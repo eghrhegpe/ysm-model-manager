@@ -26,7 +26,7 @@ import { ensureFabStyles } from "../../../utils/dom/fab.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { sceneRegistry } from "./scene-registry.ts";
-import { fillRoles, roleDetailView, roleBaseName } from "./preview-menu-roles.ts";
+import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./preview-menu-roles.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 export { roleBaseName };
@@ -259,6 +259,8 @@ function buildPreviewMenuRouters(
           makePanelView,
           m!,
           (items) => shell.handle?.setAdapterItems(items),
+          // 🧍 模型 dock → 角色列表 → 点角色名 → 模型详情（统计/纹理 + 工具行）
+          (e) => modelDetailView(e, { makeRow, makePanelView, menu: m!, actionCtx }),
         ),
     },
     runners: {
@@ -402,23 +404,12 @@ function renderPreviewDock(
           return;
         }
       }
-      // 💃 动作组：有活跃角色+技能 → 直达详情聚焦动作 section
+      // 💃 动作组：有活跃角色+技能 → 直达动作详情（骨骼/播放/感知）；否则角色列表（onSelectRole → motionDetailView）
       if (g.id === "motion") {
         const activeId = sceneRegistry.getActiveId();
         const active = activeId ? sceneRegistry.getAll().find((x) => x.id === activeId) : undefined;
         if (active?.menuItems) {
-          showMenu(
-            roleDetailView(active, {
-              makeRow: makeRowFn,
-              makePanelView: makePanelViewFn,
-              menu,
-              actionCtx,
-              initialSection: "motion",
-              onSwitchRole: rolesDef
-                ? () => showMenu(makePanelViewFn(rolesDef))
-                : undefined,
-            }),
-          );
+          showMenu(motionDetailView(active, { makeRow: makeRowFn, makePanelView: makePanelViewFn, menu, actionCtx }));
           return;
         }
       }

@@ -577,7 +577,7 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
     {
       id: "bones",
       icon: "🦴",
-      labelKey: "preview.bones",
+      labelKey: "preview.section.bones",
       fallback: "骨骼",
       kind: "panel",
       dockGroup: "motion",

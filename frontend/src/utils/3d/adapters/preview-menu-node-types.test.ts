@@ -59,7 +59,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
           {
             id: "bones",
             kind: "panel",
-            labelKey: "preview.bones",
+            labelKey: "preview.section.bones",
             fallback: "骨骼",
             icon: "🦴",
             dockGroup: "model",

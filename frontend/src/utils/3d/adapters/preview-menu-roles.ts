@@ -33,42 +33,33 @@ export function roleBaseName(e: ModelEntry): string {
   return dot > 0 ? base.slice(0, dot) : base;
 }
 
-/**
- * 角色详情子面板（目标态「详情=模型信息面板本体」）：
- *  - model 组第一个 panel（恒为「模型信息」）→ renderCustom 直渲进详情主体（1 跳看内容，用户「最想进入」）；
- *  - 其余 model 项（截图/材质/骨骼）→ 工具区可折叠 section（点击 navigate 各自面板，不再平行平铺）；
- *  - motion 组 → 「动作」可折叠 section（dock 💃 直达时展开、模型主体隐藏）；
- *  - onSwitchRole → 详情底部工具行（不占首屏，用户批评「切换角色放第一位」）。
- * 模块级共享：fillRoles 点角色名进入；dock 🧍 / 💃 捷径直达。
- */
-export function roleDetailView(
+// ── 模型详情（🧍 模型 dock 入口）──
+// 模型信息面板本体直渲（统计/纹理）+ 工具行（截图/材质）——纯模型上下文，无动作项
+export function modelDetailView(
   e: ModelEntry,
   deps: {
     makeRow: (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
     makePanelView: (node: PreviewMenuNode) => SlideMenuView;
     menu: SlideMenuHandle;
     actionCtx: PreviewActionMenuCtx;
-    onSwitchRole?: () => void;
-    initialSection?: "model" | "motion";
   },
 ): SlideMenuView {
   const modelItems = (e.menuItems ?? []).filter((d) => d.kind === "panel" && d.dockGroup === "model");
-  const motionItems = (e.menuItems ?? []).filter((d) => d.kind === "panel" && d.dockGroup === "motion");
   const primary = modelItems[0];
   const toolItems = modelItems.slice(1);
   return {
     title: roleBaseName(e),
     render: (l) => {
       l.innerHTML = "";
-      if (modelItems.length === 0 && motionItems.length === 0) {
+      if (modelItems.length === 0) {
         const empty = document.createElement("div");
         empty.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
         empty.textContent = tr("preview.roleNoDetail", "（该角色无可查看项）");
         l.appendChild(empty);
         return;
       }
-      // ① 模型信息面板本体直渲（dock 🧍 / 默认聚焦模型时；💃 直达动作时隐藏本体）
-      if (primary?.renderCustom && deps.initialSection !== "motion") {
+      // 模型信息面板本体直渲（1 跳看内容，用户「最想进入」）
+      if (primary?.renderCustom) {
         try {
           primary.renderCustom(l, () => deps.menu.back());
         } catch (err) {
@@ -82,48 +73,50 @@ export function roleDetailView(
         sep.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
         l.appendChild(sep);
       }
-      // ② 其余 model 项（截图/材质）→ 单项平铺，多项折叠（避免"1项也折叠"的过度结构化）
+      // 工具行（截图/材质）：单项平铺，多项折叠
       const sections: PreviewMenuNode[] = [];
       if (toolItems.length === 1) {
-        sections.push(toolItems[0]); // 单项直接平铺，省去 section header
+        sections.push(toolItems[0]);
       } else if (toolItems.length > 1) {
         sections.push({
           id: "preview-role-tools",
           kind: "folder",
           labelKey: "preview.roleToolsSection",
           fallback: "工具",
-          defaultOpen: true, // 多项始终展开，不折叠
+          defaultOpen: true,
           children: toolItems,
         });
       }
-      // ③ motion 组 → 动作 section（单项平铺，多项折叠但始终展开）
-      if (motionItems.length === 1) {
-        sections.push(motionItems[0]);
-      } else if (motionItems.length > 1) {
-        sections.push({
-          id: "preview-role-motion",
-          kind: "folder",
-          labelKey: "preview.roleMotionSection",
-          fallback: "动作",
-          defaultOpen: true, // 始终展开——骨骼/播放/感知等项应直可视达
-          children: motionItems,
-        });
+      if (sections.length > 0) renderMenu(l, sections, deps);
+    },
+  };
+}
+
+// ── 动作详情（💃 动作 dock 入口）──
+// 纯动作上下文：骨骼/播放/感知——无模型信息、无工具项、无折叠
+export function motionDetailView(
+  e: ModelEntry,
+  deps: {
+    makeRow: (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
+    makePanelView: (node: PreviewMenuNode) => SlideMenuView;
+    menu: SlideMenuHandle;
+    actionCtx: PreviewActionMenuCtx;
+  },
+): SlideMenuView {
+  const motionItems = (e.menuItems ?? []).filter((d) => d.kind === "panel" && d.dockGroup === "motion");
+  return {
+    title: roleBaseName(e),
+    render: (l) => {
+      l.innerHTML = "";
+      if (motionItems.length === 0) {
+        const empty = document.createElement("div");
+        empty.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+        empty.textContent = tr("preview.roleNoMotion", "（该角色无可播放动作）");
+        l.appendChild(empty);
+        return;
       }
-      // ④ onSwitchRole → 详情底部「切换角色 ›」工具行（不占首屏）
-      if (deps.onSwitchRole) {
-        sections.push({
-          // id 不带 preview- 前缀：makeRow 渲染时自动补 preview- 前缀（data-testid="preview-role-switch"）
-          id: "role-switch",
-          kind: "action",
-          labelKey: "preview.switchRole",
-          fallback: "切换角色 ›",
-          icon: "🎭",
-          action: (): void => {
-            deps.onSwitchRole?.();
-          },
-        });
-      }
-      renderMenu(l, sections, deps);
+      // 动作项全部平铺——骨骼/播放/感知各自直达，不需要折叠
+      renderMenu(l, motionItems, deps);
     },
   };
 }
@@ -159,6 +152,7 @@ function frRenderRoles(
   rolesBox: HTMLDivElement,
   deps: FrRenderDeps,
   toolsDeps: FrToolsDeps,
+  onSelectRole: (e: ModelEntry) => SlideMenuView,
   reRender: () => void
 ): void {
   rolesBox.innerHTML = "";
@@ -173,7 +167,7 @@ function frRenderRoles(
   }
   const activeId = sceneRegistry.getActiveId();
   for (const e of entries) {
-    rolesBox.appendChild(frBuildRoleRow(e, e.id === activeId, deps, toolsDeps, reRender));
+    rolesBox.appendChild(frBuildRoleRow(e, e.id === activeId, deps, toolsDeps, onSelectRole, reRender));
   }
 }
 
@@ -182,6 +176,7 @@ function frBuildRoleRow(
   isActive: boolean,
   deps: FrRenderDeps,
   toolsDeps: FrToolsDeps,
+  onSelectRole: (e: ModelEntry) => SlideMenuView,
   reRender: () => void
 ): HTMLElement {
   const row = document.createElement("div");
@@ -193,12 +188,7 @@ function frBuildRoleRow(
   const radio = frBuildFocusRadio(e, isActive, deps.setAdapterItems, reRender);
   const name = frBuildRoleName(e);
   row.onclick = (): void => {
-    deps.menu.navigate(roleDetailView(e, {
-      makeRow: deps.makeRow,
-      makePanelView: deps.makePanelView,
-      menu: deps.menu,
-      actionCtx: deps.actionCtx,
-    }));
+    deps.menu.navigate(onSelectRole(e));
   };
   const tools = frBuildRoleToolsBtn(e, toolsDeps, deps.menu);
   row.append(radio, name, tools);
@@ -282,6 +272,7 @@ export function fillRoles(
   makePanelView: (node: PreviewMenuNode) => SlideMenuView,
   menu: SlideMenuHandle,
   setAdapterItems: (items: PreviewMenuNode[]) => void,
+  onSelectRole: (e: ModelEntry) => SlideMenuView,
 ): void {
   const actionCtx: PreviewActionMenuCtx = {
     toast: ctx.toast,
@@ -294,7 +285,7 @@ export function fillRoles(
 
   const renderDeps: FrRenderDeps = { setAdapterItems, makeRow, makePanelView, menu, actionCtx };
   const toolsDeps: FrToolsDeps = { unloadRole: (id) => ctx.unloadRole?.(id), closePopup };
-  const reRender: () => void = () => frRenderRoles(rolesBox, renderDeps, toolsDeps, reRender);
+  const reRender: () => void = () => frRenderRoles(rolesBox, renderDeps, toolsDeps, onSelectRole, reRender);
   renderDeps.reRender = reRender;
 
   reRender();

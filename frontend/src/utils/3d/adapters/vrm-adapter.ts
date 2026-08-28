@@ -585,7 +585,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
     {
       id: "bones",
       icon: "🦴",
-      labelKey: "preview.bones",
+      labelKey: "preview.section.bones",
       fallback: "骨骼",
       kind: "panel",
       legacyTestId: "vrm-bones-entry",

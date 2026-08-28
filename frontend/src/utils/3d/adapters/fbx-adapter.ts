@@ -277,7 +277,7 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
     menuItems.push({
       id: "bones",
       icon: "🦴",
-      labelKey: "preview.bones",
+      labelKey: "preview.section.bones",
       fallback: "骨骼",
       kind: "panel",
       legacyTestId: "fbx-bones-entry",

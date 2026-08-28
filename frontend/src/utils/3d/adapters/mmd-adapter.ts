@@ -1317,7 +1317,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
     items.push({
       id: "bones",
       icon: "🦴",
-      labelKey: "preview.bones",
+      labelKey: "preview.section.bones",
       fallback: "骨骼",
       kind: "panel",
       dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）

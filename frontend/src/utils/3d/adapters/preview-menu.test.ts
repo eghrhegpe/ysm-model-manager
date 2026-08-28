@@ -271,7 +271,7 @@ describe("mountPreviewRootMenu", () => {
       {
         id: "bones",
         icon: "🦴",
-        labelKey: "preview.bones",
+        labelKey: "preview.section.bones",
         fallback: "骨骼",
         kind: "panel",
         dockGroup: "model",

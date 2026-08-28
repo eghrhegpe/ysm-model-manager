@@ -113,7 +113,7 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
       d.style.cssText = "padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:4px;margin:2px 4px 4px;font-size:10px;color:rgba(255,255,255,0.7);border-left:2px solid var(--accent,#7c83ff)";
 
       if (!tree || !activeId) {
-        d.innerHTML = `<div style="color:rgba(255,255,255,0.4)">${t("preview.bone.selectHint")}</div>`;
+        d.innerHTML = `<div style="color:rgba(255,255,255,0.4)">${t("preview.hint.clickBone")}</div>`;
         return d;
       }
       const det = getBoneDetail(activeId, tree);

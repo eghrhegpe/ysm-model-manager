@@ -39,7 +39,7 @@ describe("renderMenu 新 kind", () => {
 
   it("field: 渲染键值对行，有 data-testid", () => {
     const nodes: PreviewMenuNode[] = [
-      { id: "stat-bones", kind: "field", labelKey: "preview.bones", value: 128 },
+      { id: "stat-bones", kind: "field", labelKey: "preview.section.bones", value: 128 },
       { id: "stat-cubes", kind: "field", labelKey: "preview.cubes", value: 512 },
     ];
     const container = document.createElement("div");
@@ -79,7 +79,7 @@ describe("renderMenu 新 kind", () => {
   it("sectionTitle: 渲染小标题行", () => {
     const nodes: PreviewMenuNode[] = [
       { id: "sec-stats", kind: "sectionTitle", labelKey: "preview.statsSection" },
-      { id: "stat-bones", kind: "field", labelKey: "preview.bones", value: 10 },
+      { id: "stat-bones", kind: "field", labelKey: "preview.section.bones", value: 10 },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);

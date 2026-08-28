@@ -1406,8 +1406,8 @@
 | `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:228` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
 | `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:246` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
-| `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:23` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
-| `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:39` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
+| `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:24` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
+| `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:47` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
 | `PerceptionState()` | `frontend/src/utils/3d/adapters/perception-controls:7` | 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） |
 | `PerceptionCapability()` | `frontend/src/utils/3d/adapters/perception-controls:16` | 可用感知模块描述（由 adapter 按实际能力填写） |
 | `buildPerceptionControls()` | `frontend/src/utils/3d/adapters/perception-controls:37` | 在感知面板内渲染开关行（对齐 camera-controls.ts 范式）。 |
@@ -1696,9 +1696,9 @@
 | `JavaModelFace()` | `frontend/src/utils/3d/parse-java-model:44` | 单面解析产物（像素坐标 + Three 域 UV） |
 | `JavaModelResult()` | `frontend/src/utils/3d/parse-java-model:59` | — |
 | `PackEntryReader()` | `frontend/src/utils/3d/parse-java-model:73` | 条目读取器：Go binding ReadPackEntry 包装（返回 base64 或 null） |
-| `modelEntryFor()` | `frontend/src/utils/3d/parse-java-model:93` | 模型名 → 条目路径（无命名空间默认 minecraft） |
-| `parseJavaModel()` | `frontend/src/utils/3d/parse-java-model:310` | 解析资源包内 block/item 模型（parent 链递归）。 |
-| `isRenderableModel()` | `frontend/src/utils/3d/parse-java-model:339` | 判定模型是否"完整可渲染"：至少一个面有纹理或纯色（纯模板如 cube/cube_all 返回 false） |
+| `modelEntryFor()` | `frontend/src/utils/3d/parse-java-model:85` | 模型名 → 条目路径（无命名空间默认 minecraft） |
+| `parseJavaModel()` | `frontend/src/utils/3d/parse-java-model:292` | 解析资源包内 block/item 模型（parent 链递归）。 |
+| `isRenderableModel()` | `frontend/src/utils/3d/parse-java-model:320` | 判定模型是否"完整可渲染"：至少一个面有纹理或纯色（纯模板如 cube/cube_all 返回 false） |
 | `BeatDetectorLike()` | `frontend/src/utils/3d/perception/autodance:18` | 节拍 detector 接口（抽象，解耦具体实现） |
 | `AutoDanceOptions()` | `frontend/src/utils/3d/perception/autodance:26` | AutoDance 配置 |
 | `createAutoDanceController()` | `frontend/src/utils/3d/perception/autodance:69` | — |

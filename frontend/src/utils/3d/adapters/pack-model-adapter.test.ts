@@ -132,6 +132,56 @@ describe("tint 渲染", () => {
     preview.dispose!();
   });
 
+  it("tint 面有 texEntry → 仍读纹理，材质 color×map（grass 顶面不是纯色平板）", async () => {
+    hoisted.parseMock.mockResolvedValue(makeJavaModel({
+      faces: [{ dir: "up", verts: [0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "textures/block/grass_block_top.png", tintindex: 0, texColor: null, cullface: "up" }],
+    }));
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "grass_block.json", deps, "/packs.zip");
+    expect(deps.readEntry).toHaveBeenCalledWith("/packs.zip", "textures/block/grass_block_top.png");
+    const mesh = ((ctx.scene as THREE.Scene).children[0] as THREE.Group).children[0] as THREE.Mesh;
+    const mat = mesh.material as THREE.MeshStandardMaterial;
+    expect(mat.map).toBeDefined();
+    expect(mat.color.getHex()).toBe(0x4a9d2b); // tint 色（mock getTintColorSync）
+    preview.dispose!();
+  });
+
+  it("同 tint 不同纹理 → 分开材质（key 含纹理路径，避免错用同一张 map）", async () => {
+    hoisted.parseMock.mockResolvedValue(makeJavaModel({
+      faces: [
+        { dir: "up", verts: [0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "textures/block/grass_block_top.png", tintindex: 0, texColor: null, cullface: "up" },
+        { dir: "north", verts: [0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "textures/block/grass_block_side_overlay.png", tintindex: 0, texColor: null, cullface: "north" },
+      ],
+    }));
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "grass_block.json", deps, "/packs.zip");
+    const meshes = ((ctx.scene as THREE.Scene).children[0] as THREE.Group).children.filter((c) => (c as THREE.Mesh).isMesh);
+    expect(meshes.length).toBe(2);
+    preview.dispose!();
+  });
+
+  it("类别按纹理路径启发式（tintindex 值非类别索引）：_leaves→foliage、water→water、无后缀→grass", async () => {
+    const { getTintColorSync } = await import("../mc-tints.ts");
+    const spy = vi.mocked(getTintColorSync);
+    hoisted.parseMock.mockResolvedValue(makeJavaModel({
+      faces: [
+        { dir: "north", verts: [0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "textures/block/oak_leaves.png", tintindex: 0, texColor: null, cullface: "north" },
+        { dir: "south", verts: [1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "textures/block/water_still.png", tintindex: 0, texColor: null, cullface: "south" },
+        { dir: "up", verts: [0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "textures/block/grass_block_top.png", tintindex: 0, texColor: null, cullface: "up" },
+      ],
+    }));
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "tinted.json", deps, "/packs.zip");
+    const cats = spy.mock.calls.map((c) => c[0]);
+    expect(cats).toContain("foliage");
+    expect(cats).toContain("water");
+    expect(cats).toContain("grass");
+    preview.dispose!();
+  });
+
   it("face.texColor → 直接使用颜色值", async () => {
     hoisted.parseMock.mockResolvedValue(makeJavaModel({
       faces: [{ dir: "north", verts: [0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: null, tintindex: null, texColor: "#ff0000", cullface: "north" }],

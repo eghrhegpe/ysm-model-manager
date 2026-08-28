@@ -5,7 +5,8 @@
 // 通用外壳（overlay/renderer/循环/释放/根菜单切换面板）由 mount-preview-core.ts 拥有。
 // 边界：适配器 0 backend import（ADR-072），Go 绑定经 deps 注入。
 //
-// L4：tint 面按类别取 MC biome 默认色（plains；数据来源见 mc-tints.ts / ADR-080 §5.4）。
+// L4：tint 面保留纹理（color×map 相乘），类别按 texEntry 路径启发式（草/叶/水），取 MC biome 默认色
+// （数据来源见 mc-tints.ts / ADR-080 §5.4；tintindex 仅作"需染色"布尔，值非类别索引）。
 
 import * as THREE from "three";
 import {
@@ -24,9 +25,16 @@ export interface PackDeps {
   readEntry(path: string, entry: string): Promise<string>;
 }
 
-// tint 染色类别映射（tintindex → MC 染色类别；视觉近似，ADR-080 §5.4）
-// 0=grass, 1=leaves(foliage), 2=water, 3=dead_bush(固定色)
-const TINT_CATEGORY = ["grass", "foliage", "water", "dead_bush"] as const;
+// tint 染色类别（MC BlockColors 语义：类别由方块身份决定，模型 JSON 不含方块身份 → 路径启发式近似，
+// ADR-080 §5.4 方案 a）：*_leaves→foliage、*water*→water，其余默认 grass
+// （vanilla 染色面如 grass_block 顶面/overlay 无后缀，默认草地绿即正确）。
+// 注意：tintindex 值 0..3 不是类别索引（行业实现 prismarine 仅用 ===0 布尔），故不再按 index 查表。
+function tintCategoryForPath(texEntry: string | null): string {
+  if (!texEntry) return "grass";
+  if (texEntry.includes("_leaves")) return "foliage";
+  if (texEntry.includes("water")) return "water";
+  return "grass";
+}
 const NO_TEX_FALLBACK = 0xcccccc;
 
 interface PackState {
@@ -54,36 +62,57 @@ interface MatWithKey {
   key: string;
 }
 
+/** 读纹理 base64 → 缓存 Texture（失败返回 null） */
+async function loadTexture(
+  deps: PackDeps,
+  path: string,
+  texEntry: string,
+  usedTextures: Set<string>,
+): Promise<THREE.Texture | null> {
+  const b64 = await deps.readEntry(path, texEntry);
+  if (!b64) return null;
+  const dataUrl = b64ToDataURL(b64);
+  usedTextures.add(dataUrl);
+  return textureCache.acquire(dataUrl, (u) => {
+    const t = new THREE.Texture(new Image());
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    const img = t.image as HTMLImageElement;
+    img.onload = (): void => { t.needsUpdate = true; };
+    img.src = u;
+    return t;
+  });
+}
+
 async function textureFor(
   deps: PackDeps,
   path: string,
   face: JavaModelResult["faces"][number],
   usedTextures: Set<string>,
 ): Promise<MatWithKey> {
+  // tint 面：保留纹理 × tint（Three 中 map 与 color 相乘）——行业做法是 tint 乘到顶点色并照常采样纹理，
+  // 纯色平板是对 vanilla 染色面（grass_block 顶面/overlay 等均带纹理）的错误简化。
+  // key 含纹理路径：同 tint 不同纹理须分开材质（共用一个 map 会错贴）。
   if (face.tintindex !== null) {
-    const idx = Math.max(0, Math.min(3, face.tintindex));
-    const cat = TINT_CATEGORY[idx];
+    const cat = tintCategoryForPath(face.texEntry);
     const color = getTintColorSync(cat, "plains");
-    return { mat: new THREE.MeshStandardMaterial({ color, transparent: true, opacity: 0.9, roughness: 1.0, metalness: 0.0 }), key: `tint:${cat}` };
+    if (face.texEntry) {
+      const tex = await loadTexture(deps, path, face.texEntry, usedTextures);
+      if (tex) {
+        return { mat: new THREE.MeshStandardMaterial({ map: tex, color, roughness: 1.0, metalness: 0.0 }), key: `tint:${cat}:${face.texEntry}` };
+      }
+    }
+    // 无纹理/读取失败：纯色兜底；water 半透明（MC 语义），其余不透明
+    const isWater = cat === "water";
+    return { mat: new THREE.MeshStandardMaterial({ color, transparent: isWater, opacity: isWater ? 0.9 : 1.0, roughness: 1.0, metalness: 0.0 }), key: `tint:${cat}:` };
   }
   if (face.texColor) {
     return { mat: new THREE.MeshStandardMaterial({ color: parseInt(face.texColor.slice(1), 16), roughness: 1.0, metalness: 0.0 }), key: `color:${face.texColor}` };
   }
   if (face.texEntry) {
-    const b64 = await deps.readEntry(path, face.texEntry);
-    if (b64) {
-      const dataUrl = b64ToDataURL(b64);
-      usedTextures.add(dataUrl);
-      const tex = textureCache.acquire(dataUrl, (u) => {
-        const t = new THREE.Texture(new Image());
-        t.colorSpace = THREE.SRGBColorSpace;
-        t.magFilter = THREE.NearestFilter;
-        t.minFilter = THREE.NearestFilter;
-        const img = t.image as HTMLImageElement;
-        img.onload = (): void => { t.needsUpdate = true; };
-        img.src = u;
-        return t;
-      });
+    const tex = await loadTexture(deps, path, face.texEntry, usedTextures);
+    if (tex) {
       return { mat: new THREE.MeshStandardMaterial({ map: tex, roughness: 1.0, metalness: 0.0 }), key: `tex:${face.texEntry}` };
     }
   }

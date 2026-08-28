@@ -79,14 +79,6 @@ function b64ToText(b64: string): string {
   return new TextDecoder("utf-8").decode(b64ToBytes(b64));
 }
 
-/** 读 PNG 头取纹理尺寸（字节 16-24 为 IHDR width/height） */
-function pngSizeOfB64(b64: string): { w: number; h: number } | null {
-  const bytes = b64ToBytes(b64);
-  if (bytes.length < 24 || bytes[0] !== 0x89 || bytes[1] !== 0x50) return null; // \x89PNG
-  const dv = new DataView(bytes.buffer, bytes.byteOffset, 24);
-  return { w: dv.getUint32(16), h: dv.getUint32(20) };
-}
-
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
 /** 模型名 → 条目路径（无命名空间默认 minecraft） */
@@ -217,8 +209,6 @@ interface ElementLike {
 async function buildElementFaces(
   el: ElementLike,
   textures: Record<string, string>,
-  read: PackEntryReader,
-  texSizeCache: Map<string, { w: number; h: number }>,
 ): Promise<JavaModelFace[]> {
   const [minx, miny, minz] = el.from;
   const [maxx, maxy, maxz] = el.to;
@@ -251,6 +241,10 @@ async function buildElementFaces(
     }
 
     // UV：像素矩形 → 4 角 → face rotation → 归一化 + v 翻转
+    // 归一化分母恒 16（MC 模型 uv 的 16 = 一整张纹理，与 PNG 实际尺寸无关——
+    // 高清资源包只换 png 不改 uv；按 PNG 尺寸做分母会只取左上 1/N）。
+    // 注意归一化须整式 /16：u = (u1 + 角*(u2-u1)) / 16——局部矩形 [4,4,12,12] → [0.25,0.75]，
+    // 拆成 u1 + 角*(u2-u1)/16 会在全铺 UV (0..16) 时碰巧输出 0..1，但局部 UV 越界（行业口径：uv 恒 /16）。
     const uvPx = (fd.uv as number[] | undefined) ?? [0, 0, 16, 16];
     const [u1, v1, u2, v2] = uvPx;
     const rotDeg = (fd.rotation as number | undefined) ?? 0;
@@ -259,23 +253,11 @@ async function buildElementFaces(
 
     const texRef =
       typeof fd.texture === "string" ? resolveTextureRef(fd.texture, textures, new Set()) : null;
-    let size = { w: 16, h: 16 };
-    if (texRef?.kind === "texture") {
-      let s = texSizeCache.get(texRef.entry);
-      if (!s) {
-        const b64 = await read(texRef.entry);
-        if (b64) {
-          s = pngSizeOfB64(b64) ?? { w: 16, h: 16 };
-          texSizeCache.set(texRef.entry, s);
-        }
-      }
-      if (s) size = s;
-    }
 
     const uv: number[] = [];
     for (const c of spec.corners) {
-      let u = u1 + (c[3] * (u2 - u1)) / size.w;
-      let v = v1 + (c[4] * (v2 - v1)) / size.h;
+      let u = (u1 + (c[3] * (u2 - u1))) / 16;
+      let v = (v1 + (c[4] * (v2 - v1))) / 16;
       if (rotDeg !== 0) {
         const bu = (u - 0.5) * cos - (v - 0.5) * sn + 0.5;
         const bv = (u - 0.5) * sn + (v - 0.5) * cos + 0.5;
@@ -312,12 +294,11 @@ export async function parseJavaModel(
   read: PackEntryReader,
 ): Promise<JavaModelResult | null> {
   const jsonCache = new Map<string, Record<string, unknown>>();
-  const texSizeCache = new Map<string, { w: number; h: number }>();
   try {
     const model = await resolveModel(entry, read, jsonCache, new Set(), true);
     const faces: JavaModelFace[] = [];
     for (const el of model.elements) {
-      faces.push(...(await buildElementFaces(el as unknown as ElementLike, model.textures, read, texSizeCache)));
+      faces.push(...(await buildElementFaces(el as unknown as ElementLike, model.textures)));
     }
     // 展示名：去命名空间 / models 前缀 / block|item / 扩展名
     const short = entry.replace(/^assets\/[^/]+\/models\/(?:block|item)\//, "").replace(/\.json$/, "");

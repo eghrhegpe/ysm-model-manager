@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-127：性能档位薄壳版——数据表 + 通用套用器（低/中/高/自定义）",
+        "link": "/adr/ADR-127-preview-perf-presets"
+      },
+      {
         "text": "ADR-126：3D 预览菜单声明式 Schema 终态——状态层泛化 + 面板 schema 化 + 可见性谓词化 + dockGroup 解耦",
         "link": "/adr/ADR-126-menu-schema-final-form"
       },

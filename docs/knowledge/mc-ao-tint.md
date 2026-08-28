@@ -14,7 +14,7 @@ use_when:
   - pack-model-adapter 材质升级后续（ADR-080）
   - 顶点色遮蔽权重
 invariant_anchors:
-  - frontend/src/utils/3d/adapters/pack-model-adapter.ts|TINT_CATEGORY
+  - frontend/src/utils/3d/adapters/pack-model-adapter.ts|tintCategoryForPath
   - frontend/src/utils/3d/mc-tints.ts|getTintColorSync
 ---
 
@@ -93,14 +93,14 @@ v = (1 - h * t) * (H - 1)      // 注意是 h*t，非 h
 
 MC 的 `tintindex` 是**自由整数索引**，最终颜色由**方块类型 + biome** 经 `BlockColors`/`FoliageColors` 解析，**并非 index 值直接映射颜色**。prismarine-viewer 仅用 `eFace.tintindex === 0` 作为"该面需要 tint"的布尔开关（0 = 草/叶/水通用），**没有 4 类按 index 查表**。
 
-→ 当前 `pack-model-adapter.ts` 的 `TINT_COLORS[4] = [grass, leaves, water, dead_bush]` 按 `tintindex 0..3` 查表是**视觉近似、非语义正确**，且 index→色 映射是约定俗成兜底（与 biome 正确解正交）。
+→ `pack-model-adapter.ts` 已按此语义修正（TDD，全绿）：tintindex 仅作"需染色"布尔，**不再按 index 查表**；类别改由 `texEntry` 路径启发式（`tintCategoryForPath`：`*_leaves`→foliage、`*water*`→water、其余默认 grass，覆盖 vanilla 多数染色面——grass_block 顶面/overlay 无后缀即默认草地绿）；tint 面**保留纹理**（材质 `color×map` 相乘，替代早期"纯色平板"错误简化，"同 tint 不同纹理"按 key 含纹理路径分开材质，避免错贴）。该启发式即 ADR-080 §5.4 方案 a；"方块身份 → tint 类别"精确映射（手工小表）仍为未来改进，与 biome 正确解正交。
 
 ## 3. 与本项目的落地映射（供 L4）
 
 | 目标 | 前置条件 | 务实路径 |
 |------|----------|----------|
 | AO（4 段） | 邻居块查询能力（本预览器无） | 先合成 3×3×3 邻域或接受全亮；权重算法直接照搬 §1（~5 行，无外部依赖） |
-| biome 正确 tint | 数据依赖：`minecraft-data` 或打包 `tints.json` | 消费 `tints` 表按 biome 查；替代当前 `TINT_COLORS[4]` 近似 |
+| biome 正确 tint | 数据依赖：`minecraft-data` 或打包 `tints.json` | 已消费 `tints` 表按 biome 查（`getTintColorSync`）；类别经 `tintCategoryForPath` 启发式，已替代早期按 `tintindex` 查表近似 |
 | NormalMap / Emissive | — | 确认放弃：MC Java block model 格式几乎不用，无实际效果 |
 
 ## 4. 风险 / 红线

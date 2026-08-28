@@ -141,6 +141,53 @@ describe("face UV rotation", () => {
   });
 });
 
+describe("UV 归一化（行业口径：分母恒 16，与纹理 PNG 尺寸无关）", () => {
+  /** 构造最小 PNG 头（签名 + IHDR，宽高自定）——旧实现读它做 UV 归一化分母 */
+  function pngHeadB64(width: number, height: number): string {
+    const b = new Uint8Array(33);
+    b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+    b[16] = (width >> 24) & 0xff; b[17] = (width >> 16) & 0xff; b[18] = (width >> 8) & 0xff; b[19] = width & 0xff;
+    b[20] = (height >> 24) & 0xff; b[21] = (height >> 16) & 0xff; b[22] = (height >> 8) & 0xff; b[23] = height & 0xff;
+    let s = "";
+    for (const byte of b) s += String.fromCharCode(byte);
+    return btoa(s);
+  }
+
+  it("32x32 高清纹理：uv 仍覆盖全图 0..1（按 PNG 尺寸除会只取左上 1/4）", async () => {
+    const map = new Map<string, string>();
+    const model = {
+      textures: { side: "block/hd" },
+      elements: [{ from: [0, 0, 0], to: [16, 16, 16], faces: { north: { uv: [0, 0, 16, 16], texture: "#side" } } }],
+    };
+    map.set("assets/minecraft/models/block/hd.json", btoa(unescape(encodeURIComponent(JSON.stringify(model)))));
+    map.set("assets/minecraft/textures/block/hd.png", pngHeadB64(32, 32));
+    const read: PackEntryReader = async (e) => map.get(e) ?? null;
+
+    const m = await parseJavaModel("assets/minecraft/models/block/hd.json", read);
+    expect(m).not.toBeNull();
+    const uvs = m!.faces[0].uv;
+    expect(Math.max(...uvs)).toBe(1); // 覆盖整张 32x32 纹理（旧实现 /32 → 0.5）
+    expect(uvs.every((v) => v >= 0 && v <= 1)).toBe(true);
+  });
+
+  it("uv 局部矩形 [4,4,12,12] 归一化到 [0.25, 0.25, 0.75, 0.75]（16 基准，与纹理尺寸无关）", async () => {
+    const map = new Map<string, string>();
+    const model = {
+      textures: { side: "block/hd" },
+      elements: [{ from: [0, 0, 0], to: [16, 16, 16], faces: { north: { uv: [4, 4, 12, 12], texture: "#side" } } }],
+    };
+    map.set("assets/minecraft/models/block/hdsub.json", btoa(unescape(encodeURIComponent(JSON.stringify(model)))));
+    map.set("assets/minecraft/textures/block/hd.png", pngHeadB64(32, 32)); // 旧实现会把它除成 0.125..0.375
+    const read: PackEntryReader = async (e) => map.get(e) ?? null;
+
+    const m = await parseJavaModel("assets/minecraft/models/block/hdsub.json", read);
+    expect(m).not.toBeNull();
+    const uvs = m!.faces[0].uv;
+    expect(Math.max(...uvs)).toBe(0.75);
+    expect(Math.min(...uvs)).toBe(0.25);
+  });
+});
+
 describe("isRenderableModel", () => {
   it("纯模板（全 null 纹理）判定不可渲染；有纹理引用可渲染", async () => {
     const tpl = makeReader({ "assets/minecraft/models/block/tpl.json": { parent: "block/cube", textures: {} } });

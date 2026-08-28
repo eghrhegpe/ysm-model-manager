@@ -1,7 +1,7 @@
 // ===== tpl-settings.ts — settingsHTML 页面模板（从 tpl.ts 拆出，ADR-040 P1 第2轮拆分）=====
 // basic + ui 标签页在此；about + credits 已拆至 tpl-settings-about.ts
 import { t } from "../../core/i18n/t.ts";
-import { resolveWebMode } from "../../backend/platform.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 
@@ -330,7 +330,7 @@ ${body}
 
 export function settingsHTML(): string {
   const isViewer = isViewerMode();
-  const isWebViewer = resolveWebMode();
+  const isWebViewer = isWebPlatform();
 
   const basicBody = `${renderStgBasicPaths(isViewer)}
   ${renderStgStorageCard(isWebViewer)}

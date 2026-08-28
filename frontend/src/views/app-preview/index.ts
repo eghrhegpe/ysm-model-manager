@@ -24,7 +24,7 @@ import {
   collectBlobUrls,
 } from "./cache.ts";
 import { getApp } from "../../backend/app.ts";
-import { resolveWebMode } from "../../backend/platform.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
 import { t } from "../../core/i18n/t.ts";
 import { type PreviewCtx, type DecodedYsm } from "./utils.ts";
 import { GenGuard } from "./gen-guard.ts";
@@ -231,7 +231,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     const gen = this._previewGuard.current;
     // ADR-071 M1：web 端 .7z 明确"暂不支持"（识别为 ysm 但 WASM/解压均无法处理——
     // 显示文件名即可，不尝试解析报错；替代原"点击预览必失败"）
-    if (extOf(path) === ".7z" && resolveWebMode()) {
+    if (extOf(path) === ".7z" && isWebPlatform()) {
       bus.emit("toast:show", {
         msg: t("preview.web7zUnsupported"),
         duration: TOAST_MS.normal,

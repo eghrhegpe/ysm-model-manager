@@ -6,7 +6,7 @@ import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { executeCLI } from "../../../services/cli-bridge.ts";
 import type { CLIArgs } from "../../../services/cli-bridge.ts";
-import { resolveWebMode } from "../../../backend/platform.ts";
+import { isWebPlatform } from "../../../backend/platform-web.ts";
 import { bus } from "../../../bus.ts";
 import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
@@ -350,7 +350,7 @@ interface DgPcGfStage {
 }
 
 function dgPcGfWebModeCheck(): boolean {
-  if (resolveWebMode()) {
+  if (isWebPlatform()) {
     bus.emit("toast:show", {
       msg: "网页版不支持性能诊断",
       duration: TOAST_MS.normal,

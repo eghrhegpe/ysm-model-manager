@@ -12,23 +12,23 @@ import {
   workshopHTML,
 } from "./tpl.ts";
 
-const { getAndroidBridgeMock, isViewerModeMock, resolveWebModeMock } = vi.hoisted(() => ({
+const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock } = vi.hoisted(() => ({
   getAndroidBridgeMock: vi.fn().mockReturnValue(null), // 默认桌面（无 Android 桥）
   isViewerModeMock: vi.fn().mockReturnValue(false), // 默认桌面（非查看器模式）
-  resolveWebModeMock: vi.fn().mockReturnValue(false), // 默认桌面（非网页版）
+  isWebPlatformMock: vi.fn().mockReturnValue(false), // 默认桌面（非网页版）
 }));
 vi.mock("../../utils/dom/android-bridge.ts", () => ({
   getAndroidBridge: getAndroidBridgeMock,
   isViewerMode: isViewerModeMock,
 }));
-vi.mock("../../backend/platform.ts", () => ({
-  resolveWebMode: resolveWebModeMock,
+vi.mock("../../backend/platform-web.ts", () => ({
+  isWebPlatform: isWebPlatformMock,
 }));
 
 beforeEach(() => {
   getAndroidBridgeMock.mockReturnValue(null);
   isViewerModeMock.mockReturnValue(false);
-  resolveWebModeMock.mockReturnValue(false);
+  isWebPlatformMock.mockReturnValue(false);
 });
 
 describe("app-content 模板", () => {
@@ -86,9 +86,9 @@ describe("app-content 模板", () => {
     expect(html).toContain("set-lang");
   });
 
-  it("settingsHTML 网页版（resolveWebMode=true）显示网页版文件来源 FSA 授权卡片", () => {
+  it("settingsHTML 网页版（isWebPlatform=true）显示网页版文件来源 FSA 授权卡片", () => {
     isViewerModeMock.mockReturnValue(true);
-    resolveWebModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     const html = settingsHTML();
     // 网页版隐藏本地文件路径配置后，改显 FSA 授权卡片
     expect(html).toContain("stg-web-repo-card");
@@ -98,9 +98,9 @@ describe("app-content 模板", () => {
 
   it("settingsHTML Android（桥存在但非网页版）渲染本地路径卡而非 FSA 授权卡", () => {
     // 回归：仅网页版才渲染需 showDirectoryPicker 的 FSA 卡；
-    // Android 有 Java 桥但 resolveWebMode=false，应渲染 files 卡，避免报"浏览器不支持 FSA"
+    // Android 有 Java 桥但 isWebPlatform=false，应渲染 files 卡，避免报"浏览器不支持 FSA"
     isViewerModeMock.mockReturnValue(true);
-    resolveWebModeMock.mockReturnValue(false);
+    isWebPlatformMock.mockReturnValue(false);
     getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as never);
     const html = settingsHTML();
     expect(html).not.toContain("web-repo-auth-btn");

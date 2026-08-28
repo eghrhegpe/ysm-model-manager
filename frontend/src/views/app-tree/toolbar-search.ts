@@ -6,7 +6,7 @@ import { bus } from "../../bus.ts";
 import { getExts } from "../../utils/resource/extensions.ts";
 import { modalAdvFilter, type AdvFilterValue } from "../../utils/dom/dialogs/adv-filter.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { resolveWebMode } from "../../backend/platform.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
 import { importWebFiles } from "../../backend/browser-adapter.ts";
 // 网页版数值条件降级标记消费（web-stats.ts 经 browserAdapter 链 re-export——与
 // searchWebModels 同一模块实例；Worker 批量统计不可用时置位，此处 toast 提示）
@@ -18,7 +18,7 @@ type $Id = (id: string) => HTMLElement | null;
 
 // --- 多线程统计角标（网页版证明 off-main-thread：主线程 + stats Worker 并行）---
 // 右下角 fixed 小角标：数值条件搜索时显示 "🧵×2 ⚙️ x/y"（Worker 批进度），
-// 统计完成隐藏；Worker 降级时短暂显示 ⚠️ 提示。仅 web 模式（resolveWebMode）创建。
+// 统计完成隐藏；Worker 降级时短暂显示 ⚠️ 提示。仅 web 模式（isWebPlatform）创建。
 let statsBadge: HTMLElement | null = null;
 
 function showStatsBadge(html: string): void {
@@ -166,7 +166,7 @@ async function dgAfSearchModelPaths(
     });
     return "cancel";
   }
-  const isWebNum = resolveWebMode() && hasNumRange;
+  const isWebNum = isWebPlatform() && hasNumRange;
   const poolN = getStatsPoolSize();
   if (isWebNum) {
     showStatsBadge(`🧵×${poolN} 准备统计…`);
@@ -204,7 +204,7 @@ async function dgAfSearchModelPaths(
 }
 
 function dgAfWarnWebDegraded(hasNumRange: boolean): void {
-  if (resolveWebMode() && hasNumRange && consumeWebSearchDegraded()) {
+  if (isWebPlatform() && hasNumRange && consumeWebSearchDegraded()) {
     bus.emit("toast:show", {
       msg: "⚠️ 网页版统计引擎不可用，骨骼/立方体数值条件已忽略（仅关键词匹配）",
       duration: TOAST_MS.normal,

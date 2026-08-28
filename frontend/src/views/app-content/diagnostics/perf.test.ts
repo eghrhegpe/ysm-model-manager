@@ -7,18 +7,18 @@
 //  - 加载剖析：甘特图 + 资产清单渲染（通过 facade perf.ts re-export 路由）
 // 注：业务逻辑已拆至 perf-cli.ts（CLI 三块）/ perf-trace.ts（加载剖析）；
 // 本测试通过 facade initPerfPanel / renderLoadTraceSection 集成验证，保证接口契约不变。
-// mock cli-bridge.executeCLI（web 模式在测试环境视为 native，resolveWebMode=false）
+// mock cli-bridge.executeCLI（web 模式在测试环境视为 native，isWebPlatform=false）
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 import { recordLoadTrace, clearLoadTraces } from "../../../utils/3d/load-trace.ts";
 
-const { executeCLI, resolveWebMode } = vi.hoisted(() => ({
+const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
-  resolveWebMode: vi.fn(() => false),
+  isWebPlatform: vi.fn(() => false),
 }));
 
 vi.mock("../../../services/cli-bridge.ts", () => ({ executeCLI }));
-vi.mock("../../../backend/platform.ts", () => ({ resolveWebMode }));
+vi.mock("../../../backend/platform-web.ts", () => ({ isWebPlatform }));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -100,7 +100,7 @@ function makeRoot(): ShadowRoot {
 beforeEach(() => {
   vi.clearAllMocks();
   document.body.innerHTML = "";
-  resolveWebMode.mockReturnValue(false);
+  isWebPlatform.mockReturnValue(false);
 });
 
 describe("single-bench 面板", () => {

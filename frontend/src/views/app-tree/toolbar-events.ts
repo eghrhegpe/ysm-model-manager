@@ -13,7 +13,7 @@ import { updateSelectCount } from "./events.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { setRenderMode, type RenderMode } from "./render.ts";
 import { getApp } from "../../backend/app.ts";
-import { resolveWebMode } from "../../backend/platform.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
 import { getAndroidBridge, isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { getExts } from "../../utils/resource/extensions.ts";
 import { resolveAndroidRepoDir } from "../../utils/dom/directory-picker.ts";
@@ -241,7 +241,7 @@ async function atTlHandleImportFile(ctx: AtTlCtx): Promise<void> {
 async function atTlHandleImportDir(ctx: AtTlCtx): Promise<void> {
   const { vm } = ctx;
   const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
-  if (resolveWebMode()) {
+  if (isWebPlatform()) {
     const gen = vm._gen;
     await pickWebFilesAndImport(
       rtype,
@@ -317,7 +317,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
             return;
           }
           const idx = await GenerateRepoIndex(filesRoot);
-          if (resolveWebMode() && typeof idx === "string") {
+          if (isWebPlatform() && typeof idx === "string") {
             const blob = new Blob([idx], { type: "application/json;charset=utf-8" });
             const a = document.createElement("a");
             a.download = "index.json";

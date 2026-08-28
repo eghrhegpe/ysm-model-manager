@@ -5,7 +5,7 @@
 import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../backend/app.ts";
-import { resolveWebMode } from "../../../backend/platform.ts";
+import { isWebPlatform } from "../../../backend/platform-web.ts";
 import { loadResourceRegistry } from "../../../utils/resource/registry.ts";
 import { safeGet } from "../../../utils/dom/storage.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
@@ -257,11 +257,11 @@ async function stgBindLangSwitch(
 
 function stgBindWebFsa(
   root: ShadowRoot,
-  resolveWebModeFn: typeof resolveWebMode,
+  isWebPlatformFn: typeof isWebPlatform,
 ): void {
   const webRepoBtn = root.getElementById("web-repo-auth-btn") as HTMLButtonElement | null;
   const webRepoStatus = root.getElementById("web-repo-auth-status");
-  if (webRepoBtn && resolveWebModeFn()) {
+  if (webRepoBtn && isWebPlatformFn()) {
     const applyFsaState = async (): Promise<void> => {
       try {
         const state = await getFsaAuthState();
@@ -384,5 +384,5 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   initKeymap(root);
 
   await stgBindLangSwitch(root, toastError);
-  stgBindWebFsa(root, resolveWebMode);
+  stgBindWebFsa(root, isWebPlatform);
 }

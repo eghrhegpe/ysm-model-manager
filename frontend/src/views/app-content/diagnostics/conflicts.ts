@@ -6,7 +6,7 @@ import { bus } from "../../../bus.ts";
 import { getApp } from "../../../backend/app.ts";
 import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../../utils/resource/types.ts";
-import { resolveWebMode } from "../../../backend/platform.ts";
+import { isWebPlatform } from "../../../backend/platform-web.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
 import type { EscFn } from "./logs.ts";
 import type { AppConfig, VersionInstance } from "../../../utils/types-re-export.ts";
@@ -54,7 +54,7 @@ interface DgCfResolveResult {
 // ===== scanConflicts 子函数 =====
 
 function dgCfWebGate(): boolean {
-  if (resolveWebMode()) {
+  if (isWebPlatform()) {
     bus.emit("toast:show", {
       msg: "网页版不支持冲突扫描",
       duration: TOAST_MS.normal,
@@ -200,7 +200,7 @@ export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void>
 // ===== scanSyncConflicts 子函数 =====
 
 function dgCfSyncWebGate(): boolean {
-  if (resolveWebMode()) {
+  if (isWebPlatform()) {
     bus.emit("toast:show", {
       msg: "网页版不支持同步冲突扫描",
       duration: TOAST_MS.normal,

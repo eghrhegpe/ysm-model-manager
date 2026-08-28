@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { getApp } from "../../backend/app.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
-import { resolveWebMode } from "../../backend/platform.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 import { buildSpecFromGeometryJSON } from "../../utils/3d/spec-builder.ts";
 import { textureCache } from "../../utils/3d/texture-cache.ts";
@@ -129,14 +129,14 @@ async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
 
 /** 兜底：前端 WASM 解码 .ysm 拿 geometry JSON，构建 spec
  *  Android 路径调 Go binding Build3DSpecFromGeometryJSON；
- *  网页版路径（resolveWebMode）调纯 TS buildSpecFromGeometryJSON——
+ *  网页版路径（isWebPlatform）调纯 TS buildSpecFromGeometryJSON——
  *  Go binding 在网页版恒 "{}" 桩（ADR-049 P2-2 闭环）。 */
 async function fetchSpecViaWasmFallback(model: ModelLike): Promise<ModelSpec | null> {
   try {
     const decoded = await decodeYsmViaWasm(model._modelPath!);
     if (!decoded?.geometryRaw) return null;
     let specStr: string;
-    if (resolveWebMode()) {
+    if (isWebPlatform()) {
       // 网页版：Go binding 不可用（恒 "{}" 桩），调纯 TS 移植
       specStr = buildSpecFromGeometryJSON(decoded.geometryRaw);
     } else {

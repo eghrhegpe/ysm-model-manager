@@ -2,7 +2,7 @@
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { getApp } from "../../backend/app.ts";
 import { swallowError } from "../../utils/core/async.ts";
-import { resolveWebMode } from "../../backend/platform.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
@@ -31,7 +31,7 @@ export function openSite(
   } else if (browseMode === "window") {
     // 窗口模式直连（独立 WebView2 窗口，非 iframe，无需反代绕 X-Frame-Options）
     // 网页版没有预热窗口，回退系统浏览器打开，避免 NavigatePlazaWindow fail-fast 静默无反应
-    if (resolveWebMode()) {
+    if (isWebPlatform()) {
       swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(url)));
     } else {
       swallowError(getApp().then(({ NavigatePlazaWindow }) =>
@@ -109,7 +109,7 @@ export function bindSiteEvents(
     const cs = host._currentSite;
     if (cs) {
       // 网页版无 WebView2 预热窗口，回退系统浏览器打开
-      if (resolveWebMode()) {
+      if (isWebPlatform()) {
         swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
       } else {
         swallowError(getApp().then(({ NavigatePlazaWindow }) =>
@@ -124,7 +124,7 @@ export function bindSiteEvents(
     .getElementById("ws-export-btn")
     ?.addEventListener("click", async () => {
       // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
-      if (resolveWebMode()) {
+      if (isWebPlatform()) {
         bus.emit("toast:show", {
           msg: "网页版暂不支持导出站点配置，请使用桌面版",
           duration: TOAST_MS.normal,
@@ -152,7 +152,7 @@ export function bindSiteEvents(
     .getElementById("ws-import-btn")
     ?.addEventListener("click", async () => {
       // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
-      if (resolveWebMode()) {
+      if (isWebPlatform()) {
         bus.emit("toast:show", {
           msg: "网页版暂不支持导入站点配置，请使用桌面版",
           duration: TOAST_MS.normal,

@@ -9,7 +9,7 @@ const { mocks } = vi.hoisted(() => {
     ListModelAuthors: vi.fn(),
     ScanLocalAuthors: vi.fn(),
     SaveWorkshopCreators: vi.fn(),
-    resolveWebMode: vi.fn().mockReturnValue(false),
+    isWebPlatform: vi.fn().mockReturnValue(false),
   };
   return { mocks };
 });
@@ -24,8 +24,8 @@ vi.mock("../../backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("../../backend/platform.ts", () => ({
-  resolveWebMode: mocks.resolveWebMode,
+vi.mock("../../backend/platform-web.ts", () => ({
+  isWebPlatform: mocks.isWebPlatform,
 }));
 
 vi.mock("../../utils/debug/debug.ts", () => ({
@@ -43,7 +43,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.resolveWebMode.mockReturnValue(false);
+  mocks.isWebPlatform.mockReturnValue(false);
   forceRefreshCommunityMerge();
   forceRefreshScanAuthors();
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));

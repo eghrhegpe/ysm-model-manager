@@ -5,11 +5,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 
-const { getAppMock, specMock, buildSpecMock, isViewerModeMock, decodeWasmMock, tsSpecBuilderMock, fakeTextureCache } = vi.hoisted(() => ({
+const { getAppMock, specMock, buildSpecMock, isViewerModeMock, isWebPlatformMock, decodeWasmMock, tsSpecBuilderMock, fakeTextureCache } = vi.hoisted(() => ({
   getAppMock: vi.fn(),
   specMock: vi.fn(),
   buildSpecMock: vi.fn(),
   isViewerModeMock: vi.fn().mockReturnValue(false),
+  isWebPlatformMock: vi.fn().mockReturnValue(false),
   decodeWasmMock: vi.fn(),
   tsSpecBuilderMock: vi.fn(),
   fakeTextureCache: {
@@ -25,6 +26,9 @@ vi.mock("../../backend/app.ts", () => ({
 }));
 vi.mock("../../utils/dom/android-bridge.ts", () => ({
   isViewerMode: isViewerModeMock,
+}));
+vi.mock("../../backend/platform-web.ts", () => ({
+  isWebPlatform: isWebPlatformMock,
 }));
 vi.mock("./wasm.ts", () => ({
   decodeYsmViaWasm: decodeWasmMock,
@@ -61,6 +65,8 @@ class FakeImage {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  isWebPlatformMock.mockReturnValue(false);
+  isViewerModeMock.mockReturnValue(false);
   delete (globalThis as Record<string, unknown>)["__YSM_BACKEND__"];
   getAppMock.mockResolvedValue({
     GetModel3DSpec: specMock,
@@ -315,7 +321,8 @@ describe("preloadModel / fetchSpec", () => {
   });
 
   it("网页版（__YSM_BACKEND__=browser）spec 空 → WASM 兜底成功（P2-2 闭环：纯 TS 移植）", async () => {
-    (globalThis as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    isViewerModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     specMock.mockResolvedValue(JSON.stringify({ models: [] }));
     tsSpecBuilderMock.mockReturnValue(
       JSON.stringify({ models: [{ meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] }] }),
@@ -334,7 +341,8 @@ describe("preloadModel / fetchSpec", () => {
   });
 
   it("网页版 WASM 兜底解码失败 → 仍抛 3D spec 为空（镜像 Android 失败用例）", async () => {
-    (globalThis as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    isViewerModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     specMock.mockResolvedValue(JSON.stringify({ models: [] }));
     decodeWasmMock.mockResolvedValue(null); // 解码失败
     try {
@@ -347,7 +355,8 @@ describe("preloadModel / fetchSpec", () => {
   });
 
   it("网页版纯 TS 返回 {}（无数据）→ 兜底 null → 抛 3D spec 为空", async () => {
-    (globalThis as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    isViewerModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     specMock.mockResolvedValue(JSON.stringify({ models: [] }));
     decodeWasmMock.mockResolvedValue({ geometryRaw: '{"geometry":"x"}' });
     tsSpecBuilderMock.mockReturnValue("{}"); // 纯 TS 移植无数据
@@ -361,7 +370,8 @@ describe("preloadModel / fetchSpec", () => {
   });
 
   it("网页版 WASM 兜底 geometryRaw 为空（\"\"/undefined）→ 兜底 null → 抛 3D spec 为空", async () => {
-    (globalThis as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    isViewerModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     specMock.mockResolvedValue(JSON.stringify({ models: [] }));
     try {
       for (const [i, empty] of (["", undefined] as const).entries()) {

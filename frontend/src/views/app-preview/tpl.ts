@@ -137,7 +137,7 @@ export function statsCardHTML(
   ${componentCounts.length > 0
     ? componentCounts.map((c) => `<div class="pv-card-row" style="font-size:var(--fs-xs)"><span class="pv-stat-label" style="min-width:72px">${esc(c.name)}</span><span class="pv-card-val">${c.bones}</span> 骨骼 · <span class="pv-card-val">${c.cubes}</span> 立方体</div>`).join("")
     : `<div class="pv-card-row">
-    <span class="pv-stat-label">${t("preview.label.skeleton")}</span><span class="pv-card-val">${model.boneCount}</span> ${t("preview.unit")}<br>
+    <span class="pv-stat-label">${t("preview.label.boneCount")}</span><span class="pv-card-val">${model.boneCount}</span> ${t("preview.unit")}<br>
     <span class="pv-stat-label">${t("preview.cubesLabel")}</span><span class="pv-card-val">${model.cubeCount}</span> ${t("preview.unit")}
   </div>`}
 </div>

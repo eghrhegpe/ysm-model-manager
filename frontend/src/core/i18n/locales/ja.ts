@@ -924,7 +924,7 @@ export const ja: Record<string, string> = {
   "preview.preview3dLoadFailed": "3D プレビューの読み込みに失敗しました",
   "preview.voxel3dLoadFailed": "ボクセル 3D の読み込みに失敗しました",
   "preview.modelStructure": "モデル構造",
-  "preview.label.skeleton": "ボーン",
+  "preview.label.boneCount": "ボーン数",
   "preview.cubesLabel": "キューブ (Cubes)",
   "preview.unit": "個",
   "preview.textureSize": "テクスチャサイズ",

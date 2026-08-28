@@ -923,7 +923,7 @@ export const en: Record<string, string> = {
   "preview.preview3dLoadFailed": "3D preview failed to load",
   "preview.voxel3dLoadFailed": "Voxel 3D failed to load",
   "preview.modelStructure": "Model Structure",
-  "preview.label.skeleton": "Bones",
+  "preview.label.boneCount": "Bone Count",
   "preview.cubesLabel": "Cubes",
   "preview.unit": "unit",
   "preview.textureSize": "Texture Size",

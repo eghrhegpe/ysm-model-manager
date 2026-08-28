@@ -89,6 +89,19 @@ function renderCapToggle(parent: HTMLElement, c: MenuControlDef): void {
   parent.appendChild(row);
 }
 
+/**
+ * slider 值格式化（renderCapSlider 与环境面板摘要行共用，防两端分叉）：
+ *   unit="h" → HH:MM（小数进位分钟）／ unit="%" → 百分比（×100 取整）／
+ *   其它 unit → 值+单位拼接 ／ 无 unit → toFixed(2)
+ */
+export function formatCapSliderValue(c: MenuControlDef, v: number): string {
+  const u = c.slider?.unit;
+  if (u === "h") return `${String(Math.floor(v)).padStart(2, "0")}:${String(Math.round((v % 1) * 60)).padStart(2, "0")}`;
+  if (u === "%") return `${Math.round(v * 100)}%`;
+  if (u) return `${v}${u}`;
+  return v.toFixed(2);
+}
+
 /** slider：label + 当前值 + range 拖动 */
 function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
@@ -102,9 +115,7 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
   name.textContent = tr(c.labelKey, c.fallback);
   const val = document.createElement("span");
   const numVal = c.getValue() as number;
-  const fmtVal = (v: number): string =>
-    c.slider?.unit === "%" ? `${Math.round(v * 100)}%` : c.slider?.unit === "h" ? `${String(Math.floor(v)).padStart(2, "0")}:${String(Math.round((v % 1) * 60)).padStart(2, "0")}` : c.slider?.unit ? `${v}${c.slider.unit}` : v.toFixed(2);
-  val.textContent = fmtVal(numVal);
+  val.textContent = formatCapSliderValue(c, numVal);
   head.append(name, val);
   const slider = document.createElement("input");
   slider.type = "range";
@@ -116,7 +127,7 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
   slider.oninput = (): void => {
     const v = Number(slider.value);
     c.setValue(v);
-    val.textContent = fmtVal(v);
+    val.textContent = formatCapSliderValue(c, v);
   };
   // slider 提交（松手/change）：高频拖拽在 oninput 已写值，此处只做离散提交回调
   // （如 pixel-ratio 提交时 notify）。未声明 onCommit 的 slider 行为不变。

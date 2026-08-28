@@ -11,7 +11,6 @@ import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
-import { fill3DPanel } from "./skeleton-fill-panel.ts";
 import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import type { Spec3D, BoneSelectInfo } from "../../utils/3d/model3d.ts";
@@ -57,32 +56,6 @@ export interface YsmControlsContext {
   onTextureChange?: (texIdx: number) => void;
   /** 截取当前 3D 渲染画面（PNG base64，无 data: 前缀）—— ADR-052 P3 通用化 */
   screenshot?(): Promise<string | null>;
-}
-
-/**
- * 模型菜单面板：统计 / 纹理 / 骨骼列表 / 骨骼详情 / 多组件切换（fill3DPanel 内容）。
- * [doc:adr-126-p4-b-2] 本面板保留命令式逃生舱——含「模型选择器」多组件切换动态视图状态，
- * 非静态内容，声明式化收益低风险高（P4-B-2 只声明式化截图面板，见 ysmShotNodes）。
- */
-export function fillYsmModelPanel(list: HTMLElement, ctx: YsmControlsContext): void {
-  const modelSel = document.createElement("select");
-  modelSel.className = "ysm-3d-popselect";
-  modelSel.style.display = "none";
-  modelSel.onchange = (): void => {
-    ctx.handle.showModelGroup(parseInt(modelSel.value, 10));
-  };
-  if (ctx.handle.getModelGroupCount() > 1) {
-    modelSel.style.display = "";
-    list.appendChild(modelSel);
-  }
-  fill3DPanel(
-    list as HTMLDivElement,
-    ctx.model,
-    ctx.texArr as THREE.Texture[],
-    ctx.spec as Spec3D,
-    ctx.handle,
-    modelSel,
-  );
 }
 
 /**

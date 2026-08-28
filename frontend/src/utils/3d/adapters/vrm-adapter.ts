@@ -162,13 +162,22 @@ export async function readVrmMeta(
 }
 
 /** VRM 内容构建：把模型挂入核心 scene，返回每帧 update + dispose */
+/** VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） */
+export interface VrmModelInfoCtx {
+  modelName: string;
+  boneCount: number;
+  materialCount: number;
+}
+
 /** 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） */
 export interface VrmPanelHooks {
   makePanelRenderer: (bridge: VrmMaterialControlBridge) => (list: HTMLElement) => void;
-  /** 模型信息面板填充回调（ADR-052 P3）；缺失则 model 项 render 退化为 no-op */
-  makeModelPanelRenderer?: (list: HTMLElement) => void;
-  /** 截图面板填充回调（ADR-052 P3：喂 screenshotFn 给 saveScreenshot）；缺失则 shot 项 render 退化为 no-op */
-  makeShotPanelRenderer?: (screenshotFn: () => Promise<string | null>) => (list: HTMLElement) => void;
+  /** 声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归，P5 收尾 VRM 对齐 MMD）：
+   *  vrmModelInfoNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
+  modelInfoNodes?: (ctx: VrmModelInfoCtx) => PreviewMenuNode[];
+  /** 截图面板声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归，P5 收尾：对齐 MMD/YSM
+   *  shotNodes 模式，复用 shot-panel-shared；缺失 → children 空、面板不渲染） */
+  shotNodes?: (screenshot: (() => Promise<string | null>) | null, modelPath: string) => PreviewMenuNode[];
   /** 播放面板填充回调（复用 MMD 播放面板；解除 utils→views 分层违规 R1，缺失则 play 项 render 退化为 no-op） */
   fillPlayPanel?: (list: HTMLElement, bridge: MmdPlayBridge) => void;
 }
@@ -341,6 +350,7 @@ function mdVrBuildPerception(vrm: VRM, ctx: PreviewBuildCtx, boneTree: BoneTree,
   return { perceptionState, perceptionCaps, breath, gaze, blink, footIK, useNativeLookAt, blinkExpressionNames, exprMgr };
 }
 function mdVrStage4MenuPanels(
+  path: string,
   panels: VrmPanelHooks | undefined,
   ctx: PreviewBuildCtx,
   boneAssy: MdVrBoneAssembly,
@@ -350,10 +360,17 @@ function mdVrStage4MenuPanels(
 ): PreviewMenuNode[] {
   const { bonePanelRef, boneTree } = boneAssy;
   const { motionClips, motionMixer } = motion;
+  // 模型信息数据源（model 面板 children；名称取文件名去扩展名）
+  const modelInfo: VrmModelInfoCtx = {
+    modelName: path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || path,
+    boneCount: boneAssy.boneTree.roots.length,
+    materialCount: vrmMaterials.length,
+  };
   const menuItems = vrmMenuItems({
     panels,
+    modelInfo,
+    modelPath: path,
     screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
-    modelPanel: panels?.makeModelPanelRenderer,
     bonePanel: {
       tree: boneTree,
       viewContainer: ctx.viewContainer,
@@ -502,7 +519,7 @@ export async function buildVrmScene(
   const boneAssy = mdVrStage2BonesHumanoid(vrm);
   const vrmMaterials = mdVrStage3Materials(vrm);
   const perception = mdVrBuildPerception(vrm, ctx, boneAssy.boneTree, boneAssy.semanticBones);
-  const menuItems = mdVrStage4MenuPanels(panels, ctx, boneAssy, vrmMaterials, motion, perception);
+  const menuItems = mdVrStage4MenuPanels(path, panels, ctx, boneAssy, vrmMaterials, motion, perception);
   return mdVrStage5BuildResult(ctx, path, port, parseRes, boneAssy, vrmMaterials, motion, perception, menuItems);
 }
 
@@ -510,8 +527,10 @@ export async function buildVrmScene(
 export interface VrmMenuItemsOpts {
   /** 截图能力（ADR-052 P3：screenshotFromRenderer 共享 renderer）；null → 不注入 shot 项 */
   screenshot: (() => Promise<string | null>) | null;
-  /** 模型信息面板填充回调（视图层注入；缺失则 render 退化为 no-op） */
-  modelPanel?: (list: HTMLElement) => void;
+  /** 模型信息数据源（adapter build 构造：文件名 + 骨骼/材质数；model 面板 children 的数据输入） */
+  modelInfo: VrmModelInfoCtx;
+  /** 模型完整路径（截图保存文件名 + 假对象 _modelPath） */
+  modelPath: string;
   bonePanel: {
     /** 已构建骨骼树（buildVrmBoneTree 产物） */
     tree: BoneTree;
@@ -553,9 +572,11 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       dockGroup: "model",
       legacyTestId: "vrm-model-entry",
-      renderCustom:(list): void => {
-        o.modelPanel?.(list);
-      },
+      // [doc:adr-126-p4-b-1] 面板内容声明式化（P5 收尾：VRM 迁 children 样板，对齐 MMD）：
+      // children = vrmModelInfoNodes 纯数据节点（经 panels 注入，R1 禁 utils→views）。
+      // 此前 renderCustom 委托 makeModelPanelRenderer——视图层从未注入（no-op 空面板），
+      // 迁 children 顺带补上从未有过的模型信息内容。
+      children: o.panels?.modelInfoNodes?.(o.modelInfo) ?? [],
     },
     {
       id: "shot",
@@ -565,10 +586,10 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       dockGroup: "model",
       legacyTestId: "vrm-shot-entry",
-      renderCustom:(list): void => {
-        // ADR-052 P3：截图面板填充委托视图层（panels.makeShotPanelRenderer），缺失则 no-op
-        if (o.screenshot) o.panels?.makeShotPanelRenderer?.(o.screenshot)(list);
-      },
+      // [doc:adr-126-p4-b-1] 截图面板声明式化（P5 收尾：对齐 MMD/YSM shotNodes 样板，
+      // 复用 shot-panel-shared 六角度按钮）；此前委托 makeShotPanelRenderer——
+      // 视图层从未注入（no-op 空面板），迁 children 顺带补上截图功能。
+      children: o.panels?.shotNodes?.(o.screenshot, o.modelPath) ?? [],
     },
     {
       id: "material",

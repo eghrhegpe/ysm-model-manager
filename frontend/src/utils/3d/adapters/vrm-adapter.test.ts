@@ -239,8 +239,6 @@ function registeredItems(built: { menuItems?: Array<{ id: string; kind: string; 
 function makePanels(): VrmPanelHooks {
   return {
     makePanelRenderer: () => () => {},
-    makeModelPanelRenderer: () => {},
-    makeShotPanelRenderer: () => () => {},
     fillPlayPanel: () => {},
   };
 }
@@ -730,7 +728,8 @@ describe("vrmMenuItems 结构", () => {
   it("基础三项：model/shot/bones", () => {
     const items = vrmMenuItems({
       screenshot: () => Promise.resolve("shot"),
-      modelPanel: vi.fn(),
+      modelInfo: { modelName: "test", boneCount: 2, materialCount: 3 },
+      modelPath: "a/test.vrm",
       bonePanel: {
         tree: { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() },
         viewContainer: null,
@@ -785,7 +784,8 @@ describe("vrmMenuItems 结构", () => {
   it("有 play → 追加 vrma-play 项（dockGroup=motion）", () => {
     const items = vrmMenuItems({
       screenshot: () => Promise.resolve("shot"),
-      modelPanel: vi.fn(),
+      modelInfo: { modelName: "test", boneCount: 2, materialCount: 3 },
+      modelPath: "a/test.vrm",
       bonePanel: {
         tree: { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() },
         viewContainer: null,

@@ -58,9 +58,6 @@ export interface YsmAdapterOptions {
    * 缺失时菜单 render / 骨骼拾取联动退化为 no-op（测试与无面板场景安全）。
    */
   panels?: {
-    /** [doc:adr-126-p5-收口] YSM model 面板已走 schema-registry，fillModelPanel 旧路径可选
-     *  （兼容旧装配）；新装配只传 registerModelSchema */
-    fillModelPanel?: (list: HTMLElement, ctx: YsmControlsContext) => void;
     fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
@@ -364,8 +361,8 @@ function mdYsBuildMenuAndDebug(
     { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
   ];
   // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容由视图层注册的 builder 驱动
-  // （R1 禁 utils→views，注册钩子由视图层注入实现）。缺失时不注册——model 面板走
-  // renderCustom fallback（fillModelPanel，兼容 maid-3d 等未迁移调用者），不空白。
+  // （R1 禁 utils→views，注册钩子由视图层注入实现）。所有调用者（ysm-3d / maid-3d）都
+  // 经 registerModelSchema 注册；缺失时不注册 → schemaId 无 fallback（契约禁双通道），面板空渲染。
   opts.panels?.registerModelSchema?.(controlsCtx);
   const menuItems = ysmMenuItems({
     controlsCtx,
@@ -549,9 +546,6 @@ export interface YsmMenuItemsOpts {
   };
   /** 面板填充回调（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
   panels?: {
-    /** [doc:adr-126-p5-收口] YSM model 面板已走 schema-registry，fillModelPanel 旧路径可选
-     *  （兼容旧装配）；新装配只传 registerModelSchema */
-    fillModelPanel?: (list: HTMLElement, ctx: YsmControlsContext) => void;
     fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */

@@ -43,7 +43,6 @@ function fakeYsmOpts(): YsmMenuItemsOpts {
     bonePanel: fakeBonePanel(),
     // [doc:adr-126-p4-b-2] ysmShotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）
     panels: {
-      fillModelPanel: () => {},
       fillShotPanel: () => {},
       shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "x" }],
     },
@@ -104,6 +103,8 @@ function fakeBonePanel() {
 function fakeVrmOpts(): VrmMenuItemsOpts {
   return {
     screenshot: null,
+    modelInfo: { modelName: "测试.vrm", boneCount: 2, materialCount: 3 },
+    modelPath: "a/test.vrm",
     bonePanel: fakeBonePanel(),
     material: {
       list: () => [{ index: 0, name: "Body" }],
@@ -113,8 +114,14 @@ function fakeVrmOpts(): VrmMenuItemsOpts {
     },
     panels: {
       makePanelRenderer: () => (list) => setHtml(list, '<div data-testid="mat-0"></div>'),
-      makeModelPanelRenderer: (list) => setHtml(list, '<div data-testid="vrm-model-card">测试.vrm</div>'),
-      makeShotPanelRenderer: () => () => {},
+      // [doc:adr-126-p4-b-1] vrm model/shot 走 children 声明式（P5 收尾）：假工厂返回
+      // 非空节点，契约测试「panel 必有渲染通道」要求 children 非空
+      modelInfoNodes: () => [
+        { id: "vrm-fake-info", icon: "🧪", kind: "field" as const, labelKey: "preview.nameLabel", fallback: "名称", value: "测试.vrm" },
+      ],
+      shotNodes: () => [
+        { id: "vrm-fake-shot", icon: "📷", kind: "button" as const, labelKey: "preview.screenshot", fallback: "截图" },
+      ],
     },
   };
 }

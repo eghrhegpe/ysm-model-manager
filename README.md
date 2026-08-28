@@ -1,26 +1,29 @@
 # 🧱 YSM 模型管理器
 
-> 像 Steam 创意工坊一样，管理你的 Minecraft YSM 模型。导入、预览、分类、同步到整合包，一站完成。
+> > 像 Steam 创意工坊一样，管理你的 Minecraft YSM 模型。
+> > [https://eghrhegpe.github.io/ysm-model-manager/](https://eghrhegpe.github.io/ysm-model-manager/)
 
 **技术栈**：Go (Wails v3) + 原生 HTML/CSS/TS (Web Components + Shadow DOM) + Three.js + YSMParser WASM
 
-**平台支持**：✅ Windows (amd64) · ⚠️ macOS (实验性) · ✅ Linux (amd64) · ✅ Android (arm64，查看器模式)
+**✅ Windows (amd64) · ✅ Linux (amd64) · ⚠️ macOS (实验性)** 具备完整的导入、预览、分类、同步功能。
 
-> 🌐 **产品主页**: [https://eghrhegpe.github.io/ysm-model-manager/](https://eghrhegpe.github.io/ysm-model-manager/) — 功能介绍、视频演示、截图展示
-> 🕸️ **网页版**（ADR-049）：纯浏览器托管（可 GitHub Pages），同一代码库经 backend 适配器路由到 IndexedDB 模型库。Phase 0~3 已完成（含能力门控、主 UI 集成与 Web 端 e2e 回归）。
+**✅Android「3D预览器」** 授权公共仓库路径后， `os.*` 直读模型文件。
+
+**✅网页版「3D预览器」** 经 backend 适配器路由到 IndexedDB 模型库（`resolveBackend` 双实现）。
 
 ---
 
 ## ⚡ 快速开始
 
-1. **下载**：前往 [GitHub Releases](https://github.com/eghrhegpe/ysm-model-manager/releases) 下载最新的 `YSM-Model-Manager_windows_amd64.zip`
+1. **下载**： [GitHub Releases](https://github.com/eghrhegpe/ysm-model-manager/releases) 的 `YSM-Model-Manager_windows_amd64.exe`
 2. **解压**：解压到任意目录（如 `D:\YSM-Model-Manager\`）
 3. **首次配置**：启动程序 → 设置游戏根目录（`.minecraft` 文件夹）→ 设置模型仓库路径
 4. **开始使用**：把模型文件放入仓库目录，或通过拖拽导入
 
 > 📖 **详细说明见 [用户指南](docs/guide/index.md)**，包含 FAQ、故障排查、链接模式详解等。
-> 🎨 **设计规范见 [Design.md](docs/Design.md)**，AI 开发时的 UI 约束指南。
-> 🧭 **主站介绍见 [docs/index.md](docs/index.md)**，AI 协作规则见 [AGENTS.md](AGENTS.md)。
+> 🎨 **设计规范见 [Design.md](docs/Design.md)**， 包含 UI 设计指南。
+> 🧭 **主站介绍见 [docs/index.md](docs/index.md)**，包含 项目进展。
+> AI 协作规则见 [AGENTS.md](AGENTS.md)。
 
 ---
 
@@ -28,17 +31,16 @@
 
 左侧导航 → 右侧主区域，共 7 个功能模块：
 
-| 导航          | 功能                                       |
-| ------------- | ------------------------------------------ |
-| 📦 模型仓库   | 树形浏览、启用/禁用、搜索排序、3D 预览     |
-| 🎮 整合包管理 | 版本列表、同步状态、快捷安装               |
-| 🎨 创作者频道 | 创作者浏览、渐变头像、预设搜索、内嵌浏览器 |
-| 🧩 创意工坊   | GitHub 在线仓库列表、一键下载              |
-| 👴 仓库元老   | 健康度评分、资历最深、月度热力图、今日推荐 |
-| 🛠️ 诊断与冲突 | 操作日志、模型去重（可选保留）、冲突检测   |
-| ⚙️ 设置       | 卡片化设置、"关于"主页、主题与字体配置     |
-
-> **Android / 网页版为「查看器模式」**（ADR-046/ADR-049）：Android 固定公共仓库路径 + 授权后 `os.*` 直读，无 Minecraft Java 版/整合包概念（相关卡片与入口隐藏）；网页版经 backend 适配器路由到 IndexedDB 模型库（`resolveBackend` 双实现）。完整编辑/管理以桌面为准。
+| 导航          | 功能                                           |
+| ------------- | ---------------------------------------------- |
+| 🎲 3D 预览    | 直接看YSM、车万女仆、蓝图、投影、PMX、VRM 模型 |
+| 📦 模型仓库   | 树形浏览、启用/禁用、搜索排序、3D 预览         |
+| 🎮 整合包管理 | 版本列表、同步状态、快捷安装                   |
+| 🎨 创作者频道 | 创作者浏览、渐变头像、预设搜索、内嵌浏览器     |
+| 🧩 创意工坊   | GitHub 在线仓库列表、一键下载                  |
+| 👴 仓库元老   | 健康度评分、资历最深、月度热力图、今日推荐     |
+| 🛠️ 诊断与冲突 | 操作日志、模型去重（可选保留）、冲突检测       |
+| ⚙️ 设置       | 卡片化设置、"关于"主页、主题与字体配置         |
 
 ---
 
@@ -48,12 +50,14 @@
 
 <p align="center"><img src="docs/public/preview/模型仓库.png" width="80%" alt="模型仓库"></p>
 
-- 扫描 `.ysm` / `.zip` / `.7z` 模型文件（按 SHA256 去重）
-- 树形文件夹浏览 + 拖拽移动
+- 扫描9类模型文件，支持`.zip` / `.7z` 按 SHA256 去重）
+- 树形文件夹浏览 + 拖拽即移动
+  p`/`.7z` （按 SHA256 去重）
+- 树形文件夹浏览 + 拖拽即可导入到当前仓库页。
 - 搜索高亮 + 多字段排序（名称 / 大小 / 日期）
-- 文件大小颜色：<1MB 绿色，1~3MB 默认，>3MB 红色
+- 文件大小颜色：<1MB 绿色，1~3MB 默认，>3ban红色
 - 日期美化（今天显示时间，今年显示月日，往年显示完整日期）
-- 启用 / 禁用切换（加 `.disabled` 后缀，兼容历史 `.ban`），复选框批量操作
+- 启用 / 禁用切换（`.ban` 后缀），复选框批量操作
 - 文件夹开关（全部启用 / 全部禁用 / 混合翻转）
 - 右键菜单：禁用/启用、模型详情、打开文件夹
 - 📇 **生成 GitHub 索引**：扫描仓库生成 `index.json`，提交后即可在线浏览
@@ -79,9 +83,10 @@
 ### 🔄 同步与安装
 
 - 三种安装模式：📋 复制 / 🔗 硬链接（推荐） / 🔗 符号链接（不推荐）
-- 批量安装缺失 / 全覆盖安装 / 上传新模型到仓库
-- **文件监听器**（`fsnotify`）：仓库文件加/删 `.disabled`/`.ban` 时自动同步到所有整合包，无需手动操作（双后缀兼容）
+- 批量安装缺失 / 上传新模型到仓库
+- **文件监听器**（`fsnotify`）：仓库文件加/删 `.disabled` 时自动同步到所有整合包，无需手动操作
 - 状态同步：仓库启用/禁用 → 自动同步到所有整合包 custom 目录
+- 禁用模型自动隐藏（不出现在缺失列表），已安装自动加 `.ban`
 - 硬链接跨分区自动降级为复制
 - 游戏运行时文件被锁定自动跳过，退出后下次触发自动重试
 
@@ -306,24 +311,24 @@ node scripts/android-install.mjs
 
 ## 📖 文档索引
 
-| 文档                                                                 | 内容                                      |
-| -------------------------------------------------------------------- | ----------------------------------------- |
-| [`docs/guide/用户指南.md`](docs/guide/用户指南.md)                   | **用户手册**：安装、配置、功能详解、FAQ   |
-| [`docs/archive/architecture.md`](docs/archive/architecture.md) | 前端架构规范 + 组件拆分指南（已归档） |
-| [`docs/Design.md`](docs/Design.md)                 | UI 设计规范（CSS 变量、布局、字体）       |
-| [`docs/archive/bug-chronicle.md`](docs/archive/bug-chronicle.md) | Bug 排查记录（含 Debug Path Review，已归档） |
-| [`docs/archive/PROJECT_STATUS.md`](docs/archive/PROJECT_STATUS.md) | **项目当前状态**（已归档）          |
-| [`docs/archive/TASK_PLAN.md`](docs/archive/TASK_PLAN.md)                 | **AI 任务计划**（已归档）           |
-| [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md)     | **会话交接日志**（已归档）       |
-| [`docs/archive/3D/3d-rendering-report.md`](docs/archive/3D/3d-rendering-report.md)   | **3D 渲染引擎开发报告**（已归档） |
-| [`docs/releases/index.md`](docs/releases/index.md)         | 各版本发版说明（索引）                   |
-| [`docs/index.md`](docs/index.md)         | **主站介绍**（功能一览 + 站点地图 + 界面预览）    |
-| [`docs/knowledge/index.md`](docs/knowledge/index.md)                 | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |
-| [`docs/adr/index.md`](docs/adr/index.md) | **ADR 决策记录登记表**（架构决策追踪）    |
-| [`docs/governance-rules.md`](docs/governance-rules.md) | 前端治理规则手册（9 条规则 × 严重度 × 检测工具） |
-| [`docs/pitfalls.md`](docs/pitfalls.md) | 致命陷阱手册（11 条事故教训全量版）          |
-| [`frontend/AGENTS.md`](frontend/AGENTS.md) | 前端专属 AI 行为手册（DnD/调试/组件约束） |
-| [`docs/architecture.md`](docs/architecture.md) | 架构（3D 渲染标准 + YSMParser WASM 内嵌） |
+| 文档                                                                               | 内容                                                      |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [`docs/guide/用户指南.md`](docs/guide/用户指南.md)                                 | **用户手册**：安装、配置、功能详解、FAQ                   |
+| [`docs/archive/architecture.md`](docs/archive/architecture.md)                     | 前端架构规范 + 组件拆分指南（已归档）                     |
+| [`docs/Design.md`](docs/Design.md)                                                 | UI 设计规范（CSS 变量、布局、字体）                       |
+| [`docs/archive/bug-chronicle.md`](docs/archive/bug-chronicle.md)                   | Bug 排查记录（含 Debug Path Review，已归档）              |
+| [`docs/archive/PROJECT_STATUS.md`](docs/archive/PROJECT_STATUS.md)                 | **项目当前状态**（已归档）                                |
+| [`docs/archive/TASK_PLAN.md`](docs/archive/TASK_PLAN.md)                           | **AI 任务计划**（已归档）                                 |
+| [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md)               | **会话交接日志**（已归档）                                |
+| [`docs/archive/3D/3d-rendering-report.md`](docs/archive/3D/3d-rendering-report.md) | **3D 渲染引擎开发报告**（已归档）                         |
+| [`docs/releases/index.md`](docs/releases/index.md)                                 | 各版本发版说明（索引）                                    |
+| [`docs/index.md`](docs/index.md)                                                   | **主站介绍**（功能一览 + 站点地图 + 界面预览）            |
+| [`docs/knowledge/index.md`](docs/knowledge/index.md)                               | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |
+| [`docs/adr/index.md`](docs/adr/index.md)                                           | **ADR 决策记录登记表**（架构决策追踪）                    |
+| [`docs/governance-rules.md`](docs/governance-rules.md)                             | 前端治理规则手册（9 条规则 × 严重度 × 检测工具）          |
+| [`docs/pitfalls.md`](docs/pitfalls.md)                                             | 致命陷阱手册（11 条事故教训全量版）                       |
+| [`frontend/AGENTS.md`](frontend/AGENTS.md)                                         | 前端专属 AI 行为手册（DnD/调试/组件约束）                 |
+| [`docs/architecture.md`](docs/architecture.md)                                     | 架构（3D 渲染标准 + YSMParser WASM 内嵌）                 |
 
 ---
 

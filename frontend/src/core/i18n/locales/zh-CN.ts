@@ -1047,7 +1047,7 @@ export const zhCN: Record<string, string> = {
   "preview.noPostprocCap": "进入 3D 后再打开后处理面板",
   "preview.reflector": "反光地面",
   "preview.reflectorDesc": "基于 Reflector.js 的真实屏幕空间镜面地面（仅地面一层）",
-  "preview.reflectorOpacity": "反射强度",
+  "preview.reflectorOpacity": "反射不透明度",
   "preview.reflectorResolution": "反射精度",
   "preview.reflectorSize": "地面大小",
   "preview.fog": "雾效",

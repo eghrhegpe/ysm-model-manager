@@ -1069,7 +1069,7 @@ export const en: Record<string, string> = {
   "preview.shadowBiasDesc": "Fixes shadow Peter Panning (self-shadow moiré); typically between -0.001 and 0.",
   "preview.shadowNormalBias": "Normal Bias",
   "preview.shadowNormalBiasDesc": "Offset shadows along normals to eliminate acne and jagged edges at grazing angles.",
-  "preview.shadowCameraSize": "Directional Frustum",
+  "preview.shadowCameraSize": "Directional Shadow Frustum",
   "preview.shadowCameraSizeDesc": "Side length of the directional light orthographic shadow camera; larger = wider coverage, less detail.",
   "preview.noShadowCap": "Enter the 3D preview before opening the shadow panel",
   "preview.ground": "Ground",
@@ -1080,7 +1080,7 @@ export const en: Record<string, string> = {
   
   "preview.groundNormalStrength": "Normal Strength",
   "preview.groundGroupMaterial": "Surface Material",
-  "preview.groundMatSource": "Surface",
+  "preview.groundMatSource": "Surface Material",
   "preview.groundMatColor": "Base Color",
   "preview.groundMatLineColor": "Line Color",
   "preview.groundMatGridSize": "Cells",

@@ -972,7 +972,7 @@
   "preview.noPostprocCap": "3D 画面に入ってから開いてください",
   "preview.reflector": "反射床",
   "preview.reflectorDesc": "Reflector.js によるスクリーン空間鏡面床（床のみ）",
-  "preview.reflectorOpacity": "反射強度",
+  "preview.reflectorOpacity": "反射不透明度",
   "preview.reflectorResolution": "反射解像度",
   "preview.reflectorSize": "床サイズ",
   "preview.fog": "霧",

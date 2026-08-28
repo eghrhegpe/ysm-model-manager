@@ -20,7 +20,8 @@ describe("summaryCardHTML 占位与兜底", () => {
   it("无 summary 且 header 非 isYsm → 走完整卡片路径（名称回退 -）", () => {
     const html = summaryCardHTML(null, { name: "x" });
     expect(html).not.toContain("dp-placeholder");
-    expect(html).toContain("model-detail-title");
+    // 2026-08-28：顶部「📄 模型详情」标题已移除（tab 已表达层级，去重）
+    expect(html).not.toContain("model-detail-title");
     expect(html).toContain(">-</h3>");
   });
 });

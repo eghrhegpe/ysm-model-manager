@@ -1914,10 +1914,10 @@
 | `YsmSummary()` | `frontend/src/utils/format/summarize:27` | — |
 | `YSMHeader()` | `frontend/src/utils/format/summarize:52` | — |
 | `safeUrl()` | `frontend/src/utils/format/summarize:87` | 安全链接：仅放行 http/https，拦截 javascript:/data: 等危险 scheme（导出供统计卡作者链接复用） |
-| `summaryCardHTML()` | `frontend/src/utils/format/summarize:156` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
-| `DecodedStats()` | `frontend/src/utils/format/summarize:261` | 解码统计结果（原 spike 侧 YsmSummary，改名避免与上方元数据接口撞名） |
-| `findBones()` | `frontend/src/utils/format/summarize:273` | 递归找第一个数组（骨骼列表通常嵌在 model/bones 等层级）。 |
-| `summarizeDecoded()` | `frontend/src/utils/format/summarize:291` | 解析 main.json 提取骨骼/几何摘要（只做统计，不渲染） |
+| `summaryCardHTML()` | `frontend/src/utils/format/summarize:155` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
+| `DecodedStats()` | `frontend/src/utils/format/summarize:259` | 解码统计结果（原 spike 侧 YsmSummary，改名避免与上方元数据接口撞名） |
+| `findBones()` | `frontend/src/utils/format/summarize:271` | 递归找第一个数组（骨骼列表通常嵌在 model/bones 等层级）。 |
+| `summarizeDecoded()` | `frontend/src/utils/format/summarize:289` | 解析 main.json 提取骨骼/几何摘要（只做统计，不渲染） |
 | `YsmProperties()` | `frontend/src/utils/format/ysm-anim-config:14` | WASM 解码产物 ysm.json 的 properties 相关字段（仅取本模块需要的部分） |
 | `extractAnimGroupsAndConfigs()` | `frontend/src/utils/format/ysm-anim-config:34` | 从 ysm.json properties 提取动画分组与配置菜单。 |
 | `GH_REPO()` | `frontend/src/utils/gh-links:5` | — |

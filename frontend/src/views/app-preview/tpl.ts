@@ -126,7 +126,7 @@ export function statsCardHTML(
     texMapHtml = `<div class="pv-card-row" style="font-size:9px;color:var(--muted);padding:1px 0">📎 ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
   }
   return `
-<div class="pv-card-title">📊 ${t("preview.modelOverview")}${badge}</div>
+${badge ? `<div class="pv-card-title">${badge}</div>` : ""}
 <div class="pv-card-section pv-section-blue">
   <div class="pv-card-section-label">🔗 ${t("preview.modelStructure")}</div>
   <div class="pv-card-row">

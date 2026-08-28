@@ -132,7 +132,6 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
     : `<h3>${esc(name)}${freeBadge}</h3>`;
 
   return `<div class="content" id="preview-content">
-<div class="model-detail-title">📄 ${t("format.modelDetail")}</div>
 ${titleHtml}
 ${workHtml ? `<div class="md-row"><span class="md-label">${t("dialog.work")}</span><span class="md-value">${workHtml}</span></div>` : ""}
 ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-height:1.6;padding:6px 10px;background:var(--surf);border-radius:6px;border-left:3px solid var(--accent)">${tips}</div>` : ""}
@@ -236,7 +235,6 @@ export function summaryCardHTML(
     : "";
 
   return `<div class="content" id="preview-content">
-<div class="model-detail-title">📄 ${t("format.modelDetail")}</div>
 <h3>${esc(name)}${freeBadge}</h3>
 
 ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}

@@ -64,7 +64,9 @@ export interface PreviewMenuGroupDef {
 }
 
 export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
-  { id: "model", icon: "🧍", fallback: "模型" },
+  // dock 按钮文案与落地面板语义对齐（2026-08-28）：🧍 组点击直达 roles 面板（加载角色），
+  // 原 fallback「模型」与落地标题「加载角色」错位——改「角色」按钮即面板，用户无转译歧义
+  { id: "model", icon: "🧍", fallback: "角色" },
   { id: "motion", icon: "💃", fallback: "动作" },
   // 环境独立成组（2026-08-19 拆组）：体量 > 全部场景设置（sky/ground/env/fog/reflector），
   // 且地面/水面系统后续会持续膨胀，单独 root 按钮避免场景组挤爆

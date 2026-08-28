@@ -47,10 +47,10 @@
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
 | 前端·工具 | 168 | 679 |
-| frontend/views | 118 | 345 |
+| frontend/views | 118 | 343 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **499** | **2125** |
+| **合计** | **499** | **2123** |
 
 ## Go·头像
 
@@ -2209,10 +2209,8 @@
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:31` | — |
 | `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:36` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:43` | — |
-| `SHOT_KEYS()` | `frontend/src/views/app-preview/shot-panel-shared:17` | 截图六角度键（current/front/45/side/back45/all）——fillXxxShotPanel 与 shotButtonNodes 共用，防两处漂移 |
-| `SHOT_LABELS()` | `frontend/src/views/app-preview/shot-panel-shared:20` | 截图六角度 i18n 键（与 SHOT_KEYS 同序） |
-| `makeShotAction()` | `frontend/src/views/app-preview/shot-panel-shared:33` | 截图保存副作用：防连点 guard + toast 错误提示。fillXxxShotPanel（命令式）与 shotButtonNodes（声明式）共用 |
-| `shotButtonNodes()` | `frontend/src/views/app-preview/shot-panel-shared:64` | 截图面板声明式节点（6 button）：screenshotFn 为 null 时返回空数组（MMD 能力缺失不渲染）； undefined（YSM ctx 可选字段）时仍返回 6 |
+| `makeShotAction()` | `frontend/src/views/app-preview/shot-panel-shared:34` | 截图保存副作用：防连点 guard + toast 错误提示。fillXxxShotPanel（命令式）与 shotButtonNodes（声明式）共用 |
+| `shotButtonNodes()` | `frontend/src/views/app-preview/shot-panel-shared:65` | 截图面板声明式节点（6 button）：screenshotFn 为 null 时返回空数组（MMD 能力缺失不渲染）； undefined（YSM ctx 可选字段）时仍返回 6 |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
 | `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:10` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:36` | — |

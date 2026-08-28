@@ -13,11 +13,12 @@ import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
 import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
 
-/** 截图六角度键（current/front/45/side/back45/all）——fillXxxShotPanel 与 shotButtonNodes 共用，防两处漂移 */
-export const SHOT_KEYS = ["current", "front", "45", "side", "back45", "all"] as const;
+/** 截图六角度键（current/front/45/side/back45/all）——fillXxxShotPanel 与 shotButtonNodes 共用，防两处漂移。
+ *  仅本模块内消费（knip：导出但无外部 import = 死导出，勿再 export） */
+const SHOT_KEYS = ["current", "front", "45", "side", "back45", "all"] as const;
 
 /** 截图六角度 i18n 键（与 SHOT_KEYS 同序） */
-export const SHOT_LABELS = [
+const SHOT_LABELS = [
   "preview.screenshotCurrent",
   "preview.screenshotFront",
   "preview.screenshot45",

@@ -511,7 +511,7 @@
 | `frontend/src/views/app-preview/index.ts` | 244 |
 | `frontend/src/views/app-preview/index.ts` | 266 |
 | `frontend/src/views/app-preview/preview-library.ts` | 107 |
-| `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |
+| `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | `frontend/src/views/app-sidebar/events.ts` | 110 |
 | `frontend/src/views/app-sidebar/index.ts` | 150 |
 | `frontend/src/views/app-sidebar/index.ts` | 264 |

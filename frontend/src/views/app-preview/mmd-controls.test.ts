@@ -7,7 +7,6 @@ import * as THREE from "three";
 import {
   fillMmdModelPanel,
   fillMmdMorphPanel,
-  buildMaterialControls,
   mmdModelInfoNodes,
   mmdShotNodes,
   type MmdBottomNavCtx,
@@ -364,134 +363,7 @@ describe("fillMmdMorphPanel（独立表情面板，对齐材质折叠模式）",
   });
 });
 
-describe("buildMaterialControls", () => {
-  it("渲染材质面板（显隐 + 透明度滑条），行数 = pmx.materials 长度", () => {
-    const { ctx } = makeCtx();
-    const container = document.createElement("div");
-    buildMaterialControls(container, makeMatBridge(ctx));
-    expect(container.querySelector(".mmd-mat-row")).not.toBeNull();
-    expect(container.querySelectorAll(".mmd-mat-row").length).toBe(28); // = pmx.materials.length
-    expect(container.querySelector(".mmd-mat-op")).not.toBeNull(); // 透明度滑条
-  });
-
-  it("点击显隐按钮 → Material.visible 切换", () => {
-    const { ctx, mesh } = makeCtx();
-    const container = document.createElement("div");
-    buildMaterialControls(container, makeMatBridge(ctx));
-    const eye = container.querySelector(".mmd-mat-eye") as HTMLElement;
-    const mat = (mesh.material as THREE.Material[])[0]; // 多材质数组，取第 0 个
-    const before = mat.visible;
-    eye.click();
-    expect(mat.visible).toBe(!before);
-  });
-
-  it("材质索引越界时 getDetail 返回 null 不崩溃", () => {
-    const { ctx } = makeCtx();
-    const container = document.createElement("div");
-    // 使用空 bridge（items 长度 = 0），不触发 getDetail 越界
-    buildMaterialControls(container, makeEmptyBridge());
-    // 应显示"无材质"提示，而不是崩溃
-    expect(container.textContent).toContain("无材质");
-  });
-
-  it("透明度滑条改变 → setOpacity 被调用且值映射正确（0-100 → 0-1）", () => {
-    let capturedOpacity = -1;
-    const bridge = makeStubBridge({
-      setOpacityFn: (i: number, o: number) => { capturedOpacity = o; },
-    });
-    const container = document.createElement("div");
-    buildMaterialControls(container, bridge);
-    const slider = container.querySelector<HTMLInputElement>('.mmd-mat-op')!;
-    slider.value = "50";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(capturedOpacity).toBe(0.5);
-  });
-
-  it("透明度滑条设为 0 → 完全不透明（opacity=0）", () => {
-    let capturedOpacity = -1;
-    const bridge = makeStubBridge({
-      setOpacityFn: (i: number, o: number) => { capturedOpacity = o; },
-    });
-    const container = document.createElement("div");
-    buildMaterialControls(container, bridge);
-    const slider = container.querySelector<HTMLInputElement>('.mmd-mat-op')!;
-    slider.value = "0";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(capturedOpacity).toBe(0);
-  });
-
-  it("透明度滑条设为 100 → 完全不透明（opacity=1）", () => {
-    let capturedOpacity = -1;
-    const bridge = makeStubBridge({
-      setOpacityFn: (i: number, o: number) => { capturedOpacity = o; },
-    });
-    const container = document.createElement("div");
-    buildMaterialControls(container, bridge);
-    const slider = container.querySelector<HTMLInputElement>('.mmd-mat-op')!;
-    slider.value = "100";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(capturedOpacity).toBe(1);
-  });
-
-  it("可见性状态持久化：点击后再次 getDetail 反映新状态", () => {
-    const { ctx } = makeSingleMatCtx();
-    const container = document.createElement("div");
-    buildMaterialControls(container, makeMatBridge(ctx));
-    const eye = container.querySelector<HTMLElement>(".mmd-mat-eye")!;
-    const bridge = makeMatBridge(ctx);
-    // 初始为 false（makeSingleMatCtx 设置了 visible=false）
-    expect(bridge.getDetail(0)?.visible).toBe(false);
-    expect(eye.textContent).toBe("🚫");
-    // 点击显示
-    eye.click();
-    expect(bridge.getDetail(0)?.visible).toBe(true);
-    expect(eye.textContent).toBe("👁");
-    // 再次点击隐藏
-    eye.click();
-    expect(bridge.getDetail(0)?.visible).toBe(false);
-    expect(eye.textContent).toBe("🚫");
-  });
-
-  it("empty bridge（list 返回空）→ 渲染（无材质）提示，不崩溃", () => {
-    const container = document.createElement("div");
-    buildMaterialControls(container, makeEmptyBridge());
-    expect(container.querySelector(".slide-sublabel")).not.toBeNull();
-    expect(container.textContent).toContain("（无材质）");
-  });
-
-  it("单个材质的面板渲染（行数 = 1）", () => {
-    const { ctx } = makeSingleMatCtx();
-    const container = document.createElement("div");
-    buildMaterialControls(container, makeMatBridge(ctx));
-    expect(container.querySelectorAll(".mmd-mat-row").length).toBe(1);
-    expect(container.querySelector(".mmd-mat-eye")).not.toBeNull();
-    expect(container.querySelector(".mmd-mat-op")).not.toBeNull();
-  });
-
-  it("行元素的 data-testid 格式正确（mat-<index>）", () => {
-    const { ctx } = makeCtx();
-    const container = document.createElement("div");
-    buildMaterialControls(container, makeMatBridge(ctx));
-    const firstRow = container.querySelector<HTMLElement>('[data-testid="mat-0"]');
-    expect(firstRow).not.toBeNull();
-    const lastRow = container.querySelector<HTMLElement>('[data-testid="mat-27"]');
-    expect(lastRow).not.toBeNull();
-  });
-});
-
 describe("边界条件", () => {
-  it("material.bridge 的 list() 抛出异常时，buildMaterialControls 不崩溃", () => {
-    const badBridge: MaterialControlBridge = {
-      list: () => { throw new Error("bridge list failed"); },
-      getDetail: () => null,
-      setVisible: () => {},
-      setOpacity: () => {},
-    };
-    const container = document.createElement("div");
-    // 预期抛错（无 try-catch 包裹）
-    expect(() => buildMaterialControls(container, badBridge)).toThrow("bridge list failed");
-  });
-
   it("fillMmdModelPanel 的 mesh 无 morphTargetDictionary → 静默返回", () => {
     const rawMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),

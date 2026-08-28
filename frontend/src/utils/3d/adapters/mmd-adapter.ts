@@ -50,6 +50,7 @@ import { buildLipMorphIndices } from "../perception/lipsync.ts"; // 多 morph in
 import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK）
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
+import { materialNodes } from "./material-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import { getCustomAnimPath, filterAnimFiles } from "./mmd-anim-library.ts";
 // import { createBlinkController } from "../perception/blink.ts"; // 待 three-mmd 暴露 morph 权重 API 后接入
@@ -181,7 +182,6 @@ export interface MmdPanelHooks {
   fillMorphPanel: (list: HTMLElement, ctx: MmdBottomNavCtx) => void;
   fillPlayPanel: (list: HTMLElement, bridge: MmdPlayBridge) => void;
   fillShotPanel: (list: HTMLElement, ctx: MmdBottomNavCtx, screenshot: (() => Promise<string | null>) | null) => void;
-  buildMaterialControls: (container: HTMLElement, bridge: MaterialControlBridge) => void;
   /** 声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归）：R1 禁 utils 运行时依赖 views，
    *  mmdModelInfoNodes / mmdShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
   modelInfoNodes?: (ctx: MmdBottomNavCtx) => PreviewMenuNode[];
@@ -1294,7 +1294,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       legacyTestId: "mmd-material-entry",
       dockGroup: "model", // 底栏 🧍 模型组
-      renderCustom:(list) => o.panels?.buildMaterialControls?.(list, o.material),
+      children: materialNodes(o.material),
     },
   ];
   // [doc:adr-126-p4-b-1] 截图面板条件注入：screenshot 能力缺失（null）→ 不注入项

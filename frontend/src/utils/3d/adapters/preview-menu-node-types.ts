@@ -47,6 +47,7 @@ export type PreviewMenuNodeKind =
   | "row" // 列表行（纹理/材质/bone 等动态列表）
   | "divider"
   | "sectionTitle"
+  | "material-row" // [doc:adr-126-p5] 组合控件行（label + eye 显隐 + opacity 滑条）——审计 #3 material 声明式化
   | "custom";
 
 /** 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） */
@@ -115,6 +116,10 @@ export interface PreviewMenuNode {
     danger?: boolean;
     /** 兼容既有 e2e 选择器的 legacy data-testid（如 preview-close-3d / env-menu-btn / ysm-roles-entry），渲染为 id 属性 */
     legacyTestId?: string;
+    /** material-row 类型：行内组合控件——eye 显隐 toggle（[doc:adr-126-p5] 审计 #3 组合行增强） */
+    eye?: { get: () => boolean; set: (v: boolean) => void };
+    /** material-row 类型：行内组合控件——opacity 透明度滑条（显示值 0-100，set 收 0-100） */
+    opacity?: { get: () => number; set: (v: number) => void };
   }
 
 /** 类型守卫：节点是否为 folder（可下钻） */

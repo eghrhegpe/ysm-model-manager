@@ -5,7 +5,7 @@
 import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter, type Mount3DOptions } from "../../utils/3d/adapters/mount-preview-core.ts";
 import { buildMmdScene, type MmdPanelHooks } from "../../utils/3d/adapters/mmd-adapter.ts";
 import { makeMmdDataPort } from "./mmd-data-port.ts";
-import { fillMmdModelPanel, fillMmdMorphPanel, fillMmdPlayPanel, fillMmdShotPanel, buildMaterialControls, mmdModelInfoNodes, mmdShotNodes } from "./mmd-controls.ts";
+import { fillMmdModelPanel, fillMmdMorphPanel, fillMmdPlayPanel, fillMmdShotPanel, mmdModelInfoNodes, mmdShotNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.pmx/.pmd→"mmd"）
@@ -16,7 +16,6 @@ const mmdPanelHooks: MmdPanelHooks = {
   fillMorphPanel: fillMmdMorphPanel,
   fillPlayPanel: fillMmdPlayPanel,
   fillShotPanel: fillMmdShotPanel,
-  buildMaterialControls,
   modelInfoNodes: mmdModelInfoNodes,
   shotNodes: mmdShotNodes,
 };

@@ -21,6 +21,7 @@ import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截�
 import { renderLoadingState } from "./preview-loading.ts";
 import { b64ToBytes } from "../base64.ts";
 import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
+import { materialNodes } from "./material-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { BoneTree } from "../bone-tools.ts";
@@ -171,7 +172,6 @@ export interface VrmModelInfoCtx {
 
 /** 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） */
 export interface VrmPanelHooks {
-  makePanelRenderer: (bridge: VrmMaterialControlBridge) => (list: HTMLElement) => void;
   /** 声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归，P5 收尾 VRM 对齐 MMD）：
    *  vrmModelInfoNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
   modelInfoNodes?: (ctx: VrmModelInfoCtx) => PreviewMenuNode[];
@@ -601,9 +601,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       legacyTestId: "vrm-material-entry",
       dockGroup: "model",
-      renderCustom:(list): void => {
-        o.panels?.makePanelRenderer?.(o.material)(list);
-      },
+      children: materialNodes(o.material),
     },
     {
       id: "bones",

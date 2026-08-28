@@ -90,6 +90,34 @@ describe("renderMenu 新 kind", () => {
     expect(on).toBe(false);
   });
 
+  it("material-row: 渲染组合控件行（label + eye + slider），eye 点击翻转 / slider 触发 set", () => {
+    let visible = true;
+    let opacity = 80;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "mat-0",
+        kind: "material-row",
+        labelKey: "Body",
+        fallback: "Body",
+        eye: { get: () => visible, set: (v: boolean) => { visible = v; } },
+        opacity: { get: () => opacity, set: (v: number) => { opacity = v; } },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-mat-0"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.textContent).toContain("Body");
+    const eye = row.querySelector("button") as HTMLButtonElement;
+    eye.click();
+    expect(visible).toBe(false);
+    const slider = row.querySelector("input[type=range]") as HTMLInputElement;
+    expect(slider.value).toBe("80");
+    slider.value = "30";
+    slider.dispatchEvent(new Event("input"));
+    expect(opacity).toBe(30);
+  });
+
   it("row: 渲染动态列表行", () => {
     const nodes: PreviewMenuNode[] = [
       { id: "tex-0", kind: "row", labelKey: "skin.png", value: "64x64" },

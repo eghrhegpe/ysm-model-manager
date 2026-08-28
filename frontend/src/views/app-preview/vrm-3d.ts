@@ -6,7 +6,7 @@
 import { mount3D, cleanupPreview, invalidatePreview, switchPreview, type PreviewAdapter, type Mount3DOptions } from "../../utils/3d/adapters/mount-preview-core.ts";
 import { buildVrmScene, type VrmPanelHooks } from "../../utils/3d/adapters/vrm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
-import { makeVrmPanelRenderer, vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
+import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
 import { fillMmdPlayPanel } from "./mmd-controls.ts";
 import { withPreviewExtras, registerReRoute, openModel3DFullscreen } from "./preview-library.ts";
 
@@ -31,7 +31,6 @@ async function addOpLog(op: string, msg: string, status: "ok" | "fail" | "warn",
 }
 
 const vrmPanelHooks: VrmPanelHooks = {
-  makePanelRenderer: makeVrmPanelRenderer,
   // [doc:adr-126-p4-b-1] model 面板走 children 声明式（对齐 MMD）；此前 makeModelPanelRenderer
   // 从未注入（no-op 空面板），迁 children 顺带补上模型信息内容
   modelInfoNodes: vrmModelInfoNodes,

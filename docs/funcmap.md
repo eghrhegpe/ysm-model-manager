@@ -45,12 +45,12 @@
 | 前端·特性 | 17 | 84 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
-| frontend/ui | 18 | 64 |
-| 前端·工具 | 171 | 698 |
-| frontend/views | 118 | 348 |
+| frontend/ui | 18 | 65 |
+| 前端·工具 | 172 | 700 |
+| frontend/views | 118 | 346 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **502** | **2147** |
+| **合计** | **503** | **2148** |
 
 ## Go·头像
 
@@ -1271,6 +1271,7 @@
 | `installUiComponentsStyles()` | `frontend/src/ui/ui-components-styles:25` | 将组件样式注入 document.head（全局/light-DOM 场景）。幂等，仅注入一次。 |
 | `SLIDER_QUARTER_LARGE_STEP()` | `frontend/src/ui/ui-constants:6` | 左区大幅减步进：全范围 15% |
 | `SLIDER_QUARTER_SMALL_STEP()` | `frontend/src/ui/ui-constants:8` | 中左/中右微调步进：全范围 5% |
+| `PREVIEW_OVERLAY_ID()` | `frontend/src/ui/ui-constants:11` | 3D 全屏预览 overlay 根容器 ID（mount-preview-core 挂载 / app-tree 快捷键门禁共用） |
 | `HeaderToggleConfig()` | `frontend/src/ui/ui-header-toggle:82` | — |
 | `createHeaderToggle()` | `frontend/src/ui/ui-header-toggle:100` | 创建标题栏小型开关。返回 `&lt;label class="toggle header-toggle"&gt;`， 含双触发去重（跳过 target===input 的 synthetic |
 | `cardContainer()` | `frontend/src/ui/ui-helpers` | — |
@@ -1338,13 +1339,15 @@
 | `FbxSceneData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:88` | — |
 | `captureTextureName()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:102` | — |
 | `fbxSceneToData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:209` | — |
-| `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:15` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
-| `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:29` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
-| `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:46` | 创建并绑定所有 3D 预览输入事件：WASD 键盘 + 拖拽自转 + resize。 |
+| `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:27` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
+| `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:42` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
+| `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:111` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
 | `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:416` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层控件钩子。 |
 | `litematicMenuItems()` | `frontend/src/utils/3d/adapters/litematic-adapter:459` | 构造 litematic 专属菜单项： 分层切片调节（axis/layer 控件）作为 🧍 模型组的一个面板项， 点击后弹出面板，内含轴选择 + 分层模式 + 滑块控件。 |
-| `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:64` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:179` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
+| `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
+| `materialNodes()` | `frontend/src/utils/3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
+| `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:65` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:180` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
 | `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1159` | — |
 | `MmdMenuItemsOpts()` | `frontend/src/utils/3d/adapters/mmd-adapter:1232` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
 | `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1264` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
@@ -1394,17 +1397,17 @@
 | `makeZipOverlayPort()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:113` | 创建 ZIP Overlay Port：包装 MmdDataPort， 将 zip 内路径前缀（如 "/repo/miku.zip!/"）路由到内存中的 zip entries。 |
 | `prepareMmdZipInput()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:202` | 构造完整的 zip 包装流程： 检测 zip → 解析 zip → 创建 overlay → 返回 { port, rootPath } 调用方只需： const { port, |
 | `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:218` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
-| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:75` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
-| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:94` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
-| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:120` | — |
-| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:130` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
-| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:179` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
-| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:184` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
-| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:204` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
-| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:217` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
-| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:223` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
-| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:228` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
-| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:246` | — |
+| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:76` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
+| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:95` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
+| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:121` | — |
+| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:131` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
+| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:180` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
+| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:185` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
+| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:205` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
+| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:218` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
+| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:224` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
+| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:229` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
+| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:247` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
 | `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:24` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
 | `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:47` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
@@ -1430,12 +1433,12 @@
 | `PreviewSnapshot()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:29` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
 | `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:32` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
 | `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:38` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
-| `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:53` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
-| `PreviewMenuNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:78` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
-| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:121` | 类型守卫：节点是否为 folder（可下钻） |
-| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:126` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
-| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:139` | 递归收集全部节点 id（供 id 唯一性契约测试） |
-| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:298` | — |
+| `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:54` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
+| `PreviewMenuNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:79` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
+| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:126` | 类型守卫：节点是否为 folder（可下钻） |
+| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:131` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
+| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:144` | 递归收集全部节点 id（供 id 唯一性契约测试） |
+| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:339` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu-roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:38` | — |
 | `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:97` | — |
@@ -1486,11 +1489,11 @@
 | `PmxObject()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:127` | — |
 | `PmxReader()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader:62` | PmxReader is a static class that parses PMX data |
 | `FBXLoader()` | `frontend/src/utils/3d/adapters/vendor/fbx/FBXLoader:79` | A loader for the FBX format. |
-| `VrmDataPort()` | `frontend/src/utils/3d/adapters/vrm-adapter:30` | VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `VrmMetaInfo()` | `frontend/src/utils/3d/adapters/vrm-adapter:87` | VRM meta 归一化信息（meta 卡展示用） |
-| `readVrmMeta()` | `frontend/src/utils/3d/adapters/vrm-adapter:106` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
-| `VrmModelInfoCtx()` | `frontend/src/utils/3d/adapters/vrm-adapter:166` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
-| `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:173` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
+| `VrmDataPort()` | `frontend/src/utils/3d/adapters/vrm-adapter:31` | VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `VrmMetaInfo()` | `frontend/src/utils/3d/adapters/vrm-adapter:88` | VRM meta 归一化信息（meta 卡展示用） |
+| `readVrmMeta()` | `frontend/src/utils/3d/adapters/vrm-adapter:107` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
+| `VrmModelInfoCtx()` | `frontend/src/utils/3d/adapters/vrm-adapter:167` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
+| `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:174` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
 | `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:509` | — |
 | `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:529` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
 | `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:567` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
@@ -2189,10 +2192,10 @@
 | `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:109` | 关闭活跃女仆 3D 预览 |
 | `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:114` | 作废在途女仆 3D 加载 |
 | `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:328` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
-| `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:30` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
-| `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:35` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
-| `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:40` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
-| `invalidateMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:45` | 任意新预览派发时调用，作废在途 MMD 加载 |
+| `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:29` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
+| `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:34` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
+| `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:39` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
+| `invalidateMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:44` | 任意新预览派发时调用，作废在途 MMD 加载 |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/mmd-controls` | — |
 | `MmdBottomNavCtx()` | `frontend/src/views/app-preview/mmd-controls:28` | — |
 | `fillMmdModelPanel()` | `frontend/src/views/app-preview/mmd-controls:41` | MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） |
@@ -2201,9 +2204,8 @@
 | `MmdPlayBridge()` | `frontend/src/views/app-preview/mmd-controls:119` | MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） |
 | `fillMmdPlayPanel()` | `frontend/src/views/app-preview/mmd-controls:132` | MMD 播放面板：播放/暂停 + 多动作切换 + 空态提示 |
 | `MaterialControlBridge()` | `frontend/src/views/app-preview/mmd-controls:200` | 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） |
-| `buildMaterialControls()` | `frontend/src/views/app-preview/mmd-controls:216` | 在 container 渲染 MMD 材质面板：每行 = 显隐开关（👁/🚫）+ 名称 + 透明度滑条。 |
-| `mmdShotNodes()` | `frontend/src/views/app-preview/mmd-controls:287` | [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。 |
-| `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:303` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
+| `mmdShotNodes()` | `frontend/src/views/app-preview/mmd-controls:217` | [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。 |
+| `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:233` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
 | `makeMmdDataPort()` | `frontend/src/views/app-preview/mmd-data-port:11` | 构建一个接入 Go RPC 的 MMD 数据端口；scope 仅用于 AddOpLog 的运行时环打标 （角色预览用 "mmd-preview"，场景预览用 "mmd-scene" |
 | `resolveMmdSiblings()` | `frontend/src/views/app-preview/mmd-siblings:13` | 同类型 MMD 模型候选（委托共享底座 resolveSiblingsByType）；失败返回 []（下拉不渲染） |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:12` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
@@ -2221,9 +2223,9 @@
 | `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:60` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
 | `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:132` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
 | `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:149` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
-| `createScene3D()` | `frontend/src/views/app-preview/scene-3d:35` | 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） |
-| `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:40` | 清理场景 3D（WebGL renderer + rAF 循环） |
-| `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:45` | 任意新预览派发时调用，作废在途场景加载 |
+| `createScene3D()` | `frontend/src/views/app-preview/scene-3d:34` | 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） |
+| `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:39` | 清理场景 3D（WebGL renderer + rAF 循环） |
+| `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:44` | 任意新预览派发时调用，作废在途场景加载 |
 | `resolveSceneSiblings()` | `frontend/src/views/app-preview/scene-siblings:8` | 场景模型候选（只扫 SceneModel 子目录）；失败返回 [] |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:31` | — |
 | `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:36` | — |
@@ -2266,13 +2268,12 @@
 | `getPrefer3D()` | `frontend/src/views/app-preview/utils:60` | — |
 | `setPrefer3D()` | `frontend/src/views/app-preview/utils:63` | — |
 | `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:147` | 剥离 YSGP 文本头部，返回标准二进制格式 |
-| `createVrm3D()` | `frontend/src/views/app-preview/vrm-3d:50` | 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 |
-| `cleanupVrm3D()` | `frontend/src/views/app-preview/vrm-3d:65` | 清理 VRM 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
-| `invalidateVrmPreview()` | `frontend/src/views/app-preview/vrm-3d:70` | 任意新预览派发时调用，作废在途 VRM 加载 |
+| `createVrm3D()` | `frontend/src/views/app-preview/vrm-3d:49` | 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 |
+| `cleanupVrm3D()` | `frontend/src/views/app-preview/vrm-3d:64` | 清理 VRM 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
+| `invalidateVrmPreview()` | `frontend/src/views/app-preview/vrm-3d:69` | 任意新预览派发时调用，作废在途 VRM 加载 |
 | `VrmMaterialControlBridge()` | `frontend/src/views/app-preview/vrm-controls:18` | 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 |
-| `vrmModelInfoNodes()` | `frontend/src/views/app-preview/vrm-controls:98` | VRM 模型信息声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdModelInfoNodes） |
-| `vrmShotNodes()` | `frontend/src/views/app-preview/vrm-controls:114` | VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）： screenshotFn null（无 |
-| `makeVrmPanelRenderer()` | `frontend/src/views/app-preview/vrm-controls:130` | — |
+| `vrmModelInfoNodes()` | `frontend/src/views/app-preview/vrm-controls:26` | VRM 模型信息声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdModelInfoNodes） |
+| `vrmShotNodes()` | `frontend/src/views/app-preview/vrm-controls:42` | VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）： screenshotFn null（无 |
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:21` | — |
 | `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:45` | — |
 | `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:58` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
@@ -2337,7 +2338,7 @@
 | `updateSelectCount()` | `frontend/src/views/app-tree/events:392` | — |
 | `bindTreeEvents()` | `frontend/src/views/app-tree/events:496` | — |
 | `appTreeStyle()` | `frontend/src/views/app-tree/index:12` | — |
-| `AppTree()` | `frontend/src/views/app-tree/index:62` | — |
+| `AppTree()` | `frontend/src/views/app-tree/index:63` | — |
 | `TreeEntry()` | `frontend/src/views/app-tree/loader:11` | 树条目（loader 转换后的渲染格式） |
 | `loadEntries()` | `frontend/src/views/app-tree/loader:68` | 从 Go 后端加载仓库文件列表，返回格式化的 entries 扁平化架构下每个 MMD 子类型为独立顶级类型，直接用 subdir 作为类型 ID 查表 |
 | `TreeRow()` | `frontend/src/views/app-tree/render:22` | 扁平化行（虚拟滚动数据单元） |

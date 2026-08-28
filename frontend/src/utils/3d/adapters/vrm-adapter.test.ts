@@ -238,7 +238,6 @@ function registeredItems(built: { menuItems?: Array<{ id: string; kind: string; 
 
 function makePanels(): VrmPanelHooks {
   return {
-    makePanelRenderer: () => () => {},
     fillPlayPanel: () => {},
   };
 }
@@ -837,7 +836,7 @@ describe("vrmMenuItems 结构", () => {
         setOpacity: () => {},
       },
       play: null,
-      panels: { makePanelRenderer: () => () => {}, modelInfoNodes: infoCb, shotNodes: shotCb },
+      panels: { modelInfoNodes: infoCb, shotNodes: shotCb },
     });
     expect(items.find((i) => i.id === "model")?.children?.length).toBe(0);
     expect(infoCb).toHaveBeenCalledWith({ modelName: "模型A", boneCount: 52, materialCount: 3 });

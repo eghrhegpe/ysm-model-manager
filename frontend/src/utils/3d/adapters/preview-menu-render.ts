@@ -267,6 +267,47 @@ function rmAppendToggle(container: HTMLElement, node: PreviewMenuNode): void {
   container.appendChild(wrap);
 }
 
+/** [子函数 5.75/6] material-row：组合控件行（label + eye 显隐 + opacity 滑条）——
+ *  [doc:adr-126-p5] 审计 #3 组合行增强；eye/opacity 闭包经 bridge 下沉（对齐旧
+ *  buildMaterialControls 语义：点击翻转显隐、滑条改透明度） */
+function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): void {
+  const wrap = document.createElement("div");
+  wrap.className = "slide-item";
+  wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 10px";
+  wrap.dataset.testid = "preview-" + node.id;
+  const eye = document.createElement("button");
+  eye.type = "button";
+  eye.style.cssText = "flex:0 0 auto;background:none;border:none;cursor:pointer;font-size:14px;padding:0;line-height:1";
+  const eyeApply = (v: boolean): void => {
+    eye.textContent = v ? "👁" : "🚫";
+    eye.title = v ? "隐藏" : "显示";
+  };
+  eyeApply(node.eye?.get() ?? true);
+  eye.onclick = (e: MouseEvent): void => {
+    e.stopPropagation();
+    const next = !node.eye?.get();
+    node.eye?.set(next);
+    eyeApply(next);
+  };
+  wrap.appendChild(eye);
+  const lb = document.createElement("span");
+  lb.className = "slide-label";
+  lb.style.cssText = "flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12px;color:rgba(255,255,255,0.85)";
+  lb.textContent = rmLabel(node);
+  wrap.appendChild(lb);
+  const op = document.createElement("input");
+  op.type = "range";
+  op.min = "0";
+  op.max = "100";
+  op.value = String(node.opacity?.get() ?? 100);
+  op.style.cssText = "flex:0 0 auto;width:72px;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+  op.oninput = (): void => {
+    node.opacity?.set(Number(op.value));
+  };
+  wrap.appendChild(op);
+  container.appendChild(wrap);
+}
+
 /** [子函数 6/6] divider + sectionTitle：两个轻量节点共用 tiny 子函数 */
 function rmAppendDecor(container: HTMLElement, node: PreviewMenuNode): void {
   if (node.kind === "divider") {
@@ -313,6 +354,8 @@ export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], dep
       rmAppendSelect(container, node, snapshot, deps.menu);
     } else if (node.kind === "toggle") {
       rmAppendToggle(container, node);
+    } else if (node.kind === "material-row") {
+      rmAppendMaterialRow(container, node);
     } else if (node.kind === "divider" || node.kind === "sectionTitle") {
       rmAppendDecor(container, node);
     } else {

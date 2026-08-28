@@ -81,7 +81,6 @@ function fakeMmdOpts(overrides: Partial<MmdMenuItemsOpts> = {}): MmdMenuItemsOpt
       fillMorphPanel: (list) => setHtml(list, '<div data-testid="mmd-morph-card"></div>'),
       fillPlayPanel: (list) => setHtml(list, '<button data-testid="mmd-play"></button><select data-testid="mmd-motion"></select>'),
       fillShotPanel: () => {},
-      buildMaterialControls: (list) => setHtml(list, '<div data-testid="mat-0"></div>'),
       // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
       modelInfoNodes: () => [{ id: "mmd-model-name", kind: "field", labelKey: "x", value: "测试.pmx" }],
       shotNodes: () => [],
@@ -113,7 +112,6 @@ function fakeVrmOpts(): VrmMenuItemsOpts {
       setOpacity: vi.fn(),
     },
     panels: {
-      makePanelRenderer: () => (list) => setHtml(list, '<div data-testid="mat-0"></div>'),
       // [doc:adr-126-p4-b-1] vrm model/shot 走 children 声明式（P5 收尾）：假工厂返回
       // 非空节点，契约测试「panel 必有渲染通道」要求 children 非空
       modelInfoNodes: () => [
@@ -473,14 +471,14 @@ describe("面板渲染（安全 panel 逐个打开）", () => {
   it("mmd material 面板：材质行渲染（data-testid=mat-<i>）", () => {
     const { overlay, handle } = mountWith(mmdMenuItems(fakeMmdOpts()));
     handle.openPanel("material");
-    expect(overlay.querySelector('[data-testid=mat-0]')).not.toBeNull();
+    expect(overlay.querySelector('[data-testid=preview-mat-0]')).not.toBeNull();
     handle.dispose();
   });
 
   it("vrm material 面板：材质行渲染（data-testid=mat-<i>）", () => {
     const { overlay, handle } = mountWith(vrmMenuItems(fakeVrmOpts()));
     handle.openPanel("material");
-    expect(overlay.querySelector('[data-testid="mat-0"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-testid="preview-mat-0"]')).not.toBeNull();
     handle.dispose();
   });
 

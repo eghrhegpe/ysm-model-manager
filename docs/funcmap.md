@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 168 | 674 |
+| 前端·工具 | 168 | 679 |
 | frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **498** | **2113** |
+| **合计** | **498** | **2118** |
 
 ## Go·头像
 
@@ -1415,7 +1415,8 @@
 | `LoadingProgressMode()` | `frontend/src/utils/3d/adapters/preview-loading:14` | 加载进度条模式：indeterminate（循环动画）| determinate（固定 id + transition，供外部更新宽度） |
 | `renderLoadingState()` | `frontend/src/utils/3d/adapters/preview-loading:17` | 3D 预览加载态：loadingEl 渲染图标 + 标签 + 进度条 |
 | `showLoadFailure()` | `frontend/src/utils/3d/adapters/preview-loading:35` | 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 |
-| `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-cap-controls:421` | — |
+| `collectVisiblePredicates()` | `frontend/src/utils/3d/adapters/preview-menu-cap-controls:432` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
+| `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-cap-controls:436` | — |
 | `PreviewMenuItemKind()` | `frontend/src/utils/3d/adapters/preview-menu-defs:30` | — |
 | `PreviewMenuGroupId()` | `frontend/src/utils/3d/adapters/preview-menu-defs:31` | — |
 | `PreviewMenuItemDef()` | `frontend/src/utils/3d/adapters/preview-menu-defs:33` | — |
@@ -1440,9 +1441,12 @@
 | `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu-roles:267` | — |
 | `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:32` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
 | `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:46` | 灯光面板 schema：从 light cap 自报控件渲染 |
-| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:67` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
-| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:83` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
-| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:99` | 设置面板 schema：性能/画质开关声明式节点 |
+| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:64` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
+| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:77` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
+| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:90` | 设置面板 schema：性能（横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
+| `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:114` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
+| `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:165` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
+| `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:178` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
 | `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu-switch:217` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
@@ -1586,16 +1590,18 @@
 | `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:76` | ============ 场景能力统一接口 ============ |
 | `persistState()` | `frontend/src/utils/3d/caps/scene-capability:124` | 保存 JSON 到 localStorage |
 | `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:129` | 从 localStorage 加载 JSON |
+| `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:140` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
+| `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:155` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
 | `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
 | `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
 | `ShadowCapability()` | `frontend/src/utils/3d/caps/shadow-capability:171` | ============ ShadowCapability ============ |
-| `SkyParams()` | `frontend/src/utils/3d/caps/sky-capability:28` | — |
-| `DEFAULT_SKY_PARAMS()` | `frontend/src/utils/3d/caps/sky-capability:61` | — |
-| `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:81` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
-| `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:89` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
-| `injectSkySunScalePatch()` | `frontend/src/utils/3d/caps/sky-capability:124` | §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform， 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为 |
-| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:313` | — |
+| `SkyParams()` | `frontend/src/utils/3d/caps/sky-capability:29` | — |
+| `DEFAULT_SKY_PARAMS()` | `frontend/src/utils/3d/caps/sky-capability:62` | — |
+| `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:82` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
+| `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:90` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
+| `injectSkySunScalePatch()` | `frontend/src/utils/3d/caps/sky-capability:125` | §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform， 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为 |
+| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:314` | — |
 | `WaterMode()` | `frontend/src/utils/3d/caps/water-capability:17` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
 | `WaterParams()` | `frontend/src/utils/3d/caps/water-capability:20` | — |
 | `DEFAULT_WATER_PARAMS()` | `frontend/src/utils/3d/caps/water-capability:49` | — |
@@ -1759,7 +1765,6 @@
 | `SettingsPath()` | `frontend/src/utils/3d/state/settings-state:33` | 本层托管的横切设置路径（ADR-125 P1 收编六项） |
 | `SETTINGS_PATHS()` | `frontend/src/utils/3d/state/settings-state:42` | 全部受管路径（供契约测试枚举 / 快照遍历） |
 | `toStatePath()` | `frontend/src/utils/3d/state/settings-state:55` | 契约守卫：SettingsPath 必须落在 `PreviewStatePath` 的定义域内。 |
-| `SettingsPathBinding()` | `frontend/src/utils/3d/state/settings-state:60` | 单个路径的读写绑定 |
 | `subscribeSettings()` | `frontend/src/utils/3d/state/settings-state:160` | 订阅横切设置变更；返回取消订阅函数 |
 | `getStateValue()` | `frontend/src/utils/3d/state/settings-state:181` | 读取路径当前值 |
 | `setStateValue()` | `frontend/src/utils/3d/state/settings-state:190` | 写入路径值。 |

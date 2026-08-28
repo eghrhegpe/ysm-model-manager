@@ -418,6 +418,21 @@ function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
   parent.appendChild(row);
 }
 
+/**
+ * [doc:adr-125 P3] 枚举控件中的条件显隐谓词。
+ *
+ * 纯函数（不依赖注册表），供契约测试锁定「全仓共有几个隐藏逻辑、各自行为如何」——
+ * 杜绝条件显隐散落各 cap 工厂内部而无集中清单的「隐藏逻辑无人知道」状况。
+ *
+ * P3 规定条件显隐只允许两种形式：
+ *   1. cap 内 `visible`（必须基于自身 params，**禁止跨 cap 探查**）
+ *   2. 声明式节点上的 `visibleWhen(s)`（吃状态层快照的纯函数）
+ * 禁止在 schema 构建期以 `if (cap)` 做条件插入（声明期求值 → cap 后创建则永不可见）。
+ */
+export function collectVisiblePredicates(controls: MenuControlDef[]): MenuControlDef[] {
+  return controls.filter((c) => typeof c.visible === "function");
+}
+
 export function renderCapControls(list: HTMLElement, controls: MenuControlDef[]): void {
   // 分组折叠 sectionMap 贯穿全循环：同一 group 的控件归入同一可折叠 section，header 点击切换展开/收起。
   // kind 分派：divider 无 group 挂顶层作组间分隔；其余控件挂 (target ?? list)（有 group 挂 body，无 group 挂顶层）。签名不可动，本函数只做纯分派。

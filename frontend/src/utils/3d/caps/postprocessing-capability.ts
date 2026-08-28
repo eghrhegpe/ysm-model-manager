@@ -117,6 +117,9 @@ function ppcBuildBasic(cap: PostprocessingCapability): MenuControlDef[] {
       kind: "toggle",
       labelKey: "preview.postprocessing",
       fallback: "后处理管线",
+      // [doc:adr-125] 自动并入设置面板（画质分组）。原 settings 面板手写的
+      // 「Bloom 辉光」toggle 与本控件同源（均读写 cap.setEnabled），已由聚合取代
+      settingsOrder: 10,
       getValue: () => cap.isEnabled(),
       setValue: (v) => cap.setEnabled(v as boolean),
     },

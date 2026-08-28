@@ -22,6 +22,7 @@ import {
   type MenuControlDef,
   persistState,
   restoreState,
+  restoreFields,
 } from "./scene-capability.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
 
@@ -245,6 +246,9 @@ function skcBuildScattering(cap: SkyCapability): MenuControlDef[] {
       labelKey: "preview.environmentMapping",
       fallback: "环境贴图",
       group: "preview.skyGroupAdvanced",
+      // [doc:adr-125] 自动并入设置面板（画质分组）。原 settings 面板手写的
+      // 「PMREM 环境光」toggle 与本控件同源，已由聚合取代
+      settingsOrder: 20,
       getValue: () => cap.isEnvironmentEnabled(),
       setValue: (v) => cap.setEnvironmentEnabled(v as boolean),
     },
@@ -843,18 +847,18 @@ export class SkyCapability implements SceneCapability {
     });
   }
 
-  /** 从 localStorage 恢复状态 */
+  /** 从 localStorage 恢复状态（字段恢复走 restoreFields，消除与 ground/water 同构的 typeof 样板） */
   loadState(): void {
-    const state = restoreState(this.id);
-    if (!state) return;
-    if (typeof state.enabled === "boolean") this.enabled = state.enabled;
-    if (typeof state.timeOfDay === "number") this.params.timeOfDay = state.timeOfDay;
-    if (typeof state.cloudCoverage === "number") this.params.cloudCoverage = state.cloudCoverage;
-    if (typeof state.environment === "boolean") this.params.environment = state.environment;
-    if (typeof state.godRaysEnabled === "boolean") this.godRaysEnabled = state.godRaysEnabled;
-    // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
-    if (typeof state.sunIntensityScale === "number") this.params.sunIntensityScale = state.sunIntensityScale;
-    if (typeof state.sunDiscScale === "number") this.params.sunDiscScale = state.sunDiscScale;
+    restoreFields(restoreState(this.id), {
+      enabled: { boolean: (v) => { this.enabled = v; } },
+      timeOfDay: { number: (v) => { this.params.timeOfDay = v; } },
+      cloudCoverage: { number: (v) => { this.params.cloudCoverage = v; } },
+      environment: { boolean: (v) => { this.params.environment = v; } },
+      godRaysEnabled: { boolean: (v) => { this.godRaysEnabled = v; } },
+      // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
+      sunIntensityScale: { number: (v) => { this.params.sunIntensityScale = v; } },
+      sunDiscScale: { number: (v) => { this.params.sunDiscScale = v; } },
+    });
   }
 
   private detach(): void {

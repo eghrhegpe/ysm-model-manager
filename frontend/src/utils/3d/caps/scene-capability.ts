@@ -26,6 +26,12 @@ export interface MenuControlDef {
   hintKey?: string;
   /** 分组标题 i18n 键（同一 group 的连续控件归入一个可折叠 section；group 变化时插入 section header） */
   group?: string;
+  /**
+   * 设置面板聚合序号（ADR-125 P2）：定义后该控件自动并入 ⚙️ 设置面板，按本值升序排列。
+   * 未定义 = 不进设置面板（避免 pp 的 20 个高级控件淹没设置页）。
+   * cap 侧自声明即可，settings 侧零接线。
+   */
+  settingsOrder?: number;
   /** 条件显隐：定义且返回 false 时控件隐藏（用于模式/状态依赖控件，如水面 wetness 仅 film、pool 控件仅 pool、地面材质仅 matSource≠none）。未定义则始终显示。 */
   visible?: () => boolean;
   /** slider 配置 */
@@ -128,4 +134,34 @@ export function restoreState(capId: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+/** 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） */
+export interface FieldRestorer {
+  number?: (v: number) => void;
+  boolean?: (v: boolean) => void;
+  string?: (v: string) => void;
+}
+
+/**
+ * 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的
+ * `if (typeof state.x === "number") this.params.x = state.x;`）。
+ *
+ * 收敛动机：该样板在 ground / sky / water 等 cap 之间构成 jscpd 10 行级重复块
+ * （`ground-capability#sky-capability` 等），且每新增一个持久化字段就多复制一行。
+ *
+ * @returns 有存档且成功回填 true；无存档返回 false（对应早退语义）
+ */
+export function restoreFields(
+  state: Record<string, unknown> | null,
+  spec: Record<string, FieldRestorer>,
+): boolean {
+  if (!state) return false;
+  for (const [key, restorer] of Object.entries(spec)) {
+    const v = state[key];
+    if (typeof v === "number") restorer.number?.(v);
+    else if (typeof v === "boolean") restorer.boolean?.(v);
+    else if (typeof v === "string") restorer.string?.(v);
+  }
+  return true;
 }

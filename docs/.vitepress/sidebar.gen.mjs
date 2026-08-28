@@ -1580,6 +1580,10 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_repo_audit"
           },
           {
+            "text": "3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）",
+            "link": "/knowledge/preview_menu_settings_state"
+          },
+          {
             "text": "共享样式 shared-styles",
             "link": "/knowledge/shared-styles"
           },

@@ -120,8 +120,15 @@ export async function showModelDetail(
     const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) detailDiv.innerHTML = cardHTML;
 
-    // 加载 2D 模型预览（骨架 tab）；loadModel2D 内部已兜底渲染错误，此处仅防未处理拒绝
-    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton")).catch(
+    // 详情卡统计容器（方案 A：统计卡彩色分区 + 头像作者挂详情卡底部，骨骼 tab 只留图）
+    const statsDiv = document.createElement("div");
+    statsDiv.id = "preview-stats";
+    statsDiv.style.cssText = "margin-top:10px";
+    detailDiv?.appendChild(statsDiv);
+
+    // 加载 2D 模型预览（骨架 tab 只留骨骼线条图；统计卡经 statsContainer 挂详情卡）
+    // 进详情本身即触发 loadModel2D 异步解码，统计卡数据（骨骼/立方体/纹理/头像）无需额外请求
+    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv).catch(
       (e) => console.warn("[preview] loadModel2D:", e),
     );
   } catch (err) {

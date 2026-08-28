@@ -1480,7 +1480,7 @@
 | `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:546` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
 | `VrmBonePanelCtx()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:21` | 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） |
 | `RenderVrmBonePanel()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:31` | 骨骼面板渲染契约：返回清理函数（面板移除时调用） |
-| `makeBonePanelRenderer()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:37` | 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。 |
+| `makeBonePanelRenderer()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:40` | 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。 |
 | `buildVrmBoneNodes()` | `frontend/src/utils/3d/adapters/vrm-bone:20` | 从 vrm.humanoid 提取标准人形骨骼列表（id = HumanoidBoneName 如 "leftUpperArm"）。 |
 | `buildVrmBoneTree()` | `frontend/src/utils/3d/adapters/vrm-bone:52` | 从 vrm.humanoid 直接构建通用骨骼树（buildBoneNodes → buildBoneTree 一步到位） |
 | `ResolveModeResponse()` | `frontend/src/utils/3d/adapters/worker-bridge:15` | 响应必须携带 id；resolve-mode 还需 ok 标志（错误以响应形式回传，不 reject） |
@@ -1914,9 +1914,9 @@
 | `YsmSummary()` | `frontend/src/utils/format/summarize:27` | — |
 | `YSMHeader()` | `frontend/src/utils/format/summarize:52` | — |
 | `summaryCardHTML()` | `frontend/src/utils/format/summarize:156` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
-| `DecodedStats()` | `frontend/src/utils/format/summarize:283` | 解码统计结果（原 spike 侧 YsmSummary，改名避免与上方元数据接口撞名） |
-| `findBones()` | `frontend/src/utils/format/summarize:295` | 递归找第一个数组（骨骼列表通常嵌在 model/bones 等层级）。 |
-| `summarizeDecoded()` | `frontend/src/utils/format/summarize:313` | 解析 main.json 提取骨骼/几何摘要（只做统计，不渲染） |
+| `DecodedStats()` | `frontend/src/utils/format/summarize:261` | 解码统计结果（原 spike 侧 YsmSummary，改名避免与上方元数据接口撞名） |
+| `findBones()` | `frontend/src/utils/format/summarize:273` | 递归找第一个数组（骨骼列表通常嵌在 model/bones 等层级）。 |
+| `summarizeDecoded()` | `frontend/src/utils/format/summarize:291` | 解析 main.json 提取骨骼/几何摘要（只做统计，不渲染） |
 | `YsmProperties()` | `frontend/src/utils/format/ysm-anim-config:14` | WASM 解码产物 ysm.json 的 properties 相关字段（仅取本模块需要的部分） |
 | `extractAnimGroupsAndConfigs()` | `frontend/src/utils/format/ysm-anim-config:34` | 从 ysm.json properties 提取动画分组与配置菜单。 |
 | `GH_REPO()` | `frontend/src/utils/gh-links:5` | — |
@@ -2122,9 +2122,9 @@
 | `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:252` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
 | `detailGen()` | `frontend/src/views/app-preview/detail:23` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:26` | 显示模型详情（YSM 模型） |
-| `showResourcePack()` | `frontend/src/views/app-preview/detail:137` | 显示资源包信息（pack.mcmeta + pack.png） |
-| `showSimplePreview()` | `frontend/src/views/app-preview/detail:180` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
-| `showShaderpack()` | `frontend/src/views/app-preview/detail:198` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
+| `showResourcePack()` | `frontend/src/views/app-preview/detail:144` | 显示资源包信息（pack.mcmeta + pack.png） |
+| `showSimplePreview()` | `frontend/src/views/app-preview/detail:187` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
+| `showShaderpack()` | `frontend/src/views/app-preview/detail:205` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
 | `openEmpty3DFullscreen()` | `frontend/src/views/app-preview/empty-3d:35` | 打开空场景 3D 全屏预览（无需 path）。 |
 | `cleanupEmpty3D()` | `frontend/src/views/app-preview/empty-3d:40` | 清理空场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateEmptyPreview()` | `frontend/src/views/app-preview/empty-3d:45` | 作废在途空场景加载 |
@@ -2200,7 +2200,7 @@
 | `buildDepthMap()` | `frontend/src/views/app-preview/skeleton-utils:34` | 构建骨骼层级深度映射（用于骨骼列表缩进渲染） parentId 为空的骨骼深度为 0，其余递归计算 |
 | `closeActive3DOverlay()` | `frontend/src/views/app-preview/skeleton:36` | 关闭当前活跃的 3D 全屏 overlay（若存在）。供 app-preview/index.ts 切换模型前调用。 |
 | `setActive3DClose()` | `frontend/src/views/app-preview/skeleton:42` | 设置当前活跃的 3D 全屏 overlay 关闭函数（maid/通用 Bedrock 模型复用此机制）。 |
-| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:59` | 加载模型 2D 骨骼线条图 + 统计面板 |
+| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:59` | 加载模型 2D 骨骼线条图（+ 可选统计卡容器：传入则统计卡渲染到该容器，骨架区只留图） |
 | `resolveStageSiblings()` | `frontend/src/views/app-preview/stage-siblings:13` | 扫描 StageAnim 目录下所有资源文件（VMD + 音频 + config）；失败返回 [] |
 | `OrderedTexInput()` | `frontend/src/views/app-preview/texture-order:7` | — |
 | `buildOrderedTexKeys()` | `frontend/src/views/app-preview/texture-order:21` | 计算 3D 渲染/纹理选择器用的有序纹理名列表 |

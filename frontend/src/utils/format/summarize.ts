@@ -175,32 +175,12 @@ export function summaryCardHTML(
   const name = cleanText(summary?.name || summary?.source || "-");
   const tips = renderTips(summary?.tips);
   const licenseType = cleanText(summary?.license);
-  const authors = summary?.authors || [];
+  // 作者行不再由详情摘要卡渲染（方案 A 去重 2026-08-28）：统计卡（buildStatsCard
+  // → skeleton-render.ts）统一承载「头像 + 作者 + 角色」列表，且挂详情卡底部，
+  // 摘要卡保留唯一性——作者信息不重复出现。WASM 解码失败（统计卡不渲染）时
+  // 骨架 tab 会显示加载失败态，作者缺失属该降级路径的可接受损失。
   const stats = summary?.stats || {};
   const preview = summary?.preview || {};
-
-  // 作者行
-  let authorHtml = "";
-  if (authors.length > 0) {
-    const parts = authors.map((a) => {
-      const name = esc(cleanText(a.name || ""));
-      const bili = a.bilibili
-        ? `<a href="${esc(safeUrl(a.bilibili))}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(a.bilibili)}">📺</a>`
-        : "";
-      const role = a.roles ? cleanText(a.roles) : "";
-      return `${name}${bili}${role ? `（${esc(role)}）` : ""}`;
-    });
-    authorHtml = parts.join(" / ");
-  } else if (basename) {
-    // 回退：内部 metadata 未声明 authors 时（常见于 .zip 模型仅把作者写在文件名 [作者] 前缀），
-    // 从文件名推断作者并标注「📎 文件名」，与 metadata 来源区分；不覆盖用户已声明的 authors。
-    const p = parseModelName(basename);
-    if (p.author) {
-      authorHtml =
-        `<span class="tag-author">${esc(p.author)}</span>` +
-        `<span style="font-size:9px;color:var(--muted);margin-left:4px">📎 ${t("format.fromFilename")}</span>`;
-    }
-  }
 
   // 动画分组（内部标识符只显示计数，有中文名的显示标签）
   let animGroupHtml = "";
@@ -260,12 +240,10 @@ export function summaryCardHTML(
 ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}
 
 <div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${esc(licenseType) || t("format.unlabeled")}</span></div>
-${authorHtml ? `<div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value">${authorHtml}</span></div>` : ""}
 
 <div class="md-divider"></div>
 
 <div class="md-row"><span class="md-label">📦 ${t("format.resources")}</span><span class="md-value">${t("format.resourceStats", { tex: stats.textures || 0, models: stats.models || 0, anims: stats.animations || 0 })}</span></div>
-${stats.texWidth && stats.texHeight ? `<div class="md-row"><span class="md-label">🖼️ ${t("tree.afTex")}</span><span class="md-value">${stats.texWidth} × ${stats.texHeight} px</span></div>` : ""}
 
 ${preview.heightScale || preview.widthScale ? `<div class="md-row"><span class="md-label">📐 ${t("format.scale")}</span><span class="md-value">${(preview.heightScale ?? 1).toFixed(2)} × ${(preview.widthScale || 1).toFixed(2)}</span></div>` : ""}
 

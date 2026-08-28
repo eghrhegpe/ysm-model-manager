@@ -55,11 +55,12 @@ function makeShotGuard(shotBtn: HTMLElement): {
   return { get saving() { return _saving; }, setSaving: (v: boolean) => { _saving = v; }, setIcon };
 }
 
-/** 加载模型 2D 骨骼线条图 + 统计面板 */
+/** 加载模型 2D 骨骼线条图（+ 可选统计卡容器：传入则统计卡渲染到该容器，骨架区只留图） */
 export async function loadModel2D(
   ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
   modelPath: string,
   skelContainer: HTMLElement | null,
+  statsContainer?: HTMLElement | null,
 ): Promise<void> {
   const content = skelContainer || ctx.root.getElementById("preview-content");
   if (!content) return;
@@ -117,7 +118,13 @@ export async function loadModel2D(
     canvas.addEventListener("wheel", (e) => { e.preventDefault(); _zoom = Math.max(0.2, Math.min(10, _zoom * Math.exp(-e.deltaY * 0.002))); doRender(); }, { passive: false });
     // 作者/头像延迟补全（首帧已渲染，await 不阻塞用户看到模型）
     if (model) await fillAuthorsAsync(modelPath, model);
-    buildStatsCard(container, model, modelPath, _decodedBy, ctx);
+    // 统计卡（彩色分区 + 头像作者）渲染目标：详情卡传入 statsContainer 时挂详情卡
+    // （方案 A：详情卡吸收设计），否则保持原状挂骨架区（兼容既有调用/测试）
+    if (statsContainer) {
+      buildStatsCard(statsContainer, model, modelPath, _decodedBy, ctx);
+    } else {
+      buildStatsCard(container, model, modelPath, _decodedBy, ctx);
+    }
     buildBoneExportRow(container, model as BedrockGeometry & { boneCount?: number; bones?: Array<{ id: string; name: string; parentId?: string }> }, modelPath);
     let _is3D = false, _prefer3D = getPrefer3D(), _loading3D = false;
     const model3dGuard = new GenGuard();

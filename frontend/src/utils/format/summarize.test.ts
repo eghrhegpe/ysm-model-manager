@@ -41,19 +41,20 @@ describe("summaryCardHTML 完整摘要", () => {
     links: { home: "https://example.com" },
   };
 
-  it("渲染名称 / 作者（含 bilibili 链接与角色）/ 许可", () => {
+  it("渲染名称 / 许可（作者已移至统计卡，摘要卡不再渲染）", () => {
     const html = summaryCardHTML(full, {});
     expect(html).toContain("测试角色");
-    expect(html).toContain("作者A");
-    expect(html).toContain("https://b23.tv/x");
-    expect(html).toContain("建模");
     expect(html).toContain("免费可商用");
+    // 方案 A（2026-08-28）：作者行由统计卡 buildStatsCard 承载（头像+角色），
+    // 摘要卡去重不再渲染——避免与详情卡底部统计卡重复
+    expect(html).not.toContain("作者A");
   });
 
-  it("渲染资源统计与纹理尺寸", () => {
+  it("渲染资源统计（纹理尺寸已移至统计卡，摘要卡不再渲染）", () => {
     const html = summaryCardHTML(full, {});
     expect(html).toContain("贴图 4 · 模型 2 · 动画 6");
-    expect(html).toContain("128 × 256 px");
+    // 方案 A：纹理尺寸由统计卡彩色分区（pv-section-green）承载
+    expect(html).not.toContain("128 × 256 px");
   });
 
   it("动画分组过滤内部标识符（range/checkbox 等）", () => {
@@ -89,7 +90,7 @@ describe("summaryCardHTML 完整摘要", () => {
     expect(html).toContain("1.50 × 2.00");
   });
 
-  it("只提供 texWidth 无 texHeight → 不渲染纹理行，输出无 undefined（P4 修复）", () => {
+  it("只提供 texWidth 无 texHeight → 无 undefined 泄漏（纹理行已移统计卡，P4 语义保留）", () => {
     const html = summaryCardHTML(
       { name: "x", stats: { textures: 1, texWidth: 128 } },
       {},
@@ -116,41 +117,32 @@ describe("summaryCardHTML 徽章与转义", () => {
     expect(html).not.toContain("<img");
     expect(html).toContain("&lt;img");
   });
-
-  it("作者名含 HTML 字符被转义", () => {
-    const html = summaryCardHTML(
-      { name: "x", authors: [{ name: "<script>alert(1)</script>" }] },
-      {},
-    );
-    expect(html).not.toContain("<script>");
-  });
 });
 
-// P-新增：zip 等模型内部 metadata 未声明 authors 时，从文件名 [作者] 前缀回退
-describe("summaryCardHTML 文件名作者回退", () => {
-  it("zip summary 无 authors，basename 含 [作者] → 渲染作者并标注文件名来源", () => {
+// 方案 A（2026-08-28）：作者行（含文件名 [作者] 回退）已随统计卡 buildStatsCard 承载，
+// 摘要卡不再渲染作者——下述断言从「渲染回退作者」改为「不再渲染作者行（去重）」
+describe("summaryCardHTML 作者去重（方案 A）", () => {
+  it("basename 含 [作者] → 摘要卡不再渲染作者行（统计卡承载）", () => {
     const html = summaryCardHTML(
       { name: "十六夜咲夜", stats: { textures: 1 } },
       {},
       "[碎de帆]【东方project】十六夜咲夜Izayoi_Sakuya2025-06.zip",
     );
-    expect(html).toContain('<span class="md-label">作者</span>');
-    expect(html).toContain('class="tag-author">碎de帆');
-    expect(html).toContain("📎 文件名");
+    expect(html).not.toContain('<span class="md-label">作者</span>');
+    expect(html).not.toContain("📎 文件名");
   });
 
-  it("summary 有 metadata authors → 优先用 metadata，不回退文件名", () => {
+  it("summary 有 metadata authors → 摘要卡不再渲染作者行", () => {
     const html = summaryCardHTML(
       { name: "x", authors: [{ name: "元数据作者" }] },
       {},
       "[碎de帆]角色.zip",
     );
-    expect(html).toContain("元数据作者");
+    expect(html).not.toContain("元数据作者");
     expect(html).not.toContain("碎de帆");
-    expect(html).not.toContain("📎 文件名");
   });
 
-  it("basename 无 [作者] 前缀、summary 也无 authors → 不渲染作者行", () => {
+  it("basename 无 [作者] 前缀 → 不渲染作者行", () => {
     const html = summaryCardHTML(
       { name: "x", stats: { textures: 1 } },
       {},
@@ -159,14 +151,14 @@ describe("summaryCardHTML 文件名作者回退", () => {
     expect(html).not.toContain('<span class="md-label">作者</span>');
   });
 
-  it("summary 为空（极端空 zip）且 basename 含 [作者] → 仍回退显示作者", () => {
+  it("summary 为空（极端空 zip）且 basename 含 [作者] → 不再回退渲染作者行", () => {
     const html = summaryCardHTML(
       null,
       { isYsm: false },
       "[碎de帆]角色.zip",
     );
-    expect(html).toContain('class="tag-author">碎de帆');
-    expect(html).toContain("📎 文件名");
+    expect(html).not.toContain('class="tag-author">碎de帆');
+    expect(html).not.toContain("📎 文件名");
   });
 });
 

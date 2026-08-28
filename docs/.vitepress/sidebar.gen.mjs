@@ -1656,14 +1656,6 @@ export const autoSidebar = [
             "link": "/knowledge/ground-cap-gcbuildmaterialgroup-133"
           },
           {
-            "text": "联邦渲染能力 (Render Federation)",
-            "link": "/knowledge/knowledge_render_federation"
-          },
-          {
-            "text": "YSM (Bedrock) 动画管线",
-            "link": "/knowledge/knowledge_ysm-anim-pipeline"
-          },
-          {
             "text": "MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现",
             "link": "/knowledge/mc-ao-tint"
           },
@@ -1690,6 +1682,10 @@ export const autoSidebar = [
           {
             "text": "统一 3D 预览核心 preview-core",
             "link": "/knowledge/preview_core"
+          },
+          {
+            "text": "联邦渲染能力 (Render Federation)",
+            "link": "/knowledge/render-federation"
           },
           {
             "text": "安全错误消息提取 utils",
@@ -1750,6 +1746,10 @@ export const autoSidebar = [
           {
             "text": "worker-bridge-settleError-fallback",
             "link": "/knowledge/worker-bridge-settleerror-fallback"
+          },
+          {
+            "text": "YSM (Bedrock) 动画管线",
+            "link": "/knowledge/ysm-anim-pipeline"
           },
           {
             "text": "WASM 解析器 ysm-parser",

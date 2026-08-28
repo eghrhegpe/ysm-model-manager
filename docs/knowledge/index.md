@@ -235,8 +235,6 @@
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
 | 🍃 ground-cap-gcbuildmaterialgroup-133 | ground-cap-gcBuildMaterialGroup-133 | leaf | — | 拆 gcBuildMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | — | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（grid/checker/solid 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
-| 🍃 knowledge | 联邦渲染能力 (Render Federation) | 1 | — | — |
-| 🍃 knowledge | YSM (Bedrock) 动画管线 | 1 | — | — |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | — | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | — | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
 | 🏗 model3d | 3D 预览渲染 model3d | architecture | — | 3D 预览, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底, OrbitControls |
@@ -244,6 +242,7 @@
 | 🍃 mount3d-584-giant | mount3D-584-giant | leaf | — | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
 | 🏗 perception | 3D 感知系统 perception | architecture | — | 自主动画, 自动跳舞, 眨眼, 呼吸, 视线追踪, 口型同步, 节拍检测, 模型感知, 自动运动 |
 | 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | — | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
+| 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | — | — |
 | 🍃 safe_error_msg | 安全错误消息提取 utils | leaf | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | — | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
 | 🍃 utils-array | 数组工具 moveItem | leaf | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
@@ -259,6 +258,7 @@
 | 🍃 utils-resource-types | 资源类型工具 resource-types | leaf | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, LoadResourceTypes, 注册表加载 |
 | 🍃 utils-summarize | 摘要生成 summarize | leaf | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
 | 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | — | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
+| 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | — | — |
 | 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, 加密模型, wasm 加载, Emscripten, MEMFS, node 解码, callMain |
 
 ### 摘要

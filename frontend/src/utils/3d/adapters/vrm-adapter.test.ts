@@ -210,7 +210,7 @@ function makeCtx() {
       viewContainer: document.createElement("div"),
       loadingEl,
       overlay,
-      menu: { setAdapterItems: vi.fn(), openPanel: vi.fn() } as unknown as PreviewMenuHandle,
+      menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), getCurrentPanelId: vi.fn(() => null) } as unknown as PreviewMenuHandle,
       renderer: { domElement: document.createElement("div") } as unknown as THREE.WebGLRenderer,
     },
     scene,

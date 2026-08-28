@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 165 | 661 |
+| 前端·工具 | 166 | 662 |
 | frontend/views | 117 | 339 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **495** | **2101** |
+| **合计** | **496** | **2102** |
 
 ## Go·头像
 
@@ -1394,17 +1394,17 @@
 | `makeZipOverlayPort()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:113` | 创建 ZIP Overlay Port：包装 MmdDataPort， 将 zip 内路径前缀（如 "/repo/miku.zip!/"）路由到内存中的 zip entries。 |
 | `prepareMmdZipInput()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:202` | 构造完整的 zip 包装流程： 检测 zip → 解析 zip → 创建 overlay → 返回 { port, rootPath } 调用方只需： const { port, |
 | `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:218` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
-| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:72` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
-| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:91` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
-| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:117` | — |
-| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:127` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
-| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:173` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
-| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:178` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
-| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:198` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
-| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:211` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
-| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:217` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
-| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:222` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
-| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:240` | — |
+| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:74` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
+| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:93` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
+| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:119` | — |
+| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:129` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
+| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:178` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
+| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:183` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
+| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:203` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
+| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:216` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
+| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:222` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
+| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:227` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
+| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:245` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
 | `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:23` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
 | `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:39` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
@@ -1422,8 +1422,8 @@
 | `PreviewMenuGroupDef()` | `frontend/src/utils/3d/adapters/preview-menu-defs:60` | 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） |
 | `PREVIEW_MENU_GROUPS()` | `frontend/src/utils/3d/adapters/preview-menu-defs:66` | — |
 | `CORE_MENU_ITEMS()` | `frontend/src/utils/3d/adapters/preview-menu-defs:88` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
-| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu-env:76` | — |
-| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu-env:166` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
+| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu-env:78` | — |
+| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu-env:168` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
 | `PreviewStatePath()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:14` | 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） |
 | `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:24` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
 | `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:30` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
@@ -1448,7 +1448,7 @@
 | `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `PreviewMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu:36` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
 | `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu:78` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
-| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu:488` | — |
+| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu:494` | — |
 | `ModelEntry()` | `frontend/src/utils/3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
 | `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
 | `MAX_MODELS()` | `frontend/src/utils/3d/adapters/scene-registry:209` | 同场景最大模型数（超量追加被拒，ADR-093 T6） |
@@ -1492,10 +1492,10 @@
 | `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
 | `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
 | `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:43` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
-| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:472` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
-| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:502` | 工厂：构造统一 PreviewAdapter（shared 模式） |
-| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:521` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:555` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
+| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:480` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
+| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:510` | 工厂：构造统一 PreviewAdapter（shared 模式） |
+| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:529` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:563` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
 | `ALPHA_F_VISIBLE()` | `frontend/src/utils/3d/alpha-index:5` | — |
 | `ALPHA_F_HOLE()` | `frontend/src/utils/3d/alpha-index:6` | — |
 | `ALPHA_F_TRANSLUCENT()` | `frontend/src/utils/3d/alpha-index:7` | — |
@@ -1544,12 +1544,9 @@
 | `DEFAULT_FOG_PARAMS()` | `frontend/src/utils/3d/caps/fog-capability:30` | — |
 | `FOG_PRESETS()` | `frontend/src/utils/3d/caps/fog-capability:40` | 模型类别雾预设：材质特性不同，雾浓度/远近做合理初始值 |
 | `FogCapability()` | `frontend/src/utils/3d/caps/fog-capability:68` | — |
-| `WaterMode()` | `frontend/src/utils/3d/caps/ground-capability:38` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
-| `WaterParams()` | `frontend/src/utils/3d/caps/ground-capability:41` | — |
-| `DEFAULT_WATER_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:68` | — |
-| `GroundParams()` | `frontend/src/utils/3d/caps/ground-capability:83` | — |
-| `DEFAULT_GROUND_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:98` | — |
-| `GroundCapability()` | `frontend/src/utils/3d/caps/ground-capability:108` | — |
+| `GroundParams()` | `frontend/src/utils/3d/caps/ground-capability:38` | 地面参数（表面材质 + 网格；水面已拆分为独立 WaterCapability） |
+| `DEFAULT_GROUND_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:51` | — |
+| `GroundCapability()` | `frontend/src/utils/3d/caps/ground-capability:60` | — |
 | `GroundSurfaceMode()` | `frontend/src/utils/3d/caps/ground-surface-spec:17` | 地面表面模式（扁平枚举：来源 × 画布样式合一，避免双字段耦合守卫） |
 | `GroundMaterialParams()` | `frontend/src/utils/3d/caps/ground-surface-spec:19` | — |
 | `DEFAULT_GROUND_SURFACE_PARAMS()` | `frontend/src/utils/3d/caps/ground-surface-spec:46` | — |
@@ -1581,9 +1578,9 @@
 | `DEFAULT_REFLECTOR_PARAMS()` | `frontend/src/utils/3d/caps/reflector-capability:34` | — |
 | `REFLECTOR_PRESETS()` | `frontend/src/utils/3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
 | `ReflectorCapability()` | `frontend/src/utils/3d/caps/reflector-capability:125` | — |
-| `SceneCapabilityFactory()` | `frontend/src/utils/3d/caps/scene-capability-registry:20` | 能力工厂：接收 scene/renderer/camera，返回能力实例 |
-| `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:27` | 注册表：管理所有场景能力的工厂和实例 |
-| `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:106` | 全局单例（模块级单例 + 运行时状态隔离） |
+| `SceneCapabilityFactory()` | `frontend/src/utils/3d/caps/scene-capability-registry:21` | 能力工厂：接收 scene/renderer/camera，返回能力实例 |
+| `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:28` | 注册表：管理所有场景能力的工厂和实例 |
+| `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:107` | 全局单例（模块级单例 + 运行时状态隔离） |
 | `MenuControlDef()` | `frontend/src/utils/3d/caps/scene-capability:16` | 菜单控件定义（声明式，由框架渲染为 DOM） |
 | `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:68` | ============ 场景能力统一接口 ============ |
 | `persistState()` | `frontend/src/utils/3d/caps/scene-capability:112` | 保存 JSON 到 localStorage |
@@ -1598,6 +1595,10 @@
 | `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:89` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
 | `injectSkySunScalePatch()` | `frontend/src/utils/3d/caps/sky-capability:124` | §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform， 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为 |
 | `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:310` | — |
+| `WaterMode()` | `frontend/src/utils/3d/caps/water-capability:17` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
+| `WaterParams()` | `frontend/src/utils/3d/caps/water-capability:20` | — |
+| `DEFAULT_WATER_PARAMS()` | `frontend/src/utils/3d/caps/water-capability:49` | — |
+| `WaterCapability()` | `frontend/src/utils/3d/caps/water-capability:65` | — |
 | `disposeDebugGroup()` | `frontend/src/utils/3d/cleanup-helper:14` | 释放 debug 叠加层中的所有 Three.js 资源（geometry / material / texture）。 |
 | `disposeSceneMeshes()` | `frontend/src/utils/3d/cleanup-helper:40` | 遍历场景图释放所有 Mesh 的 geometry 和 material。 |
 | `eulerToQuaternion()` | `frontend/src/utils/3d/cube-mesh` | — |
@@ -2237,7 +2238,7 @@
 | `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:43` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
 | `fillYsmModelPanel()` | `frontend/src/views/app-preview/ysm-controls:74` | 模型菜单面板：统计 / 纹理 / 骨骼列表 / 骨骼详情 / 多组件切换（fill3DPanel 内容） |
 | `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:96` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
-| `attachYsmBoneSelect()` | `frontend/src/views/app-preview/ysm-controls:137` | 骨骼拾取联动（YSM 特色）：点击 3D 模型骨骼 → 打开骨骼面板（id:"bones"） |
+| `attachYsmBoneSelect()` | `frontend/src/views/app-preview/ysm-controls:137` | 骨骼拾取联动（YSM 特色）：点击 3D 模型骨骼 → 仅在骨骼面板已打开时滚动高亮对应行 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:127` | — |

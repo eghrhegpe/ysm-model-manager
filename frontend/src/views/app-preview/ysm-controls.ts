@@ -133,15 +133,17 @@ export function fillYsmShotPanel(list: HTMLElement, ctx: YsmControlsContext): vo
   });
 }
 
-/** 骨骼拾取联动（YSM 特色）：点击 3D 模型骨骼 → 打开骨骼面板（id:"bones"） */
+/** 骨骼拾取联动（YSM 特色）：点击 3D 模型骨骼 → 仅在骨骼面板已打开时滚动高亮对应行 */
 export function attachYsmBoneSelect(
   handle: YsmContentHandle,
   openPanel: (id: string) => void,
+  getCurrentPanelId?: () => string | null,
 ): void {
   handle.onBoneSelect = (info: BoneSelectInfo): void => {
-    // 打开骨骼面板（makeBonePanelRenderer 渲染列表 + 拾取联动高亮）
-    openPanel("bones");
-    // 高亮命中的骨骼行
+    // 仅在骨骼面板已打开时才滚动高亮，不再强制切换面板（避免打断 3D 视图上下文）
+    const isBonePanelOpen = getCurrentPanelId?.() === "bones";
+    if (!isBonePanelOpen) return;
+    // 高亮命中的骨骼行（makeBonePanelRenderer 渲染的列表 + 拾取联动高亮）
     const row = document.querySelector<HTMLElement>(
       `.bone-detail-inline, div[data-bone-id="${CSS.escape(info.name)}"]`,
     );

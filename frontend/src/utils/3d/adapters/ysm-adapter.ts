@@ -58,7 +58,11 @@ export interface YsmAdapterOptions {
   panels?: {
     fillModelPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
-    attachBoneSelect: (content: YsmContentHandle, cb: (id: string) => void) => void;
+    attachBoneSelect: (
+      content: YsmContentHandle,
+      openPanel: (id: string) => void,
+      getCurrentPanelId: () => string | null,
+    ) => void;
   };
   /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM listAllFilePaths 注入模式） */
   listAllFilePaths?: (dir: string) => Promise<string[] | null>;
@@ -210,7 +214,11 @@ function mdYsSetupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCam
   rayState.onBoneSelectCallback = (info: BoneSelectInfo) => {
     content.onBoneSelect?.(info);
   };
-  opts.panels?.attachBoneSelect?.(content, (id: string) => ctx.menu.openPanel(id));
+  opts.panels?.attachBoneSelect?.(
+    content,
+    (id: string) => ctx.menu.openPanel(id),
+    () => ctx.menu.getCurrentPanelId(),
+  );
 
   return { initCamPos, initCamTarget, rayState, nameMap, parentMap, childrenMap, rayCleanup, boneMaps, content };
 }

@@ -84,7 +84,7 @@ function makeCtx() {
     viewContainer: document.createElement("div"),
     loadingEl: document.createElement("div"),
     overlay,
-    menu: { setAdapterItems: vi.fn(), openPanel: vi.fn() } as unknown as PreviewMenuHandle,
+    menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), getCurrentPanelId: vi.fn(() => null) } as unknown as PreviewMenuHandle,
   };
 }
 
@@ -203,15 +203,17 @@ describe("buildYsmScene 面板填充与骨骼拾取", () => {
     preview.dispose();
   });
 
-  it("attachBoneSelect 被正确接线（传入 content + openPanel 回调）", async () => {
+  it("attachBoneSelect 被正确接线（传入 content + openPanel + getCurrentPanelId 回调）", async () => {
     const ctx = makeCtx();
     const loader = vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry));
-    let capturedCb: ((id: string) => void) | null = null;
+    let capturedCb: ((id: string) => void) | undefined;
+    let capturedGetPanelId: (() => string | null) | undefined;
     const panels = {
       fillModelPanel: vi.fn(),
       fillShotPanel: vi.fn(),
-      attachBoneSelect: vi.fn((content: never, cb: (id: string) => void) => {
+      attachBoneSelect: vi.fn((_content: never, cb: (id: string) => void, getPanelId: () => string | null) => {
         capturedCb = cb;
+        capturedGetPanelId = getPanelId;
       }),
     };
     await buildYsmScene(ctx, "/m/a.ysm", {
@@ -222,10 +224,12 @@ describe("buildYsmScene 面板填充与骨骼拾取", () => {
 
     expect(panels.attachBoneSelect).toHaveBeenCalledTimes(1);
     // 第二个参数是回调，core 调用它时触发 openPanel
-    if (capturedCb) {
-      (capturedCb as (id: string) => void)("hip");
-    }
+    capturedCb?.("hip");
     expect(ctx.menu.openPanel).toHaveBeenCalledWith("hip");
+    // 第三个参数 getCurrentPanelId 委托给 ctx.menu.getCurrentPanelId
+    expect(capturedGetPanelId).toBeDefined();
+    (ctx.menu as { getCurrentPanelId: () => string | null }).getCurrentPanelId = vi.fn(() => "bones");
+    expect(capturedGetPanelId!()).toBe("bones");
   });
 });
 

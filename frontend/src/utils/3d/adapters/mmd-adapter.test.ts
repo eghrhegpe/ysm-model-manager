@@ -105,7 +105,7 @@ function makeCtx() {
       viewContainer: document.createElement("div"),
       loadingEl,
       overlay: document.createElement("div"),
-      menu: { setAdapterItems: vi.fn(), openPanel: vi.fn() } as unknown as PreviewMenuHandle,
+      menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), getCurrentPanelId: vi.fn(() => null) } as unknown as PreviewMenuHandle,
     },
     scene,
     camera,

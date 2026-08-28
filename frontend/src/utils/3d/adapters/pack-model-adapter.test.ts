@@ -68,7 +68,7 @@ function makeCtx() {
     viewContainer: document.createElement("div"),
     loadingEl: document.createElement("div"),
     overlay: document.createElement("div"),
-    menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn(), dispose: vi.fn() },
+    menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn(), dispose: vi.fn(), getCurrentPanelId: vi.fn(() => null) },
     renderer: { domElement: document.createElement("div") },
     cameraControls: { setOrbit: vi.fn(), setSpeed: vi.fn() },
   } as unknown as PreviewBuildCtx;

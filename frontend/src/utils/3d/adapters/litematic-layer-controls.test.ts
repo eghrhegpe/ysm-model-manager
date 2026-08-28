@@ -21,7 +21,7 @@ function makeMockCtx(): PreviewBuildCtx {
       update: vi.fn(),
     },
     loadingEl: document.createElement("div"),
-    menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn(), dispose: vi.fn() },
+    menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn(), dispose: vi.fn(), getCurrentPanelId: vi.fn(() => null) },
   } as unknown as PreviewBuildCtx;
 }
 

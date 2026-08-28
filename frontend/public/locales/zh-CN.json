@@ -1136,7 +1136,6 @@
   "format.unlabeled": "未标注",
   "format.resources": "资源",
   "format.resourceStats": "贴图 {tex} · 模型 {models} · 动画 {anims}",
-  "format.scale": "缩放",
   "format.links": "链接",
   "format.homepage": "主页",
   "format.donate": "赞助",

@@ -1136,7 +1136,6 @@
   "format.unlabeled": "未記載",
   "format.resources": "リソース",
   "format.resourceStats": "テクスチャ {tex} · モデル {models} · アニメーション {anims}",
-  "format.scale": "スケール",
   "format.links": "リンク",
   "format.homepage": "ホームページ",
   "format.donate": "支援",

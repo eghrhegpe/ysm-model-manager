@@ -215,8 +215,6 @@ describe("loadModel2D — 2D 成功路径", () => {
     expect(statsCardHTML).toHaveBeenCalledWith(
       expect.objectContaining({ bones: expect.any(Array) }),
       "/m/a.ysm",
-      "go",
-      undefined, // scale 未传入（loadModel2D 无 statsContainer 分支不传缩放）
     );
     expect(container.textContent).toContain("作者A");
     expect(renderModel2D).toHaveBeenCalledTimes(1);
@@ -244,7 +242,7 @@ describe("loadModel2D — 2D 成功路径", () => {
     document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
     const eyeBtn = container.querySelector("button") as HTMLButtonElement;
-    expect(eyeBtn.textContent).toContain("preview.boneLabels");
+    expect(eyeBtn.textContent).toContain("preview.field.boneNames");
 
     eyeBtn.click();
     expect(localStorage.getItem("ysm_showBoneLabels")).toBe("false");
@@ -331,7 +329,7 @@ describe("loadModel2D — 交互", () => {
     document.body.appendChild(container);
     await loadModel2D(ctx, "/m/a.ysm", container);
     const boneBtn = [...container.querySelectorAll("button")].find(
-      (b) => b.textContent === "📋 preview.exportBones",
+      (b) => b.textContent === "📋 preview.action.exportBoneNames",
     )!;
     boneBtn.click();
     expect(buildBoneNamesText).toHaveBeenCalledWith(
@@ -499,7 +497,7 @@ describe("fill3DPanel", () => {
     expect(panel.textContent).toContain("纹理 (2)");
     expect(panel.textContent).toContain("skin");
     expect(panel.textContent).toContain("tail");
-    expect(panel.textContent).toContain("声明尺寸");
+    // 声明尺寸已在纹理行内标注（texRow），不再在模型统计区重复显示
     expect(panel.textContent).toContain("声明 64×32");
     expect(panel.textContent).toContain("加载 64×32");
     expect(panel.textContent).toContain("加载 ?");

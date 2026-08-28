@@ -172,8 +172,6 @@ function fillPanelComponent(
   }
   statsBox.appendChild(iRow("骨骼", bones + " 根"));
   statsBox.appendChild(iRow("立方体", cubes + " 个"));
-  // 声明尺寸 = spec.models[i].textureWidth/Height（模型声明值，非实际加载位图尺寸）
-  statsBox.appendChild(iRow("声明尺寸", declW + "×" + declH));
 
   // ── 纹理（只显示当前组件的绑定） ──
   const eff = rawIdx < 0 ? 0 : rawIdx;

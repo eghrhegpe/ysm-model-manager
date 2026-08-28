@@ -1136,7 +1136,6 @@
   "format.unlabeled": "Unlabeled",
   "format.resources": "Resources",
   "format.resourceStats": "{tex} textures · {models} models · {anims} animations",
-  "format.scale": "Scale",
   "format.links": "Links",
   "format.homepage": "Homepage",
   "format.donate": "Donate",

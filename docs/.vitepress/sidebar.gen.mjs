@@ -1588,6 +1588,10 @@ export const autoSidebar = [
             "link": "/knowledge/preview_menu_settings_state"
           },
           {
+            "text": "3D 预览面板内容声明式化通道（ADR-126 P4-B）",
+            "link": "/knowledge/preview_panel_declarative"
+          },
+          {
             "text": "3D 预览全域状态层（ADR-126 P4-A）",
             "link": "/knowledge/preview_state"
           },

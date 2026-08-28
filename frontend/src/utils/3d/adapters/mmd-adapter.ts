@@ -29,6 +29,7 @@ import type {
   MmdPlayBridge,
   MaterialControlBridge,
 } from "../../../views/app-preview/mmd-controls.ts";
+import { mmdModelInfoNodes, mmdShotNodes } from "../../../views/app-preview/mmd-controls.ts";
 import {
   listMmdMaterials,
   getMmdMaterialDetail,
@@ -1267,7 +1268,10 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       legacyTestId: "mmd-model-entry",
       dockGroup: "model", // 底栏 🧍 模型组
-      renderCustom:(list) => o.panels?.fillModelPanel?.(list, o.navCtx),
+      // [doc:adr-126-p4-b-1] 面板内容声明式化：children = mmdModelInfoNodes 纯数据节点，
+      // 渲染走 renderMenu（preview-menu-render.ts），替代 renderCustom 手写 DOM 闭包。
+      // fillModelPanel 逃生舱保留在 MmdPanelHooks（兼容既有面板），此处走新通道。
+      children: mmdModelInfoNodes(o.navCtx),
     },
     {
       id: "morph",
@@ -1280,16 +1284,6 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       renderCustom:(list) => o.panels?.fillMorphPanel?.(list, o.navCtx),
     },
     {
-      id: "shot",
-      icon: "📷",
-      labelKey: "preview.screenshot",
-      fallback: "截图",
-      kind: "panel",
-      dockGroup: "model", // 底栏 🧍 模型组
-      legacyTestId: "mmd-shot-entry",
-      renderCustom:(list) => o.panels?.fillShotPanel?.(list, o.navCtx, o.screenshot),
-    },
-    {
       id: "material",
       icon: "🎨",
       labelKey: "preview.materialList",
@@ -1300,6 +1294,21 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       renderCustom:(list) => o.panels?.buildMaterialControls?.(list, o.material),
     },
   ];
+  // [doc:adr-126-p4-b-1] 截图面板条件注入：screenshot 能力缺失（null）→ 不注入项
+  // （对齐 bonePanel 范式；比"注入空 children 面板"干净——截图能力是可选能力）。
+  // 面板内容声明式化：children = mmdShotNodes 纯数据节点（6 截图按钮），渲染走 renderMenu。
+  if (o.screenshot) {
+    items.push({
+      id: "shot",
+      icon: "📷",
+      labelKey: "preview.screenshot",
+      fallback: "截图",
+      kind: "panel",
+      dockGroup: "model", // 底栏 🧍 模型组
+      legacyTestId: "mmd-shot-entry",
+      children: mmdShotNodes(o.navCtx, o.screenshot),
+    });
+  }
   // MMD 始终注入 play 项（支持用户配置的自定义动作库，空态引导选择）
   items.push({
     id: "play",

@@ -8,6 +8,8 @@ import {
   fillMmdModelPanel,
   fillMmdMorphPanel,
   buildMaterialControls,
+  mmdModelInfoNodes,
+  mmdShotNodes,
   type MmdBottomNavCtx,
   type MaterialControlBridge,
 } from "./mmd-controls.ts";
@@ -231,6 +233,50 @@ describe("fillMmdModelPanel", () => {
       fillMmdModelPanel(list, ctx);
       expect(list.textContent).toContain(name);
     }
+  });
+});
+
+describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
+  it("产出 2 行 field：名称 + 骨骼/材质/表情计数，纯数据零 DOM", () => {
+    const { ctx } = makeCtx();
+    const nodes = mmdModelInfoNodes(ctx);
+    expect(nodes.length).toBe(2);
+    expect(nodes[0]).toMatchObject({ id: "mmd-model-name", kind: "field", value: "子言.pmx" });
+    expect(nodes[1]).toMatchObject({ id: "mmd-model-overview", kind: "field" });
+    expect(nodes[1].value).toContain("364"); // 骨骼
+    expect(nodes[1].value).toContain("28");  // 材质
+    expect(nodes[1].value).toContain("55");  // 表情
+    // 纯数据：不碰 DOM（与原 fillMmdModelPanel 的命令式渲染形成对照）
+    expect(document.body.innerHTML).toBe("");
+  });
+
+  it("不同 modelName 正确透出到 value", () => {
+    const names = ["初音ミク.pmx", "Miku.pmd"];
+    for (const name of names) {
+      const { ctx } = makeCtxWithName(name);
+      expect(mmdModelInfoNodes(ctx)[0].value).toBe(name);
+    }
+  });
+});
+
+describe("mmdShotNodes（P4-B-1 声明式节点）", () => {
+  it("6 个 button 节点，id 稳定 + legacyTestId 兼容，action 触发截图", () => {
+    const { ctx } = makeCtx();
+    const screenshotFn = vi.fn(() => Promise.resolve("b64"));
+    const nodes = mmdShotNodes(ctx, screenshotFn);
+    expect(nodes.length).toBe(6);
+    expect(nodes.map((n) => n.id)).toEqual([
+      "mmd-shot-current", "mmd-shot-front", "mmd-shot-45", "mmd-shot-side", "mmd-shot-back45", "mmd-shot-all",
+    ]);
+    expect(nodes.every((n) => n.kind === "button")).toBe(true);
+    // legacyTestId 兼容旧 e2e 选择器（shot-<key>）
+    expect(nodes[0].legacyTestId).toBe("shot-current");
+    expect(nodes[0].icon).toBe("📷");
+  });
+
+  it("screenshotFn 为 null → 返回空数组（面板不渲染，与 fillMmdShotPanel 一致）", () => {
+    const { ctx } = makeCtx();
+    expect(mmdShotNodes(ctx, null)).toEqual([]);
   });
 });
 

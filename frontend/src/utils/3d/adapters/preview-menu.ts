@@ -27,6 +27,7 @@ import { t } from "../../../core/i18n/t.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./preview-menu-roles.ts";
+import { renderMenu } from "./preview-menu-render.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 export { roleBaseName };
@@ -237,7 +238,7 @@ function buildPreviewMenuRouters(
   const makeRow = makePreviewMenuRow;
   const makePanelView = (node: PreviewMenuNode): SlideMenuView =>
     previewMakePanelView(node, (l, n) =>
-      renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx),
+      renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx, { makeRow, makePanelView }),
     );
   // 先占位：makePanelView 上面的闭包会立即引用 routers，routers 下面立即赋值
   const routers: PreviewMenuRouters = {
@@ -270,7 +271,7 @@ function buildPreviewMenuRouters(
   return routers;
 }
 
-/** [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → renderCustom → action → fillers 四级衰退 + try-catch 错误边界 */
+/** [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → fillers 五级衰退 + try-catch 错误边界 */
 function renderPreviewPanel(
   list: HTMLElement,
   node: PreviewMenuNode,
@@ -278,6 +279,10 @@ function renderPreviewPanel(
   menu: SlideMenuHandle,
   hideMenu: () => void,
   actionCtx: PreviewActionMenuCtx,
+  panelDeps: {
+    makeRow: (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
+    makePanelView: (node: PreviewMenuNode) => SlideMenuView;
+  },
 ): void {
   list.innerHTML = "";
   // 面板可定位（2026-08-28 反馈通道）：data-panel-id 机器可读（测试/诊断/外部工具），
@@ -289,6 +294,16 @@ function renderPreviewPanel(
   try {
     if (routers.schemaBuilders[node.id]) {
       renderPreviewSchemaContent(list, routers.schemaBuilders[node.id]!(menu), hideMenu);
+    } else if (node.children?.length) {
+      // [doc:adr-126-p4-b-1] 面板内容声明式通道：panel 节点带 children → 递归 renderMenu。
+      // 适配器只需产出 PreviewMenuNode[]（field/button/row...），渲染全走声明式渲染器，
+      // 消灭「面板内容手写 DOM 闭包」的第二渲染通道（fill3DPanel/fillModelPanel 类）。
+      renderMenu(list, node.children, {
+        makeRow: panelDeps.makeRow,
+        makePanelView: panelDeps.makePanelView,
+        menu,
+        actionCtx,
+      });
     } else if (node.renderCustom) {
       node.renderCustom(list, () => hideMenu());
     } else if (node.action) {
@@ -499,7 +514,7 @@ export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx):
   const routers = buildPreviewMenuRouters(ctx, hideMenu, menu, actionCtx, shell);
   // 阶段 4：面板/组视图工厂（引用 routers 做渲染）
   const renderPanelFn = (l: HTMLElement, n: PreviewMenuNode): void =>
-    renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx);
+    renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx, { makeRow: makePreviewMenuRow, makePanelView: makePanelViewFn });
   const makePanelViewFn = (n: PreviewMenuNode): SlideMenuView =>
     previewMakePanelView(n, renderPanelFn);
   const makeRowFn = makePreviewMenuRow;

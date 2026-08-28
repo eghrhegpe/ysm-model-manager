@@ -12,6 +12,7 @@ import { cardContainer, addFieldRow } from "../../ui/ui-helpers.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
+import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
 import {
   listMmdMaterials,
   getMmdMaterialDetail,
@@ -46,6 +47,26 @@ export function fillMmdModelPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void
       `${pmx.bones.length} 骨骼 · ${pmx.materials.length} 材质 · ${pmx.morphs.length} 表情`,
     );
   });
+}
+
+/**
+ * [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。
+ * 纯数据：2 行 field（名称 + 骨骼/材质/表情计数），零 DOM。
+ * adapter 的 model 面板节点带 `children: mmdModelInfoNodes(ctx)` → 渲染走 renderMenu（preview-menu-render.ts）。
+ * fillMmdModelPanel 保留（向后兼容 + 既有测试零回归）；新面板路径走本函数。
+ */
+export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
+  const pmx = ctx.mmd.pmx;
+  return [
+    { id: "mmd-model-name", kind: "field", labelKey: "preview.nameLabel", fallback: "名称", value: ctx.modelName },
+    {
+      id: "mmd-model-overview",
+      kind: "field",
+      labelKey: "preview.modelOverview",
+      fallback: "模型",
+      value: `${pmx.bones.length} 骨骼 · ${pmx.materials.length} 材质 · ${pmx.morphs.length} 表情`,
+    },
+  ];
 }
 
 /** MMD 表情面板（morph 权重 0/1 切换，✓ 高亮当前开启；独立菜单项，避免 84+ 行平铺模型面板） */
@@ -267,35 +288,39 @@ function makeShotGuard(): { saving: boolean; setSaving: (v: boolean) => void } {
   };
 }
 
+/** MMD 截图六角度键与标签（fillMmdShotPanel / mmdShotNodes 共用，防两处漂移） */
+const MMD_SHOT_KEYS = ["current", "front", "45", "side", "back45", "all"] as const;
+const MMD_SHOT_LABELS = [
+  "preview.screenshotCurrent",
+  "preview.screenshotFront",
+  "preview.screenshot45",
+  "preview.screenshotSide",
+  "preview.screenshotBack45",
+  "preview.screenshotAll",
+] as const;
+
 /**
- * MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。
- * current / front / 45 / side / back45 / all 六角度——all 走 saveScreenshot 的 angle 路径。
- * @param screenshotFn 适配器注入的截图能力（screenshotFromRenderer 共享 renderer），null 时面板不渲染
+ * [doc:adr-126-p4-b-1] MMD 截图保存副作用（从 fillMmdShotPanel 抽出共享）：
+ * 防连点 guard + toast 错误提示。fillMmdShotPanel（命令式）与 mmdShotNodes（声明式）共用，
+ * 行为与原逻辑完全一致（guard 每次调用新建，与 fill 时新建等价）。
  */
-export function fillMmdShotPanel(
-  list: HTMLElement,
+function makeMmdShotAction(
   ctx: MmdBottomNavCtx,
   screenshotFn: (() => Promise<string | null>) | null,
-): void {
-  if (!screenshotFn) return;
+): (key: string) => Promise<void> {
   const shot = makeShotGuard();
-  const shotKeys = ["current", "front", "45", "side", "back45", "all"] as const;
-  const shotLabels = [
-    t("preview.screenshotCurrent"),
-    t("preview.screenshotFront"),
-    t("preview.screenshot45"),
-    t("preview.screenshotSide"),
-    t("preview.screenshotBack45"),
-    t("preview.screenshotAll"),
-  ];
-  const saveShot = async (key: string): Promise<void> => {
+  return async (key: string): Promise<void> => {
     if (shot.saving) return;
     shot.setSaving(true);
     try {
+      // 第四参传 screenshotFn（活跃渲染器截图）；第三参 setShotState 传空回调——
+      // 原 fillMmdShotPanel 误把 screenshotFn 传第三参（被当 setShotState 调），
+      // 导致实际截图走 renderMultiAngle fallback 而非活跃渲染器；此处顺手修正。
       await saveScreenshot(
         { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], _modelPath: ctx.modelPath, texture: "" },
         key,
-        screenshotFn,
+        () => {},
+        screenshotFn ?? undefined, // 调用方已保证非 null（fillMmdShotPanel/mmdShotNodes 的 `if (!screenshotFn) return`）
       );
     } catch (e) {
       console.error("[3D 截图]", e);
@@ -308,12 +333,51 @@ export function fillMmdShotPanel(
       shot.setSaving(false);
     }
   };
-  shotKeys.forEach((key, i) => {
+}
+
+/**
+ * [doc:adr-126-p4-b-1] MMD 截图面板——声明式节点版（通道验证）。
+ * 6 个 button 节点（📷 + 角度标签），action 内做截图副作用；screenshotFn 为 null 时返回空数组
+ * （面板不渲染，与原 fillMmdShotPanel 的 `if (!screenshotFn) return` 一致）。
+ * fillMmdShotPanel 保留（向后兼容）；新面板路径走本函数。
+ */
+export function mmdShotNodes(
+  ctx: MmdBottomNavCtx,
+  screenshotFn: (() => Promise<string | null>) | null,
+): PreviewMenuNode[] {
+  if (!screenshotFn) return [];
+  const saveShot = makeMmdShotAction(ctx, screenshotFn);
+  return MMD_SHOT_KEYS.map((key, i) => ({
+    id: `mmd-shot-${key}`,
+    kind: "button" as const,
+    labelKey: MMD_SHOT_LABELS[i],
+    fallback: key,
+    icon: "📷",
+    legacyTestId: `shot-${key}`,
+    action: (): void => {
+      void saveShot(key);
+    },
+  }));
+}
+
+/**
+ * MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。
+ * current / front / 45 / side / back45 / all 六角度——all 走 saveScreenshot 的 angle 路径。
+ * @param screenshotFn 适配器注入的截图能力（screenshotFromRenderer 共享 renderer），null 时面板不渲染
+ */
+export function fillMmdShotPanel(
+  list: HTMLElement,
+  ctx: MmdBottomNavCtx,
+  screenshotFn: (() => Promise<string | null>) | null,
+): void {
+  if (!screenshotFn) return;
+  const saveShot = makeMmdShotAction(ctx, screenshotFn);
+  MMD_SHOT_KEYS.forEach((key, i) => {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "ysm-3d-popbtn ysm-3d-popbtn--row";
-    item.textContent = "📷 " + shotLabels[i];
-      item.dataset.testid = "shot-" + key;
+    item.textContent = "📷 " + t(MMD_SHOT_LABELS[i]);
+    item.dataset.testid = "shot-" + key;
     item.onclick = (): void => {
       void saveShot(key);
     };

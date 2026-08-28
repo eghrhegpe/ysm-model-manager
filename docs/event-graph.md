@@ -510,7 +510,7 @@
 | `frontend/src/views/app-preview/detail-3d.ts` | 308 |
 | `frontend/src/views/app-preview/index.ts` | 244 |
 | `frontend/src/views/app-preview/index.ts` | 266 |
-| `frontend/src/views/app-preview/mmd-controls.ts` | 302 |
+| `frontend/src/views/app-preview/mmd-controls.ts` | 327 |
 | `frontend/src/views/app-preview/preview-library.ts` | 107 |
 | `frontend/src/views/app-preview/ysm-controls.ts` | 114 |
 | `frontend/src/views/app-sidebar/events.ts` | 110 |

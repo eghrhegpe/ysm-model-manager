@@ -195,9 +195,15 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     });
   });
 
-  it("适配器注入项 panel 必有 render；action 必有 run（core 项走 fillers 映射，行为测试覆盖）", () => {
+  it("适配器注入项 panel 必有 render（renderCustom 或 children 声明式二选一）；action 必有 run（core 项走 fillers 映射，行为测试覆盖）", () => {
     [...ysmItems, ...mmdItems, ...vrmItems].forEach((d) => {
-      if (d.kind === "panel") expect(typeof d.renderCustom, `${d.id}.renderCustom`).toBe("function");
+      // [doc:adr-126-p4-b-1] panel 内容两通道：renderCustom（命令式逃生舱）或 children（声明式节点，走 renderPreviewPanel children 分支）
+      if (d.kind === "panel") {
+        expect(
+          typeof d.renderCustom === "function" || (d.children?.length ?? 0) > 0,
+          `${d.id} 缺渲染通道（renderCustom 或 children）`,
+        ).toBe(true);
+      }
       if (d.kind === "action") expect(typeof d.action, `${d.id}.action`).toBe("function");
     });
   });
@@ -232,14 +238,18 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     expect(bones.dockGroup, "bones.dockGroup").toBe("motion");
   });
 
-  it("mmd model/material/play 恒定；bones 条件注入", () => {
-    const withAll = mmdMenuItems(fakeMmdOpts({ bonePanel: fakeBonePanel() }));
+  it("mmd model/material/play 恒定；shot 条件注入（screenshot 能力）；bones 条件注入", () => {
+    // [doc:adr-126-p4-b-1] shot 面板改为条件注入：screenshot 能力缺失（null）→ 无 shot 项
+    const withAll = mmdMenuItems(fakeMmdOpts({ bonePanel: fakeBonePanel(), screenshot: () => Promise.resolve(null) }));
     expectContainsAtLeast(extractIds(withAll), ["bones", "material", "model", "play", "shot"], "mmd 全注入");
     // play 始终注入（支持用户配置自定义动作库，空态引导选择）
-    const slim = mmdMenuItems(fakeMmdOpts({ play: { clips: [], isPlaying: () => false, toggle: vi.fn(), currentIndex: () => 0, select: vi.fn(), animDir: null } }));
+    const slim = mmdMenuItems(fakeMmdOpts({ play: { clips: [], isPlaying: () => false, toggle: vi.fn(), currentIndex: () => 0, select: vi.fn(), animDir: null }, screenshot: () => Promise.resolve(null) }));
     expectContainsAtLeast(extractIds(slim), ["play", "material", "model", "shot"], "mmd play 始终存在（空态）");
     // 无 pmx.bones → 无 bones
     expectNotContains(extractIds(slim), ["bones"], "mmd 无 bones 时不注入");
+    // 无 screenshot 能力 → 无 shot 项（[doc:adr-126-p4-b-1] 条件注入契约）
+    const noShot = mmdMenuItems(fakeMmdOpts({ screenshot: null }));
+    expectNotContains(extractIds(noShot), ["shot"], "mmd 无 screenshot 时不注入 shot");
   });
 
   it("legacyTestId 锚点齐全（既有 e2e 选择器兼容契约）", () => {

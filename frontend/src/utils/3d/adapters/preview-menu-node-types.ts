@@ -72,7 +72,7 @@ export interface PreviewMenuNode {
   icon?: string;
   /** 仅 folder：默认展开 */
   defaultOpen?: boolean;
-  /** 仅 folder：子节点 */
+  /** folder：子节点（可折叠 section）；panel：面板内容声明式子节点（[doc:adr-126-p4-b-1] renderPreviewPanel children 分支递归 renderMenu） */
   children?: PreviewMenuNode[];
   /** slider/toggle 等控件绑定 */
   control?: PreviewControlSpec;

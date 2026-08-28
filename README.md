@@ -178,9 +178,13 @@
 
 ---
 
-## 🔬 技术原理：YSMParser 集成与 .ysm 格式
+# 🔬 技术原理：
 
-### .ysm 文件格式
+## Blockbench 模型与 molang 动画
+
+
+
+## .ysm 文件组成
 
 `.ysm` 是 YSM 模组的专有模型格式，**不是标准 zip 压缩包**。其结构为：
 
@@ -194,7 +198,7 @@
 - 开源模型以标准 `.zip` 格式分发，内含明文 `minecraft:geometry` JSON
 - 加密模型使用 YSGP 二进制格式 + AES 加密，需专用解析器解码
 
-### YSMParser 集成
+## YSMParser 集成
 
 本工具集成 [YSMParser](https://github.com/OpenYSM/YSMParser) 用于解码加密 .ysm 模型：
 

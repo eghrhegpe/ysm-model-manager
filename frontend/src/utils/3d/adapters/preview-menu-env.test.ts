@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderEnvLevel, buildEnvSchema } from "./preview-menu-env.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import type { SceneCapability } from "../caps/scene-capability.ts";
 import type { PreviewMenuCtx } from "./preview-menu.ts";
 import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
 
@@ -38,14 +39,14 @@ function makeMenu(): SlideMenuHandle {
   } as unknown as SlideMenuHandle;
 }
 
-/** 测试用 sky cap 共享工厂：两处 fakeSkyCap 构造重复 → 抽公共函数（修复 jscpd 自重复 L47/L260） */
-function makeFakeSkyCap() {
+/** 测试用 sky cap 共享工厂：两处 fakeSkyCap 构造重复 → 抽公共函数（修复 jscpd 自重复） */
+function makeFakeSkyCap(controls?: ReturnType<NonNullable<SceneCapability["getMenuControls"]>>) {
   return {
     id: "sky",
     labelKey: "preview.sky",
     icon: "🌤️",
     descKey: "",
-    getMenuControls: () => [
+    getMenuControls: () => controls ?? [
       { id: "sky-toggle", kind: "toggle", labelKey: "preview.skyEnabled", fallback: "天空", getValue: () => true, setValue: () => {} },
     ],
     apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
@@ -165,14 +166,7 @@ describe("renderEnvLevel", () => {
 
   it("预设按钮点击调用 applyPreset（通过 menu.refresh）", () => {
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
-    const fakeSkyCap = {
-      id: "sky",
-      labelKey: "preview.sky",
-      icon: "🌤️",
-      descKey: "",
-      getMenuControls: () => [],
-      apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
-    };
+    const fakeSkyCap = makeFakeSkyCap([]); // 空控件列表
     const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as never) : null) });
     const menu = makeMenu();
     const list = document.createElement("div");

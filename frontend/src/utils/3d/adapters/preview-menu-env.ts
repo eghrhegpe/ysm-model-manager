@@ -38,6 +38,13 @@ const PRESET_ORDER = [
   { id: "sky", icon: "\uD83C\uDF24\uFE0F", labelKey: "preview.presetQuickSky" },
 ];
 function tr(key: string, fallback: string): string { const v = t(key); return v === key ? fallback : v; }
+/** 环境面板空态提示行（两分支共用） */
+function appendEnvEmpty(list: HTMLElement): void {
+  const r = document.createElement("div");
+  r.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+  r.textContent = tr("preview.noEnvironment", "进入 3D 后再打开环境面板");
+  list.appendChild(r);
+}
 function resolveCaps(ctx: PreviewMenuCtx): SceneCapability[] {
   let allCaps = sceneCapabilityRegistry.getAll().filter((cap) => ENV_IDS.has(cap.id));
   if (allCaps.length === 0) {
@@ -106,13 +113,7 @@ function applyPreset(ctx: PreviewMenuCtx, presetId: Exclude<EnvPresetId, "custom
 export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: SlideMenuHandle): void {
   if (!menu) {
     const caps = orderedCaps(resolveCaps(ctx));
-    if (caps.length === 0) {
-      const r = document.createElement("div");
-      r.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
-      r.textContent = tr("preview.noEnvironment", "进入 3D 后再打开环境面板");
-      list.appendChild(r);
-      return;
-    }
+    if (caps.length === 0) { appendEnvEmpty(list); return; }
     const ctrls: MenuControlDef[] = [];
     caps.forEach((cap, idx) => {
       if (idx > 0) ctrls.push({ id: "__divider_"+cap.id, kind: "divider" as const, labelKey: "", fallback: "", getValue: () => false, setValue: () => {} });
@@ -123,13 +124,7 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
   }
   const caps = orderedCaps(resolveCaps(ctx));
   rebuildEnvSubs(caps, menu); // 重建订阅：进入环境面板即刷新最新参数（含上一次会话遗留的 menu 引用清理）
-  if (caps.length === 0) {
-    const r = document.createElement("div");
-    r.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
-    r.textContent = tr("preview.noEnvironment", "进入 3D 后再打开环境面板");
-    list.appendChild(r);
-    return;
-  }
+  if (caps.length === 0) { appendEnvEmpty(list); return; }
   const pb = document.createElement("div");
   pb.style.cssText = "display:flex;gap:4px;padding:6px 10px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.08)";
   PRESET_ORDER.forEach((p) => {

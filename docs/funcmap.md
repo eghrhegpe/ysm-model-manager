@@ -1428,8 +1428,8 @@
 | `PREVIEW_MENU_GROUPS()` | `frontend/src/utils/3d/adapters/preview-menu-defs:66` | — |
 | `CORE_MENU_ITEMS()` | `frontend/src/utils/3d/adapters/preview-menu-defs:88` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
 | `disposeEnvSubscriptions()` | `frontend/src/utils/3d/adapters/preview-menu-env:29` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
-| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu-env:106` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
-| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu-env:240` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
+| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu-env:113` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
+| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu-env:235` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
 | `PreviewStatePath()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:14` | 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） |
 | `PreviewSnapshot()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:29` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
 | `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:32` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |

@@ -278,6 +278,12 @@ function renderPreviewPanel(
   actionCtx: PreviewActionMenuCtx,
 ): void {
   list.innerHTML = "";
+  // 面板可定位（2026-08-28 反馈通道）：data-panel-id 机器可读（测试/诊断/外部工具），
+  // title hover 提示人读——用户悬停面板内容即可读到内部 id / testid，
+  // 反馈「我看到的这个面板」时直接报 id，免去视觉路径转译歧义
+  list.dataset.panelId = node.id;
+  list.dataset.panelTestId = node.legacyTestId ?? "";
+  list.title = `panel: ${node.id}${node.legacyTestId ? ` · testid: ${node.legacyTestId}` : ""}`;
   try {
     if (routers.schemaBuilders[node.id]) {
       renderPreviewSchemaContent(list, routers.schemaBuilders[node.id]!(menu), hideMenu);

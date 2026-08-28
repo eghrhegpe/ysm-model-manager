@@ -1438,11 +1438,11 @@
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:38` | — |
 | `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:97` | — |
 | `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu-roles:267` | — |
-| `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:31` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
-| `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:45` | 灯光面板 schema：从 light cap 自报控件渲染 |
-| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:66` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
-| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:82` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
-| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:98` | 设置面板 schema：性能/画质开关声明式节点 |
+| `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:32` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
+| `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:46` | 灯光面板 schema：从 light cap 自报控件渲染 |
+| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:67` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
+| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:83` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
+| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:99` | 设置面板 schema：性能/画质开关声明式节点 |
 | `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu-switch:217` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu` | — |

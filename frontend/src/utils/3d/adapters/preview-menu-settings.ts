@@ -10,6 +10,7 @@ import { safeSet } from "../../../utils/dom/storage.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { isFrustumCullEnabled, setFrustumCullEnabled } from "../frustum-cull.ts";
+import type { WireframeCapability } from "../caps/wireframe-capability.ts";
 import {
   getMaxFps,
   invalidateMaxFpsCache,
@@ -104,6 +105,8 @@ export function buildSettingsSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
   // 🎨 画质分组
   nodes.push(bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality", "画质"));
   nodes.push(bsBuildPixelRatioSlider());
+  const wfCap = sceneCapabilityRegistry.getById("wireframe") as WireframeCapability | undefined;
+  if (wfCap) nodes.push(bsBuildWireframeToggle(wfCap));
   const ppCap = sceneCapabilityRegistry.getById("postprocessing") as
     | (import("../caps/postprocessing-capability.ts").PostprocessingCapability & {
         setEnabled(v: boolean): void;
@@ -296,6 +299,32 @@ function bsBuildNote(): PreviewMenuNode {
       note.style.cssText = "padding:8px 10px;font-size:11px;color:rgba(255,255,255,0.4);line-height:1.5";
       note.textContent = tr("preview.settingsNote", "分辨率上限需重新进入 3D 预览生效；其余开关即时生效。");
       list.appendChild(note);
+    },
+  };
+}
+
+function bsBuildWireframeToggle(wfCap: WireframeCapability): PreviewMenuNode {
+  return {
+    id: "settings-wireframe",
+    kind: "custom",
+    labelKey: "preview.wireframe",
+    fallback: "线框模式",
+    renderCustom: (list: HTMLElement): void => {
+      const row = bsMakeSlideRow();
+      const labelBox = document.createElement("div");
+      labelBox.style.cssText = "flex:1;display:flex;align-items:center;gap:8px;min-width:0";
+      const label = bsMakeSlideLabel("preview.wireframe", "线框模式");
+      const hint = document.createElement("span");
+      hint.style.cssText = "font-size:11px;color:rgba(255,255,255,0.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+      hint.textContent = tr("preview.wireframeDesc", "显示模型网格拓扑结构，调试布线用");
+      labelBox.append(label, hint);
+      const toggle = createHeaderToggle({
+        value: wfCap.isEnabled(),
+        onChange: (v: boolean): void => wfCap.setEnabled(v),
+        bind: (): boolean => wfCap.isEnabled(),
+      });
+      row.append(labelBox, toggle);
+      list.appendChild(row);
     },
   };
 }

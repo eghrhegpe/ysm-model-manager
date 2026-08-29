@@ -1,14 +1,17 @@
 // ===== Litematic 体素 3D 内容适配器（ADR-066 P3：从 litematic-3d.ts 抽离内容层）=====
 // 本文件只负责体素专属逻辑：经 Go 绑定取 voxel JSON → 按空间分块建 InstancedMesh →
-// 分层渲染 UI（axis/layer）+ 灯光 + GridHelper + 包围盒定相机。通用外壳
-// （overlay/renderer/循环/释放/相机控制）由 mount-preview-core.ts 拥有。
+// 分层切片面板（schema builder 注册，ADR-126 P5 收口）+ 灯光 + GridHelper + 包围盒定相机。
+// 通用外壳（overlay/renderer/循环/释放/相机控制）由 mount-preview-core.ts 拥有。
 
 import * as THREE from "three";
 import { t } from "../../../core/i18n/t.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode, PreviewSnapshot } from "./preview-menu-node-types.ts";
+import type { SchemaBuilder } from "./schema-registry.ts";
+import { registerSchema, unregisterSchema } from "./schema-registry.ts";
+import { getStateValue, resetLitematicSliceMode } from "../state/preview-state.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { renderLoadingState } from "./preview-loading.ts";
@@ -50,17 +53,6 @@ interface MdLiLayerShell {
   layerMax: number;
   layerVal: number;
   layerVal2: number;
-}
-
-interface MdLiLayerControlEls {
-  sep: HTMLElement;
-  axisLabel: HTMLElement;
-  axisSel: HTMLSelectElement;
-  layerMode: HTMLSelectElement;
-  layerSlider: HTMLInputElement;
-  layerInput: HTMLInputElement;
-  layerSlider2: HTMLInputElement;
-  layerInput2: HTMLInputElement;
 }
 
 // ===== 阶段①：入口守卫 + 路径读取 + 数据解析 =====
@@ -193,7 +185,7 @@ function mdLiBuildBlockMesh(
   return { modelGroup, instancedMeshes, materials, groupMeshes, boxGeo, grid: si.grid };
 }
 
-// ===== 阶段④：层面板装配 + applyLayer 过滤 =====
+// ===== 阶段④：分层切片（schema builder 注册 + applyLayer 体素过滤）=====
 
 function mdLiChunkKey(p: number[], si: MdLiSizeInfo): number {
   const cx = Math.floor(p[0] / CHUNK_SIZE);
@@ -235,135 +227,125 @@ function mdLiApplyLayer(
   }
 }
 
-function mdLiSetupRange(
-  shell: MdLiLayerShell,
-  si: MdLiSizeInfo,
-  els: MdLiLayerControlEls,
-): void {
-  shell.layerMax = [si.sizeX, si.sizeY, si.sizeZ][shell.layerAxis];
-  els.layerSlider.max = String(shell.layerMax);
-  els.layerInput.max = String(shell.layerMax);
-  els.layerSlider2.max = String(shell.layerMax);
-  els.layerInput2.max = String(shell.layerMax);
+// ===== 分层切片面板（schema builder 声明式，ADR-126 P5 收口：renderCustom 逃生舱退役）=====
+
+/** litematic 分层切片面板 schema 键（panel.schemaId 与 dispose 注销共用，防漂移静默丢面板） */
+export const LITEMATIC_SLICE_SCHEMA_ID = "litematic-slice";
+
+/** 轴下标 → 轴名（下标即 voxel 数据维度）；显示顺序保持旧 UI（Y 默认在前） */
+const SLICE_AXES = ["X", "Y", "Z"];
+const SLICE_AXIS_OPTIONS = [
+  { value: "Y", label: "Y" },
+  { value: "X", label: "X" },
+  { value: "Z", label: "Z" },
+];
+
+/** 切片模式真源在状态层（slider visibleWhen 谓词与 applyLayer 共读同一值） */
+function mdLiSliceMode(): string {
+  return String(getStateValue("ui.litematicSliceMode") ?? "all");
 }
 
-function mdLiUpdateLayerUI(
-  shell: MdLiLayerShell,
+/** 层号收敛 [1, layerMax]（非法输入回落 max——沿用旧 mdLiClampLayerInput 语义） */
+function mdLiClampLayer(n: number, layerMax: number): number {
+  return Number.isFinite(n) ? Math.max(1, Math.min(layerMax, n)) : layerMax;
+}
+
+/** 分层切片面板 builder 工厂：闭包持 shell（轴/层值会话态），每次面板渲染重新执行——
+ *  slider max 随轴切换保持新鲜（axis/mode select 均 refreshOnChange 触发重渲染）。
+ *  快照参数不消费：动态数据在闭包 shell 而非全局状态层（模式除外，走 visibleWhen 谓词）。 */
+function mdLiBuildSliceSchema(
   si: MdLiSizeInfo,
   rawGroups: VoxelData["groups"],
   groupMeshes: MdLiBuiltMeshes["groupMeshes"],
-  els: MdLiLayerControlEls,
-): void {
-  const m = els.layerMode.value;
-  els.layerSlider.style.display = m === "all" ? "none" : "";
-  els.layerInput.style.display = m === "all" ? "none" : "";
-  els.layerSlider2.style.display = m === "range" ? "" : "none";
-  els.layerInput2.style.display = m === "range" ? "" : "none";
-  mdLiApplyLayer(shell, si, rawGroups, groupMeshes, m);
-}
-
-function mdLiClampLayerInput(input: HTMLInputElement, slider: HTMLInputElement, layerMax: number): number {
-  const n = Number(input.value);
-  const v = Number.isFinite(n) ? Math.max(1, Math.min(layerMax, n)) : layerMax;
-  input.value = String(v);
-  slider.value = String(v);
-  return v;
-}
-
-function mdLiBuildLayerControls(
-  ctx: PreviewBuildCtx,
-  data: VoxelData,
-  si: MdLiSizeInfo,
-  groupMeshes: MdLiBuiltMeshes["groupMeshes"],
-): PreviewMenuNode[] {
-  const rawGroups = data.groups;
+): SchemaBuilder {
   const shell: MdLiLayerShell = {
     layerAxis: 1,
-    layerMax: Math.max(si.sizeX, si.sizeY, si.sizeZ, 1),
-    layerVal: 0,
-    layerVal2: 0,
+    layerMax: si.sizeY,
+    layerVal: si.sizeY,
+    layerVal2: si.sizeY,
   };
-
-  const sep = document.createElement("span");
-  sep.style.cssText = "width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 4px";
-  const axisLabel = document.createElement("span");
-  axisLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
-  axisLabel.textContent = t("preview.sliceAxis") + ":";
-  const axisSel = document.createElement("select");
-  axisSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
-  ["Y", "X", "Z"].forEach((a) => {
-    const o = document.createElement("option");
-    o.value = a;
-    o.textContent = a;
-    axisSel.appendChild(o);
-  });
-  const layerMode = document.createElement("select");
-  layerMode.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
-  [{ v: "all", t: "全部" }, { v: "single", t: "单层" }, { v: "range", t: "范围" }].forEach((m) => {
-    const o = document.createElement("option");
-    o.value = m.v;
-    o.textContent = m.t;
-    layerMode.appendChild(o);
-  });
-  const layerSlider = document.createElement("input");
-  layerSlider.type = "range"; layerSlider.min = "1"; layerSlider.max = "100"; layerSlider.value = "100";
-  layerSlider.style.cssText = "width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff);display:none";
-  const layerInput = document.createElement("input");
-  layerInput.type = "number"; layerInput.min = "1"; layerInput.max = "100"; layerInput.value = "100";
-  layerInput.style.cssText = "width:42px;font-size:11px;padding:1px 3px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);font-family:inherit;text-align:center;display:none";
-  const layerSlider2 = document.createElement("input");
-  layerSlider2.type = "range"; layerSlider2.min = "1"; layerSlider2.max = "100"; layerSlider2.value = "100";
-  layerSlider2.style.cssText = "width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff);display:none";
-  const layerInput2 = document.createElement("input");
-  layerInput2.type = "number"; layerInput2.min = "1"; layerInput2.max = "100"; layerInput2.value = "100";
-  layerInput2.style.cssText = "width:42px;font-size:11px;padding:1px 3px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);font-family:inherit;text-align:center;display:none";
-
-  const els: MdLiLayerControlEls = { sep, axisLabel, axisSel, layerMode, layerSlider, layerInput, layerSlider2, layerInput2 };
-
-  axisSel.onchange = (): void => {
-    shell.layerAxis = { X: 0, Y: 1, Z: 2 }[axisSel.value] ?? 1;
-    mdLiSetupRange(shell, si, els);
-    layerSlider.value = String(shell.layerMax);
-    layerInput.value = String(shell.layerMax);
-    layerSlider2.value = String(shell.layerMax);
-    layerInput2.value = String(shell.layerMax);
+  const applyLayer = (): void => mdLiApplyLayer(shell, si, rawGroups, groupMeshes, mdLiSliceMode());
+  const resetToMax = (): void => {
+    shell.layerMax = [si.sizeX, si.sizeY, si.sizeZ][shell.layerAxis];
     shell.layerVal = shell.layerMax;
     shell.layerVal2 = shell.layerMax;
-    mdLiApplyLayer(shell, si, rawGroups, groupMeshes, layerMode.value);
   };
-  layerSlider.oninput = (): void => {
-    layerInput.value = layerSlider.value;
-    shell.layerVal = Number(layerSlider.value);
-    mdLiApplyLayer(shell, si, rawGroups, groupMeshes, layerMode.value);
-  };
-  layerInput.onchange = (): void => {
-    const v = mdLiClampLayerInput(layerInput, layerSlider, shell.layerMax);
-    shell.layerVal = v;
-    mdLiApplyLayer(shell, si, rawGroups, groupMeshes, layerMode.value);
-  };
-  layerSlider2.oninput = (): void => {
-    layerInput2.value = layerSlider2.value;
-    shell.layerVal2 = Number(layerSlider2.value);
-    mdLiApplyLayer(shell, si, rawGroups, groupMeshes, layerMode.value);
-  };
-  layerInput2.onchange = (): void => {
-    const v = mdLiClampLayerInput(layerInput2, layerSlider2, shell.layerMax);
-    shell.layerVal2 = v;
-    mdLiApplyLayer(shell, si, rawGroups, groupMeshes, layerMode.value);
-  };
-  layerMode.onchange = (): void => {
-    mdLiUpdateLayerUI(shell, si, rawGroups, groupMeshes, els);
-  };
+  const layerSlider = (id: string, labelKey: string, fallback: string, pick: "layerVal" | "layerVal2", visibleWhen: (s: PreviewSnapshot) => boolean): PreviewMenuNode => ({
+    id,
+    kind: "slider",
+    labelKey,
+    fallback,
+    visibleWhen,
+    control: {
+      min: 1,
+      max: shell.layerMax,
+      numeric: true,
+      get: () => shell[pick],
+      set: (v) => {
+        shell[pick] = mdLiClampLayer(Number(v), shell.layerMax);
+      },
+      onChange: () => applyLayer(),
+    },
+  });
+  return () => [
+    { id: "slice-divider", kind: "divider" },
+    {
+      id: "slice-axis",
+      kind: "select",
+      labelKey: "preview.sliceAxis",
+      fallback: "分层轴",
+      control: {
+        options: SLICE_AXIS_OPTIONS,
+        get: () => SLICE_AXES[shell.layerAxis] ?? "Y",
+        set: (raw) => {
+          const i = SLICE_AXES.indexOf(String(raw));
+          shell.layerAxis = i >= 0 ? i : 1;
+          resetToMax();
+          return raw;
+        },
+        onChange: () => applyLayer(),
+        refreshOnChange: true,
+      },
+    },
+    {
+      id: "slice-mode",
+      kind: "select",
+      labelKey: "preview.sliceMode",
+      fallback: "模式",
+      control: {
+        options: [
+          { value: "all", label: "全部" },
+          { value: "single", label: "单层" },
+          { value: "range", label: "范围" },
+        ],
+        bind: "ui.litematicSliceMode",
+        onChange: () => applyLayer(),
+        refreshOnChange: true,
+      },
+    },
+    layerSlider("slice-layer", "preview.sliceLayer", "层", "layerVal", (s) => s["ui.litematicSliceMode"] === "single"),
+    layerSlider("slice-range-start", "preview.sliceRangeStart", "起", "layerVal", (s) => s["ui.litematicSliceMode"] === "range"),
+    layerSlider("slice-range-end", "preview.sliceRangeEnd", "止", "layerVal2", (s) => s["ui.litematicSliceMode"] === "range"),
+  ];
+}
 
-  mdLiSetupRange(shell, si, els);
-  layerSlider.value = String(shell.layerMax);
-  layerInput.value = String(shell.layerMax);
-  layerSlider2.value = String(shell.layerMax);
-  layerInput2.value = String(shell.layerMax);
-  shell.layerVal = shell.layerMax;
-  shell.layerVal2 = shell.layerMax;
-
-  return litematicMenuItems(els);
+/** 注册切片面板 builder + 产出 panel 入口节点（schemaId 是唯一渲染通道，契约禁双通道） */
+function mdLiRegisterSliceSchema(
+  si: MdLiSizeInfo,
+  rawGroups: VoxelData["groups"],
+  groupMeshes: MdLiBuiltMeshes["groupMeshes"],
+): PreviewMenuNode {
+  registerSchema(LITEMATIC_SLICE_SCHEMA_ID, mdLiBuildSliceSchema(si, rawGroups, groupMeshes));
+  return {
+    id: "slice",
+    icon: "🧊",
+    labelKey: "preview.sliceControl",
+    fallback: "分层切片",
+    kind: "panel",
+    dockGroup: "model",
+    legacyTestId: "litematic-slice-entry",
+    schemaId: LITEMATIC_SLICE_SCHEMA_ID,
+  };
 }
 
 // ===== 辅助：perf trace + truncated 警告 =====
@@ -401,6 +383,8 @@ function mdLiBuildResult(
   return {
     menuItems,
     dispose(): void {
+      unregisterSchema(LITEMATIC_SLICE_SCHEMA_ID);
+      resetLitematicSliceMode();
       unregisterModelRoot(built.modelGroup);
       built.instancedMeshes.forEach((m) => safeDispose(m));
       built.materials.forEach((m) => safeDispose(m));
@@ -411,7 +395,7 @@ function mdLiBuildResult(
   };
 }
 
-/** Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层控件钩子。
+/** Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。
  *  voxelCall 由视图壳注入（对齐 ADR-072：适配器 0 backend import），经绑定名取 Go RPC。 */
 export async function buildLitematicScene(
   ctx: PreviewBuildCtx,
@@ -431,52 +415,8 @@ export async function buildLitematicScene(
   ctx.loadingEl.remove();
   mdLiRecordPerfTrace(path, tStart, data);
 
-  const sliceItems = mdLiBuildLayerControls(ctx, data, si, built.groupMeshes);
+  const sliceItems = [mdLiRegisterSliceSchema(si, data.groups, built.groupMeshes)];
   mdLiShowTruncatedWarning(ctx, data);
 
   return mdLiBuildResult(ctx, built, sliceItems);
-}
-
-// ===== litematic 菜单项（ADR-076 v2 Phase 3：分层控件收编进 ⚙️ 根菜单）=====
-
-/** litematic 分层控件渲染参数（由 buildLitematicScene 传入已创建的 DOM 元素） */
-interface LitematicMenuRenderArgs {
-  sep: HTMLElement;
-  axisLabel: HTMLElement;
-  axisSel: HTMLSelectElement;
-  layerMode: HTMLSelectElement;
-  layerSlider: HTMLInputElement;
-  layerInput: HTMLInputElement;
-  layerSlider2: HTMLInputElement;
-  layerInput2: HTMLInputElement;
-}
-
-/**
- * 构造 litematic 专属菜单项：
- * 分层切片调节（axis/layer 控件）作为 🧍 模型组的一个面板项，
- * 点击后弹出面板，内含轴选择 + 分层模式 + 滑块控件。
- */
-export function litematicMenuItems(els: LitematicMenuRenderArgs): PreviewMenuNode[] {
-  return [
-    {
-      id: "slice",
-      icon: "🧊",
-      labelKey: "preview.sliceControl",
-      fallback: "分层切片",
-      kind: "panel",
-      dockGroup: "model",
-      legacyTestId: "litematic-slice-entry",
-      renderCustom:(list: HTMLElement) => {
-        list.innerHTML = "";
-        list.appendChild(els.sep);
-        list.appendChild(els.axisLabel);
-        list.appendChild(els.axisSel);
-        list.appendChild(els.layerMode);
-        list.appendChild(els.layerSlider);
-        list.appendChild(els.layerInput);
-        list.appendChild(els.layerSlider2);
-        list.appendChild(els.layerInput2);
-      },
-    },
-  ];
 }

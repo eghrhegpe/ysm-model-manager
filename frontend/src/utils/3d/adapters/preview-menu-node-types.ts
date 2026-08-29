@@ -66,6 +66,9 @@ export interface PreviewControlSpec {
   set?: (v: unknown) => unknown;
   /** 控件值变更后的副作用 */
   onChange?: (v: unknown) => void;
+  /** slider 类型：旁挂数字输入框（与 range 双向联动，onchange 走 min/max clamp）——
+   *  大数值层号精确输入场景（litematic 分层切片首用） */
+  numeric?: boolean;
   /** onchange 后重渲染当前面板（menu.refresh()）：面板内容随绑定状态变化的场景
    *  （如组件 select 切档后 stats/纹理行按新快照重建，[doc:adr-126-p5] 订阅链闭合的渲染侧） */
   refreshOnChange?: boolean;

@@ -326,7 +326,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
 
   // 顶栏已移除（ADR-076 v2，用户 2026-08-16 决策）：预览控件全部收进
   // 声明式根菜单（⚙️ 按钮 → mountPreviewRootMenu），彻底告别顶栏滑块垃圾。
-  // litematic 分层控件也经 litematicMenuItems 注入根菜单模型组（Phase 3 收编）。
+  // litematic 分层切片面板也经 schemaId 注册（registerSchema builder）注入根菜单模型组。
 
   // 相机控制桥（shared 模式）：core 的相机控件与 PreviewBuildCtx.cameraControls
   // 共用同一 bridge（操作核心内部 orbitMode/camSpeed/controls），适配器（如 ysm 底部

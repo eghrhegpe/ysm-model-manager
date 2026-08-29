@@ -279,6 +279,65 @@ function rmAppendToggle(container: HTMLElement, node: PreviewMenuNode): void {
   container.appendChild(wrap);
 }
 
+/** [子函数 5.6/6] slider：label(可选) + range（+numeric 时旁挂 number 联动）行——
+ *  通用渲染器的 slider 分支补齐（caps 专属 slider 走 preview-menu-cap-controls 另一通道，
+ *  此处分派的是 PreviewMenuNode 数据）。control.get/set 闭包读写（同 toggle 范式） */
+function rmAppendSlider(container: HTMLElement, node: PreviewMenuNode): void {
+  const spec = node.control;
+  const wrap = document.createElement("div");
+  wrap.className = "slide-item";
+  wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 10px";
+  wrap.dataset.testid = "preview-" + node.id;
+  const min = spec?.min ?? 0;
+  const max = spec?.max ?? 100;
+  const range = document.createElement("input");
+  range.type = "range";
+  range.min = String(min);
+  range.max = String(max);
+  range.step = String(spec?.step ?? 1);
+  const initial = Number(spec?.get?.(undefined) ?? min);
+  range.value = String(initial);
+  range.style.cssText = "flex:1;min-width:0;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+  let num: HTMLInputElement | null = null;
+  if (spec?.numeric) {
+    num = document.createElement("input");
+    num.type = "number";
+    num.min = range.min;
+    num.max = range.max;
+    num.step = range.step;
+    num.value = String(initial);
+    num.style.cssText = "flex:0 0 auto;width:52px;font-size:11px;padding:1px 3px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);text-align:center";
+  }
+  const commit = (v: number): void => {
+    spec?.set?.(v);
+    spec?.onChange?.(v);
+  };
+  range.oninput = (): void => {
+    const v = Number(range.value);
+    if (num) num.value = String(v);
+    commit(v);
+  };
+  if (num) {
+    num.onchange = (): void => {
+      const n = Number(num!.value);
+      const v = Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : Number(range.value);
+      range.value = String(v);
+      num!.value = String(v);
+      commit(v);
+    };
+  }
+  if (node.labelKey) {
+    const lb = document.createElement("span");
+    lb.className = "slide-label";
+    lb.style.cssText = "flex:0 0 auto;font-size:12px;color:rgba(255,255,255,0.7)";
+    lb.textContent = rmLabel(node);
+    wrap.appendChild(lb);
+  }
+  wrap.append(range);
+  if (num) wrap.append(num);
+  container.appendChild(wrap);
+}
+
 /** [子函数 5.75/6] material-row：组合控件行（label + eye 显隐 + opacity 滑条）——
  *  [doc:adr-126-p5] 审计 #3 组合行增强；eye/opacity 闭包经 bridge 下沉（对齐旧
  *  buildMaterialControls 语义：点击翻转显隐、滑条改透明度） */
@@ -373,6 +432,8 @@ export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], dep
       rmAppendDynamicRow(container, node, deps.actionCtx);
     } else if (node.kind === "select") {
       rmAppendSelect(container, node, snapshot, deps.menu);
+    } else if (node.kind === "slider") {
+      rmAppendSlider(container, node);
     } else if (node.kind === "toggle") {
       rmAppendToggle(container, node);
     } else if (node.kind === "material-row") {

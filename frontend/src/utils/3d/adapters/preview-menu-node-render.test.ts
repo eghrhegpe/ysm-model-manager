@@ -317,4 +317,76 @@ describe("renderMenu 新 kind", () => {
     const row = container.querySelector('[data-testid="preview-custom-area"]') as HTMLElement;
     expect(row).not.toBeNull();
   });
+
+  it("slider: 渲染 range 行，value 来自 control.get，oninput 触发 set+onChange", () => {
+    let val = 40;
+    const changed: number[] = [];
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "layer-slider",
+        kind: "slider",
+        labelKey: "preview.sliceLayer",
+        fallback: "层",
+        control: {
+          min: 1,
+          max: 100,
+          get: () => val,
+          set: (v: unknown) => { val = Number(v); },
+          onChange: (v: unknown) => { changed.push(Number(v)); },
+        },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-layer-slider"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    const range = row.querySelector('input[type="range"]') as HTMLInputElement;
+    expect(range).not.toBeNull();
+    expect(range.min).toBe("1");
+    expect(range.max).toBe("100");
+    expect(range.value).toBe("40");
+    range.value = "77";
+    range.dispatchEvent(new Event("input"));
+    expect(val).toBe(77);
+    expect(changed).toEqual([77]);
+  });
+
+  it("slider: numeric=true 联动 number 输入框，number onchange 走 min/max clamp", () => {
+    let val = 5;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "num-slider",
+        kind: "slider",
+        control: { min: 1, max: 10, get: () => val, set: (v: unknown) => { val = Number(v); }, numeric: true },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-num-slider"]') as HTMLElement;
+    const range = row.querySelector('input[type="range"]') as HTMLInputElement;
+    const num = row.querySelector('input[type="number"]') as HTMLInputElement;
+    expect(num).not.toBeNull();
+    expect(num.value).toBe("5");
+    // range 拖动 → number 同步
+    range.value = "8";
+    range.dispatchEvent(new Event("input"));
+    expect(num.value).toBe("8");
+    expect(val).toBe(8);
+    // number 越界输入 → clamp 到 max 后提交
+    num.value = "99";
+    num.dispatchEvent(new Event("change"));
+    expect(val).toBe(10);
+    expect(range.value).toBe("10");
+  });
+
+  it("slider: 无 labelKey 时不渲染 label（保持旧裸滑条视觉）", () => {
+    const nodes: PreviewMenuNode[] = [
+      { id: "bare-slider", kind: "slider", control: { get: () => 1, set: () => {} } },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-bare-slider"]') as HTMLElement;
+    expect(row.querySelector(".slide-label")).toBeNull();
+    expect(row.querySelector('input[type="range"]')).not.toBeNull();
+  });
 });

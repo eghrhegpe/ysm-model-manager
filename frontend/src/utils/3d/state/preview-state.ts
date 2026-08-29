@@ -58,6 +58,9 @@ export const KNOWN_PATHS = [
   // [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
   // 会话态不落盘；面板侧 subscribe 变更 → 调 showModelGroup 副作用（views 层装配）。
   "ui.activeComponent",
+  // [doc:adr-126-p5-收尾] litematic 分层切片模式（会话态）：all / single / range。
+  // select bind 写入 + slider visibleWhen 谓词消费（AGENTS.md 3d菜单 visibleWhen 唯一守卫口）。
+  "ui.litematicSliceMode",
 ] as const satisfies readonly PreviewStatePath[];
 
 /**
@@ -84,6 +87,9 @@ interface PreviewStatePathBinding {
 
 /** [doc:adr-126-p5-b] 当前选中组件（会话态内存值）：-1 = All，其余 = 组件下标 */
 let _activeComponent = -1;
+
+/** [doc:adr-126-p5-收尾] litematic 分层切片模式（会话态内存值）：all / single / range */
+let _litematicSliceMode = "all";
 
 /** 判断对象上是否存在指定方法（结构性探测，避免 as 硬转后的运行期炸裂） */
 function hasMethod<T>(obj: unknown, name: keyof T): boolean {
@@ -181,6 +187,13 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
     },
     available: () => true,
   },
+  "ui.litematicSliceMode": {
+    get: () => _litematicSliceMode,
+    set: (v) => {
+      _litematicSliceMode = typeof v === "string" && ["all", "single", "range"].includes(v) ? v : "all";
+    },
+    available: () => true,
+  },
 };
 
 /** 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。
@@ -188,6 +201,11 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
  *  读陈旧下标，越界组件 → stats 聚合错 + select 无匹配项（P5-A review P2） */
 export function resetActiveComponent(): void {
   _activeComponent = -1;
+}
+
+/** 重置 litematic 切片模式（预览 dispose 时调用；同 _activeComponent 防跨会话泄漏） */
+export function resetLitematicSliceMode(): void {
+  _litematicSliceMode = "all";
 }
 
 // ── 订阅（供后续取代 05fe24b7 的手工 refresh 链路）──

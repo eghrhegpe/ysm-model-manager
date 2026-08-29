@@ -123,7 +123,7 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 - 落地：P4-B-1（mmd model/shot 声明式化）+ P4-B-2（YSM 截图声明式化 + 截图共享层）+ **P4-D（`visibleWhen: (s: PreviewSnapshot) => boolean` 升级）** + **P5（受控 schema 注册 schema-registry.ts + select 分支 + `ui.activeComponent` 响应式 + buildYsmModelSchema 取代 fill3DPanel）** 已完成
 - **P5 撤销 P4-B-3 的「fill3DPanel 保持逃生舱」定性**：用户推动的根治——fill3DPanel 的组件切换是「渲染通道不受控」（新增面板可绕过数组系统拼 DOM），不是「交互态不值得转」；现以 `ui.activeComponent` 状态层 + schema-registry 受控注册 + select 分支根治
 - **P5-收尾：morph/play 交互面板也声明式化**（二轮审计）——`morphNodes`（mmd 表情 toggle）+ `playNodes`（播放/暂停 toggle + 动作 select + 空态，三 adapter 共用）；交互态「运行时状态」由 toggle/select 的 get/set 闭包 + 即时 apply 解决，不需 Capability 类
-- **逃生舱只剩两类真·复杂**：① 骨骼面板（makeBonePanelRenderer，3D 射线拾取 + 相机/场景实时对象）；② litematic 分层切片（直接持有 DOM 元素引用）
+- **逃生舱只剩一类真·复杂**：骨骼面板（makeBonePanelRenderer，3D 射线拾取 + 相机/场景实时对象）。**litematic 分层切片已 schema 化退出逃生舱**：`registerSchema("litematic-slice", builder)` 每次面板渲染重建节点（slider max 随轴新鲜）、切片模式走状态层 `ui.litematicSliceMode`（select bind + slider `visibleWhen` 谓词，dispose 注销 + resetLitematicSliceMode 防跨会话泄漏）；通用渲染器 renderMenu 补齐 slider 分支（label 可选 + `control.numeric` 旁挂 number 联动，caps 专属 slider 仍走 preview-menu-cap-controls 另一通道）
 - **zip 多 pmx 选择（[doc:adr-127]）**：`resolveMmdZipConfig` 暴露全部 pmx/pmd 候选（`modelCandidates`，排序后第一个 = 默认）；mmd model 面板多候选时前置 select，选中 → `switchTo(候选虚拟路径)`（复用 switchToSession 外壳保留换内容层，零新机制）——面板写法与 morph/play/material 同款（children + 纯数据工厂 + panels 注入）
 - P4-C（dockGroup 双语义）定性「保持观察」：模式守卫早已独立字段，剩 dock 分组 + 内容域双语义，概念错位非功能 bug（详见 ADR-126 §2.5）
 - 顺手修复：`fillMmdShotPanel` / `fillYsmShotPanel` 的 `saveScreenshot` 第三参误传 `screenshotFn`（被当 setShotState），实际截图走 fallback 而非活跃渲染器——`makeShotAction`（shot-panel-shared.ts）已修正（第四参传 screenshotFn）

@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 175 | 719 |
+| 前端·工具 | 176 | 726 |
 | frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **506** | **2168** |
+| **合计** | **507** | **2175** |
 
 ## Go·头像
 
@@ -1342,10 +1342,16 @@
 | `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:27` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
 | `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:42` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
 | `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:121` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
-| `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/litematic-adapter:234` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
-| `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:404` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
+| `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/litematic-adapter:236` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
+| `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:412` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
 | `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
 | `materialNodes()` | `frontend/src/utils/3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
+| `RepresentativeSnapshot()` | `frontend/src/utils/3d/adapters/menu-graph:23` | 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） |
+| `MenuGraphNode()` | `frontend/src/utils/3d/adapters/menu-graph:29` | 导航图节点（菜单节点的投影，只读不写） |
+| `MenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:50` | 导航图：dock 分组 → 面板 → 节点树 + 动作节点 + 覆盖度 |
+| `CollectMenuGraphOpts()` | `frontend/src/utils/3d/adapters/menu-graph:65` | collectMenuGraph 入参 |
+| `collectNodePredicates()` | `frontend/src/utils/3d/adapters/menu-graph:77` | 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二） |
+| `collectMenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:138` | 收集菜单导航图（纯函数，不改任何状态）。 |
 | `makeMenuCtx()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:12` | PreviewMenuCtx 全字段 stub：能力全缺（getCap → null）、桥全 vi.fn()。 |
 | `mockMenuHandle()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:36` | SlideMenuHandle 全方法 stub（渲染器/面板单测用，导航动作全 no-op） |
 | `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:66` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
@@ -1440,9 +1446,9 @@
 | `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:38` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
 | `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:54` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
 | `PreviewMenuNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:82` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
-| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:129` | 类型守卫：节点是否为 folder（可下钻） |
-| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:134` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
-| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:147` | 递归收集全部节点 id（供 id 唯一性契约测试） |
+| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:131` | 类型守卫：节点是否为 folder（可下钻） |
+| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:136` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
+| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:149` | 递归收集全部节点 id（供 id 唯一性契约测试） |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:420` | — |
 | `renderAdapterPanelContent()` | `frontend/src/utils/3d/adapters/preview-menu-render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu-roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
@@ -1596,7 +1602,9 @@
 | `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:107` | — |
 | `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:117` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
 | `lightDirToPosition()` | `frontend/src/utils/3d/caps/light-capability:348` | 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） |
-| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:356` | — |
+| `SKY_ENV_AMBIENT_ATTENUATION()` | `frontend/src/utils/3d/caps/light-capability:359` | PMREM 环境光开启时 ambient 让位系数（双间接光叠加防过亮/互相稀释—— [doc:adr-126-p5] 光系统统一性 #3）。预览（refreshAmbientFr |
+| `attenuateAmbientForSky()` | `frontend/src/utils/3d/caps/light-capability:362` | ambient 强度按 sky 环境开关套让位系数（镜像 AmbientParams 应用，公式单源） |
+| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:366` | — |
 | `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |
@@ -1797,15 +1805,14 @@
 | `applyPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:61` | 套用档位：遍历档位表走状态层统一写口（默认广播 notify，面板订阅可自动刷新）。 |
 | `setPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:70` | 切换档位：持久化 + 套用 |
 | `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:51` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
-| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:72` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
-| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:202` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
-| `resetLitematicSliceMode()` | `frontend/src/utils/3d/state/preview-state:207` | 重置 litematic 切片模式（预览 dispose 时调用；同 _activeComponent 防跨会话泄漏） |
-| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:217` | 订阅横切设置变更；返回取消订阅函数 |
-| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:238` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
-| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:247` | 写入路径值。 |
-| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:257` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
-| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:266` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
-| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:273` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
+| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:69` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
+| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:189` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
+| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:199` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:220` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
+| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:229` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:239` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:248` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
+| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:255` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
 | `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
 | `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |
@@ -2263,7 +2270,7 @@
 | `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:48` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |
 | `buildStatsCard()` | `frontend/src/views/app-preview/skeleton-render:90` | 构建统计卡片（含作者列表） 异步获取3D spec 以对齐3D面板逐组件数据源——bone/cube 按 spec.models[] 拆分， 纹理尺寸取 spec 第一个组件的声明 |
 | `buildBoneExportRow()` | `frontend/src/views/app-preview/skeleton-render:167` | 构建导出骨骼名按钮行 |
-| `saveScreenshot()` | `frontend/src/views/app-preview/skeleton-render:215` | — |
+| `saveScreenshot()` | `frontend/src/views/app-preview/skeleton-render:216` | — |
 | `sec()` | `frontend/src/views/app-preview/skeleton-utils:6` | 面板分区标题（3D overlay 信息面板使用） gap=false 用于面板首个分区（panel 已有 padding-top，避免顶部 10+12=22px 过空） |
 | `iRow()` | `frontend/src/views/app-preview/skeleton-utils:15` | 信息行：标签 | 值 |
 | `buildDepthMap()` | `frontend/src/views/app-preview/skeleton-utils:34` | 构建骨骼层级深度映射（用于骨骼列表缩进渲染） parentId 为空的骨骼深度为 0，其余递归计算 |

@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-129：3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置）",
+        "link": "/adr/ADR-129-preview-3d-domain-root"
+      },
+      {
         "text": "ADR-128：菜单导航图生成器与 e2e 选择器派生（声明式收口后的可验证性）",
         "link": "/adr/ADR-128-menu-nav-graph-e2e-selectors"
       },

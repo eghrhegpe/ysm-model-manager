@@ -1185,6 +1185,10 @@ export const en: Record<string, string> = {
   "preview.noPackPng": "No pack.png",
   "preview.blockItemModel3d": "Block/Item Model 3D Preview",
   "preview.noBlockData": "No block data",
+  // ── Resource pack model list (ADR-131 P3) ──
+  "preview.modelList": "🧊 Model List ({n})",
+  "preview.modelListOverflow": "Over 200 models; only first {n} kept in list",
+  "preview.modelCubes": "{cubes} cuboid(s)",
   "preview.sliceAxis": "Slice Axis",
   "preview.sliceControl": "Slice Control",
   "preview.sliceMode": "Mode",

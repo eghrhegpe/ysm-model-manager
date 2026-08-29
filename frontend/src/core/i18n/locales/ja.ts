@@ -1186,6 +1186,10 @@ export const ja: Record<string, string> = {
   "preview.noPackPng": "pack.png なし",
   "preview.blockItemModel3d": "ブロック/アイテムモデル 3D プレビュー",
   "preview.noBlockData": "ブロックデータなし",
+  // ── リソースパックモデルリスト（ADR-131 P3）──
+  "preview.modelList": "🧊 モデルリスト（{n}）",
+  "preview.modelListOverflow": "モデル 200 超: 先頭 {n} 件のみリスト表示",
+  "preview.modelCubes": "{cubes} キューブ",
   "preview.sliceAxis": "スライス軸",
   "preview.sliceControl": "スライス制御",
   "preview.sliceMode": "モード",

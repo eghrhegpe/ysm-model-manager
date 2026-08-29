@@ -38,7 +38,7 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 26 |
-| Go(internal)·应用入口 | 29 | 215 |
+| Go(internal)·应用入口 | 29 | 217 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 18 | 37 |
@@ -50,7 +50,7 @@
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **512** | **2202** |
+| **合计** | **512** | **2204** |
 
 ## Go·头像
 
@@ -899,8 +899,10 @@
 | `App.RepoHealthAudit()` | `internal/app/resource_bindings:596` | RepoHealthAudit 一键全仓体检（审计 + 去重），返回 JSON 字符串。 |
 | `App.RepoHealthAuditAll()` | `internal/app/resource_bindings:617` | RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。 |
 | `App.InstallResourceToInstance()` | `internal/app/resource_bindings:682` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
-| `App.ListPackModels()` | `internal/app/resourcepack_models:49` | ListPackModels 枚举资源包容器内的 block/item 模型 JSON 条目路径（升序）。 |
-| `App.ReadPackEntry()` | `internal/app/resourcepack_models:74` | ReadPackEntry 读取容器内条目内容（base64 字符串）。 |
+| `App.ListPackModels()` | `internal/app/resourcepack_models:73` | ListPackModels 枚举资源包容器内的 block/item 模型 JSON 条目路径（升序）。 |
+| `App.ListPackModelsDetail()` | `internal/app/resourcepack_models:100` | ListPackModelsDetail 枚举资源包容器内的 block/item 模型（升序）+ 立方体数（elements 长度）。 |
+| `App.ReadPackEntry()` | `internal/app/resourcepack_models:167` | ReadPackEntry 读取容器内条目内容（base64 字符串）。 |
+| `PackModelDetail()` | `internal/app/resourcepack_models:27` | PackModelDetail 单模型清单项（path + 立方体数，供详情页模型清单区）。 |
 | `limitedBuffer.Write()` | `internal/app/wasm_decoder:86` | — |
 | `App.GetWasmBinary()` | `internal/app/wasm_embed:5` | GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。 |
 
@@ -1032,7 +1034,7 @@
 | `typeFromWebDir()` | `frontend/src/backend/web-fs:76` | 从 /web/&lt;type&gt;/... |
 | `scanWebModels()` | `frontend/src/backend/web-fs:85` | — |
 | `readWebFile()` | `frontend/src/backend/web-fs:180` | 读文件（/web/&lt;type&gt;/&lt;rest&gt; → IDB → base64；wasm.ts 解码链零改动复用） 模型组 name 与组内 rel 在 file key 中无缝拼接（ |
-| `scanAllWebModels()` | `frontend/src/backend/web-fs:753` | 扫描全部资源类型的模型（供标签聚合 / 子目录映射等全库操作） |
+| `scanAllWebModels()` | `frontend/src/backend/web-fs:794` | 扫描全部资源类型的模型（供标签聚合 / 子目录映射等全库操作） |
 | `WebModelStats()` | `frontend/src/backend/web-stats` | — |
 | `STATS_BATCH_LIMIT()` | `frontend/src/backend/web-stats` | — |
 | `onStatsProgress()` | `frontend/src/backend/web-stats:40` | 注册批量统计进度回调（done/total 为该批已处理模型数；传 null 注销） |
@@ -1623,8 +1625,8 @@
 | `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |
-| `POSTPROC_PRESETS()` | `frontend/src/utils/3d/caps/postprocessing-capability:338` | 模型类别后处理预设 |
-| `PostprocessingCapability()` | `frontend/src/utils/3d/caps/postprocessing-capability:380` | — |
+| `POSTPROC_PRESETS()` | `frontend/src/utils/3d/caps/postprocessing-capability:347` | 模型类别后处理预设 —— 统一亮度口径 bloomStrength / bloomThreshold / bloomRadius / exposure / toneMapping |
+| `PostprocessingCapability()` | `frontend/src/utils/3d/caps/postprocessing-capability:357` | — |
 | `ReflectorParams()` | `frontend/src/utils/3d/caps/reflector-capability:18` | — |
 | `DEFAULT_REFLECTOR_PARAMS()` | `frontend/src/utils/3d/caps/reflector-capability:34` | — |
 | `REFLECTOR_PRESETS()` | `frontend/src/utils/3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
@@ -1825,13 +1827,13 @@
 | `PreviewSnapshot()` | `frontend/src/utils/3d/state/preview-state:48` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
 | `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:69` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
 | `toStatePath()` | `frontend/src/utils/3d/state/preview-state:91` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
-| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:251` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
-| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:261` | 订阅横切设置变更；返回取消订阅函数 |
-| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:282` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
-| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:291` | 写入路径值。 |
-| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:301` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
-| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:310` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
-| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:317` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
+| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:261` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
+| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:271` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:292` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
+| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:301` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:311` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:320` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
+| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:327` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
 | `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
 | `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |
@@ -2216,9 +2218,9 @@
 | `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:299` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
 | `detailGen()` | `frontend/src/views/app-preview/detail:24` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:27` | 显示模型详情（YSM 模型） |
-| `showResourcePack()` | `frontend/src/views/app-preview/detail:144` | 显示资源包信息（pack.mcmeta + pack.png） |
-| `showSimplePreview()` | `frontend/src/views/app-preview/detail:187` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
-| `showShaderpack()` | `frontend/src/views/app-preview/detail:205` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
+| `showResourcePack()` | `frontend/src/views/app-preview/detail:144` | 显示资源包信息（pack.mcmeta + pack.png + 模型清单） |
+| `showSimplePreview()` | `frontend/src/views/app-preview/detail:241` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
+| `showShaderpack()` | `frontend/src/views/app-preview/detail:259` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
 | `openEmpty3DFullscreen()` | `frontend/src/views/app-preview/empty-3d:35` | 打开空场景 3D 全屏预览（无需 path）。 |
 | `cleanupEmpty3D()` | `frontend/src/views/app-preview/empty-3d:40` | 清理空场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateEmptyPreview()` | `frontend/src/views/app-preview/empty-3d:45` | 作废在途空场景加载 |
@@ -2264,8 +2266,8 @@
 | `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:161` | 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标） |
 | `resolveMorphSiblings()` | `frontend/src/views/app-preview/morph-siblings:8` | CustomMorph 目录下所有候选文件（含子目录）；失败返回 [] |
 | `createPack3D()` | `frontend/src/views/app-preview/pack-3d:30` | 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） |
-| `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:50` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
-| `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:55` | 任意新预览派发时调用，作废在途资源包加载 |
+| `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:51` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
+| `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:56` | 任意新预览派发时调用，作废在途资源包加载 |
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:23` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
 | `registerReRoute()` | `frontend/src/views/app-preview/preview-library:24` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
 | `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:32` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |

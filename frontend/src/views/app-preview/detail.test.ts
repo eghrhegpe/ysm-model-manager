@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
 
-const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, createMmd3DMock, resolveMmdSiblingsMock, readFileBytesMock, readPmxStatsMock } = vi.hoisted(() => ({
+const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, createMmd3DMock, resolveMmdSiblingsMock, readFileBytesMock, readPmxStatsMock, packModelsMock, createPack3DMock } = vi.hoisted(() => ({
   summaryMock: vi.fn(),
   headerMock: vi.fn(),
   readPackMock: vi.fn(),
@@ -14,6 +14,8 @@ const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, cre
   resolveMmdSiblingsMock: vi.fn(),
   readFileBytesMock: vi.fn(),
   readPmxStatsMock: vi.fn(),
+  packModelsMock: vi.fn(),
+  createPack3DMock: vi.fn(),
 }));
 
 vi.mock("../../backend/app.ts", () => ({
@@ -22,7 +24,11 @@ vi.mock("../../backend/app.ts", () => ({
     ExtractYSMHeader: headerMock,
     ReadPackMeta: readPackMock,
     ReadFileBytes: readFileBytesMock,
+    ListPackModelsDetail: packModelsMock,
   }),
+}));
+vi.mock("./pack-3d.ts", () => ({
+  createPack3D: createPack3DMock,
 }));
 vi.mock("../../utils/3d/adapters/mmd-detail-stats.ts", () => ({
   readPmxStats: readPmxStatsMock,
@@ -68,6 +74,8 @@ beforeEach(() => {
   resolveMmdSiblingsMock.mockResolvedValue([]);
   readFileBytesMock.mockResolvedValue(btoa("PMX"));
   readPmxStatsMock.mockResolvedValue(null);
+  packModelsMock.mockResolvedValue("{\"models\":[],\"total\":0}");
+  createPack3DMock.mockResolvedValue(undefined);
   localStorage.clear();
 });
 
@@ -108,6 +116,44 @@ describe("showResourcePack 资源包信息", () => {
     const ctx = makeCtx();
     await showResourcePack(ctx, "/packs/bad.mcmeta");
     expect(ctx.root.innerHTML).toContain("读取失败");
+  });
+
+  it("模型清单（ADR-131 P3）：渲染 path + 方块数，点击直达 3D（startEntry）", async () => {
+    readPackMock.mockResolvedValue(JSON.stringify({ description: "包", pack_format: 12 }));
+    packModelsMock.mockResolvedValue(JSON.stringify({
+      models: [
+        { path: "assets/minecraft/models/block/door.json", cubes: 1 },
+        { path: "assets/minecraft/models/block/wall.json", cubes: 3 },
+      ],
+      total: 2,
+    }));
+    const ctx = makeCtx();
+    await showResourcePack(ctx, "/packs/pack.mcmeta");
+    // 异步清单区补渲染：等 packModelsMock 调用后 host 出现
+    await vi.waitFor(() => {
+      expect(ctx.root.innerHTML).toContain("模型清单");
+      expect(ctx.root.innerHTML).toContain("door.json");
+      expect(ctx.root.innerHTML).toContain("3 方块");
+    });
+    expect(packModelsMock).toHaveBeenCalledWith("/packs/pack.mcmeta");
+    // 点击 door 模型行 → 直达 3D 且带 startEntry
+    const doorRow = [...ctx.root.querySelectorAll<HTMLElement>(".pack-model-item")].find(
+      (el) => el.dataset.entry?.includes("door.json"),
+    );
+    expect(doorRow).toBeTruthy();
+    doorRow!.click();
+    await vi.waitFor(() =>
+      expect(createPack3DMock).toHaveBeenCalledWith("/packs/pack.mcmeta", { startEntry: "assets/minecraft/models/block/door.json" }),
+    );
+  });
+
+  it("模型清单：无模型 / total 0 → 不渲染清单区（仅 FAB）", async () => {
+    readPackMock.mockResolvedValue(JSON.stringify({}, ));
+    const ctx = makeCtx();
+    await showResourcePack(ctx, "/packs/empty.mcmeta");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(ctx.root.innerHTML).not.toContain("模型清单");
   });
 });
 

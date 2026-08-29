@@ -255,6 +255,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // 恢复 deepDispose 默认 no-op（顺序守护测试会设真清几何实现，防残留影响其他用例）
+  hoisted.deepDispose.mockReset();
 });
 
 describe("buildVrmScene 主路径", () => {
@@ -857,17 +859,31 @@ describe("readVrmMeta 场景统计（ADR-131 P2）", () => {
     hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
     hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
 
+    // 顺序守护加固（review 发现）：deepDispose mock 要真的「释放」场景几何——
+    // 若实现 no-op，将来有人把 collectSceneStats 挪到 deepDispose 之后，mock 什么都没
+    // 释放，stats 照样读到 1 mesh，测试照绿。「dispose 后几何为空」由本实现兑现：
+    // 删 position/index 属性 + 材质置空 → 挪用后 triangleCount/materialCount 变 0，断言失败。
+    hoisted.deepDispose.mockImplementation((scene: THREE.Object3D) => {
+      scene.traverse((o) => {
+        if (!(o as THREE.Mesh).isMesh) return;
+        const m = o as THREE.Mesh;
+        const g = m.geometry as THREE.BufferGeometry;
+        g.deleteAttribute("position");
+        g.setIndex(null);
+        m.material = null as unknown as THREE.Material;
+      });
+    });
+
     const info = await readVrmMeta("/vrm/test.vrm", hoisted.readBytesMock);
     expect(info).not.toBeNull();
     expect(info!.stats).toEqual(
       expect.objectContaining({
         meshCount: 1,
         boneCount: 1,
-        triangleCount: 1,
-        materialCount: 1,
+        triangleCount: 1, // 若挪到 deepDispose 后采集 → position/index 已清 → 变 0 失败
+        materialCount: 1, // 若挪用 → material 已置空 → 变 0 失败
       }),
     );
-    // 顺序守护：stats 必须 deepDispose 前采集（dispose 后几何为空读不到）
     expect(hoisted.deepDispose).toHaveBeenCalledWith(vrm.scene);
   });
 

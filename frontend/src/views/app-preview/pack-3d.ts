@@ -27,7 +27,7 @@ function makePackDeps() {
 }
 
 /** 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） */
-export async function createPack3D(path: string, opts?: Mount3DOptions): Promise<void> {
+export async function createPack3D(path: string, opts?: Mount3DOptions & { startEntry?: string }): Promise<void> {
   const App = await getApp();
   const fn = (App as unknown as Record<string, (p: string) => Promise<string>>)["ListPackModels"];
   const raw = fn ? await fn(path) : "[]";
@@ -40,10 +40,11 @@ export async function createPack3D(path: string, opts?: Mount3DOptions): Promise
   } catch {}
   if (entries.length === 0) return;
 
-  // 首个 entry 作为初始 path（zip 内模型路径，即虚拟文件夹下的文件路径）
-  const initialEntry = entries[0];
+  // 指定初始 entry（详情页模型清单点击直达；ADR-131 P3），否则首个 entry
+  const { startEntry, ...mountOpts } = opts ?? {};
+  const initialEntry = startEntry && entries.includes(startEntry) ? startEntry : entries[0]!;
   // 适配器持 zipPath（解析模型文件所需的容器路径）
-  await mount3D(makePackAdapter(makePackDeps(), path), initialEntry, withPreviewExtras({ siblings: entries, ...opts }));
+  await mount3D(makePackAdapter(makePackDeps(), path), initialEntry, withPreviewExtras({ siblings: entries, ...mountOpts }));
 }
 
 /** 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 */

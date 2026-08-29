@@ -1188,6 +1188,10 @@ export const zhCN: Record<string, string> = {
   "preview.noPackPng": "无pack.png",
   "preview.blockItemModel3d": "方块/物品模型 3D 预览",
   "preview.noBlockData": "无方块数据",
+  // ── 资源包模型清单（ADR-131 P3）──
+  "preview.modelList": "🧊 模型清单（{n}）",
+  "preview.modelListOverflow": "模型超 200 仅保存前 {n} 条到清单",
+  "preview.modelCubes": "{cubes} 方块",
   "preview.sliceAxis": "分层轴",
   "preview.sliceControl": "分层切片",
   "preview.sliceMode": "模式",

@@ -684,6 +684,33 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
     expect(b64).toBe(btoa("{\"textures\":{\"all\":\"block/stone\"}}"));
   });
 
+  it("ListPackModelsDetail：镜像 Go 契约——models 带 cubes + total（封顶 200）", async () => {
+    const zipBytes = zipSync({
+      "pack.mcmeta": strToU8("{}"),
+      "assets/minecraft/models/block/stone.json": strToU8("{\"parent\":\"minecraft:block/cube_all\",\"textures\":{\"all\":\"minecraft:block/stone\"}}"),
+      "assets/minecraft/models/block/door.json": strToU8("{\"parent\":\"block/cube\",\"elements\":[{\"from\":[0,0,0],\"to\":[16,16,16]}]}"),
+      "assets/minecraft/models/block/wall.json": strToU8("{\"elements\":[{},{},{}]}"),
+      "assets/minecraft/models/item/stone.json": strToU8("{\"parent\":\"minecraft:block/stone\"}"),
+      "assets/minecraft/textures/block/stone.png": strToU8("PNG"),
+    });
+    const zipFile = new File([zipBytes], "材质包.zip");
+    await importWebFiles([zipFile], "resourcepack");
+    const raw = (await browserAdapter.ListPackModelsDetail("/web/resourcepack/材质包/材质包.zip")) as string;
+    const detail = JSON.parse(raw) as { models: Array<{ path: string; cubes: number }>; total: number };
+    expect(detail.total).toBe(4);
+    expect(detail.models).toHaveLength(4);
+    const byPath = new Map(detail.models.map((m) => [m.path, m.cubes]));
+    expect(byPath.get("assets/minecraft/models/block/stone.json")).toBe(0);
+    expect(byPath.get("assets/minecraft/models/block/door.json")).toBe(1);
+    expect(byPath.get("assets/minecraft/models/block/wall.json")).toBe(3);
+    expect(byPath.get("assets/minecraft/models/item/stone.json")).toBe(0);
+  });
+
+  it("ListPackModelsDetail：空包 / 失败 → 合法空结构", async () => {
+    const raw = (await browserAdapter.ListPackModelsDetail("/web/resourcepack/缺失/不存在.zip")) as string;
+    expect(JSON.parse(raw)).toEqual({ models: [], total: 0 });
+  });
+
   it("FindPreviewImage：模型同目录 preview.png 转 data URI", async () => {
     const f1 = new File([enc2.encode("YSM")], "狐狸.ysm");
     const f2 = new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], "preview.png");

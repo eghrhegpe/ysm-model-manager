@@ -140,14 +140,15 @@ export async function showModelDetail(
   }
 }
 
-/** 显示资源包信息（pack.mcmeta + pack.png） */
+/** 显示资源包信息（pack.mcmeta + pack.png + 模型清单） */
 export async function showResourcePack(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
   const gen = detailGen.next();
   try {
-    const { ReadPackMeta } = await getApp();
+    const App = await getApp();
+    const { ReadPackMeta } = App;
     const jsonStr = await ReadPackMeta(path);
     if (detailGen.stale(gen)) return;
     const meta = JSON.parse(jsonStr) as {
@@ -162,6 +163,8 @@ export async function showResourcePack(
     const desc = renderFormattedText(meta.description || "");
     if (detailGen.stale(gen)) return;
     const rv = describeVersionRange(meta);
+    // ADR-131 P3：模型清单（path + 方块数，封顶 200，total 全量）——list 组件占位，
+    // 数据经 ListPackModelsDetail 异步取（Go 绑定 / web-fs 镜像同构）
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 ${t("preview.resourcePack")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
@@ -169,6 +172,7 @@ export async function showResourcePack(
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
     <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${rv.format}${rv.version ? "（" + rv.version + "）" : ""}</div>
+    <div id="pack-model-list"></div>
   </div>
 </div>
 <button class="preview-fab" id="btn-pack-model-3d" title="${t("preview.blockItemModel3d")}" aria-label="${t("preview.blockItemModel3d")}"><span class="preview-ic">&#x1F3D7;&#xFE0F;</span></button>`;
@@ -177,10 +181,60 @@ export async function showResourcePack(
       promoteTitleIfPresent(fab);
       fab.onclick = (): void => { createPack3D(path).catch((e) => console.warn("[preview] pack3D:", e)); };
     }
+    // 模型清单区（异步取数，失败/无模型静默隐藏；详情卡降级约定）
+    void renderPackModelList(ctx, gen, App, path);
   } catch (e) {
     if (detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div></div>`;
   }
+}
+
+/** 渲染资源包模型清单区（ADR-131 P3）：ListPackModelsDetail → path + 方块数列表，点击直达 3D */
+async function renderPackModelList(
+  ctx: PreviewCtx,
+  gen: number,
+  App: Awaited<ReturnType<typeof getApp>>,
+  path: string,
+): Promise<void> {
+  try {
+    const fn = (App as unknown as Record<string, (p: string) => Promise<string>>)["ListPackModelsDetail"];
+    if (typeof fn !== "function") return; // 绑定缺失（降级：不显示清单区）
+    const raw = await fn(path);
+    if (detailGen.stale(gen)) return;
+    const detail = JSON.parse(raw) as {
+      models?: Array<{ path: string; cubes: number }>;
+      total?: number;
+    };
+    const models = detail.models ?? [];
+    const host = ctx.root.querySelector<HTMLElement>("#pack-model-list");
+    if (!host) return;
+    if (models.length === 0) return; // 无模型 → 不渲染清单区（仅 FAB 3D 入口）
+    const total = detail.total ?? models.length;
+    const overflow = total > models.length
+      ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${t("preview.modelListOverflow", { n: models.length })}</div>`
+      : "";
+    host.innerHTML = `<div style="border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px">
+  <div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.modelList", { n: total })}</div>
+  ${models.map((m) => {
+    const name = m.path.split("/").pop() || m.path;
+    return `<div class="pack-model-item" data-entry="${esc(m.path)}" style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer;border-left:3px solid rgba(124,131,255,0.5)">
+      <span>🧊</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</span>
+      <span style="color:var(--muted);font-size:10px;margin-left:auto;flex-shrink:0">${t("preview.modelCubes", { cubes: m.cubes })}</span>
+    </div>`;
+  }).join("")}
+  ${overflow}
+  <style>.pack-model-item:hover{background:rgba(255,255,255,0.05)}</style>
+</div>`;
+    // 点击单模型直达 3D（pack-model-adapter 吃 entry path，startEntry 指定初始）
+    host.querySelectorAll<HTMLElement>(".pack-model-item").forEach((el) => {
+      el.onclick = (): void => {
+        const entry = el.dataset.entry || "";
+        if (!entry) return;
+        createPack3D(path, { startEntry: entry }).catch((e) => console.warn("[preview] pack3D:", e));
+      };
+    });
+  } catch { /* 清单读取失败静默：基础卡不受影响（详情卡降级约定） */ }
 }
 
 /** 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 */

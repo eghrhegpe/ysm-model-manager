@@ -760,6 +760,16 @@ export function ListPackModels(path: string): $CancellablePromise<string> {
     return $Call.ByID(426377372, path);
 }
 
+/**
+ * ListPackModelsDetail 枚举资源包容器内的 block/item 模型（升序）+ 立方体数（elements 长度）。
+ * 失败或无模型返回 {"models":[],"total":0}。封顶前 packModelDetailCap 条带 cubes（防大包
+ * 全量解析），total 报告全量模型数——前端超限只显示 total。跨类型路由：详情页模型清单区
+ * 经此一屏拿到「路径 + 立方体数」，点击单模型直达 pack-model-adapter 3D（ADR-131 P3）。
+ */
+export function ListPackModelsDetail(path: string): $CancellablePromise<string> {
+    return $Call.ByID(440793901, path);
+}
+
 export function ListRecycleBin(recyclePath: string): $CancellablePromise<types$0.ModelEntry[] | null> {
     return $Call.ByID(3420025601, recyclePath);
 }

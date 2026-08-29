@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -112,5 +113,100 @@ func TestReadPackEntry_Guard(t *testing.T) {
 		if got := a.ReadPackEntry(p, entry); got != "" {
 			t.Errorf("非法条目 %q 应返回空，实际非空", entry)
 		}
+	}
+}
+
+// packDetailZipFiles 含带 elements 的模型 JSON（block/stone 3 个立方体、block/door 1 个）
+var packDetailZipFiles = map[string]string{
+	"assets/minecraft/models/block/stone.json":  `{"parent":"minecraft:block/cube_all","textures":{"all":"minecraft:block/stone"}}`,
+	"assets/minecraft/models/block/door.json":   `{"parent":"block/cube","elements":[{"from":[0,0,0],"to":[16,16,16]}]}`,
+	"assets/minecraft/models/block/wall.json":   `{"parent":"block/cube","elements":[{"from":[0,0,0],"to":[8,16,16]},{"from":[8,0,0],"to":[16,16,16]},{"from":[0,0,0],"to":[16,8,16]}]}`,
+	"assets/minecraft/models/item/stone.json":   `{"parent":"minecraft:block/stone"}`,
+	"assets/minecraft/textures/block/stone.png": "PNG-PLACEHOLDER",
+}
+
+// listPackModelDetail 解析 ListPackModelsDetail 的 JSON 结构
+func unmarshalPackDetail(t *testing.T, raw string) struct {
+	Models []PackModelDetail `json:"models"`
+	Total  int               `json:"total"`
+} {
+	t.Helper()
+	var out struct {
+		Models []PackModelDetail `json:"models"`
+		Total  int               `json:"total"`
+	}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		t.Fatalf("ListPackModelsDetail 返回非法 JSON: %v", err)
+	}
+	return out
+}
+
+func TestListPackModelsDetail(t *testing.T) {
+	a := &App{}
+	p := makePackZip(t, packDetailZipFiles)
+	got := a.ListPackModelsDetail(p)
+	res := unmarshalPackDetail(t, got)
+
+	if res.Total != 4 {
+		t.Fatalf("期望 4 个模型，实际 total=%d: %v", res.Total, res.Models)
+	}
+	if len(res.Models) != 4 {
+		t.Fatalf("期望 4 条 models，实际 %d: %v", len(res.Models), res.Models)
+	}
+	// 立方体数：block/stone 无 elements=0，door=1，wall=3，item/stone 0
+	cubesByPath := map[string]int{}
+	for _, m := range res.Models {
+		cubesByPath[m.Path] = m.Cubes
+	}
+	if cubesByPath["assets/minecraft/models/block/door.json"] != 1 {
+		t.Errorf("door 立方体数应 1，实际 %d", cubesByPath["assets/minecraft/models/block/door.json"])
+	}
+	if cubesByPath["assets/minecraft/models/block/wall.json"] != 3 {
+		t.Errorf("wall 立方体数应 3，实际 %d", cubesByPath["assets/minecraft/models/block/wall.json"])
+	}
+	if cubesByPath["assets/minecraft/models/block/stone.json"] != 0 {
+		t.Errorf("stone 无 elements 立方体数应 0，实际 %d", cubesByPath["assets/minecraft/models/block/stone.json"])
+	}
+	// 升序
+	for i := 1; i < len(res.Models); i++ {
+		if res.Models[i].Path < res.Models[i-1].Path {
+			t.Errorf("models 应升序，[%d]=%q < [%d]=%q", i, res.Models[i].Path, i-1, res.Models[i-1].Path)
+		}
+	}
+}
+
+func TestListPackModelsDetail_Cap(t *testing.T) {
+	a := &App{}
+	// 造 250 个模型（> 封顶 200）验证封顶 + total 全量
+	files := map[string]string{}
+	for i := 0; i < 250; i++ {
+		// 补零保证升序稳定（m000..m249）
+		name := fmt.Sprintf("assets/minecraft/models/block/m%03d.json", i)
+		files[name] = `{"elements":[{"from":[0,0,0],"to":[16,16,16]}]}`
+	}
+	p := makePackZip(t, files)
+	got := a.ListPackModelsDetail(p)
+	res := unmarshalPackDetail(t, got)
+
+	if res.Total != 250 {
+		t.Errorf("total 应 250，实际 %d", res.Total)
+	}
+	if len(res.Models) != packModelDetailCap {
+		t.Errorf("封顶应 %d 条，实际 %d", packModelDetailCap, len(res.Models))
+	}
+}
+
+func TestListPackModelsDetail_NonZip(t *testing.T) {
+	a := &App{}
+	raw := a.ListPackModelsDetail(filepath.Join(t.TempDir(), "notexist.zip"))
+	var out struct {
+		Models []PackModelDetail `json:"models"`
+		Total  int               `json:"total"`
+	}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		t.Fatalf("不存在文件期望合法 JSON，实际 %q", raw)
+	}
+	if out.Total != 0 || len(out.Models) != 0 {
+		t.Errorf("不存在文件期望空清单，实际 total=%d models=%d", out.Total, len(out.Models))
 	}
 }

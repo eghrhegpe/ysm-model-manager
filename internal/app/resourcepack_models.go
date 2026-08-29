@@ -6,6 +6,7 @@ package app
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"log"
 	"sort"
@@ -16,6 +17,29 @@ import (
 
 // maxPackEntrySize 单条目读取上限（64MB）：模型 JSON 远小于此，纹理 PNG 亦足够。
 const maxPackEntrySize = 64 << 20
+
+// packModelDetailCap 模型清单封顶条数（防大包：数百+ 模型时只解析前 N 条立方体数，
+// total 报告全量；前端清单懒加载，超限只显示 total）。
+const packModelDetailCap = 200
+
+// PackModelDetail 单模型清单项（path + 立方体数，供详情页模型清单区）。
+// Path 为容器内条目路径（升序）；Cubes = JSON elements 数组长度（无 elements 为 0）。
+type PackModelDetail struct {
+	Path  string `json:"path"`
+	Cubes int    `json:"cubes"`
+}
+
+// packModelElementsCount 数 JSON 模型 elements 数组长度（Java block/item model：
+// 每个 element 一个立方体；无 elements（纯 parent 模板如 cube_all）为 0）。
+func packModelElementsCount(data []byte) int {
+	var m struct {
+		Elements []json.RawMessage `json:"elements"`
+	}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return 0
+	}
+	return len(m.Elements)
+}
 
 // packModelEntryMatch 判定条目是否为 block/item 模型 JSON：
 // assets/<ns>/models/{block,item}/**/*.json（含子目录，如 door/fence_gate）
@@ -67,6 +91,75 @@ func (a *App) ListPackModels(path string) string {
 	}
 	sort.Strings(out)
 	return marshalJSON("ListPackModels", out, "[]")
+}
+
+// ListPackModelsDetail 枚举资源包容器内的 block/item 模型（升序）+ 立方体数（elements 长度）。
+// 失败或无模型返回 {"models":[],"total":0}。封顶前 packModelDetailCap 条带 cubes（防大包
+// 全量解析），total 报告全量模型数——前端超限只显示 total。跨类型路由：详情页模型清单区
+// 经此一屏拿到「路径 + 立方体数」，点击单模型直达 pack-model-adapter 3D（ADR-131 P3）。
+func (a *App) ListPackModelsDetail(path string) string {
+	r, err := container.Open(path)
+	if err != nil {
+		log.Printf("[packs] ListPackModelsDetail 打开失败 %s: %v", path, err)
+		return marshalJSON("ListPackModelsDetail", packDetailList{}, "{}")
+	}
+	defer r.Close()
+	seen := map[string]bool{}
+	var all []string
+	for _, e := range r.Entries() {
+		if e.IsDir() {
+			continue
+		}
+		n := e.Name()
+		if packModelEntryMatch(n) && !seen[n] {
+			seen[n] = true
+			all = append(all, n)
+		}
+	}
+	sort.Strings(all)
+	out := packDetailList{Total: len(all)}
+	if len(all) > packModelDetailCap {
+		all = all[:packModelDetailCap]
+	}
+	out.Models = make([]PackModelDetail, 0, len(all))
+	for _, n := range all {
+		cubes := 0
+		if data := a.readPackEntryRaw(r, n); len(data) > 0 {
+			cubes = packModelElementsCount(data)
+		}
+		out.Models = append(out.Models, PackModelDetail{Path: n, Cubes: cubes})
+	}
+	return marshalJSON("ListPackModelsDetail", out, "{}")
+}
+
+// packDetailList ListPackModelsDetail 返回值。
+type packDetailList struct {
+	Models []PackModelDetail `json:"models"`
+	Total  int               `json:"total"`
+}
+
+// readPackEntryRaw 容器内按名读取条目原始字节（packEntrySafe 守卫复用 ReadPackEntry 口径）。
+// 返回 nil 表示条目不存在/读取失败/超限。
+func (a *App) readPackEntryRaw(r container.Reader, entry string) []byte {
+	if !packEntrySafe(entry) {
+		return nil
+	}
+	for _, e := range r.Entries() {
+		if e.IsDir() || !strings.EqualFold(e.Name(), entry) {
+			continue
+		}
+		rc, err := e.Open()
+		if err != nil {
+			return nil
+		}
+		data, err := io.ReadAll(io.LimitReader(rc, maxPackEntrySize))
+		rc.Close()
+		if err != nil {
+			return nil
+		}
+		return data
+	}
+	return nil
 }
 
 // ReadPackEntry 读取容器内条目内容（base64 字符串）。

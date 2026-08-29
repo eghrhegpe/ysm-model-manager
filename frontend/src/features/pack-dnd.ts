@@ -39,7 +39,9 @@ const toast = (msg: string, type: "success" | "error" | "warn" | "info", duratio
 
 /**
  * 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。
- * folderName/subpath 拆分与 importFolder 同口径（拖「分类1/狐狸」→ subpath=分类1）。
+ * 组名拆分与 importFolder 同口径；当前收集链路中 g.dir 恒为首段目录
+ * （groupCollected 取 relPath 第一段），故 subpath 恒为空，多级嵌套体现在
+ * 组内 relPath（拖「分类1/狐狸」→ 组名=分类1，items RelPath=狐狸/…）。
  * 单文件走 ImportFileAndPushToInstance（importer 类型路由）。
  */
 export async function handleInstanceDrop(
@@ -69,6 +71,13 @@ export async function handleInstanceDrop(
     logDrop(`pack-drop: 目标实例 ${instanceName}`);
 
     const collected0: CollectedEntry[] = await collectDropFiles(e);
+    // 「收集 0」只在真的没收集到文件时提示；因 oversize 被滤光的场景
+    // 仅提示超限（与仓库页拖拽同口径，避免误导性「未检测到支持文件」）
+    if (collected0.length === 0) {
+      logDrop("pack-drop: 收集 0 文件");
+      toast("📂 " + t("import.noSupportedFiles"), "info");
+      return;
+    }
     // oversize 逐文件过滤（与仓库页拖拽同口径）
     const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
     if (oversized.length > 0) {
@@ -79,11 +88,7 @@ export async function handleInstanceDrop(
       );
     }
     const collected = collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
-    if (collected.length === 0) {
-      logDrop("pack-drop: 收集 0 文件");
-      toast("📂 " + t("import.noSupportedFiles"), "info");
-      return;
-    }
+    if (collected.length === 0) return; // 全被 oversize 滤除：超限提示已足够
 
     const { folders, singles: allSingles } = groupCollected(collected);
     // 光杆 ysm.json 散文件与 directImport 同款拦截（整组内 ysm.json 走文件夹路由不受影响）
@@ -107,6 +112,8 @@ export async function handleInstanceDrop(
 
     for (const g of folders) {
       attempted++;
+      // g.dir 恒为单段（groupCollected 契约：取 relPath 第一段目录），subpath 恒空；
+      // split 为防御性预留——若未来 groupCollected 支持多级 dir，此处无需改动即成立
       const parts = g.dir.split("/");
       const folderName = parts[parts.length - 1] || "模型";
       const subpath = parts.slice(0, -1).join("/");

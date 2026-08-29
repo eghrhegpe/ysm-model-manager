@@ -3,6 +3,7 @@
 // 随设置页版删除不再覆盖，检测流程各分支语义保持等价（happy-dom + mock 桥）。
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { bus, type BusEvents } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 
 const { getAppMock, pickDirMock } = vi.hoisted(() => ({
   getAppMock: vi.fn(),
@@ -62,7 +63,8 @@ function makeInstance(over: Record<string, unknown> = {}) {
 /** runLauncherDetect 触发后等待实例选择器弹层出现 */
 async function openPicker(): Promise<HTMLElement> {
   return vi.waitFor(() => {
-    const el = document.querySelector<HTMLElement>("[data-launcher-picker]");
+    // modalPicker 统一弹窗脚手架：弹层根（行列表 / 取消按钮 / footer 表单均在层内）
+    const el = document.querySelector<HTMLElement>("[data-testid='dlg-overlay']");
     expect(el).not.toBeNull();
     return el as HTMLElement;
   });
@@ -97,9 +99,9 @@ describe("runLauncherDetect", () => {
       expect(app.DetectLauncherInstances).toHaveBeenCalledWith("/picked");
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toEqual([
-        { msg: "No HMCL/PCL Minecraft instance found", duration: 3500, type: "warn" },
+        { msg: t("launcher.detect.noInstances"), duration: 3500, type: "warn" },
       ]);
-      expect(document.querySelector("[data-launcher-picker]")).toBeNull();
+      expect(document.querySelector("[data-testid='dlg-overlay']")).toBeNull();
     } finally {
       off();
     }
@@ -131,12 +133,12 @@ describe("runLauncherDetect", () => {
     try {
       const p = runLauncherDetect();
       const picker = await openPicker();
-      (picker.querySelector("[data-launcher-cancel]") as HTMLElement).click();
+      (picker.querySelector("[data-testid='dlg-cancel']") as HTMLElement).click();
       await p;
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(app.SetResourceRoot).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(0);
-      expect(document.querySelector("[data-launcher-picker]")).toBeNull();
+      expect(document.querySelector("[data-testid='dlg-overlay']")).toBeNull();
     } finally {
       off();
     }
@@ -157,7 +159,7 @@ describe("runLauncherDetect", () => {
       const picker = await openPicker();
       // esc 转义：实例名中的 HTML 注入片段被转义后才进入弹层
       expect(picker.innerHTML).toContain("Fab&lt;b&gt;ulous");
-      (picker.querySelector('[data-launcher-instance="0"]') as HTMLElement).click();
+      (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
       await p;
 
       // SaveAppConfig 五参（filesRoot/resourcepackRoot 原样回写，theme 缺省 dark）
@@ -169,9 +171,9 @@ describe("runLauncherDetect", () => {
       // 副作用：全局刷新 + 成功 toast + 弹层关闭
       expect(stats).toHaveLength(1);
       expect(toasts).toEqual([
-        { msg: "✅ HMCL · Minecraft 1.20.1", duration: 3000, type: "success" },
+        { msg: t("launcher.detect.success", { launcher: "HMCL", version: "1.20.1" }), duration: 3000, type: "success" },
       ]);
-      expect(document.querySelector("[data-launcher-picker]")).toBeNull();
+      expect(document.querySelector("[data-testid='dlg-overlay']")).toBeNull();
     } finally {
       offToast();
       offStats();
@@ -186,7 +188,7 @@ describe("runLauncherDetect", () => {
     const p = runLauncherDetect();
     const picker = await openPicker();
     (picker.querySelector("[data-launcher-default]") as HTMLInputElement).checked = false;
-    (picker.querySelector('[data-launcher-instance="0"]') as HTMLElement).click();
+    (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
     await p;
     expect(app.SaveAppConfig).toHaveBeenCalledTimes(1);
     expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "dark");
@@ -203,7 +205,7 @@ describe("runLauncherDetect", () => {
     try {
       const p = runLauncherDetect();
       const picker = await openPicker();
-      (picker.querySelector('[data-launcher-instance="0"]') as HTMLElement).click();
+      (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
       await p;
       // 第一次保存 mcRoot=/mc/root；失败后回滚 previousMcRoot=/old-mc
       expect(app.SaveAppConfig).toHaveBeenCalledTimes(2);

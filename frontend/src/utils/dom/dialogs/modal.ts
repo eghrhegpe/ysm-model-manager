@@ -546,3 +546,104 @@ export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
     close,
   };
 }
+
+/** modalPicker 行项（label/meta/sub/hint 由函数内部 esc 转义，调用方传原始文本） */
+export interface ModalPickerItem {
+  label: string;
+  meta?: string;
+  sub?: string;
+  hint?: string;
+  hintColor?: string;
+}
+
+/** modalPicker 选项 */
+export interface ModalPickerOptions {
+  title: string;
+  icon?: string;
+  width?: string;
+  /** 标题下、列表上的说明文字 */
+  subtitle?: string;
+  items: ModalPickerItem[];
+  /** 列表下方自定义 HTML（调用方负责转义）；其中带 name 的表单控件值在关闭时聚合返回 */
+  footerHTML?: string;
+  cancelText?: string;
+}
+
+/** modalPicker 结果 */
+export interface ModalPickerResult {
+  /** 选中行下标（0-based） */
+  index: number;
+  /** footer 内 checkbox/radio 按 name 的选中态 */
+  footerChecked: Record<string, boolean>;
+  /** footer 内 input/select/textarea 按 name 的值 */
+  footerValues: Record<string, string>;
+}
+
+/** 收集 footer 自定义区带 name 的表单控件值（关闭时结算，DOM 移除前读取） */
+function dgMoCollectFooter(box: HTMLElement): { checked: Record<string, boolean>; values: Record<string, string> } {
+  const checked: Record<string, boolean> = {};
+  const values: Record<string, string> = {};
+  box.querySelectorAll<HTMLElement>("[name]").forEach((el) => {
+    const name = el.getAttribute("name") || "";
+    if (!name) return;
+    if (el instanceof HTMLInputElement) {
+      if (el.type === "checkbox" || el.type === "radio") checked[name] = el.checked;
+      else values[name] = el.value;
+    } else if (el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
+      values[name] = el.value;
+    }
+  });
+  return { checked, values };
+}
+
+function dgMoBuildPickerBox(
+  title: string,
+  icon: string | undefined,
+  subtitle: string | undefined,
+  items: ModalPickerItem[],
+  footerHTML: string | undefined,
+  cancelText: string | undefined,
+): (box: HTMLElement) => void {
+  return (box): void => {
+    const rows = items
+      .map(
+        (it, i) =>
+          `<button data-idx="${i}" data-testid="pick-item" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px;border:1px solid var(--bd,#444);border-radius:8px;background:transparent;color:inherit;cursor:pointer;font-family:inherit">
+  <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(it.label)}</span>${it.meta ? `<span style="color:var(--accent,#89b4fa)">${esc(it.meta)}</span>` : ""}</div>
+  ${it.sub ? `<div style="font-size:10px;color:var(--muted,#888);margin-top:5px">${esc(it.sub)}</div>` : ""}
+  ${it.hint ? `<div style="font-size:10px;color:${esc(it.hintColor || "var(--muted,#888)")};margin-top:2px">${esc(it.hint)}</div>` : ""}
+</button>`,
+      )
+      .join("");
+    box.innerHTML =
+      `<div class="dlg-title" style="margin:0">${esc(icon || "")} ${esc(title)}</div>` +
+      (subtitle ? `<div style="font-size:10px;color:var(--muted,#888);margin:5px 0 10px">${esc(subtitle)}</div>` : "") +
+      `<div data-testid="pick-list" style="margin:2px 0;max-height:55vh;overflow-y:auto">${rows}</div>` +
+      (footerHTML || "") +
+      `<div style="margin-top:12px;text-align:right"><button id="pk-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancelText || t("dialog.cancelEsc"))}</button></div>`;
+  };
+}
+
+/**
+ * 富列表选择弹窗（行即选项）：复用统一弹窗脚手架（createDialog），
+ * 单例登记 / 焦点陷阱 / 退场动画 / Esc / 遮罩关闭与 modalSelect 同款。
+ * 区别于 modalSelect 的下拉形态：多行富内容展示（label/meta/sub/hint），
+ * 底部可挂自定义表单（footerHTML，按 name 聚合返回选中态/值）。
+ * @returns 选中行下标 + footer 表单值；取消返回 null
+ */
+export function modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult | null> {
+  return new Promise((resolve) => {
+    const { title, icon, width, subtitle, items, footerHTML, cancelText } = opts;
+    const { box, close } = createDialog<ModalPickerResult | null>({
+      title, icon, width: width || "480px", tabIndex: 0, cancelValue: null, resolve,
+      buildBox: dgMoBuildPickerBox(title, icon, subtitle, items, footerHTML, cancelText),
+    });
+    box.querySelectorAll<HTMLButtonElement>("[data-testid='pick-item']").forEach((row) => {
+      row.addEventListener("click", () => {
+        const footer = dgMoCollectFooter(box);
+        close({ index: Number(row.dataset.idx || "0"), footerChecked: footer.checked, footerValues: footer.values });
+      });
+    });
+    (box.querySelector("#pk-cancel") as HTMLElement).onclick = (): void => close(null);
+  });
+}

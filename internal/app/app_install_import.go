@@ -224,8 +224,14 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 // ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型），
 // 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未知实例不落仓库残档。
 func (a *App) ImportFileAndPushToInstance(fileName, base64Data, instanceName string) error {
-	// 光杆 ysm.json 推送侧会触发 InstallDir(父目录)，单文件命中即父目录=仓库根 →
-	// 整仓落地灾难；与前端 directImport 的提示口径一致，前置拒绝。
+	// 根级目录级安装入口前置拒绝（与 pushRepoPathToInstance 兜底防线构成双保险）：
+	// .pmx/.pmd/ysm.json 单文件在推送侧会触发 InstallDir(父目录)，父目录=仓库根 →
+	// 整仓落地灾难。前置到落盘前拦截，不留下「入仓成功但推送必败」的仓库残档
+	// （ysm.json 与前端 directImport 的提示口径一致）。
+	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(fileName)))
+	if ext == ".pmx" || ext == ".pmd" {
+		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "根级 .pmx/.pmd 不可单独推送（会触发父目录级整组安装）", Suggestion: "MMD 模型请整体选择包含贴图的模型文件夹拖入"}
+	}
 	if strings.EqualFold(strings.TrimSpace(fileName), "ysm.json") {
 		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "光杆 ysm.json 不可单独推送", Suggestion: "请拖入含 ysm.json 的整个模型文件夹"}
 	}
@@ -293,8 +299,9 @@ func (a *App) pushRepoPathToInstance(rtype, instanceName, repoPath string) error
 	if err != nil {
 		return err
 	}
-	// 防目录级安装整仓落地：.pmx/.pmd/ysm.json 触发 InstallDir(父目录)，
-	// 父目录=仓库根时会把整棵仓库推进实例（拖拽单文件场景比右键推送更易命中）。
+	// 防目录级安装整仓落地的兜底防线（入口 ImportFileAndPushToInstance 已前置拦截
+	// 单文件 .pmx/.pmd/ysm.json；此处覆盖未来其他调用方直推根级文件的场景）：
+	// .pmx/.pmd/ysm.json 触发 InstallDir(父目录)，父目录=仓库根时会把整棵仓库推进实例。
 	if filepath.Dir(repoPath) == filepath.Clean(globalDir) {
 		ext := strings.ToLower(filepath.Ext(repoPath))
 		if ext == ".pmx" || ext == ".pmd" || (ext == ".json" && types.IsYsmEntryJSON(repoPath)) {

@@ -69,6 +69,17 @@ export async function handleTreeDrop(
     // 桌面版：收集口径收敛到 dnd-shared.collectDropFiles（files 优先 +
     // webkitGetAsEntry 补充目录 + 去重合并），与整合包卡片拖入共用
     const collected0: CollectedEntry[] = await collectDropFiles(e);
+    // 「收集 0」只在真的没收集到文件时提示；因 oversize 被滤光的场景
+    // 仅提示超限（避免 oversize toast 之后再误导性弹「未检测到支持文件」）
+    if (collected0.length === 0) {
+      logDrop("drop: 收集 0 文件（webkitGetAsEntry fallback 也空）");
+      bus.emit("toast:show", {
+        msg: "📂 " + t("import.noSupportedFiles") + "（" + DROP_EXTS_STR + "）",
+        duration: TOAST_MS.normal,
+        type: "info",
+      });
+      return;
+    }
     // oversize 逐文件过滤
     const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
     if (oversized.length > 0) {
@@ -79,15 +90,7 @@ export async function handleTreeDrop(
       });
     }
     const collected = collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
-    if (collected.length === 0) {
-      logDrop("drop: 收集 0 文件（webkitGetAsEntry fallback 也空）");
-      bus.emit("toast:show", {
-        msg: "📂 " + t("import.noSupportedFiles") + "（" + DROP_EXTS_STR + "）",
-        duration: TOAST_MS.normal,
-        type: "info",
-      });
-      return;
-    }
+    if (collected.length === 0) return; // 全被 oversize 滤除：超限提示已足够
     const importableStr = (name: string) => isImportableFile(name) ? "Y" : "N";
     logDrop(`drop: 收集 ${collected.length} 文件 [${collected.map((c) => `${c.file.name}(imp=${importableStr(c.file.name)})`).join(", ")}]`);
 

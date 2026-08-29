@@ -281,6 +281,16 @@ export const en: Record<string, string> = {
   "import.noAuthor": "No author information detected",
   "import.queueFull": "Import queue is full",
 
+  // ── Launcher detection (instance empty state) ──
+  "launcher.mc.selectDir": "Select game directory",
+  "launcher.detect.noInstances": "No HMCL/PCL Minecraft instance found",
+  "launcher.detect.success": "✅ {launcher} · Minecraft {version}",
+  "launcher.picker.subtitle": "Select a Minecraft instance and its YSM custom directory.",
+  "launcher.picker.game": "Game",
+  "launcher.picker.ysm": "YSM",
+  "launcher.picker.pending": "pending",
+  "launcher.picker.useAsYsmRoot": "Use YSM custom directory as default download path",
+
   // ── Repository (content tab) ──
   "repo.tab.tree": "File Tree",
   "repo.tab.dedup": "Deduplicate",

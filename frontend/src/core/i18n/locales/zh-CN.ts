@@ -284,6 +284,16 @@ export const zhCN: Record<string, string> = {
   "import.noAuthor": "未检测到作者信息",
   "import.queueFull": "导入队列已满",
 
+  // ── 启动器检测（实例页空态） ──
+  "launcher.mc.selectDir": "选择游戏目录",
+  "launcher.detect.noInstances": "未找到 HMCL/PCL 游戏实例",
+  "launcher.detect.success": "✅ {launcher} · Minecraft {version}",
+  "launcher.picker.subtitle": "选择一个 Minecraft 实例及其 YSM 自定义目录",
+  "launcher.picker.game": "游戏目录",
+  "launcher.picker.ysm": "YSM",
+  "launcher.picker.pending": "待创建",
+  "launcher.picker.useAsYsmRoot": "将 YSM 自定义目录设为默认下载路径",
+
   // ── 模型仓库（content tab 栏） ──
   "repo.tab.tree": "文件树",
   "repo.tab.dedup": "去重",

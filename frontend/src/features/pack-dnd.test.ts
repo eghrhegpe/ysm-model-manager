@@ -142,13 +142,14 @@ describe("handleInstanceDrop 编排", () => {
     expect(events).not.toContain("stats:refresh");
   });
 
-  it("oversize 文件被过滤并提示，不给 binding", async () => {
+  it("oversize 文件被过滤并提示，不给 binding（且不误导性补弹「收集 0 文件」）", async () => {
     const ev = makeDragEvent("drop", { files: [makeFile("big.ysm", "x".repeat(50))] });
     await handleInstanceDrop(ev, "TestInst", busyIdle);
     await flush();
 
     expect(mocks.importFilePush).not.toHaveBeenCalled();
     expect(toasts.some((t2) => t2.type === "warn")).toBe(true);
+    expect(toasts.some((t2) => t2.type === "info")).toBe(false);
   });
 
   it("推送失败：错误 toast 带友好信息，且仍刷新（导入可能已落仓库）", async () => {
@@ -184,6 +185,7 @@ describe("handleInstanceDrop 编排", () => {
 
     expect(mocks.importFilePush).not.toHaveBeenCalled();
     expect(mocks.importFolderPush).not.toHaveBeenCalled();
+    expect(toasts.some((t2) => t2.type === "info")).toBe(true);
   });
 });
 

@@ -282,6 +282,16 @@ export const ja: Record<string, string> = {
   "import.noAuthor": "作者情報が検出されませんでした",
   "import.queueFull": "インポートキューが満杯です",
 
+  // ── ランチャー検出（インスタンス空状態） ──
+  "launcher.mc.selectDir": "ゲームディレクトリを選択",
+  "launcher.detect.noInstances": "HMCL/PCL の Minecraft インスタンスが見つかりません",
+  "launcher.detect.success": "✅ {launcher} · Minecraft {version}",
+  "launcher.picker.subtitle": "Minecraft インスタンスとその YSM カスタムディレクトリを選択します",
+  "launcher.picker.game": "ゲーム",
+  "launcher.picker.ysm": "YSM",
+  "launcher.picker.pending": "未作成",
+  "launcher.picker.useAsYsmRoot": "YSM カスタムディレクトリを既定のダウンロード先にする",
+
   // ── Repository (content tab) ──
   "repo.tab.tree": "ファイルツリー",
   "repo.tab.dedup": "重複排除",

@@ -162,6 +162,19 @@ func TestImportFileAndPushToInstance_BareYsmJsonRejected(t *testing.T) {
 	assertFileAbsent(t, filepath.Join(customDir, "ysm.json"))
 }
 
+func TestImportFileAndPushToInstance_RootLevelModelRejected(t *testing.T) {
+	// 根级 .pmx/.pmd 单文件会触发推送侧 InstallDir(父目录) → 仓库根整仓落地；
+	// 前置到落盘前拒绝，不留下「入仓成功但推送必败」的仓库残档（与 ysm.json 同口径）。
+	a, ysmRoot, customDir := packApp(t)
+	for _, name := range []string{"char.pmx", "char.pmd"} {
+		if err := a.ImportFileAndPushToInstance(name, b64("mmd-bytes"), "TestInst"); err == nil {
+			t.Fatalf("根级单文件 %s 应被拒绝", name)
+		}
+		assertFileAbsent(t, filepath.Join(ysmRoot, name))
+		assertFileAbsent(t, filepath.Join(customDir, name))
+	}
+}
+
 func TestImportFolderAndPushToInstance_InvalidatesScanCache(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	// 暖缓存：二次扫描命中 30s scanCache

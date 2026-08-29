@@ -1935,7 +1935,7 @@
 | `ModalPickerItem()` | `frontend/src/utils/dom/dialogs/modal:551` | modalPicker 行项（label/meta/sub/hint 由函数内部 esc 转义，调用方传原始文本） |
 | `ModalPickerOptions()` | `frontend/src/utils/dom/dialogs/modal:560` | modalPicker 选项 |
 | `ModalPickerResult()` | `frontend/src/utils/dom/dialogs/modal:573` | modalPicker 结果 |
-| `modalPicker()` | `frontend/src/utils/dom/dialogs/modal:634` | 富列表选择弹窗（行即选项）：复用统一弹窗脚手架（createDialog）， 单例登记 / 焦点陷阱 / 退场动画 / Esc / 遮罩关闭与 modalSelect 同款。 |
+| `modalPicker()` | `frontend/src/utils/dom/dialogs/modal:650` | 富列表选择弹窗（行即选项）：复用统一弹窗脚手架（createDialog）， 单例登记 / 焦点陷阱 / 退场动画 / Esc / 遮罩关闭与 modalSelect 同款。 |
 | `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:7` | 重命名字段（调用方已 trim） |
 | `BuildModelNameOptions()` | `frontend/src/utils/dom/dialogs/rename-format:21` | 命名模板引擎选项（索引 4.9 收敛 buildRenameName / rebuildParsedName 两套手工拼接）： - fillDefaults=true：空作品补「未 |
 | `ModelNameFields()` | `frontend/src/utils/dom/dialogs/rename-format:27` | 命名模板输入字段（variant 可选：单重命名有、批量重建无） |

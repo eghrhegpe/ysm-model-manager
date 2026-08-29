@@ -160,7 +160,10 @@ export function packagePatternFor(file) {
 /** 跑 `go test -coverprofile` 解析出的文件→语句块映射。 */
 export function runCoverProfile(packagePattern, tmp) {
   const r1 = run('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
-    cwd: ROOT, stdio: 'ignore', timeout: 30000,
+    cwd: ROOT, stdio: 'ignore', timeout: 120000,
+    // 2026-08-29 超时 30s→120s：冷缓存下 internal/app 全包（Wails app 层）覆盖插桩
+    // 编译可远超 30s，而 pre-push 预跑的 go test -race 是独立构建缓存、不预热普通
+    // coverprofile 构建 → 冷 push 首跑超时返回 null → 误报 missing/pct=0 阻断。
   });
   if (!r1.ok) {
     return null; // 编译失败/测试失败 → 该包无数据

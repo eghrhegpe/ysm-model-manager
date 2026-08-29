@@ -45,9 +45,21 @@ export default defineConfig({
         "src/utils/3d/adapters/mmd-pmx-parser.worker.ts",
         // MMD 纹理解码 Worker 池管理器：new Worker 创建真实线程，池生命周期不可单测
         "src/utils/3d/adapters/mmd-texture-decoder.ts",
-        // 3D 预览装配入口（mount3D 完整渲染管线 + WebGL/rAF）：happy-dom 无法运行
+        // 3D 预览装配入口（mount3D 完整渲染管线 + WebGL/rAF）：happy-dom 无法运行。
+        // 同类薄包装（内容层在各自 adapter，本文件仅 getApp 注入 + 公开符号）一并豁免：
         "src/views/app-preview/maid-3d.ts",
         "src/views/app-preview/ysm-3d.ts",
+        "src/views/app-preview/scene-3d.ts",
+        "src/views/app-preview/mmd-3d.ts",
+        "src/views/app-preview/vrm-3d.ts",
+        "src/views/app-preview/fbx-3d.ts",
+        "src/views/app-preview/empty-3d.ts",
+        "src/views/app-preview/pack-3d.ts",
+        // 第三方 vendor（不承担测试归属）：babylon-mmd / FBXLoader / Blockbench Molang（JannisX11, MIT）
+        "src/utils/3d/adapters/vendor/**",
+        "src/utils/animation/molang-lib/**",
+        // 测试辅助（非生产代码，先例：web-spike 排除）
+        "src/test-utils/**",
       ],
       thresholds: {
         // 2026-08-18 校准：降低阈值以豁免高成本/低收益的 DOM 依赖模块

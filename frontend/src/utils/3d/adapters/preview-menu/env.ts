@@ -9,6 +9,7 @@ import type { SlideMenuHandle } from '../../../../ui/ui-slide-menu.ts';
 import { renderCapControls, formatCapSliderValue } from './cap-controls.ts';
 import type { PreviewMenuCtx } from './core.ts';
 import { t } from '../../../../core/i18n/t.ts';
+import { previewSnapshot, type PreviewSnapshot } from '../../state/preview-state.ts';
 import { ENV_PRESET_LINKAGE, type EnvPresetId } from '../../caps/environment-capability.ts';
 import type { PreviewMenuNode } from './node-types.ts';
 
@@ -68,10 +69,13 @@ function orderedCaps(allCaps: SceneCapability[]): SceneCapability[] {
 function partitionCapControlsByGroup(
   cap: SceneCapability,
   ctrls: MenuControlDef[],
+  snapshot?: PreviewSnapshot,
 ): { key: string | null; label: string; ctrls: MenuControlDef[] }[] {
   const groups = new Map<string | null, MenuControlDef[]>();
   for (const c of ctrls) {
-    if (c.visible && !c.visible()) continue; // 条件隐藏控件不计入分组（空组由调用方 .filter 丢弃）
+    if (c.visible && !c.visible()) continue; // A 轨：条件隐藏控件不计入分组
+    // B 轨：状态层快照谓词 visibleWhen(s)——与 renderCapControls 同口径，避免「分区入口出现但控件实际被隐藏」的错配
+    if (c.visibleWhen && snapshot && !c.visibleWhen(snapshot)) continue;
     const k = c.group ?? null;
     const arr = groups.get(k);
     if (arr) arr.push(c);
@@ -119,7 +123,7 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
       if (idx > 0) ctrls.push({ id: "__divider_"+cap.id, kind: "divider" as const, labelKey: "", fallback: "", getValue: () => false, setValue: () => {} });
       ctrls.push(...cap.getMenuControls());
     });
-    renderCapControls(list, ctrls);
+    renderCapControls(list, ctrls, previewSnapshot());
     return;
   }
   const caps = orderedCaps(resolveCaps(ctx));
@@ -176,11 +180,12 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
           const all = cap.getMenuControls();
           const idx = all.findIndex((cc) => cc.kind !== "divider");
           const subCtrls = all.filter((_, i) => i !== idx);
-          const groups = partitionCapControlsByGroup(cap, subCtrls).filter((g) => g.ctrls.length > 0);
+          const snap = previewSnapshot();
+          const groups = partitionCapControlsByGroup(cap, subCtrls, snap).filter((g) => g.ctrls.length > 0);
           if (groups.length <= 1) {
             // 无分组（或仅剩单组）：保持原平铺下钻
             subList.replaceChildren();
-            renderCapControls(subList, subCtrls);
+            renderCapControls(subList, subCtrls, previewSnapshot());
             return;
           }
           // 带分组：先列分区入口（形态 / 外观 / 水池 / 波纹 …），各自下钻到该组控件
@@ -208,11 +213,11 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
                   const cur = cap.getMenuControls();
                   const cidx = cur.findIndex((cc) => cc.kind !== "divider");
                   const csub = cur.filter((_, i) => i !== cidx);
-                  const grp = partitionCapControlsByGroup(cap, csub).find((x) => x.key === key);
+                  const grp = partitionCapControlsByGroup(cap, csub, previewSnapshot()).find((x) => x.key === key);
                   if (!grp) return;
                   // 剥掉 group 字段，避免 renderCapControls 再包一层同名 section
                   const flat = grp.ctrls.map((c) => ({ ...c, group: undefined }));
-                  renderCapControls(gsub, flat);
+                  renderCapControls(gsub, flat, previewSnapshot());
                 },
               });
             };

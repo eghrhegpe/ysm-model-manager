@@ -73,6 +73,10 @@ export const KNOWN_PATHS = [
   "render.bloom",
   "render.wireframe",
   "env.pmrem",
+  // [doc:adr-126-p5-c] 探针：cap 内部状态上浮至状态层快照，供 cap 控件
+  // visibleWhen(s) 谓词消费（替代 cap 内 visible? 闭包），打通 B 轨。
+  "env.waterMode",
+  "env.groundMatSource",
   // [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
   // 会话态不落盘；面板侧 subscribe 变更 → 调 showModelGroup 副作用（views 层装配）。
   "ui.activeComponent",
@@ -142,6 +146,34 @@ function envToggleCap(id: string): EnvToggleCap | undefined {
   return cap as unknown as EnvToggleCap;
 }
 
+/** [doc:adr-126-p5-c] 水面能力（读/写 mode）——供 env.waterMode 惰性绑定 */
+interface WaterModeCap {
+  getWaterMode(): string;
+  setWaterMode(v: string): void;
+}
+function waterCap(): WaterModeCap | undefined {
+  const cap: SceneCapability | undefined = sceneCapabilityRegistry.getById("water");
+  if (!cap) return undefined;
+  if (!hasMethod<WaterModeCap>(cap, "getWaterMode") || !hasMethod<WaterModeCap>(cap, "setWaterMode")) {
+    return undefined;
+  }
+  return cap as unknown as WaterModeCap;
+}
+
+/** [doc:adr-126-p5-c] 地面能力（读/写 matSource）——供 env.groundMatSource 惰性绑定 */
+interface GroundMatCap {
+  getMatSource(): string;
+  setMatSource(v: string): void;
+}
+function groundMatCap(): GroundMatCap | undefined {
+  const cap: SceneCapability | undefined = sceneCapabilityRegistry.getById("ground");
+  if (!cap) return undefined;
+  if (!hasMethod<GroundMatCap>(cap, "getMatSource") || !hasMethod<GroundMatCap>(cap, "setMatSource")) {
+    return undefined;
+  }
+  return cap as unknown as GroundMatCap;
+}
+
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）
  *  类型用窄联合（`typeof KNOWN_PATHS[number]`）而非 `PreviewStatePath` 全集——
  *  保证"加新路径"必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住"调用方永不传未落地项" */
@@ -187,6 +219,18 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
     get: () => envToggleCap("sky")?.isEnvironmentEnabled() ?? false,
     set: (v) => envToggleCap("sky")?.setEnvironmentEnabled(Boolean(v)),
     available: () => envToggleCap("sky") !== undefined,
+  },
+  // [doc:adr-126-p5-c] 探针：cap 内部状态上浮——water.mode / ground.matSource。
+  // 惰性解析（cap 缺席时 available=false、get 安全缺省），不持有实例、不落盘。
+  "env.waterMode": {
+    get: () => waterCap()?.getWaterMode() ?? "film",
+    set: (v) => waterCap()?.setWaterMode(String(v)),
+    available: () => waterCap() !== undefined,
+  },
+  "env.groundMatSource": {
+    get: () => groundMatCap()?.getMatSource() ?? "none",
+    set: (v) => groundMatCap()?.setMatSource(String(v)),
+    available: () => groundMatCap() !== undefined,
   },
   // ── 会话态：不落盘（非持久化偏好）──
   //   [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。

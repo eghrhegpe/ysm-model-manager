@@ -234,6 +234,56 @@ describe("renderEnvLevel", () => {
     poolEntry.click();
     expect(subList.querySelector('[data-testid="cap-water-pool-height"]')).not.toBeNull();
   });
+
+  it("探针 P5-c：water 控件走 visibleWhen(s) 状态层谓词，切模式后 film 专属控件显隐（B 轨替代 A 轨）", () => {
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
+    let mode: "film" | "pool" = "film";
+    const listeners = new Set<() => void>();
+    const fakeWaterCap = {
+      id: "water",
+      labelKey: "preview.water",
+      icon: "💧",
+      descKey: "",
+      subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+      getWaterMode: () => mode,
+      setWaterMode: (v: string) => { mode = v as "film" | "pool"; listeners.forEach((l) => l()); },
+      getMenuControls: () => [
+        { id: "water-enabled", kind: "toggle", labelKey: "preview.groundWaterEnabled", fallback: "水面", getValue: () => true, setValue: () => {} },
+        { id: "water-mode", kind: "select", labelKey: "preview.groundWaterMode", fallback: "形态", group: "preview.waterGroupForm", select: [{ value: "film", label: "薄膜" }, { value: "pool", label: "水池" }], getValue: () => mode, setValue: (v: string) => { mode = v as "film" | "pool"; listeners.forEach((l) => l()); } },
+        { id: "water-wetness", kind: "slider", labelKey: "preview.waterFilmDensity", fallback: "浓度", group: "preview.waterGroupLook", slider: { min: 0, max: 1, step: 0.05 }, getValue: () => 0.5, setValue: () => {}, visibleWhen: (s: any) => s["env.waterMode"] === "film" },
+        { id: "water-pool-height", kind: "slider", labelKey: "preview.groundPoolHeight", fallback: "水池高度", group: "preview.waterGroupPool", slider: { min: 0.01, max: 5, step: 0.05 }, getValue: () => 1, setValue: () => {}, visibleWhen: (s: any) => s["env.waterMode"] === "pool" },
+      ],
+      apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
+    };
+    // 注册到 registry，让 previewSnapshot() 经 env.waterMode binding 拿到 mode（状态层上浮）
+    vi.spyOn(sceneCapabilityRegistry, "getById").mockImplementation((id: string) => (id === "water" ? (fakeWaterCap as never) : undefined));
+    const ctx = makeCtx({ getCap: (id) => (id === "water" ? (fakeWaterCap as never) : null) });
+    const subList = document.createElement("div");
+    let lastView: { title: string; render: (l: HTMLElement) => void } | null = null;
+    const nav = (v: { title: string; render: (l: HTMLElement) => void }): void => { lastView = v; v.render(subList); };
+    const menu = {
+      ...makeMenu(),
+      navigate: vi.fn(nav),
+      refresh: vi.fn(() => { if (lastView) lastView.render(subList); }),
+    } as unknown as SlideMenuHandle;
+
+    const list = document.createElement("div");
+    renderEnvLevel(list, ctx, menu);
+    const row = list.querySelector('[data-testid="cap-row-water"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    row.click(); // 进入水面子视图（mode=film）
+
+    // 初始 film：浓度（Look 组，film 专属，visibleWhen 判定显示）存在，水池（Pool 组）不存在
+    expect(subList.querySelector('[data-testid="cap-group-entry-preview.waterGroupLook"]')).not.toBeNull();
+    expect(subList.querySelector('[data-testid="cap-group-entry-preview.waterGroupPool"]')).toBeNull();
+
+    // 切到 pool（模拟用户选「水池」→ setValue 触发 listeners → 状态层快照更新 + 订阅刷新）
+    fakeWaterCap.getMenuControls().find((c) => c.id === "water-mode")!.setValue("pool");
+
+    expect(menu.refresh).toHaveBeenCalled();
+    expect(subList.querySelector('[data-testid="cap-group-entry-preview.waterGroupPool"]')).not.toBeNull();
+    expect(subList.querySelector('[data-testid="cap-group-entry-preview.waterGroupLook"]')).toBeNull();
+  });
 });
 
 describe("buildEnvSchema（ADR-126 P5 声明式上岸）", () => {

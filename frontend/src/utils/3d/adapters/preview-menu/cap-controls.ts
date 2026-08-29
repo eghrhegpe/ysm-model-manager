@@ -4,6 +4,7 @@
 import { createHeaderToggle } from "../../../../ui/ui-header-toggle.ts";
 import { t } from "../../../../core/i18n/t.ts";
 import type { MenuControlDef } from "../../caps/scene-capability.ts";
+import type { PreviewSnapshot } from "../../state/preview-state.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
 const tr = (key: string, fallback: string): string => {
@@ -449,12 +450,18 @@ export function collectVisiblePredicates(controls: MenuControlDef[]): MenuContro
   return controls.filter((c) => typeof c.visible === "function");
 }
 
-export function renderCapControls(list: HTMLElement, controls: MenuControlDef[]): void {
+export function renderCapControls(
+  list: HTMLElement,
+  controls: MenuControlDef[],
+  snapshot?: PreviewSnapshot,
+): void {
   // 分组折叠 sectionMap 贯穿全循环：同一 group 的控件归入同一可折叠 section，header 点击切换展开/收起。
   // kind 分派：divider 无 group 挂顶层作组间分隔；其余控件挂 (target ?? list)（有 group 挂 body，无 group 挂顶层）。签名不可动，本函数只做纯分派。
   const sectionMap = new Map<string, CapSectionShell>();
   for (const c of controls) {
-    if (c.visible && !c.visible()) continue; // 条件隐藏控件（模式/状态依赖）跳过，不渲染也不建空 section
+    if (c.visible && !c.visible()) continue; // A 轨：条件隐藏控件（闭包依赖 cap params）跳过
+    // B 轨：状态层快照谓词 visibleWhen(s)——吃 previewSnapshot()，与 A 轨 AND（皆通过才显示）
+    if (c.visibleWhen && snapshot && !c.visibleWhen(snapshot)) continue;
     const parent = ensureCapSection(sectionMap, list, c.group) ?? list;
     switch (c.kind) {
       case "divider": renderCapDivider(parent); break;

@@ -387,3 +387,49 @@ describe("契约守卫", () => {
     for (const p of KNOWN_PATHS) expect(toStatePath(p)).toBe(p);
   });
 });
+
+describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P5-c）", () => {
+  function baseCap(id: string) {
+    return {
+      id,
+      labelKey: `cap.${id}`,
+      icon: "🧪",
+      descKey: `cap.${id}.desc`,
+      apply: vi.fn(),
+      dispose: vi.fn(),
+      setEnabled: vi.fn(),
+      isEnabled: () => true,
+      getMenuControls: () => [],
+      saveState: vi.fn(),
+      loadState: vi.fn(),
+    };
+  }
+
+  it("cap 缺席：available=false、get 安全缺省 film/none、写入不抛", () => {
+    expect(isPathAvailable("env.waterMode")).toBe(false);
+    expect(getStateValue("env.waterMode")).toBe("film");
+    expect(isPathAvailable("env.groundMatSource")).toBe(false);
+    expect(getStateValue("env.groundMatSource")).toBe("none");
+    expect(() => setStateValue("env.waterMode", "pool")).not.toThrow();
+  });
+
+  it("cap 就位：get 透传 cap 内部状态、available=true、set 透传", () => {
+    const water = { ...baseCap("water"), getWaterMode: () => "pool", setWaterMode: vi.fn() };
+    const ground = { ...baseCap("ground"), getMatSource: () => "texture", setMatSource: vi.fn() };
+    mountCaps(water as never, ground as never);
+    expect(isPathAvailable("env.waterMode")).toBe(true);
+    expect(getStateValue("env.waterMode")).toBe("pool");
+    expect(getStateValue("env.groundMatSource")).toBe("texture");
+    setStateValue("env.waterMode", "film");
+    expect(water.setWaterMode).toHaveBeenCalledWith("film");
+  });
+
+  it("previewSnapshot 含这两个键且 cap 缺席时为安全缺省", () => {
+    mountCaps();
+    const snap = previewSnapshot();
+    expect("env.waterMode" in snap).toBe(true);
+    expect("env.groundMatSource" in snap).toBe(true);
+    expect(snap["env.waterMode"]).toBe("film");
+    expect(snap["env.groundMatSource"]).toBe("none");
+  });
+});

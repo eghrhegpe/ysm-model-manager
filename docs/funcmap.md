@@ -1439,9 +1439,9 @@
 | `LoadingProgressMode()` | `frontend/src/utils/3d/adapters/preview-loading:14` | 加载进度条模式：indeterminate（循环动画）| determinate（固定 id + transition，供外部更新宽度） |
 | `renderLoadingState()` | `frontend/src/utils/3d/adapters/preview-loading:17` | 3D 预览加载态：loadingEl 渲染图标 + 标签 + 进度条 |
 | `showLoadFailure()` | `frontend/src/utils/3d/adapters/preview-loading:35` | 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 |
-| `formatCapSliderValue()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:97` | slider 值格式化（renderCapSlider 与环境面板摘要行共用，防两端分叉）： unit="h" → HH:MM（小数进位分钟）／ unit="%" → 百分比（×1 |
-| `collectVisiblePredicates()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:448` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
-| `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:452` | — |
+| `formatCapSliderValue()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:98` | slider 值格式化（renderCapSlider 与环境面板摘要行共用，防两端分叉）： unit="h" → HH:MM（小数进位分钟）／ unit="%" → 百分比（×1 |
+| `collectVisiblePredicates()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:449` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
+| `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:453` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
 | `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
@@ -1457,9 +1457,9 @@
 | `PreviewMenuGroupDef()` | `frontend/src/utils/3d/adapters/preview-menu/defs:60` | 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） |
 | `PREVIEW_MENU_GROUPS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:66` | — |
 | `CORE_MENU_ITEMS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:88` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
-| `disposeEnvSubscriptions()` | `frontend/src/utils/3d/adapters/preview-menu/env:29` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
-| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu/env:113` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
-| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu/env:235` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
+| `disposeEnvSubscriptions()` | `frontend/src/utils/3d/adapters/preview-menu/env:30` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
+| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu/env:117` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
+| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu/env:240` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
 | `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
 | `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:24` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
 | `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:40` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
@@ -1627,13 +1627,13 @@
 | `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:32` | 注册表：管理所有场景能力的工厂和实例 |
 | `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:111` | 全局单例（模块级单例 + 运行时状态隔离） |
 | `isSkyEnvironmentOn()` | `frontend/src/utils/3d/caps/scene-capability-registry:133` | sky 环境开关（跨组件查询属组合根职责；light ambient ×0.5 协调与截图镜像 （skeleton-render）共用——原 light-capability 模块 |
-| `MenuControlDef()` | `frontend/src/utils/3d/caps/scene-capability:16` | 菜单控件定义（声明式，由框架渲染为 DOM） |
-| `SceneCapabilityLookup()` | `frontend/src/utils/3d/caps/scene-capability:84` | cap 间协调查询器：组合根 createAll 时注入，cap 间联动经此查询（不 import scene-capability-registry——组合根 import 全部 |
-| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:88` | — |
-| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:136` | 保存 JSON 到 localStorage |
-| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:141` | 从 localStorage 加载 JSON |
-| `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:152` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
-| `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:168` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
+| `MenuControlDef()` | `frontend/src/utils/3d/caps/scene-capability:17` | 菜单控件定义（声明式，由框架渲染为 DOM） |
+| `SceneCapabilityLookup()` | `frontend/src/utils/3d/caps/scene-capability:90` | cap 间协调查询器：组合根 createAll 时注入，cap 间联动经此查询（不 import scene-capability-registry——组合根 import 全部 |
+| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:94` | — |
+| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:142` | 保存 JSON 到 localStorage |
+| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:147` | 从 localStorage 加载 JSON |
+| `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:158` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
+| `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:174` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
 | `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
 | `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
@@ -1817,14 +1817,14 @@
 | `PreviewStatePath()` | `frontend/src/utils/3d/state/preview-state:33` | 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） |
 | `PreviewSnapshot()` | `frontend/src/utils/3d/state/preview-state:48` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
 | `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:69` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
-| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:87` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
-| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:207` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
-| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:217` | 订阅横切设置变更；返回取消订阅函数 |
-| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:238` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
-| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:247` | 写入路径值。 |
-| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:257` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
-| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:266` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
-| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:273` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
+| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:91` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
+| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:251` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
+| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:261` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:282` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
+| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:291` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:301` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:310` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
+| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:317` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
 | `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
 | `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |

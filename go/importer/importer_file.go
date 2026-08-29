@@ -35,39 +35,42 @@ type ImportOptions struct {
 type ImportLogger func(name, src, dst string, size int64, status, msg string)
 
 // ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件）
-// rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot）
-func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn func(rtype string) string, logger ImportLogger) error {
+// rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot）。
+// 返回 (destPath, rtype)：落盘绝对路径 + 判定出的资源类型——
+// 「先入仓库再推送」组合链路（app 层 ImportFileAndPushToInstance）依赖两者定位产物，
+// 类型判定单一事实源仍在本函数，调用方不得自行复刻。
+func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn func(rtype string) string, logger ImportLogger) (string, string, error) {
 	ext := strings.ToLower(filepath.Ext(fileName))
 	if !types.IsSupportedExt(ext) {
-		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式"}
+		return "", "", types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式"}
 	}
 	// ysm 包内 json 白名单：.json 仅允许 ysm.json 入口清单，包内 geometry/animation/语言 json 不得单独导入
-	// 与 go/scanner/scanner.go 的 ysm.json 白名单对齐（ADR-038 D2）
+	// 与 go/scanner/scanner.go:80-87 的 ysm.json 白名单对齐（ADR-038 D2）
 	if ext == ".json" && !types.IsYsmEntryJSON(filepath.Base(fileName)) {
-		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
+		return "", "", types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
 	}
 	// 路径穿越检测：统一入口 paths.HasTraversal（ADR-038 D2）
 	if paths.HasTraversal(fileName) {
-		return types.AppError{Code: types.ErrFileNameInvalid, Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含路径穿越", Suggestion: "请使用纯文件名，不要包含路径"}
+		return "", "", types.AppError{Code: types.ErrFileNameInvalid, Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含路径穿越", Suggestion: "请使用纯文件名，不要包含路径"}
 	}
 	if strings.ContainsAny(fileName, `\/`) {
-		return types.AppError{Code: types.ErrFileNameInvalid, Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
+		return "", "", types.AppError{Code: types.ErrFileNameInvalid, Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
 	}
 	// base64 预大小守卫：先检查编码长度上界再解码，避免超大 base64 字符串
 	// 解码后才命中 len(data) > MaxImportSize 检查、白白分配 GB 级内存（峰值内存尖刺）。
 	// base64 解码后大小 ≤ len(base64Data)*3/4，上界超限时直接拒绝无需解码。
 	if int64(len(base64Data))*3/4 > types.MaxImportSize {
-		return types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
+		return "", "", types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
 	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
-		return types.AppError{Code: types.ErrDecodeFailed, Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
+		return "", "", types.AppError{Code: types.ErrDecodeFailed, Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
 	}
 	if len(data) > types.MaxImportSize {
-		return types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
+		return "", "", types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
 	}
 	if len(data) == 0 {
-		return types.AppError{Code: types.ErrFileEmpty, Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
+		return "", "", types.AppError{Code: types.ErrFileEmpty, Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
 	}
 
 	// 类型检测：优先内容检测（ZIP/7z 可能为 YSM/资源包/光影包），回退扩展名匹配
@@ -88,12 +91,12 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 		}
 	}
 	if rtype == "" {
-		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "无法识别文件类型", Suggestion: "ZIP/7z 内未找到已知资源特征（pack.mcmeta/shaders/ysm.json/模型后缀等），请确认文件格式或改用桌面端导入"}
+		return "", "", types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "无法识别文件类型", Suggestion: "ZIP/7z 内未找到已知资源特征（pack.mcmeta/shaders/ysm.json/模型后缀等），请确认文件格式或改用桌面端导入"}
 	}
 
 	targetRoot := rootFn(rtype)
 	if targetRoot == "" {
-		return fmt.Errorf("请先设置文件存储路径")
+		return "", "", fmt.Errorf("请先设置文件存储路径")
 	}
 
 	// 魔数校验
@@ -118,14 +121,14 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	destPath := filepath.Join(targetRoot, fileName)
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, fsutil.DirPerms); err != nil {
-		return types.AppError{Code: types.ErrMkdirFailed, Operation: "导入模型", TargetPath: destDir, Reason: "无法创建目标目录", Suggestion: "请检查磁盘权限或空间"}
+		return "", "", types.AppError{Code: types.ErrMkdirFailed, Operation: "导入模型", TargetPath: destDir, Reason: "无法创建目标目录", Suggestion: "请检查磁盘权限或空间"}
 	}
 	if !opts.Overwrite {
 		if _, err := os.Stat(destPath); err == nil {
-			return types.AppError{Code: types.ErrFileExists, Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
+			return "", "", types.AppError{Code: types.ErrFileExists, Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
 		}
 	}
-	return WriteFileAtomic(destPath, data)
+	return destPath, rtype, WriteFileAtomic(destPath, data)
 }
 
 // WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。

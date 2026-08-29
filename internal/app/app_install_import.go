@@ -71,11 +71,13 @@ func (a *App) ImportModelFileSkipCheck(fileName, base64Data string) error {
 }
 
 func (a *App) importModelFile(fileName, base64Data string, skipCheck bool) error {
-	return a.importModelFileWithOptions(fileName, base64Data, importOptions{skipCheck: skipCheck})
+	_, _, err := a.importModelFileWithOptions(fileName, base64Data, importOptions{skipCheck: skipCheck})
+	return err
 }
 
 func (a *App) ImportModelFileOverwrite(fileName, base64Data string) error {
-	return a.importModelFileWithOptions(fileName, base64Data, importOptions{overwrite: true})
+	_, _, err := a.importModelFileWithOptions(fileName, base64Data, importOptions{overwrite: true})
+	return err
 }
 
 type importOptions struct {
@@ -83,9 +85,10 @@ type importOptions struct {
 	overwrite bool
 }
 
-// importModelFileWithOptions 导入模型文件（校验+写文件核心下沉 go/importer）
-func (a *App) importModelFileWithOptions(fileName, base64Data string, opts importOptions) error {
-	err := importer.ImportFromBase64(fileName, base64Data, importer.ImportOptions{
+// importModelFileWithOptions 导入模型文件（校验+写文件核心下沉 go/importer）。
+// 返回 (destPath, rtype)：落盘路径 + 判定类型，供「先入仓库再推送」组合链路消费。
+func (a *App) importModelFileWithOptions(fileName, base64Data string, opts importOptions) (string, string, error) {
+	destPath, rtype, err := importer.ImportFromBase64(fileName, base64Data, importer.ImportOptions{
 		SkipCheck: opts.skipCheck,
 		Overwrite: opts.overwrite,
 	}, func(rtype string) string {
@@ -97,7 +100,7 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 		// 否则新增的 30s 同步结果缓存会让导入后整合包页静默陈旧 ≤30s。
 		a.ClearScanCache()
 	}
-	return err
+	return destPath, rtype, err
 }
 
 func (a *App) ImportModelFileTo(fileName, subpath, base64Data string) error {
@@ -211,5 +214,101 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 	// Go 侧统一失效：导入后立即清扫描缓存/容器指纹缓存/同步结果缓存，
 	// 不依赖前端事后 ClearScanCache（否则漏一条路径就吃 30s 陈旧窗）。
 	a.ClearScanCache()
+	return nil
+}
+
+// ========== 整合包卡片拖拽导入（先入仓库再推送，复用右键推送管线） ==========
+// 数据流与下载→安装同构：外部产物先入仓库（单一事实源），再由仓库落盘产物
+// 装进整合包实例（硬链接模式由此成立）。前端只编排调用，类型判定与落点全在 Go 侧。
+
+// ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型），
+// 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未知实例不落仓库残档。
+func (a *App) ImportFileAndPushToInstance(fileName, base64Data, instanceName string) error {
+	// 光杆 ysm.json 推送侧会触发 InstallDir(父目录)，单文件命中即父目录=仓库根 →
+	// 整仓落地灾难；与前端 directImport 的提示口径一致，前置拒绝。
+	if strings.EqualFold(strings.TrimSpace(fileName), "ysm.json") {
+		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "光杆 ysm.json 不可单独推送", Suggestion: "请拖入含 ysm.json 的整个模型文件夹"}
+	}
+	cfg := a.LoadAppConfig()
+	if err := requireMcRoot(cfg); err != nil {
+		return err
+	}
+	if err := a.requireInstance(cfg.McRoot, instanceName); err != nil {
+		return err
+	}
+	destPath, rtype, err := a.importModelFileWithOptions(fileName, base64Data, importOptions{})
+	if err != nil {
+		return err
+	}
+	return a.pushRepoPathToInstance(rtype, instanceName, destPath)
+}
+
+// ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型，
+// 与 ImportModelFolder 同源），再把仓库落盘的文件夹根推送到指定整合包实例
+// （ysmsync.PushSingleResource 对目录走 InstallDir 整组安装，扩展名白名单按类型过滤）。
+// subpath 保留多级拖入的父目录层级（拖「分类1/狐狸」→ 仓库 分类1/狐狸/）。
+func (a *App) ImportFolderAndPushToInstance(folderName, subpath string, files []types.ImportFileItem, instanceName string) error {
+	cfg := a.LoadAppConfig()
+	if err := requireMcRoot(cfg); err != nil {
+		return err
+	}
+	if err := a.requireInstance(cfg.McRoot, instanceName); err != nil {
+		return err
+	}
+	rtype := inferFolderType(files)
+	root, _ := a.GetRepoRoot(rtype)
+	if root == "" {
+		return fmt.Errorf("请先设置文件存储路径")
+	}
+	if err := a.importModelFolderAs(rtype, folderName, subpath, files); err != nil {
+		return err
+	}
+	return a.pushRepoPathToInstance(rtype, instanceName, filepath.Join(root, subpath, folderName))
+}
+
+// requireInstance 校验 mcRoot 下存在指定名称的整合包实例（ListVersionInstances 同源发现）。
+func (a *App) requireInstance(mcRoot, instanceName string) error {
+	for _, ins := range a.ListVersionInstances(mcRoot) {
+		if ins.Name == instanceName {
+			return nil
+		}
+	}
+	return fmt.Errorf("未找到整合包: %s", instanceName)
+}
+
+// pushRepoPathToInstance 把仓库内已落盘的文件/目录推送到指定整合包实例。
+// 与 PushSingleResourceToInstance 同一管线（filesRootForSync + findInstanceDir +
+// ysmsync.PushSingleResource），区别仅在于实例目录只解析一次、调用方自持 rtype
+// （文件夹整组按组类型推送，不逐文件重判型导致纹理错根）。
+func (a *App) pushRepoPathToInstance(rtype, instanceName, repoPath string) error {
+	cfg := a.LoadAppConfig()
+	if err := requireMcRoot(cfg); err != nil {
+		return err
+	}
+	globalDir, _ := a.filesRootForSync(rtype)
+	if globalDir == "" {
+		return fmt.Errorf("未设置 %s 类型的仓库目录", rtype)
+	}
+	customDir, err := a.findInstanceDir(rtype, instanceName, cfg.McRoot)
+	if err != nil {
+		return err
+	}
+	// 防目录级安装整仓落地：.pmx/.pmd/ysm.json 触发 InstallDir(父目录)，
+	// 父目录=仓库根时会把整棵仓库推进实例（拖拽单文件场景比右键推送更易命中）。
+	if filepath.Dir(repoPath) == filepath.Clean(globalDir) {
+		ext := strings.ToLower(filepath.Ext(repoPath))
+		if ext == ".pmx" || ext == ".pmd" || (ext == ".json" && types.IsYsmEntryJSON(repoPath)) {
+			return types.AppError{Code: types.ErrInvalidPath, Operation: "推送资源", SourcePath: repoPath, Reason: "根级目录级安装入口被拒绝", Suggestion: "请将模型放入仓库子文件夹后再推送"}
+		}
+	}
+	opErr := ysmsync.PushSingleResource(repoPath, customDir, globalDir, a.getLinkMode(), rtype)
+	if opErr != nil {
+		a.logger.Add(filepath.Base(repoPath), repoPath, customDir, 0, "failed", opErr.Error())
+		return opErr
+	}
+	a.logger.Add(filepath.Base(repoPath), repoPath, customDir, 0, "success", "")
+	// 推送会改实例目录；与 PushSingleResourceToInstance 同款显式失效（保持刷新即时）
+	instance.InvalidateSyncItemsCache()
+	ysmsync.InvalidateSyncScanCaches()
 	return nil
 }

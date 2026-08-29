@@ -186,7 +186,7 @@
 | 🏗 app-modules | 组件入口 app-modules | architecture | — | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新, import 组件, 新组件注册, 窗口显示, startup reveal |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:change, 菜单, 页面记忆, 版本号 |
 | 🏗 app-preview | 预览面板 app-preview | architecture | — | 预览, 模型预览, 2D 骨骼, 3D 预览, Litematic, 蓝图, 缩略图, WASM 解码, 放大预览 |
-| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture | — | 侧边栏, 整合包列表, 版本卡片, 推送, 拉取, 一键安装, 同步状态, 勾选 |
+| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture | — | 侧边栏, 整合包列表, 版本卡片, 推送, 拉取, 一键安装, 同步状态, 勾选, 整合包拖拽导入, 启动器检测 |
 | 🏗 app-sync-manager | 整合包同步页 app-sync-manager | architecture | — | 整合包同步, 同步状态, 推送资源, 拉取资源, 待推送, 可拉取, 已禁用, 实例资源 |
 | 🍃 app-toast | Toast 通知 app-toast | leaf | — | toast, 通知, 提示, 消息, 撤销, 反馈, 报错提示 |
 | 🏗 app-tree | 资源树 app-tree | architecture | — | 树形, 资源列表, tree, 节点, 树, 目录树 |

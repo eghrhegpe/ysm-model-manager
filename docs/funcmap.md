@@ -42,15 +42,15 @@
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 18 | 37 |
-| 前端·特性 | 17 | 84 |
+| 前端·特性 | 18 | 91 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
 | 前端·工具 | 176 | 725 |
-| frontend/views | 118 | 347 |
+| frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **507** | **2176** |
+| **合计** | **508** | **2184** |
 
 ## Go·头像
 
@@ -1156,23 +1156,30 @@
 | `createVirtualList()` | `frontend/src/features/community/virtual-list:31` | — |
 | `CollectedFile()` | `frontend/src/features/dnd-collector:6` | 收集结果条目 |
 | `collectFiles()` | `frontend/src/features/dnd-collector:35` | 递归收集 DataTransferItem[] 或 FileSystemEntry[] 中的文件。 |
-| `getExt()` | `frontend/src/features/dnd-shared:4` | — |
-| `isSupportedFile()` | `frontend/src/features/dnd-shared:8` | 扩展名是否在支持列表 |
-| `isImportableFile()` | `frontend/src/features/dnd-shared:14` | 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单 包内 geometry/animation/语言 json（main.json / *.animation. |
-| `shouldEnterForm()` | `frontend/src/features/dnd-shared:22` | 判断文件是否需要进入命名表单 2026-08-05：导入默认直接（保留原文件名，后端自动路由类型/冲突覆盖确认）， 不再强制命名表单；ysm.json 单文件保留表单提示（整组导入 |
-| `CollectedEntry()` | `frontend/src/features/dnd-shared:33` | 收集条目（文件 + 相对路径） |
-| `FolderGroup()` | `frontend/src/features/dnd-shared:39` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
-| `groupCollected()` | `frontend/src/features/dnd-shared:51` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
-| `handleTreeDrop()` | `frontend/src/features/import-dnd:37` | 处理 drop 事件：收集文件 → 过滤 → 执行导入。 |
-| `bindTreeDnD()` | `frontend/src/features/import-dnd:153` | 在目标容器上注册仓库页 DnD 事件。 |
+| `getExt()` | `frontend/src/features/dnd-shared:5` | — |
+| `isSupportedFile()` | `frontend/src/features/dnd-shared:9` | 扩展名是否在支持列表 |
+| `isImportableFile()` | `frontend/src/features/dnd-shared:15` | 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单 包内 geometry/animation/语言 json（main.json / *.animation. |
+| `shouldEnterForm()` | `frontend/src/features/dnd-shared:23` | 判断文件是否需要进入命名表单 2026-08-05：导入默认直接（保留原文件名，后端自动路由类型/冲突覆盖确认）， 不再强制命名表单；ysm.json 单文件保留表单提示（整组导入 |
+| `CollectedEntry()` | `frontend/src/features/dnd-shared:34` | 收集条目（文件 + 相对路径） |
+| `FolderGroup()` | `frontend/src/features/dnd-shared:40` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
+| `groupCollected()` | `frontend/src/features/dnd-shared:52` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
+| `isEditableTarget()` | `frontend/src/features/dnd-shared:84` | drop 目标是否为可编辑元素（输入框内 drop 不应触发导入） |
+| `collectDropFiles()` | `frontend/src/features/dnd-shared:99` | 从 drop 事件的 DataTransfer 收集文件（桌面端）： 优先 dataTransfer.files（WebView2 可靠），再 items → webkitGetA |
+| `handleTreeDrop()` | `frontend/src/features/import-dnd:28` | 处理 drop 事件：收集文件 → 过滤 → 执行导入。 |
+| `bindTreeDnD()` | `frontend/src/features/import-dnd:120` | 在目标容器上注册仓库页 DnD 事件。 |
 | `CollectedEntry()` | `frontend/src/features/import-executor` | — |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
 | `ImportFile()` | `frontend/src/features/import-executor:20` | 带相对路径的 File（文件夹导入时标记 _relPath） |
-| `directImport()` | `frontend/src/features/import-executor:61` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
-| `importFolder()` | `frontend/src/features/import-executor:98` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） rtype：页面上下文类型（当前树根属性，派生自注册表路由配置）——非空走 Im |
-| `executeCollected()` | `frontend/src/features/import-executor:179` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
-| `importWebFilesWithToast()` | `frontend/src/features/import-executor:204` | 网页版导入执行（ADR-049 Phase 3）：拖入/选择文件 → importWebFiles 直写 IndexedDB → toast 反馈 → tree/stats 刷新。 |
+| `fileToBase64()` | `frontend/src/features/import-executor:39` | File → base64（10s 超时兜底，防 FileReader 悬挂卡死导入）；pack-dnd 复用 |
+| `directImport()` | `frontend/src/features/import-executor:62` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
+| `importFolder()` | `frontend/src/features/import-executor:99` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） rtype：页面上下文类型（当前树根属性，派生自注册表路由配置）——非空走 Im |
+| `executeCollected()` | `frontend/src/features/import-executor:180` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
+| `importWebFilesWithToast()` | `frontend/src/features/import-executor:205` | 网页版导入执行（ADR-049 Phase 3）：拖入/选择文件 → importWebFiles 直写 IndexedDB → toast 反馈 → tree/stats 刷新。 |
 | `loadOldestModel()` | `frontend/src/features/oldest-models:290` | — |
+| `PackDndBusy()` | `frontend/src/features/pack-dnd:26` | drop 处理期间的 busy 守卫（由绑定闭包持有，每组件实例独立） |
+| `PackDndInstance()` | `frontend/src/features/pack-dnd:32` | 卡片实例的最小形状（SidebarInstance 结构子集） |
+| `handleInstanceDrop()` | `frontend/src/features/pack-dnd:45` | 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。 |
+| `bindPackCardDnD()` | `frontend/src/features/pack-dnd:177` | 在 document 层注册整合包卡片 DnD（WebView2 ShadowRoot drop 限制， 与 bindTreeDnD 同款范式：document 监听 + comp |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:23` | — |
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:33` | — |
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:235` | — |
@@ -2114,7 +2121,6 @@
 | `PAGE_REGISTRY()` | `frontend/src/views/app-content/page-registry:30` | — |
 | `initSettings()` | `frontend/src/views/app-content/settings/init:311` | 初始化设置页所有事件绑定 |
 | `initKeymap()` | `frontend/src/views/app-content/settings/keymap:130` | 初始化 3D 预览操作：键位网格 + 恢复默认 + 相机速度 + 默认旋转模式 |
-| `registerLauncherDetection()` | `frontend/src/views/app-content/settings/launcher-detection:124` | Install launcher detection into the settings view without crossing feature/view layers. |
 | `saveCfg()` | `frontend/src/views/app-content/settings/path-cards:25` | — |
 | `bindPathClick()` | `frontend/src/views/app-content/settings/path-cards:53` | — |
 | `initAdvancedGrid()` | `frontend/src/views/app-content/settings/path-cards:194` | — |
@@ -2315,10 +2321,12 @@
 | `registerYsmModelSchema()` | `frontend/src/views/app-preview/ysm-controls:96` | [doc:adr-126-p5] YSM model 面板受控 schema 注册 + 组件选择副作用订阅。 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
-| `bindCardEvents()` | `frontend/src/views/app-sidebar/events:127` | — |
-| `resetSelectedEmit()` | `frontend/src/views/app-sidebar/events:189` | 复位去重标记：组件真正卸载（disconnectedCallback）时调用—— 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） |
-| `bindFooter()` | `frontend/src/views/app-sidebar/events:232` | — |
+| `bindCardEvents()` | `frontend/src/views/app-sidebar/events:137` | — |
+| `resetSelectedEmit()` | `frontend/src/views/app-sidebar/events:199` | 复位去重标记：组件真正卸载（disconnectedCallback）时调用—— 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） |
+| `bindFooter()` | `frontend/src/views/app-sidebar/events:242` | — |
 | `appSidebarStyle()` | `frontend/src/views/app-sidebar/index:13` | — |
+| `runMcSearch()` | `frontend/src/views/app-sidebar/launcher-detect:50` | 🔍 自动搜索常见 MC 安装位置（多结果弹选择器） |
+| `runLauncherDetect()` | `frontend/src/views/app-sidebar/launcher-detect:124` | 🎮 HMCL / PCL 启动器实例检测：选启动器目录 → 选实例 → 写 mcRoot（可选并设 YSM 资源根） |
 | `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:21` | MMD 变体聚合结果 |
 | `loadInstances()` | `frontend/src/views/app-sidebar/loader:37` | 从 Go 加载整合包实例列表，转换为 render 需要的格式（同 rtype 在途请求合并） 去重只服务「读并发」（多组件同时触发 reload），若变异完成的刷新并入变异前发起 |
 | `groupMmdVariants()` | `frontend/src/views/app-sidebar/loader:167` | 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。 |

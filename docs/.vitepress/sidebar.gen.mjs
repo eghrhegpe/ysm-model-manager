@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-130：整合包卡片拖拽导入：先入仓库再推送",
+        "link": "/adr/ADR-130-pack-dnd-repo-first-push"
+      },
+      {
         "text": "ADR-129：3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置）",
         "link": "/adr/ADR-129-preview-3d-domain-root"
       },

@@ -30,12 +30,12 @@
 | `repo:rtype-changed` | 3 | 6 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
-| `stats:refresh` | 24 | 2 | 0 | 0 | ✅ |
+| `stats:refresh` | 26 | 2 | 0 | 0 | ✅ |
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 200 | 2 | 0 | 0 | ✅ |
-| `tree:reload` | 12 | 1 | 0 | 0 | ✅ |
+| `toast:show` | 205 | 2 | 0 | 0 | ✅ |
+| `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
 ## 调用详情
@@ -93,7 +93,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-sidebar/events.ts` | 113 |
+| `frontend/src/views/app-sidebar/events.ts` | 123 |
 | `frontend/src/views/app-tree/events.ts` | 296 |
 | `frontend/src/views/app-tree/events.ts` | 320 |
 | `frontend/src/views/app-tree/events.ts` | 331 |
@@ -231,7 +231,7 @@
 | `frontend/src/views/app-content/site/events.ts` | 201 |
 | `frontend/src/views/app-nav/index.ts` | 22 |
 | `frontend/src/views/app-nav/index.ts` | 163 |
-| `frontend/src/views/app-sidebar/events.ts` | 240 |
+| `frontend/src/views/app-sidebar/events.ts` | 250 |
 | `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
 
 **订阅方（on）：**
@@ -246,8 +246,8 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-sidebar/events.ts` | 68 |
-| `frontend/src/views/app-sidebar/events.ts` | 225 |
+| `frontend/src/views/app-sidebar/events.ts` | 78 |
+| `frontend/src/views/app-sidebar/events.ts` | 235 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -270,7 +270,7 @@
 | `frontend/src/views/app-content/init-pages.ts` | 79 |
 | `frontend/src/views/app-content/init-pages.ts` | 255 |
 | `frontend/src/views/app-nav/index.ts` | 155 |
-| `frontend/src/views/app-sidebar/index.ts` | 429 |
+| `frontend/src/views/app-sidebar/index.ts` | 435 |
 | `frontend/src/views/app-sync-manager/index.ts` | 174 |
 
 ### `repo:search-creator`
@@ -311,15 +311,17 @@
 | `frontend/src/features/community/download-queue-store.ts` | 258 |
 | `frontend/src/features/community/download-queue.ts` | 114 |
 | `frontend/src/features/import-executor.ts` | 34 |
-| `frontend/src/features/import-executor.ts` | 219 |
+| `frontend/src/features/import-executor.ts` | 220 |
+| `frontend/src/features/pack-dnd.ts` | 160 |
 | `frontend/src/features/recycle-bin.ts` | 107 |
 | `frontend/src/features/recycle-bin.ts` | 167 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
 | `frontend/src/views/app-content/settings/init.ts` | 141 |
-| `frontend/src/views/app-content/settings/launcher-detection.ts` | 98 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
-| `frontend/src/views/app-sidebar/index.ts` | 319 |
+| `frontend/src/views/app-sidebar/index.ts` | 320 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 71 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 150 |
 | `frontend/src/views/app-sync-manager/index.ts` | 220 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 67 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 136 |
@@ -331,7 +333,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-sidebar/index.ts` | 421 |
+| `frontend/src/views/app-sidebar/index.ts` | 427 |
 | `frontend/src/views/app-sync-manager/index.ts` | 154 |
 
 ### `sync:download:done`
@@ -345,15 +347,15 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-sidebar/index.ts` | 195 |
-| `frontend/src/views/app-sidebar/index.ts` | 216 |
+| `frontend/src/views/app-sidebar/index.ts` | 196 |
+| `frontend/src/views/app-sidebar/index.ts` | 217 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-sidebar/index.ts` | 209 |
+| `frontend/src/views/app-sidebar/index.ts` | 210 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -379,10 +381,10 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/app-modules.ts` | 69 |
-| `frontend/src/app-modules.ts` | 79 |
-| `frontend/src/app-modules.ts` | 89 |
-| `frontend/src/app-modules.ts` | 121 |
+| `frontend/src/app-modules.ts` | 68 |
+| `frontend/src/app-modules.ts` | 78 |
+| `frontend/src/app-modules.ts` | 88 |
+| `frontend/src/app-modules.ts` | 119 |
 | `frontend/src/core/context-menu-shared.ts` | 23 |
 | `frontend/src/core/context-menu-shared.ts` | 58 |
 | `frontend/src/core/context-menu-shared.ts` | 68 |
@@ -416,15 +418,16 @@
 | `frontend/src/features/community/events.ts` | 222 |
 | `frontend/src/features/community/events.ts` | 274 |
 | `frontend/src/features/community/events.ts` | 311 |
-| `frontend/src/features/import-dnd.ts` | 48 |
-| `frontend/src/features/import-dnd.ts` | 66 |
-| `frontend/src/features/import-dnd.ts` | 105 |
-| `frontend/src/features/import-dnd.ts` | 118 |
-| `frontend/src/features/import-dnd.ts` | 132 |
-| `frontend/src/features/import-dnd.ts` | 218 |
+| `frontend/src/features/import-dnd.ts` | 39 |
+| `frontend/src/features/import-dnd.ts` | 57 |
+| `frontend/src/features/import-dnd.ts` | 75 |
+| `frontend/src/features/import-dnd.ts` | 84 |
+| `frontend/src/features/import-dnd.ts` | 99 |
+| `frontend/src/features/import-dnd.ts` | 185 |
 | `frontend/src/features/import-executor.ts` | 29 |
-| `frontend/src/features/import-executor.ts` | 210 |
-| `frontend/src/features/import-executor.ts` | 223 |
+| `frontend/src/features/import-executor.ts` | 211 |
+| `frontend/src/features/import-executor.ts` | 224 |
+| `frontend/src/features/pack-dnd.ts` | 37 |
 | `frontend/src/features/recycle-bin.ts` | 240 |
 | `frontend/src/features/version-updater.ts` | 149 |
 | `frontend/src/features/version-updater.ts` | 158 |
@@ -469,8 +472,6 @@
 | `frontend/src/views/app-content/settings/keymap.ts` | 103 |
 | `frontend/src/views/app-content/settings/keymap.ts` | 114 |
 | `frontend/src/views/app-content/settings/keymap.ts` | 135 |
-| `frontend/src/views/app-content/settings/launcher-detection.ts` | 75 |
-| `frontend/src/views/app-content/settings/launcher-detection.ts` | 99 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 79 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 273 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 279 |
@@ -512,15 +513,21 @@
 | `frontend/src/views/app-preview/index.ts` | 266 |
 | `frontend/src/views/app-preview/preview-library.ts` | 107 |
 | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
-| `frontend/src/views/app-sidebar/events.ts` | 110 |
-| `frontend/src/views/app-sidebar/index.ts` | 150 |
-| `frontend/src/views/app-sidebar/index.ts` | 264 |
-| `frontend/src/views/app-sidebar/index.ts` | 266 |
-| `frontend/src/views/app-sidebar/index.ts` | 269 |
-| `frontend/src/views/app-sidebar/index.ts` | 313 |
-| `frontend/src/views/app-sidebar/index.ts` | 315 |
-| `frontend/src/views/app-sidebar/index.ts` | 317 |
-| `frontend/src/views/app-sidebar/index.ts` | 322 |
+| `frontend/src/views/app-sidebar/events.ts` | 120 |
+| `frontend/src/views/app-sidebar/index.ts` | 151 |
+| `frontend/src/views/app-sidebar/index.ts` | 265 |
+| `frontend/src/views/app-sidebar/index.ts` | 267 |
+| `frontend/src/views/app-sidebar/index.ts` | 270 |
+| `frontend/src/views/app-sidebar/index.ts` | 314 |
+| `frontend/src/views/app-sidebar/index.ts` | 316 |
+| `frontend/src/views/app-sidebar/index.ts` | 318 |
+| `frontend/src/views/app-sidebar/index.ts` | 323 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 57 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 72 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 78 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 133 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 151 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
 | `frontend/src/views/app-sidebar/loader.ts` | 152 |
 | `frontend/src/views/app-sync-manager/index.ts` | 151 |
 | `frontend/src/views/app-sync-manager/network.ts` | 47 |
@@ -598,11 +605,12 @@
 | `frontend/src/features/community/download-queue-store.ts` | 257 |
 | `frontend/src/features/community/download-queue.ts` | 113 |
 | `frontend/src/features/import-executor.ts` | 35 |
-| `frontend/src/features/import-executor.ts` | 218 |
+| `frontend/src/features/import-executor.ts` | 219 |
+| `frontend/src/features/pack-dnd.ts` | 161 |
 | `frontend/src/features/recycle-bin.ts` | 108 |
 | `frontend/src/features/recycle-bin.ts` | 168 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 436 |
-| `frontend/src/views/app-sidebar/index.ts` | 320 |
+| `frontend/src/views/app-sidebar/index.ts` | 321 |
 
 **订阅方（on）：**
 | 文件 | 行 |

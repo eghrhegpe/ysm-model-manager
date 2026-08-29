@@ -457,7 +457,7 @@ func TestImportFromBase64_Validation(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ImportFromBase64(tc.fileName, tc.b64, tc.opts, rootFn, logFn)
+			_, _, err := ImportFromBase64(tc.fileName, tc.b64, tc.opts, rootFn, logFn)
 			if err == nil {
 				t.Fatalf("ImportFromBase64(%q) 应报错", tc.fileName)
 			}
@@ -468,7 +468,7 @@ func TestImportFromBase64_Validation(t *testing.T) {
 	}
 
 	t.Run("存储路径未设置", func(t *testing.T) {
-		err := ImportFromBase64("m.ysm", base64.StdEncoding.EncodeToString([]byte("x")), ImportOptions{},
+		_, _, err := ImportFromBase64("m.ysm", base64.StdEncoding.EncodeToString([]byte("x")), ImportOptions{},
 			func(rtype string) string { return "" }, logFn)
 		if err == nil {
 			t.Fatal("rootFn 返回空应报错")
@@ -495,7 +495,7 @@ func TestImportFromBase64_MagicWarn(t *testing.T) {
 		}
 		// Overwrite 允许各用例复用同一 root 下的同名文件
 		opts.Overwrite = true
-		if err := ImportFromBase64(name, b64, opts, rootFn, logFn); err != nil {
+		if _, _, err := ImportFromBase64(name, b64, opts, rootFn, logFn); err != nil {
 			t.Fatalf("导入应成功: %v", err)
 		}
 		return logs
@@ -541,7 +541,7 @@ func TestImportFromBase64_MagicWarn(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var logs []string
 			logFn := func(n, s, d string, size int64, status, msg string) { logs = append(logs, msg) }
-			err := ImportFromBase64(tc.fileName, tc.b64, ImportOptions{Overwrite: true}, rootFn, logFn)
+			_, _, err := ImportFromBase64(tc.fileName, tc.b64, ImportOptions{Overwrite: true}, rootFn, logFn)
 			if err == nil {
 				t.Fatalf("坏容器应报错（识别不出就是识别不出），实际导入成功")
 			}
@@ -556,7 +556,7 @@ func TestImportFromBase64_MagicWarn(t *testing.T) {
 func TestImportFromBase64_NilLogger(t *testing.T) {
 	root := t.TempDir()
 	badYsm := base64.StdEncoding.EncodeToString([]byte{0xDE, 0xAD, 0xBE, 0xEF, 0x00})
-	err := ImportFromBase64("m.ysm", badYsm, ImportOptions{}, func(rtype string) string { return root }, nil)
+	_, _, err := ImportFromBase64("m.ysm", badYsm, ImportOptions{}, func(rtype string) string { return root }, nil)
 	if err != nil {
 		t.Fatalf("nil logger 不应影响导入: %v", err)
 	}
@@ -572,7 +572,7 @@ func TestImportFromBase64_MkdirFailed(t *testing.T) {
 		t.Fatal(err)
 	}
 	rootFn := func(rtype string) string { return filepath.Join(blocker, "sub", "repo") }
-	err := ImportFromBase64("m.ysm", base64.StdEncoding.EncodeToString([]byte("x")), ImportOptions{}, rootFn,
+	_, _, err := ImportFromBase64("m.ysm", base64.StdEncoding.EncodeToString([]byte("x")), ImportOptions{}, rootFn,
 		func(n, s, d string, size int64, status, msg string) {})
 	if err == nil {
 		t.Fatal("目标目录创建失败应报错")
@@ -617,7 +617,7 @@ func TestImportFromBase64_RtypeRouting(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			clear(got)
-			err := ImportFromBase64(tc.fileName, base64.StdEncoding.EncodeToString(tc.data), ImportOptions{Overwrite: true}, rootFn, logFn)
+			_, _, err := ImportFromBase64(tc.fileName, base64.StdEncoding.EncodeToString(tc.data), ImportOptions{Overwrite: true}, rootFn, logFn)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("应报错（无特征容器不得假装 ysm），实际导入成功")
@@ -643,7 +643,7 @@ func TestImportFromBase64_FileTooLarge(t *testing.T) {
 	big := make([]byte, types.MaxImportSize+1)
 	b64 := base64.StdEncoding.EncodeToString(big)
 	big = nil // 释放源缓冲，降低峰值内存
-	err := ImportFromBase64("big.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
+	_, _, err := ImportFromBase64("big.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
 		func(n, s, d string, size int64, status, msg string) {})
 	if err == nil {
 		t.Fatal("超过 500MB 应报错")

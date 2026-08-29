@@ -536,6 +536,9 @@ export function GetSubDirMap(): $CancellablePromise<{ [_ in string]?: string } |
  * GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。
  *   - global：仓库侧基准目录（GetRepoRoot 结果）
  *   - instance：实例侧实际扫描目录（types.FindInstDir 结果，可能因兜底命中非标准目录）
+ *   - warningCode：仓库侧目录疑似过宽时的结构化告警码（"scan_dir_wide"，空串=正常）
+ *   - warningParams：告警参数（label=类型名、dir=过宽目录、subDir=建议专属子目录）；
+ *     显示文案由前端按 i18n 组装，后端不吐拼好的中文（避免 en/ja 用户看到中文警告）
  * 
  * 用途：让前端同步页展示“到底从哪个文件夹扫”，尤其兜底命中 Sable-Schematics 时用户可见。
  * 不触发全量扫描，仅做目录解析 + 标准目录存在性/证据检查，体感轻量。
@@ -590,6 +593,24 @@ export function HasYSMMod(modsDir: string): $CancellablePromise<boolean> {
  */
 export function ImportByType(rtype: string, srcPath: string): $CancellablePromise<string> {
     return $Call.ByID(1466768695, rtype, srcPath);
+}
+
+/**
+ * ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型），
+ * 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未知实例不落仓库残档。
+ */
+export function ImportFileAndPushToInstance(fileName: string, base64Data: string, instanceName: string): $CancellablePromise<void> {
+    return $Call.ByID(3147934771, fileName, base64Data, instanceName);
+}
+
+/**
+ * ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型，
+ * 与 ImportModelFolder 同源），再把仓库落盘的文件夹根推送到指定整合包实例
+ * （ysmsync.PushSingleResource 对目录走 InstallDir 整组安装，扩展名白名单按类型过滤）。
+ * subpath 保留多级拖入的父目录层级（拖「分类1/狐狸」→ 仓库 分类1/狐狸/）。
+ */
+export function ImportFolderAndPushToInstance(folderName: string, subpath: string, files: types$0.ImportFileItem[] | null, instanceName: string): $CancellablePromise<void> {
+    return $Call.ByID(3226339089, folderName, subpath, files, instanceName);
 }
 
 export function ImportModelFile(fileName: string, base64Data: string): $CancellablePromise<void> {

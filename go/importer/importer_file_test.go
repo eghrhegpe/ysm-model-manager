@@ -18,10 +18,13 @@ func TestImportFromBase64_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 	b64 := base64.StdEncoding.EncodeToString([]byte("modeldata"))
-	err := ImportFromBase64("m.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
+	dest, _, err := ImportFromBase64("m.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("导入失败: %v", err)
+	}
+	if dest != filepath.Join(root, "m.ysm") {
+		t.Fatalf("destPath = %q, 期望 %q", dest, filepath.Join(root, "m.ysm"))
 	}
 	data, err := os.ReadFile(filepath.Join(root, "m.ysm"))
 	if err != nil || string(data) != "modeldata" {
@@ -37,13 +40,13 @@ func TestImportFromBase64_FileExists(t *testing.T) {
 	}
 	_ = os.WriteFile(filepath.Join(root, "m.ysm"), []byte("old"), 0644)
 	b64 := base64.StdEncoding.EncodeToString([]byte("new"))
-	err := ImportFromBase64("m.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
+	_, _, err := ImportFromBase64("m.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err == nil {
 		t.Fatal("文件已存在应报错")
 	}
 	// 覆盖模式成功
-	err = ImportFromBase64("m.ysm", b64, ImportOptions{Overwrite: true}, func(rtype string) string { return root },
+	_, _, err = ImportFromBase64("m.ysm", b64, ImportOptions{Overwrite: true}, func(rtype string) string { return root },
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("覆盖导入失败: %v", err)
@@ -56,11 +59,11 @@ func TestImportFromBase64_FileExists(t *testing.T) {
 
 func TestImportFromBase64_Invalid(t *testing.T) {
 	b64 := base64.StdEncoding.EncodeToString([]byte("x"))
-	if err := ImportFromBase64("../evil.ysm", b64, ImportOptions{}, func(rtype string) string { return "/tmp" },
+	if _, _, err := ImportFromBase64("../evil.ysm", b64, ImportOptions{}, func(rtype string) string { return "/tmp" },
 		func(name, src, dst string, size int64, status, msg string) {}); err == nil {
 		t.Fatal("路径穿越文件名应报错")
 	}
-	if err := ImportFromBase64("bad.xyz", b64, ImportOptions{}, func(rtype string) string { return "/tmp" },
+	if _, _, err := ImportFromBase64("bad.xyz", b64, ImportOptions{}, func(rtype string) string { return "/tmp" },
 		func(name, src, dst string, size int64, status, msg string) {}); err == nil {
 		t.Fatal("不支持扩展名应报错")
 	}
@@ -77,16 +80,16 @@ func TestImportFromBase64_JsonWhitelist(t *testing.T) {
 	b64 := base64.StdEncoding.EncodeToString([]byte("{}"))
 
 	// ysm.json 入口清单放行
-	if err := ImportFromBase64("ysm.json", b64, ImportOptions{}, rootFn, logFn); err != nil {
+	if _, _, err := ImportFromBase64("ysm.json", b64, ImportOptions{}, rootFn, logFn); err != nil {
 		t.Fatalf("ysm.json 应放行: %v", err)
 	}
 	// 大写 YSM.JSON 放行
-	if err := ImportFromBase64("YSM.JSON", b64, ImportOptions{Overwrite: true}, rootFn, logFn); err != nil {
+	if _, _, err := ImportFromBase64("YSM.JSON", b64, ImportOptions{Overwrite: true}, rootFn, logFn); err != nil {
 		t.Fatalf("YSM.JSON 应放行: %v", err)
 	}
 	// 包内 geometry / animation / 语言 json 一律拒绝
 	for _, name := range []string{"main.json", "arm.json", "slashblade.animation.json", "zh_cn.json", "en_us.json"} {
-		if err := ImportFromBase64(name, b64, ImportOptions{}, rootFn, logFn); err == nil {
+		if _, _, err := ImportFromBase64(name, b64, ImportOptions{}, rootFn, logFn); err == nil {
 			t.Fatalf("%s 应被 ysm.json 白名单拒绝", name)
 		}
 	}
@@ -138,7 +141,7 @@ func TestImportFromBase64_WriteFailureCleanup(t *testing.T) {
 	if err := os.MkdirAll(blocker, 0755); err != nil {
 		t.Fatal(err)
 	}
-	err := ImportFromBase64("blocker.ysm", b64, ImportOptions{Overwrite: true}, rootFn, logFn)
+	_, _, err := ImportFromBase64("blocker.ysm", b64, ImportOptions{Overwrite: true}, rootFn, logFn)
 	if err == nil {
 		t.Fatal("目标为目录时导入应失败")
 	}

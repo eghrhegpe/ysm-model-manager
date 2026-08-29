@@ -6,6 +6,7 @@ import type { BoneSelectInfo } from "../../utils/3d/model3d.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import type { Spec3D } from "../../utils/3d/model3d.ts";
 import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
+import { multiModelSelectNode } from "../../utils/3d/adapters/preview-menu/multi-model.ts";
 import type { PreviewSnapshot } from "../../utils/3d/state/preview-state.ts";
 
 /** fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） */
@@ -335,35 +336,39 @@ export function buildYsmModelSchema(
   const slots = ysmModelTextureSlots(ctx.spec, rawIdx, ctx.texArr.length);
 
   // 组件选择（多组件才显示；-1 = All 选项恒在）
-  const allLabel = t("preview.allComponents");
-  const options = [{ value: "-1", label: allLabel === "preview.allComponents" ? "全部组件" : allLabel }];
-  for (let i = 0; i < mgCount; i++) {
-    const mg = ctx.spec.models?.[i] as { name?: string; id?: string; bones?: unknown[] } | undefined;
-    options.push({ value: String(i), label: `${mg?.name || mg?.id || "model"} (${mg?.bones?.length ?? 0})` });
-  }
-
+  // [doc:adr-132] 迁 multiModelSelectNode 统一原语（对齐 MMD zip/资源包）：
+  // entries 首项 "-1" = All（「全部组件」），其余为组件下标；get/set 走 per-scene 会话态闭包
+  // （sessionActiveComponent，6b080b33 Bug B 范式）；refreshOnChange 切档后 stats/纹理行重建。
+  // 注意：显式 `mgCount > 1` 守卫——「-1 = All」恒选项使 entries 恒 ≥2，不能依赖原语的
+  // 单候选 null 判断（单组件时也不显示 select，对齐旧语义）。
+  // 快照回退（审核修复）：get 与 rawIdxRaw 同表达式——闭包缺省（旧调用/测试）时读
+  // snapshot["ui.activeComponent"]，面板内部口径一致（select 显示 = stats/纹理聚合行）；
+  // set 在闭包缺省时无写入目标（snapshot 只读）→ 静默 no-op，legacy 路径为只读展示。
   const nodes: PreviewMenuNode[] = [];
   if (mgCount > 1) {
-    nodes.push({
-      id: "ysm-component-select",
-      kind: "select",
+    const allLabel = t("preview.allComponents");
+    const select = multiModelSelectNode({
+      nodeId: "ysm-component-select",
       labelKey: "preview.component",
       fallback: "组件",
-      control: {
-        // [doc:adr-126-p5-b→B2] 不再 bind "ui.activeComponent"（全局状态层）——get/set 闭包
-        // 读写 per-scene 会话态（对齐 litematic slice-mode 的 shell 闭包范式），杜绝跨预览泄漏
-        get: () => String(sessionActiveComponent?.get() ?? -1),
-        set: (raw) => {
-          const n = Number(raw);
-          sessionActiveComponent?.set(Number.isFinite(n) ? n : -1);
-          return raw;
-        },
-        options,
-        // [doc:adr-126-p5] 切档后 menu.refresh() 重渲染面板——stats/纹理行按新会话态重建
-        // （订阅链已切 3D 组，此处补渲染侧；否则面板内容停留在打开时的快照）
-        refreshOnChange: true,
+      refreshOnChange: true,
+      entries: [
+        { id: "-1", label: allLabel === "preview.allComponents" ? "全部组件" : allLabel },
+        ...(ctx.spec.models ?? []).map((mg, i) => ({
+          id: String(i),
+          label: `${(mg as { name?: string; id?: string })?.name || (mg as { id?: string })?.id || "model"} (${(mg as { bones?: unknown[] })?.bones?.length ?? 0})`,
+        })),
+      ],
+      activeId: (): string =>
+        String(
+          sessionActiveComponent?.get() ??
+            (typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1),
+        ),
+      onSelect: (id: string): void => {
+        sessionActiveComponent?.set(Number.isFinite(Number(id)) ? Number(id) : -1);
       },
     });
+    if (select) nodes.push(select);
   }
 
   // 统计

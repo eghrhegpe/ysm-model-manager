@@ -2,6 +2,8 @@
 kind: preview_menu_session_key
 name: preview-menu-session-key
 tier: architecture
+adr:
+  - ADR-132
 category: ui
 source_files:
   - frontend/src/utils/3d/adapters/schema-registry.ts
@@ -47,6 +49,8 @@ use_when:
   per-mount 稳定 `sessionId`（`mount3D` 内 `_mountSessionSeq` 自增，`s{n}`），经
   `PreviewBuildCtx.sessionId` → 适配器 `sc.sessionId` → `registerModelSchema(ctx, sessionId)` 与
   `ysmMenuItems` 的 `schemaId` 同源注册/渲染；dispose 按同一 key 精准注销（不误伤同台他人）。
+  `_mountSessionSeq` 随 `_resetSingletons()` 一起重置（测试钩子契约，2026-08-29 审核修复——
+  否则跨用例单调递增，断言 per-scene key 形状的测试顺序依赖 flaky）。
 - **Bug B（activeComponent 跨预览泄漏）**：`_activeComponent` 曾是模块级单值，maid generic 模式
   clamp 会误伤同台 YSM 的残留下标。修复：`registerYsmModelSchema` 持本地 `activeComponent` 闭包
   （`get`/`set`），`buildYsmModelSchema` 第三参 `sessionActiveComponent` 消费；不再
@@ -62,7 +66,8 @@ use_when:
   - 第三参缺省 → 回退读快照 `ui.activeComponent`（旧调用兼容）
   - select 控件不再 `bind: "ui.activeComponent"`，改 `get`/`set` 闭包读写会话态
 - `mount3D` 每次新鲜 mount 生成 `sessionId`；`switchTo`（switch-preview）复用同一 id（会话内切换
-  schema key 前后一致）
+  schema key 前后一致）；`buildSwitchContent` 注入的 `ctx.switchTo` 为延迟闭包（指向当前会话
+  handle，2026-08-29 审核修复）——重建后的 select 节点（pack/MMD 多模型选择）仍可继续切换
 
 ## 与其他子系统关系
 

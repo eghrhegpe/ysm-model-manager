@@ -26,6 +26,9 @@ export interface MultiModelSelectOpts {
   fallback?: string;
   /** 稳定节点 id（缺省 "multi-model-select"） */
   nodeId?: string;
+  /** [doc:adr-132] 切档后重渲染当前面板（menu.refresh()）——YSM 组件 select 切档后
+   *  stats/纹理行需按新会话态重建（对齐 render.ts select 分支的 refreshOnChange 语义） */
+  refreshOnChange?: boolean;
 }
 
 /**
@@ -34,8 +37,10 @@ export interface MultiModelSelectOpts {
  * 返回节点：kind="select"，control.options / get / set 全部装配好，零手写 DOM。
  */
 export function multiModelSelectNode(opts: MultiModelSelectOpts): PreviewMenuNode | null {
-  const { entries, activeId, onSelect, labelKey = "preview.component", fallback = "模型", nodeId = "multi-model-select" } = opts;
+  const { entries, activeId, onSelect, labelKey = "preview.component", fallback = "模型", nodeId = "multi-model-select", refreshOnChange } = opts;
   if (entries.length < 2) return null;
+  // [审核修复] 预计算合法 id 集合：get/set 判存在 O(1)，避免每次控件读写全量线性扫 entries
+  const ids = new Set(entries.map((e) => e.id));
   return {
     id: nodeId,
     kind: "select",
@@ -45,13 +50,15 @@ export function multiModelSelectNode(opts: MultiModelSelectOpts): PreviewMenuNod
       options: entries.map((e) => ({ value: e.id, label: e.label })),
       get: (): string => {
         const cur = activeId();
-        return entries.some((e) => e.id === cur) ? cur : (entries[0]?.id ?? "");
+        return ids.has(cur) ? cur : (entries[0]?.id ?? "");
       },
       set: (v: unknown): string => {
         const id = String(v);
-        if (entries.some((e) => e.id === id)) onSelect(id);
+        if (ids.has(id)) onSelect(id);
         return id;
       },
+      // [doc:adr-132] 切档后重渲染当前面板（YSM 组件 select 语义；MMD/资源包不传则保持默认）
+      refreshOnChange,
     },
   };
 }

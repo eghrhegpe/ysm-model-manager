@@ -90,4 +90,32 @@ describe("multiModelSelectNode（ADR-132 多模型选择原语）", () => {
     expect(node.fallback).toBe("多模型");
     expect(node.id).toBe("pack-model-select");
   });
+
+  it("refreshOnChange 透传到 control（YSM 组件切档后 stats 行重建）", () => {
+    const node = multiModelSelectNode({
+      entries,
+      activeId: () => "/a.pmx",
+      onSelect: () => {},
+      refreshOnChange: true,
+    })!;
+    expect(node.control?.refreshOnChange).toBe(true);
+  });
+
+  it("entries 含 -1=All 首项：get/set 按字符串 id 工作（YSM 组件下标语义）", () => {
+    const ysmEntries = [
+      { id: "-1", label: "全部组件" },
+      { id: "0", label: "main (4)" },
+      { id: "1", label: "armor (0)" },
+    ];
+    const onSelect = vi.fn();
+    const node = multiModelSelectNode({
+      entries: ysmEntries,
+      activeId: () => "0",
+      onSelect,
+    })!;
+    expect(node.control?.get?.(undefined)).toBe("0");
+    node.control?.set?.("-1");
+    expect(onSelect).toHaveBeenCalledWith("-1");
+    expect(node.control?.options?.[0].value).toBe("-1");
+  });
 });

@@ -270,3 +270,35 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
     expect(setAdapterItemsMock).toHaveBeenCalledWith([]);
   });
 });
+
+// ===== [审核修复] buildSwitchContent 注入的 switchTo 延迟闭包跨重建存活（ADR-132 pack select 连续切换） =====
+describe("switch 重建后 switchTo 延迟闭包（pack 多模型 select 连续切换回归）", () => {
+  it("重建后的 buildCtx.switchTo 非 undefined，且转发到当前会话 handle.switchTo（第二次切换不失效）", async () => {
+    const { ctx, state, mockAdapter } = makeMockCtx();
+    const handleSwitch = vi.fn(() => Promise.resolve());
+    state._handle = { cleanup: vi.fn(), switchTo: handleSwitch } as PreviewHandle;
+
+    // 第一次切换（会话内重建）：build 收到延迟闭包而非 undefined
+    await switchToSession(ctx, "a.json");
+    const firstCtx = mockAdapter.build.mock.calls[0][0] as PreviewBuildCtx;
+    expect(typeof firstCtx.switchTo).toBe("function");
+    await firstCtx.switchTo?.("b.json");
+    // 闭包透传 options 参数（undefined 时仍显式传，与 mount3D 初次注入闭包同构）
+    expect(handleSwitch).toHaveBeenCalledWith("b.json", undefined);
+
+    // 第二次切换：重建后的新 buildCtx.switchTo 仍是活闭包 → 连续切换不失效
+    // （修复前 buildSwitchContent 传 undefined，重建后 select onSelect 短路静默 no-op）
+    await switchToSession(ctx, "b.json");
+    const secondCtx = mockAdapter.build.mock.calls[1][0] as PreviewBuildCtx;
+    expect(typeof secondCtx.switchTo).toBe("function");
+    await secondCtx.switchTo?.("c.json");
+    expect(handleSwitch).toHaveBeenCalledWith("c.json", undefined);
+  });
+
+  it("无活跃会话 handle 时 switchTo 闭包 no-op 不抛（与 switchPreview 同口径）", async () => {
+    const { ctx, mockAdapter } = makeMockCtx(); // state._handle 保持 null
+    await switchToSession(ctx, "a.json");
+    const buildCtx = mockAdapter.build.mock.calls[0][0] as PreviewBuildCtx;
+    await expect(buildCtx.switchTo?.("x.json")).resolves.toBeUndefined();
+  });
+});

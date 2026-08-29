@@ -223,6 +223,9 @@ export function _resetSingletons(): void {
   _singletonControls = null;
   _globalAnimId = 0;
   _globalPerFrames.length = 0;
+  // [审核修复] mount 会话序号同属模块级单例态：重置后 sessionId 生成确定性可测
+  // （否则跨用例单调递增，断言 per-scene key 形状的测试会顺序依赖）
+  _mountSessionSeq = 0;
 }
 
 /** 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op */

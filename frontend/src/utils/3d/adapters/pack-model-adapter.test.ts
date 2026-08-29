@@ -438,7 +438,7 @@ describe("pack-model 多模型 select（ADR-132）", () => {
   it("modelEntries 多候选 → menuItems 含 pack-model-select 节点（kind:select，options 含全部 entry）", async () => {
     const deps = makeDeps();
     const ctx = makeCtx();
-    const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip", {
+    const preview = await buildPackScene(ctx, "assets/minecraft/models/block/dirt.json", deps, "/packs.zip", {
       modelEntries: ["assets/minecraft/models/block/dirt.json", "assets/minecraft/models/block/stone.json"],
     });
     const sel = preview.menuItems?.find((n) => n.id === "pack-model-select");
@@ -448,15 +448,26 @@ describe("pack-model 多模型 select（ADR-132）", () => {
       "assets/minecraft/models/block/dirt.json",
       "assets/minecraft/models/block/stone.json",
     ]);
-    // get 读当前 entryPath（activeId 闭包 = build 入参，完整路径）
+    // get 读当前 entryPath（activeId 闭包 = build 入参，完整路径在 entries 中 → in-entries 分支）
     expect(sel!.control?.get?.(undefined)).toBe("assets/minecraft/models/block/dirt.json");
+    preview.dispose!();
+  });
+
+  it("build 非首 entry → get 返回该 entry（in-entries 分支，非 entries[0] fallback）", async () => {
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "assets/minecraft/models/block/stone.json", deps, "/packs.zip", {
+      modelEntries: ["assets/minecraft/models/block/dirt.json", "assets/minecraft/models/block/stone.json"],
+    });
+    const sel = preview.menuItems?.find((n) => n.id === "pack-model-select");
+    expect(sel!.control?.get?.(undefined)).toBe("assets/minecraft/models/block/stone.json");
     preview.dispose!();
   });
 
   it("modelEntries 单候选 → 无 select 节点（无选择语义）", async () => {
     const deps = makeDeps();
     const ctx = makeCtx();
-    const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip", {
+    const preview = await buildPackScene(ctx, "assets/minecraft/models/block/dirt.json", deps, "/packs.zip", {
       modelEntries: ["assets/minecraft/models/block/dirt.json"],
     });
     expect(preview.menuItems?.some((n) => n.id === "pack-model-select")).toBe(false);
@@ -468,7 +479,7 @@ describe("pack-model 多模型 select（ADR-132）", () => {
     const switchTo = vi.fn(() => Promise.resolve());
     const ctx = makeCtx() as unknown as PreviewBuildCtx & { switchTo: (p: string) => Promise<void> };
     ctx.switchTo = switchTo;
-    const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip", {
+    const preview = await buildPackScene(ctx, "assets/minecraft/models/block/dirt.json", deps, "/packs.zip", {
       modelEntries: ["assets/minecraft/models/block/dirt.json", "assets/minecraft/models/block/stone.json"],
     });
     const sel = preview.menuItems?.find((n) => n.id === "pack-model-select")!;

@@ -194,7 +194,12 @@ async function buildSwitchContent(
         loadingEl: ctx.loadingEl,
         overlay: ctx.overlay,
         menu: ctx.menuHandle,
-        switchTo: undefined,
+        // [审核修复] 延迟闭包（与 mount3D 初次 build 注入同款）：switch 重建后的 menuItems
+        // select 节点（pack 多模型选择 ADR-132）onSelect 仍能触发后续切换——此前传 undefined
+        // 导致每次会话内 pack select 只能生效一次，重建后第二次点击静默 no-op；
+        // 无活跃会话时 no-op（与 switchPreview 同口径）。
+        switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> =>
+          ctx.getHandle()?.switchTo?.(p, options) ?? Promise.resolve(),
         sessionId: ctx.sessionId,
       },
       newPath,

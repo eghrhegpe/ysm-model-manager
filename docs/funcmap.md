@@ -1430,10 +1430,10 @@
 | `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:191` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
 | `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:196` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
 | `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:216` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
-| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:229` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
-| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:235` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
-| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:240` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
-| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:258` | — |
+| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:232` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
+| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:238` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
+| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:243` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
+| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:261` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
 | `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:26` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
 | `PackAdapterOpts()` | `frontend/src/utils/3d/adapters/pack-model-adapter:31` | 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） |
@@ -1467,7 +1467,7 @@
 | `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu/env:117` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
 | `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu/env:240` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
 | `MultiModelSelectOpts()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:16` | 多模型选择原语入参 |
-| `multiModelSelectNode()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:36` | 多模型选择 select 节点工厂。 |
+| `multiModelSelectNode()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:39` | 多模型选择 select 节点工厂。 |
 | `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
 | `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:24` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
 | `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:40` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
@@ -1508,7 +1508,7 @@
 | `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:67` | 测试用：清空注册表（用例间隔离） |
 | `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:32` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
 | `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:95` | 会话内切换模型（复用外壳重建内容层）。 |
-| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:414` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
+| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:419` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
 | `Endianness()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
 | `ConsoleLogger()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
 | `MmdDataDeserializer()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |
@@ -2290,12 +2290,12 @@
 | `makeShotAction()` | `frontend/src/views/app-preview/shot-panel-shared:34` | 截图保存副作用：防连点 guard + toast 错误提示。fillXxxShotPanel（命令式）与 shotButtonNodes（声明式）共用 |
 | `shotButtonNodes()` | `frontend/src/views/app-preview/shot-panel-shared:65` | 截图面板声明式节点（6 button）：screenshotFn 为 null 时返回空数组（MMD 能力缺失不渲染）； undefined（YSM ctx 可选字段）时仍返回 6 |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
-| `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:12` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
-| `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:38` | — |
-| `YsmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:262` | 组件统计（按 activeComponent 聚合；-1 = All）：骨骼数 + 立方体数 + 组件名 |
-| `ysmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:270` | 统计聚合（与 fillPanelComponent 同逻辑，抽为纯函数供 schema 与命令式共用） |
-| `ysmModelTextureSlots()` | `frontend/src/views/app-preview/skeleton-fill-panel:290` | 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） |
-| `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:318` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
+| `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:13` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
+| `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:39` | — |
+| `YsmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:263` | 组件统计（按 activeComponent 聚合；-1 = All）：骨骼数 + 立方体数 + 组件名 |
+| `ysmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:271` | 统计聚合（与 fillPanelComponent 同逻辑，抽为纯函数供 schema 与命令式共用） |
+| `ysmModelTextureSlots()` | `frontend/src/views/app-preview/skeleton-fill-panel:291` | 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） |
+| `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:319` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-render` | — |
 | `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:23` | 创建 2D 骨骼画布并异步加载纹理 |
 | `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:48` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |

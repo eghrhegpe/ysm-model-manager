@@ -43,12 +43,13 @@ use_when:
 
 ```ts
 multiModelSelectNode(opts: {
-  entries: Array<{ id: string; label: string }>;  // 候选（id = 切换目标完整路径）
+  entries: Array<{ id: string; label: string }>;  // 候选（id = 切换目标完整路径/下标字符串）
   activeId: () => string;                          // 当前选中（per-scene 闭包；非法值回退首项）
   onSelect: (id: string) => void;                  // 切换副作用（switchTo / showModelGroup）
   labelKey?: string;                               // 缺省 "preview.component"
   fallback?: string;                               // 缺省 "模型"
   nodeId?: string;                                 // 缺省 "multi-model-select"
+  refreshOnChange?: boolean;                       // 切档后 menu.refresh() 重渲染面板（YSM 组件 select 语义）
 }): PreviewMenuNode | null
 ```
 
@@ -56,13 +57,14 @@ multiModelSelectNode(opts: {
 
 - **MMD zip**（`mmd-controls.ts` `mmdModelInfoNodes`）：候选 = `zipModelCandidates`（虚拟路径，mmd-adapter.ts:392 暴露）；get 保持 basename 匹配（`modelName` = 虚拟路径 basename）；set → `ctx.switchTo(虚拟路径)`
 - **资源包**（`pack-model-adapter.ts` `buildPackScene`）：候选 = `modelEntries`（pack-3d.ts 经 `ListPackModels` 枚举注入）；get 读 build 入参 entryPath；set → `ctx.switchTo(entryPath)`
+- **YSM/maid**（`skeleton-fill-panel.ts` `buildYsmModelSchema`）：候选 = `-1`（All，label「全部组件」）+ 组件下标 `0..N`；get/set 走 `sessionActiveComponent` per-scene 闭包；`refreshOnChange: true`（切档后 stats/纹理行按新会话态重建）；**显式 `mgCount > 1` 守卫**（「-1 = All」恒选项使 entries 恒 ≥2，不能依赖原语单候选 null 判断——单组件不显示 select，对齐旧语义）
 
 ## 与其他子系统关系
 
 - `preview-menu/node-types.ts`：返回 `PreviewMenuNode`（kind: "select"，`control.options/get/set` 装配好）
 - `mount-preview-core.ts`：`PreviewScene.menuItems` 出口（pack 首次接入）；`PreviewBuildCtx.switchTo` 是切换副作用宿主
 - `preview-state.ts`：**不扩展** `PreviewStatePath` 模板串域（`bindings: Record<typeof KNOWN_PATHS[number]>` 要求字面量全覆盖，模板串破坏 Record）；会话态走闭包
-- `scene-registry.ts` / `switch-preview.ts`：switchTo 重建链路（切模型复用外壳）
+- `scene-registry.ts` / `switch-preview.ts`：switchTo 重建链路（切模型复用外壳）；**buildSwitchContent 注入的 `ctx.switchTo` 是延迟闭包**（指向当前会话 `handle.switchTo`，与 mount3D 初次 build 同款，2026-08-29 审核修复）——重建后的 menuItems select 节点 onSelect 仍能触发后续切换（此前传 `undefined`，pack select 会话内只能生效一次，第二次点击静默 no-op）
 - `mmd-zip-overlay.ts`：zip 多模型候选的解析源（`resolveMmdZipConfig` / `modelCandidates`）
 
 ## 不变量
@@ -72,6 +74,7 @@ multiModelSelectNode(opts: {
 - `set` 只调 onSelect 合法 id（不在 entries 的 id 静默忽略）
 - 状态真源 = 调用方闭包（per-scene），不落全局状态层、不落盘
 - 切换语义 = switchTo 重建（复用外壳），不是同台追加（同台是 ADR-093 范围）
+- **切换闭包跨重建存活（审核修复回归）**：select 的 `onSelect` → `ctx.switchTo`（延迟闭包经会话 handle 解析），switch 重建后依然可切——`switch-preview.test.ts` 覆盖「连续两次切换」；原语 `get`/`set` 用预计算 id Set 判存在（O(1)，不做全量线性扫）
 
 ## 相关
 

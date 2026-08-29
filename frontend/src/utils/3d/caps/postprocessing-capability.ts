@@ -582,7 +582,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       // 为基准，体积光 opacity 仅做 ±20% 微调。此前 opacity 直接放大成 strength 系数
       //（满值 1.5 = 默认 2.5 倍）+ 阈值压到 0.2——开体积光即亮爆；体积光是光柱浓度语义，
       // 不该主导全局 bloom。radius 保持用户设置（edgeFade 联动半径本就怪）。
-      this.bloomPass.threshold = Math.max(0.05, this.params.bloomThreshold * (1 - 0.2 * vol.opacity));
+      this.bloomPass.threshold = this.params.bloomThreshold * (1 - 0.2 * vol.opacity);
       this.bloomPass.strength = this.params.bloomStrength * (1 + 0.2 * vol.opacity);
       this.bloomPass.radius = this.params.bloomRadius;
     } else {

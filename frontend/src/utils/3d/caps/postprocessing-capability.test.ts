@@ -429,6 +429,15 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     expect(bp.strength).toBeLessThanOrEqual(0.6 * 1.2 + 1e-9);
   });
 
+  it("低 bloomThreshold（<0.0625）不超用户设置：threshold 跟随 ±20% 而非下限钳制", () => {
+    // 31c3f65a review P3：旧 Math.max(0.05, ...) 下限在 bloomThreshold<0.0625 时输出 0.05
+    // 超过用户设置——违反「不超用户设置区间」契约；去下限后应跟随 0.8×user
+    const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.04, bloomRadius: 0.5 } });
+    const bp = mockBloomPass(cap);
+    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
+    expect(bp.threshold).toBeCloseTo(0.04 * 0.8, 6); // 0.032 而非旧下限 0.05
+  });
+
   it("联动关：直接用用户设置（else 分支不受影响）", () => {
     const cap = newCap({ params: { bloomStrength: 0.9, bloomThreshold: 0.7, bloomRadius: 0.4 } });
     cap.setBloomFollowVolumetric(false);

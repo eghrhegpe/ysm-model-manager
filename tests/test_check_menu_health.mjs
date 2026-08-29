@@ -15,7 +15,7 @@ import assert from 'node:assert';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseItem } from '../scripts/check-menu-health.mjs';
+import { parseItem, itemViolations } from '../scripts/check-menu-health.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -80,7 +80,7 @@ check('parseItem 识别 panel 项 schemaId 受控通道（ADR-126 P5）', () => 
   assert.equal(item.hasRender, true, 'schemaId: 应记为 hasRender（受控 schema 是渲染通道，renderPreviewPanel 优先查询）');
 });
 
-check('parseItem 识别 schemaId + renderCustom 双通道同存（契约禁——62c83271 review P3）', () => {
+check('parseItem 识别 schemaId + renderCustom 双通道同存（契约禁止——62c83271 review P3）', () => {
   const item = parseItem(`{
     id: "model",
     kind: "panel",
@@ -97,6 +97,31 @@ check('parseItem 识别 schemaId-only 不误报 dualChannel', () => {
     schemaId: YSM_MODEL_SCHEMA_ID,
   }`, 'model');
   assert.equal(item.dualChannel, false, '仅 schemaId 无 renderCustom → 非双通道');
+});
+
+check('门禁拦截路径：schemaId + renderCustom 同存项产出 render-channel-ambiguous 违规', () => {
+  const it = parseItem(`{
+    id: "model",
+    kind: "panel",
+    labelKey: "preview.model",
+    schemaId: YSM_MODEL_SCHEMA_ID,
+    renderCustom: (list) => {},
+  }`, 'model');
+  it.file = 'frontend/src/utils/3d/adapters/ysm-adapter.ts';
+  const v = itemViolations(it, new Set(['preview.model']));
+  assert.ok(v.some((x) => x.rule === 'render-channel-ambiguous'), '双通道同存必须被门禁拦截（拦截路径真实执行）');
+});
+
+check('反例：schemaId 父项 + children 内 renderCustom 子节点不误报双通道', () => {
+  const it = parseItem(`{
+    id: "model",
+    kind: "panel",
+    schemaId: YSM_MODEL_SCHEMA_ID,
+    children: [
+      { id: "sub", kind: "field", renderCustom: (list) => {}, value: "" },
+    ],
+  }`, 'model');
+  assert.equal(it.dualChannel, false, 'children 内 renderCustom 不算父项双通道（stripTopChildren 剥离）');
 });
 
 check('parseItem 识别 action 项 run 入口', () => {

@@ -112,6 +112,25 @@ export function extractItemBlock(content, idPos) {
   return content.slice(openLine, closePos + 1);
 }
 
+// 渲染通道识别正则（hasRender 与 dualChannel 共用——a48f74fd review P3 抽常量防双源漂移）
+const SCHEMA_ID_RE = /schemaId:\s*[\w$.'"]/;
+const RENDER_CUSTOM_RE = /renderCustom:\s*\(/;
+
+/** 剥离 item 块内顶层 children: [...] 数组（子节点的 renderCustom 不计入父项 dualChannel——
+ *  a48f74fd review P2：正则作用于整块会把 children 子节点误判为父项双通道） */
+function stripTopChildren(block) {
+  const m = block.match(/children:\s*\[/);
+  if (!m) return block;
+  const start = block.indexOf(m[0]) + m[0].length - 1; // '[' 位置
+  let d = 0;
+  for (let i = start; i < block.length; i++) {
+    const c = block[i];
+    if (c === '[') d++;
+    else if (c === ']') { d--; if (d === 0) return block.slice(0, start) + block.slice(i + 1); }
+  }
+  return block;
+}
+
 export function parseItem(block, id) {
   const field = (re) => {
     const m = block.match(re);
@@ -126,11 +145,12 @@ export function parseItem(block, id) {
     // P4-B 系列把 model/shot 面板从 renderCustom 迁移到 children（纯数据节点）后，门禁须同步认识。
     // [doc:adr-126-p5-a] schemaId 是第四通道（受控 schema 驱动：renderPreviewPanel 优先查 schema-registry；
     // 契约「带 schemaId 不得同时带 renderCustom——双通道歧义」），如 ysm-adapter model 项。
-    hasRender: /(?:render|renderCustom):\s*\(/.test(block) || /children:\s*(?:\[|[\w$.(])/.test(block) || /schemaId:\s*[\w$.'"]/.test(block),
+    hasRender: /(?:render|renderCustom):\s*\(/.test(block) || /children:\s*(?:\[|[\w$.(])/.test(block) || SCHEMA_ID_RE.test(block),
     hasRun: /\brun:\s*\(/.test(block),
     // [doc:adr-126-p5-a] 契约执行（62c83271 review P3）：schemaId 与 renderCustom 双通道歧义——
-    // 注释声明不够，门禁须拦截「schemaId 带 renderCustom」的同存状态
-    dualChannel: /schemaId:\s*[\w$.'"]/.test(block) && /renderCustom:\s*\(/.test(block),
+    // 注释声明不够，门禁须拦截「schemaId 带 renderCustom」的同存状态；renderCustom 只查顶层
+    //（stripTopChildren 剥离 children 数组，防 P4-B 子节点误报——a48f74fd review P2）
+    dualChannel: SCHEMA_ID_RE.test(block) && RENDER_CUSTOM_RE.test(stripTopChildren(block)),
   };
 }
 
@@ -151,6 +171,39 @@ export function parseFile(rel) {
   return items;
 }
 
+/** 单 item 规则判定（rule 2-6）——导出供契约测试端到端覆盖门禁拦截路径（a48f74fd review P3） */
+export function itemViolations(it, zhCNKeys) {
+  const v = [];
+  // 2. labelKey 非空
+  if (!it.labelKey) v.push({ rule: 'labelKey-present', item: it.id, file: it.file, detail: '缺 labelKey' });
+  // 3. labelKey 在 zh-CN 存在
+  if (it.labelKey && !zhCNKeys.has(it.labelKey)) {
+    v.push({ rule: 'labelKey-i18n', item: it.id, file: it.file, detail: `labelKey "${it.labelKey}" 在 zh-CN 语言包不存在` });
+  }
+  // 4. dockGroup 合法
+  if (it.dockGroup && !LEGAL_GROUPS.has(it.dockGroup)) {
+    v.push({ rule: 'dockGroup-valid', item: it.id, file: it.file, detail: `dockGroup "${it.dockGroup}" 非法（须为 ${[...LEGAL_GROUPS].join('/')}）` });
+  }
+  // 5. kind 合法
+  if (!LEGAL_KINDS.has(it.kind)) {
+    v.push({ rule: 'kind-valid', item: it.id, file: it.file, detail: `kind "${it.kind || '(空)'}" 非法（须为 panel/action/divider）` });
+  }
+  // 6. panel 有 render / action 有 run（CORE 文件走 preview-menu.ts fillers 映射渲染，不写 render，豁免）
+  const isCoreFile = it.file.endsWith('preview-menu-defs.ts');
+  if (it.kind === 'panel' && !isCoreFile && !it.hasRender) {
+    v.push({ rule: 'panel-has-render', item: it.id, file: it.file, detail: 'panel 项缺 render' });
+  }
+  // [doc:adr-126-p5-a] 双通道歧义（62c83271 review P3）：schemaId 是受控 schema 通道（renderPreviewPanel
+  // 优先查 registry），同时带 renderCustom 即两条渲染路径并存——契约禁止，门禁拦截而非仅注释声明
+  if (it.kind === 'panel' && !isCoreFile && it.dualChannel) {
+    v.push({ rule: 'render-channel-ambiguous', item: it.id, file: it.file, detail: 'schemaId 与 renderCustom 双通道歧义，契约禁止同存' });
+  }
+  if (it.kind === 'action' && !it.hasRun) {
+    v.push({ rule: 'action-has-run', item: it.id, file: it.file, detail: 'action 项缺 run' });
+  }
+  return v;
+}
+
 // ── 主逻辑 ──
 function main() {
 const allItems = [];
@@ -165,50 +218,7 @@ for (const it of allItems) {
   idFiles.get(it.id).push(it.file);
   if (!byFile.has(it.file)) byFile.set(it.file, []);
   byFile.get(it.file).push(it.id);
-  // 2. labelKey 非空
-  if (!it.labelKey) {
-    violations.push({ rule: 'labelKey-present', item: it.id, file: it.file, detail: '缺 labelKey' });
-  }
-  // 3. labelKey 在 zh-CN 存在
-  if (it.labelKey && !zhCNKeys.has(it.labelKey)) {
-    violations.push({
-      rule: 'labelKey-i18n',
-      item: it.id,
-      file: it.file,
-      detail: `labelKey "${it.labelKey}" 在 zh-CN 语言包不存在`,
-    });
-  }
-  // 4. dockGroup 合法
-  if (it.dockGroup && !LEGAL_GROUPS.has(it.dockGroup)) {
-    violations.push({
-      rule: 'dockGroup-valid',
-      item: it.id,
-      file: it.file,
-      detail: `dockGroup "${it.dockGroup}" 非法（须为 ${[...LEGAL_GROUPS].join('/')}）`,
-    });
-  }
-  // 5. kind 合法
-  if (!LEGAL_KINDS.has(it.kind)) {
-    violations.push({
-      rule: 'kind-valid',
-      item: it.id,
-      file: it.file,
-      detail: `kind "${it.kind || '(空)'}" 非法（须为 panel/action/divider）`,
-    });
-  }
-  // 6. panel 有 render / action 有 run（CORE 文件走 preview-menu.ts fillers 映射渲染，不写 render，豁免）
-  const isCoreFile = it.file.endsWith('preview-menu-defs.ts');
-  if (it.kind === 'panel' && !isCoreFile && !it.hasRender) {
-    violations.push({ rule: 'panel-has-render', item: it.id, file: it.file, detail: 'panel 项缺 render' });
-  }
-  // [doc:adr-126-p5-a] 双通道歧义（62c83271 review P3）：schemaId 是受控 schema 通道（renderPreviewPanel
-  // 优先查 registry），同时带 renderCustom 即两条渲染路径并存——契约禁止，门禁拦截而非仅注释声明
-  if (it.kind === 'panel' && !isCoreFile && it.dualChannel) {
-    violations.push({ rule: 'render-channel-ambiguous', item: it.id, file: it.file, detail: 'schemaId 与 renderCustom 双通道歧义，契约禁止同存' });
-  }
-  if (it.kind === 'action' && !it.hasRun) {
-    violations.push({ rule: 'action-has-run', item: it.id, file: it.file, detail: 'action 项缺 run' });
-  }
+  violations.push(...itemViolations(it, zhCNKeys));
 }
 
 // ── id 唯一性校验（独立段：每文件内部唯一 + core∩适配器无交集）──

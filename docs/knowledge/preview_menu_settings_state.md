@@ -5,8 +5,8 @@ tier: leaf
 category: ui
 source_files:
   - frontend/src/utils/3d/state/preview-state.ts
-  - frontend/src/utils/3d/adapters/preview-menu-settings.ts
-  - frontend/src/utils/3d/adapters/preview-menu-cap-controls.ts
+  - frontend/src/utils/3d/adapters/preview-menu/settings.ts
+  - frontend/src/utils/3d/adapters/preview-menu/cap-controls.ts
   - frontend/src/utils/3d/caps/scene-capability.ts
 tests:
   - frontend/src/utils/3d/state/preview-state.test.ts
@@ -27,7 +27,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 | 块 | 内容 | 落点 |
 |----|------|------|
 | P1 | `settingsState` 横切状态层（[ADR-126 P4-A] 已升格为 `previewState`） | `frontend/src/utils/3d/state/preview-state.ts` |
-| P2 | 单渲染器 + 自动 cap 聚合 | `preview-menu-settings.ts` 产出 `MenuControlDef[]` 喂 `renderCapControls` |
+| P2 | 单渲染器 + 自动 cap 聚合 | `preview-menu/settings.ts` 产出 `MenuControlDef[]` 喂 `renderCapControls` |
 | P3 | visible 规则定死 | `MenuControlDef.visible` / `collectVisiblePredicates()` |
 
 ## 核心职责
@@ -43,14 +43,14 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 | `render.wireframe` | wireframe cap `wireframe-toggle` | 不落盘 |
 | `env.pmrem` | sky cap `sky-env` | 不落盘 |
 
-- 路径类型复用已有 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀自 `preview-menu-node-types.ts` 归位）；`toStatePath()` 是编译期契约守卫，前缀写错即编译失败。
+- 路径类型复用已有 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀自 `preview-menu/node-types.ts` 归位）；`toStatePath()` 是编译期契约守卫，前缀写错即编译失败。
 - cap 派生路径**惰性解析**：每次 `get/set` 都现查 `sceneCapabilityRegistry.getById()`，不在构建期捕获实例。这是 ADR-125 P3 明令禁止的「声明期求值 → cap 后创建则永不可见」（即 `05fe24b7` 所修「水池分组不出现」同类病）的根治点。
 - 结构性探测：`hasMethod()` 判断 cap 是否真有 `isEnabled/setEnabled`，冒牌 cap 不误判为可用。
 
 ### P2 自动聚合：cap 侧自声明，settings 侧零接线
 
 - `MenuControlDef.settingsOrder?: number` —— **定义了才进设置面板**，升序排列。未定义则不进（否则 pp 的 20 个高级控件会淹没设置页）。
-- 新 cap 想进设置面板：只改自己文件加一个 `settingsOrder`，`preview-menu-settings.ts` 不动。
+- 新 cap 想进设置面板：只改自己文件加一个 `settingsOrder`，`preview-menu/settings.ts` 不动。
 - `collectSettingsCapControls()` 每次调用重取，**抹平 `group`**（设置面板是扁平视图，否则「高级」等折叠 section 会混进来）。
 - 已声明：`pp-enabled`(10) / `sky-env`(20) / `wireframe-toggle`(30)。
 
@@ -96,7 +96,7 @@ collectVisiblePredicates(controls)       // 纯函数，枚举带 visible 的控
 
 ## 与其他子系统关系
 
-- **ADR-085**：本卡是其 S2 的补全，S1/S3 仍有效（`refreshDock` 在 `preview-menu.ts`）。
+- **ADR-085**：本卡是其 S2 的补全，S1/S3 仍有效（`refreshDock` 在 `preview-menu/core.ts`）。
 - **`05fe24b7` 手工 refresh 链路**（`SceneCapability.subscribe?` + `rebuildEnvSubs` + `menu.refresh()`）：P1 的 `subscribeSettings` 是它的替代方向，但**尚未接入**——env 局部刷新仍在用旧链路，迁移是遗留项。
 - **`renderCapControls`**：唯一的控件渲染器，10 种 kind + group 折叠 + visible 过滤。A 层 `renderPreviewSchemaContent` 只实现 sectionTitle/divider/field，其余仍走 `renderCustom`（本 ADR 不扩展）。
 - **`restoreFields()`**（`scene-capability.ts`）：顺带收敛了各 cap `loadState` 的 `typeof` 样板，消除 `ground#sky` 的 jscpd 10 行重复块。**目前仅 sky-capability 接入**，ground/water 待跟进。

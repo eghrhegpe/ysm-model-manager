@@ -3,11 +3,11 @@
 // setAdapterItems/openPanel/dispose、单 panel 快捷直达、多 panel 组内下钻。
 // ★ 测试断言全部从 PREVIEW_MENU_GROUPS / CORE_MENU_ITEMS 推导，不硬编码菜单 ID。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./preview-menu-defs.ts";
-import { mountPreviewRootMenu } from "./preview-menu.ts";
-import { sceneRegistry } from "./scene-registry.ts";
-import { deriveTestIds } from "../../../test-utils/self-healing.ts";
-import { makeMenuCtx as makeCtx } from "./menu-test-fixtures.ts";
+import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
+import { mountPreviewRootMenu } from "./core.ts";
+import { sceneRegistry } from "../scene-registry.ts";
+import { deriveTestIds } from "../../../../test-utils/self-healing.ts";
+import { makeMenuCtx as makeCtx } from "../menu-test-fixtures.ts";
 
 describe("CORE_MENU_ITEMS 表结构", () => {
   it("id 唯一 + legacyTestId 唯一", () => {

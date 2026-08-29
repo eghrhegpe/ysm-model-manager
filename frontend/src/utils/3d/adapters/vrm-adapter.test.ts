@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { PreviewMenuHandle } from "./preview-menu.ts";
+import type { PreviewMenuHandle } from "./preview-menu/core.ts";
 
 // ---- DOM mock（vitest 无默认 document）----
 const mockElements: Map<string, HTMLElement> = new Map();

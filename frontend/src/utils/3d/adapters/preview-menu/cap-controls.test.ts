@@ -3,8 +3,8 @@
 //   h（钟点 → HH:MM）/ %（百分比）/ 带单位（拼接）/ 无单位（toFixed2）。
 // 该函数由 renderCapSlider 与 renderEnvLevel 摘要行共用——防两端分叉回归。
 import { describe, it, expect } from "vitest";
-import { formatCapSliderValue } from "./preview-menu-cap-controls.ts";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
+import { formatCapSliderValue } from "./cap-controls.ts";
+import type { MenuControlDef } from "../../caps/scene-capability.ts";
 
 function makeSlider(unit?: string): MenuControlDef {
   return {

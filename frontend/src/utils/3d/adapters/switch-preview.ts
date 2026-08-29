@@ -17,7 +17,7 @@ import type { CameraControlBridge } from "./camera-controls.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuHandle } from "./preview-menu.ts";
+import type { PreviewMenuHandle } from "./preview-menu/core.ts";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
 import { fitCameraToRoots } from "../camera-setup.ts";
 

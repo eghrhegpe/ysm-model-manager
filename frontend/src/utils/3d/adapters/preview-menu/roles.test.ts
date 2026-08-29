@@ -4,12 +4,12 @@
 // ⚙ 工具含卸载角色、空态与加载入口共存。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
-import { CORE_MENU_ITEMS } from "./preview-menu-defs.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
-import { mountPreviewRootMenu, roleBaseName, type PreviewMenuCtx } from "./preview-menu.ts";
-import { sceneRegistry } from "./scene-registry.ts";
-import { registerSchema, unregisterSchema } from "./schema-registry.ts";
-import { makeMenuCtx as makeCtx } from "./menu-test-fixtures.ts";
+import { CORE_MENU_ITEMS } from "./defs.ts";
+import type { PreviewMenuNode } from "./node-types.ts";
+import { mountPreviewRootMenu, roleBaseName, type PreviewMenuCtx } from "./core.ts";
+import { sceneRegistry } from "../scene-registry.ts";
+import { registerSchema, unregisterSchema } from "../schema-registry.ts";
+import { makeMenuCtx as makeCtx } from "../menu-test-fixtures.ts";
 
 /** 注册一个测试角色（真实 SceneRegistry 单例，测试间 reset） */
 function regRole(path: string, menuItems: PreviewMenuNode[] | null = null): string {

@@ -101,7 +101,7 @@ export class WireframeCapability implements SceneCapability {
         labelKey: "preview.wireframe",
         fallback: "线框模式",
         // [doc:adr-125] 自动并入设置面板（画质分组），取代原先在
-        // preview-menu-settings.ts 手写的 bsBuildWireframeToggle 重复真值来源
+        // preview-menu/settings.ts 手写的 bsBuildWireframeToggle 重复真值来源
         settingsOrder: 30,
         getValue: () => this.on,
         setValue: (v) => this.setEnabled(v as boolean),

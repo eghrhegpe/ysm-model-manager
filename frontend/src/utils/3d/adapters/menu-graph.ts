@@ -13,12 +13,12 @@
 // 可达性 = 对代表性快照集求 node.visibleWhen(snap)；节点级谓词（吃 PreviewSnapshot）
 // 与 cap 级 collectVisiblePredicates（无参 c.visible）严格区分，不可混用（§5 死穴二）。
 
-import type { PreviewMenuNode, PreviewMenuNodeKind } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode, PreviewMenuNodeKind } from "./preview-menu/node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
-import type { PreviewMenuRouters } from "./preview-menu.ts";
+import type { PreviewMenuRouters } from "./preview-menu/core.ts";
 import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
 import { getSchema, listSchemas } from "./schema-registry.ts";
-import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./preview-menu-defs.ts";
+import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./preview-menu/defs.ts";
 
 /** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） */
 export interface RepresentativeSnapshot {

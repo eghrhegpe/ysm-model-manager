@@ -1,6 +1,6 @@
 // ===== 通用相机控件（ADR-066 P3 拆出：破 mount-preview-core ↔ preview-menu 循环）=====
 // buildCameraControls / CameraControlBridge 原定义在 mount-preview-core.ts，
-// 但 preview-menu.ts 也 import 它们 → 两文件互相 import 构成循环依赖
+// 但 preview-menu/core.ts 也 import 它们 → 两文件互相 import 构成循环依赖
 // （check-circular 检出）。拆到独立文件后：
 //   mount-preview-core → preview-menu（mountPreviewRootMenu）
 //   preview-menu → camera-controls（buildCameraControls）

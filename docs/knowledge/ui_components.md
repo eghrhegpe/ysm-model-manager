@@ -58,7 +58,7 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- **消费方（3D 预览）**：`mount-preview-core.ts`（环境面板 `createSlideMenu` + `installUiComponentsStyles` + `createHeaderToggle`）、`preview-menu.ts`（`createSlideMenu`）、`mmd-controls.ts`（`cardContainer`/`addFieldRow`）
+- **消费方（3D 预览）**：`mount-preview-core.ts`（环境面板 `createSlideMenu` + `installUiComponentsStyles` + `createHeaderToggle`）、`preview-menu/core.ts`（`createSlideMenu`）、`mmd-controls.ts`（`cardContainer`/`addFieldRow`）
 - **shared-styles** — 共享按钮/焦点样式被本库样式引用
 - **views/app-*** — 各视图在 Shadow DOM 内经 `adoptedStyleSheets = [uiComponentsStyleSheet, ...]` 消费样式串（`var()` 不跨 Shadow 边界继承的坑按前端 AGENTS 处理）
 

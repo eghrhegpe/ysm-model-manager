@@ -7,7 +7,7 @@
 // 方案 A 收尾：CORE_MENU_ITEMS 已统一为 PreviewMenuNode[]，
 // 适配器注入也是 PreviewMenuNode[]——整条链路统一 Node，不再有 PreviewMenuItemDef 往返转换。
 
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "./node-types.ts";
 //
 // ⚠️ 与声明式节点类型的映射（方案 A 第 1 步，见 preview-menu-node-types.ts）：
 // 本文件 PreviewMenuItemDef 是 flat 面板项（dock 壳用）；未来声明式渲染器按

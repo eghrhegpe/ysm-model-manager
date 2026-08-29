@@ -10,9 +10,9 @@ import { zhCN } from "../../../core/i18n/locales/zh-CN.ts";
 import { buildLitematicScene, LITEMATIC_SLICE_SCHEMA_ID } from "./litematic-adapter.ts";
 import { getSchema } from "./schema-registry.ts";
 import { previewSnapshot } from "../state/preview-state.ts";
-import { renderMenu, renderPreviewPanel } from "./preview-menu.ts";
+import { renderMenu, renderPreviewPanel } from "./preview-menu/core.ts";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";

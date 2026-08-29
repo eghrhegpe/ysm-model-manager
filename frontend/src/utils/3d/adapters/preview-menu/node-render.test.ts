@@ -1,9 +1,9 @@
 // ===== renderMenu 新 kind 测试：field / button / row / sectionTitle =====
 import { describe, it, expect, beforeEach } from "vitest";
-import { renderMenu } from "./preview-menu.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
-import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
-import { mockMenuHandle } from "./menu-test-fixtures.ts";
+import { renderMenu } from "./core.ts";
+import type { PreviewMenuNode } from "./node-types.ts";
+import type { SlideMenuHandle } from "../../../../ui/ui-slide-menu.ts";
+import { mockMenuHandle } from "../menu-test-fixtures.ts";
 
 function makeDeps(): {
   makeRow: (def: never) => HTMLElement;

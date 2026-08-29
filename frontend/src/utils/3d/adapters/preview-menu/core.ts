@@ -6,33 +6,33 @@
 //   - 组内多个项 → home 到组根视图（项列表），点击项 navigate 下钻面板
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
-import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./preview-menu-defs.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
-import type { PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
-import { disposeEnvSubscriptions, buildEnvSchema } from "./preview-menu-env.ts";
-import { renderCapControls } from "./preview-menu-cap-controls.ts";
-import { safeErrorMessage } from "../../safe-error-msg.ts";
-import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
-import type { CameraControlBridge } from "./camera-controls.ts";
+import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
+import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewActionMenuCtx } from "./node-types.ts";
+import { disposeEnvSubscriptions, buildEnvSchema } from "./env.ts";
+import { renderCapControls } from "./cap-controls.ts";
+import { safeErrorMessage } from "../../../safe-error-msg.ts";
+import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../../../ui/ui-slide-menu.ts";
+import type { CameraControlBridge } from "../camera-controls.ts";
 import {
   buildCameraSchema,
   buildLightingSchema,
   buildShadowSchema,
   buildPostprocessingSchema,
   buildSettingsSchema,
-} from "./preview-menu-settings.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
-import { ensureFabStyles } from "../../../utils/dom/fab.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import { sceneRegistry } from "./scene-registry.ts";
-import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./preview-menu-roles.ts";
-import { renderAdapterPanelContent } from "./preview-menu-render.ts";
-import { previewSnapshot } from "../state/preview-state.ts";
+} from "./settings.ts";
+import type { SceneCapability } from "../../caps/scene-capability.ts";
+import { ensureFabStyles } from "../../../../utils/dom/fab.ts";
+import { t } from "../../../../core/i18n/t.ts";
+import { sceneCapabilityRegistry } from "../../caps/scene-capability-registry.ts";
+import { sceneRegistry } from "../scene-registry.ts";
+import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
+import { renderAdapterPanelContent } from "./render.ts";
+import { previewSnapshot } from "../../state/preview-state.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 export { roleBaseName };
-export { renderMenu } from "./preview-menu-render.ts";
+export { renderMenu } from "./render.ts";
 
 /** 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 */
 export interface PreviewMenuCtx {

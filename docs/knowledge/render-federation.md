@@ -62,7 +62,7 @@ Sky → Ground → Environment → Fog → Light → Shadow → Reflector → Po
 ## UI 暴露路径
 
 每个 Cap 实现 `getMenuControls(): MenuControlDef[]`，返回菜单项定义数组。
-`preview-menu.ts` 的 `refreshDock()` 调用 `cap.getMenuControls()` 渲染到 dock-nav。
+`preview-menu/core.ts` 的 `refreshDock()` 调用 `cap.getMenuControls()` 渲染到 dock-nav。
 
 分组示例（postprocessing）：
 - Basic: enabled toggle / toneMapping / exposure

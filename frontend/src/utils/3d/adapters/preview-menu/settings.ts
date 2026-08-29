@@ -10,16 +10,16 @@
 //     重复真值来源，改由 collectSettingsCapControls() 自动聚合
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
-import { renderCapControls } from "./preview-menu-cap-controls.ts";
-import { buildCameraControls } from "./camera-controls.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
-import { getStateValue, setStateValue } from "../state/preview-state.ts";
-import { getPerfPreset, setPerfPreset, type PerfLevel } from "../state/perf-presets.ts";
-import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
-import type { PreviewMenuCtx } from "./preview-menu.ts";
+import type { PreviewMenuNode } from "./node-types.ts";
+import { renderCapControls } from "./cap-controls.ts";
+import { buildCameraControls } from "../camera-controls.ts";
+import { t } from "../../../../core/i18n/t.ts";
+import { sceneCapabilityRegistry } from "../../caps/scene-capability-registry.ts";
+import type { MenuControlDef } from "../../caps/scene-capability.ts";
+import { getStateValue, setStateValue } from "../../state/preview-state.ts";
+import { getPerfPreset, setPerfPreset, type PerfLevel } from "../../state/perf-presets.ts";
+import type { SlideMenuHandle } from "../../../../ui/ui-slide-menu.ts";
+import type { PreviewMenuCtx } from "./core.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
 const tr = (key: string, fallback: string): string => {
@@ -45,10 +45,10 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
 
 /** 灯光面板 schema：从 light cap 自报控件渲染 */
 export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const lightFromReg = sceneCapabilityRegistry.getById("light") as import("../caps/light-capability.ts").LightCapability | null;
+  const lightFromReg = sceneCapabilityRegistry.getById("light") as import("../../caps/light-capability.ts").LightCapability | null;
   const lightCap = lightFromReg ?? (() => {
     const fromCtx = ctx.getCap("light");
-    if (fromCtx && "getMenuControls" in fromCtx) return fromCtx as unknown as import("../caps/light-capability.ts").LightCapability;
+    if (fromCtx && "getMenuControls" in fromCtx) return fromCtx as unknown as import("../../caps/light-capability.ts").LightCapability;
     return null;
   })();
   if (!lightCap) {
@@ -63,7 +63,7 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
 
 /** 阴影面板 schema：从 shadow cap 自报控件渲染 */
 export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const fromReg = sceneCapabilityRegistry.getById("shadow") as import("../caps/shadow-capability.ts").ShadowCapability | null;
+  const fromReg = sceneCapabilityRegistry.getById("shadow") as import("../../caps/shadow-capability.ts").ShadowCapability | null;
   if (!fromReg) {
     return [{ id: "shadow-empty", kind: "custom", renderCustom: (list) => {
       bsRenderEmptyRow(list, tr("preview.noShadowCap", "进入 3D 后再打开阴影面板"));
@@ -76,7 +76,7 @@ export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
 
 /** 后处理面板 schema：从 postprocessing cap 自报控件渲染 */
 export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const fromReg = sceneCapabilityRegistry.getById("postprocessing") as import("../caps/postprocessing-capability.ts").PostprocessingCapability | null;
+  const fromReg = sceneCapabilityRegistry.getById("postprocessing") as import("../../caps/postprocessing-capability.ts").PostprocessingCapability | null;
   if (!fromReg) {
     return [{ id: "postproc-empty", kind: "custom", renderCustom: (list) => {
       bsRenderEmptyRow(list, tr("preview.noPostprocCap", "进入 3D 后再打开后处理面板"));

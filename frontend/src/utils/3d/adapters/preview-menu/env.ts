@@ -1,16 +1,16 @@
 // ===== 环境菜单声明式 Schema（ADR-076 + ADR-106）=====
-import { sceneCapabilityRegistry } from '../caps/scene-capability-registry.ts';
-import type { SceneCapability, MenuControlDef } from '../caps/scene-capability.ts';
-import type { SkyCapability } from '../caps/sky-capability.ts';
-import type { FogCapability } from '../caps/fog-capability.ts';
-import type { EnvironmentCapability } from '../caps/environment-capability.ts';
-import { createHeaderToggle } from '../../../ui/ui-header-toggle.ts';
-import type { SlideMenuHandle } from '../../../ui/ui-slide-menu.ts';
-import { renderCapControls, formatCapSliderValue } from './preview-menu-cap-controls.ts';
-import type { PreviewMenuCtx } from './preview-menu.ts';
-import { t } from '../../../core/i18n/t.ts';
-import { ENV_PRESET_LINKAGE, type EnvPresetId } from '../caps/environment-capability.ts';
-import type { PreviewMenuNode } from './preview-menu-node-types.ts';
+import { sceneCapabilityRegistry } from '../../caps/scene-capability-registry.ts';
+import type { SceneCapability, MenuControlDef } from '../../caps/scene-capability.ts';
+import type { SkyCapability } from '../../caps/sky-capability.ts';
+import type { FogCapability } from '../../caps/fog-capability.ts';
+import type { EnvironmentCapability } from '../../caps/environment-capability.ts';
+import { createHeaderToggle } from '../../../../ui/ui-header-toggle.ts';
+import type { SlideMenuHandle } from '../../../../ui/ui-slide-menu.ts';
+import { renderCapControls, formatCapSliderValue } from './cap-controls.ts';
+import type { PreviewMenuCtx } from './core.ts';
+import { t } from '../../../../core/i18n/t.ts';
+import { ENV_PRESET_LINKAGE, type EnvPresetId } from '../../caps/environment-capability.ts';
+import type { PreviewMenuNode } from './node-types.ts';
 
 const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
 const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;

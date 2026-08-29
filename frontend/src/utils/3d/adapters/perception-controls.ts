@@ -4,7 +4,7 @@
 // buildPerceptionControls（89 行手写 DOM，三 adapter 复制同一份）已删除，
 // perceptionNodes 是纯数据工厂（零 DOM，R1 合规）。
 
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 
 /** 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） */
 export interface PerceptionState {

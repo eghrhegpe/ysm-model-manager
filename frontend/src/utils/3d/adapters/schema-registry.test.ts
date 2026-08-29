@@ -12,7 +12,7 @@ import {
   listSchemas,
   resetSchemas,
 } from "./schema-registry.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 
 beforeEach(() => {
   resetSchemas();

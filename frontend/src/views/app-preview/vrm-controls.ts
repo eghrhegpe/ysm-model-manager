@@ -10,7 +10,7 @@ import {
   type VrmMaterialDetail,
 } from "../../utils/3d/vrm-materials.ts";
 import { t } from "../../core/i18n/t.ts";
-import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
 import type { VrmModelInfoCtx } from "../../utils/3d/adapters/vrm-adapter.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";
 

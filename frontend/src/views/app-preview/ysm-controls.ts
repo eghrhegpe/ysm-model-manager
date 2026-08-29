@@ -3,7 +3,7 @@
 // 骨骼拾取联动）集中于此，由 ysm-adapter 经 ctx.menu.setAdapterItems 注入 ⚙️ 根菜单。
 // 旧 buildYsmBottomNav / mkNavBtn / popupSection / popupRow 已随 Phase 2 删除——
 // 控件全部表驱动渲染，测试遍历 CORE_MENU_ITEMS + 适配器真实注入项断言结构
-// （preview-menu-items.test.ts，对齐 MikuMikuAR 声明式菜单测试范式）。
+// （preview-menu/items.test.ts，对齐 MikuMikuAR 声明式菜单测试范式）。
 
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import * as THREE from "three";
@@ -11,7 +11,7 @@ import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
-import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import type { Spec3D, BoneSelectInfo } from "../../utils/3d/model3d.ts";
 import type { BedrockGeometry } from "./geometry.ts";

@@ -4,7 +4,7 @@
 // materialNodes 是纯数据工厂（零 DOM，R1 合规）；bridge 用结构类型（Structural typing：
 // MMD MaterialControlBridge / VRM VrmMaterialControlBridge 天然兼容，不跨层 import 类型）。
 
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 
 /** material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） */
 export interface MaterialBridgeLike {

@@ -13,16 +13,16 @@
 // + 运行时 registerSchema 路径。适配器面板（model/mmd/vrm 经 children/renderCustom 注入）需加载模型，
 // 留待 ADR-128 collectMenuGraph 收口后统一覆盖。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CORE_MENU_ITEMS } from "./preview-menu-defs.ts";
+import { CORE_MENU_ITEMS } from "./defs.ts";
 import {
   buildPreviewMenuRouters,
   renderPreviewPanel,
   type PreviewMenuRouters,
-} from "./preview-menu.ts";
-import { getSchema, listSchemas, registerSchema, resetSchemas } from "./schema-registry.ts";
-import { previewSnapshot } from "../state/preview-state.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
-import { makeMenuCtx as makeCtx, mockMenuHandle as mockMenu } from "./menu-test-fixtures.ts";
+} from "./core.ts";
+import { getSchema, listSchemas, registerSchema, resetSchemas } from "../schema-registry.ts";
+import { previewSnapshot } from "../../state/preview-state.ts";
+import type { PreviewMenuNode } from "./node-types.ts";
+import { makeMenuCtx as makeCtx, mockMenuHandle as mockMenu } from "../menu-test-fixtures.ts";
 
 function mockPanelDeps() {
   return {

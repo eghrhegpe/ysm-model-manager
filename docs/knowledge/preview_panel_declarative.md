@@ -4,9 +4,9 @@ name: 3D 预览面板内容声明式化通道（ADR-126 P4-B）
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/utils/3d/adapters/preview-menu.ts
-  - frontend/src/utils/3d/adapters/preview-menu-render.ts
-  - frontend/src/utils/3d/adapters/preview-menu-node-types.ts
+  - frontend/src/utils/3d/adapters/preview-menu/core.ts
+  - frontend/src/utils/3d/adapters/preview-menu/render.ts
+  - frontend/src/utils/3d/adapters/preview-menu/node-types.ts
   - frontend/src/utils/3d/adapters/mmd-adapter.ts
   - frontend/src/utils/3d/adapters/ysm-adapter.ts
   - frontend/src/utils/3d/adapters/morph-controls.ts
@@ -14,7 +14,7 @@ source_files:
   - frontend/src/views/app-preview/ysm-controls.ts
   - frontend/src/views/app-preview/shot-panel-shared.ts
 tests:
-  - frontend/src/utils/3d/adapters/preview-menu-items.test.ts
+  - frontend/src/utils/3d/adapters/preview-menu/items.test.ts
   - frontend/src/utils/3d/adapters/morph-controls.test.ts
   - frontend/src/views/app-preview/mmd-controls.test.ts
   - frontend/src/views/app-preview/ysm-controls.test.ts
@@ -29,13 +29,13 @@ use_when:
 
 ## 概览
 
-ADR-125 把**设置面板**的控件统一到 `MenuControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节点带 `children: PreviewMenuNode[]`，渲染走 `renderMenu`（preview-menu-render.ts），消灭「面板内容手写 DOM 闭包」的第二渲染通道。
+ADR-125 把**设置面板**的控件统一到 `MenuControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节点带 `children: PreviewMenuNode[]`，渲染走 `renderMenu`（preview-menu/render.ts），消灭「面板内容手写 DOM 闭包」的第二渲染通道。
 
 **P4-B 分三小步**（ADR-126 §2.1 拆解）：P4-B-1 验证通道（MMD 信息卡 + 截图按钮组）→ P4-B-2 YSM 截图声明式化（`fill3DPanel` 统计/纹理/模型选择器**保留逃生舱**——含多组件切换动态视图状态，非静态内容）→ P4-B-3 morph/play 交互面板。`fillRoles` **不在范围**（实测已声明式：sceneRegistry + menuItems 过滤 + SlideMenuView 驱动）。
 
 ## 核心机制
 
-### renderPreviewPanel children 分支（preview-menu.ts）
+### renderPreviewPanel children 分支（preview-menu/core.ts）
 
 `renderPreviewPanel` 的渲染通道五级衰退：
 
@@ -103,19 +103,19 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 ## 与其他子系统关系
 
 - **ADR-125**：设置面板走 `MenuControlDef[]`（B 层），本卡的面板内容走 `PreviewMenuNode[]`（A 层 children）——两条声明式通道各自独立，不混用。
-- **renderMenu**（preview-menu-render.ts）：children 内容的渲染器，支持 field/button/row/folder/divider/sectionTitle + 逃生舱。
+- **renderMenu**（preview-menu/render.ts）：children 内容的渲染器，支持 field/button/row/folder/divider/sectionTitle + 逃生舱。
 - **mmd-adapter / mmd-controls**：P4-B-1 试点——model 面板 `children: o.panels?.modelInfoNodes?.(...)`，shot 面板条件注入 `children: o.panels?.shotNodes?.(...)`；`fillMmdModelPanel` / `fillMmdShotPanel` 保留（向后兼容 + 既有测试零回归）。
 - **注入通道回归（R1 分层）**：节点工厂（`mmdModelInfoNodes` / `mmdShotNodes` / `ysmShotNodes`）定义在 views，adapter 经 `MmdPanelHooks` / `YsmMenuItemsOpts.panels` 的可选字段（`modelInfoNodes` / `shotNodes`）由视图层注入（mmd-3d / scene-3d / ysm-3d / maid-3d）——**adapter 不得直接 import views 层工厂**（check-layering R1 零容忍，曾因直接 import 阻断推送，见 `44b4e1b2`）。注入缺失 → children 空、面板不渲染（测试桩同步补注入）。
 - **ADR-085**：S2「状态单向流」的大方向——面板内容从命令式 DOM 构建收敛为数据节点。
 
 ## 不变量
 
-1. **panel 必有渲染通道**：renderCustom（命令式逃生舱）或 children（声明式节点）二选一——契约测试 `preview-menu-items.test.ts` 断言。
+1. **panel 必有渲染通道**：renderCustom（命令式逃生舱）或 children（声明式节点）二选一——契约测试 `preview-menu/items.test.ts` 断言。
 2. **能力缺失 → 不注入项**（条件注入），不注入空 children 面板（对齐 bonePanel 范式）。
 3. **声明式节点零 DOM**：`mmdModelInfoNodes` / `mmdShotNodes` 是纯数据工厂，不碰 `document`（与 fillXxxPanel 命令式形成对照）。
 4. **R1 分层（零容忍）**：utils 侧 adapter **不得 import views 层节点工厂**——必须经 `panels` 注入通道（`modelInfoNodes` / `shotNodes` 可选字段）由视图层注入；`check-menu-health` 门禁认识 children 渲染通道（render/renderCustom/children 三选一，`f697a270` 起）。
 5. **新旧通道并存**：`fillMmdModelPanel` / `fillMmdShotPanel` 保留兼容，新面板路径走 children——每步独立可回滚。
-7. **面板组装路径必须复用同一条通道衰退链**（P5 事故不变量）：adapter 面板内容渲染唯一实现 = `renderAdapterPanelContent`（preview-menu-render.ts，schemaId → children → renderCustom 三通道）；`renderPreviewPanel`（⚙ 根菜单）与 `modelDetailView`（roles 详情模型信息本体直渲）都调它。教训：P5 把 ysm/maid 模型面板迁到 schemaId、mmd/vrm 迁到 children 时，modelDetailView 旧直渲门 `primary?.renderCustom` 静默失明——统计/纹理/组件 select 在 roles 详情集体消失（用户 2026-08-29 实测报告），且无测试报警。三通道回归锁在 `preview-menu.roles.test.ts`（真实路径 dock-model → 角色行 → 详情）。
+7. **面板组装路径必须复用同一条通道衰退链**（P5 事故不变量）：adapter 面板内容渲染唯一实现 = `renderAdapterPanelContent`（preview-menu/render.ts，schemaId → children → renderCustom 三通道）；`renderPreviewPanel`（⚙ 根菜单）与 `modelDetailView`（roles 详情模型信息本体直渲）都调它。教训：P5 把 ysm/maid 模型面板迁到 schemaId、mmd/vrm 迁到 children 时，modelDetailView 旧直渲门 `primary?.renderCustom` 静默失明——统计/纹理/组件 select 在 roles 详情集体消失（用户 2026-08-29 实测报告），且无测试报警。三通道回归锁在 `preview-menu.roles.test.ts`（真实路径 dock-model → 角色行 → 详情）。
 6. `fillRoles` **不在 P4-B 范围**（已声明式，实测 sceneRegistry + menuItems + SlideMenuView 驱动）。
 
 ## 相关
@@ -124,7 +124,7 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 - 落地：P4-B-1（mmd model/shot 声明式化）+ P4-B-2（YSM 截图声明式化 + 截图共享层）+ **P4-D（`visibleWhen: (s: PreviewSnapshot) => boolean` 升级）** + **P5（受控 schema 注册 schema-registry.ts + select 分支 + `ui.activeComponent` 响应式 + buildYsmModelSchema 取代 fill3DPanel）** 已完成
 - **P5 撤销 P4-B-3 的「fill3DPanel 保持逃生舱」定性**：用户推动的根治——fill3DPanel 的组件切换是「渲染通道不受控」（新增面板可绕过数组系统拼 DOM），不是「交互态不值得转」；现以 `ui.activeComponent` 状态层 + schema-registry 受控注册 + select 分支根治
 - **P5-收尾：morph/play 交互面板也声明式化**（二轮审计）——`morphNodes`（mmd 表情 toggle）+ `playNodes`（播放/暂停 toggle + 动作 select + 空态，三 adapter 共用）；交互态「运行时状态」由 toggle/select 的 get/set 闭包 + 即时 apply 解决，不需 Capability 类
-- **逃生舱只剩一类真·复杂**：骨骼面板（makeBonePanelRenderer，3D 射线拾取 + 相机/场景实时对象）。**litematic 分层切片已 schema 化退出逃生舱**：per-scene key `litematic-slice-{n}` 注册 builder 每次面板渲染重建节点（slider max 随轴新鲜）；切片模式 = shell 闭包场景级会话态（select get/set 闭包 + slider `visibleWhen` 谓词读同一闭包，dispose 随闭包消亡不动全局状态——P5 复盘：全局单值 + dispose 重置会跨场景误伤）；通用渲染器 renderMenu 补齐 slider 分支（label 可选 + `control.numeric` 旁挂 number 联动，caps 专属 slider 仍走 preview-menu-cap-controls 另一通道）
+- **逃生舱只剩一类真·复杂**：骨骼面板（makeBonePanelRenderer，3D 射线拾取 + 相机/场景实时对象）。**litematic 分层切片已 schema 化退出逃生舱**：per-scene key `litematic-slice-{n}` 注册 builder 每次面板渲染重建节点（slider max 随轴新鲜）；切片模式 = shell 闭包场景级会话态（select get/set 闭包 + slider `visibleWhen` 谓词读同一闭包，dispose 随闭包消亡不动全局状态——P5 复盘：全局单值 + dispose 重置会跨场景误伤）；通用渲染器 renderMenu 补齐 slider 分支（label 可选 + `control.numeric` 旁挂 number 联动，caps 专属 slider 仍走 preview-menu/cap-controls 另一通道）
 - **zip 多 pmx 选择（[doc:adr-127]）**：`resolveMmdZipConfig` 暴露全部 pmx/pmd 候选（`modelCandidates`，排序后第一个 = 默认）；mmd model 面板多候选时前置 select，选中 → `switchTo(候选虚拟路径)`（复用 switchToSession 外壳保留换内容层，零新机制）——面板写法与 morph/play/material 同款（children + 纯数据工厂 + panels 注入）
 - P4-C（dockGroup 双语义）定性「保持观察」：模式守卫早已独立字段，剩 dock 分组 + 内容域双语义，概念错位非功能 bug（详见 ADR-126 §2.5）
 - 顺手修复：`fillMmdShotPanel` / `fillYsmShotPanel` 的 `saveScreenshot` 第三参误传 `screenshotFn`（被当 setShotState），实际截图走 fallback 而非活跃渲染器——`makeShotAction`（shot-panel-shared.ts）已修正（第四参传 screenshotFn）

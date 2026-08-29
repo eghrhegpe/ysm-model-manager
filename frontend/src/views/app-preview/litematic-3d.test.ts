@@ -310,7 +310,7 @@ import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
 import { sleep } from "../../test-utils/index.ts";
 import { getSchema, listSchemas } from "../../utils/3d/adapters/schema-registry.ts";
 import { previewSnapshot } from "../../utils/3d/state/preview-state.ts";
-import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
 
 /** 访问 mock 暴露的 InstancedMesh 实例列表，供 count / setMatrixAt 断言 */
 const meshInstances = (THREE as unknown as {

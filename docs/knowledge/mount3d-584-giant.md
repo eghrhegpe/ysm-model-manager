@@ -29,7 +29,7 @@ use_when:
 
 - 上游：`views/app-preview/*` 经 `mount3D` 进入 3D 预览
 - 下游：`PreviewAdapter`（vrm/litematic/mmd/pack-model/ysm）经 `build(ctx, path)` 注入内容层
-- 横向：`cleanup-3d.ts`（runFullCleanup）/`switch-preview.ts`（switchToSession）/`input-and-animation.ts`（bindInputHandlers）/`camera-controls.ts`/`preview-menu.ts`（mountPreviewRootMenu）
+- 横向：`cleanup-3d.ts`（runFullCleanup）/`switch-preview.ts`（switchToSession）/`input-and-animation.ts`（bindInputHandlers）/`camera-controls.ts`/`preview-menu/core.ts`（mountPreviewRootMenu）
 
 ## 不变量
 

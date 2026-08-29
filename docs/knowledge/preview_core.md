@@ -39,7 +39,7 @@ quick_risk_lines:
   - 适配器项经 setAdapterItems 注入，禁止内联
   - 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update()
 pitfalls:
-  - 「preview-menu.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
+  - 「preview-menu/core.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
   - 「skeleton.ts」异步回调写入已卸载 DOM → 每个 await 后检查 container.isConnected
   - 「vrm.humanoid.update()」手动调用导致 T-pose 回归 → 只用 vrm.update(dt)
 ---
@@ -54,7 +54,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 ## 核心职责
 
-- **外壳**：overlay + ⚙️ 声明式根菜单(`preview-menu-defs.ts`：`CORE_MENU_ITEMS` + `PREVIEW_MENU_GROUPS`，能力驱动 dock) + viewContainer + loadingEl + 适配器控件容器(`topBar`，仅 vrm/litematic 遗留 `extraControls` 单按钮，Phase 3 收编)
+- **外壳**：overlay + ⚙️ 声明式根菜单(`preview-menu/defs.ts`：`CORE_MENU_ITEMS` + `PREVIEW_MENU_GROUPS`，能力驱动 dock) + viewContainer + loadingEl + 适配器控件容器(`topBar`，仅 vrm/litematic 遗留 `extraControls` 单按钮，Phase 3 收编)
 - **渲染基座（shared 模式）**：创建 `scene` / `camera` / `renderer` / `OrbitControls` / 灯光，驱动 rAF 循环、WASD/拖拽自转、resize、ESC 关闭、GPU 资源释放。**WASD 键位表驱动（见 [model3d](./model3d.md) 键位消费链）**：`bindInputHandlers` 按 `KeyboardEvent.code`+`loadTdKeymap()` 映射动作表，`mpApplyWasdCameraMotion` 只查 forward/back/left/right/up/down；输入框焦点守卫防止吞打字；方向键双轨 + 修饰键左右对称。
 - **3D overlay 无障碍（a11y，2026-08-29）**：`#ysm-overlay-3d` 设 `role="dialog"` + `aria-modal="true"` + `aria-label="3D 预览"`（复用 `preview.title3d` i18n key），屏幕阅读器可识别模态体验；`mount3D` 入口 `rememberTrigger()` 记下触发 FAB，关闭时 `returnFocus()` 把焦点还给 FAB；document 级 `trapFocusAcrossShadow`（`utils/dom/focus-restore.ts`，跨 Shadow 边界找可聚焦元素，覆盖 ⚙️ 菜单 Shadow DOM）拦截 Tab 越界——避免焦点逃出 3D 到背后树面板。单一事实源：`utils/dom/focus-restore.ts` 的 `rememberTrigger / returnFocus / trapFocusAcrossShadow` 三件套，弹窗/3D/上下文菜单统一受益。
 - **适配器注入**：内容层经 `PreviewAdapter.build()` 挂进 `ctx.scene`；每帧 `update(dt)` 驱动动态部分（VRM SpringBone、动画）
@@ -68,7 +68,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 - `mount3D(adapter, path, opts?)` — 主入口，`cleanupPreview()` 旧会话后建新
 - `cleanupPreview()` / `invalidatePreview()` / `switchPreview(path)`
 - `buildCameraControls(topBar, bridge)` — 通用相机控件（旋转模式/速度/重置），已收进根菜单 `camera` 项（sharedOnly）
-- `mountPreviewRootMenu(overlay, ctx)` → `PreviewMenuHandle`（`dispose`/`setAdapterItems`/`openPanel`/`refreshDock`）+ `PREVIEW_MENU_GROUPS` + `CORE_MENU_ITEMS`（`preview-menu-defs.ts` / `preview-menu.ts`）— **ADR-076 v3 声明式根菜单**（顶栏砍掉，⚙️ 按钮 + 弹出菜单，项表驱动；core 项 roles/environment/camera/lighting/shadow/postproc；**适配器项经 `PreviewBuildCtx.menu.setAdapterItems` 注入**；legacyTestId `ysm-close-3d`/`env-menu-btn`/`ysm-roles-entry` + 适配器项 `ysm-model-entry`/`mmd-model-entry` 等保留兼容 e2e）
+- `mountPreviewRootMenu(overlay, ctx)` → `PreviewMenuHandle`（`dispose`/`setAdapterItems`/`openPanel`/`refreshDock`）+ `PREVIEW_MENU_GROUPS` + `CORE_MENU_ITEMS`（`preview-menu/defs.ts` / `preview-menu/core.ts`）— **ADR-076 v3 声明式根菜单**（顶栏砍掉，⚙️ 按钮 + 弹出菜单，项表驱动；core 项 roles/environment/camera/lighting/shadow/postproc；**适配器项经 `PreviewBuildCtx.menu.setAdapterItems` 注入**；legacyTestId `ysm-close-3d`/`env-menu-btn`/`ysm-roles-entry` + 适配器项 `ysm-model-entry`/`mmd-model-entry` 等保留兼容 e2e）
 
   **2026-08-19 环境拆组**：环境体量 > 全部场景设置，故将 `environment` 从 `scene` 组拆出，独立成 `env` 组（🌍 环境）。scene 组 icon 换 🎛️ 避免双 🌍 混淆。dock 按钮顺序：🧍 模型 → 💃 动作 → 🌍 环境 → 🎛️ 场景。组内仅一个 panel 项时自动快捷直达面板（不渲染组根视图），故 env 组（单 environment 项）点击直接进环境面板。
 
@@ -91,15 +91,15 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 ## 验证状态与迭代清单（2026-08-19）
 
 - **ADR-076 v3 声明式根菜单（Phase 1+2 已落地，Phase 3 待立项）**：
-  - **Phase 1**：顶栏整块砍掉，预览控件收进 overlay 内 ⚙️ 根菜单（`PREVIEW_MENU_DEFS` 表驱动，对齐 ADR-021 范式）。`mount3D` 内 `mountPreviewRootMenu(overlay, ctx)` 挂 ⚙️ 按钮（`preview-menu-btn`）+ 弹出（`ysm-preview-menu`）；`close` 复刻原 `closeBtn` 分支（`cleanupFn?fullCleanup:closeOverlay`），`fullCleanup` 内 `menuHandle.dispose()` 解绑 `document` 监听；`switchTo` 成功后 `currentPath = newPath` 同步高亮。三语 locale 补齐 7 键。
-  - **Phase 2**：ysM/mmd 底部导航脚手架删除（`buildYsm/MmdBottomNav` + `mkNavBtn` + 两份 togglePopup/closePopup），适配器经 `PreviewBuildCtx.menu.setAdapterItems` 注入专属项——ysM：model/截图/骨骼；mmd：model/材质/播放（+ADR-077 bones 并行落地经仲裁收编）。切换归 core switch 项、相机归 core camera 项，消灭双入口。测试：`preview-menu.test.ts` 新增（14 例）+ `preview-menu-items.test.ts`（24 例全绿）。顺带修复 ysm 两处现存缺陷（navBuilder 死参数——底部导航从未挂载；骨骼按钮点击找不存在的 `#ysm-3d-panel`——无效）。
+  - **Phase 1**：顶栏整块砍掉，预览控件收进 overlay 内 ⚙️ 根菜单（`PREVIEW_MENU_DEFS` 表驱动，对齐 ADR-021 范式）。`mount3D` 内 `mountPreviewRootMenu(overlay, ctx)` 挂 ⚙️ 按钮（`preview-menu/btn`）+ 弹出（`ysm-preview-menu`）；`close` 复刻原 `closeBtn` 分支（`cleanupFn?fullCleanup:closeOverlay`），`fullCleanup` 内 `menuHandle.dispose()` 解绑 `document` 监听；`switchTo` 成功后 `currentPath = newPath` 同步高亮。三语 locale 补齐 7 键。
+  - **Phase 2**：ysM/mmd 底部导航脚手架删除（`buildYsm/MmdBottomNav` + `mkNavBtn` + 两份 togglePopup/closePopup），适配器经 `PreviewBuildCtx.menu.setAdapterItems` 注入专属项——ysM：model/截图/骨骼；mmd：model/材质/播放（+ADR-077 bones 并行落地经仲裁收编）。切换归 core switch 项、相机归 core camera 项，消灭双入口。测试：`preview-menu.test.ts` 新增（14 例）+ `preview-menu/items.test.ts`（24 例全绿）。顺带修复 ysm 两处现存缺陷（navBuilder 死参数——底部导航从未挂载；骨骼按钮点击找不存在的 `#ysm-3d-panel`——无效）。
   - **Phase 2 后续（2026-08-19）**：
     - **环境拆组**：environment 从 scene 组拆出，独立为 env 组（🌍 环境），场景组 icon 换 🎛️。dock 按钮顺序：🧍 → 💃 → 🌍 → 🎛️。组定义 `PREVIEW_MENU_GROUPS` 新增 `{ id: "env", icon: "🌍", fallback: "环境" }`，`PreviewMenuGroupId` 扩展 `"env"`。`CORE_MENU_ITEMS` 中 environment 项 `dockGroup` 从 `"scene"` 改为 `"env"`。地面/水面系统后续继续膨胀时，往 env 组加 panel 项即可（组内多 panel 自动走组根视图 → 下钻导航）。
     - **下钻箭头**：panel 型行右侧加 `>` 装饰性箭头（`data-testid="row-chevron"`），提示可点击进入下级面板。`makeRow(def, { chevron: def.kind === "panel" })` 实现，action 型行无箭头。
     - **入口合并（2026-08-21）**：独立 `switch` 项（🔁 切换模型，legacyTestId `mmd-switch`）撤除——其面板（`fillSwitch`：类型 tab + siblings + 手动路径）本是角色面板底部的内嵌加载入口，双入口属重复。模型组 core 项仅余 `roles`（无适配器项时 dock-model 单 panel 快捷直达）；`needsSiblings` 字段随之删除；i18n 键 `preview.switchModel` 三语移除。后续「最近加载」类候选源应作为 `fillSwitch` 的新类型 tab 接入（行渲染/样式复用），勿另起面板。
   - **Phase 3 待立项**：vrm/litematic `extraControls` 单按钮（骨骼/分层/切换）收编为菜单项后删除 topBar 容器；ADR-074 S2 VRM 骨骼面板已接 UI（topBar 骨骼按钮开关面板，经 `makeBonePanelRenderer` 通用外壳），ysm 骨骼面板同构落地（ADR-077）。
-  - **dock 🧍 模型组统一为 roles 入口（2026-08-22，commit e8d6f5aa）**：删掉 `renderDock` 模型组基于 `sceneRegistry` 是否为空的 if/else 分流补丁——生产恒非空使其成死分支，且造成加载模型后 🧍 显示旧组根菜单（与 FAB 直进 roles 不一致）。🧍 永远快捷直达 roles 面板；单模型实例工具（模型信息/截图/骨骼/材料）保留 `dockGroup:"model"`，下沉至角色详情（`roleDetailView` 按该字段过滤）可达。litematic 蓝图切片同步从 `ctx.menu.setAdapterItems`（dock 平铺 sink）搬家到 `buildLitematicScene` 返回值 `menuItems: sliceItems`（角色详情 sink），使蓝图注册进 `sceneRegistry` 的 entry 携带切片、可在其详情内显示与卸载。测试契约见 `preview-menu.test.ts` / `preview-menu-items.test.ts`。
-  - **声明式类型层 + 通用渲染器（方案 A，2026-08-25，commits 8005f64e / 62f82445）**：从 MikuMikuAR `menu-node-types.ts` 移植 `PreviewMenuNode` 声明式节点类型（`preview-menu-node-types.ts`，纯类型叶零运行时）——含 `folder` 递归（`children`）/ `visibleWhen` 守卫 / `renderCustom` 逃生舱 / `action` 回调 / `dockGroup`·`sharedOnly`·`requiresEnvironment`（ysm 特有字段）；契约测试 `preview-menu-node-types.test.ts`（6 例）。配套通用递归渲染器 `renderMenu(container, nodes, deps)`（preview-menu.ts 模块级）：folder→可折叠 section（testid=`node.id` / `-body`，兼容既有 e2e）、panel/action→行（复用 makeRow/navigate/run）、divider/sectionTitle→轻量行。`roleDetailView` 模型/动作两 section 改为 `PreviewMenuNode` 声明树驱动，删除命令式 `renderRoleSection`。**迁移路径**：新菜单项优先写 `PreviewMenuNode`（可嵌套、可守卫），存量 flat 项经 `renderCustom` 逃生舱过渡；`PreviewMenuItemDef.render`→`renderCustom`、`run`→`action`（closePopup 必选→可选，包装兜底）。预览菜单从「壳声明式 + 肉命令式」走向「全声明式」。
+  - **dock 🧍 模型组统一为 roles 入口（2026-08-22，commit e8d6f5aa）**：删掉 `renderDock` 模型组基于 `sceneRegistry` 是否为空的 if/else 分流补丁——生产恒非空使其成死分支，且造成加载模型后 🧍 显示旧组根菜单（与 FAB 直进 roles 不一致）。🧍 永远快捷直达 roles 面板；单模型实例工具（模型信息/截图/骨骼/材料）保留 `dockGroup:"model"`，下沉至角色详情（`roleDetailView` 按该字段过滤）可达。litematic 蓝图切片同步从 `ctx.menu.setAdapterItems`（dock 平铺 sink）搬家到 `buildLitematicScene` 返回值 `menuItems: sliceItems`（角色详情 sink），使蓝图注册进 `sceneRegistry` 的 entry 携带切片、可在其详情内显示与卸载。测试契约见 `preview-menu.test.ts` / `preview-menu/items.test.ts`。
+  - **声明式类型层 + 通用渲染器（方案 A，2026-08-25，commits 8005f64e / 62f82445）**：从 MikuMikuAR `menu-node-types.ts` 移植 `PreviewMenuNode` 声明式节点类型（`preview-menu/node-types.ts`，纯类型叶零运行时）——含 `folder` 递归（`children`）/ `visibleWhen` 守卫 / `renderCustom` 逃生舱 / `action` 回调 / `dockGroup`·`sharedOnly`·`requiresEnvironment`（ysm 特有字段）；契约测试 `preview-menu/node-types.test.ts`（6 例）。配套通用递归渲染器 `renderMenu(container, nodes, deps)`（preview-menu/core.ts 模块级）：folder→可折叠 section（testid=`node.id` / `-body`，兼容既有 e2e）、panel/action→行（复用 makeRow/navigate/run）、divider/sectionTitle→轻量行。`roleDetailView` 模型/动作两 section 改为 `PreviewMenuNode` 声明树驱动，删除命令式 `renderRoleSection`。**迁移路径**：新菜单项优先写 `PreviewMenuNode`（可嵌套、可守卫），存量 flat 项经 `renderCustom` 逃生舱过渡；`PreviewMenuItemDef.render`→`renderCustom`、`run`→`action`（closePopup 必选→可选，包装兜底）。预览菜单从「壳声明式 + 肉命令式」走向「全声明式」。
   - **公共映射 previewItemToNode（方案 A 第 3 步，commit 86208061，**已删**）**：曾是 `PreviewMenuItemDef`→`PreviewMenuNode` 单向映射。方案 A 收尾（commit e0aab996）统一整条链路为 `PreviewMenuNode`，`previewItemToNode` 和逆向 `nodeToDef` 一并删除——往返转换是有损的（`children`/`visibleWhen`/`control` 被静默丢弃，`action` 的 ctx 被打成 no-op 桩）。
   - **详情=模型信息面板本体（方案 A 第 4 步，commit adf60576）**：`roleDetailView` 目标态落地——model 组第一个 panel（三适配器恒为「模型信息」）`renderCustom` **直渲进详情主体**（1 跳看内容，响应「模型信息最想进入」）；其余 model 项（截图/材质/骨骼）→ 详情内「工具」可折叠 section（`preview-role-tools`，不再平行平铺）；motion 组保留「动作」section（dock 🧍 默认折叠 / dock 💃 直达展开且模型主体隐藏）；「切换角色 ›」从详情顶部移到底部工具行（`role-switch` action 节点，经 renderMenu 渲染，testid 自动补 `preview-` 前缀故 node id 不带前缀）。roles.test 3 处旧 section 契约翻转（断言模型本体直渲/工具区/动作聚焦）。
   - **dock 🧍 = 角色列表入口（第 5 步，commit 659e6308，实测反馈修正）**：dock 🧍 点击**恒进 roles 角色列表**（加载/切换模型入口），**不再**因活跃角色有 menuItems 而直达详情——用户实测「点模型按钮跳 ysm 模型介绍而非切换模型」反直觉（B 的「🧍 1 跳直达详情」UX 决策反噬），切换模型被迫绕二级；列表点角色名同样 1 跳进详情且切换不绕路。💃 动作组保持直达详情（聚焦动作 section）。fillRoles 点角色名进详情本就不传 onSwitchRole（slide-menu ← back 返回列表）。
@@ -124,7 +124,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
   4. ✅ 云量滑块已收进**环境菜单**（`skyCap.setCloudCoverage(v)`，0-1 映射晴空→多云，oninput 实时改天空、onchange 松手刷新 IBL；`preview.cloudCoverage` i18n 三语，代码层 `tr` 兜底）。重构背景：原顶栏滑块被批「塞垃圾」，统一收进 🌍 环境根菜单面板（环境独立成组后，地水系统同样收进此面板，不再挤占场景组）；三语键 `preview.envMenu/timeOfDay/cloudCoverage/environmentLight` 已入库，但保留 `tr` 代码兜底防并行 locale 竞争退化显示原始键名。
   5. ✅ **下钻箭头**：组根视图中 panel 型行右侧加 `>` 装饰箭头（`data-testid="row-chevron"`），与「🌍 环境组单 panel 快捷直达（不显示组根视图）」配合——多 panel 组（如 🎛️ 场景）的 camera/lighting/shadow/postproc 行均有箭头，提示可点击进入下级面板。
 
-> **已知坑（构建期 capability 引用）**：环境菜单在 `if(!selfMode)` **之前**构建，此时 `skyCap`/`groundCap` 尚未赋值（仍为 `null`）。正确模式已改**getter 式 `PreviewMenuCtx`**（`preview-menu.ts`）：菜单项表通过 getter 在菜单渲染时按需取值，规避构建期 `null` 收窄报 `Property does not exist on type 'never'`；字面量默认值（time=9、IBL=true）只作为初始 UI 显示值，交互处理器写在 `oninput`/`onChange` 闭包内用 `skyCap?.`。地面行 `value: true`、IBL 行 `value: true` 即此口径。
+> **已知坑（构建期 capability 引用）**：环境菜单在 `if(!selfMode)` **之前**构建，此时 `skyCap`/`groundCap` 尚未赋值（仍为 `null`）。正确模式已改**getter 式 `PreviewMenuCtx`**（`preview-menu/core.ts`）：菜单项表通过 getter 在菜单渲染时按需取值，规避构建期 `null` 收窄报 `Property does not exist on type 'never'`；字面量默认值（time=9、IBL=true）只作为初始 UI 显示值，交互处理器写在 `oninput`/`onChange` 闭包内用 `skyCap?.`。地面行 `value: true`、IBL 行 `value: true` 即此口径。
 
 ## 相关
 

@@ -10,13 +10,13 @@
  *   1. id 全局唯一（渲染为 data-testid="preview-<id>"，撞车则 e2e 寻址失效）
  *   2. labelKey 非空
  *   3. labelKey 在 zh-CN 语言包存在（三语一致性由 locales-consistency.test 保证）
- *   4. dockGroup ∈ PreviewMenuGroupId 联合类型（单一事实来源，自动从 preview-menu-defs.ts 推导）或 无（非法值导致 dock 按钮进错组）
+ *   4. dockGroup ∈ PreviewMenuGroupId 联合类型（单一事实来源，自动从 preview-menu/defs.ts 推导）或 无（非法值导致 dock 按钮进错组）
  *   5. kind ∈ {panel, action, divider}
  *   6. panel 项必有渲染通道；action 项必有 run（缺失则面板/动作不可执行）
  *      渲染通道四选一：render | renderCustom（ADR-085 逃生舱）| children（ADR-126 P4-B 声明式子节点）
  *      | schemaId（ADR-126 P5 受控 schema 驱动，renderPreviewPanel 优先查 schema-registry）
  *
- * 解析策略：正则解析 4 个菜单表文件（preview-menu-defs.ts + ysm/mmd/vrm-adapter.ts），
+ * 解析策略：正则解析 4 个菜单表文件（preview-menu/defs.ts + ysm/mmd/vrm-adapter.ts），
  * 对每个 `id: "xxx"` 匹配回溯对象块（配对 { }，跳过字符串内 { }），提取字段。
  *
  * 用法：
@@ -34,7 +34,7 @@ const JSON_MODE = process.argv.includes('--json');
 
 // ── 菜单表文件（相对 ROOT）──
 const MENU_FILES = [
-  'frontend/src/utils/3d/adapters/preview-menu-defs.ts',
+  'frontend/src/utils/3d/adapters/preview-menu/defs.ts',
   'frontend/src/utils/3d/adapters/ysm-adapter.ts',
   'frontend/src/utils/3d/adapters/mmd-adapter.ts',
   'frontend/src/utils/3d/adapters/vrm-adapter.ts',
@@ -46,7 +46,7 @@ function readRel(rel) {
   return fs.readFileSync(path.resolve(ROOT, rel), 'utf-8');
 }
 
-// 合法 dockGroup 从单一事实来源 preview-menu-defs.ts 的 `PreviewMenuGroupId` 联合类型推导，
+// 合法 dockGroup 从单一事实来源 preview-menu/defs.ts 的 `PreviewMenuGroupId` 联合类型推导，
 // 不在此处硬编码第二份清单——否则新增组（如 2026-08-19 的 "env"）时漏改闸门即双源漂移、误阻断推送。
 const LEGAL_GROUPS = deriveLegalGroups();
 
@@ -55,7 +55,7 @@ function deriveLegalGroups() {
   const m = defs.match(/type\s+PreviewMenuGroupId\s*=\s*([^;]+);/);
   const ids = m ? [...m[1].matchAll(/"([a-z0-9-]+)"/g)].map((x) => x[1]) : [];
   if (!ids.length) {
-    throw new Error('check-menu-health: 无法从 preview-menu-defs.ts 推导 PreviewMenuGroupId（单一事实来源缺失），拒绝用兜底硬编码清单');
+    throw new Error('check-menu-health: 无法从 preview-menu/defs.ts 推导 PreviewMenuGroupId（单一事实来源缺失），拒绝用兜底硬编码清单');
   }
   return new Set(ids);
 }
@@ -189,7 +189,7 @@ export function itemViolations(it, zhCNKeys) {
     v.push({ rule: 'kind-valid', item: it.id, file: it.file, detail: `kind "${it.kind || '(空)'}" 非法（须为 panel/action/divider）` });
   }
   // 6. panel 有 render / action 有 run（CORE 文件走 preview-menu.ts fillers 映射渲染，不写 render，豁免）
-  const isCoreFile = it.file.endsWith('preview-menu-defs.ts');
+  const isCoreFile = it.file.endsWith('preview-menu/defs.ts');
   if (it.kind === 'panel' && !isCoreFile && !it.hasRender) {
     v.push({ rule: 'panel-has-render', item: it.id, file: it.file, detail: 'panel 项缺 render' });
   }
@@ -224,7 +224,7 @@ for (const it of allItems) {
 // ── id 唯一性校验（独立段：每文件内部唯一 + core∩适配器无交集）──
 // 适配器按次挂载互斥（一次预览只加载一种模型），故 ysm/mmd/vrm 可共享 id（model/shot/bones）；
 // 仅「同一文件内重复」与「适配器 id 与 core 撞车」才报违规。
-const coreFile = 'frontend/src/utils/3d/adapters/preview-menu-defs.ts';
+const coreFile = 'frontend/src/utils/3d/adapters/preview-menu/defs.ts';
 const coreIds = new Set((byFile.get(coreFile) || []));
 const sharedIds = []; // 跨适配器同名的 id（不违规，仅报告）
 for (const [file, ids] of byFile) {

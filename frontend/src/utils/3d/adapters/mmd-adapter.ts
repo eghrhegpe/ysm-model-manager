@@ -10,7 +10,7 @@ import { MMDLoader, VmdObject, buildAnimation, buildCameraAnimation, VPDLoader, 
 import { MMDAmmoPlugin } from "@moeru/three-mmd-physics-ammo"; // 官方 Ammo.js 物理后端（PhysicsService 实装，非自研 cannon）
 import { t } from "../../../core/i18n/t.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import { scheduleBackgroundEncoding, cancelPendingEncodings } from "./mmd-ktx2-encoder.ts";
 import { safeErrorMessage } from "../../safe-error-msg.ts";
@@ -1281,7 +1281,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       legacyTestId: "mmd-model-entry",
       dockGroup: "model", // 底栏 🧍 模型组
       // [doc:adr-126-p4-b-1] 面板内容声明式化：children = modelInfoNodes 纯数据节点（经 panels 注入，
-      // R1 禁 utils→views 运行时依赖），渲染走 renderMenu（preview-menu-render.ts）。
+      // R1 禁 utils→views 运行时依赖），渲染走 renderMenu（preview-menu/render.ts）。
       // fillModelPanel 逃生舱保留在 MmdPanelHooks（兼容既有面板），此处走新通道。
       children: o.panels?.modelInfoNodes?.(o.navCtx) ?? [],
     },

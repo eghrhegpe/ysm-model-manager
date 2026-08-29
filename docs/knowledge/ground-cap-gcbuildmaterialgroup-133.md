@@ -29,7 +29,7 @@ use_when:
 ## 与其他子系统关系
 
 - 上游：`GroundCapability.getMenuControls()` 聚合 `gcBuildMain`/`gcBuildMaterialGroup` 两组（1 + 14 = 15 控件；水面已拆为独立 WaterCapability，其 `gcBuildWaterGroup` 在 water-capability.ts 内）。
-- 下游：`renderCapControls`（preview-menu-cap-controls.ts）消费 `MenuControlDef[]` 渲染声明式菜单。
+- 下游：`renderCapControls`（preview-menu/cap-controls.ts）消费 `MenuControlDef[]` 渲染声明式菜单。
 - 横向：`gcBuildMain` ~12 行、`gcBuildMaterialGroup` ~55 行——组长尾均 <100 行。
 
 ## 不变量

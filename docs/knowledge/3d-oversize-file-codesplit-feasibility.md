@@ -37,7 +37,7 @@ created: 2026-08-27
 
 **不拆**。理由：
 - 与 mmd-adapter 同理——唯一导出 `PreviewBuildCtx` interface，拆 interface 会断契约链
-- `switch-preview.ts`(419) / `preview-menu-settings.ts`(301) / `preview-menu-roles.ts`(300) 已经拆出去了
+- `switch-preview.ts`(419) / `preview-menu/settings.ts`(301) / `preview-menu/roles.ts`(300) 已经拆出去了
 - 剩下的 1113 行是 mount-preview 的核心编排逻辑（场景注册 + 会话管理 + 资源加载），拆了会断生命周期链
 
 ### caps/ground-capability.ts（~900 行）

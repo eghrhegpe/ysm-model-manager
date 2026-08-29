@@ -23,8 +23,8 @@ import {
   collectSettingsCapControls,
   buildSettingsControls,
   buildSettingsSchema,
-} from "../adapters/preview-menu-settings.ts";
-import { collectVisiblePredicates } from "../adapters/preview-menu-cap-controls.ts";
+} from "../adapters/preview-menu/settings.ts";
+import { collectVisiblePredicates } from "../adapters/preview-menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "../render-budget.ts";
@@ -77,7 +77,7 @@ function makeFakeCap(
 /**
  * 把 fake cap 注入注册表读口（spy 而非 createAll）。
  *
- * 不用 `registry.add + createAll` 的原因：preview-menu-settings.ts 的 import 链
+ * 不用 `registry.add + createAll` 的原因：preview-menu/settings.ts 的 import 链
  * 已把真实 cap 工厂注册到全局单例，createAll 会在 happy-dom 下逐个构造失败
  * （无 WebGL renderer），且 factories 无法清空、跨用例累积。spy 只替换读口，隔离干净。
  */

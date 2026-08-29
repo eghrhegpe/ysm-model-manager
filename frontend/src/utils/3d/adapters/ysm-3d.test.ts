@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
 import type { BedrockGeometry } from "../../../views/app-preview/geometry.ts";
-import type { PreviewMenuHandle } from "./preview-menu.ts";
+import type { PreviewMenuHandle } from "./preview-menu/core.ts";
 import type { BoneTree } from "../bone-tools.ts";
 
 const mocks = vi.hoisted(() => ({

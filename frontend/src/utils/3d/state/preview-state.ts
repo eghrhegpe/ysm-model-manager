@@ -27,7 +27,7 @@
 //   - bloom / pmrem / wireframe 走 cap 的 get/set 派生映射，本层不落盘；
 //     cap 存自己的域（cap.saveState），本层不重复存
 
-// [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters/preview-menu-node-types.ts，
+// [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters 平铺的 preview-menu-node-types.ts，
 // state 反向 import adapters → 类型归位 state，adapters 反过来前向 import state，方向正）
 /** 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） */
 export type PreviewStatePath =

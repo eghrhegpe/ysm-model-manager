@@ -5,15 +5,15 @@
 // 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载角色，
 // 少用但重要）；底部复用 fillSwitch 加载入口（siblings + 类型 tab）。
 
-import type { SlideMenuHandle, SlideMenuView } from "../../../ui/ui-slide-menu.ts";
-import { attachTooltip } from "../../../utils/dom/tooltip.ts";
-import { safeErrorMessage } from "../../safe-error-msg.ts";
-import { t } from "../../../core/i18n/t.ts";
-import type { PreviewMenuNode, PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
-import { sceneRegistry, type ModelEntry } from "./scene-registry.ts";
-import { renderMenu, renderAdapterPanelContent } from "./preview-menu-render.ts";
-import { fillSwitch } from "./preview-menu-switch.ts";
-import type { PreviewMenuCtx } from "./preview-menu.ts";
+import type { SlideMenuHandle, SlideMenuView } from "../../../../ui/ui-slide-menu.ts";
+import { attachTooltip } from "../../../../utils/dom/tooltip.ts";
+import { safeErrorMessage } from "../../../safe-error-msg.ts";
+import { t } from "../../../../core/i18n/t.ts";
+import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
+import { sceneRegistry, type ModelEntry } from "../scene-registry.ts";
+import { renderMenu, renderAdapterPanelContent } from "./render.ts";
+import { fillSwitch } from "./switch.ts";
+import type { PreviewMenuCtx } from "./core.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
 const tr = (key: string, fallback: string): string => {

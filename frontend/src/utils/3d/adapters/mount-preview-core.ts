@@ -59,8 +59,8 @@ import { installUiComponentsStyles } from "../../../ui/ui-components-styles.ts";
 import { createSlideMenu } from "../../../ui/ui-helpers.ts";
 import { createHeaderToggle } from "../../../ui/ui-header-toggle.ts";
 import { PREVIEW_OVERLAY_ID } from "../../../ui/ui-constants.ts";
-import { mountPreviewRootMenu, type PreviewMenuHandle } from "./preview-menu.ts";
-import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import { mountPreviewRootMenu, type PreviewMenuHandle } from "./preview-menu/core.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 import { type CameraControlBridge } from "./camera-controls.ts";
 import { type BoneSelectInfo, type BoneMaps, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
 import type { TdKeyAction } from "../keymap.ts";
@@ -364,8 +364,8 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   const viewContainer = _singletonViewContainer;
 
   // 声明式根菜单（⚙️）：core 在 overlay 内自建（预览全屏盖住 app 外壳，主程序 nav.settings 够不着），
-  // 全部控件以 CORE_MENU_ITEMS + 适配器注入项表驱动渲染（preview-menu-defs.ts），
-  // 测试遍历真实菜单数组断言（preview-menu-items.test.ts），选择器稳定可遍历（ADR-076 v2）。
+  // 全部控件以 CORE_MENU_ITEMS + 适配器注入项表驱动渲染（preview-menu/defs.ts），
+  // 测试遍历真实菜单数组断言（preview-menu/items.test.ts），选择器稳定可遍历（ADR-076 v2）。
   const menuHandle = mountPreviewRootMenu(overlay, {
     selfMode,
     getCap: (id: string) => sceneCapabilityRegistry.getById(id) ?? null,

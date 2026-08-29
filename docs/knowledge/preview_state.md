@@ -5,8 +5,8 @@ tier: leaf
 category: ui
 source_files:
   - frontend/src/utils/3d/state/preview-state.ts
-  - frontend/src/utils/3d/adapters/preview-menu-settings.ts
-  - frontend/src/utils/3d/adapters/preview-menu-node-types.ts
+  - frontend/src/utils/3d/adapters/preview-menu/settings.ts
+  - frontend/src/utils/3d/adapters/preview-menu/node-types.ts
 tests:
   - frontend/src/utils/3d/state/preview-state.test.ts
 use_when:
@@ -28,7 +28,7 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 | 项 | 旧（ADR-125） | 新（P4-A） |
 |----|--------------|-----------|
 | 模块 | `state/settings-state.ts` | `state/preview-state.ts` |
-| 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀归位，原 `preview-menu-node-types.ts:14-21` 七域模板） |
+| 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀归位，原 `preview-menu/node-types.ts:14-21` 七域模板） |
 | 已知路径常量 | `SETTINGS_PATHS` | `KNOWN_PATHS`（仍只列 6 项落地） |
 | 快照函数 | `settingsSnapshot()` | `previewSnapshot()` |
 | 公共函数名 | `getStateValue/setStateValue/subscribeSettings/isPathAvailable/resetSettingsListeners/toStatePath` | **保持同名**（通用名，跨子步零额外回归） |
@@ -62,13 +62,13 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 
 ## 与其他子系统关系
 
-- **ADR-085**：本层是其 S2「状态单向流」的补全——S1 注册表 / S3 refreshDock 仍有效（`preview-menu.ts`）。
+- **ADR-085**：本层是其 S2「状态单向流」的补全——S1 注册表 / S3 refreshDock 仍有效（`preview-menu/core.ts`）。
 - **ADR-125**：本层是其 P1 的升格，六项横切设置的「持久化边界」与「双写防线」原样继承。
 - **ADR-126 P4-A→D→C**：本层是 P4 系列地基——P4-B 面板 schema 化、P4-D 可见性谓词化、P4-C dockGroup 解耦都消费本层的状态通道。
 - **sceneRegistry（ADR-093）**：角色/动作的**业务状态**（活跃角色、角色列表、menuItems）由其管，本层**不重复造轮**——避免双源。
 - **SlideMenuHandle**：面板导航栈由其自管，本层不接管。
 - **`PreviewMenuNode` 字段层**：`sharedOnly` / `hideInSelfMode` / `requiresEnvironment` 是节点自身守卫，本层不复制。
-- **`renderCapControls`**：唯一控件渲染器，本层状态通过 `buildCrossCuttingControls()`（`preview-menu-settings.ts`）喂给它。
+- **`renderCapControls`**：唯一控件渲染器，本层状态通过 `buildCrossCuttingControls()`（`preview-menu/settings.ts`）喂给它。
 
 ## 不变量
 
@@ -82,5 +82,5 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 
 - ADR-126（本决策 P4-A）、ADR-125（P1 血统）、ADR-085（S2 补全对象）、ADR-093（sceneRegistry 归属）
 - 契约测试：`frontend/src/utils/3d/state/preview-state.test.ts`（20 例，随迁自 settings-state.test.ts）
-- 消费者：`preview-menu-settings.ts`（`buildCrossCuttingControls` 三项横切控件读写走本层）
+- 消费者：`preview-menu/settings.ts`（`buildCrossCuttingControls` 三项横切控件读写走本层）
 - 后续：P4-B 面板 schema 化（**已落地 P4-B-1/2**）、P4-D 可见性谓词化（**已落地：`visibleWhen: (s: PreviewSnapshot) => boolean`**，node-types.ts 签名升级 + renderMenu / renderPreviewSchemaContent 调用点传 `previewSnapshot()`）、P4-C dockGroup 解耦（按需加 `ui.activePanel`）

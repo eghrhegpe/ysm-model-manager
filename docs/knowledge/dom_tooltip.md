@@ -37,7 +37,7 @@ use_when:
 ## 与其他子系统关系
 
 - `fab.ts` `createIconButton`：`opts.title` 走本组件（不设原生 title），aria-label 承担可达性——topBar 全部图标按钮（✕ 关闭 / ◀▶ 面板切换 / 📷 截图 / ⟲ 重置等）自动获得 tooltip
-- `preview-menu.ts`：➕追加到场景 / ●设为焦点 / ⚙模型工具 / 角色路径 4 处由 `.title=` 改 `attachTooltip`
+- `preview-menu/core.ts`：➕追加到场景 / ●设为焦点 / ⚙模型工具 / 角色路径 4 处由 `.title=` 改 `attachTooltip`
 - `app-preview` 面板 FAB（Shadow DOM 内）：`detail.ts` / `detail-3d.ts` / `skeleton.ts` / `maid-3d.ts` 共 9 处绑定点 `promoteTitleIfPresent`
 - 底部 dock 导航按钮（`preview-dock-navbtn`）**不接**——常显文字标签，tooltip 冗余
 

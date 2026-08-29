@@ -12,7 +12,7 @@ import { cardContainer, addFieldRow } from "../../ui/ui-helpers.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
-import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import {
   listMmdMaterials,
@@ -55,7 +55,7 @@ export function fillMmdModelPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void
 /**
  * [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。
  * 纯数据：2 行 field（名称 + 骨骼/材质/表情计数），零 DOM。
- * adapter 的 model 面板节点带 `children: mmdModelInfoNodes(ctx)` → 渲染走 renderMenu（preview-menu-render.ts）。
+ * adapter 的 model 面板节点带 `children: mmdModelInfoNodes(ctx)` → 渲染走 renderMenu（preview-menu/render.ts）。
  * fillMmdModelPanel 保留（向后兼容 + 既有测试零回归）；新面板路径走本函数。
  */
 export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {

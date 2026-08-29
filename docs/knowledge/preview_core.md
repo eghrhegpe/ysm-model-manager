@@ -72,6 +72,8 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
   **2026-08-19 环境拆组**：环境体量 > 全部场景设置，故将 `environment` 从 `scene` 组拆出，独立成 `env` 组（🌍 环境）。scene 组 icon 换 🎛️ 避免双 🌍 混淆。dock 按钮顺序：🧍 模型 → 💃 动作 → 🌍 环境 → 🎛️ 场景。组内仅一个 panel 项时自动快捷直达面板（不渲染组根视图），故 env 组（单 environment 项）点击直接进环境面板。
 
+  **2026-08-29 ADR-131 统计面板**：核心层 post-build（`mount3D` 注册块）对 `sceneBaseline` 差量 roots 调 `collectSceneStats`（`utils/3d/scene-stats.ts`），经 `mergeStatsMenuItems`（`preview-menu/stats.ts`）合并统计面板进 `menuItems` 后**一次** `setAdapterItems`（合并后一次注入，禁止二次调用覆盖）；switch 路径只合并进注册表 `menuItems`（经 roles 详情 / `setActive` 消费），不在核心层重复注入。面板节点 `kind: "panel"` + 6 个 field 行，`visibleWhen: (s) => hasSceneStats(stats)` 守卫有统计才显示（铁律：声明式节点可被所有数组类菜单调用）。i18n key `preview.stats.*` 三段式。
+
   **2026-08-19 下钻箭头**：组根视图（多 panel 列表）中，`kind === "panel"` 的行右侧显示 `>` 装饰性箭头（`data-testid="row-chevron"`），提示该行可点击进入下级面板。action 型行无箭头。渲染见 `makeRow(def, { chevron: def.kind === "panel" })`。
 - 契约接口：`PreviewBuildCtx`（外壳句柄 + **`menu: PreviewMenuHandle` 注册通道**）、`PreviewScene`（内容契约：`update`/`dispose`/`resetCamera`/`extraControls`…）、`PreviewAdapter`（`id`/`mode`/`build`/`onClose`）、`PreviewHandle`、`CameraControlBridge`
 

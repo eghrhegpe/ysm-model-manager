@@ -207,7 +207,17 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
   //   与 cap 自报控件同源：pp-enabled / wireframe-toggle / sky-env
   "render.bloom": {
     get: () => toggleCap("postprocessing")?.isEnabled() ?? false,
-    set: (v) => toggleCap("postprocessing")?.setEnabled(Boolean(v)),
+    set: (v) => {
+      const cap = toggleCap("postprocessing");
+      if (!cap) return;
+      // 性能档位只做「总闸」：render.bloom=false 关闭全部（低档保性能）；
+      // =true 不强制打开 —— 尊重 per-type 预设设为关闭的类型（方块/体素/光影包），
+      // 根治「medium 默认强制全类型开 Bloom → YSM/车万女仆爆亮」的越权。
+      // 最终开关 = 总闸(render.bloom) && per-type 门禁(params.enabled)，手动开关不受此限。
+      // params 经结构化转型读取（ToggleCap 接口不暴露 getParams，避免引入循环依赖）。
+      const params = (cap as unknown as { getParams: () => { enabled: boolean } }).getParams();
+      cap.setEnabled(Boolean(v) ? params.enabled : false);
+    },
     available: () => toggleCap("postprocessing") !== undefined,
   },
   "render.wireframe": {

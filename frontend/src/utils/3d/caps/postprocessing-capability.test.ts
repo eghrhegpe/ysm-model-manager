@@ -382,21 +382,48 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
     const origExp = renderer.toneMappingExposure;
     const origTM = renderer.toneMapping;
-    // mmd 预设 exposure=1.05, toneMapping=aces — 但 enabled=false 不能写 renderer
-    cap.setPreset("mmd");
+    // ysm 预设 enabled=false：统一亮度口径下预设只带 enabled，不携 exposure
+    cap.setPreset("ysm");
     expect(renderer.toneMapping).toBe(origTM);
     expect(renderer.toneMappingExposure).toBeCloseTo(origExp, 4);
-    // params 更新了
-    expect(cap.getParams().exposure).toBeCloseTo(1.05, 4);
+    // params 保持全局默认曝光（光影包统一值），不出现 per-type 1.05
+    expect(cap.getParams().exposure).toBeCloseTo(1.0, 4);
+    expect(cap.isEnabled()).toBe(false);
   });
 
-  it("setPreset 在 enabled=true 时正常写 tone mapping / exposure", () => {
+  it("setPreset 在 enabled=true 时正常写 tone mapping / exposure（全局统一值）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState();
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
-    cap.setPreset("mmd");
-    expect(renderer.toneMappingExposure).toBeCloseTo(1.05, 4);
+    // vrm 预设 enabled=true：写全局默认曝光 1.0（不再 per-type 1.05）
+    cap.setPreset("vrm");
+    expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4);
+  });
+
+  it("setPreset 落库 this.enabled（per-type 开关生效，根治死代码）", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState();
+    // 构造 off，套用 vrm（enabled:true）→ 应翻转为 on 并构建 composer
+    const capOn = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
+    let built = false;
+    (capOn as unknown as { buildComposer: () => void }).buildComposer = () => { built = true; };
+    (capOn as unknown as { disposeComposer: () => void }).disposeComposer = () => {};
+    (capOn as unknown as { applyReflectorSync: () => void }).applyReflectorSync = () => {};
+    capOn.setPreset("vrm");
+    expect(capOn.isEnabled()).toBe(true);
+    expect(built).toBe(true);
+    // 构造 on，套用 ysm（enabled:false）→ 应翻转为 off 并销毁 composer
+    const capOff = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
+    let disposed = false;
+    (capOff as unknown as { buildComposer: () => void }).buildComposer = () => {};
+    (capOff as unknown as { disposeComposer: () => void }).disposeComposer = () => { disposed = true; };
+    (capOff as unknown as { applyReflectorSync: () => void }).applyReflectorSync = () => {};
+    capOff.setPreset("ysm");
+    expect(capOff.isEnabled()).toBe(false);
+    expect(disposed).toBe(true);
   });
 });
 

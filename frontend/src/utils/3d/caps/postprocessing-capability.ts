@@ -334,47 +334,24 @@ function ppcBuildSSR(cap: PostprocessingCapability): MenuControlDef[] {
   ];
 }
 
-/** 模型类别后处理预设 */
+/**
+ * 模型类别后处理预设 —— 统一亮度口径
+ *
+ * bloomStrength / bloomThreshold / bloomRadius / exposure / toneMapping 一律继承
+ * DEFAULT_POSTPROC_PARAMS（光影包全局值），**不按类型分别调**：同一光影包 → 同一观感，
+ * 消除「YSM/车万女仆爆亮、MMD/VRM 无反应」的不对称（材质差异不应由 per-type 亮度补偿）。
+ *
+ * per-type 预设只保留 `enabled`，语义收紧为「该类模型是否允许走后处理」——纯性能/视觉门禁。
+ * 最终生效开关 = 性能档位 `render.bloom`（总闸：低档=false 全关）&& 此处 `enabled`（per-type 门禁）。
+ */
 export const POSTPROC_PRESETS: Record<string, Partial<PostprocessingParams>> = {
   default: { ...DEFAULT_POSTPROC_PARAMS },
-  ysm: {
-    // 方块：后处理薄，避免像素感丢失；SSR off（方块 PBR 效果有限）
-    enabled: false, bloomStrength: 0.3, bloomThreshold: 0.85, bloomRadius: 0.3,
-    ssaoEnabled: false, toneMapping: "aces", exposure: 1.0,
-    reflectionMode: "envmap-only", reflectorDisableWhenSSR: true,
-  },
-  vrm: {
-    // PBR 角色：Bloom 柔光 + SSAO 中档 + SSR 默认开（金属皮肤反射明显）
-    // ✨ v1.14 调优：默认开启后处理，Bloom 更柔和自然
-    enabled: true, bloomStrength: 0.6, bloomThreshold: 0.7, bloomRadius: 0.5,
-    ssaoEnabled: false, ssaoRadius: 10, toneMapping: "aces", exposure: 1.05,
-    reflectionMode: "envmap-only", ssrOpacity: 0.5, ssrMaxDistance: 180, reflectorDisableWhenSSR: true,
-  },
-  mmd: {
-    // toon：Bloom 阈值提升防白天天空全图泛白（§2 曝光治理）；toon 自发光仍有溢出但范围收敛
-    // 前值 v1.14：strength=1.0 threshold=0.5 radius=0.9 → 过强，天空亮区 >0.5 触发 Bloom → 整片泛白
-    enabled: true, bloomStrength: 0.85, bloomThreshold: 0.7, bloomRadius: 0.8,
-    ssaoEnabled: false, ssaoRadius: 6, toneMapping: "aces", exposure: 1.05,
-    reflectionMode: "envmap-only",
-  },
-  litematic: {
-    // 体素：Bloom 小，SSAO 关（无明显细节反而出噪声）；SSR 关（方块反射无细节）
-    enabled: false, bloomStrength: 0.3, bloomThreshold: 0.9, bloomRadius: 0.2,
-    ssaoEnabled: false, toneMapping: "aces", exposure: 1.0,
-    reflectionMode: "envmap-only",
-  },
-  resourcepack: {
-    enabled: false, bloomStrength: 0.3, bloomThreshold: 0.85, bloomRadius: 0.3,
-    ssaoEnabled: false, toneMapping: "aces", exposure: 1.0,
-    reflectionMode: "envmap-only",
-  },
-  "mmd-scene": {
-    // 场景模型：Bloom 稍强出氛围，SSAO 中档增加纵深，SSR 开（场景地面反射）
-    // 阈值从 0.55 → 0.72（§2 曝光治理）：避免大面积天空触发 Bloom，保留场景高光与自发光溢出
-    enabled: false, bloomStrength: 0.8, bloomThreshold: 0.72, bloomRadius: 0.85,
-    ssaoEnabled: false, ssaoRadius: 15, toneMapping: "aces", exposure: 1.0,
-    reflectionMode: "envmap-only",
-  },
+  ysm:         { enabled: false }, // 方块/车万女仆：满亮材质 + 发光骨，默认关后处理避免爆亮
+  vrm:         { enabled: true },  // PBR 角色：开柔光
+  mmd:         { enabled: true },  // toon：开辉光
+  litematic:   { enabled: false }, // 体素：默认关
+  resourcepack:{ enabled: false }, // 资源包：默认关
+  "mmd-scene": { enabled: false }, // 场景：默认关
 };
 
 export class PostprocessingCapability implements SceneCapability, PostprocessingLike {
@@ -675,11 +652,25 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     // （对齐 fog「预设不强制覆盖用户选择」口径，修复重启后 SSR 模式被静默重置为 envmap-only）
     const { reflectionMode: _presetMode, ...presetRest } = preset;
     this.params = { ...this.params, ...presetRest };
-    // 曝光归权：enabled=false 时 applyToneMapping 不写 renderer（避免覆盖 SkyCapability 写入值）
-    if (this.enabled) this.applyToneMapping();
-    if (this.composer) {
-      this.buildComposer(); // 重新按预设构建（pass 组合可能改变）
+    // 统一亮度口径：per-type 预设仅携带 enabled 开关；bloomStrength/threshold/exposure
+    // 等亮度参数统一继承 DEFAULT（光影包全局值），不按类型分别调。
+    // 关键修复：将预设 enabled 落库到实例字段 this.enabled，使 per-type 开关真正生效
+    // —— 此前 this.enabled 只被构造/setEnabled/loadState 更新，setPreset 改了 params.enabled
+    //    却从不更新 this.enabled → needComposer/render 读取的开关永远是旧值，per-type 预设形同虚设。
+    if (this.params.enabled !== this.enabled) {
+      this.enabled = this.params.enabled;
+      if (this.enabled) {
+        this.buildComposer();
+        this.applyToneMapping();
+      } else {
+        this.disposeComposer();
+      }
+      this.applyReflectorSync();
+    } else if (this.enabled) {
+      // enabled 未变但 loadState 可能更新了曝光等参数，保持 renderer 同步
+      this.applyToneMapping();
     }
+    if (this.composer) this.buildComposer();
   }
 
   /* -------- 参数 setter -------- */

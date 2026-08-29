@@ -6,7 +6,7 @@
 
 | 层级 | 文件 | 角色 |
 |------|------|------|
-| **活报告** | `audit-r5` / `audit-r8` / `audit-r14` | 仍有未闭合项的审计（前端数据层 / 测试覆盖缺口 / 覆盖率），**当前事实源** |
+| **活报告** | `audit-r5` / `audit-r8` / `audit-r14` / `audit-r15` | 仍有未闭合项的审计（前端数据层 / 测试覆盖缺口 / 覆盖率 / scripts 工具链），**当前事实源** |
 | 归档 | `archive/` | 已全部闭合的历史审计（R1-R4, R6-R13, 初版基线, 仲裁记录），代码还债后移入，**仅作历史追溯** |
 | 审核框架 | `audit-framework.md` | 审计方法论 + ADR-109 三份 Checklist（代码审查 / 跨平台 / 前端 3D） |
 
@@ -19,6 +19,7 @@ audit/
 ├── audit-r5-frontend-data-layer-2026-08-18.md    ← 活报告
 ├── audit-r8-test-coverage-gaps-2026-08-18.md     ← 活报告
 ├── audit-r14-coverage-2026-08-18.md              ← 活报告
+├── audit-r15-scripts-2026-08-29.md               ← 活报告（scripts/ 工具链）
 └── archive/                     ← 15 份已闭合报告（R1-R4, R6-R13, 基线, 仲裁）
 ```
 

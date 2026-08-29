@@ -10,6 +10,9 @@ source_files:
   - frontend/src/utils/3d/bone-tools.ts
   - frontend/src/utils/3d/caps/sky-capability.ts
   - frontend/src/utils/3d/caps/ground-capability.ts
+  - internal/app/container_entries.go
+  - go/litematic/voxel.go
+  - frontend/src/backend/web-fs.ts
 tests:
   - frontend/src/utils/3d/adapters/mmd-adapter.test.ts
   - frontend/src/utils/3d/adapters/ysm-3d.test.ts
@@ -77,6 +80,8 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
   **P2 详情卡补统计行（2026-08-29）**：VRM `readVrmMeta` 在 `deepDispose` 前 `collectSceneStats(vrm.scene)` 顺带采集（零额外成本，`VrmMetaInfo.stats`；顺序守护测试：deepDispose mock 真清几何，挪位即断言失败）；MMD `showMmdPreview` 经 `mmd-detail-stats.ts` 的 `readPmxStats`（Worker 解析 PMX counts + 模块级缓存防重复解析，**键含 b64 长度内容指纹**——同路径文件被替换/重导入后自动重解析不显陈旧统计，上限 64 条防无界增长；仅 `.pmx` 触发、失败降级 null）。**三口径标注**（审核建议 ②）：`preview.stats.panel` =「渲染实测」（traverse 场景图口径，3D 菜单 + VRM 详情卡共用）、`preview.stats.file` =「文件统计」（PMX 解析口径，MMD 详情卡）、YSM 模型面板 = Go AnalyzeBedrockModel 口径——三方区分，避免同屏数字口径困惑。**已知边界**：`.pmd` 老格式不触发文件统计（parser 为 PMX 专属），降级无统计行——非 bug，日后同理。
 
   **P3 资源包模型清单（2026-08-29）**：Go **新增** `ListPackModelsDetail` 绑定（不破坏 `ListPackModels` 4 处消费者）：`models[{path,cubes}] + total`，cubes 数 JSON `elements`，封顶 `packModelDetailCap=200` 防大包；`generate:bindings -ts` 重生 + web-fs 镜像 `listWebPackModelsDetail` 同构。`showResourcePack` 加「🧊 模型清单 (N)」区（每行 path+cubes，超限显示 total，`esc()` 防 XSS），点击单模型 `createPack3D(path, { startEntry })` 直达 pack-model-adapter 3D（适配器吃 entry path，zip 当虚拟文件夹）。
+
+  **ADR-132 遗留 1 蓝图/litematic zip 容器多 nbt（2026-08-29）**：Go **新增** `ListContainerEntries(path, exts)`（容器内条目枚举，`container.Open` → `Entries()` → 扩展名白名单过滤 → 升序 JSON 数组）与 `GetVoxelDataInContainer(path, entry, ext)`（容器内 gzip NBT 条目读取 → 解耦后的「root→voxel」管线 → 与 `Get*VoxelData` 同形状 JSON，`containerEntrySafe` 守卫防穿越）。**voxel 解耦**：`go/litematic/voxel.go` 三个 `Build*VoxelData` 拆「路径→root」（`openGzRoot`）+「root→voxel」（`Build*VoxelDataFromRoot`），容器内读取复用后者（`OpenGzRootFromBytes` 导出入口），裸文件路径行为零回归。**前端**：`litematic-3d.ts` `createLitematic3D` 对 `.zip` 先 `ListContainerEntries` 枚举（`.nbt,.litematic,.schematic` 白名单）→ 装配 adapter（`containerPath`+`modelEntries`+`entryExt`）→ 初始 entry = 首项，容器内 voxelCall 走 `GetVoxelDataInContainer`（修复原「zip 被当 gzip 打开」坏预览）；`litematic-adapter.ts` `buildLitematicScene` 注入 `multiModelSelectNode`（ADR-132 原语，候选 = modelEntries，activeId = 当前 entry，onSelect = `ctx.switchTo`）；空容器/单 entry 退化无 select（裸路径零回归）。**web 镜像**：`web-fs.ts` `listWebContainerEntries` + `readWebVoxelInContainer`（extractZip → findZipEntry → `decodeVoxelNbt` → voxelView）。
 
   **2026-08-19 下钻箭头**：组根视图（多 panel 列表）中，`kind === "panel"` 的行右侧显示 `>` 装饰性箭头（`data-testid="row-chevron"`），提示该行可点击进入下级面板。action 型行无箭头。渲染见 `makeRow(def, { chevron: def.kind === "panel" })`。
 - 契约接口：`PreviewBuildCtx`（外壳句柄 + **`menu: PreviewMenuHandle` 注册通道**）、`PreviewScene`（内容契约：`update`/`dispose`/`resetCamera`/`extraControls`…）、`PreviewAdapter`（`id`/`mode`/`build`/`onClose`）、`PreviewHandle`、`CameraControlBridge`

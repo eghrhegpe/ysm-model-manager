@@ -732,3 +732,65 @@ describe("appendLitematicPreview — 同台追加入口对称 mmd/vrm", () => {
 function unmountOverlay(overlay: HTMLElement): void {
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
 }
+
+// ===== ADR-132 遗留 1：蓝图/litematic zip 容器内多模型装配 =====
+// createLitematic3D 对 .zip 路径先 ListContainerEntries 枚举 → 装配容器内多模型 adapter
+// （containerPath + modelEntries + 容器内 voxelCall）→ 初始 entry = 首项；裸文件零回归。
+describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
+  it("zip 枚举出多 entry → 装配容器内 adapter，初始 build 首项 entry，voxelCall 走 GetVoxelDataInContainer", async () => {
+    const voxelInContainer = vi.fn().mockResolvedValue(VALID_JSON);
+    vi.mocked(getApp).mockResolvedValue({
+      ListContainerEntries: vi.fn().mockResolvedValue(JSON.stringify(["builds/a.nbt", "builds/b.litematic"])),
+      GetVoxelDataInContainer: voxelInContainer,
+    } as never);
+    await createLitematic3D("/lib/blueprint.zip", "GetLitematicVoxelData");
+    // 初始 entry = 首项（builds/a.nbt），容器内 voxelCall 读容器字节
+    expect(voxelInContainer).toHaveBeenCalledWith("/lib/blueprint.zip", "builds/a.nbt", ".nbt");
+    const overlay = lastOverlay();
+    expect(overlay).toBeTruthy();
+    // 多模型 select 已注入（schema 注册 + menuItems）
+    const key = listSchemas().filter((k) => k.startsWith("litematic-slice-")).pop();
+    expect(key).toBeTruthy();
+    unmountOverlay(overlay);
+  });
+
+  it("zip 枚举空/失败 → 降级裸路径（不崩溃，走原 GetLitematicVoxelData 契约）", async () => {
+    const voxel = vi.fn().mockResolvedValue(VALID_JSON);
+    vi.mocked(getApp).mockResolvedValue({
+      ListContainerEntries: vi.fn().mockResolvedValue("[]"),
+      GetLitematicVoxelData: voxel,
+    } as never);
+    await createLitematic3D("/lib/empty.zip", "GetLitematicVoxelData");
+    // 空容器 → 降级裸路径（zip 当裸文件读，仍走原契约，不崩溃）
+    expect(voxel).toHaveBeenCalledWith("/lib/empty.zip");
+    const overlay = lastOverlay();
+    expect(overlay).toBeTruthy();
+    unmountOverlay(overlay);
+  });
+
+  it("zip 单 entry → 无 select（单模型无选择语义）", async () => {
+    vi.mocked(getApp).mockResolvedValue({
+      ListContainerEntries: vi.fn().mockResolvedValue(JSON.stringify(["builds/only.nbt"])),
+      GetVoxelDataInContainer: vi.fn().mockResolvedValue(VALID_JSON),
+    } as never);
+    await createLitematic3D("/lib/single.zip", "GetLitematicVoxelData");
+    const overlay = lastOverlay();
+    expect(overlay).toBeTruthy();
+    // 单候选无 select 节点（menuItems 仅 slice 面板）——经 schema-registry 验证 slice 仍注册
+    const key = listSchemas().filter((k) => k.startsWith("litematic-slice-")).pop();
+    expect(key).toBeTruthy();
+    unmountOverlay(overlay);
+  });
+
+  it("裸 .litematic 文件零回归（不经枚举，直接走 GetLitematicVoxelData）", async () => {
+    const voxel = vi.fn().mockResolvedValue(VALID_JSON);
+    vi.mocked(getApp).mockResolvedValue({
+      GetLitematicVoxelData: voxel,
+    } as never);
+    await createLitematic3D("/a.litematic", "GetLitematicVoxelData");
+    expect(voxel).toHaveBeenCalledWith("/a.litematic");
+    const overlay = lastOverlay();
+    expect(overlay).toBeTruthy();
+    unmountOverlay(overlay);
+  });
+});

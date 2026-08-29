@@ -22,7 +22,7 @@
 | go/instance | 1 | 4 |
 | go/internal | 1 | 3 |
 | go/launcher | 1 | 1 |
-| Go·Litematic | 6 | 9 |
+| Go·Litematic | 6 | 13 |
 | Go·日志 | 2 | 12 |
 | Go·包管理 | 1 | 3 |
 | Go·路径 | 1 | 7 |
@@ -38,7 +38,7 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 26 |
-| Go(internal)·应用入口 | 29 | 217 |
+| Go(internal)·应用入口 | 30 | 220 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 18 | 37 |
@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 181 | 747 |
+| 前端·工具 | 181 | 748 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **513** | **2208** |
+| **合计** | **514** | **2216** |
 
 ## Go·头像
 
@@ -324,9 +324,13 @@
 | `ParseMeta()` | `go/litematic/parser:30` | ParseMeta 解析 litematic 格式（Litematic/Minihud 保存的投影）元数据。 |
 | `ParseSchematicSummary()` | `go/litematic/schematic:10` | ParseSchematicSummary 解析 WorldEdit schematic（.schem）摘要。 |
 | `ParseNbtStructure()` | `go/litematic/structure:6` | ParseNbtStructure 解析 Java 版 structure NBT（.nbt 结构方块保存）摘要。 |
-| `BuildVoxelData()` | `go/litematic/voxel:92` | BuildVoxelData 构建体素渲染数据（按颜色分组） |
-| `BuildNbtVoxelData()` | `go/litematic/voxel:274` | — |
-| `BuildSchematicVoxelData()` | `go/litematic/voxel:492` | — |
+| `OpenGzRootFromBytes()` | `go/litematic/voxel:64` | OpenGzRootFromBytes 从 gzip NBT 字节流解码 root compound（容器条目读取的导出入口， internal/app 经 container.E |
+| `BuildVoxelData()` | `go/litematic/voxel:108` | BuildVoxelData 构建体素渲染数据（按颜色分组）——裸文件路径入口（零回归）。 |
+| `BuildVoxelDataFromRoot()` | `go/litematic/voxel:118` | BuildVoxelDataFromRoot 从已解码 root compound 构建 litematic 体素（ADR-132 遗留 1： 容器内条目读取复用——root 由 |
+| `BuildNbtVoxelData()` | `go/litematic/voxel:296` | BuildNbtVoxelData 读取 .nbt structure 文件体素数据（裸文件路径入口）。 |
+| `BuildNbtVoxelDataFromRoot()` | `go/litematic/voxel:305` | BuildNbtVoxelDataFromRoot 从已解码 root compound 构建 structure NBT 体素（容器内条目复用）。 |
+| `BuildSchematicVoxelData()` | `go/litematic/voxel:520` | BuildSchematicVoxelData 读取 .schematic 文件体素数据（裸文件路径入口）。 |
+| `BuildSchematicVoxelDataFromRoot()` | `go/litematic/voxel:529` | BuildSchematicVoxelDataFromRoot 从已解码 root compound 构建 schematic 体素（容器内条目复用）。 |
 
 ## Go·日志
 
@@ -851,6 +855,9 @@
 | `App.ExecuteCLI()` | `internal/app/cli_bridge:31` | ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定） |
 | `App.GetAllowedCLICommands()` | `internal/app/cli_bridge:140` | GetAllowedCLICommands 返回可用 CLI 命令列表 列表由 main.go 从 cli 注册表注入（SetAllowedCommands），新增命令自动可见 |
 | `CoopCoepMiddleware()` | `internal/app/coi_middleware:10` | CoopCoepMiddleware 注入 COOP/COEP 响应头（ADR-079 M2：桌面 Wails 解锁 SharedArrayBuffer → 支持 pthread |
+| `App.ListContainerEntries()` | `internal/app/container_entries:75` | ListContainerEntries 枚举容器内匹配扩展名白名单的条目路径（升序 JSON 数组）。 |
+| `App.GetVoxelDataInContainer()` | `internal/app/container_entries:110` | GetVoxelDataInContainer 读取容器内 gzip NBT 条目并构建体素数据（JSON 与 Get*VoxelData 同形状：成功 → LitematicVo |
+| `containerEntryError.Error()` | `internal/app/container_entries:175` | — |
 | `ErrorJSON()` | `internal/app/error_json:16` | ErrorJSON 构建带 error 字段的响应 JSON。 |
 | `SyncErrorJSON()` | `internal/app/error_json:31` | SyncErrorJSON 构建同步操作的错误响应（含 conflicts / totalConflicts 基础字段）。 |
 | `ResolveErrorJSON()` | `internal/app/error_json:39` | ResolveErrorJSON 构建冲突解决的操作错误响应（含 resolved / failed / manual 基础字段）。 |
@@ -1034,7 +1041,7 @@
 | `typeFromWebDir()` | `frontend/src/backend/web-fs:76` | 从 /web/&lt;type&gt;/... |
 | `scanWebModels()` | `frontend/src/backend/web-fs:85` | — |
 | `readWebFile()` | `frontend/src/backend/web-fs:180` | 读文件（/web/&lt;type&gt;/&lt;rest&gt; → IDB → base64；wasm.ts 解码链零改动复用） 模型组 name 与组内 rel 在 file key 中无缝拼接（ |
-| `scanAllWebModels()` | `frontend/src/backend/web-fs:794` | 扫描全部资源类型的模型（供标签聚合 / 子目录映射等全库操作） |
+| `scanAllWebModels()` | `frontend/src/backend/web-fs:873` | 扫描全部资源类型的模型（供标签聚合 / 子目录映射等全库操作） |
 | `WebModelStats()` | `frontend/src/backend/web-stats` | — |
 | `STATS_BATCH_LIMIT()` | `frontend/src/backend/web-stats` | — |
 | `onStatsProgress()` | `frontend/src/backend/web-stats:40` | 注册批量统计进度回调（done/total 为该批已处理模型数；传 null 注销） |
@@ -1355,8 +1362,9 @@
 | `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:28` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
 | `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:43` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
 | `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:122` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
-| `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/litematic-adapter:237` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
-| `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:413` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
+| `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/litematic-adapter:238` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
+| `LitematicBuildOpts()` | `frontend/src/utils/3d/adapters/litematic-adapter:413` | — |
+| `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:425` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
 | `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
 | `materialNodes()` | `frontend/src/utils/3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
 | `RepresentativeSnapshot()` | `frontend/src/utils/3d/adapters/menu-graph:24` | 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） |
@@ -2236,9 +2244,9 @@
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:26` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:41` | 解析后的 Bedrock geometry |
 | `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:85` | 从 JSON 字符串解析 Bedrock geometry |
-| `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:26` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
-| `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:49` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
-| `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:54` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
+| `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:72` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
+| `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:115` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
+| `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:120` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:29` | P2 修复（code_review）：任意新预览派发时推进代际——原守卫只在 showLitematic 自身递增，litematic A 解析中切到 YSM B（走 detail |
 | `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:184` | 显示投影文件详情面板（tab 布局） |
 | `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:252` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
@@ -2421,9 +2429,9 @@
 | `openAdvFilterDialog()` | `frontend/src/views/app-tree/toolbar-search:253` | — |
 | `pickWebFilesAndImport()` | `frontend/src/views/app-tree/toolbar-search:287` | — |
 | `headerHTML()` | `frontend/src/views/app-tree/tpl:5` | — |
-| `footerHTML()` | `frontend/src/views/app-tree/tpl:29` | — |
-| `emptyHTML()` | `frontend/src/views/app-tree/tpl:37` | — |
-| `spinnerHTML()` | `frontend/src/views/app-tree/tpl:41` | — |
+| `footerHTML()` | `frontend/src/views/app-tree/tpl:30` | — |
+| `emptyHTML()` | `frontend/src/views/app-tree/tpl:38` | — |
+| `spinnerHTML()` | `frontend/src/views/app-tree/tpl:42` | — |
 | `ROW_H_GRID()` | `frontend/src/views/app-tree/virtual-scroll:3` | — |
 | `ROW_H_LIST()` | `frontend/src/views/app-tree/virtual-scroll:4` | — |
 | `calcVisibleRange()` | `frontend/src/views/app-tree/virtual-scroll:14` | 根据滚动位置计算可见行范围（支持动态行高） |

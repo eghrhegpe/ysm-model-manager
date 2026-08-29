@@ -9,10 +9,17 @@ source_files:
   - frontend/src/utils/3d/adapters/preview-menu/multi-model.ts
   - frontend/src/views/app-preview/mmd-controls.ts
   - frontend/src/utils/3d/adapters/pack-model-adapter.ts
+  - frontend/src/utils/3d/adapters/litematic-adapter.ts
+  - frontend/src/views/app-preview/litematic-3d.ts
+  - internal/app/container_entries.go
+  - go/litematic/voxel.go
 tests:
   - frontend/src/utils/3d/adapters/pack-model-adapter.test.ts
   - frontend/src/utils/3d/adapters/preview-menu/multi-model.test.ts
   - frontend/src/views/app-preview/mmd-controls.test.ts
+  - frontend/src/utils/3d/adapters/litematic-adapter.test.ts
+  - frontend/src/views/app-preview/litematic-3d.test.ts
+  - internal/app/container_entries_test.go
 use_when:
   - 多模型
   - 多组件
@@ -22,6 +29,9 @@ use_when:
   - 多 entry
   - 多候选
   - ADR-132
+  - 蓝图 zip
+  - litematic zip
+  - 容器内多 nbt
 ---
 
 # 多模型选择菜单原语 multiModelSelectNode
@@ -57,6 +67,7 @@ multiModelSelectNode(opts: {
 
 - **MMD zip**（`mmd-controls.ts` `mmdModelInfoNodes`）：候选 = `zipModelCandidates`（虚拟路径，mmd-adapter.ts:392 暴露）；get 保持 basename 匹配（`modelName` = 虚拟路径 basename）；set → `ctx.switchTo(虚拟路径)`
 - **资源包**（`pack-model-adapter.ts` `buildPackScene`）：候选 = `modelEntries`（pack-3d.ts 经 `ListPackModels` 枚举注入）；get 读 build 入参 entryPath；set → `ctx.switchTo(entryPath)`
+- **蓝图/litematic zip**（`litematic-adapter.ts` `buildLitematicScene` + `litematic-3d.ts` `createLitematic3D`，ADR-132 遗留 1）：`.zip` 容器先 `ListContainerEntries` 枚举（`.nbt,.litematic,.schematic` 白名单）→ 装配 adapter（`containerPath` + `modelEntries` + `entryExt`）→ build 的 path 即容器内 entry（虚拟路径）；候选 = `modelEntries`，get 读 build 入参 entryPath，set → `ctx.switchTo(entryPath)`；容器内 voxelCall 走 `GetVoxelDataInContainer(containerPath, entry, ext)`（修复原「zip 被当 gzip 打开」坏预览）。单 entry/空容器退化无 select（裸路径零回归）
 - **YSM/maid**（`skeleton-fill-panel.ts` `buildYsmModelSchema`）：候选 = `-1`（All，label「全部组件」）+ 组件下标 `0..N`；get/set 走 `sessionActiveComponent` per-scene 闭包；`refreshOnChange: true`（切档后 stats/纹理行按新会话态重建）；**显式 `mgCount > 1` 守卫**（「-1 = All」恒选项使 entries 恒 ≥2，不能依赖原语单候选 null 判断——单组件不显示 select，对齐旧语义）
 
 ## 与其他子系统关系

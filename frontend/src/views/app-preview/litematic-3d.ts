@@ -2,12 +2,28 @@
 // 内容层抽到 litematic-adapter.ts。本文件仅作兼容薄包装，保留
 // createLitematic3D / cleanupVoxel3D / invalidateLitematicPreview 公开符号，
 // litematic-meta.ts 与既有测试无需改动。voxelFn 经适配器工厂传入，决定走哪条 Go RPC。
+// ADR-132 遗留 1：.zip 蓝图/投影容器先 ListContainerEntries 枚举 → 装配容器内多模型
+// adapter（containerPath + modelEntries + 容器内 voxelCall），修复「zip 被当 gzip 打开」坏预览。
 
 import { mount3D, cleanupPreview, invalidatePreview, switchPreview, type PreviewAdapter, type Mount3DOptions } from "../../utils/3d/adapters/mount-preview-core.ts";
-import { buildLitematicScene } from "../../utils/3d/adapters/litematic-adapter.ts";
+import { buildLitematicScene, type LitematicBuildOpts } from "../../utils/3d/adapters/litematic-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
 import { RESOURCE_TYPES, VOXEL_RPC_BY_EXT, extOf } from "../../utils/resource/types.ts";
+
+/** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */
+const CONTAINER_VOXEL_EXTS = ".nbt,.litematic,.schematic";
+
+/** 是否容器路径（.zip 蓝图/投影包）——zip 内条目走容器枚举 + 容器内 voxelCall */
+function isContainerPath(path: string): boolean {
+  return extOf(path) === ".zip";
+}
+
+/** 容器内条目扩展名（.nbt/.litematic/.schematic 等；无匹配回退空 = 走默认体素构建） */
+function entryExtOf(entry: string): string {
+  const ext = extOf(entry);
+  return VOXEL_RPC_BY_EXT[ext] ? ext : "";
+}
 
 /** voxelCall 注入（视图壳层保留 getApp；适配器 0 backend import，ADR-072 边界判据） */
 function makeVoxelCall(voxelFn: string): (path: string) => Promise<string> {
@@ -18,13 +34,63 @@ function makeVoxelCall(voxelFn: string): (path: string) => Promise<string> {
   };
 }
 
-function makeLitematicAdapter(voxelFn: string): PreviewAdapter {
-  return { id: "litematic", build: (ctx, path) => buildLitematicScene(ctx, path, makeVoxelCall(voxelFn)) };
+/** 容器内 voxelCall：GetVoxelDataInContainer(containerPath, entry, ext)（ADR-132 遗留 1） */
+function makeContainerVoxelCall(containerPath: string, ext: string): (entryPath: string) => Promise<string> {
+  return async (entryPath: string): Promise<string> => {
+    const App = await getApp();
+    const fn = (App as unknown as Record<string, (p: string, e: string, x: string) => Promise<string>>)["GetVoxelDataInContainer"];
+    return fn(containerPath, entryPath, ext);
+  };
+}
+
+function makeLitematicAdapter(voxelFn: string, container?: LitematicBuildOpts): PreviewAdapter {
+  return {
+    id: "litematic",
+    build: (ctx, path) => {
+      const call = container?.containerPath
+        ? makeContainerVoxelCall(container.containerPath, container.entryExt ?? "")
+        : makeVoxelCall(voxelFn);
+      return buildLitematicScene(ctx, path, call, container);
+    },
+  };
+}
+
+/** 枚举 zip 容器内体素条目（ListContainerEntries；失败返回 []，调用方降级单模型裸路径） */
+async function listContainerEntries(containerPath: string): Promise<string[]> {
+  try {
+    const App = await getApp();
+    const fn = (App as unknown as Record<string, (p: string, e: string) => Promise<string>>)["ListContainerEntries"];
+    const raw = await fn(containerPath, CONTAINER_VOXEL_EXTS);
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 /** 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 */
 export async function createLitematic3D(path: string, voxelFn: string, opts?: Mount3DOptions): Promise<void> {
-  await mount3D(makeLitematicAdapter(voxelFn), path, withPreviewExtras(opts ?? {}));
+  const extraOpts = withPreviewExtras(opts ?? {});
+  // ADR-132 遗留 1：.zip 蓝图/投影容器 → 先枚举容器内体素条目，装配容器内多模型 adapter
+  if (isContainerPath(path)) {
+    const entries = await listContainerEntries(path);
+    if (entries.length > 0) {
+      const firstExt = entryExtOf(entries[0]);
+      await mount3D(
+        makeLitematicAdapter(voxelFn, {
+          containerPath: path,
+          modelEntries: entries,
+          entryExt: firstExt,
+        }),
+        entries[0],
+        extraOpts,
+      );
+      return;
+    }
+    // 枚举失败/空容器：降级裸路径（zip 会被 gzip 打开失败——修复前正是此路径报错，
+    // 现降级仍走原错误契约而非崩溃）
+  }
+  await mount3D(makeLitematicAdapter(voxelFn), path, extraOpts);
 }
 
 /** 按扩展名解析体素 RPC（对齐 litematic-meta.ts 的 VOXEL_RPC_BY_EXT 映射） */

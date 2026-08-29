@@ -12,6 +12,7 @@ import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
 import { registerSchema, unregisterSchema } from "./schema-registry.ts";
+import { multiModelSelectNode } from "./preview-menu/multi-model.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { renderLoadingState } from "./preview-loading.ts";
@@ -408,12 +409,24 @@ function mdLiBuildResult(
   };
 }
 
+// ===== Litematic 内容构建选项（ADR-132 遗留 1：蓝图/litematic zip 容器内多模型）=====
+export interface LitematicBuildOpts {
+  /** 容器路径（.zip 蓝图/投影包）；缺省 = 裸文件（path 即磁盘文件） */
+  containerPath?: string;
+  /** 容器内全部可切换 entry（如 ["a.nbt","b.litematic"]）；缺省 = 单模型无 select */
+  modelEntries?: string[];
+  /** 容器内条目扩展名（体素 RPC 分派，如 ".nbt"；缺省空 = 走默认 BuildVoxelDataFromRoot） */
+  entryExt?: string;
+}
+
 /** Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。
- *  voxelCall 由视图壳注入（对齐 ADR-072：适配器 0 backend import），经绑定名取 Go RPC。 */
+ *  voxelCall 由视图壳注入（对齐 ADR-072：适配器 0 backend import），经绑定名取 Go RPC。
+ *  containerPath 存在时 path 即容器内 entry（虚拟路径），voxelCall 变体读取容器内字节。 */
 export async function buildLitematicScene(
   ctx: PreviewBuildCtx,
   path: string,
   voxelCall: (path: string) => Promise<string>,
+  opts?: LitematicBuildOpts,
 ): Promise<PreviewScene> {
   const tStart = performance.now();
   mdLiShowLoading(ctx);
@@ -432,5 +445,23 @@ export async function buildLitematicScene(
   const sliceItems = [mdLiRegisterSliceSchema(si, data.groups, built.groupMeshes, sliceKey)];
   mdLiShowTruncatedWarning(ctx, data);
 
-  return mdLiBuildResult(ctx, built, sliceItems, sliceKey);
+  // [doc:adr-132] 多模型选择菜单项（容器内全部 entry；切 entry 走 core switchTo 重建）
+  const menuItems: PreviewMenuNode[] = sliceItems;
+  const entries = opts?.modelEntries ?? [];
+  if (entries.length >= 2) {
+    const select = multiModelSelectNode({
+      entries: entries.map((e) => ({
+        id: e,
+        label: e.split(/[/\\]/).pop() || e,
+      })),
+      nodeId: "litematic-model-select",
+      activeId: (): string => path,
+      onSelect: (id: string): void => {
+        if (ctx.switchTo && id) void ctx.switchTo(id);
+      },
+    });
+    if (select) menuItems.push(select);
+  }
+
+  return mdLiBuildResult(ctx, built, menuItems, sliceKey);
 }

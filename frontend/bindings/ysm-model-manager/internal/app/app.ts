@@ -548,6 +548,17 @@ export function GetSyncScanDirs(rtype: string, instanceName: string): $Cancellab
 }
 
 /**
+ * GetVoxelDataInContainer 读取容器内 gzip NBT 条目并构建体素数据（JSON 与 Get*VoxelData
+ * 同形状：成功 → LitematicVoxelData；失败 → {"error": string}）。
+ * entry 为容器内条目路径（如 "subdir/a.nbt"）；ext 决定体素构建器分派
+ * （.nbt → BuildNbtVoxelDataFromRoot / .schematic → BuildSchematicVoxelDataFromRoot /
+ * 其余 → BuildVoxelDataFromRoot，对齐 VOXEL_RPC_BY_EXT 前端映射）。
+ */
+export function GetVoxelDataInContainer(path: string, entry: string, ext: string): $CancellablePromise<string> {
+    return $Call.ByID(3637455095, path, entry, ext);
+}
+
+/**
  * GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。
  * wasmBinary 由根包 main 的 init() 经 SetEmbedded 注入。
  */
@@ -738,6 +749,15 @@ export function ListAllFilePaths(dir: string): $CancellablePromise<string[] | nu
  */
 export function ListByTag(tag: string): $CancellablePromise<string[] | null> {
     return $Call.ByID(543634162, tag);
+}
+
+/**
+ * ListContainerEntries 枚举容器内匹配扩展名白名单的条目路径（升序 JSON 数组）。
+ * exts 逗号分隔（如 ".nbt,.litematic,.schematic"）；失败/无匹配返回 "[]"。
+ * 容器路径自身不校验扩展名（.zip/.7z/目录均走 container.Open 分派）。
+ */
+export function ListContainerEntries(path: string, exts: string): $CancellablePromise<string> {
+    return $Call.ByID(3328832690, path, exts);
 }
 
 export function ListFileNames(dir: string): $CancellablePromise<string[] | null> {

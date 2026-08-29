@@ -1,5 +1,13 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
+
+// Mock focus-restore 避免真实 pushInputBlock/popInputBlock 在测试中执行
+vi.mock("../../utils/dom/focus-restore.ts", () => ({
+  pushInputBlock: vi.fn(),
+  popInputBlock: vi.fn(),
+  isInputBlocked: vi.fn(() => false),
+}));
+
 import { createSlideMenu, type SlideMenuView } from "../ui-slide-menu.ts";
 
 // ===================================================================

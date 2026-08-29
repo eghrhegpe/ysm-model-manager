@@ -65,6 +65,29 @@ export function __getTriggerForTest(): HTMLElement | null {
 }
 
 // ────────────────────────────────────────────────────────────────────
+// 输入阻断栈（菜单/弹窗接管键盘时，相机等外层停止消费 WASD/方向键）
+// ────────────────────────────────────────────────────────────────────
+
+/** 栈：push 后 isInputBlocked()=true，pop 后恢复 */
+const _inputBlockStack: string[] = [];
+
+/** 挂起外层键盘消费（菜单弹出时调用，id 唯一标识阻断源） */
+export function pushInputBlock(id: string): void {
+  _inputBlockStack.push(id);
+}
+
+/** 解除挂起（菜单关闭时传同一 id） */
+export function popInputBlock(id: string): void {
+  const idx = _inputBlockStack.lastIndexOf(id);
+  if (idx >= 0) _inputBlockStack.splice(idx, 1);
+}
+
+/** 外层键盘消费（相机 WASD 等）是否应暂停 */
+export function isInputBlocked(): boolean {
+  return _inputBlockStack.length > 0;
+}
+
+// ────────────────────────────────────────────────────────────────────
 // 跨 Shadow DOM 的可聚焦查找
 // ────────────────────────────────────────────────────────────────────
 

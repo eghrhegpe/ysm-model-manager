@@ -13,6 +13,7 @@ import { disposeEnvSubscriptions, buildEnvSchema } from "./env.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { safeErrorMessage } from "../../../safe-error-msg.ts";
 import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../../../ui/ui-slide-menu.ts";
+import { pushInputBlock } from "../../../dom/focus-restore.ts";
 import type { CameraControlBridge } from "../camera-controls.ts";
 import {
   buildCameraSchema,
@@ -123,15 +124,17 @@ function buildPreviewMenuShell(
   menu.root.querySelector<HTMLElement>(".slide-back")?.setAttribute("id", "preview-close-3d");
 
   const showMenu = (view: SlideMenuView): void => {
-    menu.home(view);
     popup.style.display = "flex";
+    menu.onShow();
+    menu.home(view);
   };
-  const hideMenu = (): void => {
+  const hideMenu = (opts?: { restoreFocus?: boolean }): void => {
     popup.style.display = "none";
+    menu.onHide(opts);
   };
   // 根级 ✕ 语义 = 关闭整个 3D 预览
   menu.setOnClose(() => {
-    hideMenu();
+    hideMenu({ restoreFocus: false });
     ctx.close();
   });
   return { dock, popup, menu, showMenu, hideMenu };
@@ -451,6 +454,8 @@ function renderPreviewDock(
 function bindPreviewTapToggle(
   viewEl: HTMLElement,
   popup: HTMLElement,
+  showMenu: (view: SlideMenuView) => void,
+  hideMenu: (opts?: { restoreFocus?: boolean }) => void,
 ): () => void {
   const tapAbort = new AbortController();
   let downX = 0;
@@ -470,11 +475,15 @@ function bindPreviewTapToggle(
     (e: PointerEvent): void => {
       const moved = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY);
       if (moved > 5 || performance.now() - downT > 400) return;
-      const list = popup.querySelector<HTMLElement>(".slide-list");
       if (popup.style.display !== "none") {
-        popup.style.display = "none";
-      } else if (list && list.childElementCount > 0) {
-        popup.style.display = "flex";
+        hideMenu(); // 点击渲染器 → 隐藏菜单（焦点恢复给触发元素）
+      } else {
+        const list = popup.querySelector<HTMLElement>(".slide-list");
+        if (list && list.childElementCount > 0) {
+          popup.style.display = "flex";
+          // 仅恢复输入阻断栈（不调 onShow：无具体视图，仅恢复之前 popup 状态）
+          pushInputBlock("slide-menu");
+        }
       }
     },
     { signal: tapAbort.signal },
@@ -539,7 +548,7 @@ export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx):
       adapterItemsRef,
     );
   // 阶段 6：tap 识别（点击渲染器区域显隐菜单，拖拽不响应）
-  const abortTap = bindPreviewTapToggle(ctx.getViewContainer(), popup);
+  const abortTap = bindPreviewTapToggle(ctx.getViewContainer(), popup, showMenu, hideMenu);
 
   // ---- 句柄方法 ----
   const setAdapterItems = (items: PreviewMenuNode[]): void => {

@@ -11,9 +11,17 @@
 //  - 零业务依赖，可被任意预览/面板复用；
 //  - 向后兼容：不调用 home/navigate 的调用方（直接操作 menu.list）行为不变——
 //    此时导航栈为空，slide-back 在根级仍触发 onClose（即关闭）。
+//
+// 键盘可达性（ADR-076 a11y 补全）：
+//  - 方向键 ↑↓ 导航菜单项（roving tabindex：当前项 tabindex=0，其余 -1）
+//  - Enter/Space 激活聚焦项（触发 click 事件，复用已有行 click handler）
+//  - Escape / Home / End 辅助导航
+//  - onShow() / onHide() 管理焦点记忆恢复 + 输入阻断栈（menu.openId →
+//    isInputBlocked()=true → input-and-animation 暂停相机 WASD/方向键）
 
 import { installUiComponentsStyles } from "./ui-components-styles.ts";
 import { installSlideMenuStyles } from "./ui-slide-menu-styles.ts";
+import { pushInputBlock, popInputBlock } from "../utils/dom/focus-restore.ts";
 
 /** 单个菜单视图：标题 + 把内容渲染进给定的 list 容器。 */
 export interface SlideMenuView {
@@ -29,7 +37,7 @@ export interface SlideMenuHandle {
   /** 内容挂载点（.slide-list.render-card），legacy 直接操作时可用 */
   list: HTMLElement;
   /** 设置标题栏文字（legacy 直接操作；经导航栈时由视图 title 托管） */
-  setTitle(title: string): void;
+  setTitle(t: string): void;
   /** 注册关闭回调（根级返回按钮点击 / 回车 / 空格触发） */
   setOnClose(fn: () => void): void;
   /** 以给定视图为根重置导航栈并渲染（用于顶部菜单进入一级） */
@@ -48,16 +56,28 @@ export interface SlideMenuHandle {
   isAtRoot(): boolean;
   /** 移除整个外壳 */
   dispose(): void;
+
+  // ── a11y：焦点管理 + 输入阻断 ──
+  /** 菜单显示时调用：记住触发焦点，push 输入阻断栈，给首个菜单项 focus */
+  onShow(): void;
+  /** 菜单隐藏时调用：pop 输入阻断栈，归还焦点给触发元素
+   *  @param opts.restoreFocus 传 false 跳过归还（3D overlay 关闭时由 closeOverlay 处理） */
+  onHide(opts?: { restoreFocus?: boolean }): void;
 }
 
-/** 构建 slide-menu 卡片外壳（含轻量导航栈）。 */
+/** 构建 slide-menu 卡片外壳（含轻量导航栈 + 键盘导航）。 */
 export function createSlideMenu(opts?: { title?: string; closeIcon?: string }): SlideMenuHandle {
   smInstallStyles();
   const shell = smBuildShell(opts);
   const stack: SlideMenuView[] = [];
   let onClose: (() => void) | undefined;
+  let _prevFocus: HTMLElement | null = null;
+  const MENU_BLOCK_ID = "slide-menu";
 
-  const renderTop = (): void => smRenderTop(stack, shell.list, shell.title, shell.backBtn, opts);
+  const renderTop = (): void => {
+    smRenderTop(stack, shell.list, shell.title, shell.backBtn, opts);
+    smSetupNavItems(shell.list);
+  };
   const handleBack = (): void => {
     if (stack.length > 1) {
       stack.pop();
@@ -67,10 +87,15 @@ export function createSlideMenu(opts?: { title?: string; closeIcon?: string }): 
     }
   };
   smBindBackButton(shell.backBtn, handleBack);
+  smBindKeyboardNav(shell.list, handleBack);
 
   return smBuildHandle(shell, stack, renderTop, handleBack, {
     getOnClose: () => onClose,
     setOnClose: (fn) => { onClose = fn; },
+    getPrevFocus: () => _prevFocus,
+    setPrevFocus: (el) => { _prevFocus = el; },
+    pushBlock: () => pushInputBlock(MENU_BLOCK_ID),
+    popBlock: () => popInputBlock(MENU_BLOCK_ID),
   });
 }
 
@@ -151,9 +176,71 @@ function smBindBackButton(backBtn: HTMLSpanElement, handleBack: () => void): voi
   };
 }
 
+// ── 键盘导航 ──────────────────────────────────────────────────────
+
+/** list 可见直接子节点（菜单项 / section wrapper） */
+function smGetNavItems(list: HTMLElement): HTMLElement[] {
+  return Array.from(list.children).filter(
+    (el): el is HTMLElement => el instanceof HTMLElement && el.offsetParent !== null,
+  );
+}
+
+/** roving tabindex：当前项 0，其余 -1；focus */
+function smFocusItem(items: HTMLElement[], idx: number): void {
+  items.forEach((el, i) => { el.tabIndex = i === idx ? 0 : -1; });
+  items[idx]?.focus();
+}
+
+/** list 级 keydown 委托：↑↓ 导航 / Enter·Space 激活 / Escape 返回 / Home·End 首尾 */
+function smBindKeyboardNav(list: HTMLElement, handleBack: () => void): void {
+  list.addEventListener("keydown", (e: KeyboardEvent): void => {
+    const items = smGetNavItems(list);
+    if (!items.length) return;
+    let idx = items.indexOf(document.activeElement as HTMLElement);
+    const key = e.key;
+    if (key === "ArrowDown") {
+      e.preventDefault();
+      smFocusItem(items, idx < 0 ? 0 : (idx + 1) % items.length);
+    } else if (key === "ArrowUp") {
+      e.preventDefault();
+      smFocusItem(items, idx < 0 ? 0 : (idx - 1 + items.length) % items.length);
+    } else if (key === "Home") {
+      e.preventDefault();
+      smFocusItem(items, 0);
+    } else if (key === "End") {
+      e.preventDefault();
+      smFocusItem(items, items.length - 1);
+    } else if (key === "Enter" || key === " ") {
+      e.preventDefault();
+      const target = items[idx >= 0 ? idx : 0];
+      if (target) {
+        // 触发项自身或其第一个交互子元素的 click（兼容 section header / row / toggle）
+        const clickable = target.querySelector<HTMLElement>("button, a[href], [role='button'], input")
+          ?? target;
+        clickable.click();
+      }
+    } else if (key === "Escape") {
+      e.preventDefault();
+      handleBack();
+    }
+  });
+}
+
+/** 每次 smRenderTop 后：为 list 可见直接子节点设 roving tabindex（首项 0，其余 -1） */
+function smSetupNavItems(list: HTMLElement): void {
+  const items = smGetNavItems(list);
+  items.forEach((el, i) => { el.tabIndex = i === 0 ? 0 : -1; });
+}
+
+// ── handle 构造 ──────────────────────────────────────────────────
+
 interface SmHandleDeps {
   getOnClose: () => (() => void) | undefined;
   setOnClose: (fn: () => void) => void;
+  getPrevFocus: () => HTMLElement | null;
+  setPrevFocus: (fn: HTMLElement | null) => void;
+  pushBlock: () => void;
+  popBlock: () => void;
 }
 
 function smBuildHandle(
@@ -183,5 +270,29 @@ function smBuildHandle(
     reset: (): void => { stack.length = 0; },
     isAtRoot: (): boolean => stack.length <= 1,
     dispose: (): void => { shell.root.remove(); },
+
+    // ── a11y：焦点记忆 + 输入阻断 ──
+    onShow: (): void => {
+      // 记住触发元素（首次显示时；后续 navigate 不覆盖）
+      if (!deps.getPrevFocus() && document.activeElement instanceof HTMLElement) {
+        deps.setPrevFocus(document.activeElement);
+      }
+      deps.pushBlock();
+      // 焦点给首项（微任务保证 DOM 已渲染完）
+      requestAnimationFrame((): void => {
+        const items = smGetNavItems(shell.list);
+        smFocusItem(items, 0);
+      });
+    },
+    onHide: (opts?): void => {
+      deps.popBlock();
+      if (opts?.restoreFocus !== false) {
+        const el = deps.getPrevFocus();
+        deps.setPrevFocus(null);
+        if (el && el.isConnected) {
+          try { el.focus(); } catch { /* 元素不可聚焦时静默 */ }
+        }
+      }
+    },
   };
 }

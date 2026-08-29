@@ -41,6 +41,8 @@ invariant_anchors:
 - `refresh()` — 重渲当前视图
 - `reset()` / `isAtRoot()` — 栈重置与根级检测
 - `isShowing()` — 是否处于打开状态
+- **键盘导航（a11y，2026-08-29）**：↑↓ 方向键在菜单项间循环（roving tabindex：当前项 `tabindex=0`，其余 `-1`）；Enter/Space 激活聚焦项（触发 click，复用已有行 click handler）；Escape 返回上一级 / 根级触发关闭；Home/End 跳首尾。**不使用 WASD**（避免与 3D 相机输入冲突，上下文栈可后续接入）
+- **焦点记忆 + 输入阻断栈（a11y，2026-08-29）**：`onShow()` 记住触发焦点 + `pushInputBlock("slide-menu")`（暂停相机 WASD/方向键消费）+ 给首项 focus；`onHide({ restoreFocus? })` pop 输入阻断 + 归还焦点（3D overlay 关闭路径传 `{restoreFocus:false}` 避免双 returnFocus 竞争）
 
 ## 解耦要点
 
@@ -52,7 +54,9 @@ invariant_anchors:
 ## 对外 API / 入口
 
 - `SlideMenuView` — `{ title, render(list: HTMLElement): void }`
-- `SlideMenuHandle` — `{ root, list, setTitle, setOnClose, home, navigate, back, refresh, reset, isAtRoot, isShowing }`
+- `SlideMenuHandle` — `{ root, list, setTitle, setOnClose, home, navigate, back, refresh, reset, isAtRoot, isShowing, onShow, onHide }`
+  - `onShow(): void` — 焦点记忆 + 输入阻断 + 首项 focus
+  - `onHide(opts?: { restoreFocus?: boolean }): void` — pop 阻断 + 归还焦点
 - `createSlideMenu({ title?, closeIcon? })`
 
 ## 与其他子系统关系
@@ -67,6 +71,8 @@ invariant_anchors:
 - `closeIcon` 默认 ✕，`navigate` 后返回按钮切换为 ←（不通过 CSS class 区分，靠 glyph 切换）
 - 每次 `navigate`/`refresh` 都会调用视图的 `render`（须幂等）
 - 导航栈清空（`reset`）后回到初始状态，`isAtRoot()` 始终为 true
+- **键盘导航仅使用方向键**（不使用 WASD），避免与 3D 相机 WASD 输入冲突（input-and-animation 在 document 级监听，isInputBlocked 暂停其消费）
+- **showMenu 调用方须调 `menu.onShow()`，hideMenu 调用方须调 `menu.onHide()`**（管理焦点恢复 + 输入阻断栈）；✕ 关闭 3D 时 hideMenu 传 `{ restoreFocus: false }`（由 mount3D closeOverlay 处理焦点归还）
 
 ## 相关
 

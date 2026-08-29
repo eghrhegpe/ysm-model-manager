@@ -18,6 +18,7 @@
 import * as THREE from "three";
 import type { PostprocessingLike } from "./postprocessing.ts";
 import { loadTdKeymap, type TdKeyAction } from "../keymap.ts";
+import { isInputBlocked } from "../../dom/focus-restore.ts";
 
 // ---------------------------------------------------------------------------
 // 类型
@@ -139,6 +140,8 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
   const keymap = loadTdKeymap();
   const heldCodes = new Set<string>(); // 当前按住的物理键（双轨键修复：一动作多键持有，松其一不误清）
   const onKeyDown = (e: KeyboardEvent): void => {
+    // 菜单/弹窗接管键盘时（pushInputBlock），暂停相机 WASD/方向键消费
+    if (isInputBlocked()) return;
     if (isEditableTarget(e)) return;
     const code = e.code;
     let hit = false;

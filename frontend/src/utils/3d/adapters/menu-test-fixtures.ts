@@ -47,5 +47,7 @@ export function mockMenuHandle(): SlideMenuHandle {
     reset: () => {},
     isAtRoot: () => true,
     dispose: () => {},
+    onShow: () => {},
+    onHide: () => {},
   } as unknown as SlideMenuHandle;
 }

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-29T14:30:12.800Z",
+  "generated": "2026-08-29T16:01:24.725Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -103,6 +103,7 @@
     "src/ui/ui-header-toggle.ts#src/ui/ui-header-toggle.ts",
     "src/utils/3d/adapters/__tests__/input-and-animation.test.ts#src/utils/3d/adapters/__tests__/input-and-animation.test.ts",
     "src/utils/3d/adapters/fbx-adapter.ts#src/utils/3d/adapters/pack-model-adapter.ts",
+    "src/utils/3d/adapters/litematic-adapter.test.ts#src/utils/3d/adapters/vrm-adapter.test.ts",
     "src/utils/3d/adapters/mmd-adapter.test.ts#src/utils/3d/adapters/mmd-adapter.test.ts",
     "src/utils/3d/adapters/mmd-adapter.test.ts#src/utils/3d/adapters/vrm-adapter.test.ts",
     "src/utils/3d/adapters/mmd-adapter.ts#src/utils/3d/adapters/vrm-adapter.ts",
@@ -143,7 +144,6 @@
     "src/views/app-content/site/edit.test.ts#src/views/app-content/site/edit.test.ts",
     "src/views/app-content/site/edit.ts#src/views/app-content/site/edit.ts",
     "src/views/app-content/workshop-site-opener.test.ts#src/views/app-content/workshop-site-opener.test.ts",
-    "src/views/app-preview/detail-3d.test.ts#src/views/app-preview/maid-3d.test.ts",
     "src/views/app-preview/fbx-3d.ts#src/views/app-preview/ysm-3d.ts",
     "src/views/app-preview/litematic-3d.test.ts#src/views/app-preview/litematic-3d.test.ts",
     "src/views/app-preview/mmd-controls.test.ts#src/views/app-preview/mmd-controls.test.ts",

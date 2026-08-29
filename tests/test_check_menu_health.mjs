@@ -80,6 +80,25 @@ check('parseItem 识别 panel 项 schemaId 受控通道（ADR-126 P5）', () => 
   assert.equal(item.hasRender, true, 'schemaId: 应记为 hasRender（受控 schema 是渲染通道，renderPreviewPanel 优先查询）');
 });
 
+check('parseItem 识别 schemaId + renderCustom 双通道同存（契约禁——62c83271 review P3）', () => {
+  const item = parseItem(`{
+    id: "model",
+    kind: "panel",
+    schemaId: YSM_MODEL_SCHEMA_ID,
+    renderCustom: (list) => {},
+  }`, 'model');
+  assert.equal(item.dualChannel, true, 'schemaId 与 renderCustom 同存 → dualChannel 标记（门禁 render-channel-ambiguous 拦截）');
+});
+
+check('parseItem 识别 schemaId-only 不误报 dualChannel', () => {
+  const item = parseItem(`{
+    id: "model",
+    kind: "panel",
+    schemaId: YSM_MODEL_SCHEMA_ID,
+  }`, 'model');
+  assert.equal(item.dualChannel, false, '仅 schemaId 无 renderCustom → 非双通道');
+});
+
 check('parseItem 识别 action 项 run 入口', () => {
   const item = parseItem(`{
     id: "export",

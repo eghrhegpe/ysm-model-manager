@@ -128,6 +128,9 @@ export function parseItem(block, id) {
     // 契约「带 schemaId 不得同时带 renderCustom——双通道歧义」），如 ysm-adapter model 项。
     hasRender: /(?:render|renderCustom):\s*\(/.test(block) || /children:\s*(?:\[|[\w$.(])/.test(block) || /schemaId:\s*[\w$.'"]/.test(block),
     hasRun: /\brun:\s*\(/.test(block),
+    // [doc:adr-126-p5-a] 契约执行（62c83271 review P3）：schemaId 与 renderCustom 双通道歧义——
+    // 注释声明不够，门禁须拦截「schemaId 带 renderCustom」的同存状态
+    dualChannel: /schemaId:\s*[\w$.'"]/.test(block) && /renderCustom:\s*\(/.test(block),
   };
 }
 
@@ -197,6 +200,11 @@ for (const it of allItems) {
   const isCoreFile = it.file.endsWith('preview-menu-defs.ts');
   if (it.kind === 'panel' && !isCoreFile && !it.hasRender) {
     violations.push({ rule: 'panel-has-render', item: it.id, file: it.file, detail: 'panel 项缺 render' });
+  }
+  // [doc:adr-126-p5-a] 双通道歧义（62c83271 review P3）：schemaId 是受控 schema 通道（renderPreviewPanel
+  // 优先查 registry），同时带 renderCustom 即两条渲染路径并存——契约禁止，门禁拦截而非仅注释声明
+  if (it.kind === 'panel' && !isCoreFile && it.dualChannel) {
+    violations.push({ rule: 'render-channel-ambiguous', item: it.id, file: it.file, detail: 'schemaId 与 renderCustom 双通道歧义，契约禁止同存' });
   }
   if (it.kind === 'action' && !it.hasRun) {
     violations.push({ rule: 'action-has-run', item: it.id, file: it.file, detail: 'action 项缺 run' });

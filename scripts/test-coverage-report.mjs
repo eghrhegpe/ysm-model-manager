@@ -3,9 +3,10 @@
  * test-coverage-report.mjs — 补测建议清单生成器。
  *
  * 读取 vitest v8 coverage 产物（frontend/coverage/coverage-final.json，
- * 由 `npm run test:coverage` 生成，istanbul 兼容格式），输出按语句覆盖率
- * 升序排列的未覆盖清单（文件 + 未覆盖行区间 + 未覆盖函数），供 AI/人工
- * 决定下一步补测对象。覆盖率阈值防回退见 frontend/vite.config.js。
+ * 由 `npm run test:coverage` 生成，istanbul 兼容格式），输出未覆盖清单
+ * （文件 + 未覆盖行区间 + 未覆盖函数），按文件体量升序（小文件优先，
+ * 同体量按覆盖率升序）；满覆盖且无未覆盖行/函数的文件不占名额，
+ * 供 AI/人工决定下一步补测对象。覆盖率阈值防回退见 frontend/vite.config.js。
  *
  * 用法：
  *   node scripts/test-coverage-report.mjs            # 文本报告（默认 top 15）
@@ -164,6 +165,13 @@ const overall = totalFiles ? Number((sumStmts / totalFiles).toFixed(2)) : 100;
 
 const belowThreshold = rows.filter((r) => r.stmtsRaw < THRESHOLD);
 
+// 清单展示口径：100% 满覆盖且无未覆盖行/函数的文件不占补测名额——
+// 该脚本按「小文件优先」排序，若不过滤，零语句的类型/纯声明文件会
+// 堵住清单前排，真正欠测的大文件反而沉底（2026-08-30 补测轮实测）。
+const visibleRows = rows.filter(
+  (r) => r.stmtsRaw < 100 || r.uncoveredLines.length > 0 || r.uncoveredFns.length > 0
+);
+
 if (suggestMode) {
   // ── 非阻断建议模式（prepare-commit-msg 钩子消费；永远 exit 0）──
   if (jsonMode) {
@@ -220,7 +228,7 @@ if (jsonMode) {
           source: inputPath,
           hint: '文件级语句覆盖率仅供参考（vitest 全局阈值见 frontend/vitest.config.ts coverage.thresholds）',
         },
-        files: rows.slice(0, topN).map((r) => ({
+        files: visibleRows.slice(0, topN).map((r) => ({
           file: r.file,
           stmts: r.stmts,
           uncoveredRanges: r.uncoveredLines.length ? compactRanges(r.uncoveredLines) : '',
@@ -232,9 +240,9 @@ if (jsonMode) {
     ) + '\n'
   );
 } else {
-  process.stdout.write(`# 补测建议清单（未覆盖代码，语句覆盖率升序）\n`);
-  process.stdout.write(`来源: ${toPosix(relPosix(inputPath))} · 共 ${totalFiles} 个源文件 · 平均语句覆盖率 ${overall}%\n\n`);
-  const shown = rows.slice(0, topN);
+  process.stdout.write(`# 补测建议清单（未覆盖代码，小文件优先）\n`);
+  process.stdout.write(`来源: ${toPosix(relPosix(inputPath))} · 共 ${totalFiles} 个源文件 · 平均语句覆盖率 ${overall}% · 待补测 ${visibleRows.length} 个\n\n`);
+  const shown = visibleRows.slice(0, topN);
   for (const r of shown) {
     const lineDesc = r.uncoveredLines.length ? compactRanges(r.uncoveredLines) : '(无)';
     const fnDesc = r.uncoveredFns.length ? r.uncoveredFns.join(', ') : '(无)';
@@ -242,7 +250,7 @@ if (jsonMode) {
     process.stdout.write(`  未覆盖行:   ${lineDesc}\n`);
     process.stdout.write(`  未覆盖函数: ${fnDesc}\n`);
   }
-  if (rows.length > shown.length) {
-    process.stdout.write(`\n（仅显示最差 ${shown.length} 个，共 ${rows.length} 个；--top N 可调整）\n`);
+  if (visibleRows.length > shown.length) {
+    process.stdout.write(`\n（仅显示 ${shown.length} 个，待补测共 ${visibleRows.length} 个（满覆盖文件已过滤）；--top N 可调整）\n`);
   }
 }

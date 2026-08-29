@@ -55,7 +55,7 @@ vi.mock("./skeleton.ts", () => ({
 
 import { showMaidPreview } from "./maid-3d.ts";
 
-function makeCtx(): PreviewCtx {
+function makeCtx(over: Partial<PreviewCtx> = {}): PreviewCtx {
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
   return {
@@ -64,6 +64,7 @@ function makeCtx(): PreviewCtx {
     unsubs: [],
     decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
+    ...over,
   };
 }
 
@@ -169,5 +170,27 @@ describe("showMaidPreview 车万女仆详情", () => {
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
     expect(ctx.root.innerHTML).toContain("无法读取模型数据");
+  });
+
+  it("loadPreviewImage 返回封面 → 渲染 img 替换 🧸 大图标", async () => {
+    const ctx = makeCtx({
+      loadPreviewImage: vi.fn().mockResolvedValue("data:image/png;base64,COVER"),
+    });
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    const html = ctx.root.innerHTML;
+    // 占位符里应有 img 且 src 为封面 data URI
+    expect(html).toContain('<img src="data:image/png;base64,COVER"');
+    // 🧸 大图标被替换（占位符内不再有 .big-icon）
+    expect(ctx.root.querySelector(".dp-placeholder .big-icon")).toBeNull();
+  });
+
+  it("loadPreviewImage 返回 null → 回退 🧸 大图标", async () => {
+    const ctx = makeCtx(); // 默认 mockResolvedValue(null)
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    const html = ctx.root.innerHTML;
+    // 无图 → 无 img
+    expect(html).not.toContain("<img");
+    // 🧸 大图标保留
+    expect(html).toContain('<div class="big-icon">🧸</div>');
   });
 });

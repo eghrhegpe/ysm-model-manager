@@ -12,6 +12,7 @@ import { loadModelData } from "./loader.ts";
 import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
 import { statsCardHTML, type StatsCardModel } from "./tpl.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
+import { detailGen } from "./detail.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
@@ -209,6 +210,7 @@ function dpRenderPanel(
   selSubIdx: number,
   onSelect: (idx: number) => void,
   onToggle3d: () => void,
+  previewUri?: string | null,
 ): void {
   // 彩色统计卡（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——复用 YSM statsCardHTML，
   // 共用 AnalyzeBedrockModel 返回的 types.BedrockModel 数据源，与 YSM 详情同一设计语言。
@@ -217,10 +219,15 @@ function dpRenderPanel(
     : "";
   const detail = dpRenderDetail(modelInfo, subs, selSubIdx);
   const subList = dpRenderSubList(subs, selSubIdx);
+  // 封面缩略图（loadPreviewImage 产物）：有图时替换 🧸 大图标，无图回退 🧸 装饰。
+  // 样式对齐资源包详情（detail.ts:171）：96px、圆角、边框、pixelated。
+  const coverHtml = previewUri
+    ? `<img src="${esc(previewUri)}" alt="" style="width:96px;height:96px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
+    : `<div class="big-icon">🧸</div>`;
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🧸 ${t("preview.modelInfo")}</h3>
   <div class="dp-placeholder">
-    <div class="big-icon">🧸</div>
+    ${coverHtml}
     <div class="dp-hint" style="font-weight:600">${esc(basename)}</div>
     <div class="dp-hint">Bedrock Edition Model</div>
   </div>
@@ -312,6 +319,10 @@ export async function showMaidPreview(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
+  // 跨文件快速切换守卫：与 detail 域共享 detailGen——切到其他文件（detail/simple/maid）
+  // 会推进代数，本函数 await 续体（loadPreviewImage/AnalyzeBedrockModel）回来后
+  // stale 即丢弃在途渲染，避免旧面板画回新文件上。
+  const gen = detailGen.next();
   const basename = path.split(/[/\\]/).pop() || path;
   // 先显示加载状态
   ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -373,8 +384,13 @@ export async function showMaidPreview(
     }
   };
 
-  // 共享局域 state：选中子模型索引 + 3D 打开并发防护
-  const state: MaidPreviewState = { selSubIdx: 0, loading3D: false, model3dGuard: new GenGuard() };
+  // 共享局域 state：选中子模型索引 + 3D 打开并发防护 + 封面预览图 URI
+  const state: MaidPreviewState & { previewUri?: string | null } = {
+    selSubIdx: 0,
+    loading3D: false,
+    model3dGuard: new GenGuard(),
+    previewUri: null,
+  };
   const render = (): void => {
     dpRenderPanel(
       ctx,
@@ -384,9 +400,18 @@ export async function showMaidPreview(
       state.selSubIdx,
       (idx) => { state.selSubIdx = idx; render(); void refreshPerEntry(idx); },
       () => { void dpToggle3D(state, ctx, path, baseModelInfo, subs, state.selSubIdx); },
+      state.previewUri,
     );
   };
 
-  await ctx.loadPreviewImage(path);
+  // 封面预览图（缓存 → WASM → Go 兜底，统一入口）：
+  // 先渲染无图态（统计卡立即可见），异步取图后若命中再重绘替换 🧸。
+  // 不 await 阻塞首帧——取图走 Go 解析 zip 可能数百 ms，用户无需等图才见统计卡。
   render();
+  const cover = await ctx.loadPreviewImage(path);
+  if (detailGen.stale(gen)) return; // 用户已切走，丢弃在途封面
+  if (cover && cover !== state.previewUri) {
+    state.previewUri = cover;
+    render();
+  }
 }

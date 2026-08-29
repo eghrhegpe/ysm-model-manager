@@ -222,7 +222,7 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
         setMasterEnabled?: (v: boolean) => void;
       };
       if (master.setMasterEnabled) {
-        master.setMasterEnabled(Boolean(v) ? (master.getParams?.().enabled ?? true) : false);
+        master.setMasterEnabled(Boolean(v) ? (master.getParams?.()?.enabled ?? true) : false);
       } else {
         cap.setEnabled(Boolean(v));
       }

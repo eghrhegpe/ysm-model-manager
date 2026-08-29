@@ -399,3 +399,43 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     expect(renderer.toneMappingExposure).toBeCloseTo(1.05, 4);
   });
 });
+
+describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）", () => {
+  // [doc:adr-126-p5] 用户拍板方案 b：联动以用户设置为基准 ±20% 微调——此前 opacity 直接
+  // 放大成 strength（满值 1.5）+ 阈值压到 0.2，开体积光即亮爆；本组锁「不超用户设置区间」契约。
+  function mockBloomPass(cap: PostprocessingCapability): { threshold: number; strength: number; radius: number } {
+    const bp = { threshold: 0, strength: 0, radius: 0 };
+    (cap as unknown as { bloomPass: unknown }).bloomPass = bp;
+    return bp;
+  }
+  const lightCap = (opacity: number) => ({ getParams: () => ({ volumetric: { opacity } }) }) as never;
+
+  it("默认体积光（opacity 0.45）：threshold/strength 落在用户设置 ±20% 内，radius 保持用户设置", () => {
+    const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
+    const bp = mockBloomPass(cap);
+    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(0.45));
+    expect(bp.threshold).toBeGreaterThanOrEqual(0.6 * 0.8);
+    expect(bp.threshold).toBeLessThanOrEqual(0.6);
+    expect(bp.strength).toBeGreaterThanOrEqual(0.6);
+    expect(bp.strength).toBeLessThanOrEqual(0.6 * 1.2);
+    expect(bp.radius).toBe(0.5); // radius 不再被 edgeFade 劫持
+  });
+
+  it("满值体积光（opacity 1.0）：不再爆——strength ≤ +20%、threshold ≥ -20%", () => {
+    const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
+    const bp = mockBloomPass(cap);
+    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
+    expect(bp.threshold).toBeGreaterThanOrEqual(0.6 * 0.8 - 1e-9);
+    expect(bp.strength).toBeLessThanOrEqual(0.6 * 1.2 + 1e-9);
+  });
+
+  it("联动关：直接用用户设置（else 分支不受影响）", () => {
+    const cap = newCap({ params: { bloomStrength: 0.9, bloomThreshold: 0.7, bloomRadius: 0.4 } });
+    cap.setBloomFollowVolumetric(false);
+    const bp = mockBloomPass(cap);
+    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
+    expect(bp.threshold).toBe(0.7);
+    expect(bp.strength).toBe(0.9);
+    expect(bp.radius).toBe(0.4);
+  });
+});

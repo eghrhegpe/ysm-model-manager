@@ -578,9 +578,13 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (!this.bloomPass) return;
     if (this.params.bloomFollowVolumetric && lightCap) {
       const vol = lightCap.getParams().volumetric;
-      this.bloomPass.threshold = Math.max(0.05, 0.5 - vol.opacity * 0.3);
-      this.bloomPass.strength = vol.opacity * 1.5;
-      this.bloomPass.radius = vol.edgeFade * 0.5 + 0.1;
+      // [doc:adr-126-p5] 联动解耦（用户拍板方案 b）：以用户设置（bloomStrength/bloomThreshold）
+      // 为基准，体积光 opacity 仅做 ±20% 微调。此前 opacity 直接放大成 strength 系数
+      //（满值 1.5 = 默认 2.5 倍）+ 阈值压到 0.2——开体积光即亮爆；体积光是光柱浓度语义，
+      // 不该主导全局 bloom。radius 保持用户设置（edgeFade 联动半径本就怪）。
+      this.bloomPass.threshold = Math.max(0.05, this.params.bloomThreshold * (1 - 0.2 * vol.opacity));
+      this.bloomPass.strength = this.params.bloomStrength * (1 + 0.2 * vol.opacity);
+      this.bloomPass.radius = this.params.bloomRadius;
     } else {
       this.bloomPass.threshold = this.params.bloomThreshold;
       this.bloomPass.strength = this.params.bloomStrength;

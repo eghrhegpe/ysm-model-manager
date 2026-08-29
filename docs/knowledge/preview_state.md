@@ -28,7 +28,7 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 | 项 | 旧（ADR-125） | 新（P4-A） |
 |----|--------------|-----------|
 | 模块 | `state/settings-state.ts` | `state/preview-state.ts` |
-| 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`preview-menu-node-types.ts:14-21` 七域模板） |
+| 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀归位，原 `preview-menu-node-types.ts:14-21` 七域模板） |
 | 已知路径常量 | `SETTINGS_PATHS` | `KNOWN_PATHS`（仍只列 6 项落地） |
 | 快照函数 | `settingsSnapshot()` | `previewSnapshot()` |
 | 公共函数名 | `getStateValue/setStateValue/subscribeSettings/isPathAvailable/resetSettingsListeners/toStatePath` | **保持同名**（通用名，跨子步零额外回归） |
@@ -47,7 +47,7 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 
 ```ts
 // 路径类型（编译期契约）
-type PreviewStatePath          // preview-menu-node-types.ts，七域模板
+type PreviewStatePath          // state/preview-state.ts，七域模板（ADR-129 第一刀归位）
 const KNOWN_PATHS              // 窄集合：readonly ["render.frustumCull", ...]（6 项）
 
 // 状态层（入参窄类型 = typeof KNOWN_PATHS[number]，编译期守「加新路径 = 扩 KNOWN_PATHS + 填 binding」）

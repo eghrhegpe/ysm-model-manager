@@ -43,7 +43,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 | `render.wireframe` | wireframe cap `wireframe-toggle` | 不落盘 |
 | `env.pmrem` | sky cap `sky-env` | 不落盘 |
 
-- 路径类型复用已有 `PreviewStatePath`（`preview-menu-node-types.ts`）；`toStatePath()` 是编译期契约守卫，前缀写错即编译失败。
+- 路径类型复用已有 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀自 `preview-menu-node-types.ts` 归位）；`toStatePath()` 是编译期契约守卫，前缀写错即编译失败。
 - cap 派生路径**惰性解析**：每次 `get/set` 都现查 `sceneCapabilityRegistry.getById()`，不在构建期捕获实例。这是 ADR-125 P3 明令禁止的「声明期求值 → cap 后创建则永不可见」（即 `05fe24b7` 所修「水池分组不出现」同类病）的根治点。
 - 结构性探测：`hasMethod()` 判断 cap 是否真有 `isEnabled/setEnabled`，冒牌 cap 不误判为可用。
 

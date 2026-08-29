@@ -60,8 +60,9 @@ const FILES_ROOT = path.resolve(ROOT, opts.filesRoot);
 let raw = '';
 const args = ['run', '.', '--cli', '--files-root', FILES_ROOT, 'gui-flow', '--json'];
 if (opts.model) args.push('--model', opts.model);
-const gr = run('go', args, { cwd: ROOT, timeout: 120000 });
+const gr = run('go', args, { cwd: ROOT, timeout: 120000, mergeStderr: false });
 // 退出码非 0：程序自身 JSON 响应在 out（stdout 被捕获而非丢失），stderr 多为 watcher/编译噪音
+// mergeStderr:false 保证失败时 out 仍仅 stdout，JSON 不被噪音污染（code review P2）
 // 不能直接失败——gui-flow 有阶段失败时 Go 返回 status:error + exit 1，JSON 仍可解析定位失败阶段
 raw = gr.out.trim();
 

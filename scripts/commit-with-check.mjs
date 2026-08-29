@@ -68,8 +68,8 @@ function git(args) {
   return r.ok ? r.out.trim() : '';
 }
 
-function gitArray(args) {
-  const r = run('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT });
+function gitArray(args, opts = {}) {
+  const r = run('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT, ...opts });
   return r.ok ? 0 : (r.rc > 0 ? r.rc : 1);
 }
 
@@ -152,7 +152,10 @@ if (checkOnly) {
 }
 
 // ── 3. 全绿后自动 git commit（数组参数，杜绝命令注入）──
-const commitRc = gitArray(['commit', '-m', message]);
+// commit 会触发 pre-commit 钩子（go-coverage-hint/coverage-suggest-hint/check-biome 串行，
+// 单包 go test 上限即 20s），30s 默认超时会掐断并可能残留 index.lock；
+// 显式 10 分钟超时与下方 pre-push-gate 门禁一致（code review 004563ce P2）。
+const commitRc = gitArray(['commit', '-m', message], { timeout: 600_000 });
 if (commitRc !== 0) {
   console.error('❌ git commit 失败（可能是 pre-commit 钩子拦截，或 message 格式问题）');
   process.exit(1);

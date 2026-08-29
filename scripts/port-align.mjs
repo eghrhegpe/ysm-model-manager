@@ -52,7 +52,9 @@ async function loadTsPort() {
       `--outfile=${outfile}`,
     ], {});
     if (!r.ok) {
-      console.error('[port-align] esbuild 打包 TS 端口失败：', r.err || `rc=${r.rc}`);
+      // r.out 失败时含真实 esbuild 诊断（stdout+stderr 合并），r.err 只是通用「执行失败」；
+      // 不打印 r.out 会把打包错误文本吞掉，用户只能看到裸 rc（code review 004563ce P3）。
+      console.error('[port-align] esbuild 打包 TS 端口失败：', r.out.trim() || r.err || `rc=${r.rc}`);
       rmSync(tmp, { recursive: true, force: true });
       process.exit(2);
     }

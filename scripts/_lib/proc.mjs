@@ -38,7 +38,7 @@ export const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
  * @returns {{ ok: boolean, rc: number, out: string, err?: string }}
  *   ok=true  rc=0（或 allowExit1 且 rc=1）；ok=false 且 rc=-1 表示未执行成功（ENOENT/超时/异常）
  */
-export function run(bin, args, { cwd = process.cwd(), timeout = DEFAULT_TIMEOUT, shell = false, allowExit1 = false, maxBuffer = DEFAULT_MAX_BUFFER, env, stdio } = {}) {
+export function run(bin, args, { cwd = process.cwd(), timeout = DEFAULT_TIMEOUT, shell = false, allowExit1 = false, maxBuffer = DEFAULT_MAX_BUFFER, env, stdio, mergeStderr = true } = {}) {
   const o = { cwd, encoding: 'utf-8', timeout, maxBuffer };
   // 显式 shell:true 时按平台选 shell（win32 自动 cmd.exe / POSIX 自动 /bin/sh），
   // 承载管道/重定向命令（pre-push-gate sh()）；默认无 shell，避免 cmd.exe 找不到
@@ -55,14 +55,19 @@ export function run(bin, args, { cwd = process.cwd(), timeout = DEFAULT_TIMEOUT,
     if (e.code === 'ENOENT') {
       return { ok: false, rc: -1, out: '', err: `command not found: ${bin}` };
     }
-    const out = String((e.stdout || '') + (e.stderr || ''));
+    // mergeStderr=false：失败时 out 仅 stdout（JSON 消费方语义，perf-gate/gui-flow-gate
+    // 需要 stdout-only 的 JSON 响应，stderr 多为 watcher/编译噪音会污染 JSON.parse；
+    // code review 004563ce P2）。stderr 原文附入 err 供诊断不丢。
+    const out = mergeStderr ? String((e.stdout || '') + (e.stderr || '')) : String(e.stdout || '');
+    const stderrText = mergeStderr ? '' : String(e.stderr || '');
     if (e.killed) {
       return { ok: false, rc: -2, out, err: `command timed out after ${timeout}ms: ${bin} ${args.join(' ')}` };
     }
     if (e.status === 1 && allowExit1) {
       return { ok: true, rc: 1, out };
     }
-    return { ok: false, rc: e.status ?? -1, out, err: `${bin} 执行失败（rc=${e.status ?? 'unknown'}）` };
+    const errMsg = `${bin} 执行失败（rc=${e.status ?? 'unknown'}）`;
+    return { ok: false, rc: e.status ?? -1, out, err: stderrText ? `${errMsg}\n${stderrText}` : errMsg };
   }
 }
 

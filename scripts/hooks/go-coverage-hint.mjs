@@ -73,6 +73,8 @@ export function coverFuncsForPackage(root, pattern, tmp) {
   const r1 = run('go', ['test', '-coverprofile=' + tmp, pattern, '-count=1'], {
     cwd: root,
     timeout: GO_TEST_TIMEOUT_MS,
+    // 探测型调用只产出 coverprofile 文件：丢弃测试输出，防大输出缓冲超 64MiB maxBuffer（code review P3）
+    stdio: 'ignore',
   });
   if (!r1.ok) {
     return new Map(); // 编译失败/测试失败/超时 → 无数据（非阻断）

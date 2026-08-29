@@ -82,9 +82,9 @@ let raw = '';
 const bench = run(
   'go',
   ['run', '.', '--cli', '--files-root', FILES_ROOT, 'single-bench', '--model', MODEL, '--iterations', String(opts.iterations), '--json'],
-  { cwd: ROOT, timeout: 120000 },
+  { cwd: ROOT, timeout: 120000, mergeStderr: false },
 );
-raw = bench.out.trim(); // single-bench 失败也可能有 JSON 响应（run 合并 stdout+stderr）
+raw = bench.out.trim(); // 失败时 out 也仅 stdout（mergeStderr:false），JSON 不被 watcher/编译噪音污染（code review P2）
 if (!raw) {
   console.error('[FAIL] single-bench 无 stdout 输出（go run 编译/运行失败）');
   process.exit(1);

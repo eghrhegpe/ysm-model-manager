@@ -9,7 +9,7 @@
 import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter, type Mount3DOptions } from "../../utils/3d/adapters/mount-preview-core.ts";
 import { buildMmdScene, type MmdPanelHooks } from "../../utils/3d/adapters/mmd-adapter.ts";
 import { makeMmdDataPort } from "./mmd-data-port.ts";
-import { fillMmdModelPanel, fillMmdMorphPanel, fillMmdPlayPanel, fillMmdShotPanel, mmdModelInfoNodes, mmdShotNodes } from "./mmd-controls.ts";
+import { fillMmdModelPanel, fillMmdShotPanel, mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，SceneModel .pmx/.pmd→"mmd-scene"）
@@ -17,11 +17,10 @@ registerReRoute("mmd-scene", (path) => createScene3D(path));
 
 const scenePanelHooks: MmdPanelHooks = {
   fillModelPanel: fillMmdModelPanel,
-  fillMorphPanel: fillMmdMorphPanel,
-  fillPlayPanel: fillMmdPlayPanel,
   fillShotPanel: fillMmdShotPanel,
   modelInfoNodes: mmdModelInfoNodes,
   shotNodes: mmdShotNodes,
+  playNodes,
 };
 
 /** 场景适配器：id = "mmd-scene"，驱动场景专属预设（天空/光照/阴影） */

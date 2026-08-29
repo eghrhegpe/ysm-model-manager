@@ -209,7 +209,11 @@ function rmAppendSelect(
   const sel = document.createElement("select");
   sel.className = "setting-select";
   sel.dataset.testid = "preview-" + node.id;
-  const cur = spec.get ? spec.get(snapshot[spec.bind!]) : snapshot[spec.bind!];
+  // [doc:adr-126-p5-收尾] select 支持两种模式：bind（状态层路径，play/morph 之外用）或
+  // 闭包 get/set（非状态层来源，如 MmdPlayBridge 动作 select）——与 toggle 分支同构。
+  const cur = spec.bind
+    ? spec.get ? spec.get(snapshot[spec.bind]) : snapshot[spec.bind]
+    : spec.get ? spec.get(undefined) : "";
   for (const opt of spec.options) {
     const o = document.createElement("option");
     o.value = opt.value;
@@ -220,11 +224,11 @@ function rmAppendSelect(
   sel.onchange = (): void => {
     const raw = sel.value;
     const v = spec.set ? spec.set(raw) : raw;
-    // [doc:adr-126-p5-c] control.bind 是声明式路径（编译期经 PreviewStatePath 守卫）；
-    // 运行期收窄到 KNOWN_PATHS 窄联合——未落地路径（bindings 无对应项）写前必须
-    // isPathAvailable 守卫，否则 bindings[path] 为 undefined 直接 TypeError（P5-A review P3）
-    if (!isPathAvailable(spec.bind as never)) return;
-    setStateValue(spec.bind as never, v);
+    if (spec.bind) {
+      // bind 模式：写状态层（未落地路径守卫，P5-A review P3）
+      if (!isPathAvailable(spec.bind as never)) return;
+      setStateValue(spec.bind as never, v);
+    }
     spec.onChange?.(v);
     // [doc:adr-126-p5] refreshOnChange：面板内容随绑定状态变化（组件 select 切档后
     // stats/纹理行按新快照重建）——menu.refresh() 重渲染当前面板，schema builder 重新执行

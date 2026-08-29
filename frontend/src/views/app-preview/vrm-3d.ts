@@ -7,7 +7,7 @@ import { mount3D, cleanupPreview, invalidatePreview, switchPreview, type Preview
 import { buildVrmScene, type VrmPanelHooks } from "../../utils/3d/adapters/vrm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
-import { fillMmdPlayPanel } from "./mmd-controls.ts";
+import { playNodes } from "./mmd-controls.ts";
 import { withPreviewExtras, registerReRoute, openModel3DFullscreen } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.vrm→"vrm"）
@@ -36,8 +36,8 @@ const vrmPanelHooks: VrmPanelHooks = {
   modelInfoNodes: vrmModelInfoNodes,
   // shot 面板同（此前 makeShotPanelRenderer 从未注入）；复用 shot-panel-shared 六角度
   shotNodes: vrmShotNodes,
-  // 播放面板复用 MMD 填充函数（views→views 合法；解除 utils→views 分层违规 R1）
-  fillPlayPanel: fillMmdPlayPanel,
+  // [doc:adr-126-p5-收尾] play 面板声明式化：复用 MMD playNodes（views→views 合法；R1 合规）
+  playNodes,
 };
 
 const vrmAdapter: PreviewAdapter = {

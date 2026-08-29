@@ -70,51 +70,6 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
   ];
 }
 
-/** MMD 表情面板（morph 权重 0/1 切换，✓ 高亮当前开启；独立菜单项，避免 84+ 行平铺模型面板） */
-export function fillMmdMorphPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void {
-  const morphNames = Object.keys(ctx.mesh.morphTargetDictionary || {});
-  if (morphNames.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "slide-sublabel";
-    empty.style.cssText = "padding:8px 10px;color:rgba(128,128,128,0.85);font-size:12px";
-    empty.textContent = t("preview.noOtherMorph");
-    list.appendChild(empty);
-    return;
-  }
-  const sec = document.createElement("div");
-  sec.className = "slide-sublabel";
-  sec.style.cssText = "padding:6px 10px;font-size:12px;color:rgba(255,255,255,0.7)";
-  sec.textContent = `😀 ${t("preview.mmdMorph")} (${morphNames.length})`;
-  list.appendChild(sec);
-  morphNames.forEach((name) => {
-    const row = document.createElement("div");
-    row.className = "ysm-preview-menu-row";
-    row.dataset.testid = "mmd-morph-" + name;
-    const dict = ctx.mesh.morphTargetDictionary || {};
-    const idx = dict[name];
-    const active = idx !== undefined && (ctx.mesh.morphTargetInfluences?.[idx] ?? 0) > 0.5;
-    const ic = document.createElement("span");
-    ic.textContent = active ? "✓" : "🙂";
-    ic.style.cssText = "font-size:15px;width:18px;text-align:center";
-    const lb = document.createElement("span");
-    lb.textContent = name;
-    row.append(ic, lb);
-    row.style.cssText =
-      "display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px" +
-      (active ? ";background:var(--mmd-morph-active-bg)" : "");
-    row.onclick = (): void => {
-      const d = ctx.mesh.morphTargetDictionary || {};
-      const i = d[name];
-      if (i === undefined || !ctx.mesh.morphTargetInfluences) return;
-      ctx.mesh.morphTargetInfluences[i] = ctx.mesh.morphTargetInfluences[i] > 0.5 ? 0 : 1;
-      const now = ctx.mesh.morphTargetInfluences[i] > 0.5;
-      ic.textContent = now ? "✓" : "🙂";
-      row.style.background = now ? "var(--mmd-morph-active-bg)" : "transparent";
-    };
-    list.appendChild(row);
-  });
-}
-
 /** MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） */
 export interface MmdPlayBridge {
   clips: Array<{ label: string }>;
@@ -128,72 +83,73 @@ export interface MmdPlayBridge {
   requestReload?: () => void;
 }
 
-/** MMD 播放面板：播放/暂停 + 多动作切换 + 空态提示 */
-export function fillMmdPlayPanel(list: HTMLElement, bridge: MmdPlayBridge): void {
+/**
+ * [doc:adr-126-p5-收尾] MMD 播放/动作面板——声明式节点版。
+ * 播放/暂停 = toggle（get 读 isPlaying，set 调 toggle，rmAppendToggle 点击即时反馈）；
+ * 动作切换 = select（闭包 get/set 读写 bridge，非状态层路径）；空态 = field 提示 + button 重新扫描；
+ * animDir = field 路径提示。fillMmdPlayPanel（命令式）已删除。
+ */
+export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
+  // 空态：无动作文件 → 引导提示 + 重新扫描（requestReload）
   if (bridge.clips.length === 0) {
-    // ---- 空态：提示用户在 CustomAnim 目录放置 VMD 文件 ----
-    const emptySec = document.createElement("div");
-    emptySec.style.cssText = "padding:12px 10px;display:flex;flex-direction:column;gap:8px";
-    const hint = document.createElement("div");
-    hint.style.cssText = "font-size:12px;color:rgba(255,255,255,0.6);line-height:1.6";
-    if (bridge.animDir) {
-      hint.textContent = `动作库目录：${bridge.animDir}（暂无 VMD/VPD 文件，请将动作文件放入此目录）`;
-    } else {
-      hint.textContent = "当前模型无内置动作。请将 VMD/VPD 动作放入仓库的 CustomAnim 子目录。";
+    const hint = bridge.animDir
+      ? `动作库目录：${bridge.animDir}（暂无 VMD/VPD 文件，请将动作文件放入此目录）`
+      : "当前模型无内置动作。请将 VMD/VPD 动作放入仓库的 CustomAnim 子目录。";
+    const nodes: PreviewMenuNode[] = [
+      { id: "play-empty", kind: "field" as const, labelKey: "preview.playEmpty", fallback: hint, value: "" },
+    ];
+    if (bridge.requestReload) {
+      nodes.push({
+        id: "play-reload",
+        kind: "button" as const,
+        labelKey: "preview.playReload",
+        fallback: "重新扫描",
+        action: (): void => {
+          bridge.requestReload?.();
+        },
+      });
     }
-    emptySec.appendChild(hint);
-
-    const refreshBtn = document.createElement("button");
-    refreshBtn.className = "pv-btn";
-    refreshBtn.textContent = "重新扫描";
-    refreshBtn.style.cssText = "font-size:12px;padding:4px 10px;align-self:flex-start";
-    refreshBtn.onclick = () => { bridge.requestReload?.(); };
-    emptySec.appendChild(refreshBtn);
-    list.appendChild(emptySec);
-    return;
+    return nodes;
   }
-
-  // ---- 正常态：播放控件 ----
-  const playBtn = document.createElement("button");
-  playBtn.id = "mmd-play-btn";
-  playBtn.textContent = bridge.isPlaying() ? t("preview.mmdPause") : t("preview.mmdPlay");
-  playBtn.className = "mode-btn";
-  playBtn.dataset.testid = "mmd-play";
-  playBtn.style.cssText = "align-self:flex-start;margin:2px 0";
-  playBtn.onclick = (): void => {
-    bridge.toggle();
-    playBtn.textContent = bridge.isPlaying() ? t("preview.mmdPause") : t("preview.mmdPlay");
-  };
-  list.appendChild(playBtn);
-
+  // 正常态：播放/暂停 toggle + 动作 select（多动作时）+ animDir 提示
+  const nodes: PreviewMenuNode[] = [
+    {
+      id: "play-toggle",
+      kind: "toggle" as const,
+      labelKey: "preview.mmdPlay",
+      fallback: "播放",
+      control: {
+        get: (): boolean => bridge.isPlaying(),
+        set: (): void => {
+          bridge.toggle();
+        },
+      },
+    },
+  ];
   if (bridge.clips.length > 1) {
-    const sel = document.createElement("select");
-    sel.id = "mmd-motion-sel";
-    sel.className = "setting-select";
-    sel.dataset.testid = "mmd-motion";
-    sel.value = String(bridge.currentIndex());
-    bridge.clips.forEach((c, i) => {
-      const opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = c.label;
-      sel.appendChild(opt);
+    nodes.push({
+      id: "play-select",
+      kind: "select" as const,
+      labelKey: "preview.mmdMotion",
+      fallback: "动作",
+      control: {
+        options: bridge.clips.map((c, i) => ({ value: String(i), label: c.label })),
+        get: (): string => String(bridge.currentIndex()),
+        set: (v: unknown): void => {
+          bridge.select(Number(v) || 0);
+        },
+      },
     });
-    sel.onchange = (): void => {
-      bridge.select(Number(sel.value) || 0);
-    };
-    list.appendChild(sel);
   }
-
-  // 已配置动作库时显示路径提示
   if (bridge.animDir) {
-    const dirRow = document.createElement("div");
-    dirRow.style.cssText = "padding:6px 10px;display:flex;align-items:center;gap:6px";
-    const dirLabel = document.createElement("span");
-    dirLabel.style.cssText = "font-size:10px;color:rgba(255,255,255,0.4);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
-    dirLabel.textContent = `动作库: ${bridge.animDir}`;
-    dirRow.appendChild(dirLabel);
-    list.appendChild(dirRow);
+    nodes.push({
+      id: "play-dir",
+      kind: "field" as const,
+      fallback: `动作库: ${bridge.animDir}`,
+      value: "",
+    });
   }
+  return nodes;
 }
 
 /** 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） */

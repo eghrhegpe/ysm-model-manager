@@ -13,7 +13,7 @@ import { preloadModel } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
-import { fillMmdPlayPanel } from "./mmd-controls.ts";
+import { playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
@@ -77,11 +77,11 @@ export async function createYsm3D(
       panels: {
         fillShotPanel: fillYsmShotPanel,
         shotNodes: ysmShotNodes,
+        playNodes,
         // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容 = buildYsmModelSchema
         // （组件选择走 ui.activeComponent，切换副作用 = showModelGroup）
         registerModelSchema: registerYsmModelSchema,
       },
-      fillPlayPanel: fillMmdPlayPanel,
     }),
     path,
     withPreviewExtras({ siblings: opts.siblings }),

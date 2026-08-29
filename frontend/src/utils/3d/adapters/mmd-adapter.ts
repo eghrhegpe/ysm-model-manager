@@ -51,6 +51,7 @@ import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部�
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { materialNodes } from "./material-controls.ts";
+import { morphNodes } from "./morph-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import { getCustomAnimPath, filterAnimFiles } from "./mmd-anim-library.ts";
 // import { createBlinkController } from "../perception/blink.ts"; // 待 three-mmd 暴露 morph 权重 API 后接入
@@ -179,13 +180,13 @@ async function disposeMmdMesh(
 /** 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） */
 export interface MmdPanelHooks {
   fillModelPanel: (list: HTMLElement, ctx: MmdBottomNavCtx) => void;
-  fillMorphPanel: (list: HTMLElement, ctx: MmdBottomNavCtx) => void;
-  fillPlayPanel: (list: HTMLElement, bridge: MmdPlayBridge) => void;
   fillShotPanel: (list: HTMLElement, ctx: MmdBottomNavCtx, screenshot: (() => Promise<string | null>) | null) => void;
   /** 声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归）：R1 禁 utils 运行时依赖 views，
-   *  mmdModelInfoNodes / mmdShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
+   *  mmdModelInfoNodes / mmdShotNodes / playNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
   modelInfoNodes?: (ctx: MmdBottomNavCtx) => PreviewMenuNode[];
   shotNodes?: (ctx: MmdBottomNavCtx, screenshot: (() => Promise<string | null>) | null) => PreviewMenuNode[];
+  /** [doc:adr-126-p5-收尾] play 面板声明式节点（toggle 播放/暂停 + select 动作 + 空态） */
+  playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
 }
 
 // ===== MdMmBuildCtx 按域分组的接口组合（声明层收敛，访问路径 c.xxx 不变）=====
@@ -1284,7 +1285,9 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       legacyTestId: "mmd-morph-entry",
       dockGroup: "motion", // 底栏 💃 动作组（表情是动作系统的资产）
-      renderCustom:(list) => o.panels?.fillMorphPanel?.(list, o.navCtx),
+      // [doc:adr-126-p5-收尾] morph 面板声明式化：children = morphNodes 纯数据节点
+      // （toggle kind，照 perceptionNodes 样板）。fillMorphPanel 逃生舱删除。
+      children: morphNodes(o.navCtx.mesh),
     },
     {
       id: "material",
@@ -1321,7 +1324,9 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
     kind: "panel",
     legacyTestId: "mmd-play-entry",
     dockGroup: "motion", // 底栏 💃 动作组
-    renderCustom:(list) => o.panels?.fillPlayPanel?.(list, o.play),
+    // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（toggle 播放/暂停 +
+    // select 动作 + 空态引导），经 panels 注入（R1 禁 utils→views）。fillPlayPanel 逃生舱删除。
+    children: o.panels?.playNodes?.(o.play) ?? [],
   });
   if (o.bonePanel) {
     // 局部 const 收窄替代 !：renderCustom 闭包内 TS 不保持 o.bonePanel 的收窄

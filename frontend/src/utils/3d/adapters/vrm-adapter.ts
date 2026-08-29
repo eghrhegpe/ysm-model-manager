@@ -177,8 +177,9 @@ export interface VrmPanelHooks {
   /** 截图面板声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归，P5 收尾：对齐 MMD/YSM
    *  shotNodes 模式，复用 shot-panel-shared；缺失 → children 空、面板不渲染） */
   shotNodes?: (screenshot: (() => Promise<string | null>) | null, modelPath: string) => PreviewMenuNode[];
-  /** 播放面板填充回调（复用 MMD 播放面板；解除 utils→views 分层违规 R1，缺失则 play 项 render 退化为 no-op） */
-  fillPlayPanel?: (list: HTMLElement, bridge: MmdPlayBridge) => void;
+  /** [doc:adr-126-p5-收尾] play 面板声明式节点（复用 MMD playNodes：toggle 播放/暂停 +
+   *  select 动作 + 空态引导）；缺失 → children 空、面板不渲染 */
+  playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
 }
 
 interface MdVrParseResult {
@@ -633,9 +634,8 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       legacyTestId: "vrm-play-entry",
       dockGroup: "motion", // 底栏 💃 动作组（对齐 MMD）
-      renderCustom:(list): void => {
-        o.panels?.fillPlayPanel?.(list, o.play!);
-      },
+      // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（复用 MMD，经 panels 注入）
+      children: o.panels?.playNodes?.(o.play) ?? [],
     });
   }
   if (o.perception) {

@@ -71,17 +71,42 @@ function makePort(): MmdDataPort {
   };
 }
 
-/** 测试用 panels 桩：fillPlayPanel 喂真实按钮+文案（暂停/播放 toggle），其余 no-op */
+/** 测试用 panels 桩：playNodes 喂真实结构 toggle + select（对齐 playNodes id 约定），其余 no-op */
 function makeMmdPanels(): MmdPanelHooks {
   return {
     fillModelPanel: () => {},
-    fillMorphPanel: () => {},
-    fillPlayPanel: (list) => {
-      const btn = document.createElement("button");
-      btn.id = "mmd-play-btn";
-      btn.textContent = "暂停";
-      btn.onclick = (): void => { btn.textContent = btn.textContent === "暂停" ? "播放" : "暂停"; };
-      list.appendChild(btn);
+    playNodes: (bridge) => {
+      const nodes: Array<{
+        id: string;
+        kind: "toggle" | "select";
+        labelKey?: string;
+        fallback: string;
+        control: {
+          options?: Array<{ value: string; label: string }>;
+          get?: (v?: unknown) => unknown;
+          set: (v?: unknown) => void;
+        };
+      }> = [
+        {
+          id: "play-toggle",
+          kind: "toggle",
+          fallback: "播放",
+          control: { get: () => bridge.isPlaying(), set: () => bridge.toggle() },
+        },
+      ];
+      if (bridge.clips.length > 1) {
+        nodes.push({
+          id: "play-select",
+          kind: "select",
+          fallback: "动作",
+          control: {
+            options: bridge.clips.map((c, i) => ({ value: String(i), label: c.label })) as never,
+            get: () => String(bridge.currentIndex()),
+            set: (v) => { bridge.select(Number(v) || 0); },
+          },
+        });
+      }
+      return nodes as never;
     },
     fillShotPanel: () => {},
     // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
@@ -116,17 +141,19 @@ function makeCtx() {
 }
 
 /** 最近一次 setAdapterItems 收到的适配器项 */
-function registeredItems(built: { menuItems?: Array<{ id: string; kind: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void }> | null }): Array<{
+function registeredItems(built: { menuItems?: Array<{ id: string; kind: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void; children?: Array<{ id: string; kind: string; control?: { get?: (v?: unknown) => unknown; set?: (v: unknown) => void } }> }> | null }): Array<{
   id: string;
   kind: string;
   render?: (list: HTMLElement, close: () => void) => void;
   renderCustom?: (list: HTMLElement, close?: () => void) => void;
+  children?: Array<{ id: string; kind: string; control?: { get?: (v?: unknown) => unknown; set?: (v: unknown) => void } }>;
 }> {
   return (built.menuItems ?? []) as Array<{
     id: string;
     kind: string;
     render?: (list: HTMLElement, close: () => void) => void;
     renderCustom?: (list: HTMLElement, close?: () => void) => void;
+    children?: Array<{ id: string; kind: string; control?: { get?: (v?: unknown) => unknown; set?: (v: unknown) => void } }>;
   }>;
 }
 
@@ -336,18 +363,22 @@ describe("buildMmdScene 主路径", () => {
     expect(hoisted.vmdParseMock).toHaveBeenCalledTimes(1);
     expect(hoisted.buildAnimMock).toHaveBeenCalledTimes(1);
 
-    // 播放面板（ADR-076 v2 Phase 2：经菜单项 render；初始播放态 → 文案"暂停"）
+    // 播放面板（[doc:adr-126-p5-收尾] play 走 playNodes 声明式 toggle/select；初始播放态 → toggle on）
     const playItem = registeredItems(built).find((i) => i.id === "play");
     expect(playItem).toBeDefined();
-    const list = document.createElement("div");
-    playItem!.renderCustom!(list, () => {});
-    const playBtn = list.querySelector<HTMLElement>("#mmd-play-btn");
-    expect(playBtn).not.toBeNull();
-    expect(playBtn!.textContent).toBe("暂停");
-    playBtn!.click();
-    expect(playBtn!.textContent).toBe("播放");
-    playBtn!.click();
-    expect(playBtn!.textContent).toBe("暂停");
+    expect(playItem?.renderCustom).toBeUndefined();
+    // children = playNodes 产出：toggle（播放/暂停）经 control.get/set 闭包读写 bridge
+    const toggle = (playItem?.children ?? []).find((n) => n.id === "play-toggle");
+    expect(toggle).toBeDefined();
+    expect(toggle?.kind).toBe("toggle");
+    // 初始播放态（VMD 自动播放）→ toggle on
+    expect(toggle?.control?.get?.(undefined)).toBe(true);
+    // 点击 → 暂停 → toggle off
+    toggle?.control?.set?.(false);
+    expect(toggle?.control?.get?.(undefined)).toBe(false);
+    // 再点 → 恢复播放 → toggle on
+    toggle?.control?.set?.(true);
+    expect(toggle?.control?.get?.(undefined)).toBe(true);
 
     // update 契约：updateWithMixer 驱动动画 + IK
     built.update!(0.016);
@@ -425,13 +456,12 @@ describe("buildMmdScene 主路径", () => {
     // 坏 VMD 被跳过，仅 1 个动画构建成功
     expect(hoisted.buildAnimMock).toHaveBeenCalledTimes(1);
 
-    // 仅 1 个 clip → 播放面板无 select（播放按钮仍在）
+    // 仅 1 个 clip → play 节点无 select（播放 toggle 仍在）
     const playItem = registeredItems(built).find((i) => i.id === "play");
     expect(playItem).toBeDefined();
-    const list = document.createElement("div");
-    playItem!.renderCustom!(list, () => {});
-    expect(list.querySelector("#mmd-motion-sel")).toBeNull();
-    expect(list.querySelector("#mmd-play-btn")).not.toBeNull();
+    const playChildren = playItem?.children ?? [];
+    expect(playChildren.some((n) => n.id === "play-select")).toBe(false);
+    expect(playChildren.some((n) => n.id === "play-toggle")).toBe(true);
     built.dispose();
   });
 
@@ -813,24 +843,9 @@ describe("mmd-pmx-worker 开关（默认主线程 MMDLoader 完整加载，worke
 
 // ---- VMD 切换动作：拉回绑定姿势再播 + action.reset 归零（避免未覆盖骨骼残留旧动作）----
 describe("VMD select 切换：骨骼复位 + action 归零重播", () => {
-  /** 带 select 下拉的 panels 桩（复刻 mmd-controls.ts fillMmdPlayPanel 的 select 接线） */
+  /** 带 select 下拉的 panels 桩（base.playNodes 多 clip 时含 play-select，直接复用） */
   function makePanelsWithSelect(): MmdPanelHooks {
-    const base = makeMmdPanels();
-    return {
-      ...base,
-      fillPlayPanel: (list, bridge) => {
-        const sel = document.createElement("select");
-        sel.id = "mmd-motion-sel";
-        bridge.clips.forEach((c, i) => {
-          const opt = document.createElement("option");
-          opt.value = String(i);
-          opt.textContent = c.label;
-          sel.appendChild(opt);
-        });
-        sel.onchange = (): void => { bridge.select(Number(sel.value) || 0); };
-        list.appendChild(sel);
-      },
-    };
+    return makeMmdPanels();
   }
 
   it("select 切换动作：先复位骨骼（skeleton.pose）+ 新 action.reset 归零", async () => {
@@ -891,16 +906,14 @@ describe("VMD select 切换：骨骼复位 + action 归零重播", () => {
       const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makePanelsWithSelect());
       expect(hoisted.buildAnimMock).toHaveBeenCalledTimes(2);
 
-      // 通过下拉切换动作 0 → 1
+      // 通过下拉切换动作 0 → 1（[doc:adr-126-p5-收尾] play 走声明式 select 节点 control）
       const playItem = registeredItems(built).find((i) => i.id === "play");
       expect(playItem).toBeDefined();
-      const list = document.createElement("div");
-      playItem!.renderCustom!(list, () => {});
-      const sel = list.querySelector<HTMLSelectElement>("#mmd-motion-sel");
-      expect(sel).not.toBeNull();
+      const sel = (playItem?.children ?? []).find((n) => n.kind === "select");
+      expect(sel).toBeDefined();
       const beforeReset = resetCalls.length;
-      sel!.value = "1";
-      sel!.dispatchEvent(new Event("change"));
+      // select 节点 control.set 触发 bridge.select（内部含骨骼复位 + action.reset）
+      sel!.control?.set?.("1");
 
       expect(poseSpy, "切换动作前应复位骨骼到绑定姿势（防未覆盖骨骼残留旧动作）").toHaveBeenCalled();
       expect(

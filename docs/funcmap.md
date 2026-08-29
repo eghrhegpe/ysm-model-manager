@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 172 | 701 |
-| frontend/views | 118 | 347 |
+| 前端·工具 | 173 | 703 |
+| frontend/views | 118 | 346 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **503** | **2150** |
+| **合计** | **504** | **2151** |
 
 ## Go·头像
 
@@ -1346,11 +1346,11 @@
 | `litematicMenuItems()` | `frontend/src/utils/3d/adapters/litematic-adapter:459` | 构造 litematic 专属菜单项： 分层切片调节（axis/layer 控件）作为 🧍 模型组的一个面板项， 点击后弹出面板，内含轴选择 + 分层模式 + 滑块控件。 |
 | `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
 | `materialNodes()` | `frontend/src/utils/3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
-| `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:65` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:180` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1159` | — |
-| `MmdMenuItemsOpts()` | `frontend/src/utils/3d/adapters/mmd-adapter:1232` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1264` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
+| `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:66` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:181` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
+| `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1160` | — |
+| `MmdMenuItemsOpts()` | `frontend/src/utils/3d/adapters/mmd-adapter:1233` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1265` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
 | `getCustomAnimPath()` | `frontend/src/utils/3d/adapters/mmd-anim-library:12` | 获取 MMD 动作库（CustomAnim）的绝对路径。 |
 | `filterAnimFiles()` | `frontend/src/utils/3d/adapters/mmd-anim-library:24` | 从文件列表中筛选动作文件（.vmd / .vpd） |
 | `BasisEncoderLike()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:13` | BasisEncoder 实例的最小接口（embind 运行时提供） |
@@ -1397,6 +1397,8 @@
 | `makeZipOverlayPort()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:113` | 创建 ZIP Overlay Port：包装 MmdDataPort， 将 zip 内路径前缀（如 "/repo/miku.zip!/"）路由到内存中的 zip entries。 |
 | `prepareMmdZipInput()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:202` | 构造完整的 zip 包装流程： 检测 zip → 解析 zip → 创建 overlay → 返回 { port, rootPath } 调用方只需： const { port, |
 | `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:218` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
+| `MorphMeshLike()` | `frontend/src/utils/3d/adapters/morph-controls:10` | morph 面板入参（mesh 的 morphTargetDictionary/influences 子集，结构兼容 THREE.SkinnedMesh） |
+| `morphNodes()` | `frontend/src/utils/3d/adapters/morph-controls:20` | MMD 表情开关声明式节点（纯数据工厂零 DOM）。 |
 | `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:76` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
 | `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:95` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
 | `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:121` | — |
@@ -1439,7 +1441,7 @@
 | `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:126` | 类型守卫：节点是否为 folder（可下钻） |
 | `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:131` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
 | `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:144` | 递归收集全部节点 id（供 id 唯一性契约测试） |
-| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:348` | — |
+| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:352` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu-roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:38` | — |
 | `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:97` | — |
@@ -1495,9 +1497,9 @@
 | `readVrmMeta()` | `frontend/src/utils/3d/adapters/vrm-adapter:106` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
 | `VrmModelInfoCtx()` | `frontend/src/utils/3d/adapters/vrm-adapter:166` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
 | `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:173` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:508` | — |
-| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:528` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:566` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
+| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:509` | — |
+| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:529` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:567` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
 | `VrmBonePanelCtx()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:21` | 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） |
 | `RenderVrmBonePanel()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:31` | 骨骼面板渲染契约：返回清理函数（面板移除时调用） |
 | `makeBonePanelRenderer()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:40` | 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。 |
@@ -1511,9 +1513,9 @@
 | `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
 | `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
 | `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:45` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
-| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:493` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
-| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:523` | 工厂：构造统一 PreviewAdapter（shared 模式） |
-| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:542` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:492` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
+| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:522` | 工厂：构造统一 PreviewAdapter（shared 模式） |
+| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:541` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
 | `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:580` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
 | `ALPHA_F_VISIBLE()` | `frontend/src/utils/3d/alpha-index:5` | — |
 | `ALPHA_F_HOLE()` | `frontend/src/utils/3d/alpha-index:6` | — |
@@ -2193,20 +2195,19 @@
 | `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:92` | 关闭活跃女仆 3D 预览 |
 | `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:97` | 作废在途女仆 3D 加载 |
 | `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:311` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
-| `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:29` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
-| `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:34` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
-| `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:39` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
-| `invalidateMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:44` | 任意新预览派发时调用，作废在途 MMD 加载 |
+| `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:28` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
+| `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:33` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
+| `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:38` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
+| `invalidateMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:43` | 任意新预览派发时调用，作废在途 MMD 加载 |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/mmd-controls` | — |
 | `MmdBottomNavCtx()` | `frontend/src/views/app-preview/mmd-controls:28` | — |
 | `fillMmdModelPanel()` | `frontend/src/views/app-preview/mmd-controls:41` | MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） |
 | `mmdModelInfoNodes()` | `frontend/src/views/app-preview/mmd-controls:59` | [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。 |
-| `fillMmdMorphPanel()` | `frontend/src/views/app-preview/mmd-controls:74` | MMD 表情面板（morph 权重 0/1 切换，✓ 高亮当前开启；独立菜单项，避免 84+ 行平铺模型面板） |
-| `MmdPlayBridge()` | `frontend/src/views/app-preview/mmd-controls:119` | MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） |
-| `fillMmdPlayPanel()` | `frontend/src/views/app-preview/mmd-controls:132` | MMD 播放面板：播放/暂停 + 多动作切换 + 空态提示 |
-| `MaterialControlBridge()` | `frontend/src/views/app-preview/mmd-controls:200` | 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） |
-| `mmdShotNodes()` | `frontend/src/views/app-preview/mmd-controls:217` | [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。 |
-| `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:233` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
+| `MmdPlayBridge()` | `frontend/src/views/app-preview/mmd-controls:74` | MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） |
+| `playNodes()` | `frontend/src/views/app-preview/mmd-controls:92` | [doc:adr-126-p5-收尾] MMD 播放/动作面板——声明式节点版。 |
+| `MaterialControlBridge()` | `frontend/src/views/app-preview/mmd-controls:156` | 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） |
+| `mmdShotNodes()` | `frontend/src/views/app-preview/mmd-controls:173` | [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。 |
+| `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:189` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
 | `makeMmdDataPort()` | `frontend/src/views/app-preview/mmd-data-port:11` | 构建一个接入 Go RPC 的 MMD 数据端口；scope 仅用于 AddOpLog 的运行时环打标 （角色预览用 "mmd-preview"，场景预览用 "mmd-scene" |
 | `resolveMmdSiblings()` | `frontend/src/views/app-preview/mmd-siblings:13` | 同类型 MMD 模型候选（委托共享底座 resolveSiblingsByType）；失败返回 []（下拉不渲染） |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:12` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
@@ -2224,9 +2225,9 @@
 | `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:60` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
 | `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:132` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
 | `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:149` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
-| `createScene3D()` | `frontend/src/views/app-preview/scene-3d:34` | 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） |
-| `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:39` | 清理场景 3D（WebGL renderer + rAF 循环） |
-| `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:44` | 任意新预览派发时调用，作废在途场景加载 |
+| `createScene3D()` | `frontend/src/views/app-preview/scene-3d:33` | 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） |
+| `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:38` | 清理场景 3D（WebGL renderer + rAF 循环） |
+| `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:43` | 任意新预览派发时调用，作废在途场景加载 |
 | `resolveSceneSiblings()` | `frontend/src/views/app-preview/scene-siblings:8` | 场景模型候选（只扫 SceneModel 子目录）；失败返回 [] |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:31` | — |
 | `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:36` | — |

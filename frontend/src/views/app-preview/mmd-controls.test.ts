@@ -6,9 +6,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   fillMmdModelPanel,
-  fillMmdMorphPanel,
   mmdModelInfoNodes,
   mmdShotNodes,
+  playNodes,
   type MmdBottomNavCtx,
   type MaterialControlBridge,
 } from "./mmd-controls.ts";
@@ -45,18 +45,6 @@ function makeCtx() {
 }
 
 // ---- 测试辅助工具函数 ----
-
-/** 创建空 morph 字典的 mesh（无表情） */
-function makeEmptyMorphMesh(): THREE.SkinnedMesh {
-  const rawMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    Array.from({ length: 5 }, () => new THREE.MeshBasicMaterial()),
-  );
-  // 显式设置空字典
-  (rawMesh as any).morphTargetDictionary = {};
-  (rawMesh as any).morphTargetInfluences = [];
-  return rawMesh as unknown as THREE.SkinnedMesh;
-}
 
 /** 创建 0 骨骼的 PMX（骨骼数为 0） */
 function makeZeroBoneCtx(): { ctx: MmdBottomNavCtx } {
@@ -207,87 +195,59 @@ describe("mmdShotNodes（P4-B-1 声明式节点）", () => {
   });
 });
 
-describe("fillMmdMorphPanel（独立表情面板，对齐材质折叠模式）", () => {
-  it("表情行 = morph 数（testId mmd-morph-<name>），点击切换权重 0↔1 + ✓ 高亮", () => {
-    const { ctx, mesh } = makeCtx();
-    const list = document.createElement("div");
-    fillMmdMorphPanel(list, ctx);
-    const rows = list.querySelectorAll('[data-testid^="mmd-morph-"]');
-    expect(rows.length).toBe(3);
-    const row = list.querySelector('[data-testid="mmd-morph-微笑"]') as HTMLElement;
-    expect(mesh.morphTargetInfluences![0]).toBe(0);
-    row.click();
-    expect(mesh.morphTargetInfluences![0]).toBe(1);
-    expect(row.querySelector("span")?.textContent).toBe("✓");
-    row.click();
-    expect(mesh.morphTargetInfluences![0]).toBe(0);
-    expect(row.querySelector("span")?.textContent).toBe("🙂");
+describe("playNodes（[doc:adr-126-p5-收尾] 播放面板声明式节点）", () => {
+  function makeBridge(overrides: Partial<import("./mmd-controls.ts").MmdPlayBridge> = {}) {
+    const clips = [{ label: "a" }, { label: "b" }];
+    let playing = false;
+    let idx = 0;
+    return {
+      clips,
+      isPlaying: () => playing,
+      toggle: () => { playing = !playing; },
+      currentIndex: () => idx,
+      select: (i: number) => { idx = i; },
+      animDir: null,
+      requestReload: vi.fn(),
+      ...overrides,
+    } as unknown as import("./mmd-controls.ts").MmdPlayBridge;
+  }
+
+  it("多动作：toggle（播放/暂停）+ select（动作），闭包读写 bridge", () => {
+    const bridge = makeBridge();
+    const nodes = playNodes(bridge);
+    expect(nodes.map((n) => n.id)).toEqual(["play-toggle", "play-select"]);
+    const toggle = nodes.find((n) => n.id === "play-toggle")!;
+    const sel = nodes.find((n) => n.id === "play-select")!;
+    // toggle 初始 off → set(true) 播放 → get true
+    expect(toggle.control?.get?.(undefined)).toBe(false);
+    toggle.control?.set?.(true);
+    expect(toggle.control?.get?.(undefined)).toBe(true);
+    // select 初始 0 → set("1") → bridge.select(1)
+    expect(sel.control?.get?.(undefined)).toBe("0");
+    sel.control?.set?.("1");
+    expect(bridge.currentIndex()).toBe(1);
+    expect(sel.control?.get?.(undefined)).toBe("1");
   });
 
-  it("空 morph 字典时渲染空态提示（不崩溃）", () => {
-    const mesh = makeEmptyMorphMesh();
-    const mmd = {
-      pmx: {
-        bones: new Array(10),
-        materials: [{ name: "mat0" }, { name: "mat1" }],
-        morphs: [],
-      },
-    };
-    const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "测试.pmx" };
-    const list = document.createElement("div");
-    fillMmdMorphPanel(list, ctx);
-    // 无 morph 行，但有空态提示
-    expect(list.querySelectorAll('[data-testid^="mmd-morph-"]').length).toBe(0);
-    expect(list.textContent).not.toBe("");
+  it("单动作：仅 toggle，无 select", () => {
+    const bridge = makeBridge({ clips: [{ label: "only" }] });
+    const nodes = playNodes(bridge);
+    expect(nodes.map((n) => n.id)).toEqual(["play-toggle"]);
   });
 
-  it("单个 morph 的点击切换行为", () => {
-    const rawMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      [new THREE.MeshBasicMaterial()],
-    );
-    rawMesh.morphTargetDictionary = { "单一": 0 };
-    rawMesh.morphTargetInfluences = [0];
-    const mesh = rawMesh as unknown as THREE.SkinnedMesh;
-    const mmd = {
-      pmx: {
-        bones: new Array(5),
-        materials: [{ name: "mat0" }],
-        morphs: [{ name: "单一" }],
-      },
-    };
-    const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "单morph.pmx" };
-    const list = document.createElement("div");
-    fillMmdMorphPanel(list, ctx);
-    const row = list.querySelector('[data-testid="mmd-morph-单一"]') as HTMLElement;
-    expect(row).not.toBeNull();
-    expect(mesh.morphTargetInfluences![0]).toBe(0);
-    row.click();
-    expect(mesh.morphTargetInfluences![0]).toBe(1);
-    expect(row.querySelector("span")?.textContent).toBe("✓");
+  it("无动作：空态 field + 重新扫描 button（requestReload 触发）", () => {
+    const bridge = makeBridge({ clips: [] });
+    const nodes = playNodes(bridge);
+    expect(nodes[0]).toMatchObject({ id: "play-empty", kind: "field" });
+    expect(nodes[1]).toMatchObject({ id: "play-reload", kind: "button" });
+    nodes[1].action!({ toast: vi.fn(), closeAllOverlays: vi.fn() });
+    expect(bridge.requestReload).toHaveBeenCalled();
   });
 
-  it("初始权重 > 0.5 时显示 ✓（无需首次点击）", () => {
-    const rawMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      [new THREE.MeshBasicMaterial()],
-    );
-    rawMesh.morphTargetDictionary = { "已激活": 0 };
-    rawMesh.morphTargetInfluences = [1];
-    const mesh = rawMesh as unknown as THREE.SkinnedMesh;
-    const mmd = {
-      pmx: {
-        bones: new Array(5),
-        materials: [{ name: "mat0" }],
-        morphs: [{ name: "已激活" }],
-      },
-    };
-    const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "init.pmx" };
-    const list = document.createElement("div");
-    fillMmdMorphPanel(list, ctx);
-    const row = list.querySelector('[data-testid="mmd-morph-已激活"]') as HTMLElement;
-    expect(row.querySelector("span")?.textContent).toBe("✓");
-    expect(row.style.background).toContain("var(--mmd-morph-active-bg)");
+  it("animDir 配置：追加路径提示 field", () => {
+    const bridge = makeBridge({ animDir: "/custom/anim" });
+    const nodes = playNodes(bridge);
+    expect(nodes.some((n) => n.id === "play-dir")).toBe(true);
   });
 });
 

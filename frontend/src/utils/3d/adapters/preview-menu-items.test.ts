@@ -78,8 +78,10 @@ function fakeMmdOpts(overrides: Partial<MmdMenuItemsOpts> = {}): MmdMenuItemsOpt
     bonePanel: null,
     panels: {
       fillModelPanel: (list) => setHtml(list, '<div data-testid="mmd-model-card">测试.pmx</div>'),
-      fillMorphPanel: (list) => setHtml(list, '<div data-testid="mmd-morph-card"></div>'),
-      fillPlayPanel: (list) => setHtml(list, '<button data-testid="mmd-play"></button><select data-testid="mmd-motion"></select>'),
+      playNodes: () => [
+        { id: "play-toggle", kind: "toggle" as const, labelKey: "x", fallback: "播放", control: { get: () => false, set: () => {} } },
+        { id: "play-select", kind: "select" as const, labelKey: "x", fallback: "动作", control: { options: [], get: () => "0", set: () => {} } },
+      ],
       fillShotPanel: () => {},
       // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
       modelInfoNodes: () => [{ id: "mmd-model-name", kind: "field", labelKey: "x", value: "测试.pmx" }],
@@ -460,11 +462,16 @@ describe("面板渲染（安全 panel 逐个打开）", () => {
     handle.dispose();
   });
 
-  it("mmd play 面板：#mmd-play-btn + 动作选择器", () => {
+  it("mmd play 面板：播放 toggle + 动作选择器（声明式节点）", () => {
+    // [doc:adr-126-p5-收尾] play 走 playNodes 声明式 children：toggle（播放/暂停）+ select（动作）
+    // 渲染由 renderMenu 单测覆盖（preview-menu-node-render.test.ts），此处断言节点结构
+    const playNode = mmdMenuItems(fakeMmdOpts()).find((d) => d.id === "play");
+    expect(playNode?.children?.map((c) => c.id)).toEqual(["play-toggle", "play-select"]);
+    expect(playNode?.children?.some((c) => c.kind === "toggle")).toBe(true);
+    expect(playNode?.children?.some((c) => c.kind === "select")).toBe(true);
     const { overlay, handle } = mountWith(mmdMenuItems(fakeMmdOpts()));
     handle.openPanel("play");
-    expect(overlay.querySelector("[data-testid=mmd-play]")).not.toBeNull();
-    expect(overlay.querySelector("[data-testid=mmd-motion]")).not.toBeNull();
+    expect(overlay.textContent).toContain("播放");
     handle.dispose();
   });
 

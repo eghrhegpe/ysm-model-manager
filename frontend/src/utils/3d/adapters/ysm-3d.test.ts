@@ -382,15 +382,22 @@ describe("buildYsmScene 动画播放器集成（ADR-100）", () => {
       preload: mocks.preloadModel,
       listAllFilePaths: listPaths,
       readTextFile,
-      fillPlayPanel: (_list, bridge) => {
-        firstLabel = bridge.clips[0]?.label ?? null;
+      panels: {
+        fillShotPanel: () => {},
+        // [doc:adr-126-p5-收尾] play 面板声明式化：playNodes 经 panels 注入（R1 合规），
+        // 捕获 bridge 验证动作标签解码
+        playNodes: (bridge) => {
+          firstLabel = bridge.clips[0]?.label ?? null;
+          return [];
+        },
       },
     });
 
     const items = registeredItems(preview);
     const playItem = items.find((i) => i.id === "ysm-play");
     expect(playItem).toBeDefined();
-    playItem!.renderCustom!(document.createElement("div"), () => {});
+    // play 节点走 children（playNodes 产出），不再 renderCustom
+    expect(playItem?.renderCustom).toBeUndefined();
     // 多 clip 标签 = 「文件名 · clip 名」；乱码解码会让 clip 名变 Latin-1 杂音
     expect(firstLabel).toBe("motion · 挥手");
 

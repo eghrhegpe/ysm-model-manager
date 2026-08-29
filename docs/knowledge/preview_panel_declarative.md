@@ -9,11 +9,13 @@ source_files:
   - frontend/src/utils/3d/adapters/preview-menu-node-types.ts
   - frontend/src/utils/3d/adapters/mmd-adapter.ts
   - frontend/src/utils/3d/adapters/ysm-adapter.ts
+  - frontend/src/utils/3d/adapters/morph-controls.ts
   - frontend/src/views/app-preview/mmd-controls.ts
   - frontend/src/views/app-preview/ysm-controls.ts
   - frontend/src/views/app-preview/shot-panel-shared.ts
 tests:
   - frontend/src/utils/3d/adapters/preview-menu-items.test.ts
+  - frontend/src/utils/3d/adapters/morph-controls.test.ts
   - frontend/src/views/app-preview/mmd-controls.test.ts
   - frontend/src/views/app-preview/ysm-controls.test.ts
 use_when:
@@ -120,6 +122,7 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 - ADR-126（本决策 P4-B + P5 根治）、ADR-125（设置面板单渲染器）、ADR-085（声明式收敛方向）、ADR-093（条件注入范式）
 - 落地：P4-B-1（mmd model/shot 声明式化）+ P4-B-2（YSM 截图声明式化 + 截图共享层）+ **P4-D（`visibleWhen: (s: PreviewSnapshot) => boolean` 升级）** + **P5（受控 schema 注册 schema-registry.ts + select 分支 + `ui.activeComponent` 响应式 + buildYsmModelSchema 取代 fill3DPanel）** 已完成
 - **P5 撤销 P4-B-3 的「fill3DPanel 保持逃生舱」定性**：用户推动的根治——fill3DPanel 的组件切换是「渲染通道不受控」（新增面板可绕过数组系统拼 DOM），不是「交互态不值得转」；现以 `ui.activeComponent` 状态层 + schema-registry 受控注册 + select 分支根治
-- 仍保持逃生舱：morph/play/material（运行时交互态，转声明式需先造 Capability 类，ADR-126 §2.5 定性不变）
+- **P5-收尾：morph/play 交互面板也声明式化**（二轮审计）——`morphNodes`（mmd 表情 toggle）+ `playNodes`（播放/暂停 toggle + 动作 select + 空态，三 adapter 共用）；交互态「运行时状态」由 toggle/select 的 get/set 闭包 + 即时 apply 解决，不需 Capability 类
+- **逃生舱只剩两类真·复杂**：① 骨骼面板（makeBonePanelRenderer，3D 射线拾取 + 相机/场景实时对象）；② litematic 分层切片（直接持有 DOM 元素引用）
 - P4-C（dockGroup 双语义）定性「保持观察」：模式守卫早已独立字段，剩 dock 分组 + 内容域双语义，概念错位非功能 bug（详见 ADR-126 §2.5）
 - 顺手修复：`fillMmdShotPanel` / `fillYsmShotPanel` 的 `saveScreenshot` 第三参误传 `screenshotFn`（被当 setShotState），实际截图走 fallback 而非活跃渲染器——`makeShotAction`（shot-panel-shared.ts）已修正（第四参传 screenshotFn）

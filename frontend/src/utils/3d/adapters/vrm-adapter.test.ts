@@ -238,7 +238,9 @@ function registeredItems(built: { menuItems?: Array<{ id: string; kind: string; 
 
 function makePanels(): VrmPanelHooks {
   return {
-    fillPlayPanel: () => {},
+    playNodes: () => [
+      { id: "stub-play-toggle", kind: "toggle" as const, labelKey: "x", fallback: "播放", control: { get: () => false, set: () => {} } },
+    ],
   };
 }
 
@@ -503,12 +505,14 @@ describe("VRMA 多动作切换", () => {
     expect(playItem).toBeDefined();
     expect(playItem?.dockGroup).toBe("motion");
 
-    // 通过 panels.fillPlayPanel 验证 play bridge
-    const fillPlayPanel = vi.fn();
+    // 通过 panels.playNodes 验证 play bridge（[doc:adr-126-p5-收尾] play 面板声明式化）
+    const playNodes = vi.fn((bridge: unknown) => [
+      { id: "stub-play", kind: "toggle" as const, labelKey: "x", fallback: "播放", control: { get: () => false, set: () => {} } },
+    ]);
     const panelsWithPlay = makePanels();
-    panelsWithPlay.fillPlayPanel = fillPlayPanel;
+    panelsWithPlay.playNodes = playNodes;
 
-    // 重置 parseMock 计数，重新构建以注入 fillPlayPanel
+    // 重置 parseMock 计数，重新构建以注入 playNodes
     hoisted.parseMock.mockClear();
     hoisted.parseMock.mockImplementation((buffer: unknown, path: string) => {
       const callCount = hoisted.parseMock.mock.calls.length;
@@ -530,15 +534,11 @@ describe("VRMA 多动作切换", () => {
       hoisted.listPathsMock,
     );
 
-    // 菜单项含 vrma-play，且 render 会调用 fillPlayPanel
+    // 菜单项含 vrma-play，且 playNodes 被调用（bridge 传对）
     const items2 = registeredItems(built2);
     const playItem2 = items2.find((i: { id: string }) => i.id === "vrma-play");
     expect(playItem2).toBeDefined();
-
-    // 调用 render 触发 fillPlayPanel（第二参 close 本用例不关心，传 no-op 满足双参签名）
-    const list = document.createElement("div");
-    playItem2!.renderCustom!(list, () => {});
-    expect(fillPlayPanel).toHaveBeenCalled();
+    expect(playNodes).toHaveBeenCalled();
 
     built2.dispose();
   });

@@ -62,6 +62,8 @@ export interface YsmAdapterOptions {
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
     shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
+    /** [doc:adr-126-p5-收尾] play 面板声明式节点（复用 MMD playNodes）；缺失 → children 空 */
+    playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
     /** [doc:adr-126-p5-c] 受控 schema 注册钩子：build 拿到 controlsCtx 后调用，
      *  视图层在此注册 buildYsmModelSchema（key="ysm-model"）——model 面板内容走 schema-registry */
     /** 返回取消订阅函数（off）：视图层订阅状态层变更（如 ui.activeComponent → showModelGroup）
@@ -72,8 +74,6 @@ export interface YsmAdapterOptions {
   listAllFilePaths?: (dir: string) => Promise<string[] | null>;
   /** base64 文本读取（读 .animation.json 字节用；对齐 VRM readFn 注入模式） */
   readTextFile?: (path: string) => Promise<string | null>;
-  /** 播放面板填充回调（视图层注入；复用 fillMmdPlayPanel，解除 utils→views 分层违规 R1） */
-  fillPlayPanel?: (list: HTMLElement, bridge: MmdPlayBridge) => void;
   /**
    * 渲染模式（ADR-Bedrock 通用化）：
    * - "ysm"（默认）：启用 YSM 专属特性（动画扫描、语义骨骼、呼吸控制）
@@ -379,7 +379,6 @@ function mdYsBuildMenuAndDebug(
       cleanupRef: bonePanelRef,
     },
     play: animBridge ?? undefined,
-    fillPlayPanel: opts.fillPlayPanel,
     perception: { state: perceptionState, caps: perceptionCaps },
   });
 
@@ -557,13 +556,14 @@ export interface YsmMenuItemsOpts {
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
     shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
+    /** [doc:adr-126-p5-收尾] play 面板声明式节点（复用 MMD playNodes：toggle 播放/暂停 +
+     *  select 动作 + 空态引导）；缺失 → children 空、面板不渲染 */
+    playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
     // 注：registerModelSchema 只在 YsmAdapterOptions（makeYsmAdapter opts）消费——
     // ysmMenuItems 不读它，不在此重复声明（防两接口分化，P5-A review P3）
   };
   /** YSM 动画桥（ADR-100）；null/缺省（无 .animation.json）→ 不注入 play 项 */
   play?: MmdPlayBridge | null | undefined;
-  /** 播放面板填充回调（视图层注入；复用 fillMmdPlayPanel，解除 utils→views 分层违规 R1） */
-  fillPlayPanel?: (list: HTMLElement, bridge: MmdPlayBridge) => void;
   /** 感知层状态（adapter build 创建，面板 UI 双向绑定） */
   perception?: {
     state: PerceptionState;
@@ -638,9 +638,8 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       legacyTestId: "ysm-play-entry",
       dockGroup: "motion",
-      renderCustom:(list) => {
-        o.fillPlayPanel?.(list, o.play!);
-      },
+      // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（复用 MMD，经 panels 注入）
+      children: o.panels?.playNodes?.(o.play) ?? [],
     });
   }
   if (o.perception) {

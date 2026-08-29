@@ -69,10 +69,13 @@ function openEmbedded(
     // 句柄必须写模块级 wsLoadTimer（返回按钮的 clearTimeout 消费同一变量）；
     // 此前局部 const 遮蔽模块级变量 → 返回按钮清的是 undefined，旧 timer 残留仍会弹 blocked
     window.clearTimeout(wsLoadTimer); // 防残留：上一次内嵌打开的 timer 未清时先作废
-    wsLoadTimer = window.setTimeout(() => {
+    // 局部句柄 + 模块级同赋：onload 清「本次」句柄而非「最新」，避免返回后极速再开时
+    // 旧空文档的迟到 load 误清新 timer（审核建议：消除理论竞态）
+    const timer = window.setTimeout(() => {
       if (blockedEl) blockedEl.style.display = "flex";
     }, WS_EMBED_TIMEOUT_MS);
-    iframe.onload = () => window.clearTimeout(wsLoadTimer);
+    wsLoadTimer = timer;
+    iframe.onload = () => window.clearTimeout(timer);
   }
 }
 

@@ -2191,7 +2191,7 @@
 | `isFaved()` | `frontend/src/views/app-content/workshop-data:76` | — |
 | `toggleFav()` | `frontend/src/views/app-content/workshop-data:80` | — |
 | `openSite()` | `frontend/src/views/app-content/workshop-site-opener:20` | 打开站点（外链/内嵌/窗口） |
-| `bindSiteEvents()` | `frontend/src/views/app-content/workshop-site-opener:82` | 绑定站点打开相关事件 |
+| `bindSiteEvents()` | `frontend/src/views/app-content/workshop-site-opener:85` | 绑定站点打开相关事件 |
 | `WorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:20` | 创意工坊页的共享 ref 集合——单一事实来源。 |
 | `createWorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:28` | 创建创意工坊页的共享 ref 对象（单一入口，所有消费者共享同一实例） |
 | `initWorkshopTabs()` | `frontend/src/views/app-content/workshop-tabs:40` | 初始化创意工坊 Tab |

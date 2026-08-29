@@ -449,6 +449,25 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     expect(h.vm._entries[1].banned).toBe(true); // 成功项 b.ysm 翻转
   });
 
+  it("全部失败 → toast warn 含失败计数；不翻转 banned、不 renderTree、不发 sync（ok=0 短路）", async () => {
+    const h = makeHarness();
+    ToggleEnableMock.mockRejectedValue(new Error("lock"));
+    h.vm._entries = [
+      makeEntry("dirA/a.ysm", "/repo/dirA/a.ysm", false),
+      makeEntry("dirA/b.ysm", "/repo/dirA/b.ysm", false),
+    ];
+    h.container.appendChild(folderRow("dirA", "目录A"));
+    bindTreeEvents(h.container, h.vm);
+    click(h.container.querySelector(".fh .ck") as Element);
+    await flush();
+    const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
+    expect(toasts.some((t) => t.msg === "文件夹禁用: 0 成功, 2 失败" && t.type === "warn")).toBe(true);
+    // ok=0 → 不进 if (ok>0)：失败项全部保持原状，不重绘不广播
+    expect(h.vm._entries.every((e) => e.banned === false)).toBe(true);
+    expect(h.vm._renderTree).not.toHaveBeenCalled();
+    expect(emitted("sync:toggle:status").length).toBe(0);
+  });
+
   it("批量进行中 → toast「⏳ 操作进行中」，不调 getApp", async () => {
     const h = makeHarness();
     (h.vm as unknown as { _batchBusy: boolean })._batchBusy = true;

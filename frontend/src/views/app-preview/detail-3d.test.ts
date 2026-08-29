@@ -289,6 +289,8 @@ describe("showMorphPreview CustomMorph 入口卡", () => {
     expect(items[1].classList.contains("active")).toBe(false);
     // hover 效果来自注入的组件级 <style> 规则（.morph-item:hover），非内联 hover: 前缀
     expect(html).toContain(".morph-item:hover");
+    // 高亮规则本体也在 <style> 里（防 active class 拼上了但规则被误删，测试仍绿的假绿）
+    expect(html).toContain(".morph-item.active");
     // 点击兄弟项 → 带 rtype 的 model:select
     items[1].click();
     expect(emitted("model:select")).toEqual([

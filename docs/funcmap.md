@@ -1487,7 +1487,7 @@
 | `STATS_PANEL_ID()` | `frontend/src/utils/3d/adapters/preview-menu/stats:17` | 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） |
 | `hasSceneStats()` | `frontend/src/utils/3d/adapters/preview-menu/stats:20` | 是否有可供展示的统计（mesh/bone 任一 &gt; 0；全 0 = 空场景/纯装饰，无意义） |
 | `buildStatsPanel()` | `frontend/src/utils/3d/adapters/preview-menu/stats:25` | 构造统计面板节点：panel + 6 个 field 行（骨骼/网格/三角面/材质/纹理/表情） |
-| `mergeStatsMenuItems()` | `frontend/src/utils/3d/adapters/preview-menu/stats:58` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
+| `mergeStatsMenuItems()` | `frontend/src/utils/3d/adapters/preview-menu/stats:59` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
 | `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu/switch:217` | — |
 | `ModelEntry()` | `frontend/src/utils/3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
 | `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |

@@ -54,11 +54,14 @@ export function buildStatsPanel(stats: SceneStats): PreviewMenuNode {
 /**
  * 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。
  * 纯函数：不修改入参；有统计才追加（全 0 场景无统计面板）。
+ * 幂等保护（审核 nit）：入参已含 stats-panel（id 去重）时不再追加——防日后多调用点重复注入。
  */
 export function mergeStatsMenuItems(
   items: PreviewMenuNode[] | null | undefined,
   stats: SceneStats,
 ): PreviewMenuNode[] {
   if (!hasSceneStats(stats)) return items ?? [];
-  return [...(items ?? []), buildStatsPanel(stats)];
+  const base = items ?? [];
+  if (base.some((n) => n.id === STATS_PANEL_ID)) return base;
+  return [...base, buildStatsPanel(stats)];
 }

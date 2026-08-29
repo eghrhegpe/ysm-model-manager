@@ -93,4 +93,17 @@ describe("mergeStatsMenuItems", () => {
     expect(merged).toHaveLength(1);
     expect(merged[0]!.id).toBe("layers");
   });
+
+  it("幂等保护：入参已含 stats-panel（id 去重）→ 不重复追加", () => {
+    // 审核 nit：防日后多调用点重复注入（现仅 mount3D + switch 两处互斥调用）
+    const existing: PreviewMenuNode[] = [
+      { id: "layers", kind: "panel", icon: "⛰️", labelKey: "x", fallback: "分层" },
+      { id: "stats-panel", kind: "panel", icon: "📊", labelKey: "x", fallback: "渲染实测", children: [] },
+    ];
+    const merged = mergeStatsMenuItems(existing, stats());
+    expect(merged).toHaveLength(2);
+    expect(merged.filter((n) => n.id === "stats-panel")).toHaveLength(1);
+    // 不修改入参（纯函数）
+    expect(existing).toHaveLength(2);
+  });
 });

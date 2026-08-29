@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { renderMenu } from "./preview-menu.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
+import { mockMenuHandle } from "./menu-test-fixtures.ts";
 
 function makeDeps(): {
   makeRow: (def: never) => HTMLElement;
@@ -17,20 +18,7 @@ function makeDeps(): {
       return row;
     },
     makePanelView: () => ({ title: "", render: () => {} }) as any,
-    menu: {
-      root: document.createElement("div"),
-      list: document.createElement("div"),
-      setTitle: () => {},
-      setOnClose: () => {},
-      home: () => {},
-      navigate: () => {},
-      back: () => {},
-      refresh: () => {},
-      isShowing: () => false,
-      reset: () => {},
-      isAtRoot: () => true,
-      dispose: () => {},
-    } as unknown as SlideMenuHandle,
+    menu: mockMenuHandle(),
   } as any;
 }
 

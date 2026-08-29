@@ -10,6 +10,7 @@ import type { SlideMenuHandle, SlideMenuView } from "../../../ui/ui-slide-menu.t
 import { t } from "../../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
 import { previewSnapshot, setStateValue, isPathAvailable } from "../state/preview-state.ts";
+import { getSchema } from "./schema-registry.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
 const tr = (key: string, fallback: string): string => {
@@ -444,4 +445,52 @@ export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], dep
       rmAppendLeaf(container, node, deps);
     }
   }
+}
+
+// ===================================================================
+// renderAdapterPanelContent — adapter 面板内容三通道衰退（P5 roles 回归同源化）
+// ===================================================================
+
+/**
+ * adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道，
+ * 命中其一即渲染并返回 true。`renderPreviewPanel`（⚙ 根菜单面板）与 `modelDetailView`
+ * （roles 详情模型信息本体直渲）共用本实现——两条组装路径永不再分叉。
+ *
+ * 背景（P5 事故）：modelDetailView 旧直渲门只认 renderCustom，四类适配器模型面板迁离
+ * renderCustom（ysm/maid→schemaId、mmd/vrm→children）后统计/纹理/组件 select 在 roles
+ * 详情集体消失。教训：面板组装路径必须复用同一条通道衰退链，不允许各自手拼。
+ */
+export function renderAdapterPanelContent(
+  list: HTMLElement,
+  node: PreviewMenuNode,
+  deps: {
+    makeRow: (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
+    makePanelView: (node: PreviewMenuNode) => SlideMenuView;
+    menu: SlideMenuHandle;
+    actionCtx: PreviewActionMenuCtx;
+    /** renderCustom 逃生舱的 closePopup（兼容 MikuMikuAR 双参用法） */
+    hideMenu: () => void;
+  },
+): boolean {
+  // [doc:adr-126-p5-a] 受控 builder 注册优先：面板内容由 schema-registry 产出（吃状态层快照）
+  const builder = getSchema(node.schemaId ?? node.id);
+  if (builder) {
+    renderMenu(list, builder(previewSnapshot()), deps);
+    return true;
+  }
+  // [doc:adr-126-p4-b-1] 面板内容声明式通道：panel 节点带 children → 递归 renderMenu
+  if (node.children?.length) {
+    renderMenu(list, node.children, deps);
+    return true;
+  }
+  if (node.renderCustom) {
+    // [doc:adr-126-p5-收口] renderCustom 是末段逃生舱。若声明了 schemaId 走到这里
+    // 说明注册缺失，console.warn 提示（防静默 fallback 掩盖）
+    if (node.schemaId && !getSchema(node.schemaId)) {
+      console.warn(`[preview-menu] "${node.id}" 声明 schemaId="${node.schemaId}" 但未注册——走 renderCustom 逃生舱`);
+    }
+    node.renderCustom(list, deps.hideMenu);
+    return true;
+  }
+  return false;
 }

@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 174 | 714 |
+| 前端·工具 | 175 | 719 |
 | frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **505** | **2163** |
+| **合计** | **506** | **2168** |
 
 ## Go·头像
 
@@ -1346,6 +1346,8 @@
 | `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:404` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
 | `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
 | `materialNodes()` | `frontend/src/utils/3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
+| `makeMenuCtx()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:12` | PreviewMenuCtx 全字段 stub：能力全缺（getCap → null）、桥全 vi.fn()。 |
+| `mockMenuHandle()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:36` | SlideMenuHandle 全方法 stub（渲染器/面板单测用，导航动作全 no-op） |
 | `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:66` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
 | `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:181` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
 | `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1168` | — |
@@ -1441,11 +1443,12 @@
 | `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:129` | 类型守卫：节点是否为 folder（可下钻） |
 | `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:134` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
 | `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:147` | 递归收集全部节点 id（供 id 唯一性契约测试） |
-| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:419` | — |
+| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:420` | — |
+| `renderAdapterPanelContent()` | `frontend/src/utils/3d/adapters/preview-menu-render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu-roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:38` | — |
-| `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:97` | — |
-| `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu-roles:267` | — |
+| `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:112` | — |
+| `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu-roles:282` | — |
 | `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:33` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
 | `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:47` | 灯光面板 schema：从 light cap 自报控件渲染 |
 | `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:65` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
@@ -1458,10 +1461,12 @@
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
-| `PreviewMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu:39` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
-| `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu:81` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
-| `renderPreviewPanel()` | `frontend/src/utils/3d/adapters/preview-menu:278` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
-| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu:522` | — |
+| `PreviewMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu:38` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
+| `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu:80` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
+| `PreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu:223` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
+| `buildPreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu:235` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
+| `renderPreviewPanel()` | `frontend/src/utils/3d/adapters/preview-menu:279` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
+| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu:507` | — |
 | `ModelEntry()` | `frontend/src/utils/3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
 | `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
 | `MAX_MODELS()` | `frontend/src/utils/3d/adapters/scene-registry:209` | 同场景最大模型数（超量追加被拒，ADR-093 T6） |

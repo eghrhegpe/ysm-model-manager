@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-128：菜单导航图生成器与 e2e 选择器派生（声明式收口后的可验证性）",
+        "link": "/adr/ADR-128-menu-nav-graph-e2e-selectors"
+      },
+      {
         "text": "ADR-127：性能档位薄壳版——数据表 + 通用套用器（低/中/高/自定义）",
         "link": "/adr/ADR-127-preview-perf-presets"
       },

@@ -27,8 +27,7 @@ import { t } from "../../../core/i18n/t.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./preview-menu-roles.ts";
-import { renderMenu } from "./preview-menu-render.ts";
-import { getSchema } from "./schema-registry.ts";
+import { renderAdapterPanelContent } from "./preview-menu-render.ts";
 import { previewSnapshot } from "../state/preview-state.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
@@ -220,8 +219,8 @@ function renderPreviewSchemaContent(
   }
 }
 
-/** buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射 */
-interface PreviewMenuRouters {
+/** buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） */
+export interface PreviewMenuRouters {
   schemaBuilders: Record<string, (menu?: SlideMenuHandle) => PreviewMenuNode[]>;
   fillers: Record<string, (list: HTMLElement, menu?: SlideMenuHandle) => void>;
   runners: Record<string, () => void>;
@@ -230,8 +229,10 @@ interface PreviewMenuRouters {
 /**
  * [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。
  *   roles 面板需要 setAdapterItems 回写 dock——handle 尚未构造时经 shell 延迟读取。
+ *   导出供 preview-menu-health.test.ts 复用（ADR-128 落地前哨：真正执行每个常驻面板渲染器，
+ *   捕捉「菜单没迁移就断渲染」），与 check-menu-health.mjs（正则静态扫表）互补。
  */
-function buildPreviewMenuRouters(
+export function buildPreviewMenuRouters(
   ctx: PreviewMenuCtx,
   hideMenu: () => void,
   menu: SlideMenuHandle,
@@ -297,34 +298,18 @@ export function renderPreviewPanel(
   try {
     if (routers.schemaBuilders[node.id]) {
       renderPreviewSchemaContent(list, routers.schemaBuilders[node.id]!(menu), hideMenu);
-    } else if (getSchema(node.schemaId ?? node.id)) {
-      // [doc:adr-126-p5-a] 受控 builder 注册优先：面板内容由 schema-registry 产出（吃状态层快照）。
-      // 新增面板必须注册（registerSchema）——renderCustom 逃生舱收编为真·无法数据化的内容。
-      const builder = getSchema(node.schemaId ?? node.id)!;
-      renderMenu(list, builder(previewSnapshot()), {
+    } else if (
+      renderAdapterPanelContent(list, node, {
         makeRow: panelDeps.makeRow,
         makePanelView: panelDeps.makePanelView,
         menu,
         actionCtx,
-      });
-    } else if (node.children?.length) {
-      // [doc:adr-126-p4-b-1] 面板内容声明式通道：panel 节点带 children → 递归 renderMenu。
-      // 适配器只需产出 PreviewMenuNode[]（field/button/row...），渲染全走声明式渲染器，
-      // 消灭「面板内容手写 DOM 闭包」的第二渲染通道（fill3DPanel/fillModelPanel 类）。
-      renderMenu(list, node.children, {
-        makeRow: panelDeps.makeRow,
-        makePanelView: panelDeps.makePanelView,
-        menu,
-        actionCtx,
-      });
-    } else if (node.renderCustom) {
-      // [doc:adr-126-p5-收口] renderCustom 是末段逃生舱——带 schemaId/children 的节点
-      // 走声明式通道（上面分支先命中）；此处到达 = 真·无法数据化的内容（note 等静态文案）。
-      // 若误带 schemaId 走这里说明注册缺失，console.warn 提示（防静默 fallback 掩盖）
-      if (node.schemaId && !getSchema(node.schemaId)) {
-        console.warn(`[preview-menu] "${node.id}" 声明 schemaId="${node.schemaId}" 但未注册——走 renderCustom 逃生舱`);
-      }
-      node.renderCustom(list, () => hideMenu());
+        hideMenu: () => hideMenu(),
+      })
+    ) {
+      // [doc:adr-126-p5-a] schema-registry → children → renderCustom 三通道（共享实现）——
+      // 与 modelDetailView（roles 详情模型信息本体直渲）同源，两条组装路径永不再分叉
+      // （P5 事故：旧直渲门只认 renderCustom，四类适配器面板迁新通道后本体在 roles 消失）
     } else if (node.action) {
       node.action(actionCtx);
     } else {

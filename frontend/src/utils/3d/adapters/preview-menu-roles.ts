@@ -11,7 +11,7 @@ import { safeErrorMessage } from "../../safe-error-msg.ts";
 import { t } from "../../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
 import { sceneRegistry, type ModelEntry } from "./scene-registry.ts";
-import { renderMenu } from "./preview-menu-render.ts";
+import { renderMenu, renderAdapterPanelContent } from "./preview-menu-render.ts";
 import { fillSwitch } from "./preview-menu-switch.ts";
 import type { PreviewMenuCtx } from "./preview-menu.ts";
 
@@ -58,10 +58,28 @@ export function modelDetailView(
         l.appendChild(empty);
         return;
       }
-      // 模型信息面板本体直渲（1 跳看内容，用户「最想进入」）
-      if (primary?.renderCustom) {
+      // 模型信息面板本体直渲（1 跳看内容，用户「最想进入」）——走与 ⚙ 面板同一条
+      // 三通道衰退（schema-registry → children → renderCustom，renderAdapterPanelContent
+      // 共享实现）。P5 事故修复：旧直渲门只认 renderCustom，四类适配器模型面板迁离后
+      // （ysm/maid→schemaId、mmd/vrm→children）统计/纹理/组件 select 在此集体消失。
+      if (primary) {
+        const infoHost = document.createElement("div");
+        infoHost.dataset.panelId = primary.id;
+        infoHost.dataset.panelTestId = primary.legacyTestId ?? "";
         try {
-          primary.renderCustom(l, () => deps.menu.back());
+          const handled = renderAdapterPanelContent(infoHost, primary, {
+            makeRow: deps.makeRow,
+            makePanelView: deps.makePanelView,
+            menu: deps.menu,
+            actionCtx: deps.actionCtx,
+            hideMenu: () => deps.menu.back(),
+          });
+          if (handled) {
+            l.appendChild(infoHost);
+            const sep = document.createElement("div");
+            sep.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
+            l.appendChild(sep);
+          }
         } catch (err) {
           console.error("[preview-menu] 模型信息面板渲染失败", primary.id, err);
           const errRow = document.createElement("div");
@@ -69,9 +87,6 @@ export function modelDetailView(
           errRow.textContent = "面板渲染失败: " + safeErrorMessage(err);
           l.appendChild(errRow);
         }
-        const sep = document.createElement("div");
-        sep.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
-        l.appendChild(sep);
       }
       // 工具行（截图/材质）：单项平铺，多项折叠
       const sections: PreviewMenuNode[] = [];

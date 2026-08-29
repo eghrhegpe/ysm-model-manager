@@ -15,6 +15,7 @@ import { ysmMenuItems, type YsmMenuItemsOpts } from "./ysm-adapter.ts";
 import { mmdMenuItems, type MmdMenuItemsOpts } from "./mmd-adapter.ts";
 import { vrmMenuItems, type VrmMenuItemsOpts } from "./vrm-adapter.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx } from "./preview-menu.ts";
+import { makeMenuCtx } from "./menu-test-fixtures.ts";
 import type { BoneTree } from "../bone-tools.ts";
 import {
   expectContainsAtLeast,
@@ -145,25 +146,8 @@ const fakeCap = {
 } as never;
 
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
-  return {
-    selfMode: false,
-    getCap: (id) => (id === "sky" || id === "ground" ? fakeCap : null),
-    getCamBridge: () => ({
-      getOrbit: () => true,
-      setOrbit: vi.fn(),
-      getSpeed: () => 20,
-      setSpeed: vi.fn(),
-      reset: vi.fn(),
-    }),
-    getSiblings: () => [],
-    getCurrentPath: () => "/m/a.ysm",
-    getViewContainer: () => document.createElement("div"),
-    close: vi.fn(),
-    switchTo: vi.fn(),
-    toast: vi.fn(),
-    closeAllOverlays: vi.fn(),
-    ...overrides,
-  };
+  // 共享夹具薄包装：本文件测能力驱动 dock，默认注入 sky/ground fakeCap
+  return makeMenuCtx({ getCap: (id) => (id === "sky" || id === "ground" ? fakeCap : null), ...overrides });
 }
 
 function mountWith(items: PreviewMenuNode[], ctxOverrides: Partial<PreviewMenuCtx> = {}) {

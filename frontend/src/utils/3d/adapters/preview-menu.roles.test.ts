@@ -2,35 +2,14 @@
 // 覆盖：roles 项声明、角色列表渲染（焦点标记）、行首 radio 焦点切换、
 // 点击角色名进详情（按该角色 menuItems 能力显示，vrm/mmd 内容各异）、
 // ⚙ 工具含卸载角色、空态与加载入口共存。
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { CORE_MENU_ITEMS } from "./preview-menu-defs.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import { mountPreviewRootMenu, roleBaseName, type PreviewMenuCtx } from "./preview-menu.ts";
 import { sceneRegistry } from "./scene-registry.ts";
-
-function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
-  return {
-    selfMode: false,
-    getCap: () => null,
-    getCamBridge: () => ({
-      getOrbit: () => true,
-      setOrbit: vi.fn(),
-      getSpeed: () => 20,
-      setSpeed: vi.fn(),
-      reset: vi.fn(),
-    }),
-    getSiblings: () => [],
-    getCurrentPath: () => "/m/a.ysm",
-    getViewContainer: () => document.createElement("div"),
-    close: vi.fn(),
-    switchTo: vi.fn(),
-    unloadRole: vi.fn(),
-    toast: vi.fn(),
-    closeAllOverlays: vi.fn(),
-    ...overrides,
-  };
-}
+import { registerSchema, unregisterSchema } from "./schema-registry.ts";
+import { makeMenuCtx as makeCtx } from "./menu-test-fixtures.ts";
 
 /** 注册一个测试角色（真实 SceneRegistry 单例，测试间 reset） */
 function regRole(path: string, menuItems: PreviewMenuNode[] | null = null): string {
@@ -260,6 +239,87 @@ describe("角色面板（roles）", () => {
     expect(switchExternal).not.toHaveBeenCalled();
     // 不调 menu.refresh()：列表 DOM 保持不变（保留滚动位置）
     // ✓ 高亮在下次打开面板时自动归位（getCurrentPath 已更新）
+    handle.dispose();
+  });
+});
+
+// ===== 模型详情信息本体通道回归锁（P5 事故：统计/纹理/组件 select 集体消失）=====
+// modelDetailView 的 primary 直渲旧门只认 renderCustom——四类适配器模型面板迁离
+// renderCustom（ysm/maid→schemaId、mmd/vrm→children）后全部静默跳过，roles 详情只剩
+// 截图工具行。本组测试走真实路径（dock-model → 角色行 → 详情）锁三通道全兼容。
+describe("模型详情信息本体（三通道回归锁）", () => {
+  let overlay: HTMLElement;
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sceneRegistry.reset();
+    overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+  });
+  afterEach(() => {
+    unregisterSchema("detail-schema-test");
+  });
+
+  /** 注册一个带模型信息面板 + 截图工具行的测试角色并进入其详情视图（handle 由调用方 dispose）。
+   *  工具行对齐 ysm-adapter 生产形态：shot 是 children 面板（6 角度 button 在下钻视图） */
+  function enterDetail(primaryPanel: PreviewMenuNode): { id: string; handle: { dispose: () => void } } {
+    const id = regRole("/m/atri.zip", [
+      primaryPanel,
+      {
+        id: "shot",
+        icon: "📷",
+        labelKey: "preview.screenshot",
+        fallback: "截图",
+        kind: "panel",
+        dockGroup: "model",
+        children: [{ id: "ysm-shot-front", kind: "button", labelKey: "preview.screenshot", fallback: "正面", action: vi.fn() }],
+      },
+    ]);
+    const handle = mountPreviewRootMenu(overlay, makeCtx());
+    (overlay.querySelector('[data-testid="dock-model"]') as HTMLElement).click();
+    (overlay.querySelector(`[data-testid="preview-role-row"][data-role-id="${id}"]`) as HTMLElement).click();
+    return { id, handle };
+  }
+
+  it("schemaId 通道：模型信息本体渲染（ysm/maid 形态——统计/纹理/组件 select 载体）", () => {
+    registerSchema("detail-schema-test", () => [
+      { id: "stat-tex", kind: "field", labelKey: "preview.textures", fallback: "纹理", value: 4 },
+    ]);
+    const { handle } = enterDetail({ id: "model", kind: "panel", dockGroup: "model", schemaId: "detail-schema-test" });
+    expect(overlay.querySelector('[data-testid="preview-stat-tex"]')).not.toBeNull();
+    // 工具行不受影响（本体修复不能反杀截图段）：shot 面板带 children → folder 形态
+    // （section testid = 节点 id），角度按钮平铺在展开 body 里（用户所见「📷 六连」）
+    expect(overlay.querySelector('[data-testid="shot"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-testid="preview-ysm-shot-front"]')).not.toBeNull();
+    handle.dispose();
+  });
+
+  it("children 通道：模型信息本体渲染（mmd/vrm 形态——zip 多 pmx select 载体）", () => {
+    const { handle } = enterDetail({
+      id: "model",
+      kind: "panel",
+      dockGroup: "model",
+      children: [{ id: "info-name", kind: "field", labelKey: "preview.modelInfo", fallback: "模型", value: "ATRI" }],
+    });
+    expect(overlay.querySelector('[data-testid="preview-info-name"]')).not.toBeNull();
+    handle.dispose();
+  });
+
+  it("renderCustom 通道：模型信息本体渲染（旧版/逃生舱形态，closePopup 透传）", () => {
+    const { handle } = enterDetail({
+      id: "model",
+      kind: "panel",
+      dockGroup: "model",
+      renderCustom: (l, closePopup) => {
+        const d = document.createElement("div");
+        d.dataset.testid = "legacy-info-body";
+        d.onclick = () => closePopup?.();
+        d.textContent = "legacy-info";
+        l.appendChild(d);
+      },
+    });
+    const body = overlay.querySelector('[data-testid="legacy-info-body"]') as HTMLElement;
+    expect(body).not.toBeNull();
+    body.click(); // closePopup = menu.back——旧直渲门透传语义保持
     handle.dispose();
   });
 });

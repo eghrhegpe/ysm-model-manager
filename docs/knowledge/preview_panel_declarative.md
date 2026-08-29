@@ -115,6 +115,7 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 3. **声明式节点零 DOM**：`mmdModelInfoNodes` / `mmdShotNodes` 是纯数据工厂，不碰 `document`（与 fillXxxPanel 命令式形成对照）。
 4. **R1 分层（零容忍）**：utils 侧 adapter **不得 import views 层节点工厂**——必须经 `panels` 注入通道（`modelInfoNodes` / `shotNodes` 可选字段）由视图层注入；`check-menu-health` 门禁认识 children 渲染通道（render/renderCustom/children 三选一，`f697a270` 起）。
 5. **新旧通道并存**：`fillMmdModelPanel` / `fillMmdShotPanel` 保留兼容，新面板路径走 children——每步独立可回滚。
+7. **面板组装路径必须复用同一条通道衰退链**（P5 事故不变量）：adapter 面板内容渲染唯一实现 = `renderAdapterPanelContent`（preview-menu-render.ts，schemaId → children → renderCustom 三通道）；`renderPreviewPanel`（⚙ 根菜单）与 `modelDetailView`（roles 详情模型信息本体直渲）都调它。教训：P5 把 ysm/maid 模型面板迁到 schemaId、mmd/vrm 迁到 children 时，modelDetailView 旧直渲门 `primary?.renderCustom` 静默失明——统计/纹理/组件 select 在 roles 详情集体消失（用户 2026-08-29 实测报告），且无测试报警。三通道回归锁在 `preview-menu.roles.test.ts`（真实路径 dock-model → 角色行 → 详情）。
 6. `fillRoles` **不在 P4-B 范围**（已声明式，实测 sceneRegistry + menuItems + SlideMenuView 驱动）。
 
 ## 相关

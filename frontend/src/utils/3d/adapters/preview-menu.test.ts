@@ -4,31 +4,10 @@
 // ★ 测试断言全部从 PREVIEW_MENU_GROUPS / CORE_MENU_ITEMS 推导，不硬编码菜单 ID。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./preview-menu-defs.ts";
-import { mountPreviewRootMenu, type PreviewMenuCtx } from "./preview-menu.ts";
+import { mountPreviewRootMenu } from "./preview-menu.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { deriveTestIds } from "../../../test-utils/self-healing.ts";
-
-function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
-  return {
-    selfMode: false,
-    getCap: () => null,
-    getCamBridge: () => ({
-      getOrbit: () => true,
-      setOrbit: vi.fn(),
-      getSpeed: () => 20,
-      setSpeed: vi.fn(),
-      reset: vi.fn(),
-    }),
-    getSiblings: () => [],
-    getCurrentPath: () => "/m/a.ysm",
-    getViewContainer: () => document.createElement("div"),
-    close: vi.fn(),
-    switchTo: vi.fn(),
-    toast: vi.fn(),
-    closeAllOverlays: vi.fn(),
-    ...overrides,
-  };
-}
+import { makeMenuCtx as makeCtx } from "./menu-test-fixtures.ts";
 
 describe("CORE_MENU_ITEMS 表结构", () => {
   it("id 唯一 + legacyTestId 唯一", () => {

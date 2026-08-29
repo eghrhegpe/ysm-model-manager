@@ -21,6 +21,24 @@ vi.mock("../../backend/app.ts", () => ({
   }),
 }));
 
+// FAB 3D 一键跳转的动态 import 链（_viewerFabClick 内 await import）——
+// 三模块均不在本测试 import 链上静态加载，mock 后只被 _viewerFabClick 消费
+vi.mock("../../views/app-content/init-pages.ts", () => ({
+  getLastModelPath: vi.fn(),
+}));
+vi.mock("../../views/app-preview/empty-3d.ts", () => ({
+  openEmpty3DFullscreen: vi.fn(),
+}));
+vi.mock("../../views/app-preview/preview-library.ts", () => ({
+  openModel3DFullscreen: vi.fn(),
+}));
+import { getApp } from "../../backend/app.ts";
+import { t } from "../../core/i18n/t.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { getLastModelPath } from "../../views/app-content/init-pages.ts";
+import { openEmpty3DFullscreen } from "../../views/app-preview/empty-3d.ts";
+import { openModel3DFullscreen } from "../../views/app-preview/preview-library.ts";
+
 import "./index.ts"; // 触发 customElements.define("app-nav")
 
 describe("app-nav（testid 钩子 + 导航交互）", () => {
@@ -199,3 +217,189 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     unmountElement(el);
   });
 });
+// ===== 增量覆盖：键盘导航 / FAB 跳转 / 版本兜底 / 仓库焦点重试 / logo 动态文案 =====
+describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    localStorage.removeItem("nav_page");
+    localStorage.removeItem("nav_collapsed");
+    canMock.mockReturnValue(true);
+    // 先清共享 mock 的调用历史（vitest 3+ restoreAllMocks 不再重置 vi.fn 工厂 mock）
+    vi.clearAllMocks();
+    // 重整共享 mock 实现
+    vi.mocked(getApp).mockResolvedValue({
+      GetAppVersion: vi.fn().mockResolvedValue("v1.0.0"),
+    } as never);
+    vi.mocked(getLastModelPath).mockReturnValue(null);
+    vi.mocked(openEmpty3DFullscreen).mockResolvedValue(undefined);
+    vi.mocked(openModel3DFullscreen).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+    vi.restoreAllMocks();
+  });
+
+  function mountNav(): { el: HTMLElement; root: ShadowRoot } {
+    const el = mountCustomElement("app-nav");
+    const root = el.shadowRoot!;
+    return { el, root };
+  }
+
+  it("nav-item 键盘导航：ArrowDown/ArrowUp 循环移焦，Home/End 跳首尾，Enter/Space 激活", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    const items = getAllByTestId(root, "nav-item") as HTMLElement[];
+    const focusSpies = items.map((i) => vi.spyOn(i, "focus"));
+    const spy = vi.fn();
+    const offNav = bus.on("nav:changed", spy);
+
+    items[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+    expect(focusSpies[1]).toHaveBeenCalledTimes(1);
+    items[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+    expect(focusSpies[0]).toHaveBeenCalledTimes(1);
+    items[1].dispatchEvent(new KeyboardEvent("keydown", { key: "End" }));
+    expect(focusSpies[items.length - 1]).toHaveBeenCalledTimes(1);
+    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
+    expect(focusSpies[0]).toHaveBeenCalledTimes(2);
+
+    // Enter / Space 都触发激活（与 click 同链路：safeSet + nav:changed）。
+    // 用 settings 项而非 repository——repository 激活会触发 focusRepoSearch 的
+    // 500ms 后台重试链，泄漏到后续用例干扰 document.querySelector 断言。
+    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(spy).toHaveBeenCalledWith({ page: "settings" });
+    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+    expect(spy).toHaveBeenCalledTimes(2);
+    offNav();
+    unmountElement(el);
+  });
+
+  it("FAB 点击：无最近模型 → 空场景 3D（openEmpty3DFullscreen，不弹 toast）", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    const toastSpy = vi.fn();
+    const offToast = bus.on("toast:show", toastSpy);
+    (getByTestId(root, "nav-viewer-fab") as HTMLElement).click();
+    await waitFor(() => expect(openEmpty3DFullscreen).toHaveBeenCalledTimes(1));
+    expect(getLastModelPath).toHaveBeenCalledTimes(1);
+    expect(openModel3DFullscreen).not.toHaveBeenCalled();
+    expect(toastSpy).not.toHaveBeenCalled();
+    offToast();
+    unmountElement(el);
+  });
+
+  it("FAB 点击：有最近模型 → openModel3DFullscreen(path)；打开失败 → console.error + 错误 toast", async () => {
+    vi.mocked(getLastModelPath).mockReturnValue("/m/a.pmx");
+    vi.mocked(openModel3DFullscreen).mockRejectedValue(new Error("open fail"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const toastSpy = vi.fn();
+    const offToast = bus.on("toast:show", toastSpy);
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    (getByTestId(root, "nav-viewer-fab") as HTMLElement).click();
+    await waitFor(() => expect(toastSpy).toHaveBeenCalled());
+    expect(openModel3DFullscreen).toHaveBeenCalledWith("/m/a.pmx");
+    expect(openEmpty3DFullscreen).not.toHaveBeenCalled();
+    expect(errSpy).toHaveBeenCalled();
+    expect(toastSpy.mock.calls[0][0]).toMatchObject({ type: "error", msg: "❌ 打开 3D 失败" });
+    offToast();
+    errSpy.mockRestore();
+    unmountElement(el);
+  });
+
+  it("FAB 键盘 Enter/Space 走同一打开链路（无障碍对齐 click）", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    const fab = getByTestId(root, "nav-viewer-fab") as HTMLElement;
+    fab.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+    await waitFor(() => expect(openEmpty3DFullscreen).toHaveBeenCalledTimes(1));
+    fab.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    await waitFor(() => expect(openEmpty3DFullscreen).toHaveBeenCalledTimes(2));
+    unmountElement(el);
+  });
+
+  it("GetAppVersion 失败 → 版本位兜底显示 t('nav.preview')（不硬编码版本号）", async () => {
+    vi.mocked(getApp).mockRejectedValueOnce(new Error("bridge down"));
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    await waitFor(() => {
+      const v = root.getElementById("nav-version");
+      return v !== null && v.textContent === t("nav.preview");
+    });
+    expect(root.getElementById("nav-version")!.textContent).not.toContain("v1.0.0");
+    unmountElement(el);
+  });
+
+  it("版本加载完成前已断开 → isConnected 守卫提前返回（不写已卸载 DOM）", async () => {
+    let resolveVersion!: (v: string) => void;
+    vi.mocked(getApp).mockResolvedValue({
+      GetAppVersion: () =>
+        new Promise<string>((res) => {
+          resolveVersion = res;
+        }),
+    } as never);
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    unmountElement(el);
+    resolveVersion("v9.9.9");
+    await sleep(50);
+    // 守卫生效：已卸载组件的版本位停留在「加载中…」，未被 v9.9.9 改写
+    expect(root.getElementById("nav-version")!.textContent).toBe(t("common.loading"));
+  });
+
+  it("lang:changed → 重新渲染导航（订阅回调 → this.render）", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    const renderSpy = vi.spyOn(el as unknown as { render: () => void }, "render");
+    bus.emit("lang:changed", { lang: "en" });
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+    // 重渲染后导航项仍在（innerHTML 整体重写不丢结构）
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    renderSpy.mockRestore();
+    unmountElement(el);
+  });
+
+  it("repo:rtype-changed → logo 文案切到新类型短标签（💎 EntityPlayer → MMD）", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    bus.emit("repo:rtype-changed", RESOURCE_TYPES.MMD);
+    const logo = root.querySelector(".logo-text")!;
+    expect(logo.textContent).toContain("MMD");
+    expect(logo.textContent).toContain(t("app.managerSuffix"));
+    unmountElement(el);
+  });
+
+  it("切到仓库页 → 渐进重试聚焦搜索框（首试 miss，25ms 后命中 #srch）", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    const srch = { focus: vi.fn(), select: vi.fn() };
+    const fakeAppContent = {
+      shadowRoot: {
+        querySelector: () => ({ shadowRoot: { getElementById: () => srch } }),
+      },
+    };
+    const qSpy = vi
+      .spyOn(document, "querySelector")
+      .mockReturnValueOnce(null)
+      .mockReturnValue(fakeAppContent as never);
+    (getAllByTestId(root, "nav-item")[0] as HTMLElement).click(); // repository → queueMicrotask(focusRepoSearch)
+    await sleep(60);
+    expect(qSpy.mock.calls.some((c) => c[0] === "app-content")).toBe(true);
+    expect(srch.focus).toHaveBeenCalledTimes(1);
+    expect(srch.select).toHaveBeenCalledTimes(1);
+    qSpy.mockRestore();
+    unmountElement(el);
+  });
+
+  it("setCollapsed 同值调用为 no-op（不重复渲染）", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    const renderSpy = vi.spyOn(el as unknown as { render: () => void }, "render");
+    (el as unknown as { setCollapsed(c: boolean): void }).setCollapsed(false); // 已是展开态
+    expect(renderSpy).not.toHaveBeenCalled();
+    expect(el.hasAttribute("data-collapsed")).toBe(false);
+    renderSpy.mockRestore();
+    unmountElement(el);
+  });
+});
+

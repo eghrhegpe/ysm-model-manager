@@ -1,7 +1,7 @@
 // ===== MMD KTX2 编码器单元测试 =====
 // 覆盖：encodeAndCacheTexture（编码成功/失败）、
 // scheduleBackgroundEncoding（调度行为）、并发控制与取消机制。
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 
 const hoisted = vi.hoisted(() => {
   return {
@@ -528,5 +528,249 @@ describe("resetEncoderState", () => {
 
     // 总计应该是 10 次（第一次 5 次 + 第二次 5 次）
     expect(hoisted.ktx2EncodeMock).toHaveBeenCalledTimes(10);
+  });
+});
+
+// ---- scheduleBackgroundEncoding 增量：completedHashes 幂等跳过 + 外层 catch 在途清理 ----
+describe("scheduleBackgroundEncoding 幂等与在途清理（增量）", () => {
+  /** 本 describe 用独立端口（addOpLog 可注入抛错实现，不污染共享 addOpLogMock） */
+  function makeLocalPort(): MmdDataPort {
+    return {
+      readFileBytes: vi.fn(),
+      readFileBytesBatch: vi.fn(),
+      listAllFilePaths: vi.fn(),
+      addOpLog: vi.fn(),
+      getCachedTexture: vi.fn(),
+    };
+  }
+
+  beforeEach(() => {
+    resetEncoderState();
+    vi.clearAllMocks();
+    hoisted.ktx2EncodeMock.mockResolvedValue(new Uint8Array([0x01]).buffer);
+    hoisted.saveTextureMock.mockResolvedValue(undefined);
+    __setEncodeImplForTest(hoisted.ktx2EncodeMock);
+    installDomMocks();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("已完成的 hash 再次调度 → completedHashes 幂等跳过（continue 分支）", async () => {
+    const port = makeLocalPort();
+    const hashMap = new Map([["blob:done", "hash_done_branch"]]);
+    const tasks: Array<() => void> = [];
+    vi.stubGlobal("queueMicrotask", (cb: () => void) => tasks.push(cb));
+
+    scheduleBackgroundEncoding(hashMap, port);
+    for (const task of tasks) task();
+    await vi.advanceTimersByTimeAsync(50);
+    expect(hoisted.ktx2EncodeMock).toHaveBeenCalledTimes(1);
+
+    // 编码已完成（completedHashes 已收录）→ 再次调度被 completedHashes 分支跳过
+    tasks.length = 0;
+    scheduleBackgroundEncoding(hashMap, port);
+    for (const task of tasks) task();
+    await vi.advanceTimersByTimeAsync(50);
+    expect(hoisted.ktx2EncodeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("addOpLog 在 catch 内抛错 → 外层 .catch 清理 inProgress（同 hash 可重新调度）", async () => {
+    hoisted.ktx2EncodeMock.mockRejectedValue(new Error("encode explode"));
+    const port = makeLocalPort();
+    (port.addOpLog as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      throw new Error("oplog sink broken");
+    });
+    const hashMap = new Map([["blob:oplog", "hash_oplog_throw"]]);
+    const tasks: Array<() => void> = [];
+    vi.stubGlobal("queueMicrotask", (cb: () => void) => tasks.push(cb));
+
+    scheduleBackgroundEncoding(hashMap, port);
+    for (const task of tasks) task();
+    tasks.length = 0;
+    await vi.advanceTimersByTimeAsync(50);
+    expect(hoisted.ktx2EncodeMock).toHaveBeenCalledTimes(1);
+
+    // 编码失败且 opLog 抛错（promise 在外层 .catch 结算）→ inProgress 已清理 → 可重新调度
+    scheduleBackgroundEncoding(hashMap, port);
+    for (const task of tasks) task();
+    await vi.advanceTimersByTimeAsync(50);
+    expect(hoisted.ktx2EncodeMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---- encodeToKTX2 主线程入口（真实编码链路）----
+// 既有用例经 __setEncodeImplForTest 替换了 encodeImpl，真实 encodeToKTX2（Worker 池 /
+// 同步降级 / 尺寸守卫）不再可达。此处用 vi.resetModules 取一份全新模块实例（默认
+// encodeImpl = 真实 encodeToKTX2），配合可编程假 Worker 验证三条主线程路径。
+describe("encodeToKTX2 主线程入口（默认 encodeImpl：Worker 池 / 同步降级 / 尺寸守卫）", () => {
+  type EncoderModule = typeof import("./mmd-ktx2-encoder.ts");
+  type Ktx2Echo = { ok: boolean; buffer?: ArrayBuffer; error?: string };
+
+  let fresh: EncoderModule;
+  /** 可编程回包：postMessage 后按当前实现响应（"crash" = 触发 worker onerror） */
+  let respond: (msg: { id: number }) => Ktx2Echo | "crash";
+  /** 捕获已创建的假 Worker（用于 beforeEach 拆池，保证用例从无池状态开始） */
+  let createdWorkers: FakeKtx2Worker[] = [];
+
+  class FakeKtx2Worker {
+    onmessage: ((e: { data: unknown }) => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor() {
+      createdWorkers.push(this);
+    }
+    postMessage(msg: { id: number }, _transfer?: Transferable[]): void {
+      setTimeout(() => {
+        const r = respond(msg);
+        if (r === "crash") {
+          this.onerror?.();
+          return;
+        }
+        this.onmessage?.({ data: { id: msg.id, ...r } });
+      }, 0);
+    }
+    terminate(): void { /* 池终止语义由 worker-bridge 测试覆盖 */ }
+  }
+
+  /** 独立端口（addOpLog 可精确断言，不与共享 addOpLogMock 串扰） */
+  function makeLocalPort(): MmdDataPort {
+    return {
+      readFileBytes: vi.fn(),
+      readFileBytesBatch: vi.fn(),
+      listAllFilePaths: vi.fn(),
+      addOpLog: vi.fn(),
+      getCachedTexture: vi.fn(),
+    };
+  }
+
+  /**
+   * stub fetch 让 basis_encoder js/wasm 拉取延迟失败。
+   * 必须用 setTimeout 延迟 reject：loadBasisModule 里两个 fetch 顺序求值，
+   * 若首个 .text() 同步 reject，会在 Promise.all 挂上 handler 前触发
+   * unhandled rejection（vitest 记为 Unhandled Errors）。
+   */
+  function stubBasisFetchFailure(): void {
+    const fail = (): Promise<never> =>
+      new Promise((_, rej) => {
+        setTimeout(() => rej(new Error("no basis files in test env")), 0);
+      });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      text: fail,
+      arrayBuffer: fail,
+      blob: () => Promise.resolve(new Blob([MINIMAL_PNG_B64])),
+    }));
+  }
+
+  beforeAll(async () => {
+    vi.resetModules();
+    fresh = await import("./mmd-ktx2-encoder.ts");
+  });
+
+  beforeEach(() => {
+    fresh.resetEncoderState();
+    // getKtx2WorkerPool 有模块级缓存（ktx2Workers）——resetEncoderState 不拆池。
+    // 通过 onerror → handleWorkerError → terminatePool → onPoolTerminated 清缓存，
+    // 确保每个用例都从「无池」状态开始（同步降级用例依赖此判定）。
+    for (const w of createdWorkers) w.onerror?.();
+    createdWorkers = [];
+    vi.clearAllMocks();
+    hoisted.saveTextureMock.mockResolvedValue(undefined);
+    installDomMocks();
+    respond = () => ({ ok: true, buffer: new Uint8Array([9, 9, 9]).buffer });
+    vi.stubGlobal("Worker", FakeKtx2Worker);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("Worker 池可用 → 走桥接回包 resolve，结果分块转 base64 落盘（[9,9,9] → CQkJ）", async () => {
+    const port = makeLocalPort();
+    const ok = await fresh.encodeAndCacheTexture("hash_pool_ok", "blob:pool", port);
+
+    expect(ok).toBe(true);
+    expect(hoisted.saveTextureMock).toHaveBeenCalledWith("hash_pool_ok", "CQkJ");
+    expect(port.addOpLog).toHaveBeenCalledWith(
+      "ktx2-encode", "hash_pool_ok", "ok", expect.stringContaining("bytes=3"),
+    );
+  });
+
+  it("worker 回 ok:false → 桥接 reject → 静默降级记 fail 日志", async () => {
+    respond = () => ({ ok: false, error: "worker boom" });
+    const port = makeLocalPort();
+    const ok = await fresh.encodeAndCacheTexture("hash_pool_err", "blob:pool", port);
+
+    expect(ok).toBe(false);
+    expect(port.addOpLog).toHaveBeenCalledWith("ktx2-encode", "hash_pool_err", "fail", "worker boom");
+    expect(hoisted.saveTextureMock).not.toHaveBeenCalled();
+  });
+
+  it("worker 崩溃（onerror）→ 终止整池 + 在途 reject + 池引用清空（下次重建）", async () => {
+    respond = () => "crash";
+    const port = makeLocalPort();
+    const ok = await fresh.encodeAndCacheTexture("hash_pool_crash", "blob:pool", port);
+
+    expect(ok).toBe(false);
+    expect(port.addOpLog).toHaveBeenCalledWith(
+      "ktx2-encode", "hash_pool_crash", "fail", expect.stringContaining("KTX2 worker 终止"),
+    );
+
+    // 崩溃后池已清空（onPoolTerminated）→ 下一次请求重建池，新回包正常走通
+    respond = () => ({ ok: true, buffer: new Uint8Array([1]).buffer });
+    const ok2 = await fresh.encodeAndCacheTexture("hash_pool_rebuild", "blob:pool", port);
+    expect(ok2).toBe(true);
+    expect(hoisted.saveTextureMock).toHaveBeenCalledWith("hash_pool_rebuild", "AQ==");
+  });
+
+  it("超大纹理在主线程入口先拦（TextureTooLargeError → warn，不触碰 Worker 池）", async () => {
+    const ImageCtor = function () {
+      const obj: { width: number; height: number; onload: (() => void) | null; src: string } = {
+        width: 5000, height: 5000, onload: null, src: "",
+      };
+      setTimeout(() => { obj.onload?.(); }, 0);
+      return obj;
+    };
+    vi.stubGlobal("Image", ImageCtor);
+    const port = makeLocalPort();
+    const ok = await fresh.encodeAndCacheTexture("hash_big_entry", "blob:big", port);
+
+    expect(ok).toBe(false);
+    expect(port.addOpLog).toHaveBeenCalledWith(
+      "ktx2-encode", "hash_big_entry", "warn", expect.stringContaining("纹理过大 5000x5000"),
+    );
+    expect(hoisted.saveTextureMock).not.toHaveBeenCalled();
+  });
+
+  it("Worker 不可用 → 降级同步编码 encodeToKTX2Basis（WASM 缺失时静默失败）", async () => {
+    vi.stubGlobal("Worker", undefined);
+    stubBasisFetchFailure();
+    const port = makeLocalPort();
+    const ok = await fresh.encodeAndCacheTexture("hash_sync", "blob:sync", port);
+
+    expect(ok).toBe(false);
+    expect(port.addOpLog).toHaveBeenCalledWith(
+      "ktx2-encode", "hash_sync", "fail", expect.any(String),
+    );
+    expect(hoisted.saveTextureMock).not.toHaveBeenCalled();
+  });
+
+  it("Worker 构造抛错 → 池创建失败（catch 清引用返回 null）→ 同步降级", async () => {
+    vi.stubGlobal("Worker", class {
+      constructor() {
+        throw new Error("worker blocked in test env");
+      }
+    });
+    stubBasisFetchFailure();
+    const port = makeLocalPort();
+    const ok = await fresh.encodeAndCacheTexture("hash_ctor_fail", "blob:ctor", port);
+
+    expect(ok).toBe(false);
+    expect(port.addOpLog).toHaveBeenCalledWith(
+      "ktx2-encode", "hash_ctor_fail", "fail", expect.any(String),
+    );
+    expect(hoisted.saveTextureMock).not.toHaveBeenCalled();
   });
 });

@@ -2325,8 +2325,8 @@
 | `resetSelectedEmit()` | `frontend/src/views/app-sidebar/events:199` | 复位去重标记：组件真正卸载（disconnectedCallback）时调用—— 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） |
 | `bindFooter()` | `frontend/src/views/app-sidebar/events:242` | — |
 | `appSidebarStyle()` | `frontend/src/views/app-sidebar/index:13` | — |
-| `runMcSearch()` | `frontend/src/views/app-sidebar/launcher-detect:50` | 🔍 自动搜索常见 MC 安装位置（多结果弹选择器） |
-| `runLauncherDetect()` | `frontend/src/views/app-sidebar/launcher-detect:124` | 🎮 HMCL / PCL 启动器实例检测：选启动器目录 → 选实例 → 写 mcRoot（可选并设 YSM 资源根） |
+| `runMcSearch()` | `frontend/src/views/app-sidebar/launcher-detect:55` | 🔍 自动搜索常见 MC 安装位置（多结果弹选择器） |
+| `runLauncherDetect()` | `frontend/src/views/app-sidebar/launcher-detect:129` | 🎮 HMCL / PCL 启动器实例检测：选启动器目录 → 选实例 → 写 mcRoot（可选并设 YSM 资源根） |
 | `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:21` | MMD 变体聚合结果 |
 | `loadInstances()` | `frontend/src/views/app-sidebar/loader:37` | 从 Go 加载整合包实例列表，转换为 render 需要的格式（同 rtype 在途请求合并） 去重只服务「读并发」（多组件同时触发 reload），若变异完成的刷新并入变异前发起 |
 | `groupMmdVariants()` | `frontend/src/views/app-sidebar/loader:167` | 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。 |

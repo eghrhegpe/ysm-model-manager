@@ -34,7 +34,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 205 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 204 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -320,8 +320,8 @@
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
 | `frontend/src/views/app-sidebar/index.ts` | 320 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 71 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 150 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 155 |
 | `frontend/src/views/app-sync-manager/index.ts` | 220 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 67 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 136 |
@@ -522,12 +522,11 @@
 | `frontend/src/views/app-sidebar/index.ts` | 316 |
 | `frontend/src/views/app-sidebar/index.ts` | 318 |
 | `frontend/src/views/app-sidebar/index.ts` | 323 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 57 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 72 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 78 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 133 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 151 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 37 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 62 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 77 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 138 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 156 |
 | `frontend/src/views/app-sidebar/loader.ts` | 152 |
 | `frontend/src/views/app-sync-manager/index.ts` | 151 |
 | `frontend/src/views/app-sync-manager/network.ts` | 47 |

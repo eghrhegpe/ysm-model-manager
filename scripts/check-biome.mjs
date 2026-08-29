@@ -31,10 +31,9 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { getRoot } from './_lib/scan-files.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = getRoot();
 const isWin = process.platform === 'win32';
 // 复用 pre-push-gate 的跨平台 bin 解析约定（win32 用 .cmd 包装）
 const biomeBin = path.join(ROOT, 'frontend', 'node_modules', '.bin', isWin ? 'biome.cmd' : 'biome');

@@ -46,8 +46,8 @@ for(let i=0;i<yr.length;i++)ys[i]=yr.charCodeAt(i);
 async function main(){
   const mod=await YSMParser({wasmBinary:wb.buffer,noInitialRun:true});
   const FS=mod.FS;
-  try{FS.mkdir('/input')}catch(e){}
-  try{FS.mkdir('/output')}catch(e){}
+  try{FS.mkdir('/input')}catch(e){}  // EEXIST 忽略是预期：目录已存在时 mkdir 抛错，不影响后续写文件（R15 P3 #2）
+  try{FS.mkdir('/output')}catch(e){} // 同上
   FS.writeFile('/input/model.ysm',ys);
   try{mod.callMain(['-i','/input','-o','/output'])}catch(e){
     if(!(e&&e.name==='ExitStatus'))throw e}

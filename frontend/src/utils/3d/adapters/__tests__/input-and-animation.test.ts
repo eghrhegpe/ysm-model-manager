@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 import { bindInputHandlers } from "../input-and-animation.ts";
 import type { InputOptions } from "../input-and-animation.ts";
+import { pushInputBlock, popInputBlock, isInputBlocked } from "../../../dom/focus-restore.ts";
 
 // mock WebGLRenderer / domElement / postProc 的最小壳，避免真实 WebGL 依赖
 function mkFakeRenderer(): THREE.WebGLRenderer {
@@ -395,5 +396,102 @@ describe("bindInputHandlers", () => {
     const opts = mkOptions({ postProc: null });
     const handlers = bindInputHandlers(opts);
     expect(() => handlers.onResize()).not.toThrow();
+  });
+});
+
+// ===================================================================
+// 双轨键保持（97f7949c heldCodes） + Numpad 兼容 + 输入阻断栈
+// ===================================================================
+describe("bindInputHandlers 双轨键 / Numpad / 输入阻断", () => {
+  const mkEv = (key: string, code: string): KeyboardEvent =>
+    new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true });
+
+  const keyupEv = (key: string, code: string): KeyboardEvent =>
+    new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // 清空输入阻断栈残留（push 未 pop 会污染后续测试）
+    while (isInputBlocked()) popInputBlock("test-block");
+  });
+
+  it("双轨键：W + ArrowUp 同向按住 → 松开 ArrowUp 后 forward 仍保持（W 仍持有）", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    // 同向双轨：W 和 ArrowUp 都激活 forward
+    handlers.onKeyDown(mkEv("w", "KeyW"));
+    handlers.onKeyDown(mkEv("ArrowUp", "ArrowUp"));
+    expect(opts.keys.forward).toBe(true);
+    // 松开 ArrowUp：W 仍按住 → forward 保持
+    handlers.onKeyUp(keyupEv("ArrowUp", "ArrowUp"));
+    expect(opts.keys.forward).toBe(true);
+    // 松开 W：无键持有 → forward 清除
+    handlers.onKeyUp(keyupEv("w", "KeyW"));
+    expect(opts.keys.forward).toBeFalsy();
+  });
+
+  it("双轨键：ShiftLeft + ShiftRight 对称 → 松开右 Shift 后 down 仍保持", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    // down 默认绑 ShiftLeft；左右 Shift 等价
+    handlers.onKeyDown(mkEv("Shift", "ShiftLeft"));
+    handlers.onKeyDown(mkEv("Shift", "ShiftRight"));
+    expect(opts.keys.down).toBe(true);
+    // 松开 ShiftRight：ShiftLeft 仍按住 → down 保持
+    handlers.onKeyUp(keyupEv("Shift", "ShiftRight"));
+    expect(opts.keys.down).toBe(true);
+    // 松开 ShiftLeft → down 清除
+    handlers.onKeyUp(keyupEv("Shift", "ShiftLeft"));
+    expect(opts.keys.down).toBeFalsy();
+  });
+
+  it("双轨键：松开未按过的键不误清（heldCodes 只删自己按过的）", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    handlers.onKeyDown(mkEv("w", "KeyW"));
+    expect(opts.keys.forward).toBe(true);
+    // 松开一个从未按过的 ArrowUp：forward 不受影响
+    handlers.onKeyUp(keyupEv("ArrowUp", "ArrowUp"));
+    expect(opts.keys.forward).toBe(true);
+    handlers.onKeyUp(keyupEv("w", "KeyW"));
+    expect(opts.keys.forward).toBeFalsy();
+  });
+
+  it("Numpad 兼容：Numpad8/2/4/6 → forward/back/left/right", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    handlers.onKeyDown(mkEv("8", "Numpad8"));
+    expect(opts.keys.forward).toBe(true);
+    handlers.onKeyDown(mkEv("2", "Numpad2"));
+    expect(opts.keys.back).toBe(true);
+    handlers.onKeyDown(mkEv("4", "Numpad4"));
+    expect(opts.keys.left).toBe(true);
+    handlers.onKeyDown(mkEv("6", "Numpad6"));
+    expect(opts.keys.right).toBe(true);
+  });
+
+  it("输入阻断：pushInputBlock 后 onKeyDown 暂停相机消费（isInputBlocked → 提前 return）", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    pushInputBlock("test-block");
+    try {
+      const ev = mkEv("w", "KeyW");
+      handlers.onKeyDown(ev);
+      expect(opts.keys.forward).toBeUndefined();
+      expect(ev.defaultPrevented).toBe(false);
+    } finally {
+      popInputBlock("test-block");
+    }
+  });
+
+  it("输入阻断：pop 后恢复相机消费", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    pushInputBlock("test-block");
+    popInputBlock("test-block");
+    const ev = mkEv("w", "KeyW");
+    handlers.onKeyDown(ev);
+    expect(opts.keys.forward).toBe(true);
+    expect(ev.defaultPrevented).toBe(true);
   });
 });

@@ -1,14 +1,16 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from "vitest";
-
-// Mock focus-restore 避免真实 pushInputBlock/popInputBlock 在测试中执行
-vi.mock("../../utils/dom/focus-restore.ts", () => ({
-  pushInputBlock: vi.fn(),
-  popInputBlock: vi.fn(),
-  isInputBlocked: vi.fn(() => false),
-}));
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { createSlideMenu, type SlideMenuView } from "../ui-slide-menu.ts";
+import * as focusRestore from "../../utils/dom/focus-restore.ts";
+
+/** 真实场景 menu.root 会被挂进 DOM（preview-menu/core.ts：popup.appendChild(menu.root)）；
+ *  未连接的元素 focus() 在 happy-dom 无效（activeElement 停在 BODY）——测试必须挂载。 */
+function mountMenu(): ReturnType<typeof createSlideMenu> {
+  const h = createSlideMenu();
+  document.body.appendChild(h.root);
+  return h;
+}
 
 // ===================================================================
 // 测试辅助：构造视图工厂
@@ -427,5 +429,230 @@ describe("createSlideMenu", () => {
   it("不调用 home/navigate 时，title 保持 opts.title 初始值", () => {
     const h = createSlideMenu({ title: "默认标题" });
     expect(h.root.querySelector(".slide-title")!.textContent).toBe("默认标题");
+  });
+});
+
+// ===================================================================
+// 11. 键盘导航（80da4ce0 a11y：↑↓/Home/End/Enter/Space/Escape + roving tabindex）
+// ===================================================================
+describe("createSlideMenu 键盘导航", () => {
+  // 构造带菜单项行的视图：每行一个 .slide-item button 直接子节点
+  // （真实 3D 菜单行本身可聚焦；button 保证 happy-dom 下 focus 生效）
+  const makeNavView = (titles: string[], title = "nav"): SlideMenuView => ({
+    title,
+    render: (list: HTMLElement) => {
+      list.innerHTML = "";
+      titles.forEach((txt) => {
+        const row = document.createElement("button");
+        row.className = "slide-item";
+        row.textContent = txt;
+        list.appendChild(row);
+      });
+    },
+  });
+
+  const keyEvent = (key: string, shiftKey = false): KeyboardEvent =>
+    new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, shiftKey });
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    vi.clearAllMocks();
+  });
+
+  it("home 后：roving tabindex 生效（首项 0，其余 -1）", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B", "C"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    expect(items.map((el) => el.tabIndex)).toEqual([0, -1, -1]);
+  });
+
+  it("ArrowDown：从首项走到次项，tabindex 跟随（roving）", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B", "C"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    items[0]!.focus();
+    h.list.dispatchEvent(keyEvent("ArrowDown"));
+    const after = Array.from(h.list.children) as HTMLElement[];
+    expect(after.map((el) => el.tabIndex)).toEqual([-1, 0, -1]);
+  });
+
+  it("ArrowDown 在末项 → 循环回首项", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    items[1]!.focus();
+    h.list.dispatchEvent(keyEvent("ArrowDown"));
+    const after = Array.from(h.list.children) as HTMLElement[];
+    expect(after.map((el) => el.tabIndex)).toEqual([0, -1]);
+  });
+
+  it("ArrowUp 在首项 → 循环到末项", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    items[0]!.focus();
+    h.list.dispatchEvent(keyEvent("ArrowUp"));
+    const after = Array.from(h.list.children) as HTMLElement[];
+    expect(after.map((el) => el.tabIndex)).toEqual([-1, 0]);
+  });
+
+  it("Home → 首项获得 tabindex 0", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B", "C"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    items[2]!.focus();
+    h.list.dispatchEvent(keyEvent("Home"));
+    expect(items[0]!.tabIndex).toBe(0);
+    expect(items[1]!.tabIndex).toBe(-1);
+    expect(items[2]!.tabIndex).toBe(-1);
+  });
+
+  it("End → 末项获得 tabindex 0", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B", "C"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    items[0]!.focus();
+    h.list.dispatchEvent(keyEvent("End"));
+    expect(items[2]!.tabIndex).toBe(0);
+    expect(items[0]!.tabIndex).toBe(-1);
+  });
+
+  it("Enter 在聚焦项上 → 触发该项 click", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    const clickSpy = vi.fn();
+    items[1]!.addEventListener("click", clickSpy);
+    items[1]!.focus();
+    h.list.dispatchEvent(keyEvent("Enter"));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("Space 在聚焦项上 → 触发该项 click", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    const clickSpy = vi.fn();
+    items[0]!.addEventListener("click", clickSpy);
+    items[0]!.focus();
+    h.list.dispatchEvent(keyEvent(" "));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape → 触发 handleBack（根级 = onClose）", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A"]));
+    const onClose = vi.fn();
+    h.setOnClose(onClose);
+    h.list.dispatchEvent(keyEvent("Escape"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape 在子级 → 返回上一级（不触发 onClose）", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A"], "一级"));
+    h.navigate(makeNavView(["B"], "二级"));
+    const onClose = vi.fn();
+    h.setOnClose(onClose);
+    h.list.dispatchEvent(keyEvent("Escape"));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(h.root.querySelector(".slide-title")!.textContent).toBe("一级");
+  });
+
+  it("箭头键 preventDefault（阻止滚动）", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B"]));
+    const ev = keyEvent("ArrowDown");
+    h.list.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+  });
+});
+
+// ===================================================================
+// 12. onShow / onHide：焦点记忆 + 输入阻断栈（80da4ce0 a11y）
+// ===================================================================
+describe("createSlideMenu onShow/onHide", () => {
+  const makeView = (title: string): SlideMenuView => ({
+    title,
+    render: (list: HTMLElement) => {
+      list.innerHTML = "";
+      const row = document.createElement("button");
+      row.className = "slide-item";
+      row.textContent = "row";
+      list.appendChild(row);
+    },
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    // 清空模块级输入阻断栈残留（上一个测试 push 未 pop 会污染本测试）
+    while (focusRestore.isInputBlocked()) focusRestore.popInputBlock("slide-menu");
+  });
+
+  it("onShow：push 输入阻断栈（isInputBlocked → true）", () => {
+    const pushSpy = vi.spyOn(focusRestore, "pushInputBlock");
+    const h = mountMenu();
+    h.home(makeView("t"));
+    expect(focusRestore.isInputBlocked()).toBe(false);
+    h.onShow();
+    expect(pushSpy).toHaveBeenCalledWith("slide-menu");
+    expect(focusRestore.isInputBlocked()).toBe(true);
+  });
+
+  it("onHide：pop 输入阻断栈（isInputBlocked → false）", () => {
+    const popSpy = vi.spyOn(focusRestore, "popInputBlock");
+    const h = mountMenu();
+    h.home(makeView("t"));
+    h.onShow();
+    expect(focusRestore.isInputBlocked()).toBe(true);
+    h.onHide();
+    expect(popSpy).toHaveBeenCalledWith("slide-menu");
+    expect(focusRestore.isInputBlocked()).toBe(false);
+  });
+
+  it("onShow 记住触发元素 → onHide 把焦点还给触发元素", () => {
+    const trigger = document.createElement("button");
+    trigger.id = "trigger";
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    const h = mountMenu();
+    h.home(makeView("t"));
+    h.onShow();
+    // onShow 的 rAF 里把焦点给首项；onHide 应归还
+    const el = h.list.querySelector<HTMLElement>(".slide-item")!;
+    el.focus();
+    h.onHide();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("onHide({ restoreFocus: false })：归还焦点被跳过", () => {
+    const trigger = document.createElement("button");
+    trigger.id = "trigger";
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    const h = mountMenu();
+    h.home(makeView("t"));
+    h.onShow();
+    const el = h.list.querySelector<HTMLElement>(".slide-item")!;
+    el.focus();
+    h.onHide({ restoreFocus: false });
+    expect(document.activeElement).not.toBe(trigger);
+  });
+
+  it("触发元素已离文档 → onHide 静默跳过归还（不抛错）", () => {
+    const trigger = document.createElement("button");
+    trigger.id = "trigger";
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    const h = mountMenu();
+    h.home(makeView("t"));
+    h.onShow();
+    trigger.remove();
+    expect(() => h.onHide()).not.toThrow();
   });
 });

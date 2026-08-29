@@ -91,15 +91,21 @@ export function isInputBlocked(): boolean {
 // 跨 Shadow DOM 的可聚焦查找
 // ────────────────────────────────────────────────────────────────────
 
-/** 元素祖先链上是否存在 aria-hidden="true"（命中则视为不可达） */
+/** 元素祖先链上是否存在 aria-hidden="true"（命中则视为不可达）
+ *  跨 Shadow 边界跳到 host 时必须跟随「当前节点」的 root（node.getRootNode()）——
+ *  旧实现固定 el.getRootNode()：shadow 内 el 走到 host 的 parentElement=null 后又跳回
+ *  同一 host，无限循环冻结主线程（已探针实证 200ms 320 万步）。node 跟随版：shadow 内
+ *  顶元素 parentElement=null → 取该节点 root 的 host 跳出；到 document 层 root 非
+ *  ShadowRoot → 循环正常终止。多层嵌套 shadow 同理逐层跳出。 */
 function hasAriaHiddenAncestor(el: Element): boolean {
   let node: Element | null = el;
   while (node) {
     if (node.getAttribute && node.getAttribute("aria-hidden") === "true") return true;
-    node = node.parentElement;
-    // 跨 Shadow 边界跳到 host
-    if (!node && (el.getRootNode() instanceof ShadowRoot)) {
-      node = (el.getRootNode() as ShadowRoot).host as Element;
+    const next: Element | null = node.parentElement;
+    if (!next && node.getRootNode() instanceof ShadowRoot) {
+      node = (node.getRootNode() as ShadowRoot).host as Element;
+    } else {
+      node = next;
     }
   }
   return false;
@@ -134,21 +140,6 @@ export function findTabbableAcrossShadow(root: Element | ShadowRoot | Document):
   return out;
 }
 
-/** 元素是否在 overlay 子树内（含 Shadow DOM 跨边界） */
-function isInsideOverlay(el: Element | null, overlay: Element): boolean {
-  if (!el) return false;
-  let node: Node | null = el;
-  while (node) {
-    if (node === overlay) return true;
-    if (node instanceof ShadowRoot) {
-      node = node.host;
-      continue;
-    }
-    node = node.parentNode;
-  }
-  return false;
-}
-
 /**
  * 跨 Shadow DOM 的焦点陷阱：Tab 键在 overlay 子树内可聚焦元素间循环。
  * 与 dialog-modal.ts trapFocus 语义一致，但跨 Shadow 边界找可聚焦元素，
@@ -173,11 +164,16 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     const first = tabbable[0]!;
     const last = tabbable[tabbable.length - 1]!;
     const active = document.activeElement as Element | null;
-    const inside = isInsideOverlay(active, overlay);
-    if (e.shiftKey && (active === first || !inside)) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && (active === last || !inside)) {
+    // 焦点落在 tabbable 元素上（含 shadow 内）才允许浏览器自然 Tab 循环；
+    // 否则（overlay 背景 / overlay 外 / happy-dom 下 shadow 焦点降级到 host）
+    // 一律收拢回 first/last——防焦点逃出 overlay 到背后页面。
+    const onTabbable = tabbable.includes(active as HTMLElement);
+    if (e.shiftKey) {
+      if (active === first || !onTabbable) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || !onTabbable) {
       e.preventDefault();
       first.focus();
     }

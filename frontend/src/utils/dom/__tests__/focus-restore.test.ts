@@ -116,6 +116,86 @@ describe("findTabbableAcrossShadow", () => {
     const ids = tabbable.map((el) => el.id);
     expect(ids).toEqual(["visible"]);
   });
+
+  it("跨 Shadow：收集 shadow root 内的 tabbable（真实 attachShadow 场景）", () => {
+    const root = document.createElement("div");
+    root.id = "root";
+    document.body.appendChild(root);
+    const host = document.createElement("div");
+    host.id = "host";
+    root.appendChild(host);
+    const sr = host.attachShadow({ mode: "open" });
+    const inner = document.createElement("button");
+    inner.id = "inner";
+    sr.appendChild(inner);
+
+    const tabbable = findTabbableAcrossShadow(root);
+    const ids = tabbable.map((el) => el.id);
+    expect(ids).toEqual(["inner"]);
+  });
+
+  it("跨 Shadow：多层嵌套 shadow + light DOM 交错，全部收集且不卡死（回归：旧实现死循环）", () => {
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    // light
+    const light = document.createElement("button");
+    light.id = "light";
+    root.appendChild(light);
+    // 一层 shadow
+    const host1 = document.createElement("div");
+    root.appendChild(host1);
+    const sr1 = host1.attachShadow({ mode: "open" });
+    const b1 = document.createElement("button");
+    b1.id = "shadow1";
+    sr1.appendChild(b1);
+    // 二层嵌套 shadow
+    const host2 = document.createElement("div");
+    sr1.appendChild(host2);
+    const sr2 = host2.attachShadow({ mode: "open" });
+    const b2 = document.createElement("button");
+    b2.id = "shadow2";
+    sr2.appendChild(b2);
+
+    const tabbable = findTabbableAcrossShadow(root);
+    const ids = tabbable.map((el) => el.id);
+    expect(ids).toEqual(["light", "shadow1", "shadow2"]);
+  });
+
+  it("跨 Shadow：shadow 内元素的 light 层祖先 aria-hidden=true → 该元素被跳过", () => {
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    const hidden = document.createElement("div");
+    hidden.setAttribute("aria-hidden", "true");
+    root.appendChild(hidden);
+    const host = document.createElement("div");
+    hidden.appendChild(host);
+    const sr = host.attachShadow({ mode: "open" });
+    const inner = document.createElement("button");
+    inner.id = "hidden-inner";
+    sr.appendChild(inner);
+
+    const tabbable = findTabbableAcrossShadow(root);
+    const ids = tabbable.map((el) => el.id);
+    expect(ids).toEqual([]);
+  });
+
+  it("跨 Shadow：shadow 内祖先 aria-hidden=true → 该元素被跳过", () => {
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    const host = document.createElement("div");
+    root.appendChild(host);
+    const sr = host.attachShadow({ mode: "open" });
+    const wrap = document.createElement("div");
+    wrap.setAttribute("aria-hidden", "true");
+    sr.appendChild(wrap);
+    const inner = document.createElement("button");
+    inner.id = "hidden-inner-2";
+    wrap.appendChild(inner);
+
+    const tabbable = findTabbableAcrossShadow(root);
+    const ids = tabbable.map((el) => el.id);
+    expect(ids).toEqual([]);
+  });
 });
 
 describe("trapFocusAcrossShadow Tab 循环", () => {
@@ -189,6 +269,79 @@ describe("trapFocusAcrossShadow Tab 循环", () => {
       const ev = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
       document.dispatchEvent(ev);
       expect(ev.defaultPrevented).toBe(false);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("跨 Shadow：焦点在 shadow 内 last → Tab 拉回 shadow 内 first（不卡死，回归死循环）", () => {
+    const overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+    const host = document.createElement("div");
+    overlay.appendChild(host);
+    const sr = host.attachShadow({ mode: "open" });
+    const first = document.createElement("button");
+    first.id = "first";
+    sr.appendChild(first);
+    const last = document.createElement("button");
+    last.id = "last";
+    sr.appendChild(last);
+
+    const cleanup = trapFocusAcrossShadow(overlay);
+    try {
+      last.focus();
+      const ev = dispatchTab(document, false);
+      expect(ev.defaultPrevented).toBe(true);
+      // happy-dom 限制：document.activeElement 停在 host，shadow 内焦点走 shadowRoot.activeElement
+      expect(host.shadowRoot!.activeElement).toBe(first);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("跨 Shadow：Shift+Tab 在 shadow 内 first → 跳回 shadow 内 last", () => {
+    const overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+    const host = document.createElement("div");
+    overlay.appendChild(host);
+    const sr = host.attachShadow({ mode: "open" });
+    const first = document.createElement("button");
+    first.id = "first";
+    sr.appendChild(first);
+    const last = document.createElement("button");
+    last.id = "last";
+    sr.appendChild(last);
+
+    const cleanup = trapFocusAcrossShadow(overlay);
+    try {
+      first.focus();
+      const ev = dispatchTab(document, true);
+      expect(ev.defaultPrevented).toBe(true);
+      expect(host.shadowRoot!.activeElement).toBe(last);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("跨 Shadow：overlay 外焦点 Tab → 拉回 shadow 内 first", () => {
+    const overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+    const host = document.createElement("div");
+    overlay.appendChild(host);
+    const sr = host.attachShadow({ mode: "open" });
+    const first = document.createElement("button");
+    first.id = "first";
+    sr.appendChild(first);
+    const outside = document.createElement("button");
+    outside.id = "outside";
+    document.body.appendChild(outside);
+    outside.focus();
+
+    const cleanup = trapFocusAcrossShadow(overlay);
+    try {
+      const ev = dispatchTab(document, false);
+      expect(ev.defaultPrevented).toBe(true);
+      expect(host.shadowRoot!.activeElement).toBe(first);
     } finally {
       cleanup();
     }

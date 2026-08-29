@@ -19,8 +19,13 @@ const FE = path.join(ROOT, 'frontend');
 const TESTID_REGISTRY = {
   // app-content 标签栏
   'content-tab':    'src/views/app-content/tpl.ts',
-  // app-nav 导航项
+  // app-nav 导航项（nav-item 原有；其下 5 项为孤儿扫描补全 ADR-133 阶段 A）
   'nav-item':       'src/views/app-nav/index.ts',
+  'nav-toggle':     'src/views/app-nav/index.ts',
+  'nav-repo-sel':   'src/views/app-nav/index.ts',
+  'nav-group-select': 'src/views/app-nav/index.ts',
+  'nav-subtype-select': 'src/views/app-nav/index.ts',
+  'nav-viewer-fab': 'src/views/app-nav/index.ts',
   // app-sidebar 侧栏操作
   'sidebar-push':   'src/views/app-sidebar/tpl.ts',
   'sidebar-pull':   'src/views/app-sidebar/tpl.ts',
@@ -61,6 +66,8 @@ const TESTID_REGISTRY = {
   'tree-af-max-tex': 'src/views/app-tree/tpl.ts',
   'tree-af-clear':  'src/views/app-tree/tpl.ts',
   'tree-repo':      'src/views/app-tree/tpl.ts',
+  // tree 工具栏底栏状态（孤儿扫描补全 ADR-133 阶段 A）
+  'tree-ftr-stat':  'src/views/app-tree/tpl.ts',
   // context-menu 右键菜单
   'ctx-item':       'src/views/context-menu/index.ts',
   // modal 遮罩弹窗（modalPrompt/modalConfirm/modalSelect）
@@ -111,9 +118,42 @@ for (const [testid, relFile] of Object.entries(TESTID_REGISTRY)) {
   const attrPattern = `data-testid="${testid}"`;
   const datasetPattern = `dataset.testid = "${testid}"`;
   if (!content.includes(attrPattern) && !content.includes(datasetPattern)) {
-    errors.push(`MISSING: testid="${testid}" 在 ${relFile} 中未找到（data-testid 属性或 dataset.testid 赋值均认可）`);
+    errors.push(
+      `MISSING: testid="${testid}" 在 ${relFile} 中未找到（data-testid 属性或 dataset.testid 赋值均认可）。\n` +
+      `      ↳ canonical fix（ADR-133）：功能已删则删除注册表对应条目；禁止为过门禁补无 handler 假按钮。`
+    );
   }
 }
+
+// ── ADR-133 阶段 A.2：反向孤儿扫描 ──────────────────────
+// 关键命名约定内的 data-testid 若未登记于 TESTID_REGISTRY → 契约红，强制「新增关键交互元素须显式登记」。
+// 反向覆盖病根1 漏网：存在性校验管「删功能忘删条目」，此处补「加元素忘登记」。
+// 约定作用域有意收窄至关键前缀，避免装饰性 testid 误伤；扫描前已实证 gap=6 并已于本文件登记（app-nav ×5 + tree-ftr-stat）。
+// 仅扫 frontend/src（源码）：构建产物 dist-*/dist-web 含历史残留 testid 字面量（如已清掉的 tree-repo-export），会制造误报，故排除。
+const KEY_PREFIXES = ['tree-', 'sm-', 'gh-', 'ctx-', 'dlg-', 'recy-', 'sidebar-', 'nav-', 'content-', 'toast'];
+const isKeyTestid = (id) => KEY_PREFIXES.some((p) => id === p.replace(/-$/, '') || id.startsWith(p));
+(function scanOrphanTestids() {
+  const seen = new Set();
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === 'node_modules' || e.name === '.git' || e.name.startsWith('dist')) continue;
+        walk(p);
+      } else if (/\.(ts|tsx|js|jsx)$/.test(e.name)) {
+        const c = fs.readFileSync(p, 'utf8');
+        for (const m of c.matchAll(/data-testid="([a-z0-9-]+)"/g)) seen.add(m[1]);
+        for (const m of c.matchAll(/dataset\.testid\s*=\s*"([a-z0-9-]+)"/g)) seen.add(m[1]);
+      }
+    }
+  };
+  walk(path.join(FE, 'src'));
+  for (const id of seen) {
+    if (isKeyTestid(id) && !(id in TESTID_REGISTRY)) {
+      errors.push(`ORPHAN: data-testid="${id}" 命中关键命名约定但未登记于 TESTID_REGISTRY（新增关键交互元素须显式登记；ADR-133 阶段 A）`);
+    }
+  }
+})();
 
 if (errors.length > 0) {
   console.error('❌ 契约测试失败：关键 data-testid 缺失');

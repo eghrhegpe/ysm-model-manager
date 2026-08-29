@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-133：契约测试真实性：从存在性门禁升级为消费性校验",
+        "link": "/adr/ADR-133-testid-contract-authenticity"
+      },
+      {
         "text": "ADR-132：多模型选择菜单原语（跨资源类型统一 select）",
         "link": "/adr/ADR-132-multi-model-select-menu-primitive"
       },

@@ -19,16 +19,17 @@
  *   node scripts/perf-gate.mjs --warn-only                # 超阈值仅 WARN 不阻断（供本地观察）
  *   node scripts/perf-gate.mjs --verbose                  # 打印解析明细
  * 退出码：0=通过（或 warn-only+仅 warn），1=失败（阶段回归超阈值）。
- * 依赖：零依赖（仅 node:child_process / node:fs / node:path / node:url 内置）。
+ * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.mjs（零外部依赖）。
  * 设计意图：把「性能退回」从"靠感觉/靠记忆"升级为"可对比的量化门禁"。baseline 纳入
  *           git 作为性能锚点，预-push 可调用；git 层面的漂移由人工 review baseline 变更把关。
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { getRoot } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = getRoot();
 const BASELINE_FILE = path.join(ROOT, 'scripts', 'baseline', 'perf-baseline.json');
 
 // 阶段行格式（对齐 go/cli/concurrent.go printSingleModelStages、frontend perf.ts）：
@@ -41,33 +42,32 @@ const STAGE_ORDER = [
   '⑤ 纹理数据准备', '⑥ IPC 传输模拟', '⑦ 缓存检查',
 ];
 
-function parseArgs(argv) {
-  const o = {
+// ── 参数解析（共享层 _lib/parse-args.mjs）────────────────────────
+// 原内联解析的未知参数 exit 2 语义由 unknown 白名单拦截保留；
+// iterations/thresholdRatio 原为 parseInt/parseFloat 数字，这里显式 Number() 还原。
+const parsed = parseArgs(process.argv.slice(2), {
+  bools: ['init', 'warn-only', 'verbose'],
+  strings: ['model', 'files-root', 'iterations', 'threshold-ratio'],
+  defaults: {
     model: path.join('tests', 'fixtures', 'ysm', '01_taisho_maid', 'ysm.json'),
-    filesRoot: 'tests/fixtures/ysm/01_taisho_maid',
-    iterations: 1,
-    thresholdRatio: 1.5,
-    init: false,
-    warnOnly: false,
-    verbose: false,
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--init') o.init = true;
-    else if (a === '--warn-only') o.warnOnly = true;
-    else if (a === '--verbose') o.verbose = true;
-    else if (a === '--model') o.model = argv[++i];
-    else if (a === '--files-root') o.filesRoot = argv[++i];
-    else if (a === '--iterations') o.iterations = parseInt(argv[++i], 10);
-    else if (a === '--threshold-ratio') o.thresholdRatio = parseFloat(argv[++i]);
-    else {
-      console.error(`[FAIL] 未知参数: ${a}`);
-      process.exit(2);
-    }
-  }
-  return o;
+    'files-root': 'tests/fixtures/ysm/01_taisho_maid',
+    iterations: '1',
+    'threshold-ratio': '1.5',
+  },
+});
+if (parsed.unknown.length) {
+  console.error(`[FAIL] 未知参数: ${parsed.unknown.join(' ')}`);
+  process.exit(2);
 }
-const opts = parseArgs(process.argv.slice(2));
+const opts = {
+  model: parsed.model,
+  filesRoot: parsed['files-root'],
+  iterations: Number(parsed.iterations),
+  thresholdRatio: Number(parsed['threshold-ratio']),
+  init: parsed.init,
+  warnOnly: parsed['warn-only'],
+  verbose: parsed.verbose,
+};
 
 const FILES_ROOT = path.resolve(ROOT, opts.filesRoot);
 const MODEL = path.resolve(ROOT, opts.model);

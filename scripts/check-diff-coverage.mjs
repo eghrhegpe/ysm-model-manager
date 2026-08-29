@@ -26,26 +26,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
-
-function parseArgs(argv) {
-  const out = {};
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (!a.startsWith('--')) continue;
-    const eq = a.indexOf('=');
-    if (eq >= 0) {
-      out[a.slice(2, eq)] = a.slice(eq + 1);
-    } else if (a === '--uncommitted' || a === '--json' || a === '--suggest' || a === '--staged') {
-      out[a.slice(2)] = true;
-    } else if (i + 1 < argv.length) {
-      out[a.slice(2)] = argv[++i];
-    }
-  }
-  return out;
-}
 
 function git(args) {
   try {
@@ -241,7 +225,14 @@ export function buildSuggestBlock(failures, threshold) {
 }
 
 function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseArgs(process.argv.slice(2), {
+    bools: ['uncommitted', 'json', 'suggest', 'staged'],
+    strings: ['threshold', 'base', 'head', 'files', 'coverage'],
+  });
+  if (args.unknown.length) {
+    console.error(`[diff-coverage] 未知参数: ${args.unknown.join(' ')}（支持 --threshold/--base/--head/--files/--coverage/--uncommitted/--staged/--suggest/--json）`);
+    process.exit(USAGE_ERROR);
+  }
   const coveragePath = args.coverage
     ? resolve(ROOT, args.coverage)
     : resolve(ROOT, 'frontend', 'coverage', 'coverage-final.json');

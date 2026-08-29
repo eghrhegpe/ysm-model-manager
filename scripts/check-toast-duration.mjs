@@ -10,14 +10,16 @@
  * 行为：仅报告，不阻断（退出码恒 0，输出 [WARN]）。
  *   —— 当前为非阻断观察期：待 rollout 稳定后，可将下方 `process.exit(0)` 翻为
  *      `process.exit(violations.length ? 1 : 0)` 升级为硬闸，与 check-boolean-naming 等对齐。
- * 依赖：node:child_process / node:fs / node:path（零依赖，与项目其他 check-*.mjs 一致）
+ *      升级触发条件（R15 P3 #1 时间锚点）：① 观察期 ≥30 天无回归（2026-08-29 起）；
+ *      ② 或 `docs/.doc-next-steps.md` 已标记为 debt；③ 或 check-boolean-naming 等同类闸门先升级。
+ * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.mjs（零外部依赖）
  */
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { getRoot } from "./_lib/scan-files.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = getRoot();
 const SRC = path.join(ROOT, "frontend/src");
 
 const MAP = {
@@ -66,5 +68,6 @@ console.log(`[WARN] check-toast-duration: 发现 ${violations.length} 处 toast 
 for (const v of violations) {
   console.log(`  ${v.file}:${v.line}  ${v.kind} 裸 duration: ${v.n} → 应改为 TOAST_MS.${v.key}`);
 }
-// 非阻断观察期：退出码恒 0。升级硬闸时改此处。
+// 非阻断观察期：退出码恒 0。升级硬闸时改此处（触发条件见文件头注释：≥30 天无回归 /
+// docs/.doc-next-steps.md 标记 debt / 同类闸门先升级，R15 P3 #1）。
 process.exit(0);

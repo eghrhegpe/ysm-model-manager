@@ -23,35 +23,29 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { walk, readText, getRoot, relPosix } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const ROOT = getRoot();
 
-// ─── 参数解析（手写，避免引入外部依赖；保持与其他 check-* 脚本同款极简风格）──
-function parseArgs(argv) {
-  const out = {
-    funcs: false,
-    json: false,
-    scope: null,          // 字符串或 null；相对路径 → 以 ROOT 为基准解析
-    threshold: 30,        // 默认 🟨 >30，🟧 = 2×threshold，🟥 = 3×threshold
-    _positional: [],
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--funcs') out.funcs = true;
-    else if (a === '--json') out.json = true;
-    else if (a === '--scope' && argv[i + 1]) { out.scope = argv[++i]; }
-    else if (a === '--threshold' && argv[i + 1]) {
-      const n = parseInt(argv[++i], 10);
-      if (!Number.isFinite(n) || n < 1) { console.error(`[line-counter] --threshold 需正整数，收到 ${argv[i]}，用默认 30`); }
-      else out.threshold = n;
-    }
-    else if (!a.startsWith('-')) out._positional.push(a);
-    else console.warn(`[line-counter] 忽略未知参数 "${a}"`);
+// ─── 参数解析（共享层 _lib/parse-args.mjs）────────────────────────
+// 位置参数由共享层收进 `_`（原 _positional 同样未被消费，此处省略）。
+// --threshold 正整数校验保留（非法时告警回落默认 30，与原手写解析一致）。
+const raw = parseArgs(process.argv.slice(2), {
+  bools: ['funcs', 'json'],
+  strings: ['scope', 'threshold'],
+  defaults: { threshold: 30 }, // 默认 🟨 >30，🟧 = 2×threshold，🟥 = 3×threshold
+});
+if (raw.threshold !== null) {
+  const n = parseInt(raw.threshold, 10);
+  if (!Number.isFinite(n) || n < 1) {
+    console.error(`[line-counter] --threshold 需正整数，收到 ${raw.threshold}，用默认 30`);
+    raw.threshold = 30;
+  } else {
+    raw.threshold = n;
   }
-  return out;
 }
+const args = { funcs: raw.funcs, json: raw.json, scope: raw.scope, threshold: raw.threshold };
 
 // ─── 生成/测试文件豁免（复用现有 isGeneratedFile，新增测试文件判定）──
 const GENERATED_FILE_RE = /\.gen\.(mjs|js|ts|go)$/;
@@ -492,8 +486,6 @@ function packageLines(base, pattern) {
 }
 
 function main() {
-  const args = parseArgs(process.argv.slice(2));
-
   // ── --funcs 模式：函数级三档分级 ──
   if (args.funcs) {
     try {

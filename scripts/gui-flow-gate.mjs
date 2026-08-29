@@ -19,41 +19,41 @@
  *   node scripts/gui-flow-gate.mjs --model <path>       # 指定要分析的模型（默认自动选第一个）
  *   node scripts/gui-flow-gate.mjs --verbose            # 打印原始输出与解析明细
  * 退出码：0=通过，1=失败。
- * 依赖：零依赖（仅 node:child_process / node:path / node:url 内置）。
+ * 依赖：node:child_process / node:path / scripts/_lib/scan-files.mjs（零外部依赖）。
  * 设计意图：把 CLI 当 GUI 的「无头验证替身」——真跑 gui-flow 验证 Go 后端加载链健康
  *           （配置→扫描→分析→缓存→数据→渲染预估）。与 tests/test_cli_gui_flow_contract.mjs
  *           的静态契约互补：静态层进每次 push 门禁，本门禁做真跑集成验证，CI/手动可选触发。
  */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { getRoot } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = getRoot();
 
-// ── 参数解析（极简，零依赖）────────────────────────────
-function parseArgs(argv) {
-  const o = {
-    filesRoot: path.join('tests', 'fixtures', 'ysm', '01_taisho_maid'),
+// ── 参数解析（共享层 _lib/parse-args.mjs）────────────────────────
+// 原内联解析的未知参数 exit 2 语义由 unknown 白名单拦截保留；
+// thresholdMs 原为 parseInt 数字，这里显式 Number() 还原。
+const parsed = parseArgs(process.argv.slice(2), {
+  bools: ['verbose', 'require-model'],
+  strings: ['files-root', 'model', 'threshold-ms'],
+  defaults: {
+    'files-root': path.join('tests', 'fixtures', 'ysm', '01_taisho_maid'),
     model: '',
-    thresholdMs: 60000,
-    verbose: false,
-    requireModel: false,
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--verbose') o.verbose = true;
-    else if (a === '--require-model') o.requireModel = true;
-    else if (a === '--files-root') o.filesRoot = argv[++i];
-    else if (a === '--model') o.model = argv[++i];
-    else if (a === '--threshold-ms') o.thresholdMs = parseInt(argv[++i], 10);
-    else {
-      console.error(`[FAIL] 未知参数: ${a}`);
-      process.exit(2);
-    }
-  }
-  return o;
+    'threshold-ms': '60000',
+  },
+});
+if (parsed.unknown.length) {
+  console.error(`[FAIL] 未知参数: ${parsed.unknown.join(' ')}`);
+  process.exit(2);
 }
-const opts = parseArgs(process.argv.slice(2));
+const opts = {
+  filesRoot: parsed['files-root'],
+  model: parsed.model,
+  thresholdMs: Number(parsed['threshold-ms']),
+  verbose: parsed.verbose,
+  requireModel: parsed['require-model'],
+};
 
 const FILES_ROOT = path.resolve(ROOT, opts.filesRoot);
 

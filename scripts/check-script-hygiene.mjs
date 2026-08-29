@@ -7,7 +7,8 @@
  *   1. 退出码失效：裸 `main();` 调用但 main 内靠 `return 1` 传失败（无 process.exit）
  *      → 退出码恒 0，CI/调用方误判成功（new-knowledge-card.mjs 曾中招）；
  *   2. 共享层内联：内联 `function rg(` /
- *      `path.resolve(path.dirname(fileURLToPath(...)))` 样板
+ *      `path.resolve(path.dirname(fileURLToPath(...)))` 样板 /
+ *      内联 `function parseArgs(`
  *      → 违反 scripts/README.md「共享能力一律 import 自 _lib/，禁止内联样板」；
  *      带显式扩展名过滤/跳过集合的领域专用 walker（如 .md/.go 收集器）视为合法内联，不告警。
  *   3. --json 契约：检查类脚本（check-* / *-check / review / doctor / link-checker /
@@ -60,6 +61,7 @@ function checkExitCode(text) {
 const INLINE_WALK_RE = /^function walk\(|^const walk\s*=/m;
 const INLINE_RG_RE = /^function rg\(|^const rg\s*=|execFileSync\([^)]*['"]rg['"]/m;
 const INLINE_BOILERPLATE_RE = /path\.resolve\(path\.dirname\(fileURLToPath\(import\.meta\.url\)\)\)|const __dirname = path\.dirname\(fileURLToPath\(import\.meta\.url\)\);\r?\nconst ROOT = path\.resolve\(__dirname, '\.\.'\)/;
+const INLINE_PARSEARGS_RE = /^function parseArgs\(|^const parseArgs\s*=/m;
 
 // 领域收集器特征：带显式扩展名过滤 / 跳过集合 / 回调的专用 walk 视为合法内联，不告警。
 const DOMAIN_WALK_RE =
@@ -87,6 +89,9 @@ function checkSharedLayer(text) {
     out.push('内联 walk() 定义（应 import 共享层 _lib/，如 _lib/scan-files.mjs）');
   }
   if (INLINE_RG_RE.test(text)) out.push('内联 rg() 定义（应 import 共享层 _lib/，如 _lib/ripgrep.mjs）');
+  if (INLINE_PARSEARGS_RE.test(text)) {
+    out.push('内联 parseArgs() 定义（应 import 共享层 _lib/，如 _lib/parse-args.mjs）');
+  }
   if (INLINE_BOILERPLATE_RE.test(text)) {
     out.push('内联 ROOT 样板 path.resolve(dirname(fileURLToPath(...)))（新脚本应 import 共享层 _lib/ 的 ROOT/getRoot）');
   }

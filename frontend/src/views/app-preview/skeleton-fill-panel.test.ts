@@ -40,9 +40,21 @@ const ctx = {
 const snap = (activeComponent: number): PreviewSnapshot =>
   ({ "ui.activeComponent": activeComponent }) as PreviewSnapshot;
 
+/** 会话级 activeComponent 闭包（对齐 B2 范式：per-scene 会话态，不走全局状态层） */
+const sessionActive = (initial = -1): { get: () => number; set: (n: number) => void; snapshot: PreviewSnapshot } => {
+  let v = initial;
+  return {
+    get: () => v,
+    set: (n: number) => {
+      v = n;
+    },
+    snapshot: snap(v),
+  };
+};
+
 describe("buildYsmModelSchema（声明式 schema）", () => {
   it("单组件：统计 2 行 field + 纹理 2 行 row，无组件选择 select", () => {
-    const nodes = buildYsmModelSchema(ctx, snap(-1));
+    const nodes = buildYsmModelSchema(ctx, snap(-1), sessionActive(-1));
     // 单组件 → 无 select
     expect(nodes.some((n) => n.kind === "select")).toBe(false);
     // 统计
@@ -56,7 +68,7 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     expect(texNodes[0].value).toContain("加载 64×32");
   });
 
-  it("多组件：组件选择 select 出现，bind 到 ui.activeComponent，选项含 All + 各组件", () => {
+  it("多组件：组件选择 select 出现，get/set 闭包读写会话 activeComponent，选项含 All + 各组件", () => {
     const multiCtx = {
       ...ctx,
       spec: makeSpec({
@@ -66,15 +78,18 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
         ],
       }),
     } as never;
-    const nodes = buildYsmModelSchema(multiCtx, snap(-1));
+    const nodes = buildYsmModelSchema(multiCtx, snap(-1), sessionActive(-1));
     const sel = nodes.find((n) => n.kind === "select")!;
     expect(sel.id).toBe("ysm-component-select");
-    expect(sel.control?.bind).toBe("ui.activeComponent");
+    // [doc:adr-126-p5-b→B2] select 不再 bind 全局状态层——get/set 闭包读写 per-scene 会话态
+    expect(sel.control?.bind).toBeUndefined();
+    expect(sel.control?.get).toBeTypeOf("function");
+    expect(sel.control?.set).toBeTypeOf("function");
     expect(sel.control?.options?.map((o) => o.value)).toEqual(["-1", "0", "1"]);
     expect(sel.control?.options?.[0].label).toBe("全部组件");
   });
 
-  it("多组件 + activeComponent=1：统计/纹理按组件 1 聚合", () => {
+  it("多组件 + activeComponent=1：统计/纹理按组件 1 聚合（会话闭包读）", () => {
     const multiCtx = {
       ...ctx,
       spec: makeSpec({
@@ -86,7 +101,8 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
       texArr: [{ userData: { imgWidth: 128, imgHeight: 64 } }] as never[],
       model: { textureNames: ["armor_tex"], textures: ["a/armor.png"], textureCategories: [""] } as never,
     } as never;
-    const nodes = buildYsmModelSchema(multiCtx, snap(1));
+    const active = sessionActive(1);
+    const nodes = buildYsmModelSchema(multiCtx, snap(1), active);
     expect(nodes.find((n) => n.id === "ysm-stats-bones")?.value).toBe("1 根");
     expect(nodes.find((n) => n.id === "ysm-stats-cubes")?.value).toBe("2 个");
     // 组件 1 只有 1 个槽位
@@ -108,7 +124,7 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
       texArr: [{ userData: { imgWidth: 128, imgHeight: 64 } }] as never[],
       model: { textureNames: ["armor_tex"], textures: ["a/armor.png"], textureCategories: [""] } as never,
     } as never;
-    const nodes = buildYsmModelSchema(exclusiveCtx, snap(1));
+    const nodes = buildYsmModelSchema(exclusiveCtx, snap(1), sessionActive(1));
     const rows = nodes.filter((n) => n.kind === "row");
     expect(rows.length).toBe(2); // 专属纹理 2 行（替代全局槽行）
     expect(rows[0].id).toBe("ysm-tex-ex-0");
@@ -117,6 +133,28 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     expect(rows[0].value).toContain("声明 128×64");
     expect(rows[1].id).toBe("ysm-tex-ex-1");
     expect(rows[1].labelKey).toBe("armor #2");
+  });
+
+  it("组件 select 闭包 set 后 get 读回新值（会话态写读一致，B2）", () => {
+    const multiCtx = {
+      ...ctx,
+      spec: makeSpec({
+        models: [
+          { name: "main", bones: [{ _cubeCount: 1 }], meshGroups: [{ texIdx: 0 }] },
+          { name: "armor", bones: [], meshGroups: [{ texIdx: 1 }] },
+        ],
+      }),
+    } as never;
+    const active = sessionActive(-1);
+    const nodes = buildYsmModelSchema(multiCtx, snap(-1), active);
+    const sel = nodes.find((n) => n.kind === "select")!;
+    expect(sel.control!.get!(undefined)).toBe("-1");
+    sel.control!.set!("1");
+    expect(active.get()).toBe(1);
+    // 重建节点：get 闭包读会话态新值（对齐 litematic shell 闭包范式）
+    const rebuilt = buildYsmModelSchema(multiCtx, snap(-1), active);
+    const sel2 = rebuilt.find((n) => n.kind === "select")!;
+    expect(sel2.control!.get!(undefined)).toBe("1");
   });
 });
 

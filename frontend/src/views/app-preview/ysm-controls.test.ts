@@ -21,13 +21,12 @@ import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
 import { registerYsmModelSchema } from "./ysm-controls.ts";
 import {
   YSM_MODEL_SCHEMA_ID,
+  makeYsmModelSchemaId,
   hasSchema,
   getSchema,
   resetSchemas,
 } from "../../utils/3d/adapters/schema-registry.ts";
 import {
-  setStateValue,
-  getStateValue,
   resetSettingsListeners,
   resetActiveComponent,
 } from "../../utils/3d/state/preview-state.ts";
@@ -117,7 +116,7 @@ describe("fillYsmShotPanel（命令式，向后兼容）", () => {
   });
 });
 
-describe("registerYsmModelSchema（P5 受控注册 + ui.activeComponent 订阅）", () => {
+describe("registerYsmModelSchema（P5 受控注册 + B2 per-scene 会话态）", () => {
   beforeEach(() => {
     resetSchemas();
     resetSettingsListeners();
@@ -131,7 +130,7 @@ describe("registerYsmModelSchema（P5 受控注册 + ui.activeComponent 订阅�
     resetActiveComponent();
   });
 
-  it("注册 YSM_MODEL_SCHEMA_ID builder；调用 builder 时以 ctx + 状态快照委托 buildYsmModelSchema", () => {
+  it("注册 builder；调用 builder 时以 ctx + 状态快照委托 buildYsmModelSchema（缺省 sessionId → 旧全局 key 兼容）", () => {
     const ctx = makeCtx();
     const off = registerYsmModelSchema(ctx);
     expect(typeof off).toBe("function");
@@ -144,24 +143,86 @@ describe("registerYsmModelSchema（P5 受控注册 + ui.activeComponent 订阅�
     expect(buildYsmModelSchema).toHaveBeenCalledWith(
       { model: ctx.model, spec: ctx.spec, texArr: ctx.texArr },
       snap,
+      expect.objectContaining({ get: expect.any(Function), set: expect.any(Function) }),
     );
     off();
   });
 
-  it("ui.activeComponent 变更 → showModelGroup(新值)；其他路径变更不触发；off() 退订后不再触发", () => {
+  it("传 sessionId → 注册到 per-scene key（ysm-model-{sessionId}），不占旧全局键", () => {
     const ctx = makeCtx();
-    const showModelGroup = ctx.handle.showModelGroup as ReturnType<typeof vi.fn>;
-    const off = registerYsmModelSchema(ctx);
-    // 非 ui.activeComponent 路径变更：订阅回调被通知但不触发副作用（单一消费点）
-    setStateValue("render.maxFps", 60);
-    expect(showModelGroup).not.toHaveBeenCalled();
-    setStateValue("ui.activeComponent", 2);
-    expect(showModelGroup).toHaveBeenCalledTimes(1);
-    expect(showModelGroup).toHaveBeenCalledWith(2);
-    // 状态层读回与写入一致（写读一致契约）
-    expect(getStateValue("ui.activeComponent")).toBe(2);
+    const off = registerYsmModelSchema(ctx, "m1");
+    expect(typeof off).toBe("function");
+    // per-scene key 注册；旧全局键不被本次注册占用
+    expect(hasSchema(makeYsmModelSchemaId("m1"))).toBe(true);
+    expect(hasSchema(YSM_MODEL_SCHEMA_ID)).toBe(false);
+    expect(getSchema(makeYsmModelSchemaId("m1"))).toBeTypeOf("function");
     off();
-    setStateValue("ui.activeComponent", 3);
-    expect(showModelGroup).toHaveBeenCalledTimes(1);
+    // dispose 后 per-scene key 精准注销
+    expect(hasSchema(makeYsmModelSchemaId("m1"))).toBe(false);
+  });
+
+  it("[Bug A 端到端] YSM/maid 同框 schema 隔离：两个 sessionId 的 builder 都活着，互不覆盖", () => {
+    const ctxA = makeCtx();
+    const ctxB = makeCtx();
+    // 先后注册（模拟 YSM + maid 同台，旧实现第二次会静默覆盖第一次的 builder 闭包）
+    const offA = registerYsmModelSchema(ctxA, "m1");
+    const offB = registerYsmModelSchema(ctxB, "m2");
+    expect(hasSchema(makeYsmModelSchemaId("m1"))).toBe(true);
+    expect(hasSchema(makeYsmModelSchemaId("m2"))).toBe(true);
+    // 两个 builder 都活着——各自 getSchema 取到各自闭包
+    const builderA = getSchema(makeYsmModelSchemaId("m1"))!;
+    const builderB = getSchema(makeYsmModelSchemaId("m2"))!;
+    expect(builderA).toBeDefined();
+    expect(builderB).toBeDefined();
+    expect(builderA).not.toBe(builderB);
+    // 各自构建时拿自己的 ctx（不串数据）
+    builderA({} as never);
+    expect(buildYsmModelSchema).toHaveBeenLastCalledWith(
+      { model: ctxA.model, spec: ctxA.spec, texArr: ctxA.texArr },
+      expect.anything(),
+      expect.anything(),
+    );
+    builderB({} as never);
+    expect(buildYsmModelSchema).toHaveBeenLastCalledWith(
+      { model: ctxB.model, spec: ctxB.spec, texArr: ctxB.texArr },
+      expect.anything(),
+      expect.anything(),
+    );
+    // 注销 A 不影响 B（dispose 精准清理）
+    offA();
+    expect(hasSchema(makeYsmModelSchemaId("m1"))).toBe(false);
+    expect(hasSchema(makeYsmModelSchemaId("m2"))).toBe(true);
+    offB();
+  });
+
+  it("[Bug B] activeComponent per-scene 会话态：set 闭包 → showModelGroup；两场景互不串扰", () => {
+    // B2 后组件选择不再走全局状态层——registerYsmModelSchema 持 per-scene `_local` 闭包，
+    // 经 sessionActiveComponent 第三参交给 buildYsmModelSchema（select get/set 读写它），
+    // set 触发 showModelGroup（单一消费点）。两场景各自闭包隔离，互不串扰。
+    const ctxA = makeCtx();
+    const ctxB = makeCtx();
+    const showA = ctxA.handle.showModelGroup as ReturnType<typeof vi.fn>;
+    const showB = ctxB.handle.showModelGroup as ReturnType<typeof vi.fn>;
+    // 捕获每个注册实例传给 buildYsmModelSchema 的会话态闭包（mock 返回 []，节点产出在
+    // skeleton-fill-panel.test.ts 覆盖——此处只验证 registerYsmModelSchema 的接线）。
+    // 注意 builder 惰性：注册后须调用 builder 才触发 buildYsmModelSchema。
+    const offA = registerYsmModelSchema(ctxA, "m1");
+    const offB = registerYsmModelSchema(ctxB, "m2");
+    getSchema(makeYsmModelSchemaId("m1"))!({} as never);
+    getSchema(makeYsmModelSchemaId("m2"))!({} as never);
+    const calledA = vi.mocked(buildYsmModelSchema).mock.calls[0]![2]!;
+    const calledB = vi.mocked(buildYsmModelSchema).mock.calls[1]![2]!;
+    expect(calledA).not.toBe(calledB); // per-scene：各自独立闭包
+    // 场景 A 组件 select set → A 的 showModelGroup，B 不触发（不串扰）
+    calledA.set!(2);
+    expect(showA).toHaveBeenCalledWith(2);
+    expect(showB).not.toHaveBeenCalled();
+    // 场景 B 独立读写自己的会话态
+    expect(calledB.get!()).toBe(-1);
+    calledB.set!(0);
+    expect(showB).toHaveBeenCalledWith(0);
+    expect(showA).toHaveBeenCalledTimes(1); // A 不受 B 影响
+    offA();
+    offB();
   });
 });

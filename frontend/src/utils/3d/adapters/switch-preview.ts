@@ -68,6 +68,9 @@ export interface SwitchContext {
   setPerFrame: (f: ((dt: number) => void) | null) => void;
   /** 可变：_handle 构造后赋值 */
   getHandle: () => PreviewHandle | null;
+  /** [Bug A] 当前 mount 会话稳定 id（mount3D 生成，会话内切换复用同一 id）——
+   *  buildSwitchContent 转发给 adapter.build，per-scene schema key 前后一致 */
+  sessionId?: string;
   /** 终止标志（引用对象，与 isDisposed 同构，避免按值捕获失效，见 r12 P2） */
   aborted: { v: boolean };
   /** 并发切换抑制：switchToSession 运行期间为 true，防止连续点击触发重复 build（r12 P1） */
@@ -185,6 +188,7 @@ async function buildSwitchContent(
         overlay: ctx.overlay,
         menu: ctx.menuHandle,
         switchTo: undefined,
+        sessionId: ctx.sessionId,
       },
       newPath,
     );

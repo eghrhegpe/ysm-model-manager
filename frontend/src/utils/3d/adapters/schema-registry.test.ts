@@ -11,6 +11,9 @@ import {
   hasSchema,
   listSchemas,
   resetSchemas,
+  unregisterSchema,
+  makeYsmModelSchemaId,
+  YSM_MODEL_SCHEMA_ID,
 } from "./schema-registry.ts";
 import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 
@@ -48,5 +51,39 @@ describe("schema-registry 受控注册", () => {
     registerSchema("b", () => []);
     resetSchemas();
     expect(listSchemas()).toEqual([]);
+  });
+});
+
+describe("makeYsmModelSchemaId（per-scene key 工厂，YSM/maid 同框隔离）", () => {
+  it("返回 `ysm-model-{sessionId}` 形态；YSM_MODEL_SCHEMA_ID 常量保留（旧全局 key 兼容）", () => {
+    expect(makeYsmModelSchemaId("m1")).toBe("ysm-model-m1");
+    expect(makeYsmModelSchemaId("scene-7")).toBe("ysm-model-scene-7");
+    // 工厂产物与旧全局 key 不同——per-scene 注册不再静默覆盖 "ysm-model"
+    expect(makeYsmModelSchemaId("m1")).not.toBe(YSM_MODEL_SCHEMA_ID);
+  });
+
+  it("per-scene key 并存：a/b 两个 builder 都注册，各自 getSchema 取到自己的（互不覆盖）", () => {
+    const builderA = () => [{ id: "a", kind: "field" as const, value: "A" }];
+    const builderB = () => [{ id: "b", kind: "field" as const, value: "B" }];
+    registerSchema(makeYsmModelSchemaId("m1"), builderA);
+    registerSchema(makeYsmModelSchemaId("m2"), builderB);
+
+    // 两个 builder 都还在（Bug A：旧固定 key 第二次 build 会静默覆盖第一个）
+    expect(hasSchema(makeYsmModelSchemaId("m1"))).toBe(true);
+    expect(hasSchema(makeYsmModelSchemaId("m2"))).toBe(true);
+    expect(listSchemas()).toEqual(
+      expect.arrayContaining([makeYsmModelSchemaId("m1"), makeYsmModelSchemaId("m2")]),
+    );
+    // getSchema 各自取到各自的 builder（不再串数据）
+    expect(getSchema(makeYsmModelSchemaId("m1"))!({} as never)[0]).toMatchObject({ value: "A" });
+    expect(getSchema(makeYsmModelSchemaId("m2"))!({} as never)[0]).toMatchObject({ value: "B" });
+  });
+
+  it("注销一个 per-scene key 不影响另一个（dispose 精准清理）", () => {
+    registerSchema(makeYsmModelSchemaId("m1"), () => []);
+    registerSchema(makeYsmModelSchemaId("m2"), () => []);
+    unregisterSchema(makeYsmModelSchemaId("m1"));
+    expect(hasSchema(makeYsmModelSchemaId("m1"))).toBe(false);
+    expect(hasSchema(makeYsmModelSchemaId("m2"))).toBe(true);
   });
 });

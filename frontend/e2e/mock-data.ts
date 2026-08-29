@@ -226,6 +226,7 @@ export const MOCK_DATA = {
   ListByTag: undefined,
   ListFileNames: undefined,
   ListPackModels: undefined,
+  ListPackModelsDetail: undefined,
   ListRecycleBin: undefined,
   MergeWorkshopCreatorsFromJSON: undefined,
   MoveModelFile: undefined,

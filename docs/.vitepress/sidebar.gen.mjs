@@ -1616,6 +1616,10 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_repo_audit"
           },
           {
+            "text": "preview-menu-session-key",
+            "link": "/knowledge/preview_menu_session_key"
+          },
+          {
             "text": "3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）",
             "link": "/knowledge/preview_menu_settings_state"
           },

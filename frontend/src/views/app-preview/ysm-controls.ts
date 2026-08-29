@@ -17,9 +17,8 @@ import type { Spec3D, BoneSelectInfo } from "../../utils/3d/model3d.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import type { CameraControlBridge } from "../../utils/3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
-import { registerSchema, YSM_MODEL_SCHEMA_ID } from "../../utils/3d/adapters/schema-registry.ts";
+import { registerSchema, unregisterSchema, makeYsmModelSchemaId, YSM_MODEL_SCHEMA_ID } from "../../utils/3d/adapters/schema-registry.ts";
 import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
-import { subscribeSettings, getStateValue } from "../../utils/3d/state/preview-state.ts";
 
 /** 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） */
 export type YsmModel = BedrockGeometry & {
@@ -88,23 +87,43 @@ export function fillYsmShotPanel(list: HTMLElement, ctx: YsmControlsContext): vo
 }
 
 /**
- * [doc:adr-126-p5] YSM model 面板受控 schema 注册 + 组件选择副作用订阅。
- * maid-3d / ysm-3d 共用：注册 YSM_MODEL_SCHEMA_ID（buildYsmModelSchema 吃状态层快照），
- * 并订阅 ui.activeComponent → showModelGroup（单一消费点，防 listeners 只增不减）。
- * 返回 off 给 adapter dispose 调用——防订阅者泄漏（审计 #1）。
+ * [doc:adr-126-p5→B2] YSM model 面板受控 schema 注册 + 组件选择副作用装配。
+ * maid-3d / ysm-3d 共用：注册 buildYsmModelSchema（吃状态层快照 + per-scene 会话态闭包）。
+ *
+ * @param sessionId 当前 3D 会话稳定 id（mount 层生成，per-mount 唯一）。传入 → 注册到
+ *   per-scene key `ysm-model-{sessionId}`（多模型同框防互相覆盖，Bug A 根因修复，对齐
+ *   litematic `litematic-slice-{n}` 范式）；缺省（旧调用/测试）→ 退化为旧全局键
+ *   YSM_MODEL_SCHEMA_ID（兼容不破）。
+ * @deprecated 省略 sessionId 的调用形态仅保留兼容——新调用必须传 sessionId，
+ *   否则多模型同台仍会互相覆盖 builder。
+ *
+ * B2 变更：activeComponent 从全局状态层收敛为本地闭包（per-scene 会话态）——
+ *   不再 subscribeSettings("ui.activeComponent")（旧链：状态层广播 → 回调读全局值 →
+ *   showModelGroup；模块级单值跨预览泄漏，maid generic 模式 clamp 会误伤同台 YSM）。
+ *   返回 off：dispose 时注销 schema + 清本地会话态（防陈旧 builder 闭包持有已销毁场景）。
  */
-export function registerYsmModelSchema(ctx: YsmControlsContext): () => void {
-  registerSchema(YSM_MODEL_SCHEMA_ID, (snap) =>
+export function registerYsmModelSchema(ctx: YsmControlsContext, sessionId?: string): () => void {
+  const schemaId = sessionId ? makeYsmModelSchemaId(sessionId) : YSM_MODEL_SCHEMA_ID;
+  // per-scene 会话态：组件选择真源（-1 = All）——随本次注册闭包生灭，不入全局状态层
+  let activeComponent = -1;
+  const sessionActiveComponent = {
+    get: (): number => activeComponent,
+    set: (n: number): void => {
+      activeComponent = n;
+      // 单一消费点副作用：切 3D 显示组（与旧订阅链同语义，防 listeners 只增不减）
+      ctx.handle.showModelGroup(n);
+    },
+  };
+  registerSchema(schemaId, (snap) =>
     buildYsmModelSchema(
       { model: ctx.model, spec: ctx.spec, texArr: ctx.texArr as THREE.Texture[] },
       snap,
+      sessionActiveComponent,
     ),
   );
-  return subscribeSettings((changed) => {
-    if (changed === "ui.activeComponent") {
-      ctx.handle.showModelGroup(getStateValue("ui.activeComponent") as number);
-    }
-  });
+  return () => {
+    unregisterSchema(schemaId);
+  };
 }
 
 

@@ -308,9 +308,12 @@ export function ysmModelTextureSlots(
 /**
  * YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。
  * @param ctx YSM 控件上下文（model/spec/texArr）
- * @param snapshot 状态层快照（读 ui.activeComponent，-1 = All）
- * 组件切换副作用（showModelGroup）由 views 层 registerModelSchema 闭包订阅状态层驱动
- * （[doc:adr-126-p5-收口] 订阅链闭合）——本函数只产出节点，不含副作用。
+ * @param snapshot 状态层快照（兼容保留：P4-D visibleWhen 谓词同构；组件下标不再读它）
+ * @param sessionActiveComponent per-scene 组件选择会话态闭包（get/set 读写，-1 = All）——
+ *   [doc:adr-126-p5-b→B2] activeComponent 从全局状态层收敛为适配器内会话态（对齐 litematic
+ *   shell 闭包范式）：跨预览泄漏的模块级单值被多场景共享，maid generic 模式 clamp 会误伤
+ *   同台 YSM 的残留下标。B2 收敛在 ysm 适配器内，对外 API 形态不变（状态层零改动）。
+ *   组件切换副作用（showModelGroup）由 views 层 registerModelSchema 闭包驱动（本函数只产出节点）。
  */
 export function buildYsmModelSchema(
   ctx: {
@@ -319,8 +322,12 @@ export function buildYsmModelSchema(
     texArr: import("three").Texture[];
   },
   snapshot: PreviewSnapshot,
+  sessionActiveComponent?: { get: () => number; set: (n: number) => void },
 ): PreviewMenuNode[] {
-  const rawIdxRaw = typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1;
+  // 会话态真源 = 闭包（per-scene）；缺省（旧调用/测试）回退快照读 ui.activeComponent（兼容）
+  const rawIdxRaw =
+    sessionActiveComponent?.get() ??
+    (typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1);
   const mgCount = ctx.spec.models?.length ?? 0;
   // clamp：组件数变化后的陈旧下标（≥ mgCount）视为 -1（All）——防 stats 聚合越界 + select 无匹配项
   const rawIdx = rawIdxRaw >= mgCount ? -1 : rawIdxRaw;
@@ -343,9 +350,16 @@ export function buildYsmModelSchema(
       labelKey: "preview.component",
       fallback: "组件",
       control: {
-        bind: "ui.activeComponent",
+        // [doc:adr-126-p5-b→B2] 不再 bind "ui.activeComponent"（全局状态层）——get/set 闭包
+        // 读写 per-scene 会话态（对齐 litematic slice-mode 的 shell 闭包范式），杜绝跨预览泄漏
+        get: () => String(sessionActiveComponent?.get() ?? -1),
+        set: (raw) => {
+          const n = Number(raw);
+          sessionActiveComponent?.set(Number.isFinite(n) ? n : -1);
+          return raw;
+        },
         options,
-        // [doc:adr-126-p5] 切档后 menu.refresh() 重渲染面板——stats/纹理行按新快照重建
+        // [doc:adr-126-p5] 切档后 menu.refresh() 重渲染面板——stats/纹理行按新会话态重建
         // （订阅链已切 3D 组，此处补渲染侧；否则面板内容停留在打开时的快照）
         refreshOnChange: true,
       },

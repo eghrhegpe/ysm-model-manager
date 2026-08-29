@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 180 | 743 |
+| 前端·工具 | 180 | 744 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **512** | **2204** |
+| **合计** | **512** | **2205** |
 
 ## Go·头像
 
@@ -1424,16 +1424,16 @@
 | `MorphMeshLike()` | `frontend/src/utils/3d/adapters/morph-controls:10` | morph 面板入参（mesh 的 morphTargetDictionary/influences 子集，结构兼容 THREE.SkinnedMesh） |
 | `morphNodes()` | `frontend/src/utils/3d/adapters/morph-controls:20` | MMD 表情开关声明式节点（纯数据工厂零 DOM）。 |
 | `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:81` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
-| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:100` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
-| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:126` | — |
-| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:136` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
-| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:185` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
-| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:190` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
-| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:210` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
-| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:223` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
-| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:229` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
-| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:234` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
-| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:252` | — |
+| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:104` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
+| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:130` | — |
+| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:140` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
+| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:191` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
+| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:196` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
+| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:216` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
+| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:229` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
+| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:235` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
+| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:240` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
+| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:258` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
 | `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:24` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
 | `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:47` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
@@ -1495,16 +1495,17 @@
 | `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
 | `MAX_MODELS()` | `frontend/src/utils/3d/adapters/scene-registry:209` | 同场景最大模型数（超量追加被拒，ADR-093 T6） |
 | `YSM_MODEL_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/schema-registry:20` | YSM model 面板 schema 键（adapter schemaId 与 views 注册共用同一常量，防漂移静默丢面板） |
-| `SchemaBuilder()` | `frontend/src/utils/3d/adapters/schema-registry:23` | 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） |
-| `registerSchema()` | `frontend/src/utils/3d/adapters/schema-registry:30` | 注册面板 builder；重复注册**覆盖**旧 builder（多模型同框时活跃模型换菜单，后注册者生效）—— 与 setAdapterItems 换菜单语义一致；测试用 reg |
-| `unregisterSchema()` | `frontend/src/utils/3d/adapters/schema-registry:36` | 注销面板 builder（预览 dispose 时调用，防跨会话污染：陈旧 builder 的闭包 持有已 dispose 场景的 model/texArr/handle，不清理会 |
-| `getSchema()` | `frontend/src/utils/3d/adapters/schema-registry:41` | 取面板 builder；未注册返回 undefined |
-| `hasSchema()` | `frontend/src/utils/3d/adapters/schema-registry:46` | 是否已注册 |
-| `listSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:51` | 全部已注册 id（供契约测试枚举 / 审计「谁在绕道 renderCustom」） |
-| `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:56` | 测试用：清空注册表（用例间隔离） |
+| `makeYsmModelSchemaId()` | `frontend/src/utils/3d/adapters/schema-registry:29` | per-scene 唯一 schema 键工厂（YSM/maid 同框隔离，对齐 litematic `litematic-slice-{n}` 范式）。 |
+| `SchemaBuilder()` | `frontend/src/utils/3d/adapters/schema-registry:34` | 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） |
+| `registerSchema()` | `frontend/src/utils/3d/adapters/schema-registry:41` | 注册面板 builder；重复注册**覆盖**旧 builder（多模型同框时活跃模型换菜单，后注册者生效）—— 与 setAdapterItems 换菜单语义一致；测试用 reg |
+| `unregisterSchema()` | `frontend/src/utils/3d/adapters/schema-registry:47` | 注销面板 builder（预览 dispose 时调用，防跨会话污染：陈旧 builder 的闭包 持有已 dispose 场景的 model/texArr/handle，不清理会 |
+| `getSchema()` | `frontend/src/utils/3d/adapters/schema-registry:52` | 取面板 builder；未注册返回 undefined |
+| `hasSchema()` | `frontend/src/utils/3d/adapters/schema-registry:57` | 是否已注册 |
+| `listSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:62` | 全部已注册 id（供契约测试枚举 / 审计「谁在绕道 renderCustom」） |
+| `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:67` | 测试用：清空注册表（用例间隔离） |
 | `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:31` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
-| `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:91` | 会话内切换模型（复用外壳重建内容层）。 |
-| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:405` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
+| `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:94` | 会话内切换模型（复用外壳重建内容层）。 |
+| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:409` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
 | `Endianness()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
 | `ConsoleLogger()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
 | `MmdDataDeserializer()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |
@@ -1542,11 +1543,11 @@
 | `createWorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:65` | — |
 | `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
 | `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
-| `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:45` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
-| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:492` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
-| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:522` | 工厂：构造统一 PreviewAdapter（shared 模式） |
-| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:541` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:580` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
+| `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:44` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
+| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:500` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
+| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:531` | 工厂：构造统一 PreviewAdapter（shared 模式） |
+| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:550` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:592` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
 | `ALPHA_F_VISIBLE()` | `frontend/src/utils/3d/alpha-index:5` | — |
 | `ALPHA_F_HOLE()` | `frontend/src/utils/3d/alpha-index:6` | — |
 | `ALPHA_F_TRANSLUCENT()` | `frontend/src/utils/3d/alpha-index:7` | — |
@@ -2291,7 +2292,7 @@
 | `YsmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:262` | 组件统计（按 activeComponent 聚合；-1 = All）：骨骼数 + 立方体数 + 组件名 |
 | `ysmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:270` | 统计聚合（与 fillPanelComponent 同逻辑，抽为纯函数供 schema 与命令式共用） |
 | `ysmModelTextureSlots()` | `frontend/src/views/app-preview/skeleton-fill-panel:290` | 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） |
-| `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:315` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
+| `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:318` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-render` | — |
 | `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:23` | 创建 2D 骨骼画布并异步加载纹理 |
 | `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:48` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |
@@ -2333,12 +2334,12 @@
 | `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:92` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
 | `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:97` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/ysm-controls` | — |
-| `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:25` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
-| `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:34` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
-| `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:47` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
-| `ysmShotNodes()` | `frontend/src/views/app-preview/ysm-controls:70` | [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。 |
-| `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:75` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
-| `registerYsmModelSchema()` | `frontend/src/views/app-preview/ysm-controls:96` | [doc:adr-126-p5] YSM model 面板受控 schema 注册 + 组件选择副作用订阅。 |
+| `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:24` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
+| `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:33` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
+| `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:46` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
+| `ysmShotNodes()` | `frontend/src/views/app-preview/ysm-controls:69` | [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。 |
+| `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:74` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
+| `registerYsmModelSchema()` | `frontend/src/views/app-preview/ysm-controls:105` | [doc:adr-126-p5→B2] YSM model 面板受控 schema 注册 + 组件选择副作用装配。 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:137` | — |

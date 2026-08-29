@@ -23,8 +23,7 @@ import { disposeDebugGroup } from "../cleanup-helper.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
 import type { YsmContentHandle, YsmControlsContext } from "../../../views/app-preview/ysm-controls.ts";
 import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
-import { YSM_MODEL_SCHEMA_ID, unregisterSchema } from "./schema-registry.ts";
-import { resetActiveComponent } from "../state/preview-state.ts";
+import { makeYsmModelSchemaId, unregisterSchema, YSM_MODEL_SCHEMA_ID } from "./schema-registry.ts";
 import type { Spec3D, BoneSelectInfo, BoneMaps } from "../model3d.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import type { BedrockGeometry } from "../../../views/app-preview/geometry.ts";
@@ -65,10 +64,13 @@ export interface YsmAdapterOptions {
     /** [doc:adr-126-p5-收尾] play 面板声明式节点（复用 MMD playNodes）；缺失 → children 空 */
     playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
     /** [doc:adr-126-p5-c] 受控 schema 注册钩子：build 拿到 controlsCtx 后调用，
-     *  视图层在此注册 buildYsmModelSchema（key="ysm-model"）——model 面板内容走 schema-registry */
+     *  视图层在此注册 buildYsmModelSchema（key 由 sessionId 决定：有 → "ysm-model-{sid}"
+     *  per-scene 键防多模型同框互相覆盖；无 → 旧全局键 "ysm-model"）——model 面板内容走
+     *  schema-registry。第二参 sessionId 为当前 mount 会话稳定 id（mount 层生成）。 */
     /** 返回取消订阅函数（off）：视图层订阅状态层变更（如 ui.activeComponent → showModelGroup）
-     *  后由 adapter dispose 调用，防 listeners Set 只增不减的订阅泄漏（审计 #1 真 bug） */
-    registerModelSchema?: (ctx: YsmControlsContext) => (() => void) | undefined;
+     *  后由 adapter dispose 调用，防 listeners Set 只增不减的订阅泄漏（审计 #1 真 bug）。
+     *  [Bug B] B2 后组件选择不再走状态层订阅——off 只注销 schema + 清 per-scene 会话闭包 */
+    registerModelSchema?: (ctx: YsmControlsContext, sessionId?: string) => (() => void) | undefined;
   };
   /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM listAllFilePaths 注入模式） */
   listAllFilePaths?: (dir: string) => Promise<string[] | null>;
@@ -109,6 +111,8 @@ interface MdYsSceneCtx {
   ctx: PreviewBuildCtx;
   path: string;
   opts: YsmAdapterOptions;
+  /** 当前 3D 会话稳定 id（mount 层生成，per-mount 唯一）——per-scene schema key 来源 */
+  sessionId: string;
   tStart: number;
   tLoadStart: number;
   tLoadEnd: number;
@@ -367,9 +371,11 @@ function mdYsBuildMenuAndDebug(
   // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容由视图层注册的 builder 驱动
   // （R1 禁 utils→views，注册钩子由视图层注入实现）。所有调用者（ysm-3d / maid-3d）都
   // 经 registerModelSchema 注册；缺失时不注册 → schemaId 无 fallback（契约禁双通道），面板空渲染。
-  const unsubscribeState = opts.panels?.registerModelSchema?.(controlsCtx);
+  // [Bug A] sessionId 透传：视图层据此注册 per-scene key（ysm-model-{sid}），多模型同框防互相覆盖。
+  const unsubscribeState = opts.panels?.registerModelSchema?.(controlsCtx, sc.sessionId);
   const menuItems = ysmMenuItems({
     controlsCtx,
+    sessionId: sc.sessionId,
     panels: opts.panels,
     bonePanel: {
       tree: boneTree,
@@ -455,13 +461,15 @@ function mdYsMakeSceneHandle(
       animPlayer?.dispose();
       breath?.dispose();
       // [doc:adr-126-p5] dispose 注销 schema：防跨会话污染（陈旧 builder 闭包持有已销毁场景
-      // 的 model/texArr/handle，不清理会泄漏 WebGL 纹理集 + maid 等后续预览渲染旧模型数据）
-      unregisterSchema(YSM_MODEL_SCHEMA_ID);
+      // 的 model/texArr/handle，不清理会泄漏 WebGL 纹理集 + maid 等后续预览渲染旧模型数据）。
+      // [Bug A] per-scene key 注销：只注销自己的（多模型同框不误伤他人——对齐 litematic
+      // dispose unregisterSchema(sliceKey) 范式）；无 sessionId 时退化为旧全局键（兼容）。
+      unregisterSchema(sc.sessionId ? makeYsmModelSchemaId(sc.sessionId) : YSM_MODEL_SCHEMA_ID);
       // [审计 #1] 状态层订阅退订：listeners Set 只增不减会累积陈旧订阅者
       //（闭包持有已 dispose 场景的 handle）——registerModelSchema 返回的 off 在此调用
       menu.unsubscribeState?.();
-      // 会话态组件选择重置（-1 = All）：防跨预览陈旧下标（P5-A review P2）
-      resetActiveComponent();
+      // [Bug B] B2 后组件选择是 registerYsmModelSchema 内 per-scene 闭包（随 off 注销消亡），
+      // 不再需要全局 resetActiveComponent——模块级会话值已移除该消费点（跨预览泄漏根除）。
     },
     resetCamera(): void {
       ctx.camera!.position.copy(initCamPos);
@@ -501,6 +509,7 @@ export async function buildYsmScene(
   const now = () => performance.now();
   const sc: MdYsSceneCtx = {
     ctx, path, opts,
+    sessionId: ctx.sessionId ?? "",
     tStart: now(),
     tLoadStart: now(),
     tLoadEnd: 0,
@@ -540,6 +549,9 @@ interface YsmBonePanelRef {
 /** ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 */
 export interface YsmMenuItemsOpts {
   controlsCtx: YsmControlsContext;
+  /** 当前 3D 会话稳定 id（mount 层生成）——model 面板 schemaId 用 per-scene key 的依据；
+   *  缺省（测试/旧调用）→ 退化旧全局键 YSM_MODEL_SCHEMA_ID（兼容） */
+  sessionId?: string;
   /** 骨骼面板依赖（render 闭包 + 清理引用） */
   bonePanel: {
     /** 已构建骨骼树（buildBoneTree 产物） */
@@ -588,11 +600,14 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       dockGroup: "model",
       legacyTestId: "ysm-model-entry",
       // [doc:adr-126-p5-c] 受控 schema 驱动：renderPreviewPanel 优先查 schema-registry 的
-      // YSM_MODEL_SCHEMA_ID，builder（buildYsmModelSchema）吃状态层快照产出声明式节点。
+      // YSM_MODEL_SCHEMA_ID（缺省）或 per-scene key（传 sessionId），builder（buildYsmModelSchema）
+      // 吃状态层快照产出声明式节点。
       // schemaId 是唯一渲染通道（契约：带 schemaId 不得同时带 renderCustom——双通道歧义）；
       // 所有 makeYsmAdapter 调用者（ysm-3d / maid-3d）必须经 registerModelSchema 注册，
       // 缺失则面板空渲染（P5-A review P1 修复：maid-3d 已补注册）。
-      schemaId: YSM_MODEL_SCHEMA_ID,
+      // [Bug A] per-scene key（多模型同框防互相覆盖，对齐 litematic 范式）：注册与 menuItems
+      // 必须用同一个 key——registerModelSchema(ctx, sessionId) 与 schemaId 同源。
+      schemaId: o.sessionId ? makeYsmModelSchemaId(o.sessionId) : YSM_MODEL_SCHEMA_ID,
     },
     {
       id: "shot",

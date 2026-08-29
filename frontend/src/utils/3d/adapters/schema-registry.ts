@@ -19,6 +19,17 @@ import type { PreviewSnapshot } from "../state/preview-state.ts";
 /** YSM model 面板 schema 键（adapter schemaId 与 views 注册共用同一常量，防漂移静默丢面板） */
 export const YSM_MODEL_SCHEMA_ID = "ysm-model";
 
+/**
+ * per-scene 唯一 schema 键工厂（YSM/maid 同框隔离，对齐 litematic `litematic-slice-{n}` 范式）。
+ * 固定全局键 `ysm-model` 被第二场景 build 静默覆盖（Bug A 根因）：先后加载两个 YSM（或 YSM +
+ * maid）时，第一个模型的 builder 闭包被第二个 build 覆盖，旧面板 select/纹理/统计全串数据。
+ * 传 sessionId 后注册到 `ysm-model-{sessionId}`，dispose 精准注销自己的 key，互不误伤。
+ * 兼容：无 sessionId（旧调用/测试）时调用方退化用 YSM_MODEL_SCHEMA_ID（本工厂不接受 undefined）。
+ */
+export function makeYsmModelSchemaId(sessionId: string): string {
+  return `${YSM_MODEL_SCHEMA_ID}-${sessionId}`;
+}
+
 /** 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） */
 export type SchemaBuilder = (snapshot: PreviewSnapshot) => PreviewMenuNode[];
 

@@ -90,6 +90,10 @@ export interface PreviewBuildCtx {
   renderer?: THREE.WebGLRenderer;
   /** shared 模式下核心的相机控制桥（旋转/速度/重置，操作核心内部状态；self 模式 undefined） */
   cameraControls?: CameraControlBridge;
+  /** [Bug A] 当前 mount 会话稳定 id（per-mount 自增，新鲜 mount 生成；switchTo 复用外壳不换）。
+   *  适配器据此做 per-scene schema key（如 ysm-model-{sid}）——多模型同框防互相覆盖。
+   *  测试/旧调用无 sessionId 时缺省 undefined，适配器退化旧全局键（兼容不破）。 */
+  sessionId?: string;
   /** 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；延迟闭包——build 时 _handle 未赋值，点击时已就绪 */
   switchTo?(path: string, options?: { keepInScene?: boolean }): Promise<void>;
   /** 声明式根菜单注册通道（ADR-076 v2 Phase 2）：适配器 build 内经 setAdapterItems 注入专属菜单项、openPanel 打开面板（骨骼拾取联动） */
@@ -158,6 +162,8 @@ const PER_FRAME_WARN_MS = 50;
 const PER_FRAME_WARN_THROTTLE_MS = 5000;
 
 let _gen = 0;
+/** [Bug A] mount 会话序号（per-mount 唯一 id 来源；switchTo 复用外壳不递增） */
+let _mountSessionSeq = 0;
 /** 上次 perFrame 告警时间戳（节流用） */
 let _lastPerFrameWarnTs = 0;
 
@@ -259,6 +265,10 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   installUiComponentsStyles();
   const myGen = ++_gen;
   const selfMode = adapter.mode === "self";
+  // [Bug A] per-mount 会话稳定 id：每次 mount3D 自增（含 switchTo 重建？否——switchTo 走
+  // switch-preview 复用外壳，不重新 mount；此处仅新鲜 mount 生成）。适配器 build 经
+  // ctx.sessionId 读取，供 per-scene schema key（ysm-model-{sid}）注册/注销对齐。
+  const sessionId = `s${++_mountSessionSeq}`;
 
   // ---- 收敛：session 级可变状态（原 14 个裸 let，统一经此对象读写）----
   const session: MpSessionState = {
@@ -630,6 +640,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     adapter: { build: adapter.build.bind(adapter) },
     camBridge,
     selfMode,
+    sessionId,
     renderer: infra?.renderer,
     controls: infra?.controls,
     orbitTarget: infra?.orbitTarget,
@@ -697,6 +708,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
         controls: i?.controls,
         renderer: i?.renderer,
         cameraControls: selfMode ? undefined : camBridge,
+        sessionId,
         viewContainer,
         loadingEl,
         overlay,

@@ -30,6 +30,8 @@ export interface MmdZipConfig {
   entryPaths: string[];
   /** 模型 basename（如 "model.pmx"，用于 texMap keying） */
   modelBase: string;
+  /** [doc:adr-127] zip 内全部 pmx/pmd 候选（排序后，第一个 = 默认选中）——供模型选择面板列出 */
+  modelCandidates: Array<{ key: string; base: string }>;
 }
 
 /**
@@ -88,6 +90,8 @@ export async function resolveMmdZipConfig(
     return a.key.localeCompare(b.key);
   });
   const selected = candidates[0];
+  // [doc:adr-127] 全部候选暴露（模型选择面板列出；第一个仍是默认）
+  const modelCandidates = candidates.map((c) => ({ key: c.key, base: c.base }));
 
   return {
     zipPath,
@@ -96,6 +100,7 @@ export async function resolveMmdZipConfig(
     entries: entriesMap,
     entryPaths,
     modelBase: selected.base,
+    modelCandidates,
   };
 }
 
@@ -202,7 +207,7 @@ export function makeZipOverlayPort(
 export async function prepareMmdZipInput(
   path: string,
   port: MmdDataPort,
-): Promise<{ port: MmdDataPort; rootPath: string; modelBytes: Uint8Array; modelBase: string; modelEntry: string }> {
+): Promise<{ port: MmdDataPort; rootPath: string; modelBytes: Uint8Array; modelBase: string; modelEntry: string; allModelEntries: string[] }> {
   const config = await resolveMmdZipConfig(path, port);
   const { port: overlay, rootPath } = makeZipOverlayPort(port, config);
   return {
@@ -211,6 +216,7 @@ export async function prepareMmdZipInput(
     modelBytes: config.modelBytes,
     modelBase: config.modelBase,
     modelEntry: config.modelEntry,
+    allModelEntries: config.modelCandidates.map((c) => c.key),
   };
 }
 

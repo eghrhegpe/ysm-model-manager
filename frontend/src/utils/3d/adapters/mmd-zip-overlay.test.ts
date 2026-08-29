@@ -127,6 +127,19 @@ describe("resolveMmdZipConfig", () => {
     expect(config.modelEntry).toBe("miku.pmx");
   });
 
+  it("[doc:adr-127] 多模型 zip：modelCandidates 暴露全部 pmx/pmd（排序，第一个 = 默认）", async () => {
+    const zipBytes = makeMultiModelZipBytes();
+    const port = makeInnerPort();
+    vi.spyOn(port, "readFileBytes").mockResolvedValueOnce(zipToB64(zipBytes));
+
+    const config = await resolveMmdZipConfig("/repo/multi.zip", port);
+
+    // 全部候选：.pmx 优先，pmx 内字典序；pmd 兜底
+    expect(config.modelCandidates.map((c) => c.key)).toEqual(["miku.pmx", "zuko.pmx", "extra.pmd"]);
+    // 第一个 = 默认选中（与 modelEntry 一致）
+    expect(config.modelCandidates[0].key).toBe(config.modelEntry);
+  });
+
   it("空 zip 抛错", async () => {
     const zipBytes = makeEmptyZipBytes();
     const port = makeInnerPort();
@@ -172,6 +185,7 @@ describe("ZipOverlayPort 三条路由", () => {
     modelBytes: entriesMap.get("model.pmx")!,
     entries: entriesMap,
     entryPaths,
+    modelCandidates: [{ key: "model.pmx", base: "model.pmx" }],
   };
 
   const { port: overlay, rootPath } = makeZipOverlayPort(innerPort, config);

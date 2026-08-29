@@ -203,6 +203,8 @@ interface MdMmIoState {
   effectivePort: MmdDataPort;
   effectivePath: string;
   zipModelOverride: { bytes: Uint8Array; base: string; b64: string } | null;
+  /** [doc:adr-127] zip 内全部 pmx/pmd 候选虚拟路径（rootPath + key）；非 zip = 空数组（model 面板不显示切换） */
+  zipModelCandidates: string[];
   modelB64: string | null;
   bytes: Uint8Array;
   modelBase: string;
@@ -295,7 +297,7 @@ type MdMmStage1Ctx = Pick<
   | "effectivePath" | "effectivePort" | "modelB64" | "modelBase" | "modelBlobUrl"
   | "origPath" | "path" | "pmxParsePromise" | "pmxParser" | "port"
   | "stopLongTaskWatch" | "texHashMap" | "texMap" | "usePmxWorker" | "vmdPaths"
-  | "vpdPaths" | "zipModelOverride"
+  | "vpdPaths" | "zipModelOverride" | "zipModelCandidates"
 >;
 
 type MdMmStage1bCtx = Pick<
@@ -344,6 +346,7 @@ type MdMmStage5Ctx = Pick<
   | "action" | "bonePanelRef" | "boneTree" | "cameraAction" | "cameraClips"
   | "cameraMixer" | "clips" | "ctx" | "curIdx" | "customAnimPath" | "mesh"
   | "mixer" | "mmd" | "origPath" | "panels" | "perceptionState" | "playing"
+  | "zipModelCandidates"
 >;
 
 // 收尾聚合器：内部调用 stage6bTrace，故其 Pick 需同时覆盖 stage6b 用到的
@@ -380,10 +383,13 @@ async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
   c.effectivePort = c.port;
   c.effectivePath = c.path;
   c.zipModelOverride = null;
+  c.zipModelCandidates = [];
   if (c.path.toLowerCase().endsWith(".zip")) {
     const zip = await prepareMmdZipInput(c.effectivePath, c.port);
     c.effectivePort = zip.port;
     c.effectivePath = zip.rootPath + zip.modelEntry;
+    // [doc:adr-127] 暴露全部 pmx/pmd 候选虚拟路径（模型面板切换用）；第一个 = 当前
+    c.zipModelCandidates = zip.allModelEntries.map((key) => zip.rootPath + key);
     c.zipModelOverride = {
       bytes: zip.modelBytes,
       base: zip.modelBase,
@@ -911,6 +917,8 @@ function mdMmStage5Menu(c: MdMmStage5Ctx): {
     modelPath: c.origPath,
     cameraControls: c.ctx.cameraControls,
     switchTo: c.ctx.switchTo,
+    // [doc:adr-127] zip 多 pmx 候选（模型面板切换 select 用）
+    zipModelCandidates: c.zipModelCandidates,
   };
   const mats = c.mesh.material as unknown as THREE.Material[];
   c.bonePanelRef = { current: null };

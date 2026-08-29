@@ -2,6 +2,8 @@
 kind: optimization_log
 name: 优化记录 optimization-log
 tier: architecture
+adr:
+  - ADR-127
 category: config
 source_files:
   - frontend/src/utils/3d/adapters/mmd-adapter.ts

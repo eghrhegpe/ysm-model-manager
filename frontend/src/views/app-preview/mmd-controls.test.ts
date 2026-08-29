@@ -172,6 +172,34 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
       expect(mmdModelInfoNodes(ctx)[0].value).toBe(name);
     }
   });
+
+  it("[doc:adr-127] zip 多候选：model 面板前置 select（列出全部 pmx），选中 → switchTo 虚拟路径", () => {
+    const { ctx } = makeCtx();
+    const switchTo = vi.fn();
+    const nodes = mmdModelInfoNodes({
+      ...ctx,
+      zipModelCandidates: ["/repo/multi.zip!/miku.pmx", "/repo/multi.zip!/zuko.pmx"],
+      switchTo,
+    });
+    // 首节点 = select（多候选时）
+    const sel = nodes[0];
+    expect(sel.id).toBe("mmd-model-select");
+    expect(sel.kind).toBe("select");
+    expect(sel.control?.options?.map((o) => o.value)).toEqual([
+      "/repo/multi.zip!/miku.pmx",
+      "/repo/multi.zip!/zuko.pmx",
+    ]);
+    // 选中切换 → switchTo(候选虚拟路径)
+    sel.control?.set?.("/repo/multi.zip!/zuko.pmx");
+    expect(switchTo).toHaveBeenCalledWith("/repo/multi.zip!/zuko.pmx");
+  });
+
+  it("[doc:adr-127] 非 zip（无候选）→ 无 select，保持 2 行 field", () => {
+    const { ctx } = makeCtx();
+    const nodes = mmdModelInfoNodes(ctx);
+    expect(nodes.some((n) => n.kind === "select")).toBe(false);
+    expect(nodes.length).toBe(2);
+  });
 });
 
 describe("mmdShotNodes（P4-B-1 声明式节点）", () => {

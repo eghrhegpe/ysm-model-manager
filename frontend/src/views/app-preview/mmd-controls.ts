@@ -35,6 +35,8 @@ export interface MmdBottomNavCtx {
   cameraControls?: CameraControlBridge;
   /** 切换到另一模型（复用核心外壳重建内容层；Phase 2 后归 core switch 项，本字段保留兼容） */
   switchTo?(path: string): Promise<void>;
+  /** [doc:adr-127] zip 内全部 pmx/pmd 候选虚拟路径（多候选时 model 面板显示切换 select）；非 zip = 空/缺省 */
+  zipModelCandidates?: string[];
 }
 
 /** MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） */
@@ -58,7 +60,31 @@ export function fillMmdModelPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void
  */
 export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
   const pmx = ctx.mmd.pmx;
-  return [
+  const nodes: PreviewMenuNode[] = [];
+  // [doc:adr-127] zip 多 pmx：模型选择 select（列出全部候选，选中 → switchTo 虚拟路径）
+  if ((ctx.zipModelCandidates?.length ?? 0) > 1) {
+    nodes.push({
+      id: "mmd-model-select",
+      kind: "select",
+      labelKey: "preview.component",
+      fallback: "模型",
+      control: {
+        options: ctx.zipModelCandidates!.map((p) => ({
+          value: p,
+          label: p.split(/[/\\]/).pop() || p,
+        })),
+        // 当前选中：模型名匹配的候选
+        get: (): string =>
+          ctx.zipModelCandidates?.find((p) => (p.split(/[/\\]/).pop() || "") === ctx.modelName)
+            ?? ctx.zipModelCandidates![0] ?? "",
+        set: (v: unknown): void => {
+          const path = String(v);
+          if (ctx.switchTo && path) void ctx.switchTo(path);
+        },
+      },
+    });
+  }
+  nodes.push(
     { id: "mmd-model-name", kind: "field", labelKey: "preview.nameLabel", fallback: "名称", value: ctx.modelName },
     {
       id: "mmd-model-overview",
@@ -67,7 +93,8 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
       fallback: "模型",
       value: `${pmx.bones.length} 骨骼 · ${pmx.materials.length} 材质 · ${pmx.morphs.length} 表情`,
     },
-  ];
+  );
+  return nodes;
 }
 
 /** MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） */

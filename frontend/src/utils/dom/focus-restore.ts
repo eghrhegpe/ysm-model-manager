@@ -3,8 +3,9 @@
 // - rememberTrigger / returnFocus 配对：打开模态/浮层/全屏前记下当前 activeElement，
 //   关闭时把焦点还给触发器（弹窗/3D overlay/上下文菜单统一受益）。
 // - trapFocusAcrossShadow：与 dialog-modal.ts trapFocus 同语义，但跨 Shadow DOM
-//   边界找可聚焦元素——3D 预览 overlay 内 ⚙️ 菜单（createSlideMenu 是 Shadow DOM）
-//   的按钮也要被 Tab 循环覆盖到。
+//   边界找可聚焦元素。注：3D overlay 当前整链是 light DOM（createSlideMenu 无
+//   attachShadow），跨 shadow 逻辑属防御性兜底——overlay 内将来若挂入带可聚焦
+//   子树的 shadow 组件，Tab 循环依然覆盖得到。
 //
 // 单一事实源：所有模态/浮层走 rememberTrigger + returnFocus + trapFocus
 // （或 trapFocusAcrossShadow），避免各组件重复实现焦点恢复 / Tab 循环。
@@ -163,10 +164,15 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     if (tabbable.length === 0) return;
     const first = tabbable[0]!;
     const last = tabbable[tabbable.length - 1]!;
-    const active = document.activeElement as Element | null;
-    // 焦点落在 tabbable 元素上（含 shadow 内）才允许浏览器自然 Tab 循环；
-    // 否则（overlay 背景 / overlay 外 / happy-dom 下 shadow 焦点降级到 host）
-    // 一律收拢回 first/last——防焦点逃出 overlay 到背后页面。
+    // 深焦解析：document.activeElement 对 shadow 内聚焦元素做 retargeting，
+    // 返回的是 host 而非内层元素——沿 shadowRoot.activeElement 下钻到真实聚焦元素，
+    // 否则 tabbable.includes(active) 对 shadow 恒为 false，Tab 退化成 first/last 乒乓。
+    let active: Element | null = document.activeElement as Element | null;
+    while (active && active.shadowRoot && active.shadowRoot.activeElement) {
+      active = active.shadowRoot.activeElement;
+    }
+    // 焦点落在 tabbable 元素上（含 shadow 内，深焦解析后）才允许浏览器自然 Tab 循环；
+    // 否则（overlay 背景 / overlay 外）一律收拢回 first/last——防焦点逃出 overlay。
     const onTabbable = tabbable.includes(active as HTMLElement);
     if (e.shiftKey) {
       if (active === first || !onTabbable) {
@@ -179,11 +185,14 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     }
   };
   document.addEventListener("keydown", handler);
-  _activeCleanup = (): void => {
+  const cleanup = (): void => {
     document.removeEventListener("keydown", handler);
   };
+  _activeCleanup = cleanup;
+  // 身份守卫：只清自己那一份（旧实现无条件执行 _activeCleanup，A 建立→B 建立→
+  // A close 会误删 B 的监听——单例靠「最后写入闭包」而非身份标识的语义瑕疵）
   return (): void => {
-    if (_activeCleanup) {
+    if (_activeCleanup === cleanup) {
       _activeCleanup();
       _activeCleanup = null;
     }

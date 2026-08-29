@@ -317,8 +317,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     _singletonOverlay = overlay;
     _singletonBody = body;
   }
-  // 跨 Shadow DOM 焦点陷阱：3D overlay 内含 ⚙️ 菜单（createSlideMenu 是 Shadow DOM），
-  // 浏览器 querySelectorAll 不穿透 Shadow 边界——用 trapFocusAcrossShadow 覆盖
+  // 焦点陷阱：3D overlay 整链当前为 light DOM（createSlideMenu 无 attachShadow），
+  // trapFocusAcrossShadow 的跨 shadow 下钻是防御性兜底——将来 overlay 内挂入带
+  // 可聚焦子树的 shadow 组件时 Tab 循环依然覆盖得到
   if (!focusTrapCleanup) {
     focusTrapCleanup = trapFocusAcrossShadow(overlay);
   }

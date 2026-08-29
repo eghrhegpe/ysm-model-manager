@@ -466,7 +466,7 @@ describe("createSlideMenu 键盘导航", () => {
     expect(items.map((el) => el.tabIndex)).toEqual([0, -1, -1]);
   });
 
-  it("ArrowDown：从首项走到次项，tabindex 跟随（roving）", () => {
+  it("ArrowDown：从首项走到次项，tabindex 跟随（roving）且焦点真正移动", () => {
     const h = mountMenu();
     h.home(makeNavView(["A", "B", "C"]));
     const items = Array.from(h.list.children) as HTMLElement[];
@@ -474,6 +474,7 @@ describe("createSlideMenu 键盘导航", () => {
     h.list.dispatchEvent(keyEvent("ArrowDown"));
     const after = Array.from(h.list.children) as HTMLElement[];
     expect(after.map((el) => el.tabIndex)).toEqual([-1, 0, -1]);
+    expect(document.activeElement).toBe(items[1]);
   });
 
   it("ArrowDown 在末项 → 循环回首项", () => {

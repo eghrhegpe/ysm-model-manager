@@ -323,6 +323,33 @@ describe("trapFocusAcrossShadow Tab 循环", () => {
     }
   });
 
+  it("跨 Shadow：shadow 内 middle 聚焦 → Tab 自然流动（不拦截，深焦解析后 onTabbable 命中）", () => {
+    const overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+    const host = document.createElement("div");
+    overlay.appendChild(host);
+    const sr = host.attachShadow({ mode: "open" });
+    const first = document.createElement("button");
+    first.id = "first";
+    sr.appendChild(first);
+    const middle = document.createElement("button");
+    middle.id = "middle";
+    sr.appendChild(middle);
+    const last = document.createElement("button");
+    last.id = "last";
+    sr.appendChild(last);
+
+    const cleanup = trapFocusAcrossShadow(overlay);
+    try {
+      // happy-dom 下 document.activeElement 停在 host；深焦解析应下钻到 middle
+      middle.focus();
+      const ev = dispatchTab(document, false);
+      expect(ev.defaultPrevented).toBe(false);
+    } finally {
+      cleanup();
+    }
+  });
+
   it("跨 Shadow：overlay 外焦点 Tab → 拉回 shadow 内 first", () => {
     const overlay = document.createElement("div");
     document.body.appendChild(overlay);

@@ -7,7 +7,9 @@ import { safeUrl } from "../../utils/format/summarize.ts";
 import { getApp } from "../../backend/app.ts";
 import { statsCardHTML } from "./tpl.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
-import { renderMultiAngle } from "./screenshot-renderer.ts";
+import { renderMultiAngle, type ScreenshotLights } from "./screenshot-renderer.ts";
+import { sceneCapabilityRegistry } from "../../utils/3d/caps/scene-capability-registry.ts";
+import type { LightCapability } from "../../utils/3d/caps/light-capability.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
@@ -195,6 +197,21 @@ export function buildBoneExportRow(
 /**
  * 截图保存内部逻辑（供 3D overlay 使用）
  */
+/** 从预览 LightCapability 提取截图灯光（无 cap / 三点布光全关 → undefined 回退标准灯）——
+ *  [doc:adr-126-p5] 截图灯光割裂修复：离屏多角度截图与预览所见即所得 */
+function toScreenshotLights(): ScreenshotLights | undefined {
+  const cap = sceneCapabilityRegistry.getById("light") as LightCapability | null;
+  if (!cap) return undefined;
+  const p = cap.getParams();
+  if (!p.key.enabled && !p.fill.enabled && !p.rim.enabled) return undefined;
+  return {
+    ambient: { color: p.ambient.color, intensity: p.ambient.intensity },
+    key: { ...p.key },
+    fill: { ...p.fill },
+    rim: { ...p.rim },
+  };
+}
+
 export async function saveScreenshot(
   model: BedrockGeometry & {
     textures?: string[] | null;
@@ -222,6 +239,7 @@ export async function saveScreenshot(
       const results = await renderMultiAngle(model._modelPath || "", texUrls, {
         size: 512,
         componentTextures: model.componentTextures,
+        lights: toScreenshotLights(),
       });
       b64 = results?.[0]?.base64 ?? null;
     }

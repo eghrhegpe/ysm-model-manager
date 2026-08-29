@@ -7,6 +7,7 @@ import {
   DEFAULT_LIGHT_PARAMS,
   LIGHT_PRESETS,
 } from "./light-capability.ts";
+import { sceneCapabilityRegistry } from "./scene-capability-registry.ts";
 
 // ---- 假渲染器 ----
 function makeFakeRenderer() {
@@ -212,6 +213,31 @@ describe("LightCapability — setPreset", () => {
     const cap = newCap();
     cap.setPreset("unknown-type");
     expect(cap.getParams().spotlight.enabled).toBe(false);
+  });
+
+  it("手动 preset 后自动 setPreset 不再覆盖（手动优先——双入口时序修复）", () => {
+    const cap = newCap();
+    cap.setPreset("vrm", { manual: true });
+    expect(cap.getCurrentPreset()).toBe("vrm");
+    cap.setPreset("ysm"); // 模拟切模型自动套 adapter.id（mount-preview-core）
+    expect(cap.getCurrentPreset()).toBe("vrm"); // 手动选择压制自动覆盖
+    expect(cap.getParams().key.intensity).toBe(1.0); // 仍是 vrm 预设参数
+  });
+
+  it("PMREM 环境光开启时 ambient 自动衰减 ×0.5（双间接光协调）", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    // fake sky cap：isEnvironmentEnabled → true（PMREM 环境光生效，ambient 让位防叠加过亮）
+    const spy = vi.spyOn(sceneCapabilityRegistry, "getById").mockReturnValue({
+      isEnvironmentEnabled: () => true,
+    } as never);
+    try {
+      cap.setPreset("ysm"); // 触发 syncLightsFromParams
+      const ambient = (cap as unknown as { ambientLight: THREE.AmbientLight }).ambientLight;
+      expect(ambient.intensity).toBeCloseTo(cap.getParams().ambient.intensity * 0.5, 6);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

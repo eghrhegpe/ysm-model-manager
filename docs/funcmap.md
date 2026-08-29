@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 173 | 703 |
-| frontend/views | 118 | 346 |
+| 前端·工具 | 173 | 704 |
+| frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **504** | **2151** |
+| **合计** | **504** | **2153** |
 
 ## Go·头像
 
@@ -1393,10 +1393,10 @@
 | `applyWorkerDecodedTextures()` | `frontend/src/utils/3d/adapters/mmd-texture-decoder:169` | 将 Worker 解码的 ImageBitmap 应用到 MMD 模型的材质纹理： 1. |
 | `bytesToBase64()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay` | — |
 | `MmdZipConfig()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:20` | ZIP 解析产物（传给 overlay 的配置） |
-| `resolveMmdZipConfig()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:39` | 解压 zip + 找 .pmx/.pmd 模型 → 返回 MmdZipConfig。 |
-| `makeZipOverlayPort()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:113` | 创建 ZIP Overlay Port：包装 MmdDataPort， 将 zip 内路径前缀（如 "/repo/miku.zip!/"）路由到内存中的 zip entries。 |
-| `prepareMmdZipInput()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:202` | 构造完整的 zip 包装流程： 检测 zip → 解析 zip → 创建 overlay → 返回 { port, rootPath } 调用方只需： const { port, |
-| `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:218` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
+| `resolveMmdZipConfig()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:41` | 解压 zip + 找 .pmx/.pmd 模型 → 返回 MmdZipConfig。 |
+| `makeZipOverlayPort()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:118` | 创建 ZIP Overlay Port：包装 MmdDataPort， 将 zip 内路径前缀（如 "/repo/miku.zip!/"）路由到内存中的 zip entries。 |
+| `prepareMmdZipInput()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:207` | 构造完整的 zip 包装流程： 检测 zip → 解析 zip → 创建 overlay → 返回 { port, rootPath } 调用方只需： const { port, |
+| `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:223` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
 | `MorphMeshLike()` | `frontend/src/utils/3d/adapters/morph-controls:10` | morph 面板入参（mesh 的 morphTargetDictionary/influences 子集，结构兼容 THREE.SkinnedMesh） |
 | `morphNodes()` | `frontend/src/utils/3d/adapters/morph-controls:20` | MMD 表情开关声明式节点（纯数据工厂零 DOM）。 |
 | `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:76` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
@@ -1582,14 +1582,15 @@
 | `generateSurfacePixels()` | `frontend/src/utils/3d/caps/ground-surface-spec:164` | — |
 | `applyGroundSurfaceStructural()` | `frontend/src/utils/3d/caps/ground-surface-spec:261` | 重建路径专用：把 structural 落到新材质上。 |
 | `applyGroundSurfaceAppearance()` | `frontend/src/utils/3d/caps/ground-surface-spec:280` | 原地/重建通用：appearance 字段统一落地（唯一入口）。 |
-| `DirectionalLightParams()` | `frontend/src/utils/3d/caps/light-capability:35` | ============ 参数类型 ============ |
-| `AmbientLightParams()` | `frontend/src/utils/3d/caps/light-capability:45` | — |
-| `SpotlightParams()` | `frontend/src/utils/3d/caps/light-capability:50` | — |
-| `VolumetricParams()` | `frontend/src/utils/3d/caps/light-capability:64` | — |
-| `LightParams()` | `frontend/src/utils/3d/caps/light-capability:78` | — |
-| `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:106` | — |
-| `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:116` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
-| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:346` | — |
+| `DirectionalLightParams()` | `frontend/src/utils/3d/caps/light-capability:36` | ============ 参数类型 ============ |
+| `AmbientLightParams()` | `frontend/src/utils/3d/caps/light-capability:46` | — |
+| `SpotlightParams()` | `frontend/src/utils/3d/caps/light-capability:51` | — |
+| `VolumetricParams()` | `frontend/src/utils/3d/caps/light-capability:65` | — |
+| `LightParams()` | `frontend/src/utils/3d/caps/light-capability:79` | — |
+| `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:107` | — |
+| `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:117` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
+| `lightDirToPosition()` | `frontend/src/utils/3d/caps/light-capability:348` | 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） |
+| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:356` | — |
 | `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |
@@ -2229,9 +2230,10 @@
 | `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:38` | 清理场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:43` | 任意新预览派发时调用，作废在途场景加载 |
 | `resolveSceneSiblings()` | `frontend/src/views/app-preview/scene-siblings:8` | 场景模型候选（只扫 SceneModel 子目录）；失败返回 [] |
-| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:31` | — |
-| `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:36` | — |
-| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:43` | — |
+| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:48` | — |
+| `ScreenshotLights()` | `frontend/src/views/app-preview/screenshot-renderer:54` | 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得） |
+| `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:61` | — |
+| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:70` | — |
 | `makeShotAction()` | `frontend/src/views/app-preview/shot-panel-shared:34` | 截图保存副作用：防连点 guard + toast 错误提示。fillXxxShotPanel（命令式）与 shotButtonNodes（声明式）共用 |
 | `shotButtonNodes()` | `frontend/src/views/app-preview/shot-panel-shared:65` | 截图面板声明式节点（6 button）：screenshotFn 为 null 时返回空数组（MMD 能力缺失不渲染）； undefined（YSM ctx 可选字段）时仍返回 6 |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
@@ -2242,11 +2244,11 @@
 | `ysmModelTextureSlots()` | `frontend/src/views/app-preview/skeleton-fill-panel:289` | 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） |
 | `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:314` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-render` | — |
-| `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:21` | 创建 2D 骨骼画布并异步加载纹理 |
-| `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:46` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |
-| `buildStatsCard()` | `frontend/src/views/app-preview/skeleton-render:88` | 构建统计卡片（含作者列表） 异步获取3D spec 以对齐3D面板逐组件数据源——bone/cube 按 spec.models[] 拆分， 纹理尺寸取 spec 第一个组件的声明 |
-| `buildBoneExportRow()` | `frontend/src/views/app-preview/skeleton-render:165` | 构建导出骨骼名按钮行 |
-| `saveScreenshot()` | `frontend/src/views/app-preview/skeleton-render:198` | 截图保存内部逻辑（供 3D overlay 使用） |
+| `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:23` | 创建 2D 骨骼画布并异步加载纹理 |
+| `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:48` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |
+| `buildStatsCard()` | `frontend/src/views/app-preview/skeleton-render:90` | 构建统计卡片（含作者列表） 异步获取3D spec 以对齐3D面板逐组件数据源——bone/cube 按 spec.models[] 拆分， 纹理尺寸取 spec 第一个组件的声明 |
+| `buildBoneExportRow()` | `frontend/src/views/app-preview/skeleton-render:167` | 构建导出骨骼名按钮行 |
+| `saveScreenshot()` | `frontend/src/views/app-preview/skeleton-render:215` | — |
 | `sec()` | `frontend/src/views/app-preview/skeleton-utils:6` | 面板分区标题（3D overlay 信息面板使用） gap=false 用于面板首个分区（panel 已有 padding-top，避免顶部 10+12=22px 过空） |
 | `iRow()` | `frontend/src/views/app-preview/skeleton-utils:15` | 信息行：标签 | 值 |
 | `buildDepthMap()` | `frontend/src/views/app-preview/skeleton-utils:34` | 构建骨骼层级深度映射（用于骨骼列表缩进渲染） parentId 为空的骨骼深度为 0，其余递归计算 |

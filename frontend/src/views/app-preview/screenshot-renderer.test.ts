@@ -100,6 +100,7 @@ const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObje
       buildSceneMeshMock: vi.fn(),
       buildYsmObjectMock: vi.fn(),
       threeStub: {
+        NoToneMapping: 0,
         WebGLRenderer: FakeWebGLRenderer,
         Scene: FakeScene,
         AmbientLight: FakeLight,

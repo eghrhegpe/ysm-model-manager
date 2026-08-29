@@ -7,6 +7,7 @@ import { buildYsmObject, type YsmObjectHandle } from "../../utils/3d/ysm-object.
 import { screenshotFromRenderer } from "../../utils/3d/screenshot.ts";
 import { type Spec3D } from "../../utils/3d/model3d.ts";
 import { buildSpecFromGeometryJSON } from "../../utils/3d/spec-builder.ts";
+import { lightDirToPosition, type DirectionalLightParams } from "../../utils/3d/caps/light-capability.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 
 // ===== 3D 场景灯光样板（原 scene-lights.ts，唯一消费者是本文件，合并回）=====
@@ -28,15 +29,41 @@ function addStandardSceneLights(scene: THREE.Scene): void {
   scene.add(dl);
 }
 
+/** 按预览灯光参数建灯（无 lights → 回退标准灯）——[doc:adr-126-p5] 截图灯光割裂修复：
+ *  离屏多角度截图此前用硬编码标准灯，与预览三点布光割裂（所见非所得） */
+function applyLights(scene: THREE.Scene, lights?: ScreenshotLights): void {
+  if (!lights) {
+    addStandardSceneLights(scene);
+    return;
+  }
+  scene.add(new THREE.AmbientLight(lights.ambient.color, lights.ambient.intensity));
+  for (const d of [lights.key, lights.fill, lights.rim]) {
+    if (!d.enabled) continue;
+    const dl = new THREE.DirectionalLight(d.color, d.intensity);
+    dl.position.copy(lightDirToPosition(d, 5)); // radius 5 对齐预览 createDirectional
+    scene.add(dl);
+  }
+}
+
 export interface AngleShot {
   name: string;
   base64: string;
+}
+
+/** 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得） */
+export interface ScreenshotLights {
+  ambient: { color: number; intensity: number };
+  key: DirectionalLightParams;
+  fill: DirectionalLightParams;
+  rim: DirectionalLightParams;
 }
 
 export interface RenderMultiAngleOptions {
   size?: number;
   /** Component name -> texture URLs/base64 entries, matching the live preview path. */
   componentTextures?: Record<string, string[]>;
+  /** 截图灯光（从预览 LightCapability 提取——所见即所得；缺省回退标准灯） */
+  lights?: ScreenshotLights;
 }
 
 // renderMultiAngle 透明背景多角度截图
@@ -91,7 +118,7 @@ export async function renderMultiAngle(
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     scene = new THREE.Scene();
-    addStandardSceneLights(scene);
+    applyLights(scene, opts.lights);
 
     ysmObject = buildYsmObject(spec, texArr, componentTexMap, 0);
     const { rootGroup } = ysmObject;

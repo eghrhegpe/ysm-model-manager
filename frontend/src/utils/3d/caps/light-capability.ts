@@ -19,6 +19,7 @@ import {
 } from "./scene-capability.ts";
 import { RESOURCE_TYPES } from "../../resource/types.ts";
 import { safeDispose } from "../safe-dispose.ts";
+import { sceneCapabilityRegistry } from "./scene-capability-registry.ts";
 import { dbg } from "../../debug/debug.ts";
 import { safeErrorMessage } from "../../safe-error-msg.ts";
 
@@ -338,9 +339,18 @@ function lcBuildThreePoint(cap: LightCapability): MenuControlDef[] {
         { value: "resourcepack", label: "MC块包" },
       ],
       getValue: () => cap.getCurrentPreset(),
-      setValue: (v) => cap.setPreset(v as string),
+      setValue: (v) => cap.setPreset(v as string, { manual: true }),
     },
   ];
+}
+
+/** 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） */
+export function lightDirToPosition(p: DirectionalLightParams, radius: number): THREE.Vector3 {
+  const az = degToRad(p.azimuth);
+  const el = degToRad(p.elevation);
+  const h = radius * Math.cos(el); // 水平分量
+  const y = radius * Math.sin(el); // 垂直分量
+  return new THREE.Vector3(h * Math.sin(az), y, h * Math.cos(az));
 }
 
 export class LightCapability implements SceneCapability {
@@ -376,6 +386,8 @@ export class LightCapability implements SceneCapability {
 
   // ADR-085 S2：记录当前预设名，消灭 fillLighting 启发式派生
   private currentPreset: string = "default";
+  /** 手动 preset 记忆（light-preset select 显式选择；非空时自动套模型预设不覆盖——[doc:adr-126-p5] 手动优先） */
+  private manualPreset: string | null = null;
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -424,23 +436,14 @@ export class LightCapability implements SceneCapability {
 
   private createDirectional(p: DirectionalLightParams): THREE.DirectionalLight {
     const dl = new THREE.DirectionalLight(p.color, p.intensity);
-    dl.position.copy(this.dirToPosition(p, 5));
+    dl.position.copy(lightDirToPosition(p, 5));
     return dl;
-  }
-
-  /** 方位角 + 仰角 → 3D 位置（radius 为单位长度，后续乘 intensity 相关） */
-  private dirToPosition(p: DirectionalLightParams, radius: number): THREE.Vector3 {
-    const az = degToRad(p.azimuth);
-    const el = degToRad(p.elevation);
-    const h = radius * Math.cos(el); // 水平分量
-    const y = radius * Math.sin(el); // 垂直分量
-    return new THREE.Vector3(h * Math.sin(az), y, h * Math.cos(az));
   }
 
   private updateDirectional(light: THREE.DirectionalLight, p: DirectionalLightParams): void {
     light.color.setHex(p.color);
     light.intensity = p.intensity;
-    light.position.copy(this.dirToPosition(p, 5));
+    light.position.copy(lightDirToPosition(p, 5));
     light.visible = p.enabled;
   }
 
@@ -606,8 +609,13 @@ export class LightCapability implements SceneCapability {
     }
   }
 
-  /** 按模型类别套用预设 */
-  setPreset(modelType: string): void {
+  /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
+  setPreset(modelType: string, opts?: { manual?: boolean }): void {
+    if (opts?.manual) {
+      this.manualPreset = modelType;
+    } else if (this.manualPreset) {
+      return; // [doc:adr-126-p5] 自动套模型预设被手动选择压制（切模型/重建预览不覆盖用户偏好）
+    }
     const preset = LIGHT_PRESETS[modelType] ?? LIGHT_PRESETS.default;
     this.currentPreset = modelType; // ADR-085 S2：记录真实预设名
     this.params = deepMergeLightParams(this.params, preset);
@@ -749,8 +757,13 @@ export class LightCapability implements SceneCapability {
     this.updateDirectional(this.keyLight, this.params.key);
     this.updateDirectional(this.fillLight, this.params.fill);
     this.updateDirectional(this.rimLight, this.params.rim);
+    // [doc:adr-126-p5] 双间接光协调：PMREM 环境光（IBL）开启时 ambient 自动衰减（×0.5）——
+    // 两套间接光叠加会过亮/互相稀释，环境贴图开则 ambient 让位（光系统统一性 #3）
+    const skyEnvOn =
+      (sceneCapabilityRegistry.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null)
+        ?.isEnvironmentEnabled?.() ?? false;
     this.ambientLight.color.setHex(this.params.ambient.color);
-    this.ambientLight.intensity = this.params.ambient.intensity;
+    this.ambientLight.intensity = this.params.ambient.intensity * (skyEnvOn ? 0.5 : 1);
     this.setSpotlight({ ...this.params.spotlight });
   }
 

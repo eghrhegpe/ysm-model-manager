@@ -21,7 +21,7 @@
 | `executil/` | 外部进程工具（HideWindow 平台双实现，收敛自三处副本） 〔源码 2: hidewindow_other.go hidewindow_windows.go · 测试 3〕 |
 | `fileops/` | 文件操作 + 预览提取 + 包信息（ADR-003 P3 下沉） 〔源码 4: fileops.go fileops_enable.go fileops_preview.go folder_import.go · 测试 10〕 |
 | `fsutil/` | 目录遍历工具（WalkDir 集中管理） 〔源码 10: bom.go copy.go crossdevice_other.go crossdevice_windows.go format.go hardlink_other.go hardlink_w… · 测试 9〕 |
-| `geometry/` | Bedrock Geometry JSON 解析（ZIP/7z 提取，防炸弹限制） 〔源码 3: archive.go parse.go ysm_parser.go · 测试 16 · 子目录 1: testdata/〕 |
+| `geometry/` | Bedrock Geometry JSON 解析（ZIP/7z 提取，防炸弹限制） 〔源码 3: archive.go parse.go ysm_parser.go · 测试 17 · 子目录 1: testdata/〕 |
 | `importer/` | 资源导入策略接口与内置实现 〔源码 2: importer.go importer_file.go · 测试 7〕 |
 | `installer/` | 模型安装 〔源码 1: installer.go · 测试 4〕 |
 | `instance/` | 整合包实例同步状态组装（ADR-003 补充下沉） 〔源码 1: instance.go · 测试 2〕 |

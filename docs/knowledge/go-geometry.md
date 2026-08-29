@@ -31,7 +31,7 @@ invariant_anchors:
 
 - `parse.go` — 标准 geometry JSON 解析（骨骼/立方体/UV/旋转/纹理槽）
 - `ysm_parser.go` — ysm.json 清单解析共享函数（`parseYsmArchive`）：结构解码返回原文，口径后处理留调用点（见不变量）
-- `archive.go` — ZIP/7z 存档解包：ysm.json 清单（model/texture 顺序）、多 geometry 文件合并、cube→texSlot 绑定、PNG 纹理与动画 JSON 收集、首张 PNG 快速缩略；**容器打开统一走 `go/container`（ADR-068）**——`ExtractFirstPNGFromZip/7z` 入口经 `OpenZipBytes/Open7zBytes` + 格式无关 `extractFirstPNG`，`collectArchiveFiles` 消费 `container.Entry`，删除原 ParseFrom7z/ParseFromZip 对称外壳 ~294 行（公开签名不变）；**zip/7z 六入口（ParseFrom*/ParseFrom*Entry/ParseComponentsFrom*）已收敛**为 `openArchiveBytes` 单一打开点 + 共享实现（`parseModelFromArchive` / `parseFromArchiveEntry` / `parseComponentsFromArchive`），六导出函数变薄包装，改解析逻辑只改共享实现
+- `archive.go` — ZIP/7z 存档解包：ysm.json 清单（model/texture 顺序）、多 geometry 文件合并、cube→texSlot 绑定、PNG 纹理与动画 JSON 收集、预览 PNG 提取（封面候选优先）；**容器打开统一走 `go/container`（ADR-068）**——`ExtractFirstPNGFromZip/7z` 入口经 `OpenZipBytes/Open7zBytes` + 格式无关 `extractFirstPNG`，`collectArchiveFiles` 消费 `container.Entry`，删除原 ParseFrom7z/ParseFromZip 对称外壳 ~294 行（公开签名不变）；**zip/7z 六入口（ParseFrom*/ParseFrom*Entry/ParseComponentsFrom*）已收敛**为 `openArchiveBytes` 单一打开点 + 共享实现（`parseModelFromArchive` / `parseFromArchiveEntry` / `parseComponentsFromArchive`），六导出函数变薄包装，改解析逻辑只改共享实现
 
 ## 对外 API / 入口
 
@@ -40,7 +40,7 @@ invariant_anchors:
 - `ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte)` — 7z 版（`github.com/bodgit/sevenzip`），返回模型与纹理；不单独分流动画 JSON（动画文件当 geometry 解析失败后自然跳过）
 - `ParseFromZipEntry(data []byte, size int64, subPath string)` / `ParseFrom7zEntry(...)` — 按 subPath（L0 SubModel.SourcePath 口径）解析单个 geometry 文件；三层降级命中（精确→命名空间相对→basename 模糊），命中失败返回 nil
 - `ParseComponentsFromZip(data []byte, size int64)` / `ParseComponentsFrom7z(...)` — 多组件解析（YSMViewer 式）：每个模型文件独立组件（含 arm/载具，不合并不排除），main 优先排序 + perComponent 独立纹理；返回（组件数组、纹理名数组、error）
-- `ExtractFirstPNGFromZip(data []byte, size int64) []byte` / `ExtractFirstPNGFrom7z(data []byte, size int64) []byte` — 提取第一张 PNG 做快速预览
+- `ExtractFirstPNGFromZip(data []byte, size int64) []byte` / `ExtractFirstPNGFrom7z(data []byte, size int64) []byte` — 提取预览 PNG 做快速缩略：**先精确匹配根目录封面候选（`pack.png`/`cover.png`/`preview.png`/`thumbnail.png`，顶层条目），无封面候选时回退枚举序第一张 PNG**。封面候选与位置无关（pack.png 排在 assets/ 纹理后也能优先命中），与 `fileops.FindPreviewImage` 的散图候选（preview.png/cover.png/thumbnail.png）同一命名约定贯通 zip 内外——资源包/女仆包/整合包统一受益
 
 ## 与其他子系统关系
 

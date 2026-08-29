@@ -59,21 +59,67 @@ func filterArmModels(order []string) []string {
 	return out
 }
 
-// extractFirstPNG 从容器读取器中找第一张 .png（ZIP/7z 共用）。
+// coverCandidateNames 封面候选名（根目录，不带路径前缀）——MC 生态封面约定，
+// 资源包/女仆包/整合包通用：pack.png 优先，回退 cover/preview/thumbnail。
+// 与 fileops.FindPreviewImage 的散图候选（preview.png/cover.png/thumbnail.png）口径一致，
+// 一套命名约定贯通 zip 内与 zip 外。
+var coverCandidateNames = []string{
+	"pack.png",
+	"cover.png",
+	"preview.png",
+	"thumbnail.png",
+}
+
+// extractFirstPNG 从容器读取器中提取预览 PNG（ZIP/7z 共用）：
+// 先精确匹配根目录封面候选（pack.png/cover.png/preview.png/thumbnail.png），
+// 无封面候选时回退"枚举序第一张 PNG"（旧行为，兼容无封面 zip）。
+// 封面候选与位置无关：pack.png 排在 assets/ 纹理之后也能被优先选中。
 func extractFirstPNG(r container.Reader) []byte {
-	for _, e := range r.Entries() {
-		if strings.HasSuffix(strings.ToLower(e.Name()), ".png") && !e.IsDir() {
-			rc, err := e.Open()
-			if err != nil {
-				continue
+	entries := r.Entries()
+	// 第一遍：根目录封面候选名优先（顶层条目，不带路径分隔符）
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := strings.ToLower(e.Name())
+		if !strings.ContainsAny(name, "/\\") && contains(coverCandidateNames, name) {
+			if buf := readPNGEntry(e); len(buf) > 0 {
+				return buf
 			}
-			buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
-			if len(buf) > 0 {
+		}
+	}
+	// 第二遍：回退第一张 PNG（旧行为）
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if strings.HasSuffix(strings.ToLower(e.Name()), ".png") {
+			if buf := readPNGEntry(e); len(buf) > 0 {
 				return buf
 			}
 		}
 	}
 	return nil
+}
+
+// readPNGEntry 读取单条 PNG 条目内容（大小受限，防 ZIP 炸弹）。
+func readPNGEntry(e container.Entry) []byte {
+	rc, err := e.Open()
+	if err != nil {
+		return nil
+	}
+	defer rc.Close()
+	return fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
+}
+
+// contains 字符串切片成员判定。
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览）

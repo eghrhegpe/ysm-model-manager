@@ -2,7 +2,7 @@
 // 验证注册表在极端场景下的健壮性：重复注册、dispose 后操作、并发创建等
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SceneCapabilityRegistry } from "./scene-capability-registry.ts";
+import { SceneCapabilityRegistry, sceneCapabilityRegistry, isSkyEnvironmentOn } from "./scene-capability-registry.ts";
 import type { SceneCapability, MenuControlDef } from "./scene-capability.ts";
 
 function makeFakeCap(id: string, overrides: Partial<SceneCapability> = {}): SceneCapability {
@@ -69,6 +69,32 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     registry.saveAll();
     expect(cap1.saveState).toHaveBeenCalledTimes(1);
     expect(cap2.saveState).toHaveBeenCalledTimes(1);
+  });
+
+  it("createAll 向工厂注入 caps 查询器：getById 可查同批实例（cap 间协调走注入不经全局）", () => {
+    const capA = makeFakeCap("a");
+    let lookup: { getById(id: string): SceneCapability | undefined } | undefined;
+    registry.add((ctx) => {
+      lookup = ctx.caps;
+      return capA;
+    });
+    registry.createAll({} as never);
+    expect(lookup?.getById("a")).toBe(capA);
+    expect(lookup?.getById("missing")).toBeUndefined();
+  });
+
+  it("isSkyEnvironmentOn：读全局 sky 的环境开关；sky 缺席 → false", () => {
+    expect(isSkyEnvironmentOn()).toBe(false);
+    const sky = makeFakeCap("sky");
+    (sky as { isEnvironmentEnabled?: () => boolean }).isEnvironmentEnabled = () => true;
+    sceneCapabilityRegistry.add(() => sky);
+    sceneCapabilityRegistry.createAll({} as never);
+    try {
+      expect(isSkyEnvironmentOn()).toBe(true);
+    } finally {
+      sceneCapabilityRegistry.dispose();
+    }
+    expect(isSkyEnvironmentOn()).toBe(false);
   });
 
   it("loadAll 按序调用每个 cap 的 loadState", () => {

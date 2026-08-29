@@ -79,6 +79,12 @@ export interface MenuControlDef {
 
 /* ============ 场景能力统一接口 ============ */
 
+/** cap 间协调查询器：组合根 createAll 时注入，cap 间联动经此查询（不 import
+ *  scene-capability-registry——组合根 import 全部 cap，cap 反向 import 它即成模块环） */
+export interface SceneCapabilityLookup {
+  getById(id: string): SceneCapability | undefined;
+}
+
 export interface SceneCapability {
   /** 唯一标识（如 "sky" / "ground" / "light" / "fog"） */
   readonly id: string;

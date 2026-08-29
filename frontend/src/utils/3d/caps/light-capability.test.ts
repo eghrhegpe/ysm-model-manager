@@ -7,7 +7,6 @@ import {
   DEFAULT_LIGHT_PARAMS,
   LIGHT_PRESETS,
 } from "./light-capability.ts";
-import { sceneCapabilityRegistry } from "./scene-capability-registry.ts";
 
 // ---- 假渲染器 ----
 function makeFakeRenderer() {
@@ -224,20 +223,20 @@ describe("LightCapability — setPreset", () => {
     expect(cap.getParams().key.intensity).toBe(1.0); // 仍是 vrm 预设参数
   });
 
-  it("PMREM 环境光开启时 ambient 自动衰减 ×0.5（双间接光协调）", () => {
+  it("PMREM 环境光开启时 ambient 自动衰减 ×0.5（双间接光协调，caps 查询器经构造注入）", () => {
     const scene = new THREE.Scene();
-    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
-    // fake sky cap：isEnvironmentEnabled → true（PMREM 环境光生效，ambient 让位防叠加过亮）
-    const spy = vi.spyOn(sceneCapabilityRegistry, "getById").mockReturnValue({
-      isEnvironmentEnabled: () => true,
-    } as never);
-    try {
-      cap.setPreset("ysm"); // 触发 syncLightsFromParams
-      const ambient = (cap as unknown as { ambientLight: THREE.AmbientLight }).ambientLight;
-      expect(ambient.intensity).toBeCloseTo(cap.getParams().ambient.intensity * 0.5, 6);
-    } finally {
-      spy.mockRestore();
-    }
+    const cap = new LightCapability({
+      scene,
+      renderer: makeFakeRenderer(),
+      // fake sky cap 经注入查询器提供（组合根 createAll 同款通道）——不再 spy 全局单例
+      caps: {
+        getById: (id: string) =>
+          id === "sky" ? ({ isEnvironmentEnabled: () => true } as never) : undefined,
+      },
+    });
+    cap.setPreset("ysm"); // 触发 syncLightsFromParams
+    const ambient = (cap as unknown as { ambientLight: THREE.AmbientLight }).ambientLight;
+    expect(ambient.intensity).toBeCloseTo(cap.getParams().ambient.intensity * 0.5, 6);
   });
 });
 

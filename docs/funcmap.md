@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 174 | 712 |
+| 前端·工具 | 174 | 713 |
 | frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **505** | **2161** |
+| **合计** | **505** | **2162** |
 
 ## Go·头像
 
@@ -1590,8 +1590,7 @@
 | `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:107` | — |
 | `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:117` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
 | `lightDirToPosition()` | `frontend/src/utils/3d/caps/light-capability:348` | 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） |
-| `isSkyEnvironmentOn()` | `frontend/src/utils/3d/caps/light-capability:358` | PMREM 环境光（IBL）是否开启——ambient 衰减单一来源（预览 syncLightsFromParams 与 截图 toScreenshotLights 共用，保证所见 |
-| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:365` | — |
+| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:356` | — |
 | `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |
@@ -1602,15 +1601,17 @@
 | `REFLECTOR_PRESETS()` | `frontend/src/utils/3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
 | `ReflectorCapability()` | `frontend/src/utils/3d/caps/reflector-capability:125` | — |
 | `RenderModeCapability()` | `frontend/src/utils/3d/caps/render-mode-capability:59` | -------- 主类 -------- |
-| `SceneCapabilityFactory()` | `frontend/src/utils/3d/caps/scene-capability-registry:22` | 能力工厂：接收 scene/renderer/camera，返回能力实例 |
-| `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:29` | 注册表：管理所有场景能力的工厂和实例 |
-| `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:108` | 全局单例（模块级单例 + 运行时状态隔离） |
+| `SceneCapabilityFactory()` | `frontend/src/utils/3d/caps/scene-capability-registry:24` | 能力工厂：接收 scene/renderer/camera，返回能力实例。 |
+| `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:32` | 注册表：管理所有场景能力的工厂和实例 |
+| `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:111` | 全局单例（模块级单例 + 运行时状态隔离） |
+| `isSkyEnvironmentOn()` | `frontend/src/utils/3d/caps/scene-capability-registry:133` | sky 环境开关（跨组件查询属组合根职责；light ambient ×0.5 协调与截图镜像 （skeleton-render）共用——原 light-capability 模块 |
 | `MenuControlDef()` | `frontend/src/utils/3d/caps/scene-capability:16` | 菜单控件定义（声明式，由框架渲染为 DOM） |
-| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:82` | ============ 场景能力统一接口 ============ |
-| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:130` | 保存 JSON 到 localStorage |
-| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:135` | 从 localStorage 加载 JSON |
-| `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:146` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
-| `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:162` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
+| `SceneCapabilityLookup()` | `frontend/src/utils/3d/caps/scene-capability:84` | cap 间协调查询器：组合根 createAll 时注入，cap 间联动经此查询（不 import scene-capability-registry——组合根 import 全部 |
+| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:88` | — |
+| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:136` | 保存 JSON 到 localStorage |
+| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:141` | 从 localStorage 加载 JSON |
+| `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:152` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
+| `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:168` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
 | `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
 | `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |

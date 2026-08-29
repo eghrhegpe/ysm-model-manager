@@ -19,13 +19,13 @@ import { RESOURCE_TYPES } from "../../resource/types.ts";
 import { Sky } from "three/addons/objects/Sky.js";
 import {
   type SceneCapability,
+  type SceneCapabilityLookup,
   type MenuControlDef,
   persistState,
   restoreState,
   restoreFields,
 } from "./scene-capability.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
-import { sceneCapabilityRegistry } from "./scene-capability-registry.ts";
 
 export interface SkyParams {
   /** 太阳高度角（度，0=地平线，90=天顶） */
@@ -320,6 +320,7 @@ export class SkyCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
+  private caps?: SceneCapabilityLookup;
   /** PMREMGenerator 延迟创建（构造函数不依赖 WebGL，node 测试友好） */
   private pmrem: THREE.PMREMGenerator | null = null;
   private sky: Sky;
@@ -342,9 +343,12 @@ export class SkyCapability implements SceneCapability {
     renderer: THREE.WebGLRenderer;
     params?: Partial<SkyParams>;
     enabled?: boolean;
+    /** cap 间协调查询器（组合根 createAll 注入）——环境开关变化通知 light 刷新 ambient */
+    caps?: SceneCapabilityLookup;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
+    this.caps = opts.caps;
     this.params = { ...DEFAULT_SKY_PARAMS, ...(opts.params ?? {}) };
     this.enabled = opts.enabled ?? true;
     this.prevToneMapping = this.renderer.toneMapping;
@@ -468,8 +472,9 @@ export class SkyCapability implements SceneCapability {
     if (!this.enabled) return;
     if (v) this.regenerateEnvironment();
     else this.clearEnvironment();
-    // [doc:adr-126-p5] 双间接光协调：环境光开关变化同步 light 的 ambient 衰减（防 ×0.5 过期）
-    (sceneCapabilityRegistry.getById("light") as { refreshAmbientFromSky?: () => void } | null)
+    // [doc:adr-126-p5] 双间接光协调：环境光开关变化同步 light 的 ambient 衰减（防 ×0.5 过期）——
+    // 经构造注入的查询器（组合根 createAll 传入），不 import registry（防模块环）
+    (this.caps?.getById("light") as { refreshAmbientFromSky?: () => void } | null | undefined)
       ?.refreshAmbientFromSky?.();
   }
 

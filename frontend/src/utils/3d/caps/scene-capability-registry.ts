@@ -16,13 +16,16 @@ import { ReflectorCapability } from "./reflector-capability.ts";
 import { EnvironmentCapability } from "./environment-capability.ts";
 import { PostprocessingCapability } from "./postprocessing-capability.ts";
 import { RenderModeCapability } from "./render-mode-capability.ts";
-import type { SceneCapability } from "./scene-capability.ts";
+import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
 
-/** 能力工厂：接收 scene/renderer/camera，返回能力实例 */
+/** 能力工厂：接收 scene/renderer/camera，返回能力实例。
+ *  ctx.caps 是 cap 间协调查询器（getById 本批实例）——cap 间联动经注入，不 import
+ *  本模块（组合根 import 全部 cap，反向 import 即成模块环，check-circular 卡点） */
 export type SceneCapabilityFactory = (ctx: {
   scene: THREE.Scene;
   renderer: THREE.WebGLRenderer;
   camera: THREE.PerspectiveCamera;
+  caps?: SceneCapabilityLookup;
 }) => SceneCapability;
 
 /** 注册表：管理所有场景能力的工厂和实例 */
@@ -45,7 +48,7 @@ export class SceneCapabilityRegistry {
     this.instances = [];
     for (const factory of this.factories) {
       try {
-        const cap = factory(ctx);
+        const cap = factory({ ...ctx, caps: { getById: (id) => this.getById(id) } });
         this.instances.push(cap);
       } catch (e) {
         console.warn("[scene-cap] 能力创建失败:", e);
@@ -124,3 +127,12 @@ sceneCapabilityRegistry.add((ctx) => new PostprocessingCapability({
 }));
 sceneCapabilityRegistry.add((ctx) => new LightCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new RenderModeCapability({ scene: ctx.scene }));
+
+/** sky 环境开关（跨组件查询属组合根职责；light ambient ×0.5 协调与截图镜像
+ *  （skeleton-render）共用——原 light-capability 模块函数，上移断 registry↔light 环） */
+export function isSkyEnvironmentOn(): boolean {
+  return (
+    (sceneCapabilityRegistry.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null)
+      ?.isEnvironmentEnabled?.() ?? false
+  );
+}

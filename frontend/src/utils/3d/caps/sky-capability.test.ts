@@ -105,6 +105,23 @@ describe("SkyCapability — 环境 IBL 开关", () => {
     cap.setEnvironmentEnabled(true);
     expect(cap.isEnvironmentEnabled()).toBe(true);
   });
+
+  it("setEnvironmentEnabled 经注入的 caps 查询器通知 light 刷新 ambient（双间接光协调）", () => {
+    const scene = new THREE.Scene();
+    const refreshAmbientFromSky = vi.fn();
+    const cap = new SkyCapability({
+      scene,
+      renderer: makeFakeRenderer(),
+      caps: {
+        getById: (id: string) =>
+          id === "light" ? ({ refreshAmbientFromSky } as never) : undefined,
+      },
+    });
+    cap.setEnvironmentEnabled(false);
+    expect(refreshAmbientFromSky).toHaveBeenCalledTimes(1);
+    cap.setEnvironmentEnabled(true);
+    expect(refreshAmbientFromSky).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("SkyCapability — 启用/禁用", () => {

@@ -13,13 +13,13 @@
 import * as THREE from "three";
 import {
   type SceneCapability,
+  type SceneCapabilityLookup,
   type MenuControlDef,
   persistState,
   restoreState,
 } from "./scene-capability.ts";
 import { RESOURCE_TYPES } from "../../resource/types.ts";
 import { safeDispose } from "../safe-dispose.ts";
-import { sceneCapabilityRegistry } from "./scene-capability-registry.ts";
 import { dbg } from "../../debug/debug.ts";
 import { safeErrorMessage } from "../../safe-error-msg.ts";
 
@@ -353,15 +353,6 @@ export function lightDirToPosition(p: DirectionalLightParams, radius: number): T
   return new THREE.Vector3(h * Math.sin(az), y, h * Math.cos(az));
 }
 
-/** PMREM 环境光（IBL）是否开启——ambient 衰减单一来源（预览 syncLightsFromParams 与
- *  截图 toScreenshotLights 共用，保证所见即所得——[doc:adr-126-p5] 双间接光协调） */
-export function isSkyEnvironmentOn(): boolean {
-  return (
-    (sceneCapabilityRegistry.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null)
-      ?.isEnvironmentEnabled?.() ?? false
-  );
-}
-
 export class LightCapability implements SceneCapability {
   readonly id = "light";
   readonly labelKey = "preview.lighting";
@@ -370,6 +361,7 @@ export class LightCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
+  private caps?: SceneCapabilityLookup;
   private params: LightParams;
   private enabled: boolean;
   private target: THREE.Vector3; // 对象中心，聚光灯瞄准点
@@ -405,9 +397,12 @@ export class LightCapability implements SceneCapability {
     enabled?: boolean;
     target?: THREE.Vector3;
     targetHeight?: number;
+    /** cap 间协调查询器（组合根 createAll 注入）——ambient 衰减读 sky 环境开关 */
+    caps?: SceneCapabilityLookup;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
+    this.caps = opts.caps;
     this.params = deepMergeLightParams(DEFAULT_LIGHT_PARAMS, opts.params ?? {});
     this.enabled = opts.enabled ?? true;
     this.target = opts.target ?? new THREE.Vector3(0, 0, 0);
@@ -767,9 +762,12 @@ export class LightCapability implements SceneCapability {
   }
 
   /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调；
-   *  也由 syncLightsFromParams 复用——ambient 应用单一出口，预览/截图同构） */
+   *  也由 syncLightsFromParams 复用——ambient 应用单一出口，预览/截图同构）。
+   *  sky 环境开关经构造注入的查询器读取（全局版 isSkyEnvironmentOn 在组合根 registry） */
   refreshAmbientFromSky(): void {
-    const skyEnvOn = isSkyEnvironmentOn();
+    const skyEnvOn =
+      (this.caps?.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null | undefined)
+        ?.isEnvironmentEnabled?.() ?? false;
     this.ambientLight.color.setHex(this.params.ambient.color);
     this.ambientLight.intensity = this.params.ambient.intensity * (skyEnvOn ? 0.5 : 1);
   }

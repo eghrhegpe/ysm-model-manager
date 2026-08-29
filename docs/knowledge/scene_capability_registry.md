@@ -59,6 +59,7 @@ ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Gr
 - **`scene-capability.ts` 只含接口/类型/持久化工具**：旧版双单例（`sceneCapabilityRegistry`）已于 2026-08-18 清理删除，**勿从该文件 import 同名单例**——唯一实现在 `scene-capability-registry.ts`
 - **「光」指代消歧**：`light` 是唯一光源能力（主灯/补灯/轮廓灯/顶光/环境光/体积光）；`fog`（雾）、`shadow`（阴影）、`reflector`（反射）不是光源，菜单/语义归环境类
 - **setPreset 只做合理默认**：不覆盖用户显式选择（reflectionMode / enabled 等持久化值优先）
+- **cap 间协调走构造注入，不 import registry**：`createAll` 向每个工厂 ctx 注入 `caps` 查询器（`SceneCapabilityLookup.getById`，`scene-capability.ts` 接口叶）；cap 需要联动其他能力（如 sky 环境开关 → light ambient ×0.5）时经 `this.caps?.getById(...)`——本组合根 import 全部 cap，cap 反向 import registry 即成模块环（check-circular 卡点，2026-08-29 破环）。跨组件查询的模块级函数放组合根（如 `isSkyEnvironmentOn` 在 registry 文件，消费方 skeleton-render 截图 ambient 镜像）
 - **dispose 必须还原构造前状态**（prevFog / prevShadowMap / prevToneMapping），防跨会话泄漏
 
 ## 相关

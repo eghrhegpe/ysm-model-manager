@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 176 | 725 |
+| 前端·工具 | 176 | 728 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **508** | **2184** |
+| **合计** | **508** | **2187** |
 
 ## Go·头像
 
@@ -1309,9 +1309,9 @@
 | `slideMenuCss()` | `frontend/src/ui/ui-slide-menu-styles:9` | — |
 | `slideMenuStyleSheet()` | `frontend/src/ui/ui-slide-menu-styles:165` | — |
 | `installSlideMenuStyles()` | `frontend/src/ui/ui-slide-menu-styles:169` | 将外壳样式注入 document.head（全局/light-DOM 场景）。幂等，仅注入一次。 |
-| `SlideMenuView()` | `frontend/src/ui/ui-slide-menu:19` | 单个菜单视图：标题 + 把内容渲染进给定的 list 容器。 |
-| `SlideMenuHandle()` | `frontend/src/ui/ui-slide-menu:26` | — |
-| `createSlideMenu()` | `frontend/src/ui/ui-slide-menu:54` | 构建 slide-menu 卡片外壳（含轻量导航栈）。 |
+| `SlideMenuView()` | `frontend/src/ui/ui-slide-menu:27` | 单个菜单视图：标题 + 把内容渲染进给定的 list 容器。 |
+| `SlideMenuHandle()` | `frontend/src/ui/ui-slide-menu:34` | — |
+| `createSlideMenu()` | `frontend/src/ui/ui-slide-menu:69` | 构建 slide-menu 卡片外壳（含轻量导航栈 + 键盘导航）。 |
 | `HeaderToggleConfig()` | `frontend/src/ui/ui-slide-row` | — |
 | `TrailingAction()` | `frontend/src/ui/ui-slide-row:12` | — |
 | `createTrailingBtn()` | `frontend/src/ui/ui-slide-row:55` | 统一尾部第二动作按钮工厂——供 slideRow 与 menu.ts createRow 共用， 确保两条渲染路径的第二按钮观感与行为一致（22px .slide-add-btn； |
@@ -1348,9 +1348,9 @@
 | `FbxSceneData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:88` | — |
 | `captureTextureName()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:102` | — |
 | `fbxSceneToData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:209` | — |
-| `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:27` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
-| `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:42` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
-| `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:121` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
+| `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:28` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
+| `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:43` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
+| `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:122` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
 | `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/litematic-adapter:237` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
 | `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:413` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
 | `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
@@ -1443,12 +1443,12 @@
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
 | `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
-| `PreviewMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/core:38` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
-| `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu/core:80` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
-| `PreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:223` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
-| `buildPreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:235` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
-| `renderPreviewPanel()` | `frontend/src/utils/3d/adapters/preview-menu/core:279` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
-| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core:507` | — |
+| `PreviewMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/core:39` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
+| `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu/core:81` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
+| `PreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:226` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
+| `buildPreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:238` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
+| `renderPreviewPanel()` | `frontend/src/utils/3d/adapters/preview-menu/core:282` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
+| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core:516` | — |
 | `PreviewMenuItemKind()` | `frontend/src/utils/3d/adapters/preview-menu/defs:30` | — |
 | `PreviewMenuGroupId()` | `frontend/src/utils/3d/adapters/preview-menu/defs:31` | — |
 | `PreviewMenuItemDef()` | `frontend/src/utils/3d/adapters/preview-menu/defs:33` | — |
@@ -1667,11 +1667,11 @@
 | `isFrustumCullEnabled()` | `frontend/src/utils/3d/frustum-cull:111` | 视锥裁剪开关是否启用（undefined → 默认关；safeGet 隐私模式安全） |
 | `setFrustumCullEnabled()` | `frontend/src/utils/3d/frustum-cull:117` | 设置视锥裁剪开关（设置面板开关调用） |
 | `restoreModelGroupsVisible()` | `frontend/src/utils/3d/frustum-cull:122` | 关闭剔除时恢复所有注册模型根可见性（幂等） |
-| `IKChain()` | `frontend/src/utils/3d/ik-solver:21` | IK 链：从 root 到 endEffector 的 THREE.Object3D 有序数组（含两端） |
-| `IKConfig()` | `frontend/src/utils/3d/ik-solver:24` | IK 求解配置 |
-| `IKResult()` | `frontend/src/utils/3d/ik-solver:42` | IK 求解结果 |
-| `solveIK()` | `frontend/src/utils/3d/ik-solver:75` | CCD IK 求解器。 |
-| `extractIKChainFromTree()` | `frontend/src/utils/3d/ik-solver:195` | 从 BoneTree 中提取从 root 到 endEffector 的骨骼链（object 引用）。 |
+| `IKChain()` | `frontend/src/utils/3d/ik-solver:24` | IK 链：从 root 到 endEffector 的 THREE.Object3D 有序数组（含两端） |
+| `IKConfig()` | `frontend/src/utils/3d/ik-solver:27` | IK 求解配置 |
+| `IKResult()` | `frontend/src/utils/3d/ik-solver:45` | IK 求解结果 |
+| `solveIK()` | `frontend/src/utils/3d/ik-solver:78` | CCD IK 求解器。 |
+| `extractIKChainFromTree()` | `frontend/src/utils/3d/ik-solver:200` | 从 BoneTree 中提取从 root 到 endEffector 的骨骼链（object 引用）。 |
 | `TdKeyAction()` | `frontend/src/utils/3d/keymap:8` | — |
 | `DEFAULT_TD_KEYMAP()` | `frontend/src/utils/3d/keymap:11` | 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） |
 | `loadTdKeymap()` | `frontend/src/utils/3d/keymap:27` | 读取用户自定义键位（无/非法时回退默认） |
@@ -1961,8 +1961,11 @@
 | `returnFocus()` | `frontend/src/utils/dom/focus-restore:43` | 把焦点还给 rememberTrigger 记住的元素；若元素已离文档 / 不可聚焦则跳过（不抛错）。 |
 | `clearTrigger()` | `frontend/src/utils/dom/focus-restore:58` | 显式清除记忆（用于测试或主动取消打开） |
 | `__getTriggerForTest()` | `frontend/src/utils/dom/focus-restore:63` | 测试钩子：读取当前记忆（业务代码不应调用） |
-| `findTabbableAcrossShadow()` | `frontend/src/utils/dom/focus-restore:86` | 在 root 子树（含 Shadow DOM）内收集 tabbable 元素；保持 DOM 顺序（含跨 shadow 顺序） |
-| `trapFocusAcrossShadow()` | `frontend/src/utils/dom/focus-restore:141` | — |
+| `pushInputBlock()` | `frontend/src/utils/dom/focus-restore:75` | 挂起外层键盘消费（菜单弹出时调用，id 唯一标识阻断源） |
+| `popInputBlock()` | `frontend/src/utils/dom/focus-restore:80` | 解除挂起（菜单关闭时传同一 id） |
+| `isInputBlocked()` | `frontend/src/utils/dom/focus-restore:86` | 外层键盘消费（相机 WASD 等）是否应暂停 |
+| `findTabbableAcrossShadow()` | `frontend/src/utils/dom/focus-restore:109` | 在 root 子树（含 Shadow DOM）内收集 tabbable 元素；保持 DOM 顺序（含跨 shadow 顺序） |
+| `trapFocusAcrossShadow()` | `frontend/src/utils/dom/focus-restore:164` | — |
 | `formatBytes()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值或 0 返回空串 |
 | `sizeColor()` | `frontend/src/utils/dom/format:23` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
 | `fmtDate()` | `frontend/src/utils/dom/format:35` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |

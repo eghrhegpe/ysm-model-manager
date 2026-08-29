@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 127 张知识卡
+> 总计: 128 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -23,7 +23,7 @@
 
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
 
-## core（17 张）
+## core（18 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -39,6 +39,7 @@
 | 🏗 global-handlers | 全局事件处理 global-handlers | architecture | — | 全局事件, 拖拽导入, 拖拽提示, 同步缺失, 清空整合包, 导出清单 |
 | 🏗 i18n | 国际化 i18n 模块 | architecture | — | 翻译, 多语言, i18n, t(), 语言切换, lang:changed |
 | 🍃 i18n_accuracy | i18n 翻译准确度扫描记录 | leaf | — | 翻译准确度, 键名与值语义错位, i18n 翻译扫描, en 丢 Count, Opacity 误译, 术语统一, 翻译名实不符 |
+| 🍃 ik_solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | — | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD |
 | 🏗 model-stats | Web Worker 模型统计层 model-stats | architecture | cpu-bound, concurrent | 模型统计, 骨骼数, 立方体数, 纹理尺寸, SearchModels, 数值筛选, Web Worker, 批量统计 |
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | — | 页面, 当前页, 状态管理, page store, currentPage |
 | 🏗 pointer-events | Pointer Events 统一交互（触屏 + 桌面） | architecture | — | pointerdown, pointermove, pointerup, setPointerCapture, touch-action, 触屏, 拖拽, 旋转, hover, mouseenter, 全窗预览 |
@@ -59,6 +60,7 @@
 - **global-handlers**（全局事件处理 global-handlers）：`core/handlers/global.ts` 是全应用唯一的 core 全局 handler 注册入口（致命陷阱 #2 的解法）：app-content 的 `connectedCallback` 调一次 `registerGloba…
 - **i18n**（国际化 i18n 模块）：`i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化…
 - **i18n_accuracy**（i18n 翻译准确度扫描记录）：2026-08-28 对三语翻译包（zh-CN / en / ja）进行了系统性扫描，覆盖 13 个命名空间、4 种语义模式（Count 后缀、Opacity 后缀、Size 后缀、Material 后缀）。发现并修复 10 处"键名与翻译…
+- **ik_solver**（CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik）：自写精简版 CCD（Cyclic Coordinate Descent）IK 求解器（ADR-072 工具层纯净、零 DOM / 零 backend），
 - **model-stats**（Web Worker 模型统计层 model-stats）：`frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo…
 - **page-store**（页面状态管理 page-store.ts）：`page-store.ts` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。核心职责是维护只读当前页状态与启动初始页解析——*…
 - **pointer-events**（Pointer Events 统一交互（触屏 + 桌面））：ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `…

@@ -284,9 +284,12 @@ describe("solveIK 极向量约束", () => {
     expect(result.achieved).toBe(false);
   });
 
-  it("target=末端现位 → IK 角度项为零触发 continue，极向量一并被跳过（现状语义）", () => {
-    const { end, chain } = makePoleChain();
+  it("target=末端现位 → CCD 角度项零夹角跳过，但极向量独立执行（j1 被拉向 poleTarget）", () => {
+    const { j1, j2, end, chain } = makePoleChain();
     chain.forEach((o) => o.updateMatrixWorld(true));
+    // target=末端现位 (3,0,0)：所有关节 toEnd 与 toTarget 同向 → 角度=0，旋转项全跳过（极向量已解耦）
+    // 极向量：j1（j=1 < 链长-2=2）执行 pole——chainDir (1,0,0) 拉向 toPole (1,2,0)/√5
+    //   → j1 绕 +Z 旋转 acos(1/√5)：j2 世界位 (1+1/√5, 2/√5, 0)，end = j2 + R·(1,0,0) = (1+2/√5, 4/√5, 0)
     const result = solveIK(chain, new THREE.Vector3(3, 0, 0), {
       iterations: 1,
       poleTarget: new THREE.Vector3(2, 2, 0),
@@ -294,9 +297,14 @@ describe("solveIK 极向量约束", () => {
     });
     const wp = new THREE.Vector3();
     end.getWorldPosition(wp);
-    expect(wp.x).toBeCloseTo(3, 6);
-    expect(wp.y).toBeCloseTo(0, 6);
-    expect(result.achieved).toBe(true);
+    const s = Math.sqrt(0.2); // 1/√5（cos θ；sin θ = 2/√5）
+    expect(wp.x).toBeCloseTo(1 + 2 * s, 3); // 1 + 2/√5 ≈ 1.894
+    expect(wp.y).toBeCloseTo(4 * s, 3); // 4/√5 ≈ 1.789
+    expect(wp.z).toBeCloseTo(0, 6);
+    // 末端离开目标（pole 是姿态约束，牺牲末端精度属预期）；j2 无 pole 条件且角度零 → 保持单位四元数
+    expect(result.achieved).toBe(false);
+    expect(j2.quaternion.w).toBeCloseTo(1);
+    expect(j1.quaternion.w).toBeLessThan(1); // j1 已被极向量绕 Z 旋转
   });
 
   it("pole 与 chainDir 同向（angle < 1e-6）→ 极向量早退不旋转", () => {

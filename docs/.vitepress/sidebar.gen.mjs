@@ -1340,6 +1340,10 @@ export const autoSidebar = [
             "link": "/knowledge/i18n"
           },
           {
+            "text": "CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik",
+            "link": "/knowledge/ik_solver"
+          },
+          {
             "text": "Web Worker 模型统计层 model-stats",
             "link": "/knowledge/model-stats"
           },

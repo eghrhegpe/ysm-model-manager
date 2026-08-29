@@ -33,9 +33,14 @@ interface LauncherSelection {
 /** 检测/搜索进行中守卫（两类入口共享：都在改 mcRoot，不并发） */
 let _busy = false;
 
-/** 保存 mcRoot（其余配置项沿用当前值原样回写；theme 取全局主题缺省 dark） */
-async function saveMcRoot(mcRoot: string): Promise<void> {
-  const App = await getApp();
+const toastError = (error: unknown): void => {
+  bus.emit("toast:show", { msg: "❌ " + friendlyError(error), duration: TOAST_MS.verbose, type: "error" });
+};
+
+/** 保存 mcRoot（其余配置项沿用当前值原样回写；theme 取全局主题缺省 dark）；
+ *  app 可传已取好的绑定引用（调用方顺手 LoadAppConfig 时免二次动态 import） */
+async function saveMcRoot(mcRoot: string, app?: Awaited<ReturnType<typeof getApp>>): Promise<void> {
+  const App = app ?? await getApp();
   const latest = await App.LoadAppConfig();
   await App.SaveAppConfig(
     latest.filesRoot || "",
@@ -67,7 +72,7 @@ export async function runMcSearch(): Promise<void> {
       });
       if (!selected) return;
     }
-    await saveMcRoot(selected);
+    await saveMcRoot(selected, App);
     bus.emit("stats:refresh");
     bus.emit("toast:show", {
       msg: t("content.mcPathSet", { path: selected }),
@@ -75,7 +80,7 @@ export async function runMcSearch(): Promise<void> {
       type: "success",
     });
   } catch (error) {
-    bus.emit("toast:show", { msg: "❌ " + friendlyError(error), duration: TOAST_MS.verbose, type: "error" });
+    toastError(error);
   } finally {
     _busy = false;
   }
@@ -138,12 +143,12 @@ export async function runLauncherDetect(): Promise<void> {
 
     const latest = await App.LoadAppConfig();
     const previousMcRoot = latest.mcRoot || "";
-    await saveMcRoot(selection.instance.gameRoot);
+    await saveMcRoot(selection.instance.gameRoot, App);
     if (selection.useAsYsmRoot) {
       try {
         await App.SetResourceRoot("ysm", selection.instance.customDir);
       } catch (error) {
-        await saveMcRoot(previousMcRoot); // 失败回滚 mcRoot，不留半套配置
+        await saveMcRoot(previousMcRoot, App); // 失败回滚 mcRoot，不留半套配置
         throw error;
       }
     }
@@ -154,7 +159,7 @@ export async function runLauncherDetect(): Promise<void> {
       type: "success",
     });
   } catch (error) {
-    bus.emit("toast:show", { msg: "❌ " + friendlyError(error), duration: TOAST_MS.verbose, type: "error" });
+    toastError(error);
   } finally {
     _busy = false;
   }

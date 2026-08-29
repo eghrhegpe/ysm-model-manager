@@ -275,7 +275,7 @@ function buildPreviewMenuRouters(
 }
 
 /** [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → fillers 五级衰退 + try-catch 错误边界 */
-function renderPreviewPanel(
+export function renderPreviewPanel(
   list: HTMLElement,
   node: PreviewMenuNode,
   routers: PreviewMenuRouters,

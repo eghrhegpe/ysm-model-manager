@@ -229,8 +229,10 @@ function mdLiApplyLayer(
 
 // ===== 分层切片面板（schema builder 声明式，ADR-126 P5 收口：renderCustom 逃生舱退役）=====
 
-/** litematic 分层切片面板 schema 键（panel.schemaId 与 dispose 注销共用，防漂移静默丢面板） */
+/** litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖，
+ *  5329a347 review P2：固定 key 会被第二场景静默覆盖、任一 dispose 误注销另一场景） */
 export const LITEMATIC_SLICE_SCHEMA_ID = "litematic-slice";
+let mdLiSliceInstance = 0; // 模块级递增计数（per-scene 唯一 key）
 
 /** 轴下标 → 轴名（下标即 voxel 数据维度）；显示顺序保持旧 UI（Y 默认在前） */
 const SLICE_AXES = ["X", "Y", "Z"];
@@ -334,8 +336,9 @@ function mdLiRegisterSliceSchema(
   si: MdLiSizeInfo,
   rawGroups: VoxelData["groups"],
   groupMeshes: MdLiBuiltMeshes["groupMeshes"],
+  sliceKey: string, // per-scene 唯一 key（多模型并存防互相覆盖——5329a347 review P2）
 ): PreviewMenuNode {
-  registerSchema(LITEMATIC_SLICE_SCHEMA_ID, mdLiBuildSliceSchema(si, rawGroups, groupMeshes));
+  registerSchema(sliceKey, mdLiBuildSliceSchema(si, rawGroups, groupMeshes));
   return {
     id: "slice",
     icon: "🧊",
@@ -344,7 +347,7 @@ function mdLiRegisterSliceSchema(
     kind: "panel",
     dockGroup: "model",
     legacyTestId: "litematic-slice-entry",
-    schemaId: LITEMATIC_SLICE_SCHEMA_ID,
+    schemaId: sliceKey,
   };
 }
 
@@ -379,11 +382,12 @@ function mdLiBuildResult(
   ctx: PreviewBuildCtx,
   built: MdLiBuiltMeshes,
   menuItems: PreviewMenuNode[],
+  sliceKey: string,
 ): PreviewScene {
   return {
     menuItems,
     dispose(): void {
-      unregisterSchema(LITEMATIC_SLICE_SCHEMA_ID);
+      unregisterSchema(sliceKey); // per-scene key：只注销自己的，多模型并存不误伤（5329a347 review P2）
       resetLitematicSliceMode();
       unregisterModelRoot(built.modelGroup);
       built.instancedMeshes.forEach((m) => safeDispose(m));
@@ -415,8 +419,9 @@ export async function buildLitematicScene(
   ctx.loadingEl.remove();
   mdLiRecordPerfTrace(path, tStart, data);
 
-  const sliceItems = [mdLiRegisterSliceSchema(si, data.groups, built.groupMeshes)];
+  const sliceKey = `${LITEMATIC_SLICE_SCHEMA_ID}-${++mdLiSliceInstance}`; // per-scene 唯一（多模型并存防覆盖）
+  const sliceItems = [mdLiRegisterSliceSchema(si, data.groups, built.groupMeshes, sliceKey)];
   mdLiShowTruncatedWarning(ctx, data);
 
-  return mdLiBuildResult(ctx, built, sliceItems);
+  return mdLiBuildResult(ctx, built, sliceItems, sliceKey);
 }

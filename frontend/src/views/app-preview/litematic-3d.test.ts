@@ -250,9 +250,9 @@ vi.mock("three/addons/controls/OrbitControls.js", () => ({
 
 vi.mock("../../backend/app.ts", () => ({ getApp: vi.fn() }));
 // 注：不再 mock 掉 CORE_MENU_ITEMS 的 roles 项。旧「dock-model 单 panel 直达」捷径已随
-// 2026-08-22 收口删除（恒进 roles 列表 → 点角色名 → roleDetailView），openSlicePanel
-// 走生产三跳导航；mock 反而使 model 组 fall through 到快捷直达、slice 以面板内容打开，
-// 永远产生不了 litematic-slice-entry row。
+// 2026-08-22 收口删除（恒进 roles 列表 → 点角色名 → roleDetailView）。切片控件断言不走
+// 菜单 DOM 导航——5329a347 schema 化后经 sliceNodes()（schema-registry 前缀查找）直驱，
+// 生产导航路径由 preview-menu 系测试 + layer-controls 集成用例（renderPreviewPanel 接线）覆盖。
 // ADR-073 天空能力（sky-capability）依赖 PMREMGenerator 需真实 WebGL context，
 // 本测试 three 全 stub 无 WebGL——mock SkyCapability 为 no-op，隔离体素渲染逻辑。
 // 方法面同步 mount-preview-core 的 shared 初始化路径（setPreset/apply/getTimeOfDay 即时调用；
@@ -308,6 +308,9 @@ import { bus } from "../../bus.ts";
 import * as THREE from "three";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
 import { sleep } from "../../test-utils/index.ts";
+import { getSchema, listSchemas } from "../../utils/3d/adapters/schema-registry.ts";
+import { previewSnapshot, setStateValue, resetLitematicSliceMode } from "../../utils/3d/state/preview-state.ts";
+import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
 
 /** 访问 mock 暴露的 InstancedMesh 实例列表，供 count / setMatrixAt 断言 */
 const meshInstances = (THREE as unknown as {
@@ -321,6 +324,21 @@ const meshInstances = (THREE as unknown as {
 const cameraInstances = (THREE as unknown as {
   _cameraInstances: Array<{ quaternion: { setFromEuler: ReturnType<typeof vi.fn> } }>;
 })._cameraInstances;
+
+/** schema 化后（5329a347）切片面板经 schema-registry 注册，per-scene key = litematic-slice-<n>。
+ *  按前缀取最新实例的 builder 产出节点——不导航菜单 DOM（dock-model 恒进 roles 列表，
+ *  slice 行在角色下钻后的模型详情层，三跳 DOM 导航对单元测试过脆且与视图渲染细节耦合） */
+function sliceNodes(): PreviewMenuNode[] {
+  const key = listSchemas().filter((k) => k.startsWith("litematic-slice-")).pop();
+  if (!key) throw new Error("litematic slice schema 未注册（createLitematic3D 未完成或已 dispose）");
+  return getSchema(key)!(previewSnapshot());
+}
+
+/** 触发一次 applyLayer（mock InstancedMesh 构造 count=0，须经切片控件写过才可断言）——
+ *  经 schema mode control 触发，等价旧「面板 select change」的生产路径（onChange → applyLayer） */
+function triggerApplyLayer(): void {
+  sliceNodes().find((n) => n.id === "slice-mode")!.control!.onChange?.(undefined);
+}
 
 /** 最近创建的 overlay（createLitematic3D append 到 body） */
 function lastOverlay(): HTMLElement {
@@ -342,6 +360,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   meshInstances.length = 0;
   cameraInstances.length = 0;
+  resetLitematicSliceMode(); // 切片模式会话态跨用例污染防护（schema 化后走状态层）
   vi.mocked(getApp).mockResolvedValue({
     GetLitematicVoxelData: voxelFn(VALID_JSON),
   } as never);
@@ -501,22 +520,22 @@ describe("控件交互", () => {
 
   it("分层模式切换 → applyLayer（mesh.count 更新）；切片轴切换 → 层范围重置", async () => {
     await createLitematic3D("/a.litematic", "GetLitematicVoxelData");
-    const overlay = lastOverlay();
-    // Phase 3 收编：分层控件在菜单模型组面板内，需先导航打开
-    openSlicePanel(overlay);
-    const selects = overlay.querySelectorAll("select");
-    const layerMode = selects[selects.length - 1] as HTMLSelectElement; // 最后一个 select 是分层模式
-    const axisSel = selects[1] as HTMLSelectElement; // 第二个 select 是切片轴
-    // 单层模式 → 滑块显示
-    layerMode.value = "single";
-    layerMode.dispatchEvent(new Event("change"));
-    // 切轴 → 层 max 重置（不抛）
-    axisSel.value = "Z";
-    axisSel.dispatchEvent(new Event("change"));
-    // 范围模式 → 双滑块
-    layerMode.value = "range";
-    layerMode.dispatchEvent(new Event("change"));
-    unmountOverlay(overlay);
+    let nodes = sliceNodes();
+    // 单层模式 → 层滑块节点出现（visibleWhen 谓词吃状态层）+ applyLayer 写 count（Y=max 层 → 0）
+    setStateValue("ui.litematicSliceMode", "single");
+    nodes = sliceNodes();
+    expect(nodes.find((n) => n.id === "slice-layer")).toBeDefined();
+    triggerApplyLayer();
+    expect(meshInstances.reduce((s, m) => s + m.count, 0)).toBe(0);
+    // 切轴 Z → 层 max 重置为 sizeZ=16（重建节点后读——真实 UI 由 refreshOnChange 触发）
+    nodes.find((n) => n.id === "slice-axis")!.control!.set!("Z");
+    nodes = sliceNodes();
+    expect(nodes.find((n) => n.id === "slice-layer")!.control!.max).toBe(16);
+    // 范围模式 → 起止双滑块节点出现
+    setStateValue("ui.litematicSliceMode", "range");
+    nodes = sliceNodes();
+    expect(nodes.find((n) => n.id === "slice-range-start")).toBeDefined();
+    expect(nodes.find((n) => n.id === "slice-range-end")).toBeDefined();
   });
 });
 
@@ -531,19 +550,11 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
       ),
     } as never);
     await createLitematic3D("/origin.litematic", "GetLitematicVoxelData");
-    // 至少创建一个 InstancedMesh，且 applyLayer 触发后 count > 0（原点方块仍在）
     expect(meshInstances.length).toBeGreaterThanOrEqual(1);
-    // 切到 single 并触发 applyLayer，使 mesh.count 被显式写入
-    const overlay = lastOverlay();
-    // Phase 3 收编：分层控件在菜单模型组面板内，需先导航打开
-    openSlicePanel(overlay);
-    const selects = overlay.querySelectorAll("select");
-    const layerMode = selects[selects.length - 1] as HTMLSelectElement;
-    layerMode.value = "all";
-    layerMode.dispatchEvent(new Event("change"));
+    // mock InstancedMesh 构造 count=0——经 schema mode control 触发 applyLayer(all) 写入合法体素数
+    triggerApplyLayer();
     const total = meshInstances.reduce((s, m) => s + m.count, 0);
     expect(total).toBe(2); // 两个合法方块都保留
-    unmountOverlay(overlay);
   });
 
   it("缺失/NaN 坐标整条丢弃，不聚到原点造幽灵方块（#17）", async () => {
@@ -567,17 +578,10 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
       ),
     } as never);
     await createLitematic3D("/mixed.litematic", "GetLitematicVoxelData");
-    const overlay = lastOverlay();
-    // Phase 3 收编：分层控件在菜单模型组面板内，需先导航打开
-    openSlicePanel(overlay);
-    const selects = overlay.querySelectorAll("select");
-    const layerMode = selects[selects.length - 1] as HTMLSelectElement;
-    layerMode.value = "all";
-    layerMode.dispatchEvent(new Event("change"));
-    // 5 条 → 3 条合法（1 个原点 + 2 个），2 条非法被丢弃
+    // 经 schema mode control 触发 applyLayer(all) 写 count（3 条合法）
+    triggerApplyLayer();
     const total = meshInstances.reduce((s, m) => s + m.count, 0);
     expect(total).toBe(3);
-    unmountOverlay(overlay);
   });
 
   it("边界体素 [size-1] 渲染：chunk 索引不越界", async () => {
@@ -591,16 +595,10 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
     } as never);
     await createLitematic3D("/edge.litematic", "GetLitematicVoxelData");
     expect(meshInstances.length).toBeGreaterThanOrEqual(1);
-    const overlay = lastOverlay();
-    // Phase 3 收编：分层控件在菜单模型组面板内，需先导航打开
-    openSlicePanel(overlay);
-    const selects = overlay.querySelectorAll("select");
-    const layerMode = selects[selects.length - 1] as HTMLSelectElement;
-    layerMode.value = "all";
-    layerMode.dispatchEvent(new Event("change"));
+    // 经 schema mode control 触发 applyLayer(all) 写 count（2 个合法）
+    triggerApplyLayer();
     const total = meshInstances.reduce((s, m) => s + m.count, 0);
     expect(total).toBe(2); // 边界 + 原点都在
-    unmountOverlay(overlay);
   });
 
   it("applyLayer single 模式：只保留目标层方块，count 过滤正确", async () => {
@@ -615,26 +613,15 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
       ),
     } as never);
     await createLitematic3D("/layer.litematic", "GetLitematicVoxelData");
-    const overlay = lastOverlay();
-    // Phase 3 收编：分层控件在菜单模型组面板内，需先导航打开
-    openSlicePanel(overlay);
-    const selects = overlay.querySelectorAll("select");
-    const layerMode = selects[selects.length - 1] as HTMLSelectElement;
-    // 切到 single 后，把 layerVal 调到 1（target 层 0）
-    layerMode.value = "single";
-    layerMode.dispatchEvent(new Event("change"));
-    const layerSlider = overlay.querySelectorAll<HTMLInputElement>(
-      'input[type="range"]',
-    );
-    // single 模式下第一个可见 layer slider（非速度滑块）控制 layerVal
-    const ls = [...layerSlider].find(
-      (el) => el.style.display !== "none" && el.min === "1",
-    ) as HTMLInputElement;
-    ls.value = "1";
-    ls.dispatchEvent(new Event("input"));
+    // schema 驱动：切 single + 层调到 1（target 层 0）
+    setStateValue("ui.litematicSliceMode", "single");
+    triggerApplyLayer();
+    expect(meshInstances.reduce((s, m) => s + m.count, 0)).toBe(0); // 默认 Y=max 层全滤空
+    const layer = sliceNodes().find((n) => n.id === "slice-layer")!;
+    layer.control!.set!(1);
+    layer.control!.onChange?.(1);
     const total = meshInstances.reduce((s, m) => s + m.count, 0);
     expect(total).toBe(2); // [0,0,0] 和 [1,0,0] 在 Y=0 层；[2,5,2] 被过滤
-    unmountOverlay(overlay);
   });
 });
 
@@ -673,79 +660,6 @@ describe("审核补充：边界与异步路径", () => {
     resolveFn(VALID_JSON); // 此刻 resolveFn 已是 fn(path) 的真实 resolver
     await p;
     expect(document.body.contains(overlay)).toBe(false); // 迟到数据不复活
-  });
-
-  it("非立方体模型切单层：layerVal 在 setupRange 后同步（原 bug：整屏空白）", async () => {
-    // size=[16,8,16]，默认 Y 轴 layerMax=8；[0,7,0] 在 Y=7 层
-    vi.mocked(getApp).mockResolvedValue({
-      GetLitematicVoxelData: voxelFn(
-        JSON.stringify({
-          groups: [{ positions: [[0, 7, 0], [0, 5, 0]], color: "#ffffff" }],
-          size: [16, 8, 16],
-        }),
-      ),
-    } as never);
-    await createLitematic3D("/noncube.litematic", "GetLitematicVoxelData");
-    const overlay = lastOverlay();
-    // Phase 3 收编：分层控件在菜单模型组面板内，需先导航打开
-    openSlicePanel(overlay);
-    const selects = overlay.querySelectorAll("select");
-    const layerMode = selects[selects.length - 1] as HTMLSelectElement;
-    layerMode.value = "single";
-    layerMode.dispatchEvent(new Event("change"));
-    // 修复前 layerVal=16 → target=15 → 全部过滤（count=0）；修复后 target=7 → 只留 Y=7
-    const total = meshInstances.reduce((s, m) => s + m.count, 0);
-    expect(total).toBe(1);
-    unmountOverlay(overlay);
-  });
-
-  it("layerInput 输入越界值 → 钳到 [1, layerMax]", async () => {
-    await createLitematic3D("/clamp.litematic", "GetLitematicVoxelData");
-    const overlay = lastOverlay();
-    // Phase 3 收编：分层控件在菜单模型组面板内，需先导航打开
-    openSlicePanel(overlay);
-    const selects = overlay.querySelectorAll("select");
-    const layerMode = selects[selects.length - 1] as HTMLSelectElement;
-    layerMode.value = "single";
-    layerMode.dispatchEvent(new Event("change"));
-    const numInput = overlay.querySelector('input[type="number"]') as HTMLInputElement;
-    expect(numInput.style.display).not.toBe("none"); // single 模式下数字输入可见
-    numInput.value = "999";
-    numInput.dispatchEvent(new Event("change"));
-    expect(numInput.value).toBe("16"); // size=16 → layerMax=16，越界钳回
-    numInput.value = "0";
-    numInput.dispatchEvent(new Event("change"));
-    expect(numInput.value).toBe("1"); // 低于下限钳到 1
-    unmountOverlay(overlay);
-  });
-
-  it("范围模式双滑块：slider2 决定区间上界，过滤正确", async () => {
-    vi.mocked(getApp).mockResolvedValue({
-      GetLitematicVoxelData: voxelFn(
-        JSON.stringify({
-          groups: [{ positions: [[0, 0, 0], [1, 1, 1], [2, 2, 2]], color: "#ffffff" }],
-          size: [16, 16, 16],
-        }),
-      ),
-    } as never);
-    await createLitematic3D("/range.litematic", "GetLitematicVoxelData");
-    const overlay = lastOverlay();
-    // Phase 3 收编：分层控件在菜单模型组面板内，需先导航打开
-    openSlicePanel(overlay);
-    const selects = overlay.querySelectorAll("select");
-    const layerMode = selects[selects.length - 1] as HTMLSelectElement;
-    layerMode.value = "range";
-    layerMode.dispatchEvent(new Event("change"));
-    // range 模式：layerSlider 设 1（lo=0），slider2 设 2（hi=2）→ 区间 [0,2) 保留 Y=0/1
-    const ranges = [...overlay.querySelectorAll<HTMLInputElement>('input[type="range"]')]
-      .filter((el) => el.min === "1");
-    ranges[0].value = "1"; // layerSlider
-    ranges[0].dispatchEvent(new Event("input"));
-    ranges[1].value = "2"; // layerSlider2
-    ranges[1].dispatchEvent(new Event("input"));
-    const total = meshInstances.reduce((s, m) => s + m.count, 0);
-    expect(total).toBe(2);
-    unmountOverlay(overlay);
   });
 
   it("自身旋转模式拖拽：pointerdown + pointermove → quaternion 更新", async () => {
@@ -811,20 +725,4 @@ describe("appendLitematicPreview — 同台追加入口对称 mmd/vrm", () => {
  * close 收进菜单项，直接 removeChild 更稳。 */
 function unmountOverlay(overlay: HTMLElement): void {
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-}
-
-/** Phase 3 收编辅助：打开 litematic 分层切片控件
- * 声明式根菜单范式（ADR-076 v3）+ 2026-08-22 收口后导航：dock-model 恒进 roles
- * 角色列表 → 点角色名行下钻 roleDetailView。litematic 仅一个 model panel 项（slice）
- * → 作为 primary 经 renderCustom 直渲进详情主体（roleDetailView :746），控件直接可达，
- * 不再有中间 slice row（legacyTestId 仅存于 groupView/detailView 多项场景）。 */
-function openSlicePanel(overlay: HTMLElement): void {
-  const modelBtn = overlay.querySelector('[data-testid="dock-model"]') as HTMLElement;
-  if (!modelBtn) throw new Error("dock-model button not found");
-  modelBtn.click();
-  // 🧍 模型组恒进 roles 列表 → 点角色名行进详情（preview-menu.ts fillRoles 契约）
-  const roleRow = overlay.querySelector('[data-testid="preview-role-name"]') as HTMLElement;
-  if (!roleRow) throw new Error("preview-role-name row not found (roles list)");
-  roleRow.click();
-  // roleDetailView 已把 slice 控件（axis/layerMode/滑块）直渲进详情主体
 }

@@ -16,6 +16,8 @@ import type { EnvironmentCapability } from "../caps/environment-capability.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { showLoadFailure } from "./preview-loading.ts";
+import { collectSceneStats } from "../scene-stats.ts";
+import { mergeStatsMenuItems } from "./preview-menu/stats.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import type { PreviewMenuHandle } from "./preview-menu/core.ts";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
@@ -278,15 +280,22 @@ function registerSwitchScene(
 ): void {
   if (beforeBuild) {
     const added = ctx.scene ? ctx.scene.children.filter((c) => !beforeBuild.has(c)) : [];
+    // ADR-131 P1：切换模型后重新采集统计，合并统计面板进注册表 menuItems
+    // （统计面板经 roles 详情 / setActive 换菜单消费，见 scene-registry）
+    const stats = collectSceneStats(added);
+    const menuItems = mergeStatsMenuItems(next.menuItems, stats);
     sceneRegistry.register({
       path: newPath,
       rtype: ctx.getCurrentRtype?.() ?? "",
       roots: added,
       built: next,
       boneMaps: next.boneMaps ?? null,
-      menuItems: next.menuItems ?? null,
+      menuItems,
       onBonePick: next.onBonePick ?? null,
     });
+    // 注意：不在核心层再调 setAdapterItems——switch 路径菜单注入由适配器
+    // build 内完成（ADR-076 v2 Phase 3 收编），核心层一次注入只发生在 mount3D
+    // （ADR-131 §2.3：统计面板与 built.menuItems 合并后一次注入，不重复调用）
   } else {
     sceneRegistry.register({ path: newPath, rtype: "", roots: [], built: next });
   }

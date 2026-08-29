@@ -44,6 +44,8 @@ import type { SwitchContext } from "./switch-preview.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { sceneRegistry } from "./scene-registry.ts";
+import { collectSceneStats } from "../scene-stats.ts";
+import { mergeStatsMenuItems } from "./preview-menu/stats.ts";
 import { applyPerfPreset, getPerfPreset } from "../state/perf-presets.ts";
 import { fitCameraToRoots } from "../camera-setup.ts";
 import { assembleBoneSelectInfo, getMeshBoneId } from "../bone-raycast.ts";
@@ -748,17 +750,21 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       const added = infra && session.sceneBaseline
         ? infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
         : [];
+      // ADR-131 P1：post-build 采集场景统计，合并统计面板进菜单（「能渲染就能出统计」）
+      const stats = collectSceneStats(added);
+      const menuItems = mergeStatsMenuItems(session.built.menuItems, stats);
       sceneRegistry.register({
         path,
         rtype: opts.rtype ?? adapter.id,
         roots: added,
         built: session.built,
         boneMaps: session.built.boneMaps ?? null,
-        menuItems: session.built.menuItems ?? null,
+        menuItems,
         onBonePick: session.built.onBonePick ?? null,
       });
       // ADR-076 v2 Phase 3：注册后立刻注入菜单项，否则 dock-menu 无适配器专属控件
-      if (session.built.menuItems) menuHandle.setAdapterItems(session.built.menuItems);
+      // （ADR-131 §2.3：统计面板已并入 menuItems，一次注入不覆盖）
+      if (menuItems.length > 0) menuHandle.setAdapterItems(menuItems);
     }
 
     // ADR-076 v2 Phase 3：适配器控件全部经声明式根菜单注入（ctx.menu.setAdapterItems / built.menuItems）

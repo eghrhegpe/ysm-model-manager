@@ -135,4 +135,32 @@ describe("collectSceneStats", () => {
     expect(s.triangleCount).toBe(0);
     expect(s.materialCount).toBe(0);
   });
+
+  it("数组 roots 形态（sceneBaseline 差量）：多个根节点合并统计", () => {
+    // P1 挂点传的是 scene.children 差量数组（ADR-131 §2.2），非单根 Group
+    const a = new THREE.Group();
+    a.add(new THREE.Mesh(makeIndexedGeo(3), new THREE.MeshBasicMaterial()));
+    const b = new THREE.Group();
+    b.add(new THREE.Bone());
+    b.add(new THREE.Mesh(makeIndexedGeo(5), new THREE.MeshBasicMaterial()));
+    const s = collectSceneStats([a, b]);
+    expect(s.meshCount).toBe(2);
+    expect(s.triangleCount).toBe(8);
+    expect(s.boneCount).toBe(1);
+    expect(s.materialCount).toBe(2);
+  });
+
+  it("游离骨骼：bind 后未挂入场景图的 skeleton.bones 也计入（约定行为）", () => {
+    // ADR-131 语义：骨骼 = SkinnedMesh.skeleton.bones ∪ 裸 Bone（Set 去重）。
+    // skeleton.bones 即使未 add 进场景图（游离于 traverse 之外）也应被计入——
+    // 绑定即生效，与实际挂载位置无关。
+    const geo = makeIndexedGeo(2);
+    const bones = [new THREE.Bone(), new THREE.Bone()];
+    const skeleton = new THREE.Skeleton(bones);
+    const mesh = new THREE.SkinnedMesh(geo, new THREE.MeshBasicMaterial());
+    mesh.bind(skeleton); // bones 未 add 到 mesh/scene，仅存在于 skeleton 引用
+    const root = new THREE.Group();
+    root.add(mesh);
+    expect(collectSceneStats(root).boneCount).toBe(2);
+  });
 });

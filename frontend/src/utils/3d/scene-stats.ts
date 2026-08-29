@@ -50,8 +50,9 @@ export function collectSceneStats(roots: THREE.Object3D | THREE.Object3D[]): Sce
   for (const root of list) {
     root.traverse((obj) => {
       // 骨骼：skeleton.bones（SkinnedMesh 自带）与裸 Bone 对象统一收进 Set 去重
-      if (obj instanceof THREE.Bone) {
-        bones.add(obj);
+      // （鸭子类型对齐 three.js 惯例：isBone / isSkinnedMesh / isMesh）
+      if ((obj as THREE.Bone).isBone) {
+        bones.add(obj as THREE.Bone);
       }
       const skinned = obj as THREE.SkinnedMesh;
       if (skinned.isSkinnedMesh && skinned.skeleton) {

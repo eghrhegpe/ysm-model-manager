@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 178 | 736 |
+| 前端·工具 | 179 | 740 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **510** | **2195** |
+| **合计** | **511** | **2199** |
 
 ## Go·头像
 
@@ -1418,17 +1418,17 @@
 | `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:224` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
 | `MorphMeshLike()` | `frontend/src/utils/3d/adapters/morph-controls:10` | morph 面板入参（mesh 的 morphTargetDictionary/influences 子集，结构兼容 THREE.SkinnedMesh） |
 | `morphNodes()` | `frontend/src/utils/3d/adapters/morph-controls:20` | MMD 表情开关声明式节点（纯数据工厂零 DOM）。 |
-| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:79` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
-| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:98` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
-| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:124` | — |
-| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:134` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
-| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:183` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
-| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:188` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
-| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:208` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
-| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:221` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
-| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:227` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
-| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:232` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
-| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:250` | — |
+| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:81` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
+| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:100` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
+| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:126` | — |
+| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:136` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
+| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:185` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
+| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:190` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
+| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:210` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
+| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:223` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
+| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:229` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
+| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:234` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
+| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:252` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
 | `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:24` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
 | `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:47` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
@@ -1481,6 +1481,10 @@
 | `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu/settings:118` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
 | `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/settings:170` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
 | `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu/settings:183` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
+| `STATS_PANEL_ID()` | `frontend/src/utils/3d/adapters/preview-menu/stats:17` | 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） |
+| `hasSceneStats()` | `frontend/src/utils/3d/adapters/preview-menu/stats:20` | 是否有可供展示的统计（mesh/bone 任一 &gt; 0；全 0 = 空场景/纯装饰，无意义） |
+| `buildStatsPanel()` | `frontend/src/utils/3d/adapters/preview-menu/stats:25` | 构造统计面板节点：panel + 6 个 field 行（骨骼/网格/三角面/材质/纹理/表情） |
+| `mergeStatsMenuItems()` | `frontend/src/utils/3d/adapters/preview-menu/stats:57` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
 | `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu/switch:217` | — |
 | `ModelEntry()` | `frontend/src/utils/3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
 | `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
@@ -1493,9 +1497,9 @@
 | `hasSchema()` | `frontend/src/utils/3d/adapters/schema-registry:46` | 是否已注册 |
 | `listSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:51` | 全部已注册 id（供契约测试枚举 / 审计「谁在绕道 renderCustom」） |
 | `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:56` | 测试用：清空注册表（用例间隔离） |
-| `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:29` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
-| `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:89` | 会话内切换模型（复用外壳重建内容层）。 |
-| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:396` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
+| `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:31` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
+| `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:91` | 会话内切换模型（复用外壳重建内容层）。 |
+| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:404` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
 | `Endianness()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
 | `ConsoleLogger()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
 | `MmdDataDeserializer()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |
@@ -2187,7 +2191,7 @@
 | `isFaved()` | `frontend/src/views/app-content/workshop-data:76` | — |
 | `toggleFav()` | `frontend/src/views/app-content/workshop-data:80` | — |
 | `openSite()` | `frontend/src/views/app-content/workshop-site-opener:20` | 打开站点（外链/内嵌/窗口） |
-| `bindSiteEvents()` | `frontend/src/views/app-content/workshop-site-opener:79` | 绑定站点打开相关事件 |
+| `bindSiteEvents()` | `frontend/src/views/app-content/workshop-site-opener:82` | 绑定站点打开相关事件 |
 | `WorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:20` | 创意工坊页的共享 ref 集合——单一事实来源。 |
 | `createWorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:28` | 创建创意工坊页的共享 ref 对象（单一入口，所有消费者共享同一实例） |
 | `initWorkshopTabs()` | `frontend/src/views/app-content/workshop-tabs:40` | 初始化创意工坊 Tab |
@@ -2206,7 +2210,7 @@
 | `showFbxPreview()` | `frontend/src/views/app-preview/detail-3d:132` | 显示 FBX 预览卡（文件名 + FAB 进 3D；FBX 无标准 meta 读取，保持简单形态，ADR-112） |
 | `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:162` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
 | `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:192` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
-| `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:252` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
+| `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:259` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
 | `detailGen()` | `frontend/src/views/app-preview/detail:24` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:27` | 显示模型详情（YSM 模型） |
 | `showResourcePack()` | `frontend/src/views/app-preview/detail:144` | 显示资源包信息（pack.mcmeta + pack.png） |
@@ -2383,7 +2387,7 @@
 | `toggleSelect()` | `frontend/src/views/app-tree/data:16` | 切换选中状态 |
 | `selectSingle()` | `frontend/src/views/app-tree/data:31` | 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState） |
 | `updateSelectCount()` | `frontend/src/views/app-tree/events:392` | — |
-| `bindTreeEvents()` | `frontend/src/views/app-tree/events:496` | — |
+| `bindTreeEvents()` | `frontend/src/views/app-tree/events:498` | — |
 | `appTreeStyle()` | `frontend/src/views/app-tree/index:12` | — |
 | `AppTree()` | `frontend/src/views/app-tree/index:63` | — |
 | `TreeEntry()` | `frontend/src/views/app-tree/loader:11` | 树条目（loader 转换后的渲染格式） |

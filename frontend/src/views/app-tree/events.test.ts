@@ -428,7 +428,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     expect(toasts.some((t) => t.msg === "文件夹禁用: 2 成功, 0 失败")).toBe(true);
   });
 
-  it("部分失败 → toast warn 含失败计数；banned 按现状乐观全量翻转（含失败项，待重载纠正）", async () => {
+  it("部分失败 → toast warn 含失败计数；仅成功项翻转，失败项保持原状（回归：不再乐观全量翻转）", async () => {
     const h = makeHarness();
     ToggleEnableMock
       .mockRejectedValueOnce(new Error("lock"))
@@ -443,10 +443,10 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     await flush();
     const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
     expect(toasts.some((t) => t.msg === "文件夹禁用: 1 成功, 1 失败" && t.type === "warn")).toBe(true);
-    // 源码现状：ok>0 后对全部 targets 无差别翻转（不看单项成败）→ 失败项也被置 banned，
-    // 依赖随后 _load/重载由后端真实状态纠正
-    expect(h.vm._entries[0].banned).toBe(true);
-    expect(h.vm._entries[1].banned).toBe(true);
+    // 修复后：只翻转成功项；失败项保持原状，不依赖重载纠正
+    // （mock 顺序：a.ysm 首次调用 rejected、b.ysm 第二次 resolved）
+    expect(h.vm._entries[0].banned).toBe(false); // 失败项 a.ysm 保持现状
+    expect(h.vm._entries[1].banned).toBe(true); // 成功项 b.ysm 翻转
   });
 
   it("批量进行中 → toast「⏳ 操作进行中」，不调 getApp", async () => {

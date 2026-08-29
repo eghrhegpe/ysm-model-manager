@@ -216,12 +216,19 @@ export async function showMorphPreview(
       const items = siblings.map((p) => {
         const name = p.split(/[/\\]/).pop() || p;
         const active = p === path;
-        return `<div class="morph-item" data-path="${esc(p)}" style="padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px;${active ? "background:rgba(80,200,120,0.15);color:#50c878;font-weight:600" : ""}hover:background:rgba(255,255,255,0.05)">
+        // 高亮/hover 走注入的 .morph-item 样式（内联 style 表达不了 :hover；
+        // 旧写法「;font-weight:600}hover:background:...」缺分号 + hover: 前缀非法，
+        // 连 font-weight 一起被并成一条声明整体丢弃）
+        return `<div class="morph-item${active ? " active" : ""}" data-path="${esc(p)}">
           <span style="font-size:10px;color:var(--muted)">◉</span>
           <span>${esc(name)}</span>
         </div>`;
       }).join("");
-      container.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
+      container.innerHTML = `<style>
+  .morph-item{padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px}
+  .morph-item:hover{background:rgba(255,255,255,0.05)}
+  .morph-item.active{background:rgba(80,200,120,0.15);color:#50c878;font-weight:600}
+</style><div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
       // 点击兄弟列表项切换
       container.querySelectorAll<HTMLElement>(".morph-item").forEach((el) => {
         el.onclick = () => {

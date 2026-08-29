@@ -283,13 +283,12 @@ describe("showMorphPreview CustomMorph 入口卡", () => {
     expect(html).toContain("全部 2 个表情姿势");
     const items = ctx.root.querySelectorAll<HTMLElement>(".morph-item");
     expect(items.length).toBe(2);
-    // 当前 path 高亮
-    expect(
-      (items[0].getAttribute("style") || "").includes("font-weight:600"),
-    ).toBe(true);
-    expect(
-      (items[1].getAttribute("style") || "").includes("font-weight:600"),
-    ).toBe(false);
+    // 当前 path 高亮（修复后走 .active class：内联 style 既表达不了 :hover，
+    // 又因缺分号把 font-weight 并进非法声明整体丢弃）
+    expect(items[0].classList.contains("active")).toBe(true);
+    expect(items[1].classList.contains("active")).toBe(false);
+    // hover 效果来自注入的组件级 <style> 规则（.morph-item:hover），非内联 hover: 前缀
+    expect(html).toContain(".morph-item:hover");
     // 点击兄弟项 → 带 rtype 的 model:select
     items[1].click();
     expect(emitted("model:select")).toEqual([

@@ -449,18 +449,20 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
   const enable = allEnabled ? false : true;
   let ok = 0,
     fail = 0;
+  const flipped: TreeEntry[] = [];
   for (const e of targets) {
     if (e.banned === !enable) continue;
     try {
       await ToggleEnable(e.fullPath);
       ok++;
+      flipped.push(e); // 只登记实际成功的项，失败项不翻转（不靠重载纠正）
     } catch (err) {
       fail++;
       console.warn("[tree] toggleFolderBatch 失败:", e.fullPath, err);
     }
   }
   if (ok > 0) {
-    for (const e of targets) {
+    for (const e of flipped) {
       if (!e.banned && !enable) e.banned = true;
       else if (e.banned && enable) e.banned = false;
     }

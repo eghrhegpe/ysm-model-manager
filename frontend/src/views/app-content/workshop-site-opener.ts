@@ -66,7 +66,10 @@ function openEmbedded(
     iframe.style.display = "";
     iframe.src = url;
     // 加载超时兜底：15s 未完成加载 → 提示「此站点不允许内嵌浏览」+ 外链打开
-    const wsLoadTimer = window.setTimeout(() => {
+    // 句柄必须写模块级 wsLoadTimer（返回按钮的 clearTimeout 消费同一变量）；
+    // 此前局部 const 遮蔽模块级变量 → 返回按钮清的是 undefined，旧 timer 残留仍会弹 blocked
+    window.clearTimeout(wsLoadTimer); // 防残留：上一次内嵌打开的 timer 未清时先作废
+    wsLoadTimer = window.setTimeout(() => {
       if (blockedEl) blockedEl.style.display = "flex";
     }, WS_EMBED_TIMEOUT_MS);
     iframe.onload = () => window.clearTimeout(wsLoadTimer);

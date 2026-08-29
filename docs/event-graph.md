@@ -210,8 +210,8 @@
 | `frontend/src/features/oldest-models.ts` | 61 |
 | `frontend/src/features/recycle-bin.ts` | 183 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 385 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 229 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 296 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 236 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 303 |
 | `frontend/src/views/app-tree/events.ts` | 155 |
 | `frontend/src/views/app-tree/events.ts` | 252 |
 | `frontend/src/views/app-tree/index.ts` | 411 |
@@ -369,7 +369,7 @@
 |------|----|
 | `frontend/src/views/app-tree/bus-handlers.ts` | 319 |
 | `frontend/src/views/app-tree/events.ts` | 96 |
-| `frontend/src/views/app-tree/events.ts` | 469 |
+| `frontend/src/views/app-tree/events.ts` | 471 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -436,9 +436,9 @@
 | `frontend/src/features/version-updater.ts` | 216 |
 | `frontend/src/features/version-updater.ts` | 250 |
 | `frontend/src/features/version-updater.ts` | 260 |
-| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 405 |
+| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 407 |
 | `frontend/src/utils/3d/adapters/preview-loading.ts` | 38 |
-| `frontend/src/utils/3d/adapters/switch-preview.ts` | 135 |
+| `frontend/src/utils/3d/adapters/switch-preview.ts` | 137 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 387 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 401 |
@@ -498,17 +498,17 @@
 | `frontend/src/views/app-content/site/edit.ts` | 245 |
 | `frontend/src/views/app-content/site/events.ts` | 146 |
 | `frontend/src/views/app-content/site/events.ts` | 271 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 128 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 138 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 144 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 156 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 167 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 173 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 131 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 141 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 147 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 159 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 170 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 176 |
 | `frontend/src/views/app-content/workshop-tabs.ts` | 90 |
 | `frontend/src/views/app-content/workshop-tabs.ts` | 138 |
 | `frontend/src/views/app-nav/index.ts` | 102 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 242 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 308 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 249 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 315 |
 | `frontend/src/views/app-preview/index.ts` | 244 |
 | `frontend/src/views/app-preview/index.ts` | 266 |
 | `frontend/src/views/app-preview/preview-library.ts` | 107 |
@@ -561,8 +561,8 @@
 | `frontend/src/views/app-tree/events.ts` | 382 |
 | `frontend/src/views/app-tree/events.ts` | 423 |
 | `frontend/src/views/app-tree/events.ts` | 431 |
-| `frontend/src/views/app-tree/events.ts` | 472 |
-| `frontend/src/views/app-tree/events.ts` | 485 |
+| `frontend/src/views/app-tree/events.ts` | 474 |
+| `frontend/src/views/app-tree/events.ts` | 487 |
 | `frontend/src/views/app-tree/index.ts` | 201 |
 | `frontend/src/views/app-tree/index.ts` | 347 |
 | `frontend/src/views/app-tree/index.ts` | 355 |

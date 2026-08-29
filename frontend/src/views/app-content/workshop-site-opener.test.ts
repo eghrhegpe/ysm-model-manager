@@ -172,6 +172,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
       <button id="ws-import-btn"></button>
       <iframe id="ws-iframe" src="https://old.example.com/"></iframe>
       <div id="ws-browser"></div>
+      <div id="ws-blocked" style="display:none"></div>
     `;
     const raw: Record<string, unknown> = { _root: el, _currentSite: null as unknown };
     const host = raw as unknown as AppContentHost;
@@ -193,6 +194,19 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     // happy-dom 将 iframe.src="" 解析为 base URL，用 attribute 断言原始写入
     expect(b.iframe.getAttribute("src")).toBe("");
     expect(b.browser.style.display).toBe("none");
+  });
+
+  it("ws-back：内嵌后返回 → 清掉 15s 超时定时器，blocked 不再弹出（回归：局部变量遮蔽模块级）", () => {
+    vi.useFakeTimers();
+    const b = makeBindHost();
+    bindSiteEvents(b.host);
+    openSite(b.host, site, "embed");
+    b.btn("ws-back").click();
+    vi.advanceTimersByTime(16000); // 超过 WS_EMBED_TIMEOUT_MS
+    const blocked = b.el.querySelector("#ws-blocked") as HTMLElement;
+    // 修复前：模块级 wsLoadTimer 从未被赋值，clearTimeout 清的是 undefined，
+    // 局部超时定时器照常触发 → blocked 弹 flex（本断言红）
+    expect(blocked.style.display).not.toBe("flex");
   });
 
   it("ws-open / ws-open-fallback：有 currentSite → OpenInBrowser(site.url)", async () => {

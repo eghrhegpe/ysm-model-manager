@@ -101,10 +101,13 @@ func (a *App) ListPackModelsDetail(path string) string {
 	r, err := container.Open(path)
 	if err != nil {
 		log.Printf("[packs] ListPackModelsDetail 打开失败 %s: %v", path, err)
-		return marshalJSON("ListPackModelsDetail", packDetailList{}, "{}")
+		return marshalJSON("ListPackModelsDetail", packDetailList{Models: []PackModelDetail{}}, "{}")
 	}
 	defer r.Close()
 	seen := map[string]bool{}
+	// 单次遍历同时收集「全量清单」与「name→entry 索引」：cubes 解析直取句柄，
+	// 避免每条模型全量重扫 Entries（O(models×entries) → O(entries)）。
+	byName := map[string]container.Entry{}
 	var all []string
 	for _, e := range r.Entries() {
 		if e.IsDir() {
@@ -114,6 +117,7 @@ func (a *App) ListPackModelsDetail(path string) string {
 		if packModelEntryMatch(n) && !seen[n] {
 			seen[n] = true
 			all = append(all, n)
+			byName[n] = e
 		}
 	}
 	sort.Strings(all)
@@ -124,7 +128,7 @@ func (a *App) ListPackModelsDetail(path string) string {
 	out.Models = make([]PackModelDetail, 0, len(all))
 	for _, n := range all {
 		cubes := 0
-		if data := a.readPackEntryRaw(r, n); len(data) > 0 {
+		if data := readPackEntry(byName[n]); len(data) > 0 {
 			cubes = packModelElementsCount(data)
 		}
 		out.Models = append(out.Models, PackModelDetail{Path: n, Cubes: cubes})
@@ -138,28 +142,23 @@ type packDetailList struct {
 	Total  int               `json:"total"`
 }
 
-// readPackEntryRaw 容器内按名读取条目原始字节（packEntrySafe 守卫复用 ReadPackEntry 口径）。
-// 返回 nil 表示条目不存在/读取失败/超限。
-func (a *App) readPackEntryRaw(r container.Reader, entry string) []byte {
-	if !packEntrySafe(entry) {
+// readPackEntry 读取已解析的容器条目原始字节（packEntrySafe 守卫复用 ReadPackEntry 口径；
+// entry 来自 ListPackModelsDetail 单次遍历的 byName 索引，O(1) 直取，不再全量重扫）。
+// 返回 nil 表示条目非法/读取失败/超限。
+func readPackEntry(e container.Entry) []byte {
+	if !packEntrySafe(e.Name()) {
 		return nil
 	}
-	for _, e := range r.Entries() {
-		if e.IsDir() || !strings.EqualFold(e.Name(), entry) {
-			continue
-		}
-		rc, err := e.Open()
-		if err != nil {
-			return nil
-		}
-		data, err := io.ReadAll(io.LimitReader(rc, maxPackEntrySize))
-		rc.Close()
-		if err != nil {
-			return nil
-		}
-		return data
+	rc, err := e.Open()
+	if err != nil {
+		return nil
 	}
-	return nil
+	data, err := io.ReadAll(io.LimitReader(rc, maxPackEntrySize))
+	rc.Close()
+	if err != nil {
+		return nil
+	}
+	return data
 }
 
 // ReadPackEntry 读取容器内条目内容（base64 字符串）。

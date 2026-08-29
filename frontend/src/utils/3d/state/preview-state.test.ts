@@ -199,6 +199,54 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     }
   });
 
+  it("render.bloom 总闸语义：=true 尊重 per-type 门禁、=false 恒关，且不抹门禁（off→on 循环可恢复）", () => {
+    // 镜像真实 PostprocessingCapability：setEnabled 写两处、setMasterEnabled 只写生效开关
+    const params = { enabled: true };
+    const pp = {
+      id: "postprocessing",
+      labelKey: "x",
+      icon: "x",
+      descKey: "x",
+      enabled: false,
+      controls: [],
+      apply: vi.fn(),
+      dispose: vi.fn(),
+      setEnabled(v: boolean) {
+        pp.enabled = v;
+        params.enabled = v;
+      },
+      isEnabled: () => pp.enabled,
+      getParams: () => params,
+      setMasterEnabled(v: boolean) {
+        pp.enabled = v;
+      },
+      getMenuControls: () => pp.controls,
+      saveState: vi.fn(),
+      loadState: vi.fn(),
+    };
+    mountCaps(pp as unknown as SceneCapability);
+
+    // per-type 门禁关 + 总闸开 → 不得越权开启（YSM/车万女仆爆亮回归防护）
+    params.enabled = false;
+    setStateValue("render.bloom", true);
+    expect(pp.isEnabled()).toBe(false);
+
+    // 门禁开 + 总闸开 → 正常开启
+    params.enabled = true;
+    setStateValue("render.bloom", true);
+    expect(pp.isEnabled()).toBe(true);
+
+    // 总闸关 → 恒关，且门禁不被抹掉（P2 回归：此前 setEnabled(false) 把门禁写死为 false）
+    setStateValue("render.bloom", false);
+    expect(pp.isEnabled()).toBe(false);
+    expect(params.enabled).toBe(true);
+
+    // 总闸再开 → 恢复（off→on 循环不失效）
+    setStateValue("render.bloom", true);
+    expect(pp.isEnabled()).toBe(true);
+    expect(params.enabled).toBe(true);
+  });
+
   it("结构性探测：id 对得上但方法不全的 cap 不误判为可用", () => {
     // 只有 isEnabled、缺 setEnabled —— toggleCap 应判为「无此能力」而非运行期炸裂
     const halfCap = {

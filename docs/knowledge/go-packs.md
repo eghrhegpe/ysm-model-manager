@@ -55,4 +55,4 @@ invariant_anchors:
 - [resource_registry](./resource-registry.md) — detector 与扩展名定义
 - [go_types](./go-types.md) — PackMeta / FormatRange
 - [wails_bridge](./wails-bridge.md) — 资源包 binding
-- **资源包模型读取绑定（`internal/app/resourcepack_models.go`，非 go/packs）**：`ListPackModels`（枚举 block/item 模型路径）/ `ReadPackEntry`（单条目 base64）/ `ListPackModelsDetail`（ADR-131 P3：`models[{path,cubes}] + total`，cubes 数 JSON `elements`，封顶 `packModelDetailCap=200`）——容器枚举统一走 `container.Reader`（ADR-068），网页版镜像见 [backend_web](./backend_web.md)
+- **资源包模型读取绑定（`internal/app/resourcepack_models.go`，非 go/packs）**：`ListPackModels`（枚举 block/item 模型路径）/ `ReadPackEntry`（单条目 base64）/ `ListPackModelsDetail`（ADR-131 P3：`models[{path,cubes}] + total`，cubes 数 JSON `elements`，封顶 `packModelDetailCap=200`）——容器枚举统一走 `container.Reader`（ADR-068），网页版镜像见 [backend_web](./backend_web.md)。**实现要点（2026-08-29 审核修复）**：`ListPackModelsDetail` 单次遍历建 `name→entry` map，cubes 解析 O(1) 直取句柄（旧实现每条模型全量重扫 Entries = O(models×entries)）；失败路径返回 `models:[]`（非 `null`，与 docstring 及 web 镜像同构）。

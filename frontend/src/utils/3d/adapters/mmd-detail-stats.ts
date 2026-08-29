@@ -21,8 +21,11 @@ export interface PmxFileStats {
   morphs: number;
 }
 
-/** 模块级缓存：同 path 只 Worker 解析一次（防详情卡重复打开重复解析大文件） */
+/** 模块级缓存：同 path+内容指纹 只 Worker 解析一次（防详情卡重复打开重复解析大文件）。
+ *  键含 b64 长度指纹——同路径文件被替换/重导入后自动重解析，不显示陈旧统计。 */
 const pmxStatsCache = new Map<string, PmxFileStats>();
+/** 缓存上限：超限整体清空（简单防无界增长；统计项很小，LRU 收益低） */
+const PMX_STATS_CACHE_CAP = 64;
 
 /** 清除缓存（测试钩子；生产由模块级生命周期自然存活） */
 export function _clearPmxStatsCache(): void {
@@ -37,11 +40,13 @@ export async function readPmxStats(
   path: string,
   readFn: (p: string) => Promise<string | null>,
 ): Promise<PmxFileStats | null> {
-  const cached = pmxStatsCache.get(path);
-  if (cached) return cached;
   try {
     const b64 = await readFn(path);
     if (!b64) return null;
+    // 内容指纹：键含 b64 长度——同路径文件被替换（web 重导入/桌面改盘）后长度变化 → 自动重解析
+    const key = `${path}:${b64.length}`;
+    const cached = pmxStatsCache.get(key);
+    if (cached) return cached;
     const bytes = b64ToBytes(b64);
     const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 
@@ -56,7 +61,8 @@ export async function readPmxStats(
         materials: resp.materials?.length ?? 0,
         morphs: resp.morphs?.length ?? 0,
       };
-      pmxStatsCache.set(path, stats);
+      pmxStatsCache.set(key, stats);
+      if (pmxStatsCache.size > PMX_STATS_CACHE_CAP) pmxStatsCache.clear();
       return stats;
     } finally {
       parser.dispose();

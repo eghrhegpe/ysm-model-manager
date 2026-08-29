@@ -46,6 +46,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 - 路径类型复用已有 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀自 `preview-menu/node-types.ts` 归位）；`toStatePath()` 是编译期契约守卫，前缀写错即编译失败。
 - cap 派生路径**惰性解析**：每次 `get/set` 都现查 `sceneCapabilityRegistry.getById()`，不在构建期捕获实例。这是 ADR-125 P3 明令禁止的「声明期求值 → cap 后创建则永不可见」（即 `05fe24b7` 所修「水池分组不出现」同类病）的根治点。
 - 结构性探测：`hasMethod()` 判断 cap 是否真有 `isEnabled/setEnabled`，冒牌 cap 不误判为可用。
+- **`render.bloom` 总闸语义（2026-08-29 审核修复）**：性能档位写入 = 总闸。`false` 关全部；`true` 尊重 per-type 门禁（`params.enabled`）不强制打开（防 YSM/车万女仆爆亮）。实现走 cap 的 `setMasterEnabled`（只写生效开关、**不抹门禁**，总闸 off→on 循环可恢复），缺该方法/`getParams`（旧实现/测试 fake）时结构化回退 `setEnabled(Boolean(v))`——不做硬转，防运行期炸裂。
 
 ### P2 自动聚合：cap 侧自声明，settings 侧零接线
 

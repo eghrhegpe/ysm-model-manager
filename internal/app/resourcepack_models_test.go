@@ -209,6 +209,14 @@ func TestListPackModelsDetail_NonZip(t *testing.T) {
 	if out.Total != 0 || len(out.Models) != 0 {
 		t.Errorf("不存在文件期望空清单，实际 total=%d models=%d", out.Total, len(out.Models))
 	}
+	// 契约（审核修复）：失败路径 models 必须序列化为 [] 而非 null——与 docstring 及
+	// web 镜像 listWebPackModelsDetail 同构，后续消费者直接 .length 不炸
+	if strings.Contains(raw, `"models":null`) {
+		t.Errorf("失败路径 models 应序列化为 []，实际含 null：%q", raw)
+	}
+	if !strings.Contains(raw, `"models":[]`) {
+		t.Errorf("失败路径应含 \"models\":[]，实际 %q", raw)
+	}
 }
 
 func TestPackModelElementsCount_Edge(t *testing.T) {

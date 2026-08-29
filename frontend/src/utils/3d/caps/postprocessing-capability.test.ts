@@ -505,3 +505,50 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     expect(bp.radius).toBe(0.4);
   });
 });
+
+// ============ 性能档位总闸 setMasterEnabled + setPreset 构建次数（审核修复回归） ============
+describe("PostprocessingCapability — 总闸与 setPreset 构建次数", () => {
+  function buildSpy() {
+    return vi.mocked(
+      (PostprocessingCapability.prototype as unknown as { buildComposer: () => void }).buildComposer,
+    );
+  }
+
+  it("setMasterEnabled 只写生效开关，不抹 per-type 门禁 params.enabled（off→on 循环可恢复）", () => {
+    const cap = newCap({ enabled: false, params: { enabled: true } }); // 门禁开、总闸关（vrm 初始态）
+    cap.setMasterEnabled(true);
+    expect(cap.isEnabled()).toBe(true);
+    expect(cap.getParams().enabled).toBe(true); // 门禁未被抹
+    cap.setMasterEnabled(false);
+    expect(cap.isEnabled()).toBe(false);
+    expect(cap.getParams().enabled).toBe(true); // 门禁保留 → 再开可恢复
+    cap.setMasterEnabled(true);
+    expect(cap.isEnabled()).toBe(true);
+  });
+
+  it("setMasterEnabled 值未变时不做无谓重建", () => {
+    const cap = newCap({ enabled: true });
+    const spy = buildSpy();
+    spy.mockClear();
+    cap.setMasterEnabled(true);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("setPreset enabled 翻转（false→true）时 composer 只构建一次", () => {
+    const cap = newCap(); // 默认 enabled=false（params.enabled=false）
+    const spy = buildSpy();
+    spy.mockClear();
+    cap.setPreset("vrm"); // 门禁 false→true 翻转
+    expect(cap.isEnabled()).toBe(true);
+    expect(spy).toHaveBeenCalledTimes(1); // 修复前末尾无条件重建会二次 build
+  });
+
+  it("setPreset enabled 未变（保持 on）时重建 composer 一次以同步参数", () => {
+    const cap = newCap({ enabled: true, params: { enabled: true } });
+    (cap as unknown as { composer: unknown }).composer = {}; // 模拟已有 composer（mock 不置位）
+    const spy = buildSpy();
+    spy.mockClear();
+    cap.setPreset("vrm");
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});

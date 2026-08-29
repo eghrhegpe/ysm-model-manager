@@ -653,6 +653,21 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.applyReflectorSync();
   }
 
+  /** 性能档位总闸（render.bloom 绑定入口）：只写当前生效开关 this.enabled，
+   *  不触碰 per-type 门禁 params.enabled——门禁由 setPreset 维护，总闸 off 不得抹掉
+   *  （否则 off→on 循环后门禁已毁，bloom 再也开不回来）。手动开关（pp-enabled）仍走 setEnabled。 */
+  setMasterEnabled(v: boolean): void {
+    if (this.enabled === v) return;
+    this.enabled = v;
+    if (v) {
+      this.buildComposer();
+      this.applyToneMapping();
+    } else {
+      this.disposeComposer();
+    }
+    this.applyReflectorSync();
+  }
+
   isEnabled(): boolean {
     return this.enabled;
   }
@@ -682,10 +697,11 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       }
       this.applyReflectorSync();
     } else if (this.enabled) {
-      // enabled 未变但 loadState 可能更新了曝光等参数，保持 renderer 同步
+      // enabled 未变但 loadState 可能更新了曝光等参数：重建 composer 同步 pass 组合
+      // （重建只此一条路径——翻转分支已构建过，末尾不再无条件重建，避免 double build）
+      if (this.composer) this.buildComposer();
       this.applyToneMapping();
     }
-    if (this.composer) this.buildComposer();
   }
 
   /* -------- 参数 setter -------- */

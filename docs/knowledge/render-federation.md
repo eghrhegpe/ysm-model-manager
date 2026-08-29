@@ -75,6 +75,8 @@ Sky → Ground → Environment → Fog → Light → Shadow → Reflector → Po
 - Bloom + SSR + SSAO 三开是"重型组合"，低端 Android WebView 建议至少关闭 SSAO
 - Volumetric cone 只在 `spotlight.enabled && volumetric.enabled` 同时真时渲染
 - Postprocessing composer 延迟创建：需要时才 new EffectComposer，节省 GPU 资源
+- **总闸与门禁分层（2026-08-29 审核修复）**：`setEnabled`（手动开关 pp-enabled）写 `this.enabled` + `params.enabled`；`setMasterEnabled`（性能档位 render.bloom 入口）只写 `this.enabled`，**不触碰 per-type 门禁 `params.enabled`**——总闸 off 再 on 不会把门禁抹掉（旧实现经 `setEnabled(false)` 把门禁写死，VRM/MMD bloom 再也开不回来）。
+- **`setPreset` composer 只构建一次（2026-08-29 审核修复）**：enabled 翻转分支内 buildComposer 后，末尾不再无条件重建；仅「enabled 未变且已启用」路径重建（同步 loadState 更新的参数）。此前翻转 false→true 时 composer 被 dispose+重建两遍。
 
 ## v1.14 视觉调优变更
 

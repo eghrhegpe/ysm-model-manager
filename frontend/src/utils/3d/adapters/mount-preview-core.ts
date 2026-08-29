@@ -58,10 +58,11 @@ import { createIconButton } from "../../../utils/dom/fab.ts";
 import { installUiComponentsStyles } from "../../../ui/ui-components-styles.ts";
 import { createSlideMenu } from "../../../ui/ui-helpers.ts";
 import { createHeaderToggle } from "../../../ui/ui-header-toggle.ts";
+import { PREVIEW_OVERLAY_ID } from "../../../ui/ui-constants.ts";
 import { mountPreviewRootMenu, type PreviewMenuHandle } from "./preview-menu.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import { type CameraControlBridge } from "./camera-controls.ts";
-import { type BoneSelectInfo, BoneMaps, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
+import { type BoneSelectInfo, type BoneMaps, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
 import type { TdKeyAction } from "../keymap.ts";
 import { rememberTrigger, returnFocus, trapFocusAcrossShadow } from "../../../utils/dom/focus-restore.ts";
 import { t } from "../../../core/i18n/t.ts";
@@ -301,7 +302,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   let body = _singletonBody;
   if (!overlay) {
     overlay = document.createElement("div");
-    overlay.id = "ysm-overlay-3d";
+    overlay.id = PREVIEW_OVERLAY_ID;
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:var(--z-fullscreen);background:#11111b;display:flex;flex-direction:column";
     // 无障碍：3D 全屏预览是模态体验——告诉屏幕阅读器这是对话框、独占焦点、名称用

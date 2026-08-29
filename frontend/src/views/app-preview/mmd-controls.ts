@@ -123,7 +123,9 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
       ? `动作库目录：${bridge.animDir}（暂无 VMD/VPD 文件，请将动作文件放入此目录）`
       : "当前模型无内置动作。请将 VMD/VPD 动作放入仓库的 CustomAnim 子目录。";
     const nodes: PreviewMenuNode[] = [
-      { id: "play-empty", kind: "field" as const, labelKey: "preview.playEmpty", fallback: hint, value: "" },
+      // [doc:adr-126-p5] play-empty 提示文本必须进 value（rmAppendField 渲染 value，不读
+      // fallback——9a65f796 review P2：此前塞 fallback 导致空态引导完全丢失）
+      { id: "play-empty", kind: "field" as const, labelKey: "preview.playEmpty", fallback: hint, value: hint },
     ];
     if (bridge.requestReload) {
       nodes.push({
@@ -173,7 +175,7 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
       id: "play-dir",
       kind: "field" as const,
       fallback: `动作库: ${bridge.animDir}`,
-      value: "",
+      value: `动作库: ${bridge.animDir}`, // [doc:adr-126-p5] rmAppendField 渲染 value 不读 fallback
     });
   }
   return nodes;

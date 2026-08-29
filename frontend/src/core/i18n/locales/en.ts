@@ -1170,6 +1170,8 @@ export const en: Record<string, string> = {
   "preview.ysmModel": "YSM Model",
   "preview.mmdSkin": "MMD Skin",
   "preview.mmdPlay": "Play",
+  "preview.playEmpty": "No Built-in Animations",
+  "preview.playReload": "Rescan",
   "preview.mmdPause": "Pause",
   "preview.mmdMorph": "Morph",
   "preview.mmdLoadModel": "Load Model",

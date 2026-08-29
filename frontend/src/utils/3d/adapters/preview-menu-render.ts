@@ -188,6 +188,16 @@ function rmAppendDynamicRow(container: HTMLElement, node: PreviewMenuNode, actio
   container.appendChild(row);
 }
 
+/** select 当前值解析：bind 模式取 snapshot[bind]（状态层路径），闭包模式取 get(undefined)——
+ *  9a65f796 review P12：嵌套三元改单层（bind 优先分支），行为等价 */
+function rmSelectCurrent(
+  spec: { bind?: string; get?: (v?: unknown) => unknown },
+  snapshot: Record<string, unknown>,
+): string {
+  if (spec.bind) return spec.get ? String(spec.get(snapshot[spec.bind])) : String(snapshot[spec.bind]);
+  return spec.get ? String(spec.get(undefined)) : "";
+}
+
 /** [子函数 5/6] select：下拉选择控件（bind 到 PreviewStatePath，走状态层读写）——
  *  [doc:adr-126-p5-c] 受控化：组件选择等交互控件不再手写 DOM 闭包，声明为节点 + control.bind */
 function rmAppendSelect(
@@ -211,9 +221,7 @@ function rmAppendSelect(
   sel.dataset.testid = "preview-" + node.id;
   // [doc:adr-126-p5-收尾] select 支持两种模式：bind（状态层路径，play/morph 之外用）或
   // 闭包 get/set（非状态层来源，如 MmdPlayBridge 动作 select）——与 toggle 分支同构。
-  const cur = spec.bind
-    ? spec.get ? spec.get(snapshot[spec.bind]) : snapshot[spec.bind]
-    : spec.get ? spec.get(undefined) : "";
+  const cur = rmSelectCurrent(spec, snapshot);
   for (const opt of spec.options) {
     const o = document.createElement("option");
     o.value = opt.value;

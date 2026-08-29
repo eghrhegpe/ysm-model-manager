@@ -52,12 +52,17 @@ export interface InputHandlers {
 // 键位 → 动作 判定（与 keymap.ts 同源：键位存 KeyboardEvent.code）
 // ---------------------------------------------------------------------------
 
-/** 方向键双轨映射：箭头 → 平移动作（与 WASD 并存，FPS 惯例） */
+/** 方向键双轨映射：箭头 + 小键盘 → 平移动作（与 WASD 并存，FPS 惯例；
+ *  Numpad 为键位体系切 code 后的向后兼容——704cd5b1 review P3） */
 const ARROW_TO_ACTION: Partial<Record<string, TdKeyAction>> = {
   ArrowUp: "forward",
   ArrowDown: "back",
   ArrowLeft: "left",
   ArrowRight: "right",
+  Numpad8: "forward",
+  Numpad2: "back",
+  Numpad4: "left",
+  Numpad6: "right",
 };
 
 /** 修饰键左右对称对（Shift/Ctrl/Alt）：自定义 down=ShiftLeft 时按右 Shift 也生效 */
@@ -132,6 +137,7 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
   // 每次绑定读取一次当前键位（localStorage 失效/缺失回退默认），会话期间默认不变；
   // 设置页改键位后重开 3D 即生效。
   const keymap = loadTdKeymap();
+  const heldCodes = new Set<string>(); // 当前按住的物理键（双轨键修复：一动作多键持有，松其一不误清）
   const onKeyDown = (e: KeyboardEvent): void => {
     if (isEditableTarget(e)) return;
     const code = e.code;
@@ -144,14 +150,17 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
     });
     // 命中动作才拦截默认行为；但不阻止修饰键本身（对齐原实现：Shift 只记录按键状态，
     // preventDefault 仅用于字符/方向/空格等，防止滚动与字符输入）
+    if (hit) heldCodes.add(code);
     if (hit && !isModifierCode(code)) e.preventDefault();
   };
   const onKeyUp = (e: KeyboardEvent): void => {
     const code = e.code;
+    heldCodes.delete(code);
     (Object.keys(keymap) as TdKeyAction[]).forEach((action) => {
-      if (codeActivatesAction(code, action, keymap)) {
-        opts.keys[action] = false;
-      }
+      if (!codeActivatesAction(code, action, keymap)) return;
+      // 双轨键修复（704cd5b1 review P2）：W+ArrowUp 同向 / ShiftLeft+ShiftRight 对称——
+      // 释放其中一键时，只要仍有其他物理键持有该动作就保持，否则清除
+      opts.keys[action] = [...heldCodes].some((c) => codeActivatesAction(c, action, keymap));
     });
   };
   document.addEventListener("keydown", onKeyDown);

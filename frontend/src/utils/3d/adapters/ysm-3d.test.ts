@@ -468,7 +468,6 @@ describe("ysmMenuItems 独立菜单表测试", () => {
         select: vi.fn(),
         animDir: null,
       },
-      fillPlayPanel: vi.fn(),
     };
     const items = ysmMenuItems(opts);
     expect(items.map((i) => i.id)).toContain("ysm-play");

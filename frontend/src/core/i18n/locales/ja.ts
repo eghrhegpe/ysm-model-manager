@@ -1171,6 +1171,8 @@ export const ja: Record<string, string> = {
   "preview.ysmModel": "YSMモデル",
   "preview.mmdSkin": "MMDスキン",
   "preview.mmdPlay": "再生",
+  "preview.playEmpty": "内蔵アニメーションなし",
+  "preview.playReload": "再スキャン",
   "preview.mmdPause": "一時停止",
   "preview.mmdMorph": "モーフ",
   "preview.mmdLoadModel": "モデル切替",

@@ -43,6 +43,7 @@ invariant_anchors:
 ## 与其他子系统关系
 
 - 被 `internal/app/app_install.go`（安装/全局安装/覆盖安装）与 `internal/app/resource_bindings.go`（资源类型推送）调用
+- **整合包卡片拖拽导入链路（2026-08-29）**：`internal/app/app_install_import.go` 的 `ImportFileAndPushToInstance` / `ImportFolderAndPushToInstance`（先入仓库再推送，测试 `app_install_pack_test.go`）经共享私有 helper `pushRepoPathToInstance` 调 `ysmsync.PushSingleResource` 落地——与 `PushSingleResourceToInstance` 同管线（`filesRootForSync` + `findInstanceDir` + linkMode），区别是实例目录只解析一次、rtype 由调用方自持（文件夹整组按组类型推送，不逐文件重判型防纹理错根）；根级 `.pmx/.pmd/ysm.json` 目录级安装入口前置拒绝（防 InstallDir(父目录)=仓库根整仓落地）
 - `internal/app/app_install_import.go:InstallModelTo`（右键「推送到整合包」入口）**已按 `DetectResourceType(src)` 路由 `GetRepoRoot(rtype)` 作为 `filesRoot`**（2026-08-23 修复：此前硬编码 `a.ysmRoot()`，导致非 YSM 单文件在 `installer.Install` 的 `IsInside` 守卫被拦、永远进不了硬链接分支）。YSM 走 `GetRepoRoot("ysm")` 与 `a.ysmRoot()` 结果一致，行为零回归；非 YSM（vrm/vmd/nbt/zip…）首次能过守卫进入链接分支。
 - 被 [go_sync](./go-sync.md) 的 `sync_push.go`（推送）与 `sync_relink.go`（重链接）调用——同步差异算出来后由本包执行落地
 - 依赖 [go_paths](./go-paths.md)（`ContainsMinecraftMarker` / `IsInside`）、[go_types](./go-types.md)（`AppError` / `IsSupportedExt` / `AllExts`）

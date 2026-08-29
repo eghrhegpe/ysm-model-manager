@@ -28,6 +28,7 @@ use_when:
 
 - 供 app 层实例检测/列表使用（`ListVersionInstances` 等 binding 的数据源之一）
 - `go/types` — `VersionInstance` 等结构
+- **前端消费入口（2026-08-29 搬家）**：`DetectLauncherInstances` binding 唯一消费者 = 实例页空态 `app-sidebar/launcher-detect.ts`（原 settings 页按钮已删）；实例页空态见知识卡 `app_sidebar`
 
 ## 不变量
 

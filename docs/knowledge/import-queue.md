@@ -8,11 +8,13 @@ source_files:
   - frontend/src/features/import-dnd.ts
   - frontend/src/features/dnd-shared.ts
   - frontend/src/features/dnd-collector.ts
+  - frontend/src/features/pack-dnd.ts
 tests:
   - frontend/src/features/import-executor.test.ts
   - frontend/src/features/import-dnd.test.ts
   - frontend/src/features/dnd-shared.test.ts
   - frontend/src/features/dnd-collector.test.ts
+  - frontend/src/features/pack-dnd.test.ts
 use_when:
   - 导入
   - 导入队列
@@ -58,7 +60,15 @@ invariant_anchors:
 - `isImportableFile(name)`：`.json` 仅放行 `ysm.json` 入口清单（包内 `main.json`/`*.animation.json`/`zh_cn.json` 等不得单独导入），与 `go/scanner/scanner.go:80-87` 白名单对齐
 - `shouldEnterForm(name)`：**仅 `ysm.json` 返回 true**（当前仅用于表单分流，整组导入不进表单）
 - `groupCollected(collected)`：按顶层目录分组，组内至少 1 个支持文件才整组导入，否则整组丢弃
+- `collectDropFiles(e)`（2026-08-29）：drop 事件收集口径单点——`dataTransfer.files` 优先（WebView2 可靠）+ `webkitGetAsEntry` 补充目录条目，按 `name:size:lastModified` 去重合并；`handleTreeDrop` / `handleInstanceDrop` 共用（原 import-dnd 内联块收敛）
+- `isEditableTarget(el)`：drop 目标是否可编辑元素（输入框内 drop 不触发导入），两 handler 共用
 - 类型：`CollectedEntry`、`FolderGroup`
+
+### pack-dnd.ts（整合包卡片拖拽导入，2026-08-29）
+
+- `handleInstanceDrop(e, instanceName, busy)`：拖文件到实例卡片 = **先入仓库再推送**（数据流与「下载→安装」同构，仓库是单一事实源，硬链接模式由此成立）——收集（`collectDropFiles`）→ oversize 过滤 → `groupCollected` 分组 → 文件夹组逐个 `ImportFolderAndPushToInstance(folderName, subpath, items, instanceName)`、散落单文件 `ImportFileAndPushToInstance(name, base64, instanceName)`（类型判定/仓库落点/实例推送全在 Go，前端不判型）；光杆 `ysm.json` 散文件拦截（与 `directImport` 同款提示，防推送侧整仓落地）；只要有 binding 调用即发 `stats:refresh` + `tree:reload`（导入可能已落仓库，防陈旧）；环形日志走 `AddOpLog("pack-drop", ...)`
+- `bindPackCardDnD(root, getInstances)`：document 层监听（WebView2 ShadowRoot drop 限制，与 `bindTreeDnD` 同款 `composedPath`/parentNode 跨界范式），`dragover` 命中卡片加 `.dnd-over` 高亮、drop 按 `data-idx` 解析实例名（`getInstances` 惰性读最新列表）；由 `<app-sidebar>` `connectedCallback` 调用（cleanup 存 `_packDndCleanup`）
+- Go 侧配套 binding 见 `internal/app/app_install_import.go`（`ImportFileAndPushToInstance` / `ImportFolderAndPushToInstance` / `pushRepoPathToInstance`），推送复用 `ysmsync.PushSingleResource` 管线（见知识卡 `go_installer` / `go_sync`）
 
 ### dnd-collector.ts（文件收集器）
 
@@ -69,12 +79,13 @@ invariant_anchors:
 
 ## 对外 API / 入口
 
-- import-executor 导出：`directImport`、`importFolder`、`executeCollected`、`importWebFilesWithToast`、`isImportableFile`
+- import-executor 导出：`directImport`、`importFolder`、`executeCollected`、`importWebFilesWithToast`、`isImportableFile`、`fileToBase64`（10s 超时 base64 读取，pack-dnd 复用）
 - import-dnd 导出：`handleTreeDrop`、`bindTreeDnD`
-- dnd-shared 导出：`isSupportedFile`、`isImportableFile`、`shouldEnterForm`、`getExt`、`groupCollected`、类型 `CollectedEntry`/`FolderGroup`
+- dnd-shared 导出：`isSupportedFile`、`isImportableFile`、`shouldEnterForm`、`getExt`、`groupCollected`、`collectDropFiles`、`isEditableTarget`、类型 `CollectedEntry`/`FolderGroup`
 - dnd-collector 导出：`collectFiles`、类型 `CollectedFile`
+- pack-dnd 导出：`handleInstanceDrop`、`bindPackCardDnD`、类型 `PackDndBusy`/`PackDndInstance`
 - 派发 bus：`toast:show`、`stats:refresh`、`tree:reload`
-- getApp() 调用：`ImportModelFile`、`ImportModelFolder`、`ImportModelFolderTo`、`AddOpLog`
+- getApp() 调用：`ImportModelFile`、`ImportModelFolder`、`ImportModelFolderTo`、`ImportFileAndPushToInstance`、`ImportFolderAndPushToInstance`、`AddOpLog`
 
 ## 关键机制
 
@@ -88,7 +99,7 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- 由 [app-tree](./app-tree.md) 调用 `bindTreeDnD` 注册仓库页拖拽
+- 由 [app-tree](./app-tree.md) 调用 `bindTreeDnD` 注册仓库页拖拽；由 [app-sidebar](./app-sidebar.md) 调用 `bindPackCardDnD` 注册整合包卡片拖拽
 - 与 [global-handlers](./global-handlers.md) 分工：全局 DnD 遮罩已删除（ADR-060 收敛至组件级），拖拽全部走 `app-tree` 容器绑定
 - 类型判定/归类归 Go（`resource_types.json` + `go/scanner`），前端只透传上下文类型
 - 单文件落盘见 [go_importer](./go-importer.md)，文件夹整组写入见 `go/fileops.WriteModelFolder`（[go_fileops](./go-fileops.md)）

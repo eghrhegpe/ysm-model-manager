@@ -47,7 +47,7 @@ invariant_anchors:
 - `Register` / `Get` — 导入策略注册表（`Handler` 接口：`Type() string`、`Import(srcPath, dstDir) string`，返回空串即成功）
 - `NewSimpleCopy` — 单文件/目录复制策略（`SimpleCopyImporter`）
 - `NewDirectoryCopy` — 以文件夹为单位的复制策略（`DirectoryCopyImporter`：EntityPlayer 等目录型类型）
-- `ImportFromBase64(fileName, base64Data, ImportOptions{SkipCheck, Overwrite}, rootFn, logger)` — base64 导入核心
+- `ImportFromBase64(fileName, base64Data, ImportOptions{SkipCheck, Overwrite}, rootFn, logger) (destPath, rtype string, err error)` — base64 导入核心（**2026-08-29 返回值扩展**：回传落盘绝对路径与判定类型，「先入仓库再推送」组合链路依赖两者定位产物，类型判定单一事实源仍在本函数）
 - `DetectZipType(data []byte) string` — ZIP 内容类型检测
 - `init()` 注册：resourcepack / shaderpack / blueprint / EntityPlayer / SceneModel / CustomAnim / CustomMorph / StageAnim / mmd-shader / DefaultAnim / DefaultMorph / maid-model / ysm / litematic
 

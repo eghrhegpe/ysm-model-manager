@@ -3,11 +3,18 @@
 // 在 ctx 构造后被修改时，switchToSession 能读到最新值——
 // 而非构造时快照的旧值（修复前的 bug）。
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import type { PreviewBuildCtx, PreviewScene, PreviewHandle } from "./mount-preview-core.ts";
+import { collectSceneStats } from "../scene-stats.ts";
+import { mergeStatsMenuItems } from "./preview-menu/stats.ts";
+import { sceneRegistry } from "./scene-registry.ts";
+
+beforeEach(() => {
+  sceneRegistry.reset();
+});
 
 /** 构造最小可用的 mock 测试上下文 */
 function makeMockCtx(): {
@@ -198,5 +205,68 @@ describe("syncLightTargetFromContent 陈旧字段修复", () => {
     syncLightTargetFromContent(scene, baseline, mockLightCap);
     expect(setTargetSpy).toHaveBeenCalledTimes(1);
     expect(setTargetHeightSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
+  it("切换后 dock 菜单按新模型 menuItems 刷新（含统计面板，不再残留首模型菜单）", async () => {
+    const { ctx, state, mockScene, mockAdapter } = makeMockCtx();
+    // 首模型已由 mount3D 注册进注册表（含统计面板）——模拟 dock 停在首模型菜单
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    state.sceneBaseline = new Set([mesh]);
+    mockScene.add(mesh);
+    const firstMenuItems = [{ id: "model-a", kind: "panel" as const, icon: "x", labelKey: "", fallback: "A" }];
+    sceneRegistry.reset();
+    sceneRegistry.register({
+      path: "initial.glb",
+      rtype: "vrm",
+      roots: [mesh],
+      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      menuItems: mergeStatsMenuItems(firstMenuItems, collectSceneStats(mesh)),
+    });
+
+    // 新模型 build：往 scene 挂新 mesh + 返回自己的 menuItems（无统计面板）
+    const newMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    mockAdapter.build.mockImplementation(async (_ctx: PreviewBuildCtx) => {
+      mockScene.add(newMesh);
+      return {
+        dispose: vi.fn(),
+        menuItems: [{ id: "model-b", kind: "panel", icon: "y", labelKey: "", fallback: "B" }],
+      } as unknown as PreviewScene;
+    });
+
+    await switchToSession(ctx, "new.glb");
+
+    // dock 被按新模型菜单刷新：适配器项 B + 新模型统计面板（不再残留 A）
+    const setAdapterItemsMock = (ctx.menuHandle as unknown as { setAdapterItems: ReturnType<typeof vi.fn> }).setAdapterItems;
+    expect(setAdapterItemsMock).toHaveBeenCalled();
+    const lastCall = setAdapterItemsMock.mock.calls.at(-1)![0] as Array<{ id: string }>;
+    const ids = lastCall.map((n) => n.id);
+    expect(ids).toContain("model-b");
+    expect(ids).toContain("stats-panel");
+    expect(ids).not.toContain("model-a");
+  });
+
+  it("新模型无 menuItems 且无统计 → dock 清空适配器项（不残留旧菜单）", async () => {
+    const { ctx, state, mockScene, mockAdapter } = makeMockCtx();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    state.sceneBaseline = new Set([mesh]);
+    mockScene.add(mesh);
+    sceneRegistry.reset();
+    sceneRegistry.register({
+      path: "initial.glb",
+      rtype: "vrm",
+      roots: [mesh],
+      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      menuItems: [{ id: "model-a", kind: "panel", icon: "x", labelKey: "", fallback: "A" }],
+    });
+
+    // 新模型 build 返回空 menuItems、不挂 mesh（无统计）
+    mockAdapter.build.mockResolvedValue({ dispose: vi.fn() } as unknown as PreviewScene);
+
+    await switchToSession(ctx, "empty.glb");
+
+    const setAdapterItemsMock = (ctx.menuHandle as unknown as { setAdapterItems: ReturnType<typeof vi.fn> }).setAdapterItems;
+    expect(setAdapterItemsMock).toHaveBeenCalledWith([]);
   });
 });

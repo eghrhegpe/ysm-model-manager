@@ -18,6 +18,7 @@ import { safeDispose } from "../safe-dispose.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { collectSceneStats } from "../scene-stats.ts";
 import { mergeStatsMenuItems } from "./preview-menu/stats.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import type { PreviewMenuHandle } from "./preview-menu/core.ts";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
@@ -111,7 +112,13 @@ export async function switchToSession(
   ctx.setBuilt(next);
   pushSwitchHistory(ctx, keep, next);
   unregisterSwitchPrevious(ctx, keep);
-  registerSwitchScene(ctx, newPath, next, beforeBuild);
+  // ADR-131 C1 修复：注册后立刻按新模型 menuItems 刷新 dock 菜单——switch 路径的
+  // 适配器 build 不调 setAdapterItems（grep 实证），此前 dock 残留首次 mount 的菜单
+  // （旧模型统计面板数值不匹配）；非空合并 menuItems 一次注入，空则清空适配器项
+  // （对齐 mount3D 注册后注入 + mpUnloadRole 的两分支模式）。
+  const switchMenuItems = registerSwitchScene(ctx, newPath, next, beforeBuild);
+  if (switchMenuItems.length > 0) ctx.menuHandle.setAdapterItems(switchMenuItems);
+  else ctx.menuHandle.setAdapterItems([]);
   ctx.setCurrentPath(newPath);
   syncSwitchView(ctx, next, beforeBuild, keep);
   updateSwitchBaseline(ctx, beforeBuild);
@@ -275,17 +282,17 @@ function unregisterSwitchPrevious(ctx: SwitchContext, keep: boolean): void {
 /**
  * 注册进场景注册表（ADR-093 T2；keep 追加 / 普通切换均登记，单一事实来源）。
  * 有无 beforeBuild 快照决定是否携带 roots/boneMaps 等增量元数据。
+ * 返回新注册 entry 的 merged menuItems（含统计面板；可能为空数组——调用方据此刷新 dock）。
  */
 function registerSwitchScene(
   ctx: SwitchContext,
   newPath: string,
   next: PreviewScene,
   beforeBuild: Set<THREE.Object3D> | null,
-): void {
+): PreviewMenuNode[] {
   if (beforeBuild) {
     const added = ctx.scene ? ctx.scene.children.filter((c) => !beforeBuild.has(c)) : [];
     // ADR-131 P1：切换模型后重新采集统计，合并统计面板进注册表 menuItems
-    // （统计面板经 roles 详情 / setActive 换菜单消费，见 scene-registry）
     const stats = collectSceneStats(added);
     const menuItems = mergeStatsMenuItems(next.menuItems, stats);
     sceneRegistry.register({
@@ -297,12 +304,10 @@ function registerSwitchScene(
       menuItems,
       onBonePick: next.onBonePick ?? null,
     });
-    // 注意：不在核心层再调 setAdapterItems——switch 路径菜单注入由适配器
-    // build 内完成（ADR-076 v2 Phase 3 收编），核心层一次注入只发生在 mount3D
-    // （ADR-131 §2.3：统计面板与 built.menuItems 合并后一次注入，不重复调用）
-  } else {
-    sceneRegistry.register({ path: newPath, rtype: "", roots: [], built: next });
+    return menuItems;
   }
+  sceneRegistry.register({ path: newPath, rtype: "", roots: [], built: next });
+  return [];
 }
 
 /**

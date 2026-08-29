@@ -1506,9 +1506,9 @@
 | `hasSchema()` | `frontend/src/utils/3d/adapters/schema-registry:57` | 是否已注册 |
 | `listSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:62` | 全部已注册 id（供契约测试枚举 / 审计「谁在绕道 renderCustom」） |
 | `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:67` | 测试用：清空注册表（用例间隔离） |
-| `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:31` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
-| `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:94` | 会话内切换模型（复用外壳重建内容层）。 |
-| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:409` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
+| `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:32` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
+| `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:95` | 会话内切换模型（复用外壳重建内容层）。 |
+| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:414` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
 | `Endianness()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
 | `ConsoleLogger()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
 | `MmdDataDeserializer()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |

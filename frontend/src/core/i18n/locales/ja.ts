@@ -1259,7 +1259,7 @@ export const ja: Record<string, string> = {
   "tree.more": "⋮ その他 ▾",
   "tree.moreImportFile": "ファイルをインポート",
   "tree.moreImportDir": "📁 フォルダをインポート",
-  "tree.moreSelectAll": "☑️ すべて選択",
+  "tree.selectAll": "☑️ すべて選択",
   "tree.moreOpenFolder": "📂 フォルダを開く",
   "tree.moreRefresh": "🔄 更新",
   "tree.moreGenIndex": "📇 インデックス生成",

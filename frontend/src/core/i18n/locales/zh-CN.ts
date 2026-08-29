@@ -1262,7 +1262,7 @@ export const zhCN: Record<string, string> = {
   "tree.more": "⋮ 更多 ▾",
   "tree.moreImportFile": "导入文件",
   "tree.moreImportDir": "📁 导入文件夹",
-  "tree.moreSelectAll": "☑️ 全选",
+  "tree.selectAll": "☑️ 全选",
   "tree.moreOpenFolder": "📂 打开文件夹",
   "tree.moreRefresh": "🔄 刷新",
   "tree.moreGenIndex": "📇 生成索引",

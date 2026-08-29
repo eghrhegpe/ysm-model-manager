@@ -1258,7 +1258,7 @@ export const en: Record<string, string> = {
   "tree.more": "⋮ More ▾",
   "tree.moreImportFile": "Import file",
   "tree.moreImportDir": "📁 Import folder",
-  "tree.moreSelectAll": "☑️ Select all",
+  "tree.selectAll": "☑️ Select all",
   "tree.moreOpenFolder": "📂 Open folder",
   "tree.moreRefresh": "🔄 Refresh",
   "tree.moreGenIndex": "📇 Generate index",

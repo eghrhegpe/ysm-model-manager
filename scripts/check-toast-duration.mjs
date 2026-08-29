@@ -12,12 +12,12 @@
  *      `process.exit(violations.length ? 1 : 0)` 升级为硬闸，与 check-boolean-naming 等对齐。
  *      升级触发条件（R15 P3 #1 时间锚点）：① 观察期 ≥30 天无回归（2026-08-29 起）；
  *      ② 或 `docs/.doc-next-steps.md` 已标记为 debt；③ 或 check-boolean-naming 等同类闸门先升级。
- * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.mjs（零外部依赖）
+ * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.mjs / scripts/_lib/proc.mjs（零外部依赖）
  */
-import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { getRoot } from "./_lib/scan-files.mjs";
+import { run } from "./_lib/proc.mjs";
 
 const ROOT = getRoot();
 const SRC = path.join(ROOT, "frontend/src");
@@ -31,15 +31,14 @@ const reEmit = /bus\.emit\(\s*"toast:show"[\s\S]{0,1200}?duration:\s*(\d+)/g;
 const reHelper = /(?<![\w.$])toast\(\s*([\s\S]+?)\s*,\s*(\d+)(?:\s*,\s*((?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|`(?:\\.|[^`])*`|[\w.$]+)))?\)/g;
 
 let files;
-try {
-  files = execSync(`git -C "${ROOT}" ls-files frontend/src`, { encoding: "utf8" })
-    .split("\n").filter(Boolean)
-    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
-    .map((f) => path.join(ROOT, f));
-} catch {
+const r = run('git', ['-C', ROOT, 'ls-files', 'frontend/src'], {});
+if (!r.ok) {
   console.log("[WARN] check-toast-duration: 无法列举 frontend/src，跳过");
   process.exit(0);
 }
+files = r.out.split("\n").filter(Boolean)
+  .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+  .map((f) => path.join(ROOT, f));
 
 const violations = [];
 for (const file of files) {

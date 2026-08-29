@@ -4,16 +4,16 @@
  * 由 scripts/release-notes-gen.py 迁移（2026-08-03），逻辑逐点保真。
  * release-notes-gen.mjs — 发布说明生成器
  * 设计意图：发布说明生成器
- * 依赖：node:child_process / node:path / node:url
+ * 依赖：node:path / node:url / scripts/_lib/{scan-files,proc}.mjs
  * 用法：
  *   node scripts/release-notes-gen.mjs                 # 默认行为（输出 JSON 数据）
  *   node scripts/release-notes-gen.mjs --check         # 漂移校验：git tag 必须有对应发版说明 md
  * 退出码：--check 发现缺失 → 1；git 查询失败（fail-closed）→ 1；否则 0。
  */
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { run as runProc } from './_lib/proc.mjs';
 
 const argv = process.argv.slice(2);
 // 未知 flag 白名单拦截（批次4 P2）：`--chck` 拼错会被 includes 静默忽略 → 走进 collect 而非
@@ -31,10 +31,8 @@ const EXEMPT_TAGS = new Set(['v1.7.0-open-source-prep.20260617']);
 
 
 function run(cmd) {
-  try {
-    const stdout = execFileSync(cmd[0], cmd.slice(1), { encoding: 'utf-8', timeout: 30000, cwd: ROOT });
-    return stdout.trim();
-  } catch { return ''; }
+  const r = runProc(cmd[0], cmd.slice(1), { timeout: 30000, cwd: ROOT });
+  return r.ok ? r.out.trim() : '';
 }
 
 function collect() {
@@ -131,15 +129,14 @@ function collect() {
  * 每个 `vX.Y.Z` tag 必须有对应 `docs/releases/vX.Y.Z.md`（新版本只产出单一 md）。 */
 function checkReleaseNotes() {
   let tags;
-  try {
-    // --sort=version:refname：版本序（v1.10.0 正确排在 v1.9.3 之后），前驱计算依赖此序
-    const stdout = execFileSync('git', ['tag', '--list', 'v*', '--sort=version:refname'], { encoding: 'utf-8', timeout: 30000, cwd: ROOT });
-    tags = stdout.split('\n').map((t) => t.trim()).filter(Boolean);
-  } catch (e) {
+  // --sort=version:refname：版本序（v1.10.0 正确排在 v1.9.3 之后），前驱计算依赖此序
+  const r = runProc('git', ['tag', '--list', 'v*', '--sort=version:refname'], { timeout: 30000, cwd: ROOT });
+  if (!r.ok) {
     // ADR-043 fail-closed：git 不可用 = 扫描不完整，拒绝放行（不把空 tag 清单当「无漂移」）
-    console.error(`❌ git tag 查询失败（扫描不完整，拒绝放行）: ${e.message}`);
+    console.error(`❌ git tag 查询失败（扫描不完整，拒绝放行）: ${r.err || `rc=${r.rc}`}`);
     process.exit(1);
   }
+  tags = r.out.split('\n').map((t) => t.trim()).filter(Boolean);
 
   const missing = tags.filter((t) => {
     if (EXEMPT_TAGS.has(t)) return false; // 预发布/临时 tag 豁免（非正式发版）

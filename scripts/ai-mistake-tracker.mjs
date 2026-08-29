@@ -12,8 +12,8 @@
  *
  * 退出码：0（无 process.exit 调用）
  */
-import { execFileSync } from "node:child_process";
 import { ROOT } from './_lib/scan-files.mjs';
+import { run } from './_lib/proc.mjs';
 
 
 
@@ -53,17 +53,12 @@ const HOTSPOT_PREFIXES = ["frontend/src/", "internal/", "go/", "scripts/"];
 
 
 function _run(cmd) {
-  try {
-    const out = execFileSync("git", cmd, {
-      cwd: ROOT,
-      encoding: "utf-8",
-      timeout: 30000,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "en_US.UTF-8" },
-    });
-    return out.trim();
-  } catch {
-    return "";
-  }
+  const r = run("git", cmd, {
+    cwd: ROOT,
+    timeout: 30000,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "en_US.UTF-8" },
+  });
+  return r.ok ? r.out.trim() : "";
 }
 
 function gitLog(limit = 200) {

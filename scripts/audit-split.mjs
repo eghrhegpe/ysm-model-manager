@@ -17,20 +17,22 @@
  * 退出码：0 审计成功；--redline 且存在 >400 行文件 → 1；缺参/commit 无效 → 2（其余 0）。
  */
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
 import { getRoot } from './_lib/scan-files.mjs';
+import { run } from './_lib/proc.mjs';
 
 const ROOT = getRoot();
 const REDLINE = 400; // ADR-040：拆分后每文件 ≤400 行
 
-// ── git 封装（Windows 安全：execFileSync 无 shell 展开）──
+// ── git 封装（Windows 安全：run 数组参数无 shell 展开）──
 
 function git(args) {
-  return execFileSync('git', ['-c', 'core.quotepath=false', ...args], {
-    cwd: ROOT, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024,
-    stdio: ['ignore', 'pipe', 'ignore'], // 探测型调用成败均不向终端撒 stderr
+  const r = run('git', ['-c', 'core.quotepath=false', ...args], {
+    cwd: ROOT,
+    maxBuffer: 128 * 1024 * 1024,
   });
+  if (!r.ok) throw new Error(r.err || `git ${args[0]} 失败（rc=${r.rc}）`);
+  return r.out;
 }
 
 /** git 命令，失败返回 null（如路径不存在/二进制）。 */

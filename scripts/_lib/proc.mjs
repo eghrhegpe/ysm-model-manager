@@ -38,16 +38,19 @@ export const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
  * @returns {{ ok: boolean, rc: number, out: string, err?: string }}
  *   ok=true  rc=0（或 allowExit1 且 rc=1）；ok=false 且 rc=-1 表示未执行成功（ENOENT/超时/异常）
  */
-export function run(bin, args, { cwd = process.cwd(), timeout = DEFAULT_TIMEOUT, shell = false, allowExit1 = false, maxBuffer = DEFAULT_MAX_BUFFER, env } = {}) {
+export function run(bin, args, { cwd = process.cwd(), timeout = DEFAULT_TIMEOUT, shell = false, allowExit1 = false, maxBuffer = DEFAULT_MAX_BUFFER, env, stdio } = {}) {
   const o = { cwd, encoding: 'utf-8', timeout, maxBuffer };
   // 显式 shell:true 时按平台选 shell（win32 自动 cmd.exe / POSIX 自动 /bin/sh），
   // 承载管道/重定向命令（pre-push-gate sh()）；默认无 shell，避免 cmd.exe 找不到
   // Git Bash 工具（doctor run() 实证）与 `2>/dev/null` 类 POSIX 重定向被 cmd.exe 误解析
   if (shell) o.shell = true;
   if (env) o.env = { ...process.env, ...env };
+  // stdio 透传（'inherit'/'ignore'/'pipe' 等）：默认缺省 = pipe 捕获 out；
+  // commit-with-check 委托 pre-push-gate 需 inherit 实时透传门禁输出（子代理锐评）。
+  if (stdio) o.stdio = stdio;
   try {
     const stdout = execFileSync(bin, args, o);
-    return { ok: true, rc: 0, out: String(stdout) };
+    return { ok: true, rc: 0, out: stdio && stdio !== 'pipe' ? '' : String(stdout) };
   } catch (e) {
     if (e.code === 'ENOENT') {
       return { ok: false, rc: -1, out: '', err: `command not found: ${bin}` };

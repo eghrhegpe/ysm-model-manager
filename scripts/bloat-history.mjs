@@ -21,13 +21,13 @@
  *
  * 退出码：0（无论有无跳点）。情报型工具，不阻断任何流程。
  */
-import { execFileSync } from 'node:child_process';
 import {
   logPathDetail,
   showAt,
 } from './_lib/git-ref.mjs';
 import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
 import { ROOT } from './_lib/scan-files.mjs';
+import { run } from './_lib/proc.mjs';
 
 // ── 顶层声明提取（与 audit-split 同源，供"导出 vs 非导出"区分）──
 function goTopFuncs(text) {
@@ -87,8 +87,8 @@ function collect(path, limit) {
   for (const c of commits) {
     const thisText = showAt(c.hash, path);
     const prevRef = c.hash + '^';
-    let prevExists = false;
-    try { execFileSync('git', ['rev-parse', '--verify', prevRef + '^{commit}'], { cwd: ROOT, stdio: 'ignore' }); prevExists = true; } catch { /* root commit */ }
+    const r = run('git', ['rev-parse', '--verify', prevRef + '^{commit}'], { cwd: ROOT });
+    const prevExists = r.ok;
     const prevText = prevExists ? showAt(prevRef, path) : null;
     // --follow 下 rename 前的 commit 用当前路径读不到快照（showAt 返回 null），
     // 该段曲线会显示 `-`；统计缺失量供输出提示，避免静默吞掉（code_review P3）

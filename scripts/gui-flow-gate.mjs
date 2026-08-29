@@ -24,10 +24,10 @@
  *           （配置→扫描→分析→缓存→数据→渲染预估）。与 tests/test_cli_gui_flow_contract.mjs
  *           的静态契约互补：静态层进每次 push 门禁，本门禁做真跑集成验证，CI/手动可选触发。
  */
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { getRoot } from './_lib/scan-files.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
+import { run } from './_lib/proc.mjs';
 
 const ROOT = getRoot();
 
@@ -58,15 +58,12 @@ const opts = {
 const FILES_ROOT = path.resolve(ROOT, opts.filesRoot);
 
 let raw = '';
-try {
-  const args = ['run', '.', '--cli', '--files-root', FILES_ROOT, 'gui-flow', '--json'];
-  if (opts.model) args.push('--model', opts.model);
-  raw = execFileSync('go', args, { cwd: ROOT, encoding: 'utf8', timeout: 120000 }).trim();
-} catch (e) {
-  // 退出码非 0：程序自身 JSON 响应在 e.stdout（stdout 被捕获而非丢失），stderr 多为 watcher/编译噪音
-  // 不能直接失败——gui-flow 有阶段失败时 Go 返回 status:error + exit 1，JSON 仍可解析定位失败阶段
-  raw = (e.stdout || '').trim();
-}
+const args = ['run', '.', '--cli', '--files-root', FILES_ROOT, 'gui-flow', '--json'];
+if (opts.model) args.push('--model', opts.model);
+const gr = run('go', args, { cwd: ROOT, timeout: 120000 });
+// 退出码非 0：程序自身 JSON 响应在 out（stdout 被捕获而非丢失），stderr 多为 watcher/编译噪音
+// 不能直接失败——gui-flow 有阶段失败时 Go 返回 status:error + exit 1，JSON 仍可解析定位失败阶段
+raw = gr.out.trim();
 
 if (!raw) {
   console.error('[FAIL] gui-flow 无 stdout 输出（go run 编译/运行失败），请查看上方 go 的错误输出');

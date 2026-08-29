@@ -16,12 +16,12 @@
  * 不依赖任何外部 fixture（wine_fox 等），纯合成 corpus → 无幽灵路径、可移植。
  */
 
-import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
+import { run } from './_lib/proc.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,17 +43,16 @@ async function loadTsPort() {
   const tmp = mkdtempSync(join(tmpdir(), 'port-align-'));
   const outfile = join(tmp, 'cube-mesh.bundle.mjs');
   try {
-    try {
-      execFileSync(process.execPath, [
-        ESBUILD_BIN,
-        CUBE_MESH_TS,
-        '--bundle',
-        '--format=esm',
-        '--platform=node',
-        `--outfile=${outfile}`,
-      ], { stdio: 'pipe' });
-    } catch (e) {
-      console.error('[port-align] esbuild 打包 TS 端口失败：', e.stderr?.toString() || e.message);
+    const r = run(process.execPath, [
+      ESBUILD_BIN,
+      CUBE_MESH_TS,
+      '--bundle',
+      '--format=esm',
+      '--platform=node',
+      `--outfile=${outfile}`,
+    ], {});
+    if (!r.ok) {
+      console.error('[port-align] esbuild 打包 TS 端口失败：', r.err || `rc=${r.rc}`);
       rmSync(tmp, { recursive: true, force: true });
       process.exit(2);
     }

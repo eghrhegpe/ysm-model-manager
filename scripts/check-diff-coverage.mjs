@@ -21,22 +21,19 @@
  *   rename 中新增的真实逻辑仍受覆盖约束。
  * 依赖：node:child_process / node:fs / node:path / node:url / 本地模块
  */
-import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './_lib/scan-files.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
+import { run } from './_lib/proc.mjs';
 
 const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
 
 function git(args) {
-  try {
-    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
-  } catch {
-    return null; // 失败返回 null（区别于“成功但无输出”的 ''）：调用方 fail-closed，拒绝空跑放行
-  }
+  const r = run('git', args, { cwd: ROOT });
+  return r.ok ? r.out.trim() : null; // 失败返回 null（区别于“成功但无输出”的 ''）：调用方 fail-closed，拒绝空跑放行
 }
 
 /** 取本次改动的非测试源码文件（repo-root 相对路径）。 */

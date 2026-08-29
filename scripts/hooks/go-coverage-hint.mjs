@@ -14,14 +14,14 @@
  *   - 只终端(stderr)输出，不写 commit body（与前端 coverage 提示同口径）。
  *   - 逃生阀：YSM_SKIP_GO_COVERAGE_HINT=1 git commit
  *
- * 依赖：node:child_process / node:path / node:os / node:url / 本地模块 getRoot
+ * 依赖：node:path / node:os / node:url / 本地模块 getRoot / _lib/proc.mjs
  */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
+import { run } from '../_lib/proc.mjs';
 
 /** 低于该百分比的函数进入提醒（与仓库"拆函数 ≤ 80 行"的量产纪律对齐的覆盖阈值）。 */
 export const GO_FUNC_COVERAGE_THRESHOLD = 80;
@@ -35,18 +35,16 @@ const GO_TEST_TIMEOUT_MS = 20000;
  * @returns {string[]} 相对路径列表；git 失败返回 []。
  */
 export function getChangedGoFiles(root) {
-  try {
-    const out = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
-      cwd: root, encoding: 'utf8',
-    }).trim();
-    if (!out) return [];
-    return out.split('\n')
-      .filter((l) => l.endsWith('.go'))
-      .filter((l) => !l.endsWith('_test.go')) // 只盯源码，不盯测试自身
-      .filter((l) => l !== 'go-cover'); // 排除仓库根的覆盖产物
-  } catch {
-    return [];
-  }
+  const r = run('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
+    cwd: root,
+  });
+  if (!r.ok) return [];
+  const out = r.out.trim();
+  if (!out) return [];
+  return out.split('\n')
+    .filter((l) => l.endsWith('.go'))
+    .filter((l) => !l.endsWith('_test.go')) // 只盯源码，不盯测试自身
+    .filter((l) => l !== 'go-cover'); // 排除仓库根的覆盖产物
 }
 
 /**
@@ -72,22 +70,18 @@ export function packagePatternFor(file) {
  * @returns {Map<string, number>}
  */
 export function coverFuncsForPackage(root, pattern, tmp) {
-  try {
-    execFileSync('go', ['test', '-coverprofile=' + tmp, pattern, '-count=1'], {
-      cwd: root, encoding: 'utf8', stdio: 'ignore',
-      timeout: GO_TEST_TIMEOUT_MS,
-    });
-  } catch {
+  const r1 = run('go', ['test', '-coverprofile=' + tmp, pattern, '-count=1'], {
+    cwd: root,
+    timeout: GO_TEST_TIMEOUT_MS,
+  });
+  if (!r1.ok) {
     return new Map(); // 编译失败/测试失败/超时 → 无数据（非阻断）
   }
-  try {
-    const out = execFileSync('go', ['tool', 'cover', '-func=' + tmp], {
-      cwd: root, encoding: 'utf8',
-    });
-    return parseCoverFuncs(out);
-  } catch {
-    return new Map();
-  }
+  const r2 = run('go', ['tool', 'cover', '-func=' + tmp], {
+    cwd: root,
+  });
+  if (!r2.ok) return new Map();
+  return parseCoverFuncs(r2.out);
 }
 
 /** 解析 `go tool cover -func` 文本 → Map<"相对路径:函数名", 百分比>。导出供单测。 */
@@ -158,16 +152,13 @@ export function collectLowCoverage(root, changedFiles, threshold = GO_FUNC_COVER
 
 /** 调 check-go-diff-coverage --suggest --staged，取本次暂存 Go 变更行覆盖率建议的函数数（非阻断）。 */
 function getDiffCoverageFuncCount(ROOT) {
-  try {
-    const out = execFileSync(
-      process.execPath,
-      [path.join(ROOT, 'scripts', 'check-go-diff-coverage.mjs'), '--suggest', '--staged', '--threshold', String(GO_FUNC_COVERAGE_THRESHOLD)],
-      { encoding: 'utf8' },
-    );
-    return (out.split('\n').filter((l) => l.startsWith('- `')).length);
-  } catch {
-    return 0;
-  }
+  const r = run(
+    process.execPath,
+    [path.join(ROOT, 'scripts', 'check-go-diff-coverage.mjs'), '--suggest', '--staged', '--threshold', String(GO_FUNC_COVERAGE_THRESHOLD)],
+    { cwd: ROOT },
+  );
+  if (!r.ok) return 0;
+  return (r.out.split('\n').filter((l) => l.startsWith('- `')).length);
 }
 
 function main() {

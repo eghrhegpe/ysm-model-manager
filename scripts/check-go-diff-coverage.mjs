@@ -32,20 +32,17 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './_lib/scan-files.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
+import { run } from './_lib/proc.mjs';
 
 const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
 
 function git(args) {
-  try {
-    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
-  } catch {
-    return null;
-  }
+  const r = run('git', args, { cwd: ROOT });
+  return r.ok ? r.out.trim() : null;
 }
 
 /** 本次改动的非测试 Go 源码文件（repo-root 相对路径）。 */
@@ -162,11 +159,10 @@ export function packagePatternFor(file) {
 
 /** 跑 `go test -coverprofile` 解析出的文件→语句块映射。 */
 export function runCoverProfile(packagePattern, tmp) {
-  try {
-    execFileSync('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
-      cwd: ROOT, encoding: 'utf8', stdio: 'ignore', timeout: 30000,
-    });
-  } catch {
+  const r1 = run('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
+    cwd: ROOT, stdio: 'ignore', timeout: 30000,
+  });
+  if (!r1.ok) {
     return null; // 编译失败/测试失败 → 该包无数据
   }
   try {
@@ -186,16 +182,13 @@ export function runCoverProfile(packagePattern, tmp) {
  * 失败返回 null（保守：不豁免，沿用旧 0% 行为）。
  */
 export function goListGoFiles(packagePattern) {
-  try {
-    const out = execFileSync('go', ['list', '-f', '{{.GoFiles}}', packagePattern], {
-      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 30000,
-    });
-    const names = new Set();
-    for (const m of out.matchAll(/([^\/\s]+\.go)/g)) names.add(m[1]);
-    return names;
-  } catch {
-    return null;
-  }
+  const r = run('go', ['list', '-f', '{{.GoFiles}}', packagePattern], {
+    cwd: ROOT, timeout: 30000,
+  });
+  if (!r.ok) return null;
+  const names = new Set();
+  for (const m of r.out.matchAll(/([^\/\s]+\.go)/g)) names.add(m[1]);
+  return names;
 }
 
 /** 解析 Go coverprofile 文本 → Map<repoRootRelPath, Array<{sl,el,n,count}>>。导出供单测。 */
@@ -280,8 +273,8 @@ function main() {
   const json = Boolean(args.json);
   const suggest = Boolean(args.suggest);
   const hostGOOS = (() => {
-    try { return execFileSync('go', ['env', 'GOOS'], { cwd: ROOT, encoding: 'utf8' }).trim(); }
-    catch { return os.platform(); }
+    const r = run('go', ['env', 'GOOS'], { cwd: ROOT });
+    return r.ok ? r.out.trim() : os.platform();
   })();
 
   if (!Number.isFinite(threshold)) {

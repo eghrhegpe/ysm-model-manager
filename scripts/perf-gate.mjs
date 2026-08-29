@@ -23,11 +23,11 @@
  * 设计意图：把「性能退回」从"靠感觉/靠记忆"升级为"可对比的量化门禁"。baseline 纳入
  *           git 作为性能锚点，预-push 可调用；git 层面的漂移由人工 review baseline 变更把关。
  */
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot } from './_lib/scan-files.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
+import { run } from './_lib/proc.mjs';
 
 const ROOT = getRoot();
 const BASELINE_FILE = path.join(ROOT, 'scripts', 'baseline', 'perf-baseline.json');
@@ -79,15 +79,12 @@ if (!fs.existsSync(MODEL)) {
 
 // ── 真跑 single-bench --json ─────────────────────────────────
 let raw = '';
-try {
-  raw = execFileSync(
-    'go',
-    ['run', '.', '--cli', '--files-root', FILES_ROOT, 'single-bench', '--model', MODEL, '--iterations', String(opts.iterations), '--json'],
-    { cwd: ROOT, encoding: 'utf8', timeout: 120000 },
-  ).trim();
-} catch (e) {
-  raw = (e.stdout || '').trim(); // single-bench 失败也可能有 JSON 响应
-}
+const bench = run(
+  'go',
+  ['run', '.', '--cli', '--files-root', FILES_ROOT, 'single-bench', '--model', MODEL, '--iterations', String(opts.iterations), '--json'],
+  { cwd: ROOT, timeout: 120000 },
+);
+raw = bench.out.trim(); // single-bench 失败也可能有 JSON 响应（run 合并 stdout+stderr）
 if (!raw) {
   console.error('[FAIL] single-bench 无 stdout 输出（go run 编译/运行失败）');
   process.exit(1);

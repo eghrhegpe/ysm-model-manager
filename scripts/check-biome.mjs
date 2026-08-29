@@ -28,10 +28,10 @@
  *   node scripts/check-biome.mjs --write    # 自动修复变更文件（pre-commit 用）
  *   node scripts/check-biome.mjs --json     # 门禁注入（输出 _summary JSON）
  */
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot } from './_lib/scan-files.mjs';
+import { run } from './_lib/proc.mjs';
 
 const ROOT = getRoot();
 const isWin = process.platform === 'win32';
@@ -57,23 +57,16 @@ const jsonMode = args.includes('--json');
 const cmd = writeMode ? ['check', '--write', '--changed'] : ['check', '--changed'];
 
 /** 跑 biome，捕获退出码与合并输出（biome 诊断 stdout/stderr 分布不固定）
- * 必须用 shell:true——Windows 上 .cmd 脚本（biome.cmd）无法被 execFileSync 直接 spawn
- * （EINVAL），需经 cmd.exe 运行；POSIX 上 shell:true 同样安全。 */
+ * 必须用 shell:true——Windows 上 .cmd 脚本（biome.cmd）无法被直接 spawn
+ * （EINVAL），需经 cmd.exe 运行（proc.mjs run 的 shell 透传）；POSIX 上 shell:true 同样安全。 */
 function runBiome() {
-  try {
-    const out = execFileSync(biomeBin, cmd, {
-      cwd: path.join(ROOT, 'frontend'),
-      encoding: 'utf8',
-      stdio: 'pipe',
-      shell: true,
-    });
-    return { status: 0, out: out ?? '' };
-  } catch (e) {
-    return {
-      status: typeof e.status === 'number' ? e.status : 1,
-      out: ((e.stdout ?? '') + (e.stderr ?? '')).toString(),
-    };
-  }
+  const r = run(biomeBin, cmd, {
+    cwd: path.join(ROOT, 'frontend'),
+    shell: true,
+  });
+  return r.ok
+    ? { status: 0, out: r.out }
+    : { status: r.rc > 0 ? r.rc : 1, out: r.out };
 }
 
 /** 从 biome 文本输出解析 "Found N errors. / Found N warnings." 概要（Biome 2.x 格式） */

@@ -29,9 +29,9 @@
 
 import path from 'node:path';
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
+import { run } from '../_lib/proc.mjs';
 
 export const BLOCK_START = '🔬 覆盖率建议（非阻断，frontend/vitest.config.ts 阈值）：';
 export const BLOCK_END = '🔬 ──END──';
@@ -60,13 +60,10 @@ export function buildBlock(files, start = BLOCK_START, end = BLOCK_END) {
 
 /** 调 test-coverage-report --suggest --json，取低于阈值的文件清单（永远不抛）。 */
 function getLowCoverageFiles(ROOT) {
+  const r = run(process.execPath, [path.join(ROOT, 'scripts', 'test-coverage-report.mjs'), '--suggest', '--json'], { cwd: ROOT });
+  if (!r.ok) return [];
   try {
-    const out = execFileSync(
-      process.execPath,
-      [path.join(ROOT, 'scripts', 'test-coverage-report.mjs'), '--suggest', '--json'],
-      { encoding: 'utf8' },
-    );
-    const j = JSON.parse(out);
+    const j = JSON.parse(r.out);
     return Array.isArray(j.files) ? j.files : [];
   } catch {
     return [];
@@ -76,17 +73,11 @@ function getLowCoverageFiles(ROOT) {
 /** 调 check-diff-coverage --suggest --staged，取本次暂存变更的「变更行覆盖率」建议区块。
  * 返回 📈 包裹的 Markdown 区块，或 null（无缺口/无数据，--suggest 永远 exit 0 不抛）。 */
 function getDiffCoverageBlock(ROOT) {
-  try {
-    const out = execFileSync(
-      process.execPath,
-      [path.join(ROOT, 'scripts', 'check-diff-coverage.mjs'), '--suggest', '--staged'],
-      { encoding: 'utf8' },
-    ).trim();
-    if (!out) return null;
-    return [DIFF_BLOCK_START, out, DIFF_BLOCK_END].join('\n');
-  } catch {
-    return null;
-  }
+  const r = run(process.execPath, [path.join(ROOT, 'scripts', 'check-diff-coverage.mjs'), '--suggest', '--staged'], { cwd: ROOT });
+  if (!r.ok) return null;
+  const out = r.out.trim();
+  if (!out) return null;
+  return [DIFF_BLOCK_START, out, DIFF_BLOCK_END].join('\n');
 }
 
 /** 格式化时间为 YYYY-MM-DD HH:mm（本地时区；不用 toLocaleString，避免跨平台 locale 漂移）。 */

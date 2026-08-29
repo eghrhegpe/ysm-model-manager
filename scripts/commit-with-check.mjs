@@ -23,11 +23,11 @@
  *   1 — 门禁失败，未提交
  *   2 — 用法错误
  *
- * 依赖：node:child_process / _lib/scan-files / _lib/domain-classify
+ * 依赖：_lib/scan-files / _lib/domain-classify / _lib/proc
  */
-import { execFileSync } from 'node:child_process';
 import { ROOT } from './_lib/scan-files.mjs';
 import { classify } from './_lib/domain-classify.mjs';
+import { run } from './_lib/proc.mjs';
 
 // ── 参数解析 ──
 const args = process.argv.slice(2);
@@ -64,20 +64,13 @@ if (!checkOnly && !message) {
 // Q0 修复（子代理锐评）：加 -c core.quotepath=false，解非 ASCII 文件名八进制转义
 // 否则 git diff --cached --name-only 输出转义串 → classify 判 'other' → 零检查静默放行+自动提交
 function git(args) {
-  try {
-    return execFileSync('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT, encoding: 'utf8' }).trim();
-  } catch {
-    return '';
-  }
+  const r = run('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT });
+  return r.ok ? r.out.trim() : '';
 }
 
 function gitArray(args) {
-  try {
-    execFileSync('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-    return 0;
-  } catch (e) {
-    return e.status ?? 1;
-  }
+  const r = run('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT });
+  return r.ok ? 0 : (r.rc > 0 ? r.rc : 1);
 }
 
 // ── 1. 读 staged files，展示变更域（检查本身委托 pre-push-gate）──
@@ -125,14 +118,11 @@ if (docsMode || byDomain.docs?.length || byDomain.adr?.length) {
   ];
   let genOk = 0, genFail = 0;
   for (const cmd of GEN_CMDS) {
-    try {
-      execFileSync(process.execPath, [`scripts/${cmd}`], {
-        cwd: ROOT, stdio: 'ignore', timeout: 30_000,
-      });
-      genOk++;
-    } catch {
-      genFail++;
-    }
+    const r = run(process.execPath, [`scripts/${cmd}`], {
+      cwd: ROOT, stdio: 'ignore', timeout: 30_000,
+    });
+    if (r.ok) genOk++;
+    else genFail++;
   }
   console.log(`[gen] 已预刷新 ${genOk}/${GEN_CMDS.length} 个 gen 腚本${genFail ? `（${genFail} 个失败，不阻断，门禁会再检）` : '（全绿）'}`);
 }
@@ -142,15 +132,12 @@ const gateArgs = docsMode
   ? ['--docs', '--dry-run', '--no-banner']
   : ['--files', stagedFiles.join('\n'), '--dry-run', '--no-banner'];
 let gateRc = 0;
-try {
-  execFileSync(process.execPath, ['scripts/pre-push-gate.mjs', ...gateArgs], {
-    cwd: ROOT,
-    stdio: 'inherit',
-    timeout: 600_000,
-  });
-} catch (e) {
-  gateRc = e.status ?? 1;
-}
+const gate = run(process.execPath, ['scripts/pre-push-gate.mjs', ...gateArgs], {
+  cwd: ROOT,
+  stdio: 'inherit',
+  timeout: 600_000,
+});
+if (!gate.ok) gateRc = gate.rc > 0 ? gate.rc : 1;
 
 if (gateRc !== 0) {
   console.log('');

@@ -26,9 +26,9 @@
 
 import path from 'node:path';
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
+import { run } from '../_lib/proc.mjs';
 
 export const BLOCK_START = '📚 受影响知识卡（建议同步复核 docs/knowledge）：';
 export const BLOCK_END = '📚 ──END──';
@@ -141,41 +141,33 @@ export function parseCardText(text) {
 }
 
 function getStagedChanged() {
-  try {
-    // --diff-filter=ACMRD 含删除(D)/重命名(R)：卡 source_files 引用的源码文件被删/重命名时
-    // 同样需要提示复核（此前仅 ACM 漏掉 D/R）；quotePath=false 保证非 ASCII 路径不被
-    // 引号/八进制转义破坏与 check-knowledge-drift 的匹配。
-    // 注意：被删/重命名的「卡文件本身」不在此覆盖（--affected 只匹配磁盘上现存卡的
-    // source_files，删除的卡不在索引中），那是另一类场景（code_review P3 注释校准）。
-    return execFileSync('git', ['-c', 'core.quotePath=false', 'diff', '--cached', '--name-only', '--diff-filter=ACMRD'], { encoding: 'utf8' })
-      .split('\n').map((s) => s.trim()).filter(Boolean);
-  } catch {
-    return [];
-  }
+  // --diff-filter=ACMRD 含删除(D)/重命名(R)：卡 source_files 引用的源码文件被删/重命名时
+  // 同样需要提示复核（此前仅 ACM 漏掉 D/R）；quotePath=false 保证非 ASCII 路径不被
+  // 引号/八进制转义破坏与 check-knowledge-drift 的匹配。
+  // 注意：被删/重命名的「卡文件本身」不在此覆盖（--affected 只匹配磁盘上现存卡的
+  // source_files，删除的卡不在索引中），那是另一类场景（code_review P3 注释校准）。
+  const r = run('git', ['-c', 'core.quotePath=false', 'diff', '--cached', '--name-only', '--diff-filter=ACMRD'], {});
+  if (!r.ok) return [];
+  return r.out.split('\n').map((s) => s.trim()).filter(Boolean);
 }
 
 function getAffectedCards(ROOT, changed) {
   // 用 process.execPath（当前 node 的 Windows 绝对路径），避免 Git Bash msys 路径
   // 在 Windows 版 node 的 execFileSync 中无法被 CreateProcess 解析的陷阱。
-  try {
-    const out = execFileSync(
-      process.execPath,
-      [path.join(ROOT, 'scripts', 'check-knowledge-drift.mjs'), '--affected', '--quiet', ...changed],
-      { encoding: 'utf8' },
-    );
-    return out.split('\n').map((s) => s.trim()).filter(Boolean);
-  } catch {
-    return [];
-  }
+  const r = run(
+    process.execPath,
+    [path.join(ROOT, 'scripts', 'check-knowledge-drift.mjs'), '--affected', '--quiet', ...changed],
+    {},
+  );
+  if (!r.ok) return [];
+  return r.out.split('\n').map((s) => s.trim()).filter(Boolean);
 }
 
 /** 获取 staged 变更的 diff 内容（供疑似过时句检测）。失败返回空串。 */
 function getStagedDiff() {
-  try {
-    return execFileSync('git', ['diff', '--cached'], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
-  } catch {
-    return '';
-  }
+  const r = run('git', ['diff', '--cached'], { maxBuffer: 10 * 1024 * 1024 });
+  if (!r.ok) return '';
+  return r.out;
 }
 
 /** 读取知识卡正文（跳过 frontmatter），失败返回空串。返回 { body, offset }。 */

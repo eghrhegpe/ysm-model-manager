@@ -27,11 +27,11 @@
 // cpp-base64/zlib/fpng）——首次需先经 CMake 构建（wasm-release preset）或复用既有
 // build-wasm 目录。emsdk 路径可用 EMSDK 环境变量覆盖。
 
-import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync, statSync, renameSync } from "node:fs";
 import { join, dirname, basename, delimiter as PATH_DELIM } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { run } from "./_lib/proc.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -122,14 +122,13 @@ if (!SKIP_BUILD) {
     ...src, ...inc, ...libs,
   ];
   console.log("[build] em++ 编译中...");
-  try {
-    execFileSync(EMXX, args, {
-      cwd: UPSTREAM,
-      stdio: "inherit",
-      env: { ...process.env, PATH: `${EMCC_DIR}${PATH_DELIM}${process.env.PATH}`, EMSDK },
-    });
-  } catch (e) {
-    console.error("[build] ❌ em++ 编译失败:", e?.stderr || e?.message || e);
+  const r = run(EMXX, args, {
+    cwd: UPSTREAM,
+    stdio: "inherit",
+    env: { ...process.env, PATH: `${EMCC_DIR}${PATH_DELIM}${process.env.PATH}`, EMSDK },
+  });
+  if (!r.ok) {
+    console.error("[build] ❌ em++ 编译失败:", r.err || `rc=${r.rc}`);
     process.exit(1);
   }
   console.log(`[build] ✅ 编译完成: ${OUT_DIR}`);

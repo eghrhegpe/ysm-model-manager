@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-29T08:34:04.220Z",
+  "generated": "2026-08-29T10:57:38.283Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -122,6 +122,7 @@
     "src/utils/3d/caps/ground-capability.ts#src/utils/3d/caps/water-capability.ts",
     "src/utils/3d/caps/ground-surface-spec.ts#src/utils/3d/caps/ground-surface-spec.ts",
     "src/utils/3d/caps/postprocessing-capability.test.ts#src/utils/3d/caps/shadow-capability.test.ts",
+    "src/utils/3d/ik-solver.test.ts#src/utils/3d/ik-solver.test.ts",
     "src/utils/3d/model2d-draw.ts#src/utils/3d/model2d-hit-zones.ts",
     "src/utils/3d/model3d-spec.test.ts#src/utils/3d/model3d-spec.test.ts",
     "src/utils/3d/model3d.test.ts#src/views/app-preview/litematic-3d.test.ts",

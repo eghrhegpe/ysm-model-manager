@@ -38,7 +38,7 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 26 |
-| Go(internal)·应用入口 | 29 | 213 |
+| Go(internal)·应用入口 | 29 | 215 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 18 | 37 |
@@ -50,7 +50,7 @@
 | frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **507** | **2174** |
+| **合计** | **507** | **2176** |
 
 ## Go·头像
 
@@ -259,9 +259,9 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `ImportFromBase64()` | `go/importer/importer_file:39` | ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件） rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot） |
-| `WriteFileAtomic()` | `go/importer/importer_file:135` | WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。 |
-| `DetectZipType()` | `go/importer/importer_file:149` | DetectZipType 扫描容器条目名识别资源类型 #5 收敛：收集全部条目名后委托 types.DetectByEntries 做 (priority desc, id as |
+| `ImportFromBase64()` | `go/importer/importer_file:42` | ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件） rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot）。 |
+| `WriteFileAtomic()` | `go/importer/importer_file:138` | WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。 |
+| `DetectZipType()` | `go/importer/importer_file:152` | DetectZipType 扫描容器条目名识别资源类型 #5 收敛：收集全部条目名后委托 types.DetectByEntries 做 (priority desc, id as |
 | `ImportOptions()` | `go/importer/importer_file:29` | ImportOptions 导入选项 |
 | `ImportLogger()` | `go/importer/importer_file:35` | ImportLogger 导入日志回调（薄壳注入 App.logger.Add） |
 | `Register()` | `go/importer/importer:34` | Register 注册导入策略（线程安全） |
@@ -740,11 +740,13 @@
 | `App.ImportModelFile()` | `internal/app/app_install_import:56` | — |
 | `App.DetectZipType()` | `internal/app/app_install_import:61` | DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用） |
 | `App.ImportModelFileSkipCheck()` | `internal/app/app_install_import:69` | — |
-| `App.ImportModelFileOverwrite()` | `internal/app/app_install_import:77` | — |
-| `App.ImportModelFileTo()` | `internal/app/app_install_import:103` | — |
-| `App.ImportModelFileOverwriteTo()` | `internal/app/app_install_import:107` | — |
-| `App.ImportModelFileToMMD()` | `internal/app/app_install_import:114` | ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。 |
-| `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:119` | ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。 |
+| `App.ImportModelFileOverwrite()` | `internal/app/app_install_import:78` | — |
+| `App.ImportModelFileTo()` | `internal/app/app_install_import:106` | — |
+| `App.ImportModelFileOverwriteTo()` | `internal/app/app_install_import:110` | — |
+| `App.ImportModelFileToMMD()` | `internal/app/app_install_import:117` | ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。 |
+| `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:122` | ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。 |
+| `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:226` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
+| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:250` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
 | `App.CountInstanceResources()` | `internal/app/app_install_instance:26` | CountInstanceResources 统计指定整合包中可清空的资源文件数 只统计仓库中已有的文件（同 clearInstanceDir 逻辑） rtype 为空时统计全部类 |
 | `App.ClearInstanceResources()` | `internal/app/app_install_instance:66` | ClearInstanceResources 清空指定整合包中已同步的文件 insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型） 返回清除的文件数量 |
 | `App.DeduplicateCustomDir()` | `internal/app/app_install_instance:152` | DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle） |
@@ -1348,10 +1350,10 @@
 | `materialNodes()` | `frontend/src/utils/3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
 | `RepresentativeSnapshot()` | `frontend/src/utils/3d/adapters/menu-graph:24` | 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） |
 | `MenuGraphNode()` | `frontend/src/utils/3d/adapters/menu-graph:30` | 导航图节点（菜单节点的投影，只读不写） |
-| `MenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:51` | 导航图：dock 分组 → 面板 → 节点树 + 动作节点 + 覆盖度 |
-| `CollectMenuGraphOpts()` | `frontend/src/utils/3d/adapters/menu-graph:66` | collectMenuGraph 入参 |
-| `collectNodePredicates()` | `frontend/src/utils/3d/adapters/menu-graph:78` | 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二） |
-| `collectMenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:139` | 收集菜单导航图（纯函数，不改任何状态）。 |
+| `MenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:56` | 导航图：dock 分组 → 面板 → 节点树 + 动作节点 + 覆盖度 |
+| `CollectMenuGraphOpts()` | `frontend/src/utils/3d/adapters/menu-graph:71` | collectMenuGraph 入参 |
+| `collectNodePredicates()` | `frontend/src/utils/3d/adapters/menu-graph:83` | 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二） |
+| `collectMenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:144` | 收集菜单导航图（纯函数，不改任何状态）。 |
 | `makeMenuCtx()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:12` | PreviewMenuCtx 全字段 stub：能力全缺（getCap → null）、桥全 vi.fn()。 |
 | `mockMenuHandle()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:36` | SlideMenuHandle 全方法 stub（渲染器/面板单测用，导航动作全 no-op） |
 | `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:66` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |

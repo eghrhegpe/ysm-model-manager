@@ -126,4 +126,67 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     expect(graph.actions.map((a) => a.id)).toContain("close");
     expect(graph.actions.find((a) => a.id === "close")!.nonNav).toBe(true);
   });
+
+  it("registry builder 抛错 → collectMenuGraph 抛异常（生成失败由上层门禁拦截，挡 AI 破坏真实路径于 e2e 之前，P2①）", () => {
+    registerSchema("boom", () => {
+      throw new Error("kaboom");
+    });
+    const { routers, menu } = buildGraphRouters();
+    expect(() => collect(routers, menu, [{ name: "default", snapshot: DEFAULT_SNAP }])).toThrow(
+      /boom.*kaboom/,
+    );
+  });
+
+  it("多档代表性快照下 reachableBy 聚合（数组意义 = 跨档可见性并集，P2②）", () => {
+    registerSchema("ysm-model", () => [
+      {
+        id: "model",
+        kind: "panel",
+        dockGroup: "model",
+        children: [
+          { id: "sky-node", kind: "field", visibleWhen: (s) => !!s["env.sky"] },
+          { id: "mode-node", kind: "field", visibleWhen: (s) => s["ui.mode"] === "self" },
+          { id: "always", kind: "field" },
+        ],
+      },
+    ]);
+    const { routers, menu } = buildGraphRouters();
+    const snaps: RepresentativeSnapshot[] = [
+      { name: "default", snapshot: {} },
+      { name: "envOn", snapshot: { "env.sky": true } as PreviewSnapshot },
+      { name: "roleLoaded", snapshot: { "ui.mode": "self" } as PreviewSnapshot },
+    ];
+    const graph = collect(routers, menu, snaps);
+    const ysm = graph.docks.find((d) => d.group === "model")!.panels.find((p) => p.id === "ysm-model")!;
+    const model = ysm.children.find((c) => c.id === "model")!;
+    const sky = model.children.find((c) => c.id === "sky-node")!;
+    const mode = model.children.find((c) => c.id === "mode-node")!;
+    const always = model.children.find((c) => c.id === "always")!;
+    // 各守卫节点只在命中快照档可见
+    expect(sky.reachableBy).toEqual(["envOn"]);
+    expect(mode.reachableBy).toEqual(["roleLoaded"]);
+    expect(always.reachableBy).toEqual(["default", "envOn", "roleLoaded"]);
+    // 面板级乐观（P1）：ysm-model reachableBy 恒全档，不随快照收窄
+    expect(ysm.reachableBy).toEqual(["default", "envOn", "roleLoaded"]);
+  });
+
+  it("registryIds 白名单只收窄枚举、不收窄 coverage 判定（防白名单洗掉双通道债，P2③；并佐证 P3 带具体 id）", () => {
+    registerSchema("ysm-model", () => [{ id: "model", kind: "panel", dockGroup: "model" }]);
+    const { routers, menu } = buildGraphRouters();
+    // 白名单只给 ysm-model：枚举收窄，但 closure builder 债仍按全量 listSchemas() 算
+    const graph = collectMenuGraph({
+      routers,
+      menu,
+      snapshots: [{ name: "default", snapshot: DEFAULT_SNAP }],
+      registryIds: ["ysm-model"],
+    });
+    // 枚举收窄：registry 通道只产出 ysm-model（无其它 registry 面板混入）
+    const modelDock = graph.docks.find((d) => d.group === "model")!;
+    expect(modelDock.panels.map((p) => p.id)).toContain("ysm-model");
+    // coverage 仍 partial：closure builder（lighting/shadow/...）未迁 registry，白名单洗不掉
+    expect(graph.coverage).toBe("partial");
+    expect(graph.uncoveredLayers).toContain("roles"); // procedural 面板 id
+    // P3：closure builder id 在 uncoveredLayers（非 "schemaBuilders-not-in-registry" 占位）
+    expect(graph.uncoveredLayers).toContain("lighting");
+  });
 });

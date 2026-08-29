@@ -6,7 +6,7 @@
 // 入口 = 双通道并集（修正初稿误用 listSchemas 单一入口，见 ADR-128 §5 死穴一）：
 //   1. routers.schemaBuilders 闭包（6 常驻 L2 面板）    —— 渲染器第一真值源
 //   2. schema-registry Map（ysm-model + 动态 litematic）— 渲染器第二通道
-//   3. PreviewMenuNode.children[] 递归                   —— L3/L4 声明式下钻
+//   3. PreviewMenuNode.children[] 递归                   —— L3/L4 声明式下钻（无独立块，内嵌 projectNode 递归，见 P5①）
 //   4. fillers（roles 过程式下钻）                       —— P4-B 前必需，标 procedural
 //   5. runners（close 动作式）                            —— 标 nonNav，不进导航路径
 //
@@ -40,9 +40,14 @@ export interface MenuGraphNode {
   nonNav: boolean;
   /** 过程式下钻（fillers），内部结构不可静态走通 */
   procedural?: boolean;
-  /** 在 ≥1 档代表性快照下可见（无 visibleWhen 守卫 → 恒 true） */
+  /**
+   * 节点级：在 ≥1 档代表性快照下可见（无 visibleWhen 守卫 → 恒 true）。
+   * 面板级（buildPanelNode）：恒 true——面板挂载是命令式（如 ysm-model 需模型已加载），
+   * 无 visibleWhen 可判，故面板 reachable 是结构乐观默认，**非「模型已加载即达」守卫**。
+   * e2e 选择器消费方不得将面板 reachable 当作「无模型场景不可达」的判定依据（ADR-128 P1）。
+   */
   reachable: boolean;
-  /** 可见的各快照档名（空 = 当前代表性集下恒不可达，可能条件路径盲点） */
+  /** 节点级：可见的各快照档名（空 = 当前代表性集下恒不可达，可能条件路径盲点）；面板级恒为全档名（乐观默认） */
   reachableBy: string[];
   children: MenuGraphNode[];
 }
@@ -54,7 +59,7 @@ export interface MenuGraph {
   actions: MenuGraphNode[];
   /** full = 全部面板可声明式走通；partial = 存在过程式下钻 / 双通道债（ADR-128 §2.2） */
   coverage: "full" | "partial";
-  /** partial 时未覆盖层（procedural 面板 id + "schemaBuilders-not-in-registry"） */
+  /** partial 时未覆盖层（procedural 面板 id + 未迁 registry 的 closure builder id 列表，见 P3） */
   uncoveredLayers: string[];
   /** 过程式面板 id（fillers，图内仅占位，内部节点不可枚举） */
   proceduralPanels: string[];
@@ -138,7 +143,12 @@ function buildPanelNode(
  */
 export function collectMenuGraph(opts: CollectMenuGraphOpts): MenuGraph {
   const { routers, snapshots, menu } = opts;
-  const registryIds = opts.registryIds ?? listSchemas();
+  // coverage 基线 = 全量 listSchemas()（不受 registryIds 白名单收窄影响，P2③）
+  const fullRegistry = listSchemas();
+  // registryIds 只收窄「枚举范围」，不改 coverage 判定基线
+  const registryIds = opts.registryIds ?? fullRegistry;
+  // 隐式假设：registry builder 输出不随快照变化（当前 builders 不消费快照）。
+  // 若未来演进到 builder 按快照导出不同 options/节点，此处需改为逐档执行并合并（P5② 已知假设）。
   const snapForBuilder = snapshots[0]?.snapshot ?? ({} as PreviewSnapshot);
 
   const allPanels: MenuGraphNode[] = [];
@@ -212,15 +222,15 @@ export function collectMenuGraph(opts: CollectMenuGraphOpts): MenuGraph {
   }
 
   // 覆盖度：过程式下钻 或 闭包 builder 未迁 registry → partial
+  // dualChannelDebt 基于全量 fullRegistry 判定（白名单只收窄枚举，不收窄判定，P2③）
   const dualChannelDebt = Object.keys(routers.schemaBuilders).filter(
-    (id) => !registryIds.includes(id),
+    (id) => !fullRegistry.includes(id),
   );
   const coverage: MenuGraph["coverage"] =
     proceduralPanels.length === 0 && dualChannelDebt.length === 0 ? "full" : "partial";
-  const uncoveredLayers = [
-    ...proceduralPanels,
-    ...(dualChannelDebt.length ? ["schemaBuilders-not-in-registry"] : []),
-  ];
+  // uncoveredLayers 带具体 id（procedural 面板 id + 未迁 registry 的 closure builder id），门禁可精确报错（P3）
+  // 去重：roles 等既是 filler 又是 closure builder 时会在两处出现
+  const uncoveredLayers = [...new Set([...proceduralPanels, ...dualChannelDebt])];
 
   const predicateCount = collectNodePredicates(allResolvedNodes.flat()).length;
 

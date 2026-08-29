@@ -1056,6 +1056,7 @@ export const ja: Record<string, string> = {
   "preview.bloomStrength": "ブルーム強度",
   "preview.bloomThreshold": "ブルーム閾値",
   "preview.bloomRadius": "ブルーム半径",
+  "preview.bloomEnabled": "ブルーム切替",
   "preview.bloomFollowVolumetric": "体積光に連動",
   "preview.ssao": "環境光遮蔽 (SSAO)",
   "preview.ssaoRadius": "SSAO サンプル半径",

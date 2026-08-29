@@ -101,6 +101,36 @@ describe("PostprocessingCapability — Bloom 参数", () => {
     cap.setBloomFollowVolumetric(true);
     expect(ctrl.getValue()).toBe(true);
   });
+
+  it("独立辉光开关默认开启且继承 DEFAULT", () => {
+    expect(DEFAULT_POSTPROC_PARAMS.bloomEnabled).toBe(true);
+    const cap = newCap();
+    expect(cap.getParams().bloomEnabled).toBe(true);
+  });
+
+  it("pp-bloom-enabled 控件存在且读写经 setBloomEnabled（与管线开关 this.enabled 正交）", () => {
+    const cap = newCap();
+    const ctrl = cap.getMenuControls().find((c) => c.id === "pp-bloom-enabled")!;
+    expect(ctrl).toBeDefined();
+    expect(ctrl.kind).toBe("toggle");
+    expect(ctrl.group).toBe("preview.postprocessingGroupBloom");
+    expect(ctrl.getValue()).toBe(true);
+    cap.setBloomEnabled(false);
+    expect(ctrl.getValue()).toBe(false);
+    expect(cap.getParams().bloomEnabled).toBe(false);
+    cap.setBloomEnabled(true);
+    expect(cap.getParams().bloomEnabled).toBe(true);
+  });
+
+  it("setBloomEnabled 立即旁路 bloomPass（composer 已构建时）", () => {
+    const cap = newCap({ enabled: true });
+    const fakePass = { enabled: true } as unknown as { enabled: boolean };
+    (cap as unknown as { bloomPass: { enabled: boolean } | null }).bloomPass = fakePass;
+    cap.setBloomEnabled(false);
+    expect(fakePass.enabled).toBe(false);
+    cap.setBloomEnabled(true);
+    expect(fakePass.enabled).toBe(true);
+  });
 });
 
 describe("PostprocessingCapability — SSAO", () => {

@@ -978,6 +978,7 @@
   "preview.bloomStrength": "辉光强度",
   "preview.bloomThreshold": "辉光阈值",
   "preview.bloomRadius": "辉光半径",
+  "preview.bloomEnabled": "辉光开关",
   "preview.bloomFollowVolumetric": "跟随体积光联动",
   "preview.ssao": "环境光遮蔽 (SSAO)",
   "preview.ssaoRadius": "SSAO 采样半径",

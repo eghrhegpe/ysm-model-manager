@@ -42,6 +42,8 @@ export interface PostprocessingParams {
   bloomRadius: number;
   /** 是否让 Bloom 参数跟随 LightCapability 体积光联动（开启后用 opacity/edgeFade 调 bloom） */
   bloomFollowVolumetric: boolean;
+  /** 独立辉光开关：false 时旁路 bloomPass，不影响 SSAO/SSR（与整条管线开关 this.enabled 正交） */
+  bloomEnabled: boolean;
   /** SSAO 开关 */
   ssaoEnabled: boolean;
   /** SSAO 采样半径（控制 AO 扩散范围） */
@@ -88,6 +90,7 @@ export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
   bloomThreshold: 0.6,
   bloomRadius: 0.5,
   bloomFollowVolumetric: true,
+  bloomEnabled: true,
   ssaoEnabled: false,
   ssaoRadius: 8,
   ssaoMinDist: 0.005,
@@ -154,6 +157,15 @@ function ppcBuildBasic(cap: PostprocessingCapability): MenuControlDef[] {
 
 function ppcBuildBloom(cap: PostprocessingCapability): MenuControlDef[] {
   return [
+    {
+      id: "pp-bloom-enabled",
+      kind: "toggle",
+      labelKey: "preview.bloomEnabled",
+      fallback: "辉光开关",
+      group: "preview.postprocessingGroupBloom",
+      getValue: () => cap.getParams().bloomEnabled,
+      setValue: (v) => cap.setBloomEnabled(v as boolean),
+    },
     {
       id: "pp-bloom-strength",
       kind: "slider",
@@ -553,6 +565,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   private syncBloomPass(lightCap: LightCapability | null): void {
     if (!this.bloomPass) return;
+    // 独立辉光开关：false 时整个 bloomPass 旁路（Pass.enabled=false），不影响 SSAO/SSR
+    this.bloomPass.enabled = this.params.bloomEnabled;
+    if (!this.params.bloomEnabled) return;
     if (this.params.bloomFollowVolumetric && lightCap) {
       const vol = lightCap.getParams().volumetric;
       // [doc:adr-126-p5] 联动解耦（用户拍板方案 b）：以用户设置（bloomStrength/bloomThreshold）
@@ -690,6 +705,10 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   setBloomFollowVolumetric(v: boolean): void {
     this.params.bloomFollowVolumetric = v;
   }
+  setBloomEnabled(v: boolean): void {
+    this.params.bloomEnabled = v;
+    if (this.bloomPass) this.bloomPass.enabled = v;
+  }
 
   setSSAOEnabled(v: boolean): void {
     this.params.ssaoEnabled = v;
@@ -775,6 +794,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       bloomThreshold: this.params.bloomThreshold,
       bloomRadius: this.params.bloomRadius,
       bloomFollowVolumetric: this.params.bloomFollowVolumetric,
+      bloomEnabled: this.params.bloomEnabled,
       ssaoEnabled: this.params.ssaoEnabled,
       ssaoRadius: this.params.ssaoRadius,
       ssaoMinDist: this.params.ssaoMinDist,
@@ -801,6 +821,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (typeof state.bloomThreshold === "number") this.params.bloomThreshold = state.bloomThreshold;
     if (typeof state.bloomRadius === "number") this.params.bloomRadius = state.bloomRadius;
     if (typeof state.bloomFollowVolumetric === "boolean") this.params.bloomFollowVolumetric = state.bloomFollowVolumetric;
+    if (typeof state.bloomEnabled === "boolean") this.params.bloomEnabled = state.bloomEnabled;
     if (typeof state.ssaoEnabled === "boolean") this.params.ssaoEnabled = state.ssaoEnabled;
     if (typeof state.ssaoRadius === "number") this.params.ssaoRadius = state.ssaoRadius;
     if (typeof state.ssaoMinDist === "number") this.params.ssaoMinDist = state.ssaoMinDist;

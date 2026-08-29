@@ -1055,6 +1055,7 @@ export const en: Record<string, string> = {
   "preview.bloomStrength": "Bloom Strength",
   "preview.bloomThreshold": "Bloom Threshold",
   "preview.bloomRadius": "Bloom Radius",
+  "preview.bloomEnabled": "Bloom Toggle",
   "preview.bloomFollowVolumetric": "Follow Volumetric Light",
   "preview.ssao": "Ambient Occlusion (SSAO)",
   "preview.ssaoRadius": "SSAO Radius",

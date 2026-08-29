@@ -177,6 +177,11 @@ export function createResolveModeBridge<Resp extends ResolveModeResponse>(
     onWorkerError: "resolveAllError",
     makeErrorResponse: (id, msg) => ({ id, ok: false, error: msg } as Resp),
   });
+  // 消息接线必须由工厂完成：薄封装不暴露 handleMessage/handleWorkerError，
+  // 若漏接，worker 响应永不结算、恒超时 ok:false 静默回退主线程
+  // （回归锁：worker-bridge.test.ts「工厂内部接线」两例，409b060e 曾丢失）
+  worker.onmessage = (e: MessageEvent<Resp>) => bridge.handleMessage(e.data);
+  worker.onerror = () => bridge.handleWorkerError();
   return {
     request: (bytes) => bridge.request({ bytes }, [bytes]),
     dispose: () => bridge.dispose(),

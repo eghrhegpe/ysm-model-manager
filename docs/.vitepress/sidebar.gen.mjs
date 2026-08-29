@@ -1293,6 +1293,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r15-scripts-2026-08-29"
       },
       {
+        "text": "R16 补测轮：测试覆盖清欠",
+        "link": "/audit/audit-r16-test-coverage-2026-08-30"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

@@ -34,6 +34,7 @@ Worker 桥单请求失败结算：超时 / dispose / onerror 复用 `settleError
 - `WorkerErrorStrategy = "resolveAllError" | "terminatePool"` 联合类型穷尽性。
 - `resolveAllError` 模式必须传 `makeErrorResponse`（L71 入口契约校验，抛错）。
 - `terminatePool` 模式 `makeErrorResponse` 不允许（联合分支约束）。
+- **消息接线由工厂完成**：`createResolveModeBridge` 内部把 `worker.onmessage/onerror` 委托回 `bridge.handleMessage/handleWorkerError`——薄封装不暴露这两者，漏接 = worker 响应永不结算、恒超时 ok:false 静默回退主线程。409b060e 重构曾丢失接线，2026-08-30 补测轮（audit-r16）修复并加 `worker-bridge.test.ts`「工厂内部接线」回归锁。
 
 ## 问题清单（ts-package-review 2026-08-27）
 

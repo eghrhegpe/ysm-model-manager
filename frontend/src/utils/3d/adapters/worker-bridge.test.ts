@@ -379,9 +379,8 @@ describe("worker.terminate 已终止不抛错", () => {
 });
 
 // ===== createResolveModeBridge 薄封装 =====
-// createResolveModeBridge 内部 new Worker 后需外部（或运行时）将 worker.onmessage
-// 挂到 bridge.handleMessage——薄封装不暴露 handleMessage，故测试通过 stub Worker
-// 构造函数拿回 fakeWorker 实例后手动桥接 onmessage。
+// 工厂内部完成 worker.onmessage/onerror → bridge 的消息接线（曾于 409b060e 重构
+// 时丢失、2026-08-30 补测轮修复并加「工厂内部接线」回归锁），测试直接模拟消息循环即可。
 
 describe("createResolveModeBridge", () => {
   it("request → postMessage 注入 id + transfer bytes", async () => {
@@ -399,12 +398,41 @@ describe("createResolveModeBridge", () => {
     expect(msg).toMatchObject({ id: 0, bytes: buf });
     expect(transfer).toEqual([buf]);
 
-    // 手动桥接 onmessage 后模拟响应
-    // （真实场景由运行时 Web Worker 消息循环触发 onmessage）
-    fakeWorker.onmessage = (e) => {
-      // createResolveModeBridge 内部 bridge 的 settle 回调是 resolve
-      // 这里模拟 worker 响应 resolve 路径
-    };
+    vi.unstubAllGlobals();
+  });
+
+  it("工厂内部接线：worker 响应经 onmessage 结算 request Promise（回归锁：409b060e 重构曾丢失接线）", async () => {
+    const fakeWorker = makeWorker();
+    vi.stubGlobal("Worker", class {
+      constructor() { return fakeWorker; }
+    });
+
+    const bridge = createResolveModeBridge<{ id: number; ok: boolean; error?: string }>(
+      "./some-worker.ts", 100, "超时",
+    );
+    const p = bridge.request(new ArrayBuffer(16));
+    // 工厂必须已把 worker.onmessage 委托回桥——respond 直接模拟真实消息循环
+    // 若接线缺失，此 Promise 永不结算、只能等超时 ok:false（2026-08-30 补测轮发现）
+    fakeWorker.respond({ id: 0, ok: true });
+    await expect(p).resolves.toMatchObject({ id: 0, ok: true });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("工厂内部接线：worker onerror → 在途请求以 ok:false 结算（resolveAllError）", async () => {
+    const fakeWorker = makeWorker();
+    vi.stubGlobal("Worker", class {
+      constructor() { return fakeWorker; }
+    });
+
+    const bridge = createResolveModeBridge<{ id: number; ok: boolean; error?: string }>(
+      "./some-worker.ts", 100, "超时",
+    );
+    const p = bridge.request(new ArrayBuffer(8));
+    fakeWorker.crash();
+    const resp = await p;
+    expect(resp.ok).toBe(false);
+    expect(typeof resp.error).toBe("string");
 
     vi.unstubAllGlobals();
   });

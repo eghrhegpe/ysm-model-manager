@@ -8,7 +8,8 @@ import type { PreviewMenuRouters } from "./preview-menu.ts";
 import { buildPreviewMenuRouters } from "./preview-menu.ts";
 import { makeMenuCtx, mockMenuHandle } from "./menu-test-fixtures.ts";
 import { registerSchema, resetSchemas } from "./schema-registry.ts";
-import type { PreviewMenuNode, PreviewSnapshot } from "./preview-menu-node-types.ts";
+import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
 
 /** 默认代表性快照：空记录（无状态守卫激活）→ 非守卫节点可达，守卫节点隐藏 */

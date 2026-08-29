@@ -1342,16 +1342,16 @@
 | `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:27` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
 | `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:42` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
 | `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:121` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
-| `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/litematic-adapter:236` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
-| `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:412` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
+| `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/litematic-adapter:237` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
+| `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:413` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
 | `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
 | `materialNodes()` | `frontend/src/utils/3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
-| `RepresentativeSnapshot()` | `frontend/src/utils/3d/adapters/menu-graph:23` | 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） |
-| `MenuGraphNode()` | `frontend/src/utils/3d/adapters/menu-graph:29` | 导航图节点（菜单节点的投影，只读不写） |
-| `MenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:50` | 导航图：dock 分组 → 面板 → 节点树 + 动作节点 + 覆盖度 |
-| `CollectMenuGraphOpts()` | `frontend/src/utils/3d/adapters/menu-graph:65` | collectMenuGraph 入参 |
-| `collectNodePredicates()` | `frontend/src/utils/3d/adapters/menu-graph:77` | 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二） |
-| `collectMenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:138` | 收集菜单导航图（纯函数，不改任何状态）。 |
+| `RepresentativeSnapshot()` | `frontend/src/utils/3d/adapters/menu-graph:24` | 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） |
+| `MenuGraphNode()` | `frontend/src/utils/3d/adapters/menu-graph:30` | 导航图节点（菜单节点的投影，只读不写） |
+| `MenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:51` | 导航图：dock 分组 → 面板 → 节点树 + 动作节点 + 覆盖度 |
+| `CollectMenuGraphOpts()` | `frontend/src/utils/3d/adapters/menu-graph:66` | collectMenuGraph 入参 |
+| `collectNodePredicates()` | `frontend/src/utils/3d/adapters/menu-graph:78` | 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二） |
+| `collectMenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:139` | 收集菜单导航图（纯函数，不改任何状态）。 |
 | `makeMenuCtx()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:12` | PreviewMenuCtx 全字段 stub：能力全缺（getCap → null）、桥全 vi.fn()。 |
 | `mockMenuHandle()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:36` | SlideMenuHandle 全方法 stub（渲染器/面板单测用，导航动作全 no-op） |
 | `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:66` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
@@ -1440,15 +1440,13 @@
 | `disposeEnvSubscriptions()` | `frontend/src/utils/3d/adapters/preview-menu-env:29` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
 | `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu-env:113` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
 | `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu-env:235` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
-| `PreviewStatePath()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:14` | 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） |
-| `PreviewSnapshot()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:29` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
-| `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:32` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
-| `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:38` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
-| `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:54` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
-| `PreviewMenuNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:82` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
-| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:131` | 类型守卫：节点是否为 folder（可下钻） |
-| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:136` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
-| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:149` | 递归收集全部节点 id（供 id 唯一性契约测试） |
+| `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
+| `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:24` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
+| `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:40` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
+| `PreviewMenuNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:68` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
+| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:117` | 类型守卫：节点是否为 folder（可下钻） |
+| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:122` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
+| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:135` | 递归收集全部节点 id（供 id 唯一性契约测试） |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:420` | — |
 | `renderAdapterPanelContent()` | `frontend/src/utils/3d/adapters/preview-menu-render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu-roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
@@ -1476,14 +1474,14 @@
 | `ModelEntry()` | `frontend/src/utils/3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
 | `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
 | `MAX_MODELS()` | `frontend/src/utils/3d/adapters/scene-registry:209` | 同场景最大模型数（超量追加被拒，ADR-093 T6） |
-| `YSM_MODEL_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/schema-registry:19` | YSM model 面板 schema 键（adapter schemaId 与 views 注册共用同一常量，防漂移静默丢面板） |
-| `SchemaBuilder()` | `frontend/src/utils/3d/adapters/schema-registry:22` | 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） |
-| `registerSchema()` | `frontend/src/utils/3d/adapters/schema-registry:29` | 注册面板 builder；重复注册**覆盖**旧 builder（多模型同框时活跃模型换菜单，后注册者生效）—— 与 setAdapterItems 换菜单语义一致；测试用 reg |
-| `unregisterSchema()` | `frontend/src/utils/3d/adapters/schema-registry:35` | 注销面板 builder（预览 dispose 时调用，防跨会话污染：陈旧 builder 的闭包 持有已 dispose 场景的 model/texArr/handle，不清理会 |
-| `getSchema()` | `frontend/src/utils/3d/adapters/schema-registry:40` | 取面板 builder；未注册返回 undefined |
-| `hasSchema()` | `frontend/src/utils/3d/adapters/schema-registry:45` | 是否已注册 |
-| `listSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:50` | 全部已注册 id（供契约测试枚举 / 审计「谁在绕道 renderCustom」） |
-| `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:55` | 测试用：清空注册表（用例间隔离） |
+| `YSM_MODEL_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/schema-registry:20` | YSM model 面板 schema 键（adapter schemaId 与 views 注册共用同一常量，防漂移静默丢面板） |
+| `SchemaBuilder()` | `frontend/src/utils/3d/adapters/schema-registry:23` | 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） |
+| `registerSchema()` | `frontend/src/utils/3d/adapters/schema-registry:30` | 注册面板 builder；重复注册**覆盖**旧 builder（多模型同框时活跃模型换菜单，后注册者生效）—— 与 setAdapterItems 换菜单语义一致；测试用 reg |
+| `unregisterSchema()` | `frontend/src/utils/3d/adapters/schema-registry:36` | 注销面板 builder（预览 dispose 时调用，防跨会话污染：陈旧 builder 的闭包 持有已 dispose 场景的 model/texArr/handle，不清理会 |
+| `getSchema()` | `frontend/src/utils/3d/adapters/schema-registry:41` | 取面板 builder；未注册返回 undefined |
+| `hasSchema()` | `frontend/src/utils/3d/adapters/schema-registry:46` | 是否已注册 |
+| `listSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:51` | 全部已注册 id（供契约测试枚举 / 审计「谁在绕道 renderCustom」） |
+| `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:56` | 测试用：清空注册表（用例间隔离） |
 | `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:29` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
 | `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:89` | 会话内切换模型（复用外壳重建内容层）。 |
 | `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:396` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
@@ -1803,15 +1801,17 @@
 | `getPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:50` | 读取当前档位（无存档或未知值回默认） |
 | `applyPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:61` | 套用档位：遍历档位表走状态层统一写口（默认广播 notify，面板订阅可自动刷新）。 |
 | `setPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:70` | 切换档位：持久化 + 套用 |
-| `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:51` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
-| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:69` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
-| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:189` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
-| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:199` | 订阅横切设置变更；返回取消订阅函数 |
-| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:220` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
-| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:229` | 写入路径值。 |
-| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:239` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
-| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:248` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
-| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:255` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
+| `PreviewStatePath()` | `frontend/src/utils/3d/state/preview-state:33` | 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） |
+| `PreviewSnapshot()` | `frontend/src/utils/3d/state/preview-state:48` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
+| `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:69` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
+| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:87` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
+| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:207` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
+| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:217` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:238` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
+| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:247` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:257` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:266` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
+| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:273` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
 | `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
 | `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |
@@ -2258,12 +2258,12 @@
 | `makeShotAction()` | `frontend/src/views/app-preview/shot-panel-shared:34` | 截图保存副作用：防连点 guard + toast 错误提示。fillXxxShotPanel（命令式）与 shotButtonNodes（声明式）共用 |
 | `shotButtonNodes()` | `frontend/src/views/app-preview/shot-panel-shared:65` | 截图面板声明式节点（6 button）：screenshotFn 为 null 时返回空数组（MMD 能力缺失不渲染）； undefined（YSM ctx 可选字段）时仍返回 6 |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
-| `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:11` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
-| `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:37` | — |
-| `YsmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:261` | 组件统计（按 activeComponent 聚合；-1 = All）：骨骼数 + 立方体数 + 组件名 |
-| `ysmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:269` | 统计聚合（与 fillPanelComponent 同逻辑，抽为纯函数供 schema 与命令式共用） |
-| `ysmModelTextureSlots()` | `frontend/src/views/app-preview/skeleton-fill-panel:289` | 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） |
-| `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:314` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
+| `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:12` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
+| `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:38` | — |
+| `YsmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:262` | 组件统计（按 activeComponent 聚合；-1 = All）：骨骼数 + 立方体数 + 组件名 |
+| `ysmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:270` | 统计聚合（与 fillPanelComponent 同逻辑，抽为纯函数供 schema 与命令式共用） |
+| `ysmModelTextureSlots()` | `frontend/src/views/app-preview/skeleton-fill-panel:290` | 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） |
+| `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:315` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-render` | — |
 | `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:23` | 创建 2D 骨骼画布并异步加载纹理 |
 | `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:48` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |

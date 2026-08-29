@@ -7,7 +7,7 @@
 // 升格要点（与 ADR-126 §2.1「7 域类型全声明，binding 只填已落地项」校准对齐）：
 //   - 模块名 / 类型名 / 快照函数名升格：SettingsPath→(并入 PreviewStatePath) /
 //     SETTINGS_PATHS→KNOWN_PATHS / settingsSnapshot→previewSnapshot
-//   - `PreviewStatePath`（`preview-menu-node-types.ts:14-21`）作为路径类型契约：
+//   - `PreviewStatePath`（本文件定义，ADR-129 第一刀归位自 adapters）作为路径类型契约：
 //     七域（env/render/light/ui/perception/motion/model）类型层全声明；
 //     本文件 binding 层只填**已落地的 6 项**（render.*/env.* 横切设置）。
 //   - 业务状态（角色/动作/面板导航）由 sceneRegistry / SlideMenuHandle / 节点字段
@@ -27,7 +27,25 @@
 //   - bloom / pmrem / wireframe 走 cap 的 get/set 派生映射，本层不落盘；
 //     cap 存自己的域（cap.saveState），本层不重复存
 
-import type { PreviewStatePath, PreviewSnapshot } from "../adapters/preview-menu-node-types.ts";
+// [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters/preview-menu-node-types.ts，
+// state 反向 import adapters → 类型归位 state，adapters 反过来前向 import state，方向正）
+/** 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） */
+export type PreviewStatePath =
+  | `env.${string}`
+  | `render.${string}`
+  | `light.${string}`
+  | `ui.${string}`
+  | `perception.${string}`
+  | `motion.${string}`
+  | `model.${string}`;
+
+/**
+ * 状态层快照：`visibleWhen: (s: PreviewSnapshot) => boolean` 纯函数谓词吃的快照形状。
+ * 由本文件 `previewSnapshot()` 产出（Record<PreviewStatePath, unknown>）。
+ * 未落地路径的值为 undefined（谓词读 `s["ui.mode"]` 安全——falsy）。
+ * [doc:adr-126-p4-d] 与 AGENTS.md「3d菜单只允许 visibleWhen: (s) => boolean」对齐。
+ */
+export type PreviewSnapshot = Record<PreviewStatePath, unknown>;
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import { isFrustumCullEnabled, setFrustumCullEnabled } from "../frustum-cull.ts";
@@ -44,7 +62,7 @@ import { safeSet } from "../../dom/storage.ts";
 /**
  * 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。
  *
- * 7 域路径类型契约 `PreviewStatePath`（`preview-menu-node-types.ts:14-21`）在类型层
+ * 7 域路径类型契约 `PreviewStatePath`（本文件定义，ADR-129 第一刀归位自 adapters）在类型层
  * 全声明（env/render/light/ui/perception/motion/model），但 binding 层只填已落地的
  * 6 项横切设置。其余域按需在 P4-C/D 落 binding：未落地项 `isPathAvailable()=false`。
  */

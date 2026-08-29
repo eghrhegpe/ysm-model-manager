@@ -8,7 +8,7 @@ import {
   ysmModelStats,
   ysmModelTextureSlots,
 } from "./skeleton-fill-panel.ts";
-import type { PreviewSnapshot } from "../../utils/3d/adapters/preview-menu-node-types.ts";
+import type { PreviewSnapshot } from "../../utils/3d/state/preview-state.ts";
 
 /** 最小 spec（单组件）：1 个 modelGroup，2 根骨骼，2 个纹理槽 */
 function makeSpec(overrides: { models?: unknown[] } = {}) {

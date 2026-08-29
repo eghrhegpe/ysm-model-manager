@@ -10,23 +10,9 @@
 // 当前阶段（方案 A 第 1 步）：仅类型层落地，渲染器仍是命令式 preview-menu.ts——本叶先立「数据层契约」，
 // 让新增/迁移菜单项时有声明式形状可依，而非继续手写 createElement。
 
-/** 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） */
-export type PreviewStatePath =
-  | `env.${string}`
-  | `render.${string}`
-  | `light.${string}`
-  | `ui.${string}`
-  | `perception.${string}`
-  | `motion.${string}`
-  | `model.${string}`;
-
-/**
- * 状态层快照：`visibleWhen: (s: PreviewSnapshot) => boolean` 纯函数谓词吃的快照形状。
- * 由 `state/preview-state.ts` 的 `previewSnapshot()` 产出（Record<PreviewStatePath, unknown>）。
- * 未落地路径的值为 undefined（谓词读 `s["ui.mode"]` 安全——falsy）。
- * [doc:adr-126-p4-d] 与 AGENTS.md「3d菜单只允许 visibleWhen: (s) => boolean」对齐。
- */
-export type PreviewSnapshot = Record<PreviewStatePath, unknown>;
+// [doc:adr-129-第一刀] PreviewStatePath / PreviewSnapshot 迁至 state/preview-state.ts（本位）；
+// 本文件前向 import state 的类型——方向正（菜单节点吃状态层快照），非反向依赖。
+import type { PreviewStatePath, PreviewSnapshot } from "../state/preview-state.ts";
 
 /** 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） */
 export interface PreviewActionMenuCtx {

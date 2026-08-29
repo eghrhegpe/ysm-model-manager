@@ -35,7 +35,8 @@ const refreshRepo = (): void => {
   bus.emit("tree:reload");
 };
 
-const fileToBase64 = (file: File): Promise<string> =>
+/** File → base64（10s 超时兜底，防 FileReader 悬挂卡死导入）；pack-dnd 复用 */
+export const fileToBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     // P3 修复（子代理审计）：无超时兜底——FileReader 既不走 onload 也不走 onerror 时

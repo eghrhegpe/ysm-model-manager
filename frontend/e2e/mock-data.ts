@@ -83,6 +83,9 @@ export const MOCK_DATA = {
   ImportModelFile: undefined,
   ImportModelFolder: undefined,
   ImportModelFolderTo: undefined,
+  // 整合包卡片拖拽导入（先入仓库再推送；e2e 未触达，补 undefined 最安全）
+  ImportFileAndPushToInstance: undefined,
+  ImportFolderAndPushToInstance: undefined,
   DeleteResourcePack: undefined,
   OpenFolder: undefined,
   ReadShaderpackLang: JSON.stringify({ name: "光影包测试", entries: {} }),

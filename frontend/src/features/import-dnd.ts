@@ -14,20 +14,11 @@ import { dbg } from "../utils/debug/debug.ts";
 import { swallowError } from "../utils/core/async.ts";
 import { logError } from "../utils/core/log.ts";
 import { executeCollected, importWebFilesWithToast } from "./import-executor.ts";
-import { collectFiles, type CollectedFile } from "./dnd-collector.ts";
-import { isImportableFile } from "./dnd-shared.ts";
+import { collectDropFiles, isEditableTarget, isImportableFile, type CollectedEntry } from "./dnd-shared.ts";
 
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
-const isEditable = (el: EventTarget | null): boolean => {
-  const node = el as HTMLElement | null;
-  return Boolean(
-    node &&
-      (node.tagName === "INPUT" ||
-        node.tagName === "TEXTAREA" ||
-        node.isContentEditable),
-  );
-};
+const isEditable = isEditableTarget;
 
 /**
  * 处理 drop 事件：收集文件 → 过滤 → 执行导入。
@@ -75,31 +66,19 @@ export async function handleTreeDrop(
       return;
     }
 
-    // 桌面版：优先用 dataTransfer.files（WebView2 可靠）；
-    // webkitGetAsEntry 在 WebView2 中对文件条目可能返回 null，仅作为目录收集的补充。
-    // 策略：先用 files 收集所有散文件，再尝试 items → webkitGetAsEntry 补充目录条目。
-    const baseFiles: CollectedFile[] = Array.from(e.dataTransfer?.files || []).map((f) => ({
-      file: f,
-      relPath: (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name,
-    }));
-
-    const items = Array.from(e.dataTransfer?.items || []);
-    let collected: CollectedFile[];
-    if (items.length > 0) {
-      const viaItems = await collectFiles(items, false);
-      // 合并：items 路径来的补充到 baseFiles，去重
-      const seen = new Set(baseFiles.map((c) => c.file.name + ":" + c.file.size + ":" + c.file.lastModified));
-      for (const c of viaItems) {
-        const key = c.file.name + ":" + c.file.size + ":" + c.file.lastModified;
-        if (!seen.has(key)) {
-          seen.add(key);
-          baseFiles.push(c);
-        }
-      }
-      collected = baseFiles;
-    } else {
-      collected = baseFiles;
+    // 桌面版：收集口径收敛到 dnd-shared.collectDropFiles（files 优先 +
+    // webkitGetAsEntry 补充目录 + 去重合并），与整合包卡片拖入共用
+    const collected0: CollectedEntry[] = await collectDropFiles(e);
+    // oversize 逐文件过滤
+    const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
+    if (oversized.length > 0) {
+      bus.emit("toast:show", {
+        msg: `⚠️ ${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
+        duration: TOAST_MS.long,
+        type: "warn",
+      });
     }
+    const collected = collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
     if (collected.length === 0) {
       logDrop("drop: 收集 0 文件（webkitGetAsEntry fallback 也空）");
       bus.emit("toast:show", {
@@ -111,18 +90,6 @@ export async function handleTreeDrop(
     }
     const importableStr = (name: string) => isImportableFile(name) ? "Y" : "N";
     logDrop(`drop: 收集 ${collected.length} 文件 [${collected.map((c) => `${c.file.name}(imp=${importableStr(c.file.name)})`).join(", ")}]`);
-
-    // oversize 逐文件过滤
-    const oversized = collected.filter((c) => c.file.size > MAX_IMPORT_BYTES);
-    if (oversized.length > 0) {
-      bus.emit("toast:show", {
-        msg: `⚠️ ${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
-        duration: TOAST_MS.long,
-        type: "warn",
-      });
-      collected = collected.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
-      if (collected.length === 0) return;
-    }
 
     const total = collected.length;
     const r = await executeCollected(collected, rtype);

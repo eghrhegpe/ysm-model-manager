@@ -22,6 +22,7 @@ export { appSidebarStyle };
 import { headerHTML, footerHTML, listContainerHTML } from "./tpl.ts";
 import { renderVersionCards } from "./render.ts";
 import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
+import { bindPackCardDnD } from "../../features/pack-dnd.ts";
 import { get } from "../../services/registry.ts";
 import type { loadInstances } from "./loader.ts";
 import type { SidebarInstance } from "./data.ts";
@@ -362,6 +363,7 @@ class AppSidebar extends WebComponentBase {
   private _unsubs: Array<() => void> = [];
   private _rtype: string;
   private _cardCleanup: (() => void) | null = null;
+  private _packDndCleanup: (() => void) | null = null;
   private _docClickHandler: (() => void) | null = null;
   private _syncInProgress = false; // 防止并发推送/拉取
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -413,6 +415,10 @@ class AppSidebar extends WebComponentBase {
 
   async connectedCallback(): Promise<void> {
     this._renderLayout();
+
+    // 整合包卡片拖拽导入（先入仓库再推送）：document 层监听，惰性读最新实例列表
+    this._packDndCleanup?.();
+    this._packDndCleanup = bindPackCardDnD(this._root, () => this._instances);
 
     // 监听刷新事件（300ms 防抖，防止短时间内多次重载）
     // force=true：stats:refresh 由变异操作（sync 拉取/删除/导入/启停）完成后触发，
@@ -520,6 +526,10 @@ class AppSidebar extends WebComponentBase {
     if (this._cardCleanup) {
       this._cardCleanup();
       this._cardCleanup = null;
+    }
+    if (this._packDndCleanup) {
+      this._packDndCleanup();
+      this._packDndCleanup = null;
     }
     if (this._docClickHandler) {
       document.removeEventListener("click", this._docClickHandler);

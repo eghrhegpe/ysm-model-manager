@@ -11,8 +11,15 @@ export function renderVersionCards(
 ): void {
   container.innerHTML = "";
   if (!instances.length) {
-    container.innerHTML =
-      '<div class="ws-empty" style="padding:24px">🔍 ' + t("sidebar.noMatchInstances") + '</div>';
+    // 空态就地配 mcRoot：自动搜索覆盖标准布局，HMCL/PCL 检测覆盖分离实例目录
+    // （原设置页「🎮 HMCL / PCL」按钮搬家至此，用户在哪遇到问题就在哪解决）
+    container.innerHTML = `
+      <div class="ws-empty" style="padding:24px;text-align:center">🔍 ${t("sidebar.noMatchInstances")}
+        <div style="margin-top:12px;display:flex;gap:6px;justify-content:center">
+          <button class="btn-base sm" data-sidebar-mc-search>🔍 ${t("settings.paths.autoSearch")}</button>
+          <button class="btn-base sm" data-sidebar-launcher-detect>🎮 HMCL / PCL</button>
+        </div>
+      </div>`;
     return;
   }
   instances.forEach((ins, idx) => {

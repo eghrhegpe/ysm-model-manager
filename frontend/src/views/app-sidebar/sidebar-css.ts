@@ -15,6 +15,8 @@ export const sidebarCSS: string = `
   background: var(--bg); border: 1px solid var(--bd);
   border-radius: 6px; margin-bottom: 4px; overflow: hidden;
 }
+/* 拖拽导入悬停态：虚线框提示「拖到此卡片可直接推送到该整合包」 */
+.instance-card.dnd-over { border: 1px dashed var(--accent, #89b4fa); box-shadow: 0 0 0 1px var(--accent, #89b4fa) inset; }
 .instance-card-header {
   padding: 5px 10px; cursor: pointer; transition: background var(--tr-fast);
 }

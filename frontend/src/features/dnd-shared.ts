@@ -1,5 +1,6 @@
 // ===== DnD 导入共享逻辑（import-queue 与 handler-dnd 共用，消除重复）=====
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
+import { collectFiles } from "./dnd-collector.ts";
 
 const getExt = (name: string): string =>
   "." + (name.split(".").pop() || "").toLowerCase();
@@ -73,4 +74,42 @@ export const groupCollected = (
     }
   }
   return { folders, singles };
+};
+
+// ===== drop 事件文件收集（仓库页 / 整合包卡片共用收集口径）=====
+
+const fileKey = (f: File): string => f.name + ":" + f.size + ":" + f.lastModified;
+
+/** drop 目标是否为可编辑元素（输入框内 drop 不应触发导入） */
+export const isEditableTarget = (el: EventTarget | null): boolean => {
+  const node = el as HTMLElement | null;
+  return Boolean(
+    node &&
+      (node.tagName === "INPUT" ||
+        node.tagName === "TEXTAREA" ||
+        node.isContentEditable),
+  );
+};
+
+/**
+ * 从 drop 事件的 DataTransfer 收集文件（桌面端）：
+ * 优先 dataTransfer.files（WebView2 可靠），再 items → webkitGetAsEntry 补充目录条目，
+ * 按 name:size:lastModified 去重合并。handleTreeDrop / handleInstanceDrop 共用。
+ */
+export const collectDropFiles = async (e: DragEvent): Promise<CollectedEntry[]> => {
+  const baseFiles: CollectedEntry[] = Array.from(e.dataTransfer?.files || []).map((f) => ({
+    file: f,
+    relPath: (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name,
+  }));
+  const items = Array.from(e.dataTransfer?.items || []);
+  if (items.length === 0) return baseFiles;
+  const viaItems = await collectFiles(items, false);
+  const seen = new Set(baseFiles.map((c) => fileKey(c.file)));
+  for (const c of viaItems) {
+    if (!seen.has(fileKey(c.file))) {
+      seen.add(fileKey(c.file));
+      baseFiles.push(c);
+    }
+  }
+  return baseFiles;
 };

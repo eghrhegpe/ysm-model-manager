@@ -8,6 +8,7 @@ import { currentRepoType } from "../../features/repo-rtype.ts";
 import type { SidebarInstance } from "./data.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { getApp } from "../../backend/app.ts";
+import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";
 
 // 绑定每个卡片展开/折叠
 // 返回清理函数，组件销毁时移除事件监听
@@ -39,6 +40,15 @@ function bindCardClickHandler(
   return (e: MouseEvent): void => {
     const target = e.target as HTMLElement | null;
     if (!target) return;
+    // 空态就地配置入口（render.ts ws-empty 内按钮，走列表事件委托）
+    if (target.closest("[data-sidebar-mc-search]")) {
+      void runMcSearch();
+      return;
+    }
+    if (target.closest("[data-sidebar-launcher-detect]")) {
+      void runLauncherDetect();
+      return;
+    }
     if (target.closest("button") || target.closest(".chk")) return;
     const card = target.closest(".instance-card") as HTMLElement | null;
     if (!card) return;

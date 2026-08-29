@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-29T12:12:05.644Z",
+  "generated": "2026-08-29T12:20:47.108Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -134,6 +134,7 @@
     "src/utils/format/ysm-anim-config.ts#src/views/app-preview/wasm.ts",
     "src/utils/resource/types.test.ts#src/utils/resource/types.ts",
     "src/views/app-content/diagnostics/perf.test.ts#src/views/app-content/diagnostics/perf.test.ts",
+    "src/views/app-content/init-github.test.ts#src/views/app-content/init-github.test.ts",
     "src/views/app-content/site/edit.test.ts#src/views/app-content/site/edit.test.ts",
     "src/views/app-content/site/edit.ts#src/views/app-content/site/edit.ts",
     "src/views/app-preview/detail-3d.test.ts#src/views/app-preview/maid-3d.test.ts",

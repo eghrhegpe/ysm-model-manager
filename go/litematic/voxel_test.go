@@ -427,8 +427,10 @@ func TestBuildNbtVoxelData_InvalidSize(t *testing.T) {
 // ====== 基岩版 1.21+ structure（sub_levels 聚合，对齐 buildBedrockVoxelData）=====
 
 // makeBedrockStructureGz 构造基岩版 structure NBT：
-//   sub0: bounds (0,0,0)-(1,0,0)，blocks: (0,0,0) pid=1 stone、(0,0,1) pid=0 air、(1,0,0) pid=2 red_concrete
-//   sub1: bounds (2,0,0)-(3,0,0)，blocks: (0,0,0) pid=1 stone（origin=2 → 全局 (2,0,0)）、(1,0,0) pid=9 越界跳过
+//
+//	sub0: bounds (0,0,0)-(1,0,0)，blocks: (0,0,0) pid=1 stone、(0,0,1) pid=0 air、(1,0,0) pid=2 red_concrete
+//	sub1: bounds (2,0,0)-(3,0,0)，blocks: (0,0,0) pid=1 stone（origin=2 → 全局 (2,0,0)）、(1,0,0) pid=9 越界跳过
+//
 // 聚合包围盒 (0,0,0)-(3,0,0) → Size [4,1,1]；验证坐标平移归零（min=0）+ air/越界过滤
 func makeBedrockStructureGz(t *testing.T) []byte {
 	t.Helper()
@@ -590,5 +592,87 @@ func TestBuildSchematicVoxelData_NoBlocks(t *testing.T) {
 	path := writeVoxelGz(t, buf.Bytes())
 	if _, err := BuildSchematicVoxelData(path, 100); err == nil {
 		t.Fatal("无 Blocks/BlockData 应报错")
+	}
+}
+
+// ===== ADR-132 遗留 1：root 输入源解耦（OpenGzRootFromBytes + Build*FromRoot）=====
+// 覆盖：OpenGzRootFromBytes 正常解码/坏 gzip/非 gzip；FromRoot 与裸路径入口结果一致（零回归）。
+
+func TestOpenGzRootFromBytes_Success(t *testing.T) {
+	_, data := makeVoxelGz(t, 1, 100)
+	root, err := OpenGzRootFromBytes(data)
+	if err != nil {
+		t.Fatalf("OpenGzRootFromBytes 失败: %v", err)
+	}
+	if _, ok := root["Regions"]; !ok {
+		t.Error("root 应含 Regions（litematic 结构）")
+	}
+}
+
+func TestOpenGzRootFromBytes_BadGzip(t *testing.T) {
+	if _, err := OpenGzRootFromBytes([]byte("not gzip data")); err == nil {
+		t.Fatal("非 gzip 字节应报错")
+	}
+	// 截断 gzip（合法头 + 截断体）也应报错
+	_, good := makeVoxelGz(t, 1, 100)
+	if _, err := OpenGzRootFromBytes(good[:len(good)/2]); err == nil {
+		t.Fatal("截断 gzip 应报错")
+	}
+}
+
+func TestBuildVoxelDataFromRoot_MatchesPathEntry(t *testing.T) {
+	// 同一 gz 字节：裸路径入口 vs 字节→root→FromRoot，结果一致（零回归 + 解耦等价）
+	_, data := makeVoxelGz(t, 1, 100)
+	path := writeVoxelGz(t, data)
+
+	viaPath, err := BuildVoxelData(path, 100)
+	if err != nil {
+		t.Fatalf("BuildVoxelData 失败: %v", err)
+	}
+	root, err := OpenGzRootFromBytes(data)
+	if err != nil {
+		t.Fatalf("OpenGzRootFromBytes 失败: %v", err)
+	}
+	viaRoot, err := BuildVoxelDataFromRoot(root, 100)
+	if err != nil {
+		t.Fatalf("BuildVoxelDataFromRoot 失败: %v", err)
+	}
+	if viaPath.Size != viaRoot.Size {
+		t.Errorf("Size 不一致: path=%v root=%v", viaPath.Size, viaRoot.Size)
+	}
+	if len(viaPath.Groups) != len(viaRoot.Groups) {
+		t.Errorf("Groups 数不一致: path=%d root=%d", len(viaPath.Groups), len(viaRoot.Groups))
+	}
+	for i := range viaPath.Groups {
+		if viaPath.Groups[i].Color != viaRoot.Groups[i].Color {
+			t.Errorf("Groups[%d].Color 不一致: path=%s root=%s", i, viaPath.Groups[i].Color, viaRoot.Groups[i].Color)
+		}
+	}
+}
+
+func TestBuildNbtVoxelDataFromRoot_MatchesPathEntry(t *testing.T) {
+	data := makeNbtStructureGz(t, 1) // 1 个 stone 方块
+	path := writeVoxelGz(t, data)
+
+	viaPath, err := BuildNbtVoxelData(path, 100)
+	if err != nil {
+		t.Fatalf("BuildNbtVoxelData 失败: %v", err)
+	}
+	root, err := OpenGzRootFromBytes(data)
+	if err != nil {
+		t.Fatalf("OpenGzRootFromBytes 失败: %v", err)
+	}
+	viaRoot, err := BuildNbtVoxelDataFromRoot(root, 100)
+	if err != nil {
+		t.Fatalf("BuildNbtVoxelDataFromRoot 失败: %v", err)
+	}
+	if len(viaPath.Groups) != len(viaRoot.Groups) {
+		t.Errorf("Groups 数不一致: path=%d root=%d", len(viaPath.Groups), len(viaRoot.Groups))
+	}
+	if len(viaPath.Groups) == 0 {
+		t.Fatal("structure NBT 应有 1 个方块组")
+	}
+	if len(viaPath.Groups[0].Positions) != len(viaRoot.Groups[0].Positions) {
+		t.Errorf("Positions 数不一致: path=%d root=%d", len(viaPath.Groups[0].Positions), len(viaRoot.Groups[0].Positions))
 	}
 }

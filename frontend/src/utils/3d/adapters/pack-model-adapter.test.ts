@@ -432,3 +432,48 @@ describe("setRotationMode / setSpeed", () => {
     preview.dispose!();
   });
 });
+
+// ===== [doc:adr-132] 多模型选择菜单原语（资源包 zip 多 entry）=====
+describe("pack-model 多模型 select（ADR-132）", () => {
+  it("modelEntries 多候选 → menuItems 含 pack-model-select 节点（kind:select，options 含全部 entry）", async () => {
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip", {
+      modelEntries: ["assets/minecraft/models/block/dirt.json", "assets/minecraft/models/block/stone.json"],
+    });
+    const sel = preview.menuItems?.find((n) => n.id === "pack-model-select");
+    expect(sel).toBeDefined();
+    expect(sel!.kind).toBe("select");
+    expect(sel!.control?.options?.map((o) => o.value)).toEqual([
+      "assets/minecraft/models/block/dirt.json",
+      "assets/minecraft/models/block/stone.json",
+    ]);
+    // get 读当前 entryPath（activeId 闭包 = build 入参，完整路径）
+    expect(sel!.control?.get?.(undefined)).toBe("assets/minecraft/models/block/dirt.json");
+    preview.dispose!();
+  });
+
+  it("modelEntries 单候选 → 无 select 节点（无选择语义）", async () => {
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip", {
+      modelEntries: ["assets/minecraft/models/block/dirt.json"],
+    });
+    expect(preview.menuItems?.some((n) => n.id === "pack-model-select")).toBe(false);
+    preview.dispose!();
+  });
+
+  it("select set → ctx.switchTo(entryPath) 触发重建", async () => {
+    const deps = makeDeps();
+    const switchTo = vi.fn(() => Promise.resolve());
+    const ctx = makeCtx() as unknown as PreviewBuildCtx & { switchTo: (p: string) => Promise<void> };
+    ctx.switchTo = switchTo;
+    const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip", {
+      modelEntries: ["assets/minecraft/models/block/dirt.json", "assets/minecraft/models/block/stone.json"],
+    });
+    const sel = preview.menuItems?.find((n) => n.id === "pack-model-select")!;
+    sel.control!.set!("assets/minecraft/models/block/stone.json");
+    expect(switchTo).toHaveBeenCalledWith("assets/minecraft/models/block/stone.json");
+    preview.dispose!();
+  });
+});

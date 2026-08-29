@@ -17,12 +17,20 @@ import {
 import { screenshotFromRenderer } from "../screenshot.ts";
 import { loadMcTints, getTintColorSync } from "../mc-tints.ts";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import { multiModelSelectNode } from "./preview-menu/multi-model.ts";
 import { textureCache } from "../texture-cache.ts";
 import { safeDispose } from "../safe-dispose.ts";
 
 /** Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） */
 export interface PackDeps {
   readEntry(path: string, entry: string): Promise<string>;
+}
+
+/** 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） */
+export interface PackAdapterOpts {
+  /** zip 内全部可渲染 model entry（如 assets/minecraft/models/block/xxx.json）；缺省 = 单模型无 select */
+  modelEntries?: string[];
 }
 
 // tint 染色类别（MC BlockColors 语义：类别由方块身份决定，模型 JSON 不含方块身份 → 路径启发式近似，
@@ -43,11 +51,11 @@ interface PackState {
   usedTextures: Set<string>;
 }
 
-/** 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） */
-export function makePackAdapter(deps: PackDeps, zipPath: string): PreviewAdapter {
+/** 工厂：适配器持 zipPath（容器路径）+ 可选多模型候选（ADR-132），buildPath 即 entry path（虚拟文件夹下的文件路径） */
+export function makePackAdapter(deps: PackDeps, zipPath: string, opts?: PackAdapterOpts): PreviewAdapter {
   return {
     id: "resourcepack",
-    build: (ctx, buildPath) => buildPackScene(ctx, buildPath, deps, zipPath),
+    build: (ctx, buildPath) => buildPackScene(ctx, buildPath, deps, zipPath, opts),
   };
 }
 
@@ -211,12 +219,13 @@ function disposeContent(state: PackState, scene: THREE.Scene): void {
   state.usedTextures.clear();
 }
 
-/** 构建资源包模型预览场景（ADR-080 D3 + ADR-084 L2） */
+/** 构建资源包模型预览场景（ADR-080 D3 + ADR-084 L2 + ADR-132 多模型 select） */
 async function buildPackScene(
   ctx: PreviewBuildCtx,
   entryPath: string, // ADR-084 L2：zip 内模型路径（虚拟文件夹下的文件路径）
   deps: PackDeps,
   zipPath: string,   // 容器路径（.zip 文件路径）
+  opts?: PackAdapterOpts,
 ): Promise<PreviewScene> {
   if (!ctx.scene || !ctx.camera || !ctx.controls || !ctx.renderer) {
     throw new Error("pack-model shared 模式需要核心提供 scene/camera/controls/renderer");
@@ -259,7 +268,23 @@ async function buildPackScene(
   frameCamera(ctx, group);
   ctx.loadingEl.remove();
 
+  // [doc:adr-132] 多模型选择菜单项（zip 内全部 model entry；切 entry 走 core switchTo 重建）
+  const menuItems: PreviewMenuNode[] = [];
+  const select = multiModelSelectNode({
+    entries: (opts?.modelEntries ?? []).map((e) => ({
+      id: e,
+      label: e.split(/[/\\]/).pop() || e,
+    })),
+    nodeId: "pack-model-select",
+    activeId: (): string => entryPath,
+    onSelect: (id: string): void => {
+      if (ctx.switchTo && id) void ctx.switchTo(id);
+    },
+  });
+  if (select) menuItems.push(select);
+
   return {
+    menuItems,
     dispose: () => disposeContent(state, ctx.scene!),
     resetCamera: () => {
       if (ctx.camera && state.group) {

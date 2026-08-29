@@ -203,7 +203,7 @@ interface MdMmIoState {
   effectivePort: MmdDataPort;
   effectivePath: string;
   zipModelOverride: { bytes: Uint8Array; base: string; b64: string } | null;
-  /** [doc:adr-127] zip 内全部 pmx/pmd 候选虚拟路径（rootPath + key）；非 zip = 空数组（model 面板不显示切换） */
+  /** [doc:adr-132] zip 内全部 pmx/pmd 候选虚拟路径（rootPath + key）；非 zip = 空数组（model 面板不显示切换） */
   zipModelCandidates: string[];
   modelB64: string | null;
   bytes: Uint8Array;
@@ -388,7 +388,7 @@ async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
     const zip = await prepareMmdZipInput(c.effectivePath, c.port);
     c.effectivePort = zip.port;
     c.effectivePath = zip.rootPath + zip.modelEntry;
-    // [doc:adr-127] 暴露全部 pmx/pmd 候选虚拟路径（模型面板切换用）；第一个 = 当前
+    // [doc:adr-132] 暴露全部 pmx/pmd 候选虚拟路径（模型面板切换用）；第一个 = 当前
     c.zipModelCandidates = zip.allModelEntries.map((key) => zip.rootPath + key);
     c.zipModelOverride = {
       bytes: zip.modelBytes,
@@ -917,7 +917,7 @@ function mdMmStage5Menu(c: MdMmStage5Ctx): {
     modelPath: c.origPath,
     cameraControls: c.ctx.cameraControls,
     switchTo: c.ctx.switchTo,
-    // [doc:adr-127] zip 多 pmx 候选（模型面板切换 select 用）
+    // [doc:adr-132] zip 多 pmx 候选（模型面板切换 select 用）
     zipModelCandidates: c.zipModelCandidates,
   };
   const mats = c.mesh.material as unknown as THREE.Material[];

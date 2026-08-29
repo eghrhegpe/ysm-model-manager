@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 129 张知识卡
+> 总计: 130 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -176,7 +176,7 @@
 - **go_repoaudit**（仓库审计 go/repoaudit）：`go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 
-## ui（27 张）
+## ui（28 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -200,6 +200,7 @@
 | 🏗 dialog-tag-editor | 标签编辑器 tag-editor | architecture | — | 标签, 打标签, 编辑标签, tag, 标签弹窗, 分类标记 |
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, 3D 预览, overlay, ADR-057 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
+| 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | — | TODO |
 | 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, ysm-model, sessionId |
 | 🍃 preview_menu_settings_state | 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125） | leaf | — | 新增 3D 预览设置项, 新增 cap 想让某个开关出现在设置面板, 排查设置项改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, ADR-125 三块落地状态核对 |
 | 🍃 preview_panel_declarative | 3D 预览面板内容声明式化通道（ADR-126 P4-B） | leaf | — | 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）, 评估"面板内容该走 renderCustom 还是 children 声明式", 排查面板内容不出现 / 渲染通道冲突, P4-B 子步（1→2→3）状态通道复用参考 |
@@ -228,6 +229,7 @@
 - **dialog-tag-editor**（标签编辑器 tag-editor）：`tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto…
 - **dom-fab**（3D 预览悬浮 FAB 控制层）：3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu…
 - **frontend_repo_audit**（前端 TS 整包审计）：2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全…
+- **multi_model_select**（多模型选择菜单原语 multiModelSelectNode）：TODO
 - **preview_menu_session_key**（preview-menu-session-key）：3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台
 - **preview_menu_settings_state**（3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125））：ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已落地，**S2「状态单向流」只落了 bind 回写，未落统一状态源**——横切设置项各自有独立读写通道，声明式 Schema 的 `control.bi…
 - **preview_panel_declarative**（3D 预览面板内容声明式化通道（ADR-126 P4-B））：ADR-125 把**设置面板**的控件统一到 `MenuControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节点带 …

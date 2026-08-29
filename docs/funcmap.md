@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 180 | 744 |
+| 前端·工具 | 181 | 747 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **512** | **2205** |
+| **合计** | **513** | **2208** |
 
 ## Go·头像
 
@@ -901,7 +901,7 @@
 | `App.InstallResourceToInstance()` | `internal/app/resource_bindings:682` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
 | `App.ListPackModels()` | `internal/app/resourcepack_models:73` | ListPackModels 枚举资源包容器内的 block/item 模型 JSON 条目路径（升序）。 |
 | `App.ListPackModelsDetail()` | `internal/app/resourcepack_models:100` | ListPackModelsDetail 枚举资源包容器内的 block/item 模型（升序）+ 立方体数（elements 长度）。 |
-| `App.ReadPackEntry()` | `internal/app/resourcepack_models:167` | ReadPackEntry 读取容器内条目内容（base64 字符串）。 |
+| `App.ReadPackEntry()` | `internal/app/resourcepack_models:166` | ReadPackEntry 读取容器内条目内容（base64 字符串）。 |
 | `PackModelDetail()` | `internal/app/resourcepack_models:27` | PackModelDetail 单模型清单项（path + 立方体数，供详情页模型清单区）。 |
 | `limitedBuffer.Write()` | `internal/app/wasm_decoder:86` | — |
 | `App.GetWasmBinary()` | `internal/app/wasm_embed:5` | GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。 |
@@ -1375,8 +1375,8 @@
 | `getCustomAnimPath()` | `frontend/src/utils/3d/adapters/mmd-anim-library:12` | 获取 MMD 动作库（CustomAnim）的绝对路径。 |
 | `filterAnimFiles()` | `frontend/src/utils/3d/adapters/mmd-anim-library:24` | 从文件列表中筛选动作文件（.vmd / .vpd） |
 | `PmxFileStats()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:16` | PMX 文件级统计（详情卡展示；独立于 SceneStats 的 traverse 口径） |
-| `_clearPmxStatsCache()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:28` | 清除缓存（测试钩子；生产由模块级生命周期自然存活） |
-| `readPmxStats()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:36` | 读 PMX 文件级统计：Worker 完整解析 → 取 counts → 缓存。 |
+| `_clearPmxStatsCache()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:31` | 清除缓存（测试钩子；生产由模块级生命周期自然存活） |
+| `readPmxStats()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:39` | 读 PMX 文件级统计：Worker 完整解析 → 取 counts → 缓存。 |
 | `BasisEncoderLike()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:13` | BasisEncoder 实例的最小接口（embind 运行时提供） |
 | `BasisModuleLike()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:29` | 初始化后的 basis 模块（含 BasisEncoder 构造器） |
 | `MAX_KTX2_PIXELS()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:65` | 单纹理像素上限：超过则跳过 KTX2 编码。 |
@@ -1435,8 +1435,9 @@
 | `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:240` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
 | `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:258` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
-| `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:24` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
-| `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:47` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
+| `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:26` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
+| `PackAdapterOpts()` | `frontend/src/utils/3d/adapters/pack-model-adapter:31` | 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） |
+| `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:55` | 工厂：适配器持 zipPath（容器路径）+ 可选多模型候选（ADR-132），buildPath 即 entry path（虚拟文件夹下的文件路径） |
 | `PerceptionState()` | `frontend/src/utils/3d/adapters/perception-controls:10` | 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） |
 | `PerceptionCapability()` | `frontend/src/utils/3d/adapters/perception-controls:19` | 可用感知模块描述（由 adapter 按实际能力填写） |
 | `perceptionNodes()` | `frontend/src/utils/3d/adapters/perception-controls:36` | 感知面板声明式节点（纯数据工厂零 DOM）：toggle kind 节点， control.get/set 闭包读写 adapter 内 perception state（非状态层 |
@@ -1465,6 +1466,8 @@
 | `disposeEnvSubscriptions()` | `frontend/src/utils/3d/adapters/preview-menu/env:30` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
 | `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu/env:117` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
 | `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu/env:240` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
+| `MultiModelSelectOpts()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:16` | 多模型选择原语入参 |
+| `multiModelSelectNode()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:36` | 多模型选择 select 节点工厂。 |
 | `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
 | `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:24` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
 | `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:40` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
@@ -1828,13 +1831,13 @@
 | `PreviewSnapshot()` | `frontend/src/utils/3d/state/preview-state:48` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
 | `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:69` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
 | `toStatePath()` | `frontend/src/utils/3d/state/preview-state:91` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
-| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:261` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
-| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:271` | 订阅横切设置变更；返回取消订阅函数 |
-| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:292` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
-| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:301` | 写入路径值。 |
-| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:311` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
-| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:320` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
-| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:327` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
+| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:270` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
+| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:280` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:301` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
+| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:310` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:320` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:329` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
+| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:336` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
 | `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
 | `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |
@@ -2251,14 +2254,14 @@
 | `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:38` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
 | `invalidateMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:43` | 任意新预览派发时调用，作废在途 MMD 加载 |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/mmd-controls` | — |
-| `MmdBottomNavCtx()` | `frontend/src/views/app-preview/mmd-controls:28` | — |
-| `fillMmdModelPanel()` | `frontend/src/views/app-preview/mmd-controls:43` | MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） |
-| `mmdModelInfoNodes()` | `frontend/src/views/app-preview/mmd-controls:61` | [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。 |
-| `MmdPlayBridge()` | `frontend/src/views/app-preview/mmd-controls:101` | MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） |
-| `playNodes()` | `frontend/src/views/app-preview/mmd-controls:119` | [doc:adr-126-p5-收尾] MMD 播放/动作面板——声明式节点版。 |
-| `MaterialControlBridge()` | `frontend/src/views/app-preview/mmd-controls:185` | 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） |
-| `mmdShotNodes()` | `frontend/src/views/app-preview/mmd-controls:202` | [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。 |
-| `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:218` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
+| `MmdBottomNavCtx()` | `frontend/src/views/app-preview/mmd-controls:29` | — |
+| `fillMmdModelPanel()` | `frontend/src/views/app-preview/mmd-controls:44` | MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） |
+| `mmdModelInfoNodes()` | `frontend/src/views/app-preview/mmd-controls:62` | [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。 |
+| `MmdPlayBridge()` | `frontend/src/views/app-preview/mmd-controls:96` | MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） |
+| `playNodes()` | `frontend/src/views/app-preview/mmd-controls:114` | [doc:adr-126-p5-收尾] MMD 播放/动作面板——声明式节点版。 |
+| `MaterialControlBridge()` | `frontend/src/views/app-preview/mmd-controls:180` | 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） |
+| `mmdShotNodes()` | `frontend/src/views/app-preview/mmd-controls:197` | [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。 |
+| `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:213` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
 | `makeMmdDataPort()` | `frontend/src/views/app-preview/mmd-data-port:11` | 构建一个接入 Go RPC 的 MMD 数据端口；scope 仅用于 AddOpLog 的运行时环打标 （角色预览用 "mmd-preview"，场景预览用 "mmd-scene" |
 | `resolveMmdSiblings()` | `frontend/src/views/app-preview/mmd-siblings:13` | 同类型 MMD 模型候选（委托共享底座 resolveSiblingsByType）；失败返回 []（下拉不渲染） |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:12` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
@@ -2267,8 +2270,8 @@
 | `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:161` | 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标） |
 | `resolveMorphSiblings()` | `frontend/src/views/app-preview/morph-siblings:8` | CustomMorph 目录下所有候选文件（含子目录）；失败返回 [] |
 | `createPack3D()` | `frontend/src/views/app-preview/pack-3d:30` | 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） |
-| `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:51` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
-| `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:56` | 任意新预览派发时调用，作废在途资源包加载 |
+| `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:57` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
+| `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:62` | 任意新预览派发时调用，作废在途资源包加载 |
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:23` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
 | `registerReRoute()` | `frontend/src/views/app-preview/preview-library:24` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
 | `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:32` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |

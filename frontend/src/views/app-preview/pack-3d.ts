@@ -35,7 +35,9 @@ export async function createPack3D(path: string, opts?: Mount3DOptions & { start
   try {
     const arr = JSON.parse(raw) as unknown;
     entries = Array.isArray(arr)
-      ? (arr as string[]).filter((e) => e.includes("/block/") || e.includes("/item/"))
+      // 与 Go/web 的大小写不敏感清单（packModelEntryMatch / webPackModelEntryMatch）一致：
+      // Block/Item 大写目录的包也能被筛中，否则详情页点模型行静默无响应
+      ? (arr as string[]).filter((e) => e.toLowerCase().includes("/block/") || e.toLowerCase().includes("/item/"))
       : [];
   } catch {}
   if (entries.length === 0) return;
@@ -43,8 +45,12 @@ export async function createPack3D(path: string, opts?: Mount3DOptions & { start
   // 指定初始 entry（详情页模型清单点击直达；ADR-131 P3），否则首个 entry
   const { startEntry, ...mountOpts } = opts ?? {};
   const initialEntry = startEntry && entries.includes(startEntry) ? startEntry : entries[0]!;
-  // 适配器持 zipPath（解析模型文件所需的容器路径）
-  await mount3D(makePackAdapter(makePackDeps(), path), initialEntry, withPreviewExtras({ siblings: entries, ...mountOpts }));
+  // 适配器持 zipPath（解析模型文件所需的容器路径）+ 多模型候选（ADR-132：根菜单 select）
+  await mount3D(
+    makePackAdapter(makePackDeps(), path, { modelEntries: entries }),
+    initialEntry,
+    withPreviewExtras({ siblings: entries, ...mountOpts }),
+  );
 }
 
 /** 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 */

@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-132：多模型选择菜单原语（跨资源类型统一 select）",
+        "link": "/adr/ADR-132-multi-model-select-menu-primitive"
+      },
+      {
         "text": "ADR-131：3D 渲染期统计提取（预览期统计与类型判定解耦）",
         "link": "/adr/ADR-131-preview-stats-extraction"
       },
@@ -1614,6 +1618,10 @@ export const autoSidebar = [
           {
             "text": "前端 TS 整包审计",
             "link": "/knowledge/frontend_repo_audit"
+          },
+          {
+            "text": "多模型选择菜单原语 multiModelSelectNode",
+            "link": "/knowledge/multi_model_select"
           },
           {
             "text": "preview-menu-session-key",

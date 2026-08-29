@@ -30,7 +30,7 @@ export interface MmdZipConfig {
   entryPaths: string[];
   /** 模型 basename（如 "model.pmx"，用于 texMap keying） */
   modelBase: string;
-  /** [doc:adr-127] zip 内全部 pmx/pmd 候选（排序后，第一个 = 默认选中）——供模型选择面板列出 */
+  /** [doc:adr-132] zip 内全部 pmx/pmd 候选（排序后，第一个 = 默认选中）——供模型选择面板列出 */
   modelCandidates: Array<{ key: string; base: string }>;
 }
 
@@ -90,7 +90,7 @@ export async function resolveMmdZipConfig(
     return a.key.localeCompare(b.key);
   });
   const selected = candidates[0];
-  // [doc:adr-127] 全部候选暴露（模型选择面板列出；第一个仍是默认）
+  // [doc:adr-132] 全部候选暴露（模型选择面板列出；第一个仍是默认）
   const modelCandidates = candidates.map((c) => ({ key: c.key, base: c.base }));
 
   return {

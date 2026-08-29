@@ -13,6 +13,7 @@ import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
 import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
+import { multiModelSelectNode } from "../../utils/3d/adapters/preview-menu/multi-model.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import {
   listMmdMaterials,
@@ -35,7 +36,7 @@ export interface MmdBottomNavCtx {
   cameraControls?: CameraControlBridge;
   /** 切换到另一模型（复用核心外壳重建内容层；Phase 2 后归 core switch 项，本字段保留兼容） */
   switchTo?(path: string): Promise<void>;
-  /** [doc:adr-127] zip 内全部 pmx/pmd 候选虚拟路径（多候选时 model 面板显示切换 select）；非 zip = 空/缺省 */
+  /** [doc:adr-132] zip 内全部 pmx/pmd 候选虚拟路径（多候选时 model 面板显示切换 select）；非 zip = 空/缺省 */
   zipModelCandidates?: string[];
 }
 
@@ -61,29 +62,23 @@ export function fillMmdModelPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void
 export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
   const pmx = ctx.mmd.pmx;
   const nodes: PreviewMenuNode[] = [];
-  // [doc:adr-127] zip 多 pmx：模型选择 select（列出全部候选，选中 → switchTo 虚拟路径）
-  if ((ctx.zipModelCandidates?.length ?? 0) > 1) {
-    nodes.push({
-      id: "mmd-model-select",
-      kind: "select",
-      labelKey: "preview.component",
-      fallback: "模型",
-      control: {
-        options: ctx.zipModelCandidates!.map((p) => ({
-          value: p,
-          label: p.split(/[/\\]/).pop() || p,
-        })),
-        // 当前选中：模型名匹配的候选
-        get: (): string =>
-          ctx.zipModelCandidates?.find((p) => (p.split(/[/\\]/).pop() || "") === ctx.modelName)
-            ?? ctx.zipModelCandidates![0] ?? "",
-        set: (v: unknown): void => {
-          const path = String(v);
-          if (ctx.switchTo && path) void ctx.switchTo(path);
-        },
-      },
-    });
-  }
+  // [doc:adr-132] zip 多 pmx：模型选择 select（统一原语 multiModelSelectNode，ADR-132）。
+  // 候选 = zipModelCandidates（虚拟路径，mmd-adapter.ts:392 暴露）；get 保持 basename 匹配
+  // 语义（modelName = 虚拟路径 basename）；set → switchTo(虚拟路径) 重建内容层。
+  const candidates = (ctx.zipModelCandidates ?? []).map((p) => ({
+    id: p,
+    label: p.split(/[/\\]/).pop() || p,
+  }));
+  const select = multiModelSelectNode({
+    entries: candidates,
+    nodeId: "mmd-model-select",
+    activeId: (): string =>
+      candidates.find((c) => c.label === ctx.modelName)?.id ?? candidates[0]?.id ?? "",
+    onSelect: (id: string): void => {
+      if (ctx.switchTo && id) void ctx.switchTo(id);
+    },
+  });
+  if (select) nodes.push(select);
   nodes.push(
     { id: "mmd-model-name", kind: "field", labelKey: "preview.nameLabel", fallback: "名称", value: ctx.modelName },
     {

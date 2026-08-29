@@ -226,7 +226,7 @@ function dpRenderPanel(
     : `<div class="big-icon">🧸</div>`;
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🧸 ${t("preview.modelInfo")}</h3>
-  <div class="dp-placeholder">
+  <div class="dp-placeholder dp-placeholder--head">
     ${coverHtml}
     <div class="dp-hint" style="font-weight:600">${esc(basename)}</div>
     <div class="dp-hint">Bedrock Edition Model</div>
@@ -327,7 +327,7 @@ export async function showMaidPreview(
   // 先显示加载状态
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🧸 ${t("preview.modelInfo")}</h3>
-  <div class="dp-placeholder">
+  <div class="dp-placeholder dp-placeholder--head">
     <div class="big-icon">🧸</div>
     <div class="dp-hint">${esc(basename)}</div>
     <div class="dp-hint">${t("preview.bedrockModel")}</div>

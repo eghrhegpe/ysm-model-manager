@@ -193,4 +193,11 @@ describe("showMaidPreview 车万女仆详情", () => {
     // 🧸 大图标保留
     expect(html).toContain('<div class="big-icon">🧸</div>');
   });
+
+  it("占位符带紧凑头部类（dp-placeholder--head，避免 24px 空态留白）", async () => {
+    const ctx = makeCtx();
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    // maid 的占位符是头部内容区（封面/文件名），不是空态——需带紧凑修饰类
+    expect(ctx.root.innerHTML).toContain('class="dp-placeholder dp-placeholder--head"');
+  });
 });

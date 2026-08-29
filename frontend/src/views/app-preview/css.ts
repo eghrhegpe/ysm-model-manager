@@ -16,6 +16,10 @@ export const previewCSS: string = `
 :host-context(.no-animations) .content > * { animation: none !important; }
 h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transform: uppercase; letter-spacing: .5px; margin: 0 0 8px; }
 .dp-placeholder { text-align: center; padding: 24px 0; color: var(--muted); }
+/* 紧凑头部态（maid 封面/文件名区）：压缩 24px 空态留白，贴近下方详情卡 */
+.dp-placeholder--head { padding: 4px 0 8px; }
+.dp-placeholder--head .dp-hint { margin-bottom: 6px; }
+.dp-placeholder .dp-hint:last-child { margin-bottom: 0; }
 .dp-placeholder .big-icon { font-size: var(--fs-xl); margin-bottom: 8px; }
 .dp-placeholder .dp-hint { font-size: var(--fs-base); margin-bottom: 12px; }
 .dp-placeholder .dp-hints { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }

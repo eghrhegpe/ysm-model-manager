@@ -50,7 +50,7 @@ class AppToast extends WebComponentBase {
         @keyframes toastIn { 0% { transform: translateY(20px) scale(.95); opacity: 0; } 60% { transform: translateY(-4px) scale(1.02); opacity: 1; } 100% { transform: translateY(0) scale(1); } }
         @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
       </style>
-      <div id="c" class="toast-container"></div>
+      <div id="c" class="toast-container" role="status" aria-live="polite"></div>
     `;
   }
 

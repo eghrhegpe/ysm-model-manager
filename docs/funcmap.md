@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 176 | 728 |
+| 前端·工具 | 177 | 730 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **508** | **2187** |
+| **合计** | **509** | **2189** |
 
 ## Go·头像
 
@@ -1326,6 +1326,8 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
+| `BonesPanelItemOpts()` | `frontend/src/utils/3d/adapters/bones-panel-node:32` | 工厂入参：caller 持 cleanupRef（与 panel 生命周期对齐，dispose 时同步调） |
+| `makeBonesPanelItem()` | `frontend/src/utils/3d/adapters/bones-panel-node:51` | 构造「骨骼」菜单项节点。返回的 PreviewMenuNode 形状固定： id="bones" / icon="🦴" / dockGroup="motion" / kind=" |
 | `CameraControlBridge()` | `frontend/src/utils/3d/adapters/camera-controls:13` | 相机控制桥：shared/self 双模式统一构建旋转/速度/重置控件的回调集合（方案 A：消灭 ysm-adapter 双份实现） |
 | `buildCameraControls()` | `frontend/src/utils/3d/adapters/camera-controls:31` | 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 |
 | `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:41` | — |

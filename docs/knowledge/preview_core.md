@@ -56,7 +56,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 - **外壳**：overlay + ⚙️ 声明式根菜单(`preview-menu/defs.ts`：`CORE_MENU_ITEMS` + `PREVIEW_MENU_GROUPS`，能力驱动 dock) + viewContainer + loadingEl + 适配器控件容器(`topBar`，仅 vrm/litematic 遗留 `extraControls` 单按钮，Phase 3 收编)
 - **渲染基座（shared 模式）**：创建 `scene` / `camera` / `renderer` / `OrbitControls` / 灯光，驱动 rAF 循环、WASD/拖拽自转、resize、ESC 关闭、GPU 资源释放。**WASD 键位表驱动（见 [model3d](./model3d.md) 键位消费链）**：`bindInputHandlers` 按 `KeyboardEvent.code`+`loadTdKeymap()` 映射动作表，`mpApplyWasdCameraMotion` 只查 forward/back/left/right/up/down；输入框焦点守卫防止吞打字；方向键双轨 + 修饰键左右对称。
-- **3D overlay 无障碍（a11y，2026-08-29）**：`#ysm-overlay-3d` 设 `role="dialog"` + `aria-modal="true"` + `aria-label="3D 预览"`（复用 `preview.title3d` i18n key），屏幕阅读器可识别模态体验；`mount3D` 入口 `rememberTrigger()` 记下触发 FAB，关闭时 `returnFocus()` 把焦点还给 FAB；document 级 `trapFocusAcrossShadow`（`utils/dom/focus-restore.ts`，跨 Shadow 边界找可聚焦元素，覆盖 ⚙️ 菜单 Shadow DOM）拦截 Tab 越界——避免焦点逃出 3D 到背后树面板。单一事实源：`utils/dom/focus-restore.ts` 的 `rememberTrigger / returnFocus / trapFocusAcrossShadow` 三件套，弹窗/3D/上下文菜单统一受益。
+- **3D overlay 无障碍（a11y，2026-08-29）**：`#ysm-overlay-3d` 设 `role="dialog"` + `aria-modal="true"` + `aria-label="3D 预览"`（复用 `preview.title3d` i18n key），屏幕阅读器可识别模态体验；`mount3D` 入口 `rememberTrigger()` 记下触发 FAB，关闭时 `returnFocus()` 把焦点还给 FAB；document 级 `trapFocusAcrossShadow`（`utils/dom/focus-restore.ts`）拦截 Tab 越界——避免焦点逃出 3D 到背后树面板。注：overlay 整链当前为 **light DOM**（createSlideMenu 无 attachShadow），跨 shadow 下钻属防御性兜底；handler 内深焦解析 + cleanup 身份守卫已修（详见 [utils-dom](./utils-dom.md)）。单一事实源：`utils/dom/focus-restore.ts` 的 `rememberTrigger / returnFocus / trapFocusAcrossShadow` 三件套，弹窗/3D/上下文菜单统一受益。
 - **适配器注入**：内容层经 `PreviewAdapter.build()` 挂进 `ctx.scene`；每帧 `update(dt)` 驱动动态部分（VRM SpringBone、动画）
 - **VRM 动画播放（VRMA）**：`vrm-adapter` 注册 `VRMAnimationLoaderPlugin`，加载同目录 `.vrma`（`listAllFilePaths` 经端口注入，0 backend import），`createVRMAnimationClip` → `THREE.AnimationMixer`；每帧严格 `mixer.update(dt)` → `vrm.update(dt)`（后者内部已含 humanoid / springBone 更新，禁止手动 `vrm.humanoid.update()` 否则 T-pose 回归）；播放时暂停呼吸 / 视线 / 眨眼（与 MMD 行为对齐），复用 `MmdPlayBridge` + `fillMmdPlayPanel` 渲染播放 / 暂停 / 选片面板，无 `.vrma` 时优雅降级（面板不显示）
 - **3D 内模型切换**：`switchToSession(path)` 复用外壳重建内容层（ADR-066 §5.6），对外暴露为 `switchPreview`；`switchPreview(path, { keepInScene: true })` 同台追加（多角色同框，`MAX_MODELS=8` 上限）；角色面板（🧍 模型组 🎭 roles）列出已加载角色（`sceneRegistry`），支持焦点切换 / 详情 / 卸载 / 追加
@@ -125,6 +125,12 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
   5. ✅ **下钻箭头**：组根视图中 panel 型行右侧加 `>` 装饰箭头（`data-testid="row-chevron"`），与「🌍 环境组单 panel 快捷直达（不显示组根视图）」配合——多 panel 组（如 🎛️ 场景）的 camera/lighting/shadow/postproc 行均有箭头，提示可点击进入下级面板。
 
 > **已知坑（构建期 capability 引用）**：环境菜单在 `if(!selfMode)` **之前**构建，此时 `skyCap`/`groundCap` 尚未赋值（仍为 `null`）。正确模式已改**getter 式 `PreviewMenuCtx`**（`preview-menu/core.ts`）：菜单项表通过 getter 在菜单渲染时按需取值，规避构建期 `null` 收窄报 `Property does not exist on type 'never'`；字面量默认值（time=9、IBL=true）只作为初始 UI 显示值，交互处理器写在 `oninput`/`onChange` 闭包内用 `skyCap?.`。地面行 `value: true`、IBL 行 `value: true` 即此口径。
+
+## 已知遗留（2026-08-29 a11y 审查登记）
+
+- **`Space=up` 吞按钮激活**（`input-and-animation.ts`）：`up` 动作绑 `Space`，`onKeyDown` 对命中动作 `preventDefault`——3D 面板内焦点在某 button 上按空格，会被相机消费吞掉该按钮的键盘激活。当前被输入阻断栈（菜单打开 `isInputBlocked()` 提前 return）掩盖，未爆。修复方向：`isEditableTarget` 之外再加「焦点在可交互元素（button/a/role=button）时不消费 Space」判定。
+- **`ARROW_TO_ACTION` 方向键双轨硬编码**：Arrow/NumPad 恒映射平移动作，用户自定义键位后方向键仍强制生效、不可禁用/改绑——"自定义键位"之上叠了一层绕过 keymap 的隐藏映射。与 ADR-036（3D 操作键位）的"键位可配置"语义存在张力，后续若做键位导入/导出须一并治理。
+- 输入阻断栈（`pushInputBlock`/`popInputBlock`，`utils/dom/focus-restore.ts`）当前无"嵌套阻断源计数"——同一 id 重复 push 后 pop 一次即清（`popInputBlock` 按 `lastIndexOf` 删单条）。3D 菜单 + 叠加浮层场景靠调用方自行配对，未做栈深度守卫。
 
 ## 相关
 

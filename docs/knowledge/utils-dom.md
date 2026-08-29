@@ -52,6 +52,11 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 - **hl 在原始 text 上定位**（非先整体转义——`&lt;` 错位陷阱有判别性测试锁定：`hl("&lt;","lt")` → `&amp;<mark>lt</mark>;`，P3 补测）；**Unicode 大小写折叠长度变化（如土耳其 İ）时降级纯转义**（P3 修复：折叠后 idx 用于切片原始 text 会静默错切空 mark）
 - toast 时长：消费方一律引用 `TOAST_MS` 语义档，禁止内联魔法数字或另起同名命名（防止语义漂移）；`scripts/check-toast-duration.mjs` 门禁守护（R7 红线，非阻断观察期，待 rollout 稳定翻硬闸）
 
+## 已知遗留（2026-08-29 a11y 审查登记）
+
+- **输入阻断栈无嵌套计数守卫**：`pushInputBlock`/`popInputBlock` 按 id 配对（`pop` 用 `lastIndexOf` 删单条），同一 id 重复 push 后 pop 一次即清，无栈深度计数。3D 菜单 + 叠加浮层场景靠调用方自行配对；`ui-slide-menu.test.ts` 清栈的 `while (isInputBlocked()) popInputBlock("slide-menu")` 写死 id，未来若塞入其他 id 会死循环——后续可考虑暴露 `__resetInputBlockForTest` 钩子或改计数语义。
+- **测试规模盲区**（`focus-restore.test.ts` / `input-and-animation.test.ts`）：Numpad 只测 keydown 未测 keyup 释放；输入阻断栈 × 双轨键组合时序（按住 W → push 阻断 → 松 W）未锁；`first/last` 按文档序而定、浏览器自然 Tab 按 tabindex 序，overlay 内出现 `tabindex>0` 时边界可能错位（与 modal.ts 同源局限）。随真实屏幕阅读器验证需求再补。
+
 ## 相关
 
 - [utils_display](./utils-display.md) — 文件名显示（同源红线）

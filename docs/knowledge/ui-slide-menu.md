@@ -74,6 +74,11 @@ invariant_anchors:
 - **键盘导航仅使用方向键**（不使用 WASD），避免与 3D 相机 WASD 输入冲突（input-and-animation 在 document 级监听，isInputBlocked 暂停其消费）
 - **showMenu 调用方须调 `menu.onShow()`，hideMenu 调用方须调 `menu.onHide()`**（管理焦点恢复 + 输入阻断栈）；✕ 关闭 3D 时 hideMenu 传 `{ restoreFocus: false }`（由 mount3D closeOverlay 处理焦点归还）
 
+## 已知遗留（2026-08-29 a11y 审查登记）
+
+- `smGetNavItems` 用 `el.offsetParent !== null` 判可见性——**position:fixed 项在真实浏览器 offsetParent 为 null 会被误过滤**（happy-dom 下 offsetParent 是 undefined 恒保留，测试未暴露）。当前菜单项无 fixed 定位未触发；若未来菜单项用 fixed 需改判 `getClientRects().length` 或 `display` 检查。
+- 键盘导航测试补强后仍缺「焦点真正移动」断言之外的边界场景（见 `ui-slide-menu.test.ts` 观察项）；Numpad keyup 释放、输入阻断栈×双轨键组合补测在 `input-and-animation.test.ts` 登记，属同类规模盲区，随真实 a11y 验证需求再补。
+
 ## 相关
 
 - [preview_core](./preview_core.md) — 环境面板等消费方

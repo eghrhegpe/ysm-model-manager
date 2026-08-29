@@ -111,23 +111,6 @@ async function blobUrlToImageData(blobUrl: string): Promise<{
   return { data: new Uint8Array(imageData.data.buffer), width: img.width, height: img.height };
 }
 
-/** 将 blob URL 转换为 base64 字符串 */
-async function blobUrlToBase64(blobUrl: string): Promise<string> {
-  const resp = await fetch(blobUrl);
-  const blob = await resp.blob();
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // result 是 data:application/octet-stream;base64,... 格式，提取 base64 部分
-      const b64 = result.includes(",") ? result.split(",")[1] : result;
-      resolve(b64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
 // ===== 本地 basis_encoder WASM 加载与 KTX2 编码（绕开 loaders.gl 的 subarray().buffer 假成功 bug）=====
 // 核心实现已抽取到 mmd-ktx2-basis.ts（主线程与 Worker 共用，无 DOM 依赖）。
 // 本文件保留编码调度/并发/缓存逻辑，并在此处导出兼容符号。
@@ -192,12 +175,6 @@ function getKtx2WorkerPool(): Worker[] | null {
     ktx2Workers = null;
     return null;
   }
-}
-
-/** 终止全部 KTX2 worker，在途任务全部 reject（降级同步路径） */
-function terminateKtx2Workers(): void {
-  // 终止整池 + reject 全部在途；onPoolTerminated 已清 ktx2Workers/ktx2Bridge
-  ktx2Bridge?.terminatePool();
 }
 
 /**

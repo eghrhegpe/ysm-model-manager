@@ -38,6 +38,11 @@ export function loadMcTints(version = "1.21.4"): Promise<TintsFile> {
     .then((d) => {
       cache = d;
       return d;
+    })
+    .catch((e: unknown) => {
+      // 失败后清空 inflight：一次网络瞬断不应让本页面生命周期内永久锁死加载
+      inflight = null;
+      throw e;
     });
   return inflight;
 }

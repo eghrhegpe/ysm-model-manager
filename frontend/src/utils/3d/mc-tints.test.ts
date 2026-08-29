@@ -51,7 +51,7 @@ describe("getTintColorSync（未加载 vendored 表，cache=null）", () => {
 });
 
 describe("loadMcTints", () => {
-  it("HTTP 失败：抛 HTTP <status>；inflight 不复位（现状语义：失败后重试直接复用 rejected promise）", async () => {
+  it("HTTP 失败：抛 HTTP <status>；失败清空 inflight → 重试重新 fetch（不复用 rejected promise）", async () => {
     // resetModules + 动态导入：隔离实例，不污染本文件静态实例的 cache
     vi.resetModules();
     const fetchMock = vi.fn(async (_url: string) => ({ ok: false, status: 404, json: async () => ({}) }));
@@ -62,10 +62,11 @@ describe("loadMcTints", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(String(fetchMock.mock.calls[0][0])).toContain("mc-tints/1.20.json");
 
-      // 现状：rejected promise 留在 inflight → 再调不再发 fetch
+      // 失败后 inflight 已清空 → 再次调用重新发 fetch（而非复用 rejected promise）
       fetchMock.mockClear();
       await expect(mod.loadMcTints("1.21.4")).rejects.toThrow("HTTP 404");
-      expect(fetchMock).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(String(fetchMock.mock.calls[0][0])).toContain("mc-tints/1.21.4.json");
     } finally {
       vi.unstubAllGlobals();
     }

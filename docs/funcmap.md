@@ -1377,9 +1377,9 @@
 | `encodeToKTX2Basis()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:81` | 将 RGBA ImageData 编码为 KTX2（Basis Universal ETC1S）。 |
 | `cancelPendingEncodings()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:71` | 取消所有待执行的编码（已在执行的不受影响） |
 | `resetEncoderState()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:83` | 重置编码器状态（测试用） |
-| `__setEncodeImplForTest()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:228` | 测试用：注入编码实现（默认走本地 WASM） |
-| `encodeAndCacheTexture()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:239` | 将单个 PNG 纹理编码为 KTX2 并缓存。 |
-| `scheduleBackgroundEncoding()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:289` | 遍历 mesh 材质，对有 KTX2 缓存需要的纹理进行后台编码。 |
+| `__setEncodeImplForTest()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:205` | 测试用：注入编码实现（默认走本地 WASM） |
+| `encodeAndCacheTexture()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:216` | 将单个 PNG 纹理编码为 KTX2 并缓存。 |
+| `scheduleBackgroundEncoding()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:266` | 遍历 mesh 材质，对有 KTX2 缓存需要的纹理进行后台编码。 |
 | `Ktx2TextureLoaderDeps()` | `frontend/src/utils/3d/adapters/mmd-ktx2-texture-loader:21` | 拦截 loader 依赖注入（装配方提供） |
 | `Ktx2TextureLoader()` | `frontend/src/utils/3d/adapters/mmd-ktx2-texture-loader:61` | — |
 | `Ktx2EncodeRequest()` | `frontend/src/utils/3d/adapters/mmd-ktx2-worker:9` | 主线程 → Worker 的请求 |
@@ -1685,7 +1685,7 @@
 | `getLoadTraces()` | `frontend/src/utils/3d/load-trace:57` | — |
 | `clearLoadTraces()` | `frontend/src/utils/3d/load-trace:63` | — |
 | `loadMcTints()` | `frontend/src/utils/3d/mc-tints:29` | 预载 vendored tints 表（幂等；失败抛错由调用方降级兜底）。 |
-| `getTintColorSync()` | `frontend/src/utils/3d/mc-tints:51` | 取某染色类别在某 biome 下的颜色（默认 plains）。 |
+| `getTintColorSync()` | `frontend/src/utils/3d/mc-tints:56` | 取某染色类别在某 biome 下的颜色（默认 plains）。 |
 | `bakeMeshFragments()` | `frontend/src/utils/3d/mesh-baker:10` | Bake fragments once, then batch by animated bone, texture, and alpha mode. |
 | `addMeshToBoneGroup()` | `frontend/src/utils/3d/mesh-builder:31` | 从 spec mesh group 数据构建 THREE.Mesh 并添加到 boneGroup。 |
 | `compKey()` | `frontend/src/utils/3d/mesh:18` | 组件内骨骼 key（mi: 组件下标, id: 骨骼 id）。renderModel3D 与 buildSceneMesh 共用，随 mesh 迁移。 |

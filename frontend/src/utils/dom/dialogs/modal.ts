@@ -596,6 +596,22 @@ function dgMoCollectFooter(box: HTMLElement): { checked: Record<string, boolean>
   return { checked, values };
 }
 
+/** hintColor 白名单校验（review 14f3b7e4 P3）：modalPicker 是共享 API，hintColor 直插
+ * style 属性——esc() 只转义 HTML 字符，`; : ( )` 未转义，恶意值可注入额外 CSS 属性
+ * （UI redressing / 外链 beacon）。只放行 #hex / CSS 变量 var(--...) / 命名色（仅字母
+ * 空格连字符，无 ;:() 注入面），不匹配回退默认。
+ * @param c 调用方传入的 hintColor
+ * @returns 安全颜色值（不匹配时回退 var(--muted,#888)）
+ */
+function safeHintColor(c?: string): string {
+  if (!c) return "var(--muted,#888)";
+  const t = c.trim();
+  if (/^#[\da-fA-F]{3,8}$/.test(t)) return t;              // #hex（3/4/6/8 位）
+  if (/^var\(\s*--[\w-]+\s*\)$/.test(t)) return t;         // var(--token)
+  if (/^[a-zA-Z][a-zA-Z\s-]*$/.test(t)) return t;          // 命名色（无 CSS 注入字符）
+  return "var(--muted,#888)";
+}
+
 function dgMoBuildPickerBox(
   title: string,
   icon: string | undefined,
@@ -611,7 +627,7 @@ function dgMoBuildPickerBox(
           `<button data-idx="${i}" data-testid="pick-item" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px;border:1px solid var(--bd,#444);border-radius:8px;background:transparent;color:inherit;cursor:pointer;font-family:inherit">
   <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(it.label)}</span>${it.meta ? `<span style="color:var(--accent,#89b4fa)">${esc(it.meta)}</span>` : ""}</div>
   ${it.sub ? `<div style="font-size:10px;color:var(--muted,#888);margin-top:5px">${esc(it.sub)}</div>` : ""}
-  ${it.hint ? `<div style="font-size:10px;color:${esc(it.hintColor || "var(--muted,#888)")};margin-top:2px">${esc(it.hint)}</div>` : ""}
+  ${it.hint ? `<div style="font-size:10px;color:${safeHintColor(it.hintColor)};margin-top:2px">${esc(it.hint)}</div>` : ""}
 </button>`,
       )
       .join("");

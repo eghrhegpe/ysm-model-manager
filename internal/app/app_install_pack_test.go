@@ -6,6 +6,7 @@ package app
 
 import (
 	"encoding/base64"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,12 +166,26 @@ func TestImportFileAndPushToInstance_BareYsmJsonRejected(t *testing.T) {
 func TestImportFileAndPushToInstance_RootLevelModelRejected(t *testing.T) {
 	// 根级 .pmx/.pmd 单文件会触发推送侧 InstallDir(父目录) → 仓库根整仓落地；
 	// 前置到落盘前拒绝，不留下「入仓成功但推送必败」的仓库残档（与 ysm.json 同口径）。
-	a, ysmRoot, customDir := packApp(t)
+	// 断言两点（review 14f3b7e4）：
+	//  1) 错误码必须是入口前置检查的 ErrUnsupportedType——若只断言 err!=nil，入口检查被删后
+	//     推送兜底（ErrInvalidPath）仍会返错，测试假绿（旧兜底拦在入仓之后，残档已留下）；
+	//  2) 无残留断言必须查 .pmx/.pmd 的真实落点根（GetRepoRoot("mmd")，与 importer 类型路由
+	//     同源），查 ysmRoot 是查错地方（MMD 模型不会落到 ysm 根）。
+	a, _, customDir := packApp(t)
+	mmdRoot, err := a.GetRepoRoot("mmd")
+	if err != nil {
+		t.Fatalf("GetRepoRoot(mmd) 失败: %v", err)
+	}
 	for _, name := range []string{"char.pmx", "char.pmd"} {
-		if err := a.ImportFileAndPushToInstance(name, b64("mmd-bytes"), "TestInst"); err == nil {
+		err := a.ImportFileAndPushToInstance(name, b64("mmd-bytes"), "TestInst")
+		if err == nil {
 			t.Fatalf("根级单文件 %s 应被拒绝", name)
 		}
-		assertFileAbsent(t, filepath.Join(ysmRoot, name))
+		var ae types.AppError
+		if !errors.As(err, &ae) || ae.Code != types.ErrUnsupportedType {
+			t.Fatalf("%s 应报 ErrUnsupportedType（入口前置检查），实际: %v", name, err)
+		}
+		assertFileAbsent(t, filepath.Join(mmdRoot, name))
 		assertFileAbsent(t, filepath.Join(customDir, name))
 	}
 }

@@ -1,7 +1,7 @@
 // ===== 仓库页 DnD（组件级 — ADR-060）测试 =====
 // 覆盖：bindTreeDnD 事件绑定 / handleTreeDrop 处理链路（网页版分支、桌面版收集、oversize、busy 互斥、错误兜底）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../bus.ts";
+import { bus, type ToastPayload } from "../bus.ts";
 import { handleTreeDrop, bindTreeDnD } from "./import-dnd.ts";
 import { fireDrop, fireDrag } from "../test-utils/events.ts";
 import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
@@ -336,6 +336,36 @@ describe("handleTreeDrop — oversize 过滤", () => {
     await flush();
     const { ImportModelFile } = await freshGetApp();
     expect(ImportModelFile).not.toHaveBeenCalled();
+    unsub();
+  });
+
+  // review 14f3b7e4 回归锁：collect-0 检查前移后（oversize 滤光场景静默返回），
+  // 镜像 pack-dnd.test.ts 的双断言——all-oversized 只许 warn、不许误导性 info；
+  // 空 drop 必须走 collect-0 的 info 提示。两者互斥，缺一即双 toast 回归。
+  it("全部文件超限 → 仅 warn 超限提示，不误导性补弹「未检测到支持文件」info", async () => {
+    const big = new File(["x"], "big.ysm", { type: "application/octet-stream" });
+    Object.defineProperty(big, "size", { value: MAX_IMPORT_BYTES + 1, configurable: true });
+    const toasts: ToastPayload[] = [];
+    const unsub = bus.on("toast:show", (p) => toasts.push(p));
+    bindTreeDnD(container);
+    fireDrop(container, { items: [], files: [big], types: ["Files"] });
+    await flush();
+    await flush();
+    await flush();
+    expect(toasts.some((t2) => t2.type === "warn")).toBe(true);
+    expect(toasts.some((t2) => t2.type === "info")).toBe(false);
+    unsub();
+  });
+
+  it("收集 0 文件（空 drop）→ info 提示无支持文件", async () => {
+    const toasts: ToastPayload[] = [];
+    const unsub = bus.on("toast:show", (p) => toasts.push(p));
+    bindTreeDnD(container);
+    fireDrop(container, { items: [], files: [], types: ["Files"] });
+    await flush();
+    await flush();
+    await flush();
+    expect(toasts.some((t2) => t2.type === "info")).toBe(true);
     unsub();
   });
 });

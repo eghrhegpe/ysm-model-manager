@@ -155,7 +155,7 @@ vi.mock("three/addons/loaders/GLTFLoader.js", () => ({
   },
 }));
 
-import { buildVrmScene, type VrmPanelHooks, vrmMenuItems } from "./vrm-adapter.ts";
+import { buildVrmScene, readVrmMeta, type VrmPanelHooks, vrmMenuItems } from "./vrm-adapter.ts";
 
 /** 构造注入端口（含诊断日志 mock） */
 function makePort() {
@@ -842,5 +842,48 @@ describe("vrmMenuItems 结构", () => {
     expect(items.find((i) => i.id === "model")?.children?.length).toBe(0);
     expect(infoCb).toHaveBeenCalledWith({ modelName: "模型A", boneCount: 52, materialCount: 3 });
     expect(shotCb).toHaveBeenCalledWith(expect.any(Function), "/m/模型A.vrm");
+  });
+});
+
+describe("readVrmMeta 场景统计（ADR-131 P2）", () => {
+  it("复用 GLTF parse 的 vrm.scene 顺带采集 stats（deepDispose 前 traverse）", async () => {
+    const vrm = makeFakeVrm();
+    // 制造可统计内容：1 mesh（1 三角面）+ 1 bone
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(9), 3));
+    geo.setIndex(new THREE.BufferAttribute(new Uint32Array(3), 1));
+    vrm.scene.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial()));
+    vrm.scene.add(new THREE.Bone());
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+
+    const info = await readVrmMeta("/vrm/test.vrm", hoisted.readBytesMock);
+    expect(info).not.toBeNull();
+    expect(info!.stats).toEqual(
+      expect.objectContaining({
+        meshCount: 1,
+        boneCount: 1,
+        triangleCount: 1,
+        materialCount: 1,
+      }),
+    );
+    // 顺序守护：stats 必须 deepDispose 前采集（dispose 后几何为空读不到）
+    expect(hoisted.deepDispose).toHaveBeenCalledWith(vrm.scene);
+  });
+
+  it("空 scene（无 mesh/bone）→ stats 全 0 仍返回", async () => {
+    const vrm = makeFakeVrm();
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+
+    const info = await readVrmMeta("/vrm/empty.vrm", hoisted.readBytesMock);
+    expect(info!.stats).toEqual({
+      boneCount: 0,
+      meshCount: 0,
+      triangleCount: 0,
+      materialCount: 0,
+      textureCount: 0,
+      morphCount: 0,
+    });
   });
 });

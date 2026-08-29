@@ -20,6 +20,7 @@ import { recordLoadTrace } from "../load-trace.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { renderLoadingState } from "./preview-loading.ts";
 import { b64ToBytes } from "../base64.ts";
+import { collectSceneStats, type SceneStats } from "../scene-stats.ts";
 import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { materialNodes } from "./material-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
@@ -100,6 +101,8 @@ export interface VrmMetaInfo {
     violent: boolean;
     reference?: string;
   };
+  /** 场景统计（ADR-131 P2：复用本次 GLTF parse 顺带采集，零额外成本） */
+  stats?: SceneStats;
 }
 
 /** 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null */
@@ -154,6 +157,9 @@ export async function readVrmMeta(
         thumbnail: meta.thumbnailImage ? imageToDataURL(meta.thumbnailImage) : "",
       };
     }
+    // ADR-131 P2：复用本次 GLTF parse 的 vrm.scene 顺带采集统计（必须在 deepDispose
+    // 之前 traverse——dispose 后 geometry/material 已释放，读到的是空数据）
+    info.stats = vrm.scene ? collectSceneStats(vrm.scene) : undefined;
     VRMUtils.deepDispose(vrm.scene); // 仅取 meta，释放 parse 出的 GPU 资源
     return info;
   } catch {

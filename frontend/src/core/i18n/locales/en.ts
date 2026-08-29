@@ -890,13 +890,18 @@ export const en: Record<string, string> = {
   "preview.modelInfo": "Model Info",
   "preview.roles": "Loaded Roles",
   // ── 3D stats panel (ADR-131 P1: preview.stats.* three-segment) ──
-  "preview.stats.panel": "📊 Stats",
+  // 口径标注：rendered = traverse scene-graph 口径，与 YSM 模型面板 Go 口径区分
+  "preview.stats.panel": "📊 Runtime Stats",
   "preview.stats.bones": "Bones",
   "preview.stats.meshes": "Meshes",
   "preview.stats.triangles": "Triangles",
   "preview.stats.materials": "Materials",
   "preview.stats.textures": "Textures",
   "preview.stats.morphs": "Morphs",
+  // MMD detail card (P2: PMX file-parse scope, distinct from runtime stats)
+  "preview.stats.file": "📊 File Stats",
+  "preview.stats.vertices": "Vertices",
+  "preview.stats.faces": "Faces",
   "preview.roleFocus": "Set as focus",
   "preview.roleTools": "Model tools",
   "preview.roleToolsSection": "Tools",

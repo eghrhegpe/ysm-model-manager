@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
 
-const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, createMmd3DMock, resolveMmdSiblingsMock } = vi.hoisted(() => ({
+const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, createMmd3DMock, resolveMmdSiblingsMock, readFileBytesMock, readPmxStatsMock } = vi.hoisted(() => ({
   summaryMock: vi.fn(),
   headerMock: vi.fn(),
   readPackMock: vi.fn(),
@@ -12,6 +12,8 @@ const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, cre
   createVrm3DMock: vi.fn(),
   createMmd3DMock: vi.fn(),
   resolveMmdSiblingsMock: vi.fn(),
+  readFileBytesMock: vi.fn(),
+  readPmxStatsMock: vi.fn(),
 }));
 
 vi.mock("../../backend/app.ts", () => ({
@@ -19,7 +21,11 @@ vi.mock("../../backend/app.ts", () => ({
     ExtractYsmSummary: summaryMock,
     ExtractYSMHeader: headerMock,
     ReadPackMeta: readPackMock,
+    ReadFileBytes: readFileBytesMock,
   }),
+}));
+vi.mock("../../utils/3d/adapters/mmd-detail-stats.ts", () => ({
+  readPmxStats: readPmxStatsMock,
 }));
 vi.mock("./skeleton.ts", () => ({
   loadModel2D: vi.fn().mockResolvedValue(undefined),
@@ -60,6 +66,8 @@ beforeEach(() => {
   headerMock.mockResolvedValue(null);
   readPackMock.mockResolvedValue("{}");
   resolveMmdSiblingsMock.mockResolvedValue([]);
+  readFileBytesMock.mockResolvedValue(btoa("PMX"));
+  readPmxStatsMock.mockResolvedValue(null);
   localStorage.clear();
 });
 
@@ -178,6 +186,35 @@ describe("showVrmMeta VRM meta 卡", () => {
     await showVrmMeta(ctx, "/repo/bad.vrm");
     expect(ctx.root.innerHTML).toContain("读取失败");
   });
+
+  it("有 stats（ADR-131 P2）→ 渲染渲染实测统计行；无 stats → 不渲染", async () => {
+    vrmMetaMock.mockResolvedValueOnce({
+      name: "带统计模型",
+      authors: [],
+      metaVersion: "1",
+      stats: {
+        boneCount: 52,
+        meshCount: 8,
+        triangleCount: 12000,
+        materialCount: 3,
+        textureCount: 1,
+        morphCount: 6,
+      },
+    });
+    const ctx = makeCtx();
+    await showVrmMeta(ctx, "/repo/stats.vrm");
+    const html = ctx.root.innerHTML;
+    expect(html).toContain("渲染实测"); // 口径标注（审核建议 ②）
+    expect(html).toContain("52");
+    expect(html).toContain("12,000");
+    expect(html).toContain("表情");
+
+    // 无 stats → 无统计行
+    vrmMetaMock.mockResolvedValueOnce({ name: "无统计", authors: [], metaVersion: "1" });
+    const ctx2 = makeCtx();
+    await showVrmMeta(ctx2, "/repo/nostats.vrm");
+    expect(ctx2.root.innerHTML).not.toContain("渲染实测");
+  });
 });
 
 describe("showMmdPreview MMD 预览卡", () => {
@@ -204,5 +241,36 @@ describe("showMmdPreview MMD 预览卡", () => {
     await showMmdPreview(ctx, "/repo/模型.pmd", { icon: "🎭", label: "MMD 角色模型" });
     expect(ctx.root.innerHTML).toContain("🎭 MMD 角色模型");
     expect(ctx.root.innerHTML).toContain("模型.pmd");
+  });
+
+  it(".pmx 有统计（ADR-131 P2）→ 异步补文件统计行；非 .pmx 不触发解析", async () => {
+    readPmxStatsMock.mockResolvedValue({
+      vertices: 12500,
+      faces: 25000,
+      bones: 42,
+      materials: 5,
+      morphs: 8,
+    });
+    const ctx = makeCtx();
+    await showMmdPreview(ctx, "/repo/miku2.pmx");
+    await vi.waitFor(() => {
+      const html = ctx.root.innerHTML;
+      expect(html).toContain("文件统计"); // PMX 解析口径标注
+      expect(html).toContain("12,500");
+      expect(html).toContain("25,000");
+      expect(html).toContain("42");
+    });
+    expect(readPmxStatsMock).toHaveBeenCalledWith(
+      "/repo/miku2.pmx",
+      expect.any(Function),
+    );
+
+    // 非 .pmx（如 .pmd）不触发 Worker 解析（文件统计不可得，基础卡不受影响）
+    const ctx2 = makeCtx();
+    await showMmdPreview(ctx2, "/repo/old.pmd");
+    expect(readPmxStatsMock).not.toHaveBeenCalledWith(
+      "/repo/old.pmd",
+      expect.any(Function),
+    );
   });
 });

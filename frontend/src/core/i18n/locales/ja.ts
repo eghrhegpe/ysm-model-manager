@@ -891,13 +891,18 @@ export const ja: Record<string, string> = {
   "preview.modelInfo": "モデル情報",
   "preview.roles": "読み込み済みキャラクター",
   // ── 3D 統計パネル（ADR-131 P1: preview.stats.* 三段式）──
-  "preview.stats.panel": "📊 統計",
+  // 口径注記: 描画実測 = traverse シーングラフ口径, YSM モデルパネルの Go 口径と区別
+  "preview.stats.panel": "📊 描画実測",
   "preview.stats.bones": "ボーン",
   "preview.stats.meshes": "メッシュ",
   "preview.stats.triangles": "三角形",
   "preview.stats.materials": "マテリアル",
   "preview.stats.textures": "テクスチャ",
   "preview.stats.morphs": "表情",
+  // MMD 詳細カード（P2: PMX ファイル解析口径, 描画実測と区別）
+  "preview.stats.file": "📊 ファイル統計",
+  "preview.stats.vertices": "頂点",
+  "preview.stats.faces": "面数",
   "preview.roleFocus": "焦点に設定",
   "preview.roleTools": "モデルツール",
   "preview.roleToolsSection": "ツール",

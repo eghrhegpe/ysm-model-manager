@@ -11,6 +11,7 @@ import { esc } from "../../utils/dom/html.ts";
 import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { readVrmMeta } from "../../utils/3d/adapters/vrm-adapter.ts";
+import { readPmxStats } from "../../utils/3d/adapters/mmd-detail-stats.ts";
 import { createVrm3D } from "./vrm-3d.ts";
 import { createMmd3D } from "./mmd-3d.ts";
 import { createFbx3D } from "./fbx-3d.ts";
@@ -67,6 +68,20 @@ export async function showVrmMeta(
       const refBadge = r?.reference
         ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">📎 ${t("preview.reference")}: ${esc(r.reference)}</div>`
         : "";
+      // ADR-131 P2：readVrmMeta 顺带采集的渲染期统计（traverse 口径；标注「渲染实测」
+      // 与 YSM 模型面板的 Go AnalyzeBedrockModel 口径区分，避免双口径困惑——审核建议 ②）
+      const s = meta.stats;
+      const statsRow = s && (s.meshCount > 0 || s.boneCount > 0)
+        ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(124,131,255,0.08);font-size:var(--fs-xs);color:var(--muted)">
+            <span style="color:#7c83ff">📊 ${t("preview.stats.panel")}</span>
+            <span>🦴 ${t("preview.stats.bones")}: <b>${s.boneCount}</b></span>
+            <span>🧩 ${t("preview.stats.meshes")}: <b>${s.meshCount}</b></span>
+            <span>🔺 ${t("preview.stats.triangles")}: <b>${s.triangleCount.toLocaleString()}</b></span>
+            <span>🎨 ${t("preview.stats.materials")}: <b>${s.materialCount}</b></span>
+            <span>🖼️ ${t("preview.stats.textures")}: <b>${s.textureCount}</b></span>
+            <span>😊 ${t("preview.stats.morphs")}: <b>${s.morphCount}</b></span>
+          </div>`
+        : "";
       ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
@@ -78,6 +93,7 @@ export async function showVrmMeta(
     ${meta.license ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📜 ${esc(meta.license)}</div>` : ""}
     ${refBadge}
     ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge("商用", r.commercial, "💰")}${badge("用户", r.allowedUser === "everyone", "👥")}${badge("性", r.sexual, "🔞")}${badge("暴力", r.violent, "⚔️")}</div>` : ""}
+    ${statsRow}
     <button class="preview-fab" id="btn-vrm-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>
   </div>
 </div>`;
@@ -105,6 +121,7 @@ export async function showMmdPreview(
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
   detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
+  const gen = detailGen.next();
   const icon = (opts && opts.icon) || "🎭";
   const label = (opts && opts.label) || t("preview.mmdSkin");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -112,6 +129,7 @@ export async function showMmdPreview(
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
+    <div id="mmd-stats-row"></div>
     <button class="preview-fab" id="btn-mmd-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>
   </div>
 </div>`;
@@ -125,6 +143,28 @@ export async function showMmdPreview(
         await createMmd3D(path, { siblings });
       })();
     };
+  }
+  // ADR-131 P2：异步补 PMX 文件统计（仅 .pmx；不阻塞基础卡渲染，gen 守卫过期丢弃）
+  if (/\.pmx$/i.test(path)) {
+    void (async () => {
+      try {
+        const App = await getApp();
+        const readFn = (App as unknown as Record<string, (p: string) => Promise<string | null>>)["ReadFileBytes"];
+        const stats = await readPmxStats(path, readFn);
+        if (detailGen.stale(gen) || !stats) return;
+        const host = ctx.root.querySelector<HTMLElement>("#mmd-stats-row");
+        if (!host) return;
+        // 口径标注（审核建议 ②）：PMX 文件解析 vs 3D 渲染实测 vs YSM Go 口径三方区分
+        host.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(124,131,255,0.08);font-size:var(--fs-xs);color:var(--muted)">
+          <span style="color:#7c83ff">📊 ${t("preview.stats.file")}</span>
+          <span>🔺 ${t("preview.stats.vertices")}: <b>${stats.vertices.toLocaleString()}</b></span>
+          <span>◻️ ${t("preview.stats.faces")}: <b>${stats.faces.toLocaleString()}</b></span>
+          <span>🦴 ${t("preview.stats.bones")}: <b>${stats.bones}</b></span>
+          <span>🎨 ${t("preview.stats.materials")}: <b>${stats.materials}</b></span>
+          <span>😊 ${t("preview.stats.morphs")}: <b>${stats.morphs}</b></span>
+        </div>`;
+      } catch { /* 统计读取失败静默：基础卡不受影响（详情卡降级约定） */ }
+    })();
   }
 }
 

@@ -35,7 +35,8 @@ export function buildStatsPanel(stats: SceneStats): PreviewMenuNode {
     kind: "panel",
     icon: "📊",
     labelKey: "preview.stats.panel",
-    fallback: "统计",
+    // 口径标注（审核建议 ②）：traverse 渲染实测，与 YSM 模型面板 Go 口径区分
+    fallback: "渲染实测",
     dockGroup: "model",
     // 有统计才显示（铁律：visibleWhen 纯函数守卫；stats 是 build 后闭包值，非状态层项）
     visibleWhen: () => hasSceneStats(stats),

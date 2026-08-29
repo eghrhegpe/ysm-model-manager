@@ -893,13 +893,18 @@ export const zhCN: Record<string, string> = {
   "preview.modelInfo": "模型信息",
   "preview.roles": "加载角色",
   // ── 3D 统计面板（ADR-131 P1：preview.stats.* 三段式）──
-  "preview.stats.panel": "📊 统计",
+  // 口径标注（审核建议 ②）：渲染实测 = traverse 场景图口径，与 YSM 模型面板 Go 口径区分
+  "preview.stats.panel": "📊 渲染实测",
   "preview.stats.bones": "骨骼",
   "preview.stats.meshes": "网格",
   "preview.stats.triangles": "三角面",
   "preview.stats.materials": "材质",
   "preview.stats.textures": "纹理",
   "preview.stats.morphs": "表情",
+  // MMD 详情卡（P2：PMX 文件解析口径，与渲染实测区分）
+  "preview.stats.file": "📊 文件统计",
+  "preview.stats.vertices": "顶点",
+  "preview.stats.faces": "面数",
   "preview.roleFocus": "设为焦点",
   "preview.roleTools": "模型工具",
   "preview.roleToolsSection": "工具",

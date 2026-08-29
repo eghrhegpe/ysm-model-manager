@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 179 | 740 |
+| 前端·工具 | 180 | 743 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **511** | **2199** |
+| **合计** | **512** | **2202** |
 
 ## Go·头像
 
@@ -1372,6 +1372,9 @@
 | `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1273` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
 | `getCustomAnimPath()` | `frontend/src/utils/3d/adapters/mmd-anim-library:12` | 获取 MMD 动作库（CustomAnim）的绝对路径。 |
 | `filterAnimFiles()` | `frontend/src/utils/3d/adapters/mmd-anim-library:24` | 从文件列表中筛选动作文件（.vmd / .vpd） |
+| `PmxFileStats()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:16` | PMX 文件级统计（详情卡展示；独立于 SceneStats 的 traverse 口径） |
+| `_clearPmxStatsCache()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:28` | 清除缓存（测试钩子；生产由模块级生命周期自然存活） |
+| `readPmxStats()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:36` | 读 PMX 文件级统计：Worker 完整解析 → 取 counts → 缓存。 |
 | `BasisEncoderLike()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:13` | BasisEncoder 实例的最小接口（embind 运行时提供） |
 | `BasisModuleLike()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:29` | 初始化后的 basis 模块（含 BasisEncoder 构造器） |
 | `MAX_KTX2_PIXELS()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:65` | 单纹理像素上限：超过则跳过 KTX2 编码。 |
@@ -1484,7 +1487,7 @@
 | `STATS_PANEL_ID()` | `frontend/src/utils/3d/adapters/preview-menu/stats:17` | 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） |
 | `hasSceneStats()` | `frontend/src/utils/3d/adapters/preview-menu/stats:20` | 是否有可供展示的统计（mesh/bone 任一 &gt; 0；全 0 = 空场景/纯装饰，无意义） |
 | `buildStatsPanel()` | `frontend/src/utils/3d/adapters/preview-menu/stats:25` | 构造统计面板节点：panel + 6 个 field 行（骨骼/网格/三角面/材质/纹理/表情） |
-| `mergeStatsMenuItems()` | `frontend/src/utils/3d/adapters/preview-menu/stats:57` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
+| `mergeStatsMenuItems()` | `frontend/src/utils/3d/adapters/preview-menu/stats:58` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
 | `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu/switch:217` | — |
 | `ModelEntry()` | `frontend/src/utils/3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
 | `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
@@ -2205,12 +2208,12 @@
 | `collectBlobUrls()` | `frontend/src/views/app-preview/cache:48` | 收集缓存值中全部 blob URL（evict 释放用） |
 | `cacheSet()` | `frontend/src/views/app-preview/cache:65` | — |
 | `previewCSS()` | `frontend/src/views/app-preview/css:2` | — |
-| `showVrmMeta()` | `frontend/src/views/app-preview/detail-3d:29` | 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） |
-| `showMmdPreview()` | `frontend/src/views/app-preview/detail-3d:102` | 显示 MMD 预览卡（文件名 + FAB 进 3D；PMX/PMD 无标准 meta 读取，保持简单形态） |
-| `showFbxPreview()` | `frontend/src/views/app-preview/detail-3d:132` | 显示 FBX 预览卡（文件名 + FAB 进 3D；FBX 无标准 meta 读取，保持简单形态，ADR-112） |
-| `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:162` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
-| `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:192` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
-| `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:259` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
+| `showVrmMeta()` | `frontend/src/views/app-preview/detail-3d:30` | 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） |
+| `showMmdPreview()` | `frontend/src/views/app-preview/detail-3d:118` | 显示 MMD 预览卡（文件名 + FAB 进 3D；PMX/PMD 无标准 meta 读取，保持简单形态） |
+| `showFbxPreview()` | `frontend/src/views/app-preview/detail-3d:172` | 显示 FBX 预览卡（文件名 + FAB 进 3D；FBX 无标准 meta 读取，保持简单形态，ADR-112） |
+| `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:202` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
+| `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:232` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
+| `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:299` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
 | `detailGen()` | `frontend/src/views/app-preview/detail:24` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:27` | 显示模型详情（YSM 模型） |
 | `showResourcePack()` | `frontend/src/views/app-preview/detail:144` | 显示资源包信息（pack.mcmeta + pack.png） |

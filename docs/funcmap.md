@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 177 | 734 |
+| 前端·工具 | 178 | 736 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **509** | **2193** |
+| **合计** | **510** | **2195** |
 
 ## Go·头像
 
@@ -1775,6 +1775,8 @@
 | `shouldRenderAtFps()` | `frontend/src/utils/3d/render-budget:101` | 帧率上限节流版：now 已到/过 nextFrame 才渲染。 |
 | `Disposable()` | `frontend/src/utils/3d/safe-dispose:6` | 可释放对象的最小形状（Three.js 的 Texture/Material/Geometry 等均满足） |
 | `safeDispose()` | `frontend/src/utils/3d/safe-dispose:11` | 安全释放：dispose 抛错不阻塞后续释放（个别适配器 dispose 会抛） |
+| `SceneStats()` | `frontend/src/utils/3d/scene-stats:19` | 场景统计（ADR-131 P0 产出，调用方映射进 StatsCardModel） |
+| `collectSceneStats()` | `frontend/src/utils/3d/scene-stats:35` | 一次 traverse 收集统计；roots 接受 Scene 或 Object3D[]（sceneBaseline 差量后的内容层根） |
 | `ScreenshotOpts()` | `frontend/src/utils/3d/screenshot:13` | 截图选项 |
 | `screenshotFromRenderer()` | `frontend/src/utils/3d/screenshot:27` | 从活跃的 renderer/scene/camera 截图，返回 PNG/JPEG base64（无 data: 前缀）。 |
 | `SemanticBoneId()` | `frontend/src/utils/3d/semantic-bones:21` | 语义骨骼 id（对齐 VRM humanoid 命名；MMD 经候选名匹配；center 为 MMD 特有整体根） |

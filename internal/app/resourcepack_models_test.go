@@ -210,3 +210,49 @@ func TestListPackModelsDetail_NonZip(t *testing.T) {
 		t.Errorf("不存在文件期望空清单，实际 total=%d models=%d", out.Total, len(out.Models))
 	}
 }
+
+func TestPackModelElementsCount_Edge(t *testing.T) {
+	// 畸形 JSON → 0（不 panic）
+	if got := packModelElementsCount([]byte("not-json{")); got != 0 {
+		t.Errorf("畸形 JSON 期望 0，实际 %d", got)
+	}
+	if got := packModelElementsCount([]byte(`null`)); got != 0 {
+		t.Errorf("null 期望 0，实际 %d", got)
+	}
+	// elements 非数组（异常形状）→ 0
+	if got := packModelElementsCount([]byte(`{"elements":42}`)); got != 0 {
+		t.Errorf("elements 非数组期望 0，实际 %d", got)
+	}
+	// 空数组 → 0
+	if got := packModelElementsCount([]byte(`{"elements":[]}`)); got != 0 {
+		t.Errorf("空 elements 期望 0，实际 %d", got)
+	}
+	// 正常 → 数量
+	if got := packModelElementsCount([]byte(`{"elements":[{},{}]}`)); got != 2 {
+		t.Errorf("2 elements 期望 2，实际 %d", got)
+	}
+	// 无视多余字段（parent/textures/display 不影响）
+	if got := packModelElementsCount([]byte(`{"parent":"block/cube","textures":{},"elements":[{"from":[0,0,0],"to":[16,16,16]}]}`)); got != 1 {
+		t.Errorf("带 parent/textures 期望 1，实际 %d", got)
+	}
+}
+
+func TestListPackModelsDetail_InvalidEntriesExcluded(t *testing.T) {
+	// 容器内混入非 block/item 目录模型 → 不列入（对齐 ListPackModels 口径）
+	a := &App{}
+	files := map[string]string{
+		"pack.mcmeta":                           `{"pack":{"pack_format":15}}`,
+		"assets/minecraft/models/custom/x.json": `{"elements":[{}]}`, // 非 block/item 目录，不应列入
+		"assets/minecraft/models/block/ok.json": `{"elements":[{}]}`,
+		"other/outside.json":                    `{"elements":[{}]}`,
+	}
+	p := makePackZip(t, files)
+	raw := a.ListPackModelsDetail(p)
+	res := unmarshalPackDetail(t, raw)
+	if res.Total != 1 {
+		t.Fatalf("期望仅 1 个 block 模型（custom/outside 不入列），实际 total=%d: %v", res.Total, res.Models)
+	}
+	if len(res.Models) != 1 || res.Models[0].Path != "assets/minecraft/models/block/ok.json" {
+		t.Errorf("期望仅 ok.json，实际 %v", res.Models)
+	}
+}

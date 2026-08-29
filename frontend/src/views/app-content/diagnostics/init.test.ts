@@ -1,23 +1,32 @@
 // ===== 诊断页测试 =====
 // 覆盖：
-//  - initDiagnostics：初始加载 / tab 切换 / 刷新 / 清空 / 筛选 / 搜索防抖
+//  - initDiagnostics：初始加载 / tab 切换（log/runtime/conflict/perf/health/sync-conflict）/
+//    刷新 / 清空（含能力门禁与失败）/ 筛选 / 搜索防抖 / 复制面板与行内复制（含降级）/
+//    同步冲突与体检扫描入口 / 查看器模式隐藏桌面专属入口
 //  - 日志渲染：分组徽标 / 空态 / 抛错兜底（import + runtime）
 //  - startDedup：单类型/全类型目录扫描 / 无目录 / 无重复 / exec 移入回收站 / 取消
 //  - scanConflicts：无游戏目录 / 无实例 / 冲突渲染 / 无冲突 / 扫描失败
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "../../../test-utils/index.ts";
 import { initDiagnostics, startDedup, getDedupConfig, resetDedupConfig } from "./init.ts";
 
-const { busEmit, busOn, getApp, loadResourceRegistry } = vi.hoisted(() => ({
+const { busEmit, busOn, getApp, loadResourceRegistry, can, isViewerMode } = vi.hoisted(() => ({
   busEmit: vi.fn(),
   busOn: vi.fn(() => () => {}),
   getApp: vi.fn(),
   loadResourceRegistry: vi.fn(() => ({})),
+  can: vi.fn(() => true),
+  isViewerMode: vi.fn(() => false),
 }));
 
 vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("../../../backend/app.ts", () => ({ getApp }));
 vi.mock("../../../utils/resource/registry.ts", () => ({ loadResourceRegistry }));
+vi.mock("../../../utils/dom/capabilities.ts", () => ({ can }));
+vi.mock("../../../utils/dom/android-bridge.ts", () => ({
+  isViewerMode,
+  getAndroidBridge: () => null,
+}));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -27,13 +36,22 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
   el.innerHTML = `
     <div id="diag-refresh"></div>
     <div id="diag-clear"></div>
+    <div id="diag-copy"></div>
     <div id="diag-scan-conflict"></div>
+    <div id="diag-scan-sync-conflict"></div>
+    <div id="diag-scan-health"></div>
     <button class="diag-btn" data-diag="log">日志</button>
     <button class="diag-btn" data-diag="runtime">运行时</button>
     <button class="diag-btn" data-diag="conflict">冲突</button>
+    <button class="diag-btn" data-diag="perf">性能</button>
+    <button class="diag-btn" data-diag="health">体检</button>
+    <button class="diag-btn" data-diag="sync-conflict">同步</button>
     <div id="diag-log"><div id="diag-log-list"></div></div>
     <div id="diag-runtime"><div id="diag-runtime-list"></div></div>
     <div id="diag-conflict"><div id="diag-conflict-list"></div></div>
+    <div id="diag-perf"><div id="diag-load-trace"></div></div>
+    <div id="diag-health"><div id="diag-health-list"></div></div>
+    <div id="diag-sync-conflict"><div id="diag-sync-conflict-list"></div></div>
     <button class="diag-log-fbtn" data-status="all">全部</button>
     <button class="diag-log-fbtn" data-status="success">成功</button>
     <input id="diag-log-search">
@@ -58,11 +76,46 @@ function mockApp(overrides: Record<string, unknown> = {}) {
   });
 }
 
+/** 替换全局 navigator（clipboard 注入；afterEach 统一 unstub） */
+function stubClipboard(writeText: ReturnType<typeof vi.fn>): void {
+  vi.stubGlobal("navigator", { clipboard: { writeText } });
+}
+
+/** 覆盖 document.execCommand（happy-dom 可能未实现，用 expando 赋值 + 还原） */
+function overrideExecCommand(fn: (...args: unknown[]) => unknown): () => void {
+  const doc = document as unknown as { execCommand?: unknown };
+  const original = doc.execCommand;
+  doc.execCommand = fn;
+  return () => {
+    doc.execCommand = original;
+  };
+}
+
+/** 构造一份合法体检报告（对齐 health.test.ts） */
+function buildReport() {
+  return {
+    timestamp: "2026-08-21T00:00:00Z",
+    directory: "/repo",
+    score: 85,
+    completeness: { checked: 10, valid: 9, invalid: 1, percentage: 90 },
+    cache: { cache_dir: "/cache", cache_files: 5, cache_size: 1024, hit_rate: 50 },
+    resources: { total_files: 12, total_size: 2048, by_type: { model: 10, texture: 2 } },
+    dedup: { groups: 1, extra_files: 2, reclaim_bytes: 4096 },
+    warnings: [],
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   document.body.innerHTML = "";
   loadResourceRegistry.mockResolvedValue({});
+  can.mockReturnValue(true);
+  isViewerMode.mockReturnValue(false);
   mockApp();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("initDiagnostics — 日志面板", () => {
@@ -415,5 +468,239 @@ describe("dedup config（getDedupConfig / resetDedupConfig）", () => {
     expect(getDedupConfig().strategy).toBe("deep_hash");
     expect(getDedupConfig().keepPolicy).toBe("oldest");
     expect(getDedupConfig().priorityPath).toBe("");
+  });
+});
+
+describe("initDiagnostics — 复制面板与行内复制", () => {
+  it("diag-copy：无日志 → toast「当前无日志可复制」，不碰剪贴板", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.getElementById("diag-copy") as HTMLElement).click();
+    await waitFor(() =>
+      expect(busEmit).toHaveBeenCalledWith(
+        "toast:show",
+        expect.objectContaining({ msg: expect.stringContaining("当前无日志可复制") }),
+      ),
+    );
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it("diag-copy：有日志 → 剪贴板写入剔除 .log-copy 后的文本 + toast 已复制提示", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "success", Operation: "import", ModelName: "ok.ysm", Timestamp: 1700000000000 },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => expect(list.textContent).toContain("ok"));
+    (root.getElementById("diag-copy") as HTMLElement).click();
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const copied = (writeText.mock.calls[0] as unknown as unknown[])[0] as string;
+    expect(copied).toContain("ok");
+    expect(copied).not.toContain("📋"); // .log-copy 按钮已从克隆中剔除
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ msg: expect.stringContaining("已复制") }),
+    );
+  });
+
+  it("diag-copy：clipboard 拒绝 → execCommand textarea 降级 + toast 已复制", async () => {
+    stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
+    const execSpy = vi.fn(() => true);
+    const restore = overrideExecCommand(execSpy);
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    // 先等日志列表渲染出占位文本，保证有可复制内容（否则撞「无日志」早退分支）
+    await waitFor(() =>
+      expect((root.getElementById("diag-log-list") as HTMLElement).textContent).toContain("暂无日志"),
+    );
+    (root.getElementById("diag-copy") as HTMLElement).click();
+    await waitFor(() => expect(execSpy).toHaveBeenCalledWith("copy"));
+    restore();
+    // 面板路径：降级后仍发 copiedLogPrivacy 提示（成功/降级同款文案）
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ msg: expect.stringContaining("已复制") }),
+    );
+  });
+
+  it(".log-copy 行点击：写入该行 .log-msg 文本 + toast", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "failed", Operation: "import", ModelName: "bad.ysm", ErrorMsg: "磁盘已满" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => expect(list.querySelector(".log-copy")).toBeTruthy());
+    (list.querySelector(".log-copy") as HTMLElement).click();
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect((writeText.mock.calls[0] as unknown as unknown[])[0]).toBe("bad磁盘已满"); // .log-msg 文本 trim
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ msg: expect.stringContaining("已复制") }),
+    );
+  });
+
+  it(".log-copy 行点击：写入失败 → execCommand 降级 + toast 已复制", async () => {
+    stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
+    const execSpy = vi.fn(() => true);
+    const restore = overrideExecCommand(execSpy);
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "success", Operation: "import", ModelName: "ok.ysm" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => expect(list.querySelector(".log-copy")).toBeTruthy());
+    (list.querySelector(".log-copy") as HTMLElement).click();
+    await waitFor(() => expect(execSpy).toHaveBeenCalledWith("copy"));
+    restore();
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ msg: expect.stringContaining("日志已复制到剪贴板") }),
+    );
+  });
+
+  it(".log-copy 行点击：行内无文本 → 早退不碰剪贴板", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    mockApp({
+      GetImportLogs: vi.fn(() => [{ Status: "success", Operation: "import" }]), // 无 ModelName/ErrorMsg/路径
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => expect(list.querySelector(".log-copy")).toBeTruthy());
+    (list.querySelector(".log-copy") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(writeText).not.toHaveBeenCalled();
+  });
+});
+
+describe("initDiagnostics — 清空日志门禁与失败", () => {
+  it("can(ClearImportLogs)=false → warn toast，不调用 ClearImportLogs", async () => {
+    const clearFn = vi.fn();
+    mockApp({ ClearImportLogs: clearFn });
+    can.mockReturnValue(false);
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.getElementById("diag-clear") as HTMLElement).click();
+    await waitFor(() =>
+      expect(busEmit).toHaveBeenCalledWith(
+        "toast:show",
+        expect.objectContaining({ msg: "网页版不支持清除日志", type: "warn" }),
+      ),
+    );
+    expect(clearFn).not.toHaveBeenCalled();
+  });
+
+  it("ClearImportLogs 拒绝 → ❌ 清除失败 error toast", async () => {
+    mockApp({ ClearImportLogs: vi.fn(() => Promise.reject(new Error("boom"))) });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.getElementById("diag-clear") as HTMLElement).click();
+    await waitFor(() =>
+      expect(busEmit).toHaveBeenCalledWith(
+        "toast:show",
+        expect.objectContaining({
+          msg: expect.stringContaining("清除日志失败"),
+          type: "error",
+        }),
+      ),
+    );
+    const call = busEmit.mock.calls.find((c) => (c[1] as { msg: string }).msg.includes("清除日志失败"));
+    expect((call![1] as { msg: string }).msg.startsWith("❌")).toBe(true);
+  });
+});
+
+describe("initDiagnostics — 同步冲突与体检扫描入口", () => {
+  it("diag-scan-sync-conflict 点击 → 同步冲突配置面板渲染（Exists 实例过滤）", async () => {
+    mockApp({
+      ListVersionInstances: vi.fn(() => [
+        { Name: "insA", Exists: true, CustomDir: "/a" },
+        { Name: "insB", Exists: false, CustomDir: "/b" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.getElementById("diag-scan-sync-conflict") as HTMLElement).click();
+    const list = root.getElementById("diag-sync-conflict-list") as HTMLElement;
+    await waitFor(() => expect(list.querySelector("#sync-scan-btn")).toBeTruthy());
+    const optTexts = Array.from(list.querySelectorAll("#sync-instance option")).map((o) => o.textContent);
+    expect(optTexts).toContain("insA");
+    expect(optTexts).not.toContain("insB");
+  });
+
+  it("diag-scan-health 点击 → 体检报告渲染到 diag-health-list", async () => {
+    mockApp({
+      RepoHealthAudit: vi.fn(() => JSON.stringify(buildReport())),
+      GetRepoRoot: vi.fn(async () => "/repo"),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.getElementById("diag-scan-health") as HTMLElement).click();
+    const list = root.getElementById("diag-health-list") as HTMLElement;
+    await waitFor(() => expect(list.innerHTML).toContain("85"));
+    expect(list.innerHTML).toContain("健康");
+  });
+});
+
+describe("initDiagnostics — tab 联动扩展与查看器降级", () => {
+  it("tab 切到 perf → perf 面板显示 + 加载剖析空态渲染", () => {
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.querySelector('.diag-btn[data-diag="perf"]') as HTMLElement).click();
+    expect((root.getElementById("diag-perf") as HTMLElement).style.display).toBe("");
+    expect((root.getElementById("diag-log") as HTMLElement).style.display).toBe("none");
+    expect((root.getElementById("diag-load-trace") as HTMLElement).textContent).toContain(
+      "暂无加载记录",
+    );
+  });
+
+  it("tab 切到 health / sync-conflict → 对应面板 display 联动", () => {
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.querySelector('.diag-btn[data-diag="health"]') as HTMLElement).click();
+    expect((root.getElementById("diag-health") as HTMLElement).style.display).toBe("");
+    expect((root.getElementById("diag-runtime") as HTMLElement).style.display).toBe("none");
+    (root.querySelector('.diag-btn[data-diag="sync-conflict"]') as HTMLElement).click();
+    expect((root.getElementById("diag-sync-conflict") as HTMLElement).style.display).toBe("");
+    expect((root.getElementById("diag-health") as HTMLElement).style.display).toBe("none");
+  });
+
+  it("查看器模式（isViewerMode=true）→ 隐藏桌面专属 tab 与扫描入口", () => {
+    isViewerMode.mockReturnValue(true);
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    // 桌面专属 tab 按钮
+    for (const name of ["conflict", "health", "sync-conflict"]) {
+      expect(
+        (root.querySelector(`.diag-btn[data-diag="${name}"]`) as HTMLElement).style.display,
+      ).toBe("none");
+    }
+    // 扫描与 perf 桌面按钮
+    for (const id of ["diag-scan-conflict", "diag-scan-health", "diag-scan-sync-conflict"]) {
+      expect((root.getElementById(id) as HTMLElement).style.display).toBe("none");
+    }
+  });
+
+  it("桌面模式（isViewerMode=false）→ 桌面专属入口保持可见", () => {
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    expect(
+      (root.getElementById("diag-scan-conflict") as HTMLElement).style.display,
+    ).not.toBe("none");
   });
 });

@@ -22,6 +22,7 @@ import { textureCache } from "../texture-cache.ts";
 import { clearModelRoots } from "../frustum-cull.ts";
 import { dbg } from "../../../utils/debug/debug.ts";
 import { safeDispose } from "../safe-dispose.ts";
+import { returnFocus } from "../../dom/focus-restore.ts";
 
 // ── GPU Info 类型（替代 as unknown as 类型断言）─────────────────────────────
 interface GpuMemoryInfo {
@@ -70,6 +71,8 @@ export interface CleanupContext {
   adapter: { onClose?: () => void };
   /** tip 自动消失定时器 ID（可变，undefined 表示无） */
   getTipTimeoutId: () => ReturnType<typeof setTimeout> | undefined;
+  /** 无障碍：3D overlay 焦点陷阱释放函数（mount3D 注入；runFullCleanup 末尾调） */
+  focusTrapCleanup?: () => void;
 }
 
 // ── fullCleanup ────────────────────────────────────────────────────────────
@@ -136,6 +139,10 @@ export function runFullCleanup(ctx: CleanupContext): void {
   if (ctx.overlay.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
   ctx.nullHandle();
   ctx.adapter.onClose?.();
+  // 无障碍：释放 3D overlay 焦点陷阱（mount3D 注入的 cleanup）+ 把焦点还给触发器
+  // （mount3D 入口 rememberTrigger 已记下 activeElement；元素已离文档时静默跳过）
+  ctx.focusTrapCleanup?.();
+  returnFocus();
   // GPU 内存泄漏检测：记录清理后的 renderer.info.memory（renderer.dispose 后 info 仍可读）
   if (ctx.renderer) {
     const info = (ctx.renderer as unknown as { info?: GpuRendererInfo }).info;

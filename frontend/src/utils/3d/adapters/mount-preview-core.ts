@@ -63,6 +63,8 @@ import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import { type CameraControlBridge } from "./camera-controls.ts";
 import { type BoneSelectInfo, BoneMaps, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
 import type { TdKeyAction } from "../keymap.ts";
+import { rememberTrigger, returnFocus, trapFocusAcrossShadow } from "../../../utils/dom/focus-restore.ts";
+import { t } from "../../../core/i18n/t.ts";
 import {
   PREVIEW_FRAME_INTERVAL_MS,
   createAdaptiveRenderBudget,
@@ -245,6 +247,9 @@ export interface Mount3DOptions {
 }
 
 export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount3DOptions = {}): Promise<void> {
+  // 焦点记忆：记下当前 activeElement 作为关闭时 returnFocus 的目标
+  // （FAB 按钮的 onclick 触发 mount3D → activeElement 即触发按钮）
+  rememberTrigger();
   const cooperate = opts.cooperate === true;
   // 复用单例外壳（renderer/canvas/overlay/scene 存活），首次 mount3D 创建，后续复用。
   // cooperate=true 时多个模型叠加在同一 scene；cooperate=false 时先清除旧模型再加载新模型。
@@ -288,6 +293,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   let onDragPointerMove: (e: PointerEvent) => void = () => {};
   let onResize: () => void = () => {};
 
+  // 焦点陷阱 cleanup（每次 mount3D 新建，closeOverlay / runFullCleanup 释放）
+  let focusTrapCleanup: (() => void) | null = null;
+
   // 单例外壳：首次创建，后续 mount3D 复用同一 DOM（避免重建导致黑屏）
   let overlay = _singletonOverlay;
   let body = _singletonBody;
@@ -296,12 +304,22 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     overlay.id = "ysm-overlay-3d";
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:var(--z-fullscreen);background:#11111b;display:flex;flex-direction:column";
+    // 无障碍：3D 全屏预览是模态体验——告诉屏幕阅读器这是对话框、独占焦点、名称用
+    // 已有 preview.title3d i18n key（与 FAB aria-label 同源，3 语言包已同步）
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", t("preview.title3d"));
     document.body.appendChild(overlay);
     body = document.createElement("div");
     body.style.cssText = "flex:1;display:flex;position:relative;overflow:hidden";
     overlay.appendChild(body);
     _singletonOverlay = overlay;
     _singletonBody = body;
+  }
+  // 跨 Shadow DOM 焦点陷阱：3D overlay 内含 ⚙️ 菜单（createSlideMenu 是 Shadow DOM），
+  // 浏览器 querySelectorAll 不穿透 Shadow 边界——用 trapFocusAcrossShadow 覆盖
+  if (!focusTrapCleanup) {
+    focusTrapCleanup = trapFocusAcrossShadow(overlay);
   }
   // viewContainer 复用模块级单例（与 scene/canvas 同寿命；创建逻辑见下方 §3 UI 装配）
 
@@ -418,6 +436,11 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     // 从模块级 handles 列表移除当前 session
     const idx = _handles.findIndex(h => h.gen === myGen);
     if (idx >= 0) _handles.splice(idx, 1);
+    // 无障碍：释放焦点陷阱 + 把焦点还给触发 3D 的 FAB 按钮（rememberTrigger 在
+    // mount3D 入口已记下 activeElement；元素已离文档时 returnFocus 静默跳过）
+    focusTrapCleanup?.();
+    focusTrapCleanup = null;
+    returnFocus();
     adapter.onClose?.();
   }
   document.addEventListener("keydown", session.escH);
@@ -582,6 +605,11 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     },
     adapter,
     getTipTimeoutId: () => session.tipTimeoutId,
+    // 无障碍：把焦点陷阱 cleanup 注入，runFullCleanup 末尾释放并 returnFocus
+    focusTrapCleanup: () => {
+      focusTrapCleanup?.();
+      focusTrapCleanup = null;
+    },
   };
 
   const switchCtx: SwitchContext = {

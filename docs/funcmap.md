@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 173 | 704 |
+| 前端·工具 | 174 | 710 |
 | frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **504** | **2153** |
+| **合计** | **505** | **2159** |
 
 ## Go·头像
 
@@ -1319,8 +1319,8 @@
 |------|--------|------|
 | `CameraControlBridge()` | `frontend/src/utils/3d/adapters/camera-controls:13` | 相机控制桥：shared/self 双模式统一构建旋转/速度/重置控件的回调集合（方案 A：消灭 ysm-adapter 双份实现） |
 | `buildCameraControls()` | `frontend/src/utils/3d/adapters/camera-controls:31` | 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 |
-| `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:40` | — |
-| `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:79` | — |
+| `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:41` | — |
+| `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:82` | — |
 | `FbxDataPort()` | `frontend/src/utils/3d/adapters/fbx-adapter:28` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
 | `FBX_TARGET_MAX_DIM()` | `frontend/src/utils/3d/adapters/fbx-adapter:35` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
 | `FbxScaleInfo()` | `frontend/src/utils/3d/adapters/fbx-adapter:38` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
@@ -1399,17 +1399,17 @@
 | `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:224` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
 | `MorphMeshLike()` | `frontend/src/utils/3d/adapters/morph-controls:10` | morph 面板入参（mesh 的 morphTargetDictionary/influences 子集，结构兼容 THREE.SkinnedMesh） |
 | `morphNodes()` | `frontend/src/utils/3d/adapters/morph-controls:20` | MMD 表情开关声明式节点（纯数据工厂零 DOM）。 |
-| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:76` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
-| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:95` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
-| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:121` | — |
-| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:131` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
-| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:180` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
-| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:185` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
-| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:205` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
-| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:218` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
-| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:224` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
-| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:229` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
-| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:247` | — |
+| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:78` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
+| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:97` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
+| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:123` | — |
+| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:133` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
+| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:182` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
+| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:187` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
+| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:207` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
+| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:220` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
+| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:226` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
+| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:231` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
+| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:249` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
 | `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:24` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
 | `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:47` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
@@ -1933,6 +1933,12 @@
 | `FLASH_DURATION_MS()` | `frontend/src/utils/dom/feedback:10` | 默认闪烁时长（ms） |
 | `FlashOptions()` | `frontend/src/utils/dom/feedback:13` | 闪烁反馈配置 |
 | `flashBtn()` | `frontend/src/utils/dom/feedback:28` | 按钮/行闪烁反馈：加 flash class，duration 后移除。 |
+| `rememberTrigger()` | `frontend/src/utils/dom/focus-restore:29` | 记住当前聚焦元素作为后续 returnFocus 的目标。 |
+| `returnFocus()` | `frontend/src/utils/dom/focus-restore:43` | 把焦点还给 rememberTrigger 记住的元素；若元素已离文档 / 不可聚焦则跳过（不抛错）。 |
+| `clearTrigger()` | `frontend/src/utils/dom/focus-restore:58` | 显式清除记忆（用于测试或主动取消打开） |
+| `__getTriggerForTest()` | `frontend/src/utils/dom/focus-restore:63` | 测试钩子：读取当前记忆（业务代码不应调用） |
+| `findTabbableAcrossShadow()` | `frontend/src/utils/dom/focus-restore:86` | 在 root 子树（含 Shadow DOM）内收集 tabbable 元素；保持 DOM 顺序（含跨 shadow 顺序） |
+| `trapFocusAcrossShadow()` | `frontend/src/utils/dom/focus-restore:141` | — |
 | `formatBytes()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值或 0 返回空串 |
 | `sizeColor()` | `frontend/src/utils/dom/format:23` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
 | `fmtDate()` | `frontend/src/utils/dom/format:35` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |

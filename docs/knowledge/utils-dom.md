@@ -20,7 +20,7 @@ invariant_anchors:
 
 ## 概览
 
-HTML 转义、搜索高亮与全局 toast 时长语义常量。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（8 档语义常量，新增 `persist=10000` / `sticky=60000` 长期通知档；消费方禁止内联魔法数字；`scripts/check-toast-duration.mjs` 门禁守护 R7 红线）。
+HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / 恢复（a11y）。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（8 档语义常量，新增 `persist=10000` / `sticky=60000` 长期通知档；消费方禁止内联魔法数字；`scripts/check-toast-duration.mjs` 门禁守护 R7 红线）；`focus-restore.ts` 提供模态/浮层/全屏预览的「记触发元素 + 还焦点 + 跨 Shadow DOM Tab 循环」三件套，避免各组件重复实现焦点管理。
 
 ## 核心职责
 
@@ -32,6 +32,11 @@ HTML 转义、搜索高亮与全局 toast 时长语义常量。`esc()` 是全前
 
 - `esc(s: string): string` — **治理红线函数**：转义 `&` `<` `>` `"` `'` 五种字符为 HTML 实体（`&` 最先替换防二次转义）；null/undefined 按空串处理不抛错
 - `hl(text: string, query?: string): string` — 先在**原始 text** 上大小写不敏感定位 query 的**首个**命中，再按原始索引切 before/match/after 三段、各自 `esc()` 后拼 `<mark>`（非「先整体转义再查找」——该路径会因 `&lt;` 错位，html.ts esc 注释显式否决）；无 query 或未命中时返回纯转义文本
+- **焦点记忆 / 恢复 + 跨 Shadow DOM 焦点陷阱**（`utils/dom/focus-restore.ts`，2026-08-29）：
+  - `rememberTrigger()` 记下当前 `document.activeElement`（同步，开模态/浮层前调）
+  - `returnFocus()` 关闭时把焦点还给记住的元素；元素已离文档/不可聚焦时静默跳过（不抛错）；`clearTrigger()` 显式清除
+  - `trapFocusAcrossShadow(overlay): () => void` 跨 Shadow DOM 边界找可聚焦元素 + 拦截 Tab 越界（document 级单例监听）。与 `dialog-modal.ts trapFocus` 互补：弹窗用轻量 overlay 级；3D 全屏/带 Shadow 子树的浮层用跨 Shadow 版本
+  - **使用约束**：单例 trap，多个浮层叠加时只一个生效；duck-typing 容错 node 测试环境（无 `HTMLElement` 全局）
 
 ## 与其他子系统关系
 

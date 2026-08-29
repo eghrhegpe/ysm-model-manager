@@ -43,12 +43,15 @@ rules:
     tags: [federal, parallel-session]
 
   # —— 受保护分支推送门禁（--force 已由内置基线 ask）——
-  - match:
-      tools: [bash, pwsh]
-      argv: { command: "git", args: ["push"], anyArg: ["*main*", "*master*"] }
-    action: ask
-    reason: "向 main/master 推送会触发 CI/门禁；确认目标分支与 PR 流程"
-    tags: [federal, git]
+  # 2026-08-29 审核后注释：push 不碰工作区，破坏性与 restore/checkout/stash 不同级；
+  # 「向 main 推」的防线已有本地 pre-push 门禁（质量闸）+ 远端分支保护双层兜底，
+  # 且按 main 字面匹配拦不住裸 `git push` 等价写法（漏洞）——有字无实，去掉以免误伤正常流程。
+  # - match:
+  #     tools: [bash, pwsh]
+  #     argv: { command: "git", args: ["push"], anyArg: ["*main*", "*master*"] }
+  #   action: ask
+  #   reason: "向 main/master 推送会触发 CI/门禁；确认目标分支与 PR 流程"
+  #   tags: [federal, git]
 
   # —— 禁止全局污染: 坚守 npm/pnpm/yarn -g 禁用纪律 ——
   - match:

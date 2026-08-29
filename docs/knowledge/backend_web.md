@@ -67,6 +67,7 @@ invariant_anchors:
 | `ReadFileBytesBatch` / `ReadFileBytesBatchWithMeta` | 并发读 IDB，MMD/Scene 3D 纹理加载不再静默丢贴图 |
 | `GetPackInfo` | 返回最小 `PackInfo`，展开目录不再“无法读取整合包信息” |
 | `ListPackModels` / `ReadPackEntry` | 基于 `extractZip` 枚举/读取资源包模型条目，解锁资源包 3D |
+| `ListPackModelsDetail` | 镜像 Go `ListPackModelsDetail`（ADR-131 P3）：`models[{path,cubes}] + total`，cubes = JSON `elements` 长度，封顶 200 防大包；详情页模型清单数据源 |
 | `FindPreviewImage` / `ExtractPreviewTexture` | 模型同目录预览图 / zip 首张 PNG / `.json` 解压目录纹理 → `data:` URI |
 | `AnalyzeBedrockModel` | `ysm.json` manifest 驱动多角色 geometry 合并（bones 合并、纹理声明序、默认纹理置首）；无 manifest 时回退第一个 `minecraft:geometry` |
 | `AnalyzeBedrockModelEntry` | 按 `subPath` 从 zip 定位单角色 geometry，供多角色包内切换 |

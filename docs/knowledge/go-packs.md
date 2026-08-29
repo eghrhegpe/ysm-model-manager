@@ -55,3 +55,4 @@ invariant_anchors:
 - [resource_registry](./resource-registry.md) — detector 与扩展名定义
 - [go_types](./go-types.md) — PackMeta / FormatRange
 - [wails_bridge](./wails-bridge.md) — 资源包 binding
+- **资源包模型读取绑定（`internal/app/resourcepack_models.go`，非 go/packs）**：`ListPackModels`（枚举 block/item 模型路径）/ `ReadPackEntry`（单条目 base64）/ `ListPackModelsDetail`（ADR-131 P3：`models[{path,cubes}] + total`，cubes 数 JSON `elements`，封顶 `packModelDetailCap=200`）——容器枚举统一走 `container.Reader`（ADR-068），网页版镜像见 [backend_web](./backend_web.md)

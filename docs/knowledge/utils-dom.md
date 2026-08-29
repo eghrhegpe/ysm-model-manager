@@ -36,7 +36,7 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
   - `rememberTrigger()` 记下当前 `document.activeElement`（同步，开模态/浮层前调）
   - `returnFocus()` 关闭时把焦点还给记住的元素；元素已离文档/不可聚焦时静默跳过（不抛错）；`clearTrigger()` 显式清除
   - `trapFocusAcrossShadow(overlay): () => void` 跨 Shadow DOM 边界找可聚焦元素 + 拦截 Tab 越界（document 级单例监听）。与 `dialog-modal.ts trapFocus` 互补：弹窗用轻量 overlay 级；3D 全屏/带 Shadow 子树的浮层用跨 Shadow 版本
-  - **2026-08-29 修复**：① `hasAriaHiddenAncestor` 固定 `el.getRootNode()` 会在 shadow 内元素上死循环（parentElement=null 后反复跳回同一 host，探针实证 200ms 320 万步）——改 `node.getRootNode()` 跟随当前节点逐层跳出；② trap 收拢从 `!inside`（只防 overlay 外）改为 `tabbable.includes(active)`（overlay 背景点击后 Tab 也能拉回，防逃逸）
+  - **2026-08-29 修复**：① `hasAriaHiddenAncestor` 固定 `el.getRootNode()` 会在 shadow 内元素上死循环（parentElement=null 后反复跳回同一 host，探针实证 200ms 320 万步）——改 `node.getRootNode()` 跟随当前节点逐层跳出；② trap 收拢从 `!inside` 改为 `tabbable.includes(active)`——`document.activeElement` 对 shadow 内聚焦元素 retargeting 到 host，旧 `active===last` 判不中导致 shadow 内 Tab 逃逸，收拢逻辑防焦点逃出 overlay；③ handler 内沿 `shadowRoot.activeElement` 深焦解析，shadow 内多元素 Tab 自然流动（中间元素可达，不退化 first/last 乒乓）；④ trap cleanup 加身份守卫只清自己那份（旧实现 A close 会误删 B 的监听）
   - **使用约束**：单例 trap，多个浮层叠加时只一个生效；duck-typing 容错 node 测试环境（无 `HTMLElement` 全局）
 
 ## 与其他子系统关系

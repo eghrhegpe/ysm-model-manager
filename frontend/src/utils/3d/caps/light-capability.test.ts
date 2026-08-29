@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== LightCapability 测试 =====
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   LightCapability,
@@ -318,5 +318,200 @@ describe("LightCapability — 场景边界", () => {
     cap.apply();
     cap.dispose();
     expect(() => cap.setEnabled(true)).not.toThrow();
+  });
+});
+// ============ 持久化（saveState / loadState）============
+describe("LightCapability — 持久化", () => {
+  beforeEach(() => { localStorage.clear(); });
+  afterEach(() => { localStorage.clear(); });
+
+  it("saveState/loadState 往返：布尔/数值/引擎/预设全还原", () => {
+    const cap = newCap();
+    cap.setParams({ key: { enabled: false }, ambient: { intensity: 0.9 } });
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: true });
+    cap.setPreset("mmd", { manual: true });
+    cap.saveState();
+
+    const cap2 = newCap();
+    cap2.loadState();
+    const p = cap2.getParams();
+    // 可疑点记录：loadState 先恢复 spotlightEnabled/volumetricEnabled=true，随后 manualPreset→
+    // setPreset("mmd") 全量合并预设，把 key/spotlight/volumetric 的 enabled 全部覆盖回预设值（false）——
+    // 用户保存的灯开关在手动预设存在时全部丢失
+    expect(p.key.enabled).toBe(true); // mmd 预设 DEFAULT_KEY.enabled=true 覆盖
+    expect(p.ambient.intensity).toBe(0.9); // ambient 不在 LIGHT_PRESETS 合并范围，保留
+    expect(p.spotlight.enabled).toBe(false); // mmd 预设 enabled:false 覆盖
+    expect(p.volumetric.enabled).toBe(false); // mmd 预设 enabled:false 覆盖
+    expect(cap2.getCurrentPreset()).toBe("mmd");
+  });
+
+  it("loadState 空存储时保持默认值", () => {
+    const cap = newCap({ params: { ambient: { intensity: 1.5 } } });
+    cap.loadState();
+    expect(cap.getParams().ambient.intensity).toBe(1.5);
+  });
+
+  it("loadState 非法 volumetricEngine 跳过；仅 currentPreset 时走自动恢复", () => {
+    localStorage.setItem("ysm-scene-cap-light", JSON.stringify({
+      volumetricEngine: "warp", currentPreset: "vrm",
+    }));
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.getVolumetricEngine()).toBe("cone"); // 非法值跳过
+    expect(cap.getCurrentPreset()).toBe("vrm"); // 自动恢复
+  });
+
+  it("loadState manualPreset 存在时按手动恢复并压制后续自动预设", () => {
+    localStorage.setItem("ysm-scene-cap-light", JSON.stringify({ manualPreset: "litematic", currentPreset: "mmd" }));
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.getCurrentPreset()).toBe("litematic"); // 手动优先
+    cap.setPreset("mmd"); // 自动套模型类别
+    expect(cap.getCurrentPreset()).toBe("litematic"); // 仍被压制
+  });
+
+  it("loadState 类型不匹配字段全部跳过", () => {
+    localStorage.setItem("ysm-scene-cap-light", JSON.stringify({
+      enabled: "yes", keyEnabled: 1, ambientIntensity: "bright",
+      spotlightEnabled: null, volumetricEnabled: 0,
+    }));
+    const cap = newCap();
+    cap.loadState();
+    const p = cap.getParams();
+    expect(p.key.enabled).toBe(true); // 默认
+    expect(p.ambient.intensity).toBe(0.5);
+    expect(p.spotlight.enabled).toBe(false);
+    expect(p.volumetric.enabled).toBe(false);
+  });
+});
+
+// ============ 锥组挂载态下的更新路径 ============
+describe("LightCapability — 锥组挂载态更新路径", () => {
+  function coneCap(scene: THREE.Scene): LightCapability {
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    // 顺序敏感：rebuildCone 需要 spotlight+volumetric 双开才建锥组，
+    // setSpotlight 内部有挂载分支，故先开 volumetric 再开 spotlight
+    cap.setVolumetric({ enabled: true });
+    cap.setSpotlight({ enabled: true });
+    cap.apply(); // 挂载锥组
+    return cap;
+  }
+
+  it("getDirectionalLights/getSpotLight 返回内部灯引用", () => {
+    const cap = newCap();
+    const dirs = cap.getDirectionalLights();
+    expect(dirs).toHaveLength(3);
+    dirs.forEach((d) => expect(d.isDirectionalLight).toBe(true));
+    expect(cap.getSpotLight().isSpotLight).toBe(true);
+  });
+
+  it("setTarget 挂载态下同步锥组位置（跟随 spotlight 下方）", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    const group = scene.getObjectByName("ysm-light-volumetric-cone")!;
+    cap.setTarget(new THREE.Vector3(10, 2, 5));
+    expect(group.position.x).toBe(10);
+    expect(group.position.z).toBe(5);
+    // 锥组在 spotlight（target.y + targetHeight）下方 half height
+    expect(group.position.y).toBeCloseTo(2 + 8 - 8 / 2, 5);
+  });
+
+  it("setTargetHeight 重建锥；spotlight 抬升但新锥组不自动回挂（可疑点记录）", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+    cap.setTargetHeight(12);
+    const spot = cap.getSpotLight();
+    expect(spot.position.y).toBeCloseTo(12, 5);
+    // rebuildCone 的新锥组未挂载（setTargetHeight 只在 coneGroup 已在场景时同步位置，
+    // 而它已被 rebuildCone 换新移除）——挂载态下改高度会导致锥组消失
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+  });
+
+  it("setPreset 切到 volumetric 关闭的预设时卸载锥组；重新开启时回挂", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+    cap.setPreset("ysm"); // ysm 预设 volumetric.enabled=false → 锥组卸载
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+    cap.setPreset("mmd-scene"); // volumetric 仍 false → 保持卸载
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+  });
+
+  it("setSpotlight 时锥组已在场景则原位重建跟随", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    cap.setSpotlight({ angle: 40, intensity: 3 });
+    const group = scene.getObjectByName("ysm-light-volumetric-cone");
+    expect(group).toBeDefined();
+    expect(cap.getSpotLight().intensity).toBe(3);
+  });
+
+  it("setVolumetric({enabled:false}) 移除已挂载锥组", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    cap.setVolumetric({ enabled: false });
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+  });
+
+  it("setParams 开 volumetric+spotlight 时挂载锥组；关闭时移除", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    cap.setParams({ spotlight: { enabled: true }, volumetric: { enabled: true } });
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+    cap.setParams({ volumetric: { enabled: false } });
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+  });
+});
+
+// ============ 菜单控件联动 ============
+describe("LightCapability — 菜单控件联动", () => {
+  it("toggle/slider/select 全部读写联动", () => {
+    const cap = newCap();
+    const controls = cap.getMenuControls();
+    const by = (id: string) => controls.find((c) => c.id === id)!;
+    by("light-key").setValue(false);
+    expect(by("light-key").getValue()).toBe(false);
+    by("light-fill").setValue(false);
+    expect(by("light-fill").getValue()).toBe(false);
+    by("light-rim").setValue(false);
+    expect(by("light-rim").getValue()).toBe(false);
+    by("light-ambient").setValue(1.2);
+    expect(by("light-ambient").getValue()).toBe(1.2);
+    by("light-spotlight").setValue(true);
+    expect(by("light-spotlight").getValue()).toBe(true);
+    by("light-volumetric").setValue(true);
+    expect(by("light-volumetric").getValue()).toBe(true);
+    by("light-cone-angle").setValue(45);
+    expect(by("light-cone-angle").getValue()).toBe(45);
+    by("light-preset").setValue("vrm");
+    expect(by("light-preset").getValue()).toBe("vrm");
+  });
+
+  it("light-preset select 经 manual 入口记录手动预设", () => {
+    const cap = newCap();
+    const presetCtrl = cap.getMenuControls().find((c) => c.id === "light-preset")!;
+    presetCtrl.setValue("ysm");
+    expect(cap.getCurrentPreset()).toBe("ysm");
+    cap.setPreset("mmd"); // 自动入口被手动压制
+    expect(cap.getCurrentPreset()).toBe("ysm");
+  });
+});
+
+// ============ 导出工具函数 ============
+describe("light-capability 导出工具函数", () => {
+  it("attenuateAmbientForSky：开 ×0.5 / 关 ×1", async () => {
+    const { attenuateAmbientForSky, lightDirToPosition } = await import("./light-capability.ts");
+    expect(attenuateAmbientForSky(1.0, true)).toBeCloseTo(0.5, 10);
+    expect(attenuateAmbientForSky(1.0, false)).toBeCloseTo(1.0, 10);
+    // lightDirToPosition：仰角 90 → 正上方；方位 0 → +Z
+    const top = lightDirToPosition({ enabled: true, color: 0, intensity: 0, azimuth: 0, elevation: 90 }, 5);
+    expect(top.y).toBeCloseTo(5, 5);
+    expect(top.x).toBeCloseTo(0, 5);
+    const north = lightDirToPosition({ enabled: true, color: 0, intensity: 0, azimuth: 0, elevation: 0 }, 5);
+    expect(north.z).toBeCloseTo(5, 5);
+    expect(north.y).toBeCloseTo(0, 5);
   });
 });

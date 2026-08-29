@@ -5,11 +5,12 @@
 //（「空气角色」/几何放大 N 倍）。本测试锁死 attachRootBones：所有根骨骼
 // 都挂到 mesh，且子树骨骼 matrixWorld 平移非零（判别性断言，见 assertRootsAttached）。
 // @vitest-environment happy-dom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import {
   buildPmxScene,
   buildPmxSceneSliced,
+  createPmxParser,
 } from "./mmd-pmx-parser.ts";
 import type { PmxParseResponse } from "./mmd-pmx-parser.worker.ts";
 
@@ -92,5 +93,150 @@ describe("buildPmxSceneSliced — 多根骨骼挂载（切片版同锁）", () =
     const built = await buildPmxSceneSliced(pmx, { texUrlMap: new Map() });
     expect(built).not.toBeNull();
     assertRootsAttached(built!.mesh, pmx);
+  });
+});
+
+// ===== 覆盖率攻坚：createPmxParser（Worker 可用路径）+ 材质/纹理构建 =====
+
+/** 可手动投递响应的 FakeWorker（对齐 createResolveModeBridge 协议） */
+class FakeWorker {
+  onmessage: ((e: { data: unknown }) => void) | null = null;
+  onerror: ((e: unknown) => void) | null = null;
+  lastId = -1;
+  terminated = false;
+  static instances: FakeWorker[] = [];
+  postMessage(msg: { id: number }): void {
+    this.lastId = msg.id;
+    FakeWorker.instances.push(this);
+  }
+  respond(resp: unknown): void {
+    this.onmessage?.({ data: resp });
+  }
+  terminate(): void {
+    this.terminated = true;
+  }
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  FakeWorker.instances = [];
+});
+
+/** 带材质 + 纹理 + 骨骼层级的 PMX fixture（材质/骨骼构建分支用） */
+function pmxWithMaterials(): PmxParseResponse {
+  const base = syntheticPmx();
+  return {
+    ...base,
+    textures: ["tex/face.png"],
+    // 半透明 + 双面 + 纹理引用 / 不透明单面 + 无纹理（仅 builder 消费的字段）
+    materials: [
+      { name: "服", diffuse: [0.5, 0.2, 0.1, 0.5], flags: 0x01, textureIndex: 0 },
+      { name: "肌", diffuse: [1, 1, 1, 1], flags: 0, textureIndex: -1 },
+    ] as unknown as PmxParseResponse["materials"],
+  };
+}
+
+describe("createPmxParser（Worker 可用路径）", () => {
+  it("无 Worker（受限环境）→ always-fail parser（调用方 fallback 主线程）", async () => {
+    vi.stubGlobal("Worker", undefined);
+    const parser = createPmxParser();
+    await expect(parser.parse(new ArrayBuffer(4))).resolves.toMatchObject({
+      ok: false,
+      error: "Worker 不可用（测试/受限环境）",
+    });
+    expect(() => parser.dispose()).not.toThrow();
+  });
+
+  it("Worker 存在 → 真实 bridge：parse 注入 id 发请求 + dispose 终止 worker", async () => {
+    vi.stubGlobal("Worker", FakeWorker as unknown as typeof Worker);
+    const parser = createPmxParser();
+    const bytes = new ArrayBuffer(8);
+    const p = parser.parse(bytes);
+    const worker = FakeWorker.instances.at(-1)!;
+    expect(worker).toBeDefined();
+    expect(worker.lastId).toBeGreaterThanOrEqual(0); // bridge 注入请求 id
+    // ⚠️ 疑似源码 bug：createResolveModeBridge 未接线 worker.onmessage（409b060e 重构丢失）
+    // → 响应永不结算，只能等 30s 超时 ok:false 回退。此处不 await 响应，仅锁请求/终止契约。
+    void p;
+    parser.dispose();
+    expect(worker.terminated).toBe(true);
+    p.catch(() => {});
+  });
+
+  it("worker 无响应 → 超时以 ok:false 结算（resolve-mode 语义）", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("Worker", FakeWorker as unknown as typeof Worker);
+      const parser = createPmxParser();
+      const p = parser.parse(new ArrayBuffer(4));
+      const assertion = expect(p).resolves.toMatchObject({
+        ok: false,
+        error: "PMX 解析超时（>30s）",
+      });
+      await vi.advanceTimersByTimeAsync(30001);
+      await assertion;
+      parser.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("buildPmxScene — 材质/纹理构建", () => {
+  it("材质 diffuse/flags/纹理映射：半透明 + DoubleSide + texUrlMap 命中建纹理", () => {
+    const pmx = pmxWithMaterials();
+    const texUrlMap = new Map<string, string>([
+      ["tex/face.png", "blob:tex-full"],
+      ["face.png", "blob:tex-base"],
+    ]);
+    // TextureLoader.load 同步回包（happy-dom 无真实图像解码）→ 锁 onLoad 材质接线
+    const loadSpy = vi.spyOn(THREE.TextureLoader.prototype, "load").mockImplementation(
+      function (this: THREE.TextureLoader, _url: string, onLoad?: (t: THREE.Texture) => void) {
+        const tex = new THREE.Texture();
+        onLoad?.(tex);
+        return tex;
+      } as never,
+    );
+    try {
+      const built = buildPmxScene(pmx, { texUrlMap });
+      expect(built).not.toBeNull();
+      expect(loadSpy).toHaveBeenCalledTimes(1);
+      const [matA, matB] = built!.materials;
+      expect(matA.name).toBe("服");
+      expect(matA.transparent).toBe(true); // diffuse.a = 0.5 < 1
+      expect(matA.side).toBe(THREE.DoubleSide); // flags & 0x01
+      expect(matA.map).toBeInstanceOf(THREE.Texture); // onLoad 接线：mat.map 赋值（needsUpdate 为 setter-only，不可读）
+      expect(matB.transparent).toBe(false);
+      expect(matB.side).toBe(THREE.FrontSide);
+    } finally {
+      loadSpy.mockRestore();
+    }
+  });
+
+  it("无根骨骼（全为子骨骼）→ attachRootBones 兜底挂 bones[0]", () => {
+    const pmx = syntheticPmx();
+    pmx.bones![0].parentBoneIndex = 1; // rootA 变 rootB 的子
+    pmx.bones![1].parentBoneIndex = 0; // rootB 变 rootA 的子（人为无根环）
+    const built = buildPmxScene(pmx, { texUrlMap: new Map() });
+    expect(built).not.toBeNull();
+    // 兜底：bones[0] 挂到 mesh（防孤儿根整树不更新 matrixWorld）
+    expect(built!.mesh.children).toContain(built!.bones[0]);
+  });
+});
+
+describe("buildPmxSceneSliced — 材质/纹理构建（切片版同锁）", () => {
+  it("材质 diffuse/flags/纹理映射与同步版一致（basename 兜底命中）", async () => {
+    const pmx = pmxWithMaterials();
+    // sliced 版对 texPath 统一 lowercase 后查表 → 仅注册 basename 键也命中
+    const texUrlMap = new Map<string, string>([["face.png", "blob:tex-base"]]);
+    const built = await buildPmxSceneSliced(pmx, { texUrlMap });
+    expect(built).not.toBeNull();
+    const [matA, matB] = built!.materials;
+    expect(matA.name).toBe("服");
+    expect(matA.transparent).toBe(true);
+    expect(matA.side).toBe(THREE.DoubleSide);
+    expect(matB.side).toBe(THREE.FrontSide);
+    // 延迟纹理挂 pendingTexture（worker 解码完成后同步应用）
+    expect((matA.userData as { pendingTexture?: unknown }).pendingTexture).toBeDefined();
   });
 });

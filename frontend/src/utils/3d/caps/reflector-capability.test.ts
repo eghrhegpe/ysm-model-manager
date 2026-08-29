@@ -9,12 +9,8 @@ import {
   REFLECTOR_PRESETS,
 } from "./reflector-capability.ts";
 
-// 拦截 buildReflector（内部依赖 Reflector 3D 对象，node 不可用）
-beforeEach(() => {
-  vi.spyOn(ReflectorCapability.prototype as unknown as { buildReflector: () => void }, "buildReflector").mockImplementation(() => {
-    // no-op
-  });
-});
+// buildReflector 的 Reflector 构造（geometry + ShaderMaterial + WebGLRenderTarget）是纯数据
+// 对象创建，不触碰真实 WebGL context，node 环境可直接跑真实管线（onBeforeRender 渲染除外）。
 
 function newCap(opts: { enabled?: boolean; params?: Partial<import("./reflector-capability.ts").ReflectorParams> } = {}) {
   const scene = new THREE.Scene();
@@ -192,5 +188,124 @@ describe("ReflectorCapability — 预设数据完整性", () => {
     for (const t of expectedTypes) {
       expect(REFLECTOR_PRESETS[t]).toBeDefined();
     }
+  });
+});
+describe("ReflectorCapability — 真实管线", () => {
+  it("setEnabled(true) 后 scene 出现 ysm-reflector mesh，位置/旋转/uOpacity 就位", () => {
+    const cap = newCap({ enabled: true, params: { groundY: 2, opacity: 0.75 } });
+    cap.apply(); // 构造不自动 build，需 apply 显式挂载
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    const reflector = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
+    expect(reflector).toBeDefined();
+    expect(reflector.position.y).toBeCloseTo(2 - 0.01, 5);
+    expect(reflector.rotation.x).toBeCloseTo(-Math.PI / 2, 5);
+    const mat = reflector.material as THREE.ShaderMaterial;
+    expect(mat.transparent).toBe(true);
+    expect(mat.uniforms.uOpacity.value).toBe(0.75);
+    // opacity 注入成功：fragmentShader 含 uOpacity
+    expect(mat.fragmentShader).toContain("uOpacity");
+  });
+
+  it("setOpacity 挂载态下更新 uniforms.uOpacity（不重建）", () => {
+    const cap = newCap({ enabled: true });
+    cap.apply();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    const reflector = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
+    const mat = reflector.material as THREE.ShaderMaterial;
+    cap.setOpacity(0.2);
+    expect(mat.uniforms.uOpacity.value).toBe(0.2);
+  });
+
+  it("setColor 挂载态下更新 uniforms.color（官方 tint 通道）", () => {
+    const cap = newCap({ enabled: true });
+    cap.apply();
+    const reflector = ((cap as unknown as { scene: THREE.Scene }).scene.getObjectByName("ysm-reflector")) as THREE.Mesh;
+    const mat = reflector.material as THREE.ShaderMaterial;
+    cap.setColor(0x123456);
+    expect((mat.uniforms.color.value as THREE.Color).getHex()).toBe(0x123456);
+  });
+
+  it("setSize/setResolution/setClipBias 挂载态下触发重建（旧 mesh 移除 + 新 mesh 就位）", () => {
+    const cap = newCap({ enabled: true });
+    cap.apply();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    const first = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
+    cap.setSize(300);
+    const second = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
+    expect(second).toBeDefined();
+    expect(second).not.toBe(first); // 重建
+    cap.setResolution(512);
+    cap.setClipBias(0.008);
+    expect((cap.getParams().clipBias)).toBe(0.008);
+  });
+
+  it("setGroundY 挂载态下更新高度；disabled 只存参数", () => {
+    const cap = newCap({ enabled: true });
+    cap.apply();
+    const reflector = ((cap as unknown as { scene: THREE.Scene }).scene.getObjectByName("ysm-reflector")) as THREE.Mesh;
+    cap.setGroundY(5);
+    expect(reflector.position.y).toBeCloseTo(5 - 0.01, 5);
+    const cap2 = newCap();
+    cap2.setGroundY(7);
+    expect(cap2.getParams().groundY).toBe(7);
+  });
+
+  it("setPreset 挂载态下重建（新尺寸参数生效）", () => {
+    const cap = newCap({ enabled: true });
+    cap.apply();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    cap.setPreset("litematic");
+    expect((scene.getObjectByName("ysm-reflector") as THREE.Mesh).material).toBeDefined();
+    expect(cap.getParams().size).toBe(500);
+  });
+
+  it("setEnabled(false) 移除并释放；重复 apply 幂等", () => {
+    const cap = newCap({ enabled: true });
+    cap.apply();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    const reflector = scene.getObjectByName("ysm-reflector")!;
+    const geoDisposeSpy = vi.spyOn((reflector as THREE.Mesh).geometry, "dispose");
+    cap.setEnabled(false);
+    expect(scene.getObjectByName("ysm-reflector")).toBeUndefined();
+    expect(geoDisposeSpy).toHaveBeenCalled();
+    cap.apply(); // enabled=false → 不再创建
+    expect(scene.getObjectByName("ysm-reflector")).toBeUndefined();
+    cap.dispose(); // 幂等
+  });
+
+  it("loadState(enabled=true) 直接重建反射面", () => {
+    localStorage.setItem("ysm-scene-cap-reflector", JSON.stringify({ enabled: true, size: 250, opacity: 0.4 }));
+    const cap = newCap();
+    cap.loadState();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    const reflector = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
+    expect(reflector).toBeDefined();
+    expect(cap.getParams().size).toBe(250);
+    localStorage.removeItem("ysm-scene-cap-reflector");
+  });
+
+  it("apply 挂载（enabled 默认 false 时不创建）", () => {
+    const cap = newCap({ enabled: true });
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    cap.apply();
+    expect(scene.getObjectByName("ysm-reflector")).toBeDefined();
+    const capOff = newCap();
+    capOff.apply();
+    expect(((capOff as unknown as { scene: THREE.Scene }).scene.getObjectByName("ysm-reflector"))).toBeUndefined();
+  });
+});
+
+// ============ 菜单控件联动 ============
+describe("ReflectorCapability — 菜单控件联动", () => {
+  it("opacity/resolution/size 滑块读写联动", () => {
+    const cap = newCap();
+    const controls = cap.getMenuControls();
+    const by = (id: string) => controls.find((c) => c.id === id)!;
+    by("reflector-opacity").setValue(0.9);
+    expect(by("reflector-opacity").getValue()).toBe(0.9);
+    by("reflector-resolution").setValue(2048);
+    expect(by("reflector-resolution").getValue()).toBe(2048);
+    by("reflector-size").setValue(400);
+    expect(by("reflector-size").getValue()).toBe(400);
   });
 });

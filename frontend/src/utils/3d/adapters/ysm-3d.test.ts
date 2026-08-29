@@ -82,14 +82,19 @@ beforeEach(() => {
 function makeCtx() {
   const scene = { add: vi.fn(), remove: vi.fn() } as unknown as import("three").Scene;
   const camera = {
-    position: { clone: () => ({ copy: vi.fn() }), set: vi.fn() },
+    // position.clone() 返回带 copy 的对象（resetCamera 用 position.copy(initCamPos) 回位）
+    position: { clone: () => ({ copy: vi.fn(), x: 1, y: 2, z: 3 }), copy: vi.fn(), set: vi.fn() },
     lookAt: vi.fn(),
   } as unknown as import("three").PerspectiveCamera;
   const controls = {
     target: { clone: () => ({ copy: vi.fn() }), set: vi.fn(), copy: vi.fn() },
     update: vi.fn(),
   } as never;
-  const renderer = { domElement: document.createElement("div") } as unknown as import("three").WebGLRenderer;
+  const rendererDom = document.createElement("div");
+  // width/height = 0 → screenshotFromRenderer 未就绪守卫返回 null（fake renderer 无 getSize）
+  (rendererDom as unknown as { width: number; height: number }).width = 0;
+  (rendererDom as unknown as { width: number; height: number }).height = 0;
+  const renderer = { domElement: rendererDom } as unknown as import("three").WebGLRenderer;
   const overlay = document.createElement("div");
   document.body.appendChild(overlay);
   return {
@@ -520,5 +525,158 @@ describe("ysmMenuItems 独立菜单表测试", () => {
       scene: null,
       legacyTestId: "ysm-bones-entry",
     });
+  });
+});
+
+// ===== 覆盖率攻坚：守卫 / 多模型模式 / 拾取回调 / 播放桥 / F 键调试 / 生命周期方法 =====
+
+import { sceneRegistry } from "./scene-registry.ts";
+
+describe("buildYsmScene 守卫与多模型模式", () => {
+  beforeEach(() => {
+    sceneRegistry.reset();
+    mocks.registerBoneRaycast.mockReset();
+    mocks.registerBoneRaycast.mockImplementation(() => vi.fn());
+  });
+
+  it("scene/camera/controls/renderer 缺失 → 抛错（shared 模式前置守卫）", async () => {
+    const ctx = makeCtx() as Record<string, unknown>;
+    delete ctx.renderer;
+    await expect(
+      buildYsmScene(ctx as never, "/m/a.ysm", {
+        loader: vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry)),
+        preload: mocks.preloadModel,
+      }),
+    ).rejects.toThrow(/需要核心提供/);
+  });
+
+  it("多模型同框（注册表非空）→ 跳过逐模型 raycast（统一拾取器接管），dispose 不抛", async () => {
+    sceneRegistry.register({
+      path: "other.ysm",
+      rtype: "ysm",
+      roots: [],
+      built: { dispose: vi.fn() } as never,
+    });
+    const ctx = makeCtx();
+    const preview = await buildYsmScene(ctx, "/m/a.ysm", {
+      loader: vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry)),
+      preload: mocks.preloadModel,
+    });
+    expect(mocks.registerBoneRaycast).not.toHaveBeenCalled();
+    expect(() => preview.dispose()).not.toThrow();
+    sceneRegistry.reset(); // 防泄漏：多模型态不留到后续用例
+  });
+});
+
+describe("buildYsmScene 拾取/播放/调试/生命周期补全", () => {
+  it("拾取回调 + 播放桥 + 控制器 + F 键调试全链路", async () => {
+    sceneRegistry.reset(); // 单模型模式：raycast 走逐模型注册
+    const ctx = makeCtx();
+    mocks.registerBoneRaycast.mockReset();
+    const capturedRayState: { rayState: { onBoneSelectCallback: ((i: unknown) => void) | null } | null } = { rayState: null };
+    (mocks.registerBoneRaycast as unknown as { mockImplementation: (f: (...args: unknown[]) => unknown) => void }).mockImplementation(
+      (...args: unknown[]) => {
+        const rayState = args[7] as { setHoveredBone: (v: string | null) => void; setHoveredMesh: (v: unknown) => void; onBoneSelectCallback: ((i: unknown) => void) | null };
+        rayState.setHoveredBone("b1");
+        rayState.setHoveredMesh({});
+        capturedRayState.rayState = rayState;
+        return () => {};
+      },
+    );
+    mocks.preloadModel.mockResolvedValue({
+      texArr: [],
+      spec: { models: [{ bones: [{ id: "b1", name: "Body", parentId: null }], textureWidth: 64, textureHeight: 32 }] },
+    });
+    const THREE = await import("three");
+    mocks.buildYsmObject.mockReturnValue({
+      rootGroup: new THREE.Group(),
+      boneGroupMap: new Map([["b1", new THREE.Group()]]),
+      modelGroups,
+      showModelGroup: vi.fn(),
+      getModelGroupCount: () => 1,
+      setBoneVisible: vi.fn(),
+      toggleBone: vi.fn(),
+      getBoneList: () => [],
+      removeFromScene: vi.fn(),
+    });
+
+    const listPaths = vi.fn().mockResolvedValue([
+      "/m/anim/motion.animation.json",
+      "/m/anim/ctl.animation_controllers.json",
+    ]);
+    const readTextFile = vi.fn().mockImplementation(async (p: string) => {
+      if (p.endsWith(".animation_controllers.json")) {
+        return btoa(JSON.stringify({
+          format_version: "1.10",
+          animation_controllers: { ctl: { states: { default: { animations: ["idle"], transitions: [] } } } },
+        }));
+      }
+      return btoa(JSON.stringify({ animations: { idle: { animation_length: 1, loop: true, bones: { root: { position: { "0": [0, 0, 0] } } } } } }));
+    });
+
+    let controlsCtx: Record<string, unknown> = {};
+    let playBridge: Record<string, (...a: unknown[]) => unknown> | null = null;
+    const preview = await buildYsmScene(ctx, "/m/anim/model.ysm", {
+      loader: vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry)),
+      preload: mocks.preloadModel,
+      listAllFilePaths: listPaths,
+      readTextFile,
+      panels: {
+        fillShotPanel: () => {},
+        shotNodes: (c) => { controlsCtx = c as unknown as Record<string, unknown>; return []; },
+        playNodes: (bridge) => { playBridge = bridge as unknown as Record<string, (...a: unknown[]) => unknown>; return []; },
+      },
+    });
+
+    // 拾取回调：rayState.onBoneSelectCallback → content.onBoneSelect（null 时 no-op 不抛）
+    expect(capturedRayState.rayState).not.toBeNull();
+    expect(() => capturedRayState.rayState!.onBoneSelectCallback!({ boneId: "b1" })).not.toThrow();
+
+    // 播放桥闭包（isPlaying/toggle/currentIndex/select → animPlayer）
+    expect(playBridge).not.toBeNull();
+    const p0 = playBridge!.isPlaying!() as boolean;
+    playBridge!.toggle!();
+    expect(playBridge!.isPlaying!()).toBe(!p0);
+    playBridge!.currentIndex!();
+    playBridge!.select!(0);
+    playBridge!.toggle!();
+
+    // controlsCtx.screenshot 闭包（fake renderer → 静默 null）
+    await expect(
+      (controlsCtx.screenshot as () => Promise<string | null>)(),
+    ).resolves.toBeNull();
+
+    // content 句柄方法（视图层消费面；mock obj 方法直透）
+    const handle = controlsCtx.handle as {
+      showModelGroup: (i: number) => void;
+      getModelGroupCount: () => number;
+      setBoneVisible: (n: string, v: boolean) => void;
+      toggleBone: (n: string) => void;
+      getBoneList: (i?: number) => unknown;
+    };
+    handle.showModelGroup(0);
+    handle.getModelGroupCount();
+    handle.setBoneVisible("b1", false);
+    handle.toggleBone("b1");
+    handle.getBoneList();
+
+    // F 键调试：其他键 / 组合键早退；单按 f → normal→pivot（rebuildDebug 真实执行）
+    const dom = ctx.renderer.domElement as HTMLElement;
+    dom.dispatchEvent(new KeyboardEvent("keydown", { key: "x" }));
+    dom.dispatchEvent(new KeyboardEvent("keydown", { key: "f", ctrlKey: true }));
+    dom.dispatchEvent(new KeyboardEvent("keydown", { key: "f" })); // → pivot（debugGroup 非空）
+    dom.dispatchEvent(new KeyboardEvent("keydown", { key: "f" })); // → bone（debugGroup 非空，dispose 时释放）
+
+    // 生命周期方法
+    expect(() => preview.resetCamera?.()).not.toThrow();
+    preview.setRotationMode?.(true);
+    preview.setSpeed?.(5);
+    preview.showModelGroup?.(0);
+    preview.onBonePick?.("b1");
+    expect(ctx.menu.openPanel).toHaveBeenCalledWith("b1");
+    preview.update?.(0.016);
+    await expect(preview.screenshot?.()).resolves.toBeNull();
+
+    preview.dispose();
   });
 });

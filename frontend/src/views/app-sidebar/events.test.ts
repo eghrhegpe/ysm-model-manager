@@ -3,11 +3,20 @@
 // 旧 handler 闭包仍读到最新 instances（P2 数据陈旧回归）
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { emitMock } = vi.hoisted(() => ({
+const { emitMock, runMcSearchMock, runLauncherDetectMock, currentRepoTypeMock } = vi.hoisted(() => ({
   emitMock: vi.fn(),
+  runMcSearchMock: vi.fn(),
+  runLauncherDetectMock: vi.fn(),
+  currentRepoTypeMock: vi.fn(() => "ysm"),
 }));
 
 vi.mock("../../bus.ts", () => ({ bus: { emit: emitMock, on: vi.fn() } }));
+// 2026-08-29 覆盖率补强：mc-search / launcher-detect 按钮路径 + restore 兜底可注入
+vi.mock("./launcher-detect.ts", () => ({
+  runMcSearch: runMcSearchMock,
+  runLauncherDetect: runLauncherDetectMock,
+}));
+vi.mock("../../features/repo-rtype.ts", () => ({ currentRepoType: currentRepoTypeMock }));
 vi.mock("./tpl.ts", () => ({
   instanceCardHeaderHTML: () => '<div class="instance-card-header"><div class="name"></div></div>',
 }));
@@ -55,6 +64,9 @@ function mount(instances: SidebarInstance[]) {
 
 beforeEach(() => {
   emitMock.mockClear();
+  runMcSearchMock.mockClear();
+  runLauncherDetectMock.mockClear();
+  currentRepoTypeMock.mockReturnValue("ysm");
   localStorage.clear();
   resetSelectedEmit(); // 隔离模块级 _lastEmittedPkg 状态（P3 补测：去重状态机跨用例不串）
 });
@@ -260,5 +272,278 @@ describe("bindFooter", () => {
       expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe("🎮 /detected"),
     );
     expect(app.SaveAppConfig).toHaveBeenCalled();
+  });
+
+  it("btn-mc 点击 → nav:changed 跳设置页", () => {
+    const { root } = mountFooter();
+    bindFooter(root, []);
+    (root.getElementById("btn-mc") as HTMLElement).click();
+    expect(emitMock).toHaveBeenCalledWith("nav:changed", { page: "settings" });
+  });
+
+  it("MC 检测链路拒绝（LoadAppConfig reject）→ 按钮「未设置」+ console.warn", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("cfg down"));
+    const { root } = mountFooter();
+    bindFooter(root, []);
+    await waitFor(
+      () => expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe("🎮 未设置"),
+    );
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
+
+// ===== 覆盖率补强：点击早退 / 右键菜单 / 绑定生命周期 / restore 兜底 =====
+describe("bindCardEvents — 点击早退分支（P1/P2 闭包内的守卫）", () => {
+  it("点击 [data-sidebar-mc-search] → runMcSearch 且不选中", () => {
+    const { container } = mount([instance("A1")]);
+    const btn = document.createElement("button");
+    btn.setAttribute("data-sidebar-mc-search", "");
+    container.appendChild(btn);
+    btn.click();
+    expect(runMcSearchMock).toHaveBeenCalledTimes(1);
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+  });
+
+  it("点击 [data-sidebar-launcher-detect] → runLauncherDetect", () => {
+    const { container } = mount([instance("A1")]);
+    const btn = document.createElement("button");
+    btn.setAttribute("data-sidebar-launcher-detect", "");
+    container.appendChild(btn);
+    btn.click();
+    expect(runLauncherDetectMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("点击卡片内普通 button / chk → 早退不选中", () => {
+    const { container } = mount([instance("A1")]);
+    const card = container.querySelector(".instance-card") as HTMLElement;
+    const plain = document.createElement("button");
+    card.appendChild(plain);
+    plain.click();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+
+    const chk = document.createElement("div");
+    chk.className = "chk";
+    card.appendChild(chk);
+    chk.click();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+  });
+
+  it("点击列表空白（无卡片）/ 卡片无 header → 早退", () => {
+    const { container, root } = mount([instance("A1")]);
+    (container as HTMLElement).click();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+
+    // 无 header 卡片：手工构造 DOM
+    const host2 = document.createElement("div");
+    const root2 = host2.attachShadow({ mode: "open" });
+    root2.innerHTML =
+      '<div class="list" id="sidebar-instance-list">' +
+      '<div class="instance-card" data-idx="0"></div></div>';
+    bindCardEvents(root2, [instance("A1")]);
+    (root2.querySelector(".instance-card") as HTMLElement).click();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+    void root;
+  });
+
+  it("涟漪：点击 header 加 active+ripple，500ms 后 ripple 移除", async () => {
+    const { container } = mount([instance("A1")]);
+    const hdr = container.querySelector(".instance-card-header") as HTMLElement;
+    hdr.click();
+    expect(hdr.classList.contains("active")).toBe(true);
+    expect(hdr.classList.contains("ripple")).toBe(true);
+    await new Promise((r) => setTimeout(r, 560));
+    expect(hdr.classList.contains("ripple")).toBe(false);
+    expect(hdr.classList.contains("active")).toBe(true); // active 不随涟漪消失
+  });
+});
+
+describe("bindCardEvents — 右键菜单（ctx:show）", () => {
+  function ctxEvent(): MouseEvent {
+    return new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 11,
+      clientY: 22,
+    });
+  }
+
+  it("右键卡片 → preventDefault + ctx:show payload（name 剥 📦 / subdir 读 storage）", () => {
+    localStorage.setItem("repo_subdir", " subdirA ");
+    const pkg = instance("A1");
+    const { container } = mount([pkg]);
+    const hdr = container.querySelector(".instance-card-header") as HTMLElement;
+    (hdr.querySelector(".name") as HTMLElement).textContent = "📦 A1";
+    const ev = ctxEvent();
+    (container.querySelector(".instance-card") as HTMLElement).dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(emitMock).toHaveBeenCalledWith(
+      "ctx:show",
+      expect.objectContaining({
+        x: 11,
+        y: 22,
+        type: "instance",
+        instanceName: "A1",
+        path: "/mc/instances/A1",
+        rtype: "ysm",
+      }),
+    );
+  });
+
+  it("右键无 rtype 实例 → toastEmptyRtype 拦截，不 emit ctx:show", () => {
+    const noRtype = { ...instance("X1"), rtype: "" };
+    const { container } = mount([noRtype]);
+    const ev = ctxEvent();
+    (container.querySelector(".instance-card") as HTMLElement).dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(emitMock).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ type: "error" }),
+    );
+    expect(emitMock).not.toHaveBeenCalledWith("ctx:show", expect.anything());
+  });
+
+  it("右键无 dir 实例 → missingPath toast，不 emit ctx:show", () => {
+    const noDir = { ...instance("Y1"), dir: "" };
+    const { container } = mount([noDir]);
+    const ev = ctxEvent();
+    (container.querySelector(".instance-card") as HTMLElement).dispatchEvent(ev);
+    expect(emitMock).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ type: "error" }),
+    );
+    expect(emitMock).not.toHaveBeenCalledWith("ctx:show", expect.anything());
+  });
+
+  it("右键非卡片区域 / idx 越界 → 无 emit 不拦截", () => {
+    const { container } = mount([instance("A1")]);
+    const evList = ctxEvent();
+    (container as HTMLElement).dispatchEvent(evList);
+    expect(evList.defaultPrevented).toBe(false);
+    expect(emitMock).not.toHaveBeenCalledWith("ctx:show", expect.anything());
+  });
+});
+
+describe("bindCardEvents — 绑定生命周期", () => {
+  it("绑定前先清残留 .instance-card-context-menu", () => {
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML =
+      '<div class="list" id="sidebar-instance-list"></div>' +
+      '<div class="instance-card-context-menu">stale</div>';
+    bindCardEvents(root, []);
+    expect(root.querySelector(".instance-card-context-menu")).toBeNull();
+  });
+
+  it("root 无 #sidebar-instance-list → 返回 noop cleanup", () => {
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = "<div></div>";
+    const cleanup = bindCardEvents(root, []);
+    expect(typeof cleanup).toBe("function");
+    expect(() => cleanup()).not.toThrow();
+  });
+
+  it("cleanup 后点击失效；重复 cleanup 安全", () => {
+    const { container, cleanup } = mount([instance("A1")]);
+    cleanup();
+    (container.querySelector(".instance-card-header") as HTMLElement).click();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+    expect(() => cleanup()).not.toThrow();
+  });
+
+  it("list 元素被替换后重绑 → 旧 list 监听移除、新 list 生效", () => {
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
+    const oldList = root.getElementById("sidebar-instance-list")!;
+    bindCardEvents(root, [instance("A1")]);
+
+    // 模拟 list 整体替换（innerHTML 重建）
+    root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
+    const newList = root.getElementById("sidebar-instance-list")!;
+    bindCardEvents(root, [instance("B1")]);
+
+    // 旧 list（已脱离 DOM）点击 → 无 emit（监听已移除）
+    const hdrOld = document.createElement("div");
+    hdrOld.className = "instance-card-header";
+    const cardOld = document.createElement("div");
+    cardOld.className = "instance-card";
+    cardOld.dataset.idx = "0";
+    cardOld.appendChild(hdrOld);
+    oldList.appendChild(cardOld);
+    hdrOld.click();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+
+    // 新 list 正常选中
+    renderVersionCards(newList, [instance("B1")]);
+    (newList.querySelector(".instance-card-header") as HTMLElement).click();
+    expect(emitMock).toHaveBeenLastCalledWith("package:selected", instance("B1"));
+  });
+});
+
+describe("restoreSelectedCard 兜底分支", () => {
+  const flushRaf = (): Promise<void> =>
+    new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+  it("保存名有实例但渲染卡片缺失（idx 越界于 DOM）→ 不高亮不 emit", async () => {
+    localStorage.setItem("sb_selectedName_ysm", "B1");
+    // 渲染只放 A1 的卡片，instances 却含 B1 → idx=1 找不到 card
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
+    const container = root.getElementById("sidebar-instance-list")!;
+    renderVersionCards(container, [instance("A1")]);
+    bindCardEvents(root, [instance("A1"), instance("B1")]);
+    await flushRaf();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+  });
+
+  it("恢复卡片无 header → rAF 内兜底 return", async () => {
+    localStorage.setItem("sb_selectedName_ysm", "A1");
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML =
+      '<div class="list" id="sidebar-instance-list">' +
+      '<div class="instance-card" data-idx="0"></div></div>';
+    bindCardEvents(root, [instance("A1")]);
+    await flushRaf();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+  });
+
+  it("保存实例无 rtype → toastEmptyRtype + 去重位记录（后续 reload 不再 toast）", async () => {
+    localStorage.setItem("sb_selectedName_ysm", "X1");
+    const noRtype = { ...instance("X1"), rtype: "" };
+    mount([noRtype]);
+    await flushRaf();
+    expect(emitMock).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ type: "error" }),
+    );
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+    // reload：emitKey 已记录 → 不再 toast
+    emitMock.mockClear();
+    mount([{ ...instance("X1"), rtype: "" }]);
+    await flushRaf();
+    expect(emitMock).not.toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ type: "error" }),
+    );
+  });
+
+  it("instances 空且 currentRepoType 抛错 → console.warn 兜底不炸", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    currentRepoTypeMock.mockImplementationOnce(() => {
+      throw new Error("repo state broken");
+    });
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
+    expect(() => bindCardEvents(root, [])).not.toThrow();
+    await flushRaf();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

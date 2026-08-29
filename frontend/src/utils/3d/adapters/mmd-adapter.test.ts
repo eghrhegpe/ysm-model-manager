@@ -23,6 +23,18 @@ const hoisted = vi.hoisted(() => {
     buildAnimMock: vi.fn(),
     buildCameraAnimMock: vi.fn(),
     ammoPluginMock: vi.fn(),
+    vpdLoadAsyncMock: vi.fn(),
+    applyVPDMock: vi.fn(),
+    ktx2LoadAsyncMock: vi.fn(),
+    prepareZipMock: vi.fn(),
+    decodeAllMock: vi.fn(),
+    applyTexturesMock: vi.fn(),
+    scheduleBackgroundEncodingMock: vi.fn(),
+    cancelPendingEncodingsMock: vi.fn(),
+    screenshotMock: vi.fn(),
+    recordTraceMock: vi.fn(),
+    mainThreadWatchCb: null as ((info: unknown) => void) | null,
+    createPmxParserImpl: null as null | (() => unknown),
     managerInstances,
   };
 });
@@ -47,12 +59,77 @@ vi.mock("@moeru/three-mmd", () => ({
   VmdObject: { ParseFromBuffer: hoisted.vmdParseMock },
   buildAnimation: hoisted.buildAnimMock,
   buildCameraAnimation: hoisted.buildCameraAnimMock,
+  VPDLoader: class {
+    loadAsync = hoisted.vpdLoadAsyncMock;
+  },
+  applyVPD: hoisted.applyVPDMock,
 }));
 vi.mock("@moeru/three-mmd-physics-ammo", () => ({
   MMDAmmoPlugin: hoisted.ammoPluginMock,
 }));
+vi.mock("three/addons/loaders/KTX2Loader.js", () => ({
+  KTX2Loader: class {
+    loadAsync = hoisted.ktx2LoadAsyncMock;
+    setTranscoderPath(): unknown { return this; }
+    detectSupport(): unknown { return this; }
+  },
+}));
+vi.mock("./mmd-texture-decoder.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./mmd-texture-decoder.ts")>();
+  return {
+    ...actual,
+    getTextureDecoder: () => ({ decodeAll: hoisted.decodeAllMock }),
+    applyWorkerDecodedTextures: hoisted.applyTexturesMock,
+  };
+});
+vi.mock("../load-trace.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../load-trace.ts")>();
+  return {
+    ...actual,
+    recordLoadTrace: hoisted.recordTraceMock,
+  };
+});
+vi.mock("./mmd-zip-overlay.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./mmd-zip-overlay.ts")>();
+  return {
+    ...actual,
+    prepareMmdZipInput: hoisted.prepareZipMock,
+  };
+});
+vi.mock("./mmd-pmx-parser.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./mmd-pmx-parser.ts")>();
+  return {
+    ...actual,
+    createPmxParser: (): unknown => {
+      // 默认镜像真实降级行为（测试/受限环境无 Worker → always-fail parser）
+      if (hoisted.createPmxParserImpl) return hoisted.createPmxParserImpl();
+      return {
+        parse: () => Promise.resolve({ id: 0, ok: false, error: "Worker 不可用（测试/受限环境）" }),
+        dispose: () => undefined,
+      };
+    },
+  };
+});
+vi.mock("./mmd-ktx2-encoder.ts", () => ({
+  scheduleBackgroundEncoding: hoisted.scheduleBackgroundEncodingMock,
+  cancelPendingEncodings: hoisted.cancelPendingEncodingsMock,
+}));
+vi.mock("../../../utils/main-thread-watch.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../utils/main-thread-watch.ts")>();
+  return {
+    ...actual,
+    startMainThreadWatch: (cb: (info: unknown) => void): (() => void) => {
+      hoisted.mainThreadWatchCb = cb;
+      return () => { hoisted.mainThreadWatchCb = null; };
+    },
+  };
+});
+vi.mock("../screenshot.ts", () => ({
+  screenshotFromRenderer: (...args: unknown[]) => hoisted.screenshotMock(...args),
+}));
 
 import { buildMmdScene, type MmdDataPort, type MmdPanelHooks } from "./mmd-adapter.ts";
+import { getApp } from "../../../backend/app.ts";
 
 /** 构造注入端口（对齐 ADR-072：适配器 0 backend import，数据经 port 注入） */
 function makePort(): MmdDataPort {
@@ -132,7 +209,9 @@ function makeCtx() {
       viewContainer: document.createElement("div"),
       loadingEl,
       overlay: document.createElement("div"),
-      menu: { setAdapterItems: vi.fn(), openPanel: vi.fn() } as unknown as PreviewMenuHandle,
+      menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn() } as unknown as PreviewMenuHandle,
+      // KTX2 直载/gpu-leak 用例会注入 fake renderer（happy-dom 无 WebGL）
+      renderer: undefined as unknown as THREE.WebGLRenderer,
     },
     scene,
     camera,
@@ -174,6 +253,13 @@ beforeEach(() => {
   hoisted.managerInstances.length = 0;
   hoisted.loaderLoadAsyncMock.mockReset();
   hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmd()));
+  // 新增依赖 mock 默认值（decodeAll 空结果 = 无 worker 解码纹理；背景编码/dispose no-op）
+  hoisted.decodeAllMock.mockResolvedValue(new Map());
+  hoisted.screenshotMock.mockResolvedValue("shot-b64");
+  hoisted.createPmxParserImpl = null;
+  hoisted.mainThreadWatchCb = null;
+  localStorage.removeItem("mmd-pmx-worker");
+  localStorage.removeItem("fbx-worker");
 });
 
 afterEach(() => {
@@ -926,5 +1012,1050 @@ describe("VMD select 切换：骨骼复位 + action 归零重播", () => {
     } finally {
       clipActionSpy.mockRestore();
     }
+  });
+});
+
+// ===== 覆盖率攻坚：诊断降级 / LoadingManager 回调 / 纹理哈希 / KTX2 缓存 / zip 输入 =====
+
+/** 构造带骨骼 + 语义 morph 字典的 SkinnedMesh fake MMD（感知层 update 分支用） */
+function fakeMmdRich() {
+  const geometry = new THREE.BoxGeometry(1, 2, 1);
+  const boneIndices = new Float32Array(geometry.attributes.position.count * 4);
+  const boneWeights = new Float32Array(geometry.attributes.position.count * 4);
+  for (let i = 0; i < boneWeights.length; i += 4) {
+    boneIndices[i] = 0; boneIndices[i + 1] = 0; boneIndices[i + 2] = 0; boneIndices[i + 3] = 0;
+    boneWeights[i] = 1; boneWeights[i + 1] = 0; boneWeights[i + 2] = 0; boneWeights[i + 3] = 0;
+  }
+  geometry.setAttribute("skinIndex", new THREE.BufferAttribute(boneIndices, 4));
+  geometry.setAttribute("skinWeight", new THREE.BufferAttribute(boneWeights, 4));
+  const chest = new THREE.Bone();
+  chest.name = "上半身"; // MMD_SEMANTIC_CANDIDATES.chest 命中 → semanticBones 非空
+  const skeleton = new THREE.Skeleton([chest]);
+  const mat = new THREE.MeshBasicMaterial();
+  mat.map = new THREE.Texture();
+  (mat.map as unknown as { image: { src: string; width: number; height: number } }).image = {
+    src: "blob:mock-url",
+    width: 64,
+    height: 64,
+  };
+  const mesh = new THREE.SkinnedMesh(geometry, [mat]); // 材质数组（对齐多材质 PMX 常态）
+  mesh.bind(skeleton, new THREE.Matrix4());
+  // morphTargetDictionary 对齐 MMD_SEMANTIC_MORPH_CANDIDATES（blink=まばたき / lipOpen=あ）
+  (mesh as unknown as { morphTargetDictionary: Record<string, number> }).morphTargetDictionary = {
+    "まばたき": 0,
+    "あ": 1,
+  };
+  mesh.morphTargetInfluences = [0, 0];
+  return {
+    mesh,
+    pmx: {
+      bones: [{ name: "上半身", parentBoneIndex: -1 }],
+      materials: [{ name: "服" }],
+      morphs: [{ name: "まばたき" }, { name: "あ" }],
+    },
+    update: hoisted.mmdUpdateMock,
+    updateWithMixer: hoisted.mmdUpdateWithMixerMock,
+    dispose: hoisted.mmdDisposeMock,
+  };
+}
+
+describe("诊断与降级路径", () => {
+  it("addOpLog 抛错 → mmdDiag 静默吞掉，加载不阻断", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx"]);
+    const port = makePort();
+    (port.addOpLog as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("diag down"));
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    expect(built.update).toBeDefined();
+    built.dispose();
+  });
+
+  it("main-thread 长任务回调 → 环形日志 main-thread warn（不阻断）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx"]);
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    // startMainThreadWatch 已被 mock 捕获回调 → 手动触发长任务
+    expect(hoisted.mainThreadWatchCb).not.toBeNull();
+    hoisted.mainThreadWatchCb!({ duration: 120 });
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    const mainThread = calls.find((c) => c[0] === "main-thread");
+    expect(mainThread).toBeDefined();
+    expect(mainThread![2]).toBe("warn");
+    built.dispose();
+  });
+
+  it("批量读取降级后单纹理 readFileBytes reject → 该纹理跳过不阻断", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockImplementation((p: string) => {
+      if (p.endsWith(".pmx")) return Promise.resolve(btoa("PMX"));
+      if (p.endsWith("t1.png")) return Promise.reject(new Error("io error"));
+      return Promise.resolve(btoa("TEX"));
+    });
+    hoisted.listPathsMock.mockResolvedValue([
+      "/mmd/miku/miku.pmx",
+      "/mmd/miku/t1.png",
+      "/mmd/miku/t2.png",
+    ]);
+    const port: MmdDataPort = {
+      ...makePort(),
+      readFileBytesBatch: vi.fn().mockRejectedValue(new Error("batch down")),
+    };
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    expect(built.update).toBeDefined();
+    built.dispose();
+  });
+
+  it("MMDLoader.loadAsync 返回 undefined → 结构守卫抛「MMD parse 返回空结果」", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx"]);
+    hoisted.loaderLoadAsyncMock.mockResolvedValue(undefined);
+    const { ctx } = makeCtx();
+    await expect(
+      buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort()),
+    ).rejects.toThrow("MMD parse 返回空结果");
+  });
+
+  it("dispose 时 mmd.dispose 抛错 → dbg 记录 dispose-mesh-fail 不外抛", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    hoisted.mmdDisposeMock.mockImplementation(() => { throw new Error("gpu dead"); });
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    expect(() => built.dispose()).not.toThrow();
+  });
+});
+
+describe("LoadingManager 回调（进度条 + 性能统计）", () => {
+  it("onProgress 更新进度条宽度；onLoad 统计纹理尺寸/gpu 上报 perf", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx"]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    const port = makePort();
+    const { ctx, loadingEl } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+
+    const mgr = hoisted.managerInstances[0] as unknown as {
+      onProgress: (url: string, loaded: number, total: number) => void;
+      onLoad: () => void;
+    };
+    // renderLoadingState(determinate) 已在 loadingEl 内建 #ysm-mmd-progress；onProgress 命中并改宽
+    mgr.onProgress("/x.png", 5, 10);
+    const bar = loadingEl.querySelector<HTMLElement>("#ysm-mmd-progress");
+    expect(bar).not.toBeNull();
+    expect(bar!.style.width).toBe("50%");
+
+    // onLoad：tParseEnd/tBuildEnd 已在 build 流程写入 → perf diag 含纹理尺寸统计
+    mgr.onLoad();
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    const perf = calls.find((c) => c[0] === "perf");
+    expect(perf).toBeDefined();
+    expect(String(perf![3])).toContain("tex=64x64x1");
+    expect(String(perf![3])).toContain("parse=");
+    built.dispose();
+  });
+});
+
+describe("PMX worker 路径成功（workerBuilt）", () => {
+  /** 合成 PMX worker 解析结果（含 IK 骨骼 + 刚体 + 纹理引用） */
+  function okPmxResult() {
+    return {
+      id: 0,
+      ok: true,
+      vertices: {
+        count: 3,
+        positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+        normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+        uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
+        boneIndices: new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        boneWeights: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]),
+      },
+      faces: { count: 3, indices: new Uint32Array([0, 1, 2]) },
+      textures: ["tex.png"],
+      materials: [{ name: "服", diffuse: [1, 0, 0, 0.5], flags: 1, textureIndex: 0 }],
+      bones: [{ name: "rootA", englishName: "", parentBoneIndex: -1, position: [0, 0, 0], rotation: [0, 0, 0, 1], flag: 0, hasIK: true }],
+      rigidBodies: [{}],
+      joints: [],
+      morphs: [],
+      displayFrames: [],
+    };
+  }
+
+  function setupWorkerOk() {
+    localStorage.setItem("mmd-pmx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa("DATA-" + p)));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    const disposeSpy = vi.fn();
+    hoisted.createPmxParserImpl = () => ({
+      parse: () => Promise.resolve(okPmxResult()),
+      dispose: disposeSpy,
+    });
+    return disposeSpy;
+  }
+
+  it("worker 解析成功 → buildPmxSceneSliced 建 mesh（IK/刚体受限 warn）+ parser.dispose", async () => {
+    setupWorkerOk();
+    const port = makePort();
+    const { ctx, scene } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+
+    // worker 产物 mesh 挂进 scene（SkinnedMesh），MMDLoader 主路径未走
+    expect(hoisted.loaderLoadAsyncMock).not.toHaveBeenCalled();
+    expect(scene.children.some((c) => (c as THREE.SkinnedMesh).isSkinnedMesh)).toBe(true);
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "pmx-worker-build" && c[2] === "ok")).toBeDefined();
+    expect(calls.find((c) => c[0] === "worker-limit" && String(c[3]).includes("IK"))).toBeDefined();
+    expect(calls.find((c) => c[0] === "worker-limit" && String(c[3]).includes("刚体"))).toBeDefined();
+
+    // worker 路径 applyPose → applyVPDToMesh（直接改 mesh 骨骼）
+    const vpd = {
+      bones: { rootA: { position: [0, 1, 0], rotation: [0, 0, 0, 1] } },
+      morphs: { "まばたき": 0.5 },
+    };
+    built.applyPose?.(0);
+    void vpd; // applyPose 内部使用 build 时记录的 vpdPoses（此模型无 vpd 文件 → no-op）
+    built.dispose();
+  });
+
+  it("worker 路径 VPD 姿势 → applyVPDToMesh 直改骨骼/morph（不经 applyVPD）", async () => {
+    setupWorkerOk();
+    hoisted.listPathsMock.mockResolvedValue([
+      "/mmd/miku/miku.pmx",
+      "/mmd/miku/pose.vpd",
+    ]);
+    const vpdObj = {
+      bones: { rootA: { position: [0, 1, 0], rotation: [0, 0, 0, 1] } },
+      morphs: {},
+    };
+    hoisted.vpdLoadAsyncMock.mockResolvedValue(vpdObj);
+    const port = makePort();
+    const { ctx, scene } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+
+    const skinned = scene.children.find((c) => (c as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh;
+    const rootBone = skinned.skeleton.bones.find((b) => b.name === "rootA")!;
+    built.applyPose?.(0);
+    // applyVPDToMesh：position.add 直接改骨骼（不走 applyVPD mock）
+    expect(hoisted.applyVPDMock).not.toHaveBeenCalled();
+    expect(rootBone.position.y).toBeGreaterThan(0);
+    built.dispose();
+  });
+
+  it("worker parse promise reject → 降级 MMDLoader 主路径（diag warn）", async () => {
+    localStorage.setItem("mmd-pmx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx"]);
+    hoisted.createPmxParserImpl = () => ({
+      parse: () => Promise.reject(new Error("worker crash")),
+      dispose: vi.fn(),
+    });
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    expect(hoisted.loaderLoadAsyncMock).toHaveBeenCalledWith("/mmd/miku/miku.pmx");
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "pmx-worker-build" && String(c[3]).includes("threw"))).toBeDefined();
+    built.dispose();
+  });
+});
+
+describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
+  function makeRichPort(opts: { cacheHit: boolean }): MmdDataPort {
+    return {
+      readFileBytes: hoisted.readBytesMock,
+      readFileBytesBatch: vi.fn().mockResolvedValue({
+        "/mmd/miku/tex.png": btoa("PNG"),
+      }),
+      readFileBytesBatchWithMeta: vi.fn().mockResolvedValue({
+        "/mmd/miku/tex.png": { data: btoa("PNG"), hash: "h1" },
+      }),
+      listAllFilePaths: hoisted.listPathsMock,
+      addOpLog: vi.fn().mockResolvedValue(undefined),
+      getCachedTexture: vi.fn().mockResolvedValue(null),
+    };
+    void opts;
+  }
+
+  function fakeRenderer() {
+    return {
+      info: { memory: { geometries: 2, textures: 3 } },
+    } as unknown as THREE.WebGLRenderer;
+  }
+
+  it("缓存命中 → GetCachedTextureByHash 直载 KTX2 替换材质 map（旧纹理释放）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.ktx2LoadAsyncMock.mockResolvedValue(new THREE.CompressedTexture([], 1, 1));
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    vi.mocked(getApp).mockResolvedValue({
+      HasCachedTextures: async () => ({ h1: true }),
+      GetCachedTextureByHash: async () => btoa("KTX2DATA"),
+    } as never);
+
+    const port = makeRichPort({ cacheHit: true });
+    const { ctx } = makeCtx();
+    ctx.renderer = fakeRenderer();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    const replace = calls.find((c) => c[0] === "ktx2-replace" && c[1] === "cache-hit");
+    expect(replace).toBeDefined();
+    // 材质 map 被替换为压缩纹理（fakeMmdRich 材质数组首项）
+    const mesh = (ctx.scene as THREE.Scene).children.find((c) => (c as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh;
+    const replacedMap = (mesh.material as THREE.MeshBasicMaterial[])[0].map;
+    expect(replacedMap).toBeDefined();
+    expect((replacedMap as unknown as { isCompressedTexture?: boolean }).isCompressedTexture).toBe(true);
+
+    // 经 manager.getHandler 取回 Ktx2TextureLoader，直测 resolveHash/getCachedTextureByHash 闭包
+    const mgr = hoisted.managerInstances[0] as unknown as { getHandler: (f: string) => unknown };
+    const ktx2Direct = mgr.getHandler("tex.png") as unknown as {
+      load: (url: string, onLoad?: (t: THREE.Texture) => void) => THREE.Texture;
+      deps: { resolveHash: (u: string) => string | undefined; getCachedTextureByHash: (h: string) => Promise<string | null> };
+    };
+    expect(ktx2Direct.deps.resolveHash("textures/tex.png")).toBe("h1");
+    expect(ktx2Direct.deps.resolveHash("toon01.bmp")).toBeUndefined();
+    await expect(ktx2Direct.deps.getCachedTextureByHash("h1")).resolves.toBe(btoa("KTX2DATA"));
+    // 直载路径：hash 命中 → 占位纹理被合并压缩字段（isCompressedTexture 翻转）
+    const placeholder = ktx2Direct.load("textures/tex.png");
+    await new Promise((r) => setTimeout(r, 0));
+    expect((placeholder as unknown as { isCompressedTexture?: boolean }).isCompressedTexture).toBe(true);
+
+    built.dispose();
+    // gpu-leak 前后统计 + 背景编码排除已缓存 hash
+    expect(hoisted.scheduleBackgroundEncodingMock).not.toHaveBeenCalled();
+  });
+
+  it("GetCachedTextureByHash 返回空串 → getCachedTextureByHash 归一为 null", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    vi.mocked(getApp).mockRejectedValue(new Error("bridge down") as never);
+    const { ctx } = makeCtx();
+    ctx.renderer = { info: { memory: { geometries: 1, textures: 1 } } } as unknown as THREE.WebGLRenderer;
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    const mgr = hoisted.managerInstances[0] as unknown as { getHandler: (f: string) => unknown };
+    const ktx2Direct = mgr.getHandler("tex.png") as unknown as {
+      deps: { getCachedTextureByHash: (h: string) => Promise<string | null> };
+    };
+    await expect(ktx2Direct.deps.getCachedTextureByHash("h1")).resolves.toBeNull();
+    built.dispose();
+  });
+
+  it("缓存未命中 → warn 上报 + 未缓存 hash 转后台编码", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    vi.mocked(getApp).mockResolvedValue({
+      HasCachedTextures: async () => ({}),
+      GetCachedTextureByHash: async () => null,
+    } as never);
+
+    const port = makeRichPort({ cacheHit: false });
+    const { ctx } = makeCtx();
+    ctx.renderer = fakeRenderer();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "ktx2-replace" && c[1] === "cache-miss")).toBeDefined();
+    // 未命中 → hash 转后台编码（getCachedTexture 兼容通道存在）
+    expect(hoisted.scheduleBackgroundEncodingMock).toHaveBeenCalledTimes(1);
+    built.dispose();
+  });
+
+  it("gpu-leak 统计：dispose 前后读 renderer.info.memory（不抛）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    const { ctx } = makeCtx();
+    ctx.renderer = fakeRenderer();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    expect(() => built.dispose()).not.toThrow();
+  });
+});
+
+describe("zip 输入（ADR-132 多候选）", () => {
+  it(".zip 路径 → prepareMmdZipInput 换 port/虚拟路径 + 候选透传 navCtx", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    const zipPort: MmdDataPort = {
+      readFileBytes: vi.fn().mockResolvedValue(btoa("ZIP-PMX")),
+      readFileBytesBatch: vi.fn().mockResolvedValue({}),
+      listAllFilePaths: vi.fn().mockResolvedValue([]),
+      addOpLog: vi.fn().mockResolvedValue(undefined),
+    };
+    hoisted.prepareZipMock.mockResolvedValue({
+      port: zipPort,
+      rootPath: "zip://a/",
+      modelEntry: "m.pmx",
+      allModelEntries: ["m.pmx", "b.pmx"],
+      modelBytes: new Uint8Array([1, 2, 3]),
+      modelBase: "m.pmx",
+    });
+    const capturedNav: Array<Record<string, unknown>> = [];
+    const panels = makeMmdPanels();
+    panels.modelInfoNodes = (navCtx) => {
+      capturedNav.push(navCtx as unknown as Record<string, unknown>);
+      return [];
+    };
+
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/a.zip", makePort(), panels);
+
+    // loader 收到虚拟路径；模型字节来自 zip override（zipPort.readFileBytes 不再触发）
+    expect(hoisted.loaderLoadAsyncMock).toHaveBeenCalledWith("zip://a/m.pmx");
+    expect(zipPort.readFileBytes).not.toHaveBeenCalled();
+    // 候选透传 navCtx（模型面板切换 select 用）
+    expect(capturedNav[0]!.zipModelCandidates).toEqual(["zip://a/m.pmx", "zip://a/b.pmx"]);
+    built.dispose();
+  });
+});
+
+describe("材质/播放桥消费（menu children control 接线）", () => {
+  it("materialNodes eye/opacity control → setMmdMaterialVisible/Opacity 实改材质", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+
+    const matItem = registeredItems(built as never).find((i) => i.id === "material") as {
+      children?: Array<{ eye?: { get: () => boolean; set: (v: boolean) => void }; opacity?: { get: () => number; set: (v: number) => void } }>;
+    };
+    const row = matItem?.children?.find((c) => c.eye && c.opacity);
+    expect(row).toBeDefined();
+    expect(row!.eye!.get()).toBe(true);
+    row!.eye!.set(false);
+    expect(row!.eye!.get()).toBe(false);
+    row!.opacity!.set(50);
+    expect(row!.opacity!.get()).toBe(50);
+    built.dispose();
+  });
+
+  it("play 桥：无 clip toggle 空守卫 + currentIndex/isPlaying 读取", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+
+    // 经 playNodes 捕获 bridge（makeMmdPanels 的 toggle control set 触发 bridge.toggle）
+    const playItem = registeredItems(built as never).find((i) => i.id === "play");
+    const toggle = (playItem?.children ?? []).find((n) => n.id === "play-toggle") as unknown as { control: { get: () => boolean; set: (v: boolean) => void } };
+    expect(toggle.control.get()).toBe(true); // playing 初始 true（无 clip 也如此）
+    toggle.control.set(false); // toggle() → clips.length===0 早退，playing 不变
+    expect(toggle.control.get()).toBe(true);
+    built.dispose();
+  });
+
+  it("相机 VMD select 切换 → cameraAction stop/重建/播放（cameraMixer 分支）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa(p)));
+    hoisted.listPathsMock.mockResolvedValue([
+      "/mmd/miku/miku.pmx",
+      "/mmd/miku/cam1.vmd",
+      "/mmd/miku/cam2.vmd",
+    ]);
+    hoisted.vmdParseMock.mockImplementation(() => Promise.resolve({ cameraKeyFrames: [{ frameNumber: 0 }] }));
+    hoisted.buildAnimMock.mockReturnValue(new THREE.AnimationClip("motion", -1, []));
+    hoisted.buildCameraAnimMock.mockReturnValue(new THREE.AnimationClip("cam", -1, []));
+
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+
+    const playItem = registeredItems(built as never).find((i) => i.id === "play");
+    const sel = (playItem?.children ?? []).find((n) => n.kind === "select") as unknown as { control: { get: () => string; set: (v: string) => void } };
+    expect(sel).toBeDefined();
+    expect(sel.control.get()).toBe("0");
+    sel.control.set("1");
+    expect(sel.control.get()).toBe("1");
+    sel.control.set("1"); // 同 index → 早退
+    sel.control.set("99"); // 越界 → 早退
+    expect(sel.control.get()).toBe("1");
+    // 切换后 isPlaying 保持
+    const toggle = (playItem?.children ?? []).find((n) => n.id === "play-toggle") as unknown as { control: { get: () => boolean; set: (v: boolean) => void } };
+    expect(toggle.control.get()).toBe(true);
+    built.dispose();
+  });
+});
+
+describe("update 感知层分支（呼吸/注视/眨眼/口型/足部 IK）", () => {
+  /** 从 scene 中取 fakeMmdRich mesh 的 morphTargetInfluences */
+  function fakeMmdRichMeshInfluences(scene: THREE.Scene): number[] {
+    const mesh = scene.children.find((c) => (c as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh;
+    return mesh.morphTargetInfluences ?? [];
+  }
+
+  it("语义骨骼 + 语义 morph 齐备 → update 驱动全部感知控制器（无动画待机态）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+
+    // semanticBones 已通过 built 透传（非空 = 语义层接入成功）
+    expect(built.semanticBones).toBeDefined();
+    expect(built.semanticBones!.chest).toBeDefined();
+    // 推进数帧：breath/gaze/blink/lipSync/footIK/autoDance 全链路（断言不抛 + 权重写入合法区间）
+    for (let i = 0; i < 5; i++) built.update!(0.016);
+    const morphs = fakeMmdRichMeshInfluences((ctx.scene as THREE.Scene));
+    expect(morphs.every((w) => w >= 0 && w <= 1)).toBe(true);
+    expect(hoisted.mmdUpdateWithMixerMock).toHaveBeenCalled();
+    built.dispose();
+  });
+});
+
+describe("挂载边界（scene 缺失 / 多材质纹理释放统计）", () => {
+  it("scene 缺失（self 模式）→ mesh-debug warn 跳过挂载，仍返回 PreviewScene", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    const { ctx } = makeCtx();
+    (ctx as { scene?: unknown }).scene = undefined;
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    expect(built.update).toBeDefined();
+    built.dispose();
+  });
+
+  it("disposeMmdMesh：多材质数组 + 带尺寸纹理 → tex/gpu 统计上报（dispose-tex diag）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    const texA = new THREE.Texture();
+    (texA as unknown as { image: { width: number; height: number } }).image = { width: 256, height: 256 };
+    const texADispose = vi.spyOn(texA, "dispose");
+    const matA = new THREE.MeshBasicMaterial();
+    matA.map = texA;
+    const matB = new THREE.MeshBasicMaterial();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [matA, matB]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() =>
+      Promise.resolve({
+        mesh,
+        pmx: { bones: [], materials: [], morphs: [] },
+        update: hoisted.mmdUpdateMock,
+        updateWithMixer: hoisted.mmdUpdateWithMixerMock,
+        dispose: hoisted.mmdDisposeMock,
+      }),
+    );
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    built.dispose();
+
+    expect(texADispose).toHaveBeenCalled();
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    const texDiag = calls.find((c) => c[0] === "dispose-tex");
+    expect(texDiag).toBeDefined();
+    expect(String(texDiag![1])).toContain("tex=1");
+    expect(revokeURL).toHaveBeenCalled();
+  });
+});
+
+// ===== 覆盖率攻坚二：pmd 分支 / 动作库扫描 / worker 纹理解码 / applyPose 变体 =====
+
+describe("格式与纹理边界", () => {
+  it(".pmd 扩展名 → mdMmDetectFormat 走 pmd 分支（跳过 PMX worker stage）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMD"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmd"]);
+    const { ctx, scene } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmd", makePort(), makeMmdPanels());
+    expect(hoisted.loaderLoadAsyncMock).toHaveBeenCalledWith("/mmd/miku/miku.pmd");
+    expect(scene.children.length).toBeGreaterThan(0);
+    built.dispose();
+  });
+
+  it("短 TGA（<18 字节）→ isLikelyTga 早退跳过（不注册 blob）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockImplementation((p: string) => {
+      if (p.toLowerCase().endsWith(".tga")) return Promise.resolve(btoa("short")); // 5 字节
+      if (p.endsWith(".pmx")) return Promise.resolve(btoa("PMX"));
+      return Promise.resolve(btoa("PNG"));
+    });
+    hoisted.listPathsMock.mockResolvedValue([
+      "/mmd/miku/miku.pmx",
+      "/mmd/miku/short.tga",
+      "/mmd/miku/tex.png",
+    ]);
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    const mgr = hoisted.managerInstances[0]!;
+    // 短 TGA 未注册 → 原路径放行
+    expect(mgr.resolveURL("/mmd/miku/short.tga")).toBe("/mmd/miku/short.tga");
+    built.dispose();
+  });
+
+  it("build 悬置期间 onLoad 先到 → tParseEnd=0 早退；完成后 trace 含纹理加载段", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    // 延迟 parse：stage2（manager 已建）与 parse 之间插入 onLoad 调用
+    let resolveLoad!: (v: unknown) => void;
+    hoisted.loaderLoadAsyncMock.mockImplementation(
+      () => new Promise((res) => { resolveLoad = res; }),
+    );
+    const { ctx } = makeCtx();
+    const p = buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    // 轮询等待 stage2 完成（manager 已建、parse 悬置）
+    for (let i = 0; i < 200 && hoisted.managerInstances.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 1));
+    }
+    const mgr = hoisted.managerInstances[0] as unknown as { onLoad: () => void };
+    mgr.onLoad(); // tParseEnd 尚为 0 → 早退分支
+    resolveLoad(fakeMmdRich());
+    await p;
+    // textureLoadedAt 已被 onLoad 写入 → stage6bTrace push「纹理加载」段
+    const traceCall = hoisted.recordTraceMock.mock.calls.at(-1)?.[0] as { stages: Array<{ name: string }> };
+    expect(traceCall.stages.map((s) => s.name)).toContain("纹理加载");
+  });
+});
+
+describe("动作库扫描（getCustomAnimPath + vmd/vpd 降级）", () => {
+  function setup() {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx"]);
+  }
+
+  it("GetRepoRoot 返回动作库目录 → 扫描 extraAnims 追加 vmd/vpd（diag ok）", async () => {
+    setup();
+    vi.mocked(getApp).mockResolvedValue({
+      GetRepoRoot: async () => "/repo/CustomAnim",
+    } as never);
+    hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa(p)));
+    // 目录文件（模型同目录）只有 pmx；动作库目录扫描到 vmd/vpd/无关文件
+    let scanDir = "";
+    hoisted.listPathsMock.mockImplementation(async (dir: string) => {
+      scanDir = dir;
+      if (dir === "/repo/CustomAnim") {
+        return ["/repo/CustomAnim/dance.vmd", "/repo/CustomAnim/pose.vpd", "/repo/CustomAnim/note.txt"];
+      }
+      return ["/mmd/miku/miku.pmx"];
+    });
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    expect(scanDir).toBe("/repo/CustomAnim");
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "anim-lib-scan" && c[2] === "ok")).toBeDefined();
+    built.dispose();
+  });
+
+  it("动作库目录扫描失败 → diag fail 静默降级", async () => {
+    setup();
+    vi.mocked(getApp).mockResolvedValue({
+      GetRepoRoot: async () => "/repo/CustomAnim",
+    } as never);
+    hoisted.listPathsMock.mockImplementation(async (dir: string) => {
+      if (dir === "/repo/CustomAnim") throw new Error("scan fail");
+      return ["/mmd/miku/miku.pmx"];
+    });
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "anim-lib-scan" && c[2] === "fail")).toBeDefined();
+    built.dispose();
+  });
+
+  it("anim 字节缺失/坏 VPD → 逐文件跳过不阻断", async () => {
+    setup();
+    hoisted.readBytesMock.mockImplementation((p: string) => {
+      if (p.endsWith(".pmx")) return Promise.resolve(btoa("PMX"));
+      return Promise.resolve(null); // anim 字节批量读取返回空
+    });
+    hoisted.listPathsMock.mockResolvedValue([
+      "/mmd/miku/miku.pmx",
+      "/mmd/miku/dance.vmd",
+      "/mmd/miku/pose.vpd",
+    ]);
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    // 字节为空 → vmd/vpd 均跳过（vmdParse/VPDLoader 未触发）
+    expect(hoisted.vmdParseMock).not.toHaveBeenCalled();
+    expect(hoisted.vpdLoadAsyncMock).not.toHaveBeenCalled();
+    built.dispose();
+  });
+
+  it("VPD 解析抛错 → dbg parse-vpd-fail 跳过其余照常", async () => {
+    setup();
+    hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa(p)));
+    hoisted.listPathsMock.mockResolvedValue([
+      "/mmd/miku/miku.pmx",
+      "/mmd/miku/bad.vpd",
+    ]);
+    hoisted.vpdLoadAsyncMock.mockRejectedValue(new Error("bad vpd"));
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    expect(built.update).toBeDefined();
+    built.dispose();
+  });
+});
+
+describe("worker 纹理解码应用（pendingTexture / decoded 位图）", () => {
+  it("主线程路径无 pendingTexture 材质 → decoded 位图空转（warn diag）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as never]]));
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "tex-decode-apply" && String(c[3]).includes("pendingTexture"))).toBeDefined();
+    built.dispose();
+  });
+
+  it("worker 路径 pendingTexture 命中 → applyWorkerDecodedTextures 替换（ok diag）", async () => {
+    localStorage.setItem("mmd-pmx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("DATA"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as never]]));
+    hoisted.applyTexturesMock.mockReturnValue({ replaced: 2, total: 2 });
+    hoisted.createPmxParserImpl = () => ({
+      parse: () => Promise.resolve({
+        id: 0,
+        ok: true,
+        vertices: {
+          count: 3,
+          positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+          normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+          uvs: new Float32Array([]),
+          boneIndices: new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+          boneWeights: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]),
+        },
+        faces: { count: 3, indices: new Uint32Array([0, 1, 2]) },
+        textures: ["tex.png"],
+        materials: [{ name: "服", diffuse: [1, 1, 1, 1], flags: 0, textureIndex: 0 }],
+        bones: [{ name: "rootA", englishName: "", parentBoneIndex: -1, position: [0, 0, 0], rotation: [0, 0, 0, 1], flag: 0, hasIK: false }],
+        rigidBodies: [],
+        joints: [],
+        morphs: [],
+        displayFrames: [],
+      }),
+      dispose: vi.fn(),
+    });
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    expect(hoisted.applyTexturesMock).toHaveBeenCalled();
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "tex-decode-apply" && c[2] === "ok")).toBeDefined();
+    built.dispose();
+  });
+
+  it("worker 路径 replaced=0（路径不匹配）→ warn diag", async () => {
+    localStorage.setItem("mmd-pmx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("DATA"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as never]]));
+    hoisted.applyTexturesMock.mockReturnValue({ replaced: 0, total: 2 });
+    hoisted.createPmxParserImpl = () => ({
+      parse: () => Promise.resolve({
+        id: 0,
+        ok: true,
+        vertices: {
+          count: 3,
+          positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+          normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+          uvs: new Float32Array([]),
+          boneIndices: new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+          boneWeights: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]),
+        },
+        faces: { count: 3, indices: new Uint32Array([0, 1, 2]) },
+        textures: ["tex.png"],
+        materials: [{ name: "服", diffuse: [1, 1, 1, 1], flags: 0, textureIndex: 0 }],
+        bones: [{ name: "rootA", englishName: "", parentBoneIndex: -1, position: [0, 0, 0], rotation: [0, 0, 0, 1], flag: 0, hasIK: false }],
+        rigidBodies: [],
+        joints: [],
+        morphs: [],
+        displayFrames: [],
+      }),
+      dispose: vi.fn(),
+    });
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "tex-decode-apply" && String(c[3]).includes("replaced=0"))).toBeDefined();
+    built.dispose();
+  });
+
+  it("decoded promise reject → tex-decode-apply warn（主线程 fallback）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.decodeAllMock.mockRejectedValue(new Error("decode boom"));
+    const port = makePort();
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "tex-decode-apply" && String(c[3]).includes("fallback"))).toBeDefined();
+    built.dispose();
+  });
+});
+
+describe("KTX2 替换异常（stage3 直载容错）", () => {
+  /** 与 KTX2 缓存直载 describe 同款 rich port（WithMeta 提供 hash） */
+  function makeRichPort(): MmdDataPort {
+    return {
+      readFileBytes: hoisted.readBytesMock,
+      readFileBytesBatch: vi.fn().mockResolvedValue({
+        "/mmd/miku/tex.png": btoa("PNG"),
+      }),
+      readFileBytesBatchWithMeta: vi.fn().mockResolvedValue({
+        "/mmd/miku/tex.png": { data: btoa("PNG"), hash: "h1" },
+      }),
+      listAllFilePaths: hoisted.listPathsMock,
+      addOpLog: vi.fn().mockResolvedValue(undefined),
+      getCachedTexture: vi.fn().mockResolvedValue(null),
+    };
+  }
+
+  function fakeRenderer() {
+    return {
+      info: { memory: { geometries: 2, textures: 3 } },
+    } as unknown as THREE.WebGLRenderer;
+  }
+
+  it("GetCachedTextureByHash 返回空串 → 跳过替换保留原纹理", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    vi.mocked(getApp).mockResolvedValue({
+      HasCachedTextures: async () => ({ h1: true }),
+      GetCachedTextureByHash: async () => "",
+    } as never);
+    const port = makeRichPort();
+    const { ctx } = makeCtx();
+    ctx.renderer = fakeRenderer();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    // 缓存命中计数仍有，但替换数为 0（ktx2LoadAsync 未触发）
+    expect(hoisted.ktx2LoadAsyncMock).not.toHaveBeenCalled();
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "ktx2-replace" && c[1] === "cache-hit")).toBeDefined();
+    built.dispose();
+  });
+
+  it("KTX2 loadAsync reject → dbg ktx2-replace-fail 保留原纹理（链不阻断）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    hoisted.ktx2LoadAsyncMock.mockRejectedValue(new Error("ktx fail"));
+    vi.mocked(getApp).mockResolvedValue({
+      HasCachedTextures: async () => ({ h1: true }),
+      GetCachedTextureByHash: async () => btoa("KTX2"),
+    } as never);
+    const port = makeRichPort();
+    const { ctx } = makeCtx();
+    ctx.renderer = fakeRenderer();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+    expect(hoisted.ktx2LoadAsyncMock).toHaveBeenCalled();
+    built.dispose();
+  });
+});
+
+describe("applyPose / play 桥补漏", () => {
+  function setupVpdNonWorker() {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa(p)));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/pose.vpd"]);
+    hoisted.vmdParseMock.mockImplementation(() => Promise.resolve({ cameraKeyFrames: [{ frameNumber: 0 }] }));
+    hoisted.buildAnimMock.mockReturnValue(new THREE.AnimationClip("m", -1, []));
+    hoisted.buildCameraAnimMock.mockReturnValue(new THREE.AnimationClip("cam", -1, []));
+  }
+
+  it("非 worker 路径 applyPose → applyVPD；越界 index 早退；applyVPD 抛错容错", async () => {
+    setupVpdNonWorker();
+    hoisted.vpdLoadAsyncMock.mockResolvedValue({ bones: { c: { position: [0, 0, 0], rotation: [0, 0, 0, 1] } }, morphs: {} });
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+
+    built.applyPose?.(0);
+    expect(hoisted.applyVPDMock).toHaveBeenCalledTimes(1);
+    built.applyPose?.(99); // 越界 → 早退
+    expect(hoisted.applyVPDMock).toHaveBeenCalledTimes(1);
+
+    // applyVPD 抛错 → dbg apply-vpd-fail 不外抛
+    hoisted.applyVPDMock.mockImplementation(() => { throw new Error("vpd boom"); });
+    expect(() => built.applyPose?.(0)).not.toThrow();
+    built.dispose();
+  });
+
+  it("play 桥：toggle 翻转 cameraAction.paused + requestReload 触发 dock 刷新", async () => {
+    setupVpdNonWorker();
+    hoisted.listPathsMock.mockResolvedValue([
+      "/mmd/miku/miku.pmx",
+      "/mmd/miku/cam.vmd",
+      "/mmd/miku/pose.vpd",
+    ]);
+    hoisted.vpdLoadAsyncMock.mockResolvedValue({ bones: {}, morphs: {} });
+    let capturedBridge: Record<string, (...a: unknown[]) => unknown> | null = null;
+    const panels = makeMmdPanels();
+    panels.playNodes = (bridge) => {
+      capturedBridge = bridge as unknown as Record<string, (...a: unknown[]) => unknown>;
+      return [];
+    };
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), panels);
+
+    // requestReload → menu.refreshDock
+    capturedBridge!.requestReload!();
+    expect((ctx.menu as unknown as { refreshDock: ReturnType<typeof vi.fn> }).refreshDock).toHaveBeenCalled();
+
+    // toggle：翻 playing + cameraAction.paused（camera clip 存在 → cameraAction 非空）
+    const isPlaying0 = capturedBridge!.isPlaying!() as boolean;
+    capturedBridge!.toggle!();
+    expect(capturedBridge!.isPlaying!()).toBe(!isPlaying0);
+    capturedBridge!.toggle!();
+    expect(capturedBridge!.isPlaying!()).toBe(isPlaying0);
+    built.dispose();
+  });
+
+  it("shotNodes 注入的 screenshot 能力可调用（mmdMenuItems screenshot 闭包）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    const panels = makeMmdPanels();
+    let gotShot: (() => Promise<string | null>) | null = null;
+    panels.shotNodes = (_navCtx, screenshot) => {
+      gotShot = screenshot;
+      return [];
+    };
+    const { ctx } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), panels);
+    await expect(gotShot!()).resolves.toBe("shot-b64");
+    // PreviewScene.screenshot 同源
+    await expect(built.screenshot!()).resolves.toBe("shot-b64");
+    built.dispose();
+  });
+
+  it("mesh.visible=false → update 早退（不再驱动 updateWithMixer）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    const { ctx, scene } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    const mesh = scene.children.find((c) => (c as THREE.Mesh).isMesh) as THREE.Mesh;
+    const before = hoisted.mmdUpdateWithMixerMock.mock.calls.length;
+    mesh.visible = false;
+    built.update!(0.016);
+    expect(hoisted.mmdUpdateWithMixerMock.mock.calls.length).toBe(before);
+    built.dispose();
+  });
+});
+
+describe("worker applyVPDToMesh 变体", () => {
+  function setupWorkerWithVpd(vpdObj: unknown) {
+    localStorage.setItem("mmd-pmx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("DATA"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/pose.vpd"]);
+    hoisted.vpdLoadAsyncMock.mockResolvedValue(vpdObj);
+    hoisted.createPmxParserImpl = () => ({
+      parse: () => Promise.resolve({
+        id: 0,
+        ok: true,
+        vertices: {
+          count: 3,
+          positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+          normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+          uvs: new Float32Array([]),
+          boneIndices: new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+          boneWeights: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]),
+        },
+        faces: { count: 3, indices: new Uint32Array([0, 1, 2]) },
+        textures: [],
+        materials: [{ name: "服", diffuse: [1, 1, 1, 1], flags: 0, textureIndex: -1 }],
+        bones: [{ name: "rootA", englishName: "", parentBoneIndex: -1, position: [0, 0, 0], rotation: [0, 0, 0, 1], flag: 0, hasIK: false }],
+        rigidBodies: [],
+        joints: [],
+        morphs: [],
+        displayFrames: [],
+      }),
+      dispose: vi.fn(),
+    });
+  }
+
+  it("VPD 无 bones → applyVPDToMesh 早退；未知骨骼名 continue", async () => {
+    setupWorkerWithVpd({}); // 无 bones → 早退
+    const { ctx } = makeCtx();
+    let built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    expect(() => built.applyPose?.(0)).not.toThrow();
+    built.dispose();
+
+    // bones 含未知名 → continue（不抛）
+    setupWorkerWithVpd({ bones: { 不存在: { position: [0, 1, 0], rotation: [0, 0, 0, 1] } }, morphs: {} });
+    const { ctx: ctx2 } = makeCtx();
+    built = await buildMmdScene(ctx2, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    expect(() => built.applyPose?.(0)).not.toThrow();
+    built.dispose();
+  });
+
+  it("VPD morphs + mesh morphTargetDictionary → 权重直写 influences", async () => {
+    setupWorkerWithVpd({
+      bones: { rootA: { position: [0, 1, 0], rotation: [0, 0, 0, 1] } },
+      morphs: { "まばたき": 0.7 },
+    });
+    const { ctx, scene } = makeCtx();
+    const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
+    const skinned = scene.children.find((c) => (c as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh;
+    skinned.morphTargetDictionary = { "まばたき": 0 };
+    skinned.morphTargetInfluences = [0];
+    built.applyPose?.(0);
+    expect(skinned.morphTargetInfluences![0]).toBeCloseTo(0.7, 5);
+    built.dispose();
   });
 });

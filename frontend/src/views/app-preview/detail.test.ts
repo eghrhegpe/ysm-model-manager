@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
 
-const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, createMmd3DMock, resolveMmdSiblingsMock, readFileBytesMock, readPmxStatsMock, packModelsMock, createPack3DMock } = vi.hoisted(() => ({
+const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, createMmd3DMock, resolveMmdSiblingsMock, readFileBytesMock, readPmxStatsMock, packModelsMock, createPack3DMock, loadModel2DMock, shaderLangMock, wasmDecodeMock } = vi.hoisted(() => ({
   summaryMock: vi.fn(),
   headerMock: vi.fn(),
   readPackMock: vi.fn(),
@@ -16,6 +16,9 @@ const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, cre
   readPmxStatsMock: vi.fn(),
   packModelsMock: vi.fn(),
   createPack3DMock: vi.fn(),
+  loadModel2DMock: vi.fn().mockResolvedValue(undefined),
+  shaderLangMock: vi.fn(),
+  wasmDecodeMock: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("../../backend/app.ts", () => ({
@@ -25,7 +28,11 @@ vi.mock("../../backend/app.ts", () => ({
     ReadPackMeta: readPackMock,
     ReadFileBytes: readFileBytesMock,
     ListPackModelsDetail: packModelsMock,
+    ReadShaderpackLang: shaderLangMock,
   }),
+}));
+vi.mock("./wasm.ts", () => ({
+  decodeYsmViaWasm: wasmDecodeMock,
 }));
 vi.mock("./pack-3d.ts", () => ({
   createPack3D: createPack3DMock,
@@ -33,9 +40,7 @@ vi.mock("./pack-3d.ts", () => ({
 vi.mock("../../utils/3d/adapters/mmd-detail-stats.ts", () => ({
   readPmxStats: readPmxStatsMock,
 }));
-vi.mock("./skeleton.ts", () => ({
-  loadModel2D: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("./skeleton.ts", () => ({ loadModel2D: loadModel2DMock }));
 vi.mock("../../utils/3d/adapters/vrm-adapter.ts", () => ({
   readVrmMeta: vrmMetaMock,
 }));
@@ -51,7 +56,8 @@ vi.mock("./mmd-siblings.ts", () => ({
   resolveMmdSiblings: resolveMmdSiblingsMock,
 }));
 
-import { showModelDetail, showResourcePack, showSimplePreview } from "./detail.ts";
+import { showModelDetail, showResourcePack, showSimplePreview, showShaderpack, detailGen } from "./detail.ts";
+import { waitFor, sleep } from "../../test-utils/index.ts";
 import { showVrmMeta, showMmdPreview } from "./detail-3d.ts";
 
 function makeCtx(): PreviewCtx {
@@ -75,6 +81,7 @@ beforeEach(() => {
   readFileBytesMock.mockResolvedValue(btoa("PMX"));
   readPmxStatsMock.mockResolvedValue(null);
   packModelsMock.mockResolvedValue("{\"models\":[],\"total\":0}");
+  shaderLangMock.mockResolvedValue("{}");
   createPack3DMock.mockResolvedValue(undefined);
   localStorage.clear();
 });
@@ -318,5 +325,182 @@ describe("showMmdPreview MMD 预览卡", () => {
       "/repo/old.pmd",
       expect.any(Function),
     );
+  });
+});
+
+// ===== 覆盖率补强：tab 切换 / gen 过期守卫 / shaderpack 详情 / 模型清单竞态 =====
+describe("showModelDetail — tab 切换（switchTab）", () => {
+  it("点击 skeleton tab → 落盘偏好 + 面板显隐切换", async () => {
+    const ctx = makeCtx();
+    await showModelDetail(ctx, "/m/a.ysm");
+    const skelTab = ctx.root.querySelector('.pv-tab[data-tab="skeleton"]') as HTMLElement;
+    skelTab.click();
+    expect(localStorage.getItem("ysm_previewTab")).toBe("skeleton");
+    expect(skelTab.classList.contains("pv-tab-active")).toBe(true);
+    const detail = ctx.root.getElementById("preview-detail") as HTMLElement;
+    const skel = ctx.root.getElementById("preview-skeleton") as HTMLElement;
+    expect(detail.style.display).toBe("none");
+    expect(skel.style.display).toBe("");
+    // 切回 detail
+    (ctx.root.querySelector('.pv-tab[data-tab="detail"]') as HTMLElement).click();
+    expect(localStorage.getItem("ysm_previewTab")).toBe("detail");
+    expect((ctx.root.getElementById("preview-detail") as HTMLElement).style.display).toBe("");
+  });
+
+  it("持久化 ysm_previewTab=skeleton → 初始渲染骨架 tab 激活", async () => {
+    localStorage.setItem("ysm_previewTab", "skeleton");
+    const ctx = makeCtx();
+    await showModelDetail(ctx, "/m/a.ysm");
+    const skelTab = ctx.root.querySelector('.pv-tab[data-tab="skeleton"]') as HTMLElement;
+    expect(skelTab.classList.contains("pv-tab-active")).toBe(true);
+    expect((ctx.root.getElementById("preview-detail") as HTMLElement).style.display).toBe("none");
+  });
+});
+
+describe("detailGen 过期守卫（在途请求作废）", () => {
+  it("loadPreviewImage 在途时切走 → 恢复后 61 早退，不发请求", async () => {
+    const ctx = makeCtx();
+    let resolvePreview: (v: null) => void = () => {};
+    vi.mocked(ctx.loadPreviewImage).mockImplementationOnce(
+      () => new Promise<null>((r) => (resolvePreview = r)),
+    );
+    const pending = showModelDetail(ctx, "/m/stale.ysm");
+    detailGen.invalidate(); // 用户切走
+    resolvePreview(null);
+    await pending;
+    expect(summaryMock).not.toHaveBeenCalled();
+  });
+
+  it("ExtractYsmSummary 在途时切走 → 恢复后 70 早退", async () => {
+    const ctx = makeCtx();
+    let resolveSummary: (v: null) => void = () => {};
+    summaryMock.mockImplementationOnce(() => new Promise<null>((r) => (resolveSummary = r)));
+    const pending = showModelDetail(ctx, "/m/stale2.ysm");
+    await vi.waitFor(() => expect(summaryMock).toHaveBeenCalled());
+    detailGen.invalidate();
+    resolveSummary(null);
+    await pending;
+    const detail = ctx.root.getElementById("preview-detail") as HTMLElement;
+    expect(detail.innerHTML).toContain("⏳"); // 停留在加载占位，未回写
+  });
+
+  it("摘要无实义 → decodeYsmViaWasm 补全成功（95 enriched）", async () => {
+    const ctx = makeCtx();
+    wasmDecodeMock.mockResolvedValue({
+      animGroups: [{ name: "idle" }],
+      authors: [{ name: "作者A", role: "建模" }],
+    });
+    headerMock.mockResolvedValue({ name: "加密模", tips: "提示", license: "CC", linkHome: "https://x" });
+    await showModelDetail(ctx, "/m/enc.ysm");
+    expect(wasmDecodeMock).toHaveBeenCalledWith("/m/enc.ysm");
+    // enriched 生成 → showSummary 非空 → 走 summaryCardHTML 渲染（header 信息上卡），
+    // 作者头像由 loadModel2D 链的统计卡承载（本文件已 mock 该链）
+    const detail = ctx.root.getElementById("preview-detail") as HTMLElement;
+    expect(detail.innerHTML).toContain("加密模");
+    expect(loadModel2DMock).toHaveBeenCalled();
+  });
+
+  it("loadModel2D 拒绝 → console.warn 兜底（132）", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    summaryMock.mockResolvedValue({ stats: { models: 3 } });
+    loadModel2DMock.mockRejectedValueOnce(new Error("2d boom"));
+    const ctx = makeCtx();
+    await showModelDetail(ctx, "/m/warn.ysm");
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
+    warn.mockRestore();
+  });
+
+  it("ReadPackMeta 在途时切走 → 恢复后 153 早退", async () => {
+    const ctx = makeCtx();
+    let resolveRead: (v: string) => void = () => {};
+    readPackMock.mockImplementationOnce(() => new Promise<string>((r) => (resolveRead = r)));
+    const pending = showResourcePack(ctx, "/p/a.zip");
+    await vi.waitFor(() => expect(readPackMock).toHaveBeenCalled());
+    detailGen.invalidate();
+    resolveRead("{}");
+    await pending;
+    expect(ctx.root.getElementById("preview-content")).toBeNull();
+  });
+
+  it("ListPackModelsDetail 在途时切走 → 恢复后 203 静默早退", async () => {
+    const ctx = makeCtx();
+    let resolveList: (v: string) => void = () => {};
+    packModelsMock.mockImplementationOnce(() => new Promise<string>((r) => (resolveList = r)));
+    readPackMock.mockResolvedValue(
+      JSON.stringify({ pack: { pack_format: 15, description: "x" } }),
+    );
+    await showResourcePack(ctx, "/p/stale.zip");
+    detailGen.invalidate();
+    resolveList(JSON.stringify({ models: [{ path: "assets/a.json", cubes: 2 }], total: 1 }));
+    await sleep(50);
+    expect(ctx.root.querySelector(".pack-model-item")).toBeNull();
+  });
+
+  it("FAB 点击 → createPack3D（182）", async () => {
+    const ctx = makeCtx();
+    await showResourcePack(ctx, "/p/fab.zip");
+    const fab = ctx.root.querySelector("#btn-pack-model-3d") as HTMLButtonElement;
+    fab.click();
+    expect(createPack3DMock).toHaveBeenCalledWith("/p/fab.zip");
+  });
+});
+
+
+describe("showShaderpack 光影包详情", () => {
+  beforeEach(() => {
+    shaderLangMock.mockResolvedValue("{}");
+  });
+
+  it("成功：displayName + .comment 配置简介（去 § 格式码，截前 3 条）", async () => {
+    shaderLangMock.mockResolvedValue(
+      JSON.stringify({
+        name: "光影A",
+        entries: {
+          "settings.comment": "§a第一§c条",
+          "quality.comment": "第二条",
+          "shadow.comment": "第三条",
+          "misc.comment": "第四条（应被截断）",
+          "unrelated": "v",
+        },
+      }),
+    );
+    const ctx = makeCtx();
+    await showShaderpack(ctx, "/s/a.zip", { icon: "✨", label: "光影" });
+    const html = (ctx.root.getElementById("preview-content") as HTMLElement).innerHTML;
+    expect(html).toContain("光影A");
+    expect(html).toContain("第一");
+    expect(html).not.toContain("第四条"); // slice(0,3) 上限：第四条不出现
+    expect(html).not.toContain("§");
+  });
+
+  it("无 .comment 条目 → 回退「📦 光影包 (N 项配置)」", async () => {
+    shaderLangMock.mockResolvedValue(JSON.stringify({ entries: { a: "1", b: "2" } }));
+    const ctx = makeCtx();
+    await showShaderpack(ctx, "/s/b.zip");
+    const html = (ctx.root.getElementById("preview-content") as HTMLElement).innerHTML;
+    expect(html).toContain("2 项配置");
+    expect(html).toContain("b.zip"); // name 缺失 → basename 兜底
+  });
+
+  it("ReadShaderpackLang 拒绝 → ⚠️ 读取失败占位", async () => {
+    shaderLangMock.mockRejectedValueOnce(new Error("lang boom"));
+    const ctx = makeCtx();
+    await showShaderpack(ctx, "/s/c.zip");
+    const html = (ctx.root.getElementById("preview-content") as HTMLElement).innerHTML;
+    expect(html).toContain("⚠️");
+    expect(html).toContain("lang boom");
+  });
+
+  it("在途时切走（detailGen.invalidate）→ 恢复后 stale 早退（275）", async () => {
+    let resolveLang: (v: string) => void = () => {};
+    shaderLangMock.mockImplementationOnce(() => new Promise<string>((r) => (resolveLang = r)));
+    const ctx = makeCtx();
+    const pending = showShaderpack(ctx, "/s/stale.zip");
+    await vi.waitFor(() => expect(shaderLangMock).toHaveBeenCalled());
+    detailGen.invalidate();
+    resolveLang(JSON.stringify({ name: "迟到的光影" }));
+    await pending;
+    const content = ctx.root.getElementById("preview-content") as HTMLElement;
+    expect(content.innerHTML).toContain("⏳"); // 停留在加载占位
   });
 });

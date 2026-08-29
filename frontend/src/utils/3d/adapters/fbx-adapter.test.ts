@@ -11,9 +11,12 @@ const hoisted = vi.hoisted(() => {
   const loadImpl = vi.fn();
   let withAnim = true;
   let withBones = false;
+  let loadError: Error | null = null;
   return {
     loadImpl,
     readBytesMock: vi.fn(),
+    fbxParserImpl: null as null | (() => unknown),
+    buildFromDataOverride: null as null | ((data: unknown, config?: unknown) => THREE.Group),
     setWithAnim: (v: boolean) => {
       withAnim = v;
     },
@@ -22,13 +25,22 @@ const hoisted = vi.hoisted(() => {
       withBones = v;
     },
     getWithBones: () => withBones,
+    setLoadError: (e: Error | null) => {
+      loadError = e;
+    },
+    getLoadError: () => loadError,
   };
 });
 
 vi.mock("three/addons/loaders/FBXLoader.js", () => ({
   FBXLoader: class {
     constructor(_manager?: unknown) {}
-    load(_url: string, onLoad: (g: unknown) => void): void {
+    load(_url: string, onLoad: (g: unknown) => void, _onProgress?: unknown, onError?: (e: unknown) => void): void {
+      const loadError = hoisted.getLoadError();
+      if (loadError) {
+        onError?.(loadError);
+        return;
+      }
       const g = new THREE.Group();
       // 骨骼开关：构造带骨架的 SkinnedMesh（ADR-074 骨骼面板注入场景）
       if (hoisted.getWithBones()) {
@@ -58,6 +70,25 @@ vi.mock("three/addons/loaders/FBXLoader.js", () => ({
   },
 }));
 
+vi.mock("./fbx-parser.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./fbx-parser.ts")>();
+  return {
+    ...actual,
+    createFbxParser: (): unknown => {
+      // 默认镜像真实降级（测试/受限环境无 Worker → always-fail parser）
+      if (hoisted.fbxParserImpl) return hoisted.fbxParserImpl();
+      return {
+        parse: () => Promise.resolve({ ok: false, error: "Worker 不可用（测试/受限环境）" }),
+        dispose: () => undefined,
+      };
+    },
+    buildFbxSceneFromData: (data: unknown, config?: unknown): THREE.Group => {
+      if (hoisted.buildFromDataOverride) return hoisted.buildFromDataOverride(data, config);
+      return actual.buildFbxSceneFromData(data as never, config as never);
+    },
+  };
+});
+
 function makeCtx(): PreviewBuildCtx {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
@@ -76,6 +107,10 @@ describe("fbx-adapter", () => {
     hoisted.loadImpl.mockReset();
     hoisted.setWithAnim(true);
     hoisted.setWithBones(false);
+    hoisted.setLoadError(null);
+    hoisted.fbxParserImpl = null;
+    hoisted.buildFromDataOverride = null;
+    localStorage.removeItem("fbx-worker");
   });
 
   it("build 主路径：读字节→加载→挂场景→播动画→相机取景", async () => {
@@ -204,5 +239,199 @@ describe("normalizeFbxScale（ADR-112 P1 尺度归一）", () => {
     const anims = (group as unknown as { animations: THREE.AnimationClip[] }).animations;
     expect(anims).toHaveLength(1);
     expect(anims[0]).toBe(clip);
+  });
+});
+
+// ===== 覆盖率攻坚：worker 路径 / texUrlMap / 降级与错误路径 / screenshot =====
+
+/** worker 解析产物 fixture：1 mesh + 1 非 mesh 节点；材质含大小写纹理 + 缺失纹理 */
+function workerData(): unknown {
+  return {
+    nodes: [
+      {
+        name: "mesh0",
+        parent: -1,
+        isMesh: true,
+        transform: { position: [0, 0, 0], quaternion: [0, 0, 0, 1], scale: [1, 1, 1] },
+        mesh: {
+          name: "mesh0",
+          geometry: {},
+          materials: [
+            { type: "MeshStandardMaterial", name: "m", map: "Tex.PNG" },
+            { type: "MeshStandardMaterial", name: "m2", normalMap: "missing.png" },
+          ],
+          hasSkeleton: false,
+        },
+      },
+      {
+        name: "empty-group",
+        parent: -1,
+        isMesh: false,
+        transform: { position: [0, 0, 0], quaternion: [0, 0, 0, 1], scale: [1, 1, 1] },
+      },
+    ],
+    animations: [{ name: "clip1", duration: 1, tracks: [] }],
+  };
+}
+
+describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
+  beforeEach(() => {
+    hoisted.readBytesMock.mockReset();
+    hoisted.loadImpl.mockReset();
+    hoisted.setWithAnim(true);
+    hoisted.setWithBones(false);
+    hoisted.setLoadError(null);
+    hoisted.fbxParserImpl = null;
+    hoisted.buildFromDataOverride = null;
+    localStorage.removeItem("fbx-worker");
+  });
+
+  it("worker 解析成功 → texUrlMap（原样/小写双试）+ buildFbxSceneFromData 重建 + diag ok", async () => {
+    localStorage.setItem("fbx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:tex-url");
+    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    // 原样大小写 miss → 小写重试命中（磁盘文件名大小写不一致场景）
+    hoisted.readBytesMock.mockImplementation((p: string) => {
+      if (p === "/repo/fbx/a.fbx") return Promise.resolve(btoa("FBX"));
+      if (p === "/repo/fbx/tex.png") return Promise.resolve(btoa("PNG"));
+      return Promise.resolve(null);
+    });
+    let parsedData: unknown;
+    hoisted.fbxParserImpl = () => ({
+      parse: async (bytes: Uint8Array) => {
+        void bytes;
+        parsedData = workerData();
+        return { ok: true, data: parsedData };
+      },
+      dispose: vi.fn(),
+    });
+    // buildFbxSceneFromData override：重建带动画的 Group（worker 路径纹理挂贴图由真实 builder 完成，
+    // 此处只锁 adapter 侧编排：texUrlMap 构建 → 重建 → 统计 → 挂场景）
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(
+      new THREE.BoxGeometry(180, 180, 180),
+      [new THREE.MeshStandardMaterial(), new THREE.MeshStandardMaterial()], // 材质数组 → countFbxStats/dispose 数组分支
+    ));
+    (group as unknown as { animations: THREE.AnimationClip[] }).animations = [new THREE.AnimationClip("c", 1, [])];
+    hoisted.buildFromDataOverride = vi.fn(() => group);
+
+    const ctx = makeCtx();
+    const built = await buildFbxScene(ctx, "/repo/fbx/a.fbx", {
+      readFileBytes: hoisted.readBytesMock,
+      addOpLog: vi.fn(),
+    });
+
+    // parser.parse 收到字节，dispose 释放
+    expect(hoisted.buildFromDataOverride).toHaveBeenCalledTimes(1);
+    // 纹理按 FBX 同目录读取：原样 miss → 小写命中
+    expect(hoisted.readBytesMock).toHaveBeenCalledWith("/repo/fbx/Tex.PNG");
+    expect(hoisted.readBytesMock).toHaveBeenCalledWith("/repo/fbx/tex.png");
+    // 尺度归一 + 相机取景按 worker 重建产物
+    expect((ctx.camera as THREE.PerspectiveCamera).far).toBeCloseTo(FBX_TARGET_MAX_DIM * 50, 0);
+    // 内嵌动画 → mixer 播放（update 不抛）
+    expect(() => built.update?.(0.016)).not.toThrow();
+    // dispose → 纹理 blob URL 释放（模型 blob 已在 finally 释放）
+    built.dispose();
+    expect(revokeURL).toHaveBeenCalledWith("blob:tex-url");
+    void parsedData;
+  });
+
+  it("worker 解析失败（ok:false）→ 降级主线程 blob 路径（FBXLoader）", async () => {
+    localStorage.setItem("fbx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:fbx-url");
+    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
+    hoisted.fbxParserImpl = () => ({
+      parse: () => Promise.resolve({ ok: false, error: "bad header" }),
+      dispose: vi.fn(),
+    });
+    const ctx = makeCtx();
+    const built = await buildFbxScene(ctx, "/repo/fbx/b.fbx", {
+      readFileBytes: hoisted.readBytesMock,
+      addOpLog: vi.fn(),
+    });
+    // 降级路径产出 mock FBXLoader 的 Group（含动画）
+    expect(hoisted.loadImpl).toHaveBeenCalled();
+    expect(built.update).toBeDefined();
+    built.dispose();
+    expect(revokeURL).toHaveBeenCalled();
+  });
+
+  it("worker parse 抛错 → diag fail + 异常穿透", async () => {
+    localStorage.setItem("fbx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:fbx-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
+    hoisted.fbxParserImpl = () => ({
+      parse: () => Promise.reject(new Error("worker crash")),
+      dispose: vi.fn(),
+    });
+    const ctx = makeCtx();
+    await expect(
+      buildFbxScene(ctx, "/repo/fbx/c.fbx", { readFileBytes: hoisted.readBytesMock, addOpLog: vi.fn() }),
+    ).rejects.toThrow("worker crash");
+  });
+});
+
+describe("fbx-adapter 主线程降级与边界", () => {
+  beforeEach(() => {
+    hoisted.readBytesMock.mockReset();
+    hoisted.loadImpl.mockReset();
+    hoisted.setWithAnim(true);
+    hoisted.setWithBones(false);
+    hoisted.setLoadError(null);
+    hoisted.fbxParserImpl = null;
+    hoisted.buildFromDataOverride = null;
+    localStorage.removeItem("fbx-worker");
+  });
+
+  it("FBXLoader load onError → 拒绝并携带 Error（diag fail）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:fbx-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
+    hoisted.setLoadError(new Error("fbx parse fail"));
+    const ctx = makeCtx();
+    await expect(
+      buildFbxScene(ctx, "/repo/fbx/d.fbx", { readFileBytes: hoisted.readBytesMock }),
+    ).rejects.toThrow("fbx parse fail");
+  });
+
+  it("renderer 缺失 → screenshot 归一 null（不抛）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:fbx-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
+    const ctx = makeCtx();
+    const built = await buildFbxScene(ctx, "/repo/fbx/e.fbx", { readFileBytes: hoisted.readBytesMock });
+    await expect(built.screenshot?.()).resolves.toBeNull();
+    built.dispose();
+  });
+
+  it("纹理原样大小写命中 → 不做小写重试", async () => {
+    localStorage.setItem("fbx-worker", "1");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:tex-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockImplementation((p: string) => {
+      if (p === "/repo/fbx/f.fbx") return Promise.resolve(btoa("FBX"));
+      if (p === "/repo/fbx/Tex.PNG") return Promise.resolve(btoa("PNG"));
+      return Promise.resolve(null);
+    });
+    hoisted.fbxParserImpl = () => ({
+      parse: () => Promise.resolve({ ok: true, data: workerData() }),
+      dispose: vi.fn(),
+    });
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial()));
+    (group as unknown as { animations: THREE.AnimationClip[] }).animations = [];
+    hoisted.buildFromDataOverride = vi.fn(() => group);
+
+    await buildFbxScene(makeCtx(), "/repo/fbx/f.fbx", {
+      readFileBytes: hoisted.readBytesMock,
+      addOpLog: vi.fn(),
+    });
+    // 原样命中 → 该纹理只读一次（不做小写重试；missing.png 双试均 miss 另计）
+    const texCalls = (hoisted.readBytesMock.mock.calls as Array<[string]>)
+      .map((c) => c[0])
+      .filter((p) => p.endsWith("Tex.PNG") || p.endsWith("tex.png"));
+    expect(texCalls).toEqual(["/repo/fbx/Tex.PNG"]);
   });
 });

@@ -1,11 +1,11 @@
-// @vitest-environment node
 // ===== SkyCapability 测试（utils/3d/caps/sky-capability.ts）=====
-// 覆盖：构造默认值、时间/云量/环境 IBL、启用禁用、预设、持久化、getMenuControls。
+// 覆盖：构造默认值、时间/云量/环境 IBL、启用禁用、预设、持久化、getMenuControls、
+// apply 完整管线（Fake PMREM）、regenerateEnvironment 失败兜底、god rays 挂载、昼夜循环。
 //
 // 设计说明：
-// - PMREMGenerator 已从构造函数延迟到 apply() 时创建，构造函数不再依赖 WebGL。
-//   node 环境可直接构造，构造函数无需 mock。
-// - 但 apply() 仍需要 WebGL（Sky 3D 对象 + PMREMGenerator），保留 spyOn 拦截。
+// - Sky 构造纯数据对象（BoxGeometry + ShaderMaterial），不依赖 WebGL，node 可构造。
+// - apply() 的 PMREMGenerator.fromScene 经 per-file vi.mock 提供 Fake（带 dispose），
+//   happy-dom 下 requestAnimationFrame 可驱动昼夜循环，其余 three 导出取 actual。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
@@ -16,14 +16,32 @@ import {
   injectSkySunScalePatch,
 } from "./sky-capability.ts";
 
-// 拦截 apply（内部依赖 Sky 3D 对象 + PMREMGenerator，node 不可用）
-beforeEach(() => {
-  vi.spyOn(SkyCapability.prototype as unknown as { apply: () => void }, "apply").mockImplementation(() => {
-    // no-op
-  });
+// PMREMGenerator 扩展 mock：fromScene 返回带 dispose 的对象（真实返回 WebGLRenderTarget），
+// 否则 regenerateEnvironment 二次调用 dispose 旧 RT 时 TypeError
+vi.mock("three", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("three")>();
+  class FakeWebGLRenderer {
+    domElement = document.createElement("div");
+    setSize(): void {}
+    setPixelRatio(): void {}
+    render(): void {}
+    dispose(): void {}
+    getContext(): null { return null; }
+  }
+  class FakePMREMGenerator {
+    fromScene(): { texture: THREE.Texture; dispose: () => void } {
+      return { texture: new actual.Texture(), dispose: () => {} };
+    }
+    dispose(): void {}
+  }
+  return {
+    ...actual,
+    WebGLRenderer: FakeWebGLRenderer as unknown as typeof actual.WebGLRenderer,
+    PMREMGenerator: FakePMREMGenerator as unknown as typeof actual.PMREMGenerator,
+  };
 });
 
-function makeFakeRenderer() {
+function makeFakeRenderer(overrides: { toneMapping?: THREE.ToneMapping; toneMappingExposure?: number } = {}) {
   return {
     capabilities: { isWebGL2: true, maxTextures: 16 },
     properties: new Map(),
@@ -33,8 +51,8 @@ function makeFakeRenderer() {
     getPixelRatio: () => 1,
     getContext: () => null,
     outputColorSpace: THREE.SRGBColorSpace,
-    toneMapping: THREE.ACESFilmicToneMapping,
-    toneMappingExposure: 1,
+    toneMapping: overrides.toneMapping ?? THREE.ACESFilmicToneMapping,
+    toneMappingExposure: overrides.toneMappingExposure ?? 1,
   } as unknown as THREE.WebGLRenderer;
 }
 
@@ -234,6 +252,42 @@ describe("SkyCapability — getMenuControls 结构", () => {
       expect(c.group).toBeDefined();
       expect(c.group!.startsWith("preview.sky")).toBe(true);
     });
+  });
+
+  it("时间轴控件与云量滑块联动状态（regenerate=true 分支）", () => {
+    const cap = newCap();
+    const controls = cap.getMenuControls();
+    const timelineCtrl = controls.find((c) => c.id === "sky-timeline")!;
+    timelineCtrl.setValue(20);
+    expect(cap.getTimeOfDay()).toBe(20);
+    expect(timelineCtrl.getValue()).toBe(20);
+    const cloudCtrl = controls.find((c) => c.id === "sky-cloud")!;
+    cloudCtrl.setValue(0.8); // 走 setCloudCoverage(v, true) → regenerate
+    expect(cap.getCloudCoverage()).toBe(0.8);
+  });
+
+  it("太阳耦合滑块与昼夜循环控件联动", () => {
+    const cap = newCap();
+    const controls = cap.getMenuControls();
+    const intensityCtrl = controls.find((c) => c.id === "sky-sun-intensity")!;
+    intensityCtrl.setValue(1.1);
+    expect(cap.getSunIntensityScale()).toBe(1.1);
+    expect(intensityCtrl.getValue()).toBe(1.1);
+    const discCtrl = controls.find((c) => c.id === "sky-sun-disc")!;
+    discCtrl.setValue(0.3);
+    expect(cap.getSunDiscScale()).toBe(0.3);
+    // 昼夜循环 toggle
+    const rotateCtrl = controls.find((c) => c.id === "sky-auto-rotate")!;
+    rotateCtrl.setValue(true);
+    expect(cap.isAutoRotating()).toBe(true);
+    expect(rotateCtrl.getValue()).toBe(true);
+    rotateCtrl.setValue(false);
+    expect(cap.isAutoRotating()).toBe(false);
+    // 体积光束 toggle
+    const godraysCtrl = controls.find((c) => c.id === "sky-godrays")!;
+    godraysCtrl.setValue(true);
+    expect(cap.isGodRaysEnabled()).toBe(true);
+    expect(godraysCtrl.getValue()).toBe(true);
   });
 });
 
@@ -483,6 +537,18 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     expect(matches.length).toBe(1);
   });
 
+  it("幂等分支：已注入时仅同步默认值到 uniforms，不改 shader", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat, { sunIntensityScale: 0.6, sunDiscScale: 0.4 });
+    const shaderBefore = mat.fragmentShader;
+    // 第二次调用走幂等早退分支：只覆盖 uniforms.value
+    injectSkySunScalePatch(mat, { sunIntensityScale: 0.9, sunDiscScale: 0.8 });
+    expect(mat.fragmentShader).toBe(shaderBefore);
+    expect(mat.uniforms.sunIntensityScale.value).toBe(0.9);
+    expect(mat.uniforms.sunDiscScale.value).toBe(0.8);
+  });
+
   it("setter 更新值只改 uniforms.value，不重编译 shader（needsUpdate=false）", () => {
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
@@ -497,5 +563,279 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     // shader 不变，无重编译（Three ShaderMaterial 初始 needsUpdate 为 undefined，不应被置 true 触发重编）
     expect(mat.fragmentShader).toBe(shaderBefore);
     expect(mat.needsUpdate).toBeFalsy();
+  });
+
+  it("声明注入兜底：showSunDisc 锚点失配时在 hash 函数前插入声明", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    // 模拟 Three 未来版本调整 uniforms 顺序：主锚点被破坏，但保留 hash 函数标记
+    mat.fragmentShader = mat.fragmentShader.replace(
+      /(uniform\s+float\s+showSunDisc\s*;\s*\n\s*uniform\s+float\s+time\s*;)/,
+      "// anchors removed",
+    );
+    // three r185 Material 只有 needsUpdate setter（version++），无 getter——用 version 观察重编译触发
+    const versionBefore = mat.version;
+    injectSkySunScalePatch(mat);
+    expect(mat.fragmentShader).toMatch(/uniform\s+float\s+sunIntensityScale\s*;/);
+    expect(mat.fragmentShader.indexOf("uniform float sunIntensityScale")).toBeLessThan(
+      mat.fragmentShader.indexOf("float hash( vec2 p )"),
+    );
+    expect(mat.version).toBe(versionBefore + 1); // patched → needsUpdate=true → version++
+  });
+
+  it("两个锚点全部失配时告警并跳过 patch（不产生半残 shader）", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    mat.fragmentShader = "// totally different shader, no anchors at all";
+    injectSkySunScalePatch(mat);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("sky-capability"), expect.any(String));
+    // uniforms 已注册（对象层先注册防 crash），但 shader 未被改
+    expect(mat.uniforms.sunIntensityScale).toBeDefined();
+    expect(mat.fragmentShader).toBe("// totally different shader, no anchors at all");
+    warnSpy.mockRestore();
+  });
+});
+
+// ============ apply 完整管线（Fake PMREM + happy-dom rAF）============
+describe("SkyCapability — apply 管线（真实分支）", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("apply 后 sky 挂载 scene、tone mapping/exposure 设置、environment 生成", () => {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer({ toneMapping: THREE.NoToneMapping, toneMappingExposure: 3.3 });
+    const cap = new SkyCapability({ scene, renderer });
+    cap.apply();
+    expect(cap.isEnabled()).toBe(true);
+    expect((cap as unknown as { sky: Sky }).sky.parent).toBe(scene);
+    expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    expect(renderer.toneMappingExposure).toBe(DEFAULT_SKY_PARAMS.exposure);
+    expect(scene.environment).not.toBeNull();
+  });
+
+  it("environment=false 时 apply 清空 environment 但仍挂载天空", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer(), params: { environment: false } });
+    cap.apply();
+    expect(scene.environment).toBeNull();
+    expect((cap as unknown as { sky: Sky }).sky.parent).toBe(scene);
+  });
+
+  it("clearEnvironment 只清自己生成的环境（外部 environment 保留）", () => {
+    const scene = new THREE.Scene();
+    const external = new THREE.Texture();
+    scene.environment = external;
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer(), params: { environment: false } });
+    cap.apply();
+    cap.setEnvironmentEnabled(false);
+    // renderTarget 未生成（environment=false 从未 build）→ 不等于 rt.texture → 外部值保留
+    expect(scene.environment).toBe(external);
+  });
+
+  it("setEnabled(false) detach：sky/godRays/tint 全部移除", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    cap.setGodRaysEnabled(true);
+    cap.setTime(18); // 日落 → godRays + tint 挂载
+    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBe(scene);
+    cap.setEnabled(false);
+    expect((cap as unknown as { sky: Sky }).sky.parent).toBeNull();
+    expect(scene.environment).toBeNull();
+    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
+    expect((cap as unknown as { sunsetTintMesh: THREE.Mesh }).sunsetTintMesh!.parent).toBeNull();
+  });
+
+  it("dispose 还原 tone mapping/exposure 并释放资源", () => {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer({ toneMapping: THREE.NoToneMapping, toneMappingExposure: 3.3 });
+    const cap = new SkyCapability({ scene, renderer });
+    cap.apply();
+    const pmrem = (cap as unknown as { pmrem: { dispose: () => void } | null }).pmrem;
+    expect(pmrem).not.toBeNull();
+    const pmremSpy = vi.spyOn(pmrem!, "dispose");
+    cap.dispose();
+    expect(renderer.toneMapping).toBe(THREE.NoToneMapping);
+    expect(renderer.toneMappingExposure).toBe(3.3);
+    expect((cap as unknown as { sky: Sky }).sky.parent).toBeNull();
+    expect(scene.environment).toBeNull();
+    expect((cap as unknown as { renderTarget: { dispose: () => void } | null }).renderTarget).toBeNull();
+    expect((cap as unknown as { godRays: THREE.Group | null }).godRays).toBeNull();
+    expect((cap as unknown as { sunsetTintMesh: THREE.Mesh | null }).sunsetTintMesh).toBeNull();
+    expect(pmremSpy).toHaveBeenCalled();
+  });
+
+  it("setSun 写 uniforms 并在 enabled+environment 下重建环境", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setSun(30, 200);
+    const p = cap.getParams();
+    expect(p.elevation).toBe(30);
+    expect(p.azimuth).toBe(200);
+    const sunU = (cap as unknown as { sky: Sky }).sky.material.uniforms["sunPosition"].value as THREE.Vector3;
+    // 仰角 30 方位 200 → sunPosition 非默认值
+    expect(sunU.length()).toBeCloseTo(1, 5);
+    expect(scene.environment).not.toBeNull(); // regenerate 已跑
+  });
+
+  it("setSunIntensityScale / setSunDiscScale clamp 并同步 uniforms", () => {
+    const cap = newCap();
+    cap.setSunIntensityScale(2); // clamp 到 1.5
+    expect(cap.getSunIntensityScale()).toBe(1.5);
+    cap.setSunIntensityScale(-1); // clamp 到 0
+    expect(cap.getSunIntensityScale()).toBe(0);
+    cap.setSunDiscScale(0.7);
+    expect(cap.getSunDiscScale()).toBe(0.7);
+    const u = (cap as unknown as { sky: Sky }).sky.material.uniforms;
+    expect(u["sunIntensityScale"].value).toBe(0);
+    expect(u["sunDiscScale"].value).toBe(0.7);
+  });
+
+  it("setCloudCoverage(regenerate=true) 同步刷新 IBL 环境", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setCloudCoverage(0.5, true);
+    const u = (cap as unknown as { envSky: Sky }).envSky.material.uniforms;
+    expect(u["cloudCoverage"].value).toBe(0.5);
+    expect(scene.environment).not.toBeNull();
+  });
+
+  it("regenerateEnvironment 失败（fromScene 抛错）走 catch 告警且 showSunDisc 恢复", () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    vi.spyOn(THREE.PMREMGenerator.prototype as unknown as { fromScene: () => unknown }, "fromScene")
+      .mockImplementation(() => {
+        throw new Error("gl oom");
+      });
+    expect(() => cap.setEnvironmentEnabled(true)).not.toThrow();
+    expect(errSpy).toHaveBeenCalledWith("[sky] 环境贴图生成失败:", expect.any(Error));
+    // finally 恢复太阳盘
+    expect((cap as unknown as { envSky: Sky }).envSky.material.uniforms["showSunDisc"].value).toBe(1);
+    errSpy.mockRestore();
+  });
+
+  it("getSunPosition 输出 clamp 到 [0,1]（夜间 elevation<0 时 y<0.5）", () => {
+    const cap = newCap({ params: { timeOfDay: 0 } }); // 午夜
+    const pos = cap.getSunPosition();
+    expect(pos.x).toBeGreaterThanOrEqual(0);
+    expect(pos.x).toBeLessThanOrEqual(1);
+    expect(pos.y).toBeLessThan(0.5); // 地平线下
+    cap.setTime(12); // 正午
+    expect(cap.getSunPosition().y).toBeGreaterThan(0.5);
+  });
+});
+
+// ============ 昼夜循环（happy-dom requestAnimationFrame）============
+describe("SkyCapability — 昼夜循环 autoRotate", () => {
+  it("start/stop 切换与幂等；tick 推进 timeOfDay", async () => {
+    const cap = newCap();
+    expect(cap.isAutoRotating()).toBe(false);
+    cap.startAutoRotate();
+    expect(cap.isAutoRotating()).toBe(true);
+    cap.startAutoRotate(); // 幂等：不重复起循环
+    // happy-dom rAF ≈ 16ms/帧；1 小时/秒 → 100ms ≈ 0.1 小时
+    await new Promise((r) => setTimeout(r, 100));
+    expect(cap.getTimeOfDay()).toBeGreaterThan(9);
+    cap.stopAutoRotate();
+    expect(cap.isAutoRotating()).toBe(false);
+    const stopped = cap.getTimeOfDay();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(cap.getTimeOfDay()).toBe(stopped); // 停止后不再推进
+  });
+
+  it("stopAutoRotate 未启动时 no-op", () => {
+    const cap = newCap();
+    expect(() => cap.stopAutoRotate()).not.toThrow();
+    expect(cap.isAutoRotating()).toBe(false);
+  });
+
+  it("dispose 自动停止昼夜循环", async () => {
+    const cap = newCap();
+    cap.startAutoRotate();
+    expect(cap.isAutoRotating()).toBe(true);
+    cap.dispose();
+    expect(cap.isAutoRotating()).toBe(false);
+    await new Promise((r) => setTimeout(r, 40));
+    // dispose 后即使残留 rAF 也不推进（tick 内 setTime 仍会跑，但 stop 已解除链）
+    expect(cap.isAutoRotating()).toBe(false);
+  });
+});
+
+// ============ God Rays 挂载/卸载（真实分支）============
+describe("SkyCapability — God Rays 挂载分支", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("日落时启用 godRays → group 挂载 scene 且 intensity 写入 uniform", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setGodRaysEnabled(true);
+    cap.setTime(18); // elevation≈0 → intensity>0
+    const group = (cap as unknown as { godRays: THREE.Group }).godRays;
+    expect(group.parent).toBe(scene);
+    expect(group.visible).toBe(true);
+    const mesh = group.children[0] as THREE.Mesh;
+    const mat = mesh.material as THREE.ShaderMaterial;
+    expect(mat.uniforms.uIntensity.value).toBeGreaterThan(0);
+    // 挂载时颜色初始化为 sunset sunColor
+    expect(mat.uniforms.uColor.value.getHex()).toBe(0xffe0a8);
+    // sunset tint 同步挂载
+    expect((cap as unknown as { sunsetTintMesh: THREE.Mesh }).sunsetTintMesh!.parent).toBe(scene);
+  });
+
+  it("正午时 godRays intensity=0 → group 卸载", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setGodRaysEnabled(true);
+    cap.setTime(18);
+    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBe(scene);
+    cap.setTime(12); // 正午 → intensity=0 → 卸载
+    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
+    expect((cap as unknown as { sunsetTintMesh: THREE.Mesh }).sunsetTintMesh!.parent).toBeNull();
+  });
+
+  it("godRays 关闭后 setTime 把已挂载的 group 移除", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setGodRaysEnabled(true);
+    cap.setTime(18);
+    cap.setGodRaysEnabled(false);
+    cap.setTime(18); // updateGodRays 走 disabled 分支 → remove
+    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
+  });
+
+  it("disabled 状态下 setGodRaysEnabled 只翻标志不触发挂载", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setEnabled(false);
+    cap.setGodRaysEnabled(true);
+    expect(cap.isGodRaysEnabled()).toBe(true);
+    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
+  });
+
+  it("setPreset 在 disabled 时只合并参数不写 uniforms", () => {
+    const cap = newCap({ enabled: false });
+    const u = (cap as unknown as { sky: Sky }).sky.material.uniforms;
+    const turbidityBefore = u["turbidity"].value;
+    cap.setPreset("vrm");
+    expect(cap.getParams().turbidity).toBe(MODEL_SKY_PRESETS.vrm!.turbidity!);
+    expect(u["turbidity"].value).toBe(turbidityBefore); // 未写入 uniforms
+  });
+
+  it("loadState 非法类型字段全部跳过（restoreFields 守卫）", () => {
+    localStorage.setItem("ysm-scene-cap-sky", JSON.stringify({
+      timeOfDay: "noon", cloudCoverage: "cloudy", environment: "yes", enabled: 1,
+      sunIntensityScale: "big", sunDiscScale: null,
+    }));
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.getTimeOfDay()).toBe(DEFAULT_SKY_PARAMS.timeOfDay);
+    expect(cap.getCloudCoverage()).toBe(DEFAULT_SKY_PARAMS.cloudCoverage);
+    expect(cap.isEnvironmentEnabled()).toBe(DEFAULT_SKY_PARAMS.environment);
+    expect(cap.getSunIntensityScale()).toBe(DEFAULT_SKY_PARAMS.sunIntensityScale);
   });
 });

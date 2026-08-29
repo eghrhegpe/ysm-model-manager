@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "../../../test-utils/index.ts";
 import { initSettings } from "./init.ts";
+import { t } from "../../../core/i18n/t.ts";
 
 const {
   busEmit,
@@ -17,6 +18,10 @@ const {
   loadTdKeymap,
   initVersionUpdater,
   friendlyError,
+  isWebPlatformMock,
+  selectLocalRepoMock,
+  getFsaAuthStateMock,
+  rescanFsaRootMock,
 } = vi.hoisted(() => ({
   busEmit: vi.fn(),
   busOn: vi.fn((_event: string, _fn: (p: unknown) => void) => () => {}),
@@ -48,6 +53,11 @@ const {
   }),
   initVersionUpdater: vi.fn(),
   friendlyError: vi.fn((e: unknown) => String((e as Error)?.message ?? e)),
+  // stgBindWebFsa 分支控制（覆盖率补强）：平台开关 + FSA 三函数
+  isWebPlatformMock: vi.fn(() => false),
+  selectLocalRepoMock: vi.fn(),
+  getFsaAuthStateMock: vi.fn(),
+  rescanFsaRootMock: vi.fn(),
 }));
 
 vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
@@ -56,6 +66,19 @@ vi.mock("../../../utils/resource/registry.ts", () => ({ loadResourceRegistry }))
 vi.mock("../../../utils/3d/model3d.ts", () => ({ loadTdKeymap }));
 vi.mock("../../../features/version-updater.ts", () => ({ initVersionUpdater }));
 vi.mock("../../../utils/dom/errors.ts", () => ({ friendlyError }));
+// browser-adapter：本图内仅 init.ts 消费 FSA 三函数；browserAdapter 空垫是给
+// importOriginal 展开的真 platform-web 引用兜底（仅函数体内使用，不在此验证）
+vi.mock("../../../backend/browser-adapter.ts", () => ({
+  selectLocalRepo: selectLocalRepoMock,
+  getFsaAuthState: getFsaAuthStateMock,
+  rescanFsaRoot: rescanFsaRootMock,
+  browserAdapter: {},
+}));
+// isWebPlatform 换可控开关（其余导出保持真实，避免切断 platform.ts 链）
+vi.mock("../../../backend/platform-web.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../backend/platform-web.ts")>();
+  return { ...actual, isWebPlatform: isWebPlatformMock };
+});
 
 function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
   const el = document.createElement("div");
@@ -86,7 +109,14 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <button id="set-relink"></button>
     <div id="set-version"></div>
     <button id="set-releases"></button>
-    <select id="set-lang"></select>
+    <select id="set-lang">
+      <option value="zh-CN">简体中文</option><option value="en">English</option>
+    </select>
+    <select id="set-update-check">
+      <option value="21600000">6h</option><option value="86400000">24h</option>
+    </select>
+    <button id="web-repo-auth-btn"></button>
+    <div id="web-repo-auth-status"></div>
     <select id="set-font-size">
       <option value="small">small</option><option value="normal">normal</option><option value="large">large</option>
     </select>
@@ -149,6 +179,11 @@ beforeEach(() => {
   loadResourceRegistry.mockResolvedValue({
     ysm: { id: "ysm", name: "模型", icon: "🧊", storageSubDir: "ysm", configField: "YsmRoot" },
   });
+  // FSA/平台开关默认态：非 web 平台 + unsupported（与 happy-dom 真实语义一致）
+  isWebPlatformMock.mockReturnValue(false);
+  getFsaAuthStateMock.mockResolvedValue("unsupported");
+  rescanFsaRootMock.mockResolvedValue({ ok: true, imported: 0, failed: 0, dir: "" });
+  selectLocalRepoMock.mockResolvedValue({ ok: true, imported: 0, failed: 0, dir: "" });
   mockApp();
 });
 
@@ -714,5 +749,277 @@ describe("initSettings — 扫描提示气泡", () => {
     resolvePaths(["/mc1", "/mc2"]);
     await new Promise((r) => setTimeout(r, 0));
     expect(document.getElementById("mc-scan-tooltip")).toBeNull();
+  });
+});
+
+// ===== 覆盖率补强：更新间隔 / relink 收尾分支 / 语言切换 / filesRoot / 面板收起 / FSA =====
+describe("initSettings — 更新检查间隔（stgBindUpdateInterval）", () => {
+  it("初始化：无配置 → 默认 6h；change → SaveThresholds + toast", async () => {
+    const saveThresholds = vi.fn();
+    mockApp({ SaveThresholds: saveThresholds });
+    const { root } = makeRoot();
+    await initSettings(root);
+    const sel = root.getElementById("set-update-check") as HTMLSelectElement;
+    expect(sel.value).toBe("21600000");
+    sel.value = "86400000";
+    sel.dispatchEvent(new Event("change"));
+    await waitFor(() => saveThresholds.mock.calls.length > 0);
+    expect(saveThresholds).toHaveBeenCalledWith(86400000, 500); // logMaxEntries 兜底 500
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ type: "success" }),
+    );
+  });
+
+  it("SaveThresholds 失败 → 错误 toast（有出口）", async () => {
+    mockApp({ SaveThresholds: vi.fn(() => Promise.reject(new Error("threshold boom"))) });
+    const { root } = makeRoot();
+    await initSettings(root);
+    const sel = root.getElementById("set-update-check") as HTMLSelectElement;
+    sel.value = "86400000";
+    sel.dispatchEvent(new Event("change"));
+    await waitFor(() =>
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("threshold boom"),
+      ),
+    );
+  });
+
+  it("配置已有 updateCheckIntervalMs / logMaxEntries → 透传给 SaveThresholds", async () => {
+    const saveThresholds = vi.fn();
+    mockApp({
+      SaveThresholds: saveThresholds,
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "",
+        linkMode: "copy",
+        mirror: "",
+        updateCheckIntervalMs: 86400000,
+        logMaxEntries: 300,
+      })),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    const sel = root.getElementById("set-update-check") as HTMLSelectElement;
+    expect(sel.value).toBe("86400000");
+    sel.dispatchEvent(new Event("change"));
+    await waitFor(() => saveThresholds.mock.calls.length > 0);
+    expect(saveThresholds).toHaveBeenCalledWith(86400000, 300);
+  });
+});
+
+describe("initSettings — relink 收尾分支（busy / 全跳过 / 外层失败）", () => {
+  it("relink 进行中重复点击 → 防重入（ListVersionInstances 仅一次）", async () => {
+    const listInstances = vi.fn(() => new Promise(() => {})); // 永不 resolve
+    mockApp({
+      ListVersionInstances: listInstances,
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "/mc", // 必须非空，否则先走「请先设置游戏根目录」早退
+        linkMode: "copy",
+      })),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    const btn = root.getElementById("set-relink") as HTMLElement;
+    btn.click();
+    btn.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(listInstances).toHaveBeenCalledTimes(1);
+  });
+
+  it("实例全被跳过（无 Exists / 无 Name）→ 「没有需要重新链接」toast 且不调 Relink", async () => {
+    const relinkFn = vi.fn(() => 5);
+    mockApp({
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "/mc",
+        linkMode: "copy",
+      })),
+      ListVersionInstances: vi.fn(() => [
+        { Name: "insA", Exists: false },
+        { Name: "", Exists: true },
+      ]),
+      RelinkAllInstanceResources: relinkFn,
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-relink") as HTMLElement).click();
+    await waitFor(() =>
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("没有需要重新链接"),
+      ),
+    );
+    expect(relinkFn).not.toHaveBeenCalled();
+  });
+
+  it("ListVersionInstances 拒绝 → 外层 catch → 错误 toast", async () => {
+    mockApp({
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "/mc",
+        linkMode: "copy",
+      })),
+      ListVersionInstances: vi.fn(() => Promise.reject(new Error("list boom"))),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-relink") as HTMLElement).click();
+    await waitFor(() =>
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("list boom"),
+      ),
+    );
+  });
+});
+
+describe("initSettings — 发布页失败 / 语言切换 / filesRoot 卡片 / 面板收起", () => {
+  it("OpenInBrowser 失败 → 「❌ 打开浏览器失败」toast", async () => {
+    mockApp({ OpenInBrowser: vi.fn(() => Promise.reject(new Error("open boom"))) });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-releases") as HTMLElement).click();
+    await waitFor(() =>
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("打开浏览器失败"),
+      ),
+    );
+  });
+
+  it("语言切换 change → setLang 落盘 + lang:changed 广播", async () => {
+    const { root } = makeRoot();
+    await initSettings(root);
+    const sel = root.getElementById("set-lang") as HTMLSelectElement;
+    sel.value = "en";
+    sel.dispatchEvent(new Event("change"));
+    await waitFor(() => localStorage.getItem("uiLang") === "en");
+    expect(busEmit).toHaveBeenCalledWith("lang:changed", { lang: "en" });
+  });
+
+  it("filesRoot 路径卡片 → SelectDirectory + saveCfg(filesRoot)", async () => {
+    const saveFn = vi.fn();
+    mockApp({ SaveAppConfig: saveFn });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-files-root") as HTMLElement).click();
+    await waitFor(() => saveFn.mock.calls.length > 0);
+    expect(saveFn.mock.calls[0]![0]).toBe("/pick"); // 第 1 参 filesRoot
+  });
+
+  it("高级面板二次点击 → 收起（adv-closing → display none）", async () => {
+    const { root } = makeRoot();
+    await initSettings(root);
+    const panel = root.getElementById("set-advanced-panel") as HTMLElement;
+    const btn = root.getElementById("set-advanced-toggle") as HTMLElement;
+    btn.click();
+    await waitFor(() => panel.style.display === "block");
+    btn.click();
+    expect(panel.classList.contains("adv-closing")).toBe(true);
+    await waitFor(() => panel.style.display === "none", 1000);
+    expect(panel.classList.contains("adv-closing")).toBe(false);
+  });
+});
+
+describe("initSettings — 网页版 FSA 授权（stgBindWebFsa）", () => {
+  async function stubPicker(): Promise<() => void> {
+    (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker = vi.fn();
+    return () => {
+      delete (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker;
+    };
+  }
+
+  it("非 web 平台（默认）→ 不接线：点击无任何反应", async () => {
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("web-repo-auth-btn") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(selectLocalRepoMock).not.toHaveBeenCalled();
+    expect(getFsaAuthStateMock).not.toHaveBeenCalled();
+  });
+
+  it("web 平台 + 授权态 revoked → 状态文案 revoked", async () => {
+    isWebPlatformMock.mockReturnValue(true);
+    getFsaAuthStateMock.mockResolvedValue("revoked");
+    const { root } = makeRoot();
+    await initSettings(root);
+    await waitFor(
+      () => (root.getElementById("web-repo-auth-status") as HTMLElement).textContent !== "",
+    );
+    expect((root.getElementById("web-repo-auth-status") as HTMLElement).textContent).toBe(
+      t("settings.webRepo.revoked"),
+    );
+  });
+
+  it("web 平台 + 授权态 granted → 自动重扫 + 状态含导入数 + repo:rtype-changed", async () => {
+    isWebPlatformMock.mockReturnValue(true);
+    getFsaAuthStateMock.mockResolvedValue("granted");
+    rescanFsaRootMock.mockResolvedValue({ ok: true, imported: 3, failed: 0, dir: "/lr" });
+    const { root } = makeRoot();
+    await initSettings(root);
+    await waitFor(() => busEmit.mock.calls.some((c) => c[0] === "repo:rtype-changed"));
+    expect(rescanFsaRootMock).toHaveBeenCalledTimes(1);
+    expect((root.getElementById("web-repo-auth-status") as HTMLElement).textContent).toContain("3");
+  });
+
+  it("applyFsaState 自愈失败（getFsaAuthState 拒绝）→ 静默", async () => {
+    isWebPlatformMock.mockReturnValue(true);
+    getFsaAuthStateMock.mockRejectedValue(new Error("fsa down"));
+    const { root } = makeRoot();
+    await initSettings(root);
+    await new Promise((r) => setTimeout(r, 0));
+    expect((root.getElementById("web-repo-auth-status") as HTMLElement).textContent).toBe("");
+  });
+
+  it("web 平台点击授权：浏览器不支持 showDirectoryPicker → unsupported 文案", async () => {
+    isWebPlatformMock.mockReturnValue(true);
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("web-repo-auth-btn") as HTMLElement).click();
+    await waitFor(
+      () =>
+        (root.getElementById("web-repo-auth-status") as HTMLElement).textContent ===
+        t("settings.webRepo.unsupported"),
+    );
+    expect(selectLocalRepoMock).not.toHaveBeenCalled();
+  });
+
+  it("web 平台点击授权：成功 → repo:rtype-changed + 按钮恢复", async () => {
+    isWebPlatformMock.mockReturnValue(true);
+    selectLocalRepoMock.mockResolvedValue({ ok: true, imported: 5, failed: 1, dir: "/lr" });
+    const restore = await stubPicker();
+    const { root } = makeRoot();
+    try {
+      await initSettings(root);
+      (root.getElementById("web-repo-auth-btn") as HTMLElement).click();
+      await waitFor(() => busEmit.mock.calls.some((c) => c[0] === "repo:rtype-changed"));
+      const btn = root.getElementById("web-repo-auth-btn") as HTMLButtonElement;
+      const status = root.getElementById("web-repo-auth-status") as HTMLElement;
+      expect(btn.disabled).toBe(false); // finally 恢复
+      expect(status.textContent).not.toBe(t("settings.webRepo.scanning"));
+    } finally {
+      restore();
+    }
+  });
+
+  it("web 平台点击授权：selectLocalRepo 拒绝 → 状态显示友好错误 + 按钮恢复", async () => {
+    isWebPlatformMock.mockReturnValue(true);
+    selectLocalRepoMock.mockRejectedValue(new Error("pick boom"));
+    const restore = await stubPicker();
+    const { root } = makeRoot();
+    try {
+      await initSettings(root);
+      (root.getElementById("web-repo-auth-btn") as HTMLElement).click();
+      await waitFor(
+        () =>
+          (root.getElementById("web-repo-auth-status") as HTMLElement).textContent === "pick boom",
+      );
+      expect((root.getElementById("web-repo-auth-btn") as HTMLButtonElement).disabled).toBe(false);
+    } finally {
+      restore();
+    }
   });
 });

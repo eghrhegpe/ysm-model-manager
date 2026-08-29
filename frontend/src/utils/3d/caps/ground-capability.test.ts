@@ -3,7 +3,7 @@
 // 覆盖：apply 挂入场景（GridHelper）、setVisible/getVisible 开关切换、
 // 默认可见/参数覆盖、dispose 移除并释放、表面材质层（spec 单源：重建/原地区分、显隐跟随、自定义贴图缓存、持久化回退）。
 // 注：水面已拆为独立 WaterCapability（见 water-capability.test.ts）。
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as THREE from "three";
 import { GroundCapability, DEFAULT_GROUND_PARAMS } from "./ground-capability.ts";
 import { persistState } from "./scene-capability.ts";
@@ -255,3 +255,184 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     });
   });
 });
+
+// ============ 启用切换：enabled × 显隐/挂载门控 ============
+describe("GroundCapability — 启用切换", () => {
+  it("setEnabled(false) 把 grid/surface 从场景移除；再启用重新挂入", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    expect(scene.getObjectByName("ysm-ground")).toBeDefined();
+    cap.setEnabled(false);
+    expect(scene.getObjectByName("ysm-ground")).toBeUndefined();
+    expect(scene.getObjectByName("ysm-ground-surface")).toBeUndefined();
+    cap.setEnabled(true);
+    expect(scene.getObjectByName("ysm-ground")).toBeDefined();
+    expect(scene.getObjectByName("ysm-ground-surface")).toBeDefined();
+  });
+
+  it("disabled 时仅移除挂载，surface.visible 标志不被改写（门控只走 refreshSurface/setVisible）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene, params: { matSource: "checker" } });
+    cap.apply();
+    const surface = (cap as unknown as { surface: THREE.Mesh }).surface;
+    expect(surface.visible).toBe(true);
+    cap.setEnabled(false);
+    expect(surface.parent).toBeNull(); // 移除挂载
+    expect(surface.visible).toBe(true); // visible 标志保持（setEnabled 不调 updateSurfaceVisible）
+    cap.setEnabled(true);
+    expect(surface.parent).toBe(scene);
+    expect(surface.visible).toBe(true);
+  });
+});
+
+// ============ 材质参数 setter 批量（全部经 refreshSurface 单路径）============
+describe("GroundCapability — 材质参数 setter 批量", () => {
+  it("全部 setter 落地 params（含 clamp/取模）且 getter 回读一致", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene, params: { matSource: "checker" } });
+    cap.setMatLineColor(0x112233);
+    cap.setMatGridSize(16.7); // round → 17
+    cap.setMatGridSize(1); // clamp min 2
+    cap.setMatOpacity(2); // clamp 1
+    cap.setMatOpacity(-1); // clamp 0
+    cap.setMatScale(100); // clamp 8
+    cap.setMatScale(0.1); // clamp 0.25
+    cap.setMatRotation(450); // %360 → 90
+    cap.setMatRotation(-90); // → 270
+    cap.setMatRoughness(5); // clamp 1
+    cap.setMatMetalness(-2); // clamp 0
+    cap.setMatColor2(0xaabbcc);
+    cap.setMatDensity(20); // clamp 8
+    cap.setMatAngle(400); // → 40
+
+    expect(cap.getMatOpacity()).toBe(0);
+    expect(cap.getMatScale()).toBe(0.25);
+    expect(cap.getMatRotation()).toBe(270);
+    expect(cap.getMatRoughness()).toBe(1);
+    expect(cap.getMatMetalness()).toBe(0);
+    expect(cap.getMatColor2()).toBe(0xaabbcc);
+    expect(cap.getMatDensity()).toBe(8);
+    expect(cap.getMatAngle()).toBe(40);
+    const p = (cap as unknown as { params: Record<string, number> }).params;
+    expect(p.matLineColor).toBe(0x112233);
+    expect(p.matGridSize).toBe(2);
+  });
+
+  it("acceptLoadedTexture 两次：旧缓存被释放，材质/hint 换新图", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    const tex1 = new THREE.DataTexture(new Uint8Array(16), 2, 2);
+    const tex2 = new THREE.DataTexture(new Uint8Array(16), 2, 2);
+    const disposeSpy = vi.spyOn(tex1, "dispose");
+    cap.acceptLoadedTexture(tex1, "a.png");
+    cap.acceptLoadedTexture(tex2, "b.png");
+    expect(disposeSpy).toHaveBeenCalled(); // 旧缓存释放
+    const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    expect(mat.map).toBe(tex2);
+    const hint = cap.getMenuControls().find((c) => c.id === "ground-mat-texture")!.button!.getHint!();
+    expect(hint).toContain("b.png");
+  });
+
+  it("dispose 时释放程序化表面纹理（非 custom 缓存归属）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene, params: { matSource: "checker" } });
+    cap.apply();
+    const surfaceTex = (cap as unknown as { surfaceTex: THREE.Texture }).surfaceTex;
+    expect(surfaceTex).not.toBeNull();
+    const disposeSpy = vi.spyOn(surfaceTex!, "dispose");
+    cap.dispose();
+    expect(disposeSpy).toHaveBeenCalled();
+  });
+});
+
+// ============ 菜单控件联动 ============
+describe("GroundCapability — 菜单控件联动", () => {
+  it("visible toggle 与 mat-source select 联动", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const controls = cap.getMenuControls();
+    const visibleCtrl = controls.find((c) => c.id === "ground-visible")!;
+    visibleCtrl.setValue(false);
+    expect(cap.getVisible()).toBe(false);
+    expect(visibleCtrl.getValue()).toBe(false);
+    const sourceCtrl = controls.find((c) => c.id === "ground-mat-source")!;
+    sourceCtrl.setValue("stripes");
+    expect(cap.getMatSource()).toBe("stripes");
+    expect(sourceCtrl.getValue()).toBe("stripes");
+  });
+
+  it("材质参数控件 setValue/getValue 全联动（texture 模式下可见）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene, params: { matSource: "checker" } });
+    const controls = cap.getMenuControls();
+    const by = (id: string): MenuControlDefOf => controls.find((c) => c.id === id)!;
+    by("ground-mat-color").setValue(0xff8800);
+    by("ground-mat-color2").setValue(0x00ff88);
+    by("ground-mat-line-color").setValue(0x445566);
+    by("ground-mat-grid-size").setValue(12);
+    by("ground-mat-density").setValue(4);
+    by("ground-mat-angle").setValue(45);
+    by("ground-mat-opacity").setValue(0.5);
+    by("ground-mat-scale").setValue(2);
+    by("ground-mat-rotation").setValue(30);
+    by("ground-mat-roughness").setValue(0.8);
+    by("ground-mat-metalness").setValue(0.2);
+    expect(by("ground-mat-color").getValue()).toBe(0xff8800);
+    expect(by("ground-mat-color2").getValue()).toBe(0x00ff88);
+    expect(by("ground-mat-line-color").getValue()).toBe(0x445566);
+    expect(by("ground-mat-grid-size").getValue()).toBe(12);
+    expect(by("ground-mat-density").getValue()).toBe(4);
+    expect(by("ground-mat-angle").getValue()).toBe(45);
+    expect(by("ground-mat-opacity").getValue()).toBe(0.5);
+    expect(by("ground-mat-scale").getValue()).toBe(2);
+    expect(by("ground-mat-rotation").getValue()).toBe(30);
+    expect(by("ground-mat-roughness").getValue()).toBe(0.8);
+    expect(by("ground-mat-metalness").getValue()).toBe(0.2);
+  });
+
+  it("button 控件：getValue null、setValue no-op、visible 随模式切换", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const pick = cap.getMenuControls().find((c) => c.id === "ground-mat-texture")!;
+    const clear = cap.getMenuControls().find((c) => c.id === "ground-mat-clear")!;
+    // none 模式隐藏
+    expect(pick.visible?.()).toBe(false);
+    expect(clear.visible?.()).toBe(false);
+    expect(pick.getValue()).toBeNull();
+    expect(() => pick.setValue("x")).not.toThrow();
+    expect(() => clear.setValue("x")).not.toThrow();
+    // texture 模式显示
+    cap.setMatSource("texture");
+    expect(pick.visible?.()).toBe(true);
+    expect(clear.visible?.()).toBe(true);
+    // 清除按钮 action → clearCustomTexture 回 plain
+    clear.button!.action!();
+    expect(cap.getMatSource()).toBe("plain");
+  });
+
+  it("选择贴图按钮 action 触发文件选择器（mock input，node 环境）", () => {
+    const fakeInput = {
+      type: "",
+      accept: "",
+      onchange: null as unknown,
+      click(): void { /* node 下不做真实选择 */ },
+    };
+    const stub = vi.stubGlobal("document", {
+      createElement: (tag: string) => (tag === "input" ? fakeInput : null),
+    });
+    try {
+      const scene = new THREE.Scene();
+      const cap = new GroundCapability({ scene, params: { matSource: "texture" } });
+      const pick = cap.getMenuControls().find((c) => c.id === "ground-mat-texture")!;
+      expect(() => pick.button!.action!()).not.toThrow();
+      expect(fakeInput.type).toBe("file");
+      expect(fakeInput.accept).toBe("image/*");
+    } finally {
+      stub.unstubAllGlobals();
+    }
+  });
+});
+
+type MenuControlDefOf = ReturnType<GroundCapability["getMenuControls"]>[number];

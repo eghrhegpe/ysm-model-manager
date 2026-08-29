@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import { AlphaIndex } from "./alpha-index.ts";
 import { getTextureAlphaInfo, getTextureAlphaMode } from "./texture-alpha.ts";
 
@@ -102,5 +102,73 @@ describe("getTextureAlphaInfo", () => {
       [40, 50, 60, 0],
     ]);
     expect(getTextureAlphaInfo(tex)).toBe(getTextureAlphaInfo(tex));
+  });
+});
+
+// ===== 覆盖率补强：非 DataTexture 路径（image null / canvas 2d 采样 / 容错）=====
+describe("getTextureAlphaMode — readRgbaPixels 非 data 路径", () => {
+  it("image 缺失 → 像素不可读回退 opaque（index null）", () => {
+    const tex = new THREE.Texture(); // image 默认 undefined
+    const info = getTextureAlphaInfo(tex);
+    expect(info.mode).toBe("opaque");
+    expect(info.index).toBeNull();
+  });
+
+  function stubCanvas(
+    getImageData: () => { data: Uint8ClampedArray; width: number; height: number } | never,
+    opts: { ctxNull?: boolean; drawThrows?: boolean } = {},
+  ): void {
+    const ctx = {
+      drawImage: () => {
+        if (opts.drawThrows) throw new Error("tainted");
+      },
+      getImageData,
+    };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => (opts.ctxNull ? null : ctx),
+    };
+    vi.spyOn(document, "createElement").mockImplementation(((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return document.createElement(tag as keyof HTMLElementTagNameMap);
+    }) as typeof document.createElement);
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("HTMLImage 形态 image → canvas 2d 缩小采样并按像素分类（blend）", () => {
+    stubCanvas(() => ({
+      // 2x2：3 个不透明 + 1 个半透明 → 25% > 5% → blend
+      data: new Uint8ClampedArray([
+        10, 20, 30, 255, 40, 50, 60, 255,
+        70, 80, 90, 255, 0, 0, 0, 128,
+      ]),
+      width: 2,
+      height: 2,
+    }));
+    const tex = new THREE.Texture();
+    tex.image = { naturalWidth: 1024, naturalHeight: 1024 } as unknown as HTMLImageElement;
+    expect(getTextureAlphaMode(tex)).toBe("blend");
+    // 采样封顶 256px
+    const info = getTextureAlphaInfo(tex)!;
+    expect(info.width).toBe(256);
+    expect(info.height).toBe(256);
+  });
+
+  it("canvas getContext 返回 null → 回退 opaque", () => {
+    stubCanvas((() => ({})) as never, { ctxNull: true });
+    const tex = new THREE.Texture();
+    tex.image = { naturalWidth: 64, naturalHeight: 64 } as unknown as HTMLImageElement;
+    expect(getTextureAlphaMode(tex)).toBe("opaque");
+  });
+
+  it("drawImage 抛错（tainted）→ catch 回退 opaque（保持渲染）", () => {
+    stubCanvas((() => ({})) as never, { drawThrows: true });
+    const tex = new THREE.Texture();
+    tex.image = { naturalWidth: 64, naturalHeight: 64 } as unknown as HTMLImageElement;
+    expect(getTextureAlphaMode(tex)).toBe("opaque");
   });
 });

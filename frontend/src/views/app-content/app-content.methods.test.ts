@@ -566,3 +566,144 @@ describe("纯函数（直引 util：formatBytes / esc，AppContent 不再持有�
     expect(esc(undefined as unknown as string)).toBe("");
   });
 });
+
+// ===== 覆盖率补强：init-pages 直接导出 / 键盘导航 / 懒初始化失败复位 =====
+import {
+  initDiagnosticsPage,
+  initInstancesPage,
+  initRepositoryPage,
+  initSettingsPage,
+  rememberModelPath,
+  getLastModelPath,
+} from "./init-pages.ts";
+import type { Mock } from "vitest";
+
+describe("init-pages — 直接导出函数（初始化防御分支）", () => {
+  it("initDiagnosticsPage → initDiagnostics 接管 root（22）", async () => {
+    const el = mountContent();
+    const diag = await import("./diagnostics/init.ts");
+    initDiagnosticsPage(el as never);
+    expect(diag.initDiagnostics).toHaveBeenCalledWith(el._root, expect.any(Function));
+  });
+
+  it("initInstancesPage 幂等（33）：二次调用不再注册监听；package:selected 空 rtype 早退（42）", async () => {
+    const el = mountContent();
+    initInstancesPage(el as never); // 首次 → 注册 package:selected
+    const before = el._unsubs.length;
+    initInstancesPage(el as never); // 二次 → insKey 早退（33）
+    expect(el._unsubs.length).toBe(before);
+    // 渲染 instances 页拿到 #ins-content → 空 rtype 防御性 return（42）
+    el._current = "instances";
+    el._render();
+    await flushAsyncTurns();
+    bus.emit("package:selected", { name: "X", rtype: "" });
+    await flushAsyncTurns();
+    expect(
+      el.shadowRoot.querySelector("#ins-content app-sync-manager"),
+    ).toBeNull();
+  });
+
+  it("空 root host → bindTabs 无 tab 早退（100）+ mountTree 无树体兜底（68）", () => {
+    const host = {
+      _root: document.createElement("div").attachShadow({ mode: "open" }),
+      _unsubs: [] as Array<() => void>,
+    };
+    initRepositoryPage(host as never);
+    expect(host._unsubs).toHaveLength(1); // 仅 repo:rtype-changed 订阅
+  });
+
+  it("initSettingsPage：initSettings 拒绝 → console.error + toast（280-281）", async () => {
+    const el = mountContent();
+    el._current = "settings";
+    el._render();
+    await flushAsyncTurns();
+    const settingsMod = await import("./settings/init.ts");
+    (settingsMod.initSettings as Mock).mockRejectedValueOnce(new Error("settings boom"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const toasts: Array<{ type?: string }> = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p as never));
+    try {
+      await initSettingsPage(el as never);
+    } finally {
+      off();
+      err.mockRestore();
+    }
+    expect(toasts.some((t) => t.type === "error")).toBe(true);
+  });
+
+  it("rememberModelPath / getLastModelPath 存取（304/308）", () => {
+    rememberModelPath("/m/狐.ysm");
+    expect(getLastModelPath()).toBe("/m/狐.ysm");
+    rememberModelPath(null);
+    expect(getLastModelPath()).toBeNull();
+  });
+});
+
+describe("_bindTabs — WAI-ARIA 键盘导航（188-212）", () => {
+  async function renderRepo() {
+    const el = mountContent();
+    el._current = "repository";
+    el._render();
+    await flushAsyncTurns();
+    const tabs = Array.from(el.shadowRoot.querySelectorAll<HTMLElement>(".repo-tab"));
+    return { el, tabs };
+  }
+
+  it("ArrowRight → 下一 tab 自动激活（含懒初始化）", async () => {
+    const { tabs } = await renderRepo();
+    tabs[0].focus();
+    tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    await flushAsyncTurns();
+    expect(tabs[1].classList.contains("active")).toBe(true); // recycle
+    expect(tabs[1].getAttribute("aria-selected")).toBe("true");
+    expect(tabs[1].getAttribute("tabindex")).toBe("0");
+  });
+
+  it("ArrowLeft / Home / End → roving 焦点切换并激活", async () => {
+    const { tabs } = await renderRepo();
+    tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    await flushAsyncTurns();
+    expect(tabs[tabs.length - 1].classList.contains("active")).toBe(true); // oldest（268/164）
+    tabs[tabs.length - 1].dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
+    );
+    await flushAsyncTurns();
+    expect(tabs[tabs.length - 2].classList.contains("active")).toBe(true); // dedup
+    tabs[tabs.length - 2].dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Home", bubbles: true }),
+    );
+    await flushAsyncTurns();
+    expect(tabs[0].classList.contains("active")).toBe(true);
+  });
+
+  it("Enter / Space → 当前列表自动激活", async () => {
+    const { el, tabs } = await renderRepo();
+    tabs[2].focus(); // dedup
+    tabs[2].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await flushAsyncTurns();
+    expect(tabs[2].classList.contains("active")).toBe(true);
+    tabs[3].dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    await flushAsyncTurns();
+    expect(tabs[3].classList.contains("active")).toBe(true);
+    void el;
+  });
+
+  it("懒初始化失败 → inited 复位可重试 + 错误 toast（167-168）", async () => {
+    const { el, tabs } = await renderRepo();
+    const toasts: Array<{ msg?: string; type?: string }> = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p as never));
+    (initRecycleBin as Mock).mockImplementationOnce(() => {
+      throw new Error("recycle boom");
+    });
+    tabs[1].click(); // recycle 首次 → 失败
+    await flushAsyncTurns();
+    expect(toasts.some((t) => t.type === "error")).toBe(true);
+    // 二次点击 → inited 已复位 → 重试（成功）
+    (initRecycleBin as Mock).mockResolvedValueOnce(() => {});
+    tabs[1].click();
+    await flushAsyncTurns();
+    expect(initRecycleBin).toHaveBeenCalledTimes(2);
+    off();
+    void el;
+  });
+});

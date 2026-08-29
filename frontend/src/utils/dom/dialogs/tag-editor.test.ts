@@ -33,6 +33,7 @@ vi.mock("../../../backend/app.ts", () => ({
 }));
 
 import { modalTagEditor } from "./tag-editor.ts";
+import { t } from "../../../core/i18n/t.ts";
 
 async function open(modelPath = "/m/a.ysm") {
   const pending = modalTagEditor(modelPath);
@@ -97,5 +98,121 @@ describe("modalTagEditor — 正常加载保存", () => {
 
     expect(mocks.SetModelTags).toHaveBeenCalledWith("/m/a.ysm", ["a", "b"]);
     expect(result).toEqual(["a", "b"]);
+  });
+});
+
+// ===== 覆盖率补强：标签增删 / 建议区 / 关闭路径 / disposed 竞态 =====
+describe("modalTagEditor — 标签增删与建议区", () => {
+  it("te-tag-del 点击 → 移除对应标签，保存携带剩余项", async () => {
+    mocks.GetModelTags.mockResolvedValue(["a", "b"]);
+    const { overlay, pending } = await open();
+    overlay.querySelector<HTMLButtonElement>(".te-tag-del[data-tag=\"a\"]")!.click();
+    expect(overlay.querySelectorAll(".te-tag")).toHaveLength(1);
+    overlay.querySelector<HTMLButtonElement>("#te-save")!.click();
+    await vi.waitFor(() => expect(mocks.SetModelTags).toHaveBeenCalled());
+    expect(mocks.SetModelTags).toHaveBeenCalledWith("/m/a.ysm", ["b"]);
+    expect(await pending).toEqual(["b"]);
+  });
+
+  it("建议区：未使用标签渲染 + 点击加标签（排序并入）；无未用标签 → 提示占位", async () => {
+    mocks.GetModelTags.mockResolvedValue(["a"]);
+    mocks.AllTags.mockResolvedValue(["c", "b"]);
+    const { overlay, pending } = await open();
+    const sug = overlay.querySelector("#te-suggest") as HTMLElement;
+    expect(sug.querySelectorAll(".te-sug-btn")).toHaveLength(2);
+    sug.querySelector<HTMLButtonElement>(".te-sug-btn[data-tag=\"b\"]")!.click();
+    expect(overlay.querySelector("#te-tags")!.textContent).toContain("b");
+    // 保存 → ["a","b"]（sort 后）
+    overlay.querySelector<HTMLButtonElement>("#te-save")!.click();
+    await vi.waitFor(() => expect(mocks.SetModelTags).toHaveBeenCalled());
+    expect(await pending).toEqual(["a", "b"]);
+  });
+
+  it("全部标签都已使用 → 建议区显示无其他标签占位", async () => {
+    mocks.GetModelTags.mockResolvedValue(["a"]);
+    mocks.AllTags.mockResolvedValue(["a"]);
+    const { overlay } = await open();
+    const sug = overlay.querySelector("#te-suggest") as HTMLElement;
+    expect(sug.querySelectorAll(".te-sug-btn")).toHaveLength(0);
+    expect(sug.textContent).toContain(t("dialog.noOtherTags"));
+  });
+
+  it("输入空串 Enter / add 按钮 → 不新增", async () => {
+    const { overlay, pending } = await open();
+    const input = overlay.querySelector("#te-input") as HTMLInputElement;
+    input.value = "   ";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(overlay.querySelectorAll(".te-tag")).toHaveLength(0);
+    // add 按钮路径：合法标签经按钮新增
+    input.value = "k";
+    overlay.querySelector<HTMLButtonElement>("#te-add")!.click();
+    expect(overlay.querySelectorAll(".te-tag")).toHaveLength(1);
+    overlay.querySelector<HTMLButtonElement>("#te-cancel")!.click();
+    expect(await pending).toBeNull();
+  });
+});
+
+describe("modalTagEditor — 关闭路径与 disposed 竞态", () => {
+  it("overlay 空白点击 → close(null)；Escape → close(null)", async () => {
+    const { overlay, pending } = await open();
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(await pending).toBeNull();
+  });
+
+  it("Escape 键 → close(null)", async () => {
+    const { overlay, pending } = await open();
+    overlay.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(await pending).toBeNull();
+  });
+
+  it("registerDlg 注册的 ESC 回调可关窗（closeDlg(overlay, resolve, null)）", async () => {
+    const { pending } = await open();
+    const [, registeredClose] = registerDlgMock.mock.calls[0] as unknown as [
+      unknown,
+      () => void,
+    ];
+    registeredClose();
+    expect(await pending).toBeNull();
+  });
+
+  it("save 时已 disposed → getApp 后早退，不写回", async () => {
+    let resolveTags: (v: string[]) => void = () => {};
+    mocks.GetModelTags.mockImplementationOnce(
+      () => new Promise<string[]>((r) => (resolveTags = r)),
+    );
+    const pending = modalTagEditor("/m/d.ysm");
+    await new Promise((r) => setTimeout(r, 0)); // 加载链挂起
+    const overlay = document.querySelector(".dlg-overlay")!;
+    overlay.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); // disposed = true
+    expect(await pending).toBeNull();
+    resolveTags(["a"]);
+    await new Promise((r) => setTimeout(r, 0)); // 恢复后 disposed 早退（162/175）
+    // 保存点击：disposed → getApp 后 204 早退，SetModelTags 不调
+    (overlay.querySelector("#te-save") as HTMLButtonElement).click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.SetModelTags).not.toHaveBeenCalled();
+  });
+
+  it("SetModelTags 在途时关闭 → 恢复后 disposed 早退，不以保存结果关窗（206）", async () => {
+    let resolveSet: (v: undefined) => void = () => {};
+    mocks.SetModelTags.mockImplementationOnce(
+      () => new Promise<void>((r) => (resolveSet = r)),
+    );
+    const { overlay, pending } = await open();
+    overlay.querySelector<HTMLButtonElement>("#te-save")!.click();
+    await vi.waitFor(() => expect(mocks.SetModelTags).toHaveBeenCalled());
+    overlay.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(await pending).toBeNull();
+    resolveSet(undefined); // SetModelTags 完成 → 206 disposed 早退
+    await new Promise((r) => setTimeout(r, 0));
+  });
+
+  it("SetModelTags 拒绝 → 错误文案写入 errEl（209）", async () => {
+    mocks.SetModelTags.mockRejectedValueOnce(new Error("save boom"));
+    const { overlay, pending, errEl } = await open();
+    overlay.querySelector<HTMLButtonElement>("#te-save")!.click();
+    await vi.waitFor(() => expect(errEl.textContent).toContain("save boom"));
+    overlay.querySelector<HTMLButtonElement>("#te-cancel")!.click();
+    expect(await pending).toBeNull();
   });
 });

@@ -44,6 +44,7 @@ const hoisted = vi.hoisted(() => {
     loaderParsers,
     deepDisposeCalls,
     vrmUtilsMock: vi.fn(),
+    rotateVRM0: vi.fn(),
     deepDispose: vi.fn(),
     createAnimClip: vi.fn(),
     parseMock: vi.fn(),
@@ -110,7 +111,7 @@ vi.mock("@pixiv/three-vrm", () => ({
     }
   },
   VRMUtils: {
-    rotateVRM0: vi.fn(),
+    rotateVRM0: hoisted.rotateVRM0,
     deepDispose: hoisted.deepDispose,
   },
 }));
@@ -901,5 +902,285 @@ describe("readVrmMeta 场景统计（ADR-131 P2）", () => {
       textureCount: 0,
       morphCount: 0,
     });
+  });
+});
+
+// ===== 覆盖率攻坚：readVrmMeta 分支 / metaVersion 0 / 桥消费 / dispose 纹理统计 =====
+
+describe("readVrmMeta 分支补全", () => {
+  /** 带 fake canvas 的 document（imageToDataURL 走 drawImage + toDataURL） */
+  function stubCanvasDocument(): void {
+    const originalCreateElement = (document as unknown as { createElement: (tag: string) => HTMLElement })
+      .createElement;
+    vi.stubGlobal("document", {
+      createElement: (tag: string): unknown => {
+        if (tag === "canvas") {
+          return {
+            width: 0,
+            height: 0,
+            getContext: () => ({ drawImage: vi.fn() }),
+            toDataURL: () => "data:image/png;base64,THUMB",
+          };
+        }
+        return originalCreateElement(tag);
+      },
+    } as unknown as typeof document);
+  }
+
+  it("VRM0 meta → restrictions 归一 + thumbnail dataURL（meta.texture 走 imageToDataURL）", async () => {
+    stubCanvasDocument();
+    const vrm = makeFakeVrm();
+    vrm.meta = {
+      metaVersion: "0" as const,
+      title: "初音",
+      author: "作者A",
+      version: "0.1",
+      licenseName: "CC0",
+      otherLicenseUrl: "https://lic.example",
+      contactInformation: "@contact",
+      texture: { image: { width: 4, height: 4 } },
+      allowedUserName: "Everyone",
+      commercialUssageName: "Allow",
+      sexualUssageName: "Disallow",
+      violentUssageName: "Allow",
+      reference: "https://ref.example",
+    } as never;
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+
+    const info = await readVrmMeta("/vrm/v0.vrm", hoisted.readBytesMock);
+    expect(info).not.toBeNull();
+    expect(info!.metaVersion).toBe("0");
+    expect(info!.name).toBe("初音");
+    expect(info!.authors).toEqual(["作者A"]);
+    expect(info!.license).toBe("CC0 · https://lic.example");
+    expect(info!.contact).toBe("@contact");
+    expect(info!.thumbnail).toBe("data:image/png;base64,THUMB");
+    expect(info!.restrictions).toEqual({
+      allowedUser: "everyone",
+      commercial: true,
+      sexual: false,
+      violent: true,
+      reference: "https://ref.example",
+    });
+  });
+
+  it("readFn 返回空 / parse 抛错 → 返回 null（catch 静默）", async () => {
+    hoisted.readBytesMock.mockResolvedValue(null);
+    expect(await readVrmMeta("/vrm/missing.vrm", hoisted.readBytesMock)).toBeNull();
+
+    hoisted.readBytesMock.mockResolvedValue(btoa("BAD"));
+    hoisted.parseMock.mockImplementation(() => { throw new Error("corrupt glb"); });
+    expect(await readVrmMeta("/vrm/bad.vrm", hoisted.readBytesMock)).toBeNull();
+  });
+
+  it("缩略图 toDataURL 抛错 → imageToDataURL catch 返回空串（meta 仍返回）", async () => {
+    // canvas.toDataURL 抛错（happy-dom 环境异常）→ imageToDataURL 静默降级 ""
+    vi.stubGlobal("document", {
+      createElement: (tag: string): unknown => {
+        if (tag === "canvas") {
+          return {
+            width: 0,
+            height: 0,
+            getContext: () => ({ drawImage: vi.fn() }),
+            toDataURL: () => { throw new Error("canvas broken"); },
+          };
+        }
+        return document.createElement(tag);
+      },
+    } as unknown as typeof document);
+    const vrm = makeFakeVrm();
+    vrm.meta = {
+      metaVersion: "0" as const,
+      title: "x",
+      texture: { image: { width: 4, height: 4 } },
+    } as never;
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+
+    const info = await readVrmMeta("/vrm/thumb-broken.vrm", hoisted.readBytesMock);
+    expect(info).not.toBeNull();
+    expect(info!.thumbnail).toBe("");
+  });
+});
+
+describe("buildVrmScene metaVersion 0", () => {
+  it("VRM0 → rotateVRM0 摆正分支触发", async () => {
+    const vrm = makeFakeVrm();
+    (vrm.meta as { metaVersion: string }).metaVersion = "0";
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+
+    const { ctx } = makeCtx();
+    const built = await buildVrmScene(ctx, "/vrm/v0.vrm", makePort(), hoisted.readBytesMock);
+    // rotateVRM0 是 vi.mock 工厂里的 vi.fn → 经 hoisted.vrmUtilsMock 不存在，直接断言调用过
+    expect(hoisted.rotateVRM0).toHaveBeenCalledWith(vrm);
+    built.dispose();
+  });
+});
+
+describe("桥消费（material / play / screenshot / 感知 update）", () => {
+  function makeVrmWithMaterials(materials: THREE.Material[]): ReturnType<typeof makeFakeVrm> {
+    const vrm = makeFakeVrm();
+    for (const m of materials) {
+      vrm.scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), m));
+    }
+    return vrm;
+  }
+
+  it("materialNodes eye/opacity control → 消费 vrm-materials 桥（visible/opacity 透传）", async () => {
+    const vrm = makeVrmWithMaterials([
+      new THREE.MeshBasicMaterial(),
+      new THREE.MeshBasicMaterial(),
+    ]);
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    // listVrmMaterials / getVrmMaterialDetail 已在文件头 mock → 重配置返回非空列表
+    const { listVrmMaterials, getVrmMaterialDetail, setVrmMaterialVisible, setVrmMaterialOpacity } =
+      await import("../vrm-materials.ts");
+    (listVrmMaterials as ReturnType<typeof vi.fn>).mockReturnValue([
+      { index: 0, name: "服" },
+      { index: 1, name: "肌" },
+    ]);
+    (getVrmMaterialDetail as ReturnType<typeof vi.fn>).mockImplementation(
+      (_mats: unknown, i: number) => ({ index: i, name: `m${i}`, visible: true, opacity: 1, transparent: false, type: "mtoon" as const }),
+    );
+
+    const { ctx } = makeCtx();
+    const built = await buildVrmScene(ctx, "/vrm/mat.vrm", makePort(), hoisted.readBytesMock);
+    const matItem = built.menuItems?.find((i) => i.id === "material") as {
+      children?: Array<{ eye?: { get: () => boolean; set: (v: boolean) => void }; opacity?: { get: () => number; set: (v: number) => void } }>;
+    };
+    const row = matItem?.children?.find((c) => c.eye && c.opacity);
+    expect(row).toBeDefined();
+    expect(row!.eye!.get()).toBe(true);
+    row!.eye!.set(false);
+    expect(setVrmMaterialVisible).toHaveBeenCalled();
+    expect(row!.opacity!.get()).toBe(100);
+    row!.opacity!.set(50);
+    expect(setVrmMaterialOpacity).toHaveBeenCalled();
+    built.dispose();
+  });
+
+  it("无原生 lookAt → gaze 控制器兜底（update 驱动 + dispose 释放）", async () => {
+    const vrm = makeFakeVrm();
+    (vrm as { lookAt?: unknown }).lookAt = undefined; // 关闭原生 lookAt → gaze 兜底
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+
+    const { ctx, camera } = makeCtx();
+    const built = await buildVrmScene(ctx, "/vrm/gaze.vrm", makePort(), hoisted.readBytesMock);
+    built.update!(0.016);
+    const { createGazeController } = await import("../perception/gaze.ts");
+    const gaze = (createGazeController as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
+    expect(gaze.apply).toHaveBeenCalledWith(0.016, expect.anything(), camera.position);
+    built.dispose();
+    expect(gaze.dispose).toHaveBeenCalled();
+  });
+
+  it("update 眨眼分支：expressionManager 存在 + 待机态 → blink.apply 注入 setValue 回调", async () => {
+    const vrm = makeFakeVrm();
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+
+    const { ctx } = makeCtx();
+    const built = await buildVrmScene(ctx, "/vrm/blink.vrm", makePort(), hoisted.readBytesMock);
+    built.update!(0.016);
+    const { createBlinkController } = await import("../perception/blink.ts");
+    const blink = (createBlinkController as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
+    expect(blink.apply).toHaveBeenCalledTimes(1);
+    // 回调写入 expressionManager.setValue
+    const setter = blink.apply.mock.calls[0][1] as (w: number) => void;
+    setter(0.5);
+    expect(vrm.expressionManager!.setValue).toHaveBeenCalledWith("blink", 0.5);
+    built.dispose();
+  });
+
+  it("play 桥：toggle 翻转播放态 + select 切换 clip（同 index / 越界早退）", async () => {
+    const vrm = makeFakeVrm();
+    hoisted.parseMock.mockImplementation((buffer: unknown, path: string) => {
+      void path;
+      if (hoisted.parseMock.mock.calls.length > 1) {
+        return { userData: { vrmAnimations: [{ name: "a" }] } };
+      }
+      return { userData: { vrm } };
+    });
+    hoisted.readBytesMock.mockImplementation((p: string) => {
+      if (p.endsWith(".vrma")) return Promise.resolve(btoa("VRMA"));
+      if (p.endsWith(".vrm")) return Promise.resolve(btoa("VRM"));
+      return Promise.resolve(null);
+    });
+    hoisted.listPathsMock.mockResolvedValue(["/vrm/t.vrm", "/vrm/a.vrma", "/vrm/b.vrma"]);
+    hoisted.createAnimClip.mockReturnValue(new THREE.AnimationClip("m", -1, []));
+
+    let bridge: Record<string, (...a: unknown[]) => unknown> | null = null;
+    const panels = makePanels();
+    panels.playNodes = (b) => {
+      bridge = b as unknown as Record<string, (...a: unknown[]) => unknown>;
+      return [];
+    };
+    const { ctx } = makeCtx();
+    const built = await buildVrmScene(ctx, "/vrm/t.vrm", makePort(), hoisted.readBytesMock, panels, hoisted.listPathsMock);
+    expect(bridge).not.toBeNull();
+
+    // toggle 翻转
+    const p0 = bridge!.isPlaying!() as boolean;
+    bridge!.toggle!();
+    expect(bridge!.isPlaying!()).toBe(!p0);
+    // select 切换
+    bridge!.select!(1);
+    expect(bridge!.currentIndex!()).toBe(1);
+    // 同 index / 越界早退
+    bridge!.select!(1);
+    bridge!.select!(99);
+    expect(bridge!.currentIndex!()).toBe(1);
+    built.dispose();
+  });
+
+  it("shotNodes 注入的 screenshot 能力可调用 + PreviewScene.screenshot", async () => {
+    const vrm = makeFakeVrm();
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    let gotShot: (() => Promise<string | null>) | null = null;
+    const panels = makePanels();
+    panels.shotNodes = (screenshot) => {
+      gotShot = screenshot;
+      return [];
+    };
+    const { ctx } = makeCtx();
+    const built = await buildVrmScene(ctx, "/vrm/shot.vrm", makePort(), hoisted.readBytesMock, panels);
+    await expect(gotShot!()).resolves.toBe("screenshot-url");
+    await expect(built.screenshot!()).resolves.toBe("screenshot-url");
+    built.dispose();
+  });
+});
+
+describe("dispose 纹理统计（gpu-release diag）", () => {
+  it("mesh 多材质 + map 纹理 → dispose 统计 texCount 上报", async () => {
+    const vrm = makeFakeVrm();
+    const matA = new THREE.MeshBasicMaterial();
+    matA.map = new THREE.Texture();
+    const matB = new THREE.MeshBasicMaterial();
+    matB.map = new THREE.Texture();
+    vrm.scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [matA, matB]));
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+
+    const { ctx } = makeCtx();
+    const port = makePort();
+    const built = await buildVrmScene(ctx, "/vrm/tex.vrm", port, hoisted.readBytesMock);
+    built.dispose();
+    expect(port.addOpLog).toHaveBeenCalledWith(
+      "gpu-release",
+      "/vrm/tex.vrm",
+      "ok",
+      expect.stringContaining("tex=2"),
+    );
   });
 });

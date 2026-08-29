@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   fillMmdModelPanel,
+  fillMmdShotPanel,
   mmdModelInfoNodes,
   mmdShotNodes,
   playNodes,
@@ -387,5 +388,30 @@ describe("边界条件", () => {
     const mat = new THREE.MeshBasicMaterial({ opacity: 1, transparent: false });
     setMmdMaterialOpacity([mat], 0, 0.8);
     expect(mat.transparent).toBe(true);
+  });
+});
+
+// ===== 覆盖率补强：fillMmdShotPanel（六角度截图按钮装配 + 点击触发截图链）=====
+describe("fillMmdShotPanel", () => {
+  it("screenshotFn 为 null → 早退不渲染任何按钮", () => {
+    const { ctx } = makeCtx();
+    const list = document.createElement("div");
+    fillMmdShotPanel(list, ctx, null);
+    expect(list.children).toHaveLength(0);
+  });
+
+  it("有 screenshotFn → 装配 6 个角度按钮（data-testid shot-*），点击触发截图链", async () => {
+    const { ctx } = makeCtx();
+    const fn = vi.fn(async () => "data:image/png;base64,AAA");
+    const list = document.createElement("div");
+    fillMmdShotPanel(list, ctx, fn);
+    const btns = list.querySelectorAll("button");
+    expect(btns).toHaveLength(6);
+    for (const key of ["current", "front", "45", "side", "back45", "all"]) {
+      expect(list.querySelector(`[data-testid="shot-${key}"]`)).toBeTruthy();
+    }
+    // 点击「当前视角」→ makeShotAction → saveScreenshot → screenshotFn()
+    (list.querySelector('[data-testid="shot-current"]') as HTMLElement).click();
+    await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1), { timeout: 3000 });
   });
 });

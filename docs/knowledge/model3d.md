@@ -59,6 +59,7 @@ quick_risk_lines:
 | 坐标口径 / X 轴翻转 / trap #11 | [§ 坐标口径工具](#坐标口径工具) + [不变量](#不变量) |
 | 对外 API / 加载入口 | [§ 加载/桥接层](#加载桥接层) + [对外 API / 入口](#对外-api--入口) |
 | 废弃兜底 spec | [§ 工具/辅助层](#工具辅助层) |
+| 场景统计提取（骨骼/网格/三角面/材质/纹理/表情） | [§ 工具/辅助层](#工具辅助层) `scene-stats.ts` |
 
 ### 渲染会话（已收敛至统一核心）
 
@@ -110,6 +111,7 @@ export function computeBoneLocalPos(
 - `keymap.ts` — 键位/相机偏好持久化（`loadTdKeymap` / `loadTdCamSpeed` / `loadTdRotMode`）
 - `debug-render.ts` — debug 叠加层渲染（pivot 标记 / 骨骼线框）
 - `model3d-spec.ts` — JS 端 spec 类型定义与 `buildSpecFromModel` 构建器；`CUBE_EPS` 被 cube-mesh.ts 消费（零厚度面修正/合并 epsilon 单点），`fetchSpec` 被 model3d-loader.ts 调用。与 Go `threejs.Build()` 口径不一致（cubePivot/cubeOrigin 不做 X 取反），仅作前端 spec 类型枢纽与测试黄金样本使用
+- `scene-stats.ts` — **3D 场景统计提取器（ADR-131 P0）**：`collectSceneStats(roots)` 一次 traverse 出 `SceneStats`（boneCount / meshCount / triangleCount / materialCount / textureCount / morphCount）。材质/纹理按实例去重；骨骼 = `SkinnedMesh.skeleton.bones` ∪ 裸 Bone（Set 去重不双计）；表情数取 `morphTargetInfluences` 最长网格；Line/Points 不计入网格与三角面。纯函数零视图依赖，供 mount-preview-core post-build 挂点采统计（「能渲染就能出统计」），映射进 `StatsCardModel` 由视图层完成。实现陷阱：异步纹理 onLoad 前 `texture.image` 为 null，本提取器只计纹理数，尺寸由调用方 onLoad 后补
 
 ## 加载/桥接层
 

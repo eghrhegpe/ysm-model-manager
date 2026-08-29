@@ -312,7 +312,7 @@
 | `frontend/src/features/community/download-queue.ts` | 114 |
 | `frontend/src/features/import-executor.ts` | 34 |
 | `frontend/src/features/import-executor.ts` | 220 |
-| `frontend/src/features/pack-dnd.ts` | 160 |
+| `frontend/src/features/pack-dnd.ts` | 167 |
 | `frontend/src/features/recycle-bin.ts` | 107 |
 | `frontend/src/features/recycle-bin.ts` | 167 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
@@ -321,7 +321,7 @@
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
 | `frontend/src/views/app-sidebar/index.ts` | 320 |
 | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 155 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 139 |
 | `frontend/src/views/app-sync-manager/index.ts` | 220 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 67 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 136 |
@@ -420,10 +420,10 @@
 | `frontend/src/features/community/events.ts` | 311 |
 | `frontend/src/features/import-dnd.ts` | 39 |
 | `frontend/src/features/import-dnd.ts` | 57 |
-| `frontend/src/features/import-dnd.ts` | 75 |
-| `frontend/src/features/import-dnd.ts` | 84 |
-| `frontend/src/features/import-dnd.ts` | 99 |
-| `frontend/src/features/import-dnd.ts` | 185 |
+| `frontend/src/features/import-dnd.ts` | 76 |
+| `frontend/src/features/import-dnd.ts` | 86 |
+| `frontend/src/features/import-dnd.ts` | 102 |
+| `frontend/src/features/import-dnd.ts` | 188 |
 | `frontend/src/features/import-executor.ts` | 29 |
 | `frontend/src/features/import-executor.ts` | 211 |
 | `frontend/src/features/import-executor.ts` | 224 |
@@ -525,8 +525,8 @@
 | `frontend/src/views/app-sidebar/launcher-detect.ts` | 37 |
 | `frontend/src/views/app-sidebar/launcher-detect.ts` | 62 |
 | `frontend/src/views/app-sidebar/launcher-detect.ts` | 77 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 138 |
-| `frontend/src/views/app-sidebar/launcher-detect.ts` | 156 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 122 |
+| `frontend/src/views/app-sidebar/launcher-detect.ts` | 140 |
 | `frontend/src/views/app-sidebar/loader.ts` | 152 |
 | `frontend/src/views/app-sync-manager/index.ts` | 151 |
 | `frontend/src/views/app-sync-manager/network.ts` | 47 |
@@ -605,7 +605,7 @@
 | `frontend/src/features/community/download-queue.ts` | 113 |
 | `frontend/src/features/import-executor.ts` | 35 |
 | `frontend/src/features/import-executor.ts` | 219 |
-| `frontend/src/features/pack-dnd.ts` | 161 |
+| `frontend/src/features/pack-dnd.ts` | 168 |
 | `frontend/src/features/recycle-bin.ts` | 108 |
 | `frontend/src/features/recycle-bin.ts` | 168 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 436 |

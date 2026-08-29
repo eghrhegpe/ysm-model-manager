@@ -44,8 +44,11 @@ test('run 成功路径：out 为 stdout（与 mergeStderr 无关）', () => {
 // ── 超时分支：stderr 保留 ──
 
 test('run 超时：rc=-2，mergeStderr=false 时 err 含超时文案与 stderr 原文', () => {
-  const r = run(NODE, ['-e', "process.stderr.write('HANG-TRACE');setTimeout(()=>{}, 5000)"], {
-    timeout: 200,
+  // 慢 CI/Windows 冷启动下 node -e 引导可能 >200ms：timeout 太紧会在子进程写 stderr 前
+  // 就 kill 掉，HANG-TRACE 断言随机红（连环 review 5c6accc4，4 条同源）。
+  // 放宽到 1500ms（子进程自身 setTimeout 5000ms 保证 rc=-2 仍成立）+ setInterval 周期写，双保险。
+  const r = run(NODE, ['-e', "setInterval(()=>process.stderr.write('HANG-TRACE'), 10);setTimeout(()=>{}, 5000)"], {
+    timeout: 1500,
     mergeStderr: false,
   });
   assert.equal(r.ok, false);

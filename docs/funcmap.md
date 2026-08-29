@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 177 | 730 |
+| 前端·工具 | 177 | 734 |
 | frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **509** | **2189** |
+| **合计** | **509** | **2193** |
 
 ## Go·头像
 
@@ -746,7 +746,7 @@
 | `App.ImportModelFileToMMD()` | `internal/app/app_install_import:117` | ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。 |
 | `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:122` | ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。 |
 | `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:226` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
-| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:250` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
+| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:256` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
 | `App.CountInstanceResources()` | `internal/app/app_install_instance:26` | CountInstanceResources 统计指定整合包中可清空的资源文件数 只统计仓库中已有的文件（同 clearInstanceDir 逻辑） rtype 为空时统计全部类 |
 | `App.ClearInstanceResources()` | `internal/app/app_install_instance:66` | ClearInstanceResources 清空指定整合包中已同步的文件 insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型） 返回清除的文件数量 |
 | `App.DeduplicateCustomDir()` | `internal/app/app_install_instance:152` | DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle） |
@@ -1166,7 +1166,7 @@
 | `isEditableTarget()` | `frontend/src/features/dnd-shared:84` | drop 目标是否为可编辑元素（输入框内 drop 不应触发导入） |
 | `collectDropFiles()` | `frontend/src/features/dnd-shared:99` | 从 drop 事件的 DataTransfer 收集文件（桌面端）： 优先 dataTransfer.files（WebView2 可靠），再 items → webkitGetA |
 | `handleTreeDrop()` | `frontend/src/features/import-dnd:28` | 处理 drop 事件：收集文件 → 过滤 → 执行导入。 |
-| `bindTreeDnD()` | `frontend/src/features/import-dnd:120` | 在目标容器上注册仓库页 DnD 事件。 |
+| `bindTreeDnD()` | `frontend/src/features/import-dnd:123` | 在目标容器上注册仓库页 DnD 事件。 |
 | `CollectedEntry()` | `frontend/src/features/import-executor` | — |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
 | `ImportFile()` | `frontend/src/features/import-executor:20` | 带相对路径的 File（文件夹导入时标记 _relPath） |
@@ -1178,8 +1178,8 @@
 | `loadOldestModel()` | `frontend/src/features/oldest-models:290` | — |
 | `PackDndBusy()` | `frontend/src/features/pack-dnd:26` | drop 处理期间的 busy 守卫（由绑定闭包持有，每组件实例独立） |
 | `PackDndInstance()` | `frontend/src/features/pack-dnd:32` | 卡片实例的最小形状（SidebarInstance 结构子集） |
-| `handleInstanceDrop()` | `frontend/src/features/pack-dnd:45` | 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。 |
-| `bindPackCardDnD()` | `frontend/src/features/pack-dnd:177` | 在 document 层注册整合包卡片 DnD（WebView2 ShadowRoot drop 限制， 与 bindTreeDnD 同款范式：document 监听 + comp |
+| `handleInstanceDrop()` | `frontend/src/features/pack-dnd:47` | 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。 |
+| `bindPackCardDnD()` | `frontend/src/features/pack-dnd:184` | 在 document 层注册整合包卡片 DnD（WebView2 ShadowRoot drop 限制， 与 bindTreeDnD 同款范式：document 监听 + comp |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:23` | — |
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:33` | — |
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:235` | — |
@@ -1930,6 +1930,10 @@
 | `ModalProgressHandle()` | `frontend/src/utils/dom/dialogs/modal:443` | — |
 | `fmtMB()` | `frontend/src/utils/dom/dialogs/modal:450` | 格式化字节为 MB（进度弹窗/窗口标题共用） |
 | `modalProgress()` | `frontend/src/utils/dom/dialogs/modal:533` | 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。 |
+| `ModalPickerItem()` | `frontend/src/utils/dom/dialogs/modal:551` | modalPicker 行项（label/meta/sub/hint 由函数内部 esc 转义，调用方传原始文本） |
+| `ModalPickerOptions()` | `frontend/src/utils/dom/dialogs/modal:560` | modalPicker 选项 |
+| `ModalPickerResult()` | `frontend/src/utils/dom/dialogs/modal:573` | modalPicker 结果 |
+| `modalPicker()` | `frontend/src/utils/dom/dialogs/modal:634` | 富列表选择弹窗（行即选项）：复用统一弹窗脚手架（createDialog）， 单例登记 / 焦点陷阱 / 退场动画 / Esc / 遮罩关闭与 modalSelect 同款。 |
 | `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:7` | 重命名字段（调用方已 trim） |
 | `BuildModelNameOptions()` | `frontend/src/utils/dom/dialogs/rename-format:21` | 命名模板引擎选项（索引 4.9 收敛 buildRenameName / rebuildParsedName 两套手工拼接）： - fillDefaults=true：空作品补「未 |
 | `ModelNameFields()` | `frontend/src/utils/dom/dialogs/rename-format:27` | 命名模板输入字段（variant 可选：单重命名有、批量重建无） |
@@ -1967,7 +1971,7 @@
 | `popInputBlock()` | `frontend/src/utils/dom/focus-restore:80` | 解除挂起（菜单关闭时传同一 id） |
 | `isInputBlocked()` | `frontend/src/utils/dom/focus-restore:86` | 外层键盘消费（相机 WASD 等）是否应暂停 |
 | `findTabbableAcrossShadow()` | `frontend/src/utils/dom/focus-restore:115` | 在 root 子树（含 Shadow DOM）内收集 tabbable 元素；保持 DOM 顺序（含跨 shadow 顺序） |
-| `trapFocusAcrossShadow()` | `frontend/src/utils/dom/focus-restore:170` | — |
+| `trapFocusAcrossShadow()` | `frontend/src/utils/dom/focus-restore:155` | — |
 | `formatBytes()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值或 0 返回空串 |
 | `sizeColor()` | `frontend/src/utils/dom/format:23` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
 | `fmtDate()` | `frontend/src/utils/dom/format:35` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
@@ -2331,7 +2335,7 @@
 | `bindFooter()` | `frontend/src/views/app-sidebar/events:242` | — |
 | `appSidebarStyle()` | `frontend/src/views/app-sidebar/index:13` | — |
 | `runMcSearch()` | `frontend/src/views/app-sidebar/launcher-detect:55` | 🔍 自动搜索常见 MC 安装位置（多结果弹选择器） |
-| `runLauncherDetect()` | `frontend/src/views/app-sidebar/launcher-detect:129` | 🎮 HMCL / PCL 启动器实例检测：选启动器目录 → 选实例 → 写 mcRoot（可选并设 YSM 资源根） |
+| `runLauncherDetect()` | `frontend/src/views/app-sidebar/launcher-detect:113` | 🎮 HMCL / PCL 启动器实例检测：选启动器目录 → 选实例 → 写 mcRoot（可选并设 YSM 资源根） |
 | `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:21` | MMD 变体聚合结果 |
 | `loadInstances()` | `frontend/src/views/app-sidebar/loader:37` | 从 Go 加载整合包实例列表，转换为 render 需要的格式（同 rtype 在途请求合并） 去重只服务「读并发」（多组件同时触发 reload），若变异完成的刷新并入变异前发起 |
 | `groupMmdVariants()` | `frontend/src/views/app-sidebar/loader:167` | 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。 |

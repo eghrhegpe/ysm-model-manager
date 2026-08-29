@@ -2,11 +2,17 @@
 kind: multi_model_select
 name: 多模型选择菜单原语 multiModelSelectNode
 tier: architecture
+adr:
+  - ADR-132
 category: ui
 source_files:
   - frontend/src/utils/3d/adapters/preview-menu/multi-model.ts
   - frontend/src/views/app-preview/mmd-controls.ts
   - frontend/src/utils/3d/adapters/pack-model-adapter.ts
+tests:
+  - frontend/src/utils/3d/adapters/pack-model-adapter.test.ts
+  - frontend/src/utils/3d/adapters/preview-menu/multi-model.test.ts
+  - frontend/src/views/app-preview/mmd-controls.test.ts
 use_when:
   - 多模型
   - 多组件

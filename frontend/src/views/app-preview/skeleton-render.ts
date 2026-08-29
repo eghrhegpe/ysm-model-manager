@@ -9,7 +9,7 @@ import { statsCardHTML } from "./tpl.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { renderMultiAngle, type ScreenshotLights } from "./screenshot-renderer.ts";
 import { sceneCapabilityRegistry, isSkyEnvironmentOn } from "../../utils/3d/caps/scene-capability-registry.ts";
-import { type LightCapability } from "../../utils/3d/caps/light-capability.ts";
+import { attenuateAmbientForSky, type LightCapability } from "../../utils/3d/caps/light-capability.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
@@ -204,8 +204,9 @@ function toScreenshotLights(): ScreenshotLights | undefined {
   if (!cap) return undefined;
   const p = cap.getParams();
   return {
-    // 镜像预览的 PMREM 环境光衰减（×0.5）——截图与预览 ambient 同构（单一来源 isSkyEnvironmentOn）
-    ambient: { color: p.ambient.color, intensity: p.ambient.intensity * (isSkyEnvironmentOn() ? 0.5 : 1) },
+    // 镜像预览的 PMREM 环境光衰减——截图与预览 ambient 同构：
+    // 开关读组合根 isSkyEnvironmentOn，系数/公式走 light-capability 的 attenuateAmbientForSky 单源
+    ambient: { color: p.ambient.color, intensity: attenuateAmbientForSky(p.ambient.intensity, isSkyEnvironmentOn()) },
     key: { ...p.key },
     fill: { ...p.fill },
     rim: { ...p.rim },

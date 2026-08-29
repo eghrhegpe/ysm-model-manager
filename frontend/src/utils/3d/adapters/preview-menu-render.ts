@@ -472,8 +472,10 @@ export function renderAdapterPanelContent(
     hideMenu: () => void;
   },
 ): boolean {
-  // [doc:adr-126-p5-a] 受控 builder 注册优先：面板内容由 schema-registry 产出（吃状态层快照）
-  const builder = getSchema(node.schemaId ?? node.id);
+  // [doc:adr-126-p5-a] 受控 builder 注册优先：面板内容由 schema-registry 产出（吃状态层快照）。
+  // schemaId 必显式（P5 复盘：撤 `?? node.id` 隐式兜底——panel id 静默充当 schema key 与
+  // per-scene 显式 key 约定冲突，id 撞注册键时会渲染错误内容且无告警）
+  const builder = node.schemaId ? getSchema(node.schemaId) : undefined;
   if (builder) {
     renderMenu(list, builder(previewSnapshot()), deps);
     return true;

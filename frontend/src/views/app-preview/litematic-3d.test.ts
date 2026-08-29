@@ -309,7 +309,7 @@ import * as THREE from "three";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
 import { sleep } from "../../test-utils/index.ts";
 import { getSchema, listSchemas } from "../../utils/3d/adapters/schema-registry.ts";
-import { previewSnapshot, setStateValue, resetLitematicSliceMode } from "../../utils/3d/state/preview-state.ts";
+import { previewSnapshot } from "../../utils/3d/state/preview-state.ts";
 import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
 
 /** 访问 mock 暴露的 InstancedMesh 实例列表，供 count / setMatrixAt 断言 */
@@ -340,6 +340,13 @@ function triggerApplyLayer(): void {
   sliceNodes().find((n) => n.id === "slice-mode")!.control!.onChange?.(undefined);
 }
 
+/** 切换切片模式（真源 = shell 闭包，经模式 select 的 get/set 闭包驱动，同生产 select change） */
+function setSliceMode(nodes: PreviewMenuNode[], mode: string): void {
+  const m = nodes.find((n) => n.id === "slice-mode")!;
+  m.control!.set!(mode);
+  m.control!.onChange!(mode);
+}
+
 /** 最近创建的 overlay（createLitematic3D append 到 body） */
 function lastOverlay(): HTMLElement {
   const kids = document.body.children;
@@ -360,7 +367,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   meshInstances.length = 0;
   cameraInstances.length = 0;
-  resetLitematicSliceMode(); // 切片模式会话态跨用例污染防护（schema 化后走状态层）
   vi.mocked(getApp).mockResolvedValue({
     GetLitematicVoxelData: voxelFn(VALID_JSON),
   } as never);
@@ -521,8 +527,8 @@ describe("控件交互", () => {
   it("分层模式切换 → applyLayer（mesh.count 更新）；切片轴切换 → 层范围重置", async () => {
     await createLitematic3D("/a.litematic", "GetLitematicVoxelData");
     let nodes = sliceNodes();
-    // 单层模式 → 层滑块节点出现（visibleWhen 谓词吃状态层）+ applyLayer 写 count（Y=max 层 → 0）
-    setStateValue("ui.litematicSliceMode", "single");
+    // 单层模式 → 层滑块节点出现（visibleWhen 谓词读 shell 闭包）+ applyLayer 写 count（Y=max 层 → 0）
+    setSliceMode(nodes, "single");
     nodes = sliceNodes();
     expect(nodes.find((n) => n.id === "slice-layer")).toBeDefined();
     triggerApplyLayer();
@@ -532,7 +538,7 @@ describe("控件交互", () => {
     nodes = sliceNodes();
     expect(nodes.find((n) => n.id === "slice-layer")!.control!.max).toBe(16);
     // 范围模式 → 起止双滑块节点出现
-    setStateValue("ui.litematicSliceMode", "range");
+    setSliceMode(nodes, "range");
     nodes = sliceNodes();
     expect(nodes.find((n) => n.id === "slice-range-start")).toBeDefined();
     expect(nodes.find((n) => n.id === "slice-range-end")).toBeDefined();
@@ -614,7 +620,7 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
     } as never);
     await createLitematic3D("/layer.litematic", "GetLitematicVoxelData");
     // schema 驱动：切 single + 层调到 1（target 层 0）
-    setStateValue("ui.litematicSliceMode", "single");
+    setSliceMode(sliceNodes(), "single");
     triggerApplyLayer();
     expect(meshInstances.reduce((s, m) => s + m.count, 0)).toBe(0); // 默认 Y=max 层全滤空
     const layer = sliceNodes().find((n) => n.id === "slice-layer")!;

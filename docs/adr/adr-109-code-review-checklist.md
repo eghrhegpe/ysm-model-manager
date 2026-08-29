@@ -51,6 +51,8 @@
 
 #### DOM 资源生命周期
 - [ ] `addEventListener` 是否有对应的 `removeEventListener`？
+- [ ] 主题提交的核心卖点路径是否有**先行端到端断言**（不依赖 review 补洞）？例：截图灯光接线（e8178c82 初版只接 fallback 分支）、roles 详情模型信息通道（P5 事故）——「有集成测试就会初版变红」的路径，提交前自查而非等 review 发现。
+- [ ] 多实例注册表 key（schema-registry 等）是否 per-scene 显式、无 id 隐式兜底、dispose 只注销自身？
 - [ ] `viewContainer` 是否在 `fullCleanup` 中移除？
 - [ ] rAF 循环是否在 `perFrame` 列表空时停止？
 

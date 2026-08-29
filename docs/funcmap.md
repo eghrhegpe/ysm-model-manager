@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 176 | 726 |
+| 前端·工具 | 176 | 725 |
 | frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **507** | **2175** |
+| **合计** | **507** | **2174** |
 
 ## Go·头像
 
@@ -1602,9 +1602,8 @@
 | `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:107` | — |
 | `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:117` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
 | `lightDirToPosition()` | `frontend/src/utils/3d/caps/light-capability:348` | 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） |
-| `SKY_ENV_AMBIENT_ATTENUATION()` | `frontend/src/utils/3d/caps/light-capability:359` | PMREM 环境光开启时 ambient 让位系数（双间接光叠加防过亮/互相稀释—— [doc:adr-126-p5] 光系统统一性 #3）。预览（refreshAmbientFr |
-| `attenuateAmbientForSky()` | `frontend/src/utils/3d/caps/light-capability:362` | ambient 强度按 sky 环境开关套让位系数（镜像 AmbientParams 应用，公式单源） |
-| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:366` | — |
+| `attenuateAmbientForSky()` | `frontend/src/utils/3d/caps/light-capability:363` | ambient 强度按 sky 环境开关套让位系数（镜像 AmbientParams 应用，公式单源） |
+| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:367` | — |
 | `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |

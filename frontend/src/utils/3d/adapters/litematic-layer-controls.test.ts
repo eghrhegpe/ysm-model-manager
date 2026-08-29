@@ -1,7 +1,7 @@
 // ===== litematic 分层切片测试：schema builder 声明式契约（renderCustom 逃生舱退役）=====
 // litematic 分层（axis/layer 切片）经 registerSchema 注册 builder（[doc:adr-126-p5-a]），
-// 面板内容由 renderMenu 声明式渲染；切片模式走状态层 ui.litematicSliceMode
-// + slider visibleWhen 谓词（AGENTS.md 3d菜单唯一条件守卫口）。
+// 面板内容由 renderMenu 声明式渲染；切片模式 = shell 闭包场景级会话态（select get/set
+// 闭包 + slider visibleWhen 谓词读同一闭包，AGENTS.md 3d菜单唯一条件守卫口）。
 // 覆盖：panel 入口 / builder 数据契约（轴切换重置、clamp 防御、applyLayer 体素过滤联动）
 // / 注册生命周期 / renderMenu 真渲染器显隐。
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -9,14 +9,13 @@ import * as THREE from "three";
 import { zhCN } from "../../../core/i18n/locales/zh-CN.ts";
 import { buildLitematicScene, LITEMATIC_SLICE_SCHEMA_ID } from "./litematic-adapter.ts";
 import { getSchema } from "./schema-registry.ts";
-import { previewSnapshot, setStateValue, resetLitematicSliceMode } from "../state/preview-state.ts";
+import { previewSnapshot } from "../state/preview-state.ts";
 import { renderMenu, renderPreviewPanel } from "./preview-menu.ts";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";
-  resetLitematicSliceMode();
 });
 
 function makeMockCtx(): PreviewBuildCtx {
@@ -62,6 +61,13 @@ async function buildScene(): Promise<{
 
 const nodeById = (nodes: PreviewMenuNode[], id: string): PreviewMenuNode =>
   nodes.find((n) => n.id === id)!;
+
+/** 经模式 select 的 get/set 闭包驱动切片模式（真源 = shell，与生产 select change 同路径） */
+function setMode(nodes: PreviewMenuNode[], mode: string): void {
+  const m = nodeById(nodes, "slice-mode");
+  m.control!.set!(mode);
+  m.control!.onChange!(mode);
+}
 
 function renderNodes(nodes: PreviewMenuNode[]): HTMLElement {
   const container = document.createElement("div");
@@ -109,7 +115,12 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     expect(axis.kind).toBe("select");
     expect(axis.control!.options!.map((o) => o.value)).toEqual(["Y", "X", "Z"]);
     const mode = nodeById(nodes, "slice-mode");
-    expect(mode.control!.bind).toBe("ui.litematicSliceMode");
+    // 模式真源 = shell 闭包（场景级会话态）：非 bind 模式，get/set 闭包读写
+    expect(mode.control!.bind).toBeUndefined();
+    expect(mode.control!.get!(undefined)).toBe("all");
+    mode.control!.set!("bogus");
+    expect(mode.control!.get!(undefined)).toBe("all"); // 非法值防御回落 all
+    mode.control!.set!("all");
     expect(mode.control!.options!.map((o) => o.value)).toEqual(["all", "single", "range"]);
     // 切片模式 select 切换后面板重渲染（slider 显隐刷新）
     expect(mode.control!.refreshOnChange).toBe(true);
@@ -152,7 +163,7 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
 
   it("slider onChange 联动 applyLayer：single 模式层号过滤 instance count", async () => {
     const { ctx, nodes } = await buildScene();
-    setStateValue("ui.litematicSliceMode", "single");
+    setMode(nodes, "single");
     const layer = nodeById(nodes, "slice-layer");
     const meshes = instancedMeshesOf(ctx);
     expect(meshes.length).toBeGreaterThan(0);
@@ -167,7 +178,7 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
 
   it("range 双滑块：lo=layerVal / hi=layerVal2，hi 收敛 [lo, max] 语义不变", async () => {
     const { ctx, nodes } = await buildScene();
-    setStateValue("ui.litematicSliceMode", "range");
+    setMode(nodes, "range");
     const lo = nodeById(nodes, "slice-range-start");
     const hi = nodeById(nodes, "slice-range-end");
     expect(lo.control!.get!(undefined)).toBe(11);
@@ -188,38 +199,38 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     expect(visible(previewSnapshot()).map((n) => n.id)).toEqual([
       "slice-divider", "slice-axis", "slice-mode",
     ]);
-    setStateValue("ui.litematicSliceMode", "single");
+    setMode(nodes, "single");
     expect(visible(previewSnapshot()).map((n) => n.id)).toEqual([
       "slice-divider", "slice-axis", "slice-mode", "slice-layer",
     ]);
-    setStateValue("ui.litematicSliceMode", "range");
+    setMode(nodes, "range");
     expect(visible(previewSnapshot()).map((n) => n.id)).toEqual([
       "slice-divider", "slice-axis", "slice-mode", "slice-range-start", "slice-range-end",
     ]);
   });
 
-  it("renderMenu 真渲染器：slider 显隐随 ui.litematicSliceMode 变化（range+number 联动）", async () => {
+  it("renderMenu 真渲染器：slider 显隐随切片模式（shell 闭包）变化（range+number 联动）", async () => {
     const { nodes } = await buildScene();
     // all：无滑条
     expect(renderNodes(nodes).querySelectorAll('input[type="range"]').length).toBe(0);
     // single：1 滑条 + 1 数字输入
-    setStateValue("ui.litematicSliceMode", "single");
+    setMode(nodes, "single");
     let c = renderNodes(nodes);
     expect(c.querySelectorAll('input[type="range"]').length).toBe(1);
     expect(c.querySelectorAll('input[type="number"]').length).toBe(1);
     // range：2 滑条 + 2 数字输入（双滑块契约）
-    setStateValue("ui.litematicSliceMode", "range");
+    setMode(nodes, "range");
     c = renderNodes(nodes);
     expect(c.querySelectorAll('input[type="range"]').length).toBe(2);
     expect(c.querySelectorAll('input[type="number"]').length).toBe(2);
   });
 
-  it("dispose 注销 schema + 重置切片模式（防跨会话泄漏）", async () => {
-    const { built, sliceKey } = await buildScene();
-    setStateValue("ui.litematicSliceMode", "single");
+  it("dispose 注销 schema；切片模式随 shell 闭包消亡（不动全局状态）", async () => {
+    const { built, nodes, sliceKey } = await buildScene();
+    setMode(nodes, "single"); // 场景级会话态置位
     built.dispose();
     expect(getSchema(sliceKey)).toBeUndefined();
-    expect(previewSnapshot()["ui.litematicSliceMode"]).toBe("all");
+    // 模式存于闭包：dispose 后 shell 不可达，无全局残留可断言（跨场景零误伤的结构保证）
   });
 
   it("集成：真实 select change 驱动 bind→onChange→refreshOnChange 全链（不绕过渲染器）", async () => {
@@ -246,7 +257,7 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     // 真实 change：all → single
     mode.value = "single";
     mode.dispatchEvent(new Event("change"));
-    expect(previewSnapshot()["ui.litematicSliceMode"]).toBe("single"); // (a) bind 写状态层
+    expect(nodeById(nodes, "slice-mode").control!.get!(undefined)).toBe("single"); // (a) set 闭包写 shell.mode
     expect(refresh).toHaveBeenCalled(); // (b) refreshOnChange 触发重渲染接线点
     // (c) 模拟 refresh 重跑 builder：single 出现 1 滑条 + 1 数字输入
     const rebuilt = getSchema(sliceKey)!(previewSnapshot());

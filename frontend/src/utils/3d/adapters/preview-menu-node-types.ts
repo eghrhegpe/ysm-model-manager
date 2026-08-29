@@ -100,8 +100,10 @@ export interface PreviewMenuNode {
   renderCustom?: (container: HTMLElement, closePopup?: () => void) => (() => void) | void;
   /** 条件守卫：吃状态层快照的纯函数，返回 false 时不渲染（如 self 模式隐藏 camera）——[doc:adr-126-p4-d] 升级为 (s: PreviewSnapshot) => boolean */
   visibleWhen?: (s: PreviewSnapshot) => boolean;
-  /** [doc:adr-126-p5-a] 受控 schema builder 注册 key：有则 renderPreviewPanel 查 schema-registry 的该 key；
-   *  缺省回退 node.id。多模型同框时各适配器用专属 key（如 "ysm-model"）避免互相覆盖 */
+  /** [doc:adr-126-p5-a] 受控 schema builder 注册 key：有则 renderPreviewPanel 查 schema-registry 的该 key。
+   *  多模型同框时各适配器用专属 key（如 "ysm-model" / "litematic-slice-{n}"）避免互相覆盖。
+   *  必显式——panel id 不再隐式兜底作 schema key（P5 复盘：id 撞注册键渲染错内容且无告警，
+   *  与 per-scene 显式 key 约定冲突） */
   schemaId?: string;
   /** action 节点回调（对应 PreviewMenuItemDef.run） */
   action?: (ctx: PreviewActionMenuCtx) => void | Promise<void>;

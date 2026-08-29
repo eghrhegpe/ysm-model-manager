@@ -11,7 +11,6 @@ import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { PreviewMenuNode, PreviewSnapshot } from "./preview-menu-node-types.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
 import { registerSchema, unregisterSchema } from "./schema-registry.ts";
-import { getStateValue, resetLitematicSliceMode } from "../state/preview-state.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { renderLoadingState } from "./preview-loading.ts";
@@ -53,6 +52,9 @@ interface MdLiLayerShell {
   layerMax: number;
   layerVal: number;
   layerVal2: number;
+  /** 切片模式（all/single/range）——场景级会话态：随 shell 闭包生灭，不入全局状态层
+   *  （P5 复盘：全局单值 + 任一 dispose 重置会跨场景误伤；真源 per-scene 化后无此问题） */
+  mode: string;
 }
 
 // ===== 阶段①：入口守卫 + 路径读取 + 数据解析 =====
@@ -242,19 +244,17 @@ const SLICE_AXIS_OPTIONS = [
   { value: "Z", label: "Z" },
 ];
 
-/** 切片模式真源在状态层（slider visibleWhen 谓词与 applyLayer 共读同一值） */
-function mdLiSliceMode(): string {
-  return String(getStateValue("ui.litematicSliceMode") ?? "all");
-}
+/** 合法切片模式白名单（select set 闭包防御非法值） */
+const SLICE_MODES = ["all", "single", "range"];
 
 /** 层号收敛 [1, layerMax]（非法输入回落 max——沿用旧 mdLiClampLayerInput 语义） */
 function mdLiClampLayer(n: number, layerMax: number): number {
   return Number.isFinite(n) ? Math.max(1, Math.min(layerMax, n)) : layerMax;
 }
 
-/** 分层切片面板 builder 工厂：闭包持 shell（轴/层值会话态），每次面板渲染重新执行——
- *  slider max 随轴切换保持新鲜（axis/mode select 均 refreshOnChange 触发重渲染）。
- *  快照参数不消费：动态数据在闭包 shell 而非全局状态层（模式除外，走 visibleWhen 谓词）。 */
+/** 分层切片面板 builder 工厂：闭包持 shell（轴/层值/模式会话态，全 per-scene），每次面板
+ *  渲染重新执行——slider max 随轴切换保持新鲜（axis/mode select 均 refreshOnChange 触发）。
+ *  快照参数不消费：动态数据全在闭包 shell（含模式），不入全局状态层。 */
 function mdLiBuildSliceSchema(
   si: MdLiSizeInfo,
   rawGroups: VoxelData["groups"],
@@ -265,8 +265,9 @@ function mdLiBuildSliceSchema(
     layerMax: si.sizeY,
     layerVal: si.sizeY,
     layerVal2: si.sizeY,
+    mode: "all",
   };
-  const applyLayer = (): void => mdLiApplyLayer(shell, si, rawGroups, groupMeshes, mdLiSliceMode());
+  const applyLayer = (): void => mdLiApplyLayer(shell, si, rawGroups, groupMeshes, shell.mode);
   const resetToMax = (): void => {
     shell.layerMax = [si.sizeX, si.sizeY, si.sizeZ][shell.layerAxis];
     shell.layerVal = shell.layerMax;
@@ -320,14 +321,20 @@ function mdLiBuildSliceSchema(
           { value: "single", label: "单层" },
           { value: "range", label: "范围" },
         ],
-        bind: "ui.litematicSliceMode",
+        // 模式真源 = shell 闭包（场景级会话态，非全局状态层路径）——get/set 闭包模式
+        // 与 MmdPlayBridge 动作 select 同构；slider visibleWhen 谓词读同一闭包
+        get: () => shell.mode,
+        set: (raw) => {
+          shell.mode = SLICE_MODES.includes(String(raw)) ? String(raw) : "all";
+          return shell.mode;
+        },
         onChange: () => applyLayer(),
         refreshOnChange: true,
       },
     },
-    layerSlider("slice-layer", "preview.sliceLayer", "层", "layerVal", (s) => s["ui.litematicSliceMode"] === "single"),
-    layerSlider("slice-range-start", "preview.sliceRangeStart", "起", "layerVal", (s) => s["ui.litematicSliceMode"] === "range"),
-    layerSlider("slice-range-end", "preview.sliceRangeEnd", "止", "layerVal2", (s) => s["ui.litematicSliceMode"] === "range"),
+    layerSlider("slice-layer", "preview.sliceLayer", "层", "layerVal", () => shell.mode === "single"),
+    layerSlider("slice-range-start", "preview.sliceRangeStart", "起", "layerVal", () => shell.mode === "range"),
+    layerSlider("slice-range-end", "preview.sliceRangeEnd", "止", "layerVal2", () => shell.mode === "range"),
   ];
 }
 
@@ -388,7 +395,8 @@ function mdLiBuildResult(
     menuItems,
     dispose(): void {
       unregisterSchema(sliceKey); // per-scene key：只注销自己的，多模型并存不误伤（5329a347 review P2）
-      resetLitematicSliceMode();
+      // 切片模式随 shell 闭包消亡——不动全局状态（P5 复盘：原 resetLitematicSliceMode
+      // 重置全局单值，双场景下先关闭的会把后者的切片模式误重置回 all）
       unregisterModelRoot(built.modelGroup);
       built.instancedMeshes.forEach((m) => safeDispose(m));
       built.materials.forEach((m) => safeDispose(m));

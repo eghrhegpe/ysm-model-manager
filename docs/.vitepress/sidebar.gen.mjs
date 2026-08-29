@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-131：3D 渲染期统计提取（预览期统计与类型判定解耦）",
+        "link": "/adr/ADR-131-preview-stats-extraction"
+      },
+      {
         "text": "ADR-130：整合包卡片拖拽导入：先入仓库再推送",
         "link": "/adr/ADR-130-pack-dnd-repo-first-push"
       },

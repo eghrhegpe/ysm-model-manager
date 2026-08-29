@@ -60,8 +60,13 @@ export function run(bin, args, { cwd = process.cwd(), timeout = DEFAULT_TIMEOUT,
     // code review 004563ce P2）。stderr 原文附入 err 供诊断不丢。
     const out = mergeStderr ? String((e.stdout || '') + (e.stderr || '')) : String(e.stdout || '');
     const stderrText = mergeStderr ? '' : String(e.stderr || '');
-    if (e.killed) {
-      return { ok: false, rc: -2, out, err: `command timed out after ${timeout}ms: ${bin} ${args.join(' ')}` };
+    // 超时判定：POSIX 抛 e.killed=true；Windows 抛 code='ETIMEDOUT'（e.killed 为 undefined，
+    // proc.test.mjs 实证 errno=-4039）——两态都要识别，否则超时被误判为普通失败（rc=-1）
+    if (e.killed || e.code === 'ETIMEDOUT') {
+      const timeoutMsg = `command timed out after ${timeout}ms: ${bin} ${args.join(' ')}`;
+      // 超时分支同样拼接 stderrText（mergeStderr:false 下 stderr 只此一处），
+      // 否则挂起线索（卡在哪个包/goroutine）随超时被丢弃，违背「stderr 附 err 不丢」契约
+      return { ok: false, rc: -2, out, err: stderrText ? `${timeoutMsg}\n${stderrText}` : timeoutMsg };
     }
     if (e.status === 1 && allowExit1) {
       return { ok: true, rc: 1, out };

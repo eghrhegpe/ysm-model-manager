@@ -86,7 +86,9 @@ const bench = run(
 );
 raw = bench.out.trim(); // 失败时 out 也仅 stdout（mergeStderr:false），JSON 不被 watcher/编译噪音污染（code review P2）
 if (!raw) {
-  console.error('[FAIL] single-bench 无 stdout 输出（go run 编译/运行失败）');
+  // mergeStderr:false 后编译/运行错误在 bench.err（stderr 原文），不再混入 out——
+  // 这里必须透出，否则 go run 编译失败只留一句裸提示、真实错误被吞（连环 review f050902f）
+  console.error(`[FAIL] single-bench 无 stdout 输出（go run 编译/运行失败）:\n${bench.err || ''}`);
   process.exit(1);
 }
 if (opts.verbose) console.log('--- 解析阶段 ---');

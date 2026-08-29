@@ -1966,8 +1966,8 @@
 | `pushInputBlock()` | `frontend/src/utils/dom/focus-restore:75` | 挂起外层键盘消费（菜单弹出时调用，id 唯一标识阻断源） |
 | `popInputBlock()` | `frontend/src/utils/dom/focus-restore:80` | 解除挂起（菜单关闭时传同一 id） |
 | `isInputBlocked()` | `frontend/src/utils/dom/focus-restore:86` | 外层键盘消费（相机 WASD 等）是否应暂停 |
-| `findTabbableAcrossShadow()` | `frontend/src/utils/dom/focus-restore:109` | 在 root 子树（含 Shadow DOM）内收集 tabbable 元素；保持 DOM 顺序（含跨 shadow 顺序） |
-| `trapFocusAcrossShadow()` | `frontend/src/utils/dom/focus-restore:164` | — |
+| `findTabbableAcrossShadow()` | `frontend/src/utils/dom/focus-restore:115` | 在 root 子树（含 Shadow DOM）内收集 tabbable 元素；保持 DOM 顺序（含跨 shadow 顺序） |
+| `trapFocusAcrossShadow()` | `frontend/src/utils/dom/focus-restore:170` | — |
 | `formatBytes()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值或 0 返回空串 |
 | `sizeColor()` | `frontend/src/utils/dom/format:23` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
 | `fmtDate()` | `frontend/src/utils/dom/format:35` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |

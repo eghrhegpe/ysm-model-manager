@@ -67,7 +67,9 @@ const gr = run('go', args, { cwd: ROOT, timeout: 120000, mergeStderr: false });
 raw = gr.out.trim();
 
 if (!raw) {
-  console.error('[FAIL] gui-flow 无 stdout 输出（go run 编译/运行失败），请查看上方 go 的错误输出');
+  // mergeStderr:false 后编译/运行错误在 gr.err（stderr 原文），上方并无 go 的错误输出——
+  // 这里必须透出，否则「请查看上方」变成误导、真实错误被吞（连环 review f050902f）
+  console.error(`[FAIL] gui-flow 无 stdout 输出（go run 编译/运行失败）:\n${gr.err || ''}`);
   process.exit(1);
 }
 if (opts.verbose) console.log('--- 原始 JSON stdout ---\n' + raw);

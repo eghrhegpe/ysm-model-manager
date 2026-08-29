@@ -23,8 +23,19 @@ vi.mock("../bone-raycast.ts", () => ({
 vi.mock("../bone-tools.ts", () => ({
   buildBoneTree: vi.fn(() => ({ byId: new Map(), childrenMap: new Map(), roots: [] })),
 }));
-vi.mock("./vrm-bone-ui.ts", () => ({
-  makeBonePanelRenderer: () => () => () => {},
+vi.mock("./bones-panel-node.ts", () => ({
+  // stub 工厂：记录调用参数，便于断言「ysm 正确把 o.bonePanel 字段传给工厂」
+  // bones 面板的真实渲染行为（含 cleanupRef 重入、空守卫）在 bones-panel-node.test.ts 覆盖
+  makeBonesPanelItem: vi.fn((opts: { legacyTestId: string }) => ({
+    id: "bones",
+    icon: "🦴",
+    labelKey: "preview.section.bones",
+    fallback: "骨骼",
+    kind: "panel" as const,
+    dockGroup: "motion" as const,
+    legacyTestId: opts.legacyTestId,
+    renderCustom: (): void => {},
+  })),
 }));
 
 const rootGroup = { type: "Group", children: [] as unknown[] };
@@ -474,9 +485,16 @@ describe("ysmMenuItems 独立菜单表测试", () => {
     expect(items.find((i) => i.id === "ysm-play")!.dockGroup).toBe("motion");
   });
 
-  it("bonePanel cleanupRef 重入时先清理旧 renderer", () => {
-    const cleanup1 = vi.fn();
-    const cleanup2 = vi.fn();
+  // 旧「cleanupRef 重入清理」测试已删除——该责任点迁出 ysm-adapter 至
+  // bones-panel-node.ts（4 adapter 共用工厂）。行为契约在 bones-panel-node.test.ts
+  // 「cleanupRef 重入清理：第二次 renderCustom 前先调上一次 cleanup 并置 null」覆盖。
+  // ysm-adapter 这一层只剩「正确把 o.bonePanel 字段传给工厂」的接线契约：
+
+  it("ysm 正确把 bonePanel 字段（tree/cleanupRef/viewContainer/camera/scene/legacyTestId）传给 bones 工厂", async () => {
+    const { makeBonesPanelItem } = await import("./bones-panel-node.ts");
+    const cleanupRef = { current: null };
+    const viewContainer = document.createElement("div");
+    const tree = { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() } as unknown as BoneTree;
     const opts = {
       controlsCtx: {
         model: {} as never,
@@ -486,26 +504,21 @@ describe("ysmMenuItems 独立菜单表测试", () => {
         handle: {} as never,
       },
       bonePanel: {
-        tree: { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() } as unknown as BoneTree,
-        viewContainer: document.createElement("div"),
+        tree,
+        viewContainer,
         camera: null,
         scene: null,
-        cleanupRef: { current: null },
+        cleanupRef,
       },
     };
-    const items = ysmMenuItems(opts);
-    const bonesItem = items.find((i) => i.id === "bones")!;
-    const list = document.createElement("div");
-
-    // 首次渲染：cleanupRef.current 初始为 null，直接注册
-    bonesItem.renderCustom!(list, () => {});
-    expect(cleanup1).not.toHaveBeenCalled();
-
-    // 模拟重入场景：cleanupRef.current 已有值（第二次渲染）
-    // 此时应触发清理旧 renderer
-    const cleanupRef = (opts.bonePanel as { cleanupRef: { current: (() => void) | null } }).cleanupRef;
-    cleanupRef.current = cleanup2;
-    bonesItem.renderCustom!(list, () => {});
-    expect(cleanup2).toHaveBeenCalledTimes(1);
+    ysmMenuItems(opts);
+    expect(makeBonesPanelItem).toHaveBeenCalledWith({
+      tree,
+      cleanupRef,
+      viewContainer,
+      camera: null,
+      scene: null,
+      legacyTestId: "ysm-bones-entry",
+    });
   });
 });

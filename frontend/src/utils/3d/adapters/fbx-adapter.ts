@@ -21,7 +21,7 @@ import { buildFbxSceneFromData, createFbxParser } from "./fbx-parser.ts";
 import type { FbxSceneData } from "./fbx-scene-to-data.ts";
 import { buildBoneTree } from "../bone-tools.ts";
 import { fbxBonesToBoneNodes } from "../fbx-bones.ts";
-import { makeBonePanelRenderer } from "./vrm-bone-ui.ts"; // ADR-074 S2: 通用骨骼面板
+import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 
 /** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
@@ -274,27 +274,17 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
   const bonePanelRef: { current: (() => void) | null } = { current: null };
   const menuItems: PreviewMenuNode[] = [];
   if (boneTree.roots.length > 0) {
-    menuItems.push({
-      id: "bones",
-      icon: "🦴",
-      labelKey: "preview.section.bones",
-      fallback: "骨骼",
-      kind: "panel",
-      legacyTestId: "fbx-bones-entry",
-      dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
-      renderCustom: (list): void => {
-        // 通用骨骼面板：渲染进根菜单面板；重入时先清理旧 renderer（对齐 vrm/mmd 同款）
-        if (bonePanelRef.current) {
-          bonePanelRef.current();
-          bonePanelRef.current = null;
-        }
-        bonePanelRef.current = makeBonePanelRenderer(boneTree)(list, {
-          viewContainer: ctx.viewContainer!,
-          camera: ctx.camera!,
-          scene: ctx.scene!,
-        });
-      },
-    });
+    // 工厂统一空守卫 + cleanupRef 重入清理（消除原 4 段 ~15 行重复；fbx 持 bonePanelRef）
+    menuItems.push(
+      makeBonesPanelItem({
+        tree: boneTree,
+        cleanupRef: bonePanelRef,
+        viewContainer: ctx.viewContainer,
+        camera: ctx.camera,
+        scene: ctx.scene,
+        legacyTestId: "fbx-bones-entry",
+      }),
+    );
   }
 
   return {

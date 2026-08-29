@@ -29,7 +29,7 @@ import type { Spec3D, BoneSelectInfo, BoneMaps } from "../model3d.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import type { BedrockGeometry } from "../../../views/app-preview/geometry.ts";
 import type { PreviewScene, PreviewBuildCtx, PreviewAdapter } from "./mount-preview-core.ts";
-import { makeBonePanelRenderer } from "./vrm-bone-ui.ts"; // ADR-074 S2: 通用骨骼面板
+import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player.ts";
@@ -607,27 +607,14 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       // 面板常驻——不按能力条件注入。
       children: o.panels?.shotNodes?.(o.controlsCtx) ?? [],
     },
-    {
-      id: "bones",
-      icon: "🦴",
-      labelKey: "preview.section.bones",
-      fallback: "骨骼",
-      kind: "panel",
-      dockGroup: "motion",
+    makeBonesPanelItem({
+      tree: o.bonePanel.tree,
+      cleanupRef: o.bonePanel.cleanupRef,
+      viewContainer: o.bonePanel.viewContainer,
+      camera: o.bonePanel.camera,
+      scene: o.bonePanel.scene,
       legacyTestId: "ysm-bones-entry",
-      renderCustom:(list) => {
-        // 通用骨骼面板（ADR-077）：渲染进根菜单面板；重入时先清理旧 renderer
-        if (o.bonePanel.cleanupRef.current) {
-          o.bonePanel.cleanupRef.current();
-          o.bonePanel.cleanupRef.current = null;
-        }
-        o.bonePanel.cleanupRef.current = makeBonePanelRenderer(o.bonePanel.tree)(list, {
-          viewContainer: o.bonePanel.viewContainer!,
-          camera: o.bonePanel.camera!,
-          scene: o.bonePanel.scene!,
-        });
-      },
-    },
+    }),
   ];
   if (o.play) {
     items.push({

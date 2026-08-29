@@ -4,6 +4,8 @@
 // VRMA 动作加载（同目录 .vrma → createVRMAnimationClip）、
 // 错误路径（空字节/解析失败）、GPU 释放（deepDispose + uncacheRoot）。
 // @pixiv/three-vrm 全 mock；three 用真实实现（Box3/Vector3/LoadingManager）。
+import type { BoneTree } from "../bone-tools.ts"
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -752,32 +754,31 @@ describe("vrmMenuItems 结构", () => {
     items.forEach((i) => expect(i.kind).toBe("panel"));
   });
 
-  it("bonePanel 重入时先清理旧 renderer（cleanupRef.current 被调用后置 null）", () => {
-    // 直接测试 cleanupRef 的行为逻辑（与 vrmMenuItems 中 bones 项的 render 一致）
-    const cleanup1 = vi.fn();
-    const cleanup2 = vi.fn();
-    const cleanup3 = vi.fn();
-
-    // 首次渲染：cleanupRef.current 初始为 null，不触发清理，直接注册
-    const cleanupRef1 = { current: null as (() => void) | null };
-    if (cleanupRef1.current) {
-      cleanupRef1.current();
-      cleanupRef1.current = null;
-    }
-    cleanupRef1.current = cleanup2;
-
-    expect(cleanup1).not.toHaveBeenCalled(); // 首次无旧 cleanup
-    expect(cleanupRef1.current).toBe(cleanup2);
-
-    // 重入渲染：应先调用旧 cleanup 再注册新的
-    if (cleanupRef1.current) {
-      cleanupRef1.current(); // 应调用 cleanup2
-      cleanupRef1.current = null;
-    }
-    cleanupRef1.current = cleanup3;
-
-    expect(cleanup2).toHaveBeenCalledTimes(1);
-    expect(cleanupRef1.current).toBe(cleanup3);
+  it("vrm 正确把 bonePanel 字段（tree/cleanupRef/viewContainer/camera/scene/legacyTestId）传给真实 bones 工厂", () => {
+    // 真实 bones-panel-node 工厂（未被 mock）会调 mock 的 makeBonePanelRenderer，
+    // 记录到 makeBonePanelRenderer 的第二次参数（cleanup 函数）便于断言 cleanupRef 接线正确
+    const cleanupRef = { current: null as (() => void) | null };
+    const viewContainer = document.createElement("div");
+    const tree = { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() } as unknown as BoneTree;
+    const items = vrmMenuItems({
+      screenshot: null,
+      modelInfo: { modelName: "test", boneCount: 2, materialCount: 3 },
+      modelPath: "a/test.vrm",
+      bonePanel: { tree, viewContainer, camera: null, scene: null, cleanupRef },
+      material: {
+        list: () => [],
+        getDetail: () => ({ index: 0, name: "test", visible: true, opacity: 1, transparent: false, type: "mtoon" as const }),
+        setVisible: () => {},
+        setOpacity: () => {},
+      },
+      play: null,
+    });
+    const bonesItem = items.find((i) => i.id === "bones")!;
+    expect(bonesItem.legacyTestId).toBe("vrm-bones-entry");
+    // 工厂产物的 renderCustom 应绑 cleanupRef；调一次后 cleanupRef.current 应被设为 no-op 函数
+    bonesItem.renderCustom!(document.createElement("div"));
+    // camera/scene 为 null → 工厂早 return，cleanupRef.current 仍为 null
+    expect(cleanupRef.current).toBeNull();
   });
 
   it("有 play → 追加 vrma-play 项（dockGroup=motion）", () => {

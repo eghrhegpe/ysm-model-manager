@@ -9,7 +9,7 @@ import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm";
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip, type VRMAnimation } from "@pixiv/three-vrm-animation";
 import type { VRM0Meta } from "@pixiv/three-vrm-core";
 import { t } from "../../../core/i18n/t.ts";
-import { makeBonePanelRenderer } from "./vrm-bone-ui.ts";
+import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { buildVrmBoneTree } from "./vrm-bone.ts";
 import { vrmSemanticBoneMap } from "../semantic-bones.ts";
 import { createBreathController } from "../perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
@@ -603,27 +603,14 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       dockGroup: "model",
       children: materialNodes(o.material),
     },
-    {
-      id: "bones",
-      icon: "🦴",
-      labelKey: "preview.section.bones",
-      fallback: "骨骼",
-      kind: "panel",
+    makeBonesPanelItem({
+      tree: o.bonePanel.tree,
+      cleanupRef: o.bonePanel.cleanupRef,
+      viewContainer: o.bonePanel.viewContainer,
+      camera: o.bonePanel.camera,
+      scene: o.bonePanel.scene,
       legacyTestId: "vrm-bones-entry",
-      dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
-      renderCustom:(list): void => {
-        // 通用骨骼面板（ADR-077）：渲染进根菜单面板；重入时先清理旧 renderer
-        if (o.bonePanel.cleanupRef.current) {
-          o.bonePanel.cleanupRef.current();
-          o.bonePanel.cleanupRef.current = null;
-        }
-        o.bonePanel.cleanupRef.current = makeBonePanelRenderer(o.bonePanel.tree)(list, {
-          viewContainer: o.bonePanel.viewContainer!,
-          camera: o.bonePanel.camera!,
-          scene: o.bonePanel.scene!,
-        });
-      },
-    },
+    }),
   ];
   if (o.play) {
     items.push({

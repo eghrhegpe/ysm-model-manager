@@ -40,7 +40,7 @@ import { buildBoneTree, type BoneTree } from "../bone-tools.ts";
 import { mmdSemanticBoneMap } from "../semantic-bones.ts";
 import { mmdSemanticMorphMap } from "../semantic-morphs.ts";
 import { dbg } from "../../debug/debug.ts";
-import { makeBonePanelRenderer } from "./vrm-bone-ui.ts"; // ADR-074 S2: 通用骨骼面板
+import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { createBreathController } from "../perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
 import { createGazeController } from "../perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
 import { createBlinkController } from "../perception/blink.ts"; // 语义 morph 消费方：程序化生命力 L1.5
@@ -1337,35 +1337,17 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
     children: o.panels?.playNodes?.(o.play) ?? [],
   });
   if (o.bonePanel) {
-    // 局部 const 收窄替代 !：renderCustom 闭包内 TS 不保持 o.bonePanel 的收窄
-    const bp = o.bonePanel;
-    items.push({
-      id: "bones",
-      icon: "🦴",
-      labelKey: "preview.section.bones",
-      fallback: "骨骼",
-      kind: "panel",
-      dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
-      legacyTestId: "mmd-bones-entry",
-      renderCustom:(list) => {
-        // 通用骨骼面板：渲染进根菜单面板；重入时先清理旧 renderer
-        if (bp.cleanupRef.current) {
-          bp.cleanupRef.current();
-          bp.cleanupRef.current = null;
-        }
-        // viewContainer/camera/scene 允许 null/undefined（面板未展开时未填充）——
-        // 渲染前显式校验，替代内部 ! 断言
-        const vc = bp.viewContainer;
-        const cam = bp.camera;
-        const scn = bp.scene;
-        if (!vc || !cam || !scn) return;
-        bp.cleanupRef.current = makeBonePanelRenderer(bp.tree)(list, {
-          viewContainer: vc,
-          camera: cam,
-          scene: scn,
-        });
-      },
-    });
+    // 工厂统一空守卫 + cleanupRef 重入清理（消除原 4 段 ~15 行重复）
+    items.push(
+      makeBonesPanelItem({
+        tree: o.bonePanel.tree,
+        cleanupRef: o.bonePanel.cleanupRef,
+        viewContainer: o.bonePanel.viewContainer,
+        camera: o.bonePanel.camera,
+        scene: o.bonePanel.scene,
+        legacyTestId: "mmd-bones-entry",
+      }),
+    );
   }
   if (o.perception) {
     // 局部 const 收窄替代 !：renderCustom 闭包内 TS 不保持 o.perception 的收窄

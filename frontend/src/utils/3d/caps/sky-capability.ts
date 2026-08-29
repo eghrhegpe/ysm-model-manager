@@ -25,6 +25,7 @@ import {
   restoreFields,
 } from "./scene-capability.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
+import { sceneCapabilityRegistry } from "./scene-capability-registry.ts";
 
 export interface SkyParams {
   /** 太阳高度角（度，0=地平线，90=天顶） */
@@ -467,6 +468,9 @@ export class SkyCapability implements SceneCapability {
     if (!this.enabled) return;
     if (v) this.regenerateEnvironment();
     else this.clearEnvironment();
+    // [doc:adr-126-p5] 双间接光协调：环境光开关变化同步 light 的 ambient 衰减（防 ×0.5 过期）
+    (sceneCapabilityRegistry.getById("light") as { refreshAmbientFromSky?: () => void } | null)
+      ?.refreshAmbientFromSky?.();
   }
 
   /** 按模型类别套用散射/曝光预设（ADR-073 #3）；modelType 取 adapter.id（ysm/vrm/mmd/litematic） */

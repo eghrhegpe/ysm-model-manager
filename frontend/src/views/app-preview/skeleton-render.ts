@@ -9,7 +9,7 @@ import { statsCardHTML } from "./tpl.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { renderMultiAngle, type ScreenshotLights } from "./screenshot-renderer.ts";
 import { sceneCapabilityRegistry } from "../../utils/3d/caps/scene-capability-registry.ts";
-import type { LightCapability } from "../../utils/3d/caps/light-capability.ts";
+import { isSkyEnvironmentOn, type LightCapability } from "../../utils/3d/caps/light-capability.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
@@ -197,15 +197,15 @@ export function buildBoneExportRow(
 /**
  * 截图保存内部逻辑（供 3D overlay 使用）
  */
-/** 从预览 LightCapability 提取截图灯光（无 cap / 三点布光全关 → undefined 回退标准灯）——
- *  [doc:adr-126-p5] 截图灯光割裂修复：离屏多角度截图与预览所见即所得 */
+/** 从预览 LightCapability 提取截图灯光（仅 light cap 缺失才回退标准灯——三点全关是用户
+ *  刻意的暗场景，截图必须保持暗——[doc:adr-126-p5] 截图灯光割裂修复：所见即所得） */
 function toScreenshotLights(): ScreenshotLights | undefined {
   const cap = sceneCapabilityRegistry.getById("light") as LightCapability | null;
   if (!cap) return undefined;
   const p = cap.getParams();
-  if (!p.key.enabled && !p.fill.enabled && !p.rim.enabled) return undefined;
   return {
-    ambient: { color: p.ambient.color, intensity: p.ambient.intensity },
+    // 镜像预览的 PMREM 环境光衰减（×0.5）——截图与预览 ambient 同构（单一来源 isSkyEnvironmentOn）
+    ambient: { color: p.ambient.color, intensity: p.ambient.intensity * (isSkyEnvironmentOn() ? 0.5 : 1) },
     key: { ...p.key },
     fill: { ...p.fill },
     rim: { ...p.rim },
@@ -260,6 +260,7 @@ export async function saveScreenshot(
     const results = await renderMultiAngle(model._modelPath || "", texUrls, {
       size: 512,
       componentTextures: model.componentTextures,
+      lights: toScreenshotLights(),
     });
     if (!results) return;
     const hit = results.find((r) => r.name === key);

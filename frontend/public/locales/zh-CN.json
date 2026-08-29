@@ -1097,6 +1097,8 @@
   "preview.ysmModel": "YSM 模型",
   "preview.mmdSkin": "MMD 皮肤",
   "preview.mmdPlay": "播放",
+  "preview.playEmpty": "无内置动作",
+  "preview.playReload": "重新扫描",
   "preview.mmdPause": "暂停",
   "preview.mmdMorph": "表情",
   "preview.mmdLoadModel": "切换模型",

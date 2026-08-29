@@ -353,6 +353,15 @@ export function lightDirToPosition(p: DirectionalLightParams, radius: number): T
   return new THREE.Vector3(h * Math.sin(az), y, h * Math.cos(az));
 }
 
+/** PMREM 环境光（IBL）是否开启——ambient 衰减单一来源（预览 syncLightsFromParams 与
+ *  截图 toScreenshotLights 共用，保证所见即所得——[doc:adr-126-p5] 双间接光协调） */
+export function isSkyEnvironmentOn(): boolean {
+  return (
+    (sceneCapabilityRegistry.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null)
+      ?.isEnvironmentEnabled?.() ?? false
+  );
+}
+
 export class LightCapability implements SceneCapability {
   readonly id = "light";
   readonly labelKey = "preview.lighting";
@@ -730,6 +739,7 @@ export class LightCapability implements SceneCapability {
       volumetricEnabled: this.params.volumetric.enabled,
       volumetricEngine: this.volumetricEngine,
       currentPreset: this.currentPreset,
+      manualPreset: this.manualPreset,
     });
   }
 
@@ -747,10 +757,21 @@ export class LightCapability implements SceneCapability {
     if (state.volumetricEngine === "cone" || state.volumetricEngine === "postprocess") {
       this.volumetricEngine = state.volumetricEngine;
     }
-    if (typeof state.currentPreset === "string") {
+    if (typeof state.manualPreset === "string") {
+      this.manualPreset = state.manualPreset; // [doc:adr-126-p5] 手动优先跨会话保持（重建/刷新不丢）
+      this.setPreset(state.manualPreset, { manual: true });
+    } else if (typeof state.currentPreset === "string") {
       this.setPreset(state.currentPreset);
     }
     this.syncLightsFromParams();
+  }
+
+  /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调；
+   *  也由 syncLightsFromParams 复用——ambient 应用单一出口，预览/截图同构） */
+  refreshAmbientFromSky(): void {
+    const skyEnvOn = isSkyEnvironmentOn();
+    this.ambientLight.color.setHex(this.params.ambient.color);
+    this.ambientLight.intensity = this.params.ambient.intensity * (skyEnvOn ? 0.5 : 1);
   }
 
   private syncLightsFromParams(): void {
@@ -759,11 +780,7 @@ export class LightCapability implements SceneCapability {
     this.updateDirectional(this.rimLight, this.params.rim);
     // [doc:adr-126-p5] 双间接光协调：PMREM 环境光（IBL）开启时 ambient 自动衰减（×0.5）——
     // 两套间接光叠加会过亮/互相稀释，环境贴图开则 ambient 让位（光系统统一性 #3）
-    const skyEnvOn =
-      (sceneCapabilityRegistry.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null)
-        ?.isEnvironmentEnabled?.() ?? false;
-    this.ambientLight.color.setHex(this.params.ambient.color);
-    this.ambientLight.intensity = this.params.ambient.intensity * (skyEnvOn ? 0.5 : 1);
+    this.refreshAmbientFromSky();
     this.setSpotlight({ ...this.params.spotlight });
   }
 

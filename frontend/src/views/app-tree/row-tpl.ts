@@ -5,6 +5,16 @@ import { formatBytes, sizeColor } from "../../utils/dom/format.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 
+// ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
+// 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
+export const VIEW_TESTIDS: readonly string[] = [
+  'tree-file',
+  'tree-toggle',
+  'tree-dir',
+  'tree-dir-toggle',
+];
+
+
 /** 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） */
 export function fileRowHTML(
   e: TreeEntry,

@@ -3,6 +3,13 @@ import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { t } from "../../core/i18n/t.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 
+// ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
+// 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
+export const VIEW_TESTIDS: readonly string[] = [
+  'content-tab',
+];
+
+
 // P1 修复（ADR-040）：settingsHTML 已拆至 tpl-settings.ts，此处 re-export 兼容
 export { settingsHTML } from "./tpl-settings.ts";
 

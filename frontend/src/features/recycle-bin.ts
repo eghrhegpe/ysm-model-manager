@@ -14,6 +14,15 @@ import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { esc } from "../utils/dom/html.ts";
 import { formatBytes } from "../utils/dom/format.ts";
 
+// ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
+// 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
+export const VIEW_TESTIDS: readonly string[] = [
+  'recy-item',
+  'recy-restore',
+  'recy-del',
+];
+
+
 const LEAVE_ANIM_MS = 150;
 const TOAST_ACTION_OK_MS = TOAST_MS.success;
 const TOAST_ACTION_ERR_MS = TOAST_MS.normal;

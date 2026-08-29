@@ -2,6 +2,36 @@
 
 import { t } from "../../core/i18n/t.ts";
 
+// ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
+// 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
+export const VIEW_TESTIDS: readonly string[] = [
+  'tree-srch',
+  'tree-adv-filter',
+  'tree-authors',
+  'tree-batch',
+  'tree-batch-enable',
+  'tree-batch-disable',
+  'tree-more',
+  'tree-more-import-file',
+  'tree-more-import-dir',
+  'tree-sel-all',
+  'tree-more-open-folder',
+  'tree-more-refresh',
+  'tree-more-genindex',
+  'tree-sort',
+  'tree-view-mode',
+  'tree-af-min-bones',
+  'tree-af-max-bones',
+  'tree-af-min-cubes',
+  'tree-af-max-cubes',
+  'tree-af-min-tex',
+  'tree-af-max-tex',
+  'tree-af-clear',
+  'tree-repo',
+  'tree-ftr-stat',
+];
+
+
 export function headerHTML(): string {
   return `<div class="hdr">
 <div class="hdr-row hdr-search-row">

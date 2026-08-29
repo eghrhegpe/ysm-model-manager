@@ -4,6 +4,17 @@ import { shortLabelOf } from "../../utils/resource/short-label.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { t } from "../../core/i18n/t.ts";
 
+// ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
+// 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
+export const VIEW_TESTIDS: readonly string[] = [
+  'sidebar-push',
+  'sidebar-pull',
+  'sidebar-select-all',
+  'sidebar-check',
+  'sidebar-sync-type',
+];
+
+
 export function headerHTML(): string {
   return (
     '<div style="padding:4px 8px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +

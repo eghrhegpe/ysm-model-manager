@@ -30,7 +30,7 @@
 
 实证（见 §4 溯源）：全仓 57 个注册表 testid 全部有真实消费，但消费方式分两类——**44 个**被 `.test.ts` 直接 `getByTestId` 引用；**12 个**（`content-tab`、`sidebar-push/pull/select-all/check/sync-type`、`tree-authors`、`tree-batch`、`tree-more`、`ctx-item`、`dlg-select`、`dlg-ok`）仅出现在自身声明文件，被事件委托 / `dataset.testid` 动态消费，**全仓无任何字面量引用**。
 
-该实证直接否决了「朴素消费性检查（testid 字面量须出现在声明文件之外）」的可行性——它会把这 12 个合法动态委托 testid 误判为死条目。因此阶段 A 不能依赖字面量消费检查，阶段 B（让 testid 与 handler 在同一声明处共存）才是真·机制修复。
+该实证直接否决了「朴素消费性检查（testid 字面量须出现在声明文件之外）」的可行性——它会把这 12 个合法动态委托 testid 误判为死条目。因此阶段 A 不依赖字面量消费检查；阶段 B 以「视图级 `VIEW_TESTIDS` 声明 + 运行期聚合」消除手工清单（见 §2），反造假（病根 3）因本仓 testid↔handler 刻意解耦而交 e2e，契约层只守「存在 + 无孤儿」。
 
 ## 2. 决策（Decision）
 
@@ -43,11 +43,16 @@
 3. **修复指引 + 造假拦截（修复文案）**：注册表条目在 source 缺失时，契约错误信息必须写明 canonical fix = **删除注册表条目**（功能已删），并显式禁止「为过门禁补无 handler 的假按钮」（病根 3 的诱导链从文案层切断）。提交级模式检测（同提交新增 `data-testid="X"` + 注册表条目且零引用 → 失败）留作 push-gate 增强，不在离线契约测试中落地（见 §4 实证对「零引用」判定的可靠性限制）。
 4. **反造假校验推迟至阶段 B（关键修订）**：实证发现本仓消费以 `#id` / `.class` / 事件委托为主，testid 字面量消费**无法区分真/假**——§1 实证 12 个动态委托 testid 全仓零字面量引用；`app-nav` 的 `nav-group-select` / `nav-subtype-select` / `nav-repo-sel` 仅以 `#id` 被组件与测试消费。故阶段 A **不落地字面量消费性检查**：它要么误杀上述合法项，要么需膨胀白名单（= 病根1 重现）。反造假（「有 testid 无 handler」）只能由阶段 B 结构性解决（testid↔handler 同处声明，从结构上使其不可能）。阶段 A 仅以孤儿扫描 + canonical 修复指引止血，不引入消费性白名单。
 
-### 阶段 B（根治，消除手工清单本身）
+### 阶段 B（根治，消除手工清单本身 — 已落地 2026-08-30）
 
-1. **testid 与 handler 同处声明**：各视图以声明式映射（如 `TOOLBAR_BINDINGS = [{ testid, handler }]`、`KEY_TESTIDS`）取代手工 `TESTID_REGISTRY`，使 `testid` 与 `handler` 在同一声明处共存。注册表改为由绑定处**自动生成**（并入 pre-commit 的 `GEN_CMDS` 同款纯函数链路），消灭手工清单（病根 1）。
-2. **契约校验升级为真实性**：每个声明 testid 必须绑定**真实 handler**（非 `undefined` / 无操作）+ 至少一处测试或 handler 引用。「有 testid 无 handler」在结构上不可能（病根 2）。
-3. **反向孤儿扫描并入生成链路**：阶段 A 的孤儿扫描在生成注册表时一并完成，无需独立维护。
+1. **testid 事实源移入视图（同处声明，务实版）**：各视图以 `export const VIEW_TESTIDS: readonly string[]` 声明其稳定 testid（G-1 钩子单一事实源），与视图代码同文件、同生命周期。删除/新增 `data-testid` 时在同一视图可见声明 → 引导同步。集中手工 `TESTID_REGISTRY` 已删除（病根 1 结构性消除）。
+   - **务实边界（关键）**：本仓 handler 以 `#id` / `.class` / 事件委托消费，testid 是 G-1 **刻意解耦**的稳定钩子（见 §1 实证：12 个动态委托 testid 全仓零字面量引用；`nav-*` 仅以 `#id` 消费）。故「`{testid, handler}` 严格同处」不可强制执行（会破坏 G-1 解耦、且动态拼接 testid 无法进静态数组）。阶段 B 取「**视图级声明**」而非「**绑定级 `{testid,handler}`**」——既兑现「同处声明」消除手工清单，又不破坏既有架构。
+2. **注册表运行期聚合（自动生成，无生成文件 / 无 pre-commit 改动）**：契约测试 `tests/test_testid_contract.mjs` 运行期静态扫描 `frontend/src` 各文件 `VIEW_TESTIDS` 字面量数组，聚合为注册表。无需 `GEN_CMDS` / JSON 产物，规避 pre-commit stage 快照范围限制（其仅覆盖 docs/locales/completions）。
+3. **双校验替代单点存在性**：
+   - **must-have**：声明于 `VIEW_TESTIDS` 的 testid 必须在源码有对应 `data-testid`/`dataset.testid` 钩子。删钩子忘删声明 → 红（**保留 G-1「删能红」**——此底线决定了不能采用「纯扫源码生成注册表」，因那会让删钩子后注册表同步消失而失守；故采用显式声明而非纯扫描）。
+   - **孤儿扫描**：源码中命中关键命名约定的 testid 必须被某 `VIEW_TESTIDS` 声明。加关键元素忘登记 → 红（消除病根 1「漏登」）。
+   - 任一「声明↔钩子」不同步即红；「只声明无钩子」的假补也红（病根 3 在契约层收窄——但见下方边界）。
+4. **反造假（病根 3）的诚实边界**：静态契约只能保证「声明↔钩子」一致，无法保证「钩子↔真实 handler」一致（本仓 handler 不按 testid 字面量消费）。故「有 testid 无 handler」的彻底根治**交 e2e 测试**：e2e 以 `getByTestId` 触发真实交互，无 handler 即失败。契约层只守「存在 + 无孤儿」，不假装能验真实性。这是 §1 实证推导的必然结论，非降级。
 
 > 不做的事：不采用「纯字面量消费性检查」作为主手段（实证证伪其安全性）；不在阶段 A 把 12 个动态委托项当作「死条目」强删（会破坏合法功能）。
 
@@ -59,16 +64,17 @@
 - 关键交互元素删除不再能静默逃进门禁盲区。
 
 **负面 / 成本**
-- 阶段 A 引入 12 项有界动态委托白名单，需随阶段 B 收敛；白名单本身是小幅手工维护（但远小于 57 项全量清单，且每项带收敛 TODO）。
-- 阶段 B 为结构性重构：需在各视图建立声明式 `testid↔handler` 映射并改生成链路，有一次性迁移成本。
+- 阶段 B 在 11 个视图文件新增 `VIEW_TESTIDS` 导出（一次性机械迁移，由原 `tmp/inject-view-testids.mjs` 完成，脚本已删），后续维护成本 = 删/加 `data-testid` 时同步同文件数组（引导式，远低于集中清单漏同步）。
+- 反造假（病根 3）未由契约静态根治，依赖 e2e 覆盖真实交互——属架构性取舍（testid↔handler 刻意解耦），非遗漏。
 
 **已知遗留**
-- 阶段 A→B 过渡期内，12 个动态委托 testid 依赖白名单放行，其「真实消费」靠文档标注而非静态校验保障。
-- `tmp/analyze-testid-consumers.mjs` 为本次调研实证脚本（一次性），不作为长效工具；阶段 B 落地后可删除。
+- 动态拼接 testid（`"preview-"+node.id` 等）不在 `VIEW_TESTIDS` 契约范围，其稳定性由上游 render 保证，契约不守护（符合 G-1「只守固定钩子」语义）。
+- `tmp/` 下实证脚本（`analyze-testid-consumers.mjs` / `analyze-orphan-gap.mjs` / `inject-view-testids.mjs`）为一次性迁移与调研工具，阶段 B 落地后清理。
 
 ## 4. 数据溯源
 
-- **契约测试实现** → `tests/test_testid_contract.mjs`：`TESTID_REGISTRY`（line 19–88，手工清单）；存在性校验（line 103–116，仅 `content.includes('data-testid="<id>"')` / `dataset.testid = "<id>"`）。
+- **契约测试实现（阶段 B 落地后）** → `tests/test_testid_contract.mjs`：运行期聚合 `VIEW_TESTIDS`（静态扫描 `frontend/src` 各文件 `export const VIEW_TESTIDS` 字面量数组）→ 注册表；双校验 `must-have`（声明须有钩子）+ 孤儿扫描（源码关键前缀 testid 须声明）。手工 `TESTID_REGISTRY` 已删除。
+- **VIEW_TESTIDS 声明分布** → 11 个视图文件（app-content/tpl.ts、app-nav/index.ts、app-sidebar/tpl.ts、app-sync-manager/tpl.ts、app-toast/index.ts、app-tree/{tpl,row-tpl}.ts、context-menu/index.ts、dialogs/modal.ts、community/render.ts、recycle-bin.ts），共 63 个稳定 testid。
 - **事件链核实** → `git cat-file -t` 确认 `5bfc6ff5` / `5cbbc43a` / `029ef285` / `46f45c19` / `9a43766d` 均存在；`git log --oneline` 见 `9a43766d` 为「移除 export-repo 死按钮 + 删 tree-repo-export 死条目」。
 - **消费性实证** → `tmp/analyze-testid-consumers.mjs`（遍历 `frontend/src` 全部 `.ts/.tsx`，负向边界正则 `(?<![a-z0-9-])<id>(?![a-z0-9-])` 防前缀误匹配）：57 个 testid 全部有消费；44 个有 `.test.ts` `getByTestId` 引用；12 个仅声明文件出现（动态委托）。
 - **上游契约** → ADR-035（G-1 抗脆弱测试基础设施）、`docs/adr/index.md` 登记表（ADR-133 已占号）。

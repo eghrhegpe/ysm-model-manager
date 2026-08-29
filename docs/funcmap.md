@@ -42,15 +42,15 @@
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 18 | 37 |
-| 前端·特性 | 18 | 91 |
+| 前端·特性 | 18 | 93 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
-| 前端·工具 | 181 | 748 |
-| frontend/views | 118 | 348 |
+| 前端·工具 | 181 | 749 |
+| frontend/views | 121 | 356 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **514** | **2216** |
+| **合计** | **517** | **2227** |
 
 ## Go·头像
 
@@ -1147,18 +1147,19 @@
 | `RepoEventsContext()` | `frontend/src/features/community/events:17` | bindRepoEvents 上下文 |
 | `RepoEventsHandle()` | `frontend/src/features/community/events:29` | 绑定返回值 |
 | `bindRepoEvents()` | `frontend/src/features/community/events:340` | 绑定仓库模型页面的所有事件。 |
-| `WorkshopModel()` | `frontend/src/features/community/render:10` | 工坊模型条目（index.json 结构） |
-| `WorkshopSite()` | `frontend/src/features/community/render:18` | 工坊站点 |
-| `isModelMissing()` | `frontend/src/features/community/render:28` | 判断模型是否缺失（本地不存在） |
-| `countMissing()` | `frontend/src/features/community/render:44` | 计算缺失数量 |
-| `filterModels()` | `frontend/src/features/community/render:55` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
-| `ModelRowCtx()` | `frontend/src/features/community/render:91` | 单行构建上下文（renderModelList / buildModelRow 共用） |
-| `buildModelRow()` | `frontend/src/features/community/render:100` | 构建单行模型行（虚拟列表 renderItem 用） |
-| `renderModelList()` | `frontend/src/features/community/render:176` | 渲染模型列表（DocumentFragment） |
-| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:210` | 站点分组展示顺序（renderCardsHTML 使用） |
-| `groupSites()` | `frontend/src/features/community/render:215` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
-| `renderCardsHTML()` | `frontend/src/features/community/render:232` | 生成左栏站点卡片 HTML |
-| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:282` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
+| `VIEW_TESTIDS()` | `frontend/src/features/community/render:11` | — |
+| `WorkshopModel()` | `frontend/src/features/community/render:27` | 工坊模型条目（index.json 结构） |
+| `WorkshopSite()` | `frontend/src/features/community/render:35` | 工坊站点 |
+| `isModelMissing()` | `frontend/src/features/community/render:45` | 判断模型是否缺失（本地不存在） |
+| `countMissing()` | `frontend/src/features/community/render:61` | 计算缺失数量 |
+| `filterModels()` | `frontend/src/features/community/render:72` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
+| `ModelRowCtx()` | `frontend/src/features/community/render:108` | 单行构建上下文（renderModelList / buildModelRow 共用） |
+| `buildModelRow()` | `frontend/src/features/community/render:117` | 构建单行模型行（虚拟列表 renderItem 用） |
+| `renderModelList()` | `frontend/src/features/community/render:193` | 渲染模型列表（DocumentFragment） |
+| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:227` | 站点分组展示顺序（renderCardsHTML 使用） |
+| `groupSites()` | `frontend/src/features/community/render:232` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
+| `renderCardsHTML()` | `frontend/src/features/community/render:249` | 生成左栏站点卡片 HTML |
+| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:299` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
 | `showRepoModels()` | `frontend/src/features/community/show-repo-models:27` | 显示 GitHub 仓库模型列表（比对本地已有文件） 包含：本地扫描、sourceLabel构建、countMissing、renderRepoHeaderHTML、bindRep |
 | `VirtualListOpts()` | `frontend/src/features/community/virtual-list:8` | — |
 | `VirtualList()` | `frontend/src/features/community/virtual-list:21` | — |
@@ -1189,9 +1190,10 @@
 | `PackDndInstance()` | `frontend/src/features/pack-dnd:32` | 卡片实例的最小形状（SidebarInstance 结构子集） |
 | `handleInstanceDrop()` | `frontend/src/features/pack-dnd:47` | 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。 |
 | `bindPackCardDnD()` | `frontend/src/features/pack-dnd:184` | 在 document 层注册整合包卡片 DnD（WebView2 ShadowRoot drop 限制， 与 bindTreeDnD 同款范式：document 监听 + comp |
-| `RecycleHost()` | `frontend/src/features/recycle-bin:23` | — |
-| `isPathInRoot()` | `frontend/src/features/recycle-bin:33` | — |
-| `initRecycleBin()` | `frontend/src/features/recycle-bin:235` | — |
+| `VIEW_TESTIDS()` | `frontend/src/features/recycle-bin:19` | — |
+| `RecycleHost()` | `frontend/src/features/recycle-bin:32` | — |
+| `isPathInRoot()` | `frontend/src/features/recycle-bin:42` | — |
+| `initRecycleBin()` | `frontend/src/features/recycle-bin:244` | — |
 | `currentRepoType()` | `frontend/src/features/repo-rtype:18` | 读取当前仓库资源类型（时刻值）。 |
 | `useCurrentResourceType()` | `frontend/src/features/repo-rtype:28` | 订阅当前仓库资源类型。 |
 | `UpdateInfo()` | `frontend/src/features/version-updater:15` | 更新信息（CheckUpdate 返回） |
@@ -1938,25 +1940,26 @@
 | `applyReplaceToName()` | `frontend/src/utils/dom/dialogs/batch-rename-util:41` | 查找替换：分离扩展名，仅对文件名主体做替换。 |
 | `BatchRenameChange()` | `frontend/src/utils/dom/dialogs/batch-rename:21` | 应用变更载荷 |
 | `showBatchRenameDialog()` | `frontend/src/utils/dom/dialogs/batch-rename:438` | — |
-| `trapFocus()` | `frontend/src/utils/dom/dialogs/modal:25` | 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面 |
-| `closeDlg()` | `frontend/src/utils/dom/dialogs/modal:53` | 带退场动画关闭对话框 |
-| `__resetModalStateForTest()` | `frontend/src/utils/dom/dialogs/modal:81` | 测试钩子：重置活动弹窗单例槽位（isolate:false 共享模块图下，兄弟文件残留的 _activeOverlay 会让「无活动弹窗」断言失真；web-store.__rese |
-| `registerDlg()` | `frontend/src/utils/dom/dialogs/modal:88` | 弹窗 append 到 body 后调用，登记为当前活动弹窗 |
-| `closeActiveDialog()` | `frontend/src/utils/dom/dialogs/modal:104` | 关闭当前活动弹窗（按取消值结算）。返回是否关闭了弹窗。 |
-| `ModalPromptOptions()` | `frontend/src/utils/dom/dialogs/modal:185` | modalPrompt 选项 |
-| `modalPrompt()` | `frontend/src/utils/dom/dialogs/modal:263` | 弹出带输入框的模态框，类似 styled prompt() |
-| `ModalSelectOptions()` | `frontend/src/utils/dom/dialogs/modal:282` | modalSelect 选项 |
-| `modalSelect()` | `frontend/src/utils/dom/dialogs/modal:351` | 弹出下拉选择框 |
-| `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:367` | modalConfirm 选项 |
-| `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:422` | 弹出确认对话框 |
-| `ModalProgressOptions()` | `frontend/src/utils/dom/dialogs/modal:435` | — |
-| `ModalProgressHandle()` | `frontend/src/utils/dom/dialogs/modal:443` | — |
-| `fmtMB()` | `frontend/src/utils/dom/dialogs/modal:450` | 格式化字节为 MB（进度弹窗/窗口标题共用） |
-| `modalProgress()` | `frontend/src/utils/dom/dialogs/modal:533` | 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。 |
-| `ModalPickerItem()` | `frontend/src/utils/dom/dialogs/modal:551` | modalPicker 行项（label/meta/sub/hint 由函数内部 esc 转义，调用方传原始文本） |
-| `ModalPickerOptions()` | `frontend/src/utils/dom/dialogs/modal:560` | modalPicker 选项 |
-| `ModalPickerResult()` | `frontend/src/utils/dom/dialogs/modal:573` | modalPicker 结果 |
-| `modalPicker()` | `frontend/src/utils/dom/dialogs/modal:650` | 富列表选择弹窗（行即选项）：复用统一弹窗脚手架（createDialog）， 单例登记 / 焦点陷阱 / 退场动画 / Esc / 遮罩关闭与 modalSelect 同款。 |
+| `VIEW_TESTIDS()` | `frontend/src/utils/dom/dialogs/modal:10` | — |
+| `trapFocus()` | `frontend/src/utils/dom/dialogs/modal:36` | 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面 |
+| `closeDlg()` | `frontend/src/utils/dom/dialogs/modal:64` | 带退场动画关闭对话框 |
+| `__resetModalStateForTest()` | `frontend/src/utils/dom/dialogs/modal:92` | 测试钩子：重置活动弹窗单例槽位（isolate:false 共享模块图下，兄弟文件残留的 _activeOverlay 会让「无活动弹窗」断言失真；web-store.__rese |
+| `registerDlg()` | `frontend/src/utils/dom/dialogs/modal:99` | 弹窗 append 到 body 后调用，登记为当前活动弹窗 |
+| `closeActiveDialog()` | `frontend/src/utils/dom/dialogs/modal:115` | 关闭当前活动弹窗（按取消值结算）。返回是否关闭了弹窗。 |
+| `ModalPromptOptions()` | `frontend/src/utils/dom/dialogs/modal:196` | modalPrompt 选项 |
+| `modalPrompt()` | `frontend/src/utils/dom/dialogs/modal:274` | 弹出带输入框的模态框，类似 styled prompt() |
+| `ModalSelectOptions()` | `frontend/src/utils/dom/dialogs/modal:293` | modalSelect 选项 |
+| `modalSelect()` | `frontend/src/utils/dom/dialogs/modal:362` | 弹出下拉选择框 |
+| `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:378` | modalConfirm 选项 |
+| `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:433` | 弹出确认对话框 |
+| `ModalProgressOptions()` | `frontend/src/utils/dom/dialogs/modal:446` | — |
+| `ModalProgressHandle()` | `frontend/src/utils/dom/dialogs/modal:454` | — |
+| `fmtMB()` | `frontend/src/utils/dom/dialogs/modal:461` | 格式化字节为 MB（进度弹窗/窗口标题共用） |
+| `modalProgress()` | `frontend/src/utils/dom/dialogs/modal:544` | 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。 |
+| `ModalPickerItem()` | `frontend/src/utils/dom/dialogs/modal:562` | modalPicker 行项（label/meta/sub/hint 由函数内部 esc 转义，调用方传原始文本） |
+| `ModalPickerOptions()` | `frontend/src/utils/dom/dialogs/modal:571` | modalPicker 选项 |
+| `ModalPickerResult()` | `frontend/src/utils/dom/dialogs/modal:584` | modalPicker 结果 |
+| `modalPicker()` | `frontend/src/utils/dom/dialogs/modal:661` | 富列表选择弹窗（行即选项）：复用统一弹窗脚手架（createDialog）， 单例登记 / 焦点陷阱 / 退场动画 / Esc / 遮罩关闭与 modalSelect 同款。 |
 | `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:7` | 重命名字段（调用方已 trim） |
 | `BuildModelNameOptions()` | `frontend/src/utils/dom/dialogs/rename-format:21` | 命名模板引擎选项（索引 4.9 收敛 buildRenameName / rebuildParsedName 两套手工拼接）： - fillDefaults=true：空作品补「未 |
 | `ModelNameFields()` | `frontend/src/utils/dom/dialogs/rename-format:27` | 命名模板输入字段（variant 可选：单重命名有、批量重建无） |
@@ -2188,11 +2191,12 @@
 | `settingsHTML()` | `frontend/src/views/app-content/tpl-settings:331` | — |
 | `settingsHTML()` | `frontend/src/views/app-content/tpl` | — |
 | `recycleHTML()` | `frontend/src/views/app-content/tpl` | — |
-| `repositoryHTML()` | `frontend/src/views/app-content/tpl:9` | — |
-| `instancesHTML()` | `frontend/src/views/app-content/tpl:47` | — |
-| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:70` | — |
-| `githubHTML()` | `frontend/src/views/app-content/tpl:171` | ===== GitHub 仓库页面 ===== |
-| `workshopHTML()` | `frontend/src/views/app-content/tpl:202` | — |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-content/tpl:8` | — |
+| `repositoryHTML()` | `frontend/src/views/app-content/tpl:16` | — |
+| `instancesHTML()` | `frontend/src/views/app-content/tpl:54` | — |
+| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:77` | — |
+| `githubHTML()` | `frontend/src/views/app-content/tpl:178` | ===== GitHub 仓库页面 ===== |
+| `workshopHTML()` | `frontend/src/views/app-content/tpl:209` | — |
 | `extractAvatars()` | `frontend/src/views/app-content/workshop-avatar:13` | 提取创作者头像（后台批量） 无参全量：BatchExtractCreatorAvatars() 扫全部模型一次性灌满 host._avatarCache； 先前按「当前站点/作者限 |
 | `BrowseMode()` | `frontend/src/views/app-content/workshop-browse-mode:5` | 创作者频道浏览模式 |
 | `BrowseModeRef()` | `frontend/src/views/app-content/workshop-browse-mode:8` | 浏览模式可变引用：与 wsEditModeRef:{v} 同构，贯穿 ctx→render→openUrl 消除值拷贝 stale |
@@ -2213,6 +2217,7 @@
 | `createWorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:28` | 创建创意工坊页的共享 ref 对象（单一入口，所有消费者共享同一实例） |
 | `initWorkshopTabs()` | `frontend/src/views/app-content/workshop-tabs:40` | 初始化创意工坊 Tab |
 | `setShowSiteView()` | `frontend/src/views/app-content/workshop-tabs:150` | — |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-nav/index:18` | — |
 | `navCSS()` | `frontend/src/views/app-nav/tpl:2` | — |
 | `BoneEntry()` | `frontend/src/views/app-preview/bone-names:5` | 骨骼条目（结构类型，兼容 DecodedYsm.bones 元素） |
 | `buildBoneNamesText()` | `frontend/src/views/app-preview/bone-names:15` | 构建骨骼名导出文本行： 首行 `模型: &lt;path&gt;`、次行 `骨骼总数: &lt;n&gt;`，其后每根骨骼 有方块则 `名称 (n 方)`，结构骨骼（无方块）则 `名称 (结构骨骼,无方) |
@@ -2364,10 +2369,11 @@
 | `groupMmdVariants()` | `frontend/src/views/app-sidebar/loader:167` | 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。 |
 | `renderVersionCards()` | `frontend/src/views/app-sidebar/render:8` | — |
 | `sidebarCSS()` | `frontend/src/views/app-sidebar/sidebar-css:3` | — |
-| `headerHTML()` | `frontend/src/views/app-sidebar/tpl:7` | — |
-| `footerHTML()` | `frontend/src/views/app-sidebar/tpl:26` | — |
-| `listContainerHTML()` | `frontend/src/views/app-sidebar/tpl:70` | — |
-| `instanceCardHeaderHTML()` | `frontend/src/views/app-sidebar/tpl:100` | 单个整合包卡片头部。 |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-sidebar/tpl:9` | — |
+| `headerHTML()` | `frontend/src/views/app-sidebar/tpl:18` | — |
+| `footerHTML()` | `frontend/src/views/app-sidebar/tpl:37` | — |
+| `listContainerHTML()` | `frontend/src/views/app-sidebar/tpl:81` | — |
+| `instanceCardHeaderHTML()` | `frontend/src/views/app-sidebar/tpl:111` | 单个整合包卡片头部。 |
 | `EventSelf()` | `frontend/src/views/app-sync-manager/events:9` | — |
 | `bindEvents()` | `frontend/src/views/app-sync-manager/events:17` | 绑定所有 DOM 事件（状态筛选 / 单行操作按钮 / dir-level 文件夹展开折叠） |
 | `SyncManagerSelf()` | `frontend/src/views/app-sync-manager/index:27` | 合并四子模块（store / renderer / events / network）对组件实例的接口需求， 一统江湖，消除各处 `as any` 桥接。各子模块可改从此导入。 |
@@ -2384,18 +2390,20 @@
 | `loadData()` | `frontend/src/views/app-sync-manager/store:42` | 加载实例同步状态（GetInstanceSyncStatus） 过期代际丢弃；加载失败 toast 提醒 + 空数组。 |
 | `tabStatus()` | `frontend/src/views/app-sync-manager/store:75` | tabStatus：diverged 折叠进 missing tab（继承可操作属性——与 renderer 计数同规， 逐节点复用以防口径漂移）。返回该条目在 status ta |
 | `applyFilter()` | `frontend/src/views/app-sync-manager/store:123` | 应用类型 + 状态筛选，写入 self._filteredItems（递归 + keep-ancestors）。 |
-| `SyncItem()` | `frontend/src/views/app-sync-manager/tpl:9` | 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） |
-| `STATUS_ICON()` | `frontend/src/views/app-sync-manager/tpl:32` | — |
-| `STATUS_COLOR()` | `frontend/src/views/app-sync-manager/tpl:41` | — |
-| `statusIconOf()` | `frontend/src/views/app-sync-manager/tpl:50` | — |
-| `statusColorOf()` | `frontend/src/views/app-sync-manager/tpl:51` | — |
-| `actionBtnHTML()` | `frontend/src/views/app-sync-manager/tpl:54` | 状态操作按钮（missing/diverged→push；optional→pull；legacy→pullHere；其余无） |
-| `syncDirRowHTML()` | `frontend/src/views/app-sync-manager/tpl:71` | 文件夹行 HTML（dir-level 层级展示：箭头 + 图标 + 名称 + 大小 + 操作按钮） 点击整行切换展开/折叠；push/pull 按钮冒泡到文件行层，由 event |
-| `containerHTML()` | `frontend/src/views/app-sync-manager/tpl:138` | 容器骨架 |
-| `statusTabHTML()` | `frontend/src/views/app-sync-manager/tpl:181` | 状态筛选标签 HTML |
-| `itemHTML()` | `frontend/src/views/app-sync-manager/tpl:210` | 列表项 HTML（扁平文件行，按 isDir 为 false 渲染） |
-| `emptyHTML()` | `frontend/src/views/app-sync-manager/tpl:253` | 空状态 HTML |
-| `loadingHTML()` | `frontend/src/views/app-sync-manager/tpl:267` | 加载中 |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-sync-manager/tpl:10` | — |
+| `SyncItem()` | `frontend/src/views/app-sync-manager/tpl:17` | 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） |
+| `STATUS_ICON()` | `frontend/src/views/app-sync-manager/tpl:40` | — |
+| `STATUS_COLOR()` | `frontend/src/views/app-sync-manager/tpl:49` | — |
+| `statusIconOf()` | `frontend/src/views/app-sync-manager/tpl:58` | — |
+| `statusColorOf()` | `frontend/src/views/app-sync-manager/tpl:59` | — |
+| `actionBtnHTML()` | `frontend/src/views/app-sync-manager/tpl:62` | 状态操作按钮（missing/diverged→push；optional→pull；legacy→pullHere；其余无） |
+| `syncDirRowHTML()` | `frontend/src/views/app-sync-manager/tpl:79` | 文件夹行 HTML（dir-level 层级展示：箭头 + 图标 + 名称 + 大小 + 操作按钮） 点击整行切换展开/折叠；push/pull 按钮冒泡到文件行层，由 event |
+| `containerHTML()` | `frontend/src/views/app-sync-manager/tpl:146` | 容器骨架 |
+| `statusTabHTML()` | `frontend/src/views/app-sync-manager/tpl:189` | 状态筛选标签 HTML |
+| `itemHTML()` | `frontend/src/views/app-sync-manager/tpl:218` | 列表项 HTML（扁平文件行，按 isDir 为 false 渲染） |
+| `emptyHTML()` | `frontend/src/views/app-sync-manager/tpl:261` | 空状态 HTML |
+| `loadingHTML()` | `frontend/src/views/app-sync-manager/tpl:275` | 加载中 |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-toast/index:12` | — |
 | `treeCSS()` | `frontend/src/views/app-tree/app-tree-styles:3` | — |
 | `AuthorInfo()` | `frontend/src/views/app-tree/authors:6` | 作者统计（Go ListModelAuthors 返回） |
 | `loadAuthors()` | `frontend/src/views/app-tree/authors:19` | 从 Go 端加载作者列表 |
@@ -2423,19 +2431,22 @@
 | `folderRowCommon()` | `frontend/src/views/app-tree/row-common:34` | 文件夹行公共计算：图标、颜色、箭头、开关 class、显示名、缩进 |
 | `listFileRowHTML()` | `frontend/src/views/app-tree/row-tpl-list:8` | 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） |
 | `listFolderRowHTML()` | `frontend/src/views/app-tree/row-tpl-list:27` | 文件夹行 HTML（紧凑列表模式：arrow + folder icon + name） |
-| `fileRowHTML()` | `frontend/src/views/app-tree/row-tpl:9` | 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） |
-| `folderRowHTML()` | `frontend/src/views/app-tree/row-tpl:34` | 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-tree/row-tpl:10` | — |
+| `fileRowHTML()` | `frontend/src/views/app-tree/row-tpl:19` | 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） |
+| `folderRowHTML()` | `frontend/src/views/app-tree/row-tpl:44` | 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） |
 | `bindToolbarEvents()` | `frontend/src/views/app-tree/toolbar-events:356` | — |
 | `openAdvFilterDialog()` | `frontend/src/views/app-tree/toolbar-search:253` | — |
 | `pickWebFilesAndImport()` | `frontend/src/views/app-tree/toolbar-search:287` | — |
-| `headerHTML()` | `frontend/src/views/app-tree/tpl:5` | — |
-| `footerHTML()` | `frontend/src/views/app-tree/tpl:30` | — |
-| `emptyHTML()` | `frontend/src/views/app-tree/tpl:38` | — |
-| `spinnerHTML()` | `frontend/src/views/app-tree/tpl:42` | — |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-tree/tpl:7` | — |
+| `headerHTML()` | `frontend/src/views/app-tree/tpl:35` | — |
+| `footerHTML()` | `frontend/src/views/app-tree/tpl:60` | — |
+| `emptyHTML()` | `frontend/src/views/app-tree/tpl:68` | — |
+| `spinnerHTML()` | `frontend/src/views/app-tree/tpl:72` | — |
 | `ROW_H_GRID()` | `frontend/src/views/app-tree/virtual-scroll:3` | — |
 | `ROW_H_LIST()` | `frontend/src/views/app-tree/virtual-scroll:4` | — |
 | `calcVisibleRange()` | `frontend/src/views/app-tree/virtual-scroll:14` | 根据滚动位置计算可见行范围（支持动态行高） |
 | `installScrollSync()` | `frontend/src/views/app-tree/virtual-scroll:31` | 在容器上安装滚动监听，当滚动到新范围时自动重新渲染可见行 |
+| `VIEW_TESTIDS()` | `frontend/src/views/context-menu/index:10` | — |
 
 ## 前端·WASM
 

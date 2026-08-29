@@ -6,6 +6,23 @@ import { formatBytes } from "../../utils/dom/format.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
 
+// ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
+// 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
+export const VIEW_TESTIDS: readonly string[] = [
+  'gh-back',
+  'gh-srch',
+  'gh-toggle',
+  'gh-select-all',
+  'gh-dl-selected',
+  'gh-list',
+  'gh-row',
+  'gh-cb',
+  'gh-name',
+  'gh-dl',
+  'gh-search-bili',
+];
+
+
 /** 工坊模型条目（index.json 结构） */
 export interface WorkshopModel {
   name: string;

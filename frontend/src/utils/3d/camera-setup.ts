@@ -51,11 +51,18 @@ function fitCameraToBounds(
     box.getCenter(center);
     const size = new THREE.Vector3();
     box.getSize(size);
-    const dist = Math.max(size.x, size.y, size.z) * 1.5 + 2;
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const dist = maxDim * 1.5 + 2;
     // 模型包围盒适配：相机放 Z- 侧（模型正面；历史曾用 +Z/YSMViewer 默认，实际 YSM 模型脸朝 Z-）
     camera.position.set(center.x, center.y, center.z - dist);
     camera.lookAt(center);
     controls.target.copy(center);
+    // 深度标定（ADR 对齐 vrm/mmd/fbx/pack）：把近/远裁剪面按包围盒收紧到 maxDim*50，
+    // 避免共享单例相机残留的 far=5000 导致 YSM / 多模型同框深度精度崩坏（z-fighting / 遮挡错乱）。
+    // 此前 fitCameraToScene 只设机位不碰 near/far，是"其他资源正常、YSM 深度异常"的根因。
+    camera.near = 0.05;
+    camera.far = maxDim * 50;
+    camera.updateProjectionMatrix();
   } else {
     camera.position.set(0, 80, -120);
     controls.target.set(0, 80, 0);

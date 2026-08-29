@@ -70,6 +70,30 @@ describe("fitCameraToScene", () => {
     expect(controls.target.x).toBeCloseTo(10, 1);
     expect(controls.target.y).toBeCloseTo(5, 1);
   });
+
+  it("回归：取景后按包围盒收紧 near/far（far ≈ maxDim*50，near=0.05）", () => {
+    const { camera, controls } = makeCtx();
+    // 故意污染 near/far，模拟共享单例相机被上一类资源留下的残留值
+    camera.near = 1;
+    camera.far = 12345;
+    const root = makeModelRoot(16, 32, 16); // raw 16×32×16
+    root.scale.set(1 / 16, 1 / 16, 1 / 16); // 缩放后 1×2×1，maxDim=2
+
+    fitCameraToScene(root, camera, controls);
+
+    // 必须被包围盒标定覆盖：near=0.05、far=maxDim*50=100
+    expect(camera.near).toBeCloseTo(0.05, 5);
+    expect(camera.far).toBeCloseTo(2 * 50, 5);
+  });
+
+  it("回归：空内容根节点 fallback 不污染 near/far（保留既有值）", () => {
+    const { camera, controls } = makeCtx();
+    const origNear = camera.near;
+    const origFar = camera.far;
+    fitCameraToScene(null, camera, controls);
+    expect(camera.near).toBe(origNear);
+    expect(camera.far).toBe(origFar);
+  });
 });
 
 describe("fitCameraToRoots", () => {
@@ -114,6 +138,23 @@ describe("fitCameraToRoots", () => {
     // 即使 visible=false，setFromObject 仍然计入（这是设计决策：调用方应自己过滤）
     const expectedDist = 3.5; // maxDim=1, dist = 1 * 1.5 + 2
     expect(camera.position.z).toBeCloseTo(-expectedDist, 1);
+  });
+
+  it("回归：多根并集同样收紧 far ≈ 并集 maxDim*50", () => {
+    const { camera, controls } = makeCtx();
+    camera.far = 9999; // 模拟残留
+    const rootA = makeModelRoot(16, 16, 16);
+    rootA.scale.set(1 / 16, 1 / 16, 1 / 16);
+    rootA.position.set(-5, 0, 0);
+    const rootB = makeModelRoot(16, 16, 16);
+    rootB.scale.set(1 / 16, 1 / 16, 1 / 16);
+    rootB.position.set(5, 0, 0);
+
+    fitCameraToRoots([rootA, rootB], camera, controls);
+
+    // 并集 width=11（从 -5.5 到 5.5），maxDim=11，far=550
+    expect(camera.far).toBeCloseTo(11 * 50, 5);
+    expect(camera.near).toBeCloseTo(0.05, 5);
   });
 });
 

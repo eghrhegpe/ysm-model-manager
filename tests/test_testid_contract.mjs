@@ -48,7 +48,6 @@ const TESTID_REGISTRY = {
   'tree-more-import-file': 'src/views/app-tree/tpl.ts',
   'tree-more-import-dir':  'src/views/app-tree/tpl.ts',
   'tree-sel-all':   'src/views/app-tree/tpl.ts',
-  'tree-repo-export': 'src/views/app-tree/tpl.ts',
   'tree-more-open-folder': 'src/views/app-tree/tpl.ts',
   'tree-more-refresh': 'src/views/app-tree/tpl.ts',
   'tree-more-genindex': 'src/views/app-tree/tpl.ts',

@@ -104,8 +104,12 @@ class ContextMenu extends WebComponentBase {
         const label = this._esc(item.label || "");
         const icon = item.icon ? this._esc(item.icon) : "";
         const danger = item.danger ? "danger" : "";
+        // ADR-133 阶段 C+：action 落到 DOM 供测试语义定位。MenuItem.action 本就是
+        // 「行为标识（测试按此匹配）」，此前只存在于 JS 层，e2e 只能按 i18n 文案
+        // filter（改文案/切 locale 即静默失效）；输出属性后定位与文案彻底解耦。
+        const action = item.action ? ` data-action="${this._esc(item.action)}"` : "";
         return `
-        <div class="item ${danger}" data-testid="ctx-item" data-idx="${i}" style="animation: itemSlideIn .15s ease ${i * 25}ms both;">
+        <div class="item ${danger}" data-testid="ctx-item" data-idx="${i}"${action} style="animation: itemSlideIn .15s ease ${i * 25}ms both;">
           ${icon ? `<span class="icon">${icon}</span>` : ""}
           <span>${label}</span>
         </div>

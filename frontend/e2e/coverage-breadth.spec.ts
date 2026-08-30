@@ -10,7 +10,7 @@
 // （playwright.config.ts 默认 testDir ./e2e，本文件按文件名被扫描——日常 e2e 不跑它，
 //   仅按需执行；采集产物不入 git，.gitignore 已含 frontend/e2e-coverage/ 可选加）
 import { test, expect } from "./fixture.ts";
-import { gotoApp, waitForTreeCount, clickTreeFile } from "./helpers.ts";
+import { gotoApp, navItem, waitForTreeCount, clickTreeFile } from "./helpers.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -34,7 +34,7 @@ test.describe("E2E 覆盖广度采集（G-4）", () => {
     }
 
     // ② 文件树交互（展开/点击）
-    await navItems.nth(0).click(); // 回到仓库页
+    await navItem(page, "repository").click(); // 回到仓库页（语义定位，原 nth(0) 依赖首项顺序）
     await expect(page.locator('[data-testid="tree-file"]').first()).toBeVisible({ timeout: 5000 });
     // P2 修复（子代理审计）：原 `waitForTreeCount(page, 1)` 参数错位——第一参数应为
     // testid 字符串（"tree-file"），传数字 1 会白等 8s 返回 0，后续 clickTreeFile 空操作

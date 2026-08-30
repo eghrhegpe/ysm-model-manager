@@ -2,7 +2,7 @@
 // 验证核心导航路径：点击 nav-item → 页面切换。
 // 断言基于 data-testid 稳定钩子（Design.md §19.1）。
 import { test, expect } from "./fixture.ts";
-import { gotoApp } from "./helpers.ts";
+import { gotoApp, navItem } from "./helpers.ts";
 
 test.describe("导航切换", () => {
   test("首页加载 → 渲染导航栏 6 项", async ({ page }) => {
@@ -14,13 +14,14 @@ test.describe("导航切换", () => {
 
   test("点击「整合包管理」→ 页内容切换", async ({ page }) => {
     await gotoApp(page);
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 点击第二个导航项（整合包管理）
-    await navItems.nth(1).click();
+    // 语义定位整合包管理项（原 nth(1) 序号：viewer 模式 instances 不渲染即整体错位）
+    await navItem(page, "instances").click();
     // 页面内容应切换（app-content 响应 nav:change 事件）
     // 断言 instances 页实际元素（原断言 content-tab 是 repository 页的标签，
     // 切换后不可见属假绿——依赖旧时序才通过；实例页稳定钩子是 ins-content）
-    await expect(page.locator("#ins-content")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="ins-content"]')).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test("依次点击所有导航项 → 不抛错", async ({ page }) => {

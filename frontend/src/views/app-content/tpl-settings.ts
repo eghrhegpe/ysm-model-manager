@@ -5,6 +5,12 @@ import { isWebPlatform } from "../../backend/platform-web.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 
+// ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
+// 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
+export const VIEW_TESTIDS: readonly string[] = [
+  'set-mc-path',
+];
+
 function renderStgTabs(): string {
   return `<div class="repo-tabs">
 <button class="stg-tab active" data-tab="basic">⚙️ ${t("settings.basic")}</button>
@@ -21,7 +27,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
     : `<div class="stg-card" style="animation-delay:0ms">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 ${t("settings.paths.gameRoot")}<button class="btn-base sm" id="set-mc-detect">🔍 ${t("settings.paths.autoSearch")}</button></div>
       <div class="stg-card-body">
-        <div class="stg-path-val" id="set-mc-path">${t("common.loading")}</div>
+        <div class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</div>
         <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>
       </div>
     </div>`;

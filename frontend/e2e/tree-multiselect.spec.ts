@@ -10,7 +10,7 @@ async function getSelectedCount(page: import("@playwright/test").Page): Promise<
   const stat = await page.evaluate(() => {
     const content = document.querySelector("app-content");
     const tree = content?.shadowRoot?.querySelector("app-tree");
-    const el = tree?.shadowRoot?.getElementById("ftr-stat");
+    const el = tree?.shadowRoot?.querySelector('[data-testid="tree-ftr-stat"]');
     return el?.textContent || "";
   });
   const m = stat.match(/已选\s*(\d+)/);

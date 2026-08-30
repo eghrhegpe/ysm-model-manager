@@ -2,7 +2,33 @@
 // app-content → app-tree 双层 Shadow DOM 穿透 + 轮询等待逻辑在
 // file-tree / tree-search / tree-multiselect / sidebar-menu 各自内联实现，
 // 易漂移。统一收敛到本文件，spec 只 import 不重复。
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+
+/**
+ * 导航页 id —— 与 app-nav/index.ts 的 items[].id 同源，渲染为 data-page 属性。
+ * 注意历史命名错位（非笔误）：id="workshop" 的 UI 文案是「创作者频道」，
+ * id="github" 的 UI 文案才是「创意工坊」。以 id 为准，勿按文案推断。
+ */
+export type NavPage =
+  | "repository"
+  | "instances"
+  | "workshop"
+  | "github"
+  | "diagnostics"
+  | "settings";
+
+/**
+ * 按语义定位导航项，替代 `.nth(N)` 序号定位（ADR-133 阶段 C+）。
+ *
+ * 为何必须弃用序号：instances 项在查看器模式下不渲染（app-nav/index.ts 的
+ * `can("ListVersionInstances")` 能力门控，ADR-049），导航项 6→5，其后所有序号
+ * 整体前移一格 —— nth(4) 由 diagnostics 变 settings、nth(5) 直接越界。
+ * 更危险的是错位未必报红（如 workshop→github 结构相近），可能静默假绿。
+ * data-page 语义定位对导航项增删、重排、显隐一律免疫。
+ */
+export function navItem(page: Page, target: NavPage): Locator {
+  return page.locator(`[data-testid="nav-item"][data-page="${target}"]`);
+}
 
 /** 应用启动序列：goto("/") → nav-item 可见 → app-content shadowRoot 就绪（时序竞态护栏） */
 export async function gotoApp(page: Page): Promise<void> {

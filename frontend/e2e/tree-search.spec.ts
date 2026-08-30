@@ -1,6 +1,6 @@
 // ===== E2E 测试：文件树搜索/筛选（ADR-037）=====
 // 验证文件树搜索框：输入关键词过滤列表、空结果状态。
-// 搜索框 id="srch" 在 app-content → app-tree 两层 Shadow DOM 内，用 page.evaluate 操作。
+// 搜索框 data-testid="tree-srch" 在 app-content → app-tree 两层 Shadow DOM 内，用 page.evaluate 操作。
 // 树穿透查询复用 e2e/helpers.ts（子代理审核 P4：消除重复实现）。
 import { test, expect } from "./fixture.ts";
 import { gotoApp, waitForTreeCount } from "./helpers.ts";
@@ -10,7 +10,9 @@ async function typeSearch(page: import("@playwright/test").Page, keyword: string
   await page.evaluate((kw) => {
     const content = document.querySelector("app-content");
     const tree = content?.shadowRoot?.querySelector("app-tree");
-    const input = tree?.shadowRoot?.getElementById("srch") as HTMLInputElement | null;
+    const input = tree?.shadowRoot?.querySelector(
+      '[data-testid="tree-srch"]',
+    ) as HTMLInputElement | null;
     if (!input) return;
     input.value = kw;
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -57,7 +59,7 @@ test.describe("文件树搜索", () => {
     const hasSearch = await page.evaluate(() => {
       const content = document.querySelector("app-content");
       const tree = content?.shadowRoot?.querySelector("app-tree");
-      return !!tree?.shadowRoot?.getElementById("srch");
+      return !!tree?.shadowRoot?.querySelector('[data-testid="tree-srch"]');
     });
     expect(hasSearch).toBe(true);
   });

@@ -17,7 +17,7 @@
 | go/fileops | 4 | 13 |
 | Go·文件系统 | 11 | 23 |
 | Go·几何 | 2 | 11 |
-| Go·导入 | 2 | 16 |
+| Go·导入 | 3 | 17 |
 | Go·安装 | 1 | 11 |
 | go/instance | 1 | 4 |
 | go/internal | 1 | 3 |
@@ -50,7 +50,7 @@
 | frontend/views | 122 | 360 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **525** | **2251** |
+| **合计** | **526** | **2252** |
 
 ## Go·头像
 
@@ -216,7 +216,7 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `DecodeBase64Limited()` | `go/fsutil/b64:17` | DecodeBase64Limited 受限 base64 解码（StdEncoding）。 |
+| `DecodeBase64Limited()` | `go/fsutil/b64:20` | DecodeBase64Limited 受限 base64 解码（StdEncoding）。 |
 | `StripBOM()` | `go/fsutil/bom:12` | StripBOM 移除 data 前缀的 UTF-8 BOM；无 BOM 时原样返回（bytes.TrimPrefix 语义）。 |
 | `StepError.Error()` | `go/fsutil/copy:48` | — |
 | `StepError.Unwrap()` | `go/fsutil/copy:49` | — |
@@ -260,6 +260,7 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
+| `DetectZipTypeFromBase64Tail()` | `go/importer/detect_tail:31` | DetectZipTypeFromBase64Tail 解码 base64 末尾窗口、解析 zip 中央目录条目名并分类。 |
 | `ImportFromBase64()` | `go/importer/importer_file:41` | ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件） rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot）。 |
 | `WriteFileAtomic()` | `go/importer/importer_file:133` | WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。 |
 | `DetectZipType()` | `go/importer/importer_file:147` | DetectZipType 扫描容器条目名识别资源类型 #5 收敛：收集全部条目名后委托 types.DetectByEntries 做 (priority desc, id as |
@@ -748,14 +749,14 @@
 | `App.SyncCustomToRepo()` | `internal/app/app_install_import:49` | SyncCustomToRepo 同步整合包自定义目录到仓库（执行逻辑下沉 go/sync） |
 | `App.ImportModelFile()` | `internal/app/app_install_import:57` | — |
 | `App.DetectZipType()` | `internal/app/app_install_import:62` | DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用） |
-| `App.ImportModelFileSkipCheck()` | `internal/app/app_install_import:71` | — |
-| `App.ImportModelFileOverwrite()` | `internal/app/app_install_import:80` | — |
-| `App.ImportModelFileTo()` | `internal/app/app_install_import:108` | — |
-| `App.ImportModelFileOverwriteTo()` | `internal/app/app_install_import:112` | — |
-| `App.ImportModelFileToMMD()` | `internal/app/app_install_import:119` | ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。 |
-| `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:124` | ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。 |
-| `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:230` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
-| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:260` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
+| `App.ImportModelFileSkipCheck()` | `internal/app/app_install_import:78` | — |
+| `App.ImportModelFileOverwrite()` | `internal/app/app_install_import:87` | — |
+| `App.ImportModelFileTo()` | `internal/app/app_install_import:115` | — |
+| `App.ImportModelFileOverwriteTo()` | `internal/app/app_install_import:119` | — |
+| `App.ImportModelFileToMMD()` | `internal/app/app_install_import:126` | ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。 |
+| `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:131` | ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。 |
+| `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:237` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
+| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:267` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
 | `App.CountInstanceResources()` | `internal/app/app_install_instance:26` | CountInstanceResources 统计指定整合包中可清空的资源文件数 只统计仓库中已有的文件（同 clearInstanceDir 逻辑） rtype 为空时统计全部类 |
 | `App.ClearInstanceResources()` | `internal/app/app_install_instance:66` | ClearInstanceResources 清空指定整合包中已同步的文件 insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型） 返回清除的文件数量 |
 | `App.DeduplicateCustomDir()` | `internal/app/app_install_instance:152` | DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle） |

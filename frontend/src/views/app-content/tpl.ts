@@ -5,8 +5,17 @@ import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
+// ADR-133 阶段 C+：e2e 定位通道收敛——原用 #id 定位的元素改配同名 data-testid
+// （id 保留给 handler / CSS 锚点，testid 独占测试通道，二者同名以消除认知负担）。
 export const VIEW_TESTIDS: readonly string[] = [
   'content-tab',
+  'diag-log',
+  'diag-log-list',
+  'diag-runtime',
+  'ins-content',
+  'ws-tabs',
+  'ws-search-view',
+  'ws-search-results',
 ];
 
 
@@ -60,7 +69,7 @@ export function instancesHTML(): string {
     '<div class="tab-body" id="ins-tab-versions">' +
     '<div class="repo-layout">' +
     '<app-sidebar class="ins-sidebar"></app-sidebar>' +
-    '<div class="ins-content" id="ins-content" style="display:flex;flex-direction:column;overflow:hidden">' +
+    '<div class="ins-content" id="ins-content" data-testid="ins-content" style="display:flex;flex-direction:column;overflow:hidden">' +
     '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px">' +
     '<div style="font-size:24px">👈</div>' +
     "<div>" + t("instances.emptyHint") + "</div>" +
@@ -118,7 +127,7 @@ export function diagnosticsHTML(): string {
 </button>
 </div>
 <div class="diag-right">
-<div class="diag-panel" id="diag-log">
+<div class="diag-panel" id="diag-log" data-testid="diag-log">
 <div class="diag-log-filter" style="display:flex;gap:4px;padding:3px 12px;overflow:hidden">
 <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
 <button class="diag-log-fbtn" data-status="success">✅ ${t("diagnostics.success")}</button>
@@ -126,9 +135,9 @@ export function diagnosticsHTML(): string {
 <button class="diag-log-fbtn" data-status="skipped">⏭️ ${t("diagnostics.skipped")}</button>
 <input id="diag-log-search" placeholder="🔍 ${t("diagnostics.searchPlaceholder")}" style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
 </div>
-<div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noLogs")}</div></div>
+<div id="diag-log-list" data-testid="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noLogs")}</div></div>
 </div>
-<div class="diag-panel" id="diag-runtime" style="display:none">
+<div class="diag-panel" id="diag-runtime" data-testid="diag-runtime" style="display:none">
 <div id="diag-runtime-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noRuntimeLogs")}</div></div>
 </div>
 <div class="diag-panel" id="diag-conflict" style="display:none">
@@ -210,7 +219,7 @@ export function workshopHTML(): string {
   // 站点 Tab 由 _initWorkshop 动态生成，此处只放容器
   return (
     '<div class="repo-wrap">' +
-    '<div class="repo-tabs" id="ws-tabs">' +
+    '<div class="repo-tabs" id="ws-tabs" data-testid="ws-tabs">' +
     '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ ' + t("common.loading") + '</span>' +
     "</div>" +
     // 站点配置导入/导出工具栏（index.ts ws-export-btn / ws-import-btn 绑定）
@@ -222,8 +231,8 @@ export function workshopHTML(): string {
     '<div class="cr-page" id="ws-page">' +
     '<div class="cr-right" style="width:100%;flex:1;display:flex;flex-direction:column;overflow:hidden" id="ws-right">' +
     '<div class="cr-right-inner" id="ws-right-inner">' +
-    '<div id="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
-    '<div id="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
+    '<div id="ws-search-view" data-testid="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
+    '<div id="ws-search-results" data-testid="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
     '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">' + t("common.loading") + '</div>' +
     "</div>" +
     "</div>" +

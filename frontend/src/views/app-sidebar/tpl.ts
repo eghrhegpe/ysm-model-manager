@@ -12,6 +12,9 @@ export const VIEW_TESTIDS: readonly string[] = [
   'sidebar-select-all',
   'sidebar-check',
   'sidebar-sync-type',
+  // ADR-133 阶段 C+：下拉容器原仅有 #id，e2e 靠 getElementById 绕过契约；补同名 testid 收口
+  'sidebar-push-menu',
+  'sidebar-pull-menu',
 ];
 
 
@@ -22,12 +25,12 @@ export function headerHTML(): string {
     '<input type="checkbox" id="sb-select-all" data-testid="sidebar-select-all" style="cursor:pointer"> ' + t("common.selectAll") + '</label>' +
     '<div class="dd-wrap" style="position:relative;display:inline-block">' +
     '<button class="sidebar-push-selected" data-testid="sidebar-push" style="padding:3px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">⬆️ ' + t("sidebar.pushSelected") + ' ▾</button>' +
-    '<div class="dd-menu" id="sidebar-push-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:10px;white-space:nowrap">' +
+    '<div class="dd-menu" id="sidebar-push-menu" data-testid="sidebar-push-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:10px;white-space:nowrap">' +
     typeMenuItemsHTML() +
     "</div></div>" +
     '<div class="dd-wrap" style="position:relative;display:inline-block">' +
     '<button class="sidebar-pull-selected" data-testid="sidebar-pull" style="padding:3px 8px;border-radius:4px;border:1px solid var(--sm-optional);background:transparent;color:var(--sm-optional);cursor:pointer;font-size:9px;font-family:inherit">⬇️ ' + t("sidebar.pullSelected") + ' ▾</button>' +
-    '<div class="dd-menu" id="sidebar-pull-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:10px;white-space:nowrap">' +
+    '<div class="dd-menu" id="sidebar-pull-menu" data-testid="sidebar-pull-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:10px;white-space:nowrap">' +
     typeMenuItemsHTML() +
     "</div></div>" +
     "</div>"

@@ -2,7 +2,7 @@
 // 验证导航到设置页和基本内容渲染。
 // 使用 data-testid 稳定钩子定位（Design.md §19.1）。
 import { test, expect } from "./fixture.ts";
-import { gotoApp } from "./helpers.ts";
+import { gotoApp, navItem } from "./helpers.ts";
 
 test.describe("设置页", () => {
   test.beforeEach(async ({ page }) => {
@@ -10,34 +10,33 @@ test.describe("设置页", () => {
   });
 
   test("导航到设置页", async ({ page }) => {
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 导航项第 6 个是"设置"
-    const count = await navItems.count();
+    // 桌面模式应渲染全部 6 项（含 instances）；此断言本身即是数量契约
+    const count = await page.locator('[data-testid="nav-item"]').count();
     expect(count).toBe(6);
-    // 点击最后一个（设置），等待 active 高亮切换（实断言替代裸等待）
-    await navItems.nth(5).click();
-    await expect(navItems.nth(5)).toHaveClass(/active/, { timeout: 5000 });
+    // 语义定位「设置」项，等待 active 高亮切换（实断言替代裸等待）
+    const settings = navItem(page, "settings");
+    await settings.click();
+    await expect(settings).toHaveClass(/active/, { timeout: 5000 });
   });
 
   test("导航到创作者频道页", async ({ page }) => {
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 第 3 个是"创作者频道"
-    await navItems.nth(2).click();
-    await expect(navItems.nth(2)).toHaveClass(/active/, { timeout: 5000 });
+    // id="workshop" 的 UI 文案是「创作者频道」（历史命名错位，见 helpers.ts NavPage）
+    const creators = navItem(page, "workshop");
+    await creators.click();
+    await expect(creators).toHaveClass(/active/, { timeout: 5000 });
   });
 
   test("导航到创意工坊页", async ({ page }) => {
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 第 4 个是"创意工坊"
-    await navItems.nth(3).click();
-    await expect(navItems.nth(3)).toHaveClass(/active/, { timeout: 5000 });
+    // id="github" 的 UI 文案是「创意工坊」（历史命名错位，见 helpers.ts NavPage）
+    const workshopPage = navItem(page, "github");
+    await workshopPage.click();
+    await expect(workshopPage).toHaveClass(/active/, { timeout: 5000 });
   });
 
   test("导航到诊断页", async ({ page }) => {
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 第 5 个是"诊断与冲突"
-    await navItems.nth(4).click();
-    await expect(navItems.nth(4)).toHaveClass(/active/, { timeout: 5000 });
+    const diag = navItem(page, "diagnostics");
+    await diag.click();
+    await expect(diag).toHaveClass(/active/, { timeout: 5000 });
   });
 
   test("设置页点击游戏根目录 → SelectDirectory → SaveAppConfig + toast", async ({ page }) => {
@@ -48,30 +47,37 @@ test.describe("设置页", () => {
       undefined,
       { timeout: 10000, polling: 200 },
     );
-    const navItems = page.locator('[data-testid="nav-item"]');
-    await navItems.nth(5).click(); // 设置
+    await navItem(page, "settings").click();
     // 等待设置页渲染（shadow DOM 内路径卡片出现；诊断证实点击后约 2s 就绪）
     await page.waitForFunction(
       () => {
         const content = document.querySelector("app-content");
-        return Boolean(content?.shadowRoot?.getElementById("set-mc-path"));
+        return Boolean(
+          content?.shadowRoot?.querySelector('[data-testid="set-mc-path"]'),
+        );
       },
       undefined,
       { timeout: 10000, polling: 200 },
     );
+    // 成功 toast 语义定位（ADR-133 阶段 C+）：原 filter({hasText:"Path updated"})
+    // 硬编码 en-US 文案，改文案/切 locale 即静默失效；改断言 data-toast-type
+    // 语义属性 + 计数增量——既隔离页面加载期的其它 toast，又与文案完全解耦。
+    const successToasts = page.locator(
+      '[data-testid="toast"][data-toast-type="success"]',
+    );
+    const before = await successToasts.count();
     // 点击游戏根目录路径卡片（bindPathClick 绑定，桌面走 SelectDirectory）
     await page.evaluate(() => {
       const content = document.querySelector("app-content")!;
-      const el = content.shadowRoot!.getElementById("set-mc-path")!;
+      const el = content.shadowRoot!.querySelector(
+        '[data-testid="set-mc-path"]',
+      ) as HTMLElement;
       el.click();
     });
-    // mock SelectDirectory 返回 /e2e/mc → saveCfg → SaveAppConfig → toast「Path updated」
-    // 欢迎 toast（YSM 管理器 v1.0 预告版）每次加载必弹，必须 filter 定位自己的
-    // toast（原 toast.first() 会命中欢迎 toast 假红，settings 是最后漏修的 spec）
-    const toast = page
-      .locator('[data-testid="toast"]')
-      .filter({ hasText: "Path updated" });
-    await expect(toast.first()).toBeVisible({ timeout: 5000 });
+    // mock SelectDirectory 返回 /e2e/mc → saveCfg → SaveAppConfig → success toast
+    await expect
+      .poll(() => successToasts.count(), { timeout: 5000, intervals: [100] })
+      .toBeGreaterThan(before);
     // P3 修复（code review）：删除死代码 addInitScript 块——原注释声称「覆盖
     // SelectDirectory 使断言成为真变化断言」，但回调实际无操作（window.__ysme2e
     // 未声明，void orig 是 no-op），且 addInitScript 只在未来文档加载执行而
@@ -79,7 +85,7 @@ test.describe("设置页", () => {
     // pickDirectory→saveCfg→SaveAppConfig→toast 全链路）
     const text = await page.evaluate(() => {
       const content = document.querySelector("app-content")!;
-      const el = content.shadowRoot!.getElementById("set-mc-path")!;
+      const el = content.shadowRoot!.querySelector('[data-testid="set-mc-path"]')!;
       return el.textContent ?? "";
     });
     // 断言方向修正：不再断言具体路径值（mock 同值恒真），改为非空 + 非 Loading…
@@ -91,9 +97,8 @@ test.describe("设置页", () => {
     // 背景：2026-08-24 复盘——.stg-* / .tab-body 曾误置于全局 components.css <link>，
     // 被 app-content 的 Shadow DOM 边界阻断，computed style 全裸奔（CI 全绿但视觉失效）。
     // 纯 DOM 存在性断言抓不到此类回归，必须断言 computed style。
-    // 进入设置页（第 6 个 nav）
-    const navItems = page.locator('[data-testid="nav-item"]');
-    await navItems.nth(5).click();
+    // 进入设置页
+    await navItem(page, "settings").click();
     await page.waitForFunction(
       () => {
         const content = document.querySelector("app-content");

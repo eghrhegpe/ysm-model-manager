@@ -38,7 +38,7 @@ test.describe("Toast 通知", () => {
     await expect(toast).toBeVisible({ timeout: 3000 });
 
     // 点击关闭按钮
-    const closeBtn = toast.locator(".close-btn");
+    const closeBtn = toast.locator('[data-testid="toast-close"]');
     await expect(closeBtn).toBeVisible({ timeout: 2000 });
     await closeBtn.click();
     // 等待 slideOut 动画完成（自动重试替代 waitForTimeout）
@@ -65,7 +65,7 @@ test.describe("Toast 通知", () => {
     await expect(toast).toBeVisible({ timeout: 3000 });
 
     // 点击撤销按钮（poll 等待异步回调，替代固定 300ms）
-    const undoBtn = toast.locator(".undo-btn");
+    const undoBtn = toast.locator('[data-testid="toast-undo"]');
     await expect(undoBtn).toBeVisible({ timeout: 2000 });
     await undoBtn.click();
     await expect.poll(() => undoCalled, { timeout: 3000 }).toBe(true);

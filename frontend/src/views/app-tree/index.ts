@@ -28,6 +28,13 @@ import { bindToolbarEvents } from "./toolbar-events.ts";
 import { get } from "../../services/registry.ts";
 import type { loadEntries, TreeEntry } from "./loader.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
+
+// ADR-133 阶段 B/C+：本文件内钩子的稳定 testid 声明（G-1 单一事实源，与钩子同处）。
+// 树容器 id="tree" 供 handler/CSS 锚定，testid 取 'tree-root'——落入契约孤儿扫描的
+// 'tree-' 前缀白名单，从而同受 must-have 与孤儿双校验守护（裸 'tree' 只受前者）。
+export const VIEW_TESTIDS: readonly string[] = [
+  'tree-root',
+];
 import { loadAuthors, type AuthorInfo } from "./authors.ts";
 import { bus } from "../../bus.ts";
 import { selectState, selectSingle } from "./data.ts";
@@ -247,7 +254,7 @@ export class AppTree extends WebComponentBase {
   _renderLayout(): void {
     this._root.innerHTML =
       headerHTML() +
-      '<div class="list" id="tree" role="tree" aria-label="' + t("tree.fileList") + '">' +
+      '<div class="list" id="tree" data-testid="tree-root" role="tree" aria-label="' + t("tree.fileList") + '">' +
       spinnerHTML() +
       "</div>" +
       '<div class="tree-drop-hint" id="tree-drop-hint"><span class="dot"></span><span id="tree-drop-text"></span></div>' +

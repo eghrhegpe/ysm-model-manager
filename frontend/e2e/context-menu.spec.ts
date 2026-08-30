@@ -66,22 +66,26 @@ test.describe("右键菜单", () => {
     }
     await rightClickTree(page, "tree-file");
 
-    // 定位菜单项：file.copy-path action（menu-defs.ts，e2e 环境为英文语言包）
-    const copyItem = page
-      .locator('[data-testid="ctx-item"]')
-      .filter({ hasText: "Copy File Path" });
-    const copyCount = await copyItem.count();
-    if (copyCount === 0) {
-      test.skip(true, "右键菜单未渲染 Copy File Path 项");
-      return;
-    }
-    await copyItem.click();
-    // action 执行后 toast「路径已复制到剪贴板」（copy-path 成功/catch 兜底均触发，
-    // 文案硬编码中文、语言无关；原「任一 toast 可见」会被 index.html 欢迎 toast 假绿）
-    const toast = page
-      .locator('[data-testid="toast"]')
-      .filter({ hasText: "已复制到剪贴板" });
-    await expect(toast.first()).toBeVisible({ timeout: 5000 });
+    // 语义定位（ADR-133 阶段 C+）：按 data-action 匹配 action 标识，
+    // 替代原 filter({hasText:"Copy File Path"}) —— 文案硬编码 en-US，改文案即静默失效
+    const copyItem = page.locator(
+      '[data-testid="ctx-item"][data-action="file.copy-path"]',
+    );
+    // 硬断言替代原「count===0 就 skip」：那条兜底是「按 i18n 文案定位」时代的防御
+    // （文案对不上就当环境问题跳过），而 data-action 定位后目标已确定——
+    // file 菜单必含 copy-path（context-menus.test.ts 断言查看器模式亦保留），
+    // 继续保留 skip 等于给「菜单构建回归」留一条静默逃逸通道。
+    await expect(copyItem.first()).toBeVisible({ timeout: 3000 });
+    // 反馈 toast 计数基线（copy-path 成功走 success、失败走 error，两分支均有反馈）
+    const feedbackToasts = page.locator(
+      '[data-testid="toast"][data-toast-type="success"], [data-testid="toast"][data-toast-type="error"]',
+    );
+    const before = await feedbackToasts.count();
+    await copyItem.first().click();
+    // action 执行后必弹反馈 toast（原按中文文案 filter，语言/文案变更即失效）
+    await expect
+      .poll(() => feedbackToasts.count(), { timeout: 5000, intervals: [100] })
+      .toBeGreaterThan(before);
     // 顺带断言菜单已隐藏（onClick finally 调 hide）
     await expect(page.locator('[data-testid="ctx-item"]').first()).not.toBeVisible({
       timeout: 3000,

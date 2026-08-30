@@ -72,15 +72,15 @@ async function clickSidebarButton(
   }, testid);
 }
 
-/** 读取下拉菜单中的资源类型选项数量 */
-async function getMenuItems(page: import("@playwright/test").Page, menuId: string): Promise<number> {
-  return page.evaluate((mid) => {
+/** 读取下拉菜单中的资源类型选项数量（menuTestid = sidebar-push-menu / sidebar-pull-menu） */
+async function getMenuItems(page: import("@playwright/test").Page, menuTestid: string): Promise<number> {
+  return page.evaluate((tid) => {
     const content = document.querySelector("app-content");
     const sidebar = content?.shadowRoot?.querySelector("app-sidebar");
     if (!sidebar?.shadowRoot) return 0;
-    const menu = sidebar.shadowRoot.getElementById(mid);
+    const menu = sidebar.shadowRoot.querySelector(`[data-testid="${tid}"]`);
     return menu ? menu.querySelectorAll(".dd-item").length : 0;
-  }, menuId);
+  }, menuTestid);
 }
 
 test.describe("侧栏 push/pull 菜单", () => {

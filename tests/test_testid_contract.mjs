@@ -20,7 +20,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FE = path.join(ROOT, 'frontend');
 
 // 关键命名约定（收窄作用域，避免装饰性 testid 误伤）；与阶段 A 孤儿扫描一致。
-const KEY_PREFIXES = ['tree-', 'sm-', 'gh-', 'ctx-', 'dlg-', 'recy-', 'sidebar-', 'nav-', 'content-', 'toast'];
+// 阶段 C+ 增补 'diag-' / 'ws-' / 'set-' / 'ins-'：这几族原先只有 #id、无 testid，e2e 靠
+// getElementById / locator("#id") 绕过契约通道；补钩子后须一并纳入孤儿扫描，否则新增关键元素仍可漏登。
+const KEY_PREFIXES = ['tree-', 'sm-', 'gh-', 'ctx-', 'dlg-', 'recy-', 'sidebar-', 'nav-', 'content-', 'toast', 'diag-', 'ws-', 'set-', 'ins-'];
 const isKeyTestid = (id) => KEY_PREFIXES.some((p) => id === p.replace(/-$/, '') || id.startsWith(p));
 
 const errors = [];

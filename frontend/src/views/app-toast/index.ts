@@ -11,6 +11,10 @@ import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 export const VIEW_TESTIDS: readonly string[] = [
   'toast',
+  // 阶段 C+：撤销/关闭按钮原仅有样式 class，e2e 用 .undo-btn/.close-btn 定位，
+  // CSS 重构改类名即静默失效；补稳定钩子并保留 class 供样式与 onclick 绑定。
+  'toast-undo',
+  'toast-close',
 ];
 
 
@@ -105,8 +109,12 @@ class AppToast extends WebComponentBase {
     const t = document.createElement("div") as ToastEl;
     t.className = "toast" + (type ? " " + type : "");
     t.dataset.testid = "toast"; // G-1 稳定钩子（Design.md §19.1）
+    // 阶段 C+：type 的语义镜像。class 由 CSS 消费（重构可改名），测试需与样式解耦；
+    // e2e 断言 [data-toast-type="success"] 替代原「按 i18n 文案 filter」。
+    if (type) t.dataset.toastType = type;
     if (clickCallback) t.style.cursor = "pointer";
-    t.innerHTML = `<span class="msg">${this._esc(msg)}</span>${undoCallback ? `<button class="undo-btn">↩ ${tr("toast.undo")}</button>` : ""}<button class="close-btn">✕</button>`;
+    // G-1 稳定钩子：undo/close 按钮同时挂 data-testid，e2e 不再依赖 .undo-btn/.close-btn class
+    t.innerHTML = `<span class="msg">${this._esc(msg)}</span>${undoCallback ? `<button class="undo-btn" data-testid="toast-undo">↩ ${tr("toast.undo")}</button>` : ""}<button class="close-btn" data-testid="toast-close">✕</button>`;
     c.appendChild(t);
     if (clickCallback) {
       (t.querySelector(".msg") as HTMLElement).onclick = (e: MouseEvent) => {

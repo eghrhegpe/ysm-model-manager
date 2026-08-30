@@ -14,13 +14,15 @@
 import { test, expect, type Page } from "./fixture.ts";
 import { gotoApp } from "./helpers.ts";
 
-/** 等待 app-tree 的 #tree 容器已挂载（DnD 绑定在 connectedCallback 内同步完成） */
+/** 等待 app-tree 的树容器已挂载（DnD 绑定在 connectedCallback 内同步完成） */
 async function waitForTreeDnD(page: Page): Promise<void> {
   await page.waitForFunction(
     () => {
       const content = document.querySelector("app-content");
       const treeHost = content?.shadowRoot?.querySelector("app-tree");
-      return Boolean(treeHost?.shadowRoot?.getElementById("tree"));
+      return Boolean(
+        treeHost?.shadowRoot?.querySelector('[data-testid="tree-root"]'),
+      );
     },
     undefined,
     { timeout: 10000, polling: 200 },
@@ -38,8 +40,8 @@ async function dispatchFileDragOnTree(
       const content = document.querySelector("app-content");
       const treeHost = content?.shadowRoot?.querySelector("app-tree");
       const root = treeHost?.shadowRoot;
-      const tree = root?.getElementById("tree");
-      if (!tree) throw new Error("app-tree #tree 未就绪，无法派发组件级 DnD");
+      const tree = root?.querySelector('[data-testid="tree-root"]');
+      if (!tree) throw new Error("app-tree tree-root 未就绪，无法派发组件级 DnD");
       const dt = new DataTransfer();
       dt.items.add(new File(["e2e-content"], name, { type: "" }));
       const fire = (type: string): void => {
@@ -102,8 +104,8 @@ test.describe("拖拽导入（DnD）", () => {
       const content = document.querySelector("app-content");
       const treeHost = content?.shadowRoot?.querySelector("app-tree");
       const root = treeHost?.shadowRoot;
-      const tree = root?.getElementById("tree");
-      if (!tree) throw new Error("app-tree #tree 未就绪");
+      const tree = root?.querySelector('[data-testid="tree-root"]');
+      if (!tree) throw new Error("app-tree tree-root 未就绪");
       const dt = new DataTransfer(); // 无 items
       const ev = new DragEvent("dragover", {
         bubbles: true,

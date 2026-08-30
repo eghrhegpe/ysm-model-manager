@@ -26,6 +26,7 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 
 - HTML 特殊字符转义（innerHTML 拼接防注入）
 - 搜索关键词高亮（转义后返回 `<mark>` 包裹的安全 HTML）
+- 文件下载：`downloadTextFile(content, filename)`（Blob → ObjectURL → anchor download → revoke），供 `context-menu-handlers` 等 core 层调用，不再直接操作 `document/URL`（P2-2 DOM 职责下沉）
 - toast 时长语义化：`TOAST_MS` 8 档常量（quick=1500 / success=2000 / info=2500 / normal=3000 / verbose=4000 / long=5000 / persist=10000 / sticky=60000），全仓 toast 裸 `duration` 已收敛至该单一事实源（commit `b1508ac5`）；契约测试 `toast-ms.test.ts` 断言语档值与单调性；门禁 `scripts/check-toast-duration.mjs` 扫描非测试 src 捕捉裸时长（非阻断 [WARN] 观察期），防回流
 
 ## 对外 API / 入口

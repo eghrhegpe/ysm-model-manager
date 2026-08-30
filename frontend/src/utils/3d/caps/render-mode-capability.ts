@@ -66,6 +66,10 @@ export class RenderModeCapability implements SceneCapability {
   private overrides: RenderModeOverrides = { ...EMPTY_OVERRIDES };
   /** material uuid → 原始属性快照 */
   private snapshot = new Map<string, MaterialSnapshot>();
+  /** 本次覆盖会话中曾被 override 的属性（ov 从非 null 回 null 的清除瞬间回落快照一次）。
+   *  审核修复：避免任何一次 sync 都把全部 5 项按快照重写——从未覆盖过的属性保持
+   *  材质现值不写，外部写入（ground depthWrite、legacy wireframe 等）不被静默还原。 */
+  private coveredProps = new Set<keyof RenderModeOverrides>();
 
   constructor(opts: { scene: THREE.Scene }) {
     this.scene = opts.scene;
@@ -89,22 +93,41 @@ export class RenderModeCapability implements SceneCapability {
   }
 
   private applyOverrides(): void {
-    // 单属性取值：override 非 null → 用它；null（不覆盖）→ 回落该属性的快照原始值；
-    // 无快照（首次 apply 前就被外部改写过）→ 保持材质现值。
-    const pick = <T>(ov: T | null, origVal: T | undefined, cur: T): T =>
-      ov !== null ? ov : origVal !== undefined ? origVal : cur;
     for (const m of collectMaterials(this.scene)) {
       const mat = m as THREE.MeshBasicMaterial;
       const orig = this.snapshot.get(m.uuid);
-      // 属性互相独立（见文件头「每个属性独立 override，null = 保持原始值」）：
-      // 旧实现只写非 null 项，清除单个 override 会让该属性一直停在覆盖值上，
-      // 直到全部清空走 restoreSnapshot 才恢复——与声明语义不符，故此处逐属性回落。
-      mat.wireframe = pick(this.overrides.wireframe, orig?.wireframe, mat.wireframe);
-      mat.blending = pick(this.overrides.blending, orig?.blending, mat.blending);
-      mat.depthTest = pick(this.overrides.depthTest, orig?.depthTest, mat.depthTest);
-      mat.side = pick(this.overrides.side, orig?.side, mat.side);
-      mat.depthWrite = pick(this.overrides.depthWrite, orig?.depthWrite, mat.depthWrite);
+      // 单属性取值（审核修复：if/else 展开，消嵌套三元）：
+      //   override 非 null → 用它（登记 coveredProps，清除时回落快照一次）；
+      //   override null 且曾被覆盖 → 回落该属性快照原始值（无快照保持现值）；
+      //   override null 且从未覆盖 → 保持材质现值不写（外部写入不被 sync 还原）。
+      // 回调参数显式注解：泛型 T 无法从回调体反向推断，不注解会落为 unknown。
+      this.applyProp("wireframe", mat, orig, (v: boolean) => { mat.wireframe = v; });
+      this.applyProp("blending", mat, orig, (v: THREE.Blending) => { mat.blending = v; });
+      this.applyProp("depthTest", mat, orig, (v: boolean) => { mat.depthTest = v; });
+      this.applyProp("side", mat, orig, (v: THREE.Side) => { mat.side = v; });
+      this.applyProp("depthWrite", mat, orig, (v: boolean) => { mat.depthWrite = v; });
     }
+  }
+
+  /** 单属性应用：见 applyOverrides 三态注释。 */
+  private applyProp<T>(
+    key: keyof RenderModeOverrides,
+    mat: THREE.MeshBasicMaterial,
+    orig: MaterialSnapshot | undefined,
+    set: (v: T) => void,
+  ): void {
+    const ov = this.overrides[key];
+    if (ov !== null) {
+      this.coveredProps.add(key);
+      set(ov as unknown as T);
+      return;
+    }
+    if (this.coveredProps.has(key)) {
+      this.coveredProps.delete(key);
+      if (orig !== undefined) set(orig[key] as unknown as T);
+      // 无快照（首次 apply 前就被外部改写）→ 保持现值不写
+    }
+    // 从未覆盖 → 保持现值不写
   }
 
   private restoreSnapshot(): void {
@@ -119,6 +142,7 @@ export class RenderModeCapability implements SceneCapability {
       mat.depthWrite = orig.depthWrite;
     }
     this.snapshot.clear();
+    this.coveredProps.clear();
   }
 
   private hasAnyOverride(): boolean {
@@ -261,5 +285,6 @@ export class RenderModeCapability implements SceneCapability {
     if (this.snapshot.size > 0) this.restoreSnapshot();
     this.overrides = { ...EMPTY_OVERRIDES };
     this.snapshot.clear();
+    this.coveredProps.clear();
   }
 }

@@ -939,10 +939,16 @@ async function searchWebModels(
     }));
   }
   // Worker 批量统计；不可用/失败 → 返回 null（web-stats 内部已吞错并整批降级，
-  // 「不向上抛」契约由 web-stats.test.ts「runner 抛错 → 降级（不向上抛）」锁定，
-  // 故此处无需外层 try/catch——那层 catch 是永不触发的死代码）
-  // → stats 为 null 时降级为关键词匹配（数值 0），toast 由消费方提示
-  const stats = await batchStatsWebModels(matched.map((e) => e.Path));
+  // 「不向上抛」契约由 web-stats.test.ts「runner 抛错 → 降级（不向上抛）」锁定）。
+  // 审核修复：保留外层 catch 作边界防御——callee 契约之外的任何拒绝路径（如
+  // worker 构造 / IDB 键枚举异常）同样降级为关键词匹配（数值 0），而非向调用方
+  // 抛错让数值过滤搜索直接 throw；防御分支近乎不可达但成本为零。
+  let stats: WebModelStats[] | null;
+  try {
+    stats = await batchStatsWebModels(matched.map((e) => e.Path));
+  } catch {
+    stats = null;
+  }
   if (!stats) {
     return matched.map((e) => ({
       name: e.Name,

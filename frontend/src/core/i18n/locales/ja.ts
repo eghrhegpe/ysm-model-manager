@@ -953,6 +953,12 @@ export const ja: Record<string, string> = {
   "preview.title3d": "3Dプレビュー",
   "preview.modelInfo": "モデル情報",
   "preview.roles": "読み込み済みキャラクター",
+  // 3D 下部ドックグループボタン文案（preview-menu defs.ts PREVIEW_MENU_GROUPS）
+  "preview.groupModel": "キャラクター",
+  "preview.groupMotion": "モーション",
+  "preview.groupEnv": "環境",
+  "preview.groupScene": "シーン",
+  "preview.groupSettings": "設定",
   // ── 3D 統計パネル（ADR-131 P1: preview.stats.* 三段式）──
   // 口径注記: 描画実測 = traverse シーングラフ口径, YSM モデルパネルの Go 口径と区別
   "preview.stats.panel": "📊 描画実測",

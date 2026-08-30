@@ -955,6 +955,12 @@ export const zhCN: Record<string, string> = {
   "preview.title3d": "3D 预览",
   "preview.modelInfo": "模型信息",
   "preview.roles": "加载角色",
+  // 3D 底部 dock 组按钮文案（preview-menu defs.ts PREVIEW_MENU_GROUPS）
+  "preview.groupModel": "角色",
+  "preview.groupMotion": "动作",
+  "preview.groupEnv": "环境",
+  "preview.groupScene": "场景",
+  "preview.groupSettings": "设置",
   // ── 3D 统计面板（ADR-131 P1：preview.stats.* 三段式）──
   // 口径标注（审核建议 ②）：渲染实测 = traverse 场景图口径，与 YSM 模型面板 Go 口径区分
   "preview.stats.panel": "📊 渲染实测",

@@ -952,6 +952,12 @@ export const en: Record<string, string> = {
   "preview.title3d": "3D Preview",
   "preview.modelInfo": "Model Info",
   "preview.roles": "Loaded Roles",
+  // 3D bottom dock group button labels (preview-menu defs.ts PREVIEW_MENU_GROUPS)
+  "preview.groupModel": "Character",
+  "preview.groupMotion": "Motion",
+  "preview.groupEnv": "Environment",
+  "preview.groupScene": "Scene",
+  "preview.groupSettings": "Settings",
   // ── 3D stats panel (ADR-131 P1: preview.stats.* three-segment) ──
   // 口径标注：rendered = traverse scene-graph 口径，与 YSM 模型面板 Go 口径区分
   "preview.stats.panel": "📊 Runtime Stats",

@@ -60,22 +60,25 @@ export interface PreviewMenuItemDef {
 export interface PreviewMenuGroupDef {
   id: PreviewMenuGroupId;
   icon: string;
+  /** i18n 键（dock 按钮/组标题文案）；缺失时回退 fallback（tr 兜底，杜绝裸中文） */
+  labelKey: string;
+  /** i18n 缺失时的回退文案 */
   fallback: string;
 }
 
 export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
   // dock 按钮文案与落地面板语义对齐（2026-08-28）：🧍 组点击直达 roles 面板（加载角色），
   // 原 fallback「模型」与落地标题「加载角色」错位——改「角色」按钮即面板，用户无转译歧义
-  { id: "model", icon: "🧍", fallback: "角色" },
-  { id: "motion", icon: "💃", fallback: "动作" },
+  { id: "model", icon: "🧍", labelKey: "preview.groupModel", fallback: "角色" },
+  { id: "motion", icon: "💃", labelKey: "preview.groupMotion", fallback: "动作" },
   // 环境独立成组（2026-08-19 拆组）：体量 > 全部场景设置（sky/ground/env/fog/reflector），
   // 且地面/水面系统后续会持续膨胀，单独 root 按钮避免场景组挤爆
-  { id: "env", icon: "🌍", fallback: "环境" },
+  { id: "env", icon: "🌍", labelKey: "preview.groupEnv", fallback: "环境" },
   // 场景组只留相机/灯光/阴影/后处理（icon 换 🎛️ 与 🌍 环境区分）
-  { id: "scene", icon: "🎛️", fallback: "场景" },
+  { id: "scene", icon: "🎛️", labelKey: "preview.groupScene", fallback: "场景" },
   // 设置独立成组：聚合所有场景能力（sky/ground/fog/shadow/reflector/postprocessing/light）的控件，
   // 用户一处调全部，即时生效。与 🌍 环境的区别：环境是能力开关+下钻参数，设置是平铺总览。
-  { id: "settings", icon: "⚙️", fallback: "设置" },
+  { id: "settings", icon: "⚙️", labelKey: "preview.groupSettings", fallback: "设置" },
 ];
 
 /**

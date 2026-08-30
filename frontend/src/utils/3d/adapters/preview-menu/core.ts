@@ -343,7 +343,7 @@ function previewMakeGroupView(
   hideMenu: () => void,
 ): SlideMenuView {
   return {
-    title: g.fallback,
+    title: tr(g.labelKey, g.fallback),
     render: (list) => {
       list.innerHTML = "";
       for (const node of groupItems) {
@@ -409,7 +409,7 @@ function renderPreviewDock(
     btn.dataset.dockGroup = g.id;
     btn.title = `dock: ${g.id} · ${groupItems.map((n) => n.id).join(" / ")}`;
     btn.innerHTML =
-      `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${g.fallback}</span>`;
+      `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${tr(g.labelKey, g.fallback)}</span>`;
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();
       const rolesDef = allItems.find((d) => d.id === "roles" && d.kind === "panel");

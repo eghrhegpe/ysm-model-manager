@@ -65,6 +65,23 @@
 1. **C 组测试的类型债务（37 处 TS 错误）**：子代理跑 vitest 验证（esbuild 转译不查类型）但漏跑 typecheck。修复：web-fs.bindings.test.ts 的 `ab2u8` 签名放宽（`ArrayBuffer | Uint8Array` 归一，zipSync 返回值可直接回灌）、`seedMark` 第 5 参放宽 `unknown`、5 处 `as string[]` 断言删除（绑定声明即返回 `Promise<string>`，断言非法且多余）、`getMockImplementation` 非空断言；detail.test.ts 删 `mockResolvedValue` 多余第二参 + `vi.mocked()` 包装修复函数窄化；ysm-object.test.ts 的 `typeof x![0]` 改 `NonNullable<typeof x>[0]`。
 2. **app-modules.boot.test.ts「启动 2s 后预取」跨用例竞态**：源码 IIFE 注册的是真实 `setTimeout(2000)`，上一用例的 timer 在全量慢跑下于本用例断言前到点触发共享 mock（单跑绿、全量挂）。修复：boot 前 `mockClear()` 清跨用例迟到调用——boot 的 `flushMicro` 是纯微任务泵（宏任务无插入点），boot 后同步断言无竞速窗口。
 
+## 全量 flake 归因（2026-08-30 实证，非推断）
+
+**现象**：常规全量 `npx vitest run` 稳定出现 4 个失败，`Test Files 4 failed | 308 passed (312)`、`Tests 4 failed | 4976 passed (4980)`。失败集合**逐轮漂移**（2→3→4→4，每轮文件不同），失败原因**清一色 `Test timed out in 5000ms`、零断言失败**，且单文件复跑均绿。
+
+**决定性实验**：抬超时阈值重跑全量 `npx vitest run --testTimeout=20000`。
+
+| | 结果 | 耗时 |
+|---|---|---|
+| 默认 5000ms | 4 failed \| 4976 passed（4980） | ~54s |
+| `--testTimeout=20000` | **312 passed / 4980 passed，EXIT=0** | 56s（tests 43.30s） |
+
+**结论**：**资源争用导致的边缘超时，不是回归、不是死锁、不是句柄泄漏。** 判据三条：① 用例总数前后完全一致（4980），说明没有用例被跳过或崩溃；② 抬高阈值后失败**全部消失**——若真有死锁/泄漏，20s 与 5s 同样过不去；③ 耗时几乎不变（54s vs 56s），说明没有一个用例真的"卡住"，只是峰值负载下个别用例越过 5s 线。
+
+**为何不给这 4 个用例单独加 `timeout`**：失败集合每轮漂移，不存在固定的"4 个慢用例"可标注——这是全局并发负载的分布尾部，不是个别用例的性能缺陷。可行的正规处置只有两条：**全局调参**（vitest config `testTimeout`，影响面大、需评审）或**降低并发度**（实测 `--maxWorkers=2` 跑 11m44s 仍未完成，代价过高，已放弃）。当前结论是**观察项而非缺陷项**，不阻塞任何发布或推送。
+
+**过程纠正**：此前四轮凭"失败集合漂移 + 全是超时 + 零断言失败 + 单跑通过"四条间接证据推断为环境问题，虽结论正确但**未实证**——推断正确不等于验证完成。补上阈值实验后才算闭环。这条本身也适用于其他"看起来显然是环境问题"的判定。
+
 ## 总体结论
 
 **通过**。三组 30 个源文件语句覆盖从欠测区（0%~76%）整体拉到 92%~100%，全量验证绿（vitest / typecheck / vite build，见工作区验证记录）。测试补全顺带产出 1 个 P1 修复（worker-bridge 接线）+ 10 项待修清单——「补测即审核」的路径再次验证有效：测试要锁住分支就必须读懂分支，读懂分支才能发现分支里的坑。

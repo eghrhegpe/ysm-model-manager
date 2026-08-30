@@ -18,12 +18,13 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || exit 0)"
 cd "$ROOT" || exit 0
 
 CLEANED=""
-# code_review P2/P3：管道子 shell 会吞掉 CLEANED 赋值（汇报永不触发，黑箱）——
-# 改用 temp 文件重定向（POSIX 安全，无进程替换依赖），循环留在父 shell。
-# -c core.quotepath=false：非 ASCII 文件名输出原始 UTF-8（对齐 audit-split/
-# commit-with-check/pre-push-gate 行业标配，防八进制转义破坏 restore 路径匹配）。
-LIST="/tmp/ysm_postclean_$$.txt"
-git -c core.quotepath=false diff --cached --name-only 2>/dev/null > "$LIST" || true
+# code_review #2（P2）：只清 pre-commit 记录过的生成物清单（.git/ysm_gen_staged）——
+# 原「git diff --cached --name-only + wd==HEAD」会误清用户仅存索引的暂存
+# （git add + git restore --worktree 场景：改动只存在于索引，被静默丢弃即数据丢失）。
+# 清单由 pre-commit 每次提交时写入（last-writer-wins，路径来自 find 原始 UTF-8，
+# 无 quotepath 转义问题）；无清单（--no-verify / YSM_SKIP_GEN）→ 无生成物残留 → 退出。
+LIST_FILE="$(git rev-parse --git-dir 2>/dev/null)/ysm_gen_staged"
+[ -f "$LIST_FILE" ] || exit 0
 while IFS= read -r p; do
   [ -z "$p" ] && continue
   [ -e "$p" ] || continue
@@ -36,7 +37,6 @@ while IFS= read -r p; do
       echo "[post-commit] ⚠️ 清暂存残留失败: $p"
     fi
   fi
-done < "$LIST"
-rm -f "$LIST"
-[ -n "$CLEANED" ] && echo "[post-commit] 已清暂存残留(工作树==HEAD):$CLEANED"
+done < "$LIST_FILE"
+[ -n "$CLEANED" ] && echo "[post-commit] 已清生成物暂存残留(工作树==HEAD):$CLEANED"
 exit 0

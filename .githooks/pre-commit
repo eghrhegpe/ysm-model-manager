@@ -97,6 +97,10 @@ while IFS= read -r p; do
     [ -f "$p" ] || continue
     git add -- "$p" 2>/dev/null || ADD_FAIL="$ADD_FAIL $p"
   done < /tmp/ysm_gen_to_stage.txt
+  # 供 post-commit 消费：记录本次 stage 的生成物清单（固定路径 last-writer-wins；
+  # 并发会话各自 pre-commit 覆盖，post-commit 消费最新一份即可）。code_review #2：
+  # post-commit 只清本清单内文件，杜绝「wd==HEAD 判定」误清用户仅存索引的暂存。
+  git rev-parse --git-dir >/dev/null 2>&1 && cp /tmp/ysm_gen_to_stage.txt "$(git rev-parse --git-dir)/ysm_gen_staged" 2>/dev/null || true
   rm -f "$GEN_SNAP" /tmp/ysm_gen_snap_after.txt
 else
   # 快照缺失（find 异常）→ 兜底只 stage 已跟踪 docs/locales/completions 的修改（-u 不 stage 新文件）

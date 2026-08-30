@@ -147,7 +147,7 @@ describe("createPmxParser（Worker 可用路径）", () => {
     expect(() => parser.dispose()).not.toThrow();
   });
 
-  it("Worker 存在 → 真实 bridge：parse 注入 id 发请求 + dispose 终止 worker", async () => {
+  it("Worker 存在 → 真实 bridge：parse 注入 id 发请求、响应经工厂接线结算、dispose 终止 worker", async () => {
     vi.stubGlobal("Worker", FakeWorker as unknown as typeof Worker);
     const parser = createPmxParser();
     const bytes = new ArrayBuffer(8);
@@ -155,12 +155,13 @@ describe("createPmxParser（Worker 可用路径）", () => {
     const worker = FakeWorker.instances.at(-1)!;
     expect(worker).toBeDefined();
     expect(worker.lastId).toBeGreaterThanOrEqual(0); // bridge 注入请求 id
-    // ⚠️ 疑似源码 bug：createResolveModeBridge 未接线 worker.onmessage（409b060e 重构丢失）
-    // → 响应永不结算，只能等 30s 超时 ok:false 回退。此处不 await 响应，仅锁请求/终止契约。
-    void p;
+    // 2026-08-30 修复：createResolveModeBridge 工厂内已接线 worker.onmessage →
+    // bridge.handleMessage（1575cc08，409b060e 重构丢失的接线恢复）——响应正常结算，
+    // 不再需要 30s 超时回退。此处正向锁「响应路径」：投递响应 → parse Promise 结算 ok:true。
+    worker.respond({ id: worker.lastId, ok: true });
+    await expect(p).resolves.toMatchObject({ ok: true });
     parser.dispose();
     expect(worker.terminated).toBe(true);
-    p.catch(() => {});
   });
 
   it("worker 无响应 → 超时以 ok:false 结算（resolve-mode 语义）", async () => {

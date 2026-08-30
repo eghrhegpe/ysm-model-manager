@@ -431,8 +431,11 @@ describe("createResolveModeBridge", () => {
     const p = bridge.request(new ArrayBuffer(8));
     fakeWorker.crash();
     const resp = await p;
+    // 正向锁定 onerror → handleWorkerError → resolveAllError 路径：错误消息必须来自
+    // worker 崩溃（"Worker 错误"），而非超时回退（"超时"）——若 onerror 接线被移除，
+    // 此处断言即红（超时会 settle 成 "超时"）。
     expect(resp.ok).toBe(false);
-    expect(typeof resp.error).toBe("string");
+    expect(resp.error).toBe("Worker 错误");
 
     vi.unstubAllGlobals();
   });

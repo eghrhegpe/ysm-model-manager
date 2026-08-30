@@ -1894,6 +1894,10 @@ export const autoSidebar = [
             "link": "/knowledge/resource-registry"
           },
           {
+            "text": "脚本 argv 规范与已知豁免 parse-args.mjs",
+            "link": "/knowledge/scripts_argv"
+          },
+          {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
           }

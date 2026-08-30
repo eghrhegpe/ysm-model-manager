@@ -2176,7 +2176,7 @@
 | `PageDefinition()` | `frontend/src/views/app-content/page-registry:23` | — |
 | `PAGE_REGISTRY()` | `frontend/src/views/app-content/page-registry:30` | — |
 | `initSettings()` | `frontend/src/views/app-content/settings/init:311` | 初始化设置页所有事件绑定 |
-| `initKeymap()` | `frontend/src/views/app-content/settings/keymap:130` | 初始化 3D 预览操作：键位网格 + 恢复默认 + 相机速度 + 默认旋转模式 |
+| `initKeymap()` | `frontend/src/views/app-content/settings/keymap:131` | 初始化 3D 预览操作：键位网格 + 恢复默认 + 相机速度 + 默认旋转模式 |
 | `saveCfg()` | `frontend/src/views/app-content/settings/path-cards:25` | — |
 | `bindPathClick()` | `frontend/src/views/app-content/settings/path-cards:53` | — |
 | `initAdvancedGrid()` | `frontend/src/views/app-content/settings/path-cards:194` | — |

@@ -464,9 +464,9 @@
 | `frontend/src/views/app-content/settings/init.ts` | 156 |
 | `frontend/src/views/app-content/settings/init.ts` | 184 |
 | `frontend/src/views/app-content/settings/init.ts` | 231 |
-| `frontend/src/views/app-content/settings/keymap.ts` | 103 |
-| `frontend/src/views/app-content/settings/keymap.ts` | 114 |
-| `frontend/src/views/app-content/settings/keymap.ts` | 135 |
+| `frontend/src/views/app-content/settings/keymap.ts` | 104 |
+| `frontend/src/views/app-content/settings/keymap.ts` | 115 |
+| `frontend/src/views/app-content/settings/keymap.ts` | 136 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 79 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 273 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 279 |

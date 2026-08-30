@@ -2,11 +2,9 @@
 /**
  * commit-with-check.mjs — 验证 + 自动提交的 thin wrapper（ADR-086 配套，2026-08-17 重构）
  *
- * 核心洞察：把 AI 的「确认性循环」（改代码→tsc→build→test→git add→commit→git log）
- * 压缩为「改代码→commit-with-check」单条命令。
- *
- * 设计意图：作为 ADR-086 的配套入口，让「验证+提交」走同一条被门禁保护的路径，
- * 杜绝绕过检查直接 commit。
+ * 设计意图：把 AI 的「确认性循环」（改代码→tsc→build→test→git add→commit→git log）
+ * 压缩为「改代码→commit-with-check」单条命令——验证委托 pre-push-gate（单一源头），
+ * 门禁全绿才 commit，杜绝绕过检查直接提交。
  *
  * 设计（thin wrapper）：
  *   1. 读 git staged files，仅作变更域摘要展示

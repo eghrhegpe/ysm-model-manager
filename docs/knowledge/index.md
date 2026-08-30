@@ -2,11 +2,11 @@
 
 # 知识卡索引
 
-> 总计: 131 张知识卡
+> 总计: 132 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（6 张）
+## config（7 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
@@ -17,11 +17,13 @@
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单 |
 | 🏗 optimization_log | 优化记录 optimization-log | architecture | cpu-bound, gpu-bound, concurrent, memory-heavy | 优化, 性能, 瓶颈, 优化记录, optimization, perf, KTX2, 纹理缓存, 加载速度, 内存, GPU 内存, 闪退, 泄漏, dispose |
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
+| 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.mjs | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
 | 🏗 vitest-env-switch | Vitest 环境切换规则 | architecture | — | vitest, 测试环境, node 环境, happy-dom, 测试切换 |
 
 ### 摘要
 
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
+- **scripts_argv**（脚本 argv 规范与已知豁免 parse-args.mjs）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.mjs`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-3…
 
 ## core（18 张）
 

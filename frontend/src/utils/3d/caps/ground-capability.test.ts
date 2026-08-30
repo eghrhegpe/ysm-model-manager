@@ -114,6 +114,24 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(mat.map!.repeat.x).toBeCloseTo(8); // textureRepeat(80,1)=8
   });
 
+  it("setEnabled 变更须重算 surface.visible 门控（与 setVisible 路径对称）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setMatSource("checker");
+    const surf = scene.getObjectByName("ysm-ground-surface")!;
+    expect(surf.visible).toBe(true);
+
+    cap.setEnabled(false);
+    // 禁用期间改材质 → refreshSurface 按 enabled=false 重算门控 → visible=false（陈旧值被纠正）
+    cap.setMatSource("grid");
+    cap.setEnabled(true);
+    // 重新启用后表面层必须恢复可见：apply() 只挂回场景、不重算门控，
+    // 若 setEnabled 不调 updateSurfaceVisible，表面层会「挂在场景里却不可见」= 地面材质凭空消失
+    expect(scene.getObjectByName("ysm-ground-surface")).toBeDefined();
+    expect(surf.visible).toBe(true);
+  });
+
   it("structural 变化重建（map 新实例）；appearance 变化原地（map 引用不变）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
@@ -271,7 +289,7 @@ describe("GroundCapability — 启用切换", () => {
     expect(scene.getObjectByName("ysm-ground-surface")).toBeDefined();
   });
 
-  it("disabled 时仅移除挂载，surface.visible 标志不被改写（门控只走 refreshSurface/setVisible）", () => {
+  it("disabled 时移除挂载并同步 surface.visible 门控（enabled 属门控因子之一）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene, params: { matSource: "checker" } });
     cap.apply();
@@ -279,10 +297,13 @@ describe("GroundCapability — 启用切换", () => {
     expect(surface.visible).toBe(true);
     cap.setEnabled(false);
     expect(surface.parent).toBeNull(); // 移除挂载
-    expect(surface.visible).toBe(true); // visible 标志保持（setEnabled 不调 updateSurfaceVisible）
+    // 门控 = enabled × params.visible × 模式非 none，enabled 变了门控必须重算。
+    // 旧实现不重算，留下陈旧 true；一旦禁用期间改材质（refreshSurface 重算成 false），
+    // 再启用时 apply() 只挂回场景不恢复门控 → 表面层挂上去了却不可见。
+    expect(surface.visible).toBe(false);
     cap.setEnabled(true);
     expect(surface.parent).toBe(scene);
-    expect(surface.visible).toBe(true);
+    expect(surface.visible).toBe(true); // 重新启用后门控恢复
   });
 });
 

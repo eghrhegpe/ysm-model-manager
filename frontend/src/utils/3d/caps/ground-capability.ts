@@ -135,6 +135,11 @@ export class GroundCapability implements SceneCapability {
       if (this.grid.parent) this.grid.parent.remove(this.grid);
       if (this.surface.parent) this.surface.parent.remove(this.surface);
     }
+    // 门控须随 enabled 重算：surface.visible = enabled × params.visible × 模式非 none。
+    // 只挂卸场景而不重算会留下陈旧值——「禁用期间改材质（refreshSurface 按 enabled=false
+    // 重算成 false）→ 再启用时 apply() 只挂回、不恢复门控」会让表面层挂在场景里却不可见，
+    // 表现为地面材质凭空消失。与 setVisible 路径保持对称（setVisible 亦走此重算）。
+    this.updateSurfaceVisible();
   }
 
   // 所有 mat* setter 只改 params 后调 refreshSurface()；

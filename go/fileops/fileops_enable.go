@@ -73,7 +73,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 		if types.IsDisableSuffix(path) {
 			// 文件自身也带禁用后缀（旧状态残留）：优先还原父目录再还原文件
 			fileNew := types.StripDisableSuffix(path)
-			if _, err := os.Stat(fileNew); err == nil {
+			if _, err := os.Lstat(fileNew); err == nil {
 				return false, fmt.Errorf("目标已存在: %s", fileNew)
 			}
 			if err := os.Rename(path, fileNew); err != nil {
@@ -82,7 +82,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 		}
 		// 大小写不敏感去禁用后缀（Windows 上 .DISABLED 目录也能还原）
 		dirNew := types.StripDisableSuffix(bannedParent)
-		if _, err := os.Stat(dirNew); err == nil {
+		if _, err := os.Lstat(dirNew); err == nil {
 			return false, fmt.Errorf("目标已存在: %s", dirNew)
 		}
 		if err := os.Rename(bannedParent, dirNew); err != nil {
@@ -117,7 +117,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 	if types.IsDisableSuffix(path) {
 		// 委托 types.StripDisableSuffix（单一事实来源），不内联切片防口径漂移。
 		newPath := types.StripDisableSuffix(path)
-		if _, err := os.Stat(newPath); err == nil {
+		if _, err := os.Lstat(newPath); err == nil {
 			return false, fmt.Errorf("目标已存在: %s", newPath)
 		}
 		if err := os.Rename(path, newPath); err != nil {
@@ -127,7 +127,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 	}
 	// 禁用（写入新标准 .disabled）
 	newPath := path + disableSuffix
-	if _, err := os.Stat(newPath); err == nil {
+	if _, err := os.Lstat(newPath); err == nil {
 		return false, fmt.Errorf("目标文件已存在: %s", newPath)
 	}
 	if err := os.Rename(path, newPath); err != nil {

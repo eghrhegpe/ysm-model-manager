@@ -26,6 +26,11 @@ type Logger func(name, src, dst string, size int64, status, msg string)
 //	例如仓库 maid-model/vendor/character/pack.zip 推送后落位到
 //	targetDir/vendor/character/pack.zip，而非扁平化的 targetDir/pack.zip。
 func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) (int, error) {
+	// 整段持 installer.InstallLock（ADR-056）：差集（SyncResources）在锁外计算会让陈旧
+	// diff 在两次 Install 之间被并发 Pull/Relink 改写目标目录后继续安装——与同文件
+	// PullResources/RelinkDir 的整段持锁口径对齐。循环内改用 *Locked 变体防重入死锁。
+	installer.InstallLock.Lock()
+	defer installer.InstallLock.Unlock()
 	defer InvalidateSyncScanCaches() // 推送会改实例/全局目录，清同步扫盘缓存防陈旧
 	count := 0
 	failed := 0
@@ -39,7 +44,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 			fi, stErr := os.Stat(missing)
 			var err error
 			if stErr == nil && !fi.IsDir() {
-				err = installer.Install(missing, targetDir, globalDir, linkMode)
+				err = installer.InstallLocked(missing, targetDir, globalDir, linkMode)
 			} else {
 				// 多层物理路径：用 InstallDirRel 保留仓库层级结构
 				// 例如 missing=globalDir/vendor/character/modelA → targetDir/vendor/character/modelA
@@ -49,9 +54,9 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 				// 行为一致：basename 落位）
 				if relErr != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 					// 越界回退到 InstallDir 原语义（basename 落位）
-					err = installer.InstallDir(missing, targetDir, globalDir, linkMode, rtype)
+					err = installer.InstallDirLocked(missing, targetDir, globalDir, linkMode, rtype)
 				} else {
-					err = installer.InstallDirRel(missing, targetDir, filepath.ToSlash(rel), globalDir, linkMode, rtype)
+					err = installer.InstallDirRelLocked(missing, targetDir, filepath.ToSlash(rel), globalDir, linkMode, rtype)
 				}
 			}
 			if err == nil {
@@ -69,10 +74,10 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 		return count, nil
 	}
 
-	// 非文件夹级类型：文件级同步
+	// 非文件夹级类型：文件级同步（整段已持 InstallLock，见函数头注释）
 	result := SyncResources(globalDir, targetDir, rtype)
 	for _, src := range result.Missing {
-		if err := installer.Install(src, targetDir, globalDir, linkMode); err == nil {
+		if err := installer.InstallLocked(src, targetDir, globalDir, linkMode); err == nil {
 			count++
 		} else {
 			failed++

@@ -85,7 +85,7 @@ func RenameDir(oldPath, newName string) error {
 	}
 	parent := filepath.Dir(oldPath)
 	newPath := filepath.Join(parent, newName)
-	if _, err := os.Stat(newPath); err == nil {
+	if _, err := os.Lstat(newPath); err == nil {
 		return fmt.Errorf("目标已存在: %s", newPath)
 	}
 	return os.Rename(oldPath, newPath)
@@ -133,7 +133,7 @@ func RenameFile(oldPath, newName string) error {
 	}
 	parent := filepath.Dir(oldPath)
 	newPath := filepath.Join(parent, newName)
-	if _, err := os.Stat(newPath); err == nil {
+	if _, err := os.Lstat(newPath); err == nil {
 		return fmt.Errorf("目标已存在: %s", newPath)
 	}
 	return os.Rename(oldPath, newPath)
@@ -228,7 +228,7 @@ func MoveModelFile(root, src, dstDir string) error {
 	dst := filepath.Join(dstDir, filepath.Base(src))
 	// 移动前防覆盖检查，与 CopyModelFile 语义对齐——
 	// 原实现 os.Rename 在 POSIX 上静默覆盖同名目标，Windows 上报错，行为不一致且可能数据丢失
-	if _, err := os.Stat(dst); err == nil {
+	if _, err := os.Lstat(dst); err == nil {
 		return fmt.Errorf("目标已存在: %s", dst)
 	}
 	if err := renameForMove(src, dst); err != nil {
@@ -323,7 +323,7 @@ func CopyModelFile(root, src, dstDir string) error {
 	}
 	dst := filepath.Join(dstDir, filepath.Base(src))
 	// 防覆盖：目标已存在直接报错（单文件与目录一致）
-	if _, err := os.Stat(dst); err == nil {
+	if _, err := os.Lstat(dst); err == nil {
 		return fmt.Errorf("目标已存在: %s", dst)
 	}
 	info, err := os.Stat(src)

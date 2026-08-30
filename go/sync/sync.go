@@ -273,7 +273,10 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		if d.IsDir() {
 			return nil
 		}
-		if strings.Contains(strings.ToLower(p), ".recycle") {
+		// 逐段判定（对齐 fsutil.IsRecycleDir/download.stripRecycleSegments 口径）：
+		// 原整路径子串 Contains 会误跳过文件名含 ".recycle" 的正常模型
+		//（如 my.recycle.backup.ysm 不参与启禁同步）
+		if hasRecycleSegment(p) {
 			return nil
 		}
 		actualPath := p
@@ -509,14 +512,27 @@ func GetLinkType(path string) types.LinkType {
 	return types.LinkCopy
 }
 
+// hasRecycleSegment 判断路径中是否存在任一名为 .recycle 的目录段（大小写不敏感，
+// 对齐 fsutil.IsRecycleDir / download.stripRecycleSegments 的 EqualFold 口径）。
+// 覆盖 .recycle 子树内已遍历文件的跳过语义（walk 会进入子树列出其下文件），
+// 同时不误伤文件名含 ".recycle" 的正常模型（如 my.recycle.backup.ysm）。
+func hasRecycleSegment(p string) bool {
+	for _, seg := range strings.Split(p, string(filepath.Separator)) {
+		if strings.EqualFold(seg, ".recycle") {
+			return true
+		}
+	}
+	return false
+}
+
 // isFileLocked 判断错误是否因为文件被其他进程锁定
 func isFileLocked(err error) bool {
 	if err == nil {
 		return false
 	}
-	// errno 优先：Windows ERROR_SHARING_VIOLATION(32) / Unix EBUSY(16)
-	// 两端错误码空间互不重叠，rename 不会命中对方语义，跨平台无副作用
-	if errors.Is(err, syscall.Errno(32)) || errors.Is(err, syscall.Errno(16)) {
+	// errno 优先：Windows ERROR_SHARING_VIOLATION(32) / ERROR_LOCK_VIOLATION(33) /
+	// Unix EBUSY(16)——两端错误码空间互不重叠，rename 不会命中对方语义，跨平台无副作用
+	if errors.Is(err, syscall.Errno(32)) || errors.Is(err, syscall.Errno(33)) || errors.Is(err, syscall.Errno(16)) {
 		return true
 	}
 	// 兜底：检查嵌套错误的消息内容（Windows 上 os.Rename 可能返回 LinkError/PathError）

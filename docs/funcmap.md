@@ -234,11 +234,11 @@
 | `WalkAllDirs()` | `go/fsutil/walk:38` | WalkAllDirs 递归遍历目录，返回所有子目录路径（深度优先后序：子目录在前，父目录在后） 不包含根目录本身。后序便于删除类操作（先删深目录，父目录变空后可被继续删除）。 |
 | `CountFiles()` | `go/fsutil/walk:72` | CountFiles 统计目录中的文件数（不限制扩展名） 流式计数：不构造完整 []string，避免大目录下为取 len 白白物化整棵文件树 （遍历语义与 WalkAllFile |
 | `CleanEmptyDirs()` | `go/fsutil/walk:96` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
-| `IsRecycleDir()` | `go/fsutil/walk:112` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
-| `IsResourcePackFolder()` | `go/fsutil/walk:120` | IsResourcePackFolder 检查目录是否为资源包文件夹（内含 pack.mcmeta）。 |
-| `ReadLimitedEntry()` | `go/fsutil/write:59` | ReadLimitedEntry 读取 zip/7z 单条目：limit+1 探测截断（ADR-033 修复，ADR-044 策略 A 统一口径）—— 原 `io.ReadAll( |
-| `WriteFileAtomic()` | `go/fsutil/write:79` | WriteFileAtomic 临时文件 + rename 原子落地目标文件。 |
-| `SHA256File()` | `go/fsutil/write:121` | SHA256File 计算文件内容的 SHA256 哈希，返回十六进制字符串。 |
+| `IsRecycleDir()` | `go/fsutil/walk:114` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
+| `IsResourcePackFolder()` | `go/fsutil/walk:122` | IsResourcePackFolder 检查目录是否为资源包文件夹（内含 pack.mcmeta）。 |
+| `ReadLimitedEntry()` | `go/fsutil/write:60` | ReadLimitedEntry 读取 zip/7z 单条目：limit+1 探测截断（ADR-033 修复，ADR-044 策略 A 统一口径）—— 原 `io.ReadAll( |
+| `WriteFileAtomic()` | `go/fsutil/write:86` | WriteFileAtomic 临时文件 + rename 原子落地目标文件。 |
+| `SHA256File()` | `go/fsutil/write:128` | SHA256File 计算文件内容的 SHA256 哈希，返回十六进制字符串。 |
 
 ## Go·几何
 
@@ -445,13 +445,13 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `DetectConflicts()` | `go/sync/conflict:69` | DetectConflicts 检测本地和远端之间的冲突 基于文件哈希比较：两端都存在且哈希不同 → 内容冲突 localDir: 本地目录路径（整合包） remoteDir: 远 |
-| `ResolveConflict()` | `go/sync/conflict:131` | ResolveConflict 解决单个文件冲突 先备份再操作，确保安全 |
-| `ResolveConflicts()` | `go/sync/conflict:167` | ResolveConflicts 批量解决冲突 |
-| `ConflictType()` | `go/sync/conflict:13` | ConflictType 冲突类型 |
-| `ResolutionStrategy()` | `go/sync/conflict:23` | ResolutionStrategy 冲突解决策略 |
-| `FileConflict()` | `go/sync/conflict:35` | FileConflict 文件冲突详情 |
-| `ConflictReport()` | `go/sync/conflict:57` | ConflictReport 冲突报告 |
+| `DetectConflicts()` | `go/sync/conflict:70` | DetectConflicts 检测本地和远端之间的冲突 基于文件哈希比较：两端都存在且哈希不同 → 内容冲突 localDir: 本地目录路径（整合包） remoteDir: 远 |
+| `ResolveConflict()` | `go/sync/conflict:132` | ResolveConflict 解决单个文件冲突 先备份再操作，确保安全 |
+| `ResolveConflicts()` | `go/sync/conflict:173` | ResolveConflicts 批量解决冲突。 |
+| `ConflictType()` | `go/sync/conflict:14` | ConflictType 冲突类型 |
+| `ResolutionStrategy()` | `go/sync/conflict:24` | ResolutionStrategy 冲突解决策略 |
+| `FileConflict()` | `go/sync/conflict:36` | FileConflict 文件冲突详情 |
+| `ConflictReport()` | `go/sync/conflict:58` | ConflictReport 冲突报告 |
 | `RegisterInvalidationHook()` | `go/sync/sync_cache:30` | RegisterInvalidationHook 把同步扫描缓存挂到 scanner 失效钩子上。 |
 | `InvalidateSyncScanCaches()` | `go/sync/sync_cache:61` | InvalidateSyncScanCaches 清空全部同步目录扫描结果缓存。 |
 | `ResourceDiff()` | `go/sync/sync_diff:31` | ResourceDiff 按调用方提供的 key（文件名或相对路径，ADR-064 阶段二统一为 relKey 相对路径）对比两侧条目：   - 同名同大小（或含目录条目）→ Sy |
@@ -469,19 +469,19 @@
 | `CompareGlobalInstanceHashes()` | `go/sync/sync_hash:29` | CompareGlobalInstanceHashes 对比全局目录和整合包实例子目录，返回每个实例的 Missing / Extra / Synced 状态。 |
 | `HasModInDirFn()` | `go/sync/sync_hash:19` | HasModInDirFn 判断 mods 目录是否含有指定类型 mod 的函数类型。 |
 | `PushResources()` | `go/sync/sync_push:28` | PushResources 推送缺失资源到整合包（folder 级类型用 SyncResourcesDirLevel） 多层物理路径支持： 对于 dirLevelSync 类型，会 |
-| `PullResources()` | `go/sync/sync_push:93` | PullResources 拉取整合包多余资源回仓库 持 InstallLock：从实例目录复制文件回仓库，与 SyncToggleStatus/RelinkDir 等并发操作同一 |
-| `PullSingleResource()` | `go/sync/sync_push:194` | PullSingleResource 拉取单个资源（文件夹/文件）回仓库 持 InstallLock：从实例目录复制文件回仓库，与并发同步操作互斥（ADR-056） |
-| `PushSingleResource()` | `go/sync/sync_push:233` | PushSingleResource 推送单个资源到整合包： 文件夹 / .json/.pmx/.pmd（文件夹级类型）走 InstallDir，其余 Install。 |
-| `SyncCustomToRepo()` | `go/sync/sync_push:254` | SyncCustomToRepo 同步整合包自定义目录的模型到仓库（哈希/名称去重） |
+| `PullResources()` | `go/sync/sync_push:98` | PullResources 拉取整合包多余资源回仓库 持 InstallLock：从实例目录复制文件回仓库，与 SyncToggleStatus/RelinkDir 等并发操作同一 |
+| `PullSingleResource()` | `go/sync/sync_push:199` | PullSingleResource 拉取单个资源（文件夹/文件）回仓库 持 InstallLock：从实例目录复制文件回仓库，与并发同步操作互斥（ADR-056） |
+| `PushSingleResource()` | `go/sync/sync_push:238` | PushSingleResource 推送单个资源到整合包： 文件夹 / .json/.pmx/.pmd（文件夹级类型）走 InstallDir，其余 Install。 |
+| `SyncCustomToRepo()` | `go/sync/sync_push:259` | SyncCustomToRepo 同步整合包自定义目录的模型到仓库（哈希/名称去重） |
 | `Logger()` | `go/sync/sync_push:19` | Logger 导入日志回调（薄壳注入 App.logger.Add） |
 | `RelinkDir()` | `go/sync/sync_relink:18` | RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚） |
 | `GetInstanceStatus()` | `go/sync/sync:28` | GetInstanceStatus 获取整合包状态（使用真实 ListVersions） rtype: 资源类型 ID（如 "ysm"），用于解析特定子目录；为空时使用 ins.C |
 | `GetInstanceStatusWith()` | `go/sync/sync:157` | — |
 | `SyncToggleStatus()` | `go/sync/sync:228` | SyncToggleStatus 同步启用/禁用状态 |
-| `SyncResources()` | `go/sync/sync:397` | — |
-| `SyncResourcesWithConfig()` | `go/sync/sync:402` | SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测） |
-| `SortEntries()` | `go/sync/sync:488` | SortEntries 按名称排序模型条目 |
-| `GetLinkType()` | `go/sync/sync:495` | GetLinkType 判断文件的链接类型 |
+| `SyncResources()` | `go/sync/sync:400` | — |
+| `SyncResourcesWithConfig()` | `go/sync/sync:405` | SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测） |
+| `SortEntries()` | `go/sync/sync:491` | SortEntries 按名称排序模型条目 |
+| `GetLinkType()` | `go/sync/sync:498` | GetLinkType 判断文件的链接类型 |
 | `ScanFunc()` | `go/sync/sync:24` | ScanFunc 扫描模型（函数类型，由 app.go 注入） |
 
 ## Go·标签
@@ -1161,11 +1161,11 @@
 | `filterModels()` | `frontend/src/features/community/render:72` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
 | `ModelRowCtx()` | `frontend/src/features/community/render:108` | 单行构建上下文（renderModelList / buildModelRow 共用） |
 | `buildModelRow()` | `frontend/src/features/community/render:117` | 构建单行模型行（虚拟列表 renderItem 用） |
-| `renderModelList()` | `frontend/src/features/community/render:193` | 渲染模型列表（DocumentFragment） |
-| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:227` | 站点分组展示顺序（renderCardsHTML 使用） |
-| `groupSites()` | `frontend/src/features/community/render:232` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
-| `renderCardsHTML()` | `frontend/src/features/community/render:249` | 生成左栏站点卡片 HTML |
-| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:299` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
+| `renderModelList()` | `frontend/src/features/community/render:194` | 渲染模型列表（DocumentFragment） |
+| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:228` | 站点分组展示顺序（renderCardsHTML 使用） |
+| `groupSites()` | `frontend/src/features/community/render:233` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
+| `renderCardsHTML()` | `frontend/src/features/community/render:250` | 生成左栏站点卡片 HTML |
+| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:300` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
 | `showRepoModels()` | `frontend/src/features/community/show-repo-models:27` | 显示 GitHub 仓库模型列表（比对本地已有文件） 包含：本地扫描、sourceLabel构建、countMissing、renderRepoHeaderHTML、bindRep |
 | `VirtualListOpts()` | `frontend/src/features/community/virtual-list:8` | — |
 | `VirtualList()` | `frontend/src/features/community/virtual-list:21` | — |
@@ -1483,8 +1483,8 @@
 | `PREVIEW_MENU_GROUPS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:66` | — |
 | `CORE_MENU_ITEMS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:88` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
 | `disposeEnvSubscriptions()` | `frontend/src/utils/3d/adapters/preview-menu/env:30` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
-| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu/env:117` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
-| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu/env:240` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
+| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu/env:116` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
+| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu/env:239` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
 | `MultiModelSelectOpts()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:16` | 多模型选择原语入参 |
 | `multiModelSelectNode()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:39` | 多模型选择 select 节点工厂。 |
 | `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |

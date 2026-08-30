@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/installer"
 )
 
 // ConflictType 冲突类型
@@ -137,7 +138,9 @@ func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDi
 		// 强制使用远端：先备份本地，再用远端覆盖。
 		// 拷贝统一走 fsutil.CopyFile（ADR-044 收敛：原子 tmp+rename，
 		// 中途失败不留半截目标；权限/步骤错误类型化见 fsutil）。
-		backupPath := localPath + ".bak"
+		// 备份名带时间戳：固定 ".bak" 会在残留旧备份时被静默覆盖（丢失唯一的恢复点）；
+		// 时间戳版与 fsutil.CopyDirRecursive 的 .bak-<ts> 口径一致，成功后由下方删除。
+		backupPath := fmt.Sprintf("%s.bak-%d", localPath, time.Now().UnixNano())
 		if err := fsutil.CopyFile(localPath, backupPath); err != nil {
 			return fmt.Errorf("备份本地文件失败: %w", err)
 		}
@@ -163,8 +166,14 @@ func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDi
 	}
 }
 
-// ResolveConflicts 批量解决冲突
+// ResolveConflicts 批量解决冲突。
+// 整段持 installer.InstallLock（ADR-056）：ForceRemote 分支对实例/全局目录文件做
+// CopyFile 覆盖写，与并发的 Install/RelinkDir/SyncToggleStatus 操作同一目录文件时
+// 必须互斥；ResolveConflict 自身不加锁，供本函数持锁调用。
 func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
+	installer.InstallLock.Lock()
+	defer installer.InstallLock.Unlock()
+	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
 	for _, c := range conflicts {
 		strategy := c.SuggestedStrategy
 		if strategy == ResolveManual {

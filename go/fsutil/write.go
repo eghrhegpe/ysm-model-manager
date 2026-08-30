@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -66,7 +67,13 @@ func ReadLimitedEntry(rc io.ReadCloser, limit int64) []byte {
 		return nil
 	}
 	buf, err := io.ReadAll(io.LimitReader(rc, limit+1))
-	if err != nil || int64(len(buf)) > limit {
+	if err != nil {
+		// 读取错误（IO 故障）与超限是两类失败：超限是预期内跳过，IO 故障需诊断线索——
+		// 函数签名不变（nil 表示跳过该条目），但至少留下日志而非完全静默
+		log.Printf("[fsutil] ReadLimitedEntry 读取失败（非超限，返回 nil 跳过条目）: %v", err)
+		return nil
+	}
+	if int64(len(buf)) > limit {
 		return nil
 	}
 	return buf

@@ -178,9 +178,15 @@ func CopyDirRecursive(src, dst string, opts CopyDirOptions) error {
 		}
 
 		// 原子替换：若目标已存在，先备份再 rename
-		if _, stErr := os.Stat(dst); stErr == nil {
+		// ⚠️ 崩溃窗口（有意的取舍）：Rename(dst, backup) 成功与 Rename(tmpDir, dst) 之间
+		// 进程崩溃 → dst 缺失，旧数据仅在 .bak-<ts>；恢复需人工扫描同目录 .bak-*。
+		// 两步 rename 无法在单进程内进一步原子化（POSIX/Win 均无目录级事务），
+		// 故仅文档化窗口 + 备份永不覆盖（纳秒时间戳）作为兜底。
+		if _, stErr := os.Lstat(dst); stErr == nil {
 			backup := dst + ".bak-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-			_ = os.RemoveAll(backup)
+			if rmErr := os.RemoveAll(backup); rmErr != nil {
+				log.Printf("[fsutil] 清理陈旧备份失败 %s: %v（不影响本次替换，rename 仍可继续）", backup, rmErr)
+			}
 			if err := os.Rename(dst, backup); err != nil {
 				return err
 			}
@@ -188,7 +194,9 @@ func CopyDirRecursive(src, dst string, opts CopyDirOptions) error {
 				_ = os.Rename(backup, dst) // 回滚恢复
 				return err
 			}
-			_ = os.RemoveAll(backup)
+			if rmErr := os.RemoveAll(backup); rmErr != nil {
+				log.Printf("[fsutil] 替换成功后清理备份失败 %s: %v（旧数据完整保留在该路径）", backup, rmErr)
+			}
 			return nil
 		}
 		return os.Rename(tmpDir, dst)
@@ -240,7 +248,9 @@ func copyDirRecursiveWalk(src, dstDir string, opts CopyDirOptions) error {
 			return os.MkdirAll(target, DirPerms)
 		}
 		if !opts.Overwrite {
-			if _, err := os.Stat(target); err == nil {
+			// Lstat 而非 Stat：目标位置是悬空符号链接时 Stat 返回 NotExist，
+			// 守卫被绕过 → CopyFile 的 rename 静默顶掉链接（对齐 recycle.uniqueDest 口径）
+			if _, err := os.Lstat(target); err == nil {
 				return fmt.Errorf("目标已存在: %s", target)
 			}
 		}

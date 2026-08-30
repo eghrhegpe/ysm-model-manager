@@ -186,6 +186,12 @@ func InstallDirLocked(srcDir, dstDir, filesRoot, linkMode, rtype string) error {
 	return installDirAtLocked(srcDir, dstDir, "", filesRoot, linkMode, rtype)
 }
 
+// InstallDirRelLocked 与 InstallDirRel 语义相同，但不重复加锁——供 sync.PushResources
+// 等整段持 InstallLock 的调用方使用（防重入死锁）。
+func InstallDirRelLocked(srcDir, dstRoot, relSlash, filesRoot, linkMode, rtype string) error {
+	return installDirAtLocked(srcDir, dstRoot, relSlash, filesRoot, linkMode, rtype)
+}
+
 // normalizeInstallDirPaths 目录安装前的路径归一化与安全守卫（原 installDirAtLocked 阶段 1-3 提纯）。
 // 执行顺序：TrimSpace → cleanAbs → evalSymlinksOrKeep（防 symlink 绕过字符串守卫）→ 空值拒绝 →
 // sameDir 死递归守卫 → ContainsMinecraftMarker(.minecraft 内) → filesRoot 非空时 IsInside(仓库内) 守卫。
@@ -711,7 +717,7 @@ func linkErr(src, dst string, err error) error {
 	if strings.Contains(errStr, "cross-device") || strings.Contains(errStr, "different device") || strings.Contains(errStr, "not same device") {
 		return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "仓库与游戏目录在不同分区，不支持硬链接", Suggestion: "请在设置中切换为复制模式"}
 	}
-	if strings.Contains(errStr, "access") || strings.Contains(errStr, "permission") {
+	if strings.Contains(errStr, "access is denied") || strings.Contains(errStr, "permission") {
 		return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "权限不足，无法创建硬链接", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
 	}
 	return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "硬链接失败", Suggestion: "请在设置中切换为复制模式"}
@@ -725,7 +731,7 @@ func symlinkErr(src, dst string, err error) error {
 	}
 	// 文本兜底（非 errno 包装的异常错误）
 	errStr := strings.ToLower(err.Error())
-	if strings.Contains(errStr, "access") || strings.Contains(errStr, "privilege") || strings.Contains(errStr, "permission") {
+	if strings.Contains(errStr, "access is denied") || strings.Contains(errStr, "privilege") || strings.Contains(errStr, "permission") {
 		return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "创建符号链接需要管理员权限", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
 	}
 	return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "符号链接失败", Suggestion: "请在设置中切换为复制模式"}
@@ -754,9 +760,11 @@ func IsValidRepoRoot(path string) bool {
 	absLower := strings.ToLower(abs) + string(filepath.Separator)
 	var forbidden []string
 	if runtime.GOOS == "windows" {
-		// Windows 系统目录
-		for _, drive := range []string{"c:", "d:", "e:"} {
-			prefix := drive + string(filepath.Separator)
+		// Windows 系统目录——按目标所在盘符动态拼前缀（VolumeName），而非枚举 c:/d:/e:
+		// （原枚举漏掉 F: 等盘上的 windows/program files）
+		vol := strings.ToLower(filepath.VolumeName(abs))
+		if vol != "" {
+			prefix := vol + string(filepath.Separator)
 			forbidden = append(forbidden,
 				prefix+"windows"+string(filepath.Separator),
 				prefix+"program files"+string(filepath.Separator),

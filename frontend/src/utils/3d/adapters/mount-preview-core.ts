@@ -195,7 +195,9 @@ export function invalidatePreview(): void {
 /** 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） */
 export function cleanupPreview(): void {
   _gen++;
-  for (const h of _handles) {
+  // 快照遍历：handle.cleanup() → fullCleanup → finishSession 会从 _handles 摘除自身，
+  // 边遍历边删会跳元素（cooperate 多会话场景只清掉一半），故先复制一份
+  for (const h of [..._handles]) {
     try { h.handle.cleanup(); } catch (_) {}
   }
   _handles.length = 0;
@@ -277,6 +279,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   const session: MpSessionState = {
     currentPath: path,
     isDisposed: { v: false },
+    finished: false,
     aborted: { v: false },
     cleanupFn: null,
     // 相机偏好从 localStorage 读取（keymap.ts 同源：速度默认 20，环绕模式默认 orbit）
@@ -440,6 +443,27 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       else closeOverlay();
     }
   };
+  /**
+   * 会话收尾（幂等，closeOverlay 早期路径与 fullCleanup post-build 路径共用）：
+   * 摘句柄 → 通知调用方 → 无障碍焦点归还。
+   * 必须单一出口：ESC 早期中断会先走 closeOverlay，build 随后 resolve 时中止守卫
+   * 又会进入 fullCleanup，两条路径都会调到这里——不幂等则 onClose 会重复触发。
+   */
+  function finishSession(): void {
+    if (session.finished) return;
+    session.finished = true;
+    // 从模块级 handles 列表移除当前 session（hasActivePreview 以该列表为依据）
+    const idx = _handles.findIndex(h => h.gen === myGen);
+    if (idx >= 0) _handles.splice(idx, 1);
+    // 无障碍：释放焦点陷阱 + 把焦点还给触发 3D 的 FAB 按钮（rememberTrigger 在
+    // mount3D 入口已记下 activeElement；元素已离文档时 returnFocus 静默跳过）
+    focusTrapCleanup?.();
+    focusTrapCleanup = null;
+    returnFocus();
+    // 通知调用方会话已关闭（UI 状态复位 / android-back 注销依赖此回调）
+    adapter.onClose?.();
+  }
+
   function closeOverlay(): void {
     session.aborted.v = true;
     document.removeEventListener("keydown", session.escH);
@@ -450,15 +474,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     }
     menuHandle.dispose();
     if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
-    // 从模块级 handles 列表移除当前 session
-    const idx = _handles.findIndex(h => h.gen === myGen);
-    if (idx >= 0) _handles.splice(idx, 1);
-    // 无障碍：释放焦点陷阱 + 把焦点还给触发 3D 的 FAB 按钮（rememberTrigger 在
-    // mount3D 入口已记下 activeElement；元素已离文档时 returnFocus 静默跳过）
-    focusTrapCleanup?.();
-    focusTrapCleanup = null;
-    returnFocus();
-    adapter.onClose?.();
+    finishSession();
   }
   document.addEventListener("keydown", session.escH);
 
@@ -728,6 +744,11 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     if (session.aborted.v || myGen !== _gen) {
       // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
       // 避免外壳资源泄漏；内容层 GPU 资源经 fullCleanup 一并释放。
+      // 注意：会话登记进 allBuilt 发生在下方（build 成功之后），此处必须补登记，
+      // 否则刚 build 完的内容层不在 dispose 列表里 → GPU 资源泄漏。
+      if (session.built && !session.allBuilt.includes(session.built)) {
+        session.allBuilt.push(session.built);
+      }
       fullCleanup();
       return;
     }
@@ -827,6 +848,8 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
         cancelAnimationFrame(_globalAnimId);
         _globalAnimId = 0;
       }
+      // ⑦ 收尾：摘句柄 + 通知调用方 + 焦点归还（幂等，与 closeOverlay 共用同一出口）
+      finishSession();
     }
 
     // 复用 escH 可变引用，switchTo 后旧 handler 被替换，新 handler 在 cleanup 时通过 getter 正确卸载
@@ -878,6 +901,9 @@ interface MpSessionState {
   currentPath: string;
   /** disposed 标记（可变引用） */
   isDisposed: { v: boolean };
+  /** 会话收尾已完成标记：closeOverlay（早期路径）与 fullCleanup（post-build 路径）共用，
+   *  保证「摘句柄 + 通知调用方 + 焦点归还」只发生一次（abort 路径会二次进入 fullCleanup） */
+  finished: boolean;
   /** 中止标记（可变引用，ESC/invalidate 打断） */
   aborted: { v: boolean };
   /** cleanup 函数引用（build 成功后赋值） */

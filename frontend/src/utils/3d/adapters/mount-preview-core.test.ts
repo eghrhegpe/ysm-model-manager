@@ -230,14 +230,30 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-    // ⚠️ 疑似源码 bug：fullCleanup 不从 _handles 移除本会话、也不调 adapter.onClose
-    //（仅 closeOverlay 早期路径做；生产中 ESC/关闭按钮走 fullCleanup → 调用方状态
-    // 复位 + android-back 注销不会发生，hasActivePreview 残留 true）。此处只锁实际行为。
     expect(built.dispose).toHaveBeenCalledTimes(1);
     expect(h.menuHandle!.dispose).toHaveBeenCalled();
     expect(sceneRegistry.count()).toBe(0);
-    cleanupPreview(); // 兜底清 _handles 残影
+    // 会话须从 _handles 摘除并通知调用方：ESC/关闭按钮走 fullCleanup，若只拆 DOM 不动
+    // 句柄，hasActivePreview() 会恒为 true、调用方状态不复位、android-back 不注销。
+    expect(adapter.onClose).toHaveBeenCalledTimes(1);
     expect(hasActivePreview()).toBe(false);
+    cleanupPreview(); // 幂等兜底
+    expect(hasActivePreview()).toBe(false);
+  });
+
+  it("build 期间被 invalidate：已产出的内容层仍须 dispose，不留 GPU 资源", async () => {
+    const built = makeBuilt();
+    let resolveBuild!: (b: PreviewScene) => void;
+    const build = vi.fn(() => new Promise<PreviewScene>((res) => { resolveBuild = res; }));
+    const adapter: PreviewAdapter = { id: "vrm", build, onClose: vi.fn() };
+    const pending = mount3D(adapter, "/m/abort.vrm");
+    invalidatePreview(); // 代际守卫：build resolve 后进入中止分支
+    resolveBuild(built);
+    await pending;
+    // build 已返回内容层，中止分支须先把它登记进 allBuilt 再 fullCleanup，否则 dispose 不到
+    expect(built.dispose).toHaveBeenCalledTimes(1);
+    expect(hasActivePreview()).toBe(false);
+    expect(adapter.onClose).toHaveBeenCalledTimes(1);
   });
 
   it("build 失败 → console.error + showLoadFailure 降级，不注册会话", async () => {

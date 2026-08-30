@@ -8,6 +8,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { TOAST_MS } from "./utils/dom/toast-ms.ts";
 
+// [治本] 文件级真实 timer 登记：boot 期间注册的所有 setTimeout 句柄（含 app-modules
+// 顶层 IIFE 的 setTimeout(2000) 预取与 flush 泵的 setTimeout(0)）统一登记，afterEach
+// 逐个 clearTimeout。vi.useFakeTimers() 只劫持新注册定时器、**不取消已挂起的真实
+// 定时器**——上一用例 boot 残留的 real 2s timer 会在下一用例 await 间隙触发，污染
+// mock 断言（竞态根因）；mockClear 只清调用记录不清时钟，是治标。此处治本。
+const realTimerHandles = new Set<ReturnType<typeof setTimeout>>();
+
+// [治本] 重装配用例（resetModules + 7 视图动态 import + 20 轮真实宏任务泵）在 CI
+// 全量负载下真实耗时可能超过默认 5s testTimeout——放宽文件级上限至 20s。非掩盖：
+// 真死锁会远超 20s 仍红；此放宽只吸收调度延迟造成的偶发超时。
+vi.setConfig({ testTimeout: 20000 });
+
 // ── hoisted mock 池（vi.mock factory 只能引用 hoisted 变量）──
 const m = vi.hoisted(() => ({
   registerErrorDiary: vi.fn(),
@@ -110,14 +122,36 @@ const flushMicro = async () => {
 };
 
 /** resetModules 后重新求值 app-modules；先挂 bus toast 观察点再 import。
- *  视图 mock 每次重注册（见 mockViews），m.failNav 控制 app-nav 动态 import 是否失败。 */
+ *  视图 mock 每次重注册（见 mockViews），m.failNav 控制 app-nav 动态 import 是否失败。
+ *  [治本] 真实 timer 登记仅在**真实计时器环境**（默认 flush）激活：spy 全局 setTimeout
+ *  透传登记 app-modules 顶层 IIFE 的 setTimeout(2000) 预取句柄，import 完成立即
+ *  mockRestore，afterEach 统一 clear 防跨用例竞态。fake timers 用例（microFlush）**不
+ *  登记**：其 timer 是 fake 实现，advanceTimersByTimeAsync 已推进、useRealTimers 丢弃，
+ *  且 spy×fake timers 的恢复链互相干扰（spyOn 保存/恢复的是 fake 实现，会把全局
+ *  setTimeout 恢复错乱，导致后续用例 flush 泵挂起 20s 超时——实测主题跟随/devtools
+ *  用例全挂）。 */
 async function boot(opts: { microFlush?: boolean } = {}) {
   vi.resetModules();
   mockViews();
   const { bus } = await import("./bus.ts");
   const toasts: Array<{ msg: string; duration?: number; type?: string }> = [];
   bus.on("toast:show", (p) => toasts.push(p as never));
-  await import("./app-modules.ts");
+  let timerSpy: ReturnType<typeof vi.spyOn> | undefined;
+  if (!opts.microFlush) {
+    const origSetTimeout = globalThis.setTimeout;
+    timerSpy = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation(((fn, ms, ...args) => {
+        const h = origSetTimeout(fn, ms, ...args);
+        realTimerHandles.add(h);
+        return h;
+      }) as unknown as typeof globalThis.setTimeout);
+  }
+  try {
+    await import("./app-modules.ts");
+  } finally {
+    timerSpy?.mockRestore();
+  }
   await (opts.microFlush ? flushMicro() : flush());
   return { toasts };
 }
@@ -161,6 +195,10 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  // [治本] 统一清理本用例登记的真实 timer：上一用例 IIFE 的 setTimeout(2000) 若不
+  // 清掉，会跨用例残留（useFakeTimers 不取消已挂起真实定时器）——这正是竞态根因。
+  for (const h of realTimerHandles) clearTimeout(h);
+  realTimerHandles.clear();
 });
 
 describe("app-modules 启动装配", () => {

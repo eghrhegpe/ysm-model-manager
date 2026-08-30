@@ -793,14 +793,24 @@ export class LightCapability implements SceneCapability {
     // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步（setPreset 的判定基于覆盖前的预设值）
     this.syncConeMount();
     // ④ 引擎最后恢复：仅 "postprocess" 走 setVolumetricEngine——其「postprocess ⇒
-    //    volumetric 关闭」一致性约束是有意的；"cone" 用无副作用字段赋值（cone 是构造
-    //    默认引擎，其「spotlight 开启时强制 volumetric.enabled=true」是运行期切回锥
-    //    引擎的语义，若在此执行会把用户保存的 volumetricEnabled=false 强制翻回 true，
-    //    与②「用户显式保存的开关优先」矛盾——跨会话丢失回归，方向相反）。
+    //    volumetric 关闭」一致性约束是有意的；"cone" 恢复引擎字段，且当恢复后的
+    //    params 真启用（volumetric + spotlight 均开）时重建并挂载锥组——setVolumetricEngine
+    //    的 cone 分支被弃用后，这是 loadState 中唯一的锥组挂载路径（审核复核 P1：
+    //    纯字段赋值会让保存 volumetric=true 的会话在 loadState 后锥组静默消失）。
+    //    不强制翻转 volumetric.enabled——只按②恢复的用户值判定，与「用户保存的
+    //    开关优先」不变量一致。
     if (state.volumetricEngine === "postprocess") {
       this.setVolumetricEngine("postprocess");
     } else if (state.volumetricEngine === "cone") {
       this.volumetricEngine = "cone";
+      if (this.params.volumetric.enabled && this.params.spotlight.enabled) {
+        this.rebuildCone();
+        if (this.coneGroup && !this.coneGroup.parent) {
+          this.scene.add(this.coneGroup);
+          this.coneGroup.position.copy(this.spotlight.position);
+          this.coneGroup.position.y -= this.coneHeight / 2;
+        }
+      }
     }
     this.syncLightsFromParams();
   }

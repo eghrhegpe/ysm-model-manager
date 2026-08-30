@@ -371,6 +371,28 @@ describe("LightCapability — 持久化", () => {
     expect((cap2 as unknown as { coneGroup?: THREE.Object3D | null }).coneGroup?.parent).toBeUndefined();
   });
 
+  it("saveState/loadState 往返：volumetric=true + cone 引擎 + spotlight 开启 → 锥组重建并挂载（复核 P1 回归）", () => {
+    const cap = newCap();
+    cap.setPreset("mmd", { manual: true });
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: true });
+    expect(cap.getVolumetricEngine()).toBe("cone"); // 默认引擎
+    cap.saveState();
+
+    const cap2 = newCap();
+    cap2.loadState();
+    const p = cap2.getParams();
+    // 复核修复前：cone 分支改纯字段赋值后，loadState 无任何路径重建锥组——保存
+    // volumetric=true 的会话重载后锥组静默消失（coneGroup 恒 null、syncConeMount
+    // 只处理已挂载、setSpotlight 因 coneGroup null 短路）。
+    // 复核修复后：cone 分支按恢复后的 params 重建+挂载锥组（不强制翻转开关）。
+    expect(p.spotlight.enabled).toBe(true);
+    expect(p.volumetric.enabled).toBe(true);
+    expect(cap2.getVolumetricEngine()).toBe("cone");
+    const capScene = (cap2 as unknown as { scene: THREE.Scene }).scene;
+    expect(capScene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+  });
+
   it("loadState 空存储时保持默认值", () => {
     const cap = newCap({ params: { ambient: { intensity: 1.5 } } });
     cap.loadState();

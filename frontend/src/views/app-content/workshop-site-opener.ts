@@ -142,7 +142,7 @@ export function bindSiteEvents(
         const { ExportWorkshopSitesJSONFile } = await getApp();
         const path = await ExportWorkshopSitesJSONFile();
         bus.emit("toast:show", {
-          msg: t("workshop.exported", { path }),
+          msg: t("workshop.action.exported", { path }),
           duration: TOAST_MS.success,
           type: "success",
         });
@@ -171,7 +171,7 @@ export function bindSiteEvents(
         const n = await ValidateWorkshopSites();
         // TODO: 重新加载创作者列表
         bus.emit("toast:show", {
-          msg: t("workshop.imported", { n }),
+          msg: t("workshop.action.imported", { n }),
           duration: TOAST_MS.success,
           type: "success",
         });

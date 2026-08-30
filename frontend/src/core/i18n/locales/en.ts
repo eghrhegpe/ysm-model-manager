@@ -610,7 +610,7 @@ export const en: Record<string, string> = {
   "workshop.allDownloaded": "All downloads complete",
   // site edit / workshop fetch (app-content site/edit + workshop-site-opener)
   "workshop.siteInfoLost": "❌ Site info lost",
-  "workshop.saved": "✅ Saved",
+  "workshop.action.saved": "✅ Saved",
   "workshop.saveFailed": "Save failed",
   "workshop.logCreators": "Creators: +{added} updated {updated}",
   "workshop.logSites": "Sites: +{added}",
@@ -625,10 +625,10 @@ export const en: Record<string, string> = {
   "workshop.newCreatorName": "New Creator",
   "workshop.newCreatorDesc": "Description",
   "workshop.exportWebUnsupported": "Exporting site config is not supported on web, use the desktop app",
-  "workshop.exported": "📤 Site exported: {path}",
+  "workshop.action.exported": "📤 Site exported: {path}",
   "workshop.exportFailed": "Export failed",
   "workshop.importWebUnsupported": "Importing site config is not supported on web, use the desktop app",
-  "workshop.imported": "✅ Imported {n} sites",
+  "workshop.action.imported": "✅ Imported {n} sites",
   "workshop.communityIndexLoading": "⏳ Community index: {source}…",
   "workshop.siteIndexLoading": "⏳ Site index: {source}…",
   "workshop.githubNoIndex": "📭 This repo has no index.json (workshop index not built yet)",
@@ -965,14 +965,6 @@ export const en: Record<string, string> = {
   "settings.autoSearchDone": "Auto search complete",
   "settings.mcNotFound": "Minecraft path not found",
   "settings.mcMultipleFound": "Multiple Minecraft paths detected",
-
-  // ── Settings - UI & Experience ──
-  "settings.ui.fontSizeUpdated": "✅ Font size updated",
-  "settings.ui.fontUpdated": "✅ Font updated",
-  "settings.ui.densityUpdated": "✅ Card density updated",
-  "settings.ui.animOn": "✅ Animation enabled",
-  "settings.ui.animOff": "✅ Animation disabled",
-  "settings.ui.defaultPageSaved": "✅ Default page saved",
 
   // ── Settings - 3D Preview Keybindings ──
   "settings.td.forward": "Forward",

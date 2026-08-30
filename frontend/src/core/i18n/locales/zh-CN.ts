@@ -613,7 +613,7 @@ export const zhCN: Record<string, string> = {
   "workshop.allDownloaded": "全部下载完成",
   // 站点编辑/工坊拉取（app-content site/edit + workshop-site-opener）
   "workshop.siteInfoLost": "❌ 站点信息丢失",
-  "workshop.saved": "✅ 已保存",
+  "workshop.action.saved": "✅ 已保存",
   "workshop.saveFailed": "保存失败",
   "workshop.logCreators": "创作者: +{added} 补{updated}",
   "workshop.logSites": "站点: +{added}",
@@ -628,10 +628,10 @@ export const zhCN: Record<string, string> = {
   "workshop.newCreatorName": "新作者",
   "workshop.newCreatorDesc": "描述",
   "workshop.exportWebUnsupported": "网页版暂不支持导出站点配置，请使用桌面版",
-  "workshop.exported": "📤 站点已导出: {path}",
+  "workshop.action.exported": "📤 站点已导出: {path}",
   "workshop.exportFailed": "导出失败",
   "workshop.importWebUnsupported": "网页版暂不支持导入站点配置，请使用桌面版",
-  "workshop.imported": "✅ 已导入 {n} 个站点",
+  "workshop.action.imported": "✅ 已导入 {n} 个站点",
   "workshop.communityIndexLoading": "⏳ 社区索引: {source}…",
   "workshop.siteIndexLoading": "⏳ 站点索引: {source}…",
   "workshop.githubNoIndex": "📭 该仓库没有 index.json（尚未建立创意工坊索引）",
@@ -968,14 +968,6 @@ export const zhCN: Record<string, string> = {
   "settings.autoSearchDone": "自动搜索完成",
   "settings.mcNotFound": "未找到 Minecraft 路径",
   "settings.mcMultipleFound": "检测到多个 Minecraft 路径",
-
-  // ── 设置页 - 界面与体验 ──
-  "settings.ui.fontSizeUpdated": "✅ 字号已更新",
-  "settings.ui.fontUpdated": "✅ 字体已更新",
-  "settings.ui.densityUpdated": "✅ 卡片密度已更新",
-  "settings.ui.animOn": "✅ 动画已开启",
-  "settings.ui.animOff": "✅ 动画已关闭",
-  "settings.ui.defaultPageSaved": "✅ 默认页面已保存",
 
   // ── 设置页 - 3D 预览键位 ──
   "settings.td.forward": "前移",

@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-135：Go 端 jscpd 重复代码检测与增量门禁",
+        "link": "/adr/ADR-135-go-jscpd"
+      },
+      {
         "text": "ADR-134：将 containerTypeCache 包级全局收进组件（破隐藏耦合）",
         "link": "/adr/ADR-134-container-type-cache-component"
       },
@@ -1896,6 +1900,10 @@ export const autoSidebar = [
           {
             "text": "脚本 argv 规范与已知豁免 parse-args.mjs",
             "link": "/knowledge/scripts_argv"
+          },
+          {
+            "text": "Go 端 jscpd 重复检测脚本",
+            "link": "/knowledge/scripts_jscpd_go"
           },
           {
             "text": "Vitest 环境切换规则",

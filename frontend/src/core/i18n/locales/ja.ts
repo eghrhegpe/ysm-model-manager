@@ -611,7 +611,7 @@ export const ja: Record<string, string> = {
   "workshop.allDownloaded": "すべてのダウンロードが完了しました",
   // サイト編集/工房フェッチ（app-content site/edit + workshop-site-opener）
   "workshop.siteInfoLost": "❌ サイト情報が失われました",
-  "workshop.saved": "✅ 保存しました",
+  "workshop.action.saved": "✅ 保存しました",
   "workshop.saveFailed": "保存に失敗しました",
   "workshop.logCreators": "クリエイター: +{added} 更新{updated}",
   "workshop.logSites": "サイト: +{added}",
@@ -626,10 +626,10 @@ export const ja: Record<string, string> = {
   "workshop.newCreatorName": "新しいクリエイター",
   "workshop.newCreatorDesc": "説明",
   "workshop.exportWebUnsupported": "ウェブ版ではサイト設定のエクスポートはサポートされていません。デスクトップ版を使用してください",
-  "workshop.exported": "📤 サイトをエクスポートしました: {path}",
+  "workshop.action.exported": "📤 サイトをエクスポートしました: {path}",
   "workshop.exportFailed": "エクスポートに失敗しました",
   "workshop.importWebUnsupported": "ウェブ版ではサイト設定のインポートはサポートされていません。デスクトップ版を使用してください",
-  "workshop.imported": "✅ {n} 件のサイトをインポートしました",
+  "workshop.action.imported": "✅ {n} 件のサイトをインポートしました",
   "workshop.communityIndexLoading": "⏳ コミュニティインデックス: {source}…",
   "workshop.siteIndexLoading": "⏳ サイトインデックス: {source}…",
   "workshop.githubNoIndex": "📭 このリポジトリに index.json がありません（工房インデックス未構築）",
@@ -966,14 +966,6 @@ export const ja: Record<string, string> = {
   "settings.autoSearchDone": "自動検索が完了しました",
   "settings.mcNotFound": "Minecraftのパスが見つかりません",
   "settings.mcMultipleFound": "複数のMinecraftパスが検出されました",
-
-  // ── Settings - UI & Experience ──
-  "settings.ui.fontSizeUpdated": "✅ フォントサイズを更新しました",
-  "settings.ui.fontUpdated": "✅ フォントを更新しました",
-  "settings.ui.densityUpdated": "✅ カード密度を更新しました",
-  "settings.ui.animOn": "✅ アニメーションを有効にしました",
-  "settings.ui.animOff": "✅ アニメーションを無効にしました",
-  "settings.ui.defaultPageSaved": "✅ 既定ページを保存しました",
 
   // ── Settings - 3D Preview Keybindings ──
   "settings.td.forward": "前進",

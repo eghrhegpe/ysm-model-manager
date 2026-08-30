@@ -300,7 +300,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     b.btn("ws-export-btn").click();
     await flush();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "workshop.exported",
+      msg: "workshop.action.exported",
       duration: TOAST_MS.success,
       type: "success",
     });
@@ -347,7 +347,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     b.btn("ws-import-btn").click();
     await flush();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "workshop.imported",
+      msg: "workshop.action.imported",
       duration: TOAST_MS.success,
       type: "success",
     });

@@ -141,7 +141,7 @@ function eeBindToolbarBtns(
         await SaveWorkshopCreatorsBySite(site.id, siteCreators);
         wsEditModeRef.v = false;
         busRef.emit("toast:show", {
-          msg: t("workshop.saved"),
+          msg: t("workshop.action.saved"),
           duration: 2000,
           type: "success",
         });

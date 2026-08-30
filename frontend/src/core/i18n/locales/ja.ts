@@ -1094,6 +1094,7 @@ export const ja: Record<string, string> = {
   "preview.authors": "作者",
   "preview.modelOverview": "モデル概要",
   "preview.extraTextures": "追加テクスチャ {extra} 枚（計 {total} 枚）",
+  "preview.inventory": "パック内ファイル",
   "preview.roleTexCount": "キャラテクスチャ {role} 枚 · 独立モデル {comp} 枚",
   "preview.rolesList": "L0 リスト役（{n}）",
   "preview.preview3dLoadFailed": "3D プレビューの読み込みに失敗しました",

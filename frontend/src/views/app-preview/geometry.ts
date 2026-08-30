@@ -44,6 +44,16 @@ export interface BedrockGeometry {
   texWidth: number;
   texHeight: number;
   bones: BedrockBone[];
+  /** Go FileInventory 权威归属清单（go/types/bedrock.go，zip 内文件只识别不解析）。
+   *  统计卡「包内文件」行直接消费，不再按文件名猜。 */
+  fileInventory?: {
+    animations?: string[];
+    controllers?: string[];
+    langFiles?: string[];
+    incFiles?: string[];
+    legacyModels?: string[];
+    avatars?: string[];
+  };
   /** WASM/Go 附加字段（作者/头像/路径/纹理映射日志等） */
   _authors?: Array<{
     name?: string;

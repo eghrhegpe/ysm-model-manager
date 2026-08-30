@@ -1093,6 +1093,7 @@ export const en: Record<string, string> = {
   "preview.authors": "Authors",
   "preview.modelOverview": "Model Overview",
   "preview.extraTextures": "{extra} extra textures (of {total} total)",
+  "preview.inventory": "Pack contents",
   "preview.roleTexCount": "{role} role textures · {comp} component textures",
   "preview.rolesList": "L0 Role List ({n})",
   "preview.preview3dLoadFailed": "3D preview failed to load",

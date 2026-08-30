@@ -134,4 +134,41 @@ describe("statsCardHTML", () => {
     expect(html).not.toContain("ysm-badge");
     expect(html).not.toContain("pv-card-title");
   });
+
+  it("fileInventory → 包内文件清单行（Go 权威归属，非零类目计数 + 文件路径 tooltip）", () => {
+    const html = statsCardHTML(
+      {
+        ...base,
+        fileInventory: {
+          animations: ["animations/idle.animation.json", "animations/walk.animation.json"],
+          controllers: ["controllers/main.animation_controller.json"],
+          langFiles: ["lang/zh_CN.lang"],
+          avatars: ["avatar/fox.jpg"],
+        },
+      },
+      "/repo/a.zip",
+    );
+    expect(html).toContain("包内文件");
+    expect(html).toContain("动画 2");
+    expect(html).toContain("控制器 1");
+    expect(html).toContain("语言 1");
+    expect(html).toContain("头像 1");
+    // tooltip 携带权威路径（转义后）
+    expect(html).toContain("animations/idle.animation.json");
+    // 未出现的类目（incFiles/legacyModels）不渲染
+    expect(html).not.toContain("旧格式");
+  });
+
+  it("无 fileInventory → 不渲染包内文件行", () => {
+    const html = statsCardHTML(base, "/repo/a.zip");
+    expect(html).not.toContain("包内文件");
+  });
+
+  it("fileInventory 全类目为空 → 不渲染包内文件行", () => {
+    const html = statsCardHTML(
+      { ...base, fileInventory: { animations: [], controllers: [] } },
+      "/repo/a.zip",
+    );
+    expect(html).not.toContain("包内文件");
+  });
 });

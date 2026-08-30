@@ -73,6 +73,15 @@ export interface StatsCardModel {
   /** 逐组件统计数据（从3D spec 对齐）：bone/cube 按组件拆分，与3D roles 面板一致。
    *  有数据时渲染组件化统计行替代聚合 boneCount/cubeCount。 */
   componentCounts?: Array<{ name: string; bones: number; cubes: number }>;
+  /** Go FileInventory 权威归属清单（go/types/bedrock.go）。非空时渲染「包内文件」行 */
+  fileInventory?: {
+    animations?: string[];
+    controllers?: string[];
+    langFiles?: string[];
+    incFiles?: string[];
+    legacyModels?: string[];
+    avatars?: string[];
+  };
 }
 
 /** 模型统计卡片 */
@@ -131,6 +140,26 @@ export function statsCardHTML(
   if (extraCount > 0) {
     texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">📎 ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
   }
+  // Go FileInventory 权威归属清单（zip 模型专属，文件夹模型无此字段）：
+  // 非零类目渲染为「emoji 计数」芯片，tooltip 携带权威文件路径——前端只展示不判定
+  const inv = model.fileInventory;
+  const invChips = [
+    { icon: "🎬", label: "动画", files: inv?.animations },
+    { icon: "🎛️", label: "控制器", files: inv?.controllers },
+    { icon: "🌐", label: "语言", files: inv?.langFiles },
+    { icon: "🧩", label: "旧格式", files: inv?.legacyModels },
+    { icon: "🖼️", label: "头像", files: inv?.avatars },
+  ]
+    .filter((c) => (c.files?.length || 0) > 0)
+    .map((c) => ({
+      icon: c.icon,
+      label: `${c.label} ${c.files!.length}`,
+      title: c.files!.join("\n"),
+    }));
+  const invHtml =
+    invChips.length > 0
+      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0;flex-wrap:wrap;gap:2px 8px">📦 ${t("preview.inventory")}${invChips.map((c) => `<span title="${esc(c.title)}">${c.icon} ${esc(c.label)}</span>`).join("")}</div>`
+      : "";
   return `
 <div class="pv-card-section pv-section-blue">
   <div class="pv-card-section-label">🔗 ${t("preview.modelStructure")}</div>
@@ -149,6 +178,7 @@ ${subBlock}
   </div>
   ${catSummary}
   ${texMapHtml}
+  ${invHtml}
 </div>
 <div class="pv-card-section pv-section-orange">
   <div class="pv-card-section-label">💾 ${t("preview.fileInfo")}</div>

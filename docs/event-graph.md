@@ -307,7 +307,7 @@
 | `frontend/src/core/handlers/android-events.ts` | 66 |
 | `frontend/src/core/handlers/instance-ops.ts` | 150 |
 | `frontend/src/core/handlers/sync.ts` | 86 |
-| `frontend/src/core/handlers/sync.ts` | 207 |
+| `frontend/src/core/handlers/sync.ts` | 212 |
 | `frontend/src/features/community/download-queue-store.ts` | 258 |
 | `frontend/src/features/community/download-queue.ts` | 114 |
 | `frontend/src/features/import-executor.ts` | 34 |
@@ -341,7 +341,7 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/core/handlers/sync.ts` | 106 |
-| `frontend/src/core/handlers/sync.ts` | 133 |
+| `frontend/src/core/handlers/sync.ts` | 139 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -359,7 +359,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/handlers/sync.ts` | 260 |
+| `frontend/src/core/handlers/sync.ts` | 265 |
 
 ### `sync:toggle:status`
 
@@ -373,7 +373,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/handlers/sync.ts` | 266 |
+| `frontend/src/core/handlers/sync.ts` | 271 |
 
 ### `toast:show`
 
@@ -399,12 +399,12 @@
 | `frontend/src/core/handlers/sync.ts` | 41 |
 | `frontend/src/core/handlers/sync.ts` | 87 |
 | `frontend/src/core/handlers/sync.ts` | 116 |
-| `frontend/src/core/handlers/sync.ts` | 126 |
-| `frontend/src/core/handlers/sync.ts` | 157 |
-| `frontend/src/core/handlers/sync.ts` | 166 |
-| `frontend/src/core/handlers/sync.ts` | 200 |
-| `frontend/src/core/handlers/sync.ts` | 215 |
-| `frontend/src/core/handlers/sync.ts` | 240 |
+| `frontend/src/core/handlers/sync.ts` | 132 |
+| `frontend/src/core/handlers/sync.ts` | 162 |
+| `frontend/src/core/handlers/sync.ts` | 171 |
+| `frontend/src/core/handlers/sync.ts` | 205 |
+| `frontend/src/core/handlers/sync.ts` | 220 |
+| `frontend/src/core/handlers/sync.ts` | 245 |
 | `frontend/src/features/community/download-queue-store.ts` | 247 |
 | `frontend/src/features/community/download-queue.ts` | 272 |
 | `frontend/src/features/community/download-queue.ts` | 298 |
@@ -592,8 +592,8 @@
 |------|----|
 | `frontend/src/core/context-menu-shared.ts` | 19 |
 | `frontend/src/core/handlers/android-events.ts` | 65 |
-| `frontend/src/core/handlers/sync.ts` | 134 |
-| `frontend/src/core/handlers/sync.ts` | 247 |
+| `frontend/src/core/handlers/sync.ts` | 128 |
+| `frontend/src/core/handlers/sync.ts` | 252 |
 | `frontend/src/features/community/download-queue-store.ts` | 257 |
 | `frontend/src/features/community/download-queue.ts` | 113 |
 | `frontend/src/features/import-executor.ts` | 35 |

@@ -73,7 +73,7 @@
 | `views/` | 页面级视图组件（app-content / app-tree / app-preview 等） 〔子目录 8: app-content/ app-nav/ app-preview/ app-sidebar/ app-sync-manager/ app-toast/ app-tree/ context-menu/〕 |
 | `wasm/` | WASM 生成数据（base64 豁免文件） 〔源码 9: parser-shared.ts ysm-glue-data-mt.js ysm-glue-data.js ysm-parser.ts ysm-wasm-data-mt.d.ts ysm-was… · 测试 1〕 |
 | `web-spike/` | 网页版 spike 入口（main.ts，构建/冒烟验证） 〔源码 1: main.ts〕 |
-| `workers/` | Web Worker 批量统计（searchWebModels 数值条件走 Worker 线程，主线程零解析负载） 〔源码 3: stats-core.ts stats-protocol.ts stats.worker.ts · 测试 1〕 |
+| `workers/` | Web Worker 批量统计（searchWebModels 数值条件走 Worker 线程，主线程零解析负载） 〔源码 3: stats-core.ts stats-protocol.ts stats.worker.ts · 测试 2〕 |
 | `app-modules.boot.test.ts` | app-modules 本体 boot 级启动装配测试（vi.resetModules 反复求值顶层副作用：服务注册/四视图装配/启动 IIFE 降级/系统主题跟随/devtools 接线） |
 | `app-modules.test.ts` | app-modules 主题/隐私模式启动链测试（normalizeTheme / safeGet / initTheme / applyUIPrefs） |
 | `app-modules.ts` | 组件入口 + 右键菜单映射 |

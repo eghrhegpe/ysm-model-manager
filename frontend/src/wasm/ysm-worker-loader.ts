@@ -66,9 +66,16 @@ export async function initYsmParserInWorkerMt(): Promise<boolean> {
   const glue = _getGlueCodeMt() as string | null;
   if (!glue) throw new Error("mt 胶水代码空");
   const blobUrl = URL.createObjectURL(new Blob([glue], { type: "application/javascript" }));
-  return initParserInWorker(_getWasmBinaryMt() as ArrayBuffer | null, glue, {
-    mainScriptUrlOrBlob: blobUrl,
-  });
+  // init 失败时 pthread worker 未创建（或已随失败终止），Blob URL 不再被引用；
+  // 成功路径按上方注释保留不 revoke（pthread worker 生命周期内持续使用）
+  try {
+    return await initParserInWorker(_getWasmBinaryMt() as ArrayBuffer | null, glue, {
+      mainScriptUrlOrBlob: blobUrl,
+    });
+  } catch (e) {
+    URL.revokeObjectURL(blobUrl);
+    throw e;
+  }
 }
 
 async function initParserInWorker(

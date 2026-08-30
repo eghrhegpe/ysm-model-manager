@@ -138,6 +138,8 @@ export async function executeCLI(command: string, args: CLIArgs = {}): Promise<C
         code: "call_failed",
         message: safeErrorMessage(err),
       },
+      // 与 not_supported 分支形状一致，消费方可统一读 meta.platform
+      meta: { platform: isWebPlatform() ? "web" : "native" },
     };
   }
 }

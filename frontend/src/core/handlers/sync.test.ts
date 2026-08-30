@@ -127,18 +127,21 @@ describe("registerSync — sync:download:missing", () => {
     expect(toasts.some((t) => t.msg.includes("全部导入完成: 1 成功"))).toBe(true);
   });
 
-  it("repoRoot 未配置 → warn toast，不安装", async () => {
+  it("repoRoot 未配置 → warn toast，不安装，不触发 tree:reload", async () => {
     mocks.GetRepoRoot.mockResolvedValue("");
     await register();
-    const { toasts, doneEvents } = spyEvents();
+    const { toasts, doneEvents, reloadEvents } = spyEvents();
 
     bus.emit("sync:download:missing", { instanceName: "", rtype: "ysm", token: "t3" });
+    await flush();
     await flush();
 
     expect(toasts.some((t) => t.msg === "请先配置该资源类型目录" && t.type === "warn")).toBe(true);
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
     // finally 仍然执行
     expect(doneEvents.length).toBe(1);
+    // 配置缺失未做任何写操作 → 不广播全树重扫（P2 审核修复）
+    expect(reloadEvents.length).toBe(0);
   });
 
   it("并发守卫：连点两次只执行一次安装", async () => {

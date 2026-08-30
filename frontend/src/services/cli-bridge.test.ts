@@ -106,6 +106,8 @@ describe("CLI Bridge - 命令执行", () => {
 
     expect(result.status).toBe("error");
     expect(result.error?.code).toBe("call_failed");
+    // call_failed 与 not_supported 分支形状一致：消费方可统一读 meta.platform
+    expect(result.meta?.platform).toBe("native");
   });
 });
 

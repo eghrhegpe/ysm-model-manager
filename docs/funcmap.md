@@ -1083,7 +1083,7 @@
 | `registerGlobalHandlers()` | `frontend/src/core/handlers/global:12` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
 | `registerInstanceOps()` | `frontend/src/core/handlers/instance-ops:12` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
 | `requireMcRoot()` | `frontend/src/core/handlers/require-mcroot:13` | 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。 |
-| `registerSync()` | `frontend/src/core/handlers/sync:252` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
+| `registerSync()` | `frontend/src/core/handlers/sync:257` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
 | `SUPPORTED_LANGS()` | `frontend/src/core/i18n/locale:11` | 支持的语言列表（规划清单） |
 | `LangCode()` | `frontend/src/core/i18n/locale:17` | — |
 | `warnedKeys()` | `frontend/src/core/i18n/locale:31` | 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） |
@@ -1213,13 +1213,13 @@
 | `CLIResponse()` | `frontend/src/services/cli-bridge:39` | CLI 统一响应 |
 | `resetDynamicCommandsCache()` | `frontend/src/services/cli-bridge:53` | 重置动态白名单缓存（供测试使用） |
 | `executeCLI()` | `frontend/src/services/cli-bridge:99` | 执行 CLI 命令（核心入口） |
-| `getAllowedCLICommands()` | `frontend/src/services/cli-bridge:148` | 获取允许的 CLI 命令列表（优先使用动态缓存） |
-| `cliSearch()` | `frontend/src/services/cli-bridge:163` | 搜索模型 |
-| `cliList()` | `frontend/src/services/cli-bridge:172` | 列出所有模型 |
-| `cliAnalyze()` | `frontend/src/services/cli-bridge:177` | 分析模型 |
-| `cliCacheStatus()` | `frontend/src/services/cli-bridge:182` | 缓存状态查询 |
-| `buildArgsMap()` | `frontend/src/services/cli-bridge:189` | 构建参数 map（过滤 undefined 和 null） |
-| `parseCLIResponse()` | `frontend/src/services/cli-bridge:200` | 解析 CLI JSON 响应 |
+| `getAllowedCLICommands()` | `frontend/src/services/cli-bridge:150` | 获取允许的 CLI 命令列表（优先使用动态缓存） |
+| `cliSearch()` | `frontend/src/services/cli-bridge:165` | 搜索模型 |
+| `cliList()` | `frontend/src/services/cli-bridge:174` | 列出所有模型 |
+| `cliAnalyze()` | `frontend/src/services/cli-bridge:179` | 分析模型 |
+| `cliCacheStatus()` | `frontend/src/services/cli-bridge:184` | 缓存状态查询 |
+| `buildArgsMap()` | `frontend/src/services/cli-bridge:191` | 构建参数 map（过滤 undefined 和 null） |
+| `parseCLIResponse()` | `frontend/src/services/cli-bridge:202` | 解析 CLI JSON 响应 |
 | `ServiceName()` | `frontend/src/services/registry:11` | 已知服务名（新服务先在 app-modules.ts 注册，再在此登记） |
 | `register()` | `frontend/src/services/registry:18` | 注册一个服务（.ts 调用方：register("name", impl as X) 声明类型；重复注册覆盖旧实例并告警） |
 | `get()` | `frontend/src/services/registry:24` | 获取一个服务（.ts 调用方：get&lt;X&gt;("name") 断言期望类型；未注册抛错，错误含服务名） |
@@ -2492,8 +2492,8 @@
 | `_getWasmBinary()` | `frontend/src/wasm/ysm-wasm-data:3` | — |
 | `initYsmParserInWorker()` | `frontend/src/wasm/ysm-worker-loader:52` | Worker 内独立初始化 WASM（懒加载单例，生命周期等同 Worker 本身）。 |
 | `initYsmParserInWorkerMt()` | `frontend/src/wasm/ysm-worker-loader:65` | ADR-079 M3/M4：pthread 多线程版初始化（需 crossOriginIsolated=true——SharedArrayBuffer 前提，见 backend/c |
-| `decodeYsmInWorker()` | `frontend/src/wasm/ysm-worker-loader:155` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组），返回 [{path, data}]。 |
-| `decodeYsmInWorkerMemfs()` | `frontend/src/wasm/ysm-worker-loader:194` | callMain + MEMFS 解码 .ysm（回退路径，兼容旧 WASM 编译 / V3 文本头部等格式）。 |
+| `decodeYsmInWorker()` | `frontend/src/wasm/ysm-worker-loader:162` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组），返回 [{path, data}]。 |
+| `decodeYsmInWorkerMemfs()` | `frontend/src/wasm/ysm-worker-loader:201` | callMain + MEMFS 解码 .ysm（回退路径，兼容旧 WASM 编译 / V3 文本头部等格式）。 |
 
 ## frontend/workers
 

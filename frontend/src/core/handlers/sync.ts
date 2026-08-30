@@ -120,7 +120,13 @@ async function handleSyncDownloadMissing(
     });
   }
   try {
-    if (rtype && !(await runDownloadMissing(instanceName, rtype))) failed = true;
+    if (rtype) {
+      const ok = await runDownloadMissing(instanceName, rtype);
+      if (!ok) failed = true;
+      // P2（审核修复）：仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
+      // tree:reload 会引发无意义全树重扫
+      else bus.emit("tree:reload");
+    }
   } catch (e) {
     failed = true;
     bus.emit("toast:show", {
@@ -131,7 +137,6 @@ async function handleSyncDownloadMissing(
   } finally {
     flag.busy = false;
     bus.emit("sync:download:done", { token, instanceName, skipped: failed });
-    bus.emit("tree:reload");
   }
 }
 

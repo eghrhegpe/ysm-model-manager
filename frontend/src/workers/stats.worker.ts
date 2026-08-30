@@ -107,7 +107,18 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
     // 注意：mt 初始化依赖 COI（coi-sw.ts 网页版 SW 补头 / 桌面 mpr middleware）。
     const mt = typeof crossOriginIsolated === "boolean" && crossOriginIsolated;
     // 预加载 WASM：失败 → 整批 error（主线程据此整体降级，避免每个模型空转浪费）
-    const ok = mt ? await initYsmParserInWorkerMt() : await initYsmParserInWorker();
+    // P2（审核修复）：mt init 失败（pthread worker spawn 失败、SAB 被策略回收等瞬态
+    // 问题）不直接整批 error——回退单线程 WASM 重试一次，仍失败才交给主线程整体降级，
+    // 避免 COI 满足但 pthread 环境异常的设备永久失去数值统计
+    let ok: boolean;
+    try {
+      ok = mt
+        ? await initYsmParserInWorkerMt()
+        : await initYsmParserInWorker();
+    } catch (mtErr) {
+      if (!mt) throw mtErr;
+      ok = await initYsmParserInWorker();
+    }
     if (!ok) {
       post({ type: "error", requestId, message: "YSMParser WASM 初始化失败" });
       return;

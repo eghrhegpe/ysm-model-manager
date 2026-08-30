@@ -1067,9 +1067,9 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `DIR_HANDLERS()` | `frontend/src/core/context-menu-dir-handlers:10` | dir 类 handler 子表 |
-| `FILE_HANDLERS()` | `frontend/src/core/context-menu-file-handlers:13` | file 类 handler 子表 |
-| `MenuCtx()` | `frontend/src/core/context-menu-handlers:96` | — |
-| `HANDLERS()` | `frontend/src/core/context-menu-handlers:99` | 行为 handler 表（instance + batch + merge file/dir） |
+| `FILE_HANDLERS()` | `frontend/src/core/context-menu-file-handlers:14` | file 类 handler 子表 |
+| `MenuCtx()` | `frontend/src/core/context-menu-handlers:97` | — |
+| `HANDLERS()` | `frontend/src/core/context-menu-handlers:100` | 行为 handler 表（instance + batch + merge file/dir） |
 | `refreshUI()` | `frontend/src/core/context-menu-shared:17` | 通知树组件和统计面板刷新 |
 | `toast()` | `frontend/src/core/context-menu-shared:23` | 显示 toast 通知 |
 | `toastError()` | `frontend/src/core/context-menu-shared:31` | 错误 toast（`❌ ${friendlyError(e)}` 模板收敛——instance-ops / settings/init 等 catch 块共用）。 |

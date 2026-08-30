@@ -7,6 +7,7 @@ import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
 import { modalTagEditor } from "../utils/dom/dialogs/tag-editor.ts";
 import { refreshUI, toast, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { copyText } from "../utils/dom/clipboard.ts";
 import type { MenuCtx } from "./context-menu-handlers.ts";
 
 /** file 类 handler 子表 */
@@ -138,27 +139,13 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "file.copy-path": async (ctx) => {
-    try {
-      await navigator.clipboard.writeText(ctx.path || "");
-      toast("✅ 路径已复制到剪贴板", TOAST_MS.success);
-    } catch {
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = ctx.path || "";
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
-        const ok = document.execCommand("copy");
-        document.body.removeChild(ta);
-        if (!ok) {
-          toast("❌ 复制失败，请手动复制路径", TOAST_MS.normal, "error");
-          return;
-        }
-        toast("✅ 路径已复制到剪贴板", TOAST_MS.success);
-      } catch (fallbackErr) {
-        toast("❌ " + friendlyError(fallbackErr, "复制失败"), TOAST_MS.normal, "error");
-      }
-    }
+    // 复用 utils/dom/clipboard.ts copyText（Clipboard API + textarea fallback），
+    // 与 batch.copy-paths 同一实现——不再手写 navigator/textarea 双路径
+    const ok = await copyText(ctx.path || "");
+    toast(
+      ok ? "✅ 路径已复制到剪贴板" : "❌ 复制失败，请手动复制路径",
+      ok ? TOAST_MS.success : TOAST_MS.normal,
+      ok ? undefined : "error",
+    );
   },
 };

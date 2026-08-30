@@ -843,14 +843,14 @@
 | `App.BackupWorkshopCreators()` | `internal/app/app_workshop:311` | — |
 | `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:326` | — |
 | `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:368` | — |
-| `NewApp()` | `internal/app/app:74` | — |
-| `App.SetApp()` | `internal/app/app:103` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
-| `App.GetYSMRepoRoot()` | `internal/app/app:106` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
-| `App.SetMainWindow()` | `internal/app/app:118` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |
-| `App.ServiceStartup()` | `internal/app/app:121` | ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用 |
-| `App.ServiceShutdown()` | `internal/app/app:220` | ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用 |
-| `App.OpenInBrowser()` | `internal/app/app:255` | OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌） |
-| `App.GetAppVersion()` | `internal/app/app:260` | GetAppVersion 返回当前版本号 |
+| `NewApp()` | `internal/app/app:75` | — |
+| `App.SetApp()` | `internal/app/app:104` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
+| `App.GetYSMRepoRoot()` | `internal/app/app:107` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
+| `App.SetMainWindow()` | `internal/app/app:119` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |
+| `App.ServiceStartup()` | `internal/app/app:122` | ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用 |
+| `App.ServiceShutdown()` | `internal/app/app:221` | ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用 |
+| `App.OpenInBrowser()` | `internal/app/app:256` | OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌） |
+| `App.GetAppVersion()` | `internal/app/app:261` | GetAppVersion 返回当前版本号 |
 | `App()` | `internal/app/app:40` | — |
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `App.SetAllowedCommands()` | `internal/app/cli_bridge:15` | SetAllowedCommands 注入可用 CLI 命令列表（由 main.go 调用 cli.GetAllowedCommands() 提供） 避免 app→cli 循环依赖 |

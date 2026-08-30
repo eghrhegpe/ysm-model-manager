@@ -38,21 +38,22 @@ func requireMcRoot(cfg types.AppConfig) error {
 }
 
 type App struct {
-	LinkMode       string
-	logger         *logs.Logger
-	runtimeLogs    *logs.RuntimeBuffer
-	watcher        *watcher.Watcher
-	queue          *DownloadQueue
-	containerCache *containerTypeCache // ADR-134：容器类型指纹缓存组件（原包级全局抽离）
-	tagsStore      *tags.Store
-	tagsStoreOnce  sync.Once
-	configCache    types.AppConfig
-	configLoaded   bool
-	configMu       sync.RWMutex
-	linkModeMu     sync.RWMutex
-	watcherMu      sync.Mutex
-	app            *application.App
-	mainWindow     *application.WebviewWindow
+	LinkMode           string
+	logger             *logs.Logger
+	runtimeLogs        *logs.RuntimeBuffer
+	watcher            *watcher.Watcher
+	queue              *DownloadQueue
+	containerCache     *containerTypeCache // ADR-134：容器类型指纹缓存组件（原包级全局抽离）
+	containerCacheOnce sync.Once
+	tagsStore          *tags.Store
+	tagsStoreOnce      sync.Once
+	configCache        types.AppConfig
+	configLoaded       bool
+	configMu           sync.RWMutex
+	linkModeMu         sync.RWMutex
+	watcherMu          sync.Mutex
+	app                *application.App
+	mainWindow         *application.WebviewWindow
 
 	// Plaza browser window (ADR-050)
 	plazaWin           *application.WebviewWindow

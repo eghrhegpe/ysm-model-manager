@@ -43,6 +43,8 @@ invariant_anchors:
 
 `app-sidebar` 是仓库页左栏的整合包列表组件（Shadow DOM），展示当前资源类型下各整合包（Minecraft 版本实例）的同步状态卡片，支持选中联动、勾选批量推送/拉取、一键安装缺失资源。它遵循标准组件拆分规范（index/tpl/data/loader/render/events）。
 
+**i18n 收敛（2026-08-31）**：推送/拉取全流程 toast 与按钮文案已全量迁移到 `sidebar.*` key（`selectPackFirst`/`verbPush`/`verbPull`/`pushDone*`/`pullDone*`/`packSkipped`/`packTimedOut`），复用既有 `sidebar.notSet`/`pushSelected`/`pullSelected`/`loadFailed`/`loadFailedDetail`；残留仅 `dbg()` 调试日志参数（非 UI 文案）。新增 key 集中在 zh-CN.ts sidebar 段，改文案只改语言包。
+
 ## 核心职责
 
 - `index.ts` — `<app-sidebar>` 生命周期编排：`observedAttributes: ["rtype"]`、订阅刷新事件、全选/同步所选（推送走 `sync:download:missing` 事件 + correlation token，拉取直调 `PullResourceFromInstance`）、`_reload` 带 `_loading` 并发守卫。**构造函数 rtype 缺省读 `currentRepoType()`**（P1 修复：tpl.ts 挂载 `<app-sidebar>` 不传 rtype 属性，此前恒回落 YSM，整合包标题首屏显示 `(ysm)` 须手动切导航标签才被 `repo:rtype-changed` 纠正；现与仓库页 `initRepositoryPage` 的 `savedRtype` 恢复逻辑对齐，首屏即正确）。**同步所选由一组 `asb*` 包级助手承载（2026-08-26 批4.0 扁平化，非 withEventTimeout）**：`asbHandlePushMenuClick`/`asbHandlePullMenuClick` 只做入闸（`asbBeginSync`）+ 取类型 + `void asbRunPush`/`asbRunPull` 收口；推送并发原语拆为 `asbPushOne`（等单 token done、skipped/超时分别 reject 带 `kind`）、`asbWaitBusQuiet`（等同步归位防竞态），错误归类走 `asbKindError`/`asbPushErrorKind`

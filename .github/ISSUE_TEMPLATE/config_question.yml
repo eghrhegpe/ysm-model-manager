@@ -1,0 +1,63 @@
+name: ⚙️ 配置 / 使用问题
+description: 程序能跑但不会配，或操作上不知道怎么做
+labels: ["question", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        你的问题可能已经在用户指南中解答，请先查阅：
+        [`docs/guide/用户指南.md`](../blob/main/docs/guide/用户指南.md)
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 遇到的问题
+      description: 你想做什么？卡在哪一步？
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 相关功能模块
+      options:
+        - 🎲 3D 预览
+        - 📦 模型仓库
+        - 🎮 整合包管理
+        - 🎨 创作者频道
+        - 🧩 创意工坊
+        - 👴 仓库元老
+        - 🛠️ 诊断与冲突
+        - ⚙️ 设置
+        - 🔗 同步与安装
+        - 🧭 CLI 命令行
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      placeholder: "v1.2.3 或 commit hash"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      options:
+        - Windows (amd64)
+        - Linux (amd64)
+        - macOS
+        - Android
+        - 网页版
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充上下文
+      description: 截图、配置文件内容等。

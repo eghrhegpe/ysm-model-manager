@@ -1,0 +1,71 @@
+# Dependabot 配置 — YSM 模型管理器
+# 自动检查依赖更新，创建 PR 供审查合并
+# 文档：https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+updates:
+  # ── Go modules ──
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    # 主要版本升级单独分组，便于审查破坏性变更
+    groups:
+      patch:
+        update-types: ["patch"]
+        patterns: ["*"]
+      minor:
+        update-types: ["minor"]
+        patterns: ["*"]
+
+  # ── npm（前端）──
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      patch:
+        update-types: ["patch"]
+        patterns: ["*"]
+      minor:
+        update-types: ["minor"]
+        patterns: ["*"]
+    # Three.js 生态升级需手动验证 3D 渲染，不自动升级 major
+    ignore:
+      - dependency-name: "three"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/three"
+        update-types: ["version-update:semver-major"]
+
+  # ── GitHub Actions ──
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"

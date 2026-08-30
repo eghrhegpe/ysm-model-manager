@@ -1,0 +1,34 @@
+# CODEOWNERS — YSM 模型管理器
+# 单人开发模式：全局指派给仓库 owner，PR 自动指派 reviewer
+# 多人协作时按目录拆分各 owner
+
+# ── 全局默认 ──
+*           @JiangKaslana
+
+# ── 按层细分（覆盖默认，精确指派）──
+# Go 后端（Wails 绑定 + 工具包）
+/go/        @JiangKaslana
+/internal/  @JiangKaslana
+main.go     @JiangKaslana
+
+# 前端（Web Components + Three.js）
+/frontend/src/  @JiangKaslana
+/frontend/css/  @JiangKaslana
+
+# 3D 渲染适配器（敏感区，改动需重点审查）
+/frontend/src/utils/3d/  @JiangKaslana
+
+# 文档 + ADR（协作编辑区）
+/docs/      @JiangKaslana
+
+# CI/CD + 钩子（基础设施，改动需审）
+/.github/   @JiangKaslana
+/.githooks/ @JiangKaslana
+/scripts/   @JiangKaslana
+
+# 生成物（自动生成，无需 owner 审查）
+/docs/knowledge/index.md     @JiangKaslana
+/docs/funcmap.md             @JiangKaslana
+/docs/project-map.md         @JiangKaslana
+/docs/cli-commands.md        @JiangKaslana
+/frontend/public/locales/    @JiangKaslana

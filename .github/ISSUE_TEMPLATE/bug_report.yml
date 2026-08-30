@@ -1,0 +1,80 @@
+name: 🐛 Bug 报告
+description: 报告功能异常或崩溃
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢报告 Bug！请尽量填全以下信息，帮助我们快速定位。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug 描述
+      description: 清晰简洁地描述这个 Bug 是什么。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 最小可复现步骤。
+      placeholder: |
+        1. 启动程序
+        2. 进入「...」页面
+        3. 点击「...」按钮
+        4. 看到 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 鐵预期行为
+      description: 你期望发生什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 在「关于」页查看版本号，或 `git rev-parse --short HEAD`。
+      placeholder: "v1.2.3 或 commit hash"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      options:
+        - Windows (amd64)
+        - Linux (amd64)
+        - macOS
+        - Android
+        - 网页版
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 错误信息
+      description: 操作日志面板的内容、console 报错、或 CLI 输出。
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充上下文
+      description: 截图、配置文件、模型文件样本等。

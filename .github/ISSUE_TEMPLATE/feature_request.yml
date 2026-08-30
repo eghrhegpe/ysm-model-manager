@@ -1,0 +1,49 @@
+name: ✨ 功能请求
+description: 提出新功能或改进建议
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢提出功能请求！请描述清楚你想解决的问题。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 这个功能请求是为了解决什么痛点？
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的解决方案
+      description: 你希望项目怎么做？
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案
+      description: 有没有其他实现方式？为什么不选它们？
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影响范围
+      options:
+        - 桌面版（Windows/Linux/macOS）
+        - Android
+        - 网页版
+        - CLI 命令行
+        - 全平台
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充上下文
+      description: 参考链接、截图、竞品示例等。

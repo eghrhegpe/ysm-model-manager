@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 用户指南
+    url: https://github.com/JiangKaslana/ysm-model-manager/blob/main/docs/guide/用户指南.md
+    about: 安装、配置、功能详解、FAQ——大多数使用问题都能在这里找到答案。
+  - name: 🔒 安全漏洞报告
+    url: https://github.com/JiangKaslana/ysm-model-manager/security/advisories/new
+    about: 安全漏洞请走私密报告渠道，不要在公开 Issue 中提交。
+  - name: 🧭 CLI 命令参考
+    url: https://github.com/JiangKaslana/ysm-model-manager/blob/main/docs/cli-commands.md
+    about: 命令行模式的完整命令、分类与选项参考。

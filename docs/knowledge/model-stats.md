@@ -37,7 +37,7 @@ invariant_anchors:
 
 - **`stats-core.ts`** — 纯计算核心（无 IO、无 WASM 依赖），输入为解码/直读产物文件，输出统计数值
   - `statsFromDecodedFiles(files)` — 批量统计：骨数 = `bones` 数组长度；立方体数 = 各 `bone.cubes` 长度之和（递归收集）；纹理宽高 = `max(嗅探, geometry description 描述)`
-  - **纹理头魔数**：`PNG_SIG` / `JPG_SIG` / `GIF_SIG` / `BMP_SIG` / `TGA_SIG` — 与 Go `imagePixelArea` / `wasm.ts sniffTexSize` 同口径，勿单独改
+  - **纹理头魔数**：`PNG_SIG` / `JPG_SIG` / `GIF_SIG` / `BMP_SIG` / `TGA_SIG` — 单一事实源已收敛至 `frontend/src/utils/tex-size.ts` 的 `sniffTexSize`（2026-09 去重专项：从 stats-core / wasm.ts 抽出的公共纯函数），与 Go `imagePixelArea` 同口径，勿单独改
   - 输出 `ModelStatsResult`（`boneCount` / `cubeCount` / `texWidth` / `texHeight` / `hasError`），口径对齐 Go `decodeYSMViaNodeJS`（`internal/app/wasm_decoder.go` decodeYSMViaNodeJS）与前端 `decodeYsmViaWasm`
 
 - **`stats-protocol.ts`** — 协议层：`StatsWorkerRequest` / `StatsWorkerResponse` / `WebModelStats` / `WebModelStatsWithPath` 类型；`STATS_BATCH_LIMIT`（单批上限）
@@ -53,7 +53,7 @@ invariant_anchors:
 
 - **仅支持同源 IndexedDB**：Worker 内 `open('ysm')` 同源读取，跨源场景不可用
 - **主线程不直接调 WASM**：统计走 Worker，避免大库解析卡 UI
-- **口径对称**：`sniffTexSize` 与 Go `imagePixelArea` / `wasm.ts sniffTexSize` 必须同口径；`boneCount`/`cubeCount` 口径对齐 Go 侧
+- **口径对称**：`sniffTexSize`（`utils/tex-size.ts` 单一事实源）与 Go `imagePixelArea` 必须同口径；`boneCount`/`cubeCount` 口径对齐 Go 侧
 
 ## 不变量
 

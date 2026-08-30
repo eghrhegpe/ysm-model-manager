@@ -45,6 +45,10 @@
 > 活用规则：D-1~D-4 已全部结案（D-1/D-2 已完成，D-3/D-4 撤账——jscpd 误报，非纯复制）。下次重扫若现新热点，按本台账格式补 D-5+。
 > 重扫命令：`cd frontend && npx jscpd --format typescript --ignore "**/*.test.ts,**/wasm/**,**/bindings/**" js`
 
+| 编号 | 热点 | 行数 | 性质 | 处置 |
+| ---- | ---- | ---- | ---- | ---- |
+| D-5 | `wasm.ts` ↔ `stats-core.ts`（sniffTexSize）等 7 组生产重复 | 24~32/组 | 跨文件，真复制（纯函数/壳层样板） | ✅ 已完成（2026-09-02）：2026-09 去重专项。T1 `sniffTexSize` → `utils/tex-size.ts` 单一事实源（wasm/stats-core 共用 + 测试迁移）；T2 `patchGlueHeapExport`/`resolveWasmFactory` → `parser-shared.ts`（主线程/Worker 共用，单例状态保持隔离）；T3 `createIconBox` → `icons.ts`（ui-rows/ui-advanced-rows 共用）；T4 `runBatchRename` → `bus-handlers.ts` 内部（两事件共用）；T6 `readFileBytes`/`addOpLog` → `views/app-preview/view-shell.ts`（fbx/ysm/vrm/maid 四处视图壳共用）；T7 `createListenerSet` → `scene-capability.ts`（ground/water 共用）+ ground loadState 迁 `restoreFields`。T5（model2d-draw↔hit-zones bone 包围盒）🧊 撤账：hit-zones 有 30+ 行额外变换（cube 级 rotation / btx 位置旋转 / 不同投影），抽公共函数需传回调或数组分配（热路径 GC 压力）或 10+ 参数（可读性崩），同 D-3/D-4 先例。净效果：生产配对 23→19，重复行 2313→2220（1.42%→1.36%），全量测试 + typecheck 绿 |
+
 **E-1 列表/网格视图切换（低）**
 
 - **问题**：仓库列表只支持卡片视图，紧凑列表视图可提升浏览效率。

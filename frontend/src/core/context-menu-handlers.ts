@@ -18,8 +18,25 @@ import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
 import { downloadTextFile } from "../utils/dom/download-text.ts";
 
-/** batch.move / batch.copy 共用模板。 */
-let _batchBusy = false;
+/**
+ * Busy flag 工厂（2026-XX 重构）：消除模块级 `let _batchBusy`——
+ * 每个 handler 闭包持自己的 flag，互不耦合。
+ * 原实现：模块单 flag → batch.move / batch.copy / batch.recycle 三选一互斥（过保守）
+ * 新实现：按 verb 独立 busy → 同一 verb 连点互斥（保留原保护），不同 verb 可并发
+ */
+function makeBusy() {
+  let busy = false;
+  return {
+    tryStart(): boolean {
+      if (busy) return false;
+      busy = true;
+      return true;
+    },
+    finish() {
+      busy = false;
+    },
+  };
+}
 
 async function runBatchFileOp(
   ctx: MenuCtx,
@@ -29,13 +46,13 @@ async function runBatchFileOp(
     dialog: { title: string; icon: string; okText: string; emptyMsg: string };
     partialFailMsg: string;
     allFailMsg: string;
+    busy: ReturnType<typeof makeBusy>;
   },
 ): Promise<void> {
-  if (_batchBusy) {
+  if (!op.busy.tryStart()) {
     toast("⏳ 操作进行中，请稍候", TOAST_MS.quick, "info");
     return;
   }
-  _batchBusy = true;
   try {
     const resolved = await resolveDstDir(op.dialog, ctx.rtype);
     if (!resolved) return;
@@ -67,9 +84,14 @@ async function runBatchFileOp(
   } catch (e) {
     toast(`❌ ${friendlyError(e)}`, TOAST_MS.verbose, "error");
   } finally {
-    _batchBusy = false;
+    op.busy.finish();
   }
 }
+
+// 模块初始化时为每个 verb 各创建独立 busy flag（move / copy / recycle 互不耦合）
+const moveBusy = makeBusy();
+const copyBusy = makeBusy();
+const recycleBusy = makeBusy();
 
 export type MenuCtx = import("../bus.ts").CtxShowPayload & { paths: string[] };
 
@@ -126,6 +148,7 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       dialog: { title: "移动到文件夹", icon: "📂", okText: "移动", emptyMsg: "❌ 请先配置存储路径" },
       partialFailMsg: "",
       allFailMsg: "移动失败",
+      busy: moveBusy,
     }),
   "batch.copy": (ctx) =>
     runBatchFileOp(ctx, {
@@ -134,13 +157,13 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       dialog: { title: "复制到文件夹", icon: "📋", okText: "复制", emptyMsg: "❌ 请先配置仓库目录" },
       partialFailMsg: "可能目标已存在",
       allFailMsg: "复制失败（可能目标已存在）",
+      busy: copyBusy,
     }),
   "batch.recycle": async (ctx) => {
-    if (_batchBusy) {
+    if (!recycleBusy.tryStart()) {
       toast("⏳ 操作进行中，请稍候", TOAST_MS.quick, "info");
       return;
     }
-    _batchBusy = true;
     try {
       const ok2 = await modalConfirm({
         title: "批量移入回收站",
@@ -170,7 +193,7 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     } catch (e) {
       toast(`❌ ${friendlyError(e)}`, TOAST_MS.long, "error");
     } finally {
-      _batchBusy = false;
+      recycleBusy.finish();
     }
   },
   "batch.copy-paths": async (ctx) => {

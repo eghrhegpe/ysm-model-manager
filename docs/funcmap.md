@@ -30,7 +30,7 @@
 | go/repoaudit | 1 | 9 |
 | go/rustbridge | 5 | 10 |
 | go/scanner | 1 | 12 |
-| Go·同步 | 9 | 38 |
+| Go·同步 | 9 | 39 |
 | Go·标签 | 1 | 8 |
 | go/texture_cache | 1 | 13 |
 | Go·Three.js | 1 | 6 |
@@ -50,7 +50,7 @@
 | frontend/views | 122 | 360 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **526** | **2252** |
+| **合计** | **526** | **2253** |
 
 ## Go·头像
 
@@ -449,7 +449,8 @@
 |------|--------|------|
 | `DetectConflicts()` | `go/sync/conflict:70` | DetectConflicts 检测本地和远端之间的冲突 基于文件哈希比较：两端都存在且哈希不同 → 内容冲突 localDir: 本地目录路径（整合包） remoteDir: 远 |
 | `ResolveConflict()` | `go/sync/conflict:132` | ResolveConflict 解决单个文件冲突 先备份再操作，确保安全 |
-| `ResolveConflicts()` | `go/sync/conflict:173` | ResolveConflicts 批量解决冲突。 |
+| `ResolveConflicts()` | `go/sync/conflict:170` | ResolveConflicts 批量解决冲突（公开入口，整段持 installer.InstallLock）。 |
+| `ResolveConflictsLocked()` | `go/sync/conflict:181` | ResolveConflictsLocked 与 ResolveConflicts 语义相同，但调用方须已持有 installer.InstallLock （禁止重入加锁——syn |
 | `ConflictType()` | `go/sync/conflict:14` | ConflictType 冲突类型 |
 | `ResolutionStrategy()` | `go/sync/conflict:24` | ResolutionStrategy 冲突解决策略 |
 | `FileConflict()` | `go/sync/conflict:36` | FileConflict 文件冲突详情 |
@@ -2307,12 +2308,12 @@
 | `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:66` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
 | `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:71` | 任意新预览派发时调用，作废在途资源包加载 |
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:23` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
-| `registerReRoute()` | `frontend/src/views/app-preview/preview-library:25` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
-| `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:33` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |
-| `OpenModel3DOptions()` | `frontend/src/views/app-preview/preview-library:38` | openModel3DFullscreen 选项（ADR-093 T4：cooperate 统一多模型同台追加入口） |
-| `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:61` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
-| `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:154` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
-| `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:171` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
+| `registerReRoute()` | `frontend/src/views/app-preview/preview-library:26` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
+| `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:34` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |
+| `OpenModel3DOptions()` | `frontend/src/views/app-preview/preview-library:39` | openModel3DFullscreen 选项（ADR-093 T4：cooperate 统一多模型同台追加入口） |
+| `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:62` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
+| `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:155` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
+| `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:172` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
 | `createScene3D()` | `frontend/src/views/app-preview/scene-3d:33` | 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） |
 | `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:38` | 清理场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:43` | 任意新预览派发时调用，作废在途场景加载 |

@@ -228,8 +228,8 @@ class AppNav extends WebComponentBase {
         </div>
         ${items
           .map(
-            (item, idx) => `
-          <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${item.id}" title="${t(item.key)}" role="button" tabindex="0" data-nav-idx="${idx}">
+            (item) => `
+          <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${item.id}" title="${t(item.key)}" role="button" tabindex="0">
             <span class="icon">${item.icon}</span>
             <span class="nav-text">${t(item.key)}</span>
           </div>

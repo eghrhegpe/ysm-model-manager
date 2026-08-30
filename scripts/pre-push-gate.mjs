@@ -542,10 +542,14 @@ async function main() {
     // check-redlines——仅「变更文件内」的违规计入新增阻断，仓库内其他文件既有债务
     // 不干扰当前提交（否则只改 Go/文档会被未提交 frontend 存量新增红线卡住）。
     // --all / --docs 模式 files 为空、不传 --files → 全库基线比对，向后兼容。
-    const filesArg = (filesMode || (!allMode && !docsMode)) && files.length
-      ? ` --files ${shq(files.join('\n'))}`
-      : '';
-    const rl = sh(`node scripts/check-redlines.mjs --json --baseline${filesArg}`);
+    // 数组参数直走 procRun（无 shell）：--files 大列表（整目录搬家可达 300+ 文件）经
+    // shell:true 会超 cmd.exe 8191 限制，check-redlines 进程起不来 → fail-closed 报
+    // 「输出解析失败」误阻断推送（2026-08-31 ADR-129 第三刀 utils/3d → features/preview-3d 实证）。
+    // 数组直传走 Windows CreateProcess 32767 上限，避开 cmd 8K 墙。all/docs 模式 files 为空 → 全库比对。
+    const rlArgs = ['scripts/check-redlines.mjs', '--json', '--baseline'];
+    if (files.length) rlArgs.push('--files', files.join('\n'));
+    const rlRaw = procRun('node', rlArgs, { cwd: ROOT, timeout: TIMEOUT });
+    const rl = { rc: rlRaw.rc, out: rlRaw.out || rlRaw.err || '' };
     let newV = null, ok = false, scanHealthy = false, baseCount = 0, rlTail = '';
     try {
       const parsed = JSON.parse(rl.out);

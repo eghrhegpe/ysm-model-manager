@@ -72,7 +72,7 @@ function isEmptyCatch(text, start) {
 
 /** 是否为轻量工具模块（utils/ 下非组件、非 3d 渲染的纯函数文件）。 */
 function isLightweightUtil(spec) {
-  return /\/utils\/[^/]+\.ts$/.test(spec) && !/\/utils\/3d\//.test(spec) && !/\/utils\/dom\/(?:css|html)\.ts$/.test(spec);
+  return /\/utils\/[^/]+\.ts$/.test(spec) && !/\/utils\/dom\/(?:css|html)\.ts$/.test(spec);
 }
 
 function main() {

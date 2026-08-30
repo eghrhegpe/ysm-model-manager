@@ -825,13 +825,13 @@
 | `App.SetModelTags()` | `internal/app/app_tags:29` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:38` | ListByTag 返回所有打了指定标签的文件路径列表 |
 | `App.AllTags()` | `internal/app/app_tags:43` | AllTags 返回所有被使用的标签（按使用次数降序） |
-| `App.GetCachedTexture()` | `internal/app/app_texture_cache:27` | GetCachedTexture 读取纹理文件，计算内容哈希，检查 KTX2 缓存。 |
-| `App.SaveCachedTexture()` | `internal/app/app_texture_cache:73` | SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。 |
-| `App.ClearTextureCache()` | `internal/app/app_texture_cache:83` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
-| `App.HasCachedTexture()` | `internal/app/app_texture_cache:88` | HasCachedTexture 检查指定纹理的内容哈希是否已有 KTX2 缓存。 |
-| `App.GetCachedTextureByHash()` | `internal/app/app_texture_cache:95` | GetCachedTextureByHash 通过哈希直接读取 KTX2 缓存（不读取原始文件，轻量操作）。 |
-| `App.HasCachedTextures()` | `internal/app/app_texture_cache:108` | HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。 |
-| `CachedTextureResult()` | `internal/app/app_texture_cache:18` | CachedTextureResult 是 GetCachedTexture 的返回值。 |
+| `App.GetCachedTexture()` | `internal/app/app_texture_cache:28` | GetCachedTexture 读取纹理文件，计算内容哈希，检查 KTX2 缓存。 |
+| `App.SaveCachedTexture()` | `internal/app/app_texture_cache:74` | SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。 |
+| `App.ClearTextureCache()` | `internal/app/app_texture_cache:84` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.HasCachedTexture()` | `internal/app/app_texture_cache:89` | HasCachedTexture 检查指定纹理的内容哈希是否已有 KTX2 缓存。 |
+| `App.GetCachedTextureByHash()` | `internal/app/app_texture_cache:96` | GetCachedTextureByHash 通过哈希直接读取 KTX2 缓存（不读取原始文件，轻量操作）。 |
+| `App.HasCachedTextures()` | `internal/app/app_texture_cache:112` | HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。 |
+| `CachedTextureResult()` | `internal/app/app_texture_cache:19` | CachedTextureResult 是 GetCachedTexture 的返回值。 |
 | `App.DefaultWorkshopSites()` | `internal/app/app_workshop:104` | — |
 | `App.SaveWorkshopSites()` | `internal/app/app_workshop:115` | — |
 | `App.LoadWorkshopCreators()` | `internal/app/app_workshop:157` | — |

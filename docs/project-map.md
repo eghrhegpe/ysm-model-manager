@@ -53,7 +53,7 @@
 
 | 包 | 用途 |
 |----|------|
-| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 42 · 测试 29〕 |
+| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 42 · 测试 31〕 |
 
 <!-- /GEN: internal-structure -->
 

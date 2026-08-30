@@ -313,6 +313,12 @@ func (a *App) BackupWorkshopCreators() (string, error) {
 	bakPath := path + "." + time.Now().Format("20060102-150405") + ".bak"
 	data, err := os.ReadFile(path)
 	if err != nil {
+		// 全新用户无用户配置（数据走 bundled 兜底）：无数据可备份 ≠ 错误，
+		// 否则 Merge/Replace/Reset 首次使用全部中止（R22 审核 P2-1）。
+		// 与 web 桥（web-community.ts 无备份步骤直接合并）行为对齐。
+		if os.IsNotExist(err) {
+			return "", nil
+		}
 		return "", err
 	}
 	// 原子写入（与 saveConfig/tags 对齐）——

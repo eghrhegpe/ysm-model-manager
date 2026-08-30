@@ -7,6 +7,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -226,5 +227,53 @@ func TestWorkshopConfigMigrateFromExe(t *testing.T) {
 	}
 	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
 		t.Error("旧 exe 旁文件应被清理")
+	}
+}
+
+// 全新用户无 creators.json（数据走 bundled 兜底）：备份应视为「无数据可备份」
+// 返回成功，否则 Merge/Replace/Reset 首次使用全部中止（R22 审核 P2-1，
+// 与 web 桥 web-community.ts 无备份步骤直接合并的行为对齐）。
+func TestBackupWorkshopCreators_NoFile(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	bakPath, err := (&App{}).BackupWorkshopCreators()
+	if err != nil {
+		t.Fatalf("creators.json 不存在时备份应成功（无数据可备份），got %v", err)
+	}
+	if bakPath != "" {
+		t.Errorf("无数据可备份时应返回空路径, got %q", bakPath)
+	}
+}
+
+// 全新用户拖拽导入创作者 JSON 应成功（P2-1 修复验证）：
+// MergeWorkshopCreatorsFromJSON 前置备份在无用户配置时不再中止。
+// 注：Merge 尾部「合并后 >=100 条」完整性下限依赖 bundled 基线（生产内联
+// >=100 条）；测试环境无 bundled，故导入 100 条直接过闸。
+func TestMergeWorkshopCreatorsFromJSON_FreshUser(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	imported := make([]types.WorkshopCreator, 100)
+	for i := range imported {
+		imported[i] = types.WorkshopCreator{Name: fmt.Sprintf("creator-%d", i), Type: "bilibili"}
+	}
+	data, err := json.Marshal(imported)
+	if err != nil {
+		t.Fatal(err)
+	}
+	added, updated, err := a.MergeWorkshopCreatorsFromJSON(string(data))
+	if err != nil {
+		t.Fatalf("全新用户首次 Merge 不应失败（P2-1），got %v", err)
+	}
+	if added+updated != 100 {
+		t.Fatalf("100 条导入应全部计入 added/updated, got added=%d updated=%d", added, updated)
+	}
+	// 合并后已落盘（可读回）
+	if got := len(a.LoadWorkshopCreators()); got < 100 {
+		t.Fatalf("合并后应可读回 >=100 条, got %d", got)
 	}
 }

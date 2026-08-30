@@ -846,8 +846,8 @@
 | `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:278` | — |
 | `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:304` | — |
 | `App.BackupWorkshopCreators()` | `internal/app/app_workshop:311` | — |
-| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:326` | — |
-| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:368` | — |
+| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:332` | — |
+| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:374` | — |
 | `NewApp()` | `internal/app/app:75` | — |
 | `App.SetApp()` | `internal/app/app:104` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
 | `App.GetYSMRepoRoot()` | `internal/app/app:107` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
@@ -2197,7 +2197,7 @@
 | `LocalCreatorLike()` | `frontend/src/views/app-content/site-view:43` | 本地创作者（绑定 + 运行时附加字段） |
 | `renderSiteView()` | `frontend/src/views/app-content/site-view:54` | 站点视图渲染主入口 — 编排壳：构造数据 → 构 HTML → 绑事件 → 聚 cleanup。 |
 | `bindDragEvents()` | `frontend/src/views/app-content/site/drag:14` | 绑定拖拽 JSON 导入事件：创作者 JSON / 站点 JSON 识别 + 合并。 |
-| `bindEditEvents()` | `frontend/src/views/app-content/site/edit:520` | 绑定编辑模式事件：编辑入口 / 拉取配置 / 取消 / 保存 / 行内编辑 / 删除创作者 / 拖拽排序 / 增删搜索词 / 搜索过滤。 |
+| `bindEditEvents()` | `frontend/src/views/app-content/site/edit:526` | 绑定编辑模式事件：编辑入口 / 拉取配置 / 取消 / 保存 / 行内编辑 / 删除创作者 / 拖拽排序 / 增删搜索词 / 搜索过滤。 |
 | `CrCardCtx()` | `frontend/src/views/app-content/site/render:14` | 创作者卡片工厂上下文 |
 | `BuildSiteHtmlCtx()` | `frontend/src/views/app-content/site/render:25` | buildSiteHtml 依赖的渲染上下文 |
 | `createCrCard()` | `frontend/src/views/app-content/site/render:45` | 创作者卡片工厂 |

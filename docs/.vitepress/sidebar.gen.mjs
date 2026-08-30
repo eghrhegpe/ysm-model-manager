@@ -1321,6 +1321,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r21-go-dedup-2026-08-31"
       },
       {
+        "text": "R22 审核 — internal/app/app_workshop.go 创意工坊配置（站点 + 创作者）",
+        "link": "/audit/audit-r22-app-workshop-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

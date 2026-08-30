@@ -976,6 +976,10 @@ describe("readVrmMeta 分支补全", () => {
 
   it("缩略图 toDataURL 抛错 → imageToDataURL catch 返回空串（meta 仍返回）", async () => {
     // canvas.toDataURL 抛错（happy-dom 环境异常）→ imageToDataURL 静默降级 ""
+    // 捕获原始 createElement（审核修复）：stubGlobal 替换全局 document 后，fallback
+    // 若调 document.createElement 会递归进 stub 自身直到栈溢出——与同文件
+    // stubCanvasDocument 的既有安全模式保持一致。
+    const origCreate = document.createElement.bind(document);
     vi.stubGlobal("document", {
       createElement: (tag: string): unknown => {
         if (tag === "canvas") {
@@ -986,7 +990,7 @@ describe("readVrmMeta 分支补全", () => {
             toDataURL: () => { throw new Error("canvas broken"); },
           };
         }
-        return document.createElement(tag);
+        return origCreate(tag);
       },
     } as unknown as typeof document);
     const vrm = makeFakeVrm();

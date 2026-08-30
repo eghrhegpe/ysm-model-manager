@@ -156,7 +156,6 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
 
     bus.emit("repo:rtype-changed", self._selectedType); // 同值 → 早退
     await sleep(150);
-    console.log("CALLS same-value window:", mocks.GetInstanceSyncStatus.mock.calls.length, "calls0:", calls0);
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(calls0);
 
     // 异值 → 重载，render 同步抛错 → .catch warn

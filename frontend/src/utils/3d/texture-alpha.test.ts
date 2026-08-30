@@ -129,9 +129,13 @@ describe("getTextureAlphaMode — readRgbaPixels 非 data 路径", () => {
       height: 0,
       getContext: () => (opts.ctxNull ? null : ctx),
     };
+    // 捕获原始 createElement（审核修复）：spy 替换后 fallback 若调 document.createElement
+    // 会递归进 mock 自身直到栈溢出（当前 SUT 只请求 canvas 故潜伏）——对齐
+    // environment-capability / vrm-adapter 既有 stub 的安全模式。
+    const origCreate = document.createElement.bind(document);
     vi.spyOn(document, "createElement").mockImplementation(((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
-      return document.createElement(tag as keyof HTMLElementTagNameMap);
+      return origCreate(tag as keyof HTMLElementTagNameMap);
     }) as typeof document.createElement);
   }
 

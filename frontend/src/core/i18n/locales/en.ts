@@ -958,6 +958,10 @@ export const en: Record<string, string> = {
   "preview.groupEnv": "Environment",
   "preview.groupScene": "Scene",
   "preview.groupSettings": "Settings",
+  // 3D panel render error boundary + material visibility eye button
+  "preview.renderFail": "Panel render failed",
+  "preview.eyeHide": "Hide",
+  "preview.eyeShow": "Show",
   // ── 3D stats panel (ADR-131 P1: preview.stats.* three-segment) ──
   // 口径标注：rendered = traverse scene-graph 口径，与 YSM 模型面板 Go 口径区分
   "preview.stats.panel": "📊 Runtime Stats",

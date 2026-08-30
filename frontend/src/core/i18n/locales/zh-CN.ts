@@ -961,6 +961,10 @@ export const zhCN: Record<string, string> = {
   "preview.groupEnv": "环境",
   "preview.groupScene": "场景",
   "preview.groupSettings": "设置",
+  // 3D 面板渲染错误边界 + 材质显隐 eye 按钮（preview-menu core/render/roles）
+  "preview.renderFail": "面板渲染失败",
+  "preview.eyeHide": "隐藏",
+  "preview.eyeShow": "显示",
   // ── 3D 统计面板（ADR-131 P1：preview.stats.* 三段式）──
   // 口径标注（审核建议 ②）：渲染实测 = traverse 场景图口径，与 YSM 模型面板 Go 口径区分
   "preview.stats.panel": "📊 渲染实测",

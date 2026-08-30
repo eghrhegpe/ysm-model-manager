@@ -84,7 +84,7 @@ export function modelDetailView(
           console.error("[preview-menu] 模型信息面板渲染失败", primary.id, err);
           const errRow = document.createElement("div");
           errRow.style.cssText = "padding:8px 10px;color:#ff7b7b;font-size:12px";
-          errRow.textContent = "面板渲染失败: " + safeErrorMessage(err);
+          errRow.textContent = `${tr("preview.renderFail", "Panel render failed")}: ${safeErrorMessage(err)}`;
           l.appendChild(errRow);
         }
       }

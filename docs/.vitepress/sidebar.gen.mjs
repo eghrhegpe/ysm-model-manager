@@ -1309,6 +1309,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r18-regression-verification-2026-08-30"
       },
       {
+        "text": "R19 审核 — go/watcher 文件监听 + App 对接",
+        "link": "/audit/audit-r19-go-watcher-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

@@ -959,6 +959,10 @@ export const ja: Record<string, string> = {
   "preview.groupEnv": "環境",
   "preview.groupScene": "シーン",
   "preview.groupSettings": "設定",
+  // 3D パネル描画エラー境界 + マテリアル表示 eye ボタン（preview-menu core/render/roles）
+  "preview.renderFail": "パネル描画に失敗",
+  "preview.eyeHide": "非表示",
+  "preview.eyeShow": "表示",
   // ── 3D 統計パネル（ADR-131 P1: preview.stats.* 三段式）──
   // 口径注記: 描画実測 = traverse シーングラフ口径, YSM モデルパネルの Go 口径と区別
   "preview.stats.panel": "📊 描画実測",

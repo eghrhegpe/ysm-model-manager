@@ -7,16 +7,12 @@
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
 import type { SlideMenuHandle, SlideMenuView } from "../../../../ui/ui-slide-menu.ts";
-import { t } from "../../../../core/i18n/t.ts";
+import { tr } from "../../../../core/i18n/tr.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
 import { previewSnapshot, setStateValue, isPathAvailable, KNOWN_PATHS } from "../../state/preview-state.ts";
 import { getSchema } from "../schema-registry.ts";
 
-/** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
-const tr = (key: string, fallback: string): string => {
-  const v = t(key);
-  return v === key ? fallback : v;
-};
+// i18n 取值统一走共享 tr()（core/i18n/tr.ts，支持缺失键兜底 + params 插值）
 
 /**
  * 幂等注入 renderMenu 用的 CSS 类规则（仅注入一次，重复调用 no-op）。
@@ -359,7 +355,7 @@ function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): voi
   eye.style.cssText = "flex:0 0 auto;background:none;border:none;cursor:pointer;font-size:14px;padding:0;line-height:1";
   const eyeApply = (v: boolean): void => {
     eye.textContent = v ? "👁" : "🚫";
-    eye.title = v ? "隐藏" : "显示";
+    eye.title = v ? tr("preview.eyeHide", "Hide") : tr("preview.eyeShow", "Show");
   };
   const toggleEye = (): void => {
     const next = !node.eye?.get();

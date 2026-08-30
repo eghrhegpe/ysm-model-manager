@@ -316,7 +316,7 @@ export function renderPreviewPanel(
     console.error("[preview-menu] renderPanel FAILED", node.id, err);
     const errRow = document.createElement("div");
     errRow.style.cssText = "padding:8px 10px;color:#ff7b7b;font-size:12px";
-    errRow.textContent = "面板渲染失败: " + safeErrorMessage(err);
+    errRow.textContent = `${tr("preview.renderFail", "Panel render failed")}: ${safeErrorMessage(err)}`;
     list.appendChild(errRow);
   }
 }

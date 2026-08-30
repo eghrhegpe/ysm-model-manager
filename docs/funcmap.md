@@ -1497,8 +1497,8 @@
 | `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:117` | 类型守卫：节点是否为 folder（可下钻） |
 | `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:122` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
 | `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:135` | 递归收集全部节点 id（供 id 唯一性契约测试） |
-| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/render:424` | — |
-| `renderAdapterPanelContent()` | `frontend/src/utils/3d/adapters/preview-menu/render:467` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
+| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/render:420` | — |
+| `renderAdapterPanelContent()` | `frontend/src/utils/3d/adapters/preview-menu/render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu/roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu/roles:38` | — |
 | `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu/roles:112` | — |

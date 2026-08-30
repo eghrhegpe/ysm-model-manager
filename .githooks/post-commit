@@ -18,15 +18,23 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || exit 0)"
 cd "$ROOT" || exit 0
 
 CLEANED=""
-git diff --cached --name-only 2>/dev/null | while IFS= read -r p; do
+# code_review P2/P3：管道子 shell 会吞掉 CLEANED 赋值（汇报永不触发，黑箱）——
+# 改用 temp 文件重定向（POSIX 安全，无进程替换依赖），循环留在父 shell。
+LIST="/tmp/ysm_postclean_$$.txt"
+git diff --cached --name-only 2>/dev/null > "$LIST" || true
+while IFS= read -r p; do
   [ -z "$p" ] && continue
   [ -e "$p" ] || continue
   # 仅清「工作树 == HEAD」的纯残留（无真实未提交改动）
   if git diff --quiet HEAD -- "$p" 2>/dev/null; then
     if git restore --staged -- "$p" 2>/dev/null; then
       CLEANED="$CLEANED $p"
+    else
+      # 失败可见（原 2>/dev/null 吞掉，AI 无从得知）
+      echo "[post-commit] ⚠️ 清暂存残留失败: $p"
     fi
   fi
-done
+done < "$LIST"
+rm -f "$LIST"
 [ -n "$CLEANED" ] && echo "[post-commit] 已清暂存残留(工作树==HEAD):$CLEANED"
 exit 0

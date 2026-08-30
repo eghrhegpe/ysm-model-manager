@@ -11,8 +11,13 @@ import { tr } from "./i18n/tr.ts";
 interface MenuItemDef {
   /** 行为标识：context-menus.ts 查 handler 表绑定 onClick */
   action?: string;
-  /** 静态文案或按 ctx 动态生成（如标题项） */
-  label?: string | ((ctx: CtxShowPayload) => string);
+  /**
+   * 静态文案或按 ctx 动态生成（如标题项）；divider 项省略。
+   * 2026-XX 收紧：原 `string | ((ctx) => string)` 的 string 分支已无消费者
+   * （所有声明均函数式：`() => tr("menu.xxx", "Fallback")` 或 `(ctx) => 动态`），
+   * 收紧为纯函数式让「label 必须经 i18n 或 ctx 动态生成」成为类型级约束。
+   */
+  label?: (ctx: CtxShowPayload) => string;
   icon?: string;
   danger?: boolean;
   divider?: boolean;
@@ -20,7 +25,7 @@ interface MenuItemDef {
    * 节点级可见性谓词：返回 false 则该 item 不出现在 menu:show 载荷。
    * 与 utils/3d/adapters/preview-menu/node-types.ts 的 `PreviewMenuNode.visibleWhen`
    * 同构（吃 ctx 快照，纯函数，无副作用）；未定义 → 恒可见。
-   * 与 viewer-mode 全局过滤（context-menus.ts `isViewerMode`）AND：两边都通过才显示。
+   * 与 viewer-mode 全局过滤（context-menus.ts `canWebAction`）AND：两边都通过才显示。
    */
   visibleWhen?: (ctx: CtxShowPayload) => boolean;
 }

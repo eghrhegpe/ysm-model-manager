@@ -1097,9 +1097,9 @@
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
 | `tr()` | `frontend/src/core/i18n/tr:17` | i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。 |
-| `MenuDef()` | `frontend/src/core/menu-defs:29` | 单类菜单的完整声明 |
-| `MENU_DEFS()` | `frontend/src/core/menu-defs:35` | 四类右键菜单的声明式规格（唯一事实来源） |
-| `getMenuDef()` | `frontend/src/core/menu-defs:123` | 测试辅助：按 type 取声明（不存在返回 undefined） |
+| `MenuDef()` | `frontend/src/core/menu-defs:34` | 单类菜单的完整声明 |
+| `MENU_DEFS()` | `frontend/src/core/menu-defs:40` | 四类右键菜单的声明式规格（唯一事实来源） |
+| `getMenuDef()` | `frontend/src/core/menu-defs:128` | 测试辅助：按 type 取声明（不存在返回 undefined） |
 | `sanitizePage()` | `frontend/src/core/page-store:30` | — |
 | `PAGE_WHITELIST()` | `frontend/src/core/page-store:28` | — |
 | `resolveInitialPage()` | `frontend/src/core/page-store:40` | — |

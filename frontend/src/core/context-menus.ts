@@ -33,7 +33,7 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   });
   return items.map((item) => {
     if (item.divider) return { divider: true };
-    const label = typeof item.label === "function" ? item.label(norm) : item.label;
+    const label = item.label ? item.label(norm) : undefined;
     const action = item.action;
     const handler = action ? HANDLERS[action] : undefined;
     if (action && !handler) {

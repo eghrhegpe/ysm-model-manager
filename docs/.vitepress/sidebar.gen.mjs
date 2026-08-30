@@ -1924,10 +1924,6 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "测试残留",
-            "link": "/knowledge/测试残留"
-          },
-          {
             "text": "AI 急速版路由表（高频场景）",
             "link": "/knowledge/routes-quick"
           },

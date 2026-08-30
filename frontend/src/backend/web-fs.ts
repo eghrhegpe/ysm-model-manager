@@ -938,13 +938,11 @@ async function searchWebModels(
       hasError: false,
     }));
   }
-  // Worker 批量统计；不可用/失败 → 降级为关键词匹配（数值 0），toast 由消费方提示
-  let stats: WebModelStats[] | null = null;
-  try {
-    stats = await batchStatsWebModels(matched.map((e) => e.Path));
-  } catch {
-    stats = null;
-  }
+  // Worker 批量统计；不可用/失败 → 返回 null（web-stats 内部已吞错并整批降级，
+  // 「不向上抛」契约由 web-stats.test.ts「runner 抛错 → 降级（不向上抛）」锁定，
+  // 故此处无需外层 try/catch——那层 catch 是永不触发的死代码）
+  // → stats 为 null 时降级为关键词匹配（数值 0），toast 由消费方提示
+  const stats = await batchStatsWebModels(matched.map((e) => e.Path));
   if (!stats) {
     return matched.map((e) => ({
       name: e.Name,
@@ -1183,15 +1181,18 @@ async function moveOrCopyWebModel(src: string, dstDir: string, move: boolean): P
   const newName = webMoveTargetName(dstName, name);
   const srcBase = newName.slice(newName.lastIndexOf("/") + 1);
   assertValidRenameName(srcBase, "目录");
+  // 自嵌套检查（目标**严格**位于源内）须先于「目标已存在」——对齐 Go fileops.go:313-320
+  //（自嵌套）先于 :326（目标已存在）：两条同时命中时 Go 报的是自嵌套。
+  // 注意 `newName === name`（目标 == 源自身）不属于自嵌套：Go 侧此时 dstDir 是 src 的父
+  // 目录，relToSrc 为 ".." 不算嵌套，dst=Join(dstDir,Base(src))=src 命中 stat 存在报
+  // 「目标已存在」——故等值分支必须留在下方存在性检查里，不可随此支上移。
+  if (newName.startsWith(`${name}/`)) {
+    throw new Error(t("webFs.moveNested", { path: dstDir }));
+  }
   // 防覆盖：目标组已存在 → 拒绝（对齐 Go「目标已存在」；含目标 == 源自身移动——
   // Go 对 dst===src 命中 stat(dst) 存在报「目标已存在」，web 侧 dir key 即源自身）
   if ((await idbGet("files", dirKey(type, newName))) !== undefined) {
     throw new Error(t("webFs.moveTargetExists", { path: `${WEB_ROOT}/${type}/${newName}` }));
-  }
-  // 自嵌套检查（须在写库前执行）：目标位于源内 → 拒绝
-  // （对齐 Go「目标目录不能位于源目录内」；防在 src 内留下嵌套组）
-  if (newName === name || newName.startsWith(`${name}/`)) {
-    throw new Error(t("webFs.moveNested", { path: dstDir }));
   }
   await rekeyWebModelGroup(type, name, newName, move);
 }

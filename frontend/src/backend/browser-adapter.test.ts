@@ -1487,6 +1487,18 @@ describe("browserAdapter — MoveModelFile / CopyModelFile（组级移动/复制
     expect(idbMock._store.has("file:ysm/分类1/狐狸/tex/face.png")).toBe(false);
   });
 
+  it("MoveModelFile：目标位于源内且目标 key 已存在 → 报自嵌套（对齐 Go 自嵌套先于目标已存在）", async () => {
+    await importWebFiles([new File([e6.encode("Y")], "狐狸.ysm")], "ysm");
+    // 预置目标 dir key，迫使「目标已存在」与「自嵌套」两条检查同时命中：
+    // Go fileops.go:313-320 自嵌套先于 :326 目标已存在，故此处必须报自嵌套。
+    // （dstName 只能单段——多段含 "/" 会被 assertValidRenameName 拦下，
+    //  故「目标位于源内」由 dstDir 名 == 源组名构造：目标 狐狸/狐狸 是源严格子目录）
+    idbMock._store.set("dir:ysm/狐狸/狐狸:", {});
+    await expect(
+      browserAdapter.MoveModelFile("/web/ysm/狐狸/狐狸.ysm", "/web/ysm/狐狸"),
+    ).rejects.toThrow(/目标目录不能位于源目录内/);
+  });
+
   it("CopyModelFile：复制保留源（新旧模型并存，dir/file/标记都复制）", async () => {
     await importWebFiles([new File([e6.encode("Y")], "狐狸.ysm")], "ysm");
     const p = "/web/ysm/狐狸/狐狸.ysm";

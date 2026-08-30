@@ -169,6 +169,10 @@ function clearSwitchContent(ctx: SwitchContext, keep: boolean): Set<THREE.Object
   // 释放旧内容层 GPU 资源（非同台模式才 dispose；同台模式下旧模型仍需保持）
   if (!keep) {
     try { ctx.getBuilt()?.dispose(); } catch (e) { console.error("[preview] 旧内容层 dispose 失败:", e); }
+    // 审核 P3-1：dispose 后立即停驱动旧 perFrame——否则 await build 窗口内
+    // rAF 仍每帧驱动已释放的旧 update（有 try/catch 兜底不崩，但每帧刷警告）。
+    // build 成功后 syncSwitchView 注册新回调；失败则 recoverSwitchFailure 已兜底。
+    ctx.setPerFrame(null);
   }
   return ctx.scene ? new Set(ctx.scene.children) : null;
 }

@@ -16,6 +16,7 @@ import { getApp } from "../../backend/app.ts";
 import { RESOURCE_TYPE_LABELS, resolvePreviewKey, resolvePreviewKeyByExt, resolvePreviewKeyToRtype, getPreviewableTypeTabs, extOf, resolveDefaultPreviewKey, isContainerExt } from "../../utils/resource/types.ts";
 import type { Mount3DOptions } from "../../utils/3d/adapters/mount-preview-core.ts";
 import { switchPreview, hasActivePreview, cleanupPreview } from "../../utils/3d/adapters/mount-preview-core.ts";
+import { sceneRegistry } from "../../utils/3d/adapters/scene-registry.ts";
 
 /** 跨类型换角色注册表：各 createXxx3D 模块加载时注册，路由侧不反向 import 包装器（破循环） */
 const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};
@@ -40,8 +41,8 @@ export interface OpenModel3DOptions {
   /**
    * 多模型同台追加：有活跃会话时改走 switchPreview({keepInScene}) 把新模型追加进
    * 同一场景，统一收口到注册表主门（消除 appendXxxPreview 绕过路由的接缝）。
-   * 注意：当前 switchToSession 复用活跃会话的适配器，故 cooperate 追加与活跃会话
-   * 同类型时语义最稳；跨类型（如 MMD 会话追加 VRM）需适配器按类型解析，见 ADR-093 T4-b。
+   * 跨类型目标（如 MMD 会话追加 VRM）：活跃适配器无法解析 → 降级为「关旧开新」
+   * + toast（审核 P3-4 守卫，见 openModel3DFullscreen 内 cooperate 决策段）。
    */
   cooperate?: boolean;
   /** 已分类的资源类型 ID（如 "EntityPlayer"）：调用方已知时传入，避免歧义扩展名重复探测；
@@ -67,10 +68,6 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
   // 注意：清理须在 opener 解析成功之后执行（code review P2）——类型探测失败或
   // routeKey 未注册（非 3D 资源/后端暂不可用）时提前清理会销毁用户当前活跃 3D 会话，
   // 旧会话本应在此类失败导航下存活，只弹 toast。
-  if (options?.cooperate && hasActivePreview()) {
-    await switchPreview(path, { keepInScene: true });
-    return;
-  }
   const { DetectResourceType } = await getApp();
   // 发射点已分类（switchExternal 等透传 rtype）时优先用，避免歧义扩展名重复探测
   let rtype = options?.rtype || "";
@@ -83,6 +80,31 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
   }
   // ADR-111：按 variants 解析预览 key（.pmx→mmd、.vrm→vrm），无变体回退 rtype
   const routeKey = resolvePreviewKey(path, rtype);
+  // cooperate 决策（审核 P3-4，ADR-093 T4-b 收尾）：cooperate 分支从函数头部移到
+  // routeKey 解析之后——活跃会话适配器只能解析自己的类型，跨类型同台追加会让活跃
+  // 适配器 build 错误类型文件。比对活跃会话 rtype（registry entry）与新路径路由
+  // rtype（preview key 反解），不一致时降级为「关旧开新」+ toast 说明。
+  // 类型探测失败（routeKey 空）时不降级，保持原 switchPreview 行为不误伤。
+  let cooperate = options?.cooperate === true && hasActivePreview();
+  if (cooperate) {
+    // 活跃会话 rtype 可能是类型 ID（opts.rtype 透传，如 EntityPlayer）也可能是
+    // adapter.id（如 vrm）——与 routeKey 或其反解 rtype 任一相同即视为同类型
+    const activeRtype = sceneRegistry.get(sceneRegistry.getActiveId() ?? "")?.rtype ?? "";
+    const newRtype = resolvePreviewKeyToRtype(routeKey);
+    if (activeRtype && newRtype && activeRtype !== newRtype && activeRtype !== routeKey) {
+      cooperate = false;
+      const { bus } = await import("../../bus.ts");
+      bus.emit("toast:show", {
+        msg: `同台追加仅支持同类型，已切换为新模型（${activeRtype} → ${newRtype}）`,
+        duration: TOAST_MS.normal,
+        type: "warn",
+      });
+    }
+  }
+  if (cooperate) {
+    await switchPreview(path, { keepInScene: true });
+    return;
+  }
   // 兜底链（歧义扩展名/容器，仅预览路由派生，不参与类型判定）：
   // 1. ext 兜底：DetectResourceType 对 .pmx 等多声明扩展名保守返回 "other"，
   //    而 variants 明确声明了预览适配器（如 .pmx→mmd）——按扩展名再查一次；
@@ -94,7 +116,7 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
     (routeKey === "" || routeKey === "other" ? _openers[resolvePreviewKeyByExt(path)] : undefined) ??
     (isContainerExt(extOf(path)) ? _openers[resolveDefaultPreviewKey(rtype)] : undefined);
   if (opener) {
-    if (!options?.cooperate && hasActivePreview()) {
+    if (!cooperate && hasActivePreview()) {
       cleanupPreview();
     }
     await opener(path, siblings);

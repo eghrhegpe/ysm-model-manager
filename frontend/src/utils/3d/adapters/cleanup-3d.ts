@@ -38,6 +38,18 @@ interface GpuRendererInfo {
 // 所有可从 mount3D 作用域松绑的外部引用，统一经此接口注入。
 // 可变 let 变量通过 setter 回调传递，允许纯函数内赋值。
 
+/**
+ * 防御性执行单个清理步骤（审核 P3-2/P4-3）：失败不阻断后续释放，
+ * 且经 dbg 留痕（环形日志面板可查），不再纯静默。
+ */
+function tryStep(label: string, fn: () => void): void {
+  try {
+    fn();
+  } catch (e) {
+    dbg("cleanup-fail", { label, err: String(e) });
+  }
+}
+
 export interface CleanupContext {
   menuHandle: PreviewMenuHandle;
   isDisposed: { v: boolean };
@@ -119,20 +131,20 @@ export function runFullCleanup(ctx: CleanupContext): void {
   ctx.nullBuilt();
   // 程序化天空（ADR-073 L1）：还原 tone mapping 并释放 PMREM/几何/材质
   // 统一注册表：保存状态后由 registry 统一 dispose（已遍历所有能力，无需再逐个 dispose）
-  try { sceneCapabilityRegistry.saveAll(); } catch (_) { /* 防御性 */ }
+  tryStep("sceneCapabilityRegistry.saveAll", () => sceneCapabilityRegistry.saveAll());
   safeDispose(sceneCapabilityRegistry);
   // P0 纹理缓存池：session 结束释放所有缓存纹理
-  try { textureCache.disposeAll(); } catch (_) { /* 防御性释放 */ }
+  tryStep("textureCache.disposeAll", () => textureCache.disposeAll());
   // 视锥裁剪：清空模型根节点注册
-  try { clearModelRoots(); } catch (_) { /* 防御性释放 */ }
+  tryStep("clearModelRoots", () => clearModelRoots());
   // 不再逐个 dispose 各能力（已由 sceneCapabilityRegistry.dispose 统一处理），
   // 避免双重 dispose 导致 SkyCapability 重复还原 toneMapping / PMREM 等问题
   // 后处理体积光管线（ADR-081 L2）：释放 EffectComposer + bloom
-  try {
-    ctx.postProcCap?.dispose();
-    ctx.postProc?.dispose();
-    ctx.nullPostProc();
-  } catch (_) { /* 防御性释放 */ }
+  // 审核 P3-2：三个释放各自独立 try——此前共用一个 try，postProcCap 抛错会跳过
+  // 后两者 → EffectComposer/内部 render target 在错误路径泄漏。
+  tryStep("postProcCap.dispose", () => ctx.postProcCap?.dispose());
+  tryStep("postProc.dispose", () => ctx.postProc?.dispose());
+  tryStep("nullPostProc", () => ctx.nullPostProc());
   // 防御性遍历：释放内容层可能遗漏的几何/材质/纹理
   // 仅移除本 session 添加的 DOM 子节点（viewContainer 含 renderer.domElement）。
   // renderer/controls 的 dispose 由 _resetSingletons 或下次 mount 时自然处理。

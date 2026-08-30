@@ -407,9 +407,11 @@ describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
     rejectBuild(new Error("late boom"));
     await p;
 
-    // P2 守卫：不 console.error、不清 perFrame/allBuilt，仅复位 inFlight
+    // P2 守卫：不 console.error、recoverSwitchFailure 不做额外清理，仅复位 inFlight。
+    // （审核 P3-1 后 perFrame 在 clearSwitchContent dispose 旧 built 时已被置空——
+    // 旧内容层已释放，rAF 不再驱动其 update；recoverSwitchFailure 本身仍不清 allBuilt。）
     expect(errSpy).not.toHaveBeenCalled();
-    expect(state.perFrame).not.toBeNull();
+    expect(state.perFrame).toBeNull();
     expect(state.built).not.toBeNull();
     expect(ctx.inFlight).toBe(false);
   });
@@ -610,5 +612,42 @@ describe("switchToSession 清理与排开边界", () => {
     await expect(
       switchToSession(ctx, "solo.glb", { keepInScene: true }),
     ).resolves.toBeUndefined();
+  });
+});
+
+// ===== perFrame await 窗口修复（审核 P3-1）=====
+// 旧问题：clearSwitchContent dispose 旧 built 后、syncSwitchView 重设 perFrame 前
+// 存在 await build 窗口，rAF 仍每帧驱动已 dispose 的旧 update（try/catch 兜底不崩，
+// 但每帧刷警告日志）。修复：dispose 旧 built 后立即 setPerFrame(null)。
+describe("switchToSession perFrame await 窗口（审核 P3-1）", () => {
+  it("非 keep 切换：旧 built dispose 后、build 期间 perFrame 已置空", async () => {
+    const { ctx, state, mockAdapter } = makeMockCtx();
+    const oldUpdate = vi.fn();
+    state.perFrame = oldUpdate;
+    state.built = { dispose: vi.fn() } as unknown as PreviewScene;
+    state.sceneBaseline = new Set();
+    let seenDuringBuild: ((dt: number) => void) | null = oldUpdate;
+    mockAdapter.build.mockImplementation(async () => {
+      seenDuringBuild = state.perFrame;
+      return { dispose: vi.fn() };
+    });
+    await switchToSession(ctx, "new.glb");
+    expect(seenDuringBuild).toBeNull(); // build 期间旧 update 已停驱动
+    expect(state.perFrame).not.toBe(oldUpdate); // 结束后为新模型 update
+  });
+
+  it("keep=true 同台：旧 built 未 dispose，build 期间 perFrame 保持旧值不中断", async () => {
+    const { ctx, state, mockAdapter } = makeMockCtx();
+    const oldUpdate = vi.fn();
+    state.perFrame = oldUpdate;
+    state.built = { dispose: vi.fn() } as unknown as PreviewScene;
+    state.sceneBaseline = new Set();
+    let seenDuringBuild: ((dt: number) => void) | null = null;
+    mockAdapter.build.mockImplementation(async () => {
+      seenDuringBuild = state.perFrame;
+      return { dispose: vi.fn() };
+    });
+    await switchToSession(ctx, "new.glb", { keepInScene: true });
+    expect(seenDuringBuild).toBe(oldUpdate); // 同台模式旧模型仍在场景，不中断
   });
 });

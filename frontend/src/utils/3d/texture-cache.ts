@@ -19,6 +19,13 @@ export class TextureCacheImpl {
   private cache = new Map<string, CacheEntry>();
 
   /**
+   * @param maxEntries 容量上限（审核 P3-3）：归零条目在超限时按最久未用（LRU）
+   *   淘汰并 dispose，防单一长会话浏览大量不同模型时 GPU 常驻纹理单调增长；
+   *   仍被引用（refs>0）的条目永不淘汰，跨模型复用语义不变。
+   */
+  constructor(private maxEntries = 200) {}
+
+  /**
    * 获取缓存纹理或创建新纹理。
    * @param url   纹理 URL / dataURL
    * @param make  创建器（url → Texture），仅缓存未命中时调用
@@ -27,11 +34,27 @@ export class TextureCacheImpl {
     let entry = this.cache.get(url);
     if (entry) {
       entry.refs++;
+      // LRU：命中即刷新访问序（Map 迭代序 = 插入序，delete+set 移到最新）
+      this.cache.delete(url);
+      this.cache.set(url, entry);
       return entry.tex as T;
     }
+    this.evictZeroRefIfNeeded();
     const tex = make(url);
     this.cache.set(url, { tex, refs: 1 });
     return tex;
+  }
+
+  /** 超容量时淘汰最久未用的归零条目（Map 头部 = 最旧）；无可淘汰则放行超限 */
+  private evictZeroRefIfNeeded(): void {
+    if (this.cache.size < this.maxEntries) return;
+    for (const [k, e] of this.cache) {
+      if (this.cache.size < this.maxEntries) break;
+      if (e.refs === 0) {
+        safeDispose(e.tex);
+        this.cache.delete(k);
+      }
+    }
   }
 
   /**

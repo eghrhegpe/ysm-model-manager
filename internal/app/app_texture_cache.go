@@ -7,6 +7,7 @@ package app
 import (
 	"encoding/base64"
 	"fmt"
+	"log"
 	"os"
 
 	"ysm-model-manager/go/fsutil"
@@ -105,13 +106,19 @@ func (a *App) GetCachedTextureByHash(hash string) (string, error) {
 
 // HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。
 // 一次 RPC 返回所有检查结果，map[hash] → 是否存在。
+// 检查出错（IO/权限等，非「未命中」）时：记录日志 + 该 hash 置 false（视为未命中，
+// 前端安全回退 PNG 解码），不让错误静默丢失（Go AGENTS「错误不要丢」）。
+// 修复前 err 时静默跳过该 hash，前端读缺失 key 当「未缓存」，错误完全无留痕。
 func (a *App) HasCachedTextures(hashes []string) map[string]bool {
 	result := make(map[string]bool, len(hashes))
 	for _, h := range hashes {
 		ok, err := texture_cache.HasCached(h)
-		if err == nil {
-			result[h] = ok
+		if err != nil {
+			log.Printf("[texture_cache] 检查缓存 %s 失败: %v", h, err)
+			result[h] = false // 查询失败视为未命中，前端安全回退
+			continue
 		}
+		result[h] = ok
 	}
 	return result
 }

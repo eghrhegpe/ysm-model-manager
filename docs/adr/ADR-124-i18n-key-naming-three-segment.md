@@ -105,7 +105,7 @@ preview.zoom           preview.zoomIn          preview.zoomOut
 | **CI 卡口** | 任何**新增**的键，CI 强制三段式 | `scripts/i18n-key-naming.mjs`（本 ADR 新增） |
 | **旧键扫描** | 一次性扫出所有"实体直挂 root"违规键，列清单 | 同上脚本 `--list-violations` |
 | **局部重构** | 仅"高频歧义实体"（bone / texture / pack / model 等）逐个 PR 迁移 | 手动；每个 PR 不超过 50 键 |
-| **旧键废弃** | 旧键保留作为"语义注释"防 grep 漏掉；新键 t() 优先查 | 见 §2.3 兼容表 |
+| **旧键废弃** | 实际落地：**改名时同步改全部调用点 + 语言包删旧键**（不留兼容表）；详见 §2.3 实施调整 | 见 §2.3 |
 
 **禁止做的事**：
 
@@ -113,18 +113,25 @@ preview.zoom           preview.zoomIn          preview.zoomOut
 - ❌ 改成嵌套对象（调用方式 t() 签名要变，回归风险大）
 - ❌ 强求"所有现有键"统一（绝大多数现有键没歧义，无收益）
 
-### 2.3 旧→新兼容表机制
+### 2.3 旧→新迁移策略：同步改调用点（原兼容表机制未落地）
 
-`t()` 内部维护一份"旧键→新键"映射表（写在 `frontend/src/core/i18n/locales/legacy-key-map.ts`），旧键命中时**优先查新键**：
+> **实施调整（2026-08-31 实锤，决策变更）**：本节原定的「旧键→新键兼容表回退」机制**未落地**——
+> 全仓库不存在 `frontend/src/core/i18n/locales/legacy-key-map.ts`，`t()`（`frontend/src/core/i18n/t.ts`）只有直查 +
+> `console.warn` 兜底，无旧键→新键回退逻辑。实际采用**同步改调用点**策略：改名键（如
+> `workshop.saved → workshop.action.saved`，见 52784c3d）时，同步改全部调用点 + 测试断言 + 三语言包，
+> 旧键从语言包**直接删除**（`grep workshop.saved` 零残留）。原「兼容表回退」从决策降级为**备选方案**，
+> 仅在出现「无法同步改调用点」（如第三方/插件消费旧键）时再启用。
+
+原设计（备选，不启用）：
 
 ```ts
-// 伪代码
+// 伪代码——备选机制，当前未启用
 function t(key, params) {
   // 1. 直查
   let text = bundle[key];
   if (text !== undefined) return interpolate(text, params);
 
-  // 2. 兼容回退：旧键→新键
+  // 2. 兼容回退：旧键→新键（当前无 legacy-key-map.ts，本段不存在）
   const newKey = legacyKeyMap[key];
   if (newKey && bundle[newKey] !== undefined) {
     return interpolate(bundle[newKey], params);
@@ -136,10 +143,10 @@ function t(key, params) {
 }
 ```
 
-**好处**：
-- 调用方代码 `t("preview.bones")` 完全不动
-- 翻译人员改时**优先改新键**（在文档/知识卡中标注）
-- 长期逐步废弃旧键
+**采用「同步改调用点」的理由**：
+- 迁移键量可控（每个 PR ≤50 键），调用点 grep 可穷尽，同步改比长期维护映射表更简单、无「翻译改旧键白改」的隐性坑
+- 旧键直接删除而非保留，**杜绝了「翻译改旧键以为生效实则无效」的失效陷阱**（i18n_accuracy.md 曾记录 10 处键名迁移后值未同步的问题，正是旧键残留的后果）
+- 维护成本：无需维护 `legacy-key-map.ts` 长期表
 
 ### 2.4 命名检查脚本：`scripts/i18n-key-naming.mjs`
 
@@ -199,14 +206,14 @@ node scripts/i18n-key-naming.mjs --check newKey1 newKey2  # 检查指定键
 
 - **大模型/翻译人员消歧**：`preview.metric.boneCount` 一看就是"3D 预览的统计指标：骨骼数"，和 `skeleton.*` 填充面板零冲突。
 - **CI 卡口**新增键，三段式从源头强制，旧键不再"劣币驱逐良币"。
-- **最小迁移成本**：旧键保留 + 兼容表，调用方零改动。
+- **最小迁移成本**：每批 ≤50 键、`grep` 穷尽调用点同步改 + 删旧键，一次到位不留债（见 §2.3 实施调整）。
 - **可分批做**：每个 PR 不超过 50 键，可持续。
 - **教学价值**：以"骨骼"为正向案例，沉淀 i18n 命名规范到知识卡。
 
 ### 3.2 负面
 
 - **键数量略增**：每个旧键多 1 段（`.section` / `.tab` 等），但命名空间天然分布，不会爆炸。
-- **需要维护兼容表**：`legacy-key-map.ts` 长期存在，每次迁移 PR 减一行。
+- **迁移需同步改调用点**（§2.3 实施调整）：改名键必须 `grep` 穷尽所有调用点 + 测试断言 + 三语言包，漏一处则 `t()` 直查 miss 返回 key 本身（白屏风险）。相比原兼容表方案，单次迁移改动面略大；换来的收益是删除旧键、无长期映射表维护与「改旧键失效」陷阱。
 - **教育成本**：新成员需理解"角色"概念，AGENTS.md / 知识卡需更新。
 
 ### 3.3 已知遗留
@@ -226,6 +233,6 @@ node scripts/i18n-key-naming.mjs --check newKey1 newKey2  # 检查指定键
 | 18 个"骨骼"相关键（zh-CN.ts grep） | 命名空间分散在 7 处 | 痛点 A 量化 |
 | 大模型/翻译人员误改测试 | "骨骼"改 1 处引发 4 处错改 | 痛点 A 案例 |
 | `scripts/i18n-key-naming.mjs`（新增） | CI 模式 | §2.4 实现 |
-| `frontend/src/core/i18n/locales/legacy-key-map.ts`（新增） | 旧键→新键兼容表 | §2.3 实现 |
+| 2026-08-31 实施核实 | 全仓库无 `legacy-key-map.ts`；`t.ts` 无旧键→新键回退；`workshop.saved→action.saved` 调用点全部同步改、旧键零残留 | §2.3 决策变更为「同步改调用点」，兼容表降级为备选 |
 
 <!-- 文件名: i18n-key-naming-three-segment.md → 实际文件 ADR-124-i18n-key-naming-three-segment.md -->

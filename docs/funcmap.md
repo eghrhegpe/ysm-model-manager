@@ -288,10 +288,10 @@
 | `InstallDirLocked()` | `go/installer/installer:185` | InstallDirLocked 与 InstallDir 语义相同，但不重复加锁——供已持锁调用方使用。 |
 | `InstallDirRelLocked()` | `go/installer/installer:191` | InstallDirRelLocked 与 InstallDirRel 语义相同，但不重复加锁——供 sync.PushResources 等整段持 InstallLock 的调用 |
 | `InstallToGlobal()` | `go/installer/installer:474` | InstallToGlobal 安装到全局 custom 目录 |
-| `InstallWithOverlay()` | `go/installer/installer:500` | InstallWithOverlay 带冲突检查的安装 |
-| `CopyFile()` | `go/installer/installer:584` | CopyFile 复制文件到目标目录（带互斥锁） |
-| `CopyFileLocked()` | `go/installer/installer:592` | CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
-| `IsValidRepoRoot()` | `go/installer/installer:742` | IsValidRepoRoot 禁止选择系统敏感目录作为仓库 跨平台实现：禁止根目录、系统关键目录 |
+| `InstallWithOverlay()` | `go/installer/installer:503` | InstallWithOverlay 带冲突检查的安装 注意（R25 P4-1）：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有 .minec |
+| `CopyFile()` | `go/installer/installer:587` | CopyFile 复制文件到目标目录（带互斥锁） |
+| `CopyFileLocked()` | `go/installer/installer:595` | CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
+| `IsValidRepoRoot()` | `go/installer/installer:745` | IsValidRepoRoot 禁止选择系统敏感目录作为仓库 跨平台实现：禁止根目录、系统关键目录 |
 
 ## go/instance
 

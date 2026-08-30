@@ -497,6 +497,9 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 }
 
 // InstallWithOverlay 带冲突检查的安装
+// 注意（R25 P4-1）：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有
+// .minecraft 守卫，源侧仅靠调用方约束）；前端已 0 消费（Deprecated 绑定，
+// 上层 InstallModelWithOverlay 仅兼容旧绑定面），待发版清理。
 func InstallWithOverlay(src, customDir string) (string, error) {
 	InstallLock.Lock()
 	defer InstallLock.Unlock()

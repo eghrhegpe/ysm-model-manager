@@ -681,6 +681,20 @@ export const ja: Record<string, string> = {
   "sync.busySkip": "同期中、今回はスキップ",
   "sync.failedToast": "同期失敗: {msg}",
 
+  // instance-ops ハンドラー（core/handlers/instance-ops.ts）
+  "inst.packNotFound": "統合パックが見つかりません",
+  "inst.noResources": "この統合パックにはリソースファイルがありません",
+  "inst.exportListCopied": "📋 {n} 個のファイル一覧をクリップボードにコピーしました",
+  "inst.nothingToClear": "クリアできるリソースファイルがありません",
+  "inst.clearTitle": "統合パックをクリア",
+  "inst.clearMessage": "{name} をクリア\nスキャンされた {n} 個のリソースファイルがクリアされます（ゴミ箱へ、復元可能）。\nタイプ：{type}\n未入庫のファイルはそのまま残ります。続行しますか？",
+  "inst.clearOk": "🗑️ クリア",
+  "inst.cancelled": "キャンセルしました",
+  "inst.cleared": "🗑️ {name}: {n} 個のファイルをクリアしました（ゴミ箱へ）",
+  "inst.countFail": "リソース数を集計できません",
+  "inst.countFailPrefix": "集計失敗",
+  "inst.clearFail": "クリア失敗",
+
   // ── Diagnostics Operation Types ──
   "diagnostics.logsCleared": "ログをクリアしました",
   "diagnostics.opImport": "インポート",

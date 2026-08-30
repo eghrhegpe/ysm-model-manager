@@ -683,6 +683,20 @@ export const zhCN: Record<string, string> = {
   "sync.busySkip": "同步进行中，已跳过本次",
   "sync.failedToast": "同步失败: {msg}",
 
+  // instance-ops 处理器（core/handlers/instance-ops.ts）
+  "inst.packNotFound": "未找到整合包",
+  "inst.noResources": "该整合包没有资源文件",
+  "inst.exportListCopied": "📋 已复制 {n} 个文件清单到剪贴板",
+  "inst.nothingToClear": "该整合包没有可清空的资源文件",
+  "inst.clearTitle": "清空整合包",
+  "inst.clearMessage": "清空 {name}\n扫描到 {n} 个资源文件将被清空（走回收站，可恢复）。\n类型：{type}\n未入库的文件保留不动。确定继续吗？",
+  "inst.clearOk": "🗑️ 清空",
+  "inst.cancelled": "已取消",
+  "inst.cleared": "🗑️ {name}: 已清空 {n} 个文件（移入回收站）",
+  "inst.countFail": "无法统计资源数量",
+  "inst.countFailPrefix": "统计失败",
+  "inst.clearFail": "清空失败",
+
   // ── 诊断操作类型 ──
   "diagnostics.logsCleared": "日志已清空",
   "diagnostics.opImport": "导入",

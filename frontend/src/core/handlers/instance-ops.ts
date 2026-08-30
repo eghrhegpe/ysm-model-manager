@@ -34,7 +34,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         const ins = instances.find((i) => i.Name === insName);
         if (!ins?.VersionDir) {
           bus.emit("toast:show", {
-            msg: "未找到整合包",
+            msg: t("inst.packNotFound"),
             duration: TOAST_MS.normal,
             type: "error",
           });
@@ -73,7 +73,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         // L118 `totalCount === 0` 写法不一致
         if (totalFiles === 0) {
           bus.emit("toast:show", {
-            msg: "该整合包没有资源文件",
+            msg: t("inst.noResources"),
             duration: TOAST_MS.success,
             type: "info",
           });
@@ -83,7 +83,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         const text = allLines.join("\n");
         await navigator.clipboard.writeText(text);
         bus.emit("toast:show", {
-          msg: `📋 已复制 ${totalFiles} 个文件清单到剪贴板`,
+          msg: t("inst.exportListCopied", { n: totalFiles }),
           duration: TOAST_MS.normal,
           type: "success",
         });
@@ -118,12 +118,12 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
           totalCount = await CountInstanceResources(insName, rtype);
         } catch (countErr) {
           // 统计失败不静默：显示「没有资源」会误导用户以为整合包为空
-          toastError(countErr, "无法统计资源数量", "统计失败");
+          toastError(countErr, t("inst.countFail"), t("inst.countFailPrefix"));
           return;
         }
         if (totalCount === 0) {
           bus.emit("toast:show", {
-            msg: "该整合包没有可清空的资源文件",
+            msg: t("inst.nothingToClear"),
             duration: TOAST_MS.success,
             type: "info",
           });
@@ -131,15 +131,15 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         }
         const typeLabel = RESOURCE_TYPE_LABELS[rtype] || rtype;
         const confirmed = await modalConfirm({
-          title: "清空整合包",
+          title: t("inst.clearTitle"),
           icon: "🗑️",
-          message: `清空 ${insName}\n扫描到 ${totalCount} 个资源文件将被清空（走回收站，可恢复）。\n类型：${typeLabel}\n未入库的文件保留不动。确定继续吗？`,
-          okText: "🗑️ 清空",
+          message: t("inst.clearMessage", { name: insName, n: totalCount, type: typeLabel }),
+          okText: t("inst.clearOk"),
           danger: true,
         });
         if (!confirmed) {
           bus.emit("toast:show", {
-            msg: "已取消",
+            msg: t("inst.cancelled"),
             duration: TOAST_MS.quick,
             type: "info",
           });
@@ -149,12 +149,12 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
           const count = await ClearInstanceResources(insName, rtype);
           bus.emit("stats:refresh");
           bus.emit("toast:show", {
-            msg: `🗑️ ${insName}: 已清空 ${count} 个文件（移入回收站）`,
+            msg: t("inst.cleared", { name: insName, n: count }),
             duration: TOAST_MS.normal,
             type: "success",
           });
         } catch (err) {
-          toastError(err, "清空失败", "清空失败");
+          toastError(err, t("inst.clearFail"), t("inst.clearFail"));
         }
       } catch (e) {
         toastError(e);

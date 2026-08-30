@@ -680,6 +680,20 @@ export const en: Record<string, string> = {
   "sync.busySkip": "Sync in progress, skipped this time",
   "sync.failedToast": "Sync failed: {msg}",
 
+  // instance-ops handlers (core/handlers/instance-ops.ts)
+  "inst.packNotFound": "Modpack not found",
+  "inst.noResources": "This modpack has no resource files",
+  "inst.exportListCopied": "📋 Copied {n} file names to clipboard",
+  "inst.nothingToClear": "Nothing to clear in this modpack",
+  "inst.clearTitle": "Clear modpack",
+  "inst.clearMessage": "Clear {name}\n{n} resource files found will be cleared (to recycle bin, recoverable).\nType: {type}\nFiles not in the repo are left untouched. Continue?",
+  "inst.clearOk": "🗑️ Clear",
+  "inst.cancelled": "Cancelled",
+  "inst.cleared": "🗑️ {name}: cleared {n} files (moved to recycle bin)",
+  "inst.countFail": "Unable to count resources",
+  "inst.countFailPrefix": "Count failed",
+  "inst.clearFail": "Clear failed",
+
   // ── Diagnostics Operation Types ──
   "diagnostics.logsCleared": "Logs cleared",
   "diagnostics.opImport": "Import",

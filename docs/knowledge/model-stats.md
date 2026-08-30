@@ -42,7 +42,7 @@ invariant_anchors:
 
 - **`stats-protocol.ts`** — 协议层：`StatsWorkerRequest` / `StatsWorkerResponse` / `WebModelStats` / `WebModelStatsWithPath` 类型；`STATS_BATCH_LIMIT`（单批上限）
 
-- **`stats.worker.ts`** — Worker 入口：独立 `import` WASM + `open` IndexedDB（同源），消息驱动批量处理
+- **`stats.worker.ts`** — Worker 入口：独立 `import` WASM + `open` IndexedDB（同源），消息驱动批量处理；COI 满足时优先 pthread 多线程 WASM（ADR-079 M4），mt init 失败回退一次单线程 init 再判 error（P2 审核修复：防 COI 满足但 pthread 环境瞬态异常的设备永久失去数值统计）
 
 - **`web-stats.ts`** — 主线程编排：
   - `batchStatsWebModels(paths)` — 串行发送请求（同一时刻至多一个），批间 `STATS_CHUNK_TIMEOUT_MS`（60s）超时终止防僵尸

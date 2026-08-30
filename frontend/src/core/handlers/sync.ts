@@ -39,7 +39,7 @@ async function runDownloadMissing(
   const filesRoot = await GetRepoRoot(rtype);
   if (!filesRoot) {
     bus.emit("toast:show", {
-      msg: "请先配置该资源类型目录",
+      msg: t("sync.configureResourceTypeDir"),
       duration: TOAST_MS.normal,
       type: "warn",
     });
@@ -160,7 +160,7 @@ async function runSyncToggleStatus(): Promise<void> {
   const mcRoot = await requireMcRoot();
   if (!filesRoot || !mcRoot) {
     bus.emit("toast:show", {
-      msg: "请先配置目录",
+      msg: t("sync.configureDir"),
       duration: TOAST_MS.normal,
       type: "warn",
     });

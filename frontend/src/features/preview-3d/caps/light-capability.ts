@@ -355,7 +355,8 @@ export function lightDirToPosition(p: DirectionalLightParams, radius: number): T
 
 /** PMREM 环境光开启时 ambient 让位系数（双间接光叠加防过亮/互相稀释——
  *  [doc:adr-126-p5] 光系统统一性 #3）。预览（refreshAmbientFromSky）与截图
- *  （skeleton-render toScreenshotLights）共用——×0.5 单一事实源，改一处两处同步。
+ *  （features/preview-3d/screenshot-lights.ts toScreenshotLights，ADR-136 归位）共用——
+ *  ×0.5 单一事实源，改一处两处同步。
  *  模块常量不导出：外部唯一入口是 attenuateAmbientForSky()（knip 零未引用导出） */
 const SKY_ENV_AMBIENT_ATTENUATION = 0.5;
 

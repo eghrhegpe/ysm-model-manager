@@ -1,5 +1,5 @@
 // @vitest-environment node
-// ===== 多角度截图渲染器测试 =====
+// ===== 多角度截图渲染器测试（ADR-136 第四刀随实现迁至 features/preview-3d）=====
 // 覆盖 renderMultiAngle 全部路径：
 //  - spec 获取/解析失败 → null（P2 修复：不 reject 防 unhandled rejection）
 //  - models 为空 → null；loadTextures/buildSceneMesh 抛错 → null
@@ -7,7 +7,7 @@
 //  - P3 修复：空 base64（GPU 异常）不入结果集
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObjectMock, threeStub } =
+const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObjectMock, buildSpecMock, threeStub } =
   vi.hoisted(() => {
     class FakeVec {
       x = 0;
@@ -99,6 +99,7 @@ const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObje
       loadTexturesMock: vi.fn(),
       buildSceneMeshMock: vi.fn(),
       buildYsmObjectMock: vi.fn(),
+      buildSpecMock: vi.fn(),
       threeStub: {
         NoToneMapping: 0,
         WebGLRenderer: FakeWebGLRenderer,
@@ -127,17 +128,18 @@ const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObje
   });
 
 vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
-vi.mock("./model3d-loader.ts", () => ({ loadTextures: loadTexturesMock }));
+vi.mock("./texture-loader.ts", () => ({ loadTextures: loadTexturesMock }));
 // buildSceneMesh/compKey 已从 model3d.ts 迁至 mesh.ts（model3d 拆分）——mock 目标同步迁移，
 // 否则 mock 失效会跑真实实现（three 被 mock 成 Fake 类，行为不符 → renderMultiAngle 返回 null）
-vi.mock("../../features/preview-3d/mesh.ts", () => ({
+vi.mock("./mesh.ts", () => ({
   buildSceneMesh: buildSceneMeshMock,
   compKey: (mi: number, boneId: string) => `${mi}:${boneId}`,
 }));
-vi.mock("../../features/preview-3d/ysm-object.ts", () => ({ buildYsmObject: buildYsmObjectMock }));
+vi.mock("./ysm-object.ts", () => ({ buildYsmObject: buildYsmObjectMock }));
+vi.mock("./spec-builder.ts", () => ({ buildSpecFromGeometryJSON: buildSpecMock }));
 vi.mock("three", () => threeStub);
 
-import { renderMultiAngle } from "./screenshot-renderer.ts";
+import { renderMultiAngle } from "./screenshot-render.ts";
 
 const validSpec = {
   models: [
@@ -215,6 +217,24 @@ describe("renderMultiAngle — 防御路径", () => {
     specMock.mockResolvedValue(JSON.stringify({ models: [] }));
     expect(await renderMultiAngle("/m/a.ysm", [])).toBeNull();
     expect(threeStub.WebGLRenderer.instances).toHaveLength(0);
+  });
+
+  it("spec.models 为空 + 注入 decodeYsm 兜底 → buildSpecFromGeometryJSON 重建 spec", async () => {
+    // ADR-136：WASM 兜底由视图层经 options.decodeYsm 注入（不再直接 import views/wasm.ts）
+    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    buildSpecMock.mockReturnValue(JSON.stringify(validSpec));
+    const decodeYsm = vi.fn().mockResolvedValue({ geometryRaw: JSON.stringify(validSpec.models[0]) });
+    const shots = await renderMultiAngle("/m/a.ysm", [], { decodeYsm: decodeYsm as never });
+    expect(decodeYsm).toHaveBeenCalledWith("/m/a.ysm");
+    expect(buildSpecMock).toHaveBeenCalled();
+    expect(shots).not.toBeNull();
+  });
+
+  it("注入 decodeYsm 返回 null（解码失败）→ 返回 null", async () => {
+    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    buildSpecMock.mockReturnValue(JSON.stringify(validSpec));
+    const decodeYsm = vi.fn().mockResolvedValue(null);
+    expect(await renderMultiAngle("/m/a.ysm", [], { decodeYsm: decodeYsm as never })).toBeNull();
   });
 
   it("loadTextures 抛错 → 外层 catch → console.warn + 返回 null", async () => {

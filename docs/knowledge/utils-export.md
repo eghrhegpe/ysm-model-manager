@@ -4,12 +4,15 @@ name: 截图与导出 export
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/views/app-preview/screenshot-renderer.ts
+  - frontend/src/features/preview-3d/screenshot-render.ts
+  - frontend/src/features/preview-3d/screenshot-lights.ts
+  - frontend/src/features/preview-3d/texture-loader.ts
   - frontend/src/views/app-preview/cache.ts
   - frontend/src/features/preview-3d/screenshot.ts
 tests:
   - frontend/src/views/app-preview/cache.test.ts
-  - frontend/src/views/app-preview/screenshot-renderer.test.ts
+  - frontend/src/features/preview-3d/screenshot-render.test.ts
+  - frontend/src/features/preview-3d/texture-loader.test.ts
 use_when:
   - 截图
   - 导出 PNG
@@ -26,7 +29,7 @@ invariant_anchors:
 
 ## 概览
 
-预览产物的导出与缓存层：`screenshot-renderer.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图入口 `screenshotPreview()` 位于 [model3d](./model3d.md)。
+预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图入口 `screenshotPreview()` 位于 [model3d](./model3d.md)。截图灯光提取（`toScreenshotLights`）与纹理加载（`loadTextures`）已随 ADR-136 第四刀归位 features/preview-3d（`screenshot-lights.ts` / `texture-loader.ts`）。
 
 ## 核心职责
 
@@ -35,7 +38,7 @@ invariant_anchors:
 
 ## 对外 API / 入口
 
-`screenshot-renderer.ts`：
+`screenshot-render.ts`：
 - `renderMultiAngle(modelPath: string, texUrls: string[], opts?: { size? }): Promise<AngleShot[] | null>` — 经 `GetModel3DSpec` 取 spec + `loadTextures` 加载纹理，离屏 WebGLRenderer（alpha 透明背景，默认 512×512）渲染四角度，返回 `[{ name, base64 }]`（PNG base64 无 data: 前缀）；结束 traverse dispose 全部 geometry/material + renderer
 - `AngleShot` 接口：`{ name: "front" | "45" | "side" | "back45", base64 }`
 
@@ -46,8 +49,8 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- 消费方：`app-preview/preview-skeleton.ts`（renderMultiAngle 多角度截图 + model3d.screenshotPreview 当前画面截图）、`app-preview/index.ts` + `preview-loader.ts` + `preview-wasm.ts`（preview-cache 读写与 evict 注册）
-- 依赖 [model3d](./model3d.md) 的 buildSceneMesh、model3d-loader 的 loadTextures；Go binding：GetModel3DSpec
+- 消费方：`app-preview/skeleton-render.ts`（renderMultiAngle 多角度截图 + model3d.screenshotPreview 当前画面截图，经 `screenshot-lights.ts` toScreenshotLights 提取预览灯光）、`app-preview/index.ts` + `preview-loader.ts` + `preview-wasm.ts`（preview-cache 读写与 evict 注册）
+- 依赖 [model3d](./model3d.md) 的 buildSceneMesh、`texture-loader.ts` 的 loadTextures；Go binding：GetModel3DSpec
 
 ## 不变量
 

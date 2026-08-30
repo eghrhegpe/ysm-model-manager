@@ -585,7 +585,7 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 
 - **2D 预览**：`features/preview-3d/model2d.ts`（~19.4KB）处理平铺/网格 2D 缩略图（Canvas 2D 正交投影）。
 - **缓存**：`utils/preview-cache.ts` 预览缓存 FIFO；`model3d-loader.ts` LRU 20 条 spec 缓存；`texture-cache.ts` 纹理引用计数池（跨模型复用，session 结束统一释放）。
-- **截图**：`features/preview-3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-renderer.ts` 离屏多角度；Go 端 `app_files.go:ExtractPreviewTexture` 提取预览纹理。
+- **截图**：`features/preview-3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-render.ts` 离屏多角度（ADR-136 归位）+ `screenshot-lights.ts` toScreenshotLights（预览灯光提取）；Go 端 `app_files.go:ExtractPreviewTexture` 提取预览纹理。
 
 ---
 

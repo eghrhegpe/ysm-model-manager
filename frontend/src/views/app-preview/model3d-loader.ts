@@ -1,11 +1,12 @@
 // ===== 3D 模型加载器（类型化版 — ADR-014 P2）=====
+// loadTextures 已随 ADR-136 第四刀归位 features/preview-3d/texture-loader.ts
 import * as THREE from "three";
 import { getApp } from "../../backend/app.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 import { buildSpecFromGeometryJSON } from "../../features/preview-3d/spec-builder.ts";
-import { textureCache } from "../../features/preview-3d/texture-cache.ts";
+import { loadTextures } from "../../features/preview-3d/texture-loader.ts";
 import { recordLoadTrace } from "../../features/preview-3d/load-trace.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
@@ -49,59 +50,7 @@ function getCachedSpec(path: string): string | undefined {
   return data;
 }
 
-/** 并行加载纹理 URL 列表，返回 THREE.Texture 数组（P0 优化：纹理缓存池，同 URL 复用） */
-export async function loadTextures(urls?: string[]): Promise<(THREE.Texture | null)[]> {
-  if (!urls?.length) return [];
-  const texArr: (THREE.Texture | null)[] = urls.map((url) => {
-    if (!url) return null;
-    return textureCache.acquire(url, (u) => {
-      // 缓存未命中：创建新纹理
-      const img = new Image();
-      // 同步创建，异步填充——acquire 需要立即返回 Texture 实例
-      const tex = new THREE.Texture(img);
-      tex.flipY = false;
-      tex.minFilter = THREE.NearestFilter;
-      tex.magFilter = THREE.NearestFilter;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      // 异步加载图片并更新纹理
-      img.onload = (): void => {
-        tex.needsUpdate = true;
-        tex.userData.imgWidth = img.naturalWidth;
-        tex.userData.imgHeight = img.naturalHeight;
-      };
-      img.onerror = (): void => {
-        tex.userData.loadError = true;
-      };
-      img.src = u;
-      return tex;
-    });
-  });
-  // 等待所有图片加载完成（确保 needsUpdate 已触发）
-  await Promise.all(
-    texArr.map((tex, i) =>
-      tex && urls[i]
-        ? new Promise<void>((resolve) => {
-            const img = tex.image;
-            if (img && typeof (img as HTMLImageElement).complete === "boolean" && (img as HTMLImageElement).complete) { resolve(); return; }
-            const check = (): void => {
-              if (img && typeof (img as HTMLImageElement).complete === "boolean" && (img as HTMLImageElement).complete) resolve();
-              else setTimeout(check, 50);
-            };
-            check();
-          })
-        : Promise.resolve(),
-    ),
-  );
-  for (let i = 0; i < texArr.length; i++) {
-    if (texArr[i]?.userData.loadError) {
-      if (urls[i]) textureCache.invalidate(urls[i]);
-      texArr[i] = null;
-    }
-  }
-  if (texArr.every((t) => t === null))
-    console.warn("[3D] 纹理加载失败，模型将显示为 fallback 颜色");
-  return texArr;
-}
+/** 并行加载纹理 URL 列表，返回 THREE.Texture 数组（ADR-136 归位 features/preview-3d/texture-loader.ts） */
 
 /** 获取模型 spec（Go 绑定为唯一事实来源，ADR-004；Android 等无 Node 环境降级前端 WASM 解码兜底） */
 async function fetchSpec(model: ModelLike): Promise<ModelSpec> {

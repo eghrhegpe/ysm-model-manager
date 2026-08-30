@@ -56,7 +56,7 @@ vi.mock("../../bus.ts", () => ({ bus: { emit: busEmit } }));
 vi.mock("../../utils/dom/errors.ts", () => ({ friendlyError }));
 vi.mock("./tpl.ts", () => ({ statsCardHTML }));
 vi.mock("./bone-names.ts", () => ({ buildBoneNamesText }));
-vi.mock("./screenshot-renderer.ts", () => ({ renderMultiAngle }));
+vi.mock("../../features/preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
 vi.mock("./model3d-loader.ts", () => ({ preloadModel }));
 // §5.7 shared 化：3D 打开收敛到 ysm-3d（path 驱动），骨架层测试 mock 编排层——
 // shared 外壳（挂 scene/导航/raycast）集成由 ysm-3d.test.ts（three stub）覆盖

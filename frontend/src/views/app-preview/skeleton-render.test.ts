@@ -15,7 +15,8 @@ const { getApp, screenshotFn, renderMultiAngle, saveFile } = vi.hoisted(() => ({
 
 vi.mock("../../core/i18n/t.ts", () => ({ t: (k: string) => k }));
 vi.mock("../../backend/app.ts", () => ({ getApp }));
-vi.mock("./screenshot-renderer.ts", () => ({ renderMultiAngle }));
+vi.mock("../../features/preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
+vi.mock("./wasm.ts", () => ({ decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)) }));
 
 import { setup2DCanvas, buildToggleRow, buildStatsCard, buildBoneExportRow, saveScreenshot } from "./skeleton-render.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
@@ -329,7 +330,11 @@ describe("saveScreenshot", () => {
     saveFile.mockResolvedValue(undefined);
     const setShotState = vi.fn();
     await saveScreenshot(makeModel(), "front", setShotState, screenshotFn);
-    expect(renderMultiAngle).toHaveBeenCalledWith("/m/a.ysm", [""], { size: 512 });
+    expect(renderMultiAngle).toHaveBeenCalledWith(
+      "/m/a.ysm",
+      [""],
+      expect.objectContaining({ size: 512, decodeYsm: expect.any(Function) }),
+    );
     expect(saveFile).toHaveBeenCalledWith(expect.stringContaining("_front"), "f");
   });
 

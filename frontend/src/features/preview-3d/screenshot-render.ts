@@ -1,17 +1,24 @@
-// ===== 3D 多角度截图渲染器（类型化版 — ADR-014 P2）=====
+// ===== 3D 多角度截图渲染器（ADR-136 第四刀归位）=====
+// 原 views/app-preview/screenshot-renderer.ts 纯领域逻辑归位 features/preview-3d——
+// 无 DOM、纯 Three.js 离屏渲染，与 screenshot.ts 同域。
+// 依赖方向修复：`decodeYsmViaWasm`（视图层 wasm.ts，836 行深耦合视图兄弟）经
+// RenderMultiAngleOptions.decodeYsm 依赖注入，本文件不反向 import views。
 import * as THREE from "three";
-import { bus } from "../../bus.ts";
+
 import { getApp } from "../../backend/app.ts";
-import { loadTextures } from "./model3d-loader.ts";
-import { buildYsmObject, type YsmObjectHandle } from "../../features/preview-3d/ysm-object.ts";
-import { screenshotFromRenderer } from "../../features/preview-3d/screenshot.ts";
-import { type Spec3D } from "../../features/preview-3d/model3d.ts";
-import { buildSpecFromGeometryJSON } from "../../features/preview-3d/spec-builder.ts";
-import { lightDirToPosition, type DirectionalLightParams } from "../../features/preview-3d/caps/light-capability.ts";
-import { decodeYsmViaWasm } from "./wasm.ts";
+import {
+  type DirectionalLightParams,
+  lightDirToPosition,
+} from "./caps/light-capability.ts";
+import { type Spec3D } from "./model3d.ts";
+import { screenshotFromRenderer } from "./screenshot.ts";
+import { type ScreenshotLights } from "./screenshot-lights.ts";
+import { buildSpecFromGeometryJSON } from "./spec-builder.ts";
+import { loadTextures } from "./texture-loader.ts";
+import { buildYsmObject, type YsmObjectHandle } from "./ysm-object.ts";
 
 // ===== 3D 场景灯光样板（原 scene-lights.ts，唯一消费者是本文件，合并回）=====
-// 标准主灯参数（renderer-setup / screenshot-renderer 口径一致）
+// 标准主灯参数（renderer-setup / screenshot-render 口径一致）
 const DIR_LIGHT_POS = [10, 30, 20] as const;
 const AMBIENT_LIGHT_COLOR = 0xffffff;
 const AMBIENT_LIGHT_INTENSITY = 1.0;
@@ -50,12 +57,10 @@ export interface AngleShot {
   base64: string;
 }
 
-/** 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得） */
-export interface ScreenshotLights {
-  ambient: { color: number; intensity: number };
-  key: DirectionalLightParams;
-  fill: DirectionalLightParams;
-  rim: DirectionalLightParams;
+/** 前端 WASM 解码兜底注入类型（仅取 geometryRaw；不 import views 类型保边界）
+ *  内部类型不导出（knip 零未引用导出） */
+interface DecodeYsmFn {
+  (modelPath: string): Promise<{ geometryRaw?: string | null } | null>;
 }
 
 export interface RenderMultiAngleOptions {
@@ -64,6 +69,8 @@ export interface RenderMultiAngleOptions {
   componentTextures?: Record<string, string[]>;
   /** 截图灯光（从预览 LightCapability 提取——所见即所得；缺省回退标准灯） */
   lights?: ScreenshotLights;
+  /** 前端 WASM 解码兜底（视图层注入——features 不反向 import views；缺省跳过 WASM 兜底） */
+  decodeYsm?: DecodeYsmFn;
 }
 
 // renderMultiAngle 透明背景多角度截图
@@ -87,7 +94,7 @@ export async function renderMultiAngle(
     // ADR-071：web 端 spec 桩无效 → 前端 WASM 解码 + buildSpecFromGeometryJSON 兜底（同 model3d-loader）
     if (!spec?.models?.length) {
       try {
-        const decoded = await decodeYsmViaWasm(modelPath);
+        const decoded = opts.decodeYsm ? await opts.decodeYsm(modelPath) : null;
         if (decoded?.geometryRaw) {
           spec = JSON.parse(buildSpecFromGeometryJSON(decoded.geometryRaw)) as Spec3D;
         }

@@ -116,8 +116,7 @@ export function computeBoneLocalPos(
 ## 加载/桥接层
 
 **`model3d-loader.ts`**：
-- `loadTextures(urls?): Promise<(THREE.Texture | null)[]>` — 并行加载，`flipY=false` + `NearestFilter` + `SRGB`；**null 占位不压缩索引**（全失败时返回 null 占位数组而非空数组）
-- `preloadModel(model): Promise<{ texArr, spec, componentTexMap }>` — 纹理 + spec 并行预加载；内部 `fetchSpec` 走 Go `GetModel3DSpec` binding（模块级 `specCache` LRU 缓存上限 20）；Android/网页 viewer 模式降级 WASM 解码兜底（`fetchSpecViaWasmFallback` + `buildSpecFromModel`）。**ADR-114 perComponent：componentTexMap 数据源 = `spec.componentTextures`**（Go GetModel3DSpec 注入，键 = `comp_<i>` 对齐 BuildMulti ModelGroup 命名，zip/7z/解压目录三路同源；`model.componentTextures` 仅旧数据链兼容）——未声明组件（arrow 等投射物）按 YSM 游戏语义用同名纹理，不再依赖全局 texArr 槽位
+- `preloadModel(model): Promise<{ texArr, spec, componentTexMap }>` — 纹理 + spec 并行预加载（纹理加载走 `texture-loader.ts` 的 `loadTextures`，ADR-136 归位 features）；内部 `fetchSpec` 走 Go `GetModel3DSpec` binding（模块级 `specCache` LRU 缓存上限 20）；Android/网页 viewer 模式降级 WASM 解码兜底（`fetchSpecViaWasmFallback` + `buildSpecFromModel`）。**ADR-114 perComponent：componentTexMap 数据源 = `spec.componentTextures`**（Go GetModel3DSpec 注入，键 = `comp_<i>` 对齐 BuildMulti ModelGroup 命名，zip/7z/解压目录三路同源；`model.componentTextures` 仅旧数据链兼容）——未声明组件（arrow 等投射物）按 YSM 游戏语义用同名纹理，不再依赖全局 texArr 槽位
 - `spec-builder.ts` — spec 构建工具（WASM 兜底通道，含 `thicknessEpsilon` 零厚度面修正）；`cubeTexW/cubeTexH` 已对齐 Go 端 per-cube 记录来源 geometry 的 texture_width/height（恒 0 会让多组件 UV 全按第一个 geometry 尺寸归一化 → 缩放错）
 
 **桥接方向**：Go `GetModel3DSpec` ← [go_threejs](./go-threejs.md) `threejs.Build()` → `model3d-loader.ts` `fetchSpec` → 适配器 `build()` 挂进 `mount3D` 统一场景渲染。纹理/模型对象来自 [go_geometry](./go-geometry.md)。
@@ -133,7 +132,7 @@ export function computeBoneLocalPos(
 - `switchPreview(path, { keepInScene? })` — 会话内切换 / 同台追加（ADR-066 §5.6；keep 追加即多模型同框）
 - `cleanupPreview()` / `invalidatePreview()` — 清理与在途作废竞态守卫
 - `preview-library.ts` `openModel3DFullscreen(path, { cooperate? })` — 跨类型统一路由入口（ADR-093 T4）；**方案 A（2026-08-24）**：`cooperate=false` 且有活跃会话时先 `cleanupPreview()` 清理旧活跃全屏层（释放旧内容层 + 复位注册表 + 复原单例），再建新模型——把本函数注释「cooperate=false 会先清理旧的活跃全屏层」从名义变实际；对 ysm/mmd/vrm/litematic 所有类型的「二次点击资源列表」统一生效，不影响 `cooperate=true` 的 keepInScene 追加语义，也不影响会话内 `switchTo` 切换。契约测试见 `preview-library-replace.test.ts`
-- 截图：`features/preview-3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-renderer.ts` 离屏多角度
+- 截图：`features/preview-3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-render.ts` 离屏多角度（ADR-136 归位 features）+ `screenshot-lights.ts` toScreenshotLights（预览灯光提取）
 
 `model3d-loader.ts`：
 - `loadTextures(urls?): Promise<(THREE.Texture | null)[]>` — 并行加载，`flipY=false` + `NearestFilter` + `SRGB`；**null 占位不压缩索引**
@@ -156,7 +155,7 @@ export function computeBoneLocalPos(
 
 ## 与其他子系统关系
 
-- 消费方：`app-preview/ysm-3d.ts`（YSM 3D 薄包装，skeleton.ts 经此接入统一外壳）、`utils/screenshot-renderer.ts`（复用 buildSceneMesh + loadTextures 做离屏多角度截图）
+- 消费方：`app-preview/ysm-3d.ts`（YSM 3D 薄包装，skeleton.ts 经此接入统一外壳）、`features/preview-3d/screenshot-render.ts`（复用 buildSceneMesh + loadTextures 做离屏多角度截图，ADR-136 归位）
 - 上游数据：Go `GetModel3DSpec` binding ← [go_threejs](./go-threejs.md) `threejs.Build()`；纹理/模型对象来自 [go_geometry](./go-geometry.md)
 
 ## 不变量

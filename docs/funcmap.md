@@ -42,15 +42,15 @@
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 19 | 39 |
-| 前端·特性 | 140 | 623 |
+| 前端·特性 | 143 | 629 |
 | 前端·服务 | 2 | 18 |
-| frontend/test-utils | 6 | 37 |
+| frontend/test-utils | 7 | 38 |
 | frontend/ui | 18 | 66 |
 | 前端·工具 | 63 | 230 |
-| frontend/views | 122 | 359 |
+| frontend/views | 121 | 354 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **527** | **2254** |
+| **合计** | **530** | **2256** |
 
 ## Go·头像
 
@@ -1498,8 +1498,8 @@
 | `DEFAULT_LIGHT_PARAMS()` | `frontend/src/features/preview-3d/caps/light-capability:107` | — |
 | `LIGHT_PRESETS()` | `frontend/src/features/preview-3d/caps/light-capability:117` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
 | `lightDirToPosition()` | `frontend/src/features/preview-3d/caps/light-capability:348` | 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） |
-| `attenuateAmbientForSky()` | `frontend/src/features/preview-3d/caps/light-capability:363` | ambient 强度按 sky 环境开关套让位系数（镜像 AmbientParams 应用，公式单源） |
-| `LightCapability()` | `frontend/src/features/preview-3d/caps/light-capability:367` | — |
+| `attenuateAmbientForSky()` | `frontend/src/features/preview-3d/caps/light-capability:364` | ambient 强度按 sky 环境开关套让位系数（镜像 AmbientParams 应用，公式单源） |
+| `LightCapability()` | `frontend/src/features/preview-3d/caps/light-capability:368` | — |
 | `ReflectionMode()` | `frontend/src/features/preview-3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/features/preview-3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/features/preview-3d/caps/postprocessing-capability:87` | — |
@@ -1665,6 +1665,11 @@
 | `safeDispose()` | `frontend/src/features/preview-3d/safe-dispose:11` | 安全释放：dispose 抛错不阻塞后续释放（个别适配器 dispose 会抛） |
 | `SceneStats()` | `frontend/src/features/preview-3d/scene-stats:19` | 场景统计（ADR-131 P0 产出，调用方映射进 StatsCardModel） |
 | `collectSceneStats()` | `frontend/src/features/preview-3d/scene-stats:35` | 一次 traverse 收集统计；roots 接受 Scene 或 Object3D[]（sceneBaseline 差量后的内容层根） |
+| `ScreenshotLights()` | `frontend/src/features/preview-3d/screenshot-lights:18` | 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得） |
+| `toScreenshotLights()` | `frontend/src/features/preview-3d/screenshot-lights:26` | 从预览 LightCapability 提取截图灯光；cap 缺失 → undefined（渲染方回退标准灯） |
+| `AngleShot()` | `frontend/src/features/preview-3d/screenshot-render:55` | — |
+| `RenderMultiAngleOptions()` | `frontend/src/features/preview-3d/screenshot-render:66` | — |
+| `renderMultiAngle()` | `frontend/src/features/preview-3d/screenshot-render:77` | — |
 | `ScreenshotOpts()` | `frontend/src/features/preview-3d/screenshot:13` | 截图选项 |
 | `screenshotFromRenderer()` | `frontend/src/features/preview-3d/screenshot:27` | 从活跃的 renderer/scene/camera 截图，返回 PNG/JPEG base64（无 data: 前缀）。 |
 | `SemanticBoneId()` | `frontend/src/features/preview-3d/semantic-bones:21` | 语义骨骼 id（对齐 VRM humanoid 命名；MMD 经候选名匹配；center 为 MMD 特有整体根） |
@@ -1719,6 +1724,7 @@
 | `getTextureAlphaMode()` | `frontend/src/features/preview-3d/texture-alpha:35` | Classify alpha once per cached texture so material setup can choose a render path. |
 | `TextureCacheImpl()` | `frontend/src/features/preview-3d/texture-cache:18` | — |
 | `textureCache()` | `frontend/src/features/preview-3d/texture-cache:94` | 全局单例（随 3D 会话生命周期；disposeAll 由 cleanup-3d.ts 调用） |
+| `loadTextures()` | `frontend/src/features/preview-3d/texture-loader:9` | — |
 | `VrmMaterialListItem()` | `frontend/src/features/preview-3d/vrm-materials:11` | 材质列表项（listVrmMaterials） |
 | `VrmMaterialDetail()` | `frontend/src/features/preview-3d/vrm-materials:17` | 材质详情（getVrmMaterialDetail） |
 | `listVrmMaterials()` | `frontend/src/features/preview-3d/vrm-materials:28` | 材质列表：vrm.scene 遍历所有 Mesh.material（含数组材质） |
@@ -1774,6 +1780,7 @@
 | `fireInput()` | `frontend/src/test-utils/events:45` | 模拟输入变化（更新 input.value 并触发 input + change 事件） |
 | `fireDrop()` | `frontend/src/test-utils/events:55` | 模拟拖拽 drop：构造 DragEvent 并注入 dataTransfer（happy-dom 忽略 DragEvent init 参数，需 defineProperty） |
 | `fireDrag()` | `frontend/src/test-utils/events:67` | 模拟任意类型拖拽事件（dragstart/dragover/dragleave…），与 fireDrop 同款 dataTransfer 注入 |
+| `FakeImage()` | `frontend/src/test-utils/fake-image:4` | — |
 | `queryByTestId()` | `frontend/src/test-utils/index` | — |
 | `getByTestId()` | `frontend/src/test-utils/index` | — |
 | `queryAllByTestId()` | `frontend/src/test-utils/index` | — |
@@ -2300,10 +2307,9 @@
 | `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:213` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
 | `makeMmdDataPort()` | `frontend/src/views/app-preview/mmd-data-port:11` | 构建一个接入 Go RPC 的 MMD 数据端口；scope 仅用于 AddOpLog 的运行时环打标 （角色预览用 "mmd-preview"，场景预览用 "mmd-scene" |
 | `resolveMmdSiblings()` | `frontend/src/views/app-preview/mmd-siblings:13` | 同类型 MMD 模型候选（委托共享底座 resolveSiblingsByType）；失败返回 []（下拉不渲染） |
-| `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:12` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
-| `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:24` | Go 返回的 3D spec（models 数组） |
-| `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:53` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组（P0 优化：纹理缓存池，同 URL 复用） |
-| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:161` | 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标） |
+| `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:13` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
+| `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:25` | Go 返回的 3D spec（models 数组） |
+| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:110` | 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标） |
 | `resolveMorphSiblings()` | `frontend/src/views/app-preview/morph-siblings:8` | CustomMorph 目录下所有候选文件（含子目录）；失败返回 [] |
 | `createPack3D()` | `frontend/src/views/app-preview/pack-3d:32` | 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） |
 | `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:66` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
@@ -2319,10 +2325,6 @@
 | `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:38` | 清理场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:43` | 任意新预览派发时调用，作废在途场景加载 |
 | `resolveSceneSiblings()` | `frontend/src/views/app-preview/scene-siblings:8` | 场景模型候选（只扫 SceneModel 子目录）；失败返回 [] |
-| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:48` | — |
-| `ScreenshotLights()` | `frontend/src/views/app-preview/screenshot-renderer:54` | 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得） |
-| `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:61` | — |
-| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:70` | — |
 | `makeShotAction()` | `frontend/src/views/app-preview/shot-panel-shared:34` | 截图保存副作用：防连点 guard + toast 错误提示。fillXxxShotPanel（命令式）与 shotButtonNodes（声明式）共用 |
 | `shotButtonNodes()` | `frontend/src/views/app-preview/shot-panel-shared:65` | 截图面板声明式节点（6 button）：screenshotFn 为 null 时返回空数组（MMD 能力缺失不渲染）； undefined（YSM ctx 可选字段）时仍返回 6 |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
@@ -2337,7 +2339,7 @@
 | `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:48` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |
 | `buildStatsCard()` | `frontend/src/views/app-preview/skeleton-render:90` | 构建统计卡片（含作者列表） 异步获取3D spec 以对齐3D面板逐组件数据源——bone/cube 按 spec.models[] 拆分， 纹理尺寸取 spec 第一个组件的声明 |
 | `buildBoneExportRow()` | `frontend/src/views/app-preview/skeleton-render:167` | 构建导出骨骼名按钮行 |
-| `saveScreenshot()` | `frontend/src/views/app-preview/skeleton-render:216` | — |
+| `saveScreenshot()` | `frontend/src/views/app-preview/skeleton-render:200` | 截图保存内部逻辑（供 3D overlay 使用） |
 | `sec()` | `frontend/src/views/app-preview/skeleton-utils:6` | 面板分区标题（3D overlay 信息面板使用） gap=false 用于面板首个分区（panel 已有 padding-top，避免顶部 10+12=22px 过空） |
 | `iRow()` | `frontend/src/views/app-preview/skeleton-utils:15` | 信息行：标签 | 值 |
 | `buildDepthMap()` | `frontend/src/views/app-preview/skeleton-utils:34` | 构建骨骼层级深度映射（用于骨骼列表缩进渲染） parentId 为空的骨骼深度为 0，其余递归计算 |

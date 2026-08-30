@@ -1,5 +1,5 @@
 // ===== 模型数据加载（唯一入口）=====
-// 供给 skeleton.ts 和 screenshot-renderer.ts 使用
+// 供给 skeleton.ts 使用（ADR-136 第四刀后截图走 features/preview-3d/screenshot-render.ts）
 import { cacheGet, cacheSet } from "./cache.ts";
 import { extOf } from "../../utils/resource/types.ts";
 import { getApp } from "../../backend/app.ts";

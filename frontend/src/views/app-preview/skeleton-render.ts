@@ -7,9 +7,9 @@ import { safeUrl } from "../../utils/format/summarize.ts";
 import { getApp } from "../../backend/app.ts";
 import { statsCardHTML } from "./tpl.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
-import { renderMultiAngle, type ScreenshotLights } from "./screenshot-renderer.ts";
-import { sceneCapabilityRegistry, isSkyEnvironmentOn } from "../../features/preview-3d/caps/scene-capability-registry.ts";
-import { attenuateAmbientForSky, type LightCapability } from "../../features/preview-3d/caps/light-capability.ts";
+import { renderMultiAngle } from "../../features/preview-3d/screenshot-render.ts";
+import { toScreenshotLights } from "../../features/preview-3d/screenshot-lights.ts";
+import { decodeYsmViaWasm } from "./wasm.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
@@ -197,22 +197,6 @@ export function buildBoneExportRow(
 /**
  * 截图保存内部逻辑（供 3D overlay 使用）
  */
-/** 从预览 LightCapability 提取截图灯光（仅 light cap 缺失才回退标准灯——三点全关是用户
- *  刻意的暗场景，截图必须保持暗——[doc:adr-126-p5] 截图灯光割裂修复：所见即所得） */
-function toScreenshotLights(): ScreenshotLights | undefined {
-  const cap = sceneCapabilityRegistry.getById("light") as LightCapability | null;
-  if (!cap) return undefined;
-  const p = cap.getParams();
-  return {
-    // 镜像预览的 PMREM 环境光衰减——截图与预览 ambient 同构：
-    // 开关读组合根 isSkyEnvironmentOn，系数/公式走 light-capability 的 attenuateAmbientForSky 单源
-    ambient: { color: p.ambient.color, intensity: attenuateAmbientForSky(p.ambient.intensity, isSkyEnvironmentOn()) },
-    key: { ...p.key },
-    fill: { ...p.fill },
-    rim: { ...p.rim },
-  };
-}
-
 export async function saveScreenshot(
   model: BedrockGeometry & {
     textures?: string[] | null;
@@ -266,6 +250,7 @@ async function renderFrame(model: BedrockGeometry & { textures?: string[] | null
     size: 512,
     componentTextures: model.componentTextures,
     lights: toScreenshotLights(),
+    decodeYsm: decodeYsmViaWasm, // ADR-136：features 不反向 import views，WASM 兜底由视图层注入
   });
   if (!results) return null;
   const hit = results.find((r) => r.name === key);

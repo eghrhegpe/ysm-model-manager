@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-136：截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀）",
+        "link": "/adr/ADR-136-screenshot-domain-homecoming"
+      },
+      {
         "text": "ADR-135：Go 端 jscpd 重复代码检测与增量门禁",
         "link": "/adr/ADR-135-go-jscpd"
       },

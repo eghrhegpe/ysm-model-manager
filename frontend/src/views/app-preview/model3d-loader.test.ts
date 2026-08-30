@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 3D 模型加载器测试 =====
-// 覆盖：loadTextures（成功/失败 null 占位保索引）、fetchSpec LRU 缓存、
-// preloadModel R1 纹理序契约校验（texArrOrder vs textureNames 不一致 warn）
+// 覆盖：fetchSpec LRU 缓存、preloadModel R1 纹理序契约校验（texArrOrder vs textureNames 不一致 warn）
+// loadTextures 单测已随 ADR-136 第四刀迁至 features/preview-3d/texture-loader.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 
@@ -41,27 +41,9 @@ vi.mock("../../features/preview-3d/texture-cache.ts", () => ({
   textureCache: fakeTextureCache,
 }));
 
-import { loadTextures, preloadModel } from "./model3d-loader.ts";
+import { preloadModel } from "./model3d-loader.ts";
 import { getLoadTraces, clearLoadTraces } from "../../features/preview-3d/load-trace.ts";
-
-/** 可控 Image：src setter 同步触发 onload/onerror（happy-dom 无真实网络） */
-class FakeImage {
-  onload: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  naturalWidth = 64;
-  naturalHeight = 32;
-  complete = false;
-  _src = "";
-  _fail = false;
-  set src(u: string) {
-    this._src = u;
-    if (this._fail) this.onerror?.();
-    else { this.complete = true; this.onload?.(); }
-  }
-  get src(): string {
-    return this._src;
-  }
-}
+import { FakeImage } from "../../test-utils/fake-image.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -71,47 +53,6 @@ beforeEach(() => {
   getAppMock.mockResolvedValue({
     GetModel3DSpec: specMock,
     Build3DSpecFromGeometryJSON: buildSpecMock,
-  });
-});
-
-describe("loadTextures", () => {
-  it("空/无 urls → 空数组", async () => {
-    expect(await loadTextures([])).toEqual([]);
-    expect(await loadTextures(undefined)).toEqual([]);
-  });
-
-  it("全部加载成功 → THREE.Texture 数组（flipY=false、userData 尺寸）", async () => {
-    vi.stubGlobal("Image", FakeImage);
-    try {
-      const texArr = await loadTextures(["a.png", "b.png"]);
-      expect(texArr).toHaveLength(2);
-      expect(texArr[0]).toBeInstanceOf(THREE.Texture);
-      expect(texArr[0]!.flipY).toBe(false);
-      expect(texArr[0]!.userData.imgWidth).toBe(64);
-      expect(texArr[1]).toBeInstanceOf(THREE.Texture);
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  it("部分失败 → null 占位且索引不压缩（后续组件贴纹理不错位）", async () => {
-    class PartialImage extends FakeImage {
-      set src(u: string) {
-        this._src = u;
-        if (u === "b.png") { this.complete = true; this.onerror?.(); }
-        else { this.complete = true; this.onload?.(); }
-      }
-    }
-    vi.stubGlobal("Image", PartialImage);
-    try {
-      const texArr = await loadTextures(["a.png", "b.png", "c.png"]);
-      expect(texArr).toHaveLength(3);
-      expect(texArr[0]).toBeInstanceOf(THREE.Texture);
-      expect(texArr[1]).toBeNull(); // 失败占位，不 filter
-      expect(texArr[2]).toBeInstanceOf(THREE.Texture);
-    } finally {
-      vi.unstubAllGlobals();
-    }
   });
 });
 

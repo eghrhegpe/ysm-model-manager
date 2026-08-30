@@ -1,0 +1,32 @@
+#!/bin/sh
+# post-commit — 清路径限定提交遗留的暂存残留（2026-08-31 实战修复）
+# 现象：pre-commit 钩子 gen+stage 生成物（docs/funcmap.md 等）+ gofmt/智能 stage，
+# 而 `git commit -- <paths>`（路径限定提交）按 --only 语义提交后，钩子 stage 的
+# 文件残留在索引 → `git status` 显示 MM 噪音（实测：git diff HEAD 为空但 MM 常驻），
+# 高推理 AI 误判工作区脏、空转多轮排查。
+# 逻辑：遍历「有暂存差异的文件」，仅当「工作树 == HEAD（无真实未提交改动）」时
+# `git restore --staged` 清索引残留——此时索引里的版本必是残留（真实改动会留下
+# 工作树 != HEAD，保持诚实显示不动）。
+# 安全性：只清「工作树无真实改动」的纯索引残留；手写文件/并行会话的半成品
+# （工作树 != HEAD）一律不动。零丢失（不动工作树，索引可随时 re-add）。
+# 逃生阀：YSM_SKIP_POSTCLEAN=1
+exec 1>&2
+set -u
+[ "${YSM_SKIP_POSTCLEAN:-0}" = "1" ] && exit 0
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || exit 0)"
+[ -z "${ROOT:-}" ] && exit 0
+cd "$ROOT" || exit 0
+
+CLEANED=""
+git diff --cached --name-only 2>/dev/null | while IFS= read -r p; do
+  [ -z "$p" ] && continue
+  [ -e "$p" ] || continue
+  # 仅清「工作树 == HEAD」的纯残留（无真实未提交改动）
+  if git diff --quiet HEAD -- "$p" 2>/dev/null; then
+    if git restore --staged -- "$p" 2>/dev/null; then
+      CLEANED="$CLEANED $p"
+    fi
+  fi
+done
+[ -n "$CLEANED" ] && echo "[post-commit] 已清暂存残留(工作树==HEAD):$CLEANED"
+exit 0

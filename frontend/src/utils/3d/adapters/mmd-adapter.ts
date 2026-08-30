@@ -737,8 +737,10 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
     const { getApp } = await import("../../../backend/app.ts");
     const app = await getApp();
     // 类型化直调（AppBindings 具名方法）；browserAdapter 可能缺这两个方法——用
-    // `in` 存在性检查保留原「缺方法跳过缓存优化」守卫语义（替换 as unknown as 双方法断言）
-    if ("HasCachedTextures" in app && "GetCachedTextureByHash" in app) {
+    // typeof-function 检查保留原「缺方法跳过缓存优化」守卫语义（审查 P3：`in`
+    // 只查键存在性不查可调用性，非函数值会 TypeError 且本块无 try/catch 包裹，
+    // 整个 MMD 3D 构建失败）
+    if (typeof app.HasCachedTextures === "function" && typeof app.GetCachedTextureByHash === "function") {
       const allHashes = [...new Set(c.blobUrlToHash.values())];
       const cacheStatus = (await app.HasCachedTextures(allHashes)) ?? {};
       c.cachedHashes = new Set(allHashes.filter((h) => cacheStatus[h]));

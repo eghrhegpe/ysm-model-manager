@@ -232,11 +232,14 @@ export async function encodeAndCacheTexture(
     if (port.addOpLog) {
       void port.addOpLog("ktx2-encode", hash, "ok", `bytes=${ktx2Bytes.length} original=${imageData.width}x${imageData.height}`);
     }
-    // 通过 Go 绑定保存缓存
+    // 通过 Go 绑定保存缓存；仅「绑定缺失」跳过持久化仍算编码成功（审查 P3：
+    // 缺绑定若走 catch→false，completedHashes 永不标记，每次加载同一纹理重编码 +
+    // 刷 fail 日志——原 fn? 守卫语义是「无持久化 = 本次会话成功」；真实保存错误仍走外层 catch）
     const { getApp } = await import("../../../backend/app.ts");
     const app = await getApp();
-    // 类型化直调；browserAdapter 未实现时抛错 → 外层 catch 静默降级（保留原守卫语义）
-    await app.SaveCachedTexture(hash, ktx2B64);
+    if (typeof app.SaveCachedTexture === "function") {
+      await app.SaveCachedTexture(hash, ktx2B64);
+    }
     // 标记为已完成
     completedHashes.add(hash);
     return true;

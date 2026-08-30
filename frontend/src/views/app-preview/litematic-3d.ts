@@ -32,12 +32,19 @@ function entryExtOf(entry: string): string {
 function makeVoxelCall(voxelFn: string): (path: string) => Promise<string> {
   return async (path: string): Promise<string> => {
     const App = await getApp();
-    // 动态 key：按 VOXEL_RPC_BY_EXT 值域收窄到 AppBindings 的具名方法联合
-    const fn = (
-      voxelFn === "GetNbtVoxelData" ? App.GetNbtVoxelData
-      : voxelFn === "GetSchematicVoxelData" ? App.GetSchematicVoxelData
-      : App.GetLitematicVoxelData
-    );
+    // 动态 key：按 VOXEL_RPC_BY_EXT 值域收窄到 AppBindings 具名方法（if/else 链，
+    // 审查 P3：嵌套三元 + 未知值静默回退 GetLitematicVoxelData 会让注册表新增 RPC
+    // 名时错调 builder——未知名显式抛错，注册表增长失败响亮；空串仍走默认语义）
+    let fn: (p: string) => Promise<string>;
+    if (voxelFn === "GetNbtVoxelData") {
+      fn = App.GetNbtVoxelData;
+    } else if (voxelFn === "GetSchematicVoxelData") {
+      fn = App.GetSchematicVoxelData;
+    } else if (voxelFn === "" || voxelFn === "GetLitematicVoxelData") {
+      fn = App.GetLitematicVoxelData;
+    } else {
+      throw new Error(`未识别的 voxel RPC 名: ${voxelFn}`);
+    }
     return await fn(path);
   };
 }

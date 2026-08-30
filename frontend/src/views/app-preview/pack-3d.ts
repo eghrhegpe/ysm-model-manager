@@ -20,12 +20,10 @@ function makePackDeps() {
   return {
     readEntry: async (path: string, entry: string): Promise<string> => {
       const App = await getApp();
-      // 类型化直调；browserAdapter 未实现时抛错 → catch 回退空串（保留原守卫语义）
-      try {
-        return await App.ReadPackEntry(path, entry);
-      } catch {
-        return "";
-      }
+      // 类型化直调；仅「绑定缺失」回退空串（审查 P3：原 fn? 守卫只覆盖缺绑定，
+      // 真实 Go 读取错误必须继续传播给调用方，不能 catch-all 吞掉）
+      if (typeof App.ReadPackEntry !== "function") return "";
+      return await App.ReadPackEntry(path, entry);
     },
   };
 }
@@ -33,12 +31,15 @@ function makePackDeps() {
 /** 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） */
 export async function createPack3D(path: string, opts?: Mount3DOptions & { startEntry?: string }): Promise<void> {
   let raw: string;
+  let App: Awaited<ReturnType<typeof getApp>> | null = null;
   try {
-    const App = await getApp();
-    raw = await App.ListPackModels(path);
+    App = await getApp();
   } catch {
-    raw = "[]"; // browserAdapter 未实现/绑定缺失 → 空清单（保留原 fn 守卫语义）
+    App = null; // 桥不可用（browser 模式）→ 空清单
   }
+  // 类型化直调；仅「绑定缺失」回退 "[]"（审查 P3：真实 ListPackModels 错误仍传播，
+  // 调用方有 .catch("[preview] pack3D:") 记录；不能 catch-all 吞掉导致无预览无诊断）
+  raw = App && typeof App.ListPackModels === "function" ? await App.ListPackModels(path) : "[]";
   let entries: string[] = [];
   try {
     const arr = JSON.parse(raw) as unknown;

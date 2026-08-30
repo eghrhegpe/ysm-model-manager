@@ -505,8 +505,8 @@
 | `frontend/src/views/app-preview/detail-3d.ts` | 353 |
 | `frontend/src/views/app-preview/index.ts` | 244 |
 | `frontend/src/views/app-preview/index.ts` | 266 |
-| `frontend/src/views/app-preview/preview-library.ts` | 95 |
-| `frontend/src/views/app-preview/preview-library.ts` | 127 |
+| `frontend/src/views/app-preview/preview-library.ts` | 97 |
+| `frontend/src/views/app-preview/preview-library.ts` | 129 |
 | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | `frontend/src/views/app-sidebar/events.ts` | 120 |
 | `frontend/src/views/app-sidebar/index.ts` | 151 |

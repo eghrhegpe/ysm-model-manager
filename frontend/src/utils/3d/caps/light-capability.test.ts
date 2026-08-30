@@ -327,22 +327,23 @@ describe("LightCapability — 持久化", () => {
 
   it("saveState/loadState 往返：布尔/数值/引擎/预设全还原", () => {
     const cap = newCap();
+    // 真实用户路径：先选手动预设，再逐个调灯开关（故开关值须在 setPreset 之后设置，
+    // 否则被预设就地覆盖，saveState 存下的就已经是预设值，测不出跨会话丢失）
+    cap.setPreset("mmd", { manual: true });
     cap.setParams({ key: { enabled: false }, ambient: { intensity: 0.9 } });
     cap.setSpotlight({ enabled: true });
     cap.setVolumetric({ enabled: true });
-    cap.setPreset("mmd", { manual: true });
     cap.saveState();
 
     const cap2 = newCap();
     cap2.loadState();
     const p = cap2.getParams();
-    // 可疑点记录：loadState 先恢复 spotlightEnabled/volumetricEnabled=true，随后 manualPreset→
-    // setPreset("mmd") 全量合并预设，把 key/spotlight/volumetric 的 enabled 全部覆盖回预设值（false）——
-    // 用户保存的灯开关在手动预设存在时全部丢失
-    expect(p.key.enabled).toBe(true); // mmd 预设 DEFAULT_KEY.enabled=true 覆盖
+    // 用户显式保存的灯开关优先于模型预设（ADR-126 P5「手动优先」同口径）：
+    // 预设先套用，再用保存值覆盖，故此处 key=false / spotlight=true / volumetric=true 均须保住
+    expect(p.key.enabled).toBe(false); // 用户关了主光，不被 mmd 预设（true）盖回
     expect(p.ambient.intensity).toBe(0.9); // ambient 不在 LIGHT_PRESETS 合并范围，保留
-    expect(p.spotlight.enabled).toBe(false); // mmd 预设 enabled:false 覆盖
-    expect(p.volumetric.enabled).toBe(false); // mmd 预设 enabled:false 覆盖
+    expect(p.spotlight.enabled).toBe(true); // 用户开了聚光，不被 mmd 预设（false）盖回
+    expect(p.volumetric.enabled).toBe(true); // 用户开了体积光，不被 mmd 预设（false）盖回
     expect(cap2.getCurrentPreset()).toBe("mmd");
   });
 

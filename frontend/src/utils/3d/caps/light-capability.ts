@@ -636,6 +636,14 @@ export class LightCapability implements SceneCapability {
     this.params = deepMergeLightParams(this.params, preset);
     this.syncLightsFromParams();
     this.rebuildCone();
+    this.syncConeMount();
+  }
+
+  /**
+   * 锥组挂载态与当前 params 同步（setPreset / loadState 复用）。
+   * 只在锥组已挂载时处理卸载与定位——挂载动作由 setSpotlight / setVolumetric 负责。
+   */
+  private syncConeMount(): void {
     if (this.coneGroup && this.coneGroup.parent) {
       // 若启用状态改变，需同步挂载/卸载
       if (!this.params.volumetric.enabled || !this.params.spotlight.enabled) {
@@ -754,20 +762,28 @@ export class LightCapability implements SceneCapability {
     const state = restoreState(this.id);
     if (!state) return;
     if (typeof state.enabled === "boolean") this.enabled = state.enabled;
-    if (typeof state.keyEnabled === "boolean") this.params.key.enabled = state.keyEnabled;
-    if (typeof state.fillEnabled === "boolean") this.params.fill.enabled = state.fillEnabled;
-    if (typeof state.rimEnabled === "boolean") this.params.rim.enabled = state.rimEnabled;
     if (typeof state.ambientIntensity === "number") this.params.ambient.intensity = state.ambientIntensity;
-    if (typeof state.spotlightEnabled === "boolean") this.params.spotlight.enabled = state.spotlightEnabled;
-    if (typeof state.volumetricEnabled === "boolean") this.params.volumetric.enabled = state.volumetricEnabled;
-    if (state.volumetricEngine === "cone" || state.volumetricEngine === "postprocess") {
-      this.volumetricEngine = state.volumetricEngine;
-    }
+    // ① 预设先套用（内含 rebuildCone / 锥组挂载判定）。必须在灯开关恢复之前：
+    //    deepMergeLightParams(this.params, preset) 以预设为准，后恢复的开关才会生效。
     if (typeof state.manualPreset === "string") {
       this.manualPreset = state.manualPreset; // [doc:adr-126-p5] 手动优先跨会话保持（重建/刷新不丢）
       this.setPreset(state.manualPreset, { manual: true });
     } else if (typeof state.currentPreset === "string") {
       this.setPreset(state.currentPreset);
+    }
+    // ② 用户显式保存的灯开关优先于模型预设（ADR-126 P5「手动优先」同口径）。
+    //    旧实现把这一步放在 setPreset 之前，导致开关被预设值静默覆盖——跨会话丢失。
+    if (typeof state.keyEnabled === "boolean") this.params.key.enabled = state.keyEnabled;
+    if (typeof state.fillEnabled === "boolean") this.params.fill.enabled = state.fillEnabled;
+    if (typeof state.rimEnabled === "boolean") this.params.rim.enabled = state.rimEnabled;
+    if (typeof state.spotlightEnabled === "boolean") this.params.spotlight.enabled = state.spotlightEnabled;
+    if (typeof state.volumetricEnabled === "boolean") this.params.volumetric.enabled = state.volumetricEnabled;
+    // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步（setPreset 的判定基于覆盖前的预设值）
+    this.syncConeMount();
+    // ④ 引擎最后恢复：setVolumetricEngine 自带「postprocess ⇒ volumetric 关闭」一致性约束，
+    //    放最后可避免用户保存的 volumetricEnabled 与 postprocess 引擎自相矛盾
+    if (state.volumetricEngine === "cone" || state.volumetricEngine === "postprocess") {
+      this.setVolumetricEngine(state.volumetricEngine);
     }
     this.syncLightsFromParams();
   }

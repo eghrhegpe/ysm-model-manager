@@ -1259,6 +1259,7 @@
   "tree.importFail": "❌ Import failed: {msg}",
   "tree.advFilterFail": "Advanced filter failed",
   "tree.selectFileTitle": "Select {rtype} file",
+  "tree.importFileFilter": "{rtype} files",
   "tree.importOk": "Import successful",
   "tree.importDirOk": "Folder import successful",
   "tree.needStoragePath": "Configure a storage path first",

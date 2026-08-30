@@ -141,7 +141,7 @@ async function dgAfFetchTagPaths(tag: string): Promise<Set<string> | null> {
     return new Set(paths || []);
   } catch (e) {
     bus.emit("toast:show", {
-      msg: "❌ 标签查询失败: " + friendlyError(e),
+      msg: t("tree.tagQueryFail", { msg: friendlyError(e) }),
       duration: TOAST_MS.verbose,
       type: "error",
     });
@@ -160,7 +160,7 @@ async function dgAfSearchModelPaths(
   const filesRoot = vm._filesRoot;
   if (!filesRoot) {
     bus.emit("toast:show", {
-      msg: "请先配置仓库目录",
+      msg: t("tree.needRepoDir"),
       duration: TOAST_MS.success,
       type: "warn",
     });
@@ -169,7 +169,7 @@ async function dgAfSearchModelPaths(
   const isWebNum = isWebPlatform() && hasNumRange;
   const poolN = getStatsPoolSize();
   if (isWebNum) {
-    showStatsBadge(`🧵×${poolN} 准备统计…`);
+    showStatsBadge(t("tree.statsBadgePreparing", { n: poolN }));
     onStatsProgress((done, total) => {
       showStatsBadge(`🧵×${poolN} ⚙️ ${done}/${total}`);
     });
@@ -190,7 +190,7 @@ async function dgAfSearchModelPaths(
   } catch (e: unknown) {
     dbg("adv-filter", "search:error", { err: String(e) });
     bus.emit("toast:show", {
-      msg: "❌ 高级筛选失败: " + friendlyError(e),
+      msg: "❌ " + t("tree.advFilterFail") + ": " + friendlyError(e),
       duration: TOAST_MS.long,
       type: "error",
     });
@@ -206,11 +206,11 @@ async function dgAfSearchModelPaths(
 function dgAfWarnWebDegraded(hasNumRange: boolean): void {
   if (isWebPlatform() && hasNumRange && consumeWebSearchDegraded()) {
     bus.emit("toast:show", {
-      msg: "⚠️ 网页版统计引擎不可用，骨骼/立方体数值条件已忽略（仅关键词匹配）",
+      msg: t("tree.webStatsDegraded"),
       duration: TOAST_MS.normal,
       type: "warn",
     });
-    showStatsBadge("⚠️ Worker 降级 · 数值条件忽略");
+    showStatsBadge(t("tree.statsBadgeDegraded"));
     setTimeout(hideStatsBadge, 3000);
   }
 }
@@ -235,13 +235,13 @@ function dgAfToastAndRender(vm: AppTree): void {
   const size = vm._filterPaths?.size ?? 0;
   if (size > 0) {
     bus.emit("toast:show", {
-      msg: `🔍 找到 ${size} 个匹配`,
+      msg: t("tree.filterFound", { n: size }),
       duration: TOAST_MS.quick,
       type: "success",
     });
   } else if (vm._filterPaths && size === 0) {
     bus.emit("toast:show", {
-      msg: "🔍 无匹配模型（已应用筛选）",
+      msg: t("tree.filterNone"),
       duration: TOAST_MS.success,
       type: "warn",
     });
@@ -305,8 +305,8 @@ export async function pickWebFilesAndImport(
         bus.emit("toast:show", {
           msg:
             r.failed > 0
-              ? `✅ ${r.imported} 个导入成功，${r.failed} 个失败`
-              : `✅ ${r.imported} 个模型已导入浏览器模型库`,
+              ? t("tree.webImportPartial", { imported: r.imported, failed: r.failed })
+              : t("tree.webImportOk", { imported: r.imported }),
           duration: TOAST_MS.verbose,
           type: r.failed > 0 ? "warn" : "success",
         });

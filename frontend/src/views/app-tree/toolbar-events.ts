@@ -42,7 +42,7 @@ async function atTlShowConfirm(
   const errMsg = await importByType(rtype, path);
   if (errMsg) {
     bus.emit("toast:show", {
-      msg: "❌ 导入失败: " + errMsg,
+      msg: t("tree.importFail", { msg: errMsg }),
       duration: TOAST_MS.verbose,
       type: "warn",
     });
@@ -159,7 +159,7 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
     dbg("adv-filter", "btn:click");
     openAdvFilterDialog($, vm).catch((e) => {
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e, "高级筛选失败"),
+        msg: "❌ " + friendlyError(e, t("tree.advFilterFail")),
         duration: TOAST_MS.verbose,
         type: "error",
       });
@@ -229,12 +229,12 @@ async function atTlHandleImportFile(ctx: AtTlCtx): Promise<void> {
     vm,
     () =>
       SelectImportFile(
-        rtype + " 文件|" + extFilter,
-        "选择" + rtype + "文件",
+        t("tree.importFileFilter", { rtype }) + "|" + extFilter,
+        t("tree.selectFileTitle", { rtype }),
       ),
     ImportByType,
     rtype,
-    "导入成功",
+    t("tree.importOk"),
   );
 }
 
@@ -267,7 +267,7 @@ async function atTlHandleImportDir(ctx: AtTlCtx): Promise<void> {
     () => SelectDirectory(),
     ImportByType,
     rtype,
-    "文件夹导入成功",
+    t("tree.importDirOk"),
   );
 }
 
@@ -310,7 +310,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
           const filesRoot = await GetRepoRoot(currentRepoType());
           if (!filesRoot) {
             bus.emit("toast:show", {
-              msg: "请先配置存储路径",
+              msg: t("tree.needStoragePath"),
               duration: TOAST_MS.success,
               type: "warn",
             });
@@ -328,7 +328,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
             URL.revokeObjectURL(a.href);
           }
           bus.emit("toast:show", {
-            msg: "✅ index.json 已生成",
+            msg: t("tree.indexGenerated"),
             duration: TOAST_MS.normal,
             type: "success",
           });
@@ -339,7 +339,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
             type: "error",
           });
         } finally {
-          btn.textContent = "📇 生成索引";
+          btn.textContent = t("tree.moreGenIndex");
           btn.disabled = false;
         }
       }

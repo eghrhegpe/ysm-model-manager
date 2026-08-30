@@ -1259,6 +1259,7 @@
   "tree.importFail": "❌ インポートに失敗: {msg}",
   "tree.advFilterFail": "高度なフィルターに失敗しました",
   "tree.selectFileTitle": "{rtype} ファイルを選択",
+  "tree.importFileFilter": "{rtype} ファイル",
   "tree.importOk": "インポートに成功しました",
   "tree.importDirOk": "フォルダのインポートに成功しました",
   "tree.needStoragePath": "ストレージパスを設定してください",

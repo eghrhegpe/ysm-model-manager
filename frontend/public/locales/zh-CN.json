@@ -1259,6 +1259,7 @@
   "tree.importFail": "❌ 导入失败: {msg}",
   "tree.advFilterFail": "高级筛选失败",
   "tree.selectFileTitle": "选择{rtype}文件",
+  "tree.importFileFilter": "{rtype} 文件",
   "tree.importOk": "导入成功",
   "tree.importDirOk": "文件夹导入成功",
   "tree.needStoragePath": "请先配置存储路径",

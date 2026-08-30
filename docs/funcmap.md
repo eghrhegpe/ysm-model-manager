@@ -61,7 +61,7 @@
 | `DecodeYSMFiles()` | `go/avatar/avatar_decode:75` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
 | `ExtractAvatarURI()` | `go/avatar/avatar_extract:215` | — |
 | `CacheAvatarsFromJSON()` | `go/avatar/avatar_extract:230` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
-| `CacheAvatarsFromModel()` | `go/avatar/avatar_extract:300` | CacheAvatarsFromModel 从 .ysm/.zip/.json 模型缓存所有作者头像。 |
+| `CacheAvatarsFromModel()` | `go/avatar/avatar_extract:300` | CacheAvatarsFromModel 从 .ysm/.zip/.7z/.json 模型缓存所有作者头像。 |
 | `ReadFileFromZip()` | `go/avatar/avatar_zip:20` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
 | `ReadFileFromContainer()` | `go/avatar/avatar_zip:55` | ReadFileFromContainer 从统一容器读取指定路径的文件（ADR-068： 容器打开统一走 container，替代 zip.NewReader + ReadFil |
 | `SafeName()` | `go/avatar/avatar:45` | SafeName 将非法文件名字符替换为下划线。 |

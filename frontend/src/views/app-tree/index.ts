@@ -360,7 +360,7 @@ export class AppTree extends WebComponentBase {
     }
     if (!can("DeleteResourcePack")) {
       bus.emit("toast:show", {
-        msg: "网页版不支持删除模型",
+        msg: t("tree.webNoDelete"),
         duration: TOAST_MS.normal,
         type: "warn",
       });
@@ -368,10 +368,10 @@ export class AppTree extends WebComponentBase {
     }
     e.preventDefault();
     if (!(await modalConfirm({
-      title: "批量删除",
+      title: t("tree.batchDeleteTitle"),
       icon: "🗑️",
-      message: `确定要删除选中的 ${paths.length} 个文件吗？`,
-      okText: "🗑️ 删除",
+      message: t("tree.batchDeleteConfirm", { n: paths.length }),
+      okText: t("tree.deleteOk"),
       danger: true,
     })))
       return true;

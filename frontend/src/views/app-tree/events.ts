@@ -67,7 +67,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
     e.stopPropagation();
     if (!can("ToggleEnable")) {
       bus.emit("toast:show", {
-        msg: "网页版不支持启用/禁用模型",
+        msg: t("tree.webNoToggle"),
         duration: TOAST_MS.normal,
         type: "warn",
       });
@@ -75,7 +75,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
     }
     if (vm._toggleBusy || vm._batchBusy) {
       bus.emit("toast:show", {
-        msg: "⏳ 操作进行中，请稍候",
+        msg: t("ctx.busyWait"),
         duration: TOAST_MS.quick,
         type: "info",
       });
@@ -100,9 +100,9 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       .catch((err) => {
         console.warn("[tree] ToggleEnable 失败:", fullPath, err);
         bus.emit("toast:show", {
-          msg:
-            "❌ 切换失败: " +
-            (fullPath ? fullPath.split(/[/\\]/).pop() : ""),
+          msg: t("tree.toggleFail", {
+            name: fullPath ? (fullPath.split(/[/\\]/).pop() || "") : "",
+          }),
           duration: TOAST_MS.normal,
           type: "error",
         });
@@ -128,7 +128,7 @@ function atTeOpenAuthor(author: string): void {
     .catch((err) => {
       console.warn("[tree] OpenInBrowser 失败:", err);
       bus.emit("toast:show", {
-        msg: "❌ 打开浏览器失败",
+        msg: "❌ " + t("tree.browserFailed"),
         duration: TOAST_MS.normal,
         type: "error",
       });
@@ -169,7 +169,7 @@ function atTeClickRowPreview(ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElement
         atTeOpenAuthor(author);
       } else {
         bus.emit("toast:show", {
-          msg: "未解析到作者名",
+          msg: t("tree.noAuthor"),
           duration: TOAST_MS.success,
           type: "warn",
         });
@@ -178,7 +178,7 @@ function atTeClickRowPreview(ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElement
     .catch((err) => {
       console.warn("[tree] 加载 display 模块失败:", err);
       bus.emit("toast:show", {
-        msg: "❌ 加载解析模块失败",
+        msg: "❌ " + t("tree.parserLoadFailed"),
         duration: TOAST_MS.normal,
         type: "error",
       });
@@ -194,7 +194,7 @@ function atTeClickRowCopy(ctx: AtTeCtx, e: MouseEvent, haCopy: HTMLElement): boo
     ?.writeText(name)
     .then(() => {
       bus.emit("toast:show", {
-        msg: "📋 已复制: " + name,
+        msg: "📋 " + t("tree.copied", { name }),
         duration: TOAST_MS.quick,
         type: "info",
       });
@@ -380,7 +380,7 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
       })
       .catch((err) => {
         bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(err, "重命名失败"),
+          msg: "❌ " + friendlyError(err, t("ctx.renameFail")),
           duration: TOAST_MS.verbose,
           type: "error",
         });
@@ -394,7 +394,7 @@ export function updateSelectCount(root: ShadowRoot): void {
   if (!stat) return;
   const n = selectState.keys.size;
   if (n > 0) {
-    stat.textContent = "已选 " + n + " 个文件";
+    stat.textContent = t("tree.selectedCount", { n });
     stat.style.color = "var(--accent)";
   } else {
     stat.style.color = "";
@@ -421,7 +421,7 @@ function collectDirEntries(
 async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> {
   if (vm._batchBusy || vm._toggleBusy) {
     bus.emit("toast:show", {
-      msg: "⏳ 操作进行中，请稍候",
+      msg: t("ctx.busyWait"),
       duration: TOAST_MS.quick,
       type: "info",
     });
@@ -429,7 +429,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
   }
   if (!can("ToggleEnable")) {
     bus.emit("toast:show", {
-      msg: "网页版不支持启用/禁用模型",
+      msg: t("tree.webNoToggle"),
       duration: TOAST_MS.normal,
       type: "warn",
     });
@@ -472,20 +472,17 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     }
   }
   bus.emit("toast:show", {
-    msg:
-      "文件夹" +
-      (enable ? "启用" : "禁用") +
-      ": " +
-      ok +
-      " 成功, " +
-      fail +
-      " 失败",
+    msg: t("tree.folderToggleResult", {
+      action: enable ? t("tree.enable") : t("tree.disable"),
+      ok,
+      fail,
+    }),
     duration: TOAST_MS.long,
     type: fail > 0 ? "warn" : "success",
   });
   } catch (err) {
     bus.emit("toast:show", {
-      msg: "❌ " + friendlyError(err, "批量启用/禁用失败"),
+      msg: "❌ " + friendlyError(err, t("tree.batchToggleFail")),
       duration: TOAST_MS.long,
       type: "error",
     });

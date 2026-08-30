@@ -352,14 +352,14 @@ export function renderTree(
   mode: RenderMode = "grid",
 ): void {
   if (!entries.length) {
-    container.innerHTML = emptyHTML("📁", "暂无模型文件");
+    container.innerHTML = emptyHTML("📁", t("tree.noModelFiles"));
     cleanupVirtualScroll(container);
     return;
   }
   const root = buildTree(entries, sort, search, filterPaths);
   const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
   if (!rows.length) {
-    container.innerHTML = emptyHTML("🔍", "未找到匹配的文件");
+    container.innerHTML = emptyHTML("🔍", t("tree.noMatchFiles"));
     cleanupVirtualScroll(container);
     return;
   }

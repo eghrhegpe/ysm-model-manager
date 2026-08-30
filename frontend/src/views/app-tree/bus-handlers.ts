@@ -74,11 +74,11 @@ function atBeHandleBatchDisableAll(vm: AppTree): void {
 
 async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
   const name = await modalPrompt({
-    title: "重命名文件夹",
+    title: t("tree.dirRenameTitle"),
     icon: "✂️",
     value: dir.split("/").pop(),
-    placeholder: "输入新文件夹名称",
-    okText: "✂️ 重命名",
+    placeholder: t("tree.inputNewFolder"),
+    okText: t("tree.dirRenameOk"),
   });
   if (!name) return;
   try {
@@ -102,10 +102,10 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
 
 async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
   const name = await modalPrompt({
-    title: "新建文件夹",
+    title: t("tree.mkdirTitle"),
     icon: "📁",
     placeholder: t("tree.inputFolderName"),
-    okText: "📁 创建",
+    okText: t("tree.mkdirOk"),
   });
   if (!name) return;
   try {
@@ -128,10 +128,10 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
 
 async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
   const confirmed = await modalConfirm({
-    title: "移入回收站",
+    title: t("ctx.fileRecycleTitle"),
     icon: "♻️",
-    message: `确定将文件夹移入回收站？\n${dir}`,
-    okText: "♻️ 移入回收站",
+    message: t("tree.dirRecycleConfirm", { dir }),
+    okText: t("tree.dirRecycleOk"),
     danger: true,
   });
   if (!confirmed) return;
@@ -161,10 +161,10 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     await reload(vm);
     bus.emit("stats:refresh");
     const suffix = errors.length
-      ? "，失败 " + errors.length + " 个（" + errors.slice(0, 3).join("; ") + "）"
+      ? t("tree.recycledFailSuffix", { fail: errors.length, detail: errors.slice(0, 3).join("; ") })
       : "";
     bus.emit("toast:show", {
-      msg: `♻️ 已回收 ${count} 个文件` + suffix,
+      msg: `♻️ ${t("tree.recycled", { count })}` + suffix,
       duration: TOAST_MS.normal,
       type: "success",
     });
@@ -187,7 +187,7 @@ async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void>
     const entries = (await ScanModelEntriesFiltered(absDir, rtype, "", label)) || [];
     if (!entries || !entries.length) {
       bus.emit("toast:show", {
-        msg: "📂 文件夹为空",
+        msg: "📂 " + t("tree.dirEmpty"),
         duration: TOAST_MS.success,
         type: "warn",
       });
@@ -214,7 +214,7 @@ async function atBeHandleBatchRename(vm: AppTree, paths: string[]): Promise<void
       Name: p.split(/[/\\]/).pop() || "",
       Path: p,
     }));
-    await showBatchRenameDialog("批量重命名", entries, (renames) =>
+    await showBatchRenameDialog(t("dialog.batchRenameTitle"), entries, (renames) =>
       runBatchRename(vm, renames),
     );
   } catch (e) {
@@ -266,7 +266,7 @@ async function runBatchToggle(
 ): Promise<void> {
   if (!can("ToggleEnable")) {
     bus.emit("toast:show", {
-      msg: "网页版不支持启用/禁用模型",
+      msg: t("tree.webNoToggle"),
       duration: TOAST_MS.normal,
       type: "warn",
     });
@@ -274,7 +274,7 @@ async function runBatchToggle(
   }
   if (vm._batchBusy || vm._toggleBusy) {
     bus.emit("toast:show", {
-      msg: "⏳ 批量操作进行中，请稍候",
+      msg: t("tree.batchBusyWait"),
       duration: TOAST_MS.quick,
       type: "info",
     });

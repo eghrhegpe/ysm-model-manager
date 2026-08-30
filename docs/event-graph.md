@@ -207,7 +207,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/features/oldest-models.ts` | 61 |
+| `frontend/src/features/oldest-models.ts` | 59 |
 | `frontend/src/features/recycle-bin.ts` | 192 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 385 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 274 |

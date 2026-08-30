@@ -1194,7 +1194,7 @@
 | `importFolder()` | `frontend/src/features/import-executor:99` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） rtype：页面上下文类型（当前树根属性，派生自注册表路由配置）——非空走 Im |
 | `executeCollected()` | `frontend/src/features/import-executor:180` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
 | `importWebFilesWithToast()` | `frontend/src/features/import-executor:205` | 网页版导入执行（ADR-049 Phase 3）：拖入/选择文件 → importWebFiles 直写 IndexedDB → toast 反馈 → tree/stats 刷新。 |
-| `loadOldestModel()` | `frontend/src/features/oldest-models:290` | — |
+| `loadOldestModel()` | `frontend/src/features/oldest-models:282` | — |
 | `PackDndBusy()` | `frontend/src/features/pack-dnd:26` | drop 处理期间的 busy 守卫（由绑定闭包持有，每组件实例独立） |
 | `PackDndInstance()` | `frontend/src/features/pack-dnd:32` | 卡片实例的最小形状（SidebarInstance 结构子集） |
 | `handleInstanceDrop()` | `frontend/src/features/pack-dnd:47` | 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。 |

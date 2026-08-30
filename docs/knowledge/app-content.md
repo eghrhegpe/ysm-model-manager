@@ -62,6 +62,8 @@ invariant_anchors:
 
 构造器不再硬编码 `"repository"`，而是与 `app-nav`、`PageStore` 三源同源调用 `resolveInitialPage()`（`core/page-store.ts`）：`app-content` 经 `app-modules.ts` 动态加载，可能晚于 `app-nav` 派发的初始 `nav:change`，事件被吞后若硬编码首页，会让 UI 实际渲染页与 `PageStore.currentPage` 脱节。旧版全局 DnD 曾依赖 `page === "repository"` 守卫，现仓库页 DnD 已改为 `app-tree` 组件级绑定，不再受该守卫影响。
 
+**i18n 收敛（2026-08-31）**：`app-content` 子域（工坊/站点编辑/诊断/设置）约 70 处裸中文 toast/弹窗/角色标签已全量迁移到 `workshop.*` / `diagnostics.*` / `settings.*` / `content.*` key（复用 `tree.browserFailed` / `content.settingsInitFailed` / `diagnostics.all`），三语言包同步（1431 keys）；残留仅 `dbg/console` 日志与 CLI 输出解析匹配符（非 UI 文案，不迁移）。新增 key 集中在 zh-CN.ts 各命名空间注释段，改 UI 文案只改语言包。
+
 ## 核心职责
 
 - `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:change` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）

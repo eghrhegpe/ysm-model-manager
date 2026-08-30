@@ -167,7 +167,14 @@ function checkArgvContract(text) {
     return [];
   }
   // import 了 parseArgs 但没消费 unknown → 拼错 flag 仍静默通过，白名单形同虚设
-  if (!/\.unknown\b/.test(text)) {
+  // 两种合法消费形态都认：属性访问 `args.unknown.length`（含别名如 raw.unknown）与
+  // 解构 `const { unknown } = parseArgs(...)`——i18n-check.mjs 曾因解构形式被误报。
+  const consumesUnknown =
+    /\.unknown\b/.test(text) ||           // 属性访问（args.unknown / raw.unknown）
+    /\{\s*[^}]*\bunknown\b[^}]*\}\s*=\s*parseArgs\s*\(/.test(text) || // 解构取值
+    /\bunknown\s*&&\s*unknown\.length/.test(text) ||                  // 直接消费
+    /\bunknown\s*\.length/.test(text);                                // 别名消费
+  if (!consumesUnknown) {
     return ['import parseArgs 但未消费 args.unknown 白名单（应 unknown.length 时退非 0）'];
   }
   return [];
@@ -187,8 +194,10 @@ function collectScripts(dir) {
   for (const d of entries) {
     const abs = path.join(dir, d.name);
     if (d.isDirectory()) {
-      // _lib 是共享层（按设计允许内联样板），不纳入卫生检查
-      if (d.name.startsWith('_')) continue;
+      // _lib 是共享层（按设计允许内联样板），不纳入卫生检查；
+      // hooks/ 子目录走 git 钩子协议参数（prepare-commit-msg 的 $1/$2、pre-push stdin 等），
+      // 参数语义由 git 约定固定、非 CLI 用户输入——不适用 parse-args positional 口径（2026-08 审核）
+      if (d.name.startsWith('_') || d.name === 'hooks') continue;
       out.push(...collectScripts(abs));
     } else if (d.name.endsWith('.mjs') && !d.name.startsWith('_') && !d.name.endsWith('.test.mjs')) {
       out.push(path.relative(SCRIPTS_DIR, abs).replace(/\\/g, '/'));

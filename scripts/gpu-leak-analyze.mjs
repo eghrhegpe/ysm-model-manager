@@ -24,6 +24,11 @@
  *   cat console.log | node scripts/gpu-leak-analyze.mjs      # stdin 模式
  *
  * 退出码：发现泄漏 → 1；无泄漏或无数据 → 0（WARN 不阻断）。
+ *
+ * 依赖：node:fs / node:readline（零外部依赖）
+ *
+ * 设计意图：把 3D 清理路径的 GPU 内存泄漏从"日志里人眼找"变成"机器对账"——
+ * 逐对计算 cleanup 前后差值，标出泄漏几何/纹理，供子代理/CI 消费。
  */
 
 import fs from 'node:fs';

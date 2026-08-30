@@ -161,7 +161,7 @@ const ALL_STATIC_TOOLS = [
   { tool: 'build-novel-index.mjs', args: ['--check'] },
   { tool: 'gen-cli-doc.mjs', args: ['--check'] },
   { tool: 'gen-cli-completion.mjs', args: ['--check'] },
-  'check-script-hygiene.mjs',
+  { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
   // 子进程直调收敛守护（ADR-043）：WARN 报告未走 _lib/proc.mjs 的 execFileSync/execSync 直调
   'check-proc-adoption.mjs',
   'check-workflow-refs.mjs',
@@ -185,7 +185,7 @@ const DOC_STATIC_TOOLS = [
   { tool: 'build-novel-index.mjs', args: ['--check'] },
   { tool: 'gen-cli-doc.mjs', args: ['--check'] },
   { tool: 'gen-cli-completion.mjs', args: ['--check'] },
-  'check-script-hygiene.mjs',
+  { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
   'check-proc-adoption.mjs',
   'check-workflow-refs.mjs',
 ];

@@ -21,6 +21,9 @@
  * 退出码：发现漂移 → 1；一致或仅警告 → 0。
  *
  * 新增"已还债事实"时，在此文件的 KNOWN_REPAID 与 CODE_ASSERTS 同步登记。
+ *
+ * 设计意图：阻止 ADR 描述与代码现实脱节——文档侧"已还债仍标开放"与代码侧
+ * "声明已实现但实际违反"双向漂移都会被抓出，避免 AI 把完成的活反复当开放债。
  */
 import fs from 'node:fs';
 import path from 'node:path';

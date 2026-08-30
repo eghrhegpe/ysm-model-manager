@@ -27,6 +27,7 @@ import path from 'node:path';
 import { showAt, gitMaybe } from './_lib/git-ref.mjs';
 import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
 import { walk, ROOT, toPosix } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 // ── 顶层声明提取（与 audit-split 同源）──
 function goTopFuncs(text) {
@@ -155,11 +156,15 @@ function toJ(result) {
   return { kind: 'rollback-impact', commit: result.commit, removed: result.removed, callers: callersMap, totalCallers: total, safe: total === 0 };
 }
 
-const argv = process.argv.slice(2);
-const JSON_OUT = argv.includes('--json');
-const QUIET = argv.includes('--quiet');
-const SCOPE = argv.includes('--scope') ? argv[argv.indexOf('--scope') + 1] : null;
-const commitArg = argv.find((a) => !a.startsWith('--'));
+const args = parseArgs(process.argv.slice(2), { bools: ['json', 'quiet'], strings: ['scope'] });
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
+const JSON_OUT = args.json;
+const QUIET = args.quiet;
+const SCOPE = args.scope;
+const commitArg = args._[0];
 if (!commitArg) {
   console.error('用法: node scripts/rollback-impact.mjs <commit> [--scope <dir>] [--json|--quiet]');
   process.exit(2);

@@ -2437,7 +2437,7 @@
 | `toggleSelect()` | `frontend/src/views/app-tree/data:16` | 切换选中状态 |
 | `selectSingle()` | `frontend/src/views/app-tree/data:31` | 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState） |
 | `updateSelectCount()` | `frontend/src/views/app-tree/events:392` | — |
-| `bindTreeEvents()` | `frontend/src/views/app-tree/events:498` | — |
+| `bindTreeEvents()` | `frontend/src/views/app-tree/events:495` | — |
 | `appTreeStyle()` | `frontend/src/views/app-tree/index:12` | — |
 | `VIEW_TESTIDS()` | `frontend/src/views/app-tree/index:35` | — |
 | `AppTree()` | `frontend/src/views/app-tree/index:70` | — |

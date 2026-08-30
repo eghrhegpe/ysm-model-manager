@@ -26,6 +26,7 @@ function fail(msg) {
 }
 
 const full = process.argv.includes('--full');
+const jsonOut = process.argv.includes('--json');
 if (process.argv.includes('--help')) {
   console.log(`用法:
   node scripts/android-check.mjs          编译检测（compileDebugJavaWithJavac，约 10s）
@@ -62,8 +63,13 @@ const r = run(gradlew, [task], {
 });
 
 if (r.ok) {
-  console.log(`[android-check] ✅ ${task} 通过`);
+  if (jsonOut) console.log(JSON.stringify({ _summary: { ok: true, task }, rc: r.rc }));
+  else console.log(`[android-check] ✅ ${task} 通过`);
   process.exit(0);
 }
-console.error(`[android-check] ❌ ${task} 失败（rc=${r.rc}）：\n${r.out.slice(-1200)}`);
+if (jsonOut) {
+  console.log(JSON.stringify({ _summary: { ok: false, task, rc: r.rc }, tail: r.out.slice(-1200) }));
+} else {
+  console.error(`[android-check] ❌ ${task} 失败（rc=${r.rc}）：\n${r.out.slice(-1200)}`);
+}
 process.exit(1);

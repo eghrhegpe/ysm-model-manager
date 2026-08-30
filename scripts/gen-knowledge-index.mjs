@@ -21,7 +21,11 @@ import { parseArgs } from './_lib/parse-args.mjs';
 // 本文件为第一处消解）
 import { CATEGORY_LABELS, KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR as KC_DIR, PERF_TAGS } from './_lib/knowledge-cards.mjs';
 
-const { check: CHECK } = parseArgs(process.argv.slice(2), { bools: ['check'] });
+const { check: CHECK, unknown: UNKNOWN } = parseArgs(process.argv.slice(2), { bools: ['check'] });
+if (UNKNOWN && UNKNOWN.length) {
+  console.error(`❌ 未知参数: ${UNKNOWN.join(', ')}（--help 查看用法）`);
+  process.exit(1);
+}
 
 const OUTPUT = path.join(KC_DIR, 'index.md');
 

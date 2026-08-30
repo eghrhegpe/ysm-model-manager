@@ -13,7 +13,18 @@
  *   - 另对 eulerToQuaternion 纯函数单独扫一遍（覆盖骨骼调用点，不仅是 cube）
  *   - 输出：覆盖矩阵（可见盲区）+ 分歧报告；退出码 0=全绿 / 1=有分歧
  *
+ * 用法：
+ *   npm run verify:port          # 项目入口（等价 node scripts/port-align.mjs）
+ *   node scripts/port-align.mjs  # 直接跑
+ *
  * 不依赖任何外部 fixture（wine_fox 等），纯合成 corpus → 无幽灵路径、可移植。
+ *
+ * 依赖：node:fs / node:os / node:url / node:module / node:path / _lib/proc.mjs（零外部依赖）
+ *
+ * 退出码：0 = 全绿（端口对齐无分歧）；1 = 有分歧。
+ *
+ * 设计意图：cube/spec 坐标端口的手动对拍工具——用 Blockbench 权威 oracle 对
+ * 真实 TS 端口（cube-mesh.ts / quaternion.ts）做多样性覆盖回归，数据收敛争论。
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';

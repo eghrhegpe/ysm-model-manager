@@ -13,6 +13,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const SEARCH_NAMES = ['main.json', 'arm.json', 'texture.png', 'texture2.png',
   'left_arm.json', 'right_arm.json', 'arrow.json'];
@@ -99,9 +100,13 @@ function inspect(filepath) {
   return result;
 }
 
-const args = process.argv.slice(2);
-const jsonMode = args.includes('--json');
-const fileArg = args.find((a) => !a.startsWith('--'));
+const args = parseArgs(process.argv.slice(2), { bools: ['json'] });
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(1);
+}
+const jsonMode = args.json;
+const fileArg = args._[0] ?? null;
 
 if (!fileArg) {
   console.error('Usage: node scripts/inspect_ysm.mjs <path> [--json]');

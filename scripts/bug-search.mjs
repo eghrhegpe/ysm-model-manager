@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const BUG_FILE = path.join(ROOT, 'docs/archive/bug-chronicle.md');
 
@@ -59,9 +60,13 @@ function search(keyword, bugs) {
   return results;
 }
 
-const args = process.argv.slice(2);
-const jsonMode = args.includes('--json');
-const keywordArg = args.find((a) => !a.startsWith('--')) ?? null;
+const args = parseArgs(process.argv.slice(2), { bools: ['json'] });
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
+const jsonMode = args.json;
+const keywordArg = args._[0] ?? null;
 
 const bugs = loadBugs();
 const results = keywordArg ? search(keywordArg, bugs) : bugs;

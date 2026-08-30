@@ -13,6 +13,13 @@
  * 8. 重复字符串模式（非法字符集等）
  *
  * 用法：node scripts/drift-scan.mjs [--json]
+ *
+ * 依赖：node:fs / node:path / node:url（零外部依赖）
+ *
+ * 退出码：0（报告工具，不阻断）
+ *
+ * 设计意图：双轨（Go 轨 + 前端轨）实现漂移的自动侦察兵——硬编码常量、内联
+ * 切片/路径操作、错误链断裂、资源泄漏、重复实现等跨轨不一致，一次扫出。
  */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";

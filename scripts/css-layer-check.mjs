@@ -29,6 +29,11 @@
  *   node scripts/css-layer-check.mjs            # 报告，ERROR 也只提示（非阻断）
  *   node scripts/css-layer-check.mjs --strict   # ERROR 时 exit 1（供 pre-push 门禁）
  *   YSM_SKIP_CSS_LAYER=1 node ...               # 逃生阀，跳过本检查
+ *
+ * 退出码：默认 0；--strict 且存在 ERROR → 1。
+ *
+ * 设计意图：Shadow DOM 样式越界的自动化防线——类/keyframe 定义在 components.css
+ * 并不等于在 shadow 内生效（@keyframes 不可穿透），纯 grep 看不出的 bug 由本闸抓出。
  */
 
 import fs from "node:fs";
@@ -38,6 +43,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const STRICT = process.argv.includes("--strict");
+const JSON_OUT = process.argv.includes("--json");
 if (process.env.YSM_SKIP_CSS_LAYER === "1") {
   console.log("[css-layer-check] YSM_SKIP_CSS_LAYER=1, 跳过");
   process.exit(0);
@@ -323,13 +329,18 @@ for (const dom of SHADOW_DOMAINS) {
 
 // ── 输出 ──
 if (problems.length === 0) {
-  console.log("[css-layer-check] ✅ 无 shadow 样式越界（keyframe 本地化 + 类归属正确）");
+  if (JSON_OUT) console.log(JSON.stringify({ _summary: { ok: true, errors: 0, warns: 0 } }));
+  else console.log("[css-layer-check] ✅ 无 shadow 样式越界（keyframe 本地化 + 类归属正确）");
   process.exit(0);
 }
-console.log("[css-layer-check] 发现 " + errorCount + " 个 ERROR / " + warnCount + " 个 WARN：");
-for (const p of problems) console.log("  " + p);
+if (JSON_OUT) {
+  console.log(JSON.stringify({ _summary: { ok: !(STRICT && errorCount > 0), errors: errorCount, warns: warnCount }, problems }));
+} else {
+  console.log("[css-layer-check] 发现 " + errorCount + " 个 ERROR / " + warnCount + " 个 WARN：");
+  for (const p of problems) console.log("  " + p);
+}
 if (STRICT && errorCount > 0) {
-  console.log("[css-layer-check] --strict: ERROR 阻断（pre-push 门禁）");
+  if (!JSON_OUT) console.log("[css-layer-check] --strict: ERROR 阻断（pre-push 门禁）");
   process.exit(1);
 }
 process.exit(0);

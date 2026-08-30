@@ -36,6 +36,10 @@ const raw = parseArgs(process.argv.slice(2), {
   strings: ['scope', 'threshold'],
   defaults: { threshold: 30 }, // 默认 🟨 >30，🟧 = 2×threshold，🟥 = 3×threshold
 });
+if (raw.unknown && raw.unknown.length) {
+  console.error(`❌ 未知参数: ${raw.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(1);
+}
 if (raw.threshold !== null) {
   const n = parseInt(raw.threshold, 10);
   if (!Number.isFinite(n) || n < 1) {

@@ -1,10 +1,18 @@
 #!/usr/bin/env node
 /**
+ * perf/vitest-env-switch.mjs — 纯逻辑测试文件环境标注切换工具。
  * 为纯逻辑测试文件添加 @vitest-environment node 标注。
  * 这些文件已确认无 DOM 依赖（document/window/localStorage/createElement/querySelector 等），
  * 切换后省去 happy-dom 环境重建开销（~1.2s/文件）。
  *
  * 用法：node scripts/perf/vitest-env-switch.mjs
+ *
+ * 依赖：node:fs / node:path / _lib/scan-files.mjs（零外部依赖）
+ *
+ * 退出码：0 成功；1 失败（文件缺失/写入错误）。
+ *
+ * 设计意图：性能工具——给已确认无 DOM 依赖的纯逻辑测试文件批量加
+ * @vitest-environment node 标注，省去 happy-dom 环境重建开销（~1.2s/文件）。
  */
 import fs from 'node:fs';
 import path from 'node:path';

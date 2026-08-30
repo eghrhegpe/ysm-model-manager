@@ -1,19 +1,21 @@
 #!/usr/bin/env node
-// ===== translucency-probe.mjs — 面级透明分类增益探针（诊断工具）=====
-// 问题：当前前端按「整张纹理」分 transparent 路径（mesh 级粒度）；ModernYSM
-// （upstream TranslucencyScanner）按「cube 面 UV 区域」分级。真实模型上，
-// mesh 级粒度到底误路由多少面？——本脚本在真实模型上量化答案。
-//
-// 用法：node scripts/translucency-probe.mjs <模型目录...>
-//   目录可含多个模型夹（递归一层找 ysm.json），如：
-//   node scripts/translucency-probe.mjs "upstream/[YSM模型]官方开源wine_fox_json"
-//
-// 方法：
-//   1. 零依赖解 PNG（zlib inflate + 还原滤波），逐像素 alpha 分三级：
-//      hole(=0) / translucent(0<a<255) / opaque(=255)
-//   2. 8×8 tile 聚合 + 前缀和 → O(1) 查任意 UV 矩形的三级特征（AlphaIndex 思想）
-//   3. 解析 Bedrock 几何 box-UV 六面矩形，逐面查表分类
-//   4. 对比「纹理全局模式」（现管线口径）vs「面级模式」，统计错路面积比
+/**
+ * translucency-probe.mjs — 面级透明分类增益探针（诊断工具）。
+ * 当前前端按「整张纹理」分 transparent 路径（mesh 级粒度）；ModernYSM
+ * （upstream TranslucencyScanner）按「cube 面 UV 区域」分级。真实模型上，
+ * mesh 级粒度到底误路由多少面？——本脚本在真实模型上量化答案。
+ *
+ * 依赖：node:fs / node:path / node:zlib（零外部依赖）
+ *
+ * 用法：node scripts/translucency-probe.mjs <模型目录...>
+ *   目录可含多个模型夹（递归一层找 ysm.json），如：
+ *   node scripts/translucency-probe.mjs "upstream/[YSM模型]官方开源wine_fox_json"
+ *
+ * 退出码：0（诊断工具，只输出报告不阻断）。
+ *
+ * 设计意图：量化 mesh 级 vs 面级透明分类的误路由面积比，为是否引入
+ * 面级透明路径（AlphaIndex 思想）提供数据依据。
+ */
 
 import fs from "node:fs";
 import path from "node:path";

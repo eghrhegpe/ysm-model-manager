@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 /**
- * event-graph.mjs — Bus 事件契约守护者。
+ * event-graph-mjs-gen.mjs — 生成 event-graph.mjs 的脚手架入口。
+ * 用法：node scripts/event-graph-mjs-gen.mjs [--check] [--json] [--strict]
+ * 退出码：0 成功；1 生成/校验失败。
+ * 设计意图：event-graph.mjs 的配套生成器入口（事件契约守护的脚手架侧）。
+ * 依赖：node:fs / node:path / _lib/scan-files.mjs（零外部依赖）
  */
 import fs from 'node:fs';
 import path from 'node:path';

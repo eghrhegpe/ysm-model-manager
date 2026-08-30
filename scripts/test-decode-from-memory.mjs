@@ -21,6 +21,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "fs";
 import { join, dirname } from "path";
 import { tmpdir } from "os";
 import { execSync } from "child_process";
+import { parseArgs } from "./_lib/parse-args.mjs";
 
 const ROOT = process.cwd();
 const WASM_PATH = join(ROOT, "frontend/public/wasm/YSMParser.wasm");
@@ -30,7 +31,12 @@ const OUTPUT_DIR = join(ROOT, "tests/ysm-reference");
 const wasmBin = readFileSync(WASM_PATH);
 const wasmB64 = wasmBin.toString("base64");
 
-const file = process.argv[2] || "upstream/[瀛猫]【Vup】穆小泠(黑色晚礼服)2.0.ysm";
+const args = parseArgs(process.argv.slice(2));
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(1);
+}
+const file = args._[0] || "upstream/[瀛猫]【Vup】穆小泠(黑色晚礼服)2.0.ysm";
 const name = file.split("/").pop().replace(".ysm", "");
 
 const ysmData = readFileSync(file);

@@ -7,6 +7,13 @@
  *   node scripts/compile-rust-static.mjs              # 当前平台 native
  *   node scripts/compile-rust-static.mjs --target x86_64-unknown-linux-gnu
  *   node scripts/compile-rust-static.mjs --target aarch64-unknown-linux-gnu
+ *
+ * 依赖：cargo + 目标平台 target（rustup target add <triple>）
+ *
+ * 退出码：0 成功；1 失败（cargo 缺失、target 未装、编译错误）。
+ *
+ * 设计意图：Linux 构建链的 Rust 侧单步——编 staticlib 供 Go CGO 静态链接，
+ * build/linux/Taskfile.yml 的 compile:rust 任务调用。
  */
 import fs from 'node:fs';
 import path from 'node:path';

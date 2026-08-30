@@ -27,6 +27,13 @@
  *   node scripts/check-biome.mjs --strict   # 同上（门禁占位，语义等价）
  *   node scripts/check-biome.mjs --write    # 自动修复变更文件（pre-commit 用）
  *   node scripts/check-biome.mjs --json     # 门禁注入（输出 _summary JSON）
+ *
+ * 依赖：frontend/node_modules/.bin/biome（Rust 解析器，不依赖项目 typescript 包）
+ *
+ * 退出码：0 = 通过 / 无变更文件；1 = 发现 lint/format 违规。
+ *
+ * 设计意图：给 pre-push 门禁提供 TS7 安全的增量 lint 闸——镜像 gofmt 范式，
+ * 只查相对 main 的变更文件，避免对存量未 lint 代码误伤。
  */
 import fs from 'node:fs';
 import path from 'node:path';

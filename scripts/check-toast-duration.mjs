@@ -13,6 +13,13 @@
  *      升级触发条件（R15 P3 #1 时间锚点）：① 观察期 ≥30 天无回归（2026-08-29 起）；
  *      ② 或 `docs/.doc-next-steps.md` 已标记为 debt；③ 或 check-boolean-naming 等同类闸门先升级。
  * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.mjs / scripts/_lib/proc.mjs（零外部依赖）
+ *
+ * 用法：node scripts/check-toast-duration.mjs
+ *
+ * 退出码：恒 0（观察期非阻断；升级硬闸的触发条件见上方说明）
+ *
+ * 设计意图：防止 toast 时长硬编码回流——bus.emit("toast:show") / toast() helper 的
+ * duration 参数必须来自 TOAST_MS 单一事实源，裸数字即违规（R7）。
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -31,9 +38,11 @@ const reEmit = /bus\.emit\(\s*"toast:show"[\s\S]{0,1200}?duration:\s*(\d+)/g;
 const reHelper = /(?<![\w.$])toast\(\s*([\s\S]+?)\s*,\s*(\d+)(?:\s*,\s*((?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|`(?:\\.|[^`])*`|[\w.$]+)))?\)/g;
 
 let files;
+const jsonOut = process.argv.includes("--json");
 const r = run('git', ['-C', ROOT, 'ls-files', 'frontend/src'], {});
 if (!r.ok) {
-  console.log("[WARN] check-toast-duration: 无法列举 frontend/src，跳过");
+  if (jsonOut) console.log(JSON.stringify({ _summary: { ok: true, violations: 0, skipped: true } }));
+  else console.log("[WARN] check-toast-duration: 无法列举 frontend/src，跳过");
   process.exit(0);
 }
 files = r.out.split("\n").filter(Boolean)
@@ -59,13 +68,18 @@ for (const file of files) {
 }
 
 if (violations.length === 0) {
-  console.log("[OK] check-toast-duration: 无 toast 裸时长（全部引用 TOAST_MS 单一事实源）");
+  if (jsonOut) console.log(JSON.stringify({ _summary: { ok: true, violations: 0 } }));
+  else console.log("[OK] check-toast-duration: 无 toast 裸时长（全部引用 TOAST_MS 单一事实源）");
   process.exit(0);
 }
 
-console.log(`[WARN] check-toast-duration: 发现 ${violations.length} 处 toast 裸时长（违反 R7 单一事实源）`);
-for (const v of violations) {
-  console.log(`  ${v.file}:${v.line}  ${v.kind} 裸 duration: ${v.n} → 应改为 TOAST_MS.${v.key}`);
+if (jsonOut) {
+  console.log(JSON.stringify({ _summary: { ok: true, violations: violations.length }, violations }));
+} else {
+  console.log(`[WARN] check-toast-duration: 发现 ${violations.length} 处 toast 裸时长（违反 R7 单一事实源）`);
+  for (const v of violations) {
+    console.log(`  ${v.file}:${v.line}  ${v.kind} 裸 duration: ${v.n} → 应改为 TOAST_MS.${v.key}`);
+  }
 }
 // 非阻断观察期：退出码恒 0。升级硬闸时改此处（触发条件见文件头注释：≥30 天无回归 /
 // docs/.doc-next-steps.md 标记 debt / 同类闸门先升级，R15 P3 #1）。

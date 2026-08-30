@@ -10,6 +10,11 @@
  *   node scripts/compile-android-rust.mjs          # arm64（真机）
  *   node scripts/compile-android-rust.mjs --arch amd64  # x86_64（模拟器）
  *   node scripts/compile-android-rust.mjs --arch all    # fat（两者都编）
+ *
+ * 退出码：0 成功；1 失败（cargo/NDK 缺失、编译错误）。
+ *
+ * 设计意图：Android 构建链的 Rust 侧单步——把 scanner bridge 编成 .a 静态库
+ * 供 Go CGO 链接，android-build.mjs 在交叉编译前自动调用。
  */
 import fs from 'node:fs';
 import path from 'node:path';

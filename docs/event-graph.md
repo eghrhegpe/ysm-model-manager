@@ -556,7 +556,7 @@
 | `frontend/src/views/app-tree/events.ts` | 423 |
 | `frontend/src/views/app-tree/events.ts` | 431 |
 | `frontend/src/views/app-tree/events.ts` | 474 |
-| `frontend/src/views/app-tree/events.ts` | 487 |
+| `frontend/src/views/app-tree/events.ts` | 484 |
 | `frontend/src/views/app-tree/index.ts` | 208 |
 | `frontend/src/views/app-tree/index.ts` | 354 |
 | `frontend/src/views/app-tree/index.ts` | 362 |

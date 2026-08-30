@@ -1,13 +1,16 @@
-// ===== 实战比对：单女仆 zip vs 多合一女仆包 =====
-// 用法：node scripts/compare-maid-packs.mjs
-//
-// 流程：
-//   1. 用 _listzip.go 列 zip 条目 + 抽取 maid_model.json（L0 清单）
-//   2. 调 ParseFromZip（通过 Go 单元 TestMaidL0_RealPacks，stdout 输出 JSON）
-//      获取解析结果：BoneCount、pngs 数量、SubModels、TextureNames
-//   3. 合并输出：每个 zip 一份 报告，对比 L0 清单 与 L1 枚举 的差异
-//
-// 输出路径：tmp/maid-report.json（完整 JSON）+ 控制台 摘要 表格
+#!/usr/bin/env node
+/**
+ * compare-maid-packs.mjs — 实战比对：单女仆 zip vs 多合一女仆包。
+ *
+ * 依赖：node:child_process / node:fs / node:path（零外部依赖）
+ *
+ * 用法：node scripts/compare-maid-packs.mjs
+ *
+ * 退出码：0（比对报告工具，不阻断）。
+ *
+ * 设计意图：用 _listzip.go 列 zip 条目 + 调 ParseFromZip（经 Go 单测）对比
+ * L0 清单与 L1 枚举差异，输出 tmp/maid-report.json 供模型包结构分析。
+ */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";

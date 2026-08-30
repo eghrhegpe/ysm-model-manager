@@ -1,3 +1,19 @@
+#!/usr/bin/env node
+/**
+ * verify-wasm-mt.mjs — ADR-079 M3/M4 验证脚本：pthread 多线程 WASM 在 Worker 全局下实例化 + 解码。
+ * 模拟 Web Worker 全局（无 window，globalThis 注入）——与 ysm-worker-loader 同构路径。
+ *
+ * 依赖：node:fs / node:module / _lib/parse-args.mjs + 前端 mt 产物（frontend/src/wasm/ysm-*-mt.js）
+ *
+ * 用法：
+ *   node scripts/verify-wasm-mt.mjs                 # 无参数（提示用法）
+ *   node scripts/verify-wasm-mt.mjs <path.ysm>      # 用真实 .ysm 验证 mt 解码链
+ *
+ * 退出码：0 = 结构验证通过；1 = 工厂/实例化失败；2 = 用法错误。
+ *
+ * 设计意图：M4 接入前验证 mt 胶水 + wasm 兼容性——真 pthread worker spawn 需浏览器
+ * crossOriginIsolated 环境，Node 侧先做结构级验证（MODULARIZE 工厂 + Blob URL 注入）。
+ */
 // ===== ADR-079 M3/M4 验证脚本：pthread 多线程 WASM 在 Worker 全局下实例化 + 解码 =====
 // 模拟 Web Worker 全局（无 window，globalThis 注入）——与 ysm-worker-loader 同构路径：
 //  1. import mt 数据文件（pthread 编译产物，Atomics/SharedArrayBuffer/PThread）
@@ -9,9 +25,15 @@
 // 运行：node scripts/verify-wasm-mt.mjs
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { parseArgs } from "./_lib/parse-args.mjs";
 const require = createRequire(import.meta.url);
 
-const ysmPath = process.argv[2];
+const args = parseArgs(process.argv.slice(2));
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（用法: node scripts/verify-wasm-mt.mjs <path.ysm>）`);
+  process.exit(2);
+}
+const ysmPath = args._[0];
 if (!ysmPath) {
   console.error("用法: node scripts/verify-wasm-mt.mjs <path.ysm>");
   process.exit(2);

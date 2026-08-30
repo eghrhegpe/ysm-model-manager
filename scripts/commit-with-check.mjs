@@ -24,6 +24,10 @@
  *   2 — 用法错误
  *
  * 依赖：_lib/scan-files / _lib/domain-classify / _lib/proc
+ *
+ * 设计意图：把 AI 的「确认性循环」（改代码→tsc→build→test→git add→commit→git log）
+ * 压缩为「改代码→commit-with-check」单条命令，检查清单单一源头 = pre-push-gate，
+ * 不平行维护第二套。
  */
 import { ROOT } from './_lib/scan-files.mjs';
 import { classify } from './_lib/domain-classify.mjs';
@@ -181,5 +185,17 @@ if (status) {
 } else {
   console.log('工作区干净，无剩余改动。');
 }
+
+// --json 契约（检查类脚本）：末尾无条件输出结构化摘要，供 CI/子代理稳定消费
+console.log(JSON.stringify({
+  _summary: {
+    ok: true,
+    mode: docsMode ? 'docs' : 'files',
+    checkOnly: !!checkOnly,
+    committed: !checkOnly,
+    files: stagedFiles.length,
+    sha: !checkOnly ? git(['rev-parse', '--short', 'HEAD']) : null,
+  },
+}));
 
 process.exit(0);

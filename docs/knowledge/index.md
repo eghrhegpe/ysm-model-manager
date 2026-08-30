@@ -112,7 +112,7 @@
 | 🏗 go-download | 下载器 go/download | architecture | io-bound, single-thread | 下载, 进度, download, 进度条, 下载进度 |
 | 🏗 go-executil | 进程隐藏窗口 go/executil | architecture | — | 子进程隐藏控制台窗口, 跨平台 HideWindow, 外部进程启动 |
 | 🏗 go-fileops | 文件操作 go/fileops | architecture | — | 移动, 复制, 重命名, 删除, fileops, 启用禁用, .ban, ysm.json 整组操作 |
-| 🍃 go-fsutil | 文件基础设施 go/fsutil | leaf | — | 遍历, walk, 空目录, 文件数, 原子写, 复制, 权限常量, 硬链接, 跨设备, BOM, 读取上限 |
+| 🍃 go-fsutil | 文件基础设施 go/fsutil | leaf | — | 遍历, walk, 空目录, 文件数, 原子写, 复制, 权限常量, 硬链接, 跨设备, BOM, 读取上限, base64 受限解码 |
 | 🏗 go-geometry | Geometry 存档 go/geometry | architecture | — | geometry, 基岩版, bedrock, 模型解析, zip, 7z, 纹理, 动画 |
 | 🏗 go-importer | 导入策略 go/importer | architecture | — | 导入, 策略, 导入队列, importer |
 | 🏗 go-installer | 模型安装 go/installer | architecture | — | 安装, installer, 模型导入, 下载模型 |

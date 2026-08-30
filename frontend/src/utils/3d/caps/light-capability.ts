@@ -617,11 +617,23 @@ export class LightCapability implements SceneCapability {
   setTargetHeight(h: number): void {
     this.targetHeight = h;
     this.spotlight.position.set(this.target.x, this.target.y + h, this.target.z);
+    // rebuildCone 会 dispose 旧锥组并换成全新实例（新实例默认脱离场景），故先记挂载态，
+    // 重建后按原状态回挂 + 重新定位——否则挂载态下改高度会让体积光锥凭空消失。
+    // 只恢复「重建前已挂载」的情形，不凭空新增挂载（未开启体积光时不应出现锥组）。
+    const wasMounted = Boolean(this.coneGroup?.parent);
     this.rebuildCone();
-    if (this.coneGroup && this.scene.getObjectByName(this.coneGroup.name)) {
-      this.coneGroup.position.copy(this.spotlight.position);
-      this.coneGroup.position.y -= this.coneHeight / 2;
-    }
+    if (wasMounted) this.attachCone();
+  }
+
+  /**
+   * 把当前锥组挂进场景并对齐聚光灯（幂等：已在场景中则只同步位置）。
+   * 供 rebuildCone 换新实例后的回挂使用——rebuildCone 只负责建，不负责挂载。
+   */
+  private attachCone(): void {
+    if (!this.coneGroup) return;
+    if (!this.coneGroup.parent) this.scene.add(this.coneGroup);
+    this.coneGroup.position.copy(this.spotlight.position);
+    this.coneGroup.position.y -= this.coneHeight / 2;
   }
 
   /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
@@ -641,15 +653,15 @@ export class LightCapability implements SceneCapability {
 
   /**
    * 锥组挂载态与当前 params 同步（setPreset / loadState 复用）。
-   * 只在锥组已挂载时处理卸载与定位——挂载动作由 setSpotlight / setVolumetric 负责。
+   * 只在锥组已挂载时处理卸载与定位——挂载动作由 setSpotlight / setVolumetric /
+   * setVolumetricEngine 负责（本方法不重挂：外层守卫已保证 coneGroup.parent 非空，
+   * 曾经的 else-if 重挂分支是死代码，已删）。
    */
   private syncConeMount(): void {
     if (this.coneGroup && this.coneGroup.parent) {
-      // 若启用状态改变，需同步挂载/卸载
+      // 启用状态关闭 → 卸载（锥组仍在场景中时）
       if (!this.params.volumetric.enabled || !this.params.spotlight.enabled) {
-        if (this.coneGroup.parent) this.coneGroup.parent.remove(this.coneGroup);
-      } else if (!this.coneGroup.parent) {
-        this.scene.add(this.coneGroup);
+        this.coneGroup.parent.remove(this.coneGroup);
       }
       this.coneGroup.position.copy(this.spotlight.position);
       this.coneGroup.position.y -= this.coneHeight / 2;
@@ -780,10 +792,15 @@ export class LightCapability implements SceneCapability {
     if (typeof state.volumetricEnabled === "boolean") this.params.volumetric.enabled = state.volumetricEnabled;
     // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步（setPreset 的判定基于覆盖前的预设值）
     this.syncConeMount();
-    // ④ 引擎最后恢复：setVolumetricEngine 自带「postprocess ⇒ volumetric 关闭」一致性约束，
-    //    放最后可避免用户保存的 volumetricEnabled 与 postprocess 引擎自相矛盾
-    if (state.volumetricEngine === "cone" || state.volumetricEngine === "postprocess") {
-      this.setVolumetricEngine(state.volumetricEngine);
+    // ④ 引擎最后恢复：仅 "postprocess" 走 setVolumetricEngine——其「postprocess ⇒
+    //    volumetric 关闭」一致性约束是有意的；"cone" 用无副作用字段赋值（cone 是构造
+    //    默认引擎，其「spotlight 开启时强制 volumetric.enabled=true」是运行期切回锥
+    //    引擎的语义，若在此执行会把用户保存的 volumetricEnabled=false 强制翻回 true，
+    //    与②「用户显式保存的开关优先」矛盾——跨会话丢失回归，方向相反）。
+    if (state.volumetricEngine === "postprocess") {
+      this.setVolumetricEngine("postprocess");
+    } else if (state.volumetricEngine === "cone") {
+      this.volumetricEngine = "cone";
     }
     this.syncLightsFromParams();
   }

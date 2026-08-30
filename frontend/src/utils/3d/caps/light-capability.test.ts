@@ -347,6 +347,30 @@ describe("LightCapability — 持久化", () => {
     expect(cap2.getCurrentPreset()).toBe("mmd");
   });
 
+  it("saveState/loadState 往返：volumetric=false + cone 引擎 + spotlight 开启 → 体积光不被引擎恢复重新打开（审核修复回归）", () => {
+    const cap = newCap();
+    // 常见用户态：开聚光灯但关体积光（引擎保持默认 cone）——saveState 持久化
+    // {spotlightEnabled:true, volumetricEnabled:false, volumetricEngine:"cone"}
+    cap.setPreset("mmd", { manual: true });
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: false });
+    expect(cap.getVolumetricEngine()).toBe("cone"); // 默认引擎
+    cap.saveState();
+
+    const cap2 = newCap();
+    cap2.loadState();
+    const p = cap2.getParams();
+    // 修复前：loadState 步骤④ setVolumetricEngine("cone") 因 spotlight 开启而强制
+    // volumetric.enabled=true 并重建挂载光锥——用户保存的「体积光关」跨会话丢失。
+    // 修复后：cone 引擎走无副作用字段恢复，用户保存值存活。
+    expect(p.spotlight.enabled).toBe(true);
+    expect(p.volumetric.enabled).toBe(false);
+    expect(cap2.getVolumetricEngine()).toBe("cone");
+    // 锥组不因引擎恢复被挂载（spotlight 开启但 volumetric 关闭 → 无光锥；
+    // cap2 从未构建锥组，coneGroup 为 undefined 即「未挂载」）
+    expect((cap2 as unknown as { coneGroup?: THREE.Object3D | null }).coneGroup?.parent).toBeUndefined();
+  });
+
   it("loadState 空存储时保持默认值", () => {
     const cap = newCap({ params: { ambient: { intensity: 1.5 } } });
     cap.loadState();
@@ -418,15 +442,28 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     expect(group.position.y).toBeCloseTo(2 + 8 - 8 / 2, 5);
   });
 
-  it("setTargetHeight 重建锥；spotlight 抬升但新锥组不自动回挂（可疑点记录）", () => {
+  it("setTargetHeight 重建锥后保持挂载（rebuildCone 换新实例不得让锥组消失）", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
     cap.setTargetHeight(12);
     const spot = cap.getSpotLight();
     expect(spot.position.y).toBeCloseTo(12, 5);
-    // rebuildCone 的新锥组未挂载（setTargetHeight 只在 coneGroup 已在场景时同步位置，
-    // 而它已被 rebuildCone 换新移除）——挂载态下改高度会导致锥组消失
+    // rebuildCone 会 dispose 旧锥组并换成新实例（新实例默认脱离场景），
+    // 必须按重建前的挂载态回挂 + 重新定位，否则改高度会让体积光锥凭空消失
+    const group = scene.getObjectByName("ysm-light-volumetric-cone");
+    expect(group).toBeDefined();
+    expect(group!.position.y).toBeCloseTo(12 - 12 / 2, 5);
+  });
+
+  it("setTargetHeight 在锥组未挂载时不主动挂载（保持未挂载态）", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    // 未开 volumetric/spotlight → 无锥组
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+    cap.setTargetHeight(12);
+    // 回挂只恢复「重建前已挂载」的状态，不凭空新增挂载
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 

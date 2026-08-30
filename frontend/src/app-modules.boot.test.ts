@@ -141,11 +141,11 @@ async function boot(opts: { microFlush?: boolean } = {}) {
     const origSetTimeout = globalThis.setTimeout;
     timerSpy = vi
       .spyOn(globalThis, "setTimeout")
-      .mockImplementation(((fn, ms, ...args) => {
-        const h = origSetTimeout(fn, ms, ...args);
+      .mockImplementation(((...a: Parameters<typeof setTimeout>) => {
+        const h = origSetTimeout(...a);
         realTimerHandles.add(h);
         return h;
-      }) as unknown as typeof globalThis.setTimeout);
+      }) as typeof setTimeout);
   }
   try {
     await import("./app-modules.ts");

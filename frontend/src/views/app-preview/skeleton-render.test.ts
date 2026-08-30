@@ -291,7 +291,7 @@ describe("saveScreenshot", () => {
     expect(setShotState).not.toHaveBeenCalledWith("\u2705");
   });
 
-  it("all → 递归 front/45/side/back45（saveFile 4 次）", async () => {
+  it("all → 递归 front/45/side/back45（saveFile 4 次，内容与视角一一对应）", async () => {
     renderMultiAngle.mockResolvedValue([
       { name: "front", base64: "f" },
       { name: "45", base64: "45" },
@@ -303,6 +303,25 @@ describe("saveScreenshot", () => {
     await saveScreenshot(makeModel({ textures: ["t1", "t2"] }), "all", setShotState, screenshotFn);
     expect(renderMultiAngle).toHaveBeenCalledTimes(4);
     expect(saveFile).toHaveBeenCalledTimes(4);
+    // 视角-内容一一对应（审查 P1：误用 renderFrontFrame 会让四张全存 front 帧）
+    const calls = saveFile.mock.calls.map(([file, b64]) => [String(file), b64]);
+    expect(calls).toEqual([
+      [expect.stringContaining("_front"), "f"],
+      [expect.stringContaining("_45"), "45"],
+      [expect.stringContaining("_side"), "s"],
+      [expect.stringContaining("_back45"), "b45"],
+    ]);
+  });
+
+  it("45 → renderMultiAngle 命中 45 角度帧（非 front 帧，审查 P1 回归）", async () => {
+    renderMultiAngle.mockResolvedValue([
+      { name: "front", base64: "f" },
+      { name: "45", base64: "45" },
+    ]);
+    saveFile.mockResolvedValue(undefined);
+    const setShotState = vi.fn();
+    await saveScreenshot(makeModel(), "45", setShotState, screenshotFn);
+    expect(saveFile).toHaveBeenCalledWith(expect.stringContaining("_45"), "45");
   });
 
   it("front → renderMultiAngle 命中 front 角度", async () => {

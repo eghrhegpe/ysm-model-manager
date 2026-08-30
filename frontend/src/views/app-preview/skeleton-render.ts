@@ -245,7 +245,10 @@ export async function saveScreenshot(
   } else if (key === "all") {
     for (const k of ["front", "45", "side", "back45"]) await saveScreenshot(model, k, setShotState, screenshotFn);
   } else {
-    const b64 = await renderFrontFrame(model);
+    // 按请求视角渲染对应帧（renderFrame 内 renderMultiAngle 返回 front/45/side/back45
+    // 并按 key 匹配 name——审查 P1：误用 renderFrontFrame 会让 45/side/back45 全部
+    // 保存 front 帧，文件名与内容错位）
+    const b64 = await renderFrame(model, key);
     if (!b64) return;
     await SaveScreenshotFile(base + "_" + key + ".png", b64);
   }

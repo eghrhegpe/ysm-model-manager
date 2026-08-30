@@ -20,7 +20,7 @@ const VALID_ACTIONS = new Set(['import', 'toggle', 'delete', 'openFolder', 'view
 const VALID_CONFIG_FIELDS = new Set([
   'YsmRoot', 'ResourcepackRoot', 'ShaderpackRoot', 'SchematicRoot', 'LitematicRoot', 'MmdRoot', 'VrcRoot',
 ]);
-const REQUIRED_FIELDS = ['id', 'name', 'icon', 'extensions', 'instanceDir', 'instanceLevel', 'preview', 'detector', 'actions'];
+const REQUIRED_FIELDS = ['id', 'name', 'icon', 'extensions', 'instanceDir', 'instanceLevel', 'preview', 'detector'];
 // ADR-092：合法分组 id 白名单（resourceGroups 顶层数组派生）
 const VALID_GROUPS = new Set(['minecraft', 'minecraft-mod', 'mmd', 'vrm', 'other']);
 
@@ -178,14 +178,17 @@ function validate() {
       }
     }
 
-    // actions 校验
-    const actions = rt?.actions ?? [];
-    if (!Array.isArray(actions) || actions.length === 0) {
-      errors.push(`${prefix}: 'actions' must be a non-empty array`);
-    } else {
-      for (const act of actions) {
-        if (!VALID_ACTIONS.has(act)) {
-          errors.push(`${prefix}: unknown action '${act}', must be one of ${[...VALID_ACTIONS]}`);
+    // actions 校验（可选——81490dc8 清理死配置后不再强制：存在才校验非空+白名单，
+    // 前端/Go 已零消费，唯一历史消费者即本测试自身）
+    const actions = rt?.actions;
+    if (actions !== undefined) {
+      if (!Array.isArray(actions) || actions.length === 0) {
+        errors.push(`${prefix}: 'actions' must be a non-empty array`);
+      } else {
+        for (const act of actions) {
+          if (!VALID_ACTIONS.has(act)) {
+            errors.push(`${prefix}: unknown action '${act}', must be one of ${[...VALID_ACTIONS]}`);
+          }
         }
       }
     }

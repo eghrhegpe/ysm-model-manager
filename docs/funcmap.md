@@ -836,18 +836,18 @@
 | `App.SaveWorkshopSites()` | `internal/app/app_workshop:114` | — |
 | `App.LoadWorkshopCreators()` | `internal/app/app_workshop:156` | — |
 | `App.SaveWorkshopCreators()` | `internal/app/app_workshop:167` | — |
-| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:176` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
-| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:192` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
-| `App.LoadGitHubRepos()` | `internal/app/app_workshop:205` | — |
-| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:216` | — |
-| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:237` | ========== CSV 导出/导入 ========== |
-| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:249` | — |
-| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:262` | — |
-| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:278` | — |
-| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:304` | — |
-| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:311` | — |
-| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:332` | — |
-| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:374` | — |
+| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:188` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
+| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:204` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
+| `App.LoadGitHubRepos()` | `internal/app/app_workshop:217` | — |
+| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:228` | — |
+| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:249` | ========== CSV 导出/导入 ========== |
+| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:261` | — |
+| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:274` | — |
+| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:290` | — |
+| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:316` | — |
+| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:323` | — |
+| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:344` | — |
+| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:386` | — |
 | `NewApp()` | `internal/app/app:75` | — |
 | `App.SetApp()` | `internal/app/app:104` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
 | `App.GetYSMRepoRoot()` | `internal/app/app:107` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
@@ -2225,14 +2225,14 @@
 | `createBrowseModeRef()` | `frontend/src/views/app-content/workshop-browse-mode:13` | 建浏览模式 ref（单源，setBrowseMode 改 .v 即处处生效） |
 | `loadBrowseMode()` | `frontend/src/views/app-content/workshop-browse-mode:20` | 从 localStorage 加载浏览模式 |
 | `saveBrowseMode()` | `frontend/src/views/app-content/workshop-browse-mode:31` | 保存浏览模式到 localStorage |
-| `CreatorIdentity()` | `frontend/src/views/app-content/workshop-data:9` | 创作者身份识别结果 |
-| `CreatorIdentityInput()` | `frontend/src/views/app-content/workshop-data:16` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
-| `getCreatorIdentity()` | `frontend/src/views/app-content/workshop-data:23` | — |
-| `getTagFromRole()` | `frontend/src/views/app-content/workshop-data:49` | — |
-| `parseDescTags()` | `frontend/src/views/app-content/workshop-data:54` | — |
-| `loadFavs()` | `frontend/src/views/app-content/workshop-data:64` | — |
-| `isFaved()` | `frontend/src/views/app-content/workshop-data:76` | — |
-| `toggleFav()` | `frontend/src/views/app-content/workshop-data:80` | — |
+| `CreatorIdentity()` | `frontend/src/views/app-content/workshop-data:10` | 创作者身份识别结果 |
+| `CreatorIdentityInput()` | `frontend/src/views/app-content/workshop-data:17` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
+| `getCreatorIdentity()` | `frontend/src/views/app-content/workshop-data:24` | — |
+| `getTagFromRole()` | `frontend/src/views/app-content/workshop-data:50` | — |
+| `parseDescTags()` | `frontend/src/views/app-content/workshop-data:55` | — |
+| `loadFavs()` | `frontend/src/views/app-content/workshop-data:65` | — |
+| `isFaved()` | `frontend/src/views/app-content/workshop-data:77` | — |
+| `toggleFav()` | `frontend/src/views/app-content/workshop-data:81` | — |
 | `openSite()` | `frontend/src/views/app-content/workshop-site-opener:20` | 打开站点（外链/内嵌/窗口） |
 | `bindSiteEvents()` | `frontend/src/views/app-content/workshop-site-opener:85` | 绑定站点打开相关事件 |
 | `WorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:20` | 创意工坊页的共享 ref 集合——单一事实来源。 |

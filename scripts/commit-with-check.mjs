@@ -5,6 +5,9 @@
  * 核心洞察：把 AI 的「确认性循环」（改代码→tsc→build→test→git add→commit→git log）
  * 压缩为「改代码→commit-with-check」单条命令。
  *
+ * 设计意图：作为 ADR-086 的配套入口，让「验证+提交」走同一条被门禁保护的路径，
+ * 杜绝绕过检查直接 commit。
+ *
  * 设计（thin wrapper）：
  *   1. 读 git staged files，仅作变更域摘要展示
  *   2. 检查全部委托给 pre-push-gate.mjs（--all --dry-run / --docs --dry-run）
@@ -24,10 +27,6 @@
  *   2 — 用法错误
  *
  * 依赖：_lib/scan-files / _lib/domain-classify / _lib/proc
- *
- * 设计意图：把 AI 的「确认性循环」（改代码→tsc→build→test→git add→commit→git log）
- * 压缩为「改代码→commit-with-check」单条命令，检查清单单一源头 = pre-push-gate，
- * 不平行维护第二套。
  */
 import { ROOT } from './_lib/scan-files.mjs';
 import { classify } from './_lib/domain-classify.mjs';

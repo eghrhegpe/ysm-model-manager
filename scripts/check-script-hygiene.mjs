@@ -223,7 +223,10 @@ function main() {
   }
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ _summary: { scripts: files.length, warns: warns.length }, warns }, null, 2));
+    // _summary.ok 对齐 --json 契约（pre-push-gate runTools 优先读 s.ok）：
+    // 默认模式 WARN 不阻断 → ok=true（提示工具）；--strict 模式有 WARN 即不通过。
+    const ok = STRICT ? warns.length === 0 : true;
+    console.log(JSON.stringify({ _summary: { scripts: files.length, warns: warns.length, ok }, warns }, null, 2));
     if (STRICT && warns.length) process.exit(1);
     return;
   }

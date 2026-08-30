@@ -2,11 +2,16 @@
 /**
  * compare-maid-packs.mjs — 实战比对：单女仆 zip vs 多合一女仆包。
  *
- * 依赖：node:child_process / node:fs / node:path（零外部依赖）
+ * 【当前状态：依赖缺失，暂不可运行】本脚本依赖仓库根 `_tools/` 下的
+ * listzip.go（列 zip 条目 + 抽 manifest）与 maidparse.go（ParseFromZip 独立程序），
+ * 但 `_tools/` 目录当前不存在（2026-08-31 核对）——运行即报
+ * `listzip fail: ..._tools\listzip.go not found`。待 _tools/ 工具回归后再启用。
+ *
+ * 依赖：node:child_process / node:fs / node:path + 缺失的 _tools/{listzip,maidparse}.go
  *
  * 用法：node scripts/compare-maid-packs.mjs
  *
- * 退出码：0（比对报告工具，不阻断）。
+ * 退出码：0（比对报告工具，不阻断）；依赖缺失时 1（当前必然失败）。
  *
  * 设计意图：用 _listzip.go 列 zip 条目 + 调 ParseFromZip（经 Go 单测）对比
  * L0 清单与 L1 枚举差异，输出 tmp/maid-report.json 供模型包结构分析。

@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
@@ -529,6 +530,14 @@ func (a *App) isPathInRootOrSelf(path string) bool {
 		sep := string(filepath.Separator)
 		if rel == ".." || strings.HasPrefix(rel, ".."+sep) {
 			continue // 越权到该根外，试下一个根
+		}
+		// 符号链接二次复核（audit P3）：词法 Rel 通过 ≠ 真实落点在根内——
+		// 根内出现指向外部的 symlink 时纯词法判定可越权读根外文件。
+		// 仅对真实存在的路径复核：Lstat 失败（不存在/断链）无越权读取面，维持词法判定；
+		// 且 EvalSymlinks 对不存在路径失败会保留 8.3 短路径原样，与已解析的 root 前缀
+		// 比对错位会产生误拒（TestIsPathInRootOrSelf_Boundaries 实测）。
+		if _, err := os.Lstat(clean); err == nil && paths.IsInsideResolved(root, clean) != nil {
+			continue // 词法在内、真实存在，但解析后越出该根，试下一个根
 		}
 		return true
 	}

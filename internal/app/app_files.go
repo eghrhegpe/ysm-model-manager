@@ -62,11 +62,19 @@ func (a *App) RenameFile(oldPath, newName string) error {
 }
 
 // ========== 预览提取 ==========
+// 路径守卫：与 ReadFileBytes 同口径（isPathInRootOrSelf）——「能读的文件就能预览」
+// 对称范式；否则任意 modelPath 可返回根外文件的预览图 data URI（信息泄露面）。
 func (a *App) FindPreviewImage(modelPath string) string {
+	if !a.isPathInRootOrSelf(modelPath) {
+		return ""
+	}
 	return fileops.FindPreviewImage(modelPath)
 }
 
 func (a *App) ExtractPreviewTexture(modelPath string) string {
+	if !a.isPathInRootOrSelf(modelPath) {
+		return ""
+	}
 	return fileops.ExtractPreviewTexture(modelPath)
 }
 

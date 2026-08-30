@@ -1349,8 +1349,8 @@
 | `makeBonesPanelItem()` | `frontend/src/utils/3d/adapters/bones-panel-node:51` | 构造「骨骼」菜单项节点。返回的 PreviewMenuNode 形状固定： id="bones" / icon="🦴" / dockGroup="motion" / kind=" |
 | `CameraControlBridge()` | `frontend/src/utils/3d/adapters/camera-controls:13` | 相机控制桥：shared/self 双模式统一构建旋转/速度/重置控件的回调集合（方案 A：消灭 ysm-adapter 双份实现） |
 | `buildCameraControls()` | `frontend/src/utils/3d/adapters/camera-controls:31` | 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 |
-| `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:41` | — |
-| `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:82` | — |
+| `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:53` | — |
+| `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:94` | — |
 | `FbxDataPort()` | `frontend/src/utils/3d/adapters/fbx-adapter:29` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
 | `FBX_TARGET_MAX_DIM()` | `frontend/src/utils/3d/adapters/fbx-adapter:36` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
 | `FbxScaleInfo()` | `frontend/src/utils/3d/adapters/fbx-adapter:39` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
@@ -1526,7 +1526,7 @@
 | `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:67` | 测试用：清空注册表（用例间隔离） |
 | `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:32` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
 | `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:95` | 会话内切换模型（复用外壳重建内容层）。 |
-| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:419` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
+| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:423` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
 | `Endianness()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
 | `ConsoleLogger()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
 | `MmdDataDeserializer()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |
@@ -1864,7 +1864,7 @@
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |
 | `getTextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:35` | Classify alpha once per cached texture so material setup can choose a render path. |
 | `TextureCacheImpl()` | `frontend/src/utils/3d/texture-cache:18` | — |
-| `textureCache()` | `frontend/src/utils/3d/texture-cache:71` | 全局单例（随 3D 会话生命周期；disposeAll 由 cleanup-3d.ts 调用） |
+| `textureCache()` | `frontend/src/utils/3d/texture-cache:94` | 全局单例（随 3D 会话生命周期；disposeAll 由 cleanup-3d.ts 调用） |
 | `VrmMaterialListItem()` | `frontend/src/utils/3d/vrm-materials:11` | 材质列表项（listVrmMaterials） |
 | `VrmMaterialDetail()` | `frontend/src/utils/3d/vrm-materials:17` | 材质详情（getVrmMaterialDetail） |
 | `listVrmMaterials()` | `frontend/src/utils/3d/vrm-materials:28` | 材质列表：vrm.scene 遍历所有 Mesh.material（含数组材质） |
@@ -2303,12 +2303,12 @@
 | `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:66` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
 | `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:71` | 任意新预览派发时调用，作废在途资源包加载 |
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:23` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
-| `registerReRoute()` | `frontend/src/views/app-preview/preview-library:24` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
-| `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:32` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |
-| `OpenModel3DOptions()` | `frontend/src/views/app-preview/preview-library:37` | openModel3DFullscreen 选项（ADR-093 T4：cooperate 统一多模型同台追加入口） |
-| `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:60` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
-| `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:132` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
-| `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:149` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
+| `registerReRoute()` | `frontend/src/views/app-preview/preview-library:25` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
+| `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:33` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |
+| `OpenModel3DOptions()` | `frontend/src/views/app-preview/preview-library:38` | openModel3DFullscreen 选项（ADR-093 T4：cooperate 统一多模型同台追加入口） |
+| `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:61` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
+| `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:152` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
+| `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:169` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
 | `createScene3D()` | `frontend/src/views/app-preview/scene-3d:33` | 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） |
 | `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:38` | 清理场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:43` | 任意新预览派发时调用，作废在途场景加载 |

@@ -3,7 +3,7 @@
 package app
 
 import (
-	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +13,7 @@ import (
 	"ysm-model-manager/go/importer"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/instance"
+	"ysm-model-manager/go/paths"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 )
@@ -59,7 +60,8 @@ func (a *App) ImportModelFile(fileName, base64Data string) error {
 
 // DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用）
 func (a *App) DetectZipType(base64Data string) string {
-	data, err := base64.StdEncoding.DecodeString(base64Data)
+	// base64 预大小守卫：与导入链路同口径，类型探测只需头部特征，50MB 上限足够
+	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxReadLimit)
 	if err != nil {
 		return "unknown"
 	}
@@ -167,7 +169,14 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 	if ext == ".json" && !types.IsYsmEntryJSON(filepath.Base(fileName)) {
 		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
 	}
-	data, err := base64.StdEncoding.DecodeString(base64Data)
+	// base64 受限解码：预检+解码+复检统一走 fsutil.DecodeBase64Limited
+	//（原「解码后才查 len(data)」会在 500MB 输入上先白白物化再拒绝，与 importer_file.go 口径不一）
+	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxImportSize)
+	if errors.Is(err, fsutil.ErrB64TooLarge) {
+		// 文案绑定 MaxImportSizeMB 常量——原硬编码 "500MB"
+		// 与 MaxImportSize 无绑定，改常量后漂移即编译期暴露
+		return types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件大小超过 %dMB 限制", types.MaxImportSizeMB), Suggestion: fmt.Sprintf("请压缩文件至 %dMB 以内", types.MaxImportSizeMB)}
+	}
 	if err != nil {
 		return types.AppError{Code: types.ErrDecodeFailed, Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
 	}
@@ -181,16 +190,11 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 			}
 		}
 	}
-	if strings.Contains(fileName, "../") || strings.Contains(fileName, "..\\") || strings.HasSuffix(fileName, "..") {
+	if paths.HasTraversal(fileName) {
 		return types.AppError{Code: types.ErrFileNameInvalid, Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含路径穿越", Suggestion: "请使用纯文件名，不要包含路径"}
 	}
 	if strings.ContainsAny(fileName, `\/`) {
 		return types.AppError{Code: types.ErrFileNameInvalid, Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
-	}
-	if len(data) > types.MaxImportSize {
-		// 文案绑定 MaxImportSizeMB 常量——原硬编码 "500MB"
-		// 与 MaxImportSize 无绑定，改常量后漂移即编译期暴露
-		return types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件大小超过 %dMB 限制", types.MaxImportSizeMB), Suggestion: fmt.Sprintf("请压缩文件至 %dMB 以内", types.MaxImportSizeMB)}
 	}
 	if len(data) == 0 {
 		return types.AppError{Code: types.ErrFileEmpty, Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}

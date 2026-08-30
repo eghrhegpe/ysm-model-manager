@@ -44,7 +44,9 @@ type boneJSON struct {
 	Cubes    []cubeJSON      `json:"cubes"`
 }
 
-// clampTexSize 纹理尺寸钳制到 [0, 65536]（防 1e100 溢出为负 → UV 归一化垃圾值）
+// clampTexSize 纹理尺寸守卫（防 1e100 溢出为负 → UV 归一化垃圾值）：
+// 合法范围 [0, 65536]，<0 或 >65536 归 0 —— 0 是「缺失/无效」哨兵值，
+// 与合法 0 不可区分属有意取舍（下游 0 → 走默认纹理尺寸），超界不做真钳制。
 func clampTexSize(v float64) int {
 	i := int(v)
 	if i < 0 || i > 65536 {

@@ -52,6 +52,7 @@ tests/python/__pycache__/
 .atomcode/
 .rg-test-tmp/
 .qoder/
+.workbuddy-ai/
 .workbuddy/
 .codebuddy/
 .mimosa/

@@ -20,8 +20,10 @@ cd "$ROOT" || exit 0
 CLEANED=""
 # code_review P2/P3：管道子 shell 会吞掉 CLEANED 赋值（汇报永不触发，黑箱）——
 # 改用 temp 文件重定向（POSIX 安全，无进程替换依赖），循环留在父 shell。
+# -c core.quotepath=false：非 ASCII 文件名输出原始 UTF-8（对齐 audit-split/
+# commit-with-check/pre-push-gate 行业标配，防八进制转义破坏 restore 路径匹配）。
 LIST="/tmp/ysm_postclean_$$.txt"
-git diff --cached --name-only 2>/dev/null > "$LIST" || true
+git -c core.quotepath=false diff --cached --name-only 2>/dev/null > "$LIST" || true
 while IFS= read -r p; do
   [ -z "$p" ] && continue
   [ -e "$p" ] || continue

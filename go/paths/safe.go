@@ -129,6 +129,13 @@ func resolveOrKeep(p string) string {
 	return p
 }
 
+// ResolveOrKeep 是 resolveOrKeep 的导出形式，供调用方缓存复用 baseDir 的解析结果
+// （扫描热路径优化：baseDir 来自配置极少变化，每次重算 EvalSymlinks 是主要重复开销；
+// path 侧仍应每次实时解析，保留对路径中途 symlink 的复核语义）。
+func ResolveOrKeep(p string) string {
+	return resolveOrKeep(p)
+}
+
 // HasTraversal 检查路径片段是否包含 ".." 遍历组件（统一入口）。
 // 覆盖场景：纯文件名（importer）、目录名（fileops）、子路径（folder_import）。
 // 跨平台：同时检查 / 和 \\，防止未 Clean 的原始输入绕过。

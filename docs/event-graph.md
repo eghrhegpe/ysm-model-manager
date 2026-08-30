@@ -214,7 +214,7 @@
 | `frontend/src/views/app-preview/detail-3d.ts` | 341 |
 | `frontend/src/views/app-tree/events.ts` | 155 |
 | `frontend/src/views/app-tree/events.ts` | 252 |
-| `frontend/src/views/app-tree/index.ts` | 411 |
+| `frontend/src/views/app-tree/index.ts` | 418 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -528,9 +528,9 @@
 | `frontend/src/views/app-sync-manager/network.ts` | 55 |
 | `frontend/src/views/app-sync-manager/store.ts` | 30 |
 | `frontend/src/views/app-sync-manager/store.ts` | 64 |
-| `frontend/src/views/app-toast/index.ts` | 125 |
-| `frontend/src/views/app-toast/index.ts` | 144 |
-| `frontend/src/views/app-toast/index.ts` | 153 |
+| `frontend/src/views/app-toast/index.ts` | 133 |
+| `frontend/src/views/app-toast/index.ts` | 152 |
+| `frontend/src/views/app-toast/index.ts` | 161 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 60 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 95 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
@@ -557,11 +557,11 @@
 | `frontend/src/views/app-tree/events.ts` | 431 |
 | `frontend/src/views/app-tree/events.ts` | 474 |
 | `frontend/src/views/app-tree/events.ts` | 487 |
-| `frontend/src/views/app-tree/index.ts` | 201 |
-| `frontend/src/views/app-tree/index.ts` | 347 |
-| `frontend/src/views/app-tree/index.ts` | 355 |
-| `frontend/src/views/app-tree/index.ts` | 456 |
+| `frontend/src/views/app-tree/index.ts` | 208 |
+| `frontend/src/views/app-tree/index.ts` | 354 |
+| `frontend/src/views/app-tree/index.ts` | 362 |
 | `frontend/src/views/app-tree/index.ts` | 463 |
+| `frontend/src/views/app-tree/index.ts` | 470 |
 | `frontend/src/views/app-tree/loader.ts` | 31 |
 | `frontend/src/views/app-tree/loader.ts` | 55 |
 | `frontend/src/views/app-tree/toolbar-events.ts` | 44 |
@@ -584,7 +584,7 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/core/error-diary.ts` | 55 |
-| `frontend/src/views/app-toast/index.ts` | 65 |
+| `frontend/src/views/app-toast/index.ts` | 69 |
 
 ### `tree:reload`
 
@@ -620,4 +620,4 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/index.ts` | 137 |
+| `frontend/src/views/app-tree/index.ts` | 144 |

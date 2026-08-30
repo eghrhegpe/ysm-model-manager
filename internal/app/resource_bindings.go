@@ -415,6 +415,9 @@ func (a *App) ResetResourceRoot(rtype string) error {
 
 // saveConfig 写入配置到文件
 func (a *App) saveConfig(cfg types.AppConfig) error {
+	// roots（FilesRoot/CustomRoots 等）可能变更：失效 isPathInRootOrSelf 的
+	// root 解析缓存，防止扫描守卫用过期的根真实路径做 symlink 复核
+	clearResolvedRootCache()
 	if configDir() == "" {
 		// 平台数据根缺失（Android 沙盒不可用等）：fail-fast 报明确错误，
 		// 绝不退化为相对路径（CWD=/ 只读 → 无意义的 read-only 报错）

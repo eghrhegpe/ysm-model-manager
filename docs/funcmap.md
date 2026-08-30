@@ -25,7 +25,7 @@
 | Go·Litematic | 6 | 13 |
 | Go·日志 | 2 | 12 |
 | Go·包管理 | 1 | 3 |
-| Go·路径 | 1 | 7 |
+| Go·路径 | 1 | 8 |
 | Go·回收站 | 2 | 19 |
 | go/repoaudit | 1 | 9 |
 | go/rustbridge | 5 | 10 |
@@ -47,10 +47,10 @@
 | frontend/test-utils | 6 | 37 |
 | frontend/ui | 18 | 66 |
 | 前端·工具 | 184 | 758 |
-| frontend/views | 122 | 358 |
+| frontend/views | 122 | 360 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **525** | **2248** |
+| **合计** | **525** | **2251** |
 
 ## Go·头像
 
@@ -367,8 +367,9 @@
 | `ErrPathEscalation.Unwrap()` | `go/paths/safe:46` | Unwrap 暴露分类哨兵：errors.Is(err, ErrNotInside) 等可直接判断， 无需文本匹配错误文案。 |
 | `IsInside()` | `go/paths/safe:51` | IsInside 检查 path 是否在 baseDir 下，防止路径遍历。 |
 | `IsInsideResolved()` | `go/paths/safe:116` | IsInsideResolved 解析符号链接后再判定 path 是否在 baseDir 下（BUG-1 修复）。 |
-| `HasTraversal()` | `go/paths/safe:137` | HasTraversal 检查路径片段是否包含 ".." 遍历组件（统一入口）。 |
-| `ContainsMinecraftMarker()` | `go/paths/safe:159` | ContainsMinecraftMarker 检查路径中是否包含 .minecraft 或 minecraft 标记 PrismLauncher 实例目录下可能是 minecra |
+| `ResolveOrKeep()` | `go/paths/safe:135` | ResolveOrKeep 是 resolveOrKeep 的导出形式，供调用方缓存复用 baseDir 的解析结果 （扫描热路径优化：baseDir 来自配置极少变化，每次重算 |
+| `HasTraversal()` | `go/paths/safe:144` | HasTraversal 检查路径片段是否包含 ".." 遍历组件（统一入口）。 |
+| `ContainsMinecraftMarker()` | `go/paths/safe:166` | ContainsMinecraftMarker 检查路径中是否包含 .minecraft 或 minecraft 标记 PrismLauncher 实例目录下可能是 minecra |
 | `ErrPathEscalation()` | `go/paths/safe:32` | ErrPathEscalation 路径越权错误 |
 
 ## Go·回收站
@@ -901,15 +902,15 @@
 | `App.SelectImportFile()` | `internal/app/resource_bindings:370` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
 | `App.SetResourceRoot()` | `internal/app/resource_bindings:392` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） ADR-095：写入 cfg.CustomRoots[rtype]；删除则清空该 key。 |
 | `App.ResetResourceRoot()` | `internal/app/resource_bindings:412` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
-| `App.ImportResourcePack()` | `internal/app/resource_bindings:446` | ImportResourcePack 使用策略模式导入资源包 |
-| `App.ImportByType()` | `internal/app/resource_bindings:459` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
-| `App.DeleteResourcePack()` | `internal/app/resource_bindings:479` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： 统一入口——根据 rtype.isDir 决定语义： isDir=true:  删除文件所在 |
-| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:548` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串）。 |
-| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:576` | CountDuplicateFiles 快速统计重复文件数量。 |
-| `App.InvalidateScanCache()` | `internal/app/resource_bindings:589` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
-| `App.RepoHealthAudit()` | `internal/app/resource_bindings:596` | RepoHealthAudit 一键全仓体检（审计 + 去重），返回 JSON 字符串。 |
-| `App.RepoHealthAuditAll()` | `internal/app/resource_bindings:617` | RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。 |
-| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:682` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
+| `App.ImportResourcePack()` | `internal/app/resource_bindings:449` | ImportResourcePack 使用策略模式导入资源包 |
+| `App.ImportByType()` | `internal/app/resource_bindings:462` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
+| `App.DeleteResourcePack()` | `internal/app/resource_bindings:482` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： 统一入口——根据 rtype.isDir 决定语义： isDir=true:  删除文件所在 |
+| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:551` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串）。 |
+| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:579` | CountDuplicateFiles 快速统计重复文件数量。 |
+| `App.InvalidateScanCache()` | `internal/app/resource_bindings:592` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
+| `App.RepoHealthAudit()` | `internal/app/resource_bindings:599` | RepoHealthAudit 一键全仓体检（审计 + 去重），返回 JSON 字符串。 |
+| `App.RepoHealthAuditAll()` | `internal/app/resource_bindings:620` | RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。 |
+| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:685` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
 | `App.ListPackModels()` | `internal/app/resourcepack_models:73` | ListPackModels 枚举资源包容器内的 block/item 模型 JSON 条目路径（升序）。 |
 | `App.ListPackModelsDetail()` | `internal/app/resourcepack_models:100` | ListPackModelsDetail 枚举资源包容器内的 block/item 模型（升序）+ 立方体数（elements 长度）。 |
 | `App.ReadPackEntry()` | `internal/app/resourcepack_models:166` | ReadPackEntry 读取容器内条目内容（base64 字符串）。 |
@@ -2206,15 +2207,16 @@
 | `recycleHTML()` | `frontend/src/views/app-content/tpl-recycle:5` | — |
 | `aboutHTML()` | `frontend/src/views/app-content/tpl-settings-about:6` | About 标签页（版本/特性/技术栈/链接/快速上手） |
 | `creditsHTML()` | `frontend/src/views/app-content/tpl-settings-about:101` | Credits 标签页（灵感来源/特别感谢） |
-| `settingsHTML()` | `frontend/src/views/app-content/tpl-settings:331` | — |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-content/tpl-settings:10` | — |
+| `settingsHTML()` | `frontend/src/views/app-content/tpl-settings:337` | — |
 | `settingsHTML()` | `frontend/src/views/app-content/tpl` | — |
 | `recycleHTML()` | `frontend/src/views/app-content/tpl` | — |
-| `VIEW_TESTIDS()` | `frontend/src/views/app-content/tpl:8` | — |
-| `repositoryHTML()` | `frontend/src/views/app-content/tpl:16` | — |
-| `instancesHTML()` | `frontend/src/views/app-content/tpl:54` | — |
-| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:77` | — |
-| `githubHTML()` | `frontend/src/views/app-content/tpl:178` | ===== GitHub 仓库页面 ===== |
-| `workshopHTML()` | `frontend/src/views/app-content/tpl:209` | — |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-content/tpl:10` | — |
+| `repositoryHTML()` | `frontend/src/views/app-content/tpl:25` | — |
+| `instancesHTML()` | `frontend/src/views/app-content/tpl:63` | — |
+| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:86` | — |
+| `githubHTML()` | `frontend/src/views/app-content/tpl:187` | ===== GitHub 仓库页面 ===== |
+| `workshopHTML()` | `frontend/src/views/app-content/tpl:218` | — |
 | `extractAvatars()` | `frontend/src/views/app-content/workshop-avatar:13` | 提取创作者头像（后台批量） 无参全量：BatchExtractCreatorAvatars() 扫全部模型一次性灌满 host._avatarCache； 先前按「当前站点/作者限 |
 | `BrowseMode()` | `frontend/src/views/app-content/workshop-browse-mode:5` | 创作者频道浏览模式 |
 | `BrowseModeRef()` | `frontend/src/views/app-content/workshop-browse-mode:8` | 浏览模式可变引用：与 wsEditModeRef:{v} 同构，贯穿 ctx→render→openUrl 消除值拷贝 stale |
@@ -2390,10 +2392,10 @@
 | `renderVersionCards()` | `frontend/src/views/app-sidebar/render:8` | — |
 | `sidebarCSS()` | `frontend/src/views/app-sidebar/sidebar-css:3` | — |
 | `VIEW_TESTIDS()` | `frontend/src/views/app-sidebar/tpl:9` | — |
-| `headerHTML()` | `frontend/src/views/app-sidebar/tpl:18` | — |
-| `footerHTML()` | `frontend/src/views/app-sidebar/tpl:37` | — |
-| `listContainerHTML()` | `frontend/src/views/app-sidebar/tpl:81` | — |
-| `instanceCardHeaderHTML()` | `frontend/src/views/app-sidebar/tpl:111` | 单个整合包卡片头部。 |
+| `headerHTML()` | `frontend/src/views/app-sidebar/tpl:21` | — |
+| `footerHTML()` | `frontend/src/views/app-sidebar/tpl:40` | — |
+| `listContainerHTML()` | `frontend/src/views/app-sidebar/tpl:84` | — |
+| `instanceCardHeaderHTML()` | `frontend/src/views/app-sidebar/tpl:114` | 单个整合包卡片头部。 |
 | `EventSelf()` | `frontend/src/views/app-sync-manager/events:9` | — |
 | `bindEvents()` | `frontend/src/views/app-sync-manager/events:17` | 绑定所有 DOM 事件（状态筛选 / 单行操作按钮 / dir-level 文件夹展开折叠） |
 | `SyncManagerSelf()` | `frontend/src/views/app-sync-manager/index:27` | 合并四子模块（store / renderer / events / network）对组件实例的接口需求， 一统江湖，消除各处 `as any` 桥接。各子模块可改从此导入。 |
@@ -2434,7 +2436,8 @@
 | `updateSelectCount()` | `frontend/src/views/app-tree/events:392` | — |
 | `bindTreeEvents()` | `frontend/src/views/app-tree/events:498` | — |
 | `appTreeStyle()` | `frontend/src/views/app-tree/index:12` | — |
-| `AppTree()` | `frontend/src/views/app-tree/index:63` | — |
+| `VIEW_TESTIDS()` | `frontend/src/views/app-tree/index:35` | — |
+| `AppTree()` | `frontend/src/views/app-tree/index:70` | — |
 | `TreeEntry()` | `frontend/src/views/app-tree/loader:11` | 树条目（loader 转换后的渲染格式） |
 | `loadEntries()` | `frontend/src/views/app-tree/loader:68` | 从 Go 后端加载仓库文件列表，返回格式化的 entries 扁平化架构下每个 MMD 子类型为独立顶级类型，直接用 subdir 作为类型 ID 查表 |
 | `TreeRow()` | `frontend/src/views/app-tree/render:22` | 扁平化行（虚拟滚动数据单元） |

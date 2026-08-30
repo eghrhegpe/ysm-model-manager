@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"
 )
@@ -115,6 +116,41 @@ func TestIsPathInRootOrSelf_SymlinkEscape(t *testing.T) {
 	}
 	if !a.isPathInRootOrSelf(inside) {
 		t.Error("根内真实文件应放行")
+	}
+}
+
+// TestResolvedRootCache：缓存命中 + saveConfig 失效（audit P3 性能收敛回归）。
+func TestResolvedRootCache(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "repo")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a := scanApp(t, types.AppConfig{FilesRoot: root})
+
+	// Windows Temp 目录可能经 8.3 短名/symlink，基准取 ResolveOrKeep 本身
+	wantRoot := paths.ResolveOrKeep(root)
+	if got := resolvedRoot(root); got != wantRoot {
+		t.Fatalf("已解析根应与 ResolveOrKeep 一致, got %q want %q", got, wantRoot)
+	}
+	if _, ok := resolvedRootCache.Load(root); !ok {
+		t.Fatal("resolvedRoot 结果应写入缓存")
+	}
+	// 直接改缓存值模拟陈旧条目，saveConfig 后应被清空
+	resolvedRootCache.Store(root, filepath.Join(base, "stale"))
+	if err := a.saveConfig(a.LoadAppConfig()); err != nil {
+		t.Fatalf("saveConfig: %v", err)
+	}
+	if _, ok := resolvedRootCache.Load(root); ok {
+		t.Fatal("saveConfig 后 root 解析缓存应已失效")
+	}
+	// 失效后重新解析，恢复正确值
+	if got := resolvedRoot(root); got != wantRoot {
+		t.Fatalf("失效后应重新解析, got %q", got)
+	}
+	// 守卫功能不回归：根外仍拒绝（root 也经同一解析口径，避免 8.3 短名误判）
+	if a.isPathInRootOrSelf(filepath.Join(paths.ResolveOrKeep(base), "outside", "m.ysm")) {
+		t.Error("根外路径不应通过 isPathInRootOrSelf")
 	}
 }
 

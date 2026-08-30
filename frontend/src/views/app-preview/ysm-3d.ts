@@ -16,12 +16,7 @@ import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-co
 import { playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-
-/** 数据读取注入（视图壳层保留 getApp；适配器 0 backend import，ADR-072 边界判据） */
-async function readFileBytes(path: string): Promise<string | null> {
-  const App = await getApp();
-  return (App as unknown as Record<string, (p: string) => Promise<string | null>>)["ReadFileBytes"](path);
-}
+import { readFileBytes } from "./view-shell.ts";
 
 /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM 同款 ListAllFilePaths 注入） */
 async function listAllFilePaths(dir: string): Promise<string[] | null> {

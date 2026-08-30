@@ -11,6 +11,7 @@ import {
   type MenuControlDef,
   persistState,
   restoreState,
+  createListenerSet,
 } from "./scene-capability.ts";
 
 /** 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） */
@@ -75,7 +76,7 @@ export class WaterCapability implements SceneCapability {
   private params: WaterParams;
   private enabled: boolean;
   /** 参数变更监听（menu 局部刷新用）；仅模式切换等影响分组可见性的离散操作 notify */
-  private listeners = new Set<() => void>();
+  private readonly listenerSet = createListenerSet();
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -397,12 +398,11 @@ export class WaterCapability implements SceneCapability {
 
   /** 订阅参数变更（模式切换触发）；返回取消订阅函数 */
   subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return this.listenerSet.subscribe(listener);
   }
 
   private notify(): void {
-    for (const l of this.listeners) l();
+    this.listenerSet.notify();
   }
   getWaterMode(): WaterMode { return this.params.mode; }
 

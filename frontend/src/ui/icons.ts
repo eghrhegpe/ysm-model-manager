@@ -20,3 +20,24 @@ export function createIcon(icon: string): HTMLElement | null {
     span.textContent = icon;
     return span;
 }
+
+/**
+ * 创建 <span.cs-icon> 图标盒并挂到 parent 下（icon 为空则不创建）。
+ * 有图标则插入 createIcon 结果；iconify 风格名（createIcon 返回 null）走首字 fallback。
+ * 从 ui-rows.createIconBox 上移，ui-advanced-rows / ui-slide-row 共用，消除 jscpd 重复。
+ */
+export function createIconBox(icon: string | undefined, label: string, parent: HTMLElement): void {
+    if (!icon) return;
+    const iconBox = document.createElement('span');
+    iconBox.className = 'cs-icon';
+    const iconEl = createIcon(icon);
+    if (iconEl) {
+        iconBox.appendChild(iconEl);
+    } else {
+        const fb = document.createElement('span');
+        fb.className = 'cs-icon-fallback';
+        fb.textContent = label.charAt(0) || '?';
+        iconBox.appendChild(fb);
+    }
+    parent.appendChild(iconBox);
+}

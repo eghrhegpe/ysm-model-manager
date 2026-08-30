@@ -4,45 +4,13 @@
 // avatar）、.json 主文件统计（ysm.json spec 关联文件 / 标准 geometry / 畸形输入）。
 import { describe, it, expect } from "vitest";
 import {
-  sniffTexSize,
   statsFromDecodedFiles,
   statsFromJsonBytes,
   type StatsFileInput,
 } from "./stats-core.ts";
+import { pngBytes, jpgBytes } from "../test-utils/tex-bytes.ts";
 
 const enc = new TextEncoder();
-
-/** 构造最小 PNG 字节（签名 + IHDR 宽高，对齐 sniffTexSize 读取偏移 16..23） */
-function pngBytes(w: number, h: number): Uint8Array {
-  const arr = new Uint8Array(24);
-  arr[0] = 0x89;
-  arr[1] = 0x50;
-  arr[2] = 0x4e;
-  arr[16] = (w >>> 24) & 0xff;
-  arr[17] = (w >>> 16) & 0xff;
-  arr[18] = (w >>> 8) & 0xff;
-  arr[19] = w & 0xff;
-  arr[20] = (h >>> 24) & 0xff;
-  arr[21] = (h >>> 16) & 0xff;
-  arr[22] = (h >>> 8) & 0xff;
-  arr[23] = h & 0xff;
-  return arr;
-}
-
-/** 构造最小 JPEG 字节（SOI + SOF0 段携带宽高，对齐 sniffTexSize 的 SOF 扫描） */
-function jpgBytes(w: number, h: number): Uint8Array {
-  const arr = new Uint8Array(12);
-  arr[0] = 0xff;
-  arr[1] = 0xd8;
-  arr[2] = 0xff;
-  arr[3] = 0xc0; // SOF0
-  arr[6] = 0x08; // precision
-  arr[7] = (h >>> 8) & 0xff;
-  arr[8] = h & 0xff;
-  arr[9] = (w >>> 8) & 0xff;
-  arr[10] = w & 0xff;
-  return arr;
-}
 
 /** 2 骨 4 方 64x32 / 3 骨 2 方 16x16 的标准 bedrock geometry JSON */
 const geoA = JSON.stringify({
@@ -60,23 +28,6 @@ const geoB = JSON.stringify({
       bones: [{ name: "x", cubes: [{}, {}] }, { name: "y", cubes: [] }, { name: "z", cubes: [] }],
     },
   ],
-});
-
-describe("stats-core.sniffTexSize（对齐 Go imagePixelArea / wasm.ts 嗅探口径）", () => {
-  it("PNG：签名 + IHDR 宽高大端", () => {
-    expect(sniffTexSize(pngBytes(128, 64))).toEqual({ w: 128, h: 64 });
-    expect(sniffTexSize(pngBytes(16, 16))).toEqual({ w: 16, h: 16 });
-  });
-
-  it("JPEG：SOI 后首个 SOF 段宽高", () => {
-    expect(sniffTexSize(jpgBytes(512, 256))).toEqual({ w: 512, h: 256 });
-  });
-
-  it("非图片/畸形输入返回 null", () => {
-    expect(sniffTexSize(new Uint8Array(0))).toBeNull();
-    expect(sniffTexSize(new Uint8Array([1, 2, 3]))).toBeNull();
-    expect(sniffTexSize(enc.encode("not an image at all!"))).toBeNull();
-  });
 });
 
 describe("stats-core.statsFromDecodedFiles（.ysm WASM 产物统计）", () => {

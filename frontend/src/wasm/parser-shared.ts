@@ -132,3 +132,33 @@ export function writeHeapBytes(
   getHeap().set(src, ptr);
   return ptr;
 }
+
+/**
+ * 修改 Emscripten 胶水代码：在所有 updateMemoryViews 调用后导出 HEAPU8 到 Module。
+ * 主线程（ysm-parser.ts）与 Worker（ysm-worker-loader.ts）共用，消除逐字重复。
+ * 用 ";updateMemoryViews()" 避免误改函数定义；replaceAll 确保所有调用点都被 patch。
+ */
+export function patchGlueHeapExport(glueCode: string): string {
+  return glueCode.replaceAll(
+    ";updateMemoryViews()",
+    ';updateMemoryViews();Module["HEAPU8"]=HEAPU8',
+  );
+}
+
+/**
+ * 解析 Emscripten 胶水工厂返回值（MODULARIZE 产物：可能返回 Promise）并校验 ccall。
+ * 主线程 / Worker 两处 init 共用；成功返回 WasmModuleLike，异常值抛错。
+ * @param factory 胶水暴露的工厂（async factory(moduleArg)）
+ * @param moduleArg 注入的 Module 配置（主线程 window.Module / Worker globalThis.Module）
+ */
+export async function resolveWasmFactory(
+  factory: (module: unknown) => unknown | Promise<unknown>,
+  moduleArg: unknown,
+): Promise<WasmModuleLike> {
+  const mod = factory(moduleArg);
+  const resolved = mod instanceof Promise ? await mod : mod;
+  if (!resolved || typeof (resolved as WasmModuleLike).ccall !== "function") {
+    throw new Error("YSMParserModule 工厂返回异常值");
+  }
+  return resolved as WasmModuleLike;
+}

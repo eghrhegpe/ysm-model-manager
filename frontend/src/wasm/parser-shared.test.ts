@@ -4,9 +4,12 @@ import {
   classifyWasmError,
   ensureDir,
   collectOutputFiles,
+  patchGlueHeapExport,
+  resolveWasmFactory,
   wipeDir,
   writeHeapBytes,
   type FSLike,
+  type WasmModuleLike,
 } from "./parser-shared.ts";
 
 /** 内存 FS：最小 Emscripten MEMFS 语义 */
@@ -184,5 +187,45 @@ describe("writeHeapBytes", () => {
     expect(ptr).toBe(16);
     // 写入发生在新 heap（若实现缓存了旧 heap 会写到 detached buffer 上）
     expect([...newHeap.slice(16, 18)]).toEqual([9, 9]);
+  });
+});
+
+describe("patchGlueHeapExport（主线程 / Worker 共用胶水 patch）", () => {
+  it("在 updateMemoryViews 调用后注入 HEAPU8 导出，且只命中调用点", () => {
+    const glue = `function updateMemoryViews(){...}\nfoo();updateMemoryViews();bar();updateMemoryViews();`;
+    const out = patchGlueHeapExport(glue);
+    expect(out).toContain(
+      ';updateMemoryViews();Module["HEAPU8"]=HEAPU8',
+    );
+    expect(out.match(/Module\["HEAPU8"\]/g)).toHaveLength(2);
+    // 函数定义（;updateMemoryViews(){...}）不被误改
+    expect(out).toContain("function updateMemoryViews(){...}");
+  });
+
+  it("无调用点 → 原样返回", () => {
+    expect(patchGlueHeapExport("var x=1;")).toBe("var x=1;");
+  });
+});
+
+describe("resolveWasmFactory（工厂解析 + ccall 校验）", () => {
+  const fakeModule: WasmModuleLike = {
+    _malloc: (n) => n,
+    _free: () => {},
+    ccall: () => 1,
+    FS: {} as never,
+  };
+
+  it("同步工厂返回合法模块 → 直接解析", async () => {
+    await expect(resolveWasmFactory(() => fakeModule, {})).resolves.toBe(fakeModule);
+  });
+
+  it("Promise 工厂 → await 后解析", async () => {
+    await expect(resolveWasmFactory(async () => fakeModule, {})).resolves.toBe(fakeModule);
+  });
+
+  it("工厂返回异常值（缺 ccall）→ 抛错", async () => {
+    await expect(resolveWasmFactory(() => ({} as never), {})).rejects.toThrow(
+      "YSMParserModule 工厂返回异常值",
+    );
   });
 });

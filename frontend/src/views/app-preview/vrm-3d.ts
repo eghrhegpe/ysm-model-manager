@@ -9,15 +9,10 @@ import { getApp } from "../../backend/app.ts";
 import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { withPreviewExtras, registerReRoute, openModel3DFullscreen } from "./preview-library.ts";
+import { readFileBytes } from "./view-shell.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.vrm→"vrm"）
 registerReRoute("vrm", (path) => createVrm3D(path));
-
-/** 数据读取注入（视图壳层保留 getApp；适配器 0 backend import，ADR-072 边界判据） */
-async function readFileBytes(path: string): Promise<string | null> {
-  const App = await getApp();
-  return (App as unknown as Record<string, (p: string) => Promise<string | null>>)["ReadFileBytes"](path);
-}
 
 /** 同目录文件枚举（VRMA 动作扫描用；对齐 MMD 同款 ListAllFilePaths 注入） */
 async function listAllFilePaths(dir: string): Promise<string[] | null> {
@@ -25,9 +20,9 @@ async function listAllFilePaths(dir: string): Promise<string[] | null> {
   return (App as unknown as Record<string, (d: string) => Promise<string[] | null>>)["ListAllFilePaths"](dir);
 }
 
-/** ADR-072 诊断端口：环形日志面板写入 */
+/** ADR-072 诊断端口：环形日志面板写入（当前 no-op，后续通过 bus 或 port 注入） */
 async function addOpLog(op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void> {
-  // TODO: 接入真实环形日志面板（当前 no-op，后续通过 bus 或 port 注入）
+  // TODO: 接入真实环形日志面板
 }
 
 const vrmPanelHooks: VrmPanelHooks = {

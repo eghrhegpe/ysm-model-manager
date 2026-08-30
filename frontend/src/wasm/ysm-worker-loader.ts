@@ -20,6 +20,8 @@ import {
   classifyWasmError,
   collectOutputFiles,
   ensureDir,
+  patchGlueHeapExport,
+  resolveWasmFactory,
   wipeDir,
   writeHeapBytes,
   type WasmModuleLike,
@@ -85,10 +87,7 @@ async function initParserInWorker(
     if (!glueCode) throw new Error("胶水代码空");
 
     // 2. 修改胶水代码：在所有 updateMemoryViews 调用后导出 HEAPU8 到 Module
-    const patchedGlue = glueCode.replaceAll(
-      ";updateMemoryViews()",
-      ';updateMemoryViews();Module["HEAPU8"]=HEAPU8',
-    );
+    const patchedGlue = patchGlueHeapExport(glueCode);
 
     // 3. 设置 Module.wasmBinary（worker 全局，替代主线程的 window.Module）；
     //    ADR-079 M4：pthread 变体额外注入 mainScriptUrlOrBlob（Blob URL）
@@ -107,12 +106,7 @@ async function initParserInWorker(
     // 5. 调用工厂（胶水为 MODULARIZE 产物：async factory(moduleArg)）
     const factory = g.YSMParserModule as ((module: unknown) => unknown | Promise<unknown>) | undefined;
     if (!factory) throw new Error("YSMParserModule 未定义");
-    const mod = factory(moduleCfg);
-    const resolved = mod instanceof Promise ? await mod : mod;
-    if (!resolved || typeof (resolved as WasmModuleLike).ccall !== "function") {
-      throw new Error("YSMParserModule 工厂返回异常值");
-    }
-    wasmModule = resolved as WasmModuleLike;
+    wasmModule = await resolveWasmFactory(factory, moduleCfg);
     loading = false; // 成功后复位，避免 wasmModule 被置空后 loading 恒真 → 永久挂起
     waiters.forEach((r) => r(true));
     waiters = [];

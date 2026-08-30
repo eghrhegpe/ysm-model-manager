@@ -23,12 +23,7 @@ import type { PreviewCtx } from "./utils.ts";
 import type { BedrockSubModel } from "./geometry.ts";
 import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { GenGuard } from "./gen-guard.ts";
-
-/** 数据读取注入 */
-async function readFileBytes(path: string): Promise<string | null> {
-  const App = await getApp();
-  return (App as unknown as Record<string, (p: string) => Promise<string | null>>)["ReadFileBytes"](path);
-}
+import { readFileBytes } from "./view-shell.ts";
 
 /** 跨类型换角色路由 */
 async function openMaidFullscreen(path: string): Promise<void> {

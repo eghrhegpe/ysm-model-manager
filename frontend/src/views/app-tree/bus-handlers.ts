@@ -38,6 +38,32 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
   return cleanups;
 }
 
+/**
+ * 批量重命名回调体（dir:batch-rename 与 batch:rename 共用，消除 32 行跨事件重复）：
+ * 逐条调用 RenameFile，计数 ok/fail，清空选择态，reload + 统计刷新 + toast。
+ */
+async function runBatchRename(vm: AppTree, renames: Array<{ oldPath?: string; newName: string }>): Promise<void> {
+  let ok = 0, fail = 0;
+  const { RenameFile } = await getApp();
+  for (const r of renames) {
+    try {
+      await RenameFile(r.oldPath || "", r.newName);
+      ok++;
+    } catch {
+      fail++;
+    }
+  }
+  selectState.keys.clear();
+  selectState.lastKey = null;
+  await reload(vm);
+  bus.emit("stats:refresh");
+  bus.emit("toast:show", {
+    msg: `✅ ${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
+    duration: TOAST_MS.normal,
+    type: fail > 0 ? "warn" : "success",
+  });
+}
+
 function atBeHandleBatchEnableAll(vm: AppTree): void {
   void batchToggleAll(vm, true);
 }
@@ -170,27 +196,8 @@ async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void>
     await showBatchRenameDialog(
       absDir,
       entries.map((e) => ({ Name: e.Name, Path: e.Path })),
-      async (renames) => {
-        let ok = 0, fail = 0;
-        const { RenameFile } = await getApp();
-        for (const r of renames) {
-          try {
-            await RenameFile(r.oldPath || "", r.newName);
-            ok++;
-          } catch {
-            fail++;
-          }
-        }
-        selectState.keys.clear();
-        selectState.lastKey = null;
-        await reload(vm);
-        bus.emit("stats:refresh");
-        bus.emit("toast:show", {
-          msg: `✅ ${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
-          duration: TOAST_MS.normal,
-          type: fail > 0 ? "warn" : "success",
-        });
-      });
+      (renames) => runBatchRename(vm, renames),
+    );
   } catch (e) {
     bus.emit("toast:show", {
       msg: `❌ ${friendlyError(e)}`,
@@ -207,27 +214,9 @@ async function atBeHandleBatchRename(vm: AppTree, paths: string[]): Promise<void
       Name: p.split(/[/\\]/).pop() || "",
       Path: p,
     }));
-    await showBatchRenameDialog("批量重命名", entries, async (renames) => {
-      let ok = 0, fail = 0;
-      const { RenameFile } = await getApp();
-      for (const r of renames) {
-        try {
-          await RenameFile(r.oldPath || "", r.newName);
-          ok++;
-        } catch {
-          fail++;
-        }
-      }
-      selectState.keys.clear();
-      selectState.lastKey = null;
-      await reload(vm);
-      bus.emit("stats:refresh");
-      bus.emit("toast:show", {
-        msg: `✅ ${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
-        duration: TOAST_MS.normal,
-        type: fail > 0 ? "warn" : "success",
-      });
-    });
+    await showBatchRenameDialog("批量重命名", entries, (renames) =>
+      runBatchRename(vm, renames),
+    );
   } catch (e) {
     bus.emit("toast:show", {
       msg: `❌ ${friendlyError(e)}`,

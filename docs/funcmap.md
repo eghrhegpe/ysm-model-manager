@@ -44,13 +44,13 @@
 | 前端·核心 | 18 | 37 |
 | 前端·特性 | 18 | 93 |
 | 前端·服务 | 2 | 18 |
-| frontend/test-utils | 5 | 35 |
-| frontend/ui | 18 | 65 |
-| 前端·工具 | 181 | 749 |
-| frontend/views | 121 | 356 |
-| 前端·WASM | 9 | 22 |
-| frontend/workers | 2 | 14 |
-| **合计** | **518** | **2229** |
+| frontend/test-utils | 6 | 37 |
+| frontend/ui | 18 | 66 |
+| 前端·工具 | 182 | 751 |
+| frontend/views | 122 | 358 |
+| 前端·WASM | 9 | 24 |
+| frontend/workers | 2 | 13 |
+| **合计** | **521** | **2237** |
 
 ## Go·头像
 
@@ -1264,6 +1264,8 @@
 | `expectNotContains()` | `frontend/src/test-utils/self-healing:36` | 反向自愈断言：actual 不包含 forbidden。 |
 | `deriveTestIds()` | `frontend/src/test-utils/self-healing:49` | 从菜单项推导 data-testid 选择器（`preview-${id}`）。 |
 | `extractIds()` | `frontend/src/test-utils/self-healing:57` | 从菜单项列表提取 id 数组（已排序）。 |
+| `pngBytes()` | `frontend/src/test-utils/tex-bytes:6` | 构造最小 PNG 字节（签名 + IHDR 宽高，对齐 sniffTexSize 读取偏移 16..23） |
+| `jpgBytes()` | `frontend/src/test-utils/tex-bytes:23` | 构造最小 JPEG 字节（SOI + SOF0 段携带宽高，对齐 sniffTexSize 的 SOF 扫描） |
 
 ## frontend/ui
 
@@ -1281,9 +1283,10 @@
 | `COLLAPSIBLE()` | `frontend/src/ui/dom-contract:29` | collapsible（folder）组件契约 |
 | `SLIDER_BAR_CLASS()` | `frontend/src/ui/dom-contract:37` | 滑动条本体 class（slider / colorSlider / modeSlider 共用 .cs-bar） |
 | `createIcon()` | `frontend/src/ui/icons:10` | 创建一个图标元素（可能返回 null，调用方应走兜底层）。 |
+| `createIconBox()` | `frontend/src/ui/icons:29` | 创建 &lt;span.cs-icon&gt; 图标盒并挂到 parent 下（icon 为空则不创建）。 |
 | `addColorSliderRow()` | `frontend/src/ui/ui-advanced-rows:37` | — |
 | `addVector3SliderRow()` | `frontend/src/ui/ui-advanced-rows:209` | — |
-| `addModeSlider()` | `frontend/src/ui/ui-advanced-rows:406` | — |
+| `addModeSlider()` | `frontend/src/ui/ui-advanced-rows:393` | — |
 | `cardContainer()` | `frontend/src/ui/ui-card:10` | Card container helper: removes render-card bg, wraps content in an lcard. |
 | `addCollapsible()` | `frontend/src/ui/ui-collapsible:24` | 通用折叠面板组件 |
 | `addSectionTitle()` | `frontend/src/ui/ui-collapsible:137` | 区块标题（section-title），用于 cardContainer 内的视觉分组。 |
@@ -1303,22 +1306,22 @@
 | `PresetChipItem()` | `frontend/src/ui/ui-preset:16` | 单个预设芯片的描述。 |
 | `buildPresetChipGroup()` | `frontend/src/ui/ui-preset:35` | 渲染一组 preset-chip（统一 .preset-group 容器 + addPresetChip 布局）。 |
 | `addClearRow()` | `frontend/src/ui/ui-preset:73` | 渲染一行右对齐的「清除」按钮（统一 cs-btn cs-btn-sm 样式）。 |
-| `addToggleRow()` | `frontend/src/ui/ui-rows:147` | — |
-| `initControl()` | `frontend/src/ui/ui-rows:184` | 封装 registerControl + immediate update 模式。 |
-| `addSliderRow()` | `frontend/src/ui/ui-rows:401` | 数字滑块行。内部统一由 {@link DragSliderController} 驱动 （拖拽 + 键盘 + 游标点击），行为与其他滑块 builder 保持一致。 |
-| `addModeRow()` | `frontend/src/ui/ui-rows:445` | — |
-| `addEmptyRow()` | `frontend/src/ui/ui-rows:480` | 创建空状态占位行（灰色文字，不可点击），替代手动 `el.style.opacity = '0.5'` 模式 |
-| `addCardTitle()` | `frontend/src/ui/ui-rows:503` | 创建 card-title 标题行并追加到容器 |
-| `addDangerRow()` | `frontend/src/ui/ui-rows:518` | 创建危险操作行（icon + red label），替代手动拼接 `div.slide-item &gt; icon + label.danger-text` |
-| `addFieldRow()` | `frontend/src/ui/ui-rows:550` | 创建字段行（左 label + 右 value），替代手动拼接的 `div.slide-item &gt; span.slide-label.field-label + span.fie |
-| `addInfoGrid()` | `frontend/src/ui/ui-rows:583` | — |
-| `addInfoCard()` | `frontend/src/ui/ui-rows:590` | — |
-| `sliderRow()` | `frontend/src/ui/ui-rows:623` | — |
-| `toggleRow()` | `frontend/src/ui/ui-rows:640` | — |
-| `addWatchDirRow()` | `frontend/src/ui/ui-rows:665` | — |
-| `addActionRow()` | `frontend/src/ui/ui-rows:727` | 创建一个可点击的动作按钮行（替代手写 cs-row + button）。 |
-| `addDisabledRow()` | `frontend/src/ui/ui-rows:764` | 创建一个不可交互的提示行（替代手写 cs-row + opacity 0.4 + pointer-events none）。 |
-| `addInlineToggleRow()` | `frontend/src/ui/ui-rows:795` | 创建一个内联 toggle 行（替代手写 toggle-row + toggle-label + toggle-switch）。 |
+| `addToggleRow()` | `frontend/src/ui/ui-rows:128` | — |
+| `initControl()` | `frontend/src/ui/ui-rows:165` | 封装 registerControl + immediate update 模式。 |
+| `addSliderRow()` | `frontend/src/ui/ui-rows:382` | 数字滑块行。内部统一由 {@link DragSliderController} 驱动 （拖拽 + 键盘 + 游标点击），行为与其他滑块 builder 保持一致。 |
+| `addModeRow()` | `frontend/src/ui/ui-rows:426` | — |
+| `addEmptyRow()` | `frontend/src/ui/ui-rows:461` | 创建空状态占位行（灰色文字，不可点击），替代手动 `el.style.opacity = '0.5'` 模式 |
+| `addCardTitle()` | `frontend/src/ui/ui-rows:484` | 创建 card-title 标题行并追加到容器 |
+| `addDangerRow()` | `frontend/src/ui/ui-rows:499` | 创建危险操作行（icon + red label），替代手动拼接 `div.slide-item &gt; icon + label.danger-text` |
+| `addFieldRow()` | `frontend/src/ui/ui-rows:531` | 创建字段行（左 label + 右 value），替代手动拼接的 `div.slide-item &gt; span.slide-label.field-label + span.fie |
+| `addInfoGrid()` | `frontend/src/ui/ui-rows:564` | — |
+| `addInfoCard()` | `frontend/src/ui/ui-rows:571` | — |
+| `sliderRow()` | `frontend/src/ui/ui-rows:604` | — |
+| `toggleRow()` | `frontend/src/ui/ui-rows:621` | — |
+| `addWatchDirRow()` | `frontend/src/ui/ui-rows:646` | — |
+| `addActionRow()` | `frontend/src/ui/ui-rows:708` | 创建一个可点击的动作按钮行（替代手写 cs-row + button）。 |
+| `addDisabledRow()` | `frontend/src/ui/ui-rows:745` | 创建一个不可交互的提示行（替代手写 cs-row + opacity 0.4 + pointer-events none）。 |
+| `addInlineToggleRow()` | `frontend/src/ui/ui-rows:776` | 创建一个内联 toggle 行（替代手写 toggle-row + toggle-label + toggle-switch）。 |
 | `slideMenuCss()` | `frontend/src/ui/ui-slide-menu-styles:9` | — |
 | `slideMenuStyleSheet()` | `frontend/src/ui/ui-slide-menu-styles:165` | — |
 | `installSlideMenuStyles()` | `frontend/src/ui/ui-slide-menu-styles:169` | 将外壳样式注入 document.head（全局/light-DOM 场景）。幂等，仅注入一次。 |
@@ -1611,9 +1614,9 @@
 | `DEFAULT_FOG_PARAMS()` | `frontend/src/utils/3d/caps/fog-capability:30` | — |
 | `FOG_PRESETS()` | `frontend/src/utils/3d/caps/fog-capability:40` | 模型类别雾预设：材质特性不同，雾浓度/远近做合理初始值 |
 | `FogCapability()` | `frontend/src/utils/3d/caps/fog-capability:68` | — |
-| `GroundParams()` | `frontend/src/utils/3d/caps/ground-capability:38` | 地面参数（表面材质 + 网格；水面已拆分为独立 WaterCapability） |
-| `DEFAULT_GROUND_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:51` | — |
-| `GroundCapability()` | `frontend/src/utils/3d/caps/ground-capability:60` | — |
+| `GroundParams()` | `frontend/src/utils/3d/caps/ground-capability:40` | 地面参数（表面材质 + 网格；水面已拆分为独立 WaterCapability） |
+| `DEFAULT_GROUND_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:53` | — |
+| `GroundCapability()` | `frontend/src/utils/3d/caps/ground-capability:62` | — |
 | `GroundSurfaceMode()` | `frontend/src/utils/3d/caps/ground-surface-spec:17` | 地面表面模式（扁平枚举：来源 × 画布样式合一，避免双字段耦合守卫） |
 | `GroundMaterialParams()` | `frontend/src/utils/3d/caps/ground-surface-spec:19` | — |
 | `DEFAULT_GROUND_SURFACE_PARAMS()` | `frontend/src/utils/3d/caps/ground-surface-spec:46` | — |
@@ -1659,6 +1662,7 @@
 | `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:147` | 从 localStorage 加载 JSON |
 | `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:158` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
 | `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:174` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
+| `createListenerSet()` | `frontend/src/utils/3d/caps/scene-capability:208` | 参数变更订阅器工厂（ground / water 的 subscribe + notify 样板收敛）。 |
 | `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
 | `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
@@ -1669,10 +1673,10 @@
 | `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:91` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
 | `injectSkySunScalePatch()` | `frontend/src/utils/3d/caps/sky-capability:126` | §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform， 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为 |
 | `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:315` | — |
-| `WaterMode()` | `frontend/src/utils/3d/caps/water-capability:17` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
-| `WaterParams()` | `frontend/src/utils/3d/caps/water-capability:20` | — |
-| `DEFAULT_WATER_PARAMS()` | `frontend/src/utils/3d/caps/water-capability:49` | — |
-| `WaterCapability()` | `frontend/src/utils/3d/caps/water-capability:65` | — |
+| `WaterMode()` | `frontend/src/utils/3d/caps/water-capability:18` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
+| `WaterParams()` | `frontend/src/utils/3d/caps/water-capability:21` | — |
+| `DEFAULT_WATER_PARAMS()` | `frontend/src/utils/3d/caps/water-capability:50` | — |
+| `WaterCapability()` | `frontend/src/utils/3d/caps/water-capability:66` | — |
 | `WireframeCapability()` | `frontend/src/utils/3d/caps/wireframe-capability:14` | — |
 | `disposeDebugGroup()` | `frontend/src/utils/3d/cleanup-helper:14` | 释放 debug 叠加层中的所有 Three.js 资源（geometry / material / texture）。 |
 | `disposeSceneMeshes()` | `frontend/src/utils/3d/cleanup-helper:40` | 遍历场景图释放所有 Mesh 的 geometry 和 material。 |
@@ -2083,6 +2087,7 @@
 | `resolveTypeSafe()` | `frontend/src/utils/resource/types:326` | 安全解析类型（ADR-067）：单归属扩展名直接命中；歧义扩展名（.zip/.7z 等可包裹任意资源） 返回 null，调用方必须回退到 Go DetectResourceType |
 | `matchZipEntryTS()` | `frontend/src/utils/resource/types:376` | 按注册表 zipEntries 指纹匹配 ZIP 条目名，返回命中的资源类型 ID（ADR-082 S4： 前端指纹注册表化，与 Go types.MatchZipEntry 同构 |
 | `safeErrorMessage()` | `frontend/src/utils/safe-error-msg:19` | 从任意错误对象提取可读消息字符串。 |
+| `sniffTexSize()` | `frontend/src/utils/tex-size:22` | 从纹理字节嗅探像素尺寸（PNG：8 字签名 + IHDR 后 4 字节宽/4 字节高大端； JPEG：SOI 后首个 SOF 段高度/宽度）。失败返回 null。 |
 | `WorkshopSite()` | `frontend/src/utils/types-re-export` | — |
 | `WorkshopPresetSearch()` | `frontend/src/utils/types-re-export` | — |
 | `AppConfig()` | `frontend/src/utils/types-re-export` | — |
@@ -2243,7 +2248,7 @@
 | `openEmpty3DFullscreen()` | `frontend/src/views/app-preview/empty-3d:35` | 打开空场景 3D 全屏预览（无需 path）。 |
 | `cleanupEmpty3D()` | `frontend/src/views/app-preview/empty-3d:40` | 清理空场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateEmptyPreview()` | `frontend/src/views/app-preview/empty-3d:45` | 作废在途空场景加载 |
-| `createFbx3D()` | `frontend/src/views/app-preview/fbx-3d:41` | 打开 FBX 3D 预览（独立资产：模型 + 内嵌动画）；siblings 透传同类型候选（ADR-066 §5.6） |
+| `createFbx3D()` | `frontend/src/views/app-preview/fbx-3d:26` | 打开 FBX 3D 预览（独立资产：模型 + 内嵌动画）；siblings 透传同类型候选（ADR-066 §5.6） |
 | `resolveFbxSiblings()` | `frontend/src/views/app-preview/fbx-siblings:7` | 同类型 FBX 模型候选（GetRepoRoot(fbx) → ScanModelEntriesFiltered 主文件 Path 列表）；失败返回 []（下拉不渲染） |
 | `GenGuard()` | `frontend/src/views/app-preview/gen-guard:13` | GenGuard：统一代际守卫（bug-chronicle #18 治理）。 |
 | `BedrockCube()` | `frontend/src/views/app-preview/geometry:6` | Bedrock 方块 |
@@ -2260,10 +2265,10 @@
 | `LoadModelOpts()` | `frontend/src/views/app-preview/loader:11` | loadModelData 选项（Bedrock 通用模型加载控制） |
 | `loadModelData()` | `frontend/src/views/app-preview/loader:29` | 加载模型几何数据 + 纹理（优先路径，阻塞渲染） 统一路径：缓存 → WASM 解码（仅 .ysm）→ Go AnalyzeBedrockModel 兜底 作者/头像延迟到 fil |
 | `fillAuthorsAsync()` | `frontend/src/views/app-preview/loader:232` | 异步补全作者/头像信息（不阻塞首帧渲染） 在几何渲染完成后调用，后台补齐作者名 + 头像 URL |
-| `MaidOpenOptions()` | `frontend/src/views/app-preview/maid-3d:42` | — |
-| `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:93` | 关闭活跃女仆 3D 预览 |
-| `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:98` | 作废在途女仆 3D 加载 |
-| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:318` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
+| `MaidOpenOptions()` | `frontend/src/views/app-preview/maid-3d:37` | — |
+| `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:88` | 关闭活跃女仆 3D 预览 |
+| `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:93` | 作废在途女仆 3D 加载 |
+| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:313` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
 | `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:28` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
 | `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:33` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:38` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
@@ -2340,17 +2345,19 @@
 | `getPrefer3D()` | `frontend/src/views/app-preview/utils:60` | — |
 | `setPrefer3D()` | `frontend/src/views/app-preview/utils:63` | — |
 | `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:147` | 剥离 YSGP 文本头部，返回标准二进制格式 |
-| `createVrm3D()` | `frontend/src/views/app-preview/vrm-3d:49` | 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 |
-| `cleanupVrm3D()` | `frontend/src/views/app-preview/vrm-3d:64` | 清理 VRM 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
-| `invalidateVrmPreview()` | `frontend/src/views/app-preview/vrm-3d:69` | 任意新预览派发时调用，作废在途 VRM 加载 |
+| `readFileBytes()` | `frontend/src/views/app-preview/view-shell:11` | 数据读取注入（Wails ReadFileBytes；返回 null = 读取失败） |
+| `addOpLog()` | `frontend/src/views/app-preview/view-shell:17` | 环形日志面板诊断（AddOpLog 注入；失败静默不阻断加载）。scope = 运行时环打标（如 "fbx-preview"） |
+| `createVrm3D()` | `frontend/src/views/app-preview/vrm-3d:44` | 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 |
+| `cleanupVrm3D()` | `frontend/src/views/app-preview/vrm-3d:59` | 清理 VRM 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
+| `invalidateVrmPreview()` | `frontend/src/views/app-preview/vrm-3d:64` | 任意新预览派发时调用，作废在途 VRM 加载 |
 | `VrmMaterialControlBridge()` | `frontend/src/views/app-preview/vrm-controls:18` | 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 |
 | `vrmModelInfoNodes()` | `frontend/src/views/app-preview/vrm-controls:26` | VRM 模型信息声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdModelInfoNodes） |
 | `vrmShotNodes()` | `frontend/src/views/app-preview/vrm-controls:42` | VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）： screenshotFn null（无 |
-| `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:21` | — |
-| `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:42` | — |
-| `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:55` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
-| `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:92` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
-| `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:97` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
+| `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:22` | — |
+| `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:37` | — |
+| `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:50` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
+| `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:87` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
+| `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:92` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/ysm-controls` | — |
 | `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:24` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
 | `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:33` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
@@ -2462,31 +2469,32 @@
 | `ensureDir()` | `frontend/src/wasm/parser-shared:92` | — |
 | `collectOutputFiles()` | `frontend/src/wasm/parser-shared:102` | — |
 | `writeHeapBytes()` | `frontend/src/wasm/parser-shared:123` | 将 JS 数据写入 WASM 内存，返回指针。 |
+| `patchGlueHeapExport()` | `frontend/src/wasm/parser-shared:141` | 修改 Emscripten 胶水代码：在所有 updateMemoryViews 调用后导出 HEAPU8 到 Module。 |
+| `resolveWasmFactory()` | `frontend/src/wasm/parser-shared:154` | 解析 Emscripten 胶水工厂返回值（MODULARIZE 产物：可能返回 Promise）并校验 ccall。 |
 | `_getGlueCodeMt()` | `frontend/src/wasm/ysm-glue-data-mt:3` | — |
 | `_getGlueCode()` | `frontend/src/wasm/ysm-glue-data:3` | — |
 | `YsmDecodedFile()` | `frontend/src/wasm/ysm-parser` | — |
-| `initYSMParser()` | `frontend/src/wasm/ysm-parser:53` | — |
-| `decodeYsmFileFromMemory()` | `frontend/src/wasm/ysm-parser:138` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
-| `decodeYsmFile()` | `frontend/src/wasm/ysm-parser:187` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
+| `initYSMParser()` | `frontend/src/wasm/ysm-parser:55` | — |
+| `decodeYsmFileFromMemory()` | `frontend/src/wasm/ysm-parser:131` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
+| `decodeYsmFile()` | `frontend/src/wasm/ysm-parser:180` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
 | `_getWasmBinaryMt()` | `frontend/src/wasm/ysm-wasm-data-mt.d:1` | — |
 | `_getWasmBinaryMt()` | `frontend/src/wasm/ysm-wasm-data-mt:4` | — |
 | `_getWasmBinary()` | `frontend/src/wasm/ysm-wasm-data.d:1` | — |
 | `_getWasmBinary()` | `frontend/src/wasm/ysm-wasm-data:3` | — |
-| `initYsmParserInWorker()` | `frontend/src/wasm/ysm-worker-loader:50` | Worker 内独立初始化 WASM（懒加载单例，生命周期等同 Worker 本身）。 |
-| `initYsmParserInWorkerMt()` | `frontend/src/wasm/ysm-worker-loader:63` | ADR-079 M3/M4：pthread 多线程版初始化（需 crossOriginIsolated=true——SharedArrayBuffer 前提，见 backend/c |
-| `decodeYsmInWorker()` | `frontend/src/wasm/ysm-worker-loader:161` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组），返回 [{path, data}]。 |
-| `decodeYsmInWorkerMemfs()` | `frontend/src/wasm/ysm-worker-loader:200` | callMain + MEMFS 解码 .ysm（回退路径，兼容旧 WASM 编译 / V3 文本头部等格式）。 |
+| `initYsmParserInWorker()` | `frontend/src/wasm/ysm-worker-loader:52` | Worker 内独立初始化 WASM（懒加载单例，生命周期等同 Worker 本身）。 |
+| `initYsmParserInWorkerMt()` | `frontend/src/wasm/ysm-worker-loader:65` | ADR-079 M3/M4：pthread 多线程版初始化（需 crossOriginIsolated=true——SharedArrayBuffer 前提，见 backend/c |
+| `decodeYsmInWorker()` | `frontend/src/wasm/ysm-worker-loader:155` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组），返回 [{path, data}]。 |
+| `decodeYsmInWorkerMemfs()` | `frontend/src/wasm/ysm-worker-loader:194` | callMain + MEMFS 解码 .ysm（回退路径，兼容旧 WASM 编译 / V3 文本头部等格式）。 |
 
 ## frontend/workers
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `StatsFileInput()` | `frontend/src/workers/stats-core:13` | 解码/直读产物文件（Worker 与主线程共用形状） |
-| `ModelStatsResult()` | `frontend/src/workers/stats-core:19` | 单模型统计结果（SearchResult 数值字段对齐） |
-| `sniffTexSize()` | `frontend/src/workers/stats-core:40` | 从纹理字节嗅探像素尺寸（PNG：签名 + IHDR 后宽/高大端；JPEG：SOI 后首个 SOF）。 |
-| `statsFromDecodedFiles()` | `frontend/src/workers/stats-core:111` | 从 WASM 解码产物计算统计（.ysm 主文件路径）。 |
-| `StatsRelReader()` | `frontend/src/workers/stats-core:147` | 读取相对路径文件的回调（Worker 内 = IDB 读取；测试可注入内存 Map） |
-| `statsFromJsonBytes()` | `frontend/src/workers/stats-core:155` | 从 .json 主文件字节计算统计（解压目录入口，ADR-038 ysm.json 语义）： - ysm.json spec 格式（spec+files）：按 files.play |
+| `StatsFileInput()` | `frontend/src/workers/stats-core:14` | 解码/直读产物文件（Worker 与主线程共用形状） |
+| `ModelStatsResult()` | `frontend/src/workers/stats-core:20` | 单模型统计结果（SearchResult 数值字段对齐） |
+| `statsFromDecodedFiles()` | `frontend/src/workers/stats-core:76` | 从 WASM 解码产物计算统计（.ysm 主文件路径）。 |
+| `StatsRelReader()` | `frontend/src/workers/stats-core:112` | 读取相对路径文件的回调（Worker 内 = IDB 读取；测试可注入内存 Map） |
+| `statsFromJsonBytes()` | `frontend/src/workers/stats-core:120` | 从 .json 主文件字节计算统计（解压目录入口，ADR-038 ysm.json 语义）： - ysm.json spec 格式（spec+files）：按 files.play |
 | `WebModelStats()` | `frontend/src/workers/stats-protocol:5` | 单模型统计结果（与 SearchResult 数值字段对齐） |
 | `WebModelStatsWithPath()` | `frontend/src/workers/stats-protocol:14` | 带 path 的统计结果（Worker 返回，主线程按 path 对齐防顺序漂移） |
 | `StatsWorkerRequest()` | `frontend/src/workers/stats-protocol:17` | 主线程 → Worker：批量统计任务 |

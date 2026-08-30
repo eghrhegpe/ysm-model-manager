@@ -2,7 +2,7 @@
 // addColorSliderRow / addModeSlider
 // 自 MikuMikuAR 迁移：依赖改本库与 utils/core；颜色助手内联（解耦 Babylon Color3）。
 
-import { createIcon } from "./icons.ts";
+import { createIconBox } from "./icons.ts";
 import type { ControlOptions } from "./ui-types.ts";
 import { initControl } from "./ui-rows.ts";
 import { clampPct, clamp01 } from "../utils/core/clamp.ts";
@@ -259,20 +259,7 @@ function vsrBuildBlock(label: string, icon?: string, testId?: string): HTMLDivEl
 
     const header = document.createElement('div');
     header.className = 'vec3-header';
-    if (icon) {
-        const iconBox = document.createElement('span');
-        iconBox.className = 'cs-icon';
-        const iconEl = createIcon(icon);
-        if (iconEl) {
-            iconBox.appendChild(iconEl);
-        } else {
-            const fb = document.createElement('span');
-            fb.className = 'cs-icon-fallback';
-            fb.textContent = label.charAt(0) || '?';
-            iconBox.appendChild(fb);
-        }
-        header.appendChild(iconBox);
-    }
+    createIconBox(icon, label, header);
     const title = document.createElement('span');
     title.className = 'vec3-title';
     title.textContent = label;
@@ -442,20 +429,7 @@ export function addModeSlider<T extends string | number>(
     top.setAttribute(ARIA_ATTR.valuemin, '0');
     top.setAttribute(ARIA_ATTR.valuemax, String(total - 1));
 
-    if (icon) {
-        const iconBox = document.createElement('span');
-        iconBox.className = 'cs-icon';
-        const iconEl = createIcon(icon);
-        if (iconEl) {
-            iconBox.appendChild(iconEl);
-        } else {
-            const fb = document.createElement('span');
-            fb.className = 'cs-icon-fallback';
-            fb.textContent = label.charAt(0) || '?';
-            iconBox.appendChild(fb);
-        }
-        top.appendChild(iconBox);
-    }
+    createIconBox(icon, label, top);
 
     const lbl = document.createElement('span');
     lbl.className = 'cs-label';

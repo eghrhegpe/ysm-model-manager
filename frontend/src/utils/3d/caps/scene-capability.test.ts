@@ -6,7 +6,7 @@
 //   - null 存档 / 损坏数据（真值非对象）→ false，不应用任何字段
 //   - 至少一个字段回填 → true（@returns 契约：真实应用与否，而非「有存档」）
 import { describe, it, expect, vi } from "vitest";
-import { restoreFields } from "./scene-capability.ts";
+import { restoreFields, createListenerSet } from "./scene-capability.ts";
 
 describe("restoreFields — 类型分发", () => {
   it("number 值触发 number 恢复器", () => {
@@ -78,5 +78,36 @@ describe("restoreFields — 不匹配与损坏数据", () => {
       { timeOfDay: { number: vi.fn() }, enabled: { boolean: vi.fn() } },
     );
     expect(ok).toBe(false);
+  });
+});
+
+describe("createListenerSet — 订阅/通知（ground/water 共用样板）", () => {
+  it("notify 触发全部已订阅监听器", () => {
+    const { subscribe, notify } = createListenerSet();
+    const a = vi.fn();
+    const b = vi.fn();
+    subscribe(a);
+    subscribe(b);
+    notify();
+    expect(a).toHaveBeenCalledTimes(1);
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
+  it("取消订阅后不再触发", () => {
+    const { subscribe, notify } = createListenerSet();
+    const a = vi.fn();
+    const unsub = subscribe(a);
+    unsub();
+    notify();
+    expect(a).not.toHaveBeenCalled();
+  });
+
+  it("多次 notify 每次触发；订阅回调可安全访问自身状态", () => {
+    const { subscribe, notify } = createListenerSet();
+    let count = 0;
+    subscribe(() => { count++; });
+    notify();
+    notify();
+    expect(count).toBe(2);
   });
 });

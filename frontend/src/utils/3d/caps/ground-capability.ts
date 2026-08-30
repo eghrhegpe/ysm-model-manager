@@ -12,6 +12,8 @@ import {
   type MenuControlDef,
   persistState,
   restoreState,
+  restoreFields,
+  createListenerSet,
 } from "./scene-capability.ts";
 import {
   DEFAULT_GROUND_SURFACE_PARAMS,
@@ -74,7 +76,7 @@ export class GroundCapability implements SceneCapability {
   private params: GroundParams;
   private enabled: boolean;
   /** 参数变更监听（menu 局部刷新用）；仅材质来源切换等影响分组可见性的离散操作 notify */
-  private listeners = new Set<() => void>();
+  private readonly listenerSet = createListenerSet();
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -262,12 +264,11 @@ export class GroundCapability implements SceneCapability {
 
   /** 订阅参数变更（材质来源切换触发）；返回取消订阅函数 */
   subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return this.listenerSet.subscribe(listener);
   }
 
   private notify(): void {
-    for (const l of this.listeners) l();
+    this.listenerSet.notify();
   }
   setMatColor(hex: number): void {
     this.params.matColor = hex;
@@ -372,26 +373,36 @@ export class GroundCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") this.enabled = state.enabled;
-    if (typeof state.visible === "boolean") {
-      this.params.visible = state.visible;
-      this.grid.visible = state.visible;
-    }
-    if (typeof state.matSource === "string" && GROUND_SURFACE_MODES.includes(state.matSource as GroundSurfaceMode)) {
-      this.params.matSource =
-        state.matSource === "texture" && !this.customTex ? "plain" : (state.matSource as GroundSurfaceMode);
-    }
-    if (typeof state.matColor === "number") this.params.matColor = state.matColor;
-    if (typeof state.matLineColor === "number") this.params.matLineColor = state.matLineColor;
-    if (typeof state.matColor2 === "number") this.params.matColor2 = state.matColor2;
-    if (typeof state.matGridSize === "number") this.params.matGridSize = state.matGridSize;
-    if (typeof state.matOpacity === "number") this.setMatOpacity(state.matOpacity);
-    if (typeof state.matScale === "number") this.setMatScale(state.matScale);
-    if (typeof state.matRotationDeg === "number") this.setMatRotation(state.matRotationDeg);
-    if (typeof state.matDensity === "number") this.setMatDensity(state.matDensity);
-    if (typeof state.matAngleDeg === "number") this.setMatAngle(state.matAngleDeg);
-    if (typeof state.matRoughness === "number") this.setMatRoughness(state.matRoughness);
-    if (typeof state.matMetalness === "number") this.setMatMetalness(state.matMetalness);
+    restoreFields(state, {
+      enabled: {
+        boolean: (v) => { this.enabled = v; },
+      },
+      visible: {
+        boolean: (v) => {
+          this.params.visible = v;
+          this.grid.visible = v;
+        },
+      },
+      matSource: {
+        string: (v) => {
+          if (GROUND_SURFACE_MODES.includes(v as GroundSurfaceMode)) {
+            this.params.matSource =
+              v === "texture" && !this.customTex ? "plain" : (v as GroundSurfaceMode);
+          }
+        },
+      },
+      matColor: { number: (v) => { this.params.matColor = v; } },
+      matLineColor: { number: (v) => { this.params.matLineColor = v; } },
+      matColor2: { number: (v) => { this.params.matColor2 = v; } },
+      matGridSize: { number: (v) => { this.params.matGridSize = v; } },
+      matOpacity: { number: (v) => this.setMatOpacity(v) },
+      matScale: { number: (v) => this.setMatScale(v) },
+      matRotationDeg: { number: (v) => this.setMatRotation(v) },
+      matDensity: { number: (v) => this.setMatDensity(v) },
+      matAngleDeg: { number: (v) => this.setMatAngle(v) },
+      matRoughness: { number: (v) => this.setMatRoughness(v) },
+      matMetalness: { number: (v) => this.setMatMetalness(v) },
+    });
   }
 
   /** 移除并释放（GridHelper 材质可能是数组，遍历 dispose；surface 连同纹理一并释放） */

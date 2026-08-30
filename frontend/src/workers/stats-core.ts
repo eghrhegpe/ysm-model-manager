@@ -8,6 +8,7 @@
 //    （Go 只取 geometry 描述；前端 wasm.ts 取 max(嗅探, 描述)——本文件取大者，语义超集）
 //  - sniffTexSize 与 Go imagePixelArea / wasm.ts sniffTexSize 同口径，勿单独改
 import { parseBedrockGeometryFromJSON } from "../views/app-preview/geometry.ts";
+import { sniffTexSize } from "../utils/tex-size.ts";
 
 /** 解码/直读产物文件（Worker 与主线程共用形状） */
 export interface StatsFileInput {
@@ -25,42 +26,6 @@ export interface ModelStatsResult {
 }
 
 const EMPTY_ERROR: ModelStatsResult = { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true };
-
-// --- 纹理头魔数（与 Go imagePixelArea / wasm.ts sniffTexSize 一致，勿单独改）---
-const PNG_SIG = [0x89, 0x50, 0x4e];
-const JPEG_MARKER = 0xff;
-const JPEG_SOF_MASK = 0xc0;
-const JPEG_SOF_EXCLUDE = [0xc4, 0xc8, 0xcc];
-const JPEG_HEADER_SCAN_LIMIT = 4096;
-
-/**
- * 从纹理字节嗅探像素尺寸（PNG：签名 + IHDR 后宽/高大端；JPEG：SOI 后首个 SOF）。
- * 与 Go 端 imagePixelArea 口径一致。
- */
-export function sniffTexSize(arr: Uint8Array): { w: number; h: number } | null {
-  if (!arr?.length) return null;
-  if (arr[0] === PNG_SIG[0] && arr[1] === PNG_SIG[1] && arr[2] === PNG_SIG[2]) {
-    if (arr.length < 24) return null;
-    const w = (arr[16] << 24) | (arr[17] << 16) | (arr[18] << 8) | arr[19];
-    const h = (arr[20] << 24) | (arr[21] << 16) | (arr[22] << 8) | arr[23];
-    return w > 0 && h > 0 ? { w, h } : null;
-  }
-  if (arr[0] === JPEG_MARKER && arr[1] === 0xd8) {
-    for (let i = 2; i < Math.min(arr.length - 8, JPEG_HEADER_SCAN_LIMIT); i++) {
-      const m = arr[i + 1];
-      if (
-        arr[i] === JPEG_MARKER &&
-        (m & 0xf0) === JPEG_SOF_MASK &&
-        !JPEG_SOF_EXCLUDE.includes(m)
-      ) {
-        const h = (arr[i + 5] << 8) | arr[i + 6];
-        const w = (arr[i + 7] << 8) | arr[i + 8];
-        return w > 0 && h > 0 ? { w, h } : null;
-      }
-    }
-  }
-  return null;
-}
 
 /**
  * 宽松 geometry 解析：标准 `minecraft:geometry` 数组（parseBedrockGeometryFromJSON）

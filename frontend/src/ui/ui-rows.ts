@@ -2,7 +2,7 @@
 // addToggleRow / addSliderRow / addModeRow / sliderRow / toggleRow
 // 自 MikuMikuAR 迁移：解耦 render-context(i18n/iconify)，依赖改为本库与 utils/core。
 
-import { createIcon } from "./icons.ts";
+import { createIcon, createIconBox } from "./icons.ts";
 import { registerControl } from "./control-registry.ts";
 import type { ControlOptions } from "./ui-types.ts";
 import { slideRow } from "./ui-slide-row.ts";
@@ -14,27 +14,8 @@ import { SLIDER_QUARTER_LARGE_STEP, SLIDER_QUARTER_SMALL_STEP } from "./ui-const
 import { ROLE, SLIDER_BAR_CLASS, ARIA_ATTR } from "./dom-contract.ts";
 
 // ===================================================================
-// createIconBox — icon 渲染工具（消除 addToggleRow/addSliderRow 两处重复）
+// createIconBox 现为 icons.ts 导出（icon 渲染工具，消除多文件重复）：
 // 创建 <span.cs-icon> 元素：有图标则插入 createIcon 结果，无图标则用首字 fallback。
-// ===================================================================
-
-function createIconBox(icon: string, label: string, parent: HTMLElement): void {
-    const iconBox = document.createElement('span');
-    iconBox.className = 'cs-icon';
-    const iconEl = createIcon(icon);
-    if (iconEl) {
-        iconBox.appendChild(iconEl);
-    } else {
-        const fb = document.createElement('span');
-        fb.className = 'cs-icon-fallback';
-        fb.textContent = label.charAt(0) || '?';
-        iconBox.appendChild(fb);
-    }
-    parent.appendChild(iconBox);
-}
-
-// ===================================================================
-// addToggleRow — 子函数类型与工具
 // ===================================================================
 
 // 自增计数器，用于生成稳定的唯一 ID

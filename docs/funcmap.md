@@ -56,9 +56,9 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `SetNodeJS()` | `go/avatar/avatar_decode:39` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
-| `limitedBuffer.Write()` | `go/avatar/avatar_decode:54` | — |
-| `DecodeYSMFiles()` | `go/avatar/avatar_decode:63` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
+| `SetNodeJS()` | `go/avatar/avatar_decode:44` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数（线程安全）。 |
+| `limitedBuffer.Write()` | `go/avatar/avatar_decode:66` | — |
+| `DecodeYSMFiles()` | `go/avatar/avatar_decode:75` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
 | `ExtractAvatarURI()` | `go/avatar/avatar_extract:215` | — |
 | `CacheAvatarsFromJSON()` | `go/avatar/avatar_extract:230` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
 | `CacheAvatarsFromModel()` | `go/avatar/avatar_extract:300` | CacheAvatarsFromModel 从 .ysm/.zip/.json 模型缓存所有作者头像。 |
@@ -697,10 +697,10 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `App.CachedCreatorAvatar()` | `internal/app/app_avatar:17` | CachedCreatorAvatar 检查缓存中是否有作者头像，返回 data URI |
-| `App.BatchExtractCreatorAvatars()` | `internal/app/app_avatar:22` | BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像 |
-| `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:74` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
-| `App.CacheModelAvatars()` | `internal/app/app_avatar:129` | CacheModelAvatars 从模型文件缓存作者头像（覆盖 .ysm/.zip/.json 等所有格式） |
+| `App.CachedCreatorAvatar()` | `internal/app/app_avatar:18` | CachedCreatorAvatar 检查缓存中是否有作者头像，返回 data URI |
+| `App.BatchExtractCreatorAvatars()` | `internal/app/app_avatar:23` | BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像 |
+| `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:79` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
+| `App.CacheModelAvatars()` | `internal/app/app_avatar:138` | CacheModelAvatars 从模型文件缓存作者头像（覆盖 .ysm/.zip/.json 等所有格式） |
 | `App.GetConfigPath()` | `internal/app/app_config:62` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
 | `App.SaveAppConfig()` | `internal/app/app_config:134` | — |
 | `App.SetDownloadMirror()` | `internal/app/app_config:204` | — |
@@ -1169,7 +1169,7 @@
 | `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:228` | 站点分组展示顺序（renderCardsHTML 使用） |
 | `groupSites()` | `frontend/src/features/community/render:233` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
 | `renderCardsHTML()` | `frontend/src/features/community/render:250` | 生成左栏站点卡片 HTML |
-| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:300` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
+| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:298` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
 | `showRepoModels()` | `frontend/src/features/community/show-repo-models:27` | 显示 GitHub 仓库模型列表（比对本地已有文件） 包含：本地扫描、sourceLabel构建、countMissing、renderRepoHeaderHTML、bindRep |
 | `VirtualListOpts()` | `frontend/src/features/community/virtual-list:8` | — |
 | `VirtualList()` | `frontend/src/features/community/virtual-list:21` | — |
@@ -2163,7 +2163,7 @@
 | `initPerfPanel()` | `frontend/src/views/app-content/diagnostics/perf:14` | 初始化性能面板（single-bench / gui-flow / perf-log / 加载剖析） |
 | `appContentStyle()` | `frontend/src/views/app-content/index:11` | — |
 | `GithubPageCtx()` | `frontend/src/views/app-content/init-github:24` | GitHub 社群页编排上下文——把 initGithubPage 各闭包捕获的共享状态显式注入， 供 githubLoadRepos / githubShowRepo / git |
-| `initGithubPage()` | `frontend/src/views/app-content/init-github:282` | 初始化 GitHub 页（纯分派：创建 ctx + 初始化缓存 + 触发 loadRepos） |
+| `initGithubPage()` | `frontend/src/views/app-content/init-github:280` | 初始化 GitHub 页（纯分派：创建 ctx + 初始化缓存 + 触发 loadRepos） |
 | `initDiagnosticsPage()` | `frontend/src/views/app-content/init-pages:21` | 初始化诊断页 |
 | `initInstancesPage()` | `frontend/src/views/app-content/init-pages:28` | 初始化实例页 |
 | `initWorkshopPage()` | `frontend/src/views/app-content/init-pages:288` | 初始化创意工坊页（委托到 init-workshop.ts） |

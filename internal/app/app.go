@@ -222,7 +222,9 @@ func (a *App) ServiceShutdown() error {
 	defer func() {
 		// 原 recover 静默吞 panic——记录原因便于排查
 		if r := recover(); r != nil {
-			println("[shutdown] 退出时异常:", fmt.Sprint(r))
+			// 走标准库 log：app.go:124 SetOutput 已接 runtimeLogs 环形 buffer，
+			// 内建 println 只落 stderr，诊断页（环形日志面板）看不到退出异常
+			log.Printf("[shutdown] 退出时异常: %v", r)
 		}
 	}()
 	a.watcherMu.Lock()

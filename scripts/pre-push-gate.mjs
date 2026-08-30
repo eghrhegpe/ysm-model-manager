@@ -151,6 +151,9 @@ const ALL_STATIC_TOOLS = [
   'check-circular-go.mjs',
   'check-orphan-exports.mjs',
   'check-deadcode-baseline.mjs',
+  // jscpd-go.mjs — Go 端复制粘贴增量门禁（2026-08-30 接入）：push 模式由 GO_STATIC_TOOLS 补挂、
+  // 全量模式在此一并发入；baseline 独立于前端 deadcode-baseline，零耦合
+  'jscpd-go.mjs',
   // check-layering.mjs — 前端域已覆盖
   'check-tpl-refs.mjs',
   'check-dynamic-import.mjs',
@@ -223,6 +226,9 @@ const FRONTEND_STATIC_TOOLS = [
 /** push 模式按变更域补挂的 Go 静态工具 */
 const GO_STATIC_TOOLS = [
   'check-circular-go.mjs',
+  // Go 端复制粘贴增量门禁（2026-08-30 接入）：新增重复对 → 阻断推送；
+  // baseline 落 scripts/baseline/jscpd-go-baseline.json，与前端 deadcode-baseline 零耦合
+  'jscpd-go.mjs',
   // Go 变更行覆盖率门禁（2026-08-27 集成，默认 threshold=60 硬门禁）：
   // --json 模式 exit 0/1/2，runTools 退 rc 判定可靠（_summary 无 ok/errors 字段）。
   // 软建议 80% 由 go-coverage-hint 显式 --threshold 80 承担（prepare-commit-msg）。

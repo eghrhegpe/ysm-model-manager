@@ -657,6 +657,19 @@ export const en: Record<string, string> = {
   "sidebar.notSet": "Not Set",
   "sidebar.noMatchInstances": "No matching modpacks found",
   "sidebar.noMods": "🚫 No {type}",
+  // sidebar push/pull action toasts (app-sidebar/index.ts)
+  "sidebar.selectPackFirst": "Please select the packs to {verb} first",
+  "sidebar.verbPush": "push",
+  "sidebar.verbPull": "pull",
+  "sidebar.pushDoneAll": "✅ Push complete: {n} packs",
+  "sidebar.pushDone": "⚠️ Push complete, {detail}",
+  "sidebar.pushFailed": "❌ Push failed: {msg}",
+  "sidebar.pullDoneAll": "✅ Pull complete, {n} files total",
+  "sidebar.pullDone": "⚠️ Pull complete: {pulled} files, {failed} failed",
+  "sidebar.pullNothing": "📭 Nothing to pull (no extra resources in instances)",
+  "sidebar.pullFailed": "❌ Pull failed: {msg}",
+  "sidebar.packSkipped": "{n} skipped (sync in progress)",
+  "sidebar.packTimedOut": "{n} timed out",
 
   // ── Resource Manager ──
   "resource.initFailed": "Initialization failed",

@@ -148,7 +148,7 @@ function asbBeginSync(
   if (!item) return null;
   const selected = asbGetSelected(ctx);
   if (!selected.length) {
-    bus.emit("toast:show", { msg: `请先勾选要${verb}的整合包`, duration: TOAST_MS.success, type: "info" });
+    bus.emit("toast:show", { msg: t("sidebar.selectPackFirst", { verb }), duration: TOAST_MS.success, type: "info" });
     return null;
   }
   if (flags.getSyncInProgress()) return null;
@@ -182,7 +182,7 @@ function asbHandlePushMenuClick(
   ctx: AsbSidebarContext,
   flags: AsbSyncFlags,
 ): void {
-  const selected = asbBeginSync(e, "推送", ctx, flags, () => asbCloseAllMenus(pushMenu, pullMenu), pushBtn);
+  const selected = asbBeginSync(e, t("sidebar.verbPush"), ctx, flags, () => asbCloseAllMenus(pushMenu, pullMenu), pushBtn);
   if (!selected) return;
   const types = asbResolveTypes((e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all");
   void asbRunPush(selected, types, pushBtn, flags);
@@ -260,16 +260,16 @@ async function asbRunPush(
     }
     if (skipped > 0 || timedOut > 0) {
       const parts: string[] = [];
-      if (skipped > 0) parts.push(`${skipped} 个被跳过（同步进行中）`);
-      if (timedOut > 0) parts.push(`${timedOut} 个超时`);
-      bus.emit("toast:show", { msg: `⚠️ 推送完成，${parts.join("，")}`, duration: TOAST_MS.normal, type: "warn" });
+      if (skipped > 0) parts.push(t("sidebar.packSkipped", { n: skipped }));
+      if (timedOut > 0) parts.push(t("sidebar.packTimedOut", { n: timedOut }));
+      bus.emit("toast:show", { msg: t("sidebar.pushDone", { detail: parts.join("，") }), duration: TOAST_MS.normal, type: "warn" });
     } else {
-      bus.emit("toast:show", { msg: `✅ 推送完成：${selected.length} 个整合包`, duration: TOAST_MS.info });
+      bus.emit("toast:show", { msg: t("sidebar.pushDoneAll", { n: selected.length }), duration: TOAST_MS.info });
     }
   } catch (err) {
-    bus.emit("toast:show", { msg: "❌ 推送失败: " + (safeErrorMessage(err)), duration: TOAST_MS.normal, type: "error" });
+    bus.emit("toast:show", { msg: t("sidebar.pushFailed", { msg: safeErrorMessage(err) }), duration: TOAST_MS.normal, type: "error" });
   } finally {
-    pushBtn.textContent = "⬆️ 推送所选 ▾";
+    pushBtn.textContent = "⬆️ " + t("sidebar.pushSelected") + " ▾";
     pushBtn.disabled = false;
     flags.setSyncInProgress(false);
   }
@@ -284,7 +284,7 @@ function asbHandlePullMenuClick(
   ctx: AsbSidebarContext,
   flags: AsbSyncFlags,
 ): void {
-  const selected = asbBeginSync(e, "拉取", ctx, flags, () => asbCloseAllMenus(pushMenu, pullMenu), pullBtn);
+  const selected = asbBeginSync(e, t("sidebar.verbPull"), ctx, flags, () => asbCloseAllMenus(pushMenu, pullMenu), pullBtn);
   if (!selected) return;
   const types = asbResolveTypes((e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all");
   void asbRunPull(selected, types, pullBtn, flags);
@@ -311,16 +311,16 @@ async function asbRunPull(
       }
     }
     if (failed > 0) {
-      bus.emit("toast:show", { msg: `⚠️ 拉取完成: ${totalPulled} 个文件, ${failed} 个失败`, duration: TOAST_MS.normal, type: "warn" });
+      bus.emit("toast:show", { msg: t("sidebar.pullDone", { pulled: totalPulled, failed }), duration: TOAST_MS.normal, type: "warn" });
     } else if (totalPulled > 0) {
-      bus.emit("toast:show", { msg: `✅ 拉取完成，共 ${totalPulled} 个文件`, duration: TOAST_MS.info });
+      bus.emit("toast:show", { msg: t("sidebar.pullDoneAll", { n: totalPulled }), duration: TOAST_MS.info });
     } else {
-      bus.emit("toast:show", { msg: "📭 没有可拉取的文件（实例中无多余资源）", duration: TOAST_MS.info, type: "info" });
+      bus.emit("toast:show", { msg: t("sidebar.pullNothing"), duration: TOAST_MS.info, type: "info" });
     }
     bus.emit("stats:refresh");
     bus.emit("tree:reload");
   } catch (err) {
-    bus.emit("toast:show", { msg: "❌ 拉取失败: " + (safeErrorMessage(err)), duration: TOAST_MS.normal, type: "error" });
+    bus.emit("toast:show", { msg: t("sidebar.pullFailed", { msg: safeErrorMessage(err) }), duration: TOAST_MS.normal, type: "error" });
   } finally {
     pullBtn.textContent = "⬇️ " + t("sidebar.pullSelected") + " ▾";
     pullBtn.disabled = false;

@@ -660,6 +660,19 @@ export const zhCN: Record<string, string> = {
   "sidebar.notSet": "未设置",
   "sidebar.noMatchInstances": "未找到匹配的整合包",
   "sidebar.noMods": "🚫 无{type}",
+  // sidebar 推送/拉取动作 toast（app-sidebar/index.ts）
+  "sidebar.selectPackFirst": "请先勾选要{verb}的整合包",
+  "sidebar.verbPush": "推送",
+  "sidebar.verbPull": "拉取",
+  "sidebar.pushDoneAll": "✅ 推送完成：{n} 个整合包",
+  "sidebar.pushDone": "⚠️ 推送完成，{detail}",
+  "sidebar.pushFailed": "❌ 推送失败: {msg}",
+  "sidebar.pullDoneAll": "✅ 拉取完成，共 {n} 个文件",
+  "sidebar.pullDone": "⚠️ 拉取完成: {pulled} 个文件, {failed} 个失败",
+  "sidebar.pullNothing": "📭 没有可拉取的文件（实例中无多余资源）",
+  "sidebar.pullFailed": "❌ 拉取失败: {msg}",
+  "sidebar.packSkipped": "{n} 个被跳过（同步进行中）",
+  "sidebar.packTimedOut": "{n} 个超时",
 
   // ── 资源管理器 ──
   "resource.initFailed": "初始化失败",

@@ -658,6 +658,19 @@ export const ja: Record<string, string> = {
   "sidebar.notSet": "未設定",
   "sidebar.noMatchInstances": "一致する統合パックが見つかりません",
   "sidebar.noMods": "🚫 {type}なし",
+  // sidebar プッシュ/プルトースト（app-sidebar/index.ts）
+  "sidebar.selectPackFirst": "先に{verb}するパックを選択してください",
+  "sidebar.verbPush": "プッシュ",
+  "sidebar.verbPull": "プル",
+  "sidebar.pushDoneAll": "✅ プッシュ完了：{n} パック",
+  "sidebar.pushDone": "⚠️ プッシュ完了、{detail}",
+  "sidebar.pushFailed": "❌ プッシュに失敗: {msg}",
+  "sidebar.pullDoneAll": "✅ プル完了、合計 {n} ファイル",
+  "sidebar.pullDone": "⚠️ プル完了: {pulled} ファイル、{failed} 失敗",
+  "sidebar.pullNothing": "📭 プルするファイルがありません（インスタンスに余分なリソースなし）",
+  "sidebar.pullFailed": "❌ プルに失敗: {msg}",
+  "sidebar.packSkipped": "{n} スキップ（同期中）",
+  "sidebar.packTimedOut": "{n} タイムアウト",
 
   // ── Resource Manager ──
   "resource.initFailed": "初期化に失敗しました",

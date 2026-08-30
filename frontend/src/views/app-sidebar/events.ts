@@ -270,11 +270,11 @@ export function bindFooter(
               theme,
             );
           } else {
-            btn.textContent = "🎮 未设置";
+            btn.textContent = "🎮 " + t("sidebar.notSet");
           }
         }
       } catch (e) {
-        btn.textContent = "🎮 未设置";
+        btn.textContent = "🎮 " + t("sidebar.notSet");
         console.warn("[sidebar] MC detection:", e);
       }
     })();

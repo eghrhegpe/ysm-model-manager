@@ -57,7 +57,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 ## 核心职责
 
-- **外壳**：overlay + ⚙️ 声明式根菜单(`preview-menu/defs.ts`：`CORE_MENU_ITEMS` + `PREVIEW_MENU_GROUPS`，能力驱动 dock) + viewContainer + loadingEl + 适配器控件容器(`topBar`，仅 vrm/litematic 遗留 `extraControls` 单按钮，Phase 3 收编)
+- **外壳**：overlay + ⚙️ 声明式根菜单(`preview-menu/defs.ts`：`CORE_MENU_ITEMS` + `PREVIEW_MENU_GROUPS`，能力驱动 dock) + viewContainer + loadingEl + 适配器控件容器(`topBar`，仅 vrm/litematic 遗留 `extraControls` 单按钮，Phase 3 收编)。`PREVIEW_MENU_GROUPS` 组定义带 `labelKey + fallback`（2026-08-31 补齐：dock 按钮/组标题走 `tr()`，与 `CORE_MENU_ITEMS` 同款兜底；新增组只加 defs.ts 一行 + 三语 key）
 - **渲染基座（shared 模式）**：创建 `scene` / `camera` / `renderer` / `OrbitControls` / 灯光，驱动 rAF 循环、WASD/拖拽自转、resize、ESC 关闭、GPU 资源释放。**WASD 键位表驱动（见 [model3d](./model3d.md) 键位消费链）**：`bindInputHandlers` 按 `KeyboardEvent.code`+`loadTdKeymap()` 映射动作表，`mpApplyWasdCameraMotion` 只查 forward/back/left/right/up/down；输入框焦点守卫防止吞打字；方向键双轨 + 修饰键左右对称。
 - **3D overlay 无障碍（a11y，2026-08-29）**：`#ysm-overlay-3d` 设 `role="dialog"` + `aria-modal="true"` + `aria-label="3D 预览"`（复用 `preview.title3d` i18n key），屏幕阅读器可识别模态体验；`mount3D` 入口 `rememberTrigger()` 记下触发 FAB，关闭时 `returnFocus()` 把焦点还给 FAB；document 级 `trapFocusAcrossShadow`（`utils/dom/focus-restore.ts`）拦截 Tab 越界——避免焦点逃出 3D 到背后树面板。注：overlay 整链当前为 **light DOM**（createSlideMenu 无 attachShadow），跨 shadow 下钻属防御性兜底；handler 内深焦解析 + cleanup 身份守卫已修（详见 [utils-dom](./utils-dom.md)）。单一事实源：`utils/dom/focus-restore.ts` 的 `rememberTrigger / returnFocus / trapFocusAcrossShadow` 三件套，弹窗/3D/上下文菜单统一受益。
 - **适配器注入**：内容层经 `PreviewAdapter.build()` 挂进 `ctx.scene`；每帧 `update(dt)` 驱动动态部分（VRM SpringBone、动画）

@@ -17,6 +17,7 @@ import { createGazeController } from "../perception/gaze.ts"; // 语义骨骼消
 import { createBlinkController } from "../perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
 import { recordLoadTrace } from "../load-trace.ts";
+import { frameCameraSide } from "../camera-setup.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { renderLoadingState } from "./preview-loading.ts";
 import { b64ToBytes } from "../base64.ts";
@@ -307,18 +308,8 @@ async function mdVrLoadVrmaAnims(
   return { motionClips, motionMixer, motionAction, motionPlaying, motionIdx };
 }
 function mdVrSetupCameraBounds(ctx: PreviewBuildCtx, vrm: VRM): void {
-  const box = new THREE.Box3().setFromObject(vrm.scene);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  ctx.camera!.near = 0.05;
-  ctx.camera!.far = maxDim * 50;
-  ctx.camera!.position.set(center.x, center.y + size.y * 0.1, center.z + maxDim * 1.6);
-  ctx.camera!.updateProjectionMatrix();
-  ctx.controls!.target.copy(center);
-  ctx.controls!.minDistance = maxDim * 0.1;
-  ctx.controls!.maxDistance = maxDim * 12;
-  ctx.controls!.update();
+  // 侧上方取景（对齐 fbx/pack 口径，见 camera-setup.frameCameraSide）
+  frameCameraSide(ctx, vrm.scene);
 }
 function mdVrStage3Materials(vrm: VRM): THREE.Material[] {
   const vrmMaterials: THREE.Material[] = [];

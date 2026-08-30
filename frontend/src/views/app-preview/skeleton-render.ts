@@ -233,16 +233,7 @@ export async function saveScreenshot(
       b64 = await screenshotFn();
     } else {
       // fallback：无活跃渲染器时复用 renderMultiAngle 取 front 帧
-      const texUrls =
-        model.textures && model.textures.length > 1
-          ? model.textures
-          : [model.texture || ""];
-      const results = await renderMultiAngle(model._modelPath || "", texUrls, {
-        size: 512,
-        componentTextures: model.componentTextures,
-        lights: toScreenshotLights(),
-      });
-      b64 = results?.[0]?.base64 ?? null;
+      b64 = await renderFrontFrame(model);
     }
     if (!b64) {
       // 抛错而非静默吞错：让消费者统一 catch（setIcon ❌ + toast），
@@ -254,19 +245,31 @@ export async function saveScreenshot(
   } else if (key === "all") {
     for (const k of ["front", "45", "side", "back45"]) await saveScreenshot(model, k, setShotState, screenshotFn);
   } else {
-    const texUrls =
-      model.textures && model.textures.length > 1
-        ? model.textures
-        : [model.texture || ""];
-    const results = await renderMultiAngle(model._modelPath || "", texUrls, {
-      size: 512,
-      componentTextures: model.componentTextures,
-      lights: toScreenshotLights(),
-    });
-    if (!results) return;
-    const hit = results.find((r) => r.name === key);
-    if (hit) await SaveScreenshotFile(base + "_" + key + ".png", hit.base64);
+    const b64 = await renderFrontFrame(model);
+    if (!b64) return;
+    await SaveScreenshotFile(base + "_" + key + ".png", b64);
   }
   setShotState("\u2705");
   setTimeout(() => setShotState("\u{1F4F7}"), 2000);
+}
+
+/** 无活跃渲染器时复用 renderMultiAngle 渲染指定视角帧（front/45/side/back45/all 共用；key 传 "front" 等） */
+async function renderFrame(model: BedrockGeometry & { textures?: string[] | null; componentTextures?: Record<string, string[]>; _modelPath?: string }, key: string): Promise<string | null> {
+  const texUrls =
+    model.textures && model.textures.length > 1
+      ? model.textures
+      : [model.texture || ""];
+  const results = await renderMultiAngle(model._modelPath || "", texUrls, {
+    size: 512,
+    componentTextures: model.componentTextures,
+    lights: toScreenshotLights(),
+  });
+  if (!results) return null;
+  const hit = results.find((r) => r.name === key);
+  return hit?.base64 ?? null;
+}
+
+/** 无活跃渲染器 fallback：取 front 帧 base64（key === "current" 分支） */
+async function renderFrontFrame(model: Parameters<typeof renderFrame>[0]): Promise<string | null> {
+  return renderFrame(model, "front");
 }

@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from "vitest";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { fitCameraToScene, fitCameraToRoots } from "./camera-setup.ts";
+import { fitCameraToScene, fitCameraToRoots, frameCameraSide } from "./camera-setup.ts";
 
 /** 构造最小可用的 mock context */
 function makeCtx() {
@@ -171,5 +171,54 @@ describe("一致性检查", () => {
 
     expect(ctx1.camera.position).toEqual(ctx2.camera.position);
     expect(ctx1.controls.target).toEqual(ctx2.controls.target);
+  });
+});
+
+describe("frameCameraSide（fbx/vrm/pack 共用侧上方取景）", () => {
+  it("默认系数：相机置于 +Z 斜上方（y +size*0.1, z +maxDim*1.6），controls 限位 [0.1, 12]×maxDim", () => {
+    const { camera, controls } = makeCtx();
+    const root = makeModelRoot(16, 32, 16); // raw 16×32×16
+    root.scale.set(1 / 16, 1 / 16, 1 / 16); // 1×2×1, maxDim=2
+
+    frameCameraSide({ camera, controls }, root);
+
+    // center=(0,0,0)：相机 y = 0 + 2*0.1 = 0.2，z = 0 + 2*1.6 = 3.2
+    expect(camera.position.x).toBeCloseTo(0, 5);
+    expect(camera.position.y).toBeCloseTo(0.2, 5);
+    expect(camera.position.z).toBeCloseTo(3.2, 5);
+    // near/far 收紧
+    expect(camera.near).toBeCloseTo(0.05, 5);
+    expect(camera.far).toBeCloseTo(2 * 50, 5);
+    // controls 约束
+    expect(controls.target).toEqual(new THREE.Vector3(0, 0, 0));
+    expect(controls.minDistance).toBeCloseTo(0.2, 5);
+    expect(controls.maxDistance).toBeCloseTo(24, 5);
+  });
+
+  it("opts 覆盖系数（pack 口径 y 0.15 / z 1.8）", () => {
+    const { camera, controls } = makeCtx();
+    const root = makeModelRoot(16, 32, 16);
+    root.scale.set(1 / 16, 1 / 16, 1 / 16);
+
+    frameCameraSide({ camera, controls }, root, { yRatio: 0.15, zRatio: 1.8 });
+
+    // center=(0,0,0)：y = 2*0.15 = 0.3，z = 2*1.8 = 3.6
+    expect(camera.position.y).toBeCloseTo(0.3, 5);
+    expect(camera.position.z).toBeCloseTo(3.6, 5);
+  });
+
+  it("ctx.camera/controls 缺省时静默跳过（不抛错）", () => {
+    const root = makeModelRoot(16, 16, 16);
+    expect(() => frameCameraSide({}, root)).not.toThrow();
+    expect(() => frameCameraSide({ camera: null, controls: null }, root)).not.toThrow();
+  });
+
+  it("空/退化包围盒 → maxDim 兜底 1，不抛错", () => {
+    const { camera, controls } = makeCtx();
+    const empty = new THREE.Group(); // 无任何子节点 → Box3 空
+    frameCameraSide({ camera, controls }, empty);
+    // maxDim = max(0,0,0) || 1 = 1
+    expect(camera.position.z).toBeCloseTo(1 * 1.6, 5);
+    expect(camera.far).toBeCloseTo(1 * 50, 5);
   });
 });

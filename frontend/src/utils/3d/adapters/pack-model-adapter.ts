@@ -21,6 +21,7 @@ import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 import { multiModelSelectNode } from "./preview-menu/multi-model.ts";
 import { textureCache } from "../texture-cache.ts";
 import { safeDispose } from "../safe-dispose.ts";
+import { frameCameraSide } from "../camera-setup.ts";
 
 /** Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） */
 export interface PackDeps {
@@ -176,24 +177,9 @@ async function buildModelGroup(
   return { group, disposables };
 }
 
-/** 包围盒定相机（对齐 vrm-adapter 口径） */
+/** 包围盒定相机（对齐 vrm/fbx 口径；pack 取景略远——y 0.15 / z 1.8 覆盖默认 0.1/1.6） */
 function frameCamera(ctx: PreviewBuildCtx, target: THREE.Object3D): void {
-  const box = new THREE.Box3().setFromObject(target);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  if (ctx.camera) {
-    ctx.camera.near = 0.05;
-    ctx.camera.far = maxDim * 50;
-    ctx.camera.position.set(center.x, center.y + size.y * 0.15, center.z + maxDim * 1.8);
-    ctx.camera.updateProjectionMatrix();
-  }
-  if (ctx.controls) {
-    ctx.controls.target.copy(center);
-    ctx.controls.minDistance = maxDim * 0.1;
-    ctx.controls.maxDistance = maxDim * 12;
-    ctx.controls.update();
-  }
+  frameCameraSide(ctx, target, { yRatio: 0.15, zRatio: 1.8 });
 }
 
 /** 释放内容层 GPU 资源（复用：build 失败和 dispose 共用） */

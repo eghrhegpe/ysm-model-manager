@@ -23,6 +23,7 @@ import { buildBoneTree } from "../bone-tools.ts";
 import { fbxBonesToBoneNodes } from "../fbx-bones.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import { frameCameraSide } from "../camera-setup.ts";
 
 /** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface FbxDataPort {
@@ -250,23 +251,8 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
     await fbxDiag(port, "fbx-anim", `内嵌动画 ${group.animations.length} 段`, "ok");
   }
 
-  // 4) 相机取景（镜像 vrm-adapter.ts:267，包围盒定相机 + controls 约束）
-  const box = new THREE.Box3().setFromObject(group);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  if (ctx.camera) {
-    ctx.camera.near = 0.05;
-    ctx.camera.far = maxDim * 50;
-    ctx.camera.position.set(center.x, center.y + size.y * 0.1, center.z + maxDim * 1.6);
-    ctx.camera.updateProjectionMatrix();
-  }
-  if (ctx.controls) {
-    ctx.controls.target.copy(center);
-    ctx.controls.minDistance = maxDim * 0.1;
-    ctx.controls.maxDistance = maxDim * 12;
-    ctx.controls.update();
-  }
+  // 4) 相机取景（镜像 vrm-adapter / pack-model-adapter，侧上方取景 + controls 约束）
+  frameCameraSide(ctx, group);
 
   // 5) 骨骼面板（ADR-074 S2 通用骨骼面板复用，ADR-112 扩展）：收拢 SkinnedMesh 骨骼
   //    构建通用骨骼树；有骨骼才注入 🦴 菜单项，复用 makeBonePanelRenderer（列表/详情/拾取联动）

@@ -41,16 +41,16 @@
 | Go(internal)·应用入口 | 31 | 222 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
-| 前端·核心 | 18 | 37 |
+| 前端·核心 | 18 | 38 |
 | 前端·特性 | 18 | 93 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 6 | 37 |
 | frontend/ui | 18 | 66 |
-| 前端·工具 | 182 | 751 |
+| 前端·工具 | 182 | 753 |
 | frontend/views | 122 | 358 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **521** | **2237** |
+| **合计** | **521** | **2240** |
 
 ## Go·头像
 
@@ -1070,17 +1070,18 @@
 | `FILE_HANDLERS()` | `frontend/src/core/context-menu-file-handlers:13` | file 类 handler 子表 |
 | `MenuCtx()` | `frontend/src/core/context-menu-handlers:73` | — |
 | `HANDLERS()` | `frontend/src/core/context-menu-handlers:76` | 行为 handler 表（instance + batch + merge file/dir） |
-| `refreshUI()` | `frontend/src/core/context-menu-shared:16` | 通知树组件和统计面板刷新 |
-| `toast()` | `frontend/src/core/context-menu-shared:22` | 显示 toast 通知 |
-| `toastEmptyRtype()` | `frontend/src/core/context-menu-shared:27` | rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） |
-| `isUnsafeFolderName()` | `frontend/src/core/context-menu-shared:32` | 路径安全过滤：禁止逃逸段（. |
-| `resolveDstDir()` | `frontend/src/core/context-menu-shared:44` | 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）。 |
+| `refreshUI()` | `frontend/src/core/context-menu-shared:17` | 通知树组件和统计面板刷新 |
+| `toast()` | `frontend/src/core/context-menu-shared:23` | 显示 toast 通知 |
+| `toastError()` | `frontend/src/core/context-menu-shared:31` | 错误 toast（`❌ ${friendlyError(e)}` 模板收敛——instance-ops / settings/init 等 catch 块共用）。 |
+| `toastEmptyRtype()` | `frontend/src/core/context-menu-shared:36` | rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） |
+| `isUnsafeFolderName()` | `frontend/src/core/context-menu-shared:41` | 路径安全过滤：禁止逃逸段（. |
+| `resolveDstDir()` | `frontend/src/core/context-menu-shared:53` | 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）。 |
 | `registerContextMenus()` | `frontend/src/core/context-menus:77` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:29` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:51` | 注册 UI 报错落日记功能。 |
 | `registerAndroidEvents()` | `frontend/src/core/handlers/android-events:18` | 注册 Android 系统事件消费，push 取消订阅函数到 unsubs |
 | `registerGlobalHandlers()` | `frontend/src/core/handlers/global:12` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
-| `registerInstanceOps()` | `frontend/src/core/handlers/instance-ops:13` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
+| `registerInstanceOps()` | `frontend/src/core/handlers/instance-ops:12` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
 | `requireMcRoot()` | `frontend/src/core/handlers/require-mcroot:13` | 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。 |
 | `registerSync()` | `frontend/src/core/handlers/sync:252` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
 | `SUPPORTED_LANGS()` | `frontend/src/core/i18n/locale:11` | 支持的语言列表（规划清单） |
@@ -1348,11 +1349,11 @@
 | `buildCameraControls()` | `frontend/src/utils/3d/adapters/camera-controls:31` | 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 |
 | `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:41` | — |
 | `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:82` | — |
-| `FbxDataPort()` | `frontend/src/utils/3d/adapters/fbx-adapter:28` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `FBX_TARGET_MAX_DIM()` | `frontend/src/utils/3d/adapters/fbx-adapter:35` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
-| `FbxScaleInfo()` | `frontend/src/utils/3d/adapters/fbx-adapter:38` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
-| `normalizeFbxScale()` | `frontend/src/utils/3d/adapters/fbx-adapter:54` | Box3 尺度归一（ADR-112 P1）：DCC 导出单位混乱（cm/m/Unity units 可差 100×）时， 模型要么小到穿近平面看不见、要么顶天立地顶爆场景能力。均匀 |
-| `buildFbxScene()` | `frontend/src/utils/3d/adapters/fbx-adapter:167` | 构建 FBX 内容场景（ADR-112 地基）。 |
+| `FbxDataPort()` | `frontend/src/utils/3d/adapters/fbx-adapter:29` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `FBX_TARGET_MAX_DIM()` | `frontend/src/utils/3d/adapters/fbx-adapter:36` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
+| `FbxScaleInfo()` | `frontend/src/utils/3d/adapters/fbx-adapter:39` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
+| `normalizeFbxScale()` | `frontend/src/utils/3d/adapters/fbx-adapter:55` | Box3 尺度归一（ADR-112 P1）：DCC 导出单位混乱（cm/m/Unity units 可差 100×）时， 模型要么小到穿近平面看不见、要么顶天立地顶爆场景能力。均匀 |
+| `buildFbxScene()` | `frontend/src/utils/3d/adapters/fbx-adapter:168` | 构建 FBX 内容场景（ADR-112 地基）。 |
 | `FbxParser()` | `frontend/src/utils/3d/adapters/fbx-parser:18` | FBX 解析器管理器（接口对齐 PmxParser） |
 | `createFbxParser()` | `frontend/src/utils/3d/adapters/fbx-parser:27` | 创建 FBX 解析器（Worker）。测试/受限环境无 Worker → always-fail 降级守卫， 调用方（fbx-adapter）会 fallback 到主线程 FBX |
 | `FbxSceneBuilderConfig()` | `frontend/src/utils/3d/adapters/fbx-parser:44` | 场景重建配置 |
@@ -1450,9 +1451,9 @@
 | `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:245` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
 | `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:263` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
-| `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:26` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
-| `PackAdapterOpts()` | `frontend/src/utils/3d/adapters/pack-model-adapter:31` | 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） |
-| `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:55` | 工厂：适配器持 zipPath（容器路径）+ 可选多模型候选（ADR-132），buildPath 即 entry path（虚拟文件夹下的文件路径） |
+| `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:27` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
+| `PackAdapterOpts()` | `frontend/src/utils/3d/adapters/pack-model-adapter:32` | 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） |
+| `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:56` | 工厂：适配器持 zipPath（容器路径）+ 可选多模型候选（ADR-132），buildPath 即 entry path（虚拟文件夹下的文件路径） |
 | `PerceptionState()` | `frontend/src/utils/3d/adapters/perception-controls:10` | 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） |
 | `PerceptionCapability()` | `frontend/src/utils/3d/adapters/perception-controls:19` | 可用感知模块描述（由 adapter 按实际能力填写） |
 | `perceptionNodes()` | `frontend/src/utils/3d/adapters/perception-controls:36` | 感知面板声明式节点（纯数据工厂零 DOM）：toggle kind 节点， control.get/set 闭包读写 adapter 内 perception state（非状态层 |
@@ -1541,14 +1542,14 @@
 | `PmxObject()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:127` | — |
 | `PmxReader()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader:62` | PmxReader is a static class that parses PMX data |
 | `FBXLoader()` | `frontend/src/utils/3d/adapters/vendor/fbx/FBXLoader:79` | A loader for the FBX format. |
-| `VrmDataPort()` | `frontend/src/utils/3d/adapters/vrm-adapter:32` | VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `VrmMetaInfo()` | `frontend/src/utils/3d/adapters/vrm-adapter:88` | VRM meta 归一化信息（meta 卡展示用） |
-| `readVrmMeta()` | `frontend/src/utils/3d/adapters/vrm-adapter:109` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
-| `VrmModelInfoCtx()` | `frontend/src/utils/3d/adapters/vrm-adapter:172` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
-| `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:179` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:515` | — |
-| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:535` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:573` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
+| `VrmDataPort()` | `frontend/src/utils/3d/adapters/vrm-adapter:33` | VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `VrmMetaInfo()` | `frontend/src/utils/3d/adapters/vrm-adapter:89` | VRM meta 归一化信息（meta 卡展示用） |
+| `readVrmMeta()` | `frontend/src/utils/3d/adapters/vrm-adapter:110` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
+| `VrmModelInfoCtx()` | `frontend/src/utils/3d/adapters/vrm-adapter:173` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
+| `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:180` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
+| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:506` | — |
+| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:526` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:564` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
 | `VrmBonePanelCtx()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:21` | 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） |
 | `RenderVrmBonePanel()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:31` | 骨骼面板渲染契约：返回清理函数（面板移除时调用） |
 | `makeBonePanelRenderer()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:40` | 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。 |
@@ -1597,8 +1598,10 @@
 | `setBoneVisible()` | `frontend/src/utils/3d/bone-visibility:11` | 设置指定骨骼组及其所有子网格的可见性。 |
 | `toggleBone()` | `frontend/src/utils/3d/bone-visibility:19` | 切换指定骨骼组的可见性（取反）。 |
 | `showModelGroup()` | `frontend/src/utils/3d/bone-visibility:29` | 按索引显示单个模型组件（idx &lt; 0 = 全部显示，NaN 防御）。 |
-| `fitCameraToScene()` | `frontend/src/utils/3d/camera-setup:12` | 根据内容根节点的包围盒适配相机位置和 controls.target。 |
-| `fitCameraToRoots()` | `frontend/src/utils/3d/camera-setup:26` | 按给定根节点列表（多模型同框）计算并集包围盒并返回相机初始位姿。 |
+| `FrameSideOptions()` | `frontend/src/utils/3d/camera-setup:8` | frameCameraSide 取景系数（fbx/vrm/pack 三适配器共用，对齐历史口径） |
+| `frameCameraSide()` | `frontend/src/utils/3d/camera-setup:21` | 侧上方取景（外部格式 fbx/vrm/pack 共用）：包围盒 → 相机置于 +Z 斜上方， controls 限位到 maxDim 的 [0.1, 12] 倍。与 fitCame |
+| `fitCameraToScene()` | `frontend/src/utils/3d/camera-setup:54` | 根据内容根节点的包围盒适配相机位置和 controls.target。 |
+| `fitCameraToRoots()` | `frontend/src/utils/3d/camera-setup:68` | 按给定根节点列表（多模型同框）计算并集包围盒并返回相机初始位姿。 |
 | `EnvPresetId()` | `frontend/src/utils/3d/caps/environment-capability:20` | — |
 | `EnvPreset()` | `frontend/src/utils/3d/caps/environment-capability:22` | — |
 | `ENV_PRESETS()` | `frontend/src/utils/3d/caps/environment-capability:43` | — |
@@ -2167,13 +2170,13 @@
 | `bindPathClick()` | `frontend/src/views/app-content/settings/path-cards:53` | — |
 | `initAdvancedGrid()` | `frontend/src/views/app-content/settings/path-cards:194` | — |
 | `initMcDetect()` | `frontend/src/views/app-content/settings/path-cards:319` | — |
+| `toastError()` | `frontend/src/views/app-content/settings/store` | — |
 | `SettingsCfg()` | `frontend/src/views/app-content/settings/store:11` | 设置页当前配置类型（LoadAppConfig 返回值，经 Wails $CancellablePromise 解包） |
 | `cfg()` | `frontend/src/views/app-content/settings/store:14` | 当前配置：initSettings 加载后注入，各模块就地更新字段（saveCfg/检测/主题/链接模式） |
 | `cardRefreshers()` | `frontend/src/views/app-content/settings/store:17` | 所有路径卡片的刷新函数列表（绑定后收集，重排/重置时统一调用） |
 | `isBusy()` | `frontend/src/views/app-content/settings/store:21` | — |
 | `setBusy()` | `frontend/src/views/app-content/settings/store:22` | — |
-| `toastError()` | `frontend/src/views/app-content/settings/store:27` | — |
-| `resetSettingsStore()` | `frontend/src/views/app-content/settings/store:36` | 重置模块级状态（initSettings 开头调用；重复执行时清空上次残留） |
+| `resetSettingsStore()` | `frontend/src/views/app-content/settings/store:27` | 重置模块级状态（initSettings 开头调用；重复执行时清空上次残留） |
 | `initTheme()` | `frontend/src/views/app-content/settings/theme:24` | 初始化主题段：主题卡片点击切换 + 自动切换下拉框 |
 | `applyUIPrefs()` | `frontend/src/views/app-content/settings/ui-prefs:12` | 应用 UI 偏好到 CSS 变量（字号/字体/密度/动画）——启动链与设置页共用（ADR-040 拆分去重） |
 | `initUiPrefs()` | `frontend/src/views/app-content/settings/ui-prefs:52` | 初始化界面与体验设置：应用偏好 + 绑定字号/字体/密度/动画/默认页变更 |

@@ -48,6 +48,7 @@
 | 编号 | 热点 | 行数 | 性质 | 处置 |
 | ---- | ---- | ---- | ---- | ---- |
 | D-5 | `wasm.ts` ↔ `stats-core.ts`（sniffTexSize）等 7 组生产重复 | 24~32/组 | 跨文件，真复制（纯函数/壳层样板） | ✅ 已完成（2026-09-02）：2026-09 去重专项。T1 `sniffTexSize` → `utils/tex-size.ts` 单一事实源（wasm/stats-core 共用 + 测试迁移）；T2 `patchGlueHeapExport`/`resolveWasmFactory` → `parser-shared.ts`（主线程/Worker 共用，单例状态保持隔离）；T3 `createIconBox` → `icons.ts`（ui-rows/ui-advanced-rows 共用）；T4 `runBatchRename` → `bus-handlers.ts` 内部（两事件共用）；T6 `readFileBytes`/`addOpLog` → `views/app-preview/view-shell.ts`（fbx/ysm/vrm/maid 四处视图壳共用）；T7 `createListenerSet` → `scene-capability.ts`（ground/water 共用）+ ground loadState 迁 `restoreFields`。T5（model2d-draw↔hit-zones bone 包围盒）🧊 撤账：hit-zones 有 30+ 行额外变换（cube 级 rotation / btx 位置旋转 / 不同投影），抽公共函数需传回调或数组分配（热路径 GC 压力）或 10+ 参数（可读性崩），同 D-3/D-4 先例。净效果：生产配对 23→19，重复行 2313→2220（1.42%→1.36%），全量测试 + typecheck 绿 |
+| D-6 | `fbx-adapter` ↔ `pack-model-adapter` ↔ `vrm-adapter`（相机取景）等 3 组 | 11~24/组 | 跨文件，真复制（相机适配/错误 toast/截图 fallback） | ✅ 已完成（2026-09-02，续）：A1+A2 `frameCameraSide` → `camera-setup.ts`（fbx/vrm 默认 0.1/1.6、pack 覆盖 0.15/1.8，三适配器共用 + 测试）；A3 `toastError(err, fallback, prefix)` → `core/context-menu-shared.ts`（instance-ops 4 处 catch + settings/store 原本地 toastError 收敛为 re-export）；A5 `renderFrame(model, key)` → `skeleton-render.ts` 内部（current/多角度截图 fallback 两分支共用）。净效果：生产配对 19→16，重复行 2220→2177（1.36%→1.33%）。剩余 16 条全部为撤账项（类型声明 / 结构相似语义不同 / 单例隔离），不再追 |
 
 **E-1 列表/网格视图切换（低）**
 

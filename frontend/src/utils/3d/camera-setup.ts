@@ -4,6 +4,48 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+/** frameCameraSide 取景系数（fbx/vrm/pack 三适配器共用，对齐历史口径） */
+export interface FrameSideOptions {
+  /** 相机高度 = center.y + size.y * yRatio */
+  yRatio?: number;
+  /** 相机距离 = center.z + maxDim * zRatio */
+  zRatio?: number;
+}
+
+/**
+ * 侧上方取景（外部格式 fbx/vrm/pack 共用）：包围盒 → 相机置于 +Z 斜上方，
+ * controls 限位到 maxDim 的 [0.1, 12] 倍。与 fitCameraToBounds（Z- 正面，YSM 口径）
+ * 语义不同——前者供外部格式俯视模型，后者供 YSM 正面展示。
+ * 收敛自 fbx-adapter / pack-model-adapter / vrm-adapter 三处逐字副本（jscpd）。
+ */
+export function frameCameraSide(
+  ctx: {
+    camera?: THREE.PerspectiveCamera | null;
+    controls?: OrbitControls | null;
+  },
+  target: THREE.Object3D,
+  opts?: FrameSideOptions,
+): void {
+  const box = new THREE.Box3().setFromObject(target);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const yRatio = opts?.yRatio ?? 0.1;
+  const zRatio = opts?.zRatio ?? 1.6;
+  if (ctx.camera) {
+    ctx.camera.near = 0.05;
+    ctx.camera.far = maxDim * 50;
+    ctx.camera.position.set(center.x, center.y + size.y * yRatio, center.z + maxDim * zRatio);
+    ctx.camera.updateProjectionMatrix();
+  }
+  if (ctx.controls) {
+    ctx.controls.target.copy(center);
+    ctx.controls.minDistance = maxDim * 0.1;
+    ctx.controls.maxDistance = maxDim * 12;
+    ctx.controls.update();
+  }
+}
+
 /**
  * 根据内容根节点的包围盒适配相机位置和 controls.target。
  * @param contentRoot 模型内容根节点（不含 sky/ground 等能力组件）

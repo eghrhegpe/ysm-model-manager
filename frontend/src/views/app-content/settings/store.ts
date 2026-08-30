@@ -2,10 +2,10 @@
 // initSettings 是设置页唯一入口（init-pages.ts 懒加载调用），语言热切换（ADR-045）后
 // app-content 会重渲染设置页并再次执行 initSettings——因此所有共享状态必须经
 // resetSettingsStore 重置，避免上次残留（旧 DOM 的刷新闭包/卡死的 busy 标志）污染本次。
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { bus } from "../../../bus.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
 import type { AppBindings } from "../../../backend/app.ts";
+// toastError 已收敛至 core/context-menu-shared.ts（instance-ops / settings 等多处 catch 共用，
+// 2026-09 去重专项；本文件原本地实现删除，re-export 保持 settings/ 内部导入路径不变）
+export { toastError } from "../../../core/context-menu-shared.ts";
 
 /** 设置页当前配置类型（LoadAppConfig 返回值，经 Wails $CancellablePromise 解包） */
 export type SettingsCfg = Awaited<ReturnType<AppBindings["LoadAppConfig"]>>;
@@ -21,15 +21,6 @@ let busy = false;
 export const isBusy = (): boolean => busy;
 export const setBusy = (v: boolean): void => {
   busy = v;
-};
-
-// P2 修复：async handler 统一错误出口（抽公共函数，避免 5 处相似 catch 块重复）
-export const toastError = (e: unknown): void => {
-  bus.emit("toast:show", {
-    msg: "❌ " + friendlyError(e),
-    duration: TOAST_MS.long,
-    type: "error",
-  });
 };
 
 /** 重置模块级状态（initSettings 开头调用；重复执行时清空上次残留） */

@@ -1,13 +1,12 @@
 // ===== 整合包操作：导出清单 / 清空目录（类型化版 — ADR-014 P3）=====
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { bus } from "../../bus.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
 import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
 import { getApp } from "../../backend/app.ts";
 import { requireMcRoot } from "./require-mcroot.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { t } from "../../core/i18n/t.ts";
-import { toastEmptyRtype } from "../context-menu-shared.ts";
+import { toastEmptyRtype, toastError } from "../context-menu-shared.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
 export function registerInstanceOps(unsubs: Array<() => void>): void {
@@ -89,11 +88,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
           type: "success",
         });
       } catch (e) {
-        bus.emit("toast:show", {
-          msg: `❌ ${friendlyError(e)}`,
-          duration: TOAST_MS.long,
-          type: "error",
-        });
+        toastError(e);
       }
     }),
   );
@@ -123,11 +118,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
           totalCount = await CountInstanceResources(insName, rtype);
         } catch (countErr) {
           // 统计失败不静默：显示「没有资源」会误导用户以为整合包为空
-          bus.emit("toast:show", {
-            msg: "❌ 统计失败: " + friendlyError(countErr, "无法统计资源数量"),
-            duration: TOAST_MS.normal,
-            type: "error",
-          });
+          toastError(countErr, "无法统计资源数量", "统计失败");
           return;
         }
         if (totalCount === 0) {
@@ -163,18 +154,10 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
             type: "success",
           });
         } catch (err) {
-          bus.emit("toast:show", {
-            msg: `❌ 清空失败: ${friendlyError(err, "清空失败")}`,
-            duration: TOAST_MS.long,
-            type: "error",
-          });
+          toastError(err, "清空失败", "清空失败");
         }
       } catch (e) {
-        bus.emit("toast:show", {
-          msg: `❌ ${friendlyError(e)}`,
-          duration: TOAST_MS.long,
-          type: "error",
-        });
+        toastError(e);
       }
     }),
   );

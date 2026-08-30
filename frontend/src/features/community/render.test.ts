@@ -163,15 +163,13 @@ describe("renderCardsHTML", () => {
     expect(html).toContain("浏览平台");
   });
 
-  it("卡片含 data-group 与 data-index 定位", () => {
+  it("卡片含 data-group 定位", () => {
     const sites = [
       { label: "S1", group: "search" },
       { label: "B1" },
     ];
     const html = renderCardsHTML(sites, esc);
     expect(html).toContain('data-group="search"');
-    expect(html).toContain('data-index="0"');
-    expect(html).toContain('data-index="1"');
   });
 
   it("label/desc 经 esc 转义", () => {

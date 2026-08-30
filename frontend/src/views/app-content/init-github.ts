@@ -44,7 +44,7 @@ export interface GithubPageCtx {
 }
 
 /**
- * 拉取仓库列表并渲染 gh-card（stagger 动画 + data-index/data-repo），绑定点击切 active。
+ * 拉取仓库列表并渲染 gh-card（stagger 动画 + data-repo 标识），绑定点击切 active。
  */
 async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
   const grid = ctx.grid;
@@ -72,9 +72,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
       grid.innerHTML = ghCreators
         .map(
           (cr, idx) =>
-            '<div class="gh-card gh-repo-card" style="animation-delay:' + stagger(idx, 30, 300) + 'ms" data-index="' +
-            idx +
-            '" data-repo="' +
+            '<div class="gh-card gh-repo-card" style="animation-delay:' + stagger(idx, 30, 300) + 'ms" data-repo="' +
             escUtil(cr.name) +
             '">' +
             '<div class="gh-card-body">' +

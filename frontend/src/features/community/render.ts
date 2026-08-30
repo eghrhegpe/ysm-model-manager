@@ -270,9 +270,7 @@ export function renderCardsHTML(
       html +=
         '<div class="gh-card" style="animation-delay:' +
         stagger(cardIdx, 30, 300) +
-        'ms" data-index="' +
-        sites.indexOf(s) +
-        '" data-group="' +
+        'ms" data-group="' +
         esc(g) +
         '">' +
         '<div class="gh-card-icon">' +

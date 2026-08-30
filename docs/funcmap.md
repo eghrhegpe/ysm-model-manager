@@ -699,8 +699,8 @@
 |------|--------|------|
 | `App.CachedCreatorAvatar()` | `internal/app/app_avatar:18` | CachedCreatorAvatar 检查缓存中是否有作者头像，返回 data URI |
 | `App.BatchExtractCreatorAvatars()` | `internal/app/app_avatar:23` | BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像 |
-| `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:79` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
-| `App.CacheModelAvatars()` | `internal/app/app_avatar:138` | CacheModelAvatars 从模型文件缓存作者头像（覆盖 .ysm/.zip/.json 等所有格式） |
+| `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:84` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
+| `App.CacheModelAvatars()` | `internal/app/app_avatar:143` | CacheModelAvatars 从模型文件缓存作者头像（覆盖 .ysm/.zip/.json 等所有格式） |
 | `App.GetConfigPath()` | `internal/app/app_config:62` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
 | `App.SaveAppConfig()` | `internal/app/app_config:134` | — |
 | `App.SetDownloadMirror()` | `internal/app/app_config:204` | — |

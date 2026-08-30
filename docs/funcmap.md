@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 6 | 37 |
 | frontend/ui | 18 | 66 |
-| 前端·工具 | 182 | 753 |
+| 前端·工具 | 183 | 754 |
 | frontend/views | 122 | 358 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **521** | **2240** |
+| **合计** | **522** | **2241** |
 
 ## Go·头像
 
@@ -922,7 +922,7 @@
 | `normalizeTheme()` | `frontend/src/app-modules` | — |
 | `applyTheme()` | `frontend/src/app-modules` | — |
 | `initTheme()` | `frontend/src/app-modules` | — |
-| `bus()` | `frontend/src/bus:201` | 默认实例（组件直接使用） |
+| `bus()` | `frontend/src/bus:205` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
 | `PageName()` | `frontend/src/bus:30` | 核心页面名（与 app-nav 导航菜单一致） |
@@ -1285,9 +1285,9 @@
 | `SLIDER_BAR_CLASS()` | `frontend/src/ui/dom-contract:37` | 滑动条本体 class（slider / colorSlider / modeSlider 共用 .cs-bar） |
 | `createIcon()` | `frontend/src/ui/icons:10` | 创建一个图标元素（可能返回 null，调用方应走兜底层）。 |
 | `createIconBox()` | `frontend/src/ui/icons:29` | 创建 &lt;span.cs-icon&gt; 图标盒并挂到 parent 下（icon 为空则不创建）。 |
-| `addColorSliderRow()` | `frontend/src/ui/ui-advanced-rows:37` | — |
-| `addVector3SliderRow()` | `frontend/src/ui/ui-advanced-rows:209` | — |
-| `addModeSlider()` | `frontend/src/ui/ui-advanced-rows:393` | — |
+| `addColorSliderRow()` | `frontend/src/ui/ui-advanced-rows:38` | — |
+| `addVector3SliderRow()` | `frontend/src/ui/ui-advanced-rows:210` | — |
+| `addModeSlider()` | `frontend/src/ui/ui-advanced-rows:394` | — |
 | `cardContainer()` | `frontend/src/ui/ui-card:10` | Card container helper: removes render-card bg, wraps content in an lcard. |
 | `addCollapsible()` | `frontend/src/ui/ui-collapsible:24` | 通用折叠面板组件 |
 | `addSectionTitle()` | `frontend/src/ui/ui-collapsible:137` | 区块标题（section-title），用于 cardContainer 内的视觉分组。 |
@@ -2096,6 +2096,7 @@
 | `AppConfig()` | `frontend/src/utils/types-re-export` | — |
 | `VersionInstance()` | `frontend/src/utils/types-re-export` | — |
 | `ModelEntry()` | `frontend/src/utils/types-re-export` | — |
+| `uid()` | `frontend/src/utils/uid:14` | 生成唯一 id。 |
 
 ## frontend/views
 

@@ -149,7 +149,9 @@ let _busInstance: Bus | null = null;
 /** 创建一个新 bus 实例 */
 function createBus(): Bus {
   const listeners: Partial<Record<BusEventName, Array<(payload: unknown) => void>>> = {};
-  // on/off 提取为闭包：unsub 与 once 内部不再依赖 this（解构调用不丢上下文）
+  // on/off 提取为闭包：unsub 与 once 内部不再依赖 this（解构调用不丢上下文）。
+  // 闭包签名保留泛型（Bus["on"]/Bus["off"]）——内部 push/indexOf 时转内部存储类型
+  // (payload: unknown) => void（listeners 的存储类型）。
   const on: Bus["on"] = (event, fn) => {
     ((listeners[event] as Array<(payload: unknown) => void>) ||= []).push(fn as (payload: unknown) => void);
     return () => off(event, fn);
@@ -185,14 +187,16 @@ function createBus(): Bus {
       });
     },
     once(event, fn) {
-      const wrapper = (data: unknown) => {
-        off(event, wrapper as never);
-        fn(data as never);
+      // wrapper 与 fn 同签名（泛型窄类型），内部传给 on/off 时由闭包转内部存储类型；
+      // 无需 as never——wrapper 的 payload 类型与 event 的 BusEvents[K] 一致
+      const wrapper: (payload: BusEvents[typeof event]) => void = (data) => {
+        off(event, wrapper);
+        fn(data);
       };
-      on(event, wrapper as never);
+      on(event, wrapper);
       // P2 修复：返回退订函数（与 on 契约对齐）——事件永不触发时调用方可主动移除 wrapper，
       // 否则 wrapper 永久驻留全局单例 listeners，且 off(event, 原fn) 按引用匹配不到 wrapper（幽灵监听器）
-      return () => off(event, wrapper as never);
+      return () => off(event, wrapper);
     },
   };
 }

@@ -69,7 +69,7 @@
 | `services/` | 服务注册（registry.ts） 〔源码 2: cli-bridge.ts registry.ts · 测试 2〕 |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） 〔源码 6: events.ts index.ts query-by-testid.ts render.ts self-healing.ts tex-bytes.ts · 测试 4〕 |
 | `ui/` | 🥉 ui-helpers 原生 DOM 组件库（自 MikuMikuAR 迁移：slide-row / rows / header-toggle / advanced-rows / collapsible / preset / card / loading + 自包含 CSS 模块 `ui-components-styles.ts`，经 `installUiComponentsStyles()` / `uiComponentsStyleSheet` 接入） 〔源码 18 · 子目录 1: __tests__/〕 |
-| `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） 〔源码 7: array.ts gh-links.ts main-thread-watch.ts module-loader.ts safe-error-msg.ts tex-size.ts types-re… · 测试 5 · 子目录 10: 3d/ animation/ async/ cache/ core/ debug/ dom/ format/ icon/ resource/〕 |
+| `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） 〔源码 8: array.ts gh-links.ts main-thread-watch.ts module-loader.ts safe-error-msg.ts tex-size.ts types-re… · 测试 6 · 子目录 10: 3d/ animation/ async/ cache/ core/ debug/ dom/ format/ icon/ resource/〕 |
 | `views/` | 页面级视图组件（app-content / app-tree / app-preview 等） 〔子目录 8: app-content/ app-nav/ app-preview/ app-sidebar/ app-sync-manager/ app-toast/ app-tree/ context-menu/〕 |
 | `wasm/` | WASM 生成数据（base64 豁免文件） 〔源码 9: parser-shared.ts ysm-glue-data-mt.js ysm-glue-data.js ysm-parser.ts ysm-wasm-data-mt.d.ts ysm-was… · 测试 1〕 |
 | `web-spike/` | 网页版 spike 入口（main.ts，构建/冒烟验证） 〔源码 1: main.ts〕 |

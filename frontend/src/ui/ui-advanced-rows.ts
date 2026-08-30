@@ -6,6 +6,7 @@ import { createIconBox } from "./icons.ts";
 import type { ControlOptions } from "./ui-types.ts";
 import { initControl } from "./ui-rows.ts";
 import { clampPct, clamp01 } from "../utils/core/clamp.ts";
+import { uid } from "../utils/uid.ts";
 import { DragSliderController } from "./ui-slider-controller.ts";
 // DOM 契约单源：role/class 由 dom-contract 提供，禁止手写字符串
 import { ROLE, SLIDER_BAR_CLASS, ARIA_ATTR } from "./dom-contract.ts";
@@ -83,7 +84,7 @@ function csrBuildShell(
     const title = document.createElement('span');
     title.className = 'clr-title';
     title.textContent = label;
-    title.id = `color-${Math.random().toString(36).slice(2, 11)}`;
+    title.id = uid("color-");
     header.appendChild(title);
     const swatch = document.createElement('span');
     swatch.className = 'clr-swatch';
@@ -111,7 +112,7 @@ function csrBuildChannelRow(
     ch.style.color = channelColor;
     ch.textContent = ['R', 'G', 'B'][ci];
     // titleId 用 block 内随机 id 会更好，这里用 label + ci 即可（labelledby 指向 ch 自己）
-    ch.id = `clr-ch-${label}-${ci}-${Math.random().toString(36).slice(2, 7)}`;
+    ch.id = `clr-ch-${label}-${ci}-${uid()}`;
     sub.appendChild(ch);
 
     const val = document.createElement('span');
@@ -263,7 +264,7 @@ function vsrBuildBlock(label: string, icon?: string, testId?: string): HTMLDivEl
     const title = document.createElement('span');
     title.className = 'vec3-title';
     title.textContent = label;
-    title.id = `vec3-${Math.random().toString(36).slice(2, 11)}`;
+    title.id = uid("vec3-");
     header.appendChild(title);
     block.appendChild(header);
     return block;
@@ -292,7 +293,7 @@ function vsrBuildAxisRow(
     ch.className = 'vec3-axis';
     ch.style.color = axisColor;
     ch.textContent = axes[ai];
-    ch.id = `vec3-${label}-ax${ai}-${Math.random().toString(36).slice(2, 7)}`;
+    ch.id = `vec3-${label}-ax${ai}-${uid()}`;
     sub.appendChild(ch);
 
     const val = document.createElement('span');

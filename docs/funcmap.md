@@ -42,11 +42,11 @@
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 19 | 39 |
-| 前端·特性 | 18 | 93 |
+| 前端·特性 | 140 | 623 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 6 | 37 |
 | frontend/ui | 18 | 66 |
-| 前端·工具 | 185 | 760 |
+| 前端·工具 | 63 | 230 |
 | frontend/views | 122 | 359 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
@@ -1199,6 +1199,536 @@
 | `PackDndInstance()` | `frontend/src/features/pack-dnd:32` | 卡片实例的最小形状（SidebarInstance 结构子集） |
 | `handleInstanceDrop()` | `frontend/src/features/pack-dnd:47` | 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。 |
 | `bindPackCardDnD()` | `frontend/src/features/pack-dnd:184` | 在 document 层注册整合包卡片 DnD（WebView2 ShadowRoot drop 限制， 与 bindTreeDnD 同款范式：document 监听 + comp |
+| `BonesPanelItemOpts()` | `frontend/src/features/preview-3d/adapters/bones-panel-node:32` | 工厂入参：caller 持 cleanupRef（与 panel 生命周期对齐，dispose 时同步调） |
+| `makeBonesPanelItem()` | `frontend/src/features/preview-3d/adapters/bones-panel-node:51` | 构造「骨骼」菜单项节点。返回的 PreviewMenuNode 形状固定： id="bones" / icon="🦴" / dockGroup="motion" / kind=" |
+| `CameraControlBridge()` | `frontend/src/features/preview-3d/adapters/camera-controls:13` | 相机控制桥：shared/self 双模式统一构建旋转/速度/重置控件的回调集合（方案 A：消灭 ysm-adapter 双份实现） |
+| `buildCameraControls()` | `frontend/src/features/preview-3d/adapters/camera-controls:31` | 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 |
+| `CleanupContext()` | `frontend/src/features/preview-3d/adapters/cleanup-3d:53` | — |
+| `runFullCleanup()` | `frontend/src/features/preview-3d/adapters/cleanup-3d:94` | — |
+| `FbxDataPort()` | `frontend/src/features/preview-3d/adapters/fbx-adapter:29` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `FBX_TARGET_MAX_DIM()` | `frontend/src/features/preview-3d/adapters/fbx-adapter:36` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
+| `FbxScaleInfo()` | `frontend/src/features/preview-3d/adapters/fbx-adapter:39` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
+| `normalizeFbxScale()` | `frontend/src/features/preview-3d/adapters/fbx-adapter:55` | Box3 尺度归一（ADR-112 P1）：DCC 导出单位混乱（cm/m/Unity units 可差 100×）时， 模型要么小到穿近平面看不见、要么顶天立地顶爆场景能力。均匀 |
+| `buildFbxScene()` | `frontend/src/features/preview-3d/adapters/fbx-adapter:168` | 构建 FBX 内容场景（ADR-112 地基）。 |
+| `FbxParser()` | `frontend/src/features/preview-3d/adapters/fbx-parser:18` | FBX 解析器管理器（接口对齐 PmxParser） |
+| `createFbxParser()` | `frontend/src/features/preview-3d/adapters/fbx-parser:27` | 创建 FBX 解析器（Worker）。测试/受限环境无 Worker → always-fail 降级守卫， 调用方（fbx-adapter）会 fallback 到主线程 FBX |
+| `FbxSceneBuilderConfig()` | `frontend/src/features/preview-3d/adapters/fbx-parser:44` | 场景重建配置 |
+| `buildFbxSceneFromData()` | `frontend/src/features/preview-3d/adapters/fbx-parser:214` | 从 worker 产出的纯数据重建 Three.js 场景（FBX worker 路径的主线程构建器） 按 nodes 层级还原：非 mesh 节点建 Group、mesh 节点建 |
+| `FbxParseRequest()` | `frontend/src/features/preview-3d/adapters/fbx-parser.worker:17` | 主线程 → Worker 请求 |
+| `FbxParseResponse()` | `frontend/src/features/preview-3d/adapters/fbx-parser.worker:23` | Worker → 主线程响应 |
+| `FbxGeometryData()` | `frontend/src/features/preview-3d/adapters/fbx-scene-to-data:16` | — |
+| `FbxMaterialData()` | `frontend/src/features/preview-3d/adapters/fbx-scene-to-data:29` | — |
+| `FbxSkeletonData()` | `frontend/src/features/preview-3d/adapters/fbx-scene-to-data:45` | — |
+| `FbxMeshData()` | `frontend/src/features/preview-3d/adapters/fbx-scene-to-data:56` | — |
+| `FbxSceneData()` | `frontend/src/features/preview-3d/adapters/fbx-scene-to-data:88` | — |
+| `captureTextureName()` | `frontend/src/features/preview-3d/adapters/fbx-scene-to-data:102` | — |
+| `fbxSceneToData()` | `frontend/src/features/preview-3d/adapters/fbx-scene-to-data:209` | — |
+| `InputOptions()` | `frontend/src/features/preview-3d/adapters/input-and-animation:28` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
+| `InputHandlers()` | `frontend/src/features/preview-3d/adapters/input-and-animation:43` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
+| `bindInputHandlers()` | `frontend/src/features/preview-3d/adapters/input-and-animation:122` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
+| `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/features/preview-3d/adapters/litematic-adapter:238` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
+| `LitematicBuildOpts()` | `frontend/src/features/preview-3d/adapters/litematic-adapter:413` | — |
+| `buildLitematicScene()` | `frontend/src/features/preview-3d/adapters/litematic-adapter:425` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
+| `MaterialBridgeLike()` | `frontend/src/features/preview-3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
+| `materialNodes()` | `frontend/src/features/preview-3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
+| `RepresentativeSnapshot()` | `frontend/src/features/preview-3d/adapters/menu-graph:24` | 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） |
+| `MenuGraphNode()` | `frontend/src/features/preview-3d/adapters/menu-graph:30` | 导航图节点（菜单节点的投影，只读不写） |
+| `MenuGraph()` | `frontend/src/features/preview-3d/adapters/menu-graph:56` | 导航图：dock 分组 → 面板 → 节点树 + 动作节点 + 覆盖度 |
+| `CollectMenuGraphOpts()` | `frontend/src/features/preview-3d/adapters/menu-graph:71` | collectMenuGraph 入参 |
+| `collectNodePredicates()` | `frontend/src/features/preview-3d/adapters/menu-graph:83` | 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二） |
+| `collectMenuGraph()` | `frontend/src/features/preview-3d/adapters/menu-graph:144` | 收集菜单导航图（纯函数，不改任何状态）。 |
+| `makeMenuCtx()` | `frontend/src/features/preview-3d/adapters/menu-test-fixtures:12` | PreviewMenuCtx 全字段 stub：能力全缺（getCap → null）、桥全 vi.fn()。 |
+| `mockMenuHandle()` | `frontend/src/features/preview-3d/adapters/menu-test-fixtures:36` | SlideMenuHandle 全方法 stub（渲染器/面板单测用，导航动作全 no-op） |
+| `MmdDataPort()` | `frontend/src/features/preview-3d/adapters/mmd-adapter:66` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `MmdPanelHooks()` | `frontend/src/features/preview-3d/adapters/mmd-adapter:181` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
+| `buildMmdScene()` | `frontend/src/features/preview-3d/adapters/mmd-adapter:1168` | — |
+| `MmdMenuItemsOpts()` | `frontend/src/features/preview-3d/adapters/mmd-adapter:1241` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `mmdMenuItems()` | `frontend/src/features/preview-3d/adapters/mmd-adapter:1273` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
+| `getCustomAnimPath()` | `frontend/src/features/preview-3d/adapters/mmd-anim-library:12` | 获取 MMD 动作库（CustomAnim）的绝对路径。 |
+| `filterAnimFiles()` | `frontend/src/features/preview-3d/adapters/mmd-anim-library:24` | 从文件列表中筛选动作文件（.vmd / .vpd） |
+| `PmxFileStats()` | `frontend/src/features/preview-3d/adapters/mmd-detail-stats:16` | PMX 文件级统计（详情卡展示；独立于 SceneStats 的 traverse 口径） |
+| `_clearPmxStatsCache()` | `frontend/src/features/preview-3d/adapters/mmd-detail-stats:31` | 清除缓存（测试钩子；生产由模块级生命周期自然存活） |
+| `readPmxStats()` | `frontend/src/features/preview-3d/adapters/mmd-detail-stats:39` | 读 PMX 文件级统计：Worker 完整解析 → 取 counts → 缓存。 |
+| `BasisEncoderLike()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-basis:13` | BasisEncoder 实例的最小接口（embind 运行时提供） |
+| `BasisModuleLike()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-basis:29` | 初始化后的 basis 模块（含 BasisEncoder 构造器） |
+| `MAX_KTX2_PIXELS()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-basis:65` | 单纹理像素上限：超过则跳过 KTX2 编码。 |
+| `TextureTooLargeError()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-basis:68` | 超大纹理跳过编码的标记错误（encodeAndCacheTexture 据此记 warn 而非 fail） |
+| `encodeToKTX2Basis()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-basis:81` | 将 RGBA ImageData 编码为 KTX2（Basis Universal ETC1S）。 |
+| `cancelPendingEncodings()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder:71` | 取消所有待执行的编码（已在执行的不受影响） |
+| `resetEncoderState()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder:83` | 重置编码器状态（测试用） |
+| `__setEncodeImplForTest()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder:205` | 测试用：注入编码实现（默认走本地 WASM） |
+| `encodeAndCacheTexture()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder:216` | 将单个 PNG 纹理编码为 KTX2 并缓存。 |
+| `scheduleBackgroundEncoding()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder:267` | 遍历 mesh 材质，对有 KTX2 缓存需要的纹理进行后台编码。 |
+| `Ktx2TextureLoaderDeps()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader:21` | 拦截 loader 依赖注入（装配方提供） |
+| `Ktx2TextureLoader()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader:61` | — |
+| `Ktx2EncodeRequest()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-worker:9` | 主线程 → Worker 的请求 |
+| `Ktx2EncodeResponse()` | `frontend/src/features/preview-3d/adapters/mmd-ktx2-worker:17` | Worker → 主线程的响应 |
+| `pmxObjectToResponse()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-convert:194` | 权威 PmxObject → PmxParseResponse（压缩数组可 transferable；id 由调用方填入） |
+| `PmxBuilderConfig()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser:29` | Builder 配置 |
+| `PmxBuildResult()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser:37` | Builder 产出 |
+| `PmxParser()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser:46` | PMX 解析器管理器 |
+| `createPmxParser()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser:54` | 创建 PMX 解析器（Worker） |
+| `buildPmxScene()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser:76` | 从 Worker 解析结果构建 Three.js 场景对象。 |
+| `buildPmxSceneSliced()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser:209` | 异步切片版 buildPmxScene：将重负载同步构建拆成 rAF 帧片段。 |
+| `PmxParseRequest()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:17` | 主线程 → Worker 请求 |
+| `PmxVertexData()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:23` | 顶点数据（交织存储，GPU 友好） |
+| `PmxFaceData()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:33` | 面数据 |
+| `PmxMaterialData()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:39` | 材质数据 |
+| `PmxBoneData()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:56` | 骨骼数据（字段对齐 @moeru/three-mmd PmxObject.Bone） |
+| `PmxMorphData()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:71` | Morph 数据 |
+| `PmxParseResponse()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:78` | Worker → 主线程响应 |
+| `PmxRigidBodyData()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:98` | — |
+| `PmxJointData()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:115` | — |
+| `PmxDisplayFrameData()` | `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker:130` | — |
+| `TexDecodeRequest()` | `frontend/src/features/preview-3d/adapters/mmd-texture-decode.worker:9` | 主线程 → Worker 的请求 |
+| `TexDecodeResponse()` | `frontend/src/features/preview-3d/adapters/mmd-texture-decode.worker:17` | Worker → 主线程的响应 |
+| `TexDecodeConfig()` | `frontend/src/features/preview-3d/adapters/mmd-texture-decoder:15` | 解码器配置 |
+| `DecodedTexture()` | `frontend/src/features/preview-3d/adapters/mmd-texture-decoder:23` | 解码结果条目 |
+| `TextureDecoder()` | `frontend/src/features/preview-3d/adapters/mmd-texture-decoder:40` | 解码管理器：创建 Worker 池、分发任务、收集结果。 |
+| `getTextureDecoder()` | `frontend/src/features/preview-3d/adapters/mmd-texture-decoder:149` | 获取共享解码器（懒创建） |
+| `applyWorkerDecodedTextures()` | `frontend/src/features/preview-3d/adapters/mmd-texture-decoder:169` | 将 Worker 解码的 ImageBitmap 应用到 MMD 模型的材质纹理： 1. |
+| `bytesToBase64()` | `frontend/src/features/preview-3d/adapters/mmd-zip-overlay` | — |
+| `MmdZipConfig()` | `frontend/src/features/preview-3d/adapters/mmd-zip-overlay:20` | ZIP 解析产物（传给 overlay 的配置） |
+| `resolveMmdZipConfig()` | `frontend/src/features/preview-3d/adapters/mmd-zip-overlay:41` | 解压 zip + 找 .pmx/.pmd 模型 → 返回 MmdZipConfig。 |
+| `makeZipOverlayPort()` | `frontend/src/features/preview-3d/adapters/mmd-zip-overlay:118` | 创建 ZIP Overlay Port：包装 MmdDataPort， 将 zip 内路径前缀（如 "/repo/miku.zip!/"）路由到内存中的 zip entries。 |
+| `prepareMmdZipInput()` | `frontend/src/features/preview-3d/adapters/mmd-zip-overlay:207` | 构造完整的 zip 包装流程： 检测 zip → 解析 zip → 创建 overlay → 返回 { port, rootPath } 调用方只需： const { port, |
+| `zipFindEntry()` | `frontend/src/features/preview-3d/adapters/mmd-zip-overlay:224` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
+| `MorphMeshLike()` | `frontend/src/features/preview-3d/adapters/morph-controls:10` | morph 面板入参（mesh 的 morphTargetDictionary/influences 子集，结构兼容 THREE.SkinnedMesh） |
+| `morphNodes()` | `frontend/src/features/preview-3d/adapters/morph-controls:20` | MMD 表情开关声明式节点（纯数据工厂零 DOM）。 |
+| `PreviewBuildCtx()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:81` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
+| `PreviewScene()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:104` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
+| `PreviewAdapter()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:130` | — |
+| `PreviewHandle()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:140` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
+| `invalidatePreview()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:191` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
+| `cleanupPreview()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:196` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
+| `_resetSingletons()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:218` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
+| `switchPreview()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:234` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
+| `hasActivePreview()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:240` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
+| `Mount3DOptions()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:245` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
+| `mount3D()` | `frontend/src/features/preview-3d/adapters/mount-preview-core:263` | — |
+| `buildPackScene()` | `frontend/src/features/preview-3d/adapters/pack-model-adapter` | — |
+| `PackDeps()` | `frontend/src/features/preview-3d/adapters/pack-model-adapter:27` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
+| `PackAdapterOpts()` | `frontend/src/features/preview-3d/adapters/pack-model-adapter:32` | 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） |
+| `makePackAdapter()` | `frontend/src/features/preview-3d/adapters/pack-model-adapter:56` | 工厂：适配器持 zipPath（容器路径）+ 可选多模型候选（ADR-132），buildPath 即 entry path（虚拟文件夹下的文件路径） |
+| `PerceptionState()` | `frontend/src/features/preview-3d/adapters/perception-controls:10` | 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） |
+| `PerceptionCapability()` | `frontend/src/features/preview-3d/adapters/perception-controls:19` | 可用感知模块描述（由 adapter 按实际能力填写） |
+| `perceptionNodes()` | `frontend/src/features/preview-3d/adapters/perception-controls:36` | 感知面板声明式节点（纯数据工厂零 DOM）：toggle kind 节点， control.get/set 闭包读写 adapter 内 perception state（非状态层 |
+| `PostprocessingLike()` | `frontend/src/features/preview-3d/adapters/postprocessing:8` | 后处理对外最小契约（PostprocessingCapability 实现此接口） |
+| `LoadingProgressMode()` | `frontend/src/features/preview-3d/adapters/preview-loading:14` | 加载进度条模式：indeterminate（循环动画）| determinate（固定 id + transition，供外部更新宽度） |
+| `renderLoadingState()` | `frontend/src/features/preview-3d/adapters/preview-loading:17` | 3D 预览加载态：loadingEl 渲染图标 + 标签 + 进度条 |
+| `showLoadFailure()` | `frontend/src/features/preview-3d/adapters/preview-loading:35` | 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 |
+| `formatCapSliderValue()` | `frontend/src/features/preview-3d/adapters/preview-menu/cap-controls:98` | slider 值格式化（renderCapSlider 与环境面板摘要行共用，防两端分叉）： unit="h" → HH:MM（小数进位分钟）／ unit="%" → 百分比（×1 |
+| `collectVisiblePredicates()` | `frontend/src/features/preview-3d/adapters/preview-menu/cap-controls:449` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
+| `renderCapControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/cap-controls:453` | — |
+| `roleBaseName()` | `frontend/src/features/preview-3d/adapters/preview-menu/core` | — |
+| `renderMenu()` | `frontend/src/features/preview-3d/adapters/preview-menu/core` | — |
+| `renderCapControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/core` | — |
+| `PreviewMenuCtx()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:39` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
+| `PreviewMenuHandle()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:75` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
+| `PreviewMenuRouters()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:220` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
+| `buildPreviewMenuRouters()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:232` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
+| `renderPreviewPanel()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:276` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
+| `mountPreviewRootMenu()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:510` | — |
+| `PreviewMenuItemKind()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:30` | — |
+| `PreviewMenuGroupId()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:31` | — |
+| `PreviewMenuItemDef()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:33` | — |
+| `PreviewMenuGroupDef()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:60` | 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） |
+| `PREVIEW_MENU_GROUPS()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:69` | — |
+| `CORE_MENU_ITEMS()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:91` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
+| `disposeEnvSubscriptions()` | `frontend/src/features/preview-3d/adapters/preview-menu/env:30` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
+| `renderEnvLevel()` | `frontend/src/features/preview-3d/adapters/preview-menu/env:116` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
+| `buildEnvSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/env:239` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
+| `MultiModelSelectOpts()` | `frontend/src/features/preview-3d/adapters/preview-menu/multi-model:16` | 多模型选择原语入参 |
+| `multiModelSelectNode()` | `frontend/src/features/preview-3d/adapters/preview-menu/multi-model:39` | 多模型选择 select 节点工厂。 |
+| `PreviewActionMenuCtx()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
+| `PreviewMenuNodeKind()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:24` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
+| `PreviewControlSpec()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:40` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
+| `PreviewMenuNode()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:68` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
+| `isPreviewFolderNode()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:117` | 类型守卫：节点是否为 folder（可下钻） |
+| `collectPreviewLeafNodes()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:122` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
+| `collectPreviewNodeIds()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:135` | 递归收集全部节点 id（供 id 唯一性契约测试） |
+| `renderMenu()` | `frontend/src/features/preview-3d/adapters/preview-menu/render:420` | — |
+| `renderAdapterPanelContent()` | `frontend/src/features/preview-3d/adapters/preview-menu/render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
+| `roleBaseName()` | `frontend/src/features/preview-3d/adapters/preview-menu/roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
+| `modelDetailView()` | `frontend/src/features/preview-3d/adapters/preview-menu/roles:38` | — |
+| `motionDetailView()` | `frontend/src/features/preview-3d/adapters/preview-menu/roles:112` | — |
+| `fillRoles()` | `frontend/src/features/preview-3d/adapters/preview-menu/roles:282` | — |
+| `buildCameraSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:33` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
+| `buildLightingSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:47` | 灯光面板 schema：从 light cap 自报控件渲染 |
+| `buildShadowSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:65` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
+| `buildPostprocessingSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:78` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
+| `buildSettingsSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:91` | 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
+| `buildCrossCuttingControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:118` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
+| `collectSettingsCapControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:170` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
+| `buildSettingsControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:183` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
+| `STATS_PANEL_ID()` | `frontend/src/features/preview-3d/adapters/preview-menu/stats:17` | 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） |
+| `hasSceneStats()` | `frontend/src/features/preview-3d/adapters/preview-menu/stats:20` | 是否有可供展示的统计（mesh/bone 任一 &gt; 0；全 0 = 空场景/纯装饰，无意义） |
+| `buildStatsPanel()` | `frontend/src/features/preview-3d/adapters/preview-menu/stats:25` | 构造统计面板节点：panel + 6 个 field 行（骨骼/网格/三角面/材质/纹理/表情） |
+| `mergeStatsMenuItems()` | `frontend/src/features/preview-3d/adapters/preview-menu/stats:59` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
+| `fillSwitch()` | `frontend/src/features/preview-3d/adapters/preview-menu/switch:217` | — |
+| `ModelEntry()` | `frontend/src/features/preview-3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
+| `sceneRegistry()` | `frontend/src/features/preview-3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
+| `MAX_MODELS()` | `frontend/src/features/preview-3d/adapters/scene-registry:209` | 同场景最大模型数（超量追加被拒，ADR-093 T6） |
+| `YSM_MODEL_SCHEMA_ID()` | `frontend/src/features/preview-3d/adapters/schema-registry:20` | YSM model 面板 schema 键（adapter schemaId 与 views 注册共用同一常量，防漂移静默丢面板） |
+| `makeYsmModelSchemaId()` | `frontend/src/features/preview-3d/adapters/schema-registry:29` | per-scene 唯一 schema 键工厂（YSM/maid 同框隔离，对齐 litematic `litematic-slice-{n}` 范式）。 |
+| `SchemaBuilder()` | `frontend/src/features/preview-3d/adapters/schema-registry:34` | 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） |
+| `registerSchema()` | `frontend/src/features/preview-3d/adapters/schema-registry:41` | 注册面板 builder；重复注册**覆盖**旧 builder（多模型同框时活跃模型换菜单，后注册者生效）—— 与 setAdapterItems 换菜单语义一致；测试用 reg |
+| `unregisterSchema()` | `frontend/src/features/preview-3d/adapters/schema-registry:47` | 注销面板 builder（预览 dispose 时调用，防跨会话污染：陈旧 builder 的闭包 持有已 dispose 场景的 model/texArr/handle，不清理会 |
+| `getSchema()` | `frontend/src/features/preview-3d/adapters/schema-registry:52` | 取面板 builder；未注册返回 undefined |
+| `hasSchema()` | `frontend/src/features/preview-3d/adapters/schema-registry:57` | 是否已注册 |
+| `listSchemas()` | `frontend/src/features/preview-3d/adapters/schema-registry:62` | 全部已注册 id（供契约测试枚举 / 审计「谁在绕道 renderCustom」） |
+| `resetSchemas()` | `frontend/src/features/preview-3d/adapters/schema-registry:67` | 测试用：清空注册表（用例间隔离） |
+| `SwitchContext()` | `frontend/src/features/preview-3d/adapters/switch-preview:32` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
+| `switchToSession()` | `frontend/src/features/preview-3d/adapters/switch-preview:95` | 会话内切换模型（复用外壳重建内容层）。 |
+| `syncLightTargetFromContent()` | `frontend/src/features/preview-3d/adapters/switch-preview:423` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
+| `Endianness()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
+| `ConsoleLogger()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
+| `MmdDataDeserializer()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |
+| `PmxObject()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxObject` | — |
+| `Vec3()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:4` | — |
+| `Vec4()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:5` | — |
+| `PmxHeader()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:7` | — |
+| `PmxVertex()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:21` | — |
+| `PmxMaterial()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:34` | — |
+| `PmxBone()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:53` | — |
+| `PmxMorph()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:73` | — |
+| `PmxDisplayFrame()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:86` | — |
+| `PmxRigidBody()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:93` | — |
+| `PmxJoint()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:111` | — |
+| `PmxObject()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:127` | — |
+| `PmxReader()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader:62` | PmxReader is a static class that parses PMX data |
+| `FBXLoader()` | `frontend/src/features/preview-3d/adapters/vendor/fbx/FBXLoader:79` | A loader for the FBX format. |
+| `VrmDataPort()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:33` | VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `VrmMetaInfo()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:89` | VRM meta 归一化信息（meta 卡展示用） |
+| `readVrmMeta()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:110` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
+| `VrmModelInfoCtx()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:173` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
+| `VrmPanelHooks()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:180` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
+| `buildVrmScene()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:506` | — |
+| `VrmMenuItemsOpts()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:526` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `vrmMenuItems()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:564` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
+| `VrmBonePanelCtx()` | `frontend/src/features/preview-3d/adapters/vrm-bone-ui:21` | 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） |
+| `RenderVrmBonePanel()` | `frontend/src/features/preview-3d/adapters/vrm-bone-ui:31` | 骨骼面板渲染契约：返回清理函数（面板移除时调用） |
+| `makeBonePanelRenderer()` | `frontend/src/features/preview-3d/adapters/vrm-bone-ui:40` | 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。 |
+| `buildVrmBoneNodes()` | `frontend/src/features/preview-3d/adapters/vrm-bone:20` | 从 vrm.humanoid 提取标准人形骨骼列表（id = HumanoidBoneName 如 "leftUpperArm"）。 |
+| `buildVrmBoneTree()` | `frontend/src/features/preview-3d/adapters/vrm-bone:52` | 从 vrm.humanoid 直接构建通用骨骼树（buildBoneNodes → buildBoneTree 一步到位） |
+| `ResolveModeResponse()` | `frontend/src/features/preview-3d/adapters/worker-bridge:15` | 响应必须携带 id；resolve-mode 还需 ok 标志（错误以响应形式回传，不 reject） |
+| `WorkerErrorStrategy()` | `frontend/src/features/preview-3d/adapters/worker-bridge:22` | 崩溃/终止时的结算策略 |
+| `WorkerBridge()` | `frontend/src/features/preview-3d/adapters/worker-bridge:29` | — |
+| `CreateWorkerBridgeOpts()` | `frontend/src/features/preview-3d/adapters/worker-bridge:44` | — |
+| `createWorkerBridge()` | `frontend/src/features/preview-3d/adapters/worker-bridge:65` | — |
+| `ResolveModeBridge()` | `frontend/src/features/preview-3d/adapters/worker-bridge:158` | — |
+| `createResolveModeBridge()` | `frontend/src/features/preview-3d/adapters/worker-bridge:165` | — |
+| `YsmAdapterOptions()` | `frontend/src/features/preview-3d/adapters/ysm-adapter:44` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
+| `buildYsmScene()` | `frontend/src/features/preview-3d/adapters/ysm-adapter:500` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
+| `makeYsmAdapter()` | `frontend/src/features/preview-3d/adapters/ysm-adapter:531` | 工厂：构造统一 PreviewAdapter（shared 模式） |
+| `YsmMenuItemsOpts()` | `frontend/src/features/preview-3d/adapters/ysm-adapter:550` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `ysmMenuItems()` | `frontend/src/features/preview-3d/adapters/ysm-adapter:592` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
+| `ALPHA_F_VISIBLE()` | `frontend/src/features/preview-3d/alpha-index:5` | — |
+| `ALPHA_F_HOLE()` | `frontend/src/features/preview-3d/alpha-index:6` | — |
+| `ALPHA_F_TRANSLUCENT()` | `frontend/src/features/preview-3d/alpha-index:7` | — |
+| `flagsForAlpha()` | `frontend/src/features/preview-3d/alpha-index:12` | — |
+| `AlphaIndex()` | `frontend/src/features/preview-3d/alpha-index:18` | — |
+| `b64ToBytes()` | `frontend/src/features/preview-3d/base64:6` | base64 → Uint8Array（Go []byte 的 base64 序列化） |
+| `bytesToArrayBuffer()` | `frontend/src/features/preview-3d/base64:15` | Uint8Array → ArrayBuffer（Blob 构造要求 ArrayBufferView&lt;ArrayBuffer&gt;，规避 SharedArrayBuffer 泛型） |
+| `bytesToBase64()` | `frontend/src/features/preview-3d/base64:20` | Uint8Array → base64（分块防栈溢出，对齐 atob 解码口径） |
+| `BoneInfoLite()` | `frontend/src/features/preview-3d/bone-list:7` | getBoneList 返回的扁平骨骼信息 |
+| `getBoneList()` | `frontend/src/features/preview-3d/bone-list:21` | 从 spec 提取骨骼列表，支持按组件索引： - modelIdx 缺省 0 → 第一组件（main，动画驱动）——向后兼容 v1 单组件语义 - modelIdx &gt;= 0  → |
+| `buildBoneHierarchy()` | `frontend/src/features/preview-3d/bone-raycast:14` | 构建骨骼层级路径映射（name/id/parent/children）。 |
+| `getMeshBoneId()` | `frontend/src/features/preview-3d/bone-raycast:53` | Mesh → 所属骨骼名（沿父链向上查找 has isGroup 且 name 在 nameMap 中的节点）。 |
+| `assembleBoneSelectInfo()` | `frontend/src/features/preview-3d/bone-raycast:68` | 骨骼选中信息组装。 |
+| `registerBoneRaycast()` | `frontend/src/features/preview-3d/bone-raycast:130` | 注册 pointermove / click 骨骼拾取监听器。 |
+| `BoneNode()` | `frontend/src/features/preview-3d/bone-tools:11` | 统一骨骼节点：来源无关（YSM spec bones / VRM humanoid bones 均适配） |
+| `BoneTree()` | `frontend/src/features/preview-3d/bone-tools:23` | 骨骼树：id 索引 + 子映射 + 根集合 + object 反查（buildBoneTree 产物） |
+| `buildBoneTree()` | `frontend/src/features/preview-3d/bone-tools:36` | 从任意扁平骨骼声明构建层级树。 |
+| `BoneListItem()` | `frontend/src/features/preview-3d/bone-tools:58` | 深度缩进的骨骼列表项（枚举 + 父子 + 深度） |
+| `listBonesWithDepth()` | `frontend/src/features/preview-3d/bone-tools:65` | 骨骼树 → 深度缩进列表（前序遍历，根 depth=0；数组顺序即展开顺序） |
+| `getBonePath()` | `frontend/src/features/preview-3d/bone-tools:78` | 骨骼 id → 全路径（如 "root / spine / head"；找不到该 id 返回 null） |
+| `getBonePosition()` | `frontend/src/features/preview-3d/bone-tools:93` | 骨骼 id → 世界坐标（需 object；无 object 或缺省返回 null） |
+| `BoneDetail()` | `frontend/src/features/preview-3d/bone-tools:101` | 骨骼详情：路径/坐标/父骨骼/子骨骼列表（id 不存在返回 null） |
+| `getBoneDetail()` | `frontend/src/features/preview-3d/bone-tools:110` | — |
+| `setBoneNodeVisible()` | `frontend/src/features/preview-3d/bone-tools:129` | 骨骼显隐：设置该骨骼节点及其所有子网格可见性（需 object；无 object no-op） |
+| `toggleBoneVisible()` | `frontend/src/features/preview-3d/bone-tools:137` | 骨骼显隐：切换（取反）该骨骼节点可见性 |
+| `findAncestorBoneId()` | `frontend/src/features/preview-3d/bone-tools:153` | 沿 Object3D 父链向上找最近的骨骼 id（object 引用匹配，不依赖 name 约定） |
+| `pickBone()` | `frontend/src/features/preview-3d/bone-tools:169` | Raycaster 拾取：命中任意 mesh → 沿父链找最近挂载在骨骼节点上的祖先（需 object）。 |
+| `BoneGroupMap()` | `frontend/src/features/preview-3d/bone-visibility:6` | BoneGroupMap 类型别名：骨骼 id → THREE.Group |
+| `setBoneVisible()` | `frontend/src/features/preview-3d/bone-visibility:11` | 设置指定骨骼组及其所有子网格的可见性。 |
+| `toggleBone()` | `frontend/src/features/preview-3d/bone-visibility:19` | 切换指定骨骼组的可见性（取反）。 |
+| `showModelGroup()` | `frontend/src/features/preview-3d/bone-visibility:29` | 按索引显示单个模型组件（idx &lt; 0 = 全部显示，NaN 防御）。 |
+| `FrameSideOptions()` | `frontend/src/features/preview-3d/camera-setup:8` | frameCameraSide 取景系数（fbx/vrm/pack 三适配器共用，对齐历史口径） |
+| `frameCameraSide()` | `frontend/src/features/preview-3d/camera-setup:21` | 侧上方取景（外部格式 fbx/vrm/pack 共用）：包围盒 → 相机置于 +Z 斜上方， controls 限位到 maxDim 的 [0.1, 12] 倍。与 fitCame |
+| `fitCameraToScene()` | `frontend/src/features/preview-3d/camera-setup:54` | 根据内容根节点的包围盒适配相机位置和 controls.target。 |
+| `fitCameraToRoots()` | `frontend/src/features/preview-3d/camera-setup:68` | 按给定根节点列表（多模型同框）计算并集包围盒并返回相机初始位姿。 |
+| `EnvPresetId()` | `frontend/src/features/preview-3d/caps/environment-capability:20` | — |
+| `EnvPreset()` | `frontend/src/features/preview-3d/caps/environment-capability:22` | — |
+| `ENV_PRESETS()` | `frontend/src/features/preview-3d/caps/environment-capability:43` | — |
+| `EnvPresetLinkage()` | `frontend/src/features/preview-3d/caps/environment-capability:88` | 预设快捷联动表：选某预设时，除切 environment.preset 外，一并联动 sky/fog/env 参数， 让「日落」「夜景」等预设呈现完整氛围，而非只换一张 envMa |
+| `ENV_PRESET_LINKAGE()` | `frontend/src/features/preview-3d/caps/environment-capability:100` | — |
+| `EnvironmentParams()` | `frontend/src/features/preview-3d/caps/environment-capability:127` | — |
+| `DEFAULT_ENV_PARAMS()` | `frontend/src/features/preview-3d/caps/environment-capability:138` | — |
+| `ENV_PRESET_BY_MODEL()` | `frontend/src/features/preview-3d/caps/environment-capability:147` | 模型类别环境默认 preset（YSM 方块=sky，VRM/MMD=studio 柔光更友好，体素=forest） |
+| `drawEnvEquirect()` | `frontend/src/features/preview-3d/caps/environment-capability:158` | 给 canvas 2D ctx 填充 equirectangular 环境贴图（程序化） |
+| `EnvironmentCapability()` | `frontend/src/features/preview-3d/caps/environment-capability:399` | — |
+| `FogMode()` | `frontend/src/features/preview-3d/caps/fog-capability:15` | — |
+| `FogParams()` | `frontend/src/features/preview-3d/caps/fog-capability:17` | — |
+| `DEFAULT_FOG_PARAMS()` | `frontend/src/features/preview-3d/caps/fog-capability:30` | — |
+| `FOG_PRESETS()` | `frontend/src/features/preview-3d/caps/fog-capability:40` | 模型类别雾预设：材质特性不同，雾浓度/远近做合理初始值 |
+| `FogCapability()` | `frontend/src/features/preview-3d/caps/fog-capability:68` | — |
+| `GroundParams()` | `frontend/src/features/preview-3d/caps/ground-capability:40` | 地面参数（表面材质 + 网格；水面已拆分为独立 WaterCapability） |
+| `DEFAULT_GROUND_PARAMS()` | `frontend/src/features/preview-3d/caps/ground-capability:53` | — |
+| `GroundCapability()` | `frontend/src/features/preview-3d/caps/ground-capability:62` | — |
+| `GroundSurfaceMode()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:17` | 地面表面模式（扁平枚举：来源 × 画布样式合一，避免双字段耦合守卫） |
+| `GroundMaterialParams()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:19` | — |
+| `DEFAULT_GROUND_SURFACE_PARAMS()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:46` | — |
+| `GroundSurfaceStructuralSpec()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:61` | — |
+| `GroundSurfaceAppearanceSpec()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:73` | — |
+| `GroundSurfaceSpec()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:81` | — |
+| `buildGroundSurfaceSpec()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:92` | — |
+| `surfaceSpecKey()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:117` | structural 子集确定性序列化：新增结构字段后在此补一行即自动纳入重建判别 |
+| `groundSurfaceNeedsRebuild()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:132` | 结构性变化 → 需要重建材质与纹理；否则原地更新即可 |
+| `TILE_WORLD_SIZE()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:139` | 每格世界单位基准：50 单位地面默认铺 5×5 次重复 |
+| `textureRepeat()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:141` | — |
+| `generateSurfacePixels()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:164` | — |
+| `applyGroundSurfaceStructural()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:261` | 重建路径专用：把 structural 落到新材质上。 |
+| `applyGroundSurfaceAppearance()` | `frontend/src/features/preview-3d/caps/ground-surface-spec:280` | 原地/重建通用：appearance 字段统一落地（唯一入口）。 |
+| `DirectionalLightParams()` | `frontend/src/features/preview-3d/caps/light-capability:36` | ============ 参数类型 ============ |
+| `AmbientLightParams()` | `frontend/src/features/preview-3d/caps/light-capability:46` | — |
+| `SpotlightParams()` | `frontend/src/features/preview-3d/caps/light-capability:51` | — |
+| `VolumetricParams()` | `frontend/src/features/preview-3d/caps/light-capability:65` | — |
+| `LightParams()` | `frontend/src/features/preview-3d/caps/light-capability:79` | — |
+| `DEFAULT_LIGHT_PARAMS()` | `frontend/src/features/preview-3d/caps/light-capability:107` | — |
+| `LIGHT_PRESETS()` | `frontend/src/features/preview-3d/caps/light-capability:117` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
+| `lightDirToPosition()` | `frontend/src/features/preview-3d/caps/light-capability:348` | 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） |
+| `attenuateAmbientForSky()` | `frontend/src/features/preview-3d/caps/light-capability:363` | ambient 强度按 sky 环境开关套让位系数（镜像 AmbientParams 应用，公式单源） |
+| `LightCapability()` | `frontend/src/features/preview-3d/caps/light-capability:367` | — |
+| `ReflectionMode()` | `frontend/src/features/preview-3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
+| `PostprocessingParams()` | `frontend/src/features/preview-3d/caps/postprocessing-capability:35` | — |
+| `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/features/preview-3d/caps/postprocessing-capability:87` | — |
+| `POSTPROC_PRESETS()` | `frontend/src/features/preview-3d/caps/postprocessing-capability:359` | 模型类别后处理预设 —— 统一亮度口径 bloomStrength / bloomThreshold / bloomRadius / exposure / toneMapping |
+| `PostprocessingCapability()` | `frontend/src/features/preview-3d/caps/postprocessing-capability:369` | — |
+| `ReflectorParams()` | `frontend/src/features/preview-3d/caps/reflector-capability:18` | — |
+| `DEFAULT_REFLECTOR_PARAMS()` | `frontend/src/features/preview-3d/caps/reflector-capability:34` | — |
+| `REFLECTOR_PRESETS()` | `frontend/src/features/preview-3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
+| `ReflectorCapability()` | `frontend/src/features/preview-3d/caps/reflector-capability:125` | — |
+| `RenderModeCapability()` | `frontend/src/features/preview-3d/caps/render-mode-capability:59` | -------- 主类 -------- |
+| `SceneCapabilityFactory()` | `frontend/src/features/preview-3d/caps/scene-capability-registry:24` | 能力工厂：接收 scene/renderer/camera，返回能力实例。 |
+| `SceneCapabilityRegistry()` | `frontend/src/features/preview-3d/caps/scene-capability-registry:32` | 注册表：管理所有场景能力的工厂和实例 |
+| `sceneCapabilityRegistry()` | `frontend/src/features/preview-3d/caps/scene-capability-registry:111` | 全局单例（模块级单例 + 运行时状态隔离） |
+| `isSkyEnvironmentOn()` | `frontend/src/features/preview-3d/caps/scene-capability-registry:133` | sky 环境开关（跨组件查询属组合根职责；light ambient ×0.5 协调与截图镜像 （skeleton-render）共用——原 light-capability 模块 |
+| `MenuControlDef()` | `frontend/src/features/preview-3d/caps/scene-capability:17` | 菜单控件定义（声明式，由框架渲染为 DOM） |
+| `SceneCapabilityLookup()` | `frontend/src/features/preview-3d/caps/scene-capability:90` | cap 间协调查询器：组合根 createAll 时注入，cap 间联动经此查询（不 import scene-capability-registry——组合根 import 全部 |
+| `SceneCapability()` | `frontend/src/features/preview-3d/caps/scene-capability:94` | — |
+| `persistState()` | `frontend/src/features/preview-3d/caps/scene-capability:142` | 保存 JSON 到 localStorage |
+| `restoreState()` | `frontend/src/features/preview-3d/caps/scene-capability:147` | 从 localStorage 加载 JSON |
+| `FieldRestorer()` | `frontend/src/features/preview-3d/caps/scene-capability:158` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
+| `restoreFields()` | `frontend/src/features/preview-3d/caps/scene-capability:174` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
+| `createListenerSet()` | `frontend/src/features/preview-3d/caps/scene-capability:208` | 参数变更订阅器工厂（ground / water 的 subscribe + notify 样板收敛）。 |
+| `ShadowParams()` | `frontend/src/features/preview-3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
+| `DEFAULT_SHADOW_PARAMS()` | `frontend/src/features/preview-3d/caps/shadow-capability:39` | — |
+| `SHADOW_PRESETS()` | `frontend/src/features/preview-3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
+| `ShadowCapability()` | `frontend/src/features/preview-3d/caps/shadow-capability:171` | ============ ShadowCapability ============ |
+| `SkyParams()` | `frontend/src/features/preview-3d/caps/sky-capability:30` | — |
+| `DEFAULT_SKY_PARAMS()` | `frontend/src/features/preview-3d/caps/sky-capability:63` | — |
+| `SkyModelType()` | `frontend/src/features/preview-3d/caps/sky-capability:83` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
+| `MODEL_SKY_PRESETS()` | `frontend/src/features/preview-3d/caps/sky-capability:91` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
+| `injectSkySunScalePatch()` | `frontend/src/features/preview-3d/caps/sky-capability:126` | §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform， 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为 |
+| `SkyCapability()` | `frontend/src/features/preview-3d/caps/sky-capability:315` | — |
+| `WaterMode()` | `frontend/src/features/preview-3d/caps/water-capability:18` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
+| `WaterParams()` | `frontend/src/features/preview-3d/caps/water-capability:21` | — |
+| `DEFAULT_WATER_PARAMS()` | `frontend/src/features/preview-3d/caps/water-capability:50` | — |
+| `WaterCapability()` | `frontend/src/features/preview-3d/caps/water-capability:66` | — |
+| `WireframeCapability()` | `frontend/src/features/preview-3d/caps/wireframe-capability:14` | — |
+| `disposeDebugGroup()` | `frontend/src/features/preview-3d/cleanup-helper:14` | 释放 debug 叠加层中的所有 Three.js 资源（geometry / material / texture）。 |
+| `disposeSceneMeshes()` | `frontend/src/features/preview-3d/cleanup-helper:40` | 遍历场景图释放所有 Mesh 的 geometry 和 material。 |
+| `eulerToQuaternion()` | `frontend/src/features/preview-3d/cube-mesh` | — |
+| `isIdentityQuat()` | `frontend/src/features/preview-3d/cube-mesh` | — |
+| `hasBoneRotation()` | `frontend/src/features/preview-3d/cube-mesh` | — |
+| `computeBoneLocalPos()` | `frontend/src/features/preview-3d/cube-mesh:24` | 计算骨骼本地位置（对齐 YSMViewer/C# ConvertBones 口径）。 |
+| `buildCubeMeshData()` | `frontend/src/features/preview-3d/cube-mesh:192` | 从 Bedrock cube 数据构建 THREE.Mesh 几何数据。 |
+| `mergeCubes()` | `frontend/src/features/preview-3d/cube-mesh:261` | 合并两组 cube：新 cube 中与旧 cube 空间重叠的替换之，不重叠的追加。 |
+| `rebuildDebug()` | `frontend/src/features/preview-3d/debug-render:58` | 重建 debug 叠加层（pivot 标记 / 骨骼线框）。 |
+| `MeshFragment()` | `frontend/src/features/preview-3d/face-split:14` | 网格碎片：同一 meshGroup 按 alpha 特征拆出的子几何 + 渲染路径 |
+| `splitMeshByFaceAlpha()` | `frontend/src/features/preview-3d/face-split:24` | 按三角形 UV 包围盒查询 AlphaIndex，把 md 拆成 ≤3 个 mode 碎片。 |
+| `fbxBonesToBoneNodes()` | `frontend/src/features/preview-3d/fbx-bones:29` | FBX 场景骨骼 → BoneNode[]（id=骨骼索引、parentId=父骨骼索引、object=Bone 引用）。 |
+| `registerModelRoot()` | `frontend/src/features/preview-3d/frustum-cull:18` | 注册模型根节点（adapter 调用） |
+| `unregisterModelRoot()` | `frontend/src/features/preview-3d/frustum-cull:23` | 注销模型根节点（adapter dispose 时调用） |
+| `getModelRootCount()` | `frontend/src/features/preview-3d/frustum-cull:29` | 获取当前注册的模型根节点数 |
+| `cullModelGroups()` | `frontend/src/features/preview-3d/frustum-cull:38` | 对所有已注册的模型根节点做视锥裁剪。 |
+| `clearModelRoots()` | `frontend/src/features/preview-3d/frustum-cull:99` | 清空所有注册（session 结束时调用） |
+| `isFrustumCullEnabled()` | `frontend/src/features/preview-3d/frustum-cull:111` | 视锥裁剪开关是否启用（undefined → 默认关；safeGet 隐私模式安全） |
+| `setFrustumCullEnabled()` | `frontend/src/features/preview-3d/frustum-cull:117` | 设置视锥裁剪开关（设置面板开关调用） |
+| `restoreModelGroupsVisible()` | `frontend/src/features/preview-3d/frustum-cull:122` | 关闭剔除时恢复所有注册模型根可见性（幂等） |
+| `IKChain()` | `frontend/src/features/preview-3d/ik-solver:24` | IK 链：从 root 到 endEffector 的 THREE.Object3D 有序数组（含两端） |
+| `IKConfig()` | `frontend/src/features/preview-3d/ik-solver:27` | IK 求解配置 |
+| `IKResult()` | `frontend/src/features/preview-3d/ik-solver:45` | IK 求解结果 |
+| `solveIK()` | `frontend/src/features/preview-3d/ik-solver:78` | CCD IK 求解器。 |
+| `extractIKChainFromTree()` | `frontend/src/features/preview-3d/ik-solver:200` | 从 BoneTree 中提取从 root 到 endEffector 的骨骼链（object 引用）。 |
+| `TdKeyAction()` | `frontend/src/features/preview-3d/keymap:8` | — |
+| `DEFAULT_TD_KEYMAP()` | `frontend/src/features/preview-3d/keymap:11` | 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） |
+| `loadTdKeymap()` | `frontend/src/features/preview-3d/keymap:27` | 读取用户自定义键位（无/非法时回退默认） |
+| `loadTdCamSpeed()` | `frontend/src/features/preview-3d/keymap:45` | 相机移动速度（2–200），默认 20 |
+| `loadTdRotMode()` | `frontend/src/features/preview-3d/keymap:52` | true = 环绕（orbit），false = 自身（free） |
+| `LoadTraceTexture()` | `frontend/src/features/preview-3d/load-trace:6` | — |
+| `LoadTraceStage()` | `frontend/src/features/preview-3d/load-trace:12` | — |
+| `LoadTraceAssets()` | `frontend/src/features/preview-3d/load-trace:18` | — |
+| `LoadTrace()` | `frontend/src/features/preview-3d/load-trace:38` | — |
+| `recordLoadTrace()` | `frontend/src/features/preview-3d/load-trace:52` | — |
+| `getLoadTraces()` | `frontend/src/features/preview-3d/load-trace:57` | — |
+| `clearLoadTraces()` | `frontend/src/features/preview-3d/load-trace:63` | — |
+| `loadMcTints()` | `frontend/src/features/preview-3d/mc-tints:29` | 预载 vendored tints 表（幂等；失败抛错由调用方降级兜底）。 |
+| `getTintColorSync()` | `frontend/src/features/preview-3d/mc-tints:56` | 取某染色类别在某 biome 下的颜色（默认 plains）。 |
+| `bakeMeshFragments()` | `frontend/src/features/preview-3d/mesh-baker:10` | Bake fragments once, then batch by animated bone, texture, and alpha mode. |
+| `addMeshToBoneGroup()` | `frontend/src/features/preview-3d/mesh-builder:31` | 从 spec mesh group 数据构建 THREE.Mesh 并添加到 boneGroup。 |
+| `compKey()` | `frontend/src/features/preview-3d/mesh:18` | 组件内骨骼 key（mi: 组件下标, id: 骨骼 id）。renderModel3D 与 buildSceneMesh 共用，随 mesh 迁移。 |
+| `disposeMaterial()` | `frontend/src/features/preview-3d/mesh:36` | 释放材质（含所有位图贴图），null/undefined 安全。 |
+| `buildSceneMesh()` | `frontend/src/features/preview-3d/mesh:54` | 构建 3D 场景网格（组件分组 + 骨骼树），返回供渲染/交互使用的组结构。 |
+| `mmdBonesToBoneNodes()` | `frontend/src/features/preview-3d/mmd-bones:16` | MMD 骨骼 → bone-tools BoneNode[]（id = pmx 索引字符串；越界父/自引用 → null 根） |
+| `MmdBonePickResult()` | `frontend/src/features/preview-3d/mmd-bones:32` | 拾取结果（pickMmdBone 命中） |
+| `pickMmdBone()` | `frontend/src/features/preview-3d/mmd-bones:39` | MMD 骨骼拾取：射线到骨骼 worldPosition 距离命中（Bone 无几何，网格归属拾取不适用） |
+| `FootIKController()` | `frontend/src/features/preview-3d/mmd-foot-ik:13` | 足部 IK 控制器 |
+| `createFootIKController()` | `frontend/src/features/preview-3d/mmd-foot-ik:27` | 创建足部 IK 控制器 |
+| `MmdMaterialListItem()` | `frontend/src/features/preview-3d/mmd-materials:13` | 材质列表项（listMmdMaterials） |
+| `MmdMaterialDetail()` | `frontend/src/features/preview-3d/mmd-materials:19` | 材质详情（getMmdMaterialDetail） |
+| `listMmdMaterials()` | `frontend/src/features/preview-3d/mmd-materials:31` | 材质列表：pmx.materials name + 索引（索引与 mesh.material 对齐） |
+| `setMmdMaterialVisible()` | `frontend/src/features/preview-3d/mmd-materials:38` | 材质显隐：Material.visible（MMDToonMaterial 继承 MeshPhongMaterial） |
+| `toggleMmdMaterialVisible()` | `frontend/src/features/preview-3d/mmd-materials:48` | 材质显隐切换：返回切换后的可见状态（越界返回 false） |
+| `setMmdMaterialOpacity()` | `frontend/src/features/preview-3d/mmd-materials:59` | 材质透明度（0-1）：opacity 设置 + transparent 联动（opacity &lt; 1 → transparent = true） |
+| `getMmdMaterialDetail()` | `frontend/src/features/preview-3d/mmd-materials:71` | 材质详情：name/可见/透明/高光/光泽（越界返回 null） |
+| `buildModelGroup()` | `frontend/src/features/preview-3d/model-group-builder:299` | 单组件 spec 构建核心。 |
+| `drawView()` | `frontend/src/features/preview-3d/model2d-draw:234` | 主视图绘制：逐 bone/cube 投影 + 可选高亮 + 可选标签 |
+| `drawMiniView()` | `frontend/src/features/preview-3d/model2d-draw:301` | 小地图：俯视图投影全部 cube 包围盒 |
+| `cubeVec()` | `frontend/src/features/preview-3d/model2d-draw:11` | — |
+| `HitZone()` | `frontend/src/features/preview-3d/model2d-hit-zones:9` | 骨骼屏幕热区（鼠标拾取） |
+| `calcBoneHitZones()` | `frontend/src/features/preview-3d/model2d-hit-zones:18` | 计算骨骼在屏幕上的命中热区（2D 正交投影，供鼠标拾取；导出供测试） |
+| `calcBoneHitZones()` | `frontend/src/features/preview-3d/model2d` | — |
+| `BedrockCube()` | `frontend/src/features/preview-3d/model2d:16` | Bedrock cube（AnalyzeBedrockModel 结构） |
+| `BedrockBone()` | `frontend/src/features/preview-3d/model2d:26` | Bedrock bone |
+| `BedrockModel()` | `frontend/src/features/preview-3d/model2d:32` | BedrockModel（AnalyzeBedrockModel 返回） |
+| `Model2DOptions()` | `frontend/src/features/preview-3d/model2d:37` | renderModel2D 选项 |
+| `renderModel2D()` | `frontend/src/features/preview-3d/model2d:58` | 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转） |
+| `CUBE_EPS()` | `frontend/src/features/preview-3d/model3d-spec:6` | 立方体几何 epsilon（0.001）——单点导出，cube-mesh.ts 的 THICKNESS_EPSILON/CUBE_EPSILON 同值收敛于此 |
+| `SpecCube()` | `frontend/src/features/preview-3d/model3d-spec:11` | 立方体（骨骼上的 box 元素） |
+| `SpecBone()` | `frontend/src/features/preview-3d/model3d-spec:23` | 骨骼 |
+| `SpecModelInput()` | `frontend/src/features/preview-3d/model3d-spec:31` | 模型输入（buildSpecFromModel 参数） |
+| `SpecBuildResult()` | `frontend/src/features/preview-3d/model3d-spec:38` | 构建产物：mesh data + bones |
+| `SpecMeshData()` | `frontend/src/features/preview-3d/model3d-spec:46` | 单 mesh 数据（Go spec meshGroups 结构近似） |
+| `buildSpecFromModel()` | `frontend/src/features/preview-3d/model3d-spec:67` | 构建 Three.js 可消费的 spec 结构 { bones[], meshes[] } |
+| `TdKeyAction()` | `frontend/src/features/preview-3d/model3d` | — |
+| `DEFAULT_TD_KEYMAP()` | `frontend/src/features/preview-3d/model3d` | — |
+| `loadTdKeymap()` | `frontend/src/features/preview-3d/model3d` | — |
+| `loadTdCamSpeed()` | `frontend/src/features/preview-3d/model3d` | — |
+| `loadTdRotMode()` | `frontend/src/features/preview-3d/model3d` | — |
+| `SpecBone3D()` | `frontend/src/features/preview-3d/model3d:11` | — |
+| `SpecMeshGroup3D()` | `frontend/src/features/preview-3d/model3d:23` | — |
+| `Spec3D()` | `frontend/src/features/preview-3d/model3d:43` | — |
+| `BoneSelectInfo()` | `frontend/src/features/preview-3d/model3d:48` | 骨骼选中信息（window._3dOnBoneSelect 回调参数） |
+| `BoneMaps()` | `frontend/src/features/preview-3d/model3d:62` | 骨骼层级映射（dispatch 拾取归属用，ADR-093 T5） |
+| `JavaModelFace()` | `frontend/src/features/preview-3d/parse-java-model:44` | 单面解析产物（像素坐标 + Three 域 UV） |
+| `JavaModelResult()` | `frontend/src/features/preview-3d/parse-java-model:59` | — |
+| `PackEntryReader()` | `frontend/src/features/preview-3d/parse-java-model:73` | 条目读取器：Go binding ReadPackEntry 包装（返回 base64 或 null） |
+| `modelEntryFor()` | `frontend/src/features/preview-3d/parse-java-model:85` | 模型名 → 条目路径（无命名空间默认 minecraft） |
+| `parseJavaModel()` | `frontend/src/features/preview-3d/parse-java-model:292` | 解析资源包内 block/item 模型（parent 链递归）。 |
+| `isRenderableModel()` | `frontend/src/features/preview-3d/parse-java-model:320` | 判定模型是否"完整可渲染"：至少一个面有纹理或纯色（纯模板如 cube/cube_all 返回 false） |
+| `BeatDetectorLike()` | `frontend/src/features/preview-3d/perception/autodance:18` | 节拍 detector 接口（抽象，解耦具体实现） |
+| `AutoDanceOptions()` | `frontend/src/features/preview-3d/perception/autodance:26` | AutoDance 配置 |
+| `createAutoDanceController()` | `frontend/src/features/preview-3d/perception/autodance:69` | — |
+| `BeatDetectorOptions()` | `frontend/src/features/preview-3d/perception/beat-detector:27` | 节拍检测配置 |
+| `createBeatDetector()` | `frontend/src/features/preview-3d/perception/beat-detector:68` | 构建节拍 detector。 |
+| `BlinkCallback()` | `frontend/src/features/preview-3d/perception/blink:24` | 眨眼 callback：被 controller 在眨眼周期内周期性调用，传入当前权重（0→1→0） |
+| `BlinkOptions()` | `frontend/src/features/preview-3d/perception/blink:42` | — |
+| `createBlinkController()` | `frontend/src/features/preview-3d/perception/blink:55` | 构建眨眼 controller。 |
+| `createBreathController()` | `frontend/src/features/preview-3d/perception/breath:48` | 构建呼吸 controller：每次 build 调用一次，持有闭包 state |
+| `createGazeController()` | `frontend/src/features/preview-3d/perception/gaze:35` | — |
+| `LipSyncCallback()` | `frontend/src/features/preview-3d/perception/lipsync:26` | 单 morph 回调：消费方写入具体格式的 morph weight |
+| `MultiLipSyncCallback()` | `frontend/src/features/preview-3d/perception/lipsync:29` | 多 morph 回调：(morphId, weight) → 消费方写入 |
+| `LipSyncOptions()` | `frontend/src/features/preview-3d/perception/lipsync:36` | — |
+| `createLipSyncController()` | `frontend/src/features/preview-3d/perception/lipsync:51` | 构建 LipSync controller。 |
+| `buildLipMorphIndices()` | `frontend/src/features/preview-3d/perception/lipsync:132` | 从 SemanticMorphMap 提取口型 morph index 映射（供消费方使用）。 |
+| `eulerToQuaternion()` | `frontend/src/features/preview-3d/quaternion:15` | 欧拉角（度）→ 四元数，旋转顺序: Rz * Ry * Rx (ZYX intrinsic = XYZ extrinsic)。 |
+| `isIdentityQuat()` | `frontend/src/features/preview-3d/quaternion:78` | 判定四元数是否≈单位四元数（浮点 epsilon）。 |
+| `hasBoneRotation()` | `frontend/src/features/preview-3d/quaternion:89` | 判定骨骼旋转是否实际生效（四元数 ≠ 单位四元数，epsilon 口径）。 |
+| `applyRotationIfNonIdentity()` | `frontend/src/features/preview-3d/quaternion:102` | 若旋转四元数非单位四元数，则赋值到 Three.js 对象的 quaternion；单位四元数跳过（保持默认）。 |
+| `MAX_PIXEL_RATIO_KEY()` | `frontend/src/features/preview-3d/render-budget:5` | — |
+| `getMaxPixelRatio()` | `frontend/src/features/preview-3d/render-budget:10` | 读取用户设置的渲染分辨率上限（设置面板 slider 持久化）；缺省 1.5。 |
+| `PREVIEW_FRAME_INTERVAL_MS()` | `frontend/src/features/preview-3d/render-budget:17` | — |
+| `MAX_FPS_DEFAULT()` | `frontend/src/features/preview-3d/render-budget:22` | — |
+| `MAX_FPS_KEY()` | `frontend/src/features/preview-3d/render-budget:23` | — |
+| `invalidateMaxFpsCache()` | `frontend/src/features/preview-3d/render-budget:30` | — |
+| `getMaxFps()` | `frontend/src/features/preview-3d/render-budget:33` | — |
+| `getFrameIntervalMs()` | `frontend/src/features/preview-3d/render-budget:44` | 当前帧间隔（ms）：fps=0（不限制）→ 极小间隔（rAF 每帧都渲染）。 |
+| `AdaptiveRenderBudget()` | `frontend/src/features/preview-3d/render-budget:52` | — |
+| `previewPixelRatio()` | `frontend/src/features/preview-3d/render-budget:58` | — |
+| `createAdaptiveRenderBudget()` | `frontend/src/features/preview-3d/render-budget:63` | — |
+| `sampleAdaptivePixelRatio()` | `frontend/src/features/preview-3d/render-budget:74` | Returns a new pixel ratio only when sustained frame delivery is too slow. |
+| `shouldRenderPreviewFrame()` | `frontend/src/features/preview-3d/render-budget:90` | — |
+| `shouldRenderAtFps()` | `frontend/src/features/preview-3d/render-budget:101` | 帧率上限节流版：now 已到/过 nextFrame 才渲染。 |
+| `Disposable()` | `frontend/src/features/preview-3d/safe-dispose:6` | 可释放对象的最小形状（Three.js 的 Texture/Material/Geometry 等均满足） |
+| `safeDispose()` | `frontend/src/features/preview-3d/safe-dispose:11` | 安全释放：dispose 抛错不阻塞后续释放（个别适配器 dispose 会抛） |
+| `SceneStats()` | `frontend/src/features/preview-3d/scene-stats:19` | 场景统计（ADR-131 P0 产出，调用方映射进 StatsCardModel） |
+| `collectSceneStats()` | `frontend/src/features/preview-3d/scene-stats:35` | 一次 traverse 收集统计；roots 接受 Scene 或 Object3D[]（sceneBaseline 差量后的内容层根） |
+| `ScreenshotOpts()` | `frontend/src/features/preview-3d/screenshot:13` | 截图选项 |
+| `screenshotFromRenderer()` | `frontend/src/features/preview-3d/screenshot:27` | 从活跃的 renderer/scene/camera 截图，返回 PNG/JPEG base64（无 data: 前缀）。 |
+| `SemanticBoneId()` | `frontend/src/features/preview-3d/semantic-bones:21` | 语义骨骼 id（对齐 VRM humanoid 命名；MMD 经候选名匹配；center 为 MMD 特有整体根） |
+| `SEMANTIC_BONE_IDS()` | `frontend/src/features/preview-3d/semantic-bones:47` | 全部语义骨骼 id（稳定顺序：躯干 → 头颈 → 四肢；消费方遍历用） |
+| `SemanticBoneEntry()` | `frontend/src/features/preview-3d/semantic-bones:74` | 语义骨骼解析结果：语义 → 格式内骨骼（object 可直接改变换；缺失 = 该语义缺省） |
+| `SemanticBoneMap()` | `frontend/src/features/preview-3d/semantic-bones:82` | 语义骨骼映射表（Partial：匹配不到的语义缺省，消费方宽容降级） |
+| `MMD_SEMANTIC_CANDIDATES()` | `frontend/src/features/preview-3d/semantic-bones:92` | MMD 语义候选名表：语义 → 候选骨骼名列表（MMD 命名空间；消费方不直接触达） |
+| `matchSemanticBone()` | `frontend/src/features/preview-3d/semantic-bones:154` | 在 BoneTree 中按候选名匹配首个骨骼（name 优先、id 兜底；候选顺序即优先级）。 |
+| `resolveSemanticBones()` | `frontend/src/features/preview-3d/semantic-bones:167` | 从 BoneTree + 候选表解析语义映射（MMD 等无标准语义的格式走此路）。 |
+| `getSemanticBone()` | `frontend/src/features/preview-3d/semantic-bones:186` | 取语义骨骼（消费方唯一入口；缺失返回 null，调用方自行降级）。 |
+| `vrmSemanticBoneMap()` | `frontend/src/features/preview-3d/semantic-bones:200` | VRM 特化：humanoid.humanBones 的键天然就是语义名（52 个标准骨骼）， 零候选匹配直接产映射——与 buildVrmBoneNodes 同一数据源。 |
+| `mmdSemanticBoneMap()` | `frontend/src/features/preview-3d/semantic-bones:216` | MMD 特化：BoneTree（mmdBonesToBoneNodes → buildBoneTree 产物）+ 内置候选表 → 语义映射。 |
+| `ysmSemanticBoneMap()` | `frontend/src/features/preview-3d/semantic-bones:303` | YSM 特化：从 SpecBone3D[]（spec.models[].bones[]）构建语义映射。 |
+| `SemanticMorphId()` | `frontend/src/features/preview-3d/semantic-morphs:14` | 语义 morph id（对齐 MMD 标准表情 + VRM 标准 expression） |
+| `SEMANTIC_MORPH_IDS()` | `frontend/src/features/preview-3d/semantic-morphs:24` | 全部语义 morph id（稳定顺序） |
+| `SemanticMorphEntry()` | `frontend/src/features/preview-3d/semantic-morphs:30` | 语义 morph 解析结果 |
+| `SemanticMorphMap()` | `frontend/src/features/preview-3d/semantic-morphs:36` | 语义 morph 映射表（Partial：匹配不到的语义缺省） |
+| `MMD_SEMANTIC_MORPH_CANDIDATES()` | `frontend/src/features/preview-3d/semantic-morphs:43` | MMD 语义 morph 候选名表 |
+| `matchSemanticMorph()` | `frontend/src/features/preview-3d/semantic-morphs:60` | 在 morph 名列表中按候选名匹配首个语义 morph（候选顺序 = 优先级）。 |
+| `resolveSemanticMorphs()` | `frontend/src/features/preview-3d/semantic-morphs:70` | 从 morph 名列表 + 候选表解析语义 morph 映射（MMD 等无标准语义的格式走此路）。 |
+| `mmdSemanticMorphMap()` | `frontend/src/features/preview-3d/semantic-morphs:87` | MMD 特化：pmx.morphs[].name 列表 → 语义 morph 映射。 |
+| `getSemanticMorph()` | `frontend/src/features/preview-3d/semantic-morphs:95` | 取语义 morph 条目（消费方唯一入口；缺失返回 null）。 |
+| `Vec3()` | `frontend/src/features/preview-3d/spec-builder:23` | vec3 — Go threejs/spec.go L55 |
+| `Cube2D()` | `frontend/src/features/preview-3d/spec-builder:30` | Cube2D — Go types/bedrock.go Cube2D |
+| `BedrockModel()` | `frontend/src/features/preview-3d/spec-builder:56` | BedrockModel — Go types/bedrock.go BedrockModel |
+| `SubModel()` | `frontend/src/features/preview-3d/spec-builder:72` | SubModel 子模型条目（Go types/bedrock.go SubModel）。 |
+| `ModelGroup()` | `frontend/src/features/preview-3d/spec-builder:87` | ModelGroup — Go threejs/spec.go ModelGroup |
+| `BoneData()` | `frontend/src/features/preview-3d/spec-builder:99` | BoneData — Go threejs/spec.go BoneData |
+| `MeshData()` | `frontend/src/features/preview-3d/spec-builder:109` | MeshData — Go threejs/spec.go MeshData |
+| `buildSpecFromGeometryJSON()` | `frontend/src/features/preview-3d/spec-builder:128` | 从 bedrock geometry JSON 构建 3D spec（纯 TS，无 Go 依赖）。 |
+| `PerfLevel()` | `frontend/src/features/preview-3d/state/perf-presets:16` | 性能档位：低 / 中 / 高 + 自定义（自定义不套用，保持用户手调） |
+| `PERF_PRESET_KEY()` | `frontend/src/features/preview-3d/state/perf-presets:19` | 持久化键：当前档位（对齐 ysm_3d_maxFps 风格） |
+| `PERF_PRESET_DEFAULT()` | `frontend/src/features/preview-3d/state/perf-presets:22` | 无存档时的默认档位 |
+| `PERF_PRESETS()` | `frontend/src/features/preview-3d/state/perf-presets:28` | 档位表：三档 → StatePath → 值（纯数据，新增档位/参数只改这里，零接线） |
+| `getPerfPreset()` | `frontend/src/features/preview-3d/state/perf-presets:50` | 读取当前档位（无存档或未知值回默认） |
+| `applyPerfPreset()` | `frontend/src/features/preview-3d/state/perf-presets:61` | 套用档位：遍历档位表走状态层统一写口（默认广播 notify，面板订阅可自动刷新）。 |
+| `setPerfPreset()` | `frontend/src/features/preview-3d/state/perf-presets:70` | 切换档位：持久化 + 套用 |
+| `PreviewStatePath()` | `frontend/src/features/preview-3d/state/preview-state:33` | 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） |
+| `PreviewSnapshot()` | `frontend/src/features/preview-3d/state/preview-state:48` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
+| `KNOWN_PATHS()` | `frontend/src/features/preview-3d/state/preview-state:69` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
+| `toStatePath()` | `frontend/src/features/preview-3d/state/preview-state:91` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
+| `resetActiveComponent()` | `frontend/src/features/preview-3d/state/preview-state:270` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
+| `subscribeSettings()` | `frontend/src/features/preview-3d/state/preview-state:280` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/features/preview-3d/state/preview-state:301` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
+| `setStateValue()` | `frontend/src/features/preview-3d/state/preview-state:310` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/features/preview-3d/state/preview-state:320` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `previewSnapshot()` | `frontend/src/features/preview-3d/state/preview-state:329` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
+| `resetSettingsListeners()` | `frontend/src/features/preview-3d/state/preview-state:336` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
+| `TextureAlphaMode()` | `frontend/src/features/preview-3d/texture-alpha:4` | — |
+| `TextureAlphaInfo()` | `frontend/src/features/preview-3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
+| `getTextureAlphaInfo()` | `frontend/src/features/preview-3d/texture-alpha:17` | — |
+| `getTextureAlphaMode()` | `frontend/src/features/preview-3d/texture-alpha:35` | Classify alpha once per cached texture so material setup can choose a render path. |
+| `TextureCacheImpl()` | `frontend/src/features/preview-3d/texture-cache:18` | — |
+| `textureCache()` | `frontend/src/features/preview-3d/texture-cache:94` | 全局单例（随 3D 会话生命周期；disposeAll 由 cleanup-3d.ts 调用） |
+| `VrmMaterialListItem()` | `frontend/src/features/preview-3d/vrm-materials:11` | 材质列表项（listVrmMaterials） |
+| `VrmMaterialDetail()` | `frontend/src/features/preview-3d/vrm-materials:17` | 材质详情（getVrmMaterialDetail） |
+| `listVrmMaterials()` | `frontend/src/features/preview-3d/vrm-materials:28` | 材质列表：vrm.scene 遍历所有 Mesh.material（含数组材质） |
+| `setVrmMaterialVisible()` | `frontend/src/features/preview-3d/vrm-materials:38` | 材质显隐：Material.visible（MToon/标准/基础均支持） |
+| `setVrmMaterialOpacity()` | `frontend/src/features/preview-3d/vrm-materials:48` | 材质透明度（0-1）：opacity 设置 + transparent 联动 |
+| `getVrmMaterialDetail()` | `frontend/src/features/preview-3d/vrm-materials:62` | 材质详情：name/可见/透明/类型（越界返回 null） |
+| `YsmAnimPlayer()` | `frontend/src/features/preview-3d/ysm-animation-player:32` | — |
+| `createYsmAnimPlayer()` | `frontend/src/features/preview-3d/ysm-animation-player:281` | Builds a YSM animation player whose per-frame path reuses every temporary object. |
+| `YsmObjectHandle()` | `frontend/src/features/preview-3d/ysm-object:25` | YSM 内容场景句柄：挂进任意 scene 后的内容层操作与释放 |
+| `buildYsmObject()` | `frontend/src/features/preview-3d/ysm-object:50` | 构建 YSM 内容场景图：spec → rootGroup（骨骼分组 + 网格挂载 + 纹理绑定）。 |
 | `VIEW_TESTIDS()` | `frontend/src/features/recycle-bin:19` | — |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:32` | — |
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:42` | — |
@@ -1349,536 +1879,6 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `BonesPanelItemOpts()` | `frontend/src/utils/3d/adapters/bones-panel-node:32` | 工厂入参：caller 持 cleanupRef（与 panel 生命周期对齐，dispose 时同步调） |
-| `makeBonesPanelItem()` | `frontend/src/utils/3d/adapters/bones-panel-node:51` | 构造「骨骼」菜单项节点。返回的 PreviewMenuNode 形状固定： id="bones" / icon="🦴" / dockGroup="motion" / kind=" |
-| `CameraControlBridge()` | `frontend/src/utils/3d/adapters/camera-controls:13` | 相机控制桥：shared/self 双模式统一构建旋转/速度/重置控件的回调集合（方案 A：消灭 ysm-adapter 双份实现） |
-| `buildCameraControls()` | `frontend/src/utils/3d/adapters/camera-controls:31` | 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 |
-| `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:53` | — |
-| `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:94` | — |
-| `FbxDataPort()` | `frontend/src/utils/3d/adapters/fbx-adapter:29` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `FBX_TARGET_MAX_DIM()` | `frontend/src/utils/3d/adapters/fbx-adapter:36` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
-| `FbxScaleInfo()` | `frontend/src/utils/3d/adapters/fbx-adapter:39` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
-| `normalizeFbxScale()` | `frontend/src/utils/3d/adapters/fbx-adapter:55` | Box3 尺度归一（ADR-112 P1）：DCC 导出单位混乱（cm/m/Unity units 可差 100×）时， 模型要么小到穿近平面看不见、要么顶天立地顶爆场景能力。均匀 |
-| `buildFbxScene()` | `frontend/src/utils/3d/adapters/fbx-adapter:168` | 构建 FBX 内容场景（ADR-112 地基）。 |
-| `FbxParser()` | `frontend/src/utils/3d/adapters/fbx-parser:18` | FBX 解析器管理器（接口对齐 PmxParser） |
-| `createFbxParser()` | `frontend/src/utils/3d/adapters/fbx-parser:27` | 创建 FBX 解析器（Worker）。测试/受限环境无 Worker → always-fail 降级守卫， 调用方（fbx-adapter）会 fallback 到主线程 FBX |
-| `FbxSceneBuilderConfig()` | `frontend/src/utils/3d/adapters/fbx-parser:44` | 场景重建配置 |
-| `buildFbxSceneFromData()` | `frontend/src/utils/3d/adapters/fbx-parser:214` | 从 worker 产出的纯数据重建 Three.js 场景（FBX worker 路径的主线程构建器） 按 nodes 层级还原：非 mesh 节点建 Group、mesh 节点建 |
-| `FbxParseRequest()` | `frontend/src/utils/3d/adapters/fbx-parser.worker:17` | 主线程 → Worker 请求 |
-| `FbxParseResponse()` | `frontend/src/utils/3d/adapters/fbx-parser.worker:23` | Worker → 主线程响应 |
-| `FbxGeometryData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:16` | — |
-| `FbxMaterialData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:29` | — |
-| `FbxSkeletonData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:45` | — |
-| `FbxMeshData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:56` | — |
-| `FbxSceneData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:88` | — |
-| `captureTextureName()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:102` | — |
-| `fbxSceneToData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:209` | — |
-| `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:28` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
-| `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:43` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
-| `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:122` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
-| `LITEMATIC_SLICE_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/litematic-adapter:238` | litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖， 5329a347 review P2：固定 key 会被第二场景静 |
-| `LitematicBuildOpts()` | `frontend/src/utils/3d/adapters/litematic-adapter:413` | — |
-| `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:425` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层切片面板钩子。 |
-| `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |
-| `materialNodes()` | `frontend/src/utils/3d/adapters/material-controls:18` | 材质面板声明式节点：每材质一行组合控件（eye + opacity），闭包经 bridge 下沉 |
-| `RepresentativeSnapshot()` | `frontend/src/utils/3d/adapters/menu-graph:24` | 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） |
-| `MenuGraphNode()` | `frontend/src/utils/3d/adapters/menu-graph:30` | 导航图节点（菜单节点的投影，只读不写） |
-| `MenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:56` | 导航图：dock 分组 → 面板 → 节点树 + 动作节点 + 覆盖度 |
-| `CollectMenuGraphOpts()` | `frontend/src/utils/3d/adapters/menu-graph:71` | collectMenuGraph 入参 |
-| `collectNodePredicates()` | `frontend/src/utils/3d/adapters/menu-graph:83` | 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二） |
-| `collectMenuGraph()` | `frontend/src/utils/3d/adapters/menu-graph:144` | 收集菜单导航图（纯函数，不改任何状态）。 |
-| `makeMenuCtx()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:12` | PreviewMenuCtx 全字段 stub：能力全缺（getCap → null）、桥全 vi.fn()。 |
-| `mockMenuHandle()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:36` | SlideMenuHandle 全方法 stub（渲染器/面板单测用，导航动作全 no-op） |
-| `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:66` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:181` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1168` | — |
-| `MmdMenuItemsOpts()` | `frontend/src/utils/3d/adapters/mmd-adapter:1241` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1273` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
-| `getCustomAnimPath()` | `frontend/src/utils/3d/adapters/mmd-anim-library:12` | 获取 MMD 动作库（CustomAnim）的绝对路径。 |
-| `filterAnimFiles()` | `frontend/src/utils/3d/adapters/mmd-anim-library:24` | 从文件列表中筛选动作文件（.vmd / .vpd） |
-| `PmxFileStats()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:16` | PMX 文件级统计（详情卡展示；独立于 SceneStats 的 traverse 口径） |
-| `_clearPmxStatsCache()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:31` | 清除缓存（测试钩子；生产由模块级生命周期自然存活） |
-| `readPmxStats()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:39` | 读 PMX 文件级统计：Worker 完整解析 → 取 counts → 缓存。 |
-| `BasisEncoderLike()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:13` | BasisEncoder 实例的最小接口（embind 运行时提供） |
-| `BasisModuleLike()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:29` | 初始化后的 basis 模块（含 BasisEncoder 构造器） |
-| `MAX_KTX2_PIXELS()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:65` | 单纹理像素上限：超过则跳过 KTX2 编码。 |
-| `TextureTooLargeError()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:68` | 超大纹理跳过编码的标记错误（encodeAndCacheTexture 据此记 warn 而非 fail） |
-| `encodeToKTX2Basis()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:81` | 将 RGBA ImageData 编码为 KTX2（Basis Universal ETC1S）。 |
-| `cancelPendingEncodings()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:71` | 取消所有待执行的编码（已在执行的不受影响） |
-| `resetEncoderState()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:83` | 重置编码器状态（测试用） |
-| `__setEncodeImplForTest()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:205` | 测试用：注入编码实现（默认走本地 WASM） |
-| `encodeAndCacheTexture()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:216` | 将单个 PNG 纹理编码为 KTX2 并缓存。 |
-| `scheduleBackgroundEncoding()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:267` | 遍历 mesh 材质，对有 KTX2 缓存需要的纹理进行后台编码。 |
-| `Ktx2TextureLoaderDeps()` | `frontend/src/utils/3d/adapters/mmd-ktx2-texture-loader:21` | 拦截 loader 依赖注入（装配方提供） |
-| `Ktx2TextureLoader()` | `frontend/src/utils/3d/adapters/mmd-ktx2-texture-loader:61` | — |
-| `Ktx2EncodeRequest()` | `frontend/src/utils/3d/adapters/mmd-ktx2-worker:9` | 主线程 → Worker 的请求 |
-| `Ktx2EncodeResponse()` | `frontend/src/utils/3d/adapters/mmd-ktx2-worker:17` | Worker → 主线程的响应 |
-| `pmxObjectToResponse()` | `frontend/src/utils/3d/adapters/mmd-pmx-convert:194` | 权威 PmxObject → PmxParseResponse（压缩数组可 transferable；id 由调用方填入） |
-| `PmxBuilderConfig()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser:29` | Builder 配置 |
-| `PmxBuildResult()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser:37` | Builder 产出 |
-| `PmxParser()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser:46` | PMX 解析器管理器 |
-| `createPmxParser()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser:54` | 创建 PMX 解析器（Worker） |
-| `buildPmxScene()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser:76` | 从 Worker 解析结果构建 Three.js 场景对象。 |
-| `buildPmxSceneSliced()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser:209` | 异步切片版 buildPmxScene：将重负载同步构建拆成 rAF 帧片段。 |
-| `PmxParseRequest()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:17` | 主线程 → Worker 请求 |
-| `PmxVertexData()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:23` | 顶点数据（交织存储，GPU 友好） |
-| `PmxFaceData()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:33` | 面数据 |
-| `PmxMaterialData()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:39` | 材质数据 |
-| `PmxBoneData()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:56` | 骨骼数据（字段对齐 @moeru/three-mmd PmxObject.Bone） |
-| `PmxMorphData()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:71` | Morph 数据 |
-| `PmxParseResponse()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:78` | Worker → 主线程响应 |
-| `PmxRigidBodyData()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:98` | — |
-| `PmxJointData()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:115` | — |
-| `PmxDisplayFrameData()` | `frontend/src/utils/3d/adapters/mmd-pmx-parser.worker:130` | — |
-| `TexDecodeRequest()` | `frontend/src/utils/3d/adapters/mmd-texture-decode.worker:9` | 主线程 → Worker 的请求 |
-| `TexDecodeResponse()` | `frontend/src/utils/3d/adapters/mmd-texture-decode.worker:17` | Worker → 主线程的响应 |
-| `TexDecodeConfig()` | `frontend/src/utils/3d/adapters/mmd-texture-decoder:15` | 解码器配置 |
-| `DecodedTexture()` | `frontend/src/utils/3d/adapters/mmd-texture-decoder:23` | 解码结果条目 |
-| `TextureDecoder()` | `frontend/src/utils/3d/adapters/mmd-texture-decoder:40` | 解码管理器：创建 Worker 池、分发任务、收集结果。 |
-| `getTextureDecoder()` | `frontend/src/utils/3d/adapters/mmd-texture-decoder:149` | 获取共享解码器（懒创建） |
-| `applyWorkerDecodedTextures()` | `frontend/src/utils/3d/adapters/mmd-texture-decoder:169` | 将 Worker 解码的 ImageBitmap 应用到 MMD 模型的材质纹理： 1. |
-| `bytesToBase64()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay` | — |
-| `MmdZipConfig()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:20` | ZIP 解析产物（传给 overlay 的配置） |
-| `resolveMmdZipConfig()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:41` | 解压 zip + 找 .pmx/.pmd 模型 → 返回 MmdZipConfig。 |
-| `makeZipOverlayPort()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:118` | 创建 ZIP Overlay Port：包装 MmdDataPort， 将 zip 内路径前缀（如 "/repo/miku.zip!/"）路由到内存中的 zip entries。 |
-| `prepareMmdZipInput()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:207` | 构造完整的 zip 包装流程： 检测 zip → 解析 zip → 创建 overlay → 返回 { port, rootPath } 调用方只需： const { port, |
-| `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:224` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
-| `MorphMeshLike()` | `frontend/src/utils/3d/adapters/morph-controls:10` | morph 面板入参（mesh 的 morphTargetDictionary/influences 子集，结构兼容 THREE.SkinnedMesh） |
-| `morphNodes()` | `frontend/src/utils/3d/adapters/morph-controls:20` | MMD 表情开关声明式节点（纯数据工厂零 DOM）。 |
-| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:81` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
-| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:104` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
-| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:130` | — |
-| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:140` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
-| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:191` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
-| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:196` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
-| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:218` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
-| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:234` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
-| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:240` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
-| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:245` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
-| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:263` | — |
-| `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
-| `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:27` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
-| `PackAdapterOpts()` | `frontend/src/utils/3d/adapters/pack-model-adapter:32` | 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） |
-| `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:56` | 工厂：适配器持 zipPath（容器路径）+ 可选多模型候选（ADR-132），buildPath 即 entry path（虚拟文件夹下的文件路径） |
-| `PerceptionState()` | `frontend/src/utils/3d/adapters/perception-controls:10` | 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） |
-| `PerceptionCapability()` | `frontend/src/utils/3d/adapters/perception-controls:19` | 可用感知模块描述（由 adapter 按实际能力填写） |
-| `perceptionNodes()` | `frontend/src/utils/3d/adapters/perception-controls:36` | 感知面板声明式节点（纯数据工厂零 DOM）：toggle kind 节点， control.get/set 闭包读写 adapter 内 perception state（非状态层 |
-| `PostprocessingLike()` | `frontend/src/utils/3d/adapters/postprocessing:8` | 后处理对外最小契约（PostprocessingCapability 实现此接口） |
-| `LoadingProgressMode()` | `frontend/src/utils/3d/adapters/preview-loading:14` | 加载进度条模式：indeterminate（循环动画）| determinate（固定 id + transition，供外部更新宽度） |
-| `renderLoadingState()` | `frontend/src/utils/3d/adapters/preview-loading:17` | 3D 预览加载态：loadingEl 渲染图标 + 标签 + 进度条 |
-| `showLoadFailure()` | `frontend/src/utils/3d/adapters/preview-loading:35` | 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 |
-| `formatCapSliderValue()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:98` | slider 值格式化（renderCapSlider 与环境面板摘要行共用，防两端分叉）： unit="h" → HH:MM（小数进位分钟）／ unit="%" → 百分比（×1 |
-| `collectVisiblePredicates()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:449` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
-| `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/cap-controls:453` | — |
-| `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
-| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
-| `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
-| `PreviewMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/core:39` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
-| `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu/core:75` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
-| `PreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:220` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
-| `buildPreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:232` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
-| `renderPreviewPanel()` | `frontend/src/utils/3d/adapters/preview-menu/core:276` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
-| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core:510` | — |
-| `PreviewMenuItemKind()` | `frontend/src/utils/3d/adapters/preview-menu/defs:30` | — |
-| `PreviewMenuGroupId()` | `frontend/src/utils/3d/adapters/preview-menu/defs:31` | — |
-| `PreviewMenuItemDef()` | `frontend/src/utils/3d/adapters/preview-menu/defs:33` | — |
-| `PreviewMenuGroupDef()` | `frontend/src/utils/3d/adapters/preview-menu/defs:60` | 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） |
-| `PREVIEW_MENU_GROUPS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:69` | — |
-| `CORE_MENU_ITEMS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:91` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
-| `disposeEnvSubscriptions()` | `frontend/src/utils/3d/adapters/preview-menu/env:30` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
-| `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu/env:116` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
-| `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu/env:239` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
-| `MultiModelSelectOpts()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:16` | 多模型选择原语入参 |
-| `multiModelSelectNode()` | `frontend/src/utils/3d/adapters/preview-menu/multi-model:39` | 多模型选择 select 节点工厂。 |
-| `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
-| `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:24` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
-| `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:40` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
-| `PreviewMenuNode()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:68` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
-| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:117` | 类型守卫：节点是否为 folder（可下钻） |
-| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:122` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
-| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:135` | 递归收集全部节点 id（供 id 唯一性契约测试） |
-| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/render:420` | — |
-| `renderAdapterPanelContent()` | `frontend/src/utils/3d/adapters/preview-menu/render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
-| `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu/roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
-| `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu/roles:38` | — |
-| `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu/roles:112` | — |
-| `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu/roles:282` | — |
-| `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu/settings:33` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
-| `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu/settings:47` | 灯光面板 schema：从 light cap 自报控件渲染 |
-| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu/settings:65` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
-| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu/settings:78` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
-| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu/settings:91` | 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
-| `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu/settings:118` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
-| `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/settings:170` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
-| `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu/settings:183` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
-| `STATS_PANEL_ID()` | `frontend/src/utils/3d/adapters/preview-menu/stats:17` | 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） |
-| `hasSceneStats()` | `frontend/src/utils/3d/adapters/preview-menu/stats:20` | 是否有可供展示的统计（mesh/bone 任一 &gt; 0；全 0 = 空场景/纯装饰，无意义） |
-| `buildStatsPanel()` | `frontend/src/utils/3d/adapters/preview-menu/stats:25` | 构造统计面板节点：panel + 6 个 field 行（骨骼/网格/三角面/材质/纹理/表情） |
-| `mergeStatsMenuItems()` | `frontend/src/utils/3d/adapters/preview-menu/stats:59` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
-| `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu/switch:217` | — |
-| `ModelEntry()` | `frontend/src/utils/3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
-| `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
-| `MAX_MODELS()` | `frontend/src/utils/3d/adapters/scene-registry:209` | 同场景最大模型数（超量追加被拒，ADR-093 T6） |
-| `YSM_MODEL_SCHEMA_ID()` | `frontend/src/utils/3d/adapters/schema-registry:20` | YSM model 面板 schema 键（adapter schemaId 与 views 注册共用同一常量，防漂移静默丢面板） |
-| `makeYsmModelSchemaId()` | `frontend/src/utils/3d/adapters/schema-registry:29` | per-scene 唯一 schema 键工厂（YSM/maid 同框隔离，对齐 litematic `litematic-slice-{n}` 范式）。 |
-| `SchemaBuilder()` | `frontend/src/utils/3d/adapters/schema-registry:34` | 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） |
-| `registerSchema()` | `frontend/src/utils/3d/adapters/schema-registry:41` | 注册面板 builder；重复注册**覆盖**旧 builder（多模型同框时活跃模型换菜单，后注册者生效）—— 与 setAdapterItems 换菜单语义一致；测试用 reg |
-| `unregisterSchema()` | `frontend/src/utils/3d/adapters/schema-registry:47` | 注销面板 builder（预览 dispose 时调用，防跨会话污染：陈旧 builder 的闭包 持有已 dispose 场景的 model/texArr/handle，不清理会 |
-| `getSchema()` | `frontend/src/utils/3d/adapters/schema-registry:52` | 取面板 builder；未注册返回 undefined |
-| `hasSchema()` | `frontend/src/utils/3d/adapters/schema-registry:57` | 是否已注册 |
-| `listSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:62` | 全部已注册 id（供契约测试枚举 / 审计「谁在绕道 renderCustom」） |
-| `resetSchemas()` | `frontend/src/utils/3d/adapters/schema-registry:67` | 测试用：清空注册表（用例间隔离） |
-| `SwitchContext()` | `frontend/src/utils/3d/adapters/switch-preview:32` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
-| `switchToSession()` | `frontend/src/utils/3d/adapters/switch-preview:95` | 会话内切换模型（复用外壳重建内容层）。 |
-| `syncLightTargetFromContent()` | `frontend/src/utils/3d/adapters/switch-preview:423` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
-| `Endianness()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
-| `ConsoleLogger()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
-| `MmdDataDeserializer()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |
-| `PmxObject()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxObject` | — |
-| `Vec3()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:4` | — |
-| `Vec4()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:5` | — |
-| `PmxHeader()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:7` | — |
-| `PmxVertex()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:21` | — |
-| `PmxMaterial()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:34` | — |
-| `PmxBone()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:53` | — |
-| `PmxMorph()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:73` | — |
-| `PmxDisplayFrame()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:86` | — |
-| `PmxRigidBody()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:93` | — |
-| `PmxJoint()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:111` | — |
-| `PmxObject()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader.d:127` | — |
-| `PmxReader()` | `frontend/src/utils/3d/adapters/vendor/babylon-mmd/pmxReader:62` | PmxReader is a static class that parses PMX data |
-| `FBXLoader()` | `frontend/src/utils/3d/adapters/vendor/fbx/FBXLoader:79` | A loader for the FBX format. |
-| `VrmDataPort()` | `frontend/src/utils/3d/adapters/vrm-adapter:33` | VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `VrmMetaInfo()` | `frontend/src/utils/3d/adapters/vrm-adapter:89` | VRM meta 归一化信息（meta 卡展示用） |
-| `readVrmMeta()` | `frontend/src/utils/3d/adapters/vrm-adapter:110` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
-| `VrmModelInfoCtx()` | `frontend/src/utils/3d/adapters/vrm-adapter:173` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
-| `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:180` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:506` | — |
-| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:526` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:564` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
-| `VrmBonePanelCtx()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:21` | 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） |
-| `RenderVrmBonePanel()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:31` | 骨骼面板渲染契约：返回清理函数（面板移除时调用） |
-| `makeBonePanelRenderer()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:40` | 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。 |
-| `buildVrmBoneNodes()` | `frontend/src/utils/3d/adapters/vrm-bone:20` | 从 vrm.humanoid 提取标准人形骨骼列表（id = HumanoidBoneName 如 "leftUpperArm"）。 |
-| `buildVrmBoneTree()` | `frontend/src/utils/3d/adapters/vrm-bone:52` | 从 vrm.humanoid 直接构建通用骨骼树（buildBoneNodes → buildBoneTree 一步到位） |
-| `ResolveModeResponse()` | `frontend/src/utils/3d/adapters/worker-bridge:15` | 响应必须携带 id；resolve-mode 还需 ok 标志（错误以响应形式回传，不 reject） |
-| `WorkerErrorStrategy()` | `frontend/src/utils/3d/adapters/worker-bridge:22` | 崩溃/终止时的结算策略 |
-| `WorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:29` | — |
-| `CreateWorkerBridgeOpts()` | `frontend/src/utils/3d/adapters/worker-bridge:44` | — |
-| `createWorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:65` | — |
-| `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
-| `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
-| `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:44` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
-| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:500` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
-| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:531` | 工厂：构造统一 PreviewAdapter（shared 模式） |
-| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:550` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:592` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
-| `ALPHA_F_VISIBLE()` | `frontend/src/utils/3d/alpha-index:5` | — |
-| `ALPHA_F_HOLE()` | `frontend/src/utils/3d/alpha-index:6` | — |
-| `ALPHA_F_TRANSLUCENT()` | `frontend/src/utils/3d/alpha-index:7` | — |
-| `flagsForAlpha()` | `frontend/src/utils/3d/alpha-index:12` | — |
-| `AlphaIndex()` | `frontend/src/utils/3d/alpha-index:18` | — |
-| `b64ToBytes()` | `frontend/src/utils/3d/base64:6` | base64 → Uint8Array（Go []byte 的 base64 序列化） |
-| `bytesToArrayBuffer()` | `frontend/src/utils/3d/base64:15` | Uint8Array → ArrayBuffer（Blob 构造要求 ArrayBufferView&lt;ArrayBuffer&gt;，规避 SharedArrayBuffer 泛型） |
-| `bytesToBase64()` | `frontend/src/utils/3d/base64:20` | Uint8Array → base64（分块防栈溢出，对齐 atob 解码口径） |
-| `BoneInfoLite()` | `frontend/src/utils/3d/bone-list:7` | getBoneList 返回的扁平骨骼信息 |
-| `getBoneList()` | `frontend/src/utils/3d/bone-list:21` | 从 spec 提取骨骼列表，支持按组件索引： - modelIdx 缺省 0 → 第一组件（main，动画驱动）——向后兼容 v1 单组件语义 - modelIdx &gt;= 0  → |
-| `buildBoneHierarchy()` | `frontend/src/utils/3d/bone-raycast:14` | 构建骨骼层级路径映射（name/id/parent/children）。 |
-| `getMeshBoneId()` | `frontend/src/utils/3d/bone-raycast:53` | Mesh → 所属骨骼名（沿父链向上查找 has isGroup 且 name 在 nameMap 中的节点）。 |
-| `assembleBoneSelectInfo()` | `frontend/src/utils/3d/bone-raycast:68` | 骨骼选中信息组装。 |
-| `registerBoneRaycast()` | `frontend/src/utils/3d/bone-raycast:130` | 注册 pointermove / click 骨骼拾取监听器。 |
-| `BoneNode()` | `frontend/src/utils/3d/bone-tools:11` | 统一骨骼节点：来源无关（YSM spec bones / VRM humanoid bones 均适配） |
-| `BoneTree()` | `frontend/src/utils/3d/bone-tools:23` | 骨骼树：id 索引 + 子映射 + 根集合 + object 反查（buildBoneTree 产物） |
-| `buildBoneTree()` | `frontend/src/utils/3d/bone-tools:36` | 从任意扁平骨骼声明构建层级树。 |
-| `BoneListItem()` | `frontend/src/utils/3d/bone-tools:58` | 深度缩进的骨骼列表项（枚举 + 父子 + 深度） |
-| `listBonesWithDepth()` | `frontend/src/utils/3d/bone-tools:65` | 骨骼树 → 深度缩进列表（前序遍历，根 depth=0；数组顺序即展开顺序） |
-| `getBonePath()` | `frontend/src/utils/3d/bone-tools:78` | 骨骼 id → 全路径（如 "root / spine / head"；找不到该 id 返回 null） |
-| `getBonePosition()` | `frontend/src/utils/3d/bone-tools:93` | 骨骼 id → 世界坐标（需 object；无 object 或缺省返回 null） |
-| `BoneDetail()` | `frontend/src/utils/3d/bone-tools:101` | 骨骼详情：路径/坐标/父骨骼/子骨骼列表（id 不存在返回 null） |
-| `getBoneDetail()` | `frontend/src/utils/3d/bone-tools:110` | — |
-| `setBoneNodeVisible()` | `frontend/src/utils/3d/bone-tools:129` | 骨骼显隐：设置该骨骼节点及其所有子网格可见性（需 object；无 object no-op） |
-| `toggleBoneVisible()` | `frontend/src/utils/3d/bone-tools:137` | 骨骼显隐：切换（取反）该骨骼节点可见性 |
-| `findAncestorBoneId()` | `frontend/src/utils/3d/bone-tools:153` | 沿 Object3D 父链向上找最近的骨骼 id（object 引用匹配，不依赖 name 约定） |
-| `pickBone()` | `frontend/src/utils/3d/bone-tools:169` | Raycaster 拾取：命中任意 mesh → 沿父链找最近挂载在骨骼节点上的祖先（需 object）。 |
-| `BoneGroupMap()` | `frontend/src/utils/3d/bone-visibility:6` | BoneGroupMap 类型别名：骨骼 id → THREE.Group |
-| `setBoneVisible()` | `frontend/src/utils/3d/bone-visibility:11` | 设置指定骨骼组及其所有子网格的可见性。 |
-| `toggleBone()` | `frontend/src/utils/3d/bone-visibility:19` | 切换指定骨骼组的可见性（取反）。 |
-| `showModelGroup()` | `frontend/src/utils/3d/bone-visibility:29` | 按索引显示单个模型组件（idx &lt; 0 = 全部显示，NaN 防御）。 |
-| `FrameSideOptions()` | `frontend/src/utils/3d/camera-setup:8` | frameCameraSide 取景系数（fbx/vrm/pack 三适配器共用，对齐历史口径） |
-| `frameCameraSide()` | `frontend/src/utils/3d/camera-setup:21` | 侧上方取景（外部格式 fbx/vrm/pack 共用）：包围盒 → 相机置于 +Z 斜上方， controls 限位到 maxDim 的 [0.1, 12] 倍。与 fitCame |
-| `fitCameraToScene()` | `frontend/src/utils/3d/camera-setup:54` | 根据内容根节点的包围盒适配相机位置和 controls.target。 |
-| `fitCameraToRoots()` | `frontend/src/utils/3d/camera-setup:68` | 按给定根节点列表（多模型同框）计算并集包围盒并返回相机初始位姿。 |
-| `EnvPresetId()` | `frontend/src/utils/3d/caps/environment-capability:20` | — |
-| `EnvPreset()` | `frontend/src/utils/3d/caps/environment-capability:22` | — |
-| `ENV_PRESETS()` | `frontend/src/utils/3d/caps/environment-capability:43` | — |
-| `EnvPresetLinkage()` | `frontend/src/utils/3d/caps/environment-capability:88` | 预设快捷联动表：选某预设时，除切 environment.preset 外，一并联动 sky/fog/env 参数， 让「日落」「夜景」等预设呈现完整氛围，而非只换一张 envMa |
-| `ENV_PRESET_LINKAGE()` | `frontend/src/utils/3d/caps/environment-capability:100` | — |
-| `EnvironmentParams()` | `frontend/src/utils/3d/caps/environment-capability:127` | — |
-| `DEFAULT_ENV_PARAMS()` | `frontend/src/utils/3d/caps/environment-capability:138` | — |
-| `ENV_PRESET_BY_MODEL()` | `frontend/src/utils/3d/caps/environment-capability:147` | 模型类别环境默认 preset（YSM 方块=sky，VRM/MMD=studio 柔光更友好，体素=forest） |
-| `drawEnvEquirect()` | `frontend/src/utils/3d/caps/environment-capability:158` | 给 canvas 2D ctx 填充 equirectangular 环境贴图（程序化） |
-| `EnvironmentCapability()` | `frontend/src/utils/3d/caps/environment-capability:399` | — |
-| `FogMode()` | `frontend/src/utils/3d/caps/fog-capability:15` | — |
-| `FogParams()` | `frontend/src/utils/3d/caps/fog-capability:17` | — |
-| `DEFAULT_FOG_PARAMS()` | `frontend/src/utils/3d/caps/fog-capability:30` | — |
-| `FOG_PRESETS()` | `frontend/src/utils/3d/caps/fog-capability:40` | 模型类别雾预设：材质特性不同，雾浓度/远近做合理初始值 |
-| `FogCapability()` | `frontend/src/utils/3d/caps/fog-capability:68` | — |
-| `GroundParams()` | `frontend/src/utils/3d/caps/ground-capability:40` | 地面参数（表面材质 + 网格；水面已拆分为独立 WaterCapability） |
-| `DEFAULT_GROUND_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:53` | — |
-| `GroundCapability()` | `frontend/src/utils/3d/caps/ground-capability:62` | — |
-| `GroundSurfaceMode()` | `frontend/src/utils/3d/caps/ground-surface-spec:17` | 地面表面模式（扁平枚举：来源 × 画布样式合一，避免双字段耦合守卫） |
-| `GroundMaterialParams()` | `frontend/src/utils/3d/caps/ground-surface-spec:19` | — |
-| `DEFAULT_GROUND_SURFACE_PARAMS()` | `frontend/src/utils/3d/caps/ground-surface-spec:46` | — |
-| `GroundSurfaceStructuralSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:61` | — |
-| `GroundSurfaceAppearanceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:73` | — |
-| `GroundSurfaceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:81` | — |
-| `buildGroundSurfaceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:92` | — |
-| `surfaceSpecKey()` | `frontend/src/utils/3d/caps/ground-surface-spec:117` | structural 子集确定性序列化：新增结构字段后在此补一行即自动纳入重建判别 |
-| `groundSurfaceNeedsRebuild()` | `frontend/src/utils/3d/caps/ground-surface-spec:132` | 结构性变化 → 需要重建材质与纹理；否则原地更新即可 |
-| `TILE_WORLD_SIZE()` | `frontend/src/utils/3d/caps/ground-surface-spec:139` | 每格世界单位基准：50 单位地面默认铺 5×5 次重复 |
-| `textureRepeat()` | `frontend/src/utils/3d/caps/ground-surface-spec:141` | — |
-| `generateSurfacePixels()` | `frontend/src/utils/3d/caps/ground-surface-spec:164` | — |
-| `applyGroundSurfaceStructural()` | `frontend/src/utils/3d/caps/ground-surface-spec:261` | 重建路径专用：把 structural 落到新材质上。 |
-| `applyGroundSurfaceAppearance()` | `frontend/src/utils/3d/caps/ground-surface-spec:280` | 原地/重建通用：appearance 字段统一落地（唯一入口）。 |
-| `DirectionalLightParams()` | `frontend/src/utils/3d/caps/light-capability:36` | ============ 参数类型 ============ |
-| `AmbientLightParams()` | `frontend/src/utils/3d/caps/light-capability:46` | — |
-| `SpotlightParams()` | `frontend/src/utils/3d/caps/light-capability:51` | — |
-| `VolumetricParams()` | `frontend/src/utils/3d/caps/light-capability:65` | — |
-| `LightParams()` | `frontend/src/utils/3d/caps/light-capability:79` | — |
-| `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:107` | — |
-| `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:117` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
-| `lightDirToPosition()` | `frontend/src/utils/3d/caps/light-capability:348` | 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） |
-| `attenuateAmbientForSky()` | `frontend/src/utils/3d/caps/light-capability:363` | ambient 强度按 sky 环境开关套让位系数（镜像 AmbientParams 应用，公式单源） |
-| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:367` | — |
-| `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
-| `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
-| `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:87` | — |
-| `POSTPROC_PRESETS()` | `frontend/src/utils/3d/caps/postprocessing-capability:359` | 模型类别后处理预设 —— 统一亮度口径 bloomStrength / bloomThreshold / bloomRadius / exposure / toneMapping |
-| `PostprocessingCapability()` | `frontend/src/utils/3d/caps/postprocessing-capability:369` | — |
-| `ReflectorParams()` | `frontend/src/utils/3d/caps/reflector-capability:18` | — |
-| `DEFAULT_REFLECTOR_PARAMS()` | `frontend/src/utils/3d/caps/reflector-capability:34` | — |
-| `REFLECTOR_PRESETS()` | `frontend/src/utils/3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
-| `ReflectorCapability()` | `frontend/src/utils/3d/caps/reflector-capability:125` | — |
-| `RenderModeCapability()` | `frontend/src/utils/3d/caps/render-mode-capability:59` | -------- 主类 -------- |
-| `SceneCapabilityFactory()` | `frontend/src/utils/3d/caps/scene-capability-registry:24` | 能力工厂：接收 scene/renderer/camera，返回能力实例。 |
-| `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:32` | 注册表：管理所有场景能力的工厂和实例 |
-| `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:111` | 全局单例（模块级单例 + 运行时状态隔离） |
-| `isSkyEnvironmentOn()` | `frontend/src/utils/3d/caps/scene-capability-registry:133` | sky 环境开关（跨组件查询属组合根职责；light ambient ×0.5 协调与截图镜像 （skeleton-render）共用——原 light-capability 模块 |
-| `MenuControlDef()` | `frontend/src/utils/3d/caps/scene-capability:17` | 菜单控件定义（声明式，由框架渲染为 DOM） |
-| `SceneCapabilityLookup()` | `frontend/src/utils/3d/caps/scene-capability:90` | cap 间协调查询器：组合根 createAll 时注入，cap 间联动经此查询（不 import scene-capability-registry——组合根 import 全部 |
-| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:94` | — |
-| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:142` | 保存 JSON 到 localStorage |
-| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:147` | 从 localStorage 加载 JSON |
-| `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:158` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
-| `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:174` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
-| `createListenerSet()` | `frontend/src/utils/3d/caps/scene-capability:208` | 参数变更订阅器工厂（ground / water 的 subscribe + notify 样板收敛）。 |
-| `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
-| `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
-| `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
-| `ShadowCapability()` | `frontend/src/utils/3d/caps/shadow-capability:171` | ============ ShadowCapability ============ |
-| `SkyParams()` | `frontend/src/utils/3d/caps/sky-capability:30` | — |
-| `DEFAULT_SKY_PARAMS()` | `frontend/src/utils/3d/caps/sky-capability:63` | — |
-| `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:83` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
-| `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:91` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
-| `injectSkySunScalePatch()` | `frontend/src/utils/3d/caps/sky-capability:126` | §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform， 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为 |
-| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:315` | — |
-| `WaterMode()` | `frontend/src/utils/3d/caps/water-capability:18` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
-| `WaterParams()` | `frontend/src/utils/3d/caps/water-capability:21` | — |
-| `DEFAULT_WATER_PARAMS()` | `frontend/src/utils/3d/caps/water-capability:50` | — |
-| `WaterCapability()` | `frontend/src/utils/3d/caps/water-capability:66` | — |
-| `WireframeCapability()` | `frontend/src/utils/3d/caps/wireframe-capability:14` | — |
-| `disposeDebugGroup()` | `frontend/src/utils/3d/cleanup-helper:14` | 释放 debug 叠加层中的所有 Three.js 资源（geometry / material / texture）。 |
-| `disposeSceneMeshes()` | `frontend/src/utils/3d/cleanup-helper:40` | 遍历场景图释放所有 Mesh 的 geometry 和 material。 |
-| `eulerToQuaternion()` | `frontend/src/utils/3d/cube-mesh` | — |
-| `isIdentityQuat()` | `frontend/src/utils/3d/cube-mesh` | — |
-| `hasBoneRotation()` | `frontend/src/utils/3d/cube-mesh` | — |
-| `computeBoneLocalPos()` | `frontend/src/utils/3d/cube-mesh:24` | 计算骨骼本地位置（对齐 YSMViewer/C# ConvertBones 口径）。 |
-| `buildCubeMeshData()` | `frontend/src/utils/3d/cube-mesh:192` | 从 Bedrock cube 数据构建 THREE.Mesh 几何数据。 |
-| `mergeCubes()` | `frontend/src/utils/3d/cube-mesh:261` | 合并两组 cube：新 cube 中与旧 cube 空间重叠的替换之，不重叠的追加。 |
-| `rebuildDebug()` | `frontend/src/utils/3d/debug-render:58` | 重建 debug 叠加层（pivot 标记 / 骨骼线框）。 |
-| `MeshFragment()` | `frontend/src/utils/3d/face-split:14` | 网格碎片：同一 meshGroup 按 alpha 特征拆出的子几何 + 渲染路径 |
-| `splitMeshByFaceAlpha()` | `frontend/src/utils/3d/face-split:24` | 按三角形 UV 包围盒查询 AlphaIndex，把 md 拆成 ≤3 个 mode 碎片。 |
-| `fbxBonesToBoneNodes()` | `frontend/src/utils/3d/fbx-bones:29` | FBX 场景骨骼 → BoneNode[]（id=骨骼索引、parentId=父骨骼索引、object=Bone 引用）。 |
-| `registerModelRoot()` | `frontend/src/utils/3d/frustum-cull:18` | 注册模型根节点（adapter 调用） |
-| `unregisterModelRoot()` | `frontend/src/utils/3d/frustum-cull:23` | 注销模型根节点（adapter dispose 时调用） |
-| `getModelRootCount()` | `frontend/src/utils/3d/frustum-cull:29` | 获取当前注册的模型根节点数 |
-| `cullModelGroups()` | `frontend/src/utils/3d/frustum-cull:38` | 对所有已注册的模型根节点做视锥裁剪。 |
-| `clearModelRoots()` | `frontend/src/utils/3d/frustum-cull:99` | 清空所有注册（session 结束时调用） |
-| `isFrustumCullEnabled()` | `frontend/src/utils/3d/frustum-cull:111` | 视锥裁剪开关是否启用（undefined → 默认关；safeGet 隐私模式安全） |
-| `setFrustumCullEnabled()` | `frontend/src/utils/3d/frustum-cull:117` | 设置视锥裁剪开关（设置面板开关调用） |
-| `restoreModelGroupsVisible()` | `frontend/src/utils/3d/frustum-cull:122` | 关闭剔除时恢复所有注册模型根可见性（幂等） |
-| `IKChain()` | `frontend/src/utils/3d/ik-solver:24` | IK 链：从 root 到 endEffector 的 THREE.Object3D 有序数组（含两端） |
-| `IKConfig()` | `frontend/src/utils/3d/ik-solver:27` | IK 求解配置 |
-| `IKResult()` | `frontend/src/utils/3d/ik-solver:45` | IK 求解结果 |
-| `solveIK()` | `frontend/src/utils/3d/ik-solver:78` | CCD IK 求解器。 |
-| `extractIKChainFromTree()` | `frontend/src/utils/3d/ik-solver:200` | 从 BoneTree 中提取从 root 到 endEffector 的骨骼链（object 引用）。 |
-| `TdKeyAction()` | `frontend/src/utils/3d/keymap:8` | — |
-| `DEFAULT_TD_KEYMAP()` | `frontend/src/utils/3d/keymap:11` | 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） |
-| `loadTdKeymap()` | `frontend/src/utils/3d/keymap:27` | 读取用户自定义键位（无/非法时回退默认） |
-| `loadTdCamSpeed()` | `frontend/src/utils/3d/keymap:45` | 相机移动速度（2–200），默认 20 |
-| `loadTdRotMode()` | `frontend/src/utils/3d/keymap:52` | true = 环绕（orbit），false = 自身（free） |
-| `LoadTraceTexture()` | `frontend/src/utils/3d/load-trace:6` | — |
-| `LoadTraceStage()` | `frontend/src/utils/3d/load-trace:12` | — |
-| `LoadTraceAssets()` | `frontend/src/utils/3d/load-trace:18` | — |
-| `LoadTrace()` | `frontend/src/utils/3d/load-trace:38` | — |
-| `recordLoadTrace()` | `frontend/src/utils/3d/load-trace:52` | — |
-| `getLoadTraces()` | `frontend/src/utils/3d/load-trace:57` | — |
-| `clearLoadTraces()` | `frontend/src/utils/3d/load-trace:63` | — |
-| `loadMcTints()` | `frontend/src/utils/3d/mc-tints:29` | 预载 vendored tints 表（幂等；失败抛错由调用方降级兜底）。 |
-| `getTintColorSync()` | `frontend/src/utils/3d/mc-tints:56` | 取某染色类别在某 biome 下的颜色（默认 plains）。 |
-| `bakeMeshFragments()` | `frontend/src/utils/3d/mesh-baker:10` | Bake fragments once, then batch by animated bone, texture, and alpha mode. |
-| `addMeshToBoneGroup()` | `frontend/src/utils/3d/mesh-builder:31` | 从 spec mesh group 数据构建 THREE.Mesh 并添加到 boneGroup。 |
-| `compKey()` | `frontend/src/utils/3d/mesh:18` | 组件内骨骼 key（mi: 组件下标, id: 骨骼 id）。renderModel3D 与 buildSceneMesh 共用，随 mesh 迁移。 |
-| `disposeMaterial()` | `frontend/src/utils/3d/mesh:36` | 释放材质（含所有位图贴图），null/undefined 安全。 |
-| `buildSceneMesh()` | `frontend/src/utils/3d/mesh:54` | 构建 3D 场景网格（组件分组 + 骨骼树），返回供渲染/交互使用的组结构。 |
-| `mmdBonesToBoneNodes()` | `frontend/src/utils/3d/mmd-bones:16` | MMD 骨骼 → bone-tools BoneNode[]（id = pmx 索引字符串；越界父/自引用 → null 根） |
-| `MmdBonePickResult()` | `frontend/src/utils/3d/mmd-bones:32` | 拾取结果（pickMmdBone 命中） |
-| `pickMmdBone()` | `frontend/src/utils/3d/mmd-bones:39` | MMD 骨骼拾取：射线到骨骼 worldPosition 距离命中（Bone 无几何，网格归属拾取不适用） |
-| `FootIKController()` | `frontend/src/utils/3d/mmd-foot-ik:13` | 足部 IK 控制器 |
-| `createFootIKController()` | `frontend/src/utils/3d/mmd-foot-ik:27` | 创建足部 IK 控制器 |
-| `MmdMaterialListItem()` | `frontend/src/utils/3d/mmd-materials:13` | 材质列表项（listMmdMaterials） |
-| `MmdMaterialDetail()` | `frontend/src/utils/3d/mmd-materials:19` | 材质详情（getMmdMaterialDetail） |
-| `listMmdMaterials()` | `frontend/src/utils/3d/mmd-materials:31` | 材质列表：pmx.materials name + 索引（索引与 mesh.material 对齐） |
-| `setMmdMaterialVisible()` | `frontend/src/utils/3d/mmd-materials:38` | 材质显隐：Material.visible（MMDToonMaterial 继承 MeshPhongMaterial） |
-| `toggleMmdMaterialVisible()` | `frontend/src/utils/3d/mmd-materials:48` | 材质显隐切换：返回切换后的可见状态（越界返回 false） |
-| `setMmdMaterialOpacity()` | `frontend/src/utils/3d/mmd-materials:59` | 材质透明度（0-1）：opacity 设置 + transparent 联动（opacity &lt; 1 → transparent = true） |
-| `getMmdMaterialDetail()` | `frontend/src/utils/3d/mmd-materials:71` | 材质详情：name/可见/透明/高光/光泽（越界返回 null） |
-| `buildModelGroup()` | `frontend/src/utils/3d/model-group-builder:299` | 单组件 spec 构建核心。 |
-| `drawView()` | `frontend/src/utils/3d/model2d-draw:234` | 主视图绘制：逐 bone/cube 投影 + 可选高亮 + 可选标签 |
-| `drawMiniView()` | `frontend/src/utils/3d/model2d-draw:301` | 小地图：俯视图投影全部 cube 包围盒 |
-| `cubeVec()` | `frontend/src/utils/3d/model2d-draw:11` | — |
-| `HitZone()` | `frontend/src/utils/3d/model2d-hit-zones:9` | 骨骼屏幕热区（鼠标拾取） |
-| `calcBoneHitZones()` | `frontend/src/utils/3d/model2d-hit-zones:18` | 计算骨骼在屏幕上的命中热区（2D 正交投影，供鼠标拾取；导出供测试） |
-| `calcBoneHitZones()` | `frontend/src/utils/3d/model2d` | — |
-| `BedrockCube()` | `frontend/src/utils/3d/model2d:16` | Bedrock cube（AnalyzeBedrockModel 结构） |
-| `BedrockBone()` | `frontend/src/utils/3d/model2d:26` | Bedrock bone |
-| `BedrockModel()` | `frontend/src/utils/3d/model2d:32` | BedrockModel（AnalyzeBedrockModel 返回） |
-| `Model2DOptions()` | `frontend/src/utils/3d/model2d:37` | renderModel2D 选项 |
-| `renderModel2D()` | `frontend/src/utils/3d/model2d:58` | 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转） |
-| `CUBE_EPS()` | `frontend/src/utils/3d/model3d-spec:6` | 立方体几何 epsilon（0.001）——单点导出，cube-mesh.ts 的 THICKNESS_EPSILON/CUBE_EPSILON 同值收敛于此 |
-| `SpecCube()` | `frontend/src/utils/3d/model3d-spec:11` | 立方体（骨骼上的 box 元素） |
-| `SpecBone()` | `frontend/src/utils/3d/model3d-spec:23` | 骨骼 |
-| `SpecModelInput()` | `frontend/src/utils/3d/model3d-spec:31` | 模型输入（buildSpecFromModel 参数） |
-| `SpecBuildResult()` | `frontend/src/utils/3d/model3d-spec:38` | 构建产物：mesh data + bones |
-| `SpecMeshData()` | `frontend/src/utils/3d/model3d-spec:46` | 单 mesh 数据（Go spec meshGroups 结构近似） |
-| `buildSpecFromModel()` | `frontend/src/utils/3d/model3d-spec:67` | 构建 Three.js 可消费的 spec 结构 { bones[], meshes[] } |
-| `TdKeyAction()` | `frontend/src/utils/3d/model3d` | — |
-| `DEFAULT_TD_KEYMAP()` | `frontend/src/utils/3d/model3d` | — |
-| `loadTdKeymap()` | `frontend/src/utils/3d/model3d` | — |
-| `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d` | — |
-| `loadTdRotMode()` | `frontend/src/utils/3d/model3d` | — |
-| `SpecBone3D()` | `frontend/src/utils/3d/model3d:11` | — |
-| `SpecMeshGroup3D()` | `frontend/src/utils/3d/model3d:23` | — |
-| `Spec3D()` | `frontend/src/utils/3d/model3d:43` | — |
-| `BoneSelectInfo()` | `frontend/src/utils/3d/model3d:48` | 骨骼选中信息（window._3dOnBoneSelect 回调参数） |
-| `BoneMaps()` | `frontend/src/utils/3d/model3d:62` | 骨骼层级映射（dispatch 拾取归属用，ADR-093 T5） |
-| `JavaModelFace()` | `frontend/src/utils/3d/parse-java-model:44` | 单面解析产物（像素坐标 + Three 域 UV） |
-| `JavaModelResult()` | `frontend/src/utils/3d/parse-java-model:59` | — |
-| `PackEntryReader()` | `frontend/src/utils/3d/parse-java-model:73` | 条目读取器：Go binding ReadPackEntry 包装（返回 base64 或 null） |
-| `modelEntryFor()` | `frontend/src/utils/3d/parse-java-model:85` | 模型名 → 条目路径（无命名空间默认 minecraft） |
-| `parseJavaModel()` | `frontend/src/utils/3d/parse-java-model:292` | 解析资源包内 block/item 模型（parent 链递归）。 |
-| `isRenderableModel()` | `frontend/src/utils/3d/parse-java-model:320` | 判定模型是否"完整可渲染"：至少一个面有纹理或纯色（纯模板如 cube/cube_all 返回 false） |
-| `BeatDetectorLike()` | `frontend/src/utils/3d/perception/autodance:18` | 节拍 detector 接口（抽象，解耦具体实现） |
-| `AutoDanceOptions()` | `frontend/src/utils/3d/perception/autodance:26` | AutoDance 配置 |
-| `createAutoDanceController()` | `frontend/src/utils/3d/perception/autodance:69` | — |
-| `BeatDetectorOptions()` | `frontend/src/utils/3d/perception/beat-detector:27` | 节拍检测配置 |
-| `createBeatDetector()` | `frontend/src/utils/3d/perception/beat-detector:68` | 构建节拍 detector。 |
-| `BlinkCallback()` | `frontend/src/utils/3d/perception/blink:24` | 眨眼 callback：被 controller 在眨眼周期内周期性调用，传入当前权重（0→1→0） |
-| `BlinkOptions()` | `frontend/src/utils/3d/perception/blink:42` | — |
-| `createBlinkController()` | `frontend/src/utils/3d/perception/blink:55` | 构建眨眼 controller。 |
-| `createBreathController()` | `frontend/src/utils/3d/perception/breath:48` | 构建呼吸 controller：每次 build 调用一次，持有闭包 state |
-| `createGazeController()` | `frontend/src/utils/3d/perception/gaze:35` | — |
-| `LipSyncCallback()` | `frontend/src/utils/3d/perception/lipsync:26` | 单 morph 回调：消费方写入具体格式的 morph weight |
-| `MultiLipSyncCallback()` | `frontend/src/utils/3d/perception/lipsync:29` | 多 morph 回调：(morphId, weight) → 消费方写入 |
-| `LipSyncOptions()` | `frontend/src/utils/3d/perception/lipsync:36` | — |
-| `createLipSyncController()` | `frontend/src/utils/3d/perception/lipsync:51` | 构建 LipSync controller。 |
-| `buildLipMorphIndices()` | `frontend/src/utils/3d/perception/lipsync:132` | 从 SemanticMorphMap 提取口型 morph index 映射（供消费方使用）。 |
-| `eulerToQuaternion()` | `frontend/src/utils/3d/quaternion:15` | 欧拉角（度）→ 四元数，旋转顺序: Rz * Ry * Rx (ZYX intrinsic = XYZ extrinsic)。 |
-| `isIdentityQuat()` | `frontend/src/utils/3d/quaternion:78` | 判定四元数是否≈单位四元数（浮点 epsilon）。 |
-| `hasBoneRotation()` | `frontend/src/utils/3d/quaternion:89` | 判定骨骼旋转是否实际生效（四元数 ≠ 单位四元数，epsilon 口径）。 |
-| `applyRotationIfNonIdentity()` | `frontend/src/utils/3d/quaternion:102` | 若旋转四元数非单位四元数，则赋值到 Three.js 对象的 quaternion；单位四元数跳过（保持默认）。 |
-| `MAX_PIXEL_RATIO_KEY()` | `frontend/src/utils/3d/render-budget:5` | — |
-| `getMaxPixelRatio()` | `frontend/src/utils/3d/render-budget:10` | 读取用户设置的渲染分辨率上限（设置面板 slider 持久化）；缺省 1.5。 |
-| `PREVIEW_FRAME_INTERVAL_MS()` | `frontend/src/utils/3d/render-budget:17` | — |
-| `MAX_FPS_DEFAULT()` | `frontend/src/utils/3d/render-budget:22` | — |
-| `MAX_FPS_KEY()` | `frontend/src/utils/3d/render-budget:23` | — |
-| `invalidateMaxFpsCache()` | `frontend/src/utils/3d/render-budget:30` | — |
-| `getMaxFps()` | `frontend/src/utils/3d/render-budget:33` | — |
-| `getFrameIntervalMs()` | `frontend/src/utils/3d/render-budget:44` | 当前帧间隔（ms）：fps=0（不限制）→ 极小间隔（rAF 每帧都渲染）。 |
-| `AdaptiveRenderBudget()` | `frontend/src/utils/3d/render-budget:52` | — |
-| `previewPixelRatio()` | `frontend/src/utils/3d/render-budget:58` | — |
-| `createAdaptiveRenderBudget()` | `frontend/src/utils/3d/render-budget:63` | — |
-| `sampleAdaptivePixelRatio()` | `frontend/src/utils/3d/render-budget:74` | Returns a new pixel ratio only when sustained frame delivery is too slow. |
-| `shouldRenderPreviewFrame()` | `frontend/src/utils/3d/render-budget:90` | — |
-| `shouldRenderAtFps()` | `frontend/src/utils/3d/render-budget:101` | 帧率上限节流版：now 已到/过 nextFrame 才渲染。 |
-| `Disposable()` | `frontend/src/utils/3d/safe-dispose:6` | 可释放对象的最小形状（Three.js 的 Texture/Material/Geometry 等均满足） |
-| `safeDispose()` | `frontend/src/utils/3d/safe-dispose:11` | 安全释放：dispose 抛错不阻塞后续释放（个别适配器 dispose 会抛） |
-| `SceneStats()` | `frontend/src/utils/3d/scene-stats:19` | 场景统计（ADR-131 P0 产出，调用方映射进 StatsCardModel） |
-| `collectSceneStats()` | `frontend/src/utils/3d/scene-stats:35` | 一次 traverse 收集统计；roots 接受 Scene 或 Object3D[]（sceneBaseline 差量后的内容层根） |
-| `ScreenshotOpts()` | `frontend/src/utils/3d/screenshot:13` | 截图选项 |
-| `screenshotFromRenderer()` | `frontend/src/utils/3d/screenshot:27` | 从活跃的 renderer/scene/camera 截图，返回 PNG/JPEG base64（无 data: 前缀）。 |
-| `SemanticBoneId()` | `frontend/src/utils/3d/semantic-bones:21` | 语义骨骼 id（对齐 VRM humanoid 命名；MMD 经候选名匹配；center 为 MMD 特有整体根） |
-| `SEMANTIC_BONE_IDS()` | `frontend/src/utils/3d/semantic-bones:47` | 全部语义骨骼 id（稳定顺序：躯干 → 头颈 → 四肢；消费方遍历用） |
-| `SemanticBoneEntry()` | `frontend/src/utils/3d/semantic-bones:74` | 语义骨骼解析结果：语义 → 格式内骨骼（object 可直接改变换；缺失 = 该语义缺省） |
-| `SemanticBoneMap()` | `frontend/src/utils/3d/semantic-bones:82` | 语义骨骼映射表（Partial：匹配不到的语义缺省，消费方宽容降级） |
-| `MMD_SEMANTIC_CANDIDATES()` | `frontend/src/utils/3d/semantic-bones:92` | MMD 语义候选名表：语义 → 候选骨骼名列表（MMD 命名空间；消费方不直接触达） |
-| `matchSemanticBone()` | `frontend/src/utils/3d/semantic-bones:154` | 在 BoneTree 中按候选名匹配首个骨骼（name 优先、id 兜底；候选顺序即优先级）。 |
-| `resolveSemanticBones()` | `frontend/src/utils/3d/semantic-bones:167` | 从 BoneTree + 候选表解析语义映射（MMD 等无标准语义的格式走此路）。 |
-| `getSemanticBone()` | `frontend/src/utils/3d/semantic-bones:186` | 取语义骨骼（消费方唯一入口；缺失返回 null，调用方自行降级）。 |
-| `vrmSemanticBoneMap()` | `frontend/src/utils/3d/semantic-bones:200` | VRM 特化：humanoid.humanBones 的键天然就是语义名（52 个标准骨骼）， 零候选匹配直接产映射——与 buildVrmBoneNodes 同一数据源。 |
-| `mmdSemanticBoneMap()` | `frontend/src/utils/3d/semantic-bones:216` | MMD 特化：BoneTree（mmdBonesToBoneNodes → buildBoneTree 产物）+ 内置候选表 → 语义映射。 |
-| `ysmSemanticBoneMap()` | `frontend/src/utils/3d/semantic-bones:303` | YSM 特化：从 SpecBone3D[]（spec.models[].bones[]）构建语义映射。 |
-| `SemanticMorphId()` | `frontend/src/utils/3d/semantic-morphs:14` | 语义 morph id（对齐 MMD 标准表情 + VRM 标准 expression） |
-| `SEMANTIC_MORPH_IDS()` | `frontend/src/utils/3d/semantic-morphs:24` | 全部语义 morph id（稳定顺序） |
-| `SemanticMorphEntry()` | `frontend/src/utils/3d/semantic-morphs:30` | 语义 morph 解析结果 |
-| `SemanticMorphMap()` | `frontend/src/utils/3d/semantic-morphs:36` | 语义 morph 映射表（Partial：匹配不到的语义缺省） |
-| `MMD_SEMANTIC_MORPH_CANDIDATES()` | `frontend/src/utils/3d/semantic-morphs:43` | MMD 语义 morph 候选名表 |
-| `matchSemanticMorph()` | `frontend/src/utils/3d/semantic-morphs:60` | 在 morph 名列表中按候选名匹配首个语义 morph（候选顺序 = 优先级）。 |
-| `resolveSemanticMorphs()` | `frontend/src/utils/3d/semantic-morphs:70` | 从 morph 名列表 + 候选表解析语义 morph 映射（MMD 等无标准语义的格式走此路）。 |
-| `mmdSemanticMorphMap()` | `frontend/src/utils/3d/semantic-morphs:87` | MMD 特化：pmx.morphs[].name 列表 → 语义 morph 映射。 |
-| `getSemanticMorph()` | `frontend/src/utils/3d/semantic-morphs:95` | 取语义 morph 条目（消费方唯一入口；缺失返回 null）。 |
-| `Vec3()` | `frontend/src/utils/3d/spec-builder:23` | vec3 — Go threejs/spec.go L55 |
-| `Cube2D()` | `frontend/src/utils/3d/spec-builder:30` | Cube2D — Go types/bedrock.go Cube2D |
-| `BedrockModel()` | `frontend/src/utils/3d/spec-builder:56` | BedrockModel — Go types/bedrock.go BedrockModel |
-| `SubModel()` | `frontend/src/utils/3d/spec-builder:72` | SubModel 子模型条目（Go types/bedrock.go SubModel）。 |
-| `ModelGroup()` | `frontend/src/utils/3d/spec-builder:87` | ModelGroup — Go threejs/spec.go ModelGroup |
-| `BoneData()` | `frontend/src/utils/3d/spec-builder:99` | BoneData — Go threejs/spec.go BoneData |
-| `MeshData()` | `frontend/src/utils/3d/spec-builder:109` | MeshData — Go threejs/spec.go MeshData |
-| `buildSpecFromGeometryJSON()` | `frontend/src/utils/3d/spec-builder:128` | 从 bedrock geometry JSON 构建 3D spec（纯 TS，无 Go 依赖）。 |
-| `PerfLevel()` | `frontend/src/utils/3d/state/perf-presets:16` | 性能档位：低 / 中 / 高 + 自定义（自定义不套用，保持用户手调） |
-| `PERF_PRESET_KEY()` | `frontend/src/utils/3d/state/perf-presets:19` | 持久化键：当前档位（对齐 ysm_3d_maxFps 风格） |
-| `PERF_PRESET_DEFAULT()` | `frontend/src/utils/3d/state/perf-presets:22` | 无存档时的默认档位 |
-| `PERF_PRESETS()` | `frontend/src/utils/3d/state/perf-presets:28` | 档位表：三档 → StatePath → 值（纯数据，新增档位/参数只改这里，零接线） |
-| `getPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:50` | 读取当前档位（无存档或未知值回默认） |
-| `applyPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:61` | 套用档位：遍历档位表走状态层统一写口（默认广播 notify，面板订阅可自动刷新）。 |
-| `setPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:70` | 切换档位：持久化 + 套用 |
-| `PreviewStatePath()` | `frontend/src/utils/3d/state/preview-state:33` | 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） |
-| `PreviewSnapshot()` | `frontend/src/utils/3d/state/preview-state:48` | 状态层快照：`visibleWhen: (s: PreviewSnapshot) =&gt; boolean` 纯函数谓词吃的快照形状。 |
-| `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:69` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
-| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:91` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
-| `resetActiveComponent()` | `frontend/src/utils/3d/state/preview-state:270` | 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。 |
-| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:280` | 订阅横切设置变更；返回取消订阅函数 |
-| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:301` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
-| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:310` | 写入路径值。 |
-| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:320` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
-| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:329` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
-| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:336` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
-| `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
-| `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
-| `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |
-| `getTextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:35` | Classify alpha once per cached texture so material setup can choose a render path. |
-| `TextureCacheImpl()` | `frontend/src/utils/3d/texture-cache:18` | — |
-| `textureCache()` | `frontend/src/utils/3d/texture-cache:94` | 全局单例（随 3D 会话生命周期；disposeAll 由 cleanup-3d.ts 调用） |
-| `VrmMaterialListItem()` | `frontend/src/utils/3d/vrm-materials:11` | 材质列表项（listVrmMaterials） |
-| `VrmMaterialDetail()` | `frontend/src/utils/3d/vrm-materials:17` | 材质详情（getVrmMaterialDetail） |
-| `listVrmMaterials()` | `frontend/src/utils/3d/vrm-materials:28` | 材质列表：vrm.scene 遍历所有 Mesh.material（含数组材质） |
-| `setVrmMaterialVisible()` | `frontend/src/utils/3d/vrm-materials:38` | 材质显隐：Material.visible（MToon/标准/基础均支持） |
-| `setVrmMaterialOpacity()` | `frontend/src/utils/3d/vrm-materials:48` | 材质透明度（0-1）：opacity 设置 + transparent 联动 |
-| `getVrmMaterialDetail()` | `frontend/src/utils/3d/vrm-materials:62` | 材质详情：name/可见/透明/类型（越界返回 null） |
-| `YsmAnimPlayer()` | `frontend/src/utils/3d/ysm-animation-player:32` | — |
-| `createYsmAnimPlayer()` | `frontend/src/utils/3d/ysm-animation-player:281` | Builds a YSM animation player whose per-frame path reuses every temporary object. |
-| `YsmObjectHandle()` | `frontend/src/utils/3d/ysm-object:25` | YSM 内容场景句柄：挂进任意 scene 后的内容层操作与释放 |
-| `buildYsmObject()` | `frontend/src/utils/3d/ysm-object:50` | 构建 YSM 内容场景图：spec → rootGroup（骨骼分组 + 网格挂载 + 纹理绑定）。 |
 | `animateNumber()` | `frontend/src/utils/animation/animate:15` | 里程表滚动进位动画 |
 | `ControllerTransition()` | `frontend/src/utils/animation/animation-controller:10` | 状态转换定义 |
 | `ControllerState()` | `frontend/src/utils/animation/animation-controller:22` | 单个状态定义 |

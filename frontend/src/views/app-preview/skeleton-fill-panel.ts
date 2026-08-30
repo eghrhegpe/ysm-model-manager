@@ -2,12 +2,12 @@
 // 填充 3D 信息面板：统计 + 纹理 + 模型选择 + 骨骼列表 + 详情框
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
-import type { BoneSelectInfo } from "../../utils/3d/model3d.ts";
+import type { BoneSelectInfo } from "../../features/preview-3d/model3d.ts";
 import type { BedrockGeometry } from "./geometry.ts";
-import type { Spec3D } from "../../utils/3d/model3d.ts";
-import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
-import { multiModelSelectNode } from "../../utils/3d/adapters/preview-menu/multi-model.ts";
-import type { PreviewSnapshot } from "../../utils/3d/state/preview-state.ts";
+import type { Spec3D } from "../../features/preview-3d/model3d.ts";
+import type { PreviewMenuNode } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
+import { multiModelSelectNode } from "../../features/preview-3d/adapters/preview-menu/multi-model.ts";
+import type { PreviewSnapshot } from "../../features/preview-3d/state/preview-state.ts";
 
 /** fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） */
 export interface PanelHandle {

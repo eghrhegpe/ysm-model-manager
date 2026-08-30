@@ -54,7 +54,7 @@ ysm-model-manager/
 │   │   ├── backend/           # Wails/browser/android 后端适配
 │   │   ├── views/             # Web Components（Shadow DOM）
 │   │   ├── core/              # 基础设施（context-menus/i18n/...）
-│   │   └── utils/3d/          # Three.js 3D 适配器
+│   │   └── features/preview-3d/          # Three.js 3D 适配器
 │   └── bindings/              # Wails 自动生成的 TS 绑定
 ├── docs/                      # 文档（GitHub Pages 主站）
 ├── scripts/                   # 构建/发布/工具脚本

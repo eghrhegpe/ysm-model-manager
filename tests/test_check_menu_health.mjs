@@ -107,7 +107,7 @@ check('门禁拦截路径：schemaId + renderCustom 同存项产出 render-chann
     schemaId: YSM_MODEL_SCHEMA_ID,
     renderCustom: (list) => {},
   }`, 'model');
-  it.file = 'frontend/src/utils/3d/adapters/ysm-adapter.ts';
+  it.file = 'frontend/src/features/preview-3d/adapters/ysm-adapter.ts';
   const v = itemViolations(it, new Set(['preview.model']));
   assert.ok(v.some((x) => x.rule === 'render-channel-ambiguous'), '双通道同存必须被门禁拦截（拦截路径真实执行）');
 });

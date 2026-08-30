@@ -1,7 +1,7 @@
 // ===== Canvas 全屏放大预览 =====
 // 从 events.ts 拆分：openFullPreview
 import type { BedrockGeometry } from "./geometry.ts";
-import { renderModel2D } from "../../utils/3d/model2d.ts";
+import { renderModel2D } from "../../features/preview-3d/model2d.ts";
 
 /** 全窗放大预览（独立函数，不依赖组件实例） */
 export async function openFullPreview(

@@ -6,25 +6,25 @@ tier: architecture
 adr:
   - ADR-125
 source_files:
-  - frontend/src/utils/3d/caps/scene-capability-registry.ts
-  - frontend/src/utils/3d/caps/sky-capability.ts
-  - frontend/src/utils/3d/caps/ground-capability.ts
-  - frontend/src/utils/3d/caps/light-capability.ts
-  - frontend/src/utils/3d/caps/postprocessing-capability.ts
-  - frontend/src/utils/3d/caps/environment-capability.ts
-  - frontend/src/utils/3d/caps/fog-capability.ts
-  - frontend/src/utils/3d/caps/shadow-capability.ts
-  - frontend/src/utils/3d/adapters/mount-preview-core.ts
+  - frontend/src/features/preview-3d/caps/scene-capability-registry.ts
+  - frontend/src/features/preview-3d/caps/sky-capability.ts
+  - frontend/src/features/preview-3d/caps/ground-capability.ts
+  - frontend/src/features/preview-3d/caps/light-capability.ts
+  - frontend/src/features/preview-3d/caps/postprocessing-capability.ts
+  - frontend/src/features/preview-3d/caps/environment-capability.ts
+  - frontend/src/features/preview-3d/caps/fog-capability.ts
+  - frontend/src/features/preview-3d/caps/shadow-capability.ts
+  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts
 tests:
-  - frontend/src/utils/3d/adapters/__tests__/mount-preview-core.test.ts
-  - frontend/src/utils/3d/caps/environment-capability.test.ts
-  - frontend/src/utils/3d/caps/fog-capability.test.ts
-  - frontend/src/utils/3d/caps/ground-capability.test.ts
-  - frontend/src/utils/3d/caps/light-capability.test.ts
-  - frontend/src/utils/3d/caps/postprocessing-capability.test.ts
-  - frontend/src/utils/3d/caps/scene-capability-registry.test.ts
-  - frontend/src/utils/3d/caps/shadow-capability.test.ts
-  - frontend/src/utils/3d/caps/sky-capability.test.ts
+  - frontend/src/features/preview-3d/adapters/__tests__/mount-preview-core.test.ts
+  - frontend/src/features/preview-3d/caps/environment-capability.test.ts
+  - frontend/src/features/preview-3d/caps/fog-capability.test.ts
+  - frontend/src/features/preview-3d/caps/ground-capability.test.ts
+  - frontend/src/features/preview-3d/caps/light-capability.test.ts
+  - frontend/src/features/preview-3d/caps/postprocessing-capability.test.ts
+  - frontend/src/features/preview-3d/caps/scene-capability-registry.test.ts
+  - frontend/src/features/preview-3d/caps/shadow-capability.test.ts
+  - frontend/src/features/preview-3d/caps/sky-capability.test.ts
 created: 2026-08-xx
 updated: 2026-08-xx
 description: ADR-073 确立的联邦渲染能力架构：caps/ 下的 SceneCapability 通过 sceneCapabilityRegistry 统一注册、自动挂载与菜单暴露

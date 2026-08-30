@@ -16,7 +16,7 @@ main.go     @JiangKaslana
 /frontend/css/  @JiangKaslana
 
 # 3D 渲染适配器（敏感区，改动需重点审查）
-/frontend/src/utils/3d/  @JiangKaslana
+/frontend/src/features/preview-3d/  @JiangKaslana
 
 # 文档 + ADR（协作编辑区）
 /docs/      @JiangKaslana

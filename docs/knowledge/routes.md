@@ -62,10 +62,10 @@
 | 导入、导入队列、拖拽导入、命名表单、文件夹导入、覆盖导入、import | [导入队列 import-queue](./import-queue.md) | 导入分两层：**全局导入执行器 `import-executor.ts`（一等公民）** 负责真正的落盘（`directImport` 单文件直导 / `importFolder` 文件夹整组 / `executeCollected` 批量… |
 | 模型统计、骨骼数、立方体数、纹理尺寸、SearchModels、数值筛选、Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | `frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo… |
 | 2D 预览、骨骼图、Canvas 渲染、前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。 |
-| 3D 预览、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底、OrbitControls | [3D 预览渲染 model3d](./model3d.md) | 前端 Three.js 3D 渲染层（`frontend/src/utils/3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/mmd… |
+| 3D 预览、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底、OrbitControls | [3D 预览渲染 model3d](./model3d.md) | 前端 Three.js 3D 渲染层（`frontend/src/features/preview-3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/mmd… |
 | 优化、性能、瓶颈、优化记录、optimization、perf、KTX2、纹理缓存、加载速度、内存、GPU 内存、闪退、泄漏、dispose | [优化记录 optimization-log](./optimization_log.md) | — |
 | 页面、当前页、状态管理、page store、currentPage | [页面状态管理 page-store.ts](./page-store.md) | `page-store.ts` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。核心职责是维护只读当前页状态与启动初始页解析——*… |
-| 自主动画、自动跳舞、眨眼、呼吸、视线追踪、口型同步、节拍检测、模型感知、自动运动 | [3D 感知系统 perception](./perception.md) | `utils/3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。 |
+| 自主动画、自动跳舞、眨眼、呼吸、视线追踪、口型同步、节拍检测、模型感知、自动运动 | [3D 感知系统 perception](./perception.md) | `features/preview-3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。 |
 | pointerdown、pointermove、pointerup、setPointerCapture、touch-action、触屏、拖拽、旋转、hover、mouseenter、全窗预览 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `… |
 | 3D 预览、统一预览外壳、程序化天空 / sky / 背景 / scene.background、PreviewAdapter 适配器、全模型预览（YSM / VRM / MMD / Litematic）、mount3D | [统一 3D 预览核心 preview-core](./preview_core.md) | ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚手架（旧实现各内联 ~250 行同构），成为所有富格式 3D 预览的**单一事实来源外壳**。内容差异经 `PreviewAdapter.bui… |
 | 回收站、恢复文件、清空回收站、软删除、recycle、还原 | [回收站界面 recycle-bin](./recycle-bin.md) | `recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调… |

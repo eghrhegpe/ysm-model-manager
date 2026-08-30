@@ -423,6 +423,9 @@
 | `frontend/src/features/import-executor.ts` | 211 |
 | `frontend/src/features/import-executor.ts` | 224 |
 | `frontend/src/features/pack-dnd.ts` | 37 |
+| `frontend/src/features/preview-3d/adapters/mount-preview-core.ts` | 423 |
+| `frontend/src/features/preview-3d/adapters/preview-loading.ts` | 38 |
+| `frontend/src/features/preview-3d/adapters/switch-preview.ts` | 147 |
 | `frontend/src/features/recycle-bin.ts` | 249 |
 | `frontend/src/features/version-updater.ts` | 149 |
 | `frontend/src/features/version-updater.ts` | 158 |
@@ -431,9 +434,6 @@
 | `frontend/src/features/version-updater.ts` | 216 |
 | `frontend/src/features/version-updater.ts` | 250 |
 | `frontend/src/features/version-updater.ts` | 260 |
-| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 423 |
-| `frontend/src/utils/3d/adapters/preview-loading.ts` | 38 |
-| `frontend/src/utils/3d/adapters/switch-preview.ts` | 147 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 387 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 401 |

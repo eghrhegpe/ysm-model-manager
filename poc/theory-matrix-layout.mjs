@@ -145,7 +145,7 @@ const actions = [
   {
     item: "scale 未建模",
     layer: "前端动画系统",
-    files: ["frontend/src/utils/3d/animation/*.ts (推测)", "molang 求值器"],
+    files: ["frontend/src/features/preview-3d/animation/*.ts (推测)", "molang 求值器"],
     effort: "中",
     risk: "中",
     detail: "在 molang → bone transform 求值时，补 bone.scale = [sX, sY, sZ] 通道。上游 animSx/Sy/Sz 来自 boneParams[6..8]，我们需在动画解析时识别 scale 关键帧。",

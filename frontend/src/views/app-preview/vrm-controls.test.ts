@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
-import type { PreviewActionMenuCtx } from "../../utils/3d/adapters/preview-menu/node-types.ts";
+import type { PreviewActionMenuCtx } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
 
 // 截图链路（Wails 绑定 SaveScreenshotFile）在 node 测试环境不可用——
 // mock saveScreenshot 隔离副作用，只验证 vrmShotNodes 的 action 触发截图调用

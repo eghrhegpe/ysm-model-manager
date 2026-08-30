@@ -1,6 +1,6 @@
 # 通用骨骼工具层架构经验
 
-> 本文档沉淀 YSM 项目中 `utils/3d/bone-tools.ts` 的架构设计经验，供其他 3D 项目参考。
+> 本文档沉淀 YSM 项目中 `features/preview-3d/bone-tools.ts` 的架构设计经验，供其他 3D 项目参考。
 
 ## 背景
 
@@ -142,8 +142,8 @@ describe("buildVrmBoneNodes", () => {
 
 ## 相关文件
 
-- `frontend/src/utils/3d/bone-tools.ts` — 通用工具实现
-- `frontend/src/utils/3d/adapters/vrm-bone.ts` — VRM 适配
-- `frontend/src/utils/3d/mmd-bones.ts` — MMD 适配
-- `frontend/src/utils/3d/bone-tools.test.ts` — 通用层测试
-- `frontend/src/utils/3d/adapters/vrm-bone.test.ts` — 适配层测试
+- `frontend/src/features/preview-3d/bone-tools.ts` — 通用工具实现
+- `frontend/src/features/preview-3d/adapters/vrm-bone.ts` — VRM 适配
+- `frontend/src/features/preview-3d/mmd-bones.ts` — MMD 适配
+- `frontend/src/features/preview-3d/bone-tools.test.ts` — 通用层测试
+- `frontend/src/features/preview-3d/adapters/vrm-bone.test.ts` — 适配层测试

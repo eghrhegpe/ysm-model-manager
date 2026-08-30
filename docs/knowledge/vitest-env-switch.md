@@ -140,8 +140,8 @@ getAppMock.mockResolvedValue({
 | `core/handlers/instance-ops.test.ts` | 直接标注 | 纯逻辑 |
 | `core/context-menus.test.ts` | 标注 + 模式2 | 隔壁已修 `document` mock |
 | `features/dnd-collector.test.ts` | 直接标注 | 纯逻辑 |
-| 14 个 `utils/3d/*.test.ts` | 直接标注 | 纯逻辑（骨骼/材质/感知/能力） |
-| `utils/3d/adapters/vrm-bone.test.ts` | 直接标注 | 纯逻辑 |
+| 14 个 `features/preview-3d/*.test.ts` | 直接标注 | 纯逻辑（骨骼/材质/感知/能力） |
+| `features/preview-3d/adapters/vrm-bone.test.ts` | 直接标注 | 纯逻辑 |
 | `views/app-preview/mmd-siblings.test.ts` | 直接标注 | 纯逻辑 |
 | `views/app-sidebar/loader.test.ts` | 标注 + 模式4 | mock `getApp` |
 | `views/app-tree/bus-handlers.test.ts` | 标注 + 模式3 | mock `capabilities` |

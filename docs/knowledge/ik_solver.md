@@ -4,8 +4,8 @@ name: CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik
 tier: leaf
 category: core
 source_files:
-  - frontend/src/utils/3d/ik-solver.ts
-  - frontend/src/utils/3d/mmd-foot-ik.ts
+  - frontend/src/features/preview-3d/ik-solver.ts
+  - frontend/src/features/preview-3d/mmd-foot-ik.ts
 use_when:
   - IK 求解
   - 骨骼 IK
@@ -59,4 +59,4 @@ use_when:
 ## 相关
 
 - ADR-072（工具层纯净）/ ADR-066（babylon-mmd 提及）
-- frontend/src/utils/3d/bone-tools.ts、semantic-bones.ts、ik-solver.test.ts、mmd-foot-ik.test.ts
+- frontend/src/features/preview-3d/bone-tools.ts、semantic-bones.ts、ik-solver.test.ts、mmd-foot-ik.test.ts

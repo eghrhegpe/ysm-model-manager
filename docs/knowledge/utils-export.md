@@ -6,7 +6,7 @@ category: utils
 source_files:
   - frontend/src/views/app-preview/screenshot-renderer.ts
   - frontend/src/views/app-preview/cache.ts
-  - frontend/src/utils/3d/screenshot.ts
+  - frontend/src/features/preview-3d/screenshot.ts
 tests:
   - frontend/src/views/app-preview/cache.test.ts
   - frontend/src/views/app-preview/screenshot-renderer.test.ts

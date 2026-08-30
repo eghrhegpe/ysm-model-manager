@@ -4,7 +4,7 @@ name: 3D 感知系统 perception
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/utils/3d/perception/
+  - frontend/src/features/preview-3d/perception/
 use_when:
   - 自主动画
   - 自动跳舞
@@ -16,16 +16,16 @@ use_when:
   - 模型感知
   - 自动运动
 invariant_anchors:
-  - frontend/src/utils/3d/perception/autodance.ts|createAutoDanceController
-  - frontend/src/utils/3d/perception/beat-detector.ts|createBeatDetector
-  - frontend/src/utils/3d/perception/blink.ts|createBlinkController
+  - frontend/src/features/preview-3d/perception/autodance.ts|createAutoDanceController
+  - frontend/src/features/preview-3d/perception/beat-detector.ts|createBeatDetector
+  - frontend/src/features/preview-3d/perception/blink.ts|createBlinkController
 ---
 
 # 3D 感知系统 perception
 
 ## 概览
 
-`utils/3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。
+`features/preview-3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。
 
 ## 核心职责
 

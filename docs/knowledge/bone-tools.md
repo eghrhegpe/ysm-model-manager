@@ -4,15 +4,15 @@ name: 跨格式骨骼工具层 bone-tools
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/3d/bone-tools.ts
-  - frontend/src/utils/3d/adapters/vrm-bone.ts
-  - frontend/src/utils/3d/adapters/vrm-bone-ui.ts
-  - frontend/src/utils/3d/mmd-bones.ts
+  - frontend/src/features/preview-3d/bone-tools.ts
+  - frontend/src/features/preview-3d/adapters/vrm-bone.ts
+  - frontend/src/features/preview-3d/adapters/vrm-bone-ui.ts
+  - frontend/src/features/preview-3d/mmd-bones.ts
 tests:
-  - frontend/src/utils/3d/bone-tools.test.ts
-  - frontend/src/utils/3d/adapters/vrm-bone.test.ts
-  - frontend/src/utils/3d/adapters/vrm-bone-ui.test.ts
-  - frontend/src/utils/3d/mmd-bones.test.ts
+  - frontend/src/features/preview-3d/bone-tools.test.ts
+  - frontend/src/features/preview-3d/adapters/vrm-bone.test.ts
+  - frontend/src/features/preview-3d/adapters/vrm-bone-ui.test.ts
+  - frontend/src/features/preview-3d/mmd-bones.test.ts
 use_when:
   - 骨骼工具
   - 骨骼树
@@ -24,15 +24,15 @@ use_when:
   - buildBoneTree
   - makeBonePanelRenderer
 invariant_anchors:
-  - frontend/src/utils/3d/bone-tools.ts|buildBoneTree
-  - frontend/src/utils/3d/adapters/vrm-bone-ui.ts|makeBonePanelRenderer
+  - frontend/src/features/preview-3d/bone-tools.ts|buildBoneTree
+  - frontend/src/features/preview-3d/adapters/vrm-bone-ui.ts|makeBonePanelRenderer
 ---
 
 # 跨格式骨骼工具层 bone-tools
 
 ## 概览
 
-`frontend/src/utils/3d/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D 层级树两种形态的差异，统一为 `BoneNode` / `BoneTree` 抽象。纯逻辑零 DOM——UI 渲染不在本层（ADR-072 工具层纯净）。
+`frontend/src/features/preview-3d/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D 层级树两种形态的差异，统一为 `BoneNode` / `BoneTree` 抽象。纯逻辑零 DOM——UI 渲染不在本层（ADR-072 工具层纯净）。
 
 ## 核心职责
 

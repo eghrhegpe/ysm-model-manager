@@ -3,11 +3,11 @@ import * as THREE from "three";
 import { bus } from "../../bus.ts";
 import { getApp } from "../../backend/app.ts";
 import { loadTextures } from "./model3d-loader.ts";
-import { buildYsmObject, type YsmObjectHandle } from "../../utils/3d/ysm-object.ts";
-import { screenshotFromRenderer } from "../../utils/3d/screenshot.ts";
-import { type Spec3D } from "../../utils/3d/model3d.ts";
-import { buildSpecFromGeometryJSON } from "../../utils/3d/spec-builder.ts";
-import { lightDirToPosition, type DirectionalLightParams } from "../../utils/3d/caps/light-capability.ts";
+import { buildYsmObject, type YsmObjectHandle } from "../../features/preview-3d/ysm-object.ts";
+import { screenshotFromRenderer } from "../../features/preview-3d/screenshot.ts";
+import { type Spec3D } from "../../features/preview-3d/model3d.ts";
+import { buildSpecFromGeometryJSON } from "../../features/preview-3d/spec-builder.ts";
+import { lightDirToPosition, type DirectionalLightParams } from "../../features/preview-3d/caps/light-capability.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 
 // ===== 3D 场景灯光样板（原 scene-lights.ts，唯一消费者是本文件，合并回）=====

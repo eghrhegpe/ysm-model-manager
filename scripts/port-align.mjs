@@ -37,7 +37,7 @@ import { run } from './_lib/proc.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, '..');
-const CUBE_MESH_TS = resolve(REPO_ROOT, 'frontend/src/utils/3d/cube-mesh.ts');
+const CUBE_MESH_TS = resolve(REPO_ROOT, 'frontend/src/features/preview-3d/cube-mesh.ts');
 
 // esbuild 解析：port-align.mjs 在仓库根，从 frontend/ 向上走 Node 模块解析，
 // 找到 esbuild/bin/esbuild。不硬编码 node_modules 路径，兼容 hoisting。

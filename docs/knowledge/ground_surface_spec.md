@@ -4,8 +4,8 @@ name: 地面材质 spec 单一事实源 ground-surface-spec
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/3d/caps/ground-surface-spec.ts
-  - frontend/src/utils/3d/caps/ground-capability.ts
+  - frontend/src/features/preview-3d/caps/ground-surface-spec.ts
+  - frontend/src/features/preview-3d/caps/ground-capability.ts
 use_when:
   - 地面材质 / 地面贴图 / 地板 / surface
   - 材质重建与原地更新的判别（needsRebuild）
@@ -13,8 +13,8 @@ use_when:
   - 自定义图片上传到地面（TextureLoader）
   - GroundMaterialSpec / specKey / textureToken
 invariant_anchors:
-  - frontend/src/utils/3d/caps/ground-surface-spec.ts|buildGroundSurfaceSpec
-  - frontend/src/utils/3d/caps/ground-surface-spec.ts|groundSurfaceNeedsRebuild
+  - frontend/src/features/preview-3d/caps/ground-surface-spec.ts|buildGroundSurfaceSpec
+  - frontend/src/features/preview-3d/caps/ground-surface-spec.ts|groundSurfaceNeedsRebuild
 ---
 # 地面材质 spec 单一事实源 ground-surface-spec
 

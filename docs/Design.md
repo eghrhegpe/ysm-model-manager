@@ -910,7 +910,7 @@ G-1 抗脆弱测试基础设施（ADR-035）——测试断言稳定语义而非
 
 - **禁止**：入口函数缩写后缀（`.init.test.ts` / `.load.test.ts`）——统一用 `.integration.test.ts` 表达集成语义；`.spec.ts` 仅限 `frontend/e2e/`（Playwright），不混入 src。
 - **归属**：共享 helper 入 `frontend/src/test-utils/`，其自身测试放同目录；契约/脚本测试（`tests/*.mjs`）留在仓库根，不属 vitest 范畴。
-- **例外（已备案）**：`real-data-fuzz.test.ts`（独立数据轰击，不镜像模块）、`core/i18n/locales-consistency.test.ts`（locales/ 禁放 .test.ts，放上级 i18n/）、`utils/3d/model3d-spec.test.ts`（模块名含 `-spec` 属源码命名，非 Playwright spec）。
+- **例外（已备案）**：`real-data-fuzz.test.ts`（独立数据轰击，不镜像模块）、`core/i18n/locales-consistency.test.ts`（locales/ 禁放 .test.ts，放上级 i18n/）、`features/preview-3d/model3d-spec.test.ts`（模块名含 `-spec` 属源码命名，非 Playwright spec）。
 - **新增测试**：先看同目录既有命名，遵循上表；组件级测试按 §19.1 testid 规范写。
 
 ---

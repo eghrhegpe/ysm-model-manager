@@ -4,7 +4,7 @@ name: worker-bridge-settleError-fallback
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/3d/adapters/worker-bridge.ts
+  - frontend/src/features/preview-3d/adapters/worker-bridge.ts
 use_when:
   - 扩展 WorkerErrorStrategy 策略
   - 评审 worker-bridge settleError 分支

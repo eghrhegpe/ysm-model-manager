@@ -4,9 +4,9 @@ import { getApp } from "../../backend/app.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
-import { buildSpecFromGeometryJSON } from "../../utils/3d/spec-builder.ts";
-import { textureCache } from "../../utils/3d/texture-cache.ts";
-import { recordLoadTrace } from "../../utils/3d/load-trace.ts";
+import { buildSpecFromGeometryJSON } from "../../features/preview-3d/spec-builder.ts";
+import { textureCache } from "../../features/preview-3d/texture-cache.ts";
+import { recordLoadTrace } from "../../features/preview-3d/load-trace.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {

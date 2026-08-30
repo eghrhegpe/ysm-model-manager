@@ -4,8 +4,8 @@ name: Pointer Events 统一交互（触屏 + 桌面）
 tier: architecture
 category: core
 source_files:
-  - frontend/src/utils/3d/adapters/input-and-animation.ts
-  - frontend/src/utils/3d/model2d.ts
+  - frontend/src/features/preview-3d/adapters/input-and-animation.ts
+  - frontend/src/features/preview-3d/model2d.ts
   - frontend/src/views/app-preview/zoom.ts
   - frontend/src/views/app-preview/skeleton.ts
   - frontend/src/views/app-preview/litematic-3d.ts
@@ -14,8 +14,8 @@ source_files:
   - frontend/src/views/app-content/site/edit.ts
   - frontend/src/views/app-tree/toolbar-events.ts
 tests:
-  - frontend/src/utils/3d/model2d.test.ts
-  - frontend/src/utils/3d/model3d.test.ts
+  - frontend/src/features/preview-3d/model2d.test.ts
+  - frontend/src/features/preview-3d/model3d.test.ts
   - frontend/src/views/app-preview/zoom.test.ts
   - frontend/src/views/app-preview/skeleton.test.ts
   - frontend/src/views/app-content/app-content.methods.test.ts
@@ -33,7 +33,7 @@ use_when:
   - mouseenter
   - 全窗预览
 invariant_anchors:
-  - frontend/src/utils/3d/adapters/input-and-animation.ts|setPointerCapture
+  - frontend/src/features/preview-3d/adapters/input-and-animation.ts|setPointerCapture
 ---
 
 # Pointer Events 统一交互（触屏 + 桌面）

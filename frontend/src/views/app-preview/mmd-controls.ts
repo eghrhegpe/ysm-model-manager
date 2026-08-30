@@ -12,8 +12,8 @@ import { cardContainer, addFieldRow } from "../../ui/ui-helpers.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
-import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
-import { multiModelSelectNode } from "../../utils/3d/adapters/preview-menu/multi-model.ts";
+import type { PreviewMenuNode } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
+import { multiModelSelectNode } from "../../features/preview-3d/adapters/preview-menu/multi-model.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import {
   listMmdMaterials,
@@ -22,8 +22,8 @@ import {
   setMmdMaterialOpacity,
   type MmdMaterialDetail,
   type MmdMaterialListItem,
-} from "../../utils/3d/mmd-materials.ts";
-import type { CameraControlBridge } from "../../utils/3d/adapters/camera-controls.ts";
+} from "../../features/preview-3d/mmd-materials.ts";
+import type { CameraControlBridge } from "../../features/preview-3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
 
 export interface MmdBottomNavCtx {

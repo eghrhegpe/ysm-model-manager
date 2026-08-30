@@ -4,12 +4,12 @@ name: 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/utils/3d/state/preview-state.ts
-  - frontend/src/utils/3d/adapters/preview-menu/settings.ts
-  - frontend/src/utils/3d/adapters/preview-menu/cap-controls.ts
-  - frontend/src/utils/3d/caps/scene-capability.ts
+  - frontend/src/features/preview-3d/state/preview-state.ts
+  - frontend/src/features/preview-3d/adapters/preview-menu/settings.ts
+  - frontend/src/features/preview-3d/adapters/preview-menu/cap-controls.ts
+  - frontend/src/features/preview-3d/caps/scene-capability.ts
 tests:
-  - frontend/src/utils/3d/state/preview-state.test.ts
+  - frontend/src/features/preview-3d/state/preview-state.test.ts
 use_when:
   - 新增 3D 预览设置项
   - 新增 cap 想让某个开关出现在设置面板
@@ -26,7 +26,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 
 | 块 | 内容 | 落点 |
 |----|------|------|
-| P1 | `settingsState` 横切状态层（[ADR-126 P4-A] 已升格为 `previewState`） | `frontend/src/utils/3d/state/preview-state.ts` |
+| P1 | `settingsState` 横切状态层（[ADR-126 P4-A] 已升格为 `previewState`） | `frontend/src/features/preview-3d/state/preview-state.ts` |
 | P2 | 单渲染器 + 自动 cap 聚合 | `preview-menu/settings.ts` 产出 `MenuControlDef[]` 喂 `renderCapControls` |
 | P3 | visible 规则定死 | `MenuControlDef.visible` / `collectVisiblePredicates()` |
 
@@ -117,6 +117,6 @@ collectVisiblePredicates(controls)       // 纯函数，枚举带 visible 的控
 ## 相关
 
 - ADR-125（本决策）、ADR-085（S2 补全对象）、ADR-076（菜单壳）、ADR-093（声明式 Schema 类型来源）
-- 契约测试：`frontend/src/utils/3d/state/preview-state.test.ts`（20 例，[ADR-126 P4-A] 随迁改名）
+- 契约测试：`frontend/src/features/preview-3d/state/preview-state.test.ts`（20 例，[ADR-126 P4-A] 随迁改名）
 - 历史病征：`f0fa3e23`（cap 已自报却手写 29 行重复 toggle）、`05fe24b7`（无状态层可订阅 → 手工 pub/sub）、`7fdfdcc7`（visible 谓词散落无清单）
 - 遗留：`auto-import.mjs` 对 ground/water 的 `private notify()` 报 2 条误判（`05fe24b7` 引入，非本卡范围）

@@ -231,7 +231,7 @@ cardContainer(menu.list, (c) => {
 ## 8. 已知约束 / 待办
 
 - **✅ 动画管线已收敛**：
-  - Bedrock (YSM) 动画已由 `ysm-adapter.ts` 桥接至 `frontend/src/utils/3d/ysm-animation-player.ts`，**不依赖** `model3d.ts` 的循环。
+  - Bedrock (YSM) 动画已由 `ysm-adapter.ts` 桥接至 `frontend/src/features/preview-3d/ysm-animation-player.ts`，**不依赖** `model3d.ts` 的循环。
   - MMD 动画由 `@moeru/three-mmd` 在适配器内部处理。
   - **注意**：后续 3D 动画交互（进度条、暂停）应在 `app-preview` 组件层对接适配器实例，而非修改渲染核心。
 - **已接入**：MMD 预览弹窗（`views/app-preview/mmd-controls.ts`）已通过 `createSlideMenu` 接入本库（见 §7）。后续新面板接入时按 `docs/Design.md` §19 验收清单核对一致性与无障碍。

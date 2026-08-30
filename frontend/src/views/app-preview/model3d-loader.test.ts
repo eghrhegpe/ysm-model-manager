@@ -33,16 +33,16 @@ vi.mock("../../backend/platform-web.ts", () => ({
 vi.mock("./wasm.ts", () => ({
   decodeYsmViaWasm: decodeWasmMock,
 }));
-vi.mock("../../utils/3d/spec-builder.ts", () => ({
+vi.mock("../../features/preview-3d/spec-builder.ts", () => ({
   buildSpecFromGeometryJSON: tsSpecBuilderMock,
 }));
 
-vi.mock("../../utils/3d/texture-cache.ts", () => ({
+vi.mock("../../features/preview-3d/texture-cache.ts", () => ({
   textureCache: fakeTextureCache,
 }));
 
 import { loadTextures, preloadModel } from "./model3d-loader.ts";
-import { getLoadTraces, clearLoadTraces } from "../../utils/3d/load-trace.ts";
+import { getLoadTraces, clearLoadTraces } from "../../features/preview-3d/load-trace.ts";
 
 /** 可控 Image：src setter 同步触发 onload/onerror（happy-dom 无真实网络） */
 class FakeImage {

@@ -4,12 +4,12 @@ name: 场景能力注册表 scene-capability-registry
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/utils/3d/caps/
-  - frontend/src/utils/3d/adapters/scene-registry.ts
+  - frontend/src/features/preview-3d/caps/
+  - frontend/src/features/preview-3d/adapters/scene-registry.ts
 tests:
-  - frontend/src/utils/3d/caps/scene-capability-registry.test.ts
-  - frontend/src/utils/3d/caps/ground-capability.test.ts
-  - frontend/src/utils/3d/caps/light-capability.test.ts
+  - frontend/src/features/preview-3d/caps/scene-capability-registry.test.ts
+  - frontend/src/features/preview-3d/caps/ground-capability.test.ts
+  - frontend/src/features/preview-3d/caps/light-capability.test.ts
 use_when:
   - 场景能力 / cap / registry / SceneCapability
   - 3D 菜单控件声明式渲染（getMenuControls）
@@ -17,11 +17,11 @@ use_when:
   - 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）
   - 「光」指代消歧（light 是光源，fog/shadow/reflector 不是）
 invariant_anchors:
-  - frontend/src/utils/3d/caps/scene-capability-registry.ts|sceneCapabilityRegistry
-  - frontend/src/utils/3d/caps/scene-capability.ts|SceneCapability
-  - frontend/src/utils/3d/adapters/mount-preview-core.ts|createAll
-  - frontend/src/utils/3d/adapters/preview-menu/env.ts|buildEnvSchema
-  - frontend/src/utils/3d/adapters/preview-menu/env.ts|renderEnvLevel
+  - frontend/src/features/preview-3d/caps/scene-capability-registry.ts|sceneCapabilityRegistry
+  - frontend/src/features/preview-3d/caps/scene-capability.ts|SceneCapability
+  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts|createAll
+  - frontend/src/features/preview-3d/adapters/preview-menu/env.ts|buildEnvSchema
+  - frontend/src/features/preview-3d/adapters/preview-menu/env.ts|renderEnvLevel
 ---
 
 # 场景能力注册表 scene-capability-registry

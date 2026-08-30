@@ -1,7 +1,7 @@
 // ===== 同类型候选列表通用底座（视图壳数据准备：GetRepoRoot → ScanModelEntriesFiltered）=====
 // 各格式（mmd / fbx / scene / ...）共享同一链路，Go 按注册表白名单过滤（ADR-044③ 对称范式）。
 // 归位 views 层（ADR-072 根治：依赖 getApp 读仓库根，属视图壳数据能力，
-// 不该被 utils/3d/adapters 反向 import —— 那会与 adapter → controls 形成循环依赖环）。
+// 不该被 features/preview-3d/adapters 反向 import —— 那会与 adapter → controls 形成循环依赖环）。
 import { getApp } from "../../backend/app.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 

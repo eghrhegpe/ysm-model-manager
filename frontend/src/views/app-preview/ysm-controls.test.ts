@@ -25,13 +25,13 @@ import {
   hasSchema,
   getSchema,
   resetSchemas,
-} from "../../utils/3d/adapters/schema-registry.ts";
+} from "../../features/preview-3d/adapters/schema-registry.ts";
 import {
   resetSettingsListeners,
   resetActiveComponent,
   type PreviewSnapshot,
-} from "../../utils/3d/state/preview-state.ts";
-import type { Spec3D } from "../../utils/3d/model3d.ts";
+} from "../../features/preview-3d/state/preview-state.ts";
+import type { Spec3D } from "../../features/preview-3d/model3d.ts";
 
 function makeCtx(overrides: Partial<YsmControlsContext> = {}): YsmControlsContext {
   return {

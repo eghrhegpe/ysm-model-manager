@@ -3,8 +3,8 @@
 // 以 mode="generic" 跳过 YSM 专属特性（动画扫描/语义骨骼/呼吸控制）。
 // 女仆模型本质是标准 Bedrock Edition geometry，Go AnalyzeBedrockModel
 // 已天然支持 .zip 解析（parseModelFromEntries 通用路径）。
-import { mount3D, cleanupPreview, invalidatePreview } from "../../utils/3d/adapters/mount-preview-core.ts";
-import { makeYsmAdapter } from "../../utils/3d/adapters/ysm-adapter.ts";
+import { mount3D, cleanupPreview, invalidatePreview } from "../../features/preview-3d/adapters/mount-preview-core.ts";
+import { makeYsmAdapter } from "../../features/preview-3d/adapters/ysm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import { preloadModel, type ModelLike } from "./model3d-loader.ts";

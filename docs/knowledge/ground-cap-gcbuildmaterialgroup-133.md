@@ -4,7 +4,7 @@ name: ground-cap-gcBuildMaterialGroup-133
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/3d/caps/ground-capability.ts
+  - frontend/src/features/preview-3d/caps/ground-capability.ts
 use_when:
   - 拆 gcBuildMaterialGroup 长函数
   - 评审 ground-capability.ts 菜单构建
@@ -24,7 +24,7 @@ use_when:
 
 - `gcBuildMaterialGroup(cap: GroundCapability): MenuControlDef[]` — 包级函数，仅 `getMenuControls()` 调用。
 - 辅助工厂（包级、material group 专用）：`gcSliderDef` / `gcColorDef` / `gcButtonDef`。
-- 水面菜单（原 `gcBuildWaterGroup` 的 12 项 water 控件）已随 2026-08-28 拆分迁至独立 `WaterCapability`（`frontend/src/utils/3d/caps/water-capability.ts`），ground 不再聚合水面组。
+- 水面菜单（原 `gcBuildWaterGroup` 的 12 项 water 控件）已随 2026-08-28 拆分迁至独立 `WaterCapability`（`frontend/src/features/preview-3d/caps/water-capability.ts`），ground 不再聚合水面组。
 
 ## 与其他子系统关系
 

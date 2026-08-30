@@ -20,7 +20,7 @@ cd frontend && npm run typecheck       # tsc --noEmit（遗留基线错误用 Se
 ```bash
 $ for d in frontend/src/*/; do files=$(find "$d" -name "*.ts" ! -name "*.test.ts" | wc -l); loc=$(find "$d" -name "*.ts" ! -name "*.test.ts" -exec cat {} + 2>/dev/null | wc -l); echo "$d $files files, $loc LOC"; done
 ```
-3. 整仓评审时按 ~10k LOC 配平分批并行子代理（2026-08 实测：utils/3d ≈28k、views ≈22k 各自成组且可再按子目录对半——app-content/app-preview 是 views 大头；backend+core ≈11k 合并一组；ui/features/services/wasm/workers/utils 其余合并）。`utils/3d/adapters/vendor` 是第三方 vendor 不评。单包评审直接通读 .ts 源码（抽查 .test.ts）。子代理提示词必须含「只做研究、绝不修改任何文件」。
+3. 整仓评审时按 ~10k LOC 配平分批并行子代理（2026-08 实测：features/preview-3d ≈28k、views ≈22k 各自成组且可再按子目录对半——app-content/app-preview 是 views 大头；backend+core ≈11k 合并一组；ui/features/services/wasm/workers/utils 其余合并）。`features/preview-3d/adapters/vendor` 是第三方 vendor 不评。单包评审直接通读 .ts 源码（抽查 .test.ts）。子代理提示词必须含「只做研究、绝不修改任何文件」。
 4. 子代理若只回评分表或元对话，追问一次「补交报告正文，不重读文件」，不重跑。
 5. 五维 + 本仓专项 → 按模板输出。
 

@@ -4,10 +4,10 @@ name: 3D 预览渲染 model3d
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/utils/3d/
+  - frontend/src/features/preview-3d/
   - frontend/src/views/app-preview/model3d-loader.ts
 tests:
-  - frontend/src/utils/3d/model3d-spec.test.ts
+  - frontend/src/features/preview-3d/model3d-spec.test.ts
 use_when:
   - 3D 预览
   - Three.js
@@ -19,7 +19,7 @@ use_when:
   - spec 兜底
   - OrbitControls
 invariant_anchors:
-  - frontend/src/utils/3d/cube-mesh.ts|computeBoneLocalPos
+  - frontend/src/features/preview-3d/cube-mesh.ts|computeBoneLocalPos
   - frontend/src/views/app-preview/model3d-loader.ts|specCache
 quick_groups:
   - 3D 预览与模型追加
@@ -33,7 +33,7 @@ quick_risk_lines:
 
 ## 概览
 
-前端 Three.js 3D 渲染层（`frontend/src/utils/3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/mmd/litematic）挂进同一 `ctx.scene`；多模型同框经 `sceneRegistry` 注册表管理（ADR-093，`MAX_MODELS=8`）。曾落地的 RenderSession 对象化（ADR-052）因生产无调用方，render-session.ts 470 行已随 ADR-052 P2 收尾删除，本卡不再描述该链路。
+前端 Three.js 3D 渲染层（`frontend/src/features/preview-3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/mmd/litematic）挂进同一 `ctx.scene`；多模型同框经 `sceneRegistry` 注册表管理（ADR-093，`MAX_MODELS=8`）。曾落地的 RenderSession 对象化（ADR-052）因生产无调用方，render-session.ts 470 行已随 ADR-052 P2 收尾删除，本卡不再描述该链路。
 
 **文件按层分组**：
 
@@ -45,7 +45,7 @@ quick_risk_lines:
 | **工具/辅助层** | `quaternion.ts` / `debug-render.ts` / `keymap.ts` / `model3d-spec.ts` | 四元数工具 / debug 叠加 / 键位偏好 / 历史 JS spec 兜底（已废弃） |
 | **加载/桥接层** | `model3d-loader.ts` / `spec-builder.ts` | 纹理 + spec 预加载（Go binding 桥接） / spec 构建工具 |
 
-> **ADR-072 已落地**：内容适配器（ysm/vrm/litematic/mmd）已下沉至 `utils/3d/adapters/`，本卡仅覆盖渲染层基础设施。适配器层见知识卡 [preview_core](./preview_core.md)。
+> **ADR-072 已落地**：内容适配器（ysm/vrm/litematic/mmd）已下沉至 `features/preview-3d/adapters/`，本卡仅覆盖渲染层基础设施。适配器层见知识卡 [preview_core](./preview_core.md)。
 
 几何数据（顶点/法线/UV/骨骼四元数）全部由 Go 端 [go_threejs](./go-threejs.md) 预计算，本层只渲染、不做几何计算。
 
@@ -88,7 +88,7 @@ export function computeBoneLocalPos(
 **渲染循环与交互**：
 - 默认 OrbitControls 轨道模式，`setRotationMode(false)` 切自由相机（WASD 平移 + 空格/Shift 升降）
 - **3D 操作键位 / 相机偏好持久化**（localStorage）：键位存 `KeyboardEvent.code` 物理键，相机速度 `td-cam-speed`（2–200，默认 20），旋转模式 `td-rot-mode`（orbit/free）
-- **键位消费链（2026-08-29 修复"改键不生效"）**：设置页存 `KeyboardEvent.code`（`settings/keymap.ts` 捕获）→ `loadTdKeymap()` 读取（`utils/3d/keymap.ts`）→ `input-and-animation.ts` `bindInputHandlers` 按 code 映射成**动作表**（forward/back/left/right/up/down 布尔）→ `mount-preview-core.ts` `mpApplyWasdCameraMotion` 只查动作表，不再硬编码键位。**自定义键位真正生效**（原来消费端硬编码 `keys["w"]` 等，设置页改键白改）。方向键双轨保留（ArrowUp→forward 等，FPS 惯例）；修饰键左右对称（ShiftLeft/ShiftRight 对 down 等价，对齐旧 `keys["shift"]` 行为）。**输入框守卫**：焦点在 INPUT/TEXTAREA/SELECT/contentEditable 时不记录、不 preventDefault——3D 面板内文本框打字不被吞（原 document 级监听无条件吞 w/a/s/d）。
+- **键位消费链（2026-08-29 修复"改键不生效"）**：设置页存 `KeyboardEvent.code`（`settings/keymap.ts` 捕获）→ `loadTdKeymap()` 读取（`features/preview-3d/keymap.ts`）→ `input-and-animation.ts` `bindInputHandlers` 按 code 映射成**动作表**（forward/back/left/right/up/down 布尔）→ `mount-preview-core.ts` `mpApplyWasdCameraMotion` 只查动作表，不再硬编码键位。**自定义键位真正生效**（原来消费端硬编码 `keys["w"]` 等，设置页改键白改）。方向键双轨保留（ArrowUp→forward 等，FPS 惯例）；修饰键左右对称（ShiftLeft/ShiftRight 对 down 等价，对齐旧 `keys["shift"]` 行为）。**输入框守卫**：焦点在 INPUT/TEXTAREA/SELECT/contentEditable 时不记录、不 preventDefault——3D 面板内文本框打字不被吞（原 document 级监听无条件吞 w/a/s/d）。
 - **相机偏好初始读偏好**（2026-08-29）：会话初始 `camSpeed=loadTdCamSpeed()`、`orbitMode=loadTdRotMode()`，free 模式下同步 `controls.enableRotate=false`（此前硬编码 orbit+速度 20，设置页改相机偏好 3D 打开不生效）
 - **材质为 ysmview 风格**：`DoubleSide + transparent + alphaTest:0.1 + depthWrite:true`；alpha 模式由 `texture-alpha.ts getTextureAlphaMode` 逐纹理分类并缓存 userData（ADR-118 Phase A：半透明像素占比 ≤0.5% 视为杂点不判 blend——wine_fox 实测错路面 80.9%→35.6%，8 模型 blend→cutout 翻正，18_wedding 真混合保持 blend）
   - **mesh 级视锥剔除关闭**（2026-08-25 修复）：`mesh-builder.ts` 统一 `mesh.frustumCulled = false`。Three.js 默认 mesh 级剔除常开，但设置页 `ysm_3d_frustumCull` 开关只管 Group 级（`frustum-cull.ts` `cullModelGroups`），单模型场景 Group 级本就豁免，导致 mesh 级剔除始终是场上唯一在跑的剔除机制——骨骼旋转时脸部等扁平小包围球部件落到视锥边缘被误判不可见（"转头脸消失"根因之一）。关闭 mesh 级剔除后，可见性交由 Group 级 `cullModelGroups` 统一管理，多模型同框性能由 Group 级兜底，单模型场景无损。
@@ -133,7 +133,7 @@ export function computeBoneLocalPos(
 - `switchPreview(path, { keepInScene? })` — 会话内切换 / 同台追加（ADR-066 §5.6；keep 追加即多模型同框）
 - `cleanupPreview()` / `invalidatePreview()` — 清理与在途作废竞态守卫
 - `preview-library.ts` `openModel3DFullscreen(path, { cooperate? })` — 跨类型统一路由入口（ADR-093 T4）；**方案 A（2026-08-24）**：`cooperate=false` 且有活跃会话时先 `cleanupPreview()` 清理旧活跃全屏层（释放旧内容层 + 复位注册表 + 复原单例），再建新模型——把本函数注释「cooperate=false 会先清理旧的活跃全屏层」从名义变实际；对 ysm/mmd/vrm/litematic 所有类型的「二次点击资源列表」统一生效，不影响 `cooperate=true` 的 keepInScene 追加语义，也不影响会话内 `switchTo` 切换。契约测试见 `preview-library-replace.test.ts`
-- 截图：`utils/3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-renderer.ts` 离屏多角度
+- 截图：`features/preview-3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-renderer.ts` 离屏多角度
 
 `model3d-loader.ts`：
 - `loadTextures(urls?): Promise<(THREE.Texture | null)[]>` — 并行加载，`flipY=false` + `NearestFilter` + `SRGB`；**null 占位不压缩索引**
@@ -259,4 +259,4 @@ cd frontend && npm run dev:web
 - [model2d](./model2d.md) — 2D 预览（同一坐标口径约束）
 - [app_preview](./app-preview.md) — 预览面板消费方
 - [web-edition 路线图](../roadmap/web-edition.md) — 网页版性能线 R4
-- `frontend/src/utils/3d/cube-mesh.ts` — computeBoneLocalPos 工具
+- `frontend/src/features/preview-3d/cube-mesh.ts` — computeBoneLocalPos 工具

@@ -6,16 +6,16 @@ adr:
   - ADR-132
 category: ui
 source_files:
-  - frontend/src/utils/3d/adapters/schema-registry.ts
+  - frontend/src/features/preview-3d/adapters/schema-registry.ts
   - frontend/src/views/app-preview/ysm-controls.ts
-  - frontend/src/utils/3d/adapters/ysm-adapter.ts
-  - frontend/src/utils/3d/adapters/mount-preview-core.ts
-  - frontend/src/utils/3d/adapters/switch-preview.ts
+  - frontend/src/features/preview-3d/adapters/ysm-adapter.ts
+  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts
+  - frontend/src/features/preview-3d/adapters/switch-preview.ts
   - frontend/src/views/app-preview/skeleton-fill-panel.ts
 tests:
-  - frontend/src/utils/3d/adapters/__tests__/mount-preview-core.test.ts
-  - frontend/src/utils/3d/adapters/schema-registry.test.ts
-  - frontend/src/utils/3d/adapters/switch-preview.test.ts
+  - frontend/src/features/preview-3d/adapters/__tests__/mount-preview-core.test.ts
+  - frontend/src/features/preview-3d/adapters/schema-registry.test.ts
+  - frontend/src/features/preview-3d/adapters/switch-preview.test.ts
   - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
   - frontend/src/views/app-preview/ysm-controls.test.ts
 use_when:

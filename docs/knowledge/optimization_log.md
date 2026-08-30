@@ -6,22 +6,22 @@ adr:
   - ADR-127
 category: config
 source_files:
-  - frontend/src/utils/3d/adapters/mmd-adapter.ts
-  - frontend/src/utils/3d/adapters/mmd-ktx2-encoder.ts
-  - frontend/src/utils/3d/adapters/mmd-ktx2-basis.ts
-  - frontend/src/utils/3d/adapters/mmd-ktx2-worker.ts
-  - frontend/src/utils/3d/adapters/mmd-ktx2-texture-loader.ts
-  - frontend/src/utils/3d/adapters/mmd-pmx-parser.ts
-  - frontend/src/utils/3d/adapters/mmd-pmx-parser.worker.ts
-  - frontend/src/utils/3d/adapters/mmd-texture-decoder.ts
+  - frontend/src/features/preview-3d/adapters/mmd-adapter.ts
+  - frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder.ts
+  - frontend/src/features/preview-3d/adapters/mmd-ktx2-basis.ts
+  - frontend/src/features/preview-3d/adapters/mmd-ktx2-worker.ts
+  - frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader.ts
+  - frontend/src/features/preview-3d/adapters/mmd-pmx-parser.ts
+  - frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker.ts
+  - frontend/src/features/preview-3d/adapters/mmd-texture-decoder.ts
   - frontend/src/utils/main-thread-watch.ts
   - internal/app/app_model.go
   - internal/app/app_texture_cache.go
   - go/texture_cache/texture_cache.go
 tests:
-  - frontend/src/utils/3d/adapters/mmd-adapter.test.ts
-  - frontend/src/utils/3d/adapters/mmd-ktx2-encoder.test.ts
-  - frontend/src/utils/3d/adapters/mmd-ktx2-texture-loader.test.ts
+  - frontend/src/features/preview-3d/adapters/mmd-adapter.test.ts
+  - frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder.test.ts
+  - frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader.test.ts
   - frontend/src/utils/main-thread-watch.test.ts
 use_when:
   - 优化
@@ -44,7 +44,7 @@ perf:
   - concurrent
   - memory-heavy
 invariant_anchors:
-  - frontend/src/utils/3d/adapters/mmd-adapter.ts|mmdMenuItems
+  - frontend/src/features/preview-3d/adapters/mmd-adapter.ts|mmdMenuItems
   - frontend/src/utils/main-thread-watch.ts|startMainThreadWatch
 ---
 

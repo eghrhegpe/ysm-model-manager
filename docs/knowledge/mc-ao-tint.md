@@ -4,8 +4,8 @@ name: MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/3d/adapters/pack-model-adapter.ts
-  - frontend/src/utils/3d/mc-tints.ts
+  - frontend/src/features/preview-3d/adapters/pack-model-adapter.ts
+  - frontend/src/features/preview-3d/mc-tints.ts
 reference_files:
   - PrismarineJS/prismarine-viewer viewer/lib/models.js (getSectionGeometry)  # 仅只读参考，不引入其渲染器
 use_when:
@@ -14,8 +14,8 @@ use_when:
   - pack-model-adapter 材质升级后续（ADR-080）
   - 顶点色遮蔽权重
 invariant_anchors:
-  - frontend/src/utils/3d/adapters/pack-model-adapter.ts|tintCategoryForPath
-  - frontend/src/utils/3d/mc-tints.ts|getTintColorSync
+  - frontend/src/features/preview-3d/adapters/pack-model-adapter.ts|tintCategoryForPath
+  - frontend/src/features/preview-3d/mc-tints.ts|getTintColorSync
 ---
 
 # MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现

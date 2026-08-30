@@ -376,7 +376,7 @@ ReadFileBytes(Go, base64) → atob → Uint8Array
 
 ### 4.6 存档
 
-- 当前稳定版为 `frontend/src/utils/3d/model3d.ts`（旧 `docs/model3d.js` / `docs/model3d-ysm-attempt.js` 备份已随文档治理删除）。
+- 当前稳定版为 `frontend/src/features/preview-3d/model3d.ts`（旧 `docs/model3d.js` / `docs/model3d-ysm-attempt.js` 备份已随文档治理删除）。
 - 旧版 `applyBoxUV`/`applyFaceUV` + `BoxGeometry` 方案永久废弃，不允许再提及或恢复。
 
 ---
@@ -491,7 +491,7 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 
 ### 7.1 统一预览核心（ADR-066）
 
-`frontend/src/utils/3d/adapters/mount-preview-core.ts`（928 行）是**所有富格式 3D 预览的单一事实来源外壳**，持有单实例 renderer / scene / camera / OrbitControls / rAF 循环 / 灯光 / 场景能力。内容差异经 `PreviewAdapter.build(ctx, path)` 挂进同一 `ctx.scene`：
+`frontend/src/features/preview-3d/adapters/mount-preview-core.ts`（928 行）是**所有富格式 3D 预览的单一事实来源外壳**，持有单实例 renderer / scene / camera / OrbitControls / rAF 循环 / 灯光 / 场景能力。内容差异经 `PreviewAdapter.build(ctx, path)` 挂进同一 `ctx.scene`：
 
 ```
 mount3D(adapter, path, opts?)
@@ -545,7 +545,7 @@ mount3D(adapter, path, opts?)
 
 ### 7.5 感知层（程序化生命力）
 
-`utils/3d/perception/`：让模型「活起来」的自主行为子系统，纯逻辑零 DOM：
+`features/preview-3d/perception/`：让模型「活起来」的自主行为子系统，纯逻辑零 DOM：
 
 | 层级 | 模块 | 驱动目标 |
 |------|------|----------|
@@ -583,9 +583,9 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 
 ### 7.9 2D 预览 + 缓存 + 截图
 
-- **2D 预览**：`utils/3d/model2d.ts`（~19.4KB）处理平铺/网格 2D 缩略图（Canvas 2D 正交投影）。
+- **2D 预览**：`features/preview-3d/model2d.ts`（~19.4KB）处理平铺/网格 2D 缩略图（Canvas 2D 正交投影）。
 - **缓存**：`utils/preview-cache.ts` 预览缓存 FIFO；`model3d-loader.ts` LRU 20 条 spec 缓存；`texture-cache.ts` 纹理引用计数池（跨模型复用，session 结束统一释放）。
-- **截图**：`utils/3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-renderer.ts` 离屏多角度；Go 端 `app_files.go:ExtractPreviewTexture` 提取预览纹理。
+- **截图**：`features/preview-3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-renderer.ts` 离屏多角度；Go 端 `app_files.go:ExtractPreviewTexture` 提取预览纹理。
 
 ---
 
@@ -753,7 +753,7 @@ core/handler-dnd.ts 拦截 drop
   → emit tree:reload
   → 选中触发 model:select → app-preview
   → views/app-preview/wasm.ts decodeYsmViaWasm (§4.2)
-  → utils/3d/model3d.ts + Three.js 渲染
+  → features/preview-3d/model3d.ts + Three.js 渲染
 ```
 
 ### (b) 模型树 / 仓库页填充

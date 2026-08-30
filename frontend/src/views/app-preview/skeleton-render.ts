@@ -8,12 +8,12 @@ import { getApp } from "../../backend/app.ts";
 import { statsCardHTML } from "./tpl.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { renderMultiAngle, type ScreenshotLights } from "./screenshot-renderer.ts";
-import { sceneCapabilityRegistry, isSkyEnvironmentOn } from "../../utils/3d/caps/scene-capability-registry.ts";
-import { attenuateAmbientForSky, type LightCapability } from "../../utils/3d/caps/light-capability.ts";
+import { sceneCapabilityRegistry, isSkyEnvironmentOn } from "../../features/preview-3d/caps/scene-capability-registry.ts";
+import { attenuateAmbientForSky, type LightCapability } from "../../features/preview-3d/caps/light-capability.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
-import type { Spec3D } from "../../utils/3d/model3d.ts";
+import type { Spec3D } from "../../features/preview-3d/model3d.ts";
 // P1 修复（ADR-040）：fill3DPanel 已拆至 skeleton-fill-panel.ts，此处 re-export 兼容
 export { fill3DPanel } from "./skeleton-fill-panel.ts";
 

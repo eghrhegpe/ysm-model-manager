@@ -23,12 +23,12 @@ vi.mock("../../backend/app.ts", () => ({
     ReadFileBytes: vi.fn().mockResolvedValue(null),
   }),
 }));
-vi.mock("../../utils/3d/adapters/mount-preview-core.ts", () => ({
+vi.mock("../../features/preview-3d/adapters/mount-preview-core.ts", () => ({
   mount3D: mountMock,
   cleanupPreview: cleanupMock,
   invalidatePreview: vi.fn(),
 }));
-vi.mock("../../utils/3d/adapters/ysm-adapter.ts", () => ({
+vi.mock("../../features/preview-3d/adapters/ysm-adapter.ts", () => ({
   makeYsmAdapter: makeAdapterMock,
 }));
 vi.mock("./loader.ts", () => ({

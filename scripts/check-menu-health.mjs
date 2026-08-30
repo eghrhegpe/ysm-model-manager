@@ -44,10 +44,10 @@ if (ARGS.unknown.length) {
 
 // ── 菜单表文件（相对 ROOT）──
 const MENU_FILES = [
-  'frontend/src/utils/3d/adapters/preview-menu/defs.ts',
-  'frontend/src/utils/3d/adapters/ysm-adapter.ts',
-  'frontend/src/utils/3d/adapters/mmd-adapter.ts',
-  'frontend/src/utils/3d/adapters/vrm-adapter.ts',
+  'frontend/src/features/preview-3d/adapters/preview-menu/defs.ts',
+  'frontend/src/features/preview-3d/adapters/ysm-adapter.ts',
+  'frontend/src/features/preview-3d/adapters/mmd-adapter.ts',
+  'frontend/src/features/preview-3d/adapters/vrm-adapter.ts',
 ];
 const LOCALE_FILE = 'frontend/src/core/i18n/locales/zh-CN.ts';
 const LEGAL_KINDS = new Set(['panel', 'action', 'divider']);
@@ -234,7 +234,7 @@ for (const it of allItems) {
 // ── id 唯一性校验（独立段：每文件内部唯一 + core∩适配器无交集）──
 // 适配器按次挂载互斥（一次预览只加载一种模型），故 ysm/mmd/vrm 可共享 id（model/shot/bones）；
 // 仅「同一文件内重复」与「适配器 id 与 core 撞车」才报违规。
-const coreFile = 'frontend/src/utils/3d/adapters/preview-menu/defs.ts';
+const coreFile = 'frontend/src/features/preview-3d/adapters/preview-menu/defs.ts';
 const coreIds = new Set((byFile.get(coreFile) || []));
 const sharedIds = []; // 跨适配器同名的 id（不违规，仅报告）
 for (const [file, ids] of byFile) {

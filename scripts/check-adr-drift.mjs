@@ -156,7 +156,7 @@ function codeAsserts() {
   }
 
   // 5. r12 P1 并发切换抑制防倒退：switch-preview.ts 必须含 inFlight 守卫
-  const switchPreviewPath = path.join(ROOT, 'frontend/src/utils/3d/adapters/switch-preview.ts');
+  const switchPreviewPath = path.join(ROOT, 'frontend/src/features/preview-3d/adapters/switch-preview.ts');
   try {
     const text = fs.existsSync(switchPreviewPath) ? fs.readFileSync(switchPreviewPath, 'utf-8') : '';
     // code review P3：放宽格式敏感——加花括号/删 : boolean 注解的合法重构不误报
@@ -174,7 +174,7 @@ function codeAsserts() {
 
   // 6. r10/r11 纹理+MMD 生命周期防倒退：mmd-adapter 必含 uncacheRoot + 全纹理槽释放
   //    mmd-adapter 走自有释放路径（TEX_SLOTS 含 emissiveMap + tex.dispose() 遍历），不调通用 disposeMaterial
-  const mmdAdapterPath = path.join(ROOT, 'frontend/src/utils/3d/adapters/mmd-adapter.ts');
+  const mmdAdapterPath = path.join(ROOT, 'frontend/src/features/preview-3d/adapters/mmd-adapter.ts');
   try {
     const text = fs.existsSync(mmdAdapterPath) ? fs.readFileSync(mmdAdapterPath, 'utf-8') : '';
     const hasUncacheRoot = /uncacheRoot\s*\(/.test(text);
@@ -193,8 +193,8 @@ function codeAsserts() {
   }
 
   // 7. r1/r11 capability dispose 体系防倒退：caps/ 下 light + postprocessing 必须存在 dispose 体
-  const lightCapPath = path.join(ROOT, 'frontend/src/utils/3d/caps/light-capability.ts');
-  const postCapPath = path.join(ROOT, 'frontend/src/utils/3d/caps/postprocessing-capability.ts');
+  const lightCapPath = path.join(ROOT, 'frontend/src/features/preview-3d/caps/light-capability.ts');
+  const postCapPath = path.join(ROOT, 'frontend/src/features/preview-3d/caps/postprocessing-capability.ts');
   try {
     const lightOk = fs.existsSync(lightCapPath) && /dispose\s*\(\)/.test(fs.readFileSync(lightCapPath, 'utf-8'));
     const postOk = fs.existsSync(postCapPath) && /disposeComposer|dispose\s*\(\)/.test(fs.readFileSync(postCapPath, 'utf-8'));

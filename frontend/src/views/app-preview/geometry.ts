@@ -15,7 +15,7 @@ export interface BedrockCube {
 
 /** SubModel 子模型条目（Go types/bedrock.go SubModel）。
  *  与 spec-builder.ts 的 SubModel 定义保持一致；这里重复声明是为了
- *  geometry.ts 不反向依赖 utils/3d（边界清晰）。 */
+ *  geometry.ts 不反向依赖 features/preview-3d（边界清晰）。 */
 export interface BedrockSubModel {
   name: string;
   sourcePath?: string;

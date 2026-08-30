@@ -4,10 +4,10 @@ name: 3D 区审核与修复模式提炼
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/utils/3d/debug-render.ts
-  - frontend/src/utils/3d/model-group-builder.ts
-  - frontend/src/utils/3d/adapters/mount-preview-core.ts
-  - frontend/src/utils/3d/cleanup-helper.ts
+  - frontend/src/features/preview-3d/debug-render.ts
+  - frontend/src/features/preview-3d/model-group-builder.ts
+  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts
+  - frontend/src/features/preview-3d/cleanup-helper.ts
   - frontend/src/views/app-preview/preview-library.ts
   - frontend/src/views/app-preview/skeleton.ts
 use_when:
@@ -20,8 +20,8 @@ use_when:
   - 审核驱动开发
   - 并发防护 gen 守卫
 invariant_anchors:
-  - frontend/src/utils/3d/debug-render.ts|rebuildDebug
-  - frontend/src/utils/3d/model-group-builder.ts|buildModelGroup
+  - frontend/src/features/preview-3d/debug-render.ts|rebuildDebug
+  - frontend/src/features/preview-3d/model-group-builder.ts|buildModelGroup
 ---
 
 # 3D 区审核与修复模式提炼
@@ -37,7 +37,7 @@ invariant_anchors:
 
 ### 解决方案
 引入子代理专项审核 + 主模型批量修复的协作模式：
-1. **划定范围**：给审核子代理明确的扫描目录（如 `frontend/src/utils/3d/` 和 `frontend/src/views/app-preview/`）和问题分级标准（P1/P2/P3/P4）。
+1. **划定范围**：给审核子代理明确的扫描目录（如 `frontend/src/features/preview-3d/` 和 `frontend/src/views/app-preview/`）和问题分级标准（P1/P2/P3/P4）。
 2. **结构化输出**：子代理按优先级分层报告，每项附带文件路径、行号参考和改动建议。
 3. **批量消化**：主模型按 P2 → P3 → P4 顺序依次修复，每轮修复后验证（vite build + typecheck + 测试）。
 4. **原子提交**：每轮修复独立 commit，便于回滚和追溯。
@@ -396,9 +396,9 @@ Three.js 资源（几何体、材质、纹理、渲染器）需要成对 dispose
 
 ## 相关文件
 
-- `frontend/src/utils/3d/render-loop.ts` — 渲染循环优化
-- `frontend/src/utils/3d/debug-render.ts` — 纹理缓存
-- `frontend/src/utils/3d/model-group-builder.ts` — 函数抽取
-- `frontend/src/utils/3d/adapters/mount-preview-core.ts` — 类型收敛、并发防护、资源生命周期
+- `frontend/src/features/preview-3d/render-loop.ts` — 渲染循环优化
+- `frontend/src/features/preview-3d/debug-render.ts` — 纹理缓存
+- `frontend/src/features/preview-3d/model-group-builder.ts` — 函数抽取
+- `frontend/src/features/preview-3d/adapters/mount-preview-core.ts` — 类型收敛、并发防护、资源生命周期
 - `frontend/src/views/app-preview/preview-library.ts` — 循环依赖破壁
 - `frontend/src/views/app-preview/skeleton.ts` — AbortController、防御性编程

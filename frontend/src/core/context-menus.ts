@@ -43,9 +43,12 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   const paths = ctx.paths || [];
   const norm: MenuCtx = { ...ctx, paths };
   const isViewer = isViewerMode();
-  // 查看器模式：纯前端白名单 + web 已实现 binding 的动作（can 探测）放行；
+  // 过滤链（自上而下 AND，任一失败即丢弃）：
+  //   1. 节点级 visibleWhen(ctx)（菜单即数据 P1 扩展；未定义 → 通过）
+  //   2. viewer-mode 全局过滤（纯前端白名单 + can 探测 binding 可用性）
   // 连续 divider 会在渲染时折叠，无需此处去重。
   const items = def.items.filter((item) => {
+    if (item.visibleWhen && !item.visibleWhen(norm)) return false;
     if (item.divider) return true;
     if (!item.action) return true;
     if (!isViewer) return true;

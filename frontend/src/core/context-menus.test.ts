@@ -2,11 +2,12 @@
 // ===== context-menus 映射测试（ADR-021 A 层）=====
 // 触发 ctx:show → 断言 menu:show 载荷与 menu-defs.ts 声明一致；
 // 点击 item → 断言 handler 发出正确的 bus 事件 / getApp 调用。
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import { bus } from "../bus.ts";
 import type { MenuItem, CtxShowPayload, ToastPayload } from "../bus";
 import { registerContextMenus } from "./context-menus.ts";
 import { MENU_DEFS, getMenuDef } from "./menu-defs.ts";
+import { HANDLERS } from "./context-menu-handlers.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 
 // getApp 是动态 import（backend/app.ts），测试用 mock 替代
@@ -224,8 +225,20 @@ describe("registerContextMenus 四类菜单声明", () => {
     expect(types.sort()).toEqual(["batch", "dir", "file", "instance"]);
   });
 
-  it("MENU_DEFS 全部 action 均注册 handler（零失配警告）", () => {
-    // context-menus.ts 注释承诺「测试应断言零警告」——防新增菜单项忘挂 HANDLERS
+  it("MENU_DEFS 全部 action 均注册 handler（零失配警告）", async () => {
+    // ADR-021 B 层：菜单即数据；测试应断言零警告——防新增菜单项忘挂 HANDLERS
+    // 2026-XX 升级：除 spy 之外，直接 import HANDLERS 与声明表对账（更稳定，不依赖 warn）
+    const { HANDLERS } = await import("./context-menu-handlers.ts");
+    const declared = new Set<string>();
+    for (const def of MENU_DEFS) {
+      for (const it of def.items) {
+        if (it.action) declared.add(it.action);
+      }
+    }
+    const registered = new Set(Object.keys(HANDLERS));
+    const missing = [...declared].filter((a) => !registered.has(a));
+    expect(missing, `menu-defs.ts 声明但未挂 handler 的 action: ${missing.join(", ")}`).toEqual([]);
+
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       MENU_DEFS.forEach((def) => {
@@ -811,5 +824,91 @@ describe("失败路径补强（batch.move 部分失败 / getApp reject 兜底）
     vi.mocked(getApp).mockRejectedValueOnce(new Error("boom"));
     await clickMove(["/a.ysm"]);
     expect(allToasts().some((m) => m.includes("❌"))).toBe(true);
+  });
+});
+
+// ===== 节点级 visibleWhen（ADR-021 B 层扩展，与 PreviewMenuNode.visibleWhen 同构）=====
+// 通过临时 push 一条带 visibleWhen 的项验证 filter 行为，测完 pop 保持全局清洁。
+// MENU_DEFS 是普通 const 数组（TS 未加 readonly），可运行时 mutate。
+// HANDLERS 同理：临时塞 dummy handler 让 action 不触发 console.warn（filter 测试只关心 items）。
+describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", () => {
+  const PROBE_ACTION = "__test_probe_visibleWhen__";
+  const PROBE_DEF_TYPE = "batch" as const;
+  let probeIndex = -1;
+  const originalHandler: unknown = HANDLERS[PROBE_ACTION];
+
+  function pushProbe(visibleWhen: ((ctx: CtxShowPayload) => boolean) | undefined) {
+    const def = MENU_DEFS.find((d) => d.type === PROBE_DEF_TYPE);
+    if (!def) throw new Error("missing batch def");
+    def.items.push({
+      action: PROBE_ACTION,
+      label: () => "probe",
+      icon: "🧪",
+      visibleWhen,
+    });
+    probeIndex = def.items.length - 1;
+    // 占位 handler：消除 filter 链路里 action 失配警告，filter 测试只关心 items 是否出现
+    (HANDLERS as Record<string, unknown>)[PROBE_ACTION] = () => {};
+  }
+
+  function popProbe() {
+    const def = MENU_DEFS.find((d) => d.type === PROBE_DEF_TYPE);
+    if (def && probeIndex >= 0) {
+      def.items.splice(probeIndex, 1);
+      probeIndex = -1;
+    }
+    if (originalHandler !== undefined) {
+      (HANDLERS as Record<string, unknown>)[PROBE_ACTION] = originalHandler;
+    } else {
+      delete HANDLERS[PROBE_ACTION];
+    }
+  }
+
+  function actionsOf(payload: { items: MenuItem[] }): string[] {
+    return payload.items.filter((i) => i.action).map((i) => i.action!);
+  }
+
+  afterEach(popProbe);
+
+  it("visibleWhen 返回 false → 该 item 不出现", () => {
+    pushProbe(() => false);
+    const payload = showMenu("batch", payloadCtx("batch"));
+    expect(actionsOf(payload)).not.toContain(PROBE_ACTION);
+  });
+
+  it("visibleWhen 返回 true → 该 item 出现", () => {
+    pushProbe(() => true);
+    const payload = showMenu("batch", payloadCtx("batch"));
+    expect(actionsOf(payload)).toContain(PROBE_ACTION);
+  });
+
+  it("visibleWhen 未定义 → 行为不变（保留项，与既有契约一致）", () => {
+    pushProbe(undefined);
+    const payload = showMenu("batch", payloadCtx("batch"));
+    expect(actionsOf(payload)).toContain(PROBE_ACTION);
+  });
+
+  it("visibleWhen 吃 ctx 快照 → count=0 时隐藏、count=3 时显示", () => {
+    pushProbe((ctx) => (ctx.count ?? 0) > 1);
+    const hidden = showMenu("batch", { x: 10, y: 20, type: "batch", paths: [], count: 0 });
+    expect(actionsOf(hidden)).not.toContain(PROBE_ACTION);
+    menuShows.length = 0;
+    const shown = showMenu("batch", payloadCtx("batch"));
+    expect(actionsOf(shown)).toContain(PROBE_ACTION);
+  });
+
+  it("visibleWhen 与 viewer-mode 守卫 AND：visibleWhen=true 但 viewer-mode 拒 → 仍被拒（验证第二关独立生效）", () => {
+    // pushProbe(action=__test_probe...) 不在 VIEWER_OK_ACTIONS 白名单也不在
+    // VIEWER_WEB_ACTION_BINDINGS；visibleWhen=true（放行）+ viewer=true + can=false
+    // → 仅 viewer-mode 守卫能拒；若仍被拒 = AND 关系正确（两关都生效）。
+    pushProbe(() => true);
+    isViewerModeMock.mockReturnValue(true);
+    canMock.mockReturnValue(false);
+    try {
+      const payload = showMenu("batch", payloadCtx("batch"));
+      expect(actionsOf(payload)).not.toContain(PROBE_ACTION);
+    } finally {
+      isViewerModeMock.mockReturnValue(false);
+    }
   });
 });

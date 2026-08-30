@@ -1076,7 +1076,7 @@
 | `toastEmptyRtype()` | `frontend/src/core/context-menu-shared:36` | rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） |
 | `isUnsafeFolderName()` | `frontend/src/core/context-menu-shared:41` | 路径安全过滤：禁止逃逸段（. |
 | `resolveDstDir()` | `frontend/src/core/context-menu-shared:53` | 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）。 |
-| `registerContextMenus()` | `frontend/src/core/context-menus:77` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
+| `registerContextMenus()` | `frontend/src/core/context-menus:80` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:29` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:51` | 注册 UI 报错落日记功能。 |
 | `registerAndroidEvents()` | `frontend/src/core/handlers/android-events:18` | 注册 Android 系统事件消费，push 取消订阅函数到 unsubs |
@@ -1096,9 +1096,9 @@
 | `ja()` | `frontend/src/core/i18n/locales/ja:5` | — |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
-| `MenuDef()` | `frontend/src/core/menu-defs:19` | 单类菜单的完整声明 |
-| `MENU_DEFS()` | `frontend/src/core/menu-defs:25` | 四类右键菜单的声明式规格（唯一事实来源） |
-| `getMenuDef()` | `frontend/src/core/menu-defs:113` | 测试辅助：按 type 取声明（不存在返回 undefined） |
+| `MenuDef()` | `frontend/src/core/menu-defs:29` | 单类菜单的完整声明 |
+| `MENU_DEFS()` | `frontend/src/core/menu-defs:35` | 四类右键菜单的声明式规格（唯一事实来源） |
+| `getMenuDef()` | `frontend/src/core/menu-defs:123` | 测试辅助：按 type 取声明（不存在返回 undefined） |
 | `sanitizePage()` | `frontend/src/core/page-store:30` | — |
 | `PAGE_WHITELIST()` | `frontend/src/core/page-store:28` | — |
 | `resolveInitialPage()` | `frontend/src/core/page-store:40` | — |

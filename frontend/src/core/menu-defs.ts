@@ -64,7 +64,7 @@ export const MENU_DEFS: MenuDef[] = [
     items: [
       {
         action: "noop",
-        label: (ctx) => `📦 已选 ${ctx.count || 0} 个文件`,
+        label: (ctx) => tr("menu.batchSelected", "Selected {count} files", { count: ctx.count || 0 }),
       },
       { divider: true },
       { action: "batch.rename", label: () => tr("menu.batchRename", "Batch Rename"), icon: "✂️" },

@@ -188,14 +188,10 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 		return types.AppError{Code: types.ErrDecodeFailed, Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
 	}
 	// 路径穿越防护（对齐 importer_file.go 契约）：
-	// - subpath 允许嵌套目录（folder/sub 保持目录结构），逐段拒绝空/. /.. 段
+	// - subpath 允许嵌套目录（folder/sub 保持目录结构），拒绝 .. 穿越段
 	// - fileName 拒绝 .. 序列与路径分隔符（仅纯文件名）
-	if subpath != "" {
-		for _, seg := range strings.Split(filepath.ToSlash(subpath), "/") {
-			if seg == "" || seg == "." || seg == ".." {
-				return types.AppError{Code: types.ErrInvalidPath, Operation: "导入模型", SourcePath: subpath, Reason: "非法子目录路径", Suggestion: "子目录仅支持纯目录名层级"}
-			}
-		}
+	if paths.HasTraversal(subpath) {
+		return types.AppError{Code: types.ErrInvalidPath, Operation: "导入模型", SourcePath: subpath, Reason: "非法子目录路径", Suggestion: "子目录仅支持纯目录名层级"}
 	}
 	if paths.HasTraversal(fileName) {
 		return types.AppError{Code: types.ErrFileNameInvalid, Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含路径穿越", Suggestion: "请使用纯文件名，不要包含路径"}

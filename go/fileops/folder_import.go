@@ -4,7 +4,6 @@
 package fileops
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -84,13 +83,10 @@ func WriteModelFolder(filesRoot, subpath, folderName string, files []types.Impor
 // writeModelFolderFiles 顺序写文件夹内全部文件（独立函数便于失败回滚）
 func writeModelFolderFiles(dstRoot string, files []types.ImportFileItem) error {
 	for _, f := range files {
-		data, err := base64.StdEncoding.DecodeString(f.Base64)
+		// 受限解码：预检 + 复检（与 importer_file.go:60 同口径，防恶意 base64 解码后膨胀撑爆内存）
+		data, err := fsutil.DecodeBase64Limited(f.Base64, previewReadLimit())
 		if err != nil {
 			return fmt.Errorf("base64 解码失败: %s", f.RelPath)
-		}
-		// 单文件上限（防恶意 base64 解码后膨胀撑爆内存——与 readLimitedFile 同口径）
-		if int64(len(data)) > previewReadLimit() {
-			return fmt.Errorf("文件过大 (%d 字节): %s", len(data), f.RelPath)
 		}
 		rel := filepath.Clean(filepath.FromSlash(strings.TrimSpace(f.RelPath)))
 		if rel == "." {

@@ -210,7 +210,7 @@
 | `MoveModelFile()` | `go/fileops/fileops:151` | MoveModelFile 移动 src 到 dstDir（保留原名） root 用于路径安全校验（空则跳过校验，对齐 CopyModelFile 语义）； ADR-038 D3： |
 | `CopyModelFile()` | `go/fileops/fileops:265` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
 | `DeleteModelFile()` | `go/fileops/fileops:362` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
-| `WriteModelFolder()` | `go/fileops/folder_import:21` | WriteModelFolder 写入文件夹整组到仓库（YSM 解压目录或普通模型文件夹）。 |
+| `WriteModelFolder()` | `go/fileops/folder_import:20` | WriteModelFolder 写入文件夹整组到仓库（YSM 解压目录或普通模型文件夹）。 |
 
 ## Go·文件系统
 
@@ -756,8 +756,8 @@
 | `App.ImportModelFileOverwriteTo()` | `internal/app/app_install_import:119` | — |
 | `App.ImportModelFileToMMD()` | `internal/app/app_install_import:126` | ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。 |
 | `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:131` | ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。 |
-| `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:237` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
-| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:267` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
+| `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:233` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
+| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:263` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
 | `App.CountInstanceResources()` | `internal/app/app_install_instance:26` | CountInstanceResources 统计指定整合包中可清空的资源文件数 只统计仓库中已有的文件（同 clearInstanceDir 逻辑） rtype 为空时统计全部类 |
 | `App.ClearInstanceResources()` | `internal/app/app_install_instance:66` | ClearInstanceResources 清空指定整合包中已同步的文件 insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型） 返回清除的文件数量 |
 | `App.DeduplicateCustomDir()` | `internal/app/app_install_instance:152` | DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle） |
@@ -825,13 +825,13 @@
 | `App.SetModelTags()` | `internal/app/app_tags:29` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:38` | ListByTag 返回所有打了指定标签的文件路径列表 |
 | `App.AllTags()` | `internal/app/app_tags:43` | AllTags 返回所有被使用的标签（按使用次数降序） |
-| `App.GetCachedTexture()` | `internal/app/app_texture_cache:25` | GetCachedTexture 读取纹理文件，计算内容哈希，检查 KTX2 缓存。 |
-| `App.SaveCachedTexture()` | `internal/app/app_texture_cache:71` | SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。 |
-| `App.ClearTextureCache()` | `internal/app/app_texture_cache:80` | ClearTextureCache 清空纹理缓存（用户主动清理用）。 |
-| `App.HasCachedTexture()` | `internal/app/app_texture_cache:85` | HasCachedTexture 检查指定纹理的内容哈希是否已有 KTX2 缓存。 |
-| `App.GetCachedTextureByHash()` | `internal/app/app_texture_cache:92` | GetCachedTextureByHash 通过哈希直接读取 KTX2 缓存（不读取原始文件，轻量操作）。 |
-| `App.HasCachedTextures()` | `internal/app/app_texture_cache:105` | HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。 |
-| `CachedTextureResult()` | `internal/app/app_texture_cache:16` | CachedTextureResult 是 GetCachedTexture 的返回值。 |
+| `App.GetCachedTexture()` | `internal/app/app_texture_cache:27` | GetCachedTexture 读取纹理文件，计算内容哈希，检查 KTX2 缓存。 |
+| `App.SaveCachedTexture()` | `internal/app/app_texture_cache:73` | SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。 |
+| `App.ClearTextureCache()` | `internal/app/app_texture_cache:82` | ClearTextureCache 清空纹理缓存（用户主动清理用）。 |
+| `App.HasCachedTexture()` | `internal/app/app_texture_cache:87` | HasCachedTexture 检查指定纹理的内容哈希是否已有 KTX2 缓存。 |
+| `App.GetCachedTextureByHash()` | `internal/app/app_texture_cache:94` | GetCachedTextureByHash 通过哈希直接读取 KTX2 缓存（不读取原始文件，轻量操作）。 |
+| `App.HasCachedTextures()` | `internal/app/app_texture_cache:107` | HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。 |
+| `CachedTextureResult()` | `internal/app/app_texture_cache:18` | CachedTextureResult 是 GetCachedTexture 的返回值。 |
 | `App.DefaultWorkshopSites()` | `internal/app/app_workshop:103` | — |
 | `App.SaveWorkshopSites()` | `internal/app/app_workshop:114` | — |
 | `App.LoadWorkshopCreators()` | `internal/app/app_workshop:156` | — |
@@ -1088,7 +1088,7 @@
 | `registerGlobalHandlers()` | `frontend/src/core/handlers/global:12` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
 | `registerInstanceOps()` | `frontend/src/core/handlers/instance-ops:12` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
 | `requireMcRoot()` | `frontend/src/core/handlers/require-mcroot:13` | 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。 |
-| `registerSync()` | `frontend/src/core/handlers/sync:257` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
+| `registerSync()` | `frontend/src/core/handlers/sync:260` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
 | `SUPPORTED_LANGS()` | `frontend/src/core/i18n/locale:11` | 支持的语言列表（规划清单） |
 | `LangCode()` | `frontend/src/core/i18n/locale:17` | — |
 | `warnedKeys()` | `frontend/src/core/i18n/locale:31` | 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） |
@@ -1483,8 +1483,8 @@
 | `PreviewMenuGroupId()` | `frontend/src/utils/3d/adapters/preview-menu/defs:31` | — |
 | `PreviewMenuItemDef()` | `frontend/src/utils/3d/adapters/preview-menu/defs:33` | — |
 | `PreviewMenuGroupDef()` | `frontend/src/utils/3d/adapters/preview-menu/defs:60` | 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） |
-| `PREVIEW_MENU_GROUPS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:66` | — |
-| `CORE_MENU_ITEMS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:88` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
+| `PREVIEW_MENU_GROUPS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:69` | — |
+| `CORE_MENU_ITEMS()` | `frontend/src/utils/3d/adapters/preview-menu/defs:91` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
 | `disposeEnvSubscriptions()` | `frontend/src/utils/3d/adapters/preview-menu/env:30` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
 | `renderEnvLevel()` | `frontend/src/utils/3d/adapters/preview-menu/env:116` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
 | `buildEnvSchema()` | `frontend/src/utils/3d/adapters/preview-menu/env:239` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |

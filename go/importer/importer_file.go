@@ -59,7 +59,7 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	//（预检避免超大 base64 字符串解码后才命中上限、白白分配内存的峰值尖刺）
 	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxImportSize)
 	if errors.Is(err, fsutil.ErrB64TooLarge) {
-		return "", "", types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
+		return "", "", types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件大小超过 %dMB 限制", types.MaxImportSizeMB), Suggestion: fmt.Sprintf("请压缩文件至 %dMB 以内", types.MaxImportSizeMB)}
 	}
 	if err != nil {
 		return "", "", types.AppError{Code: types.ErrDecodeFailed, Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}

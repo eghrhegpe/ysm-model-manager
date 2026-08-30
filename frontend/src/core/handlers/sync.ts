@@ -103,7 +103,7 @@ async function handleSyncDownloadMissing(
     // P1 修复：busy 命中时也要回 done（带 skipped 标记）——调用方（app-sidebar 推送）
     // 因 token/instanceName 永远等不到 done 而 30s 超时，或经 instanceName fallback
     // 误判成功；现让调用方立即解锁并识别「被跳过」
-    bus.emit("sync:download:done", { token, instanceName, skipped: true });
+    bus.emit("sync:download:done", { token, instanceName, skipped: true, skipReason: "busy" });
     return;
   }
   flag.busy = true;
@@ -111,8 +111,10 @@ async function handleSyncDownloadMissing(
   // 而非静默降级 YSM——错误类型装错仓库文件比直接报错危害大；finally 回
   // done(skipped=true)，调用方（app-sidebar）立即解锁并感知被跳过
   let failed = false;
+  let skipReason: "busy" | "config" | "error" | undefined;
   if (!rtype) {
     failed = true;
+    skipReason = "config";
     bus.emit("toast:show", {
       msg: "sync:download:missing 缺少 rtype 参数",
       duration: TOAST_MS.long,
@@ -129,6 +131,7 @@ async function handleSyncDownloadMissing(
     }
   } catch (e) {
     failed = true;
+    skipReason = "error";
     bus.emit("toast:show", {
       msg: `❌ ${friendlyError(e)}`,
       duration: TOAST_MS.long,
@@ -136,7 +139,7 @@ async function handleSyncDownloadMissing(
     });
   } finally {
     flag.busy = false;
-    bus.emit("sync:download:done", { token, instanceName, skipped: failed });
+    bus.emit("sync:download:done", { token, instanceName, skipped: failed, skipReason });
   }
 }
 

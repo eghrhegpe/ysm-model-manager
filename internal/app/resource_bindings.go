@@ -144,6 +144,7 @@ func (a *App) GetLitematicVoxelData(path string) string {
 	return marshalVoxelData("litematic", "BuildVoxelData", path, litematic.BuildVoxelData, a.voxelMaxBlocks())
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000
 func (a *App) SetVoxelMaxBlocks(limit int) error {
 	if limit < 0 || limit > 5_000_000 {
@@ -305,6 +306,7 @@ func specificRoot(cfg types.AppConfig, rtype string) string {
 	return ""
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled）
 // 补路径守卫——原实现 os.Rename 对任意路径可重命名（对齐 ToggleModelEnable 经 fileops
 // 的 ysmRoot 防护；rename 目标派生自输入路径，越权路径会连带生成越权目标）。
@@ -348,11 +350,13 @@ func (a *App) ToggleResourcePack(path string) bool {
 	return true
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // IsResourcePackEnabled 检查资源包是否启用
 func (a *App) IsResourcePackEnabled(path string) bool {
 	return !types.IsDisableSuffix(path)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // SelectImportZip 打开文件选择器选取 .zip 文件
 func (a *App) SelectImportZip() string {
 	path, err := a.app.Dialog.OpenFile().
@@ -445,6 +449,7 @@ func (a *App) saveConfig(cfg types.AppConfig) error {
 	return nil
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // ImportResourcePack 使用策略模式导入资源包
 func (a *App) ImportResourcePack(srcPath, rtype string) string {
 	dstDir, _ := a.GetRepoRoot(rtype)
@@ -574,6 +579,7 @@ func (a *App) FindDuplicateFiles(dir string, configStr ...string) string {
 	return marshalJSON("FindDuplicateFiles", groups, findDuplicateErrorJSON("JSON 序列化失败"))
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // CountDuplicateFiles 快速统计重复文件数量。
 // 契约（见 docs/wails-bindings.md）：成功 → {groups, extra}；失败 → {error: string}。
 func (a *App) CountDuplicateFiles(dir string) string {

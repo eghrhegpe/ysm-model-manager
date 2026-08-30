@@ -23,12 +23,6 @@
           "name": "pack.mcmeta",
           "match": "exact"
         }
-      ],
-      "actions": [
-        "import",
-        "toggle",
-        "delete",
-        "openFolder"
       ]
     },
     {
@@ -56,12 +50,6 @@
           "name": "shaders",
           "match": "exact"
         }
-      ],
-      "actions": [
-        "import",
-        "toggle",
-        "delete",
-        "openFolder"
       ]
     },
     {
@@ -102,13 +90,11 @@
         }
       ],
       "mod": {
-        "jarKeywords": ["yes_steve_model", "ysm-"]
-      },
-      "actions": [
-        "view",
-        "import",
-        "delete"
-      ]
+        "jarKeywords": [
+          "yes_steve_model",
+          "ysm-"
+        ]
+      }
     },
     {
       "id": "maid-model",
@@ -140,7 +126,10 @@
       "nestedPatterns": [
         {
           "entryDir": "assets",
-          "entryFiles": ["maid_model.json", "chair_model.json"],
+          "entryFiles": [
+            "maid_model.json",
+            "chair_model.json"
+          ],
           "maxDepth": 10
         }
       ],
@@ -152,12 +141,7 @@
       "mod": {
         "modId": "touhou_little_maid",
         "displayName": "Touhou Little Maid"
-      },
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      }
     },
     {
       "id": "blueprint",
@@ -193,12 +177,7 @@
       "mod": {
         "modId": "create",
         "displayName": "Create"
-      },
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      }
     },
     {
       "id": "litematic",
@@ -227,12 +206,7 @@
       "mod": {
         "modId": "litematica",
         "displayName": "Litematica"
-      },
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      }
     },
     {
       "id": "EntityPlayer",
@@ -284,13 +258,11 @@
       "isDir": true,
       "dirLevelSync": true,
       "mod": {
-        "jarKeywords": ["mmdskin", "mmd-skin"]
-      },
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+        "jarKeywords": [
+          "mmdskin",
+          "mmd-skin"
+        ]
+      }
     },
     {
       "id": "SceneModel",
@@ -338,12 +310,7 @@
         }
       ],
       "isDir": true,
-      "dirLevelSync": true,
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      "dirLevelSync": true
     },
     {
       "id": "CustomAnim",
@@ -367,12 +334,7 @@
         }
       ],
       "isDir": true,
-      "dirLevelSync": true,
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      "dirLevelSync": true
     },
     {
       "id": "CustomMorph",
@@ -396,12 +358,7 @@
         }
       ],
       "isDir": true,
-      "dirLevelSync": true,
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      "dirLevelSync": true
     },
     {
       "id": "StageAnim",
@@ -428,12 +385,7 @@
         }
       ],
       "isDir": true,
-      "dirLevelSync": true,
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      "dirLevelSync": true
     },
     {
       "id": "mmd-shader",
@@ -459,12 +411,7 @@
         }
       ],
       "isDir": true,
-      "dirLevelSync": true,
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      "dirLevelSync": true
     },
     {
       "id": "DefaultAnim",
@@ -488,12 +435,7 @@
         }
       ],
       "isDir": true,
-      "dirLevelSync": true,
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      "dirLevelSync": true
     },
     {
       "id": "DefaultMorph",
@@ -517,12 +459,7 @@
         }
       ],
       "isDir": true,
-      "dirLevelSync": true,
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      "dirLevelSync": true
     },
     {
       "id": "fbx",
@@ -538,12 +475,7 @@
       "instanceLevel": false,
       "preview": "3d",
       "detector": "extension",
-      "isDir": false,
-      "actions": [
-        "import",
-        "delete",
-        "openFolder"
-      ]
+      "isDir": false
     }
   ]
 }

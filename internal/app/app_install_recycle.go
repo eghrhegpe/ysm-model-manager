@@ -35,6 +35,7 @@ func (a *App) MoveToRecycle(src string) error {
 	return nil
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) MoveToRecycleEx(src string) (string, string) {
 	root := a.findRecycleRoot(src)
 	if root == "" {
@@ -88,6 +89,7 @@ func (a *App) findRecycleRoot(src string) string {
 	return ""
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) ClearCustomDir(customDir string) (int, error) {
 	customDir = strings.TrimSpace(customDir)
 	if customDir == "" {

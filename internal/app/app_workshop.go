@@ -246,6 +246,7 @@ func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
 	return sites, nil
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // ========== CSV 导出/导入 ==========
 func (a *App) ExportWorkshopSitesCSV() (string, error) {
 	sites := a.DefaultWorkshopSites()
@@ -288,6 +289,7 @@ func (a *App) ValidateWorkshopSites() (int, error) {
 	return len(sites), a.SaveWorkshopSites(sites)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) ImportWorkshopSitesCSV(csvContent string) error {
 	r := csv.NewReader(strings.NewReader(csvContent))
 	rows, err := r.ReadAll()
@@ -389,6 +391,7 @@ func (a *App) MergeWorkshopCreatorsFromJSON(jsonContent string) (int, int, error
 	return added, updated, a.SaveWorkshopCreators(existing)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) ReplaceWorkshopCreatorsFromJSON(jsonContent string) (int, error) {
 	var imported []types.WorkshopCreator
 	if err := json.Unmarshal([]byte(jsonContent), &imported); err != nil {

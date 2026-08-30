@@ -41,6 +41,7 @@ func (a *App) InstallModelTo(src, customDir string) error {
 	return err
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) InstallModelWithOverlay(src, customDir string) (string, error) {
 	return installer.InstallWithOverlay(src, customDir)
 }
@@ -75,6 +76,7 @@ func (a *App) DetectZipType(base64Data string) string {
 	return importer.DetectZipType(data)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) ImportModelFileSkipCheck(fileName, base64Data string) error {
 	return a.importModelFile(fileName, base64Data, true)
 }
@@ -84,6 +86,7 @@ func (a *App) importModelFile(fileName, base64Data string, skipCheck bool) error
 	return err
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) ImportModelFileOverwrite(fileName, base64Data string) error {
 	_, _, err := a.importModelFileWithOptions(fileName, base64Data, importOptions{overwrite: true})
 	return err
@@ -112,14 +115,17 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 	return destPath, rtype, err
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) ImportModelFileTo(fileName, subpath, base64Data string) error {
 	return a.importModelFileWithSubpath(fileName, subpath, base64Data, false)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) ImportModelFileOverwriteTo(fileName, subpath, base64Data string) error {
 	return a.importModelFileWithSubpath(fileName, subpath, base64Data, true)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。
 // mmdSubdir: MMD 用途子目录名（如 SceneModel/CustomAnim），对应 MMD 独立顶级类型。
 // subpath: 文件在子目录内的相对路径（文件夹导入时保留层级）。
@@ -127,6 +133,7 @@ func (a *App) ImportModelFileToMMD(fileName, subpath, mmdSubdir, base64Data stri
 	return a.importModelFileMMD(fileName, subpath, mmdSubdir, base64Data, false)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。
 func (a *App) ImportModelFileOverwriteToMMD(fileName, subpath, mmdSubdir, base64Data string) error {
 	return a.importModelFileMMD(fileName, subpath, mmdSubdir, base64Data, true)

@@ -209,6 +209,7 @@ func runConcurrentAnalyze(count int, analyze func(i int) *types.SearchResult) []
 	return results
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // SearchAllModels 跨类型搜索：遍历所有已配置资源类型的根目录，并发扫描 + 合并结果。
 // allRoots 为 rtype→root 映射（由 GetAllRepoRoots 提供）；每个搜索结果携带 Type 字段。
 // 关键词/数值过滤逻辑与 SearchModels 一致，但扫描范围覆盖全部类型。
@@ -442,6 +443,7 @@ func (a *App) ListVersionInstances(mcRoot string) []types.VersionInstance {
 	return ysmsync.ListVersions(strings.TrimSpace(mcRoot))
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) GetGlobalCustomDir(mcRoot string) string {
 	// ADR-064 锚定：路径走注册表 SubDirMap（原硬编码 config/yes_steve_model/custom，
 	// YSM scanDir 变更时此处失联）

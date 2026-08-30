@@ -78,6 +78,7 @@ func (a *App) SaveCachedTexture(hash string, b64Data string) error {
 	return texture_cache.WriteCached(hash, data)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // ClearTextureCache 清空纹理缓存（用户主动清理用）。
 func (a *App) ClearTextureCache() error {
 	return texture_cache.ClearCache()

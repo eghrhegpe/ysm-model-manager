@@ -148,6 +148,7 @@ func (a *App) clearInstanceDir(dir string, rtype string, filesRoot string) int {
 	return recycle.RemoveRepoDuplicates(dir, filesRoot, a.ysmRoot(), a.logger.Add)
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle）
 func (a *App) DeduplicateCustomDir(customDir string) (int, int, error) {
 	// 去重 Move 与安装/同步并发 Rename 同一 custom 目录文件 → 统一纳入 InstallLock 互斥（共享单锁闭环）
@@ -277,6 +278,7 @@ func (a *App) SyncModelToggleStatus(instanceCustomDir, filesRoot string) (int, i
 	return n1, n2, err
 }
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 // RelinkCustomDir 重新应用链接模式到指定目录（兼容旧版）
 func (a *App) RelinkCustomDir(customDir, filesRoot string) (int, error) {
 	// 尝试从 filesRoot 推断 rtype

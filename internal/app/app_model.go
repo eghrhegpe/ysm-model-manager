@@ -71,6 +71,7 @@ func (a *App) ExtractYSMHeaderFromBase64(base64Data string) ysm.YSMHeader {
 // previewTempTTL 临时预览文件存活期：写入前清扫过期文件，防长期运行累积磁盘
 const previewTempTTL = 24 * time.Hour
 
+// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
 func (a *App) SavePreviewTempFile(base64Data string) (string, error) {
 	// base64 预大小守卫（同 ExtractYSMHeaderFromBase64）
 	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxReadLimit)

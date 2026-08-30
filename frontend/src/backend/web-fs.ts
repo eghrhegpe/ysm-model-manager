@@ -34,7 +34,7 @@ import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/model
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
 // rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
 import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
-import { arrayBufferToBase64, base64ToBytes, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT } from "./web-common.ts";
+import { arrayBufferToBase64, base64ToBytes, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
 // R2 导入增强：detectZipType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
 import { extractZip, detectZipType } from "./extract.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
@@ -1275,11 +1275,12 @@ export const webFsBindings = {
   // DetectZipType：base64 → 字节 → 内容指纹（extract.ts detectZipType，对齐 Go 语义）
   DetectZipType: (base64Data: string) => {
     if (!base64Data) return Promise.resolve("");
-    // 安全审计：base64 大小守卫——atob 对超大字符串（>~133MB 解码后）可能导致内存压力，
-    // 且 MAX_IMPORT_BYTES=100MB 的文件 base64 约 133MB，远超类型检测所需
-    // （detectZipType 只读 local file header 文件名段，前几 KB 足够识别）
-    // 50MB base64 ≈ 37.5MB 原始，覆盖绝大多数合法 zip；>50MB 的 zip 类型检测静默返回 ""
-    if (base64Data.length > 50 * 1024 * 1024) return Promise.resolve("");
+    // base64 大小守卫：上限对齐 MAX_IMPORT_BYTES（100MB 原始 → base64 约 133.4MB）——
+    // 探测能力与导入上限同口径，50~100MB 的合法 zip 不再被旧 50MB 守卫误杀为 ""
+    //（atob 内存压力与导入路径同量级，导入本身接受的输入探测也接受）
+    if (base64Data.length > Math.ceil(MAX_IMPORT_BYTES / 3) * 4) {
+      return Promise.resolve("");
+    }
     try {
       const bin = atob(base64Data);
       const bytes = new Uint8Array(bin.length);

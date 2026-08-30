@@ -44,3 +44,20 @@ func TestDecodeBase64Limited_NoLimit(t *testing.T) {
 		t.Fatalf("max<=0 应跳过大小限制: %v", err)
 	}
 }
+
+func TestDecodeBase64Limited_NewlineInput(t *testing.T) {
+	// MIME/PEM 风格带换行的 base64：预检按剥离换行后的长度算上界，
+	// 不再把换行计入长度误判超大（DecodeString 本身忽略 \r\n）
+	wrapped := "aGVs\r\nbG8=\n"
+	data, err := DecodeBase64Limited(wrapped, 100)
+	if err != nil {
+		t.Fatalf("带换行的合法输入不应被预检误拒: %v", err)
+	}
+	if string(data) != "hello" {
+		t.Fatalf("解码结果不符: %q", data)
+	}
+	// 换行剥离后仍受 max 约束
+	if _, err := DecodeBase64Limited("aGVs\r\nbG8=\n", 2); !errors.Is(err, ErrB64TooLarge) {
+		t.Fatalf("复检仍应生效, got %v", err)
+	}
+}

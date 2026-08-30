@@ -60,8 +60,15 @@ func (a *App) ImportModelFile(fileName, base64Data string) error {
 
 // DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用）
 func (a *App) DetectZipType(base64Data string) string {
-	// base64 预大小守卫：与导入链路同口径，类型探测只需头部特征，50MB 上限足够
-	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxReadLimit)
+	// 尾部探针优先（audit #1）：解码 base64 末尾窗口解析中央目录，内存 O(4MB) 与包
+	// 体积无关——探测能力覆盖到导入上限 MaxImportSize(500MB)，50~500MB 合法 zip
+	// 不再被 50MB 探测上限误杀为 unknown
+	if id, ok := importer.DetectZipTypeFromBase64Tail(base64Data); ok {
+		return id
+	}
+	// 兜底：7z 等头部指纹格式、zip64/中央目录超出尾部窗口的 zip → 整包解码，
+	// 上限对齐导入上限（与 ImportModelFile 同口径，不再有探测/导入真空带）
+	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxImportSize)
 	if err != nil {
 		return "unknown"
 	}

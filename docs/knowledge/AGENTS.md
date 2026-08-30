@@ -85,6 +85,10 @@ node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变�
 
 **索引/生成物同步（pre-commit）**：`.githooks/pre-commit` 在 commit 时自动跑秒级 gen（清单以 `GEN_CMDS` 为准）并以 mtime/size 快照 diff 只 stage 本次 gen 实际 touch 的文件，不再无差别 `git add docs/`；失败仅提示不阻断；逃生阀 `YSM_SKIP_GEN=1`。知识卡 index/字段同步无需手动跑。
 
+**暂存残留自清（post-commit）**：`.githooks/post-commit` 在 commit 后自动清「路径限定提交（`git commit -- <paths>`）遗留的索引残留」——pre-commit 钩子 gen+stage 的生成物在 --only 语义下不被路径限定提交消费，索引残留导致 `git status` 恒显示 MM 噪音（实测 `git diff HEAD` 为空但 MM 常驻，高推理 AI 误判工作区脏空转多轮）。钩子遍历有暂存差异的文件，仅当「工作树 == HEAD（无真实未提交改动）」时 `git restore --staged` 清残留；真实改动（工作树 != HEAD，含并行会话半成品）保持诚实显示不动。逃生阀 `YSM_SKIP_POSTCLEAN=1`。
+- **对照实验（2026-08-31 实战复现）**：无 pre-commit 钩子 + 路径限定提交 → status 干净、提交 1 文件；有钩子（gen+stage）+ 路径限定提交 → 提交含钩子 stage 的生成物**且 MM 残留复现**。残留确为钩子引入的真实现象（非理论臆测）；post-commit 实测清掉。兄弟 AI 再质疑「残留子虚乌有」时以此数据为准。
+- **陷阱**：`git commit -- <path>`（--only）从 HEAD 派生 temp index，**不记录索引中的 mode 变更**（`git update-index --chmod=+x` 后路径限定提交 HEAD 仍 100644 → 永久 mode 残留且 post-commit 守卫把 mode 差异当真实改动跳过）；钩子脚本的 mode 修正需**全量提交**（无 paths）落索引 mode。
+
 
 ## 分类映射
 

@@ -3,7 +3,8 @@
 //      / runHealthAudit（成功渲染 / 后端错误 / 解析失败 / 调用异常 + 重入守卫）
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "../../../test-utils/index.ts";
-import { runHealthAudit, parseHealthReport, renderHealthReport, formatSize } from "./health.ts";
+import { runHealthAudit, renderHealthReport, formatSize } from "./health.ts";
+import { parseHealthReport } from "../../../utils/health-report.ts";
 
 const { getApp } = vi.hoisted(() => ({ getApp: vi.fn() }));
 vi.mock("../../../backend/app.ts", () => ({ getApp }));

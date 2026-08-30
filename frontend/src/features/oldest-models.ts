@@ -11,7 +11,7 @@ import { getApp } from "../backend/app.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../utils/resource/types.ts";
 import { useCurrentResourceType } from "./repo-rtype.ts";
 import { createLoadGuard } from "../utils/async/load-guard.ts";
-import { parseHealthReport } from "../views/app-content/diagnostics/health.ts";
+import { parseHealthReport } from "../utils/health-report.ts";
 
 // ===== 展示阈值（与诊断页 health.ts 同口径：80/60 分档）=====
 const MS_PER_DAY = 86400000;

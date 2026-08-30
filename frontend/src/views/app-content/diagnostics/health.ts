@@ -7,42 +7,11 @@ import { getApp } from "../../../backend/app.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { formatBytes } from "../../../utils/dom/format.ts";
 import { currentRepoType } from "../../../features/repo-rtype.ts";
+import { parseHealthReport, type HealthReport } from "../../../utils/health-report.ts";
 import type { EscFn } from "./logs.ts";
 
 // 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML
 let _healthBusy = false;
-
-/** Go 端 repoaudit.HealthReport 的 JSON 结构（字段与 go/repoaudit 对齐） */
-interface HealthReport {
-  timestamp: string;
-  directory: string;
-  score: number;
-  completeness: {
-    checked: number;
-    valid: number;
-    invalid: number;
-    percentage: number;
-  };
-  cache: {
-    cache_dir: string;
-    cache_files: number;
-    cache_size: number;
-    hit_rate: number;
-  };
-  resources: {
-    total_files: number;
-    total_size: number;
-    /** 禁用文件数（.disabled/.ban，Go types.IsDisableSuffix 单一口径） */
-    banned?: number;
-    by_type: Record<string, number>;
-  };
-  dedup: {
-    groups: number;
-    extra_files: number;
-    reclaim_bytes: number;
-  };
-  warnings?: string[];
-}
 
 /**
  * 仓库体检：调 Go 端 RepoHealthAudit（当前类型单仓库审计）并渲染结果——
@@ -89,32 +58,6 @@ export async function runHealthAudit(
       '<div class="stat-row diag-msg diag-msg-error">❌ ' + esc(msg) + "</div>";
   } finally {
     _healthBusy = false;
-  }
-}
-
-/** 解析 RepoHealthAudit 返回的 JSON 字符串。
- * 返回有三种形态：
- *  - HealthReport（含 score/completeness）→ 正常报告
- *  - {error: string} → 后端业务错误（路径校验等），返回 Error 对象供调用方区分展示
- *  - 非法 JSON / 其他 → null（真正的解析失败）
- */
-export function parseHealthReport(raw: string): HealthReport | Error | null {
-  try {
-    const parsed = JSON.parse(raw) as HealthReport & { error?: string };
-    // 最小运行时校验：score/completeness.percentage 必须为 number，
-    // 防后端结构漂移时渲染层 .toFixed() 抛异常白屏
-    if (
-      typeof parsed.score === "number" &&
-      parsed.completeness &&
-      typeof parsed.completeness.percentage === "number" &&
-      typeof parsed.completeness.valid === "number" &&
-      typeof parsed.completeness.invalid === "number"
-    )
-      return parsed;
-    if (parsed.error) return new Error(parsed.error);
-    return null;
-  } catch {
-    return null;
   }
 }
 

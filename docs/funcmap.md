@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 6 | 37 |
 | frontend/ui | 18 | 66 |
-| 前端·工具 | 184 | 758 |
-| frontend/views | 122 | 360 |
+| 前端·工具 | 185 | 760 |
+| frontend/views | 122 | 359 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **526** | **2253** |
+| **合计** | **527** | **2254** |
 
 ## Go·头像
 
@@ -2053,6 +2053,8 @@
 | `GH_REPO()` | `frontend/src/utils/gh-links:5` | — |
 | `GH_RELEASES()` | `frontend/src/utils/gh-links:6` | — |
 | `GH_DOCS()` | `frontend/src/utils/gh-links:7` | — |
+| `HealthReport()` | `frontend/src/utils/health-report:9` | Go 端 repoaudit.HealthReport 的 JSON 结构（字段与 go/repoaudit 对齐） |
+| `parseHealthReport()` | `frontend/src/utils/health-report:46` | 解析 RepoHealthAudit 返回的 JSON 字符串。 |
 | `fileIcon()` | `frontend/src/utils/icon/icon:36` | 按扩展名返回图标 emoji |
 | `isYsmName()` | `frontend/src/utils/icon/icon:52` | 是否为 YSM 文件 |
 | `ICONS()` | `frontend/src/utils/icon/workshop-icons:3` | — |
@@ -2141,10 +2143,9 @@
 | `initDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:208` | 初始化去重配置面板（标签页打开时调用，配置实时保存） 扫描结果不覆盖面板，控件扫描后仍可改；code_review P3） |
 | `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:215` | 获取当前去重配置（供外部调用）——返回冻结快照，防调用方篡改或跨调用污染。 |
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/dedup:556` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
-| `runHealthAudit()` | `frontend/src/views/app-content/diagnostics/health:54` | 仓库体检：调 Go 端 RepoHealthAudit（当前类型单仓库审计）并渲染结果—— 动态感知当前资源类型（repo-rtype，等价树视图 vm._filesRoot 的类 |
-| `parseHealthReport()` | `frontend/src/views/app-content/diagnostics/health:101` | 解析 RepoHealthAudit 返回的 JSON 字符串。 |
-| `renderHealthReport()` | `frontend/src/views/app-content/diagnostics/health:127` | 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 |
-| `formatSize()` | `frontend/src/views/app-content/diagnostics/health:180` | 字节大小人性化——委托至 formatBytes（单一事实来源，消灭多处实现口径漂移） |
+| `runHealthAudit()` | `frontend/src/views/app-content/diagnostics/health:23` | 仓库体检：调 Go 端 RepoHealthAudit（当前类型单仓库审计）并渲染结果—— 动态感知当前资源类型（repo-rtype，等价树视图 vm._filesRoot 的类 |
+| `renderHealthReport()` | `frontend/src/views/app-content/diagnostics/health:70` | 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 |
+| `formatSize()` | `frontend/src/views/app-content/diagnostics/health:123` | 字节大小人性化——委托至 formatBytes（单一事实来源，消灭多处实现口径漂移） |
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/init` | — |
 | `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/init` | — |
 | `resetDedupConfig()` | `frontend/src/views/app-content/diagnostics/init` | — |

@@ -18,19 +18,24 @@ import (
 // hasRecycleSegment 调用行：.recycle 子树中的 .ban 文件应被跳过（不参与启禁），
 // 正常位置的 .ban 仍被启用。
 func TestSyncToggleStatus_RecycleSubtreeSkipped(t *testing.T) {
-	base := t.TempDir()
-	repoDir := filepath.Join(base, "repo")
-	customDir := filepath.Join(base, "custom")
-	_ = os.MkdirAll(repoDir, 0755)
-	_ = os.MkdirAll(filepath.Join(customDir, ".recycle"), 0755)
+	customDir := t.TempDir()
+	repoDir := t.TempDir()
+	// .recycle 子树内 .ban（应跳过）+ 正常位置 .ban（应启用）+ repo 对应模型
+	want := map[string]string{
+		filepath.Join(customDir, ".recycle", "trash.ysm.ban"): "x",
+		filepath.Join(customDir, "model_a.ysm.ban"):           "disabled",
+		filepath.Join(repoDir, "model_a.ysm"):                 "repo",
+	}
+	for p, c := range want {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(c), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 
-	// custom: .recycle 子树内一个 .ban（应跳过）+ 正常位置一个 .ban（应启用）
-	_ = os.WriteFile(filepath.Join(customDir, ".recycle", "trash.ysm.ban"), []byte("x"), 0644)
-	_ = os.WriteFile(filepath.Join(customDir, "model_a.ysm.ban"), []byte("disabled"), 0644)
-	// repo: model_a 正常 → custom 的 model_a.ysm.ban 应被启用
-	_ = os.WriteFile(filepath.Join(repoDir, "model_a.ysm"), []byte("repo"), 0644)
-
-	scanFn := func(dir string) []types.ModelEntry {
+	scanFn := func(string) []types.ModelEntry {
 		return []types.ModelEntry{{Name: "model_a.ysm", Path: filepath.Join(repoDir, "model_a.ysm"), Hash: "hash_a"}}
 	}
 
@@ -38,11 +43,8 @@ func TestSyncToggleStatus_RecycleSubtreeSkipped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("不应报错: %v", err)
 	}
-	if enable != 1 {
-		t.Errorf(".recycle 子树内 .ban 应被跳过、model_a 应启用 1 个, got enable=%d", enable)
-	}
-	if disable != 0 {
-		t.Errorf("无禁用目标, got disable=%d", disable)
+	if enable != 1 || disable != 0 {
+		t.Errorf(".recycle 子树 .ban 应被跳过、model_a 应启用 1 个: enable=%d disable=%d", enable, disable)
 	}
 }
 

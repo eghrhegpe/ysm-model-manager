@@ -18,7 +18,7 @@
 | Go·文件系统 | 11 | 23 |
 | Go·几何 | 2 | 11 |
 | Go·导入 | 2 | 16 |
-| Go·安装 | 1 | 10 |
+| Go·安装 | 1 | 11 |
 | go/instance | 1 | 4 |
 | go/internal | 1 | 3 |
 | go/launcher | 1 | 1 |
@@ -50,7 +50,7 @@
 | frontend/views | 122 | 358 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **525** | **2247** |
+| **合计** | **525** | **2248** |
 
 ## Go·头像
 
@@ -286,11 +286,12 @@
 | `InstallDir()` | `go/installer/installer:168` | InstallDir 安装整个目录下的所有文件到目标目录。 |
 | `InstallDirRel()` | `go/installer/installer:178` | InstallDirRel 安装目录到 dstRoot/&lt;relSlash&gt;（保留仓库多层物理路径）。 |
 | `InstallDirLocked()` | `go/installer/installer:185` | InstallDirLocked 与 InstallDir 语义相同，但不重复加锁——供已持锁调用方使用。 |
-| `InstallToGlobal()` | `go/installer/installer:468` | InstallToGlobal 安装到全局 custom 目录 |
-| `InstallWithOverlay()` | `go/installer/installer:494` | InstallWithOverlay 带冲突检查的安装 |
-| `CopyFile()` | `go/installer/installer:578` | CopyFile 复制文件到目标目录（带互斥锁） |
-| `CopyFileLocked()` | `go/installer/installer:586` | CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
-| `IsValidRepoRoot()` | `go/installer/installer:736` | IsValidRepoRoot 禁止选择系统敏感目录作为仓库 跨平台实现：禁止根目录、系统关键目录 |
+| `InstallDirRelLocked()` | `go/installer/installer:191` | InstallDirRelLocked 与 InstallDirRel 语义相同，但不重复加锁——供 sync.PushResources 等整段持 InstallLock 的调用 |
+| `InstallToGlobal()` | `go/installer/installer:474` | InstallToGlobal 安装到全局 custom 目录 |
+| `InstallWithOverlay()` | `go/installer/installer:500` | InstallWithOverlay 带冲突检查的安装 |
+| `CopyFile()` | `go/installer/installer:584` | CopyFile 复制文件到目标目录（带互斥锁） |
+| `CopyFileLocked()` | `go/installer/installer:592` | CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
+| `IsValidRepoRoot()` | `go/installer/installer:742` | IsValidRepoRoot 禁止选择系统敏感目录作为仓库 跨平台实现：禁止根目录、系统关键目录 |
 
 ## go/instance
 

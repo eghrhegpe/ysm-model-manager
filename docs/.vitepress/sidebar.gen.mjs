@@ -1305,6 +1305,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r17-codereview-five-scope-2026-08-30"
       },
       {
+        "text": "审核 R18：跨提交回归 + 修复验证轮（2026-08-30）",
+        "link": "/audit/audit-r18-regression-verification-2026-08-30"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

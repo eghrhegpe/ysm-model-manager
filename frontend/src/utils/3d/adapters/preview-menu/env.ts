@@ -8,7 +8,7 @@ import { createHeaderToggle } from '../../../../ui/ui-header-toggle.ts';
 import type { SlideMenuHandle } from '../../../../ui/ui-slide-menu.ts';
 import { renderCapControls, formatCapSliderValue } from './cap-controls.ts';
 import type { PreviewMenuCtx } from './core.ts';
-import { t } from '../../../../core/i18n/t.ts';
+import { tr } from '../../../../core/i18n/tr.ts';
 import { previewSnapshot, type PreviewSnapshot } from '../../state/preview-state.ts';
 import { ENV_PRESET_LINKAGE, type EnvPresetId } from '../../caps/environment-capability.ts';
 import type { PreviewMenuNode } from './node-types.ts';
@@ -38,7 +38,6 @@ const PRESET_ORDER = [
   { id: "forest", icon: "\uD83C\uDF33", labelKey: "preview.presetQuickForest" },
   { id: "sky", icon: "\uD83C\uDF24\uFE0F", labelKey: "preview.presetQuickSky" },
 ];
-function tr(key: string, fallback: string): string { const v = t(key); return v === key ? fallback : v; }
 /** 环境面板空态提示行（两分支共用） */
 function appendEnvEmpty(list: HTMLElement): void {
   const r = document.createElement("div");

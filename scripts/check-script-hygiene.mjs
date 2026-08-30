@@ -16,7 +16,10 @@
  *      应支持 `--json` 或无条件输出 JSON → 子代理/CI 可稳定消费；
  *   4. 【本仓库扩展】文件头 5 字段：顶部 JSDoc 必须含
  *      文件名+描述 / 依赖声明 / 用法 / 退出码 /（推荐）设计意图，
- *      对齐两端统一文档约定，使规范可机检、可自执行。
+ *      对齐两端统一文档约定，使规范可机检、可自执行；
+ *   5. 【2026-08-30 新增】positional 脚本须走 parse-args：手写 argv 解析且消费位置参数的
+ *      脚本无未知 flag 白名单拦截（`--jso` 拼错静默当默认行为，audit-split 曾中招）；
+ *      import 了 parseArgs 却不消费 `args.unknown` 同样告警。
  *
  * 设计意图：让 MikuMikuAR 与 ysm-model-manager 共用一套 .mjs 文档约定可被机检、
  *           可自执行，把统一的「文件头规范」从纸面落到 CI/子代理可消费的卡点。
@@ -147,6 +150,29 @@ function checkHeader(file, text) {
   return issues;
 }
 
+// ── 检查 5：positional 脚本须走 parse-args ──────────────
+
+const HANDWRITTEN_ARGV_RE = /process\.argv\.slice\(2\)|process\.argv\.includes\(|process\.argv\[2\]/;
+/** 位置参数消费特征：手写「跳过 -- 开头取裸参」find，或直接取 argv[2]/argv[0] 当值。 */
+const HANDWRITTEN_POSITIONAL_RE =
+  /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]/;
+const PARSEARGS_IMPORT_RE = /_lib\/parse-args\.mjs/;
+
+function checkArgvContract(text) {
+  const usesParseArgs = PARSEARGS_IMPORT_RE.test(text);
+  if (!usesParseArgs) {
+    if (HANDWRITTEN_ARGV_RE.test(text) && HANDWRITTEN_POSITIONAL_RE.test(text)) {
+      return ['手写 argv 解析且消费 positional 参数 → 应迁 _lib/parse-args.mjs（unknown 白名单拦截，防 --jso 拼错静默放行）'];
+    }
+    return [];
+  }
+  // import 了 parseArgs 但没消费 unknown → 拼错 flag 仍静默通过，白名单形同虚设
+  if (!/\.unknown\b/.test(text)) {
+    return ['import parseArgs 但未消费 args.unknown 白名单（应 unknown.length 时退非 0）'];
+  }
+  return [];
+}
+
 // ── 主流程 ──────────────────────────────────────────────
 
 /** 递归收集 scripts/ 下所有 .mjs（含 hooks/ 子目录；排除 _lib 与测试）。返回相对 SCRIPTS_DIR 的路径。 */
@@ -181,6 +207,7 @@ function main() {
       ...checkExitCode(text).map((m) => `${f}: ${m}`),
       ...checkSharedLayer(text).map((m) => `${f}: ${m}`),
       ...checkJsonContract(f, text).map((m) => `${f}: ${m}`),
+      ...checkArgvContract(text).map((m) => `${f}: ${m}`),
       ...checkHeader(f, text),
     ];
     warns.push(...issues);

@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
 import { getRoot } from './_lib/scan-files.mjs';
 import { run } from './_lib/proc.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const ROOT = getRoot();
 const REDLINE = 400; // ADR-040：拆分后每文件 ≤400 行
@@ -380,14 +381,25 @@ function audit(commit) {
 
 // ── CLI ──
 
-const argv = process.argv.slice(2);
-const json = argv.includes('--json');
-const redlineOnly = argv.includes('--redline');
-const compact = argv.includes('--compact');
-const commitArg = argv.find((a) => !a.startsWith('--') && !a.endsWith('..') && !a.startsWith('..'));
+const args = parseArgs(process.argv.slice(2), { bools: ['json', 'redline', 'compact'] });
+if (args.help) {
+  console.log('用法: node scripts/audit-split.mjs <commit> [--json|--redline|--compact]');
+  process.exit(0);
+}
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
+const { json, redlineOnly, compact, commitArg } = {
+  json: args.json,
+  redlineOnly: args.redline,
+  compact: args.compact,
+  // 位置参数：沿用旧口径排除 `..`/`..` 开头（commit range `a..b` 走 --redline 等场景外的裸参误判防御）
+  commitArg: args._.find((a) => !a.endsWith('..') && !a.startsWith('..')),
+};
 
 if (!commitArg) {
-  console.error('用法: node scripts/audit-split.mjs <commit> [--json|--redline]');
+  console.error('用法: node scripts/audit-split.mjs <commit> [--json|--redline]（--help 查看用法）');
   process.exit(2);
 }
 

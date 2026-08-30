@@ -10,10 +10,11 @@
  *   node scripts/ai-mistake-tracker.mjs --json    # JSON 输出（CI/子代理消费）
  *   node scripts/ai-mistake-tracker.mjs --limit N # 启用 limit N
  *
- * 退出码：0（无 process.exit 调用）
+ * 退出码：0 成功；未知参数 / --help 误用 → 2 / 0
  */
 import { ROOT } from './_lib/scan-files.mjs';
 import { run } from './_lib/proc.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 
 
@@ -225,10 +226,17 @@ function formatReport(commits, chains, hotspots, catStats, violations) {
 }
 
 
-const args = process.argv.slice(2);
-const jsonMode = args.includes("--json");
-const limitIdx = args.indexOf("--limit");
-const limit = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) || 200 : 200;
+const args = parseArgs(process.argv.slice(2), { bools: ['json'], strings: ['limit'], defaults: { limit: 200 } });
+const jsonMode = args.json;
+if (args.help) {
+  console.log('用法: node scripts/ai-mistake-tracker.mjs [--json] [--limit N]');
+  process.exit(0);
+}
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
+const limit = parseInt(String(args.limit), 10) || 200;
 
 const commits = gitLog(limit);
 for (const c of commits) {

@@ -29,8 +29,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
-const JSON_MODE = process.argv.includes('--json');
+const ARGS = parseArgs(process.argv.slice(2), { bools: ['json'] });
+const JSON_MODE = ARGS.json;
+if (ARGS.help) {
+  console.log('用法: node scripts/check-menu-health.mjs [--json]');
+  process.exit(0);
+}
+if (ARGS.unknown.length) {
+  console.error(`❌ 未知参数: ${ARGS.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
 
 // ── 菜单表文件（相对 ROOT）──
 const MENU_FILES = [

@@ -173,7 +173,8 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
     dlBtn.dataset.testid = "gh-dl";
     dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");
     dlBtn.dataset.name = m.name;
-    dlBtn.dataset.size = String(m.size || 0);
+    // P3（审核复核）：同 download-tasks.ts 的有限数守卫——-1（Content-Length=-1 哨兵）不得透传
+    dlBtn.dataset.size = String(typeof m.size === "number" && Number.isFinite(m.size) && m.size > 0 ? m.size : 0);
     actionsCell.appendChild(dlBtn);
   }
   row.appendChild(actionsCell);

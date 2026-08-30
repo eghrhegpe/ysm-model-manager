@@ -20,16 +20,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot, relPosix } from './_lib/scan-files.mjs';
 
-const argv = process.argv.slice(2);
-const ARGS = new Set(argv);
-const CHECK = ARGS.has('--check');
-const JSON_OUT = ARGS.has('--json');
-const STRICT = ARGS.has('--strict');
+import { parseArgs } from './_lib/parse-args.mjs';
+
+const ARGS = parseArgs(process.argv.slice(2), { bools: ['check', 'json', 'strict'], strings: ['root'] });
+if (ARGS.help) {
+  console.log('用法: node scripts/event-graph.mjs [--check] [--json] [--strict] [--root <dir>]');
+  process.exit(0);
+}
+if (ARGS.unknown.length) {
+  console.error(`❌ 未知参数: ${ARGS.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
+const CHECK = ARGS.check;
+const JSON_OUT = ARGS.json;
+const STRICT = ARGS.strict;
 /** 测试 fixture 根覆盖（不影响生产默认路径） */
-const EFF_ROOT = (() => {
-  const i = argv.indexOf('--root');
-  return i >= 0 ? path.resolve(argv[i + 1]) : getRoot();
-})();
+const EFF_ROOT = ARGS.root ? path.resolve(ARGS.root) : getRoot();
 const SRC_DIR = path.join(EFF_ROOT, 'frontend', 'src');
 const FE_DIR = path.join(EFF_ROOT, 'frontend');
 const HTML_FILES = fs.existsSync(FE_DIR)

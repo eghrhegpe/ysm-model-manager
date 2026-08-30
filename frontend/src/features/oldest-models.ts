@@ -67,9 +67,9 @@ function computeRepoStats(entries: ModelEntry[]): RepoStats {
   let banned = 0;
   const hashMap: Record<string, number> = {};
   entries.forEach((e) => {
-    totalSize += e.Size || 0;
+    totalSize += e.Size ?? 0;
     if (/\.(disabled|ban)$/i.test(e.Name || "")) banned++;
-    if (e.Hash) hashMap[e.Hash] = (hashMap[e.Hash] || 0) + 1;
+    if (e.Hash) hashMap[e.Hash] = (hashMap[e.Hash] ?? 0) + 1;
   });
   const dupGroups = Object.values(hashMap).filter((c) => c > 1).length;
   const dupTotal = Object.values(hashMap).reduce(

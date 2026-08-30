@@ -235,6 +235,21 @@ func (a *App) restartWatcher(filesRoot, mcRoot string) error {
 	return nil
 }
 
+// SetSessionFilesRoot CLI 会话级覆写 FilesRoot（仅内存，不落盘）。
+// 背景（审核 #4 CLI 写穿）：原 DispatchCommand 经 SaveAppConfig 初始化配置，
+// CLI 的 --files-root 是一次性会话参数（临时目录/测试沙盒），落盘会永久改写
+// 真实用户配置的仓库根（GUI 下次启动静默指向被污染路径）。改为仅覆写内存
+// configCache：本次命令内 LoadAppConfig 可见，磁盘零副作用；其余配置字段
+// （Mirror/LinkMode 等）仍从真实配置读取，GUI 配置以设置页 SaveAppConfig
+// 为唯一写入口。
+func (a *App) SetSessionFilesRoot(filesRoot string) {
+	a.LoadAppConfig() // 确保已从磁盘加载（含 double-check，避免覆盖后丢真实字段）
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
+	a.configCache.FilesRoot = filesRoot
+	a.configLoaded = true
+}
+
 func orDefault(val, fallback string) string {
 	if val != "" {
 		return val

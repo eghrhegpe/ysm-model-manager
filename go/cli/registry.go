@@ -93,11 +93,13 @@ func DispatchCommand(a *app.App, saveConfigFn func(filesRoot, rpRoot, mcRoot, li
 			Err: fmt.Errorf("--files-root 参数不能为空")}
 	}
 
-	if filesRoot != "" && saveConfigFn != nil {
-		if err := saveConfigFn(filesRoot, "", "", "", ""); err != nil {
-			return &ErrRuntime{CmdName: cmdName,
-				Err: fmt.Errorf("初始化配置失败: %w", err)}
-		}
+	if filesRoot != "" {
+		// audit（#4 CLI 写穿）：--files-root 是一次性会话参数——原实现经 saveConfigFn
+		// （a.SaveAppConfig）落盘真实用户配置，临时路径的一次性操作会永久改写 GUI
+		// 仓库根（静默污染）。改为仅覆写内存会话配置：本次命令内 LoadAppConfig 可见，
+		// 磁盘零副作用（不建存储目录、不重启 watcher——CLI 本就无 watcher）。
+		// saveConfigFn 形参保留签兼容（GUI 桥传 a.SaveAppConfig），CLI 路径不再调用。
+		a.SetSessionFilesRoot(filesRoot)
 	}
 
 	ctx := &CmdContext{App: a, FilesRoot: filesRoot, Args: commandArgs[1:]}

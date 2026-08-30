@@ -1163,6 +1163,31 @@ func TestDispatchCommand_SubCommandHelp(t *testing.T) {
 	}
 }
 
+// TestDispatchCommand_SessionRootNoWriteThrough（审核 #4）：--files-root 是一次性
+// 会话参数——DispatchCommand 不得再经 saveConfigFn 落盘真实用户配置，仅覆写内存
+// 会话配置。哨兵 saveConfigFn 被调用即失败（测试自身零磁盘副作用）。
+func TestDispatchCommand_SessionRootNoWriteThrough(t *testing.T) {
+	a := app.NewApp()
+	saved := false
+	saveFn := func(string, string, string, string, string) error {
+		saved = true
+		return nil
+	}
+	dir := t.TempDir()
+	out := captureOutput(t, func() {
+		if err := DispatchCommand(a, saveFn, dir, []string{"search", "--keyword", "zz-nohit"}, false); err != nil {
+			t.Errorf("search 执行失败: %v", err)
+		}
+	})
+	_ = out
+	if saved {
+		t.Error("saveConfigFn 不应被 CLI 分发调用（写穿已移除）")
+	}
+	if got := a.LoadAppConfig().FilesRoot; got != dir {
+		t.Errorf("会话覆写未生效: got %q want %q", got, dir)
+	}
+}
+
 func TestDispatchCommand_EmptyCommandList(t *testing.T) {
 	a := app.NewApp()
 	err := DispatchCommand(a, a.SaveAppConfig, "", nil, false)

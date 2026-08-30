@@ -105,8 +105,9 @@ func runGUIFlow(ctx *CmdContext) error {
 
 // runPhaseConfigLoad 模拟配置加载（只读）
 // 此前调用 a.SaveAppConfig 会写穿真实用户配置（APPDATA/ysm_config.json）并可能重启 watcher，
-// 属 CLI 测试副作用污染源；真实 CLI 中 DispatchCommand 已在命令执行前经 saveConfigFn 落盘配置，
-// 此处仅需 LoadAppConfig 读取。见 cli_test.go 文件头「不触发 SaveAppConfig 落盘」约束。
+// 属 CLI 测试副作用污染源。现 CLI 全路径均不落盘（审核 #4）：DispatchCommand 对
+// --files-root 仅做内存会话覆写（app.SetSessionFilesRoot），此处仅需 LoadAppConfig 读取。
+// 见 cli_test.go「TestDispatchCommand_SessionRootNoWriteThrough」机检约束。
 func runPhaseConfigLoad(a *app.App) guiFlowResult {
 	start := time.Now()
 

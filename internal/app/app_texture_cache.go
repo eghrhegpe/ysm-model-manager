@@ -114,7 +114,8 @@ func (a *App) HasCachedTextures(hashes []string) map[string]bool {
 	for _, h := range hashes {
 		ok, err := texture_cache.HasCached(h)
 		if err != nil {
-			log.Printf("[texture_cache] 检查缓存 %s 失败: %v", h, err)
+			// code_review #11（P3）：hash 来自 Wails binding 外部输入边界，%q 转义防控制字符日志注入
+			log.Printf("[texture_cache] 检查缓存 %q 失败: %v", h, err)
 			result[h] = false // 查询失败视为未命中，前端安全回退
 			continue
 		}

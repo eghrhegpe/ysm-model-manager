@@ -9,6 +9,7 @@ source_files:
   - go/fsutil/copy.go
   - go/fsutil/perms.go
   - go/fsutil/bom.go
+  - go/fsutil/b64.go
   - go/fsutil/hardlink_other.go
   - go/fsutil/crossdevice_other.go
   - go/fsutil/
@@ -24,9 +25,11 @@ use_when:
   - 跨设备
   - BOM
   - 读取上限
+  - base64 受限解码
 invariant_anchors:
   - go/fsutil/walk.go|IsRecycleDir
   - go/fsutil/write.go|WriteFileAtomic
+  - go/fsutil/b64.go|DecodeBase64Limited
 ---
 
 # 文件基础设施 go/fsutil
@@ -72,6 +75,7 @@ invariant_anchors:
 - `IsHardLink` 目录恒返回 false（目录 nlink 恒 >1，误判会导致文件夹模型 Move 被当硬链接直接删除）
 - `IsCrossDeviceErr` 分平台：POSIX EXDEV(18) / Windows ERROR_NOT_SAME_DEVICE(17)，语义不同不可混用
 - `StripBOM` 只剥文件头 BOM（前 3 字节 `0xEF 0xBB 0xBF`），中间字节不变
+- `DecodeBase64Limited(s, max)`（2026-08-30 审核修复）：binding 层 base64 输入统一受限解码入口——`len*3/4` 预检（不解码即拒绝，防超大字符串解码内存尖刺）→ 解码 → 复检，超限归哨兵 `ErrB64TooLarge`（`errors.Is` 分类）。`MaxImportSize`（500MB）/`MaxReadLimit`（50MB）由调用方按语义选择；importer / app_install_import / app_model 三处已收敛，勿再手写裸 `base64.DecodeString` + 事后查大小
 
 ## 相关
 

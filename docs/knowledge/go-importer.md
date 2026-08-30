@@ -65,6 +65,7 @@ invariant_anchors:
 - 复制目录时符号链接复制链接本身（`Readlink` + `Symlink`）而非跟随；`DirectoryCopyImporter.copyDir` 对 `Readlink`/`Symlink` 的错误显式返回，不静默吞掉
 - 目录复制先写入 `MkdirTemp` 临时目录再 `os.Rename` 落地，保证原子性（失败 `defer RemoveAll` 清理）
 - `sanitizePath` 是防御纵深：上层 `installer.Install` 已用 `paths.IsInside` 严校验，包被独立使用时仍拒绝 `..`
+- base64 解码统一走 `fsutil.DecodeBase64Limited`（2026-08-30 审核修复：原「预检 + 解码 + 复检」三段手写在 `ImportFromBase64`，现收敛为 helper，`ErrB64TooLarge` 映射回 `FILE_TOO_LARGE` 文案；app 层 `importModelFileWithSubpath` 同口径）
 
 ## 相关
 

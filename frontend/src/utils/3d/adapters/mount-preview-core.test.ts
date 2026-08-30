@@ -44,7 +44,7 @@ vi.mock("three", async (importOriginal) => {
   }
   return {
     ...actual,
-    WebGLRenderer: FakeWebGLRenderer as never,
+    WebGLRenderer: FakeWebGLRenderer as unknown as typeof THREE.WebGLRenderer,
   };
 });
 
@@ -61,7 +61,7 @@ vi.mock("three/addons/controls/OrbitControls.js", async () => {
     update = vi.fn();
     constructor(_camera: unknown, _dom: unknown) {}
   }
-  return { OrbitControls: FakeOrbitControls as never };
+  return { OrbitControls: FakeOrbitControls as unknown as typeof OrbitControls };
 });
 
 // ---- caps registry：全能力桩（id → 桩，含 render/postProc 接口）----
@@ -136,6 +136,7 @@ import {
   _resetSingletons,
 } from "./mount-preview-core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 import { bus } from "../../../bus.ts";
 
 /** 最小 panel 菜单项 */
@@ -149,7 +150,7 @@ function makeBuilt(): PreviewScene {
     update: vi.fn(),
     dispose: vi.fn(),
     resetCamera: vi.fn(),
-    menuItems: [panelItem("model"), panelItem("shot")] as never,
+    menuItems: [panelItem("model"), panelItem("shot")] as unknown as PreviewMenuNode[],
   };
 }
 
@@ -419,7 +420,7 @@ describe("unloadRole（注册表卸载角色）", () => {
       rtype: "vrm",
       roots: [mesh],
       built: unloadBuilt,
-      menuItems: [panelItem("role")] as never,
+      menuItems: [panelItem("role")] as unknown as PreviewMenuNode[],
     });
 
     // 经菜单 ctx 触发 unloadRole（角色面板 ⚙ → 卸载）

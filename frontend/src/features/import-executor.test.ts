@@ -3,7 +3,7 @@
 // 覆盖：单文件直导、文件夹整组、执行入口分组、去重、ysm.json 引导
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "../bus.ts";
-import { getApp } from "../backend/app.ts";
+import { getApp, type AppBindings } from "../backend/app.ts";
 import { executeCollected, directImport, importFolder } from "./import-executor.ts";
 import { t } from "../core/i18n/t.ts";
 
@@ -122,13 +122,13 @@ describe("executeCollected — 静默导入入口", () => {
     // executeCollected 内部两次 log()（各调一次 getApp）+ importFolder 一次，共三次——
     // 需按调用序 mock：前两次给 log（AddOpLog 消费），第三次模拟缺失 ImportModelFolderTo 的旧桥
     vi.mocked(getApp)
-      .mockResolvedValueOnce(mocks as never)
-      .mockResolvedValueOnce(mocks as never)
+      .mockResolvedValueOnce(mocks as unknown as AppBindings)
+      .mockResolvedValueOnce(mocks as unknown as AppBindings)
       .mockResolvedValueOnce({
         ImportModelFile: mocks.ImportModelFile,
         ImportModelFolder: mocks.ImportModelFolder,
         // 无 ImportModelFolderTo：模拟绑定时序缺失
-      } as never);
+      } as unknown as AppBindings);
     const toasts: Array<{ msg: unknown; type?: unknown }> = [];
     const off = bus.on("toast:show", (p) => toasts.push(p));
     const r = await executeCollected(
@@ -276,7 +276,7 @@ describe("importFolder — 组内读失败跳过 / 空组 / busy / FILE_EXISTS",
     vi.mocked(getApp).mockResolvedValueOnce({
       ImportModelFile: mocks.ImportModelFile,
       ImportModelFolder: mocks.ImportModelFolder,
-    } as never);
+    } as unknown as AppBindings);
     await importFolder("包", [{ file: mkFile("m.ysm"), relPath: "包/m.ysm" }], "maid-model");
     expect(mocks.ImportModelFolder).toHaveBeenCalledTimes(1);
     expect(mocks.ImportModelFolderTo).not.toHaveBeenCalled();

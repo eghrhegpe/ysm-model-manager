@@ -419,7 +419,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
       OpenInBrowser: vi.fn().mockResolvedValue(undefined),
       BatchExtractCreatorAvatars: vi.fn().mockResolvedValue({}),
     });
-    vi.mocked(tryFetchModels).mockResolvedValue(undefined as never); // 未找到模型列表分支
+    vi.mocked(tryFetchModels).mockResolvedValue(undefined as unknown as Awaited<ReturnType<typeof tryFetchModels>>); // 未找到模型列表分支
     el._current = "github";
     el._render();
     await waitFor(() => el.shadowRoot.querySelector(".gh-repo-card") !== null);
@@ -576,21 +576,22 @@ import {
   rememberModelPath,
   getLastModelPath,
 } from "./init-pages.ts";
+import type { AppContentHost } from "./init-workshop.ts";
 import type { Mock } from "vitest";
 
 describe("init-pages — 直接导出函数（初始化防御分支）", () => {
   it("initDiagnosticsPage → initDiagnostics 接管 root（22）", async () => {
     const el = mountContent();
     const diag = await import("./diagnostics/init.ts");
-    initDiagnosticsPage(el as never);
+    initDiagnosticsPage(el as unknown as AppContentHost);
     expect(diag.initDiagnostics).toHaveBeenCalledWith(el._root, expect.any(Function));
   });
 
   it("initInstancesPage 幂等（33）：二次调用不再注册监听；package:selected 空 rtype 早退（42）", async () => {
     const el = mountContent();
-    initInstancesPage(el as never); // 首次 → 注册 package:selected
+    initInstancesPage(el as unknown as AppContentHost); // 首次 → 注册 package:selected
     const before = el._unsubs.length;
-    initInstancesPage(el as never); // 二次 → insKey 早退（33）
+    initInstancesPage(el as unknown as AppContentHost); // 二次 → insKey 早退（33）
     expect(el._unsubs.length).toBe(before);
     // 渲染 instances 页拿到 #ins-content → 空 rtype 防御性 return（42）
     el._current = "instances";
@@ -608,7 +609,7 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
       _root: document.createElement("div").attachShadow({ mode: "open" }),
       _unsubs: [] as Array<() => void>,
     };
-    initRepositoryPage(host as never);
+    initRepositoryPage(host as unknown as AppContentHost);
     expect(host._unsubs).toHaveLength(1); // 仅 repo:rtype-changed 订阅
   });
 
@@ -621,9 +622,9 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
     (settingsMod.initSettings as Mock).mockRejectedValueOnce(new Error("settings boom"));
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     const toasts: Array<{ type?: string }> = [];
-    const off = bus.on("toast:show", (p) => toasts.push(p as never));
+    const off = bus.on("toast:show", (p) => toasts.push(p as { type?: string }));
     try {
-      await initSettingsPage(el as never);
+      await initSettingsPage(el as unknown as AppContentHost);
     } finally {
       off();
       err.mockRestore();
@@ -691,7 +692,7 @@ describe("_bindTabs — WAI-ARIA 键盘导航（188-212）", () => {
   it("懒初始化失败 → inited 复位可重试 + 错误 toast（167-168）", async () => {
     const { el, tabs } = await renderRepo();
     const toasts: Array<{ msg?: string; type?: string }> = [];
-    const off = bus.on("toast:show", (p) => toasts.push(p as never));
+    const off = bus.on("toast:show", (p) => toasts.push(p as { msg?: string; type?: string }));
     (initRecycleBin as Mock).mockImplementationOnce(() => {
       throw new Error("recycle boom");
     });

@@ -65,6 +65,7 @@ vi.mock("./ysm-3d.ts", () => ({ createYsm3D, cleanupYsm3D, invalidateYsmPreview 
 
 import { loadModel2D } from "./skeleton.ts";
 import { fill3DPanel } from "./skeleton-render.ts";
+import type { Spec3D } from "../../utils/3d/model3d.ts";
 
 /** 可控 Image：src setter 同步 onload（happy-dom 无真实网络） */
 class FakeImage {
@@ -144,7 +145,7 @@ beforeEach(() => {
     SaveScreenshotFile: vi.fn(),
     GetModel3DSpec: vi.fn().mockResolvedValue(JSON.stringify({ models: [{ name: "main", bones: [{}, {}], meshGroups: [] }] })),
   });
-  vi.stubGlobal("Image", FakeImage as never);
+  vi.stubGlobal("Image", FakeImage);
   vi.stubGlobal(
     "URL",
     Object.assign(Object.create(URL), {
@@ -469,7 +470,7 @@ describe("fill3DPanel", () => {
         textureWidth: 64,
         textureHeight: 32,
       })),
-    } as never;
+    } as unknown as Spec3D;
     const handle = make3DHandle();
     handle.getModelGroupCount = vi.fn(() => count) as typeof handle.getModelGroupCount;
     handle.getBoneList = vi.fn(() => over.bones ?? []) as typeof handle.getBoneList;
@@ -522,7 +523,7 @@ describe("fill3DPanel", () => {
     const model = makeModel({
       textures: ["t.png"],
       textureNames: ["skin"],
-    }) as never;
+    }) as unknown as Parameters<typeof fill3DPanel>[1];
     const handle = make3DHandle();
     handle.getModelGroupCount = vi.fn(() => 2) as typeof handle.getModelGroupCount;
     handle.getBoneList = vi.fn(() => []) as typeof handle.getBoneList;
@@ -535,7 +536,7 @@ describe("fill3DPanel", () => {
       ],
       texArrOrder: ["skin", ""],
       componentTextures: { arrow: ["data:image/png;base64,QUJD"] },
-    } as never;
+    } as unknown as Spec3D;
     const texArr = [makeFakeTex()] as unknown as import("three").Texture[];
     fill3DPanel(panel, model, texArr, spec, handle, modelSel);
     expect(panel.textContent).toContain("skeleton.currentBinding");

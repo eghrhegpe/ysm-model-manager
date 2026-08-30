@@ -6,6 +6,7 @@ import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { buildVrmBoneNodes, buildVrmBoneTree } from "./vrm-bone.ts";
 import { listBonesWithDepth } from "../bone-tools.ts";
+import type { VRM } from "@pixiv/three-vrm";
 
 /** 构造 fake VRM：humanBones 结构对齐 three-vrm（key=boneName，node=Object3D） */
 function fakeVrm(boneNames: string[]): { vrm: { humanoid: unknown }; nodes: Map<string, THREE.Object3D> } {
@@ -31,7 +32,7 @@ function fakeVrm(boneNames: string[]): { vrm: { humanoid: unknown }; nodes: Map<
 describe("buildVrmBoneNodes", () => {
   it("标准 Humanoid 骨骼全量提取（id = boneName）", () => {
     const { vrm } = fakeVrm(["hips", "spine", "chest", "head", "leftUpperArm", "leftLowerArm", "leftHand"]);
-    const bones = buildVrmBoneNodes(vrm as never);
+    const bones = buildVrmBoneNodes(vrm as unknown as VRM);
     expect(bones.map((b) => b.id).sort()).toEqual(
       ["hips", "spine", "chest", "head", "leftUpperArm", "leftLowerArm", "leftHand"].sort(),
     );
@@ -44,7 +45,7 @@ describe("buildVrmBoneNodes", () => {
     nodes.get("head")!.parent = nodes.get("chest")!;
     nodes.get("chest")!.parent = nodes.get("spine")!;
     nodes.get("spine")!.parent = nodes.get("hips")!;
-    const bones = buildVrmBoneNodes(vrm as never);
+    const bones = buildVrmBoneNodes(vrm as unknown as VRM);
     const byId = new Map(bones.map((b) => [b.id, b]));
     expect(byId.get("head")!.parentId).toBe("chest");
     expect(byId.get("chest")!.parentId).toBe("spine");
@@ -59,14 +60,14 @@ describe("buildVrmBoneNodes", () => {
     rig.name = "rig";
     rig.parent = nodes.get("spine")!;
     nodes.get("head")!.parent = rig;
-    const bones = buildVrmBoneNodes(vrm as never);
+    const bones = buildVrmBoneNodes(vrm as unknown as VRM);
     const byId = new Map(bones.map((b) => [b.id, b]));
     expect(byId.get("head")!.parentId).toBe("spine");
   });
 
   it("无 humanoid / 空 humanBones → 空数组（不抛）", () => {
-    expect(buildVrmBoneNodes({} as never)).toEqual([]);
-    expect(buildVrmBoneNodes({ humanoid: { humanBones: {} } } as never)).toEqual([]);
+    expect(buildVrmBoneNodes({} as unknown as VRM)).toEqual([]);
+    expect(buildVrmBoneNodes({ humanoid: { humanBones: {} } } as unknown as VRM)).toEqual([]);
   });
 });
 
@@ -76,7 +77,7 @@ describe("buildVrmBoneTree", () => {
     nodes.get("head")!.parent = nodes.get("chest")!;
     nodes.get("chest")!.parent = nodes.get("spine")!;
     nodes.get("spine")!.parent = nodes.get("hips")!;
-    const tree = buildVrmBoneTree(vrm as never);
+    const tree = buildVrmBoneTree(vrm as unknown as VRM);
     const list = listBonesWithDepth(tree);
     expect(list.map((b) => b.id)).toEqual(["hips", "spine", "chest", "head"]);
     expect(list.map((b) => b.depth)).toEqual([0, 1, 2, 3]);

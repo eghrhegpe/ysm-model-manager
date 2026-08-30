@@ -23,6 +23,7 @@ import {
   rescanFsaRoot,
   reauthorizeFsaRoot,
 } from "./browser-adapter.ts";
+import type { WorkshopSite } from "../../bindings/ysm-model-manager/go/types/models.ts";
 
 // idb 层内存实现（真实 indexedDB 仅在浏览器存在，测试注入 Map 语义）
 // 2026-08-17：改用 test-utils/idb-mock.ts 共享实例——isolate:false 共享模块图下
@@ -200,7 +201,7 @@ describe("browserAdapter — Phase 2 3D 兜底守卫（ADR-049 P2-2 路径可达
 
 describe("browserAdapter — fail-fast（Phase 3 能力门控隐藏对应 UI）", () => {
   it("未实现 binding → reject WebUnsupportedError（明确报错，非 undefined 穿透）", async () => {
-    await expect(browserAdapter.ImportModelFile("a", "b") as never).rejects.toBeInstanceOf(
+    await expect(browserAdapter.ImportModelFile("a", "b") as unknown as Promise<unknown>).rejects.toBeInstanceOf(
       WebUnsupportedError,
     );
     await expect(
@@ -209,7 +210,7 @@ describe("browserAdapter — fail-fast（Phase 3 能力门控隐藏对应 UI）"
   });
 
   it("错误信息带 binding 名（可定位 Phase 3 待隐藏项）", async () => {
-    await expect(browserAdapter.ImportModelFile("a", "b") as never).rejects.toThrow(
+    await expect(browserAdapter.ImportModelFile("a", "b") as unknown as Promise<unknown>).rejects.toThrow(
       "ImportModelFile",
     );
   });
@@ -913,14 +914,14 @@ describe("browserAdapter — 社区/工坊桥接（ADR-049 Batch 2：bundled 默
 
   it("Save→Load 覆盖优先：创作者自定义列表可被读回", async () => {
     const custom = [{ name: "测试作者", desc: "单测注入", type: "bilibili" }];
-    await browserAdapter.SaveWorkshopCreators(custom as never);
+    await browserAdapter.SaveWorkshopCreators(custom);
     const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     expect(got).toHaveLength(1);
     expect(got[0].name).toBe("测试作者");
   });
 
   it("Save(null) 重置覆盖层：回退 bundled 默认", async () => {
-    await browserAdapter.SaveWorkshopCreators([{ name: "临时", desc: "x" }] as never);
+    await browserAdapter.SaveWorkshopCreators([{ name: "临时", desc: "x" }]);
     await browserAdapter.SaveWorkshopCreators(null);
     const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     expect(got.length).toBeGreaterThan(1); // bundled 默认远大于 1
@@ -928,7 +929,7 @@ describe("browserAdapter — 社区/工坊桥接（ADR-049 Batch 2：bundled 默
 
   it("Save→Load 覆盖优先：站点自定义列表可被读回，且与创作者隔离", async () => {
     const customSites = [{ id: "mysite", icon: "⭐", label: "我的站", url: "https://x.test", desc: "t", group: "search" }];
-    await browserAdapter.SaveWorkshopSites(customSites as never);
+    await browserAdapter.SaveWorkshopSites(customSites);
     const got = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string }>;
     expect(got).toHaveLength(1);
     expect(got[0].id).toBe("mysite");
@@ -938,7 +939,7 @@ describe("browserAdapter — 社区/工坊桥接（ADR-049 Batch 2：bundled 默
 
   it("Load 返回深拷贝：修改返回值不影响下次 Load", async () => {
     const a = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
-    a.push({ name: "被污染" } as never);
+    a.push({ name: "被污染" });
     const b = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     expect(b.length).toBe(a.length - 1);
   });
@@ -1059,7 +1060,7 @@ describe("browserAdapter — 桥接增强边界/异常分支补全（审核补�
   });
 
   it("SaveWorkshopSites(null) 重置覆盖层 → 回退 bundled 默认", async () => {
-    await browserAdapter.SaveWorkshopSites([{ id: "x", url: "https://x.test" }] as never);
+    await browserAdapter.SaveWorkshopSites([{ id: "x", url: "https://x.test" }] as unknown as WorkshopSite[]);
     await browserAdapter.SaveWorkshopSites(null);
     const got = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string }>;
     expect(got.length).toBeGreaterThan(1); // bundled 默认远大于 1
@@ -1184,7 +1185,7 @@ describe("browserAdapter — SearchModels 数值过滤（ADR-071 #6 Worker 统�
     const runner = vi.fn(async (paths: string[]) =>
       paths.map(() => ({ boneCount: 1, cubeCount: 1, texWidth: 1, texHeight: 1, hasError: false })),
     );
-    __setStatsRunnerForTest(runner as never);
+    __setStatsRunnerForTest(runner as unknown as Parameters<typeof __setStatsRunnerForTest>[0]);
     const hit = (await browserAdapter.SearchModels("/web/ysm", "狐狸", 0, 0, 0, 0, 0, 0)) as Array<{
       name: string;
       boneCount: number;

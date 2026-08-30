@@ -6,6 +6,10 @@ import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
 import type { BedrockGeometry } from "../../../views/app-preview/geometry.ts";
 import type { PreviewMenuHandle } from "./preview-menu/core.ts";
 import type { BoneTree } from "../bone-tools.ts";
+import type { YsmModel, YsmContentHandle } from "../../../views/app-preview/ysm-controls.ts";
+import type { Spec3D } from "../model3d.ts";
+import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 const mocks = vi.hoisted(() => ({
   preloadModel: vi.fn(),
@@ -89,7 +93,7 @@ function makeCtx() {
   const controls = {
     target: { clone: () => ({ copy: vi.fn() }), set: vi.fn(), copy: vi.fn() },
     update: vi.fn(),
-  } as never;
+  } as unknown as OrbitControls;
   const rendererDom = document.createElement("div");
   // width/height = 0 → screenshotFromRenderer 未就绪守卫返回 null（fake renderer 无 getSize）
   (rendererDom as unknown as { width: number; height: number }).width = 0;
@@ -190,7 +194,7 @@ describe("buildYsmScene（shared 装配）", () => {
     expect(adapter.id).toBe("ysm");
     // switchTo 语义：core 调 build(ctx, newPath) 重建内容层——必须加载 newPath 而非闭包旧 path
     await expect(
-      adapter.build(makeCtx() as never, "/m/b.ysm"),
+      adapter.build(makeCtx() as unknown as PreviewBuildCtx, "/m/b.ysm"),
     ).resolves.toBeTruthy();
     expect(loader).toHaveBeenCalledWith("/m/b.ysm");
   });
@@ -425,11 +429,11 @@ describe("ysmMenuItems 独立菜单表测试", () => {
   it("基本菜单项结构完整（model/shot/bones）", () => {
     const opts = {
       controlsCtx: {
-        model: {} as never,
+        model: {} as unknown as YsmModel,
         texIdx: 0,
         texArr: [],
-        spec: {} as never,
-        handle: {} as never,
+        spec: {} as unknown as Spec3D,
+        handle: {} as unknown as YsmContentHandle,
       },
       bonePanel: {
         tree: { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() } as unknown as BoneTree,
@@ -463,11 +467,11 @@ describe("ysmMenuItems 独立菜单表测试", () => {
   it("有 play bridge 时追加 ysm-play 菜单项", () => {
     const opts = {
       controlsCtx: {
-        model: {} as never,
+        model: {} as unknown as YsmModel,
         texIdx: 0,
         texArr: [],
-        spec: {} as never,
-        handle: {} as never,
+        spec: {} as unknown as Spec3D,
+        handle: {} as unknown as YsmContentHandle,
       },
       bonePanel: {
         tree: { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() } as unknown as BoneTree,
@@ -502,11 +506,11 @@ describe("ysmMenuItems 独立菜单表测试", () => {
     const tree = { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() } as unknown as BoneTree;
     const opts = {
       controlsCtx: {
-        model: {} as never,
+        model: {} as unknown as YsmModel,
         texIdx: 0,
         texArr: [],
-        spec: {} as never,
-        handle: {} as never,
+        spec: {} as unknown as Spec3D,
+        handle: {} as unknown as YsmContentHandle,
       },
       bonePanel: {
         tree,
@@ -543,7 +547,7 @@ describe("buildYsmScene 守卫与多模型模式", () => {
     const ctx = makeCtx() as Record<string, unknown>;
     delete ctx.renderer;
     await expect(
-      buildYsmScene(ctx as never, "/m/a.ysm", {
+      buildYsmScene(ctx as unknown as PreviewBuildCtx, "/m/a.ysm", {
         loader: vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry)),
         preload: mocks.preloadModel,
       }),
@@ -555,7 +559,7 @@ describe("buildYsmScene 守卫与多模型模式", () => {
       path: "other.ysm",
       rtype: "ysm",
       roots: [],
-      built: { dispose: vi.fn() } as never,
+      built: { dispose: vi.fn() } as unknown as PreviewScene,
     });
     const ctx = makeCtx();
     const preview = await buildYsmScene(ctx, "/m/a.ysm", {

@@ -10,7 +10,8 @@ import { zhCN } from "../../../core/i18n/locales/zh-CN.ts";
 import { buildLitematicScene, LITEMATIC_SLICE_SCHEMA_ID } from "./litematic-adapter.ts";
 import { getSchema } from "./schema-registry.ts";
 import { previewSnapshot } from "../state/preview-state.ts";
-import { renderMenu, renderPreviewPanel } from "./preview-menu/core.ts";
+import { renderMenu, renderPreviewPanel, type PreviewMenuRouters } from "./preview-menu/core.ts";
+import type { SlideMenuHandle, SlideMenuView } from "../../../ui/ui-slide-menu.ts";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
 
@@ -76,9 +77,9 @@ function renderNodes(nodes: PreviewMenuNode[]): HTMLElement {
       const row = document.createElement("div");
       if (def.id) row.dataset.testid = "preview-" + def.id;
       return row;
-    }) as never,
-    makePanelView: (() => ({ title: "", render: () => {} })) as never,
-    menu: { refresh: vi.fn() } as never,
+    }) as unknown as (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
+    makePanelView: (() => ({ title: "", render: () => {} })) as unknown as (node: PreviewMenuNode) => SlideMenuView,
+    menu: { refresh: vi.fn() } as unknown as SlideMenuHandle,
     actionCtx: { toast: vi.fn(), closeAllOverlays: vi.fn() },
   });
   return container;
@@ -245,9 +246,9 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
         const row = document.createElement("div");
         if (def.id) row.dataset.testid = "preview-" + def.id;
         return row;
-      }) as never,
-      makePanelView: (() => ({ title: "", render: () => {} })) as never,
-      menu: { refresh } as never,
+      }) as unknown as (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
+      makePanelView: (() => ({ title: "", render: () => {} })) as unknown as (node: PreviewMenuNode) => SlideMenuView,
+      menu: { refresh } as unknown as SlideMenuHandle,
       actionCtx: { toast: vi.fn(), closeAllOverlays: vi.fn() },
     };
     const container = document.createElement("div");
@@ -282,8 +283,8 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     renderPreviewPanel(
       list,
       panel,
-      { schemaBuilders: {} } as never, // litematic 无 schemaBuilders 条目——走 getSchema 分支
-      { refresh: vi.fn() } as never,
+      { schemaBuilders: {} } as unknown as PreviewMenuRouters, // litematic 无 schemaBuilders 条目——走 getSchema 分支
+      { refresh: vi.fn() } as unknown as SlideMenuHandle,
       () => {},
       { toast: vi.fn(), closeAllOverlays: vi.fn() },
       {
@@ -291,8 +292,8 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
           const row = document.createElement("div");
           if (def.id) row.dataset.testid = "preview-" + def.id;
           return row;
-        }) as never,
-        makePanelView: (() => ({ title: "", render: () => {} })) as never,
+        }) as unknown as (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
+        makePanelView: (() => ({ title: "", render: () => {} })) as unknown as (node: PreviewMenuNode) => SlideMenuView,
       },
     );
     expect(list.dataset.panelTestId).toBe("litematic-slice-entry"); // legacyTestId 挂 DOM

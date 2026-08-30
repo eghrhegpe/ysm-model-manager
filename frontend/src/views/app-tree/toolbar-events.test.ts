@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
 import { selectState } from "./data.ts";
+import type { AppTree } from "./index.ts";
 
 const {
   SearchModelsMock,
@@ -153,7 +154,7 @@ beforeEach(() => {
   batchEvts.length = 0;
   offs.forEach((fn) => fn());
   offs.length = 0;
-  offs.push(bus.on("toast:show", (p) => toasts.push(p as never)));
+  offs.push(bus.on("toast:show", (p) => toasts.push(p as { msg: string; type: string })));
   offs.push(bus.on("nav:changed", (p) => navs.push((p as { page: string }).page)));
   offs.push(bus.on("batch:enable-all", () => batchEvts.push("enable-all")));
   offs.push(bus.on("batch:disable-all", () => batchEvts.push("disable-all")));
@@ -187,7 +188,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     const vm = makeVM(root);
     (getByTestId("tree-srch") as HTMLInputElement).value = "Alex";
     (getByTestId("tree-af-min-bones") as HTMLInputElement).value = "3";
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
 
@@ -201,7 +202,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   it("弹窗返回 null（取消）→ 不渲染树", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await Promise.resolve();
@@ -224,7 +225,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
       maxTex: undefined,
       tag: undefined,
     });
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -248,7 +249,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     });
     ListByTagMock.mockResolvedValue(["/r/a.ysm", "/r/b.ysm"]);
     SearchModelsMock.mockResolvedValue([{ path: "/r/a.ysm" }, { path: "/r/c.ysm" }]);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -286,7 +287,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
       tag: "近代",
     });
     ListByTagMock.mockResolvedValue(["/r/t1.ysm"]);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -309,7 +310,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
       tag: "",
     });
     SearchModelsMock.mockResolvedValue([{ path: "/r/s1.ysm" }]);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -332,7 +333,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
       tag: "",
     });
     SearchModelsMock.mockResolvedValue([]);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -355,7 +356,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
       maxTex: null,
       tag: "",
     });
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -379,7 +380,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     });
     ListByTagMock.mockRejectedValue(new Error("tag boom"));
     SearchModelsMock.mockResolvedValue([{ path: "/r/a.ysm" }]);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -402,7 +403,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
       tag: "",
     });
     SearchModelsMock.mockRejectedValue(new Error("search boom"));
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -426,7 +427,7 @@ describe("bindToolbarEvents — 全选/反选", () => {
       { id: 1, type: "file", key: "/r/b.ysm", depth: 0, html: "" },
       { id: 2, type: "folder", key: "/r/dir", depth: 0, html: "" },
     ];
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-sel-all")!.click();
 
@@ -446,7 +447,7 @@ describe("bindToolbarEvents — 全选/反选", () => {
     };
     tree._vsRows = [{ id: 0, type: "file", key: "/r/a.ysm", depth: 0, html: "" }];
     selectState.keys.add("/r/a.ysm");
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-sel-all")!.click();
 
@@ -458,7 +459,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
   it("btn-repo → nav:change settings", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-repo")!.click();
 
@@ -470,7 +471,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
     try {
       const { root, get, getByTestId } = makeRoot();
       const vm = makeVM(root);
-      bindToolbarEvents(root, vm as never);
+      bindToolbarEvents(root, vm as unknown as AppTree);
 
       const srch = getByTestId("tree-srch") as HTMLInputElement;
       srch.value = "neko";
@@ -490,7 +491,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
     try {
       const { root, get, getByTestId } = makeRoot();
       const vm = makeVM(root);
-      bindToolbarEvents(root, vm as never);
+      bindToolbarEvents(root, vm as unknown as AppTree);
 
       const srch = getByTestId("tree-srch") as HTMLInputElement;
       ["n", "ne", "nek", "neko"].forEach((v) => {
@@ -511,7 +512,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
   it("sort 切换 → 更新 _sort 并渲染", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const sort = getByTestId("tree-sort") as HTMLSelectElement;
     sort.value = "date";
@@ -525,7 +526,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._renderMode = "list";
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-view-mode")!.click();
 
@@ -545,7 +546,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
     vm._search = "x";
     (getByTestId("tree-af-min-bones") as HTMLInputElement).value = "5";
     (getByTestId("tree-srch") as HTMLInputElement).value = "x";
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-af-clear")!.click();
 
@@ -562,7 +563,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._authors = [{ Name: "Alex", Count: 3 }, "Bob"];
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const ddWrap = root.getElementById("dd-authors")!;
     ddWrap.dispatchEvent(new PointerEvent("pointerenter"));
@@ -577,7 +578,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._authors = [];
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     root.getElementById("dd-authors")!.dispatchEvent(new PointerEvent("pointerenter"));
 
@@ -590,7 +591,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
       const { root, get, getByTestId } = makeRoot();
       const vm = makeVM(root);
       vm._authors = [{ Name: "Alex", Count: 1 }];
-      bindToolbarEvents(root, vm as never);
+      bindToolbarEvents(root, vm as unknown as AppTree);
 
       root.getElementById("dd-authors")!.dispatchEvent(new MouseEvent("click"));
       const menu = get("menu-authors")!;
@@ -611,7 +612,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-batch enable-all / disable-all → bus 事件", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-batch-enable")!.click();
     getByTestId("tree-batch-disable")!.click();
@@ -622,7 +623,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more open-folder → OpenFolder(repoRoot)", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-open-folder") as HTMLElement;
     btn.click();
@@ -634,9 +635,9 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more open-folder Android → 定位公共仓库目录（resolveAndroidRepoDir），不调 OpenFolder", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as never);
+    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() });
     isViewerModeMock.mockReturnValue(true); // 查看器模式（Android）
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-open-folder") as HTMLElement;
     btn.click();
@@ -650,7 +651,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._filesRoot = null;
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-open-folder") as HTMLElement;
     btn.click();
@@ -662,7 +663,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more import-file 成功 → ImportByType + 刷新 + toast", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-import-file") as HTMLElement;
     btn.click();
@@ -679,7 +680,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
     SelectImportFileMock.mockResolvedValue("");
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-import-file") as HTMLElement;
     btn.click();
@@ -692,7 +693,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
     ImportByTypeMock.mockResolvedValue("文件已存在");
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-import-file") as HTMLElement;
     btn.click();
@@ -704,7 +705,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more import-dir 桌面成功 → SelectDirectory + ImportByType + 刷新", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-import-dir") as HTMLElement;
     btn.click();
@@ -720,10 +721,10 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more import-dir Android 未授权 → 引导授权（resolveAndroidRepoDir 返回 null），不复制导入", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as never);
+    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() });
     isViewerModeMock.mockReturnValue(true); // 查看器模式（Android）
     resolveAndroidRepoDirMock.mockResolvedValue(null);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-import-dir") as HTMLElement;
     btn.click();
@@ -739,10 +740,10 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more import-dir Android 已授权 → 定位公共仓库目录 + 刷新，不走桌面 Dialog", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as never);
+    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() });
     isViewerModeMock.mockReturnValue(true); // 查看器模式（Android）
     resolveAndroidRepoDirMock.mockResolvedValue("/storage/emulated/0/YSM-Model-Manager");
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-import-dir") as HTMLElement;
     btn.click();
@@ -758,7 +759,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more refresh → 渲染 spinner + 重新加载", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-refresh") as HTMLElement;
     btn.click();
@@ -771,7 +772,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more genindex 成功 → toast + 按钮恢复", async () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-genindex") as HTMLElement;
     btn.click();
@@ -786,7 +787,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
     GetRepoRootMock.mockResolvedValue("");
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-genindex") as HTMLElement;
     btn.click();
@@ -801,7 +802,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
     GenerateRepoIndexMock.mockRejectedValue(new Error("EACCES"));
-    bindToolbarEvents(root, vm as never);
+    bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-genindex") as HTMLElement;
     btn.click();

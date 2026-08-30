@@ -4,6 +4,7 @@ import { renderEnvLevel, buildEnvSchema } from "./env.ts";
 import { sceneCapabilityRegistry } from "../../caps/scene-capability-registry.ts";
 import type { SceneCapability } from "../../caps/scene-capability.ts";
 import type { PreviewMenuCtx } from "./core.ts";
+import type { CameraControlBridge } from "../camera-controls.ts";
 import type { SlideMenuHandle } from "../../../../ui/ui-slide-menu.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */
@@ -11,7 +12,7 @@ function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
   return {
     selfMode: false,
     getCap: () => null,
-    getCamBridge: () => ({ mode: "orbit" as const, setMode: vi.fn(), reset: vi.fn() }) as never,
+    getCamBridge: () => ({ mode: "orbit" as const, setMode: vi.fn(), reset: vi.fn() }) as unknown as CameraControlBridge,
     getSiblings: () => [],
     getCurrentPath: () => "",
     getViewContainer: () => document.createElement("div"),
@@ -62,7 +63,7 @@ describe("renderEnvLevel", () => {
   it("无 menu 句柄时走平铺路径（renderCapControls）", () => {
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
     const fakeSkyCap = makeFakeSkyCap();
-    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as never) : null) });
+    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as unknown as SceneCapability) : null) });
     const list = document.createElement("div");
     renderEnvLevel(list, ctx, undefined);
     // 平铺路径：应有 cap-sky-toggle 控件行
@@ -80,7 +81,7 @@ describe("renderEnvLevel", () => {
       ],
       apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
     };
-    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as never) : null) });
+    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as unknown as SceneCapability) : null) });
     const menu = makeMenu();
     const list = document.createElement("div");
     renderEnvLevel(list, ctx, menu);
@@ -105,7 +106,7 @@ describe("renderEnvLevel", () => {
       ],
       apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
     };
-    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as never) : null) });
+    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as unknown as SceneCapability) : null) });
     const menu = makeMenu();
     const list = document.createElement("div");
     renderEnvLevel(list, ctx, menu);
@@ -133,7 +134,7 @@ describe("renderEnvLevel", () => {
       ],
       apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
     };
-    const ctx = makeCtx({ getCap: (id) => (id === "ground" ? (fakeGroundCap as never) : null) });
+    const ctx = makeCtx({ getCap: (id) => (id === "ground" ? (fakeGroundCap as unknown as SceneCapability) : null) });
     // 自定义 menu：navigate 立即把 view.render 落到 subList，便于断言子视图 DOM
     const subList = document.createElement("div");
     let lastTitle = "";
@@ -167,7 +168,7 @@ describe("renderEnvLevel", () => {
   it("预设按钮点击调用 applyPreset（通过 menu.refresh）", () => {
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
     const fakeSkyCap = makeFakeSkyCap([]); // 空控件列表
-    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as never) : null) });
+    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as unknown as SceneCapability) : null) });
     const menu = makeMenu();
     const list = document.createElement("div");
     renderEnvLevel(list, ctx, menu);
@@ -196,7 +197,7 @@ describe("renderEnvLevel", () => {
       ],
       apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
     };
-    const ctx = makeCtx({ getCap: (id) => (id === "water" ? (fakeWaterCap as never) : null) });
+    const ctx = makeCtx({ getCap: (id) => (id === "water" ? (fakeWaterCap as unknown as SceneCapability) : null) });
     const subList = document.createElement("div");
     let lastView: { title: string; render: (l: HTMLElement) => void } | null = null;
     let lastTitle = "";
@@ -256,8 +257,8 @@ describe("renderEnvLevel", () => {
       apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
     };
     // 注册到 registry，让 previewSnapshot() 经 env.waterMode binding 拿到 mode（状态层上浮）
-    vi.spyOn(sceneCapabilityRegistry, "getById").mockImplementation((id: string) => (id === "water" ? (fakeWaterCap as never) : undefined));
-    const ctx = makeCtx({ getCap: (id) => (id === "water" ? (fakeWaterCap as never) : null) });
+    vi.spyOn(sceneCapabilityRegistry, "getById").mockImplementation((id: string) => (id === "water" ? (fakeWaterCap as unknown as SceneCapability) : undefined));
+    const ctx = makeCtx({ getCap: (id) => (id === "water" ? (fakeWaterCap as unknown as SceneCapability) : null) });
     const subList = document.createElement("div");
     let lastView: { title: string; render: (l: HTMLElement) => void } | null = null;
     const nav = (v: { title: string; render: (l: HTMLElement) => void }): void => { lastView = v; v.render(subList); };
@@ -307,7 +308,7 @@ describe("buildEnvSchema（ADR-126 P5 声明式上岸）", () => {
   it("有 menu 时返回单 custom 节点，renderCustom 触发 renderEnvLevel 两级菜单路径", () => {
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
     const fakeSkyCap = makeFakeSkyCap();
-    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as never) : null) });
+    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as unknown as SceneCapability) : null) });
     const menu = makeMenu();
     const schema = buildEnvSchema(ctx, menu);
     expect(schema.length).toBe(1);

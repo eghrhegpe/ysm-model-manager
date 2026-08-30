@@ -9,6 +9,8 @@ import {
   ysmModelTextureSlots,
 } from "./skeleton-fill-panel.ts";
 import type { PreviewSnapshot } from "../../utils/3d/state/preview-state.ts";
+import type { Spec3D } from "../../utils/3d/model3d.ts";
+import * as THREE from "three";
 
 /** 最小 spec（单组件）：1 个 modelGroup，2 根骨骼，2 个纹理槽 */
 function makeSpec(overrides: { models?: unknown[] } = {}) {
@@ -21,7 +23,7 @@ function makeSpec(overrides: { models?: unknown[] } = {}) {
       meshGroups: [{ texIdx: 0 }, { texIdx: 1 }],
     },
   ];
-  return { models, componentTextures: {} } as never;
+  return { models, componentTextures: {} } as unknown as Spec3D;
 }
 
 const ctx = {
@@ -77,7 +79,7 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
           { name: "armor", bones: [], meshGroups: [{ texIdx: 1 }] },
         ],
       }),
-    } as never;
+    } as unknown as Parameters<typeof buildYsmModelSchema>[0];
     const nodes = buildYsmModelSchema(multiCtx, snap(-1), sessionActive(-1));
     const sel = nodes.find((n) => n.kind === "select")!;
     expect(sel.id).toBe("ysm-component-select");
@@ -98,9 +100,9 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
           { name: "armor", bones: [{ _cubeCount: 2 }], textureWidth: 128, textureHeight: 64, meshGroups: [{ texIdx: 1 }] },
         ],
       }),
-      texArr: [{ userData: { imgWidth: 128, imgHeight: 64 } }] as never[],
-      model: { textureNames: ["armor_tex"], textures: ["a/armor.png"], textureCategories: [""] } as never,
-    } as never;
+      texArr: [{ userData: { imgWidth: 128, imgHeight: 64 } }] as unknown as THREE.Texture[],
+      model: { textureNames: ["armor_tex"], textures: ["a/armor.png"], textureCategories: [""] } as unknown as Parameters<typeof buildYsmModelSchema>[0]["model"],
+    } as unknown as Parameters<typeof buildYsmModelSchema>[0];
     const active = sessionActive(1);
     const nodes = buildYsmModelSchema(multiCtx, snap(1), active);
     expect(nodes.find((n) => n.id === "ysm-stats-bones")?.value).toBe("1 根");
@@ -120,10 +122,10 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
           { name: "armor", bones: [{ _cubeCount: 2 }], textureWidth: 128, textureHeight: 64, meshGroups: [{ texIdx: 1 }] },
         ],
         componentTextures: { armor: ["a/armor_skin.png", "a/armor_trim.png"] },
-      } as never,
-      texArr: [{ userData: { imgWidth: 128, imgHeight: 64 } }] as never[],
-      model: { textureNames: ["armor_tex"], textures: ["a/armor.png"], textureCategories: [""] } as never,
-    } as never;
+      } as unknown as Spec3D,
+      texArr: [{ userData: { imgWidth: 128, imgHeight: 64 } }] as unknown as THREE.Texture[],
+      model: { textureNames: ["armor_tex"], textures: ["a/armor.png"], textureCategories: [""] } as unknown as Parameters<typeof buildYsmModelSchema>[0]["model"],
+    } as unknown as Parameters<typeof buildYsmModelSchema>[0];
     const nodes = buildYsmModelSchema(exclusiveCtx, snap(1), sessionActive(1));
     const rows = nodes.filter((n) => n.kind === "row");
     expect(rows.length).toBe(2); // 专属纹理 2 行（替代全局槽行）
@@ -144,7 +146,7 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
           { name: "armor", bones: [], meshGroups: [{ texIdx: 1 }] },
         ],
       }),
-    } as never;
+    } as unknown as Parameters<typeof buildYsmModelSchema>[0];
     const active = sessionActive(-1);
     const nodes = buildYsmModelSchema(multiCtx, snap(-1), active);
     const sel = nodes.find((n) => n.kind === "select")!;
@@ -165,7 +167,7 @@ describe("纯函数（fillPanelComponent 同逻辑抽取）", () => {
         { name: "main", bones: [{ _cubeCount: 2 }] },
         { name: "armor", bones: [{ _cubeCount: 3 }] },
       ],
-    }) as never;
+    }) as unknown as Spec3D;
     expect(ysmModelStats(spec, -1)).toMatchObject({ bones: 2, cubes: 5, compName: "main" });
     expect(ysmModelStats(spec, 1)).toMatchObject({ bones: 1, cubes: 3, compName: "armor" });
   });
@@ -173,10 +175,10 @@ describe("纯函数（fillPanelComponent 同逻辑抽取）", () => {
   it("ysmModelTextureSlots：按 meshGroups.texIdx 去重，缺省回退全部", () => {
     const spec = makeSpec({
       models: [{ name: "main", bones: [], meshGroups: [{ texIdx: 0 }, { texIdx: 0 }, { texIdx: 1 }] }],
-    }) as never;
+    }) as unknown as Spec3D;
     expect(ysmModelTextureSlots(spec, 0, 3)).toEqual([0, 1]);
     // meshGroups 缺失 → 回退全部
-    const bare = { models: [{ name: "main", bones: [] }] } as never;
+    const bare = { models: [{ name: "main", bones: [] }] } as unknown as Spec3D;
     expect(ysmModelTextureSlots(bare, 0, 3)).toEqual([0, 1, 2]);
   });
 });

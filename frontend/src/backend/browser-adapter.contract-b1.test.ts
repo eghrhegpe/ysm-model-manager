@@ -72,15 +72,15 @@ describe("契约 B1 — SetModelTags 规范化对齐 Go tags.go:120 (trimTag+去
   it("应 trim/去重/排序（Go: set[trimTag(t)] + sort.Strings），web 已对齐", async () => {
     const p = await importOne("狐狸.ysm");
     // Go 写入前对每标签 trimTag（去空白/控制符）、去重、排序；[' B ','A','A'] → ['A','B']
-    await browserAdapter.SetModelTags(p, [" B ", "A", "A"] as never);
+    await browserAdapter.SetModelTags(p, [" B ", "A", "A"]);
     const got = (await browserAdapter.GetModelTags(p)) as string[];
     expect(got).toEqual(["A", "B"]); // 契约守门：web 已实现 trim/去重/排序
   });
 
   it("空数组应删除 key（Go: len(tags)==0 → delete(s.data, path)），web 已对齐", async () => {
     const p = await importOne("狐狸.ysm");
-    await browserAdapter.SetModelTags(p, ["临时"] as never);
-    await browserAdapter.SetModelTags(p, [] as never);
+    await browserAdapter.SetModelTags(p, ["临时"]);
+    await browserAdapter.SetModelTags(p, []);
     // Go 契约：空数组等同删除条目，tags.json 中不再有该 path
     expect(idbMock._store.has(`tags:${p}`)).toBe(false); // 契约守门：web 已实现空数组删除 key
     expect((await browserAdapter.GetModelTags(p)) as string[]).toEqual([]);
@@ -90,7 +90,7 @@ describe("契约 B1 — SetModelTags 规范化对齐 Go tags.go:120 (trimTag+去
 describe("契约 B1 — ListByTag 查询规范化对齐 Go tags.go:205 (trimTag)", () => {
   it("查询标签首尾空白应 trim（Go: tag = trimTag(tag)），web 已对齐", async () => {
     const p = await importOne("狐狸.ysm");
-    await browserAdapter.SetModelTags(p, ["联动"] as never);
+    await browserAdapter.SetModelTags(p, ["联动"]);
     // Go: ListByTag(' 联动 ') 先 trimTag → '联动'，命中
     const got = (await browserAdapter.ListByTag(" 联动 ")) as string[];
     expect(got).toContain(p); // 契约守门：web 已实现 trimTag 查询
@@ -161,7 +161,7 @@ describe("契约 B1 — ClearImportLogs/ClearRuntimeLogs 双环分离对齐 Go a
 describe("契约 B1 — DeleteResourcePack 标记清理对齐 Go resource_bindings.go", () => {
   it("删除后标签被清除（web 行为）；注意 Go os.RemoveAll 不触碰 tags.json，残留孤立标签 → 与 Go 偏差", async () => {
     const p = await importOne("狐狸.ysm");
-    await browserAdapter.SetModelTags(p, ["临时"] as never);
+    await browserAdapter.SetModelTags(p, ["临时"]);
     await browserAdapter.DeleteResourcePack(p, "ysm");
     expect((await browserAdapter.ScanModelEntries("/web/ysm")) as unknown[]).toHaveLength(0);
     // web 主动清理 tags（browser-adapter.ts:396）；Go 契约下 tags.json 仍残留该 path 的孤立标签

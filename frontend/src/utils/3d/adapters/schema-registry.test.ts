@@ -16,6 +16,8 @@ import {
   YSM_MODEL_SCHEMA_ID,
 } from "./schema-registry.ts";
 import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { SchemaBuilder } from "./schema-registry.ts";
+import type { PreviewSnapshot } from "../state/preview-state.ts";
 
 beforeEach(() => {
   resetSchemas();
@@ -26,11 +28,11 @@ describe("schema-registry 受控注册", () => {
     const builder = (snapshot: Record<string, unknown>): PreviewMenuNode[] => [
       { id: "field-a", kind: "field", labelKey: "preview.a", value: String(snapshot["render.maxFps"]) },
     ];
-    registerSchema("test-panel", builder as never);
+    registerSchema("test-panel", builder as unknown as SchemaBuilder);
 
     expect(hasSchema("test-panel")).toBe(true);
     expect(listSchemas()).toContain("test-panel");
-    const got = getSchema("test-panel")!({ "render.maxFps": 120 } as never);
+    const got = getSchema("test-panel")!({ "render.maxFps": 120 } as unknown as PreviewSnapshot);
     expect(got[0]).toMatchObject({ id: "field-a", value: "120" });
   });
 
@@ -40,9 +42,9 @@ describe("schema-registry 受控注册", () => {
   });
 
   it("重复注册覆盖旧 builder（多模型同框换菜单语义）", () => {
-    registerSchema("dup", () => [{ id: "a", kind: "field", value: "old" } as never]);
-    registerSchema("dup", () => [{ id: "a", kind: "field", value: "new" } as never]);
-    const got = getSchema("dup")!({} as never);
+    registerSchema("dup", () => [{ id: "a", kind: "field", value: "old" } as unknown as PreviewMenuNode]);
+    registerSchema("dup", () => [{ id: "a", kind: "field", value: "new" } as unknown as PreviewMenuNode]);
+    const got = getSchema("dup")!({} as unknown as PreviewSnapshot);
     expect(got[0]).toMatchObject({ value: "new" });
   });
 
@@ -75,8 +77,8 @@ describe("makeYsmModelSchemaId（per-scene key 工厂，YSM/maid 同框隔离）
       expect.arrayContaining([makeYsmModelSchemaId("m1"), makeYsmModelSchemaId("m2")]),
     );
     // getSchema 各自取到各自的 builder（不再串数据）
-    expect(getSchema(makeYsmModelSchemaId("m1"))!({} as never)[0]).toMatchObject({ value: "A" });
-    expect(getSchema(makeYsmModelSchemaId("m2"))!({} as never)[0]).toMatchObject({ value: "B" });
+    expect(getSchema(makeYsmModelSchemaId("m1"))!({} as unknown as PreviewSnapshot)[0]).toMatchObject({ value: "A" });
+    expect(getSchema(makeYsmModelSchemaId("m2"))!({} as unknown as PreviewSnapshot)[0]).toMatchObject({ value: "B" });
   });
 
   it("注销一个 per-scene key 不影响另一个（dispose 精准清理）", () => {

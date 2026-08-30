@@ -8,6 +8,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { PreviewMenuHandle } from "./preview-menu/core.ts";
+import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 
 const hoisted = vi.hoisted(() => {
   const managerInstances: Array<{ resolveURL: (url: string) => string }> = [];
@@ -129,7 +131,7 @@ vi.mock("../screenshot.ts", () => ({
 }));
 
 import { buildMmdScene, type MmdDataPort, type MmdPanelHooks } from "./mmd-adapter.ts";
-import { getApp } from "../../../backend/app.ts";
+import { getApp, type AppBindings } from "../../../backend/app.ts";
 
 /** 构造注入端口（对齐 ADR-072：适配器 0 backend import，数据经 port 注入） */
 function makePort(): MmdDataPort {
@@ -177,13 +179,13 @@ function makeMmdPanels(): MmdPanelHooks {
           kind: "select",
           fallback: "动作",
           control: {
-            options: bridge.clips.map((c, i) => ({ value: String(i), label: c.label })) as never,
+            options: bridge.clips.map((c, i) => ({ value: String(i), label: c.label })),
             get: () => String(bridge.currentIndex()),
             set: (v) => { bridge.select(Number(v) || 0); },
           },
         });
       }
-      return nodes as never;
+      return nodes as unknown as PreviewMenuNode[];
     },
     fillShotPanel: () => {},
     // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
@@ -1310,7 +1312,7 @@ describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
     vi.mocked(getApp).mockResolvedValue({
       HasCachedTextures: async () => ({ h1: true }),
       GetCachedTextureByHash: async () => btoa("KTX2DATA"),
-    } as never);
+    } as unknown as AppBindings);
 
     const port = makeRichPort({ cacheHit: true });
     const { ctx } = makeCtx();
@@ -1351,7 +1353,7 @@ describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
     hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
     hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
-    vi.mocked(getApp).mockRejectedValue(new Error("bridge down") as never);
+    vi.mocked(getApp).mockRejectedValue(new Error("bridge down"));
     const { ctx } = makeCtx();
     ctx.renderer = { info: { memory: { geometries: 1, textures: 1 } } } as unknown as THREE.WebGLRenderer;
     const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
@@ -1372,7 +1374,7 @@ describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
     vi.mocked(getApp).mockResolvedValue({
       HasCachedTextures: async () => ({}),
       GetCachedTextureByHash: async () => null,
-    } as never);
+    } as unknown as AppBindings);
 
     const port = makeRichPort({ cacheHit: false });
     const { ctx } = makeCtx();
@@ -1446,7 +1448,7 @@ describe("材质/播放桥消费（menu children control 接线）", () => {
     const { ctx } = makeCtx();
     const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
 
-    const matItem = registeredItems(built as never).find((i) => i.id === "material") as {
+    const matItem = registeredItems(built as unknown as Parameters<typeof registeredItems>[0]).find((i) => i.id === "material") as {
       children?: Array<{ eye?: { get: () => boolean; set: (v: boolean) => void }; opacity?: { get: () => number; set: (v: number) => void } }>;
     };
     const row = matItem?.children?.find((c) => c.eye && c.opacity);
@@ -1468,7 +1470,7 @@ describe("材质/播放桥消费（menu children control 接线）", () => {
     const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
 
     // 经 playNodes 捕获 bridge（makeMmdPanels 的 toggle control set 触发 bridge.toggle）
-    const playItem = registeredItems(built as never).find((i) => i.id === "play");
+    const playItem = registeredItems(built as unknown as Parameters<typeof registeredItems>[0]).find((i) => i.id === "play");
     const toggle = (playItem?.children ?? []).find((n) => n.id === "play-toggle") as unknown as { control: { get: () => boolean; set: (v: boolean) => void } };
     expect(toggle.control.get()).toBe(true); // playing 初始 true（无 clip 也如此）
     toggle.control.set(false); // toggle() → clips.length===0 早退，playing 不变
@@ -1492,7 +1494,7 @@ describe("材质/播放桥消费（menu children control 接线）", () => {
     const { ctx } = makeCtx();
     const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", makePort(), makeMmdPanels());
 
-    const playItem = registeredItems(built as never).find((i) => i.id === "play");
+    const playItem = registeredItems(built as unknown as Parameters<typeof registeredItems>[0]).find((i) => i.id === "play");
     const sel = (playItem?.children ?? []).find((n) => n.kind === "select") as unknown as { control: { get: () => string; set: (v: string) => void } };
     expect(sel).toBeDefined();
     expect(sel.control.get()).toBe("0");
@@ -1659,7 +1661,7 @@ describe("动作库扫描（getCustomAnimPath + vmd/vpd 降级）", () => {
     setup();
     vi.mocked(getApp).mockResolvedValue({
       GetRepoRoot: async () => "/repo/CustomAnim",
-    } as never);
+    } as unknown as AppBindings);
     hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa(p)));
     // 目录文件（模型同目录）只有 pmx；动作库目录扫描到 vmd/vpd/无关文件
     let scanDir = "";
@@ -1683,7 +1685,7 @@ describe("动作库扫描（getCustomAnimPath + vmd/vpd 降级）", () => {
     setup();
     vi.mocked(getApp).mockResolvedValue({
       GetRepoRoot: async () => "/repo/CustomAnim",
-    } as never);
+    } as unknown as AppBindings);
     hoisted.listPathsMock.mockImplementation(async (dir: string) => {
       if (dir === "/repo/CustomAnim") throw new Error("scan fail");
       return ["/mmd/miku/miku.pmx"];
@@ -1736,7 +1738,7 @@ describe("worker 纹理解码应用（pendingTexture / decoded 位图）", () =>
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
-    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as never]]));
+    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as unknown as DecodedTexture]]));
     const port = makePort();
     const { ctx } = makeCtx();
     const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
@@ -1751,7 +1753,7 @@ describe("worker 纹理解码应用（pendingTexture / decoded 位图）", () =>
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     hoisted.readBytesMock.mockResolvedValue(btoa("DATA"));
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
-    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as never]]));
+    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as unknown as DecodedTexture]]));
     hoisted.applyTexturesMock.mockReturnValue({ replaced: 2, total: 2 });
     hoisted.createPmxParserImpl = () => ({
       parse: () => Promise.resolve({
@@ -1791,7 +1793,7 @@ describe("worker 纹理解码应用（pendingTexture / decoded 位图）", () =>
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     hoisted.readBytesMock.mockResolvedValue(btoa("DATA"));
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
-    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as never]]));
+    hoisted.decodeAllMock.mockResolvedValue(new Map([["tex.png", {} as unknown as DecodedTexture]]));
     hoisted.applyTexturesMock.mockReturnValue({ replaced: 0, total: 2 });
     hoisted.createPmxParserImpl = () => ({
       parse: () => Promise.resolve({
@@ -1871,7 +1873,7 @@ describe("KTX2 替换异常（stage3 直载容错）", () => {
     vi.mocked(getApp).mockResolvedValue({
       HasCachedTextures: async () => ({ h1: true }),
       GetCachedTextureByHash: async () => "",
-    } as never);
+    } as unknown as AppBindings);
     const port = makeRichPort();
     const { ctx } = makeCtx();
     ctx.renderer = fakeRenderer();
@@ -1893,7 +1895,7 @@ describe("KTX2 替换异常（stage3 直载容错）", () => {
     vi.mocked(getApp).mockResolvedValue({
       HasCachedTextures: async () => ({ h1: true }),
       GetCachedTextureByHash: async () => btoa("KTX2"),
-    } as never);
+    } as unknown as AppBindings);
     const port = makeRichPort();
     const { ctx } = makeCtx();
     ctx.renderer = fakeRenderer();

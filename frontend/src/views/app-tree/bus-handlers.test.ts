@@ -136,7 +136,7 @@ beforeEach(() => {
   syncToggles.length = 0;
   offs.forEach((fn) => fn());
   offs.length = 0;
-  offs.push(bus.on("toast:show", (p) => toasts.push(p as never)));
+  offs.push(bus.on("toast:show", (p) => toasts.push(p as { msg: string; type: string })));
   offs.push(bus.on("stats:refresh", () => statsRefreshed.push(true)));
   offs.push(bus.on("sync:toggle:status", () => syncToggles.push(true)));
 
@@ -174,7 +174,7 @@ afterEach(() => {
 
 async function bind(vm: VM): Promise<void> {
   const { bindBusEvents } = await import("./bus-handlers.ts");
-  unsubs = bindBusEvents(vm as never);
+  unsubs = bindBusEvents(vm as unknown as Parameters<typeof bindBusEvents>[0]);
   await Promise.resolve();
 }
 
@@ -378,7 +378,7 @@ describe("bindBusEvents — 批量重命名", () => {
     let onRenames: ((r: Array<{ oldPath: string; newName: string }>) => Promise<void>) | undefined;
     showBatchRenameDialogMock.mockImplementation(
       async (_dir: string, _entries: unknown, cb: (r: never) => Promise<void>) => {
-        onRenames = cb as never;
+        onRenames = cb as unknown as (r: Array<{ oldPath: string; newName: string }>) => Promise<void>;
       },
     );
 
@@ -411,7 +411,7 @@ describe("bindBusEvents — 批量重命名", () => {
     let onRenames: ((r: Array<{ oldPath: string; newName: string }>) => Promise<void>) | undefined;
     showBatchRenameDialogMock.mockImplementation(
       async (_dir: string, _entries: unknown, cb: (r: never) => Promise<void>) => {
-        onRenames = cb as never;
+        onRenames = cb as unknown as (r: Array<{ oldPath: string; newName: string }>) => Promise<void>;
       },
     );
 

@@ -25,6 +25,7 @@ const idbMock = (globalThis as unknown as {
   };
 }).__YSM_TEST_IDB__;
 import { browserAdapter } from "./browser-adapter.ts";
+import type { WorkshopSite } from "../../bindings/ysm-model-manager/go/types/models.ts";
 
 // 复刻 harness：idb 层内存实现 + vi.mock；localStorage 由 happy-dom 提供。
 
@@ -65,7 +66,7 @@ describe("B2 契约：LoadWorkshopCreators — 覆盖层优先级", () => {
   it("返回值为深拷贝：外部 mutate 不影响后续 Load（对齐 Go 每次重新反序列化）", async () => {
     const a = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     const len = a.length;
-    a.push({ name: "被污染" } as never);
+    a.push({ name: "被污染" });
     const b = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     expect(b.length).toBe(len);
   });
@@ -78,7 +79,7 @@ describe("B2 契约：LoadWorkshopCreators — 覆盖层优先级", () => {
 describe("B2 契约：SaveWorkshopCreators / SaveWorkshopSites — 写入与重置", () => {
   it("SaveWorkshopCreators(data) 后 LoadWorkshopCreators 返回新值", async () => {
     const custom = [{ name: "新作者", desc: "x", type: "bilibili" }];
-    await browserAdapter.SaveWorkshopCreators(custom as never);
+    await browserAdapter.SaveWorkshopCreators(custom);
     const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     expect(got).toHaveLength(1);
     expect(got[0].name).toBe("新作者");
@@ -86,21 +87,21 @@ describe("B2 契约：SaveWorkshopCreators / SaveWorkshopSites — 写入与重�
 
   it("SaveWorkshopSites(data) 后 DefaultWorkshopSites 返回新值（覆盖优先）", async () => {
     const custom = [{ id: "mysite", icon: "⭐", label: "我的站", url: "https://x.test", desc: "t", group: "search" }];
-    await browserAdapter.SaveWorkshopSites(custom as never);
+    await browserAdapter.SaveWorkshopSites(custom);
     const got = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string }>;
     expect(got).toHaveLength(1);
     expect(got[0].id).toBe("mysite");
   });
 
   it("SaveWorkshopCreators(null) 重置覆盖层 → 回退 bundled（网页版自身约定）", async () => {
-    await browserAdapter.SaveWorkshopCreators([{ name: "临时", desc: "x", type: "b" }] as never);
+    await browserAdapter.SaveWorkshopCreators([{ name: "临时", desc: "x", type: "b" }]);
     await browserAdapter.SaveWorkshopCreators(null);
     const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     expect(got.length).toBeGreaterThan(1); // bundled 默认远大于 1
   });
 
   it("SaveWorkshopSites(null) 重置覆盖层 → 回退 bundled（网页版自身约定）", async () => {
-    await browserAdapter.SaveWorkshopSites([{ id: "x", url: "https://x.test" }] as never);
+    await browserAdapter.SaveWorkshopSites([{ id: "x", url: "https://x.test" }] as unknown as WorkshopSite[]);
     await browserAdapter.SaveWorkshopSites(null);
     const got = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string }>;
     expect(got.length).toBeGreaterThan(1);
@@ -118,10 +119,10 @@ describe("B2 契约：站点级编辑保存（R3-P0 web 补齐，镜像 Go app_w
       { name: "A站作者", desc: "a", type: "siteA" },
       { name: "B站作者", desc: "b", type: "siteB" },
     ];
-    await browserAdapter.SaveWorkshopCreators(base as never);
+    await browserAdapter.SaveWorkshopCreators(base);
     await browserAdapter.SaveWorkshopCreatorsBySite(
       "siteA",
-      [{ name: "A站新作者", desc: "a2", type: "siteA" }] as never,
+      [{ name: "A站新作者", desc: "a2", type: "siteA" }],
     );
     const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string; type: string }>;
     const names = got.map((c) => c.name);
@@ -132,17 +133,17 @@ describe("B2 契约：站点级编辑保存（R3-P0 web 补齐，镜像 Go app_w
 
   it("SaveWorkshopPresetsBySite 只改指定站点 presetSearches", async () => {
     const site = { id: "siteA", label: "A", url: "https://a.test", presetSearches: [{ label: "旧", q: "old" }] };
-    await browserAdapter.SaveWorkshopSites([site] as never);
+    await browserAdapter.SaveWorkshopSites([site] as unknown as WorkshopSite[]);
     await browserAdapter.SaveWorkshopPresetsBySite(
       "siteA",
-      [{ label: "新", q: "new" }] as never,
+      [{ label: "新", q: "new" }],
     );
     const got = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string; presetSearches: Array<{ q: string }> }>;
     expect(got.find((s) => s.id === "siteA")?.presetSearches?.[0]?.q).toBe("new");
   });
 
   it("MergeWorkshopCreatorsFromJSON 合并新增/更新并返回 [added, updated]", async () => {
-    await browserAdapter.SaveWorkshopCreators([{ name: "已存在", desc: "", type: "x" }] as never);
+    await browserAdapter.SaveWorkshopCreators([{ name: "已存在", desc: "", type: "x" }]);
     // 构造 >=100 条（Go 完整性校验：合并后 >=100 才通过）：1 条已存在（更新 desc），其余新增
     const list = Array.from({ length: 100 }, (_, i) => ({
       name: i === 0 ? "已存在" : `新作者${i}`,
@@ -167,9 +168,9 @@ describe("B2 契约：站点级编辑保存（R3-P0 web 补齐，镜像 Go app_w
   it("多站点分号 type 连续按站点保存不丢数据（累积语义，审核验证）", async () => {
     // 逐站点 SaveWorkshopCreatorsBySite：每次 load 读到前次 save 结果（localStorage
     // 同步事务），后一次追加不覆盖前一次——多站点分号 type 拆组保存后各站点都在
-    await browserAdapter.SaveWorkshopCreators([] as never); // 清空覆盖层
-    await browserAdapter.SaveWorkshopCreatorsBySite("siteA", [{ name: "A1", desc: "", type: "siteA" }] as never);
-    await browserAdapter.SaveWorkshopCreatorsBySite("siteB", [{ name: "B1", desc: "", type: "siteB" }] as never);
+    await browserAdapter.SaveWorkshopCreators([]); // 清空覆盖层
+    await browserAdapter.SaveWorkshopCreatorsBySite("siteA", [{ name: "A1", desc: "", type: "siteA" }]);
+    await browserAdapter.SaveWorkshopCreatorsBySite("siteB", [{ name: "B1", desc: "", type: "siteB" }]);
     const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     const names = got.map((c) => c.name);
     expect(names).toContain("A1");
@@ -178,7 +179,7 @@ describe("B2 契约：站点级编辑保存（R3-P0 web 补齐，镜像 Go app_w
 
   it("MergeWorkshopCreatorsFromJSON 合并后 <100 条回滚不保存（覆盖层保持旧值）", async () => {
     const before = [{ name: "旧作者", desc: "old", type: "x" }];
-    await browserAdapter.SaveWorkshopCreators(before as never);
+    await browserAdapter.SaveWorkshopCreators(before);
     // 导入 30 条（<100 合并后 → reject），内存已合并但不应落盘
     const list = Array.from({ length: 30 }, (_, i) => ({
       name: `作者${i}`, desc: `d${i}`, type: "t",
@@ -211,7 +212,7 @@ describe("B2 契约：DefaultWorkshopSites — 恒返回站点列表", () => {
   it("返回值为深拷贝：外部 mutate 不影响后续调用", async () => {
     const a = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string }>;
     const len = a.length;
-    a.push({ id: "污染" } as never);
+    a.push({ id: "污染" });
     const b = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string }>;
     expect(b.length).toBe(len);
   });

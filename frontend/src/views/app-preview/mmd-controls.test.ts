@@ -4,6 +4,7 @@
 // （switch/camera 项），此处不再覆盖。morph 已拆独立菜单项（对齐材质折叠模式，2026-08-28）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
+import type { MMD } from "@moeru/three-mmd";
 import {
   fillMmdModelPanel,
   fillMmdShotPanel,
@@ -37,7 +38,7 @@ function makeCtx() {
     },
   };
   const ctx: MmdBottomNavCtx = {
-    mmd: mmd as never,
+    mmd: mmd as unknown as MMD,
     mesh,
     modelName: "子言.pmx",
     modelPath: "/mmd/子言/子言.pmx",
@@ -63,7 +64,7 @@ function makeZeroBoneCtx(): { ctx: MmdBottomNavCtx } {
   };
   return {
     ctx: {
-      mmd: mmd as never,
+      mmd: mmd as unknown as MMD,
       mesh,
       modelName: "空骨骼.pmx",
       modelPath: "/mmd/empty/empty.pmx",
@@ -87,7 +88,7 @@ function makeCtxWithName(name: string): { ctx: MmdBottomNavCtx } {
   };
   return {
     ctx: {
-      mmd: mmd as never,
+      mmd: mmd as unknown as MMD,
       mesh,
       modelName: name,
       modelPath: `/mmd/${name}/${name}`,
@@ -295,7 +296,7 @@ describe("边界条件", () => {
         morphs: [],
       },
     };
-    const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "test.pmx" };
+    const ctx: MmdBottomNavCtx = { mmd: mmd as unknown as MMD, mesh, modelName: "test.pmx" };
     const list = document.createElement("div");
     // 不应崩溃
     expect(() => fillMmdModelPanel(list, ctx)).not.toThrow();
@@ -319,7 +320,7 @@ describe("边界条件", () => {
         morphs: [],
       },
     };
-    const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "test.pmx" };
+    const ctx: MmdBottomNavCtx = { mmd: mmd as unknown as MMD, mesh, modelName: "test.pmx" };
     const list = document.createElement("div");
     // 不应崩溃
     expect(() => fillMmdModelPanel(list, ctx)).not.toThrow();

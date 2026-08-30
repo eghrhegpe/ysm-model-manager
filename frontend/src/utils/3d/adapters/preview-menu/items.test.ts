@@ -15,6 +15,9 @@ import { ysmMenuItems, type YsmMenuItemsOpts } from "../ysm-adapter.ts";
 import { mmdMenuItems, type MmdMenuItemsOpts } from "../mmd-adapter.ts";
 import { vrmMenuItems, type VrmMenuItemsOpts } from "../vrm-adapter.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx } from "./core.ts";
+import type { SceneCapability } from "../../caps/scene-capability.ts";
+import type { YsmModel, YsmContentHandle } from "../../../views/app-preview/ysm-controls.ts";
+import type { Spec3D } from "../../model3d.ts";
 import { makeMenuCtx } from "../menu-test-fixtures.ts";
 import type { BoneTree } from "../../bone-tools.ts";
 import {
@@ -35,11 +38,11 @@ function setHtml(el: Element, html: string): void {
 function fakeYsmOpts(): YsmMenuItemsOpts {
   return {
     controlsCtx: {
-      model: {} as never,
+      model: {} as unknown as YsmModel,
       texIdx: 0,
       texArr: [],
-      spec: {} as never,
-      handle: {} as never,
+      spec: {} as unknown as Spec3D,
+      handle: {} as unknown as YsmContentHandle,
     },
     bonePanel: fakeBonePanel(),
     // [doc:adr-126-p4-b-2] ysmShotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）
@@ -143,7 +146,7 @@ const fakeCap = {
     { id: "sky-env", kind: "toggle" as const, labelKey: "preview.environmentMapping", fallback: "环境贴图", getValue: () => true, setValue: vi.fn() },
     { id: "ground-visible", kind: "toggle" as const, labelKey: "preview.ground", fallback: "地面", getValue: () => true, setValue: vi.fn() },
   ],
-} as never;
+} as unknown as SceneCapability;
 
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
   // 共享夹具薄包装：本文件测能力驱动 dock，默认注入 sky/ground fakeCap

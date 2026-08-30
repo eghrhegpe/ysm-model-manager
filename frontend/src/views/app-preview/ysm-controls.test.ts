@@ -29,7 +29,9 @@ import {
 import {
   resetSettingsListeners,
   resetActiveComponent,
+  type PreviewSnapshot,
 } from "../../utils/3d/state/preview-state.ts";
+import type { Spec3D } from "../../utils/3d/model3d.ts";
 
 function makeCtx(overrides: Partial<YsmControlsContext> = {}): YsmControlsContext {
   return {
@@ -44,7 +46,7 @@ function makeCtx(overrides: Partial<YsmControlsContext> = {}): YsmControlsContex
     },
     texIdx: 0,
     texArr: [],
-    spec: {} as never,
+    spec: {} as unknown as Spec3D,
     handle: {
       showModelGroup: vi.fn(),
       getModelGroupCount: () => 1,
@@ -137,7 +139,7 @@ describe("registerYsmModelSchema（P5 受控注册 + B2 per-scene 会话态）",
     expect(hasSchema(YSM_MODEL_SCHEMA_ID)).toBe(true);
     const builder = getSchema(YSM_MODEL_SCHEMA_ID)!;
     expect(builder).toBeDefined();
-    const snap = { "ui.activeComponent": 0 } as never;
+    const snap = { "ui.activeComponent": 0 } as unknown as PreviewSnapshot;
     builder(snap);
     expect(buildYsmModelSchema).toHaveBeenCalledTimes(1);
     expect(buildYsmModelSchema).toHaveBeenCalledWith(
@@ -176,13 +178,13 @@ describe("registerYsmModelSchema（P5 受控注册 + B2 per-scene 会话态）",
     expect(builderB).toBeDefined();
     expect(builderA).not.toBe(builderB);
     // 各自构建时拿自己的 ctx（不串数据）
-    builderA({} as never);
+    builderA({} as unknown as PreviewSnapshot);
     expect(buildYsmModelSchema).toHaveBeenLastCalledWith(
       { model: ctxA.model, spec: ctxA.spec, texArr: ctxA.texArr },
       expect.anything(),
       expect.anything(),
     );
-    builderB({} as never);
+    builderB({} as unknown as PreviewSnapshot);
     expect(buildYsmModelSchema).toHaveBeenLastCalledWith(
       { model: ctxB.model, spec: ctxB.spec, texArr: ctxB.texArr },
       expect.anything(),
@@ -208,8 +210,8 @@ describe("registerYsmModelSchema（P5 受控注册 + B2 per-scene 会话态）",
     // 注意 builder 惰性：注册后须调用 builder 才触发 buildYsmModelSchema。
     const offA = registerYsmModelSchema(ctxA, "m1");
     const offB = registerYsmModelSchema(ctxB, "m2");
-    getSchema(makeYsmModelSchemaId("m1"))!({} as never);
-    getSchema(makeYsmModelSchemaId("m2"))!({} as never);
+    getSchema(makeYsmModelSchemaId("m1"))!({} as unknown as PreviewSnapshot);
+    getSchema(makeYsmModelSchemaId("m2"))!({} as unknown as PreviewSnapshot);
     const calledA = vi.mocked(buildYsmModelSchema).mock.calls[0]![2]!;
     const calledB = vi.mocked(buildYsmModelSchema).mock.calls[1]![2]!;
     expect(calledA).not.toBe(calledB); // per-scene：各自独立闭包

@@ -303,7 +303,7 @@ vi.mock("../../utils/3d/caps/light-capability.ts", () => ({
   },
 }));
 
-import { getApp } from "../../backend/app.ts";
+import { getApp, type AppBindings } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import * as THREE from "three";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
@@ -370,7 +370,7 @@ beforeEach(() => {
   cameraInstances.length = 0;
   vi.mocked(getApp).mockResolvedValue({
     GetLitematicVoxelData: voxelFn(VALID_JSON),
-  } as never);
+  } as unknown as AppBindings);
 });
 
 afterEach(() => {
@@ -444,7 +444,7 @@ describe("体素数据处理", () => {
   it("空 groups → voxelEmpty 提示，不崩溃", async () => {
     vi.mocked(getApp).mockResolvedValue({
       GetLitematicVoxelData: voxelFn(JSON.stringify({ groups: [], size: [10, 10, 10] })),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/empty.litematic", "GetLitematicVoxelData");
     const overlay = lastOverlay();
     expect(overlay.textContent).toContain("体素数据为空"); // test-setup t() 返回 zhCN
@@ -454,7 +454,7 @@ describe("体素数据处理", () => {
   it("{error} 契约 → 显示具体错误而非 voxelEmpty（对齐 Go voxelErrorJSON）", async () => {
     vi.mocked(getApp).mockResolvedValue({
       GetNbtVoxelData: voxelFn(JSON.stringify({ error: "BuildNbtVoxelData: not a structure NBT file" })),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/err.nbt", "GetNbtVoxelData");
     const overlay = lastOverlay();
     expect(overlay.textContent).toContain("not a structure NBT file");
@@ -472,7 +472,7 @@ describe("体素数据处理", () => {
           maxBlocks: 200000,
         }),
       ),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/trunc.litematic", "GetLitematicVoxelData");
     const overlay = lastOverlay();
     expect(overlay.textContent).toContain("200,000");
@@ -555,7 +555,7 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
           size: [16, 16, 16],
         }),
       ),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/origin.litematic", "GetLitematicVoxelData");
     expect(meshInstances.length).toBeGreaterThanOrEqual(1);
     // mock InstancedMesh 构造 count=0——经 schema mode control 触发 applyLayer(all) 写入合法体素数
@@ -583,7 +583,7 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
           size: [16, 16, 16],
         }),
       ),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/mixed.litematic", "GetLitematicVoxelData");
     // 经 schema mode control 触发 applyLayer(all) 写 count（3 条合法）
     triggerApplyLayer();
@@ -599,7 +599,7 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
           size: [16, 16, 16],
         }),
       ),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/edge.litematic", "GetLitematicVoxelData");
     expect(meshInstances.length).toBeGreaterThanOrEqual(1);
     // 经 schema mode control 触发 applyLayer(all) 写 count（2 个合法）
@@ -618,7 +618,7 @@ describe("陷阱 #11 坐标对齐 + #17 零值哨兵", () => {
           size: [16, 16, 16],
         }),
       ),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/layer.litematic", "GetLitematicVoxelData");
     // schema 驱动：切 single + 层调到 1（target 层 0）
     setSliceMode(sliceNodes(), "single");
@@ -642,7 +642,7 @@ describe("审核补充：边界与异步路径", () => {
           truncated: true, // 无 maxBlocks 字段
         }),
       ),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/trunc-fallback.litematic", "GetLitematicVoxelData");
     const overlay = lastOverlay();
     expect(overlay.textContent).toContain("200,000");
@@ -655,8 +655,8 @@ describe("审核补充：边界与异步路径", () => {
       GetLitematicVoxelData: (() =>
         new Promise<string>((r) => {
           resolveFn = r;
-        })) as never,
-    } as never);
+        })),
+    } as unknown as AppBindings);
     const p = createLitematic3D("/slow.litematic", "GetLitematicVoxelData");
     const overlay = lastOverlay(); // overlay 同步已挂载（首个 await 之前）
     // 让 build 越过首个 await getApp()、真正进入 await fn(path)：此刻 resolveFn 才被真实赋值；
@@ -743,7 +743,7 @@ describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
     vi.mocked(getApp).mockResolvedValue({
       ListContainerEntries: vi.fn().mockResolvedValue(JSON.stringify(["builds/a.nbt", "builds/b.litematic"])),
       GetVoxelDataInContainer: voxelInContainer,
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/lib/blueprint.zip", "GetLitematicVoxelData");
     // 初始 entry = 首项（builds/a.nbt），容器内 voxelCall 读容器字节
     expect(voxelInContainer).toHaveBeenCalledWith("/lib/blueprint.zip", "builds/a.nbt", ".nbt");
@@ -760,7 +760,7 @@ describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
     vi.mocked(getApp).mockResolvedValue({
       ListContainerEntries: vi.fn().mockResolvedValue(JSON.stringify(["builds/a.nbt", "maps/x.schematic"])),
       GetVoxelDataInContainer: voxelInContainer,
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/lib/mixed.zip", "GetLitematicVoxelData");
     // 初始 build 首项 .nbt → 派发 ".nbt"
     expect(voxelInContainer).toHaveBeenLastCalledWith("/lib/mixed.zip", "builds/a.nbt", ".nbt");
@@ -779,7 +779,7 @@ describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
     vi.mocked(getApp).mockResolvedValue({
       ListContainerEntries: vi.fn().mockResolvedValue("[]"),
       GetLitematicVoxelData: voxel,
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/lib/empty.zip", "GetLitematicVoxelData");
     // 空容器 → 降级裸路径（zip 当裸文件读，仍走原契约，不崩溃）
     expect(voxel).toHaveBeenCalledWith("/lib/empty.zip");
@@ -792,7 +792,7 @@ describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
     vi.mocked(getApp).mockResolvedValue({
       ListContainerEntries: vi.fn().mockResolvedValue(JSON.stringify(["builds/only.nbt"])),
       GetVoxelDataInContainer: vi.fn().mockResolvedValue(VALID_JSON),
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/lib/single.zip", "GetLitematicVoxelData");
     const overlay = lastOverlay();
     expect(overlay).toBeTruthy();
@@ -806,7 +806,7 @@ describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
     const voxel = vi.fn().mockResolvedValue(VALID_JSON);
     vi.mocked(getApp).mockResolvedValue({
       GetLitematicVoxelData: voxel,
-    } as never);
+    } as unknown as AppBindings);
     await createLitematic3D("/a.litematic", "GetLitematicVoxelData");
     expect(voxel).toHaveBeenCalledWith("/a.litematic");
     const overlay = lastOverlay();

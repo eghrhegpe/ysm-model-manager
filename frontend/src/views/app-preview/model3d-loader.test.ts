@@ -81,7 +81,7 @@ describe("loadTextures", () => {
   });
 
   it("全部加载成功 → THREE.Texture 数组（flipY=false、userData 尺寸）", async () => {
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       const texArr = await loadTextures(["a.png", "b.png"]);
       expect(texArr).toHaveLength(2);
@@ -102,7 +102,7 @@ describe("loadTextures", () => {
         else { this.complete = true; this.onload?.(); }
       }
     }
-    vi.stubGlobal("Image", PartialImage as never);
+    vi.stubGlobal("Image", PartialImage);
     try {
       const texArr = await loadTextures(["a.png", "b.png", "c.png"]);
       expect(texArr).toHaveLength(3);
@@ -125,7 +125,7 @@ describe("preloadModel / fetchSpec", () => {
   it("同一路径二次调用 → GetModel3DSpec 只调一次（LRU 缓存命中）", async () => {
     specMock.mockResolvedValue(spec());
     const model = { _modelPath: "/m/lru.ysm", texture: "t.png" };
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       const r1 = await preloadModel(model);
       const r2 = await preloadModel(model);
@@ -140,7 +140,7 @@ describe("preloadModel / fetchSpec", () => {
   it("R1 契约：texArrOrder 与 textureNames 不一致 → console.warn", async () => {
     specMock.mockResolvedValue(spec(["a.png", "X.png"]));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       await preloadModel({
         _modelPath: "/m/r1-mismatch.ysm",
@@ -162,7 +162,7 @@ describe("preloadModel / fetchSpec", () => {
     // 索引比对会误报；存在性比对（每个期望名都在已加载清单中）应通过。
     specMock.mockResolvedValue(spec(["skin", "skin", "arrow"]));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       await preloadModel({
         _modelPath: "/m/shared-slot.ysm",
@@ -190,7 +190,7 @@ describe("preloadModel / fetchSpec", () => {
         componentTextures: { arrow: ["data:image/png;base64,QUJD"] },
       }),
     );
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       const r = await preloadModel({ _modelPath: "/m/comptex.json", textures: ["skin.png"] });
       const arr = r.componentTexMap.get("arrow"); // 键 = SourceName（spec.models[i].name）
@@ -204,7 +204,7 @@ describe("preloadModel / fetchSpec", () => {
   it("R1 契约：顺序一致 → 不 warn", async () => {
     specMock.mockResolvedValue(spec(["a.png", "b.png"]));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       await preloadModel({
         _modelPath: "/m/r1-match.ysm",
@@ -224,7 +224,7 @@ describe("preloadModel / fetchSpec", () => {
     // 之前 de09164a 用 texArrOrder 当槽位清单，面板只显示「纹理 (3)」且 arrow
     // texSlot=6 越界品红。
     specMock.mockResolvedValue(spec(["magic", "winefox", "ice"]));
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       const r = await preloadModel({
         _modelPath: "/m/fox.ysm",
@@ -240,7 +240,7 @@ describe("preloadModel / fetchSpec", () => {
 
   it("全量纹理清单中的空槽必须保留，避免后续 texIdx 错位成紫色", async () => {
     specMock.mockResolvedValue(spec());
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       const r = await preloadModel({
         _modelPath: "/m/texture-hole.ysm",
@@ -258,7 +258,7 @@ describe("preloadModel / fetchSpec", () => {
 
   it("只有 textures[0] 而没有 texture 字段时仍加载首纹理", async () => {
     specMock.mockResolvedValue(spec());
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       const r = await preloadModel({
         _modelPath: "/m/array-only-texture.ysm",
@@ -286,7 +286,7 @@ describe("preloadModel / fetchSpec", () => {
       JSON.stringify({ models: [{ meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] }] }),
     );
     decodeWasmMock.mockResolvedValue({ geometryRaw: '{"geometry":"x"}' });
-    vi.stubGlobal("Image", FakeImage as never); // 纹理加载需同步 onload 的 Image mock
+    vi.stubGlobal("Image", FakeImage); // 纹理加载需同步 onload 的 Image mock
     try {
       const r = await preloadModel({ _modelPath: "/m/android.ysm", texture: "t.png" });
       expect(r.spec.models?.length).toBe(1);
@@ -328,7 +328,7 @@ describe("preloadModel / fetchSpec", () => {
       JSON.stringify({ models: [{ meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] }] }),
     );
     decodeWasmMock.mockResolvedValue({ geometryRaw: '{"geometry":"x"}' });
-    vi.stubGlobal("Image", FakeImage as never); // 纹理加载需同步 onload 的 Image mock
+    vi.stubGlobal("Image", FakeImage); // 纹理加载需同步 onload 的 Image mock
     try {
       const r = await preloadModel({ _modelPath: "/m/web.ysm", texture: "t.png" });
       expect(r.spec.models?.length).toBe(1);
@@ -388,7 +388,7 @@ describe("preloadModel / fetchSpec", () => {
   it("WASM 路径无 texArrOrder → 契约校验整体跳过，不 warn", async () => {
     specMock.mockResolvedValue(spec()); // texArrOrder undefined（WASM 路径）
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       await preloadModel({
         _modelPath: "/m/wasm.ysm",
@@ -405,7 +405,7 @@ describe("preloadModel / fetchSpec", () => {
   it("成功加载后 → recordLoadTrace 写入 store（3 段：读取/解析/纹理加载）", async () => {
     specMock.mockResolvedValue(spec());
     const model = { _modelPath: "/m/trace.ysm", textures: ["u1.png", "u2.png"], textureNames: ["u1", "u2"], texture: "u1.png" };
-    vi.stubGlobal("Image", FakeImage as never);
+    vi.stubGlobal("Image", FakeImage);
     try {
       clearLoadTraces();
       await preloadModel(model);

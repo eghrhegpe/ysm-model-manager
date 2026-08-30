@@ -5,6 +5,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SceneCapabilityRegistry, sceneCapabilityRegistry, isSkyEnvironmentOn } from "./scene-capability-registry.ts";
 import type { SceneCapability, MenuControlDef } from "./scene-capability.ts";
 
+/** createAll 的 ctx 参数类型（测试传空对象桩时精确断言，替代 as never） */
+type CreateAllCtx = Parameters<SceneCapabilityRegistry["createAll"]>[0];
+
 function makeFakeCap(id: string, overrides: Partial<SceneCapability> = {}): SceneCapability {
   return {
     id,
@@ -35,14 +38,14 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     const cap2 = makeFakeCap("sky", { apply: vi.fn() });
     registry.add(() => cap1);
     registry.add(() => cap2);
-    const caps = registry.createAll({} as never);
+    const caps = registry.createAll({} as unknown as CreateAllCtx);
     expect(caps).toHaveLength(2);
     expect(registry.getById("sky")).toBe(cap1);
   });
 
   it("dispose 后 getById 返回 undefined", () => {
     registry.add(() => makeFakeCap("sky"));
-    registry.createAll({} as never);
+    registry.createAll({} as unknown as CreateAllCtx);
     registry.dispose();
     expect(registry.getById("sky")).toBeUndefined();
   });
@@ -50,8 +53,8 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
   it("createAll 后再 createAll → dispose 旧实例后重新创建", () => {
     const factory = vi.fn(() => makeFakeCap("sky"));
     registry.add(factory);
-    registry.createAll({} as never);
-    registry.createAll({} as never);
+    registry.createAll({} as unknown as CreateAllCtx);
+    registry.createAll({} as unknown as CreateAllCtx);
     expect(factory).toHaveBeenCalledTimes(2);
   });
 
@@ -65,7 +68,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     const cap2 = makeFakeCap("ground", { saveState: vi.fn() });
     registry.add(() => cap1);
     registry.add(() => cap2);
-    registry.createAll({} as never);
+    registry.createAll({} as unknown as CreateAllCtx);
     registry.saveAll();
     expect(cap1.saveState).toHaveBeenCalledTimes(1);
     expect(cap2.saveState).toHaveBeenCalledTimes(1);
@@ -78,7 +81,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
       lookup = ctx.caps;
       return capA;
     });
-    registry.createAll({} as never);
+    registry.createAll({} as unknown as CreateAllCtx);
     expect(lookup?.getById("a")).toBe(capA);
     expect(lookup?.getById("missing")).toBeUndefined();
   });
@@ -88,7 +91,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     const sky = makeFakeCap("sky");
     (sky as { isEnvironmentEnabled?: () => boolean }).isEnvironmentEnabled = () => true;
     sceneCapabilityRegistry.add(() => sky);
-    sceneCapabilityRegistry.createAll({} as never);
+    sceneCapabilityRegistry.createAll({} as unknown as CreateAllCtx);
     try {
       expect(isSkyEnvironmentOn()).toBe(true);
     } finally {
@@ -102,7 +105,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     const cap2 = makeFakeCap("ground", { loadState: vi.fn() });
     registry.add(() => cap1);
     registry.add(() => cap2);
-    registry.createAll({} as never);
+    registry.createAll({} as unknown as CreateAllCtx);
     registry.loadAll();
     expect(cap1.loadState).toHaveBeenCalledTimes(1);
     expect(cap2.loadState).toHaveBeenCalledTimes(1);
@@ -113,7 +116,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     const cap2 = makeFakeCap("ground", { dispose: vi.fn() });
     registry.add(() => cap1);
     registry.add(() => cap2);
-    registry.createAll({} as never);
+    registry.createAll({} as unknown as CreateAllCtx);
     registry.dispose();
     expect(cap1.dispose).toHaveBeenCalledTimes(1);
     expect(cap2.dispose).toHaveBeenCalledTimes(1);
@@ -124,7 +127,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     const goodCap = makeFakeCap("ground");
     registry.add(badFactory);
     registry.add(() => goodCap);
-    const caps = registry.createAll({} as never);
+    const caps = registry.createAll({} as unknown as CreateAllCtx);
     expect(caps).toHaveLength(1);
     expect(caps[0]).toBe(goodCap);
   });
@@ -137,7 +140,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
   it("getById 返回的对象引用稳定（不每次创建新实例）", () => {
     const cap = makeFakeCap("sky");
     registry.add(() => cap);
-    registry.createAll({} as never);
+    registry.createAll({} as unknown as CreateAllCtx);
     expect(registry.getById("sky")).toBe(cap);
     expect(registry.getById("sky")).toBe(cap);
   });

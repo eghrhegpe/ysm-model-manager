@@ -24,6 +24,7 @@ import {
   buildSettingsControls,
   buildSettingsSchema,
 } from "../adapters/preview-menu/settings.ts";
+import type { PreviewMenuCtx } from "../adapters/preview-menu/core.ts";
 import { collectVisiblePredicates } from "../adapters/preview-menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
@@ -327,7 +328,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
   });
 
   it("性能档位节点：settings-perf-preset 在 schema 中，渲染 4 选项 select（低/中/高/自定义）", () => {
-    const nodes = buildSettingsSchema({} as never);
+    const nodes = buildSettingsSchema({} as unknown as PreviewMenuCtx);
     const presetNode = nodes.find((n) => n.id === "settings-perf-preset")!;
     expect(presetNode).toBeDefined();
     const list = document.createElement("div");
@@ -362,7 +363,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     // 走真实 UI 路径：schema 节点在构建时只持有 supplier，每次渲染重取注册表。
     // 若实现是构建期求值（快照烤进 renderCustom 闭包），同一节点第二次渲染
     // 永远看不到后挂载的 cap——正是 05fe24b7 所修「声明期求值」病的复现条件。
-    const qualityNode = buildSettingsSchema({} as never).find(
+    const qualityNode = buildSettingsSchema({} as unknown as PreviewMenuCtx).find(
       (n) => n.id === "settings-quality",
     )!;
     const renderRowIds = (): string[] => {
@@ -464,7 +465,7 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
   it("cap 就位：get 透传 cap 内部状态、available=true、set 透传", () => {
     const water = { ...baseCap("water"), getWaterMode: () => "pool", setWaterMode: vi.fn() };
     const ground = { ...baseCap("ground"), getMatSource: () => "texture", setMatSource: vi.fn() };
-    mountCaps(water as never, ground as never);
+    mountCaps(water as unknown as SceneCapability, ground as unknown as SceneCapability);
     expect(isPathAvailable("env.waterMode")).toBe(true);
     expect(getStateValue("env.waterMode")).toBe("pool");
     expect(getStateValue("env.groundMatSource")).toBe("texture");

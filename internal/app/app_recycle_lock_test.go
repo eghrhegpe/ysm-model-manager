@@ -19,11 +19,20 @@ import (
 // TestRecycleBindings_NonReentrantUnderLock 固定「非重入」不变量：
 // 已持 InstallLock 时调用 MoveToRecycle 必须阻塞（不得返回）——若某次改动让绑定
 // 不再持锁（回归），done 会立即关闭、本测试立刻失败；解锁后调用必须完成。
+// code_review P2：失败路径（t.Fatal）也必须释放全局锁，否则测试套件后续用例
+// 全部死锁挂 10 分钟（把「干净失败」变成「套件挂起」）。
 func TestRecycleBindings_NonReentrantUnderLock(t *testing.T) {
 	a := &App{}
 	src := filepath.Join(t.TempDir(), "model.ysm")
 
 	installer.InstallLock.Lock()
+	unlocked := false
+	defer func() {
+		if !unlocked {
+			installer.InstallLock.Unlock() // 失败路径兜底释放，防套件挂起
+		}
+	}()
+
 	done := make(chan struct{})
 	go func() {
 		_ = a.MoveToRecycle(src)
@@ -38,6 +47,7 @@ func TestRecycleBindings_NonReentrantUnderLock(t *testing.T) {
 	}
 
 	installer.InstallLock.Unlock()
+	unlocked = true
 	select {
 	case <-done:
 		// 解锁后正常完成
@@ -48,7 +58,8 @@ func TestRecycleBindings_NonReentrantUnderLock(t *testing.T) {
 
 // TestRecycleBindings_ConcurrentLockedOps 并发冒烟（-race 下验证共享单锁互斥）：
 // 多 goroutine 并发调用持锁绑定，断言全部完成且无数据竞争——锁契约回归（如某
-// 绑定漏加锁导致共享状态竞态）会被 -race 检出。
+// 绑定漏加锁导致共享状态竞态）会被 -race 检出。带超时：锁逻辑回归导致死锁时
+// 快速失败而非套件挂 10 分钟（code_review P2）。
 func TestRecycleBindings_ConcurrentLockedOps(t *testing.T) {
 	a := &App{}
 	base := t.TempDir()
@@ -61,5 +72,14 @@ func TestRecycleBindings_ConcurrentLockedOps(t *testing.T) {
 			_ = a.MoveToRecycle(src)
 		}(i)
 	}
-	wg.Wait()
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("并发持锁操作超时（疑似死锁：锁契约回归）")
+	}
 }

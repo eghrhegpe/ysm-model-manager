@@ -28,6 +28,7 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 - 搜索关键词高亮（转义后返回 `<mark>` 包裹的安全 HTML）
 - 文件下载：`downloadTextFile(content, filename)`（Blob → ObjectURL → anchor download → revoke），供 `context-menu-handlers` 等 core 层调用，不再直接操作 `document/URL`（P2-2 DOM 职责下沉）
 - toast 时长语义化：`TOAST_MS` 8 档常量（quick=1500 / success=2000 / info=2500 / normal=3000 / verbose=4000 / long=5000 / persist=10000 / sticky=60000），全仓 toast 裸 `duration` 已收敛至该单一事实源（commit `b1508ac5`）；契约测试 `toast-ms.test.ts` 断言语档值与单调性；门禁 `scripts/check-toast-duration.mjs` 扫描非测试 src 捕捉裸时长（非阻断 [WARN] 观察期），防回流
+- **能力门控 `capabilities.ts`**（同目录但非 DOM 工具——经 `backend/platform-web.ts` 的 `canBinding()` 三态矩阵判定，2026-XX 收拢）：`can(binding)` 对外 API；`canWebAction(action)` 是**查看器/web 模式右键菜单可达性的单一判定**（P2-3/P3 收敛）——纯前端动作 `VIEWER_PURE_ACTIONS`（noop / batch.copy-paths / batch.export-list / file.copy-path）恒可达 + `VIEWER_WEB_ACTION_BINDINGS` 内 action 走 `can()` 探测；原 `context-menus.ts` 内嵌 `VIEWER_WEB_ACTION_BINDINGS` / `VIEWER_OK_ACTIONS` 均已迁此，新增右键 web binding 或纯前端动作只改这里
 
 ## 对外 API / 入口
 

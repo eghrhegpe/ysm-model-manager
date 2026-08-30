@@ -132,7 +132,7 @@ export function bindSiteEvents(
       // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
       if (isWebPlatform()) {
         bus.emit("toast:show", {
-          msg: "网页版暂不支持导出站点配置，请使用桌面版",
+          msg: t("workshop.exportWebUnsupported"),
           duration: TOAST_MS.normal,
           type: "warn",
         });
@@ -142,13 +142,13 @@ export function bindSiteEvents(
         const { ExportWorkshopSitesJSONFile } = await getApp();
         const path = await ExportWorkshopSitesJSONFile();
         bus.emit("toast:show", {
-          msg: "📤 站点已导出: " + path,
+          msg: t("workshop.exported", { path }),
           duration: TOAST_MS.success,
           type: "success",
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e, "导出失败"),
+          msg: "❌ " + friendlyError(e, t("workshop.exportFailed")),
           duration: TOAST_MS.verbose,
           type: "error",
         });
@@ -160,7 +160,7 @@ export function bindSiteEvents(
       // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
       if (isWebPlatform()) {
         bus.emit("toast:show", {
-          msg: "网页版暂不支持导入站点配置，请使用桌面版",
+          msg: t("workshop.importWebUnsupported"),
           duration: TOAST_MS.normal,
           type: "warn",
         });
@@ -171,7 +171,7 @@ export function bindSiteEvents(
         const n = await ValidateWorkshopSites();
         // TODO: 重新加载创作者列表
         bus.emit("toast:show", {
-          msg: "✅ 已导入 " + n + " 个站点",
+          msg: t("workshop.imported", { n }),
           duration: TOAST_MS.success,
           type: "success",
         });

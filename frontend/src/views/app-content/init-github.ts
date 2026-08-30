@@ -182,12 +182,12 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
     if (ctx.getCurrentRepo() !== repo) return;
     const msg =
       err.message === "NetworkOffline"
-        ? "🌐 无网络连接，请检查网络后重试"
+        ? t("workshop.networkOffline")
         : err.message === "NoIndex"
-          ? "📭 该仓库没有 index.json（尚未建立创意工坊索引）"
+          ? t("workshop.githubNoIndex")
           : err.message === "RateLimited"
-            ? "⏱️ GitHub API 频率限制，请稍后重试或改用浏览器打开"
-            : "❌ 加载失败，请检查网络或稍后重试";
+            ? t("workshop.rateLimitedGithub")
+            : t("workshop.githubLoadFailed");
     if (resultsBody) {
       resultsBody.innerHTML =
         '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ ' +

@@ -1,5 +1,6 @@
 // ===== 站点视图编辑模式事件（从 site-view.ts 拆出，ADR-034 方向①）=====
 import { friendlyError } from "../../../utils/dom/errors.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../backend/app.ts";
 import { moveItem } from "../../../utils/array.ts";
@@ -112,7 +113,7 @@ function eeBindToolbarBtns(
       try {
         if (!site || !site.id) {
           busRef.emit("toast:show", {
-            msg: "❌ 站点信息丢失",
+            msg: t("workshop.siteInfoLost"),
             duration: 3000,
             type: "error",
           });
@@ -140,14 +141,14 @@ function eeBindToolbarBtns(
         await SaveWorkshopCreatorsBySite(site.id, siteCreators);
         wsEditModeRef.v = false;
         busRef.emit("toast:show", {
-          msg: "✅ 已保存",
+          msg: t("workshop.saved"),
           duration: 2000,
           type: "success",
         });
         refreshView();
       } catch (e) {
         busRef.emit("toast:show", {
-          msg: "❌ " + friendlyError(e, "保存失败"),
+          msg: "❌ " + friendlyError(e, t("workshop.saveFailed")),
           duration: 4000,
           type: "error",
         });
@@ -192,7 +193,7 @@ function eeBindFetchBtn(
           await App.SaveWorkshopCreators(allCreators);
           if (r1.added || r1.updated) {
             logs.push(
-              "创作者: +" + r1.added + " 补" + r1.updated,
+              t("workshop.logCreators", { added: r1.added, updated: r1.updated }),
             );
             changed = true;
           }
@@ -201,12 +202,12 @@ function eeBindFetchBtn(
           const r2 = m.mergeCommunitySites(allSites, sitesData);
           if (r2.added > 0) {
             await App.SaveWorkshopSites(allSites);
-            logs.push("站点: +" + r2.added);
+            logs.push(t("workshop.logSites", { added: r2.added }));
             changed = true;
           }
         }
         if (gitHubRepos && gitHubRepos.length) {
-          logs.push("GitHub: " + gitHubRepos.length + " 仓库");
+          logs.push(t("workshop.logGithub", { n: gitHubRepos.length }));
           changed = true;
         }
         let resourceTypes: unknown[] = [];
@@ -215,7 +216,7 @@ function eeBindFetchBtn(
           resourceTypes = parsed.resourceTypes || [];
         } catch (e) { console.warn("[site-edit] parse resourceTypes:", e); }
         if (resourceTypes.length) {
-          logs.push("类型: " + resourceTypes.length + " 种");
+          logs.push(t("workshop.logTypes", { n: resourceTypes.length }));
           changed = true;
         }
 
@@ -228,7 +229,7 @@ function eeBindFetchBtn(
           refreshView();
         } else {
           busRef.emit("toast:show", {
-            msg: "🌐 已是最新配置",
+            msg: t("workshop.upToDate"),
             duration: 3000,
             type: "success",
           });
@@ -236,19 +237,19 @@ function eeBindFetchBtn(
       } catch (e) {
         const err = e as Error;
         const errMsg = err.message === "NetworkOffline"
-          ? "🌐 无网络连接，请检查网络后重试"
+          ? t("workshop.networkOffline")
           : err.message === "NoIndex"
-            ? "📭 社区索引文件不存在"
+            ? t("workshop.indexMissing")
             : err.message === "RateLimited"
-              ? "⏱️ GitHub API 频率限制，请稍后重试"
-              : "🌐 " + friendlyError(e, "拉取失败");
+              ? t("workshop.rateLimited")
+              : "🌐 " + friendlyError(e, t("workshop.fetchFailed"));
         busRef.emit("toast:show", {
           msg: errMsg,
           duration: 5000,
           type: "error",
         });
       } finally {
-        btn.textContent = "🌐 更新配置";
+        btn.textContent = t("workshop.updateConfig");
         btn.disabled = false;
       }
     }, { signal: sig });
@@ -294,7 +295,12 @@ function eeBindCreatorsEdit(
 
   searchResults.querySelector(".cr-add")?.addEventListener("click", () => {
     eeSyncAllEditInputs(searchResults, creators, site);
-    creators.push({ name: "新作者", desc: "描述", type: site.id, tag: "" } as LocalCreatorLike);
+    creators.push({
+      name: t("workshop.newCreatorName"),
+      desc: t("workshop.newCreatorDesc"),
+      type: site.id,
+      tag: "",
+    } as LocalCreatorLike);
     allCreators.push(creators[creators.length - 1]);
     refreshView();
   }, { signal: sig });

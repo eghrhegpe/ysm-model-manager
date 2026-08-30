@@ -282,7 +282,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     b.btn("ws-export-btn").click();
     await flush();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "网页版暂不支持导出站点配置，请使用桌面版",
+      msg: "workshop.exportWebUnsupported",
       duration: TOAST_MS.normal,
       type: "warn",
     });
@@ -300,7 +300,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     b.btn("ws-export-btn").click();
     await flush();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "📤 站点已导出: /x/sites.json",
+      msg: "workshop.exported",
       duration: TOAST_MS.success,
       type: "success",
     });
@@ -316,9 +316,9 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     bindSiteEvents(b.host);
     b.btn("ws-export-btn").click();
     await flush();
-    expect(friendlyError).toHaveBeenCalledWith(expect.any(Error), "导出失败");
+    expect(friendlyError).toHaveBeenCalledWith(expect.any(Error), "workshop.exportFailed");
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "❌ disk boom|导出失败",
+      msg: "❌ disk boom|workshop.exportFailed",
       duration: TOAST_MS.verbose,
       type: "error",
     });
@@ -331,7 +331,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     b.btn("ws-import-btn").click();
     await flush();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "网页版暂不支持导入站点配置，请使用桌面版",
+      msg: "workshop.importWebUnsupported",
       duration: TOAST_MS.normal,
       type: "warn",
     });
@@ -347,7 +347,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     b.btn("ws-import-btn").click();
     await flush();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "✅ 已导入 3 个站点",
+      msg: "workshop.imported",
       duration: TOAST_MS.success,
       type: "success",
     });

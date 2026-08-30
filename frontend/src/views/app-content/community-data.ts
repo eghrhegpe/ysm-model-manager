@@ -282,7 +282,7 @@ export async function fetchCommunityCreators(
   mirror?: string,
 ): Promise<WorkshopCreator[]> {
   const attempts: Array<{ name: string; url: string; label: string }> = [
-    { name: "raw", url, label: "⏳ 社区索引: raw…" },
+    { name: "raw", url, label: t("workshop.communityIndexLoading", { source: "raw" }) },
   ];
   // 仅在 raw URL 看起来有效时才加兜底
   if (url && !url.includes("localhost") && !url.includes("127.0.0.1")) {
@@ -290,12 +290,12 @@ export async function fetchCommunityCreators(
       {
         name: "jsd",
         url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-model-manager@main/creators.json",
-        label: "⏳ 社区索引: jsdelivr…",
+        label: t("workshop.communityIndexLoading", { source: "jsdelivr" }),
       },
       {
         name: "api",
         url: "https://api.github.com/repos/eghrhegpe/ysm-model-manager/contents/creators.json",
-        label: "⏳ 社区索引: api…",
+        label: t("workshop.communityIndexLoading", { source: "api" }),
       },
     );
   }
@@ -353,17 +353,17 @@ async function _fetchCommunitySitesRaw(mirror?: string): Promise<WorkshopSite[]>
     {
       name: "raw",
       url: "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/workshop_sites.json",
-      label: "⏳ 站点索引: raw…",
+      label: t("workshop.siteIndexLoading", { source: "raw" }),
     },
     {
       name: "jsd",
       url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-model-manager@main/workshop_sites.json",
-      label: "⏳ 站点索引: jsdelivr…",
+      label: t("workshop.siteIndexLoading", { source: "jsdelivr" }),
     },
     {
       name: "api",
       url: "https://api.github.com/repos/eghrhegpe/ysm-model-manager/contents/workshop_sites.json",
-      label: "⏳ 站点索引: api…",
+      label: t("workshop.siteIndexLoading", { source: "api" }),
     },
   ];
   const sites = await fetchWithFallback<WorkshopSite>(attempts, mirror);

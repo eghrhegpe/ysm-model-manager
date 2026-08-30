@@ -22,7 +22,8 @@ export interface StatsWorkerRequest {
   requestId: number;
 }
 
-/** Worker → 主线程：进度 */
+/** Worker → 主线程：进度（每 10 个模型一条）。注意：当前无主线程消费方——
+ * web-stats.ts onmessage 忽略本消息，UI 进度按 chunk 完成数推进（P3 审核：协议字段留作细粒度进度条扩展点，勿误认为已生效） */
 export interface StatsWorkerProgress {
   type: "progress";
   requestId: number;

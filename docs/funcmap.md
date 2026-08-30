@@ -1091,11 +1091,11 @@
 | `SUPPORTED_LANGS()` | `frontend/src/core/i18n/locale:11` | 支持的语言列表（规划清单） |
 | `LangCode()` | `frontend/src/core/i18n/locale:17` | — |
 | `warnedKeys()` | `frontend/src/core/i18n/locale:31` | 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） |
-| `loadLocale()` | `frontend/src/core/i18n/locale:40` | 加载指定语言的 JSON 包（幂等：已加载不重复 fetch）。 |
-| `getBundle()` | `frontend/src/core/i18n/locale:60` | 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN）。 |
-| `getLang()` | `frontend/src/core/i18n/locale:74` | 读取当前语言代码 |
-| `setLang()` | `frontend/src/core/i18n/locale:79` | 切换语言（异步加载语言包后触发事件） |
-| `initI18n()` | `frontend/src/core/i18n/locale:127` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
+| `loadLocale()` | `frontend/src/core/i18n/locale:43` | 加载指定语言的 JSON 包（幂等：已加载或在途不重复 fetch）。 |
+| `getBundle()` | `frontend/src/core/i18n/locale:71` | 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN）。 |
+| `getLang()` | `frontend/src/core/i18n/locale:85` | 读取当前语言代码 |
+| `setLang()` | `frontend/src/core/i18n/locale:90` | 切换语言（异步加载语言包后触发事件） |
+| `initI18n()` | `frontend/src/core/i18n/locale:138` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
 | `en()` | `frontend/src/core/i18n/locales/en:4` | — |
 | `ja()` | `frontend/src/core/i18n/locales/ja:5` | — |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |
@@ -2513,11 +2513,11 @@
 | `WebModelStats()` | `frontend/src/workers/stats-protocol:5` | 单模型统计结果（与 SearchResult 数值字段对齐） |
 | `WebModelStatsWithPath()` | `frontend/src/workers/stats-protocol:14` | 带 path 的统计结果（Worker 返回，主线程按 path 对齐防顺序漂移） |
 | `StatsWorkerRequest()` | `frontend/src/workers/stats-protocol:17` | 主线程 → Worker：批量统计任务 |
-| `StatsWorkerProgress()` | `frontend/src/workers/stats-protocol:26` | Worker → 主线程：进度 |
-| `StatsWorkerResult()` | `frontend/src/workers/stats-protocol:34` | Worker → 主线程：批量结果（与 paths 一一对应，含 path 便于主线程对齐） |
-| `StatsWorkerError()` | `frontend/src/workers/stats-protocol:41` | Worker → 主线程：致命错误（WASM 无法加载 / 任务内部异常），主线程据此整体降级 |
-| `StatsWorkerResponse()` | `frontend/src/workers/stats-protocol:47` | — |
-| `STATS_BATCH_LIMIT()` | `frontend/src/workers/stats-protocol:53` | 单批模型上限：防 Worker 内存爆（每个模型 WASM 解码 + 纹理驻留 HEAP，200 已含余量） |
+| `StatsWorkerProgress()` | `frontend/src/workers/stats-protocol:27` | Worker → 主线程：进度（每 10 个模型一条）。注意：当前无主线程消费方—— web-stats.ts onmessage 忽略本消息，UI 进度按 chunk 完成数推进 |
+| `StatsWorkerResult()` | `frontend/src/workers/stats-protocol:35` | Worker → 主线程：批量结果（与 paths 一一对应，含 path 便于主线程对齐） |
+| `StatsWorkerError()` | `frontend/src/workers/stats-protocol:42` | Worker → 主线程：致命错误（WASM 无法加载 / 任务内部异常），主线程据此整体降级 |
+| `StatsWorkerResponse()` | `frontend/src/workers/stats-protocol:48` | — |
+| `STATS_BATCH_LIMIT()` | `frontend/src/workers/stats-protocol:54` | 单批模型上限：防 Worker 内存爆（每个模型 WASM 解码 + 纹理驻留 HEAP，200 已含余量） |
 
 ---
 

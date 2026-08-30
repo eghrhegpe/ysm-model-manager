@@ -32,13 +32,24 @@ export const warnedKeys = new Set<string>();
 
 // ── 语言包加载 ──────────────────────────────────────
 
+/** 在途加载表（lang → Promise）：并发 setLang/initI18n 同一未缓存语言只发一次 fetch（P3 审核修复，同 cli-bridge dynamicFetchPromise 范式） */
+const pendingLoads = new Map<string, Promise<void>>();
+
 /**
- * 加载指定语言的 JSON 包（幂等：已加载不重复 fetch）。
+ * 加载指定语言的 JSON 包（幂等：已加载或在途不重复 fetch）。
  * JSON 由 scripts/generate-locale-json.mjs 从 TS 源文件生成，
  * 放在 public/locales/{lang}.json。
  */
-export async function loadLocale(lang: string): Promise<void> {
-  if (bundles[lang]) return;
+export function loadLocale(lang: string): Promise<void> {
+  if (bundles[lang]) return Promise.resolve();
+  const inFlight = pendingLoads.get(lang);
+  if (inFlight) return inFlight;
+  const p = doLoadLocale(lang).finally(() => pendingLoads.delete(lang));
+  pendingLoads.set(lang, p);
+  return p;
+}
+
+async function doLoadLocale(lang: string): Promise<void> {
   try {
     const base = import.meta.env.BASE_URL ?? "/";
     const resp = await fetch(`${base}locales/${lang}.json`);

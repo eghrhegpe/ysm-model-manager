@@ -80,6 +80,47 @@ describe("loadLocale", () => {
     await locale.loadLocale("ja");
     expect(Object.keys(locale.getBundle("ja"))).toHaveLength(0);
   });
+
+  it("在途去重：并发加载同一未缓存语言只 fetch 一次（P3 审核修复）", async () => {
+    const { locale } = await freshModule();
+    // 挂起 fetch，制造「下载中」窗口
+    let resolveFetch: (v: unknown) => void = () => {};
+    globalThis.fetch = vi.fn().mockImplementation(
+      () => new Promise((r) => { resolveFetch = r; }),
+    ) as unknown as typeof fetch;
+
+    const p1 = locale.loadLocale("ja");
+    const p2 = locale.loadLocale("ja");
+    const p3 = locale.loadLocale("ja");
+    resolveFetch({ ok: true, json: async () => ({ "hello": "こんにちは" }) });
+    await Promise.all([p1, p2, p3]);
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(locale.getBundle("ja")["hello"]).toBe("こんにちは");
+    // 在途表已清空：失败重试不受污染
+    expect(await locale.loadLocale("ja")).toBeUndefined();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("在途失败 → 在途表清空，后续调用可重新 fetch", async () => {
+    const { locale } = await freshModule();
+    let rejectFetch: (e: unknown) => void = () => {};
+    globalThis.fetch = vi.fn().mockImplementation(
+      () => new Promise((_, rej) => { rejectFetch = rej; }),
+    ) as unknown as typeof fetch;
+
+    const p1 = locale.loadLocale("ja");
+    const p2 = locale.loadLocale("ja");
+    rejectFetch(new TypeError("network down"));
+    await Promise.all([p1, p2]);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+    mockFetch(true, { "retry": "成功" });
+    await locale.loadLocale("ja");
+    // mockFetch 换了新 vi.fn，计数重新起算：重试确实发了新请求
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(locale.getBundle("ja")["retry"]).toBe("成功");
+  });
 });
 
 describe("getBundle 回落链", () => {

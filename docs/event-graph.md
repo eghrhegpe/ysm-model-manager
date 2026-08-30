@@ -180,8 +180,8 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/i18n/locale.ts` | 89 |
-| `frontend/src/core/i18n/locale.ts` | 140 |
+| `frontend/src/core/i18n/locale.ts` | 100 |
+| `frontend/src/core/i18n/locale.ts` | 151 |
 
 **订阅方（on）：**
 | 文件 | 行 |

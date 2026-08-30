@@ -161,8 +161,8 @@ function writeHeap(data: Uint8Array): number {
  */
 export async function decodeYsmInWorker(bytes: Uint8Array): Promise<YsmDecodedFile[] | null> {
   if (!wasmModule) {
-    const ok = await initYsmParserInWorker();
-    if (!ok) throw new Error("YSMParser WASM 未就绪");
+    // init 失败以 throw 表达（不返回 false），异常自然向上抛由调用方处理
+    await initYsmParserInWorker();
   }
   const FS = wasmModule!.FS;
   const ccall = wasmModule!.ccall;
@@ -200,8 +200,8 @@ export async function decodeYsmInWorker(bytes: Uint8Array): Promise<YsmDecodedFi
  */
 export async function decodeYsmInWorkerMemfs(bytes: Uint8Array): Promise<YsmDecodedFile[]> {
   if (!wasmModule) {
-    const ok = await initYsmParserInWorker();
-    if (!ok) throw new Error("YSMParser WASM 未就绪");
+    // init 失败以 throw 表达（不返回 false），异常自然向上抛由调用方处理
+    await initYsmParserInWorker();
   }
   const FS = wasmModule!.FS;
   if (!FS) throw new Error("YSMParser FS 不可用");

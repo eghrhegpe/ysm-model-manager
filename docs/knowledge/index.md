@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 130 张知识卡
+> 总计: 131 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -90,12 +90,13 @@
 - **resource-packs**（资源包功能 resource-packs）：**已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager…
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（39 张）
+## go（40 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
+| 🏗 app_cycle_injection | App↔子组件对象级环打破范式（回调注入） | architecture | — | 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）, 评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct, 想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零 |
 | 🏗 classify-routing | 分类路由与回归护栏 | architecture | — | 整合包分类, 路由, location 路由, zipentry 指纹, 蓝图, 投影, vrm, pmx, 回归, last-wins, priority 裁决 |
 | 🏗 cli_quality_audit | CLI 质量摸排 Checklist | architecture | — | CLI, 质量摸排, 代码审核, 代码审查, bug 排查, 审计, 白名单, 绑定层, 覆盖率, 健康分 |
 | 🍃 doctor_gate_overlap | 质量闸门双调度器重叠审计 | leaf | — | 双调度器, 质量闸门重叠, doctor gate 差异, 治理红线下沉 |
@@ -138,6 +139,7 @@
 
 ### 摘要
 
+- **app_cycle_injection**（App↔子组件对象级环打破范式（回调注入））：`internal/app` 是 Wails 绑定层（`package app`），`App` 是 god-object，持有若干子组件
 - **classify-routing**（分类路由与回归护栏）：整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需…
 - **cli_quality_audit**（CLI 质量摸排 Checklist）：本文档记录 YSM 项目 Go CLI 层（`go/cli/` + `internal/app/` + `frontend/src/services/`）代码审核的**高频问题模式**与**修复 Checklist**。2026-08-19…
 - **doctor_gate_overlap**（质量闸门双调度器重叠审计）：2026-08-14 摸排结论：推送测试链路本身不臃肿，但质量闸门体系存在**双调度器 + 双重实现**，约 250 行重复逻辑，已出现参数漂移。

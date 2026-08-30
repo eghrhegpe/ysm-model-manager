@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-30T04:25:37.869Z",
+  "generated": "2026-08-30T04:37:06.741Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -91,11 +91,8 @@
     "src/backend/browser-adapter.contract-b2.test.ts#src/backend/web-store.logs.test.ts",
     "src/backend/browser-adapter.test.ts#src/backend/browser-adapter.test.ts",
     "src/backend/nbt-parse.test.ts#src/backend/voxel-parse.test.ts",
-    "src/backend/nbt-parse.ts#src/backend/nbt-parse.ts",
     "src/backend/pack-meta.test.ts#src/backend/web-fs.bindings.test.ts",
     "src/backend/voxel-parse.test.ts#src/backend/voxel-parse.test.ts",
-    "src/backend/voxel-parse.ts#src/backend/voxel-parse.ts",
-    "src/backend/web-fs.ts#src/backend/web-fs.ts",
     "src/core/handlers/instance-ops.test.ts#src/core/handlers/instance-ops.test.ts",
     "src/core/handlers/instance-ops.test.ts#src/core/handlers/sync.test.ts",
     "src/core/handlers/instance-ops.ts#src/views/app-content/settings/init.ts",

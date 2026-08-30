@@ -205,11 +205,7 @@ async function readVoxelJson(
     if (!b64) return voxelErrorJson("文件读取失败或不存在");
     // IO（读文件）与解码（b64 → NBT root）解耦：decodeVoxelNbt 为纯函数
     // （voxel-parse.ts），此处只做装配——读文件 → 纯解码 → 纯视图 → 契约化 JSON
-    const root = decodeVoxelNbt(b64);
-    if (!root) return voxelErrorJson("文件解码失败");
-    const data = view(root, VOXEL_MAX_BLOCKS);
-    if (!data) return voxelErrorJson("无法解析为有效的体素结构（格式不支持或字段缺失）");
-    return JSON.stringify(data);
+    return voxelToJson(b64, view);
   } catch (err) {
     // 对齐 Go marshalVoxelData 的 {error} 契约：失败带具体原因，
     // 前端可区分「解析失败」与「空数据」，不再吞成 "{}"
@@ -226,6 +222,28 @@ function voxelErrorJson(msg: string): string {
   }
 }
 
+/** 体素装配：b64 → 解码 → 视图 → 契约化 JSON（readVoxelJson / readWebVoxelInContainer 共用段）。
+ *  失败返回 {"error"} 契约（解码失败 / 视图判定无效），消除两处重复（jscpd）。 */
+function voxelToJson(
+  b64: string,
+  view: (root: Record<string, unknown>, maxBlocks: number) => VoxelData | null,
+): string {
+  const root = decodeVoxelNbt(b64);
+  if (!root) return voxelErrorJson("文件解码失败");
+  const data = view(root, VOXEL_MAX_BLOCKS);
+  if (!data) return voxelErrorJson("无法解析为有效的体素结构（格式不支持或字段缺失）");
+  return JSON.stringify(data);
+}
+
+/** zip 容器读取装配：readWebFile → base64 → extractZip（失败返回 null，调用方转 "[]"）。
+ *  listWebContainerEntries / listWebPackModels 共用前缀，消除重复（jscpd）。 */
+async function readWebZipEntries(path: string): Promise<ReturnType<typeof extractZip>["entries"] | null> {
+  const b64 = await readWebFile(path);
+  if (!b64) return null;
+  const bytes = base64ToBytes(b64);
+  if (!bytes) return null;
+  return extractZip(bytes).entries;
+}
 // ===== §6.5 容器内条目枚举 + 体素读取（ADR-132 遗留 1：蓝图/litematic zip 多 nbt 预览）=====
 // 镜像 Go internal/app/container_entries.go 的 ListContainerEntries / GetVoxelDataInContainer：
 // 读 IDB → base64 → 字节 → extractZip → 按扩展名白名单过滤（ListContainerEntries）；
@@ -264,11 +282,8 @@ function webContainerEntrySafe(name: string): boolean {
 /** 容器内条目枚举：ListContainerEntries 镜像（exts 逗号分隔；失败 → "[]"） */
 async function listWebContainerEntries(path: string, exts: string): Promise<string> {
   try {
-    const b64 = await readWebFile(path);
-    if (!b64) return "[]";
-    const bytes = base64ToBytes(b64);
-    if (!bytes) return "[]";
-    const { entries } = extractZip(bytes);
+    const entries = await readWebZipEntries(path);
+    if (!entries) return "[]";
     const extSet = webParseContainerExts(exts);
     const out = Object.keys(entries)
       .filter((k) => !k.endsWith("/") && webContainerEntrySafe(k) && webContainerExtMatch(k, extSet))
@@ -295,11 +310,7 @@ async function readWebVoxelInContainer(
     const { entries } = extractZip(bytes);
     const raw = findZipEntry(entries, entry);
     if (!raw) return voxelErrorJson("容器内不存在该条目");
-    const root = decodeVoxelNbt(zipEntryToBase64(raw));
-    if (!root) return voxelErrorJson("文件解码失败");
-    const data = view(root, VOXEL_MAX_BLOCKS);
-    if (!data) return voxelErrorJson("无法解析为有效的体素结构（格式不支持或字段缺失）");
-    return JSON.stringify(data);
+    return voxelToJson(zipEntryToBase64(raw), view);
   } catch (err) {
     return voxelErrorJson(safeErrorMessage(err));
   }
@@ -386,11 +397,8 @@ function zipEntryToBase64(bytes: Uint8Array): string {
 /** 资源包 3D：ListPackModels 枚举 zip 内条目 JSON 字符串（对齐 Go ListPackModels 契约） */
 async function listWebPackModels(path: string): Promise<string> {
   try {
-    const b64 = await readWebFile(path);
-    if (!b64) return "[]";
-    const bytes = base64ToBytes(b64);
-    if (!bytes) return "[]";
-    const { entries } = extractZip(bytes);
+    const entries = await readWebZipEntries(path);
+    if (!entries) return "[]";
     return JSON.stringify(Object.keys(entries));
   } catch {
     return "[]";
@@ -906,6 +914,20 @@ interface WebSearchResult {
   hasError: boolean;
 }
 
+/** 搜索降级映射：无数值条件快路径 / stats 不可用时的关键词匹配结果（数值 0 + hasError:false）。
+ *  两处共用，消除重复（jscpd）。 */
+function webDegradedMatches(matched: ModelEntry[]): WebSearchResult[] {
+  return matched.map((e) => ({
+    name: e.Name,
+    path: e.Path,
+    boneCount: 0,
+    cubeCount: 0,
+    texWidth: 0,
+    texHeight: 0,
+    hasError: false,
+  }));
+}
+
 async function searchWebModels(
   filesRoot: string,
   keyword: string,
@@ -928,15 +950,7 @@ async function searchWebModels(
     minBones > 0 || maxBones > 0 || minCubes > 0 || maxCubes > 0 || minTex > 0 || maxTex > 0;
   // 无数值条件 → 快路径：关键词匹配即可（保持既有行为，不做批量解码）
   if (!hasNumeric) {
-    return matched.map((e) => ({
-      name: e.Name,
-      path: e.Path,
-      boneCount: 0,
-      cubeCount: 0,
-      texWidth: 0,
-      texHeight: 0,
-      hasError: false,
-    }));
+    return webDegradedMatches(matched);
   }
   // Worker 批量统计；不可用/失败 → 返回 null（web-stats 内部已吞错并整批降级，
   // 「不向上抛」契约由 web-stats.test.ts「runner 抛错 → 降级（不向上抛）」锁定）。
@@ -950,15 +964,7 @@ async function searchWebModels(
     stats = null;
   }
   if (!stats) {
-    return matched.map((e) => ({
-      name: e.Name,
-      path: e.Path,
-      boneCount: 0,
-      cubeCount: 0,
-      texWidth: 0,
-      texHeight: 0,
-      hasError: false,
-    }));
+    return webDegradedMatches(matched);
   }
   const out: WebSearchResult[] = [];
   matched.forEach((e, i) => {

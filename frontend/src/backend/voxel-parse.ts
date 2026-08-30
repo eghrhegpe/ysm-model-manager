@@ -204,6 +204,33 @@ function asArray(v: unknown): unknown[] | undefined {
   return Array.isArray(v) ? v : undefined;
 }
 
+/** palette 列表 → 颜色数组（Name → mapColor；缺失 Name / 非 compound 元素兜底 fallback）。
+ *  三处视图（schematic / bedrock / 区块）共用，消除重复（jscpd）。 */
+function paletteToColors(paletteList: unknown[], fallback: string): string[] {
+  const out: string[] = new Array(paletteList.length);
+  for (let i = 0; i < paletteList.length; i++) {
+    const elem = paletteList[i];
+    if (isObj(elem)) {
+      const name = elem["Name"];
+      out[i] = typeof name === "string" ? mapColor(name) : fallback;
+    } else {
+      out[i] = fallback;
+    }
+  }
+  return out;
+}
+
+/** 索引反推坐标（对齐 voxel.go:437-439 口径）；int16 越界返回 null（调用方跳过）。 */
+function indexToCoord(i: number, w: number, l: number): { x: number; y: number; z: number } | null {
+  const x = (i - 1) % w;
+  const y = Math.floor((i - 1) / (w * l));
+  const z = Math.floor((i - 1) / w) % l;
+  if (x < INT16_MIN || x > INT16_MAX || y < INT16_MIN || y > INT16_MAX || z < INT16_MIN || z > INT16_MAX) {
+    return null;
+  }
+  return { x, y, z };
+}
+
 function asNumber(v: unknown): number | undefined {
   return typeof v === "number" && Number.isFinite(v) ? v : undefined;
 }
@@ -237,16 +264,7 @@ function buildRegionInfo(region: Record<string, unknown>): { info: RegionInfo | 
   const paletteList = asArray(region["BlockStatePalette"]);
   if (!paletteList || paletteList.length <= 1) return { info: null, err: null };
 
-  const palette: string[] = new Array(paletteList.length);
-  for (let i = 0; i < paletteList.length; i++) {
-    const elem = paletteList[i];
-    if (isObj(elem)) {
-      const name = elem["Name"];
-      palette[i] = typeof name === "string" ? mapColor(name) : "#000000";
-    } else {
-      palette[i] = "#000000";
-    }
-  }
+  const palette = paletteToColors(paletteList, "#000000");
 
   const sizeCompound = getCompound(region, "Size");
   if (!sizeCompound) return { info: null, err: "region 缺少 Size compound" };
@@ -415,16 +433,7 @@ export function nbtVoxelView(root: Record<string, unknown>, maxBlocks: number): 
   const sz = toIntStrict(sizeList[2], "size[2]");
   if (sx === null || sy === null || sz === null) return null;
 
-  const paletteColors: string[] = new Array(paletteList.length);
-  for (let i = 0; i < paletteList.length; i++) {
-    const elem = paletteList[i];
-    if (isObj(elem)) {
-      const name = elem["Name"];
-      paletteColors[i] = typeof name === "string" ? mapColor(name) : "#7F7F7F";
-    } else {
-      paletteColors[i] = "#7F7F7F";
-    }
-  }
+  const paletteColors = paletteToColors(paletteList, "#7F7F7F");
 
   let bi = 0;
   const next = (): VoxelBlock | null => {
@@ -503,16 +512,7 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
     }
     // block_palette：Name → mapColor（缺失 Name / 非 compound 元素兜底灰）
     const paletteList = asArray(sl["block_palette"]) ?? [];
-    const palette: string[] = new Array(paletteList.length);
-    for (let i = 0; i < paletteList.length; i++) {
-      const elem = paletteList[i];
-      if (isObj(elem)) {
-        const name = elem["Name"];
-        palette[i] = typeof name === "string" ? mapColor(name) : "#7F7F7F";
-      } else {
-        palette[i] = "#7F7F7F";
-      }
-    }
+    const palette = paletteToColors(paletteList, "#7F7F7F");
     infos.push({ originX: minX, originY: minY, originZ: minZ, palette, blocks });
   }
   if (!hasBounds) return null;
@@ -611,13 +611,9 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
         const c = paletteMap[r.value];
         if (c !== undefined) color = c;
         // 坐标由索引反推（对齐 voxel.go:437-439），int16 守卫
-        const x = (i - 1) % w;
-        const y = Math.floor((i - 1) / (w * l));
-        const z = Math.floor((i - 1) / w) % l;
-        if (x < INT16_MIN || x > INT16_MAX || y < INT16_MIN || y > INT16_MAX || z < INT16_MIN || z > INT16_MAX) {
-          continue;
-        }
-        return { color, x, y, z };
+        const coord = indexToCoord(i, w, l);
+        if (!coord) continue;
+        return { color, ...coord };
       }
       return null;
     }
@@ -636,13 +632,9 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
         const name = resolveBlockName(blockID, d);
         if (name !== "") color = mapColor(name);
       }
-      const x = (i - 1) % w;
-      const y = Math.floor((i - 1) / (w * l));
-      const z = Math.floor((i - 1) / w) % l;
-      if (x < INT16_MIN || x > INT16_MAX || y < INT16_MIN || y > INT16_MAX || z < INT16_MIN || z > INT16_MAX) {
-        continue;
-      }
-      return { color, x, y, z };
+      const c = indexToCoord(i, w, l);
+      if (!c) continue;
+      return { color, ...c };
     }
     return null;
   };

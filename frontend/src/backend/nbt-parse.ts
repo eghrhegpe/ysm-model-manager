@@ -245,23 +245,27 @@ class NbtReader {
   }
 }
 
+/** gzip 解压 + 大小上限守卫（parseNbtRoot / parseNbtRootExact 共用前缀）：
+ *  gzip 魔数（1f 8b）→ 先 ISIZE 预筛（防 zip-bomb：gunzipSync 无解压期内限，事后校验已太晚），
+ *  再 gunzipSync；解压后仍超限抛错。非 gzip 原样返回。 */
+function gunzipNbt(bytes: Uint8Array): Uint8Array {
+  if (bytes.length < 2 || bytes[0] !== GZIP_MAGIC_0 || bytes[1] !== GZIP_MAGIC_1) return bytes;
+  const isize = gzipIsizedUpperBound(bytes);
+  if (isize !== null && isize > MAX_NBT_BYTES) {
+    throw new Error(`nbt gzip ISIZE ${isize} 超过 ${MAX_NBT_BYTES} 字节上限`);
+  }
+  const data = gunzipSync(bytes);
+  if (data.length > MAX_NBT_BYTES) throw new Error(`nbt 解压后超过 ${MAX_NBT_BYTES} 字节上限`);
+  return data;
+}
+
 /**
  * 解析 NBT 根 compound，返回全部顶层标签。
  * - gzip 魔数（1f 8b）→ 先 gunzipSync 解压；否则视为已解压原始 NBT
  * - 根必须是 TAG_Compound；畸形/截断/未知类型 → 抛错（调用方转 "{}"）
  */
 export function parseNbtRoot(bytes: Uint8Array): Record<string, unknown> {
-  let data = bytes;
-  if (data.length >= 2 && data[0] === GZIP_MAGIC_0 && data[1] === GZIP_MAGIC_1) {
-    // P1：gzip footer ISIZE 预筛（防 zip-bomb：gunzipSync 无解压期内限，事后校验已太晚）
-    const isize = gzipIsizedUpperBound(data);
-    if (isize !== null && isize > MAX_NBT_BYTES) {
-      throw new Error(`nbt gzip ISIZE ${isize} 超过 ${MAX_NBT_BYTES} 字节上限`);
-    }
-    data = gunzipSync(data);
-    if (data.length > MAX_NBT_BYTES) throw new Error(`nbt 解压后超过 ${MAX_NBT_BYTES} 字节上限`);
-  }
-  const r = new NbtReader(data);
+  const r = new NbtReader(gunzipNbt(bytes));
   const { type } = r.namedTag();
   if (type !== TAG_COMPOUND) throw new Error(`根标签不是 compound（${type}）`);
   return r.payload(TAG_COMPOUND, 0) as Record<string, unknown>;
@@ -274,17 +278,7 @@ export function parseNbtRoot(bytes: Uint8Array): Record<string, unknown> {
  * gzip/解压/畸形判定行为不变。
  */
 export function parseNbtRootExact(bytes: Uint8Array): Record<string, unknown> {
-  let data = bytes;
-  if (data.length >= 2 && data[0] === GZIP_MAGIC_0 && data[1] === GZIP_MAGIC_1) {
-    // P1：gzip footer ISIZE 预筛（与 parseNbtRoot 同防线）
-    const isize = gzipIsizedUpperBound(data);
-    if (isize !== null && isize > MAX_NBT_BYTES) {
-      throw new Error(`nbt gzip ISIZE ${isize} 超过 ${MAX_NBT_BYTES} 字节上限`);
-    }
-    data = gunzipSync(data);
-    if (data.length > MAX_NBT_BYTES) throw new Error(`nbt 解压后超过 ${MAX_NBT_BYTES} 字节上限`);
-  }
-  const r = new NbtReader(data, true);
+  const r = new NbtReader(gunzipNbt(bytes), true);
   const { type } = r.namedTag();
   if (type !== TAG_COMPOUND) throw new Error(`根标签不是 compound（${type}）`);
   return r.payload(TAG_COMPOUND, 0) as Record<string, unknown>;

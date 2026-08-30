@@ -25,6 +25,23 @@ function newCap(opts: { enabled?: boolean; params?: unknown; target?: THREE.Vect
   });
 }
 
+/** 往返 helper：saveState 后新实例 loadState（cone 引擎 + spotlight 开启），
+ *  返回恢复后的实例与 params。ON/OFF 两方向共用，消除测试结构重复（jscpd）。 */
+function roundtripConeVolumetric(opts: { volumetricEnabled: boolean }): {
+  cap2: LightCapability;
+  p: ReturnType<LightCapability["getParams"]>;
+} {
+  const cap = newCap();
+  cap.setPreset("mmd", { manual: true });
+  cap.setSpotlight({ enabled: true });
+  cap.setVolumetric({ enabled: opts.volumetricEnabled });
+  expect(cap.getVolumetricEngine()).toBe("cone"); // 默认引擎
+  cap.saveState();
+  const cap2 = newCap();
+  cap2.loadState();
+  return { cap2, p: cap2.getParams() };
+}
+
 describe("LightCapability — 构造函数与默认值", () => {
   it("构造默认值完整", () => {
     const cap = newCap();
@@ -348,18 +365,7 @@ describe("LightCapability — 持久化", () => {
   });
 
   it("saveState/loadState 往返：volumetric=false + cone 引擎 + spotlight 开启 → 体积光不被引擎恢复重新打开（审核修复回归）", () => {
-    const cap = newCap();
-    // 常见用户态：开聚光灯但关体积光（引擎保持默认 cone）——saveState 持久化
-    // {spotlightEnabled:true, volumetricEnabled:false, volumetricEngine:"cone"}
-    cap.setPreset("mmd", { manual: true });
-    cap.setSpotlight({ enabled: true });
-    cap.setVolumetric({ enabled: false });
-    expect(cap.getVolumetricEngine()).toBe("cone"); // 默认引擎
-    cap.saveState();
-
-    const cap2 = newCap();
-    cap2.loadState();
-    const p = cap2.getParams();
+    const { cap2, p } = roundtripConeVolumetric({ volumetricEnabled: false });
     // 修复前：loadState 步骤④ setVolumetricEngine("cone") 因 spotlight 开启而强制
     // volumetric.enabled=true 并重建挂载光锥——用户保存的「体积光关」跨会话丢失。
     // 修复后：cone 引擎走无副作用字段恢复，用户保存值存活。
@@ -372,16 +378,7 @@ describe("LightCapability — 持久化", () => {
   });
 
   it("saveState/loadState 往返：volumetric=true + cone 引擎 + spotlight 开启 → 锥组重建并挂载（复核 P1 回归）", () => {
-    const cap = newCap();
-    cap.setPreset("mmd", { manual: true });
-    cap.setSpotlight({ enabled: true });
-    cap.setVolumetric({ enabled: true });
-    expect(cap.getVolumetricEngine()).toBe("cone"); // 默认引擎
-    cap.saveState();
-
-    const cap2 = newCap();
-    cap2.loadState();
-    const p = cap2.getParams();
+    const { cap2, p } = roundtripConeVolumetric({ volumetricEnabled: true });
     // 复核修复前：cone 分支改纯字段赋值后，loadState 无任何路径重建锥组——保存
     // volumetric=true 的会话重载后锥组静默消失（coneGroup 恒 null、syncConeMount
     // 只处理已挂载、setSpotlight 因 coneGroup null 短路）。

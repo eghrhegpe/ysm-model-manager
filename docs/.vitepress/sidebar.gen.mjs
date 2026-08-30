@@ -1394,6 +1394,10 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
+            "text": "App↔子组件对象级环打破范式（回调注入）",
+            "link": "/knowledge/app_cycle_injection"
+          },
+          {
             "text": "分类路由与回归护栏",
             "link": "/knowledge/classify-routing"
           },

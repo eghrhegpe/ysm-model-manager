@@ -12,6 +12,7 @@
 // 全程轻量获取文件——不再全量扫描各仓库、不再按扩展名分类贴标签。
 
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { t } from "../../core/i18n/t.ts";
 import { getApp } from "../../backend/app.ts";
 import { RESOURCE_TYPE_LABELS, resolvePreviewKey, resolvePreviewKeyByExt, resolvePreviewKeyToRtype, getPreviewableTypeTabs, extOf, resolveDefaultPreviewKey, isContainerExt } from "../../utils/resource/types.ts";
 import type { Mount3DOptions } from "../../utils/3d/adapters/mount-preview-core.ts";
@@ -95,7 +96,7 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
       cooperate = false;
       const { bus } = await import("../../bus.ts");
       bus.emit("toast:show", {
-        msg: `同台追加仅支持同类型，已切换为新模型（${activeRtype} → ${newRtype}）`,
+        msg: t("preview.cooperateCrossType", { from: activeRtype, to: newRtype }),
         duration: TOAST_MS.normal,
         type: "warn",
       });

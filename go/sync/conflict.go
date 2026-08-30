@@ -166,13 +166,19 @@ func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDi
 	}
 }
 
-// ResolveConflicts 批量解决冲突。
-// 整段持 installer.InstallLock（ADR-056）：ForceRemote 分支对实例/全局目录文件做
-// CopyFile 覆盖写，与并发的 Install/RelinkDir/SyncToggleStatus 操作同一目录文件时
-// 必须互斥；ResolveConflict 自身不加锁，供本函数持锁调用。
+// ResolveConflicts 批量解决冲突（公开入口，整段持 installer.InstallLock）。
 func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
 	installer.InstallLock.Lock()
 	defer installer.InstallLock.Unlock()
+	return ResolveConflictsLocked(conflicts, defaultStrategy, localDir, remoteDir)
+}
+
+// ResolveConflictsLocked 与 ResolveConflicts 语义相同，但调用方须已持有 installer.InstallLock
+// （禁止重入加锁——sync.Mutex 不可重入，外层已持锁时再 Lock 会 self-deadlock）。
+// 派生的调用方：SyncResourcesWithConfig 的冲突自动解决分支（该函数可能经
+// PushResources/PullResources → SyncResources 在 InstallLock 临界区内运行）。
+// ResolveConflict 自身不加锁，供本函数在持锁前提下调用。
+func ResolveConflictsLocked(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
 	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
 	for _, c := range conflicts {
 		strategy := c.SuggestedStrategy

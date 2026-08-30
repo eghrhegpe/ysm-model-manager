@@ -470,10 +470,13 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 			log.Printf("[sync] 冲突检测失败: %v", err)
 		} else if report.TotalConflicts > 0 {
 			log.Printf("[sync] 检测到 %d 个冲突，策略: %s", report.TotalConflicts, config.ConflictPolicy)
-			// 自动解决冲突
+			// 自动解决冲突。走 *Locked 变体：本函数可能经 PushResources/PullResources →
+			// SyncResources 在 InstallLock 临界区内运行（config 恒为 nil 走不到此处），
+			// 若改走自锁的 ResolveConflicts 会在持锁语境下重入 sync.Mutex 造成 self-deadlock。
+			// 因此此处约定：config != nil 的冲突解决必须由调用方保证已持有 InstallLock。
 			strategy := ResolutionStrategy(config.ConflictPolicy)
 			if strategy == ResolveForceRemote || strategy == ResolveForceLocal {
-				resolved, failed, manual := ResolveConflicts(report.Conflicts, strategy, instanceDir, globalDir)
+				resolved, failed, manual := ResolveConflictsLocked(report.Conflicts, strategy, instanceDir, globalDir)
 				log.Printf("[sync] 冲突解决完成: 解决 %d, 失败 %d, 需手动 %d", resolved, failed, manual)
 			} else {
 				// 手动解决模式，返回结果中标记冲突

@@ -483,8 +483,8 @@
 | `SyncToggleStatus()` | `go/sync/sync:228` | SyncToggleStatus 同步启用/禁用状态 |
 | `SyncResources()` | `go/sync/sync:400` | — |
 | `SyncResourcesWithConfig()` | `go/sync/sync:405` | SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测） |
-| `SortEntries()` | `go/sync/sync:491` | SortEntries 按名称排序模型条目 |
-| `GetLinkType()` | `go/sync/sync:498` | GetLinkType 判断文件的链接类型 |
+| `SortEntries()` | `go/sync/sync:494` | SortEntries 按名称排序模型条目 |
+| `GetLinkType()` | `go/sync/sync:501` | GetLinkType 判断文件的链接类型 |
 | `ScanFunc()` | `go/sync/sync:24` | ScanFunc 扫描模型（函数类型，由 app.go 注入） |
 
 ## Go·标签

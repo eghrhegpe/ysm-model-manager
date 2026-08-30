@@ -978,6 +978,7 @@ export const ja: Record<string, string> = {
   "preview.roleModelSection": "モデル",
   "preview.roleMotionSection": "モーション",
   "preview.appendModel": "シーンに追加",
+  "preview.cooperateCrossType": "同一シーンへの追加は同一タイプのみ対応です。新しいモデルに切り替えました（{from} → {to}）",
   "preview.library": "ライブラリ",
   "preview.libraryLoading": "ライブラリを読み込み中…",
   "preview.libraryEmpty": "（ライブラリは空です）",

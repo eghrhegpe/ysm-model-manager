@@ -980,6 +980,7 @@ export const zhCN: Record<string, string> = {
   "preview.roleModelSection": "模型",
   "preview.roleMotionSection": "动作",
   "preview.appendModel": "追加到场景",
+  "preview.cooperateCrossType": "同台追加仅支持同类型，已切换为新模型（{from} → {to}）",
   "preview.library": "资源库",
   "preview.libraryLoading": "加载资源库…",
   "preview.libraryEmpty": "（资源库为空）",

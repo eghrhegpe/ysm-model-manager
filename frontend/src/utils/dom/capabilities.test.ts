@@ -4,7 +4,7 @@
 // Android viewer（getAndroidBridge 非 null）→ 除 ANDROID_UNAVAILABLE 黑名单外均 true
 // （Go binding 全量可达，code_review P3 同步头注释与实现）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { can, canWebAction, VIEWER_WEB_ACTION_BINDINGS } from "./capabilities.ts";
+import { can, canWebAction, VIEWER_PURE_ACTIONS, VIEWER_WEB_ACTION_BINDINGS } from "./capabilities.ts";
 
 const KEY = "__YSM_BACKEND__";
 
@@ -116,5 +116,30 @@ describe("canWebAction — 右键 action 在 web/viewer 模式下的可达性（
     // 由于白名单是写死的，无法直接注入未实现 binding；改为断言「白名单内 binding 全部 web 可用」即可
     expect(canWebAction("file.move")).toBe(true);
     expect(canWebAction("batch.move")).toBe(true);
+  });
+});
+
+describe("VIEWER_PURE_ACTIONS — 纯前端动作在 viewer 模式恒可达（P3 收敛）", () => {
+  it("白名单即 context-menus.ts 原 VIEWER_OK_ACTIONS（零漂移断言）", () => {
+    // 原 context-menus.ts 硬编码 VIEWER_OK_ACTIONS 收敛到此；新增纯前端
+    // 右键动作必须加到这里，测试断言集合精确等于声明
+    expect([...VIEWER_PURE_ACTIONS].sort()).toEqual(
+      ["batch.copy-paths", "batch.export-list", "file.copy-path", "noop"].sort(),
+    );
+  });
+
+  it("纯前端动作不依赖 can()——桌面 binding 全不可用仍可达", () => {
+    vi.stubGlobal(KEY, "browser");
+    // web 下纯前端动作（DOM/剪贴板）恒可达
+    expect(canWebAction("noop")).toBe(true);
+    expect(canWebAction("batch.copy-paths")).toBe(true);
+    expect(canWebAction("batch.export-list")).toBe(true);
+    expect(canWebAction("file.copy-path")).toBe(true);
+  });
+
+  it("与 binding 动作互斥：无 binding 且不在纯前端集 → false（防误放行）", () => {
+    vi.stubGlobal(KEY, "go"); // 桌面 can() 恒 true，但不该让未知动作漏过
+    expect(canWebAction("file.recycle")).toBe(false); // 有 binding 但不在 VIEWER_WEB_ACTION_BINDINGS
+    expect(canWebAction("instance.clear")).toBe(false);
   });
 });

@@ -86,20 +86,22 @@ vi.mock("../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   InstallModelTo: InstallModelToMock,
   RevealInExplorer: RevealInExplorerMock,
 }));
-// P4（审核）：mock 查看器模式（android-bridge）——context-menus.ts 的 VIEWER_OK_ACTIONS
+// P4（审核）：mock 查看器模式（android-bridge）——context-menus.ts 的 viewer-mode
 // 过滤分支此前零覆盖；默认 false 保持既有桌面用例行为不变
 vi.mock("../utils/dom/android-bridge.ts", () => ({
   isViewerMode: isViewerModeMock,
 }));
 
-// can() / canWebAction() 能力探测 mock（viewer-mode 守卫依赖；P2-3 后 canWebAction 内部调用 can）
-const { canMock } = vi.hoisted(() => ({ canMock: vi.fn(() => false) }));
+// can() / canWebAction() 能力探测 mock（viewer-mode 守卫依赖；P3 收敛后
+// canWebAction = 纯前端恒可达 + binding 走 can() 探测，mock 同步该语义）
+const { canMock } = vi.hoisted(() => ({ canMock: vi.fn((_action: string) => false) }));
 vi.mock("../utils/dom/capabilities.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../utils/dom/capabilities.ts")>();
   return {
     ...actual,
     can: canMock,
-    canWebAction: canMock, // 直接复用：白名单查找走 actual.VIEWER_WEB_ACTION_BINDINGS，binding 可用性走 canMock
+    canWebAction: (action: string) =>
+      actual.VIEWER_PURE_ACTIONS.has(action) || canMock(action),
   };
 });
 

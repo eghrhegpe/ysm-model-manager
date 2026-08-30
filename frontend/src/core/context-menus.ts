@@ -10,16 +10,9 @@ import { getMenuDef } from "./menu-defs";
 import { HANDLERS } from "./context-menu-handlers.ts";
 type MenuCtx = import("./context-menu-handlers.ts").MenuCtx;
 
-// 查看器模式（Android/网页版 ADR-049）下仍可用的纯前端右键菜单动作：
-// 其余 action 均调 Wails binding，查看器模式默认无本地文件系统写能力，一律隐藏。
-// 2026-XX P2-3：VIEWER_WEB_ACTION_BINDINGS 表已迁至 utils/dom/capabilities.ts，
-// 此处只剩 orchestrator，新增 web binding 只改 capabilities.ts 一处。
-const VIEWER_OK_ACTIONS = new Set([
-  "noop",
-  "batch.copy-paths",
-  "batch.export-list",
-  "file.copy-path",
-]);
+// 查看器模式（Android/网页版 ADR-049）下仍可用的右键菜单动作判定全部收敛至
+// utils/dom/capabilities.ts 的 canWebAction()（纯前端恒可达 + binding 走 can() 探测，
+// 2026-XX P3 收敛）——本文件不再持有任何硬编码白名单。
 
 function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   const def = getMenuDef(ctx.type);
@@ -29,14 +22,13 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   const isViewer = isViewerMode();
   // 过滤链（自上而下 AND，任一失败即丢弃）：
   //   1. 节点级 visibleWhen(ctx)（菜单即数据 P1 扩展；未定义 → 通过）
-  //   2. viewer-mode 全局过滤（纯前端白名单 + canWebAction 探测 binding 可用性）
+  //   2. viewer-mode 全局过滤（canWebAction 单一判定：纯前端 + binding 探测）
   // 连续 divider 会在渲染时折叠，无需此处去重。
   const items = def.items.filter((item) => {
     if (item.visibleWhen && !item.visibleWhen(norm)) return false;
     if (item.divider) return true;
     if (!item.action) return true;
     if (!isViewer) return true;
-    if (VIEWER_OK_ACTIONS.has(item.action)) return true;
     return canWebAction(item.action);
   });
   return items.map((item) => {

@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 6 | 37 |
 | frontend/ui | 18 | 66 |
-| 前端·工具 | 184 | 757 |
+| 前端·工具 | 184 | 758 |
 | frontend/views | 122 | 358 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **524** | **2245** |
+| **合计** | **524** | **2246** |
 
 ## Go·头像
 
@@ -1076,7 +1076,7 @@
 | `toastEmptyRtype()` | `frontend/src/core/context-menu-shared:36` | rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） |
 | `isUnsafeFolderName()` | `frontend/src/core/context-menu-shared:41` | 路径安全过滤：禁止逃逸段（. |
 | `resolveDstDir()` | `frontend/src/core/context-menu-shared:53` | 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）。 |
-| `registerContextMenus()` | `frontend/src/core/context-menus:63` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
+| `registerContextMenus()` | `frontend/src/core/context-menus:55` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:29` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:51` | 注册 UI 报错落日记功能。 |
 | `registerAndroidEvents()` | `frontend/src/core/handlers/android-events:18` | 注册 Android 系统事件消费，push 取消订阅函数到 unsubs |
@@ -1936,7 +1936,8 @@
 | `emitAndroidBack()` | `frontend/src/utils/dom/android-bridge:43` | 系统返回键的前端触发入口：依次从栈顶触发已注册处理器。 |
 | `can()` | `frontend/src/utils/dom/capabilities:10` | 当前平台是否可用指定 binding（三态矩阵：desktop 全量 / web adapter has / Android 黑名单） |
 | `VIEWER_WEB_ACTION_BINDINGS()` | `frontend/src/utils/dom/capabilities:20` | 查看器/web 模式下右键菜单 action 的 binding 需求映射（2026-XX P2-3 收敛）： 原 `context-menus.ts` 内嵌 `VIEWER_WE |
-| `canWebAction()` | `frontend/src/utils/dom/capabilities:34` | 查看器/web 模式下该 action 是否在当前平台可达（白名单 + can() 探测） |
+| `VIEWER_PURE_ACTIONS()` | `frontend/src/utils/dom/capabilities:38` | 纯前端右键动作集（2026-XX P3 收敛）：不调 Wails binding（DOM/剪贴板/下载 已下沉 utils/dom），viewer 模式恒可达。原 `context |
+| `canWebAction()` | `frontend/src/utils/dom/capabilities:46` | 查看器/web 模式下该 action 是否在当前平台可达：纯前端恒可达 + binding 走 can() 探测 |
 | `copyText()` | `frontend/src/utils/dom/clipboard:6` | 复制纯文本到剪贴板：优先 Clipboard API（需要安全上下文），降级隐藏 textarea + execCommand |
 | `refreshAdoptedStyleSheets()` | `frontend/src/utils/dom/css-hmr:13` | 热刷指定自定义元素的 Shadow DOM 样式表。 |
 | `btnBaseCSS()` | `frontend/src/utils/dom/css:1` | — |

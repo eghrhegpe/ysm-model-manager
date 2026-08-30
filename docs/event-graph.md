@@ -101,7 +101,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menus.ts` | 65 |
+| `frontend/src/core/context-menus.ts` | 57 |
 
 ### `dir:batch-rename`
 
@@ -194,7 +194,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menus.ts` | 66 |
+| `frontend/src/core/context-menus.ts` | 58 |
 | `frontend/src/features/community/events.ts` | 196 |
 
 **订阅方（on）：**

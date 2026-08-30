@@ -30,8 +30,21 @@ export const VIEWER_WEB_ACTION_BINDINGS: Readonly<Record<string, string>> = {
   "batch.copy": "CopyModelFile",
 };
 
-/** 查看器/web 模式下该 action 是否在当前平台可达（白名单 + can() 探测） */
+/**
+ * 纯前端右键动作集（2026-XX P3 收敛）：不调 Wails binding（DOM/剪贴板/下载
+ * 已下沉 utils/dom），viewer 模式恒可达。原 `context-menus.ts` 硬编码
+ * `VIEWER_OK_ACTIONS` 收敛至此，成为「viewer 可达性」单一事实源的一部分。
+ */
+export const VIEWER_PURE_ACTIONS: ReadonlySet<string> = new Set([
+  "noop",
+  "batch.copy-paths",
+  "batch.export-list",
+  "file.copy-path",
+]);
+
+/** 查看器/web 模式下该 action 是否在当前平台可达：纯前端恒可达 + binding 走 can() 探测 */
 export function canWebAction(action: string): boolean {
+  if (VIEWER_PURE_ACTIONS.has(action)) return true;
   const b = VIEWER_WEB_ACTION_BINDINGS[action];
   return b !== undefined && can(b);
 }

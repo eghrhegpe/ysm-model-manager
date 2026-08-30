@@ -12,7 +12,7 @@
 
 | 包 | 用途 |
 |----|------|
-| `avatar/` | 创作者头像提取与缓存 〔源码 4: avatar.go avatar_decode.go avatar_extract.go avatar_zip.go · 测试 6〕 |
+| `avatar/` | 创作者头像提取与缓存 〔源码 4: avatar.go avatar_decode.go avatar_extract.go avatar_zip.go · 测试 6 · 子目录 1: testdata/〕 |
 | `cli/` | CLI 命令（脱离 GUI 的模型管理/诊断/缓存操作，入口 main.go 经 cli.RunCLI 接线） 〔源码 25 · 测试 4〕 |
 | `config/` | 运行阈值配置共享单持有点（ADR-091 D12：atomic 存 provider，取代 4 包各自 configFunc） 〔源码 1: config.go · 测试 1〕 |
 | `container/` | 统一容器桥接层（zip/7z/目录 Entry-Reader 抽象，ADR-068） 〔源码 1: container.go · 测试 2〕 |

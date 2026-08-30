@@ -24,12 +24,12 @@ func requireNode(t *testing.T) {
 	}
 }
 
-// withFakeNode 注入假胶水/wasm 并恢复全局状态。
+// withFakeNode 注入假胶水/wasm 并恢复全局状态（经 SetNodeJS 线程安全读写）。
 func withFakeNode(t *testing.T, glue string, wasm []byte) {
 	t.Helper()
-	oldNode, oldGlue, oldWasm := nodeJSPath, getGlueCode, getWasmBinary
+	oldNode, oldGlue, oldWasm := getEnv()
 	SetNodeJS("node", func() string { return glue }, func() []byte { return wasm })
-	t.Cleanup(func() { nodeJSPath, getGlueCode, getWasmBinary = oldNode, oldGlue, oldWasm })
+	t.Cleanup(func() { SetNodeJS(oldNode, oldGlue, oldWasm) })
 }
 
 // withFakeNodeCmd 用 Windows .cmd 假 node：忽略脚本参数直接输出固定内容/退出码。
@@ -42,9 +42,9 @@ func withFakeNodeCmd(t *testing.T, content string) {
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
-	oldNode, oldGlue, oldWasm := nodeJSPath, getGlueCode, getWasmBinary
+	oldNode, oldGlue, oldWasm := getEnv()
 	SetNodeJS(path, func() string { return "irrelevant" }, func() []byte { return []byte{1} })
-	t.Cleanup(func() { nodeJSPath, getGlueCode, getWasmBinary = oldNode, oldGlue, oldWasm })
+	t.Cleanup(func() { SetNodeJS(oldNode, oldGlue, oldWasm) })
 }
 
 // fakeGlueModule 生成假 YSMParser 胶水模块：静态文件树（键为 /output/ 前缀路径，
@@ -120,8 +120,8 @@ func jsonBytes(s string) []int {
 }
 
 func TestDecodeYSMFiles_SetupGuards(t *testing.T) {
-	oldNode, oldGlue, oldWasm := nodeJSPath, getGlueCode, getWasmBinary
-	defer func() { nodeJSPath, getGlueCode, getWasmBinary = oldNode, oldGlue, oldWasm }()
+	oldNode, oldGlue, oldWasm := getEnv()
+	defer func() { SetNodeJS(oldNode, oldGlue, oldWasm) }()
 
 	// node 路径未设置 → nil
 	SetNodeJS("", nil, nil)

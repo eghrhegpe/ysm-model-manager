@@ -294,15 +294,15 @@ func CacheAvatarsFromJSON(modelPath string) {
 	}
 }
 
-// CacheAvatarsFromModel 从 .ysm/.zip/.json 模型缓存所有作者头像。
+// CacheAvatarsFromModel 从 .ysm/.zip/.7z/.json 模型缓存所有作者头像。
 // 覆盖 CacheAvatarsFromJSON 仅处理解压目录（.json）的局限，使创作者视图头像
-// 对压缩包/二进制模型（.ysm/.zip）同样生效。
+// 对压缩包/二进制模型（.ysm/.zip/.7z）同样生效。
 func CacheAvatarsFromModel(modelPath string) {
 	ext := strings.ToLower(filepath.Ext(modelPath))
 	switch ext {
 	case ".json":
 		CacheAvatarsFromJSON(modelPath)
-	case ".ysm", ".zip":
+	case ".ysm", ".zip", ".7z":
 		names := modelAuthorNames(modelPath)
 		cacheDir := CacheDir()
 		if cacheDir == "" {
@@ -325,7 +325,7 @@ func CacheAvatarsFromModel(modelPath string) {
 	}
 }
 
-// modelAuthorNames 读取模型内 ysm.json 的作者名列表（支持 .ysm/.zip/.json）。
+// modelAuthorNames 读取模型内 ysm.json 的作者名列表（支持 .ysm/.zip/.7z/.json）。
 func modelAuthorNames(modelPath string) []string {
 	ext := strings.ToLower(filepath.Ext(modelPath))
 	var raw []byte
@@ -356,6 +356,22 @@ func modelAuthorNames(modelPath string) []string {
 		}
 		defer zr.Close()
 		raw = ReadFileFromContainer(zr, "ysm.json")
+	case ".7z":
+		data, err := readLimitedModel(modelPath)
+		if err != nil {
+			// 真 IO 错误补日志（IsNotExist 静默）
+			if !os.IsNotExist(err) {
+				log.Printf("[avatar] modelAuthorNames 读取 .7z 失败 %s: %v", modelPath, err)
+			}
+			return nil
+		}
+		r, err := container.Open7zBytes(data, int64(len(data)))
+		if err != nil {
+			log.Printf("[avatar] modelAuthorNames 7z 解析失败 %s: %v", modelPath, err)
+			return nil
+		}
+		defer r.Close()
+		raw = ReadFileFromContainer(r, "ysm.json")
 	case ".ysm":
 		data, err := readLimitedModel(modelPath)
 		if err != nil {

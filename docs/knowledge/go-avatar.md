@@ -36,7 +36,7 @@ invariant_anchors:
 - `SaveAvatarData(safeName string, data []byte, mime string) string` — 写缓存并返回 data URI
 - `ExtractAvatarURI(modelPath, safeName string) string` — 从 .ysm/.zip/.7z/.json 提取指定作者的头像 data URI；无 authors 声明时降级取 avatar/ 目录第一张图（仅 .ysm 分支实现）
 - `CacheAvatarsFromJSON(modelPath string)` — 从解压目录的 ysm.json 批量缓存所有作者头像（已有缓存则跳过）
-- `CacheAvatarsFromModel(modelPath string)` — 通用批量缓存（按文件扩展名分派，无 authors 声明时降级取 avatar/ 目录第一张图）
+- `CacheAvatarsFromModel(modelPath string)` — 通用批量缓存（.ysm/.zip/.7z/.json 按扩展名分派，无 authors 声明时降级取 avatar/ 目录第一张图）
 - `ReadFileFromZip(zr *zip.Reader, target string) []byte` — 按路径后缀从 ZIP 取文件；**ADR-068 迁移**：调用点改 `container.OpenZipBytes` + `ReadFileFromContainer(r container.Reader, target)`（`avatar_zip.go`），zip 专用路径收敛进统一容器桥
 - `SetNodeJS(nodePath string, glueFn func() string, wasmFn func() []byte)` — 注入 Node.js 路径与 WASM 胶水代码/二进制加载器（由 wasm_decoder.go 在启动时调用）
 - `DecodeYSMFiles(ysmData []byte)` — 起 Node.js 隐藏子进程执行 YSMParser WASM，把 .ysm 二进制解码为文件列表（path + 字节数组）
@@ -54,7 +54,7 @@ invariant_anchors:
 - 解码临时目录 `MkdirTemp` 用完必 `RemoveAll`；Windows 子进程 `HideWindow` 不弹窗口；Node 子进程带 60s 超时护栏（`exec.CommandContext`），WASM 死循环/卡死不会永久挂起 UI 线程
 - 缓存文件名一律经 `SafeName` 清洗（非法字符 + Windows 保留设备名 CON/PRN/AUX/NUL/COM1-9/LPT1-9 + 尾部点/空格），防路径穿越与写缓存失败
 - **读回缓存按文件头嗅探 mime**（P3 修复：JPEG 头像以 `.png` 落盘、读回恒硬编码 `data:image/png` → MIME 错误；现 `FFD8FF` 头识别为 `image/jpeg`）
-- **P3 观察**：降级取 avatar/ 第一张图已由 .ysm/.zip/.7z 三态实现（.json 分支不降级）；`ExtractAvatarURI` 由旧 `DecodeOneAvatar(modelPath, cacheDir, safeName)` 重构为 `(modelPath, safeName)`，`cacheDir` 形参已废弃（落盘走全局 `CacheDir()`）
+- **P3 已对齐**：降级取 avatar/ 第一张图已由 .ysm/.zip/.7z 三态实现（.json 分支不降级）；`CacheAvatarsFromModel`/`modelAuthorNames` 批量路径已同步补 .7z 分支（R20 审核 P3-4，原仅 `ExtractAvatarURI` 路径支持 .7z）；`ExtractAvatarURI` 由旧 `DecodeOneAvatar(modelPath, cacheDir, safeName)` 重构为 `(modelPath, safeName)`，`cacheDir` 形参已废弃（落盘走全局 `CacheDir()`）
 
 ## 相关
 

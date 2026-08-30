@@ -40,8 +40,33 @@ func TestExtractAvatarURI_From7zFallback(t *testing.T) {
 	}
 }
 
-// TestExtractAvatarURI_FromZipFallback verifies .zip avatar/ directory
-// fallback when no author matches.
+// TestCacheAvatarsFromModel_7z 批量缓存路径对齐 .7z（R20 审核 P3-4）：
+// modelAuthorNames 补 .7z 分支后，含 authors 声明的 7z 模型能按作者批量缓存头像。
+// 夹具 go/avatar/testdata/7z_authors.7z 含 ysm.json（authors: testuser →
+// avatar/face.png）+ avatar\face.png。
+func TestCacheAvatarsFromModel_7z(t *testing.T) {
+	src := filepath.Join("testdata", "7z_authors.7z")
+	if _, err := os.Stat(src); err != nil {
+		t.Skipf("testdata 7z_authors.7z not available: %v", err)
+	}
+	oldCacheDir := CacheDir
+	dir := t.TempDir()
+	CacheDir = func() string { return dir }
+	t.Cleanup(func() { CacheDir = oldCacheDir })
+
+	CacheAvatarsFromModel(src)
+
+	// 作者 testuser 的头像应已落盘（avatar/face.png）
+	cached := filepath.Join(dir, SafeName("testuser")+".png")
+	if _, err := os.Stat(cached); err != nil {
+		t.Fatalf(".7z 批量缓存未落盘作者头像 %s: %v", cached, err)
+	}
+	// 且读回为 data URI
+	uri, err := ReadCachedAvatar("testuser")
+	if err != nil || !strings.HasPrefix(uri, "data:image/") {
+		t.Fatalf("ReadCachedAvatar 期望 data URI, got %q err %v", uri, err)
+	}
+}
 func TestExtractAvatarURI_FromZipFallback(t *testing.T) {
 	pngData := writePNG(color.RGBA{R: 0, G: 0, B: 255, A: 255})
 	ysmJSON := `{"metadata":{"authors":[]}}`

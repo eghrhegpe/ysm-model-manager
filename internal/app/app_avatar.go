@@ -4,6 +4,7 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,11 +27,16 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 	}
 	cacheDir := avatar.CacheDir()
 	if cacheDir != "" {
-		os.MkdirAll(cacheDir, fsutil.DirPerms)
+		// MkdirAll 错误不再忽略（R20 审核 P3-2）：缓存目录创建失败应留痕，
+		// 后续 SaveAvatarData 内部也会尝试创建并 log，此处仅语义补记
+		if err := os.MkdirAll(cacheDir, fsutil.DirPerms); err != nil {
+			log.Printf("[avatar] 创建缓存目录失败 %s: %v", cacheDir, err)
+		}
 	}
 
 	entries := a.ScanModelEntries(a.ysmRoot())
 	seen := map[string]string{}
+	seenMod := map[string]int64{}
 	for _, e := range entries {
 		name := e.Name
 		if types.IsDisableSuffix(name) {
@@ -42,10 +48,14 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 				if author == "" {
 					continue
 				}
-				if _, ok := seen[author]; !ok {
-					// ADR-064 锚定：扩展名判定走注册表（原硬编码 .ysm/.zip/.7z/.json，
-					// 新增 YSM 承载格式或类型时头像提取失效）
-					if types.IsTypeModelFile(e.Name, "ysm") {
+				// ADR-064 锚定：扩展名判定走注册表（原硬编码 .ysm/.zip/.7z/.json，
+				// 新增 YSM 承载格式或类型时头像提取失效）
+				if types.IsTypeModelFile(e.Name, "ysm") {
+					// 同作者多个模型取 ModTime 最新者（R20 审核 P3-3）：
+					// 原「只看第一个」可能漏掉更新模型的头像；ModTime 相等时
+					// 先扫描到的胜出（保持扫描顺序确定性）
+					if cur, ok := seenMod[author]; !ok || e.ModTime > cur {
+						seenMod[author] = e.ModTime
 						seen[author] = e.Path
 					}
 				}
@@ -110,7 +120,11 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 	info["step"] = "found_model"
 	cacheDir := avatar.CacheDir()
 	if cacheDir != "" {
-		os.MkdirAll(cacheDir, fsutil.DirPerms)
+		// MkdirAll 错误不再忽略（R20 审核 P3-2）：缓存目录创建失败应留痕，
+		// 后续 SaveAvatarData 内部也会尝试创建并 log，此处仅语义补记
+		if err := os.MkdirAll(cacheDir, fsutil.DirPerms); err != nil {
+			log.Printf("[avatar] 创建缓存目录失败 %s: %v", cacheDir, err)
+		}
 	}
 	safe := avatar.SafeName(authorName)
 	info["step"] = "extracting"

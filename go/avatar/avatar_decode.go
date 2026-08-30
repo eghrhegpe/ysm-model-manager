@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"ysm-model-manager/go/executil"
@@ -28,18 +29,29 @@ const decodeTimeout = 60 * time.Second
 // decodeMaxOutput 解码子进程 stdout 上限（防恶意模型输出膨胀拖垮内存；对齐 internal/app ysmDecodeMaxOutput 口径）
 const decodeMaxOutput = 200 << 20
 
-// DecodeYSMFiles 通过 Node.js + WASM 解码 YSM 文件。
-// nodeJSPath 是 Node.js 可执行文件路径（可全局设置）。
-var nodeJSPath string
+// nodeEnv 持有 SetNodeJS 注入的解码环境。启动期一次注入、运行时只读；
+// 重置场景经 mutex 串行化（根 AGENTS「重置场景必须用 Mutex」，sync.Once 不可复用）。
+type nodeEnv struct {
+	mu       sync.Mutex
+	nodePath string
+	glue     func() string
+	wasm     func() []byte
+}
 
-var getGlueCode func() string
-var getWasmBinary func() []byte
+var env nodeEnv
 
-// SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。
+// SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数（线程安全）。
 func SetNodeJS(nodePath string, glueFn func() string, wasmFn func() []byte) {
-	nodeJSPath = nodePath
-	getGlueCode = glueFn
-	getWasmBinary = wasmFn
+	env.mu.Lock()
+	env.nodePath, env.glue, env.wasm = nodePath, glueFn, wasmFn
+	env.mu.Unlock()
+}
+
+// getEnv 读取当前注入环境（线程安全快照，DecodeYSMFiles 一次性取用）。
+func getEnv() (string, func() string, func() []byte) {
+	env.mu.Lock()
+	defer env.mu.Unlock()
+	return env.nodePath, env.glue, env.wasm
 }
 
 // limitedBuffer 流式输出护栏：写满 max 后丢弃超限部分并置 exceeded，保持内存有界
@@ -64,11 +76,12 @@ func DecodeYSMFiles(ysmData []byte) []struct {
 	Path string `json:"path"`
 	Data []int  `json:"data"`
 } {
-	if nodeJSPath == "" || getGlueCode == nil || getWasmBinary == nil {
+	nodePath, glueFn, wasmFn := getEnv()
+	if nodePath == "" || glueFn == nil || wasmFn == nil {
 		return nil
 	}
-	glueRaw := getGlueCode()
-	wasmBin := getWasmBinary()
+	glueRaw := glueFn()
+	wasmBin := wasmFn()
 	if len(glueRaw) == 0 || len(wasmBin) == 0 {
 		return nil
 	}
@@ -122,7 +135,7 @@ main().catch(e=>{console.error(e);process.exit(1)});
 	// 子进程加超时护栏（WASM 死循环/Node 卡死时防永久挂起冻结 UI 线程）
 	ctx, cancel := context.WithTimeout(context.Background(), decodeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, nodeJSPath, scriptPath)
+	cmd := exec.CommandContext(ctx, nodePath, scriptPath)
 	executil.HideWindow(cmd)
 	cmd.Dir = tmpDir
 	// 输出护栏：stdout 流式截断（防解压炸弹在 Node/WASM 内膨胀到数百 MB~GB 级峰值内存），

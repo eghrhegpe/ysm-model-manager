@@ -81,7 +81,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 120 |
+| `frontend/src/core/context-menu-handlers.ts` | 121 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -101,7 +101,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menus.ts` | 82 |
+| `frontend/src/core/context-menus.ts` | 65 |
 
 ### `dir:batch-rename`
 
@@ -156,7 +156,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 113 |
+| `frontend/src/core/context-menu-handlers.ts` | 114 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -168,7 +168,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 103 |
+| `frontend/src/core/context-menu-handlers.ts` | 104 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -194,7 +194,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menus.ts` | 83 |
+| `frontend/src/core/context-menus.ts` | 66 |
 | `frontend/src/features/community/events.ts` | 196 |
 
 **订阅方（on）：**

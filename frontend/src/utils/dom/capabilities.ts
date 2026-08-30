@@ -10,3 +10,28 @@ import { canBinding } from "../../backend/platform-web.ts";
 export function can(binding: string): boolean {
   return canBinding(binding);
 }
+
+/**
+ * 查看器/web 模式下右键菜单 action 的 binding 需求映射（2026-XX P2-3 收敛）：
+ * 原 `context-menus.ts` 内嵌 `VIEWER_WEB_ACTION_BINDINGS` 表 + 手写 `can(binding)`
+ * 调用收敛到本表 + canWebAction(action)，新增右键 web binding 只改这里。
+ * 与 ADR-071 一致：仅声明「哪些 action 在 web 上可达」，不重复 `can()` 三态判定逻辑。
+ */
+export const VIEWER_WEB_ACTION_BINDINGS: Readonly<Record<string, string>> = {
+  "file.rename": "RenameFile",
+  "dir.rename": "RenameDir",
+  "dir.batch-rename": "RenameDir",
+  "file.edit-tags": "GetModelTags",
+  // 移动/复制解锁（P0 翻案）：runBatchFileOp / file.move / file.copy 均走
+  // MoveModelFile/CopyModelFile binding（web-fs webFsBindings 已实现组级 rekey）
+  "file.move": "MoveModelFile",
+  "file.copy": "CopyModelFile",
+  "batch.move": "MoveModelFile",
+  "batch.copy": "CopyModelFile",
+};
+
+/** 查看器/web 模式下该 action 是否在当前平台可达（白名单 + can() 探测） */
+export function canWebAction(action: string): boolean {
+  const b = VIEWER_WEB_ACTION_BINDINGS[action];
+  return b !== undefined && can(b);
+}

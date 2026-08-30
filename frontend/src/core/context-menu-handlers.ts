@@ -16,6 +16,7 @@ import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 import { refreshUI, toast, toastEmptyRtype, isUnsafeFolderName, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
+import { downloadTextFile } from "../utils/dom/download-text.ts";
 
 /** batch.move / batch.copy 共用模板。 */
 let _batchBusy = false;
@@ -188,16 +189,8 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       .map((p) => p.split(/[/\\]/).pop())
       .filter(Boolean)
       .join("\n");
-    const blob = new Blob([names], {
-      type: "text/plain;charset=utf-8",
-    });
-    const a = document.createElement("a");
-    a.download = `model-list-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.href = URL.createObjectURL(blob);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
+    // DOM 职责下沉（utils/dom/download-text.ts）——handler 不再直接操作 document/URL
+    downloadTextFile(names, `model-list-${new Date().toISOString().slice(0, 10)}.txt`);
     toast(`✅ 已导出 ${ctx.paths.length} 个文件名`, TOAST_MS.success);
   },
 };

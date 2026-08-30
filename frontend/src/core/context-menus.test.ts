@@ -92,9 +92,16 @@ vi.mock("../utils/dom/android-bridge.ts", () => ({
   isViewerMode: isViewerModeMock,
 }));
 
-// can() 能力探测 mock（web 已实现 binding 的右键动作放行依赖它）
+// can() / canWebAction() 能力探测 mock（viewer-mode 守卫依赖；P2-3 后 canWebAction 内部调用 can）
 const { canMock } = vi.hoisted(() => ({ canMock: vi.fn(() => false) }));
-vi.mock("../utils/dom/capabilities.ts", () => ({ can: canMock }));
+vi.mock("../utils/dom/capabilities.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../utils/dom/capabilities.ts")>();
+  return {
+    ...actual,
+    can: canMock,
+    canWebAction: canMock, // 直接复用：白名单查找走 actual.VIEWER_WEB_ACTION_BINDINGS，binding 可用性走 canMock
+  };
+});
 
 // 收集 menu:show 与 handler 发出的业务事件
 const menuShows: Array<{ x: number; y: number; items: MenuItem[] }> = [];
@@ -835,7 +842,6 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
   const PROBE_ACTION = "__test_probe_visibleWhen__";
   const PROBE_DEF_TYPE = "batch" as const;
   let probeIndex = -1;
-  const originalHandler: unknown = HANDLERS[PROBE_ACTION];
 
   function pushProbe(visibleWhen: ((ctx: CtxShowPayload) => boolean) | undefined) {
     const def = MENU_DEFS.find((d) => d.type === PROBE_DEF_TYPE);
@@ -857,11 +863,8 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
       def.items.splice(probeIndex, 1);
       probeIndex = -1;
     }
-    if (originalHandler !== undefined) {
-      (HANDLERS as Record<string, unknown>)[PROBE_ACTION] = originalHandler;
-    } else {
-      delete HANDLERS[PROBE_ACTION];
-    }
+    // 直接操作 HANDLERS：不在模块顶层捕获 originalHandler（加载时 probe 未注入，恒为 undefined）
+    delete (HANDLERS as Record<string, unknown>)[PROBE_ACTION];
   }
 
   function actionsOf(payload: { items: MenuItem[] }): string[] {

@@ -782,13 +782,13 @@
 | `App.ClearImportLogs()` | `internal/app/app_install_log:20` | — |
 | `App.GetRuntimeLogs()` | `internal/app/app_install_log:25` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
 | `App.ClearRuntimeLogs()` | `internal/app/app_install_log:30` | ClearRuntimeLogs 清空运行时日志缓冲 |
-| `App.MoveToRecycle()` | `internal/app/app_install_recycle:17` | ========== 回收站 ========== |
-| `App.MoveToRecycleEx()` | `internal/app/app_install_recycle:41` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
-| `App.ClearCustomDir()` | `internal/app/app_install_recycle:95` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
-| `App.ListRecycleBin()` | `internal/app/app_install_recycle:165` | — |
-| `App.RestoreFromRecycle()` | `internal/app/app_install_recycle:182` | — |
-| `App.DeleteFromRecycle()` | `internal/app/app_install_recycle:203` | — |
-| `App.EmptyRecycleBin()` | `internal/app/app_install_recycle:219` | EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。 |
+| `App.MoveToRecycle()` | `internal/app/app_install_recycle:22` | ========== 回收站 ========== R24 P3：recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批 文件（实 |
+| `App.MoveToRecycleEx()` | `internal/app/app_install_recycle:48` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ClearCustomDir()` | `internal/app/app_install_recycle:104` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ListRecycleBin()` | `internal/app/app_install_recycle:174` | — |
+| `App.RestoreFromRecycle()` | `internal/app/app_install_recycle:191` | — |
+| `App.DeleteFromRecycle()` | `internal/app/app_install_recycle:214` | — |
+| `App.EmptyRecycleBin()` | `internal/app/app_install_recycle:232` | EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。 |
 | `App.DetectLauncherInstances()` | `internal/app/app_launcher:10` | DetectLauncherInstances inspects a user-selected HMCL/PCL directory and returns the resolv |
 | `App.AnalyzeYSMModel()` | `internal/app/app_model:40` | — |
 | `App.ExtractYsmSummary()` | `internal/app/app_model:44` | — |

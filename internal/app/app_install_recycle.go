@@ -8,13 +8,20 @@ import (
 	"path/filepath"
 	"strings"
 
+	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/recycle"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 )
 
 // ========== 回收站 ==========
+// R24 P3：recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批
+// 文件（实例目录 Rename/Remove、.recycle 内 Move）→ 统一纳入 InstallLock 互斥
+// （共享单锁闭环，与 ClearInstanceResources/DeduplicateCustomDir 同口径）。
+// ⚠️ 这些绑定不得在已持 InstallLock 的路径内被调用（非重入锁，会自死锁）。
 func (a *App) MoveToRecycle(src string) error {
+	installer.InstallLock.Lock()
+	defer installer.InstallLock.Unlock()
 	// 尝试所有可能的资源根目录，找到包含 src 的那个
 	root := a.findRecycleRoot(src)
 	if root == "" {
@@ -39,6 +46,8 @@ func (a *App) MoveToRecycle(src string) error {
 // 注意（R23 P3-3）：与 MoveToRecycle 不对称——findRecycleRoot 失败时无 ysmRoot 兜底，
 // 直接返回 error（保留旧绑定错误语义，避免静默降级到错误根目录）。
 func (a *App) MoveToRecycleEx(src string) (string, string) {
+	installer.InstallLock.Lock()
+	defer installer.InstallLock.Unlock()
 	root := a.findRecycleRoot(src)
 	if root == "" {
 		return "error", "未找到包含此文件的资源目录"
@@ -180,6 +189,8 @@ func (a *App) ListRecycleBin(recyclePath string) []types.ModelEntry {
 }
 
 func (a *App) RestoreFromRecycle(src, filesRoot string) error {
+	installer.InstallLock.Lock()
+	defer installer.InstallLock.Unlock()
 	// 尝试所有根目录恢复
 	cfg := a.LoadAppConfig()
 	for _, r := range a.allRecycleRoots(cfg) {
@@ -201,6 +212,8 @@ func (a *App) RestoreFromRecycle(src, filesRoot string) error {
 }
 
 func (a *App) DeleteFromRecycle(src string) error {
+	installer.InstallLock.Lock()
+	defer installer.InstallLock.Unlock()
 	cfg := a.LoadAppConfig()
 	for _, r := range a.allRecycleRoots(cfg) {
 		if recycle.New(r).RecycleDir() == "" {
@@ -217,6 +230,8 @@ func (a *App) DeleteFromRecycle(src string) error {
 // src 参数保留以兼容既有前端绑定契约（批次4 P2 参数命名）：历史遗留占位，
 // 实际清空全部回收站而非按单目录，Go 端不消费该值。
 func (a *App) EmptyRecycleBin(src string) (int, error) {
+	installer.InstallLock.Lock()
+	defer installer.InstallLock.Unlock()
 	cfg := a.LoadAppConfig()
 	total := 0
 	failed := []string{}

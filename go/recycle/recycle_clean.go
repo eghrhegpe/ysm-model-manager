@@ -23,11 +23,11 @@ type CleanOpLogger func(name, src, dst string, size int64, status, msg string)
 // logger 可为 nil（nil 时失败仅静默跳过）；非 nil 时移动/删除失败逐条上报
 // failed 回调，与 DeduplicateEntries 口径一致——清理数偏少可归因。
 func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogger) int {
-	targets := fsutil.WalkAllFiles(dir, true)
 	if filesRoot == "" {
-		// 没有仓库根目录时不做处理
+		// 没有仓库根目录时不做处理（R24 P4-1：守卫前移，避免空根时白走一遍遍历）
 		return 0
 	}
+	targets := fsutil.WalkAllFiles(dir, true)
 	// 预加载仓库文件索引：文件名(小写) → 完整路径列表（同名可能散布多处）
 	repoFiles := make(map[string][]string)
 	for _, p := range fsutil.WalkAllFiles(filesRoot, true) {

@@ -41,7 +41,7 @@
 | Go(internal)·应用入口 | 31 | 222 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
-| 前端·核心 | 18 | 38 |
+| 前端·核心 | 19 | 39 |
 | 前端·特性 | 18 | 93 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 6 | 37 |
@@ -50,7 +50,7 @@
 | frontend/views | 122 | 358 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **523** | **2244** |
+| **合计** | **524** | **2245** |
 
 ## Go·头像
 
@@ -1096,6 +1096,7 @@
 | `ja()` | `frontend/src/core/i18n/locales/ja:5` | — |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
+| `tr()` | `frontend/src/core/i18n/tr:17` | i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。 |
 | `MenuDef()` | `frontend/src/core/menu-defs:29` | 单类菜单的完整声明 |
 | `MENU_DEFS()` | `frontend/src/core/menu-defs:35` | 四类右键菜单的声明式规格（唯一事实来源） |
 | `getMenuDef()` | `frontend/src/core/menu-defs:123` | 测试辅助：按 type 取声明（不存在返回 undefined） |
@@ -1468,11 +1469,11 @@
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
 | `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu/core` | — |
 | `PreviewMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu/core:39` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
-| `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu/core:81` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
-| `PreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:226` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
-| `buildPreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:238` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
-| `renderPreviewPanel()` | `frontend/src/utils/3d/adapters/preview-menu/core:282` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
-| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core:516` | — |
+| `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu/core:75` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
+| `PreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:220` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
+| `buildPreviewMenuRouters()` | `frontend/src/utils/3d/adapters/preview-menu/core:232` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
+| `renderPreviewPanel()` | `frontend/src/utils/3d/adapters/preview-menu/core:276` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
+| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu/core:510` | — |
 | `PreviewMenuItemKind()` | `frontend/src/utils/3d/adapters/preview-menu/defs:30` | — |
 | `PreviewMenuGroupId()` | `frontend/src/utils/3d/adapters/preview-menu/defs:31` | — |
 | `PreviewMenuItemDef()` | `frontend/src/utils/3d/adapters/preview-menu/defs:33` | — |

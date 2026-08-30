@@ -24,7 +24,7 @@ import {
 } from "./settings.ts";
 import type { SceneCapability } from "../../caps/scene-capability.ts";
 import { ensureFabStyles } from "../../../../utils/dom/fab.ts";
-import { t } from "../../../../core/i18n/t.ts";
+import { tr } from "../../../../core/i18n/tr.ts";
 import { sceneCapabilityRegistry } from "../../caps/scene-capability-registry.ts";
 import { sceneRegistry } from "../scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
@@ -66,12 +66,6 @@ export interface PreviewMenuCtx {
   toast: (message: string) => void;
   closeAllOverlays: () => void;
 }
-
-/** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
-const tr = (key: string, fallback: string): string => {
-  const v = t(key);
-  return v === key ? fallback : v;
-};
 
 /** 通用控件渲染器：将 MenuControlDef[] 渲染为 DOM 行，替代手写 fill* 函数 */
 export { renderCapControls };

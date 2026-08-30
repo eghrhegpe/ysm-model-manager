@@ -220,15 +220,21 @@ function paletteToColors(paletteList: unknown[], fallback: string): string[] {
   return out;
 }
 
-/** 索引反推坐标（对齐 voxel.go:437-439 口径）；int16 越界返回 null（调用方跳过）。 */
-function indexToCoord(i: number, w: number, l: number): { x: number; y: number; z: number } | null {
-  const x = (i - 1) % w;
-  const y = Math.floor((i - 1) / (w * l));
-  const z = Math.floor((i - 1) / w) % l;
-  if (x < INT16_MIN || x > INT16_MAX || y < INT16_MIN || y > INT16_MAX || z < INT16_MIN || z > INT16_MAX) {
+/** 索引反推坐标（对齐 voxel.go:437-439 口径）；int16 越界返回 null（调用方跳过）。
+ *  坐标写入调用方复用的 out 对象（热循环避免每块一次 {x,y,z} 临时分配——审核 P3）。 */
+function indexToCoord(
+  i: number,
+  w: number,
+  l: number,
+  out: { x: number; y: number; z: number },
+): { x: number; y: number; z: number } | null {
+  out.x = (i - 1) % w;
+  out.y = Math.floor((i - 1) / (w * l));
+  out.z = Math.floor((i - 1) / w) % l;
+  if (out.x < INT16_MIN || out.x > INT16_MAX || out.y < INT16_MIN || out.y > INT16_MAX || out.z < INT16_MIN || out.z > INT16_MAX) {
     return null;
   }
-  return { x, y, z };
+  return out;
 }
 
 function asNumber(v: unknown): number | undefined {
@@ -599,6 +605,8 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
   // 方块生成器：v1 raw Blocks / v2 varint BlockData 双路径，跳过 air（blockID 0）
   let i = 0;
   let offset = 0;
+  // 坐标 scratch（indexToCoord 复用写入，避免每块一次临时分配——审核 P3）
+  const coord = { x: 0, y: 0, z: 0 };
   const next = (): VoxelBlock | null => {
     if (blockDataBA !== undefined && paletteMap !== null) {
       // v2: varint BlockData
@@ -611,9 +619,8 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
         const c = paletteMap[r.value];
         if (c !== undefined) color = c;
         // 坐标由索引反推（对齐 voxel.go:437-439），int16 守卫
-        const coord = indexToCoord(i, w, l);
-        if (!coord) continue;
-        return { color, ...coord };
+        if (!indexToCoord(i, w, l, coord)) continue;
+        return { color, x: coord.x, y: coord.y, z: coord.z };
       }
       return null;
     }
@@ -632,9 +639,8 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
         const name = resolveBlockName(blockID, d);
         if (name !== "") color = mapColor(name);
       }
-      const c = indexToCoord(i, w, l);
-      if (!c) continue;
-      return { color, ...c };
+      if (!indexToCoord(i, w, l, coord)) continue;
+      return { color, x: coord.x, y: coord.y, z: coord.z };
     }
     return null;
   };

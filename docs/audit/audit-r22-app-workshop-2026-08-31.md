@@ -188,6 +188,8 @@ func inTypeSegments(typeStr, siteID string) bool {
 
 验收：`go test -race ./internal/app/` ✅ + `go build ./go/...` ✅
 
+**修复状态**：四项全部落地——FIX-1 已于前提交 `e7940862` 完成（`IsNotExist` → `("", nil)` + `TestBackupWorkshopCreators_NoFile` + `TestMergeWorkshopCreatorsFromJSON_FreshUser`）；FIX-2 Type 段精确匹配 Go 侧 `inTypeSegments` + web 桥 `t.split(";").includes(siteID)` 同改 + `TestSaveWorkshopCreatorsBySite_TypeSegmentMatch`；FIX-3 三处 `println` → `log.Printf`（接入环形日志，与 R19 watcher 同类教训同步）；FIX-4 CSV 有效行校验（0 有效行报错不覆盖）+ `TestImportWorkshopSitesCSV_AllInvalidRows`。门禁：`go build ./go/...` + `go test -race ./internal/app/` + `go vet` + `vite build` + `tsc --noEmit` 全绿。
+
 ---
 
 ## 审核元数据

@@ -527,6 +527,7 @@
   "workshop.select": "Select ({n})",
   "workshop.noModels": "No models yet",
   "workshop.loading": "Loading…",
+  "workshop.loadCommunityFailed": "Failed to load community data",
   "workshop.networkError": "Network error",
   "workshop.parseError": "Data parsing failed",
   "workshop.downloadStarted": "Download started",

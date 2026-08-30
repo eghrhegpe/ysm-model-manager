@@ -527,6 +527,7 @@
   "workshop.select": "选中 ({n})",
   "workshop.noModels": "暂无模型",
   "workshop.loading": "加载中…",
+  "workshop.loadCommunityFailed": "加载社区数据失败",
   "workshop.networkError": "网络异常",
   "workshop.parseError": "数据解析失败",
   "workshop.downloadStarted": "开始下载",

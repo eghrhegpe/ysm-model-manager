@@ -277,3 +277,69 @@ func TestMergeWorkshopCreatorsFromJSON_FreshUser(t *testing.T) {
 		t.Fatalf("合并后应可读回 >=100 条, got %d", got)
 	}
 }
+
+// Type 分号分隔精确段匹配（R22 审核 P3-1）：siteID="a" 不得误删 Type="ba" /
+// "ba;c" 的创作者（原裸 Contains(c.Type, "a;") 真子串误判），但 "a" / "a;b" /
+// "b;a" 应被精确段匹配移除。
+func TestSaveWorkshopCreatorsBySite_TypeSegmentMatch(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	seed := []types.WorkshopCreator{
+		{Name: "ba-only", Type: "ba"}, // 防误删对象（原缺陷会误删）
+		{Name: "ba-c", Type: "ba;c"},  // 防误删对象（原缺陷会误删）
+		{Name: "a-only", Type: "a"},   // 应移除
+		{Name: "a-b", Type: "a;b"},    // 应移除
+		{Name: "b-a", Type: "b;a"},    // 应移除
+	}
+	if err := a.SaveWorkshopCreators(seed); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.SaveWorkshopCreatorsBySite("a", []types.WorkshopCreator{{Name: "a-new", Type: "a"}}); err != nil {
+		t.Fatal(err)
+	}
+	got := a.LoadWorkshopCreators()
+	names := map[string]bool{}
+	for _, c := range got {
+		names[c.Name] = true
+	}
+	for _, survive := range []string{"ba-only", "ba-c"} {
+		if !names[survive] {
+			t.Errorf("%q（Type 不含精确段 \"a\"）不应被 siteID=\"a\" 误删", survive)
+		}
+	}
+	for _, removed := range []string{"a-only", "a-b", "b-a"} {
+		if names[removed] {
+			t.Errorf("Type 含精确段 \"a\" 的 %q 应被移除", removed)
+		}
+	}
+	if !names["a-new"] {
+		t.Error("新站点创作者应写入")
+	}
+}
+
+// 全非法行（<6 列）导入应报错且不覆盖写盘（R22 审核 P3-3）——
+// 原实现 sites 为空仍 SaveWorkshopSites([]) 覆盖清空用户站点配置。
+func TestImportWorkshopSitesCSV_AllInvalidRows(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	// 先写一份有效站点配置
+	if err := a.SaveWorkshopSites([]types.WorkshopSite{{ID: "keep", URL: "https://keep.test"}}); err != nil {
+		t.Fatal(err)
+	}
+	// 导入全非法行（每行 <6 列）
+	content := "id,icon,label,url,desc,group\n" + "a,b,c\n" + "d,e,f\n"
+	if err := a.ImportWorkshopSitesCSV(content); err == nil {
+		t.Fatal("全非法行导入应报错")
+	}
+	// 原配置应保留（未被清空覆盖）
+	got := a.DefaultWorkshopSites()
+	if len(got) != 1 || got[0].ID != "keep" {
+		t.Fatalf("导入失败后原配置应保留, got %+v", got)
+	}
+}

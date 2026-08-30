@@ -270,10 +270,11 @@ export const webCommunityBindings = {
   // WebUnsupportedError，community-data.ts 有对应门控，现已移除）
   SaveWorkshopCreatorsBySite: (siteID: string, siteCreators: WorkshopCreator[]) => {
     const all = loadWebCreators();
-    // 移除该站点旧条目（type 精确匹配或分号分隔段匹配，对齐 Go app_workshop.go）
+    // 移除该站点旧条目（type 分号分隔精确段匹配，对齐 Go app_workshop.go
+    // inTypeSegments——原 includes(siteID + ";") 会把 "ba;c" 误配 siteID="a"）
     const kept = all.filter((c) => {
       const t = c.type || "";
-      return !(t === siteID || t.includes(siteID + ";") || t.endsWith(";" + siteID));
+      return !t.split(";").includes(siteID);
     });
     saveWebCreators([...kept, ...siteCreators]);
     return Promise.resolve();

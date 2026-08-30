@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,7 +43,7 @@ func migrateWorkshopConfig(name string) {
 	// 无条件确保目标父目录存在：全新落盘（无旧 exe 旁文件可迁移）场景下，
 	// WriteFileAtomic 不会自动创建父目录，必须在此预建（与 migrateLegacyConfig 对齐）。
 	if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
-		println("[migrate-workshop] 配置目录创建失败:", err.Error())
+		log.Printf("[migrate-workshop] 配置目录创建失败: %v", err)
 		return
 	}
 	exe, _ := os.Executable()
@@ -56,7 +57,7 @@ func migrateWorkshopConfig(name string) {
 			continue
 		}
 		if err := fsutil.WriteFileAtomic(newPath, data); err != nil {
-			println("[migrate-workshop] 迁移写盘失败:", err.Error())
+			log.Printf("[migrate-workshop] 迁移写盘失败: %v", err)
 			return
 		}
 		_ = os.Remove(p) // 迁移成功，清理旧文件
@@ -172,13 +173,25 @@ func (a *App) SaveWorkshopCreators(list []types.WorkshopCreator) error {
 	return fsutil.WriteFileAtomic(creatorsPath(), data)
 }
 
+// inTypeSegments 判断 siteID 是否为 typeStr 的分号分隔精确段（R22 审核 P3-1）：
+// 原裸 Contains(c.Type, siteID+";") 会把 "ba;c" 误配 siteID="a"（真子串误判），
+// 与 3.4③ 词边界范式一致——多站点 Type 为 "site1;site2" 分号分隔。
+func inTypeSegments(typeStr, siteID string) bool {
+	for _, seg := range strings.Split(typeStr, ";") {
+		if seg == siteID {
+			return true
+		}
+	}
+	return false
+}
+
 // SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动
 func (a *App) SaveWorkshopCreatorsBySite(siteID string, siteCreators []types.WorkshopCreator) error {
 	all := a.LoadWorkshopCreators()
-	// 移除该站点的旧条目
+	// 移除该站点的旧条目（Type 分号分隔精确段匹配）
 	var kept []types.WorkshopCreator
 	for _, c := range all {
-		if c.Type == siteID || strings.Contains(c.Type, siteID+";") || strings.HasSuffix(c.Type, ";"+siteID) {
+		if inTypeSegments(c.Type, siteID) {
 			continue
 		}
 		kept = append(kept, c)
@@ -228,7 +241,7 @@ func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
 		return nil, err
 	}
 	if err := os.Remove(creatorsPath()); err != nil && !os.IsNotExist(err) {
-		println("[workshop] 重置后清理 creators 失败:", err.Error())
+		log.Printf("[workshop] 重置后清理 creators 失败: %v", err)
 	}
 	return sites, nil
 }
@@ -297,6 +310,11 @@ func (a *App) ImportWorkshopSitesCSV(csvContent string) error {
 			s.SearchURL = row[6]
 		}
 		sites = append(sites, s)
+	}
+	// 有效行校验（R22 审核 P3-3）：全非法行（<6 列被跳过）时不得覆盖写空——
+	// 与 Merge/Replace 的「完整性校验后才落盘」口径一致，防清空用户站点配置
+	if len(sites) == 0 {
+		return fmt.Errorf("CSV 无有效数据行（每行至少 6 列）")
 	}
 	return a.SaveWorkshopSites(sites)
 }

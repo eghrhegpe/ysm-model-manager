@@ -832,22 +832,22 @@
 | `App.GetCachedTextureByHash()` | `internal/app/app_texture_cache:94` | GetCachedTextureByHash 通过哈希直接读取 KTX2 缓存（不读取原始文件，轻量操作）。 |
 | `App.HasCachedTextures()` | `internal/app/app_texture_cache:107` | HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。 |
 | `CachedTextureResult()` | `internal/app/app_texture_cache:18` | CachedTextureResult 是 GetCachedTexture 的返回值。 |
-| `App.DefaultWorkshopSites()` | `internal/app/app_workshop:103` | — |
-| `App.SaveWorkshopSites()` | `internal/app/app_workshop:114` | — |
-| `App.LoadWorkshopCreators()` | `internal/app/app_workshop:156` | — |
-| `App.SaveWorkshopCreators()` | `internal/app/app_workshop:167` | — |
-| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:188` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
-| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:204` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
-| `App.LoadGitHubRepos()` | `internal/app/app_workshop:217` | — |
-| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:228` | — |
-| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:249` | ========== CSV 导出/导入 ========== |
-| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:261` | — |
-| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:274` | — |
-| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:290` | — |
-| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:316` | — |
-| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:323` | — |
-| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:344` | — |
-| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:386` | — |
+| `App.DefaultWorkshopSites()` | `internal/app/app_workshop:104` | — |
+| `App.SaveWorkshopSites()` | `internal/app/app_workshop:115` | — |
+| `App.LoadWorkshopCreators()` | `internal/app/app_workshop:157` | — |
+| `App.SaveWorkshopCreators()` | `internal/app/app_workshop:168` | — |
+| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:189` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
+| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:205` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
+| `App.LoadGitHubRepos()` | `internal/app/app_workshop:218` | — |
+| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:229` | — |
+| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:250` | ========== CSV 导出/导入 ========== |
+| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:262` | — |
+| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:275` | — |
+| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:291` | — |
+| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:322` | — |
+| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:329` | — |
+| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:350` | — |
+| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:392` | — |
 | `NewApp()` | `internal/app/app:75` | — |
 | `App.SetApp()` | `internal/app/app:104` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
 | `App.GetYSMRepoRoot()` | `internal/app/app:107` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
@@ -2235,10 +2235,10 @@
 | `toggleFav()` | `frontend/src/views/app-content/workshop-data:81` | — |
 | `openSite()` | `frontend/src/views/app-content/workshop-site-opener:20` | 打开站点（外链/内嵌/窗口） |
 | `bindSiteEvents()` | `frontend/src/views/app-content/workshop-site-opener:85` | 绑定站点打开相关事件 |
-| `WorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:20` | 创意工坊页的共享 ref 集合——单一事实来源。 |
-| `createWorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:28` | 创建创意工坊页的共享 ref 对象（单一入口，所有消费者共享同一实例） |
-| `initWorkshopTabs()` | `frontend/src/views/app-content/workshop-tabs:40` | 初始化创意工坊 Tab |
-| `setShowSiteView()` | `frontend/src/views/app-content/workshop-tabs:150` | — |
+| `WorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:21` | 创意工坊页的共享 ref 集合——单一事实来源。 |
+| `createWorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:29` | 创建创意工坊页的共享 ref 对象（单一入口，所有消费者共享同一实例） |
+| `initWorkshopTabs()` | `frontend/src/views/app-content/workshop-tabs:41` | 初始化创意工坊 Tab |
+| `setShowSiteView()` | `frontend/src/views/app-content/workshop-tabs:151` | — |
 | `VIEW_TESTIDS()` | `frontend/src/views/app-nav/index:18` | — |
 | `navCSS()` | `frontend/src/views/app-nav/tpl:2` | — |
 | `BoneEntry()` | `frontend/src/views/app-preview/bone-names:5` | 骨骼条目（结构类型，兼容 DecodedYsm.bones 元素） |

@@ -498,8 +498,8 @@
 | `frontend/src/views/app-content/workshop-site-opener.ts` | 162 |
 | `frontend/src/views/app-content/workshop-site-opener.ts` | 173 |
 | `frontend/src/views/app-content/workshop-site-opener.ts` | 179 |
-| `frontend/src/views/app-content/workshop-tabs.ts` | 90 |
-| `frontend/src/views/app-content/workshop-tabs.ts` | 138 |
+| `frontend/src/views/app-content/workshop-tabs.ts` | 91 |
+| `frontend/src/views/app-content/workshop-tabs.ts` | 139 |
 | `frontend/src/views/app-nav/index.ts` | 114 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 287 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 353 |

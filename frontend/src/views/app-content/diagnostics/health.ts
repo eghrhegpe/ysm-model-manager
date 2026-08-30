@@ -32,6 +32,8 @@ interface HealthReport {
   resources: {
     total_files: number;
     total_size: number;
+    /** 禁用文件数（.disabled/.ban，Go types.IsDisableSuffix 单一口径） */
+    banned?: number;
     by_type: Record<string, number>;
   };
   dedup: {

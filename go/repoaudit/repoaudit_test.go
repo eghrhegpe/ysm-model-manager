@@ -146,6 +146,28 @@ func TestAudit_SymlinkRoot(t *testing.T) {
 	}
 }
 
+// TestAudit_BannedCount 禁用文件统计走 types.IsDisableSuffix 单一口径
+// （.disabled/.ban，大小写不敏感）——此前前端 oldest 页自建正则数禁用，
+// 口径双轨，现统一由 Go 审计产出（resources.banned）。
+func TestAudit_BannedCount(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.ysm"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	writeFile(t, filepath.Join(dir, "b.ysm.disabled"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	writeFile(t, filepath.Join(dir, "c.ysm.ban"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	writeFile(t, filepath.Join(dir, "d.ysm.BAN"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+
+	result, err := Audit(dir)
+	if err != nil {
+		t.Fatalf("Audit 应成功, got %v", err)
+	}
+	if result.Resources.Banned != 3 {
+		t.Errorf("3 个禁用文件（.disabled/.ban/.BAN）应记 banned=3, got %d", result.Resources.Banned)
+	}
+	if result.Resources.TotalFiles != 4 {
+		t.Errorf("禁用文件仍应计入总文件数, got %d", result.Resources.TotalFiles)
+	}
+}
+
 func TestHealthReportFor_IncludesDedup(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.ysm"), []byte("same content"))

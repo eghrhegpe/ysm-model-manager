@@ -1,5 +1,7 @@
 // ===== 资历最深 + 仓库评分 + 每日推荐（类型化版 — ADR-014 P3 features）=====
 // 响应全局类型切换
+// 评分/去重/禁用统计：数据源统一为 Go RepoHealthAudit（与诊断页/CLI health-report
+// 同源），前端不再自算健康分——消灭「本地正则数 ban + Hash 分组算重复」的双轨口径。
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
@@ -9,14 +11,12 @@ import { getApp } from "../backend/app.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../utils/resource/types.ts";
 import { useCurrentResourceType } from "./repo-rtype.ts";
 import { createLoadGuard } from "../utils/async/load-guard.ts";
+import { parseHealthReport } from "../views/app-content/diagnostics/health.ts";
 
-// ===== 业务常量（审核：魔法数值集中化，数值与既有行为完全一致）=====
+// ===== 展示阈值（与诊断页 health.ts 同口径：80/60 分档）=====
 const MS_PER_DAY = 86400000;
-const SCORE_BAN_PENALTY = 40;
-const SCORE_DUP_PENALTY = 5;
-const SCORE_DUP_PENALTY_CAP = 55;
 const SCORE_HEALTH_GOOD = 80;
-const SCORE_HEALTH_OK = 50;
+const SCORE_HEALTH_OK = 60;
 const HEATMAP_BASE_HT = 4;
 const HEATMAP_MAX_EXTRA = 44;
 const HEATMAP_STRONG = 0.66;
@@ -29,7 +29,6 @@ interface ModelEntry {
   Size: number;
   Path: string;
   Ext: string;
-  Hash: string;
   ModTime: number;
 }
 
@@ -37,7 +36,6 @@ interface RepoStats {
   totalSize: number;
   banned: number;
   dupGroups: number;
-  dupTotal: number;
   score: number;
   healthColor: string;
   healthLabel: string;
@@ -62,37 +60,31 @@ function handleContainerClick(e: MouseEvent): void {
   }
 }
 
-function computeRepoStats(entries: ModelEntry[]): RepoStats {
-  let totalSize = 0;
-  let banned = 0;
-  const hashMap: Record<string, number> = {};
-  entries.forEach((e) => {
-    totalSize += e.Size ?? 0;
-    if (/\.(disabled|ban)$/i.test(e.Name || "")) banned++;
-    if (e.Hash) hashMap[e.Hash] = (hashMap[e.Hash] ?? 0) + 1;
-  });
-  const dupGroups = Object.values(hashMap).filter((c) => c > 1).length;
-  const dupTotal = Object.values(hashMap).reduce(
-    (s, c) => s + (c > 1 ? c - 1 : 0),
-    0,
-  );
-  let score = 100;
-  if (entries.length > 0) {
-    const banPenalty = Math.round((banned / entries.length) * SCORE_BAN_PENALTY);
-    const dupPenalty = Math.min(dupTotal * SCORE_DUP_PENALTY, SCORE_DUP_PENALTY_CAP);
-    score = Math.max(0, 100 - banPenalty - dupPenalty);
-  }
-  const healthColor =
-    score >= SCORE_HEALTH_GOOD
-      ? "var(--free)"
-      : score >= SCORE_HEALTH_OK
-        ? "var(--tag-amber)"
-        : "var(--paid)";
-  const healthLabel =
-    score >= SCORE_HEALTH_GOOD ? t("oldest.health.good") : score >= SCORE_HEALTH_OK ? t("oldest.health.ok") : t("oldest.health.bad");
-  const healthTagClass =
-    score >= SCORE_HEALTH_GOOD ? "good" : score >= SCORE_HEALTH_OK ? "ok" : "bad";
-  return { totalSize, banned, dupGroups, dupTotal, score, healthColor, healthLabel, healthTagClass };
+/** 仓库统计：调 Go RepoHealthAudit（与诊断页/CLI 同源单一口径），
+ * 前端只做分档展示，不自算评分。解析失败/后端业务错误直接抛出，
+ * 由 render 的 catch 统一展示。 */
+async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
+  const { RepoHealthAudit } = await getApp();
+  const report = parseHealthReport(await RepoHealthAudit(filesRoot));
+  if (report instanceof Error) throw report;
+  if (!report) throw new Error(t("diagnostics.healthParseFailed"));
+  const score = report.score;
+  return {
+    totalSize: report.resources.total_size,
+    banned: report.resources.banned ?? 0,
+    dupGroups: report.dedup.groups,
+    score,
+    healthColor:
+      score >= SCORE_HEALTH_GOOD
+        ? "var(--free)"
+        : score >= SCORE_HEALTH_OK
+          ? "var(--tag-amber)"
+          : "var(--paid)",
+    healthLabel:
+      score >= SCORE_HEALTH_GOOD ? t("oldest.health.good") : score >= SCORE_HEALTH_OK ? t("oldest.health.ok") : t("oldest.health.bad"),
+    healthTagClass:
+      score >= SCORE_HEALTH_GOOD ? "good" : score >= SCORE_HEALTH_OK ? "ok" : "bad",
+  };
 }
 
 function buildHeatmapHtml(entries: ModelEntry[], esc: (s: string) => string): string {
@@ -302,7 +294,8 @@ export async function loadOldestModel(container: HTMLElement, esc: (s: string) =
       const entries: ModelEntry[] = (await ScanModelEntriesWithLabel(filesRoot, RESOURCE_TYPE_LABELS[getCurrentType()] ?? RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
       if (guard.stale(gen)) return;
       if (!entries || !entries.length) { container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">${t("oldest.repoEmpty")}</div>`; return; }
-      const stats = computeRepoStats(entries);
+      const stats = await fetchRepoStats(filesRoot);
+      if (guard.stale(gen)) return;
       const heatmapHtml = buildHeatmapHtml(entries, esc);
       const sorted4 = [...entries].filter((e) => Number.isFinite(e.ModTime) && e.ModTime > 0).sort((a, b) => a.ModTime - b.ModTime).slice(0, OLDEST_CARD_COUNT);
       const oldestHtml = renderOldestCardsHtml(sorted4, esc, renderDisplayName, formatBytes);

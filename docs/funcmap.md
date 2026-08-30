@@ -723,7 +723,7 @@
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
 | `App.QueueStatus()` | `internal/app/app_download:106` | — |
 | `App.DownloadFromGitHub()` | `internal/app/app_download:259` | — |
-| `App.GetModelTexSizes()` | `internal/app/app_download:270` | GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型） |
+| `App.GetModelTexSizes()` | `internal/app/app_download:271` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
 | `QueueStatusInfo()` | `internal/app/app_download:18` | QueueStatusInfo 队列状态（替代多返回值，Wails 自动映射为 JS object） |
 | `DownloadTask()` | `internal/app/app_download:24` | DownloadTask 下载队列任务 |
 | `DownloadQueue()` | `internal/app/app_download:33` | DownloadQueue 串行下载队列 回调注入替代 *App 反向引用（ADR-002 P1：打破 DownloadQueue ↔ App 循环，解锁独立测试） |
@@ -746,34 +746,34 @@
 | `App.ToggleEnable()` | `internal/app/app_files:372` | ========== 统一启用/禁用（兄弟会话裁定：无 rtype，纯路径包含判定）========== ToggleEnable 统一启禁入口——root 归属由「哪个已知根包含 |
 | `App.InstallModelFile()` | `internal/app/app_install_import:22` | ========== 安装 ========== |
 | `App.InstallModelTo()` | `internal/app/app_install_import:26` | — |
-| `App.InstallModelWithOverlay()` | `internal/app/app_install_import:44` | — |
-| `App.SyncCustomToRepo()` | `internal/app/app_install_import:49` | SyncCustomToRepo 同步整合包自定义目录到仓库（执行逻辑下沉 go/sync） |
-| `App.ImportModelFile()` | `internal/app/app_install_import:57` | — |
-| `App.DetectZipType()` | `internal/app/app_install_import:62` | DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用） |
-| `App.ImportModelFileSkipCheck()` | `internal/app/app_install_import:78` | — |
-| `App.ImportModelFileOverwrite()` | `internal/app/app_install_import:87` | — |
-| `App.ImportModelFileTo()` | `internal/app/app_install_import:115` | — |
-| `App.ImportModelFileOverwriteTo()` | `internal/app/app_install_import:119` | — |
-| `App.ImportModelFileToMMD()` | `internal/app/app_install_import:126` | ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。 |
-| `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:131` | ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。 |
-| `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:233` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
-| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:263` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
+| `App.InstallModelWithOverlay()` | `internal/app/app_install_import:45` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.SyncCustomToRepo()` | `internal/app/app_install_import:50` | SyncCustomToRepo 同步整合包自定义目录到仓库（执行逻辑下沉 go/sync） |
+| `App.ImportModelFile()` | `internal/app/app_install_import:58` | — |
+| `App.DetectZipType()` | `internal/app/app_install_import:63` | DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用） |
+| `App.ImportModelFileSkipCheck()` | `internal/app/app_install_import:80` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ImportModelFileOverwrite()` | `internal/app/app_install_import:90` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ImportModelFileTo()` | `internal/app/app_install_import:119` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ImportModelFileOverwriteTo()` | `internal/app/app_install_import:124` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ImportModelFileToMMD()` | `internal/app/app_install_import:132` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:138` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:240` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
+| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:270` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
 | `App.CountInstanceResources()` | `internal/app/app_install_instance:26` | CountInstanceResources 统计指定整合包中可清空的资源文件数 只统计仓库中已有的文件（同 clearInstanceDir 逻辑） rtype 为空时统计全部类 |
 | `App.ClearInstanceResources()` | `internal/app/app_install_instance:66` | ClearInstanceResources 清空指定整合包中已同步的文件 insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型） 返回清除的文件数量 |
-| `App.DeduplicateCustomDir()` | `internal/app/app_install_instance:152` | DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle） |
-| `App.GetInstanceStatus()` | `internal/app/app_install_instance:197` | ========== 状态同步 ========== GetInstanceStatus 获取整合包状态（按资源类型限定路径） rtype: 资源类型 ID，用于解析特定子目录；为 |
-| `App.GetResourceInstanceStatus()` | `internal/app/app_install_instance:209` | GetResourceInstanceStatus 按资源类型获取整合包同步状态 统一走 GetInstanceStatus 路径，通过 rtype 限定实例侧扫描子目录 + 仓库 |
-| `App.SyncModelToggleStatus()` | `internal/app/app_install_instance:271` | — |
-| `App.RelinkCustomDir()` | `internal/app/app_install_instance:281` | RelinkCustomDir 重新应用链接模式到指定目录（兼容旧版） |
-| `App.RelinkAllInstanceResources()` | `internal/app/app_install_instance:306` | RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录 |
-| `App.SyncResources()` | `internal/app/app_install_instance:350` | SyncResources 获取全局 ↔ 整合包的资源同步状态 |
-| `App.PushResourceToInstance()` | `internal/app/app_install_instance:388` | PushResourceToInstance 将全局中缺失的资源推送到整合包 PushResourceToInstance 推送缺失资源到整合包（执行循环下沉 go/sync） |
-| `App.PullResourceFromInstance()` | `internal/app/app_install_instance:410` | PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync） |
-| `App.PullSingleResourceFromInstance()` | `internal/app/app_install_instance:452` | PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库 PullSingleResourceFromInstance 从 |
-| `App.PushSingleResourceToInstance()` | `internal/app/app_install_instance:473` | PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync） |
-| `App.GetSyncScanDirs()` | `internal/app/app_install_instance:525` | GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。 |
-| `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:574` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
-| `App.HasYSMMod()` | `internal/app/app_install_instance:636` | ========== YSM 检测 ========== |
+| `App.DeduplicateCustomDir()` | `internal/app/app_install_instance:153` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.GetInstanceStatus()` | `internal/app/app_install_instance:198` | ========== 状态同步 ========== GetInstanceStatus 获取整合包状态（按资源类型限定路径） rtype: 资源类型 ID，用于解析特定子目录；为 |
+| `App.GetResourceInstanceStatus()` | `internal/app/app_install_instance:210` | GetResourceInstanceStatus 按资源类型获取整合包同步状态 统一走 GetInstanceStatus 路径，通过 rtype 限定实例侧扫描子目录 + 仓库 |
+| `App.SyncModelToggleStatus()` | `internal/app/app_install_instance:272` | — |
+| `App.RelinkCustomDir()` | `internal/app/app_install_instance:283` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.RelinkAllInstanceResources()` | `internal/app/app_install_instance:308` | RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录 |
+| `App.SyncResources()` | `internal/app/app_install_instance:352` | SyncResources 获取全局 ↔ 整合包的资源同步状态 |
+| `App.PushResourceToInstance()` | `internal/app/app_install_instance:390` | PushResourceToInstance 将全局中缺失的资源推送到整合包 PushResourceToInstance 推送缺失资源到整合包（执行循环下沉 go/sync） |
+| `App.PullResourceFromInstance()` | `internal/app/app_install_instance:412` | PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync） |
+| `App.PullSingleResourceFromInstance()` | `internal/app/app_install_instance:454` | PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库 PullSingleResourceFromInstance 从 |
+| `App.PushSingleResourceToInstance()` | `internal/app/app_install_instance:475` | PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync） |
+| `App.GetSyncScanDirs()` | `internal/app/app_install_instance:527` | GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。 |
+| `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:576` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
+| `App.HasYSMMod()` | `internal/app/app_install_instance:638` | ========== YSM 检测 ========== |
 | `App.SetLinkMode()` | `internal/app/app_install_link:11` | ========== 链接模式 ========== |
 | `App.GetLinkMode()` | `internal/app/app_install_link:38` | — |
 | `App.AddImportLog()` | `internal/app/app_install_log:8` | ========== 日志 ========== |
@@ -783,42 +783,42 @@
 | `App.GetRuntimeLogs()` | `internal/app/app_install_log:25` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
 | `App.ClearRuntimeLogs()` | `internal/app/app_install_log:30` | ClearRuntimeLogs 清空运行时日志缓冲 |
 | `App.MoveToRecycle()` | `internal/app/app_install_recycle:17` | ========== 回收站 ========== |
-| `App.MoveToRecycleEx()` | `internal/app/app_install_recycle:38` | — |
-| `App.ClearCustomDir()` | `internal/app/app_install_recycle:91` | — |
-| `App.ListRecycleBin()` | `internal/app/app_install_recycle:161` | — |
-| `App.RestoreFromRecycle()` | `internal/app/app_install_recycle:178` | — |
-| `App.DeleteFromRecycle()` | `internal/app/app_install_recycle:199` | — |
-| `App.EmptyRecycleBin()` | `internal/app/app_install_recycle:215` | EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。 |
+| `App.MoveToRecycleEx()` | `internal/app/app_install_recycle:39` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ClearCustomDir()` | `internal/app/app_install_recycle:93` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ListRecycleBin()` | `internal/app/app_install_recycle:163` | — |
+| `App.RestoreFromRecycle()` | `internal/app/app_install_recycle:180` | — |
+| `App.DeleteFromRecycle()` | `internal/app/app_install_recycle:201` | — |
+| `App.EmptyRecycleBin()` | `internal/app/app_install_recycle:217` | EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。 |
 | `App.DetectLauncherInstances()` | `internal/app/app_launcher:10` | DetectLauncherInstances inspects a user-selected HMCL/PCL directory and returns the resolv |
 | `App.AnalyzeYSMModel()` | `internal/app/app_model:40` | — |
 | `App.ExtractYsmSummary()` | `internal/app/app_model:44` | — |
 | `App.ExtractYSMHeader()` | `internal/app/app_model:58` | — |
 | `App.ExtractYSMHeaderFromBase64()` | `internal/app/app_model:62` | — |
-| `App.SavePreviewTempFile()` | `internal/app/app_model:74` | — |
-| `App.ReadFileBytes()` | `internal/app/app_model:117` | — |
-| `App.ReadFileBytesBatch()` | `internal/app/app_model:139` | ReadFileBytesBatch 批量读取多个文件（ADR-101：MMD 纹理加载优化）。 |
-| `App.ReadFileBytesBatchWithMeta()` | `internal/app/app_model:244` | ReadFileBytesBatchWithMeta 批量读取文件并返回内容 + SHA256 哈希。 |
-| `App.AnalyzeBedrockModel()` | `internal/app/app_model:304` | — |
-| `App.AnalyzeBedrockModelEntry()` | `internal/app/app_model:366` | AnalyzeBedrockModelEntry 按 SubModel.SourcePath 只解析归档内单模型 geometry（多角色包角色切换用）。 |
-| `App.GetModel3DSpec()` | `internal/app/app_model:414` | — |
-| `App.Build3DSpecFromGeometryJSON()` | `internal/app/app_model:454` | Build3DSpecFromGeometryJSON 从 bedrock geometry JSON 构建 3D spec（纯 Go，无 Node 依赖）。 |
-| `App.SaveScreenshotFile()` | `internal/app/app_model:558` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
-| `ReadFileMeta()` | `internal/app/app_model:220` | ReadFileMeta 是 ReadFileBytesBatchWithMeta 的单个文件元信息。 |
+| `App.SavePreviewTempFile()` | `internal/app/app_model:75` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ReadFileBytes()` | `internal/app/app_model:118` | — |
+| `App.ReadFileBytesBatch()` | `internal/app/app_model:140` | ReadFileBytesBatch 批量读取多个文件（ADR-101：MMD 纹理加载优化）。 |
+| `App.ReadFileBytesBatchWithMeta()` | `internal/app/app_model:245` | ReadFileBytesBatchWithMeta 批量读取文件并返回内容 + SHA256 哈希。 |
+| `App.AnalyzeBedrockModel()` | `internal/app/app_model:305` | — |
+| `App.AnalyzeBedrockModelEntry()` | `internal/app/app_model:367` | AnalyzeBedrockModelEntry 按 SubModel.SourcePath 只解析归档内单模型 geometry（多角色包角色切换用）。 |
+| `App.GetModel3DSpec()` | `internal/app/app_model:415` | — |
+| `App.Build3DSpecFromGeometryJSON()` | `internal/app/app_model:455` | Build3DSpecFromGeometryJSON 从 bedrock geometry JSON 构建 3D spec（纯 Go，无 Node 依赖）。 |
+| `App.SaveScreenshotFile()` | `internal/app/app_model:559` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
+| `ReadFileMeta()` | `internal/app/app_model:221` | ReadFileMeta 是 ReadFileBytesBatchWithMeta 的单个文件元信息。 |
 | `App.ExportModelStructureJSON()` | `internal/app/app_scan:24` | ========== 导出单模型骨骼结构 ========== ExportModelStructureJSON 导出单模型骨骼结构 |
 | `App.SearchModels()` | `internal/app/app_scan:62` | ========== 高级搜索 ========== SearchModels 扫描模型条目后按关键词、骨骼数、立方体数、纹理尺寸范围过滤。 |
-| `App.SearchAllModels()` | `internal/app/app_scan:215` | SearchAllModels 跨类型搜索：遍历所有已配置资源类型的根目录，并发扫描 + 合并结果。 |
-| `App.ScanModelEntries()` | `internal/app/app_scan:304` | ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。 |
-| `App.ScanModelEntriesWithLabel()` | `internal/app/app_scan:326` | ScanModelEntriesWithLabel 同 ScanModelEntries，但操作日志附带资源类型标签 （如「资源包」「光影包」「模型」），便于在操作日志面板区分扫描 |
-| `App.ScanModelEntriesFiltered()` | `internal/app/app_scan:350` | ScanModelEntriesFiltered 同 ScanModelEntriesWithLabel，但额外按 rtype（+可选 subtype）的 extensions 注 |
-| `App.ClearScanCache()` | `internal/app/app_scan:401` | ClearScanCache 清除扫描缓存（下载/导入后调用） |
-| `App.ListModelAuthors()` | `internal/app/app_scan:409` | ListModelAuthors 统计 [作者] 前缀（轻量遍历：只看文件名，不读元数据不算哈希， 不占全量扫描缓存——原走 ScanEntries 会陪绑 SHA256，大库下拖 |
-| `App.GenerateRepoIndex()` | `internal/app/app_scan:418` | GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板） |
-| `App.ScanLocalAuthors()` | `internal/app/app_scan:429` | ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者 ScanLocalAuthors 扫描本地仓库的作者信息。 |
-| `App.ListVersionInstances()` | `internal/app/app_scan:441` | — |
-| `App.GetGlobalCustomDir()` | `internal/app/app_scan:445` | — |
-| `App.ListFileNames()` | `internal/app/app_scan:451` | — |
-| `App.ListAllFilePaths()` | `internal/app/app_scan:468` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
-| `App.CheckFileExists()` | `internal/app/app_scan:477` | — |
+| `App.SearchAllModels()` | `internal/app/app_scan:216` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ScanModelEntries()` | `internal/app/app_scan:305` | ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。 |
+| `App.ScanModelEntriesWithLabel()` | `internal/app/app_scan:327` | ScanModelEntriesWithLabel 同 ScanModelEntries，但操作日志附带资源类型标签 （如「资源包」「光影包」「模型」），便于在操作日志面板区分扫描 |
+| `App.ScanModelEntriesFiltered()` | `internal/app/app_scan:351` | ScanModelEntriesFiltered 同 ScanModelEntriesWithLabel，但额外按 rtype（+可选 subtype）的 extensions 注 |
+| `App.ClearScanCache()` | `internal/app/app_scan:402` | ClearScanCache 清除扫描缓存（下载/导入后调用） |
+| `App.ListModelAuthors()` | `internal/app/app_scan:410` | ListModelAuthors 统计 [作者] 前缀（轻量遍历：只看文件名，不读元数据不算哈希， 不占全量扫描缓存——原走 ScanEntries 会陪绑 SHA256，大库下拖 |
+| `App.GenerateRepoIndex()` | `internal/app/app_scan:419` | GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板） |
+| `App.ScanLocalAuthors()` | `internal/app/app_scan:430` | ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者 ScanLocalAuthors 扫描本地仓库的作者信息。 |
+| `App.ListVersionInstances()` | `internal/app/app_scan:442` | — |
+| `App.GetGlobalCustomDir()` | `internal/app/app_scan:447` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ListFileNames()` | `internal/app/app_scan:453` | — |
+| `App.ListAllFilePaths()` | `internal/app/app_scan:470` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
+| `App.CheckFileExists()` | `internal/app/app_scan:479` | — |
 | `App.DetectConflicts()` | `internal/app/app_sync:15` | DetectConflicts 检测指定整合包与全局仓库之间的文件冲突 rtype: 资源类型 ID instanceName: 整合包名称 返回冲突报告 JSON |
 | `App.ResolveConflicts()` | `internal/app/app_sync:59` | ResolveConflicts 批量解决冲突 conflictsJSON: 冲突列表 JSON（来自 DetectConflicts） defaultStrategy: 默认解决 |
 | `App.GetModelTags()` | `internal/app/app_tags:19` | GetModelTags 返回指定模型文件的所有标签 |
@@ -827,10 +827,10 @@
 | `App.AllTags()` | `internal/app/app_tags:43` | AllTags 返回所有被使用的标签（按使用次数降序） |
 | `App.GetCachedTexture()` | `internal/app/app_texture_cache:27` | GetCachedTexture 读取纹理文件，计算内容哈希，检查 KTX2 缓存。 |
 | `App.SaveCachedTexture()` | `internal/app/app_texture_cache:73` | SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。 |
-| `App.ClearTextureCache()` | `internal/app/app_texture_cache:82` | ClearTextureCache 清空纹理缓存（用户主动清理用）。 |
-| `App.HasCachedTexture()` | `internal/app/app_texture_cache:87` | HasCachedTexture 检查指定纹理的内容哈希是否已有 KTX2 缓存。 |
-| `App.GetCachedTextureByHash()` | `internal/app/app_texture_cache:94` | GetCachedTextureByHash 通过哈希直接读取 KTX2 缓存（不读取原始文件，轻量操作）。 |
-| `App.HasCachedTextures()` | `internal/app/app_texture_cache:107` | HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。 |
+| `App.ClearTextureCache()` | `internal/app/app_texture_cache:83` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.HasCachedTexture()` | `internal/app/app_texture_cache:88` | HasCachedTexture 检查指定纹理的内容哈希是否已有 KTX2 缓存。 |
+| `App.GetCachedTextureByHash()` | `internal/app/app_texture_cache:95` | GetCachedTextureByHash 通过哈希直接读取 KTX2 缓存（不读取原始文件，轻量操作）。 |
+| `App.HasCachedTextures()` | `internal/app/app_texture_cache:108` | HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。 |
 | `CachedTextureResult()` | `internal/app/app_texture_cache:18` | CachedTextureResult 是 GetCachedTexture 的返回值。 |
 | `App.DefaultWorkshopSites()` | `internal/app/app_workshop:104` | — |
 | `App.SaveWorkshopSites()` | `internal/app/app_workshop:115` | — |
@@ -840,14 +840,14 @@
 | `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:205` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
 | `App.LoadGitHubRepos()` | `internal/app/app_workshop:218` | — |
 | `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:229` | — |
-| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:250` | ========== CSV 导出/导入 ========== |
-| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:262` | — |
-| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:275` | — |
-| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:291` | — |
-| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:322` | — |
-| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:329` | — |
-| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:350` | — |
-| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:392` | — |
+| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:251` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:263` | — |
+| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:276` | — |
+| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:293` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:324` | — |
+| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:331` | — |
+| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:352` | — |
+| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:395` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
 | `NewApp()` | `internal/app/app:75` | — |
 | `App.SetApp()` | `internal/app/app:104` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
 | `App.GetYSMRepoRoot()` | `internal/app/app:107` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
@@ -892,33 +892,33 @@
 | `App.ReadNbtStructure()` | `internal/app/resource_bindings:124` | ReadNbtStructure 读取 .nbt 结构文件基本信息 |
 | `App.ReadLitematicMeta()` | `internal/app/resource_bindings:133` | ReadLitematicMeta 读取投影文件元数据（作者/时间/版本/方块统计/预览图） |
 | `App.GetLitematicVoxelData()` | `internal/app/resource_bindings:143` | GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置） |
-| `App.SetVoxelMaxBlocks()` | `internal/app/resource_bindings:148` | SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000 |
-| `App.DetectResourceType()` | `internal/app/resource_bindings:158` | DetectResourceType 检测指定文件的资源类型 |
-| `App.GetDefaultRepoRoot()` | `internal/app/resource_bindings:171` | GetDefaultRepoRoot 返回平台默认公共仓库根目录（不含类型子目录）。 |
-| `App.GetRepoRoot()` | `internal/app/resource_bindings:186` | GetRepoRoot 根据资源类型返回对应的仓库根目录 |
-| `App.GetAllRepoRoots()` | `internal/app/resource_bindings:218` | GetAllRepoRoots 遍历所有注册资源类型，返回 rtype → root 映射（供跨类型搜索）。 |
-| `App.EnsureStorageDirs()` | `internal/app/resource_bindings:242` | EnsureStorageDirs 预创建所有注册资源类型的存储子目录 （FilesRoot/{group}/{storageSubDir}，或各类型专属覆写路径）。 |
-| `App.ToggleResourcePack()` | `internal/app/resource_bindings:314` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） 补路径守卫——原实现 os.Rename 对任意路径可重命名（对齐 T |
-| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:352` | IsResourcePackEnabled 检查资源包是否启用 |
-| `App.SelectImportZip()` | `internal/app/resource_bindings:357` | SelectImportZip 打开文件选择器选取 .zip 文件 |
-| `App.SelectImportFile()` | `internal/app/resource_bindings:370` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
-| `App.SetResourceRoot()` | `internal/app/resource_bindings:392` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） ADR-095：写入 cfg.CustomRoots[rtype]；删除则清空该 key。 |
-| `App.ResetResourceRoot()` | `internal/app/resource_bindings:412` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
-| `App.ImportResourcePack()` | `internal/app/resource_bindings:449` | ImportResourcePack 使用策略模式导入资源包 |
-| `App.ImportByType()` | `internal/app/resource_bindings:462` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
-| `App.DeleteResourcePack()` | `internal/app/resource_bindings:482` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： 统一入口——根据 rtype.isDir 决定语义： isDir=true:  删除文件所在 |
-| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:551` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串）。 |
-| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:579` | CountDuplicateFiles 快速统计重复文件数量。 |
-| `App.InvalidateScanCache()` | `internal/app/resource_bindings:592` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
-| `App.RepoHealthAudit()` | `internal/app/resource_bindings:599` | RepoHealthAudit 一键全仓体检（审计 + 去重），返回 JSON 字符串。 |
-| `App.RepoHealthAuditAll()` | `internal/app/resource_bindings:620` | RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。 |
-| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:685` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
+| `App.SetVoxelMaxBlocks()` | `internal/app/resource_bindings:149` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.DetectResourceType()` | `internal/app/resource_bindings:159` | DetectResourceType 检测指定文件的资源类型 |
+| `App.GetDefaultRepoRoot()` | `internal/app/resource_bindings:172` | GetDefaultRepoRoot 返回平台默认公共仓库根目录（不含类型子目录）。 |
+| `App.GetRepoRoot()` | `internal/app/resource_bindings:187` | GetRepoRoot 根据资源类型返回对应的仓库根目录 |
+| `App.GetAllRepoRoots()` | `internal/app/resource_bindings:219` | GetAllRepoRoots 遍历所有注册资源类型，返回 rtype → root 映射（供跨类型搜索）。 |
+| `App.EnsureStorageDirs()` | `internal/app/resource_bindings:243` | EnsureStorageDirs 预创建所有注册资源类型的存储子目录 （FilesRoot/{group}/{storageSubDir}，或各类型专属覆写路径）。 |
+| `App.ToggleResourcePack()` | `internal/app/resource_bindings:316` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:355` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.SelectImportZip()` | `internal/app/resource_bindings:361` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.SelectImportFile()` | `internal/app/resource_bindings:374` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
+| `App.SetResourceRoot()` | `internal/app/resource_bindings:396` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） ADR-095：写入 cfg.CustomRoots[rtype]；删除则清空该 key。 |
+| `App.ResetResourceRoot()` | `internal/app/resource_bindings:416` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
+| `App.ImportResourcePack()` | `internal/app/resource_bindings:454` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ImportByType()` | `internal/app/resource_bindings:467` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
+| `App.DeleteResourcePack()` | `internal/app/resource_bindings:487` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： 统一入口——根据 rtype.isDir 决定语义： isDir=true:  删除文件所在 |
+| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:556` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串）。 |
+| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:585` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.InvalidateScanCache()` | `internal/app/resource_bindings:598` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
+| `App.RepoHealthAudit()` | `internal/app/resource_bindings:605` | RepoHealthAudit 一键全仓体检（审计 + 去重），返回 JSON 字符串。 |
+| `App.RepoHealthAuditAll()` | `internal/app/resource_bindings:626` | RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。 |
+| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:691` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
 | `App.ListPackModels()` | `internal/app/resourcepack_models:73` | ListPackModels 枚举资源包容器内的 block/item 模型 JSON 条目路径（升序）。 |
 | `App.ListPackModelsDetail()` | `internal/app/resourcepack_models:100` | ListPackModelsDetail 枚举资源包容器内的 block/item 模型（升序）+ 立方体数（elements 长度）。 |
 | `App.ReadPackEntry()` | `internal/app/resourcepack_models:166` | ReadPackEntry 读取容器内条目内容（base64 字符串）。 |
 | `PackModelDetail()` | `internal/app/resourcepack_models:27` | PackModelDetail 单模型清单项（path + 立方体数，供详情页模型清单区）。 |
 | `limitedBuffer.Write()` | `internal/app/wasm_decoder:86` | — |
-| `App.GetWasmBinary()` | `internal/app/wasm_embed:5` | GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。 |
+| `App.GetWasmBinary()` | `internal/app/wasm_embed:6` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
 
 ## 前端·根 (app-modules/bus)
 
@@ -2270,7 +2270,7 @@
 | `BedrockSubModel()` | `frontend/src/views/app-preview/geometry:19` | SubModel 子模型条目（Go types/bedrock.go SubModel）。 |
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:26` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:41` | 解析后的 Bedrock geometry |
-| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:85` | 从 JSON 字符串解析 Bedrock geometry |
+| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:95` | 从 JSON 字符串解析 Bedrock geometry |
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:89` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
 | `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:132` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:137` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
@@ -2349,7 +2349,7 @@
 | `ModelDetailMeta()` | `frontend/src/views/app-preview/tpl:6` | 模型统计元数据（modelDetailHTML 入参） |
 | `modelDetailHTML()` | `frontend/src/views/app-preview/tpl:20` | 模型详情面板（仓库页面） |
 | `StatsCardModel()` | `frontend/src/views/app-preview/tpl:58` | 模型统计卡片（statsCardHTML 入参的几何视图） |
-| `statsCardHTML()` | `frontend/src/views/app-preview/tpl:79` | 模型统计卡片 |
+| `statsCardHTML()` | `frontend/src/views/app-preview/tpl:88` | 模型统计卡片 |
 | `devLog()` | `frontend/src/views/app-preview/utils:6` | DEV 模式下输出调试日志 |
 | `DecodedYsm()` | `frontend/src/views/app-preview/utils:11` | WASM 解码结果（decodeYsmViaWasm 返回） |
 | `PreviewRoot()` | `frontend/src/views/app-preview/utils:32` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） |

@@ -93,6 +93,7 @@ type CacheStatus struct {
 type ResourceSummary struct {
 	TotalFiles  int            `json:"total_files"`
 	TotalSize   int64          `json:"total_size"`
+	Banned      int            `json:"banned"`
 	ByType      map[string]int `json:"by_type"`
 	LargestFile string         `json:"largest_file,omitempty"`
 	LargestSize int64          `json:"largest_size,omitempty"`
@@ -171,6 +172,11 @@ func Audit(dirPath string) (Result, error) {
 		size := info.Size()
 		result.Resources.TotalFiles++
 		totalSize += size
+
+		// 禁用文件统计：单一口径 types.IsDisableSuffix（.disabled/.ban，大小写不敏感）
+		if types.IsDisableSuffix(d.Name()) {
+			result.Resources.Banned++
+		}
 
 		if size > largestSize {
 			largestSize = size

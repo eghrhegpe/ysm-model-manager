@@ -7,6 +7,7 @@ const { mocks } = vi.hoisted(() => {
   const mocks = {
     ScanModelEntries: vi.fn(),
     GetRepoRoot: vi.fn(),
+    RepoHealthAudit: vi.fn(),
   };
   return { mocks };
 });
@@ -15,6 +16,7 @@ vi.mock("../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ScanModelEntriesWithLabel: mocks.ScanModelEntries,
     GetRepoRoot: mocks.GetRepoRoot,
+    RepoHealthAudit: mocks.RepoHealthAudit,
   }),
 }));
 
@@ -35,6 +37,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.1);
   mocks.GetRepoRoot.mockResolvedValue("/repo");
+  mocks.RepoHealthAudit.mockResolvedValue(auditReport());
   localStorage.setItem("repo_rtype", "ysm");
 });
 
@@ -48,6 +51,20 @@ afterEach(() => {
 
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/** 构造 RepoHealthAudit 合法返回（字段与 go/repoaudit.HealthReport JSON 对齐） */
+function auditReport(overrides: Record<string, unknown> = {}): string {
+  return JSON.stringify({
+    timestamp: "2026-08-30T00:00:00Z",
+    directory: "/repo",
+    score: 87,
+    completeness: { checked: 3, valid: 3, invalid: 0, percentage: 100 },
+    cache: { cache_dir: "", cache_files: 0, cache_size: 0, hit_rate: 0 },
+    resources: { total_files: 3, total_size: 1051136, banned: 1, by_type: {} },
+    dedup: { groups: 0, extra_files: 0, reclaim_bytes: 0 },
+    ...overrides,
+  });
 }
 
 const sampleEntries = [
@@ -122,8 +139,11 @@ describe("loadOldestModel", () => {
       (el) => el.getAttribute("data-path"),
     );
     expect(paths).toEqual(["/repo/oldest.ysm", "/repo/banned.ysm.ban", "/repo/new.ysm"]);
-    // 评分：3 个条目 1 个 ban → 100 - round(1/3*40)=100-13=87（精确锁定评分环数值）
+    // 评分/禁用/重复统计均来自 RepoHealthAudit（mock 报告 score=87, banned=1）
+    expect(mocks.RepoHealthAudit).toHaveBeenCalledWith("/repo");
     expect(html).toContain('oldest-health-ring-num">87<');
+    expect(html).toContain("🚫 1");
+    expect(html).toContain("🔗 0");
     cleanup();
   });
 
@@ -232,14 +252,14 @@ describe("loadOldestModel", () => {
   });
 
   it("低评分健康 + 重复分组：分数/徽章/重复统计正确", async () => {
-    const now = Date.now();
-    const dupEntries = [
-      { Name: "a.ysm.ban", Size: 10, Path: "/r/a.ysm.ban", Ext: ".ban", Hash: "hdup", ModTime: now - 1000 },
-      { Name: "b.ysm.ban", Size: 10, Path: "/r/b.ysm.ban", Ext: ".ban", Hash: "hdup", ModTime: now - 2000 },
-      { Name: "c.ysm.ban", Size: 10, Path: "/r/c.ysm.ban", Ext: ".ban", Hash: "hdup", ModTime: now - 3000 },
-      { Name: "d.ysm.ban", Size: 10, Path: "/r/d.ysm.ban", Ext: ".ban", Hash: "hdup", ModTime: now - 4000 },
-    ];
-    mocks.ScanModelEntries.mockResolvedValue(dupEntries);
+    mocks.RepoHealthAudit.mockResolvedValue(
+      auditReport({ score: 45, dedup: { groups: 1, extra_files: 3, reclaim_bytes: 30 } }),
+    );
+    mocks.ScanModelEntries.mockResolvedValue([
+      { Name: "a.ysm.ban", Size: 10, Path: "/r/a.ysm.ban", Ext: ".ban", ModTime: Date.now() - 1000 },
+      { Name: "b.ysm.ban", Size: 10, Path: "/r/b.ysm.ban", Ext: ".ban", ModTime: Date.now() - 2000 },
+      { Name: "c.ysm", Size: 10, Path: "/r/c.ysm", Ext: ".ysm", ModTime: Date.now() - 3000 },
+    ]);
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
@@ -247,10 +267,34 @@ describe("loadOldestModel", () => {
     await flush();
 
     const html = container.innerHTML;
-    // 4 ban → round(4/4*40)=40；1 组重复 3 个多余副本 → min(3*5,55)=15 → 100-55=45
+    // 分数/徽章直接来自 Go 审计报告（score=45, dedup.groups=1）
     expect(html).toContain('oldest-health-ring-num">45<');
     expect(html).toContain('health-tag bad');
     expect(html).toContain("🔗 1");
+    cleanup();
+  });
+
+  it("RepoHealthAudit 失败 → 显示错误信息", async () => {
+    mocks.RepoHealthAudit.mockRejectedValue(new Error("audit crashed"));
+    const { loadOldestModel } = await import("./oldest-models.ts");
+    const container = document.createElement("div");
+    const cleanup = await loadOldestModel(container, (s) => s);
+    await flush();
+    await flush();
+    expect(container.textContent).toContain("加载失败");
+    expect(container.textContent).toContain("audit crashed");
+    cleanup();
+  });
+
+  it("RepoHealthAudit 返回后端业务错误 → 显示错误信息", async () => {
+    mocks.RepoHealthAudit.mockResolvedValue(JSON.stringify({ error: "审计目录不可用" }));
+    const { loadOldestModel } = await import("./oldest-models.ts");
+    const container = document.createElement("div");
+    const cleanup = await loadOldestModel(container, (s) => s);
+    await flush();
+    await flush();
+    expect(container.textContent).toContain("加载失败");
+    expect(container.textContent).toContain("审计目录不可用");
     cleanup();
   });
 

@@ -4,6 +4,7 @@ import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { t } from "./i18n/t.ts";
+import { tr } from "./i18n/tr.ts";
 import { getApp } from "../backend/app.ts";
 import { modalConfirm, modalSelect } from "../utils/dom/dialogs/modal.ts";
 import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
@@ -39,28 +40,65 @@ function makeBusy() {
   };
 }
 
+/** batch 批量操作模板（i18n key 集中定义——toast/弹窗文案不再散落 handler 字面量） */
+type BatchMode = "move" | "copy";
+const BATCH_TPL: Record<BatchMode, {
+  icon: string;
+  progress: string;
+  okAll: string;
+  okPartial: string;
+  failAll: string;
+  dialogTitle: string;
+  dialogOk: string;
+  emptyMsg: string;
+}> = {
+  move: {
+    icon: "📂",
+    progress: "ctx.moveProgress",
+    okAll: "ctx.moveOkAll",
+    okPartial: "ctx.moveOkPartial",
+    failAll: "ctx.moveFailAll",
+    dialogTitle: "ctx.moveDialogTitle",
+    dialogOk: "ctx.moveDialogOk",
+    emptyMsg: "ctx.emptyMoveRoot",
+  },
+  copy: {
+    icon: "📋",
+    progress: "ctx.copyProgress",
+    okAll: "ctx.copyOkAll",
+    okPartial: "ctx.copyOkPartial",
+    failAll: "ctx.copyFailAll",
+    dialogTitle: "ctx.copyDialogTitle",
+    dialogOk: "ctx.copyDialogOk",
+    emptyMsg: "ctx.emptyCopyRoot",
+  },
+};
+
 async function runBatchFileOp(
   ctx: MenuCtx,
   op: {
-    verb: string;
+    mode: BatchMode;
     binding: "MoveModelFile" | "CopyModelFile";
-    dialog: { title: string; icon: string; okText: string; emptyMsg: string };
-    partialFailMsg: string;
-    allFailMsg: string;
     busy: ReturnType<typeof makeBusy>;
   },
 ): Promise<void> {
   if (!op.busy.tryStart()) {
-    toast("⏳ 操作进行中，请稍候", TOAST_MS.quick, "info");
+    toast(tr("ctx.busyWait", "⏳ Operation in progress, please wait"), TOAST_MS.quick, "info");
     return;
   }
+  const tpl = BATCH_TPL[op.mode];
   try {
-    const resolved = await resolveDstDir(op.dialog, ctx.rtype);
+    const resolved = await resolveDstDir({
+      title: tr(tpl.dialogTitle, "Move to Folder"),
+      icon: tpl.icon,
+      okText: tr(tpl.dialogOk, "Move"),
+      emptyMsg: tr(tpl.emptyMsg, "❌ Configure a storage path first"),
+    }, ctx.rtype);
     if (!resolved) return;
     const { folder, dstDir } = resolved;
     const app = await getApp();
     const fn = app[op.binding];
-    toast(`📦 正在${op.verb} ${ctx.paths.length} 个文件到 ${folder}...`, TOAST_MS.normal);
+    toast(tr(tpl.progress, "📦 Moving {n} files to {folder}...", { n: ctx.paths.length, folder }), TOAST_MS.normal);
     let ok = 0;
     let fail = 0;
     for (const p of ctx.paths) {
@@ -69,17 +107,18 @@ async function runBatchFileOp(
         ok++;
       } catch (e) {
         fail++;
-        dbg(`batch-${op.verb}-fail`, p, e);
+        dbg(`batch-${op.mode}-fail`, p, e);
       }
     }
     if (ok > 0) {
-      toast(fail > 0
-          ? `✅ ${ok} 个已${op.verb} / ❌ ${fail} 失败${op.partialFailMsg ? `（${op.partialFailMsg}）` : ""}`
-          : `✅ ${ok} 个文件已${op.verb}到 ${folder}`,
+      toast(
+        fail > 0
+          ? tr(tpl.okPartial, "✅ {ok} moved / ❌ {fail} failed", { ok, fail })
+          : tr(tpl.okAll, "✅ Moved {n} files to {folder}", { n: ctx.paths.length, folder }),
         4000,
       );
     } else {
-      toast(`❌ ${op.allFailMsg}`, TOAST_MS.verbose, "error");
+      toast(tr(tpl.failAll, "❌ Move failed"), TOAST_MS.verbose, "error");
     }
     refreshUI();
   } catch (e) {
@@ -105,7 +144,7 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   // ── instance ──
   "instance.open-folder": async (ctx) => {
     if (!ctx.path) {
-      toast("❌ 整合包目录未找到", TOAST_MS.normal, "error");
+      toast(tr("ctx.missingPath", "❌ Pack directory not found"), TOAST_MS.normal, "error");
       return;
     }
     try {
@@ -114,7 +153,7 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       // subdir 参数保留为 Wails 绑定兼容，已不参与路由
       await OpenInstanceFolder(ctx.path, ctx.rtype || "", ctx.subdir || "");
     } catch (e) {
-      toastError(e, "打开文件夹失败");
+      toastError(e, tr("ctx.openFolderFail", "Failed to open folder"));
     }
   },
   "instance.export-list": (ctx) => {
@@ -144,33 +183,27 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   "batch.rename": (ctx) => bus.emit("batch:rename", { paths: ctx.paths }),
   "batch.move": (ctx) =>
     runBatchFileOp(ctx, {
-      verb: "移动",
+      mode: "move",
       binding: "MoveModelFile",
-      dialog: { title: "移动到文件夹", icon: "📂", okText: "移动", emptyMsg: "❌ 请先配置存储路径" },
-      partialFailMsg: "",
-      allFailMsg: "移动失败",
       busy: moveBusy,
     }),
   "batch.copy": (ctx) =>
     runBatchFileOp(ctx, {
-      verb: "复制",
+      mode: "copy",
       binding: "CopyModelFile",
-      dialog: { title: "复制到文件夹", icon: "📋", okText: "复制", emptyMsg: "❌ 请先配置仓库目录" },
-      partialFailMsg: "可能目标已存在",
-      allFailMsg: "复制失败（可能目标已存在）",
       busy: copyBusy,
     }),
   "batch.recycle": async (ctx) => {
     if (!recycleBusy.tryStart()) {
-      toast("⏳ 操作进行中，请稍候", TOAST_MS.quick, "info");
+      toast(tr("ctx.busyWait", "⏳ Operation in progress, please wait"), TOAST_MS.quick, "info");
       return;
     }
     try {
       const ok2 = await modalConfirm({
-        title: "批量移入回收站",
+        title: tr("ctx.recycleTitle", "Recycle Selected"),
         icon: "♻️",
-        message: `确定将选中的 ${ctx.count || 0} 个文件移入回收站？`,
-        okText: "♻️ 移入",
+        message: tr("ctx.recycleConfirm", "Move {n} selected files to recycle bin?", { n: ctx.count || 0 }),
+        okText: tr("ctx.recycleOkText", "♻️ Recycle"),
         danger: true,
       });
       if (!ok2) return;
@@ -186,9 +219,12 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
         }
       }
       if (fail > 0) {
-        toast(`❌ ${fail} 个文件移入回收站失败：${friendlyError(lastErr, "移动失败")}`, TOAST_MS.long, "error");
+        toast(tr("ctx.recycleFailN", "❌ Failed to recycle {fail} files: {err}", {
+          fail,
+          err: friendlyError(lastErr, tr("ctx.moveFail", "Move failed")),
+        }), TOAST_MS.long, "error");
       } else {
-        toast(`✅ ${ctx.paths.length} 个文件已移入回收站`, TOAST_MS.normal);
+        toast(tr("ctx.recycleOkN", "✅ Moved {n} files to recycle bin", { n: ctx.paths.length }), TOAST_MS.normal);
       }
       refreshUI();
     } catch (e) {
@@ -215,6 +251,6 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       .join("\n");
     // DOM 职责下沉（utils/dom/download-text.ts）——handler 不再直接操作 document/URL
     downloadTextFile(names, `model-list-${new Date().toISOString().slice(0, 10)}.txt`);
-    toast(`✅ 已导出 ${ctx.paths.length} 个文件名`, TOAST_MS.success);
+    toast(tr("ctx.exportListOk", "✅ Exported {n} file names", { n: ctx.paths.length }), TOAST_MS.success);
   },
 };

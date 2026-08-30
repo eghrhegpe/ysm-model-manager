@@ -17,7 +17,7 @@ describe("tr(key, fallback) — i18n 缺失键兜底", () => {
   it("键存在时返回翻译结果（不取 fallback）", () => {
     tMock.mockReturnValue("打开文件夹");
     expect(tr("menu.openFolder", "Open Folder")).toBe("打开文件夹");
-    expect(tMock).toHaveBeenCalledWith("menu.openFolder");
+    expect(tMock).toHaveBeenCalledWith("menu.openFolder", undefined);
   });
 
   it("键缺失（t 返回 key 本身）时走 fallback", () => {
@@ -29,6 +29,15 @@ describe("tr(key, fallback) — i18n 缺失键兜底", () => {
   it("键缺失 + 无 fallback 时返回 key（保底，不抛错）", () => {
     tMock.mockImplementation((key) => key);
     expect(tr("menu.nonexistent", "")).toBe("");
+  });
+
+  it("键存在 + 带插值参数时透传 t(key, params)", () => {
+    // tr 三参签名：key, fallback, params——透传 t(key, params) 插值 {n}
+    tMock.mockImplementation((key: string, params?: Record<string, string | number>) =>
+      `已复制 ${params?.n} 个路径`,
+    );
+    expect(tr("ctx.copyPathsOk", "Copied {n} paths", { n: 3 })).toBe("已复制 3 个路径");
+    expect(tMock).toHaveBeenCalledWith("ctx.copyPathsOk", { n: 3 });
   });
 
   it("fallback 与键翻译相同时仍返回翻译（不取 fallback）", () => {

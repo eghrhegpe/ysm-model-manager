@@ -81,7 +81,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 144 |
+| `frontend/src/core/context-menu-handlers.ts` | 183 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -108,7 +108,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-dir-handlers.ts` | 12 |
+| `frontend/src/core/context-menu-dir-handlers.ts` | 13 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -120,7 +120,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-dir-handlers.ts` | 49 |
+| `frontend/src/core/context-menu-dir-handlers.ts` | 50 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -132,7 +132,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-dir-handlers.ts` | 50 |
+| `frontend/src/core/context-menu-dir-handlers.ts` | 51 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -144,7 +144,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-dir-handlers.ts` | 10 |
+| `frontend/src/core/context-menu-dir-handlers.ts` | 11 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -156,7 +156,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 137 |
+| `frontend/src/core/context-menu-handlers.ts` | 176 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -168,7 +168,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 127 |
+| `frontend/src/core/context-menu-handlers.ts` | 166 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -303,7 +303,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-shared.ts` | 19 |
+| `frontend/src/core/context-menu-shared.ts` | 20 |
 | `frontend/src/core/handlers/android-events.ts` | 66 |
 | `frontend/src/core/handlers/instance-ops.ts` | 150 |
 | `frontend/src/core/handlers/sync.ts` | 86 |
@@ -384,9 +384,9 @@
 | `frontend/src/app-modules.ts` | 78 |
 | `frontend/src/app-modules.ts` | 88 |
 | `frontend/src/app-modules.ts` | 119 |
-| `frontend/src/core/context-menu-shared.ts` | 24 |
-| `frontend/src/core/context-menu-shared.ts` | 67 |
-| `frontend/src/core/context-menu-shared.ts` | 77 |
+| `frontend/src/core/context-menu-shared.ts` | 25 |
+| `frontend/src/core/context-menu-shared.ts` | 68 |
+| `frontend/src/core/context-menu-shared.ts` | 78 |
 | `frontend/src/core/handlers/android-events.ts` | 25 |
 | `frontend/src/core/handlers/android-events.ts` | 42 |
 | `frontend/src/core/handlers/instance-ops.ts` | 36 |
@@ -590,7 +590,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-shared.ts` | 18 |
+| `frontend/src/core/context-menu-shared.ts` | 19 |
 | `frontend/src/core/handlers/android-events.ts` | 65 |
 | `frontend/src/core/handlers/sync.ts` | 134 |
 | `frontend/src/core/handlers/sync.ts` | 247 |

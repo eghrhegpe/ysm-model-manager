@@ -1066,16 +1066,16 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `DIR_HANDLERS()` | `frontend/src/core/context-menu-dir-handlers:9` | dir 类 handler 子表 |
-| `FILE_HANDLERS()` | `frontend/src/core/context-menu-file-handlers:13` | file 类 handler 子表 |
-| `MenuCtx()` | `frontend/src/core/context-menu-handlers:97` | — |
-| `HANDLERS()` | `frontend/src/core/context-menu-handlers:100` | 行为 handler 表（instance + batch + merge file/dir） |
-| `refreshUI()` | `frontend/src/core/context-menu-shared:17` | 通知树组件和统计面板刷新 |
-| `toast()` | `frontend/src/core/context-menu-shared:23` | 显示 toast 通知 |
-| `toastError()` | `frontend/src/core/context-menu-shared:31` | 错误 toast（`❌ ${friendlyError(e)}` 模板收敛——instance-ops / settings/init 等 catch 块共用）。 |
-| `toastEmptyRtype()` | `frontend/src/core/context-menu-shared:36` | rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） |
-| `isUnsafeFolderName()` | `frontend/src/core/context-menu-shared:41` | 路径安全过滤：禁止逃逸段（. |
-| `resolveDstDir()` | `frontend/src/core/context-menu-shared:53` | 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）。 |
+| `DIR_HANDLERS()` | `frontend/src/core/context-menu-dir-handlers:10` | dir 类 handler 子表 |
+| `FILE_HANDLERS()` | `frontend/src/core/context-menu-file-handlers:14` | file 类 handler 子表 |
+| `MenuCtx()` | `frontend/src/core/context-menu-handlers:136` | — |
+| `HANDLERS()` | `frontend/src/core/context-menu-handlers:139` | 行为 handler 表（instance + batch + merge file/dir） |
+| `refreshUI()` | `frontend/src/core/context-menu-shared:18` | 通知树组件和统计面板刷新 |
+| `toast()` | `frontend/src/core/context-menu-shared:24` | 显示 toast 通知 |
+| `toastError()` | `frontend/src/core/context-menu-shared:32` | 错误 toast（`❌ ${friendlyError(e)}` 模板收敛——instance-ops / settings/init 等 catch 块共用）。 |
+| `toastEmptyRtype()` | `frontend/src/core/context-menu-shared:37` | rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） |
+| `isUnsafeFolderName()` | `frontend/src/core/context-menu-shared:42` | 路径安全过滤：禁止逃逸段（. |
+| `resolveDstDir()` | `frontend/src/core/context-menu-shared:54` | 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）。 |
 | `registerContextMenus()` | `frontend/src/core/context-menus:55` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:29` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:51` | 注册 UI 报错落日记功能。 |
@@ -1096,7 +1096,7 @@
 | `ja()` | `frontend/src/core/i18n/locales/ja:5` | — |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
-| `tr()` | `frontend/src/core/i18n/tr:17` | i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。 |
+| `tr()` | `frontend/src/core/i18n/tr:18` | i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。 |
 | `MenuDef()` | `frontend/src/core/menu-defs:34` | 单类菜单的完整声明 |
 | `MENU_DEFS()` | `frontend/src/core/menu-defs:40` | 四类右键菜单的声明式规格（唯一事实来源） |
 | `getMenuDef()` | `frontend/src/core/menu-defs:128` | 测试辅助：按 type 取声明（不存在返回 undefined） |

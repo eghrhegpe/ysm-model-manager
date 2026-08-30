@@ -12,9 +12,14 @@ import { t } from "./t.ts";
  * i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。
  * @param key - 翻译键（如 "menu.openFolder"）
  * @param fallback - 键缺失时的兜底字符串（建议用英文/原 key 之外的稳定文案）
+ * @param params - 插值参数，透传 t(key, params)（同 t 的 {n} 语法）
  * @returns 翻译结果；缺失则返回 fallback
  */
-export function tr(key: string, fallback: string): string {
-  const v = t(key);
+export function tr(
+  key: string,
+  fallback: string,
+  params?: Record<string, string | number>,
+): string {
+  const v = t(key, params);
   return v === key ? fallback : v;
 }

@@ -10,6 +10,7 @@ import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { t } from "./i18n/t.ts";
+import { tr } from "./i18n/tr.ts";
 
 type ToastType = NonNullable<ToastPayload["type"]>;
 
@@ -59,13 +60,13 @@ export async function resolveDstDir(opts: {
   const folder = await modalPrompt({
     title: opts.title,
     icon: opts.icon,
-    placeholder: "输入目标文件夹名，如 [作者名]",
+    placeholder: tr("ctx.dstPlaceholder", "Enter target folder name, e.g. [author]"),
     okText: opts.okText,
   });
   if (!folder) return null;
   if (isUnsafeFolderName(folder)) {
     bus.emit("toast:show", {
-      msg: "❌ 文件夹名包含非法字符",
+      msg: tr("ctx.unsafeFolderName", "❌ Folder name contains illegal characters"),
       duration: TOAST_MS.normal,
       type: "error",
     });

@@ -4,6 +4,7 @@ import { getApp } from "../backend/app.ts";
 import { modalConfirm, modalSelect } from "../utils/dom/dialogs/modal.ts";
 import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
 import { modalTagEditor } from "../utils/dom/dialogs/tag-editor.ts";
+import { tr } from "./i18n/tr.ts";
 import { refreshUI, toast, toastError, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
@@ -15,7 +16,7 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     try {
       const fileName = (ctx.path || "").split(/[/\\]/).pop() || "";
       if (fileName.toLowerCase() === "ysm.json") {
-        toast("ysm.json 是模型目录清单，请右键所在文件夹「重命名」（整组操作）",
+        toast(tr("ctx.renameYsmJson", "ysm.json is the model directory manifest — right-click its folder and choose 'Rename'"),
           4000,
           "warn",
         );
@@ -27,43 +28,43 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       await RenameFile(ctx.path || "", newName);
       refreshUI();
     } catch (e) {
-      toastError(e, "重命名失败");
+      toastError(e, tr("ctx.renameFail", "Rename failed"));
     }
   },
   "file.move": async (ctx) => {
     try {
       const resolved = await resolveDstDir({
-        title: "移动到文件夹",
+        title: tr("ctx.moveDialogTitle", "Move to Folder"),
         icon: "📂",
-        okText: "移动",
-        emptyMsg: "❌ 请先配置存储路径",
+        okText: tr("ctx.moveDialogOk", "Move"),
+        emptyMsg: tr("ctx.emptyMoveRoot", "❌ Configure a storage path first"),
       }, ctx.rtype);
       if (!resolved) return;
       const { folder, dstDir } = resolved;
       const { MoveModelFile } = await getApp();
       await MoveModelFile(ctx.path || "", dstDir);
-      toast(`✅ 已移动到 ${folder}`, TOAST_MS.normal);
+      toast(tr("ctx.fileMoveOk", "✅ Moved to {folder}", { folder }), TOAST_MS.normal);
       refreshUI();
     } catch (e) {
-      toastError(e, "移动失败");
+      toastError(e, tr("ctx.moveFail", "Move failed"));
     }
   },
   "file.copy": async (ctx) => {
     try {
       const resolved = await resolveDstDir({
-        title: "复制到文件夹",
+        title: tr("ctx.copyDialogTitle", "Copy to Folder"),
         icon: "📋",
-        okText: "复制",
-        emptyMsg: "❌ 请先配置仓库目录",
+        okText: tr("ctx.copyDialogOk", "Copy"),
+        emptyMsg: tr("ctx.emptyCopyRoot", "❌ Configure a repository directory first"),
       }, ctx.rtype);
       if (!resolved) return;
       const { folder, dstDir } = resolved;
       const { CopyModelFile } = await getApp();
       await CopyModelFile(ctx.path || "", dstDir);
-      toast(`✅ 已复制到 ${folder}`, TOAST_MS.normal);
+      toast(tr("ctx.fileCopyOk", "✅ Copied to {folder}", { folder }), TOAST_MS.normal);
       refreshUI();
     } catch (e) {
-      toastError(e, "复制失败");
+      toastError(e, tr("ctx.copyFail", "Copy failed"));
     }
   },
   "file.push-to-pack": async (ctx) => {
@@ -72,49 +73,51 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       if (!mcRoot) {
-        toast("请先配置游戏目录", TOAST_MS.success, "warn");
+        toast(tr("ctx.pushNoMcRoot", "Configure the game directory first"), TOAST_MS.success, "warn");
         return;
       }
       const instances = (await ListVersionInstances(mcRoot)) ?? [];
       if (!instances.length) {
-        toast("未找到任何整合包", TOAST_MS.success, "warn");
+        toast(tr("ctx.pushNoInstances", "No packs found"), TOAST_MS.success, "warn");
         return;
       }
       const names = instances.map((i) => i.Name);
       const chosen = await modalSelect({
-        title: "推送到整合包",
+        title: tr("ctx.pushDialogTitle", "Push to Pack"),
         icon: "📦",
         items: names,
-        okText: "📦 推送",
+        okText: tr("ctx.pushOkText", "📦 Push"),
       });
       if (!chosen) return;
       const match = instances.find((i) => i.Name === chosen);
       if (!match) return;
       try {
         await InstallModelTo(ctx.path || "", match.CustomDir);
-        toast(`✅ 已推送到 ${chosen}`, TOAST_MS.success);
+        toast(tr("ctx.pushOk", "✅ Pushed to {pack}", { pack: chosen }), TOAST_MS.success);
       } catch (e) {
-        toastError(e, "推送失败");
+        toastError(e, tr("ctx.pushFail", "Push failed"));
       }
     } catch (e) {
-      toastError(e, "推送失败");
+      toastError(e, tr("ctx.pushFail", "Push failed"));
     }
   },
   "file.edit-tags": async (ctx) => {
     try {
       const result = await modalTagEditor(ctx.path || "");
-      if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, TOAST_MS.success);
+      if (result) toast(tr("ctx.tagsSaved", "🏷️ Saved {n} tags", { n: result.length }), TOAST_MS.success);
     } catch (e) {
-      toastError(e, "标签编辑失败");
+      toastError(e, tr("ctx.tagsFail", "Failed to edit tags"));
     }
   },
   "file.recycle": async (ctx) => {
     try {
       const ok2 = await modalConfirm({
-        title: "移入回收站",
+        title: tr("ctx.fileRecycleTitle", "Recycle"),
         icon: "♻️",
-        message: `确定将 ${(ctx.path || "").split(/[/\\]/).pop()} 移入回收站？`,
-        okText: "♻️ 移入",
+        message: tr("ctx.fileRecycleConfirm", "Move {name} to recycle bin?", {
+          name: (ctx.path || "").split(/[/\\]/).pop() || "",
+        }),
+        okText: tr("ctx.recycleOkText", "♻️ Recycle"),
         danger: true,
       });
       if (!ok2) return;
@@ -123,10 +126,10 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
         await MoveToRecycle(ctx.path || "");
         refreshUI();
       } catch (e) {
-        toastError(e, "移入回收站失败");
+        toastError(e, tr("ctx.recycleFail", "Failed to recycle"));
       }
     } catch (e) {
-      toastError(e, "移入回收站失败");
+      toastError(e, tr("ctx.recycleFail", "Failed to recycle"));
     }
   },
   "file.reveal": async (ctx) => {
@@ -134,7 +137,7 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       const { RevealInExplorer } = await getApp();
       await RevealInExplorer(ctx.path || "");
     } catch (e) {
-      toastError(e, "打开失败");
+      toastError(e, tr("ctx.revealFail", "Failed to open"));
     }
   },
   "file.copy-path": async (ctx) => {
@@ -142,7 +145,7 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     // 与 batch.copy-paths 同一实现——不再手写 navigator/textarea 双路径
     const ok = await copyText(ctx.path || "");
     toast(
-      ok ? "✅ 路径已复制到剪贴板" : "❌ 复制失败，请手动复制路径",
+      ok ? tr("ctx.copyPathOk", "✅ Path copied to clipboard") : tr("ctx.copyPathFail", "❌ Copy failed, please copy the path manually"),
       ok ? TOAST_MS.success : TOAST_MS.normal,
       ok ? undefined : "error",
     );

@@ -11,10 +11,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
@@ -339,35 +337,6 @@ func (a *App) ScanModelEntriesWithLabel(dir string, label string) []types.ModelE
 	return entries
 }
 
-// containerTypeCache 容器类型指纹缓存（path → fingerprint）：
-// ScanModelEntriesFiltered 每次类型 tab 渲染都调用，容器条目（.zip/.7z）逐次
-// DetectResourceType 会重开归档——文件未变时复用指纹，避免 N 个归档每次全重扫
-// （code review P3，conf 0.50→核实成立：前端 scanModelsByType 每次 tab 渲染调用）
-var containerTypeCache sync.Map
-
-type containerFingerprint struct {
-	modTime  time.Time
-	size     int64
-	detected string
-}
-
-// cachedContainerType 返回容器真实类型（带文件指纹缓存）；文件变化（modtime/size）时重核验
-func cachedContainerType(path string, registry *types.ResourceTypeRegistry) string {
-	info, err := os.Stat(path)
-	if err != nil {
-		return ""
-	}
-	if v, ok := containerTypeCache.Load(path); ok {
-		fp := v.(containerFingerprint)
-		if fp.modTime.Equal(info.ModTime()) && fp.size == info.Size() {
-			return fp.detected
-		}
-	}
-	detected := packs.DetectResourceType(path, registry)
-	containerTypeCache.Store(path, containerFingerprint{modTime: info.ModTime(), size: info.Size(), detected: detected})
-	return detected
-}
-
 // ScanModelEntriesFiltered 同 ScanModelEntriesWithLabel，但额外按 rtype（+可选 subtype）的 extensions
 // 注册表做类型特定扩展名过滤。前端预览菜单切换模型场景用——EntityPlayer 类型需排除
 // .vmd/.vpd 动作文件，仅保留 .pmx/.pmd/.zip 模型/容器文件。
@@ -378,6 +347,7 @@ func cachedContainerType(path string, registry *types.ResourceTypeRegistry) stri
 // rtype 为空或注册表无匹配时退化为 ScanModelEntriesWithLabel 行为（不过滤）。
 // 路径守卫与 ScanModelEntries/ScanModelEntriesWithLabel 完全一致。
 func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string, label string) []types.ModelEntry {
+	a.ensureContainerCache() // 兜底：测试用 repoApp 不经 NewApp 构造时惰性初始化
 	if !a.isPathInRootOrSelf(dir) {
 		return nil
 	}
@@ -407,7 +377,7 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 			// 禁用容器泄漏进所有含 .zip 的 tab 标 Type=rtype）。
 			// 非容器扩展名维持扩展名白名单直接收的旧行为。
 			if types.IsContainerExt(ext) {
-				if detected := cachedContainerType(e.Path, registry); detected != rtype {
+				if detected := a.containerCache.Get(e.Path, registry); detected != rtype {
 					continue
 				}
 			}
@@ -428,8 +398,9 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 
 // ClearScanCache 清除扫描缓存（下载/导入后调用）
 func (a *App) ClearScanCache() {
+	a.ensureContainerCache() // 兜底：容器指纹缓存组件随扫描缓存一起失效
 	scanner.InvalidateCache()
-	containerTypeCache.Clear() // code review P3：容器指纹随扫描缓存一起失效（下载/导入后）
+	a.containerCache.Clear() // code review P3：容器指纹随扫描缓存一起失效（下载/导入后）
 }
 
 // ListModelAuthors 统计 [作者] 前缀（轻量遍历：只看文件名，不读元数据不算哈希，

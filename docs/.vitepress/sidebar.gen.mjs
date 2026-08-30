@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-134：将 containerTypeCache 包级全局收进组件（破隐藏耦合）",
+        "link": "/adr/ADR-134-container-type-cache-component"
+      },
+      {
         "text": "ADR-133：契约测试真实性：从存在性门禁升级为消费性校验",
         "link": "/adr/ADR-133-testid-contract-authenticity"
       },

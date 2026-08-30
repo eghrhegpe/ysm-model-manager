@@ -38,20 +38,21 @@ func requireMcRoot(cfg types.AppConfig) error {
 }
 
 type App struct {
-	LinkMode      string
-	logger        *logs.Logger
-	runtimeLogs   *logs.RuntimeBuffer
-	watcher       *watcher.Watcher
-	queue         *DownloadQueue
-	tagsStore     *tags.Store
-	tagsStoreOnce sync.Once
-	configCache   types.AppConfig
-	configLoaded  bool
-	configMu      sync.RWMutex
-	linkModeMu    sync.RWMutex
-	watcherMu     sync.Mutex
-	app           *application.App
-	mainWindow    *application.WebviewWindow
+	LinkMode       string
+	logger         *logs.Logger
+	runtimeLogs    *logs.RuntimeBuffer
+	watcher        *watcher.Watcher
+	queue          *DownloadQueue
+	containerCache *containerTypeCache // ADR-134：容器类型指纹缓存组件（原包级全局抽离）
+	tagsStore      *tags.Store
+	tagsStoreOnce  sync.Once
+	configCache    types.AppConfig
+	configLoaded   bool
+	configMu       sync.RWMutex
+	linkModeMu     sync.RWMutex
+	watcherMu      sync.Mutex
+	app            *application.App
+	mainWindow     *application.WebviewWindow
 
 	// Plaza browser window (ADR-050)
 	plazaWin           *application.WebviewWindow
@@ -92,6 +93,9 @@ func NewApp() *App {
 		func(name string, args ...interface{}) { a.app.Event.Emit(name, args...) },
 		a.AddOpLog,
 	)
+	// ADR-134：容器类型指纹缓存组件（原 app_scan.go 包级全局抽离），
+	// 默认探测指向 packs.DetectResourceType，组装点显式注入（依赖可见）
+	a.containerCache = newContainerTypeCache(defaultDetectFn)
 	return a
 }
 

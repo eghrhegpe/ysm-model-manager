@@ -38,7 +38,7 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 26 |
-| Go(internal)·应用入口 | 31 | 222 |
+| Go(internal)·应用入口 | 31 | 223 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 19 | 39 |
@@ -50,7 +50,7 @@
 | frontend/views | 122 | 360 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **526** | **2253** |
+| **合计** | **526** | **2254** |
 
 ## Go·头像
 
@@ -697,25 +697,26 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `App.CachedCreatorAvatar()` | `internal/app/app_avatar:18` | CachedCreatorAvatar 检查缓存中是否有作者头像，返回 data URI |
-| `App.BatchExtractCreatorAvatars()` | `internal/app/app_avatar:23` | BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像 |
-| `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:76` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
-| `App.CacheModelAvatars()` | `internal/app/app_avatar:131` | CacheModelAvatars 从模型文件缓存作者头像（覆盖 .ysm/.zip/.json 等所有格式） |
+| `App.CachedCreatorAvatar()` | `internal/app/app_avatar:17` | CachedCreatorAvatar 检查缓存中是否有作者头像，返回 data URI |
+| `App.BatchExtractCreatorAvatars()` | `internal/app/app_avatar:22` | BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像 |
+| `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:74` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
+| `App.CacheModelAvatars()` | `internal/app/app_avatar:129` | CacheModelAvatars 从模型文件缓存作者头像（覆盖 .ysm/.zip/.json 等所有格式） |
 | `App.GetConfigPath()` | `internal/app/app_config:62` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
 | `App.SaveAppConfig()` | `internal/app/app_config:134` | — |
 | `App.SetDownloadMirror()` | `internal/app/app_config:204` | — |
 | `App.SaveThresholds()` | `internal/app/app_config:213` | SaveThresholds 保存运行阈值配置（ADR-062 §2.3：前端设置页写入入口）。 |
-| `App.LoadAppConfig()` | `internal/app/app_config:245` | — |
-| `App.GetSubDirMap()` | `internal/app/app_config:268` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
-| `App.CurrentVersion()` | `internal/app/app_config:272` | — |
-| `App.CheckUpdate()` | `internal/app/app_config:274` | — |
-| `App.DoUpdate()` | `internal/app/app_config:301` | — |
-| `App.RestartApplication()` | `internal/app/app_config:319` | — |
-| `App.SaveWindowPosition()` | `internal/app/app_config:354` | — |
-| `App.GetWindowPosition()` | `internal/app/app_config:368` | — |
-| `App.SelectDirectory()` | `internal/app/app_config:401` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:464` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:466` | — |
+| `App.SetSessionFilesRoot()` | `internal/app/app_config:245` | SetSessionFilesRoot CLI 会话级覆写 FilesRoot（仅内存，不落盘）。 |
+| `App.LoadAppConfig()` | `internal/app/app_config:260` | — |
+| `App.GetSubDirMap()` | `internal/app/app_config:283` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
+| `App.CurrentVersion()` | `internal/app/app_config:287` | — |
+| `App.CheckUpdate()` | `internal/app/app_config:289` | — |
+| `App.DoUpdate()` | `internal/app/app_config:316` | — |
+| `App.RestartApplication()` | `internal/app/app_config:334` | — |
+| `App.SaveWindowPosition()` | `internal/app/app_config:369` | — |
+| `App.GetWindowPosition()` | `internal/app/app_config:383` | — |
+| `App.SelectDirectory()` | `internal/app/app_config:416` | ========== 目录选择 ========== |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:479` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:481` | — |
 | `containerTypeCache.Get()` | `internal/app/app_container_cache:49` | Get 返回容器真实类型（带文件指纹缓存）；文件变化（modtime/size）时重核验 |
 | `containerTypeCache.Clear()` | `internal/app/app_container_cache:69` | Clear 清空指纹缓存（下载/导入后随扫描缓存一起失效） |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
@@ -854,8 +855,8 @@
 | `App.SetMainWindow()` | `internal/app/app:119` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |
 | `App.ServiceStartup()` | `internal/app/app:122` | ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用 |
 | `App.ServiceShutdown()` | `internal/app/app:221` | ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用 |
-| `App.OpenInBrowser()` | `internal/app/app:256` | OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌） |
-| `App.GetAppVersion()` | `internal/app/app:261` | GetAppVersion 返回当前版本号 |
+| `App.OpenInBrowser()` | `internal/app/app:258` | OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌） |
+| `App.GetAppVersion()` | `internal/app/app:263` | GetAppVersion 返回当前版本号 |
 | `App()` | `internal/app/app:40` | — |
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `App.SetAllowedCommands()` | `internal/app/cli_bridge:15` | SetAllowedCommands 注入可用 CLI 命令列表（由 main.go 调用 cli.GetAllowedCommands() 提供） 避免 app→cli 循环依赖 |

@@ -3,7 +3,6 @@
 package app
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -56,12 +55,11 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 
 	for author, modelPath := range seen {
 		safe := avatar.SafeName(author)
-		cachedPath := filepath.Join(cacheDir, safe+".png")
-		if _, err := os.Stat(cachedPath); err == nil {
-			data, _ := os.ReadFile(cachedPath)
-			if data != nil {
-				result[author] = "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)
-			}
+		// 缓存命中走 ReadCachedAvatar（含 JPEG 文件头嗅探 avatar.go:154-161，
+		// 与 CachedCreatorAvatar 口径一致）——原实现直接 os.ReadFile + 硬编码
+		// image/png，JPEG 头像缓存命中时两条 binding 返回不同 MIME
+		if dataURI, _ := avatar.ReadCachedAvatar(author); dataURI != "" {
+			result[author] = dataURI
 			continue
 		}
 		dataURI := avatar.ExtractAvatarURI(modelPath, safe)

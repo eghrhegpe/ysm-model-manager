@@ -1313,6 +1313,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r19-go-watcher-2026-08-31"
       },
       {
+        "text": "R20 审核 — go/avatar 头像提取与缓存 + App 对接",
+        "link": "/audit/audit-r20-go-avatar-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

@@ -42,7 +42,7 @@
 | `types/` | 共享类型 + 注册表 〔源码 8: bedrock.go classify.go config.go extensions.go findinst.go location.go resource.go types.go · 测试 18 · 子目录 1: testdata/〕 |
 | `updater/` | 自动更新 〔源码 3: updater.go updater_other.go updater_windows.go · 测试 8〕 |
 | `version/` | 版本号 〔源码 1: version.go · 测试 1〕 |
-| `watcher/` | 文件监听 〔源码 1: watcher.go · 测试 2〕 |
+| `watcher/` | 文件监听 〔源码 1: watcher.go · 测试 3〕 |
 | `ysm/` | YSM 解析 + 摘要 〔源码 8: cli.go decode_inject.go extracted.go header.go parse.go summary.go texsize.go ysm.go · 测试 17〕 |
 
 <!-- /GEN: go-structure -->
@@ -53,7 +53,7 @@
 
 | 包 | 用途 |
 |----|------|
-| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 42 · 测试 26〕 |
+| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 42 · 测试 27〕 |
 
 <!-- /GEN: internal-structure -->
 

@@ -1,8 +1,7 @@
 // ===== context-menu-dir-handlers.ts — dir 类右键菜单 handler（从 context-menu-handlers.ts 拆出，ADR-040 P1）=====
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/dom/errors.ts";
 import { getApp } from "../backend/app.ts";
-import { refreshUI, toast, resolveDstDir } from "./context-menu-shared.ts";
+import { refreshUI, toast, toastError, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import type { MenuCtx } from "./context-menu-handlers.ts";
 
@@ -26,7 +25,7 @@ export const DIR_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       toast(`✅ 已移动文件夹到 ${folder}`, TOAST_MS.normal);
       refreshUI();
     } catch (e) {
-      toast("❌ " + friendlyError(e, "移动失败"), TOAST_MS.verbose, "error");
+      toastError(e, "移动失败");
     }
   },
   "dir.copy": async (ctx) => {
@@ -44,7 +43,7 @@ export const DIR_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       toast(`✅ 已复制文件夹到 ${folder}`, TOAST_MS.normal);
       refreshUI();
     } catch (e) {
-      toast("❌ " + friendlyError(e, "复制失败"), TOAST_MS.verbose, "error");
+      toastError(e, "复制失败");
     }
   },
   "dir.mkdir": (ctx) => bus.emit("dir:mkdir", { dir: ctx.dir || "" }),

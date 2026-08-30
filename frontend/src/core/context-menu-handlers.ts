@@ -13,10 +13,11 @@ import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 // 共享原语（toast/refreshUI/isUnsafeFolderName/resolveDstDir）下沉至
 // context-menu-shared.ts，破除 handlers ↔ {file,dir}-handlers 循环依赖
-import { refreshUI, toast, toastEmptyRtype, isUnsafeFolderName, resolveDstDir } from "./context-menu-shared.ts";
+import { refreshUI, toast, toastError, toastEmptyRtype, isUnsafeFolderName, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
 import { downloadTextFile } from "../utils/dom/download-text.ts";
+import { dbg } from "../utils/debug/debug.ts";
 
 /**
  * Busy flag 工厂（2026-XX 重构）：消除模块级 `let _batchBusy`——
@@ -68,7 +69,7 @@ async function runBatchFileOp(
         ok++;
       } catch (e) {
         fail++;
-        console.error(`${op.verb}失败:`, p, e);
+        dbg(`batch-${op.verb}-fail`, p, e);
       }
     }
     if (ok > 0) {
@@ -82,7 +83,7 @@ async function runBatchFileOp(
     }
     refreshUI();
   } catch (e) {
-    toast(`❌ ${friendlyError(e)}`, TOAST_MS.verbose, "error");
+    toastError(e);
   } finally {
     op.busy.finish();
   }
@@ -113,7 +114,7 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       // subdir 参数保留为 Wails 绑定兼容，已不参与路由
       await OpenInstanceFolder(ctx.path, ctx.rtype || "", ctx.subdir || "");
     } catch (e) {
-      toast(`❌ ${friendlyError(e, "打开文件夹失败")}`, TOAST_MS.normal, "error");
+      toastError(e, "打开文件夹失败");
     }
   },
   "instance.export-list": (ctx) => {
@@ -191,7 +192,7 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       }
       refreshUI();
     } catch (e) {
-      toast(`❌ ${friendlyError(e)}`, TOAST_MS.long, "error");
+      toastError(e);
     } finally {
       recycleBusy.finish();
     }

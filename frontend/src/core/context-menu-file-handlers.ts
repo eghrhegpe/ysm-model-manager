@@ -1,11 +1,10 @@
 // ===== context-menu-file-handlers.ts — file 类右键菜单 handler（从 context-menu-handlers.ts 拆出，ADR-040 P1）=====
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/dom/errors.ts";
 import { getApp } from "../backend/app.ts";
 import { modalConfirm, modalSelect } from "../utils/dom/dialogs/modal.ts";
 import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
 import { modalTagEditor } from "../utils/dom/dialogs/tag-editor.ts";
-import { refreshUI, toast, resolveDstDir } from "./context-menu-shared.ts";
+import { refreshUI, toast, toastError, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
 import type { MenuCtx } from "./context-menu-handlers.ts";
@@ -28,7 +27,7 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       await RenameFile(ctx.path || "", newName);
       refreshUI();
     } catch (e) {
-      toast("❌ " + friendlyError(e, "重命名失败"), TOAST_MS.verbose, "error");
+      toastError(e, "重命名失败");
     }
   },
   "file.move": async (ctx) => {
@@ -46,7 +45,7 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       toast(`✅ 已移动到 ${folder}`, TOAST_MS.normal);
       refreshUI();
     } catch (e) {
-      toast("❌ " + friendlyError(e, "移动失败"), TOAST_MS.verbose, "error");
+      toastError(e, "移动失败");
     }
   },
   "file.copy": async (ctx) => {
@@ -64,7 +63,7 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       toast(`✅ 已复制到 ${folder}`, TOAST_MS.normal);
       refreshUI();
     } catch (e) {
-      toast("❌ " + friendlyError(e, "复制失败"), TOAST_MS.verbose, "error");
+      toastError(e, "复制失败");
     }
   },
   "file.push-to-pack": async (ctx) => {
@@ -95,10 +94,10 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
         await InstallModelTo(ctx.path || "", match.CustomDir);
         toast(`✅ 已推送到 ${chosen}`, TOAST_MS.success);
       } catch (e) {
-        toast("❌ " + friendlyError(e, "推送失败"), TOAST_MS.normal, "error");
+        toastError(e, "推送失败");
       }
     } catch (e) {
-      toast("❌ " + friendlyError(e, "推送失败"), TOAST_MS.normal, "error");
+      toastError(e, "推送失败");
     }
   },
   "file.edit-tags": async (ctx) => {
@@ -106,7 +105,7 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       const result = await modalTagEditor(ctx.path || "");
       if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, TOAST_MS.success);
     } catch (e) {
-      toast("❌ " + friendlyError(e, "标签编辑失败"), TOAST_MS.normal, "error");
+      toastError(e, "标签编辑失败");
     }
   },
   "file.recycle": async (ctx) => {
@@ -124,10 +123,10 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
         await MoveToRecycle(ctx.path || "");
         refreshUI();
       } catch (e) {
-        toast("❌ " + friendlyError(e, "移入回收站失败"), TOAST_MS.normal, "error");
+        toastError(e, "移入回收站失败");
       }
     } catch (e) {
-      toast("❌ " + friendlyError(e, "移入回收站失败"), TOAST_MS.normal, "error");
+      toastError(e, "移入回收站失败");
     }
   },
   "file.reveal": async (ctx) => {
@@ -135,7 +134,7 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       const { RevealInExplorer } = await getApp();
       await RevealInExplorer(ctx.path || "");
     } catch (e) {
-      toast("❌ " + friendlyError(e, "打开失败"), TOAST_MS.normal, "error");
+      toastError(e, "打开失败");
     }
   },
   "file.copy-path": async (ctx) => {

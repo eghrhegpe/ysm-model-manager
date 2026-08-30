@@ -1066,8 +1066,8 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `DIR_HANDLERS()` | `frontend/src/core/context-menu-dir-handlers:10` | dir 类 handler 子表 |
-| `FILE_HANDLERS()` | `frontend/src/core/context-menu-file-handlers:14` | file 类 handler 子表 |
+| `DIR_HANDLERS()` | `frontend/src/core/context-menu-dir-handlers:9` | dir 类 handler 子表 |
+| `FILE_HANDLERS()` | `frontend/src/core/context-menu-file-handlers:13` | file 类 handler 子表 |
 | `MenuCtx()` | `frontend/src/core/context-menu-handlers:97` | — |
 | `HANDLERS()` | `frontend/src/core/context-menu-handlers:100` | 行为 handler 表（instance + batch + merge file/dir） |
 | `refreshUI()` | `frontend/src/core/context-menu-shared:17` | 通知树组件和统计面板刷新 |

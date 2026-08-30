@@ -1008,10 +1008,10 @@
 | `extractBits()` | `frontend/src/backend/voxel-parse:79` | 对齐 nbt.go:299-327 extractBits：从 LongArray（精确 bigint[]，小端位序）按 bitOffset 取 bitCount 位，支持跨 64 |
 | `bitsPerEntry()` | `frontend/src/backend/voxel-parse:99` | 对齐 nbt.go:329-338 bitsPerEntry：palette 大小 → 每方块位数（≥2，单条目返回 0） |
 | `unpackBlockStates()` | `frontend/src/backend/voxel-parse:111` | 打包位解码：expectedCount 个方块索引 → palette 索引数组。 |
-| `litematicVoxelView()` | `frontend/src/backend/voxel-parse:343` | 对齐 voxel.go:92-171 BuildVoxelData：.litematic 体素视图。 |
-| `nbtVoxelView()` | `frontend/src/backend/voxel-parse:420` | 对齐 voxel.go:286-382 BuildNbtVoxelData：structure NBT 体素视图。 |
-| `schematicVoxelView()` | `frontend/src/backend/voxel-parse:570` | 对齐 voxel.go:384-491 BuildSchematicVoxelData：schematic 体素视图。 |
-| `decodeVoxelNbt()` | `frontend/src/backend/voxel-parse:657` | 纯函数：base64 字节 → NBT root（IO 与解码解耦——本函数无任何 IO，输入 b64 字符串 输出解析后的 root 对象；readVoxelJson 等装配层只 |
+| `litematicVoxelView()` | `frontend/src/backend/voxel-parse:349` | 对齐 voxel.go:92-171 BuildVoxelData：.litematic 体素视图。 |
+| `nbtVoxelView()` | `frontend/src/backend/voxel-parse:426` | 对齐 voxel.go:286-382 BuildNbtVoxelData：structure NBT 体素视图。 |
+| `schematicVoxelView()` | `frontend/src/backend/voxel-parse:576` | 对齐 voxel.go:384-491 BuildSchematicVoxelData：schematic 体素视图。 |
+| `decodeVoxelNbt()` | `frontend/src/backend/voxel-parse:663` | 纯函数：base64 字节 → NBT root（IO 与解码解耦——本函数无任何 IO，输入 b64 字符串 输出解析后的 root 对象；readVoxelJson 等装配层只 |
 | `webCliBindings()` | `frontend/src/backend/web-cli:12` | 网页版 CLI 绑定 |
 | `WebUnsupportedError()` | `frontend/src/backend/web-common:8` | 网页版专属错误：binding 浏览器端未实现（Phase 3 能力门控隐藏对应 UI） |
 | `WEB_ROOT()` | `frontend/src/backend/web-common:16` | 网页版虚拟仓库根（路径语义与桌面一致：/web/&lt;type&gt;/&lt;name&gt;/&lt;rel&gt;） |

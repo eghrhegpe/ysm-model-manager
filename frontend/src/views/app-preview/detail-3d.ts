@@ -42,8 +42,7 @@ export async function showVrmMeta(
 </div>`;
   try {
     const App = await getApp();
-    const readFn = (App as unknown as Record<string, (p: string) => Promise<string | null>>)["ReadFileBytes"];
-    const meta = await readVrmMeta(path, readFn);
+    const meta = await readVrmMeta(path, App.ReadFileBytes);
     if (detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
     if (!meta || (!meta.name && !meta.authors?.length)) {
       // 无 meta（非标准 VRM 或解析失败）→ 仅名称 + FAB
@@ -149,8 +148,7 @@ export async function showMmdPreview(
     void (async () => {
       try {
         const App = await getApp();
-        const readFn = (App as unknown as Record<string, (p: string) => Promise<string | null>>)["ReadFileBytes"];
-        const stats = await readPmxStats(path, readFn);
+        const stats = await readPmxStats(path, App.ReadFileBytes);
         if (detailGen.stale(gen) || !stats) return;
         const host = ctx.root.querySelector<HTMLElement>("#mmd-stats-row");
         if (!host) return;

@@ -7,7 +7,7 @@ import { mount3D, cleanupPreview, invalidatePreview } from "../../utils/3d/adapt
 import { makeYsmAdapter } from "../../utils/3d/adapters/ysm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import type { BedrockGeometry } from "./geometry.ts";
-import { preloadModel } from "./model3d-loader.ts";
+import { preloadModel, type ModelLike } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
 import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
 import { statsCardHTML, type StatsCardModel } from "./tpl.ts";
@@ -66,7 +66,7 @@ async function createMaid3D(
       mode: "generic",
       texIdx,
       loader: opts.loader,
-      preload: (model) => preloadModel(model as never),
+      preload: (model) => preloadModel(model as ModelLike),
       onTextureChange: rebuild,
       onClose: opts.onClose,
       readTextFile: readFileBytes,

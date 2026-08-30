@@ -17,7 +17,7 @@ registerReRoute("vrm", (path) => createVrm3D(path));
 /** 同目录文件枚举（VRMA 动作扫描用；对齐 MMD 同款 ListAllFilePaths 注入） */
 async function listAllFilePaths(dir: string): Promise<string[] | null> {
   const App = await getApp();
-  return (App as unknown as Record<string, (d: string) => Promise<string[] | null>>)["ListAllFilePaths"](dir);
+  return await App.ListAllFilePaths(dir);
 }
 
 /** ADR-072 诊断端口：环形日志面板写入（当前 no-op，后续通过 bus 或 port 注入） */

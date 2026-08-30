@@ -9,7 +9,7 @@ import { mount3D, cleanupPreview, invalidatePreview } from "../../utils/3d/adapt
 import { makeYsmAdapter } from "../../utils/3d/adapters/ysm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import type { BedrockGeometry } from "./geometry.ts";
-import { preloadModel } from "./model3d-loader.ts";
+import { preloadModel, type ModelLike } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
@@ -21,14 +21,14 @@ import { readFileBytes } from "./view-shell.ts";
 /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM 同款 ListAllFilePaths 注入） */
 async function listAllFilePaths(dir: string): Promise<string[] | null> {
   const App = await getApp();
-  return (App as unknown as Record<string, (d: string) => Promise<string[] | null>>)["ListAllFilePaths"](dir);
+  return await App.ListAllFilePaths(dir);
 }
 
 /** 跨类型换角色路由用：注入轻量 loader ctx（decodeYsmViaWasm + 空 appendDebug） */
 async function openYsmFullscreen(path: string): Promise<void> {
   await createYsm3D(path, 0, {
     loader: async (p) =>
-      (await loadModelData(p, { decodeYsmViaWasm, appendDebug: () => {} } as never)).model,
+      (await loadModelData(p, { decodeYsmViaWasm, appendDebug: () => {} })).model,
   });
 }
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中 YSM 时派发到此；未知类型回退入口）
@@ -61,7 +61,7 @@ export async function createYsm3D(
     makeYsmAdapter(path, {
       texIdx,
       loader: opts.loader,
-      preload: (model) => preloadModel(model as never),
+      preload: (model) => preloadModel(model as ModelLike),
       onTextureChange: rebuild,
       onClose: opts.onClose,
       listAllFilePaths,

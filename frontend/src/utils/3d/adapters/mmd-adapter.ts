@@ -593,9 +593,8 @@ async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> {
         try {
           const { getApp } = await import("../../../backend/app.ts");
           const app = await getApp();
-          const fn = (app as unknown as Record<string, (h: string) => Promise<string>>)["GetCachedTextureByHash"];
-          if (typeof fn !== "function") return null;
-          const b64 = await fn(hash);
+          // 类型化直调；browserAdapter 未实现/绑定缺失 → catch 返回 null（保留原 fn 守卫语义）
+          const b64 = await app.GetCachedTextureByHash(hash);
           return b64 || null;
         } catch {
           return null;
@@ -737,12 +736,11 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
   if (c.blobUrlToHash.size > 0 && c.ctx.renderer) {
     const { getApp } = await import("../../../backend/app.ts");
     const app = await getApp();
-    const appAny = app as unknown as Record<string, (x: unknown) => Promise<unknown>>;
-    const hasCachedBatch = appAny["HasCachedTextures"] as ((hashes: string[]) => Promise<Record<string, boolean>>) | undefined;
-    const getCached = appAny["GetCachedTextureByHash"] as ((h: string) => Promise<string>) | undefined;
-    if (hasCachedBatch && getCached) {
+    // 类型化直调（AppBindings 具名方法）；browserAdapter 可能缺这两个方法——用
+    // `in` 存在性检查保留原「缺方法跳过缓存优化」守卫语义（替换 as unknown as 双方法断言）
+    if ("HasCachedTextures" in app && "GetCachedTextureByHash" in app) {
       const allHashes = [...new Set(c.blobUrlToHash.values())];
-      const cacheStatus = await hasCachedBatch(allHashes);
+      const cacheStatus = (await app.HasCachedTextures(allHashes)) ?? {};
       c.cachedHashes = new Set(allHashes.filter((h) => cacheStatus[h]));
       if (c.cachedHashes.size > 0) {
         const ktx2Loader = new KTX2Loader()
@@ -763,7 +761,7 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
             const hash = c.blobUrlToHash.get(img.src);
             if (!hash || !c.cachedHashes.has(hash)) continue;
             replaceTasks.push(
-              getCached(hash).then((ktx2B64) => {
+              app.GetCachedTextureByHash(hash).then((ktx2B64) => {
                 if (!ktx2B64) return;
                 const ktxBytes = b64ToBytes(ktx2B64);
                 const ktxBlob = new Blob([bytesToArrayBuffer(ktxBytes)]);

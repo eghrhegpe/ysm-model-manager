@@ -16,10 +16,9 @@ export async function resolveStageSiblings(): Promise<Array<{
 }>> {
   try {
     const App = await getApp();
-    const app = App as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
-    const stageRoot = (await app["GetRepoRoot"]("StageAnim")) as string;
+    const stageRoot = await App.GetRepoRoot("StageAnim");
     if (!stageRoot) return [];
-    const raw = (await app["ScanModelEntriesFiltered"](stageRoot, "StageAnim", "", "舞台动画")) as Array<{ Path?: string }> | null;
+    const raw = await App.ScanModelEntriesFiltered(stageRoot, "StageAnim", "", "舞台动画");
     const results: Array<{ path: string; kind: "vmd" | "audio" | "config" | "other" }> = [];
     for (const e of raw || []) {
       const p = e.Path || "";

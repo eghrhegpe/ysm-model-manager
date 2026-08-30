@@ -8,10 +8,9 @@ import { getApp } from "../../backend/app.ts";
 export async function resolveSceneSiblings(): Promise<string[]> {
   try {
     const App = await getApp();
-    const app = App as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
-    const sceneRoot = (await app["GetRepoRoot"]("SceneModel")) as string;
+    const sceneRoot = await App.GetRepoRoot("SceneModel");
     if (!sceneRoot) return [];
-    const raw = (await app["ScanModelEntriesFiltered"](sceneRoot, "SceneModel", "", "场景模型")) as Array<{ Path?: string }> | null;
+    const raw = await App.ScanModelEntriesFiltered(sceneRoot, "SceneModel", "", "场景模型");
     // code review P3：Go 白名单含 .vrm/.zip（SceneModel 扩展集），但 createScene3D
     // 是 pmx/pmd 查看器——保留最小扩展名守卫，防列表出现加载不了的条目（破碎预览）
     return (raw || []).map((e) => e.Path || "").filter((p) => /\.(pmx|pmd)$/i.test(p));

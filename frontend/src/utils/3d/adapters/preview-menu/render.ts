@@ -9,7 +9,7 @@
 import type { SlideMenuHandle, SlideMenuView } from "../../../../ui/ui-slide-menu.ts";
 import { t } from "../../../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
-import { previewSnapshot, setStateValue, isPathAvailable } from "../../state/preview-state.ts";
+import { previewSnapshot, setStateValue, isPathAvailable, KNOWN_PATHS } from "../../state/preview-state.ts";
 import { getSchema } from "../schema-registry.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
@@ -235,8 +235,12 @@ function rmAppendSelect(
     const v = spec.set ? spec.set(raw) : raw;
     if (spec.bind) {
       // bind 模式：写状态层（未落地路径守卫，P5-A review P3）
-      if (!isPathAvailable(spec.bind as never)) return;
-      setStateValue(spec.bind as never, v);
+      // 收窄断言（非 as never）：spec.bind 是 PreviewStatePath 全集，isPathAvailable/
+      // setStateValue 只接受已落地的 KNOWN_PATHS 子集——守卫在前保证安全，同时保留
+      // 窄类型检查（KNOWN_PATHS 与 PreviewStatePath 漂移时编译期报错）
+      const path = spec.bind as typeof KNOWN_PATHS[number];
+      if (!isPathAvailable(path)) return;
+      setStateValue(path, v);
     }
     spec.onChange?.(v);
     // [doc:adr-126-p5] refreshOnChange：面板内容随绑定状态变化（组件 select 切档后

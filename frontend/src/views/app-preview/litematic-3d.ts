@@ -25,12 +25,20 @@ function entryExtOf(entry: string): string {
   return VOXEL_RPC_BY_EXT[ext] ? ext : "";
 }
 
-/** voxelCall 注入（视图壳层保留 getApp；适配器 0 backend import，ADR-072 边界判据） */
+/** voxelCall 注入（视图壳层保留 getApp；适配器 0 backend import，ADR-072 边界判据）。
+ *  voxelFn 是 VOXEL_RPC_BY_EXT 的 Go RPC 名（GetNbtVoxelData / GetSchematicVoxelData /
+ *  GetLitematicVoxelData，三签名一致）——动态 key 保留（工厂注入），但取方法走类型化
+ *  索引（AppBindings 具名方法），替换原 `as unknown as Record<string,...>` 手写断言。 */
 function makeVoxelCall(voxelFn: string): (path: string) => Promise<string> {
   return async (path: string): Promise<string> => {
     const App = await getApp();
-    const fn = (App as unknown as Record<string, (p: string) => Promise<string>>)[voxelFn || "GetLitematicVoxelData"];
-    return fn(path);
+    // 动态 key：按 VOXEL_RPC_BY_EXT 值域收窄到 AppBindings 的具名方法联合
+    const fn = (
+      voxelFn === "GetNbtVoxelData" ? App.GetNbtVoxelData
+      : voxelFn === "GetSchematicVoxelData" ? App.GetSchematicVoxelData
+      : App.GetLitematicVoxelData
+    );
+    return await fn(path);
   };
 }
 
@@ -42,8 +50,7 @@ function makeVoxelCall(voxelFn: string): (path: string) => Promise<string> {
 function makeContainerVoxelCall(containerPath: string, fallbackExt: string): (entryPath: string) => Promise<string> {
   return async (entryPath: string): Promise<string> => {
     const App = await getApp();
-    const fn = (App as unknown as Record<string, (p: string, e: string, x: string) => Promise<string>>)["GetVoxelDataInContainer"];
-    return fn(containerPath, entryPath, entryExtOf(entryPath) || fallbackExt);
+    return await App.GetVoxelDataInContainer(containerPath, entryPath, entryExtOf(entryPath) || fallbackExt);
   };
 }
 
@@ -63,8 +70,7 @@ function makeLitematicAdapter(voxelFn: string, container?: LitematicBuildOpts): 
 async function listContainerEntries(containerPath: string): Promise<string[]> {
   try {
     const App = await getApp();
-    const fn = (App as unknown as Record<string, (p: string, e: string) => Promise<string>>)["ListContainerEntries"];
-    const raw = await fn(containerPath, CONTAINER_VOXEL_EXTS);
+    const raw = await App.ListContainerEntries(containerPath, CONTAINER_VOXEL_EXTS);
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed) ? (parsed as string[]) : [];
   } catch {

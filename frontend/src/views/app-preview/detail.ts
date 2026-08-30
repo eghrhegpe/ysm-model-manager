@@ -197,9 +197,7 @@ async function renderPackModelList(
   path: string,
 ): Promise<void> {
   try {
-    const fn = (App as unknown as Record<string, (p: string) => Promise<string>>)["ListPackModelsDetail"];
-    if (typeof fn !== "function") return; // 绑定缺失（降级：不显示清单区）
-    const raw = await fn(path);
+    const raw = await App.ListPackModelsDetail(path);
     if (detailGen.stale(gen)) return;
     const detail = JSON.parse(raw) as {
       models?: Array<{ path: string; cubes: number }>;

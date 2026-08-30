@@ -235,10 +235,8 @@ export async function encodeAndCacheTexture(
     // 通过 Go 绑定保存缓存
     const { getApp } = await import("../../../backend/app.ts");
     const app = await getApp();
-    const saveFn = (app as unknown as Record<string, (h: string, d: string) => Promise<void>>)["SaveCachedTexture"];
-    if (typeof saveFn === "function") {
-      await saveFn(hash, ktx2B64);
-    }
+    // 类型化直调；browserAdapter 未实现时抛错 → 外层 catch 静默降级（保留原守卫语义）
+    await app.SaveCachedTexture(hash, ktx2B64);
     // 标记为已完成
     completedHashes.add(hash);
     return true;

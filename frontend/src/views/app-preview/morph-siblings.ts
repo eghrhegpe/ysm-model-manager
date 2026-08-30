@@ -8,10 +8,9 @@ import { getApp } from "../../backend/app.ts";
 export async function resolveMorphSiblings(): Promise<string[]> {
   try {
     const App = await getApp();
-    const app = App as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
-    const morphRoot = (await app["GetRepoRoot"]("CustomMorph")) as string;
+    const morphRoot = await App.GetRepoRoot("CustomMorph");
     if (!morphRoot) return [];
-    const raw = (await app["ScanModelEntriesFiltered"](morphRoot, "CustomMorph", "", "自定义表情")) as Array<{ Path?: string }> | null;
+    const raw = await App.ScanModelEntriesFiltered(morphRoot, "CustomMorph", "", "自定义表情");
     // code review P3：CustomMorph 白名单含 .zip（非 VPD 姿势）——VPD 应用流程
     // 只认 vpd——保留最小扩展名守卫，防列表出现不可应用的条目（失败应用）
     return (raw || []).map((e) => e.Path || "").filter((p) => /\.(vpd)$/i.test(p));

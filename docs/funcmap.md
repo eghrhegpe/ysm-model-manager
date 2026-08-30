@@ -1385,9 +1385,9 @@
 | `mockMenuHandle()` | `frontend/src/utils/3d/adapters/menu-test-fixtures:36` | SlideMenuHandle 全方法 stub（渲染器/面板单测用，导航动作全 no-op） |
 | `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:66` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
 | `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:181` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1168` | — |
-| `MmdMenuItemsOpts()` | `frontend/src/utils/3d/adapters/mmd-adapter:1241` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1273` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
+| `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1166` | — |
+| `MmdMenuItemsOpts()` | `frontend/src/utils/3d/adapters/mmd-adapter:1239` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1271` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
 | `getCustomAnimPath()` | `frontend/src/utils/3d/adapters/mmd-anim-library:12` | 获取 MMD 动作库（CustomAnim）的绝对路径。 |
 | `filterAnimFiles()` | `frontend/src/utils/3d/adapters/mmd-anim-library:24` | 从文件列表中筛选动作文件（.vmd / .vpd） |
 | `PmxFileStats()` | `frontend/src/utils/3d/adapters/mmd-detail-stats:16` | PMX 文件级统计（详情卡展示；独立于 SceneStats 的 traverse 口径） |
@@ -1402,7 +1402,7 @@
 | `resetEncoderState()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:83` | 重置编码器状态（测试用） |
 | `__setEncodeImplForTest()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:205` | 测试用：注入编码实现（默认走本地 WASM） |
 | `encodeAndCacheTexture()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:216` | 将单个 PNG 纹理编码为 KTX2 并缓存。 |
-| `scheduleBackgroundEncoding()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:266` | 遍历 mesh 材质，对有 KTX2 缓存需要的纹理进行后台编码。 |
+| `scheduleBackgroundEncoding()` | `frontend/src/utils/3d/adapters/mmd-ktx2-encoder:264` | 遍历 mesh 材质，对有 KTX2 缓存需要的纹理进行后台编码。 |
 | `Ktx2TextureLoaderDeps()` | `frontend/src/utils/3d/adapters/mmd-ktx2-texture-loader:21` | 拦截 loader 依赖注入（装配方提供） |
 | `Ktx2TextureLoader()` | `frontend/src/utils/3d/adapters/mmd-ktx2-texture-loader:61` | — |
 | `Ktx2EncodeRequest()` | `frontend/src/utils/3d/adapters/mmd-ktx2-worker:9` | 主线程 → Worker 的请求 |
@@ -1491,8 +1491,8 @@
 | `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:117` | 类型守卫：节点是否为 folder（可下钻） |
 | `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:122` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
 | `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu/node-types:135` | 递归收集全部节点 id（供 id 唯一性契约测试） |
-| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/render:420` | — |
-| `renderAdapterPanelContent()` | `frontend/src/utils/3d/adapters/preview-menu/render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
+| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu/render:424` | — |
+| `renderAdapterPanelContent()` | `frontend/src/utils/3d/adapters/preview-menu/render:467` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu/roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu/roles:38` | — |
 | `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu/roles:112` | — |
@@ -2238,16 +2238,16 @@
 | `cacheSet()` | `frontend/src/views/app-preview/cache:65` | — |
 | `previewCSS()` | `frontend/src/views/app-preview/css:2` | — |
 | `showVrmMeta()` | `frontend/src/views/app-preview/detail-3d:30` | 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） |
-| `showMmdPreview()` | `frontend/src/views/app-preview/detail-3d:118` | 显示 MMD 预览卡（文件名 + FAB 进 3D；PMX/PMD 无标准 meta 读取，保持简单形态） |
-| `showFbxPreview()` | `frontend/src/views/app-preview/detail-3d:172` | 显示 FBX 预览卡（文件名 + FAB 进 3D；FBX 无标准 meta 读取，保持简单形态，ADR-112） |
-| `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:202` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
-| `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:232` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
-| `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:299` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
+| `showMmdPreview()` | `frontend/src/views/app-preview/detail-3d:117` | 显示 MMD 预览卡（文件名 + FAB 进 3D；PMX/PMD 无标准 meta 读取，保持简单形态） |
+| `showFbxPreview()` | `frontend/src/views/app-preview/detail-3d:170` | 显示 FBX 预览卡（文件名 + FAB 进 3D；FBX 无标准 meta 读取，保持简单形态，ADR-112） |
+| `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:200` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
+| `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:230` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
+| `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:297` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
 | `detailGen()` | `frontend/src/views/app-preview/detail:24` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:27` | 显示模型详情（YSM 模型） |
 | `showResourcePack()` | `frontend/src/views/app-preview/detail:144` | 显示资源包信息（pack.mcmeta + pack.png + 模型清单） |
-| `showSimplePreview()` | `frontend/src/views/app-preview/detail:241` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
-| `showShaderpack()` | `frontend/src/views/app-preview/detail:259` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
+| `showSimplePreview()` | `frontend/src/views/app-preview/detail:239` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
+| `showShaderpack()` | `frontend/src/views/app-preview/detail:257` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
 | `openEmpty3DFullscreen()` | `frontend/src/views/app-preview/empty-3d:35` | 打开空场景 3D 全屏预览（无需 path）。 |
 | `cleanupEmpty3D()` | `frontend/src/views/app-preview/empty-3d:40` | 清理空场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateEmptyPreview()` | `frontend/src/views/app-preview/empty-3d:45` | 作废在途空场景加载 |
@@ -2259,9 +2259,9 @@
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:26` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:41` | 解析后的 Bedrock geometry |
 | `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:85` | 从 JSON 字符串解析 Bedrock geometry |
-| `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:76` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
-| `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:119` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
-| `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:124` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
+| `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:82` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
+| `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:125` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
+| `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:130` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:29` | P2 修复（code_review）：任意新预览派发时推进代际——原守卫只在 showLitematic 自身递增，litematic A 解析中切到 YSM B（走 detail |
 | `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:184` | 显示投影文件详情面板（tab 布局） |
 | `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:252` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
@@ -2292,9 +2292,9 @@
 | `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:53` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组（P0 优化：纹理缓存池，同 URL 复用） |
 | `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:161` | 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标） |
 | `resolveMorphSiblings()` | `frontend/src/views/app-preview/morph-siblings:8` | CustomMorph 目录下所有候选文件（含子目录）；失败返回 [] |
-| `createPack3D()` | `frontend/src/views/app-preview/pack-3d:30` | 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） |
-| `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:57` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
-| `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:62` | 任意新预览派发时调用，作废在途资源包加载 |
+| `createPack3D()` | `frontend/src/views/app-preview/pack-3d:34` | 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） |
+| `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:65` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
+| `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:70` | 任意新预览派发时调用，作废在途资源包加载 |
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:23` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
 | `registerReRoute()` | `frontend/src/views/app-preview/preview-library:24` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
 | `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:32` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |
@@ -2348,8 +2348,8 @@
 | `getPrefer3D()` | `frontend/src/views/app-preview/utils:60` | — |
 | `setPrefer3D()` | `frontend/src/views/app-preview/utils:63` | — |
 | `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:147` | 剥离 YSGP 文本头部，返回标准二进制格式 |
-| `readFileBytes()` | `frontend/src/views/app-preview/view-shell:11` | 数据读取注入（Wails ReadFileBytes；返回 null = 读取失败） |
-| `addOpLog()` | `frontend/src/views/app-preview/view-shell:17` | 环形日志面板诊断（AddOpLog 注入；失败静默不阻断加载）。scope = 运行时环打标（如 "fbx-preview"） |
+| `readFileBytes()` | `frontend/src/views/app-preview/view-shell:14` | 数据读取注入（Wails ReadFileBytes；返回 null = 读取失败） |
+| `addOpLog()` | `frontend/src/views/app-preview/view-shell:20` | 环形日志面板诊断（AddOpLog 注入；失败静默不阻断加载）。scope = 运行时环打标（如 "fbx-preview"） |
 | `createVrm3D()` | `frontend/src/views/app-preview/vrm-3d:44` | 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 |
 | `cleanupVrm3D()` | `frontend/src/views/app-preview/vrm-3d:59` | 清理 VRM 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `invalidateVrmPreview()` | `frontend/src/views/app-preview/vrm-3d:64` | 任意新预览派发时调用，作废在途 VRM 加载 |

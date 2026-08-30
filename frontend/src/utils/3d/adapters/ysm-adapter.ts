@@ -87,18 +87,18 @@ export interface YsmAdapterOptions {
 /** 骨骼拾取状态（bone-raycast 需要的最小 state） */
 function makeRayState(): {
   hoveredBone: string | null;
-  hoveredMesh: unknown;
+  hoveredMesh: THREE.Object3D | null;
   setHoveredBone: (v: string | null) => void;
-  setHoveredMesh: (v: unknown) => void;
+  setHoveredMesh: (v: THREE.Object3D | null) => void;
   onBoneSelectCallback: ((info: BoneSelectInfo) => void) | null;
 } {
   const s = {
     hoveredBone: null as string | null,
-    hoveredMesh: null as unknown,
+    hoveredMesh: null as THREE.Object3D | null,
     setHoveredBone: (v: string | null) => {
       s.hoveredBone = v;
     },
-    setHoveredMesh: (v: unknown) => {
+    setHoveredMesh: (v: THREE.Object3D | null) => {
       s.hoveredMesh = v;
     },
     onBoneSelectCallback: null as ((info: BoneSelectInfo) => void) | null,

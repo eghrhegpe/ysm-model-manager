@@ -20,17 +20,25 @@ function makePackDeps() {
   return {
     readEntry: async (path: string, entry: string): Promise<string> => {
       const App = await getApp();
-      const fn = (App as unknown as Record<string, (p: string, e: string) => Promise<string>>).ReadPackEntry;
-      return fn ? await fn(path, entry) : "";
+      // 类型化直调；browserAdapter 未实现时抛错 → catch 回退空串（保留原守卫语义）
+      try {
+        return await App.ReadPackEntry(path, entry);
+      } catch {
+        return "";
+      }
     },
   };
 }
 
 /** 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） */
 export async function createPack3D(path: string, opts?: Mount3DOptions & { startEntry?: string }): Promise<void> {
-  const App = await getApp();
-  const fn = (App as unknown as Record<string, (p: string) => Promise<string>>)["ListPackModels"];
-  const raw = fn ? await fn(path) : "[]";
+  let raw: string;
+  try {
+    const App = await getApp();
+    raw = await App.ListPackModels(path);
+  } catch {
+    raw = "[]"; // browserAdapter 未实现/绑定缺失 → 空清单（保留原 fn 守卫语义）
+  }
   let entries: string[] = [];
   try {
     const arr = JSON.parse(raw) as unknown;

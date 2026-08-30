@@ -85,9 +85,20 @@ function pairsFrom(report) {
   return [...set].sort();
 }
 
+// R24 review P3：基线由旧 pairsFrom（未排序）生成——加载时套用同款归一化，
+// 否则首个 A#B/B#A 翻转对会被误判为「新增重复对」+ fixed 矛盾计数。
+function normPair(p) {
+  const [a, b] = p.split('#');
+  return [a, b].sort().join('#');
+}
+
 function loadBase() {
   if (!fs.existsSync(BASELINE)) return null;
-  return JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
+  const base = JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
+  if (Array.isArray(base.clones)) {
+    base.clones = base.clones.map(normPair);
+  }
+  return base;
 }
 
 function main() {

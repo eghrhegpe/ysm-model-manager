@@ -527,6 +527,67 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
     expect(MoveModelFileMock).not.toHaveBeenCalled();
   });
 
+  // ── per-verb busy 守卫（P3 审核补测：全局单 flag → 按 verb 独立闭包，锁新契约）──
+  it("batch.move 同 verb 连点 → 第二次只发「操作进行中」toast，MoveModelFile 只调一次", async () => {
+    let resolvePrompt!: (v: string) => void;
+    modalPromptMock.mockReturnValue(new Promise<string>((res) => (resolvePrompt = res)));
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    MoveModelFileMock.mockResolvedValue(undefined);
+
+    const payload = showMenu("batch", { ...payloadCtx("batch"), paths: ["/a.ysm"] });
+    const item = payload.items.find((i) => i.action === "batch.move")!;
+    const first = item.onClick!(); // 挂起在 resolveDstDir（modalPrompt pending）
+    const second = item.onClick!(); // 同 verb 重入 → tryStart false
+    await second;
+    expect(toasts().some((t) => t.msg.includes("操作进行中"))).toBe(true);
+    expect(MoveModelFileMock).not.toHaveBeenCalled();
+
+    resolvePrompt("作者A");
+    await first;
+    expect(MoveModelFileMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("batch.move 与 batch.copy 并发 → 互不发 busy toast（per-verb 独立）", async () => {
+    let resolveMove!: (v: string) => void;
+    let resolveCopy!: (v: string) => void;
+    modalPromptMock
+      .mockReturnValueOnce(new Promise<string>((r) => (resolveMove = r)))
+      .mockReturnValueOnce(new Promise<string>((r) => (resolveCopy = r)));
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    MoveModelFileMock.mockResolvedValue(undefined);
+    CopyModelFileMock.mockResolvedValue(undefined);
+
+    const payload = showMenu("batch", { ...payloadCtx("batch"), paths: ["/a.ysm"] });
+    const moveItem = payload.items.find((i) => i.action === "batch.move")!;
+    const copyItem = payload.items.find((i) => i.action === "batch.copy")!;
+    const moveP = moveItem.onClick!(); // move 挂起
+    const copyP = copyItem.onClick!(); // copy 挂起（不同 verb，不被 move 阻塞）
+    await Promise.resolve();
+    expect(toasts().some((t) => t.msg.includes("操作进行中"))).toBe(false);
+
+    resolveMove("作者A");
+    resolveCopy("备份");
+    await Promise.all([moveP, copyP]);
+    expect(MoveModelFileMock).toHaveBeenCalledTimes(1);
+    expect(CopyModelFileMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("batch.move 取消对话框 → finish() 复位 flag，同 verb 可立即重试", async () => {
+    modalPromptMock.mockResolvedValueOnce(""); // 取消（空输入）→ finally finish()
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    MoveModelFileMock.mockResolvedValue(undefined);
+
+    const payload = showMenu("batch", { ...payloadCtx("batch"), paths: ["/a.ysm"] });
+    const item = payload.items.find((i) => i.action === "batch.move")!;
+    await item.onClick!();
+    expect(MoveModelFileMock).not.toHaveBeenCalled();
+
+    // 同 verb 立即重试 → 不再被 busy 拒绝
+    modalPromptMock.mockResolvedValueOnce("作者A");
+    await item.onClick!();
+    expect(MoveModelFileMock).toHaveBeenCalledTimes(1);
+  });
+
   // ── batch.copy ──
   it("batch.copy 部分失败 → 汇总 toast（成功+失败）", async () => {
     modalPromptMock.mockResolvedValue("备份");

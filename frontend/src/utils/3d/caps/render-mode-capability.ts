@@ -89,13 +89,21 @@ export class RenderModeCapability implements SceneCapability {
   }
 
   private applyOverrides(): void {
+    // 单属性取值：override 非 null → 用它；null（不覆盖）→ 回落该属性的快照原始值；
+    // 无快照（首次 apply 前就被外部改写过）→ 保持材质现值。
+    const pick = <T>(ov: T | null, origVal: T | undefined, cur: T): T =>
+      ov !== null ? ov : origVal !== undefined ? origVal : cur;
     for (const m of collectMaterials(this.scene)) {
       const mat = m as THREE.MeshBasicMaterial;
-      if (this.overrides.wireframe !== null) mat.wireframe = this.overrides.wireframe;
-      if (this.overrides.blending !== null) mat.blending = this.overrides.blending;
-      if (this.overrides.depthTest !== null) mat.depthTest = this.overrides.depthTest;
-      if (this.overrides.side !== null) mat.side = this.overrides.side;
-      if (this.overrides.depthWrite !== null) mat.depthWrite = this.overrides.depthWrite;
+      const orig = this.snapshot.get(m.uuid);
+      // 属性互相独立（见文件头「每个属性独立 override，null = 保持原始值」）：
+      // 旧实现只写非 null 项，清除单个 override 会让该属性一直停在覆盖值上，
+      // 直到全部清空走 restoreSnapshot 才恢复——与声明语义不符，故此处逐属性回落。
+      mat.wireframe = pick(this.overrides.wireframe, orig?.wireframe, mat.wireframe);
+      mat.blending = pick(this.overrides.blending, orig?.blending, mat.blending);
+      mat.depthTest = pick(this.overrides.depthTest, orig?.depthTest, mat.depthTest);
+      mat.side = pick(this.overrides.side, orig?.side, mat.side);
+      mat.depthWrite = pick(this.overrides.depthWrite, orig?.depthWrite, mat.depthWrite);
     }
   }
 

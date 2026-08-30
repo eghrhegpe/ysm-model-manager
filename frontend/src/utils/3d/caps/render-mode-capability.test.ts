@@ -108,7 +108,7 @@ describe("RenderModeCapability — 单属性覆盖/还原", () => {
     expect(mats.map((m) => m.wireframe)).toEqual([false, false]);
   });
 
-  it("多属性组合覆盖，单属性清除保持覆盖值，全清才整体还原", () => {
+  it("多属性组合覆盖，单属性清除即时回落原始值（属性互相独立），全清整体还原", () => {
     const mesh = makeMesh();
     const mat = mesh.material as THREE.MeshBasicMaterial;
     mat.wireframe = false;
@@ -120,9 +120,11 @@ describe("RenderModeCapability — 单属性覆盖/还原", () => {
     expect(mat.wireframe).toBe(true);
     expect(mat.blending).toBe(THREE.MultiplyBlending);
     expect(mat.depthTest).toBe(false);
-    // 还原 wireframe：仍有其他 override → sync 只 apply 非 null 属性，wireframe 保持覆盖值
+    // 清除 wireframe：null = 不覆盖 → 该属性即时回落快照原始值（false）。
+    // 属性互相独立（文件头语义「每个属性独立 override，null = 保持原始值」），
+    // 清除单个不得让材质停在覆盖值上；其余 override 继续生效。
     cap.setWireframe(null);
-    expect(mat.wireframe).toBe(true);
+    expect(mat.wireframe).toBe(false);
     expect(mat.blending).toBe(THREE.MultiplyBlending);
     expect(mat.depthTest).toBe(false);
     // 全部清空 → 整体 restoreSnapshot
@@ -182,7 +184,7 @@ describe("RenderModeCapability — 快照细节", () => {
     expect((late.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });
 
-  it("重复 sync 不重拍快照；单 override 清除后该属性保持覆盖值", () => {
+  it("重复 sync 不重拍快照；单 override 清除后该属性回落首拍原值（不保留中途外部改写）", () => {
     const mesh = makeMesh();
     const mat = mesh.material as THREE.MeshBasicMaterial;
     const cap = newCap(mesh);
@@ -190,8 +192,10 @@ describe("RenderModeCapability — 快照细节", () => {
     mat.wireframe = true; // 模拟中途外部改材质
     cap.setDepthTest(false); // 再次 sync：快照已存在不重收
     cap.setWireframe(null);
-    // 仍有 depthTest override → 不触发 restoreSnapshot，wireframe 保持 true（外部值）
-    expect(mat.wireframe).toBe(true);
+    // 仍有 depthTest override → 不触发整体 restoreSnapshot，但被清除的 wireframe
+    // 须回落首拍快照原值（false）。「null = 保持原始值」中的「原始值」指快照捕获的
+    // 原值而非中途外部改写的现值——否则一次外部改写会永久污染该属性（撤销不回去）。
+    expect(mat.wireframe).toBe(false);
     // 全清后整体还原为首拍原值 false
     cap.setDepthTest(null);
     expect(mat.wireframe).toBe(false);

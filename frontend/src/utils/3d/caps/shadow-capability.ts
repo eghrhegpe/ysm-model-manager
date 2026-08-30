@@ -305,6 +305,18 @@ export class ShadowCapability implements SceneCapability {
     });
   }
 
+  /**
+   * 收集需要配置阴影的灯。**有意不遍历场景**——只认两个显式来源：
+   * ① `LightCapability` getter（`setLightCap` 注入）② legacy 缓存（`syncLights()` 传入，
+   * 由 mount-preview-core 遍历场景后接线）。
+   *
+   * 设计理由：3D 场景里可能存在适配器自带、语义各异的灯（补光/特效灯等），
+   * 若在此遍历场景统一开 castShadow，会「误伤」这些不该参与阴影计算的灯
+   * （性能与观感双损）。故采用**调用方显式接线**的白名单语义。
+   *
+   * 契约（调用方须知）：适配器若自行往场景加灯，必须经 `setLightCap` 或 `syncLights()`
+   * 接线，否则该灯不会被纳入阴影配置（保持其原有 castShadow 值，不被本能力改写）。
+   */
   private collectLights(): {
     dirs: THREE.DirectionalLight[];
     spots: THREE.SpotLight[];

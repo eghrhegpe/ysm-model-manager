@@ -9,7 +9,7 @@ import {
   DEFAULT_SHADOW_PARAMS,
   SHADOW_PRESETS,
 } from "./shadow-capability.ts";
-import type { LightCapability } from "./light-capability.ts";
+import { LightCapability } from "./light-capability.ts";
 
 function makeFakeRenderer() {
   return {
@@ -76,6 +76,33 @@ function makeMesh(parent: THREE.Object3D, cast = false, receive = false) {
   parent.add(mesh);
   return mesh;
 }
+
+describe("ShadowCapability — collectLights 取灯语义（白名单，不遍历场景）", () => {
+  it("只认 lightCap/legacyLights 两个来源：场景里未接线的灯不被纳入阴影配置", () => {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer();
+    const wired = new THREE.DirectionalLight(0xffffff, 1);
+    const stray = new THREE.DirectionalLight(0xffffff, 0.3); // 适配器自行加入场景、未经接线
+    scene.add(wired, stray);
+    const cap = new ShadowCapability({ scene, renderer, enabled: true });
+    cap.syncLights([wired]); // 仅接线 wired
+    expect(wired.castShadow).toBe(true);
+    // 设计语义：不遍历场景，避免误伤适配器自带灯——未接线的灯保持原状、不被改写
+    expect(stray.castShadow).toBe(false);
+  });
+
+  it("lightCap 注入的灯即使不在 syncLights 缓存里也会被纳入", () => {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer();
+    const lightCap = new LightCapability({ scene, renderer });
+    const cap = new ShadowCapability({ scene, renderer, enabled: true });
+    cap.setLightCap(lightCap);
+    // LightCapability 的三盏方向灯全部被纳入（未调 syncLights）
+    for (const dl of lightCap.getDirectionalLights()) {
+      expect(dl.castShadow).toBe(true);
+    }
+  });
+});
 
 describe("ShadowCapability — 构造与默认值", () => {
   it("构造默认值完整", () => {

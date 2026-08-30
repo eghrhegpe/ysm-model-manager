@@ -700,7 +700,7 @@ export class EnvironmentCapability implements SceneCapability {
         // 降采样：每 ~4096 个像素取 1 个（大 HDR 2k+ 时性能考量）
         const stride = Math.max(1, Math.floor(total / 4096));
         // half-float (Uint16) → float32 逐元素转换
-        const hf = (THREE.DataUtils as unknown as { halfToFloat: (u: number) => number }).halfToFloat;
+        const hf = THREE.DataUtils.fromHalfFloat;
         for (let i = 0; i < total; i += stride) {
           const r = hf(src[i * 3]);
           const g = hf(src[i * 3 + 1]);

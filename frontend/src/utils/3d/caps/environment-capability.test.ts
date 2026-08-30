@@ -503,19 +503,11 @@ describe("EnvironmentCapability — 缩略图与直方图", () => {
 
   it("getLuminanceHistogram customHdrTex 分支：half-float 逐像素入 bin", () => {
     const cap = newCap();
-    // 疑似源码 bug：源码调 THREE.DataUtils.halfToFloat，three r185 只有 fromHalfFloat。
-    // 测试内桥接（生产中该分支会抛 TypeError，已记录待修）。
-    (THREE.DataUtils as unknown as Record<string, unknown>).halfToFloat = (v: number): number =>
-      THREE.DataUtils.fromHalfFloat(v);
-    try {
-      (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(4, 2, 0.5); // 8 像素
-      const hist = cap.getLuminanceHistogram();
-      // lum=0.5 → mapped=1/3 → bin=5
-      expect(hist.reduce((a, b) => a + b, 0)).toBe(8);
-      expect(hist[5]).toBe(8);
-    } finally {
-      delete (THREE.DataUtils as unknown as Record<string, unknown>).halfToFloat;
-    }
+    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(4, 2, 0.5); // 8 像素
+    const hist = cap.getLuminanceHistogram();
+    // lum=0.5 → mapped=1/3 → bin=5
+    expect(hist.reduce((a, b) => a + b, 0)).toBe(8);
+    expect(hist[5]).toBe(8);
   });
 
   it("getLuminanceHistogram 程序化背景分支：读 canvas 像素", () => {

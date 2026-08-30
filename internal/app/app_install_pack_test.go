@@ -190,6 +190,18 @@ func TestImportFileAndPushToInstance_RootLevelModelRejected(t *testing.T) {
 	}
 }
 
+func TestPushRepoPathToInstance_RootLevelYsmJsonBackstop(t *testing.T) {
+	// R23 P2：pushRepoPathToInstance 兜底防线——原 IsYsmEntryJSON(repoPath) 传全路径
+	// 恒 false 防线失效；修复后根级 ysm.json（filepath.Dir == 仓库根）必须被拒绝
+	// （ErrInvalidPath），防止未来调用方绕过前置拦截触发 InstallDir(父目录) 整仓落地。
+	a, ysmRoot, _ := packApp(t)
+	err := a.pushRepoPathToInstance("ysm", "TestInst", filepath.Join(ysmRoot, "ysm.json"))
+	var ae types.AppError
+	if !errors.As(err, &ae) || ae.Code != types.ErrInvalidPath {
+		t.Fatalf("根级 ysm.json 兜底应拒绝 (ErrInvalidPath), got: %v", err)
+	}
+}
+
 func TestImportFolderAndPushToInstance_InvalidatesScanCache(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	// 暖缓存：二次扫描命中 30s scanCache

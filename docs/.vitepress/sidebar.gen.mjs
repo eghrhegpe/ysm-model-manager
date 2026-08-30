@@ -1329,6 +1329,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r22-app-workshop-2026-08-31"
       },
       {
+        "text": "R23 审核：internal/app/app_install*.go（安装/回收站/实例链路）",
+        "link": "/audit/audit-r23-app-install-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

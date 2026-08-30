@@ -757,7 +757,7 @@
 | `App.ImportModelFileToMMD()` | `internal/app/app_install_import:132` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
 | `App.ImportModelFileOverwriteToMMD()` | `internal/app/app_install_import:138` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
 | `App.ImportFileAndPushToInstance()` | `internal/app/app_install_import:240` | ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型）， 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未 |
-| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:270` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
+| `App.ImportFolderAndPushToInstance()` | `internal/app/app_install_import:273` | ImportFolderAndPushToInstance 文件夹整组先入仓库（inferFolderType 内容推断类型， 与 ImportModelFolder 同源），再把 |
 | `App.CountInstanceResources()` | `internal/app/app_install_instance:26` | CountInstanceResources 统计指定整合包中可清空的资源文件数 只统计仓库中已有的文件（同 clearInstanceDir 逻辑） rtype 为空时统计全部类 |
 | `App.ClearInstanceResources()` | `internal/app/app_install_instance:66` | ClearInstanceResources 清空指定整合包中已同步的文件 insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型） 返回清除的文件数量 |
 | `App.DeduplicateCustomDir()` | `internal/app/app_install_instance:153` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
@@ -773,7 +773,7 @@
 | `App.PushSingleResourceToInstance()` | `internal/app/app_install_instance:475` | PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync） |
 | `App.GetSyncScanDirs()` | `internal/app/app_install_instance:527` | GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。 |
 | `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:576` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
-| `App.HasYSMMod()` | `internal/app/app_install_instance:638` | ========== YSM 检测 ========== |
+| `App.HasYSMMod()` | `internal/app/app_install_instance:641` | ========== YSM 检测 ========== HasYSMMod 检测实例 mods 目录是否包含 YSM 模组（整合包卡片 mod 徽标用）。 |
 | `App.SetLinkMode()` | `internal/app/app_install_link:11` | ========== 链接模式 ========== |
 | `App.GetLinkMode()` | `internal/app/app_install_link:38` | — |
 | `App.AddImportLog()` | `internal/app/app_install_log:8` | ========== 日志 ========== |
@@ -783,12 +783,12 @@
 | `App.GetRuntimeLogs()` | `internal/app/app_install_log:25` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
 | `App.ClearRuntimeLogs()` | `internal/app/app_install_log:30` | ClearRuntimeLogs 清空运行时日志缓冲 |
 | `App.MoveToRecycle()` | `internal/app/app_install_recycle:17` | ========== 回收站 ========== |
-| `App.MoveToRecycleEx()` | `internal/app/app_install_recycle:39` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
-| `App.ClearCustomDir()` | `internal/app/app_install_recycle:93` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
-| `App.ListRecycleBin()` | `internal/app/app_install_recycle:163` | — |
-| `App.RestoreFromRecycle()` | `internal/app/app_install_recycle:180` | — |
-| `App.DeleteFromRecycle()` | `internal/app/app_install_recycle:201` | — |
-| `App.EmptyRecycleBin()` | `internal/app/app_install_recycle:217` | EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。 |
+| `App.MoveToRecycleEx()` | `internal/app/app_install_recycle:41` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ClearCustomDir()` | `internal/app/app_install_recycle:95` | Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。 |
+| `App.ListRecycleBin()` | `internal/app/app_install_recycle:165` | — |
+| `App.RestoreFromRecycle()` | `internal/app/app_install_recycle:182` | — |
+| `App.DeleteFromRecycle()` | `internal/app/app_install_recycle:203` | — |
+| `App.EmptyRecycleBin()` | `internal/app/app_install_recycle:219` | EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。 |
 | `App.DetectLauncherInstances()` | `internal/app/app_launcher:10` | DetectLauncherInstances inspects a user-selected HMCL/PCL directory and returns the resolv |
 | `App.AnalyzeYSMModel()` | `internal/app/app_model:40` | — |
 | `App.ExtractYsmSummary()` | `internal/app/app_model:44` | — |

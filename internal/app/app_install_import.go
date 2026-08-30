@@ -238,15 +238,18 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 // ImportFileAndPushToInstance 单文件先入仓库（importer 类型路由判定落点与类型），
 // 再把仓库落盘产物推送到指定整合包实例。先验证实例存在再写入：未知实例不落仓库残档。
 func (a *App) ImportFileAndPushToInstance(fileName, base64Data, instanceName string) error {
+	// R23 P4-2：trim 后统一使用——ext 判断与落盘 destPath 同口径，防尾随空格
+	// 文件名绕过根级拦截（ext 判断 trim 而落盘未 trim 的旧口径不一致）
+	fileName = strings.TrimSpace(fileName)
 	// 根级目录级安装入口前置拒绝（与 pushRepoPathToInstance 兜底防线构成双保险）：
 	// .pmx/.pmd/ysm.json 单文件在推送侧会触发 InstallDir(父目录)，父目录=仓库根 →
 	// 整仓落地灾难。前置到落盘前拦截，不留下「入仓成功但推送必败」的仓库残档
 	// （ysm.json 与前端 directImport 的提示口径一致）。
-	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(fileName)))
+	ext := strings.ToLower(filepath.Ext(fileName))
 	if ext == ".pmx" || ext == ".pmd" {
 		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "根级 .pmx/.pmd 不可单独推送（会触发父目录级整组安装）", Suggestion: "MMD 模型请整体选择包含贴图的模型文件夹拖入"}
 	}
-	if strings.EqualFold(strings.TrimSpace(fileName), "ysm.json") {
+	if strings.EqualFold(fileName, "ysm.json") {
 		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "光杆 ysm.json 不可单独推送", Suggestion: "请拖入含 ysm.json 的整个模型文件夹"}
 	}
 	cfg := a.LoadAppConfig()
@@ -318,7 +321,9 @@ func (a *App) pushRepoPathToInstance(rtype, instanceName, repoPath string) error
 	// .pmx/.pmd/ysm.json 触发 InstallDir(父目录)，父目录=仓库根时会把整棵仓库推进实例。
 	if filepath.Dir(repoPath) == filepath.Clean(globalDir) {
 		ext := strings.ToLower(filepath.Ext(repoPath))
-		if ext == ".pmx" || ext == ".pmd" || (ext == ".json" && types.IsYsmEntryJSON(repoPath)) {
+		// IsYsmEntryJSON 做 baseName 全等比较（R23 P2：原传全路径恒 false 防线失效）——
+		// 与 importModelFileWithSubpath:183 同口径传 filepath.Base
+		if ext == ".pmx" || ext == ".pmd" || (ext == ".json" && types.IsYsmEntryJSON(filepath.Base(repoPath))) {
 			return types.AppError{Code: types.ErrInvalidPath, Operation: "推送资源", SourcePath: repoPath, Reason: "根级目录级安装入口被拒绝", Suggestion: "请将模型放入仓库子文件夹后再推送"}
 		}
 	}

@@ -36,6 +36,8 @@ func (a *App) MoveToRecycle(src string) error {
 }
 
 // Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+// 注意（R23 P3-3）：与 MoveToRecycle 不对称——findRecycleRoot 失败时无 ysmRoot 兜底，
+// 直接返回 error（保留旧绑定错误语义，避免静默降级到错误根目录）。
 func (a *App) MoveToRecycleEx(src string) (string, string) {
 	root := a.findRecycleRoot(src)
 	if root == "" {

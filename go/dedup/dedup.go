@@ -159,32 +159,45 @@ func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 	return results
 }
 
+// resolveScanRoot 入口校验公共段：TrimSpace → 空判 → Abs 化（相对路径下
+// FileEntry.Path 为相对路径，下游 recycle.Move 按 CWD 解析可能移到错误位置）。
+// Abs 失败（如 Windows 含 NUL 字节的路径）必须显式报错——静默退回入参形态会让
+// WalkDir→Lstat 失败被 log 吞掉并返回「无重复」= 假绿（与 ErrSymlinkRoot 同类的
+// 静默漏扫）。收敛 FindDuplicateFiles/CountDuplicates 重复入口（R21 审核 P3-3），
+// 错误消息与两函数原实现逐字一致。
+func resolveScanRoot(dir string) (string, error) {
+	dir = strings.TrimSpace(dir)
+	if dir == "" {
+		return "", fmt.Errorf("目录为空")
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", fmt.Errorf("dedup: 无法解析扫描目录 %q: %w", dir, err)
+	}
+	return abs, nil
+}
+
+// resolveHashAlgorithm 取首个去重配置并实例化哈希算法（nil → 默认 DeepHash）。
+func resolveHashAlgorithm(config ...*types.DedupConfig) HashAlgorithm {
+	var cfg *types.DedupConfig
+	if len(config) > 0 {
+		cfg = config[0]
+	}
+	return NewHashAlgorithm(cfg)
+}
+
 // FindDuplicateFiles 扫描目录，按配置的哈希算法分组，返回包含重复的分组
 // skipRecycle 为 true 时跳过 .recycle 子目录
 // config 为去重配置，传入 nil 则使用默认配置（DeepHash）
 // 消费共享并行哈希管道（ADR-119）：collectFiles + hashFilesParallel + 串行分组，
 // 组顺序 = hash 首次出现于遍历的顺序，组内 Files 按 Path 排序（确定性，逐字节与串行一致）。
 func FindDuplicateFiles(dir string, skipRecycle bool, config ...*types.DedupConfig) ([]Group, error) {
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return nil, fmt.Errorf("目录为空")
-	}
-	// 入口绝对化——原实现保留入参形态，相对路径下 FileEntry.Path
-	// 为相对路径，下游 recycle.Move 按 CWD 解析可能移到错误位置（与 CleanEmptyDirs 对齐）
-	abs, err := filepath.Abs(dir)
+	abs, err := resolveScanRoot(dir)
 	if err != nil {
-		// 不可解析的根（如 Windows 上含 NUL 字节的路径）必须显式报错，不能静默
-		// 退回入参形态：WalkDir→Lstat 失败会被 log 吞掉并返回「无重复」= 假绿，
-		// 与 ErrSymlinkRoot 同类的静默漏扫。CleanEmptyDirs 已对齐该行为。
-		return nil, fmt.Errorf("dedup: 无法解析扫描目录 %q: %w", dir, err)
+		return nil, err
 	}
 	dir = abs
-
-	var cfg *types.DedupConfig
-	if len(config) > 0 {
-		cfg = config[0]
-	}
-	algo := NewHashAlgorithm(cfg)
+	algo := resolveHashAlgorithm(config...)
 
 	files, err := collectFiles(dir, skipRecycle)
 	if err != nil {
@@ -242,21 +255,12 @@ func CountDuplicates(dir string, skipRecycle bool, config ...*types.DedupConfig)
 	groups = 0
 	extraFiles = 0
 
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return 0, 0, fmt.Errorf("目录为空")
-	}
-	abs, err := filepath.Abs(dir)
+	abs, err := resolveScanRoot(dir)
 	if err != nil {
-		return 0, 0, fmt.Errorf("dedup: 无法解析扫描目录 %q: %w", dir, err)
+		return 0, 0, err
 	}
 	dir = abs
-
-	var cfg *types.DedupConfig
-	if len(config) > 0 {
-		cfg = config[0]
-	}
-	algo := NewHashAlgorithm(cfg)
+	algo := resolveHashAlgorithm(config...)
 
 	files, err := collectFiles(dir, skipRecycle)
 	if err != nil {
@@ -279,52 +283,4 @@ func CountDuplicates(dir string, skipRecycle bool, config ...*types.DedupConfig)
 		}
 	}
 	return groups, extraFiles, nil
-}
-
-// CleanEmptyDirs 递归删除指定目录下的所有空子目录（不含 dir 自身）。
-// 返回删除的空目录数。从最深层开始删除，确保祖父目录也能被清理。
-func CleanEmptyDirs(dir string) (int, error) {
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return 0, fmt.Errorf("目录为空")
-	}
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		return 0, err
-	}
-	var removed int
-	removeEmptyDirs(abs, abs, &removed)
-	return removed, nil
-}
-
-// removeEmptyDirs 递归后序遍历删除空目录。
-// root 为调用入口目录：根目录自身永不删除（P2 修复——原实现 isEmptyDir(root) 命中时
-// 会误删整个根目录，与「删除所有空子目录」契约矛盾，也与 fsutil 语义分叉）。
-func removeEmptyDirs(root, dir string, removed *int) int {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return 0
-	}
-	for _, e := range entries {
-		if e.IsDir() {
-			subPath := filepath.Join(dir, e.Name())
-			removeEmptyDirs(root, subPath, removed)
-		}
-	}
-	// 再次检查是否为空（子目录可能已被删除）；根目录自身跳过
-	if dir != root && isEmptyDir(dir) {
-		if err := os.Remove(dir); err == nil {
-			(*removed)++
-		}
-	}
-	return *removed
-}
-
-// isEmptyDir 检查目录是否为空（不含任何文件和非空子目录）
-func isEmptyDir(dir string) bool {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false
-	}
-	return len(entries) == 0
 }

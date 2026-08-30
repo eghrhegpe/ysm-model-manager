@@ -102,20 +102,6 @@ func TestAdversarial_NULByteInPath(t *testing.T) {
 	}
 }
 
-// Bug 4 (LOW): CleanEmptyDirs returns (0, nil) for a non-existent path.
-// This silently masks the fact that the directory does not exist, giving
-// a false impression of success.
-func TestAdversarial_CleanEmptyDirsNonExistent(t *testing.T) {
-	removed, err := CleanEmptyDirs("/non/existent/path/that/does/not/exist")
-	if err == nil && removed == 0 {
-		t.Log("INFO(BUG-4): CleanEmptyDirs 对不存在路径返回 (0, nil)——by design（幂等清理），调用方不感知目录是否存在")
-		return
-	}
-	if err != nil {
-		t.Logf("CleanEmptyDirs correctly returned error for non-existent path: %v", err)
-	}
-}
-
 // Bug 5 (INFO): Massive directory hashing performance.
 // Not a bug — measures how long FindDuplicateFiles takes with many duplicate files.
 func TestAdversarial_MassiveDirectoryPerformance(t *testing.T) {

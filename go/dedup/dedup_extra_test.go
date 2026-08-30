@@ -303,31 +303,3 @@ func TestCountDuplicates_UnreadableFileSkipped(t *testing.T) {
 		t.Fatalf("期望 0 组 0 多余（b.txt 打开失败被跳过），got groups=%d extra=%d", g, e)
 	}
 }
-
-// os.Remove 失败分支：removeEmptyDirs 吞掉删除错误——失败的空目录不计数、不报错。
-// Windows 上目录只读位不阻止删除、root 下 0555 不阻止删除 → 跳过。
-func TestCleanEmptyDirs_RemoveFailureSkipped(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Windows 上目录只读位不阻止删除，无法构造删除失败分支")
-	}
-	dir := t.TempDir()
-	sub := filepath.Join(dir, "sub")
-	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(dir, 0555); err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chmod(dir, 0700)
-	if err := os.Remove(sub); err == nil {
-		t.Skip("当前以 root 运行，只读目录仍可删除，无法覆盖 os.Remove 失败分支")
-	}
-
-	removed, err := CleanEmptyDirs(dir)
-	if err != nil {
-		t.Fatalf("删除失败不得向上报错（removeEmptyDirs 吞掉删除错误）: %v", err)
-	}
-	if removed != 0 {
-		t.Fatalf("删除失败的空目录不应计数，got %d", removed)
-	}
-}

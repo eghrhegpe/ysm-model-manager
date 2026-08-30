@@ -11,7 +11,7 @@
 | go/cli | 4 | 29 |
 | go/config | 1 | 3 |
 | go/container | 1 | 30 |
-| Go·去重 | 2 | 16 |
+| Go·去重 | 2 | 15 |
 | Go·下载 | 1 | 16 |
 | go/executil | 2 | 2 |
 | go/fileops | 4 | 13 |
@@ -50,7 +50,7 @@
 | frontend/views | 122 | 360 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **526** | **2254** |
+| **合计** | **526** | **2253** |
 
 ## Go·头像
 
@@ -149,9 +149,8 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `FindDuplicateFiles()` | `go/dedup/dedup:167` | FindDuplicateFiles 扫描目录，按配置的哈希算法分组，返回包含重复的分组 skipRecycle 为 true 时跳过 .recycle 子目录 config 为去 |
-| `CountDuplicates()` | `go/dedup/dedup:241` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） 同样消费共享并行哈希管道（ADR-119 P1：与 FindDuplic |
-| `CleanEmptyDirs()` | `go/dedup/dedup:286` | CleanEmptyDirs 递归删除指定目录下的所有空子目录（不含 dir 自身）。 |
+| `FindDuplicateFiles()` | `go/dedup/dedup:194` | FindDuplicateFiles 扫描目录，按配置的哈希算法分组，返回包含重复的分组 skipRecycle 为 true 时跳过 .recycle 子目录 config 为去 |
+| `CountDuplicates()` | `go/dedup/dedup:254` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） 同样消费共享并行哈希管道（ADR-119 P1：与 FindDuplic |
 | `FileEntry()` | `go/dedup/dedup:25` | FileEntry 文件条目 |
 | `Group()` | `go/dedup/dedup:33` | Group 重复文件分组 |
 | `DeepHash.Name()` | `go/dedup/strategy:25` | — |

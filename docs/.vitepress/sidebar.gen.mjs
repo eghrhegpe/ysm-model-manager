@@ -1317,6 +1317,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r20-go-avatar-2026-08-31"
       },
       {
+        "text": "R21 审核 — go/dedup 去重检测 + 哈希策略",
+        "link": "/audit/audit-r21-go-dedup-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

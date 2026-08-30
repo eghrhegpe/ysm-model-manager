@@ -259,8 +259,8 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/settings/init.ts` | 275 |
-| `frontend/src/views/app-content/settings/init.ts` | 297 |
+| `frontend/src/views/app-content/settings/init.ts` | 278 |
+| `frontend/src/views/app-content/settings/init.ts` | 300 |
 | `frontend/src/views/app-nav/index.ts` | 95 |
 
 **订阅方（on）：**
@@ -316,7 +316,7 @@
 | `frontend/src/features/recycle-bin.ts` | 116 |
 | `frontend/src/features/recycle-bin.ts` | 176 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
-| `frontend/src/views/app-content/settings/init.ts` | 141 |
+| `frontend/src/views/app-content/settings/init.ts` | 142 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
 | `frontend/src/views/app-sidebar/index.ts` | 320 |
@@ -457,13 +457,13 @@
 | `frontend/src/views/app-content/init-pages.ts` | 168 |
 | `frontend/src/views/app-content/init-pages.ts` | 281 |
 | `frontend/src/views/app-content/settings/init.ts` | 48 |
-| `frontend/src/views/app-content/settings/init.ts` | 83 |
-| `frontend/src/views/app-content/settings/init.ts` | 127 |
-| `frontend/src/views/app-content/settings/init.ts` | 143 |
-| `frontend/src/views/app-content/settings/init.ts` | 150 |
-| `frontend/src/views/app-content/settings/init.ts` | 156 |
-| `frontend/src/views/app-content/settings/init.ts` | 184 |
-| `frontend/src/views/app-content/settings/init.ts` | 231 |
+| `frontend/src/views/app-content/settings/init.ts` | 84 |
+| `frontend/src/views/app-content/settings/init.ts` | 128 |
+| `frontend/src/views/app-content/settings/init.ts` | 144 |
+| `frontend/src/views/app-content/settings/init.ts` | 151 |
+| `frontend/src/views/app-content/settings/init.ts` | 159 |
+| `frontend/src/views/app-content/settings/init.ts` | 187 |
+| `frontend/src/views/app-content/settings/init.ts` | 234 |
 | `frontend/src/views/app-content/settings/keymap.ts` | 104 |
 | `frontend/src/views/app-content/settings/keymap.ts` | 115 |
 | `frontend/src/views/app-content/settings/keymap.ts` | 136 |
@@ -474,12 +474,12 @@
 | `frontend/src/views/app-content/settings/path-cards.ts` | 306 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 328 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 354 |
-| `frontend/src/views/app-content/settings/ui-prefs.ts` | 122 |
-| `frontend/src/views/app-content/settings/ui-prefs.ts` | 133 |
-| `frontend/src/views/app-content/settings/ui-prefs.ts` | 144 |
-| `frontend/src/views/app-content/settings/ui-prefs.ts` | 156 |
-| `frontend/src/views/app-content/settings/ui-prefs.ts` | 166 |
-| `frontend/src/views/app-content/settings/worker-prefs.ts` | 43 |
+| `frontend/src/views/app-content/settings/ui-prefs.ts` | 123 |
+| `frontend/src/views/app-content/settings/ui-prefs.ts` | 134 |
+| `frontend/src/views/app-content/settings/ui-prefs.ts` | 145 |
+| `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
+| `frontend/src/views/app-content/settings/ui-prefs.ts` | 167 |
+| `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | `frontend/src/views/app-content/site/drag.ts` | 44 |
 | `frontend/src/views/app-content/site/drag.ts` | 81 |
 | `frontend/src/views/app-content/site/drag.ts` | 104 |

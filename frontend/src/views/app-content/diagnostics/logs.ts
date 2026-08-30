@@ -39,7 +39,7 @@ const OP_META: Record<string, { label: string; icon: string }> = {
 /** 未知 op 回退到通用标签，避免显示裸英文 */
 function opMeta(op: string | undefined): { label: string; icon: string } {
   if (op && OP_META[op]) return OP_META[op];
-  return { label: op || "导入", icon: "🧾" };
+  return { label: op || t("diagnostics.opImportFallback"), icon: "🧾" };
 }
 
 function dgLsGetListAndGen(

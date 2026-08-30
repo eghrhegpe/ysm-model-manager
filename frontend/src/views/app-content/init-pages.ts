@@ -278,7 +278,7 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
     await initSettings(host._root);
   } catch (e) {
     console.error("[settings] 初始化失败:", e);
-    bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "设置页初始化失败"), duration: TOAST_MS.long, type: "error" });
+    bus.emit("toast:show", { msg: "❌ " + friendlyError(e, t("content.settingsInitFailed")), duration: TOAST_MS.long, type: "error" });
   }
 }
 

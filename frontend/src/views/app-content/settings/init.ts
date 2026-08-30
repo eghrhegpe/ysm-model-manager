@@ -46,13 +46,14 @@ function stgBindMirrorSelect(
           await getApp();
         await SetDownloadMirror(val);
         bus.emit("toast:show", {
-          msg:
-            "✅ 下载源已切换为 " +
-            (val === "jsdelivr"
-              ? "jsDelivr CDN"
-              : val === "githubapi"
-                ? "GitHub API"
-                : "直连"),
+          msg: t("settings.mirror.switched", {
+            name:
+              val === "jsdelivr"
+                ? t("settings.mirror.nameJsdelivr")
+                : val === "githubapi"
+                  ? t("settings.mirror.nameGithubapi")
+                  : t("settings.mirror.nameDirect"),
+          }),
           duration: TOAST_MS.success,
           type: "success",
         });
@@ -124,7 +125,7 @@ function stgBindLinkMode(
       const cfg2 = await LoadAppConfig();
       const mcRoot = cfg2.mcRoot || "";
       if (!mcRoot) {
-        bus.emit("toast:show", { msg: "请先设置游戏根目录", duration: TOAST_MS.info, type: "warn" });
+        bus.emit("toast:show", { msg: t("settings.setGameRootFirst"), duration: TOAST_MS.info, type: "warn" });
         return;
       }
       const instances = (await ListVersionInstances(mcRoot)) || [];
@@ -141,14 +142,16 @@ function stgBindLinkMode(
       bus.emit("stats:refresh");
       if (total === 0) {
         bus.emit("toast:show", {
-          msg: failed > 0 ? `⚠️ ${failed} 个整合包重新链接失败` : "没有需要重新链接的文件",
+          msg: failed > 0 ? `⚠️ ${t("settings.relinkFailed", { failed })}` : t("settings.relinkNone"),
           duration: TOAST_MS.normal,
           type: failed > 0 ? "error" : "info",
         });
         return;
       }
       bus.emit("toast:show", {
-        msg: failed > 0 ? `🔄 已重新链接 ${total} 个文件（${failed} 个失败）` : `🔄 已重新链接 ${total} 个文件`,
+        msg: failed > 0
+          ? t("settings.relinkDonePartial", { total, failed })
+          : t("settings.relinkDone", { total }),
         duration: TOAST_MS.normal,
         type: "success",
       });
@@ -182,7 +185,7 @@ function stgBindLinkMode(
         await SetLinkMode(val);
         cfgLocal.linkMode = val;
         bus.emit("toast:show", {
-          msg: `✅ 链接模式已切换至: ${val}`,
+          msg: t("settings.linkModeSwitched", { val }),
           duration: TOAST_MS.success,
           type: "success",
         });
@@ -229,7 +232,7 @@ function stgBindReleasesClick(
       .catch((e) => {
         console.warn("[settings] 打开发布页失败:", e);
         bus.emit("toast:show", {
-          msg: "❌ 打开浏览器失败",
+          msg: "❌ " + t("tree.browserFailed"),
           duration: TOAST_MS.normal,
           type: "error",
         });

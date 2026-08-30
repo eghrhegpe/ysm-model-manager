@@ -86,7 +86,7 @@ export function bindPerfCopyHandlers(root: ShadowRoot): void {
       const text = decodeURIComponent(raw);
       const ok = await copyText(text);
       bus.emit("toast:show", {
-        msg: ok ? "✅ 已复制原始输出到剪贴板" : "❌ 复制失败，请手动框选复制",
+        msg: ok ? "✅ " + t("diagnostics.perfCopied") : "❌ " + t("diagnostics.perfCopyFail"),
         duration: ok ? 2000 : 3000,
         type: ok ? undefined : "error",
       });
@@ -352,7 +352,7 @@ interface DgPcGfStage {
 function dgPcGfWebModeCheck(): boolean {
   if (isWebPlatform()) {
     bus.emit("toast:show", {
-      msg: "网页版不支持性能诊断",
+      msg: t("diagnostics.webNoPerf"),
       duration: TOAST_MS.normal,
       type: "warn",
     });

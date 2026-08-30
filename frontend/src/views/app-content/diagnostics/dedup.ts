@@ -571,7 +571,7 @@ export async function startDedup(
       const entry = rtype ? reg[rtype] : undefined;
       const entryName = entry && typeof entry.name === "string" ? entry.name : "";
       const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
-      typeLabel = rtype ? entryName || rtype : "所有";
+      typeLabel = rtype ? entryName || rtype : t("diagnostics.all");
       typeIcon = rtype ? entryIcon || "📦" : "📦";
       list.innerHTML =
         '<div class="stat-row diag-stat diag-stat-muted">' +
@@ -580,7 +580,7 @@ export async function startDedup(
     } catch (e) {
       list.innerHTML =
         '<div class="stat-row diag-stat diag-stat-muted">❌ ' +
-        esc(friendlyError(e, "加载资源类型失败")) +
+        esc(friendlyError(e, t("diagnostics.loadResourceTypesFailed"))) +
         "</div>";
       return;
     }
@@ -601,7 +601,7 @@ export async function startDedup(
     } catch (e) {
       list.innerHTML =
         '<div class="stat-row diag-stat diag-stat-muted">❌ ' +
-        esc(friendlyError(e, "加载去重配置失败")) +
+        esc(friendlyError(e, t("diagnostics.loadDedupConfigFailed"))) +
         "</div>";
     }
   } finally {

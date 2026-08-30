@@ -2,6 +2,7 @@
 // 读取/应用 UI 偏好（localStorage），统一走 safeGet/safeSet——
 // 隐私模式（存储禁用）下抛错会中断 initSettings（applyUIPref 是 init 同步执行的一部分）。
 import { bus } from "../../../bus.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 
@@ -120,7 +121,7 @@ export function initUiPrefs(root: ShadowRoot): void {
     safeSet("ui-font-size", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
-      msg: "✅ 字号已更新",
+      msg: t("settings.ui.fontSizeUpdated"),
       duration: TOAST_DURATION_MS,
       type: "success",
     });
@@ -131,7 +132,7 @@ export function initUiPrefs(root: ShadowRoot): void {
     safeSet("ui-display-font", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
-      msg: "✅ 字体已更新",
+      msg: t("settings.ui.fontUpdated"),
       duration: TOAST_DURATION_MS,
       type: "success",
     });
@@ -142,7 +143,7 @@ export function initUiPrefs(root: ShadowRoot): void {
     safeSet("ui-card-density", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
-      msg: "✅ 卡片密度已更新",
+      msg: t("settings.ui.densityUpdated"),
       duration: TOAST_DURATION_MS,
       type: "success",
     });
@@ -154,7 +155,7 @@ export function initUiPrefs(root: ShadowRoot): void {
     safeSet("ui-animations", checked ? "on" : "off");
     applyUIPref();
     bus.emit("toast:show", {
-      msg: checked ? "✅ 动画已开启" : "✅ 动画已关闭",
+      msg: checked ? t("settings.ui.animOn") : t("settings.ui.animOff"),
       duration: TOAST_DURATION_MS,
       type: "success",
     });
@@ -164,7 +165,7 @@ export function initUiPrefs(root: ShadowRoot): void {
   root.getElementById("set-default-page")?.addEventListener("change", (e) => {
     safeSet("ui-default-page", (e.target as HTMLSelectElement).value);
     bus.emit("toast:show", {
-      msg: "✅ 默认页面已保存",
+      msg: t("settings.ui.defaultPageSaved"),
       duration: TOAST_DURATION_MS,
       type: "success",
     });

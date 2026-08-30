@@ -3,6 +3,7 @@
 // _activeCapture 随本段迁移（原 init.ts 模块级）：单一捕获守卫——同一时刻仅允许
 // 一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持。
 import { bus } from "../../../bus.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { loadTdKeymap, type TdKeyAction } from "../../../utils/3d/model3d.ts";
 import { safeGet, safeSet, safeRemove } from "../../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
@@ -18,12 +19,12 @@ const TOAST_SUCCESS_MS = TOAST_MS.quick;
 const TOAST_WARN_MS = TOAST_MS.info;
 
 const TD_ACTIONS: Array<{ key: TdKeyAction; label: string }> = [
-  { key: "forward", label: "前移" },
-  { key: "back", label: "后移" },
-  { key: "left", label: "左移" },
-  { key: "right", label: "右移" },
-  { key: "up", label: "上升" },
-  { key: "down", label: "下降" },
+  { key: "forward", label: t("settings.keymap.actionForward") },
+  { key: "back", label: t("settings.keymap.actionBack") },
+  { key: "left", label: t("settings.keymap.actionLeft") },
+  { key: "right", label: t("settings.keymap.actionRight") },
+  { key: "up", label: t("settings.keymap.actionUp") },
+  { key: "down", label: t("settings.keymap.actionDown") },
 ];
 
 const tdKeyLabel = (code: string): string => {
@@ -32,13 +33,13 @@ const tdKeyLabel = (code: string): string => {
   if (code.startsWith("Digit")) return code.slice(5);
   if (code.startsWith("Numpad")) return "Num " + code.slice(6);
   const map: Record<string, string> = {
-    Space: "空格",
+    Space: t("settings.keymap.keySpace"),
     ShiftLeft: "Shift",
-    ShiftRight: "Shift(右)",
+    ShiftRight: t("settings.keymap.keyShiftRight"),
     ControlLeft: "Ctrl",
-    ControlRight: "Ctrl(右)",
+    ControlRight: t("settings.keymap.keyControlRight"),
     AltLeft: "Alt",
-    AltRight: "Alt(右)",
+    AltRight: t("settings.keymap.keyAltRight"),
     ArrowUp: "↑",
     ArrowDown: "↓",
     ArrowLeft: "←",
@@ -81,7 +82,7 @@ function tdRenderKeymap(root: ShadowRoot): void {
         document.removeEventListener("keydown", _activeCapture, true);
         _activeCapture = null;
       }
-      btn.textContent = "按键…";
+      btn.textContent = t("settings.keymap.pressKey");
       const onKey = (ev: KeyboardEvent): void => {
         // 设置页已卸载（grid 不存在）则放弃捕获，先判后拦截，杜绝全局 keydown 劫持
         if (!root.getElementById("td-keymap-grid")) {
@@ -101,7 +102,7 @@ function tdRenderKeymap(root: ShadowRoot): void {
         const conflict = TD_ACTIONS.find((a) => a.key !== key && cur[a.key] === ev.code);
         if (conflict) {
           bus.emit("toast:show", {
-            msg: `⚠️ ${tdKeyLabel(ev.code)} 已被「${conflict.label}」占用`,
+            msg: t("settings.keymap.conflict", { key: tdKeyLabel(ev.code), label: conflict.label }),
             duration: TOAST_WARN_MS,
             type: "warn",
           });
@@ -112,7 +113,7 @@ function tdRenderKeymap(root: ShadowRoot): void {
         tdSaveKeymap(cur);
         tdRenderKeymap(root);
         bus.emit("toast:show", {
-          msg: `✅ ${label} → ${tdKeyLabel(ev.code)}`,
+          msg: t("settings.keymap.bound", { label, key: tdKeyLabel(ev.code) }),
           duration: TOAST_SUCCESS_MS,
           type: "success",
         });
@@ -133,7 +134,7 @@ export function initKeymap(root: ShadowRoot): void {
     safeRemove("td-keymap");
     tdRenderKeymap(root);
     bus.emit("toast:show", {
-      msg: "↩️ 已恢复默认键位",
+      msg: t("settings.keymap.resetDone"),
       duration: TOAST_SUCCESS_MS,
       type: "success",
     });

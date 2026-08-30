@@ -400,15 +400,15 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `Audit()` | `go/repoaudit/repoaudit:124` | Audit 仓库健康审计核心：资源扫描 + 完整性 + 缓存 + 健康分数 + 警告，一次遍历。 |
-| `HealthReportFor()` | `go/repoaudit/repoaudit:250` | HealthReportFor 完整体检（审计 + 去重），GUI 绑定与 CLI health-report 同一载荷 |
-| `Classify()` | `go/repoaudit/repoaudit:363` | Classify 将扩展名映射到注册表资源类型 id（如 "ysm"/"fbx"/"blueprint"）。 |
+| `Audit()` | `go/repoaudit/repoaudit:125` | Audit 仓库健康审计核心：资源扫描 + 完整性 + 缓存 + 健康分数 + 警告，一次遍历。 |
+| `HealthReportFor()` | `go/repoaudit/repoaudit:256` | HealthReportFor 完整体检（审计 + 去重），GUI 绑定与 CLI health-report 同一载荷 |
+| `Classify()` | `go/repoaudit/repoaudit:369` | Classify 将扩展名映射到注册表资源类型 id（如 "ysm"/"fbx"/"blueprint"）。 |
 | `Result()` | `go/repoaudit/repoaudit:64` | Result 仓库审计结果（结构对齐原 go/cli repoAuditResult） |
 | `Completeness()` | `go/repoaudit/repoaudit:75` | Completeness 完整性统计 |
 | `CacheStatus()` | `go/repoaudit/repoaudit:83` | CacheStatus 缓存状态 |
 | `ResourceSummary()` | `go/repoaudit/repoaudit:93` | ResourceSummary 资源统计 |
-| `DedupSummary()` | `go/repoaudit/repoaudit:102` | DedupSummary 去重维度汇总（HealthReport 追加） |
-| `HealthReport()` | `go/repoaudit/repoaudit:109` | HealthReport 完整体检：审计 + 去重（GUI 与 CLI health-report 同一载荷） |
+| `DedupSummary()` | `go/repoaudit/repoaudit:103` | DedupSummary 去重维度汇总（HealthReport 追加） |
+| `HealthReport()` | `go/repoaudit/repoaudit:110` | HealthReport 完整体检：审计 + 去重（GUI 与 CLI health-report 同一载荷） |
 
 ## go/rustbridge
 
@@ -2141,10 +2141,10 @@
 | `initDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:208` | 初始化去重配置面板（标签页打开时调用，配置实时保存） 扫描结果不覆盖面板，控件扫描后仍可改；code_review P3） |
 | `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:215` | 获取当前去重配置（供外部调用）——返回冻结快照，防调用方篡改或跨调用污染。 |
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/dedup:556` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
-| `runHealthAudit()` | `frontend/src/views/app-content/diagnostics/health:52` | 仓库体检：调 Go 端 RepoHealthAudit（当前类型单仓库审计）并渲染结果—— 动态感知当前资源类型（repo-rtype，等价树视图 vm._filesRoot 的类 |
-| `parseHealthReport()` | `frontend/src/views/app-content/diagnostics/health:99` | 解析 RepoHealthAudit 返回的 JSON 字符串。 |
-| `renderHealthReport()` | `frontend/src/views/app-content/diagnostics/health:125` | 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 |
-| `formatSize()` | `frontend/src/views/app-content/diagnostics/health:178` | 字节大小人性化——委托至 formatBytes（单一事实来源，消灭多处实现口径漂移） |
+| `runHealthAudit()` | `frontend/src/views/app-content/diagnostics/health:54` | 仓库体检：调 Go 端 RepoHealthAudit（当前类型单仓库审计）并渲染结果—— 动态感知当前资源类型（repo-rtype，等价树视图 vm._filesRoot 的类 |
+| `parseHealthReport()` | `frontend/src/views/app-content/diagnostics/health:101` | 解析 RepoHealthAudit 返回的 JSON 字符串。 |
+| `renderHealthReport()` | `frontend/src/views/app-content/diagnostics/health:127` | 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 |
+| `formatSize()` | `frontend/src/views/app-content/diagnostics/health:180` | 字节大小人性化——委托至 formatBytes（单一事实来源，消灭多处实现口径漂移） |
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/init` | — |
 | `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/init` | — |
 | `resetDedupConfig()` | `frontend/src/views/app-content/diagnostics/init` | — |
@@ -2175,7 +2175,7 @@
 | `AppContentHost()` | `frontend/src/views/app-content/init-workshop:182` | app-content 组件接口（供 workshop/github 初始化函数访问） |
 | `PageDefinition()` | `frontend/src/views/app-content/page-registry:23` | — |
 | `PAGE_REGISTRY()` | `frontend/src/views/app-content/page-registry:30` | — |
-| `initSettings()` | `frontend/src/views/app-content/settings/init:311` | 初始化设置页所有事件绑定 |
+| `initSettings()` | `frontend/src/views/app-content/settings/init:314` | 初始化设置页所有事件绑定 |
 | `initKeymap()` | `frontend/src/views/app-content/settings/keymap:131` | 初始化 3D 预览操作：键位网格 + 恢复默认 + 相机速度 + 默认旋转模式 |
 | `saveCfg()` | `frontend/src/views/app-content/settings/path-cards:25` | — |
 | `bindPathClick()` | `frontend/src/views/app-content/settings/path-cards:53` | — |
@@ -2189,9 +2189,9 @@
 | `setBusy()` | `frontend/src/views/app-content/settings/store:22` | — |
 | `resetSettingsStore()` | `frontend/src/views/app-content/settings/store:27` | 重置模块级状态（initSettings 开头调用；重复执行时清空上次残留） |
 | `initTheme()` | `frontend/src/views/app-content/settings/theme:24` | 初始化主题段：主题卡片点击切换 + 自动切换下拉框 |
-| `applyUIPrefs()` | `frontend/src/views/app-content/settings/ui-prefs:12` | 应用 UI 偏好到 CSS 变量（字号/字体/密度/动画）——启动链与设置页共用（ADR-040 拆分去重） |
-| `initUiPrefs()` | `frontend/src/views/app-content/settings/ui-prefs:52` | 初始化界面与体验设置：应用偏好 + 绑定字号/字体/密度/动画/默认页变更 |
-| `initWorkerPrefs()` | `frontend/src/views/app-content/settings/worker-prefs:35` | 初始化 3D 解析 worker 开关：读取现有偏好回填 + 绑定变更 |
+| `applyUIPrefs()` | `frontend/src/views/app-content/settings/ui-prefs:13` | 应用 UI 偏好到 CSS 变量（字号/字体/密度/动画）——启动链与设置页共用（ADR-040 拆分去重） |
+| `initUiPrefs()` | `frontend/src/views/app-content/settings/ui-prefs:53` | 初始化界面与体验设置：应用偏好 + 绑定字号/字体/密度/动画/默认页变更 |
+| `initWorkerPrefs()` | `frontend/src/views/app-content/settings/worker-prefs:36` | 初始化 3D 解析 worker 开关：读取现有偏好回填 + 绑定变更 |
 | `RepoAuthorLike()` | `frontend/src/views/app-content/site-view:13` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
 | `RenderSiteViewCtx()` | `frontend/src/views/app-content/site-view:16` | 竚点视图渲染上下文（index.ts _initWorkshop 传入） |
 | `LocalCreatorLike()` | `frontend/src/views/app-content/site-view:43` | 本地创作者（绑定 + 运行时附加字段） |

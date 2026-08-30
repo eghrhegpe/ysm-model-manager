@@ -2,6 +2,7 @@
 // 依赖 workshop-icons.js 的 SVG 图标
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { t } from "../../core/i18n/t.ts";
 
 const STORAGE_KEY = "ysm-fav-creators";
 
@@ -25,25 +26,25 @@ export function getCreatorIdentity(cr: CreatorIdentityInput): CreatorIdentity {
   const tag = cr.tag || "";
   switch (role) {
     case "official":
-      return { label: "官方IP模型库", icon: ICONS.OFFICIAL, tag: "official" };
+      return { label: t("workshop.roleOfficial"), icon: ICONS.OFFICIAL, tag: "official" };
     case "creator":
-      return { label: "YSM 创作者", icon: ICONS.CREATOR, tag: "creator" };
+      return { label: t("workshop.roleCreator"), icon: ICONS.CREATOR, tag: "creator" };
     case "vup":
-      return { label: "VTuber 创作者", icon: ICONS.VUP, tag: "vup" };
+      return { label: t("workshop.roleVup"), icon: ICONS.VUP, tag: "vup" };
     case "repo":
-      return { label: "社区模型仓库", icon: ICONS.REPO, tag: "repo" };
+      return { label: t("workshop.roleRepo"), icon: ICONS.REPO, tag: "repo" };
     case "oc":
-      return { label: "OC 原创角色", icon: ICONS.OC, tag: "oc" };
+      return { label: t("workshop.roleOc"), icon: ICONS.OC, tag: "oc" };
   }
   // fallback: detect from old tag field（与 role 分支对齐，五种身份均可识别）
   if (tag === "official")
-    return { label: "官方IP模型库", icon: ICONS.OFFICIAL, tag: "official" };
+    return { label: t("workshop.roleOfficial"), icon: ICONS.OFFICIAL, tag: "official" };
   if (tag === "vup")
-    return { label: "VTuber 创作者", icon: ICONS.VUP, tag: "vup" };
-  if (tag === "oc") return { label: "OC 原创角色", icon: ICONS.OC, tag: "oc" };
+    return { label: t("workshop.roleVup"), icon: ICONS.VUP, tag: "vup" };
+  if (tag === "oc") return { label: t("workshop.roleOc"), icon: ICONS.OC, tag: "oc" };
   if (tag === "repo")
-    return { label: "社区模型仓库", icon: ICONS.REPO, tag: "repo" };
-  return { label: "YSM 创作者", icon: ICONS.CREATOR, tag: "creator" };
+    return { label: t("workshop.roleRepo"), icon: ICONS.REPO, tag: "repo" };
+  return { label: t("workshop.roleCreator"), icon: ICONS.CREATOR, tag: "creator" };
 }
 
 export function getTagFromRole(role?: string): string {

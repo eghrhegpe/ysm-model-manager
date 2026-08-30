@@ -3,6 +3,7 @@
 // 默认关闭（opt-in）：主线程解析为稳定基线；开启后走 worker 解析，失败自动降级主线程——
 // 设置页提供手动开关作为回退保险。读写统一走 safeGet/safeSet（隐私模式安全）。
 import { bus } from "../../../bus.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 
@@ -20,14 +21,14 @@ const WORKER_SWITCHES: ReadonlyArray<WorkerSwitch> = [
   {
     id: "set-fbx-worker",
     storageKey: "fbx-worker",
-    onMsg: "✅ FBX worker 已开启",
-    offMsg: "✅ FBX worker 已关闭",
+    onMsg: "settings.worker.fbxOn",
+    offMsg: "settings.worker.fbxOff",
   },
   {
     id: "set-mmd-worker",
     storageKey: "mmd-pmx-worker",
-    onMsg: "✅ MMD PMX worker 已开启",
-    offMsg: "✅ MMD PMX worker 已关闭",
+    onMsg: "settings.worker.mmdOn",
+    offMsg: "settings.worker.mmdOff",
   },
 ];
 
@@ -41,7 +42,7 @@ export function initWorkerPrefs(root: ShadowRoot): void {
       const checked = input.checked;
       safeSet(storageKey, checked ? "1" : "0");
       bus.emit("toast:show", {
-        msg: checked ? onMsg : offMsg,
+        msg: checked ? t(onMsg) : t(offMsg),
         duration: TOAST_DURATION_MS,
         type: "success",
       });

@@ -56,7 +56,7 @@ interface DgCfResolveResult {
 function dgCfWebGate(): boolean {
   if (isWebPlatform()) {
     bus.emit("toast:show", {
-      msg: "网页版不支持冲突扫描",
+      msg: t("diagnostics.webNoConflictScan"),
       duration: TOAST_MS.normal,
       type: "warn",
     });
@@ -202,7 +202,7 @@ export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void>
 function dgCfSyncWebGate(): boolean {
   if (isWebPlatform()) {
     bus.emit("toast:show", {
-      msg: "网页版不支持同步冲突扫描",
+      msg: t("diagnostics.webNoSyncConflictScan"),
       duration: TOAST_MS.normal,
       type: "warn",
     });

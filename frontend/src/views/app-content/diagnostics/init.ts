@@ -39,7 +39,7 @@ function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
   root.getElementById("diag-clear")?.addEventListener("click", async () => {
     if (!can("ClearImportLogs")) {
       bus.emit("toast:show", {
-        msg: "网页版不支持清除日志",
+        msg: t("diagnostics.webNoClearLogs"),
         duration: TOAST_MS.normal,
         type: "warn",
       });
@@ -74,7 +74,7 @@ function dgInBindCopyPanel(root: ShadowRoot): void {
     const text = (clone?.textContent ?? "").trim();
     if (!text) {
       bus.emit("toast:show", {
-        msg: "📋 当前无日志可复制",
+        msg: "📋 " + t("diagnostics.noLogsToCopy"),
         duration: TOAST_MS.success,
         type: "info",
       });

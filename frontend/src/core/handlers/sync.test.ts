@@ -186,7 +186,7 @@ describe("registerSync — sync:download:missing", () => {
     const { toasts, doneEvents } = spyEvents();
 
     // 故意违反契约（bus.ts 已声明 rtype 必填）：runtime 守卫应显式失败而非降级
-    bus.emit("sync:download:missing", { instanceName: "PackA", token: "t8" } as never);
+    bus.emit("sync:download:missing", { instanceName: "PackA", token: "t8" } as unknown as { instanceName?: string; rtype: string; token?: string });
     await flush();
     await flush();
 

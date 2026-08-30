@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
+import type { PreviewActionMenuCtx } from "../../utils/3d/adapters/preview-menu/node-types.ts";
 
 // 截图链路（Wails 绑定 SaveScreenshotFile）在 node 测试环境不可用——
 // mock saveScreenshot 隔离副作用，只验证 vrmShotNodes 的 action 触发截图调用
@@ -38,7 +39,7 @@ describe("vrmShotNodes（current-only 截图按钮）", () => {
   it("action 触发 saveScreenshot：_modelPath 透传 + screenshotFn 第四参", () => {
     const shotFn = () => Promise.resolve("b64");
     const nodes = vrmShotNodes(shotFn, "/m/a.vrm");
-    nodes[0].action!({} as never); // action 签名吃 PreviewActionMenuCtx（本测试不消费）
+    nodes[0].action!({} as unknown as PreviewActionMenuCtx); // action 签名吃 PreviewActionMenuCtx（本测试不消费）
     expect(saveScreenshotMock).toHaveBeenCalledWith(
       expect.objectContaining({ _modelPath: "/m/a.vrm" }),
       "current",

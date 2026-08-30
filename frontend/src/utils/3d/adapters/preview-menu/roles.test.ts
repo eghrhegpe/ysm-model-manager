@@ -8,6 +8,7 @@ import { CORE_MENU_ITEMS } from "./defs.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import { mountPreviewRootMenu, roleBaseName, type PreviewMenuCtx } from "./core.ts";
 import { sceneRegistry } from "../scene-registry.ts";
+import type { PreviewScene } from "../mount-preview-core.ts";
 import { registerSchema, unregisterSchema } from "../schema-registry.ts";
 import { makeMenuCtx as makeCtx } from "../menu-test-fixtures.ts";
 
@@ -17,7 +18,7 @@ function regRole(path: string, menuItems: PreviewMenuNode[] | null = null): stri
     path,
     rtype: "test",
     roots: [new THREE.Object3D()],
-    built: { dispose: vi.fn() } as never,
+    built: { dispose: vi.fn() } as unknown as PreviewScene,
     boneMaps: null,
     menuItems,
     onBonePick: null,

@@ -57,9 +57,9 @@ beforeEach(async () => {
   clearRegistry();
   register(
     "loadEntries",
-    (() => Promise.resolve({ filesRoot: "/repo", entries: [...entries] })) as never,
+    (() => Promise.resolve({ filesRoot: "/repo", entries: [...entries] })) as unknown as Parameters<typeof register>[1],
   );
-  getAppMock.mockResolvedValue(bindings as never);
+  getAppMock.mockResolvedValue(bindings as unknown as Awaited<ReturnType<typeof getAppMock>>);
   delete (globalThis as unknown as Record<string, unknown>)["__YSM_BACKEND__"];
   el = await mountEl();
 });

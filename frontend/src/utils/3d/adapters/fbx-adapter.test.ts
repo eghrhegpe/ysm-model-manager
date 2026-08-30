@@ -84,7 +84,7 @@ vi.mock("./fbx-parser.ts", async (importOriginal) => {
     },
     buildFbxSceneFromData: (data: unknown, config?: unknown): THREE.Group => {
       if (hoisted.buildFromDataOverride) return hoisted.buildFromDataOverride(data, config);
-      return actual.buildFbxSceneFromData(data as never, config as never);
+      return actual.buildFbxSceneFromData(data as unknown as Parameters<typeof actual.buildFbxSceneFromData>[0], config as unknown as Parameters<typeof actual.buildFbxSceneFromData>[1]);
     },
   };
 });

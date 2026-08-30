@@ -16,7 +16,7 @@ import { mmdMenuItems, type MmdMenuItemsOpts } from "../mmd-adapter.ts";
 import { vrmMenuItems, type VrmMenuItemsOpts } from "../vrm-adapter.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx } from "./core.ts";
 import type { SceneCapability } from "../../caps/scene-capability.ts";
-import type { YsmModel, YsmContentHandle } from "../../../views/app-preview/ysm-controls.ts";
+import type { YsmModel, YsmContentHandle } from "../../../../views/app-preview/ysm-controls.ts";
 import type { Spec3D } from "../../model3d.ts";
 import { makeMenuCtx } from "../menu-test-fixtures.ts";
 import type { BoneTree } from "../../bone-tools.ts";

@@ -12,6 +12,7 @@ import {
 } from "./postprocessing-capability.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
 import type { LightCapability } from "./light-capability.ts";
+import type { SceneCapability } from "./scene-capability.ts";
 
 // buildComposer 的 EffectComposer/RenderPass/UnrealBloomPass/SSAOPass/SSRPass/OutputPass
 // 均为纯数据构造（WebGLRenderTarget 不依赖 GL context），happy-dom 下可真实构建；
@@ -474,7 +475,7 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     (cap as unknown as { bloomPass: unknown }).bloomPass = bp;
     return bp;
   }
-  const lightCap = (opacity: number) => ({ getParams: () => ({ volumetric: { opacity } }) }) as never;
+  const lightCap = (opacity: number) => ({ getParams: () => ({ volumetric: { opacity } }) }) as unknown as SceneCapability;
 
   it("默认体积光（opacity 0.45）：threshold/strength 落在用户设置 ±20% 内，radius 保持用户设置", () => {
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });

@@ -944,7 +944,7 @@ describe("readVrmMeta 分支补全", () => {
       sexualUssageName: "Disallow",
       violentUssageName: "Allow",
       reference: "https://ref.example",
-    } as never;
+    } as unknown as typeof vrm.meta;
     hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
     hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
 
@@ -998,7 +998,7 @@ describe("readVrmMeta 分支补全", () => {
       metaVersion: "0" as const,
       title: "x",
       texture: { image: { width: 4, height: 4 } },
-    } as never;
+    } as unknown as typeof vrm.meta;
     hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
     hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
 

@@ -68,7 +68,7 @@ beforeEach(() => {
   localStorage.clear();
   document.body.innerHTML = "";
   getApp.mockResolvedValue({ SaveScreenshotFile: saveFile });
-  vi.stubGlobal("Image", FakeImage as never);
+  vi.stubGlobal("Image", FakeImage);
   vi.stubGlobal(
     "URL",
     Object.assign(Object.create(URL), {

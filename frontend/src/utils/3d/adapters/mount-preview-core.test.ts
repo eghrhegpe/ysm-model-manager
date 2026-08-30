@@ -61,7 +61,7 @@ vi.mock("three/addons/controls/OrbitControls.js", async () => {
     update = vi.fn();
     constructor(_camera: unknown, _dom: unknown) {}
   }
-  return { OrbitControls: FakeOrbitControls as unknown as typeof OrbitControls };
+  return { OrbitControls: FakeOrbitControls as unknown as typeof import("three/addons/controls/OrbitControls.js").OrbitControls };
 });
 
 // ---- caps registry：全能力桩（id → 桩，含 render/postProc 接口）----

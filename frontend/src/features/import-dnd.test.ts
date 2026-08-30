@@ -258,7 +258,7 @@ describe("handleTreeDrop — 错误兜底", () => {
     const toastSpy = vi.fn();
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
     // items 含 null 触发 collectFiles 的 null 守卫（不再崩溃）
-    const ev = makeDragEvent("drop", { items: [null as never], files: [], types: ["Files"] });
+    const ev = makeDragEvent("drop", { items: [null as unknown as DataTransferItem], files: [], types: ["Files"] });
     const [isBusy, setBusy] = makeBusyPair();
     await handleTreeDrop(ev, isBusy, setBusy);
     await flush();

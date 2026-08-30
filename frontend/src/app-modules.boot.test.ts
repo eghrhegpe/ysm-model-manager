@@ -135,7 +135,7 @@ async function boot(opts: { microFlush?: boolean } = {}) {
   mockViews();
   const { bus } = await import("./bus.ts");
   const toasts: Array<{ msg: string; duration?: number; type?: string }> = [];
-  bus.on("toast:show", (p) => toasts.push(p as never));
+  bus.on("toast:show", (p) => toasts.push(p as { msg: string; duration?: number; type?: string }));
   let timerSpy: ReturnType<typeof vi.spyOn> | undefined;
   if (!opts.microFlush) {
     const origSetTimeout = globalThis.setTimeout;
@@ -168,7 +168,7 @@ function captureThemeChange() {
       cb: never,
       opts?: never,
     ) => {
-      if (type === "change") cbs.push(cb as never);
+      if (type === "change") cbs.push(cb as (e: { matches: boolean }) => void);
       return add(type, cb, opts);
     };
     return mql;

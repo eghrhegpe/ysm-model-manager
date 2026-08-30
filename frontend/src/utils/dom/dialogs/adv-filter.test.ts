@@ -26,7 +26,7 @@ vi.mock("../../../backend/app.ts", () => ({
 import { modalAdvFilter } from "./adv-filter.ts";
 
 async function open(opts: { value?: Record<string, unknown> } = {}) {
-  const pending = modalAdvFilter(opts as never);
+  const pending = modalAdvFilter(opts as unknown as Parameters<typeof modalAdvFilter>[0]);
   // macrotask 晚于内部异步标签加载链
   await new Promise((r) => setTimeout(r, 0));
   const overlay = document.querySelector(".dlg-overlay") as HTMLElement;

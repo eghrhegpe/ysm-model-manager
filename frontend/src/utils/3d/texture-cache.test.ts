@@ -11,7 +11,7 @@ describe("TextureCache 险恶测试", () => {
   });
 
   const makeFakeTex = (): Texture =>
-    ({ dispose: vi.fn() }) as never;
+    ({ dispose: vi.fn() }) as unknown as Texture;
 
   it("acquire 同 url 两次 → 返回同一实例", () => {
     const fakeTex = makeFakeTex();
@@ -23,7 +23,7 @@ describe("TextureCache 险恶测试", () => {
   });
 
   it("acquire 不同 url → 返回不同实例", () => {
-    const make = vi.fn((u: string) => ({ id: u, dispose: vi.fn() }) as never);
+    const make = vi.fn((u: string) => ({ id: u, dispose: vi.fn() }) as unknown as Texture);
     const t1 = cache.acquire("a.png", make);
     const t2 = cache.acquire("b.png", make);
     expect(t1).not.toBe(t2);

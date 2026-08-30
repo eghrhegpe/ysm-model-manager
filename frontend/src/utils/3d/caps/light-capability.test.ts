@@ -7,6 +7,7 @@ import {
   DEFAULT_LIGHT_PARAMS,
   LIGHT_PRESETS,
 } from "./light-capability.ts";
+import type { SceneCapability } from "./scene-capability.ts";
 
 // ---- 假渲染器 ----
 function makeFakeRenderer() {
@@ -248,7 +249,7 @@ describe("LightCapability — setPreset", () => {
       // fake sky cap 经注入查询器提供（组合根 createAll 同款通道）——不再 spy 全局单例
       caps: {
         getById: (id: string) =>
-          id === "sky" ? ({ isEnvironmentEnabled: () => true } as never) : undefined,
+          id === "sky" ? ({ isEnvironmentEnabled: () => true } as unknown as SceneCapability) : undefined,
       },
     });
     cap.setPreset("ysm"); // 触发 syncLightsFromParams

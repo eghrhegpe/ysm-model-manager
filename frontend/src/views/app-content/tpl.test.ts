@@ -11,6 +11,7 @@ import {
   githubHTML,
   workshopHTML,
 } from "./tpl.ts";
+import type { WailsAndroidBridge } from "../../backend/platform.ts";
 
 const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock } = vi.hoisted(() => ({
   getAndroidBridgeMock: vi.fn().mockReturnValue(null), // 默认桌面（无 Android 桥）
@@ -69,7 +70,7 @@ describe("app-content 模板", () => {
 
   it("settingsHTML Android 查看器模式隐藏游戏根目录/链接模式/下载镜像源卡片，保留本地文件存储卡", () => {
     isViewerModeMock.mockReturnValue(true); // Android：查看器模式、有 Java 桥、非网页版
-    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as never);
+    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as unknown as WailsAndroidBridge);
     const html = settingsHTML();
     expect(html).not.toContain("set-mc-path");
     expect(html).not.toContain("set-mc-detect");
@@ -101,7 +102,7 @@ describe("app-content 模板", () => {
     // Android 有 Java 桥但 isWebPlatform=false，应渲染 files 卡，避免报"浏览器不支持 FSA"
     isViewerModeMock.mockReturnValue(true);
     isWebPlatformMock.mockReturnValue(false);
-    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as never);
+    getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as unknown as WailsAndroidBridge);
     const html = settingsHTML();
     expect(html).not.toContain("web-repo-auth-btn");
     expect(html).not.toContain("stg-web-repo-card");

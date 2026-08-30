@@ -49,6 +49,7 @@ vi.mock("./workshop-tabs.ts", () => ({ initWorkshopTabs, setShowSiteView, create
 vi.mock("./community-data.ts", () => ({ fillSearch }));
 
 import { initWorkshopPage, resetAvatarConfigLoaded, type AppContentHost } from "./init-workshop.ts";
+import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
 /** vi.fn() 未显式标注入参时 mock.calls 元组推断为空，统一经 unknown[] 取参 */
 function callArgs(mock: unknown, index: number): unknown[] {
@@ -117,8 +118,8 @@ afterEach(() => {
   resetAvatarConfigLoaded();
 });
 
-const site = { id: "github", url: "https://github.com/", label: "GitHub" } as never;
-const site2 = { id: "bilibili", url: "https://bilibili.com/", label: "B站" } as never;
+const site = { id: "github", url: "https://github.com/", label: "GitHub" } as unknown as WorkshopSite;
+const site2 = { id: "bilibili", url: "https://bilibili.com/", label: "B站" } as unknown as WorkshopSite;
 
 describe("initWorkshopPage — 初始化装配", () => {
   it("状态装配：currentSite 置空、workshopCache/avatarCache 初始化、子模块接线", () => {

@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { SceneStats } from "../../scene-stats.ts";
 import { buildStatsPanel, mergeStatsMenuItems } from "./stats.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewSnapshot } from "../../state/preview-state.ts";
 
 function stats(overrides: Partial<SceneStats> = {}): SceneStats {
   return {
@@ -49,12 +50,12 @@ describe("buildStatsPanel", () => {
 
   it("visibleWhen：有嵌套统计（mesh/bone > 0）→ true", () => {
     const panel = buildStatsPanel(stats({ meshCount: 1, boneCount: 0 }));
-    expect(panel.visibleWhen!(null as never)).toBe(true);
+    expect(panel.visibleWhen!(null as unknown as PreviewSnapshot)).toBe(true);
   });
 
   it("visibleWhen：全空统计（无 mesh 无 bone）→ false", () => {
     const panel = buildStatsPanel(stats({ meshCount: 0, boneCount: 0 }));
-    expect(panel.visibleWhen!(null as never)).toBe(false);
+    expect(panel.visibleWhen!(null as unknown as PreviewSnapshot)).toBe(false);
   });
 
   it("i18n 缺失回退：labelKey 存在，fallback 非空（tr 兜底链路）", () => {

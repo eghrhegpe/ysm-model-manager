@@ -128,7 +128,7 @@ d2("buildYsmObject — 分支补强", () => {
 
   it("API 面板：showModelGroup / setBoneVisible / toggleBone / getBoneList / removeFromScene", () => {
     const spec = makeMinSpec();
-    spec.models!.push(JSON.parse(JSON.stringify(spec.models![0])) as never);
+    spec.models!.push(JSON.parse(JSON.stringify(spec.models![0])) as unknown as NonNullable<typeof spec.models>[0]);
     const handle = buildYsmObject(spec, [], new Map(), 0);
     expect(handle.getModelGroupCount()).toBe(2);
     handle.showModelGroup(1);

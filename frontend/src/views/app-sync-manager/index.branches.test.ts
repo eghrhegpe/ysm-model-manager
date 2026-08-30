@@ -120,7 +120,7 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
       throw new Error("sync render boom");
     });
     const toasts: Array<{ msg: string; type?: string }> = [];
-    const off = bus.on("toast:show", (p) => toasts.push(p as never));
+    const off = bus.on("toast:show", (p) => toasts.push(p as { msg: string; type?: string }));
     const { el } = mount();
     await sleep(200);
     expect(el.innerHTML).toContain("sync render boom");

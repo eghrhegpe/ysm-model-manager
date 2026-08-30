@@ -214,7 +214,7 @@ describe("错误路径", () => {
     const deps = makeDeps();
     const ctx = makeCtx();
     (ctx.scene as unknown) = null;
-    await expect(buildPackScene(ctx as never, "test.json", deps, "/packs.zip")).rejects.toThrow("shared 模式需要核心提供");
+    await expect(buildPackScene(ctx as unknown as PreviewBuildCtx, "test.json", deps, "/packs.zip")).rejects.toThrow("shared 模式需要核心提供");
   });
 });
 

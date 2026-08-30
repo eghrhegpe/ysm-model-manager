@@ -129,7 +129,7 @@ describe("vrmSemanticBoneMap", () => {
       string,
       { node?: { name: string } }
     >;
-    const map = vrmSemanticBoneMap(humanBones as never);
+    const map = vrmSemanticBoneMap(humanBones as unknown as Parameters<typeof vrmSemanticBoneMap>[0]);
     expect(map.hips?.id).toBe("hips");
     expect(map.chest?.id).toBe("chest");
     expect(map.head?.id).toBe("head");
@@ -143,7 +143,7 @@ describe("vrmSemanticBoneMap", () => {
   });
 
   it("node 缺失的骨骼不进映射（与 buildVrmBoneNodes 同口径）", () => {
-    const map = vrmSemanticBoneMap({ hips: {}, head: { node: { name: "head" } } } as never);
+    const map = vrmSemanticBoneMap({ hips: {}, head: { node: { name: "head" } } } as unknown as Parameters<typeof vrmSemanticBoneMap>[0]);
     expect(map.hips).toBeUndefined();
     expect(map.head?.id).toBe("head");
   });

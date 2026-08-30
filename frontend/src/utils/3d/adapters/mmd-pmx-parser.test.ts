@@ -196,7 +196,7 @@ describe("buildPmxScene — 材质/纹理构建", () => {
         const tex = new THREE.Texture();
         onLoad?.(tex);
         return tex;
-      } as never,
+      } as typeof THREE.TextureLoader.prototype.load,
     );
     try {
       const built = buildPmxScene(pmx, { texUrlMap });

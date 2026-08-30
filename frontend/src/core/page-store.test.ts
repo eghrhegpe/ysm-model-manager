@@ -3,7 +3,7 @@
 // 唯一写入点：registerPageStore 的 nav:changed listener；
 // 页面名收窄为 PageName 联合（编译期拦截拼错，运行时信任 emit 方类型）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../bus.ts";
+import { bus, type PageName } from "../bus.ts";
 import {
   PageStore,
   registerPageStore,
@@ -117,17 +117,17 @@ describe("PageStore 导航状态机", () => {
   });
 
   it("非法页 emit → 回退仓库页（P2 修复：sanitizePage 防遗留 .js 注入）", () => {
-    bus.emit("nav:changed", { page: "bogus" as never });
+    bus.emit("nav:changed", { page: "bogus" as unknown as PageName });
     expect(PageStore.currentPage).toBe("repository");
   });
 
   it("null/undefined 页 emit → 回退仓库页", () => {
-    bus.emit("nav:changed", { page: null as never });
+    bus.emit("nav:changed", { page: null as unknown as PageName });
     expect(PageStore.currentPage).toBe("repository");
   });
 
   it("事件侧历史名 resources → 映射回仓库页", () => {
-    bus.emit("nav:changed", { page: "resources" as never });
+    bus.emit("nav:changed", { page: "resources" as unknown as PageName });
     expect(PageStore.currentPage).toBe("repository");
   });
 });

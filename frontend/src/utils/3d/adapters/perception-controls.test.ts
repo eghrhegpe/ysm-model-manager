@@ -51,7 +51,7 @@ describe("perceptionNodes（声明式 toggle 节点）", () => {
     expect(state.breath).toBe(false);
     expect(breath.control?.get?.(undefined)).toBe(false);
     // 非布尔输入归一（Boolean 强转）
-    breath.control?.set?.("yes" as never);
+    breath.control?.set?.("yes" as unknown as boolean);
     expect(state.breath).toBe(true);
   });
 });

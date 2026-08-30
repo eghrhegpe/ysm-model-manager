@@ -52,7 +52,7 @@ function ctx(over: { decode?: unknown; appendDebug?: unknown } = {}) {
   return {
     decodeYsmViaWasm: over.decode ?? vi.fn(),
     appendDebug: over.appendDebug ?? vi.fn(),
-  } as never;
+  } as unknown as Parameters<typeof loadModelData>[1];
 }
 
 beforeEach(() => {

@@ -133,7 +133,7 @@ describe("getApp — 动态 import 路径语义（无 window.go 注入）", () =
     // 已实现的最小启动集：ScanModelEntries 诚实空（Phase 2 IndexedDB 前）
     expect(await app.ScanModelEntries("ysm")).toEqual([]);
     // 未实现 binding fail-fast（WebUnsupportedError），非 undefined 穿透
-    await expect(app.ImportModelFile("a", "b") as never).rejects.toThrow("浏览器端未实现");
+    await expect(app.ImportModelFile("a", "b") as unknown as Promise<unknown>).rejects.toThrow("浏览器端未实现");
   });
 
   it("无 __YSM_BACKEND__ 标记 + window.go 注入 → 仍走 Wails 原逻辑（桌面不受影响）", async () => {

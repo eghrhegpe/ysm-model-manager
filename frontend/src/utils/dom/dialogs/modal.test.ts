@@ -56,7 +56,7 @@ describe("closeDlg — 退场动画", () => {
   });
 
   it("nil overlay 不抛错", () => {
-    expect(() => closeDlg(null as never, () => {}, null)).not.toThrow();
+    expect(() => closeDlg(null as unknown as HTMLElement, () => {}, null)).not.toThrow();
   });
 });
 

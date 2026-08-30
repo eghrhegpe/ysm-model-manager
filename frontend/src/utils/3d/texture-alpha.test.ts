@@ -163,14 +163,14 @@ describe("getTextureAlphaMode — readRgbaPixels 非 data 路径", () => {
   });
 
   it("canvas getContext 返回 null → 回退 opaque", () => {
-    stubCanvas((() => ({})) as never, { ctxNull: true });
+    stubCanvas((() => ({})) as unknown as Parameters<typeof stubCanvas>[0], { ctxNull: true });
     const tex = new THREE.Texture();
     tex.image = { naturalWidth: 64, naturalHeight: 64 } as unknown as HTMLImageElement;
     expect(getTextureAlphaMode(tex)).toBe("opaque");
   });
 
   it("drawImage 抛错（tainted）→ catch 回退 opaque（保持渲染）", () => {
-    stubCanvas((() => ({})) as never, { drawThrows: true });
+    stubCanvas((() => ({})) as unknown as Parameters<typeof stubCanvas>[0], { drawThrows: true });
     const tex = new THREE.Texture();
     tex.image = { naturalWidth: 64, naturalHeight: 64 } as unknown as HTMLImageElement;
     expect(getTextureAlphaMode(tex)).toBe("opaque");

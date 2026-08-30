@@ -59,12 +59,12 @@ beforeEach(async () => {
   missingPayloads.length = 0;
   offs.forEach((fn) => fn());
   offs.length = 0;
-  offs.push(bus.on("toast:show", (p) => toasts.push(p as never)));
+  offs.push(bus.on("toast:show", (p) => toasts.push(p as { msg: string; type: string })));
   offs.push(bus.on("stats:refresh", () => statsRefreshed.push(true)));
   offs.push(bus.on("tree:reload", () => treeReloads.push(true)));
   offs.push(
     bus.on("sync:download:missing", (p) => {
-      missingPayloads.push(p as never);
+      missingPayloads.push(p as { token?: string });
     }),
   );
   // vi.clearAllMocks 不清 mock 实现：显式重置拉取 mock，防跨测试泄漏

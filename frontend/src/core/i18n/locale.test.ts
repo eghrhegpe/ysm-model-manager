@@ -6,6 +6,7 @@
 // 否则事件监听落在旧 bus 上）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Bus } from "../../bus.ts";
+import type { LangCode } from "./locale.ts";
 
 type LocaleModule = typeof import("../../core/i18n/locale.ts");
 
@@ -108,7 +109,7 @@ describe("setLang", () => {
     const { locale, bus } = await freshModule();
     const onChanged = vi.fn();
     bus.on("lang:changed", onChanged);
-    await locale.setLang("fr" as never);
+    await locale.setLang("fr" as unknown as LangCode);
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(onChanged).not.toHaveBeenCalled();
     expect(locale.getLang()).toBe("zh-CN");

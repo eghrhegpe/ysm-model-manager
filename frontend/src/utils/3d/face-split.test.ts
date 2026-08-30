@@ -83,7 +83,7 @@ describe("splitMeshByFaceAlpha", () => {
     flipped.flipY = true;
     expect(splitMeshByFaceAlpha(md, flipped)).toBeNull();
 
-    const empty = new THREE.DataTexture(undefined as never, 0, 0);
+    const empty = new THREE.DataTexture(undefined as unknown as ConstructorParameters<typeof THREE.DataTexture>[0], 0, 0);
     expect(splitMeshByFaceAlpha(md, empty)).toBeNull();
   });
 });

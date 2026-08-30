@@ -32,7 +32,7 @@ vi.mock("../../views/app-preview/empty-3d.ts", () => ({
 vi.mock("../../views/app-preview/preview-library.ts", () => ({
   openModel3DFullscreen: vi.fn(),
 }));
-import { getApp } from "../../backend/app.ts";
+import { getApp, type AppBindings } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { getLastModelPath } from "../../views/app-content/init-pages.ts";
@@ -229,7 +229,7 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     // 重整共享 mock 实现
     vi.mocked(getApp).mockResolvedValue({
       GetAppVersion: vi.fn().mockResolvedValue("v1.0.0"),
-    } as never);
+    } as unknown as AppBindings);
     vi.mocked(getLastModelPath).mockReturnValue(null);
     vi.mocked(openEmpty3DFullscreen).mockResolvedValue(undefined);
     vi.mocked(openModel3DFullscreen).mockResolvedValue(undefined);
@@ -337,7 +337,7 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
         new Promise<string>((res) => {
           resolveVersion = res;
         }),
-    } as never);
+    } as unknown as AppBindings);
     const { el, root } = mountNav();
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     unmountElement(el);
@@ -381,7 +381,7 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     const qSpy = vi
       .spyOn(document, "querySelector")
       .mockReturnValueOnce(null)
-      .mockReturnValue(fakeAppContent as never);
+      .mockReturnValue(fakeAppContent as unknown as Element);
     (getAllByTestId(root, "nav-item")[0] as HTMLElement).click(); // repository → queueMicrotask(focusRepoSearch)
     await sleep(60);
     expect(qSpy.mock.calls.some((c) => c[0] === "app-content")).toBe(true);

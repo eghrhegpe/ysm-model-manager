@@ -42,7 +42,7 @@ describe("常驻 dock 面板解析契约", () => {
       () => {},
       mockMenu(),
       { toast: vi.fn(), closeAllOverlays: vi.fn() },
-      { handle: null } as never,
+      { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4],
     );
     const snapshot = previewSnapshot();
     for (const node of CORE_MENU_ITEMS) {
@@ -64,7 +64,7 @@ describe("常驻 dock 面板解析契约", () => {
       () => {},
       mockMenu(),
       { toast: vi.fn(), closeAllOverlays: vi.fn() },
-      { handle: null } as never,
+      { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4],
     );
     for (const id of Object.keys(routers.runners)) {
       expect(typeof routers.runners[id], `runner "${id}" 应为函数`).toBe("function");
@@ -85,7 +85,7 @@ describe("常驻 dock 面板渲染冒烟", () => {
     const menu = mockMenu();
     const hideMenu = () => {};
     const actionCtx = { toast: vi.fn(), closeAllOverlays: vi.fn() };
-    const routers = buildPreviewMenuRouters(ctx, hideMenu, menu, actionCtx, { handle: null } as never);
+    const routers = buildPreviewMenuRouters(ctx, hideMenu, menu, actionCtx, { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4]);
     const deps = mockPanelDeps();
 
     const panelIds = [...Object.keys(routers.schemaBuilders), ...Object.keys(routers.fillers)];

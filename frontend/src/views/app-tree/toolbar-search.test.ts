@@ -63,7 +63,7 @@ function setupDom(filesRoot = "/repo") {
     _filterPaths: null as Set<string> | null,
     _renderTree: vi.fn(),
   };
-  return { $, vm: vm as never as Parameters<typeof openAdvFilterDialog>[1], host };
+  return { $, vm: vm as unknown as Parameters<typeof openAdvFilterDialog>[1], host };
 }
 
 beforeEach(() => {

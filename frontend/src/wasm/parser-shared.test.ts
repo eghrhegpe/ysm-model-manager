@@ -212,7 +212,7 @@ describe("resolveWasmFactory（工厂解析 + ccall 校验）", () => {
     _malloc: (n) => n,
     _free: () => {},
     ccall: () => 1,
-    FS: {} as never,
+    FS: {} as unknown as FSLike,
   };
 
   it("同步工厂返回合法模块 → 直接解析", async () => {
@@ -224,7 +224,7 @@ describe("resolveWasmFactory（工厂解析 + ccall 校验）", () => {
   });
 
   it("工厂返回异常值（缺 ccall）→ 抛错", async () => {
-    await expect(resolveWasmFactory(() => ({} as never), {})).rejects.toThrow(
+    await expect(resolveWasmFactory(() => ({} as unknown as WasmModuleLike), {})).rejects.toThrow(
       "YSMParserModule 工厂返回异常值",
     );
   });

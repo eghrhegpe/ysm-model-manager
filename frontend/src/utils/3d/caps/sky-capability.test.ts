@@ -15,6 +15,7 @@ import {
   MODEL_SKY_PRESETS,
   injectSkySunScalePatch,
 } from "./sky-capability.ts";
+import type { SceneCapability } from "./scene-capability.ts";
 
 // PMREMGenerator 扩展 mock：fromScene 返回带 dispose 的对象（真实返回 WebGLRenderTarget），
 // 否则 regenerateEnvironment 二次调用 dispose 旧 RT 时 TypeError
@@ -132,7 +133,7 @@ describe("SkyCapability — 环境 IBL 开关", () => {
       renderer: makeFakeRenderer(),
       caps: {
         getById: (id: string) =>
-          id === "light" ? ({ refreshAmbientFromSky } as never) : undefined,
+          id === "light" ? ({ refreshAmbientFromSky } as unknown as SceneCapability) : undefined,
       },
     });
     cap.setEnvironmentEnabled(false);

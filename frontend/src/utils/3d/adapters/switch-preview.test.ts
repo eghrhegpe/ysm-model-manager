@@ -551,9 +551,9 @@ describe("switchToSession 场景注册与视图同步（scene=null 退化 + caps
     ctx.orbitTarget = new THREE.Vector3();
     ctx.camera = new THREE.PerspectiveCamera();
     const applyMeshCasts = vi.fn();
-    ctx.shadowCap = { applyMeshCasts } as never;
+    ctx.shadowCap = { applyMeshCasts } as unknown as NonNullable<SwitchContext["shadowCap"]>;
     const syncMeshIntensity = vi.fn();
-    ctx.environmentCap = { syncMeshIntensity } as never;
+    ctx.environmentCap = { syncMeshIntensity } as unknown as NonNullable<SwitchContext["environmentCap"]>;
 
     await switchToSession(ctx, "new.glb");
 

@@ -29,40 +29,34 @@ const REGISTRY = {}; // testid -> 声明它的源文件（相对 frontend/）
 // ── 运行期聚合 VIEW_TESTIDS（ADR-133 阶段 B） ──────────────
 // 各视图文件顶部 `export const VIEW_TESTIDS: readonly string[] = ['a','b',...]` 声明。
 // 纯字面量数组，正则提取，无需编译 TS；动态拼接 testid（如 "preview-"+id）不匹配，自然排除。
-function aggregateViewTestids(dir) {
+// 单趟遍历（审核修复 P3）：同时聚合 VIEW_TESTIDS 声明 + 收集钩子字面量，每文件只读一次。
+// 跳过测试文件（审核修复 P2）：*.test.ts 的 fixture HTML 字符串里的 testid 是测试产物，
+// 不是真实钩子——若计入 seen，「删真实钩子忘删 VIEW_TESTIDS」契约仍绿（G-1 删能红被静默打穿），
+// 且 fixture 引入的未注册关键 testid 会制造 ORPHAN 误报。
+const isTestFile = (name) => /\.(test|spec|integration\.test)\.(ts|tsx|js|jsx)$/.test(name);
+const seen = new Set(); // 真实源码钩子字面量（仅非测试源码）
+(function walkSource(dir) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) {
       if (e.name === 'node_modules' || e.name === '.git' || e.name.startsWith('dist')) continue;
-      aggregateViewTestids(p);
-    } else if (/\.(ts|tsx|js|jsx)$/.test(e.name)) {
-      const c = fs.readFileSync(p, 'utf8');
-      const m = c.match(/export\s+const\s+VIEW_TESTIDS\s*:\s*readonly\s+string\[\]\s*=\s*\[([\s\S]*?)\]/);
-      if (!m) continue;
+      walkSource(p);
+      continue;
+    }
+    if (!/\.(ts|tsx|js|jsx)$/.test(e.name) || isTestFile(e.name)) continue;
+    const c = fs.readFileSync(p, 'utf8');
+    // 1. VIEW_TESTIDS 声明 → 注册表（首个声明为准）
+    const m = c.match(/export\s+const\s+VIEW_TESTIDS\s*:\s*readonly\s+string\[\]\s*=\s*\[([\s\S]*?)\]/);
+    if (m) {
       const rel = path.relative(FE, p).replace(/\\/g, '/');
       for (const idm of m[1].matchAll(/'([a-z0-9-]+)'/g)) {
         const id = idm[1];
-        if (!(id in REGISTRY)) REGISTRY[id] = rel; // 首个声明为准
+        if (!(id in REGISTRY)) REGISTRY[id] = rel;
       }
     }
-  }
-}
-aggregateViewTestids(path.join(FE, 'src'));
-
-// 收集源码中所有 testid 字面量钩子（data-testid="x" / dataset.testid = "x"）。
-// 动态拼接（含 + 表达式）不匹配，自动排除——与契约只守护固定 testid 的语义一致。
-const seen = new Set();
-(function collectSourceTestids(dir) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === 'node_modules' || e.name === '.git' || e.name.startsWith('dist')) continue;
-      collectSourceTestids(p);
-    } else if (/\.(ts|tsx|js|jsx)$/.test(e.name)) {
-      const c = fs.readFileSync(p, 'utf8');
-      for (const m of c.matchAll(/data-testid="([a-z0-9-]+)"/g)) seen.add(m[1]);
-      for (const m of c.matchAll(/dataset\.testid\s*=\s*"([a-z0-9-]+)"/g)) seen.add(m[1]);
-    }
+    // 2. 钩子字面量收集
+    for (const hm of c.matchAll(/data-testid="([a-z0-9-]+)"/g)) seen.add(hm[1]);
+    for (const hm of c.matchAll(/dataset\.testid\s*=\s*"([a-z0-9-]+)"/g)) seen.add(hm[1]);
   }
 })(path.join(FE, 'src'));
 

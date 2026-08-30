@@ -309,6 +309,7 @@ import * as THREE from "three";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
 import { sleep } from "../../test-utils/index.ts";
 import { getSchema, listSchemas } from "../../utils/3d/adapters/schema-registry.ts";
+import { switchPreview } from "../../utils/3d/adapters/mount-preview-core.ts";
 import { previewSnapshot } from "../../utils/3d/state/preview-state.ts";
 import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu/node-types.ts";
 
@@ -751,6 +752,25 @@ describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
     // 多模型 select 已注入（schema 注册 + menuItems）
     const key = listSchemas().filter((k) => k.startsWith("litematic-slice-")).pop();
     expect(key).toBeTruthy();
+    unmountOverlay(overlay);
+  });
+
+  it("zip mixed-format（.nbt + .schematic）→ 切换后 GetVoxelDataInContainer 按各 entry 自身 ext 派发（P1 回归）", async () => {
+    const voxelInContainer = vi.fn().mockResolvedValue(VALID_JSON);
+    vi.mocked(getApp).mockResolvedValue({
+      ListContainerEntries: vi.fn().mockResolvedValue(JSON.stringify(["builds/a.nbt", "maps/x.schematic"])),
+      GetVoxelDataInContainer: voxelInContainer,
+    } as never);
+    await createLitematic3D("/lib/mixed.zip", "GetLitematicVoxelData");
+    // 初始 build 首项 .nbt → 派发 ".nbt"
+    expect(voxelInContainer).toHaveBeenLastCalledWith("/lib/mixed.zip", "builds/a.nbt", ".nbt");
+    // 会话内切换到 .schematic entry（select onSelect → ctx.switchTo → switchToSession 重建）
+    await switchPreview("maps/x.schematic");
+    // 修复前：沿用首项 ext ".nbt"（schematic 的 NBT 被喂给 BuildNbtVoxelDataFromRoot → 构建失败）；
+    // 修复后：按 entry 路径派生 ".schematic"，对齐 Go switch-ext 分派
+    expect(voxelInContainer).toHaveBeenLastCalledWith("/lib/mixed.zip", "maps/x.schematic", ".schematic");
+    const overlay = lastOverlay();
+    expect(overlay).toBeTruthy();
     unmountOverlay(overlay);
   });
 

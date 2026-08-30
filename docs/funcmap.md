@@ -2249,9 +2249,9 @@
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:26` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:41` | 解析后的 Bedrock geometry |
 | `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:85` | 从 JSON 字符串解析 Bedrock geometry |
-| `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:72` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
-| `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:115` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
-| `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:120` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
+| `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:76` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
+| `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:119` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
+| `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:124` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:29` | P2 修复（code_review）：任意新预览派发时推进代际——原守卫只在 showLitematic 自身递增，litematic A 解析中切到 YSM B（走 detail |
 | `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:184` | 显示投影文件详情面板（tab 布局） |
 | `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:252` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |

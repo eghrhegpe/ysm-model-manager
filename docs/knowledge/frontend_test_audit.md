@@ -43,6 +43,7 @@ use_when:
 2. **假门禁**（✅ 已于 2026-08-26 修复）：verify-adr-042.mjs 已补 `process.exit(1)` 门禁（GAP_FOUND 即阻断 pre-push）；theory-matrix-layout.mjs 零断言已 `git mv` 至 `poc/theory-matrix-layout.mjs` 脱离 tests/ 套件。
 3. **冗余**（✅ 已于 2026-08-26 修复）：test_testid_hooks 的 4 个 tree-* testid 已被 test_testid_contract 注册表（row-tpl.ts 四项）覆盖；其独有的 2 项 G-1 基础设施存在性检查（test-utils/index.ts、app-tree.state.test.ts）已作为前导并入 test_testid_contract，test_testid_hooks.mjs 已删除。html_integrity 的 module script 检查（no-op 双空分支）已移除，保留真实 script-src 物理文件校验。
 4. **e2e-web 重复**：dropFile/allShadowText/idbKeys/clearIdb 四辅助函数在两个 spec 完全重复 ~120L，应抽 e2e-web/helpers.ts。
+5. **契约真实性（✅ 2026-08-30 修复，ADR-133）**：test_testid_contract.mjs 补反向孤儿扫描（关键前缀 testid 未登记 → 红）+ canonical 修复指引（删条目、禁补假按钮）；**跳过测试文件**——fixture HTML 字面量不再算真实钩子（否则删真实钩子忘删 VIEW_TESTIDS 时契约仍绿，G-1「删能红」被静默打穿）；两趟遍历合并单趟（消双重 readFileSync）。
 
 ## 中低优先级
 

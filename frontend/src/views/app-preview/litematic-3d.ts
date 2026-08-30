@@ -34,12 +34,16 @@ function makeVoxelCall(voxelFn: string): (path: string) => Promise<string> {
   };
 }
 
-/** 容器内 voxelCall：GetVoxelDataInContainer(containerPath, entry, ext)（ADR-132 遗留 1） */
-function makeContainerVoxelCall(containerPath: string, ext: string): (entryPath: string) => Promise<string> {
+/** 容器内 voxelCall：GetVoxelDataInContainer(containerPath, entry, ext)（ADR-132 遗留 1）。
+ *  ext 按条目路径逐条派生（entryExtOf：命中 VOXEL_RPC_BY_EXT 才用自身 ext）——mixed-format
+ *  容器（a.nbt + x.schematic 混排，均在白名单）切换时派发各自 builder，而非沿用首条目 ext
+ *  （审核修复 P1：旧实现捕获 entries[0] 的 ext 一次，第二格式必走错 builder）；未知扩展名
+ *  回退捕获的默认 ext（单格式容器保持原语义，default → BuildVoxelDataFromRoot）。 */
+function makeContainerVoxelCall(containerPath: string, fallbackExt: string): (entryPath: string) => Promise<string> {
   return async (entryPath: string): Promise<string> => {
     const App = await getApp();
     const fn = (App as unknown as Record<string, (p: string, e: string, x: string) => Promise<string>>)["GetVoxelDataInContainer"];
-    return fn(containerPath, entryPath, ext);
+    return fn(containerPath, entryPath, entryExtOf(entryPath) || fallbackExt);
   };
 }
 

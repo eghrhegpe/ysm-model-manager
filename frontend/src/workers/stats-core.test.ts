@@ -8,7 +8,7 @@ import {
   statsFromJsonBytes,
   type StatsFileInput,
 } from "./stats-core.ts";
-import { pngBytes, jpgBytes } from "../test-utils/tex-bytes.ts";
+import { pngBytes } from "../test-utils/tex-bytes.ts";
 
 const enc = new TextEncoder();
 

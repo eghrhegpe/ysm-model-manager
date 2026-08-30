@@ -24,7 +24,8 @@
 - 数据经 Wails 桥（`window.go`）消费；绑定统一 `npm run generate:bindings -ts`（无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
 
 ### 改代码——TDD，改完即验
-- 大改动（多文件/架构级）先出方案（文件:行号 + diff 思路）拍板，再动手。连环询问以确认用户需求。
+- 先出方案（文件:行号 + diff 思路）拍板，再动手。
+- 大改动（多文件/架构级）写adr，再动手，连环询问用户以确认需求。
 - 先写测试（TS/mjs/Go），再写实现；改完立刻 `go build ./go/...` 或 `cd frontend && npx vite build` + `npm run typecheck`，失败就修到绿。
 - 连续改同一文件时自下而上，避免行号漂移。
 - 排查卡顿/日志往**环形日志面板**塞，不盯 console。

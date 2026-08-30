@@ -1730,6 +1730,10 @@ export const autoSidebar = [
             "link": "/knowledge/oldest-models"
           },
           {
+            "text": "preview-3d 领域根迁移",
+            "link": "/knowledge/preview_3d_migration"
+          },
+          {
             "text": "回收站界面 recycle-bin",
             "link": "/knowledge/recycle-bin"
           },

@@ -285,6 +285,7 @@ export const MOCK_DATA = {
   SetMainWindow: undefined,
   SetModelTags: undefined,
   SetResourceRoot: undefined,
+  SetSessionFilesRoot: undefined,
   SetVoxelMaxBlocks: undefined,
   SyncModelToggleStatus: undefined,
   SyncResources: undefined,

@@ -271,12 +271,12 @@
 | `NewSimpleCopy()` | `go/importer/importer:95` | NewSimpleCopy 创建简单文件复制导入器 |
 | `SimpleCopyImporter.Type()` | `go/importer/importer:99` | — |
 | `SimpleCopyImporter.Import()` | `go/importer/importer:101` | — |
-| `NewDirectoryCopy()` | `go/importer/importer:222` | NewDirectoryCopy 创建文件夹复制导入器 |
-| `DirectoryCopyImporter.Type()` | `go/importer/importer:226` | — |
-| `DirectoryCopyImporter.Import()` | `go/importer/importer:231` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
+| `NewDirectoryCopy()` | `go/importer/importer:224` | NewDirectoryCopy 创建文件夹复制导入器 |
+| `DirectoryCopyImporter.Type()` | `go/importer/importer:228` | — |
+| `DirectoryCopyImporter.Import()` | `go/importer/importer:233` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
 | `Handler()` | `go/importer/importer:21` | Handler 资源导入策略接口 |
 | `SimpleCopyImporter()` | `go/importer/importer:90` | — |
-| `DirectoryCopyImporter()` | `go/importer/importer:217` | — |
+| `DirectoryCopyImporter()` | `go/importer/importer:219` | — |
 
 ## Go·安装
 
@@ -639,9 +639,9 @@
 | `Check()` | `go/updater/updater:139` | Check 检查 GitHub 是否有新版本（聚合所有未读版本的更新日志） |
 | `CheckWithClient()` | `go/updater/updater:145` | CheckWithClient 可注入 client 与 API URL 的测试变体（Check 的内部实现） |
 | `Download()` | `go/updater/updater:254` | Download 下载更新包（裸 exe）到临时目录，返回更新包路径（无进度回调，兼容旧调用方）。 |
-| `DownloadWithProgress()` | `go/updater/updater:263` | DownloadWithProgress 下载更新包；onProgress 在下载过程中节流回调 (done, total) 字节数 （total&lt;=0 表示 Content-Le |
-| `CleanupOldVersion()` | `go/updater/updater:426` | CleanupOldVersion 启动时清理上一次更新留下的 .old 文件 |
-| `InstallUpdate()` | `go/updater/updater:450` | InstallUpdate 校验下载的更新 exe 并通过 helper 进程替换当前 exe。 |
+| `DownloadWithProgress()` | `go/updater/updater:265` | DownloadWithProgress 下载更新包；onProgress 在下载过程中节流回调 (done, total) 字节数 （total&lt;=0 表示 Content-Le |
+| `CleanupOldVersion()` | `go/updater/updater:450` | CleanupOldVersion 启动时清理上一次更新留下的 .old 文件 |
+| `InstallUpdate()` | `go/updater/updater:474` | InstallUpdate 校验下载的更新 exe 并通过 helper 进程替换当前 exe。 |
 | `ReleaseAsset()` | `go/updater/updater:102` | ReleaseAsset GitHub Release 中的文件 |
 | `Release()` | `go/updater/updater:108` | Release GitHub Release 信息 |
 | `UpdateInfo()` | `go/updater/updater:117` | UpdateInfo 更新信息（序列化给前端） |

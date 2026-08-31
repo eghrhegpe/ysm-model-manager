@@ -42,7 +42,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
-import { toPosix } from './_lib/to-posix.mjs';
+import { toPosix } from './_lib/to-posix.ts';
 import { ROOT } from './_lib/scan-files.mjs';
 
 const FRONTEND = path.join(ROOT, 'frontend');

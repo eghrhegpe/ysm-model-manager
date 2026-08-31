@@ -32,7 +32,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
-import { run } from './_lib/proc.mjs';
+import { run } from './_lib/proc.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

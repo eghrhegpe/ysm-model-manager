@@ -43,7 +43,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './_lib/scan-files.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
-import { run } from './_lib/proc.mjs';
+import { run } from './_lib/proc.ts';
 import {
   git,
   getChangedFiles,

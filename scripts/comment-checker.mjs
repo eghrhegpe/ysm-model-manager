@@ -16,7 +16,7 @@
  */
 import fs from 'node:fs';
 import { rgSafe as rg } from './_lib/ripgrep.mjs';
-import { parseRgLine } from './_lib/rg-line.mjs';
+import { parseRgLine } from './_lib/rg-line.ts';
 
 function scanAiFluff() {
   /** 检测 AI 废话注释：用于/这是/检查.*是否 */

@@ -13,7 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
-import { run as runProc } from './_lib/proc.mjs';
+import { run as runProc } from './_lib/proc.ts';
 
 const argv = process.argv.slice(2);
 // 未知 flag 白名单拦截（批次4 P2）：`--chck` 拼错会被 includes 静默忽略 → 走进 collect 而非

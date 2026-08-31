@@ -27,7 +27,7 @@ import {
 } from './_lib/git-ref.mjs';
 import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.mjs';
 import { ROOT } from './_lib/scan-files.mjs';
-import { run } from './_lib/proc.mjs';
+import { run } from './_lib/proc.ts';
 import { parseArgs } from './_lib/parse-args.mjs';
 
 function sigAny(p, text) {

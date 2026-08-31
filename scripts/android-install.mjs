@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { getRoot } from './_lib/scan-files.mjs';
-import { run } from './_lib/proc.mjs';
+import { run } from './_lib/proc.ts';
 
 const ROOT = getRoot();
 const ANDROID_DIR = path.join(ROOT, 'build', 'android');

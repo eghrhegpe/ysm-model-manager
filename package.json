@@ -8,6 +8,7 @@
   ],
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",
+    "@types/node": "^26.4.0",
     "jscpd": "^5.0.14",
     "knip": "^6.31.0",
     "typescript": "^7.0.2"

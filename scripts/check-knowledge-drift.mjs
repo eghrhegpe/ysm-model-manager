@@ -30,7 +30,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, walk } from './_lib/scan-files.mjs';
-import { toPosix } from './_lib/to-posix.mjs';
+import { toPosix } from './_lib/to-posix.ts';
 import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.mjs';
 import { PERF_TAGS } from './_lib/knowledge-cards.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';

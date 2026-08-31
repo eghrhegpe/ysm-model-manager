@@ -21,7 +21,7 @@
 import { readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { toPosix } from './_lib/to-posix.mjs';
+import { toPosix } from './_lib/to-posix.ts';
 import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
 import { GUIDE_GROUPS } from './_lib/guide-order.mjs';
 // [ADR-114 §被补充] 常量共享层

@@ -28,7 +28,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { toPosix } from './_lib/to-posix.mjs';
+import { toPosix } from './_lib/to-posix.ts';
 import { parseArgs } from './_lib/parse-args.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

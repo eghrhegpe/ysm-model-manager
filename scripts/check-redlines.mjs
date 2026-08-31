@@ -11,7 +11,7 @@
  * 依赖：本地模块
  */
 import { rg as rgStrict } from './_lib/ripgrep.mjs';
-import { parseRgLine } from './_lib/rg-line.mjs';
+import { parseRgLine } from './_lib/rg-line.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';

@@ -1,6 +1,5 @@
-#!/usr/bin/env node
 /**
- * rg-line.mjs — rg 输出行解析共享层（scripts/_lib）。
+ * rg-line.ts — rg 输出行解析共享层（scripts/_lib）。
  *
  * 统一 check-redlines.mjs parseRgLine / comment-checker.mjs parseLine 的重复实现。
  * 解析 ripgrep 输出行 "文件:行号:内容"：
@@ -9,17 +8,17 @@
  *   3. 非标准行（无行号/少段）→ 降级返回 [原行, 0, '']
  *
  * 返回值：[file, line, content]。
- * 零依赖。
  */
 
 /**
- * @param {string} line rg 输出行
- * @returns {[string, number, string]} [文件, 行号, 内容]；解析失败返回 [原行, 0, '']
+ * @param line rg 输出行
+ * @returns [文件, 行号, 内容]；解析失败返回 [原行, 0, '']
  */
-export function parseRgLine(line) {
+export function parseRgLine(line: string): [string, number, string] {
   const parts = line.split(':');
   if (parts.length >= 3) {
-    let filePart, rest;
+    let filePart: string;
+    let rest: string;
     // Windows 盘符：C:/... → parts[0]='C'（单字符字母），parts[1] 以 / 开头
     if (parts[0].length === 1 && /[a-zA-Z]/.test(parts[0]) && parts[1].startsWith('/')) {
       filePart = parts[0] + ':' + parts[1];

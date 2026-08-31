@@ -31,7 +31,7 @@ import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync, statS
 import { join, dirname, basename, delimiter as PATH_DELIM } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { run } from "./_lib/proc.mjs";
+import { run } from './_lib/proc.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");

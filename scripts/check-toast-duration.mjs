@@ -24,7 +24,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { getRoot } from "./_lib/scan-files.mjs";
-import { run } from "./_lib/proc.mjs";
+import { run } from './_lib/proc.ts';
 
 const ROOT = getRoot();
 const SRC = path.join(ROOT, "frontend/src");

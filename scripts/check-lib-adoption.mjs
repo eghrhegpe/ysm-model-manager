@@ -65,7 +65,7 @@ const RULES = [
     lib: 'to-posix.mjs',
     capability: 'Windows 反斜杠 → 正斜杠归一',
     smells: [/\.replace\(\/\\\\\/g,\s*['"]\/['"]\)/],
-    advice: "import { toPosix } from './_lib/to-posix.mjs'",
+    advice: "import { toPosix } from './_lib/to-posix.ts'",
   },
   {
     lib: 'git-ref.mjs',

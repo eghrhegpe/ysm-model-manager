@@ -28,7 +28,7 @@
  */
 import { ROOT } from './_lib/scan-files.mjs';
 import { groupByDomain, domainSummaryText } from './_lib/domain-classify.mjs';
-import { run } from './_lib/proc.mjs';
+import { run } from './_lib/proc.ts';
 
 // ── 参数解析 ──
 const args = process.argv.slice(2);

@@ -12,12 +12,12 @@
  *
  * 用法：
  *   import { walk, resolveImport, readText, getRoot, SRC_DIR } from './_lib/scan-files.mjs';
- *   import { toPosix } from './_lib/to-posix.mjs';
+ *   import { toPosix } from './_lib/to-posix.ts';
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { toPosix } from './to-posix.mjs';
+import { toPosix } from './to-posix.ts';
 export { toPosix };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

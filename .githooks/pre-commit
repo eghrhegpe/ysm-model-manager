@@ -206,6 +206,42 @@ else
   echo "⚠️  gofmt 不可用（PATH 异常），跳过 go 格式化。"
 fi
 
+# ── 版本防御：意外文件 / 跨层夹带提示（非阻断；88daf2a2 $tmp 教训）──
+# 88daf2a2 把 8168 行覆盖率 profile 以字面量文件名 $tmp 入库，且夹带 R34 Go 修复。
+# 这里只做秒级提示，阻断留给 pre-push（--strict）：
+#   a) staged 文件名以 $ 开头 → shell 变量漏展开产物（如 $tmp）
+#   b) staged 文件首行为 mode: set/count/atomic → Go 覆盖率 profile 误入库
+#   c) 同 commit 同时含 frontend/ 与 go/ 改动 → 跨层夹带信号（合法联调可忽略）
+# 逃生阀：YSM_SKIP_VERSION_DEFENSE=1
+if [ "${YSM_SKIP_VERSION_DEFENSE:-0}" != "1" ]; then
+  echo ""
+  echo "[pre-commit] 版本防御检查（意外文件/跨层夹带）..."
+  STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
+  if [ -n "$STAGED_ALL" ]; then
+    # a) $ 开头文件名
+    SUSDOL=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^|/)\$' || true)
+    if [ -n "$SUSDOL" ]; then
+      echo "  ⚠️  \$ 开头文件名（疑似 shell 变量漏展开产物，如 88daf2a2 的 \$tmp）："
+      printf '    %s\n' "$SUSDOL"
+    fi
+    # b) Go 覆盖率 profile（首行 mode: set/count/atomic）
+    BADCOV=$(printf '%s\n' "$STAGED_ALL" | while IFS= read -r f; do
+      [ -f "$f" ] || continue
+      head -1 "$f" 2>/dev/null | grep -qE '^mode: (set|count|atomic)$' && echo "$f"
+    done)
+    if [ -n "$BADCOV" ]; then
+      echo "  ⚠️  疑似 Go 覆盖率 profile 入库："
+      printf '    %s\n' "$BADCOV"
+    fi
+    # c) 跨层夹带（frontend/ + go/ 同时改动）
+    F_CNT=$(printf '%s\n' "$STAGED_ALL" | grep -c '^frontend/' || true)
+    G_CNT=$(printf '%s\n' "$STAGED_ALL" | grep -c '^go/' || true)
+    if [ "$F_CNT" -gt 0 ] && [ "$G_CNT" -gt 0 ]; then
+      echo "  ⚠️  本次 commit 同时含 frontend/(+$F_CNT) 与 go/(+$G_CNT) 改动——跨层夹带信号（合法联调可忽略）"
+    fi
+  fi
+fi
+
 # ── Take巧 #3：本次 commit 变更统计（commit 前预览，ADR-087）──
 # 输出 staged 文件的 diff --stat（行数增删），比 status --short 更聚焦「本次 commit 内容」
 # 锐评反馈（2026-08-17）：status 显示整个工作区（含未 stage 噪音），diff --cached 直接对应本次提交

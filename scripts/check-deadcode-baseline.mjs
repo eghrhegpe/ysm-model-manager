@@ -27,6 +27,7 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { ROOT, toPosix } from './_lib/scan-files.mjs';
 import { splitNewFindings, canWriteBaseline } from './_lib/deadcode-attrib.mjs';
+import { checkStale } from './_lib/stale-baseline.mjs';
 
 const FRONTEND = path.join(ROOT, 'frontend');
 const BASELINE_FILE = path.join(ROOT, 'scripts/baseline/deadcode-baseline.json');
@@ -208,6 +209,8 @@ function main() {
       errors.push('[基线损坏] deadcode-baseline.json 无法解析，可删除后重跑 --update-baseline');
       base = { knip: [], jscpd: [] };
     }
+    const staleWarn = checkStale(base.generated, 'deadcode');
+    if (staleWarn) infos.push(staleWarn);
     const baseK = new Set(base.knip || []);
     const baseJ = new Set(base.jscpd || []);
     const newK = current.knip.filter((k) => !baseK.has(k));

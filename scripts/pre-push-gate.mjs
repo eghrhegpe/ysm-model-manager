@@ -43,6 +43,7 @@ import { planFromFiles, groupByDomain, domainSummaryText } from './_lib/domain-c
 import { runContractTestsParallel } from './_lib/contract-tests.mjs';
 import { logPush } from './_lib/log-push.mjs';
 import { shq } from './_lib/proc.mjs';
+import { ALL_STATIC_TOOLS, DOC_STATIC_TOOLS, DOC_EXTRA_SCRIPTS, FRONTEND_STATIC_TOOLS, GO_STATIC_TOOLS } from './_lib/gate-config.mjs';
 
 
 const B = { OK: '[OK]', FAIL: '[FAIL]', FIX: '[FIX]', SKIP: '[SKIP]' };
@@ -139,115 +140,8 @@ function gofmtCheck(goFiles) {
 }
 
 /* ---------------- 静态分析工具清单（--all / --docs 模式，doctor 全量迁入） ---------------- */
+// 工具清单单一事实来源 = _lib/gate-config.mjs；gate 本身只负责调度，不改清单逻辑。
 
-// doctor 全量 STATIC_TOOLS 迁入（2026-08-14 合并调度器）。
-// 剔除已在域检查内覆盖的项，避免重复扫描：check-layering（前端域）、
-// binding-check（Go 域）、gen-docs-index --check（docs/adr 域）。
-const ALL_STATIC_TOOLS = [
-  'check-doc-drift.mjs',
-  'check-adr-health.mjs',
-  'check-boolean-naming.mjs',
-  'check-circular.mjs',
-  'check-circular-go.mjs',
-  'check-orphan-exports.mjs',
-  'check-deadcode-baseline.mjs',
-  // jscpd-go.mjs — Go 端复制粘贴增量门禁（2026-08-30 接入）：push 模式由 GO_STATIC_TOOLS 补挂、
-  // 全量模式在此一并发入；baseline 独立于前端 deadcode-baseline，零耦合
-  'jscpd-go.mjs',
-  // check-layering.mjs — 前端域已覆盖
-  'check-tpl-refs.mjs',
-  'check-dynamic-import.mjs',
-  { tool: 'auto-import.mjs', args: ['--strict'] },
-  { tool: 'gen-project-map.mjs', args: ['--check'] },
-  { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
-  { tool: 'build-novel-index.mjs', args: ['--check'] },
-  { tool: 'gen-routes.mjs', args: ['--check'] },
-  { tool: 'gen-routes-quick.mjs', args: ['--check'] },
-  { tool: 'gen-cli-doc.mjs', args: ['--check'] },
-  { tool: 'gen-cli-completion.mjs', args: ['--check'] },
-  { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
-  // 子进程直调收敛守护（ADR-043）：WARN 报告未走 _lib/proc.mjs 的 execFileSync/execSync 直调
-  'check-proc-adoption.mjs',
-  // _lib 共享层采用率守护（2026-08-31 审计）：proc.mjs 配了专属闸门后非直调占比 100%，
-  // 其余模块此前零闸门、纯靠自觉（parse-args 采用率仅三成、多脚本仍手搓符号提取）。
-  // 本项把 proc 的经验推广为规则驱动的通用闸门，并给出全模块采用率全景 + 零引用告警。
-  'check-lib-adoption.mjs',
-  'check-workflow-refs.mjs',
-  // README 登记处漂移守护（2026-08-31 审计）：scripts/README.md 自称唯一登记处，
-  // 但 29/93 脚本零提及无人拦——新增/改名脚本漏登记不再静默（check-workflow-refs 守引用侧，
-  // 本项守登记侧）
-  'check-readme-index.mjs',
-  { tool: 'i18n-check.mjs', args: ['--strict'] },
-  'i18n-ui-check.mjs',
-  // binding-check.mjs — Go 域已覆盖
-  // css-layer-check.mjs — Shadow DOM 样式越界门禁（keyframe 跨 shadow 静默失效 /
-  // 类误归全局 <link> 在 shadow 内不生效）。ERROR 阻断，见 21c01725 / 9942ada3 复盘。
-  { tool: 'css-layer-check.mjs', args: ['--strict'] },
-  // toast 时长单一事实源守护（R7）：非阻断 [WARN] 观察期，防回流不误伤并行 push
-  'check-toast-duration.mjs',
-];
-
-/** 文档相关静态工具（--docs 模式，doctor DOC_STATIC_TOOLS 迁入） */
-const DOC_STATIC_TOOLS = [
-  'check-doc-drift.mjs',
-  'check-adr-health.mjs',
-  { tool: 'gen-project-map.mjs', args: ['--check'] },
-  { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
-  { tool: 'build-novel-index.mjs', args: ['--check'] },
-  // 路由表生成器（2026-08-31 审计修复）：此前未接门禁——改任何卡 use_when/quick_*
-  // 后 routes.md / routes-quick.md 不会自动重生成也不会报错，AI 第一站静默失同步。
-  // 此处 --check 硬校验（exit 1 阻断），pre-commit GEN_CMDS 同步负责自动重生成。
-  { tool: 'gen-routes.mjs', args: ['--check'] },
-  { tool: 'gen-routes-quick.mjs', args: ['--check'] },
-  { tool: 'gen-cli-doc.mjs', args: ['--check'] },
-  { tool: 'gen-cli-completion.mjs', args: ['--check'] },
-  { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
-  'check-proc-adoption.mjs',
-  'check-workflow-refs.mjs',
-  'check-readme-index.mjs',
-];
-
-/** 文档额外检查（--all / --docs 模式，doctor DOC_EXTRA_SCRIPTS 迁入）。
- * 仅保留未被域检查覆盖的项：link-checker（docs 域 --json 已判定断链）、
- * adr-check（adr 域已跑）不在此重复执行（2026-08-14 审核去重）。 */
-const DOC_EXTRA_SCRIPTS = [
-  'check-knowledge-drift.mjs',
-  'check-adr-drift.mjs', // ADR 描述 vs 代码现实漂移守护（2026-08-23 新增）
-];
-
-/** push 模式按变更域补挂的前端静态工具（2026-08-17 P1-1 修复）：
- * 此前 ALL_STATIC_TOOLS 只在 --all/--docs 跑，正常 push 从不执行治理检查（gate 名存实亡）。
- * 抽出 frontend 相关子集，plan.frontend 时补挂——保持按域裁剪的轻量，同时让 push 也过治理闸。 */
-const FRONTEND_STATIC_TOOLS = [
-  'check-circular.mjs',
-  'check-boolean-naming.mjs',
-  'check-orphan-exports.mjs',
-  'check-deadcode-baseline.mjs',
-  'check-tpl-refs.mjs',
-  'check-dynamic-import.mjs',
-  { tool: 'auto-import.mjs', args: ['--strict'] },
-  { tool: 'i18n-check.mjs', args: ['--strict'] },
-  'i18n-ui-check.mjs',
-  // Bus 事件契约硬闸（2026-08-29）：可选链盲区修复后升级——未声明/emit 缺参/
-  // VOID_EVENTS 清单漂移在 --strict 下阻断；孤儿/鬼订阅仅记录不阻断
-  { tool: 'event-graph.mjs', args: ['--strict'] },
-  // toast 时长单一事实源守护（R7）：非阻断 [WARN] 观察期
-  'check-toast-duration.mjs',
-  // Biome 增量质量闸（2026-08-27 P0）：TS 7 安全（Rust 解析器），仅查变更文件阻断
-  { tool: 'check-biome.mjs', args: ['--strict'] },
-];
-
-/** push 模式按变更域补挂的 Go 静态工具 */
-const GO_STATIC_TOOLS = [
-  'check-circular-go.mjs',
-  // Go 端复制粘贴增量门禁（2026-08-30 接入）：新增重复对 → 阻断推送；
-  // baseline 落 scripts/baseline/jscpd-go-baseline.json，与前端 deadcode-baseline 零耦合
-  'jscpd-go.mjs',
-  // Go 变更行覆盖率门禁（2026-08-27 集成，默认 threshold=60 硬门禁）：
-  // --json 模式 exit 0/1/2，runTools 退 rc 判定可靠（_summary 无 ok/errors 字段）。
-  // 软建议 80% 由 go-coverage-hint 显式 --threshold 80 承担（prepare-commit-msg）。
-  'check-go-diff-coverage.mjs',
-];
 
 /* ---------------- 主流程 ---------------- */
 

@@ -16,15 +16,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT, toPosix } from './_lib/scan-files.mjs';
+import { checkStale } from './_lib/stale-baseline.mjs';
 
-// 文件行缓存（性能审计 2026-09）：hasContext/inBlockComment 每次调用都整读文件，
-// W7 对每条命中读 3 次、同一文件被读 10+ 遍——按归一化绝对路径缓存 lines 一次性复用。
-const fileLinesCache = new Map();
-function readFileLines(file) {
+/**
+ * 文件行缓存（性能审计 2026-09）：hasContext/inBlockComment 每次调用都整读文件，
+ * W7 对每条命中读 3 次、同一文件被读 10+ 遍——按归一化绝对路径缓存 lines 一次性复用。
+ *
+ * ⚠️ 缓存在 main() 入口创建，确保每次 CLI 调用有独立生命周期，
+ * 避免模块顶层 mutable state 被 import 复用时跨调用污染。
+ */
+function createFileLinesCache() {
+  return new Map();
+}
+
+function readFileLines(file, cache) {
   try {
     const abs = path.resolve(ROOT, file.replace(/^\.?\//, ''));
-    if (!fileLinesCache.has(abs)) fileLinesCache.set(abs, fs.readFileSync(abs, 'utf-8').split('\n'));
-    return fileLinesCache.get(abs);
+    if (!cache.has(abs)) cache.set(abs, fs.readFileSync(abs, 'utf-8').split('\n'));
+    return cache.get(abs);
   } catch {
     return null;
   }
@@ -34,8 +43,8 @@ function readFileLines(file) {
  * 读取文件第 `line` 行附近（±radius 行）是否包含 `pattern`（正则）。
  * 用于单行 rg 结果需要上下文判定的场景（如 .file( 是否已在 new Promise 包裹内）。
  */
-function hasContext(file, line, pattern, radius = 8) {
-  const lines = readFileLines(file);
+function hasContext(file, line, pattern, radius = 8, cache) {
+  const lines = readFileLines(file, cache);
   if (!lines) return false;
   const start = Math.max(0, line - 1 - radius);
   const end = Math.min(lines.length, line + radius);
@@ -47,8 +56,8 @@ function hasContext(file, line, pattern, radius = 8) {
 // 用于 R3 续行豁免——只豁免真正在块注释内的行，避免「* 开头正则」误豁免
 // 真实代码续行（乘法链等，R3 是阻断规则，豁免不得宽于意图）。与 rg 口径一致，
 // 不处理字符串字面量内的 /*（红线扫描本身是启发式，足够）。
-function inBlockComment(file, lineno) {
-  const lines = readFileLines(file);
+function inBlockComment(file, lineno, cache) {
+  const lines = readFileLines(file, cache);
   if (!lines) return false;
   let inBlock = false;
   // 扫描到 lineno-1 行（不含当前行）：当前行若以 /* 开头已被前一 filter 豁免
@@ -98,6 +107,8 @@ const BASELINE_FILE = path.join(ROOT, 'scripts', 'baseline', 'redlines-baseline.
 const WARN_RULES = new Set(['R2', 'R5', 'R7', 'R4', 'W1']);
 
 function runChecks() {
+  /** 每次 runChecks 新建独立缓存，不持有模块级状态。 */
+  const cache = createFileLinesCache();
   const results = [];
 
   // 清洗 snippet 中的 C0/C1 控制字符（含 NUL、NEL、U+2028/U+2029 行分隔符等）。
@@ -161,13 +172,13 @@ function runChecks() {
       // 正则豁免会把真违规静默放行（code_review P3）
       .filter((l) => {
         const [f, line] = parseRgLine(l);
-        if (inBlockComment(f, line)) return false;
+        if (inBlockComment(f, line, cache)) return false;
         return true;
       })
       .filter((l) => {
         const [f, line] = parseRgLine(l);
         // 若 .file( 在 new Promise(...) 附近（±8 行内），说明已 Promise 化，豁免
-        if (hasContext(f, line, /new\s+Promise/, 8)) return false;
+        if (hasContext(f, line, /new\s+Promise/, 8, cache)) return false;
         return true;
       }),
     'new Promise(...)');
@@ -346,11 +357,11 @@ function runChecks() {
       .filter((l) => {
         const [f, line] = parseRgLine(l);
         // 已配缓存失效（scanner.InvalidateCache/InvalidatePath），豁免
-        if (hasContext(f, line, /scanner\.Invalidate(Cache|Path)/, 20)) return false;
+        if (hasContext(f, line, /scanner\.Invalidate(Cache|Path)/, 20, cache)) return false;
         // 启动期迁移/探测代码（非绑定层），豁免
-        if (hasContext(f, line, /migrate|probe\./, 15)) return false;
+        if (hasContext(f, line, /migrate|probe\./, 15, cache)) return false;
         // 配置/工具文件操作（非模型资源缓存相关），豁免
-        if (hasContext(f, line, /workshopSitesPath|creatorsPath|configPath\(\)/, 10)) return false;
+        if (hasContext(f, line, /workshopSitesPath|creatorsPath|configPath\(\)/, 10, cache)) return false;
         return true;
       }),
     '确认所在函数已配 scanner.InvalidateCache/InvalidatePath（防 30s 陈旧缓存"复活"）');
@@ -476,6 +487,8 @@ function runBaseline(results) {
       note: `[基线损坏] redlines-baseline.json 无法解析，删除后重跑 --update-baseline`,
       current: allKeys };
   }
+  const staleWarn = checkStale(base.generated, 'redlines');
+  if (staleWarn) console.warn(staleWarn);
   const baseSet = new Set(base.violations || []);
   // 变更域过滤（--files，2026-08-26）：仅把「本次变更文件内」的违规计入新增阻断/告警，
   // 其他文件的既有债务不干扰当前提交——避免 commit-with-check 只改 Go/文档时被

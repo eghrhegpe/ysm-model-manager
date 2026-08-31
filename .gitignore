@@ -29,6 +29,8 @@ docs/.vitepress/cache/
 *.log
 *.tmp
 tmp/
+# 覆盖率临时文件误入库教训（88daf2a2）：字面量 $tmp 无扩展名，*.tmp/*.out 兜不住
+$tmp
 *.bak
 _wails_test/
 project_tree.txt

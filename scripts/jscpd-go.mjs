@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { checkStale } from './_lib/stale-baseline.mjs';
 
 // 仓库根由共享层 scan-files.mjs 提供(消除内联 ROOT 样板,对齐 scripts_argv 卫生规范)
 const JSCPD = path.join(ROOT, 'frontend', 'node_modules', 'jscpd', 'run-jscpd.js');
@@ -100,6 +101,10 @@ function loadBase() {
   }
   return base;
 }
+function warnStale(base) {
+  const w = checkStale(base.generated, 'jscpd-go');
+  if (w) console.warn(w);
+}
 
 function main() {
   if (!fs.existsSync(JSCPD)) {
@@ -162,6 +167,7 @@ function main() {
       process.exitCode = 2;
       return; // finally 清理 tmp
     }
+    warnStale(base);
     const baseSet = new Set(base.clones || []);
     const added = current.filter((p) => !baseSet.has(p));
     const fixed = (base.clones || []).filter((p) => !current.includes(p));

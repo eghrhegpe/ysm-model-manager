@@ -62,7 +62,7 @@ const RULES = [
     advice: "import { getExportedSymbolsAny, topDeclsAny } from './_lib/source-graph.mjs'",
   },
   {
-    lib: 'to-posix.mjs',
+    lib: 'to-posix.ts',
     capability: 'Windows 反斜杠 → 正斜杠归一',
     smells: [/\.replace\(\/\\\\\/g,\s*['"]\/['"]\)/],
     advice: "import { toPosix } from './_lib/to-posix.ts'",
@@ -84,7 +84,7 @@ function adoptedRe(lib) {
 function collectLibs() {
   if (!fs.existsSync(LIB_DIR)) return [];
   return fs.readdirSync(LIB_DIR)
-    .filter((f) => f.endsWith('.mjs') && !f.endsWith('.test.mjs'))
+    .filter((f) => (f.endsWith('.mjs') || f.endsWith('.ts')) && !f.endsWith('.test.mjs') && !f.endsWith('.test.ts'))
     .sort();
 }
 

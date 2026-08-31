@@ -28,7 +28,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
-import { run } from '../_lib/proc.mjs';
+import { run } from '../_lib/proc.ts';
 
 export const BLOCK_START = '📚 受影响知识卡（建议同步复核 docs/knowledge）：';
 export const BLOCK_END = '📚 ──END──';

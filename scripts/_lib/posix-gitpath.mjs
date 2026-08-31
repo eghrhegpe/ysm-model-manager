@@ -16,7 +16,7 @@
  *   normalizeGitPath('docs/x.md', 'C:\\repo')            // → 'C:\\repo\\docs\\x.md'（相对 join root）
  */
 import path from 'node:path';
-import { toNative } from './to-posix.mjs';
+import { toNative } from './to-posix.ts';
 
 /**
  * 归一化 Git 传递的路径为可用于 fs 的绝对路径。

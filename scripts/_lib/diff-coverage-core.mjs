@@ -14,7 +14,7 @@
  * 零依赖（仅 node:fs / node:path / node:url / _lib）。
  */
 import { ROOT } from './scan-files.mjs';
-import { run } from './proc.mjs';
+import { run } from './proc.ts';
 
 /** 跑 git（失败返回 null，区别于“成功但无输出”的 ''）：调用方 fail-closed，拒绝空跑放行。 */
 export function git(args) {

@@ -31,7 +31,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
-import { run } from '../_lib/proc.mjs';
+import { run } from '../_lib/proc.ts';
 
 export const BLOCK_START = '🔬 覆盖率建议（非阻断，frontend/vitest.config.ts 阈值）：';
 export const BLOCK_END = '🔬 ──END──';

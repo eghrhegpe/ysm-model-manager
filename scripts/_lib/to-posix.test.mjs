@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import path from 'node:path';
-import { toPosix, toNative } from './to-posix.mjs';
+import { toPosix, toNative } from './to-posix.ts';
 
 // ── toPosix ──
 

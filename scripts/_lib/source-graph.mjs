@@ -12,7 +12,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { toPosix } from './to-posix.mjs';
+import { toPosix } from './to-posix.ts';
 import { walk } from './scan-files.mjs';
 
 export const EXCLUDE_DIRS = new Set(['__tests__', '__mocks__', 'node_modules', 'wailsjs', 'bindings', 'dist']);

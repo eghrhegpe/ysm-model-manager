@@ -49,10 +49,12 @@ let jscpdParseFailed = false;
 function bin(name) {
   // 与 doctor.mjs frontendBin 对齐：win32 优先 .cmd（npm shim 真实形态，shell:true 走 cmd.exe），
   // 其它平台优先 plain（无扩展名可执行）。.ps1 仅作最后兜底（cmd.exe 不直接执行 .ps1）。
-  const dir = path.join(FRONTEND, 'node_modules', '.bin');
-  const candidates = process.platform === 'win32'
+  // monorepo 化（workspaces）后依赖被 hoist 到根 node_modules/.bin，frontend 不再必有——
+  // 根 / frontend 两处都搜，取先存在的（根优先，符合 npm hoist 语义）。
+  const dirs = [path.join(ROOT, 'node_modules', '.bin'), path.join(FRONTEND, 'node_modules', '.bin')];
+  const candidates = dirs.flatMap((dir) => process.platform === 'win32'
     ? [path.join(dir, `${name}.cmd`), path.join(dir, name), path.join(dir, `${name}.ps1`)]
-    : [path.join(dir, name), path.join(dir, `${name}.ps1`)];
+    : [path.join(dir, name), path.join(dir, `${name}.ps1`)]);
   return candidates.find((c) => fs.existsSync(c)) || null;
 }
 

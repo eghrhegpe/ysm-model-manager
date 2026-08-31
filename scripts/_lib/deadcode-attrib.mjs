@@ -6,7 +6,7 @@
  * 他人遗留债务不拦路，由调用方自动收编进基线并留痕。
  * 责任集为 null = 无法归属（无 git 上下文），严格模式全阻断（fail-closed）。
  */
-import { toPosix } from './to-posix.mjs';
+import { toPosix } from './to-posix.ts';
 
 /** 从发现项 key 提取涉及文件（posix，工具 cwd 相对路径）。
  * knip 键形如 `file|type|name`；jscpd 键形如 `f1#f2`。无法解析返回 []。 */

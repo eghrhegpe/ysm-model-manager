@@ -21,7 +21,12 @@ import { ROOT } from './_lib/scan-files.mjs';
 import { checkStale } from './_lib/stale-baseline.mjs';
 
 // 仓库根由共享层 scan-files.mjs 提供(消除内联 ROOT 样板,对齐 scripts_argv 卫生规范)
-const JSCPD = path.join(ROOT, 'frontend', 'node_modules', 'jscpd', 'run-jscpd.js');
+// monorepo 化后 jscpd 被 hoist 到根 node_modules（workspaces 依赖提升），
+// 根 / frontend 两处都要找——只认 frontend 会漏根安装（npm install 到根后 frontend 不再有）。
+const JSCPD = [
+  path.join(ROOT, 'node_modules', 'jscpd', 'run-jscpd.js'),
+  path.join(ROOT, 'frontend', 'node_modules', 'jscpd', 'run-jscpd.js'),
+].find((p) => fs.existsSync(p));
 const BASELINE = path.join(ROOT, 'scripts', 'baseline', 'jscpd-go-baseline.json');
 
 const PATTERN = './go/**/*.go';

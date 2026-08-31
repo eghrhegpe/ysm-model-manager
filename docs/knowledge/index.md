@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 138 张知识卡
+> 总计: 141 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -188,7 +188,7 @@
 - **go_repoaudit**（仓库审计 go/repoaudit）：`go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 
-## ui（28 张）
+## ui（31 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -196,7 +196,7 @@
 |------|------|------|------|--------|
 | 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | — | — |
 | 🍃 3d-patterns | 3D 区审核与修复模式提炼 | leaf | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
-| 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:change, 仓库页, 诊断页, 设置页, 创作者频道, 创意工坊, 全局 handler |
+| 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:change, 仓库页, 全局 handler |
 | 🏗 app-modules | 组件入口 app-modules | architecture | — | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新, import 组件, 新组件注册, 窗口显示, startup reveal |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:change, 菜单, 页面记忆, 版本号 |
 | 🏗 app-preview | 预览面板 app-preview | architecture | — | 预览, 模型预览, 2D 骨骼, 3D 预览, Litematic, 蓝图, 缩略图, WASM 解码, 放大预览 |
@@ -204,6 +204,9 @@
 | 🏗 app-sync-manager | 整合包同步页 app-sync-manager | architecture | — | 整合包同步, 同步状态, 推送资源, 拉取资源, 待推送, 可拉取, 已禁用, 实例资源 |
 | 🍃 app-toast | Toast 通知 app-toast | leaf | — | toast, 通知, 提示, 消息, 撤销, 反馈, 报错提示 |
 | 🏗 app-tree | 资源树 app-tree | architecture | — | 树形, 资源列表, tree, 节点, 树, 目录树 |
+| 🍃 app_content_diagnostics | 诊断与冲突页 diagnostics | leaf | — | 诊断页, 诊断, 冲突, 去重流程, 日志, 体检, 性能, oldest, doDedup, 仓库体检, initDiagnostics, startDedup |
+| 🍃 app_content_settings | 设置页 settings | leaf | — | 设置页, 设置, 主题设置, 键位, 路径配置, 界面偏好, 字号, initSettings, SaveAppConfig, ui-prefs, keymap, worker 线程数 |
+| 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点, 站点视图, 创作者频道, 浏览模式, 卡片拖拽, 编辑模式, renderSiteView, site-view, browseMode, 收藏创作者 |
 | 🏗 context-menu | 右键菜单系统 | architecture | — | 右键菜单, 右键, 上下文菜单, ctx:show, menu:show, 批量操作, 移入回收站, 重命名 |
 | 🍃 dialog-adv-filter | 高级筛选 adv-filter | leaf | — | 高级筛选, 筛选, 骨骼数, 立方体, 纹理尺寸, 按标签筛选, 条件过滤 |
 | 🏗 dialog-batch-rename | 批量重命名 batch-rename | architecture | — | 批量重命名, 批量改名, 查找替换, 正则替换, 统一作者, 预设, batch-rename |
@@ -233,6 +236,9 @@
 - **app-sync-manager**（整合包同步页 app-sync-manager）：`app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本…
 - **app-toast**（Toast 通知 app-toast）：`app-toast` 是全局 Toast 通知组件（Shadow DOM，固定悬浮于视口底部居中），是全应用唯一的操作反馈出口。治理红线要求所有异常路径必须有 toast 反馈，各模块统一通过 `bus.emit("toast:show"…
 - **app-tree**（资源树 app-tree）：`app-tree` 是 YSM 核心的资源目录树组件，使用 Web Components 实现，支持展开/折叠、右键菜单、文件图标显示。
+- **app_content_diagnostics**（诊断与冲突页 diagnostics）：`diagnostics/` 是 `app-content` 的「诊断与冲突」页子域（6 个 tab：冲突 / 日志 / 体检 / 去重 / 性能 / 资历），由主卡 `app-content` 的 `init-pages.ts` 在切到诊…
+- **app_content_settings**（设置页 settings）：`settings/` 是 `app-content` 的「设置」页子域，由主卡 `app-content` 的 `init-pages.ts` 在切到设置页时分发初始化。内部高内聚：`init.ts` 汇聚全部子模块（键位 / 路径卡 /…
+- **app_content_site**（创意工坊站点视图 site）：`site/` + `site-view.ts` 是 `app-content` 的「创意工坊站点」页子域，由主卡 `app-content` 的 `init-workshop.ts` 调用 `renderSiteView` 组装。内部高内…
 - **context-menu**（右键菜单系统）：右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`core/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `menu:show` 载荷，`view…
 - **dialog-adv-filter**（高级筛选 adv-filter）：`adv-filter.ts` 提供模型高级筛选弹窗：关键字 + 骨骼数/立方体数/纹理尺寸三组数值范围 + 标签名，采集后返回结构化条件对象交给调用方执行搜索。控件集合与后端 `SearchModels` 的能力严格对齐（6 个范围参数 …
 - **dialog-batch-rename**（批量重命名 batch-rename）：`batch-rename.ts` 提供目录级批量重命名弹窗：接收文件条目列表，用 `parseModelName` 逐个解析出作者/作品/角色/日期，支持两种模式——「解析格式」（统一作者/作品批量改写）与「查找替换」（字面量或正则，含 …

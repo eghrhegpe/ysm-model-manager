@@ -538,11 +538,12 @@ async function main() {
   // 当前 _lib/ 尚未有 .ts 文件，tsc 返回 rc=2；allowRc2=true 时视为通过（零 .ts = 零错误）。
   // 未来 _lib/proc.ts 等迁移到位后，rc=2 自动变为 rc=0/1，无需额外改 gate。
   if (allMode || docsMode) {
+    const tSC0 = Date.now();
     const tSC = path.join(ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'tsc.cmd' : 'tsc');
     const tscResult = await shAsync(`"${tSC}" --noEmit -p scripts/tsconfig.json`);
     const tscOk = tscResult.rc === 0 || tscResult.rc === 2; // rc=2 = TS18003 无输入，容忍
     record('tsc scripts/', tscOk, {
-      time: tscResult.rc === 2 ? 0 : Date.now() - (t0_sc ?? Date.now()),
+      time: Date.now() - tSC0,
       note: tscResult.rc === 2 ? '无 .ts 文件（待 _lib/ 迁移后生效）'
         : (tscResult.rc === 0 ? '类型检查通过' : `${tscResult.out.trim().split('\n').filter(Boolean).length} 个错误`),
       tail: tscResult.rc === 0 ? '' : tscResult.out.trim().split('\n').slice(-5).join('\n'),

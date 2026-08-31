@@ -16,9 +16,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { walk, resolveImport, relPosix, readText, ROOT } from '../scripts/_lib/scan-files.mjs';
-import { toPosix } from '../scripts/_lib/to-posix.mjs';
+import { toPosix } from '../scripts/_lib/to-posix.ts';
 import { rg } from '../scripts/_lib/ripgrep.mjs';
-import { parseRgLine } from '../scripts/_lib/rg-line.mjs';
+import { parseRgLine } from '../scripts/_lib/rg-line.ts';
 
 const errors = [];
 

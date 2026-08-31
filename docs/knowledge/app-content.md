@@ -4,33 +4,29 @@ name: 主内容页 app-content
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/views/app-content/
-  - frontend/src/views/app-content/content-creator.ts
-  - frontend/src/views/app-content/content-diag.ts
-  - frontend/src/views/app-content/content-util.ts
-  - frontend/src/views/app-content/site/render.ts
-  - frontend/src/views/app-content/community-data.ts
-  - frontend/src/views/app-content/diagnostics/init.ts
-  - frontend/src/views/app-content/diagnostics/logs.ts
-  - frontend/src/views/app-content/diagnostics/dedup.ts
-  - frontend/src/views/app-content/diagnostics/health.ts
-  - frontend/src/views/app-content/diagnostics/conflicts.ts
-  - frontend/src/views/app-content/settings/init.ts
+  - frontend/src/views/app-content/index.ts
+  - frontend/src/views/app-content/tpl.ts
   - frontend/src/views/app-content/tpl-recycle.ts
   - frontend/src/views/app-content/tpl-settings.ts
   - frontend/src/views/app-content/tpl-settings-about.ts
-  - frontend/src/views/app-content/settings/store.ts
-  - frontend/src/views/app-content/settings/path-cards.ts
-  - frontend/src/views/app-content/settings/theme.ts
-  - frontend/src/views/app-content/settings/ui-prefs.ts
-  - frontend/src/views/app-content/settings/keymap.ts
-  - frontend/src/views/app-content/site-view.ts
-  - frontend/src/views/app-content/site/drag.ts
-  - frontend/src/views/app-content/site/edit.ts
-  - frontend/src/views/app-content/site/events.ts
-  - frontend/src/views/app-content/site/render.ts
-  - frontend/src/views/app-content/site/types.ts
-  - frontend/src/views/app-content/workshop-data.ts
+  - frontend/src/views/app-content/content-css.ts
+  - frontend/src/views/app-content/content-layout.ts
+  - frontend/src/views/app-content/content-repo.ts
+  - frontend/src/views/app-content/content-creator.ts
+  - frontend/src/views/app-content/content-diag.ts
+  - frontend/src/views/app-content/content-stg.ts
+  - frontend/src/views/app-content/content-util.ts
+  - frontend/src/views/app-content/init-pages.ts
+  - frontend/src/views/app-content/init-preview.ts
+  - frontend/src/views/app-content/init-workshop.ts
+  - frontend/src/views/app-content/init-github.ts
+  - frontend/src/views/app-content/page-registry.ts
+  - frontend/src/views/app-content/state.ts
+  - frontend/src/views/app-content/subscription-bucket.ts
+  - frontend/src/views/app-content/community-data.ts
+  - frontend/src/views/app-content/workshop-avatar.ts
+  - frontend/src/views/app-content/workshop-tabs.ts
+  - frontend/src/views/app-content/workshop-site-opener.ts
   - frontend/src/utils/icon/workshop-icons.ts
 tests:
   - frontend/src/utils/resource/types.test.ts
@@ -45,10 +41,6 @@ use_when:
   - 页面切换
   - nav:change
   - 仓库页
-  - 诊断页
-  - 设置页
-  - 创作者频道
-  - 创意工坊
   - 全局 handler
 invariant_anchors:
   - frontend/src/views/app-content/index.ts|_unsubs
@@ -66,6 +58,12 @@ invariant_anchors:
 
 ## 核心职责
 
+> **子域拆分（2026-08-31，ADR-138 同批）**：诊断页 / 设置页 / 站点视图已拆为独立子卡——
+> 本卡只持编排、模板、样式层、共享数据与工坊装配。见：
+> - [诊断与冲突页 `app_content_diagnostics`](./app_content_diagnostics.md) — `diagnostics/` 全子模块
+> - [设置页 `app_content_settings`](./app_content_settings.md) — `settings/` 全子模块
+> - [创意工坊站点视图 `app_content_site`](./app_content_site.md) — `site/` + `site-view.ts` + `workshop-data` / `workshop-browse-mode`
+
 - `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:change` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`
 - `content-css.ts` — 样式组合层：`[layout, repo, creator, diag, util, stg].join("\n")` 输出单一 CSS 字符串（6 个域文件），入口 `index.ts` 构造时 `root.adoptedStyleSheets = [appContentStyle]` 注入 Shadow DOM；CSS 全走 CSS 变量。注意：`.stg-*` 设置页样式与 `.tab-body` 已回迁本组合层（原误置于 `frontend/css/components.css` 全局 `<link>`，被 Shadow DOM 边界阻断不生效，见 2026-08-24 复盘）
@@ -76,12 +74,6 @@ invariant_anchors:
 - `content-diag.ts` — 诊断页（`.diag-*` / `.perf-*` / `.log-row` / `.conflict-row` / `.scan-*` 动画）+ GitHub 工坊（`.gh-*` 全族：仓库列表 / 模型行 / 二级菜单 / 下载队列 / 错误页）。注：`.settings-group` / `.setting-row` 已于 2026-08-24 收口至 `content-stg.ts`（设置页资产归 settings 域托管），本文件不再含设置页样式；`#set-advanced-panel` 的 advPanel 动画在 content-stg.ts
 - `content-util.ts` — 杂项：回收站动画（`.recy-*`）/ 资源管理器（`.rm-*`）/ 预览拖拽（`.preview-resize-handle`）/ 主题选择器（`.theme-*`）/ 响应式 `@media (max-width:768px)`
 - `community-data.ts` — 社区数据层：`loadCommunityData` **首屏快路径**（并发 `App.DefaultWorkshopSites` / `LoadWorkshopCreators` / `ListModelAuthors`，**不含磁盘扫描**）；`loadLocalAuthors`（本地作者扫描，withCached 5min **STALE** 策略：过期返旧值后台刷新）+ `mergeLocalAuthorsInto`（幂等合并，同名去重 + type 分段精确比较）供调用方首屏渲染后异步补充——拆分前扫描坐在 Promise.all 里阻塞整个 tab 栏（大库秒级~分钟级）；另有 `fetchCommunityCreators` / `mergeCommunityCreators` / `fetchCommunitySites` / `mergeCommunitySites` / `fillSearch` / `DEFAULT_COMMUNITY_URL`
-- `diagnostics/init.ts` — 诊断页 `initDiagnostics` 与 `startDedup` 去重流程（派发 `model:select` / `stats:refresh` / `tree:reload`）
-- `diagnostics/health.ts` — 仓库体检面板：调 Go 端 `RepoHealthAudit`（go/repoaudit 同源，GUI/CLI 消双轨），渲染分数环/完整性/缓存/资源/去重/警告
-- `settings/init.ts` — 设置页 `initSettings`：直接解构 bindings（`LoadAppConfig` / `SaveAppConfig` / `SelectDirectory` / `GetMinecraftPaths` / `SetLinkMode`），配置变更派发 `config:updated` / `stats:refresh` / `toast:show`，并接入 `initVersionUpdater`；「启动默认页面」下拉读写 localStorage `ui-default-page`，显示值兜底 `repository`（与 `resolveInitialPage` 的兜底一致）
-- `site-view.ts` — 站点视图 `renderSiteView`：组装 `SiteViewState` 后委托 `site/` 子模块渲染与绑定；行内编辑选择器排除预设卡片（`[data-idx][data-fld]:not([data-edit='preset'])`，防预设 label 输入污染创作者对象，P2 修复）；拖拽 drop 用 `realIdx` 在 `allCreators` 全量数组上重排（防站点子集覆盖清空其他站点，P2 修复）
-- `site/types.ts` / `site/render.ts` / `site/events.ts` / `site/edit.ts` / `site/drag.ts` — 站点视图拆分：状态类型 `SiteViewState` / `CleanupFn`、`createCrCard` + `buildSiteHtml` 渲染、`bindBrowseEvents` 浏览交互、`bindEditEvents` 编辑模式（AbortController signal 贯穿 7 个 eeBind* 全部监听，cleanup 真实解绑幂等）、`bindDragEvents` 卡片拖拽排序；各 bind 均返回 `CleanupFn`
-- `workshop-data.ts` — 工坊纯数据工具：`getCreatorIdentity` / `getTagFromRole` / `parseDescTags` / 收藏 `loadFavs` / `isFaved` / `toggleFav`（localStorage `ysm-fav-creators`，写入函数 `saveFavs` 为模块内私有）
 - `workshop-icons.ts` — SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`
 - `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded`（iframe）/ `NavigatePlazaWindow` / `OpenInBrowser`，`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 把搜索链路 `fillSearch` 拼好的带词链接**透传**给 `openSite`（曾丢弃入参只开首页 → 全站搜索退化为只开网站，P1 修复）
 

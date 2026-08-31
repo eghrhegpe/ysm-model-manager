@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { run } from './proc.mjs';
+import { run } from './proc.ts';
 
 // proc.mjs run() 共享层契约测试（code review f050902f 连环审核 P3 #9）：
 // mergeStderr 切分 / 超时 stderr 保留 / stdio:'ignore' 空 out / 默认合并不回归。

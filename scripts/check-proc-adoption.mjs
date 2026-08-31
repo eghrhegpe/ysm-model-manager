@@ -35,8 +35,8 @@ const STRICT = process.argv.includes('--strict');
 
 // 直调特征：import 块含 execFileSync/execSync，来源 node:child_process
 const DIRECT_EXEC_IMPORT_RE = /import\s*\{[^}]*\b(?:execFileSync|execSync)\b[^}]*\}\s*from\s*['"]node:child_process['"]/;
-// 已接入共享层：import 了 _lib/proc.mjs
-const PROC_ADOPTED_RE = /from\s*['"].*_lib[\\/]proc\.mjs['"]/;
+// 已接入共享层：import 了 _lib/proc（.mjs 迁移 .ts 后兼容两种后缀）
+const PROC_ADOPTED_RE = /from\s*['"].*_lib[\\/]proc\.(?:mjs|ts)['"]/;
 
 function main() {
   const files = collectScripts(); // 含 hooks/（git 钩子辅助脚本同样可能直调子进程）

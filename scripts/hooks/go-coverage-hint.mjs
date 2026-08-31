@@ -21,7 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
-import { run } from '../_lib/proc.mjs';
+import { run } from '../_lib/proc.ts';
 
 /** 低于该百分比的函数进入提醒（与仓库"拆函数 ≤ 80 行"的量产纪律对齐的覆盖阈值）。 */
 export const GO_FUNC_COVERAGE_THRESHOLD = 80;

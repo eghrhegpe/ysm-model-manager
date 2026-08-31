@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi, beforeAll } from "vitest";
-import { addCollapsible, addSectionTitle, addPresetChip } from "../ui-collapsible.ts";
+import { addCollapsible, addSectionTitle, addPresetChip } from "./ui-collapsible.ts";
 
 // 在 happy-dom 中 rAF 不自动触发；让 rAF 同步执行，模拟真实浏览器 paint 前的效果
 beforeAll(() => {

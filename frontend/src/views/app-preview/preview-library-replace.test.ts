@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // 部分 mock：保留原模块真实导出，仅覆盖 cleanupPreview / hasActivePreview / switchPreview 供断言
-vi.mock("../../../features/preview-3d/adapters/mount-preview-core.ts", async (importOriginal) => {
+vi.mock("../../features/preview-3d/adapters/mount-preview-core.ts", async (importOriginal) => {
   const mod = (await importOriginal()) as Record<string, unknown>;
   return {
     ...mod,
@@ -17,15 +17,15 @@ vi.mock("../../../features/preview-3d/adapters/mount-preview-core.ts", async (im
 
 // 阻断 Wails runtime 加载链（openModel3DFullscreen 内部 getApp()）。
 // 注意路径：vi.mock 相对【测试文件】解析，preview-library.ts 的
-// `import { getApp } from "../../backend/app.ts"` 相对【preview-library.ts】
+// `import { getApp } from "../backend/app.ts"` 相对【preview-library.ts】
 // （src/views/app-preview/）→ src/backend/app.ts；测试文件在 __tests__/ 子目录，
 // 须再上一级 `../../../backend/app.ts` 才能命中同一模块（原 `../../` 解析到
 // src/views/backend/ 不存在 → mock 静默失效，被旧版顶部无条件 cleanup 掩盖）。
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
-vi.mock("../../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
 
-import { openModel3DFullscreen, registerReRoute } from "../preview-library.ts";
-import { cleanupPreview, hasActivePreview, switchPreview } from "../../../features/preview-3d/adapters/mount-preview-core.ts";
+import { openModel3DFullscreen, registerReRoute } from "./preview-library.ts";
+import { cleanupPreview, hasActivePreview, switchPreview } from "../../features/preview-3d/adapters/mount-preview-core.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

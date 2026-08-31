@@ -7,37 +7,37 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 
 // ── 顶层模块 mock（避免真实 sceneRegistry / textureCache 副作用） ────────
-vi.mock("../scene-registry.ts", () => ({
+vi.mock("./scene-registry.ts", () => ({
   sceneRegistry: {
     reset: vi.fn(),
   },
   MAX_MODELS: 8,
 }));
 
-vi.mock("../../caps/scene-capability-registry.ts", () => ({
+vi.mock("../caps/scene-capability-registry.ts", () => ({
   sceneCapabilityRegistry: {
     saveAll: vi.fn(),
     dispose: vi.fn(),
   },
 }));
 
-vi.mock("../../texture-cache.ts", () => ({
+vi.mock("../texture-cache.ts", () => ({
   textureCache: {
     disposeAll: vi.fn(),
   },
 }));
 
-vi.mock("../../frustum-cull.ts", () => ({
+vi.mock("../frustum-cull.ts", () => ({
   clearModelRoots: vi.fn(),
 }));
 
 // 从被 mock 的模块重新引用（保证拿到 mock 后的对象）
-import { sceneRegistry } from "../scene-registry.ts";
-import { sceneCapabilityRegistry } from "../../caps/scene-capability-registry.ts";
-import { textureCache } from "../../texture-cache.ts";
-import { clearModelRoots } from "../../frustum-cull.ts";
-import { runFullCleanup } from "../cleanup-3d.ts";
-import type { CleanupContext } from "../cleanup-3d.ts";
+import { sceneRegistry } from "./scene-registry.ts";
+import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import { textureCache } from "../texture-cache.ts";
+import { clearModelRoots } from "../frustum-cull.ts";
+import { runFullCleanup } from "./cleanup-3d.ts";
+import type { CleanupContext } from "./cleanup-3d.ts";
 
 // ── 全局 DOM 模拟（@vitest-environment node 无 document / window / cancelAnimationFrame） ──
 const fakeDocRemove = vi.fn();

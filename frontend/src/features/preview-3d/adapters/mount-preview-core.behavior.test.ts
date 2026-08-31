@@ -12,8 +12,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
-import { mountPreviewRootMenu, type PreviewMenuCtx } from "../../menu/core.ts";
-import { sceneRegistry } from "../scene-registry.ts";
+import { mountPreviewRootMenu, type PreviewMenuCtx } from "../menu/core.ts";
+import { sceneRegistry } from "./scene-registry.ts";
 
 // ── 模块级 mock ──────────────────────────────────────────────────────────
 // three/addons/controls/OrbitControls.js：需要 fake 类（constructor / target / enableRotate / update / dispose）
@@ -32,7 +32,7 @@ vi.mock("three/addons/controls/OrbitControls.js", () => ({
   ),
 }));
 
-vi.mock("../../caps/scene-capability-registry.ts", () => {
+vi.mock("../caps/scene-capability-registry.ts", () => {
   const capFactory = (id: string) => ({
     id,
     apply: vi.fn(),
@@ -66,13 +66,13 @@ vi.mock("../../caps/scene-capability-registry.ts", () => {
   };
 });
 
-vi.mock("../../caps/sky-capability.ts", () => ({ SkyCapability: vi.fn() }));
-vi.mock("../../caps/ground-capability.ts", () => ({ GroundCapability: vi.fn() }));
-vi.mock("../../caps/light-capability.ts", () => ({ LightCapability: vi.fn() }));
-vi.mock("../../caps/fog-capability.ts", () => ({ FogCapability: vi.fn() }));
-vi.mock("../../caps/shadow-capability.ts", () => ({ ShadowCapability: vi.fn() }));
-vi.mock("../../caps/reflector-capability.ts", () => ({ ReflectorCapability: vi.fn() }));
-vi.mock("../../caps/environment-capability.ts", () => ({
+vi.mock("../caps/sky-capability.ts", () => ({ SkyCapability: vi.fn() }));
+vi.mock("../caps/ground-capability.ts", () => ({ GroundCapability: vi.fn() }));
+vi.mock("../caps/light-capability.ts", () => ({ LightCapability: vi.fn() }));
+vi.mock("../caps/fog-capability.ts", () => ({ FogCapability: vi.fn() }));
+vi.mock("../caps/shadow-capability.ts", () => ({ ShadowCapability: vi.fn() }));
+vi.mock("../caps/reflector-capability.ts", () => ({ ReflectorCapability: vi.fn() }));
+vi.mock("../caps/environment-capability.ts", () => ({
   EnvironmentCapability: vi.fn(function (this: any) {
     this.apply = vi.fn();
     this.dispose = vi.fn();
@@ -88,71 +88,71 @@ vi.mock("../../caps/environment-capability.ts", () => ({
   }),
 }));
 
-vi.mock("../../caps/postprocessing-capability.ts", () => ({
+vi.mock("../caps/postprocessing-capability.ts", () => ({
   PostprocessingCapability: vi.fn(),
 }));
 
-vi.mock("../camera-setup.ts", () => ({
+vi.mock("./camera-setup.ts", () => ({
   fitCameraToRoots: vi.fn(),
 }));
 
-vi.mock("../bone-raycast.ts", () => ({
+vi.mock("./bone-raycast.ts", () => ({
   assembleBoneSelectInfo: vi.fn(() => ({})),
   getMeshBoneId: vi.fn(() => null),
 }));
 
-vi.mock("../frustum-cull.ts", () => ({
+vi.mock("./frustum-cull.ts", () => ({
   cullModelGroups: vi.fn(),
 }));
 
-vi.mock("../../core/log.ts", () => ({
+vi.mock("../core/log.ts", () => ({
   logWarn: vi.fn(),
 }));
 
-vi.mock("../../core/i18n/t.ts", () => ({
+vi.mock("../core/i18n/t.ts", () => ({
   t: (key: string) => key,
 }));
 
-vi.mock("../switch-preview.ts", () => ({
+vi.mock("./switch-preview.ts", () => ({
   switchToSession: vi.fn(async () => {}),
   syncLightTargetFromContent: vi.fn(),
 }));
 
-vi.mock("../semantic-bones.ts", () => ({ SemanticBoneMap: {} }));
+vi.mock("./semantic-bones.ts", () => ({ SemanticBoneMap: {} }));
 
-vi.mock("../../utils/dom/errors.ts", () => ({
+vi.mock("../utils/dom/errors.ts", () => ({
   friendlyError: vi.fn((e: any) => (e instanceof Error ? e.message : String(e))),
 }));
 
-vi.mock("../../utils/dom/html.ts", () => ({
+vi.mock("../utils/dom/html.ts", () => ({
   esc: vi.fn((s: any) => String(s ?? "")),
 }));
 
-vi.mock("../../utils/dom/storage.ts", () => ({
+vi.mock("../utils/dom/storage.ts", () => ({
   safeGet: vi.fn(() => null),
   safeSet: vi.fn(),
   safeRemove: vi.fn(),
 }));
 
-vi.mock("../../utils/dom/fab.ts", () => ({
+vi.mock("../utils/dom/fab.ts", () => ({
   createIconButton: vi.fn(() => ({ _tag: "icon-btn", style: {}, classList: { add: vi.fn(), remove: vi.fn() } })),
   ensureFabStyles: vi.fn(),
   YSW_FAB_CSS: "",
 }));
 
-vi.mock("../../../ui/ui-components-styles.ts", () => ({
+vi.mock("../../ui/ui-components-styles.ts", () => ({
   installUiComponentsStyles: vi.fn(),
 }));
 
-vi.mock("../../../ui/ui-helpers.ts", () => ({
+vi.mock("../../ui/ui-helpers.ts", () => ({
   createSlideMenu: vi.fn(() => ({ _tag: "slide-menu" })),
 }));
 
-vi.mock("../../../ui/ui-header-toggle.ts", () => ({
+vi.mock("../../ui/ui-header-toggle.ts", () => ({
   createHeaderToggle: vi.fn(() => ({ _tag: "toggle" })),
 }));
 
-vi.mock("../../menu/core.ts", () => ({
+vi.mock("../menu/core.ts", () => ({
   mountPreviewRootMenu: vi.fn(() => ({
     _tag: "menu",
     setAdapterItems: vi.fn(),
@@ -161,9 +161,9 @@ vi.mock("../../menu/core.ts", () => ({
   })),
 }));
 
-vi.mock("../camera-controls.ts", () => ({}));
+vi.mock("./camera-controls.ts", () => ({}));
 
-vi.mock("../../bus.ts", () => {
+vi.mock("../bus.ts", () => {
   const events = new Map<string, any[][]>();
   return {
     bus: {
@@ -178,7 +178,7 @@ vi.mock("../../bus.ts", () => {
 });
 
 // switch-preview.ts 里也有 sceneRegistry 引用；需要在 mount-preview-core.ts 的 mock 前 mock
-vi.mock("../scene-registry.ts", () => {
+vi.mock("./scene-registry.ts", () => {
   const entries = new Map<string, any>();
   return {
     sceneRegistry: {
@@ -201,7 +201,7 @@ vi.mock("../scene-registry.ts", () => {
   };
 });
 
-vi.mock("../input-and-animation.ts", () => ({
+vi.mock("./input-and-animation.ts", () => ({
   bindInputHandlers: vi.fn(() => ({
     onKeyDown: vi.fn(),
     onKeyUp: vi.fn(),
@@ -212,7 +212,7 @@ vi.mock("../input-and-animation.ts", () => ({
   })),
 }));
 
-vi.mock("../cleanup-3d.ts", () => {
+vi.mock("./cleanup-3d.ts", () => {
   return {
     runFullCleanup: vi.fn((ctx: any) => {
       ctx.isDisposed.v = true;
@@ -335,7 +335,7 @@ afterEach(() => { resetGlobalMocks(); _resetSingletons(); });
 function makeAdapter(opts: {
   sync?: boolean;
   reject?: unknown;
-  scene?: Partial<import("../mount-preview-core.ts").PreviewScene>;
+  scene?: Partial<import("./mount-preview-core.ts").PreviewScene>;
 } = {}): any {
   return {
     id: "test-adapter",
@@ -385,7 +385,7 @@ import {
   _resetSingletons,
   type PreviewAdapter,
   type Mount3DOptions,
-} from "../mount-preview-core.ts";
+} from "./mount-preview-core.ts";
 
 // ──────────────────────────────────────────────────────────────────────
 // describe 1: hasActivePreview / invalidatePreview 基础

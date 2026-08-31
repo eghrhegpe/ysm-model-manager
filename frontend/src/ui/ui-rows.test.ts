@@ -16,7 +16,7 @@ import {
     addActionRow,
     addDisabledRow,
     addInlineToggleRow,
-} from "../ui-rows.ts";
+} from "./ui-rows.ts";
 
 // ===================================================================
 // 全局 setup：happy-dom 不自动触发 rAF，需要 mock 同步执行

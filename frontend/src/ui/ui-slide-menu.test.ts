@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { createSlideMenu, type SlideMenuView } from "../ui-slide-menu.ts";
-import * as focusRestore from "../../utils/dom/focus-restore.ts";
+import { createSlideMenu, type SlideMenuView } from "./ui-slide-menu.ts";
+import * as focusRestore from "../utils/dom/focus-restore.ts";
 
 /** 真实场景 menu.root 会被挂进 DOM（preview-menu/core.ts：popup.appendChild(menu.root)）；
  *  未连接的元素 focus() 在 happy-dom 无效（activeElement 停在 BODY）——测试必须挂载。 */

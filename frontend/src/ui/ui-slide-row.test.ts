@@ -6,8 +6,8 @@ import {
   createLeadingBtn,
   type TrailingAction,
   type SlideRowExtra,
-} from "../ui-slide-row.ts";
-import { setControlRegistry } from "../control-registry.ts";
+} from "./ui-slide-row.ts";
+import { setControlRegistry } from "./control-registry.ts";
 
 // 每次测试前：清空 body + 断开 control-registry 外部接入（避免 ui-header-toggle 污染）
 beforeEach(() => {

@@ -4,7 +4,7 @@ import {
     addColorSliderRow,
     addVector3SliderRow,
     addModeSlider,
-} from "../ui-advanced-rows.ts";
+} from "./ui-advanced-rows.ts";
 
 // ===================================================================
 // 测试辅助

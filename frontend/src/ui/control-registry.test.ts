@@ -10,7 +10,7 @@ import {
     iterateControls,
     clearControls,
     getControlCount,
-} from "../control-registry.ts";
+} from "./control-registry.ts";
 
 // 每个用例前后重置全局状态，防串测试。
 beforeEach(() => setControlRegistry(null));

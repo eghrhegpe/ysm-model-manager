@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { withLoadingIndicator } from "../ui-loading.ts";
+import { withLoadingIndicator } from "./ui-loading.ts";
 
 // 每次测试前清空 body，防止残留 overlay 跨用例污染
 beforeEach(() => {

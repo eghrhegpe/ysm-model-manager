@@ -4,7 +4,7 @@ import {
   buildPresetChipGroup,
   addClearRow,
   type PresetChipItem,
-} from "../ui-preset.ts";
+} from "./ui-preset.ts";
 
 // happy-dom 不自动触发 rAF；同步执行以模拟 paint 前效果
 beforeAll(() => {

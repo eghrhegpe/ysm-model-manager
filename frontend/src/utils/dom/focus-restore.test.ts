@@ -8,7 +8,7 @@ import {
   __getTriggerForTest,
   findTabbableAcrossShadow,
   trapFocusAcrossShadow,
-} from "../focus-restore.ts";
+} from "./focus-restore.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";

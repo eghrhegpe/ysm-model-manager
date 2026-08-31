@@ -3,7 +3,7 @@
 // @vitest-environment node
 
 import { describe, it, expect } from "vitest";
-import { filterAnimFiles } from "../mmd-anim-library";
+import { filterAnimFiles } from "./mmd-anim-library";
 
 // ---- filterAnimFiles ----
 describe("filterAnimFiles", () => {

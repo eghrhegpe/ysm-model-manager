@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { createIcon } from "../icons.ts";
+import { createIcon } from "./icons.ts";
 
 // ===================================================================
 // createIcon

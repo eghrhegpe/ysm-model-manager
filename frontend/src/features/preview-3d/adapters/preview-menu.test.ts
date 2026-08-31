@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { MenuControlDef } from "../../caps/scene-capability.ts";
-import { renderCapControls } from "../../menu/core.ts";
+import type { MenuControlDef } from "../caps/scene-capability.ts";
+import { renderCapControls } from "../menu/core.ts";
 
 // 工厂：构造 MenuControlDef，简化用例书写
 const mk = (

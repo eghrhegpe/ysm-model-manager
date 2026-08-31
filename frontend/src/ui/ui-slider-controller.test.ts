@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
-import { DragSliderController, type DragSliderOptions } from "../ui-slider-controller.ts";
+import { DragSliderController, type DragSliderOptions } from "./ui-slider-controller.ts";
 
 // ===================================================================
 // 测试辅助

@@ -3,8 +3,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   createHeaderToggle,
   type HeaderToggleConfig,
-} from "../ui-header-toggle.ts";
-import { setControlRegistry } from "../control-registry.ts";
+} from "./ui-header-toggle.ts";
+import { setControlRegistry } from "./control-registry.ts";
 
 // 每次测试前清理全局 control-registry 挂载，防止跨用例污染。
 beforeEach(() => setControlRegistry(null));
@@ -262,7 +262,7 @@ import {
   clearControls,
   getControlCount,
   iterateControls,
-} from "../control-registry.ts";
+} from "./control-registry.ts";
 
 function countBindEntries(): number {
   return [...iterateControls()].filter(([id]) =>

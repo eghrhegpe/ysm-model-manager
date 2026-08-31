@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi, beforeAll } from "vitest";
-import { cardContainer } from "../ui-card.ts";
+import { cardContainer } from "./ui-card.ts";
 
 // happy-dom 不自动触发 rAF；同步执行
 beforeAll(() => {

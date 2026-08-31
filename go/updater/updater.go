@@ -271,6 +271,11 @@ func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(
 		if err == nil {
 			return path, nil
 		}
+		// 确定性失败换源结果相同（哈希缺失/校验失败/大小超限/不完整），直接返回
+		// 不重试 ghProxy——重试只服务网络类失败（2026-08-31 R30 收尾修复）
+		if errors.Is(err, ErrHashMismatch) || errors.Is(err, ErrDownloadTooBig) || errors.Is(err, ErrDownloadIncomplete) {
+			return "", err
+		}
 		errs = append(errs, fmt.Errorf("%s: %w", src, err))
 	}
 	return "", fmt.Errorf("更新包下载失败（%d 个源均失败）：\n%w", len(sources), errors.Join(errs...))
@@ -289,6 +294,14 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 		return "", err
 	}
 	req.Header.Set("User-Agent", "YSM-Model-Manager/")
+
+	// R30 P2-3 前置（2026-08-31）：哈希不可得时**下载前**即拒绝——
+	// 空 hash 时换任何源结果相同，重试 ghProxy 纯属浪费；也不为已知
+	// 不可校验的包消耗下载流量（原实现下载完才拒绝，见 git 37044551 前逻辑）。
+	if expectedHash == "" {
+		return "", fmt.Errorf("%w：SHA256 哈希不可得，拒绝无完整性校验的更新包", ErrHashMismatch)
+	}
+
 	client := newDownloadClient()
 	resp, err := client.Do(req)
 	if err != nil {
@@ -391,13 +404,7 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 		onProgress(n, 0)
 	}
 
-	// 校验 SHA256
-	// R30 P2-3：哈希不可得时拒绝下载，防攻击者阻断 SHA256SUMS 获取绕过完整性校验。
-	// 旧实现 `if expectedHash != ""` 在哈希为空时静默跳过，仅靠 2 字节 MZ 魔数把关。
-	if expectedHash == "" {
-		os.Remove(tmp)
-		return "", fmt.Errorf("%w：SHA256 哈希不可得，拒绝无完整性校验的更新包", ErrHashMismatch)
-	}
+	// 校验 SHA256（空 hash 已由 downloadOnce 开头前置拒绝，此处恒非空）
 	{
 		actual := hex.EncodeToString(hasher.Sum(nil))
 		if !strings.EqualFold(actual, expectedHash) {

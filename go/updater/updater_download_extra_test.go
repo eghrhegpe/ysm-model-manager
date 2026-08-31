@@ -45,7 +45,7 @@ func TestDownloadOnce_ConnectionRefused(t *testing.T) {
 	deadURL := server.URL
 	server.Close() // 端口立即释放，后续连接必然被拒
 
-	_, err := Download(deadURL+"/pkg.zip", "")
+	_, err := Download(deadURL+"/pkg.zip", "x")
 	if err == nil {
 		t.Fatal("连接被拒应返回错误")
 	}
@@ -65,7 +65,8 @@ func TestDownloadOnce_TruncatedResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	path, err := Download(server.URL+"/pkg.zip", "")
+	// hash 传非空：截断读错误先于 hash 检查触发，保住截断分支
+	path, err := Download(server.URL+"/pkg.zip", "x")
 	if err == nil {
 		t.Fatal("截断响应应返回错误")
 	}
@@ -96,7 +97,7 @@ func TestDownloadOnce_TruncationProbe(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := Download(server.URL+"/pkg.zip", "")
+	_, err := Download(server.URL+"/pkg.zip", "x")
 	if err == nil {
 		t.Fatal("超过上限应返回错误")
 	}
@@ -129,7 +130,7 @@ func TestDownloadOnce_ContentLengthMismatch(t *testing.T) {
 	newDownloadClient = func() *http.Client { return &http.Client{Transport: truncRT{}} }
 	defer func() { newDownloadClient = old }()
 
-	path, err := downloadOnce("https://example.invalid/pkg", "", nil)
+	path, err := downloadOnce("https://example.invalid/pkg", "x", nil)
 	if err == nil {
 		t.Fatal("Content-Length 与实收不符应返回错误")
 	}
@@ -152,7 +153,7 @@ func TestDownload_ContentLengthMismatch_ThroughDownload(t *testing.T) {
 	defer func() { newDownloadClient = oldClient }()
 	isolateProxy(t)
 
-	_, err := Download("https://example.invalid/pkg", "")
+	_, err := Download("https://example.invalid/pkg", "x")
 	if err == nil {
 		t.Fatal("截断下载应返回错误")
 	}
@@ -186,12 +187,30 @@ func TestDownload_RejectsOversized_Sentinel(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := Download(server.URL+"/pkg", "")
+	_, err := Download(server.URL+"/pkg", "x")
 	if err == nil {
 		t.Fatal("Content-Length 超限应返回错误")
 	}
 	if !errors.Is(err, ErrDownloadTooBig) {
 		t.Errorf("应可通过 errors.Is 匹配 ErrDownloadTooBig, got %v", err)
+	}
+}
+
+// TestDownload_RejectsEmptyHash：R30 P2-3 新行为——空 hash **下载前**即拒绝（ErrHashMismatch）：
+// 防攻击者阻断 SHA256SUMS 获取后绕过完整性校验；确定性失败不再回退 ghProxy。
+func TestDownload_RejectsEmptyHash(t *testing.T) {
+	isolateProxy(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("any"))
+	}))
+	defer server.Close()
+
+	_, err := Download(server.URL+"/pkg.zip", "")
+	if err == nil {
+		t.Fatal("空 hash 必须拒绝下载（R30 P2-3：哈希不可得时禁止无完整性校验）")
+	}
+	if !errors.Is(err, ErrHashMismatch) {
+		t.Errorf("应 errors.Is 匹配 ErrHashMismatch, got %v", err)
 	}
 }
 
@@ -214,7 +233,7 @@ func TestDownload_TruncationProbe_Sentinel(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := Download(server.URL+"/pkg", "")
+	_, err := Download(server.URL+"/pkg", "x")
 	if err == nil {
 		t.Fatal("超过上限应返回错误")
 	}

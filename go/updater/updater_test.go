@@ -2,6 +2,7 @@ package updater
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -204,7 +205,8 @@ func TestDownload_OK(t *testing.T) {
 
 	// URL 带路径段——原 `server.URL` 的 filepath.Base 在 Windows 上得到
 	// "127.0.0.1:PORT"（冒号非法文件名），os.Create 失败 → 主平台测试必挂
-	path, err := Download(server.URL+"/pkg.zip", "")
+	// hash：R30 P2-3 后空 hash 前置拒绝，成功路径必须传真实哈希
+	path, err := Download(server.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)))
 	if err != nil {
 		t.Fatalf("Download() = %v", err)
 	}
@@ -227,7 +229,7 @@ func TestDownloadWithProgress_KnownLength(t *testing.T) {
 	defer server.Close()
 
 	var calls []struct{ done, total int64 }
-	path, err := DownloadWithProgress(server.URL+"/pkg.zip", "", func(done, total int64) {
+	path, err := DownloadWithProgress(server.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)), func(done, total int64) {
 		calls = append(calls, struct{ done, total int64 }{done, total})
 	})
 	if err != nil {
@@ -267,7 +269,7 @@ func TestDownloadWithProgress_UnknownLength(t *testing.T) {
 	defer server.Close()
 
 	var calls []struct{ done, total int64 }
-	path, err := DownloadWithProgress(server.URL+"/pkg.zip", "", func(done, total int64) {
+	path, err := DownloadWithProgress(server.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)), func(done, total int64) {
 		calls = append(calls, struct{ done, total int64 }{done, total})
 	})
 	if err != nil {
@@ -305,7 +307,7 @@ func TestDownloadWithProgress_ChunkedShortBody(t *testing.T) {
 	defer server.Close()
 
 	var calls []struct{ done, total int64 }
-	path, err := DownloadWithProgress(server.URL+"/pkg.zip", "", func(done, total int64) {
+	path, err := DownloadWithProgress(server.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)), func(done, total int64) {
 		calls = append(calls, struct{ done, total int64 }{done, total})
 	})
 	if err != nil {
@@ -356,8 +358,9 @@ func TestDownload_RejectsOversized(t *testing.T) {
 
 	// 加路径段——原 `server.URL` 的 filepath.Base 在 Windows 上
 	// 是含冒号的非法文件名，os.Create 在 Content-Length 预检前失败 → 超限分支在
-	// 主平台从未真正执行（测试通过但测的是别的错误）
-	if _, err := Download(server.URL+"/pkg.zip", ""); err == nil {
+	// 主平台从未真正执行（测试通过但测的是别的错误）。
+	// hash 传非空：R30 P2-3 前置空 hash 拒绝在 CL 预检之前，传 "x" 保住 CL 预检分支
+	if _, err := Download(server.URL+"/pkg.zip", "x"); err == nil {
 		t.Fatal("Content-Length 超限应返回错误")
 	}
 }
@@ -375,7 +378,8 @@ func TestDownload_HTTPError(t *testing.T) {
 	ghProxyPrefixes = []string{}
 	defer func() { ghProxyPrefixes = oldPrefixes }()
 
-	path, err := Download(server.URL+"/pkg.zip", "")
+	// hash 传非空：404 状态码检查先于下载，传任意非空保住 404 分支
+	path, err := Download(server.URL+"/pkg.zip", "deadbeef")
 	if err == nil {
 		t.Fatal("404 应返回错误（错误页不得当更新包）")
 	}
@@ -402,7 +406,7 @@ func TestDownload_MultiSource_DirectFirst(t *testing.T) {
 	ghProxyPrefixes = []string{proxy.URL + "/"}
 	defer func() { ghProxyPrefixes = oldPrefixes }()
 
-	path, err := Download(direct.URL+"/pkg.zip", "")
+	path, err := Download(direct.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)))
 	if err != nil {
 		t.Fatalf("Download() = %v", err)
 	}
@@ -428,7 +432,7 @@ func TestDownload_MultiSource_FallbackToProxy(t *testing.T) {
 	ghProxyPrefixes = []string{proxy.URL + "/"}
 	defer func() { ghProxyPrefixes = oldPrefixes }()
 
-	path, err := Download(direct.URL+"/pkg.zip", "")
+	path, err := Download(direct.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)))
 	if err != nil {
 		t.Fatalf("Download() = %v", err)
 	}
@@ -454,7 +458,7 @@ func TestDownload_MultiSource_AllFail(t *testing.T) {
 	ghProxyPrefixes = []string{proxy.URL + "/"}
 	defer func() { ghProxyPrefixes = oldPrefixes }()
 
-	_, err := Download(direct.URL+"/pkg.zip", "")
+	_, err := Download(direct.URL+"/pkg.zip", "deadbeef")
 	if err == nil {
 		t.Fatal("全部源失败应报错")
 	}

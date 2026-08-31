@@ -1,0 +1,7080 @@
+{
+  "generatedAt": "2026-08-31T03:46:32.683Z",
+  "summary": {
+    "cardCount": 134,
+    "categoryCount": 6,
+    "totalSourceRefs": 414,
+    "totalOkRefs": 414,
+    "totalMissingRefs": 0,
+    "totalCrossLinks": 197,
+    "maxCardDepth": 5
+  },
+  "perCard": [
+    {
+      "kind": "app-content",
+      "name": "主内容页 app-content",
+      "file": "app-content.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 28,
+      "okCount": 28,
+      "maxDepth": 5,
+      "avgDepth": 4.6,
+      "refs": [
+        "frontend/src/views/app-content/",
+        "frontend/src/views/app-content/content-creator.ts",
+        "frontend/src/views/app-content/content-diag.ts",
+        "frontend/src/views/app-content/content-util.ts",
+        "frontend/src/views/app-content/site/render.ts",
+        "frontend/src/views/app-content/community-data.ts",
+        "frontend/src/views/app-content/diagnostics/init.ts",
+        "frontend/src/views/app-content/diagnostics/logs.ts",
+        "frontend/src/views/app-content/diagnostics/dedup.ts",
+        "frontend/src/views/app-content/diagnostics/health.ts",
+        "frontend/src/views/app-content/diagnostics/conflicts.ts",
+        "frontend/src/views/app-content/settings/init.ts",
+        "frontend/src/views/app-content/tpl-recycle.ts",
+        "frontend/src/views/app-content/tpl-settings.ts",
+        "frontend/src/views/app-content/tpl-settings-about.ts",
+        "frontend/src/views/app-content/settings/store.ts",
+        "frontend/src/views/app-content/settings/path-cards.ts",
+        "frontend/src/views/app-content/settings/theme.ts",
+        "frontend/src/views/app-content/settings/ui-prefs.ts",
+        "frontend/src/views/app-content/settings/keymap.ts",
+        "frontend/src/views/app-content/site-view.ts",
+        "frontend/src/views/app-content/site/drag.ts",
+        "frontend/src/views/app-content/site/edit.ts",
+        "frontend/src/views/app-content/site/events.ts",
+        "frontend/src/views/app-content/site/render.ts",
+        "frontend/src/views/app-content/site/types.ts",
+        "frontend/src/views/app-content/workshop-data.ts",
+        "frontend/src/utils/icon/workshop-icons.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "optimization_log",
+      "name": "优化记录 optimization-log",
+      "file": "optimization_log.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 12,
+      "okCount": 12,
+      "maxDepth": 5,
+      "avgDepth": 4.1,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/mmd-adapter.ts",
+        "frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder.ts",
+        "frontend/src/features/preview-3d/adapters/mmd-ktx2-basis.ts",
+        "frontend/src/features/preview-3d/adapters/mmd-ktx2-worker.ts",
+        "frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader.ts",
+        "frontend/src/features/preview-3d/adapters/mmd-pmx-parser.ts",
+        "frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker.ts",
+        "frontend/src/features/preview-3d/adapters/mmd-texture-decoder.ts",
+        "frontend/src/utils/main-thread-watch.ts",
+        "internal/app/app_model.go",
+        "internal/app/app_texture_cache.go",
+        "go/texture_cache/texture_cache.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "animation-system",
+      "name": "动画系统 animation",
+      "file": "animation-system.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 10,
+      "okCount": 10,
+      "maxDepth": 5,
+      "avgDepth": 4.4,
+      "refs": [
+        "frontend/src/utils/animation/animation.ts",
+        "frontend/src/utils/animation/animate.ts",
+        "frontend/src/utils/animation/stagger.ts",
+        "frontend/src/utils/animation/molang.ts",
+        "frontend/src/utils/animation/animation-controller.ts",
+        "frontend/src/utils/animation/molang-lib/molang.js",
+        "frontend/src/utils/animation/molang-lib/easing.js",
+        "frontend/src/utils/animation/molang-lib/math.js",
+        "frontend/src/utils/animation/molang-lib/molang-prism-syntax.js",
+        "frontend/src/features/preview-3d/ysm-animation-player.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "pointer-events",
+      "name": "Pointer Events 统一交互（触屏 + 桌面）",
+      "file": "pointer-events.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 9,
+      "okCount": 9,
+      "maxDepth": 5,
+      "avgDepth": 4.3,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/input-and-animation.ts",
+        "frontend/src/features/preview-3d/model2d.ts",
+        "frontend/src/views/app-preview/zoom.ts",
+        "frontend/src/views/app-preview/skeleton.ts",
+        "frontend/src/views/app-preview/litematic-3d.ts",
+        "frontend/src/views/app-content/index.ts",
+        "frontend/src/views/app-content/settings/init.ts",
+        "frontend/src/views/app-content/site/edit.ts",
+        "frontend/src/views/app-tree/toolbar-events.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_panel_declarative",
+      "name": "3D 预览面板内容声明式化通道（ADR-126 P4-B）",
+      "file": "preview_panel_declarative.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 9,
+      "okCount": 9,
+      "maxDepth": 5,
+      "avgDepth": 4.7,
+      "refs": [
+        "frontend/src/features/preview-3d/menu/core.ts",
+        "frontend/src/features/preview-3d/menu/render.ts",
+        "frontend/src/features/preview-3d/menu/node-types.ts",
+        "frontend/src/features/preview-3d/adapters/mmd-adapter.ts",
+        "frontend/src/features/preview-3d/adapters/ysm-adapter.ts",
+        "frontend/src/features/preview-3d/adapters/morph-controls.ts",
+        "frontend/src/views/app-preview/mmd-controls.ts",
+        "frontend/src/views/app-preview/ysm-controls.ts",
+        "frontend/src/views/app-preview/shot-panel-shared.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "render-federation",
+      "name": "联邦渲染能力 (Render Federation)",
+      "file": "render-federation.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 9,
+      "okCount": 9,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/caps/scene-capability-registry.ts",
+        "frontend/src/features/preview-3d/caps/sky-capability.ts",
+        "frontend/src/features/preview-3d/caps/ground-capability.ts",
+        "frontend/src/features/preview-3d/caps/light-capability.ts",
+        "frontend/src/features/preview-3d/caps/postprocessing-capability.ts",
+        "frontend/src/features/preview-3d/caps/environment-capability.ts",
+        "frontend/src/features/preview-3d/caps/fog-capability.ts",
+        "frontend/src/features/preview-3d/caps/shadow-capability.ts",
+        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "multi_model_select",
+      "name": "多模型选择菜单原语 multiModelSelectNode",
+      "file": "multi_model_select.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 7,
+      "okCount": 7,
+      "maxDepth": 5,
+      "avgDepth": 3.9,
+      "refs": [
+        "frontend/src/features/preview-3d/menu/multi-model.ts",
+        "frontend/src/views/app-preview/mmd-controls.ts",
+        "frontend/src/features/preview-3d/adapters/pack-model-adapter.ts",
+        "frontend/src/features/preview-3d/adapters/litematic-adapter.ts",
+        "frontend/src/views/app-preview/litematic-3d.ts",
+        "internal/app/container_entries.go",
+        "go/litematic/voxel.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_core",
+      "name": "统一 3D 预览核心 preview-core",
+      "file": "preview_core.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 7,
+      "okCount": 7,
+      "maxDepth": 5,
+      "avgDepth": 3.6,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/",
+        "frontend/src/features/preview-3d/bone-tools.ts",
+        "frontend/src/features/preview-3d/caps/sky-capability.ts",
+        "frontend/src/features/preview-3d/caps/ground-capability.ts",
+        "internal/app/container_entries.go",
+        "go/litematic/voxel.go",
+        "frontend/src/backend/web-fs.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "3d-patterns",
+      "name": "3D 区审核与修复模式提炼",
+      "file": "3d-patterns.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 6,
+      "okCount": 6,
+      "maxDepth": 5,
+      "avgDepth": 4.2,
+      "refs": [
+        "frontend/src/features/preview-3d/debug-render.ts",
+        "frontend/src/features/preview-3d/model-group-builder.ts",
+        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts",
+        "frontend/src/features/preview-3d/cleanup-helper.ts",
+        "frontend/src/views/app-preview/preview-library.ts",
+        "frontend/src/views/app-preview/skeleton.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "i18n",
+      "name": "国际化 i18n 模块",
+      "file": "i18n.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 6,
+      "okCount": 6,
+      "maxDepth": 5,
+      "avgDepth": 4.5,
+      "refs": [
+        "frontend/src/core/i18n/t.ts",
+        "frontend/src/core/i18n/tr.ts",
+        "frontend/src/core/i18n/locale.ts",
+        "frontend/src/core/i18n/locales/en.ts",
+        "frontend/src/core/i18n/locales/ja.ts",
+        "frontend/src/core/i18n/locales/zh-CN.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_menu_session_key",
+      "name": "preview-menu-session-key",
+      "file": "preview_menu_session_key.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 6,
+      "okCount": 6,
+      "maxDepth": 5,
+      "avgDepth": 4.7,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/schema-registry.ts",
+        "frontend/src/views/app-preview/ysm-controls.ts",
+        "frontend/src/features/preview-3d/adapters/ysm-adapter.ts",
+        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts",
+        "frontend/src/features/preview-3d/adapters/switch-preview.ts",
+        "frontend/src/views/app-preview/skeleton-fill-panel.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "i18n_accuracy",
+      "name": "i18n 翻译准确度扫描记录",
+      "file": "i18n_accuracy.md",
+      "category": "core",
+      "tier": "leaf",
+      "sourceCount": 5,
+      "okCount": 5,
+      "maxDepth": 5,
+      "avgDepth": 3.4,
+      "refs": [
+        "frontend/src/core/i18n/locales/zh-CN.ts",
+        "frontend/src/core/i18n/locales/en.ts",
+        "frontend/src/core/i18n/locales/ja.ts",
+        "scripts/i18n-key-naming.mjs",
+        "tests/test_i18n_key_naming.mjs"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-export",
+      "name": "截图与导出 export",
+      "file": "utils-export.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 5,
+      "okCount": 5,
+      "maxDepth": 5,
+      "avgDepth": 4.2,
+      "refs": [
+        "frontend/src/features/preview-3d/screenshot-render.ts",
+        "frontend/src/features/preview-3d/screenshot-lights.ts",
+        "frontend/src/features/preview-3d/texture-loader.ts",
+        "frontend/src/features/preview-3d/decoder/cache.ts",
+        "frontend/src/features/preview-3d/screenshot.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "bone-tools",
+      "name": "跨格式骨骼工具层 bone-tools",
+      "file": "bone-tools.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 5,
+      "avgDepth": 4.5,
+      "refs": [
+        "frontend/src/features/preview-3d/bone-tools.ts",
+        "frontend/src/features/preview-3d/adapters/vrm-bone.ts",
+        "frontend/src/features/preview-3d/adapters/vrm-bone-ui.ts",
+        "frontend/src/features/preview-3d/mmd-bones.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_menu_settings_state",
+      "name": "3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）",
+      "file": "preview_menu_settings_state.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/state/preview-state.ts",
+        "frontend/src/features/preview-3d/menu/settings.ts",
+        "frontend/src/features/preview-3d/menu/cap-controls.ts",
+        "frontend/src/features/preview-3d/caps/scene-capability.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ysm-anim-pipeline",
+      "name": "YSM (Bedrock) 动画管线",
+      "file": "ysm-anim-pipeline.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 5,
+      "avgDepth": 4.3,
+      "refs": [
+        "frontend/src/features/preview-3d/ysm-animation-player.ts",
+        "frontend/src/features/preview-3d/adapters/ysm-adapter.ts",
+        "frontend/src/utils/animation/molang.ts",
+        "frontend/src/utils/animation/animation.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ysm-baked",
+      "name": "YSM 烘焙与几何反推",
+      "file": "ysm-baked.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 5,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/features/preview-3d/decoder/wasm-decode.ts",
+        "frontend/src/features/preview-3d/decoder/geometry.ts",
+        "frontend/public/wasm/YSMParser.js",
+        "frontend/public/wasm/YSMParser.wasm"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "3d-oversize-file-codesplit-feasibility",
+      "name": "3D 层超大文件 code-split 可行性",
+      "file": "3d-oversize-file-codesplit-feasibility.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/mmd-adapter.ts",
+        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts",
+        "frontend/src/features/preview-3d/caps/ground-capability.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_state",
+      "name": "3D 预览全域状态层（ADR-126 P4-A）",
+      "file": "preview_state.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/state/preview-state.ts",
+        "frontend/src/features/preview-3d/menu/settings.ts",
+        "frontend/src/features/preview-3d/menu/node-types.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "dialog-adv-filter",
+      "name": "高级筛选 adv-filter",
+      "file": "dialog-adv-filter.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/utils/dom/dialogs/adv-filter.ts",
+        "frontend/src/utils/dom/dialogs/adv-filter-util.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "dialog-batch-rename",
+      "name": "批量重命名 batch-rename",
+      "file": "dialog-batch-rename.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/utils/dom/dialogs/batch-rename.ts",
+        "frontend/src/utils/dom/dialogs/batch-rename-util.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "dialog-rename",
+      "name": "重命名弹窗 rename",
+      "file": "dialog-rename.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/utils/dom/dialogs/rename.ts",
+        "frontend/src/utils/dom/dialogs/rename-format.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "dialog-tag-editor",
+      "name": "标签编辑器 tag-editor",
+      "file": "dialog-tag-editor.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/utils/dom/dialogs/tag-editor.ts",
+        "frontend/src/utils/dom/dialogs/tag-set.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ground_surface_spec",
+      "name": "地面材质 spec 单一事实源 ground-surface-spec",
+      "file": "ground_surface_spec.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/caps/ground-surface-spec.ts",
+        "frontend/src/features/preview-3d/caps/ground-capability.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "mc-ao-tint",
+      "name": "MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现",
+      "file": "mc-ao-tint.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 5,
+      "avgDepth": 4.5,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/pack-model-adapter.ts",
+        "frontend/src/features/preview-3d/mc-tints.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "scene_capability_registry",
+      "name": "场景能力注册表 scene-capability-registry",
+      "file": "scene_capability_registry.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 5,
+      "avgDepth": 4.5,
+      "refs": [
+        "frontend/src/features/preview-3d/caps/",
+        "frontend/src/features/preview-3d/adapters/scene-registry.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "dialog-modal",
+      "name": "弹窗基座 modal",
+      "file": "dialog-modal.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/utils/dom/dialogs/modal.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ground-cap-gcbuildmaterialgroup-133",
+      "name": "ground-cap-gcBuildMaterialGroup-133",
+      "file": "ground-cap-gcbuildmaterialgroup-133.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/caps/ground-capability.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "mount-preview-module-singleton-race",
+      "name": "mount-preview-module-singleton-race",
+      "file": "mount-preview-module-singleton-race.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "mount3d-584-giant",
+      "name": "mount3D-584-giant",
+      "file": "mount3d-584-giant.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "worker-bridge-settleerror-fallback",
+      "name": "worker-bridge-settleError-fallback",
+      "file": "worker-bridge-settleerror-fallback.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 5,
+      "avgDepth": 5,
+      "refs": [
+        "frontend/src/features/preview-3d/adapters/worker-bridge.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "app-sidebar",
+      "name": "侧边栏 app-sidebar",
+      "file": "app-sidebar.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 8,
+      "okCount": 8,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/views/app-sidebar/index.ts",
+        "frontend/src/views/app-sidebar/tpl.ts",
+        "frontend/src/views/app-sidebar/data.ts",
+        "frontend/src/views/app-sidebar/loader.ts",
+        "frontend/src/views/app-sidebar/render.ts",
+        "frontend/src/views/app-sidebar/events.ts",
+        "frontend/src/views/app-sidebar/sidebar-css.ts",
+        "frontend/src/views/app-sidebar/launcher-detect.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "context-menu",
+      "name": "右键菜单系统",
+      "file": "context-menu.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 8,
+      "okCount": 8,
+      "maxDepth": 4,
+      "avgDepth": 3.3,
+      "refs": [
+        "frontend/src/views/context-menu/index.ts",
+        "frontend/src/core/context-menus.ts",
+        "frontend/src/core/menu-defs.ts",
+        "frontend/src/core/context-menu-dir-handlers.ts",
+        "frontend/src/core/context-menu-file-handlers.ts",
+        "frontend/src/core/context-menu-handlers.ts",
+        "frontend/src/core/context-menu-shared.ts",
+        "frontend/src/core/handlers/instance-ops.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "global-handlers",
+      "name": "全局事件处理 global-handlers",
+      "file": "global-handlers.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 6,
+      "okCount": 6,
+      "maxDepth": 4,
+      "avgDepth": 3.7,
+      "refs": [
+        "frontend/src/core/handlers/global.ts",
+        "frontend/src/features/import-dnd.ts",
+        "frontend/src/core/handlers/instance-ops.ts",
+        "frontend/src/core/handlers/sync.ts",
+        "frontend/src/core/handlers/require-mcroot.ts",
+        "frontend/src/core/error-diary.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "app-toast",
+      "name": "Toast 通知 app-toast",
+      "file": "app-toast.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/views/app-toast/index.ts",
+        "frontend/src/utils/dom/feedback.ts",
+        "frontend/src/utils/dom/toast-ms.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "resource-registry",
+      "name": "资源注册表 registry",
+      "file": "resource-registry.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 4,
+      "avgDepth": 2.3,
+      "refs": [
+        "resource_types.json",
+        "frontend/src/services/registry.ts",
+        "frontend/src/utils/resource/registry.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "android-bridge",
+      "name": "Android 桥接层：存储授权 + 目录选择器",
+      "file": "android-bridge.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/dom/android-bridge.ts",
+        "frontend/src/utils/dom/directory-picker.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "app-tree",
+      "name": "资源树 app-tree",
+      "file": "app-tree.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 3.5,
+      "refs": [
+        "frontend/src/views/app-tree/index.ts",
+        "frontend/src/views/app-tree/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ik_solver",
+      "name": "CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik",
+      "file": "ik_solver.md",
+      "category": "core",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/features/preview-3d/ik-solver.ts",
+        "frontend/src/features/preview-3d/mmd-foot-ik.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "model3d",
+      "name": "3D 预览渲染 model3d",
+      "file": "model3d.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 3.5,
+      "refs": [
+        "frontend/src/features/preview-3d/",
+        "frontend/src/views/app-preview/model3d-loader.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "resource-packs",
+      "name": "资源包功能 resource-packs",
+      "file": "resource-packs.md",
+      "category": "feature",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 3.5,
+      "refs": [
+        "frontend/src/views/app-preview/detail.ts",
+        "frontend/src/views/app-nav/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "shared-styles",
+      "name": "共享样式 shared-styles",
+      "file": "shared-styles.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/dom/css.ts",
+        "frontend/src/views/app-tree/app-tree-styles.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "toolbar-search",
+      "name": "工具栏搜索编排 toolbar-search",
+      "file": "toolbar-search.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/views/app-tree/toolbar-search.ts",
+        "frontend/src/views/app-tree/toolbar-events.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-mc-format",
+      "name": "MC 格式判定 mc-format",
+      "file": "utils-mc-format.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/format/mc-format.ts",
+        "frontend/src/utils/format/pack-format.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "android-events",
+      "name": "Android 系统事件消费（back/网络/存储授权）",
+      "file": "android-events.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/core/handlers/android-events.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "dom-fab",
+      "name": "3D 预览悬浮 FAB 控制层",
+      "file": "dom-fab.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/dom/fab.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "dom-storage",
+      "name": "localStorage 安全读写 safeGet/safeSet",
+      "file": "dom-storage.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/dom/storage.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "dom_tooltip",
+      "name": "悬浮提示 tooltip",
+      "file": "dom_tooltip.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/dom/tooltip.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "format-ysm-anim-config",
+      "name": "YSM 动画分组与配置菜单提取",
+      "file": "format-ysm-anim-config.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/format/ysm-anim-config.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "model2d",
+      "name": "2D 预览渲染 model2d",
+      "file": "model2d.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/features/preview-3d/model2d.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "perception",
+      "name": "3D 感知系统 perception",
+      "file": "perception.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/features/preview-3d/perception/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-display",
+      "name": "文件名显示 display",
+      "file": "utils-display.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/dom/display.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-errors",
+      "name": "错误处理 errors",
+      "file": "utils-errors.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/dom/errors.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-extensions",
+      "name": "扩展名映射 extensions",
+      "file": "utils-extensions.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/resource/extensions.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-fmt",
+      "name": "格式化工具 fmt",
+      "file": "utils-fmt.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/dom/format.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-icon",
+      "name": "图标映射 icon",
+      "file": "utils-icon.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/icon/icon.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-misc",
+      "name": "常量与调试 constants/debug",
+      "file": "utils-misc.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/debug/debug.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-summarize",
+      "name": "摘要生成 summarize",
+      "file": "utils-summarize.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/utils/format/summarize.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "backend-idb",
+      "name": "浏览器后端 IndexedDB 封装",
+      "file": "backend-idb.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 13,
+      "okCount": 13,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/backend/idb.ts",
+        "frontend/src/backend/types.ts",
+        "frontend/src/backend/app.ts",
+        "frontend/src/backend/browser-adapter.ts",
+        "frontend/src/backend/web-common.ts",
+        "frontend/src/backend/web-fs.ts",
+        "frontend/src/backend/web-store.ts",
+        "frontend/src/backend/web-stats.ts",
+        "frontend/src/backend/web-community.ts",
+        "frontend/src/backend/platform.ts",
+        "frontend/src/workers/stats-core.ts",
+        "frontend/src/workers/stats-protocol.ts",
+        "frontend/src/workers/stats.worker.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "import-queue",
+      "name": "全局导入执行 import-executor",
+      "file": "import-queue.md",
+      "category": "feature",
+      "tier": "architecture",
+      "sourceCount": 5,
+      "okCount": 5,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/features/import-executor.ts",
+        "frontend/src/features/import-dnd.ts",
+        "frontend/src/features/dnd-shared.ts",
+        "frontend/src/features/dnd-collector.ts",
+        "frontend/src/features/pack-dnd.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "model-stats",
+      "name": "Web Worker 模型统计层 model-stats",
+      "file": "model-stats.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/workers/stats-core.ts",
+        "frontend/src/workers/stats-protocol.ts",
+        "frontend/src/workers/stats.worker.ts",
+        "frontend/src/backend/web-stats.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ui-slide-menu",
+      "name": "ADR 去桶化 slide-menu 外壳组件",
+      "file": "ui-slide-menu.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/ui/ui-slide-menu.ts",
+        "frontend/src/ui/ui-slide-menu-styles.ts",
+        "frontend/src/ui/ui-helpers.ts",
+        "frontend/src/ui/ui-components-styles.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "wails-bridge",
+      "name": "Wails 桥接 app.ts",
+      "file": "wails-bridge.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/backend/app.ts",
+        "frontend/src/backend/platform.ts",
+        "frontend/src/backend/extract.ts",
+        "frontend/src/backend/browser-adapter.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "app-modules",
+      "name": "组件入口 app-modules",
+      "file": "app-modules.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 3,
+      "avgDepth": 2.3,
+      "refs": [
+        "frontend/src/app-modules.ts",
+        "frontend/src/utils/module-loader.ts",
+        "frontend/src/startup-reveal.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "cli_quality_audit",
+      "name": "CLI 质量摸排 Checklist",
+      "file": "cli_quality_audit.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 3,
+      "avgDepth": 2,
+      "refs": [
+        "go/cli/",
+        "internal/app/cli_bridge.go",
+        "frontend/src/services/cli-bridge.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-resource-types",
+      "name": "资源类型工具 resource-types",
+      "file": "utils-resource-types.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/utils/resource/",
+        "frontend/src/utils/types-re-export.ts",
+        "frontend/src/features/repo-rtype.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "community-feature",
+      "name": "社区下载 community",
+      "file": "community-feature.md",
+      "category": "feature",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/features/community/",
+        "frontend/src/utils/gh-links.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "app-nav",
+      "name": "顶部导航 app-nav",
+      "file": "app-nav.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/views/app-nav/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "app-preview",
+      "name": "预览面板 app-preview",
+      "file": "app-preview.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/views/app-preview/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "app-sync-manager",
+      "name": "整合包同步页 app-sync-manager",
+      "file": "app-sync-manager.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/views/app-sync-manager/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "core_utils",
+      "name": "核心工具函数 core-utils",
+      "file": "core_utils.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/utils/core/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-testutil",
+      "name": "测试辅助函数 go/internal/testutil",
+      "file": "go-testutil.md",
+      "category": "go",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "go/internal/testutil/testutil.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "oldest-models",
+      "name": "资历最深模型 oldest-models",
+      "file": "oldest-models.md",
+      "category": "feature",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/features/oldest-models.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "page-store",
+      "name": "页面状态管理 page-store.ts",
+      "file": "page-store.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/core/page-store.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "recycle-bin",
+      "name": "回收站界面 recycle-bin",
+      "file": "recycle-bin.md",
+      "category": "feature",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/features/recycle-bin.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "safe_error_msg",
+      "name": "安全错误消息提取 utils",
+      "file": "safe_error_msg.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/utils/safe-error-msg.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-array",
+      "name": "数组工具 moveItem",
+      "file": "utils-array.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/utils/array.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-dom",
+      "name": "DOM 工具 dom",
+      "file": "utils-dom.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/utils/dom/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "version-updater",
+      "name": "版本更新 version-updater",
+      "file": "version-updater.md",
+      "category": "feature",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/features/version-updater.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "rust-android-bridge",
+      "name": "Rust Scanner Bridge 全平台支持",
+      "file": "rust-android-bridge.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 12,
+      "okCount": 12,
+      "maxDepth": 2,
+      "avgDepth": 1.8,
+      "refs": [
+        "go/rustbridge/bridge_android.go",
+        "go/rustbridge/bridge_linux.go",
+        "go/rustbridge/bridge_darwin.go",
+        "go/rustbridge/types.go",
+        "go/scanner/rust_backend_android.go",
+        "go/scanner/rust_backend_linux.go",
+        "go/scanner/rust_backend_darwin.go",
+        "scripts/compile-android-rust.mjs",
+        "scripts/compile-rust-static.mjs",
+        "scripts/android-build.mjs",
+        "build/linux/Taskfile.yml",
+        "build/darwin/Taskfile.yml"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "wails-bindings",
+      "name": "Wails Binding API 总览 internal/app",
+      "file": "wails-bindings.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 12,
+      "okCount": 12,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "internal/app/app.go",
+        "internal/app/app_avatar.go",
+        "internal/app/app_config.go",
+        "internal/app/app_download.go",
+        "internal/app/app_files.go",
+        "internal/app/app_install.go",
+        "internal/app/app_model.go",
+        "internal/app/app_scan.go",
+        "internal/app/app_tags.go",
+        "internal/app/app_workshop.go",
+        "internal/app/resource_bindings.go",
+        "internal/app/wasm_embed.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-sync",
+      "name": "整合包同步 go/sync",
+      "file": "go-sync.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 11,
+      "okCount": 11,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/sync/sync.go",
+        "go/sync/sync_diff.go",
+        "go/sync/sync_hash.go",
+        "go/sync/sync_dirlevel.go",
+        "go/sync/sync_discovery.go",
+        "go/sync/sync_push.go",
+        "go/sync/sync_relink.go",
+        "go/sync/conflict.go",
+        "go/sync/sync_cache.go",
+        "go/fsutil/hardlink_windows.go",
+        "go/fsutil/hardlink_other.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-fsutil",
+      "name": "文件基础设施 go/fsutil",
+      "file": "go-fsutil.md",
+      "category": "go",
+      "tier": "leaf",
+      "sourceCount": 9,
+      "okCount": 9,
+      "maxDepth": 2,
+      "avgDepth": 1.9,
+      "refs": [
+        "go/fsutil/walk.go",
+        "go/fsutil/write.go",
+        "go/fsutil/copy.go",
+        "go/fsutil/perms.go",
+        "go/fsutil/bom.go",
+        "go/fsutil/b64.go",
+        "go/fsutil/hardlink_other.go",
+        "go/fsutil/crossdevice_other.go",
+        "go/fsutil/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "rustbridge",
+      "name": "Rust 桥 rustbridge",
+      "file": "rustbridge.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 9,
+      "okCount": 9,
+      "maxDepth": 2,
+      "avgDepth": 1.8,
+      "refs": [
+        "go/rustbridge/bridge_windows.go",
+        "go/rustbridge/doc.go",
+        "go/rustbridge/embedded_windows.go",
+        "go/rustbridge/types_windows.go",
+        "go/rustbridge/common.go",
+        "rust-core/src/model.rs",
+        "rust-core/src/policy.rs",
+        "rust-core/src/scan.rs",
+        "rust-wails-bridge/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-litematic",
+      "name": "Litematic 解析 go/litematic",
+      "file": "go-litematic.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 8,
+      "okCount": 8,
+      "maxDepth": 2,
+      "avgDepth": 1.9,
+      "refs": [
+        "go/litematic/parser.go",
+        "go/litematic/schematic.go",
+        "go/litematic/structure.go",
+        "go/litematic/bedrock.go",
+        "go/litematic/palette.go",
+        "go/litematic/nbt.go",
+        "go/litematic/voxel.go",
+        "go/litematic/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-android-platform-guard",
+      "name": "Android 平台守卫（Go 侧）",
+      "file": "go-android-platform-guard.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 7,
+      "okCount": 7,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "internal/app/app_files.go",
+        "internal/app/app_scan.go",
+        "internal/app/app_config.go",
+        "internal/app/wasm_decoder.go",
+        "internal/app/app.go",
+        "internal/app/app_config_android.go",
+        "internal/app/pathmgr_android.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-types",
+      "name": "共享类型 go/types",
+      "file": "go-types.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 7,
+      "okCount": 7,
+      "maxDepth": 2,
+      "avgDepth": 1.6,
+      "refs": [
+        "go/types/types.go",
+        "go/types/config.go",
+        "go/types/resource.go",
+        "go/types/extensions.go",
+        "go/types/bedrock.go",
+        "go/types/",
+        "resource_types.json"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "classify-routing",
+      "name": "分类路由与回归护栏",
+      "file": "classify-routing.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 2,
+      "avgDepth": 1.3,
+      "refs": [
+        "go/types/classify.go",
+        "go/types/resource.go",
+        "resource_types.json"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-geometry",
+      "name": "Geometry 存档 go/geometry",
+      "file": "go-geometry.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/geometry/parse.go",
+        "go/geometry/archive.go",
+        "go/geometry/ysm_parser.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "theme",
+      "name": "主题系统 theme",
+      "file": "theme.md",
+      "category": "core",
+      "tier": "leaf",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "frontend/src/app-modules.ts",
+        "frontend/src/theme-core.ts",
+        "frontend/css/variables.css"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ysm-wasm",
+      "name": "WASM 解析器 ysm-parser",
+      "file": "ysm-wasm.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "frontend/src/wasm/",
+        "internal/app/wasm_decoder.go",
+        "go/avatar/avatar_decode.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "app_cycle_injection",
+      "name": "App↔子组件对象级环打破范式（回调注入）",
+      "file": "app_cycle_injection.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "internal/app/app_download.go",
+        "internal/app/app.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-avatar",
+      "name": "头像 go/avatar",
+      "file": "go-avatar.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 1.5,
+      "refs": [
+        "go/avatar/avatar.go",
+        "go/avatar/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-cli-search",
+      "name": "CLI 搜索命令 search",
+      "file": "go-cli-search.md",
+      "category": "go",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/cli/model.go",
+        "go/cli/cli.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-download",
+      "name": "下载器 go/download",
+      "file": "go-download.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 1.5,
+      "refs": [
+        "go/download/",
+        "internal/app/app_download.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-executil",
+      "name": "进程隐藏窗口 go/executil",
+      "file": "go-executil.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/executil/hidewindow_windows.go",
+        "go/executil/hidewindow_other.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-installer",
+      "name": "模型安装 go/installer",
+      "file": "go-installer.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 1.5,
+      "refs": [
+        "go/installer/installer.go",
+        "go/installer/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-logs",
+      "name": "导入日志 go/logs",
+      "file": "go-logs.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/logs/logs.go",
+        "go/logs/runtime.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-packs",
+      "name": "资源包 mcmeta go/packs",
+      "file": "go-packs.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 1.5,
+      "refs": [
+        "go/packs/mcmeta.go",
+        "go/packs/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-tags",
+      "name": "标签系统 go/tags",
+      "file": "go-tags.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 1.5,
+      "refs": [
+        "go/tags/tags.go",
+        "go/tags/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-threejs",
+      "name": "3D 骨骼 spec go/threejs",
+      "file": "go-threejs.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 2,
+      "avgDepth": 1.5,
+      "refs": [
+        "go/threejs/spec.go",
+        "go/threejs/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "backend_web",
+      "name": "网页版后端 backend-web",
+      "file": "backend_web.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "frontend/src/backend/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "event-bus",
+      "name": "事件总线 bus.ts",
+      "file": "event-bus.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "frontend/src/bus.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-avatar-decode",
+      "name": "Go 头像提取：纯函数 vs Node+WASM 解码分界",
+      "file": "go-avatar-decode.md",
+      "category": "go",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/avatar/avatar_decode.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-config",
+      "name": "Go 配置单持有点 go/config",
+      "file": "go-config.md",
+      "category": "go",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/config/config.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-container",
+      "name": "统一容器桥接层 go/container",
+      "file": "go-container.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/container/container.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-launcher",
+      "name": "启动器实例发现 go/launcher",
+      "file": "go-launcher.md",
+      "category": "go",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/launcher/detect.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-version",
+      "name": "版本号 go/version",
+      "file": "go-version.md",
+      "category": "go",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "go/version/version.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "scripts_argv",
+      "name": "脚本 argv 规范与已知豁免 parse-args.mjs",
+      "file": "scripts_argv.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "scripts/_lib/parse-args.mjs"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "test-utils",
+      "name": "测试工具 test-utils（G-1 抗脆弱测试基础设施）",
+      "file": "test-utils.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "frontend/src/test-utils/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ui_components",
+      "name": "UI 组件库 ui-components",
+      "file": "ui_components.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 2,
+      "avgDepth": 2,
+      "refs": [
+        "frontend/src/ui/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "doctor_gate_overlap",
+      "name": "质量闸门双调度器重叠审计",
+      "file": "doctor_gate_overlap.md",
+      "category": "go",
+      "tier": "leaf",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "scripts/doctor.mjs",
+        "scripts/pre-push-gate.mjs",
+        "scripts/check-redlines.mjs"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "frontend_test_audit",
+      "name": "前端测试基建审计",
+      "file": "frontend_test_audit.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 1,
+      "avgDepth": 0.7,
+      "refs": [
+        "tests/",
+        "frontend/e2e/",
+        "frontend/e2e-web/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "fbx-cli-pipeline",
+      "name": "FBX CLI 处理管线 fbx-cli-pipeline",
+      "file": "fbx-cli-pipeline.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 1,
+      "avgDepth": 0.5,
+      "refs": [
+        "go/cli/",
+        "scripts/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_3d_migration",
+      "name": "preview-3d 领域根迁移",
+      "file": "preview_3d_migration.md",
+      "category": "feature",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "scripts/pre-push-gate.mjs",
+        "scripts/check-dynamic-import.mjs"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "drift-scan",
+      "name": "drift-scan（双轨漂移检测）",
+      "file": "drift-scan.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "scripts/drift-scan.mjs"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "event-graph-guard",
+      "name": "Bus 事件契约守卫",
+      "file": "event-graph-guard.md",
+      "category": "core",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "scripts/event-graph.mjs"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "frontend_repo_audit",
+      "name": "前端 TS 整包审计",
+      "file": "frontend_repo_audit.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "frontend/src/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-dedup",
+      "name": "去重 go/dedup",
+      "file": "go-dedup.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/dedup/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-fileops",
+      "name": "文件操作 go/fileops",
+      "file": "go-fileops.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/fileops/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-importer",
+      "name": "导入策略 go/importer",
+      "file": "go-importer.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/importer/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-instance",
+      "name": "整合包实例 go/instance",
+      "file": "go-instance.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/instance/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-paths",
+      "name": "路径安全 go/paths",
+      "file": "go-paths.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/paths/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-recycle",
+      "name": "回收站 go/recycle",
+      "file": "go-recycle.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/recycle/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-scanner",
+      "name": "扫描核心 go/scanner",
+      "file": "go-scanner.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/scanner/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-updater",
+      "name": "自动更新 go/updater",
+      "file": "go-updater.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/updater/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-watcher",
+      "name": "文件监听 go/watcher",
+      "file": "go-watcher.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/watcher/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go-ysm-parser",
+      "name": "YSM 解析 go/ysm",
+      "file": "go-ysm-parser.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/ysm/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "go_repoaudit",
+      "name": "仓库审计 go/repoaudit",
+      "file": "go_repoaudit.md",
+      "category": "go",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "go/repoaudit/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "scripts_jscpd_go",
+      "name": "Go 端 jscpd 重复检测脚本",
+      "file": "scripts_jscpd_go.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "scripts/jscpd-go.mjs"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "vitest-env-switch",
+      "name": "Vitest 环境切换规则",
+      "file": "vitest-env-switch.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 1,
+      "avgDepth": 1,
+      "refs": [
+        "frontend/vitest.config.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "extensibility-index-reconciliation",
+      "name": "可拓展点索引对账（vs HEAD @ d517113c…）",
+      "file": "extensibility-index-reconciliation.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 0,
+      "okCount": 0,
+      "maxDepth": 0,
+      "avgDepth": 0,
+      "refs": [],
+      "missing": []
+    },
+    {
+      "kind": "extensibility-index",
+      "name": "可拓展点发掘索引（extensibility inventory）",
+      "file": "extensibility-index.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 0,
+      "okCount": 0,
+      "maxDepth": 0,
+      "avgDepth": 0,
+      "refs": [],
+      "missing": []
+    },
+    {
+      "kind": "extensibility-round2",
+      "name": "拓展点 / 扩展入口 探索报告（Round 2）",
+      "file": "extensibility-round2.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 0,
+      "okCount": 0,
+      "maxDepth": 0,
+      "avgDepth": 0,
+      "refs": [],
+      "missing": []
+    }
+  ],
+  "byCategory": {
+    "ui": {
+      "count": 28,
+      "sourceFiles": 114,
+      "maxDepth": 5,
+      "kinds": [
+        "3d-oversize-file-codesplit-feasibility",
+        "3d-patterns",
+        "app-content",
+        "app-modules",
+        "app-nav",
+        "app-preview",
+        "app-sidebar",
+        "app-sync-manager",
+        "app-toast",
+        "app-tree",
+        "context-menu",
+        "dialog-adv-filter",
+        "dialog-batch-rename",
+        "dialog-modal",
+        "dialog-rename",
+        "dialog-tag-editor",
+        "dom-fab",
+        "frontend_repo_audit",
+        "multi_model_select",
+        "preview_menu_session_key",
+        "preview_menu_settings_state",
+        "preview_panel_declarative",
+        "preview_state",
+        "shared-styles",
+        "test-utils",
+        "toolbar-search",
+        "ui-slide-menu",
+        "ui_components"
+      ],
+      "label": "前端 UI 组件（tree、sidebar、preview、content）"
+    },
+    "core": {
+      "count": 18,
+      "sourceFiles": 78,
+      "maxDepth": 5,
+      "kinds": [
+        "android-bridge",
+        "android-events",
+        "backend-idb",
+        "backend_web",
+        "event-bus",
+        "event-graph-guard",
+        "frontend_test_audit",
+        "global-handlers",
+        "i18n",
+        "i18n_accuracy",
+        "ik_solver",
+        "model-stats",
+        "page-store",
+        "pointer-events",
+        "rust-android-bridge",
+        "theme",
+        "wails-bridge",
+        "ysm-baked"
+      ],
+      "label": "核心基础设施（事件总线、页面状态、Wails 桥接）"
+    },
+    "utils": {
+      "count": 33,
+      "sourceFiles": 75,
+      "maxDepth": 5,
+      "kinds": [
+        "animation-system",
+        "bone-tools",
+        "core_utils",
+        "dom-storage",
+        "dom_tooltip",
+        "format-ysm-anim-config",
+        "ground-cap-gcbuildmaterialgroup-133",
+        "ground_surface_spec",
+        "mc-ao-tint",
+        "model2d",
+        "model3d",
+        "mount-preview-module-singleton-race",
+        "mount3d-584-giant",
+        "perception",
+        "preview_core",
+        "render-federation",
+        "safe_error_msg",
+        "scene_capability_registry",
+        "utils-array",
+        "utils-display",
+        "utils-dom",
+        "utils-errors",
+        "utils-export",
+        "utils-extensions",
+        "utils-fmt",
+        "utils-icon",
+        "utils-mc-format",
+        "utils-misc",
+        "utils-resource-types",
+        "utils-summarize",
+        "worker-bridge-settleerror-fallback",
+        "ysm-anim-pipeline",
+        "ysm-wasm"
+      ],
+      "label": "工具函数（display、fmt、dom、animation）"
+    },
+    "go": {
+      "count": 40,
+      "sourceFiles": 115,
+      "maxDepth": 3,
+      "kinds": [
+        "app_cycle_injection",
+        "classify-routing",
+        "cli_quality_audit",
+        "doctor_gate_overlap",
+        "drift-scan",
+        "fbx-cli-pipeline",
+        "go-android-platform-guard",
+        "go-avatar",
+        "go-avatar-decode",
+        "go-cli-search",
+        "go-config",
+        "go-container",
+        "go-dedup",
+        "go-download",
+        "go-executil",
+        "go-fileops",
+        "go-fsutil",
+        "go-geometry",
+        "go-importer",
+        "go-installer",
+        "go-instance",
+        "go-launcher",
+        "go-litematic",
+        "go-logs",
+        "go-packs",
+        "go-paths",
+        "go-recycle",
+        "go-scanner",
+        "go-sync",
+        "go-tags",
+        "go-testutil",
+        "go-threejs",
+        "go-types",
+        "go-updater",
+        "go-version",
+        "go-watcher",
+        "go-ysm-parser",
+        "go_repoaudit",
+        "rustbridge",
+        "wails-bindings"
+      ],
+      "label": "Go 后端包（安装、下载、回收站、YSM 解析等）"
+    },
+    "feature": {
+      "count": 7,
+      "sourceFiles": 14,
+      "maxDepth": 4,
+      "kinds": [
+        "community-feature",
+        "import-queue",
+        "oldest-models",
+        "preview_3d_migration",
+        "recycle-bin",
+        "resource-packs",
+        "version-updater"
+      ],
+      "label": "业务功能（导入队列、同步、社区）"
+    },
+    "config": {
+      "count": 8,
+      "sourceFiles": 18,
+      "maxDepth": 5,
+      "kinds": [
+        "extensibility-index",
+        "extensibility-index-reconciliation",
+        "extensibility-round2",
+        "optimization_log",
+        "resource-registry",
+        "scripts_argv",
+        "scripts_jscpd_go",
+        "vitest-env-switch"
+      ],
+      "label": "配置与注册表（resource_types、AppConfig）"
+    }
+  },
+  "reverseRefs": [
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mount-preview-core.ts",
+      "cardCount": 6,
+      "cards": [
+        "3d-oversize-file-codesplit-feasibility",
+        "3d-patterns",
+        "mount-preview-module-singleton-race",
+        "mount3d-584-giant",
+        "preview_menu_session_key",
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/ground-capability.ts",
+      "cardCount": 5,
+      "cards": [
+        "3d-oversize-file-codesplit-feasibility",
+        "ground-cap-gcbuildmaterialgroup-133",
+        "ground_surface_spec",
+        "preview_core",
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mmd-adapter.ts",
+      "cardCount": 3,
+      "cards": [
+        "3d-oversize-file-codesplit-feasibility",
+        "optimization_log",
+        "preview_panel_declarative"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/ysm-adapter.ts",
+      "cardCount": 3,
+      "cards": [
+        "preview_menu_session_key",
+        "preview_panel_declarative",
+        "ysm-anim-pipeline"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_download.go",
+      "cardCount": 3,
+      "cards": [
+        "app_cycle_injection",
+        "go-download",
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app.go",
+      "cardCount": 3,
+      "cards": [
+        "app_cycle_injection",
+        "go-android-platform-guard",
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/litematic/voxel.go",
+      "cardCount": 3,
+      "cards": [
+        "go-litematic",
+        "multi_model_select",
+        "preview_core"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "resource_types.json",
+      "cardCount": 3,
+      "cards": [
+        "classify-routing",
+        "go-types",
+        "resource-registry"
+      ],
+      "depth": 0,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/settings/init.ts",
+      "cardCount": 2,
+      "cards": [
+        "app-content",
+        "pointer-events"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/site/edit.ts",
+      "cardCount": 2,
+      "cards": [
+        "app-content",
+        "pointer-events"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/i18n/locales/en.ts",
+      "cardCount": 2,
+      "cards": [
+        "i18n",
+        "i18n_accuracy"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/i18n/locales/ja.ts",
+      "cardCount": 2,
+      "cards": [
+        "i18n",
+        "i18n_accuracy"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/i18n/locales/zh-CN.ts",
+      "cardCount": 2,
+      "cards": [
+        "i18n",
+        "i18n_accuracy"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/pack-model-adapter.ts",
+      "cardCount": 2,
+      "cards": [
+        "mc-ao-tint",
+        "multi_model_select"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/sky-capability.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_core",
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/state/preview-state.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_menu_settings_state",
+        "preview_state"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/menu/settings.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_menu_settings_state",
+        "preview_state"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/menu/node-types.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_panel_declarative",
+        "preview_state"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/skeleton.ts",
+      "cardCount": 2,
+      "cards": [
+        "3d-patterns",
+        "pointer-events"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/animation.ts",
+      "cardCount": 2,
+      "cards": [
+        "animation-system",
+        "ysm-anim-pipeline"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/molang.ts",
+      "cardCount": 2,
+      "cards": [
+        "animation-system",
+        "ysm-anim-pipeline"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/ysm-animation-player.ts",
+      "cardCount": 2,
+      "cards": [
+        "animation-system",
+        "ysm-anim-pipeline"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/bone-tools.ts",
+      "cardCount": 2,
+      "cards": [
+        "bone-tools",
+        "preview_core"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/handlers/instance-ops.ts",
+      "cardCount": 2,
+      "cards": [
+        "context-menu",
+        "global-handlers"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/model2d.ts",
+      "cardCount": 2,
+      "cards": [
+        "model2d",
+        "pointer-events"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/mmd-controls.ts",
+      "cardCount": 2,
+      "cards": [
+        "multi_model_select",
+        "preview_panel_declarative"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/litematic-3d.ts",
+      "cardCount": 2,
+      "cards": [
+        "multi_model_select",
+        "pointer-events"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-tree/toolbar-events.ts",
+      "cardCount": 2,
+      "cards": [
+        "pointer-events",
+        "toolbar-search"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/ysm-controls.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_menu_session_key",
+        "preview_panel_declarative"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-nav",
+      "cardCount": 2,
+      "cards": [
+        "app-nav",
+        "resource-packs"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/app.ts",
+      "cardCount": 2,
+      "cards": [
+        "backend-idb",
+        "wails-bridge"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/browser-adapter.ts",
+      "cardCount": 2,
+      "cards": [
+        "backend-idb",
+        "wails-bridge"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/web-fs.ts",
+      "cardCount": 2,
+      "cards": [
+        "backend-idb",
+        "preview_core"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/web-stats.ts",
+      "cardCount": 2,
+      "cards": [
+        "backend-idb",
+        "model-stats"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/platform.ts",
+      "cardCount": 2,
+      "cards": [
+        "backend-idb",
+        "wails-bridge"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/workers/stats-core.ts",
+      "cardCount": 2,
+      "cards": [
+        "backend-idb",
+        "model-stats"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/workers/stats-protocol.ts",
+      "cardCount": 2,
+      "cards": [
+        "backend-idb",
+        "model-stats"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/workers/stats.worker.ts",
+      "cardCount": 2,
+      "cards": [
+        "backend-idb",
+        "model-stats"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/import-dnd.ts",
+      "cardCount": 2,
+      "cards": [
+        "global-handlers",
+        "import-queue"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/app-modules.ts",
+      "cardCount": 2,
+      "cards": [
+        "app-modules",
+        "theme"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/types/resource.go",
+      "cardCount": 2,
+      "cards": [
+        "classify-routing",
+        "go-types"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_files.go",
+      "cardCount": 2,
+      "cards": [
+        "go-android-platform-guard",
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_scan.go",
+      "cardCount": 2,
+      "cards": [
+        "go-android-platform-guard",
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_config.go",
+      "cardCount": 2,
+      "cards": [
+        "go-android-platform-guard",
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/wasm_decoder.go",
+      "cardCount": 2,
+      "cards": [
+        "go-android-platform-guard",
+        "ysm-wasm"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/avatar/avatar_decode.go",
+      "cardCount": 2,
+      "cards": [
+        "go-avatar-decode",
+        "ysm-wasm"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/hardlink_other.go",
+      "cardCount": 2,
+      "cards": [
+        "go-fsutil",
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/container_entries.go",
+      "cardCount": 2,
+      "cards": [
+        "multi_model_select",
+        "preview_core"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_model.go",
+      "cardCount": 2,
+      "cards": [
+        "optimization_log",
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/cli",
+      "cardCount": 2,
+      "cards": [
+        "cli_quality_audit",
+        "fbx-cli-pipeline"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/pre-push-gate.mjs",
+      "cardCount": 2,
+      "cards": [
+        "doctor_gate_overlap",
+        "preview_3d_migration"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/molang-lib/molang.js",
+      "cardCount": 1,
+      "cards": [
+        "animation-system"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/molang-lib/easing.js",
+      "cardCount": 1,
+      "cards": [
+        "animation-system"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/molang-lib/math.js",
+      "cardCount": 1,
+      "cards": [
+        "animation-system"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/molang-lib/molang-prism-syntax.js",
+      "cardCount": 1,
+      "cards": [
+        "animation-system"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/site/render.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/diagnostics/init.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/diagnostics/logs.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/diagnostics/dedup.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/diagnostics/health.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/diagnostics/conflicts.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/settings/store.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/settings/path-cards.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/settings/theme.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/settings/ui-prefs.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/settings/keymap.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/site/drag.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/site/events.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/site/types.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/vrm-bone.ts",
+      "cardCount": 1,
+      "cards": [
+        "bone-tools"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/vrm-bone-ui.ts",
+      "cardCount": 1,
+      "cards": [
+        "bone-tools"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/adv-filter.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-adv-filter"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/adv-filter-util.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-adv-filter"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/batch-rename.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-batch-rename"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/batch-rename-util.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-batch-rename"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/modal.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-modal"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/rename.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-rename"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/rename-format.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-rename"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/tag-editor.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-tag-editor"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/dialogs/tag-set.ts",
+      "cardCount": 1,
+      "cards": [
+        "dialog-tag-editor"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/ground-surface-spec.ts",
+      "cardCount": 1,
+      "cards": [
+        "ground_surface_spec"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/menu/multi-model.ts",
+      "cardCount": 1,
+      "cards": [
+        "multi_model_select"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/litematic-adapter.ts",
+      "cardCount": 1,
+      "cards": [
+        "multi_model_select"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mmd-ktx2-basis.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mmd-ktx2-worker.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mmd-pmx-parser.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/mmd-texture-decoder.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/input-and-animation.ts",
+      "cardCount": 1,
+      "cards": [
+        "pointer-events"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/schema-registry.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_menu_session_key"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/switch-preview.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_menu_session_key"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/menu/cap-controls.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_menu_settings_state"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/scene-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_menu_settings_state"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/menu/core.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_panel_declarative"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/menu/render.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_panel_declarative"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/morph-controls.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_panel_declarative"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/scene-capability-registry.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/light-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/postprocessing-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/environment-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/fog-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps/shadow-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/scene-registry.ts",
+      "cardCount": 1,
+      "cards": [
+        "scene_capability_registry"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/decoder/cache.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters/worker-bridge.ts",
+      "cardCount": 1,
+      "cards": [
+        "worker-bridge-settleerror-fallback"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/decoder/wasm-decode.ts",
+      "cardCount": 1,
+      "cards": [
+        "ysm-baked"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/decoder/geometry.ts",
+      "cardCount": 1,
+      "cards": [
+        "ysm-baked"
+      ],
+      "depth": 5,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/debug-render.ts",
+      "cardCount": 1,
+      "cards": [
+        "3d-patterns"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/model-group-builder.ts",
+      "cardCount": 1,
+      "cards": [
+        "3d-patterns"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/cleanup-helper.ts",
+      "cardCount": 1,
+      "cards": [
+        "3d-patterns"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/preview-library.ts",
+      "cardCount": 1,
+      "cards": [
+        "3d-patterns"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/android-bridge.ts",
+      "cardCount": 1,
+      "cards": [
+        "android-bridge"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/directory-picker.ts",
+      "cardCount": 1,
+      "cards": [
+        "android-bridge"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/handlers/android-events.ts",
+      "cardCount": 1,
+      "cards": [
+        "android-events"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/animate.ts",
+      "cardCount": 1,
+      "cards": [
+        "animation-system"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/stagger.ts",
+      "cardCount": 1,
+      "cards": [
+        "animation-system"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/animation/animation-controller.ts",
+      "cardCount": 1,
+      "cards": [
+        "animation-system"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/content-creator.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/content-diag.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/content-util.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/community-data.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/tpl-recycle.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/tpl-settings.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/tpl-settings-about.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/site-view.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/workshop-data.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/icon/workshop-icons.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sidebar/index.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-sidebar"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sidebar/tpl.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-sidebar"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sidebar/data.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-sidebar"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sidebar/loader.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-sidebar"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sidebar/render.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-sidebar"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sidebar/events.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-sidebar"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sidebar/sidebar-css.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-sidebar"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sidebar/launcher-detect.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-sidebar"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-toast/index.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-toast"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/feedback.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-toast"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/toast-ms.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-toast"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-tree/index.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-tree"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/mmd-bones.ts",
+      "cardCount": 1,
+      "cards": [
+        "bone-tools"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/context-menu/index.ts",
+      "cardCount": 1,
+      "cards": [
+        "context-menu"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/fab.ts",
+      "cardCount": 1,
+      "cards": [
+        "dom-fab"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/storage.ts",
+      "cardCount": 1,
+      "cards": [
+        "dom-storage"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/tooltip.ts",
+      "cardCount": 1,
+      "cards": [
+        "dom_tooltip"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/format/ysm-anim-config.ts",
+      "cardCount": 1,
+      "cards": [
+        "format-ysm-anim-config"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/handlers/global.ts",
+      "cardCount": 1,
+      "cards": [
+        "global-handlers"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/handlers/sync.ts",
+      "cardCount": 1,
+      "cards": [
+        "global-handlers"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/handlers/require-mcroot.ts",
+      "cardCount": 1,
+      "cards": [
+        "global-handlers"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/i18n/t.ts",
+      "cardCount": 1,
+      "cards": [
+        "i18n"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/i18n/tr.ts",
+      "cardCount": 1,
+      "cards": [
+        "i18n"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/i18n/locale.ts",
+      "cardCount": 1,
+      "cards": [
+        "i18n"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/ik-solver.ts",
+      "cardCount": 1,
+      "cards": [
+        "ik_solver"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/mmd-foot-ik.ts",
+      "cardCount": 1,
+      "cards": [
+        "ik_solver"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/mc-tints.ts",
+      "cardCount": 1,
+      "cards": [
+        "mc-ao-tint"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/model3d-loader.ts",
+      "cardCount": 1,
+      "cards": [
+        "model3d"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/perception",
+      "cardCount": 1,
+      "cards": [
+        "perception"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/zoom.ts",
+      "cardCount": 1,
+      "cards": [
+        "pointer-events"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content/index.ts",
+      "cardCount": 1,
+      "cards": [
+        "pointer-events"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/adapters",
+      "cardCount": 1,
+      "cards": [
+        "preview_core"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/skeleton-fill-panel.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_menu_session_key"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/shot-panel-shared.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_panel_declarative"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview/detail.ts",
+      "cardCount": 1,
+      "cards": [
+        "resource-packs"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/resource/registry.ts",
+      "cardCount": 1,
+      "cards": [
+        "resource-registry"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/caps",
+      "cardCount": 1,
+      "cards": [
+        "scene_capability_registry"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/css.ts",
+      "cardCount": 1,
+      "cards": [
+        "shared-styles"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-tree/app-tree-styles.ts",
+      "cardCount": 1,
+      "cards": [
+        "shared-styles"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-tree/toolbar-search.ts",
+      "cardCount": 1,
+      "cards": [
+        "toolbar-search"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/display.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-display"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/errors.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-errors"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/screenshot-render.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/screenshot-lights.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/texture-loader.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d/screenshot.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/resource/extensions.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-extensions"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom/format.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-fmt"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/icon/icon.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-icon"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/format/mc-format.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-mc-format"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/format/pack-format.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-mc-format"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/debug/debug.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-misc"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/format/summarize.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-summarize"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-content",
+      "cardCount": 1,
+      "cards": [
+        "app-content"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/module-loader.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-modules"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-preview",
+      "cardCount": 1,
+      "cards": [
+        "app-preview"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-sync-manager",
+      "cardCount": 1,
+      "cards": [
+        "app-sync-manager"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/views/app-tree",
+      "cardCount": 1,
+      "cards": [
+        "app-tree"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/idb.ts",
+      "cardCount": 1,
+      "cards": [
+        "backend-idb"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/types.ts",
+      "cardCount": 1,
+      "cards": [
+        "backend-idb"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/web-common.ts",
+      "cardCount": 1,
+      "cards": [
+        "backend-idb"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/web-store.ts",
+      "cardCount": 1,
+      "cards": [
+        "backend-idb"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/web-community.ts",
+      "cardCount": 1,
+      "cards": [
+        "backend-idb"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/services/cli-bridge.ts",
+      "cardCount": 1,
+      "cards": [
+        "cli_quality_audit"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/community",
+      "cardCount": 1,
+      "cards": [
+        "community-feature"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/gh-links.ts",
+      "cardCount": 1,
+      "cards": [
+        "community-feature"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/context-menus.ts",
+      "cardCount": 1,
+      "cards": [
+        "context-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/menu-defs.ts",
+      "cardCount": 1,
+      "cards": [
+        "context-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/context-menu-dir-handlers.ts",
+      "cardCount": 1,
+      "cards": [
+        "context-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/context-menu-file-handlers.ts",
+      "cardCount": 1,
+      "cards": [
+        "context-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/context-menu-handlers.ts",
+      "cardCount": 1,
+      "cards": [
+        "context-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/context-menu-shared.ts",
+      "cardCount": 1,
+      "cards": [
+        "context-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/core",
+      "cardCount": 1,
+      "cards": [
+        "core_utils"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/error-diary.ts",
+      "cardCount": 1,
+      "cards": [
+        "global-handlers"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "go/internal/testutil/testutil.go",
+      "cardCount": 1,
+      "cards": [
+        "go-testutil"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/import-executor.ts",
+      "cardCount": 1,
+      "cards": [
+        "import-queue"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/dnd-shared.ts",
+      "cardCount": 1,
+      "cards": [
+        "import-queue"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/dnd-collector.ts",
+      "cardCount": 1,
+      "cards": [
+        "import-queue"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/pack-dnd.ts",
+      "cardCount": 1,
+      "cards": [
+        "import-queue"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/preview-3d",
+      "cardCount": 1,
+      "cards": [
+        "model3d"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/oldest-models.ts",
+      "cardCount": 1,
+      "cards": [
+        "oldest-models"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/main-thread-watch.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/core/page-store.ts",
+      "cardCount": 1,
+      "cards": [
+        "page-store"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/recycle-bin.ts",
+      "cardCount": 1,
+      "cards": [
+        "recycle-bin"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/services/registry.ts",
+      "cardCount": 1,
+      "cards": [
+        "resource-registry"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/safe-error-msg.ts",
+      "cardCount": 1,
+      "cards": [
+        "safe_error_msg"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/ui/ui-slide-menu.ts",
+      "cardCount": 1,
+      "cards": [
+        "ui-slide-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/ui/ui-slide-menu-styles.ts",
+      "cardCount": 1,
+      "cards": [
+        "ui-slide-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/ui/ui-helpers.ts",
+      "cardCount": 1,
+      "cards": [
+        "ui-slide-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/ui/ui-components-styles.ts",
+      "cardCount": 1,
+      "cards": [
+        "ui-slide-menu"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/array.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-array"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/dom",
+      "cardCount": 1,
+      "cards": [
+        "utils-dom"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/resource",
+      "cardCount": 1,
+      "cards": [
+        "utils-resource-types"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/utils/types-re-export.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-resource-types"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/repo-rtype.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-resource-types"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/features/version-updater.ts",
+      "cardCount": 1,
+      "cards": [
+        "version-updater"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend/extract.ts",
+      "cardCount": 1,
+      "cards": [
+        "wails-bridge"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/public/wasm/YSMParser.js",
+      "cardCount": 1,
+      "cards": [
+        "ysm-baked"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/public/wasm/YSMParser.wasm",
+      "cardCount": 1,
+      "cards": [
+        "ysm-baked"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/startup-reveal.ts",
+      "cardCount": 1,
+      "cards": [
+        "app-modules"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/backend",
+      "cardCount": 1,
+      "cards": [
+        "backend_web"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/types/classify.go",
+      "cardCount": 1,
+      "cards": [
+        "classify-routing"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/cli_bridge.go",
+      "cardCount": 1,
+      "cards": [
+        "cli_quality_audit"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/bus.ts",
+      "cardCount": 1,
+      "cards": [
+        "event-bus"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_config_android.go",
+      "cardCount": 1,
+      "cards": [
+        "go-android-platform-guard"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/pathmgr_android.go",
+      "cardCount": 1,
+      "cards": [
+        "go-android-platform-guard"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/avatar/avatar.go",
+      "cardCount": 1,
+      "cards": [
+        "go-avatar"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/cli/model.go",
+      "cardCount": 1,
+      "cards": [
+        "go-cli-search"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/cli/cli.go",
+      "cardCount": 1,
+      "cards": [
+        "go-cli-search"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/config/config.go",
+      "cardCount": 1,
+      "cards": [
+        "go-config"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/container/container.go",
+      "cardCount": 1,
+      "cards": [
+        "go-container"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/executil/hidewindow_windows.go",
+      "cardCount": 1,
+      "cards": [
+        "go-executil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/executil/hidewindow_other.go",
+      "cardCount": 1,
+      "cards": [
+        "go-executil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/walk.go",
+      "cardCount": 1,
+      "cards": [
+        "go-fsutil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/write.go",
+      "cardCount": 1,
+      "cards": [
+        "go-fsutil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/copy.go",
+      "cardCount": 1,
+      "cards": [
+        "go-fsutil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/perms.go",
+      "cardCount": 1,
+      "cards": [
+        "go-fsutil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/bom.go",
+      "cardCount": 1,
+      "cards": [
+        "go-fsutil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/b64.go",
+      "cardCount": 1,
+      "cards": [
+        "go-fsutil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/crossdevice_other.go",
+      "cardCount": 1,
+      "cards": [
+        "go-fsutil"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/geometry/parse.go",
+      "cardCount": 1,
+      "cards": [
+        "go-geometry"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/geometry/archive.go",
+      "cardCount": 1,
+      "cards": [
+        "go-geometry"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/geometry/ysm_parser.go",
+      "cardCount": 1,
+      "cards": [
+        "go-geometry"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/installer/installer.go",
+      "cardCount": 1,
+      "cards": [
+        "go-installer"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/launcher/detect.go",
+      "cardCount": 1,
+      "cards": [
+        "go-launcher"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/litematic/parser.go",
+      "cardCount": 1,
+      "cards": [
+        "go-litematic"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/litematic/schematic.go",
+      "cardCount": 1,
+      "cards": [
+        "go-litematic"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/litematic/structure.go",
+      "cardCount": 1,
+      "cards": [
+        "go-litematic"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/litematic/bedrock.go",
+      "cardCount": 1,
+      "cards": [
+        "go-litematic"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/litematic/palette.go",
+      "cardCount": 1,
+      "cards": [
+        "go-litematic"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/litematic/nbt.go",
+      "cardCount": 1,
+      "cards": [
+        "go-litematic"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/logs/logs.go",
+      "cardCount": 1,
+      "cards": [
+        "go-logs"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/logs/runtime.go",
+      "cardCount": 1,
+      "cards": [
+        "go-logs"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/packs/mcmeta.go",
+      "cardCount": 1,
+      "cards": [
+        "go-packs"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/sync.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/sync_diff.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/sync_hash.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/sync_dirlevel.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/sync_discovery.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/sync_push.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/sync_relink.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/conflict.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/sync/sync_cache.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil/hardlink_windows.go",
+      "cardCount": 1,
+      "cards": [
+        "go-sync"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/tags/tags.go",
+      "cardCount": 1,
+      "cards": [
+        "go-tags"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/threejs/spec.go",
+      "cardCount": 1,
+      "cards": [
+        "go-threejs"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/types/types.go",
+      "cardCount": 1,
+      "cards": [
+        "go-types"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/types/config.go",
+      "cardCount": 1,
+      "cards": [
+        "go-types"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/types/extensions.go",
+      "cardCount": 1,
+      "cards": [
+        "go-types"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/types/bedrock.go",
+      "cardCount": 1,
+      "cards": [
+        "go-types"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/version/version.go",
+      "cardCount": 1,
+      "cards": [
+        "go-version"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_texture_cache.go",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/texture_cache/texture_cache.go",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/bridge_android.go",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/bridge_linux.go",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/bridge_darwin.go",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/types.go",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/scanner/rust_backend_android.go",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/scanner/rust_backend_linux.go",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/scanner/rust_backend_darwin.go",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "build/linux/Taskfile.yml",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "build/darwin/Taskfile.yml",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/bridge_windows.go",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/doc.go",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/embedded_windows.go",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/types_windows.go",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "go/rustbridge/common.go",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "rust-core/src/model.rs",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "rust-core/src/policy.rs",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "rust-core/src/scan.rs",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "scripts/_lib/parse-args.mjs",
+      "cardCount": 1,
+      "cards": [
+        "scripts_argv"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/test-utils",
+      "cardCount": 1,
+      "cards": [
+        "test-utils"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/theme-core.ts",
+      "cardCount": 1,
+      "cards": [
+        "theme"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "frontend/css/variables.css",
+      "cardCount": 1,
+      "cards": [
+        "theme"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/ui",
+      "cardCount": 1,
+      "cards": [
+        "ui_components"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_avatar.go",
+      "cardCount": 1,
+      "cards": [
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_install.go",
+      "cardCount": 1,
+      "cards": [
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_tags.go",
+      "cardCount": 1,
+      "cards": [
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/app_workshop.go",
+      "cardCount": 1,
+      "cards": [
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/resource_bindings.go",
+      "cardCount": 1,
+      "cards": [
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "internal/app/wasm_embed.go",
+      "cardCount": 1,
+      "cards": [
+        "wails-bindings"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/wasm",
+      "cardCount": 1,
+      "cards": [
+        "ysm-wasm"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "scripts/doctor.mjs",
+      "cardCount": 1,
+      "cards": [
+        "doctor_gate_overlap"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/check-redlines.mjs",
+      "cardCount": 1,
+      "cards": [
+        "doctor_gate_overlap"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/drift-scan.mjs",
+      "cardCount": 1,
+      "cards": [
+        "drift-scan"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/event-graph.mjs",
+      "cardCount": 1,
+      "cards": [
+        "event-graph-guard"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "frontend/src",
+      "cardCount": 1,
+      "cards": [
+        "frontend_repo_audit"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "frontend/e2e",
+      "cardCount": 1,
+      "cards": [
+        "frontend_test_audit"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "frontend/e2e-web",
+      "cardCount": 1,
+      "cards": [
+        "frontend_test_audit"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/avatar",
+      "cardCount": 1,
+      "cards": [
+        "go-avatar"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/dedup",
+      "cardCount": 1,
+      "cards": [
+        "go-dedup"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/download",
+      "cardCount": 1,
+      "cards": [
+        "go-download"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/fileops",
+      "cardCount": 1,
+      "cards": [
+        "go-fileops"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/fsutil",
+      "cardCount": 1,
+      "cards": [
+        "go-fsutil"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/importer",
+      "cardCount": 1,
+      "cards": [
+        "go-importer"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/installer",
+      "cardCount": 1,
+      "cards": [
+        "go-installer"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/instance",
+      "cardCount": 1,
+      "cards": [
+        "go-instance"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/litematic",
+      "cardCount": 1,
+      "cards": [
+        "go-litematic"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/packs",
+      "cardCount": 1,
+      "cards": [
+        "go-packs"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/paths",
+      "cardCount": 1,
+      "cards": [
+        "go-paths"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/recycle",
+      "cardCount": 1,
+      "cards": [
+        "go-recycle"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/scanner",
+      "cardCount": 1,
+      "cards": [
+        "go-scanner"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/tags",
+      "cardCount": 1,
+      "cards": [
+        "go-tags"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/threejs",
+      "cardCount": 1,
+      "cards": [
+        "go-threejs"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/types",
+      "cardCount": 1,
+      "cards": [
+        "go-types"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/updater",
+      "cardCount": 1,
+      "cards": [
+        "go-updater"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/watcher",
+      "cardCount": 1,
+      "cards": [
+        "go-watcher"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/ysm",
+      "cardCount": 1,
+      "cards": [
+        "go-ysm-parser"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "go/repoaudit",
+      "cardCount": 1,
+      "cards": [
+        "go_repoaudit"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/i18n-key-naming.mjs",
+      "cardCount": 1,
+      "cards": [
+        "i18n_accuracy"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "tests/test_i18n_key_naming.mjs",
+      "cardCount": 1,
+      "cards": [
+        "i18n_accuracy"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/check-dynamic-import.mjs",
+      "cardCount": 1,
+      "cards": [
+        "preview_3d_migration"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/compile-android-rust.mjs",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/compile-rust-static.mjs",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/android-build.mjs",
+      "cardCount": 1,
+      "cards": [
+        "rust-android-bridge"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts/jscpd-go.mjs",
+      "cardCount": 1,
+      "cards": [
+        "scripts_jscpd_go"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "frontend/vitest.config.ts",
+      "cardCount": 1,
+      "cards": [
+        "vitest-env-switch"
+      ],
+      "depth": 1,
+      "exists": true
+    },
+    {
+      "path": "scripts",
+      "cardCount": 1,
+      "cards": [
+        "fbx-cli-pipeline"
+      ],
+      "depth": 0,
+      "exists": true
+    },
+    {
+      "path": "tests",
+      "cardCount": 1,
+      "cards": [
+        "frontend_test_audit"
+      ],
+      "depth": 0,
+      "exists": true
+    },
+    {
+      "path": "rust-wails-bridge",
+      "cardCount": 1,
+      "cards": [
+        "rustbridge"
+      ],
+      "depth": 0,
+      "exists": true
+    }
+  ],
+  "crossLinks": {
+    "3d-oversize-file-codesplit-feasibility": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "3d-patterns": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "android-bridge": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "android-events": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "animation-system": {
+      "outCount": 3,
+      "outs": [
+        "model3d",
+        "model2d",
+        "app-preview"
+      ],
+      "inCount": 3,
+      "ins": [
+        "model2d",
+        "perception",
+        "ysm-wasm"
+      ]
+    },
+    "app-content": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 4,
+      "ins": [
+        "community-feature",
+        "global-handlers",
+        "oldest-models",
+        "recycle-bin"
+      ]
+    },
+    "app-modules": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 2,
+      "ins": [
+        "theme",
+        "version-updater"
+      ]
+    },
+    "app-nav": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "app-preview": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 11,
+      "ins": [
+        "animation-system",
+        "dom_tooltip",
+        "model2d",
+        "model3d",
+        "oldest-models",
+        "resource-packs",
+        "ui-slide-menu",
+        "utils-export",
+        "utils-summarize",
+        "ysm-baked",
+        "ysm-wasm"
+      ]
+    },
+    "app-sidebar": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "import-queue"
+      ]
+    },
+    "app-sync-manager": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 2,
+      "ins": [
+        "go-instance",
+        "resource-packs"
+      ]
+    },
+    "app-toast": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 4,
+      "ins": [
+        "global-handlers",
+        "recycle-bin",
+        "utils-errors",
+        "version-updater"
+      ]
+    },
+    "app-tree": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 11,
+      "ins": [
+        "community-feature",
+        "dialog-adv-filter",
+        "dialog-batch-rename",
+        "dialog-rename",
+        "dialog-tag-editor",
+        "global-handlers",
+        "import-queue",
+        "recycle-bin",
+        "shared-styles",
+        "toolbar-search",
+        "utils-fmt"
+      ]
+    },
+    "app_cycle_injection": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "backend-idb": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "model-stats"
+      ]
+    },
+    "backend_web": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "go-packs"
+      ]
+    },
+    "bone-tools": {
+      "outCount": 2,
+      "outs": [
+        "preview_core",
+        "model3d"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "classify-routing": {
+      "outCount": 3,
+      "outs": [
+        "go-types",
+        "resource-registry",
+        "extensibility-index-reconciliation"
+      ],
+      "inCount": 1,
+      "ins": [
+        "extensibility-index-reconciliation"
+      ]
+    },
+    "cli_quality_audit": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "drift-scan"
+      ]
+    },
+    "community-feature": {
+      "outCount": 7,
+      "outs": [
+        "app-content",
+        "go-download",
+        "go-installer",
+        "go-avatar",
+        "app-tree",
+        "dialog-modal",
+        "context-menu"
+      ],
+      "inCount": 1,
+      "ins": [
+        "dialog-modal"
+      ]
+    },
+    "context-menu": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 2,
+      "ins": [
+        "community-feature",
+        "dialog-batch-rename"
+      ]
+    },
+    "core_utils": {
+      "outCount": 2,
+      "outs": [
+        "utils-dom",
+        "utils-fmt"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "dialog-adv-filter": {
+      "outCount": 5,
+      "outs": [
+        "dialog-modal",
+        "wails-bindings",
+        "dialog-tag-editor",
+        "go-tags",
+        "app-tree"
+      ],
+      "inCount": 3,
+      "ins": [
+        "dialog-modal",
+        "dialog-tag-editor",
+        "toolbar-search"
+      ]
+    },
+    "dialog-batch-rename": {
+      "outCount": 4,
+      "outs": [
+        "dialog-modal",
+        "dialog-rename",
+        "app-tree",
+        "context-menu"
+      ],
+      "inCount": 1,
+      "ins": [
+        "dialog-modal"
+      ]
+    },
+    "dialog-modal": {
+      "outCount": 8,
+      "outs": [
+        "dialog-rename",
+        "dialog-batch-rename",
+        "dialog-tag-editor",
+        "dialog-adv-filter",
+        "recycle-bin",
+        "global-handlers",
+        "community-feature",
+        "import-queue"
+      ],
+      "inCount": 8,
+      "ins": [
+        "community-feature",
+        "dialog-adv-filter",
+        "dialog-batch-rename",
+        "dialog-rename",
+        "dialog-tag-editor",
+        "global-handlers",
+        "recycle-bin",
+        "version-updater"
+      ]
+    },
+    "dialog-rename": {
+      "outCount": 5,
+      "outs": [
+        "import-queue",
+        "dialog-modal",
+        "go-ysm-parser",
+        "wails-bindings",
+        "app-tree"
+      ],
+      "inCount": 2,
+      "ins": [
+        "dialog-batch-rename",
+        "dialog-modal"
+      ]
+    },
+    "dialog-tag-editor": {
+      "outCount": 5,
+      "outs": [
+        "go-tags",
+        "wails-bindings",
+        "dialog-adv-filter",
+        "dialog-modal",
+        "app-tree"
+      ],
+      "inCount": 2,
+      "ins": [
+        "dialog-adv-filter",
+        "dialog-modal"
+      ]
+    },
+    "doctor_gate_overlap": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "dom-fab": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "dom_tooltip"
+      ]
+    },
+    "dom-storage": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "dom_tooltip": {
+      "outCount": 2,
+      "outs": [
+        "dom-fab",
+        "app-preview"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "drift-scan": {
+      "outCount": 3,
+      "outs": [
+        "cli_quality_audit",
+        "go-types",
+        "go-fsutil"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "event-bus": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 2,
+      "ins": [
+        "utils-errors",
+        "wails-bindings"
+      ]
+    },
+    "event-graph-guard": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "extensibility-index-reconciliation": {
+      "outCount": 1,
+      "outs": [
+        "classify-routing"
+      ],
+      "inCount": 1,
+      "ins": [
+        "classify-routing"
+      ]
+    },
+    "extensibility-index": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "extensibility-round2": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "fbx-cli-pipeline": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "format-ysm-anim-config": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "frontend_repo_audit": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "frontend_test_audit": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "global-handlers": {
+      "outCount": 9,
+      "outs": [
+        "app-content",
+        "app-tree",
+        "import-queue",
+        "page-store",
+        "go-sync",
+        "go-installer",
+        "go-recycle",
+        "dialog-modal",
+        "app-toast"
+      ],
+      "inCount": 2,
+      "ins": [
+        "dialog-modal",
+        "import-queue"
+      ]
+    },
+    "go-android-platform-guard": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-avatar-decode": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-avatar": {
+      "outCount": 2,
+      "outs": [
+        "go-ysm-parser",
+        "wails-bridge"
+      ],
+      "inCount": 2,
+      "ins": [
+        "community-feature",
+        "go-container"
+      ]
+    },
+    "go-cli-search": {
+      "outCount": 2,
+      "outs": [
+        "toolbar-search",
+        "model-stats"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-config": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-container": {
+      "outCount": 4,
+      "outs": [
+        "go-geometry",
+        "go-ysm-parser",
+        "go-avatar",
+        "go-types"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-dedup": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 2,
+      "ins": [
+        "go_repoaudit",
+        "oldest-models"
+      ]
+    },
+    "go-download": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 2,
+      "ins": [
+        "community-feature",
+        "go-installer"
+      ]
+    },
+    "go-executil": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-fileops": {
+      "outCount": 1,
+      "outs": [
+        "import-queue"
+      ],
+      "inCount": 1,
+      "ins": [
+        "import-queue"
+      ]
+    },
+    "go-fsutil": {
+      "outCount": 4,
+      "outs": [
+        "go-recycle",
+        "go-importer",
+        "go-installer",
+        "go-types"
+      ],
+      "inCount": 2,
+      "ins": [
+        "drift-scan",
+        "go_repoaudit"
+      ]
+    },
+    "go-geometry": {
+      "outCount": 3,
+      "outs": [
+        "go-ysm-parser",
+        "go-threejs",
+        "go-types"
+      ],
+      "inCount": 6,
+      "ins": [
+        "go-container",
+        "go-threejs",
+        "go-types",
+        "go-ysm-parser",
+        "model3d",
+        "ysm-baked"
+      ]
+    },
+    "go-importer": {
+      "outCount": 1,
+      "outs": [
+        "import-queue"
+      ],
+      "inCount": 3,
+      "ins": [
+        "go-fsutil",
+        "go-types",
+        "import-queue"
+      ]
+    },
+    "go-installer": {
+      "outCount": 5,
+      "outs": [
+        "go-sync",
+        "go-paths",
+        "go-types",
+        "go-download",
+        "go-recycle"
+      ],
+      "inCount": 5,
+      "ins": [
+        "community-feature",
+        "global-handlers",
+        "go-fsutil",
+        "go-recycle",
+        "go-sync"
+      ]
+    },
+    "go-instance": {
+      "outCount": 2,
+      "outs": [
+        "go-sync",
+        "app-sync-manager"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-launcher": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-litematic": {
+      "outCount": 3,
+      "outs": [
+        "resource-registry",
+        "go-types",
+        "wails-bridge"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-logs": {
+      "outCount": 2,
+      "outs": [
+        "wails-bridge",
+        "go-types"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-packs": {
+      "outCount": 4,
+      "outs": [
+        "resource-registry",
+        "go-types",
+        "wails-bridge",
+        "backend_web"
+      ],
+      "inCount": 1,
+      "ins": [
+        "utils-mc-format"
+      ]
+    },
+    "go-paths": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "go-installer"
+      ]
+    },
+    "go-recycle": {
+      "outCount": 2,
+      "outs": [
+        "go-installer",
+        "recycle-bin"
+      ],
+      "inCount": 5,
+      "ins": [
+        "global-handlers",
+        "go-fsutil",
+        "go-installer",
+        "go-sync",
+        "recycle-bin"
+      ]
+    },
+    "go-scanner": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-sync": {
+      "outCount": 3,
+      "outs": [
+        "go-installer",
+        "go-watcher",
+        "go-recycle"
+      ],
+      "inCount": 4,
+      "ins": [
+        "global-handlers",
+        "go-installer",
+        "go-instance",
+        "go-types"
+      ]
+    },
+    "go-tags": {
+      "outCount": 1,
+      "outs": [
+        "wails-bridge"
+      ],
+      "inCount": 2,
+      "ins": [
+        "dialog-adv-filter",
+        "dialog-tag-editor"
+      ]
+    },
+    "go-testutil": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-threejs": {
+      "outCount": 2,
+      "outs": [
+        "go-geometry",
+        "go-ysm-parser"
+      ],
+      "inCount": 4,
+      "ins": [
+        "go-geometry",
+        "go-types",
+        "go-ysm-parser",
+        "model3d"
+      ]
+    },
+    "go-types": {
+      "outCount": 6,
+      "outs": [
+        "resource-registry",
+        "go-sync",
+        "go-importer",
+        "go-geometry",
+        "go-threejs",
+        "rustbridge"
+      ],
+      "inCount": 10,
+      "ins": [
+        "classify-routing",
+        "drift-scan",
+        "go-container",
+        "go-fsutil",
+        "go-geometry",
+        "go-installer",
+        "go-litematic",
+        "go-logs",
+        "go-packs",
+        "oldest-models"
+      ]
+    },
+    "go-updater": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 2,
+      "ins": [
+        "go-version",
+        "version-updater"
+      ]
+    },
+    "go-version": {
+      "outCount": 2,
+      "outs": [
+        "go-updater",
+        "wails-bindings"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "go-watcher": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "go-sync"
+      ]
+    },
+    "go-ysm-parser": {
+      "outCount": 3,
+      "outs": [
+        "go-geometry",
+        "go-threejs",
+        "model3d"
+      ],
+      "inCount": 8,
+      "ins": [
+        "dialog-rename",
+        "go-avatar",
+        "go-container",
+        "go-geometry",
+        "go-threejs",
+        "utils-summarize",
+        "ysm-baked",
+        "ysm-wasm"
+      ]
+    },
+    "go_repoaudit": {
+      "outCount": 2,
+      "outs": [
+        "go-dedup",
+        "go-fsutil"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "ground-cap-gcbuildmaterialgroup-133": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "ground_surface_spec": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "i18n": {
+      "outCount": 1,
+      "outs": [
+        "i18n_accuracy"
+      ],
+      "inCount": 1,
+      "ins": [
+        "i18n_accuracy"
+      ]
+    },
+    "i18n_accuracy": {
+      "outCount": 1,
+      "outs": [
+        "i18n"
+      ],
+      "inCount": 1,
+      "ins": [
+        "i18n"
+      ]
+    },
+    "ik_solver": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "import-queue": {
+      "outCount": 5,
+      "outs": [
+        "app-tree",
+        "app-sidebar",
+        "global-handlers",
+        "go-importer",
+        "go-fileops"
+      ],
+      "inCount": 5,
+      "ins": [
+        "dialog-modal",
+        "dialog-rename",
+        "global-handlers",
+        "go-fileops",
+        "go-importer"
+      ]
+    },
+    "mc-ao-tint": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "model-stats": {
+      "outCount": 3,
+      "outs": [
+        "toolbar-search",
+        "backend-idb",
+        "ysm-wasm"
+      ],
+      "inCount": 2,
+      "ins": [
+        "go-cli-search",
+        "toolbar-search"
+      ]
+    },
+    "model2d": {
+      "outCount": 3,
+      "outs": [
+        "model3d",
+        "animation-system",
+        "app-preview"
+      ],
+      "inCount": 2,
+      "ins": [
+        "animation-system",
+        "model3d"
+      ]
+    },
+    "model3d": {
+      "outCount": 5,
+      "outs": [
+        "preview_core",
+        "go-threejs",
+        "go-geometry",
+        "model2d",
+        "app-preview"
+      ],
+      "inCount": 8,
+      "ins": [
+        "animation-system",
+        "bone-tools",
+        "go-ysm-parser",
+        "model2d",
+        "perception",
+        "preview_core",
+        "utils-export",
+        "utils-misc"
+      ]
+    },
+    "mount-preview-module-singleton-race": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "mount3d-584-giant": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "multi_model_select": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "oldest-models": {
+      "outCount": 5,
+      "outs": [
+        "app-content",
+        "go-types",
+        "go-dedup",
+        "app-preview",
+        "shared-styles"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "optimization_log": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "page-store": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "global-handlers"
+      ]
+    },
+    "perception": {
+      "outCount": 3,
+      "outs": [
+        "model3d",
+        "animation-system",
+        "preview_core"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "pointer-events": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "preview_3d_migration": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "preview_core": {
+      "outCount": 2,
+      "outs": [
+        "model3d",
+        "utils-dom"
+      ],
+      "inCount": 4,
+      "ins": [
+        "bone-tools",
+        "model3d",
+        "perception",
+        "ui-slide-menu"
+      ]
+    },
+    "preview_menu_session_key": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "preview_menu_settings_state": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "preview_panel_declarative": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "preview_state": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "recycle-bin": {
+      "outCount": 5,
+      "outs": [
+        "app-content",
+        "go-recycle",
+        "app-tree",
+        "dialog-modal",
+        "app-toast"
+      ],
+      "inCount": 2,
+      "ins": [
+        "dialog-modal",
+        "go-recycle"
+      ]
+    },
+    "render-federation": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "resource-packs": {
+      "outCount": 2,
+      "outs": [
+        "app-sync-manager",
+        "app-preview"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "resource-registry": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 7,
+      "ins": [
+        "classify-routing",
+        "go-litematic",
+        "go-packs",
+        "go-types",
+        "utils-extensions",
+        "utils-resource-types",
+        "wails-bindings"
+      ]
+    },
+    "rust-android-bridge": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "rustbridge": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 1,
+      "ins": [
+        "go-types"
+      ]
+    },
+    "safe_error_msg": {
+      "outCount": 1,
+      "outs": [
+        "utils-dom"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "scene_capability_registry": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "scripts_argv": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "scripts_jscpd_go": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "shared-styles": {
+      "outCount": 2,
+      "outs": [
+        "app-tree",
+        "theme"
+      ],
+      "inCount": 2,
+      "ins": [
+        "oldest-models",
+        "theme"
+      ]
+    },
+    "test-utils": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "theme": {
+      "outCount": 3,
+      "outs": [
+        "app-modules",
+        "shared-styles",
+        "wails-bindings"
+      ],
+      "inCount": 1,
+      "ins": [
+        "shared-styles"
+      ]
+    },
+    "toolbar-search": {
+      "outCount": 3,
+      "outs": [
+        "model-stats",
+        "dialog-adv-filter",
+        "app-tree"
+      ],
+      "inCount": 2,
+      "ins": [
+        "go-cli-search",
+        "model-stats"
+      ]
+    },
+    "ui-slide-menu": {
+      "outCount": 3,
+      "outs": [
+        "ui_components",
+        "preview_core",
+        "app-preview"
+      ],
+      "inCount": 1,
+      "ins": [
+        "ui_components"
+      ]
+    },
+    "ui_components": {
+      "outCount": 1,
+      "outs": [
+        "ui-slide-menu"
+      ],
+      "inCount": 1,
+      "ins": [
+        "ui-slide-menu"
+      ]
+    },
+    "utils-array": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "utils-display": {
+      "outCount": 2,
+      "outs": [
+        "utils-dom",
+        "utils-mc-format"
+      ],
+      "inCount": 2,
+      "ins": [
+        "utils-dom",
+        "utils-mc-format"
+      ]
+    },
+    "utils-dom": {
+      "outCount": 1,
+      "outs": [
+        "utils-display"
+      ],
+      "inCount": 4,
+      "ins": [
+        "core_utils",
+        "preview_core",
+        "safe_error_msg",
+        "utils-display"
+      ]
+    },
+    "utils-errors": {
+      "outCount": 2,
+      "outs": [
+        "app-toast",
+        "event-bus"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "utils-export": {
+      "outCount": 3,
+      "outs": [
+        "model3d",
+        "app-preview",
+        "wails-bindings"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "utils-extensions": {
+      "outCount": 2,
+      "outs": [
+        "resource-registry",
+        "utils-resource-types"
+      ],
+      "inCount": 1,
+      "ins": [
+        "utils-resource-types"
+      ]
+    },
+    "utils-fmt": {
+      "outCount": 1,
+      "outs": [
+        "app-tree"
+      ],
+      "inCount": 1,
+      "ins": [
+        "core_utils"
+      ]
+    },
+    "utils-icon": {
+      "outCount": 1,
+      "outs": [
+        "utils-resource-types"
+      ],
+      "inCount": 1,
+      "ins": [
+        "utils-resource-types"
+      ]
+    },
+    "utils-mc-format": {
+      "outCount": 2,
+      "outs": [
+        "go-packs",
+        "utils-display"
+      ],
+      "inCount": 1,
+      "ins": [
+        "utils-display"
+      ]
+    },
+    "utils-misc": {
+      "outCount": 2,
+      "outs": [
+        "wails-bindings",
+        "model3d"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "utils-resource-types": {
+      "outCount": 4,
+      "outs": [
+        "resource-registry",
+        "utils-extensions",
+        "utils-icon",
+        "wails-bridge"
+      ],
+      "inCount": 2,
+      "ins": [
+        "utils-extensions",
+        "utils-icon"
+      ]
+    },
+    "utils-summarize": {
+      "outCount": 2,
+      "outs": [
+        "go-ysm-parser",
+        "app-preview"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "version-updater": {
+      "outCount": 4,
+      "outs": [
+        "go-updater",
+        "app-modules",
+        "app-toast",
+        "dialog-modal"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "vitest-env-switch": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "wails-bindings": {
+      "outCount": 3,
+      "outs": [
+        "wails-bridge",
+        "resource-registry",
+        "event-bus"
+      ],
+      "inCount": 7,
+      "ins": [
+        "dialog-adv-filter",
+        "dialog-rename",
+        "dialog-tag-editor",
+        "go-version",
+        "theme",
+        "utils-export",
+        "utils-misc"
+      ]
+    },
+    "wails-bridge": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 7,
+      "ins": [
+        "go-avatar",
+        "go-litematic",
+        "go-logs",
+        "go-packs",
+        "go-tags",
+        "utils-resource-types",
+        "wails-bindings"
+      ]
+    },
+    "worker-bridge-settleerror-fallback": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "ysm-anim-pipeline": {
+      "outCount": 0,
+      "outs": [],
+      "inCount": 0,
+      "ins": []
+    },
+    "ysm-baked": {
+      "outCount": 4,
+      "outs": [
+        "go-geometry",
+        "app-preview",
+        "ysm-wasm",
+        "go-ysm-parser"
+      ],
+      "inCount": 0,
+      "ins": []
+    },
+    "ysm-wasm": {
+      "outCount": 3,
+      "outs": [
+        "go-ysm-parser",
+        "animation-system",
+        "app-preview"
+      ],
+      "inCount": 2,
+      "ins": [
+        "model-stats",
+        "ysm-baked"
+      ]
+    }
+  },
+  "islands": {
+    "noSource": [
+      "extensibility-index-reconciliation",
+      "extensibility-index",
+      "extensibility-round2"
+    ],
+    "noIn": [
+      "3d-oversize-file-codesplit-feasibility",
+      "3d-patterns",
+      "android-bridge",
+      "android-events",
+      "app-nav",
+      "app_cycle_injection",
+      "doctor_gate_overlap",
+      "dom-storage",
+      "event-graph-guard",
+      "extensibility-index",
+      "extensibility-round2",
+      "fbx-cli-pipeline",
+      "format-ysm-anim-config",
+      "frontend_repo_audit",
+      "frontend_test_audit",
+      "go-android-platform-guard",
+      "go-avatar-decode",
+      "go-config",
+      "go-executil",
+      "go-launcher",
+      "go-scanner",
+      "go-testutil",
+      "ground-cap-gcbuildmaterialgroup-133",
+      "ground_surface_spec",
+      "ik_solver",
+      "mc-ao-tint",
+      "mount-preview-module-singleton-race",
+      "mount3d-584-giant",
+      "multi_model_select",
+      "optimization_log",
+      "pointer-events",
+      "preview_3d_migration",
+      "preview_menu_session_key",
+      "preview_menu_settings_state",
+      "preview_panel_declarative",
+      "preview_state",
+      "render-federation",
+      "rust-android-bridge",
+      "scene_capability_registry",
+      "scripts_argv",
+      "scripts_jscpd_go",
+      "test-utils",
+      "utils-array",
+      "vitest-env-switch",
+      "worker-bridge-settleerror-fallback",
+      "ysm-anim-pipeline"
+    ]
+  }
+}

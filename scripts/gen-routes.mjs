@@ -72,7 +72,7 @@ function extractSummary(text) {
   return Array.from(summary).slice(0, 120).join('') + '…';
 }
 
-function renderRoutes(cards) {
+function renderRoutes(cards, kwToCards) {
   const out = [];
   out.push(BANNER);
   out.push('');
@@ -85,13 +85,25 @@ function renderRoutes(cards) {
   out.push('> 由 `scripts/gen-routes.mjs` 自动生成：首选卡按卡片 `use_when` 关键词命中，摘要提供快速上下文。');
   out.push('> 更新后重新生成：`node scripts/gen-routes.mjs`。');
   out.push('');
+  out.push('> ⚠️ **歧义标注**：行内出现「⚠️歧义（另见…）」表示该意图关键词被多张卡共享——AI 需按上下文择层，仍不确定则参考本表生成时的 WARN 冲突清单消歧。');
+  out.push('');
   out.push('## 路由规则');
   out.push('');
   out.push('| 用户意图或关键词 | 首选知识卡 | 摘要 |');
   out.push('|---|---|---|');
   for (const c of cards) {
     const keywords = c.useWhen.join('、');
-    const primary = `[${cell(c.name)}](./${c.file})`;
+    let primary = `[${cell(c.name)}](./${c.file})`;
+    // 歧义词行内标注（2026-08-31 审计）：同词被 ≥2 卡共享时列出其他候选卡，
+    // 避免 AI 按表直选错层（如「3D 预览」→ 5 卡、「网页版」→ 3 卡）。
+    const ambiguous = c.useWhen.filter((kw) => (kwToCards.get(kw) || []).length > 1);
+    if (ambiguous.length) {
+      const cands = [...new Set(
+        ambiguous.flatMap((kw) => (kwToCards.get(kw) || []).map((x) => x.file).filter((f) => f !== c.file))
+      )].slice(0, 3);
+      const more = ambiguous.flatMap((kw) => (kwToCards.get(kw) || []).map((x) => x.file)).filter((f) => f !== c.file).length > cands.length ? '等' : '';
+      primary += ` ⚠️歧义（另见 ${cands.join('、')}${more}）`;
+    }
     const summary = c.summary ? cell(c.summary) : '—';
     out.push(`| ${cell(keywords)} | ${primary} | ${summary} |`);
   }
@@ -184,7 +196,7 @@ function main() {
     console.log('✅ use_when 关键词无冲突');
   }
 
-  const output = renderRoutes(routable);
+  const output = renderRoutes(routable, kwToCards);
   console.error(`📄 ${routable.length} 张 architecture 卡可路由（${cards.length - routable.length} 张无 use_when 关键词）`);
 
   const summary = (ok, check, generated) =>

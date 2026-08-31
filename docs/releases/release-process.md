@@ -115,7 +115,7 @@
 
 ## 3. 版本一致性（重要）
 
-- **版本号无单一 json 事实源**：`build-release.ps1` 用 `-Version` 参数、CI 用 `github.ref_name`（tag 名）、notes 文件名用 `vX.Y.Z.md`。
+- **版本唯一事实源 = `build/config.yml` 的 `version` 字段**：CI Prepare 强制校验 tag 与之一致（不一致即失败）；`build-release.ps1` 的 `-Version` 参数、CI `github.ref_name`、notes 文件名 `vX.Y.Z.md` 均与之对齐。
 - **操作者必须保证**：`build-release.ps1` 参数 / tag 名 / notes 文件名三处的 `X.Y.Z` 完全一致（`v` 前缀统一）。
 - **版本注入路径**：
   | 产物 | 注入方式 | 代码位置 |

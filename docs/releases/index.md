@@ -76,7 +76,7 @@
 
 ## 3. 版本一致性（重要）
 
-- **版本号无单一 json 事实源**：`build-release.ps1` 用 `-Version` 参数、CI 用 `github.ref_name`（tag 名）。
+- **版本唯一事实源 = `build/config.yml` 的 `version` 字段**：CI Prepare job 强制校验 tag 与之一致（不一致即失败）；`build-release.ps1` 的 `-Version` 参数、CI `github.ref_name` 均与之对齐。
 - **操作者必须保证**：`build-release.ps1` 参数 / tag 名 / notes 文件名三者的 `X.Y.Z` 完全一致（`v` 前缀统一）。
 - 版本注入：`go build -ldflags "-X ysm-model-manager/go/version.Version=$VerTag"`（主程序 / CLI / 更新助手三处）。
 

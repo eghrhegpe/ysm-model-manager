@@ -1962,6 +1962,10 @@ export const autoSidebar = [
             "link": "/knowledge/scripts_jscpd_go"
           },
           {
+            "text": "README 登记处对账 check-readme-index.mjs",
+            "link": "/knowledge/scripts_readme_index"
+          },
+          {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
           }

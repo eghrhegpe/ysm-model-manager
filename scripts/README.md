@@ -23,7 +23,7 @@
 
 范例见 `comment-checker.mjs`、`adr-check.mjs`（已按本规范整改）。
 
-> 执行状态：本仓库已落地 `check-script-hygiene.mjs`（与 MikuMikuAR 同款，四口径：退出码失效 / 共享层内联 / `--json` 契约 / 文件头 5 字段）；运行 `node scripts/check-script-hygiene.mjs [--json|--strict]` 即可机检本规范。
+> 执行状态：本仓库已落地 `check-script-hygiene.mjs`（与 MikuMikuAR 同款，五口径：退出码失效 / 共享层内联 / `--json` 契约 / 文件头 5 字段 / positional 脚本走 parse-args）；运行 `node scripts/check-script-hygiene.mjs [--json|--strict]` 即可机检本规范。
 
 ---
 
@@ -63,7 +63,23 @@
 | `gui-flow-gate.mjs` | `node scripts/gui-flow-gate.mjs` / `--files-root` / `--model` / `--threshold-ms` / `--require-model` / `--verbose` | **性能集成门禁（B-1 真跑层）**：真跑 `go run . --cli gui-flow --json`，验证 Go 后端加载链健康（CLI 当 GUI 无头替身）。必绿：配置加载+模型扫描；检测到可分析模型（或 `--require-model`）时强验证 ③ 分析/④缓存/⑤数据+总耗时阈值，无模型输入时降级通过并提示。⚠️ 真跑会经 DispatchCommand 落盘 files-root 到用户配置，宜在 CI/无真实用户环境执行 |
 | `perf-gate.mjs` | `node scripts/perf-gate.mjs --init [--model <path>]` /（默认对比）/ `--threshold-ratio` / `--warn-only` / `--verbose` | **single-bench 性能回归守卫（B-2）**：把各阶段耗时存为 `scripts/baseline/perf-baseline.json` 锚点，后续运行逐阶段对比，任一阶段耗时超 baseline×ratio（默认 1.5）即 fail（性能护栏防倒退）。⚠️ baseline 须用**真实模型库** `--init` 建立（fixtures 小模型耗时 ms 级噪声无锚定价值）；真跑同样落盘 files-root 到用户配置 |
 | `pre-push-gate.mjs` | `node scripts/pre-push-gate.mjs <remote> <url>`（.githooks/pre-push 调度器）/ `--dry-run` / `--all` / `--docs` | 本地质量门禁（doctor 全部模式的单一实现源头）：按变更域（Go/前端/数据/文档）只跑相关检查；Go 域含 updater helper 前置构建 + `./internal/app/` 测试；前端域含 **check-layering 分层硬门禁** + vitest + **tsc --noEmit**；gofmt 修复在 pre-commit 自动完成，pre-push 只读检出不阻断（格式类债务，2026-08-13 决策）；构建/断链/契约失败/红线扫描不可用（fail-closed）阻断推送；契约测试并行执行（~31s vs 串行 ~43s）；结果双写 stderr + `.git/push-log`（带 ISO 时间戳，持久可查）；`--all` = 全量体检（含静态分析工具 + 关键文件），`--docs` = 轻量文档检查 |
+| `commit-with-check.mjs` | `node scripts/commit-with-check.mjs -m "<msg>"` / `--docs` / `--check` | **验证 + 自动提交的 thin wrapper**（ADR-086）：验证全部委托 pre-push-gate（单一源头），门禁全绿才 commit；`--check` 只验不交；按 staged 文件自动裁剪门禁 |
+| `e2e-coverage-report.mjs` | `node scripts/e2e-coverage-report.mjs` / `--input <path>` / `--all` / `--json` | 端到端广度报告（ADR-035 G-4）：读 Playwright V8 coverage 产物，输出「哪些源文件被真实交互走到」的广度报告（函数级覆盖比例，不做行级精确统计） |
+| `test-decode-from-memory.mjs` | `node scripts/test-decode-from-memory.mjs` | YSMParser WASM 解码冒烟测试：Node + callMain + MEMFS 路径，与 `internal/app/wasm_decoder.go` 同调用方式 |
+| `verify-wasm-mt.mjs` | `node scripts/verify-wasm-mt.mjs <path.ysm>` | ADR-079 M3/M4 验证：pthread 多线程 WASM 在模拟 Worker 全局下实例化 + 解码（结构级验证，真 spawn 需浏览器 crossOriginIsolated） |
+| `build-ysm-wasm.mjs` | `node scripts/build-ysm-wasm.mjs` / `--skip-build` | 统一 YSMParser WASM 构建（一份 web 产物服务前后端）：em++ 编译 → base64 打包前端 + Go embed 拷贝 |
+| `android-build.mjs` | `node scripts/android-build.mjs` / `--arch` / `--production` / `--rust-backend` | 一键构建 Android APK：前端构建 + NDK 交叉编译 libwails.so + gradle assembleDebug（补 android-install 只装不编的缺口） |
+| `compile-android-rust.mjs` | `node scripts/compile-android-rust.mjs` / `--arch amd64|all` | 编 Rust scanner bridge 为 Android staticlib（.a）供 Go CGO 链接（android-build 前置单步） |
+| `compile-rust-static.mjs` | `node scripts/compile-rust-static.mjs` / `--target <triple>` | 编 Rust scanner bridge 为 staticlib 供 Go CGO 静态链接（Linux 构建链，build/linux/Taskfile.yml 调用） |
+| `compare-maid-packs.mjs` | `node scripts/compare-maid-packs.mjs` | 实战比对：单女仆 zip vs 多合一女仆包（L0 清单 vs L1 枚举差异；⚠️ 依赖 `_tools/` 暂缺失，当前不可运行） |
+| `analyze-knowledge-refs.mjs` | `node scripts/analyze-knowledge-refs.mjs` / `--json` / `--no-write` | 知识卡引用深度与耦合分析（一次性诊断）：卡→源码 / 卡→卡 / 分类膨胀度 / 引用孤岛，产出 docs/review/knowledge-ref-analysis.* |
+| `drift-scan.mjs` | `node scripts/drift-scan.mjs` / `--json` | 双轨漂移自动侦察兵：Go 硬编码常量 / 内联切片 / 路径归一化 / 错误链断裂 / 资源泄漏 / 重复实现 + 前端同逻辑异实现 |
+| `gpu-leak-analyze.mjs` | `node scripts/gpu-leak-analyze.mjs <logfile>` / `--json` | 解析 `[gpu-leak] before/after` 日志，逐对计算差值标出 GPU 内存泄漏点（支持 stdin） |
+| `translucency-probe.mjs` | `node scripts/translucency-probe.mjs <模型目录...>` | 面级透明分类增益探针：量化 mesh 级 vs 面级透明误路由面积比，为引入面级透明路径提供数据依据 |
+| `texture-golden.mjs` | `node scripts/texture-golden.mjs` / `--dir` / `--json` / `--limit N` | upstream 真实 .ysm 全量 golden 扫描：组件序 + 纹理名契约回归（B 层真实模型回归，与 go/geometry 合成夹具 A 层互补） |
 | `trace-analyze.mjs` | `node scripts/trace-analyze.mjs <trace.json> [trace2.json]` / `--json` / `--top N` / `--pid <pid> --tid <tid>` | **Chrome DevTools trace 性能瓶颈分析**：解析 DevTools 录制的 JSON trace（动辄 10 万+ 事件），输出 Top 最长事件 / name+cat 聚合 / 线程 dur 饼图 / 指定线程明细 / Worker 聚合 / 最忙时间片；双 trace 模式对比 A vs B 差异摘要。定位渲染主线程瓶颈、JS 执行密度、图片解码开销等。 |
+| `port-align.mjs` | `npm run verify:port`（等价 `node scripts/port-align.mjs`） | cube/spec 坐标端口「多样性对齐」校验（手动工具）：内嵌 Blockbench 权威 oracle，esbuild 打包真实 TS 端口真跑比对，输出覆盖矩阵 + 分歧报告 |
+| `perf/vitest-env-switch.mjs` | `node scripts/perf/vitest-env-switch.mjs` | 给已确认无 DOM 依赖的纯逻辑测试文件批量加 `@vitest-environment node` 标注，省 happy-dom 环境重建开销（~1.2s/文件） |
 | `.githooks/pre-commit`（薄壳） | commit 时自动执行（无需手打） | 秒级文档/索引自动同步：跑 10 个 gen（docs 分区索引 / funcmap / 知识卡 index+字段 / novel 索引 / project-map / vitepress sidebar）后 `git add docs/`（幂等：无漂移零副作用）；失败仅提示不阻断；输出走 stderr；逃生阀 `YSM_SKIP_GEN=1` |
 
 ### 治理检查（check-* 系列；唯一登记处，AGENTS.md §1.2 仅作指针）
@@ -71,15 +87,27 @@
 | 脚本 | 调用方式 | 说明 |
 |------|---------|------|
 | `check-doc-drift.mjs` | `node scripts/check-doc-drift.mjs` / `--fix` | 文档三一致：ADR 登记 + 知识卡 + 架构树引用（ERROR 阻断；`--fix` 刷新架构树基线） |
+| `check-adr-drift.mjs` | `node scripts/check-adr-drift.mjs` / `--json` | **ADR 描述 vs 代码现实漂移检测**：A) 文档侧——已还债但仍标开放的旧表述；B) 代码侧——正向断言源码现实（app_install.go 薄壳 / DownloadQueue 无 *App 循环）。双向对账，阻止 AI 把完成的活反复当开放债 |
 | `check-adr-health.mjs` | `node scripts/check-adr-health.mjs` / `--debt` | ADR 状态机值域 / 登记表同步 / 技术债清单 |
+| `check-adr-status.mjs` | `node scripts/check-adr-status.mjs` / `--check` / `--json` | ADR 状态分类精简统计：只输出 6 桶计数 + 问题清单（未标注/未知），`--check` 模式 unknown 时 exit 1（比 check-adr-health 更精简，供 CI 快速判定） |
+| `check-biome.mjs` | `node scripts/check-biome.mjs` / `--strict` / `--write` / `--json` | **Biome 委托检查器**（P0）：TS 7 太新 dependency-cruiser 静默漏检，Biome 自研 Rust 解析器全解析；增量策略 `biome check --changed`（仅查相对 main 的变更文件），`--write` 自动修复；空变更集判通过 |
+| `check-inline-error.mjs` | `node scripts/check-inline-error.mjs` / `--fix` | 内联错误模式检测：`e instanceof Error ? e.message : String(e)` 应统一收敛 safeErrorMessage / friendlyError（Worker 安全 / 用户侧 toast） |
+| `check-menu-health.mjs` | `node scripts/check-menu-health.mjs` / `--json` | **3D 预览菜单表健康门禁**（ADR-085 配套）：6 条校验（id 唯一 / labelKey 非空且入语言包 / dockGroup 类型 / kind 合法 / panel 有渲染通道 / action 有 run），正则解析 4 个菜单表文件 |
+| `check-proc-adoption.mjs` | `node scripts/check-proc-adoption.mjs` / `--json` / `--strict` | 子进程直调收敛检查（ADR-043 落地率守护）：扫描 scripts/ 直调 `execFileSync`/`execSync` 而未走 `_lib/proc.mjs` 的脚本（WARN 报告，`--strict` 时 exit 1） |
+| `check-readme-index.mjs` | `node scripts/check-readme-index.mjs` / `--json` | **README 索引对账**（登记处漂移守护）：扫描 scripts/（含 hooks/，排除 _lib 与测试）与 scripts/README.md 全文对账，零提及脚本 → 阻断。让「唯一登记处」声明可机检 |
+| `check-toast-duration.mjs` | `node scripts/check-toast-duration.mjs` | toast 时长单一事实源守护（防回流闸）：扫 frontend/src 生产代码捕捉写死裸数字的 toast 时长（bus.emit / toast() helper），当前观察期非阻断 |
 | `check-deadcode-baseline.mjs` | `node scripts/check-deadcode-baseline.mjs` / `--update-baseline` | knip+jscpd 与 `scripts/baseline/deadcode-baseline.json` 对比，新增项阻断 |
 | `check-orphan-exports.mjs` | `node scripts/check-orphan-exports.mjs` / `--strict` / `--min-consumers N` | 孤儿导出审计（零消费者符号；默认审计仅报告 rc=0，`--strict` 孤儿>0 时 rc=1 阻断；与联邦 check-consumers 同名异实，ADR-241 §Phase 2） |
 | `check-circular.mjs` | `node scripts/check-circular.mjs` | frontend/src ESM import 图找环（ERROR 阻断） |
 | `check-layering.mjs` | `node scripts/check-layering.mjs` / `--json` / `--update` | 前端分层依赖方向守护：R1/R2 零容忍（utils/services 不碰 UI 层）+ R3/R4 基线防新增（core→上层 / features→views，现有债务入 `docs/.layering-baseline.json` 待清理）；`import type` 豁免；源自 MikuMikuAR ADR-242 骨架适配，配套 `tests/test_check_layering.mjs` |
 | `check-circular-go.mjs` | `node scripts/check-circular-go.mjs` / `--json` | Go 包级循环依赖检测（`go/` 目录下 import 图找环；ERROR 阻断，`--json` 供 CI 消费） |
 | `check-boolean-naming.mjs` | `node scripts/check-boolean-naming.mjs` / `--strict` | 布尔变量命名规范 |
-| `check-script-hygiene.mjs` | `node scripts/check-script-hygiene.mjs` / `--json` / `--strict` | 脚本卫生：退出码失效（裸 main + return 失败码无 process.exit）/ 共享层内联（walk/rg/ROOT 样板）/ 检查类缺 `--json` 契约（WARN 不阻断） |
+| `check-script-hygiene.mjs` | `node scripts/check-script-hygiene.mjs` / `--json` / `--strict` | 脚本卫生（五口径）：退出码失效（裸 main + return 失败码无 process.exit）/ 共享层内联（walk/rg/ROOT/parseArgs 样板）/ 检查类缺 `--json` 契约 / 文件头 5 字段 / positional 脚本未走 `_lib/parse-args.mjs`（WARN 不阻断） |
 | `check-workflow-refs.mjs` | `node scripts/check-workflow-refs.mjs` / `--json` | 工作流引用完整性：`.github/workflows/*.yml` 的 `run:` 中 `scripts/`、`cmd/` 路径引用必须存在（迁移类死引用守护，如 cmd/build-*.ps1 → scripts/ 后 release.yml 漏同步） |
+| `css-layer-check.mjs` | `node scripts/css-layer-check.mjs` / `--strict` / `--json` | **Shadow DOM 样式越界检查**：shadow 内 `animation:` 引用无同层 @keyframes 定义 → ERROR（跨 shadow keyframe 静默失效）；全局 components.css 残留已回迁类 → ERROR；shadow 类无定义 → WARN（自动发现 shadow 域，无手写清单） |
+| `i18n-key-naming.mjs` | `node scripts/i18n-key-naming.mjs` / `--list-violations` / `--check key...` / `--entity <词>` | i18n 键名三段式规范检查（ADR-124）：只卡「新增键」必须 `<模块>.<子命名空间>.<实体>`（旧键保留作语义注释），`--list-violations` 输出迁移清单 |
+| `jscpd-go.mjs` | `node scripts/jscpd-go.mjs` / `--update` / `--json` | **Go 端复制粘贴检测**（jscpd v5 Rust 内核）+ 独立 baseline 账本：增量门禁只拦新增重复对、不惩罚存量；只扫 go/ 目录，baseline 独立存 scripts/baseline/jscpd-go-baseline.json（与前端 deadcode 零耦合） |
+| `event-graph.mjs` | `node scripts/event-graph.mjs` / `--check` / `--json` / `--strict` / `--root <dir>` | **Bus 事件契约守护者**：从 bus.ts 的 BusEvents 接口提取权威清单，报告未声明事件 / 孤儿发射 / 鬼订阅 / emit 缺参 / void 多传 / VOID_EVENTS 清单漂移（--strict 硬错误阻断；--check 供 pre-commit 自动重生成校验） |
 | `auto-import.mjs` | `node scripts/auto-import.mjs` / `--fix` / `--watch` / `--strict` | TS/JS 缺失 import 检测（ADR-014 伴生，已接入 doctor 静态分析） |
 | `gen-adr-supersede.mjs` | `node scripts/gen-adr-supersede.mjs` / `--check` | ADR 取代关系判定（五层证据：已登记 / 漏标 / 废弃未指明 / 可疑 / 表格弱宣称）；`--check` 仅漏标失败退出 1（供 check:docs） |
 | `check-dynamic-import.mjs` | `node scripts/check-dynamic-import.mjs` / `--json` | 动态 import() 合理性审查（对照 app_modules 规范：失败处理缺失 / 空 catch 吞错 / .js 后缀残留 / 轻量工具模块误动态导入；WARN 阻断） |
@@ -115,6 +143,9 @@
 | `build-novel-index.mjs` | 小说总索引生成（`docs/novel/index.md`）：扫 `docs/novel/` 目录树（act-\* + 01..10 区域 + appendix），整文件重写；区域文件夹内**禁放 README**（索引唯一来源即本脚本）；`--check` 已挂 doctor 防漂移 |
 | `gen-vitepress-sidebar.mjs` | VitePress 侧边栏生成：扫 `docs/` 全量 md 按目录树组织导航 → `docs/.vitepress/sidebar.gen.mjs`（勿手改），`docs/package.json` build 脚本前置调用（ADR-022） |
 | `gen-doc-next-steps.mjs` | 文档体系「待补地图」诊断聚合：聚合 `check-knowledge-drift` / `link-checker` / `adr-check` 的 `--json` → `docs/.doc-next-steps.md`（只读报告，不修改源文件） |
+| `gen-routes.mjs` | AI 知识库路由表自动生成（`docs/knowledge/routes.md`）：从知识卡 frontmatter `use_when` 生成「意图 → 首选卡 → 关联阅读」路由表；`--check` 已挂 doctor/pre-push |
+| `gen-routes-quick.mjs` | AI 急速版路由表自动生成（`docs/knowledge/routes-quick.md`）：从 `quick_groups` / `quick_intents` / `quick_risk_lines` / `pitfalls` 生成；配对不均恒打 WARN 绝不静默丢弃；`--check` 已挂 doctor/pre-push |
+| `generate-locale-json.mjs` | 语言包 TS → JSON 构建（ADR-045）：以 `frontend/src/core/i18n/locales/*.ts` 为单一事实源，产出 `frontend` 运行时 locales 目录下的 `*.json` 供 fetch 消费（pre-commit GEN_CMDS 调用） |
 
 ### 生成器维护约定（2026-08-03 新增）
 

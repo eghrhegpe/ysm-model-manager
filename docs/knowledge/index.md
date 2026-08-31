@@ -2,11 +2,11 @@
 
 # 知识卡索引
 
-> 总计: 134 张知识卡
+> 总计: 135 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（8 张）
+## config（9 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
@@ -19,6 +19,7 @@
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
 | 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.mjs | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
 | 🏗 scripts_jscpd_go | Go 端 jscpd 重复检测脚本 | architecture | — | jscpd, go 重复代码, 复制粘贴检测, duplicate, 重复对, 增量门禁, 新增重复, 独立 baseline |
+| 🏗 scripts_readme_index | README 登记处对账 check-readme-index.mjs | architecture | — | README, 脚本索引, 登记处, 脚本登记, check-readme-index, 脚本漂移, 脚本对账 |
 | 🏗 vitest-env-switch | Vitest 环境切换规则 | architecture | — | vitest, 测试环境, node 环境, happy-dom, 测试切换 |
 
 ### 摘要
@@ -26,6 +27,7 @@
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
 - **scripts_argv**（脚本 argv 规范与已知豁免 parse-args.mjs）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.mjs`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-3…
 - **scripts_jscpd_go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.mjs` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscp…
+- **scripts_readme_index**（README 登记处对账 check-readme-index.mjs）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
 ## core（18 张）
 

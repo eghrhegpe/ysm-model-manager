@@ -170,6 +170,10 @@ const ALL_STATIC_TOOLS = [
   // 子进程直调收敛守护（ADR-043）：WARN 报告未走 _lib/proc.mjs 的 execFileSync/execSync 直调
   'check-proc-adoption.mjs',
   'check-workflow-refs.mjs',
+  // README 登记处漂移守护（2026-08-31 审计）：scripts/README.md 自称唯一登记处，
+  // 但 29/93 脚本零提及无人拦——新增/改名脚本漏登记不再静默（check-workflow-refs 守引用侧，
+  // 本项守登记侧）
+  'check-readme-index.mjs',
   { tool: 'i18n-check.mjs', args: ['--strict'] },
   'i18n-ui-check.mjs',
   // binding-check.mjs — Go 域已覆盖
@@ -198,6 +202,7 @@ const DOC_STATIC_TOOLS = [
   { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
   'check-proc-adoption.mjs',
   'check-workflow-refs.mjs',
+  'check-readme-index.mjs',
 ];
 
 /** 文档额外检查（--all / --docs 模式，doctor DOC_EXTRA_SCRIPTS 迁入）。

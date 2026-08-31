@@ -66,6 +66,16 @@ func CreateDir(root, dir string) error {
 	return os.MkdirAll(fullPath, fsutil.DirPerms)
 }
 
+// renameToNewName 组装 newPath 并防覆盖重命名（RenameDir / RenameFile 共用尾部逻辑）。
+func renameToNewName(oldPath, newName string) error {
+	parent := filepath.Dir(oldPath)
+	newPath := filepath.Join(parent, newName)
+	if _, err := os.Lstat(newPath); err == nil {
+		return fmt.Errorf("目标已存在: %s", newPath)
+	}
+	return os.Rename(oldPath, newPath)
+}
+
 // RenameDir 重命名目录（仅改末段，保持父目录）
 func RenameDir(oldPath, newName string) error {
 	opMu.Lock()
@@ -83,12 +93,7 @@ func RenameDir(oldPath, newName string) error {
 	if newName == "." || paths.HasTraversal(newName) {
 		return fmt.Errorf("目录名包含非法路径段")
 	}
-	parent := filepath.Dir(oldPath)
-	newPath := filepath.Join(parent, newName)
-	if _, err := os.Lstat(newPath); err == nil {
-		return fmt.Errorf("目标已存在: %s", newPath)
-	}
-	return os.Rename(oldPath, newPath)
+	return renameToNewName(oldPath, newName)
 }
 
 // RemoveDir 递归删除目录（基础安全校验——拒绝空路径/NUL/穿越段/根目录；
@@ -131,12 +136,7 @@ func RenameFile(oldPath, newName string) error {
 	if types.IsYsmEntryJSON(filepath.Base(oldPath)) {
 		return fmt.Errorf("ysm.json 是模型目录清单，请重命名所在文件夹（整组操作）")
 	}
-	parent := filepath.Dir(oldPath)
-	newPath := filepath.Join(parent, newName)
-	if _, err := os.Lstat(newPath); err == nil {
-		return fmt.Errorf("目标已存在: %s", newPath)
-	}
-	return os.Rename(oldPath, newPath)
+	return renameToNewName(oldPath, newName)
 }
 
 // ========== 模型移动/复制 ==========
@@ -144,6 +144,19 @@ func RenameFile(oldPath, newName string) error {
 // renameForMove 可注入的 rename 实现（测试用：替换为返回 EXDEV 以强制触发
 // 跨设备 copy+delete fallback；生产走 os.Rename）
 var renameForMove = os.Rename
+
+// checkNotSelfNested 拒绝目录自嵌套移动/复制（dstDir 位于 src 子树内时拒绝，含等值情形）。
+func checkNotSelfNested(src, dstDir string) error {
+	if absSrc, err := filepath.Abs(src); err == nil {
+		if absDstDir, err := filepath.Abs(dstDir); err == nil {
+			if relToSrc, err := filepath.Rel(absSrc, absDstDir); err == nil &&
+				!strings.HasPrefix(relToSrc, ".."+string(filepath.Separator)) && relToSrc != ".." {
+				return fmt.Errorf("目标目录不能位于源目录内: %s", dstDir)
+			}
+		}
+	}
+	return nil
+}
 
 // MoveModelFile 移动 src 到 dstDir（保留原名）
 // root 用于路径安全校验（空则跳过校验，对齐 CopyModelFile 语义）；
@@ -214,13 +227,8 @@ func MoveModelFile(root, src, dstDir string) error {
 	// 自嵌套检查须在 MkdirAll 之前执行——被拒移动不得在 src 内
 	// 留下空 junk 目录（dstDir 位于 src 子树内时拒绝，
 	// 含 dstDir == src 等值情形：dst=Join(src,Base(src)) 仍是 src 严格子目录）。
-	if absSrc, err := filepath.Abs(src); err == nil {
-		if absDstDir, err := filepath.Abs(dstDir); err == nil {
-			if relToSrc, err := filepath.Rel(absSrc, absDstDir); err == nil &&
-				!strings.HasPrefix(relToSrc, ".."+string(filepath.Separator)) && relToSrc != ".." {
-				return fmt.Errorf("目标目录不能位于源目录内: %s", dstDir)
-			}
-		}
+	if err := checkNotSelfNested(src, dstDir); err != nil {
+		return err
 	}
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
 		return err
@@ -310,13 +318,8 @@ func CopyModelFile(root, src, dstDir string) error {
 	// 留下空 junk 目录（原实现 MkdirAll 先行，拒绝后 src 内残留空子目录污染后续复制）。
 	// dstDir 位于 src 子树内时拒绝（含等值 "."——此时 dst=Join(src,Base(src)) 仍是 src
 	// 严格子目录，WalkDir 自嵌套无限膨胀至 ENAMETOOLONG）
-	if absSrc, err := filepath.Abs(src); err == nil {
-		if absDstDir, err := filepath.Abs(dstDir); err == nil {
-			if relToSrc, err := filepath.Rel(absSrc, absDstDir); err == nil &&
-				!strings.HasPrefix(relToSrc, ".."+string(filepath.Separator)) && relToSrc != ".." {
-				return fmt.Errorf("目标目录不能位于源目录内: %s", dstDir)
-			}
-		}
+	if err := checkNotSelfNested(src, dstDir); err != nil {
+		return err
 	}
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
 		return err

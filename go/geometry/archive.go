@@ -34,13 +34,30 @@ const maxExtractSize = types.MaxReadLimit
 //
 // 导出单点（2026-08-26 审查收敛）：go/ysm 解压目录路径原有一份逐字节相同副本
 // （连本注释都各抄一份），跨包复制靠注释同步必漂移——统一引此处。
-func IsArmModelName(name string) bool {
+// modelBaseName 取模型文件基名（小写、去路径分隔符、去 .json），供 IsArmModelName /
+// IsMainModelName 统一复用——原两函数体逐字重复且各自抄同一段注释，跨点修改必漂移。
+func modelBaseName(name string) string {
 	base := strings.ToLower(name)
 	if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
 		base = base[idx+1:]
 	}
-	base = strings.TrimSuffix(base, ".json")
-	return base == "arm" || base == "arm.geo"
+	return strings.TrimSuffix(base, ".json")
+}
+
+// baseName 去路径分隔符（/ 与 \ 兼容）取文件基名，供纹理名归一化复用（collectPngEntries /
+// collectMergedFiles 原各抄一份逐字相同的剥离块）。
+func baseName(name string) string {
+	if idx := strings.LastIndex(name, "/"); idx >= 0 {
+		name = name[idx+1:]
+	}
+	if idx := strings.LastIndex(name, "\\"); idx >= 0 {
+		name = name[idx+1:]
+	}
+	return name
+}
+
+func IsArmModelName(name string) bool {
+	return modelBaseName(name) == "arm" || modelBaseName(name) == "arm.geo"
 }
 
 // filterArmModels 移除模型顺序表中的第一人称手臂模型占位。
@@ -501,13 +518,7 @@ func collectPngEntries(entries []container.Entry, maidNs string) ([][]byte, []st
 		if len(pngData) == 0 {
 			continue
 		}
-		name := e.Name()
-		if idx := strings.LastIndex(name, "/"); idx >= 0 {
-			name = name[idx+1:]
-		}
-		if idx := strings.LastIndex(name, "\\"); idx >= 0 {
-			name = name[idx+1:]
-		}
+		name := baseName(e.Name())
 		name = trimTexExt(name)
 		pngNames = append(pngNames, name)
 		pngs = append(pngs, pngData)
@@ -931,13 +942,7 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 			// 与 .ysm 解压路径口径对齐：不按尺寸过滤小纹理（64×64 合法贴图可 <4KB），
 			// 头像/预览图仅由 avatar/ 路径与基名前缀排除
 			if len(pngData) > 0 {
-				name := e.Name()
-				if idx := strings.LastIndex(name, "/"); idx >= 0 {
-					name = name[idx+1:]
-				}
-				if idx := strings.LastIndex(name, "\\"); idx >= 0 {
-					name = name[idx+1:]
-				}
+				name := baseName(e.Name())
 				pngNames = append(pngNames, trimTexExt(name))
 				pngs = append(pngs, pngData)
 			}
@@ -983,22 +988,17 @@ func sortByTexOrder(texOrder []string, pngs [][]byte, pngNames []string) map[str
 	for i, n := range texOrder {
 		orderMap[trimTexExt(n)] = i
 	}
-	sort.SliceStable(pngs, func(i, j int) bool {
+	// 两切片比较器同口径（键均为 pngNames），提取共享闭包消除逐字重复。
+	less := func(i, j int) bool {
 		oi, hasI := orderMap[strings.ToLower(pngNames[i])]
 		oj, hasJ := orderMap[strings.ToLower(pngNames[j])]
 		if hasI && hasJ {
 			return oi < oj
 		}
 		return hasI
-	})
-	sort.SliceStable(pngNames, func(i, j int) bool {
-		oi, hasI := orderMap[strings.ToLower(pngNames[i])]
-		oj, hasJ := orderMap[strings.ToLower(pngNames[j])]
-		if hasI && hasJ {
-			return oi < oj
-		}
-		return hasI
-	})
+	}
+	sort.SliceStable(pngs, less)
+	sort.SliceStable(pngNames, less)
 	return orderMap
 }
 
@@ -1440,12 +1440,7 @@ func matchGeoEntryBySubPath(geoFiles []geoEntry, subPath string) (geoEntry, bool
 // IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。
 // 导出供 wasm 多组件路径（decodeYSMComponentsViaNodeJS）与 zip 路径统一 main 判定口径。
 func IsMainModelName(name string) bool {
-	base := strings.ToLower(name)
-	if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
-		base = base[idx+1:]
-	}
-	base = strings.TrimSuffix(base, ".json")
-	return base == "main" || base == "main.geo"
+	return modelBaseName(name) == "main" || modelBaseName(name) == "main.geo"
 }
 
 // ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件，

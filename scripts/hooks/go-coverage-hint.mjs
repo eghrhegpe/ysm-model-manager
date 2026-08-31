@@ -14,7 +14,7 @@
  *   - 只终端(stderr)输出，不写 commit body（与前端 coverage 提示同口径）。
  *   - 逃生阀：YSM_SKIP_GO_COVERAGE_HINT=1 git commit
  *
- * 依赖：node:path / node:os / node:url / 本地模块 getRoot / _lib/proc.mjs
+ * 依赖：node:path / node:os / node:url / 本地模块 getRoot / _lib/proc.ts
  */
 import fs from 'node:fs';
 import os from 'node:os';

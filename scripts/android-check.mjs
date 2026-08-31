@@ -3,7 +3,7 @@
  * Android Java 语法/API 编译检测（gradle :app:compileDebugJavaWithJavac）。
  * 改 build/android 下的 Java 后跑它做语法+类型+API 可用性验证，无需连接设备。
  * 依赖：Android SDK（ANDROID_HOME）+ JDK（gradle wrapper 自带下载）。
- * 子进程统一走 _lib/proc.mjs run()（数组参数，无 shell 拼接，ADR-043）。
+ * 子进程统一走 _lib/proc.ts run()（数组参数，无 shell 拼接，ADR-043）。
  * 用法：
  *   node scripts/android-check.mjs          # 编译检测
  *   node scripts/android-check.mjs --full   # 完整 assembleDebug（含 dex/打包/签名）

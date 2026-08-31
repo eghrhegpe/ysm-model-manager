@@ -55,7 +55,7 @@ const PULL_HINT = '提示: git 报 rejected/non-fast-forward 时先 git pull 整
 
 function sh(cmd, { cwd = ROOT, timeout = TIMEOUT } = {}) {
   /** shell 执行命令（win32 兼容 .cmd），返回 { rc, out }。
-   * 统一委托 _lib/proc.mjs（超时/错误分类契约；shell:true 时 win32 走 cmd.exe、
+   * 统一委托 _lib/proc.ts（超时/错误分类契约；shell:true 时 win32 走 cmd.exe、
    * POSIX 走 /bin/sh，承载管道/重定向命令）。
    * out 回退 err：ENOENT/超时诊断在 r.err，空 out 时保留原因（P3 复核）。 */
   const r = procRun(cmd, [], { cwd, timeout, shell: true });

@@ -3,7 +3,7 @@
  * 一键编译并安装 Android 调试版到已连接设备（gradle installDebug + 自动拉起应用）。
  * 解决「打指令装安卓版折腾」：仓库根一条口令 → 设备检查 → installDebug → am start。
  * 依赖：Android SDK（ANDROID_HOME，platform-tools/adb）+ JDK（gradle wrapper 自带下载）。
- * 子进程统一走 _lib/proc.mjs run()（数组参数，无 shell 拼接，ADR-043）。
+ * 子进程统一走 _lib/proc.ts run()（数组参数，无 shell 拼接，ADR-043）。
  * 用法：
  *   node scripts/android-install.mjs            # 编译安装 + 自动拉起应用
  *   node scripts/android-install.mjs --no-launch # 只安装，不拉起

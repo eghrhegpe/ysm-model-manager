@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from '../_lib/parse-args.mjs';
+import { parseArgs } from '../_lib/parse-args.ts';
 
 const require = createRequire(import.meta.url);
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));

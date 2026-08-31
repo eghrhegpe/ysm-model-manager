@@ -19,7 +19,7 @@
  *
  * 不依赖任何外部 fixture（wine_fox 等），纯合成 corpus → 无幽灵路径、可移植。
  *
- * 依赖：node:fs / node:os / node:url / node:module / node:path / _lib/proc.mjs（零外部依赖）
+ * 依赖：node:fs / node:os / node:url / node:module / node:path / _lib/proc.ts（零外部依赖）
  *
  * 退出码：0 = 全绿（端口对齐无分歧）；1 = 有分歧。
  *

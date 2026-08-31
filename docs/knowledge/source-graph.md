@@ -24,7 +24,7 @@ use_when:
 ## 位置
 
 - 共享层：`scripts/_lib/source-graph.ts`（338 行）
-- 依赖：`_lib/to-posix.mjs`（Windows 路径归一）+ `_lib/scan-files.ts` 的 `walk`
+- 依赖：`_lib/to-posix.ts`（Windows 路径归一）+ `_lib/scan-files.ts` 的 `walk`
 
 ## 背景
 
@@ -96,7 +96,7 @@ use_when:
 ## 与其他子系统关系
 
 - `scripts/_lib/scan-files.ts` 的 `walk`：source-graph 借用它做源码文件收集（`.ts/.tsx/.js/.jsx` 扩展名），但符号提取本身不依赖 walk。
-- `scripts/_lib/to-posix.mjs`：Windows 路径归一（`C:\foo` → `C:/foo`），symbol 提取结果里路径统一正斜杠。
+- `scripts/_lib/to-posix.ts`：Windows 路径归一（`C:\foo` → `C:/foo`），symbol 提取结果里路径统一正斜杠。
 - `scripts/check-lib-adoption.mjs`：采用率闸门——检测「手搓了某模块能覆盖的能力却未 import」。source-graph 的 `getExportedSymbolsAny` / `topDeclsAny` 在其 RULES 表里已有 `advice` 条目（见 check-lib-adoption.mjs L63）。
 - `docs/adr/ADR-141-large-script-split-baseline.md`：2026-08-31 审计实证 source-graph 与 auto-import.extractExports 在 re-export 处理上存在 15 文件差异，结论「不复用」——这是**差异化设计不是复制**（source-graph 把转发符号也算本文件导出，auto-import 故意排除转发名）。
 - `tests/test_scripts_lib.mjs`：契约测试，当前覆盖 scan-files / ripgrep / to-posix / parseRgLine，**尚未覆盖 source-graph**——这是待补缺口。

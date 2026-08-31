@@ -6,7 +6,7 @@
  * assembleDebug，产出全新 APK。
  * 依赖：Android SDK（ANDROID_HOME/ANDROID_SDK_ROOT，含 NDK）+ Go（cgo 交叉编译）
  *       + JDK 17+（gradle wrapper 自带下载）。
- * 子进程统一走 _lib/proc.mjs run()（数组参数，无 shell 拼接，ADR-043）。
+ * 子进程统一走 _lib/proc.ts run()（数组参数，无 shell 拼接，ADR-043）。
  * 用法：
  *   node scripts/android-build.mjs                  # 前端 + arm64 Go + gradle，debug 版
  *   node scripts/android-build.mjs --arch amd64     # 只编 x86_64（模拟器）

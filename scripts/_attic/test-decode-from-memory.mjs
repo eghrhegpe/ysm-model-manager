@@ -21,7 +21,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "fs";
 import { join, dirname } from "path";
 import { tmpdir } from "os";
 import { execSync } from "child_process";
-import { parseArgs } from "../_lib/parse-args.mjs";
+import { parseArgs } from "../_lib/parse-args.ts";
 
 const ROOT = process.cwd();
 const WASM_PATH = join(ROOT, "frontend/public/wasm/YSMParser.wasm");

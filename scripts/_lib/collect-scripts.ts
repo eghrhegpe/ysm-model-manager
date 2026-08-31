@@ -44,7 +44,12 @@ export function collectScripts(opts: { skipHooks?: boolean; dir?: string } = {})
         // _ 前缀共享层（_lib 等）不纳入；hooks 按选项取舍（语义差异见文件头）
         if (entry.name.startsWith('_') || (skipHooks && entry.name === 'hooks')) continue;
         visit(abs);
-      } else if (entry.name.endsWith('.mjs') && !entry.name.startsWith('_') && !entry.name.endsWith('.test.mjs')) {
+      } else if (
+        // 2026-09 顶层 .mjs→.ts 迁移过渡期：双兼容收集；迁移完成后收窄为仅 .ts
+        (entry.name.endsWith('.mjs') || entry.name.endsWith('.ts')) &&
+        !entry.name.startsWith('_') &&
+        !/\.test\.(mjs|ts)$/.test(entry.name)
+      ) {
         out.push(path.relative(dir, abs).replace(/\\/g, '/'));
       }
     }

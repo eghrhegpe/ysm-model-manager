@@ -12,7 +12,7 @@
  *      `process.exit(violations.length ? 1 : 0)` 升级为硬闸，与 check-boolean-naming 等对齐。
  *      升级触发条件（R15 P3 #1 时间锚点）：① 观察期 ≥30 天无回归（2026-08-29 起）；
  *      ② 或 `docs/.doc-next-steps.md` 已标记为 debt；③ 或 check-boolean-naming 等同类闸门先升级。
- * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.ts / scripts/_lib/proc.mjs（零外部依赖）
+ * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.ts / scripts/_lib/proc.ts（零外部依赖）
  *
  * 用法：node scripts/check-toast-duration.mjs
  *

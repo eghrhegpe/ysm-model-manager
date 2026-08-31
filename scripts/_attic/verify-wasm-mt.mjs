@@ -3,7 +3,7 @@
  * verify-wasm-mt.mjs — ADR-079 M3/M4 验证脚本：pthread 多线程 WASM 在 Worker 全局下实例化 + 解码。
  * 模拟 Web Worker 全局（无 window，globalThis 注入）——与 ysm-worker-loader 同构路径。
  *
- * 依赖：node:fs / node:module / _lib/parse-args.mjs + 前端 mt 产物（frontend/src/wasm/ysm-*-mt.js）
+ * 依赖：node:fs / node:module / _lib/parse-args.ts + 前端 mt 产物（frontend/src/wasm/ysm-*-mt.js）
  *
  * 用法：
  *   node scripts/verify-wasm-mt.mjs                 # 无参数（提示用法）
@@ -25,7 +25,7 @@
 // 运行：node scripts/verify-wasm-mt.mjs
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { parseArgs } from "../_lib/parse-args.mjs";
+import { parseArgs } from "../_lib/parse-args.ts";
 const require = createRequire(import.meta.url);
 
 const args = parseArgs(process.argv.slice(2));

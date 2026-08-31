@@ -110,7 +110,7 @@ function checkSharedLayer(text) {
 // ── 检查 3：--json 契约 ────────────────────────────────
 
 const CHECK_TOOL_RE =
-  /^(check-|adr-check|binding-check|event-audit|comment-checker|link-checker|type-consistency|review|doctor|pre-push-gate)|-check\.mjs$/;
+  /^(check-|adr-check|binding-check|event-audit|comment-checker|link-checker|type-consistency|review|doctor|pre-push-gate)|-check\.(mjs|ts)$/;
 
 function checkJsonContract(file, text) {
   if (!CHECK_TOOL_RE.test(file)) return [];
@@ -137,8 +137,8 @@ function checkHeader(file, text) {
   const head = extractHeader(text);
   if (!head) return [`[文件头] ${file} 缺少 JSDoc 文件头`];
   const issues = [];
-  if (!/\.mjs\s*[—-]/.test(head)) {
-    issues.push(`[文件头] ${file} 缺「文件名 + 描述」(格式: * <name>.mjs — <描述>)`);
+  if (!/\.(mjs|ts)\s*[—-]/.test(head)) {
+    issues.push(`[文件头] ${file} 缺「文件名 + 描述」(格式: * <name>.mjs|.ts — <描述>)`);
   }
   if (!/(零依赖|依赖[:：])/.test(head)) {
     issues.push(`[文件头] ${file} 缺「依赖声明」(零依赖 或 外部依赖)`);
@@ -164,7 +164,7 @@ const HANDWRITTEN_POSITIONAL_RE =
 // 仅匹配真实 import 语句（行首锚定 + `import {…} from`），避免误把建议文案里的
 // 字符串 `...from './_lib/parse-args.ts'`（如 check-lib-adoption.mjs 的 advice 字段）
 // 当成脚本真的 import 了 parseArgs 而误报「未消费 unknown」（2026-08-31 审计修复）。
-const PARSEARGS_IMPORT_RE = /^[ \t]*import\s+\{[^}]*\}\s+from\s+['"]\.\/_lib\/parse-args\.mjs['"];?/m;
+const PARSEARGS_IMPORT_RE = /^[ \t]*import\s+\{[^}]*\}\s+from\s+['"]\.\/_lib\/parse-args\.(mjs|ts)['"];?/m;
 
 function checkArgvContract(text) {
   const usesParseArgs = PARSEARGS_IMPORT_RE.test(text);

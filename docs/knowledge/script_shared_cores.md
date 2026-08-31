@@ -45,7 +45,7 @@ use_when:
 
 ## 与其他子系统关系
 
-- 依赖 `_lib/scan-files.ts`（ROOT）+ `_lib/proc.mjs`（run）。
+- 依赖 `_lib/scan-files.ts`（ROOT）+ `_lib/proc.ts`（run）。
 - `check-circular-go.mjs` 的目录遍历（`collectGo` 自定义 walk go/+internal/+根级不递归）不抽核——目录结构特殊，非共享样板。
 - `port-align.mjs` / `line-counter.mjs` 仅共享 proc/scan-files 基建，无重复逻辑，不属本卡范围。
 

@@ -7,7 +7,7 @@
  * 再判定绝对 / 相对，统一交给 fs 操作。
  *
  * 这是「全平台前置解析」的最后一块拼图：frontmatter 解析在 _lib/frontmatter.ts，
- * 路径分隔符在 _lib/to-posix.mjs，Git 传递路径归一在此。
+ * 路径分隔符在 _lib/to-posix.ts，Git 传递路径归一在此。
  *
  * 用法：
  *   import { normalizeGitPath } from './_lib/posix-gitpath.ts';

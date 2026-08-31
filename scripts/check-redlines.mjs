@@ -15,7 +15,7 @@ import { parseRgLine } from './_lib/rg-line.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.mjs';
 
 // 文件行缓存（性能审计 2026-09）：hasContext/inBlockComment 每次调用都整读文件，
 // W7 对每条命中读 3 次、同一文件被读 10+ 遍——按归一化绝对路径缓存 lines 一次性复用。
@@ -415,7 +415,7 @@ function resolveChangedSet() {
   const idx = process.argv.indexOf('--files');
   if (idx === -1) return null;
   const raw = process.argv[idx + 1] || '';
-  const files = raw.split('\n').map((f) => f.replace(/\\/g, '/')).filter(Boolean);
+  const files = raw.split('\n').map((f) => toPosix(f)).filter(Boolean);
   return files.length ? new Set(files) : null;
 }
 
@@ -425,7 +425,7 @@ function collectViolationKeys(results) {
   for (const r of results) {
     for (const v of r.violations) {
       // toPosix 归一化跨平台路径（Windows 反斜杠 → 正斜杠）
-      const f = String(v.file).replace(/\\/g, '/');
+      const f = toPosix(String(v.file));
       // 行号不敏感比对（2026-08-12 治理）：键用「文件 + 规则 + 行内容」而非 file:line——
       // 加首行注释/格式化等行号漂移不再产生假新增（曾因 58 个测试文件加
       // // @vitest-environment node 触发 91 条存量违规"假新增"阻断推送）；

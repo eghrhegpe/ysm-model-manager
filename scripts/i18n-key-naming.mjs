@@ -28,6 +28,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { toPosix } from './_lib/to-posix.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -369,7 +370,7 @@ function checkCI() {
 
     // 尝试从 git HEAD 读旧版本（git show 输出直接走纯文本提取，不落临时文件——
     // 只读环境/并行下安全，且省一次写删 IO）
-    const gitPath = relPath.replace(/\\/g, '/');
+    const gitPath = toPosix(relPath);
     const headResult = spawnSync('git', ['show', `HEAD:${gitPath}`], { encoding: 'utf-8' });
     let headKeys = new Set();
     if (headResult.status === 0) {

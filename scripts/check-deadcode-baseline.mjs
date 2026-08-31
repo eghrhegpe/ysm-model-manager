@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.mjs';
 import { splitNewFindings, canWriteBaseline } from './_lib/deadcode-attrib.mjs';
 
 const FRONTEND = path.join(ROOT, 'frontend');
@@ -124,8 +124,8 @@ function parseJscpd() {
     return clones.map((c) => {
       // jscpd 在 Windows 输出反斜杠路径（如 views\a.ts），基线为正斜杠——
       // 统一 toPosix 归一化，否则跨平台比对全部误判「新增」（code_review P3）
-      const f1 = (c.firstFile?.name || '?').replace(/\\/g, '/');
-      const f2 = (c.secondFile?.name || '?').replace(/\\/g, '/');
+      const f1 = toPosix(c.firstFile?.name || '?');
+      const f2 = toPosix(c.secondFile?.name || '?');
       // key 用文件对级（去行号）：克隆位置随代码微移漂移时，不产生新 key 误报新增
       return `${f1}#${f2}`;
     });
@@ -150,7 +150,7 @@ function resolveResponsibleFiles() {
   };
   const collect = (out) => {
     if (out === null || !out.trim()) return [];
-    return out.trim().split('\n').filter(Boolean).map((p) => p.replace(/\\/g, '/'));
+    return out.trim().split('\n').filter(Boolean).map((p) => toPosix(p));
   };
   const files = new Set([
     ...collect(git('diff', '--cached', '--name-only')),

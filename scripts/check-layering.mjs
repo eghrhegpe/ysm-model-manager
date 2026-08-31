@@ -29,7 +29,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from './_lib/parse-args.mjs';
-import { walk } from './_lib/scan-files.mjs';
+import { walk, toPosix } from './_lib/scan-files.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -70,7 +70,7 @@ function resolveTarget(spec, fromSrcRel) {
   if (spec.startsWith('@/')) return spec.slice(2);
   if (spec.startsWith('.')) {
     const abs = resolve(dirname(resolve(SRC_ROOT, fromSrcRel)), spec);
-    const rel = relative(SRC_ROOT, abs).replace(/\\/g, '/');
+    const rel = toPosix(relative(SRC_ROOT, abs));
     return rel.startsWith('..') ? null : rel;
   }
   return null; // 裸包名（@wailsio 等）不参与分层判定
@@ -132,7 +132,7 @@ function main() {
   const violations = [];
 
   for (const abs of walk(SRC_ROOT, SCAN_OPTS)) {
-    const srcRel = relative(SRC_ROOT, abs).replace(/\\/g, '/');
+    const srcRel = toPosix(relative(SRC_ROOT, abs));
     const fromLayer = layerOf(srcRel);
     if (!fromLayer || fromLayer === 'views') continue; // views 是顶层，向下依赖合法
 

@@ -39,6 +39,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { walk } from './_lib/scan-files.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -65,16 +66,7 @@ if (process.env.YSM_SKIP_CSS_LAYER === "1") {
 const CSS_MARKER = /export const [A-Za-z]+CSS|:host\b|adoptedStyleSheets/;
 
 function walkDir(dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...walkDir(full));
-    } else if (entry.isFile() && entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts")) {
-      out.push(full);
-    }
-  }
-  return out;
+  return walk(dir, { exts: [".ts"], skipDir: () => false, skipFile: (n) => n.endsWith(".test.ts") });
 }
 
 function discoverShadowDomains() {

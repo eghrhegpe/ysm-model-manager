@@ -20,6 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot, relPosix, readText, walk } from './_lib/scan-files.mjs';
+import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
 
 const ROOT = getRoot();
 
@@ -39,100 +40,6 @@ function walkExt(dir, exts, out = []) {
     else if (exts.some((e) => d.name.endsWith(e)) && !d.name.endsWith('_test.go')) out.push(p);
   }
   return out;
-}
-
-// ── 导出符号提取 ──
-
-/** JS/TS：提取全部导出符号（export 声明 + export {} 聚合）。 */
-function getJsExportedSymbols(text) {
-  // 先剥离字符串/模板字面量（其内嵌 /* 不参与注释匹配），再剥离块/行注释，
-  // 避免字符串内 `/*` 无闭合时非贪婪块注释吞掉中间的真实 export（code_review P3）
-  const stripped = text
-    .replace(/"(?:\\.|[^"\\])*"/g, '""')
-    .replace(/'(?:\\.|[^'\\])*'/g, "''")
-    .replace(/`(?:\\.|[^`\\])*`/g, '``')
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/\/\/.*$/gm, ' ');
-  const syms = [];
-  const seen = new Set();
-  const push = (s) => {
-    if (s && !seen.has(s)) {
-      seen.add(s);
-      syms.push(s);
-    }
-  };
-  let m;
-
-  // export { a, b as c, type D } 块（可多行）
-  const reBlock = /export\s*(?:type\s+)?\{\s*([\s\S]*?)\}/g;
-  while ((m = reBlock.exec(stripped))) {
-    m[1]
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .forEach((s) => {
-        const cleaned = s.replace(/^(?:type|interface|class|const|let|var|function|enum)\s+/, '').trim();
-        const asMatch = cleaned.match(/^(.+?)\s+as\s+(.+)$/);
-        push(asMatch ? asMatch[2].trim() : cleaned);
-      });
-  }
-
-  // export default function/class/const/... Name
-  const reDefaultDecl = /export\s+default\s+(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
-  while ((m = reDefaultDecl.exec(stripped))) push(m[1]);
-
-  // export function/const/... Name
-  const reDecl = /export\s+(?:async\s+)?(?:function|const|let|var|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
-  while ((m = reDecl.exec(stripped))) push(m[1]);
-
-  // export default <Identifier>（排除关键字）
-  const reDefaultId = /export\s+default\s+(?!(?:function|class|const|let|var|interface|type|enum)\b)([A-Za-z_$][\w$]*)/g;
-  while ((m = reDefaultId.exec(stripped))) push(m[1]);
-
-  return syms;
-}
-
-/** Go：提取全部导出符号（首字母大写）。方法记为 Type.Method。 */
-function getGoExportedSymbols(text) {
-  // 先剥离注释，降低误匹配
-  const stripped = text
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/\/\/.*$/gm, ' ');
-  const syms = [];
-  const seen = new Set();
-  const push = (s) => {
-    if (s && !seen.has(s)) {
-      seen.add(s);
-      syms.push(s);
-    }
-  };
-  let m;
-
-  const reFn = /^func\s+(?:\(([^)]*)\)\s+)?([A-Za-z_$][\w$]*)\s*\(/gm;
-  while ((m = reFn.exec(stripped))) {
-    const recv = m[1];
-    const name = m[2];
-    if (!/^[A-Z]/.test(name)) continue; // 仅导出符号
-    if (recv) {
-      // receiver 类型取最后一个标识符：`(e AppError)` → AppError、`(d *Downloader)` → Downloader。
-      // 旧实现取第一个标识符，value receiver 会拿到变量名 e → 符号 e.Error 且 findLine 收窄后失配。
-      const tm = recv.match(/([A-Za-z_][\w]*)\s*$/);
-      const t = tm ? tm[1] : '';
-      push(`${t}.${name}`);
-    } else {
-      push(name);
-    }
-  }
-
-  const reType = /^type\s+([A-Z][\w$]*)\s+/gm; // 仅导出类型（首字母大写），与 reFn 的导出过滤一致
-  while ((m = reType.exec(stripped))) push(m[1]);
-
-  return syms;
-}
-
-function getExportedSymbols(filePath, lang) {
-  const text = readText(filePath);
-  return lang === 'go' ? getGoExportedSymbols(text) : getJsExportedSymbols(text);
 }
 
 // ── 定义行定位 + 说明提取 ──
@@ -157,7 +64,7 @@ function locateSym(lines, sym, lang) {
     // 方法符号 Type.Method：用 receiver 类型收窄匹配，避免同文件不同 type 的同名方法行号指错
     const recvType = dot >= 0 ? sym.slice(0, dot) : '';
     const recvPat = recvType ? `\\([^)]*\\*?${escapeRe(recvType)}\\)\\s+` : '(?:\\([^)]*\\)\\s+)?';
-    const re = new RegExp(`^(?:func\\s+${recvPat}|type\\s+)${escapeRe(methodName)}\\b`);
+    const re = new RegExp(`^(?:func\\s+${recvPat}|(?:func|type|const|var)\\s+)${escapeRe(methodName)}\\b`);
     for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) { defIdx = i; break; }
     if (defIdx <= 0) return { line: defIdx < 0 ? null : 1, doc: '' };
     const docs = [];
@@ -358,7 +265,7 @@ function main() {
   // 1. 前端（frontend/src，复用 scan-files.walk 跳过 css/node_modules/隐藏/测试）
   const feFiles = walk(undefined, { skipTest: true });
   for (const f of feFiles) {
-    const syms = getExportedSymbols(f, 'js');
+    const syms = getExportedSymbolsAny(f);
     if (!syms.length) continue;
     const rel = relPosix(f);
     const key = moduleOf(rel);
@@ -375,7 +282,7 @@ function main() {
       .filter((p) => fs.existsSync(p)),
   ];
   for (const f of goFiles) {
-    const syms = getExportedSymbols(f, 'go');
+    const syms = getExportedSymbolsAny(f);
     if (!syms.length) continue;
     const rel = relPosix(f);
     const key = moduleOf(rel);

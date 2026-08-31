@@ -37,6 +37,13 @@ export interface Stats {
     "animations": number;
     "texWidth": number;
     "texHeight": number;
+
+    /**
+     * Truncated 标记 scanZipBasicStats 达到 maxScanZipEntries 封顶，
+     * 返回的 Stats 不完整。调用方应据此向用户披露「统计可能不全」。
+     * R29 code_review P3-2：旧实现静默截断，调用方无法区分完整 vs 截断。
+     */
+    "truncated"?: boolean;
 }
 
 /**

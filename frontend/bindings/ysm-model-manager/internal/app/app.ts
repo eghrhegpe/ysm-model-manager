@@ -111,6 +111,9 @@ export function CheckUpdate(): $CancellablePromise<updater$0.UpdateInfo | null> 
     return $Call.ByID(651964520);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function ClearCustomDir(customDir: string): $CancellablePromise<number> {
     return $Call.ByID(2697468754, customDir);
 }
@@ -144,6 +147,7 @@ export function ClearScanCache(): $CancellablePromise<void> {
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * ClearTextureCache 清空纹理缓存（用户主动清理用）。
  */
 export function ClearTextureCache(): $CancellablePromise<void> {
@@ -162,6 +166,7 @@ export function CopyModelFile(src: string, dstDir: string): $CancellablePromise<
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * CountDuplicateFiles 快速统计重复文件数量。
  * 契约（见 docs/wails-bindings.md）：成功 → {groups, extra}；失败 → {error: string}。
  */
@@ -197,6 +202,7 @@ export function DebugExtractCreatorAvatar(authorName: string): $CancellablePromi
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle）
  */
 export function DeduplicateCustomDir(customDir: string): $CancellablePromise<[number, number]> {
@@ -310,6 +316,7 @@ export function ExportWorkshopCreatorsJSONFile(): $CancellablePromise<string> {
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * ========== CSV 导出/导入 ==========
  */
 export function ExportWorkshopSitesCSV(): $CancellablePromise<string> {
@@ -347,6 +354,8 @@ export function FindDuplicateFiles(dir: string, ...configStr: string[]): $Cancel
 
 /**
  * ========== 预览提取 ==========
+ * 路径守卫：与 ReadFileBytes 同口径（isPathInRootOrSelf）——「能读的文件就能预览」
+ * 对称范式；否则任意 modelPath 可返回根外文件的预览图 data URI（信息泄露面）。
  */
 export function FindPreviewImage(modelPath: string): $CancellablePromise<string> {
     return $Call.ByID(528549045, modelPath);
@@ -420,6 +429,9 @@ export function GetDefaultRepoRoot(): $CancellablePromise<string> {
     return $Call.ByID(2892280306);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function GetGlobalCustomDir(mcRoot: string): $CancellablePromise<string> {
     return $Call.ByID(4119708496, mcRoot);
 }
@@ -475,6 +487,7 @@ export function GetModelTags(modelPath: string): $CancellablePromise<string[] | 
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型）
  */
 export function GetModelTexSizes(filesRoot: string): $CancellablePromise<ysm$0.TexInfo[] | null> {
@@ -559,6 +572,7 @@ export function GetVoxelDataInContainer(path: string, entry: string, ext: string
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。
  * wasmBinary 由根包 main 的 init() 经 SetEmbedded 注入。
  */
@@ -587,6 +601,9 @@ export function HasCachedTexture(hash: string): $CancellablePromise<boolean> {
 /**
  * HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。
  * 一次 RPC 返回所有检查结果，map[hash] → 是否存在。
+ * 检查出错（IO/权限等，非「未命中」）时：记录日志 + 该 hash 置 false（视为未命中，
+ * 前端安全回退 PNG 解码），不让错误静默丢失（Go AGENTS「错误不要丢」）。
+ * 修复前 err 时静默跳过该 hash，前端读缺失 key 当「未缓存」，错误完全无留痕。
  */
 export function HasCachedTextures(hashes: string[] | null): $CancellablePromise<{ [_ in string]?: boolean } | null> {
     return $Call.ByID(2757635171, hashes);
@@ -594,6 +611,9 @@ export function HasCachedTextures(hashes: string[] | null): $CancellablePromise<
 
 /**
  * ========== YSM 检测 ==========
+ * HasYSMMod 检测实例 mods 目录是否包含 YSM 模组（整合包卡片 mod 徽标用）。
+ * 注意（R23 P4-1）："ysm" 子串匹配刻意宽松（覆盖 Yes_Steve_Model/ysm 官方 jar 变体），
+ * mods 目录语境下误判面小；若未来引入非 YSM 但含 ysm 子串的 mod，需收紧为段匹配。
  */
 export function HasYSMMod(modsDir: string): $CancellablePromise<boolean> {
     return $Call.ByID(1327539980, modsDir);
@@ -628,30 +648,44 @@ export function ImportModelFile(fileName: string, base64Data: string): $Cancella
     return $Call.ByID(2135926573, fileName, base64Data);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function ImportModelFileOverwrite(fileName: string, base64Data: string): $CancellablePromise<void> {
     return $Call.ByID(2920266218, fileName, base64Data);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function ImportModelFileOverwriteTo(fileName: string, subpath: string, base64Data: string): $CancellablePromise<void> {
     return $Call.ByID(3849603631, fileName, subpath, base64Data);
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。
  */
 export function ImportModelFileOverwriteToMMD(fileName: string, subpath: string, mmdSubdir: string, base64Data: string): $CancellablePromise<void> {
     return $Call.ByID(445496335, fileName, subpath, mmdSubdir, base64Data);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function ImportModelFileSkipCheck(fileName: string, base64Data: string): $CancellablePromise<void> {
     return $Call.ByID(334185050, fileName, base64Data);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function ImportModelFileTo(fileName: string, subpath: string, base64Data: string): $CancellablePromise<void> {
     return $Call.ByID(191674492, fileName, subpath, base64Data);
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。
  * mmdSubdir: MMD 用途子目录名（如 SceneModel/CustomAnim），对应 MMD 独立顶级类型。
  * subpath: 文件在子目录内的相对路径（文件夹导入时保留层级）。
@@ -686,12 +720,16 @@ export function ImportModelFolderTo(folderName: string, subpath: string, rtype: 
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * ImportResourcePack 使用策略模式导入资源包
  */
 export function ImportResourcePack(srcPath: string, rtype: string): $CancellablePromise<string> {
     return $Call.ByID(2578913479, srcPath, rtype);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function ImportWorkshopSitesCSV(csvContent: string): $CancellablePromise<void> {
     return $Call.ByID(1342547047, csvContent);
 }
@@ -707,6 +745,9 @@ export function InstallModelTo(src: string, customDir: string): $CancellableProm
     return $Call.ByID(547256422, src, customDir);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function InstallModelWithOverlay(src: string, customDir: string): $CancellablePromise<string> {
     return $Call.ByID(4168467473, src, customDir);
 }
@@ -731,6 +772,7 @@ export function IsFileBanned(path: string): $CancellablePromise<boolean> {
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * IsResourcePackEnabled 检查资源包是否启用
  */
 export function IsResourcePackEnabled(path: string): $CancellablePromise<boolean> {
@@ -832,11 +874,20 @@ export function MoveModelFile(src: string, dstDir: string): $CancellablePromise<
 
 /**
  * ========== 回收站 ==========
+ * R24 P3：recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批
+ * 文件（实例目录 Rename/Remove、.recycle 内 Move）→ 统一纳入 InstallLock 互斥
+ * （共享单锁闭环，与 ClearInstanceResources/DeduplicateCustomDir 同口径）。
+ * ⚠️ 这些绑定不得在已持 InstallLock 的路径内被调用（非重入锁，会自死锁）。
  */
 export function MoveToRecycle(src: string): $CancellablePromise<void> {
     return $Call.ByID(1383304780, src);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ * 注意（R23 P3-3）：与 MoveToRecycle 不对称——findRecycleRoot 失败时无 ysmRoot 兜底，
+ * 直接返回 error（保留旧绑定错误语义，避免静默降级到错误根目录）。
+ */
 export function MoveToRecycleEx(src: string): $CancellablePromise<[string, string]> {
     return $Call.ByID(2099759785, src);
 }
@@ -1008,6 +1059,7 @@ export function RelinkAllInstanceResources(instanceName: string): $CancellablePr
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * RelinkCustomDir 重新应用链接模式到指定目录（兼容旧版）
  */
 export function RelinkCustomDir(customDir: string, filesRoot: string): $CancellablePromise<number> {
@@ -1026,6 +1078,9 @@ export function RenameFile(oldPath: string, newName: string): $CancellablePromis
     return $Call.ByID(1176761595, oldPath, newName);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function ReplaceWorkshopCreatorsFromJSON(jsonContent: string): $CancellablePromise<number> {
     return $Call.ByID(1355854287, jsonContent);
 }
@@ -1097,6 +1152,9 @@ export function SaveCachedTexture(hash: string, b64Data: string): $CancellablePr
     return $Call.ByID(3781776119, hash, b64Data);
 }
 
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
+ */
 export function SavePreviewTempFile(base64Data: string): $CancellablePromise<string> {
     return $Call.ByID(3917626618, base64Data);
 }
@@ -1190,6 +1248,7 @@ export function ScanModelEntriesWithLabel(dir: string, label: string): $Cancella
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * SearchAllModels 跨类型搜索：遍历所有已配置资源类型的根目录，并发扫描 + 合并结果。
  * allRoots 为 rtype→root 映射（由 GetAllRepoRoots 提供）；每个搜索结果携带 Type 字段。
  * 关键词/数值过滤逻辑与 SearchModels 一致，但扫描范围覆盖全部类型。
@@ -1223,6 +1282,7 @@ export function SelectImportFile(filter: string, title: string): $CancellablePro
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * SelectImportZip 打开文件选择器选取 .zip 文件
  */
 export function SelectImportZip(): $CancellablePromise<string> {
@@ -1281,6 +1341,20 @@ export function SetResourceRoot(rtype: string, path: string): $CancellablePromis
 }
 
 /**
+ * SetSessionFilesRoot CLI 会话级覆写 FilesRoot（仅内存，不落盘）。
+ * 背景（审核 #4 CLI 写穿）：原 DispatchCommand 经 SaveAppConfig 初始化配置，
+ * CLI 的 --files-root 是一次性会话参数（临时目录/测试沙盒），落盘会永久改写
+ * 真实用户配置的仓库根（GUI 下次启动静默指向被污染路径）。改为仅覆写内存
+ * configCache：本次命令内 LoadAppConfig 可见，磁盘零副作用；其余配置字段
+ * （Mirror/LinkMode 等）仍从真实配置读取，GUI 配置以设置页 SaveAppConfig
+ * 为唯一写入口。
+ */
+export function SetSessionFilesRoot(filesRoot: string): $CancellablePromise<void> {
+    return $Call.ByID(3364509058, filesRoot);
+}
+
+/**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000
  */
 export function SetVoxelMaxBlocks(limit: number): $CancellablePromise<void> {
@@ -1325,6 +1399,7 @@ export function ToggleModelEnable(path: string): $CancellablePromise<boolean> {
 }
 
 /**
+ * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  * ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled）
  * 补路径守卫——原实现 os.Rename 对任意路径可重命名（对齐 ToggleModelEnable 经 fileops
  * 的 ysmRoot 防护；rename 目标派生自输入路径，越权路径会连带生成越权目标）。

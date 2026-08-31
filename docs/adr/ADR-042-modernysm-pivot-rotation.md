@@ -31,16 +31,16 @@
 
 游戏内每帧骨骼变换以 `NativeModelRenderer.calculateBoneMatrix`（`NativeModelRenderer.java:177-249`）为权威，抽象成 Go/前端共用口径表，逐条对照审计 `go/threejs` 与 `model3d.ts`：
 
-| 要点 | 游戏内实现 | 对照对象 | 审计结论（2026-08-09） |
+| 要点 | 游戏内实现 | 对照对象 | 审计结论 |
 |------|-----------|---------|------------------------|
 | **pivot 平移** | `translate((pivotX - animTx), (pivotY + animTy), (pivotZ + animTz)) × 0.0625`，**X 取负** | `spec.go:528` 等 12 处 localPosition | ✅ Go `localPos={pp.x-bp.x, bp.y-pp.y, bp.z-pp.z}` 已 X 翻转，口径一致（YSMViewer C# ConvertBones 同款） |
-| **旋转序** | `rotateZ → rotateY → rotateX`（Z→Y→X） | `eulerToQuaternion(-rx,-ry,+rz)`，ADR-041 | ✅ **已裁决并落地（2026-08-22）**：Go/TS `eulerToQuaternion` 从 `M = Rx*Ry*Rz`（ADR-041 YSMViewer 口径）改为 `M = Rz*Ry*Rx`（ZYX intrinsic，对齐 Blockbench `Format.euler_order='ZYX'` + Three.js `Euler(order='ZYX')`）。证据：Blockbench `io/format.ts:704` 默认 `euler_order='ZYX'`，Bedrock 格式未覆盖；wine_fox `Tail2.cube#0` `rotation=[-15,-57.25,-90]` 手算对照，旧口径顶点 `[-3.019,-0.183,0.684]` vs 新口径 `[-1.595,2.237,-1.439]`，Blockbench 活规范取后者。单轴旋转四元数不变（旧 `TestEulerToQuaternion90X` 断言仍 pass），三轴非零 cube 顶点修正——"主题正确、小部件错"根因消除。 |
-| **cube 变换链** | `parseCube` L659 `origin[0]*=-1` + L662 `from[0]=-(from[0]+size[0])`；`updateTransform` `mesh.position=cube.origin-parent.origin` | `buildCubeMeshData`/`applyInflate`/`resolveCubePivot`/`computeMeshLocalPos` | ✅ **已落地（2026-08-22）**：cube 从 Bedrock JSON 到渲染顶点补齐 3 层 Blockbench X 镜像/翻号——(1) cube origin X 镜像 `ox=-(ox+sx)`（`parseCube` L662）；(2) cube pivot X 翻号 `cp[0]=-cp[0]`（`parseCube` L659）；(3) mesh localPos[0] 符号 `bonePivot.x+cp[0]`（Blockbench `mesh.position=cube.origin-parent.origin`，`cp[0]` 已翻号=`-Pivot[0]`）。之前 0 层 → 顶点 X 跟 Blockbench 相反，三轴非零 cube 旋转后朝向错位。验证：`tests/port-verification/compare-cube-vertices.mjs` 逐顶点对拍 3 组 cube（Skirt 三轴 / UpBody 无旋转 / Tail2 三轴），diff=0.0000；视觉验收：裙子/小部件朝向计算精度大幅提升到正确水平。 |
-| **scale** | `scale==0 → 不可见`（三轴全零才隐藏），普通 scale 组合 | spec LocalRotation/Scale | ✅ **已落地（2026-08-24 核对）**：前端动画管线完整支持——`BoneChannels.scale`（animation.ts:52）→ `evaluateClip` 父子 scale 累积相乘（animation.ts:587-591）→ `ysm-animation-player.ts:121-129` 应用到 `THREE.Bone.scale`；`scale=0 → node.visible=false` 对齐上游 calculateBoneMatrix:213-215。`BoneData` 无需 Scale 字段（scale 是动画驱动，非静态属性） |
-| **隐藏联动** | **父不可见 → 子必不可见**（`NativeModelRenderer.java:186-189`） | `model3d.ts:801` setBoneVisible 需核对 | ✅ **已落地（2026-08-24 核对）**：`bone-visibility.ts:13` `setBoneVisible` 用 `g.traverse((c) => { c.visible = visible; })` 递归设置子骨骼 visible；`toggleBone` 同理。THREE.Object3D.traverse 天然实现「父隐子隐」 |
+| **旋转序** | `rotateZ → rotateY → rotateX`（Z→Y→X） | `eulerToQuaternion(-rx,-ry,+rz)`，ADR-041 | **采用 ZYX intrinsic 口径**：`eulerToQuaternion` 按 `M = Rz*Ry*Rx`（对齐 Blockbench `Format.euler_order='ZYX'` + Three.js `Euler(order='ZYX')`；单轴旋转四元数不变）。验证记录见 `tests/port-verification/` 与知识卡 go-threejs |
+| **cube 变换链** | `parseCube` L659 `origin[0]*=-1` + L662 `from[0]=-(from[0]+size[0])`；`updateTransform` `mesh.position=cube.origin-parent.origin` | `buildCubeMeshData`/`applyInflate`/`resolveCubePivot`/`computeMeshLocalPos` | **补 3 层 Blockbench X 镜像/翻号**：(1) cube origin X 镜像 `ox=-(ox+sx)`；(2) cube pivot X 翻号 `cp[0]=-cp[0]`；(3) mesh localPos[0] 符号 `bonePivot.x+cp[0]`。逐顶点对拍验证见 `tests/port-verification/compare-cube-vertices.mjs` |
+| **scale** | `scale==0 → 不可见`（三轴全零才隐藏），普通 scale 组合 | spec LocalRotation/Scale | **前端动画管线支持 scale 累积**：`BoneChannels.scale` → `evaluateClip` 父子累积 → `ysm-animation-player.ts` 应用；`scale=0 → node.visible=false` 对齐上游 calculateBoneMatrix:213-215 |
+| **隐藏联动** | **父不可见 → 子必不可见**（`NativeModelRenderer.java:186-189`） | `bone-visibility.ts` setBoneVisible | **父隐子隐由递归实现**：`setBoneVisible` 用 `g.traverse` 递归设置子骨骼 visible（`THREE.Object3D.traverse` 天然满足） |
 | **背面剔除** | cullable quad 做仿射投影 `det <= 0` 剔除（`det > 0 才画`） | 与 three.js 默认背面剔除口径核对 | ✅ 前端统一 `side: THREE.FrontSide`（model3d.ts:339/344）+ `alphaTest 0.1`，与 Java 正向剔除语义一致（y 轴向上约定下同向） |
-| **发光骨骼** | `bone.glow` → 全亮 `LightTexture.pack(15,15)` | model3d 需补 glow 通道 | ✅ **已落地（2026-08-24）**：Go 侧 `spec-bones.go isGlowBone` 检测 `ysmGlow` 前缀（大小写不敏感）+ `BoneData.Glow bool`；前端 `SpecBone3D.glow` → `ysm-object.ts glowByBoneId` 反查表 → `mesh-builder.ts addMeshToBoneGroup` 对 glow 骨骼用 `MeshStandardMaterial + emissive/emissiveIntensity/emissiveMap` 模拟上游全亮渲染。验证：`go test ./go/threejs/... -run TestBuildGlowBone` 3 测试 PASS；`vite build` + `tsc --noEmit` 通过；`tests/verify-adr-042.mjs` glow 5 项全 ✓ |
-| **世界坐标回填** | `unk3==1` 骨骼写回 stateBuffer（`m30/m31/m32 × 16`）供 molang 读绝对位置 | 移植 `bone_position_abs` 类函数依赖 | ⏭️ **无需实现（2026-08-24 核对）**：上游 unk3==1 时把 localMat.m30/m31/m32 写入 stateBuffer，是 GPU 渲染内部用（calculateBoneMatrix:234-242）。我们用 Three.js CPU 渲染，`THREE.Bone.getWorldPosition()` 可替代。molang 若需读绝对位置，调用 getWorldPosition 即可 |
+| **发光骨骼** | `bone.glow` → 全亮 `LightTexture.pack(15,15)` | spec glow 通道 | **glow 通道落地**：Go `spec-bones.go isGlowBone` 检测 `ysmGlow` 前缀 + `BoneData.Glow`；前端 `SpecBone3D.glow` → `mesh-builder.ts` 用 `MeshStandardMaterial + emissive/emissiveIntensity/emissiveMap` 模拟全亮渲染（回归测试 `tests/verify-adr-042.mjs`） |
+| **世界坐标回填** | `unk3==1` 骨骼写回 stateBuffer（`m30/m31/m32 × 16`）供 molang 读绝对位置 | 移植 `bone_position_abs` 类函数依赖 | **无需实现**：上游 unk3==1 写 stateBuffer 是 GPU 渲染内部用（calculateBoneMatrix:234-242）；Three.js CPU 渲染用 `THREE.Bone.getWorldPosition()` 替代 |
 
 ### 2.2 二进制直读 pivot/rotation —— 根治反推猜错（远期攻坚项）
 
@@ -48,13 +48,13 @@
 
 理由：游戏端（`YSMBinaryDeserializer.java:463-498` + `YSMClientMapper.java:452`）用的是原始保留值，从不反推，所以游戏内永远正确；反推猜错（复杂嵌套旋转 / 重合顶点崩溃，`ysm_baked.md:58`）是预览特有的已知限制，本项从根上消除。
 
-> **核对结论（2026-08-24）**：C++ 解析器 `upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp:862-876` 已从二进制**直读** bone 层原始 pivot/rotation（`bone.pivot.x/y/z = reader.readFloat()`，`bone.rotation.x/y/z = reader.readFloat()`，原始单位为弧度）。导出到 `minecraft:geometry` JSON 时（`:925-938`）已做符号修正——pivot X 取负（`-parsedBone.pivot.x`），rotation X/Y 取负并弧度转度（`(-rotation.x) * 180/PI`），Z 轴不取反。我们 `go/geometry/parse.go` 读 JSON 的 `bone.pivot` / `bone.rotation` 即为这些原始值，**bone 层二进制直读已落地**。
+> **已确认**：C++ 解析器（`YSMParserV3.cpp:862-876`）已从二进制直读 bone 层原始 pivot/rotation（原始单位为弧度），导出到 `minecraft:geometry` JSON 时做符号修正——pivot X 取负、rotation X/Y 取负并转度、Z 不取反；`go/geometry/parse.go` 读到的即为原始值。
 >
 > 尚未解决的是 **cube 层反推猜错**：C++ 解析器导出的 cube 是烘焙 quad（4 顶点 + 法线 + UV），不是 Blockbench 的 `origin/size` 格式，`restore_blockbench_cube` 从 quad 反推 `origin/size` 时复杂嵌套旋转会猜错。此问题属另一条链路，与本 §2.2 的 bone 层直读无关。
 
-> ~~可行性约束：WASM 导出的是反推后的 `minecraft:geometry` JSON，是否保留 bone 原始 pivot/rotation 需评估 YSMParser C++ 侧是否已保留（`upstream/YesSteveModel-Parser`）。若 C++ 侧未导出，需在解析层补充导出或在 Go 侧直接二次解析二进制字节流的 bone 段（`.000` 字节序）。本决策只锁定"优先原始值"的方向，具体取数落点排期验证。~~ → **已验证（2026-08-24）**：C++ 侧已保留并导出 bone 原始 pivot/rotation 到 geometry JSON，我们已在用。
+> ~~可行性约束：WASM 导出的是反推后的 `minecraft:geometry` JSON，是否保留 bone 原始 pivot/rotation 需评估 YSMParser C++ 侧是否已保留。若 C++ 侧未导出，需在解析层补充导出或在 Go 侧直接二次解析二进制字节流。~~ → **可行性已解除**：C++ 侧已保留并导出 bone 原始 pivot/rotation 到 geometry JSON。
 
-> 过渡性落地（2026-08-09 code_review P2）：在二进制直读上线前，Go 兜底侧（`go/geometry/parse.go` + `go/threejs/spec.go`）已把 cube pivot 的**缺席判定**从零值哨兵改为 `PivotSet` 标志（`*[3]float64` nil=缺席）——显式 `pivot:[0,0,0]`（绕模型原点旋转的铰接件）不再被误判为缺失、旋转中心不再漂移到 cube 中心。这与本 ADR「优先原始 pivot 值、不猜符号」的方向一致，属于反推链路上的口径修正（详见 `docs/knowledge/go-threejs.md` 不变量段、`docs/pitfalls.md` #17）。
+> 过渡性口径（code_review P2）：Go 兜底侧（`go/geometry/parse.go` + `go/threejs/spec.go`）以 `PivotSet` 标志（`*[3]float64` nil=缺席）判定 cube pivot 缺席——显式 `pivot:[0,0,0]`（绕模型原点旋转的铰接件）不再被误判为缺失、旋转中心不漂移。与本 ADR「优先原始 pivot 值、不猜符号」方向一致（详见知识卡 `go-threejs` 不变量段、`docs/pitfalls.md` #17）。
 
 ### 2.3 动画/molang 纯计算移植 —— 复活「动画静止」链路
 
@@ -69,20 +69,9 @@
 
 > 注意：molang 求值器核心在独立包 `com.elfmcys.yesstevemodel.molang`（入口 `MolangParser.java:19-25`），不在 geckolib3 内，需一并移植。particle/sound/sync 是环境副作用，Web 侧做 facade。状态机选择器（`AnimationController + AnimationState + AnimationControllerRuntime` + predicate 优先级 HIGHEST→LOWEST）可在输入环境 API 就绪后接入。
 
-> **现状核对（2026-08-24）**：基础动画链路已通——模型能按 `.animation.json` 动起来，不再是"静止在默认姿态"。
->
-> | §2.3 子项 | 现状 | 证据 |
-> |-----------|------|------|
-> | 1. 关键帧插值 | ✅ 已落地 | `animation.ts` `evaluateKeyframes` + `evaluateClip` 做插值 + 父子传播 |
-> | 4. molang builtin math | ✅ 已落地 | `molang-lib/math.js`（Sin/Cos/Atan2/Lerp/MinAngle… 整套直译） |
-> | molang 求值器 | ✅ 已落地 | `molang.ts` `compileMolang` 返回 `(animTime) => number` 闭包，被 `animation.ts:115,140` 调用 |
-> | 2. blend | ❌ 未接 | `grep blend` 整个 `frontend/src/utils/animation/` 零命中 |
-> | 3. transition | ✅ 已落地（2026-08-24 commit 163a6f09） | `selectClip` 从当前姿态采集 rest + alpha 归零，跨 clip 切换平滑过渡（~0.2s），不再硬切 |
-> | 状态机 | ❌ 未接 | 无 `AnimationController`/predicate 优先级 |
+> **收敛度**：基础动画链路已通（关键帧插值 → molang 求值 → 应用到 `THREE.Bone`），详见知识卡 `animation-system` 承接段；剩余增强项为 **blend（多源混合）+ 状态机（AnimationController predicate 优先级）**，属"让切换平滑"而非"让模型动起来"。
 >
 > **molangjs 内嵌策略**：npm 的 molangjs 包因 `"type":"module"` + CJS dist 混用在 Node 测试环境连续报错，本项目采用**源码内嵌**——`frontend/src/utils/animation/molang-lib/` 保留 JannisX11 molangjs（MIT，Blockbench 官方依赖）原始版权头，本地路径 import，彻底避开 ESM/CJS 混用坑。单例 parser + `cache_enabled=true`（400 条 LRU），未知 query/variable → 0 优雅降级，Infinity/NaN → 0 守卫。
->
-> **剩余工作**：blend（多动画源混合）+ transition（动画切换淡入淡出）+ 状态机（AnimationController predicate 优先级）。这三块是"让动画切换平滑"的增强，不是"让模型动起来"的基础。基础链路（插值 → molang 求值 → 应用到 THREE.Bone）已通。
 
 ### 实施顺序（按性价比）
 
@@ -98,7 +87,7 @@
 - **动画复活**：molang 解释 + 插值/blend/transition 落地后，从"静止在默认姿态"→"按动画文件驱动"，对游戏复现价值最高。
 
 ### 负面 / 风险
-- ~~**2.1 是视觉变更**：旋转序/背面剔除若与现行 three.js 有差异，可能引起视觉回退；须以对比测试 + 截图回归保障，不应盲回盲改。~~ → **已落地（2026-08-22）**：`eulerToQuaternion` 改 ZYX intrinsic，Go test + 前端 typecheck 全绿，旧 `TestEulerToQuaternion90X` 单轴断言仍 pass。三轴非零 cube 顶点修正，"主题正确、小部件错"根因消除。视觉验收基准：与 Blockbench 打开同一模型渲染一致。
+- ~~**2.1 是视觉变更**：旋转序/背面剔除若与现行 three.js 有差异，可能引起视觉回退；须以对比测试 + 截图回归保障，不应盲回盲改。~~ → **风险已消解**：旋转序按 ZYX intrinsic 落地，旧单轴断言仍 pass；视觉验收以「与 Blockbench 打开同一模型渲染一致」为基准（验证记录见知识卡 go-threejs）。
 - **2.2 取数成本未定**：WASM C++ 侧是否保留原始 pivot/rotation 需验证；若需 Go 二次解析，工作量大。
 - **2.3 scope 大**：完整移植含 molang 求值器 + 状态机，需分阶段，先 inner 计算后 facade。
 - **双基准歧义**：ADR-041 的 YSMViewer（C#）与本 ADR 的模组（Java）冲突时无现成裁决准则；需人工视觉验证定夺，避免单一基准反复。

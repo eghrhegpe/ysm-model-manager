@@ -24,10 +24,10 @@ YSM 模型有三种分发形态：`.ysm` 单文件（zip 容器）、`.zip` / `.
 | 路径 | 位置 | 状态 |
 |------|------|------|
 | Go 扫描 | `go/scanner/scanner.go:80-87` | ✅ 已有（确认保留） |
-| 前端导入 | `dnd-shared.ts` 新增 `isImportableFile`（import-queue 5 处 + dnd.ts 3 处调用） | ✅ 已落地（2026-08-05） |
-| Go 导入防御 | `go/importer/importer_file.go` `ImportFromBase64` + `internal/app/app_install.go` `importModelFileWithSubpath` | ✅ 已落地（2026-08-05） |
+| 前端导入 | `dnd-shared.ts` 新增 `isImportableFile`（import-queue 5 处 + dnd.ts 3 处调用） | ✅ 已对齐 |
+| Go 导入防御 | `go/importer/importer_file.go` `ImportFromBase64` + `internal/app/app_install.go` `importModelFileWithSubpath` | ✅ 已对齐 |
 
-**D3 · 文件夹模型整组操作契约**（已落地 2026-08-05）：
+**D3 · 文件夹模型整组操作契约**：
 
 1. `go/fileops` `MoveModelFile` / `CopyModelFile` 目录感知：`src` 为 `ysm.json` 时提升为操作**父目录**（整组语义）；`Copy` 支持目录递归复制（含 `.ban` 状态文件）。
 2. 目录行菜单补充 `dir.move` / `dir.copy`（`menu-defs.ts` + `context-menus.ts` handler）。

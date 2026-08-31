@@ -30,9 +30,9 @@
 
 **结论：全平台化高可行，且阻力低于预期。** MikuMikuAR 已把全路径（Windows/macOS/Linux/Android/iOS 六平台构建 + Android 真机适配）完整趟过一遍，ysM 与其技术栈同源，可按同一套路低成本复制。
 
-> **置信度分级（2026-08-09 实施后回看）**：P1 桌面三平台**已落地**（Taskfile + darwin/linux build 目录 + explorer 平台分支）；P2 Android 主体**已落地**（工程资产 + PathManager + 存储授权 + 系统事件链路 + 目录选择平台分支），唯一遗留风险（WASM SharedArrayBuffer）经审计**解除**；P3 iOS 待立项（生态最不成熟）。
+> **置信度分级**：P1 桌面三平台已落地（Taskfile + darwin/linux build 目录 + explorer 平台分支）；P2 Android 主体已落地（工程资产 + PathManager + 存储授权 + 系统事件链路 + 目录选择平台分支），WASM SharedArrayBuffer 遗留风险经审计解除；P3 iOS 待立项（生态最不成熟）。
 
-### 阻碍点分级（2026-08-09 实施后回看）
+### 阻碍点分级
 
 #### 🟢 低阻（已全部解决，补丁级）
 
@@ -65,7 +65,7 @@
 
 ### 建议路径（三阶段，每阶段独立可交付；2026-08-09 回看）
 
-| 阶段 | 范围 | 工作量 | 状态（2026-08-09） |
+| 阶段 | 范围 | 工作量 | 状态 |
 |------|------|--------|----------|
 | **P1 桌面三平台** | 补 darwin/linux build 目录 + explorer/updater 平台分支；前端零改动 | 低（约 1-2 天） | ✅ **已实施**（`Taskfile.yml` includes + `build/darwin|linux/Taskfile.yml` + `cmd/build-darwin.sh|build-linux.sh` + `RevealInExplorer`/`OpenFolder` 平台分支 + hideWindow 抽象 + `screen_*.go` 拆分） |
 | **P2 Android** | PathManager 抽象 + 存储授权 + 系统事件 + 目录选择平台分支 + WASM 审计 | 中 | ✅ **主体已实施**（`build/android/` 官方模板 + `cmd/build-android.ps1` + PathManager + `MANAGE_EXTERNAL_STORAGE` 授权链路 + `android-events.ts` + `pickDirectory()` 平台分支 + WASM 审计解除）；SAF 目录选择方案经实测修正（见 §2 中阻） |
@@ -76,7 +76,7 @@
 ## 3. 后果（Consequences）
 
 **正面**
-- 桌面三平台（Windows/macOS/Linux）成本极低，前端零改动，扩用户面。✅ 已实现
+- 桌面三平台（Windows/macOS/Linux）成本极低，前端零改动，扩用户面。
 - Go 侧平台隔离基础已有（6 组 build tag 双文件），P1 几乎不动 Go 业务代码。✅ 已兑现
 - 绑定链路（-ts + vite 重定向）与 MikuMikuAR 同款，前端契约不变。
 - **WASM 审计解除最大风险**：YSMParser 单线程，Android 无需降级（推翻 ADR-133 式悲观假设）。

@@ -251,7 +251,7 @@ git status --short 2>/dev/null | tail -15 || true
 - ADR-086 已落地：检查体系星级 + 重叠对 + AI 调用公约（防一轮打三次）——ADR-087 聚焦其未覆盖的 git hook 侧
 - 性能预算来源：实测 gen 脚本 1s + drift --affected 0.3s + git diff/status < 0.1s
 - ADR-086 §2.3 明确「pre-commit 秒级文档同步」保留——本 ADR 在其上扩展，不改动原有 gen 脚本
-- 2026-08-17 补充：T1/T2/T3 已写入 `.githooks/pre-commit` 并实测，状态从「🔄 部分采纳」转为「✅ 已采纳」；ADR-086 §5.1 的真实指令审计确认「候选池 N1-N6 边际收益低，不建议继续加 hook」
+- 补充：T1/T2/T3 已写入 `.githooks/pre-commit` 并实测（见 §9 待办表）；ADR-086 §5.1 的真实指令审计确认「候选池 N1-N6 边际收益低，不建议继续加 hook」
 
 ---
 

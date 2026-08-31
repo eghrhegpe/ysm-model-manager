@@ -69,6 +69,10 @@ type Stats struct {
 	Animations int `json:"animations"`
 	TexWidth   int `json:"texWidth"`
 	TexHeight  int `json:"texHeight"`
+	// Truncated 标记 scanZipBasicStats 达到 maxScanZipEntries 封顶，
+	// 返回的 Stats 不完整。调用方应据此向用户披露「统计可能不全」。
+	// R29 code_review P3-2：旧实现静默截断，调用方无法区分完整 vs 截断。
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // ===== 内部解析用的完整 ysm.json 结构 =====
@@ -238,14 +242,18 @@ func scanZipBasicStats(r zipEntriesReader) Stats {
 	const maxGeoJSON = 5 << 20
 	var modelCount, texCount, animCount int
 	scanned := 0
+	truncated := false
 	for _, f := range r.Entries() {
+		// R29 code_review P3-2：先跳过 dir，scanned 仅计文件条目，
+		// 避免大量 dir 条目耗尽配额
+		if f.IsDir() {
+			continue
+		}
 		scanned++
 		if scanned > maxScanZipEntries {
 			log.Printf("[ysm] scanZipBasicStats 达到条目数封顶 %d, 后续条目跳过", maxScanZipEntries)
+			truncated = true
 			break
-		}
-		if f.IsDir() {
-			continue
 		}
 		low := strings.ToLower(f.Name())
 		if strings.HasSuffix(low, ".json") {
@@ -269,7 +277,7 @@ func scanZipBasicStats(r zipEntriesReader) Stats {
 			texCount++
 		}
 	}
-	return Stats{Models: modelCount, Textures: texCount, Animations: animCount}
+	return Stats{Models: modelCount, Textures: texCount, Animations: animCount, Truncated: truncated}
 }
 
 // extractTexSizeFromZipGeo 在 ZIP 内按 geoPaths（来自 extractFileStats 的声明

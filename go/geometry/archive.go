@@ -227,30 +227,41 @@ const maxClassifyEntries = 10000
 
 func classifyFileInventory(entries []container.Entry) *types.FileInventory {
 	inv := &types.FileInventory{}
-	classified := 0
+	matched := 0
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
 		}
 		low := strings.ToLower(e.Name())
+		appended := false
 		switch {
 		case strings.HasSuffix(low, ".animation_controller.json"):
 			inv.Controllers = append(inv.Controllers, e.Name())
+			appended = true
 		case strings.HasSuffix(low, ".animation.json"):
 			inv.Animations = append(inv.Animations, e.Name())
+			appended = true
 		case strings.HasSuffix(low, ".lang"):
 			inv.LangFiles = append(inv.LangFiles, e.Name())
+			appended = true
 		case strings.HasSuffix(low, ".inc"):
 			inv.IncFiles = append(inv.IncFiles, e.Name())
+			appended = true
 		case (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && strings.Contains(low, "avatar/"):
 			inv.Avatars = append(inv.Avatars, e.Name())
+			appended = true
 		case strings.HasSuffix(low, ".json") && !types.IsYsmEntryJSON(filepath.Base(e.Name())) && isLegacyGeometryName(low):
 			inv.LegacyModels = append(inv.LegacyModels, e.Name())
+			appended = true
 		}
-		classified++
-		if classified >= maxClassifyEntries {
-			log.Printf("[geometry] classifyFileInventory 达到条目数封顶 %d, 后续条目跳过", maxClassifyEntries)
-			break
+		// R29 code_review P3-1：仅计 matched 条目，避免 10000 个 .bin 垃圾条目耗尽配额
+		if appended {
+			matched++
+			if matched >= maxClassifyEntries {
+				log.Printf("[geometry] classifyFileInventory 达到 matched 条目数封顶 %d, 后续条目跳过", maxClassifyEntries)
+				inv.Truncated = true
+				break
+			}
 		}
 	}
 	return inv

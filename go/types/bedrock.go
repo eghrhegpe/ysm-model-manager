@@ -37,6 +37,10 @@ type FileInventory struct {
 	IncFiles     []string `json:"incFiles,omitempty"`     // *.inc（include 资源）
 	LegacyModels []string `json:"legacyModels,omitempty"` // 旧格式几何（main.json/arm.json/arrow.json/info.json，无 ysm.json 场景）
 	Avatars      []string `json:"avatars,omitempty"`      // avatar/ 下的图片（作者头像，非主纹理）
+	// Truncated 标记 classifyFileInventory 达到 maxClassifyEntries 封顶，
+	// 返回的 inventory 不完整。调用方应据此向用户披露「清单可能不全」。
+	// R29 code_review P3-1：旧实现静默截断，调用方无法区分完整 vs 截断。
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // SubModel 子模型条目（多角色加载）。

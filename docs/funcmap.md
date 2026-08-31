@@ -247,13 +247,13 @@
 | `IsArmModelName()` | `go/geometry/archive:59` | — |
 | `ExtractFirstPNGFromZip()` | `go/geometry/archive:143` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
 | `ExtractFirstPNGFrom7z()` | `go/geometry/archive:153` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
-| `ParseFromZip()` | `go/geometry/archive:1374` | ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画。 |
-| `ParseFrom7z()` | `go/geometry/archive:1380` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理。 |
-| `ParseFromZipEntry()` | `go/geometry/archive:1393` | ParseFromZipEntry 按 subPath（zip 内路径，L0 SubModel.SourcePath 口径）解析单个 geometry 文件。 |
-| `ParseFrom7zEntry()` | `go/geometry/archive:1398` | ParseFrom7zEntry 对应 ParseFromZipEntry 的 7z 版本；subPath 匹配策略完全一致。 |
-| `IsMainModelName()` | `go/geometry/archive:1464` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:1471` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:1682` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 parseComponentsFromArchi |
+| `ParseFromZip()` | `go/geometry/archive:1385` | ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画。 |
+| `ParseFrom7z()` | `go/geometry/archive:1391` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理。 |
+| `ParseFromZipEntry()` | `go/geometry/archive:1404` | ParseFromZipEntry 按 subPath（zip 内路径，L0 SubModel.SourcePath 口径）解析单个 geometry 文件。 |
+| `ParseFrom7zEntry()` | `go/geometry/archive:1409` | ParseFrom7zEntry 对应 ParseFromZipEntry 的 7z 版本；subPath 匹配策略完全一致。 |
+| `IsMainModelName()` | `go/geometry/archive:1475` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:1482` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:1693` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 parseComponentsFromArchi |
 | `ParseBedrockGeometry()` | `go/geometry/parse:240` | ParseBedrockGeometry 解析 Bedrock geometry JSON。 |
 
 ## Go·导入
@@ -530,12 +530,12 @@
 |------|--------|------|
 | `BedrockModel()` | `go/types/bedrock:4` | BedrockModel 基岩版模型几何体摘要（用于 2D 预览） |
 | `FileInventory()` | `go/types/bedrock:33` | FileInventory zip 内文件归属清单（对齐 Modern YSM parseGlobalResources 的分流思想， 但只识别归属、不解析内容——不造双路径，前端 |
-| `SubModel()` | `go/types/bedrock:44` | SubModel 子模型条目（多角色加载）。 |
-| `Bone2D()` | `go/types/bedrock:51` | Bone2D 骨骼简化信息（只用于 2D 线条图） |
-| `Cube2D()` | `go/types/bedrock:61` | Cube2D 立方体信息 |
-| `YsmMetadata()` | `go/types/bedrock:79` | YsmMetadata ysm.json 的 metadata 段（模型详情：名称/许可/作者/链接）。 |
-| `YsmLicense()` | `go/types/bedrock:88` | YsmLicense 许可信息（wine_fox：{"type": "CC BY-NC-SA 4.0"}） |
-| `YsmAuthor()` | `go/types/bedrock:94` | YsmAuthor 作者条目 |
+| `SubModel()` | `go/types/bedrock:48` | SubModel 子模型条目（多角色加载）。 |
+| `Bone2D()` | `go/types/bedrock:55` | Bone2D 骨骼简化信息（只用于 2D 线条图） |
+| `Cube2D()` | `go/types/bedrock:65` | Cube2D 立方体信息 |
+| `YsmMetadata()` | `go/types/bedrock:83` | YsmMetadata ysm.json 的 metadata 段（模型详情：名称/许可/作者/链接）。 |
+| `YsmLicense()` | `go/types/bedrock:92` | YsmLicense 许可信息（wine_fox：{"type": "CC BY-NC-SA 4.0"}） |
+| `YsmAuthor()` | `go/types/bedrock:98` | YsmAuthor 作者条目 |
 | `ClassifyResource()` | `go/types/classify:38` | ClassifyResource 规范资源类型识别器（单一事实源）。 |
 | `ClassifyExt()` | `go/types/classify:64` | ClassifyExt 扩展名兜底判定：仅单一声明者直判，多/零声明者返回 "other"。 |
 | `ExtBelongsToBy()` | `go/types/classify:73` | ExtBelongsToBy 返回扩展名在指定注册表中的声明者 ID 列表（ExtBelongsTo 的可注入版本）。 |
@@ -671,7 +671,7 @@
 | `YSMHeader()` | `go/ysm/header:18` | YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型） |
 | `AnalyzeYSMModel()` | `go/ysm/parse:45` | AnalyzeYSMModel 解析 .ysm 文件，提取模型元数据 |
 | `YSMModelMeta()` | `go/ysm/parse:15` | YSMModelMeta 模型元数据（从 model.json 提取） |
-| `ExtractYsmSummary()` | `go/ysm/summary:311` | ExtractYsmSummary 从 .ysm / .zip 文件中提取摘要。 |
+| `ExtractYsmSummary()` | `go/ysm/summary:319` | ExtractYsmSummary 从 .ysm / .zip 文件中提取摘要。 |
 | `Author()` | `go/ysm/summary:18` | — |
 | `Link()` | `go/ysm/summary:24` | — |
 | `AnimGroup()` | `go/ysm/summary:29` | — |

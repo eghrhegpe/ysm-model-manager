@@ -1,6 +1,6 @@
 # ADR-120：Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk
 
-- **状态**：已采纳（Accepted）— 能力已落地，但**生产触发路径不存在**（见 §3 修正说明）
+- **状态**：已采纳（Accepted）— 生产触发路径不存在（见 §3 修正说明）
 - **日期**：2026-08-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/rustbridge/bridge_windows.go|go/scanner/scanner.go|rust-core/src/scan.rs|rust-wails-bridge/src/abi.rs|docs/knowledge/rustbridge.md`

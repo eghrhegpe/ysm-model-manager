@@ -502,7 +502,7 @@ description: 一句话摘要
 
 ## 14. 组件架构
 
-> 本章定义技术基座与跨组件协作契约，是 §15/§16 的前置。所有结论以源码 `file:line` 为准（验证于 2026-08-04）。
+> 本章定义技术基座与跨组件协作契约，是 §15/§16 的前置。以源码与自动生成物为准，不设人工验证日期戳。
 
 ### 14.1 技术基座：Web Components + Shadow DOM
 
@@ -718,6 +718,7 @@ disconnectedCallback() {
 ## 16. 事件总线契约
 
 > 权威来源：`frontend/src/bus.ts` 的 `BusEvents` 接口（:53-107）。新增事件必须先在此登记类型，再使用。
+> 事件名→payload **全量登记以自动生成物 `docs/event-graph.md`（`scripts/event-graph.mjs`）为准**，下表为常用事件速查；改事件后运行 `node scripts/event-graph.mjs` 同步（pre-commit 自动）并核对下表。
 
 ### 16.1 事件名 → payload 登记表
 

@@ -427,6 +427,8 @@ ReadFileBytes(Go, base64) → atob → Uint8Array
 
 ### 6.2 组件清单（`js/components/`）
 
+> 组件与文件全量清单、规模、函数映射以自动生成物 `docs/project-map.md`（`scripts/gen-project-map.mjs`）与 `docs/funcmap.md` 为准；下表为概览快照，以生成物为最新。
+
 | 组件 | 规模 | 关键文件 |
 |------|------|----------|
 | `app-content/` | ~185KB，多文件 | 主页面路由 `index.ts:133-149` switch（repository/instances/workshop/github/diagnostics/oldest/settings）；`content-css.ts` 65KB；`community/` 子模块（`site-view.ts` 49KB、`settings.ts` 28KB、`diagnostics.ts` 17.5KB、`core.ts`、`workshop-data.ts`、`workshop-icons.ts`） |
@@ -803,6 +805,10 @@ app-content/community/core.ts:35-36
 
 | 日期 | 变动 | 影响 |
 |------|------|------|
+| **2026-08-31** | **平台 shim 收敛 + Go 重复治理**（ADR-139 / ADR-140） | `rustbridge`/`scanner` 四 OS 平台 shim 合并（`rust_backend.go` 单文件）；Go 文件内自重复三层判定与变体层不强制合并 |
+| **2026-08-31** | **3D 子系统归位 src/preview-3d**（ADR-136 / ADR-137 / ADR-138） | 截图/离屏渲染、YSM 解码子系统归位 + `features/preview-3d` 中间层上提 `frontend/src/preview-3d/`（第五刀收尾） |
+| **2026-08-30** | **测试消费性校验 + 缓存组件化 + Go jscpd**（ADR-133 / ADR-134 / ADR-135） | 契约测试从存在性门禁升级为消费性校验；`containerTypeCache` 包级全局收进组件；Go 端 jscpd 重复检测增量门禁 |
+| **2026-08-29** | **拖拽直推仓库 + 统计提取 + 多模型选择原语**（ADR-130 / ADR-131 / ADR-132） | 整合包卡片拖拽先入仓库再推送；3D 渲染期统计提取与类型判定解耦；跨资源类型统一多模型选择菜单原语 |
 | **2026-08-18** | **多模型同框引擎**（ADR-093） | `scene-registry.ts` 场景注册表（每模型 roots/visible/boneMaps/menuItems 元数据）；`fitCameraToRoots` 多包围盒累加取景；`pickModelByObject` 统一拾取 dispatch；`openModel3DFullscreen({ cooperate })` 统一路由入口；`MAX_MODELS=8` GPU 上限 |
 | **2026-08-16** | **联邦 3D 渲染能力**（ADR-073） | `caps/` 8 个场景能力（Sky/Ground/Environment/Fog/Shadow/Reflector/Postprocessing/Light）由 `scene-capability-registry.ts` 工厂注册表驱动；所有适配器零改动继承；程序化天空（Preetham 散射）+ HDR IBL + Bloom/SSAO/SSR 后处理 + 镜面反射落地 |
 | **2026-08-15** | **统一预览核心**（ADR-066 P3） | `mount-preview-core.ts`（928 行）收缴 vrm/litematic 复制脚手架，成为所有富格式 3D 预览的单一外壳；`PreviewAdapter` 适配器模式（ysm/vrm/mmd/litematic/fbx/pack-model 6 种格式）；声明式根菜单（ADR-076）+ 感知层开关面板 |

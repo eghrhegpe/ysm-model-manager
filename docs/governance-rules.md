@@ -5,7 +5,8 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 
 # 前端治理规则手册（Governance Rules）
 
-> 9 条前端治理规则的**唯一事实来源**（规则条文 + 严重度 + 替代方案 + 检测工具）。
+> ⚠️ **以脚本为唯一事实来源**：规则集以 `scripts/check-redlines.mjs` 实现为准（已含 R10 / W6 / W7 / W8 等新增规则），本手册为人工维护的说明性子集，冲突时以脚本为准。
+> 规则条文 + 严重度 + 替代方案 + 检测工具说明如下：
 > 决策背景与事故驱动过程见 [ADR-005](./adr/ADR-005-frontend-governance-rules.md)；检测脚本实现见「脚本体系全景」（仓库 `scripts/README.md`）「治理红线」表。
 > 本手册承接原 `docs/core/CLEANUP_RULES.md`（2026-08-03 曾整本并入 ADR-005，2026-08-04 归位独立手册——规则条文与决策依据各司其职）。
 
@@ -24,10 +25,11 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 | R7 | 禁止魔法字符串资源类型字面量 | Warn | `check-redlines.mjs R7` + `type-consistency.mjs` |
 | R8 | 禁止未转义拼接 HTML | Error | `check-redlines.mjs R8` + `doctor.mjs` |
 | R9 | 禁止侧边栏手动拼接 | Warn | `check-redlines.mjs R9` |
+| R10 | 禁止重复实现 esc 转义 | Error | `check-redlines.mjs R10` |
 
-**严重度分级**：Error（4 条）= 运行时错误或安全风险，必须拦截；Warn（5 条）= 长期债务或可维护性问题，建议修复，不阻塞发布。
+**严重度分级**：Error（5 条，对应脚本 blocking 分组）= 运行时错误或安全风险，必须拦截；Warn（5 条，对应脚本 advisory 分组）= 长期债务或可维护性问题，建议修复，不阻塞发布。
 
-> check-redlines.mjs 另有 W1/W2/W5 附加扫描项（反斜杠路径 / `window.go.main.App` 直调等），属 AGENTS.md §三 治理红线范畴，不在本手册 9 条之内。
+> check-redlines.mjs 另有 W1/W2/W5/W6/W7/W8 附加扫描项（反斜杠路径 / `window.go.main.App` 直调 / async DOM race / bypass dialogs / 绑定层写操作缓存失效 / rtype 字面量分支；W3/W4 已移交 `comment-checker.mjs`），属 AGENTS.md §三 治理红线范畴，不在本手册总表之内。
 
 ---
 

@@ -1,5 +1,7 @@
 # MikuMikuAR — DESIGN.md（视觉 / 品牌规范）
 
+> **定位（2026-08-31 审计补充）**：本文为 **3D 预览子域**视觉/品牌规范（MikuMikuAR 时期移植）。主题 Design Tokens 与组件/交互规范以上位 `docs/Design.md` 为准；本文色值/字号以 `frontend/src/app.css` 的 `:root` Design Tokens 为单一真相源。
+
 > **单一真相源**：本文所有色值、字号、间距均以 `frontend/src/app.css` 的 `:root` Design Tokens 为准，**不引用 `docs/design.md` 中的 CSS 示例**（后者部分示例已过时，见文末「已知漂移」）。
 >
 > **与 `docs/design.md` 的分工**：`docs/design.md` = UI **组件/架构规范**（MenuNode Schema、builder API、键盘导航）；本文 = UI **视觉/品牌规范**（颜色、排版、圆角、间距、动效）。二者互补，搬运样式读本文，搬运结构读 `docs/design.md`。

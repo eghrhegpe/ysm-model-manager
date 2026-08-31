@@ -1,6 +1,6 @@
 # ADR-122：MdMmBuildCtx 三档重构与 tier3 Builder 化否决
 
-- **状态**：🔄 部分采纳（Partially Accepted）— tier1/2 已落地，tier3 Builder 化方向已否决
+- **状态**：🔄 部分采纳（Partially Accepted）— tier3 Builder 化方向已否决
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-26
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku）

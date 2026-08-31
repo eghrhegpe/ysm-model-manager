@@ -25,6 +25,7 @@ import {
 } from './_lib/git-ref.mjs';
 import { getExportedSymbolsAny, topDeclsAny, searchName, countLines } from './_lib/source-graph.mjs';
 import { walk, ROOT, toPosix } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const REDLINE = 400; // ADR-040：单文件 ≤400 行
 
@@ -325,14 +326,26 @@ function toJ(report, callers) {
 }
 
 // ── CLI ──
+// 位置参数 <older> <newer>，走 parse-args（unknown 白名单拦截，防 --jso 拼错静默放行）
 
-const argv = process.argv.slice(2);
-const JSON_OUT = argv.includes('--json');
-const QUIET = argv.includes('--quiet');
-const REDLINE_ONLY = argv.includes('--redline');
-const SCOPE = argv.includes('--scope') ? argv[argv.indexOf('--scope') + 1] : null;
-const COMPACT = argv.includes('--compact');
-const nonOpts = argv.filter((a) => !a.startsWith('--'));
+const args = parseArgs(process.argv.slice(2), {
+  bools: ['json', 'quiet', 'redline', 'compact'],
+  strings: ['scope'],
+});
+if (args.help) {
+  console.log('用法: node scripts/api-break.mjs <older> <newer> [--scope <dir>] [--json] [--quiet] [--redline] [--compact]');
+  process.exit(0);
+}
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
+const JSON_OUT = args.json;
+const QUIET = args.quiet;
+const REDLINE_ONLY = args.redline;
+const SCOPE = args.scope;
+const COMPACT = args.compact;
+const nonOpts = args._;
 if (nonOpts.length < 2) {
   console.error('用法: node scripts/api-break.mjs <older> <newer> [--scope <dir>] [--json] [--quiet] [--redline] [--compact]');
   process.exit(2);

@@ -29,6 +29,20 @@ export function getScalar(fm, key) {
   return v.replace(/\s+#.*$/, '').trim();
 }
 
+/**
+ * 解析 frontmatter 块内全部标量字段（key → value）。
+ * 区别于 getScalar：不要求已知 key 名，遍历所有 `k: v` 行（用于占位符等
+ * 整体值域检查，check-knowledge-drift 的模板占位符扫描）。
+ */
+export function getAllScalars(fm) {
+  const map = {};
+  for (const line of fm.split(/\r?\n/)) {
+    const m = line.match(/^([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
+    if (m) map[m[1]] = m[2].trim();
+  }
+  return map;
+}
+
 /** 提取列表字段（块列表或行内数组），返回字符串数组。 */
 export function getList(fm, key) {
   if (!fm) return [];

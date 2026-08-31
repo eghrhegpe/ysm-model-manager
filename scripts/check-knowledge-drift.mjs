@@ -29,20 +29,34 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, walk } from './_lib/scan-files.mjs';
 import { toPosix } from './_lib/to-posix.mjs';
-import { parseFrontmatter, getScalar, getList, parseSourceFiles } from './_lib/frontmatter.mjs';
+import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.mjs';
 import { PERF_TAGS } from './_lib/knowledge-cards.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
-const JSON_OUT = process.argv.includes('--json');
-const VERBOSE = process.argv.includes('--verbose');
-const AFFECTED_MODE = process.argv.includes('--affected');
-const _aIdx = process.argv.indexOf('--affected');
-const AFFECTED_PATHS = _aIdx >= 0 ? process.argv.slice(_aIdx + 1) : [];
+// 参数解析统一走 _lib/parse-args（positional 脚本契约：未知 flag 白名单拦截）
+const ARGS = parseArgs(process.argv.slice(2), { bools: ['json', 'verbose', 'quiet', 'affected'] });
+if (ARGS.help) {
+  console.log('用法: node scripts/check-knowledge-drift.mjs [--json|--verbose|--affected <f>…|--quiet]');
+  console.log('  --json      机读 JSON（doctor --docs 调用）');
+  console.log('  --verbose   文本报告 + 未覆盖文件完整清单');
+  console.log('  --affected <f>…  源码变更即列出受影响知识卡（配合 git diff --name-only）');
+  console.log('  --quiet     仅 --affected 使用：只输出卡 stem，供钩子机读');
+  process.exit(0);
+}
+if (ARGS.unknown.length) {
+  console.error(`❌ 未知参数: ${ARGS.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
+const JSON_OUT = ARGS.json;
+const VERBOSE = ARGS.verbose;
+const AFFECTED_MODE = ARGS.affected;
+const AFFECTED_PATHS = ARGS._;
 // --quiet：--affected 仅输出受影响卡 stem（每行一个），供钩子机读消费
-const QUIET = process.argv.includes('--quiet');
+const QUIET = ARGS.quiet;
 const errors = [];
 const warns = [];
 
@@ -60,29 +74,30 @@ const ROOT_ESCAPE_RE = /\\|^[A-Za-z]:|^\/|^~|\.\.\//; // 反斜杠 / 绝对路�
 
 // ── 共享 frontmatter 解析统一走 _lib/frontmatter.mjs（见顶部 import）──
 
-// ── 检查 1：知识卡 frontmatter 治理 ──────────────────
-
-/** 解析所有 frontmatter 标量字段（key → value，用于占位符检查）。 */
-function parseFrontmatterFields(fm) {
-  const map = {};
-  for (const line of fm.split(/\r?\n/)) {
-    const m = line.match(/^([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
-    if (m) map[m[1]] = m[2].trim();
-  }
-  return map;
-}
-
-function checkKnowledgeMeta() {
-  if (!fs.existsSync(KC_DIR)) return { count: 0 };
-  const files = fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && f.toLowerCase() !== 'readme.md' && f.toLowerCase() !== 'agents.md');
-  let count = 0;
-  for (const cf of files) {
+// ── 单遍遍历骨架：readdir 一次 + 每卡 read+parseFrontmatter 一次 ──
+// 此前 checkKnowledgeMeta/Sources/Anchors/Coverage/runAffected 各自
+// readdirSync + readFileSync + parseFrontmatter（每卡 frontmatter 被解析 5 遍，
+// 同一目录被读盘 5 次）——统一为一次遍历，喂给全部检查器。
+function loadKnowledgeCards() {
+  if (!fs.existsSync(KC_DIR)) return [];
+  const files = fs.readdirSync(KC_DIR).filter(
+    (f) => f.endsWith('.md') && !/^(readme|agents)\.md$/i.test(f)
+  );
+  return files.map((cf) => {
     // P1 修复（子代理审计）：带 BOM 的知识卡 `^---` 失配 → 整卡静默跳过（假绿）；
     // 对齐 hooks/knowledge-affected-hint.mjs 的 `^\uFEFF?---` 容错
     const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
+    return { cf, stem: cf.replace(/\.md$/, ''), text, fm: parseFrontmatter(text) };
+  });
+}
+
+// ── 检查 1：知识卡 frontmatter 治理 ──────────────────
+
+function checkKnowledgeMeta(cards) {
+  let count = 0;
+  for (const { cf, stem, text, fm } of cards) {
     if (!/^\uFEFF?---\r?\n/.test(text)) continue;
     count++;
-    const fm = parseFrontmatter(text);
     if (!fm) { errors.push(`知识卡 ${cf} 缺少 YAML frontmatter`); continue; }
 
     // 必填字段
@@ -94,7 +109,7 @@ function checkKnowledgeMeta() {
     }
 
     // 模板占位符
-    const fmFields = parseFrontmatterFields(fm);
+    const fmFields = getAllScalars(fm);
     for (const [k, v] of Object.entries(fmFields)) {
       if (v !== '' && PLACEHOLDER_RE.test(v)) {
         errors.push(`知识卡 ${cf} 的 ${k} 含未填充占位符: ${v}`);
@@ -108,7 +123,6 @@ function checkKnowledgeMeta() {
     }
 
     // kind 与文件名同源（单一不变量：文件名是命名事实源）
-    const stem = cf.replace(/\.md$/, '');
     if (kind && kind !== stem) {
       errors.push(`知识卡 ${cf} 的 kind「${kind}」与文件名「${stem}」不一致（kind 应等于文件名 kebab 形式）`);
     }
@@ -145,12 +159,8 @@ function checkKnowledgeMeta() {
 
 // ── 检查 2：source_files 存在性 + 路径格式 + 语义漂移 ──
 
-function checkKnowledgeSources() {
-  if (!fs.existsSync(KC_DIR)) return;
-  const files = fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && f.toLowerCase() !== 'readme.md' && f.toLowerCase() !== 'agents.md');
-  for (const cf of files) {
-    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
-    const fm = parseFrontmatter(text);
+function checkKnowledgeSources(cards) {
+  for (const { cf, fm } of cards) {
     if (!fm) continue;
     // 抽出 + 归一（反斜杠 → 正斜杠），供存在性 / 格式 / 语义三检共用
     const sources = parseSourceFiles(fm).map((s) => ({ raw: s, norm: toPosix(s) }));
@@ -182,12 +192,8 @@ function checkKnowledgeSources() {
 // GetVersion→GetAppVersion 等重构后知识卡正文失效）。知识卡 frontmatter 可声明
 // `invariant_anchors:`（list），每项 `文件相对路径|应含模式`（| 分隔，模式为字面子串或
 // `re:` 前缀正则）。锚不命中 → ERROR（机制描述漂移即红，纳入 ADR-043 fail-closed 契约）。
-function checkKnowledgeAnchors() {
-  if (!fs.existsSync(KC_DIR)) return;
-  const files = fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && f.toLowerCase() !== 'readme.md' && f.toLowerCase() !== 'agents.md');
-  for (const cf of files) {
-    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
-    const fm = parseFrontmatter(text);
+function checkKnowledgeAnchors(cards) {
+  for (const { cf, fm } of cards) {
     if (!fm) continue;
     const anchors = getList(fm, 'invariant_anchors');
     for (const raw of anchors) {
@@ -275,31 +281,25 @@ const SOURCE_ROOTS = ['frontend/src', 'go'];
 // 同时匹配 / 与 \（Windows 下 path.join 产反斜杠路径，仅正斜杠会漏排除——code_review P3）
 const WALK_EXCLUDE_RE = /(node_modules|[\\/]dist[\\/]|[\\/]bindings[\\/]|[\\/]test[\\/]|web-spike[\\/]|\.test\.|_test\.|\.spec\.)/;
 
-function walkSources(dir, out = []) {
-  if (!fs.existsSync(dir)) return out;
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (WALK_EXCLUDE_RE.test(p)) continue;
-    if (e.isDirectory()) walkSources(p, out);
-    else if (e.isFile() && /\.(ts|js|go)$/.test(e.name)) out.push(p);
-  }
-  return out;
-}
-
 /** 某卡 source_files 条目是否覆盖源文件 rel：文件精确匹配 / 目录前缀匹配。 */
 function covers(rel, entry) {
   const e = entry.replace(/\/+$/, '');
   return rel === e || rel.startsWith(e + '/');
 }
 
-function checkKnowledgeCoverage() {
-  if (!fs.existsSync(KC_DIR)) return;
+/** 源码文件单遍收集（_lib/scan-files.walk，领域排除走 skipDir/skipFile）。 */
+function walkSources(dir) {
+  return walk(dir, {
+    exts: ['.ts', '.js', '.go'],
+    skipDir: (n) => /^(node_modules|dist|bindings|test|web-spike)$/.test(n) || WALK_EXCLUDE_RE.test(n),
+    skipFile: (n) => WALK_EXCLUDE_RE.test(n),
+  });
+}
+
+function checkKnowledgeCoverage(cards) {
   // 收集所有卡的 source_files（去尾斜杠）
   const referenced = new Set();
-  for (const cf of fs.readdirSync(KC_DIR)) {
-    if (!cf.endsWith('.md') || /^(readme|agents)\.md$/i.test(cf)) continue;
-    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
-    const fm = parseFrontmatter(text);
+  for (const { fm } of cards) {
     if (!fm) continue;
     for (const src of parseSourceFiles(fm)) {
       if (/\.(ts|js|go)$/.test(src) || src.endsWith('/')) referenced.add(src.replace(/\/+$/, ''));
@@ -362,9 +362,7 @@ function runAffected(changed) {
   // affected: false（快照/报告型卡，如整包审计）→ 退出 affected 匹配：
   // 其 source_files 只服务覆盖率统计，不随单次文件变更提示复核
   const index = [];
-  for (const cf of fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && !/^(readme|agents)\.md$/i.test(f))) {
-    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
-    const fm = parseFrontmatter(text);
+  for (const { cf, fm } of loadKnowledgeCards()) {
     if (!fm) continue;
     if (getScalar(fm, 'affected') === 'false') continue;
     const sources = parseSourceFiles(fm).map((s) => toPosix(s));
@@ -409,12 +407,14 @@ function main() {
   if (!fs.existsSync(KC_DIR)) {
     errors.push('docs/knowledge/ 目录不存在，扫描不完整');
   }
-  checkKnowledgeMeta();
-  checkKnowledgeSources();
-  checkKnowledgeAnchors();
+  // 单遍遍历：readdir + read + parseFrontmatter 各一次，喂给全部检查器
+  const cards = loadKnowledgeCards();
+  checkKnowledgeMeta(cards);
+  checkKnowledgeSources(cards);
+  checkKnowledgeAnchors(cards);
   checkIndexLinks();
   checkAgentsNoHandcraftedIndex();
-  checkKnowledgeCoverage();
+  checkKnowledgeCoverage(cards);
 
   const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };
 

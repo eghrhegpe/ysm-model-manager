@@ -27,6 +27,15 @@ func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogg
 		// 没有仓库根目录时不做处理（R24 P4-1：守卫前移，避免空根时白走一遍遍历）
 		return 0
 	}
+	// 防御性守卫（R26 P3-2）：拒绝空 dir 与文件系统根目录，
+	// 防止误遍历/误删整个盘符根。dir 由 App 层薄壳注入（整合包实例目录），
+	// 允许在 filesRoot 外（如 mcRoot 下），故不加 IsInsideResolved 守卫。
+	if dir == "" {
+		return 0
+	}
+	if cleaned := filepath.Clean(dir); cleaned == string(filepath.Separator) || filepath.VolumeName(cleaned) == cleaned {
+		return 0
+	}
 	targets := fsutil.WalkAllFiles(dir, true)
 	// 预加载仓库文件索引：文件名(小写) → 完整路径列表（同名可能散布多处）
 	repoFiles := make(map[string][]string)
@@ -114,6 +123,13 @@ func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogg
 }
 
 // DeduplicateEntries 按 SHA256 哈希分组去重：每组显式按路径排序保留第一个，其余移入回收站
+//
+// 返回值语义（R26 P3-1 修复）：
+//   - removed：成功移入回收站的条目数
+//   - kept：去重成功的组数（每组保留第一个，记 1）
+//
+// 移动失败时该条目滞留原地、不计 removed；组内有任一移动失败时该组不计 kept
+// （去重未完成）。上层可据 removed + kept 与预期组数判断是否需重试。
 func DeduplicateEntries(entries []types.ModelEntry, recycleRoot string, logger CleanOpLogger) (removed, kept int) {
 	hashGroups := make(map[string][]types.ModelEntry)
 	for _, e := range entries {
@@ -134,16 +150,23 @@ func DeduplicateEntries(entries []types.ModelEntry, recycleRoot string, logger C
 		sort.Slice(group, func(i, j int) bool {
 			return group[i].Path < group[j].Path
 		})
+		groupFailed := false
 		for _, e := range group[1:] {
 			if err := Move(e.Path, recycleRoot); err != nil {
 				if logger != nil {
 					logger(e.Name, e.Path, recycleRoot, 0, "failed", "回收站移动失败: "+err.Error())
 				}
+				groupFailed = true
 				continue
 			}
 			removed++
 		}
-		kept++
+		// 组内 Move 全成功时才计 kept（去重完成，保留了一个）；
+		// 有失败时该组去重未完成，不计 kept（R26 P3-1：旧实现无条件 kept++，
+		// 把移动失败滞留的文件也计为保留，上层无法区分「无重复」与「移动全失败」）。
+		if !groupFailed {
+			kept++
+		}
 	}
 	return removed, kept
 }

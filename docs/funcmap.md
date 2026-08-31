@@ -26,7 +26,7 @@
 | Go·日志 | 2 | 12 |
 | Go·包管理 | 1 | 3 |
 | Go·路径 | 1 | 8 |
-| Go·回收站 | 2 | 19 |
+| Go·回收站 | 2 | 14 |
 | go/repoaudit | 1 | 9 |
 | go/rustbridge | 5 | 10 |
 | go/scanner | 1 | 12 |
@@ -50,7 +50,7 @@
 | frontend/views | 116 | 337 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **531** | **2256** |
+| **合计** | **531** | **2251** |
 
 ## Go·头像
 
@@ -169,22 +169,22 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `HTTPStatusError.Error()` | `go/download/download:81` | — |
-| `TruncationError.Error()` | `go/download/download:89` | — |
-| `TruncationError.Unwrap()` | `go/download/download:95` | Unwrap 让 errors.Is(err, ErrTruncated) 成立——调用方既可判断类别（errors.Is）， 又可提取数值（errors.As），无需文本匹配（# |
-| `Downloader.WithRetry()` | `go/download/download:128` | WithRetry 返回开启重试的下载器副本（不改原实例）。 |
-| `New()` | `go/download/download:193` | New 创建 Downloader，默认 5 分钟超时（可被 AppConfig.DownloadTimeoutSec 覆盖，ADR-062）。 |
-| `NewWithClient()` | `go/download/download:198` | NewWithClient 使用指定 HTTP client。 |
-| `Downloader.File()` | `go/download/download:502` | File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。 |
-| `Downloader.FileWithChecksum()` | `go/download/download:508` | FileWithChecksum 与 File 相同，额外校验下载内容 SHA256 与期望值一致。 |
-| `Downloader.FromGitHubAPI()` | `go/download/download:513` | FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。 |
-| `Downloader.FromGitHubAPIWithChecksum()` | `go/download/download:518` | FromGitHubAPIWithChecksum 与 FromGitHubAPI 相同，额外校验 SHA256（P2 预留，语义同 FileWithChecksum）。 |
-| `ResolveSavePath()` | `go/download/download:542` | ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。 |
-| `HTTPStatusError()` | `go/download/download:77` | HTTPStatusError 携带 HTTP 状态码的类型化错误，调用方用 errors.As 提取码值， 替代 strings.Contains(err.Error(), "4 |
-| `TruncationError()` | `go/download/download:84` | TruncationError 携带期望/实际字节数的截断错误，调用方用 errors.As 提取数值做诊断上报。 |
-| `ProgressFn()` | `go/download/download:98` | ProgressFn 下载进度回调。downloaded / total 为字节数。 |
-| `Downloader()` | `go/download/download:101` | Downloader 文件下载器。 |
-| `RetryPolicy()` | `go/download/download:121` | RetryPolicy 下载重试策略（字段 0 回退包级默认常量，见 WithRetry 注释）。 |
+| `HTTPStatusError.Error()` | `go/download/download:83` | — |
+| `TruncationError.Error()` | `go/download/download:96` | — |
+| `TruncationError.Unwrap()` | `go/download/download:102` | Unwrap 让 errors.Is(err, ErrTruncated) 成立——调用方既可判断类别（errors.Is）， 又可提取数值（errors.As），无需文本匹配（# |
+| `Downloader.WithRetry()` | `go/download/download:140` | WithRetry 返回开启重试的下载器副本（不改原实例）。 |
+| `New()` | `go/download/download:212` | New 创建 Downloader，默认 5 分钟超时（可被 AppConfig.DownloadTimeoutSec 覆盖，ADR-062）。 |
+| `NewWithClient()` | `go/download/download:221` | NewWithClient 使用指定 HTTP client。 |
+| `Downloader.File()` | `go/download/download:536` | File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。 |
+| `Downloader.FileWithChecksum()` | `go/download/download:542` | FileWithChecksum 与 File 相同，额外校验下载内容 SHA256 与期望值一致。 |
+| `Downloader.FromGitHubAPI()` | `go/download/download:547` | FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。 |
+| `Downloader.FromGitHubAPIWithChecksum()` | `go/download/download:552` | FromGitHubAPIWithChecksum 与 FromGitHubAPI 相同，额外校验 SHA256（P2 预留，语义同 FileWithChecksum）。 |
+| `ResolveSavePath()` | `go/download/download:576` | ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。 |
+| `HTTPStatusError()` | `go/download/download:78` | HTTPStatusError 携带 HTTP 状态码与 URL 的类型化错误，调用方用 errors.As 提取码值， 替代 strings.Contains(err.Error |
+| `TruncationError()` | `go/download/download:91` | TruncationError 携带期望/实际字节数的截断错误，调用方用 errors.As 提取数值做诊断上报。 |
+| `ProgressFn()` | `go/download/download:105` | ProgressFn 下载进度回调。downloaded / total 为字节数。 |
+| `Downloader()` | `go/download/download:108` | Downloader 文件下载器。 |
+| `RetryPolicy()` | `go/download/download:133` | RetryPolicy 下载重试策略（字段 0 回退包级默认常量，见 WithRetry 注释）。 |
 
 ## go/executil
 
@@ -281,17 +281,17 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `Install()` | `go/installer/installer:44` | Install 安装模型到目标目录（支持链接模式） |
-| `InstallLocked()` | `go/installer/installer:127` | InstallLocked 安装模型到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
-| `InstallDir()` | `go/installer/installer:168` | InstallDir 安装整个目录下的所有文件到目标目录。 |
-| `InstallDirRel()` | `go/installer/installer:178` | InstallDirRel 安装目录到 dstRoot/&lt;relSlash&gt;（保留仓库多层物理路径）。 |
-| `InstallDirLocked()` | `go/installer/installer:185` | InstallDirLocked 与 InstallDir 语义相同，但不重复加锁——供已持锁调用方使用。 |
-| `InstallDirRelLocked()` | `go/installer/installer:191` | InstallDirRelLocked 与 InstallDirRel 语义相同，但不重复加锁——供 sync.PushResources 等整段持 InstallLock 的调用 |
-| `InstallToGlobal()` | `go/installer/installer:474` | InstallToGlobal 安装到全局 custom 目录 |
-| `InstallWithOverlay()` | `go/installer/installer:503` | InstallWithOverlay 带冲突检查的安装 注意（R25 P4-1）：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有 .minec |
-| `CopyFile()` | `go/installer/installer:587` | CopyFile 复制文件到目标目录（带互斥锁） |
-| `CopyFileLocked()` | `go/installer/installer:595` | CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
-| `IsValidRepoRoot()` | `go/installer/installer:745` | IsValidRepoRoot 禁止选择系统敏感目录作为仓库 跨平台实现：禁止根目录、系统关键目录 |
+| `Install()` | `go/installer/installer:49` | Install 安装模型到目标目录（支持链接模式） |
+| `InstallLocked()` | `go/installer/installer:132` | InstallLocked 安装模型到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
+| `InstallDir()` | `go/installer/installer:173` | InstallDir 安装整个目录下的所有文件到目标目录。 |
+| `InstallDirRel()` | `go/installer/installer:183` | InstallDirRel 安装目录到 dstRoot/&lt;relSlash&gt;（保留仓库多层物理路径）。 |
+| `InstallDirLocked()` | `go/installer/installer:190` | InstallDirLocked 与 InstallDir 语义相同，但不重复加锁——供已持锁调用方使用。 |
+| `InstallDirRelLocked()` | `go/installer/installer:196` | InstallDirRelLocked 与 InstallDirRel 语义相同，但不重复加锁——供 sync.PushResources 等整段持 InstallLock 的调用 |
+| `InstallToGlobal()` | `go/installer/installer:504` | InstallToGlobal 安装到全局 custom 目录 |
+| `InstallWithOverlay()` | `go/installer/installer:533` | InstallWithOverlay 带冲突检查的安装 注意（R25 P4-1）：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有 .minec |
+| `CopyFile()` | `go/installer/installer:617` | CopyFile 复制文件到目标目录（带互斥锁） |
+| `CopyFileLocked()` | `go/installer/installer:625` | CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
+| `IsValidRepoRoot()` | `go/installer/installer:775` | IsValidRepoRoot 禁止选择系统敏感目录作为仓库 跨平台实现：禁止根目录、系统关键目录 |
 
 ## go/instance
 
@@ -377,7 +377,7 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `RemoveRepoDuplicates()` | `go/recycle/recycle_clean:25` | RemoveRepoDuplicates 清理整合包子目录中仓库已有的文件： 在 recycleRoot 内的移入回收站（可恢复），否则直接删除（仓库侧无损可重推）。 |
-| `DeduplicateEntries()` | `go/recycle/recycle_clean:117` | DeduplicateEntries 按 SHA256 哈希分组去重：每组显式按路径排序保留第一个，其余移入回收站 |
+| `DeduplicateEntries()` | `go/recycle/recycle_clean:133` | DeduplicateEntries 按 SHA256 哈希分组去重：每组显式按路径排序保留第一个，其余移入回收站 返回值语义（R26 P3-1 修复）：   - removed： |
 | `CleanOpLogger()` | `go/recycle/recycle_clean:19` | CleanOpLogger 清理操作日志回调（薄壳注入 App.logger.Add） |
 | `New()` | `go/recycle/recycle:34` | New 创建回收站管理器，root 是资源根目录，回收站为 root/.recycle |
 | `TrashManager.RecycleDir()` | `go/recycle/recycle:44` | RecycleDir 返回回收站目录路径 |
@@ -385,14 +385,9 @@
 | `TrashManager.MoveEx()` | `go/recycle/recycle:55` | MoveEx 移动文件到回收站，返回操作详情 |
 | `TrashManager.List()` | `go/recycle/recycle:206` | List 列出回收站中的文件。 |
 | `TrashManager.Restore()` | `go/recycle/recycle:266` | Restore 从回收站恢复到原目录 |
-| `TrashManager.Delete()` | `go/recycle/recycle:355` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
-| `TrashManager.Empty()` | `go/recycle/recycle:383` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 r |
+| `TrashManager.Delete()` | `go/recycle/recycle:359` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
+| `TrashManager.Empty()` | `go/recycle/recycle:387` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 r |
 | `Move()` | `go/recycle/recycle:49` | Move 移动文件到回收站 |
-| `MoveEx()` | `go/recycle/recycle:55` | MoveEx 移动文件到回收站，返回操作详情 |
-| `List()` | `go/recycle/recycle:206` | List 列出回收站中的文件。 |
-| `Restore()` | `go/recycle/recycle:266` | Restore 从回收站恢复到原目录 |
-| `Delete()` | `go/recycle/recycle:355` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
-| `Empty()` | `go/recycle/recycle:383` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 r |
 | `MoveResult()` | `go/recycle/recycle:17` | MoveResult 回收操作结果 |
 | `TrashManager()` | `go/recycle/recycle:23` | TrashManager 可配置的回收站管理器 |
 
@@ -1332,23 +1327,6 @@
 | `SwitchContext()` | `frontend/src/features/preview-3d/adapters/switch-preview:32` | 会话内切换所需的外部上下文（原 mount3D 内嵌闭包变量） |
 | `switchToSession()` | `frontend/src/features/preview-3d/adapters/switch-preview:95` | 会话内切换模型（复用外壳重建内容层）。 |
 | `syncLightTargetFromContent()` | `frontend/src/features/preview-3d/adapters/switch-preview:423` | 重算内容层包围盒，更新灯光 target（ADR-081 L1 + ADR-084 L2）。 |
-| `Endianness()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
-| `ConsoleLogger()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
-| `MmdDataDeserializer()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |
-| `PmxObject()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxObject` | — |
-| `Vec3()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:4` | — |
-| `Vec4()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:5` | — |
-| `PmxHeader()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:7` | — |
-| `PmxVertex()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:21` | — |
-| `PmxMaterial()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:34` | — |
-| `PmxBone()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:53` | — |
-| `PmxMorph()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:73` | — |
-| `PmxDisplayFrame()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:86` | — |
-| `PmxRigidBody()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:93` | — |
-| `PmxJoint()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:111` | — |
-| `PmxObject()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader.d:127` | — |
-| `PmxReader()` | `frontend/src/features/preview-3d/adapters/vendor/babylon-mmd/pmxReader:62` | PmxReader is a static class that parses PMX data |
-| `FBXLoader()` | `frontend/src/features/preview-3d/adapters/vendor/fbx/FBXLoader:79` | A loader for the FBX format. |
 | `VrmDataPort()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:33` | VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
 | `VrmMetaInfo()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:89` | VRM meta 归一化信息（meta 卡展示用） |
 | `readVrmMeta()` | `frontend/src/features/preview-3d/adapters/vrm-adapter:110` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
@@ -1742,6 +1720,23 @@
 | `TextureCacheImpl()` | `frontend/src/features/preview-3d/texture-cache:18` | — |
 | `textureCache()` | `frontend/src/features/preview-3d/texture-cache:94` | 全局单例（随 3D 会话生命周期；disposeAll 由 cleanup-3d.ts 调用） |
 | `loadTextures()` | `frontend/src/features/preview-3d/texture-loader:9` | — |
+| `Endianness()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/endianness:4` | Endianness utility class for serlization/deserialization |
+| `ConsoleLogger()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/ILogger:6` | A logger that outputs to the console generally, you can use this class as default logger |
+| `MmdDataDeserializer()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/mmdDataDeserializer:5` | DataView wrapper for deserializing MMD data |
+| `PmxObject()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxObject` | — |
+| `Vec3()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:4` | — |
+| `Vec4()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:5` | — |
+| `PmxHeader()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:7` | — |
+| `PmxVertex()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:21` | — |
+| `PmxMaterial()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:34` | — |
+| `PmxBone()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:53` | — |
+| `PmxMorph()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:73` | — |
+| `PmxDisplayFrame()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:86` | — |
+| `PmxRigidBody()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:93` | — |
+| `PmxJoint()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:111` | — |
+| `PmxObject()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader.d:127` | — |
+| `PmxReader()` | `frontend/src/features/preview-3d/vendor/babylon-mmd/pmxReader:62` | PmxReader is a static class that parses PMX data |
+| `FBXLoader()` | `frontend/src/features/preview-3d/vendor/fbx/FBXLoader:79` | A loader for the FBX format. |
 | `VrmMaterialListItem()` | `frontend/src/features/preview-3d/vrm-materials:11` | 材质列表项（listVrmMaterials） |
 | `VrmMaterialDetail()` | `frontend/src/features/preview-3d/vrm-materials:17` | 材质详情（getVrmMaterialDetail） |
 | `listVrmMaterials()` | `frontend/src/features/preview-3d/vrm-materials:28` | 材质列表：vrm.scene 遍历所有 Mesh.material（含数组材质） |

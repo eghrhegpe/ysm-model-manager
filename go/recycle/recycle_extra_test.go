@@ -14,8 +14,9 @@ import (
 func TestPackageLevelMoveEx(t *testing.T) {
 	dir := t.TempDir()
 	src := testutil.CreateTestFile(t, dir, "test.ysm", "content")
-	// 使用包级函数 MoveEx
-	res := MoveEx(src, dir)
+	// 使用 TrashManager 方法（包级 MoveEx 已删除，R26 P4-1）
+	tm := New(dir)
+	res := tm.MoveEx(src)
 	if res.Action != "recycled" {
 		t.Fatalf("MoveEx action = %s, 期望 recycled", res.Action)
 	}
@@ -30,7 +31,8 @@ func TestPackageLevelList(t *testing.T) {
 	if err := Move(src, dir); err != nil {
 		t.Fatal(err)
 	}
-	entries := List(dir)
+	tm := New(dir)
+	entries := tm.List()
 	if len(entries) != 1 {
 		t.Fatalf("期望 1 个条目, 得到 %d", len(entries))
 	}
@@ -45,11 +47,12 @@ func TestPackageLevelRestore(t *testing.T) {
 	if err := Move(src, dir); err != nil {
 		t.Fatal(err)
 	}
-	entries := List(dir)
+	tm := New(dir)
+	entries := tm.List()
 	if len(entries) != 1 {
 		t.Fatalf("回收站应有 1 个文件")
 	}
-	if err := Restore(entries[0].Path, dir); err != nil {
+	if err := tm.Restore(entries[0].Path); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(src); os.IsNotExist(err) {
@@ -63,14 +66,15 @@ func TestPackageLevelDelete(t *testing.T) {
 	if err := Move(src, dir); err != nil {
 		t.Fatal(err)
 	}
-	entries := List(dir)
+	tm := New(dir)
+	entries := tm.List()
 	if len(entries) != 1 {
 		t.Fatalf("回收站应有 1 个文件")
 	}
-	if err := Delete(entries[0].Path, dir); err != nil {
+	if err := tm.Delete(entries[0].Path); err != nil {
 		t.Fatal(err)
 	}
-	if len(List(dir)) != 0 {
+	if len(tm.List()) != 0 {
 		t.Error("删除后回收站应为空")
 	}
 }
@@ -82,14 +86,15 @@ func TestPackageLevelEmpty(t *testing.T) {
 	Move(filepath.Join(dir, "a.ysm"), dir)
 	Move(filepath.Join(dir, "b.ysm"), dir)
 
-	count, err := Empty(dir)
+	tm := New(dir)
+	count, err := tm.Empty()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if count != 2 {
 		t.Errorf("期望清空 2 个文件, 得到 %d", count)
 	}
-	if len(List(dir)) != 0 {
+	if len(tm.List()) != 0 {
 		t.Error("清空后回收站应为空")
 	}
 }

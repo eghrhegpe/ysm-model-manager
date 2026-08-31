@@ -20,6 +20,12 @@ import (
 // Rename 同一 custom 目录文件 → 竞态/丢更新；ADR-056 统一为共享单锁）
 var InstallLock sync.Mutex
 
+// ErrPartialInstall 标记目录安装「部分成功」——目录已建、部分条目已落地，
+// 但个别条目（文件拷贝/子目录递归）失败。与致命错误（目录创建/读取失败）区分：
+// 致命错误触发整树回滚清理残渣；partial 错误保留已成功落地的兄弟文件，
+// 让用户看到「哪些装上了、哪些没装上」，重装时只补失败项（R26 P3）。
+var ErrPartialInstall = errors.New("部分安装失败")
+
 // cleanAbs 封装 filepath.Abs(filepath.Clean(path))
 func cleanAbs(path string) string {
 	p, err := filepath.Abs(filepath.Clean(path))
@@ -269,13 +275,19 @@ func resolveFinalDst(srcDir, dstDir, relInside string) (string, error) {
 	return filepath.Join(dstDir, filepath.Base(srcDir)), nil
 }
 
-// callInstallDirRecursiveWithRollback 调用 installDirRecursive，并在失败时按「仅本次新建才回滚」
-// 策略清理（原 installDirAtLocked 阶段 6 提纯）。
+// callInstallDirRecursiveWithRollback 调用 installDirRecursive，并在失败时按错误分级决策回滚（R26 P3）。
+//
+// 错误分级与回滚策略：
+//   - ErrPartialInstall（条目级软失败）：**不**回滚。目录已建、部分条目已落地；
+//     整树删除会误删已成功的兄弟文件（MMD 多 texture 场景可感知）。保留部分，
+//     让用户看到「哪些装上了、哪些没装上」，重装时只补失败项。
+//   - 其他错误（致命：checkDstSymlinkSegments / MkdirAll / ReadDir 失败）：仅本次新建
+//     才回滚删除。已存在（重装/覆盖）时不整树删除，避免误删旧数据。
 //
 // 先记录 finalDst 本次安装前是否已存在：
 //   - 已存在（重装/覆盖）：finalDst 可能含用户既有数据，MkdirAll 复用旧目录，失败时**不**整树删除，
 //     否则误删旧数据（对齐 fileops.copyDirRecursive 的整树回滚口径，同时防覆盖场景误删）
-//   - 不存在（全新安装）：失败时 os.RemoveAll(finalDst) 清理部分文件；回滚失败时返回复合错误
+//   - 不存在（全新安装）：致命失败时 os.RemoveAll(finalDst) 清理部分文件；回滚失败时返回复合错误
 //     （fmt.Errorf("%w; 回滚失败: %w")），让调用方能区分「安装失败」与「安装失败+残渣残留」。
 func callInstallDirRecursiveWithRollback(srcDir, finalDst, linkMode, rtype, filesRoot string) error {
 	dstExisted := false
@@ -285,7 +297,12 @@ func callInstallDirRecursiveWithRollback(srcDir, finalDst, linkMode, rtype, file
 		log.Printf("[installer] 检查目标目录状态失败 %s: %v", finalDst, err)
 	}
 	if err := installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot); err != nil {
-		// 仅本次新建目录才回滚删除；回滚失败时记录明确警告并返回复合错误，
+		// 条目级软失败：保留已落地文件，不回滚（R26 P3）。
+		// 旧实现无差别整树回滚，把已成功的兄弟文件一起删掉，MMD 多 texture 场景用户可感知。
+		if errors.Is(err, ErrPartialInstall) {
+			return err
+		}
+		// 致命错误：仅本次新建目录才回滚删除；回滚失败时记录明确警告并返回复合错误，
 		// 让调用方能区分「安装失败」与「安装失败 + 回滚失败留残渣」两种状态
 		if !dstExisted {
 			if rmErr := os.RemoveAll(finalDst); rmErr != nil {
@@ -313,7 +330,12 @@ func installDirAtLocked(srcDir, dstDir, relInside, filesRoot, linkMode, rtype st
 		return err
 	}
 	// finalDst 落在 srcDir 内同样死递归（srcDir 与 dstDir
-	// 不同但嵌套时，如 dstDir 是 srcDir 的子目录）——在递归入口再守一道
+	// 不同但嵌套时，如 dstDir 是 srcDir 的子目录）——在递归入口再守一道。
+	// 分工说明（R26 P4-3）：normalize 的 sameDir 守卫（L232）仅防 srcDir==dstDir
+	// 完全相同；本守卫防 srcDir 是 finalDst 的祖先（嵌套）。两道守卫互补，
+	// 均不可省：sameDir 不防嵌套，本守卫不防完全相同（finalDst=dstDir/<basename>
+	// 严格是 dstDir 子路径，IsInside(srcDir, finalDst) 在 srcDir==dstDir 时
+	// rel=="." 不触发越权，需 sameDir 兜底）。
 	if paths.IsInside(srcDir, finalDst) == nil {
 		return types.AppError{Code: types.ErrInvalidPath, Operation: "安装目录", SourcePath: finalDst, Reason: "目标目录位于源目录内（潜在死递归）"}
 	}
@@ -438,6 +460,13 @@ func installSingleDirEntry(entry os.DirEntry, srcDir, finalDst, linkMode, rtype,
 }
 
 // installDirRecursive 递归安装目录树
+//
+// 错误分级（R26 P3）：
+//   - 致命错误（checkDstSymlinkSegments / MkdirAll / ReadDir 失败）：直接 return，
+//     上层 callInstallDirRecursiveWithRollback 据此触发整树回滚清理残渣。
+//   - 条目级软失败（单个文件拷贝失败、子目录递归部分失败）：收集到 errs，
+//     返回 ErrPartialInstall 包装错误；上层据此**不**回滚——已成功落地的兄弟文件保留，
+//     让用户看到「哪些装上了、哪些没装上」，重装时只补失败项。
 func installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot string) error {
 	// 目标侧符号链接段校验——必须放在 MkdirAll 之前：MkdirAll 会跟随 symlink
 	// 在真实位置建目录，若 finalDst 父链含指向 .minecraft 外的 symlink 段，
@@ -465,7 +494,9 @@ func installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot string) er
 		installSingleDirEntry(entry, srcDir, finalDst, linkMode, rtype, filesRoot, &errs)
 	}
 	if len(errs) > 0 {
-		return fmt.Errorf("安装目录 %s 部分失败: %w", srcDir, errors.Join(errs...))
+		// 条目级软失败：用 ErrPartialInstall 标记，让上层保留已落地文件而非整树回滚。
+		// 文案含「部分失败」子串以兼容旧测试断言（strings.Contains(err, "部分失败")）。
+		return fmt.Errorf("%w: 安装目录 %s 部分失败: %w", ErrPartialInstall, srcDir, errors.Join(errs...))
 	}
 	return nil
 }

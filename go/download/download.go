@@ -72,13 +72,20 @@ var (
 	ErrChecksumMismatch = errors.New("校验和不匹配")
 )
 
-// HTTPStatusError 携带 HTTP 状态码的类型化错误，调用方用 errors.As 提取码值，
+// HTTPStatusError 携带 HTTP 状态码与 URL 的类型化错误，调用方用 errors.As 提取码值，
 // 替代 strings.Contains(err.Error(), "404") 等脆弱匹配。
+// URL 字段（R26 P4-1）：旧 Error() 只输出 `HTTP <code>`，调用方日志难以定位是哪个 URL 返回 4xx/5xx。
 type HTTPStatusError struct {
 	Code int
+	URL  string
 }
 
-func (e *HTTPStatusError) Error() string { return fmt.Sprintf("HTTP %d", e.Code) }
+func (e *HTTPStatusError) Error() string {
+	if e.URL != "" {
+		return fmt.Sprintf("HTTP %d: %s", e.Code, e.URL)
+	}
+	return fmt.Sprintf("HTTP %d", e.Code)
+}
 
 // TruncationError 携带期望/实际字节数的截断错误，调用方用 errors.As 提取数值做诊断上报。
 type TruncationError struct {
@@ -115,6 +122,11 @@ const (
 	defaultRetryMaxAttempts = 3
 	// defaultRetryBackoff 显式开启重试且 Backoff 为 0 时的退避基数（指数增长）
 	defaultRetryBackoff = 500 * time.Millisecond
+	// maxRetryBackoff 指数退避封顶（R26 P3-1）：backoff<<(attempt-1) 在 attempt
+	// 较大时可能溢出（int64 左移超过 63 位）或退避过长（用户无感）。
+	// 封顶为 30s：默认 backoff=500ms 时 attempt=7 达到 32s，封顶截断；
+	// 调用方设 MaxAttempts=20 时 attempt=13 后恒等 30s，避免溢出。
+	maxRetryBackoff = 30 * time.Second
 )
 
 // RetryPolicy 下载重试策略（字段 0 回退包级默认常量，见 WithRetry 注释）。
@@ -134,6 +146,13 @@ func (d *Downloader) WithRetry(maxAttempts int, backoff time.Duration) *Download
 // isRetryableError 判断错误是否值得同一 URL 重试。
 // 不重试：ctx 取消/超时、4xx、安全 sentinel（partial 伪装/非二进制/scheme/重定向/校验和不符）。
 // 重试：服务端 5xx、底层网络错误（timeout/连接重置）、io 断流。
+//
+// 截断重试 vs 校验和不重试的语义不对称是有意设计（R26 P4-2 澄清）：
+//   - ErrTruncated（截断）属传输层问题——服务端声明 Content-Length 但实际字节数不足，
+//     可能是网络中断导致，重试同一 URL 可能下次完整。
+//   - ErrChecksumMismatch（校验和不符）属内容层问题——下载内容与期望 SHA256 不符，
+//     重试同一 URL 可能反复不符（内容本身错），不重试避免浪费。
+//   - 若截断源于 CDN 限流（反复截断），重试耗尽自然返回末次错误，调用方可换源。
 func isRetryableError(err error) bool {
 	if err == nil {
 		return false
@@ -183,7 +202,7 @@ func (d *Downloader) retryDownload(ctx context.Context, url, savePath, accept st
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(backoff << (attempt - 1)):
+		case <-time.After(min(backoff<<(attempt-1), maxRetryBackoff)):
 		}
 	}
 	return lastErr
@@ -191,7 +210,11 @@ func (d *Downloader) retryDownload(ctx context.Context, url, savePath, accept st
 
 // New 创建 Downloader，默认 5 分钟超时（可被 AppConfig.DownloadTimeoutSec 覆盖，ADR-062）。
 func New() *Downloader {
-	return &Downloader{timeout: downloadTimeout()}
+	timeout := downloadTimeout()
+	return &Downloader{
+		timeout: timeout,
+		client:  &http.Client{Timeout: timeout},
+	}
 }
 
 // NewWithClient 使用指定 HTTP client。
@@ -203,7 +226,11 @@ func (d *Downloader) httpClient() *http.Client {
 	if d.client != nil {
 		return d.client
 	}
-	return &http.Client{Timeout: d.timeout}
+	// 未缓存时即时构造并赋值到 d.client，后续调用复用同一实例（R26 P3-3）：
+	// 旧实现每次 new 一个 http.Client，无连接池/keepalive 复用，并发下载场景性能差。
+	c := &http.Client{Timeout: d.timeout}
+	d.client = c
+	return c
 }
 
 // ===== downloadTo 子函数（2026-08-25 第6刀拆分；断点续传接入点落在
@@ -241,7 +268,10 @@ func (d *Downloader) prepareDownloadEnv(url, savePath string) (*http.Client, *sy
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") {
 		return nil, nil, fmt.Errorf("%w: %q（仅支持 http/https）", ErrUnsupportedScheme, url)
 	}
-	mu, _ := fileLocks.LoadOrStore(savePath, &sync.Mutex{})
+	// 规范化锁键：filepath.Clean 消除尾分隔符/双斜杠/.. 等差异，
+	// 防止同一 savePath 因写法不同而拿到不同锁、互斥失效（R26 P3-2）。
+	lockKey := filepath.Clean(savePath)
+	mu, _ := fileLocks.LoadOrStore(lockKey, &sync.Mutex{})
 	m := mu.(*sync.Mutex)
 	m.Lock() // 交给调用方 defer Unlock
 	if err := os.MkdirAll(filepath.Dir(savePath), fsutil.DirPerms); err != nil {
@@ -283,7 +313,11 @@ func doDownloadRequest(ctx context.Context, client *http.Client, url, accept str
 // 完整响应路径的安全防线，动它即语义变更，不与功能顺手捆绑。
 func validateHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
-		return &HTTPStatusError{Code: resp.StatusCode}
+		url := ""
+		if resp.Request != nil && resp.Request.URL != nil {
+			url = resp.Request.URL.String()
+		}
+		return &HTTPStatusError{Code: resp.StatusCode, URL: url}
 	}
 	if cr := resp.Header.Get("Content-Range"); cr != "" {
 		return fmt.Errorf("%w: Content-Range: %q", ErrPartialResponse, cr)

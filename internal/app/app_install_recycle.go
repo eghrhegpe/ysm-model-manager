@@ -52,7 +52,7 @@ func (a *App) MoveToRecycleEx(src string) (string, string) {
 	if root == "" {
 		return "error", "未找到包含此文件的资源目录"
 	}
-	res := recycle.MoveEx(src, root)
+	res := recycle.New(root).MoveEx(src)
 	if res.Action != "error" {
 		// 移动成功后失效扫描缓存——与 MoveToRecycle 对齐（防 30s 陈旧缓存"复活"）
 		scanner.InvalidateCache()
@@ -177,7 +177,7 @@ func (a *App) ListRecycleBin(recyclePath string) []types.ModelEntry {
 	all := []types.ModelEntry{}
 	seen := map[string]bool{}
 	for _, r := range roots {
-		for _, e := range recycle.List(r) {
+		for _, e := range recycle.New(r).List() {
 			if seen[e.Path] {
 				continue
 			}
@@ -197,13 +197,13 @@ func (a *App) RestoreFromRecycle(src, filesRoot string) error {
 		if recycle.New(r).RecycleDir() == "" {
 			continue
 		}
-		if err := recycle.Restore(src, r); err == nil {
+		if err := recycle.New(r).Restore(src); err == nil {
 			// 恢复 = 仓库新增文件——失效扫描缓存，否则 30s 内扫描不到恢复的文件
 			scanner.InvalidateCache()
 			return nil // 找到正确的根目录并恢复
 		}
 	}
-	if err := recycle.Restore(src, filesRoot); err != nil {
+	if err := recycle.New(filesRoot).Restore(src); err != nil {
 		return err
 	}
 	// fallback 恢复成功同样失效缓存
@@ -219,11 +219,11 @@ func (a *App) DeleteFromRecycle(src string) error {
 		if recycle.New(r).RecycleDir() == "" {
 			continue
 		}
-		if err := recycle.Delete(src, r); err == nil {
+		if err := recycle.New(r).Delete(src); err == nil {
 			return nil
 		}
 	}
-	return recycle.Delete(src, a.ysmRoot())
+	return recycle.New(a.ysmRoot()).Delete(src)
 }
 
 // EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。
@@ -236,7 +236,7 @@ func (a *App) EmptyRecycleBin(src string) (int, error) {
 	total := 0
 	failed := []string{}
 	for _, r := range a.allRecycleRoots(cfg) {
-		n, err := recycle.Empty(r)
+		n, err := recycle.New(r).Empty()
 		if err != nil {
 			failed = append(failed, r)
 			continue

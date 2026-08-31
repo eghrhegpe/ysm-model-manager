@@ -304,9 +304,13 @@ func (tm *TrashManager) Restore(src string) error {
 		}
 		// 在原位置重建符号链接
 		if linkErr := os.Symlink(target, dst); linkErr != nil {
-			// 回滚：恢复回收站侧链接
-			_ = os.Symlink(target, src)
-			return fmt.Errorf("恢复符号链接失败 %s -> %s: %w", dst, target, linkErr)
+			// 回滚：恢复回收站侧链接。回滚失败时 log 并在错误中追加信息，
+			// 让调用方知道回收站侧链接已永久丢失（R26 P3-3：旧实现 _ 静默吞掉）。
+			if rbErr := os.Symlink(target, src); rbErr != nil {
+				log.Printf("[recycle] 回收站侧链接回滚失败 %s: %v（回收站条目已丢失）", src, rbErr)
+				return fmt.Errorf("恢复符号链接失败 %s -> %s: %w; 回收站侧链接回滚失败: %v", dst, target, linkErr, rbErr)
+			}
+			return fmt.Errorf("恢复符号链接失败 %s -> %s: %w（已回滚回收站侧链接）", dst, target, linkErr)
 		}
 		return nil
 	}
@@ -409,29 +413,13 @@ func (tm *TrashManager) Empty() (int, error) {
 }
 
 // ===== 向后兼容的包级函数 =====
+// 仅保留 Move（go/cli/dedup.go 调用）。MoveEx/Restore/Delete/Empty/List 包级
+// 变体已删除（R26 P4-1）：无生产调用方，且每次 New(filesRoot) 新建临时
+// TrashManager 绕过 InstallLock 绑定，构成未持锁逃逸口。调用方应直接使用
+// TrashManager 方法并确保持锁。
 
 func Move(src, filesRoot string) error {
 	return New(filesRoot).Move(src)
-}
-
-func MoveEx(src, filesRoot string) *MoveResult {
-	return New(filesRoot).MoveEx(src)
-}
-
-func List(filesRoot string) []types.ModelEntry {
-	return New(filesRoot).List()
-}
-
-func Restore(src, filesRoot string) error {
-	return New(filesRoot).Restore(src)
-}
-
-func Delete(src, filesRoot string) error {
-	return New(filesRoot).Delete(src)
-}
-
-func Empty(filesRoot string) (int, error) {
-	return New(filesRoot).Empty()
 }
 
 // copyFile 复制文件（跨分区兼容）

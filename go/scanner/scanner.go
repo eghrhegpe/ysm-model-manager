@@ -78,8 +78,11 @@ const scanCacheTTL = 30 * time.Second
 // errorSink 扫描错误回调（ADR-082 续：GUI 下 stdout 不可见，log.Printf 等于静默——
 // 薄壳注入 AddOpLog 让 walk/文件信息/哈希错误进环形日志面板，用户可查）
 // R31 P2-3：旧实现是裸变量，SetErrorSink 无锁写、emitScanError 无锁读 → data race。
-// 改 atomic.Pointer 消除竞态（启动期单写、运行期只读，atomic 足够）。
-var errorSink atomic.Pointer[func(msg string)]
+// 改 RWMutex 保护（启动期单写、运行期只读，RWMutex 足够）。
+var (
+	errorSinkMu sync.RWMutex
+	errorSink   func(msg string)
+)
 
 // scanErrorDedup 错误去重窗口：同一 msg 在窗口期内只上报一次。
 // 背景：扫描缓存 30s TTL，缓存过期后同目录反复重扫；若目录持续出错（如权限拒绝），
@@ -94,9 +97,11 @@ var (
 )
 
 // SetErrorSink 注入扫描错误回调（薄壳 internal/app 启动时调用，如 AddOpLog 包装）
-// R31 P2-3：atomic.Pointer 写入，消除 data race。
+// R31 P2-3：RWMutex 写锁保护，消除 data race。
 func SetErrorSink(fn func(msg string)) {
-	errorSink.Store(&fn)
+	errorSinkMu.Lock()
+	errorSink = fn
+	errorSinkMu.Unlock()
 }
 
 // emitScanError 上报扫描错误：注入 sink 时走 sink（进日志面板），否则 log.Printf 兜底。
@@ -118,9 +123,12 @@ func emitScanError(format string, args ...any) {
 		}
 	}
 	dedupMu.Unlock()
-	// R31 P2-3：atomic.Pointer 读取，消除 data race。
-	if fnp := errorSink.Load(); fnp != nil && *fnp != nil {
-		(*fnp)(msg)
+	// R31 P2-3：RWMutex 读锁保护，消除 data race。
+	errorSinkMu.RLock()
+	fn := errorSink
+	errorSinkMu.RUnlock()
+	if fn != nil {
+		fn(msg)
 		return
 	}
 	log.Printf("%s", msg)
@@ -204,19 +212,38 @@ func InvalidatePath(dir string) {
 		return
 	}
 	sep := string(filepath.Separator)
-	// R31 P2-2：祖先脏读修复。
+	// R31 P2-2 + code_review P1-1/P1-2：祖先脏读修复。
 	// 旧实现仅递增 key 自身 + 子孙 key 版本，不递增祖先 key 版本。
 	// 若用户扫描 /a 后 InvalidatePath("/a/b")，/a 的缓存仍 30s TTL 命中，
 	// 但 /a 的扫描结果可能已包含 /a/b 子树的状态 → 父缓存脏读。
 	// 修复：同时递增所有祖先 key 的版本，确保父缓存也失效。
+	// code_review P1-2：Windows 盘符根路径（C:\\）上 filepath.Dir 不变，
+	// 旧循环无 parent==prev 守卫会无限循环。加 prev 守卫。
 	ancestors := []string{key}
-	for parent := filepath.Dir(key); parent != "." && parent != string(filepath.Separator) && parent != key; parent = filepath.Dir(parent) {
-		ancestors = append(ancestors, parent)
+	{
+		prev := key
+		for parent := filepath.Dir(key); parent != prev; parent = filepath.Dir(parent) {
+			ancestors = append(ancestors, parent)
+			prev = parent
+			if parent == "." || parent == string(filepath.Separator) {
+				break
+			}
+		}
 	}
 	for _, anc := range ancestors {
 		kv, _ := keyVersions.LoadOrStore(anc, &atomic.Uint64{})
 		kv.(*atomic.Uint64).Add(1)
 	}
+	// code_review P1-1：恢复 descendant keyVersion 递增。
+	// 旧实现 keyVersions.Range 递增所有子孙 key 版本，拦截在途 Store。
+	// 重写时丢失了这一臂，导致在途子目录扫描的陈旧结果被缓存。
+	keyVersions.Range(func(k, v interface{}) bool {
+		kstr := k.(string)
+		if strings.HasPrefix(kstr, key+sep) {
+			v.(*atomic.Uint64).Add(1)
+		}
+		return true
+	})
 	// 遍历 scanCache 删除相关条目（自身 + 子孙 + 祖先）
 	scanCache.Range(func(k, _ interface{}) bool {
 		kstr := k.(string)

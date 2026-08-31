@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-30T14:51:04.838Z",
+  "generated": "2026-08-31T04:31:49.980Z",
   "scope": "./go/**/*.go",
   "language": "go",
   "duplicates": 457,
@@ -102,7 +102,6 @@
     "go/packs/mcmeta_test.go#go/packs/packs_extra_test.go",
     "go/packs/packs_extra_test.go#go/packs/packs_extra_test.go",
     "go/recycle/recycle_clean_test.go#go/recycle/recycle_clean_test.go",
-    "go/recycle/recycle_extra_test.go#go/recycle/recycle_extra_test.go",
     "go/recycle/recycle_moveex_test.go#go/recycle/recycle_moveex_test.go",
     "go/recycle/recycle_moveex_test.go#go/recycle/recycle_moveex_windows_test.go",
     "go/recycle/recycle_moveex_test.go#go/recycle/recycle_restore_extra_test.go",

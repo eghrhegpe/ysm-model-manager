@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/recycle"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
@@ -171,9 +172,22 @@ func (a *App) ClearCustomDir(customDir string) (int, error) {
 	return count, nil
 }
 
+// ListRecycleBin 列出回收站条目。recyclePath 非空时只遍历与之相关的资源根
+// （任一方向互相包含即视为相关），为空则退回全量遍历。
+// 单根包含判定复用 go/paths.IsInside——其已覆盖空路径、NUL 字节、filepath.Rel
+// 前缀误判（.. 与 ..foo）、Windows 大小写不敏感等边界，此处不另造一套。
 func (a *App) ListRecycleBin(recyclePath string) []types.ModelEntry {
 	cfg := a.LoadAppConfig()
 	roots := a.allRecycleRoots(cfg)
+	if recyclePath != "" {
+		keep := make([]string, 0, len(roots))
+		for _, r := range roots {
+			if paths.IsInside(r, recyclePath) == nil || paths.IsInside(recyclePath, r) == nil {
+				keep = append(keep, r)
+			}
+		}
+		roots = keep
+	}
 	all := []types.ModelEntry{}
 	seen := map[string]bool{}
 	for _, r := range roots {

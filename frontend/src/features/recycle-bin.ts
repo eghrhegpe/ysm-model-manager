@@ -39,12 +39,6 @@ interface RecycleBinEntry {
   Size: number | unknown;
 }
 
-export function isPathInRoot(path: string, root: string): boolean {
-  const p = path.replace(/\\/g, "/").toLowerCase();
-  const r = root.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
-  return p === r || p.startsWith(r + "/");
-}
-
 type ToastFn = (msg: string, duration: number, type: "success" | "error") => void;
 type TFn = typeof _t;
 type ModalConfirmFn = typeof _modalConfirm;
@@ -213,9 +207,10 @@ function buildLoadRecycleBin(
     try {
       const { ListRecycleBin, RestoreFromRecycle, DeleteFromRecycle, GetRepoRoot } = await _getApp();
       const currentRoot = await GetRepoRoot(getCurrentType());
-      const allEntries = (await ListRecycleBin("")) || [];
+      // 作用域交由 Go 端过滤（ListRecycleBin 的 recyclePath 参数），前端不再自建路径前缀匹配
+      const allEntries = (await ListRecycleBin(currentRoot || "")) || [];
       if (guard.stale(gen)) return;
-      const entries = (allEntries as RecycleBinEntry[]).filter((e) => e.Path && (currentRoot ? isPathInRoot(e.Path, currentRoot) : true));
+      const entries = (allEntries as RecycleBinEntry[]).filter((e) => e.Path);
       if (!entries.length) {
         if (shell.cleanupActions.current) { shell.cleanupActions.current(); shell.cleanupActions.current = null; }
         list.innerHTML = "";

@@ -112,17 +112,20 @@ describe("loadRecycleBin 渲染", () => {
     expect(root.getElementById("recy-count")!.textContent).toBe("空");
   });
 
-  it("有条目 → 渲染 item + 计数，按 root 过滤", async () => {
+  it("委托 Go 按 root 过滤 → 渲染 Go 返回的全部条目，前端不再 re-filter", async () => {
+    // 当前 root = /mc（由 GetRepoRoot mock 决定）；作用域过滤已移交 Go 端 ListRecycleBin(recyclePath)
     mocks.ListRecycleBin.mockResolvedValue([
       entry("a.ysm", "/mc/a.ysm"),
-      entry("b.ysm", "/other/b.ysm"), // 不在当前 root 下 → 过滤
+      entry("b.ysm", "/mc/sub/b.ysm"),
     ]);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
     await flush();
     await flush();
 
-    expect(root.querySelectorAll('[data-testid="recy-item"]')).toHaveLength(1);
-    expect(root.getElementById("recy-count")!.textContent).toContain("1 个文件");
+    // 前端只把 root 透传给 Go，不再做路径前缀过滤——Go 返回几条就渲染几条
+    expect(mocks.ListRecycleBin).toHaveBeenCalledWith("/mc");
+    expect(root.querySelectorAll('[data-testid="recy-item"]')).toHaveLength(2);
+    expect(root.getElementById("recy-count")!.textContent).toContain("2 个文件");
     expect(mocks.renderDisplayName).toHaveBeenCalled();
   });
 

@@ -61,7 +61,7 @@ function auditReport(overrides: Record<string, unknown> = {}): string {
     score: 87,
     completeness: { checked: 3, valid: 3, invalid: 0, percentage: 100 },
     cache: { cache_dir: "", cache_files: 0, cache_size: 0, hit_rate: 0 },
-    resources: { total_files: 3, total_size: 1051136, banned: 1, by_type: {} },
+    resources: { total_files: 7, total_size: 1051136, banned: 1, by_type: {} },
     dedup: { groups: 0, extra_files: 0, reclaim_bytes: 0 },
     ...overrides,
   });
@@ -144,6 +144,10 @@ describe("loadOldestModel", () => {
     expect(html).toContain('oldest-health-ring-num">87<');
     expect(html).toContain("🚫 1");
     expect(html).toContain("🔗 0");
+    // 同屏双口径修复：count pill 走 audit 仓库域 total_files（=7），
+    // 不再用 ScanModelEntriesWithLabel 的类型域 entries.length（=3）
+    expect(html).toContain("📄 7");
+    expect(html).not.toContain("📄 3");
     cleanup();
   });
 

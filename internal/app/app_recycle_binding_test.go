@@ -81,3 +81,47 @@ func TestListRecycleBin_IteratesRoots(t *testing.T) {
 		t.Fatalf("ListRecycleBin 应列出 1 条, 得到 %d", len(entries))
 	}
 }
+
+// ===== ListRecycleBin 的 recyclePath 作用域过滤 =====
+// 后端契约曾打折：recyclePath 参数在函数体内零引用（恒遍历所有根），
+// 逼前端 features/recycle-bin.ts 自建 isPathInRoot 做路径前缀补位。
+// 此处锁定"传参即过滤、空串退回全量"的语义，防止该参数再次被架空。
+// 路径包含判定复用 go/paths.IsInside（双向：recyclePath 在根内 或 根在 recyclePath 内），
+// 不在此重复测试 paths 包自身已覆盖的边界。
+
+func TestListRecycleBin_ScopeIncludesParentRelation(t *testing.T) {
+	a, ysmRoot, _ := packApp(t)
+	src := filepath.Join(ysmRoot, "scoped.ysm")
+	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if action, _ := a.MoveToRecycleEx(src); action != "recycled" {
+		t.Fatalf("预置回收失败: %s", action)
+	}
+	// 传入 ysmRoot 的父目录：recyclePath 包含回收根 → 该根被保留（双向 IsInside）
+	parent := filepath.Dir(ysmRoot)
+	if got := len(a.ListRecycleBin(parent)); got != 1 {
+		t.Fatalf("传父目录应命中 1 条, 得到 %d", got)
+	}
+}
+
+func TestListRecycleBin_ScopedByRecyclePath(t *testing.T) {
+	a, ysmRoot, _ := packApp(t)
+	src := filepath.Join(ysmRoot, "scoped.ysm")
+	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if action, _ := a.MoveToRecycleEx(src); action != "recycled" {
+		t.Fatalf("预置回收失败: %s", action)
+	}
+
+	if got := len(a.ListRecycleBin(ysmRoot)); got != 1 {
+		t.Fatalf("传所属根应列出 1 条, 得到 %d", got)
+	}
+	if got := len(a.ListRecycleBin("")); got != 1 {
+		t.Fatalf("传空串应退回全量 1 条, 得到 %d", got)
+	}
+	if got := len(a.ListRecycleBin(t.TempDir())); got != 0 {
+		t.Fatalf("传无关根目录应列出 0 条, 得到 %d", got)
+	}
+}

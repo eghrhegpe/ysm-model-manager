@@ -6,7 +6,6 @@ import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
 import { formatBytes } from "../utils/dom/format.ts";
-import { loadResourceRegistry } from "../utils/resource/registry.ts";
 import { getApp } from "../backend/app.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../utils/resource/types.ts";
 import { useCurrentResourceType } from "./repo-rtype.ts";
@@ -33,6 +32,7 @@ interface ModelEntry {
 }
 
 interface RepoStats {
+  totalFiles: number;
   totalSize: number;
   banned: number;
   dupGroups: number;
@@ -44,8 +44,6 @@ interface RepoStats {
 
 interface OldestPageOpts {
   stats: RepoStats;
-  entriesLen: number;
-  curIcon: string;
   oldestHtml: string;
   heatmapHtml: string;
   dailyHtml: string;
@@ -70,6 +68,7 @@ async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
   if (!report) throw new Error(t("diagnostics.healthParseFailed"));
   const score = report.score;
   return {
+    totalFiles: report.resources.total_files,
     totalSize: report.resources.total_size,
     banned: report.resources.banned ?? 0,
     dupGroups: report.dedup.groups,
@@ -223,8 +222,8 @@ function renderDailyPicksHtml(
 }
 
 function buildOldestPageHtml(opts: OldestPageOpts): string {
-  const { stats, entriesLen, curIcon, oldestHtml, heatmapHtml, dailyHtml, formatBytes } = opts;
-  const { score, healthColor, healthLabel, healthTagClass, totalSize, banned, dupGroups } = stats;
+  const { stats, oldestHtml, heatmapHtml, dailyHtml, formatBytes } = opts;
+  const { score, healthColor, healthLabel, healthTagClass, totalFiles, totalSize, banned, dupGroups } = stats;
   return (
     '<div class="oldest-page">' +
     '<div class="oldest-stats-bar">' +
@@ -248,10 +247,8 @@ function buildOldestPageHtml(opts: OldestPageOpts): string {
     "</span></div>" +
     '<div class="oldest-stats-divider"></div>' +
     '<div class="oldest-stats-row">' +
-    '<span class="oldest-stat-pill">' +
-    curIcon +
-    " " +
-    entriesLen +
+    '<span class="oldest-stat-pill">📄 ' +
+    totalFiles +
     "</span>" +
     '<span class="oldest-stat-pill">📏 ' +
     formatBytes(totalSize) +
@@ -300,10 +297,7 @@ export async function loadOldestModel(container: HTMLElement, esc: (s: string) =
       const sorted4 = [...entries].filter((e) => Number.isFinite(e.ModTime) && e.ModTime > 0).sort((a, b) => a.ModTime - b.ModTime).slice(0, OLDEST_CARD_COUNT);
       const oldestHtml = renderOldestCardsHtml(sorted4, esc, renderDisplayName, formatBytes);
       const dailyHtml = renderDailyPicksHtml(entries, esc, renderDisplayName, formatBytes);
-      const reg = await loadResourceRegistry();
-      if (guard.stale(gen)) return;
-      const curIcon = (reg[getCurrentType()] && reg[getCurrentType()].icon) || "📦";
-      container.innerHTML = buildOldestPageHtml({ stats, entriesLen: entries.length, curIcon, oldestHtml, heatmapHtml, dailyHtml, formatBytes });
+      container.innerHTML = buildOldestPageHtml({ stats, oldestHtml, heatmapHtml, dailyHtml, formatBytes });
       container.removeEventListener("click", handleContainerClick);
       container.addEventListener("click", handleContainerClick);
     } catch (err) {

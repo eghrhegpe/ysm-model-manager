@@ -29,8 +29,11 @@ func (a *App) prewarmPlazaWindow() {
 	)
 	a.plazaWin = w
 
+	// 窗口预热复用：点 X 只隐藏、不销毁（Cancel），因此收尾必须显式走 ClosePlazaWindow。
+	// 否则 currentPlazaTarget 不清、反向代理不停——同一站点重开时 startProxy 的
+	// oldTarget != url 判据失效，会累积泄漏 HTTP server 与端口，直到应用退出才释放。
 	w.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		w.Hide()
+		_ = a.ClosePlazaWindow()
 		e.Cancel()
 	})
 

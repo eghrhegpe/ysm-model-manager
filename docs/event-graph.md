@@ -207,8 +207,8 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/features/oldest-models.ts` | 59 |
-| `frontend/src/features/recycle-bin.ts` | 192 |
+| `frontend/src/features/oldest-models.ts` | 57 |
+| `frontend/src/features/recycle-bin.ts` | 186 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 385 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 274 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 341 |
@@ -313,8 +313,8 @@
 | `frontend/src/features/import-executor.ts` | 34 |
 | `frontend/src/features/import-executor.ts` | 220 |
 | `frontend/src/features/pack-dnd.ts` | 167 |
-| `frontend/src/features/recycle-bin.ts` | 116 |
-| `frontend/src/features/recycle-bin.ts` | 176 |
+| `frontend/src/features/recycle-bin.ts` | 110 |
+| `frontend/src/features/recycle-bin.ts` | 170 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
 | `frontend/src/views/app-content/settings/init.ts` | 142 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
@@ -423,7 +423,7 @@
 | `frontend/src/features/import-executor.ts` | 211 |
 | `frontend/src/features/import-executor.ts` | 224 |
 | `frontend/src/features/pack-dnd.ts` | 37 |
-| `frontend/src/features/recycle-bin.ts` | 249 |
+| `frontend/src/features/recycle-bin.ts` | 244 |
 | `frontend/src/features/version-updater.ts` | 149 |
 | `frontend/src/features/version-updater.ts` | 158 |
 | `frontend/src/features/version-updater.ts` | 184 |
@@ -600,8 +600,8 @@
 | `frontend/src/features/import-executor.ts` | 35 |
 | `frontend/src/features/import-executor.ts` | 219 |
 | `frontend/src/features/pack-dnd.ts` | 168 |
-| `frontend/src/features/recycle-bin.ts` | 117 |
-| `frontend/src/features/recycle-bin.ts` | 177 |
+| `frontend/src/features/recycle-bin.ts` | 111 |
+| `frontend/src/features/recycle-bin.ts` | 171 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 436 |
 | `frontend/src/views/app-sidebar/index.ts` | 321 |
 

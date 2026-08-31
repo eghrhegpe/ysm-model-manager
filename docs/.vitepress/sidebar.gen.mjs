@@ -1393,6 +1393,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r32-go-avatar-rustbridge-2026-08-31"
       },
       {
+        "text": "R33 审核：go/fileops（最后一包）",
+        "link": "/audit/audit-r33-go-fileops-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

@@ -49,7 +49,6 @@
 | `funcmap.mjs` | `node scripts/funcmap.mjs -o funcmap.md` | 提取 Go/JS/TS 导出符号映射表（按模块分组，参考 MikuMikuAR 风格） |
 | `doctor.mjs` | `node scripts/doctor.mjs` | **薄派发器**：三模式全部委托 pre-push-gate.mjs（单一实现源头，2026-08-14 合并消除双端漂移）——默认 = `--all --dry-run`（Go 编译/单测/vet + 前端构建/vitest/tsc + 文件 + 红线 + 静态分析 + Git，含 check-layering 分层守护）；`--docs` = `--docs --dry-run`（轻量文档检查）；`--gate [ref]` = `--dry-run`（域感知门禁，不触发 push）；`--json` 透传 |
 | `comment-checker.mjs` | `node scripts/comment-checker.mjs` / `--json` / `--full` | 注释质量（废话/JSDoc/TODO/调试日志）；`--json` 默认每类截断 50 条 + `_summary` 分类计数，`--full` 全量（防 wasm base64 超长行误报/爆炸） |
-| `event-audit.mjs` | `node scripts/event-audit.mjs` / `--json` | EventsOn/bus.on 注册位置检查 |
 | `binding-check.mjs` | `node scripts/binding-check.mjs` | Go 导出函数 vs v3 bindings 产物（`-ts` 契约 app.ts）一致性 |
 | `adr-check.mjs` | `node scripts/adr-check.mjs` | ADR 登记表 vs 磁盘对账（防撞号/漏登/幽灵） |
 | `ai-mistake-tracker.mjs` | `node scripts/ai-mistake-tracker.mjs` / `--limit N` / `--json` | 分析 git 历史找 AI 高频犯错区（fix 分类统计 / 连续修复链 / 文件热力图 / 规则违反扫描），反哺 AGENTS.md 陷阱清单 |
@@ -65,8 +64,6 @@
 | `pre-push-gate.mjs` | `node scripts/pre-push-gate.mjs <remote> <url>`（.githooks/pre-push 调度器）/ `--dry-run` / `--all` / `--docs` | 本地质量门禁（doctor 全部模式的单一实现源头）：按变更域（Go/前端/数据/文档）只跑相关检查；Go 域含 updater helper 前置构建 + `./internal/app/` 测试；前端域含 **check-layering 分层硬门禁** + vitest + **tsc --noEmit**；gofmt 修复在 pre-commit 自动完成，pre-push 只读检出不阻断（格式类债务，2026-08-13 决策）；构建/断链/契约失败/红线扫描不可用（fail-closed）阻断推送；契约测试并行执行（~31s vs 串行 ~43s）；结果双写 stderr + `.git/push-log`（带 ISO 时间戳，持久可查）；`--all` = 全量体检（含静态分析工具 + 关键文件），`--docs` = 轻量文档检查 |
 | `commit-with-check.mjs` | `node scripts/commit-with-check.mjs -m "<msg>"` / `--docs` / `--check` | **验证 + 自动提交的 thin wrapper**（ADR-086）：验证全部委托 pre-push-gate（单一源头），门禁全绿才 commit；`--check` 只验不交；按 staged 文件自动裁剪门禁 |
 | `e2e-coverage-report.mjs` | `node scripts/e2e-coverage-report.mjs` / `--input <path>` / `--all` / `--json` | 端到端广度报告（ADR-035 G-4）：读 Playwright V8 coverage 产物，输出「哪些源文件被真实交互走到」的广度报告（函数级覆盖比例，不做行级精确统计） |
-| `test-decode-from-memory.mjs` | `node scripts/test-decode-from-memory.mjs` | YSMParser WASM 解码冒烟测试：Node + callMain + MEMFS 路径，与 `internal/app/wasm_decoder.go` 同调用方式 |
-| `verify-wasm-mt.mjs` | `node scripts/verify-wasm-mt.mjs <path.ysm>` | ADR-079 M3/M4 验证：pthread 多线程 WASM 在模拟 Worker 全局下实例化 + 解码（结构级验证，真 spawn 需浏览器 crossOriginIsolated） |
 | `build-ysm-wasm.mjs` | `node scripts/build-ysm-wasm.mjs` / `--skip-build` | 统一 YSMParser WASM 构建（一份 web 产物服务前后端）：em++ 编译 → base64 打包前端 + Go embed 拷贝 |
 | `android-build.mjs` | `node scripts/android-build.mjs` / `--arch` / `--production` / `--rust-backend` | 一键构建 Android APK：前端构建 + NDK 交叉编译 libwails.so + gradle assembleDebug（补 android-install 只装不编的缺口） |
 | `compile-android-rust.mjs` | `node scripts/compile-android-rust.mjs` / `--arch amd64|all` | 编 Rust scanner bridge 为 Android staticlib（.a）供 Go CGO 链接（android-build 前置单步） |
@@ -74,9 +71,7 @@
 | `compare-maid-packs.mjs` | `node scripts/compare-maid-packs.mjs` | 实战比对：单女仆 zip vs 多合一女仆包（L0 清单 vs L1 枚举差异；⚠️ 依赖 `_tools/` 暂缺失，当前不可运行） |
 | `analyze-knowledge-refs.mjs` | `node scripts/analyze-knowledge-refs.mjs` / `--json` / `--no-write` | 知识卡引用深度与耦合分析（一次性诊断）：卡→源码 / 卡→卡 / 分类膨胀度 / 引用孤岛，产出 docs/review/knowledge-ref-analysis.* |
 | `drift-scan.mjs` | `node scripts/drift-scan.mjs` / `--json` | 双轨漂移自动侦察兵：Go 硬编码常量 / 内联切片 / 路径归一化 / 错误链断裂 / 资源泄漏 / 重复实现 + 前端同逻辑异实现 |
-| `gpu-leak-analyze.mjs` | `node scripts/gpu-leak-analyze.mjs <logfile>` / `--json` | 解析 `[gpu-leak] before/after` 日志，逐对计算差值标出 GPU 内存泄漏点（支持 stdin） |
-| `translucency-probe.mjs` | `node scripts/translucency-probe.mjs <模型目录...>` | 面级透明分类增益探针：量化 mesh 级 vs 面级透明误路由面积比，为引入面级透明路径提供数据依据 |
-| `texture-golden.mjs` | `node scripts/texture-golden.mjs` / `--dir` / `--json` / `--limit N` | upstream 真实 .ysm 全量 golden 扫描：组件序 + 纹理名契约回归（B 层真实模型回归，与 go/geometry 合成夹具 A 层互补） |
+| `translucency-probe.mjs` | `node scripts/translucency-probe.mjs <模型目录...>` | 面级透明分类增益探针（ADR-118 转正度量工具）：量化 mesh 级 vs 面级透明误路由面积比，为引入面级透明路径提供数据依据 |
 | `trace-analyze.mjs` | `node scripts/trace-analyze.mjs <trace.json> [trace2.json]` / `--json` / `--top N` / `--pid <pid> --tid <tid>` | **Chrome DevTools trace 性能瓶颈分析**：解析 DevTools 录制的 JSON trace（动辄 10 万+ 事件），输出 Top 最长事件 / name+cat 聚合 / 线程 dur 饼图 / 指定线程明细 / Worker 聚合 / 最忙时间片；双 trace 模式对比 A vs B 差异摘要。定位渲染主线程瓶颈、JS 执行密度、图片解码开销等。 |
 | `port-align.mjs` | `npm run verify:port`（等价 `node scripts/port-align.mjs`） | cube/spec 坐标端口「多样性对齐」校验（手动工具）：内嵌 Blockbench 权威 oracle，esbuild 打包真实 TS 端口真跑比对，输出覆盖矩阵 + 分歧报告 |
 | `perf/vitest-env-switch.mjs` | `node scripts/perf/vitest-env-switch.mjs` | 给已确认无 DOM 依赖的纯逻辑测试文件批量加 `@vitest-environment node` 标注，省 happy-dom 环境重建开销（~1.2s/文件） |
@@ -89,9 +84,7 @@
 | `check-doc-drift.mjs` | `node scripts/check-doc-drift.mjs` / `--fix` | 文档三一致：ADR 登记 + 知识卡 + 架构树引用（ERROR 阻断；`--fix` 刷新架构树基线） |
 | `check-adr-drift.mjs` | `node scripts/check-adr-drift.mjs` / `--json` | **ADR 描述 vs 代码现实漂移检测**：A) 文档侧——已还债但仍标开放的旧表述；B) 代码侧——正向断言源码现实（app_install.go 薄壳 / DownloadQueue 无 *App 循环）。双向对账，阻止 AI 把完成的活反复当开放债 |
 | `check-adr-health.mjs` | `node scripts/check-adr-health.mjs` / `--debt` | ADR 状态机值域 / 登记表同步 / 技术债清单 |
-| `check-adr-status.mjs` | `node scripts/check-adr-status.mjs` / `--check` / `--json` | ADR 状态分类精简统计：只输出 6 桶计数 + 问题清单（未标注/未知），`--check` 模式 unknown 时 exit 1（比 check-adr-health 更精简，供 CI 快速判定） |
 | `check-biome.mjs` | `node scripts/check-biome.mjs` / `--strict` / `--write` / `--json` | **Biome 委托检查器**（P0）：TS 7 太新 dependency-cruiser 静默漏检，Biome 自研 Rust 解析器全解析；增量策略 `biome check --changed`（仅查相对 main 的变更文件），`--write` 自动修复；空变更集判通过 |
-| `check-inline-error.mjs` | `node scripts/check-inline-error.mjs` / `--fix` | 内联错误模式检测：`e instanceof Error ? e.message : String(e)` 应统一收敛 safeErrorMessage / friendlyError（Worker 安全 / 用户侧 toast） |
 | `check-menu-health.mjs` | `node scripts/check-menu-health.mjs` / `--json` | **3D 预览菜单表健康门禁**（ADR-085 配套）：6 条校验（id 唯一 / labelKey 非空且入语言包 / dockGroup 类型 / kind 合法 / panel 有渲染通道 / action 有 run），正则解析 4 个菜单表文件 |
 | `check-proc-adoption.mjs` | `node scripts/check-proc-adoption.mjs` / `--json` / `--strict` | 子进程直调收敛检查（ADR-043 落地率守护）：扫描 scripts/ 直调 `execFileSync`/`execSync` 而未走 `_lib/proc.mjs` 的脚本（WARN 报告，`--strict` 时 exit 1） |
 | `check-readme-index.mjs` | `node scripts/check-readme-index.mjs` / `--json` | **README 索引对账**（登记处漂移守护）：扫描 scripts/（含 hooks/，排除 _lib 与测试）与 scripts/README.md 全文对账，零提及脚本 → 阻断。让「唯一登记处」声明可机检 |
@@ -170,6 +163,25 @@
 | 原脚本 | 原因 |
 |------|------|
 | `gen-status-index.mjs` | 僵尸脚本：目标 `docs/architecture/PROJECT_STATUS.md` 已冻结迁移至 `docs/archive/`（2026-08-03），脚本必失败且无实际消费者，删除；状态映射职责由 `gen-docs-index.mjs` 承接 |
+
+### 已归档（2026-09 孤儿审计）
+
+> 移入 `scripts/_attic/`（`_` 前缀豁免卫生/README/直调三检查器），保留代码与历史供溯源，不参与门禁。
+
+| 原脚本 | 原因 |
+|------|------|
+| `test-decode-from-memory.mjs` | YSMParser WASM 解码冒烟测试：一次性验证 Node callMain + MEMFS 路径；构建产物已稳定，验证职责由 wasm_decoder.go 测试承接 |
+| `verify-wasm-mt.mjs` | ADR-079 M3/M4 一次性验证脚本：pthread 多线程 WASM 结构级验证完毕 |
+| `gpu-leak-analyze.mjs` | GPU 内存泄漏日志分析：一次性诊断工具，无持续消费者 |
+| `texture-golden.mjs` | upstream 真实 .ysm golden 扫描：一次性回归扫描，扫全量耗时大、无 CI 挂载 |
+
+### 已删除（2026-09 孤儿审计）
+
+| 原脚本 | 原因 |
+|------|------|
+| `event-audit.mjs` | 事件注册位置审计：职责已被 `event-graph.mjs`（Bus 事件契约守护者）接管，且当前输出全为测试文件噪音 |
+| `check-adr-status.mjs` | ADR 状态精简统计：被 `check-adr-health.mjs --status/--debt` 覆盖，从未挂门禁 |
+| `check-inline-error.mjs` | 内联错误模式检测：检测目标生产代码已清零（仅剩测试文件命中），`--fix` 从未挂门禁，防回潮从未生效 |
 
 ---
 

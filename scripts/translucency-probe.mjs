@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 /**
- * translucency-probe.mjs — 面级透明分类增益探针（诊断工具）。
+ * translucency-probe.mjs — 面级透明分类增益探针（度量工具）。
  * 当前前端按「整张纹理」分 transparent 路径（mesh 级粒度）；ModernYSM
  * （upstream TranslucencyScanner）按「cube 面 UV 区域」分级。真实模型上，
  * mesh 级粒度到底误路由多少面？——本脚本在真实模型上量化答案。
+ *
+ * 定位：ADR-118 §2 决策「探针脚本转正」——保留为度量工具，作为后续任何
+ * 透明改动的基线出处（wine_fox 80.9% 错路率基线即本脚本产出）。2026-09 孤儿
+ * 审计确认保留：不挂 CI（需 upstream 真实模型语料，扫全量慢），手动按需跑。
+ * 与 line-counter / drift-scan / trace-analyze 同为「按需诊断」类。
  *
  * 依赖：node:fs / node:path / node:zlib（零外部依赖）
  *

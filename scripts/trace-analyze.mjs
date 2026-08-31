@@ -2,6 +2,10 @@
 /**
  * trace-analyze.mjs — Chrome DevTools trace 性能瓶颈分析。
  *
+ * 定位：前端性能诊断工具（手动按需运行：录制 DevTools trace → 分析瓶颈）。
+ * 2026-09 孤儿审计确认保留：无 CI 挂载（输入是人工录制的 trace 文件，无法自动化），
+ * 性能回归由 perf-gate / gui-flow-gate 承担，本脚本负责「现场诊断」环节，不属死代码。
+ *
  * 设计意图：DevTools 录制的 JSON trace 动辄 10 万+ 事件，手读不现实。
  * 本工具解析 trace，输出：
  *   1. 全 trace Top N 最长事件（按 dur 排序）；

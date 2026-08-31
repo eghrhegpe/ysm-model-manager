@@ -29,7 +29,6 @@ const JSON_SCRIPTS = [
   ['check-adr-health.mjs', '--json'],
   ['check-knowledge-drift.mjs', '--json'],
   ['check-doc-drift.mjs', '--json'],
-  ['event-audit.mjs', '--json'],
   ['comment-checker.mjs', '--json'],
   ['type-consistency.mjs', '--json'],
   ['link-checker.mjs', '--json'],

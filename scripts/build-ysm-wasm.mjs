@@ -147,7 +147,7 @@ if (!glueProbe.includes(";updateMemoryViews()")) {
   console.error("glue 缺少 ;updateMemoryViews() 补丁锚点（wasm_decoder.go 依赖），拒绝打包/拷贝");
   process.exit(1);
 }
-console.log("[verify] ✅ glue 补丁锚点存在；建议跑 node scripts/test-decode-from-memory.mjs 实测解码");
+console.log("[verify] ✅ glue 补丁锚点存在；建议跑 node scripts/_attic/test-decode-from-memory.mjs 实测解码");
 
 // 前端 base64 打包（与 pack-wasm.ps1 同格式）
 // wasm 文件：_getWasmBinary 返回 ArrayBuffer；glue 文件：_getGlueCode 返回 string
@@ -199,4 +199,4 @@ const FRONT_DIST_WASM = join(ROOT, "frontend", "dist", "wasm");
 mkdirSync(FRONT_DIST_WASM, { recursive: true });
 atomicCopy(join(OUT_DIR, "YSMParser.wasm"), join(FRONT_DIST_WASM, "YSMParser.wasm"));
 console.log(`[pack] ✅ Go embed 源已同步: frontend/dist/wasm/YSMParser.wasm`);
-console.log("[done] 建议跑 node scripts/test-decode-from-memory.mjs 实测解码");
+console.log("[done] 建议跑 node scripts/_attic/test-decode-from-memory.mjs 实测解码");

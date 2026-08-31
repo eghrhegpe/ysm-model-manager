@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-139：平台 shim 收敛 rustbridge 与 scanner 四 OS 重复",
+        "link": "/adr/ADR-139-platform-shim-dedup"
+      },
+      {
         "text": "ADR-138：preview-3d 上提 src/preview-3d（去 features 中间层）",
         "link": "/adr/ADR-138-preview-3d-to-src"
       },

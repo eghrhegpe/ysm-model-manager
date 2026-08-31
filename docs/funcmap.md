@@ -73,8 +73,8 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `RunCLI()` | `go/cli/cli:14` | RunCLI 执行 CLI 模式 |
-| `ExecuteCLIWithApp()` | `go/cli/cli:72` | ExecuteCLIWithApp 执行 CLI 命令 |
+| `RunCLI()` | `go/cli/cli:39` | RunCLI 执行 CLI 模式 |
+| `ExecuteCLIWithApp()` | `go/cli/cli:85` | ExecuteCLIWithApp 执行 CLI 命令 |
 | `NewJsonSuccess()` | `go/cli/json:39` | NewJsonSuccess 创建成功响应 |
 | `NewJsonError()` | `go/cli/json:50` | NewJsonError 创建错误响应 |
 | `NewJsonNotSupported()` | `go/cli/json:81` | NewJsonNotSupported 创建平台不支持响应 |
@@ -231,11 +231,11 @@
 | `IsHardLink()` | `go/fsutil/hardlink_windows:14` | IsHardLink 判断路径是否为硬链接（NumberOfLinks &gt; 1）。 |
 | `ContainsIllegalNameChar()` | `go/fsutil/perms:19` | ContainsIllegalNameChar 检测文件名是否含非法字符。 |
 | `WalkAllFiles()` | `go/fsutil/walk:13` | WalkAllFiles 递归遍历目录返回所有文件的完整路径（不限制扩展名） skipRecycle 为 true 时跳过 .recycle 子目录 |
-| `WalkAllDirs()` | `go/fsutil/walk:38` | WalkAllDirs 递归遍历目录，返回所有子目录路径（深度优先后序：子目录在前，父目录在后） 不包含根目录本身。后序便于删除类操作（先删深目录，父目录变空后可被继续删除）。 |
-| `CountFiles()` | `go/fsutil/walk:72` | CountFiles 统计目录中的文件数（不限制扩展名） 流式计数：不构造完整 []string，避免大目录下为取 len 白白物化整棵文件树 （遍历语义与 WalkAllFile |
-| `CleanEmptyDirs()` | `go/fsutil/walk:96` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
-| `IsRecycleDir()` | `go/fsutil/walk:114` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
-| `IsResourcePackFolder()` | `go/fsutil/walk:122` | IsResourcePackFolder 检查目录是否为资源包文件夹（内含 pack.mcmeta）。 |
+| `WalkAllDirs()` | `go/fsutil/walk:25` | WalkAllDirs 递归遍历目录，返回所有子目录路径（深度优先后序：子目录在前，父目录在后） 不包含根目录本身。后序便于删除类操作（先删深目录，父目录变空后可被继续删除）。 |
+| `CountFiles()` | `go/fsutil/walk:59` | CountFiles 统计目录中的文件数（不限制扩展名） 流式计数：不构造完整 []string，避免大目录下为取 len 白白物化整棵文件树 （遍历语义与 WalkAllFile |
+| `CleanEmptyDirs()` | `go/fsutil/walk:95` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
+| `IsRecycleDir()` | `go/fsutil/walk:113` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
+| `IsResourcePackFolder()` | `go/fsutil/walk:121` | IsResourcePackFolder 检查目录是否为资源包文件夹（内含 pack.mcmeta）。 |
 | `ReadLimitedEntry()` | `go/fsutil/write:60` | ReadLimitedEntry 读取 zip/7z 单条目：limit+1 探测截断（ADR-033 修复，ADR-044 策略 A 统一口径）—— 原 `io.ReadAll( |
 | `WriteFileAtomic()` | `go/fsutil/write:86` | WriteFileAtomic 临时文件 + rename 原子落地目标文件。 |
 | `SHA256File()` | `go/fsutil/write:128` | SHA256File 计算文件内容的 SHA256 哈希，返回十六进制字符串。 |
@@ -268,15 +268,15 @@
 | `ImportLogger()` | `go/importer/importer_file:34` | ImportLogger 导入日志回调（薄壳注入 App.logger.Add） |
 | `Register()` | `go/importer/importer:34` | Register 注册导入策略（线程安全） |
 | `Get()` | `go/importer/importer:41` | Get 获取指定类型的导入策略（线程安全） |
-| `NewSimpleCopy()` | `go/importer/importer:72` | NewSimpleCopy 创建简单文件复制导入器 |
-| `SimpleCopyImporter.Type()` | `go/importer/importer:76` | — |
-| `SimpleCopyImporter.Import()` | `go/importer/importer:78` | — |
-| `NewDirectoryCopy()` | `go/importer/importer:187` | NewDirectoryCopy 创建文件夹复制导入器 |
-| `DirectoryCopyImporter.Type()` | `go/importer/importer:191` | — |
-| `DirectoryCopyImporter.Import()` | `go/importer/importer:196` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
+| `NewSimpleCopy()` | `go/importer/importer:95` | NewSimpleCopy 创建简单文件复制导入器 |
+| `SimpleCopyImporter.Type()` | `go/importer/importer:99` | — |
+| `SimpleCopyImporter.Import()` | `go/importer/importer:101` | — |
+| `NewDirectoryCopy()` | `go/importer/importer:198` | NewDirectoryCopy 创建文件夹复制导入器 |
+| `DirectoryCopyImporter.Type()` | `go/importer/importer:202` | — |
+| `DirectoryCopyImporter.Import()` | `go/importer/importer:207` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
 | `Handler()` | `go/importer/importer:21` | Handler 资源导入策略接口 |
-| `SimpleCopyImporter()` | `go/importer/importer:67` | — |
-| `DirectoryCopyImporter()` | `go/importer/importer:182` | — |
+| `SimpleCopyImporter()` | `go/importer/importer:90` | — |
+| `DirectoryCopyImporter()` | `go/importer/importer:193` | — |
 
 ## Go·安装
 
@@ -414,8 +414,8 @@
 | `ScanManifest()` | `go/rustbridge/bridge_android:73` | — |
 | `Scan()` | `go/rustbridge/bridge_darwin:41` | — |
 | `ScanManifest()` | `go/rustbridge/bridge_darwin:69` | — |
-| `Scan()` | `go/rustbridge/bridge_linux:41` | — |
-| `ScanManifest()` | `go/rustbridge/bridge_linux:69` | — |
+| `Scan()` | `go/rustbridge/bridge_linux:44` | — |
+| `ScanManifest()` | `go/rustbridge/bridge_linux:72` | — |
 | `Scan()` | `go/rustbridge/bridge_windows:24` | — |
 | `ScanManifest()` | `go/rustbridge/bridge_windows:59` | ScanManifest 使用 Go 预枚举的文件清单调用 Rust，跳过 Rust 侧的文件系统发现（jwalk）。 |
 | `ScanError()` | `go/rustbridge/types:7` | — |

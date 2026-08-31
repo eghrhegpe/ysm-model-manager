@@ -87,6 +87,11 @@ invariant_anchors:
 - **`.ban` 是文件名重命名约定**（`ToggleModelEnable` 把 `path` 重命名为 `path+".ban"`），后缀随文件/目录名自然携带——`MoveModelFile` / `CopyModelFile` **不再处理兄弟 `<src>.ban`**（那属于撞名的无关被禁模型，复制/失败回滚均会误伤）
 - **`CopyModelFile` 拒绝目录自嵌套复制**（P2 修复：`dstDir` 位于 `src` 子树内时原实现 WalkDir 递归自嵌套无限膨胀至 ENAMETOOLONG——复制前校验 `filepath.Rel(src, dstDir)` 无 `..` 前缀即拒绝）
 - **`MoveModelFile` 跨设备 fallback**：`os.Rename` 返回 EXDEV 时自动 copy+delete，`renameForMove` 可注入供测试
+- **R33 修复链（2026-08-31）**：
+  - P3-1 目录级启用半启用态：旧顺序先 Rename 文件名再 Rename 父目录，若第二步失败，文件名已去后缀但父目录仍禁用。修复：先 Rename 父目录（决定性步骤），再 Rename 文件名。
+  - P3-2 MoveModelFile 空目录残留：`prepareModelDest` 在 `MkdirAll(dstDir)` 后若 `renameForMove` 失败，`dstDir` 空目录残留。修复：仅当 `dstDir` 由本次 `MkdirAll` 新建（`created bool`）时才 `RemoveAll`。
+  - P3-3 MoveModelFile symlink 不对称：非 EXDEV 路径直接 `renameForMove` 不检查 src 是否 symlink。修复：Rename 前对 src 补 Lstat symlink 检查（与 `copyFile` 对齐）。
+  - code_review P0/P1：`prepareModelDest` 返回 `created bool`，`MoveModelFile` 仅当 `created` 时才 `RemoveAll(dstDir)`，避免删除预存在的目标目录及其内容（静默数据破坏）。`CopyModelFile` 用 `_` 忽略 `created`。
 
 ## 相关
 

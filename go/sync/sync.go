@@ -290,6 +290,10 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		}
 
 		// 先试哈希匹配，再用多级路径匹配，最后 fallback 到纯文件名
+		// 哈希计算持锁是有意设计（R27 P3-1 确认）：SyncToggleStatus 修改文件系统
+		// （rename 加/去 .disabled 后缀），必须持锁防止与安装并发。把哈希移到锁外
+		// 会引入 TOCTOU（哈希算完后文件被改）。>500MB 文件 computeHash 返回空，
+		// 自动跳过哈希走 relKey 匹配。
 		var shouldBeBanned bool
 		var matched bool
 		hash := computeHash(p)
@@ -315,6 +319,9 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		}
 
 		if shouldBeBanned && !isCurrentlyBanned {
+			// 禁用统一收敛到 DisableSuffixes[0]（.disabled，新标准）。
+			// 历史 .ban 文件 toggle 启用→再禁用时也会变成 .disabled——
+			// 这是有意收敛（R27 P3-4 确认），非 bug。
 			newPath := p + types.DisableSuffixes[0]
 			if _, err := os.Stat(newPath); err == nil {
 				return nil // 目标已存在，跳过
@@ -423,12 +430,15 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 			return cached
 		}
 		rootFailed := false
+		partialFail := false // Walk 部分子树失败时设 true，失败结果不入缓存（R27 P3-2）
 		entries := make(map[string]DiffEntry)
 		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				log.Printf("[sync] Walk 错误 %s: %v", path, err)
 				if path == rootDir {
 					rootFailed = true
+				} else {
+					partialFail = true
 				}
 				return nil
 			}
@@ -453,7 +463,9 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 			}
 			return nil
 		})
-		if !rootFailed {
+		// 完整 Walk 才入缓存：rootFailed 已短路，partialFail 时残缺 entries 不入缓存，
+		// 避免后续 30s 内调用方拿到不完整结果（R27 P3-2）
+		if !rootFailed && !partialFail {
 			storeSyncScanCache(&syncResourcesScanCache, cacheKey, entries)
 		}
 		return entries

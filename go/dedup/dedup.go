@@ -117,6 +117,12 @@ func collectFiles(dir string, skipRecycle bool) ([]fileInfo, error) {
 // size 预分组（零语义损失）：不同 size 的文件不可能同 hash（SHA256 同 ⟹ 内容同 ⟹ size 同），
 // 唯一 size 的文件必不成组，跳过其哈希——消解大文件长尾（占死 worker 的大文件通常尺寸唯一），
 // 输出逐字节不变（唯一尺寸文件本就永不进 len>1 组）。
+// hashFilesParallel 的「读失败可见性不对称」（R27 P3-2 确认）：
+//   - 唯一 size 文件不进 job（有意跳过哈希），其读失败不可见、不记日志
+//   - 同 size 文件读失败会 log-and-skip
+//
+// 这是有意的取舍：唯一 size 文件本就不参与成组（无重复可能），
+// 跳过哈希省一次 I/O。代价是「唯一 size 但读失败」的文件静默归类为「唯一 size 跳过」。
 // 注意：唯一 size 文件**不被打开**（不进 job），其读失败自然不可见、不记日志——
 // 这是有意的（该文件本就不参与成组），与「读失败 log-and-skip」仅针对已入 job 文件。
 func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
@@ -139,6 +145,15 @@ func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			// recover 防止 worker panic 导致主 goroutine 死锁：
+			// 无缓冲 jobs channel 在 jobs <- f 处阻塞，worker panic 后
+			// wg 永不 Done、close(jobs) 永不执行（R27 P3-1）。
+			// panic 的槽位 results[idx] 留零值（ok=false），调用方见 log-and-skip。
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[dedup] worker panic: %v", r)
+				}
+			}()
 			for f := range jobs {
 				hash, err := computeHash(f.path, algo)
 				if err != nil {

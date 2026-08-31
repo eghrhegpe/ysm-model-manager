@@ -289,6 +289,12 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 			}
 			continue
 		}
+		// 名称去重用 basename（保守策略，R27 P3-5 确认）：
+		// 同名不同子目录的文件也会被跳过——避免仓库内同名文件被覆盖。
+		// 不改为 relKey（相对路径）去重：relKey 会放宽去重，
+		// 让 a/model.ysm 与仓库已有 b/model.ysm 共存，用户侧看到两个同名模型易混淆。
+		// basename 去重的代价是「同名不同内容」文件无法推入仓库，
+		// 但哈希去重（L286）已覆盖「同名同内容」场景，此处仅挡「同名不同内容」。
 		if repoNames[e.Name] {
 			if logger != nil {
 				logger(e.Name, e.Path, repoDir, 0, "skipped", "仓库已存在同名文件，跳过")

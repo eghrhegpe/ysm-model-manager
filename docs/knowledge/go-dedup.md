@@ -43,6 +43,10 @@ invariant_anchors:
 - **遍历中子树访问失败 log-and-skip，可能漏扫**（R21 审核 P3-1）：`collectFiles` 的 WalkDir 回调 err（权限拒绝/IO 失败）仅留日志、不向上报错——「无重复」结果可能漏掉整棵子树；与根 symlink 的 `ErrSymlinkRoot` 硬报错不对称（有意为之：日志留痕、诊断页可见，不阻断扫描）
 - **`.recycle` 判定大小写不敏感**（P3 修复：`strings.EqualFold`，与 fsutil.isRecycleDir 对齐——原大小写敏感，Windows `.RECYCLE` 目录会漏排）
 - **`computeHash` 是包级可注入变量（测试承重点，删改须同步测试）**：`dedup_parallel_test.go` 通过替换它验证「并行管道确定性」「size 预分组跳过哈希」。49afd979 重构时曾将其内联删除，测试包 `undefined: computeHash` 编译失败（go vet 兜住）。重构此文件时保留该注入点；若确需移除，必须同步改写两个测试
+- **R27 修复链（2026-08-31）**：
+  - `hashFilesParallel` worker panic 死锁（P3-1）：worker goroutine 加 `defer func() { if r := recover(); r != nil { log.Printf(...) } }()`。无缓冲 `jobs` channel 在 `jobs <- f` 处阻塞发送，worker panic 后 `wg` 永不 Done、`close(jobs)` 永不执行，主 goroutine 死锁。panic 的槽位 `results[idx]` 留零值（`ok=false`），调用方见 log-and-skip。
+  - `hashFilesParallel` 读失败可见性不对称是有意取舍（P3-2 确认）：唯一 size 文件不进 job（有意跳过哈希），其读失败不可见、不记日志；同 size 文件读失败会 log-and-skip。唯一 size 文件本就不参与成组（无重复可能），跳过哈希省一次 I/O。代价是「唯一 size 但读失败」的文件静默归类为「唯一 size 跳过」。
+  - `QuickHash` MD5 碰撞风险（P3-3）：MD5 非抗碰撞，对抗场景下可构造碰撞。去重结果直接驱动 `recycle.Move`（删除文件），MD5 碰撞虽概率极低但非零。QuickHash 组通过 size 预分组隐含二次 size 校验（同组必同 size），降低碰撞窗口。对抗环境下应改用 DeepHash（SHA256）。
 
 ## 相关
 

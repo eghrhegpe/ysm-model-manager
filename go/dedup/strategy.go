@@ -42,6 +42,12 @@ func (d *DeepHash) ComputeHash(filePath string) (string, error) {
 }
 
 // QuickHash 快速哈希算法 (基于 MD5) - 速度较快，适合大文件
+// QuickHash 使用 MD5 计算文件哈希，速度较快，适合大文件。
+//
+// 安全说明（R27 P3-3）：MD5 非抗碰撞，对抗场景下可构造碰撞。
+// 去重结果直接驱动 recycle.Move（删除文件），MD5 碰撞虽概率极低但非零。
+// QuickHash 组通过 size 预分组隐含二次 size 校验（同组必同 size），
+// 降低碰撞窗口。对抗环境下应改用 DeepHash（SHA256）。
 type QuickHash struct{}
 
 func (q *QuickHash) Name() string {

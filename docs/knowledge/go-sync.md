@@ -98,6 +98,15 @@ invariant_anchors:
 - 拉取侧 `copyFile`（sync_push.go）已修复为 **tmp+rename 原子落地**（P3 修复）：带 defer 清理半截文件，失败不清理残留；`copyDirRecursive`（sync_push.go）递归复制时保留符号链接语义（`os.Readlink` + `os.Symlink`），不跟随复制——与 [go_recycle](./go-recycle.md) 的 `copyDirRecursive` 口径已对齐
 - 冲突解决（conflict.go）的备份/覆盖/回滚三处拷贝已收敛 `fsutil.CopyFile` 原子 tmp+rename（ADR-044 收尾，原 `copyFileSafe` 直写壳已删）；失败路径契约（本地完好 + .bak 清理）由 `TestResolveConflict_ForceRemote_CopyFail_LocalIntact` 锁定
 - 实例 custom 目录固定为 `config/yes_steve_model/custom`
+- **R27 修复链（2026-08-31）**：
+  - `DetectConflicts` hash 失败静默漏报（P2-1）：两端 size 相同但任一端 hash 为空时，标记为 `ResolveManual` 冲突让调用方知悉需手动审查。旧实现 hash 空时跳过，哈希失败的真实冲突文件被漏报。
+  - `ResolveForceRemote` 恢复失败吞错（P2-2）：`CopyFile(remotePath, localPath)` 失败后恢复备份，恢复失败时返回带备份路径的复合错误，让调用方知悉恢复点位置。旧实现 `_ =` 吞掉恢复失败错误。
+  - `ResolveConflictsLocked` 锁契约硬约束（P2-3）：函数开头加 `assertInstallLock()`，用 `sync.Mutex.TryLock()` 检测——能 Lock 成功说明之前没人持锁→panic；Lock 阻塞说明已持锁→符合契约。让锁契约违反在发生点暴露，而非依赖隐式调用链事后追查。
+  - `RelinkDir` 备份名带时间戳（P2-4）：`backup := fmt.Sprintf("%s.relink-bak-%d", dstParent, time.Now().UnixNano())`，与 conflict.go 的 `.bak-<ts>` 口径对齐，避免上一次 relink 失败留有的备份目录被本次无条件删除——恢复点丢失。
+  - 不完整 Walk 结果不入缓存（P3-2 + P3-3）：`collect` 闭包加 `partialFail` 标志，Walk 出现非根错误时设 true，`storeSyncScanCache` 仅在 `!rootFailed && !partialFail` 时存储，避免 30s TTL 内后续调用拿到残缺 entries。
+  - `SyncToggleStatus` 哈希计算持锁是有意设计（P3-1 确认）：修改文件系统（rename 加/去 .disabled 后缀）必须持锁防止与安装并发，把哈希移到锁外会引入 TOCTOU。>500MB 文件 `computeHash` 返回空，自动跳过哈希走 relKey 匹配。
+  - `SyncToggleStatus` 禁用统一收敛到 `.disabled`（P3-4 确认）：历史 `.ban` 文件 toggle 启用→再禁用时变成 `.disabled`，有意收敛非 bug。
+  - `SyncCustomToRepo` basename 去重是有意保守策略（P3-5 确认）：同名不同子目录的文件也会被跳过，避免仓库内同名文件被覆盖。哈希去重（`repoHashes`）已覆盖「同名同内容」场景，此处仅挡「同名不同内容」。
 
 ## 已知限制 / 待治理（2026-08-24 审计）
 

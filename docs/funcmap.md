@@ -149,21 +149,21 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `FindDuplicateFiles()` | `go/dedup/dedup:194` | FindDuplicateFiles 扫描目录，按配置的哈希算法分组，返回包含重复的分组 skipRecycle 为 true 时跳过 .recycle 子目录 config 为去 |
-| `CountDuplicates()` | `go/dedup/dedup:254` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） 同样消费共享并行哈希管道（ADR-119 P1：与 FindDuplic |
+| `FindDuplicateFiles()` | `go/dedup/dedup:208` | FindDuplicateFiles 扫描目录，按配置的哈希算法分组，返回包含重复的分组 skipRecycle 为 true 时跳过 .recycle 子目录 config 为去 |
+| `CountDuplicates()` | `go/dedup/dedup:268` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） 同样消费共享并行哈希管道（ADR-119 P1：与 FindDuplic |
 | `FileEntry()` | `go/dedup/dedup:25` | FileEntry 文件条目 |
 | `Group()` | `go/dedup/dedup:33` | Group 重复文件分组 |
 | `DeepHash.Name()` | `go/dedup/strategy:25` | — |
 | `DeepHash.ComputeHash()` | `go/dedup/strategy:29` | — |
-| `QuickHash.Name()` | `go/dedup/strategy:47` | — |
-| `QuickHash.ComputeHash()` | `go/dedup/strategy:51` | — |
-| `NameSizeHash.Name()` | `go/dedup/strategy:69` | — |
-| `NameSizeHash.ComputeHash()` | `go/dedup/strategy:73` | — |
-| `NewHashAlgorithm()` | `go/dedup/strategy:83` | NewHashAlgorithm 根据配置创建哈希算法实例 |
+| `QuickHash.Name()` | `go/dedup/strategy:53` | — |
+| `QuickHash.ComputeHash()` | `go/dedup/strategy:57` | — |
+| `NameSizeHash.Name()` | `go/dedup/strategy:75` | — |
+| `NameSizeHash.ComputeHash()` | `go/dedup/strategy:79` | — |
+| `NewHashAlgorithm()` | `go/dedup/strategy:89` | NewHashAlgorithm 根据配置创建哈希算法实例 |
 | `HashAlgorithm()` | `go/dedup/strategy:15` | HashAlgorithm 去重算法策略接口 |
 | `DeepHash()` | `go/dedup/strategy:23` | DeepHash 深度哈希算法 (基于 SHA256) - 精确但较慢 |
-| `QuickHash()` | `go/dedup/strategy:45` | QuickHash 快速哈希算法 (基于 MD5) - 速度较快，适合大文件 |
-| `NameSizeHash()` | `go/dedup/strategy:67` | NameSizeHash 基于文件名和大小的"伪哈希" - 速度最快但不精确 |
+| `QuickHash()` | `go/dedup/strategy:51` | QuickHash 快速哈希算法 (基于 MD5) - 速度较快，适合大文件 QuickHash 使用 MD5 计算文件哈希，速度较快，适合大文件。 |
+| `NameSizeHash()` | `go/dedup/strategy:73` | NameSizeHash 基于文件名和大小的"伪哈希" - 速度最快但不精确 |
 
 ## Go·下载
 
@@ -383,10 +383,10 @@
 | `TrashManager.RecycleDir()` | `go/recycle/recycle:44` | RecycleDir 返回回收站目录路径 |
 | `TrashManager.Move()` | `go/recycle/recycle:49` | Move 移动文件到回收站 |
 | `TrashManager.MoveEx()` | `go/recycle/recycle:55` | MoveEx 移动文件到回收站，返回操作详情 |
-| `TrashManager.List()` | `go/recycle/recycle:206` | List 列出回收站中的文件。 |
-| `TrashManager.Restore()` | `go/recycle/recycle:266` | Restore 从回收站恢复到原目录 |
-| `TrashManager.Delete()` | `go/recycle/recycle:359` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
-| `TrashManager.Empty()` | `go/recycle/recycle:387` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 r |
+| `TrashManager.List()` | `go/recycle/recycle:200` | List 列出回收站中的文件。 |
+| `TrashManager.Restore()` | `go/recycle/recycle:260` | Restore 从回收站恢复到原目录 |
+| `TrashManager.Delete()` | `go/recycle/recycle:369` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
+| `TrashManager.Empty()` | `go/recycle/recycle:397` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 r |
 | `Move()` | `go/recycle/recycle:49` | Move 移动文件到回收站 |
 | `MoveResult()` | `go/recycle/recycle:17` | MoveResult 回收操作结果 |
 | `TrashManager()` | `go/recycle/recycle:23` | TrashManager 可配置的回收站管理器 |
@@ -442,9 +442,9 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `DetectConflicts()` | `go/sync/conflict:70` | DetectConflicts 检测本地和远端之间的冲突 基于文件哈希比较：两端都存在且哈希不同 → 内容冲突 localDir: 本地目录路径（整合包） remoteDir: 远 |
-| `ResolveConflict()` | `go/sync/conflict:132` | ResolveConflict 解决单个文件冲突 先备份再操作，确保安全 |
-| `ResolveConflicts()` | `go/sync/conflict:170` | ResolveConflicts 批量解决冲突（公开入口，整段持 installer.InstallLock）。 |
-| `ResolveConflictsLocked()` | `go/sync/conflict:181` | ResolveConflictsLocked 与 ResolveConflicts 语义相同，但调用方须已持有 installer.InstallLock （禁止重入加锁——syn |
+| `ResolveConflict()` | `go/sync/conflict:149` | ResolveConflict 解决单个文件冲突 先备份再操作，确保安全 |
+| `ResolveConflicts()` | `go/sync/conflict:190` | ResolveConflicts 批量解决冲突（公开入口，整段持 installer.InstallLock）。 |
+| `ResolveConflictsLocked()` | `go/sync/conflict:206` | ResolveConflictsLocked 与 ResolveConflicts 语义相同，但调用方须已持有 installer.InstallLock （禁止重入加锁——syn |
 | `ConflictType()` | `go/sync/conflict:14` | ConflictType 冲突类型 |
 | `ResolutionStrategy()` | `go/sync/conflict:24` | ResolutionStrategy 冲突解决策略 |
 | `FileConflict()` | `go/sync/conflict:36` | FileConflict 文件冲突详情 |
@@ -453,12 +453,12 @@
 | `InvalidateSyncScanCaches()` | `go/sync/sync_cache:61` | InvalidateSyncScanCaches 清空全部同步目录扫描结果缓存。 |
 | `ResourceDiff()` | `go/sync/sync_diff:31` | ResourceDiff 按调用方提供的 key（文件名或相对路径，ADR-064 阶段二统一为 relKey 相对路径）对比两侧条目：   - 同名同大小（或含目录条目）→ Sy |
 | `DiffEntry()` | `go/sync/sync_diff:17` | DiffEntry 一侧目录的同步条目（文件或资源包文件夹）。 |
-| `SyncResourcesDirLevel()` | `go/sync/sync_dirlevel:375` | SyncResourcesDirLevel 文件夹级同步（默认 filepath.Walk，行为不变，供测试/旧调用方使用）。 |
-| `SyncResourcesDirLevelScan()` | `go/sync/sync_dirlevel:384` | SyncResourcesDirLevelScan 同 SyncResourcesDirLevel，但注入 scanFn 复用扫描缓存， 消除 8 个 MMD 子类型 ×(1+N |
-| `DiffFolderContents()` | `go/sync/sync_dirlevel:608` | DiffFolderContents 对同名文件夹进行内容级 diff 扫描两侧文件夹内的模型文件，比较差异，返回子文件级别的同步状态 用于在文件夹级同步单元内恢复单文件粒度的同步 |
-| `DiffFolderContentsScan()` | `go/sync/sync_dirlevel:664` | DiffFolderContentsScan 同 DiffFolderContents，但全局侧文件收集复用 scanner 已缓存的 组根扫描结果（scanFn(globalRo |
-| `ScanEntriesFn()` | `go/sync/sync_dirlevel:372` | SyncResourcesDirLevel 按文件夹名对比资源（用于 YSM 的 ysm.json 文件夹和 MMD 的 .pmx/.pmd 文件夹） 以文件夹名为单位，一个文件夹 |
-| `FileDiffEntry()` | `go/sync/sync_dirlevel:582` | FileDiffEntry 文件级差异条目（用于文件夹内容级 diff） |
+| `SyncResourcesDirLevel()` | `go/sync/sync_dirlevel:356` | SyncResourcesDirLevel 文件夹级同步（默认 filepath.Walk，行为不变，供测试/旧调用方使用）。 |
+| `SyncResourcesDirLevelScan()` | `go/sync/sync_dirlevel:365` | SyncResourcesDirLevelScan 同 SyncResourcesDirLevel，但注入 scanFn 复用扫描缓存， 消除 8 个 MMD 子类型 ×(1+N |
+| `DiffFolderContents()` | `go/sync/sync_dirlevel:589` | DiffFolderContents 对同名文件夹进行内容级 diff 扫描两侧文件夹内的模型文件，比较差异，返回子文件级别的同步状态 用于在文件夹级同步单元内恢复单文件粒度的同步 |
+| `DiffFolderContentsScan()` | `go/sync/sync_dirlevel:645` | DiffFolderContentsScan 同 DiffFolderContents，但全局侧文件收集复用 scanner 已缓存的 组根扫描结果（scanFn(globalRo |
+| `ScanEntriesFn()` | `go/sync/sync_dirlevel:353` | SyncResourcesDirLevel 按文件夹名对比资源（用于 YSM 的 ysm.json 文件夹和 MMD 的 .pmx/.pmd 文件夹） 以文件夹名为单位，一个文件夹 |
+| `FileDiffEntry()` | `go/sync/sync_dirlevel:563` | FileDiffEntry 文件级差异条目（用于文件夹内容级 diff） |
 | `ListVersions()` | `go/sync/sync_discovery:15` | — |
 | `HasDotMinecraftSubdirs()` | `go/sync/sync_discovery:30` | HasDotMinecraftSubdirs 检测目录的子目录中是否包含 .minecraft/ 或 minecraft/（用于识别 instances 目录） |
 | `FindMinecraftDir()` | `go/sync/sync_discovery:47` | FindMinecraftDir 在给定目录下查找 .minecraft 或 minecraft 子目录，返回找到的路径 |
@@ -471,14 +471,14 @@
 | `PushSingleResource()` | `go/sync/sync_push:238` | PushSingleResource 推送单个资源到整合包： 文件夹 / .json/.pmx/.pmd（文件夹级类型）走 InstallDir，其余 Install。 |
 | `SyncCustomToRepo()` | `go/sync/sync_push:259` | SyncCustomToRepo 同步整合包自定义目录的模型到仓库（哈希/名称去重） |
 | `Logger()` | `go/sync/sync_push:19` | Logger 导入日志回调（薄壳注入 App.logger.Add） |
-| `RelinkDir()` | `go/sync/sync_relink:18` | RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚） |
+| `RelinkDir()` | `go/sync/sync_relink:19` | RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚） |
 | `GetInstanceStatus()` | `go/sync/sync:28` | GetInstanceStatus 获取整合包状态（使用真实 ListVersions） rtype: 资源类型 ID（如 "ysm"），用于解析特定子目录；为空时使用 ins.C |
 | `GetInstanceStatusWith()` | `go/sync/sync:157` | — |
 | `SyncToggleStatus()` | `go/sync/sync:228` | SyncToggleStatus 同步启用/禁用状态 |
-| `SyncResources()` | `go/sync/sync:400` | — |
-| `SyncResourcesWithConfig()` | `go/sync/sync:405` | SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测） |
-| `SortEntries()` | `go/sync/sync:494` | SortEntries 按名称排序模型条目 |
-| `GetLinkType()` | `go/sync/sync:501` | GetLinkType 判断文件的链接类型 |
+| `SyncResources()` | `go/sync/sync:407` | — |
+| `SyncResourcesWithConfig()` | `go/sync/sync:412` | SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测） |
+| `SortEntries()` | `go/sync/sync:506` | SortEntries 按名称排序模型条目 |
+| `GetLinkType()` | `go/sync/sync:513` | GetLinkType 判断文件的链接类型 |
 | `ScanFunc()` | `go/sync/sync:24` | ScanFunc 扫描模型（函数类型，由 app.go 注入） |
 
 ## Go·标签
@@ -678,10 +678,10 @@
 | `PreviewInfo()` | `go/ysm/summary:40` | — |
 | `YsmSummary()` | `go/ysm/summary:48` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
 | `Stats()` | `go/ysm/summary:65` | — |
-| `ScanModelTexSizes()` | `go/ysm/texsize:28` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
-| `ScanFiles()` | `go/ysm/texsize:164` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
-| `TexInfo()` | `go/ysm/texsize:20` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
-| `ModelEntry()` | `go/ysm/texsize:43` | ModelEntry 轻量级条目（仅用于纹理扫描签名，调用方传入完整路径） |
+| `ScanModelTexSizes()` | `go/ysm/texsize:25` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
+| `ScanFiles()` | `go/ysm/texsize:161` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
+| `TexInfo()` | `go/ysm/texsize:17` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
+| `ModelEntry()` | `go/ysm/texsize:40` | ModelEntry 轻量级条目（仅用于纹理扫描签名，调用方传入完整路径） |
 | `IsYSMJar()` | `go/ysm/ysm:14` | IsYSMJar 检查单个 jar 是否是 YSM 模组（支持 mods.toml 和 neoforge.mods.toml） |
 | `IsModJar()` | `go/ysm/ysm:21` | IsModJar 内容检测单个 jar 是否是指定 mod（读取 META-INF/mods.toml / neoforge.mods.toml 的 [[mods]] 块，按 mo |
 | `HasYSMMod()` | `go/ysm/ysm:86` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |

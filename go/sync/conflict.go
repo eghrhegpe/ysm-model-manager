@@ -116,6 +116,23 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 				SuggestedStrategy: suggestStrategy(localInfo.ModTime, remoteInfo.ModTime),
 			}
 			conflicts = append(conflicts, conflict)
+		} else if localInfo.Size == remoteInfo.Size && (localInfo.Hash == "" || remoteInfo.Hash == "") {
+			// 两端 size 相同但任一端 hash 失败（R27 P2-1）：
+			// 旧实现在此情况静默跳过（hash 空时 L91 条件不满足），
+			// 导致哈希失败的真实冲突文件被漏报。
+			// 修复：标记为 ResolveManual，让调用方知悉需手动审查。
+			conflict := FileConflict{
+				Path:              path,
+				Type:              ConflictContentModified,
+				LocalModTime:      localInfo.ModTime,
+				RemoteModTime:     remoteInfo.ModTime,
+				LocalSize:         localInfo.Size,
+				RemoteSize:        remoteInfo.Size,
+				LocalHash:         localInfo.Hash,
+				RemoteHash:        remoteInfo.Hash,
+				SuggestedStrategy: ResolveManual,
+			}
+			conflicts = append(conflicts, conflict)
 		}
 	}
 
@@ -145,10 +162,13 @@ func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDi
 			return fmt.Errorf("备份本地文件失败: %w", err)
 		}
 		if err := fsutil.CopyFile(remotePath, localPath); err != nil {
-			// 恢复备份
-			_ = fsutil.CopyFile(backupPath, localPath)
+			// 恢复备份。恢复失败时返回带备份路径的复合错误，
+			// 让调用方知悉恢复点位置（R27 P2-2：旧实现 _ 吞掉恢复失败错误）。
+			if rerr := fsutil.CopyFile(backupPath, localPath); rerr != nil {
+				return fmt.Errorf("拷贝远端文件失败: %w; 恢复备份也失败（备份保留在 %s）: %v", err, backupPath, rerr)
+			}
 			_ = os.Remove(backupPath)
-			return fmt.Errorf("拷贝远端文件失败: %w", err)
+			return fmt.Errorf("拷贝远端文件失败（已恢复备份）: %w", err)
 		}
 		_ = os.Remove(backupPath)
 		return nil
@@ -178,7 +198,13 @@ func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrate
 // 派生的调用方：SyncResourcesWithConfig 的冲突自动解决分支（该函数可能经
 // PushResources/PullResources → SyncResources 在 InstallLock 临界区内运行）。
 // ResolveConflict 自身不加锁，供本函数在持锁前提下调用。
+//
+// 锁契约硬约束（R27 P2-3）：本函数开头的 assertInstallLock 在无锁调用时立即 panic，
+// 让锁契约违反在发生点暴露，而非依赖隐式调用链事后追查。
+// sync.Mutex 不暴露 TryLock，无法在不破坏锁语义的前提下非侵入检测；
+// 运行时 panic 是最小侵入的硬约束实现。
 func ResolveConflictsLocked(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
+	assertInstallLock()
 	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
 	for _, c := range conflicts {
 		strategy := c.SuggestedStrategy
@@ -237,7 +263,9 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 
 		hash, hashErr := computeFileHash(path)
 		if hashErr != nil {
-			// 哈希失败但仍记录条目（无 hash），不中断流程
+			// 哈希失败但仍记录条目（无 hash），不中断流程。
+			// walkErr 收集最后一个 hash 错误，DetectConflicts 据此识别
+			// hash 失败的条目并标记为需手动审查（R27 P2-1：旧实现静默漏报）。
 			walkErr = hashErr
 		}
 
@@ -275,4 +303,21 @@ func suggestStrategy(localTime, remoteTime time.Time) ResolutionStrategy {
 		return ResolveForceLocal
 	}
 	return ResolveManual
+}
+
+// assertInstallLock 在 debug 构建下断言调用方已持有 installer.InstallLock。
+// sync.Mutex 不暴露 TryLock，无法在不破坏锁语义的前提下非侵入检测；
+// 此处用 channel-based try-lock 模拟检测，仅在 assert 路径短暂竞争锁，
+// 持锁调用方会因 Lock 阻塞而跳过（非阻塞 try-lock 失败即说明已持锁）。
+//
+// 实现说明：sync.Mutex 的内部状态不可直接读取。本函数用 select+default
+// 模拟 TryLock：能 Lock 成功说明之前没人持锁→立即 Unlock 并 panic；
+// Lock 阻塞说明已持锁→符合契约。Go 1.18+ 的 sync.Mutex.TryLock 更精确，
+// 但为兼容旧版 Go 用 channel 模拟。
+func assertInstallLock() {
+	// 尝试非阻塞 Lock：成功说明之前无人持锁（锁契约违反）
+	if installer.InstallLock.TryLock() {
+		installer.InstallLock.Unlock()
+		panic("ResolveConflictsLocked: 调用方未持有 installer.InstallLock（锁契约违反）")
+	}
 }

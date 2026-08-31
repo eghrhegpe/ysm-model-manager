@@ -72,25 +72,6 @@ func isDirTypeModelFolder(path string, rtype string) bool {
 	return false
 }
 
-// containsModelSubfolder 判断目录是否直接含子模型文件夹（即它是「容器」而非「叶子模型夹」）。
-// 用于 collectEntries：容器目录即使含直接平铺 .ysm/.zip 也不整体收编，避免吞掉子夹层级。
-// 只查直接子目录一次（子目录自身是否是模型文件夹），不递归——更深层由 Walk 逐级处理。
-func containsModelSubfolder(path string, rtype string) bool {
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return false
-	}
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		if isDirTypeModelFolder(filepath.Join(path, e.Name()), rtype) {
-			return true
-		}
-	}
-	return false
-}
-
 // findNestedModelDir 在指定目录下递归查找嵌套模型目录
 // 返回第一个符合模式的模型目录路径，找不到返回空字符串
 // 关键设计：返回实际的模型目录路径（包含入口文件的目录），

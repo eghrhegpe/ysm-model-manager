@@ -20,6 +20,9 @@
  *   5. 【2026-08-30 新增】positional 脚本须走 parse-args：手写 argv 解析且消费位置参数的
  *      脚本无未知 flag 白名单拦截（`--jso` 拼错静默当默认行为，audit-split 曾中招）；
  *      import 了 parseArgs 却不消费 `args.unknown` 同样告警。
+ *   6. 【2026-08-31 新增】孤儿脚本：未被流水线挂载（git 钩子 / pre-push-gate / Taskfile /
+ *      Actions / package.json）、无 scripts/ 内脚本调用、文档无记录的脚本——化石风险，
+ *      建议归档或补登记。判定内核来自 _lib/orphan-classify.mjs（WARN 不阻断）。
  *
  * 设计意图：让 MikuMikuAR 与 ysm-model-manager 共用一套 .mjs 文档约定可被机检、
  *           可自执行，把统一的「文件头规范」从纸面落到 CI/子代理可消费的卡点。
@@ -36,6 +39,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 import { collectScripts } from './_lib/collect-scripts.mjs';
+import { findOrphans } from './_lib/orphan-classify.mjs';
 
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 
@@ -157,7 +161,10 @@ const HANDWRITTEN_ARGV_RE = /process\.argv\.slice\(2\)|process\.argv\.includes\(
 /** 位置参数消费特征：手写「跳过 -- 开头取裸参」find，或直接取 argv[2]/argv[0] 当值。 */
 const HANDWRITTEN_POSITIONAL_RE =
   /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]/;
-const PARSEARGS_IMPORT_RE = /_lib\/parse-args\.mjs/;
+// 仅匹配真实 import 语句（行首锚定 + `import {…} from`），避免误把建议文案里的
+// 字符串 `...from './_lib/parse-args.mjs'`（如 check-lib-adoption.mjs 的 advice 字段）
+// 当成脚本真的 import 了 parseArgs 而误报「未消费 unknown」（2026-08-31 审计修复）。
+const PARSEARGS_IMPORT_RE = /^[ \t]*import\s+\{[^}]*\}\s+from\s+['"]\.\/_lib\/parse-args\.mjs['"];?/m;
 
 function checkArgvContract(text) {
   const usesParseArgs = PARSEARGS_IMPORT_RE.test(text);
@@ -181,6 +188,16 @@ function checkArgvContract(text) {
   return [];
 }
 
+// ── 检查 6：孤儿脚本 ─────────────────────────────────
+// 判定内核来自 _lib/orphan-classify.mjs（四态：mounted / called / documented / orphan）。
+// 跨脚本关系判定（谁挂载/谁调用/谁文档记录），不在 per-file 循环内做；WARN 不阻断。
+// 2026-08-31 全量审计后真孤儿归零，常态为零告警；一旦有新脚本无人引用即在此浮出。
+
+function checkOrphans() {
+  const orphans = findOrphans();
+  return orphans.map((o) => `${o.script}: 孤儿脚本——${o.reason}（建议归档或补登记）`);
+}
+
 // ── 主流程 ──────────────────────────────────────────────
 
 function main() {
@@ -201,6 +218,8 @@ function main() {
     ];
     warns.push(...issues);
   }
+  // 检查 6：孤儿脚本（全局跨脚本判定，独立于 per-file 循环）
+  warns.push(...checkOrphans());
 
   if (JSON_OUT) {
     // _summary.ok 对齐 --json 契约（pre-push-gate runTools 优先读 s.ok）：

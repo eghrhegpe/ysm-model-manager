@@ -151,21 +151,24 @@ afterEach(() => {
 // ===== updateSelectCount =====
 
 describe("updateSelectCount 选中统计", () => {
-  it("有选中 → 文本「已选 N 个文件」+ accent 色", () => {
+  it("有选中 → 文本「已选 N 个文件」+ accent 色 + data-count", () => {
     const { root, stat } = makeHarness();
     selectState.keys.add("/a.ysm");
     selectState.keys.add("/b.ysm");
     updateSelectCount(root);
     expect(stat.textContent).toBe("已选 2 个文件");
     expect(stat.style.color).toBe("var(--accent)");
+    // e2e 数据通道：与文案/locale 解耦（en-US 下文案为 "N files selected"，正则断言必挂）
+    expect(stat.getAttribute("data-count")).toBe("2");
   });
 
-  it("空选中 → 重置颜色（文本不动）", () => {
+  it("空选中 → 重置颜色（文本不动）+ data-count=0", () => {
     const { root, stat } = makeHarness();
     stat.textContent = "已选 2 个文件";
     stat.style.color = "var(--accent)";
     updateSelectCount(root);
     expect(stat.style.color).toBe("");
+    expect(stat.getAttribute("data-count")).toBe("0");
   });
 
   it("无 #ftr-stat 节点 → 安全返回不抛", () => {

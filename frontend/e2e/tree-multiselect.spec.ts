@@ -5,16 +5,15 @@
 import { test, expect } from "./fixture.ts";
 import { waitForTreeCount, clickTreeFile, gotoApp } from "./helpers.ts";
 
-/** 读取底部选中统计文本（如「已选 2 个文件」），返回选中数 */
+/** 读取底部选中计数（经 data-count 数据通道，与文案/locale 解耦） */
 async function getSelectedCount(page: import("@playwright/test").Page): Promise<number> {
-  const stat = await page.evaluate(() => {
+  const count = await page.evaluate(() => {
     const content = document.querySelector("app-content");
     const tree = content?.shadowRoot?.querySelector("app-tree");
     const el = tree?.shadowRoot?.querySelector('[data-testid="tree-ftr-stat"]');
-    return el?.textContent || "";
+    return el?.getAttribute("data-count") || "";
   });
-  const m = stat.match(/已选\s*(\d+)/);
-  return m ? parseInt(m[1], 10) : 0;
+  return parseInt(count, 10) || 0;
 }
 
 test.describe("文件树多选", () => {

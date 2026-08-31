@@ -393,6 +393,8 @@ export function updateSelectCount(root: ShadowRoot): void {
   const stat = root?.getElementById("ftr-stat");
   if (!stat) return;
   const n = selectState.keys.size;
+  // data-count 数据通道：e2e 读数字而非文案，与 locale 解耦（ADR-133 导向）
+  stat.setAttribute("data-count", String(n));
   if (n > 0) {
     stat.textContent = t("tree.selectedCount", { n });
     stat.style.color = "var(--accent)";

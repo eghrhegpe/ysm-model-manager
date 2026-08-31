@@ -368,7 +368,7 @@
 |------|----|
 | `frontend/src/views/app-tree/bus-handlers.ts` | 308 |
 | `frontend/src/views/app-tree/events.ts` | 96 |
-| `frontend/src/views/app-tree/events.ts` | 471 |
+| `frontend/src/views/app-tree/events.ts` | 473 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -553,10 +553,10 @@
 | `frontend/src/views/app-tree/events.ts` | 196 |
 | `frontend/src/views/app-tree/events.ts` | 203 |
 | `frontend/src/views/app-tree/events.ts` | 382 |
-| `frontend/src/views/app-tree/events.ts` | 423 |
-| `frontend/src/views/app-tree/events.ts` | 431 |
-| `frontend/src/views/app-tree/events.ts` | 474 |
-| `frontend/src/views/app-tree/events.ts` | 484 |
+| `frontend/src/views/app-tree/events.ts` | 425 |
+| `frontend/src/views/app-tree/events.ts` | 433 |
+| `frontend/src/views/app-tree/events.ts` | 476 |
+| `frontend/src/views/app-tree/events.ts` | 486 |
 | `frontend/src/views/app-tree/index.ts` | 208 |
 | `frontend/src/views/app-tree/index.ts` | 354 |
 | `frontend/src/views/app-tree/index.ts` | 362 |

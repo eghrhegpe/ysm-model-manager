@@ -3,7 +3,7 @@
 // 同源内核）解析 PMX，产物 PmxObject 在此转成现有 PmxParseResponse 形状（压缩数组、
 // GPU 友好、可 transferable），主线程构建（buildPmxSceneSliced / mmd 轻量适配器）零改动。
 // 替代自研 PmxReader 双轨解析：解析口径与主线程 MMDLoader 完全一致，消除口径漂移。
-import type { PmxObject } from "./vendor/babylon-mmd/pmxReader.js";
+import type { PmxObject } from "../vendor/babylon-mmd/pmxReader.js";
 import type {
   PmxParseResponse,
   PmxVertexData,

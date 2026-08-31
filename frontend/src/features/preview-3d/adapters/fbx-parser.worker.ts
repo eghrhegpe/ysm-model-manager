@@ -9,7 +9,7 @@
 // 主线程按文件名（texUrlMap）用 blob URL 重建真实纹理。
 
 import * as THREE from "three";
-import { FBXLoader } from "./vendor/fbx/FBXLoader.ts";
+import { FBXLoader } from "../vendor/fbx/FBXLoader.ts";
 import { fbxSceneToData, captureTextureName, type FbxSceneData } from "./fbx-scene-to-data.ts";
 import { safeErrorMessage } from "../../../utils/safe-error-msg.ts";
 

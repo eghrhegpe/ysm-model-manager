@@ -9,7 +9,7 @@
 //
 // PMX 格式规范：https://github.com/v-cfd/mmd/blob/master/mmd/file_format/pmx.md
 
-import { PmxReader } from "./vendor/babylon-mmd/pmxReader.js";
+import { PmxReader } from "../vendor/babylon-mmd/pmxReader.js";
 import { pmxObjectToResponse } from "./mmd-pmx-convert.ts";
 import { safeErrorMessage } from "../../../utils/safe-error-msg.ts";
 

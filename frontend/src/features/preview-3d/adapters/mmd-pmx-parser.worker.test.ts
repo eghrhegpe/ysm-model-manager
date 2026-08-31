@@ -5,9 +5,9 @@
 // 端到端验证：权威解析 → 转换 → PmxParseResponse 形状（与主线程构建契约零漂移）。
 // @vitest-environment happy-dom
 import { describe, it, expect } from "vitest";
-import { PmxReader } from "./vendor/babylon-mmd/pmxReader.js";
+import { PmxReader } from "../vendor/babylon-mmd/pmxReader.js";
 import { pmxObjectToResponse } from "./mmd-pmx-convert.ts";
-import type { PmxObject } from "./vendor/babylon-mmd/pmxReader.js";
+import type { PmxObject } from "../vendor/babylon-mmd/pmxReader.js";
 import type { PmxParseResponse } from "./mmd-pmx-parser.worker.ts";
 
 /** 权威解析 + 转换的便捷入口（id 固定 0，断言形状与 worker 产物一致） */

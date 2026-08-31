@@ -28,6 +28,7 @@ import {
 import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.mjs';
 import { ROOT } from './_lib/scan-files.mjs';
 import { run } from './_lib/proc.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 function sigAny(p, text) {
   if (!text) return { lines: null, exports: 0, tops: 0 };
@@ -150,18 +151,24 @@ function toJ(report, firstN) {
 }
 
 // ── CLI ──
-const argv = process.argv.slice(2);
-const JSON_OUT = argv.includes('--json');
-const LIMIT = Number(argv[argv.indexOf('--limit') + 1] || 30) || 30;
-const FIRST_N = argv.includes('--first') ? (Number(argv[argv.indexOf('--first') + 1]) || null) : null;
-// 路径解析需跳过取值选项的值（--limit N / --first N 后跟数字），
-// 否则 `--limit 60 src/foo.ts` 会把 "60" 误当路径（code_review P2）
-let pathArg = null;
-for (let i = 0; i < argv.length; i++) {
-  const a = argv[i];
-  if (a === '--limit' || a === '--first') { i++; continue; }
-  if (!a.startsWith('--')) { pathArg = a; break; }
+// 走 parse-args（positional 脚本契约，unknown 白名单拦截）
+const args = parseArgs(process.argv.slice(2), {
+  bools: ['json'],
+  strings: ['limit', 'first'],
+  defaults: { limit: '30' },
+});
+if (args.help) {
+  console.log('用法: node scripts/bloat-history.mjs <path> [--json|--limit N|--first N]');
+  process.exit(0);
 }
+if (args.unknown.length) {
+  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  process.exit(2);
+}
+const JSON_OUT = args.json;
+const LIMIT = Number(args.limit) || 30;
+const FIRST_N = args.first ? (Number(args.first) || null) : null;
+const pathArg = args._[0];
 if (!pathArg) {
   console.error('用法: node scripts/bloat-history.mjs <path> [--json|--limit N|--first N]');
   process.exit(2);

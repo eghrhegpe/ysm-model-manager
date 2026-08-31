@@ -237,7 +237,7 @@ func MoveModelFile(root, src, dstDir string) error {
 	// 自嵌套检查须在 MkdirAll 之前执行——被拒移动不得在 src 内
 	// 留下空 junk 目录（dstDir 位于 src 子树内时拒绝，
 	// 含 dstDir == src 等值情形：dst=Join(src,Base(src)) 仍是 src 严格子目录）。
-	dst, err := prepareModelDest(src, dstDir)
+	dst, created, err := prepareModelDest(src, dstDir)
 	if err != nil {
 		return err
 	}
@@ -259,9 +259,11 @@ func MoveModelFile(root, src, dstDir string) error {
 		// 禁用态是文件名重命名约定（ToggleModelEnable 把 path 重命名为
 		// path+".disabled"），后缀随文件/目录名自然携带，无需额外处理兄弟文件
 		if !fsutil.IsCrossDeviceErr(err) {
-			// R33 P3-2：prepareModelDest 已 MkdirAll(dstDir)，Rename 失败时
-			// 清理空 dstDir 避免残留（仅在本次新建时）。
-			_ = os.RemoveAll(dstDir)
+			// R33 P3-2 + code_review P0/P1：仅当 dstDir 由本次 MkdirAll 新建时才清理，
+			// 避免删除预存在的目标目录及其内容（静默数据破坏）。
+			if created {
+				_ = os.RemoveAll(dstDir)
+			}
 			return err
 		}
 		info, statErr := os.Stat(src)
@@ -289,14 +291,19 @@ func MoveModelFile(root, src, dstDir string) error {
 // prepareModelDest 计算复制/移动的目标路径，并在 MkdirAll 前执行自嵌套检查。
 // 与 MoveModelFile / CopyModelFile 共用同一段「自嵌套检查 → 建目录 → 拼接 dst」逻辑
 // （jscpd 报告的文件内自重复，抽取为单一事实源以避免两处行为漂移；空 dstDir/src 由调用方前置校验）。
-func prepareModelDest(src, dstDir string) (dst string, err error) {
+// R33 code_review P0/P1：返回 created bool 标记 dstDir 是否由本次 MkdirAll 新建，
+// 调用方据此决定失败时是否清理（避免删除预存在的目标目录及其内容）。
+func prepareModelDest(src, dstDir string) (dst string, created bool, err error) {
 	if err = checkNotSelfNested(src, dstDir); err != nil {
-		return "", err
+		return "", false, err
 	}
+	// 检查 dstDir 是否已存在（MkdirAll 是幂等的，不区分新建 vs 预存在）
+	_, statErr := os.Lstat(dstDir)
+	created = os.IsNotExist(statErr)
 	if err = os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
-		return "", err
+		return "", false, err
 	}
-	return filepath.Join(dstDir, filepath.Base(src)), nil
+	return filepath.Join(dstDir, filepath.Base(src)), created, nil
 }
 
 // CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验）
@@ -347,7 +354,7 @@ func CopyModelFile(root, src, dstDir string) error {
 	// 留下空 junk 目录（原实现 MkdirAll 先行，拒绝后 src 内残留空子目录污染后续复制）。
 	// dstDir 位于 src 子树内时拒绝（含等值 "."——此时 dst=Join(src,Base(src)) 仍是 src
 	// 严格子目录，WalkDir 自嵌套无限膨胀至 ENAMETOOLONG）
-	dst, err := prepareModelDest(src, dstDir)
+	dst, _, err := prepareModelDest(src, dstDir)
 	if err != nil {
 		return err
 	}

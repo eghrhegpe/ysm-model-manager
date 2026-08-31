@@ -1888,6 +1888,10 @@ export const autoSidebar = [
             "link": "/knowledge/script_shared_cores"
           },
           {
+            "text": "源码符号提取共享层 source-graph.mjs",
+            "link": "/knowledge/source-graph"
+          },
+          {
             "text": "数组工具 moveItem",
             "link": "/knowledge/utils-array"
           },

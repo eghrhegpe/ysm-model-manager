@@ -13,9 +13,6 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// 7z 文件前缀扫描上限（仅读取头部判断格式）
-const max7zScanSize = 64 << 10 // 64KB
-
 // TexInfo 轻量级纹理尺寸（不解析完整模型）
 type TexInfo struct {
 	Path      string `json:"path"`

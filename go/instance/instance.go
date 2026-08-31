@@ -355,8 +355,7 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []ResourceTypeInfo, files
 // nestTreeNode 展示树节点：中间目录（容器）或叶子单元
 type nestTreeNode struct {
 	// 容器字段
-	isDir   bool
-	relPath string // 相对仓库/实例根，段连接符 "/"
+	isDir bool
 	// 叶子字段（isDir=false 或叶子模型夹）
 	leaf *types.ResourceSyncItem
 	// 容器 children：key = 下一路径段（目录段，不含扩展名判断——直接用段名）

@@ -351,39 +351,3 @@ func quatDiff(a, b [4]float64) float64 {
 	return math.Abs(a[0]-b[0]) + math.Abs(a[1]-b[1]) + math.Abs(a[2]-b[2]) + math.Abs(a[3]-b[3])
 }
 
-// eulerToQuaternionJavaOrder 复现 ModernYSM calculateBoneMatrix 的旋转序
-// （rotateZ → rotateY → rotateX 右乘 = Rz*Ry*Rx），用于对比锁定测试。
-// 仅测试用，不进生产路径。
-func eulerToQuaternionJavaOrder(rxDeg, ryDeg, rzDeg float64) [4]float64 {
-	rx := rxDeg * math.Pi / 180.0
-	ry := ryDeg * math.Pi / 180.0
-	rz := rzDeg * math.Pi / 180.0
-	cosX, sinX := math.Cos(rx), math.Sin(rx)
-	cosY, sinY := math.Cos(ry), math.Sin(ry)
-	cosZ, sinZ := math.Cos(rz), math.Sin(rz)
-	// M = Rz * Ry * Rx（Java 右乘连调顺序）
-	m00 := cosY * cosZ
-	m01 := cosX*sinZ + sinX*sinY*cosZ
-	m02 := sinX*sinZ - cosX*sinY*cosZ
-	m10 := -cosY * sinZ
-	m11 := cosX*cosZ - sinX*sinY*sinZ
-	m12 := sinX*cosZ + cosX*sinY*sinZ
-	m20 := sinY
-	m21 := -sinX * cosY
-	m22 := cosX * cosY
-	trace := m00 + m11 + m22
-	if trace > 0 {
-		s := 0.5 / math.Sqrt(trace+1.0)
-		return [4]float64{(m21 - m12) * s, (m02 - m20) * s, (m10 - m01) * s, 0.25 / s}
-	}
-	if m00 > m11 && m00 > m22 {
-		s := 2.0 * math.Sqrt(1.0+m00-m11-m22)
-		return [4]float64{0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s}
-	}
-	if m11 > m22 {
-		s := 2.0 * math.Sqrt(1.0+m11-m00-m22)
-		return [4]float64{(m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s}
-	}
-	s := 2.0 * math.Sqrt(1.0+m22-m00-m11)
-	return [4]float64{(m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s}
-}

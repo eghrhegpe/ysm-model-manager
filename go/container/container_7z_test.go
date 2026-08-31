@@ -41,10 +41,6 @@ func TestOpen7zPath_EntriesAndRead(t *testing.T) {
 		if name == "" {
 			t.Error("条目 Name() 不应为空")
 		}
-		// UncompressedSize64 应 >= 0
-		if e.UncompressedSize64() < 0 {
-			t.Errorf("条目 %s UncompressedSize64 为负: %d", name, e.UncompressedSize64())
-		}
 		// 非目录条目应可打开并读取
 		if !e.IsDir() {
 			rc, err := e.Open()
@@ -142,6 +138,5 @@ func TestSevenzipEntry_Methods(t *testing.T) {
 		_ = e.IsDir()
 		// UncompressedSize64 返回 uint64（不 panic）
 		_ = e.UncompressedSize64()
-		break
 	}
 }

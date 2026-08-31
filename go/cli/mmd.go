@@ -164,7 +164,6 @@ func runFileBench(ctx *CmdContext) error {
 	fmt.Printf("\n   总大小: %s\n\n", formatSize(totalSize))
 
 	fmt.Println("📊 单文件读取测试:")
-	var allReadTimes []time.Duration
 	for _, fi := range fileInfos {
 		name := filepath.Base(fi.path)
 		readTimes := make([]time.Duration, *iterations)
@@ -178,7 +177,6 @@ func runFileBench(ctx *CmdContext) error {
 
 		avgTime := avgDuration(readTimes)
 		throughput := float64(fi.size) / avgTime.Seconds() / (1024 * 1024)
-		allReadTimes = append(allReadTimes, readTimes...)
 
 		fmt.Printf("   %s (%s):\n", name, formatSize(fi.size))
 		fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgTime, throughput)

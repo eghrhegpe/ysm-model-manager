@@ -10,31 +10,6 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// setupAdvDirs 创建测试用目录结构（避免与 installer_test.go 的 setupTestDirs 重名）
-func setupAdvDirs(t *testing.T) (repoRoot, customDir, mcRoot, ysmFile string) {
-	t.Helper()
-
-	repoRoot = t.TempDir()
-	mcRoot = t.TempDir()
-
-	mcDir := filepath.Join(mcRoot, ".minecraft")
-	if err := os.MkdirAll(mcDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	customDir = filepath.Join(mcDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
-	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	ysmFile = filepath.Join(repoRoot, "[作者]作品-变体(202506).ysm")
-	if err := os.WriteFile(ysmFile, []byte("test model data"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	return
-}
-
 // ============================================================================
 // BUG-1: InstallToGlobal 允许读取任意路径文件
 // InstallToGlobal 校验了 mcRoot 的 .minecraft 标记和 src 的扩展名，

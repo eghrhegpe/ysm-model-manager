@@ -15,7 +15,7 @@ use_when:
   - recycle
   - 还原
 invariant_anchors:
-  - frontend/src/features/recycle-bin.ts|isPathInRoot
+  - frontend/src/features/recycle-bin.ts|GetRepoRoot
   - frontend/src/utils/async/load-guard.ts|createLoadGuard
 ---
 

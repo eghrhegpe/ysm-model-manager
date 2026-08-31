@@ -1,6 +1,6 @@
 // ===== preview 工具函数（纯函数，无组件依赖） =====
 
-import type { AnimationClip } from "../../utils/animation/animation.ts";
+import type { AnimationClip } from "../../../utils/animation/animation.ts";
 
 /** Bedrock 方块 */
 export interface BedrockCube {

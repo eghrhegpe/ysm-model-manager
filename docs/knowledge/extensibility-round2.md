@@ -78,7 +78,7 @@ affected: false
 | 容器桥接 | `go/container/container.go`（`Entry/Reader` 接口） | 需加实现 | 现有 zip / 7z / 目录 三种适配器 |
 | 打开分派 | `container.go`（`Open`） | 需加 switch | `ext == ".zip" || ".7z" || info.IsDir()`，其他扩展返回"不支持" |
 | 内容指纹 | `container.go`（`matchZipArchive`） + `types.go`（`MatchZipEntry`） | 自动（对已有容器） | `matchZipEntry` 只认已注册的容器打开器 |
-| 前端 WASM 预览 | `frontend/src/views/app-preview/wasm.ts` + `features/preview-3d/adapters/` | 需加适配器 | YSM/WASM 硬编码 `.ysm`；Litematic/VRM/MMD 有独立适配器 |
+| 前端 WASM 预览 | `frontend/src/features/preview-3d/decoder/wasm-decode.ts` + `features/preview-3d/adapters/` | 需加适配器 | YSM/WASM 硬编码 `.ysm`；Litematic/VRM/MMD 有独立适配器 |
 | 预览派发 | `app-preview/index.ts`（`PREVIEW_HANDLERS`） | 需加 handler | 统一核心（D2，mount-preview-core）尚未落地——目前仍是每格式独立 adapter |
 
 ### 步骤

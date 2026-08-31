@@ -4,7 +4,7 @@
 // （纹理 + Android spec 兜底）时只解码一次，否则 atob/解析双份、WASM 状态竞争。
 // 注意：cache.ts 为模块级持久 Map（无 clear API），各用例用不同路径隔离。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { decodeYsmViaWasm } from "./wasm.ts";
+import { decodeYsmViaWasm } from "./wasm-decode.ts";
 
 const { initMock, decodeMemoryMock, readFileBytesMock, memfsMock } = vi.hoisted(() => ({
   initMock: vi.fn().mockResolvedValue(true),
@@ -13,13 +13,13 @@ const { initMock, decodeMemoryMock, readFileBytesMock, memfsMock } = vi.hoisted(
   memfsMock: vi.fn(),
 }));
 
-vi.mock("../../wasm/ysm-parser.ts", () => ({
+vi.mock("../../../wasm/ysm-parser.ts", () => ({
   initYSMParser: initMock,
   decodeYsmFileFromMemory: decodeMemoryMock,
   decodeYsmFile: memfsMock,
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("../../../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({ ReadFileBytes: readFileBytesMock }),
 }));
 

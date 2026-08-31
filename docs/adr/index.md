@@ -310,6 +310,7 @@ permalink: /adr/
 | ADR-003 | 业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking） | ✅ 已采纳 | 2026-08-03（初定），原方案记录于 2026-06-16 |
 | ADR-002 | 项目全面评估与改进方向 | ✅ 已采纳 | 2026-08-03 |
 | ADR-001 | 升级至 Wails 3 | ✅ 已采纳 | 2026-07-14 |
+| ADR-137 | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ✅ 已采纳 | 2026-08-31 |
 
 ## 使用规则（硬约束）
 

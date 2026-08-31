@@ -3,7 +3,7 @@
 // ctx.menu.setAdapterItems 注入 model/截图/骨骼 三项 → dispose 清理。装配级测试。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
-import type { BedrockGeometry } from "../../../views/app-preview/geometry.ts";
+import type { BedrockGeometry } from "../decoder/geometry.ts";
 import type { PreviewMenuHandle } from "./preview-menu/core.ts";
 import type { BoneTree } from "../bone-tools.ts";
 import type { YsmModel, YsmContentHandle } from "../../../views/app-preview/ysm-controls.ts";

@@ -1,18 +1,18 @@
 // ===== WASM 解码层 =====
 // 从 index.ts 拆分：.ysm 文件的前端 WASM 解码逻辑
 import { devLog } from "./utils.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { safeErrorMessage } from "../../../utils/safe-error-msg.ts";
 import { stripYsgpTextHeader, type DecodedYsm } from "./utils.ts";
 import { cacheGet, cacheSet } from "./cache.ts";
 import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "./geometry.ts";
-import { parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
-import { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } from "../../wasm/ysm-parser.ts";
+import { parseBedrockAnimationJSON } from "../../../utils/animation/animation.ts";
+import { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } from "../../../wasm/ysm-parser.ts";
 import { parseYsmJsonDirect } from "./parse-ysm-json.ts";
-import { extractAnimGroupsAndConfigs } from "../../utils/format/ysm-anim-config.ts";
+import { extractAnimGroupsAndConfigs } from "../../../utils/format/ysm-anim-config.ts";
 import { buildOrderedTexKeys } from "./texture-order.ts";
-import { getApp } from "../../backend/app.ts";
-import { swallowError } from "../../utils/core/async.ts";
-import { sniffTexSize } from "../../utils/tex-size.ts";
+import { getApp } from "../../../backend/app.ts";
+import { swallowError } from "../../../utils/core/async.ts";
+import { sniffTexSize } from "../../../utils/tex-size.ts";
 
 /** 并发去重：同一路径在途解码共享（Android 兜底与纹理并行触发时只解一次）。
  *  无此守卫时 preloadModel 并行发起的两次 decodeYsmViaWasm 会各自完整解码

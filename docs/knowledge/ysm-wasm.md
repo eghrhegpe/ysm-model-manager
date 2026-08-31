@@ -65,7 +65,7 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 
 ## 与其他子系统关系
 
-- 消费方：`frontend/src/views/app-preview/wasm.ts`（预览面板 WASM 解码分支，decodeYsmViaWasm）、`web-spike/main.ts`（开发联调入口）
+- 消费方：`frontend/src/features/preview-3d/decoder/wasm-decode.ts`（预览面板 WASM 解码分支，decodeYsmViaWasm，ADR-137 归位）、`web-spike/main.ts`（开发联调入口）
 - 解码产物（模型 JSON/纹理/动画）流向 preview-cache 与 [animation_system](./animation-system.md) 的 parseBedrockAnimationJSON
 - 兜底链路：前端 WASM 不可用时回退 Go 端解析（`app_model.go` `AnalyzeBedrockModel`，其内部再走 Node.js + WASM / exe，见上节）
 

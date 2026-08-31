@@ -8,10 +8,10 @@
 import { mount3D, cleanupPreview, invalidatePreview } from "../../features/preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "../../features/preview-3d/adapters/ysm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
-import type { BedrockGeometry } from "./geometry.ts";
+import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
 import { preloadModel, type ModelLike } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
-import { decodeYsmViaWasm } from "./wasm.ts";
+import { decodeYsmViaWasm } from "../../features/preview-3d/decoder/wasm-decode.ts";
 import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";

@@ -7,10 +7,10 @@ source_files:
   - frontend/src/features/preview-3d/screenshot-render.ts
   - frontend/src/features/preview-3d/screenshot-lights.ts
   - frontend/src/features/preview-3d/texture-loader.ts
-  - frontend/src/views/app-preview/cache.ts
+  - frontend/src/features/preview-3d/decoder/cache.ts
   - frontend/src/features/preview-3d/screenshot.ts
 tests:
-  - frontend/src/views/app-preview/cache.test.ts
+  - frontend/src/features/preview-3d/decoder/cache.test.ts
   - frontend/src/features/preview-3d/screenshot-render.test.ts
   - frontend/src/features/preview-3d/texture-loader.test.ts
 use_when:
@@ -21,8 +21,8 @@ use_when:
   - 缩略图
   - blob URL 释放
 invariant_anchors:
-  - frontend/src/views/app-preview/cache.ts|cacheSet
-  - frontend/src/views/app-preview/cache.ts|collectBlobUrls
+  - frontend/src/features/preview-3d/decoder/cache.ts|cacheSet
+  - frontend/src/features/preview-3d/decoder/cache.ts|collectBlobUrls
 ---
 
 # 截图与导出 export

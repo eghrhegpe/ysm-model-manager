@@ -6,7 +6,7 @@
 import { mount3D, cleanupPreview, invalidatePreview } from "../../features/preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "../../features/preview-3d/adapters/ysm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
-import type { BedrockGeometry } from "./geometry.ts";
+import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
 import { preloadModel, type ModelLike } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
 import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
@@ -20,7 +20,7 @@ import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
 import { setActive3DClose } from "./skeleton.ts";
 import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
 import type { PreviewCtx } from "./utils.ts";
-import type { BedrockSubModel } from "./geometry.ts";
+import type { BedrockSubModel } from "../../features/preview-3d/decoder/geometry.ts";
 import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { readFileBytes } from "./view-shell.ts";

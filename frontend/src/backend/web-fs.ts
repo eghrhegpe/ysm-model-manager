@@ -46,9 +46,9 @@ import { litematicVoxelView, nbtVoxelView, schematicVoxelView, decodeVoxelNbt, t
 // 资源包/光影包详情 meta 读取（TS 平移 go/packs/mcmeta.go 的解析层；binding 装配见下方
 // webFsBindings 的 ReadPackMeta/ReadShaderpackLang 条目——读 IDB → 解 zip → 本文件纯解析）
 import { findZipEntry, parsePackMetaJson, parseShaderpackLang, packPngToThumbnail } from "./pack-meta.ts";
-// #5：Bedrock 纯解析复用（geometry.ts 是完全前端的 JSON→BedrockGeometry 解析器）
-import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "../views/app-preview/geometry.ts";
-import { parseYsmJsonDirect } from "../views/app-preview/parse-ysm-json.ts";
+// #5：Bedrock 纯解析复用（decoder/geometry.ts 是完全前端的 JSON→BedrockGeometry 解析器）
+import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "../features/preview-3d/decoder/geometry.ts";
+import { parseYsmJsonDirect } from "../features/preview-3d/decoder/parse-ysm-json.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
 // 预填、rename.ts:92 重命名 tips、detail.ts:58-62 详情 stats/license、loader.ts:140 作者兜底）

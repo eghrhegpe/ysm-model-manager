@@ -78,7 +78,7 @@ invariant_anchors:
 - `model:select` 派发方为 `app-tree` 节点点击与诊断页去重定位（见知识卡 `app_tree`）
 - 2D/3D 骨骼计算委托 `frontend/src/features/preview-3d/model2d.ts` / `features/preview-3d/model3d.ts`，动画解析走 `utils/animation/animation.ts`
 - Litematic/schematic 解析对应 Go 端 `go/litematic`；该包的 `extractBits` 对损坏或截断文件已加 `longIdx` 越界守卫（`go/litematic/nbt.go`，42d1839），前端 `litematic-3d.ts` 只做「体素数据为空」的空态兜底，不重复校验位宽（见知识卡 `go_litematic`）
-- WASM 解析口径与 Go 端 `go/ysm` 一致（YSMViewer 算法口径）；缓存层为 `frontend/src/views/app-preview/cache.ts`
+- WASM 解析口径与 Go 端 `go/ysm` 一致（YSMViewer 算法口径）；缓存层为 `frontend/src/features/preview-3d/decoder/cache.ts`（ADR-137 归位）
 - 组件实例实现 `PreviewCtx` 最小接口，子模块只依赖该接口，不反向引用组件全貌
 
 ## 不变量
@@ -107,7 +107,7 @@ invariant_anchors:
 ## 相关
 
 - `frontend/src/features/preview-3d/model2d.ts` / `features/preview-3d/model3d.ts` — 2D/3D 骨骼渲染与计算
-- `frontend/src/views/app-preview/cache.ts` — 模块级预览缓存（跨组件生命周期持久）
+- `frontend/src/features/preview-3d/decoder/cache.ts` — 模块级预览缓存（跨组件生命周期持久，ADR-137 归位）
 - `frontend/src/wasm/` — WASM 生成数据（base64 豁免文件）
 - 知识卡：`app_content`、`app_tree`、`go_ysm_parser`、`go_litematic`、`event_bus`、`pointer-events`（双端响应式触控热区）
 - ADR-057（3D 预览悬浮触发按钮与双端响应式控制层）；`frontend/src/utils/dom/fab.ts` — FloatingActionButton 组件与全局样式注入

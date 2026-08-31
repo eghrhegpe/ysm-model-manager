@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-137：YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀）",
+        "link": "/adr/ADR-137-ysm-decoder-homecoming"
+      },
+      {
         "text": "ADR-136：截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀）",
         "link": "/adr/ADR-136-screenshot-domain-homecoming"
       },

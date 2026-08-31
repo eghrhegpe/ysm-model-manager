@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { getApp } from "../../backend/app.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
-import { decodeYsmViaWasm } from "./wasm.ts";
+import { decodeYsmViaWasm } from "../../features/preview-3d/decoder/wasm-decode.ts";
 import { buildSpecFromGeometryJSON } from "../../features/preview-3d/spec-builder.ts";
 import { loadTextures } from "../../features/preview-3d/texture-loader.ts";
 import { recordLoadTrace } from "../../features/preview-3d/load-trace.ts";

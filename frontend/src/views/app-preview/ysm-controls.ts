@@ -14,7 +14,7 @@ import { saveScreenshot } from "./skeleton-render.ts";
 import type { PreviewMenuNode } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import type { Spec3D, BoneSelectInfo } from "../../features/preview-3d/model3d.ts";
-import type { BedrockGeometry } from "./geometry.ts";
+import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
 import type { CameraControlBridge } from "../../features/preview-3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
 import { registerSchema, unregisterSchema, makeYsmModelSchemaId, YSM_MODEL_SCHEMA_ID } from "../../features/preview-3d/adapters/schema-registry.ts";

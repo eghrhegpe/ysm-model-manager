@@ -30,7 +30,7 @@ vi.mock("../../utils/dom/android-bridge.ts", () => ({
 vi.mock("../../backend/platform-web.ts", () => ({
   isWebPlatform: isWebPlatformMock,
 }));
-vi.mock("./wasm.ts", () => ({
+vi.mock("../../features/preview-3d/decoder/wasm-decode.ts", () => ({
   decodeYsmViaWasm: decodeWasmMock,
 }));
 vi.mock("../../features/preview-3d/spec-builder.ts", () => ({

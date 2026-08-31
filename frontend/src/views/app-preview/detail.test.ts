@@ -31,7 +31,7 @@ vi.mock("../../backend/app.ts", () => ({
     ReadShaderpackLang: shaderLangMock,
   }),
 }));
-vi.mock("./wasm.ts", () => ({
+vi.mock("../../features/preview-3d/decoder/wasm-decode.ts", () => ({
   decodeYsmViaWasm: wasmDecodeMock,
 }));
 vi.mock("./pack-3d.ts", () => ({

@@ -4,12 +4,12 @@ name: YSM 烘焙与几何反推
 tier: architecture
 category: core
 source_files:
-  - frontend/src/views/app-preview/wasm.ts
-  - frontend/src/views/app-preview/geometry.ts
+  - frontend/src/features/preview-3d/decoder/wasm-decode.ts
+  - frontend/src/features/preview-3d/decoder/geometry.ts
   - frontend/public/wasm/YSMParser.js
   - frontend/public/wasm/YSMParser.wasm
 tests:
-  - frontend/src/views/app-preview/geometry.test.ts
+  - frontend/src/features/preview-3d/decoder/geometry.test.ts
 use_when:
   - 烘焙
   - 几何反推
@@ -23,8 +23,8 @@ use_when:
   - YSM 导出
   - BlockBench
 invariant_anchors:
-  - frontend/src/views/app-preview/wasm.ts|decodeYsmViaWasm
-  - frontend/src/views/app-preview/geometry.ts|parseBedrockGeometryFromJSON
+  - frontend/src/features/preview-3d/decoder/wasm-decode.ts|decodeYsmViaWasm
+  - frontend/src/features/preview-3d/decoder/geometry.ts|parseBedrockGeometryFromJSON
 ---
 
 # YSM 烘焙与几何反推
@@ -46,8 +46,8 @@ YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）�
 
 ## 对外 API / 入口
 
-- `frontend/src/views/app-preview/wasm.ts` — `decodeYsmViaWasm`：WASM 解码出文件列表 → 读 `ysm.json` 取模型/纹理顺序 → 反推出的 geometry JSON → `BedrockGeometry`；最终交 `loader.ts` 消费
-- `frontend/src/views/app-preview/geometry.ts` `parseBedrockGeometryFromJSON` — 消费反推 JSON，UV 兼容数组 `[x,y]` / 对象 `{uv:[...],uv_size:[...]}` / JSON 字符串（faceUV）/ 兜底 `[0,0]` 四种形态（`geometry.ts` UV 形态解析）
+- `frontend/src/features/preview-3d/decoder/wasm-decode.ts` — `decodeYsmViaWasm`：WASM 解码出文件列表 → 读 `ysm.json` 取模型/纹理顺序 → 反推出的 geometry JSON → `BedrockGeometry`；最终交 `loader.ts` 消费
+- `frontend/src/features/preview-3d/decoder/geometry.ts` `parseBedrockGeometryFromJSON` — 消费反推 JSON，UV 兼容数组 `[x,y]` / 对象 `{uv:[...],uv_size:[...]}` / JSON 字符串（faceUV）/ 兜底 `[0,0]` 四种形态（`geometry.ts` UV 形态解析）
 - Go 兜底侧见 [go_geometry](./go-geometry.md) `ParseBedrockGeometry` / `ParseFromZip`（同一份反推 JSON 的另一输入端）
 
 ## 与其他子系统关系

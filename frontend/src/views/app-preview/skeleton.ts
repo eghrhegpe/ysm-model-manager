@@ -5,7 +5,7 @@ import { loadModelData, fillAuthorsAsync } from "./loader.ts";
 import { renderModel2D } from "../../features/preview-3d/model2d.ts";
 import { openFullPreview } from "./zoom.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import type { BedrockGeometry } from "./geometry.ts";
+import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";

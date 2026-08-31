@@ -42,15 +42,15 @@
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 24 | 120 |
 | 前端·核心 | 19 | 39 |
-| 前端·特性 | 143 | 629 |
+| 前端·特性 | 149 | 646 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 7 | 38 |
 | frontend/ui | 18 | 66 |
 | 前端·工具 | 63 | 230 |
-| frontend/views | 121 | 354 |
+| frontend/views | 116 | 337 |
 | 前端·WASM | 9 | 24 |
 | frontend/workers | 2 | 13 |
-| **合计** | **530** | **2256** |
+| **合计** | **531** | **2256** |
 
 ## Go·头像
 
@@ -1546,6 +1546,23 @@
 | `buildCubeMeshData()` | `frontend/src/features/preview-3d/cube-mesh:192` | 从 Bedrock cube 数据构建 THREE.Mesh 几何数据。 |
 | `mergeCubes()` | `frontend/src/features/preview-3d/cube-mesh:261` | 合并两组 cube：新 cube 中与旧 cube 空间重叠的替换之，不重叠的追加。 |
 | `rebuildDebug()` | `frontend/src/features/preview-3d/debug-render:58` | 重建 debug 叠加层（pivot 标记 / 骨骼线框）。 |
+| `CacheValue()` | `frontend/src/features/preview-3d/decoder/cache:10` | 缓存条目值 |
+| `cacheSetEvictHandler()` | `frontend/src/features/preview-3d/decoder/cache:39` | 注册 evict 回调，淘汰条目时调用 |
+| `cacheGet()` | `frontend/src/features/preview-3d/decoder/cache:43` | — |
+| `collectBlobUrls()` | `frontend/src/features/preview-3d/decoder/cache:48` | 收集缓存值中全部 blob URL（evict 释放用） |
+| `cacheSet()` | `frontend/src/features/preview-3d/decoder/cache:65` | — |
+| `BedrockCube()` | `frontend/src/features/preview-3d/decoder/geometry:6` | Bedrock 方块 |
+| `BedrockSubModel()` | `frontend/src/features/preview-3d/decoder/geometry:19` | SubModel 子模型条目（Go types/bedrock.go SubModel）。 |
+| `BedrockBone()` | `frontend/src/features/preview-3d/decoder/geometry:26` | Bedrock 骨骼 |
+| `BedrockGeometry()` | `frontend/src/features/preview-3d/decoder/geometry:41` | 解析后的 Bedrock geometry |
+| `parseBedrockGeometryFromJSON()` | `frontend/src/features/preview-3d/decoder/geometry:95` | 从 JSON 字符串解析 Bedrock geometry |
+| `parseYsmJsonDirect()` | `frontend/src/features/preview-3d/decoder/parse-ysm-json:23` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
+| `OrderedTexInput()` | `frontend/src/features/preview-3d/decoder/texture-order:7` | — |
+| `buildOrderedTexKeys()` | `frontend/src/features/preview-3d/decoder/texture-order:21` | 计算 3D 渲染/纹理选择器用的有序纹理名列表 |
+| `devLog()` | `frontend/src/features/preview-3d/decoder/utils:8` | DEV 模式下输出调试日志 |
+| `DecodedYsm()` | `frontend/src/features/preview-3d/decoder/utils:13` | WASM 解码结果（decodeYsmViaWasm 返回） |
+| `stripYsgpTextHeader()` | `frontend/src/features/preview-3d/decoder/utils:112` | 剥离 YSGP 文本头部，返回标准二进制格式 |
+| `decodeYsmViaWasm()` | `frontend/src/features/preview-3d/decoder/wasm-decode:22` | — |
 | `MeshFragment()` | `frontend/src/features/preview-3d/face-split:14` | 网格碎片：同一 meshGroup 按 alpha 特征拆出的子几何 + 渲染路径 |
 | `splitMeshByFaceAlpha()` | `frontend/src/features/preview-3d/face-split:24` | 按三角形 UV 包围盒查询 AlphaIndex，把 md 拆成 ≤3 个 mode 碎片。 |
 | `fbxBonesToBoneNodes()` | `frontend/src/features/preview-3d/fbx-bones:29` | FBX 场景骨骼 → BoneNode[]（id=骨骼索引、parentId=父骨骼索引、object=Bone 引用）。 |
@@ -2251,11 +2268,6 @@
 | `navCSS()` | `frontend/src/views/app-nav/tpl:2` | — |
 | `BoneEntry()` | `frontend/src/views/app-preview/bone-names:5` | 骨骼条目（结构类型，兼容 DecodedYsm.bones 元素） |
 | `buildBoneNamesText()` | `frontend/src/views/app-preview/bone-names:15` | 构建骨骼名导出文本行： 首行 `模型: &lt;path&gt;`、次行 `骨骼总数: &lt;n&gt;`，其后每根骨骼 有方块则 `名称 (n 方)`，结构骨骼（无方块）则 `名称 (结构骨骼,无方) |
-| `CacheValue()` | `frontend/src/views/app-preview/cache:10` | 缓存条目值 |
-| `cacheSetEvictHandler()` | `frontend/src/views/app-preview/cache:39` | 注册 evict 回调，淘汰条目时调用 |
-| `cacheGet()` | `frontend/src/views/app-preview/cache:43` | — |
-| `collectBlobUrls()` | `frontend/src/views/app-preview/cache:48` | 收集缓存值中全部 blob URL（evict 释放用） |
-| `cacheSet()` | `frontend/src/views/app-preview/cache:65` | — |
 | `previewCSS()` | `frontend/src/views/app-preview/css:2` | — |
 | `showVrmMeta()` | `frontend/src/views/app-preview/detail-3d:30` | 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） |
 | `showMmdPreview()` | `frontend/src/views/app-preview/detail-3d:117` | 显示 MMD 预览卡（文件名 + FAB 进 3D；PMX/PMD 无标准 meta 读取，保持简单形态） |
@@ -2274,11 +2286,6 @@
 | `createFbx3D()` | `frontend/src/views/app-preview/fbx-3d:26` | 打开 FBX 3D 预览（独立资产：模型 + 内嵌动画）；siblings 透传同类型候选（ADR-066 §5.6） |
 | `resolveFbxSiblings()` | `frontend/src/views/app-preview/fbx-siblings:7` | 同类型 FBX 模型候选（GetRepoRoot(fbx) → ScanModelEntriesFiltered 主文件 Path 列表）；失败返回 []（下拉不渲染） |
 | `GenGuard()` | `frontend/src/views/app-preview/gen-guard:13` | GenGuard：统一代际守卫（bug-chronicle #18 治理）。 |
-| `BedrockCube()` | `frontend/src/views/app-preview/geometry:6` | Bedrock 方块 |
-| `BedrockSubModel()` | `frontend/src/views/app-preview/geometry:19` | SubModel 子模型条目（Go types/bedrock.go SubModel）。 |
-| `BedrockBone()` | `frontend/src/views/app-preview/geometry:26` | Bedrock 骨骼 |
-| `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:41` | 解析后的 Bedrock geometry |
-| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:95` | 从 JSON 字符串解析 Bedrock geometry |
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:89` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
 | `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:132` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:137` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
@@ -2314,7 +2321,6 @@
 | `createPack3D()` | `frontend/src/views/app-preview/pack-3d:32` | 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） |
 | `cleanupPack3D()` | `frontend/src/views/app-preview/pack-3d:66` | 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 |
 | `invalidatePackPreview()` | `frontend/src/views/app-preview/pack-3d:71` | 任意新预览派发时调用，作废在途资源包加载 |
-| `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:23` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
 | `registerReRoute()` | `frontend/src/views/app-preview/preview-library:26` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
 | `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:34` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |
 | `OpenModel3DOptions()` | `frontend/src/views/app-preview/preview-library:39` | openModel3DFullscreen 选项（ADR-093 T4：cooperate 统一多模型同台追加入口） |
@@ -2347,22 +2353,17 @@
 | `setActive3DClose()` | `frontend/src/views/app-preview/skeleton:42` | 设置当前活跃的 3D 全屏 overlay 关闭函数（maid/通用 Bedrock 模型复用此机制）。 |
 | `loadModel2D()` | `frontend/src/views/app-preview/skeleton:59` | 加载模型 2D 骨骼线条图（+ 可选统计卡容器：传入则统计卡渲染到该容器，骨架区只留图） |
 | `resolveStageSiblings()` | `frontend/src/views/app-preview/stage-siblings:13` | 扫描 StageAnim 目录下所有资源文件（VMD + 音频 + config）；失败返回 [] |
-| `OrderedTexInput()` | `frontend/src/views/app-preview/texture-order:7` | — |
-| `buildOrderedTexKeys()` | `frontend/src/views/app-preview/texture-order:21` | 计算 3D 渲染/纹理选择器用的有序纹理名列表 |
 | `ModelDetailMeta()` | `frontend/src/views/app-preview/tpl:6` | 模型统计元数据（modelDetailHTML 入参） |
 | `modelDetailHTML()` | `frontend/src/views/app-preview/tpl:20` | 模型详情面板（仓库页面） |
 | `StatsCardModel()` | `frontend/src/views/app-preview/tpl:58` | 模型统计卡片（statsCardHTML 入参的几何视图） |
 | `statsCardHTML()` | `frontend/src/views/app-preview/tpl:88` | 模型统计卡片 |
-| `devLog()` | `frontend/src/views/app-preview/utils:6` | DEV 模式下输出调试日志 |
-| `DecodedYsm()` | `frontend/src/views/app-preview/utils:11` | WASM 解码结果（decodeYsmViaWasm 返回） |
-| `PreviewRoot()` | `frontend/src/views/app-preview/utils:32` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） |
-| `YsmDecoder()` | `frontend/src/views/app-preview/utils:39` | WASM 解码能力（loader/skeleton 消费） |
-| `PreviewDebugger()` | `frontend/src/views/app-preview/utils:44` | 调试输出能力（loader/skeleton 消费） |
-| `PreviewImageLoader()` | `frontend/src/views/app-preview/utils:49` | 预览图加载能力（detail 消费） |
-| `PreviewCtx()` | `frontend/src/views/app-preview/utils:56` | 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。 |
-| `getPrefer3D()` | `frontend/src/views/app-preview/utils:60` | — |
-| `setPrefer3D()` | `frontend/src/views/app-preview/utils:63` | — |
-| `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:147` | 剥离 YSGP 文本头部，返回标准二进制格式 |
+| `PreviewRoot()` | `frontend/src/views/app-preview/utils:8` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） |
+| `YsmDecoder()` | `frontend/src/views/app-preview/utils:15` | WASM 解码能力（loader/skeleton 消费） |
+| `PreviewDebugger()` | `frontend/src/views/app-preview/utils:20` | 调试输出能力（loader/skeleton 消费） |
+| `PreviewImageLoader()` | `frontend/src/views/app-preview/utils:25` | 预览图加载能力（detail 消费） |
+| `PreviewCtx()` | `frontend/src/views/app-preview/utils:32` | 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。 |
+| `getPrefer3D()` | `frontend/src/views/app-preview/utils:36` | — |
+| `setPrefer3D()` | `frontend/src/views/app-preview/utils:39` | — |
 | `readFileBytes()` | `frontend/src/views/app-preview/view-shell:14` | 数据读取注入（Wails ReadFileBytes；返回 null = 读取失败） |
 | `addOpLog()` | `frontend/src/views/app-preview/view-shell:20` | 环形日志面板诊断（AddOpLog 注入；失败静默不阻断加载）。scope = 运行时环打标（如 "fbx-preview"） |
 | `createVrm3D()` | `frontend/src/views/app-preview/vrm-3d:44` | 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 |
@@ -2371,7 +2372,6 @@
 | `VrmMaterialControlBridge()` | `frontend/src/views/app-preview/vrm-controls:18` | 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 |
 | `vrmModelInfoNodes()` | `frontend/src/views/app-preview/vrm-controls:26` | VRM 模型信息声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdModelInfoNodes） |
 | `vrmShotNodes()` | `frontend/src/views/app-preview/vrm-controls:42` | VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）： screenshotFn null（无 |
-| `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:22` | — |
 | `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:37` | — |
 | `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:50` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
 | `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:87` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |

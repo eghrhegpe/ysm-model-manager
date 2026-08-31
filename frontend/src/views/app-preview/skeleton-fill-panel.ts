@@ -3,7 +3,7 @@
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
 import type { BoneSelectInfo } from "../../features/preview-3d/model3d.ts";
-import type { BedrockGeometry } from "./geometry.ts";
+import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
 import type { Spec3D } from "../../features/preview-3d/model3d.ts";
 import type { PreviewMenuNode } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
 import { multiModelSelectNode } from "../../features/preview-3d/adapters/preview-menu/multi-model.ts";

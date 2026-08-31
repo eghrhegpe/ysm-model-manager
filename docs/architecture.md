@@ -329,7 +329,7 @@ type CliCommand struct {
 - **发版场景（不打包 exe）**：`.ysm` 实际解码主路径就是 **Node.js + WASM `callMain`**——Go 自己零解密代码，能力全部继承自原版 C++ 解析器（认识 YSGP V2 / YSGP V3 / OYSM 全变体），这就是「支持所有版本」的来源。
 - **无 node 场景**：路径 B 不可用，加密 `.ysm` 无法解码（仅开放 zip/7z 走 Go 原生），这是 ADR-029 保留 exe 回退的初衷。
 
-消费方 `views/app-preview/wasm.ts:25-160` 完整链（前端）：
+消费方 `features/preview-3d/decoder/wasm-decode.ts:25-160` 完整链（前端，ADR-137 归位）：
 ```
 ReadFileBytes(Go, base64) → atob → Uint8Array
   → (.json 走 parseYsmJsonDirect 直解)
@@ -752,7 +752,7 @@ core/handler-dnd.ts 拦截 drop
   → Go ImportModelFile* (app_install.go) → go/importer 策略 → 落盘
   → emit tree:reload
   → 选中触发 model:select → app-preview
-  → views/app-preview/wasm.ts decodeYsmViaWasm (§4.2)
+  → features/preview-3d/decoder/wasm-decode.ts decodeYsmViaWasm (§4.2，ADR-137 归位)
   → features/preview-3d/model3d.ts + Three.js 渲染
 ```
 

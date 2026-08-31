@@ -16,11 +16,11 @@ const { getApp, screenshotFn, renderMultiAngle, saveFile } = vi.hoisted(() => ({
 vi.mock("../../core/i18n/t.ts", () => ({ t: (k: string) => k }));
 vi.mock("../../backend/app.ts", () => ({ getApp }));
 vi.mock("../../features/preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
-vi.mock("./wasm.ts", () => ({ decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)) }));
+vi.mock("../../features/preview-3d/decoder/wasm-decode.ts", () => ({ decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)) }));
 
 import { setup2DCanvas, buildToggleRow, buildStatsCard, buildBoneExportRow, saveScreenshot } from "./skeleton-render.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
-import type { BedrockGeometry } from "./geometry.ts";
+import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
 
 /** 最小可用 BedrockGeometry（各测试按需 override） */

@@ -1,7 +1,7 @@
 // ===== 骨骼渲染逻辑 =====
 // 纯 DOM 创建/HTML 生成函数，不含事件绑定
 import { safeGet } from "../../utils/dom/storage.ts";
-import type { BedrockGeometry } from "./geometry.ts";
+import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { safeUrl } from "../../utils/format/summarize.ts";
 import { getApp } from "../../backend/app.ts";
@@ -9,7 +9,7 @@ import { statsCardHTML } from "./tpl.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { renderMultiAngle } from "../../features/preview-3d/screenshot-render.ts";
 import { toScreenshotLights } from "../../features/preview-3d/screenshot-lights.ts";
-import { decodeYsmViaWasm } from "./wasm.ts";
+import { decodeYsmViaWasm } from "../../features/preview-3d/decoder/wasm-decode.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";

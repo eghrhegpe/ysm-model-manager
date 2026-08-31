@@ -12,13 +12,13 @@ import { friendlyError } from "../../utils/dom/errors.ts";
 import { getApp } from "../../backend/app.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import type { PreviewCtx } from "./utils.ts";
-import { decodeYsmViaWasm } from "./wasm.ts";
+import { decodeYsmViaWasm } from "../../features/preview-3d/decoder/wasm-decode.ts";
 import { loadModel2D } from "./skeleton.ts";
 import { describeVersionRange } from "../../utils/format/pack-format.ts";
 import { t } from "../../core/i18n/t.ts";
 import { createPack3D } from "./pack-3d.ts";
 import { GenGuard } from "./gen-guard.ts";
-import { cacheGet } from "./cache.ts";
+import { cacheGet } from "../../features/preview-3d/decoder/cache.ts";
 
 /** 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） */
 export const detailGen = new GenGuard();

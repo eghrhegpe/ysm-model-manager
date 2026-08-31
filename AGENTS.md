@@ -38,7 +38,7 @@ git commit -m "<type>: <简短描述>" -- <自己的文件...>
 
 # 一键验证+提交（按 staged 文件自动裁剪门禁；--fast 跳 vitest / --docs 仅文档 / --check 只验不交）
 node scripts/commit-with-check.mjs -m "<msg>"
-git push --verbose 2>&1 | Select-Object -Last 50   # 多轮对话后统一推送，推送后盯返回报错
+git push --verbose 2>&1 | Select-Object -Last 50   # 仅在完成大型任务后统一推送，推送后使用gh 盯GitHub ci运行情况
 
 # 怕文件未保存？
 git show --stat xx文件 & git log -S xx文件& git diff HEAD xx文件

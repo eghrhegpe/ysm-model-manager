@@ -12,8 +12,14 @@
  *
  * 用法：
  *   import { run, runSafe } from './_lib/proc.mjs';
- *   const r = run('git', ['status', '--short'], { cwd: ROOT });   // → { ok, rc, out }
- *   const hits = runSafe('rg', [...], { cwd: ROOT });             // 失败返回 []（提示工具用）
+ *   const r = run('git', ['status', '--short'], { cwd: ROOT });   // → ProcResult
+ *   const hits = runSafe('rg', [...], { cwd: ROOT });             // '' on fail（打stderr WARN）
+ *
+ * @typedef {object} ProcResult
+ * @property {boolean} ok   - true=成功（rc=0 或 allowExit1且rc=1）；false=失败/超时/ENOENT
+ * @property {number}  rc   - 退出码；-1=ENOENT；-2=超时
+ * @property {string}  out  - stdout 内容（合并模式）或空字符串（stdio='inherit'时）
+ * @property {string} [err] - 失败原因（可选，ok=true 时不设置）
  */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -35,7 +41,7 @@ export const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
  *   - allowExit1 {boolean}    允许退出码 1 视为成功（rg 无匹配 / knip 发现死代码等）
  *   - maxBuffer {number}      输出缓冲上限
  *   - env {object}            额外环境变量（合并覆盖 process.env）
- * @returns {{ ok: boolean, rc: number, out: string, err?: string }}
+ * @returns {ProcResult}
  *   ok=true  rc=0（或 allowExit1 且 rc=1）；ok=false 且 rc=-1 表示未执行成功（ENOENT/超时/异常）
  */
 export function run(bin, args, { cwd = process.cwd(), timeout = DEFAULT_TIMEOUT, shell = false, allowExit1 = false, maxBuffer = DEFAULT_MAX_BUFFER, env, stdio, mergeStderr = true } = {}) {

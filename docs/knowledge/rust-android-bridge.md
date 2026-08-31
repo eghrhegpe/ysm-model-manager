@@ -8,9 +8,7 @@ source_files:
   - go/rustbridge/bridge_linux.go
   - go/rustbridge/bridge_darwin.go
   - go/rustbridge/types.go
-  - go/scanner/rust_backend_android.go
-  - go/scanner/rust_backend_linux.go
-  - go/scanner/rust_backend_darwin.go
+  - go/scanner/rust_backend.go
   - scripts/compile-android-rust.mjs
   - scripts/compile-rust-static.mjs
   - scripts/android-build.mjs

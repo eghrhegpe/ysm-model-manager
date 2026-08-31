@@ -76,15 +76,29 @@ func renameToNewName(oldPath, newName string) error {
 	return os.Rename(oldPath, newPath)
 }
 
+// opPrologue 统一获取写锁（opMu）并校验两个非空字符串参数（trim 后），
+// 返回去空格后的参数与解锁函数。所有导出写操作（Rename*/Move*/Copy*）的
+// 统一前置（jscpd 报告 fileops.go 内多处「Lock + TrimSpace + 空值校验」自重复）。
+// 空参时内部已释放锁并返回 nil unlock，调用方直接 return err 即可，不会死锁。
+func opPrologue(a, b, emptyMsg string) (ca, cb string, unlock func(), err error) {
+	opMu.Lock()
+	unlock = func() { opMu.Unlock() }
+	ca = strings.TrimSpace(a)
+	cb = strings.TrimSpace(b)
+	if ca == "" || cb == "" {
+		unlock()
+		return "", "", nil, fmt.Errorf("%s", emptyMsg)
+	}
+	return ca, cb, unlock, nil
+}
+
 // RenameDir 重命名目录（仅改末段，保持父目录）
 func RenameDir(oldPath, newName string) error {
-	opMu.Lock()
-	defer opMu.Unlock()
-	oldPath = strings.TrimSpace(oldPath)
-	newName = strings.TrimSpace(newName)
-	if oldPath == "" || newName == "" {
-		return fmt.Errorf("参数为空")
+	oldPath, newName, unlock, err := opPrologue(oldPath, newName, "参数为空")
+	if err != nil {
+		return err
 	}
+	defer unlock()
 	// 与 RenameFile 对齐，newName 必须通过非法字符 + 穿越校验。
 	// 原实现 `filepath.Join(parent, "../x")` 可逃出父目录/仓库。
 	if fsutil.ContainsIllegalNameChar(newName) {
@@ -122,13 +136,11 @@ func RemoveDir(dir string) error {
 
 // RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名）
 func RenameFile(oldPath, newName string) error {
-	opMu.Lock()
-	defer opMu.Unlock()
-	oldPath = strings.TrimSpace(oldPath)
-	newName = strings.TrimSpace(newName)
-	if oldPath == "" || newName == "" {
-		return fmt.Errorf("参数为空")
+	oldPath, newName, unlock, err := opPrologue(oldPath, newName, "参数为空")
+	if err != nil {
+		return err
 	}
+	defer unlock()
 	if fsutil.ContainsIllegalNameChar(newName) {
 		return fmt.Errorf("文件名包含非法字符")
 	}
@@ -162,13 +174,11 @@ func checkNotSelfNested(src, dstDir string) error {
 // root 用于路径安全校验（空则跳过校验，对齐 CopyModelFile 语义）；
 // ADR-038 D3：src 为 ysm.json 时提升为移动整个模型目录（整组语义）；目录直接整组移动
 func MoveModelFile(root, src, dstDir string) error {
-	opMu.Lock()
-	defer opMu.Unlock()
-	src = strings.TrimSpace(src)
-	dstDir = strings.TrimSpace(dstDir)
-	if src == "" || dstDir == "" {
-		return fmt.Errorf("参数空")
+	src, dstDir, unlock, err := opPrologue(src, dstDir, "参数空")
+	if err != nil {
+		return err
 	}
+	defer unlock()
 	if root != "" {
 		absRoot, err := filepath.Abs(root)
 		if err != nil {
@@ -227,13 +237,10 @@ func MoveModelFile(root, src, dstDir string) error {
 	// 自嵌套检查须在 MkdirAll 之前执行——被拒移动不得在 src 内
 	// 留下空 junk 目录（dstDir 位于 src 子树内时拒绝，
 	// 含 dstDir == src 等值情形：dst=Join(src,Base(src)) 仍是 src 严格子目录）。
-	if err := checkNotSelfNested(src, dstDir); err != nil {
+	dst, err := prepareModelDest(src, dstDir)
+	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
-		return err
-	}
-	dst := filepath.Join(dstDir, filepath.Base(src))
 	// 移动前防覆盖检查，与 CopyModelFile 语义对齐——
 	// 原实现 os.Rename 在 POSIX 上静默覆盖同名目标，Windows 上报错，行为不一致且可能数据丢失
 	if _, err := os.Lstat(dst); err == nil {
@@ -268,16 +275,27 @@ func MoveModelFile(root, src, dstDir string) error {
 	return nil
 }
 
+// prepareModelDest 计算复制/移动的目标路径，并在 MkdirAll 前执行自嵌套检查。
+// 与 MoveModelFile / CopyModelFile 共用同一段「自嵌套检查 → 建目录 → 拼接 dst」逻辑
+// （jscpd 报告的文件内自重复，抽取为单一事实源以避免两处行为漂移；空 dstDir/src 由调用方前置校验）。
+func prepareModelDest(src, dstDir string) (dst string, err error) {
+	if err = checkNotSelfNested(src, dstDir); err != nil {
+		return "", err
+	}
+	if err = os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
+		return "", err
+	}
+	return filepath.Join(dstDir, filepath.Base(src)), nil
+}
+
 // CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验）
 // ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 ysm.json 时提升为复制整个模型目录
 func CopyModelFile(root, src, dstDir string) error {
-	opMu.Lock()
-	defer opMu.Unlock()
-	src = strings.TrimSpace(src)
-	dstDir = strings.TrimSpace(dstDir)
-	if src == "" || dstDir == "" {
-		return fmt.Errorf("参数空")
+	src, dstDir, unlock, err := opPrologue(src, dstDir, "参数空")
+	if err != nil {
+		return err
 	}
+	defer unlock()
 	// 拒绝目录自嵌套复制——dstDir 位于 src 子树内时（先 MkdirAll 在 src 内创建
 	// dstDir，再 WalkDir 遍历到它）递归自嵌套无限膨胀直至 ENAMETOOLONG。
 	// 含 dstDir == src 等值情形（此时 dst=Join(src, Base(src)) 仍是 src 严格子目录，同样爆炸）。
@@ -318,13 +336,10 @@ func CopyModelFile(root, src, dstDir string) error {
 	// 留下空 junk 目录（原实现 MkdirAll 先行，拒绝后 src 内残留空子目录污染后续复制）。
 	// dstDir 位于 src 子树内时拒绝（含等值 "."——此时 dst=Join(src,Base(src)) 仍是 src
 	// 严格子目录，WalkDir 自嵌套无限膨胀至 ENAMETOOLONG）
-	if err := checkNotSelfNested(src, dstDir); err != nil {
+	dst, err := prepareModelDest(src, dstDir)
+	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
-		return err
-	}
-	dst := filepath.Join(dstDir, filepath.Base(src))
 	// 防覆盖：目标已存在直接报错（单文件与目录一致）
 	if _, err := os.Lstat(dst); err == nil {
 		return fmt.Errorf("目标已存在: %s", dst)

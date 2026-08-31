@@ -61,6 +61,29 @@ func sanitizePath(path, label string) (string, error) {
 	return cleaned, nil
 }
 
+// sanitizeImportPaths 校验并清理导入操作的源/目标路径。
+// 返回 (清理后源路径, 清理后目标路径, 错误文案)；错误文案非空时调用方应原样返回给用户。
+// 两类 Import 实现（SimpleCopy / DirectoryCopy）的前置校验逐字相同，抽此为单一事实源。
+func sanitizeImportPaths(srcPath, dstDir string) (string, string, string) {
+	if srcPath == "" {
+		return "", "", "源文件路径为空"
+	}
+	if dstDir == "" {
+		return "", "", "目标目录为空"
+	}
+
+	// 路径清理与遍历防护
+	cleanSrc, err := sanitizePath(srcPath, "源路径")
+	if err != nil {
+		return "", "", err.Error()
+	}
+	cleanDst, err := sanitizePath(dstDir, "目标路径")
+	if err != nil {
+		return "", "", err.Error()
+	}
+	return cleanSrc, cleanDst, ""
+}
+
 // ===== SimpleCopyImporter =====
 // 适用于资源包/光影包等只需复制文件的资源类型
 
@@ -76,21 +99,9 @@ func NewSimpleCopy(rtype string) *SimpleCopyImporter {
 func (s *SimpleCopyImporter) Type() string { return s.rtype }
 
 func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
-	if srcPath == "" {
-		return "源文件路径为空"
-	}
-	if dstDir == "" {
-		return "目标目录为空"
-	}
-
-	// 路径清理与遍历防护
-	srcPath, err := sanitizePath(srcPath, "源路径")
-	if err != nil {
-		return err.Error()
-	}
-	dstDir, err = sanitizePath(dstDir, "目标路径")
-	if err != nil {
-		return err.Error()
+	srcPath, dstDir, errMsg := sanitizeImportPaths(srcPath, dstDir)
+	if errMsg != "" {
+		return errMsg
 	}
 
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
@@ -194,21 +205,9 @@ func (d *DirectoryCopyImporter) Type() string { return d.rtype }
 // srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身
 // 若 srcPath 是文件则取父目录，若是目录则直接使用
 func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) string {
-	if srcPath == "" {
-		return "源文件路径为空"
-	}
-	if dstDir == "" {
-		return "目标目录为空"
-	}
-
-	// 路径清理与遍历防护
-	srcPath, err := sanitizePath(srcPath, "源路径")
-	if err != nil {
-		return err.Error()
-	}
-	dstDir, err = sanitizePath(dstDir, "目标路径")
-	if err != nil {
-		return err.Error()
+	srcPath, dstDir, errMsg := sanitizeImportPaths(srcPath, dstDir)
+	if errMsg != "" {
+		return errMsg
 	}
 
 	// 判断 srcPath 是文件还是目录

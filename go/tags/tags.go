@@ -131,16 +131,27 @@ func checkModelPath(modelPath string) error {
 	return nil
 }
 
-// SetTags 设置指定路径的标签列表（覆盖写入）
-func (s *Store) SetTags(modelPath string, tags []string) error {
+// prepareWrite 校验 modelPath 并加载底层数据，随后获取写锁（s.mu），
+// 返回解锁函数与错误。与 SetTags / AddTag 等写路径共用前置逻辑
+// （jscpd 报告的文件内自重复）。临界区由调用方 defer unlock 覆盖整段写操作。
+func (s *Store) prepareWrite(modelPath string) (func(), error) {
 	if err := checkModelPath(modelPath); err != nil {
-		return err
+		return nil, err
 	}
 	if err := s.load(); err != nil {
-		return err
+		return nil, err
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	return func() { s.mu.Unlock() }, nil
+}
+
+// SetTags 设置指定路径的标签列表（覆盖写入）
+func (s *Store) SetTags(modelPath string, tags []string) error {
+	unlock, err := s.prepareWrite(modelPath)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	if len(tags) == 0 {
 		delete(s.data, modelPath) // 空列表 → 删除条目
 	} else {
@@ -172,14 +183,11 @@ func (s *Store) AddTag(modelPath, tag string) error {
 	if tag == "" {
 		return nil
 	}
-	if err := checkModelPath(modelPath); err != nil {
+	unlock, err := s.prepareWrite(modelPath)
+	if err != nil {
 		return err
 	}
-	if err := s.load(); err != nil {
-		return err
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	defer unlock()
 	current := s.data[modelPath]
 	for _, t := range current {
 		if t == tag {
@@ -198,14 +206,11 @@ func (s *Store) RemoveTag(modelPath, tag string) error {
 	if tag == "" {
 		return nil
 	}
-	if err := checkModelPath(modelPath); err != nil {
+	unlock, err := s.prepareWrite(modelPath)
+	if err != nil {
 		return err
 	}
-	if err := s.load(); err != nil {
-		return err
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	defer unlock()
 	current := s.data[modelPath]
 	var kept []string
 	for _, t := range current {

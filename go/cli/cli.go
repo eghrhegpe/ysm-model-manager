@@ -10,22 +10,35 @@ import (
 	"ysm-model-manager/internal/app"
 )
 
-// RunCLI 执行 CLI 模式
-func RunCLI(args []string) error {
+// cliPrologue 统一 CLI 前置分支：--version/-v、--help/-h、空命令。
+// 返回解析出的 filesRoot / jsonMode / 剩余命令参数；handled=true 表示前置分支
+// 已消费全部输入（版本或帮助已打印），调用方应立即返回 nil。
+// RunCLI 与 ExecuteCLIWithApp 的前置逻辑原先逐字重复，抽此为单一事实源。
+func cliPrologue(args []string) (filesRoot string, jsonMode bool, commandArgs []string, handled bool) {
 	if len(args) > 0 && (args[0] == "--version" || args[0] == "-v") {
 		printVersion()
-		return nil
+		return "", false, nil, true
 	}
 
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" {
 		printCLIHelp()
-		return nil
+		return "", false, nil, true
 	}
 
-	filesRoot, jsonMode, commandArgs := ParseCommandArgs(args)
+	filesRoot, jsonMode, commandArgs = ParseCommandArgs(args)
 
 	if len(commandArgs) == 0 {
 		printCLIHelp()
+		return "", false, nil, true
+	}
+
+	return filesRoot, jsonMode, commandArgs, false
+}
+
+// RunCLI 执行 CLI 模式
+func RunCLI(args []string) error {
+	filesRoot, jsonMode, commandArgs, handled := cliPrologue(args)
+	if handled {
 		return nil
 	}
 
@@ -70,20 +83,8 @@ func RunCLI(args []string) error {
 
 // ExecuteCLIWithApp 执行 CLI 命令
 func ExecuteCLIWithApp(a *app.App, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, args []string) error {
-	if len(args) > 0 && (args[0] == "--version" || args[0] == "-v") {
-		printVersion()
-		return nil
-	}
-
-	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" {
-		printCLIHelp()
-		return nil
-	}
-
-	filesRoot, _, commandArgs := ParseCommandArgs(args)
-
-	if len(commandArgs) == 0 {
-		printCLIHelp()
+	filesRoot, _, commandArgs, handled := cliPrologue(args)
+	if handled {
 		return nil
 	}
 

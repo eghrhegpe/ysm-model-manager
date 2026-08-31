@@ -94,65 +94,11 @@ func findNestedModelDir(path string, patterns []types.NestedPattern) string {
 // - 当在 EntryDir 下（或其子目录）找到入口文件时，返回 EntryDir 的父目录
 // - 这样能正确识别模型包的根目录（如 my_pack/assets/ns/maid_model.json -> my_pack）
 // - 当 EntryDir 为空且入口文件直接在当前目录时，返回当前目录
+//
+// 实现：薄包装 patternFindMemo，传入独立空 memo。单次调用内目录路径唯一，
+// memo 不会提前命中，故语义与"无 memo"的原实现逐分支一致（零行为变更，ADR-140 L3）。
 func patternFind(path string, pattern types.NestedPattern, depth int) string {
-	// 深度限制，防止无限递归
-	maxDepth := pattern.MaxDepth
-	if maxDepth <= 0 {
-		maxDepth = 10
-	}
-	if depth > maxDepth {
-		return ""
-	}
-
-	// 如果 EntryDir 为空，直接在当前目录检查 EntryFiles
-	if pattern.EntryDir == "" {
-		if checkEntryFiles(path, pattern.EntryFiles) {
-			return path
-		}
-		return ""
-	}
-
-	// 检查当前目录名是否匹配 EntryDir
-	dirName := filepath.Base(path)
-	if strings.EqualFold(dirName, pattern.EntryDir) {
-		// 找到 EntryDir 目录，检查其中是否有入口文件
-		// 注意：这里检查子目录是因为 maid_model.json 在 assets/<namespace>/ 下
-		// 而不是直接在 assets/ 下
-		entries, err := os.ReadDir(path)
-		if err == nil {
-			for _, e := range entries {
-				if e.IsDir() {
-					subPath := filepath.Join(path, e.Name())
-					if checkEntryFiles(subPath, pattern.EntryFiles) {
-						// 找到入口文件，返回 EntryDir 的父目录（模型包根目录）
-						// 对于 my_pack/assets/ns/maid_model.json，返回 my_pack
-						// 而不是 ns 或 assets
-						return filepath.Dir(path)
-					}
-				}
-			}
-			// 也检查入口文件是否直接在 EntryDir 下
-			if checkEntryFiles(path, pattern.EntryFiles) {
-				return filepath.Dir(path)
-			}
-		}
-		return ""
-	}
-
-	// 未找到 EntryDir，继续向下子目录递归查找
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return ""
-	}
-	for _, e := range entries {
-		if e.IsDir() {
-			subPath := filepath.Join(path, e.Name())
-			if found := patternFind(subPath, pattern, depth+1); found != "" {
-				return found
-			}
-		}
-	}
-	return ""
+	return patternFindMemo(path, pattern, depth, make(map[string]string))
 }
 
 // checkEntryFiles 检查目录中是否存在入口文件列表中的任一文件
@@ -567,31 +513,10 @@ type FileDiffEntry struct {
 	Status  types.SyncStatus `json:"status"` // synced/missing/optional
 }
 
-// DiffFolderContents 对同名文件夹进行内容级 diff
-// 扫描两侧文件夹内的模型文件，比较差异，返回子文件级别的同步状态
-// 用于在文件夹级同步单元内恢复单文件粒度的同步信息
-//
-// 参数：
-//
-//	globalFolder: 全局仓库侧的文件夹绝对路径
-//	instanceFolder: 实例侧的文件夹绝对路径
-//	rtype: 资源类型 ID（用于识别模型文件）
-//
-// 返回：
-//
-//	[]FileDiffEntry: 子文件级别的同步状态列表
-//
-// 设计原则：
-//   - 只扫描模型文件（通过 IsTypeModelFile 过滤）
-//   - 使用相对路径作为 key，保留层级信息
-//   - 返回全局侧文件清单（synced 条目含在结果中——前端子文件列表需全量展示；
-//     差异判定由调用方按 Status 区分——code review P3 注释对齐实现）
-func DiffFolderContents(globalFolder, instanceFolder, rtype string) []FileDiffEntry {
-	// 扫描全局文件夹内的模型文件
-	globalFiles := collectFolderFiles(globalFolder, rtype)
-	// 扫描实例文件夹内的模型文件
-	instanceFiles := collectFolderFiles(instanceFolder, rtype)
-
+// diffFolderContentsCore 以全局/实例两侧文件映射计算子文件级同步 diff。
+// 收集方式（Walk 走盘 / scanner 反推）由调用方决定，本函数只做差异聚合，
+// 故 DiffFolderContents 与 DiffFolderContentsScan 共用、零行为漂移（ADR-140 L3）。
+func diffFolderContentsCore(globalFiles, instanceFiles map[string]string) []FileDiffEntry {
 	var diffs []FileDiffEntry
 	seen := make(map[string]bool)
 
@@ -635,6 +560,33 @@ func DiffFolderContents(globalFolder, instanceFolder, rtype string) []FileDiffEn
 	return diffs
 }
 
+// DiffFolderContents 对同名文件夹进行内容级 diff
+// 扫描两侧文件夹内的模型文件，比较差异，返回子文件级别的同步状态
+// 用于在文件夹级同步单元内恢复单文件粒度的同步信息
+//
+// 参数：
+//
+//	globalFolder: 全局仓库侧的文件夹绝对路径
+//	instanceFolder: 实例侧的文件夹绝对路径
+//	rtype: 资源类型 ID（用于识别模型文件）
+//
+// 返回：
+//
+//	[]FileDiffEntry: 子文件级别的同步状态列表
+//
+// 设计原则：
+//   - 只扫描模型文件（通过 IsTypeModelFile 过滤）
+//   - 使用相对路径作为 key，保留层级信息
+//   - 返回全局侧文件清单（synced 条目含在结果中——前端子文件列表需全量展示；
+//     差异判定由调用方按 Status 区分——code review P3 注释对齐实现）
+func DiffFolderContents(globalFolder, instanceFolder, rtype string) []FileDiffEntry {
+	// 扫描全局文件夹内的模型文件
+	globalFiles := collectFolderFiles(globalFolder, rtype)
+	// 扫描实例文件夹内的模型文件
+	instanceFiles := collectFolderFiles(instanceFolder, rtype)
+	return diffFolderContentsCore(globalFiles, instanceFiles)
+}
+
 // DiffFolderContentsScan 同 DiffFolderContents，但全局侧文件收集复用 scanner 已缓存的
 // 组根扫描结果（scanFn(globalRoot)），避免对每个模型夹重复 Walk 全局子树。
 // 实例侧（instanceFolder）通常不在 globalRoot 之下，且文件量远小于全局侧，
@@ -655,41 +607,7 @@ func DiffFolderContentsScan(globalFolder, instanceFolder, rtype string, scanFn S
 	globalFiles := collectFolderFilesFromScan(globalFolder, rtype, entries)
 	// 实例侧：collectFolderFiles 内部已叠 30s sync 目录扫描缓存，不再每次实走
 	instanceFiles := collectFolderFiles(instanceFolder, rtype)
-
-	var diffs []FileDiffEntry
-	seen := make(map[string]bool)
-	for relKey, gEntry := range globalFiles {
-		seen[relKey] = true
-		if _, exists := instanceFiles[relKey]; exists {
-			diffs = append(diffs, FileDiffEntry{
-				RelPath: relKey,
-				AbsPath: gEntry,
-				Size:    fileSize(gEntry),
-				Status:  types.SyncStatusSynced,
-			})
-		} else {
-			diffs = append(diffs, FileDiffEntry{
-				RelPath: relKey,
-				AbsPath: gEntry,
-				Size:    fileSize(gEntry),
-				Status:  types.SyncStatusMissing,
-			})
-		}
-	}
-	for relKey, iEntry := range instanceFiles {
-		if !seen[relKey] {
-			diffs = append(diffs, FileDiffEntry{
-				RelPath: relKey,
-				AbsPath: iEntry,
-				Size:    fileSize(iEntry),
-				Status:  types.SyncStatusOptional,
-			})
-		}
-	}
-	sort.Slice(diffs, func(i, j int) bool {
-		return diffs[i].RelPath < diffs[j].RelPath
-	})
-	return diffs
+	return diffFolderContentsCore(globalFiles, instanceFiles)
 }
 
 // collectFolderFilesFromScan 从 scanner 已缓存的组根全量条目中，过滤出 folder 下的

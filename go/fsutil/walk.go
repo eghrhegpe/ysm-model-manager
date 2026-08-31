@@ -16,20 +16,7 @@ func WalkAllFiles(dir string, skipRecycle bool) []string {
 		return nil
 	}
 	var result []string
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			log.Printf("[fsutil] WalkDir 访问 %s 失败: %v", p, err)
-			return nil
-		}
-		if d.IsDir() {
-			if skipRecycle && IsRecycleDir(p) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		result = append(result, p)
-		return nil
-	})
+	walkFilesStream(dir, skipRecycle, func(p string) { result = append(result, p) })
 	return result
 }
 
@@ -74,6 +61,15 @@ func CountFiles(dir string, skipRecycle bool) int {
 	if dir == "" {
 		return 0
 	}
+	// visit=nil：只为计数，不物化路径切片（与本函数「流式计数」的注释意图一致）
+	return walkFilesStream(dir, skipRecycle, nil)
+}
+
+// walkFilesStream 统一的 WalkDir 骨架：访问失败打日志后继续、目录按 skipRecycle 剪枝、
+// 非目录路径回调 visit 并累加计数，最终返回访问到的文件数。
+// 用回调而非返回 []string，是为了让 CountFiles 这类「只取数量」的调用方
+// 不为拿 len 而白白物化整棵文件树（大目录）；遍历语义与 WalkAllFiles 完全一致。
+func walkFilesStream(dir string, skipRecycle bool, visit func(p string)) int {
 	count := 0
 	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -87,6 +83,9 @@ func CountFiles(dir string, skipRecycle bool) int {
 			return nil
 		}
 		count++
+		if visit != nil {
+			visit(p)
+		}
 		return nil
 	})
 	return count

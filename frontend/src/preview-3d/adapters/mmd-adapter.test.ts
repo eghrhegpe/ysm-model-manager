@@ -41,7 +41,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../backend/app.ts", () => ({
+vi.mock("../../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ReadFileBytes: hoisted.readBytesMock,
     ListAllFilePaths: hoisted.listPathsMock,
@@ -116,7 +116,7 @@ vi.mock("./mmd-ktx2-encoder.ts", () => ({
   scheduleBackgroundEncoding: hoisted.scheduleBackgroundEncodingMock,
   cancelPendingEncodings: hoisted.cancelPendingEncodingsMock,
 }));
-vi.mock("../../../utils/main-thread-watch.ts", async (importOriginal) => {
+vi.mock("../../utils/main-thread-watch.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../utils/main-thread-watch.ts")>();
   return {
     ...actual,

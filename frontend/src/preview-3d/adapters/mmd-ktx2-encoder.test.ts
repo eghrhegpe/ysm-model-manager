@@ -11,7 +11,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../backend/app.ts", () => ({
+vi.mock("../../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     SaveCachedTexture: hoisted.saveTextureMock,
   }),

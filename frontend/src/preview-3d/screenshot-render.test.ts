@@ -127,7 +127,7 @@ const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObje
     };
   });
 
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("../backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("./texture-loader.ts", () => ({ loadTextures: loadTexturesMock }));
 // buildSceneMesh/compKey 已从 model3d.ts 迁至 mesh.ts（model3d 拆分）——mock 目标同步迁移，
 // 否则 mock 失效会跑真实实现（three 被 mock 成 Fake 类，行为不符 → renderMultiAngle 返回 null）

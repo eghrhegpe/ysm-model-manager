@@ -1283,6 +1283,10 @@ export const autoSidebar = [
       {
         "text": "R14 — 全量测试覆盖率审计报告",
         "link": "/audit/audit-r14-coverage-2026-08-18"
+      },
+      {
+        "text": "R34 审核：8 个小规模包（texture_cache / repoaudit / launcher / logs / watcher / tags / packs / instance）",
+        "link": "/audit/audit-r34-go-small-packages-2026-08-31"
       }
     ]
   },

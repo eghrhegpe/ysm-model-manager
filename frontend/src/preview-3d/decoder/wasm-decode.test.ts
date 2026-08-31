@@ -13,13 +13,13 @@ const { initMock, decodeMemoryMock, readFileBytesMock, memfsMock } = vi.hoisted(
   memfsMock: vi.fn(),
 }));
 
-vi.mock("../../../wasm/ysm-parser.ts", () => ({
+vi.mock("../../wasm/ysm-parser.ts", () => ({
   initYSMParser: initMock,
   decodeYsmFileFromMemory: decodeMemoryMock,
   decodeYsmFile: memfsMock,
 }));
 
-vi.mock("../../../backend/app.ts", () => ({
+vi.mock("../../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({ ReadFileBytes: readFileBytesMock }),
 }));
 

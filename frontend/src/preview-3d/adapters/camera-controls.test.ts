@@ -5,12 +5,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // mock i18n t（源文件顶层 import，否则 node 路径下 import 链会触发 window 副作用）
-vi.mock("../../../core/i18n/t.ts", () => ({
+vi.mock("../../core/i18n/t.ts", () => ({
   t: vi.fn((k: string) => k),
 }));
 
 // mock storage safeSet —— 验证 onchange/oninput 回调是否写入偏好
-vi.mock("../../../utils/dom/storage.ts", () => ({
+vi.mock("../../utils/dom/storage.ts", () => ({
   safeSet: vi.fn(),
 }));
 

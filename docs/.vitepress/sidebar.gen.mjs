@@ -1880,6 +1880,10 @@ export const autoSidebar = [
             "link": "/knowledge/scene_capability_registry"
           },
           {
+            "text": "scripts 共享核演进（diff-coverage-core + cycles）",
+            "link": "/knowledge/script_shared_cores"
+          },
+          {
             "text": "数组工具 moveItem",
             "link": "/knowledge/utils-array"
           },

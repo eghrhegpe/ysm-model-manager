@@ -46,6 +46,9 @@ invariant_anchors:
 - 下载多源回退任一成功即返回；`ghProxyPrefixes` 为第三方公开服务，域名失效时改常量即可（测试可整体替换为本地 server 隔离真实网络）
 - 每源独立 90s 超时：慢/卡源快速切镜像，全源失败才聚合报错（含源标识便于判断直连还是镜像问题）
 - 进度回调节流：已知长度 1% 步进、未知长度 512KB；尾块补发保证最终字节数（P3 修复：<512KB 短包与不足 512KB 的尾块此前零回调）
+- **R30 修复链（2026-08-31）**：
+  - P2-3 SHA256 强制校验：`Check` 在哈希不可得时返回 `Available: false`，阻断无完整性校验的更新下载。旧实现「hash 缺失仍可下载」契约已废弃——攻击者只需阻断 SHA256SUMS 获取即可绕过完整性校验。`downloadOnce` 顶部 `expectedHash == ""` 时 fail-fast 返回 `ErrHashMismatch`，避免浪费带宽。
+  - code_review P1-1 契约一致：`CheckWithClient` 在 `fetchExpectedHash` 失败或无 `latestSHASumsURL` 时返回 `Available: false`，与 `downloadOnce` 的空哈希拒绝契约一致。旧注释「hash 缺失仍可下载」已更新。
 
 ## 相关
 

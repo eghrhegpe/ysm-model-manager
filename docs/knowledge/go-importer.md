@@ -66,6 +66,9 @@ invariant_anchors:
 - 目录复制先写入 `MkdirTemp` 临时目录再 `os.Rename` 落地，保证原子性（失败 `defer RemoveAll` 清理）
 - `sanitizePath` 是防御纵深：上层 `installer.Install` 已用 `paths.IsInside` 严校验，包被独立使用时仍拒绝 `..`
 - base64 解码统一走 `fsutil.DecodeBase64Limited`（2026-08-30 审核修复：原「预检 + 解码 + 复检」三段手写在 `ImportFromBase64`，现收敛为 helper，`ErrB64TooLarge` 映射回 `FILE_TOO_LARGE` 文案；app 层 `importModelFileWithSubpath` 同口径）
+- **R30 修复链（2026-08-31）**：
+  - P2-1 `copyDirContents` symlink 路径穿越防护：`os.Readlink` 拿到 target 后直接 `os.Symlink`，绝对路径或含 `..` 的相对路径会指向仓库外。修复：解析 target 为绝对路径，判定是否在源目录树内，越界则拒绝。
+  - code_review P1-2 symlink 基目录修正：相对 target 必须解析为相对于符号链接自身目录（`filepath.Dir(srcPath)`），而非 `src`（`copyDirContents` 的当前递归目录）——OS 也是这样解析的。`filepath.Abs` 错误必须传播（fail-closed），不能 `_` 吞掉（旧实现 fail-open）。
 
 ## 相关
 

@@ -5,7 +5,7 @@
 //
 // 用途：nav-viewer-fab 在「无上次选中模型」时降级为开空场景，而非弹 toast 让用户
 // 去文件树找模型——降低首次使用门槛。
-import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter } from "../../features/preview-3d/adapters/mount-preview-core.ts";
+import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter } from "../../preview-3d/adapters/mount-preview-core.ts";
 import { withPreviewExtras } from "./preview-library.ts";
 
 /** 空适配器：build 直接 resolve 空 scene，core 渲染空白场景 + 环境光/天空/地面 */

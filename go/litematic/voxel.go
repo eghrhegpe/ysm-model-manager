@@ -273,15 +273,15 @@ func buildRegionInfo(region map[string]any) (*regionInfo, error) {
 	if ox < minCoord || ox+sx-1 > maxCoord ||
 		oy < minCoord || oy+sy-1 > maxCoord ||
 		oz < minCoord || oz+sz-1 > maxCoord {
-		// P3-3：移除 log.Printf，错误信息已通过 fmt.Errorf 返回给调用方。
-		// 高频畸形文件会刷日志，降级为纯 error 返回。
-		return nil, fmt.Errorf("region 坐标超出 int16 表示范围: origin=(%d,%d,%d) size=%d×%d×%d", ox, oy, oz, sx, sy, sz)
-	}
-	total := int64(sx) * int64(sy) * int64(sz)
-	capacity := int64(len(longs)) * 64 / int64(bpe)
-	if total > capacity {
-		return nil, fmt.Errorf("region BlockStates 容量不足: size=%d 需 %d 位，实际 %d 位", total, total, capacity)
-	}
+		 // P3-3：移除 log.Printf，错误信息已通过 fmt.Errorf 返回给调用方。
+		 // 高频畸形文件会刷日志，降级为纯 error 返回。
+		 return nil, fmt.Errorf("region 坐标超出 int16 表示范围: origin=(%d,%d,%d) size=%d×%d×%d", ox, oy, oz, sx, sy, sz)
+		}
+		total := int64(sx) * int64(sy) * int64(sz)
+		capacity := int64(len(longs)) * 64 / int64(bpe)
+		if total > capacity {
+		 return nil, fmt.Errorf("region BlockStates 容量不足: size=%d 需 %d 位，实际 %d 位", total, total, capacity)
+		}
 
 	return &regionInfo{
 		originX: ox, originY: oy, originZ: oz,

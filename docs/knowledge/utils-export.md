@@ -4,15 +4,15 @@ name: 截图与导出 export
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/features/preview-3d/screenshot-render.ts
-  - frontend/src/features/preview-3d/screenshot-lights.ts
-  - frontend/src/features/preview-3d/texture-loader.ts
-  - frontend/src/features/preview-3d/decoder/cache.ts
-  - frontend/src/features/preview-3d/screenshot.ts
+  - frontend/src/preview-3d/screenshot-render.ts
+  - frontend/src/preview-3d/screenshot-lights.ts
+  - frontend/src/preview-3d/texture-loader.ts
+  - frontend/src/preview-3d/decoder/cache.ts
+  - frontend/src/preview-3d/screenshot.ts
 tests:
-  - frontend/src/features/preview-3d/decoder/cache.test.ts
-  - frontend/src/features/preview-3d/screenshot-render.test.ts
-  - frontend/src/features/preview-3d/texture-loader.test.ts
+  - frontend/src/preview-3d/decoder/cache.test.ts
+  - frontend/src/preview-3d/screenshot-render.test.ts
+  - frontend/src/preview-3d/texture-loader.test.ts
 use_when:
   - 截图
   - 导出 PNG
@@ -21,15 +21,15 @@ use_when:
   - 缩略图
   - blob URL 释放
 invariant_anchors:
-  - frontend/src/features/preview-3d/decoder/cache.ts|cacheSet
-  - frontend/src/features/preview-3d/decoder/cache.ts|collectBlobUrls
+  - frontend/src/preview-3d/decoder/cache.ts|cacheSet
+  - frontend/src/preview-3d/decoder/cache.ts|collectBlobUrls
 ---
 
 # 截图与导出 export
 
 ## 概览
 
-预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图入口 `screenshotPreview()` 位于 [model3d](./model3d.md)。截图灯光提取（`toScreenshotLights`）与纹理加载（`loadTextures`）已随 ADR-136 第四刀归位 features/preview-3d（`screenshot-lights.ts` / `texture-loader.ts`）。
+预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图入口 `screenshotPreview()` 位于 [model3d](./model3d.md)。截图灯光提取（`toScreenshotLights`）与纹理加载（`loadTextures`）已随 ADR-136 第四刀归位 preview-3d（`screenshot-lights.ts` / `texture-loader.ts`）。
 
 ## 核心职责
 

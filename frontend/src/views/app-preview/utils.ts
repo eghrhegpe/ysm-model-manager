@@ -1,7 +1,7 @@
 // ===== 预览模块共享工具函数 =====
 // 从 index.ts 拆分：模块级函数和状态
 // ADR-137 第五刀拆分：纯领域部分（DecodedYsm / stripYsgpTextHeader / devLog）
-// 已归位 features/preview-3d/decoder/utils.ts——本文件只留视图接口与状态。
+// 已归位 preview-3d/decoder/utils.ts——本文件只留视图接口与状态。
 
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
 /** 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） */
@@ -13,7 +13,7 @@ export interface PreviewRoot {
 
 /** WASM 解码能力（loader/skeleton 消费） */
 export interface YsmDecoder {
-  decodeYsmViaWasm(path: string): Promise<import("../../features/preview-3d/decoder/utils.ts").DecodedYsm | null>;
+  decodeYsmViaWasm(path: string): Promise<import("../../preview-3d/decoder/utils.ts").DecodedYsm | null>;
 }
 
 /** 调试输出能力（loader/skeleton 消费） */

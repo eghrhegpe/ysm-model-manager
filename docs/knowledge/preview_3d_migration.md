@@ -18,7 +18,7 @@ use_when:
 
 ## 概览
 
-ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 `frontend/src/features/preview-3d/`。纯改名、收益最低、但暗礁最多。三刀顺序不可逆：第一刀正类型（依赖倒置修复）→ 第二刀降墙（preview-menu 收子目录）→ 第三刀正名（整编搬迁）。
+ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 `frontend/src/preview-3d/`。纯改名、收益最低、但暗礁最多。三刀顺序不可逆：第一刀正类型（依赖倒置修复）→ 第二刀降墙（preview-menu 收子目录）→ 第三刀正名（整编搬迁）。
 
 ## 三个暗礁（ADR-129 风险表漏掉的）
 
@@ -27,7 +27,7 @@ ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 
 `utils/3d` 并非自包含——36 个文件用 `../../dom/`、`../../safe-error-msg.ts` 等相对路径藕断丝连地引着 `utils/` 层兄弟目录（dom / debug / resource / animation / core / safe-error-msg）。父目录从 `utils/` 换成 `features/` 后，这些跨层引用全断、typecheck 报 36+ 条 TS2307。
 
 **解法**：不手数层数，写一次性 Node 脚本做「原位置解析 → 真实目标 → 新位置反推」：
-1. 把 `features/preview-3d/X` 逻辑映射回 `utils/3d/X` 的原目录；
+1. 把 `preview-3d/X` 逻辑映射回 `utils/3d/X` 的原目录；
 2. 对每个相对 import 在原目录 resolve，若落在 `src/utils/`（非 3d）且文件存在 → 用新目录反推相对路径重写；
 3. 规则本质：原 `k 个 ../ 到 utils`，变成 `k+1 个 ../ 再进 utils/`。
 

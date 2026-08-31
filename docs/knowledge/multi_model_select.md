@@ -6,18 +6,18 @@ adr:
   - ADR-132
 category: ui
 source_files:
-  - frontend/src/features/preview-3d/menu/multi-model.ts
+  - frontend/src/preview-3d/menu/multi-model.ts
   - frontend/src/views/app-preview/mmd-controls.ts
-  - frontend/src/features/preview-3d/adapters/pack-model-adapter.ts
-  - frontend/src/features/preview-3d/adapters/litematic-adapter.ts
+  - frontend/src/preview-3d/adapters/pack-model-adapter.ts
+  - frontend/src/preview-3d/adapters/litematic-adapter.ts
   - frontend/src/views/app-preview/litematic-3d.ts
   - internal/app/container_entries.go
   - go/litematic/voxel.go
 tests:
-  - frontend/src/features/preview-3d/adapters/pack-model-adapter.test.ts
-  - frontend/src/features/preview-3d/menu/multi-model.test.ts
+  - frontend/src/preview-3d/adapters/pack-model-adapter.test.ts
+  - frontend/src/preview-3d/menu/multi-model.test.ts
   - frontend/src/views/app-preview/mmd-controls.test.ts
-  - frontend/src/features/preview-3d/adapters/litematic-adapter.test.ts
+  - frontend/src/preview-3d/adapters/litematic-adapter.test.ts
   - frontend/src/views/app-preview/litematic-3d.test.ts
   - internal/app/container_entries_test.go
 use_when:
@@ -93,4 +93,4 @@ multiModelSelectNode(opts: {
 - `docs/knowledge/preview_panel_declarative.md`（声明式面板 P4/P5 + zip 多 pmx 论述）
 - `docs/adr/ADR-093-multi-model-scene-core.md`（多模型同框引擎，同台语义）
 - `docs/adr/ADR-080-pack-model-adapter.md`（资源包模型适配器）
-- `frontend/src/features/preview-3d/menu/multi-model.test.ts`（原语契约测试）
+- `frontend/src/preview-3d/menu/multi-model.test.ts`（原语契约测试）

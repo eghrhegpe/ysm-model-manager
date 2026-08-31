@@ -4,7 +4,7 @@ name: mount3D-584-giant
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts
+  - frontend/src/preview-3d/adapters/mount-preview-core.ts
 use_when:
   - 拆 mount3D 巨函数
   - 评审 mount-preview-core.ts

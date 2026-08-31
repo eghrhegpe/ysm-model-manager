@@ -8,10 +8,10 @@ import {
   setVrmMaterialOpacity,
   type VrmMaterialListItem,
   type VrmMaterialDetail,
-} from "../../features/preview-3d/vrm-materials.ts";
+} from "../../preview-3d/vrm-materials.ts";
 import { t } from "../../core/i18n/t.ts";
-import type { PreviewMenuNode } from "../../features/preview-3d/menu/node-types.ts";
-import type { VrmModelInfoCtx } from "../../features/preview-3d/adapters/vrm-adapter.ts";
+import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
+import type { VrmModelInfoCtx } from "../../preview-3d/adapters/vrm-adapter.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";
 
 /** 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 */

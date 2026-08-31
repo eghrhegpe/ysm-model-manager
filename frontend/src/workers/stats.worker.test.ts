@@ -19,7 +19,7 @@ vi.mock("../wasm/ysm-worker-loader.ts", () => ({
 }));
 
 vi.mock("../backend/idb.ts", () => ({ idbGet: vi.fn().mockResolvedValue(null) }));
-vi.mock("../features/preview-3d/decoder/utils.ts", () => ({ stripYsgpTextHeader: vi.fn() }));
+vi.mock("../preview-3d/decoder/utils.ts", () => ({ stripYsgpTextHeader: vi.fn() }));
 vi.mock("./stats-core.ts", () => ({
   statsFromDecodedFiles: vi.fn(),
   statsFromJsonBytes: vi.fn(),

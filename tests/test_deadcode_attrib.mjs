@@ -38,7 +38,7 @@ assert(attributable('internal/app/app_files.go|functions|Bar', stagedRoot),
   'Go 文件根路径直配');
 
 const stagedNone = new Set(['frontend/src/views/app-tree/index.ts']);
-assert(!attributable('src/features/preview-3d/adapters/switch-preview.ts|exports|arrangeModelsInRow', stagedNone),
+assert(!attributable('src/preview-3d/adapters/switch-preview.ts|exports|arrangeModelsInRow', stagedNone),
   '不在 staged 的发现项不应归属');
 assert(attributable('frontend/src/views/app-tree/index.ts|exports|foo', stagedNone),
   '候选自带 frontend/ 前缀也应直配');
@@ -47,7 +47,7 @@ assert(attributable('frontend/src/views/app-tree/index.ts|exports|foo', stagedNo
 const staged = new Set(['frontend/src/features/import-executor.ts']);
 const news = [
   'src/features/import-executor.ts|exports|newFn',          // 归属（staged）
-  'src/features/preview-3d/adapters/switch-preview.ts|exports|arrange', // 不归属（他人遗留）
+  'src/preview-3d/adapters/switch-preview.ts|exports|arrange', // 不归属（他人遗留）
 ];
 const split = splitNewFindings(news, staged);
 assert(split.blocking.length === 1 && split.blocking[0] === news[0], '仅归属项进阻断桶');

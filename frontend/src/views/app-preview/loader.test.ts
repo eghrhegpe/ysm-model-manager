@@ -3,7 +3,7 @@
 // 覆盖：缓存命中 / WASM 解码成功 / WASM 空结果回退 Go / Go 兜底 + texMappingLog /
 //       .json 目录 authors 填补 / 缓存 authors 填补 / 空结果返回 null
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
+import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 
 const { cacheGetMock, cacheSetMock, AnalyzeMock, parseAnimMock, ExtractSummaryMock, CacheAvatarsMock, CachedAvatarMock } =
   vi.hoisted(() => ({
@@ -16,7 +16,7 @@ const { cacheGetMock, cacheSetMock, AnalyzeMock, parseAnimMock, ExtractSummaryMo
     CachedAvatarMock: vi.fn(),
   }));
 
-vi.mock("../../features/preview-3d/decoder/cache.ts", () => ({
+vi.mock("../../preview-3d/decoder/cache.ts", () => ({
   cacheGet: cacheGetMock,
   cacheSet: cacheSetMock,
 }));

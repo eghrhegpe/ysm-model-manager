@@ -14,7 +14,7 @@ import {
   decodeYsmInWorker,
   decodeYsmInWorkerMemfs,
 } from "../wasm/ysm-worker-loader.ts";
-import { stripYsgpTextHeader } from "../features/preview-3d/decoder/utils.ts";
+import { stripYsgpTextHeader } from "../preview-3d/decoder/utils.ts";
 import {
   statsFromDecodedFiles,
   statsFromJsonBytes,

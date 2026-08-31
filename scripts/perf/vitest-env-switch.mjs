@@ -33,21 +33,21 @@ const files = [
   'core/handlers/instance-ops.test.ts',
   // features — 纯逻辑
   'features/dnd-collector.test.ts',
-  // features/preview-3d — 纯逻辑（骨骼语义/MMD 材质/解析/感知/能力）
-  'features/preview-3d/semantic-bones.test.ts',
-  'features/preview-3d/semantic-morphs.test.ts',
-  'features/preview-3d/mmd-bones.test.ts',
-  'features/preview-3d/mmd-materials.test.ts',
-  'features/preview-3d/bone-tools.test.ts',
-  'features/preview-3d/parse-java-model.test.ts',
-  'features/preview-3d/perception/autodance.test.ts',
-  'features/preview-3d/perception/beat-detector.test.ts',
-  'features/preview-3d/perception/blink.test.ts',
-  'features/preview-3d/perception/breath.test.ts',
-  'features/preview-3d/perception/gaze.test.ts',
-  'features/preview-3d/perception/lipsync.test.ts',
-  'features/preview-3d/caps/ground-capability.test.ts',
-  'features/preview-3d/caps/light-capability.test.ts',
+  // preview-3d — 纯逻辑（骨骼语义/MMD 材质/解析/感知/能力）
+  'preview-3d/semantic-bones.test.ts',
+  'preview-3d/semantic-morphs.test.ts',
+  'preview-3d/mmd-bones.test.ts',
+  'preview-3d/mmd-materials.test.ts',
+  'preview-3d/bone-tools.test.ts',
+  'preview-3d/parse-java-model.test.ts',
+  'preview-3d/perception/autodance.test.ts',
+  'preview-3d/perception/beat-detector.test.ts',
+  'preview-3d/perception/blink.test.ts',
+  'preview-3d/perception/breath.test.ts',
+  'preview-3d/perception/gaze.test.ts',
+  'preview-3d/perception/lipsync.test.ts',
+  'preview-3d/caps/ground-capability.test.ts',
+  'preview-3d/caps/light-capability.test.ts',
 ];
 
 const annotation = '// @vitest-environment node\n';

@@ -49,14 +49,14 @@ vi.mock("../../core/i18n/t.ts", () => ({
   t: (key: string) => key,
 }));
 vi.mock("./loader.ts", () => ({ loadModelData, fillAuthorsAsync: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("../../features/preview-3d/model2d.ts", () => ({ renderModel2D }));
+vi.mock("../../preview-3d/model2d.ts", () => ({ renderModel2D }));
 vi.mock("./zoom.ts", () => ({ openFullPreview }));
 vi.mock("../../backend/app.ts", () => ({ getApp }));
 vi.mock("../../bus.ts", () => ({ bus: { emit: busEmit } }));
 vi.mock("../../utils/dom/errors.ts", () => ({ friendlyError }));
 vi.mock("./tpl.ts", () => ({ statsCardHTML }));
 vi.mock("./bone-names.ts", () => ({ buildBoneNamesText }));
-vi.mock("../../features/preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
+vi.mock("../../preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
 vi.mock("./model3d-loader.ts", () => ({ preloadModel }));
 // §5.7 shared 化：3D 打开收敛到 ysm-3d（path 驱动），骨架层测试 mock 编排层——
 // shared 外壳（挂 scene/导航/raycast）集成由 ysm-3d.test.ts（three stub）覆盖
@@ -65,7 +65,7 @@ vi.mock("./ysm-3d.ts", () => ({ createYsm3D, cleanupYsm3D, invalidateYsmPreview 
 
 import { loadModel2D } from "./skeleton.ts";
 import { fill3DPanel } from "./skeleton-render.ts";
-import type { Spec3D } from "../../features/preview-3d/model3d.ts";
+import type { Spec3D } from "../../preview-3d/model3d.ts";
 
 /** 可控 Image：src setter 同步 onload（happy-dom 无真实网络） */
 class FakeImage {

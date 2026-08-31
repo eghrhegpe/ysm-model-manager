@@ -1,13 +1,13 @@
 // ===== 模型统计纯计算（Worker 可测核心：无 IO、无 WASM 依赖）=====
 // 输入为 WASM 解码产物（.ysm）或 JSON 直读字节（.json 主文件），输出统计数值。
 // 口径对齐 Go decodeYSMViaNodeJS（internal/app/wasm_decoder.go:224）与前端
-// decodeYsmViaWasm（features/preview-3d/decoder/wasm-decode.ts，ADR-137 归位）：
+// decodeYsmViaWasm（preview-3d/decoder/wasm-decode.ts，ADR-137 归位）：
 //  - boneCount/cubeCount：各 geometry JSON 合并求和（骨骼 = bones 数组长度；
 //    立方体 = 各 bone.cubes 长度之和，递归收集）
 //  - texWidth/texHeight：max(geometry description texture_width/height, 实际纹理嗅探)
 //    （Go 只取 geometry 描述；前端 wasm.ts 取 max(嗅探, 描述)——本文件取大者，语义超集）
 //  - sniffTexSize 与 Go imagePixelArea / wasm.ts sniffTexSize 同口径，勿单独改
-import { parseBedrockGeometryFromJSON } from "../features/preview-3d/decoder/geometry.ts";
+import { parseBedrockGeometryFromJSON } from "../preview-3d/decoder/geometry.ts";
 import { sniffTexSize } from "../utils/tex-size.ts";
 
 /** 解码/直读产物文件（Worker 与主线程共用形状） */

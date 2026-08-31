@@ -8,8 +8,8 @@ import {
   ysmModelStats,
   ysmModelTextureSlots,
 } from "./skeleton-fill-panel.ts";
-import type { PreviewSnapshot } from "../../features/preview-3d/state/preview-state.ts";
-import type { Spec3D } from "../../features/preview-3d/model3d.ts";
+import type { PreviewSnapshot } from "../../preview-3d/state/preview-state.ts";
+import type { Spec3D } from "../../preview-3d/model3d.ts";
 import * as THREE from "three";
 
 /** 最小 spec（单组件）：1 个 modelGroup，2 根骨骼，2 个纹理槽 */

@@ -7,7 +7,7 @@
 //
 // 运行：npx tsx tests/test_cube_uv_quad_vertex.mjs
 
-import { buildCubeMeshData } from "../frontend/src/features/preview-3d/cube-mesh.ts";
+import { buildCubeMeshData } from "../frontend/src/preview-3d/cube-mesh.ts";
 
 let failed = 0;
 function fail(msg) {

@@ -15,9 +15,9 @@ import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { t } from "../../core/i18n/t.ts";
 import { getApp } from "../../backend/app.ts";
 import { RESOURCE_TYPE_LABELS, resolvePreviewKey, resolvePreviewKeyByExt, resolvePreviewKeyToRtype, getPreviewableTypeTabs, extOf, resolveDefaultPreviewKey, isContainerExt } from "../../utils/resource/types.ts";
-import type { Mount3DOptions } from "../../features/preview-3d/adapters/mount-preview-core.ts";
-import { switchPreview, hasActivePreview, cleanupPreview } from "../../features/preview-3d/adapters/mount-preview-core.ts";
-import { sceneRegistry } from "../../features/preview-3d/adapters/scene-registry.ts";
+import type { Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { switchPreview, hasActivePreview, cleanupPreview } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { sceneRegistry } from "../../preview-3d/adapters/scene-registry.ts";
 
 /** 跨类型换角色注册表：各 createXxx3D 模块加载时注册，路由侧不反向 import 包装器（破循环） */
 const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};

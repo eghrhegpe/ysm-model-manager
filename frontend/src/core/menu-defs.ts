@@ -1,7 +1,7 @@
 // ===== 声明式菜单规格（ADR-021 B 层）=====
 // 唯一事实来源：context-menus.ts 从本表生成 menu:show 载荷；
 // 测试遍历本表断言结构与行为，加菜单项只改这里，测试自动覆盖。
-// 2026-XX P1 扩展（与 features/preview-3d PreviewMenuNode.visibleWhen 对齐）：
+// 2026-XX P1 扩展（与 preview-3d PreviewMenuNode.visibleWhen 对齐）：
 // 节点级 `visibleWhen` 谓词吃 ctx 快照（与 AGENTS.md「3d菜单只允许 visibleWhen」
 // 的精神面一致），实现右键菜单与3D 菜单的声明式语义统一；未定义时行为不变。
 import type { CtxShowPayload } from "../bus";
@@ -23,7 +23,7 @@ interface MenuItemDef {
   divider?: boolean;
   /**
    * 节点级可见性谓词：返回 false 则该 item 不出现在 menu:show 载荷。
-   * 与 features/preview-3d/menu/node-types.ts 的 `PreviewMenuNode.visibleWhen`
+   * 与 preview-3d/menu/node-types.ts 的 `PreviewMenuNode.visibleWhen`
    * 同构（吃 ctx 快照，纯函数，无副作用）；未定义 → 恒可见。
    * 与 viewer-mode 全局过滤（context-menus.ts `canWebAction`）AND：两边都通过才显示。
    */

@@ -4,12 +4,12 @@ name: YSM (Bedrock) 动画管线
 category: utils
 tier: architecture
 source_files:
-  - frontend/src/features/preview-3d/ysm-animation-player.ts
-  - frontend/src/features/preview-3d/adapters/ysm-adapter.ts
+  - frontend/src/preview-3d/ysm-animation-player.ts
+  - frontend/src/preview-3d/adapters/ysm-adapter.ts
   - frontend/src/utils/animation/molang.ts
   - frontend/src/utils/animation/animation.ts
 tests:
-  - frontend/src/features/preview-3d/ysm-animation-player.test.ts
+  - frontend/src/preview-3d/ysm-animation-player.test.ts
   - frontend/src/utils/animation/animation-controller.test.ts
   - frontend/src/utils/animation/animation.test.ts
   - frontend/src/utils/animation/molang.test.ts
@@ -55,10 +55,10 @@ rAF 循环消费动态 Spec → Three.js 画面随时间轴动起来
 
 | 模块 | 文件路径 | 职责 |
 |------|---------|------|
-| **动画玩家** | `features/preview-3d/ysm-animation-player.ts` | 完整的状态机：时间推进、Clip 切换、控制器管理。导出符号 `createYsmAnimPlayer`。 |
+| **动画玩家** | `preview-3d/ysm-animation-player.ts` | 完整的状态机：时间推进、Clip 切换、控制器管理。导出符号 `createYsmAnimPlayer`。 |
 | **Molang 求值器** | `utils/animation/molang-bridge.ts` | 表达式解析与执行。处理如 `math.sin(@variable.time)` 等公式。 |
 | **插值引擎** | `utils/animation/animation.ts` | `parseBedrockAnimationJSON`, `evaluateClip`。使用 Catmull-Rom 样条插值。 |
-| **适配器桥接** | `features/preview-3d/ysm-adapter.ts` | 将解码数据喂入 Player，并挂载到 `renderModel3D` 实例。 |
+| **适配器桥接** | `preview-3d/ysm-adapter.ts` | 将解码数据喂入 Player，并挂载到 `renderModel3D` 实例。 |
 
 ## 关键接口
 

@@ -3,8 +3,8 @@
 // 本文件仅作兼容薄包装，保留 createVrm3D / cleanupVrm3D / invalidateVrmPreview
 // 公开符号，index.ts 与既有测试无需改动。
 
-import { mount3D, cleanupPreview, invalidatePreview, switchPreview, type PreviewAdapter, type Mount3DOptions } from "../../features/preview-3d/adapters/mount-preview-core.ts";
-import { buildVrmScene, type VrmPanelHooks } from "../../features/preview-3d/adapters/vrm-adapter.ts";
+import { mount3D, cleanupPreview, invalidatePreview, switchPreview, type PreviewAdapter, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { buildVrmScene, type VrmPanelHooks } from "../../preview-3d/adapters/vrm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
 import { playNodes } from "./mmd-controls.ts";

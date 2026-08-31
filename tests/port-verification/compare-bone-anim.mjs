@@ -12,7 +12,7 @@
  *     - 旋转序 ZYX intrinsic（rotateZ→rotateY→rotateX）
  *     - scale=0 时整骨不可见（isVisible=false）
  *
- * 被测：本项目 ysm-animation-player.apply（frontend/src/features/preview-3d/ysm-animation-player.ts:91-145）
+ * 被测：本项目 ysm-animation-player.apply（frontend/src/preview-3d/ysm-animation-player.ts:91-145）
  *   - rotation: Euler(rz, ry, rx, 'ZYX') → 四元数（L4 已修）
  *   - position: 直接 node.position.set(tx, ty, tz) 覆盖 localPosition（无 pivot 包裹/X 取负//16）
  *   - scale: 直接 set(sx, sy, sz)（无 scale=0 隐藏）

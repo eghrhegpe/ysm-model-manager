@@ -329,7 +329,7 @@ type CliCommand struct {
 - **发版场景（不打包 exe）**：`.ysm` 实际解码主路径就是 **Node.js + WASM `callMain`**——Go 自己零解密代码，能力全部继承自原版 C++ 解析器（认识 YSGP V2 / YSGP V3 / OYSM 全变体），这就是「支持所有版本」的来源。
 - **无 node 场景**：路径 B 不可用，加密 `.ysm` 无法解码（仅开放 zip/7z 走 Go 原生），这是 ADR-029 保留 exe 回退的初衷。
 
-消费方 `features/preview-3d/decoder/wasm-decode.ts:25-160` 完整链（前端，ADR-137 归位）：
+消费方 `preview-3d/decoder/wasm-decode.ts:25-160` 完整链（前端，ADR-137 归位）：
 ```
 ReadFileBytes(Go, base64) → atob → Uint8Array
   → (.json 走 parseYsmJsonDirect 直解)
@@ -376,7 +376,7 @@ ReadFileBytes(Go, base64) → atob → Uint8Array
 
 ### 4.6 存档
 
-- 当前稳定版为 `frontend/src/features/preview-3d/model3d.ts`（旧 `docs/model3d.js` / `docs/model3d-ysm-attempt.js` 备份已随文档治理删除）。
+- 当前稳定版为 `frontend/src/preview-3d/model3d.ts`（旧 `docs/model3d.js` / `docs/model3d-ysm-attempt.js` 备份已随文档治理删除）。
 - 旧版 `applyBoxUV`/`applyFaceUV` + `BoxGeometry` 方案永久废弃，不允许再提及或恢复。
 
 ---
@@ -491,7 +491,7 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 
 ### 7.1 统一预览核心（ADR-066）
 
-`frontend/src/features/preview-3d/adapters/mount-preview-core.ts`（928 行）是**所有富格式 3D 预览的单一事实来源外壳**，持有单实例 renderer / scene / camera / OrbitControls / rAF 循环 / 灯光 / 场景能力。内容差异经 `PreviewAdapter.build(ctx, path)` 挂进同一 `ctx.scene`：
+`frontend/src/preview-3d/adapters/mount-preview-core.ts`（928 行）是**所有富格式 3D 预览的单一事实来源外壳**，持有单实例 renderer / scene / camera / OrbitControls / rAF 循环 / 灯光 / 场景能力。内容差异经 `PreviewAdapter.build(ctx, path)` 挂进同一 `ctx.scene`：
 
 ```
 mount3D(adapter, path, opts?)
@@ -545,7 +545,7 @@ mount3D(adapter, path, opts?)
 
 ### 7.5 感知层（程序化生命力）
 
-`features/preview-3d/perception/`：让模型「活起来」的自主行为子系统，纯逻辑零 DOM：
+`preview-3d/perception/`：让模型「活起来」的自主行为子系统，纯逻辑零 DOM：
 
 | 层级 | 模块 | 驱动目标 |
 |------|------|----------|
@@ -583,9 +583,9 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 
 ### 7.9 2D 预览 + 缓存 + 截图
 
-- **2D 预览**：`features/preview-3d/model2d.ts`（~19.4KB）处理平铺/网格 2D 缩略图（Canvas 2D 正交投影）。
+- **2D 预览**：`preview-3d/model2d.ts`（~19.4KB）处理平铺/网格 2D 缩略图（Canvas 2D 正交投影）。
 - **缓存**：`utils/preview-cache.ts` 预览缓存 FIFO；`model3d-loader.ts` LRU 20 条 spec 缓存；`texture-cache.ts` 纹理引用计数池（跨模型复用，session 结束统一释放）。
-- **截图**：`features/preview-3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-render.ts` 离屏多角度（ADR-136 归位）+ `screenshot-lights.ts` toScreenshotLights（预览灯光提取）；Go 端 `app_files.go:ExtractPreviewTexture` 提取预览纹理。
+- **截图**：`preview-3d/screenshot.ts` 纯函数（接收 renderer+scene+camera）+ `screenshot-render.ts` 离屏多角度（ADR-136 归位）+ `screenshot-lights.ts` toScreenshotLights（预览灯光提取）；Go 端 `app_files.go:ExtractPreviewTexture` 提取预览纹理。
 
 ---
 
@@ -752,8 +752,8 @@ core/handler-dnd.ts 拦截 drop
   → Go ImportModelFile* (app_install.go) → go/importer 策略 → 落盘
   → emit tree:reload
   → 选中触发 model:select → app-preview
-  → features/preview-3d/decoder/wasm-decode.ts decodeYsmViaWasm (§4.2，ADR-137 归位)
-  → features/preview-3d/model3d.ts + Three.js 渲染
+  → preview-3d/decoder/wasm-decode.ts decodeYsmViaWasm (§4.2，ADR-137 归位)
+  → preview-3d/model3d.ts + Three.js 渲染
 ```
 
 ### (b) 模型树 / 仓库页填充

@@ -11,13 +11,13 @@ import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
-import type { PreviewMenuNode } from "../../features/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
-import type { Spec3D, BoneSelectInfo } from "../../features/preview-3d/model3d.ts";
-import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
-import type { CameraControlBridge } from "../../features/preview-3d/adapters/camera-controls.ts";
+import type { Spec3D, BoneSelectInfo } from "../../preview-3d/model3d.ts";
+import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
+import type { CameraControlBridge } from "../../preview-3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
-import { registerSchema, unregisterSchema, makeYsmModelSchemaId, YSM_MODEL_SCHEMA_ID } from "../../features/preview-3d/adapters/schema-registry.ts";
+import { registerSchema, unregisterSchema, makeYsmModelSchemaId, YSM_MODEL_SCHEMA_ID } from "../../preview-3d/adapters/schema-registry.ts";
 import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
 
 /** 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） */

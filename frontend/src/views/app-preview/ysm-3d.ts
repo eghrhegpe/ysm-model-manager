@@ -5,13 +5,13 @@
 // §5.7 shared 化：YSM 适配器改 path 驱动（build(ctx, path) 内经 loadModelData
 // 加载 model），与 vrm/litematic 同构——core 的 switchTo(path) 对 ysm 生效，
 // 3D 内模型切换无需重建整个会话。
-import { mount3D, cleanupPreview, invalidatePreview } from "../../features/preview-3d/adapters/mount-preview-core.ts";
-import { makeYsmAdapter } from "../../features/preview-3d/adapters/ysm-adapter.ts";
+import { mount3D, cleanupPreview, invalidatePreview } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { makeYsmAdapter } from "../../preview-3d/adapters/ysm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
-import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
+import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { preloadModel, type ModelLike } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
-import { decodeYsmViaWasm } from "../../features/preview-3d/decoder/wasm-decode.ts";
+import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
 import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";

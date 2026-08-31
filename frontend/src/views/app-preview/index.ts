@@ -22,14 +22,14 @@ import {
   cacheSet,
   cacheSetEvictHandler,
   collectBlobUrls,
-} from "../../features/preview-3d/decoder/cache.ts";
+} from "../../preview-3d/decoder/cache.ts";
 import { getApp } from "../../backend/app.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { t } from "../../core/i18n/t.ts";
 import type { PreviewCtx } from "./utils.ts";
-import type { DecodedYsm } from "../../features/preview-3d/decoder/utils.ts";
+import type { DecodedYsm } from "../../preview-3d/decoder/utils.ts";
 import { GenGuard } from "./gen-guard.ts";
-import { decodeYsmViaWasm } from "../../features/preview-3d/decoder/wasm-decode.ts";
+import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
 import { showModelDetail, showResourcePack, showShaderpack, showSimplePreview } from "./detail.ts";
 import { showVrmMeta, showMmdPreview, showScenePreview, showMorphPreview, showStagePreview, showFbxPreview } from "./detail-3d.ts";
 import { showLitematic, cleanupLitematic3D, invalidateLitematicPreview } from "./litematic-meta.ts";
@@ -41,7 +41,7 @@ import { cleanupEmpty3D, invalidateEmptyPreview } from "./empty-3d.ts";
 import { cleanupMaid3D, invalidateMaidPreview, showMaidPreview } from "./maid-3d.ts";
 import { closeActive3DOverlay } from "./skeleton.ts";
 import { esc } from "../../utils/dom/html.ts";
-import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
+import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 
 /** 预览 show 函数签名：ctx + path + 类型元信息（icon/label） */
 type PreviewShowFn = (

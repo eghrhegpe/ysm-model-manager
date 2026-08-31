@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 3D 模型加载器测试 =====
 // 覆盖：fetchSpec LRU 缓存、preloadModel R1 纹理序契约校验（texArrOrder vs textureNames 不一致 warn）
-// loadTextures 单测已随 ADR-136 第四刀迁至 features/preview-3d/texture-loader.test.ts
+// loadTextures 单测已随 ADR-136 第四刀迁至 preview-3d/texture-loader.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 
@@ -30,19 +30,19 @@ vi.mock("../../utils/dom/android-bridge.ts", () => ({
 vi.mock("../../backend/platform-web.ts", () => ({
   isWebPlatform: isWebPlatformMock,
 }));
-vi.mock("../../features/preview-3d/decoder/wasm-decode.ts", () => ({
+vi.mock("../../preview-3d/decoder/wasm-decode.ts", () => ({
   decodeYsmViaWasm: decodeWasmMock,
 }));
-vi.mock("../../features/preview-3d/spec-builder.ts", () => ({
+vi.mock("../../preview-3d/spec-builder.ts", () => ({
   buildSpecFromGeometryJSON: tsSpecBuilderMock,
 }));
 
-vi.mock("../../features/preview-3d/texture-cache.ts", () => ({
+vi.mock("../../preview-3d/texture-cache.ts", () => ({
   textureCache: fakeTextureCache,
 }));
 
 import { preloadModel } from "./model3d-loader.ts";
-import { getLoadTraces, clearLoadTraces } from "../../features/preview-3d/load-trace.ts";
+import { getLoadTraces, clearLoadTraces } from "../../preview-3d/load-trace.ts";
 import { FakeImage } from "../../test-utils/fake-image.ts";
 
 beforeEach(() => {

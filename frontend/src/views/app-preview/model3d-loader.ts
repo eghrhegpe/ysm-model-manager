@@ -1,13 +1,13 @@
 // ===== 3D 模型加载器（类型化版 — ADR-014 P2）=====
-// loadTextures 已随 ADR-136 第四刀归位 features/preview-3d/texture-loader.ts
+// loadTextures 已随 ADR-136 第四刀归位 preview-3d/texture-loader.ts
 import * as THREE from "three";
 import { getApp } from "../../backend/app.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
-import { decodeYsmViaWasm } from "../../features/preview-3d/decoder/wasm-decode.ts";
-import { buildSpecFromGeometryJSON } from "../../features/preview-3d/spec-builder.ts";
-import { loadTextures } from "../../features/preview-3d/texture-loader.ts";
-import { recordLoadTrace } from "../../features/preview-3d/load-trace.ts";
+import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
+import { buildSpecFromGeometryJSON } from "../../preview-3d/spec-builder.ts";
+import { loadTextures } from "../../preview-3d/texture-loader.ts";
+import { recordLoadTrace } from "../../preview-3d/load-trace.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {
@@ -50,7 +50,7 @@ function getCachedSpec(path: string): string | undefined {
   return data;
 }
 
-/** 并行加载纹理 URL 列表，返回 THREE.Texture 数组（ADR-136 归位 features/preview-3d/texture-loader.ts） */
+/** 并行加载纹理 URL 列表，返回 THREE.Texture 数组（ADR-136 归位 preview-3d/texture-loader.ts） */
 
 /** 获取模型 spec（Go 绑定为唯一事实来源，ADR-004；Android 等无 Node 环境降级前端 WASM 解码兜底） */
 async function fetchSpec(model: ModelLike): Promise<ModelSpec> {

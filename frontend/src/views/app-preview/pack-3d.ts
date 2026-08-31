@@ -6,8 +6,8 @@
 // 首个 entry 作为初始 path。适配器 build(ctx, entryPath) 走 switchTo 语义，
 // 由 core switch 面板驱动，不再自建 ◀/▶ 按钮。
 
-import { mount3D, cleanupPreview, invalidatePreview, type Mount3DOptions } from "../../features/preview-3d/adapters/mount-preview-core.ts";
-import { makePackAdapter } from "../../features/preview-3d/adapters/pack-model-adapter.ts";
+import { mount3D, cleanupPreview, invalidatePreview, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { makePackAdapter } from "../../preview-3d/adapters/pack-model-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import { withPreviewExtras, registerReRoute } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";

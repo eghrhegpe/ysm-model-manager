@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T03:46:32.683Z",
+  "generatedAt": "2026-08-31T04:56:09.419Z",
   "summary": {
     "cardCount": 134,
     "categoryCount": 6,
@@ -53,32 +53,6 @@
       "missing": []
     },
     {
-      "kind": "optimization_log",
-      "name": "优化记录 optimization-log",
-      "file": "optimization_log.md",
-      "category": "config",
-      "tier": "architecture",
-      "sourceCount": 12,
-      "okCount": 12,
-      "maxDepth": 5,
-      "avgDepth": 4.1,
-      "refs": [
-        "frontend/src/features/preview-3d/adapters/mmd-adapter.ts",
-        "frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder.ts",
-        "frontend/src/features/preview-3d/adapters/mmd-ktx2-basis.ts",
-        "frontend/src/features/preview-3d/adapters/mmd-ktx2-worker.ts",
-        "frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader.ts",
-        "frontend/src/features/preview-3d/adapters/mmd-pmx-parser.ts",
-        "frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker.ts",
-        "frontend/src/features/preview-3d/adapters/mmd-texture-decoder.ts",
-        "frontend/src/utils/main-thread-watch.ts",
-        "internal/app/app_model.go",
-        "internal/app/app_texture_cache.go",
-        "go/texture_cache/texture_cache.go"
-      ],
-      "missing": []
-    },
-    {
       "kind": "animation-system",
       "name": "动画系统 animation",
       "file": "animation-system.md",
@@ -87,7 +61,7 @@
       "sourceCount": 10,
       "okCount": 10,
       "maxDepth": 5,
-      "avgDepth": 4.4,
+      "avgDepth": 4.3,
       "refs": [
         "frontend/src/utils/animation/animation.ts",
         "frontend/src/utils/animation/animate.ts",
@@ -98,7 +72,7 @@
         "frontend/src/utils/animation/molang-lib/easing.js",
         "frontend/src/utils/animation/molang-lib/math.js",
         "frontend/src/utils/animation/molang-lib/molang-prism-syntax.js",
-        "frontend/src/features/preview-3d/ysm-animation-player.ts"
+        "frontend/src/preview-3d/ysm-animation-player.ts"
       ],
       "missing": []
     },
@@ -111,10 +85,10 @@
       "sourceCount": 9,
       "okCount": 9,
       "maxDepth": 5,
-      "avgDepth": 4.3,
+      "avgDepth": 4.1,
       "refs": [
-        "frontend/src/features/preview-3d/adapters/input-and-animation.ts",
-        "frontend/src/features/preview-3d/model2d.ts",
+        "frontend/src/preview-3d/adapters/input-and-animation.ts",
+        "frontend/src/preview-3d/model2d.ts",
         "frontend/src/views/app-preview/zoom.ts",
         "frontend/src/views/app-preview/skeleton.ts",
         "frontend/src/views/app-preview/litematic-3d.ts",
@@ -122,114 +96,6 @@
         "frontend/src/views/app-content/settings/init.ts",
         "frontend/src/views/app-content/site/edit.ts",
         "frontend/src/views/app-tree/toolbar-events.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "preview_panel_declarative",
-      "name": "3D 预览面板内容声明式化通道（ADR-126 P4-B）",
-      "file": "preview_panel_declarative.md",
-      "category": "ui",
-      "tier": "leaf",
-      "sourceCount": 9,
-      "okCount": 9,
-      "maxDepth": 5,
-      "avgDepth": 4.7,
-      "refs": [
-        "frontend/src/features/preview-3d/menu/core.ts",
-        "frontend/src/features/preview-3d/menu/render.ts",
-        "frontend/src/features/preview-3d/menu/node-types.ts",
-        "frontend/src/features/preview-3d/adapters/mmd-adapter.ts",
-        "frontend/src/features/preview-3d/adapters/ysm-adapter.ts",
-        "frontend/src/features/preview-3d/adapters/morph-controls.ts",
-        "frontend/src/views/app-preview/mmd-controls.ts",
-        "frontend/src/views/app-preview/ysm-controls.ts",
-        "frontend/src/views/app-preview/shot-panel-shared.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "render-federation",
-      "name": "联邦渲染能力 (Render Federation)",
-      "file": "render-federation.md",
-      "category": "utils",
-      "tier": "architecture",
-      "sourceCount": 9,
-      "okCount": 9,
-      "maxDepth": 5,
-      "avgDepth": 5,
-      "refs": [
-        "frontend/src/features/preview-3d/caps/scene-capability-registry.ts",
-        "frontend/src/features/preview-3d/caps/sky-capability.ts",
-        "frontend/src/features/preview-3d/caps/ground-capability.ts",
-        "frontend/src/features/preview-3d/caps/light-capability.ts",
-        "frontend/src/features/preview-3d/caps/postprocessing-capability.ts",
-        "frontend/src/features/preview-3d/caps/environment-capability.ts",
-        "frontend/src/features/preview-3d/caps/fog-capability.ts",
-        "frontend/src/features/preview-3d/caps/shadow-capability.ts",
-        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "multi_model_select",
-      "name": "多模型选择菜单原语 multiModelSelectNode",
-      "file": "multi_model_select.md",
-      "category": "ui",
-      "tier": "architecture",
-      "sourceCount": 7,
-      "okCount": 7,
-      "maxDepth": 5,
-      "avgDepth": 3.9,
-      "refs": [
-        "frontend/src/features/preview-3d/menu/multi-model.ts",
-        "frontend/src/views/app-preview/mmd-controls.ts",
-        "frontend/src/features/preview-3d/adapters/pack-model-adapter.ts",
-        "frontend/src/features/preview-3d/adapters/litematic-adapter.ts",
-        "frontend/src/views/app-preview/litematic-3d.ts",
-        "internal/app/container_entries.go",
-        "go/litematic/voxel.go"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "preview_core",
-      "name": "统一 3D 预览核心 preview-core",
-      "file": "preview_core.md",
-      "category": "utils",
-      "tier": "architecture",
-      "sourceCount": 7,
-      "okCount": 7,
-      "maxDepth": 5,
-      "avgDepth": 3.6,
-      "refs": [
-        "frontend/src/features/preview-3d/adapters/",
-        "frontend/src/features/preview-3d/bone-tools.ts",
-        "frontend/src/features/preview-3d/caps/sky-capability.ts",
-        "frontend/src/features/preview-3d/caps/ground-capability.ts",
-        "internal/app/container_entries.go",
-        "go/litematic/voxel.go",
-        "frontend/src/backend/web-fs.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "3d-patterns",
-      "name": "3D 区审核与修复模式提炼",
-      "file": "3d-patterns.md",
-      "category": "ui",
-      "tier": "leaf",
-      "sourceCount": 6,
-      "okCount": 6,
-      "maxDepth": 5,
-      "avgDepth": 4.2,
-      "refs": [
-        "frontend/src/features/preview-3d/debug-render.ts",
-        "frontend/src/features/preview-3d/model-group-builder.ts",
-        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts",
-        "frontend/src/features/preview-3d/cleanup-helper.ts",
-        "frontend/src/views/app-preview/preview-library.ts",
-        "frontend/src/views/app-preview/skeleton.ts"
       ],
       "missing": []
     },
@@ -254,26 +120,6 @@
       "missing": []
     },
     {
-      "kind": "preview_menu_session_key",
-      "name": "preview-menu-session-key",
-      "file": "preview_menu_session_key.md",
-      "category": "ui",
-      "tier": "architecture",
-      "sourceCount": 6,
-      "okCount": 6,
-      "maxDepth": 5,
-      "avgDepth": 4.7,
-      "refs": [
-        "frontend/src/features/preview-3d/adapters/schema-registry.ts",
-        "frontend/src/views/app-preview/ysm-controls.ts",
-        "frontend/src/features/preview-3d/adapters/ysm-adapter.ts",
-        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts",
-        "frontend/src/features/preview-3d/adapters/switch-preview.ts",
-        "frontend/src/views/app-preview/skeleton-fill-panel.ts"
-      ],
-      "missing": []
-    },
-    {
       "kind": "i18n_accuracy",
       "name": "i18n 翻译准确度扫描记录",
       "file": "i18n_accuracy.md",
@@ -289,131 +135,6 @@
         "frontend/src/core/i18n/locales/ja.ts",
         "scripts/i18n-key-naming.mjs",
         "tests/test_i18n_key_naming.mjs"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "utils-export",
-      "name": "截图与导出 export",
-      "file": "utils-export.md",
-      "category": "utils",
-      "tier": "architecture",
-      "sourceCount": 5,
-      "okCount": 5,
-      "maxDepth": 5,
-      "avgDepth": 4.2,
-      "refs": [
-        "frontend/src/features/preview-3d/screenshot-render.ts",
-        "frontend/src/features/preview-3d/screenshot-lights.ts",
-        "frontend/src/features/preview-3d/texture-loader.ts",
-        "frontend/src/features/preview-3d/decoder/cache.ts",
-        "frontend/src/features/preview-3d/screenshot.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "bone-tools",
-      "name": "跨格式骨骼工具层 bone-tools",
-      "file": "bone-tools.md",
-      "category": "utils",
-      "tier": "leaf",
-      "sourceCount": 4,
-      "okCount": 4,
-      "maxDepth": 5,
-      "avgDepth": 4.5,
-      "refs": [
-        "frontend/src/features/preview-3d/bone-tools.ts",
-        "frontend/src/features/preview-3d/adapters/vrm-bone.ts",
-        "frontend/src/features/preview-3d/adapters/vrm-bone-ui.ts",
-        "frontend/src/features/preview-3d/mmd-bones.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "preview_menu_settings_state",
-      "name": "3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）",
-      "file": "preview_menu_settings_state.md",
-      "category": "ui",
-      "tier": "leaf",
-      "sourceCount": 4,
-      "okCount": 4,
-      "maxDepth": 5,
-      "avgDepth": 5,
-      "refs": [
-        "frontend/src/features/preview-3d/state/preview-state.ts",
-        "frontend/src/features/preview-3d/menu/settings.ts",
-        "frontend/src/features/preview-3d/menu/cap-controls.ts",
-        "frontend/src/features/preview-3d/caps/scene-capability.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "ysm-anim-pipeline",
-      "name": "YSM (Bedrock) 动画管线",
-      "file": "ysm-anim-pipeline.md",
-      "category": "utils",
-      "tier": "architecture",
-      "sourceCount": 4,
-      "okCount": 4,
-      "maxDepth": 5,
-      "avgDepth": 4.3,
-      "refs": [
-        "frontend/src/features/preview-3d/ysm-animation-player.ts",
-        "frontend/src/features/preview-3d/adapters/ysm-adapter.ts",
-        "frontend/src/utils/animation/molang.ts",
-        "frontend/src/utils/animation/animation.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "ysm-baked",
-      "name": "YSM 烘焙与几何反推",
-      "file": "ysm-baked.md",
-      "category": "core",
-      "tier": "architecture",
-      "sourceCount": 4,
-      "okCount": 4,
-      "maxDepth": 5,
-      "avgDepth": 4,
-      "refs": [
-        "frontend/src/features/preview-3d/decoder/wasm-decode.ts",
-        "frontend/src/features/preview-3d/decoder/geometry.ts",
-        "frontend/public/wasm/YSMParser.js",
-        "frontend/public/wasm/YSMParser.wasm"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "3d-oversize-file-codesplit-feasibility",
-      "name": "3D 层超大文件 code-split 可行性",
-      "file": "3d-oversize-file-codesplit-feasibility.md",
-      "category": "ui",
-      "tier": "leaf",
-      "sourceCount": 3,
-      "okCount": 3,
-      "maxDepth": 5,
-      "avgDepth": 5,
-      "refs": [
-        "frontend/src/features/preview-3d/adapters/mmd-adapter.ts",
-        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts",
-        "frontend/src/features/preview-3d/caps/ground-capability.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "preview_state",
-      "name": "3D 预览全域状态层（ADR-126 P4-A）",
-      "file": "preview_state.md",
-      "category": "ui",
-      "tier": "leaf",
-      "sourceCount": 3,
-      "okCount": 3,
-      "maxDepth": 5,
-      "avgDepth": 5,
-      "refs": [
-        "frontend/src/features/preview-3d/state/preview-state.ts",
-        "frontend/src/features/preview-3d/menu/settings.ts",
-        "frontend/src/features/preview-3d/menu/node-types.ts"
       ],
       "missing": []
     },
@@ -482,54 +203,6 @@
       "missing": []
     },
     {
-      "kind": "ground_surface_spec",
-      "name": "地面材质 spec 单一事实源 ground-surface-spec",
-      "file": "ground_surface_spec.md",
-      "category": "utils",
-      "tier": "leaf",
-      "sourceCount": 2,
-      "okCount": 2,
-      "maxDepth": 5,
-      "avgDepth": 5,
-      "refs": [
-        "frontend/src/features/preview-3d/caps/ground-surface-spec.ts",
-        "frontend/src/features/preview-3d/caps/ground-capability.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "mc-ao-tint",
-      "name": "MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现",
-      "file": "mc-ao-tint.md",
-      "category": "utils",
-      "tier": "leaf",
-      "sourceCount": 2,
-      "okCount": 2,
-      "maxDepth": 5,
-      "avgDepth": 4.5,
-      "refs": [
-        "frontend/src/features/preview-3d/adapters/pack-model-adapter.ts",
-        "frontend/src/features/preview-3d/mc-tints.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "scene_capability_registry",
-      "name": "场景能力注册表 scene-capability-registry",
-      "file": "scene_capability_registry.md",
-      "category": "utils",
-      "tier": "architecture",
-      "sourceCount": 2,
-      "okCount": 2,
-      "maxDepth": 5,
-      "avgDepth": 4.5,
-      "refs": [
-        "frontend/src/features/preview-3d/caps/",
-        "frontend/src/features/preview-3d/adapters/scene-registry.ts"
-      ],
-      "missing": []
-    },
-    {
       "kind": "dialog-modal",
       "name": "弹窗基座 modal",
       "file": "dialog-modal.md",
@@ -545,62 +218,74 @@
       "missing": []
     },
     {
-      "kind": "ground-cap-gcbuildmaterialgroup-133",
-      "name": "ground-cap-gcBuildMaterialGroup-133",
-      "file": "ground-cap-gcbuildmaterialgroup-133.md",
-      "category": "utils",
-      "tier": "leaf",
-      "sourceCount": 1,
-      "okCount": 1,
-      "maxDepth": 5,
-      "avgDepth": 5,
+      "kind": "optimization_log",
+      "name": "优化记录 optimization-log",
+      "file": "optimization_log.md",
+      "category": "config",
+      "tier": "architecture",
+      "sourceCount": 12,
+      "okCount": 12,
+      "maxDepth": 4,
+      "avgDepth": 3.4,
       "refs": [
-        "frontend/src/features/preview-3d/caps/ground-capability.ts"
+        "frontend/src/preview-3d/adapters/mmd-adapter.ts",
+        "frontend/src/preview-3d/adapters/mmd-ktx2-encoder.ts",
+        "frontend/src/preview-3d/adapters/mmd-ktx2-basis.ts",
+        "frontend/src/preview-3d/adapters/mmd-ktx2-worker.ts",
+        "frontend/src/preview-3d/adapters/mmd-ktx2-texture-loader.ts",
+        "frontend/src/preview-3d/adapters/mmd-pmx-parser.ts",
+        "frontend/src/preview-3d/adapters/mmd-pmx-parser.worker.ts",
+        "frontend/src/preview-3d/adapters/mmd-texture-decoder.ts",
+        "frontend/src/utils/main-thread-watch.ts",
+        "internal/app/app_model.go",
+        "internal/app/app_texture_cache.go",
+        "go/texture_cache/texture_cache.go"
       ],
       "missing": []
     },
     {
-      "kind": "mount-preview-module-singleton-race",
-      "name": "mount-preview-module-singleton-race",
-      "file": "mount-preview-module-singleton-race.md",
-      "category": "utils",
+      "kind": "preview_panel_declarative",
+      "name": "3D 预览面板内容声明式化通道（ADR-126 P4-B）",
+      "file": "preview_panel_declarative.md",
+      "category": "ui",
       "tier": "leaf",
-      "sourceCount": 1,
-      "okCount": 1,
-      "maxDepth": 5,
-      "avgDepth": 5,
+      "sourceCount": 9,
+      "okCount": 9,
+      "maxDepth": 4,
+      "avgDepth": 4,
       "refs": [
-        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts"
+        "frontend/src/preview-3d/menu/core.ts",
+        "frontend/src/preview-3d/menu/render.ts",
+        "frontend/src/preview-3d/menu/node-types.ts",
+        "frontend/src/preview-3d/adapters/mmd-adapter.ts",
+        "frontend/src/preview-3d/adapters/ysm-adapter.ts",
+        "frontend/src/preview-3d/adapters/morph-controls.ts",
+        "frontend/src/views/app-preview/mmd-controls.ts",
+        "frontend/src/views/app-preview/ysm-controls.ts",
+        "frontend/src/views/app-preview/shot-panel-shared.ts"
       ],
       "missing": []
     },
     {
-      "kind": "mount3d-584-giant",
-      "name": "mount3D-584-giant",
-      "file": "mount3d-584-giant.md",
+      "kind": "render-federation",
+      "name": "联邦渲染能力 (Render Federation)",
+      "file": "render-federation.md",
       "category": "utils",
-      "tier": "leaf",
-      "sourceCount": 1,
-      "okCount": 1,
-      "maxDepth": 5,
-      "avgDepth": 5,
+      "tier": "architecture",
+      "sourceCount": 9,
+      "okCount": 9,
+      "maxDepth": 4,
+      "avgDepth": 4,
       "refs": [
-        "frontend/src/features/preview-3d/adapters/mount-preview-core.ts"
-      ],
-      "missing": []
-    },
-    {
-      "kind": "worker-bridge-settleerror-fallback",
-      "name": "worker-bridge-settleError-fallback",
-      "file": "worker-bridge-settleerror-fallback.md",
-      "category": "utils",
-      "tier": "leaf",
-      "sourceCount": 1,
-      "okCount": 1,
-      "maxDepth": 5,
-      "avgDepth": 5,
-      "refs": [
-        "frontend/src/features/preview-3d/adapters/worker-bridge.ts"
+        "frontend/src/preview-3d/caps/scene-capability-registry.ts",
+        "frontend/src/preview-3d/caps/sky-capability.ts",
+        "frontend/src/preview-3d/caps/ground-capability.ts",
+        "frontend/src/preview-3d/caps/light-capability.ts",
+        "frontend/src/preview-3d/caps/postprocessing-capability.ts",
+        "frontend/src/preview-3d/caps/environment-capability.ts",
+        "frontend/src/preview-3d/caps/fog-capability.ts",
+        "frontend/src/preview-3d/caps/shadow-capability.ts",
+        "frontend/src/preview-3d/adapters/mount-preview-core.ts"
       ],
       "missing": []
     },
@@ -649,6 +334,68 @@
       "missing": []
     },
     {
+      "kind": "multi_model_select",
+      "name": "多模型选择菜单原语 multiModelSelectNode",
+      "file": "multi_model_select.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 7,
+      "okCount": 7,
+      "maxDepth": 4,
+      "avgDepth": 3.4,
+      "refs": [
+        "frontend/src/preview-3d/menu/multi-model.ts",
+        "frontend/src/views/app-preview/mmd-controls.ts",
+        "frontend/src/preview-3d/adapters/pack-model-adapter.ts",
+        "frontend/src/preview-3d/adapters/litematic-adapter.ts",
+        "frontend/src/views/app-preview/litematic-3d.ts",
+        "internal/app/container_entries.go",
+        "go/litematic/voxel.go"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_core",
+      "name": "统一 3D 预览核心 preview-core",
+      "file": "preview_core.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 7,
+      "okCount": 7,
+      "maxDepth": 4,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/preview-3d/adapters/",
+        "frontend/src/preview-3d/bone-tools.ts",
+        "frontend/src/preview-3d/caps/sky-capability.ts",
+        "frontend/src/preview-3d/caps/ground-capability.ts",
+        "internal/app/container_entries.go",
+        "go/litematic/voxel.go",
+        "frontend/src/backend/web-fs.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "3d-patterns",
+      "name": "3D 区审核与修复模式提炼",
+      "file": "3d-patterns.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 6,
+      "okCount": 6,
+      "maxDepth": 4,
+      "avgDepth": 3.5,
+      "refs": [
+        "frontend/src/preview-3d/debug-render.ts",
+        "frontend/src/preview-3d/model-group-builder.ts",
+        "frontend/src/preview-3d/adapters/mount-preview-core.ts",
+        "frontend/src/preview-3d/cleanup-helper.ts",
+        "frontend/src/views/app-preview/preview-library.ts",
+        "frontend/src/views/app-preview/skeleton.ts"
+      ],
+      "missing": []
+    },
+    {
       "kind": "global-handlers",
       "name": "全局事件处理 global-handlers",
       "file": "global-handlers.md",
@@ -669,6 +416,134 @@
       "missing": []
     },
     {
+      "kind": "preview_menu_session_key",
+      "name": "preview-menu-session-key",
+      "file": "preview_menu_session_key.md",
+      "category": "ui",
+      "tier": "architecture",
+      "sourceCount": 6,
+      "okCount": 6,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/preview-3d/adapters/schema-registry.ts",
+        "frontend/src/views/app-preview/ysm-controls.ts",
+        "frontend/src/preview-3d/adapters/ysm-adapter.ts",
+        "frontend/src/preview-3d/adapters/mount-preview-core.ts",
+        "frontend/src/preview-3d/adapters/switch-preview.ts",
+        "frontend/src/views/app-preview/skeleton-fill-panel.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "utils-export",
+      "name": "截图与导出 export",
+      "file": "utils-export.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 5,
+      "okCount": 5,
+      "maxDepth": 4,
+      "avgDepth": 3.2,
+      "refs": [
+        "frontend/src/preview-3d/screenshot-render.ts",
+        "frontend/src/preview-3d/screenshot-lights.ts",
+        "frontend/src/preview-3d/texture-loader.ts",
+        "frontend/src/preview-3d/decoder/cache.ts",
+        "frontend/src/preview-3d/screenshot.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "bone-tools",
+      "name": "跨格式骨骼工具层 bone-tools",
+      "file": "bone-tools.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 4,
+      "avgDepth": 3.5,
+      "refs": [
+        "frontend/src/preview-3d/bone-tools.ts",
+        "frontend/src/preview-3d/adapters/vrm-bone.ts",
+        "frontend/src/preview-3d/adapters/vrm-bone-ui.ts",
+        "frontend/src/preview-3d/mmd-bones.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_menu_settings_state",
+      "name": "3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）",
+      "file": "preview_menu_settings_state.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/preview-3d/state/preview-state.ts",
+        "frontend/src/preview-3d/menu/settings.ts",
+        "frontend/src/preview-3d/menu/cap-controls.ts",
+        "frontend/src/preview-3d/caps/scene-capability.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ysm-anim-pipeline",
+      "name": "YSM (Bedrock) 动画管线",
+      "file": "ysm-anim-pipeline.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 4,
+      "avgDepth": 3.8,
+      "refs": [
+        "frontend/src/preview-3d/ysm-animation-player.ts",
+        "frontend/src/preview-3d/adapters/ysm-adapter.ts",
+        "frontend/src/utils/animation/molang.ts",
+        "frontend/src/utils/animation/animation.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "ysm-baked",
+      "name": "YSM 烘焙与几何反推",
+      "file": "ysm-baked.md",
+      "category": "core",
+      "tier": "architecture",
+      "sourceCount": 4,
+      "okCount": 4,
+      "maxDepth": 4,
+      "avgDepth": 3.5,
+      "refs": [
+        "frontend/src/preview-3d/decoder/wasm-decode.ts",
+        "frontend/src/preview-3d/decoder/geometry.ts",
+        "frontend/public/wasm/YSMParser.js",
+        "frontend/public/wasm/YSMParser.wasm"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "3d-oversize-file-codesplit-feasibility",
+      "name": "3D 层超大文件 code-split 可行性",
+      "file": "3d-oversize-file-codesplit-feasibility.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/preview-3d/adapters/mmd-adapter.ts",
+        "frontend/src/preview-3d/adapters/mount-preview-core.ts",
+        "frontend/src/preview-3d/caps/ground-capability.ts"
+      ],
+      "missing": []
+    },
+    {
       "kind": "app-toast",
       "name": "Toast 通知 app-toast",
       "file": "app-toast.md",
@@ -682,6 +557,23 @@
         "frontend/src/views/app-toast/index.ts",
         "frontend/src/utils/dom/feedback.ts",
         "frontend/src/utils/dom/toast-ms.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "preview_state",
+      "name": "3D 预览全域状态层（ADR-126 P4-A）",
+      "file": "preview_state.md",
+      "category": "ui",
+      "tier": "leaf",
+      "sourceCount": 3,
+      "okCount": 3,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/preview-3d/state/preview-state.ts",
+        "frontend/src/preview-3d/menu/settings.ts",
+        "frontend/src/preview-3d/menu/node-types.ts"
       ],
       "missing": []
     },
@@ -735,18 +627,34 @@
       "missing": []
     },
     {
-      "kind": "ik_solver",
-      "name": "CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik",
-      "file": "ik_solver.md",
-      "category": "core",
+      "kind": "ground_surface_spec",
+      "name": "地面材质 spec 单一事实源 ground-surface-spec",
+      "file": "ground_surface_spec.md",
+      "category": "utils",
       "tier": "leaf",
       "sourceCount": 2,
       "okCount": 2,
       "maxDepth": 4,
       "avgDepth": 4,
       "refs": [
-        "frontend/src/features/preview-3d/ik-solver.ts",
-        "frontend/src/features/preview-3d/mmd-foot-ik.ts"
+        "frontend/src/preview-3d/caps/ground-surface-spec.ts",
+        "frontend/src/preview-3d/caps/ground-capability.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "mc-ao-tint",
+      "name": "MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现",
+      "file": "mc-ao-tint.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 3.5,
+      "refs": [
+        "frontend/src/preview-3d/adapters/pack-model-adapter.ts",
+        "frontend/src/preview-3d/mc-tints.ts"
       ],
       "missing": []
     },
@@ -759,9 +667,9 @@
       "sourceCount": 2,
       "okCount": 2,
       "maxDepth": 4,
-      "avgDepth": 3.5,
+      "avgDepth": 3,
       "refs": [
-        "frontend/src/features/preview-3d/",
+        "frontend/src/preview-3d/",
         "frontend/src/views/app-preview/model3d-loader.ts"
       ],
       "missing": []
@@ -779,6 +687,22 @@
       "refs": [
         "frontend/src/views/app-preview/detail.ts",
         "frontend/src/views/app-nav/"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "scene_capability_registry",
+      "name": "场景能力注册表 scene-capability-registry",
+      "file": "scene_capability_registry.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 4,
+      "avgDepth": 3.5,
+      "refs": [
+        "frontend/src/preview-3d/caps/",
+        "frontend/src/preview-3d/adapters/scene-registry.ts"
       ],
       "missing": []
     },
@@ -906,32 +830,47 @@
       "missing": []
     },
     {
-      "kind": "model2d",
-      "name": "2D 预览渲染 model2d",
-      "file": "model2d.md",
+      "kind": "ground-cap-gcbuildmaterialgroup-133",
+      "name": "ground-cap-gcBuildMaterialGroup-133",
+      "file": "ground-cap-gcbuildmaterialgroup-133.md",
       "category": "utils",
-      "tier": "architecture",
+      "tier": "leaf",
       "sourceCount": 1,
       "okCount": 1,
       "maxDepth": 4,
       "avgDepth": 4,
       "refs": [
-        "frontend/src/features/preview-3d/model2d.ts"
+        "frontend/src/preview-3d/caps/ground-capability.ts"
       ],
       "missing": []
     },
     {
-      "kind": "perception",
-      "name": "3D 感知系统 perception",
-      "file": "perception.md",
+      "kind": "mount-preview-module-singleton-race",
+      "name": "mount-preview-module-singleton-race",
+      "file": "mount-preview-module-singleton-race.md",
       "category": "utils",
-      "tier": "architecture",
+      "tier": "leaf",
       "sourceCount": 1,
       "okCount": 1,
       "maxDepth": 4,
       "avgDepth": 4,
       "refs": [
-        "frontend/src/features/preview-3d/perception/"
+        "frontend/src/preview-3d/adapters/mount-preview-core.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "mount3d-584-giant",
+      "name": "mount3D-584-giant",
+      "file": "mount3d-584-giant.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/preview-3d/adapters/mount-preview-core.ts"
       ],
       "missing": []
     },
@@ -1037,6 +976,21 @@
       "avgDepth": 4,
       "refs": [
         "frontend/src/utils/format/summarize.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "worker-bridge-settleerror-fallback",
+      "name": "worker-bridge-settleError-fallback",
+      "file": "worker-bridge-settleerror-fallback.md",
+      "category": "utils",
+      "tier": "leaf",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 4,
+      "avgDepth": 4,
+      "refs": [
+        "frontend/src/preview-3d/adapters/worker-bridge.ts"
       ],
       "missing": []
     },
@@ -1208,6 +1162,22 @@
       "missing": []
     },
     {
+      "kind": "ik_solver",
+      "name": "CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik",
+      "file": "ik_solver.md",
+      "category": "core",
+      "tier": "leaf",
+      "sourceCount": 2,
+      "okCount": 2,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/preview-3d/ik-solver.ts",
+        "frontend/src/preview-3d/mmd-foot-ik.ts"
+      ],
+      "missing": []
+    },
+    {
       "kind": "app-nav",
       "name": "顶部导航 app-nav",
       "file": "app-nav.md",
@@ -1283,6 +1253,21 @@
       "missing": []
     },
     {
+      "kind": "model2d",
+      "name": "2D 预览渲染 model2d",
+      "file": "model2d.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/preview-3d/model2d.ts"
+      ],
+      "missing": []
+    },
+    {
       "kind": "oldest-models",
       "name": "资历最深模型 oldest-models",
       "file": "oldest-models.md",
@@ -1309,6 +1294,21 @@
       "avgDepth": 3,
       "refs": [
         "frontend/src/core/page-store.ts"
+      ],
+      "missing": []
+    },
+    {
+      "kind": "perception",
+      "name": "3D 感知系统 perception",
+      "file": "perception.md",
+      "category": "utils",
+      "tier": "architecture",
+      "sourceCount": 1,
+      "okCount": 1,
+      "maxDepth": 3,
+      "avgDepth": 3,
+      "refs": [
+        "frontend/src/preview-3d/perception/"
       ],
       "missing": []
     },
@@ -2468,7 +2468,7 @@
     "config": {
       "count": 8,
       "sourceFiles": 18,
-      "maxDepth": 5,
+      "maxDepth": 4,
       "kinds": [
         "extensibility-index",
         "extensibility-index-reconciliation",
@@ -2484,7 +2484,7 @@
   },
   "reverseRefs": [
     {
-      "path": "frontend/src/features/preview-3d/adapters/mount-preview-core.ts",
+      "path": "frontend/src/preview-3d/adapters/mount-preview-core.ts",
       "cardCount": 6,
       "cards": [
         "3d-oversize-file-codesplit-feasibility",
@@ -2494,11 +2494,11 @@
         "preview_menu_session_key",
         "render-federation"
       ],
-      "depth": 5,
+      "depth": 4,
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/caps/ground-capability.ts",
+      "path": "frontend/src/preview-3d/caps/ground-capability.ts",
       "cardCount": 5,
       "cards": [
         "3d-oversize-file-codesplit-feasibility",
@@ -2507,29 +2507,29 @@
         "preview_core",
         "render-federation"
       ],
-      "depth": 5,
+      "depth": 4,
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/adapters/mmd-adapter.ts",
+      "path": "frontend/src/preview-3d/adapters/mmd-adapter.ts",
       "cardCount": 3,
       "cards": [
         "3d-oversize-file-codesplit-feasibility",
         "optimization_log",
         "preview_panel_declarative"
       ],
-      "depth": 5,
+      "depth": 4,
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/adapters/ysm-adapter.ts",
+      "path": "frontend/src/preview-3d/adapters/ysm-adapter.ts",
       "cardCount": 3,
       "cards": [
         "preview_menu_session_key",
         "preview_panel_declarative",
         "ysm-anim-pipeline"
       ],
-      "depth": 5,
+      "depth": 4,
       "exists": true
     },
     {
@@ -2627,56 +2627,6 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/adapters/pack-model-adapter.ts",
-      "cardCount": 2,
-      "cards": [
-        "mc-ao-tint",
-        "multi_model_select"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/sky-capability.ts",
-      "cardCount": 2,
-      "cards": [
-        "preview_core",
-        "render-federation"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/state/preview-state.ts",
-      "cardCount": 2,
-      "cards": [
-        "preview_menu_settings_state",
-        "preview_state"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/menu/settings.ts",
-      "cardCount": 2,
-      "cards": [
-        "preview_menu_settings_state",
-        "preview_state"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/menu/node-types.ts",
-      "cardCount": 2,
-      "cards": [
-        "preview_panel_declarative",
-        "preview_state"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
       "path": "frontend/src/views/app-preview/skeleton.ts",
       "cardCount": 2,
       "cards": [
@@ -2707,26 +2657,6 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/ysm-animation-player.ts",
-      "cardCount": 2,
-      "cards": [
-        "animation-system",
-        "ysm-anim-pipeline"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/bone-tools.ts",
-      "cardCount": 2,
-      "cards": [
-        "bone-tools",
-        "preview_core"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
       "path": "frontend/src/core/handlers/instance-ops.ts",
       "cardCount": 2,
       "cards": [
@@ -2737,11 +2667,11 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/model2d.ts",
+      "path": "frontend/src/preview-3d/adapters/pack-model-adapter.ts",
       "cardCount": 2,
       "cards": [
-        "model2d",
-        "pointer-events"
+        "mc-ao-tint",
+        "multi_model_select"
       ],
       "depth": 4,
       "exists": true
@@ -2777,6 +2707,16 @@
       "exists": true
     },
     {
+      "path": "frontend/src/preview-3d/caps/sky-capability.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_core",
+        "render-federation"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
       "path": "frontend/src/views/app-preview/ysm-controls.ts",
       "cardCount": 2,
       "cards": [
@@ -2784,6 +2724,46 @@
         "preview_panel_declarative"
       ],
       "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/state/preview-state.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_menu_settings_state",
+        "preview_state"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/menu/settings.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_menu_settings_state",
+        "preview_state"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/menu/node-types.ts",
+      "cardCount": 2,
+      "cards": [
+        "preview_panel_declarative",
+        "preview_state"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/ysm-animation-player.ts",
+      "cardCount": 2,
+      "cards": [
+        "animation-system",
+        "ysm-anim-pipeline"
+      ],
+      "depth": 3,
       "exists": true
     },
     {
@@ -2877,11 +2857,31 @@
       "exists": true
     },
     {
+      "path": "frontend/src/preview-3d/bone-tools.ts",
+      "cardCount": 2,
+      "cards": [
+        "bone-tools",
+        "preview_core"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
       "path": "frontend/src/features/import-dnd.ts",
       "cardCount": 2,
       "cards": [
         "global-handlers",
         "import-queue"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/model2d.ts",
+      "cardCount": 2,
+      "cards": [
+        "model2d",
+        "pointer-events"
       ],
       "depth": 3,
       "exists": true
@@ -3169,24 +3169,6 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/adapters/vrm-bone.ts",
-      "cardCount": 1,
-      "cards": [
-        "bone-tools"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/vrm-bone-ui.ts",
-      "cardCount": 1,
-      "cards": [
-        "bone-tools"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
       "path": "frontend/src/utils/dom/dialogs/adv-filter.ts",
       "cardCount": 1,
       "cards": [
@@ -3265,294 +3247,6 @@
         "dialog-tag-editor"
       ],
       "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/ground-surface-spec.ts",
-      "cardCount": 1,
-      "cards": [
-        "ground_surface_spec"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/menu/multi-model.ts",
-      "cardCount": 1,
-      "cards": [
-        "multi_model_select"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/litematic-adapter.ts",
-      "cardCount": 1,
-      "cards": [
-        "multi_model_select"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder.ts",
-      "cardCount": 1,
-      "cards": [
-        "optimization_log"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/mmd-ktx2-basis.ts",
-      "cardCount": 1,
-      "cards": [
-        "optimization_log"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/mmd-ktx2-worker.ts",
-      "cardCount": 1,
-      "cards": [
-        "optimization_log"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader.ts",
-      "cardCount": 1,
-      "cards": [
-        "optimization_log"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/mmd-pmx-parser.ts",
-      "cardCount": 1,
-      "cards": [
-        "optimization_log"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker.ts",
-      "cardCount": 1,
-      "cards": [
-        "optimization_log"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/mmd-texture-decoder.ts",
-      "cardCount": 1,
-      "cards": [
-        "optimization_log"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/input-and-animation.ts",
-      "cardCount": 1,
-      "cards": [
-        "pointer-events"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/schema-registry.ts",
-      "cardCount": 1,
-      "cards": [
-        "preview_menu_session_key"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/switch-preview.ts",
-      "cardCount": 1,
-      "cards": [
-        "preview_menu_session_key"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/menu/cap-controls.ts",
-      "cardCount": 1,
-      "cards": [
-        "preview_menu_settings_state"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/scene-capability.ts",
-      "cardCount": 1,
-      "cards": [
-        "preview_menu_settings_state"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/menu/core.ts",
-      "cardCount": 1,
-      "cards": [
-        "preview_panel_declarative"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/menu/render.ts",
-      "cardCount": 1,
-      "cards": [
-        "preview_panel_declarative"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/morph-controls.ts",
-      "cardCount": 1,
-      "cards": [
-        "preview_panel_declarative"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/scene-capability-registry.ts",
-      "cardCount": 1,
-      "cards": [
-        "render-federation"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/light-capability.ts",
-      "cardCount": 1,
-      "cards": [
-        "render-federation"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/postprocessing-capability.ts",
-      "cardCount": 1,
-      "cards": [
-        "render-federation"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/environment-capability.ts",
-      "cardCount": 1,
-      "cards": [
-        "render-federation"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/fog-capability.ts",
-      "cardCount": 1,
-      "cards": [
-        "render-federation"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/caps/shadow-capability.ts",
-      "cardCount": 1,
-      "cards": [
-        "render-federation"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/scene-registry.ts",
-      "cardCount": 1,
-      "cards": [
-        "scene_capability_registry"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/decoder/cache.ts",
-      "cardCount": 1,
-      "cards": [
-        "utils-export"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/adapters/worker-bridge.ts",
-      "cardCount": 1,
-      "cards": [
-        "worker-bridge-settleerror-fallback"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/decoder/wasm-decode.ts",
-      "cardCount": 1,
-      "cards": [
-        "ysm-baked"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/decoder/geometry.ts",
-      "cardCount": 1,
-      "cards": [
-        "ysm-baked"
-      ],
-      "depth": 5,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/debug-render.ts",
-      "cardCount": 1,
-      "cards": [
-        "3d-patterns"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/model-group-builder.ts",
-      "cardCount": 1,
-      "cards": [
-        "3d-patterns"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/cleanup-helper.ts",
-      "cardCount": 1,
-      "cards": [
-        "3d-patterns"
-      ],
-      "depth": 4,
       "exists": true
     },
     {
@@ -3817,7 +3511,16 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/mmd-bones.ts",
+      "path": "frontend/src/preview-3d/adapters/vrm-bone.ts",
+      "cardCount": 1,
+      "cards": [
+        "bone-tools"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/vrm-bone-ui.ts",
       "cardCount": 1,
       "cards": [
         "bone-tools"
@@ -3898,6 +3601,15 @@
       "exists": true
     },
     {
+      "path": "frontend/src/preview-3d/caps/ground-surface-spec.ts",
+      "cardCount": 1,
+      "cards": [
+        "ground_surface_spec"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
       "path": "frontend/src/core/i18n/t.ts",
       "cardCount": 1,
       "cards": [
@@ -3925,33 +3637,6 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/ik-solver.ts",
-      "cardCount": 1,
-      "cards": [
-        "ik_solver"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/mmd-foot-ik.ts",
-      "cardCount": 1,
-      "cards": [
-        "ik_solver"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/mc-tints.ts",
-      "cardCount": 1,
-      "cards": [
-        "mc-ao-tint"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
       "path": "frontend/src/views/app-preview/model3d-loader.ts",
       "cardCount": 1,
       "cards": [
@@ -3961,10 +3646,91 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/perception",
+      "path": "frontend/src/preview-3d/menu/multi-model.ts",
       "cardCount": 1,
       "cards": [
-        "perception"
+        "multi_model_select"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/litematic-adapter.ts",
+      "cardCount": 1,
+      "cards": [
+        "multi_model_select"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/mmd-ktx2-encoder.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/mmd-ktx2-basis.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/mmd-ktx2-worker.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/mmd-ktx2-texture-loader.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/mmd-pmx-parser.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/mmd-pmx-parser.worker.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/mmd-texture-decoder.ts",
+      "cardCount": 1,
+      "cards": [
+        "optimization_log"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/input-and-animation.ts",
+      "cardCount": 1,
+      "cards": [
+        "pointer-events"
       ],
       "depth": 4,
       "exists": true
@@ -3988,10 +3754,19 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/adapters",
+      "path": "frontend/src/preview-3d/adapters/schema-registry.ts",
       "cardCount": 1,
       "cards": [
-        "preview_core"
+        "preview_menu_session_key"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/switch-preview.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_menu_session_key"
       ],
       "depth": 4,
       "exists": true
@@ -4006,10 +3781,109 @@
       "exists": true
     },
     {
+      "path": "frontend/src/preview-3d/menu/cap-controls.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_menu_settings_state"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/caps/scene-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_menu_settings_state"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/menu/core.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_panel_declarative"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/menu/render.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_panel_declarative"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/morph-controls.ts",
+      "cardCount": 1,
+      "cards": [
+        "preview_panel_declarative"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
       "path": "frontend/src/views/app-preview/shot-panel-shared.ts",
       "cardCount": 1,
       "cards": [
         "preview_panel_declarative"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/caps/scene-capability-registry.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/caps/light-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/caps/postprocessing-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/caps/environment-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/caps/fog-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/caps/shadow-capability.ts",
+      "cardCount": 1,
+      "cards": [
+        "render-federation"
       ],
       "depth": 4,
       "exists": true
@@ -4033,7 +3907,7 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/caps",
+      "path": "frontend/src/preview-3d/adapters/scene-registry.ts",
       "cardCount": 1,
       "cards": [
         "scene_capability_registry"
@@ -4087,34 +3961,7 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d/screenshot-render.ts",
-      "cardCount": 1,
-      "cards": [
-        "utils-export"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/screenshot-lights.ts",
-      "cardCount": 1,
-      "cards": [
-        "utils-export"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/texture-loader.ts",
-      "cardCount": 1,
-      "cards": [
-        "utils-export"
-      ],
-      "depth": 4,
-      "exists": true
-    },
-    {
-      "path": "frontend/src/features/preview-3d/screenshot.ts",
+      "path": "frontend/src/preview-3d/decoder/cache.ts",
       "cardCount": 1,
       "cards": [
         "utils-export"
@@ -4183,6 +4030,60 @@
         "utils-summarize"
       ],
       "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters/worker-bridge.ts",
+      "cardCount": 1,
+      "cards": [
+        "worker-bridge-settleerror-fallback"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/decoder/wasm-decode.ts",
+      "cardCount": 1,
+      "cards": [
+        "ysm-baked"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/decoder/geometry.ts",
+      "cardCount": 1,
+      "cards": [
+        "ysm-baked"
+      ],
+      "depth": 4,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/debug-render.ts",
+      "cardCount": 1,
+      "cards": [
+        "3d-patterns"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/model-group-builder.ts",
+      "cardCount": 1,
+      "cards": [
+        "3d-patterns"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/cleanup-helper.ts",
+      "cardCount": 1,
+      "cards": [
+        "3d-patterns"
+      ],
+      "depth": 3,
       "exists": true
     },
     {
@@ -4271,6 +4172,15 @@
       "cardCount": 1,
       "cards": [
         "backend-idb"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/mmd-bones.ts",
+      "cardCount": 1,
+      "cards": [
+        "bone-tools"
       ],
       "depth": 3,
       "exists": true
@@ -4384,6 +4294,24 @@
       "exists": true
     },
     {
+      "path": "frontend/src/preview-3d/ik-solver.ts",
+      "cardCount": 1,
+      "cards": [
+        "ik_solver"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/mmd-foot-ik.ts",
+      "cardCount": 1,
+      "cards": [
+        "ik_solver"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
       "path": "frontend/src/features/import-executor.ts",
       "cardCount": 1,
       "cards": [
@@ -4420,10 +4348,10 @@
       "exists": true
     },
     {
-      "path": "frontend/src/features/preview-3d",
+      "path": "frontend/src/preview-3d/mc-tints.ts",
       "cardCount": 1,
       "cards": [
-        "model3d"
+        "mc-ao-tint"
       ],
       "depth": 3,
       "exists": true
@@ -4456,6 +4384,24 @@
       "exists": true
     },
     {
+      "path": "frontend/src/preview-3d/perception",
+      "cardCount": 1,
+      "cards": [
+        "perception"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/adapters",
+      "cardCount": 1,
+      "cards": [
+        "preview_core"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
       "path": "frontend/src/features/recycle-bin.ts",
       "cardCount": 1,
       "cards": [
@@ -4478,6 +4424,15 @@
       "cardCount": 1,
       "cards": [
         "safe_error_msg"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/caps",
+      "cardCount": 1,
+      "cards": [
+        "scene_capability_registry"
       ],
       "depth": 3,
       "exists": true
@@ -4532,6 +4487,42 @@
       "cardCount": 1,
       "cards": [
         "utils-dom"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/screenshot-render.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/screenshot-lights.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/texture-loader.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
+      ],
+      "depth": 3,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d/screenshot.ts",
+      "cardCount": 1,
+      "cards": [
+        "utils-export"
       ],
       "depth": 3,
       "exists": true
@@ -5063,6 +5054,15 @@
       "cardCount": 1,
       "cards": [
         "go-version"
+      ],
+      "depth": 2,
+      "exists": true
+    },
+    {
+      "path": "frontend/src/preview-3d",
+      "cardCount": 1,
+      "cards": [
+        "model3d"
       ],
       "depth": 2,
       "exists": true

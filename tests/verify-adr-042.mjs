@@ -18,7 +18,7 @@ const results = [];
 // 我们: BoneChannels.scale + evaluateClip 累积 + ysm-animation-player 应用
 function checkScale() {
   const animTs = read("frontend/src/utils/animation/animation.ts");
-  const playerTs = read("frontend/src/features/preview-3d/ysm-animation-player.ts");
+  const playerTs = read("frontend/src/preview-3d/ysm-animation-player.ts");
 
   const checks = [
     {
@@ -61,7 +61,7 @@ function checkScale() {
 // 上游: setHidden(selfHidden, skipChildRendering) 双标记
 // 我们: bone-visibility.ts setBoneVisible 用 g.traverse 递归
 function checkHiddenPropagation() {
-  const boneVisTs = read("frontend/src/features/preview-3d/bone-visibility.ts");
+  const boneVisTs = read("frontend/src/preview-3d/bone-visibility.ts");
 
   const checks = [
     {
@@ -92,9 +92,9 @@ function checkHiddenPropagation() {
 function checkGlow() {
   const specGo = read("go/threejs/spec.go");
   const specBonesGo = read("go/threejs/spec-bones.go");
-  const meshBuilderTs = read("frontend/src/features/preview-3d/mesh-builder.ts");
-  const ysmObjectTs = read("frontend/src/features/preview-3d/ysm-object.ts");
-  const model3dTs = read("frontend/src/features/preview-3d/model3d.ts");
+  const meshBuilderTs = read("frontend/src/preview-3d/mesh-builder.ts");
+  const ysmObjectTs = read("frontend/src/preview-3d/ysm-object.ts");
+  const model3dTs = read("frontend/src/preview-3d/model3d.ts");
 
   const checks = [
     {

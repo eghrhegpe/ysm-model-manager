@@ -1,14 +1,14 @@
-# 评审意见：ADR-129 第三刀迁移（utils/3d → features/preview-3d）
+# 评审意见：ADR-129 第三刀迁移（utils/3d → preview-3d）
 
 > 审核人：主模型（鲸鱼架构师） · 审核方式：源码实证 + 全量验证，非纸面推断
-> 对象：兄弟会话正在进行的 `frontend/src/utils/3d/*` → `frontend/src/features/preview-3d/*` 迁移
+> 对象：兄弟会话正在进行的 `frontend/src/utils/3d/*` → `frontend/src/preview-3d/*` 迁移
 > 结论：**基本妥当 ✅，可提交；含 1 处编号澄清 + 1 处结构建议（不阻断）**
 
 ---
 
 ## 1. 先澄清编号：本次迁移对应 ADR-129，不是 ADR-128
 
-- 工作区迁移 = `utils/3d/*` → `features/preview-3d/*`（227 个 rename + 327 文件改引用），
+- 工作区迁移 = `utils/3d/*` → `preview-3d/*`（227 个 rename + 327 文件改引用），
   这正是 **ADR-129「3D 预览领域根升格」的第三刀**。
 - **ADR-128** 是「菜单导航图生成器 + e2e 选择器派生」，不是目录迁移方案；其落地产物
   （`menu-graph.ts` / `schema-registry.ts` / `node-types.ts`）只是随迁对象。
@@ -39,7 +39,7 @@
 ### 现状 vs ADR-129 目标结构
 
 - **ADR-129 §2.1 目标图**：顶层 `menu/`（preview-menu 家族与 `adapters/` 平级）。
-- **实际落地**：`features/preview-3d/adapters/preview-menu/`（家族仍嵌在 adapters 下，
+- **实际落地**：`preview-3d/adapters/preview-menu/`（家族仍嵌在 adapters 下，
   adapters 依旧 67 文件平铺）。
 - **ADR 自身含糊**：§2.1 画顶层 `menu/`，§2.2 第二刀却写「收进 `adapters/preview-menu/` 子目录」。
   兄弟会话执行的是 §2.2 的写法，故与 §2.1 图不一致——**非执行错误，是文档内部矛盾**。
@@ -51,7 +51,7 @@ views/app-preview 5 + state 测试 3），却埋在「品牌商铺」`adapters/`
 建议：
 
 ```
-features/preview-3d/
+preview-3d/
 ├── state/         地基（已归位 ✅）
 ├── menu/          preview-menu 家族整体上提（域根内去前缀）
 ├── caps/          能力控件系统

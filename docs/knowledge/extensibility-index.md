@@ -31,7 +31,7 @@ affected: false
 
 **批次 1 Top 10 状态**：✅ 闭环 #3（文件夹级判定）/ #5（ShouldHashExt）/ #6（browser-adapter 装配）/ #7（import-dnd）/ #8（app-modules loadView）/ #10（/web 正则）；🔄 部分 #2（双检测器并存）/ #4（copyFile 6 处 wrapper 未收尽，installer 已收敛）/ #9（无显式 hook 指针）；⏸ N/A #1（RenderSession 独立立项）。
 
-**未触达（下一批候选）**：3D 渲染管线（features/preview-3d 全部硬编码）、test-utils 重复模式、wasm 胶水层、Go 低价值阈值常量（MaxImportSize/CHECK_INTERVAL/logs 阈值未入 AppConfig）。
+**未触达（下一批候选）**：3D 渲染管线（preview-3d 全部硬编码）、test-utils 重复模式、wasm 胶水层、Go 低价值阈值常量（MaxImportSize/CHECK_INTERVAL/logs 阈值未入 AppConfig）。
 
 **⭐ 最痛残留（加新类型必改，见 extensibility-round2.md §残留清单）**：前端 `RESOURCE_TYPES` 键 / `RESOURCE_TYPE_LABELS` / `icon.ts` 图标 / `PREVIEW_HANDLERS` / 侧栏顶部 tab 5 处**每次必改**——待从 `resource_types.json` 派生（round2 Top 10 建议 #1-4/#7）。
 
@@ -39,7 +39,7 @@ affected: false
 
 | # | 类型 | 位置 | 一句话 | 价值 |
 |---|------|------|--------|------|
-| 1 | ①+⑥ | `frontend/src/features/preview-3d/model3d.ts` 全文 | RenderSession 完整对象化（camera/renderer/controls/container 收敛 + 16 回调方法化，~数百处引用）——**已裁决独立立项待启动，勿在常规轮次内 rush**（陷阱 #11 高危） | 高 |
+| 1 | ①+⑥ | `frontend/src/preview-3d/model3d.ts` 全文 | RenderSession 完整对象化（camera/renderer/controls/container 收敛 + 16 回调方法化，~数百处引用）——**已裁决独立立项待启动，勿在常规轮次内 rush**（陷阱 #11 高危） | 高 |
 | 2 | ⑥ | `go/importer/importer_file.go` + `go/packs/mcmeta.go` | 两套资源类型检测器并存，均应注册表驱动；新增类型须改两处 | 高 |
 | 3 | ③ | `go/sync/sync_dirlevel.go` / `sync_push.go` / `instance.go` / `installer.go` | 文件夹级/目录型 rtype 判定 6+ 处硬编码，应改用 registry `isDir` | 高 |
 | 4 | ② | `go/fsutil/` `copyFile×6` / `copyDirRecursive×4` | 原子复制原语成对重复，应收敛进 fsutil | 高 |
@@ -108,7 +108,7 @@ affected: false
 
 ---
 
-## 二、`frontend/src/features/preview-3d/`（20 文件）
+## 二、`frontend/src/preview-3d/`（20 文件）
 
 > 注：`model3d.ts` 相关发现与已裁决的 RenderSession 完整对象化立项关联（Top 1），此处仅列其余。
 

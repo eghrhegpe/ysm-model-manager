@@ -12,14 +12,14 @@ const mocks = vi.hoisted(() => ({
   cleanupPreview: vi.fn(),
 }));
 vi.mock("../../backend/app.ts", () => ({ getApp: mocks.getAppMock }));
-vi.mock("../../features/preview-3d/adapters/mount-preview-core.ts", () => ({
+vi.mock("../../preview-3d/adapters/mount-preview-core.ts", () => ({
   switchPreview: mocks.switchPreview,
   hasActivePreview: mocks.hasActivePreview,
   cleanupPreview: mocks.cleanupPreview,
 }));
 
 import { openModel3DFullscreen, registerReRoute } from "./preview-library.ts";
-import { sceneRegistry } from "../../features/preview-3d/adapters/scene-registry.ts";
+import { sceneRegistry } from "../../preview-3d/adapters/scene-registry.ts";
 
 const opener = vi.fn().mockResolvedValue(undefined);
 

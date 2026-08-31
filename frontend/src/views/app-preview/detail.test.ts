@@ -31,17 +31,17 @@ vi.mock("../../backend/app.ts", () => ({
     ReadShaderpackLang: shaderLangMock,
   }),
 }));
-vi.mock("../../features/preview-3d/decoder/wasm-decode.ts", () => ({
+vi.mock("../../preview-3d/decoder/wasm-decode.ts", () => ({
   decodeYsmViaWasm: wasmDecodeMock,
 }));
 vi.mock("./pack-3d.ts", () => ({
   createPack3D: createPack3DMock,
 }));
-vi.mock("../../features/preview-3d/adapters/mmd-detail-stats.ts", () => ({
+vi.mock("../../preview-3d/adapters/mmd-detail-stats.ts", () => ({
   readPmxStats: readPmxStatsMock,
 }));
 vi.mock("./skeleton.ts", () => ({ loadModel2D: loadModel2DMock }));
-vi.mock("../../features/preview-3d/adapters/vrm-adapter.ts", () => ({
+vi.mock("../../preview-3d/adapters/vrm-adapter.ts", () => ({
   readVrmMeta: vrmMetaMock,
 }));
 // ADR-072 根治：薄包装（vrm-3d/mmd-3d）已归位 views/app-preview，mock 路径同目录；

@@ -138,8 +138,8 @@ check('buildSuggestBlock 输出可追加进 commit message 的 Markdown 区块',
 });
 
 check('buildSuggestBlock 单文件亦生成合法区块', () => {
-  const block = buildSuggestBlock([{ file: 'frontend/src/features/preview-3d/model3d.ts', pct: 0 }], 60);
-  assert.match(block, /`frontend\/src\/features\/preview-3d\/model3d.ts` — 0\.0%/);
+  const block = buildSuggestBlock([{ file: 'frontend/src/preview-3d/model3d.ts', pct: 0 }], 60);
+  assert.match(block, /`frontend\/src\/preview-3d\/model3d.ts` — 0\.0%/);
 });
 
 if (fails.length) {

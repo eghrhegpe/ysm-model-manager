@@ -10,7 +10,7 @@
 // mock cli-bridge.executeCLI（web 模式在测试环境视为 native，isWebPlatform=false）
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
-import { recordLoadTrace, clearLoadTraces } from "../../../features/preview-3d/load-trace.ts";
+import { recordLoadTrace, clearLoadTraces } from "../../../preview-3d/load-trace.ts";
 
 const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),

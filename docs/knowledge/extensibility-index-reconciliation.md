@@ -22,7 +22,7 @@ affected: false
 
 | # | 索引条目 | 状态 | 当前证据（文件:行号） |
 |---|---------|------|----------------------|
-| 1 | `model3d.ts` RenderSession 完整对象化（陷阱 #11 已独立立项） | **N/A** | `frontend/src/features/preview-3d/model3d.ts` 仍存在；按索引原文「已裁决独立立项待启动」处理，不计入 Top 10 对账 |
+| 1 | `model3d.ts` RenderSession 完整对象化（陷阱 #11 已独立立项） | **N/A** | `frontend/src/preview-3d/model3d.ts` 仍存在；按索引原文「已裁决独立立项待启动」处理，不计入 Top 10 对账 |
 | 2 | 两套检测器 `importer_file.go` + `mcmeta.go` 均应注册表驱动 | **部分** | 现状（2026-08-26 更新）：`go/packs/mcmeta.go` `DetectResourceType` 已薄壳委托 `types.ClassifyResource`；`go/importer/importer_file.go` `DetectZipType` 收集全条目名后委托 `types.DetectByEntries`（commit `bc95fbb4` 三套编排收敛）。**分类核心已统一于 `types` 包**，`resource_types.json` 字段驱动不变（ADR-067 闭环）。但 `go/repoaudit/repoaudit.go` `Classify` 仍自有实现（**有意保留**：审计口径遇未知容器标 `container`，与导入口径 content-fingerprint 语义不同），故「完全合并为单一入口」未达成。回归护栏见 [classify_routing](./classify-routing.md)（golden/isolation/order + schema 守卫 4/5，commit `634fb63f`）。|
 | 3 | 文件夹级判定 6+ 处硬编码 | **已闭环 ADR-064/065** | `go/sync/sync_push.go` 均改调 `types.IsDirLevelSync(rtype)`；`go/sync/sync_relink.go` 用 `types.IsDirLevelSync(rtype) && types.IsTypeModelFile(base, rtype)`；`go/sync/sync_dirlevel.go` 用 `types.IsTypeModelFile`；`go/instance/instance.go` 用 `types.FindInstDir`（注册表驱动）。`isSyncAllowed/isModelFile/extMatch/syncNameKey` 全部收敛进 `types/`（`NormalizeResourceName`/`IsResourceAllowed`/`IsTypeModelFile`/`IsDirLevelSync`）。 |
 | 4 | `fsutil/` `copyFile×6` / `copyDirRecursive×4` 重复 | **部分** | `go/fsutil/copy.go` 已定义统一 `CopyFile` + `CopyDirRecursive`（注释明确「收敛自 fileops/recycle/importer/sync 四份」）。`installer.copyFileLocked` 已收敛为 `fsutil.CopyFile` 委托 + `StepError` 步骤类型化错误（ADR-044 策略 A：机制归 fsutil、文案归 installer）。仍保留 6 处本地 wrapper：`sync.copyFile`、`recycle.copyFile`、`importer.copyFile`、`fileops.copyFile`、`updater.copyFile`、`cmd/updater.copyFile`——多数为薄包装/不同语义，未完全消除。 |
@@ -55,7 +55,7 @@ affected: false
 
 ---
 
-## 三、二、`frontend/src/features/preview-3d/`（20 条，主要为硬编码常量）
+## 三、二、`frontend/src/preview-3d/`（20 条，主要为硬编码常量）
 
 | 索引位置 | 状态 | 当前证据 |
 |---------|------|---------|
@@ -148,7 +148,7 @@ affected: false
 
 - **Top 10**：6 条已闭环（#3 文件夹级判定/ #5 ShouldHashExt / #6 browser-adapter 字面量 / #7 import-dnd 重复 / #8 app-modules catch / #10 /web 正则）；3 条部分（#2 双入口检测器 / #4 copyFile 6 副本 / #9 ResourceType hook 字段）；1 条 N/A（#1 RenderSession）。
 - **一、backend**：10 条中 3 已闭环（1.4/1.5/1.6 半）、3 部分、4 存活。
-- **二、features/preview-3d**：20+ 条基本全部存活（本轮 ADR 未触及 3D 管线）；Top 1 独立立项未启动。
+- **二、preview-3d**：20+ 条基本全部存活（本轮 ADR 未触及 3D 管线）；Top 1 独立立项未启动。
 - **三、views**：3 条全部存活。
 - **四、core+features+services+utils**：12 条中 2 部分（4.6 BONE_CHANNELS、4.7 display）、10 存活。
 - **五、avatar+geometry+litematic+ysm**：2 部分（头像/geometry ADR-068 已落地容器桥接）、2 存活。

@@ -307,7 +307,7 @@ function render(cards, data) {
   const deepByArea = {};
   for (const r of deepRefs) {
     let area = 'other';
-    if (r.path.startsWith('frontend/src/features/')) area = 'features/preview-3d';
+    if (r.path.startsWith('frontend/src/preview-3d/')) area = 'preview-3d';
     else if (r.path.startsWith('frontend/src/views/')) area = 'views';
     else if (r.path.startsWith('frontend/src/utils/')) area = 'utils';
     else if (r.path.startsWith('frontend/src/core/')) area = 'core';
@@ -323,9 +323,14 @@ function render(cards, data) {
   L.push('');
   L.push('**候选动作（按收益排序）：**');
   L.push('');
-  L.push('1. **`features/preview-3d/` 是深度重灾区**（40 个 ≥5 层引用路径）。该模块被 20+ 张卡引用，');
-  L.push('   是「审核牵动面」最大处。候选：整体提升为顶层模块（如 `src/preview3d/`）或保持现状但为它');
-  L.push('   单独建一个子索引卡（hub 卡），把深路径收敛到一处。');
+  const p3dDeep = deepRefs.filter((r) => r.path.startsWith('frontend/src/preview-3d/')).length;
+  if (p3dDeep > 0) {
+    L.push(`1. **\`preview-3d/\` 尚有 ${p3dDeep} 个 ≥5 层引用路径**（ADR-138 已整体上提为 \`src/preview-3d\`）。`);
+    L.push('   剩余深引用是子目录内部层级（adapters/caps/decoder 等），可按 hub 索引卡收敛。');
+  } else {
+    L.push('1. **`preview-3d/` 已随 ADR-138 上提为 `src/preview-3d`（深度 5→4）**，≥5 层引用清零，');
+    L.push('   深度问题已消解——后续只需对剩余区域按上表分布关注。');
+  }
   L.push('2. **`app-content` 卡引用 28 个文件**（全库最大引用面），是分类膨胀的样本。候选：按子视图');
   L.push('   （site / settings / diagnostics / content）拆分卡片，让审核范围可细化。');
   L.push('3. **Go 端最深仅 3 层**（`go/`、`internal/` 路径天然浅），**无需移动**——深度问题全部在前端。');

@@ -4,7 +4,7 @@ name: mount-preview-module-singleton-race
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts
+  - frontend/src/preview-3d/adapters/mount-preview-core.ts
 use_when:
   - 修 mount3D 并发竞态
   - 评审模块级单例守卫

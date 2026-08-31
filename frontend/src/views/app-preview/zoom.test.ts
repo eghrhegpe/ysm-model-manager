@@ -1,13 +1,13 @@
 // ===== openFullPreview 测试：全屏放大预览 =====
 // 覆盖：overlay 挂载/渲染、滚轮缩放、拖拽旋转、ESC/点空白关闭、关闭幂等
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
+import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 
 const { renderModel2D } = vi.hoisted(() => ({
   renderModel2D: vi.fn(),
 }));
 
-vi.mock("../../features/preview-3d/model2d.ts", () => ({
+vi.mock("../../preview-3d/model2d.ts", () => ({
   renderModel2D,
 }));
 

@@ -32,7 +32,7 @@ const {
 }));
 
 vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
-vi.mock("../../features/preview-3d/adapters/vrm-adapter.ts", () => ({
+vi.mock("../../preview-3d/adapters/vrm-adapter.ts", () => ({
   readVrmMeta: vrmMetaMock,
 }));
 // ADR-072 薄包装 + siblings 解析器全部 mock，阻断 3D 渲染管线 import 链

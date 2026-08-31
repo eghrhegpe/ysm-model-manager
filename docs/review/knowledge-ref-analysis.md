@@ -2,7 +2,7 @@
 
 > **自动生成**：`node scripts/analyze-knowledge-refs.mjs` 产出，禁止手改。
 > 用途：审核范围划定 + 文件浅移决策的依据（量化「卡→源码」深度与「源码→卡」牵动面）。
-> 生成时间：2026-08-31T03:46:32.683Z
+> 生成时间：2026-08-31T04:56:09.419Z
 
 ## 摘要
 
@@ -26,7 +26,7 @@
 | utils | 33 | 75 | 5 | 工具函数（display、fmt、dom、animation） |
 | ui | 28 | 114 | 5 | 前端 UI 组件（tree、sidebar、preview、content） |
 | core | 18 | 78 | 5 | 核心基础设施（事件总线、页面状态、Wails 桥接） |
-| config | 8 | 18 | 5 | 配置与注册表（resource_types、AppConfig） |
+| config | 8 | 18 | 4 | 配置与注册表（resource_types、AppConfig） |
 | feature | 7 | 14 | 4 | 业务功能（导入队列、同步、社区） |
 
 ## 二、卡 → 源码引用深度榜（Top 30）
@@ -34,35 +34,35 @@
 | 卡 | 分类 | 引用数 | 命中 | 最深 | 平均深度 |
 |---|---|---|---|---|---|
 | `app-content` | ui | 28 | 28 | 5 | 4.6 |
-| `optimization_log` | config | 12 | 12 | 5 | 4.1 |
-| `animation-system` | utils | 10 | 10 | 5 | 4.4 |
-| `pointer-events` | core | 9 | 9 | 5 | 4.3 |
-| `preview_panel_declarative` | ui | 9 | 9 | 5 | 4.7 |
-| `render-federation` | utils | 9 | 9 | 5 | 5 |
-| `multi_model_select` | ui | 7 | 7 | 5 | 3.9 |
-| `preview_core` | utils | 7 | 7 | 5 | 3.6 |
-| `3d-patterns` | ui | 6 | 6 | 5 | 4.2 |
+| `animation-system` | utils | 10 | 10 | 5 | 4.3 |
+| `pointer-events` | core | 9 | 9 | 5 | 4.1 |
 | `i18n` | core | 6 | 6 | 5 | 4.5 |
-| `preview_menu_session_key` | ui | 6 | 6 | 5 | 4.7 |
 | `i18n_accuracy` | core | 5 | 5 | 5 | 3.4 |
-| `utils-export` | utils | 5 | 5 | 5 | 4.2 |
-| `bone-tools` | utils | 4 | 4 | 5 | 4.5 |
-| `preview_menu_settings_state` | ui | 4 | 4 | 5 | 5 |
-| `ysm-anim-pipeline` | utils | 4 | 4 | 5 | 4.3 |
-| `ysm-baked` | core | 4 | 4 | 5 | 4 |
-| `3d-oversize-file-codesplit-feasibility` | ui | 3 | 3 | 5 | 5 |
-| `preview_state` | ui | 3 | 3 | 5 | 5 |
 | `dialog-adv-filter` | ui | 2 | 2 | 5 | 5 |
 | `dialog-batch-rename` | ui | 2 | 2 | 5 | 5 |
 | `dialog-rename` | ui | 2 | 2 | 5 | 5 |
 | `dialog-tag-editor` | ui | 2 | 2 | 5 | 5 |
-| `ground_surface_spec` | utils | 2 | 2 | 5 | 5 |
-| `mc-ao-tint` | utils | 2 | 2 | 5 | 4.5 |
-| `scene_capability_registry` | utils | 2 | 2 | 5 | 4.5 |
 | `dialog-modal` | ui | 1 | 1 | 5 | 5 |
-| `ground-cap-gcbuildmaterialgroup-133` | utils | 1 | 1 | 5 | 5 |
-| `mount-preview-module-singleton-race` | utils | 1 | 1 | 5 | 5 |
-| `mount3d-584-giant` | utils | 1 | 1 | 5 | 5 |
+| `optimization_log` | config | 12 | 12 | 4 | 3.4 |
+| `preview_panel_declarative` | ui | 9 | 9 | 4 | 4 |
+| `render-federation` | utils | 9 | 9 | 4 | 4 |
+| `app-sidebar` | ui | 8 | 8 | 4 | 4 |
+| `context-menu` | ui | 8 | 8 | 4 | 3.3 |
+| `multi_model_select` | ui | 7 | 7 | 4 | 3.4 |
+| `preview_core` | utils | 7 | 7 | 4 | 3 |
+| `3d-patterns` | ui | 6 | 6 | 4 | 3.5 |
+| `global-handlers` | core | 6 | 6 | 4 | 3.7 |
+| `preview_menu_session_key` | ui | 6 | 6 | 4 | 4 |
+| `utils-export` | utils | 5 | 5 | 4 | 3.2 |
+| `bone-tools` | utils | 4 | 4 | 4 | 3.5 |
+| `preview_menu_settings_state` | ui | 4 | 4 | 4 | 4 |
+| `ysm-anim-pipeline` | utils | 4 | 4 | 4 | 3.8 |
+| `ysm-baked` | core | 4 | 4 | 4 | 3.5 |
+| `3d-oversize-file-codesplit-feasibility` | ui | 3 | 3 | 4 | 4 |
+| `app-toast` | ui | 3 | 3 | 4 | 4 |
+| `preview_state` | ui | 3 | 3 | 4 | 4 |
+| `resource-registry` | config | 3 | 3 | 4 | 2.3 |
+| `android-bridge` | core | 2 | 2 | 4 | 4 |
 
 ## 三、源码 → 卡反向引用榜（Top 30，审核牵动面）
 
@@ -70,10 +70,10 @@
 
 | 源码路径 | 深度 | 引用卡数 | 引用卡 |
 |---|---|---|---|
-| `frontend/src/features/preview-3d/adapters/mount-preview-core.ts` | 5 | 6 | 3d-oversize-file-codesplit-feasibility, 3d-patterns, mount-preview-module-singleton-race, mount3d-584-giant, preview_menu_session_key, render-federation |
-| `frontend/src/features/preview-3d/caps/ground-capability.ts` | 5 | 5 | 3d-oversize-file-codesplit-feasibility, ground-cap-gcbuildmaterialgroup-133, ground_surface_spec, preview_core, render-federation |
-| `frontend/src/features/preview-3d/adapters/mmd-adapter.ts` | 5 | 3 | 3d-oversize-file-codesplit-feasibility, optimization_log, preview_panel_declarative |
-| `frontend/src/features/preview-3d/adapters/ysm-adapter.ts` | 5 | 3 | preview_menu_session_key, preview_panel_declarative, ysm-anim-pipeline |
+| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 4 | 6 | 3d-oversize-file-codesplit-feasibility, 3d-patterns, mount-preview-module-singleton-race, mount3d-584-giant, preview_menu_session_key, render-federation |
+| `frontend/src/preview-3d/caps/ground-capability.ts` | 4 | 5 | 3d-oversize-file-codesplit-feasibility, ground-cap-gcbuildmaterialgroup-133, ground_surface_spec, preview_core, render-federation |
+| `frontend/src/preview-3d/adapters/mmd-adapter.ts` | 4 | 3 | 3d-oversize-file-codesplit-feasibility, optimization_log, preview_panel_declarative |
+| `frontend/src/preview-3d/adapters/ysm-adapter.ts` | 4 | 3 | preview_menu_session_key, preview_panel_declarative, ysm-anim-pipeline |
 | `internal/app/app_download.go` | 2 | 3 | app_cycle_injection, go-download, wails-bindings |
 | `internal/app/app.go` | 2 | 3 | app_cycle_injection, go-android-platform-guard, wails-bindings |
 | `go/litematic/voxel.go` | 2 | 3 | go-litematic, multi_model_select, preview_core |
@@ -83,23 +83,23 @@
 | `frontend/src/core/i18n/locales/en.ts` | 5 | 2 | i18n, i18n_accuracy |
 | `frontend/src/core/i18n/locales/ja.ts` | 5 | 2 | i18n, i18n_accuracy |
 | `frontend/src/core/i18n/locales/zh-CN.ts` | 5 | 2 | i18n, i18n_accuracy |
-| `frontend/src/features/preview-3d/adapters/pack-model-adapter.ts` | 5 | 2 | mc-ao-tint, multi_model_select |
-| `frontend/src/features/preview-3d/caps/sky-capability.ts` | 5 | 2 | preview_core, render-federation |
-| `frontend/src/features/preview-3d/state/preview-state.ts` | 5 | 2 | preview_menu_settings_state, preview_state |
-| `frontend/src/features/preview-3d/menu/settings.ts` | 5 | 2 | preview_menu_settings_state, preview_state |
-| `frontend/src/features/preview-3d/menu/node-types.ts` | 5 | 2 | preview_panel_declarative, preview_state |
 | `frontend/src/views/app-preview/skeleton.ts` | 4 | 2 | 3d-patterns, pointer-events |
 | `frontend/src/utils/animation/animation.ts` | 4 | 2 | animation-system, ysm-anim-pipeline |
 | `frontend/src/utils/animation/molang.ts` | 4 | 2 | animation-system, ysm-anim-pipeline |
-| `frontend/src/features/preview-3d/ysm-animation-player.ts` | 4 | 2 | animation-system, ysm-anim-pipeline |
-| `frontend/src/features/preview-3d/bone-tools.ts` | 4 | 2 | bone-tools, preview_core |
 | `frontend/src/core/handlers/instance-ops.ts` | 4 | 2 | context-menu, global-handlers |
-| `frontend/src/features/preview-3d/model2d.ts` | 4 | 2 | model2d, pointer-events |
+| `frontend/src/preview-3d/adapters/pack-model-adapter.ts` | 4 | 2 | mc-ao-tint, multi_model_select |
 | `frontend/src/views/app-preview/mmd-controls.ts` | 4 | 2 | multi_model_select, preview_panel_declarative |
 | `frontend/src/views/app-preview/litematic-3d.ts` | 4 | 2 | multi_model_select, pointer-events |
 | `frontend/src/views/app-tree/toolbar-events.ts` | 4 | 2 | pointer-events, toolbar-search |
+| `frontend/src/preview-3d/caps/sky-capability.ts` | 4 | 2 | preview_core, render-federation |
 | `frontend/src/views/app-preview/ysm-controls.ts` | 4 | 2 | preview_menu_session_key, preview_panel_declarative |
+| `frontend/src/preview-3d/state/preview-state.ts` | 4 | 2 | preview_menu_settings_state, preview_state |
+| `frontend/src/preview-3d/menu/settings.ts` | 4 | 2 | preview_menu_settings_state, preview_state |
+| `frontend/src/preview-3d/menu/node-types.ts` | 4 | 2 | preview_panel_declarative, preview_state |
+| `frontend/src/preview-3d/ysm-animation-player.ts` | 3 | 2 | animation-system, ysm-anim-pipeline |
 | `frontend/src/views/app-nav` | 3 | 2 | app-nav, resource-packs |
+| `frontend/src/backend/app.ts` | 3 | 2 | backend-idb, wails-bridge |
+| `frontend/src/backend/browser-adapter.ts` | 3 | 2 | backend-idb, wails-bridge |
 
 ## 四、引用孤岛
 
@@ -143,21 +143,6 @@
 - `frontend/src/views/app-content/workshop-data.ts`
 - `frontend/src/utils/icon/workshop-icons.ts`
 
-### `optimization_log`（config，引用 12/12，最深 5 层）
-
-- `frontend/src/features/preview-3d/adapters/mmd-adapter.ts`
-- `frontend/src/features/preview-3d/adapters/mmd-ktx2-encoder.ts`
-- `frontend/src/features/preview-3d/adapters/mmd-ktx2-basis.ts`
-- `frontend/src/features/preview-3d/adapters/mmd-ktx2-worker.ts`
-- `frontend/src/features/preview-3d/adapters/mmd-ktx2-texture-loader.ts`
-- `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.ts`
-- `frontend/src/features/preview-3d/adapters/mmd-pmx-parser.worker.ts`
-- `frontend/src/features/preview-3d/adapters/mmd-texture-decoder.ts`
-- `frontend/src/utils/main-thread-watch.ts`
-- `internal/app/app_model.go`
-- `internal/app/app_texture_cache.go`
-- `go/texture_cache/texture_cache.go`
-
 ### `animation-system`（utils，引用 10/10，最深 5 层）
 
 - `frontend/src/utils/animation/animation.ts`
@@ -169,12 +154,12 @@
 - `frontend/src/utils/animation/molang-lib/easing.js`
 - `frontend/src/utils/animation/molang-lib/math.js`
 - `frontend/src/utils/animation/molang-lib/molang-prism-syntax.js`
-- `frontend/src/features/preview-3d/ysm-animation-player.ts`
+- `frontend/src/preview-3d/ysm-animation-player.ts`
 
 ### `pointer-events`（core，引用 9/9，最深 5 层）
 
-- `frontend/src/features/preview-3d/adapters/input-and-animation.ts`
-- `frontend/src/features/preview-3d/model2d.ts`
+- `frontend/src/preview-3d/adapters/input-and-animation.ts`
+- `frontend/src/preview-3d/model2d.ts`
 - `frontend/src/views/app-preview/zoom.ts`
 - `frontend/src/views/app-preview/skeleton.ts`
 - `frontend/src/views/app-preview/litematic-3d.ts`
@@ -182,59 +167,6 @@
 - `frontend/src/views/app-content/settings/init.ts`
 - `frontend/src/views/app-content/site/edit.ts`
 - `frontend/src/views/app-tree/toolbar-events.ts`
-
-### `preview_panel_declarative`（ui，引用 9/9，最深 5 层）
-
-- `frontend/src/features/preview-3d/menu/core.ts`
-- `frontend/src/features/preview-3d/menu/render.ts`
-- `frontend/src/features/preview-3d/menu/node-types.ts`
-- `frontend/src/features/preview-3d/adapters/mmd-adapter.ts`
-- `frontend/src/features/preview-3d/adapters/ysm-adapter.ts`
-- `frontend/src/features/preview-3d/adapters/morph-controls.ts`
-- `frontend/src/views/app-preview/mmd-controls.ts`
-- `frontend/src/views/app-preview/ysm-controls.ts`
-- `frontend/src/views/app-preview/shot-panel-shared.ts`
-
-### `render-federation`（utils，引用 9/9，最深 5 层）
-
-- `frontend/src/features/preview-3d/caps/scene-capability-registry.ts`
-- `frontend/src/features/preview-3d/caps/sky-capability.ts`
-- `frontend/src/features/preview-3d/caps/ground-capability.ts`
-- `frontend/src/features/preview-3d/caps/light-capability.ts`
-- `frontend/src/features/preview-3d/caps/postprocessing-capability.ts`
-- `frontend/src/features/preview-3d/caps/environment-capability.ts`
-- `frontend/src/features/preview-3d/caps/fog-capability.ts`
-- `frontend/src/features/preview-3d/caps/shadow-capability.ts`
-- `frontend/src/features/preview-3d/adapters/mount-preview-core.ts`
-
-### `multi_model_select`（ui，引用 7/7，最深 5 层）
-
-- `frontend/src/features/preview-3d/menu/multi-model.ts`
-- `frontend/src/views/app-preview/mmd-controls.ts`
-- `frontend/src/features/preview-3d/adapters/pack-model-adapter.ts`
-- `frontend/src/features/preview-3d/adapters/litematic-adapter.ts`
-- `frontend/src/views/app-preview/litematic-3d.ts`
-- `internal/app/container_entries.go`
-- `go/litematic/voxel.go`
-
-### `preview_core`（utils，引用 7/7，最深 5 层）
-
-- `frontend/src/features/preview-3d/adapters/`
-- `frontend/src/features/preview-3d/bone-tools.ts`
-- `frontend/src/features/preview-3d/caps/sky-capability.ts`
-- `frontend/src/features/preview-3d/caps/ground-capability.ts`
-- `internal/app/container_entries.go`
-- `go/litematic/voxel.go`
-- `frontend/src/backend/web-fs.ts`
-
-### `3d-patterns`（ui，引用 6/6，最深 5 层）
-
-- `frontend/src/features/preview-3d/debug-render.ts`
-- `frontend/src/features/preview-3d/model-group-builder.ts`
-- `frontend/src/features/preview-3d/adapters/mount-preview-core.ts`
-- `frontend/src/features/preview-3d/cleanup-helper.ts`
-- `frontend/src/views/app-preview/preview-library.ts`
-- `frontend/src/views/app-preview/skeleton.ts`
 
 ### `i18n`（core，引用 6/6，最深 5 层）
 
@@ -245,15 +177,6 @@
 - `frontend/src/core/i18n/locales/ja.ts`
 - `frontend/src/core/i18n/locales/zh-CN.ts`
 
-### `preview_menu_session_key`（ui，引用 6/6，最深 5 层）
-
-- `frontend/src/features/preview-3d/adapters/schema-registry.ts`
-- `frontend/src/views/app-preview/ysm-controls.ts`
-- `frontend/src/features/preview-3d/adapters/ysm-adapter.ts`
-- `frontend/src/features/preview-3d/adapters/mount-preview-core.ts`
-- `frontend/src/features/preview-3d/adapters/switch-preview.ts`
-- `frontend/src/views/app-preview/skeleton-fill-panel.ts`
-
 ### `i18n_accuracy`（core，引用 5/5，最深 5 层）
 
 - `frontend/src/core/i18n/locales/zh-CN.ts`
@@ -261,54 +184,6 @@
 - `frontend/src/core/i18n/locales/ja.ts`
 - `scripts/i18n-key-naming.mjs`
 - `tests/test_i18n_key_naming.mjs`
-
-### `utils-export`（utils，引用 5/5，最深 5 层）
-
-- `frontend/src/features/preview-3d/screenshot-render.ts`
-- `frontend/src/features/preview-3d/screenshot-lights.ts`
-- `frontend/src/features/preview-3d/texture-loader.ts`
-- `frontend/src/features/preview-3d/decoder/cache.ts`
-- `frontend/src/features/preview-3d/screenshot.ts`
-
-### `bone-tools`（utils，引用 4/4，最深 5 层）
-
-- `frontend/src/features/preview-3d/bone-tools.ts`
-- `frontend/src/features/preview-3d/adapters/vrm-bone.ts`
-- `frontend/src/features/preview-3d/adapters/vrm-bone-ui.ts`
-- `frontend/src/features/preview-3d/mmd-bones.ts`
-
-### `preview_menu_settings_state`（ui，引用 4/4，最深 5 层）
-
-- `frontend/src/features/preview-3d/state/preview-state.ts`
-- `frontend/src/features/preview-3d/menu/settings.ts`
-- `frontend/src/features/preview-3d/menu/cap-controls.ts`
-- `frontend/src/features/preview-3d/caps/scene-capability.ts`
-
-### `ysm-anim-pipeline`（utils，引用 4/4，最深 5 层）
-
-- `frontend/src/features/preview-3d/ysm-animation-player.ts`
-- `frontend/src/features/preview-3d/adapters/ysm-adapter.ts`
-- `frontend/src/utils/animation/molang.ts`
-- `frontend/src/utils/animation/animation.ts`
-
-### `ysm-baked`（core，引用 4/4，最深 5 层）
-
-- `frontend/src/features/preview-3d/decoder/wasm-decode.ts`
-- `frontend/src/features/preview-3d/decoder/geometry.ts`
-- `frontend/public/wasm/YSMParser.js`
-- `frontend/public/wasm/YSMParser.wasm`
-
-### `3d-oversize-file-codesplit-feasibility`（ui，引用 3/3，最深 5 层）
-
-- `frontend/src/features/preview-3d/adapters/mmd-adapter.ts`
-- `frontend/src/features/preview-3d/adapters/mount-preview-core.ts`
-- `frontend/src/features/preview-3d/caps/ground-capability.ts`
-
-### `preview_state`（ui，引用 3/3，最深 5 层）
-
-- `frontend/src/features/preview-3d/state/preview-state.ts`
-- `frontend/src/features/preview-3d/menu/settings.ts`
-- `frontend/src/features/preview-3d/menu/node-types.ts`
 
 ### `dialog-adv-filter`（ui，引用 2/2，最深 5 层）
 
@@ -330,40 +205,48 @@
 - `frontend/src/utils/dom/dialogs/tag-editor.ts`
 - `frontend/src/utils/dom/dialogs/tag-set.ts`
 
-### `ground_surface_spec`（utils，引用 2/2，最深 5 层）
-
-- `frontend/src/features/preview-3d/caps/ground-surface-spec.ts`
-- `frontend/src/features/preview-3d/caps/ground-capability.ts`
-
-### `mc-ao-tint`（utils，引用 2/2，最深 5 层）
-
-- `frontend/src/features/preview-3d/adapters/pack-model-adapter.ts`
-- `frontend/src/features/preview-3d/mc-tints.ts`
-
-### `scene_capability_registry`（utils，引用 2/2，最深 5 层）
-
-- `frontend/src/features/preview-3d/caps/`
-- `frontend/src/features/preview-3d/adapters/scene-registry.ts`
-
 ### `dialog-modal`（ui，引用 1/1，最深 5 层）
 
 - `frontend/src/utils/dom/dialogs/modal.ts`
 
-### `ground-cap-gcbuildmaterialgroup-133`（utils，引用 1/1，最深 5 层）
+### `optimization_log`（config，引用 12/12，最深 4 层）
 
-- `frontend/src/features/preview-3d/caps/ground-capability.ts`
+- `frontend/src/preview-3d/adapters/mmd-adapter.ts`
+- `frontend/src/preview-3d/adapters/mmd-ktx2-encoder.ts`
+- `frontend/src/preview-3d/adapters/mmd-ktx2-basis.ts`
+- `frontend/src/preview-3d/adapters/mmd-ktx2-worker.ts`
+- `frontend/src/preview-3d/adapters/mmd-ktx2-texture-loader.ts`
+- `frontend/src/preview-3d/adapters/mmd-pmx-parser.ts`
+- `frontend/src/preview-3d/adapters/mmd-pmx-parser.worker.ts`
+- `frontend/src/preview-3d/adapters/mmd-texture-decoder.ts`
+- `frontend/src/utils/main-thread-watch.ts`
+- `internal/app/app_model.go`
+- `internal/app/app_texture_cache.go`
+- `go/texture_cache/texture_cache.go`
 
-### `mount-preview-module-singleton-race`（utils，引用 1/1，最深 5 层）
+### `preview_panel_declarative`（ui，引用 9/9，最深 4 层）
 
-- `frontend/src/features/preview-3d/adapters/mount-preview-core.ts`
+- `frontend/src/preview-3d/menu/core.ts`
+- `frontend/src/preview-3d/menu/render.ts`
+- `frontend/src/preview-3d/menu/node-types.ts`
+- `frontend/src/preview-3d/adapters/mmd-adapter.ts`
+- `frontend/src/preview-3d/adapters/ysm-adapter.ts`
+- `frontend/src/preview-3d/adapters/morph-controls.ts`
+- `frontend/src/views/app-preview/mmd-controls.ts`
+- `frontend/src/views/app-preview/ysm-controls.ts`
+- `frontend/src/views/app-preview/shot-panel-shared.ts`
 
-### `mount3d-584-giant`（utils，引用 1/1，最深 5 层）
+### `render-federation`（utils，引用 9/9，最深 4 层）
 
-- `frontend/src/features/preview-3d/adapters/mount-preview-core.ts`
-
-### `worker-bridge-settleerror-fallback`（utils，引用 1/1，最深 5 层）
-
-- `frontend/src/features/preview-3d/adapters/worker-bridge.ts`
+- `frontend/src/preview-3d/caps/scene-capability-registry.ts`
+- `frontend/src/preview-3d/caps/sky-capability.ts`
+- `frontend/src/preview-3d/caps/ground-capability.ts`
+- `frontend/src/preview-3d/caps/light-capability.ts`
+- `frontend/src/preview-3d/caps/postprocessing-capability.ts`
+- `frontend/src/preview-3d/caps/environment-capability.ts`
+- `frontend/src/preview-3d/caps/fog-capability.ts`
+- `frontend/src/preview-3d/caps/shadow-capability.ts`
+- `frontend/src/preview-3d/adapters/mount-preview-core.ts`
 
 ### `app-sidebar`（ui，引用 8/8，最深 4 层）
 
@@ -387,6 +270,35 @@
 - `frontend/src/core/context-menu-shared.ts`
 - `frontend/src/core/handlers/instance-ops.ts`
 
+### `multi_model_select`（ui，引用 7/7，最深 4 层）
+
+- `frontend/src/preview-3d/menu/multi-model.ts`
+- `frontend/src/views/app-preview/mmd-controls.ts`
+- `frontend/src/preview-3d/adapters/pack-model-adapter.ts`
+- `frontend/src/preview-3d/adapters/litematic-adapter.ts`
+- `frontend/src/views/app-preview/litematic-3d.ts`
+- `internal/app/container_entries.go`
+- `go/litematic/voxel.go`
+
+### `preview_core`（utils，引用 7/7，最深 4 层）
+
+- `frontend/src/preview-3d/adapters/`
+- `frontend/src/preview-3d/bone-tools.ts`
+- `frontend/src/preview-3d/caps/sky-capability.ts`
+- `frontend/src/preview-3d/caps/ground-capability.ts`
+- `internal/app/container_entries.go`
+- `go/litematic/voxel.go`
+- `frontend/src/backend/web-fs.ts`
+
+### `3d-patterns`（ui，引用 6/6，最深 4 层）
+
+- `frontend/src/preview-3d/debug-render.ts`
+- `frontend/src/preview-3d/model-group-builder.ts`
+- `frontend/src/preview-3d/adapters/mount-preview-core.ts`
+- `frontend/src/preview-3d/cleanup-helper.ts`
+- `frontend/src/views/app-preview/preview-library.ts`
+- `frontend/src/views/app-preview/skeleton.ts`
+
 ### `global-handlers`（core，引用 6/6，最深 4 层）
 
 - `frontend/src/core/handlers/global.ts`
@@ -396,11 +308,68 @@
 - `frontend/src/core/handlers/require-mcroot.ts`
 - `frontend/src/core/error-diary.ts`
 
+### `preview_menu_session_key`（ui，引用 6/6，最深 4 层）
+
+- `frontend/src/preview-3d/adapters/schema-registry.ts`
+- `frontend/src/views/app-preview/ysm-controls.ts`
+- `frontend/src/preview-3d/adapters/ysm-adapter.ts`
+- `frontend/src/preview-3d/adapters/mount-preview-core.ts`
+- `frontend/src/preview-3d/adapters/switch-preview.ts`
+- `frontend/src/views/app-preview/skeleton-fill-panel.ts`
+
+### `utils-export`（utils，引用 5/5，最深 4 层）
+
+- `frontend/src/preview-3d/screenshot-render.ts`
+- `frontend/src/preview-3d/screenshot-lights.ts`
+- `frontend/src/preview-3d/texture-loader.ts`
+- `frontend/src/preview-3d/decoder/cache.ts`
+- `frontend/src/preview-3d/screenshot.ts`
+
+### `bone-tools`（utils，引用 4/4，最深 4 层）
+
+- `frontend/src/preview-3d/bone-tools.ts`
+- `frontend/src/preview-3d/adapters/vrm-bone.ts`
+- `frontend/src/preview-3d/adapters/vrm-bone-ui.ts`
+- `frontend/src/preview-3d/mmd-bones.ts`
+
+### `preview_menu_settings_state`（ui，引用 4/4，最深 4 层）
+
+- `frontend/src/preview-3d/state/preview-state.ts`
+- `frontend/src/preview-3d/menu/settings.ts`
+- `frontend/src/preview-3d/menu/cap-controls.ts`
+- `frontend/src/preview-3d/caps/scene-capability.ts`
+
+### `ysm-anim-pipeline`（utils，引用 4/4，最深 4 层）
+
+- `frontend/src/preview-3d/ysm-animation-player.ts`
+- `frontend/src/preview-3d/adapters/ysm-adapter.ts`
+- `frontend/src/utils/animation/molang.ts`
+- `frontend/src/utils/animation/animation.ts`
+
+### `ysm-baked`（core，引用 4/4，最深 4 层）
+
+- `frontend/src/preview-3d/decoder/wasm-decode.ts`
+- `frontend/src/preview-3d/decoder/geometry.ts`
+- `frontend/public/wasm/YSMParser.js`
+- `frontend/public/wasm/YSMParser.wasm`
+
+### `3d-oversize-file-codesplit-feasibility`（ui，引用 3/3，最深 4 层）
+
+- `frontend/src/preview-3d/adapters/mmd-adapter.ts`
+- `frontend/src/preview-3d/adapters/mount-preview-core.ts`
+- `frontend/src/preview-3d/caps/ground-capability.ts`
+
 ### `app-toast`（ui，引用 3/3，最深 4 层）
 
 - `frontend/src/views/app-toast/index.ts`
 - `frontend/src/utils/dom/feedback.ts`
 - `frontend/src/utils/dom/toast-ms.ts`
+
+### `preview_state`（ui，引用 3/3，最深 4 层）
+
+- `frontend/src/preview-3d/state/preview-state.ts`
+- `frontend/src/preview-3d/menu/settings.ts`
+- `frontend/src/preview-3d/menu/node-types.ts`
 
 ### `resource-registry`（config，引用 3/3，最深 4 层）
 
@@ -418,20 +387,30 @@
 - `frontend/src/views/app-tree/index.ts`
 - `frontend/src/views/app-tree/`
 
-### `ik_solver`（core，引用 2/2，最深 4 层）
+### `ground_surface_spec`（utils，引用 2/2，最深 4 层）
 
-- `frontend/src/features/preview-3d/ik-solver.ts`
-- `frontend/src/features/preview-3d/mmd-foot-ik.ts`
+- `frontend/src/preview-3d/caps/ground-surface-spec.ts`
+- `frontend/src/preview-3d/caps/ground-capability.ts`
+
+### `mc-ao-tint`（utils，引用 2/2，最深 4 层）
+
+- `frontend/src/preview-3d/adapters/pack-model-adapter.ts`
+- `frontend/src/preview-3d/mc-tints.ts`
 
 ### `model3d`（utils，引用 2/2，最深 4 层）
 
-- `frontend/src/features/preview-3d/`
+- `frontend/src/preview-3d/`
 - `frontend/src/views/app-preview/model3d-loader.ts`
 
 ### `resource-packs`（feature，引用 2/2，最深 4 层）
 
 - `frontend/src/views/app-preview/detail.ts`
 - `frontend/src/views/app-nav/`
+
+### `scene_capability_registry`（utils，引用 2/2，最深 4 层）
+
+- `frontend/src/preview-3d/caps/`
+- `frontend/src/preview-3d/adapters/scene-registry.ts`
 
 ### `shared-styles`（ui，引用 2/2，最深 4 层）
 
@@ -468,13 +447,17 @@
 
 - `frontend/src/utils/format/ysm-anim-config.ts`
 
-### `model2d`（utils，引用 1/1，最深 4 层）
+### `ground-cap-gcbuildmaterialgroup-133`（utils，引用 1/1，最深 4 层）
 
-- `frontend/src/features/preview-3d/model2d.ts`
+- `frontend/src/preview-3d/caps/ground-capability.ts`
 
-### `perception`（utils，引用 1/1，最深 4 层）
+### `mount-preview-module-singleton-race`（utils，引用 1/1，最深 4 层）
 
-- `frontend/src/features/preview-3d/perception/`
+- `frontend/src/preview-3d/adapters/mount-preview-core.ts`
+
+### `mount3d-584-giant`（utils，引用 1/1，最深 4 层）
+
+- `frontend/src/preview-3d/adapters/mount-preview-core.ts`
 
 ### `utils-display`（utils，引用 1/1，最深 4 层）
 
@@ -503,6 +486,10 @@
 ### `utils-summarize`（utils，引用 1/1，最深 4 层）
 
 - `frontend/src/utils/format/summarize.ts`
+
+### `worker-bridge-settleerror-fallback`（utils，引用 1/1，最深 4 层）
+
+- `frontend/src/preview-3d/adapters/worker-bridge.ts`
 
 ### `backend-idb`（core，引用 13/13，最深 3 层）
 
@@ -572,6 +559,11 @@
 - `frontend/src/features/community/`
 - `frontend/src/utils/gh-links.ts`
 
+### `ik_solver`（core，引用 2/2，最深 3 层）
+
+- `frontend/src/preview-3d/ik-solver.ts`
+- `frontend/src/preview-3d/mmd-foot-ik.ts`
+
 ### `app-nav`（ui，引用 1/1，最深 3 层）
 
 - `frontend/src/views/app-nav/`
@@ -592,6 +584,10 @@
 
 - `go/internal/testutil/testutil.go`
 
+### `model2d`（utils，引用 1/1，最深 3 层）
+
+- `frontend/src/preview-3d/model2d.ts`
+
 ### `oldest-models`（feature，引用 1/1，最深 3 层）
 
 - `frontend/src/features/oldest-models.ts`
@@ -599,6 +595,10 @@
 ### `page-store`（core，引用 1/1，最深 3 层）
 
 - `frontend/src/core/page-store.ts`
+
+### `perception`（utils，引用 1/1，最深 3 层）
+
+- `frontend/src/preview-3d/perception/`
 
 ### `recycle-bin`（feature，引用 1/1，最深 3 层）
 
@@ -935,20 +935,18 @@
 
 > 以下为**数据驱动的候选动作**，仅作决策输入，需人工/ADR 拍板后执行。
 
-**深度 ≥5 的引用路径共 72 个，按区域分布：**
+**深度 ≥5 的引用路径共 32 个，按区域分布：**
 
 | 区域 | 路径数 |
 |---|---|
-| features/preview-3d | 40 |
 | views | 16 |
 | utils | 13 |
 | core | 3 |
 
 **候选动作（按收益排序）：**
 
-1. **`features/preview-3d/` 是深度重灾区**（40 个 ≥5 层引用路径）。该模块被 20+ 张卡引用，
-   是「审核牵动面」最大处。候选：整体提升为顶层模块（如 `src/preview3d/`）或保持现状但为它
-   单独建一个子索引卡（hub 卡），把深路径收敛到一处。
+1. **`preview-3d/` 已随 ADR-138 上提为 `src/preview-3d`（深度 5→4）**，≥5 层引用清零，
+   深度问题已消解——后续只需对剩余区域按上表分布关注。
 2. **`app-content` 卡引用 28 个文件**（全库最大引用面），是分类膨胀的样本。候选：按子视图
    （site / settings / diagnostics / content）拆分卡片，让审核范围可细化。
 3. **Go 端最深仅 3 层**（`go/`、`internal/` 路径天然浅），**无需移动**——深度问题全部在前端。

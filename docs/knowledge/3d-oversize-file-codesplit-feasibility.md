@@ -4,9 +4,9 @@ name: 3D 层超大文件 code-split 可行性
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/features/preview-3d/adapters/mmd-adapter.ts
-  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts
-  - frontend/src/features/preview-3d/caps/ground-capability.ts
+  - frontend/src/preview-3d/adapters/mmd-adapter.ts
+  - frontend/src/preview-3d/adapters/mount-preview-core.ts
+  - frontend/src/preview-3d/caps/ground-capability.ts
 created: 2026-08-27
 ---
 

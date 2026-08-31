@@ -6,16 +6,16 @@ adr:
   - ADR-125
 category: utils
 source_files:
-  - frontend/src/features/preview-3d/adapters/
-  - frontend/src/features/preview-3d/bone-tools.ts
-  - frontend/src/features/preview-3d/caps/sky-capability.ts
-  - frontend/src/features/preview-3d/caps/ground-capability.ts
+  - frontend/src/preview-3d/adapters/
+  - frontend/src/preview-3d/bone-tools.ts
+  - frontend/src/preview-3d/caps/sky-capability.ts
+  - frontend/src/preview-3d/caps/ground-capability.ts
   - internal/app/container_entries.go
   - go/litematic/voxel.go
   - frontend/src/backend/web-fs.ts
 tests:
-  - frontend/src/features/preview-3d/adapters/mmd-adapter.test.ts
-  - frontend/src/features/preview-3d/adapters/ysm-3d.test.ts
+  - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
+  - frontend/src/preview-3d/adapters/ysm-3d.test.ts
   - frontend/src/views/app-preview/litematic-3d.test.ts
 use_when:
   - 3D 预览
@@ -25,10 +25,10 @@ use_when:
   - 全模型预览（YSM / VRM / MMD / Litematic）
   - mount3D
 invariant_anchors:
-  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts|mount3D
-  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts|_singletonScene.background
-  - frontend/src/features/preview-3d/caps/sky-capability.ts|SkyCapability
-  - frontend/src/features/preview-3d/adapters/mount-preview-core.ts|PreviewAdapter
+  - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
+  - frontend/src/preview-3d/adapters/mount-preview-core.ts|_singletonScene.background
+  - frontend/src/preview-3d/caps/sky-capability.ts|SkyCapability
+  - frontend/src/preview-3d/adapters/mount-preview-core.ts|PreviewAdapter
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -76,7 +76,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
   **2026-08-19 环境拆组**：环境体量 > 全部场景设置，故将 `environment` 从 `scene` 组拆出，独立成 `env` 组（🌍 环境）。scene 组 icon 换 🎛️ 避免双 🌍 混淆。dock 按钮顺序：🧍 模型 → 💃 动作 → 🌍 环境 → 🎛️ 场景。组内仅一个 panel 项时自动快捷直达面板（不渲染组根视图），故 env 组（单 environment 项）点击直接进环境面板。
 
-  **2026-08-29 ADR-131 统计面板**：核心层 post-build（`mount3D` 注册块）对 `sceneBaseline` 差量 roots 调 `collectSceneStats`（`features/preview-3d/scene-stats.ts`），经 `mergeStatsMenuItems`（`preview-menu/stats.ts`）合并统计面板进 `menuItems` 后**一次** `setAdapterItems`（合并后一次注入，禁止二次调用覆盖；幂等：`STATS_PANEL_ID` 去重）；switch 路径 `registerSwitchScene` 同样重采统计并合并，`switchToSession` 成功后按新模型 menuItems 刷新 dock（非空注入 / 空清空——审查 C1 修复，此前 dock 残留首模型菜单）；注册表 `menuItems` 另经 roles 详情 / `setActive` 消费。面板节点 `kind: "panel"` + 6 个 field 行，`visibleWhen: (s) => hasSceneStats(stats)` 守卫有统计才显示（铁律：声明式节点可被所有数组类菜单调用）。i18n key `preview.stats.*` 三段式。
+  **2026-08-29 ADR-131 统计面板**：核心层 post-build（`mount3D` 注册块）对 `sceneBaseline` 差量 roots 调 `collectSceneStats`（`preview-3d/scene-stats.ts`），经 `mergeStatsMenuItems`（`preview-menu/stats.ts`）合并统计面板进 `menuItems` 后**一次** `setAdapterItems`（合并后一次注入，禁止二次调用覆盖；幂等：`STATS_PANEL_ID` 去重）；switch 路径 `registerSwitchScene` 同样重采统计并合并，`switchToSession` 成功后按新模型 menuItems 刷新 dock（非空注入 / 空清空——审查 C1 修复，此前 dock 残留首模型菜单）；注册表 `menuItems` 另经 roles 详情 / `setActive` 消费。面板节点 `kind: "panel"` + 6 个 field 行，`visibleWhen: (s) => hasSceneStats(stats)` 守卫有统计才显示（铁律：声明式节点可被所有数组类菜单调用）。i18n key `preview.stats.*` 三段式。
 
   **P2 详情卡补统计行（2026-08-29）**：VRM `readVrmMeta` 在 `deepDispose` 前 `collectSceneStats(vrm.scene)` 顺带采集（零额外成本，`VrmMetaInfo.stats`；顺序守护测试：deepDispose mock 真清几何，挪位即断言失败）；MMD `showMmdPreview` 经 `mmd-detail-stats.ts` 的 `readPmxStats`（Worker 解析 PMX counts + 模块级缓存防重复解析，**键含 b64 长度内容指纹**——同路径文件被替换/重导入后自动重解析不显陈旧统计，上限 64 条防无界增长；仅 `.pmx` 触发、失败降级 null）。**三口径标注**（审核建议 ②）：`preview.stats.panel` =「渲染实测」（traverse 场景图口径，3D 菜单 + VRM 详情卡共用）、`preview.stats.file` =「文件统计」（PMX 解析口径，MMD 详情卡）、YSM 模型面板 = Go AnalyzeBedrockModel 口径——三方区分，避免同屏数字口径困惑。**已知边界**：`.pmd` 老格式不触发文件统计（parser 为 PMX 专属），降级无统计行——非 bug，日后同理。
 
@@ -91,12 +91,12 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 - **适配器**：`ysm-adapter` / `vrm-adapter`（`GLTFLoader`）/ `mmd-adapter`（`@moeru/three-mmd`）/ `litematic-adapter` 各自实现 `PreviewAdapter`，`build()` 进 `ctx.scene`
 - **数据层**：YSM 经 `model3d-loader`（`GetModel3DSpec` 唯一事实来源 + WASM 兜底）；MMD 经 `@moeru/three-mmd`；VRM / Litematic 各加载器
-- **旧并行链路（已全部删除，勿再建）**：`RenderSession` / `renderModel3D`（ADR-052）曾存在于 `frontend/src/features/preview-3d/`；render-session.ts（470 行）与 renderer-setup.ts 均随 ADR-052 P2 收尾删除（生产无调用方），`model3d.ts` 缩为 Spec 类型枢纽。程序化天空**仅落统一核心**。
+- **旧并行链路（已全部删除，勿再建）**：`RenderSession` / `renderModel3D`（ADR-052）曾存在于 `frontend/src/preview-3d/`；render-session.ts（470 行）与 renderer-setup.ts 均随 ADR-052 P2 收尾删除（生产无调用方），`model3d.ts` 缩为 Spec 类型枢纽。程序化天空**仅落统一核心**。
 
 ## 不变量
 
 - **`scene.background` 兜底（shared 模式，`mount-preview-core.ts`）**：核心创建 `scene` 并设 `scene.background = new THREE.Color("#1a1b2e")`；所有适配器 mount 进同一 `ctx.scene`
-- **天空落点（已实现，ADR-073 L1）**：统一核心在 shared 模式创建 `renderer` 后立即 `new SkyCapability({ scene, renderer }).apply()`（`mount-preview-core.ts`），复用 Three 官方 `Sky`（Preetham 散射）。YSM / VRM / MMD / Litematic 因共用同一 `ctx.scene` **零改动继承**——即「MMD 有天空 → YSM/VRM 自动获得」在 Three 域内的真·自动机制。能力层 `frontend/src/features/preview-3d/caps/sky-capability.ts` 封装 uniform 管线 + 可选 IBL（`setEnvironmentEnabled`，默认关）+ 会话级 tone mapping（dispose 还原）。`scene.background` 纯色保留为禁用天空时的兜底。
+- **天空落点（已实现，ADR-073 L1）**：统一核心在 shared 模式创建 `renderer` 后立即 `new SkyCapability({ scene, renderer }).apply()`（`mount-preview-core.ts`），复用 Three 官方 `Sky`（Preetham 散射）。YSM / VRM / MMD / Litematic 因共用同一 `ctx.scene` **零改动继承**——即「MMD 有天空 → YSM/VRM 自动获得」在 Three 域内的真·自动机制。能力层 `frontend/src/preview-3d/caps/sky-capability.ts` 封装 uniform 管线 + 可选 IBL（`setEnvironmentEnabled`，默认关）+ 会话级 tone mapping（dispose 还原）。`scene.background` 纯色保留为禁用天空时的兜底。
 - **self 模式**（`adapter.mode === "self"`，如个别单例）：核心仅提供外壳、不创建 `scene`，背景由适配器自管
 - **dock 🧍 模型组按钮恒定直达 roles 面板（2026-08-22 收口，commit e8d6f5aa）**：`renderDock` 模型组**不再**按 `sceneRegistry` 是否为空分流。生产环境每个 `built` 都经 `mount-preview-core.ts` 注册进 `sceneRegistry`，故注册表恒非空——原「无角色→组根视图」兜底分支是**死分支**，且会导致加载模型后 🧍 显示旧组根菜单（与 FAB 直进 roles 不一致）。🧍 永远走 `makePanelView(rolesDef)` 直接开角色面板（角色管理 + 内嵌加载入口 `fillSwitch`）。单模型实例工具（模型信息/截图/骨骼/材料）保留 `dockGroup:"model"` 不变，由 `roleDetailView` 按 `dockGroup==="model"` 过滤，从 dock 根**下沉到角色详情内可达**——YS'M+PMX 同台时天然自洽，且多蓝图/投影等注册的实体也能经各自详情卸载（复用类型无关的 `unloadRole`）。
 
@@ -148,4 +148,4 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 - `model3d.md`（3D 渲染层基础设施卡：Spec 类型枢纽 + 坐标口径 + 渲染管线，单会话架构）
 - `app-preview.md`（预览面板组件：2D 骨骼 / 3D / 缩略图）
-- 程序化天空落地见本卡「不变量」（能力层 `frontend/src/features/preview-3d/caps/sky-capability.ts`，经统一核心 shared 模式注入；旧 renderer-setup.ts 为死代码已删除不触碰）
+- 程序化天空落地见本卡「不变量」（能力层 `frontend/src/preview-3d/caps/sky-capability.ts`，经统一核心 shared 模式注入；旧 renderer-setup.ts 为死代码已删除不触碰）

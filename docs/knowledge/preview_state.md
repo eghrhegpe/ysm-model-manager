@@ -4,11 +4,11 @@ name: 3D 预览全域状态层（ADR-126 P4-A）
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/features/preview-3d/state/preview-state.ts
-  - frontend/src/features/preview-3d/menu/settings.ts
-  - frontend/src/features/preview-3d/menu/node-types.ts
+  - frontend/src/preview-3d/state/preview-state.ts
+  - frontend/src/preview-3d/menu/settings.ts
+  - frontend/src/preview-3d/menu/node-types.ts
 tests:
-  - frontend/src/features/preview-3d/state/preview-state.test.ts
+  - frontend/src/preview-3d/state/preview-state.test.ts
 use_when:
   - 新增 3D 预览面板跨 cap 设置项
   - 排查预览面板状态改了不生效 / 重开面板值不对
@@ -81,6 +81,6 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 ## 相关
 
 - ADR-126（本决策 P4-A）、ADR-125（P1 血统）、ADR-085（S2 补全对象）、ADR-093（sceneRegistry 归属）
-- 契约测试：`frontend/src/features/preview-3d/state/preview-state.test.ts`（20 例，随迁自 settings-state.test.ts）
+- 契约测试：`frontend/src/preview-3d/state/preview-state.test.ts`（20 例，随迁自 settings-state.test.ts）
 - 消费者：`preview-menu/settings.ts`（`buildCrossCuttingControls` 三项横切控件读写走本层）
 - 后续：P4-B 面板 schema 化（**已落地 P4-B-1/2**）、P4-D 可见性谓词化（**已落地：`visibleWhen: (s: PreviewSnapshot) => boolean`**，node-types.ts 签名升级 + renderMenu / renderPreviewSchemaContent 调用点传 `previewSnapshot()`）、P4-C dockGroup 解耦（按需加 `ui.activePanel`）

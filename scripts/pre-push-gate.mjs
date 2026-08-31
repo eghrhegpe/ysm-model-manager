@@ -544,7 +544,7 @@ async function main() {
     // --all / --docs 模式 files 为空、不传 --files → 全库基线比对，向后兼容。
     // 数组参数直走 procRun（无 shell）：--files 大列表（整目录搬家可达 300+ 文件）经
     // shell:true 会超 cmd.exe 8191 限制，check-redlines 进程起不来 → fail-closed 报
-    // 「输出解析失败」误阻断推送（2026-08-31 ADR-129 第三刀 utils/3d → features/preview-3d 实证）。
+    // 「输出解析失败」误阻断推送（2026-08-31 ADR-129 第三刀 utils/3d → preview-3d 实证）。
     // 数组直传走 Windows CreateProcess 32767 上限，避开 cmd 8K 墙。all/docs 模式 files 为空 → 全库比对。
     const rlArgs = ['scripts/check-redlines.mjs', '--json', '--baseline'];
     if (files.length) rlArgs.push('--files', files.join('\n'));

@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // 部分 mock：保留原模块真实导出，仅覆盖 cleanupPreview / hasActivePreview / switchPreview 供断言
-vi.mock("../../features/preview-3d/adapters/mount-preview-core.ts", async (importOriginal) => {
+vi.mock("../../preview-3d/adapters/mount-preview-core.ts", async (importOriginal) => {
   const mod = (await importOriginal()) as Record<string, unknown>;
   return {
     ...mod,
@@ -25,7 +25,7 @@ const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
 vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
 
 import { openModel3DFullscreen, registerReRoute } from "./preview-library.ts";
-import { cleanupPreview, hasActivePreview, switchPreview } from "../../features/preview-3d/adapters/mount-preview-core.ts";
+import { cleanupPreview, hasActivePreview, switchPreview } from "../../preview-3d/adapters/mount-preview-core.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

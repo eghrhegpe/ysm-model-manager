@@ -6,8 +6,10 @@
  * 字段生成 docs/knowledge/routes-quick.md，替代手工维护版。
  *
  * 输入（知识卡 frontmatter，全部可选；缺字段视为该卡不参与急速表）:
- *   quick_groups:     场景分组名（与 quick_intents 按索引配对，值即分组标题）
- *   quick_intents:    用户意图关键词（每行一个，按索引与 quick_groups 配对）
+ *   quick_groups:     场景分组名（值即分组标题；与 quick_intents 循环配对）
+ *   quick_intents:    用户意图关键词（每行一个，与 quick_groups 循环配对：
+ *                     意图多于分组时并入最后分组，分组多于意图时多余分组不输出；
+ *                     配对不均恒打 WARN，绝不静默丢弃——2026-08-31 审计修复）
  *   quick_risk_lines: 红线警告（按索引与 quick_intents 配对；缺省则该行红线填 -）
  *   pitfalls:         陷阱列表，格式 "「位置」描述 → 正确做法"（如无前缀则整段作陷阱描述）
  *
@@ -20,6 +22,7 @@
  * 用法:
  *   node scripts/gen-routes-quick.mjs            # 写入 docs/knowledge/routes-quick.md
  *   node scripts/gen-routes-quick.mjs --check    # 只校验不写入，不同则 exit 1（CI 用）
+ *   node scripts/gen-routes-quick.mjs --json     # JSON 摘要（pre-push-gate runTools 契约，--check 可组合）
  *   node scripts/gen-routes-quick.mjs --help     # 用法说明
  *
  * 零依赖（仅 node:fs / node:path）。
@@ -65,11 +68,23 @@ function parsePitfall(raw) {
 
 function render(cards) {
   const rows = [];
+  // 意图 ↔ 分组循环配对（2026-08-31 审计修复）：
+  // 旧实现 Math.min(groups, intents) 仅按索引配对，go-scanner 1 组 5 意图只出 1 行、
+  // preview_core 1 组 4 意图只出 1 行——其余意图静默丢弃、零警告（routes-quick 覆盖空转）。
+  // 新语义：意图多于分组 → 多余意图并入最后分组（保意图不丢）；分组多于意图 → 多余分组不输出。
+  // 两种不均都打 WARN，让 AI/人工立即看到配对异常。
   for (const c of cards) {
-    const n = Math.min(c.groups.length, c.intents.length);
-    for (let i = 0; i < n; i++) {
+    const gLen = c.groups.length;
+    const iLen = c.intents.length;
+    if (iLen > gLen) {
+      console.warn(`⚠️  ${c.file}: ${iLen} 条意图 > ${gLen} 个分组，多余 ${iLen - gLen} 条并入最后分组「${c.groups[gLen - 1]}」`);
+    } else if (gLen > iLen) {
+      const extra = c.groups.slice(iLen);
+      console.warn(`⚠️  ${c.file}: ${gLen} 个分组 > ${iLen} 条意图，多余分组不输出: ${extra.join('、')}`);
+    }
+    for (let i = 0; i < iLen; i++) {
       rows.push({
-        group: c.groups[i],
+        group: c.groups[Math.min(i, gLen - 1)],
         intent: c.intents[i],
         risk: c.risks.length > i ? c.risks[i] : '-',
         adr: c.adr,
@@ -118,7 +133,8 @@ function render(cards) {
 }
 
 function main() {
-  const args = parseArgs(process.argv.slice(2), { bools: ['check'], strings: [], defaults: {} });
+  const args = parseArgs(process.argv.slice(2), { bools: ['check', 'json'], strings: [], defaults: {} });
+  const JSON_OUT = args.json;
   if (args.help) {
     const src = fs.readFileSync(process.argv[1], 'utf-8');
     const s = src.indexOf('/**'), e = src.indexOf('*/', s);
@@ -155,24 +171,34 @@ function main() {
   cards.sort((a, b) => a.file.localeCompare(b.file));
 
   const output = render(cards);
-  const total = cards.reduce((s, c) => s + Math.min(c.groups.length, c.intents.length), 0);
+  const total = cards.reduce((s, c) => s + c.intents.length, 0);
   const pitCount = cards.reduce((s, c) => s + c.pitfalls.length, 0);
   console.error(`📄 ${cards.length} 张卡带 quick_groups，${total} 条高频意图，${pitCount} 条陷阱`);
 
+  const summary = (ok, check, generated) =>
+    JSON.stringify({ ok, check, generated, count: total, intents: total, pitfalls: pitCount, cards: cards.map((c) => c.file) });
+
   if (args.check) {
     const existing = fs.existsSync(OUT_PATH) ? fs.readFileSync(OUT_PATH, 'utf8') : '';
-    if (existing !== output) {
+    const synced = existing === output;
+    if (JSON_OUT) {
+      console.log(summary(synced, true, false));
+    } else if (synced) {
+      console.log(`✅ ${OUT_PATH} 已同步`);
+    } else {
       console.error(`❌ ${OUT_PATH} 未同步，请运行: node scripts/gen-routes-quick.mjs`);
-      process.exit(1);
     }
-    console.log(`✅ ${OUT_PATH} 已同步`);
-    return;
+    process.exit(synced ? 0 : 1);
   }
 
   const tmp = OUT_PATH + '.tmp';
   fs.writeFileSync(tmp, output);
   fs.renameSync(tmp, OUT_PATH);
-  console.log(`✅ 已写入 ${path.relative(process.cwd(), OUT_PATH)}`);
+  if (JSON_OUT) {
+    console.log(summary(true, false, true));
+  } else {
+    console.log(`✅ 已写入 ${path.relative(process.cwd(), OUT_PATH)}`);
+  }
 }
 
 main();

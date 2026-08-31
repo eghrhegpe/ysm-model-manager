@@ -162,6 +162,8 @@ const ALL_STATIC_TOOLS = [
   { tool: 'funcmap.mjs', args: ['--check'], autoFix: true },
   { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
   { tool: 'build-novel-index.mjs', args: ['--check'] },
+  { tool: 'gen-routes.mjs', args: ['--check'] },
+  { tool: 'gen-routes-quick.mjs', args: ['--check'] },
   { tool: 'gen-cli-doc.mjs', args: ['--check'] },
   { tool: 'gen-cli-completion.mjs', args: ['--check'] },
   { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
@@ -186,6 +188,11 @@ const DOC_STATIC_TOOLS = [
   { tool: 'funcmap.mjs', args: ['--check'], autoFix: true },
   { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
   { tool: 'build-novel-index.mjs', args: ['--check'] },
+  // 路由表生成器（2026-08-31 审计修复）：此前未接门禁——改任何卡 use_when/quick_*
+  // 后 routes.md / routes-quick.md 不会自动重生成也不会报错，AI 第一站静默失同步。
+  // 此处 --check 硬校验（exit 1 阻断），pre-commit GEN_CMDS 同步负责自动重生成。
+  { tool: 'gen-routes.mjs', args: ['--check'] },
+  { tool: 'gen-routes-quick.mjs', args: ['--check'] },
   { tool: 'gen-cli-doc.mjs', args: ['--check'] },
   { tool: 'gen-cli-completion.mjs', args: ['--check'] },
   { tool: 'check-script-hygiene.mjs', args: ['--strict'] },

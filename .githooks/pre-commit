@@ -71,6 +71,8 @@ gen-knowledge-h1.mjs
 gen-knowledge-symbols.mjs
 gen-knowledge-adr.mjs
 gen-knowledge-tests.mjs
+gen-routes.mjs
+gen-routes-quick.mjs
 gen-cli-doc.mjs
 gen-cli-completion.mjs
 generate-locale-json.mjs'

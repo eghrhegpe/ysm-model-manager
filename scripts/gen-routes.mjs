@@ -19,6 +19,7 @@
  * 用法：
  *   node scripts/gen-routes.mjs            # 写入 docs/knowledge/routes.md
  *   node scripts/gen-routes.mjs --check    # 只校验不写入（CI）
+ *   node scripts/gen-routes.mjs --json     # JSON 摘要（pre-push-gate runTools 契约，--check 可组合）
  *
  * 零依赖（仅 node:fs / node:path）。
  * 设计意图：路由表生成器
@@ -117,10 +118,11 @@ function renderRoutes(cards) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2), {
-    bools: ['check'],
+    bools: ['check', 'json'],
     strings: [],
     defaults: {},
   });
+  const JSON_OUT = args.json;
   if (args.help) {
     const _src = fs.readFileSync(process.argv[1], 'utf-8');
     const _s = _src.indexOf('/**');
@@ -185,18 +187,28 @@ function main() {
   const output = renderRoutes(routable);
   console.error(`📄 ${routable.length} 张 architecture 卡可路由（${cards.length - routable.length} 张无 use_when 关键词）`);
 
+  const summary = (ok, check, generated) =>
+    JSON.stringify({ ok, check, generated, count: routable.length, conflicts: conflicts.length, cards: routable.map((c) => c.file) });
+
   if (isCheck) {
     const existing = fs.existsSync(OUT_PATH) ? fs.readFileSync(OUT_PATH, 'utf8') : '';
-    if (existing !== output) {
+    const synced = existing === output;
+    if (JSON_OUT) {
+      console.log(summary(synced, true, false));
+    } else if (synced) {
+      console.log(`✅ ${OUT_PATH} 已同步`);
+    } else {
       console.error(`❌ ${OUT_PATH} 未同步，请运行：node scripts/gen-routes.mjs`);
-      process.exit(1);
     }
-    console.log(`✅ ${OUT_PATH} 已同步`);
-    return;
+    process.exit(synced ? 0 : 1);
   }
 
   fs.writeFileSync(OUT_PATH, output);
-  console.log(`✅ 已写入 ${path.relative(process.cwd(), OUT_PATH)}`);
+  if (JSON_OUT) {
+    console.log(summary(true, false, true));
+  } else {
+    console.log(`✅ 已写入 ${path.relative(process.cwd(), OUT_PATH)}`);
+  }
 }
 
 main();

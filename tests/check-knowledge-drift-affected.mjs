@@ -17,10 +17,17 @@ const NODE = process.execPath;
 const errors = [];
 
 function runAffected(...files) {
-  const r = spawnSync(NODE, [path.join(SCRIPTS, 'check-knowledge-drift.mjs'), '--affected', ...files], {
-    encoding: 'utf-8',
-    timeout: 30000,
-  });
+  // Windows 高并发下 spawn 可能瞬时 ENOENT（进程表饱和，进程根本没起来），
+  // 与脚本逻辑无关、重试即可恢复。仅当 spawn 自身失败（r.error）重试，
+  // 进程正常跑完却退出码非 0 → 不重试，交断言判真实回归（2026-08-31 审计加固）。
+  let r = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    r = spawnSync(NODE, [path.join(SCRIPTS, 'check-knowledge-drift.mjs'), '--affected', ...files], {
+      encoding: 'utf-8',
+      timeout: 30000,
+    });
+    if (!(r.error && /ENOENT|EMFILE|spawn/i.test(r.error.message || ''))) break;
+  }
   if (r.status !== 0) errors.push(`--affected 退出码非 0: ${r.status} | stderr=${r.stderr?.slice(0, 120)}`);
   return r.stdout || '';
 }

@@ -27,11 +27,18 @@ export function collectContractTests() {
 }
 
 /**
- * 运行单个测试文件，返回 { stdout, stderr, status }。
+ * 运行单个测试文件，返回 { stdout, stderr, status, spawnError? }。
  * 使用 spawn 而非 execFile：execFile Promise API 在 Node 24 上 stdout/stderr
  * 返回对象而非字符串，行为不一致。
+ *
+ * Windows 高并发下（全量门禁同时跑 ~20 个静态工具 + 39 个契约测试 + git 操作），
+ * 进程表瞬时饱和会导致 spawn 直接抛 ENOENT（进程根本没起来），表现为偶发契约测试
+ * 红——与测试逻辑无关、重试即可恢复。故对「进程未启动」做有限重试，
+ * 但「进程正常跑完却断言失败」绝不重试，避免掩盖真实回归（2026-08-31 审计加固）。
  */
-function runTest(file) {
+const MAX_SPAWN_RETRY = 3;
+
+function spawnTestOnce(file) {
   return new Promise((resolve) => {
     const proc = spawn(process.execPath, [path.join('tests', file)], {
       cwd: ROOT,
@@ -45,8 +52,23 @@ function runTest(file) {
       const out = Buffer.concat(chunks).toString('utf8');
       resolve({ stdout: out, stderr: '', status: code ?? 1 });
     });
-    proc.on('error', (e) => resolve({ stdout: '', stderr: e.message, status: 1 }));
+    proc.on('error', (e) => resolve({ stdout: '', stderr: e.message, status: 1, spawnError: e }));
   });
+}
+
+async function runTest(file) {
+  let last = null;
+  for (let attempt = 1; attempt <= MAX_SPAWN_RETRY; attempt++) {
+    const r = await spawnTestOnce(file);
+    // 仅「进程未起来」（spawn 瞬时 ENOENT / EMFILE 等）重试；
+    // 进程正常跑完但断言失败 → 立即返回，交上层判失败，不掩盖真实回归。
+    if (r.spawnError && /ENOENT|EMFILE|spawn/i.test(r.stderr || r.spawnError.message || '')) {
+      last = r;
+      continue;
+    }
+    return r;
+  }
+  return last;
 }
 
 /**

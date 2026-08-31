@@ -12,11 +12,13 @@ import { animateNumber } from "../../utils/animation/animate.ts";
 import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 import {
-  ROW_H_GRID,
-  ROW_H_LIST,
   calcVisibleRange,
   installScrollSync,
-} from "./virtual-scroll.ts";
+} from "../../utils/dom/virtual-scroll.ts";
+
+/** 树行高（虚拟滚动定高窗口，grid/list 两档；自 app-tree 原 virtual-scroll.ts 迁入） */
+export const ROW_H_GRID = 28;
+export const ROW_H_LIST = 24;
 
 /** 扁平化行（虚拟滚动数据单元） */
 export interface TreeRow {

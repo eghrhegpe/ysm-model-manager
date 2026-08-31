@@ -214,7 +214,7 @@
 | `frontend/src/views/app-preview/detail-3d.ts` | 341 |
 | `frontend/src/views/app-tree/events.ts` | 155 |
 | `frontend/src/views/app-tree/events.ts` | 252 |
-| `frontend/src/views/app-tree/index.ts` | 418 |
+| `frontend/src/views/app-tree/index.ts` | 417 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -557,11 +557,11 @@
 | `frontend/src/views/app-tree/events.ts` | 433 |
 | `frontend/src/views/app-tree/events.ts` | 476 |
 | `frontend/src/views/app-tree/events.ts` | 486 |
-| `frontend/src/views/app-tree/index.ts` | 208 |
-| `frontend/src/views/app-tree/index.ts` | 354 |
-| `frontend/src/views/app-tree/index.ts` | 362 |
-| `frontend/src/views/app-tree/index.ts` | 463 |
-| `frontend/src/views/app-tree/index.ts` | 470 |
+| `frontend/src/views/app-tree/index.ts` | 207 |
+| `frontend/src/views/app-tree/index.ts` | 353 |
+| `frontend/src/views/app-tree/index.ts` | 361 |
+| `frontend/src/views/app-tree/index.ts` | 462 |
+| `frontend/src/views/app-tree/index.ts` | 469 |
 | `frontend/src/views/app-tree/loader.ts` | 31 |
 | `frontend/src/views/app-tree/loader.ts` | 55 |
 | `frontend/src/views/app-tree/toolbar-events.ts` | 44 |
@@ -620,4 +620,4 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/index.ts` | 144 |
+| `frontend/src/views/app-tree/index.ts` | 143 |

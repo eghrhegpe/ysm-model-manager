@@ -153,6 +153,8 @@ func copyDirRecursive(src, dst string) error {
 
 // copyDirContents 递归复制目录内容到目标（无原子性保证，供旧 copyDirRecursive 测试保留）。
 // 收敛后不再供生产代码使用，仅保留供已有测试引用（drift-scan 不检测此函数名）。
+// R30 P2-1 + code_review P1-2：符号链接路径穿越防护仍在此函数内，
+// 因测试直接调用此函数验证 symlink 守卫。生产路径走 fsutil.CopyDirRecursive。
 func copyDirContents(src, dst string) error {
 	entries, err := os.ReadDir(src)
 	if err != nil {

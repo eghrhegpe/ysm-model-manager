@@ -260,6 +260,8 @@ func Download(assetURL string, expectedHash string) (string, error) {
 // 多源回退（用户反馈：直连 GitHub Release 20MB 包 7 分钟仅 17%）：
 // 直连 asset URL 失败/超时后，按 ghProxyPrefixes 依次拼代理前缀重试，任一成功即返回；
 // 全部失败时聚合各源错误返回（含源标识，便于用户判断是直连还是镜像问题）。
+// R30 P2-2 评估：多源回退的攻击面（代理被入侵替换 exe）已被 P2-3 SHA256 强制校验覆盖；
+// SSRF 到内网的风险已被 P2-1 CheckRedirect 守卫覆盖。无需额外域名白名单。
 func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(done, total int64)) (string, error) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
@@ -289,8 +291,20 @@ func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(
 
 // newDownloadClient 构建下载用 HTTP 客户端（每源独立 90s 超时：直连慢/卡时快速切镜像）。
 // ⚠️ 包级变量便于测试注入自定义 RoundTripper（仅测试注入，禁止生产调用），覆盖完整性校验等不可由真实网络触达的分支。
+// R30 P2-1：注入 CheckRedirect 守卫，与 go/download 包的 restrictedHTTPClient 同口径：
+// 拒绝非 http/https scheme（防 file:///etc/passwd 等本地文件读取）+ 跳数上限 10（防重定向死循环）。
 var newDownloadClient = func() *http.Client {
-	return &http.Client{Timeout: downloadTimeout}
+	c := &http.Client{Timeout: downloadTimeout}
+	c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if req.URL.Scheme != "https" && req.URL.Scheme != "http" {
+			return fmt.Errorf("updater: 拒绝非 http/https 重定向: %s", req.URL)
+		}
+		if len(via) >= 10 {
+			return fmt.Errorf("updater: 重定向链过长 (≥10)")
+		}
+		return nil
+	}
+	return c
 }
 
 // downloadOnce 单源下载尝试：HTTP GET + 大小截断防护 + SHA256 校验
@@ -348,6 +362,16 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 		return "", err
 	}
 	tmp := f.Name()
+
+	// R30 P2-4：临时文件 symlink 劫持防护。
+	// os.CreateTemp 在系统临时目录创建文件，若 TMPDIR 被设为攻击者可写路径，
+	// 或临时目录存在符号链接劫持，下载的 exe 可被替换。
+	// 创建后用 os.Lstat 校验：若发现是符号链接则拒绝（fail-closed）。
+	if fi, lerr := os.Lstat(tmp); lerr == nil && fi.Mode()&os.ModeSymlink != 0 {
+		f.Close()
+		os.Remove(tmp)
+		return "", fmt.Errorf("临时文件 %s 是符号链接，拒绝写入（防 symlink 劫持）", tmp)
+	}
 
 	// 限制下载大小（最大 500MB），同时计算 SHA256
 	// 预检：Content-Length 超限直接拒绝（省流量，防磁盘写满）
@@ -462,17 +486,51 @@ func InstallUpdate(exePath string) error {
 		return fmt.Errorf("获取程序路径失败: %w", err)
 	}
 
-	// 装盘前预检：无哈希降级场景下至少校验 PE 魔数，防损坏/篡改包替换运行中 exe
+	// 装盘前预检：校验 PE 魔数 + PE 签名，防损坏/篡改包替换运行中 exe
+	// R30 P2-5：旧实现仅校验 2 字节 "MZ"，攻击者可在合法 MZ 后附带任意 payload。
+	// 增强：读取 PE header 偏移（MZ + 0x3C 处的 4 字节 little-endian），
+	// 定位 PE 签名（"PE\0\0"），确认是完整 PE 文件。
 	f, err := os.Open(exePath)
 	if err != nil {
 		return fmt.Errorf("打开更新包失败: %w", err)
 	}
 	var magic [2]byte
 	_, err = io.ReadFull(f, magic[:])
-	f.Close()
 	if err != nil || string(magic[:]) != "MZ" {
+		f.Close()
 		return ErrInvalidPackage
 	}
+	// 读取 PE header 偏移（MZ + 0x3C）
+	if _, err := f.Seek(0x3C, io.SeekStart); err != nil {
+		f.Close()
+		return fmt.Errorf("%w：读取 PE 偏移失败: %v", ErrInvalidPackage, err)
+	}
+	var peOffsetBytes [4]byte
+	if _, err := io.ReadFull(f, peOffsetBytes[:]); err != nil {
+		f.Close()
+		return fmt.Errorf("%w：读取 PE 偏移失败: %v", ErrInvalidPackage, err)
+	}
+	peOffset := int(peOffsetBytes[0]) | int(peOffsetBytes[1])<<8 | int(peOffsetBytes[2])<<16 | int(peOffsetBytes[3])<<24
+	// 偏移合理性检查：PE header 不可能在 MZ header 之前，也不能太远（PE 文件通常 < 1GB）
+	if peOffset < 64 || peOffset > 1<<30 {
+		f.Close()
+		return fmt.Errorf("%w：PE 偏移非法 %d", ErrInvalidPackage, peOffset)
+	}
+	// 读取 PE 签名（"PE\0\0"）
+	if _, err := f.Seek(int64(peOffset), io.SeekStart); err != nil {
+		f.Close()
+		return fmt.Errorf("%w：定位 PE 签名失败: %v", ErrInvalidPackage, err)
+	}
+	var peSig [4]byte
+	if _, err := io.ReadFull(f, peSig[:]); err != nil {
+		f.Close()
+		return fmt.Errorf("%w：读取 PE 签名失败: %v", ErrInvalidPackage, err)
+	}
+	if string(peSig[:]) != "PE\x00\x00" {
+		f.Close()
+		return fmt.Errorf("%w：PE 签名不匹配", ErrInvalidPackage)
+	}
+	f.Close()
 
 	// 准备临时目录：复制新 exe + 释放 helper
 	tmpDir, err := os.MkdirTemp("", "ysm-update")

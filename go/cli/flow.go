@@ -53,7 +53,7 @@ func runGUIFlow(ctx *CmdContext) error {
 
 	// 如果指定了模型，使用它；否则用扫描到的第一个
 	targetModel := *modelPath
-	if targetModel == "" {
+	if targetModel == "" && len(results) > 0 {
 		if lastResult := results[len(results)-1]; lastResult.Success {
 			// 从描述中提取第一个模型
 			if idx := strings.Index(lastResult.Description, "首个模型:"); idx != -1 {
@@ -240,7 +240,7 @@ func runPhaseModelAnalyze(a *app.App, modelPath string) guiFlowResult {
 	model := a.AnalyzeBedrockModel(modelPath)
 	elapsed := time.Since(start)
 
-	if model.Bones == nil || len(model.Bones) == 0 {
+	if len(model.Bones) == 0 {
 		return guiFlowResult{
 			Stage:       "③ 模型分析",
 			Duration:    elapsed,

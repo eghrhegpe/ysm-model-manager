@@ -26,11 +26,15 @@ func ParseNbtStructure(path string) map[string]interface{} {
 	if v, ok := getInt(root, "DataVersion"); ok {
 		result["dataVersion"] = v
 	}
-	if sizeList != nil && len(sizeList) == 3 {
-		sx, _ := sizeList[0].(int32)
-		sy, _ := sizeList[1].(int32)
-		sz, _ := sizeList[2].(int32)
-		result["size"] = []int{int(sx), int(sy), int(sz)}
+	if len(sizeList) == 3 {
+		sx, sxOk := sizeList[0].(int32)
+		sy, syOk := sizeList[1].(int32)
+		sz, szOk := sizeList[2].(int32)
+		// P3-2：三元素任一类型断言失败或零尺寸则不设 size，
+		// 避免前端拿到全零 size 渲染异常、下游 voxel 除零。
+		if sxOk && syOk && szOk && sx > 0 && sy > 0 && sz > 0 {
+			result["size"] = []int{int(sx), int(sy), int(sz)}
+		}
 	}
 	if blocksList != nil {
 		result["blockCount"] = len(blocksList)

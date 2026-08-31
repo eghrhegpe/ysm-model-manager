@@ -71,6 +71,12 @@ invariant_anchors:
 - 截断 / 分组 / 表面过滤只在公共段实现一次，三个 Build* 入口不得各自手写，否则行为漂移
 - `.litematic` / `.schematic` / `.nbt` 一律经 `openGzRoot` 走 gzip 解压，非 gzip 文件直接报错
 - `.schematic` 双路径：有 `Palette` + `BlockData`（varint）走 v2，否则读 `Blocks` 字节数组走 v1——v1 有 Palette 时优先用 paletteMap 取色，无 Palette 才用 `ResolveBlockName(id, data)` 兜底，未知方块回退 `#7F7F7F`
+- **R28 修复链（2026-08-31）**：
+  - nbt.go intArray/longArray/byteArray 漏 charge（P2-1 + P3-1）：三个数组标签的物化字节数未计入 `charge()`，恶意 litematic 可构造超长 intArray（4*n 字节）绕过 512MB 预算导致 OOM。修复：intArray `charge(4*n)`，longArray `charge(8*n)`，byteArray `charge(n)`。
+  - schematic.go 零尺寸除零（P2-2）：`result["size"] = []int{w, h, l}` 在 w/h/l 为 0 时仍设置，下游 voxel.go 的 `i % info.sizeX` 在 sizeX==0 时 panic。修复：`w > 0 && h > 0 && l > 0` 守卫，零尺寸不设 size。
+  - structure.go 零尺寸静默（P3-2）：`sizeList` 元素非 int32 时 `comma, ok := sizeList[i].(int32)` 给零值，静默返回 `[0,0,0]`。修复：三元素任一类型断言失败或零尺寸则不设 size。
+  - voxel.go 刷日志（P3-3）：`buildRegionInfo` 的 `log.Printf` 在错误已返回的情况下高频打印。修复：移除 `log.Printf`，降级为纯 error 返回。
+  - nbt.go:197 注释与控制流脱节（P4-1）：`default: return false` 注释说「交给 go-mc 报错」，但 `readRootCompound` 在 probe 返回 `ok=false` 时直接拒绝、根本不调用 go-mc。修复：改为「未知 tag 类型：畸形，调用方拒绝」。
 
 ## 相关
 

@@ -25,7 +25,7 @@ func ParseSchematicSummary(path string) map[string]interface{} {
 	w, wok := getInt(root, "Width")
 	h, hok := getInt(root, "Height")
 	l, lok := getInt(root, "Length")
-	if wok && hok && lok {
+	if wok && hok && lok && w > 0 && h > 0 && l > 0 {
 		result["size"] = []int{w, h, l}
 	}
 

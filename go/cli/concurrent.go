@@ -402,6 +402,10 @@ func runSingleBench(ctx *CmdContext) error {
 	fmt.Println(strings.Repeat("=", 70))
 
 	avg := avgBenchStages(allStages)
+	if len(allStages) == 0 {
+		fmt.Println("⚠️  无基准数据（allStages 为空）")
+		return nil
+	}
 	if *iterations > 1 {
 		printAverageStages(allStages)
 	} else {
@@ -411,7 +415,9 @@ func runSingleBench(ctx *CmdContext) error {
 	fmt.Println()
 	fmt.Printf("⏱️  总耗时（%d 次迭代）: %.2fms\n", *iterations, float64(totalDuration.Microseconds())/1000)
 
-	printOptimizationHints(allStages[0])
+	if len(allStages) > 0 {
+		printOptimizationHints(allStages[0])
+	}
 
 	// C-1：基准对比 / 保存（供 CI 判定性能退化，复用 file-bench --baseline 语义）
 	return applyBenchBaseline(*baseline, *saveBaseline, *thresholdPct, avg)

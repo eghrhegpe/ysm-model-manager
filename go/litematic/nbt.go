@@ -119,7 +119,14 @@ func probeNbtDepth(data []byte) (int, bool) {
 			}
 			n := int(int32(binary.BigEndian.Uint32(data[off-4:])))
 			// 声明长度超过剩余数据直接判畸形（防 go-mc 按 2^31-1 物化 OOM）
-			return n >= 0 && n <= len(data) && read(n)
+			if n < 0 || n > len(data) {
+				return false
+			}
+			// P3-1：byteArray 也计入物化预算（n 字节）
+			if !charge(n) {
+				return false
+			}
+			return read(n)
 		case 8: // string: uint16 长度 + N
 			if !read(2) {
 				return false
@@ -185,16 +192,30 @@ func probeNbtDepth(data []byte) (int, bool) {
 			n := int(int32(binary.BigEndian.Uint32(data[off-4:])))
 			// 防乘法溢出——原 `read(4*n)` 在 n=2^30 时 4*n 溢出为 0 绕过长度检查，
 			// go-mc 按 2^30 物化 4GB slice → OOM；显式按剩余数据约束
-			return n >= 0 && n <= len(data)/4 && read(4*n)
+			if n < 0 || n > len(data)/4 {
+				return false
+			}
+			// P2-1：intArray 物化为 4*n 字节，计入预算防 OOM
+			if !charge(4 * n) {
+				return false
+			}
+			return read(4 * n)
 		case 12: // longArray: int32 长度 + 8N
 			if !read(4) {
 				return false
 			}
 			n := int(int32(binary.BigEndian.Uint32(data[off-4:])))
 			// 同 intArray，防乘法溢出与超大物化 OOM
-			return n >= 0 && n <= len(data)/8 && read(8*n)
+			if n < 0 || n > len(data)/8 {
+				return false
+			}
+			// P2-1：longArray 物化为 8*n 字节，计入预算防 OOM
+			if !charge(8 * n) {
+				return false
+			}
+			return read(8 * n)
 		default:
-			return false // 未知 tag 类型：畸形，交给 go-mc 报错
+			return false // P4-1：未知 tag 类型：畸形，调用方拒绝
 		}
 	}
 	// 根 tag：1 字节类型 + 名字（2 字节长度 + 内容），与 go-mc Decode 读根名字的语义一致

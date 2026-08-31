@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-138：preview-3d 上提 src/preview-3d（去 features 中间层）",
+        "link": "/adr/ADR-138-preview-3d-to-src"
+      },
+      {
         "text": "ADR-137：YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀）",
         "link": "/adr/ADR-137-ysm-decoder-homecoming"
       },
@@ -1355,6 +1359,10 @@ export const autoSidebar = [
       {
         "text": "R27 审核：go/sync + go/dedup（两模块并行）",
         "link": "/audit/audit-r27-go-sync-dedup-2026-08-31"
+      },
+      {
+        "text": "R28 审核：go/cli + go/litematic（两模块并行）",
+        "link": "/audit/audit-r28-go-cli-litematic-2026-08-31"
       },
       {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",

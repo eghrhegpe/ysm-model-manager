@@ -27,7 +27,7 @@
  * 依赖：_lib/scan-files / _lib/domain-classify / _lib/proc
  */
 import { ROOT } from './_lib/scan-files.mjs';
-import { classify } from './_lib/domain-classify.mjs';
+import { groupByDomain, domainSummaryText } from './_lib/domain-classify.mjs';
 import { run } from './_lib/proc.mjs';
 
 // ── 参数解析 ──
@@ -83,11 +83,8 @@ if (stagedFiles.length === 0) {
   process.exit(1);
 }
 
-const byDomain = {};
-for (const f of stagedFiles) (byDomain[classify(f)] = byDomain[classify(f)] || []).push(f);
-const domainSummary = Object.keys(byDomain).length
-  ? Object.entries(byDomain).map(([d, fs]) => `${d}:${fs.length}`).join('  ')
-  : '无变更';
+const byDomain = groupByDomain(stagedFiles);
+const domainSummary = domainSummaryText(byDomain);
 
 console.log('========== commit-with-check（thin wrapper → pre-push-gate）==========');
 console.log(`变更域: ${domainSummary}`);

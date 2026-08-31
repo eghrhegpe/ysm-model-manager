@@ -55,3 +55,27 @@ export function planFromFiles(files) {
   p.redlines = p.go || p.frontend;
   return p;
 }
+
+/**
+ * 文件集 → 按域分组的映射 { 域: [文件...] }（摘要展示用，域 = classify 返回值）。
+ * 2026-09 细读去重：pre-push-gate（--files 与 push 两分支）与 commit-with-check
+ * 三处各内联一份相同的「循环 push 到 byDomain」逻辑，此处集中单点。
+ * @param {string[]} files 相对仓库根的路径数组。
+ * @returns {Record<string, string[]>}
+ */
+export function groupByDomain(files) {
+  const byDomain = {};
+  for (const f of files) (byDomain[classify(f)] = byDomain[classify(f)] || []).push(f);
+  return byDomain;
+}
+
+/**
+ * 分组 → 摘要串（如 "go:2  frontend:1"），供「变更域」控制台行复用。
+ * @param {Record<string, string[]>} byDomain groupByDomain 的返回值。
+ * @returns {string}
+ */
+export function domainSummaryText(byDomain) {
+  return Object.keys(byDomain).length
+    ? Object.entries(byDomain).map(([d, fs]) => `${d}:${fs.length}`).join('  ')
+    : '无变更';
+}

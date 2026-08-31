@@ -39,7 +39,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 import { run as procRun } from './_lib/proc.mjs';
-import { classify, planFromFiles } from './_lib/domain-classify.mjs';
+import { planFromFiles, groupByDomain, domainSummaryText } from './_lib/domain-classify.mjs';
 import { runContractTestsParallel } from './_lib/contract-tests.mjs';
 import { logPush } from './_lib/log-push.mjs';
 import { shq } from './_lib/proc.mjs';
@@ -298,10 +298,8 @@ async function main() {
       return 2;
     }
     plan = planFromFiles(files);
-    for (const f of files) (byDomain[classify(f)] = byDomain[classify(f)] || []).push(f);
-    domainSummary = Object.keys(byDomain).length
-      ? Object.entries(byDomain).map(([d, fs]) => `${d}:${fs.length}`).join('  ')
-      : '无变更';
+    byDomain = groupByDomain(files);
+    domainSummary = domainSummaryText(byDomain);
     console.log(`模式: 文件驱动（--files，${files.length} 个文件）`);
     console.log(`变更域: ${domainSummary}`);
     console.log('');
@@ -347,14 +345,12 @@ async function main() {
     }
     files = [...fileSet];
     plan = planFromFiles(files);
-    for (const f of files) (byDomain[classify(f)] = byDomain[classify(f)] || []).push(f);
+    byDomain = groupByDomain(files);
 
     const { localRef, localOid } = pushed[0];
     const multiRef = pushed.length > 1;
     console.log(`推送: ${multiRef ? `${pushed.length} 个 ref` : localRef} ${multiRef ? '' : `${localOid.slice(0, 7)} `}→ ${remoteName} (${remoteUrl || '?'})`);
-    domainSummary = Object.keys(byDomain).length
-      ? Object.entries(byDomain).map(([d, fs2]) => `${d}:${fs2.length}`).join('  ')
-      : '无变更';
+    domainSummary = domainSummaryText(byDomain);
     console.log(`变更域: ${domainSummary}`);
     console.log('');
   }

@@ -17,22 +17,30 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './_lib/scan-files.mjs';
 
+// 文件行缓存（性能审计 2026-09）：hasContext/inBlockComment 每次调用都整读文件，
+// W7 对每条命中读 3 次、同一文件被读 10+ 遍——按归一化绝对路径缓存 lines 一次性复用。
+const fileLinesCache = new Map();
+function readFileLines(file) {
+  try {
+    const abs = path.resolve(ROOT, file.replace(/^\.?\//, ''));
+    if (!fileLinesCache.has(abs)) fileLinesCache.set(abs, fs.readFileSync(abs, 'utf-8').split('\n'));
+    return fileLinesCache.get(abs);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * 读取文件第 `line` 行附近（±radius 行）是否包含 `pattern`（正则）。
  * 用于单行 rg 结果需要上下文判定的场景（如 .file( 是否已在 new Promise 包裹内）。
  */
 function hasContext(file, line, pattern, radius = 8) {
-  try {
-    const abs = path.resolve(ROOT, file.replace(/^\.?\//, ''));
-    const content = fs.readFileSync(abs, 'utf-8');
-    const lines = content.split('\n');
-    const start = Math.max(0, line - 1 - radius);
-    const end = Math.min(lines.length, line + radius);
-    const slice = lines.slice(start, end).join('\n');
-    return pattern.test(slice);
-  } catch {
-    return false;
-  }
+  const lines = readFileLines(file);
+  if (!lines) return false;
+  const start = Math.max(0, line - 1 - radius);
+  const end = Math.min(lines.length, line + radius);
+  const slice = lines.slice(start, end).join('\n');
+  return pattern.test(slice);
 }
 
 // 判断指定行是否处于块注释（/* ... */）区间内：从文件头扫描注释开闭状态。
@@ -40,33 +48,29 @@ function hasContext(file, line, pattern, radius = 8) {
 // 真实代码续行（乘法链等，R3 是阻断规则，豁免不得宽于意图）。与 rg 口径一致，
 // 不处理字符串字面量内的 /*（红线扫描本身是启发式，足够）。
 function inBlockComment(file, lineno) {
-  try {
-    const abs = path.resolve(ROOT, file.replace(/^\.?\//, ''));
-    const lines = fs.readFileSync(abs, 'utf-8').split('\n');
-    let inBlock = false;
-    // 扫描到 lineno-1 行（不含当前行）：当前行若以 /* 开头已被前一 filter 豁免
-    const max = Math.min(lines.length, lineno - 1);
-    for (let i = 0; i < max; i++) {
-      const line = lines[i];
-      let idx = 0;
-      while (idx < line.length) {
-        if (!inBlock) {
-          const open = line.indexOf('/*', idx);
-          if (open === -1) break;
-          inBlock = true;
-          idx = open + 2;
-        } else {
-          const close = line.indexOf('*/', idx);
-          if (close === -1) { idx = line.length; break; }
-          inBlock = false;
-          idx = close + 2;
-        }
+  const lines = readFileLines(file);
+  if (!lines) return false;
+  let inBlock = false;
+  // 扫描到 lineno-1 行（不含当前行）：当前行若以 /* 开头已被前一 filter 豁免
+  const max = Math.min(lines.length, lineno - 1);
+  for (let i = 0; i < max; i++) {
+    const line = lines[i];
+    let idx = 0;
+    while (idx < line.length) {
+      if (!inBlock) {
+        const open = line.indexOf('/*', idx);
+        if (open === -1) break;
+        inBlock = true;
+        idx = open + 2;
+      } else {
+        const close = line.indexOf('*/', idx);
+        if (close === -1) { idx = line.length; break; }
+        inBlock = false;
+        idx = close + 2;
       }
     }
-    return inBlock;
-  } catch {
-    return false;
   }
+  return inBlock;
 }
 
 // rg 健康标志 + 本地包装：rgStrict 抛错（rg 缺失/坏正则/执行失败）时置 false 并返回 []，
@@ -190,10 +194,8 @@ function runChecks() {
   // 内联 style 字符串 / style.cssText / style.xxx 赋值 / CSS 规则块豁免；
   // CSS 属性行豁免（box-shadow/background 等带颜色的 CSS 属性）
   add('R5', 'hardcoded colors',
-    rgTracked('#[0-9a-f]{6}\\b', 'frontend', ['*.js', '*.ts', '*.css'])
-      .concat(rgTracked('#[0-9a-f]{3}\\b', 'frontend', ['*.js', '*.ts', '*.css']))
-      .concat(rgTracked('rgba?\\(', 'frontend', ['*.js', '*.ts', '*.css']))
-      .concat(rgTracked('hsla?\\(', 'frontend', ['*.js', '*.ts', '*.css']))
+    // 2026-09 性能：4 次 rg（#6/#3 位 hex/rgba/hsla）合并为单正则一次扫，行为不变
+    rgTracked('#[0-9a-f]{3}(?:[0-9a-f]{3})?\\b|rgba?\\(|hsla?\\(', 'frontend', ['*.js', '*.ts', '*.css'])
       .filter((l) => { const [f] = parseRgLine(l); return !f.endsWith('.css'); })
       .filter((l) => { const [f] = parseRgLine(l); return !f.includes('.test.'); })
       .filter((l) => { const [f] = parseRgLine(l); return !/\/tpl\.ts$/.test(f) && !/\/css\.ts$/.test(f) && !f.endsWith('/fab.ts') && !f.includes('content-css') && !f.includes('app-tree-styles'); })
@@ -320,9 +322,8 @@ function runChecks() {
   // W4 覆盖 go+frontend，避免双重扫描），此处不再重复。
 
   add('W5', 'async DOM race (callback sets innerHTML without stale guard)',
-    rgTracked('=>\\s*\\{[^}]*innerHTML\\s*=', 'frontend/src', ['*.js', '*.ts'])
-      .concat(rgTracked('\\.(then|finally)\\s*\\(.*innerHTML\\s*=', 'frontend/src', ['*.js', '*.ts']))
-      .concat(rgTracked('setTimeout\\s*\\(.*innerHTML\\s*=', 'frontend/src', ['*.js', '*.ts'])),
+    // 2026-09 性能：3 次 rg（箭头/then-finally/setTimeout）合并为单正则一次扫，行为不变
+    rgTracked('=>\\s*\\{[^}]*innerHTML\\s*=|\\.(then|finally)\\s*\\(.*innerHTML\\s*=|setTimeout\\s*\\(.*innerHTML\\s*=', 'frontend/src', ['*.js', '*.ts']),
     'DOM writes in async callbacks need stale-request guards (fetchDone flag)');
 
   add('W6', 'bypass dialogs (dlg-overlay outside dialogs/modal.ts)',
@@ -338,10 +339,9 @@ function runChecks() {
   // 注意：候选清单含已配失效的调用点（如 DeleteResourcePack），需人工核对函数体；
   // 基线记录当前全部调用点，新增写操作调用点将被 pre-push 阻断。
   add('W7', 'binding-layer write ops (need cache invalidation)',
-    rgTracked('os\\.(Remove|RemoveAll|Rename)\\s*\\(', 'internal/app', ['*.go', '!*_test.go'])
+    // 2026-09 性能：3 次 rg（os./fileops./recycle.）合并为单正则一次扫，行为不变
+    rgTracked('os\\.(Remove|RemoveAll|Rename)\\s*\\(|fileops\\.(RenameDir|RenameFile|RemoveDir|DeleteModelFile|WriteModelFolder)\\s*\\(|recycle\\.(MoveEx|Restore|Delete|Empty)\\s*\\(', 'internal/app', ['*.go', '!*_test.go'])
       .filter((l) => !/defer\s+os\./.test(l))
-      .concat(rgTracked('fileops\\.(RenameDir|RenameFile|RemoveDir|DeleteModelFile|WriteModelFolder)\\s*\\(', 'internal/app', ['*.go', '!*_test.go']))
-      .concat(rgTracked('recycle\\.(MoveEx|Restore|Delete|Empty)\\s*\\(', 'internal/app', ['*.go', '!*_test.go']))
       .filter((l) => !/:\d+:\s*\/\//.test(l))
       .filter((l) => {
         const [f, line] = parseRgLine(l);
@@ -485,7 +485,8 @@ function runBaseline(results) {
   const baseSeen = baseSet.has.bind(baseSet);
   const newBlocking = current.blocking.filter((k) => inChanged(k) && !baseSeen(k));
   const newAdvisory = current.advisory.filter((k) => inChanged(k) && !baseSeen(k));
-  const gone = [...baseSet].filter((k) => !allKeys.includes(k));
+  const allKeysSet = new Set(allKeys);
+  const gone = [...baseSet].filter((k) => !allKeysSet.has(k));
   const errors = newBlocking.map((k) => `[新增红线违规] ${k}`);
   const warns = newAdvisory.slice(0, 10).map((k) => `[债务规则 WARN] ${k}`);
   const infos = gone.slice(0, 10).map((k) => `[已清理] ${k}`);

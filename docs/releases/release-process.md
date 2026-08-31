@@ -133,7 +133,7 @@
 - `build-release.ps1` 上传时**优先用该文件作 Release body**（`build-release.ps1:143-151`）；缺失则用默认占位文本 `YSM Model Manager $VerTag`。
 - CI 侧 `build-release.ps1 -SkipUpload` 只构建不上传（`-SkipUpload` 跳过脚本内上传段），`softprops/action-gh-release@v2` 上传 zip + SHA256SUMS；body 为空，需 `gh release edit vX.Y.Z --notes-file docs/releases/vX.Y.Z.md` 补（v1.10.0 实测）。
 - 应用内更新日志：`go/updater` 的 `Check` 聚合 GitHub Release `body`（`UpdateInfo.ReleaseNotes`），展示未读版本日志。
-- **历史 `vX.Y.Z-compare.md` 双文件模式（v1.0.2 ~ v1.7.0）为早期遗留，不再新增**；新版本只产出单一 `vX.Y.Z.md`。
+- **历史 `vX.Y.Z-compare.md` 双文件模式（v1.0.2 ~ v1.5.8）为早期遗留，不再新增**；新版本只产出单一 `vX.Y.Z.md`。
 
 ---
 

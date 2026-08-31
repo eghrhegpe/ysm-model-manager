@@ -509,31 +509,31 @@ export const autoSidebar = [
       },
       {
         "text": "v1.6.4 — FilesRoot 统一存储架构 + 设置页 UI 翻新 + 下载修复",
-        "link": "/releases/v1.6.4-compare"
+        "link": "/releases/v1.6.4"
       },
       {
         "text": "v1.6.5 — 创意工坊 UI 大翻新 + 创作者频道精简 + 全局样式统一",
-        "link": "/releases/v1.6.5-compare"
+        "link": "/releases/v1.6.5"
       },
       {
         "text": "v1.6.6 — 下载队列重构 + 创意工坊渲染优化 + 下载流程加固",
-        "link": "/releases/v1.6.6-compare"
+        "link": "/releases/v1.6.6"
       },
       {
         "text": "v1.6.7 — 创作者频道 UI 优化 + 样式微调",
-        "link": "/releases/v1.6.7-compare"
+        "link": "/releases/v1.6.7"
       },
       {
         "text": "v1.6.8 — 下载流程加固 + 设置页优化 + CSS 组件样式统一",
-        "link": "/releases/v1.6.8-compare"
+        "link": "/releases/v1.6.8"
       },
       {
         "text": "v1.6.9 — 配置持久化修复 + 资源绑定优化 + Go 端小重构",
-        "link": "/releases/v1.6.9-compare"
+        "link": "/releases/v1.6.9"
       },
       {
         "text": "v1.7.0 — 创作者频道 UI 翻新 + 头像缓存优化 + 样式调整",
-        "link": "/releases/v1.7.0-compare"
+        "link": "/releases/v1.7.0"
       },
       {
         "text": "v1.7.1 — 补充 compare 发版说明",

@@ -1,7 +1,7 @@
 # 发版说明索引
 
 > 发版说明按 `vX.Y.Z.md` 命名存放于本目录。
-> **历史 `vX.Y.Z-compare.md` 双文件模式（v1.0.2 ~ v1.7.0）为早期遗留，不再新增**；新版本只产出单一 `vX.Y.Z.md`。
+> **历史 `vX.Y.Z-compare.md` 双文件模式（v1.0.2 ~ v1.5.8）为早期遗留，不再新增**；新版本只产出单一 `vX.Y.Z.md`。
 > 完整版本清单以 `git tag --list "v*" --sort=-version:refname` 为准。
 
 <!-- GEN: releases-index -->
@@ -28,8 +28,8 @@
 | v1.3 | v1.3.0 ~ v1.3.6 |
 | v1.4 | v1.4.0 ~ v1.4.7 |
 | v1.5 | v1.5.0 ~ v1.5.9 |
-| v1.6 | v1.6.0 ~ v1.6.3 |
-| v1.7 | v1.7.1 ~ v1.7.13 |
+| v1.6 | v1.6.0 ~ v1.6.9 |
+| v1.7 | v1.7.0 ~ v1.7.13 |
 | v1.8 | v1.8.0 ~ v1.8.11 |
 | v1.9 | v1.9.0 ~ v1.9.3 |
 | v1.10 | v1.10.0 |
@@ -44,6 +44,7 @@
 # YSM Model Manager 发版 SOP
 
 > **一句话发版**：写 notes → 打 tag → 推 tag 等 CI 打包上传 → 核对 Release。本地自检用 `build-release.ps1`。
+> **完整 SOP 以 [release-process.md](release-process.md) 为准**（含 AI 一键发版入口 `scripts/release.ps1`、`build/config.yml` 版本单点校验、四平台打包矩阵与 Secrets）；本节为裁剪摘要，细节冲突以 release-process.md 为准。
 
 ## 0. 触发机制总览
 
@@ -115,6 +116,7 @@
 | tag 触发失效 | 推 tag 后 CI 不跑 | `release.yml` `on.push` 曾只限 `branches: [main]`，缺 `tags: ['v*']`（已修） | 确认 workflow 的 `on.push.tags` 存在 |
 | 版本号不一致 | 产物「关于」版本与 tag 不符 | 三处（参数/tag/notes）版本号手改不一致 | 统一 `X.Y.Z` 三处一致 |
 | 依赖更新后 CI 失败 | test job 挂 | Go/Node 依赖与 lockfile 不同步 | 先本地 `go build ./go/...` + 前端 `npx tsc --noEmit` 再发版 |
+| 四段补丁号 | 版本写成 `v1.0.8.1` 这种 `X.Y.Z.W` | 早期一次性补丁命名（仅 v1.0.8.1 一例遗留） | 只用三段 `vX.Y.Z`，四段补丁号不再使用 |
 
 ## 8. 快速命令序列
 

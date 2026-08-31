@@ -1377,6 +1377,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r29-go-ysm-geometry-2026-08-31"
       },
       {
+        "text": "R30 审核：go/updater + go/importer（两模块并行）",
+        "link": "/audit/audit-r30-go-updater-importer-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

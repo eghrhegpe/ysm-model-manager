@@ -1,8 +1,8 @@
+//go:build linux && !android && rust_backend
+
 // android 隐含 linux 构建标签（Go 的 GOOS=android 同时满足 `linux` 约束），
 // 若不排除 android，GOOS=android 会同时纳入本文件与 bridge_android.go，
 // 导致 nativeBuffer / Scan 等符号重复声明、安卓生产构建编译失败。详见 ADR-139。
-//go:build linux && !android && rust_backend
-
 package rustbridge
 
 import (

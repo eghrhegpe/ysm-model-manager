@@ -170,7 +170,7 @@
 | 06 | `06-创作者社区/` | `go/avatar` `creators.json` `workshop_sites.json` `workshop-github.json` `community` | 创作者库、头像、工坊站点、社区索引 |
 | 07 | `07-文件与路径/` | `go/fileops` `fsutil` `paths` `recycle` `watcher` `litematic` `internal/embedded` | 硬链接/复制、路径安全、回收站、监听、嵌入资源 |
 | 08 | `08-配置与状态/` | `go/version` `logs` `errors` `tags` `settings` `page-store` | 版本、日志、错误、标签、设置持久化 |
-| 09 | `09-工具链/` | `scripts` `Taskfile.yml` `wails.json` `scripts/build-release.ps1` `doctor` `funcmap` `codemod` | 自检/审计、构建发布、代码迁移工具 |
+| 09 | `09-工具链/` | `scripts` `Taskfile.yml` `wails.json` `scripts/build-release.ps1` `doctor` `codemod` | 自检/审计、构建发布、代码迁移工具 |
 | 10 | `10-文档治理/` | `AGENTS.md` `docs/knowledge` `docs/adr` `docs/archive/bug-chronicle.md` `audits` | 文档宪法、知识卡、ADR、审计 |
 
 `appendix/` 下分 4 组，收纳非代码目录锚定的章节：
@@ -195,7 +195,7 @@ go/sync download updater / handler-sync                             → 05-同�
 go/avatar / creators workshop json / community                      → 06-创作者社区
 go/fileops fsutil paths recycle watcher litematic / internal/embedded → 07-文件与路径
 go/version logs errors tags / settings / page-store                 → 08-配置与状态
-scripts / Taskfile / wails.json / build-release / doctor / funcmap / codemod → 09-工具链
+scripts / Taskfile / wails.json / build-release / doctor / codemod → 09-工具链
 AGENTS.md / docs/knowledge / docs/adr / bug-chronicle / audits      → 10-文档治理
 多模块同时动刀（审计/重构/体检）                                    → appendix/跨模块重构
 app.go / internal/app / main.go / Wails 绑定                        → appendix/Go后端

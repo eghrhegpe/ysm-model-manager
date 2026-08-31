@@ -208,7 +208,7 @@ node scripts/new-adr.mjs "标题" [...]
 
 ### 生成物 vs 手写文件
 
-- **生成物**（`docs/` 下 index / funcmap / project-map / cli-commands / i18n locale JSON / `completions/` 等）= 全体输入的纯函数
+- **生成物**（`docs/` 下 index / project-map / cli-commands / i18n locale JSON / `completions/` 等）= 全体输入的纯函数
 - **生成物不承担提交归属**：改卡后由 pre-commit 自动 gen + stage，交就交当前全量态
 - **手写文件**（源码、知识卡、AGENTS.md 等）→ 路径限定提交
 

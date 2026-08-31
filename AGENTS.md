@@ -13,7 +13,7 @@
 - 查到的经验**写回知识卡**，让下次直接命中：`node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]`。
 
 ### 归属原则——先分清「生成物」还是「手写文件」
-- **生成物**（`docs/` 下 index / funcmap / project-map / cli-commands、i18n locale JSON、`completions/` 等，由 `.githooks/pre-commit` 的 `GEN_CMDS` 产出）= 全体输入的纯函数。**不承担提交归属、不按归属裁剪**：改卡后由 pre-commit 自动 gen+stage，交就交当前全量态。
+- **生成物**（`docs/` 下 index / project-map / cli-commands、i18n locale JSON、`completions/` 等，由 `.githooks/pre-commit` 的 `GEN_CMDS` 产出）= 全体输入的纯函数。**不承担提交归属、不按归属裁剪**：改卡后由 pre-commit 自动 gen+stage，交就交当前全量态。
 - **手写文件**（源码、知识卡、AGENTS.md 等）→ 路径限定提交，只提交自己的文件：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
 - 并行会话活跃时（`git status` 可见他人改动），路径限定是唯一安全的提交方式。
 

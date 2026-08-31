@@ -175,7 +175,7 @@
 
 ### 09-工具链
 
-> 锚定代码：`scripts` `Taskfile.yml` `wails.json` `scripts/build-release.ps1` `doctor` `funcmap` `codemod`
+> 锚定代码：`scripts` `Taskfile.yml` `wails.json` `scripts/build-release.ps1` `doctor` `codemod`
 > 主题：自检/审计、构建发布、代码迁移工具
 > 章节数：4
 

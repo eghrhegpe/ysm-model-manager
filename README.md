@@ -324,8 +324,7 @@ ysm-model-manager/
     ├── releases/             —— 各版本发版说明（index.md 索引）
     ├── public/preview/       —— README 截图
     ├── novel/                —— 联邦开发 saga（小说）
-    ├── archive/              —— 冻结区：旧架构/状态/复盘，禁止日常编辑
-    └── funcmap.md            —— 函数地图（自动生成）
+    └── archive/              —— 冻结区：旧架构/状态/复盘，禁止日常编辑
 ```
 
 ### 组件规范

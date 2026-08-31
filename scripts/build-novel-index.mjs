@@ -37,7 +37,7 @@ const REGIONS = [
   { dir: '06-创作者社区', anchor: '`go/avatar` `creators.json` `workshop_sites.json` `workshop-github.json` `community`', theme: '创作者库、头像、工坊站点、社区索引' },
   { dir: '07-文件与路径', anchor: '`go/fileops` `fsutil` `paths` `recycle` `watcher` `litematic` `internal/embedded`', theme: '硬链接/复制、路径安全、回收站、监听、嵌入资源' },
   { dir: '08-配置与状态', anchor: '`go/version` `logs` `errors` `tags` `settings` `page-store`', theme: '版本、日志、错误、标签、设置持久化' },
-  { dir: '09-工具链', anchor: '`scripts` `Taskfile.yml` `wails.json` `scripts/build-release.ps1` `doctor` `funcmap` `codemod`', theme: '自检/审计、构建发布、代码迁移工具' },
+  { dir: '09-工具链', anchor: '`scripts` `Taskfile.yml` `wails.json` `scripts/build-release.ps1` `doctor` `codemod`', theme: '自检/审计、构建发布、代码迁移工具' },
   { dir: '10-文档治理', anchor: '`AGENTS.md` `docs/knowledge` `docs/adr` `docs/archive/bug-chronicle.md` `audits`', theme: '文档宪法、知识卡、ADR、审计' },
 ];
 

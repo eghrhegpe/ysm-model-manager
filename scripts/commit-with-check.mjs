@@ -97,12 +97,11 @@ console.log('');
 // P2 修复（子代理锐评）：门禁前先跑 gen 刷新索引，解 gen 鸡生蛋
 // （门禁跑 gen-docs-index --check，若索引旧则 fail-closed 阻断；而 pre-commit 的 gen 修复在门禁之后才跑——永远轮不到修）
 // Q2 修复（子代理再洗礼）：补全 pre-commit 跑的全 11 个 gen，不只 gen-docs-index
-// （残余 10 个 gen 产物若过期，门禁静态工具如 funcmap --check 会挂，而修复在 pre-commit 之后才跑——同一鸡生蛋）
+// （残余 gen 产物若过期，门禁静态工具 --check 会挂，而修复在 pre-commit 之后才跑——同一鸡生蛋）
 // 用 byDomain 判断是否有 docs/adr 域改动（plan 变量在 pre-push-gate 内部，commit-with-check 够不到）
 if (docsMode || byDomain.docs?.length || byDomain.adr?.length) {
   const GEN_CMDS = [
     'gen-docs-index.mjs',
-    'funcmap.mjs',
     'event-graph.mjs',
     'gen-knowledge-index.mjs',
     'build-novel-index.mjs',

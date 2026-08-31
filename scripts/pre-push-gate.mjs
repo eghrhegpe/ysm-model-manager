@@ -159,7 +159,6 @@ const ALL_STATIC_TOOLS = [
   'check-dynamic-import.mjs',
   { tool: 'auto-import.mjs', args: ['--strict'] },
   { tool: 'gen-project-map.mjs', args: ['--check'] },
-  { tool: 'funcmap.mjs', args: ['--check'], autoFix: true },
   { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
   { tool: 'build-novel-index.mjs', args: ['--check'] },
   { tool: 'gen-routes.mjs', args: ['--check'] },
@@ -193,7 +192,6 @@ const DOC_STATIC_TOOLS = [
   'check-doc-drift.mjs',
   'check-adr-health.mjs',
   { tool: 'gen-project-map.mjs', args: ['--check'] },
-  { tool: 'funcmap.mjs', args: ['--check'], autoFix: true },
   { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
   { tool: 'build-novel-index.mjs', args: ['--check'] },
   // 路由表生成器（2026-08-31 审计修复）：此前未接门禁——改任何卡 use_when/quick_*
@@ -385,8 +383,8 @@ async function main() {
         if (cnt) note = cnt;
       } catch { /* 非 JSON 输出，退回 rc 判定 */ }
       // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
-      // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 funcmap.md 过期 → doctor FAIL"
-      // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打 node scripts/funcmap.mjs）
+      // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
+      // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
       if (!ok && typeof entry === 'object' && entry.autoFix) {
         const fixR = sh(`node scripts/${tool} --json`); // 写盘刷新（无 --check）
         if (fixR.rc === 0) {

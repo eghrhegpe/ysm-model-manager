@@ -427,7 +427,7 @@ ReadFileBytes(Go, base64) → atob → Uint8Array
 
 ### 6.2 组件清单（`js/components/`）
 
-> 组件与文件全量清单、规模、函数映射以自动生成物 `docs/project-map.md`（`scripts/gen-project-map.mjs`）与 `docs/funcmap.md` 为准；下表为概览快照，以生成物为最新。
+> 组件与文件全量清单、规模、函数映射以自动生成物 `docs/project-map.md`（`scripts/gen-project-map.mjs`）为准；下表为概览快照，以生成物为最新。
 
 | 组件 | 规模 | 关键文件 |
 |------|------|----------|

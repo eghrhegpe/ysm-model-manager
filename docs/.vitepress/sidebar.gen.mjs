@@ -671,10 +671,6 @@ export const autoSidebar = [
         "link": "/governance-rules"
       },
       {
-        "text": "函数映射表",
-        "link": "/funcmap"
-      },
-      {
         "text": "项目结构地图",
         "link": "/project-map"
       },

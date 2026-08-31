@@ -61,7 +61,6 @@ trap 'rm -f "$GEN_SNAP" "$GEN_SNAP_AFTER"' EXIT
 snap_docs "$GEN_SNAP"
 echo "[pre-commit] 文档自动同步..."
 GEN_CMDS='gen-docs-index.mjs
-funcmap.mjs
 event-graph.mjs
 gen-knowledge-index.mjs
 build-novel-index.mjs
@@ -117,14 +116,14 @@ fi
 
 # ── Take巧 #2：drift --affected 秒级接入（ADR-087）──
 # 取本次 stage 的变更文件，调 check-knowledge-drift --affected
-# 过滤生成物（index.md/funcmap.md 等 gen 脚本自身输出），避免误报
+# 过滤生成物（index.md/project-map.md 等 gen 脚本自身输出），避免误报
 # 审计修复（2026-08-17 子代理）：逐文件传递避免路径含空格断裂；不吞 stderr，失败可见。
 echo ""
 echo "[pre-commit] drift 检查受影响知识卡..."
 CHANGED_FILES=$(git diff --cached --name-only 2>/dev/null || true)
 if [ -n "$CHANGED_FILES" ]; then
   # 过滤生成物文件（pre-commit 自身产物，不应触发漂移告警）
-  FILTERED=$(printf '%s\n' "$CHANGED_FILES" | grep -vE '^docs/(knowledge/index|funcmap|project-map)\.md$' | grep -v '^frontend/public/locales/' || true)
+  FILTERED=$(printf '%s\n' "$CHANGED_FILES" | grep -vE '^docs/(knowledge/index|project-map)\.md$' | grep -v '^frontend/public/locales/' || true)
   if [ -n "$FILTERED" ]; then
     # 批量 + --quiet：stem 列表供 prepare-commit-msg 消费；终端展示由 prepare-commit-msg 负责（避免双重输出）
     node scripts/check-knowledge-drift.mjs --affected --quiet $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"

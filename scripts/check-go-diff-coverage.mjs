@@ -11,6 +11,12 @@
  *   当前宿主裸 `go test`（不带对应 build tags）下不被编译，coverprofile 无数据属「环境
  *   不匹配」而非「裸奔」，按 `go list` 编译集自动豁免，避免跨平台改一次桥接误报 0%。
  *
+ * 实现：git 变更收集 / rename / 建议区块等语言无关部分抽到
+ *   scripts/_lib/diff-coverage-core.mjs（与 check-diff-coverage.mjs 共享）；
+ *   本文件仅保留 Go 专属策略：isGoSource 过滤 + 包分组 + `go test -coverprofile` +
+ *   `go list` 编译集 oracle 豁免。下方 re-export 供契约测试 import（
+ *   tests/test_check_go_diff_coverage.mjs），签名不变。
+ *
  * 用法（仓库根运行，命令统一 node scripts/<name>.mjs）：
  *   node scripts/check-go-diff-coverage.mjs                          # base=origin/main, threshold=60
  *   node scripts/check-go-diff-coverage.mjs --threshold 70           # 提高阈值
@@ -27,7 +33,7 @@
  * 退出码：0 = 全部达标；1 = 存在未达标文件；2 = 配置/用法错误（git 失败或 go 不可用）。
  * 说明：Go 无持久覆盖率产物，本脚本对受影响包现跑 `go test -coverprofile`（单包 ~0.5s），
  *   数据新鲜但比前端慢——故默认只对「变更文件所在包」跑，不跑全量。
- * 依赖：node:child_process / node:fs / node:path / node:os / node:url / 本地模块
+ * 依赖：node:child_process / node:fs / node:os / node:path / node:url / 本地模块
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -36,45 +42,24 @@ import { pathToFileURL } from 'node:url';
 import { ROOT } from './_lib/scan-files.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
 import { run } from './_lib/proc.mjs';
+import {
+  git,
+  getChangedFiles,
+  addLinesFromDiff,
+  parseRenameStatus,
+  detectRenames,
+  getChangedLines,
+  buildSuggestBlock as buildSuggestBlockCore,
+} from './_lib/diff-coverage-core.mjs';
+
+// ── re-export（契约测试 import 路径锁：tests/test_check_go_diff_coverage.mjs）──
+export { addLinesFromDiff, parseRenameStatus, detectRenames, getChangedLines, getChangedFiles, git };
 
 const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
 
-function git(args) {
-  const r = run('git', args, { cwd: ROOT });
-  return r.ok ? r.out.trim() : null;
-}
-
-/** 本次改动的非测试 Go 源码文件（repo-root 相对路径）。 */
-export function getChangedGoFiles(base, head, uncommitted, staged) {
-  const out = new Set();
-  if (staged) {
-    const g = git(['diff', '--cached', '--find-renames=30', '--name-only']);
-    if (g === null) return null;
-    g.split('\n').forEach((l) => l && out.add(l));
-    return [...out].filter(isGoSource);
-  }
-  const g1 = git(['diff', '--diff-filter=ACMR', '--find-renames=30', '--name-only', `${base}...${head}`]);
-  if (g1 === null) return null;
-  g1.split('\n').forEach((l) => l && out.add(l));
-  if (out.size === 0) {
-    const g2 = git(['diff', '--diff-filter=ACMR', '--find-renames=30', '--name-only', `${head}~1...${head}`]);
-    if (g2 === null) return null;
-    g2.split('\n').forEach((l) => l && out.add(l));
-  }
-  if (uncommitted) {
-    const g3 = git(['diff', '--find-renames=30', '--name-only']);
-    if (g3 === null) return null;
-    g3.split('\n').forEach((l) => l && out.add(l));
-    const g4 = git(['diff', '--cached', '--find-renames=30', '--name-only']);
-    if (g4 === null) return null;
-    g4.split('\n').forEach((l) => l && out.add(l));
-  }
-  return [...out].filter(isGoSource);
-}
-
 /** 仅保留应纳入 Go diff 门禁的源码：.go 且非 _test.go、非根覆盖产物 go-cover。 */
-function isGoSource(f) {
+export function isGoSource(f) {
   return (
     f.endsWith('.go') &&
     !f.endsWith('_test.go') &&
@@ -83,71 +68,11 @@ function isGoSource(f) {
   );
 }
 
-/** 解析 `--unified=0` diff 输出，提取新增行号（与前端版同逻辑）。 */
-export function addLinesFromDiff(out, diff) {
-  if (!diff) return;
-  const lines = diff.split('\n');
-  let currentLine = 0;
-  for (const line of lines) {
-    const hdr = line.match(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,(\d+))?\s+@@/);
-    if (hdr) {
-      currentLine = parseInt(hdr[1], 10);
-      continue;
-    }
-    if (currentLine === 0) continue;
-    if (line.startsWith('+')) {
-      out.add(currentLine);
-      currentLine++;
-    } else if (line.startsWith(' ')) {
-      currentLine++;
-    }
-  }
-}
-
-export function parseRenameStatus(out) {
-  const map = new Map();
-  out.split('\n').forEach((l) => {
-    const m = l.match(/^R(\d+)\t(.+?)\t(.+)$/);
-    if (m) map.set(m[3], { from: m[2], sim: Number(m[1]) });
-  });
-  return map;
-}
-
-export function detectRenames(base, head, staged) {
-  if (staged) {
-    return parseRenameStatus(git(['diff', '--cached', '--name-status', '--find-renames=30']));
-  }
-  const map = parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', `${base}...${head}`]));
-  if (map.size === 0) {
-    return parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', base, head]));
-  }
-  return map;
-}
-
-/** 取变更文件的具体新增行号集合（新文件行号）。 */
-export function getChangedLines(file, base, head, uncommitted, renameOld, staged) {
-  const out = new Set();
-  if (staged) {
-    if (renameOld) {
-      addLinesFromDiff(out, git(['diff', '--unified=0', `HEAD:${renameOld}`, `:${file}`]));
-      return out;
-    }
-    addLinesFromDiff(out, git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', file]));
-    return out;
-  }
-  if (renameOld) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${file}`]));
-    if (out.size > 0) return out;
-  }
-  addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', file]));
-  if (out.size === 0) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', `${head}~1...${head}`, '--', file]));
-  }
-  if (uncommitted) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', '--', file]));
-    addLinesFromDiff(out, git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', file]));
-  }
-  return out;
+/** 本次改动的非测试 Go 源码文件（repo-root 相对路径）。 */
+export function getChangedGoFiles(base, head, uncommitted, staged) {
+  const out = getChangedFiles(base, head, uncommitted, staged);
+  if (out === null) return null;
+  return out.filter(isGoSource);
 }
 
 /** 把改动文件映射到 go test 包模式（模块根相对，如 go/scanner → ./go/scanner/...）。 */
@@ -255,17 +180,13 @@ export function stmtPctForChangedLines(blocks, changedLines) {
   return total === 0 ? 100 : (covered / total) * 100;
 }
 
+/** Go 版建议区块（标题/称谓/提示与前端版区分，契约测试锁定文案）。 */
 export function buildSuggestBlock(failures, threshold) {
-  const lines = failures.map((f) => `- \`${f.file}\` — ${f.pct.toFixed(1)}%`);
-  return [
-    '## Go 覆盖率建议（非阻断）',
-    '',
-    `以下改动 Go 文件变更行覆盖率低于 ${threshold}%，建议后续补测试（不阻塞提交/合并）：`,
-    '',
-    ...lines,
-    '',
-    '提示：本建议基于本次改动包 `go test -coverprofile` 实跑结果。',
-  ].join('\n');
+  return buildSuggestBlockCore(failures, threshold, {
+    title: '## Go 覆盖率建议（非阻断）',
+    noun: 'Go 文件',
+    hint: '本建议基于本次改动包 `go test -coverprofile` 实跑结果。',
+  });
 }
 
 function main() {

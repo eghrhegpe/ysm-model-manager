@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 /**
- * check-diff-coverage.mjs — 变更文件覆盖率门禁（diff-coverage gate）。
+ * check-diff-coverage.mjs — 变更文件覆盖率门禁（diff-coverage gate，前端版）。
  *
  * 设计意图：整体覆盖率阈值只防整体回退、不保护「新代码有测试」。本脚本
  * 仅检查「本次 git 变更的非测试源码」的变更行覆盖率，低于阈值即阻断；
  * 保护 PR/commit 的新增逻辑不裸奔（源自 MikuMikuAR P8-A gate，适配本仓库）。
+ *
+ * 实现：git 变更收集 / rename / 建议区块等语言无关部分抽到
+ *   scripts/_lib/diff-coverage-core.mjs（与 check-go-diff-coverage.mjs 共享）；
+ *   本文件仅保留前端专属策略：isSourceFile 过滤 + Istanbul coverage-final.json
+ *   读取 + statementPctForChangedLines。下方 re-export 供契约测试 import（
+ *   tests/test_check_diff_coverage.mjs），签名不变。
  *
  * 用法（仓库根运行，命令统一 node scripts/<name>.mjs）：
  *   node scripts/check-diff-coverage.mjs                          # base=origin/main, threshold=60
@@ -19,137 +25,28 @@
  * 退出码：0 = 全部达标；1 = 存在未达标文件；2 = 配置/用法错误（缺覆盖率文件或 git 失败）。
  * rename 处理：--find-renames 检测 + 两点 blob diff 取真实最小 hunk；纯改名自然达标，
  *   rename 中新增的真实逻辑仍受覆盖约束。
- * 依赖：node:child_process / node:fs / node:path / node:url / 本地模块
+ * 依赖：node:fs / node:path / node:url / _lib
  */
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve, sep } from 'node:path';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './_lib/scan-files.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
-import { run } from './_lib/proc.mjs';
+import {
+  git,
+  getChangedFiles,
+  addLinesFromDiff,
+  parseRenameStatus,
+  detectRenames,
+  getChangedLines,
+  buildSuggestBlock as buildSuggestBlockCore,
+} from './_lib/diff-coverage-core.mjs';
+
+// ── re-export（契约测试 import 路径锁：tests/test_check_diff_coverage.mjs）──
+export { addLinesFromDiff, parseRenameStatus, detectRenames, getChangedLines, getChangedFiles, git };
 
 const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
-
-function git(args) {
-  const r = run('git', args, { cwd: ROOT });
-  return r.ok ? r.out.trim() : null; // 失败返回 null（区别于“成功但无输出”的 ''）：调用方 fail-closed，拒绝空跑放行
-}
-
-/** 取本次改动的非测试源码文件（repo-root 相对路径）。 */
-function getChangedFiles(base, head, uncommitted, staged) {
-  const out = new Set();
-  // --staged：仅本次暂存区（prepare-commit-msg 场景 = 本次 commit 的文件），
-  // 避免 --base origin/main 在本地领先时把历史未推送改动也纳入噪音。
-  if (staged) {
-    const g = git(['diff', '--cached', '--find-renames=30', '--name-only']);
-    if (g === null) return null; // git 失败 → 调用方 fail-closed
-    g.split('\n').forEach((l) => l && out.add(l));
-    return [...out];
-  }
-  // 三圆点：PR 分支相对 main 合并基的改动
-  // --find-renames=30：强制激活 rename 检测（不依赖 git config），
-  // 避免 base...head 相对合并基时把 rename 拆成 A+D，导致纯改名被当新增惩罚。
-  const g1 = git(['diff', '--diff-filter=ACMR', '--find-renames=30', '--name-only', `${base}...${head}`]);
-  if (g1 === null) return null;
-  g1.split('\n').forEach((l) => l && out.add(l));
-  // 兜底：直推 main 时三圆点可能为空，退化为上一提交
-  if (out.size === 0) {
-    const g2 = git(['diff', '--diff-filter=ACMR', '--find-renames=30', '--name-only', `${head}~1...${head}`]);
-    if (g2 === null) return null;
-    g2.split('\n').forEach((l) => l && out.add(l));
-  }
-  if (uncommitted) {
-    const g3 = git(['diff', '--find-renames=30', '--name-only']);
-    if (g3 === null) return null;
-    g3.split('\n').forEach((l) => l && out.add(l));
-    const g4 = git(['diff', '--cached', '--find-renames=30', '--name-only']);
-    if (g4 === null) return null;
-    g4.split('\n').forEach((l) => l && out.add(l));
-  }
-  return [...out];
-}
-
-/** 解析 `--unified=0` diff 输出，提取新增行号。 */
-export function addLinesFromDiff(out, diff) {
-  if (!diff) return;
-  const lines = diff.split('\n');
-  let currentLine = 0;
-  for (const line of lines) {
-    const hdr = line.match(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,(\d+))?\s+@@/);
-    if (hdr) {
-      currentLine = parseInt(hdr[1], 10);
-      continue;
-    }
-    if (currentLine === 0) continue;
-    if (line.startsWith('+')) {
-      out.add(currentLine);
-      currentLine++;
-    } else if (line.startsWith(' ')) {
-      // 上下文行（未变更），仍计入行号
-      currentLine++;
-    }
-    // '-' 行在新文件中不存在，不递增行号
-  }
-}
-
-/** 解析 `git diff --name-status` 的 R 行（R<sim>\t<from>\t<to>）→ Map<to, {from, sim}>。 */
-export function parseRenameStatus(out) {
-  const map = new Map();
-  out.split('\n').forEach((l) => {
-    const m = l.match(/^R(\d+)\t(.+?)\t(.+)$/);
-    if (m) map.set(m[3], { from: m[2], sim: Number(m[1]) });
-  });
-  return map;
-}
-
-export function detectRenames(base, head, staged) {
-  // --staged：用暂存区 name-status 检测 rename（prepare-commit-msg 场景）
-  if (staged) {
-    return parseRenameStatus(git(['diff', '--cached', '--name-status', '--find-renames=30']));
-  }
-  // 三圆点：PR 相对 main 合并基
-  const map = parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', `${base}...${head}`]));
-  // 兜底：直推 main 时三圆点可能为空，退化为两点
-  if (map.size === 0) {
-    return parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', base, head]));
-  }
-  return map;
-}
-
-/** 获取变更文件的具体行号集合（新文件行号）。 */
-export function getChangedLines(file, base, head, uncommitted, renameOld, staged) {
-  const out = new Set();
-  // --staged：仅暂存区变更行（本次 commit 的文件）
-  if (staged) {
-    // [code_review P3] staged rename：pathsocope 限定单路径会把旧路径的删除项
-    // 从 diff 队列滤掉，rename 对无法配对 → 整文件被判为新增（覆盖率误判）。
-    // 与下方非 staged 的 rename 分支同思路：renameOld 存在时用「HEAD 旧 blob ↔
-    // 索引新 blob」两点 diff 取真实最小 hunk，否则回退 --cached 常规 diff。
-    if (renameOld) {
-      addLinesFromDiff(out, git(['diff', '--unified=0', `HEAD:${renameOld}`, `:${file}`]));
-      return out;
-    }
-    addLinesFromDiff(out, git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', file]));
-    return out;
-  }
-  // rename 重构：用两点 blob diff 取「旧路径→新路径」的真实最小 hunk，
-  // 避免 base...head 三圆点把 rename 当 add 时整文件被判为新增行。
-  if (renameOld) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${file}`]));
-    if (out.size > 0) return out;
-  }
-  addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', file]));
-  // 兜底：直推 main 时三圆点可能为空
-  if (out.size === 0) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', `${head}~1...${head}`, '--', file]));
-  }
-  if (uncommitted) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', '--', file]));
-    addLinesFromDiff(out, git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', file]));
-  }
-  return out;
-}
 
 /** 仅保留应纳入 diff 门禁的源码：frontend/src 下、非测试、非 index/wails 绑定产物。 */
 function isSourceFile(f) {
@@ -165,10 +62,10 @@ function isSourceFile(f) {
 
 /** 把 repo 相对路径映射到 coverage-final.json 的绝对路径 key。 */
 function matchCoverageKey(rel, covKeys) {
-  const norm = rel.split(sep).join('/');
+  const norm = rel.split('/').join('/');
   const stripped = norm.replace(/^frontend\//, '');
   for (const k of covKeys) {
-    const nk = k.split(sep).join('/');
+    const nk = k.split('/').join('/');
     if (nk === norm) return k;
     if (nk.endsWith('/' + norm)) return k;
     if (nk.endsWith('/' + stripped)) return k;
@@ -176,7 +73,7 @@ function matchCoverageKey(rel, covKeys) {
   return null;
 }
 
-/** 变更行相关的语句覆盖率百分比。 */
+/** 变更行相关的语句覆盖率百分比（Istanbul coverage-final.json 条目）。 */
 export function statementPctForChangedLines(entry, changedLines) {
   const s = entry?.s || {};
   const sm = entry?.statementMap || {};
@@ -204,21 +101,9 @@ export function statementPctForChangedLines(entry, changedLines) {
   return (covered / relevantIds.length) * 100;
 }
 
-/**
- * 构造可追加进 commit message 的非阻断建议区块（幂等剥离由钩子负责）。
- * 仅在 suggest 模式、且有未达标文件时输出；返回 Markdown 字符串，首行即 BLOCK_START 标记。
- */
+/** 前端版建议区块（标题/称谓/提示与 Go 版区分）。 */
 export function buildSuggestBlock(failures, threshold) {
-  const lines = failures.map((f) => `- \`${f.file}\` — ${f.pct.toFixed(1)}%`);
-  return [
-    '## 覆盖率建议（非阻断）',
-    '',
-    `以下改动文件变更行覆盖率低于 ${threshold}%，建议后续补测试（不阻塞提交/合并）：`,
-    '',
-    ...lines,
-    '',
-    '提示：本建议基于最近一次 `vitest --coverage` 产物；新逻辑未跑测试时数据可能滞后。',
-  ].join('\n');
+  return buildSuggestBlockCore(failures, threshold);
 }
 
 function main() {

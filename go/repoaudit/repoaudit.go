@@ -156,7 +156,10 @@ func Audit(dirPath string) (Result, error) {
 		}
 		// 符号链接守卫：拒绝根目录符号链接，跳过子树内符号链接（与 dedup 包对齐）
 		if d.Type()&os.ModeSymlink != 0 {
-			if path == dirPath {
+			// R34 P2-3：filepath.WalkDir 内部对 root 做 Clean，
+			// 传入的 dirPath 可能含尾斜杠/.. 而未 clean，导致 path != dirPath 比较失败，
+			// 根符号链接被静默跳过。对 dirPath 先 Clean 再比较。
+			if path == filepath.Clean(dirPath) {
 				return fmt.Errorf("审计根目录是符号链接: %s", dirPath)
 			}
 			return nil

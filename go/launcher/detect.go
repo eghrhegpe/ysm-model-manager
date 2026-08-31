@@ -13,6 +13,17 @@ import (
 	"ysm-model-manager/go/types"
 )
 
+// expandHMCLVars 仅对 ${HMCL_DIR} 做受限环境变量扩展。
+// R34 P2-6：原 os.ExpandEnv 对任意环境变量展开，
+// 读取恶意/被篡改启动器配置时可注入 ${HOME} 等重定向路径。
+func expandHMCLVars(s string) string {
+	hmclDir, ok := os.LookupEnv("HMCL_DIR")
+	if !ok {
+		return s
+	}
+	return strings.ReplaceAll(s, "${HMCL_DIR}", hmclDir)
+}
+
 const ysmCustomSubdir = "config/yes_steve_model/custom"
 
 const (
@@ -147,7 +158,10 @@ func readHMCLGameDirectories(launcherRoot string) []string {
 }
 
 func resolvePortablePath(base, path string) string {
-	path = os.ExpandEnv(strings.TrimSpace(path))
+	// R34 P2-6：原 os.ExpandEnv 对任意环境变量展开，
+	// 读取恶意/被篡改启动器配置时可注入 ${HOME} 等重定向路径。
+	// 仅对明确的可移植变量（HMCL_DIR）做受限扩展。
+	path = expandHMCLVars(strings.TrimSpace(path))
 	if path == "~" || strings.HasPrefix(path, "~"+string(filepath.Separator)) || strings.HasPrefix(path, "~/") {
 		if home, err := os.UserHomeDir(); err == nil {
 			path = filepath.Join(home, strings.TrimLeft(path[1:], "/\\"))

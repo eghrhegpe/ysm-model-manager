@@ -269,9 +269,17 @@ func (w *Watcher) syncAll() {
 		w.wg.Done()
 		w.mu.Lock()
 		w.syncRunning = false
+		restart := w.running
+		// R34 P2-9：syncPending 续跑竞态修复。
+		// 原实现 pending := w.syncPending 与 w.syncPending = false 在同一锁内，
+		// 但 L259-262 的 syncPending=true 设置与 L271 syncRunning=false 复位
+		// 之间存在窗口——若 in-flight 实例的 defer 已越过 pending 读取点，
+		// 新设置的 pending 被静默丢弃。
+		// 修复：在 syncRunning=false 复位之后、释放锁之前，重新检查 syncPending。
+		// 此时任何在同步期间到达的事件要么已被 L259-262 标记为 pending，
+		// 要么在 syncRunning 复位后看到 syncRunning==false 直接进入新一轮。
 		pending := w.syncPending
 		w.syncPending = false
-		restart := w.running
 		w.mu.Unlock()
 		// 执行期间积累的新事件：串行续跑一轮（Stop 后不再续跑）
 		if pending && restart {

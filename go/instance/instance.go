@@ -219,8 +219,10 @@ func (c *rtypeCtx) appendOneItem(typeItems *[]types.ResourceSyncItem, p string, 
 	var children []types.ResourceSyncItem
 	if c.isDirLevel && meta.isDirEntry {
 		instPath := p
-		if strings.HasPrefix(p, c.globalDir) {
-			rel := strings.TrimPrefix(p, c.globalDir)
+		// R34 P2-13：用分隔符守卫而非裸 HasPrefix，
+		// 防全局根是另一全局根前缀（D:\repo\a vs D:\repo\abc）时算出错误实例侧路径。
+		if strings.HasPrefix(p, c.globalDir+string(filepath.Separator)) {
+			rel := strings.TrimPrefix(p, c.globalDir+string(filepath.Separator))
 			instPath = filepath.Join(c.instDir, rel)
 		}
 		children = buildDirLevelChildren(p, instPath, c.rt.ID, c.rt.Icon, c.globalDir)

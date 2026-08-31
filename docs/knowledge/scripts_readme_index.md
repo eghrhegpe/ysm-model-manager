@@ -25,7 +25,7 @@ use_when:
 
 ## 核心职责
 
-- **对账**：递归扫描 `scripts/`（含 `hooks/` 子目录，排除 `_lib` 共享层与 `.test.mjs`），与 `scripts/README.md` 全文比对，脚本 basename（含 `.mjs`）未在 README 出现 → 零提及。
+- **对账**：通过 `_lib/collect-scripts.mjs` 的 `collectScripts()` 收集 `scripts/` 下 .mjs（含 `hooks/` 子目录，排除 `_lib` 共享层与 `.test.mjs`；2026-09 起由共享层提供，与 check-proc-adoption / check-script-hygiene 同源），与 `scripts/README.md` 全文比对，脚本 basename（含 `.mjs`）未在 README 出现 → 零提及。
 - **判定口径**：basename 精确匹配（非前缀）——README 表格列出的就是 basename，且覆盖正文/口令表引用。`doctor.mjs` 不会被 `doctor-x.mjs` 误判为已登记。
 - **阻断**：存在零提及脚本 → 退出码 1（ERROR 级），默认模式即阻断（与 check-workflow-refs 同款）。
 - **`--json` 契约**：输出 `_summary: { scripts, registered, missing }` + `missing` 清单，供 pre-push-gate / doctor / 子代理稳定消费。

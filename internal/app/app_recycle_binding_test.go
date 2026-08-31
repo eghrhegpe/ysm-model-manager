@@ -6,6 +6,7 @@
 package app
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -44,5 +45,39 @@ func TestEmptyRecycleBin_NoRecycleDir(t *testing.T) {
 	}
 	if n != 0 {
 		t.Fatalf("无回收站目录应返回 0, got %d", n)
+	}
+}
+
+// MoveToRecycleEx 成功路径（R24 加锁行）：src 落在资源根内 → findRecycleRoot 命中 →
+// recycle.New(root).MoveEx 成功 → scanner.InvalidateCache()。覆盖变更行 block[55-56]。
+func TestMoveToRecycleEx_Success(t *testing.T) {
+	a, ysmRoot, _ := packApp(t)
+	src := filepath.Join(ysmRoot, "recycle-me.ysm")
+	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	action, reason := a.MoveToRecycleEx(src)
+	if action != "recycled" {
+		t.Fatalf("应 recycled, got %q (%s)", action, reason)
+	}
+	if _, err := os.Stat(src); !os.IsNotExist(err) {
+		t.Error("回收后源文件应已进入回收站")
+	}
+}
+
+// ListRecycleBin 遍历各资源根（R24 加锁行）：move 一个文件进回收站后列出，
+// 覆盖变更行 block[179-180]（for _, e := range recycle.New(r).List()）。
+func TestListRecycleBin_IteratesRoots(t *testing.T) {
+	a, ysmRoot, _ := packApp(t)
+	src := filepath.Join(ysmRoot, "list-me.ysm")
+	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if action, _ := a.MoveToRecycleEx(src); action != "recycled" {
+		t.Fatalf("预置回收失败: %s", action)
+	}
+	entries := a.ListRecycleBin("")
+	if len(entries) != 1 {
+		t.Fatalf("ListRecycleBin 应列出 1 条, 得到 %d", len(entries))
 	}
 }

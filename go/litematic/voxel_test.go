@@ -13,15 +13,6 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// nbtLong 构造 TAG_Long
-func nbtLong(name string, v int64) []byte {
-	var body [8]byte
-	for i := 7; i >= 0; i-- {
-		body[7-i] = byte(v >> (8 * i))
-	}
-	return nbtTag(0x04, name, body[:])
-}
-
 // nbtLongArray 构造 TAG_Long_Array
 func nbtLongArray(name string, vals []int64) []byte {
 	body := []byte{byte(len(vals) >> 24), byte(len(vals) >> 16), byte(len(vals) >> 8), byte(len(vals))}

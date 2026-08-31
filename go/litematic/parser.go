@@ -101,7 +101,7 @@ func aggregateBlockStatsFromPalette(regions map[string]any) []types.LitematicBlo
 		}
 
 		paletteList := getList(region, "BlockStatePalette")
-		if paletteList == nil || len(paletteList) <= 1 {
+		if len(paletteList) <= 1 {
 			continue
 		}
 

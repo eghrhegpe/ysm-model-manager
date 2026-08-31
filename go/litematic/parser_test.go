@@ -373,6 +373,64 @@ func TestParseNbtStructure_Valid(t *testing.T) {
 	}
 }
 
+// TestParseNbtStructure_SizeGuard 覆盖 R28 P3-2 的 size 断言守卫：
+// 仅当 3 元素均为 int32 且尺寸全正时才设 size，避免前端拿到全零 size / 下游 voxel 除零。
+// 注意：size 必须编码为 NBT List（[]any{int32...}），[]int32 会被编码为 Int_Array 而 getList 取不到。
+func TestParseNbtStructure_SizeGuard(t *testing.T) {
+	mkSizeNbt := func(size any) string {
+		root := map[string]any{
+			"DataVersion": int32(2566),
+			"size":        size,
+			"blocks":      []any{},
+			"palette":     []any{map[string]any{"Name": "minecraft:stone"}},
+		}
+		raw, err := nbt.Marshal(root)
+		if err != nil {
+			t.Fatalf("nbt.Marshal 失败: %v", err)
+		}
+		var buf bytes.Buffer
+		gz := gzip.NewWriter(&buf)
+		if _, err := gz.Write(raw); err != nil {
+			t.Fatal(err)
+		}
+		gz.Close()
+		path := filepath.Join(t.TempDir(), "size.nbt")
+		if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+
+	t.Run("valid positive", func(t *testing.T) {
+		result := ParseNbtStructure(mkSizeNbt([]any{int32(3), int32(4), int32(5)}))
+		if result == nil {
+			t.Fatal("期望非 nil")
+		}
+		got, ok := result["size"].([]int)
+		if !ok || got[0] != 3 || got[1] != 4 || got[2] != 5 {
+			t.Errorf("size = %v, 期望 [3 4 5]", result["size"])
+		}
+	})
+	t.Run("wrong element type", func(t *testing.T) {
+		result := ParseNbtStructure(mkSizeNbt([]any{"3", "4", "5"}))
+		if result["size"] != nil {
+			t.Errorf("类型断言失败不应设 size, 得到 %v", result["size"])
+		}
+	})
+	t.Run("zero size rejected", func(t *testing.T) {
+		result := ParseNbtStructure(mkSizeNbt([]any{int32(0), int32(0), int32(0)}))
+		if result["size"] != nil {
+			t.Errorf("零尺寸不应设 size, 得到 %v", result["size"])
+		}
+	})
+	t.Run("len != 3 ignored", func(t *testing.T) {
+		result := ParseNbtStructure(mkSizeNbt([]any{int32(1)}))
+		if result["size"] != nil {
+			t.Errorf("长度!=3 不应设 size, 得到 %v", result["size"])
+		}
+	})
+}
+
 func TestParseNbtStructure_NonExistent(t *testing.T) {
 	result := ParseNbtStructure("/nonexistent/path.nbt")
 	if result != nil {

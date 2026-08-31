@@ -52,7 +52,9 @@ func TestMapColor_HashFallback(t *testing.T) {
 
 // TestHashColor_Deterministic 哈希颜色对相同输入稳定
 func TestHashColor_Deterministic(t *testing.T) {
-	if hashColor("test") != hashColor("test") {
+	a := hashColor("test")
+	b := hashColor("test")
+	if a != b {
 		t.Fatal("hashColor 相同输入应返回相同结果")
 	}
 }

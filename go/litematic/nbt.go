@@ -304,10 +304,27 @@ func getLongArray(m map[string]any, key string) ([]int64, bool) {
 	return nil, false
 }
 
+// toAnySlice 将 NBT 还原的整型切片([]int32/[]int64) 统一转为 []any，供 getList 下游类型断言消费。
+func toAnySlice[T int32 | int64](v []T) []any {
+	out := make([]any, len(v))
+	for i, e := range v {
+		out[i] = e
+	}
+	return out
+}
+
 func getList(m map[string]any, key string) []any {
 	if v, ok := m[key]; ok {
 		if list, ok := v.([]any); ok {
 			return list
+		}
+		// NBT List-of-Int 还原为 []int32 / []int64（如 structure 的 size），
+		// 统一转 []any——否则 getList 取不到、size 提取长期失效（R28 P3-2 守卫随之不可达）。
+		if list, ok := v.([]int32); ok {
+			return toAnySlice(list)
+		}
+		if list, ok := v.([]int64); ok {
+			return toAnySlice(list)
 		}
 	}
 	return nil

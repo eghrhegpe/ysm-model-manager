@@ -204,12 +204,12 @@
 | `ExtractPreviewTexture()` | `go/fileops/fileops_preview:50` | ExtractPreviewTexture 从模型文件中提取预览纹理（zip/7z/ysm/json） |
 | `GetPackInfo()` | `go/fileops/fileops_preview:154` | GetPackInfo 读取 ysm-pack.json（root 为空时按绝对路径处理） |
 | `CreateDir()` | `go/fileops/fileops:52` | CreateDir 在 root 下创建子目录（校验非法字符，与 RenameDir 对齐） |
-| `RenameDir()` | `go/fileops/fileops:70` | RenameDir 重命名目录（仅改末段，保持父目录） |
-| `RemoveDir()` | `go/fileops/fileops:96` | RemoveDir 递归删除目录（基础安全校验——拒绝空路径/NUL/穿越段/根目录； 仓库归属校验由调用方 isPathInRoot 负责，此处为纵深防御） |
-| `RenameFile()` | `go/fileops/fileops:119` | RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名） |
-| `MoveModelFile()` | `go/fileops/fileops:151` | MoveModelFile 移动 src 到 dstDir（保留原名） root 用于路径安全校验（空则跳过校验，对齐 CopyModelFile 语义）； ADR-038 D3： |
-| `CopyModelFile()` | `go/fileops/fileops:265` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
-| `DeleteModelFile()` | `go/fileops/fileops:362` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
+| `RenameDir()` | `go/fileops/fileops:80` | RenameDir 重命名目录（仅改末段，保持父目录） |
+| `RemoveDir()` | `go/fileops/fileops:101` | RemoveDir 递归删除目录（基础安全校验——拒绝空路径/NUL/穿越段/根目录； 仓库归属校验由调用方 isPathInRoot 负责，此处为纵深防御） |
+| `RenameFile()` | `go/fileops/fileops:124` | RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名） |
+| `MoveModelFile()` | `go/fileops/fileops:164` | MoveModelFile 移动 src 到 dstDir（保留原名） root 用于路径安全校验（空则跳过校验，对齐 CopyModelFile 语义）； ADR-038 D3： |
+| `CopyModelFile()` | `go/fileops/fileops:273` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
+| `DeleteModelFile()` | `go/fileops/fileops:365` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
 | `WriteModelFolder()` | `go/fileops/folder_import:20` | WriteModelFolder 写入文件夹整组到仓库（YSM 解压目录或普通模型文件夹）。 |
 
 ## Go·文件系统
@@ -244,16 +244,16 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `IsArmModelName()` | `go/geometry/archive:37` | IsArmModelName 判断模型文件是否为第一人称手持视角的独立手臂几何 （arm.json / arm.geo.json）。 |
-| `ExtractFirstPNGFromZip()` | `go/geometry/archive:126` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
-| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:136` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
+| `IsArmModelName()` | `go/geometry/archive:59` | — |
+| `ExtractFirstPNGFromZip()` | `go/geometry/archive:143` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
+| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:153` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
 | `ParseFromZip()` | `go/geometry/archive:1352` | ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画。 |
 | `ParseFrom7z()` | `go/geometry/archive:1358` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理。 |
 | `ParseFromZipEntry()` | `go/geometry/archive:1371` | ParseFromZipEntry 按 subPath（zip 内路径，L0 SubModel.SourcePath 口径）解析单个 geometry 文件。 |
 | `ParseFrom7zEntry()` | `go/geometry/archive:1376` | ParseFrom7zEntry 对应 ParseFromZipEntry 的 7z 版本；subPath 匹配策略完全一致。 |
 | `IsMainModelName()` | `go/geometry/archive:1442` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:1454` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:1665` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 parseComponentsFromArchi |
+| `ParseComponentsFromZip()` | `go/geometry/archive:1449` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:1660` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 parseComponentsFromArchi |
 | `ParseBedrockGeometry()` | `go/geometry/parse:240` | ParseBedrockGeometry 解析 Bedrock geometry JSON。 |
 
 ## Go·导入

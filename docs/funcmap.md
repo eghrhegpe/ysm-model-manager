@@ -425,18 +425,18 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `SetErrorSink()` | `go/scanner/scanner:95` | SetErrorSink 注入扫描错误回调（薄壳 internal/app 启动时调用，如 AddOpLog 包装） |
-| `EffectiveCacheTTL()` | `go/scanner/scanner:137` | EffectiveCacheTTL 导出当前生效的扫描缓存 TTL，供派生缓存（go/instance 同步结果、 go/sync 扫描缓存）写缓存时取同一刷新周期——30s 刷新 |
-| `OnCacheInvalidated()` | `go/scanner/scanner:162` | OnCacheInvalidated 注册一个扫描缓存失效回调。回调会在 InvalidateCache 或 InvalidatePath 完成清理后同步调用，适合清理依赖 sca |
-| `InvalidateCache()` | `go/scanner/scanner:181` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
-| `InvalidatePath()` | `go/scanner/scanner:197` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
-| `ScanEntries()` | `go/scanner/scanner:229` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
-| `ScanEntriesWithHit()` | `go/scanner/scanner:236` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
-| `ComputeFileHash()` | `go/scanner/scanner:475` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
-| `ScanEntriesLite()` | `go/scanner/scanner:498` | ScanEntriesLite 轻量目录遍历（作者提取专用）：与 ScanEntries 同一套过滤口径 （recycle/.github/禁用后缀目录跳过、扩展名白名单、.jso |
-| `ListModelAuthors()` | `go/scanner/scanner:541` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
-| `ScanLocalAuthors()` | `go/scanner/scanner:571` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
-| `GenerateRepoIndex()` | `go/scanner/scanner:653` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
+| `SetErrorSink()` | `go/scanner/scanner:98` | SetErrorSink 注入扫描错误回调（薄壳 internal/app 启动时调用，如 AddOpLog 包装） R31 P2-3：atomic.Pointer 写入，消除 d |
+| `EffectiveCacheTTL()` | `go/scanner/scanner:141` | EffectiveCacheTTL 导出当前生效的扫描缓存 TTL，供派生缓存（go/instance 同步结果、 go/sync 扫描缓存）写缓存时取同一刷新周期——30s 刷新 |
+| `OnCacheInvalidated()` | `go/scanner/scanner:166` | OnCacheInvalidated 注册一个扫描缓存失效回调。回调会在 InvalidateCache 或 InvalidatePath 完成清理后同步调用，适合清理依赖 sca |
+| `InvalidateCache()` | `go/scanner/scanner:185` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
+| `InvalidatePath()` | `go/scanner/scanner:201` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
+| `ScanEntries()` | `go/scanner/scanner:237` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
+| `ScanEntriesWithHit()` | `go/scanner/scanner:244` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
+| `ComputeFileHash()` | `go/scanner/scanner:487` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
+| `ScanEntriesLite()` | `go/scanner/scanner:510` | ScanEntriesLite 轻量目录遍历（作者提取专用）：与 ScanEntries 同一套过滤口径 （recycle/.github/禁用后缀目录跳过、扩展名白名单、.jso |
+| `ListModelAuthors()` | `go/scanner/scanner:553` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
+| `ScanLocalAuthors()` | `go/scanner/scanner:583` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
+| `GenerateRepoIndex()` | `go/scanner/scanner:665` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
 
 ## Go·同步
 

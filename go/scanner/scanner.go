@@ -77,7 +77,9 @@ const scanCacheTTL = 30 * time.Second
 
 // errorSink 扫描错误回调（ADR-082 续：GUI 下 stdout 不可见，log.Printf 等于静默——
 // 薄壳注入 AddOpLog 让 walk/文件信息/哈希错误进环形日志面板，用户可查）
-var errorSink func(msg string)
+// R31 P2-3：旧实现是裸变量，SetErrorSink 无锁写、emitScanError 无锁读 → data race。
+// 改 atomic.Pointer 消除竞态（启动期单写、运行期只读，atomic 足够）。
+var errorSink atomic.Pointer[func(msg string)]
 
 // scanErrorDedup 错误去重窗口：同一 msg 在窗口期内只上报一次。
 // 背景：扫描缓存 30s TTL，缓存过期后同目录反复重扫；若目录持续出错（如权限拒绝），
@@ -92,8 +94,9 @@ var (
 )
 
 // SetErrorSink 注入扫描错误回调（薄壳 internal/app 启动时调用，如 AddOpLog 包装）
+// R31 P2-3：atomic.Pointer 写入，消除 data race。
 func SetErrorSink(fn func(msg string)) {
-	errorSink = fn
+	errorSink.Store(&fn)
 }
 
 // emitScanError 上报扫描错误：注入 sink 时走 sink（进日志面板），否则 log.Printf 兜底。
@@ -115,8 +118,9 @@ func emitScanError(format string, args ...any) {
 		}
 	}
 	dedupMu.Unlock()
-	if errorSink != nil {
-		errorSink(msg)
+	// R31 P2-3：atomic.Pointer 读取，消除 data race。
+	if fnp := errorSink.Load(); fnp != nil && *fnp != nil {
+		(*fnp)(msg)
 		return
 	}
 	log.Printf("%s", msg)
@@ -200,23 +204,27 @@ func InvalidatePath(dir string) {
 		return
 	}
 	sep := string(filepath.Separator)
-	// 遍历 keyVersions（含在途扫描的 key）：递增所有相关 key 版本，拦截在途 Store
-	keyVersions.Range(func(k, v interface{}) bool {
-		kstr := k.(string)
-		if kstr == key || strings.HasPrefix(key, kstr+sep) || strings.HasPrefix(kstr, key+sep) {
-			kv := v.(*atomic.Uint64)
-			kv.Add(1)
-		}
-		return true
-	})
-	// 自身 key 版本兜底递增（可能从未被扫描过）
-	kv, _ := keyVersions.LoadOrStore(key, &atomic.Uint64{})
-	kv.(*atomic.Uint64).Add(1)
-	// 遍历 scanCache 删除相关条目
+	// R31 P2-2：祖先脏读修复。
+	// 旧实现仅递增 key 自身 + 子孙 key 版本，不递增祖先 key 版本。
+	// 若用户扫描 /a 后 InvalidatePath("/a/b")，/a 的缓存仍 30s TTL 命中，
+	// 但 /a 的扫描结果可能已包含 /a/b 子树的状态 → 父缓存脏读。
+	// 修复：同时递增所有祖先 key 的版本，确保父缓存也失效。
+	ancestors := []string{key}
+	for parent := filepath.Dir(key); parent != "." && parent != string(filepath.Separator) && parent != key; parent = filepath.Dir(parent) {
+		ancestors = append(ancestors, parent)
+	}
+	for _, anc := range ancestors {
+		kv, _ := keyVersions.LoadOrStore(anc, &atomic.Uint64{})
+		kv.(*atomic.Uint64).Add(1)
+	}
+	// 遍历 scanCache 删除相关条目（自身 + 子孙 + 祖先）
 	scanCache.Range(func(k, _ interface{}) bool {
 		kstr := k.(string)
-		if kstr == key || strings.HasPrefix(key, kstr+sep) || strings.HasPrefix(kstr, key+sep) {
-			scanCache.Delete(kstr)
+		for _, anc := range ancestors {
+			if kstr == anc || strings.HasPrefix(anc, kstr+sep) || strings.HasPrefix(kstr, anc+sep) {
+				scanCache.Delete(kstr)
+				return true
+			}
 		}
 		return true
 	})
@@ -284,7 +292,9 @@ retry:
 	// 仅回调一次 err 后结束，原实现打印后返回空列表并照常 Store 进缓存 30s，
 	// 用户无法区分「目录真空」与「目录不可读」（失败结果被当成功缓存）
 	walkFailed := false
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+	// R31 P2-1：接收 WalkDir 返回 error——根 lstat 失败时 WalkDir 不调 callback
+	// 直接返回 error，旧实现忽略该返回值导致 walkFailed 恒 false，空结果照常缓存。
+	if werr := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true)
 		if rootFailed {
 			walkFailed = true
@@ -297,7 +307,9 @@ retry:
 			entries = append(entries, *entry)
 		}
 		return nil
-	})
+	}); werr != nil {
+		walkFailed = true
+	}
 	// 克隆 slice 后 Store，避免 sync.Map.Load 读到 WalkDir 中途
 	// append 的部分写入（单线程 Wails 场景安全，但并发扫描无 race）
 	stored := append([]types.ModelEntry(nil), entries...)

@@ -243,9 +243,17 @@ func repairBrokenParentChain(bones []BoneData, pivots map[string]vec3, boneByNam
 			}
 		}
 
-		bp := pivots[bones[i].Name]
+		bp, hasBp := pivots[bones[i].Name]
+		if !hasBp {
+			log.Printf("[threejs] repairBrokenParentChain: bone %s 无 pivot，LocalPosition 塌到原点", bones[i].Name)
+			bp = vec3{}
+		}
 		if ancestor != "" {
-			ancPivot := pivots[ancestor]
+			ancPivot, hasAnc := pivots[ancestor]
+			if !hasAnc {
+				log.Printf("[threejs] repairBrokenParentChain: ancestor %s 无 pivot，LocalPosition 塌到原点", ancestor)
+				ancPivot = vec3{}
+			}
 			bones[i].ParentID = &ancestor
 			bones[i].LocalPosition = [3]float64{ancPivot.x - bp.x, bp.y - ancPivot.y, bp.z - ancPivot.z}
 		} else {
@@ -262,8 +270,12 @@ func attachArms(bones []BoneData, pivots map[string]vec3) []BoneData {
 		if bones[i].Name == "RightArm" && bones[i].ParentID == nil {
 			for j := range bones {
 				if bones[j].Name == "Arm" && bones[j].ParentID != nil {
-					raPivot := pivots["RightArm"]
-					armPivot := pivots["Arm"]
+					raPivot, hasRA := pivots["RightArm"]
+					armPivot, hasArm := pivots["Arm"]
+					if !hasRA || !hasArm {
+						log.Printf("[threejs] attachArms: RightArm/Arm 缺 pivot (RA=%v Arm=%v)，跳过", hasRA, hasArm)
+						break
+					}
 					bones[i].ParentID = &bones[j].Name
 					bones[i].LocalPosition = [3]float64{armPivot.x - raPivot.x, raPivot.y - armPivot.y, raPivot.z - armPivot.z}
 					break
@@ -273,8 +285,12 @@ func attachArms(bones []BoneData, pivots map[string]vec3) []BoneData {
 		if bones[i].Name == "LeftArm" && bones[i].ParentID == nil {
 			for j := range bones {
 				if bones[j].Name == "Arm" && bones[j].ParentID != nil {
-					laPivot := pivots["LeftArm"]
-					armPivot := pivots["Arm"]
+					laPivot, hasLA := pivots["LeftArm"]
+					armPivot, hasArm := pivots["Arm"]
+					if !hasLA || !hasArm {
+						log.Printf("[threejs] attachArms: LeftArm/Arm 缺 pivot (LA=%v Arm=%v)，跳过", hasLA, hasArm)
+						break
+					}
 					bones[i].ParentID = &bones[j].Name
 					bones[i].LocalPosition = [3]float64{armPivot.x - laPivot.x, laPivot.y - armPivot.y, laPivot.z - armPivot.z}
 					break

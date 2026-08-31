@@ -14,6 +14,7 @@ import {
   packagePatternFor,
   addLinesFromDiff,
   buildSuggestBlock,
+  isExemptLifecycle,
 } from '../scripts/check-go-diff-coverage.mjs';
 
 const errors = [];
@@ -113,6 +114,16 @@ check('buildSuggestBlock 生成 Markdown 区块', () => {
   const block = buildSuggestBlock([{ file: 'go/x/a.go', pct: 30.5 }], 60);
   assert.ok(block.includes('## Go 覆盖率建议（非阻断）'));
   assert.ok(block.includes('- `go/x/a.go` — 30.5%'));
+});
+
+// ── 7. isExemptLifecycle ──
+check('isExemptLifecycle 命中窗口事件豁免名单', () => {
+  assert.equal(isExemptLifecycle('internal/app/plaza_window.go'), true);
+});
+
+check('isExemptLifecycle 普通文件不豁免', () => {
+  assert.equal(isExemptLifecycle('internal/app/app.go'), false);
+  assert.equal(isExemptLifecycle('go/scanner/scanner.go'), false);
 });
 
 if (errors.length) {

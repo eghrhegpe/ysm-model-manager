@@ -714,6 +714,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-142：缓存三通道统一：texture-cache 内存池 + 磁盘压缩分层",
+        "link": "/adr/ADR-142-texture-cache-channel-unification"
+      },
+      {
         "text": "ADR-141：大脚本拆分基线",
         "link": "/adr/ADR-141-large-script-split-baseline"
       },

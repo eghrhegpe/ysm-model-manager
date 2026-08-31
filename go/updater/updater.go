@@ -216,15 +216,21 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 	}
 
 	// 从 SHA256SUMS 中解析对应 zip 的 hash
-	// fetchExpectedHash 现返回 (string, error)——原 "" 同时表达三种失败态，
-	// 404/403 时哈希校验静默跳过；现失败记录告警但保留 old 行为（hash 缺失仍可下载，
-	// 由 Download 侧状态码检查兜底，不让「hash 不可得」阻塞整个更新流程）
+	// R30 P2-3 + code_review P1-1：哈希不可得时 Available=false，
+	// 阻断无完整性校验的更新下载。
+	// 旧实现「hash 缺失仍可下载」契约已废弃——攻击者只需阻断
+	// SHA256SUMS 获取即可绕过完整性校验。
 	if latestSHASumsURL != "" {
 		hash, err := fetchExpectedHash(latestSHASumsURL, assetPattern())
 		if err != nil {
-			log.Printf("[updater] 获取期望哈希失败（更新将继续但无哈希校验）: %v", err)
+			log.Printf("[updater] 获取期望哈希失败（更新不可用）: %v", err)
+			return &UpdateInfo{Current: current, Latest: latestTag}, nil
 		}
 		expectedHash = hash
+	} else {
+		// 无 SHA256SUMS URL 的 release，哈希不可得
+		log.Printf("[updater] release 无 SHA256SUMS，更新不可用")
+		return &UpdateInfo{Current: current, Latest: latestTag}, nil
 	}
 
 	if latestTag != "" && latestAssetURL == "" {

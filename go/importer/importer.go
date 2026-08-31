@@ -174,21 +174,25 @@ func copyDirContents(src, dst string) error {
 				if rErr != nil {
 					return rErr
 				}
-				// R30 P2-1：符号链接路径穿越防护。
-				// 绝对路径或含 .. 的相对路径可指向仓库外（如 /etc/passwd），
-				// 攻击者构造含恶意 symlink 的源目录即可越权读/写。
-				// 修复：解析 target 为绝对路径，判定是否在源目录树内，
-				// 越界则拒绝。
+				// R30 P2-1 + code_review P1-2 修正：符号链接路径穿越防护。
+				// 相对 target 必须解析为相对于符号链接自身目录（filepath.Dir(srcPath)），
+				// 而非 src（copyDirContents 的当前递归目录）——OS 也是这样解析的。
+				// filepath.Abs 错误必须传播（fail-closed），不能 _ 吞掉（旧实现 fail-open）。
 				cleanTarget := filepath.Clean(target)
-				var resolvedTarget string
+				var realTarget string
 				if filepath.IsAbs(cleanTarget) {
-					resolvedTarget = cleanTarget
+					realTarget = cleanTarget
 				} else {
-					// 相对路径：解析为相对于 src 的绝对路径
-					resolvedTarget = filepath.Join(src, cleanTarget)
+					realTarget = filepath.Join(filepath.Dir(srcPath), cleanTarget)
 				}
-				resolvedSrc, _ := filepath.Abs(src)
-				resolvedTargetAbs, _ := filepath.Abs(resolvedTarget)
+				resolvedTargetAbs, absErr := filepath.Abs(realTarget)
+				if absErr != nil {
+					return fmt.Errorf("解析符号链接 target 失败 %s: %w", srcPath, absErr)
+				}
+				resolvedSrc, absErr2 := filepath.Abs(src)
+				if absErr2 != nil {
+					return fmt.Errorf("解析源目录绝对路径失败 %s: %w", src, absErr2)
+				}
 				// 允许指向源目录树内（含 src 自身）的 symlink，拒绝越界
 				if resolvedTargetAbs != resolvedSrc &&
 					!strings.HasPrefix(resolvedTargetAbs+string(filepath.Separator), resolvedSrc+string(filepath.Separator)) {

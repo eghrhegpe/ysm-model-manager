@@ -533,6 +533,22 @@ async function main() {
     }
   }
 
+  /* --- scripts/ TS 类型检查（--all 模式；.ts 文件随 _lib/ 迁移逐步出现）--- */
+  // tsc 不是 mjs 脚本，不走 runTools 的 node scripts/ 路径；TS18003（无输入）容忍为通过。
+  // 当前 _lib/ 尚未有 .ts 文件，tsc 返回 rc=2；allowRc2=true 时视为通过（零 .ts = 零错误）。
+  // 未来 _lib/proc.ts 等迁移到位后，rc=2 自动变为 rc=0/1，无需额外改 gate。
+  if (allMode || docsMode) {
+    const tSC = path.join(ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'tsc.cmd' : 'tsc');
+    const tscResult = await shAsync(`"${tSC}" --noEmit -p scripts/tsconfig.json`);
+    const tscOk = tscResult.rc === 0 || tscResult.rc === 2; // rc=2 = TS18003 无输入，容忍
+    record('tsc scripts/', tscOk, {
+      time: tscResult.rc === 2 ? 0 : Date.now() - (t0_sc ?? Date.now()),
+      note: tscResult.rc === 2 ? '无 .ts 文件（待 _lib/ 迁移后生效）'
+        : (tscResult.rc === 0 ? '类型检查通过' : `${tscResult.out.trim().split('\n').filter(Boolean).length} 个错误`),
+      tail: tscResult.rc === 0 ? '' : tscResult.out.trim().split('\n').slice(-5).join('\n'),
+    });
+  }
+
   /* --- 聚合摘要 --- */
   logPush('------------------- 结果 -------------------');
   // FAIL 前置（2026-08-29 可观测性）：失败项先出，不被 OK 洪流淹没——

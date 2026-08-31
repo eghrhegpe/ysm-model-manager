@@ -1552,6 +1552,18 @@ export const autoSidebar = [
             "link": "/knowledge/3d-patterns"
           },
           {
+            "text": "诊断与冲突页 diagnostics",
+            "link": "/knowledge/app_content_diagnostics"
+          },
+          {
+            "text": "设置页 settings",
+            "link": "/knowledge/app_content_settings"
+          },
+          {
+            "text": "创意工坊站点视图 site",
+            "link": "/knowledge/app_content_site"
+          },
+          {
             "text": "主内容页 app-content",
             "link": "/knowledge/app-content"
           },

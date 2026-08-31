@@ -1,0 +1,21 @@
+{
+  "name": "ysm-model-manager",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "docs"
+  ],
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.10",
+    "jscpd": "^5.0.14",
+    "knip": "^6.31.0",
+    "typescript": "^7.0.2"
+  },
+  "scripts": {
+    "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
+    "lint:scripts": "biome check scripts/",
+    "deadcode": "node scripts/check-deadcode-baseline.mjs",
+    "jscpd-go": "node scripts/jscpd-go.mjs"
+  }
+}

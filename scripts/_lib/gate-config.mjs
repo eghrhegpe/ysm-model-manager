@@ -108,3 +108,13 @@ export const GO_STATIC_TOOLS = [
   'jscpd-go.mjs',
   'check-go-diff-coverage.mjs',
 ];
+
+/**
+ * scripts/ TS 类型检查（--all 模式；.ts 文件随 _lib/ 迁移逐步出现，零 .ts 时 tsc
+ * 返回 TS18003 退出码 2——此处容忍 rc=2 为"无输入"，避免早期误阻断）。
+ */
+export const SCRIPTS_TYPECHECK = {
+  tool: 'tsc',
+  args: ['--noEmit', '-p', 'scripts/tsconfig.json'],
+  allowRc2: true, // TS18003 无输入 = 尚未有 .ts，非错误
+};

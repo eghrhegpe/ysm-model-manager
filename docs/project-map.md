@@ -103,6 +103,8 @@
 | `embed.go` | 内嵌资源声明（embed 文件系统） |
 | `main.go` | 程序入口（薄壳，GUI 构建） |
 | `main_test.go` | 根级测试（App 生命周期/CLI 冒烟） |
+| `package-lock.json` | ⚠️ 用途待补（在 docs/project-map.md 本表补一句） |
+| `package.json` | ⚠️ 用途待补（在 docs/project-map.md 本表补一句） |
 | `resource_types.json` | 资源类型注册表单一事实来源（扩展名/子目录/安装目标/预览/detector，编译期嵌入 go/types） |
 | `wails.json` | Wails 配置 |
 | `workshop-github.json` | 工坊 GitHub 关联 |

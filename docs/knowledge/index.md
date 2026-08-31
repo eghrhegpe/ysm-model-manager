@@ -2,16 +2,17 @@
 
 # 知识卡索引
 
-> 总计: 135 张知识卡
+> 总计: 136 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（9 张）
+## config（10 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
+| 🏗 auto_import_split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
 | 🏗 extensibility-index-reconciliation | 可拓展点索引对账（vs HEAD @ d517113c…） | architecture | — | 拓展点对账, 落地状态, ADR 闭环 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单 |
@@ -24,6 +25,7 @@
 
 ### 摘要
 
+- **auto_import_split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.mjs` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本…
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
 - **scripts_argv**（脚本 argv 规范与已知豁免 parse-args.mjs）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.mjs`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-3…
 - **scripts_jscpd_go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.mjs` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscp…

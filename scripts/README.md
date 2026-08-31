@@ -108,7 +108,11 @@
 | `i18n-key-naming.mjs` | `node scripts/i18n-key-naming.mjs` / `--list-violations` / `--check key...` / `--entity <词>` | i18n 键名三段式规范检查（ADR-124）：只卡「新增键」必须 `<模块>.<子命名空间>.<实体>`（旧键保留作语义注释），`--list-violations` 输出迁移清单 |
 | `jscpd-go.mjs` | `node scripts/jscpd-go.mjs` / `--update` / `--json` | **Go 端复制粘贴检测**（jscpd v5 Rust 内核）+ 独立 baseline 账本：增量门禁只拦新增重复对、不惩罚存量；只扫 go/ 目录，baseline 独立存 scripts/baseline/jscpd-go-baseline.json（与前端 deadcode 零耦合） |
 | `event-graph.mjs` | `node scripts/event-graph.mjs` / `--check` / `--json` / `--strict` / `--root <dir>` | **Bus 事件契约守护者**：从 bus.ts 的 BusEvents 接口提取权威清单，报告未声明事件 / 孤儿发射 / 鬼订阅 / emit 缺参 / void 多传 / VOID_EVENTS 清单漂移（--strict 硬错误阻断；--check 供 pre-commit 自动重生成校验） |
-| `auto-import.mjs` | `node scripts/auto-import.mjs` / `--fix` / `--watch` / `--strict` | TS/JS 缺失 import 检测（ADR-014 伴生，已接入 doctor 静态分析） |
+| `auto-import.mjs` | `node scripts/auto-import.mjs` / `--fix` / `--watch` / `--strict` | TS/JS 缺失 import 检测（ADR-014 伴生 + ADR-141 拆分基线，已接入 doctor 静态分析）；词法/符号/检测/修复各层拆至下方 auto-import-\* 模块，主入口零改动 |
+| `auto-import-lexer.mjs` | 库模块（非独立 CLI，被 detect 引用） | auto-import 词法层：KEYWORDS/GLOBALS 白名单 + `tokenize`（剥离注释/字符串/模板/正则，收集标识符，ADR-141） |
+| `auto-import-symbols.mjs` | 库模块（非独立 CLI，被 detect 引用） | auto-import 符号层：`extractExports` / `extractDefined` / `extractImported` + 括号/逗号/参数工具（ADR-141；re-export 排除口径经 726 文件实证） |
+| `auto-import-detect.mjs` | 库模块（非独立 CLI，被主入口引用） | auto-import 检测层：`checkFile` / `buildSymbolMap` / `collectFiles` / `run` + `relativeImportSpec`（ADR-141） |
+| `auto-import-fix.mjs` | 库模块（非独立 CLI，被主入口引用） | auto-import 修复层：`applyFixes`（幂等写回）+ `fmtText` / `fmtJson`（ADR-141） |
 | `gen-adr-supersede.mjs` | `node scripts/gen-adr-supersede.mjs` / `--check` | ADR 取代关系判定（五层证据：已登记 / 漏标 / 废弃未指明 / 可疑 / 表格弱宣称）；`--check` 仅漏标失败退出 1（供 check:docs） |
 | `check-dynamic-import.mjs` | `node scripts/check-dynamic-import.mjs` / `--json` | 动态 import() 合理性审查（对照 app_modules 规范：失败处理缺失 / 空 catch 吞错 / .js 后缀残留 / 轻量工具模块误动态导入；WARN 阻断） |
 | `check-tpl-refs.mjs` | `node scripts/check-tpl-refs.mjs` / `--json` | 前端 JS id 引用 ↔ 模板定义交叉核对：引用有定义无 → ERROR 断链阻断（幽灵 id 守护） |

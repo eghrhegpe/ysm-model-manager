@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-141：大脚本拆分基线",
+        "link": "/adr/ADR-141-large-script-split-baseline"
+      },
+      {
         "text": "ADR-140：Go 重复代码治理：文件内自重复三层判定与变体层不强制合并",
         "link": "/adr/ADR-140-go-dup-self-three-tier-variant-policy"
       },
@@ -1381,6 +1385,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r30-go-updater-importer-2026-08-31"
       },
       {
+        "text": "R31 审核：go/threejs + go/scanner（两模块并行）",
+        "link": "/audit/audit-r31-go-threejs-scanner-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },
@@ -1933,6 +1941,10 @@ export const autoSidebar = [
         "text": "config",
         "collapsed": true,
         "items": [
+          {
+            "text": "auto-import 拆分与缺失 import 检测",
+            "link": "/knowledge/auto_import_split"
+          },
           {
             "text": "可拓展点索引对账（vs HEAD @ d517113c…）",
             "link": "/knowledge/extensibility-index-reconciliation"

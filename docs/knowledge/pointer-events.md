@@ -5,7 +5,7 @@ tier: architecture
 category: core
 source_files:
   - frontend/src/preview-3d/adapters/input-and-animation.ts
-  - frontend/src/preview-3d/model2d.ts
+  - frontend/src/views/app-preview/model2d/model2d.ts
   - frontend/src/views/app-preview/zoom.ts
   - frontend/src/views/app-preview/skeleton.ts
   - frontend/src/views/app-preview/litematic-3d.ts
@@ -14,7 +14,7 @@ source_files:
   - frontend/src/views/app-content/site/edit.ts
   - frontend/src/views/app-tree/toolbar-events.ts
 tests:
-  - frontend/src/preview-3d/model2d.test.ts
+  - frontend/src/views/app-preview/model2d/model2d.test.ts
   - frontend/src/preview-3d/model3d.test.ts
   - frontend/src/views/app-preview/zoom.test.ts
   - frontend/src/views/app-preview/skeleton.test.ts

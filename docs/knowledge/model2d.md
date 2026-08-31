@@ -4,9 +4,9 @@ name: 2D 预览渲染 model2d
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/preview-3d/model2d.ts
+  - frontend/src/views/app-preview/model2d/model2d.ts
 tests:
-  - frontend/src/preview-3d/model2d.test.ts
+  - frontend/src/views/app-preview/model2d/model2d.test.ts
 use_when:
   - 2D 预览
   - 骨骼图
@@ -16,7 +16,7 @@ use_when:
   - 鼠标拾取
   - 线框图
 invariant_anchors:
-  - frontend/src/preview-3d/model2d.ts|const cosA = Math.cos(angle)
+  - frontend/src/views/app-preview/model2d/model2d.ts|const cosA = Math.cos(angle)
 ---
 
 # 2D 预览渲染 model2d
@@ -60,5 +60,5 @@ Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可
 - [model3d](./model3d.md) — 3D 预览（同一几何口径）
 - [animation_system](./animation-system.md) — BoneTransform 来源
 - [app_preview](./app-preview.md) — 预览面板消费方
-- `frontend/src/preview-3d/model2d.test.js` — 单元测试（验证入口）
+- `frontend/src/views/app-preview/model2d/model2d.test.ts` — 单元测试（验证入口）
 - AGENTS.md 致命陷阱 §二 #11

@@ -13,7 +13,7 @@
 | `go/threejs/spec.go` | Go 端骨骼计算：pivot 收集、localPos 计算、欧拉角→四元数 | ~533 |
 | `frontend/src/preview-3d/model3d.ts` | Three.js 3D 渲染：场景/相机/灯光/网格 | ~464 |
 | `frontend/src/preview-3d/model3d-spec.ts` | JS 兜底 Spec 构建（Go 不可用时） | ~255 |
-| `frontend/src/preview-3d/model2d.ts` | Canvas 2D 骨骼图：正交投影、旋转、热区 | ~556 |
+| `frontend/src/views/app-preview/model2d/model2d.ts` | Canvas 2D 骨骼图：正交投影、旋转、热区 | ~556 |
 | `frontend/src/views/app-preview/litematic-3d.ts` | 3D 全屏预览覆盖层 | ~212 |
 
 ### 已知痛点
@@ -38,7 +38,7 @@
 ```
 1. go/threejs/spec.go 全文
 2. frontend/src/preview-3d/model3d-spec.ts 全文
-3. frontend/src/preview-3d/model2d.ts 全文
+3. frontend/src/views/app-preview/model2d/model2d.ts 全文
 4. go/types/types.go 中 BedrockModel / Bone / Cube 结构体定义
 5. 一个已知简单模型的 BedrockModel JSON（2-3 根骨，知道"应该长什么样"）
 6. 当前渲染结果截图 + 期望结果截图
@@ -78,7 +78,7 @@
 1. Phase 1 的诊断结论
 2. go/threejs/spec.go
 3. frontend/src/preview-3d/model3d.ts
-4. frontend/src/preview-3d/model2d.ts
+4. frontend/src/views/app-preview/model2d/model2d.ts
 5. docs/architecture.md（了解三层解耦原则）
 ```
 
@@ -118,7 +118,7 @@
 |-----|------|------|
 | DeepSeek V4 Flash | Go 端 `spec.go` 修正 | `go/threejs/spec.go` |
 | DeepSeek V4 Flash | JS 兜底 `model3d-spec.js` 同步 | `frontend/src/preview-3d/model3d-spec.ts` |
-| Qwen3.7 Plus | 2D 骨骼图修正 | `frontend/src/preview-3d/model2d.ts` |
+| Qwen3.7 Plus | 2D 骨骼图修正 | `frontend/src/views/app-preview/model2d/model2d.ts` |
 | Qwen3.7 Plus | 调试可视化（骨骼名标签、坐标打印） | 上述文件 |
 
 **施工规范**：
@@ -192,8 +192,8 @@
 | `go/threejs/spec.go` | `eulerToQuaternion()` :102 | 旋转顺序 |
 | `go/threejs/spec.go` | cube mesh 生成 :304 | cube.pivot - bone.pivot |
 | `frontend/src/preview-3d/model3d-spec.ts` | `buildSpecFromModel()` :8 | JS 兜底，必须与 Go 一致 |
-| `frontend/src/preview-3d/model2d.ts` | `renderModel2D()` :15 | 2D 正交投影 |
-| `frontend/src/preview-3d/model2d.ts` | `rot()` :64 | Y 轴旋转函数 |
+| `frontend/src/views/app-preview/model2d/model2d.ts` | `renderModel2D()` :15 | 2D 正交投影 |
+| `frontend/src/views/app-preview/model2d/model2d.ts` | `rot()` :64 | Y 轴旋转函数 |
 | `frontend/src/preview-3d/model3d.ts` | `renderModel3D()` :36 | Three.js 场景构建 |
 
 ---

@@ -74,6 +74,9 @@ invariant_anchors:
 - `dst` 每次重算后都要复查仍在 `.recycle` 目录内
 - `.recycle` 目录独立于主数据存储
 - **冲突后缀循环遇非 IsNotExist 错误必须返回**（P2 修复：Restore 的 `os.Stat(dst)` 返回权限类错误时原实现继续加后缀循环，错误持续则死循环——已对齐 moveEx 的 `else if err != nil { return err }` 处理）
+- **`Empty` 入口必须 `Lstat(recycleDir)` 检查 symlink**（R26 P2-1 修复）：`RemoveAll` 是破坏性最强的操作，若 `.recycle` 被替换为指向外部的 symlink，`os.RemoveAll` 会跟随 symlink 删除外部目录树。正常 `.recycle` 是 `MkdirAll` 创建的普通目录，命中 symlink 即说明被篡改，一律拒绝。不用 `IsInsideResolved`：`recycleDir` 尚不存在时 `EvalSymlinks` 失败保留原路径，Windows 8.3 短名与长名解析不一致会让 `IsInside` 误判越权（`TestEmpty_RecycleDirNotExist` 回归）。
+- **`moveEx` 跨设备回退源删除失败时必须回滚删除已落地的副本**（R26 P2-2 修复）：旧实现 copy 成功后 `os.Remove(src)` 失败，错误文案说「副本在 dst，请手动清理」，但源文件也还在——误导，且后续重试会堆积更多副本。回滚成功→状态回到「源还在 + 副本已清理」用户可安全重试；回滚失败→错误同时披露源路径与副本路径让上层决策。
+- **`moveEx` rename 成功后必须对 dst 做 `IsInsideResolved(recycleDir, dst)` 事后校验**（R26 P2-3 修复）：防御文件系统 TOCTOU——rename 前父目录被换 symlink 可能让文件落到回收站之外。命中时尝试 `os.Rename` 回滚，回滚失败则报错让上层决策。
 
 ## 相关
 

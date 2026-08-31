@@ -56,6 +56,8 @@ invariant_anchors:
 - 三入口（单击/多选/全选）都走 `enqueueDownloads()`，前端只注册一组 Wails EventsOn（致命陷阱 #7）
 - 取消语义：`CancelQueue` 置 cancelled + cancel ctx → 正在下载的文件立即中断、队列结束不发 `queue:status done`；`EnqueueDownloads` 入队时复位 cancelled（取消后再下载不哑火）。队列带 `epoch` 代际计数：取消/新入队递增，旧 process goroutine 退出时仅当代际一致才复位 running / 发 done，防止「取消后立即重新入队」双 goroutine 并发处理同一队列
 - **process 判空退出前复位 running 后重检任务列表**（P2 修复：判空解锁 return 与 defer 复位 running 之间 Enqueue 可能已追加任务——running 仍 true 不启新 goroutine、defer 又复位+发 done → 队列静默停滞；现复位后代际一致且有任务则重启处理）
+- **`commitAtomicWrite` 的 Sync 失败分支必须显式 `Close` 释放句柄**（R26 P2-2 修复）：旧实现 Sync 失败直接 return，Close 没被调用，依赖外层 cleanup 的 Close 顺序。Windows 上句柄未释放会导致后续 Remove 失败、`.part-*` 残留。修复：Sync 失败分支显式 `_ = af.tmp.Close()` 释放句柄后再 return。Close 的错误被丢弃——Sync 已失败，Close 失败不影响错误分类。
+- **`len(via) >= 10` 重定向上限与标准库对齐，非 off-by-one**（R26 P2-1 误判澄清）：Go 语义里 `via` 是「已发起的请求」（含原始请求），`len(via) >= 10` 拒绝第 10 次重定向（第 11 个请求），允许 9 次重定向——与标准库 `net/http/client.go:834` 的 `defaultMaxRedirect=10` 语义完全对齐。子代理曾误判为 off-by-one，核查标准库源码后确认不修。
 
 ## 相关
 

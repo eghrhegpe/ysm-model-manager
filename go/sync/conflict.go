@@ -52,6 +52,10 @@ type FileConflict struct {
 	RemoteHash string `json:"remoteHash,omitempty"`
 	// SuggestedStrategy 建议的解决策略
 	SuggestedStrategy ResolutionStrategy `json:"suggestedStrategy"`
+	// HashFailed 标记哈希计算失败的条目（R27 code_review P2-1 修复）。
+	// 此类条目本应人工审查，ResolveConflictsLocked 检测到 HashFailed 时
+	// 不覆盖 SuggestedStrategy，直接计入 manual 计数。
+	HashFailed bool `json:"hashFailed,omitempty"`
 }
 
 // ConflictReport 冲突报告
@@ -120,7 +124,8 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 			// 两端 size 相同但任一端 hash 失败（R27 P2-1）：
 			// 旧实现在此情况静默跳过（hash 空时 L91 条件不满足），
 			// 导致哈希失败的真实冲突文件被漏报。
-			// 修复：标记为 ResolveManual，让调用方知悉需手动审查。
+			// 修复：标记 HashFailed=true + ResolveManual，让 ResolveConflictsLocked
+			// 检测到 HashFailed 时不覆盖 SuggestedStrategy，直接计入 manual。
 			conflict := FileConflict{
 				Path:              path,
 				Type:              ConflictContentModified,
@@ -131,6 +136,7 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 				LocalHash:         localInfo.Hash,
 				RemoteHash:        remoteInfo.Hash,
 				SuggestedStrategy: ResolveManual,
+				HashFailed:        true,
 			}
 			conflicts = append(conflicts, conflict)
 		}
@@ -199,14 +205,18 @@ func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrate
 // PushResources/PullResources → SyncResources 在 InstallLock 临界区内运行）。
 // ResolveConflict 自身不加锁，供本函数在持锁前提下调用。
 //
-// 锁契约硬约束（R27 P2-3）：本函数开头的 assertInstallLock 在无锁调用时立即 panic，
-// 让锁契约违反在发生点暴露，而非依赖隐式调用链事后追查。
-// sync.Mutex 不暴露 TryLock，无法在不破坏锁语义的前提下非侵入检测；
-// 运行时 panic 是最小侵入的硬约束实现。
+// 锁契约是文档约束，不做运行时断言（R27 code_review P2-2/P2-3 修正）：
+// sync.Mutex 不暴露「是否已持锁」的查询，TryLock 在其他 goroutine 持锁时返回 false
+// → 不可靠；且生产环境 panic 不可接受。调用方须自行确保持锁。
 func ResolveConflictsLocked(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
-	assertInstallLock()
 	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
 	for _, c := range conflicts {
+		// HashFailed 条目（hash 计算失败）不覆盖 SuggestedStrategy，
+		// 直接计入 manual（R27 code_review P2-1 修复）。
+		if c.HashFailed {
+			manual++
+			continue
+		}
 		strategy := c.SuggestedStrategy
 		if strategy == ResolveManual {
 			strategy = defaultStrategy
@@ -263,9 +273,10 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 
 		hash, hashErr := computeFileHash(path)
 		if hashErr != nil {
-			// 哈希失败但仍记录条目（无 hash），不中断流程。
-			// walkErr 收集最后一个 hash 错误，DetectConflicts 据此识别
-			// hash 失败的条目并标记为需手动审查（R27 P2-1：旧实现静默漏报）。
+			// 哈希失败但仍记录条目（Hash 字段为空），不中断流程。
+			// DetectConflicts 靠 per-entry Hash=="" 识别哈希失败的条目
+			// 并标记 HashFailed=true（R27 P2-1）。
+			// walkErr 仅保留最后一个错误供调用方诊断，DetectConflicts 不消费它。
 			walkErr = hashErr
 		}
 
@@ -303,21 +314,4 @@ func suggestStrategy(localTime, remoteTime time.Time) ResolutionStrategy {
 		return ResolveForceLocal
 	}
 	return ResolveManual
-}
-
-// assertInstallLock 在 debug 构建下断言调用方已持有 installer.InstallLock。
-// sync.Mutex 不暴露 TryLock，无法在不破坏锁语义的前提下非侵入检测；
-// 此处用 channel-based try-lock 模拟检测，仅在 assert 路径短暂竞争锁，
-// 持锁调用方会因 Lock 阻塞而跳过（非阻塞 try-lock 失败即说明已持锁）。
-//
-// 实现说明：sync.Mutex 的内部状态不可直接读取。本函数用 select+default
-// 模拟 TryLock：能 Lock 成功说明之前没人持锁→立即 Unlock 并 panic；
-// Lock 阻塞说明已持锁→符合契约。Go 1.18+ 的 sync.Mutex.TryLock 更精确，
-// 但为兼容旧版 Go 用 channel 模拟。
-func assertInstallLock() {
-	// 尝试非阻塞 Lock：成功说明之前无人持锁（锁契约违反）
-	if installer.InstallLock.TryLock() {
-		installer.InstallLock.Unlock()
-		panic("ResolveConflictsLocked: 调用方未持有 installer.InstallLock（锁契约违反）")
-	}
 }

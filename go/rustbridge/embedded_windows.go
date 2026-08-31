@@ -41,6 +41,14 @@ func materializeDLL() (string, error) {
 		return "", fmt.Errorf("create Rust scanner temporary file: %w", err)
 	}
 	tmpPath := tmp.Name()
+	// R32 P2-1：显式收紧临时文件权限为 0600。
+	// os.CreateTemp 权限继承 umask（可能 0644），多用户机器上同一 cacheRoot
+	// 下其它用户可读该 DLL 路径中间文件。
+	if err := os.Chmod(tmpPath, 0o600); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+		return "", fmt.Errorf("chmod Rust scanner temporary file: %w", err)
+	}
 	removeTemp := true
 	defer func() {
 		if removeTemp {

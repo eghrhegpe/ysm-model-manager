@@ -64,7 +64,7 @@
 | `CacheAvatarsFromJSON()` | `go/avatar/avatar_extract:230` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
 | `CacheAvatarsFromModel()` | `go/avatar/avatar_extract:300` | CacheAvatarsFromModel 从 .ysm/.zip/.7z/.json 模型缓存所有作者头像。 |
 | `ReadFileFromZip()` | `go/avatar/avatar_zip:20` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
-| `ReadFileFromContainer()` | `go/avatar/avatar_zip:55` | ReadFileFromContainer 从统一容器读取指定路径的文件（ADR-068： 容器打开统一走 container，替代 zip.NewReader + ReadFil |
+| `ReadFileFromContainer()` | `go/avatar/avatar_zip:54` | ReadFileFromContainer 从统一容器读取指定路径的文件（ADR-068： 容器打开统一走 container，替代 zip.NewReader + ReadFil |
 | `SafeName()` | `go/avatar/avatar:45` | SafeName 将非法文件名字符替换为下划线。 |
 | `ReadCachedAvatar()` | `go/avatar/avatar:139` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
 | `SaveAvatarData()` | `go/avatar/avatar:165` | SaveAvatarData 将头像数据写入缓存。 |
@@ -416,8 +416,8 @@
 | `ScanManifest()` | `go/rustbridge/bridge_darwin:69` | — |
 | `Scan()` | `go/rustbridge/bridge_linux:44` | — |
 | `ScanManifest()` | `go/rustbridge/bridge_linux:72` | — |
-| `Scan()` | `go/rustbridge/bridge_windows:24` | — |
-| `ScanManifest()` | `go/rustbridge/bridge_windows:59` | ScanManifest 使用 Go 预枚举的文件清单调用 Rust，跳过 Rust 侧的文件系统发现（jwalk）。 |
+| `Scan()` | `go/rustbridge/bridge_windows:27` | — |
+| `ScanManifest()` | `go/rustbridge/bridge_windows:66` | ScanManifest 使用 Go 预枚举的文件清单调用 Rust，跳过 Rust 侧的文件系统发现（jwalk）。 |
 | `ScanError()` | `go/rustbridge/types:7` | — |
 | `ScanResponse()` | `go/rustbridge/types:12` | — |
 

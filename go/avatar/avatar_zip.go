@@ -32,11 +32,10 @@ func ReadFileFromZip(zr *zip.Reader, target string) []byte {
 			log.Printf("[avatar] zip 条目打开失败 %s: %v", f.Name, err)
 			return nil
 		}
-		defer rc.Close()
-		// zip-bomb 防线：条目解压后大小未限制，ReadAll 全量读入可 OOM——
-		// readLimitedModel 限的是压缩体积，解压比无界；对齐 readLimitedAvatar
-		// types.MaxReadLimit 上限口径，LimitReader+1 截断探测（ADR-033，防恰上限值静默截断）
+		// R32 P2-1：循环内显式 Close，不依赖 defer（defer 要等函数返回才释放，
+		// 多条目命中时累积未关闭句柄）。
 		data, err := io.ReadAll(io.LimitReader(rc, types.MaxReadLimit+1))
+		rc.Close()
 		if err != nil {
 			log.Printf("[avatar] zip 条目读取失败 %s: %v", f.Name, err)
 			return nil

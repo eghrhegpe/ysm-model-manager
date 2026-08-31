@@ -19,6 +19,9 @@ var (
 	// 旧 scanProc (ysm_scan_json) 保留作回退，ABI 不破坏。
 	scanManifestProc *syscall.LazyProc
 	freeProc         *syscall.LazyProc
+	// R32 P3-1：FFI 调用序列化。Rust 侧 ysm_scan_json/ysm_scan_manifest
+	// 线程安全性未知，Go 侧加 Mutex 串行化 FFI 调用（扫描本身是重操作，性能影响可忽略）。
+	ffiMu sync.Mutex
 )
 
 func Scan(root string, registryJSON []byte) (ScanResponse, error) {
@@ -28,6 +31,10 @@ func Scan(root string, registryJSON []byte) (ScanResponse, error) {
 	if len(registryJSON) == 0 {
 		return ScanResponse{}, errors.New("Rust scanner registry is empty")
 	}
+
+	// R32 P3-1：FFI 调用序列化，防 Rust 侧非线程安全导致数据竞争/panic。
+	ffiMu.Lock()
+	defer ffiMu.Unlock()
 
 	var rootPtr *byte
 	if len(root) > 0 {
@@ -70,6 +77,10 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 		// 旧 DLL 不含 ysm_scan_manifest —— 回退到 Scan（jwalk），保证向后兼容
 		return Scan(root, registryJSON)
 	}
+
+	// R32 P3-1：FFI 调用序列化，防 Rust 侧非线程安全导致数据竞争/panic。
+	ffiMu.Lock()
+	defer ffiMu.Unlock()
 
 	var rootPtr *byte
 	if len(root) > 0 {

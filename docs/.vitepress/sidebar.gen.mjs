@@ -1389,6 +1389,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r31-go-threejs-scanner-2026-08-31"
       },
       {
+        "text": "R32 审核：go/avatar + go/rustbridge（两模块并行）",
+        "link": "/audit/audit-r32-go-avatar-rustbridge-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

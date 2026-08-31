@@ -4,6 +4,7 @@
 package updater
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -105,7 +106,8 @@ func TestCheckWithClient_NoPlatformAsset(t *testing.T) {
 }
 
 // TestCheckWithClient_HashFetchFails 覆盖 SHA256SUMS 获取失败分支：
-// 记录告警（log）但更新流程继续（ExpectedHash 为空，hash 缺失不阻塞）
+// R30 P2-3 fail-closed 契约——哈希不可得则更新不可用（Available=false，
+// 防攻击者阻断 SHA256SUMS 获取绕过完整性校验；旧「hash 缺失仍可用」契约已废弃）
 func TestCheckWithClient_HashFetchFails(t *testing.T) {
 	pattern := assetPattern()
 	var server *httptest.Server
@@ -129,8 +131,8 @@ func TestCheckWithClient_HashFetchFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CheckWithClient() = %v", err)
 	}
-	if !info.Available {
-		t.Fatal("hash 获取失败不应阻塞更新可用性")
+	if info.Available {
+		t.Fatal("hash 获取失败时应更新不可用（R30 P2-3 fail-closed）")
 	}
 	if info.ExpectedHash != "" {
 		t.Errorf("hash 获取失败时 ExpectedHash 应为空, got %q", info.ExpectedHash)
@@ -138,14 +140,22 @@ func TestCheckWithClient_HashFetchFails(t *testing.T) {
 }
 
 // TestCheckWithClient_NoReleaseNotes 覆盖全部新版本 body 为空时 notes 为空串
+// （带 SHA256SUMS asset，使更新可用以聚焦 notes 聚合语义）
 func TestCheckWithClient_NoReleaseNotes(t *testing.T) {
 	pattern := assetPattern()
 	var server *httptest.Server
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/sums") {
+			fmt.Fprintf(w, "%x  %s\n", sha256.Sum256([]byte("pkg")), pattern)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]Release{
 			{TagName: "v1.9.0", Body: "", Draft: false, Prerelease: false,
-				Assets: []ReleaseAsset{{Name: pattern, BrowserDownloadURL: server.URL + "/dl/1.9.0"}}},
+				Assets: []ReleaseAsset{
+					{Name: pattern, BrowserDownloadURL: server.URL + "/dl/1.9.0"},
+					{Name: "SHA256SUMS", BrowserDownloadURL: server.URL + "/sums"},
+				}},
 		})
 	}))
 	defer server.Close()

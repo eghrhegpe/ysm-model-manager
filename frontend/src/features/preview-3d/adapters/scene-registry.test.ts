@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 
 function makeEntry(
   path: string,

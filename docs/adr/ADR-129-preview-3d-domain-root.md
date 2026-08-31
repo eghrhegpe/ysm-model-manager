@@ -67,7 +67,7 @@ features/preview-3d/
 | 刀 | 内容 | 风险 | 顺序理由 |
 |----|------|------|---------|
 | **第一刀** | `PreviewSnapshot` / `PreviewStatePath` 从 `adapters/preview-menu-node-types.ts` 迁到 `state/`，修依赖倒置 | 低 | 最小高价值：只动类型归属，不改目录结构；import 影响面约 20 处（`adapters` 内部 + `views/app-preview`），改相对路径机械安全；做完 `state` 不再寄生 `adapters`，地基正回 |
-| **第二刀** | `preview-menu-*` 收进 `adapters/preview-menu/` 子目录，内部去前缀，统一测试命名 | 中 | 降墙：内部互引为主（81 处 import 里大头是同目录 `./`），搬子目录后相对路径不变；外部约 9 处改前缀；顺手统一横线 / 点命名分裂 |
+| **第二刀** | `preview-menu-*` 收进 `adapters/preview-menu/` 子目录，内部去前缀，统一测试命名 | 中 | 降墙：内部互引为主（81 处 import 里大头是同目录 `./`），搬子目录后相对路径不变；外部约 9 处改前缀；顺手统一横线 / 点命名分裂。**落地取舍（2026-08-31 评审后）**：家族已进一步上提为顶层 `features/preview-3d/menu/`（对齐 §2.1 目标图），`adapters/preview-menu/` 为中间态非终态 |
 | **第三刀** | `utils/3d` 整体升格 `features/preview-3d`，改外部引用前缀 | 高 | 归属正名：改 `../../utils/3d/` → `../../features/preview-3d/`；广度最大，需发版前全量 `doctor` 兜底；**验收标准含 scripts/tests 门禁脚本锚点同步 + 30+ 知识卡 `source_files` 批量更新**（见 §3.2 长尾行）；当天一刀切完，不留 `utils/3d` 与 `features/preview-3d` 并存双轨 |
 
 顺序的不可逆约束：**第一刀必须在第二、三刀之前**——正名不正骨，搬完仍是 `features/preview-3d/adapters` 持有 `state` 的类型，债跟着搬。第二、三刀可换序，但第三刀广度大，建议第二刀降墙后再做（子目录收敛后 import 路径更规整，第三刀替换面更小）。

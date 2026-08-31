@@ -8,11 +8,11 @@ import { t } from "../../../core/i18n/t.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
 import { registerSchema, unregisterSchema } from "./schema-registry.ts";
-import { multiModelSelectNode } from "./preview-menu/multi-model.ts";
+import { multiModelSelectNode } from "../menu/multi-model.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { renderLoadingState } from "./preview-loading.ts";

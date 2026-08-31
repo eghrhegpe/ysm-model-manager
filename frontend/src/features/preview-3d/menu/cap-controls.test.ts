@@ -4,8 +4,8 @@
 // 该函数由 renderCapSlider 与 renderEnvLevel 摘要行共用——防两端分叉回归。
 import { describe, it, expect } from "vitest";
 import { formatCapSliderValue, renderCapControls } from "./cap-controls.ts";
-import type { PreviewSnapshot } from "../../state/preview-state.ts";
-import type { MenuControlDef } from "../../caps/scene-capability.ts";
+import type { PreviewSnapshot } from "../state/preview-state.ts";
+import type { MenuControlDef } from "../caps/scene-capability.ts";
 
 function makeSlider(unit?: string): MenuControlDef {
   return {

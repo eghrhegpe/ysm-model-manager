@@ -9,7 +9,7 @@ import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import type { PreviewBuildCtx, PreviewScene, PreviewHandle } from "./mount-preview-core.ts";
 import { collectSceneStats } from "../scene-stats.ts";
-import { mergeStatsMenuItems } from "./preview-menu/stats.ts";
+import { mergeStatsMenuItems } from "../menu/stats.ts";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
 import { bus } from "../../../bus.ts";
 

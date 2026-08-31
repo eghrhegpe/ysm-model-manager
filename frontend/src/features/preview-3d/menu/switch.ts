@@ -4,11 +4,11 @@
 // 「当前目录」tab 已移除（记忆/当前类型生效后可少一个 tab）；
 // rtypes 为空（无注册路由）时仍走 siblings 列表兜底，不空白。
 
-import { RESOURCE_TYPE_LABELS, resolveTypeSafe, getPreviewableTypeTabs } from "../../../../utils/resource/types.ts";
-import { attachTooltip } from "../../../../utils/dom/tooltip.ts";
-import { swallowError } from "../../../../utils/core/async.ts";
-import { safeGet, safeSet } from "../../../../utils/dom/storage.ts";
-import { t } from "../../../../core/i18n/t.ts";
+import { RESOURCE_TYPE_LABELS, resolveTypeSafe, getPreviewableTypeTabs } from "../../../utils/resource/types.ts";
+import { attachTooltip } from "../../../utils/dom/tooltip.ts";
+import { swallowError } from "../../../utils/core/async.ts";
+import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
+import { t } from "../../../core/i18n/t.ts";
 import type { PreviewMenuCtx } from "./core.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */

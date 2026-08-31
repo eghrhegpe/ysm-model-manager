@@ -22,7 +22,7 @@ import type { FbxSceneData } from "./fbx-scene-to-data.ts";
 import { buildBoneTree } from "../bone-tools.ts";
 import { fbxBonesToBoneNodes } from "../fbx-bones.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { frameCameraSide } from "../camera-setup.ts";
 
 /** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */

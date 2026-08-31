@@ -20,8 +20,8 @@ invariant_anchors:
   - frontend/src/features/preview-3d/caps/scene-capability-registry.ts|sceneCapabilityRegistry
   - frontend/src/features/preview-3d/caps/scene-capability.ts|SceneCapability
   - frontend/src/features/preview-3d/adapters/mount-preview-core.ts|createAll
-  - frontend/src/features/preview-3d/adapters/preview-menu/env.ts|buildEnvSchema
-  - frontend/src/features/preview-3d/adapters/preview-menu/env.ts|renderEnvLevel
+  - frontend/src/features/preview-3d/menu/env.ts|buildEnvSchema
+  - frontend/src/features/preview-3d/menu/env.ts|renderEnvLevel
 ---
 
 # 场景能力注册表 scene-capability-registry

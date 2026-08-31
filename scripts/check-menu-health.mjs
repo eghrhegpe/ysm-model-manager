@@ -44,7 +44,7 @@ if (ARGS.unknown.length) {
 
 // ── 菜单表文件（相对 ROOT）──
 const MENU_FILES = [
-  'frontend/src/features/preview-3d/adapters/preview-menu/defs.ts',
+  'frontend/src/features/preview-3d/menu/defs.ts',
   'frontend/src/features/preview-3d/adapters/ysm-adapter.ts',
   'frontend/src/features/preview-3d/adapters/mmd-adapter.ts',
   'frontend/src/features/preview-3d/adapters/vrm-adapter.ts',
@@ -199,7 +199,7 @@ export function itemViolations(it, zhCNKeys) {
     v.push({ rule: 'kind-valid', item: it.id, file: it.file, detail: `kind "${it.kind || '(空)'}" 非法（须为 panel/action/divider）` });
   }
   // 6. panel 有 render / action 有 run（CORE 文件走 preview-menu.ts fillers 映射渲染，不写 render，豁免）
-  const isCoreFile = it.file.endsWith('preview-menu/defs.ts');
+  const isCoreFile = it.file.endsWith('menu/defs.ts');
   if (it.kind === 'panel' && !isCoreFile && !it.hasRender) {
     v.push({ rule: 'panel-has-render', item: it.id, file: it.file, detail: 'panel 项缺 render' });
   }
@@ -234,7 +234,7 @@ for (const it of allItems) {
 // ── id 唯一性校验（独立段：每文件内部唯一 + core∩适配器无交集）──
 // 适配器按次挂载互斥（一次预览只加载一种模型），故 ysm/mmd/vrm 可共享 id（model/shot/bones）；
 // 仅「同一文件内重复」与「适配器 id 与 core 撞车」才报违规。
-const coreFile = 'frontend/src/features/preview-3d/adapters/preview-menu/defs.ts';
+const coreFile = 'frontend/src/features/preview-3d/menu/defs.ts';
 const coreIds = new Set((byFile.get(coreFile) || []));
 const sharedIds = []; // 跨适配器同名的 id（不违规，仅报告）
 for (const [file, ids] of byFile) {

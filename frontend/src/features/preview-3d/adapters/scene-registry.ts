@@ -9,7 +9,7 @@
 // root 捕获用「build 前后 scene.children 差量」法（适配器无关），详见 ADR-093 §2.2。
 import * as THREE from "three";
 import type { PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { BoneSelectInfo, BoneMaps } from "../model3d.ts";
 
 /** 菜单句柄最小接口（解耦 preview-menu/core.ts 运行时依赖） */

@@ -5,12 +5,12 @@
 // 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载角色，
 // 少用但重要）；底部复用 fillSwitch 加载入口（siblings + 类型 tab）。
 
-import type { SlideMenuHandle, SlideMenuView } from "../../../../ui/ui-slide-menu.ts";
-import { attachTooltip } from "../../../../utils/dom/tooltip.ts";
-import { safeErrorMessage } from "../../../../utils/safe-error-msg.ts";
-import { t } from "../../../../core/i18n/t.ts";
+import type { SlideMenuHandle, SlideMenuView } from "../../../ui/ui-slide-menu.ts";
+import { attachTooltip } from "../../../utils/dom/tooltip.ts";
+import { safeErrorMessage } from "../../../utils/safe-error-msg.ts";
+import { t } from "../../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
-import { sceneRegistry, type ModelEntry } from "../scene-registry.ts";
+import { sceneRegistry, type ModelEntry } from "../adapters/scene-registry.ts";
 import { renderMenu, renderAdapterPanelContent } from "./render.ts";
 import { fillSwitch } from "./switch.ts";
 import type { PreviewMenuCtx } from "./core.ts";

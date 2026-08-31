@@ -6,7 +6,7 @@
 
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { PreviewMenuHandle } from "./preview-menu/core.ts";
+import type { PreviewMenuHandle } from "../menu/core.ts";
 import type { SkyCapability } from "../caps/sky-capability.ts";
 import type { GroundCapability } from "../caps/ground-capability.ts";
 import type { LightCapability } from "../caps/light-capability.ts";

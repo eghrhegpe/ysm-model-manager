@@ -23,9 +23,9 @@ import {
   collectSettingsCapControls,
   buildSettingsControls,
   buildSettingsSchema,
-} from "../adapters/preview-menu/settings.ts";
-import type { PreviewMenuCtx } from "../adapters/preview-menu/core.ts";
-import { collectVisiblePredicates } from "../adapters/preview-menu/cap-controls.ts";
+} from "../menu/settings.ts";
+import type { PreviewMenuCtx } from "../menu/core.ts";
+import { collectVisiblePredicates } from "../menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "../render-budget.ts";

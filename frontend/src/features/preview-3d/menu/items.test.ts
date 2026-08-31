@@ -5,27 +5,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { MMD } from "@moeru/three-mmd";
-import { zhCN } from "../../../../core/i18n/locales/zh-CN.ts";
+import { zhCN } from "../../../core/i18n/locales/zh-CN.ts";
 import {
   CORE_MENU_ITEMS,
   PREVIEW_MENU_GROUPS,
 } from "./defs.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
-import { ysmMenuItems, type YsmMenuItemsOpts } from "../ysm-adapter.ts";
-import { mmdMenuItems, type MmdMenuItemsOpts } from "../mmd-adapter.ts";
-import { vrmMenuItems, type VrmMenuItemsOpts } from "../vrm-adapter.ts";
+import { ysmMenuItems, type YsmMenuItemsOpts } from "../adapters/ysm-adapter.ts";
+import { mmdMenuItems, type MmdMenuItemsOpts } from "../adapters/mmd-adapter.ts";
+import { vrmMenuItems, type VrmMenuItemsOpts } from "../adapters/vrm-adapter.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx } from "./core.ts";
-import type { SceneCapability } from "../../caps/scene-capability.ts";
-import type { YsmModel, YsmContentHandle } from "../../../../views/app-preview/ysm-controls.ts";
-import type { Spec3D } from "../../model3d.ts";
-import { makeMenuCtx } from "../menu-test-fixtures.ts";
-import type { BoneTree } from "../../bone-tools.ts";
+import type { SceneCapability } from "../caps/scene-capability.ts";
+import type { YsmModel, YsmContentHandle } from "../../../views/app-preview/ysm-controls.ts";
+import type { Spec3D } from "../model3d.ts";
+import { makeMenuCtx } from "../adapters/menu-test-fixtures.ts";
+import type { BoneTree } from "../bone-tools.ts";
 import {
   expectContainsAtLeast,
   expectNotContains,
   deriveTestIds,
   extractIds,
-} from "../../../../test-utils/index.ts";
+} from "../../../test-utils/index.ts";
 
 /** 测试假渲染器：同步写 innerHTML，规避 W5 异步竞态正则命中（纯同步 mock，无异步路径） */
 function setHtml(el: Element, html: string): void {

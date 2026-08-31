@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
-import { mountPreviewRootMenu, type PreviewMenuCtx } from "../preview-menu/core.ts";
+import { mountPreviewRootMenu, type PreviewMenuCtx } from "../../menu/core.ts";
 import { sceneRegistry } from "../scene-registry.ts";
 
 // ── 模块级 mock ──────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ vi.mock("../../../ui/ui-header-toggle.ts", () => ({
   createHeaderToggle: vi.fn(() => ({ _tag: "toggle" })),
 }));
 
-vi.mock("../preview-menu/core.ts", () => ({
+vi.mock("../../menu/core.ts", () => ({
   mountPreviewRootMenu: vi.fn(() => ({
     _tag: "menu",
     setAdapterItems: vi.fn(),

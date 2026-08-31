@@ -2,8 +2,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderMenu } from "./core.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
-import type { SlideMenuHandle } from "../../../../ui/ui-slide-menu.ts";
-import { mockMenuHandle } from "../menu-test-fixtures.ts";
+import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
+import { mockMenuHandle } from "../adapters/menu-test-fixtures.ts";
 
 function makeDeps(): {
   makeRow: (def: never) => HTMLElement;

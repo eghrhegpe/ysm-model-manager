@@ -4,7 +4,7 @@
 //  - 零 DOM（R1 合规），渲染走 renderMenu toggle 分支（ADR-125 §3.3 预留的 A 层控件分支）
 // fillMmdMorphPanel（手写 DOM：图标 ✓/🙂 + 名称 + 点击切换权重）迁移后删除。
 
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 
 /** morph 面板入参（mesh 的 morphTargetDictionary/influences 子集，结构兼容 THREE.SkinnedMesh） */
 export interface MorphMeshLike {

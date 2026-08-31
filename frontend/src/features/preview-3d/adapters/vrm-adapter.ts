@@ -27,7 +27,7 @@ import { materialNodes } from "./material-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { BoneTree } from "../bone-tools.ts";
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 
 /** VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface VrmDataPort {

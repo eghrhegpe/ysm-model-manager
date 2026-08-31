@@ -11,10 +11,10 @@ import type { PreviewMenuNode } from "./node-types.ts";
 import type { PreviewActionMenuCtx } from "./node-types.ts";
 import { disposeEnvSubscriptions, buildEnvSchema } from "./env.ts";
 import { renderCapControls } from "./cap-controls.ts";
-import { safeErrorMessage } from "../../../../utils/safe-error-msg.ts";
-import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../../../ui/ui-slide-menu.ts";
-import { pushInputBlock } from "../../../../utils/dom/focus-restore.ts";
-import type { CameraControlBridge } from "../camera-controls.ts";
+import { safeErrorMessage } from "../../../utils/safe-error-msg.ts";
+import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
+import { pushInputBlock } from "../../../utils/dom/focus-restore.ts";
+import type { CameraControlBridge } from "../adapters/camera-controls.ts";
 import {
   buildCameraSchema,
   buildLightingSchema,
@@ -22,14 +22,14 @@ import {
   buildPostprocessingSchema,
   buildSettingsSchema,
 } from "./settings.ts";
-import type { SceneCapability } from "../../caps/scene-capability.ts";
-import { ensureFabStyles } from "../../../../utils/dom/fab.ts";
-import { tr } from "../../../../core/i18n/tr.ts";
-import { sceneCapabilityRegistry } from "../../caps/scene-capability-registry.ts";
-import { sceneRegistry } from "../scene-registry.ts";
+import type { SceneCapability } from "../caps/scene-capability.ts";
+import { ensureFabStyles } from "../../../utils/dom/fab.ts";
+import { tr } from "../../../core/i18n/tr.ts";
+import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import { sceneRegistry } from "../adapters/scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
 import { renderAdapterPanelContent } from "./render.ts";
-import { previewSnapshot } from "../../state/preview-state.ts";
+import { previewSnapshot } from "../state/preview-state.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 export { roleBaseName };

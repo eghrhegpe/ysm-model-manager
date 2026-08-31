@@ -4,10 +4,10 @@
 // visibleWhen 守卫有统计才显示（可被所有数组类菜单调用，铁律）。
 
 import { describe, expect, it } from "vitest";
-import type { SceneStats } from "../../scene-stats.ts";
+import type { SceneStats } from "../scene-stats.ts";
 import { buildStatsPanel, mergeStatsMenuItems } from "./stats.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
-import type { PreviewSnapshot } from "../../state/preview-state.ts";
+import type { PreviewSnapshot } from "../state/preview-state.ts";
 
 function stats(overrides: Partial<SceneStats> = {}): SceneStats {
   return {

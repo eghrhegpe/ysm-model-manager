@@ -1,11 +1,11 @@
 // ===== 环境菜单声明式 Schema 测试（对齐 MikuMikuAR getSkySchema() 范式）=====
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderEnvLevel, buildEnvSchema } from "./env.ts";
-import { sceneCapabilityRegistry } from "../../caps/scene-capability-registry.ts";
-import type { SceneCapability } from "../../caps/scene-capability.ts";
+import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import type { SceneCapability } from "../caps/scene-capability.ts";
 import type { PreviewMenuCtx } from "./core.ts";
-import type { CameraControlBridge } from "../camera-controls.ts";
-import type { SlideMenuHandle } from "../../../../ui/ui-slide-menu.ts";
+import type { CameraControlBridge } from "../adapters/camera-controls.ts";
+import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {

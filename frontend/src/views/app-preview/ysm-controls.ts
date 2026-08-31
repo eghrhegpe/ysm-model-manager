@@ -11,7 +11,7 @@ import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
-import type { PreviewMenuNode } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../../features/preview-3d/menu/node-types.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import type { Spec3D, BoneSelectInfo } from "../../features/preview-3d/model3d.ts";
 import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";

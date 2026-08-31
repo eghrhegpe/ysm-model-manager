@@ -12,7 +12,7 @@
 
 // [doc:adr-129-第一刀] PreviewStatePath / PreviewSnapshot 迁至 state/preview-state.ts（本位）；
 // 本文件前向 import state 的类型——方向正（菜单节点吃状态层快照），非反向依赖。
-import type { PreviewStatePath, PreviewSnapshot } from "../../state/preview-state.ts";
+import type { PreviewStatePath, PreviewSnapshot } from "../state/preview-state.ts";
 
 /** 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） */
 export interface PreviewActionMenuCtx {

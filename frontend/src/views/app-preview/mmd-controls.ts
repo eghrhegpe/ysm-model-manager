@@ -12,8 +12,8 @@ import { cardContainer, addFieldRow } from "../../ui/ui-helpers.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
-import type { PreviewMenuNode } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
-import { multiModelSelectNode } from "../../features/preview-3d/adapters/preview-menu/multi-model.ts";
+import type { PreviewMenuNode } from "../../features/preview-3d/menu/node-types.ts";
+import { multiModelSelectNode } from "../../features/preview-3d/menu/multi-model.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import {
   listMmdMaterials,

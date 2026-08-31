@@ -19,10 +19,10 @@ import {
   renderPreviewPanel,
   type PreviewMenuRouters,
 } from "./core.ts";
-import { getSchema, listSchemas, registerSchema, resetSchemas } from "../schema-registry.ts";
-import { previewSnapshot } from "../../state/preview-state.ts";
+import { getSchema, listSchemas, registerSchema, resetSchemas } from "../adapters/schema-registry.ts";
+import { previewSnapshot } from "../state/preview-state.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
-import { makeMenuCtx as makeCtx, mockMenuHandle as mockMenu } from "../menu-test-fixtures.ts";
+import { makeMenuCtx as makeCtx, mockMenuHandle as mockMenu } from "../adapters/menu-test-fixtures.ts";
 
 function mockPanelDeps() {
   return {

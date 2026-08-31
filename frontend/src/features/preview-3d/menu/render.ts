@@ -6,11 +6,11 @@
 //  - visibleWhen → 条件守卫（返回 false 不渲染）
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
-import type { SlideMenuHandle, SlideMenuView } from "../../../../ui/ui-slide-menu.ts";
-import { tr } from "../../../../core/i18n/tr.ts";
+import type { SlideMenuHandle, SlideMenuView } from "../../../ui/ui-slide-menu.ts";
+import { tr } from "../../../core/i18n/tr.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
-import { previewSnapshot, setStateValue, isPathAvailable, KNOWN_PATHS } from "../../state/preview-state.ts";
-import { getSchema } from "../schema-registry.ts";
+import { previewSnapshot, setStateValue, isPathAvailable, KNOWN_PATHS } from "../state/preview-state.ts";
+import { getSchema } from "../adapters/schema-registry.ts";
 
 // i18n 取值统一走共享 tr()（core/i18n/tr.ts，支持缺失键兜底 + params 插值）
 

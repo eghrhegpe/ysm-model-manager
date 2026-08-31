@@ -17,8 +17,8 @@ import {
 import { screenshotFromRenderer } from "../screenshot.ts";
 import { loadMcTints, getTintColorSync } from "../mc-tints.ts";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
-import { multiModelSelectNode } from "./preview-menu/multi-model.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
+import { multiModelSelectNode } from "../menu/multi-model.ts";
 import { textureCache } from "../texture-cache.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { frameCameraSide } from "../camera-setup.ts";

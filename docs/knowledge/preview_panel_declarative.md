@@ -4,9 +4,9 @@ name: 3D 预览面板内容声明式化通道（ADR-126 P4-B）
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/features/preview-3d/adapters/preview-menu/core.ts
-  - frontend/src/features/preview-3d/adapters/preview-menu/render.ts
-  - frontend/src/features/preview-3d/adapters/preview-menu/node-types.ts
+  - frontend/src/features/preview-3d/menu/core.ts
+  - frontend/src/features/preview-3d/menu/render.ts
+  - frontend/src/features/preview-3d/menu/node-types.ts
   - frontend/src/features/preview-3d/adapters/mmd-adapter.ts
   - frontend/src/features/preview-3d/adapters/ysm-adapter.ts
   - frontend/src/features/preview-3d/adapters/morph-controls.ts
@@ -14,7 +14,7 @@ source_files:
   - frontend/src/views/app-preview/ysm-controls.ts
   - frontend/src/views/app-preview/shot-panel-shared.ts
 tests:
-  - frontend/src/features/preview-3d/adapters/preview-menu/items.test.ts
+  - frontend/src/features/preview-3d/menu/items.test.ts
   - frontend/src/features/preview-3d/adapters/morph-controls.test.ts
   - frontend/src/views/app-preview/mmd-controls.test.ts
   - frontend/src/views/app-preview/ysm-controls.test.ts

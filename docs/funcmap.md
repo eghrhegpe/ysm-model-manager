@@ -1317,55 +1317,6 @@
 | `LoadingProgressMode()` | `frontend/src/features/preview-3d/adapters/preview-loading:14` | 加载进度条模式：indeterminate（循环动画）| determinate（固定 id + transition，供外部更新宽度） |
 | `renderLoadingState()` | `frontend/src/features/preview-3d/adapters/preview-loading:17` | 3D 预览加载态：loadingEl 渲染图标 + 标签 + 进度条 |
 | `showLoadFailure()` | `frontend/src/features/preview-3d/adapters/preview-loading:35` | 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 |
-| `formatCapSliderValue()` | `frontend/src/features/preview-3d/adapters/preview-menu/cap-controls:98` | slider 值格式化（renderCapSlider 与环境面板摘要行共用，防两端分叉）： unit="h" → HH:MM（小数进位分钟）／ unit="%" → 百分比（×1 |
-| `collectVisiblePredicates()` | `frontend/src/features/preview-3d/adapters/preview-menu/cap-controls:449` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
-| `renderCapControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/cap-controls:453` | — |
-| `roleBaseName()` | `frontend/src/features/preview-3d/adapters/preview-menu/core` | — |
-| `renderMenu()` | `frontend/src/features/preview-3d/adapters/preview-menu/core` | — |
-| `renderCapControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/core` | — |
-| `PreviewMenuCtx()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:39` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
-| `PreviewMenuHandle()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:75` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
-| `PreviewMenuRouters()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:220` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
-| `buildPreviewMenuRouters()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:232` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
-| `renderPreviewPanel()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:276` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
-| `mountPreviewRootMenu()` | `frontend/src/features/preview-3d/adapters/preview-menu/core:510` | — |
-| `PreviewMenuItemKind()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:30` | — |
-| `PreviewMenuGroupId()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:31` | — |
-| `PreviewMenuItemDef()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:33` | — |
-| `PreviewMenuGroupDef()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:60` | 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） |
-| `PREVIEW_MENU_GROUPS()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:69` | — |
-| `CORE_MENU_ITEMS()` | `frontend/src/features/preview-3d/adapters/preview-menu/defs:91` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
-| `disposeEnvSubscriptions()` | `frontend/src/features/preview-3d/adapters/preview-menu/env:30` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
-| `renderEnvLevel()` | `frontend/src/features/preview-3d/adapters/preview-menu/env:116` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
-| `buildEnvSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/env:239` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
-| `MultiModelSelectOpts()` | `frontend/src/features/preview-3d/adapters/preview-menu/multi-model:16` | 多模型选择原语入参 |
-| `multiModelSelectNode()` | `frontend/src/features/preview-3d/adapters/preview-menu/multi-model:39` | 多模型选择 select 节点工厂。 |
-| `PreviewActionMenuCtx()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
-| `PreviewMenuNodeKind()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:24` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
-| `PreviewControlSpec()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:40` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
-| `PreviewMenuNode()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:68` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
-| `isPreviewFolderNode()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:117` | 类型守卫：节点是否为 folder（可下钻） |
-| `collectPreviewLeafNodes()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:122` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
-| `collectPreviewNodeIds()` | `frontend/src/features/preview-3d/adapters/preview-menu/node-types:135` | 递归收集全部节点 id（供 id 唯一性契约测试） |
-| `renderMenu()` | `frontend/src/features/preview-3d/adapters/preview-menu/render:420` | — |
-| `renderAdapterPanelContent()` | `frontend/src/features/preview-3d/adapters/preview-menu/render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
-| `roleBaseName()` | `frontend/src/features/preview-3d/adapters/preview-menu/roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
-| `modelDetailView()` | `frontend/src/features/preview-3d/adapters/preview-menu/roles:38` | — |
-| `motionDetailView()` | `frontend/src/features/preview-3d/adapters/preview-menu/roles:112` | — |
-| `fillRoles()` | `frontend/src/features/preview-3d/adapters/preview-menu/roles:282` | — |
-| `buildCameraSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:33` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
-| `buildLightingSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:47` | 灯光面板 schema：从 light cap 自报控件渲染 |
-| `buildShadowSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:65` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
-| `buildPostprocessingSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:78` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
-| `buildSettingsSchema()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:91` | 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
-| `buildCrossCuttingControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:118` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
-| `collectSettingsCapControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:170` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
-| `buildSettingsControls()` | `frontend/src/features/preview-3d/adapters/preview-menu/settings:183` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
-| `STATS_PANEL_ID()` | `frontend/src/features/preview-3d/adapters/preview-menu/stats:17` | 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） |
-| `hasSceneStats()` | `frontend/src/features/preview-3d/adapters/preview-menu/stats:20` | 是否有可供展示的统计（mesh/bone 任一 &gt; 0；全 0 = 空场景/纯装饰，无意义） |
-| `buildStatsPanel()` | `frontend/src/features/preview-3d/adapters/preview-menu/stats:25` | 构造统计面板节点：panel + 6 个 field 行（骨骼/网格/三角面/材质/纹理/表情） |
-| `mergeStatsMenuItems()` | `frontend/src/features/preview-3d/adapters/preview-menu/stats:59` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
-| `fillSwitch()` | `frontend/src/features/preview-3d/adapters/preview-menu/switch:217` | — |
 | `ModelEntry()` | `frontend/src/features/preview-3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
 | `sceneRegistry()` | `frontend/src/features/preview-3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
 | `MAX_MODELS()` | `frontend/src/features/preview-3d/adapters/scene-registry:209` | 同场景最大模型数（超量追加被拒，ADR-093 T6） |
@@ -1593,6 +1544,55 @@
 | `clearLoadTraces()` | `frontend/src/features/preview-3d/load-trace:63` | — |
 | `loadMcTints()` | `frontend/src/features/preview-3d/mc-tints:29` | 预载 vendored tints 表（幂等；失败抛错由调用方降级兜底）。 |
 | `getTintColorSync()` | `frontend/src/features/preview-3d/mc-tints:56` | 取某染色类别在某 biome 下的颜色（默认 plains）。 |
+| `formatCapSliderValue()` | `frontend/src/features/preview-3d/menu/cap-controls:98` | slider 值格式化（renderCapSlider 与环境面板摘要行共用，防两端分叉）： unit="h" → HH:MM（小数进位分钟）／ unit="%" → 百分比（×1 |
+| `collectVisiblePredicates()` | `frontend/src/features/preview-3d/menu/cap-controls:449` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
+| `renderCapControls()` | `frontend/src/features/preview-3d/menu/cap-controls:453` | — |
+| `roleBaseName()` | `frontend/src/features/preview-3d/menu/core` | — |
+| `renderMenu()` | `frontend/src/features/preview-3d/menu/core` | — |
+| `renderCapControls()` | `frontend/src/features/preview-3d/menu/core` | — |
+| `PreviewMenuCtx()` | `frontend/src/features/preview-3d/menu/core:39` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
+| `PreviewMenuHandle()` | `frontend/src/features/preview-3d/menu/core:75` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
+| `PreviewMenuRouters()` | `frontend/src/features/preview-3d/menu/core:220` | buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） |
+| `buildPreviewMenuRouters()` | `frontend/src/features/preview-3d/menu/core:232` | [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。 |
+| `renderPreviewPanel()` | `frontend/src/features/preview-3d/menu/core:276` | [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → filler |
+| `mountPreviewRootMenu()` | `frontend/src/features/preview-3d/menu/core:510` | — |
+| `PreviewMenuItemKind()` | `frontend/src/features/preview-3d/menu/defs:30` | — |
+| `PreviewMenuGroupId()` | `frontend/src/features/preview-3d/menu/defs:31` | — |
+| `PreviewMenuItemDef()` | `frontend/src/features/preview-3d/menu/defs:33` | — |
+| `PreviewMenuGroupDef()` | `frontend/src/features/preview-3d/menu/defs:60` | 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） |
+| `PREVIEW_MENU_GROUPS()` | `frontend/src/features/preview-3d/menu/defs:69` | — |
+| `CORE_MENU_ITEMS()` | `frontend/src/features/preview-3d/menu/defs:91` | core 固定菜单项（不依赖适配器注入）： - roles：模型组唯一 core 项（已加载角色管理 + 底部内嵌加载入口 fillSwitch； 2026-08-21 合并：独立 |
+| `disposeEnvSubscriptions()` | `frontend/src/features/preview-3d/menu/env:30` | 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） |
+| `renderEnvLevel()` | `frontend/src/features/preview-3d/menu/env:116` | 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector） 独立面板排除项：light → light |
+| `buildEnvSchema()` | `frontend/src/features/preview-3d/menu/env:239` | [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）： 包 renderEnvLevel 进 PreviewMenuNo |
+| `MultiModelSelectOpts()` | `frontend/src/features/preview-3d/menu/multi-model:16` | 多模型选择原语入参 |
+| `multiModelSelectNode()` | `frontend/src/features/preview-3d/menu/multi-model:39` | 多模型选择 select 节点工厂。 |
+| `PreviewActionMenuCtx()` | `frontend/src/features/preview-3d/menu/node-types:18` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
+| `PreviewMenuNodeKind()` | `frontend/src/features/preview-3d/menu/node-types:24` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
+| `PreviewControlSpec()` | `frontend/src/features/preview-3d/menu/node-types:40` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
+| `PreviewMenuNode()` | `frontend/src/features/preview-3d/menu/node-types:68` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
+| `isPreviewFolderNode()` | `frontend/src/features/preview-3d/menu/node-types:117` | 类型守卫：节点是否为 folder（可下钻） |
+| `collectPreviewLeafNodes()` | `frontend/src/features/preview-3d/menu/node-types:122` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
+| `collectPreviewNodeIds()` | `frontend/src/features/preview-3d/menu/node-types:135` | 递归收集全部节点 id（供 id 唯一性契约测试） |
+| `renderMenu()` | `frontend/src/features/preview-3d/menu/render:420` | — |
+| `renderAdapterPanelContent()` | `frontend/src/features/preview-3d/menu/render:463` | adapter 面板内容渲染：schema-registry(schemaId) → children → renderCustom 三通道， 命中其一即渲染并返回 true。`r |
+| `roleBaseName()` | `frontend/src/features/preview-3d/menu/roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
+| `modelDetailView()` | `frontend/src/features/preview-3d/menu/roles:38` | — |
+| `motionDetailView()` | `frontend/src/features/preview-3d/menu/roles:112` | — |
+| `fillRoles()` | `frontend/src/features/preview-3d/menu/roles:282` | — |
+| `buildCameraSchema()` | `frontend/src/features/preview-3d/menu/settings:33` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
+| `buildLightingSchema()` | `frontend/src/features/preview-3d/menu/settings:47` | 灯光面板 schema：从 light cap 自报控件渲染 |
+| `buildShadowSchema()` | `frontend/src/features/preview-3d/menu/settings:65` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
+| `buildPostprocessingSchema()` | `frontend/src/features/preview-3d/menu/settings:78` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
+| `buildSettingsSchema()` | `frontend/src/features/preview-3d/menu/settings:91` | 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
+| `buildCrossCuttingControls()` | `frontend/src/features/preview-3d/menu/settings:118` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
+| `collectSettingsCapControls()` | `frontend/src/features/preview-3d/menu/settings:170` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
+| `buildSettingsControls()` | `frontend/src/features/preview-3d/menu/settings:183` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
+| `STATS_PANEL_ID()` | `frontend/src/features/preview-3d/menu/stats:17` | 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） |
+| `hasSceneStats()` | `frontend/src/features/preview-3d/menu/stats:20` | 是否有可供展示的统计（mesh/bone 任一 &gt; 0；全 0 = 空场景/纯装饰，无意义） |
+| `buildStatsPanel()` | `frontend/src/features/preview-3d/menu/stats:25` | 构造统计面板节点：panel + 6 个 field 行（骨骼/网格/三角面/材质/纹理/表情） |
+| `mergeStatsMenuItems()` | `frontend/src/features/preview-3d/menu/stats:59` | 合并统计面板进适配器 menuItems（ADR-131 §2.3：合并后一次注入，避免 setAdapterItems 互相覆盖）。 |
+| `fillSwitch()` | `frontend/src/features/preview-3d/menu/switch:217` | — |
 | `bakeMeshFragments()` | `frontend/src/features/preview-3d/mesh-baker:10` | Bake fragments once, then batch by animated bone, texture, and alpha mode. |
 | `addMeshToBoneGroup()` | `frontend/src/features/preview-3d/mesh-builder:31` | 从 spec mesh group 数据构建 THREE.Mesh 并添加到 boneGroup。 |
 | `compKey()` | `frontend/src/features/preview-3d/mesh:18` | 组件内骨骼 key（mi: 组件下标, id: 骨骼 id）。renderModel3D 与 buildSceneMesh 共用，随 mesh 迁移。 |

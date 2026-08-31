@@ -17,10 +17,10 @@ import type { CameraControlBridge } from "./camera-controls.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { collectSceneStats } from "../scene-stats.ts";
-import { mergeStatsMenuItems } from "./preview-menu/stats.ts";
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import { mergeStatsMenuItems } from "../menu/stats.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuHandle } from "./preview-menu/core.ts";
+import type { PreviewMenuHandle } from "../menu/core.ts";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
 import { fitCameraToRoots } from "../camera-setup.ts";
 

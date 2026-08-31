@@ -23,7 +23,7 @@ interface MenuItemDef {
   divider?: boolean;
   /**
    * 节点级可见性谓词：返回 false 则该 item 不出现在 menu:show 载荷。
-   * 与 features/preview-3d/adapters/preview-menu/node-types.ts 的 `PreviewMenuNode.visibleWhen`
+   * 与 features/preview-3d/menu/node-types.ts 的 `PreviewMenuNode.visibleWhen`
    * 同构（吃 ctx 快照，纯函数，无副作用）；未定义 → 恒可见。
    * 与 viewer-mode 全局过滤（context-menus.ts `canWebAction`）AND：两边都通过才显示。
    */

@@ -99,7 +99,7 @@ vi.mock("../caps/scene-capability-registry.ts", () => ({
 }));
 
 // ---- 菜单壳 / 输入 / 焦点 / 视锥裁剪：桩 ----
-vi.mock("./preview-menu/core.ts", () => ({
+vi.mock("../menu/core.ts", () => ({
   mountPreviewRootMenu: vi.fn((_overlay: unknown, ctx: Record<string, unknown>) => {
     h.menuOpts = ctx;
     h.menuHandle = {
@@ -136,7 +136,7 @@ import {
   _resetSingletons,
 } from "./mount-preview-core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
-import type { PreviewMenuNode } from "./preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { bus } from "../../../bus.ts";
 
 /** 最小 panel 菜单项 */

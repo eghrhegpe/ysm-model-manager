@@ -1,10 +1,10 @@
 // preview-menu-cap-controls.ts — 能力控件通用渲染器（从 preview-menu.ts 拆出避免 env 循环依赖）。
 // 独立模块只依赖 ui-header-toggle / i18n / MenuControlDef 类型，供 preview-menu.ts 与
 // preview-menu-env.ts 共用。
-import { createHeaderToggle } from "../../../../ui/ui-header-toggle.ts";
-import { t } from "../../../../core/i18n/t.ts";
-import type { MenuControlDef } from "../../caps/scene-capability.ts";
-import type { PreviewSnapshot } from "../../state/preview-state.ts";
+import { createHeaderToggle } from "../../../ui/ui-header-toggle.ts";
+import { t } from "../../../core/i18n/t.ts";
+import type { MenuControlDef } from "../caps/scene-capability.ts";
+import type { PreviewSnapshot } from "../state/preview-state.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
 const tr = (key: string, fallback: string): string => {

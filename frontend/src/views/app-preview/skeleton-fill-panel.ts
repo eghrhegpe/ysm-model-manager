@@ -5,8 +5,8 @@ import { esc } from "../../utils/dom/html.ts";
 import type { BoneSelectInfo } from "../../features/preview-3d/model3d.ts";
 import type { BedrockGeometry } from "../../features/preview-3d/decoder/geometry.ts";
 import type { Spec3D } from "../../features/preview-3d/model3d.ts";
-import type { PreviewMenuNode } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
-import { multiModelSelectNode } from "../../features/preview-3d/adapters/preview-menu/multi-model.ts";
+import type { PreviewMenuNode } from "../../features/preview-3d/menu/node-types.ts";
+import { multiModelSelectNode } from "../../features/preview-3d/menu/multi-model.ts";
 import type { PreviewSnapshot } from "../../features/preview-3d/state/preview-state.ts";
 
 /** fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） */

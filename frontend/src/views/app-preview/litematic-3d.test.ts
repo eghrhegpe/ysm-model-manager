@@ -311,7 +311,7 @@ import { sleep } from "../../test-utils/index.ts";
 import { getSchema, listSchemas } from "../../features/preview-3d/adapters/schema-registry.ts";
 import { switchPreview } from "../../features/preview-3d/adapters/mount-preview-core.ts";
 import { previewSnapshot } from "../../features/preview-3d/state/preview-state.ts";
-import type { PreviewMenuNode } from "../../features/preview-3d/adapters/preview-menu/node-types.ts";
+import type { PreviewMenuNode } from "../../features/preview-3d/menu/node-types.ts";
 
 /** 访问 mock 暴露的 InstancedMesh 实例列表，供 count / setMatrixAt 断言 */
 const meshInstances = (THREE as unknown as {

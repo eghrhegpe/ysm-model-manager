@@ -5,8 +5,8 @@ tier: leaf
 category: ui
 source_files:
   - frontend/src/features/preview-3d/state/preview-state.ts
-  - frontend/src/features/preview-3d/adapters/preview-menu/settings.ts
-  - frontend/src/features/preview-3d/adapters/preview-menu/node-types.ts
+  - frontend/src/features/preview-3d/menu/settings.ts
+  - frontend/src/features/preview-3d/menu/node-types.ts
 tests:
   - frontend/src/features/preview-3d/state/preview-state.test.ts
 use_when:

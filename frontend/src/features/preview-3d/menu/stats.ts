@@ -11,7 +11,7 @@
 // 三个语言包同步补键；visibleWhen 不依赖状态层快照（统计是 build 后闭包值）。
 
 import type { PreviewMenuNode } from "./node-types.ts";
-import type { SceneStats } from "../../scene-stats.ts";
+import type { SceneStats } from "../scene-stats.ts";
 
 /** 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） */
 export const STATS_PANEL_ID = "stats-panel";

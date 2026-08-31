@@ -137,8 +137,20 @@ function getExportedSymbols(filePath, lang) {
 
 // ── 定义行定位 + 说明提取 ──
 
-function findLine(filePath, sym, lang) {
-  const lines = readText(filePath).split('\n');
+// ── 定义行定位 + 说明提取（单次扫行，合并 findLine + extractDocSummary）──
+
+/**
+ * 定位符号定义行 + 提取紧邻上方注释摘要（单次扫行，替代此前
+ * findLine / extractDocSummary 各自 readText+split 的双读盘——每文件
+ * 被完整读盘+按行 split 的次数 = 导出符号数 × 2，千级符号时重复读盘数千次）。
+ * @param {string[]} lines 文件按行数组（调用方缓存，避免每符号重读）
+ * @param {string} sym 符号名（Go 方法为 Type.Method）
+ * @param {string} lang 'go' | 其它（JS/TS）
+ * @returns {{line: number|null, doc: string}} line 为 1-based 定义行，doc 为首句摘要
+ */
+function locateSym(lines, sym, lang) {
+  let defIdx = -1;
+
   if (lang === 'go') {
     const dot = sym.indexOf('.');
     const methodName = dot >= 0 ? sym.slice(dot + 1) : sym;
@@ -146,43 +158,18 @@ function findLine(filePath, sym, lang) {
     const recvType = dot >= 0 ? sym.slice(0, dot) : '';
     const recvPat = recvType ? `\\([^)]*\\*?${escapeRe(recvType)}\\)\\s+` : '(?:\\([^)]*\\)\\s+)?';
     const re = new RegExp(`^(?:func\\s+${recvPat}|type\\s+)${escapeRe(methodName)}\\b`);
-    for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) return i + 1;
-  } else {
-    const re = new RegExp(
-      '^(?:export\\s+(?:default\\s+)?(?:async\\s+)?)?' +
-        '(?:function|const|let|class|interface|type|enum)\\s+' +
-        escapeRe(sym) +
-        '\\b'
-    );
-    for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) return i + 1;
-  }
-  return null;
-}
-
-/** 取导出符号紧邻上方 JSDoc/注释首句摘要（无则留空串）。 */
-function extractDocSummary(filePath, sym, lang) {
-  const lines = readText(filePath).split('\n');
-  let defIdx = -1;
-
-  if (lang === 'go') {
-    const dot = sym.indexOf('.');
-    const methodName = dot >= 0 ? sym.slice(dot + 1) : sym;
-    // 与 findLine 同步：receiver 类型收窄匹配，防同名方法指错定义行
-    const recvType = dot >= 0 ? sym.slice(0, dot) : '';
-    const recvPat = recvType ? `\\([^)]*\\*?${escapeRe(recvType)}\\)\\s+` : '(?:\\([^)]*\\)\\s+)?';
-    const re = new RegExp(`^(?:func\\s+${recvPat}|type\\s+)${escapeRe(methodName)}\\b`);
     for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) { defIdx = i; break; }
-    if (defIdx <= 0) return '';
-    let i = defIdx - 1;
+    if (defIdx <= 0) return { line: defIdx < 0 ? null : 1, doc: '' };
     const docs = [];
+    let i = defIdx - 1;
     while (i >= 0 && /^\s*\/\//.test(lines[i])) {
       const c = lines[i].trim().replace(/^\/\/\s?/, '');
       if (c) docs.unshift(c);
       i--;
     }
-    if (!docs.length) return '';
+    if (!docs.length) return { line: defIdx + 1, doc: '' };
     const joined = docs.join(' ');
-    return (joined.split(/(?<=[。.])\s/)[0] || joined).slice(0, 90).trim();
+    return { line: defIdx + 1, doc: (joined.split(/(?<=[。.])\s/)[0] || joined).slice(0, 90).trim() };
   }
 
   // JS/TS
@@ -193,11 +180,11 @@ function extractDocSummary(filePath, sym, lang) {
       '\\b'
   );
   for (let i = 0; i < lines.length; i++) if (defRe.test(lines[i])) { defIdx = i; break; }
-  if (defIdx <= 0) return '';
+  if (defIdx <= 0) return { line: defIdx < 0 ? null : 1, doc: '' };
 
   let i = defIdx - 1;
   while (i >= 0 && /^\s*(?:\/\/.*)?$/.test(lines[i])) i--;
-  if (i < 0) return '';
+  if (i < 0) return { line: defIdx + 1, doc: '' };
 
   const docLines = [];
   if (/\*\/\s*$/.test(lines[i])) {
@@ -213,9 +200,9 @@ function extractDocSummary(filePath, sym, lang) {
     const cleaned = lines[i].replace(/^\s*\/?\*+\/?\s?/, '').replace(/\*\/\s*$/, '').trim();
     if (!cleaned.startsWith('@') && cleaned) docLines.push(cleaned);
   }
-  if (!docLines.length) return '';
+  if (!docLines.length) return { line: defIdx + 1, doc: '' };
   const joined = docLines.join(' ');
-  return (joined.split(/(?<=[。.])\s/)[0] || joined).slice(0, 90).trim();
+  return { line: defIdx + 1, doc: (joined.split(/(?<=[。.])\s/)[0] || joined).slice(0, 90).trim() };
 }
 
 // ── 模块分组 ──
@@ -316,12 +303,19 @@ function renderMarkdown(groups, sortedKeys) {
     lines.push('|------|--------|------|');
 
     const sortedFiles = [...g.files].sort((a, b) => a.rel.localeCompare(b.rel));
+    // 每文件只读盘+split 一次，locateSym 复用行数组（此前 findLine/extractDocSummary
+    // 各读一遍，每符号 2 次读盘；千级符号时数千次重复 IO）
+    const fileLines = new Map();
     for (const file of sortedFiles) {
       const displayPath = file.rel.replace(/\.(ts|js|go)$/, '');
+      let symLines = fileLines.get(file.file);
+      if (!symLines) {
+        symLines = readText(file.file).split('\n');
+        fileLines.set(file.file, symLines);
+      }
       for (const sym of file.syms) {
-        const locLine = findLine(file.file, sym, file.lang);
+        const { line: locLine, doc } = locateSym(symLines, sym, file.lang);
         const loc = locLine ? `${displayPath}:${locLine}` : displayPath;
-        const doc = extractDocSummary(file.file, sym, file.lang);
         const escaped = doc ? doc.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
         lines.push(`| \`${sym}()\` | \`${loc}\` | ${escaped || '—'} |`);
       }

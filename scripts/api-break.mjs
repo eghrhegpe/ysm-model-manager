@@ -23,46 +23,10 @@ import path from 'node:path';
 import {
   showAt, existsAt, renamePairs, gitMaybe, lsTree,
 } from './_lib/git-ref.mjs';
-import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
+import { getExportedSymbolsAny, topDeclsAny, searchName, countLines } from './_lib/source-graph.mjs';
 import { walk, ROOT, toPosix } from './_lib/scan-files.mjs';
 
 const REDLINE = 400; // ADR-040：单文件 ≤400 行
-
-// ── 顶层声明提取（与 audit-split / rollback-impact 同源口径）──
-function goTopFuncs(text) {
-  const out = new Set();
-  const re = /\bfunc\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
-  let m;
-  while ((m = re.exec(text))) {
-    const name = m[2];
-    let key = name;
-    if (m[1]) {
-      const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
-      const t = tm ? tm[1] : '';
-      key = t ? `${t}.${name}` : name;
-    }
-    out.add(key);
-  }
-  return [...out];
-}
-function tsTopDecls(text) {
-  const out = new Set();
-  const re1 = /^(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z0-9_]+)/gm;
-  let m;
-  while ((m = re1.exec(text))) out.add(m[1]);
-  const re2 = /^(?:export\s+)?(?:const|let)\s+([A-Za-z0-9_]+)\s*=/gm;
-  while ((m = re2.exec(text))) out.add(m[1]);
-  return [...out];
-}
-function topDeclsAny(p, text) {
-  return p.toLowerCase().endsWith('.go') ? goTopFuncs(text) : tsTopDecls(text);
-}
-function searchName(sym) { return sym.includes('.') ? sym.split('.').pop() : sym; }
-function countLines(t) {
-  if (!t) return null;
-  const nl = (t.match(/\n/g) || []).length;
-  return nl + (t.length > 0 && !t.endsWith('\n') ? 1 : 0);
-}
 
 // ── 核心比对 ──
 // 优化：只用 git diff --name-only 拿变更文件清单（而非 diffTree 全量遍历），

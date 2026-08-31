@@ -246,3 +246,59 @@ export function getExportedSymbolsAny(filePath, textOverride) {
   if (filePath.toLowerCase().endsWith('.go')) return getGoExportedSymbols(filePath, textOverride);
   return getExportedSymbols(filePath, textOverride);
 }
+
+// ── 顶层声明提取（导出+私有）──
+// 口径与 getExportedSymbolsAny 不同：追踪「迁移去向」需要全量顶层声明
+// （导出+私有），Go 拆分通常把私有实现搬去子文件、导出符号留壳，
+// 只追导出符号会漏掉真正去向。audit-split / api-break / rollback-impact /
+// bloat-history 四方共用的唯一实现（此前各自内联逐字复制）。
+// 迁移追踪口径：一个符号被删除当且仅当它不在任一目标文件的顶层声明里。
+
+/**
+ * Go 顶层声明：func（含方法，记为 Type.Method）/ type / const / var（含分组块）。
+ * 导出+私有全量（不按首字母过滤，与 getGoExportedSymbols 的导出口径不同）。
+ */
+export function goTopFuncs(text) {
+  const out = new Set();
+  const re = /\bfunc\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
+  let m;
+  while ((m = re.exec(text))) {
+    const name = m[2];
+    let key = name;
+    if (m[1]) {
+      const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
+      const t = tm ? tm[1] : '';
+      key = t ? `${t}.${name}` : name;
+    }
+    out.add(key);
+  }
+  return [...out];
+}
+
+/** TS/JS 顶层声明：function/class/interface/type/enum + const/let 赋值。导出+私有全量。 */
+export function tsTopDecls(text) {
+  const out = new Set();
+  const re1 = /^(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z0-9_]+)/gm;
+  let m;
+  while ((m = re1.exec(text))) out.add(m[1]);
+  const re2 = /^(?:export\s+)?(?:const|let)\s+([A-Za-z0-9_]+)\s*=/gm;
+  while ((m = re2.exec(text))) out.add(m[1]);
+  return [...out];
+}
+
+/** 按扩展名分发顶层声明提取：.go → goTopFuncs；其余 → tsTopDecls。 */
+export function topDeclsAny(path, text) {
+  return path.toLowerCase().endsWith('.go') ? goTopFuncs(text) : tsTopDecls(text);
+}
+
+/** 方法符号 Type.Method 的裸方法名（调用方文本匹配用）。 */
+export function searchName(sym) {
+  return sym.includes('.') ? sym.split('.').pop() : sym;
+}
+
+/** 行数口径：换行数 +（非空且不以换行结尾 ? 1 : 0），与 line-counter 一致。 */
+export function countLines(text) {
+  if (text === null || typeof text !== 'string') return null;
+  const nl = (text.match(/\n/g) || []).length;
+  return nl + (text.length > 0 && !text.endsWith('\n') ? 1 : 0);
+}

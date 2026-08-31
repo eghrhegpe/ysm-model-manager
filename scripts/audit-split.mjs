@@ -8,7 +8,7 @@
  *   导出清单 → 受影响文件历史提交。与防御型 check-*（fail-closed 门禁）不同，这是
  *   情报型（proactive audit）：输出洞察供 AI/人直接消费，不阻断任何流程。
  *
- * 依赖：node:fs / node:path / node:child_process + scripts/_lib/{source-graph,scan-files}.mjs
+ * 依赖：scripts/_lib/{source-graph,git-ref,parse-args}.mjs（零外部依赖）
  * 用法：
  *   node scripts/audit-split.mjs <commit>            # 审计单次提交（人读文本）
  *   node scripts/audit-split.mjs <commit> --json     # 机读 JSON（供子代理/CI 消费）
@@ -16,53 +16,34 @@
  *   node scripts/audit-split.mjs <commit> --compact  # 摘要模式：迁移/新文件明细折叠为计数 + 头部若干条
  * 退出码：0 审计成功；--redline 且存在 >400 行文件 → 1；缺参/commit 无效 → 2（其余 0）。
  */
-import fs from 'node:fs';
-import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
-import { getRoot } from './_lib/scan-files.mjs';
-import { run } from './_lib/proc.mjs';
+import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.mjs';
+import { gitMaybe, showAt as gitShowAt, existsAt as gitExistsAt } from './_lib/git-ref.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
 
-const ROOT = getRoot();
-const REDLINE = 400; // ADR-040：拆分后每文件 ≤400 行
+// ADR-040：拆分后每文件 ≤400 行
+const REDLINE = 400;
 
-// ── git 封装（Windows 安全：run 数组参数无 shell 展开）──
-
-function git(args) {
-  const r = run('git', ['-c', 'core.quotepath=false', ...args], {
-    cwd: ROOT,
-    maxBuffer: 128 * 1024 * 1024,
-  });
-  if (!r.ok) throw new Error(r.err || `git ${args[0]} 失败（rc=${r.rc}）`);
-  return r.out;
-}
-
-/** git 命令，失败返回 null（如路径不存在/二进制）。 */
-function gitMaybe(args) {
-  try { return git(args); } catch { return null; }
-}
-
-/** git show <ref>:<path> 的文本内容，失败返回 null。 */
+// ── git 访问（共享层 _lib/git-ref；此处只加结果缓存）──
+// funcMigration / removedFileTrace / 主循环会对同一 (ref,path) 重复 showAt
+// （N 个主文件 × M 个路径次 spawn），缓存后每 (ref,path) 只 git show 一次。
+const showCache = new Map();
+const existsCache = new Map();
 function showAt(ref, path) {
-  return gitMaybe(['show', `${ref}:${path}`]);
+  const k = `${ref}\u0000${path}`;
+  if (!showCache.has(k)) showCache.set(k, gitShowAt(ref, path));
+  return showCache.get(k);
 }
-
-/** 路径在 <ref> 是否存在。 */
 function existsAt(ref, path) {
-  return gitMaybe(['cat-file', '-e', `${ref}:${path}`]) !== null;
-}
-
-/** 行数口径：换行数 +（非空且不以换行结尾 ? 1 : 0），与 line-counter 一致。 */
-function countLines(text) {
-  if (text === null || typeof text !== 'string') return null;
-  const nl = (text.match(/\n/g) || []).length;
-  return nl + (text.length > 0 && !text.endsWith('\n') ? 1 : 0);
+  const k = `${ref}\u0000${path}`;
+  if (!existsCache.has(k)) existsCache.set(k, gitExistsAt(ref, path));
+  return existsCache.get(k);
 }
 
 // ── 提交信息 ──
 
 function commitMeta(ref) {
   const fmt = '%H%x09%h%x09%an%x09%ad%x09%s';
-  const line = git(['show', '-s', `--format=${fmt}`, '--date=short', ref]).trim();
+  const line = (gitMaybe(['show', '-s', `--format=${fmt}`, '--date=short', ref]) || '').trim();
   if (!line) return null;
   const [hash, short, author, date, ...rest] = line.split('\t');
   return { hash, short, author, date, subject: rest.join('\t') };
@@ -70,7 +51,7 @@ function commitMeta(ref) {
 
 /** numstat 解析文件清单：adds	dels	path（--no-renames 防 rename 花括号污染）。 */
 function fileList(commit) {
-  const out = git(['show', '--numstat', '--format=', '--no-renames', commit]).trim();
+  const out = (gitMaybe(['show', '--numstat', '--format=', '--no-renames', commit]) || '').trim();
   if (!out) return [];
   return out.split('\n').map((l) => {
     const [adds, dels, ...rest] = l.split('\t');
@@ -89,7 +70,7 @@ function fileList(commit) {
 
 /** 重命名检测：--find-renames 输出形如 `0\t0\tfrontend/src/{wails => backend}/app.ts`。 */
 function detectRenames(commit) {
-  const out = git(['show', '--numstat', '--format=', '--find-renames', commit]);
+  const out = gitMaybe(['show', '--numstat', '--format=', '--find-renames', commit]) || '';
   const renames = [];
   for (const line of out.split('\n')) {
     const m = line.match(/^\d+\t\d+\t(.+)$/);
@@ -139,39 +120,9 @@ function removedFileTrace(commit, rmPath, allPaths) {
 }
 
 // ── 函数级迁移：旧导出符号 → 保留/搬家/真删 ──
-
-// 顶层声明提取（导出+私有）。Go 拆分通常把私有实现搬去子文件、导出符号留壳，
+// 顶层声明提取（导出+私有）统一走 _lib/source-graph.mjs 的 topDeclsAny：
+// Go 拆分通常把私有实现搬去子文件、导出符号留壳，
 // 只追导出符号会漏掉真正去向，故迁移追踪用全量顶层声明口径。
-function goTopFuncs(text) {
-  const out = new Set();
-  const re = /\bfunc\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
-  let m;
-  while ((m = re.exec(text))) {
-    const name = m[2];
-    let key = name;
-    if (m[1]) {
-      const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
-      const t = tm ? tm[1] : '';
-      key = t ? `${t}.${name}` : name;
-    }
-    out.add(key);
-  }
-  return [...out];
-}
-
-function tsTopDecls(text) {
-  const out = new Set();
-  const re1 = /^(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z0-9_]+)/gm;
-  let m;
-  while ((m = re1.exec(text))) out.add(m[1]);
-  const re2 = /^(?:export\s+)?(?:const|let)\s+([A-Za-z0-9_]+)\s*=/gm;
-  while ((m = re2.exec(text))) out.add(m[1]);
-  return [...out];
-}
-
-function topDeclsAny(path, text) {
-  return path.toLowerCase().endsWith('.go') ? goTopFuncs(text) : tsTopDecls(text);
-}
 
 /** 单文件真删洞察：旧顶层声明 - 新顶层声明（死代码清理/改名收敛场景），无被拆主文件也可用。 */
 function deletedSyms(commit, path) {

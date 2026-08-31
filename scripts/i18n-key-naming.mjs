@@ -24,7 +24,7 @@
  *
  * 退出码：通过 → 0；违规且 CI 模式 → 1；--list-violations 不阻断。
  */
-import { readFileSync, readdirSync, existsSync, writeFileSync, unlinkSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -61,12 +61,9 @@ const KNOWN_ROLES = new Set([
 // 优先级：整个 seg 在 KNOWN_ROLES → role；
 //         seg 在此集合 → role（整体是 entity）；
 //         其他按 classfySecondSegment 规则判断。
-const ENTITY_DERIVED_SEGMENTS = new Set([
-  // preview.* 骨骼相关
-  'skeletonTab', 'boneLabels', 'bonesLabel', 'boneCount',
-  // 其他命名空间的高频实体
-  'assetsBones', 'minGtMaxBones',
-]);
+// 集合与 KNOWN_TWO_SEG_ENTITIES 完全同源（同一批"整体不可拆分的业务术语"），
+// 直接引用避免双份维护漂移（审查建议：此前两处逐字复制）。
+const ENTITY_DERIVED_SEGMENTS = KNOWN_TWO_SEG_ENTITIES;
 
 // ── 例外命名空间：自身就是角色，不强制三段式（menu/error/nav/...）──
 // 这些命名空间下的两段键，两段本身合法（dialog 就是角色，不是子命名空间）
@@ -99,8 +96,8 @@ function parseCliArgs() {
 
 
 // ── 提取键 ──────────────────────────────────────────
-function extractKeys(file) {
-  const text = readFileSync(file, 'utf8');
+/** 纯文本 → 键集合（checkCI 对 git show 输出直接复用，免落临时文件）。 */
+function extractKeysFromText(text) {
   const keys = new Set();
   // 匹配 "key": "value" 或 'key': 'value'，排除函数类型
   const re = /^\s*['"]([^'"]+)['"]\s*:\s*(?!function\b|\()/gm;
@@ -109,6 +106,10 @@ function extractKeys(file) {
     keys.add(m[1]);
   }
   return keys;
+}
+
+function extractKeys(file) {
+  return extractKeysFromText(readFileSync(file, 'utf8'));
 }
 
 function loadAllKeys() {
@@ -366,15 +367,13 @@ function checkCI() {
     if (!existsSync(fullPath)) continue;
     const current = extractKeys(fullPath);
 
-    // 尝试从 git HEAD 读旧版本
+    // 尝试从 git HEAD 读旧版本（git show 输出直接走纯文本提取，不落临时文件——
+    // 只读环境/并行下安全，且省一次写删 IO）
     const gitPath = relPath.replace(/\\/g, '/');
     const headResult = spawnSync('git', ['show', `HEAD:${gitPath}`], { encoding: 'utf-8' });
     let headKeys = new Set();
     if (headResult.status === 0) {
-      const tmpPath = resolve(__dirname, '.tmp-head-keys.ts');
-      writeFileSync(tmpPath, headResult.stdout, 'utf-8');
-      headKeys = extractKeys(tmpPath);
-      unlinkSync(tmpPath);
+      headKeys = extractKeysFromText(headResult.stdout);
     }
 
     for (const k of current) {

@@ -25,49 +25,9 @@ import {
   logPathDetail,
   showAt,
 } from './_lib/git-ref.mjs';
-import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
+import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.mjs';
 import { ROOT } from './_lib/scan-files.mjs';
 import { run } from './_lib/proc.mjs';
-
-// ── 顶层声明提取（与 audit-split 同源，供"导出 vs 非导出"区分）──
-function goTopFuncs(text) {
-  const out = new Set();
-  const re = /\bfunc\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
-  let m;
-  while ((m = re.exec(text))) {
-    const name = m[2];
-    let key = name;
-    if (m[1]) {
-      const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
-      const t = tm ? tm[1] : '';
-      key = t ? t + '.' + name : name;
-    }
-    out.add(key);
-  }
-  return [...out];
-}
-
-function tsTopDecls(text) {
-  const out = new Set();
-  const re1 = /^(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z0-9_]+)/gm;
-  let m;
-  while ((m = re1.exec(text))) out.add(m[1]);
-  const re2 = /^(?:export\s+)?(?:const|let)\s+([A-Za-z0-9_]+)\s*=/gm;
-  while ((m = re2.exec(text))) out.add(m[1]);
-  return [...out];
-}
-
-function topDeclsAny(p, text) {
-  return p.toLowerCase().endsWith('.go') ? goTopFuncs(text) : tsTopDecls(text);
-}
-
-function countLines(t) {
-  if (!t) return null;
-  // 末尾有换行时 split 产出尾部空串，减去——否则绝对行数系统性多算 1
-  // （git show 的 blob 文本末尾通常带 \n；跳点差值不受影响，此处统一口径）
-  const n = t.split('\n').length;
-  return t.endsWith('\n') ? n - 1 : n;
-}
 
 function sigAny(p, text) {
   if (!text) return { lines: null, exports: 0, tops: 0 };

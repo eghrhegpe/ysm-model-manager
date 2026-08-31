@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { ROOT } from '../scripts/_lib/scan-files.mjs';
+import { ROOT } from '../scripts/_lib/scan-files.ts';
 import { buildBlock, MAX_SUGGEST_FILES, formatCovTime, buildStaleHint } from '../scripts/hooks/coverage-suggest-hint.mjs';
 import { stripBlock } from '../scripts/hooks/knowledge-affected-hint.mjs';
 import { BLOCK_START, BLOCK_END } from '../scripts/hooks/coverage-suggest-hint.mjs';

@@ -4,7 +4,7 @@ status: ✅ 已采纳
 title: "ADR-088：检查体系并行调度——pre-push-gate 域间并行 + 静态工具分组 + pre-commit gen 并行"
 date: 2026-08-17
 authors: [deepseek, jieling]
-related: [ADR-086, ADR-087, scripts/pre-push-gate.mjs, scripts/_lib/contract-tests.mjs]
+related: [ADR-086, ADR-087, scripts/pre-push-gate.mjs, scripts/_lib/contract-tests.ts]
 ---
 
 # ADR-088：检查体系并行调度——pre-push-gate 域间并行 + 静态工具分组 + pre-commit gen 并行
@@ -14,7 +14,7 @@ related: [ADR-086, ADR-087, scripts/pre-push-gate.mjs, scripts/_lib/contract-tes
 - **状态**：✅ 已采纳
 - **日期**：2026-08-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`ADR-086`、`ADR-087`、`scripts/pre-push-gate.mjs`、`scripts/_lib/contract-tests.mjs`
+- **相关**：`ADR-086`、`ADR-087`、`scripts/pre-push-gate.mjs`、`scripts/_lib/contract-tests.ts`
 
 ---
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * contract-tests.mjs — 契约测试并行执行共享层。
+ * contract-tests.ts — 契约测试并行执行共享层。
  *
  * 解决 doctor.mjs / pre-push-gate.mjs 各自内联串行循环跑 tests/*.mjs 的问题。
  * 此前逐个 execFileSync（总耗时 ~43s），集中到本层后支持 Promise.all 并行（~31s），
@@ -10,14 +10,14 @@
  * stdout/stderr 是对象而非字符串，行为不一致；spawn 稳定可靠。
  *
  * 用法：
- *   import { runContractTestsParallel, collectContractTests } from './_lib/contract-tests.mjs';
+ *   import { runContractTestsParallel, collectContractTests } from './_lib/contract-tests.ts';
  *
  * 依赖：node:child_process / node:fs / node:path
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './scan-files.mjs';
+import { ROOT } from './scan-files.ts';
 
 /** 列出 tests/ 目录下所有 .mjs 文件（按文件名排序）。 */
 export function collectContractTests() {
@@ -38,16 +38,25 @@ export function collectContractTests() {
  */
 const MAX_SPAWN_RETRY = 3;
 
-function spawnTestOnce(file) {
+/** 单次 spawn 结果（含"进程未起来"的 spawnError 分支）。 */
+interface SpawnOnceResult {
+  stdout: string;
+  stderr: string;
+  status: number;
+  spawnError?: Error;
+}
+
+function spawnTestOnce(file: string): Promise<SpawnOnceResult> {
   return new Promise((resolve) => {
+    // 注意：spawn 的 SpawnOptions 无 maxBuffer（那是 execFileSync 的选项），
+    // 传了会让 TS overload 解析失败返回 never——stdout/stderr 用流式 chunk 累积即可。
     const proc = spawn(process.execPath, [path.join('tests', file)], {
       cwd: ROOT,
       stdio: ['ignore', 'pipe', 'pipe'],
-      maxBuffer: 64 * 1024 * 1024,
     });
-    const chunks = [];
-    proc.stdout.on('data', (c) => chunks.push(c));
-    proc.stderr.on('data', (c) => chunks.push(c));
+    const chunks: Buffer[] = [];
+    proc.stdout!.on('data', (c: Buffer) => chunks.push(c));
+    proc.stderr!.on('data', (c: Buffer) => chunks.push(c));
     proc.on('close', (code) => {
       const out = Buffer.concat(chunks).toString('utf8');
       resolve({ stdout: out, stderr: '', status: code ?? 1 });
@@ -56,8 +65,8 @@ function spawnTestOnce(file) {
   });
 }
 
-async function runTest(file) {
-  let last = null;
+async function runTest(file: string): Promise<SpawnOnceResult> {
+  let last: SpawnOnceResult | null = null;
   for (let attempt = 1; attempt <= MAX_SPAWN_RETRY; attempt++) {
     const r = await spawnTestOnce(file);
     // 仅「进程未起来」（spawn 瞬时 ENOENT / EMFILE 等）重试；
@@ -68,7 +77,7 @@ async function runTest(file) {
     }
     return r;
   }
-  return last;
+  return last!;
 }
 
 /**

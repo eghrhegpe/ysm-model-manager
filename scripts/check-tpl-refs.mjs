@@ -24,7 +24,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { SRC_DIR, walk, getRoot } from './_lib/scan-files.mjs';
+import { SRC_DIR, walk, getRoot } from './_lib/scan-files.ts';
 
 const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');

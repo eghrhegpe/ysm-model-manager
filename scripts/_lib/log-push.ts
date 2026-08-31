@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * log-push.mjs — 推送门禁日志共享层。
+ * log-push.ts — 推送门禁日志共享层。
  *
  * 解决 pre-push / doctor --gate 的输出可能被 git 吞掉的问题：
  *   - stdout 直写终端（交互可见）
@@ -9,7 +9,7 @@
  * .git/ 目录本身不被 git 跟踪，无需 .gitignore。
  *
  * 用法：
- *   import { logPush } from './_lib/log-push.mjs';
+ *   import { logPush } from './_lib/log-push.ts';
  *   logPush('[OK] go build          2.3s  编译通过');
  *   logPush('[FAIL] vitest run        45s   3 测试失败');
  *
@@ -17,7 +17,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './scan-files.mjs';
+import { ROOT } from './scan-files.ts';
 
 const LOG_FILE = path.join(ROOT, '.git', 'push-log');
 

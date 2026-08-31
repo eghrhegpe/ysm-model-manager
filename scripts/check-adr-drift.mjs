@@ -12,7 +12,7 @@
  *      - app_install.go 行数应 < 50（薄壳），否则 DRIFT（它本应已下沉）。
  *      - DownloadQueue 结构体不应含 *App 字段（循环应已打破）。
  *
- * 零依赖（仅 node:fs / node:path / node:url，复用 _lib/scan-files.mjs 的 ROOT）。
+ * 零依赖（仅 node:fs / node:path / node:url，复用 _lib/scan-files.ts 的 ROOT）。
  *
  * 用法：
  *   node scripts/check-adr-drift.mjs           # 文本报告
@@ -27,7 +27,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 
 const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');

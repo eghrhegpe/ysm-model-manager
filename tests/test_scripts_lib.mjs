@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 契约测试：scripts/_lib/scan-files.mjs 共享层单元测试。
+ * 契约测试：scripts/_lib/scan-files.ts 共享层单元测试。
  *
  * 覆盖边界情况：
  *   1. walk：.js/.ts 双扩展名收集、css/ 与 node_modules/ 排除（skipDir 仅过滤隐藏目录）、
@@ -15,9 +15,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { walk, resolveImport, relPosix, readText, ROOT } from '../scripts/_lib/scan-files.mjs';
+import { walk, resolveImport, relPosix, readText, ROOT } from '../scripts/_lib/scan-files.ts';
 import { toPosix } from '../scripts/_lib/to-posix.ts';
-import { rg } from '../scripts/_lib/ripgrep.mjs';
+import { rg } from '../scripts/_lib/ripgrep.ts';
 import { parseRgLine } from '../scripts/_lib/rg-line.ts';
 
 const errors = [];
@@ -114,7 +114,7 @@ assert(relPosix(path.join(ROOT, 'scripts', 'x.mjs')) === 'scripts/x.mjs', `relPo
 
 // ── 5. ripgrep 共享层（rg）：临时目录 fixture ─────────
 {
-  // rg() 的 paths 按设计相对 ROOT（ripgrep.mjs 内部 path.join(ROOT, p)），
+  // rg() 的 paths 按设计相对 ROOT（ripgrep.ts 内部 path.join(ROOT, p)），
   // 故 fixture 建在 ROOT 下临时目录，测完清理。
   const tmpDir = path.join(ROOT, '.rg-test-tmp');
   fs.mkdirSync(tmpDir, { recursive: true });

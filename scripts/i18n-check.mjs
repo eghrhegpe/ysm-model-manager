@@ -10,7 +10,7 @@
  * key parity（en/ja vs zh-CN）、占位符一致性（{n} 跨包必须一致）、zh-CN 漏译、
  * SUPPORTED_LANGS 与 locales/ 文件集漂移。warning 模式只报不阻断，--strict 供 CI。
  *
- * 零依赖（仅 node:fs / node:path / node:url + 仓库内 _lib/parse-args.mjs）。
+ * 零依赖（仅 node:fs / node:path / node:url + 仓库内 _lib/parse-args.ts）。
  *
  * 用法：
  *   node scripts/i18n-check.mjs                 # warning 模式（默认，非阻断）
@@ -22,7 +22,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = resolve(__dirname, '..', 'frontend', 'src', 'core', 'i18n', 'locales');

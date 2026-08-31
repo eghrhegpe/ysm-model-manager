@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseFrontmatter, getScalar, getList, parseSourceFiles } from './frontmatter.mjs';
+import { parseFrontmatter, getScalar, getList, parseSourceFiles } from './frontmatter.ts';
 
 // ── parseFrontmatter ──
 

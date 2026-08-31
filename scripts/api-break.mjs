@@ -22,10 +22,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   showAt, existsAt, renamePairs, gitMaybe, lsTree,
-} from './_lib/git-ref.mjs';
-import { getExportedSymbolsAny, topDeclsAny, searchName, countLines } from './_lib/source-graph.mjs';
-import { walk, ROOT, toPosix } from './_lib/scan-files.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+} from './_lib/git-ref.ts';
+import { getExportedSymbolsAny, topDeclsAny, searchName, countLines } from './_lib/source-graph.ts';
+import { walk, ROOT, toPosix } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const REDLINE = 400; // ADR-040：单文件 ≤400 行
 

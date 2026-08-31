@@ -29,11 +29,11 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, walk } from './_lib/scan-files.mjs';
+import { ROOT, walk } from './_lib/scan-files.ts';
 import { toPosix } from './_lib/to-posix.ts';
-import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.mjs';
-import { PERF_TAGS } from './_lib/knowledge-cards.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.ts';
+import { PERF_TAGS } from './_lib/knowledge-cards.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
@@ -72,7 +72,7 @@ const GEN_RE = /(^|\/)bindings(\/|$)|(^|\/)dist(\/|$)|(^|\/)node_modules(\/|$)/;
 const TEST_RE = /\.(test|spec)\.(ts|js)$|_test\.go$|(^|\/)test(\/|$)/;
 const ROOT_ESCAPE_RE = /\\|^[A-Za-z]:|^\/|^~|\.\.\//; // 反斜杠 / 绝对路径 / .. 逃逸
 
-// ── 共享 frontmatter 解析统一走 _lib/frontmatter.mjs（见顶部 import）──
+// ── 共享 frontmatter 解析统一走 _lib/frontmatter.ts（见顶部 import）──
 
 // ── 单遍遍历骨架：readdir 一次 + 每卡 read+parseFrontmatter 一次 ──
 // 此前 checkKnowledgeMeta/Sources/Anchors/Coverage/runAffected 各自
@@ -139,11 +139,11 @@ function checkKnowledgeMeta(cards) {
       errors.push(`知识卡 ${cf} 的 tier 非法: ${tier}（应为 ${[...TIER_ENUM].join('|')} 之一）`);
     }
 
-    // perf 性能画像值域（受控词表，单一事实源 = _lib/knowledge-cards.mjs PERF_TAGS）
+    // perf 性能画像值域（受控词表，单一事实源 = _lib/knowledge-cards.ts PERF_TAGS）
     const PERF_ENUM = Object.keys(PERF_TAGS);
     for (const t of getList(fm, 'perf')) {
       if (!PERF_ENUM.includes(t)) {
-        errors.push(`知识卡 ${cf} 的 perf 标签非法: ${t}（词表见 _lib/knowledge-cards.mjs PERF_TAGS: ${PERF_ENUM.join('|')}）`);
+        errors.push(`知识卡 ${cf} 的 perf 标签非法: ${t}（词表见 _lib/knowledge-cards.ts PERF_TAGS: ${PERF_ENUM.join('|')}）`);
       }
     }
 

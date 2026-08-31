@@ -25,8 +25,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
-import { parseFrontmatter, getScalar, parseSourceFiles, parseAdrHeader } from './_lib/frontmatter.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { parseFrontmatter, getScalar, parseSourceFiles, parseAdrHeader } from './_lib/frontmatter.ts';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
 const KC_DIR = path.join(ROOT, 'docs/knowledge');
@@ -120,7 +120,7 @@ function checkKnowledge() {
     if (placeholderM) errors.push(`[知识卡] ${cf} 含未填充占位符 <...>`);
 
     // source_files 存在性——复用共享解析器（inline array 与 block list 两种格式
-    // 均由 _lib/frontmatter.mjs parseSourceFiles 统一处理，与 check-knowledge-drift
+    // 均由 _lib/frontmatter.ts parseSourceFiles 统一处理，与 check-knowledge-drift
     // 行为一致；此前手写双解析存在分叉风险，code_review P3）
     const srcItems = parseSourceFiles(fm);
     for (const v of srcItems) {

@@ -1,10 +1,10 @@
 ---
 kind: source-graph
-name: 源码符号提取共享层 source-graph.mjs
+name: 源码符号提取共享层 source-graph.ts
 tier: architecture
 category: utils
 source_files:
-  - scripts/_lib/source-graph.mjs
+  - scripts/_lib/source-graph.ts
 use_when:
   - 符号提取
   - 导出符号
@@ -17,14 +17,14 @@ use_when:
   - check-lib-adoption
 ---
 
-# 源码符号提取共享层 source-graph.mjs
+# 源码符号提取共享层 source-graph.ts
 
 > **设计模式**：单一内核 + 分发层（"一个正则两套口径"），支撑 Go + JS/TS 双栈符号提取。6 个审计/检测工具共用，避免各自内联导致逐步分叉。
 
 ## 位置
 
-- 共享层：`scripts/_lib/source-graph.mjs`（338 行）
-- 依赖：`_lib/to-posix.mjs`（Windows 路径归一）+ `_lib/scan-files.mjs` 的 `walk`
+- 共享层：`scripts/_lib/source-graph.ts`（338 行）
+- 依赖：`_lib/to-posix.mjs`（Windows 路径归一）+ `_lib/scan-files.ts` 的 `walk`
 
 ## 背景
 
@@ -36,7 +36,7 @@ use_when:
 | 两组正则结果拼接序未排序 | api-break 报告顺序不稳定 | 收敛后加 `.sort()` |
 | 注释里的 `// func Ghost(` 被当真符号 | 误报 | 块注释剥离 + 行首锚定正则 |
 
-本次重构（536a19e8）把 7 个脚本的符号提取逻辑上收到 `_lib/source-graph.mjs`，净减 107 行（`-229/+122`），并建立"单一内核 + 分发层"的防御范式。
+本次重构（536a19e8）把 7 个脚本的符号提取逻辑上收到 `_lib/source-graph.ts`，净减 107 行（`-229/+122`），并建立"单一内核 + 分发层"的防御范式。
 
 ## 设计：两圈架构
 
@@ -91,11 +91,11 @@ use_when:
 | `gen-knowledge-symbols.mjs` | 知识卡 symbols 字段同步 | `getExportedSymbolsAny` + `EXCLUDE_DIRS` | ✅ 一线，pre-commit GEN_CMDS |
 | `check-lib-adoption.mjs` | _lib 采用率检查 | 只在 RULES 表里列 `advice` 字符串 | ⚠️ 并行会话未提交 |
 
-**杠杆率**：审 source-graph.mjs 1 行 ≈ 审这 6 个调用方各 1 行的正确性。2026-09 孤儿审计②判定"同模板复制铁证"的类比在这里也成立——**审共享层比审调用方更高效**。
+**杠杆率**：审 source-graph.ts 1 行 ≈ 审这 6 个调用方各 1 行的正确性。2026-09 孤儿审计②判定"同模板复制铁证"的类比在这里也成立——**审共享层比审调用方更高效**。
 
 ## 与其他子系统关系
 
-- `scripts/_lib/scan-files.mjs` 的 `walk`：source-graph 借用它做源码文件收集（`.ts/.tsx/.js/.jsx` 扩展名），但符号提取本身不依赖 walk。
+- `scripts/_lib/scan-files.ts` 的 `walk`：source-graph 借用它做源码文件收集（`.ts/.tsx/.js/.jsx` 扩展名），但符号提取本身不依赖 walk。
 - `scripts/_lib/to-posix.mjs`：Windows 路径归一（`C:\foo` → `C:/foo`），symbol 提取结果里路径统一正斜杠。
 - `scripts/check-lib-adoption.mjs`：采用率闸门——检测「手搓了某模块能覆盖的能力却未 import」。source-graph 的 `getExportedSymbolsAny` / `topDeclsAny` 在其 RULES 表里已有 `advice` 条目（见 check-lib-adoption.mjs L63）。
 - `docs/adr/ADR-141-large-script-split-baseline.md`：2026-08-31 审计实证 source-graph 与 auto-import.extractExports 在 re-export 处理上存在 15 文件差异，结论「不复用」——这是**差异化设计不是复制**（source-graph 把转发符号也算本文件导出，auto-import 故意排除转发名）。
@@ -114,13 +114,13 @@ use_when:
 | 日期 | 提交 | 问题 | 修复 |
 |------|------|------|------|
 | 2026-08-31 | `536a19e8` | goTopFuncs 只提取 func，漏 type/const/var/分组块 | 统一 goDecls 支持四类 + 分组块 |
-| 2026-08-31 | `536a19e8` | 多份内联正则逐步分叉 | 上收到 source-graph.mjs 单一内核 |
+| 2026-08-31 | `536a19e8` | 多份内联正则逐步分叉 | 上收到 source-graph.ts 单一内核 |
 | 2026-08-31 | `536a19e8` | 结果拼接序未排序导致 api-break 报告不稳定 | 统一 `.sort()` |
 | 2026-09-xx | 本卡 | 缺乏设计模式文档 | 新建知识卡 |
 
 ## 相关
 
-- `scripts/_lib/source-graph.mjs`（本卡 source）
+- `scripts/_lib/source-graph.ts`（本卡 source）
 - `scripts/api-break.mjs`（破坏性变更检测，主力调用方）
 - `scripts/audit-split.mjs`（refactor 提交审计，主力调用方）
 - `scripts/rollback-impact.mjs`（revert 影响面分析，主力调用方）

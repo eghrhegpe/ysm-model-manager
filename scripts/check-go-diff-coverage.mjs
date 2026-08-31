@@ -14,7 +14,7 @@
  *   触发真实窗口事件，列入 EXEMPT_LIFECYCLE_FILES 显式豁免（exemptLifecycle），同样非「裸奔」。
  *
  * 实现：git 变更收集 / rename / 建议区块等语言无关部分抽到
- *   scripts/_lib/diff-coverage-core.mjs（与 check-diff-coverage.mjs 共享）；
+ *   scripts/_lib/diff-coverage-core.ts（与 check-diff-coverage.mjs 共享）；
  *   本文件仅保留 Go 专属策略：isGoSource 过滤 + 包分组 + `go test -coverprofile` +
  *   `go list` 编译集 oracle 豁免。下方 re-export 供契约测试 import（
  *   tests/test_check_go_diff_coverage.mjs），签名不变。
@@ -41,8 +41,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ROOT } from './_lib/scan-files.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 import { run } from './_lib/proc.ts';
 import {
   git,
@@ -52,7 +52,7 @@ import {
   detectRenames,
   getChangedLines,
   buildSuggestBlock as buildSuggestBlockCore,
-} from './_lib/diff-coverage-core.mjs';
+} from './_lib/diff-coverage-core.ts';
 
 // ── re-export（契约测试 import 路径锁：tests/test_check_go_diff_coverage.mjs）──
 export { addLinesFromDiff, parseRenameStatus, detectRenames, getChangedLines, getChangedFiles, git };

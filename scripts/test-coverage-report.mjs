@@ -23,7 +23,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { getRoot, toPosix, relPosix } from './_lib/scan-files.mjs';
+import { getRoot, toPosix, relPosix } from './_lib/scan-files.ts';
 
 const ROOT = getRoot();
 const DEFAULT_INPUT = path.join(ROOT, 'frontend/coverage/coverage-final.json');

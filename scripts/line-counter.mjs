@@ -14,7 +14,7 @@
  *      前端 TS/JS + Go 双栈覆盖；括号匹配定边界 + 新顶层声明护栏截断；
  *      生成文件、测试文件、node_modules 自动豁免。
  *
- * 依赖：node:fs / node:path / node:url / scripts/_lib/scan-files.mjs（零外部依赖）。
+ * 依赖：node:fs / node:path / node:url / scripts/_lib/scan-files.ts（零外部依赖）。
  *
  * 用法：
  *   node scripts/line-counter.mjs                                    # 默认：文件级总览（不变）
@@ -27,12 +27,12 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { walk, readText, getRoot, relPosix } from './_lib/scan-files.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { walk, readText, getRoot, relPosix } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const ROOT = getRoot();
 
-// ─── 参数解析（共享层 _lib/parse-args.mjs）────────────────────────
+// ─── 参数解析（共享层 _lib/parse-args.ts）────────────────────────
 // 位置参数由共享层收进 `_`（原 _positional 同样未被消费，此处省略）。
 // --threshold 正整数校验保留（非法时告警回落默认 30，与原手写解析一致）。
 const raw = parseArgs(process.argv.slice(2), {

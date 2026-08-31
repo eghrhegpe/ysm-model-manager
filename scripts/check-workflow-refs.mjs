@@ -8,7 +8,7 @@
  *
  * 设计意图：迁移类治理（改名/移动脚本）后，引用方的存在性由 CI 门禁兜底，
  * 不再依赖人工记得同步 .github/workflows/。
- * 依赖：零依赖（node:fs / node:path / node:url + _lib/scan-files.mjs 的 ROOT）
+ * 依赖：零依赖（node:fs / node:path / node:url + _lib/scan-files.ts 的 ROOT）
  *
  * 用法：
  *   node scripts/check-workflow-refs.mjs            # 文本报告
@@ -18,7 +18,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 
 const WF_DIR = path.join(ROOT, '.github', 'workflows');
 

@@ -25,7 +25,7 @@
  * key 检查器只看语言包文件，对组件源码里的硬编码中文完全失明。
  * 本脚本补全这道防线，从源头堵住硬编码中文。
  *
- * 依赖：node:fs / node:path / scripts/_lib/scan-files.mjs
+ * 依赖：node:fs / node:path / scripts/_lib/scan-files.ts
  *
  * 用法：
  *   node scripts/i18n-ui-check.mjs            # 文本报告（warning，不阻断）
@@ -37,7 +37,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { getRoot } from "./_lib/scan-files.mjs";
+import { getRoot } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
 const SRC = path.join(ROOT, "frontend", "src");

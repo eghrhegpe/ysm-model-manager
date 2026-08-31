@@ -1,10 +1,10 @@
 ---
 kind: scripts_argv
-name: 脚本 argv 规范与已知豁免 parse-args.mjs
+name: 脚本 argv 规范与已知豁免 parse-args.ts
 tier: architecture
 category: config
 source_files:
-  - scripts/_lib/parse-args.mjs
+  - scripts/_lib/parse-args.ts
 use_when:
   - 脚本参数
   - argv
@@ -16,11 +16,11 @@ use_when:
   - hygiene
 ---
 
-# 脚本 argv 规范与已知豁免 parse-args.mjs
+# 脚本 argv 规范与已知豁免 parse-args.ts
 
 ## 概览
 
-`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.mjs`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30 收敛）：手写 `argv.includes('--flag')` 无法拦截拼错的 flag——`--jso` 会被静默忽略并走进默认行为（audit-split 曾中招：`--jso` 拼错照常写盘）。
+`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30 收敛）：手写 `argv.includes('--flag')` 无法拦截拼错的 flag——`--jso` 会被静默忽略并走进默认行为（audit-split 曾中招：`--jso` 拼错照常写盘）。
 
 ## 核心职责
 
@@ -32,7 +32,7 @@ use_when:
 ## 对外 API / 入口
 
 ```js
-import { parseArgs } from './_lib/parse-args.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
 const args = parseArgs(process.argv.slice(2), {
   bools: ['check', 'json', 'strict'],
   strings: ['scope'],
@@ -49,7 +49,7 @@ if (args.unknown.length) { console.error(`❌ 未知参数: ${args.unknown.join(
 
 - `scripts/check-script-hygiene.mjs`：检查口径五条——① 退出码失效（裸 `main();`）② 共享层内联（含内联 parseArgs）③ `--json` 契约 ④ 文件头 5 字段 ⑤ **positional 须走 parse-args**。默认 WARN 不阻断，`--strict` 下 `warns>0` 退 1。
 - `scripts/pre-push-gate.mjs`：ALL_STATIC_TOOLS / DOC_STATIC_TOOLS 均挂 `check-script-hygiene --strict`。
-- `docs/knowledge/` 内其他卡：`check-knowledge-drift --affected` 会在本卡 source_files（parse-args.mjs）变更时提示复核。
+- `docs/knowledge/` 内其他卡：`check-knowledge-drift --affected` 会在本卡 source_files（parse-args.ts）变更时提示复核。
 
 ## 不变量
 
@@ -61,7 +61,7 @@ if (args.unknown.length) { console.error(`❌ 未知参数: ${args.unknown.join(
 
 ## 相关
 
-- `scripts/_lib/parse-args.mjs`（本卡 source）
+- `scripts/_lib/parse-args.ts`（本卡 source）
 - `scripts/check-script-hygiene.mjs`（检查口径）
 - `scripts/pre-push-gate.mjs`（门禁挂载）
 - `scripts/commit-with-check.mjs`（已知豁免示例：`-m` 单字符带值）

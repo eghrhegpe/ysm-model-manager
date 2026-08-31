@@ -20,8 +20,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
-import { parseAdrHeader } from './_lib/frontmatter.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { parseAdrHeader } from './_lib/frontmatter.ts';
 import {
   RE_SUPERSEDED_BY,
   RE_PARTIAL,
@@ -35,7 +35,7 @@ import {
   RE_TABLE_VERB,
   RE_TABLE_NEGATED,
   globalOf,
-} from './_lib/supersede-regex.mjs';
+} from './_lib/supersede-regex.ts';
 
 const RE_CLAIM_A_G = globalOf(RE_CLAIM_A);
 const RE_CLAIM_B_G = globalOf(RE_CLAIM_B);
@@ -50,7 +50,7 @@ const FLAG_QUIET = process.argv.includes('--quiet');
 //            属勘误注记而非取代（ADR-092 仍有效，ADR-111 是 variants 解耦新决策）
 const KNOWN_ERRATA = new Set(['92-111']);
 
-// [ADR-114 §被补充] 首部解析统一走共享库 parseAdrHeader（_lib/frontmatter.mjs），
+// [ADR-114 §被补充] 首部解析统一走共享库 parseAdrHeader（_lib/frontmatter.ts），
 // 兼容 list/blockquote/table 三种格式 + 中文冒号。原局部实现与共享库并行，已消除。
 
 // ── 主流程 ─────────────────────────────────────────────

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * cycles.mjs — 有向图环检测共享核（DFS 三色标记）。
+ * cycles.ts — 有向图环检测共享核（DFS 三色标记）。
  *
  * 统一 check-circular.mjs（前端 ESM 文件级图）与 check-circular-go.mjs
  * （Go 包级图）的 findCycles 算法——此前两脚本逐行复制同一 DFS 三色实现，
@@ -21,14 +21,14 @@
  *   cycles：每条为环上的节点顺序链（[a,b]，a 在栈中，首尾相接成环）；
  *   truncated：是否因达到 maxCycles 而截断（区别于「恰好枚举完」）。
  */
-export function findCycles(graph, maxCycles = 100) {
+export function findCycles(graph: Map<string, string[]>, maxCycles = 100): { cycles: string[][]; truncated: boolean } {
   const WHITE = 0, GRAY = 1, BLACK = 2;
-  const color = new Map();
-  const stack = [];
-  const cycles = new Map(); // key（排序去重）→ 原始顺序环链
+  const color = new Map<string, number>();
+  const stack: string[] = [];
+  const cycles = new Map<string, string[]>(); // key（排序去重）→ 原始顺序环链
   let truncated = false;
 
-  function dfs(node) {
+  function dfs(node: string) {
     color.set(node, GRAY);
     stack.push(node);
     for (const next of graph.get(node) || []) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseArgs } from './parse-args.mjs';
+import { parseArgs } from './parse-args.ts';
 
 // ── bool flags ──
 

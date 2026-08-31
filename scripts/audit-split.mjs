@@ -16,9 +16,9 @@
  *   node scripts/audit-split.mjs <commit> --compact  # 摘要模式：迁移/新文件明细折叠为计数 + 头部若干条
  * 退出码：0 审计成功；--redline 且存在 >400 行文件 → 1；缺参/commit 无效 → 2（其余 0）。
  */
-import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.mjs';
-import { gitMaybe, showAt as gitShowAt, existsAt as gitExistsAt } from './_lib/git-ref.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.ts';
+import { gitMaybe, showAt as gitShowAt, existsAt as gitExistsAt } from './_lib/git-ref.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 // ADR-040：拆分后每文件 ≤400 行
 const REDLINE = 400;
@@ -120,7 +120,7 @@ function removedFileTrace(commit, rmPath, allPaths) {
 }
 
 // ── 函数级迁移：旧导出符号 → 保留/搬家/真删 ──
-// 顶层声明提取（导出+私有）统一走 _lib/source-graph.mjs 的 topDeclsAny：
+// 顶层声明提取（导出+私有）统一走 _lib/source-graph.ts 的 topDeclsAny：
 // Go 拆分通常把私有实现搬去子文件、导出符号留壳，
 // 只追导出符号会漏掉真正去向，故迁移追踪用全量顶层声明口径。
 

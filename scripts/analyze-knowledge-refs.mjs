@@ -23,15 +23,15 @@
  *   node scripts/analyze-knowledge-refs.mjs --json    # 只输出 JSON 到 stdout
  *   node scripts/analyze-knowledge-refs.mjs --no-write # 分析但不写盘（试跑）
  *
- * 零依赖（仅 node:fs / node:path），复用 _lib/frontmatter.mjs 解析。
+ * 零依赖（仅 node:fs / node:path），复用 _lib/frontmatter.ts 解析。
  * 设计意图：知识卡引用关系诊断工具（一次性，不进 pre-commit GEN 清单）
  * 退出码：分析失败 → 1；否则 0。
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
-import { parseFrontmatter, getScalar, getList, parseSourceFiles } from './_lib/frontmatter.mjs';
-import { CATEGORY_LABELS, KNOWLEDGE_NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { parseFrontmatter, getScalar, getList, parseSourceFiles } from './_lib/frontmatter.ts';
+import { CATEGORY_LABELS, KNOWLEDGE_NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
 
 const JSON_ONLY = process.argv.includes('--json');
 const NO_WRITE = process.argv.includes('--no-write');

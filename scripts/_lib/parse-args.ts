@@ -1,9 +1,9 @@
 /**
- * parse-args.mjs
+ * parse-args.ts
  * 统一参数解析 —— 零依赖，为 scripts/*.mjs 消除重复的 argv 手写解析。
  *
  * 用法：
- *   import { parseArgs } from './_lib/parse-args.mjs';
+ *   import { parseArgs } from './_lib/parse-args.ts';
  *
  *   const args = parseArgs(process.argv.slice(2), {
  *     bools: ['check', 'json', 'strict'],
@@ -17,8 +17,16 @@
  *   `--help` / `-h` 置 help=true（调用方退 0）。
  *   未知参数或缺少值的 value flag 会输出 stderr 警告，不改变退出码。
  */
-export function parseArgs(argv = [], { bools = [], strings = [], defaults = {} } = {}) {
-  const result = { _: [], ...defaults, unknown: [], help: false };
+/** 解析结果：位置参数 `_` / 未知参数 unknown / help 标志 + 动态 flag 值（索引签名）。 */
+export interface ParseArgsResult {
+  _: string[];
+  unknown: string[];
+  help: boolean;
+  [key: string]: unknown;
+}
+
+export function parseArgs(argv: string[] = [], { bools = [], strings = [], defaults = {} }: { bools?: string[]; strings?: string[]; defaults?: Record<string, unknown> } = {}): ParseArgsResult {
+  const result: ParseArgsResult = { _: [], ...defaults, unknown: [], help: false };
 
   // 预填 bools/strings 默认值
   for (const k of bools) if (!(k in result)) result[k] = false;

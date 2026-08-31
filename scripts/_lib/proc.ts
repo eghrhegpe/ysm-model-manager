@@ -17,7 +17,7 @@ import { execFileSync, type ExecFileSyncOptions, type StdioOptions } from 'node:
 
 /** 默认超时：30s（长任务显式覆盖）。 */
 export const DEFAULT_TIMEOUT = 30_000;
-/** 默认 stdout 缓冲上限（64MB，与 ripgrep.mjs 既有契约一致）。 */
+/** 默认 stdout 缓冲上限（64MB，与 ripgrep.ts 既有契约一致）。 */
 export const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
 
 /**

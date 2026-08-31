@@ -39,7 +39,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { walk } from './_lib/scan-files.mjs';
+import { walk } from './_lib/scan-files.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");

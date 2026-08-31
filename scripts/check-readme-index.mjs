@@ -14,7 +14,7 @@
  *
  * 设计意图：让「唯一登记处」的声明可机检、可自执行，与 check-workflow-refs
  * 形成引用侧 + 登记侧双守护。
- * 依赖：零依赖（node:fs / node:path + _lib/scan-files.mjs 的 ROOT）
+ * 依赖：零依赖（node:fs / node:path + _lib/scan-files.ts 的 ROOT）
  *
  * 用法：
  *   node scripts/check-readme-index.mjs           # 文本报告
@@ -24,8 +24,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
-import { collectScripts } from './_lib/collect-scripts.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { collectScripts } from './_lib/collect-scripts.ts';
 
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 

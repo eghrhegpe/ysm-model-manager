@@ -37,7 +37,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { getRoot } from './_lib/scan-files.mjs';
+import { getRoot } from './_lib/scan-files.ts';
 import { run } from './_lib/proc.ts';
 
 const ROOT = getRoot();

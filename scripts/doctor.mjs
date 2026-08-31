@@ -16,7 +16,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 
 const JSON_MODE = process.argv.includes('--json');
 const DOCS_MODE = process.argv.includes('--docs');

@@ -25,8 +25,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { ROOT, toPosix } from './_lib/scan-files.mjs';
-import { splitNewFindings, canWriteBaseline } from './_lib/deadcode-attrib.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.ts';
+import { splitNewFindings, canWriteBaseline } from './_lib/deadcode-attrib.ts';
 import { checkStale } from './_lib/stale-baseline.ts';
 
 const FRONTEND = path.join(ROOT, 'frontend');

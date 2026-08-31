@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 契约测试：scripts/_lib/collect-scripts.mjs 共享层单元测试。
+ * 契约测试：scripts/_lib/collect-scripts.ts 共享层单元测试。
  *
  * 覆盖：
  *   1. 收集 .mjs：递归子目录、排除 _ 前缀共享层（_lib/）、排除 .test.mjs
@@ -15,7 +15,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { collectScripts } from '../scripts/_lib/collect-scripts.mjs';
+import { collectScripts } from '../scripts/_lib/collect-scripts.ts';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ysm-collect-test-'));
 try {

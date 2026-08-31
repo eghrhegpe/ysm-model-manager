@@ -1,5 +1,5 @@
 /**
- * source-graph.mjs — 源码符号/依赖图提取共享库（适配自 MikuMikuAR）。
+ * source-graph.ts — 源码符号/依赖图提取共享库（适配自 MikuMikuAR）。
  *
  * 零依赖（仅 node:fs / node:path）。YSM 为 Go + JS/TS 双栈：
  *   - JS/TS：export 关键字提取导出符号（getExportedSymbols）
@@ -7,13 +7,13 @@
  *
  * 用法：
  *   import { getExportedSymbols, walkSourceFiles, scanSourceGraph }
- *     from './_lib/source-graph.mjs';
+ *     from './_lib/source-graph.ts';
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { toPosix } from './to-posix.ts';
-import { walk } from './scan-files.mjs';
+import { walk } from './scan-files.ts';
 
 export const EXCLUDE_DIRS = new Set(['__tests__', '__mocks__', 'node_modules', 'wailsjs', 'bindings', 'dist']);
 export const EXCLUDE_FILES = [/\.d\.ts$/, /\.test\.tsx?$/, /\.spec\.tsx?$/, /\.gen\.tsx?$/];
@@ -30,14 +30,14 @@ export function shouldTraverseDir(name) {
   return !name.startsWith('.') && !EXCLUDE_DIRS.has(name);
 }
 
-export function walkSourceFiles(srcDir, dir = srcDir, base = '', extensions = SOURCE_EXTENSIONS) {
+export function walkSourceFiles(srcDir: string, dir: string = srcDir, base: string = '', extensions: string[] = SOURCE_EXTENSIONS) {
   return walk(dir, {
     exts: extensions,
     skipDir: (name) => !shouldTraverseDir(name),
     skipFile: (name) => EXCLUDE_FILES.some((re) => re.test(name)),
     rel: true,
     base,
-  }).map(({ abs, rel }) => ({ file: abs, rel }));
+  }).map((item) => ({ file: (item as { abs: string }).abs, rel: (item as { rel: string }).rel }));
 }
 
 function stripImportExtension(spec) {
@@ -67,10 +67,16 @@ export function resolveSourceImport(spec, importerFile, srcDir) {
   return found ? toPosix(path.relative(srcDir, found)) : null;
 }
 
-export function parseSourceImports(filePath, srcDir) {
+/** 单条导入边。 */
+export interface ImportEdge {
+  path: string;
+  isTypeOnly: boolean;
+}
+
+export function parseSourceImports(filePath: string, srcDir: string): ImportEdge[] {
   const text = fs.readFileSync(filePath, 'utf8');
-  const imports = [];
-  const specs = new Map(); // spec -> isTypeOnly
+  const imports: ImportEdge[] = [];
+  const specs = new Map<string, boolean>(); // spec -> isTypeOnly
 
   // 正则 A: import / export ... from '...'（跨行，支持 import type / export {}/*/as ns）
   // 边界：关键字与 from 之间禁止引号与分号——旧写法用 `[\s\S]*?` 会越过语句末尾，
@@ -105,14 +111,19 @@ export function parseSourceImports(filePath, srcDir) {
   return imports;
 }
 
-export function scanSourceGraph(srcDir, { scope = null, localOnly = false } = {}) {
+export interface SourceGraphResult {
+  files: Array<{ file: string; rel: string }>;
+  graph: Map<string, Set<string>>;
+}
+
+export function scanSourceGraph(srcDir: string, { scope = null, localOnly = false }: { scope?: string | null; localOnly?: boolean } = {}): SourceGraphResult {
   // 始终扫描全部文件构建全量图
   const files = walkSourceFiles(srcDir);
-  const graph = new Map(files.map(({ rel }) => [rel, new Set()]));
+  const graph = new Map<string, Set<string>>(files.map(({ rel }) => [rel, new Set<string>()]));
 
   for (const { file, rel } of files) {
     for (const imported of parseSourceImports(file, srcDir)) {
-      graph.get(rel).add(imported.path);
+      graph.get(rel)?.add(imported.path);
     }
   }
 
@@ -123,19 +134,20 @@ export function scanSourceGraph(srcDir, { scope = null, localOnly = false } = {}
 
   if (localOnly) {
     // localOnly: 只保留 scope 内节点，不展开依赖
-    const localGraph = new Map();
+    const localGraph = new Map<string, Set<string>>();
     for (const rel of scopeSet) {
-      if (graph.has(rel)) {
-        localGraph.set(rel, new Set([...graph.get(rel)].filter((d) => scopeSet.has(d))));
+      const edges = graph.get(rel);
+      if (edges) {
+        localGraph.set(rel, new Set([...edges].filter((d) => scopeSet.has(d))));
       }
     }
     return { files: [...scopeSet].sort().map((rel) => ({ file: path.join(srcDir, rel), rel })), graph: localGraph };
   }
 
   // 默认 scope 模式：递归展开所有可达依赖
-  const visited = new Set();
-  const reachable = new Set();
-  function walk(node) {
+  const visited = new Set<string>();
+  const reachable = new Set<string>();
+  function walk(node: string) {
     if (visited.has(node)) return;
     visited.add(node);
     reachable.add(node);
@@ -144,10 +156,11 @@ export function scanSourceGraph(srcDir, { scope = null, localOnly = false } = {}
   }
   for (const rel of scopeSet) walk(rel);
 
-  const scopedGraph = new Map();
+  const scopedGraph = new Map<string, Set<string>>();
   for (const rel of reachable) {
-    if (graph.has(rel)) {
-      scopedGraph.set(rel, new Set([...graph.get(rel)].filter((d) => reachable.has(d))));
+    const edges = graph.get(rel);
+    if (edges) {
+      scopedGraph.set(rel, new Set([...edges].filter((d) => reachable.has(d))));
     }
   }
   const scopedFiles = [...reachable].sort().map((rel) => ({ file: path.join(srcDir, rel), rel }));

@@ -10,12 +10,12 @@
  * 退出码：0（成功）
  * 依赖：本地模块
  */
-import { rg as rgStrict } from './_lib/ripgrep.mjs';
+import { rg as rgStrict } from './_lib/ripgrep.ts';
 import { parseRgLine } from './_lib/rg-line.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ROOT, toPosix } from './_lib/scan-files.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.ts';
 import { checkStale } from './_lib/stale-baseline.ts';
 
 /**

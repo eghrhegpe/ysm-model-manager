@@ -21,7 +21,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
 const REG_FILE = path.join(ADR_DIR, 'index.md'); // 登记表已并入 index（ADR 双文件合并）

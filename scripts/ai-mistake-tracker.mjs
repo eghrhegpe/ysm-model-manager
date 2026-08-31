@@ -12,9 +12,9 @@
  *
  * 退出码：0 成功；未知参数 / --help 误用 → 2 / 0
  */
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 import { run } from './_lib/proc.ts';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
 
 
 

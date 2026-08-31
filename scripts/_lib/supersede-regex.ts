@@ -1,5 +1,5 @@
 /**
- * supersede-regex.mjs — ADR 取代关系判别的核心正则（YSM 完整版）。
+ * supersede-regex.ts — ADR 取代关系判别的核心正则（YSM 完整版）。
  *
  * 从 MikuMikuAR 搬运（ADR-114 §被补充 元治理：基建补齐），
  * 原 YSM 版为不完整的半搬运（缺 RE_PARTIAL / RE_NEGATED_CLAIM，

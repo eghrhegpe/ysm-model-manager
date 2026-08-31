@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { classifyScript, findOrphans } from './orphan-classify.mjs';
+import { classifyScript, findOrphans } from './orphan-classify.ts';
 
 /** 构造判定上下文（不落盘，纯内存）。 */
 function ctx({ mount = '', doc = '', siblings = {} } = {}) {

@@ -56,7 +56,7 @@ import { applyFixes } from './auto-import-fix.mjs';
 - `scripts/pre-push-gate.mjs`：ALL_STATIC_TOOLS 挂 `auto-import.mjs --strict`（有缺失建议阻断推送），doctor 全量模式并入。
 - `scripts/check-script-hygiene.mjs`：五口径扫 scripts/（含 auto-import 系列，文件头/共享层内联/parse-args），拆分后各模块须过。
 - `scripts/check-readme-index.mjs`：auto-import 系列须登记 scripts/README.md（ADR-141 拆分后新增 4 个模块已登记）。
-- `scripts/_lib/source-graph.mjs`：`getExportedSymbols` 与 `extractExports` 疑似重复，**实证结论 = 不复用**——source-graph 把 re-export 符号也算本文件导出（726 文件中 15 个差异全为此形态），接入会破坏 --fix 候选指向。
+- `scripts/_lib/source-graph.ts`：`getExportedSymbols` 与 `extractExports` 疑似重复，**实证结论 = 不复用**——source-graph 把 re-export 符号也算本文件导出（726 文件中 15 个差异全为此形态），接入会破坏 --fix 候选指向。
 - `docs/knowledge/scripts_argv.md`：姊妹治理卡——argv 规范；本卡负责 auto-import 拆分与缺失 import 检测。
 
 ## 不变量

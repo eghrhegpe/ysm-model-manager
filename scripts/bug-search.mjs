@@ -12,8 +12,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const BUG_FILE = path.join(ROOT, 'docs/archive/bug-chronicle.md');
 

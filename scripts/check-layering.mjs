@@ -28,8 +28,8 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { parseArgs } from './_lib/parse-args.mjs';
-import { walk, toPosix } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
+import { walk, toPosix } from './_lib/scan-files.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');

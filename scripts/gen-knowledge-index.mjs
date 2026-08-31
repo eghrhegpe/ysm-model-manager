@@ -13,13 +13,13 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, readText, writeText } from './_lib/scan-files.mjs';
-import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
-// [ADR-114 §被补充] 常量共享层：CATEGORY_LABELS / NON_CARDS / KNOW_DIR 从 _lib/knowledge-cards.mjs 引入
+import { ROOT, readText, writeText } from './_lib/scan-files.ts';
+import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.ts';
+import { parseArgs } from './_lib/parse-args.ts';
+// [ADR-114 §被补充] 常量共享层：CATEGORY_LABELS / NON_CARDS / KNOW_DIR 从 _lib/knowledge-cards.ts 引入
 // （原散落本文件 / gen-knowledge-adr / gen-knowledge-h1 / gen-knowledge-tests / gen-vitepress-sidebar 5 处，
 // 本文件为第一处消解）
-import { CATEGORY_LABELS, KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR as KC_DIR, PERF_TAGS } from './_lib/knowledge-cards.mjs';
+import { CATEGORY_LABELS, KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR as KC_DIR, PERF_TAGS } from './_lib/knowledge-cards.ts';
 
 const { check: CHECK, unknown: UNKNOWN } = parseArgs(process.argv.slice(2), { bools: ['check'] });
 if (UNKNOWN && UNKNOWN.length) {
@@ -150,7 +150,7 @@ function buildIndex() {
     }
   }
   out += '## 性能画像（perf 标签）\n\n';
-  out += '> 卡片 frontmatter 的 `perf:` 字段（受控词表 = `scripts/_lib/knowledge-cards.mjs` PERF_TAGS）；词表外标签由 check-knowledge-drift 报 ERROR。扩展新维度（如能耗）只加词表。\n\n';
+  out += '> 卡片 frontmatter 的 `perf:` 字段（受控词表 = `scripts/_lib/knowledge-cards.ts` PERF_TAGS）；词表外标签由 check-knowledge-drift 报 ERROR。扩展新维度（如能耗）只加词表。\n\n';
   if (byPerf.size === 0) {
     out += '（暂无标注卡——在卡 frontmatter 加 `perf:` 块列表即可，见 AGENTS.md 格式规范。）\n\n';
   } else {

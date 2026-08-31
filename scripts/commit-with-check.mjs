@@ -26,8 +26,8 @@
  *
  * 依赖：_lib/scan-files / _lib/domain-classify / _lib/proc
  */
-import { ROOT } from './_lib/scan-files.mjs';
-import { groupByDomain, domainSummaryText } from './_lib/domain-classify.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { groupByDomain, domainSummaryText } from './_lib/domain-classify.ts';
 import { run } from './_lib/proc.ts';
 
 // ── 参数解析 ──

@@ -13,7 +13,7 @@
  *
  * 设计意图：把「子进程收敛」从纸面约定升级为可机检、可汇报的卡点——
  * 与 check-script-hygiene 的共享层内联口径互补：那边查「样板内联」，这里查「直调未收敛」。
- * 依赖：node:fs / node:path / scripts/_lib/scan-files.mjs（零外部依赖）
+ * 依赖：node:fs / node:path / scripts/_lib/scan-files.ts（零外部依赖）
  *
  * 用法：
  *   node scripts/check-proc-adoption.mjs           # 文本报告（WARN，不阻断）
@@ -24,8 +24,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { getRoot } from './_lib/scan-files.mjs';
-import { collectScripts } from './_lib/collect-scripts.mjs';
+import { getRoot } from './_lib/scan-files.ts';
+import { collectScripts } from './_lib/collect-scripts.ts';
 
 const ROOT = getRoot();
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');

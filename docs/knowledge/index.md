@@ -18,7 +18,7 @@
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单 |
 | 🏗 optimization_log | 优化记录 optimization-log | architecture | cpu-bound, gpu-bound, concurrent, memory-heavy | 优化, 性能, 瓶颈, 优化记录, optimization, perf, KTX2, 纹理缓存, 加载速度, 内存, GPU 内存, 闪退, 泄漏, dispose |
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
-| 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.mjs | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
+| 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
 | 🏗 scripts_jscpd_go | Go 端 jscpd 重复检测脚本 | architecture | — | jscpd, go 重复代码, 复制粘贴检测, duplicate, 重复对, 增量门禁, 新增重复, 独立 baseline |
 | 🏗 scripts_readme_index | README 登记处对账 check-readme-index.mjs | architecture | — | README, 脚本索引, 登记处, 脚本登记, check-readme-index, 脚本漂移, 脚本对账 |
 | 🏗 vitest-env-switch | Vitest 环境切换规则 | architecture | — | vitest, 测试环境, node 环境, happy-dom, 测试切换 |
@@ -27,7 +27,7 @@
 
 - **auto_import_split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.mjs` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本…
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
-- **scripts_argv**（脚本 argv 规范与已知豁免 parse-args.mjs）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.mjs`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-3…
+- **scripts_argv**（脚本 argv 规范与已知豁免 parse-args.ts）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30…
 - **scripts_jscpd_go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.mjs` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscp…
 - **scripts_readme_index**（README 登记处对账 check-readme-index.mjs）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
@@ -283,7 +283,7 @@
 | 🍃 safe_error_msg | 安全错误消息提取 utils | leaf | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | — | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
 | 🏗 script_shared_cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重, 脚本重构 |
-| 🏗 source-graph | 源码符号提取共享层 source-graph.mjs | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图, check-lib-adoption |
+| 🏗 source-graph | 源码符号提取共享层 source-graph.ts | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图, check-lib-adoption |
 | 🍃 utils-array | 数组工具 moveItem | leaf | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
 | 🍃 utils-display | 文件名显示 display | leaf | — | 文件名, 文件名显示, 美化文件名, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮, ban 文件 |
 | 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
@@ -336,7 +336,7 @@
 
 ## 性能画像（perf 标签）
 
-> 卡片 frontmatter 的 `perf:` 字段（受控词表 = `scripts/_lib/knowledge-cards.mjs` PERF_TAGS）；词表外标签由 check-knowledge-drift 报 ERROR。扩展新维度（如能耗）只加词表。
+> 卡片 frontmatter 的 `perf:` 字段（受控词表 = `scripts/_lib/knowledge-cards.ts` PERF_TAGS）；词表外标签由 check-knowledge-drift 报 ERROR。扩展新维度（如能耗）只加词表。
 
 | 标签 | 含义 | 卡片 |
 |------|------|------|

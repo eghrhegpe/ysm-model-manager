@@ -23,11 +23,11 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
-import { ROOT } from './_lib/scan-files.mjs';
+import { parseFrontmatter, getScalar } from './_lib/frontmatter.ts';
+import { parseArgs } from './_lib/parse-args.ts';
+import { ROOT } from './_lib/scan-files.ts';
 // [ADR-114 §被补充] 常量共享层
-import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.mjs';
+import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
 
 /** 提取 frontmatter 块。 */
 function fmBlock(text) {

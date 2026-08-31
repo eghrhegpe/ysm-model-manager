@@ -37,11 +37,11 @@
 import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 import { run as procRun } from './_lib/proc.ts';
-import { planFromFiles, groupByDomain, domainSummaryText } from './_lib/domain-classify.mjs';
-import { runContractTestsParallel } from './_lib/contract-tests.mjs';
-import { logPush } from './_lib/log-push.mjs';
+import { planFromFiles, groupByDomain, domainSummaryText } from './_lib/domain-classify.ts';
+import { runContractTestsParallel } from './_lib/contract-tests.ts';
+import { logPush } from './_lib/log-push.ts';
 import { shq } from './_lib/proc.ts';
 import { ALL_STATIC_TOOLS, DOC_STATIC_TOOLS, DOC_EXTRA_SCRIPTS, FRONTEND_STATIC_TOOLS, GO_STATIC_TOOLS } from './_lib/gate-config.ts';
 

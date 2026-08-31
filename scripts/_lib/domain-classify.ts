@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * domain-classify.mjs — 变更域分类共享层。
+ * domain-classify.ts — 变更域分类共享层。
  *
  * 解决 pre-push-gate / doctor（--gate 与全量）重复内联 classify() + planFromFiles() 的问题。
  * 此前两处各自维护一份 DATA_FILES + classify() + planFromFiles()，逻辑一字不差；
@@ -8,7 +8,7 @@
  * 集中到本层后，单点修改、双端复用，符合 scripts/README.md「共享能力一律 import 自 _lib/」约定。
  *
  * 用法：
- *   import { classify, planFromFiles, DATA_FILES } from './_lib/domain-classify.mjs';
+ *   import { classify, planFromFiles, DATA_FILES } from './_lib/domain-classify.ts';
  *
  * 依赖：零依赖（纯函数，仅用 Set/String 内置 API）
  *
@@ -19,11 +19,25 @@ export const DATA_FILES = new Set([
   'resource_types.json', 'creators.json', 'workshop_sites.json', 'workshop-github.json',
 ]);
 
+/** 变更域。 */
+export type Domain = 'go' | 'frontend' | 'data' | 'docs' | 'tests' | 'other';
+
+/** 检查计划（planFromFiles 返回值）。 */
+export interface Plan {
+  go: boolean;
+  frontend: boolean;
+  data: boolean;
+  docs: boolean;
+  adr: boolean;
+  contractTests: boolean;
+  redlines: boolean;
+}
+
 /**
- * 文件路径 → 域。返回 'go' | 'frontend' | 'data' | 'docs' | 'tests' | 'other'。
- * @param {string} f 相对仓库根的 POSIX 路径（如 'go/ysm/ysm_test.go'）。
+ * 文件路径 → 域。
+ * @param f 相对仓库根的 POSIX 路径（如 'go/ysm/ysm_test.go'）。
  */
-export function classify(f) {
+export function classify(f: string): Domain {
   if (f.endsWith('.go')) return 'go';
   if (f === 'go.mod' || f === 'go.sum') return 'go';
   if (f === 'wails.json') return 'frontend';
@@ -38,8 +52,8 @@ export function classify(f) {
  * 文件集 → 需要跑的检查计划 { go, frontend, data, docs, adr, contractTests, redlines }。
  * @param {string[]} files 相对仓库根的路径数组。
  */
-export function planFromFiles(files) {
-  const p = { go: false, frontend: false, data: false, docs: false, adr: false, contractTests: false };
+export function planFromFiles(files: string[]): Plan {
+  const p: Plan = { go: false, frontend: false, data: false, docs: false, adr: false, contractTests: false, redlines: false };
   for (const f of files) {
     const d = classify(f);
     if (d === 'go') p.go = true;
@@ -63,8 +77,8 @@ export function planFromFiles(files) {
  * @param {string[]} files 相对仓库根的路径数组。
  * @returns {Record<string, string[]>}
  */
-export function groupByDomain(files) {
-  const byDomain = {};
+export function groupByDomain(files: string[]): Record<string, string[]> {
+  const byDomain: Record<string, string[]> = {};
   for (const f of files) (byDomain[classify(f)] = byDomain[classify(f)] || []).push(f);
   return byDomain;
 }
@@ -74,7 +88,7 @@ export function groupByDomain(files) {
  * @param {Record<string, string[]>} byDomain groupByDomain 的返回值。
  * @returns {string}
  */
-export function domainSummaryText(byDomain) {
+export function domainSummaryText(byDomain: Record<string, string[]>): string {
   return Object.keys(byDomain).length
     ? Object.entries(byDomain).map(([d, fs]) => `${d}:${fs.length}`).join('  ')
     : '无变更';

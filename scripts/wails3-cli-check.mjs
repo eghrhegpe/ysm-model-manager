@@ -25,7 +25,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 
 const JSON_OUT = process.argv.includes('--json');
 

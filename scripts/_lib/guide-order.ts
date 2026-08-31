@@ -1,5 +1,5 @@
 /**
- * guide-order.mjs — 用户指南语义顺序与分组（gen-docs-index / gen-vitepress-sidebar 共用）。
+ * guide-order.ts — 用户指南语义顺序与分组（gen-docs-index / gen-vitepress-sidebar 共用）。
  *
  * 单一事实来源：docs/guide/ 各篇文件名。新增指南页时：
  *   1. 加入 GUIDE_ORDER 对应位置（控制索引表与侧边栏顺序；未列出按字母序沉底）

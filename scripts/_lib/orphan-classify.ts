@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * orphan-classify.mjs — 脚本「是否还有人会执行它」的判定共享层。
+ * orphan-classify.ts — 脚本「是否还有人会执行它」的判定共享层。
  *
  * 设计意图：scripts/ 下的脚本会随迭代不断堆积，但没有任何机制回答一个基本问题——
  * 「这个脚本还有人跑吗？」2026-08-31 全量审计实测：约四分之一的脚本（数千行）
@@ -15,17 +15,24 @@
  *                靠人手敲，合理存在，不视为化石；
  *   - orphan     三者皆无 → 化石，建议归档或删除。
  *
- * 依赖：node:fs / node:path / _lib/scan-files.mjs / _lib/collect-scripts.mjs（零外部依赖）
+ * 依赖：node:fs / node:path / _lib/scan-files.ts / _lib/collect-scripts.ts（零外部依赖）
  *
  * 用法：
- *   import { findOrphans, classifyScript } from './_lib/orphan-classify.mjs';
+ *   import { findOrphans, classifyScript } from './_lib/orphan-classify.ts';
  *   findOrphans();                      // → [{ script, status, reason }]
  *   classifyScript('x.mjs', ctx);       // 单脚本判定（ctx 由 buildContext 构造）
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './scan-files.mjs';
-import { SCRIPTS_DIR, collectScripts } from './collect-scripts.mjs';
+import { ROOT } from './scan-files.ts';
+import { SCRIPTS_DIR, collectScripts } from './collect-scripts.ts';
+
+/** 判定上下文（buildContext 构造，测试可注入）。 */
+export interface OrphanCtx {
+  mountText: string;
+  docText: string;
+  siblings: Array<{ name: string; text: string }>;
+}
 
 /** 流水线挂载点：出现在这些位置的脚本会被自动执行。 */
 export const MOUNT_FILES = [
@@ -42,7 +49,7 @@ export const MOUNT_FILES = [
 export const DOC_FILES = ['scripts/README.md', 'AGENTS.md'];
 
 /** 读取仓库内的文本文件；不存在或不可读时返回空串（不因单点缺失炸掉整棵扫描）。 */
-function readIfExists(rel) {
+function readIfExists(rel: string): string {
   try {
     return fs.readFileSync(path.join(ROOT, rel), 'utf8');
   } catch {
@@ -51,9 +58,9 @@ function readIfExists(rel) {
 }
 
 /** GitHub Actions 工作流全文（目录可能不存在）。 */
-function readWorkflows() {
+function readWorkflows(): string {
   const dir = path.join(ROOT, '.github', 'workflows');
-  let names = [];
+  let names: string[] = [];
   try {
     names = fs.readdirSync(dir).filter((f) => /\.(yml|yaml)$/.test(f));
   } catch {
@@ -63,7 +70,7 @@ function readWorkflows() {
 }
 
 /** 构造判定上下文：流水线全文 + 文档全文 + 同级脚本（名 → 文本）。 */
-export function buildContext() {
+export function buildContext(): OrphanCtx {
   const files = collectScripts({ skipHooks: true });
   const siblings = files.map((f) => ({
     name: f,
@@ -82,7 +89,7 @@ export function buildContext() {
  * @param {{mountText: string, docText: string, siblings: Array<{name:string, text:string}>}} ctx
  * @returns {{status: 'mounted'|'called'|'documented'|'orphan', callers?: string[], reason?: string}}
  */
-export function classifyScript(script, ctx) {
+export function classifyScript(script: string, ctx: OrphanCtx): { status: 'mounted' | 'called' | 'documented' | 'orphan'; callers?: string[]; reason?: string } {
   // 两种形态都认：文档/挂载点里既有全名 `api-break.mjs`，也有省略后缀的 `api-break`
   // （AGENTS.md 工具口令表即为后者）。只认全名会把手册工具误判成化石。
   const bare = script.replace(/\.mjs$/, '');
@@ -106,9 +113,9 @@ export function classifyScript(script, ctx) {
  * @param {{ctx?: object}} [opts] 可注入 ctx（测试用）；缺省时自动构造
  * @returns {Array<{script: string, status: 'orphan', reason: string}>}
  */
-export function findOrphans(opts = {}) {
+export function findOrphans(opts: { ctx?: OrphanCtx } = {}) {
   const ctx = opts.ctx ?? buildContext();
-  const out = [];
+  const out: Array<{ script: string; status: string; reason?: string }> = [];
   for (const s of ctx.siblings) {
     const r = classifyScript(s.name, ctx);
     if (r.status === 'orphan') out.push({ script: s.name, ...r });

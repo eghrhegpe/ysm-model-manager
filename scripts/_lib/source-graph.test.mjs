@@ -13,7 +13,7 @@ import {
   parseSourceImports,
   searchName,
   countLines,
-} from './source-graph.mjs';
+} from './source-graph.ts';
 
 // ── Go 顶层声明：goTopFuncs（导出+私有全量）──
 

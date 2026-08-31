@@ -28,10 +28,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseArgs } from './_lib/parse-args.mjs';
-import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
+import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.ts';
 // [ADR-114 §被补充] 常量共享层
-import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.mjs';
+import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
 
 const OUT_PATH = path.join(KNOW_DIR, 'routes.md');
 

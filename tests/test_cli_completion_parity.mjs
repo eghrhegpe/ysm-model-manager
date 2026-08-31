@@ -3,7 +3,7 @@
  * 契约测试：CLI 注册表 ↔ shell 补全 parity（completions/ ↔ go/cli）。
  *
  * 背景：completions/ 由 gen-cli-completion.mjs 从 go/cli 注册表生成，与 docs/cli-commands.md
- * 同源（_lib/cli-registry.mjs）。本测试锁住三条线：
+ * 同源（_lib/cli-registry.ts）。本测试锁住三条线：
  *  1. 顶层命令名集合（RegisterCommandC）⊆ 三个补全脚本里的命令候选（防止新增命令漏进补全）
  *  2. gen-cli-completion --check 应通过（脚本产物最新，防手工篡改后漂移）
  *  3. 三个 shell 文件都存在

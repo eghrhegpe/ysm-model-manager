@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`scripts/`（约 40 个 .mjs）/ `scripts/_lib/scan-files.mjs` / `scripts/README.md` / `tests/*.mjs` / ADR-013 / ADR-014 / 联邦 MikuMikuAR（工具链适配来源）
+- **相关**：`scripts/`（约 40 个 .mjs）/ `scripts/_lib/scan-files.ts` / `scripts/README.md` / `tests/*.mjs` / ADR-013 / ADR-014 / 联邦 MikuMikuAR（工具链适配来源）
 
 ---
 
@@ -32,8 +32,8 @@
 
 ### 2.2 共享层（`scripts/_lib/`）
 
-- `scan-files.mjs`：`walk()`（.js/.ts 收集）、`resolveImport()`（补全 .ts/.js/index）、`toPosix()`、`readText()`（BOM/CRLF 容错）、`SRC_DIR` / `ROOT` 常量；
-- `frontmatter.mjs`：frontmatter 解析（ADR-019 知识卡体系复用）；
+- `scan-files.ts`：`walk()`（.js/.ts 收集）、`resolveImport()`（补全 .ts/.js/index）、`toPosix()`、`readText()`（BOM/CRLF 容错）、`SRC_DIR` / `ROOT` 常量；
+- `frontmatter.ts`：frontmatter 解析（ADR-019 知识卡体系复用）；
 - 各治理脚本 import 共享层，删除内联样板（ADR-013 治理收敛的执行层）。
 
 ### 2.3 输出契约
@@ -74,7 +74,7 @@
 | 来源 | 结果 |
 |------|------|
 | `scripts/` 目录扫描 | 约 40 个 .mjs，覆盖检查/生成/脚手架三类 |
-| `scripts/_lib/scan-files.mjs` | 共享层：walk / resolveImport / toPosix / readText / SRC_DIR |
+| `scripts/_lib/scan-files.ts` | 共享层：walk / resolveImport / toPosix / readText / SRC_DIR |
 | `scripts/README.md` | 分档索引 + 「已删除（2026-08-03 Python 迁移）」清单 |
 | `tests/*.mjs` | 契约测试 Node 化（test_config / test_schema / test_scripts_lib 等） |
 | ADR-013 | 治理收敛 Phase 1：文档宪法对账 + 联邦基线对齐 |

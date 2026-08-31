@@ -24,7 +24,7 @@
  * 设计意图：Boolean 字段命名规范检查（env-state-schema.ts）
  */
 import fs from 'node:fs';
-import { SRC_DIR, walk, relPosix } from './_lib/scan-files.mjs';
+import { SRC_DIR, walk, relPosix } from './_lib/scan-files.ts';
 
 const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');

@@ -17,8 +17,8 @@
  * 设计意图：循环依赖检查（source-graph 分析）
  */
 import fs from 'node:fs';
-import { ROOT, SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.mjs';
-import { findCycles } from './_lib/cycles.mjs';
+import { ROOT, SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.ts';
+import { findCycles } from './_lib/cycles.ts';
 
 const JSON_OUT = process.argv.includes('--json');
 

@@ -1784,7 +1784,7 @@ export const autoSidebar = [
             "link": "/knowledge/script_shared_cores"
           },
           {
-            "text": "源码符号提取共享层 source-graph.mjs",
+            "text": "源码符号提取共享层 source-graph.ts",
             "link": "/knowledge/source-graph"
           },
           {
@@ -1878,7 +1878,7 @@ export const autoSidebar = [
             "link": "/knowledge/resource-registry"
           },
           {
-            "text": "脚本 argv 规范与已知豁免 parse-args.mjs",
+            "text": "脚本 argv 规范与已知豁免 parse-args.ts",
             "link": "/knowledge/scripts_argv"
           },
           {

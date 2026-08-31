@@ -6,7 +6,7 @@
 //   3. packagePatternFor：改动文件 → go test 包模式
 //   4. 阈值边界：恰好等于阈值(80)不算低覆盖，低于才算
 import assert from 'node:assert/strict';
-import { ROOT } from '../scripts/_lib/scan-files.mjs';
+import { ROOT } from '../scripts/_lib/scan-files.ts';
 import {
   parseCoverFuncs,
   stripModulePrefix,

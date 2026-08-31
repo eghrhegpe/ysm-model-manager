@@ -6,7 +6,7 @@
  * 聚合 lexer + symbols 两层的词法/符号能力，对单文件跑缺失 import 检测、构建全局导出表、
  * 组织一轮完整扫描。领域专属（非通用共享层，故不入 _lib/）。
  *
- * 依赖：node:fs / node:path + _lib/scan-files.mjs（SRC_DIR/walk/readText/relPosix/toPosix）
+ * 依赖：node:fs / node:path + _lib/scan-files.ts（SRC_DIR/walk/readText/relPosix/toPosix）
  *   + auto-import-lexer.mjs + auto-import-symbols.mjs
  *
  * 用法：被 auto-import.mjs 主入口引用，非独立 CLI 入口。
@@ -16,7 +16,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { SRC_DIR, walk, toPosix, readText, relPosix } from './_lib/scan-files.mjs';
+import { SRC_DIR, walk, toPosix, readText, relPosix } from './_lib/scan-files.ts';
 import { tokenize, KEYWORDS, GLOBALS } from './auto-import-lexer.mjs';
 import { extractExports, extractDefined, extractImported } from './auto-import-symbols.mjs';
 

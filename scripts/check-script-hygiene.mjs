@@ -22,7 +22,7 @@
  *      import 了 parseArgs 却不消费 `args.unknown` 同样告警。
  *   6. 【2026-08-31 新增】孤儿脚本：未被流水线挂载（git 钩子 / pre-push-gate / Taskfile /
  *      Actions / package.json）、无 scripts/ 内脚本调用、文档无记录的脚本——化石风险，
- *      建议归档或补登记。判定内核来自 _lib/orphan-classify.mjs（WARN 不阻断）。
+ *      建议归档或补登记。判定内核来自 _lib/orphan-classify.ts（WARN 不阻断）。
  *
  * 设计意图：让 MikuMikuAR 与 ysm-model-manager 共用一套 .mjs 文档约定可被机检、
  *           可自执行，把统一的「文件头规范」从纸面落到 CI/子代理可消费的卡点。
@@ -37,9 +37,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
-import { collectScripts } from './_lib/collect-scripts.mjs';
-import { findOrphans } from './_lib/orphan-classify.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { collectScripts } from './_lib/collect-scripts.ts';
+import { findOrphans } from './_lib/orphan-classify.ts';
 
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 
@@ -94,11 +94,11 @@ function isDomainWalk(text) {
 function checkSharedLayer(text) {
   const out = [];
   if (INLINE_WALK_RE.test(text) && !isDomainWalk(text)) {
-    out.push('内联 walk() 定义（应 import 共享层 _lib/，如 _lib/scan-files.mjs）');
+    out.push('内联 walk() 定义（应 import 共享层 _lib/，如 _lib/scan-files.ts）');
   }
-  if (INLINE_RG_RE.test(text)) out.push('内联 rg() 定义（应 import 共享层 _lib/，如 _lib/ripgrep.mjs）');
+  if (INLINE_RG_RE.test(text)) out.push('内联 rg() 定义（应 import 共享层 _lib/，如 _lib/ripgrep.ts）');
   if (INLINE_PARSEARGS_RE.test(text)) {
-    out.push('内联 parseArgs() 定义（应 import 共享层 _lib/，如 _lib/parse-args.mjs）');
+    out.push('内联 parseArgs() 定义（应 import 共享层 _lib/，如 _lib/parse-args.ts）');
   }
   if (INLINE_BOILERPLATE_RE.test(text)) {
     out.push('内联 ROOT 样板 path.resolve(dirname(fileURLToPath(...)))（新脚本应 import 共享层 _lib/ 的 ROOT/getRoot）');
@@ -162,7 +162,7 @@ const HANDWRITTEN_ARGV_RE = /process\.argv\.slice\(2\)|process\.argv\.includes\(
 const HANDWRITTEN_POSITIONAL_RE =
   /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]/;
 // 仅匹配真实 import 语句（行首锚定 + `import {…} from`），避免误把建议文案里的
-// 字符串 `...from './_lib/parse-args.mjs'`（如 check-lib-adoption.mjs 的 advice 字段）
+// 字符串 `...from './_lib/parse-args.ts'`（如 check-lib-adoption.mjs 的 advice 字段）
 // 当成脚本真的 import 了 parseArgs 而误报「未消费 unknown」（2026-08-31 审计修复）。
 const PARSEARGS_IMPORT_RE = /^[ \t]*import\s+\{[^}]*\}\s+from\s+['"]\.\/_lib\/parse-args\.mjs['"];?/m;
 
@@ -170,7 +170,7 @@ function checkArgvContract(text) {
   const usesParseArgs = PARSEARGS_IMPORT_RE.test(text);
   if (!usesParseArgs) {
     if (HANDWRITTEN_ARGV_RE.test(text) && HANDWRITTEN_POSITIONAL_RE.test(text)) {
-      return ['手写 argv 解析且消费 positional 参数 → 应迁 _lib/parse-args.mjs（unknown 白名单拦截，防 --jso 拼错静默放行）'];
+      return ['手写 argv 解析且消费 positional 参数 → 应迁 _lib/parse-args.ts（unknown 白名单拦截，防 --jso 拼错静默放行）'];
     }
     return [];
   }
@@ -189,7 +189,7 @@ function checkArgvContract(text) {
 }
 
 // ── 检查 6：孤儿脚本 ─────────────────────────────────
-// 判定内核来自 _lib/orphan-classify.mjs（四态：mounted / called / documented / orphan）。
+// 判定内核来自 _lib/orphan-classify.ts（四态：mounted / called / documented / orphan）。
 // 跨脚本关系判定（谁挂载/谁调用/谁文档记录），不在 per-file 循环内做；WARN 不阻断。
 // 2026-08-31 全量审计后真孤儿归零，常态为零告警；一旦有新脚本无人引用即在此浮出。
 

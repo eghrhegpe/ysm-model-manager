@@ -17,10 +17,10 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 import { checkStale } from './_lib/stale-baseline.ts';
 
-// 仓库根由共享层 scan-files.mjs 提供(消除内联 ROOT 样板,对齐 scripts_argv 卫生规范)
+// 仓库根由共享层 scan-files.ts 提供(消除内联 ROOT 样板,对齐 scripts_argv 卫生规范)
 // monorepo 化后 jscpd 被 hoist 到根 node_modules（workspaces 依赖提升），
 // 根 / frontend 两处都要找——只认 frontend 会漏根安装（npm install 到根后 frontend 不再有）。
 const JSCPD = [

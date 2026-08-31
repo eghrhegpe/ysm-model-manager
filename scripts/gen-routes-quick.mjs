@@ -30,9 +30,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseArgs } from './_lib/parse-args.mjs';
-import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.mjs';
-import { KNOW_DIR, KNOWLEDGE_NON_CARDS } from './_lib/knowledge-cards.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
+import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.ts';
+import { KNOW_DIR, KNOWLEDGE_NON_CARDS } from './_lib/knowledge-cards.ts';
 
 const OUT_PATH = path.join(KNOW_DIR, 'routes-quick.md');
 const BANNER =

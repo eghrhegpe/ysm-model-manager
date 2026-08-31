@@ -7,7 +7,7 @@
  *
  * 用法：node scripts/perf/vitest-env-switch.mjs
  *
- * 依赖：node:fs / node:path / _lib/scan-files.mjs（零外部依赖）
+ * 依赖：node:fs / node:path / _lib/scan-files.ts（零外部依赖）
  *
  * 退出码：0 成功；1 失败（文件缺失/写入错误）。
  *
@@ -16,7 +16,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from '../_lib/scan-files.mjs';
+import { ROOT } from '../_lib/scan-files.ts';
 
 const FRONTEND = path.join(ROOT, 'frontend', 'src');
 

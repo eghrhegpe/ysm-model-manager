@@ -25,9 +25,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
-import { parseAdrHeader } from './_lib/frontmatter.mjs';
-import { normalizeState, STATE_LABEL } from './_lib/adr-status-categories.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { parseAdrHeader } from './_lib/frontmatter.ts';
+import { normalizeState, STATE_LABEL } from './_lib/adr-status-categories.ts';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
 const REG_FILE = path.join(ADR_DIR, 'index.md'); // 登记表已并入 index
@@ -65,8 +65,8 @@ function extractDebt(adr, title, raw) {
 
 // ── 检查 1：状态机 ────────────────────────────────────
 
-// [ADR-114 §被补充] 状态解析统一走共享库 parseAdrHeader（_lib/frontmatter.mjs）
-// + normalizeState（_lib/adr-status-categories.mjs），不再各写一套正则口径。
+// [ADR-114 §被补充] 状态解析统一走共享库 parseAdrHeader（_lib/frontmatter.ts）
+// + normalizeState（_lib/adr-status-categories.ts），不再各写一套正则口径。
 
 function checkStatus() {
   if (!fs.existsSync(ADR_DIR)) {

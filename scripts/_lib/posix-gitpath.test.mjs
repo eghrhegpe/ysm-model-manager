@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeGitPath } from './posix-gitpath.mjs';
+import { normalizeGitPath } from './posix-gitpath.ts';
 
 const ROOT = 'C:\\repo';
 

@@ -13,7 +13,7 @@
  *     其共享层口径只认 `^function walk(` 等窄命名（改名 collectScripts 即绕过）；
  *     本脚本按「能力是否被手搓」判定，覆盖 frontmatter / source-graph / to-posix
  *     等 hygiene 完全未触及的模块，且同时给出全模块采用率全景。
- * 依赖：node:fs / node:path / scripts/_lib/scan-files.mjs
+ * 依赖：node:fs / node:path / scripts/_lib/scan-files.ts
  *
  * 用法：
  *   node scripts/check-lib-adoption.mjs           # 文本报告（采用率全景 + 违规清单）
@@ -24,7 +24,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { SCRIPTS_DIR, collectScripts } from './_lib/collect-scripts.mjs';
+import { SCRIPTS_DIR, collectScripts } from './_lib/collect-scripts.ts';
 
 const LIB_DIR = path.join(SCRIPTS_DIR, '_lib');
 
@@ -38,28 +38,28 @@ const STRICT = process.argv.includes('--strict');
  */
 const RULES = [
   {
-    lib: 'scan-files.mjs',
+    lib: 'scan-files.ts',
     capability: '文件遍历 / 仓库根定位',
     smells: [/^function (?:walk|walkDir|collectFiles|scanDir|collectScripts)\s*\(/m, /^const (?:walk|walkDir)\s*=/m],
-    advice: "import { walk, ROOT } from './_lib/scan-files.mjs'",
+    advice: "import { walk, ROOT } from './_lib/scan-files.ts'",
   },
   {
-    lib: 'parse-args.mjs',
+    lib: 'parse-args.ts',
     capability: 'CLI 参数解析（含 unknown 白名单拦截）',
     smells: [/^function (?:parseArgs|parseCli)\s*\(/m, /^const parseArgs\s*=/m],
-    advice: "import { parseArgs } from './_lib/parse-args.mjs'",
+    advice: "import { parseArgs } from './_lib/parse-args.ts'",
   },
   {
-    lib: 'frontmatter.mjs',
+    lib: 'frontmatter.ts',
     capability: 'YAML frontmatter 解析',
     smells: [/^function (?:parseFrontmatter|readFrontmatter|splitFrontmatter|parseMeta)\s*\(/m, /split\(\s*['"]---['"]\s*\)/],
-    advice: "import { parseFrontmatter } from './_lib/frontmatter.mjs'",
+    advice: "import { parseFrontmatter } from './_lib/frontmatter.ts'",
   },
   {
-    lib: 'source-graph.mjs',
+    lib: 'source-graph.ts',
     capability: '源码符号 / 顶层声明提取',
     smells: [/^function (?:getExportedSymbols|getGoExportedSymbols|getJsExportedSymbols|goTopFuncs|tsTopDecls|collectSymbols)\s*\(/m],
-    advice: "import { getExportedSymbolsAny, topDeclsAny } from './_lib/source-graph.mjs'",
+    advice: "import { getExportedSymbolsAny, topDeclsAny } from './_lib/source-graph.ts'",
   },
   {
     lib: 'to-posix.ts',
@@ -68,10 +68,10 @@ const RULES = [
     advice: "import { toPosix } from './_lib/to-posix.ts'",
   },
   {
-    lib: 'git-ref.mjs',
+    lib: 'git-ref.ts',
     capability: 'git ref / commit oid 解析',
     smells: [/^function (?:resolveRef|toOid|parseRef|gitRef)\s*\(/m],
-    advice: "import { resolveRef } from './_lib/git-ref.mjs'",
+    advice: "import { resolveRef } from './_lib/git-ref.ts'",
   },
 ];
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * collect-scripts.mjs — scripts/ 目录 .mjs 收集共享层。
+ * collect-scripts.ts — scripts/ 目录 .mjs 收集共享层。
  *
  * 设计意图：check-proc-adoption / check-readme-index / check-script-hygiene 三处
  * 各自内联了一份「递归收集 scripts/ 下 .mjs（排除 _ 前缀共享层与测试）」的样板，
@@ -8,15 +8,15 @@
  * git 钩子协议参数语义排除 hooks）。2026-09 孤儿审计 ② 判定「同模板复制的铁证」，
  * 按 check-lib-adoption 既有 walk 姿势收敛为带 skipHooks 选项的单点实现。
  *
- * 依赖：node:fs / node:path / _lib/scan-files.mjs（零外部依赖）。
+ * 依赖：node:fs / node:path / _lib/scan-files.ts（零外部依赖）。
  *
  * 用法：
- *   import { collectScripts } from './_lib/collect-scripts.mjs';
+ *   import { collectScripts } from './_lib/collect-scripts.ts';
  *   collectScripts({ skipHooks: true });  // 默认含 hooks/（proc/readme 口径）
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './scan-files.mjs';
+import { ROOT } from './scan-files.ts';
 
 export const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 
@@ -28,10 +28,10 @@ export const SCRIPTS_DIR = path.join(ROOT, 'scripts');
  *   - dir {string}         起始目录，默认 SCRIPTS_DIR（测试可注入临时目录）
  * @returns {string[]} 相对起始目录的 posix 路径，排序后返回
  */
-export function collectScripts(opts = {}) {
+export function collectScripts(opts: { skipHooks?: boolean; dir?: string } = {}): string[] {
   const { skipHooks = false, dir = SCRIPTS_DIR } = opts;
-  const out = [];
-  const visit = (d) => {
+  const out: string[] = [];
+  const visit = (d: string) => {
     let entries;
     try {
       entries = fs.readdirSync(d, { withFileTypes: true });

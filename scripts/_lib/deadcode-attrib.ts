@@ -1,5 +1,5 @@
 /**
- * _lib/deadcode-attrib.mjs — 死代码/重复代码发现项归属（纯函数）。
+ * _lib/deadcode-attrib.ts — 死代码/重复代码发现项归属（纯函数）。
  *
  * 设计：check-deadcode-baseline 的门禁按域裁剪——新增发现项只有落在
  * 「本次责任文件集」（staged / 未推送提交改动）内才阻断提交；
@@ -37,9 +37,9 @@ export function attributable(key, responsibleSet) {
 
 /** 拆分新增发现项 → { blocking, absorbable }。
  * responsibleSet 为 null 时全部 blocking（严格兜底）。 */
-export function splitNewFindings(newKeys, responsibleSet) {
-  const blocking = [];
-  const absorbable = [];
+export function splitNewFindings(newKeys: string[], responsibleSet: Set<string> | null): { blocking: string[]; absorbable: string[] } {
+  const blocking: string[] = [];
+  const absorbable: string[] = [];
   for (const k of newKeys) {
     (attributable(k, responsibleSet) ? blocking : absorbable).push(k);
   }

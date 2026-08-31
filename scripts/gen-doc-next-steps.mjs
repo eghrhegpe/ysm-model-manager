@@ -26,7 +26,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { ROOT, toPosix } from './_lib/scan-files.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.ts';
 
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 const OUT_PATH = path.join(ROOT, 'docs', '.doc-next-steps.md');

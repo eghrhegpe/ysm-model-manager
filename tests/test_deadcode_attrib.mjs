@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 契约测试：scripts/_lib/deadcode-attrib.mjs 死代码发现项归属单元测试。
+ * 契约测试：scripts/_lib/deadcode-attrib.ts 死代码发现项归属单元测试。
  *
  * 覆盖：
  *   1. findingFiles：knip 键（file|type|name / 整文件 file|file|name）、jscpd 键（f1#f2）
@@ -9,7 +9,7 @@
  *
  * 零依赖、纯函数、无 IO。
  */
-import { findingFiles, attributable, splitNewFindings, canWriteBaseline } from '../scripts/_lib/deadcode-attrib.mjs';
+import { findingFiles, attributable, splitNewFindings, canWriteBaseline } from '../scripts/_lib/deadcode-attrib.ts';
 
 const errors = [];
 function assert(cond, msg) {

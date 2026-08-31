@@ -2,7 +2,7 @@
 /**
  * auto-import.mjs — TS/JS 缺失 import 检测（只读提示版，ADR-014 试水）。
  *
- * 零依赖（仅 node:fs / node:path），复用 _lib/scan-files.mjs 共享层。
+ * 零依赖（仅 node:fs / node:path），复用 _lib/scan-files.ts 共享层。
  *
  * 原理（goimports 轻量版，正则级非 AST 级）：
  *   1. 扫描 frontend/src 下所有 .ts/.js，提取每个模块的导出符号表
@@ -37,7 +37,7 @@
  * 设计意图：自动导入修复工具
  */
 import fs from 'node:fs';
-import { SRC_DIR, relPosix } from './_lib/scan-files.mjs';
+import { SRC_DIR, relPosix } from './_lib/scan-files.ts';
 import { run } from './auto-import-detect.mjs';
 import { applyFixes, fmtText, fmtJson } from './auto-import-fix.mjs';
 

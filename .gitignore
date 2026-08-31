@@ -32,6 +32,9 @@ tmp/
 # 覆盖率临时文件误入库教训（88daf2a2）：字面量 $tmp 无扩展名，*.tmp/*.out 兜不住
 $tmp
 *.bak
+# Python 编译产物（脚本迁移用 .py 临时工具时误入库的 .pyc，勿再跟踪）
+__pycache__/
+*.pyc
 _wails_test/
 project_tree.txt
 project_tree_lite.txt

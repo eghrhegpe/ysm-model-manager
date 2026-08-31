@@ -1,5 +1,5 @@
 /**
- * adr-status-categories.mjs — ADR 状态分类与归一化共享模块。
+ * adr-status-categories.ts — ADR 状态分类与归一化共享模块。
  *
  * 单一事实源 + 唯一分类入口 classifyStatus / normalizeState。
  * 使用方：gen-docs-index / check-adr-health / check-adr-status（待新增）。

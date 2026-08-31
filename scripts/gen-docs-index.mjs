@@ -23,11 +23,11 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, readText, writeText } from './_lib/scan-files.mjs';
+import { ROOT, readText, writeText } from './_lib/scan-files.ts';
 import { spawnSync } from 'node:child_process';
-import { GUIDE_ORDER, GUIDE_GROUPS } from './_lib/guide-order.mjs';
-import { parseAdrHeader } from './_lib/frontmatter.mjs';
-import { classifyStatus, DISPLAY_GROUPS, STATE_LABEL } from './_lib/adr-status-categories.mjs';
+import { GUIDE_ORDER, GUIDE_GROUPS } from './_lib/guide-order.ts';
+import { parseAdrHeader } from './_lib/frontmatter.ts';
+import { classifyStatus, DISPLAY_GROUPS, STATE_LABEL } from './_lib/adr-status-categories.ts';
 
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const ADR_INDEX_FILE = path.join(ADR_DIR, 'index.md');
@@ -147,7 +147,7 @@ function buildAdrRegistry(list) {
 // ── adr 分区：规范索引页（docs/adr/index.md，整文件重写）────
 
 // [ADR-114 §被补充] 索引分组从共享库 DISPLAY_GROUPS 导入（替代原 INDEX_GROUPS 常量），
-// 补词/删词只改 _lib/adr-status-categories.mjs 一处。
+// 补词/删词只改 _lib/adr-status-categories.ts 一处。
 
 /**
  * 使用规则（硬约束）——原 docs/adr/README.md 手写段，合并至 index 后由生成器承载。
@@ -239,7 +239,7 @@ function hrefTo(file) {
 
 /** 非功能指南页（不进表格）。 */
 const GUIDE_SKIP = new Set(['index.md', '用户指南.md', '项目意义.md']);
-// 顺序与分组见 _lib/guide-order.mjs（单一事实来源，与 gen-vitepress-sidebar 共用）
+// 顺序与分组见 _lib/guide-order.ts（单一事实来源，与 gen-vitepress-sidebar 共用）
 
 function parseGuidePages() {
   if (!fs.existsSync(GUIDE_DIR)) return [];

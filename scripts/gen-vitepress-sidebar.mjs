@@ -7,7 +7,7 @@
  * 输出：docs/.vitepress/sidebar.gen.mjs（自动生成，勿手改）。
  *
  * 分组：用户指南 / 发版记录 / 架构与规范 / 决策记录(ADR) / 知识卡 / 小说
- *   - guide：按 GUIDE_GROUPS 收纳分组（入门/核心/整理/设置/疑难），组内新手高频在前（_lib/guide-order.mjs）
+ *   - guide：按 GUIDE_GROUPS 收纳分组（入门/核心/整理/设置/疑难），组内新手高频在前（_lib/guide-order.ts）
  *   - releases/adr：自动扫描目录，标题取页面 H1/frontmatter title（中文）
  *   - 架构与规范：docs 根散 md，ARCH_ORDER 语义排序（核心规范置顶，表外沉底）
  *   - 决策记录：按编号数字倒序（最新决策置顶）
@@ -22,10 +22,10 @@ import { readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { toPosix } from './_lib/to-posix.ts';
-import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
-import { GUIDE_GROUPS } from './_lib/guide-order.mjs';
+import { parseFrontmatter, getScalar } from './_lib/frontmatter.ts';
+import { GUIDE_GROUPS } from './_lib/guide-order.ts';
 // [ADR-114 §被补充] 常量共享层
-import { KNOWLEDGE_ORDER, KNOWLEDGE_NON_CARDS as NON_CARDS } from './_lib/knowledge-cards.mjs';
+import { KNOWLEDGE_ORDER, KNOWLEDGE_NON_CARDS as NON_CARDS } from './_lib/knowledge-cards.ts';
 
 const DOCS = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'docs');
 const OUT = join(DOCS, '.vitepress', 'sidebar.gen.mjs');
@@ -89,7 +89,7 @@ function scanItems(relDir, exclude = []) {
 }
 
 // ---------- 1. 用户指南（guide/，按 GUIDE_GROUPS 收纳分组，组内语义序） ----------
-// 复用 _lib/guide-order.mjs（与 gen-docs-index 同一事实来源）：分组收纳 + 新手高频在前；
+// 复用 _lib/guide-order.ts（与 gen-docs-index 同一事实来源）：分组收纳 + 新手高频在前；
 // 表外页面（如旧总览、项目意义）归「其他」并告警，不静默丢页。
 function guideItemsBuilder() {
   const mdFiles = new Set(mdNames('guide').filter((f) => !['index.md'].includes(f)));
@@ -159,7 +159,7 @@ const adrItems = mdNames('adr')
 
 // ---------- 5. 知识卡（knowledge/，按 category 聚合，折叠） ----------
 // 从卡片 frontmatter 聚合分类（groupBy），表外分类归「其他」并告警，绝不静默丢卡。
-// [ADR-114 §被补充] KNOWLEDGE_ORDER / NON_CARDS 已从 _lib/knowledge-cards.mjs 引入，
+// [ADR-114 §被补充] KNOWLEDGE_ORDER / NON_CARDS 已从 _lib/knowledge-cards.ts 引入，
 // 不再本地复制（5 处漂移已消解）。
 function knowledgeItemsBuilder() {
   const groups = new Map();

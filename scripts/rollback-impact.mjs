@@ -24,10 +24,10 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { showAt, gitMaybe } from './_lib/git-ref.mjs';
-import { getExportedSymbolsAny, topDeclsAny, searchName } from './_lib/source-graph.mjs';
-import { walk, ROOT, toPosix } from './_lib/scan-files.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { showAt, gitMaybe } from './_lib/git-ref.ts';
+import { getExportedSymbolsAny, topDeclsAny, searchName } from './_lib/source-graph.ts';
+import { walk, ROOT, toPosix } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 function analyze(commit) {
   const parent = commit + '^';

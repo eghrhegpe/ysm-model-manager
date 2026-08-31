@@ -13,7 +13,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const SEARCH_NAMES = ['main.json', 'arm.json', 'texture.png', 'texture2.png',
   'left_arm.json', 'right_arm.json', 'arrow.json'];

@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { toPosix } from './_lib/to-posix.ts';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = resolve(__dirname, '..', 'frontend', 'src', 'core', 'i18n', 'locales');

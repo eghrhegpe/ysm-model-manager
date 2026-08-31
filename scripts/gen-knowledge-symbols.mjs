@@ -6,7 +6,7 @@
  * 列表做集合比对并同步（gen 写 / --check 校验）。
  *
  * YSM 双栈适配：JS/TS 用 export 关键字提取，Go 用首字母大写顶层声明
- * （getExportedSymbolsAny 分发，见 _lib/source-graph.mjs）。
+ * （getExportedSymbolsAny 分发，见 _lib/source-graph.ts）。
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
  *   node scripts/gen-knowledge-symbols.mjs          # 同步写入（原地修改漂移的卡）
@@ -25,10 +25,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseFrontmatter, parseSourceFiles } from './_lib/frontmatter.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
-import { getExportedSymbolsAny, EXCLUDE_DIRS } from './_lib/source-graph.mjs';
-import { ROOT } from './_lib/scan-files.mjs';
+import { parseFrontmatter, parseSourceFiles } from './_lib/frontmatter.ts';
+import { parseArgs } from './_lib/parse-args.ts';
+import { getExportedSymbolsAny, EXCLUDE_DIRS } from './_lib/source-graph.ts';
+import { ROOT } from './_lib/scan-files.ts';
 
 const KNOWLEDGE_DIR = path.join(ROOT, 'docs', 'knowledge');
 

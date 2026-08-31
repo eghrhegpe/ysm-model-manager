@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 契约测试：变更域分类与检查计划推导（_lib/domain-classify.mjs）。
+ * 契约测试：变更域分类与检查计划推导（_lib/domain-classify.ts）。
  *
  * 背景（2026-08-17）：pre-push-gate 推送门禁按改动面分流——纯 docs 走轻量、
  * 纯前端跳过 Go 域、纯 Go 跳过前端域、混合全量。classify/planFromFiles 是
@@ -16,7 +16,7 @@
  * 用法：node tests/test_domain_classify.mjs
  * 退出码：0 = 通过；1 = 失败。
  */
-import { classify, planFromFiles, DATA_FILES } from '../scripts/_lib/domain-classify.mjs';
+import { classify, planFromFiles, DATA_FILES } from '../scripts/_lib/domain-classify.ts';
 
 const failures = [];
 let assertCount = 0;

@@ -19,14 +19,14 @@
  *   node scripts/perf-gate.mjs --warn-only                # 超阈值仅 WARN 不阻断（供本地观察）
  *   node scripts/perf-gate.mjs --verbose                  # 打印解析明细
  * 退出码：0=通过（或 warn-only+仅 warn），1=失败（阶段回归超阈值）。
- * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.mjs（零外部依赖）。
+ * 依赖：node:child_process / node:fs / node:path / scripts/_lib/scan-files.ts（零外部依赖）。
  * 设计意图：把「性能退回」从"靠感觉/靠记忆"升级为"可对比的量化门禁"。baseline 纳入
  *           git 作为性能锚点，预-push 可调用；git 层面的漂移由人工 review baseline 变更把关。
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { getRoot } from './_lib/scan-files.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { getRoot } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 import { run } from './_lib/proc.ts';
 
 const ROOT = getRoot();
@@ -42,7 +42,7 @@ const STAGE_ORDER = [
   '⑤ 纹理数据准备', '⑥ IPC 传输模拟', '⑦ 缓存检查',
 ];
 
-// ── 参数解析（共享层 _lib/parse-args.mjs）────────────────────────
+// ── 参数解析（共享层 _lib/parse-args.ts）────────────────────────
 // 原内联解析的未知参数 exit 2 语义由 unknown 白名单拦截保留；
 // iterations/thresholdRatio 原为 parseInt/parseFloat 数字，这里显式 Number() 还原。
 const parsed = parseArgs(process.argv.slice(2), {

@@ -43,7 +43,7 @@ import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import { toPosix } from './_lib/to-posix.ts';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 
 const FRONTEND = path.join(ROOT, 'frontend');
 const require_ = createRequire(path.join(FRONTEND, 'package.json'));

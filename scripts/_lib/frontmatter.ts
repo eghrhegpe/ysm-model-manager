@@ -1,9 +1,9 @@
 /**
- * frontmatter.mjs — 知识卡/ADR 首部解析共享库（零依赖）。
+ * frontmatter.ts — 知识卡/ADR 首部解析共享库（零依赖）。
  *
  * 用法：
  *   import { parseFrontmatter, getScalar, getList, parseSourceFiles, parseAdrHeader }
- *     from './_lib/frontmatter.mjs';
+ *     from './_lib/frontmatter.ts';
  *
  * 注：原为知识卡专用（ADR-013 期），ADR-114 扩容后增加 `parseAdrHeader`
  * 供 gen-docs-index / check-adr-health / gen-adr-supersede / check-doc-drift
@@ -12,13 +12,13 @@
 import fs from 'node:fs';
 
 /** 提取 frontmatter 块字符串（`---...---` 之间），无则 null。 */
-export function parseFrontmatter(text) {
+export function parseFrontmatter(text: string): string | null {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   return m ? m[1] : null;
 }
 
 /** 提取标量字段（`key: value`，去注释）。 */
-export function getScalar(fm, key) {
+export function getScalar(fm: string | null, key: string): string | undefined {
   if (!fm) return undefined;
   const line = fm.match(new RegExp('^' + escapeRe(key) + '\\s*:\\s*(.+)$', 'm'));
   if (!line) return undefined;
@@ -34,8 +34,8 @@ export function getScalar(fm, key) {
  * 区别于 getScalar：不要求已知 key 名，遍历所有 `k: v` 行（用于占位符等
  * 整体值域检查，check-knowledge-drift 的模板占位符扫描）。
  */
-export function getAllScalars(fm) {
-  const map = {};
+export function getAllScalars(fm: string): Record<string, string> {
+  const map: Record<string, string> = {};
   for (const line of fm.split(/\r?\n/)) {
     const m = line.match(/^([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
     if (m) map[m[1]] = m[2].trim();
@@ -44,10 +44,10 @@ export function getAllScalars(fm) {
 }
 
 /** 提取列表字段（块列表或行内数组），返回字符串数组。 */
-export function getList(fm, key) {
+export function getList(fm: string | null, key: string): string[] {
   if (!fm) return [];
   const lines = fm.split(/\r?\n/);
-  const out = [];
+  const out: string[] = [];
   let inList = false;
   for (const line of lines) {
     const head = line.match(new RegExp('^' + escapeRe(key) + '\\s*:\\s*(.*)$'));
@@ -70,7 +70,7 @@ export function getList(fm, key) {
 }
 
 /** 正则转义 key（key 含 `.`/`-` 等特殊字符时防匹配错乱）。 */
-function escapeRe(s) {
+function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
@@ -78,10 +78,10 @@ function escapeRe(s) {
  * 解析 source_files 字段。兼容行内数组 `[a, b]` 与块列表 `- a`。
  * 单遍扫描：行内数组匹配后直接返回，避免累加。
  */
-export function parseSourceFiles(fm) {
+export function parseSourceFiles(fm: string | null): string[] {
   if (!fm) return [];
   const lines = fm.split(/\r?\n/);
-  const out = [];
+  const out: string[] = [];
   let seen = false;
   for (const line of lines) {
     const head = line.match(/^source_files\s*:\s*(.*)$/);
@@ -119,16 +119,16 @@ export function parseSourceFiles(fm) {
  * @param {string} filePath — ADR 文件绝对路径
  * @returns {{num:number,title:string,status:string,date:string,statusLine:number,supersededBy:number|null,supersedes:string} | {error:string}}
  */
-export function parseAdrHeader(filePath) {
+export function parseAdrHeader(filePath: string): { num: number; title: string; status: string; date: string; statusLine: number; supersededBy: number | null; supersedes: string } | { error: string } {
   const text = fs.readFileSync(filePath, 'utf8');
   const lines = text.split(/\r?\n/);
 
-  let num = null;
+  let num: number | null = null;
   let title = '';
   let status = '';
   let date = '';
   let statusLine = -1;
-  let supersededBy = null;
+  let supersededBy: number | null = null;
   let supersedes = '';
 
   for (let i = 0; i < Math.min(lines.length, 25); i++) {

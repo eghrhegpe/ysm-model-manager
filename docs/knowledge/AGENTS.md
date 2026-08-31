@@ -25,7 +25,7 @@ use_when:                    # 用户自然语言关键词
   - 事件
   - 事件总线
 affected: false              # 可选，仅接受 false：快照/报告型卡（如整包审计）退出 --affected 匹配——source_files 只服务覆盖率统计，不随单次文件变更提示复核
-perf:                        # 可选，性能画像标签（受控词表 = scripts/_lib/knowledge-cards.mjs PERF_TAGS）
+perf:                        # 可选，性能画像标签（受控词表 = scripts/_lib/knowledge-cards.ts PERF_TAGS）
   - cpu-bound                # 词表：cpu-bound|io-bound|gpu-bound|concurrent|single-thread|memory-heavy
 ---
 # {name}
@@ -115,8 +115,8 @@ node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变�
 
 | 脚本 | 用途 |
 |------|------|
-| `scripts/_lib/frontmatter.mjs` | frontmatter 解析共享库 |
-| `scripts/_lib/knowledge-cards.mjs` | 知识卡常量共享层（KNOWLEDGE_ORDER / CATEGORY_LABELS / NON_CARDS / PERF_TAGS） |
+| `scripts/_lib/frontmatter.ts` | frontmatter 解析共享库 |
+| `scripts/_lib/knowledge-cards.ts` | 知识卡常量共享层（KNOWLEDGE_ORDER / CATEGORY_LABELS / NON_CARDS / PERF_TAGS） |
 | `scripts/gen-knowledge-index.mjs` | 按分类生成 `index.md` |
 | `scripts/gen-routes.mjs` | AI 意图路由表自动生成（`routes.md`） |
 | `scripts/gen-routes-quick.mjs` | AI 高频路由表自动生成（`routes-quick.md`，第一站） |

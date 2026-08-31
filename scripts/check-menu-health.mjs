@@ -28,8 +28,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ROOT } from './_lib/scan-files.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const ARGS = parseArgs(process.argv.slice(2), { bools: ['json'] });
 const JSON_MODE = ARGS.json;

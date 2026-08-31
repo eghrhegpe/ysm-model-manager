@@ -3,11 +3,11 @@
  * gen-cli-completion.mjs — CLI shell 补全脚本生成器（bash / pwsh / zsh）。
  *
  * 设计意图：CLI 的可发现性短板是「命令/子命令/选项靠记忆 + 看文档」。本脚本从
- * scripts/_lib/cli-registry.mjs（与 gen-cli-doc 同源的注册表解析）生成三个目录
+ * scripts/_lib/cli-registry.ts（与 gen-cli-doc 同源的注册表解析）生成三个目录
  * 补全脚本（completions/ysm.bash / _ysm.ps1 / _ysm），用户 source 后即可 Tab 补全
  * 顶层命令、子命令与常见选项——清单全部来自源码注册，新增命令自动跟上。
  *
- * 依赖：零依赖（node:fs / node:path + scripts/_lib/scan-files.mjs + cli-registry.mjs 共享层）。
+ * 依赖：零依赖（node:fs / node:path + scripts/_lib/scan-files.ts + cli-registry.ts 共享层）。
  *
  * 用法：
  *   node scripts/gen-cli-completion.mjs            # 写入 completions/ 三个脚本
@@ -18,8 +18,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, writeText } from './_lib/scan-files.mjs';
-import { parseCliCommands } from './_lib/cli-registry.mjs';
+import { ROOT, writeText } from './_lib/scan-files.ts';
+import { parseCliCommands } from './_lib/cli-registry.ts';
 
 const OUT_DIR = path.join(ROOT, 'completions');
 const CHECK = process.argv.includes('--check');

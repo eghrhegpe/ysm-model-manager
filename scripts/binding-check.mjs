@@ -11,7 +11,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 
 
 // Go 文件：动态扫描 internal/app/ 下所有非测试 .go（避免硬编码清单漏扫新增文件）

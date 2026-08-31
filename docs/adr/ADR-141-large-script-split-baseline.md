@@ -23,7 +23,7 @@ ADR-040 为前端/Go 立了规模红线（拆分后每文件 ≤400 行），但
 痛点：
 - **单文件职责混杂**：auto-import 一个文件里词法（tokenize 188 行）/ 符号提取（161 行）/ 检测（71 行）/ 修复（67 行）四层全挤在一起，改一处要通读全文件。
 - **可测性差**：纯函数未导出，只能整脚本黑盒跑，路径覆盖薄（锐评：auto-import/codemod 只有 guard 级测试）。
-- **共享层复用无法实证**：`_lib/source-graph.mjs` 的 `getExportedSymbols` 与 auto-import 的 `extractExports` 疑似重复，但没有机制验证能否替换。
+- **共享层复用无法实证**：`_lib/source-graph.ts` 的 `getExportedSymbols` 与 auto-import 的 `extractExports` 疑似重复，但没有机制验证能否替换。
 
 ## 2. 决策（Decision）
 

@@ -7,7 +7,7 @@
  * 保护 PR/commit 的新增逻辑不裸奔（源自 MikuMikuAR P8-A gate，适配本仓库）。
  *
  * 实现：git 变更收集 / rename / 建议区块等语言无关部分抽到
- *   scripts/_lib/diff-coverage-core.mjs（与 check-go-diff-coverage.mjs 共享）；
+ *   scripts/_lib/diff-coverage-core.ts（与 check-go-diff-coverage.mjs 共享）；
  *   本文件仅保留前端专属策略：isSourceFile 过滤 + Istanbul coverage-final.json
  *   读取 + statementPctForChangedLines。下方 re-export 供契约测试 import（
  *   tests/test_check_diff_coverage.mjs），签名不变。
@@ -30,8 +30,8 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ROOT } from './_lib/scan-files.mjs';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { ROOT } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 import {
   git,
   getChangedFiles,
@@ -40,7 +40,7 @@ import {
   detectRenames,
   getChangedLines,
   buildSuggestBlock as buildSuggestBlockCore,
-} from './_lib/diff-coverage-core.mjs';
+} from './_lib/diff-coverage-core.ts';
 
 // ── re-export（契约测试 import 路径锁：tests/test_check_diff_coverage.mjs）──
 export { addLinesFromDiff, parseRenameStatus, detectRenames, getChangedLines, getChangedFiles, git };

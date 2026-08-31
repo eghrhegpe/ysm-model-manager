@@ -33,7 +33,7 @@
  * 设计意图：孤儿导出检测（0 消费者的导出符号）
  */
 import fs from 'node:fs';
-import { SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.mjs';
+import { SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.ts';
 
 const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');

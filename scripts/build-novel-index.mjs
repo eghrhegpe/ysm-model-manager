@@ -6,7 +6,7 @@
  * 单一事实来源 = docs/novel/ 目录树（act-* + 01..10 区域 + appendix）。
  * 产出 docs/novel/index.md，供 VitePress 站点与读者直接使用。
  *
- * 零外部依赖（node:fs / node:path + 共享层 _lib/scan-files.mjs 的 ROOT）。
+ * 零外部依赖（node:fs / node:path + 共享层 _lib/scan-files.ts 的 ROOT）。
  * 整文件重写（index.md 全部由生成器产出，无人工段落）。
  *
  * 用法：
@@ -18,7 +18,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, readText, writeText } from './_lib/scan-files.mjs';
+import { ROOT, readText, writeText } from './_lib/scan-files.ts';
 
 const NOVEL_DIR = path.join(ROOT, 'docs', 'novel');
 const OUT_FILE = path.join(NOVEL_DIR, 'index.md');

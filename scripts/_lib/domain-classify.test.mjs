@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { groupByDomain, domainSummaryText } from './domain-classify.mjs';
+import { groupByDomain, domainSummaryText } from './domain-classify.ts';
 
 // ── groupByDomain：文件集 → { 域: [文件] } ──
 

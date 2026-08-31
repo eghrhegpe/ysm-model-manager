@@ -95,7 +95,7 @@
 | `check-layering.mjs` | `node scripts/check-layering.mjs` / `--json` / `--update` | 前端分层依赖方向守护：R1/R2 零容忍（utils/services 不碰 UI 层）+ R3/R4 基线防新增（core→上层 / features→views，现有债务入 `docs/.layering-baseline.json` 待清理）；`import type` 豁免；源自 MikuMikuAR ADR-242 骨架适配，配套 `tests/test_check_layering.mjs` |
 | `check-circular-go.mjs` | `node scripts/check-circular-go.mjs` / `--json` | Go 包级循环依赖检测（`go/` 目录下 import 图找环；ERROR 阻断，`--json` 供 CI 消费） |
 | `check-boolean-naming.mjs` | `node scripts/check-boolean-naming.mjs` / `--strict` | 布尔变量命名规范 |
-| `check-script-hygiene.mjs` | `node scripts/check-script-hygiene.mjs` / `--json` / `--strict` | 脚本卫生（五口径）：退出码失效（裸 main + return 失败码无 process.exit）/ 共享层内联（walk/rg/ROOT/parseArgs 样板）/ 检查类缺 `--json` 契约 / 文件头 5 字段 / positional 脚本未走 `_lib/parse-args.mjs`（WARN 不阻断） |
+| `check-script-hygiene.mjs` | `node scripts/check-script-hygiene.mjs` / `--json` / `--strict` | 脚本卫生（五口径）：退出码失效（裸 main + return 失败码无 process.exit）/ 共享层内联（walk/rg/ROOT/parseArgs 样板）/ 检查类缺 `--json` 契约 / 文件头 5 字段 / positional 脚本未走 `_lib/parse-args.ts`（WARN 不阻断） |
 | `check-workflow-refs.mjs` | `node scripts/check-workflow-refs.mjs` / `--json` | 工作流引用完整性：`.github/workflows/*.yml` 的 `run:` 中 `scripts/`、`cmd/` 路径引用必须存在（迁移类死引用守护，如 cmd/build-*.ps1 → scripts/ 后 release.yml 漏同步） |
 | `css-layer-check.mjs` | `node scripts/css-layer-check.mjs` / `--strict` / `--json` | **Shadow DOM 样式越界检查**：shadow 内 `animation:` 引用无同层 @keyframes 定义 → ERROR（跨 shadow keyframe 静默失效）；全局 components.css 残留已回迁类 → ERROR；shadow 类无定义 → WARN（自动发现 shadow 域，无手写清单） |
 | `i18n-key-naming.mjs` | `node scripts/i18n-key-naming.mjs` / `--list-violations` / `--check key...` / `--entity <词>` | i18n 键名三段式规范检查（ADR-124）：只卡「新增键」必须 `<模块>.<子命名空间>.<实体>`（旧键保留作语义注释），`--list-violations` 输出迁移清单 |
@@ -135,7 +135,7 @@
 | `gen-docs-index.mjs` | 分区索引：**`docs/adr/index.md` 单文件承载全部**（状态分布 + 登记表 + 使用规则 + 状态分组，整文件重写，ADR 双文件合并后 README 为指针页）+ releases 最近版本/版本全览（GEN 标记区），knowledge 委托校验 |
 | `gen-project-map.mjs` | 项目结构地图生成（`docs/project-map.md`）：扫描磁盘目录，目录用途直接维护在 `docs/project-map.md` 表格内（脚本读回复用，无外部基线，消除双源漂移）；4 个 GEN 标记区；`--check` 已挂 doctor 防漂移；未登记用途的新目录 WARN 提醒 |
 | `gen-cli-doc.mjs` | **CLI 命令参考生成（`docs/cli-commands.md`）**：静态提取 `go/cli/` 的 `RegisterCommandC` 注册表 + `print*Usage` 子命令文本 → 命令/分类/子命令/选项表格（GEN 区）；单一事实来源 = 源码注册，新增命令改源码即同步；`--check` 已挂 doctor/pre-push，配套 `tests/test_cli_doc_parity.mjs` 锁注册表↔文档双向一致 |
-| `gen-cli-completion.mjs` | **CLI shell 补全生成（`completions/ysm.bash` / `_ysm.ps1` / `_ysm`）**：与 gen-cli-doc 同源（`_lib/cli-registry.mjs` 共享解析层），生成 bash/pwsh/zsh 三份 Tab 补全（顶层命令/子命令/选项）；`--check` 已挂 doctor/pre-push，配套 `tests/test_cli_completion_parity.mjs`；pre-commit 快照已含 `completions/` 自动 stage |
+| `gen-cli-completion.mjs` | **CLI shell 补全生成（`completions/ysm.bash` / `_ysm.ps1` / `_ysm`）**：与 gen-cli-doc 同源（`_lib/cli-registry.ts` 共享解析层），生成 bash/pwsh/zsh 三份 Tab 补全（顶层命令/子命令/选项）；`--check` 已挂 doctor/pre-push，配套 `tests/test_cli_completion_parity.mjs`；pre-commit 快照已含 `completions/` 自动 stage |
 | `gen-guide-gap.mjs` | 指南覆盖缺口扫描：提取 app-modules.ts 组件/服务功能面，与 docs/guide 对照列出缺口（WARN 不阻断；`--strict` 缺口时退出码 1） |
 | `build-novel-index.mjs` | 小说总索引生成（`docs/novel/index.md`）：扫 `docs/novel/` 目录树（act-\* + 01..10 区域 + appendix），整文件重写；区域文件夹内**禁放 README**（索引唯一来源即本脚本）；`--check` 已挂 doctor 防漂移 |
 | `gen-vitepress-sidebar.mjs` | VitePress 侧边栏生成：扫 `docs/` 全量 md 按目录树组织导航 → `docs/.vitepress/sidebar.gen.mjs`（勿手改），`docs/package.json` build 脚本前置调用（ADR-022） |
@@ -243,7 +243,7 @@
 | inspect_ysm 1-5 分散 | ✅ 合并为 `inspect_ysm.mjs` + `--json` |
 | Python/Node 双运行时分裂 | ✅ 全量迁移 Node（2026-08-03），契约测试同步 mjs |
 | 脚本自身零测试覆盖 | ✅ `tests/test_scripts_lib.mjs`（共享层边界）+ `tests/test_scripts_json.mjs`（--json 契约） |
-| review / comment-checker 重复 rg() 封装 | ✅ 抽 `_lib/ripgrep.mjs` 共享层，两脚本接入 |
+| review / comment-checker 重复 rg() 封装 | ✅ 抽 `_lib/ripgrep.ts` 共享层，两脚本接入 |
 
 ---
 
@@ -253,18 +253,18 @@
 
 | 共享层 | 提供 | 强制场景 |
 |--------|------|---------|
-| `_lib/scan-files.mjs` | `walk`（.js/.ts 双扩展名）、`resolveImport`（.ts/.js/index 补全）、`toPosix`/`relPosix`、`readText`（BOM/CRLF 容错）、`getRoot` | 扫描 frontend/src 源码、解析 import、路径输出 |
-| `_lib/ripgrep.mjs` | `rg`（严格：exit 1 → []；rg 缺失/坏正则 → 抛错）、`rgSafe`（容错：抛错 → WARN + []） | 需要 ripgrep 扫描的任何脚本（恒 exit 0 提示工具用 `rgSafe`） |
-| `_lib/frontmatter.mjs` | frontmatter 解析 | 读取 md 文档 frontmatter |
-| `_lib/git-ref.mjs` | `showAt`（跨 ref 读文本）、`existsAt`、`gitMaybe`、`logPath`/`logPathDetail`（路径提交历史）、`lsTree`/`diffTree`（ref 间文件清单对比）、`renamePairs`（rename 检测）、`lineCountAt`（跨 ref 行数）、`showAllAt`（批量快照） | git 历史任意 ref 下的源码读取；与 `source-graph.mjs` 的 `textOverride` 参数对接，避免把历史 blob 落盘再读盘的双重开销 |
-| `_lib/source-graph.mjs` | `getExportedSymbols`（JS/TS）、`getGoExportedSymbols`（Go）、`getExportedSymbolsAny`（自动分发，支持 `textOverride` 传历史文本直接入参）、`walkSourceFiles`/`scanSourceGraph` | 源码导出符号提取；`textOverride` 是"拿历史某版本源码文本做符号分析"的统一接口，供 rollback-impact / bloat-history / api-break 等复用 |
-| `_lib/domain-classify.mjs` | `classify()`（文件→域）、`planFromFiles()`（文件集→检查计划）、`DATA_FILES` | 变更域分类共享层，pre-push-gate / doctor --gate 共用，消除双端漂移 |
-| `_lib/contract-tests.mjs` | `collectContractTests()`（列出测试文件）、`runContractTestsParallel()`（并行执行，spawn + Promise.all） | 契约测试并行执行共享层，doctor / pre-push-gate 共用，~31s vs 串行 ~43s |
-| `_lib/log-push.mjs` | `logPush()`（双写 stderr + .git/push-log）、`clearPushLog()` | 推送门禁日志共享层，解决 git pre-push 钩子 stdout 被吞问题，日志带 ISO 时间戳 |
-| `_lib/collect-scripts.mjs` | `collectScripts({ skipHooks })`（收集 scripts/ 下 .mjs，排除 `_` 前缀共享层与测试；`skipHooks` 取 hooks/ 取舍——proc/readme 口径含、hygiene 口径排） | 任何需要"扫描 scripts/ 全部 .mjs"的检查器（check-proc-adoption / check-readme-index / check-script-hygiene / check-lib-adoption 已接入，2026-09 收敛） |
-| `_lib/orphan-classify.mjs` | `classifyScript(name, ctx)`（四态判定）、`findOrphans()`（孤儿清单）、`buildContext()`（挂载点+文档+同级脚本快照） | 判断"这个脚本还有没有人会执行它"。四态：`mounted`（流水线挂载）> `called`（被其它脚本调用）> `documented`（仅 README/AGENTS.md 提及，属手册工具，**不算化石**）> `orphan`。2026-08-31 审计实证：早期粗口径把 19 个手册工具误判成化石，加 `documented` 档后真孤儿归零 |
+| `_lib/scan-files.ts` | `walk`（.js/.ts 双扩展名）、`resolveImport`（.ts/.js/index 补全）、`toPosix`/`relPosix`、`readText`（BOM/CRLF 容错）、`getRoot` | 扫描 frontend/src 源码、解析 import、路径输出 |
+| `_lib/ripgrep.ts` | `rg`（严格：exit 1 → []；rg 缺失/坏正则 → 抛错）、`rgSafe`（容错：抛错 → WARN + []） | 需要 ripgrep 扫描的任何脚本（恒 exit 0 提示工具用 `rgSafe`） |
+| `_lib/frontmatter.ts` | frontmatter 解析 | 读取 md 文档 frontmatter |
+| `_lib/git-ref.ts` | `showAt`（跨 ref 读文本）、`existsAt`、`gitMaybe`、`logPath`/`logPathDetail`（路径提交历史）、`lsTree`/`diffTree`（ref 间文件清单对比）、`renamePairs`（rename 检测）、`lineCountAt`（跨 ref 行数）、`showAllAt`（批量快照） | git 历史任意 ref 下的源码读取；与 `source-graph.ts` 的 `textOverride` 参数对接，避免把历史 blob 落盘再读盘的双重开销 |
+| `_lib/source-graph.ts` | `getExportedSymbols`（JS/TS）、`getGoExportedSymbols`（Go）、`getExportedSymbolsAny`（自动分发，支持 `textOverride` 传历史文本直接入参）、`walkSourceFiles`/`scanSourceGraph` | 源码导出符号提取；`textOverride` 是"拿历史某版本源码文本做符号分析"的统一接口，供 rollback-impact / bloat-history / api-break 等复用 |
+| `_lib/domain-classify.ts` | `classify()`（文件→域）、`planFromFiles()`（文件集→检查计划）、`DATA_FILES` | 变更域分类共享层，pre-push-gate / doctor --gate 共用，消除双端漂移 |
+| `_lib/contract-tests.ts` | `collectContractTests()`（列出测试文件）、`runContractTestsParallel()`（并行执行，spawn + Promise.all） | 契约测试并行执行共享层，doctor / pre-push-gate 共用，~31s vs 串行 ~43s |
+| `_lib/log-push.ts` | `logPush()`（双写 stderr + .git/push-log）、`clearPushLog()` | 推送门禁日志共享层，解决 git pre-push 钩子 stdout 被吞问题，日志带 ISO 时间戳 |
+| `_lib/collect-scripts.ts` | `collectScripts({ skipHooks })`（收集 scripts/ 下 .mjs，排除 `_` 前缀共享层与测试；`skipHooks` 取 hooks/ 取舍——proc/readme 口径含、hygiene 口径排） | 任何需要"扫描 scripts/ 全部 .mjs"的检查器（check-proc-adoption / check-readme-index / check-script-hygiene / check-lib-adoption 已接入，2026-09 收敛） |
+| `_lib/orphan-classify.ts` | `classifyScript(name, ctx)`（四态判定）、`findOrphans()`（孤儿清单）、`buildContext()`（挂载点+文档+同级脚本快照） | 判断"这个脚本还有没有人会执行它"。四态：`mounted`（流水线挂载）> `called`（被其它脚本调用）> `documented`（仅 README/AGENTS.md 提及，属手册工具，**不算化石**）> `orphan`。2026-08-31 审计实证：早期粗口径把 19 个手册工具误判成化石，加 `documented` 档后真孤儿归零 |
 
-违规形态：内联「通用」 `walk`（即 scan-files.walk 的等价递归、无扩展名/跳过定制）/ 内联 `rg(...)` / 内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))` / 内联 `collectScripts`（scripts/.mjs 收集样板，2026-09 起应由 `_lib/collect-scripts.mjs` 提供）。带显式过滤的领域专用收集器（如 `endsWith('.md')` / `EXCLUDE` / `symbolExclude` / `onFile`）为合法内联，不计入违规；doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。
+违规形态：内联「通用」 `walk`（即 scan-files.walk 的等价递归、无扩展名/跳过定制）/ 内联 `rg(...)` / 内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))` / 内联 `collectScripts`（scripts/.mjs 收集样板，2026-09 起应由 `_lib/collect-scripts.ts` 提供）。带显式过滤的领域专用收集器（如 `endsWith('.md')` / `EXCLUDE` / `symbolExclude` / `onFile`）为合法内联，不计入违规；doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。
 
 ---
 

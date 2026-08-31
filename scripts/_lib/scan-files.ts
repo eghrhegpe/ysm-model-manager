@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * scan-files.mjs — 源码扫描共享层（scripts/_lib）。
+ * scan-files.ts — 源码扫描共享层（scripts/_lib）。
  *
  * 统一解决两类跨脚本重复问题（ADR-014 前端 .js→.ts 迁移后集中收口）：
  *   1. 文件格式层：walk 同时收集 .js/.ts；resolveImport 自动补全
@@ -11,7 +11,7 @@
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
  * 用法：
- *   import { walk, resolveImport, readText, getRoot, SRC_DIR } from './_lib/scan-files.mjs';
+ *   import { walk, resolveImport, readText, getRoot, SRC_DIR } from './_lib/scan-files.ts';
  *   import { toPosix } from './_lib/to-posix.ts';
  */
 import fs from 'node:fs';
@@ -46,9 +46,19 @@ export const SRC_EXTS = ['.js', '.ts'];
  * @returns {string[]|{abs:string,rel:string}[]}
  */
 /** 已告警过的未知选项键（walk 递归每层都会校验，按键去重避免每目录刷屏）。 */
-const warnedWalkOpts = new Set();
+const warnedWalkOpts = new Set<string>();
 
-export function walk(dir = SRC_DIR, opts = {}) {
+/** walk 选项。 */
+export interface WalkOpts {
+  exts?: string[];
+  skipDir?: (name: string) => boolean;
+  skipFile?: ((name: string) => boolean) | RegExp | null;
+  rel?: boolean;
+  base?: string;
+  skipTest?: boolean;
+}
+
+export function walk(dir: string = SRC_DIR, opts: WalkOpts = {}): Array<string | { abs: string; rel: string }> {
   const KNOWN_WALK_OPTS = new Set(['exts', 'skipDir', 'skipFile', 'rel', 'base', 'skipTest']);
   for (const k of Object.keys(opts)) {
     if (!KNOWN_WALK_OPTS.has(k) && !warnedWalkOpts.has(k)) {
@@ -58,20 +68,21 @@ export function walk(dir = SRC_DIR, opts = {}) {
   }
   const {
     exts = SRC_EXTS,
-    skipDir = (n) => n.startsWith('.') || n === 'node_modules' || n === 'css',
+    skipDir = (n: string) => n.startsWith('.') || n === 'node_modules' || n === 'css',
     skipFile = null,
     rel = false,
     base = '',
     skipTest = false,
   } = opts;
-  const out = [];
+  const out: Array<string | { abs: string; rel: string }> = [];
   if (!fs.existsSync(dir)) return out;
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
   } catch (e) {
     // 子目录权限拒绝/超长路径等：跳过该目录，不让单点异常炸掉整棵扫描树
-    if (e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'ENOTDIR' || e.code === 'ENAMETOOLONG') return out;
+    const err = e as NodeJS.ErrnoException;
+    if (err.code === 'EACCES' || err.code === 'EPERM' || err.code === 'ENOTDIR' || err.code === 'ENAMETOOLONG') return out;
     throw e;
   }
   for (const d of entries) {

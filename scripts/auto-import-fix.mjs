@@ -6,7 +6,7 @@
  * applyFixes 把缺失 import 建议幂等写入文件（聚合/CRLF 保留/插入点定位），
  * fmtText/fmtJson 产出人类与 CI 可消费的报告。领域专属（非通用共享层，故不入 _lib/）。
  *
- * 依赖：node:fs / node:path + _lib/scan-files.mjs（readText / relPosix）
+ * 依赖：node:fs / node:path + _lib/scan-files.ts（readText / relPosix）
  *
  * 用法：被 auto-import.mjs 主入口引用，非独立 CLI 入口。
  *   import { applyFixes, fmtText, fmtJson } from './auto-import-fix.mjs';
@@ -14,7 +14,7 @@
  * 退出码：非独立入口（无 CLI）。
  */
 import fs from 'node:fs';
-import { readText, relPosix } from './_lib/scan-files.mjs';
+import { readText, relPosix } from './_lib/scan-files.ts';
 
 // ── --fix 自动写入 ───────────────────────────────────
 

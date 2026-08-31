@@ -23,7 +23,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT } from './_lib/scan-files.ts';
 
 const APP_MODULES = path.join(ROOT, 'frontend', 'src', 'app-modules.ts');
 const GUIDE_DIR = path.join(ROOT, 'docs', 'guide');

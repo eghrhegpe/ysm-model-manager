@@ -823,7 +823,7 @@
 
 ### `scripts_argv`（config，引用 1/1，最深 2 层）
 
-- `scripts/_lib/parse-args.mjs`
+- `scripts/_lib/parse-args.ts`
 
 ### `test-utils`（ui，引用 1/1，最深 2 层）
 

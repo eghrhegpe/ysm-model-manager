@@ -1,5 +1,5 @@
 /**
- * knowledge-cards.mjs — 知识卡常量共享层（ADR-114 §被补充）。
+ * knowledge-cards.ts — 知识卡常量共享层（ADR-114 §被补充）。
  *
  * YSM 有 6 个 category（core/go/ui/feature/utils/config），
  * 与 BABY MikuMikuAR 的 8 桶（env/scene/physics/rendering/motion/ui/core/backend）不同——
@@ -16,7 +16,7 @@
  * 零依赖（仅 node:path）。
  */
 import path from 'node:path';
-import { ROOT } from './scan-files.mjs';
+import { ROOT } from './scan-files.ts';
 
 /** 知识卡分类展示顺序（sidebar / 索引共用）。 */
 export const KNOWLEDGE_ORDER = ['core', 'go', 'ui', 'feature', 'utils', 'config'];

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * git-ref.mjs — 跨 ref 安全 git 内容访问共享层。
+ * git-ref.ts — 跨 ref 安全 git 内容访问共享层。
  *
  * 解决"拿历史某版本源码文本做符号分析"的通用问题：audit-split / rollback-impact /
  * bloat-history / api-break 都需要在多个 git ref 上读同一文件的快照，此前各自
@@ -9,18 +9,18 @@
  *   - 失败容错：路径不存在 / 二进制 / 非文本 → 返回 null，调用方按需判断；
  *   - 路径口径：统一用正斜杠路径（git 内部路径格式），Windows 反斜杠自动归一化。
  *
- * 与 `source-graph.mjs` 搭配：`textOverride` 参数即本层的产出——把 `git show` 得到的
+ * 与 `source-graph.ts` 搭配：`textOverride` 参数即本层的产出——把 `git show` 得到的
  * 历史文本直接传入符号提取，避免把历史 blob 落盘再读盘的双重开销。
  *
- * 零外部依赖；仅 Node 内置模块（child_process/fs/path/url）+ ./scan-files.mjs（ROOT/toPosix）。
+ * 零外部依赖；仅 Node 内置模块（child_process/fs/path/url）+ ./scan-files.ts（ROOT/toPosix）。
  *
  * 用法：
  *   import { showAt, existsAt, logPath, diffTree, renamePairs }
- *     from './_lib/git-ref.mjs';
+ *     from './_lib/git-ref.ts';
  */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
-import { ROOT, toPosix } from './scan-files.mjs';
+import { ROOT, toPosix } from './scan-files.ts';
 
 /**
  * Windows 安全 git 命令执行器。
@@ -106,7 +106,7 @@ export function lineCountAt(ref, p) {
  * @param {boolean} [opts.long]   用完整 hash（%H）而非缩写（%h）
  * @returns {string[]}  每行一条：hash + subject（可能为空字符串数组）
  */
-export function logPath(p, opts = {}) {
+export function logPath(p: string, opts: { limit?: number; follow?: boolean; long?: boolean } = {}) {
   const { limit = 30, follow = true, long = false } = opts;
   const fmt = long ? '%H%x09%s' : '%h%x09%s';
   const args = ['log', `--format=${fmt}`];
@@ -129,7 +129,7 @@ export function logPath(p, opts = {}) {
  * @param {boolean} [opts.follow] 默认 true
  * @returns {{hash:string, short:string, author:string, date:string, subject:string}[]}
  */
-export function logPathDetail(p, opts = {}) {
+export function logPathDetail(p: string, opts: { limit?: number; follow?: boolean } = {}) {
   const { limit = 30, follow = true } = opts;
   const args = ['log'];
   if (follow) args.push('--follow');
@@ -174,12 +174,12 @@ export function lsTree(ref, dir = '') {
  * @param {string} [dir]   限定目录（可选）
  * @returns {{added:string[], removed:string[], common:string[], all:string[]}}
  */
-export function diffTree(older, newer, dir = '') {
+export function diffTree(older: string, newer: string, dir = ''): { added: string[]; removed: string[]; common: string[]; all: string[] } {
   const oldFiles = new Set(lsTree(older, dir));
   const newFiles = new Set(lsTree(newer, dir));
-  const added = [];
-  const removed = [];
-  const common = [];
+  const added: string[] = [];
+  const removed: string[] = [];
+  const common: string[] = [];
   for (const f of newFiles) {
     if (oldFiles.has(f)) common.push(f); else added.push(f);
   }
@@ -205,10 +205,10 @@ export function diffTree(older, newer, dir = '') {
  * @param {number} [similarityThreshold]  相似度假说（0-100），默认 50
  * @returns {{oldPath:string, newPath:string, similarity:number}[]}
  */
-export function renamePairs(older, newer, similarityThreshold = 50) {
+export function renamePairs(older: string, newer: string, similarityThreshold = 50): Array<{ oldPath: string; newPath: string; similarity: number }> {
   const out = gitMaybe(['diff', '--name-status', '-M' + similarityThreshold, older, newer]);
   if (!out) return [];
-  const pairs = [];
+  const pairs: Array<{ oldPath: string; newPath: string; similarity: number }> = [];
   for (const line of out.trim().split('\n')) {
     const m = line.match(/^R(\d+)\t(.+)\t(.+)$/);
     if (m) pairs.push({

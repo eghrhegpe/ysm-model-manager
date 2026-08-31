@@ -22,7 +22,7 @@
  * 注释掩码：扫描前剥离 // 与 /* *\/ 注释（行号 / 偏移守恒），避免「注释里引用旧脆弱写法」
  * 被误判为违规（越写清楚注释越报红）。
  *
- * 本文件由 tests/*.mjs 自动发现机制纳入 doctor / pre-push 门禁（scripts/_lib/contract-tests.mjs）。
+ * 本文件由 tests/*.mjs 自动发现机制纳入 doctor / pre-push 门禁（scripts/_lib/contract-tests.ts）。
  */
 import fs from 'node:fs';
 import path from 'node:path';

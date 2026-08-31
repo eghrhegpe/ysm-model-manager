@@ -6,9 +6,9 @@
  * 本脚本把 `go/cli/` 的 `RegisterCommandC` 注册表 + `print*Usage` 子命令文本设为
  * 唯一事实来源，静态提取顶层命令/分类/子命令/选项，生成 docs/cli-commands.md 的
  * GEN 区——新增命令只改源码注册，文档自动跟上，消灭手动同步。
- * 解析逻辑收拢在 scripts/_lib/cli-registry.mjs 共享层（与 gen-cli-completion 同源，防双轨）。
+ * 解析逻辑收拢在 scripts/_lib/cli-registry.ts 共享层（与 gen-cli-completion 同源，防双轨）。
  *
- * 依赖：零依赖（node:fs / node:path + scripts/_lib/scan-files.mjs + cli-registry.mjs 共享层）。
+ * 依赖：零依赖（node:fs / node:path + scripts/_lib/scan-files.ts + cli-registry.ts 共享层）。
  *
  * 用法：
  *   node scripts/gen-cli-doc.mjs            # 写入 docs/cli-commands.md
@@ -19,8 +19,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, readText, writeText } from './_lib/scan-files.mjs';
-import { parseCliCommands, CAT_NAMES, CAT_ORDER } from './_lib/cli-registry.mjs';
+import { ROOT, readText, writeText } from './_lib/scan-files.ts';
+import { parseCliCommands, CAT_NAMES, CAT_ORDER } from './_lib/cli-registry.ts';
 
 const OUT = path.join(ROOT, 'docs', 'cli-commands.md');
 

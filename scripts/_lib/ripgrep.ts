@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ripgrep.mjs — rg 调用共享层（scripts/_lib）。
+ * ripgrep.ts — rg 调用共享层（scripts/_lib）。
  *
  * 统一 check-redlines.mjs / comment-checker.mjs 的内联 rg() 封装：
  *   1. 统一参数：--no-heading -n --path-separator /（正斜杠输出，Windows 友好）
@@ -13,7 +13,7 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getRoot } from './scan-files.mjs';
+import { getRoot } from './scan-files.ts';
 
 // 注：ROOT 由 execFileSync 的 cwd 选项使用（见 rg()），不再单独存模块级常量
 
@@ -48,7 +48,8 @@ export function rg(pattern, paths, globs = null) {
     const out = execFileSync('rg', cmd, { cwd: getRoot(), encoding: 'utf-8', timeout: 30000, maxBuffer: 64 * 1024 * 1024 });
     if (out.trim()) return out.trim().split('\n').filter((l) => l.trim());
     return []; // rg 退出码 1：无匹配
-  } catch (err) {
+  } catch (e) {
+    const err = e as Error & { status?: number; code?: string };
     // 退出码 1 = 无匹配（正常返回空）；其余视为扫描不可信，向上抛错让调用方知情
     if (err.status === 1) return [];
     if (err.code === 'ENOENT') {
@@ -70,7 +71,7 @@ export function rgSafe(pattern, paths, globs = null) {
   try {
     return rg(pattern, paths, globs);
   } catch (e) {
-    console.error(`[warn] ripgrep 扫描跳过（${e.message}）`);
+    console.error(`[warn] ripgrep 扫描跳过（${(e as Error).message}）`);
     return [];
   }
 }

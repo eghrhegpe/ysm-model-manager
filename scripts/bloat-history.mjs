@@ -24,11 +24,11 @@
 import {
   logPathDetail,
   showAt,
-} from './_lib/git-ref.mjs';
-import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.mjs';
-import { ROOT } from './_lib/scan-files.mjs';
+} from './_lib/git-ref.ts';
+import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.ts';
+import { ROOT } from './_lib/scan-files.ts';
 import { run } from './_lib/proc.ts';
-import { parseArgs } from './_lib/parse-args.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
 
 function sigAny(p, text) {
   if (!text) return { lines: null, exports: 0, tops: 0 };

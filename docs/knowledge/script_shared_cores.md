@@ -4,8 +4,8 @@ name: scripts 共享核演进（diff-coverage-core + cycles）
 tier: architecture
 category: utils
 source_files:
-  - scripts/_lib/diff-coverage-core.mjs
-  - scripts/_lib/cycles.mjs
+  - scripts/_lib/diff-coverage-core.ts
+  - scripts/_lib/cycles.ts
 use_when:
   - 覆盖率门禁
   - diff-coverage
@@ -26,10 +26,10 @@ use_when:
 
 | 共享核 | 消费方 | 消除的重复 |
 |--------|--------|-----------|
-| `diff-coverage-core.mjs` | `check-diff-coverage.mjs` / `check-go-diff-coverage.mjs` | git 变更收集 + rename 处理 + 建议区块（~250 行） |
-| `cycles.mjs` | `check-circular.mjs` / `check-circular-go.mjs` | DFS 三色环检测 findCycles（~75 行，两处 37 行逐行相同） |
+| `diff-coverage-core.ts` | `check-diff-coverage.mjs` / `check-go-diff-coverage.mjs` | git 变更收集 + rename 处理 + 建议区块（~250 行） |
+| `cycles.ts` | `check-circular.mjs` / `check-circular-go.mjs` | DFS 三色环检测 findCycles（~75 行，两处 37 行逐行相同） |
 
-演进方向与 `scan-files.mjs` 注释「删除各脚本内联 walk/resolveImport 样板」一致：**语言无关的纯函数抽核，语言专属策略留在入口**。
+演进方向与 `scan-files.ts` 注释「删除各脚本内联 walk/resolveImport 样板」一致：**语言无关的纯函数抽核，语言专属策略留在入口**。
 
 ## 核心职责
 
@@ -45,7 +45,7 @@ use_when:
 
 ## 与其他子系统关系
 
-- 依赖 `_lib/scan-files.mjs`（ROOT）+ `_lib/proc.mjs`（run）。
+- 依赖 `_lib/scan-files.ts`（ROOT）+ `_lib/proc.mjs`（run）。
 - `check-circular-go.mjs` 的目录遍历（`collectGo` 自定义 walk go/+internal/+根级不递归）不抽核——目录结构特殊，非共享样板。
 - `port-align.mjs` / `line-counter.mjs` 仅共享 proc/scan-files 基建，无重复逻辑，不属本卡范围。
 
@@ -65,4 +65,4 @@ use_when:
 
 - `docs/knowledge/` 其它 `category: utils` 卡
 - ADR-043（check-scripts fail-closed 契约，git() null 语义来源）
-- `scripts/_lib/scan-files.mjs`（共享层演进方向注释）
+- `scripts/_lib/scan-files.ts`（共享层演进方向注释）

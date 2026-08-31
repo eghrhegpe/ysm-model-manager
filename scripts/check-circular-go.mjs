@@ -22,8 +22,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, toPosix } from './_lib/scan-files.mjs';
-import { findCycles } from './_lib/cycles.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.ts';
+import { findCycles } from './_lib/cycles.ts';
 
 const MODULE = 'ysm-model-manager';
 const JSON_OUT = process.argv.includes('--json');

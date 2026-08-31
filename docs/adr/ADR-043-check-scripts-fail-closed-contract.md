@@ -31,7 +31,7 @@
 
 - `--check` / `--json` 模式下任何 try/catch 吞掉的失败都必须计数并反映到退出码（gen-knowledge-h1 的 `failures` 数组为范式）；
 - 参数校验（阈值 NaN、未知 flag、空路径、绝对路径）一律显式拒绝退出，不得落入「默认值继续跑」的假绿路径；
-- 子进程失败按 `rg` 三态（无匹配 / 工具缺失 / 执行失败）分类传播，`rgSafe` 等容错封装只供「恒 exit 0」的提示工具使用，且失败必须打 stderr WARN（ripgrep.mjs 既有设计，固化执行）；
+- 子进程失败按 `rg` 三态（无匹配 / 工具缺失 / 执行失败）分类传播，`rgSafe` 等容错封装只供「恒 exit 0」的提示工具使用，且失败必须打 stderr WARN（ripgrep.ts 既有设计，固化执行）；
 - 生成器（gen-*）写产物一律原子写（临时文件 + rename），防止半截产物被下游当完整文件消费。
 
 ## 3. 后果（Consequences）
@@ -56,6 +56,6 @@
 
 - 18 轮审核实证（2026-07-26 至 2026-08-09）：`check-knowledge-drift` / `check-doc-drift` / `check-deadcode-baseline` / `check-adr-health` / `check-dynamic-import` / `comment-checker` / `check-circular(-go)` / `check-layering` / `check-script-hygiene` / `check-tpl-refs` / `check-boolean-naming` / `type-consistency` / `link-checker` / `adr-check` / `check-orphan-exports` / `check-diff-coverage` / `check-adr-health` / `gen-*` 系列 / `codemod` / `binding-check` / `release-notes-gen` / `ai-mistake-tracker` / `test-coverage-report` / `texture-golden` / `build-ysm-wasm` 等逐一审核记录（docs/adr/ 各轮提交 + git log）；
 - 假绿实例文件级定位见各轮 code_review 复核记录（`rgSafe` 三态 / ExitStatus 吞错 / failures 计数 / cmd.exe 重定向 / NaN 阈值）；
-- 范式实现：`gen-knowledge-h1.mjs` 的 `failures` 数组 + `check-circular(-go).mjs` 的 `maxCycles` 上限 + `parse-args.mjs` 的 `unknown` 数组拦截（均为本轮已落地代码）。
+- 范式实现：`gen-knowledge-h1.mjs` 的 `failures` 数组 + `check-circular(-go).mjs` 的 `maxCycles` 上限 + `parse-args.ts` 的 `unknown` 数组拦截（均为本轮已落地代码）。
 
 <!-- 文件名: check-scripts-fail-closed-contract.md → 实际文件 ADR-043-check-scripts-fail-closed-contract.md -->

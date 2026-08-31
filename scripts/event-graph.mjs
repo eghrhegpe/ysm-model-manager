@@ -16,7 +16,7 @@
  * 用法：node scripts/event-graph.mjs [--check] [--json] [--strict] [--root <dir>]
  *   --root 仅供测试 fixture 覆盖仓库根（默认取真实仓库根）。
  *
- * 依赖：node:fs / node:path / _lib/scan-files.mjs / _lib/parse-args.mjs（零外部依赖）
+ * 依赖：node:fs / node:path / _lib/scan-files.ts / _lib/parse-args.ts（零外部依赖）
  *
  * 退出码：默认 0；--strict 且存在硬错误（未声明事件/缺参/漂移）→ 1；用法错误 → 2。
  *
@@ -26,9 +26,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { getRoot, relPosix } from './_lib/scan-files.mjs';
+import { getRoot, relPosix } from './_lib/scan-files.ts';
 
-import { parseArgs } from './_lib/parse-args.mjs';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const ARGS = parseArgs(process.argv.slice(2), { bools: ['check', 'json', 'strict'], strings: ['root'] });
 if (ARGS.help) {

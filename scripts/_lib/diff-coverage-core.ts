@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * diff-coverage-core.mjs — 变更行覆盖率门禁共享核。
+ * diff-coverage-core.ts — 变更行覆盖率门禁共享核。
  *
  * 统一 check-diff-coverage.mjs（前端 Istanbul）与 check-go-diff-coverage.mjs
  * （Go coverprofile）的「git 变更收集 + 变更行提取 + rename 处理 + 建议区块」。
@@ -9,11 +9,11 @@
  * 背景（scripts 审核 2026-09）：两脚本此前逐行复制 git()/addLinesFromDiff/
  * parseRenameStatus/detectRenames/getChangedLines/getChangedFiles，出现「同一
  * staged-rename 修复改两遍」的历史痕迹（两处都带 HEAD blob 两点 diff 注释）；
- * 抽核后单点修 bug。与 _lib/scan-files.mjs 注释「删除各脚本内联样板」同向演进。
+ * 抽核后单点修 bug。与 _lib/scan-files.ts 注释「删除各脚本内联样板」同向演进。
  *
  * 零依赖（仅 node:fs / node:path / node:url / _lib）。
  */
-import { ROOT } from './scan-files.mjs';
+import { ROOT } from './scan-files.ts';
 import { run } from './proc.ts';
 
 /** 跑 git（失败返回 null，区别于“成功但无输出”的 ''）：调用方 fail-closed，拒绝空跑放行。 */

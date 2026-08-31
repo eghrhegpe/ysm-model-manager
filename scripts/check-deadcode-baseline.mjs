@@ -176,7 +176,9 @@ function main() {
   // jscpd 5.x 发现重复代码时默认 exit 0（未传 --threshold/--exitCode），
   // exit 1 仅代表真实失败（glob 错误/IO/崩溃）——不传 allowExit1，让真实失败
   // 以 [执行失败] 暴露，而非被掩盖成 [解析失败]/消费陈旧报告（code_review P3）
-  const jscpdOut = run('jscpd', ['--pattern', 'src/**/*.{js,ts}', '--min-lines', '10', '--min-tokens', '50', '--reporters', 'json', '--silent']);
+  // jscpd v5 Rust 内核：显式 --format typescript,javascript 确保 .ts/.tsx 不被静默跳过
+  //（无 --format 时依赖扩展名自动检测，不同 jscpd 版本行为偶有漂移；显式声明更稳定）。
+  const jscpdOut = run('jscpd', ['--pattern', 'src/**/*.{js,ts}', '--min-lines', '10', '--min-tokens', '50', '--format', 'typescript,javascript', '--reporters', 'json', '--silent']);
   if (jscpdOut !== null) {
     jscpdFindings = parseJscpd();
     // 清理 jscpd 产物文件（report/jscpd-report.json 是分析副产物，不留仓库；

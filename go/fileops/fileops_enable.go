@@ -71,22 +71,39 @@ func ToggleModelEnable(root, path string) (bool, error) {
 			}
 		}
 		if types.IsDisableSuffix(path) {
-			// 文件自身也带禁用后缀（旧状态残留）：优先还原父目录再还原文件
+			// 文件自身也带禁用后缀（旧状态残留）。
+			// R33 P3-1：先 Rename 父目录（决定性步骤），再 Rename 文件名。
+			// 旧顺序先 Rename 文件名再 Rename 父目录，若第二步失败，
+			// 文件名已去后缀但父目录仍禁用，产生「半启用」不一致态。
 			fileNew := types.StripDisableSuffix(path)
 			if _, err := os.Lstat(fileNew); err == nil {
 				return false, fmt.Errorf("目标已存在: %s", fileNew)
 			}
-			if err := os.Rename(path, fileNew); err != nil {
+			// 大小写不敏感去禁用后缀（Windows 上 .DISABLED 目录也能还原）
+			dirNew := types.StripDisableSuffix(bannedParent)
+			if _, err := os.Lstat(dirNew); err == nil {
+				return false, fmt.Errorf("目标已存在: %s", dirNew)
+			}
+			// 先还原父目录（整组启用）
+			if err := os.Rename(bannedParent, dirNew); err != nil {
 				return false, err
 			}
-		}
-		// 大小写不敏感去禁用后缀（Windows 上 .DISABLED 目录也能还原）
-		dirNew := types.StripDisableSuffix(bannedParent)
-		if _, err := os.Lstat(dirNew); err == nil {
-			return false, fmt.Errorf("目标已存在: %s", dirNew)
-		}
-		if err := os.Rename(bannedParent, dirNew); err != nil {
-			return false, err
+			// 再还原文件名（此时 path 仍指向旧 bannedParent 下的文件，
+			// 但 bannedParent 已被 Rename 为 dirNew，path 实际路径已变）
+			// path 是基于 bannedParent 的绝对路径，Rename 后需用 dirNew 下的新路径
+			newFileInDir := filepath.Join(dirNew, filepath.Base(fileNew))
+			if err := os.Rename(filepath.Join(dirNew, filepath.Base(path)), newFileInDir); err != nil {
+				return false, err
+			}
+		} else {
+			// 大小写不敏感去禁用后缀（Windows 上 .DISABLED 目录也能还原）
+			dirNew := types.StripDisableSuffix(bannedParent)
+			if _, err := os.Lstat(dirNew); err == nil {
+				return false, fmt.Errorf("目标已存在: %s", dirNew)
+			}
+			if err := os.Rename(bannedParent, dirNew); err != nil {
+				return false, err
+			}
 		}
 		return true, nil // 整组启用
 	}

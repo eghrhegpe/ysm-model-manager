@@ -246,11 +246,22 @@ func MoveModelFile(root, src, dstDir string) error {
 	if _, err := os.Lstat(dst); err == nil {
 		return fmt.Errorf("目标已存在: %s", dst)
 	}
+	// R33 P3-3：MoveModelFile 非 EXDEV 路径直接 renameForMove(src, dst)
+	// （= os.Rename），不检查 src 是否为 symlink；若仓库内混入 symlink 文件，
+	// Rename 仅移动链接本身、目标仍指仓库外，仓库内出现逃逸 symlink。
+	// copyFile 有 Lstat 拒 symlink 守卫，但仅 EXDEV 回退路径会走到。
+	// 修复：Rename 前对 src 补 Lstat symlink 检查（与 copyFile 对齐）。
+	if fi, lerr := os.Lstat(src); lerr == nil && fi.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("拒绝移动符号链接（防仓库内逃逸 symlink）: %s", src)
+	}
 	if err := renameForMove(src, dst); err != nil {
 		// 跨设备/跨卷移动：os.Rename 返回 EXDEV，回退到复制+删除源。
 		// 禁用态是文件名重命名约定（ToggleModelEnable 把 path 重命名为
 		// path+".disabled"），后缀随文件/目录名自然携带，无需额外处理兄弟文件
 		if !fsutil.IsCrossDeviceErr(err) {
+			// R33 P3-2：prepareModelDest 已 MkdirAll(dstDir)，Rename 失败时
+			// 清理空 dstDir 避免残留（仅在本次新建时）。
+			_ = os.RemoveAll(dstDir)
 			return err
 		}
 		info, statErr := os.Stat(src)

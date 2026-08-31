@@ -66,7 +66,7 @@
 | `backend/` | 后端适配层：Wails 绑定入口（app.ts）+ 平台判定（platform.ts）+ 浏览器适配（browser-adapter.ts）+ IndexedDB 模型库（idb.ts） 〔源码 24 · 测试 22〕 |
 | `core/` | 基础设施（buttons / global-handlers / theme / context-menus） 〔源码 8: context-menu-dir-handlers.ts context-menu-file-handlers.ts context-menu-handlers.ts context-menu-… · 测试 3 · 子目录 2: handlers/ i18n/〕 |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） 〔源码 9: dnd-collector.ts dnd-shared.ts import-dnd.ts import-executor.ts oldest-models.ts pack-dnd.ts recy… · 测试 8 · 子目录 1: community/〕 |
-| `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 46 · 测试 37 · 子目录 7: adapters/ caps/ decoder/ menu/ perception/ state/ vendor/〕 |
+| `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 43 · 测试 36 · 子目录 7: adapters/ caps/ decoder/ menu/ perception/ state/ vendor/〕 |
 | `services/` | 服务注册（registry.ts） 〔源码 2: cli-bridge.ts registry.ts · 测试 2〕 |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） 〔源码 7: events.ts fake-image.ts index.ts query-by-testid.ts render.ts self-healing.ts tex-bytes.ts · 测试 4〕 |
 | `ui/` | 🥉 ui-helpers 原生 DOM 组件库（自 MikuMikuAR 迁移：slide-row / rows / header-toggle / advanced-rows / collapsible / preset / card / loading + 自包含 CSS 模块 `ui-components-styles.ts`，经 `installUiComponentsStyles()` / `uiComponentsStyleSheet` 接入） 〔源码 18 · 测试 12〕 |

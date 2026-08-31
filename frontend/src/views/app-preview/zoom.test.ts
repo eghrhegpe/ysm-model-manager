@@ -7,7 +7,7 @@ const { renderModel2D } = vi.hoisted(() => ({
   renderModel2D: vi.fn(),
 }));
 
-vi.mock("../../preview-3d/model2d.ts", () => ({
+vi.mock("./model2d/model2d.ts", () => ({
   renderModel2D,
 }));
 

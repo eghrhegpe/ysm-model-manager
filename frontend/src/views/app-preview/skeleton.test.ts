@@ -49,7 +49,7 @@ vi.mock("../../core/i18n/t.ts", () => ({
   t: (key: string) => key,
 }));
 vi.mock("./loader.ts", () => ({ loadModelData, fillAuthorsAsync: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("../../preview-3d/model2d.ts", () => ({ renderModel2D }));
+vi.mock("./model2d/model2d.ts", () => ({ renderModel2D }));
 vi.mock("./zoom.ts", () => ({ openFullPreview }));
 vi.mock("../../backend/app.ts", () => ({ getApp }));
 vi.mock("../../bus.ts", () => ({ bus: { emit: busEmit } }));

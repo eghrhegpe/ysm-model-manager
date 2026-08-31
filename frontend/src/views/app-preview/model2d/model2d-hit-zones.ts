@@ -1,7 +1,7 @@
 // ===== 基岩版模型 2D 线条图渲染 —— 热区计算（model2d.ts 拆分三件之二）=====
 // calcBoneHitZones：2D 正交投影骨骼拾取热区（导出供测试/鼠标拾取）。
 
-import type { BoneTransform } from "../utils/animation/animation.ts";
+import type { BoneTransform } from "../../../utils/animation/animation.ts";
 import type { BedrockModel } from "./model2d.ts";
 import { cubeVec } from "./model2d-draw.ts";
 

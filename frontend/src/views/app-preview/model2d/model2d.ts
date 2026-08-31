@@ -3,7 +3,7 @@
 // 绘制层 → model2d-draw.ts（cubeVec + mdDv* + drawView + drawMiniView）
 // 热区计算 → model2d-hit-zones.ts（calcBoneHitZones + HitZone）
 
-import type { BoneTransform } from "../utils/animation/animation.ts";
+import type { BoneTransform } from "../../../utils/animation/animation.ts";
 import { cubeVec, drawView, drawMiniView } from "./model2d-draw.ts";
 import { calcBoneHitZones } from "./model2d-hit-zones.ts";
 

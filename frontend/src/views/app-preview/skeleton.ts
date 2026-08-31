@@ -2,7 +2,7 @@
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
 import { getPrefer3D, setPrefer3D, type PreviewRoot, type YsmDecoder, type PreviewDebugger } from "./utils.ts";
 import { loadModelData, fillAuthorsAsync } from "./loader.ts";
-import { renderModel2D } from "../../preview-3d/model2d.ts";
+import { renderModel2D } from "./model2d/model2d.ts";
 import { openFullPreview } from "./zoom.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";

@@ -2,7 +2,7 @@
 // 含 cubeVec 工具 + 全部 Canvas 绘制函数（mdDv* 辅助 + drawView + drawMiniView）。
 // 类型经 type-only import 引用主文件（编译期擦除，无运行时循环依赖）。
 
-import type { BoneTransform } from "../utils/animation/animation.ts";
+import type { BoneTransform } from "../../../utils/animation/animation.ts";
 import type { BedrockModel } from "./model2d.ts";
 
 // P1 修复（审核）：cube 向量归一化——畸形模型缺 origin/size 或数组长度 <3 时

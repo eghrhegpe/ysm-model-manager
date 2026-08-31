@@ -391,9 +391,6 @@ node scripts/android-install.mjs
 | [`docs/archive/architecture.md`](docs/archive/architecture.md)                     | 前端架构规范 + 组件拆分指南（已归档）                     |
 | [`docs/Design.md`](docs/Design.md)                                                 | UI 设计规范（CSS 变量、布局、字体）                       |
 | [`docs/archive/bug-chronicle.md`](docs/archive/bug-chronicle.md)                   | Bug 排查记录（含 Debug Path Review，已归档）              |
-| [`docs/archive/PROJECT_STATUS.md`](docs/archive/PROJECT_STATUS.md)                 | **项目当前状态**（已归档）                                |
-| [`docs/archive/TASK_PLAN.md`](docs/archive/TASK_PLAN.md)                           | **AI 任务计划**（已归档）                                 |
-| [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md)               | **会话交接日志**（已归档）                                |
 | [`docs/archive/3D/3d-rendering-report.md`](docs/archive/3D/3d-rendering-report.md) | **3D 渲染引擎开发报告**（已归档）                         |
 | [`docs/releases/index.md`](docs/releases/index.md)                                 | 各版本发版说明（索引）                                    |
 | [`docs/index.md`](docs/index.md)                                                   | **主站介绍**（功能一览 + 站点地图 + 界面预览）            |

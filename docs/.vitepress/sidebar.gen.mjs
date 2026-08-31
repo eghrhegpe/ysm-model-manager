@@ -687,20 +687,12 @@ export const autoSidebar = [
         "link": "/pitfalls"
       },
       {
-        "text": "代码审计报告（L2 模块人工审核）",
-        "link": "/review-report"
-      },
-      {
         "text": "YSM — 🥉 ui-helpers 组件库迁移与设计集成",
         "link": "/3d-DESIGN"
       },
       {
         "text": "MikuMikuAR — DESIGN.md（视觉 / 品牌规范）",
         "link": "/3d-ui-DESIGN"
-      },
-      {
-        "text": "Android 适配代码审核汇总报告",
-        "link": "/android-audit-report-2026-08-10"
       },
       {
         "text": "Android 开发手册（ADR-046 P2）",
@@ -715,32 +707,8 @@ export const autoSidebar = [
         "link": "/cli-roadmap"
       },
       {
-        "text": "下载层加固调研报告",
-        "link": "/download-hardening-research-2026-08-17"
-      },
-      {
         "text": "Bus 事件契约报告",
         "link": "/event-graph"
-      },
-      {
-        "text": "最终审计总结报告",
-        "link": "/final-audit-summary-2026-08-18"
-      },
-      {
-        "text": "YSM 模型管理器 — 前端测试覆盖专项报告",
-        "link": "/test-coverage-report-2026-08-09"
-      },
-      {
-        "text": "联网调研报告（续）：rsync/MEMFS/Molang/watcher/CAS 五个新方向",
-        "link": "/web-research-report-2026-08-17-part2"
-      },
-      {
-        "text": "联网调研报告（再续）：五个实用技术方向",
-        "link": "/web-research-report-2026-08-17-part3"
-      },
-      {
-        "text": "联网调研报告：值得后续开发借鉴的思路、文章与代码",
-        "link": "/web-research-report-2026-08-17"
       }
     ]
   },
@@ -1313,96 +1281,8 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "审核框架",
-        "link": "/audit/audit-framework"
-      },
-      {
         "text": "R14 — 全量测试覆盖率审计报告",
         "link": "/audit/audit-r14-coverage-2026-08-18"
-      },
-      {
-        "text": "R15 审核报告：scripts/ 工具链",
-        "link": "/audit/audit-r15-scripts-2026-08-29"
-      },
-      {
-        "text": "R16 补测轮：测试覆盖清欠",
-        "link": "/audit/audit-r16-test-coverage-2026-08-30"
-      },
-      {
-        "text": "审核 R17：按模块 CodeReview 五范围轮（2026-08-30）",
-        "link": "/audit/audit-r17-codereview-five-scope-2026-08-30"
-      },
-      {
-        "text": "审核 R18：跨提交回归 + 修复验证轮（2026-08-30）",
-        "link": "/audit/audit-r18-regression-verification-2026-08-30"
-      },
-      {
-        "text": "R19 审核 — go/watcher 文件监听 + App 对接",
-        "link": "/audit/audit-r19-go-watcher-2026-08-31"
-      },
-      {
-        "text": "R20 审核 — go/avatar 头像提取与缓存 + App 对接",
-        "link": "/audit/audit-r20-go-avatar-2026-08-31"
-      },
-      {
-        "text": "R21 审核 — go/dedup 去重检测 + 哈希策略",
-        "link": "/audit/audit-r21-go-dedup-2026-08-31"
-      },
-      {
-        "text": "R22 审核 — internal/app/app_workshop.go 创意工坊配置（站点 + 创作者）",
-        "link": "/audit/audit-r22-app-workshop-2026-08-31"
-      },
-      {
-        "text": "R23 审核：internal/app/app_install*.go（安装/回收站/实例链路）",
-        "link": "/audit/audit-r23-app-install-2026-08-31"
-      },
-      {
-        "text": "R24 审核：go/recycle（回收站核心）",
-        "link": "/audit/audit-r24-go-recycle-2026-08-31"
-      },
-      {
-        "text": "R25 审核：go/installer（安装核心）",
-        "link": "/audit/audit-r25-go-installer-2026-08-31"
-      },
-      {
-        "text": "R26 审核：go/installer + go/recycle + go/download（三模块并行）",
-        "link": "/audit/audit-r26-go-installer-recycle-download-2026-08-31"
-      },
-      {
-        "text": "R27 审核：go/sync + go/dedup（两模块并行）",
-        "link": "/audit/audit-r27-go-sync-dedup-2026-08-31"
-      },
-      {
-        "text": "R28 审核：go/cli + go/litematic（两模块并行）",
-        "link": "/audit/audit-r28-go-cli-litematic-2026-08-31"
-      },
-      {
-        "text": "R29 审核：go/ysm + go/geometry（两模块并行）",
-        "link": "/audit/audit-r29-go-ysm-geometry-2026-08-31"
-      },
-      {
-        "text": "R30 审核：go/updater + go/importer（两模块并行）",
-        "link": "/audit/audit-r30-go-updater-importer-2026-08-31"
-      },
-      {
-        "text": "R31 审核：go/threejs + go/scanner（两模块并行）",
-        "link": "/audit/audit-r31-go-threejs-scanner-2026-08-31"
-      },
-      {
-        "text": "R32 审核：go/avatar + go/rustbridge（两模块并行）",
-        "link": "/audit/audit-r32-go-avatar-rustbridge-2026-08-31"
-      },
-      {
-        "text": "R33 审核：go/fileops（最后一包）",
-        "link": "/audit/audit-r33-go-fileops-2026-08-31"
-      },
-      {
-        "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
-        "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
-      },
-      {
-        "text": "R8 审核报告：测试覆盖缺口审计",
-        "link": "/audit/audit-r8-test-coverage-gaps-2026-08-18"
       }
     ]
   },

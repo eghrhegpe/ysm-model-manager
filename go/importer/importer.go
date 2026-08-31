@@ -174,6 +174,26 @@ func copyDirContents(src, dst string) error {
 				if rErr != nil {
 					return rErr
 				}
+				// R30 P2-1：符号链接路径穿越防护。
+				// 绝对路径或含 .. 的相对路径可指向仓库外（如 /etc/passwd），
+				// 攻击者构造含恶意 symlink 的源目录即可越权读/写。
+				// 修复：解析 target 为绝对路径，判定是否在源目录树内，
+				// 越界则拒绝。
+				cleanTarget := filepath.Clean(target)
+				var resolvedTarget string
+				if filepath.IsAbs(cleanTarget) {
+					resolvedTarget = cleanTarget
+				} else {
+					// 相对路径：解析为相对于 src 的绝对路径
+					resolvedTarget = filepath.Join(src, cleanTarget)
+				}
+				resolvedSrc, _ := filepath.Abs(src)
+				resolvedTargetAbs, _ := filepath.Abs(resolvedTarget)
+				// 允许指向源目录树内（含 src 自身）的 symlink，拒绝越界
+				if resolvedTargetAbs != resolvedSrc &&
+					!strings.HasPrefix(resolvedTargetAbs+string(filepath.Separator), resolvedSrc+string(filepath.Separator)) {
+					return fmt.Errorf("拒绝越界符号链接: %s -> %s", srcPath, target)
+				}
 				if sErr := os.Symlink(target, dstPath); sErr != nil {
 					return sErr
 				}

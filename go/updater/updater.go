@@ -392,7 +392,13 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 	}
 
 	// 校验 SHA256
-	if expectedHash != "" {
+	// R30 P2-3：哈希不可得时拒绝下载，防攻击者阻断 SHA256SUMS 获取绕过完整性校验。
+	// 旧实现 `if expectedHash != ""` 在哈希为空时静默跳过，仅靠 2 字节 MZ 魔数把关。
+	if expectedHash == "" {
+		os.Remove(tmp)
+		return "", fmt.Errorf("%w：SHA256 哈希不可得，拒绝无完整性校验的更新包", ErrHashMismatch)
+	}
+	{
 		actual := hex.EncodeToString(hasher.Sum(nil))
 		if !strings.EqualFold(actual, expectedHash) {
 			os.Remove(tmp)

@@ -18,6 +18,7 @@
  */
 import fs from 'node:fs';
 import { ROOT, SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.mjs';
+import { findCycles } from './_lib/cycles.mjs';
 
 const JSON_OUT = process.argv.includes('--json');
 
@@ -38,47 +39,6 @@ function stripNoise(text) {
     .replace(/`(?:\\.|[^`\\])*`/g, (m) => m.replace(/[^\n]/g, ' '))
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
     .replace(/\/\/.*$/gm, (m) => m.replace(/[^\n]/g, ' '));
-}
-
-// ── 环检测（DFS 三色）─────────────────────────────────
-
-function findCycles(graph, maxCycles = 100) {
-  const WHITE = 0, GRAY = 1, BLACK = 2;
-  const color = new Map();
-  const stack = [];
-  const cycles = new Map(); // key（排序去重）→ 原始顺序环链
-  let truncated = false;
-
-  function dfs(node) {
-    color.set(node, GRAY);
-    stack.push(node);
-    for (const next of graph.get(node) || []) {
-      const c = color.get(next) ?? WHITE;
-      if (c === WHITE) {
-        if (cycles.size >= maxCycles) { truncated = true; continue; }
-        dfs(next);
-      } else if (c === GRAY) {
-        // 找到环：stack 中 next 位置截取，去掉首尾重复（next 即栈内起点）
-        const start = stack.indexOf(next);
-        if (start < 0) continue; // 防御：颜色残留兜底（正常流程 GRAY 必在栈内）
-        const display = stack.slice(start); // [a, b]（a 在栈中）
-        const key = [...display].sort().join('→');
-        cycles.set(key, display);
-        if (cycles.size >= maxCycles) truncated = true; // 枚举上限，防稠密环区指数爆炸（code_review P3）
-      }
-    }
-    stack.pop();
-    color.set(node, BLACK);
-    return false;
-  }
-
-  for (const node of graph.keys()) {
-    if ((color.get(node) ?? WHITE) === WHITE) {
-      stack.length = 0;
-      dfs(node);
-    }
-  }
-  return [...cycles.values()];
 }
 
 // ── 主流程 ────────────────────────────────────────────
@@ -125,11 +85,12 @@ function main() {
     graph.set(f, [...deps]);
   }
 
-  const cycles = findCycles(graph).map((cyc) => cyc.map((p) => relPosix(p)));
+  const { cycles } = findCycles(graph);
+  const cyclesRel = cycles.map((cyc) => cyc.map((p) => relPosix(p)));
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ _summary: { modules: files.length, cycles: cycles.length }, modules: files.length, cycles }, null, 2));
-    process.exit(cycles.length ? 1 : 0);
+    console.log(JSON.stringify({ _summary: { modules: files.length, cycles: cyclesRel.length }, modules: files.length, cycles: cyclesRel }, null, 2));
+    process.exit(cyclesRel.length ? 1 : 0);
     return;
   }
 
@@ -137,14 +98,14 @@ function main() {
   console.log(' 循环依赖检查 (check-circular)');
   console.log('══════════════════════════════════════');
   console.log(`扫描模块 : ${files.length}`);
-  console.log(`循环     : ${cycles.length}`);
+  console.log(`循环     : ${cyclesRel.length}`);
   console.log('──────────────────────────────────────');
 
-  if (!cycles.length) {
+  if (!cyclesRel.length) {
     console.log('✅ 未发现循环依赖。');
     return;
   }
-  cycles.forEach((c, i) => {
+  cyclesRel.forEach((c, i) => {
     console.log(`\n🔴 环 ${i + 1}（${c.length} 个模块）：`);
     for (const m of c) console.log(`   ${m}`);
   });

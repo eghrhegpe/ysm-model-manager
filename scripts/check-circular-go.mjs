@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, toPosix } from './_lib/scan-files.mjs';
+import { findCycles } from './_lib/cycles.mjs';
 
 const MODULE = 'ysm-model-manager';
 const JSON_OUT = process.argv.includes('--json');
@@ -75,46 +76,6 @@ function dirKey(file) {
   return toPosix(rel) || '.';
 }
 
-// ── 环检测（DFS 三色，复用 check-circular.mjs 算法）──
-
-function findCycles(graph, maxCycles = 100) {
-  const WHITE = 0,
-    GRAY = 1,
-    BLACK = 2;
-  const color = new Map();
-  const stack = [];
-  const cycles = new Map();
-
-  function dfs(node) {
-    color.set(node, GRAY);
-    stack.push(node);
-    for (const next of graph.get(node) || []) {
-      const c = color.get(next) ?? WHITE;
-      if (c === WHITE) {
-        if (cycles.size >= maxCycles) continue; // 枚举上限，防稠密环区指数爆炸
-        dfs(next);
-      } else if (c === GRAY) {
-        const start = stack.indexOf(next);
-        if (start < 0) continue; // 防御：颜色残留兜底（正常流程 GRAY 必在栈内）
-        const display = stack.slice(start);
-        const key = [...display].sort().join('→');
-        cycles.set(key, display);
-        if (cycles.size >= maxCycles) continue;
-      }
-    }
-    stack.pop();
-    color.set(node, BLACK);
-  }
-
-  for (const node of graph.keys()) {
-    if ((color.get(node) ?? WHITE) === WHITE) {
-      stack.length = 0;
-      dfs(node);
-    }
-  }
-  return [...cycles.values()];
-}
-
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
@@ -140,7 +101,8 @@ function main() {
     for (const t of imps) if (nodes.has(t)) graph.get(k).push(t);
   }
 
-  const cycles = findCycles(graph).map((cyc) =>
+  const { cycles } = findCycles(graph);
+  const cyclesRel = cycles.map((cyc) =>
     cyc.map((p) => (p === '.' ? '(root)' : p))
   );
 
@@ -148,15 +110,15 @@ function main() {
     console.log(
       JSON.stringify(
         {
-          _summary: { packages: nodes.size, cycles: cycles.length },
+          _summary: { packages: nodes.size, cycles: cyclesRel.length },
           packages: nodes.size,
-          cycles,
+          cycles: cyclesRel,
         },
         null,
         2
       )
     );
-    process.exit(cycles.length ? 1 : 0);
+    process.exit(cyclesRel.length ? 1 : 0);
     return;
   }
 
@@ -164,14 +126,14 @@ function main() {
   console.log(' Go 包级循环依赖检查 (check-circular-go)');
   console.log('══════════════════════════════════════');
   console.log(`扫描包 : ${nodes.size}`);
-  console.log(`循环   : ${cycles.length}`);
+  console.log(`循环   : ${cyclesRel.length}`);
   console.log('──────────────────────────────────────');
 
-  if (!cycles.length) {
+  if (!cyclesRel.length) {
     console.log('✅ 未发现 Go 包级循环依赖。');
     return;
   }
-  cycles.forEach((c, i) => {
+  cyclesRel.forEach((c, i) => {
     console.log(`\n🔴 环 ${i + 1}（${c.length} 个包）：`);
     for (const m of c) console.log(`   ${m}`);
   });

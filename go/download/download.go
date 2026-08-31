@@ -418,6 +418,10 @@ func verifyDownloadedFile(
 // 100% 进度事件给 UI 收尾）。
 func commitAtomicWrite(af *atomicFile, downloaded, usedTotal int64, onProgress ProgressFn) error {
 	if err := af.tmp.Sync(); err != nil {
+		// Sync 失败时显式 Close 释放句柄，避免依赖外层 cleanup 的 Close 顺序
+		// （R26 P2-2：旧实现直接 return，Windows 上句柄未释放会导致后续 Remove 失败、.part 残留）。
+		// Close 的错误被丢弃——Sync 已失败，Close 失败不影响错误分类。
+		_ = af.tmp.Close()
 		return fmt.Errorf("同步下载文件失败 %s: %w", af.tmpName, err)
 	}
 	if err := af.tmp.Close(); err != nil {

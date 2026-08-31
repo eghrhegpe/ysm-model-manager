@@ -148,6 +148,16 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 		return nil, err
 	}
 	if err := tm.renameForMove(src, dst); err == nil {
+		// rename 成功后事后校验：dst 仍落在 recycleDir 内（R26 P2-3）。
+		// 防御文件系统 TOCTOU——rename 前父目录被换 symlink 可能让文件落到回收站之外。
+		// 虽 TrashManager 自身无共享内存状态，但文件系统 TOCTOU 面存在；
+		// 命中时尝试 os.Rename 回滚，回滚失败则报错让上层决策。
+		if rerr := paths.IsInsideResolved(tm.recycleDir, dst); rerr != nil {
+			if rbErr := os.Rename(dst, src); rbErr != nil {
+				return nil, fmt.Errorf("rename 后 dst 越出回收站且回滚失败: %w（源 %s, 副本 %s）", rerr, src, dst)
+			}
+			return nil, fmt.Errorf("rename 后 dst 越出回收站, 已回滚: %w", rerr)
+		}
 		return &MoveResult{Action: "recycled", Reason: ""}, nil
 	} else if !fsutil.IsCrossDeviceErr(err) {
 		return nil, err
@@ -162,7 +172,14 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 			return nil, err
 		}
 		if err := os.RemoveAll(src); err != nil {
-			return nil, fmt.Errorf("回收站已入副本但源目录删除失败 %s: %w（副本在 %s，请手动清理）", src, err, dst)
+			// 源删除失败时回滚删除已落地的副本，恢复 move 语义的原子性（R26 P2-2）。
+			// 旧文案「副本在 dst，请手动清理」误导——实际源也还在，且重试会堆积更多副本。
+			// 回滚成功：状态回到「源还在 + 副本已清理」，用户可安全重试。
+			// 回滚失败：源 + 副本并存，错误中同时披露两路径让上层决策。
+			if rerr := os.RemoveAll(dst); rerr != nil {
+				return nil, fmt.Errorf("跨设备 move 源删除失败且回滚副本失败: 源 %s (%w), 副本 %s (%v)", src, err, dst, rerr)
+			}
+			return nil, fmt.Errorf("跨设备 move 源删除失败, 已回滚副本: 源 %s (%w)", src, err)
 		}
 		return &MoveResult{Action: "recycled", Reason: ""}, nil
 	}
@@ -174,7 +191,11 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 		return nil, err
 	}
 	if err := os.Remove(src); err != nil {
-		return nil, fmt.Errorf("回收站已入副本但源文件删除失败 %s: %w（副本在 %s，请手动清理）", src, err, dst)
+		// 同 P2-2 回滚策略：源删除失败时回滚副本，恢复原子性。
+		if rerr := os.Remove(dst); rerr != nil {
+			return nil, fmt.Errorf("跨设备 move 源删除失败且回滚副本失败: 源 %s (%w), 副本 %s (%v)", src, err, dst, rerr)
+		}
+		return nil, fmt.Errorf("跨设备 move 源删除失败, 已回滚副本: 源 %s (%w)", src, err)
 	}
 	return &MoveResult{Action: "recycled", Reason: ""}, nil
 }
@@ -351,9 +372,25 @@ func (tm *TrashManager) Delete(src string) error {
 
 // Empty 清空回收站
 // 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理
+//
+// 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 recycleDir 做 symlink 检查——
+// 若 .recycle 被替换为指向外部的 symlink，os.Stat 会跟随返回外部目录的 stat（非 NotExist），
+// os.RemoveAll 会跟随 symlink 删除外部目录树（R26 P2-1）。
+// 修复：入口 Lstat(recycleDir)，命中 symlink 一律拒绝——正常 .recycle 是 MkdirAll
+// 创建的普通目录，不可能是 symlink；命中即说明被篡改。
+// 不用 IsInsideResolved：recycleDir 尚不存在时 EvalSymlinks 失败保留原路径，
+// Windows 8.3 短名与长名解析不一致会让 IsInside 误判越权（TestEmpty_RecycleDirNotExist）。
 func (tm *TrashManager) Empty() (int, error) {
 	if tm.recycleDir == "" {
 		return 0, nil
+	}
+	// Lstat 不跟随 symlink，能识别 .recycle 本身被换 symlink 的篡改场景。
+	if info, err := os.Lstat(tm.recycleDir); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			return 0, fmt.Errorf("清空回收站失败: 回收站目录是符号链接, 可能被篡改: %s", tm.recycleDir)
+		}
+	} else if !os.IsNotExist(err) {
+		return 0, fmt.Errorf("清空回收站失败: %w", err)
 	}
 	if _, err := os.Stat(tm.recycleDir); os.IsNotExist(err) {
 		return 0, nil

@@ -175,11 +175,11 @@
 | `Downloader.WithRetry()` | `go/download/download:128` | WithRetry 返回开启重试的下载器副本（不改原实例）。 |
 | `New()` | `go/download/download:193` | New 创建 Downloader，默认 5 分钟超时（可被 AppConfig.DownloadTimeoutSec 覆盖，ADR-062）。 |
 | `NewWithClient()` | `go/download/download:198` | NewWithClient 使用指定 HTTP client。 |
-| `Downloader.File()` | `go/download/download:498` | File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。 |
-| `Downloader.FileWithChecksum()` | `go/download/download:504` | FileWithChecksum 与 File 相同，额外校验下载内容 SHA256 与期望值一致。 |
-| `Downloader.FromGitHubAPI()` | `go/download/download:509` | FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。 |
-| `Downloader.FromGitHubAPIWithChecksum()` | `go/download/download:514` | FromGitHubAPIWithChecksum 与 FromGitHubAPI 相同，额外校验 SHA256（P2 预留，语义同 FileWithChecksum）。 |
-| `ResolveSavePath()` | `go/download/download:538` | ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。 |
+| `Downloader.File()` | `go/download/download:502` | File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。 |
+| `Downloader.FileWithChecksum()` | `go/download/download:508` | FileWithChecksum 与 File 相同，额外校验下载内容 SHA256 与期望值一致。 |
+| `Downloader.FromGitHubAPI()` | `go/download/download:513` | FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。 |
+| `Downloader.FromGitHubAPIWithChecksum()` | `go/download/download:518` | FromGitHubAPIWithChecksum 与 FromGitHubAPI 相同，额外校验 SHA256（P2 预留，语义同 FileWithChecksum）。 |
+| `ResolveSavePath()` | `go/download/download:542` | ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。 |
 | `HTTPStatusError()` | `go/download/download:77` | HTTPStatusError 携带 HTTP 状态码的类型化错误，调用方用 errors.As 提取码值， 替代 strings.Contains(err.Error(), "4 |
 | `TruncationError()` | `go/download/download:84` | TruncationError 携带期望/实际字节数的截断错误，调用方用 errors.As 提取数值做诊断上报。 |
 | `ProgressFn()` | `go/download/download:98` | ProgressFn 下载进度回调。downloaded / total 为字节数。 |
@@ -383,16 +383,16 @@
 | `TrashManager.RecycleDir()` | `go/recycle/recycle:44` | RecycleDir 返回回收站目录路径 |
 | `TrashManager.Move()` | `go/recycle/recycle:49` | Move 移动文件到回收站 |
 | `TrashManager.MoveEx()` | `go/recycle/recycle:55` | MoveEx 移动文件到回收站，返回操作详情 |
-| `TrashManager.List()` | `go/recycle/recycle:185` | List 列出回收站中的文件。 |
-| `TrashManager.Restore()` | `go/recycle/recycle:245` | Restore 从回收站恢复到原目录 |
-| `TrashManager.Delete()` | `go/recycle/recycle:334` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
-| `TrashManager.Empty()` | `go/recycle/recycle:354` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 |
+| `TrashManager.List()` | `go/recycle/recycle:206` | List 列出回收站中的文件。 |
+| `TrashManager.Restore()` | `go/recycle/recycle:266` | Restore 从回收站恢复到原目录 |
+| `TrashManager.Delete()` | `go/recycle/recycle:355` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
+| `TrashManager.Empty()` | `go/recycle/recycle:383` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 r |
 | `Move()` | `go/recycle/recycle:49` | Move 移动文件到回收站 |
 | `MoveEx()` | `go/recycle/recycle:55` | MoveEx 移动文件到回收站，返回操作详情 |
-| `List()` | `go/recycle/recycle:185` | List 列出回收站中的文件。 |
-| `Restore()` | `go/recycle/recycle:245` | Restore 从回收站恢复到原目录 |
-| `Delete()` | `go/recycle/recycle:334` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
-| `Empty()` | `go/recycle/recycle:354` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 |
+| `List()` | `go/recycle/recycle:206` | List 列出回收站中的文件。 |
+| `Restore()` | `go/recycle/recycle:266` | Restore 从回收站恢复到原目录 |
+| `Delete()` | `go/recycle/recycle:355` | Delete 永久删除回收站中的文件 ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll |
+| `Empty()` | `go/recycle/recycle:383` | Empty 清空回收站 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 r |
 | `MoveResult()` | `go/recycle/recycle:17` | MoveResult 回收操作结果 |
 | `TrashManager()` | `go/recycle/recycle:23` | TrashManager 可配置的回收站管理器 |
 

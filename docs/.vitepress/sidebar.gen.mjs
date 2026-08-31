@@ -1349,6 +1349,10 @@ export const autoSidebar = [
         "link": "/audit/audit-r25-go-installer-2026-08-31"
       },
       {
+        "text": "R26 审核：go/installer + go/recycle + go/download（三模块并行）",
+        "link": "/audit/audit-r26-go-installer-recycle-download-2026-08-31"
+      },
+      {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },

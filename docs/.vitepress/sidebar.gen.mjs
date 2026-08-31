@@ -1992,6 +1992,10 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
+            "text": "go/rustbridge",
+            "link": "/knowledge/go-rustbridge"
+          },
+          {
             "text": "AI 急速版路由表（高频场景）",
             "link": "/knowledge/routes-quick"
           },

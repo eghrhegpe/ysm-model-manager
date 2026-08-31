@@ -165,39 +165,40 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	// 跨设备回退：目录（文件夹型模型）递归复制整棵树；文件走 copyFile
 	if info.IsDir() {
 		if err := tm.copyDirForMove(src, dst); err != nil {
-			// 复制中断/失败时清理半截目录，避免回收站残留损坏数据
-			if rerr := os.RemoveAll(dst); rerr != nil {
-				log.Printf("[recycle] 清理半截目录失败 %s: %v", dst, rerr)
-			}
+			logHalfCleanup(dst, "", true) // 复制中断/失败时清理半截目录，避免回收站残留损坏数据
 			return nil, err
 		}
 		if err := os.RemoveAll(src); err != nil {
-			// 源删除失败时回滚删除已落地的副本，恢复 move 语义的原子性（R26 P2-2）。
-			// 旧文案「副本在 dst，请手动清理」误导——实际源也还在，且重试会堆积更多副本。
-			// 回滚成功：状态回到「源还在 + 副本已清理」，用户可安全重试。
-			// 回滚失败：源 + 副本并存，错误中同时披露两路径让上层决策。
-			if rerr := os.RemoveAll(dst); rerr != nil {
-				return nil, fmt.Errorf("跨设备 move 源删除失败且回滚副本失败: 源 %s (%w), 副本 %s (%v)", src, err, dst, rerr)
-			}
-			return nil, fmt.Errorf("跨设备 move 源删除失败, 已回滚副本: 源 %s (%w)", src, err)
+			return nil, tm.rollbackAfterSourceRemoveFail(src, dst, err, true)
 		}
 		return &MoveResult{Action: "recycled", Reason: ""}, nil
 	}
 	if err := tm.copyFileForMove(src, dst); err != nil {
-		// 复制中断/失败时清理半截文件，避免回收站残留损坏文件
-		if rerr := os.Remove(dst); rerr != nil {
-			log.Printf("[recycle] 清理半截文件失败 %s: %v", dst, rerr)
-		}
+		logHalfCleanup(dst, "", false) // 复制中断/失败时清理半截文件，避免回收站残留损坏文件
 		return nil, err
 	}
 	if err := os.Remove(src); err != nil {
-		// 同 P2-2 回滚策略：源删除失败时回滚副本，恢复原子性。
-		if rerr := os.Remove(dst); rerr != nil {
-			return nil, fmt.Errorf("跨设备 move 源删除失败且回滚副本失败: 源 %s (%w), 副本 %s (%v)", src, err, dst, rerr)
-		}
-		return nil, fmt.Errorf("跨设备 move 源删除失败, 已回滚副本: 源 %s (%w)", src, err)
+		return nil, tm.rollbackAfterSourceRemoveFail(src, dst, err, false)
 	}
 	return &MoveResult{Action: "recycled", Reason: ""}, nil
+}
+
+// rollbackAfterSourceRemoveFail 跨设备 move 源删除失败时的副本回滚（R26 P2-2）。
+// 源删除失败说明 move 未原子完成：清理已落地的 dst 副本（目录走 RemoveAll /
+// 文件走 Remove），恢复「源还在 + 副本已清理」可安全重试状态；回滚本身也失败则
+// 在复合错误中同时披露源与副本两路径，交上层决策。目录/文件两分支共用此helper，
+// 消除 moveEx 内近重复回滚块（jscpd 新增对收敛）。
+func (tm *TrashManager) rollbackAfterSourceRemoveFail(src, dst string, srcErr error, isDir bool) error {
+	var rbErr error
+	if isDir {
+		rbErr = os.RemoveAll(dst)
+	} else {
+		rbErr = os.Remove(dst)
+	}
+	if rbErr != nil {
+		return fmt.Errorf("跨设备 move 源删除失败且回滚副本失败: 源 %s (%w), 副本 %s (%v)", src, srcErr, dst, rbErr)
+	}
+	return fmt.Errorf("跨设备 move 源删除失败, 已回滚副本: 源 %s (%w)", src, srcErr)
 }
 
 // List 列出回收站中的文件。
@@ -325,23 +326,39 @@ func (tm *TrashManager) Restore(src string) error {
 	// 目录（整组合并条目）跨设备：递归复制整棵树；文件走 copyFile
 	if info, statErr := os.Lstat(src); statErr == nil && info.IsDir() {
 		if err := tm.copyDirForMove(src, dst); err != nil {
-			// 清理失败记录日志，与 moveEx 的清理分支对齐（原 _ 静默）
-			if rerr := os.RemoveAll(dst); rerr != nil {
-				log.Printf("[recycle] Restore 清理半截目录失败 %s: %v", dst, rerr)
-			}
+			logHalfCleanup(dst, "Restore", true) // 清理失败记录日志，与 moveEx 的清理分支对齐（原 _ 静默）
 			return err
 		}
 		return os.RemoveAll(src)
 	}
 	if err := tm.copyFileForMove(src, dst); err != nil {
-		// 复制中断/失败时清理半截恢复文件，避免目标目录残留损坏文件
-		// 清理失败记录日志（原 _ 静默）
-		if rerr := os.Remove(dst); rerr != nil {
-			log.Printf("[recycle] Restore 清理半截文件失败 %s: %v", dst, rerr)
-		}
+		logHalfCleanup(dst, "Restore", false) // 复制中断/失败时清理半截恢复文件，避免目标目录残留损坏文件（原 _ 静默）
 		return err
 	}
 	return os.Remove(src)
+}
+
+// logHalfCleanup 复制/移动中断时清理半截目标并记录日志（避免回收站残留损坏数据）。
+// prefix 为调用方标识（如 "Restore"），空串表示 Move 分支；isDir 决定用 RemoveAll 还是 Remove。
+// 文案与 moveEx / Restore 原分支逐字一致，仅收敛重复（索引 6.8b 清理块去重）。
+func logHalfCleanup(dst, prefix string, isDir bool) {
+	var rerr error
+	if isDir {
+		rerr = os.RemoveAll(dst)
+	} else {
+		rerr = os.Remove(dst)
+	}
+	if rerr != nil {
+		tag := "清理半截目录失败"
+		if !isDir {
+			tag = "清理半截文件失败"
+		}
+		if prefix != "" {
+			log.Printf("[recycle] %s %s %s: %v", prefix, tag, dst, rerr)
+		} else {
+			log.Printf("[recycle] %s %s: %v", tag, dst, rerr)
+		}
+	}
 }
 
 // copyDirRecursive 递归复制目录树（跨设备 Restore 整组合并条目的 fallback）

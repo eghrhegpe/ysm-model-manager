@@ -57,6 +57,11 @@ invariant_anchors:
 - 同名骨骼合并：优先保留有 parent/有旋转的完整层级（main.json 覆盖 arm.json 的扁平版），cube 用 `mergeCubes` 重叠替换、非重叠保留
 - **全组件默认可见（2026-08-23）**：`ModelGroup.DefaultVisible` 恒 `true`（前端 `model-group-builder.ts` 同步）——旧「仅 main 默认可见」已废除：主体不叫 main 的拆分模型（部分车万女仆等）会被整组隐藏，打开一片空，且 UI「全部组件」初始选中态与渲染矛盾。视锥剔除 bbox 只计可见子树（frustum-cull 修复②），全亮无「载具撑大 box→闪烁」顾虑；组件单选互斥切换（`showModelGroup(i)` / -1 全显）不受影响
 - 坐标变换是高危区：前端 model3d.ts 历史 fix 次数全项目第一（致命陷阱 #11），改本包坐标/UV 前先 grep `bug-chronicle`，改完用自由相机近距验证
+- **R31 修复链（2026-08-31）**：
+  - P2-1 `repairBrokenParentChain` pivots 存在性检查：`pivots[name]` 不判存在性，缺失时拿到零值 `vec3{}`，LocalPosition 塌到原点。修复：取值判 `ok`，缺失时 `continue` 保留原 LocalPosition + log 告警（code_review P2-4 修正：只 log 不跳过，仍用零向量算 LocalPosition）。
+  - P2-2 `attachArms` pivots 存在性检查：同 P2-1 模式，RightArm/LeftArm/Arm 缺 pivot 时 `break` 跳过 attach + log 告警。
+  - P2-3 `fillMissingBones` pivots：已有意设计（纯 parent 引用骨骼无 pivot 时塌到原点 + log 告警），非 bug。
+  - P2-4/P2-5（parseUV 原始 Size / parseFaceUV 面序隐式契约）：待后续 deep 验证（Blockbench 交叉验证），本轮跳过。
 
 ## ADR-042 实施进度（2026-08-24 核对）
 

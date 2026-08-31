@@ -91,6 +91,11 @@ quick_risk_lines:
 - `.json` 只允许 `ysm.json` 与 Go importer / 前端 `isImportableFile` 三处口径一致（ADR-038 D2 纵深防御）
 - **目录级 `.ban` 整体跳过**（P2 修复：`fileops.ToggleModelEnable` 对文件夹模型整组禁用时把父目录改名 `modelA.ban`，ADR-038 D3.7——原实现只过滤文件级 `.ban`，目录级禁用模型会以活跃身份进入 sync 的 repoHash 被列为 Missing 或被 SyncToggleStatus 重新启用；源码按目录基名匹配 `strings.HasSuffix(strings.ToLower(d.Name()), ".ban")` 跳过）
 - **`.github` 目录跳过**：与 CI `genindex.go` 的 `strings.Contains(p, "/.github")` 口径对齐（ADR-011），避免生成仓库索引时把 GitHub Actions .workflow 误入 index
+- **R31 修复链（2026-08-31）**：
+  - P2-1 WalkDir error 忽略：根 lstat 失败时 WalkDir 不调 callback 直接返回 error，旧实现忽略返回值导致 walkFailed 恒 false，空结果照常缓存 30s。修复：`if werr := WalkDir(...); werr != nil { walkFailed = true }`。
+  - P2-2 InvalidatePath 祖先脏读：`InvalidatePath("/a/b")` 时 `/a` 的版本不会递增，父缓存 30s TTL 命中返回陈旧数据。修复：同时递增所有祖先 key 的版本 + 删除祖先缓存条目 + 恢复 descendant keyVersion 递增（code_review P1-1）。
+  - P2-3 errorSink data race：裸变量 SetErrorSink 无锁写、emitScanError 无锁读。修复：改 RWMutex 保护（code_review 修正：atomic.Pointer 泛型语法在测试中有类型匹配问题）。
+  - code_review P1-2 Windows 盘符根路径无限循环：ancestor walk 在 `C:\` 上 filepath.Dir 不变，旧循环无 `parent==prev` 守卫会无限循环。修复：加 prev 守卫 + `parent==Separator` 提前 break。
 
 ## 相关
 

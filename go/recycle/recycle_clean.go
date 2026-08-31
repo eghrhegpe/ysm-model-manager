@@ -33,7 +33,15 @@ func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogg
 	if dir == "" {
 		return 0
 	}
-	if cleaned := filepath.Clean(dir); cleaned == string(filepath.Separator) || filepath.VolumeName(cleaned) == cleaned {
+	// 拒绝文件系统根目录（R26 P3-2 + code_review P1-1 修正）：
+	// Windows 上 filepath.VolumeName("C:\\") 返回 "C:"（无尾随 \），
+	// 直接与 cleaned 比较会漏掉盘符根。正确比较：
+	// cleaned == "/"（Unix 根）或 cleaned == vol + "\\"（Windows 盘符根）。
+	cleaned := filepath.Clean(dir)
+	vol := filepath.VolumeName(cleaned)
+	sep := string(filepath.Separator)
+	isRoot := cleaned == sep || (vol != "" && cleaned == vol+sep)
+	if isRoot {
 		return 0
 	}
 	targets := fsutil.WalkAllFiles(dir, true)

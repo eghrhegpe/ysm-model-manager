@@ -455,7 +455,9 @@ func installSingleDirEntry(entry os.DirEntry, srcDir, finalDst, linkMode, rtype,
 	}
 	if err := applyInstallFileByMode(srcFile, finalDst, linkMode); err != nil {
 		log.Printf("[installer] 安装文件 %s 失败: %v (继续)", srcFile, err)
-		*errs = append(*errs, fmt.Errorf("%s: %w", name, err))
+		// 条目级软失败用 ErrPartialInstall 包装标记，让父级 installDirRecursive
+		// 分级时正确识别为 partial（code_review P1-2 修正）。
+		*errs = append(*errs, fmt.Errorf("%w: %s: %w", ErrPartialInstall, name, err))
 	}
 }
 
@@ -494,6 +496,23 @@ func installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot string) er
 		installSingleDirEntry(entry, srcDir, finalDst, linkMode, rtype, filesRoot, &errs)
 	}
 	if len(errs) > 0 {
+		// 分级 errs：fatal（非 ErrPartialInstall）直接返回，让上层触发整树回滚；
+		// 全都是 partial 时才包装为 ErrPartialInstall（保留已落地兄弟文件）。
+		// code_review P1-2 修正：旧实现统一包装为 ErrPartialInstall，
+		// 子目录 MkdirAll/ReadDir 失败被误分类为 partial，跳过整树回滚，
+		// 留下半截损坏目录树。
+		var fatalErr error
+		allPartial := true
+		for _, e := range errs {
+			if !errors.Is(e, ErrPartialInstall) {
+				fatalErr = e
+				allPartial = false
+				break
+			}
+		}
+		if !allPartial && fatalErr != nil {
+			return fmt.Errorf("安装目录 %s 致命失败: %w", srcDir, fatalErr)
+		}
 		// 条目级软失败：用 ErrPartialInstall 标记，让上层保留已落地文件而非整树回滚。
 		// 文案含「部分失败」子串以兼容旧测试断言（strings.Contains(err, "部分失败")）。
 		return fmt.Errorf("%w: 安装目录 %s 部分失败: %w", ErrPartialInstall, srcDir, errors.Join(errs...))

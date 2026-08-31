@@ -193,7 +193,13 @@ func TestInstallDirRecursive_NestedSubdir(t *testing.T) {
 	}
 }
 
-// TestInstallDirRecursive_PartialFailure 子目录落地失败应记录 errs 继续，最终返回部分失败
+// TestInstallDirRecursive_PartialFailure 子目录 MkdirAll 失败应返回 fatal（非 partial）。
+//
+// code_review P1-2 修正：旧实现把 MkdirAll 失败误分类为 partial（ErrPartialInstall），
+// 导致 callInstallDirRecursiveWithRollback 跳过整树回滚，留半截损坏目录树。
+// 修复后 MkdirAll 失败直接返回 fatal（不含「部分失败」），触发整树回滚。
+//
+// 测试用同名文件占位 sub 目录 → 递归 MkdirAll(sub) 失败，应返回 fatal 而非 partial。
 func TestInstallDirRecursive_PartialFailure(t *testing.T) {
 	srcDir := filepath.Join(t.TempDir(), "model")
 	if err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755); err != nil {
@@ -209,16 +215,17 @@ func TestInstallDirRecursive_PartialFailure(t *testing.T) {
 	if err := os.MkdirAll(finalDst, 0755); err != nil {
 		t.Fatal(err)
 	}
-	// 用同名文件占位 sub 目录 → 递归落地时 MkdirAll 失败，errs 累积
+	// 用同名文件占位 sub 目录 → 递归落地时 MkdirAll 失败
 	if err := os.WriteFile(filepath.Join(finalDst, "sub"), []byte("blocker"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	err := installDirRecursive(srcDir, finalDst, "copy", "", "")
-	if err == nil || !strings.Contains(err.Error(), "部分失败") {
-		t.Fatalf("应返回部分失败错误, got %v", err)
+	if err == nil {
+		t.Fatal("应返回错误, got nil")
 	}
-	if _, statErr := os.Stat(filepath.Join(finalDst, "ok.ysm")); statErr != nil {
-		t.Fatal("成功的条目应继续落地")
+	// MkdirAll 失败是 fatal，不应包含「部分失败」（partial 语义）
+	if strings.Contains(err.Error(), "部分失败") {
+		t.Fatalf("MkdirAll 失败应返回 fatal 而非 partial, got %v", err)
 	}
 }
 

@@ -288,11 +288,11 @@
 | `InstallDirRel()` | `go/installer/installer:184` | InstallDirRel 安装目录到 dstRoot/&lt;relSlash&gt;（保留仓库多层物理路径）。 |
 | `InstallDirLocked()` | `go/installer/installer:191` | InstallDirLocked 与 InstallDir 语义相同，但不重复加锁——供已持锁调用方使用。 |
 | `InstallDirRelLocked()` | `go/installer/installer:197` | InstallDirRelLocked 与 InstallDirRel 语义相同，但不重复加锁——供 sync.PushResources 等整段持 InstallLock 的调用 |
-| `InstallToGlobal()` | `go/installer/installer:505` | InstallToGlobal 安装到全局 custom 目录 |
-| `InstallWithOverlay()` | `go/installer/installer:534` | InstallWithOverlay 带冲突检查的安装 注意（R25 P4-1）：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有 .minec |
-| `CopyFile()` | `go/installer/installer:618` | CopyFile 复制文件到目标目录（带互斥锁） |
-| `CopyFileLocked()` | `go/installer/installer:626` | CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
-| `IsValidRepoRoot()` | `go/installer/installer:776` | IsValidRepoRoot 禁止选择系统敏感目录作为仓库 跨平台实现：禁止根目录、系统关键目录 |
+| `InstallToGlobal()` | `go/installer/installer:524` | InstallToGlobal 安装到全局 custom 目录 |
+| `InstallWithOverlay()` | `go/installer/installer:553` | InstallWithOverlay 带冲突检查的安装 注意（R25 P4-1）：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有 .minec |
+| `CopyFile()` | `go/installer/installer:637` | CopyFile 复制文件到目标目录（带互斥锁） |
+| `CopyFileLocked()` | `go/installer/installer:645` | CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。 |
+| `IsValidRepoRoot()` | `go/installer/installer:795` | IsValidRepoRoot 禁止选择系统敏感目录作为仓库 跨平台实现：禁止根目录、系统关键目录 |
 
 ## go/instance
 
@@ -378,7 +378,7 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `RemoveRepoDuplicates()` | `go/recycle/recycle_clean:25` | RemoveRepoDuplicates 清理整合包子目录中仓库已有的文件： 在 recycleRoot 内的移入回收站（可恢复），否则直接删除（仓库侧无损可重推）。 |
-| `DeduplicateEntries()` | `go/recycle/recycle_clean:133` | DeduplicateEntries 按 SHA256 哈希分组去重：每组显式按路径排序保留第一个，其余移入回收站 返回值语义（R26 P3-1 修复）：   - removed： |
+| `DeduplicateEntries()` | `go/recycle/recycle_clean:141` | DeduplicateEntries 按 SHA256 哈希分组去重：每组显式按路径排序保留第一个，其余移入回收站 返回值语义（R26 P3-1 修复）：   - removed： |
 | `CleanOpLogger()` | `go/recycle/recycle_clean:19` | CleanOpLogger 清理操作日志回调（薄壳注入 App.logger.Add） |
 | `New()` | `go/recycle/recycle:34` | New 创建回收站管理器，root 是资源根目录，回收站为 root/.recycle |
 | `TrashManager.RecycleDir()` | `go/recycle/recycle:44` | RecycleDir 返回回收站目录路径 |

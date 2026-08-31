@@ -34,6 +34,7 @@ use_when:
 
 - 未识别到任何启动器 → 空结果（不 panic）
 - YSM 自定义目录固定 `config/yes_steve_model/custom`
+- **R34 P2-6 ExpandEnv 注入修复**（detect.go:150）：原 `os.ExpandEnv` 对任意环境变量展开，读取恶意/被篡改启动器配置时可注入 `${HOME}` 等重定向路径。修复：仅对 `${HMCL_DIR}` 做受限扩展（`expandHMCLVars`）。
 
 ## 相关
 

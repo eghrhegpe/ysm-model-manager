@@ -1888,6 +1888,10 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
+            "text": "go/repoaudit",
+            "link": "/knowledge/go-repoaudit"
+          },
+          {
             "text": "go/rustbridge",
             "link": "/knowledge/go-rustbridge"
           },

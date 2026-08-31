@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **133** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **134** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 1 |
-| [✅ 已采纳](#已采纳) | 130 |
+| [✅ 已采纳](#已采纳) | 131 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -31,10 +31,11 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（130）
+### ✅ 已采纳（131）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-137](./ADR-137-ysm-decoder-homecoming.md) | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ✅ 已采纳 |
 | [ADR-136](./ADR-136-screenshot-domain-homecoming.md) | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ✅ 已采纳 |
 | [ADR-135](./ADR-135-go-jscpd.md) | Go 端 jscpd 重复代码检测与增量门禁 | ✅ 已采纳 |
 | [ADR-134](./ADR-134-container-type-cache-component.md) | 将 containerTypeCache 包级全局收进组件（破隐藏耦合） | ✅ 已采纳 |
@@ -177,6 +178,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-137 | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ✅ 已采纳 | 2026-08-31 |
 | ADR-136 | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ✅ 已采纳 | 2026-08-31 |
 | ADR-135 | Go 端 jscpd 重复代码检测与增量门禁 | ✅ 已采纳 | 2026-08-30 |
 | ADR-134 | 将 containerTypeCache 包级全局收进组件（破隐藏耦合） | ✅ 已采纳 | 2026-08-30 |
@@ -310,7 +312,6 @@ permalink: /adr/
 | ADR-003 | 业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking） | ✅ 已采纳 | 2026-08-03（初定），原方案记录于 2026-06-16 |
 | ADR-002 | 项目全面评估与改进方向 | ✅ 已采纳 | 2026-08-03 |
 | ADR-001 | 升级至 Wails 3 | ✅ 已采纳 | 2026-07-14 |
-| ADR-137 | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ✅ 已采纳 | 2026-08-31 |
 
 ## 使用规则（硬约束）
 

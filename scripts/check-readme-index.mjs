@@ -25,32 +25,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { collectScripts } from './_lib/collect-scripts.mjs';
 
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 
 const JSON_OUT = process.argv.includes('--json');
-
-/** 递归收集 scripts/ 下待登记脚本：排除 _lib 共享层（_ 前缀）与测试（.test.mjs）。
- *  含 hooks/ 子目录（git 钩子辅助脚本同样在 README 有登记表）。返回相对 scripts/ 的路径。 */
-function collectScripts(dir) {
-  const out = [];
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  for (const d of entries) {
-    const abs = path.join(dir, d.name);
-    if (d.isDirectory()) {
-      if (d.name.startsWith('_')) continue;
-      out.push(...collectScripts(abs));
-    } else if (d.name.endsWith('.mjs') && !d.name.startsWith('_') && !d.name.endsWith('.test.mjs')) {
-      out.push(path.relative(SCRIPTS_DIR, abs).replace(/\\/g, '/'));
-    }
-  }
-  return out;
-}
 
 /** 判定：README 中出现脚本 basename（含 .mjs）即视为已登记。
  *  basename 足够精确（README 表格列出的就是 basename），且能覆盖正文/口令表引用。
@@ -63,7 +42,7 @@ export function missingFromReadme(files, readmeText) {
 }
 
 function main() {
-  const files = collectScripts(SCRIPTS_DIR).sort();
+  const files = collectScripts(); // 含 hooks/（git 钩子辅助脚本同样在 README 有登记表）
   const readme = fs.readFileSync(path.join(SCRIPTS_DIR, 'README.md'), 'utf8');
 
   const missing = missingFromReadme(files, readme);

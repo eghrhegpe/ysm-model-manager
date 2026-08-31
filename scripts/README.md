@@ -261,8 +261,9 @@
 | `_lib/domain-classify.mjs` | `classify()`（文件→域）、`planFromFiles()`（文件集→检查计划）、`DATA_FILES` | 变更域分类共享层，pre-push-gate / doctor --gate 共用，消除双端漂移 |
 | `_lib/contract-tests.mjs` | `collectContractTests()`（列出测试文件）、`runContractTestsParallel()`（并行执行，spawn + Promise.all） | 契约测试并行执行共享层，doctor / pre-push-gate 共用，~31s vs 串行 ~43s |
 | `_lib/log-push.mjs` | `logPush()`（双写 stderr + .git/push-log）、`clearPushLog()` | 推送门禁日志共享层，解决 git pre-push 钩子 stdout 被吞问题，日志带 ISO 时间戳 |
+| `_lib/collect-scripts.mjs` | `collectScripts({ skipHooks })`（收集 scripts/ 下 .mjs，排除 `_` 前缀共享层与测试；`skipHooks` 取 hooks/ 取舍——proc/readme 口径含、hygiene 口径排） | 任何需要"扫描 scripts/ 全部 .mjs"的检查器（check-proc-adoption / check-readme-index / check-script-hygiene 已接入，2026-09 收敛） |
 
-违规形态：内联「通用」 `walk`（即 scan-files.walk 的等价递归、无扩展名/跳过定制）/ 内联 `rg(...)` / 内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))`。带显式过滤的领域专用收集器（如 `endsWith('.md')` / `EXCLUDE` / `symbolExclude` / `onFile`）为合法内联，不计入违规；doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。
+违规形态：内联「通用」 `walk`（即 scan-files.walk 的等价递归、无扩展名/跳过定制）/ 内联 `rg(...)` / 内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))` / 内联 `collectScripts`（scripts/.mjs 收集样板，2026-09 起应由 `_lib/collect-scripts.mjs` 提供）。带显式过滤的领域专用收集器（如 `endsWith('.md')` / `EXCLUDE` / `symbolExclude` / `onFile`）为合法内联，不计入违规；doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。
 
 ---
 

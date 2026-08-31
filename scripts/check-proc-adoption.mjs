@@ -25,6 +25,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot } from './_lib/scan-files.mjs';
+import { collectScripts } from './_lib/collect-scripts.mjs';
 
 const ROOT = getRoot();
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
@@ -37,30 +38,8 @@ const DIRECT_EXEC_IMPORT_RE = /import\s*\{[^}]*\b(?:execFileSync|execSync)\b[^}]
 // 已接入共享层：import 了 _lib/proc.mjs
 const PROC_ADOPTED_RE = /from\s*['"].*_lib[\\/]proc\.mjs['"]/;
 
-/** 递归收集 scripts/ 下所有 .mjs（含 hooks/ 子目录；排除 _lib 与测试）。返回相对 SCRIPTS_DIR 的路径。 */
-function collectScripts(dir) {
-  const out = [];
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  for (const d of entries) {
-    const abs = path.join(dir, d.name);
-    if (d.isDirectory()) {
-      // _lib 是共享层（按设计允许内联样板），不纳入收敛检查
-      if (d.name.startsWith('_')) continue;
-      out.push(...collectScripts(abs));
-    } else if (d.name.endsWith('.mjs') && !d.name.startsWith('_') && !d.name.endsWith('.test.mjs')) {
-      out.push(path.relative(SCRIPTS_DIR, abs).replace(/\\/g, '/'));
-    }
-  }
-  return out;
-}
-
 function main() {
-  const files = collectScripts(SCRIPTS_DIR).sort();
+  const files = collectScripts(); // 含 hooks/（git 钩子辅助脚本同样可能直调子进程）
   const direct = [];
 
   for (const f of files) {

@@ -35,6 +35,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { collectScripts } from './_lib/collect-scripts.mjs';
 
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 
@@ -182,32 +183,11 @@ function checkArgvContract(text) {
 
 // ── 主流程 ──────────────────────────────────────────────
 
-/** 递归收集 scripts/ 下所有 .mjs（含 hooks/ 子目录；排除 _lib 与测试）。返回相对 SCRIPTS_DIR 的路径。 */
-function collectScripts(dir) {
-  const out = [];
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  for (const d of entries) {
-    const abs = path.join(dir, d.name);
-    if (d.isDirectory()) {
-      // _lib 是共享层（按设计允许内联样板），不纳入卫生检查；
-      // hooks/ 子目录走 git 钩子协议参数（prepare-commit-msg 的 $1/$2、pre-push stdin 等），
-      // 参数语义由 git 约定固定、非 CLI 用户输入——不适用 parse-args positional 口径（2026-08 审核）
-      if (d.name.startsWith('_') || d.name === 'hooks') continue;
-      out.push(...collectScripts(abs));
-    } else if (d.name.endsWith('.mjs') && !d.name.startsWith('_') && !d.name.endsWith('.test.mjs')) {
-      out.push(path.relative(SCRIPTS_DIR, abs).replace(/\\/g, '/'));
-    }
-  }
-  return out;
-}
-
 function main() {
-  const files = collectScripts(SCRIPTS_DIR).sort();
+  // skipHooks：git 钩子协议参数（prepare-commit-msg 的 $1/$2、pre-push stdin 等）由
+  // git 约定固定、非 CLI 用户输入，不适用 parse-args positional 口径（2026-08 审核）。
+  // _ 前缀共享层（_lib 等）按设计允许内联样板，同样排除。
+  const files = collectScripts({ skipHooks: true });
 
   const warns = [];
   for (const f of files) {

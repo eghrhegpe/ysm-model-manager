@@ -70,27 +70,36 @@ export function resolveSourceImport(spec, importerFile, srcDir) {
 export function parseSourceImports(filePath, srcDir) {
   const text = fs.readFileSync(filePath, 'utf8');
   const imports = [];
-  const specs = new Set();
+  const specs = new Map(); // spec -> isTypeOnly
 
   // 正则 A: import / export ... from '...'（跨行，支持 import type / export {}/*/as ns）
-  const reFrom = /(?:^|\n)\s*(?:\/\/[^\n]*\n)*\s*(?:import|export)\b[\s\S]*?\bfrom\s+['"]([^'"]+)['"]/gm;
+  // 边界：关键字与 from 之间禁止引号与分号——旧写法用 `[\s\S]*?` 会越过语句末尾，
+  // 把 `import './a';` 一路吞到后面某条语句（实测连字符串里的 `from './zzz'` 都被解析成依赖）。
+  // 捕获组 1 = `import type` 的 type 标记；捕获组 2 = 模块说明符。
+  const reFrom = /(?:^|\n)[ \t]*(?:\/\/[^\n]*\n)*[ \t]*(?:import|export)\s+(type\s+)?[^'";]*?\bfrom\s+['"]([^'"]+)['"]/gm;
   // 正则 B: import '...'（纯 side-effect，无 from）
-  const reSide = /(?:^|\n)\s*(?:\/\/[^\n]*\n)*\s*import\s+['"]([^'"]+)['"]/gm;
+  const reSide = /(?:^|\n)[ \t]*(?:\/\/[^\n]*\n)*[ \t]*import\s+['"]([^'"]+)['"]/gm;
   // 正则 C: await import('...') — 任意位置（不要求行首）
   const reDyna = /await\s+import\s*\(\s*['"]([^'"]+)['"]\s*\)/gm;
 
-  for (const re of [reFrom, reSide, reDyna]) {
-    let match;
-    while ((match = re.exec(text))) {
-      const spec = match[1];
-      if (!specs.has(spec)) {
-        specs.add(spec);
-        const resolved = resolveSourceImport(spec, filePath, srcDir);
-        if (resolved) {
-          imports.push({ path: resolved, isTypeOnly: false });
-        }
-      }
+  /** 记录 spec：type-only 一旦为真不被后续普通导入降级。 */
+  const put = (spec, isTypeOnly) => {
+    if (!spec) return;
+    if (specs.has(spec)) {
+      if (isTypeOnly) specs.set(spec, true);
+      return;
     }
+    specs.set(spec, isTypeOnly);
+  };
+
+  let match;
+  while ((match = reFrom.exec(text))) put(match[2], Boolean(match[1]));
+  while ((match = reSide.exec(text))) put(match[1], false);
+  while ((match = reDyna.exec(text))) put(match[1], false);
+
+  for (const [spec, isTypeOnly] of specs) {
+    const resolved = resolveSourceImport(spec, filePath, srcDir);
+    if (resolved) imports.push({ path: resolved, isTypeOnly });
   }
 
   return imports;
@@ -149,96 +158,22 @@ export function scanSourceGraph(srcDir, { scope = null, localOnly = false } = {}
 // ── 导出符号提取 ──
 
 /**
- * 提取 JS/TS 文件中的 export 符号列表。
- * 覆盖：export function/const/let/class/interface/type/enum/default、export { a, b }。
+ * 提取 JS/TS 文件中的 export 符号列表（仅对外可见的导出）。
+ * 实现见 tsDecls(text, exportedOnly=true)。
  */
 export function getExportedSymbols(filePath, textOverride) {
   const text = textOverride ?? fs.readFileSync(filePath, 'utf8');
-  const syms = new Set();
-
-  // export async function / function / const / let / class / interface / type / enum
-  const re1 = /^export\s+(?:async\s+)?(?:function|const|let|class|interface|type|enum)\s+([A-Za-z0-9_]+)/gm;
-  let m;
-  while ((m = re1.exec(text))) syms.add(m[1]);
-
-  // export { a, b, c } / export { a as b }
-  const re2 = /^export\s*\{([^}]+)\}/gm;
-  while ((m = re2.exec(text))) {
-    m[1].split(',').forEach((s) => {
-      const name = s.trim().split(/\s+as\s+/).pop().trim();
-      if (name && /^[A-Za-z0-9_]+$/.test(name)) syms.add(name);
-    });
-  }
-
-  // export default function/class Name
-  const re3 = /^export\s+default\s+(?:function|class)\s+([A-Za-z0-9_]+)/gm;
-  while ((m = re3.exec(text))) syms.add(m[1]);
-
-  // export default Name (inline)
-  // P2-1：支持行尾分号（`export default bus;` 是最常见写法，`\s*$` 会被 `;` 挡掉）
-  const re4 = /^export\s+default\s+([A-Za-z0-9_]+)\s*;?\s*$/gm;
-  while ((m = re4.exec(text))) syms.add(m[1]);
-
-  return [...syms].sort();
+  return [...tsDecls(text, true)].sort();
 }
 
 /**
  * 提取 Go 文件中的导出符号（首字母大写顶层声明）：
- * func / type / const / var，含 `func (r *X) Method` 方法（方法名即导出点）。
+ * func / type / const / var，含 `func (r *X) Method` 方法（记为 `X.Method`）。
+ * 实现见 goDecls(text, exportedOnly=true)。
  */
 export function getGoExportedSymbols(filePath, textOverride) {
   const text = textOverride ?? fs.readFileSync(filePath, 'utf8');
-  const syms = new Set();
-  const isExport = (name) => name && /^[A-Z]/.test(name);
-
-  // func Name(...) / func (r *T) Name(...)
-  // P2-2：方法与 funcmap 口径一致记录为 `Type.Method`（裸方法名不是包级导出标识符，
-  // 且不同 receiver 的同名方法会被 Set 去重吞掉；接收者类型取末尾标识符）。
-  // P3（复核）：容忍泛型接收者 `r *Foo[T]`（类型参数后无裸标识符结尾，提取失败时
-  // 回退记录裸方法名而非丢弃）
-  const reFunc = /\bfunc\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
-  let m;
-  while ((m = reFunc.exec(text))) {
-    const name = m[2];
-    if (!isExport(name)) continue;
-    if (m[1]) {
-      const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
-      const t = tm ? tm[1] : '';
-      syms.add(t ? `${t}.${name}` : name); // 提取不到接收者类型时回退裸方法名
-    } else {
-      syms.add(name);
-    }
-  }
-
-  // type Name ...
-  const reType = /^type\s+([A-Za-z0-9_]+)\s+/gm;
-  while ((m = reType.exec(text))) if (isExport(m[1])) syms.add(m[1]);
-
-  // const Name = / var Name =
-  const reVal = /^(?:const|var)\s+([A-Za-z0-9_]+)\s*=/gm;
-  while ((m = reVal.exec(text))) if (isExport(m[1])) syms.add(m[1]);
-
-  // 分组声明 `const ( A = ... / B = ... )`、`var (...)`、`type (...)`（P2-3：此前全部漏提取）
-  // 逐行扫描分组块内的大写开头标识符。
-  // P2（复核）：成员可带类型说明符（`LinkCopy LinkType = "copy"`，go/types/types.go 实证），
-  // 标识符与 `=`/行尾之间容忍一个类型 token 序列。
-  const reGroupHead = /^(?:const|var|type)\s*\(/gm;
-  const reGroupBody = /^\s*([A-Za-z0-9_]+)(?:\s+[A-Za-z0-9_\[\]\.\*]+)*\s*(?:=|$|,)/gm;
-  let gm;
-  while ((gm = reGroupHead.exec(text))) {
-    // P3（复核）：块结束不依赖 `\n)`（缩进闭合会失配、嵌入 `\n)` 会越界）——
-    // 逐行扫描到首个 trim 后为 `)` 的行（容忍尾部注释）
-    let blockEnd = -1;
-    const lines = text.slice(gm.index).split('\n');
-    for (let li = 1; li < lines.length; li++) {
-      if (/^\s*\)/.test(lines[li])) { blockEnd = gm.index + lines.slice(0, li).join('\n').length + 1; break; }
-    }
-    const block = blockEnd > gm.index ? text.slice(gm.index, blockEnd) : '';
-    let bm;
-    while ((bm = reGroupBody.exec(block))) if (isExport(bm[1])) syms.add(bm[1]);
-  }
-
-  return [...syms].sort();
+  return [...goDecls(text, true)].sort();
 }
 
 /** 按扩展名分发：.go → Go 提取；其余 → JS/TS 提取。 */
@@ -247,43 +182,142 @@ export function getExportedSymbolsAny(filePath, textOverride) {
   return getExportedSymbols(filePath, textOverride);
 }
 
-// ── 顶层声明提取（导出+私有）──
-// 口径与 getExportedSymbolsAny 不同：追踪「迁移去向」需要全量顶层声明
-// （导出+私有），Go 拆分通常把私有实现搬去子文件、导出符号留壳，
-// 只追导出符号会漏掉真正去向。audit-split / api-break / rollback-impact /
-// bloat-history 四方共用的唯一实现（此前各自内联逐字复制）。
-// 迁移追踪口径：一个符号被删除当且仅当它不在任一目标文件的顶层声明里。
+// ── 声明提取统一内核 ──
+// goDecls / tsDecls 各带 exportedOnly 开关，使「导出符号」与「顶层声明（导出+私有）」
+// 两套口径共用同一份正则，杜绝分叉。
+// 此前两套实现各自内联、逐步分叉，实测差异（2026-08-31 审核）：
+//   - goTopFuncs 注释承诺 func/type/const/var/分组块 五类，实际只提取 func（漏 4 类），
+//     导致 audit-split / rollback-impact 追踪迁移去向时把搬走的 type/const 误判为「已删除」；
+//   - 两者都用 `\bfunc` 词界锚定，注释里的 `// func Ghost(`、`/* func Phantom(` 被当真符号；
+//   - goTopFuncs / tsTopDecls 返回未排序（两组正则结果拼接序），api-break 报告顺序不稳定。
+// 迁移追踪口径不变：一个符号被删除当且仅当它不在任一目标文件的顶层声明里。
 
 /**
- * Go 顶层声明：func（含方法，记为 Type.Method）/ type / const / var（含分组块）。
- * 导出+私有全量（不按首字母过滤，与 getGoExportedSymbols 的导出口径不同）。
+ * Go 声明提取：func（含方法，记为 Type.Method）/ type / const / var（含分组块）。
+ * @param {string} text 源码全文
+ * @param {boolean} exportedOnly true = 仅首字母大写的导出符号；false = 导出+私有全量
+ * @returns {Set<string>}
  */
-export function goTopFuncs(text) {
+function goDecls(text, exportedOnly) {
   const out = new Set();
-  const re = /\bfunc\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
+  const isExp = (n) => !!n && /^[A-Z]/.test(n);
+  const add = (n) => { if (n && (!exportedOnly || isExp(n))) out.add(n); };
   let m;
-  while ((m = re.exec(text))) {
+
+  // 剥离块注释（等长空格替换，保持行数与列位不变，行号语义不受影响）。
+  // 必需：块注释内可独立成行写 `func Phantom(`，行首锚定挡不住它。
+  // 不剥行注释：行首锚定已能排除 `// func Ghost(`，而剥离会把字符串里的 `//`
+  // （如 URL 常量）误当注释、破坏源码结构——故只处理块注释。
+  const src = text.replace(/\/\*[\s\S]*?\*\//g, (m0) => m0.replace(/[^\n]/g, ' '));
+
+  // func Name(...) / func (r *T) Name(...)
+  // 行首锚定（容忍缩进）：注释里的 `// func Ghost(` 天然被排除。
+  // 方法记为 `Type.Method`（裸方法名不是包级导出标识符，且不同 receiver 的同名方法会被 Set 吞掉）；
+  // 泛型接收者 `r *Foo[T]` 末尾无裸标识符，提取失败时回退裸方法名而非丢弃。
+  const reFunc = /^[ \t]*func\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
+  while ((m = reFunc.exec(src))) {
     const name = m[2];
-    let key = name;
+    if (exportedOnly && !isExp(name)) continue;
     if (m[1]) {
       const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
       const t = tm ? tm[1] : '';
-      key = t ? `${t}.${name}` : name;
+      // 未导出类型上的导出方法包外不可达，导出口径下不计
+      if (exportedOnly && t && !isExp(t)) continue;
+      add(t ? `${t}.${name}` : name);
+    } else {
+      add(name);
     }
-    out.add(key);
   }
-  return [...out];
+
+  // type Name ... / const Name = ... / var Name = ...（单行形式）
+  const reDecl = /^[ \t]*(?:type|const|var)\s+([A-Za-z0-9_]+)/gm;
+  while ((m = reDecl.exec(src))) add(m[1]);
+
+  // 分组声明 `const ( A = ... )`、`var (...)`、`type (...)`。
+  // 块结束不依赖 `\n)`（缩进闭合会失配、成员内嵌 `\n)` 会越界）——
+  // 逐行扫描到首个 trim 后以 `)` 开头的行（容忍尾部注释）。
+  // 成员可带一个类型说明符（`LinkCopy LinkType = "copy"`，go/types/types.go 实证）；
+  // 量词不嵌套（单层 `(?:...)?`），规避旧写法 `(?:\s+[...]+)*` 的灾难性回溯。
+  const reGroupHead = /^[ \t]*(?:const|var|type)\s*\(/gm;
+  const reGroupBody = /^[ \t]*([A-Za-z0-9_]+)(?:[ \t]+[A-Za-z0-9_[\].*]+)?[ \t]*(?:=|[{]|$|,)/gm;
+  let gm;
+  while ((gm = reGroupHead.exec(src))) {
+    let blockEnd = -1;
+    const lines = src.slice(gm.index).split('\n');
+    for (let li = 1; li < lines.length; li++) {
+      if (/^[ \t]*\)/.test(lines[li])) { blockEnd = gm.index + lines.slice(0, li).join('\n').length + 1; break; }
+    }
+    const block = blockEnd > gm.index ? src.slice(gm.index, blockEnd) : '';
+    let bm;
+    while ((bm = reGroupBody.exec(block))) add(bm[1]);
+  }
+
+  return out;
 }
 
-/** TS/JS 顶层声明：function/class/interface/type/enum + const/let 赋值。导出+私有全量。 */
-export function tsTopDecls(text) {
+/**
+ * TS/JS 声明提取：function/class/interface/type/enum + const/let/var（含解构）
+ * + `export { a, b as c }` 重新导出 + `export default Name`。
+ * @param {string} text 源码全文
+ * @param {boolean} exportedOnly true = 仅 export 的符号；false = 导出+私有全量
+ * @returns {Set<string>}
+ */
+function tsDecls(text, exportedOnly) {
   const out = new Set();
-  const re1 = /^(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z0-9_]+)/gm;
+  const add = (n) => { if (n) out.add(n); };
+  const E = exportedOnly ? 'export\\s+' : '(?:export\\s+)?';
   let m;
-  while ((m = re1.exec(text))) out.add(m[1]);
-  const re2 = /^(?:export\s+)?(?:const|let)\s+([A-Za-z0-9_]+)\s*=/gm;
-  while ((m = re2.exec(text))) out.add(m[1]);
-  return [...out];
+
+  // function / class / interface / type / enum
+  // 覆盖 `export default class Widget`、`export default async function f`、
+  // `export declare function f`（`async`/`declare`/`default` 均为可选前缀）
+  const reDecl = new RegExp(
+    `^${E}(?:default\\s+)?(?:declare\\s+)?(?:async\\s+)?(?:function|class|interface|type|enum)\\s+([A-Za-z0-9_$]+)`,
+    'gm',
+  );
+  while ((m = reDecl.exec(text))) add(m[1]);
+
+  // const / let / var 赋值。`const enum E` 的符号名是 enum 之后的标识符——
+  // 旧实现会把关键字 `enum` 本身当符号名（实测 `export const enum E` → `enum`）。
+  const reVal = new RegExp(
+    `^${E}(?:declare\\s+)?(?:const|let|var)\\s+(?:enum\\s+)?([A-Za-z0-9_$]+)`,
+    'gm',
+  );
+  while ((m = reVal.exec(text))) add(m[1]);
+
+  // 解构声明 `export const { a, b } = obj`（含默认值 `{ a = 1 }`）
+  const reDestr = new RegExp(`^${E}(?:const|let|var)\\s*\\{([^}]+)\\}`, 'gm');
+  while ((m = reDestr.exec(text))) {
+    for (const part of m[1].split(',')) {
+      const name = part.trim().split(/\s*[:=]\s*/)[0].trim();
+      if (/^[A-Za-z0-9_$]+$/.test(name)) add(name);
+    }
+  }
+
+  // `export { a, b as c }` / `export type { T }`（取 as 之后的对外名）
+  const reRe = /^export\s*(?:type\s*)?\{([^}]+)\}/gm;
+  while ((m = reRe.exec(text))) {
+    for (const part of m[1].split(',')) {
+      const name = part.trim().split(/\s+as\s+/).pop().trim();
+      if (/^[A-Za-z0-9_$]+$/.test(name)) add(name);
+    }
+  }
+
+  // `export default Name;`（容忍行尾分号：这是最常见写法，`\s*$` 会被 `;` 挡掉）
+  const reDefaultId = /^export\s+default\s+([A-Za-z0-9_$]+)\s*;?\s*$/gm;
+  while ((m = reDefaultId.exec(text))) add(m[1]);
+
+  return out;
+}
+
+/** Go 顶层声明：导出+私有全量（不按首字母过滤）。 */
+export function goTopFuncs(text) {
+  return [...goDecls(text, false)].sort();
+}
+
+/** TS/JS 顶层声明：导出+私有全量。 */
+export function tsTopDecls(text) {
+  return [...tsDecls(text, false)].sort();
 }
 
 /** 按扩展名分发顶层声明提取：.go → goTopFuncs；其余 → tsTopDecls。 */

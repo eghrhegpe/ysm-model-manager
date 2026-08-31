@@ -169,6 +169,10 @@ const ALL_STATIC_TOOLS = [
   { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
   // 子进程直调收敛守护（ADR-043）：WARN 报告未走 _lib/proc.mjs 的 execFileSync/execSync 直调
   'check-proc-adoption.mjs',
+  // _lib 共享层采用率守护（2026-08-31 审计）：proc.mjs 配了专属闸门后非直调占比 100%，
+  // 其余模块此前零闸门、纯靠自觉（parse-args 采用率仅三成、多脚本仍手搓符号提取）。
+  // 本项把 proc 的经验推广为规则驱动的通用闸门，并给出全模块采用率全景 + 零引用告警。
+  'check-lib-adoption.mjs',
   'check-workflow-refs.mjs',
   // README 登记处漂移守护（2026-08-31 审计）：scripts/README.md 自称唯一登记处，
   // 但 29/93 脚本零提及无人拦——新增/改名脚本漏登记不再静默（check-workflow-refs 守引用侧，

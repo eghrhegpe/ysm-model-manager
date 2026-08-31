@@ -87,6 +87,7 @@
 | `check-biome.mjs` | `node scripts/check-biome.mjs` / `--strict` / `--write` / `--json` | **Biome 委托检查器**（P0）：TS 7 太新 dependency-cruiser 静默漏检，Biome 自研 Rust 解析器全解析；增量策略 `biome check --changed`（仅查相对 main 的变更文件），`--write` 自动修复；空变更集判通过 |
 | `check-menu-health.mjs` | `node scripts/check-menu-health.mjs` / `--json` | **3D 预览菜单表健康门禁**（ADR-085 配套）：6 条校验（id 唯一 / labelKey 非空且入语言包 / dockGroup 类型 / kind 合法 / panel 有渲染通道 / action 有 run），正则解析 4 个菜单表文件 |
 | `check-proc-adoption.mjs` | `node scripts/check-proc-adoption.mjs` / `--json` / `--strict` | 子进程直调收敛检查（ADR-043 落地率守护）：扫描 scripts/ 直调 `execFileSync`/`execSync` 而未走 `_lib/proc.mjs` 的脚本（WARN 报告，`--strict` 时 exit 1） |
+| `check-lib-adoption.mjs` | `node scripts/check-lib-adoption.mjs` / `--json` / `--strict` | **\_lib 共享层采用率闸门**：规则表驱动，报「手搓了 \_lib 已有能力却未 import」的脚本，并输出全模块采用率全景 + 零引用模块告警。**与 check-proc-adoption 分工**：后者专管 `proc.mjs`（子进程），本项管其余模块（`scan-files` / `parse-args` / `frontmatter` / `source-graph` / `to-posix` / `git-ref`），proc 显式跳过不重复报。已挂 pre-push-gate，WARN 不阻断 |
 | `check-readme-index.mjs` | `node scripts/check-readme-index.mjs` / `--json` | **README 索引对账**（登记处漂移守护）：扫描 scripts/（含 hooks/，排除 _lib 与测试）与 scripts/README.md 全文对账，零提及脚本 → 阻断。让「唯一登记处」声明可机检 |
 | `check-toast-duration.mjs` | `node scripts/check-toast-duration.mjs` | toast 时长单一事实源守护（防回流闸）：扫 frontend/src 生产代码捕捉写死裸数字的 toast 时长（bus.emit / toast() helper），当前观察期非阻断 |
 | `check-deadcode-baseline.mjs` | `node scripts/check-deadcode-baseline.mjs` / `--update-baseline` | knip+jscpd 与 `scripts/baseline/deadcode-baseline.json` 对比，新增项阻断 |
@@ -261,7 +262,8 @@
 | `_lib/domain-classify.mjs` | `classify()`（文件→域）、`planFromFiles()`（文件集→检查计划）、`DATA_FILES` | 变更域分类共享层，pre-push-gate / doctor --gate 共用，消除双端漂移 |
 | `_lib/contract-tests.mjs` | `collectContractTests()`（列出测试文件）、`runContractTestsParallel()`（并行执行，spawn + Promise.all） | 契约测试并行执行共享层，doctor / pre-push-gate 共用，~31s vs 串行 ~43s |
 | `_lib/log-push.mjs` | `logPush()`（双写 stderr + .git/push-log）、`clearPushLog()` | 推送门禁日志共享层，解决 git pre-push 钩子 stdout 被吞问题，日志带 ISO 时间戳 |
-| `_lib/collect-scripts.mjs` | `collectScripts({ skipHooks })`（收集 scripts/ 下 .mjs，排除 `_` 前缀共享层与测试；`skipHooks` 取 hooks/ 取舍——proc/readme 口径含、hygiene 口径排） | 任何需要"扫描 scripts/ 全部 .mjs"的检查器（check-proc-adoption / check-readme-index / check-script-hygiene 已接入，2026-09 收敛） |
+| `_lib/collect-scripts.mjs` | `collectScripts({ skipHooks })`（收集 scripts/ 下 .mjs，排除 `_` 前缀共享层与测试；`skipHooks` 取 hooks/ 取舍——proc/readme 口径含、hygiene 口径排） | 任何需要"扫描 scripts/ 全部 .mjs"的检查器（check-proc-adoption / check-readme-index / check-script-hygiene / check-lib-adoption 已接入，2026-09 收敛） |
+| `_lib/orphan-classify.mjs` | `classifyScript(name, ctx)`（四态判定）、`findOrphans()`（孤儿清单）、`buildContext()`（挂载点+文档+同级脚本快照） | 判断"这个脚本还有没有人会执行它"。四态：`mounted`（流水线挂载）> `called`（被其它脚本调用）> `documented`（仅 README/AGENTS.md 提及，属手册工具，**不算化石**）> `orphan`。2026-08-31 审计实证：早期粗口径把 19 个手册工具误判成化石，加 `documented` 档后真孤儿归零 |
 
 违规形态：内联「通用」 `walk`（即 scan-files.walk 的等价递归、无扩展名/跳过定制）/ 内联 `rg(...)` / 内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))` / 内联 `collectScripts`（scripts/.mjs 收集样板，2026-09 起应由 `_lib/collect-scripts.mjs` 提供）。带显式过滤的领域专用收集器（如 `endsWith('.md')` / `EXCLUDE` / `symbolExclude` / `onFile`）为合法内联，不计入违规；doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。
 

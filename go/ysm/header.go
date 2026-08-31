@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -164,6 +165,10 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 			preambleLines[i] = strings.TrimSpace(cleaned)
 		}
 		h.Tips = strings.Join(preambleLines, "\n")
+	}
+	// R29 P3-2：检查 scanner.Err()，超长行（>64KB）时 log 标记
+	if err := scanner.Err(); err != nil {
+		log.Printf("[ysm] scanHeader scanner error: %v", err)
 	}
 	return h
 }

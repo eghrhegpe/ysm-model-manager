@@ -160,7 +160,9 @@ func extractTexSizeFromGeometryBytes(data []byte) (w, h int) {
 // ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用）
 func ScanFiles(filesRoot string) []ModelEntry {
 	var entries []ModelEntry
-	filepath.WalkDir(filesRoot, func(path string, d os.DirEntry, err error) error {
+	// R29 P3-3：WalkDir 返回 error 显式记录（callback 总返回 nil，
+	// 故 WalkDir 的 error 只会是根目录打开失败等不可恢复错误）
+	if err := filepath.WalkDir(filesRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("[ysm] Walk 错误 (忽略): %v", err)
 			return nil
@@ -182,6 +184,8 @@ func ScanFiles(filesRoot string) []ModelEntry {
 			})
 		}
 		return nil
-	})
+	}); err != nil {
+		log.Printf("[ysm] ScanFiles WalkDir 失败 (返回部分结果): %v", err)
+	}
 	return entries
 }

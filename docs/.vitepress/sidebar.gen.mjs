@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-140：Go 重复代码治理：文件内自重复三层判定与变体层不强制合并",
+        "link": "/adr/ADR-140-go-dup-self-three-tier-variant-policy"
+      },
+      {
         "text": "ADR-139：平台 shim 收敛 rustbridge 与 scanner 四 OS 重复",
         "link": "/adr/ADR-139-platform-shim-dedup"
       },
@@ -1367,6 +1371,10 @@ export const autoSidebar = [
       {
         "text": "R28 审核：go/cli + go/litematic（两模块并行）",
         "link": "/audit/audit-r28-go-cli-litematic-2026-08-31"
+      },
+      {
+        "text": "R29 审核：go/ysm + go/geometry（两模块并行）",
+        "link": "/audit/audit-r29-go-ysm-geometry-2026-08-31"
       },
       {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",

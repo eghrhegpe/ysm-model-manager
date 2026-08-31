@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -228,10 +229,21 @@ func extractYsmRootFromZip(f container.Entry) (*ysmRoot, error) {
 // scanZipBasicStats 无 ysm.json 的 ZIP 降级扫描：按文件后缀 + JSON 内容特征
 // 统计 Models（含 minecraft:geometry 的 JSON）/ Animations（路径含 animation/
 // controller 且不是几何的）/ Textures（图片后缀）。
+// maxScanZipEntries scanZipBasicStats 的条目数封顶（R29 P3-1）。
+// 恶意 ZIP 塞入数万个微小 .json 条目可造成显著 CPU/IO 耗时。
+// 2000 条对正常 YSM 包绰绰有余（典型包 <300 条），超限即停止。
+const maxScanZipEntries = 2000
+
 func scanZipBasicStats(r zipEntriesReader) Stats {
 	const maxGeoJSON = 5 << 20
 	var modelCount, texCount, animCount int
+	scanned := 0
 	for _, f := range r.Entries() {
+		scanned++
+		if scanned > maxScanZipEntries {
+			log.Printf("[ysm] scanZipBasicStats 达到条目数封顶 %d, 后续条目跳过", maxScanZipEntries)
+			break
+		}
 		if f.IsDir() {
 			continue
 		}

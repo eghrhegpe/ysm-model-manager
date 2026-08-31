@@ -204,12 +204,12 @@
 | `ExtractPreviewTexture()` | `go/fileops/fileops_preview:50` | ExtractPreviewTexture 从模型文件中提取预览纹理（zip/7z/ysm/json） |
 | `GetPackInfo()` | `go/fileops/fileops_preview:154` | GetPackInfo 读取 ysm-pack.json（root 为空时按绝对路径处理） |
 | `CreateDir()` | `go/fileops/fileops:52` | CreateDir 在 root 下创建子目录（校验非法字符，与 RenameDir 对齐） |
-| `RenameDir()` | `go/fileops/fileops:80` | RenameDir 重命名目录（仅改末段，保持父目录） |
-| `RemoveDir()` | `go/fileops/fileops:101` | RemoveDir 递归删除目录（基础安全校验——拒绝空路径/NUL/穿越段/根目录； 仓库归属校验由调用方 isPathInRoot 负责，此处为纵深防御） |
-| `RenameFile()` | `go/fileops/fileops:124` | RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名） |
-| `MoveModelFile()` | `go/fileops/fileops:164` | MoveModelFile 移动 src 到 dstDir（保留原名） root 用于路径安全校验（空则跳过校验，对齐 CopyModelFile 语义）； ADR-038 D3： |
-| `CopyModelFile()` | `go/fileops/fileops:273` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
-| `DeleteModelFile()` | `go/fileops/fileops:365` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
+| `RenameDir()` | `go/fileops/fileops:96` | RenameDir 重命名目录（仅改末段，保持父目录） |
+| `RemoveDir()` | `go/fileops/fileops:115` | RemoveDir 递归删除目录（基础安全校验——拒绝空路径/NUL/穿越段/根目录； 仓库归属校验由调用方 isPathInRoot 负责，此处为纵深防御） |
+| `RenameFile()` | `go/fileops/fileops:138` | RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名） |
+| `MoveModelFile()` | `go/fileops/fileops:176` | MoveModelFile 移动 src 到 dstDir（保留原名） root 用于路径安全校验（空则跳过校验，对齐 CopyModelFile 语义）； ADR-038 D3： |
+| `CopyModelFile()` | `go/fileops/fileops:293` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
+| `DeleteModelFile()` | `go/fileops/fileops:380` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
 | `WriteModelFolder()` | `go/fileops/folder_import:20` | WriteModelFolder 写入文件夹整组到仓库（YSM 解压目录或普通模型文件夹）。 |
 
 ## Go·文件系统
@@ -247,13 +247,13 @@
 | `IsArmModelName()` | `go/geometry/archive:59` | — |
 | `ExtractFirstPNGFromZip()` | `go/geometry/archive:143` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
 | `ExtractFirstPNGFrom7z()` | `go/geometry/archive:153` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
-| `ParseFromZip()` | `go/geometry/archive:1352` | ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画。 |
-| `ParseFrom7z()` | `go/geometry/archive:1358` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理。 |
-| `ParseFromZipEntry()` | `go/geometry/archive:1371` | ParseFromZipEntry 按 subPath（zip 内路径，L0 SubModel.SourcePath 口径）解析单个 geometry 文件。 |
-| `ParseFrom7zEntry()` | `go/geometry/archive:1376` | ParseFrom7zEntry 对应 ParseFromZipEntry 的 7z 版本；subPath 匹配策略完全一致。 |
-| `IsMainModelName()` | `go/geometry/archive:1442` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:1449` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:1660` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 parseComponentsFromArchi |
+| `ParseFromZip()` | `go/geometry/archive:1374` | ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画。 |
+| `ParseFrom7z()` | `go/geometry/archive:1380` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理。 |
+| `ParseFromZipEntry()` | `go/geometry/archive:1393` | ParseFromZipEntry 按 subPath（zip 内路径，L0 SubModel.SourcePath 口径）解析单个 geometry 文件。 |
+| `ParseFrom7zEntry()` | `go/geometry/archive:1398` | ParseFrom7zEntry 对应 ParseFromZipEntry 的 7z 版本；subPath 匹配策略完全一致。 |
+| `IsMainModelName()` | `go/geometry/archive:1464` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:1471` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:1682` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 parseComponentsFromArchi |
 | `ParseBedrockGeometry()` | `go/geometry/parse:240` | ParseBedrockGeometry 解析 Bedrock geometry JSON。 |
 
 ## Go·导入
@@ -454,12 +454,12 @@
 | `InvalidateSyncScanCaches()` | `go/sync/sync_cache:61` | InvalidateSyncScanCaches 清空全部同步目录扫描结果缓存。 |
 | `ResourceDiff()` | `go/sync/sync_diff:31` | ResourceDiff 按调用方提供的 key（文件名或相对路径，ADR-064 阶段二统一为 relKey 相对路径）对比两侧条目：   - 同名同大小（或含目录条目）→ Sy |
 | `DiffEntry()` | `go/sync/sync_diff:17` | DiffEntry 一侧目录的同步条目（文件或资源包文件夹）。 |
-| `SyncResourcesDirLevel()` | `go/sync/sync_dirlevel:356` | SyncResourcesDirLevel 文件夹级同步（默认 filepath.Walk，行为不变，供测试/旧调用方使用）。 |
-| `SyncResourcesDirLevelScan()` | `go/sync/sync_dirlevel:365` | SyncResourcesDirLevelScan 同 SyncResourcesDirLevel，但注入 scanFn 复用扫描缓存， 消除 8 个 MMD 子类型 ×(1+N |
-| `DiffFolderContents()` | `go/sync/sync_dirlevel:589` | DiffFolderContents 对同名文件夹进行内容级 diff 扫描两侧文件夹内的模型文件，比较差异，返回子文件级别的同步状态 用于在文件夹级同步单元内恢复单文件粒度的同步 |
-| `DiffFolderContentsScan()` | `go/sync/sync_dirlevel:645` | DiffFolderContentsScan 同 DiffFolderContents，但全局侧文件收集复用 scanner 已缓存的 组根扫描结果（scanFn(globalRo |
-| `ScanEntriesFn()` | `go/sync/sync_dirlevel:353` | SyncResourcesDirLevel 按文件夹名对比资源（用于 YSM 的 ysm.json 文件夹和 MMD 的 .pmx/.pmd 文件夹） 以文件夹名为单位，一个文件夹 |
-| `FileDiffEntry()` | `go/sync/sync_dirlevel:563` | FileDiffEntry 文件级差异条目（用于文件夹内容级 diff） |
+| `SyncResourcesDirLevel()` | `go/sync/sync_dirlevel:302` | SyncResourcesDirLevel 文件夹级同步（默认 filepath.Walk，行为不变，供测试/旧调用方使用）。 |
+| `SyncResourcesDirLevelScan()` | `go/sync/sync_dirlevel:311` | SyncResourcesDirLevelScan 同 SyncResourcesDirLevel，但注入 scanFn 复用扫描缓存， 消除 8 个 MMD 子类型 ×(1+N |
+| `DiffFolderContents()` | `go/sync/sync_dirlevel:582` | DiffFolderContents 对同名文件夹进行内容级 diff 扫描两侧文件夹内的模型文件，比较差异，返回子文件级别的同步状态 用于在文件夹级同步单元内恢复单文件粒度的同步 |
+| `DiffFolderContentsScan()` | `go/sync/sync_dirlevel:597` | DiffFolderContentsScan 同 DiffFolderContents，但全局侧文件收集复用 scanner 已缓存的 组根扫描结果（scanFn(globalRo |
+| `ScanEntriesFn()` | `go/sync/sync_dirlevel:299` | SyncResourcesDirLevel 按文件夹名对比资源（用于 YSM 的 ysm.json 文件夹和 MMD 的 .pmx/.pmd 文件夹） 以文件夹名为单位，一个文件夹 |
+| `FileDiffEntry()` | `go/sync/sync_dirlevel:509` | FileDiffEntry 文件级差异条目（用于文件夹内容级 diff） |
 | `ListVersions()` | `go/sync/sync_discovery:15` | — |
 | `HasDotMinecraftSubdirs()` | `go/sync/sync_discovery:30` | HasDotMinecraftSubdirs 检测目录的子目录中是否包含 .minecraft/ 或 minecraft/（用于识别 instances 目录） |
 | `FindMinecraftDir()` | `go/sync/sync_discovery:47` | FindMinecraftDir 在给定目录下查找 .minecraft 或 minecraft 子目录，返回找到的路径 |
@@ -488,11 +488,11 @@
 |------|--------|------|
 | `NewStore()` | `go/tags/tags:26` | NewStore 创建标签存储（懒加载：首次 Get/Set 时自动读取） |
 | `Store.GetTags()` | `go/tags/tags:107` | GetTags 返回指定路径的所有标签（已排序） |
-| `Store.SetTags()` | `go/tags/tags:135` | SetTags 设置指定路径的标签列表（覆盖写入） |
-| `Store.AddTag()` | `go/tags/tags:170` | AddTag 追加单个标签（不会重复） |
-| `Store.RemoveTag()` | `go/tags/tags:196` | RemoveTag 移除单个标签 |
-| `Store.ListByTag()` | `go/tags/tags:228` | ListByTag 返回所有打了指定标签的文件路径列表 |
-| `Store.AllTags()` | `go/tags/tags:252` | AllTags 返回所有被使用的标签（按使用次数降序） |
+| `Store.SetTags()` | `go/tags/tags:149` | SetTags 设置指定路径的标签列表（覆盖写入） |
+| `Store.AddTag()` | `go/tags/tags:181` | AddTag 追加单个标签（不会重复） |
+| `Store.RemoveTag()` | `go/tags/tags:204` | RemoveTag 移除单个标签 |
+| `Store.ListByTag()` | `go/tags/tags:233` | ListByTag 返回所有打了指定标签的文件路径列表 |
+| `Store.AllTags()` | `go/tags/tags:257` | AllTags 返回所有被使用的标签（按使用次数降序） |
 | `Store()` | `go/tags/tags:19` | Store 是标签存储，线程安全 |
 
 ## go/texture_cache
@@ -666,19 +666,19 @@
 | `DecodedFile()` | `go/ysm/decode_inject:11` | DecodedFile 解码 .ysm 产出的一个文件（Path 为输出目录内相对路径） |
 | `FindGeometryInExtractedYSM()` | `go/ysm/extracted:461` | FindGeometryInExtractedYSM 在解压后的 YSM 模型目录中查找 geometry 和纹理 ysmJsonPath: ysm.json 的完整路径 返回: |
 | `FindComponentsInExtractedYSM()` | `go/ysm/extracted:773` | FindComponentsInExtractedYSM 多组件解析（YSMViewer 式）：解压目录内每个模型文件独立组件， **不合并 bones、不排除 arm**（arm |
-| `AnalyzeYSMHeader()` | `go/ysm/header:172` | AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据 |
-| `AnalyzeYSMHeaderFromBytes()` | `go/ysm/header:325` | AnalyzeYSMHeaderFromBytes 从字节数据解析 YSM 头部（适用于 base64 导入场景） |
-| `YSMHeader()` | `go/ysm/header:17` | YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型） |
+| `AnalyzeYSMHeader()` | `go/ysm/header:177` | AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据 |
+| `AnalyzeYSMHeaderFromBytes()` | `go/ysm/header:330` | AnalyzeYSMHeaderFromBytes 从字节数据解析 YSM 头部（适用于 base64 导入场景） |
+| `YSMHeader()` | `go/ysm/header:18` | YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型） |
 | `AnalyzeYSMModel()` | `go/ysm/parse:45` | AnalyzeYSMModel 解析 .ysm 文件，提取模型元数据 |
 | `YSMModelMeta()` | `go/ysm/parse:15` | YSMModelMeta 模型元数据（从 model.json 提取） |
-| `ExtractYsmSummary()` | `go/ysm/summary:299` | ExtractYsmSummary 从 .ysm / .zip 文件中提取摘要。 |
-| `Author()` | `go/ysm/summary:17` | — |
-| `Link()` | `go/ysm/summary:23` | — |
-| `AnimGroup()` | `go/ysm/summary:28` | — |
-| `ConfigMenu()` | `go/ysm/summary:34` | — |
-| `PreviewInfo()` | `go/ysm/summary:40` | — |
-| `YsmSummary()` | `go/ysm/summary:48` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
-| `Stats()` | `go/ysm/summary:65` | — |
+| `ExtractYsmSummary()` | `go/ysm/summary:311` | ExtractYsmSummary 从 .ysm / .zip 文件中提取摘要。 |
+| `Author()` | `go/ysm/summary:18` | — |
+| `Link()` | `go/ysm/summary:24` | — |
+| `AnimGroup()` | `go/ysm/summary:29` | — |
+| `ConfigMenu()` | `go/ysm/summary:35` | — |
+| `PreviewInfo()` | `go/ysm/summary:41` | — |
+| `YsmSummary()` | `go/ysm/summary:49` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
+| `Stats()` | `go/ysm/summary:66` | — |
 | `ScanModelTexSizes()` | `go/ysm/texsize:25` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
 | `ScanFiles()` | `go/ysm/texsize:161` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
 | `TexInfo()` | `go/ysm/texsize:17` | TexInfo 轻量级纹理尺寸（不解析完整模型） |

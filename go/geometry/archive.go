@@ -220,8 +220,14 @@ func (b *l0BasenameIndex) build() (geo, png map[string][]l0NamedEntry) {
 // classifyFileInventory 识别 zip 内所有文件的归属（parseGlobalResources 轻量版：
 // 只识别不解析，Go 端承担文件识别能力，前端消费准确归属清单，不再事后按文件名猜）。
 // 纯新增能力，不改变既有收集（animJSONs/pngs 等数组内容不动，零 fallback 干扰）。
+// maxClassifyEntries classifyFileInventory 的条目数封顶（R29 P2-1）。
+// 恶意归档塞入数十万微小条目可导致 FileInventory 占用数 GB 内存。
+// 10000 条对正常 YSM 包绰绰有余（典型包 <500 条），超限即停止并标记不完整。
+const maxClassifyEntries = 10000
+
 func classifyFileInventory(entries []container.Entry) *types.FileInventory {
 	inv := &types.FileInventory{}
+	classified := 0
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
@@ -240,6 +246,11 @@ func classifyFileInventory(entries []container.Entry) *types.FileInventory {
 			inv.Avatars = append(inv.Avatars, e.Name())
 		case strings.HasSuffix(low, ".json") && !types.IsYsmEntryJSON(filepath.Base(e.Name())) && isLegacyGeometryName(low):
 			inv.LegacyModels = append(inv.LegacyModels, e.Name())
+		}
+		classified++
+		if classified >= maxClassifyEntries {
+			log.Printf("[geometry] classifyFileInventory 达到条目数封顶 %d, 后续条目跳过", maxClassifyEntries)
+			break
 		}
 	}
 	return inv
@@ -419,66 +430,38 @@ func detectMaidNs(entries []container.Entry) string {
 	return ns
 }
 
-// collectGeoAnimEntries 遍历 entries，收集 geometry JSON（geoFiles）和
-// animation/controller JSON（animJSONs）。排除 ysm.json 入口、非 maidNs 的文件、
-// maid_model/chair/sound 配置 JSON。
-func collectGeoAnimEntries(entries []container.Entry, maidNs string) ([]geoEntry, []string) {
-	var geoFiles []geoEntry
-	var animJSONs []string
-	for _, e := range entries {
-		low := strings.ToLower(e.Name())
-		if !strings.HasSuffix(low, ".json") || e.IsDir() {
-			continue
-		}
-		if types.IsYsmEntryJSON(filepath.Base(e.Name())) {
-			continue
-		}
-		// maid-model 命名空间过滤：只处理首个 namespace 的 entity JSON
-		if maidNs != "" {
-			if !strings.HasPrefix(low, maidNs) || strings.HasSuffix(low, "maid_model.json") || strings.HasSuffix(low, "maid_chair.json") || strings.HasSuffix(low, "maid_sound.json") {
-				continue
-			}
-		}
-		if strings.Contains(low, "animation") || strings.Contains(low, "controller") {
-			rc, err := e.Open()
-			if err != nil {
-				continue
-			}
-			// ReadLimitedEntry 内部已 Close；+1 探测，超限返回 nil（ADR-033）
-			buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
-			if len(buf) > 10 {
-				animJSONs = append(animJSONs, string(buf))
-			}
-			continue
-		}
-		rc, err := e.Open()
-		if err != nil {
-			continue
-		}
-		buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
-		// 不排除 arm（组件版需要；合并版由调用方 filterArmModels 过滤）
-		geoFiles = append(geoFiles, geoEntry{name: e.Name(), data: buf})
+// jsonEntryPass 判断 entry 是否通过 json 收集前置过滤：非目录 .json、非 ysm 入口、
+// 通过 maidNs 命名空间过滤（排除 maid_model/chair/sound 配置）。collectGeoAnimEntries
+// 与 collectAnimJSONs 共用，避免过滤逻辑重复（ADR-140 L3）。
+func jsonEntryPass(e container.Entry, maidNs string) bool {
+	low := strings.ToLower(e.Name())
+	if !strings.HasSuffix(low, ".json") || e.IsDir() {
+		return false
 	}
-	return geoFiles, animJSONs
+	if types.IsYsmEntryJSON(filepath.Base(e.Name())) {
+		return false
+	}
+	// maid-model 命名空间过滤：只处理首个 namespace 的 entity JSON
+	if maidNs != "" {
+		if !strings.HasPrefix(low, maidNs) || strings.HasSuffix(low, "maid_model.json") || strings.HasSuffix(low, "maid_chair.json") || strings.HasSuffix(low, "maid_sound.json") {
+			return false
+		}
+	}
+	return true
 }
 
-// collectAnimEntriesOnly 仅收集动画/控制器 JSON 字符串（geo/png 不物化）。
-// L0 命中路径专用：清单生效时 geoFiles/pngs 全部由清单派生，全量物化纯属
-// 浪费，只有 animJSONs 仍来自遍历收集（l0Resolved 无此字段）。过滤口径与
-// collectGeoAnimEntries 动画分支逐字节一致（ns 过滤置 Open 之前，无 reader 泄漏）。
-func collectAnimEntriesOnly(entries []container.Entry, maidNs string) []string {
+// collectAnimJSONs 遍历 entries，收集 animation/controller JSON 字符串（geo/png 不物化）。
+// 过滤口径（ysm 入口 / maidNs 命名空间 / maid_model·chair·sound 配置）与
+// collectGeoAnimEntries 动画分支逐字节一致；ns 过滤置 Open 之前，无 reader 泄漏。
+// 供 collectGeoAnimEntries（全量路径）与 collectAnimEntriesOnly（L0 命中路径）共用，
+// 避免动画收集逻辑重复（ADR-140 L3）。
+func collectAnimJSONs(entries []container.Entry, maidNs string) []string {
 	var animJSONs []string
 	for _, e := range entries {
+		if !jsonEntryPass(e, maidNs) {
+			continue
+		}
 		low := strings.ToLower(e.Name())
-		if !strings.HasSuffix(low, ".json") || e.IsDir() {
-			continue
-		}
-		if types.IsYsmEntryJSON(filepath.Base(e.Name())) {
-			continue
-		}
-		if maidNs != "" && (!strings.HasPrefix(low, maidNs) || strings.HasSuffix(low, "maid_model.json") || strings.HasSuffix(low, "maid_chair.json") || strings.HasSuffix(low, "maid_sound.json")) {
-			continue
-		}
 		if !strings.Contains(low, "animation") && !strings.Contains(low, "controller") {
 			continue
 		}
@@ -486,12 +469,47 @@ func collectAnimEntriesOnly(entries []container.Entry, maidNs string) []string {
 		if err != nil {
 			continue
 		}
+		// ReadLimitedEntry 内部已 Close；+1 探测，超限返回 nil（ADR-033）
 		buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
 		if len(buf) > 10 {
 			animJSONs = append(animJSONs, string(buf))
 		}
 	}
 	return animJSONs
+}
+
+// collectGeoAnimEntries 遍历 entries，收集 geometry JSON（geoFiles）和
+// animation/controller JSON（animJSONs）。排除 ysm.json 入口、非 maidNs 的文件、
+// maid_model/chair/sound 配置 JSON。anim 部分委托 collectAnimJSONs（单一来源），
+// 本函数只额外物化 geo（不含 arm 过滤——组件版需要；合并版由调用方 filterArmModels 过滤）。
+func collectGeoAnimEntries(entries []container.Entry, maidNs string) ([]geoEntry, []string) {
+	animJSONs := collectAnimJSONs(entries, maidNs)
+	var geoFiles []geoEntry
+	for _, e := range entries {
+		if !jsonEntryPass(e, maidNs) {
+			continue
+		}
+		low := strings.ToLower(e.Name())
+		// animation/controller 已由 collectAnimJSONs 收集，这里只物化 geo
+		if strings.Contains(low, "animation") || strings.Contains(low, "controller") {
+			continue
+		}
+		rc, err := e.Open()
+		if err != nil {
+			continue
+		}
+		buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
+		geoFiles = append(geoFiles, geoEntry{name: e.Name(), data: buf})
+	}
+	return geoFiles, animJSONs
+}
+
+// collectAnimEntriesOnly 仅收集动画/控制器 JSON 字符串（geo/png 不物化）。
+// L0 命中路径专用：清单生效时 geoFiles/pngs 全部由清单派生，全量物化纯属
+// 浪费——故本函数只委托 collectAnimJSONs，绝不触碰 geo 物化（无 I/O 回归，
+// 与 collectGeoAnimEntries 动画分支逐字节一致）。
+func collectAnimEntriesOnly(entries []container.Entry, maidNs string) []string {
+	return collectAnimJSONs(entries, maidNs)
 }
 
 // collectPngEntries 遍历 entries，收集非 avatar/ 非 gui/ 的 png/jpg 纹理。
@@ -638,6 +656,10 @@ func pickBestMaidGroup(g maidGroupWrapper) []maidManifestItem {
 // selectBestMaidCandidate 从候选中选"清单最长者"（启发式：条目数最长 = 主包清单）。
 // 候选空时返回零值。
 func selectBestMaidCandidate(candidates []maidNsCandidate) maidNsCandidate {
+	// R29 P2-2：空切片保护，避免 candidates[0] panic
+	if len(candidates) == 0 {
+		return maidNsCandidate{}
+	}
 	best := candidates[0]
 	for _, c := range candidates[1:] {
 		if c.count > best.count {

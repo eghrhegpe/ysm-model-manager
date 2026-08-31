@@ -43,7 +43,7 @@ import { planFromFiles, groupByDomain, domainSummaryText } from './_lib/domain-c
 import { runContractTestsParallel } from './_lib/contract-tests.mjs';
 import { logPush } from './_lib/log-push.mjs';
 import { shq } from './_lib/proc.ts';
-import { ALL_STATIC_TOOLS, DOC_STATIC_TOOLS, DOC_EXTRA_SCRIPTS, FRONTEND_STATIC_TOOLS, GO_STATIC_TOOLS } from './_lib/gate-config.mjs';
+import { ALL_STATIC_TOOLS, DOC_STATIC_TOOLS, DOC_EXTRA_SCRIPTS, FRONTEND_STATIC_TOOLS, GO_STATIC_TOOLS } from './_lib/gate-config.ts';
 
 
 const B = { OK: '[OK]', FAIL: '[FAIL]', FIX: '[FIX]', SKIP: '[SKIP]' };
@@ -140,7 +140,7 @@ function gofmtCheck(goFiles) {
 }
 
 /* ---------------- 静态分析工具清单（--all / --docs 模式，doctor 全量迁入） ---------------- */
-// 工具清单单一事实来源 = _lib/gate-config.mjs；gate 本身只负责调度，不改清单逻辑。
+// 工具清单单一事实来源 = _lib/gate-config.ts；gate 本身只负责调度，不改清单逻辑。
 
 
 /* ---------------- 主流程 ---------------- */

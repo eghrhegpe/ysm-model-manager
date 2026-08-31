@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT, toPosix } from './_lib/scan-files.mjs';
-import { checkStale } from './_lib/stale-baseline.mjs';
+import { checkStale } from './_lib/stale-baseline.ts';
 
 /**
  * 文件行缓存（性能审计 2026-09）：hasContext/inBlockComment 每次调用都整读文件，

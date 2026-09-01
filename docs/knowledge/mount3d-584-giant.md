@@ -8,6 +8,9 @@ source_files:
 use_when:
   - 拆 mount3D 巨函数
   - 评审 mount-preview-core.ts
+perf:
+  - gpu-bound
+
 ---
 
 # mount3D-584-giant

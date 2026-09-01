@@ -32,6 +32,16 @@ invariant_anchors:
   - frontend/src/core/context-menus.ts|registerContextMenus
   - frontend/src/core/menu-defs.ts|MENU_DEFS
   - frontend/src/core/menu-defs.ts|getMenuDef
+quick_groups:
+  - UI 交互与弹窗
+quick_intents:
+  - 右键菜单、添加菜单项
+  - 菜单行为执行、ctx:show
+quick_risk_lines:
+  - 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 core/context-menus.ts
+  - 禁止 view 层手写菜单项
+pitfalls:
+  - 「view 层」内联菜单结构 → 必须声明进 menu-defs.ts
 ---
 
 # 右键菜单系统

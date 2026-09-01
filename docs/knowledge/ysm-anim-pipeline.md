@@ -20,6 +20,8 @@ related_adrs:
   - ADR-061-3d (含勘误记录)
   - ADR-100 (YSM 骨骼动画)
   - ADR-113 (Molang 表达式支持)
+perf:
+  - cpu-bound
 ---
 
 # YSM (Bedrock) 动画管线

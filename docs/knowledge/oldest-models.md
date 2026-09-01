@@ -13,6 +13,8 @@ use_when:
   - 月度活动
   - 热力图
   - 仓库健康
+perf:
+  - io-bound
 invariant_anchors:
   - frontend/src/features/oldest-models.ts|bus.emit
 ---

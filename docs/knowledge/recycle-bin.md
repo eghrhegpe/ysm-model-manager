@@ -14,6 +14,8 @@ use_when:
   - 软删除
   - recycle
   - 还原
+perf:
+  - io-bound
 invariant_anchors:
   - frontend/src/features/recycle-bin.ts|GetRepoRoot
   - frontend/src/utils/async/load-guard.ts|createLoadGuard

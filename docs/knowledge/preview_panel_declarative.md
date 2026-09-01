@@ -23,6 +23,9 @@ use_when:
   - 评估"面板内容该走 renderCustom 还是 children 声明式"
   - 排查面板内容不出现 / 渲染通道冲突
   - P4-B 子步（1→2→3）状态通道复用参考
+perf:
+  - gpu-bound
+
 ---
 
 # 3D 预览面板内容声明式化通道（ADR-126 P4-B）

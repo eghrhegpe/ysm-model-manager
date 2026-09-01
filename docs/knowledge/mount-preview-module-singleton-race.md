@@ -8,6 +8,9 @@ source_files:
 use_when:
   - 修 mount3D 并发竞态
   - 评审模块级单例守卫
+perf:
+  - concurrent
+
 ---
 
 # mount-preview-module-singleton-race

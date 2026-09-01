@@ -13,6 +13,8 @@ use_when:
   - biome tint / 草叶水配色 / 4 类 tint
   - pack-model-adapter 材质升级后续（ADR-080）
   - 顶点色遮蔽权重
+perf:
+  - cpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/adapters/pack-model-adapter.ts|tintCategoryForPath
   - frontend/src/preview-3d/mc-tints.ts|getTintColorSync

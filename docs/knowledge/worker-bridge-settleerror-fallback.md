@@ -8,6 +8,9 @@ source_files:
 use_when:
   - 扩展 WorkerErrorStrategy 策略
   - 评审 worker-bridge settleError 分支
+perf:
+  - concurrent
+
 ---
 
 # worker-bridge-settleError-fallback

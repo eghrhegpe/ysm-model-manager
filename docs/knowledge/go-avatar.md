@@ -13,6 +13,8 @@ use_when:
   - avatar
   - 缓存
   - 缩略图
+perf:
+  - io-bound
 invariant_anchors:
   - go/avatar/avatar.go|isSafeAvatarPath
   - go/avatar/avatar.go|strings.NewReplacer

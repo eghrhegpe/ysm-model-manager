@@ -75,6 +75,7 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 - **WASM 资产为同一份**：前端内嵌与 `frontend/public/wasm/YSMParser.wasm` 同源（2026-08-08 重出，sha256 一致），均导出 `ysm_decode_from_memory` / `_malloc` / `ccall` 与 `_main`。Go 端 `wasm_decoder.go` 出于历史原因固定走 `callMain` + MEMFS，未切换内存直解路径——**「Node 下 `_malloc` 不可用」≠「Node 下无法解码」**（两条路径均可解码）
 - **已知问题已修复（审计核实 2026-08-08）**：此前知识卡/注释声称 `ysm-glue-data.js` 的 `_getGlueCode` 引用未声明 `_cachedWasm`（ReferenceError）且返回 ArrayBuffer——**现状数据文件无缓存变量（局部 `const b64`）、返回 TextDecoder string**，bug 已不存在，「WASM 路径必静默回退 Go」假设已失效；内存直解路径（`decodeYsmFileFromMemory`）实际可用，需在真实 WebView2 环境做一次端到端回归确认后按正式路径维护
 - `_malloc` 的指针必须在 finally 中 `_free`；HEAPU8 每次从 `window.Module` 取最新值（内存扩容后旧视图失效）
+  - **WASM 内存陷阱（历史，2026-08-20 第六轮审核已修复）**：`_malloc` 触发 growMemory 后旧 `HEAPU8` 视图指向已 detached 的 ArrayBuffer——向旧视图写入**不报错但数据丢失**，症状延迟到渲染阶段（解码全乱/模型变形），极难定位。防御：**永远不要在任何可能触发 grow 的调用（如 `_malloc`）之前缓存 HEAPU8**；每次写入都经 `_getHeap()` 取最新视图。相关：ADR-109 代码审查 Checklist（WASM 内存安全部分）。
 - WASM 加载状态是模块级单例（wasmModule/loading/waiters），不得挂额外 window 全局
 - **WASM 生命周期管理**（审计发现）：`decodeYsmFile` 回退路径中，MEMFS 输出文件读取后必须 `FS.unlink` 清理（`wipeDir`，已落地）；`decodeYsmFileFromMemory` 内存直解路径的 /output 在下一次调用前清理（P3 观察：成功后未立即 wipe，产物常驻至下次解码）。WASM 为 **app 级常驻单例**（initYSMParser 懒加载后生命周期等同应用，与 ADR-039 §2.2 常驻单例豁免同类），**无销毁场景**——曾提供 `destroyYSMParser()` 但 `_free(0)` 无法真正释放 HEAP，且销毁后重新 init 有加载成本，已移除（2026-08-06，knip 死代码基线）。若未来出现真实长运行内存压力场景，应实现真正的 Emscripten 实例销毁（`Module.destroy`/instance 释放）而非 `_free(0)`。
 

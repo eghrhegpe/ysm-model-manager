@@ -13,6 +13,9 @@ use_when:
   - foot IK
   - 极向量 / pole
   - CCD
+perf:
+  - cpu-bound
+
 ---
 
 # CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik

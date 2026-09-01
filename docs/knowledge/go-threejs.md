@@ -15,6 +15,9 @@ use_when:
   - UV
   - 四元数
   - 模型渲染
+perf:
+  - cpu-bound
+  - concurrent
 invariant_anchors:
   - go/threejs/spec.go|collectBonePivots
 ---

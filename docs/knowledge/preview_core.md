@@ -24,6 +24,8 @@ use_when:
   - PreviewAdapter 适配器
   - 全模型预览（YSM / VRM / MMD / Litematic）
   - mount3D
+perf:
+  - gpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|_singletonScene.background

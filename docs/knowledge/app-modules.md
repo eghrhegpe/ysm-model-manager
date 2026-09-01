@@ -20,6 +20,8 @@ use_when:
   - 新组件注册
   - 窗口显示
   - startup reveal
+perf:
+  - io-bound
 invariant_anchors:
   - frontend/src/utils/module-loader.ts|loadView
   - frontend/src/app-modules.ts|register

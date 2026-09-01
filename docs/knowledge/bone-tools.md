@@ -23,6 +23,8 @@ use_when:
   - BoneTree
   - buildBoneTree
   - makeBonePanelRenderer
+perf:
+  - cpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/bone-tools.ts|buildBoneTree
   - frontend/src/preview-3d/adapters/vrm-bone-ui.ts|makeBonePanelRenderer

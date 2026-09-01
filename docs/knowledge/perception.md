@@ -15,6 +15,8 @@ use_when:
   - 节拍检测
   - 模型感知
   - 自动运动
+perf:
+  - cpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/perception/autodance.ts|createAutoDanceController
   - frontend/src/preview-3d/perception/beat-detector.ts|createBeatDetector

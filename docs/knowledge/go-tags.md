@@ -12,9 +12,17 @@ use_when:
   - 分类
   - 筛选
   - tag-editor
+perf:
+  - io-bound
 invariant_anchors:
   - go/tags/tags.go|fsutil.WriteFileAtomic
   - go/tags/tags.go|.corrupt
+quick_groups:
+  - 文件操作与标签
+quick_intents:
+  - 打标签 / 标签存储 / 按标签筛选
+quick_risk_lines:
+  - 标签以文件绝对路径为 key 存 tags.json；写入走 tmp + os.Rename 原子替换，禁止直写
 ---
 
 # 标签系统 go/tags

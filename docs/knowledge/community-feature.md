@@ -21,6 +21,8 @@ use_when:
   - github 仓库
   - 下载进度
   - workshop
+perf:
+  - io-bound
 invariant_anchors:
   - frontend/src/features/community/download-queue.ts|isActiveStatus
   - frontend/src/features/community/data.ts|Promise.any

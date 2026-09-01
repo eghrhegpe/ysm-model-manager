@@ -20,9 +20,18 @@ use_when:
   - 预览缓存
   - 缩略图
   - blob URL 释放
+perf:
+  - memory-heavy
+  - gpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/decoder/cache.ts|cacheSet
   - frontend/src/preview-3d/decoder/cache.ts|collectBlobUrls
+quick_groups:
+  - 截图导出与缓存
+quick_intents:
+  - 截图 / 导出 PNG / 多角度截图 / 预览缓存
+quick_risk_lines:
+  - 离屏截图渲染器资源与 blob URL 必须释放，防内存泄漏
 ---
 
 # 截图与导出 export

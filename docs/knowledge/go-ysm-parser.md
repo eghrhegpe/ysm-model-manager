@@ -11,6 +11,8 @@ use_when:
   - 摘要
   - ysm 文件
   - 元数据
+perf:
+  - io-bound
 invariant_anchors:
   - go/ysm/summary.go|ExtractYsmSummary
   - go/ysm/parse.go|AnalyzeYSMModel

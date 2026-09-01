@@ -32,6 +32,8 @@ related_adrs:
   - ADR-073-federal-render-caps
   - ADR-084-personal-lighting
   - ADR-097-scene-capability-registry
+perf:
+  - gpu-bound
 ---
 
 # 联邦渲染能力 (Render Federation)

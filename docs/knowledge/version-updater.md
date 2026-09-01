@@ -15,6 +15,8 @@ use_when:
   - 静默检查
   - updater
   - 版本
+perf:
+  - io-bound
 invariant_anchors:
   - frontend/src/features/version-updater.ts|canCheck
   - frontend/src/features/version-updater.ts|markChecked

@@ -31,6 +31,10 @@ use_when:
   - 仓库体检
   - initDiagnostics
   - startDedup
+perf:
+  - cpu-bound
+  - gpu-bound
+  - concurrent
 invariant_anchors:
   - frontend/src/views/app-content/diagnostics/init.ts|startDedup
 ---

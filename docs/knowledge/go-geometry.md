@@ -16,6 +16,9 @@ use_when:
   - 7z
   - 纹理
   - 动画
+perf:
+  - io-bound
+  - memory-heavy
 invariant_anchors:
   - go/geometry/archive.go|fsutil.ReadLimitedEntry
   - go/geometry/ysm_parser.go|json.Decoder

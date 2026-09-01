@@ -16,6 +16,8 @@ use_when:
   - 可拉取
   - 已禁用
   - 实例资源
+perf:
+  - io-bound
 invariant_anchors:
   - frontend/src/views/app-sync-manager/index.ts|_gen
 ---

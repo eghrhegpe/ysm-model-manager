@@ -11,6 +11,8 @@ use_when:
   - installer
   - 模型导入
   - 下载模型
+perf:
+  - io-bound
 invariant_anchors:
   - go/installer/installer.go|ContainsMinecraftMarker
   - go/installer/installer.go|ERROR_NOT_SAME_DEVICE

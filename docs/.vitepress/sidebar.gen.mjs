@@ -718,6 +718,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-146：TS 路径别名与反桶契约",
+        "link": "/adr/ADR-146-path-alias-anti-barrel"
+      },
+      {
         "text": "ADR-145：cli 解耦 app：消费方定义 AppService 接口",
         "link": "/adr/ADR-145-cli-app-service-interface"
       },

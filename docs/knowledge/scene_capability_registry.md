@@ -16,6 +16,8 @@ use_when:
   - 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）
   - 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）
   - 「光」指代消歧（light 是光源，fog/shadow/reflector 不是）
+perf:
+  - gpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|sceneCapabilityRegistry
   - frontend/src/preview-3d/caps/scene-capability.ts|SceneCapability

@@ -14,9 +14,17 @@ use_when:
   - 启用禁用
   - .ban
   - ysm.json 整组操作
+perf:
+  - io-bound
 invariant_anchors:
   - go/fileops/folder_import.go|IsYsmEntryJSON
   - go/fileops/folder_import.go|WriteModelFolder
+quick_groups:
+  - 文件操作与标签
+quick_intents:
+  - 移动 / 复制 / 删除 / 重命名文件 / 文件夹导入
+quick_risk_lines:
+  - 文件 CRUD 必须走 go/fileops，internal/app 薄壳仅转发
 ---
 
 # 文件操作 go/fileops

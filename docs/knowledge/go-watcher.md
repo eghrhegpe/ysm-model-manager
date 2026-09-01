@@ -10,6 +10,8 @@ use_when:
   - 文件变化
   - 刷新
   - watcher
+perf:
+  - io-bound
 invariant_anchors:
   - go/watcher/watcher.go|evs, errs, done := w.w.Events
 ---

@@ -18,6 +18,8 @@ use_when:
   - 纹理加载
   - spec 兜底
   - OrbitControls
+perf:
+  - gpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/cube-mesh.ts|computeBoneLocalPos
   - frontend/src/views/app-preview/model3d-loader.ts|specCache

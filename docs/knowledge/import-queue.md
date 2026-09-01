@@ -23,6 +23,8 @@ use_when:
   - 覆盖导入
   - import
   - 拖拽
+perf:
+  - io-bound
 invariant_anchors:
   - frontend/src/features/dnd-shared.ts|isImportableFile
   - frontend/src/features/import-executor.ts|executeCollected

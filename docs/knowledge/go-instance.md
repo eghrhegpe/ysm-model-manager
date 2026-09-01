@@ -13,6 +13,8 @@ use_when:
   - 同步项
   - BuildSyncItems
   - 资源同步
+perf:
+  - io-bound
 invariant_anchors:
   - go/instance/instance.go|ysmsync.SyncResources
 ---

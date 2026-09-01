@@ -19,6 +19,12 @@ use_when:
 invariant_anchors:
   - frontend/src/services/registry.ts|register
   - frontend/src/services/registry.ts|get
+quick_groups:
+  - 配置与注册表
+quick_intents:
+  - 新增资源类型 / 修改 resource_types.json / 文件类型
+quick_risk_lines:
+  - resource_types.json 是唯一事实来源；前端只读不判、禁本地重算
 ---
 
 # 资源注册表 registry

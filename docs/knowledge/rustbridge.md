@@ -5,9 +5,13 @@ tier: architecture
 category: go
 source_files:
   - go/rustbridge/bridge_windows.go
+  - go/rustbridge/bridge_android.go
+  - go/rustbridge/bridge_darwin.go
+  - go/rustbridge/bridge_linux.go
   - go/rustbridge/doc.go
   - go/rustbridge/embedded_windows.go
   - go/rustbridge/types_windows.go
+  - go/rustbridge/types.go
   - go/rustbridge/common.go
   - rust-core/src/model.rs
   - rust-core/src/policy.rs
@@ -15,6 +19,7 @@ source_files:
   - rust-wails-bridge/
 tests:
   - rust-core/src/tests.rs
+  - go/rustbridge/parse_test.go
 use_when:
   - Rust 扫描器
   - rust_backend
@@ -33,9 +38,29 @@ invariant_anchors:
 
 ## 范围与构建
 
-- **包**：`go/rustbridge/`——全部文件带 `//go:build windows && rust_backend`，非 Windows 或无 tag 编译时被排除
+- **包**：`go/rustbridge/`——**4 平台独立实现**（每文件带 `rust_backend` build tag）：
+  - `bridge_windows.go`（126 行）— Windows FFI 桥接（syscall.LazyDLL，`//go:build windows && rust_backend`）
+  - `bridge_android.go`（107 行）— Android FFI 桥接（CGO extern，`//go:build android && rust_backend`）
+  - `bridge_linux.go`（104 行）— Linux FFI 桥接（CGO extern，`//go:build linux && !android && rust_backend`）
+  - `bridge_darwin.go`（101 行）— macOS FFI 桥接（CGO extern，`//go:build darwin && rust_backend`）
+  - `embedded_windows.go`（69 行）— Windows 内嵌 Rust 库释放（SHA256 版本化缓存 + 原子 rename，`//go:build windows && rust_backend`）
+  - `common.go`（33 行）— 公共解码（parseResponse，`//go:build rust_backend`）
+  - `types.go`（17 行）— 类型定义（ScanResponse/ScanEntry，`//go:build rust_backend`）
+  - `types_windows.go`（9 行）— Windows 特定类型（nativeBuffer，`//go:build windows && rust_backend`）
+  - `doc.go`（3 行）— 包文档（无 build tag）
 - **桥 DLL**：`rust-wails-bridge/`（Rust crate）编译产出 `ysm_model_manager_wails_bridge.dll`，由 `build/windows/Taskfile.yml` 的 `build:rust-bridge` 构建并拷贝到 `go/rustbridge/bin/`（`platforms: [windows]` 守卫——非 Windows 交叉构建不产 .dll）
 - **embed**：`embedded_windows.go` 用 `go:embed` 嵌入桥 DLL + sha256 校验 + 落盘；生产前端不直接 import 本包（doc.go 契约）
+
+## FFI 内存管理不变量（R32 修复链锁定）
+
+- **FFI 内存管理**：Rust 分配 → Go 拷贝（`append([]byte(nil), unsafe.Slice(...))`）→ `defer freeProc.Call` 释放。顺序正确：return 求值 `parseResponse(data)` 后 defer 执行 free。
+- `unsafe.Slice(output.ptr, int(output.len))` 作为 `append` 源，`output.ptr` 在 append 完成后不再被 Go 侧引用，free 可安全执行。
+- `runtime.KeepAlive(root)` / `runtime.KeepAlive(registryJSON)` 防止 GC 在 FFI 调用期间回收 Go 字符串/字节切片。
+- `load()` 用 `sync.Once`，首次加载失败后 `loadErr` 被永久缓存，后续所有 `Scan` 调用都返回同一错误，无重试机制。DLL 是内嵌的、缓存目录是用户私有的，加载失败基本是永久性的。
+- `materializeDLL` 依赖 `os.MkdirAll(dir, 0o700)` 的目录级 ACL 限制隔离临时文件。**不调用 os.Chmod**（Windows 上只切换 `FILE_ATTRIBUTE_READONLY`，不处理 Unix 权限位）。
+- `ScanManifest` 是 ADR-120 预留接口，生产调用图不可达（仅测试调用）。旧 DLL 不含 `ysm_scan_manifest` 符号时回退到 `Scan(root, registryJSON)`。
+- **R32 P3-1 FFI 调用序列化**：四平台 `Scan`/`ScanManifest` 对 FFI 调用无并发序列化保护，若 Rust 侧非线程安全会触发数据竞争或 panic。修复：加 `ffiMu sync.Mutex`，`Scan`/`ScanManifest` 入口 `ffiMu.Lock()`+`defer ffiMu.Unlock()`（Windows 平台已修，Android/Linux/Darwin 待后续 build tag 验证）。
+- **R32 P4 四平台函数体逐字重复**：CGO `import "C"` 的特殊性使完全去重困难，但函数体可抽公共到 `bridge_cgo_common.go`（build tag: `linux || darwin || android && rust_backend`）。待后续重构。
 
 ## 契约
 
@@ -100,5 +125,6 @@ Rust 扫描路径必须与 Go scanner 单点口径一致（code review 反复核
 
 ## 相关
 
-- ADR：ADR-115（红线范式——跨类型/跨实现不得绕过单点契约）
+- ADR：ADR-115（红线范式——跨类型/跨实现不得绕过单点契约）、ADR-120（manifest 扫描预留接口）、ADR-139（Android 隐含 linux build tag）
 - 源码：`rust-core/`（Rust 扫描器核心）、`rust-wails-bridge/`（桥 crate）、`go/rustbridge/`（Go 侧窄适配器）
+- `go/scanner/rust_backend.go` — scanner 侧 Rust 后端入口

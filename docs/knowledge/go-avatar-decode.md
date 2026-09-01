@@ -7,6 +7,10 @@ source_files:
   - go/avatar/avatar_decode.go
 use_when:
   - 改头像提取 / DecodeYSMFiles / ExtractAvatarURI 逻辑或补 avatar 测试时
+perf:
+  - io-bound
+  - single-thread
+
 ---
 
 # Go 头像提取：纯函数 vs Node+WASM 解码分界

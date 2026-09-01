@@ -16,6 +16,16 @@ use_when:
   - bus
 invariant_anchors:
   - frontend/src/bus.ts|once
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - emit 事件 / 跨组件通信
+  - 订阅 / 退订事件 / once
+quick_risk_lines:
+  - 所有跨组件异步通信必经 bus.ts，禁止组件间直耦
+  - once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper）
+pitfalls:
+  - 「bus.off(event, 原fn)」once off 错对象 → 用 once 返回的 unsub 函数取消
 ---
 
 # 事件总线 bus.ts

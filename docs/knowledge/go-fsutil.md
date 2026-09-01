@@ -26,6 +26,8 @@ use_when:
   - BOM
   - 读取上限
   - base64 受限解码
+perf:
+  - io-bound
 invariant_anchors:
   - go/fsutil/walk.go|IsRecycleDir
   - go/fsutil/write.go|WriteFileAtomic

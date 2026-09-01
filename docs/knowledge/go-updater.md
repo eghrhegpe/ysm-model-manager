@@ -10,6 +10,8 @@ use_when:
   - 自动更新
   - 版本升级
   - updater
+perf:
+  - io-bound
 invariant_anchors:
   - go/updater/updater.go|fetchExpectedHash
   - go/updater/updater.go|StatusCode

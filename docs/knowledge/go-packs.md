@@ -13,6 +13,8 @@ use_when:
   - pack_format
   - 缩略图
   - 类型检测
+perf:
+  - io-bound
 invariant_anchors:
   - go/packs/mcmeta.go|LimitReader
   - go/packs/mcmeta.go|maxLangSize

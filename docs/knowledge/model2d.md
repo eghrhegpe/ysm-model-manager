@@ -15,6 +15,8 @@ use_when:
   - 骨骼热区
   - 鼠标拾取
   - 线框图
+perf:
+  - cpu-bound
 invariant_anchors:
   - frontend/src/views/app-preview/model2d/model2d.ts|const cosA = Math.cos(angle)
 ---

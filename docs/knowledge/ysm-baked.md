@@ -22,9 +22,17 @@ use_when:
   - RawFace
   - YSM 导出
   - BlockBench
+perf:
+  - cpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/decoder/wasm-decode.ts|decodeYsmViaWasm
   - frontend/src/preview-3d/decoder/geometry.ts|parseBedrockGeometryFromJSON
+quick_groups:
+  - 模型格式与解析
+quick_intents:
+  - YSM 烘焙 / 几何反推 / pivot 错位 / BlockBench 导出
+quick_risk_lines:
+  - cube 语义已烘焙为纯顶点面，禁止前端反推 origin/size/uv
 ---
 
 # YSM 烘焙与几何反推

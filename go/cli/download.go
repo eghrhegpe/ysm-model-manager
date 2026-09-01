@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"ysm-model-manager/internal/app"
+	"ysm-model-manager/go/types"
 )
 
 func init() {
@@ -73,7 +73,7 @@ func runDownloadEnqueue(ctx *CmdContext) error {
 		return newParamErrf("download enqueue: --save-dir 参数不能为空")
 	}
 
-	tasks := []app.DownloadTask{{URL: *url, SaveDir: *saveDir}}
+	tasks := []types.DownloadTask{{URL: *url, SaveDir: *saveDir}}
 	if err := ctx.App.EnqueueDownloads(tasks); err != nil {
 		return newRuntimeErrf("入队失败: %w", err)
 	}

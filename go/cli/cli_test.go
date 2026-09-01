@@ -73,11 +73,17 @@ func withStdin(t *testing.T, input string) {
 	t.Cleanup(func() { os.Stdin = old })
 }
 
+// newCLIApp 构造 RunCLI 测试用的 AppService（ADR-145：RunCLI 不再内部 new app，
+// 由调用方注入——测试注入 app.NewApp()，与旧实现内部构造语义一致）。
+func newCLIApp() AppService {
+	return app.NewApp()
+}
+
 // ---- runCLI 入口错误/边界路径（SaveAppConfig 之前即返回，无副作用）----
 
 func TestRunCLI_NoCommand_PrintsHelp(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := RunCLI(nil); err != nil {
+		if err := RunCLI(newCLIApp(), nil); err != nil {
 			t.Errorf("RunCLI(nil) 应返回 nil, got %v", err)
 		}
 	})
@@ -88,7 +94,7 @@ func TestRunCLI_NoCommand_PrintsHelp(t *testing.T) {
 
 func TestRunCLI_Version_Flag(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := RunCLI([]string{"--version"}); err != nil {
+		if err := RunCLI(newCLIApp(), []string{"--version"}); err != nil {
 			t.Errorf("--version 应返回 nil, got %v", err)
 		}
 	})
@@ -99,7 +105,7 @@ func TestRunCLI_Version_Flag(t *testing.T) {
 
 func TestRunCLI_Version_ShortFlag(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := RunCLI([]string{"-v"}); err != nil {
+		if err := RunCLI(newCLIApp(), []string{"-v"}); err != nil {
 			t.Errorf("-v 应返回 nil, got %v", err)
 		}
 	})
@@ -110,7 +116,7 @@ func TestRunCLI_Version_ShortFlag(t *testing.T) {
 
 func TestRunCLI_Help_Flag(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := RunCLI([]string{"--help"}); err != nil {
+		if err := RunCLI(newCLIApp(), []string{"--help"}); err != nil {
 			t.Errorf("--help 应返回 nil, got %v", err)
 		}
 	})
@@ -121,7 +127,7 @@ func TestRunCLI_Help_Flag(t *testing.T) {
 
 func TestRunCLI_Help_ShortFlag(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := RunCLI([]string{"-h"}); err != nil {
+		if err := RunCLI(newCLIApp(), []string{"-h"}); err != nil {
 			t.Errorf("-h 应返回 nil, got %v", err)
 		}
 	})
@@ -132,7 +138,7 @@ func TestRunCLI_Help_ShortFlag(t *testing.T) {
 
 func TestRunCLI_SubCommandHelp(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := RunCLI([]string{"--files-root", "/tmp", "search", "--help"}); err != nil {
+		if err := RunCLI(newCLIApp(), []string{"--files-root", "/tmp", "search", "--help"}); err != nil {
 			t.Errorf("子命令 --help 应返回 nil, got %v", err)
 		}
 	})
@@ -145,7 +151,7 @@ func TestRunCLI_SubCommandHelp(t *testing.T) {
 }
 
 func TestRunCLI_UnknownCommand_ReturnsError(t *testing.T) {
-	err := RunCLI([]string{"--files-root", "/tmp", "no-such-cmd"})
+	err := RunCLI(newCLIApp(), []string{"--files-root", "/tmp", "no-such-cmd"})
 	if err == nil {
 		t.Error("未知命令应返回错误")
 	}
@@ -155,7 +161,7 @@ func TestRunCLI_UnknownCommand_ReturnsError(t *testing.T) {
 }
 
 func TestRunCLI_MissingFilesRoot_ReturnsError(t *testing.T) {
-	err := RunCLI([]string{"search", "--keyword", "x"})
+	err := RunCLI(newCLIApp(), []string{"search", "--keyword", "x"})
 	if err == nil || !strings.Contains(err.Error(), "files-root") {
 		t.Errorf("缺 --files-root 应报错, got: %v", err)
 	}
@@ -1317,7 +1323,7 @@ func TestParseCommandArgs_MultipleFilesRoot(t *testing.T) {
 func TestRunCLI_JsonMode_OutputsJsonResponse(t *testing.T) {
 	dir := t.TempDir()
 	out := captureOutput(t, func() {
-		if err := RunCLI([]string{"--files-root", dir, "--json", "list"}); err != nil {
+		if err := RunCLI(newCLIApp(), []string{"--files-root", dir, "--json", "list"}); err != nil {
 			t.Logf("RunCLI --json list 返回: %v（空仓库属正常）", err)
 		}
 	})
@@ -1935,6 +1941,43 @@ func TestDownloadEnqueue_RequiresSaveDir(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "--save-dir") {
 		t.Errorf("缺 --save-dir 应报错, got: %v", err)
 	}
+}
+
+// TestDownloadEnqueue_Success 成功路径：URL+save-dir 齐全时入队（覆盖
+// types.DownloadTask 构造行）。用 fake AppService（嵌入接口 + 覆盖
+// EnqueueDownloads）避免真实 App 的 queue emit 依赖 Wails runtime 而 panic。
+func TestDownloadEnqueue_Success(t *testing.T) {
+	var enqueued []types.DownloadTask
+	fake := &fakeAppService{enqueueFn: func(tasks []types.DownloadTask) error {
+		enqueued = append(enqueued, tasks...)
+		return nil
+	}}
+	out := captureOutput(t, func() {
+		err := runDownloadEnqueue(&CmdContext{App: fake, Args: []string{"--url", "https://example.com/a.zip", "--save-dir", t.TempDir()}})
+		if err != nil {
+			t.Fatalf("合法参数应成功入队, got %v", err)
+		}
+	})
+	if !strings.Contains(out, "已入队") {
+		t.Errorf("应输出已入队提示, got: %s", out)
+	}
+	if len(enqueued) != 1 || enqueued[0].URL != "https://example.com/a.zip" {
+		t.Errorf("应入队 1 个 https 任务, got: %+v", enqueued)
+	}
+}
+
+// fakeAppService 测试桩：嵌入 AppService（nil 接口），仅覆盖被测命令用到的方法。
+// 未覆盖的方法经嵌入的 nil 接口调用会 panic——测试只走被覆盖方法的路径。
+type fakeAppService struct {
+	AppService
+	enqueueFn func(tasks []types.DownloadTask) error
+}
+
+func (f *fakeAppService) EnqueueDownloads(tasks []types.DownloadTask) error {
+	if f.enqueueFn != nil {
+		return f.enqueueFn(tasks)
+	}
+	return nil
 }
 
 func TestDownloadGitHub_RequiresURL(t *testing.T) {

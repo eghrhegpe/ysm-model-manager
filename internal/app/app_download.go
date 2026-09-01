@@ -11,27 +11,17 @@ import (
 	"sync"
 
 	"ysm-model-manager/go/download"
+	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"
 )
 
-// QueueStatusInfo 队列状态（替代多返回值，Wails 自动映射为 JS object）
-type QueueStatusInfo struct {
-	Remaining int  `json:"remaining"`
-	Running   bool `json:"running"`
-}
-
-// DownloadTask 下载队列任务
-type DownloadTask struct {
-	URL     string `json:"url"`
-	SaveDir string `json:"saveDir"`
-	Name    string `json:"name"`
-	Size    int64  `json:"size"`
-}
+// QueueStatusInfo / DownloadTask 已下沉至 go/types（ADR-145：跨包契约 DTO）。
+// 本文件经 types.QueueStatusInfo / types.DownloadTask 引用，前端绑定 JSON 结构不变。
 
 // DownloadQueue 串行下载队列
 // 回调注入替代 *App 反向引用（ADR-002 P1：打破 DownloadQueue ↔ App 循环，解锁独立测试）
 type DownloadQueue struct {
-	tasks     []DownloadTask
+	tasks     []types.DownloadTask
 	mu        sync.Mutex
 	running   bool
 	cancelled bool
@@ -53,7 +43,7 @@ func NewDownloadQueue(downloadFn func(ctx context.Context, url, saveDir string) 
 	return &DownloadQueue{downloadFn: downloadFn, emitFn: emitFn, logFn: logFn, ctx: ctx, cancelFn: cancel}
 }
 
-func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
+func (a *App) EnqueueDownloads(tasks []types.DownloadTask) error {
 	if len(tasks) == 0 {
 		return nil
 	}
@@ -103,10 +93,10 @@ func (a *App) CancelQueue() {
 	a.app.Event.Emit("queue:status", "cancelled", 0, "")
 }
 
-func (a *App) QueueStatus() QueueStatusInfo {
+func (a *App) QueueStatus() types.QueueStatusInfo {
 	a.queue.mu.Lock()
 	defer a.queue.mu.Unlock()
-	return QueueStatusInfo{Remaining: len(a.queue.tasks), Running: a.queue.running}
+	return types.QueueStatusInfo{Remaining: len(a.queue.tasks), Running: a.queue.running}
 }
 
 func (q *DownloadQueue) process() {

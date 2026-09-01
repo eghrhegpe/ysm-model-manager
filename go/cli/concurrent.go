@@ -11,7 +11,6 @@ import (
 
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
-	"ysm-model-manager/internal/app"
 )
 
 func init() {
@@ -149,7 +148,7 @@ func runConcurrentBench(ctx *CmdContext) error {
 }
 
 // benchSerialAnalyze 串行分析模型
-func benchSerialAnalyze(a *app.App, models []string) concurrentBenchResult {
+func benchSerialAnalyze(a AppService, models []string) concurrentBenchResult {
 	start := time.Now()
 
 	for _, path := range models {
@@ -163,7 +162,7 @@ func benchSerialAnalyze(a *app.App, models []string) concurrentBenchResult {
 }
 
 // benchParallelAnalyze 并行分析模型
-func benchParallelAnalyze(a *app.App, models []string, workers int) concurrentBenchResult {
+func benchParallelAnalyze(a AppService, models []string, workers int) concurrentBenchResult {
 	start := time.Now()
 
 	modelCh := make(chan string, len(models))
@@ -729,7 +728,7 @@ func saveBenchBaseline(path string, stages []singleBenchStage) error {
 
 // runSingleBenchSamples text/json 双模式的唯一采集路径：N 次迭代运行并计时，
 // perIter 钩子供 text 模式逐迭代打印（json 静默传 nil），杜绝迭代循环双维护。
-func runSingleBenchSamples(a *app.App, modelPath, filesRoot string, iterations int, perIter func(iter int, stages []singleBenchStage)) ([][]singleBenchStage, time.Duration) {
+func runSingleBenchSamples(a AppService, modelPath, filesRoot string, iterations int, perIter func(iter int, stages []singleBenchStage)) ([][]singleBenchStage, time.Duration) {
 	var allStages [][]singleBenchStage
 	totalStart := time.Now()
 	for iter := 0; iter < iterations; iter++ {
@@ -758,7 +757,7 @@ func applyBenchBaseline(baseline, saveBaseline string, thresholdPct float64, avg
 }
 
 // runSingleModelBench 执行单次单模型测试
-func runSingleModelBench(a *app.App, modelPath, filesRoot string) []singleBenchStage {
+func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenchStage {
 	var stages []singleBenchStage
 
 	start := time.Now()

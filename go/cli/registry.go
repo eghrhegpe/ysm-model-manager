@@ -3,13 +3,11 @@ package cli
 import (
 	"fmt"
 	"os"
-
-	"ysm-model-manager/internal/app"
 )
 
 // CmdContext 统一命令执行上下文
 type CmdContext struct {
-	App       *app.App
+	App       AppService
 	FilesRoot string
 	Args      []string
 }
@@ -70,7 +68,7 @@ func GetAllCommands() []CliCommand {
 }
 
 // DispatchCommand 分发命令执行
-func DispatchCommand(a *app.App, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, filesRoot string, commandArgs []string, requireFilesRoot bool) error {
+func DispatchCommand(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, filesRoot string, commandArgs []string, requireFilesRoot bool) error {
 	if len(commandArgs) == 0 {
 		return nil
 	}

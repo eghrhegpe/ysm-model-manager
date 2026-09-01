@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
 
 // 回调注入（ADR-002 P1 打破循环）后 DownloadQueue 可脱离 App 独立测试
@@ -20,7 +22,7 @@ func TestDownloadQueue_Sequential(t *testing.T) {
 		func(name string, args ...interface{}) { emitted = append(emitted, name) },
 		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
 	)
-	q.tasks = []DownloadTask{
+	q.tasks = []types.DownloadTask{
 		{URL: "https://a.example/x.ysm", SaveDir: t.TempDir(), Name: "a.ysm"},
 		{URL: "https://b.example/y.ysm", SaveDir: t.TempDir(), Name: "b.ysm"},
 	}
@@ -55,7 +57,7 @@ func TestDownloadQueue_ErrorDoesNotStopQueue(t *testing.T) {
 		func(name string, args ...interface{}) {},
 		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
 	)
-	q.tasks = []DownloadTask{
+	q.tasks = []types.DownloadTask{
 		{URL: "https://bad.example/x.ysm", SaveDir: t.TempDir(), Name: "bad.ysm"},
 		{URL: "https://ok.example/y.ysm", SaveDir: t.TempDir(), Name: "ok.ysm"},
 	}
@@ -81,7 +83,7 @@ func TestDownloadQueue_CancelSkipsDoneEvent(t *testing.T) {
 		func(name string, args ...interface{}) { emitted = append(emitted, name) },
 		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
 	)
-	q.tasks = []DownloadTask{
+	q.tasks = []types.DownloadTask{
 		{URL: "https://slow.example/x.ysm", SaveDir: t.TempDir(), Name: "slow.ysm"},
 	}
 	q.cancelled = true
@@ -93,5 +95,29 @@ func TestDownloadQueue_CancelSkipsDoneEvent(t *testing.T) {
 		if e == "queue:status" {
 			t.Error("取消后不应发 done 事件")
 		}
+	}
+}
+
+// TestQueueStatus_ReflectsQueue 钉住 QueueStatus 的结构化返回（ADR-145：返回类型
+// 已下沉 types.QueueStatusInfo——JSON 契约 remaining/running 不变，本测试锁行为）。
+// 注：不调 EnqueueDownloads（其 process goroutine 的 emit 依赖 Wails runtime，
+// headless 测试会 nil panic），直接注入 queue.tasks 验证读锁路径。
+func TestQueueStatus_ReflectsQueue(t *testing.T) {
+	a := NewApp()
+	st := a.QueueStatus()
+	if st.Running || st.Remaining != 0 {
+		t.Errorf("空队列应 idle: got %+v", st)
+	}
+	// 包内直接注入任务（不启 process），验证 remaining 读数
+	a.queue.mu.Lock()
+	a.queue.tasks = []types.DownloadTask{
+		{URL: "https://a.example/x.ysm", SaveDir: t.TempDir(), Name: "a.ysm"},
+		{URL: "https://b.example/y.ysm", SaveDir: t.TempDir(), Name: "b.ysm"},
+	}
+	a.queue.running = true
+	a.queue.mu.Unlock()
+	st = a.QueueStatus()
+	if !st.Running || st.Remaining != 2 {
+		t.Errorf("注入 2 任务后应 running+remaining=2, got %+v", st)
 	}
 }

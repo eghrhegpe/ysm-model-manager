@@ -42,6 +42,23 @@ type ImportFileItem struct {
 	Base64  string `json:"Base64"`  // 文件内容
 }
 
+// QueueStatusInfo 下载队列状态（替代多返回值，Wails 自动映射为 JS object）。
+// 归属（ADR-145）：跨包契约 DTO 下沉至 types——go/cli 定义 AppService 接口时
+// 需引用本类型，若不随 DTO 下沉则 cli 得反向 import internal/app（死结）。
+type QueueStatusInfo struct {
+	Remaining int  `json:"remaining"`
+	Running   bool `json:"running"`
+}
+
+// DownloadTask 下载队列任务。
+// 归属（ADR-145）：同上，跨包契约 DTO 下沉至 types（JSON tag 原样保留 → bindings 零漂移）。
+type DownloadTask struct {
+	URL     string `json:"url"`
+	SaveDir string `json:"saveDir"`
+	Name    string `json:"name"`
+	Size    int64  `json:"size"`
+}
+
 // VersionInstance 整合包信息
 type VersionInstance struct {
 	Name       string `json:"Name"`

@@ -10,7 +10,6 @@ import (
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
-	"ysm-model-manager/internal/app"
 )
 
 func init() {
@@ -108,7 +107,7 @@ func runGUIFlow(ctx *CmdContext) error {
 // 属 CLI 测试副作用污染源。现 CLI 全路径均不落盘（审核 #4）：DispatchCommand 对
 // --files-root 仅做内存会话覆写（app.SetSessionFilesRoot），此处仅需 LoadAppConfig 读取。
 // 见 cli_test.go「TestDispatchCommand_SessionRootNoWriteThrough」机检约束。
-func runPhaseConfigLoad(a *app.App) guiFlowResult {
+func runPhaseConfigLoad(a AppService) guiFlowResult {
 	start := time.Now()
 
 	config := a.LoadAppConfig()
@@ -171,7 +170,7 @@ func classifyForScan(path, ext string, registry *types.ResourceTypeRegistry) str
 }
 
 // runPhaseModelScan 模拟模型扫描
-func runPhaseModelScan(a *app.App, filesRoot string) guiFlowResult {
+func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	start := time.Now()
 
 	entries := a.ScanModelEntries(filesRoot)
@@ -218,7 +217,7 @@ func runPhaseModelScan(a *app.App, filesRoot string) guiFlowResult {
 }
 
 // runPhaseModelAnalyze 模拟模型分析
-func runPhaseModelAnalyze(a *app.App, modelPath string) guiFlowResult {
+func runPhaseModelAnalyze(a AppService, modelPath string) guiFlowResult {
 	start := time.Now()
 	ext := strings.ToLower(filepath.Ext(modelPath))
 
@@ -302,7 +301,7 @@ func runPhaseTextureCache(modelPath string) guiFlowResult {
 }
 
 // runPhaseDataPrep 模拟数据准备与 IPC 传输
-func runPhaseDataPrep(a *app.App, modelPath string) guiFlowResult {
+func runPhaseDataPrep(a AppService, modelPath string) guiFlowResult {
 	start := time.Now()
 
 	model := a.AnalyzeBedrockModel(modelPath)
@@ -331,7 +330,7 @@ func runPhaseDataPrep(a *app.App, modelPath string) guiFlowResult {
 }
 
 // runPhaseRenderEstimate 模拟渲染预估
-func runPhaseRenderEstimate(a *app.App, modelPath string, verbose bool) guiFlowResult {
+func runPhaseRenderEstimate(a AppService, modelPath string, verbose bool) guiFlowResult {
 	start := time.Now()
 
 	model := a.AnalyzeBedrockModel(modelPath)

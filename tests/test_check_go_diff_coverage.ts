@@ -15,6 +15,9 @@ import {
   addLinesFromDiff,
   buildSuggestBlock,
   isExemptLifecycle,
+  isExemptEntry,
+  isRewriteLine,
+  isRewriteOnlyDiff,
 } from '../scripts/check-go-diff-coverage.ts';
 
 const errors = [];
@@ -124,6 +127,60 @@ check('isExemptLifecycle 命中窗口事件豁免名单', () => {
 check('isExemptLifecycle 普通文件不豁免', () => {
   assert.equal(isExemptLifecycle('internal/app/app.go'), false);
   assert.equal(isExemptLifecycle('go/scanner/scanner.go'), false);
+});
+
+// ── 8. isExemptEntry（入口文件豁免）──
+check('isExemptEntry main.go 豁免', () => {
+  assert.equal(isExemptEntry('main.go'), true);
+});
+
+check('isExemptEntry 普通文件不豁免', () => {
+  assert.equal(isExemptEntry('go/cli/cli.go'), false);
+  assert.equal(isExemptEntry('internal/app/app.go'), false);
+});
+
+// ── 9. isRewriteLine（纯结构行识别）──
+check('isRewriteLine 识别签名/引用/注释/断言行', () => {
+  assert.equal(isRewriteLine('func benchSerialAnalyze(a AppService, models []string) concurrentBenchResult {'), true);
+  assert.equal(isRewriteLine('func (a *App) EnqueueDownloads(tasks []types.DownloadTask) error {'), true);
+  assert.equal(isRewriteLine('import ('), true);
+  assert.equal(isRewriteLine('\t"ysm-model-manager/go/types"'), true);
+  assert.equal(isRewriteLine('// 注释'), true);
+  assert.equal(isRewriteLine(''), true);
+  assert.equal(isRewriteLine('var _ cli.AppService = appStruct'), true);
+  assert.equal(isRewriteLine('type DownloadTask struct {'), true);
+  assert.equal(isRewriteLine('const MaxImportSize = 500'), true);
+});
+
+check('isRewriteLine 逻辑行不豁免', () => {
+  assert.equal(isRewriteLine('tasks := []types.DownloadTask{{URL: *url, SaveDir: *saveDir}}'), false);
+  assert.equal(isRewriteLine('return types.QueueStatusInfo{Remaining: len(a.queue.tasks), Running: a.queue.running}'), false);
+  assert.equal(isRewriteLine('if err := cli.RunCLI(app.NewApp(), os.Args[2:]); err != nil {'), false);
+  assert.equal(isRewriteLine('var count = 0'), false); // 普通 var 是逻辑
+});
+
+// ── 10. isRewriteOnlyDiff（纯重构变更判定）──
+check('isRewriteOnlyDiff 全结构行 → 豁免', () => {
+  const diff = [
+    '@@ -152 +151 @@',
+    '-func benchSerialAnalyze(a *app.App, models []string) concurrentBenchResult {',
+    '+func benchSerialAnalyze(a AppService, models []string) concurrentBenchResult {',
+  ].join('\n');
+  assert.equal(isRewriteOnlyDiff(diff), true);
+});
+
+check('isRewriteOnlyDiff 含逻辑行 → 不豁免', () => {
+  const diff = [
+    '@@ -76 +76 @@',
+    '-tasks := []app.DownloadTask{{URL: *url, SaveDir: *saveDir}}',
+    '+tasks := []types.DownloadTask{{URL: *url, SaveDir: *saveDir}}',
+  ].join('\n');
+  assert.equal(isRewriteOnlyDiff(diff), false);
+});
+
+check('isRewriteOnlyDiff 空/null → false', () => {
+  assert.equal(isRewriteOnlyDiff(null), false);
+  assert.equal(isRewriteOnlyDiff(''), false);
 });
 
 if (errors.length) {

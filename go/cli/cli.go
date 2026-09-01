@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"ysm-model-manager/go/version"
-	"ysm-model-manager/internal/app"
 )
 
 // cliPrologue 统一 CLI 前置分支：--version/-v、--help/-h、空命令。
@@ -35,8 +34,9 @@ func cliPrologue(args []string) (filesRoot string, jsonMode bool, commandArgs []
 	return filesRoot, jsonMode, commandArgs, false
 }
 
-// RunCLI 执行 CLI 模式
-func RunCLI(args []string) error {
+// RunCLI 执行 CLI 模式（ADR-145：AppService 由调用方构造传入，本函数不再内部 new app——
+// 装配责任留在 main.go；go/cli 生产代码不再 import internal/app）
+func RunCLI(a AppService, args []string) error {
 	filesRoot, jsonMode, commandArgs, handled := cliPrologue(args)
 	if handled {
 		return nil
@@ -51,14 +51,12 @@ func RunCLI(args []string) error {
 		return &ErrParam{Err: fmt.Errorf("--files-root 参数不能为空")}
 	}
 
-	a := app.NewApp()
-
 	// 全局 --json 模式：捕获输出并包装为 JSON 响应
 	if jsonMode {
 		start := time.Now()
 		outputBuf, restoreStdout := captureStdout()
 		defer restoreStdout() // panic 兜底：确保 stdout 一定恢复
-		err := DispatchCommand(a, a.SaveAppConfig, filesRoot, commandArgs, true)
+		err := DispatchCommand(a, nil, filesRoot, commandArgs, true)
 		restoreStdout() // 显式关闭 pipe，确保 outputBuf.String() 不死锁
 
 		cmdName := commandArgs[0]
@@ -78,11 +76,11 @@ func RunCLI(args []string) error {
 		return err
 	}
 
-	return DispatchCommand(a, a.SaveAppConfig, filesRoot, commandArgs, true)
+	return DispatchCommand(a, nil, filesRoot, commandArgs, true)
 }
 
-// ExecuteCLIWithApp 执行 CLI 命令
-func ExecuteCLIWithApp(a *app.App, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, args []string) error {
+// ExecuteCLIWithApp 执行 CLI 命令（GUI 桥接入口：内部经 AppService 分发）
+func ExecuteCLIWithApp(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, args []string) error {
 	filesRoot, _, commandArgs, handled := cliPrologue(args)
 	if handled {
 		return nil

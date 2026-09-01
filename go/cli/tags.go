@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"ysm-model-manager/internal/app"
 )
 
 func init() {
@@ -208,9 +206,6 @@ func runTagsCount(ctx *CmdContext) error {
 	}
 	return nil
 }
-
-// 确保 app.App 被引用（tags 系列通过 ctx.App.* 调用）
-var _ = (*app.App)(nil)
 
 // 保留 json 导入（未来 --format json 下沉时用）
 var _ = json.Marshal

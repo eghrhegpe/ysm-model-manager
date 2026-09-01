@@ -258,8 +258,14 @@ async function main() {
     for (const entry of tools) {
       const tool = typeof entry === 'string' ? entry : entry.tool;
       const extraArgs = typeof entry === 'string' ? [] : entry.args || [];
+      // 文件驱动模式（commit-with-check 等）下，check-go-diff-coverage 必须按
+      // --staged 只查本次暂存区——否则回退 base=origin/main 全库 diff，把
+      // origin/main 之后所有未推送改动（含并行会话提交）误算进本次覆盖门禁，
+      // 纯签名重构会被误报 0% 阻断（ADR-145 实践实证）。push 模式 files 为空，
+      // 不加 --staged，保持全库比对（推送时本就该查全部待推改动）。
+      const stagedArg = files.length > 0 && tool === 'check-go-diff-coverage.ts' ? '--staged' : '';
       const t0 = Date.now();
-      const r = sh(`node scripts/${tool} --json ${extraArgs.join(' ')}`);
+      const r = sh(`node scripts/${tool} --json ${stagedArg} ${extraArgs.join(' ')}`);
       // P1 修复（2026-08-17）：审计类工具退出码不可靠（i18n/孤儿/命名/卫生默认恒 0），
       // 必须解析 --json 的 _summary 判定——与文件头「不得依赖退出码」契约对齐。
       let ok = r.rc === 0;

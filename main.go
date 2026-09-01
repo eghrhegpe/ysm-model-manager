@@ -17,7 +17,8 @@ var assets embed.FS
 func main() {
 	// ---- CLI Mode: 独立运行，脱离 Wails GUI，用于测试或自动化 ----
 	if len(os.Args) > 1 && os.Args[1] == "--cli" {
-		if err := cli.RunCLI(os.Args[2:]); err != nil {
+		// ADR-145：AppService 在入口构造并注入——go/cli 不再反向 import internal/app
+		if err := cli.RunCLI(app.NewApp(), os.Args[2:]); err != nil {
 			cli.PrintError(err)
 			os.Exit(cli.ExitCodeOf(err))
 		}
@@ -27,6 +28,9 @@ func main() {
 	// ---- End CLI Mode ----
 
 	appStruct := app.NewApp()
+	// ADR-145 编译期断言：*app.App 必须满足 cli.AppService（消费方接口契约）。
+	// 任一方法签名漂移此处立即编译失败，杜绝「接口与实现脱钩」静默演进。
+	var _ cli.AppService = appStruct
 	// CLI 桥接：从 cli 注册表注入可用命令列表（单一事实来源，新增命令自动可见）
 	appStruct.SetAllowedCommands(cli.GetAllowedCommands())
 	wailsApp := application.New(application.Options{

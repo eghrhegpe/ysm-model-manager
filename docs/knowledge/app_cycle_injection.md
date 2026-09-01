@@ -43,7 +43,7 @@ use_when:
 ```go
 // internal/app/app_download.go
 type DownloadQueue struct {
-    tasks []DownloadTask
+    tasks []types.DownloadTask // DTO 归属 go/types（ADR-145：跨包契约下沉）
     mu    sync.Mutex
     // ……
     // 注入的回调，替代原 *App 反向引用

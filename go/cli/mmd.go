@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/internal/app"
 )
 
 func init() {
@@ -241,7 +240,7 @@ func runFileBench(ctx *CmdContext) error {
 }
 
 // calculateIPCOverhead 实际测量 IPC 开销
-func calculateIPCOverhead(a *app.App, files []fileBenchItem, iterations int) ipcEstimate {
+func calculateIPCOverhead(a AppService, files []fileBenchItem, iterations int) ipcEstimate {
 	if len(files) == 0 {
 		return ipcEstimate{}
 	}

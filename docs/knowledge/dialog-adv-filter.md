@@ -70,7 +70,7 @@ invariant_anchors:
 - `null` 语义固定为「不限制」，仅在 min/max 双端有值时才做区间校验
 - 清除与取消是两种不同结果（`{ cleared: true }` vs `null`），调用方据此区分「清空条件」与「放弃修改」
 - 回填值必须过 `esc` 再进 value 属性；弹窗经 `registerDlg` 登记；**数字回填用 `?? ""` 而非 `|| ""`**（P3 修复：`0` 是合法下限值，`|| ""` 会折叠成空——最小骨骼数 0 的回填丢失）
-- 弹窗未做 `trapFocus`（modal 家族其余成员有，此处一致性缺口 P3 观察）；Enter 提交与 OK 点击共享 `closeDlg` 的 `_closing` 防重复结算
+- 弹窗未做 `trapFocus`（modal 家族其余成员有，此处一致性缺口 P3 观察）；Enter 提交与 OK 点击共享 `closeDlg` 的防重复结算守卫（模块级 WeakSet）
 
 ## 相关
 

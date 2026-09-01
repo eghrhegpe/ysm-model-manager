@@ -11,6 +11,7 @@
 |----------|--------|----------|----------|
 | 2D 预览、骨骼图、Canvas 渲染 | [2D 预览渲染 model2d](./model2d.md) | 2D 骨骼渲染必须走 model2d.ts 的 Canvas 渲染，禁止手写骨骼画布 | - |
 | 3D 菜单控件声明式渲染 | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
+| 3D 感知系统、自主动画、自动跳舞 | [3D 感知系统 perception](./perception.md) | 3D 感知必须走 perception 模块的控制器，禁止手写动画注入 | - |
 | 3D 骨骼 spec、three.js | [3D 骨骼 spec go/threejs](./go-threejs.md) | YSM 骨骼数据必须走 go/threejs 的 spec.go 转换为 three.js 格式，前端禁止手写骨骼转换 | - |
 | 3D 控制器、MMD 播放、VRM 材质 / YSM schema | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联 | ADR-127, ADR-132 |
 | 3D 预览菜单、根菜单、dock 按钮 | [统一 3D 预览核心 preview-core](./preview_core.md) | 适配器项经 setAdapterItems 注入，禁止内联 | ADR-125 |
@@ -21,6 +22,7 @@
 | 多模型选择、多组件 / 多 entry | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 容器内多模型必须经 multiModelSelectNode 声明式菜单选择，禁止 adapter 直接遍历 entry 数组渲染 | ADR-132 |
 | 骨骼动画、关键帧、动画播放 | [动画系统 animation](./animation-system.md) | 基岩 animation.json 解析后必须走 evaluateClip 插值，禁止前端手写关键帧插值逻辑 | - |
 | 加密模型、wasm 加载、Emscripten | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
+| 节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | - | - |
 | 截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132 |
 | 截图灯光、activeComponent、组件选择 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
 | 蓝图、投影、资源管理 | [资源包功能 resource-packs](./resource-packs.md) | - | - |
@@ -36,6 +38,7 @@
 | 渲染联邦、shared renderer、rAF 复用 | [联邦渲染能力 (Render Federation)](./render-federation.md) | 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer | ADR-125 |
 | 预览面板、模型预览、2D 骨骼 / 3D 预览 | [预览面板 app-preview](./app-preview.md) | 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则 | - |
 | 预览设置、显示控制、骨骼名称开关 | [预览面板设置与显示控制](./preview-settings.md) | 预览设置集中由 preview-state.ts 的 KNOWN_PATHS 注册管理，新增选项必须经注册而非直接读写状态 | ADR-132 |
+| 眨眼/呼吸/视线追踪/口型同步 | [3D 感知系统 perception](./perception.md) | - | - |
 | 帧率 / 像素比 / 视锥剔除 / 3D 偏好 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
 | 追加模型、同台加载、多模型同框 | [统一 3D 预览核心 preview-core](./preview_core.md) | 跨类型必须走 switchExternal，禁止直接调 adapter.build | ADR-125 |
 | 资源包、光影包、resourcepack / shaderpack | [资源包功能 resource-packs](./resource-packs.md) | 资源包 / 光影包详情必须经 detail.ts 的 showResourcePack/showShaderpack，禁止手写详情渲染 | - |
@@ -66,9 +69,11 @@
 | 侧边栏、整合包列表、版本卡片 | [侧边栏 app-sidebar](./app-sidebar.md) | 侧边栏的 push/pull 必须经 events.ts 的 runPush/runPull 转发到 sync-manager，禁止直接调 API | - |
 | 纯函数 | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
+| 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
 | 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底 | - |
 | 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | - |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
+| 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
 | 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
@@ -91,6 +96,7 @@
 | emit 事件 / 跨组件通信 | [事件总线 bus.ts](./event-bus.md) | 所有跨组件异步通信必经 bus.ts，禁止组件间直耦 | - |
 | input-and-animation | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
 | nav:change 事件分发、全局 handler 注册 | [主内容页 app-content](./app-content.md) | - | - |
+| node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | - | - |
 | pointerdown / pointermove / pointerup、触屏 + 桌面统一 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | 所有交互必须用 pointerdown/pointermove/pointerup 统一处理，禁止混用 mousedown/touchstart | - |
 | PushSingleResource / PullSingleResource | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | registerGlobalHandlers、instance-ops | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
@@ -99,6 +105,8 @@
 | swallowError / fireAndForget / retry / timeout | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | sync:download:missing 缺包回拉 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | tree:set-search、bus-handlers、selectState | [资源树 app-tree](./app-tree.md) | - | - |
+| updater | [版本更新 version-updater](./version-updater.md) | - | - |
+| Vitest 环境切换、测试环境 | [Vitest 环境切换规则](./vitest-env-switch.md) | 只有纯逻辑测试（不碰 DOM）才能切 @vitest-environment node，源码顶层副作用必须先治理 | - |
 
 ## 🎯 模型扫描与仓库管理
 
@@ -109,6 +117,7 @@
 | 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 关键词搜索、数值范围搜索 | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | - |
+| 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | - |
 | 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
 | 去重检测、dedup | [扫描核心 go/scanner](./go-scanner.md) | - | - |
 | 容器解析、container_entries | [统一容器桥接层 go/container](./go-container.md) | 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举 | - |
@@ -132,9 +141,11 @@
 | last-wins / priority 裁决 | [分类路由与回归护栏](./classify-routing.md) | - | - |
 | parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | - |
 | runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
+| SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | - |
 | SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
 | sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | - |
 | watcher、Events / errs / done | [文件监听 go/watcher](./go-watcher.md) | - | - |
+| Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | - |
 | YSM 解析、摘要 ExtractYsmSummary | [YSM 解析 go/ysm](./go-ysm-parser.md) | YSM 解析必须走 go/ysm 的 AnalyzeYSMModel，前端禁止手写 YSM 解析逻辑 | - |
 | YSM 文件元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
 | zip 多模型、多 entry | [统一容器桥接层 go/container](./go-container.md) | - | - |
@@ -145,13 +156,19 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 调后端、app.ts 绑定、getApp | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
+| 桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend_web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
+| Android/Linux/macOS Rust 桥 | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径 | - |
 | API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
+| bridge_windows/bridge_android/bridge_linux | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend_web.md) | - | - |
+| compile-android-rust/compile-rust-static | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
 | GetAppVersion / ScanModelEntries / SearchModels | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
 | IndexedDB / IDB / 浏览器后端 | [网页版后端 backend-web](./backend_web.md) | - | - |
 | IndexedDB、网页版存储 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 事务必须接线 complete/error/abort 三事件 | ADR-177 |
 | NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend_web.md) | - | - |
+| Rust 扫描器、rust_backend | [Rust 桥 rustbridge](./rustbridge.md) | Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载 | - |
+| rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
 | Wails 绑定、Go 调用 | [Wails 桥接 app.ts](./wails-bridge.md) | 前端必须经 getApp() 访问，禁止直调 window.go | ADR-049 |
 
 ## 🎯 文件操作与标签
@@ -218,8 +235,11 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
+| 共享类型、AppConfig、配置 | [共享类型 go/types](./go-types.md) | 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义 | - |
 | 检查更新、更新下载、update | [自动更新 go/updater](./go-updater.md) | 更新检查必须走 go/updater，前端禁止手写更新下载逻辑 | - |
 | 新增资源类型 / 修改 resource_types.json / 文件类型 | [资源注册表 registry](./resource-registry.md) | resource_types.json 是唯一事实来源；前端只读不判、禁本地重算 | - |
+| 注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) | - | - |
+| LoadRegistry/ParseDedupConfig | [共享类型 go/types](./go-types.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
 
 ## 🎯 模型格式与解析
@@ -298,6 +318,8 @@
 | 同步不做 hash 校验 | - | 文件变更未检测；必须经 sync_hash 校验 |
 | 前端手写骨骼转换 | - | 与 go/threejs 输出不一致、四元数旋转错乱；必须经 spec.go |
 | spec 字段漏转换 | - | 骨骼变形丢失；必须完整覆盖所有 spec 字段 |
+| 复制类型定义 | - | 类型不一致、重构时漏改；必须经 go/types 单点 |
+| LoadRegistry 失败未兜底 | - | 启动崩溃；必须在 LoadRegistry 里做默认值兜底 |
 | 手写更新下载 | - | 与 go/updater 的增量 / 全量策略不一致；必须经 go/updater |
 | 更新未完成前继续操作 | - | 半更新状态、启动失败；必须等更新完成再操作 |
 | 轮询文件系统 | - | 延迟高、CPU 浪费；必须经 go/watcher 事件流 |
@@ -306,12 +328,16 @@
 | 跳过 ExtractYsmSummary 走全文解析 | - | 详情展示性能差；摘要必须复用 |
 | 各组件各自调 ImportModel | - | 并发冲突、队列状态混乱；必须经 import-executor |
 | dnd-collector 未做去重 | - | 同文件重复导入；必须在 collector 阶段去重 |
+| 主线程同步跑统计 | - | 大库卡死 UI；必须经 Web Worker 后台统计 |
+| Worker 未独立加载 WASM | - | 与主线程 WASM 实例冲突；必须在 Worker 内独立 open 解码 |
 | 手写骨骼画布 | - | 与 model2d 输出不一致、缺鼠标拾取；必须复用 model2d.ts |
 | Canvas 不销毁 | - | 内存泄漏；必须复用 renderer 并dispose |
 | adapter 直接遍历 entry 数组 | - | 容器内多模型顺序不稳定、缺用户选择点；必须走 multiModelSelectNode |
 | litematic zip 多 nbt 未走 select | - | 默认取第一个，用户无法换选；必须复用 multiModelSelectNode |
 | 在 page-store 里挂页面挂载 / 卸载逻辑 | - | 与 app-content 重复、状态串扰；必须分开 |
 | resolveInitialPage 无回退 | - | 隐私模式读不到 localStorage 时死页；必须经三优先级回退 repository |
+| 手写动画注入 | - | 与感知系统控制器冲突、节奏不同步；必须经感知控制器 |
+| 节拍检测未缓存 | - | 每帧重复采样音频；必须经 beat-detector 的缓存策略 |
 | 混用 mousedown + touchstart | - | 触屏双触发、桌面手势冲突；必须经 pointer events 统一 |
 | 拖拽不设 touch-action:none | - | 浏览器滚动吃掉手势；必须在拖拽元素上禁用 touch-action |
 | 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
@@ -329,6 +355,10 @@
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
 | 手写详情渲染 | - | 与模型详情样式不一致、缺 Go 侧 ReadPackMeta/ReadShaderpackLang；必须复用 |
 | 光影包配置未读 ReadShaderpackLang | - | 显示名 / 配置简介缺失；必须经 Go 侧读取 |
+| 硬编码 Windows 路径 | - | Android/Linux 启动失败；必须经平台桥的编译脚本 |
+| CGO 未静态链接 | - | Android 缺少依赖库；必须经 compile-rust-static 静态编译 |
+| 直接 dlopen 加载 rust.dll | - | 平台差异处理不全、符号名不匹配；必须经 bridge_*.go 封装 |
+| Rust 后端未正确回收 | - | 内存泄漏；必须经 rustbridge 的 drop/destroy 生命周期 |
 | adapter 直接创建场景对象 | - | 能力列表 / 菜单 / 状态同步不一致；必须经 sceneCapabilityRegistry 注册 |
 | 能力未实现 getMenuControls | - | 菜单缺控件；必须在 SceneCapability 接口中实现 getMenuControls |
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
@@ -337,6 +367,10 @@
 | PullSingleResource 未完成前刷新侧边栏 | - | 半同步状态显示；必须等 store 状态收敛 |
 | 手写重复 DOM | - | 样式不一致、缺可访问性；必须经 ui-components |
 | ui-components 内自定义元素 | - | 与全仓 Web Components 规范冲突；ui-components 只做 helper 函数 |
+| 高频轮询 GitHub API | - | 触发限流、浪费带宽；必须经 canCheck 节流 |
+| check 未 markChecked | - | 重启后重复检查；必须在检查完成后 markChecked 记录时间戳 |
+| DOM 测试切 node 环境 | - | window/document 报错；必须保持 happy-dom 或治理源码副作用 |
+| 用 vi.mock 硬扛源码副作用 | - | 治标不治本；必须先做惰性化守卫/神桶拆分 |
 | 直调 window.go 方法 | - | Wails 启动时序不确定、方法未就绪时调用失败；必须经 getApp() 代理 |
 | 在 web 模式直调 wails binding | - | window.go 不存在；必须走 backend-web 的 browser-adapter |
 | 手写动画解析 | - | 与基岩版 animation.json 语义不一致；必须经 ysm-animation-player |

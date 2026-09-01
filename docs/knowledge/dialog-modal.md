@@ -39,7 +39,7 @@ quick_risk_lines:
 ## 核心职责
 
 - `esc(s)`：HTML 转义（`&`/`<`/`>`/`"`），弹窗内所有动态文本必须经过
-- `closeDlg(overlay, resolve, value, delay=120)`：带退场动画关闭——置 `_closing` 标记防重复触发，加 `dlg-closing` 类，延时移除 DOM 并 resolve Promise
+- `closeDlg(overlay, resolve, value, delay=120)`：带退场动画关闭——经模块级 `WeakSet<HTMLElement>`（`_closingOverlays`）防重复触发（不污染 HTMLElement 全局类型），加 `dlg-closing` 类，延时移除 DOM 并 resolve Promise
 - `registerDlg(overlay, cancelClose)`：登记活动弹窗单例；已有活动弹窗时先调其 `cancelClose()`（按取消值结算），防止连点叠加出多个弹窗/双执行
 - `modalPrompt(opts)`：输入框弹窗，空值校验（`#mp-err` 提示），Enter 确认 / Esc 取消，返回输入值或 null
 - `modalSelect(opts)`：下拉选择弹窗，返回选中项或 null
@@ -63,11 +63,11 @@ quick_risk_lines:
 ## 不变量
 
 - 活动弹窗单例槽位（`_activeOverlay`/`_closeActive`）：新弹窗 `registerDlg` 时旧弹窗必须按「取消值」结算，杜绝弹窗叠加与悬挂 Promise；`closeDlg` 结算槽位带 `_activeOverlay === overlay` 判定，旧弹窗晚到的定时器不误清新弹窗槽位
-- `closeDlg` 必须经 `overlay._closing` 守卫，同一弹窗只结算一次
+- `closeDlg` 必须经 `_closingOverlays`（WeakSet）守卫，同一弹窗只结算一次
 - 弹窗内所有动态文本必须过 `esc`，禁止直拼未转义 HTML（modal.ts 从 html.ts import 并 re-export，无双源；`'` 也转义为 `&#39;`，比知识卡声明的 `& < > "` 更严格）
 - 弹窗只 resolve 不 reject：取消/关闭一律 resolve 取消值（null/false），调用方无需 catch
 - 弹窗 append 到 `document.body` 后必须立即 `registerDlg`，顺序不可颠倒
-- trapFocus 已导出（modal.ts trapFocus）供四个内置弹窗使用；P3 观察：`FOCUSABLE_SEL` 裸 `tabindex` 会匹配 `tabindex="-1"`（当前内置弹窗无 -1 后代，静态推导未证实触发）；modalConfirm 初始焦点在 overlay 而 Enter 不触发确认（UX 缺口）；modalSelect 的 `placeholder` 选项为死代码
+- trapFocus 已导出（modal.ts trapFocus）供四个内置弹窗使用；P3 观察：`FOCUSABLE_SEL` 裸 `tabindex` 会匹配 `tabindex="-1"`（当前内置弹窗无 -1 后代，静态推导未证实触发）；modalConfirm 初始焦点在 overlay 而 Enter 不触发确认（UX 缺口）；modalSelect 的 `placeholder` 选项接口保留兼容但 builder 不消费（原 `void placeholder` 墓碑已清除）。单次使用的绑定微函数已内联回各 modalXxx，`dgMo*` 匈牙利前缀已清除（2026-09-01 utils 锐评整改）
 
 ## 相关
 

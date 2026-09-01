@@ -7,6 +7,18 @@ source_files:
   - frontend/src/features/version-updater.ts
 tests:
   - frontend/src/features/version-updater.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 更新检查、升级、新版本
+  - 静默检查、canCheck、markChecked
+  - updater
+quick_risk_lines:
+  - 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API
+pitfalls:
+  - 高频轮询 GitHub API → 触发限流、浪费带宽；必须经 canCheck 节流
+  - check 未 markChecked → 重启后重复检查；必须在检查完成后 markChecked 记录时间戳
+
 use_when:
   - 更新
   - 升级
@@ -42,7 +54,7 @@ invariant_anchors:
 - 导出：`checkUpdateSilent(): Promise<void>`、`initVersionUpdater(root: Document | ShadowRoot): void`、`interface UpdateInfo`（available/latest/current/url/expectedHash/releaseNotes）
 - 派发 bus：`toast:show`（静默通知带 `click` 回调；失败/已是最新用对应 type）
 - Wails binding（经 `getApp()`，frontend/src/backend/app.ts 统一入口）：`CheckUpdate`、`DoUpdate`、`RestartApplication`
-- 依赖：`modalConfirm`/`modalProgress`/`fmtMB`/`esc`（utils/dom/dialogs/modal.ts）、`Events`/`Window`（@wailsio/runtime——update:progress 瞬态监听 + SetTitle 标题进度）、`friendlyError`（utils/dom/errors.ts）、`bus`
+- 依赖：`modalConfirm`/`modalProgress`/`esc`（utils/dom/dialogs/modal.ts）、`fmtMB`（经 modal.ts re-export，实现已下沉 utils/format/fmt-mb.ts）、`Events`/`Window`（@wailsio/runtime——update:progress 瞬态监听 + SetTitle 标题进度）、`friendlyError`（utils/dom/errors.ts）、`bus`
 - 调用方：`frontend/src/app-modules.ts` 启动序列（`checkUpdateSilent().catch(console.warn)`，fire-and-forget 不阻塞界面）；`frontend/src/views/app-content/settings/init.ts`（`initVersionUpdater(root)`）
 
 ## 与其他子系统关系

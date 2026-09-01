@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
 
+	"ysm-model-manager/go/conc"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/scanner"
@@ -156,54 +156,31 @@ func modelMatchesFilters(model types.BedrockModel, minBones, maxBones, minCubes,
 // SearchAllModels 收敛复用，消除两处 Phase 2 复制）。analyze(i) 完成单项的过滤 + 构建：
 // 不满足条件返回 nil 即跳过该项。排序口径：名称主键 + 原始索引兜底，消除 goroutine
 // 完成序随机导致的「同输入不同输出」（ADR-119 确定性契约）。
+// 实现收敛到 go/conc.Parallel（P0：统一手写 worker 池）——conc 保输入序，
+// 等价 index 兜底；后续仅剩 Name 主键排序。
 func runConcurrentAnalyze(count int, analyze func(i int) *types.SearchResult) []types.SearchResult {
-	workers := runtime.NumCPU()
-	if workers < 2 {
-		workers = 2
-	}
 	type indexedResult struct {
 		index  int
 		result *types.SearchResult
 	}
-	taskCh := make(chan int, count)
-	resultCh := make(chan indexedResult, count)
-	var wg sync.WaitGroup
-	for range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for idx := range taskCh {
-				if r := analyze(idx); r != nil {
-					resultCh <- indexedResult{index: idx, result: r}
-				}
-			}
-		}()
-	}
+	indices := make([]int, count)
 	for i := range count {
-		taskCh <- i
+		indices[i] = i
 	}
-	close(taskCh)
-	go func() {
-		wg.Wait()
-		close(resultCh)
-	}()
-	// 收集带原始索引的结果（goroutine 完成序随机，index 用于确定性兜底）
-	var indexed []indexedResult
-	for r := range resultCh {
-		if r.result != nil {
-			indexed = append(indexed, r)
+	collected := conc.Parallel(indices, func(_ int, idx int) (indexedResult, bool) {
+		r := analyze(idx)
+		if r == nil {
+			return indexedResult{}, false
 		}
-	}
-	// 按名称为主键、原始索引为兜底键稳定排序：
-	// 同名不同路径的候选按扫描声明序排列，消除并发完成序导致的「同输入不同输出」。
-	sort.SliceStable(indexed, func(i, j int) bool {
-		if ni, nj := indexed[i].result.Name, indexed[j].result.Name; ni != nj {
-			return ni < nj
-		}
-		return indexed[i].index < indexed[j].index
+		return indexedResult{index: idx, result: r}, true
 	})
-	results := make([]types.SearchResult, len(indexed))
-	for i, r := range indexed {
+	// 按名称主键稳定排序；conc.Parallel 保输入序（=index 序），
+	// SliceStable 使同名条目保持 index 升序兜底（与原 index 兜底键等价）。
+	sort.SliceStable(collected, func(i, j int) bool {
+		return collected[i].result.Name < collected[j].result.Name
+	})
+	results := make([]types.SearchResult, len(collected))
+	for i, r := range collected {
 		results[i] = *r.result
 	}
 	return results

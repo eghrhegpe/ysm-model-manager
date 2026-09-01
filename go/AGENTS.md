@@ -23,6 +23,7 @@ node scripts/doctor.mjs         # 发版前全量闸门
 | `download` `sync` `updater` | 下载、同步、版本更新 |
 | `fileops` `fsutil` `paths` `recycle` `watcher` | 文件操作、硬链接、路径安全、回收站、监听 |
 | `avatar` | 创作者头像提取 |
+| `conc` | 通用泛型并发工具（`Parallel`：worker 池 + 输入序收集 + ok 跳过；统一 app_scan/app_model 手写池） |
 | `version` `logs` `tags` | 版本、日志、标签 |
 | `types` | 跨包共享类型定义 |
 | `litematic` | MCEdit Lite 图格式支持 |

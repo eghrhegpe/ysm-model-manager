@@ -13,11 +13,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"sync"
 	"time"
 
+	"ysm-model-manager/go/conc"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/threejs"
@@ -161,59 +160,27 @@ func (a *App) readFileBytesBatchSequential(paths []string) map[string][]byte {
 }
 
 // readFileBytesBatchConcurrent 并发批量读取（goroutine 池 + 分片调度）
-// 按 runtime.NumCPU() 数量启动 worker，每个 worker 从任务队列取 path 读取。
+// 收敛到 go/conc.Parallel（P0：统一手写 worker 池）——conc 内部 worker=NumCPU，
+// 结果按输入序收集；ok=false 跳过（路径守卫失败 / 读失败）。
 func (a *App) readFileBytesBatchConcurrent(paths []string) map[string][]byte {
-	type readTask struct {
-		index int
-		path  string
+	type fileRead struct {
+		path string
+		data []byte
 	}
-
-	// 预过滤：路径守卫前置，非法路径直接跳过
-	validPaths := make([]readTask, 0, len(paths))
-	for i, p := range paths {
-		if a.isPathInRootOrSelf(p) {
-			validPaths = append(validPaths, readTask{index: i, path: p})
+	reads := conc.Parallel(paths, func(_ int, p string) (fileRead, bool) {
+		if !a.isPathInRootOrSelf(p) {
+			return fileRead{}, false
 		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return fileRead{}, false
+		}
+		return fileRead{path: p, data: data}, true
+	})
+	result := make(map[string][]byte, len(reads))
+	for _, r := range reads {
+		result[r.path] = r.data
 	}
-
-	result := make(map[string][]byte, len(validPaths))
-	if len(validPaths) == 0 {
-		return result
-	}
-
-	// 启动 worker 池
-	workers := runtime.NumCPU()
-	if workers < 2 {
-		workers = 2
-	}
-
-	taskCh := make(chan readTask, len(validPaths))
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-
-	for range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for task := range taskCh {
-				data, err := os.ReadFile(task.path)
-				if err != nil {
-					continue
-				}
-				mu.Lock()
-				result[task.path] = data
-				mu.Unlock()
-			}
-		}()
-	}
-
-	// 投递任务
-	for _, task := range validPaths {
-		taskCh <- task
-	}
-	close(taskCh)
-
-	wg.Wait()
 	return result
 }
 
@@ -257,48 +224,22 @@ func (a *App) ReadFileBytesBatchWithMeta(paths []string) map[string]ReadFileMeta
 		}
 		return result
 	}
-	// 并发读取
-	type readTask struct {
-		index int
-		path  string
+	// 并发读取：收敛到 go/conc.Parallel（P0：统一手写 worker 池）
+	type fileMeta struct {
+		path string
+		meta ReadFileMeta
 	}
-	validPaths := make([]readTask, 0, len(paths))
-	for i, p := range paths {
-		if a.isPathInRootOrSelf(p) {
-			validPaths = append(validPaths, readTask{index: i, path: p})
+	metas := conc.Parallel(paths, func(_ int, p string) (fileMeta, bool) {
+		data, hash := a.readFileWithHash(p)
+		if data == nil {
+			return fileMeta{}, false
 		}
+		return fileMeta{path: p, meta: ReadFileMeta{Data: data, Hash: hash}}, true
+	})
+	result := make(map[string]ReadFileMeta, len(metas))
+	for _, m := range metas {
+		result[m.path] = m.meta
 	}
-	result := make(map[string]ReadFileMeta, len(validPaths))
-	if len(validPaths) == 0 {
-		return result
-	}
-	workers := runtime.NumCPU()
-	if workers < 2 {
-		workers = 2
-	}
-	taskCh := make(chan readTask, len(validPaths))
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	for range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for task := range taskCh {
-				data, hash := a.readFileWithHash(task.path)
-				if data == nil {
-					continue
-				}
-				mu.Lock()
-				result[task.path] = ReadFileMeta{Data: data, Hash: hash}
-				mu.Unlock()
-			}
-		}()
-	}
-	for _, task := range validPaths {
-		taskCh <- task
-	}
-	close(taskCh)
-	wg.Wait()
 	return result
 }
 

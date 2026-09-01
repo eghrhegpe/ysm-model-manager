@@ -1,10 +1,11 @@
 {
   "name": "ysm-model-manager-docs",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vitepress dev",
-    "build": "node ../scripts/gen-vitepress-sidebar.mjs && vitepress build",
+    "build": "node ../scripts/gen-vitepress-sidebar.ts && vitepress build",
     "preview": "vitepress preview"
   },
   "devDependencies": {

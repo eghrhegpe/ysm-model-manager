@@ -8,13 +8,13 @@
 
 ### 查证优先——不确定就查，不靠记忆推断
 - **业务知识**：`docs/knowledge/routes-quick.md`（AI 第一站）→ `docs/knowledge/routes.md`（兜底）→ `grep -r <关键词> docs/knowledge/` → 知识卡 `source_files` 源码 / CLI 实证。
-- **工具/钩子/脚本行为**：直接 `read .githooks/pre-commit`、`read scripts/xx.ts`——行为以源码为准，不凭记忆。
+- **工具/钩子/脚本**：需要修复报错 / 异常时, 才核对`read .githooks/pre-commit`、`read scripts/xx.ts`。
 - **文件路径不确认**：`node scripts/gen-project-map.ts --json` 拿真实路径。
 - 查到的经验**写回知识卡**，让下次直接命中：`node scripts/new-knowledge-card.ts <kind> <name> <category> <source_file> [--leaf]`。
 
 ### 归属原则——先分清「生成物」还是「手写文件」
-- **生成物**（`docs/` 下 index / project-map / cli-commands、i18n locale JSON、`completions/` 等，由 `.githooks/pre-commit` 的 `GEN_CMDS` 产出）= 全体输入的纯函数。**不承担提交归属、不按归属裁剪**：改卡后由 pre-commit 自动 gen+stage，交就交当前全量态。
-- **手写文件**（源码、知识卡、AGENTS.md 等）→ 路径限定提交，`git status --short` 确认 staged 只含自己的文件（一瞥），然后直接：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
+- **生成物**（`docs/` 下 index / project-map / cli-commands、i18n locale JSON、`completions/` 等，由 `.githooks/pre-commit` 的 `GEN_CMDS` 产出）= 全体输入的纯函数。不承担提交归属，交就交当前全量态，被你提交了更好。
+- **手写文件**(提交/构建/测试) → 路径限定提交，`git status --short` 确认 staged 只含自己的文件（一瞥），然后直接：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
 - 并行会话活跃时，放心让提交工具裁决提交归属。
 
 ### 职责归属——前端 vs Go（回归红线，不可违反）

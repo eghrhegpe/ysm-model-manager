@@ -209,7 +209,7 @@
 |------|----|
 | `frontend/src/features/oldest-models.ts` | 57 |
 | `frontend/src/features/recycle-bin.ts` | 186 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 382 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 384 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 274 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 341 |
 | `frontend/src/views/app-tree/events.ts` | 155 |
@@ -315,7 +315,7 @@
 | `frontend/src/features/pack-dnd.ts` | 167 |
 | `frontend/src/features/recycle-bin.ts` | 110 |
 | `frontend/src/features/recycle-bin.ts` | 170 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 432 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 434 |
 | `frontend/src/views/app-content/settings/init.ts` | 142 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
@@ -442,8 +442,8 @@
 | `frontend/src/utils/dom/directory-picker.ts` | 45 |
 | `frontend/src/utils/dom/directory-picker.ts` | 57 |
 | `frontend/src/utils/module-loader.ts` | 17 |
-| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 39 |
-| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 185 |
+| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 40 |
+| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 186 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 41 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 52 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 58 |
@@ -487,9 +487,9 @@
 | `frontend/src/views/app-content/site/edit.ts` | 115 |
 | `frontend/src/views/app-content/site/edit.ts` | 143 |
 | `frontend/src/views/app-content/site/edit.ts` | 150 |
-| `frontend/src/views/app-content/site/edit.ts` | 224 |
-| `frontend/src/views/app-content/site/edit.ts` | 231 |
-| `frontend/src/views/app-content/site/edit.ts` | 246 |
+| `frontend/src/views/app-content/site/edit.ts` | 226 |
+| `frontend/src/views/app-content/site/edit.ts` | 233 |
+| `frontend/src/views/app-content/site/edit.ts` | 248 |
 | `frontend/src/views/app-content/site/events.ts` | 146 |
 | `frontend/src/views/app-content/site/events.ts` | 271 |
 | `frontend/src/views/app-content/workshop-site-opener.ts` | 134 |
@@ -503,8 +503,8 @@
 | `frontend/src/views/app-nav/index.ts` | 114 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 287 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 353 |
-| `frontend/src/views/app-preview/index.ts` | 245 |
-| `frontend/src/views/app-preview/index.ts` | 267 |
+| `frontend/src/views/app-preview/index.ts` | 244 |
+| `frontend/src/views/app-preview/index.ts` | 266 |
 | `frontend/src/views/app-preview/preview-library.ts` | 98 |
 | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
@@ -526,8 +526,8 @@
 | `frontend/src/views/app-sync-manager/index.ts` | 151 |
 | `frontend/src/views/app-sync-manager/network.ts` | 47 |
 | `frontend/src/views/app-sync-manager/network.ts` | 55 |
-| `frontend/src/views/app-sync-manager/store.ts` | 30 |
-| `frontend/src/views/app-sync-manager/store.ts` | 64 |
+| `frontend/src/views/app-sync-manager/store.ts` | 35 |
+| `frontend/src/views/app-sync-manager/store.ts` | 69 |
 | `frontend/src/views/app-toast/index.ts` | 133 |
 | `frontend/src/views/app-toast/index.ts` | 152 |
 | `frontend/src/views/app-toast/index.ts` | 161 |
@@ -602,7 +602,7 @@
 | `frontend/src/features/pack-dnd.ts` | 168 |
 | `frontend/src/features/recycle-bin.ts` | 111 |
 | `frontend/src/features/recycle-bin.ts` | 171 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 433 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
 | `frontend/src/views/app-sidebar/index.ts` | 321 |
 
 **订阅方（on）：**

@@ -1,10 +1,25 @@
 ---
 kind: utils-misc
 name: 常量与调试 constants/debug
-tier: leaf
+tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/debug/debug.ts
+tests:
+  - frontend/src/preview-3d/debug-render.test.ts
+  - frontend/src/utils/debug/debug.ring.test.ts
+  - frontend/src/utils/debug/debug.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 调试日志、dbg、调试开关
+  - 环形日志、debugGetSpec、全局常量
+quick_risk_lines:
+  - 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码
+pitfalls:
+  - console.log 散落 → 无法按 tag 过滤、生产环境泄漏日志；必须经 dbg
+  - 环形缓冲区未限制大小 → 内存累积；必须经环形缓冲的 max 限制
+
 use_when:
   - 调试日志
   - dbg

@@ -41,58 +41,58 @@ export function resetDedupConfig(): void {
 }
 
 // ===== 类型提级（包级非导出，原 executeDedupScan 内匿名接口） =====
-interface DgDdDedupTarget {
+interface ScanTarget {
   id: string;
   icon: string;
   label: string;
   dir: string;
 }
 
-interface DgDdDedupFile {
+interface ScanFile {
   path: string;
   name: string;
   size: number;
   modTime?: string;
 }
 
-interface DgDdDedupGroup {
-  files: DgDdDedupFile[];
+interface ScanGroup {
+  files: ScanFile[];
 }
 
-interface DgDdDedupGroupResult {
+interface ScanGroupResult {
   icon: string;
   label: string;
-  groups: DgDdDedupGroup[];
+  groups: ScanGroup[];
 }
 
 // ===== getDefaultKeepIdx 子函数：闭包 toTimestamp 升格 =====
-function dgDdToTimestamp(modTime?: string | number): number {
+function toTimestamp(modTime?: string | number): number {
   if (modTime === undefined || modTime === null || modTime === "") return Number.MAX_SAFE_INTEGER;
   const ts = typeof modTime === "number" ? modTime : Date.parse(modTime);
   return isNaN(ts) ? Number.MAX_SAFE_INTEGER : ts;
 }
 
-function dgDdReduceOldestIdx(
+function reduceOldestIdx(
   files: { path: string; size: number; modTime?: string | number }[],
 ): number {
   return files.reduce(
     (best, e, i, arr) =>
-      dgDdToTimestamp(e.modTime) < dgDdToTimestamp(arr[best].modTime) ? i : best,
+      toTimestamp(e.modTime) < toTimestamp(arr[best].modTime) ? i : best,
     0,
   );
 }
 
-function dgDdReduceNewestIdx(
+function reduceNewestIdx(
   files: { path: string; size: number; modTime?: string | number }[],
 ): number {
   return files.reduce(
     (best, e, i, arr) =>
-      dgDdToTimestamp(e.modTime) > dgDdToTimestamp(arr[best].modTime) ? i : best,
+      toTimestamp(e.modTime) > toTimestamp(arr[best].modTime) ? i : best,
     0,
   );
 }
 
-function dgDdReducePathIdx(
+function reducePathIdx(
   files: { path: string; size: number; modTime?: string | number }[],
   priorityPath: string,
 ): number {
@@ -108,7 +108,7 @@ function dgDdReducePathIdx(
   );
 }
 
-function dgDdReduceLargestIdx(
+function reduceLargestIdx(
   files: { path: string; size: number; modTime?: string | number }[],
 ): number {
   return files.reduce(
@@ -133,18 +133,18 @@ function getDefaultKeepIdx(
 
   switch (policy) {
     case "oldest":
-      return dgDdReduceOldestIdx(files);
+      return reduceOldestIdx(files);
     case "newest":
-      return dgDdReduceNewestIdx(files);
+      return reduceNewestIdx(files);
     case "path":
-      return dgDdReducePathIdx(files, priorityPath);
+      return reducePathIdx(files, priorityPath);
     default:
-      return dgDdReduceLargestIdx(files);
+      return reduceLargestIdx(files);
   }
 }
 
 // ===== initDedupConfig 子函数 =====
-function dgDdRenderConfigHtml(list: HTMLElement): void {
+function renderConfigHtml(list: HTMLElement): void {
   list.innerHTML = `
     <div class="diag-dedup-config">
       <div class="diag-config-item">
@@ -171,13 +171,13 @@ function dgDdRenderConfigHtml(list: HTMLElement): void {
   `;
 }
 
-function dgDdBindStrategyChange(list: HTMLElement): void {
+function bindStrategyChange(list: HTMLElement): void {
   list.querySelector("#dedup-strategy")?.addEventListener("change", (e) => {
     dedupConfig.strategy = (e.target as HTMLSelectElement).value;
   });
 }
 
-function dgDdBindKeepPolicyChange(list: HTMLElement): void {
+function bindKeepPolicyChange(list: HTMLElement): void {
   list.querySelector("#keep-policy")?.addEventListener("change", (e) => {
     dedupConfig.keepPolicy = (e.target as HTMLSelectElement).value;
     const pathItem = list.querySelector("#priority-path-item") as HTMLElement;
@@ -187,17 +187,17 @@ function dgDdBindKeepPolicyChange(list: HTMLElement): void {
   });
 }
 
-function dgDdBindPriorityPathInput(list: HTMLElement): void {
+function bindPriorityPathInput(list: HTMLElement): void {
   list.querySelector("#priority-path")?.addEventListener("input", (e) => {
     dedupConfig.priorityPath = (e.target as HTMLInputElement).value;
   });
 }
 
-function dgDdBuildConfigPanel(list: HTMLElement): void {
-  dgDdRenderConfigHtml(list);
-  dgDdBindStrategyChange(list);
-  dgDdBindKeepPolicyChange(list);
-  dgDdBindPriorityPathInput(list);
+function buildConfigPanel(list: HTMLElement): void {
+  renderConfigHtml(list);
+  bindStrategyChange(list);
+  bindKeepPolicyChange(list);
+  bindPriorityPathInput(list);
 }
 
 /**
@@ -206,7 +206,7 @@ function dgDdBuildConfigPanel(list: HTMLElement): void {
  *             扫描结果不覆盖面板，控件扫描后仍可改；code_review P3）
  */
 export function initDedupConfig(list: HTMLElement): void {
-  dgDdBuildConfigPanel(list);
+  buildConfigPanel(list);
 }
 
 /**
@@ -222,20 +222,20 @@ export function getDedupConfig(): Readonly<{ strategy: string; keepPolicy: strin
 
 // ===== startDedup / executeDedupScan 子函数 =====
 import type { Group as DedupGroup, FileEntry as DedupFileEntry } from "../../../../bindings/ysm-model-manager/go/dedup/models.ts";
-type DgDdGetRepoRootFn = (rtype: string) => Promise<string>;
-type DgDdFindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
-type DgDdMoveToRecycleFn = (path: string) => Promise<void>;
-type DgDdRegType = Awaited<ReturnType<typeof loadResourceRegistry>>;
+type GetRepoRootFn = (rtype: string) => Promise<string>;
+type FindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
+type MoveToRecycleFn = (path: string) => Promise<void>;
+type DedupRegType = Awaited<ReturnType<typeof loadResourceRegistry>>;
 
 // ② targets收集(rtype单目录/全类型遍历)
-async function dgDdCollectTargets(
+async function collectTargets(
   rtype: string | undefined,
-  reg: DgDdRegType,
+  reg: DedupRegType,
   typeIcon: string,
   typeLabel: string,
-  GetRepoRoot: DgDdGetRepoRootFn,
-): Promise<DgDdDedupTarget[]> {
-  const targets: DgDdDedupTarget[] = [];
+  GetRepoRoot: GetRepoRootFn,
+): Promise<ScanTarget[]> {
+  const targets: ScanTarget[] = [];
   if (rtype && rtype !== "all") {
     const dir = await GetRepoRoot(rtype);
     if (dir) targets.push({ id: rtype, icon: typeIcon, label: typeLabel, dir });
@@ -253,13 +253,13 @@ async function dgDdCollectTargets(
 }
 
 // ③ 逐目录 FindDuplicateFiles 扫描（progress占位 + err判别{error}假绿）
-async function dgDdScanEachDirectory(
-  targets: DgDdDedupTarget[],
+async function scanEachDirectory(
+  targets: ScanTarget[],
   list: HTMLElement,
   esc: EscFn,
-  FindDuplicateFiles: DgDdFindDuplicateFilesFn,
-): Promise<{ allResults: DgDdDedupGroupResult[]; earlyExit: boolean }> {
-  const allResults: DgDdDedupGroupResult[] = [];
+  FindDuplicateFiles: FindDuplicateFilesFn,
+): Promise<{ allResults: ScanGroupResult[]; earlyExit: boolean }> {
+  const allResults: ScanGroupResult[] = [];
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
     list.innerHTML =
@@ -291,8 +291,8 @@ async function dgDdScanEachDirectory(
 }
 
 // ④-1 单个 group 文件列表 HTML 片段
-function dgDdRenderGroupFilesHtml(
-  files: DgDdDedupFile[],
+function renderGroupFilesHtml(
+  files: ScanFile[],
   defaultIdx: number,
   gi: number,
   esc: EscFn,
@@ -324,8 +324,8 @@ ${isDefault ? '<span class="diag-dedup-recommend">' + t("diagnostics.recommended
 }
 
 // ④ 分组结果 allResults 汇总渲染（group HTML + 默认保留索引）
-function dgDdRenderResultsHtml(
-  allResults: DgDdDedupGroupResult[],
+function renderResultsHtml(
+  allResults: ScanGroupResult[],
   esc: EscFn,
 ): string {
   const totalGroups = allResults.reduce((s, r) => s + r.groups.length, 0);
@@ -359,7 +359,7 @@ ${rtResult.icon} ${rtResult.label}
 <span class="diag-dedup-group-fill"></span>
 <span class="diag-dedup-group-info">${t("diagnostics.groupInfo", { n: files.length, size: totalSize })}</span>
 </div>`;
-      html += dgDdRenderGroupFilesHtml(files, defaultIdx, gi, esc);
+      html += renderGroupFilesHtml(files, defaultIdx, gi, esc);
       html += `<label class="diag-dedup-keep-all">
 <input type="radio" name="dedup-keep-${gi}" value="-1" class="diag-dedup-radio">
 <span class="diag-dedup-keep-all-label">🔀 ${t("diagnostics.keepAll")}</span>
@@ -376,7 +376,7 @@ ${rtResult.icon} ${rtResult.label}
 }
 
 // ④ 文件名预览点击绑定
-function dgDdBindPreviewClicks(list: HTMLElement): void {
+function bindPreviewClicks(list: HTMLElement): void {
   list.querySelectorAll("[data-path]").forEach((el) => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -387,7 +387,7 @@ function dgDdBindPreviewClicks(list: HTMLElement): void {
 }
 
 // ④ cancel 按钮绑定
-function dgDdBindCancelButton(list: HTMLElement): void {
+function bindCancelButton(list: HTMLElement): void {
   list.querySelector("#diag-dedup-cancel")?.addEventListener("click", () => {
     list.innerHTML =
       '<div class="stat-row diag-msg diag-msg-muted">' + t("diagnostics.dedupCancelled") + "</div>";
@@ -395,10 +395,10 @@ function dgDdBindCancelButton(list: HTMLElement): void {
 }
 
 // ⑤ exec 按钮：逐组 MoveToRecycle + success/fail 统计 + treeReload
-async function dgDdRunExecDelete(
+async function runExecDelete(
   list: HTMLElement,
-  allResults: DgDdDedupGroupResult[],
-  MoveToRecycle: DgDdMoveToRecycleFn,
+  allResults: ScanGroupResult[],
+  MoveToRecycle: MoveToRecycleFn,
   esc: EscFn,
 ): Promise<void> {
   if (diagExecBusy) return;
@@ -453,33 +453,33 @@ async function dgDdRunExecDelete(
 }
 
 // ⑤ exec 按钮绑定壳
-function dgDdBindExecButton(
+function bindExecButton(
   list: HTMLElement,
-  allResults: DgDdDedupGroupResult[],
-  MoveToRecycle: DgDdMoveToRecycleFn,
+  allResults: ScanGroupResult[],
+  MoveToRecycle: MoveToRecycleFn,
   esc: EscFn,
 ): void {
   list
     .querySelector("#diag-dedup-exec")
     ?.addEventListener("click", async () => {
-      await dgDdRunExecDelete(list, allResults, MoveToRecycle, esc);
+      await runExecDelete(list, allResults, MoveToRecycle, esc);
     });
 }
 
 // ②→③→④→⑤ executeDedupScan 核心协调壳（原内嵌闭包升格）
-async function dgDdExecuteScanCore(
+async function executeScanCore(
   list: HTMLElement,
   esc: EscFn,
   rtype: string | undefined,
-  reg: DgDdRegType,
+  reg: DedupRegType,
   typeIcon: string,
   typeLabel: string,
-  GetRepoRoot: DgDdGetRepoRootFn,
-  FindDuplicateFiles: DgDdFindDuplicateFilesFn,
-  MoveToRecycle: DgDdMoveToRecycleFn,
+  GetRepoRoot: GetRepoRootFn,
+  FindDuplicateFiles: FindDuplicateFilesFn,
+  MoveToRecycle: MoveToRecycleFn,
 ): Promise<void> {
   // ② targets 收集
-  const targets = await dgDdCollectTargets(rtype, reg, typeIcon, typeLabel, GetRepoRoot);
+  const targets = await collectTargets(rtype, reg, typeIcon, typeLabel, GetRepoRoot);
   if (!targets.length) {
     list.innerHTML =
       '<div class="stat-row diag-msg diag-msg-error">' + t("diagnostics.configResourceDir") + "</div>";
@@ -487,7 +487,7 @@ async function dgDdExecuteScanCore(
   }
 
   // ③ 逐目录扫描
-  const { allResults, earlyExit } = await dgDdScanEachDirectory(
+  const { allResults, earlyExit } = await scanEachDirectory(
     targets,
     list,
     esc,
@@ -505,28 +505,28 @@ async function dgDdExecuteScanCore(
   }
 
   // ④ 渲染结果 HTML + 绑定预览/取消
-  list.innerHTML = dgDdRenderResultsHtml(allResults, esc);
-  dgDdBindPreviewClicks(list);
-  dgDdBindCancelButton(list);
+  list.innerHTML = renderResultsHtml(allResults, esc);
+  bindPreviewClicks(list);
+  bindCancelButton(list);
 
   // ⑤ exec 按钮绑定
-  dgDdBindExecButton(list, allResults, MoveToRecycle, esc);
+  bindExecButton(list, allResults, MoveToRecycle, esc);
 }
 
 // 原 executeDedupScan 闭包升格 + 外层 try-catch（异常路径渲染）
-async function dgDdExecuteScan(
+async function executeScan(
   list: HTMLElement,
   esc: EscFn,
   rtype: string | undefined,
-  reg: DgDdRegType,
+  reg: DedupRegType,
   typeIcon: string,
   typeLabel: string,
-  GetRepoRoot: DgDdGetRepoRootFn,
-  FindDuplicateFiles: DgDdFindDuplicateFilesFn,
-  MoveToRecycle: DgDdMoveToRecycleFn,
+  GetRepoRoot: GetRepoRootFn,
+  FindDuplicateFiles: FindDuplicateFilesFn,
+  MoveToRecycle: MoveToRecycleFn,
 ): Promise<void> {
   try {
-    await dgDdExecuteScanCore(
+    await executeScanCore(
       list,
       esc,
       rtype,
@@ -562,7 +562,7 @@ export async function startDedup(
   _dedupBusy = true;
   try {
     // ① loadResourceRegistry（early return err）
-    let reg: DgDdRegType | null = null;
+    let reg: DedupRegType | null = null;
     let typeLabel = "";
     let typeIcon = "📦";
     try {
@@ -586,7 +586,7 @@ export async function startDedup(
 
     try {
       const { FindDuplicateFiles, GetRepoRoot, MoveToRecycle } = await getApp();
-      await dgDdExecuteScan(
+      await executeScan(
         list,
         esc,
         rtype,

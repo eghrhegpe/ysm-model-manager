@@ -87,7 +87,7 @@
 | 🏗 community-feature | 社区下载 community | architecture | io-bound | 创意工坊, 社区, 下载队列, 镜像源, 批量下载, github 仓库, 下载进度, workshop |
 | 🏗 export | 截图导出 export | architecture | — | 截图, 导出 PNG, 多角度截图, 透明背景, 预览缓存, blob URL, saveScreenshot, renderMultiAngle |
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
-| 🍃 oldest-models | 资历最深模型 oldest-models | leaf | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
+| 🏗 oldest-models | 资历最深模型 oldest-models | architecture | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
 | 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器, MMD 播放, VRM 材质, YSM schema, 截图按钮, 相机控制, 模型切换, multiModelSelectNode, preview menu node |
 | 🏗 preview-settings | 预览面板设置与显示控制 | architecture | — | 预览设置, 显示控制, 骨骼名称, 帧率, 像素比, 视锥剔除, 状态层, 3D 偏好, 组件选择, 截图灯光, activeComponent |
 | 🍃 preview_3d_migration | preview-3d 领域根迁移 | leaf | — | 整目录搬家, 领域根提升, 相对引用修复, cmd 命令行限制, 目录归置 |
@@ -292,22 +292,22 @@
 | 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 自动跳舞, 眨眼, 呼吸, 视线追踪, 口型同步, 节拍检测, 模型感知, 自动运动 |
 | 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
-| 🍃 safe_error_msg | 安全错误消息提取 utils | leaf | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
+| 🏗 safe_error_msg | 安全错误消息提取 utils | architecture | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
 | 🏗 script_shared_cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重, 脚本重构 |
 | 🏗 source-graph | 源码符号提取共享层 source-graph.ts | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图, check-lib-adoption |
-| 🍃 utils-array | 数组工具 moveItem | leaf | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
+| 🏗 utils-array | 数组工具 moveItem | architecture | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
 | 🍃 utils-display | 文件名显示 display | leaf | — | 文件名, 文件名显示, 美化文件名, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮, ban 文件 |
 | 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
-| 🍃 utils-errors | 错误处理 errors | leaf | — | 错误提示, 友好错误, friendlyError, toast 文案, 报错翻译, 网络错误, 文件被占用 |
+| 🏗 utils-errors | 错误处理 errors | architecture | — | 错误提示, 友好错误, friendlyError, toast 文案, 报错翻译, 网络错误, 文件被占用 |
 | 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存, 缩略图, blob URL 释放 |
-| 🍃 utils-extensions | 扩展名映射 extensions | leaf | — | 扩展名, 支持的文件类型, 拖拽过滤, RESOURCE_EXTS, ALL_EXTS, 导入过滤, 扩展名归属 |
+| 🏗 utils-extensions | 扩展名映射 extensions | architecture | — | 扩展名, 支持的文件类型, 拖拽过滤, RESOURCE_EXTS, ALL_EXTS, 导入过滤, 扩展名归属 |
 | 🍃 utils-fmt | 格式化工具 fmt | leaf | — | 文件大小, 字节格式化, KB MB, 日期格式化, 友好日期, 文件大小颜色 |
 | 🍃 utils-icon | 图标映射 icon | leaf | — | 图标, emoji, 文件图标, fileIcon, 判断 YSM 文件 |
 | 🍃 utils-mc-format | MC 格式判定 mc-format | leaf | — | 分节符, § 颜色, MC 颜色码, pack_format, MC 版本, 资源包版本, renderFormattedText, 版本兼容 |
-| 🍃 utils-misc | 常量与调试 constants/debug | leaf | — | 调试日志, dbg, 调试开关, 环形日志, debugGetSpec, 全局常量 |
-| 🍃 utils-resource-types | 资源类型工具 resource-types | leaf | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, LoadResourceTypes, 注册表加载 |
-| 🍃 utils-summarize | 摘要生成 summarize | leaf | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
+| 🏗 utils-misc | 常量与调试 constants/debug | architecture | — | 调试日志, dbg, 调试开关, 环形日志, debugGetSpec, 全局常量 |
+| 🏗 utils-resource-types | 资源类型工具 resource-types | architecture | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, LoadResourceTypes, 注册表加载 |
+| 🏗 utils-summarize | 摘要生成 summarize | architecture | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
 | 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | concurrent | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
 | 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | cpu-bound | YSM 动画, 基岩动画, molang, 动画管线 |
 | 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, 加密模型, wasm 加载, Emscripten, MEMFS, node 解码, callMain |

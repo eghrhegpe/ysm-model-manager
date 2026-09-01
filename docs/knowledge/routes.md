@@ -69,7 +69,7 @@
 | 整合包、同步、实例、硬链接、符号链接、缺失、多余、.ban、PrismLauncher | [整合包同步 go/sync](./go-sync.md) ⚠️歧义（另见 go-instance.md、go-fileops.md等） | `go/sync/` 包负责模型库（全局仓库）与 Minecraft 整合包实例之间的同步：发现实例（原版 / PrismLauncher 布局）、按 SHA256 哈希对比出缺失/多余/禁用文件、按文件名或文件夹对比资源包差异、检测目标文… |
 | 标签、tag、分类、筛选、tag-editor | [标签系统 go/tags](./go-tags.md) ⚠️歧义（另见 dialog-tag-editor.md、dialog-adv-filter.md、search.md等） | `go/tags/` 包提供模型标签的线程安全持久化存储，是前端 tag-editor 弹窗的后端。标签存放在配置目录的 `tags.json`，以文件绝对路径为 key、标签列表为 value，与模型文件本身解耦（移动/链接模型不污染文件… |
 | 3D 预览、骨骼、three.js、spec、顶点、UV、四元数、模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) ⚠️歧义（另见 app-preview.md、dom-fab.md、model3d.md等） | `go/threejs/` 包根据 YSMViewer 的 `ThreeJsPayloadBuilder.cs` 移植，把已解析的 `types.BedrockModel` 转换为 Three.js 可直接消费的 JSON spec：顶点、… |
-| 共享类型、AppConfig、配置、注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) ⚠️歧义（另见 resource-registry.md） | `go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_regist… |
+| 共享类型、AppConfig、配置、注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) ⚠️歧义（另见 resource-registry.md、utils-extensions.md） | `go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_regist… |
 | 更新、自动更新、版本升级、updater | [自动更新 go/updater](./go-updater.md) ⚠️歧义（另见 version-updater.md等） | `go/updater/` 包负责 YSM 应用的自动更新机制。 |
 | 监听、文件变化、刷新、watcher | [文件监听 go/watcher](./go-watcher.md) ⚠️歧义（另见 go-android-platform-guard.md） | `go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。 |
 | YSM、解析、摘要、ysm 文件、元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | `go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。 |
@@ -79,6 +79,7 @@
 | 2D 预览、骨骼图、Canvas 渲染、前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。 |
 | 3D 预览、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底、OrbitControls | [3D 预览渲染 model3d](./model3d.md) ⚠️歧义（另见 app-preview.md、dom-fab.md、go-threejs.md等） | 前端 Three.js 3D 渲染层（`frontend/src/preview-3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/m… |
 | 多模型、多组件、模型选择、select、zip 多模型、多 entry、多候选、ADR-132、蓝图 zip、litematic zip、容器内多 nbt | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的 |
+| 资历最深、老模型、仓库评分、每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | `oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按… |
 | 优化、性能、瓶颈、优化记录、optimization、perf、KTX2、纹理缓存、加载速度、内存、GPU 内存、闪退、泄漏、dispose | [优化记录 optimization-log](./optimization_log.md) | — |
 | 页面、当前页、状态管理、page store、currentPage | [页面状态管理 page-store.ts](./page-store.md) | `page-store.ts` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。核心职责是维护只读当前页状态与启动初始页解析——*… |
 | 自主动画、自动跳舞、眨眼、呼吸、视线追踪、口型同步、节拍检测、模型感知、自动运动 | [3D 感知系统 perception](./perception.md) | `preview-3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。 |
@@ -90,9 +91,10 @@
 | 回收站、恢复文件、清空回收站、软删除、recycle、还原 | [回收站界面 recycle-bin](./recycle-bin.md) ⚠️歧义（另见 go-recycle.md等） | `recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调… |
 | 联邦渲染、shared renderer、rAF 复用、多 3D 场景 | [联邦渲染能力 (Render Federation)](./render-federation.md) | — |
 | 资源包、光影包、蓝图、投影、resourcepack、shaderpack、资源管理 | [资源包功能 resource-packs](./resource-packs.md) ⚠️歧义（另见 go-packs.md、app-preview.md、classify-routing.md等） | **已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager… |
-| 资源类型、注册表、resource_types、registry、文件类型 | [资源注册表 registry](./resource-registry.md) ⚠️歧义（另见 go-types.md） | `resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。 |
+| 资源类型、注册表、resource_types、registry、文件类型 | [资源注册表 registry](./resource-registry.md) ⚠️歧义（另见 utils-resource-types.md、go-types.md） | `resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。 |
 | Android、Linux、macOS、rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) ⚠️歧义（另见 android-bridge.md、go-android-platform-guard.md、rustbridge.md） | — |
 | Rust 扫描器、rust_backend、桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) ⚠️歧义（另见 rust-android-bridge.md） | — |
+| 错误消息、Worker 错误、catch、safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe_error_msg.md) | `frontend/src/utils/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `friendlyErr… |
 | 场景能力 / cap / registry / SceneCapability、3D 菜单控件声明式渲染（getMenuControls）、新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）、3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）、「光」指代消歧（light 是光源，fog/shadow/reflector 不是） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Ground / Environment / Fog / Shadow / Reflector / Light / Postprocessing）由统一注册表**创… |
 | 覆盖率门禁、diff-coverage、循环依赖、共享核、_lib、check-circular、findCycles、脚本去重、脚本重构 | [scripts 共享核演进（diff-coverage-core + cycles）](./script_shared_cores.md) | `scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复： |
 | 脚本参数、argv、parseArgs、手写参数解析、positional、未知 flag、脚本卫生、hygiene | [脚本 argv 规范与已知豁免 parse-args.ts](./scripts_argv.md) | `scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30… |
@@ -103,14 +105,20 @@
 | 整合包同步、推送、拉取、整合包列表、同步状态、instance、PushSingleResource、PullSingleResource、sync:download:missing、app-sidebar | [整合包同步管理器 sync-manager](./sync-manager.md) ⚠️歧义（另见 app-sync-manager.md、app-sidebar.md等） | `app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**： |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试、mock、G-1 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) ⚠️歧义（另见 frontend_test_audit.md） | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 sle… |
 | UI 组件、UI 组件库、卡片组件、折叠面板、加载动画、滑块、行组件、预设、图标、幻灯片菜单、组件样式 | [UI 组件库 ui-components](./ui_components.md) ⚠️歧义（另见 dialog-batch-rename.md） | `frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 … |
+| 数组排序、拖拽排序、moveItem、列表 reorder | [数组工具 moveItem](./utils-array.md) | 纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。 |
+| 错误提示、友好错误、friendlyError、toast 文案、报错翻译、网络错误、文件被占用 | [错误处理 errors](./utils-errors.md) | 把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。 |
 | 截图、导出 PNG、多角度截图、预览缓存、缩略图、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 export.md、app-preview.md、go-avatar.md等） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图入口… |
+| 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS、ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) ⚠️歧义（另见 go-types.md） | 前端扩展名 → 资源类型映射的集中定义。拖拽导入等场景需要同步判断扩展名（无法等待异步注册表加载），故提供这份静态默认表；事实来源仍是 `resource_types.json`，三端一致性由契约测试守护。 |
+| 调试日志、dbg、调试开关、环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | 前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。原 `constants.ts`（预览画布/缩放/下载守护等全局数值常量）因长期无消费方已在死代码清理中移除，本卡同时承接「常量治理」的约定说明。 |
+| 资源类型、RESOURCE_TYPES、类型标签、存储子目录、storageSubDir、LoadResourceTypes、注册表加载 | [资源类型工具 resource-types](./utils-resource-types.md) ⚠️歧义（另见 resource-registry.md） | 前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/registry.t… |
+| 模型详情、摘要卡片、summaryCardHTML、预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) ⚠️歧义（另见 ysm-wasm.md） | 把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。 |
 | 更新、升级、检查更新、新版本、静默检查、updater、版本 | [版本更新 version-updater](./version-updater.md) ⚠️歧义（另见 go-updater.md、app-modules.md等） | `version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda… |
 | vitest、测试环境、node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | — |
 | API、Binding、接口、Go 方法、调用后端、有哪些方法、App 方法、getApp、方法签名、app.ts 绑定 | [Wails Binding API 总览 internal/app](./wails-bindings.md) ⚠️歧义（另见 wails-bridge.md等） | `internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(… |
 | Wails、桥接、getApp、Go 调用、Binding、window.go.main.App、网页版、browser adapter、浏览器后端 | [Wails 桥接 app.ts](./wails-bridge.md) ⚠️歧义（另见 wails-bindings.md、backend_web.md、backend-idb.md等） | `backend/app.ts` 是前端调用后端 Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。**ADR-049 平台双路由**：网页版（无 … |
 | YSM 动画、基岩动画、molang、动画管线 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | — |
 | 烘焙、几何反推、pivot、骨骼错位、模型错位、UV 对不上、贴图错位、RawYsmModel、RawFace、YSM 导出、BlockBench | [YSM 烘焙与几何反推](./ysm-baked.md) | YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。… |
-| WASM、YSMParser、ysm 解码、加密模型、wasm 加载、Emscripten、MEMFS、node 解码、callMain | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64… |
+| WASM、YSMParser、ysm 解码、加密模型、wasm 加载、Emscripten、MEMFS、node 解码、callMain | [WASM 解析器 ysm-parser](./ysm-wasm.md) ⚠️歧义（另见 utils-summarize.md） | YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64… |
 
 ## 标准执行模板
 

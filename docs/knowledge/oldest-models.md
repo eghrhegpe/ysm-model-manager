@@ -1,10 +1,23 @@
 ---
 kind: oldest-models
 name: 资历最深模型 oldest-models
-tier: leaf
+tier: architecture
 category: feature
 source_files:
   - frontend/src/features/oldest-models.ts
+tests:
+  - frontend/src/features/oldest-models.test.ts
+quick_groups:
+  - 模型扫描与仓库管理
+quick_intents:
+  - 资历最深、老模型、仓库评分
+  - 每日推荐、月度活动、热力图、仓库健康
+quick_risk_lines:
+  - 资历排行必须经 oldest-models.ts 统一计算，禁止各页面各自实现评分逻辑
+pitfalls:
+  - 各页面各自实现评分 → 结果不一致、排名错乱；必须经 oldest-models 单点
+  - bus.emit 未带 payload → 下游无法渲染推荐卡；必须经 bus.emit 携带完整 payload
+
 use_when:
   - 资历最深
   - 老模型

@@ -5,6 +5,31 @@
 > 本表由知识卡 frontmatter 的 `quick_*` 字段自动生成。
 > 新增高频场景请在对应知识卡 frontmatter 补充 `quick_groups`/`quick_intents`/`quick_risk_lines`/`pitfalls`。
 
+## 🎯 后端桥接与数据存储
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 调后端、app.ts 绑定、getApp | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
+| 桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
+| 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend_web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
+| Android 存储授权、目录选择器 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | Android 存储授权必须走 android-bridge 的 SAF 授权流程，禁止直接请求 MANAGE_EXTERNAL_STORAGE | - |
+| android:back 返回键、弹窗退出 | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | Android 系统事件必须经 android-events 的 registerAndroidEvents 单点注册，禁止各组件各自注册 | - |
+| Android/Linux/macOS Rust 桥 | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径 | - |
+| API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
+| bridge_windows/bridge_android/bridge_linux | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
+| browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend_web.md) | - | - |
+| closeActiveDialog、registerAndroidEvents | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
+| compile-android-rust/compile-rust-static | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
+| GetAppVersion / ScanModelEntries / SearchModels | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
+| IndexedDB / IDB / 浏览器后端 | [网页版后端 backend-web](./backend_web.md) | - | - |
+| IndexedDB、网页版存储 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 事务必须接线 complete/error/abort 三事件 | ADR-177 |
+| MANAGE_EXTERNAL_STORAGE、SAF、权限 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | - | - |
+| NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend_web.md) | - | - |
+| Rust 扫描器、rust_backend | [Rust 桥 rustbridge](./rustbridge.md) | Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载 | - |
+| rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
+| ScreenLocked、NetworkChanged、permissionGranted | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
+| Wails 绑定、Go 调用 | [Wails 桥接 app.ts](./wails-bridge.md) | 前端必须经 getApp() 访问，禁止直调 window.go | ADR-049 |
+
 ## 🎯 3D 预览与模型追加
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -68,15 +93,21 @@
 |----------|--------|----------|----------|
 | 侧边栏、整合包列表、版本卡片 | [侧边栏 app-sidebar](./app-sidebar.md) | 侧边栏的 push/pull 必须经 events.ts 的 runPush/runPull 转发到 sync-manager，禁止直接调 API | - |
 | 纯函数 | [核心工具函数 core-utils](./core_utils.md) | - | - |
+| 错误提示、友好错误、friendlyError | [错误处理 errors](./utils-errors.md) | 所有异常路径必须经 friendlyError 转中文提示，禁止裸抛原始错误到 UI | - |
+| 错误消息提取、Worker 错误、catch | [安全错误消息提取 utils](./safe_error_msg.md) | Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖 | - |
+| 调试日志、dbg、调试开关 | [常量与调试 constants/debug](./utils-misc.md) | 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码 | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
 | 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底 | - |
+| 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
 | 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | - |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
+| 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
 | 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
+| 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 外部进程启动、跨平台 HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | - | - |
@@ -95,15 +126,18 @@
 | App↔子组件对象级环、回调注入 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | 子组件必须用回调注入替代 *App 反向指针，禁止在子组件 struct 里持 *App 字段 | - |
 | emit 事件 / 跨组件通信 | [事件总线 bus.ts](./event-bus.md) | 所有跨组件异步通信必经 bus.ts，禁止组件间直耦 | - |
 | input-and-animation | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
+| isFileExistsError | [错误处理 errors](./utils-errors.md) | - | - |
 | nav:change 事件分发、全局 handler 注册 | [主内容页 app-content](./app-content.md) | - | - |
 | node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | - | - |
 | pointerdown / pointermove / pointerup、触屏 + 桌面统一 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | 所有交互必须用 pointerdown/pointermove/pointerup 统一处理，禁止混用 mousedown/touchstart | - |
 | PushSingleResource / PullSingleResource | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | registerGlobalHandlers、instance-ops | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | resolveInitialPage / sanitizePage | [页面状态管理 page-store.ts](./page-store.md) | - | - |
+| safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe_error_msg.md) | - | - |
 | setPointerCapture、touch-action、拖拽 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
 | swallowError / fireAndForget / retry / timeout | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | sync:download:missing 缺包回拉 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
+| toast 文案、报错翻译、网络错误 | [错误处理 errors](./utils-errors.md) | - | - |
 | tree:set-search、bus-handlers、selectState | [资源树 app-tree](./app-tree.md) | - | - |
 | updater | [版本更新 version-updater](./version-updater.md) | - | - |
 | Vitest 环境切换、测试环境 | [Vitest 环境切换规则](./vitest-env-switch.md) | 只有纯逻辑测试（不碰 DOM）才能切 @vitest-environment node，源码顶层副作用必须先治理 | - |
@@ -116,6 +150,7 @@
 | 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | - |
 | 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 关键词搜索、数值范围搜索 | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
+| 每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | - | - |
 | 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | - |
 | 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | - |
 | 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
@@ -124,12 +159,15 @@
 | 扫描模型、ScanModelEntries | [扫描核心 go/scanner](./go-scanner.md) | 容器指纹缓存失效需调 ClearScanCache | - |
 | 搜索、筛选、关键词 / 标签 / 数值三路交集 | [搜索筛选编排 search](./search.md) | 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑 | - |
 | 缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) | - | - |
+| 同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) | - | - |
 | 同步状态、app-sync-manager | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 文件监听、文件变化、刷新 | [文件监听 go/watcher](./go-watcher.md) | 文件变更监听必须走 go/watcher 的事件流，禁止轮询文件系统 | - |
 | 整合包分类、路由、location 路由 | [分类路由与回归护栏](./classify-routing.md) | 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑 | - |
+| 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
 | 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | - |
 | 整合包同步、sync | [扫描核心 go/scanner](./go-scanner.md) | - | - |
 | 整合包同步页、推送 / 拉取资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态 | - |
+| 资历最深、老模型、仓库评分 | [资历最深模型 oldest-models](./oldest-models.md) | 资历排行必须经 oldest-models.ts 统一计算，禁止各页面各自实现评分逻辑 | - |
 | 资源包 / 光影包、mcmeta、pack_format | [资源包 mcmeta go/packs](./go-packs.md) | 资源包元数据必须走 go/packs 的 mcmeta 解析，前端禁止手写 mcmeta.json 解析 | - |
 | 资源类型识别、rtype 判定 | [扫描核心 go/scanner](./go-scanner.md) | resource_types.json 是唯一事实来源 | - |
 | AnalyzeYSMModel、HasYSMMod | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
@@ -151,26 +189,6 @@
 | zip 多模型、多 entry | [统一容器桥接层 go/container](./go-container.md) | - | - |
 | zipentry 指纹、蓝图 / 投影 / vrm / pmx | [分类路由与回归护栏](./classify-routing.md) | - | - |
 
-## 🎯 后端桥接与数据存储
-
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
-|----------|--------|----------|----------|
-| 调后端、app.ts 绑定、getApp | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
-| 桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
-| 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend_web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
-| Android/Linux/macOS Rust 桥 | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径 | - |
-| API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
-| bridge_windows/bridge_android/bridge_linux | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
-| browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend_web.md) | - | - |
-| compile-android-rust/compile-rust-static | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
-| GetAppVersion / ScanModelEntries / SearchModels | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
-| IndexedDB / IDB / 浏览器后端 | [网页版后端 backend-web](./backend_web.md) | - | - |
-| IndexedDB、网页版存储 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 事务必须接线 complete/error/abort 三事件 | ADR-177 |
-| NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend_web.md) | - | - |
-| Rust 扫描器、rust_backend | [Rust 桥 rustbridge](./rustbridge.md) | Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载 | - |
-| rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
-| Wails 绑定、Go 调用 | [Wails 桥接 app.ts](./wails-bridge.md) | 前端必须经 getApp() 访问，禁止直调 window.go | ADR-049 |
-
 ## 🎯 文件操作与标签
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -179,6 +197,7 @@
 | 打标签 / 标签存储 / 按标签筛选 | [标签系统 go/tags](./go-tags.md) | 标签以文件绝对路径为 key 存 tags.json；写入走 tmp + os.Rename 原子替换，禁止直写 | - |
 | 导入、导入策略、导入队列 | [导入策略 go/importer](./go-importer.md) | 导入必须走 go/importer，落地用 fsutil.WriteFileAtomic 原子替换，禁止直写目标文件 | - |
 | 导入队列、拖拽导入、文件夹导入 | [全局导入执行 import-executor](./import-queue.md) | 导入必须走 import-executor 单点编排 + dnd-collector 收集，禁止各组件各自调 ImportModel | - |
+| 导入日志、操作记录、日志 | [导入日志 go/logs](./go-logs.md) | 导入日志必须走 go/logs 的 WriteFileAtomic 追加，禁止直接 os.WriteFile | - |
 | 覆盖导入、import-executor | [全局导入执行 import-executor](./import-queue.md) | - | - |
 | 回收站 / 软删除 / 恢复 / 清空回收站 | [回收站 go/recycle](./go-recycle.md) | 删除必须走 .recycle 软删除（硬链接判定），禁止直接 os.Remove | - |
 | 回收站、恢复文件、清空回收站 | [回收站界面 recycle-bin](./recycle-bin.md) | 删除必须走 .recycle 软删除（go/recycle 实现），前端禁止直接 os.Remove | - |
@@ -195,6 +214,7 @@
 | download、HTTPStatusError、TruncationError | [下载器 go/download](./go-download.md) | - | - |
 | ERROR_NOT_SAME_DEVICE | [模型安装 go/installer](./go-installer.md) | - | - |
 | fsutil.WriteFileAtomic | [导入策略 go/importer](./go-importer.md) | - | - |
+| import log、历史 | [导入日志 go/logs](./go-logs.md) | - | - |
 | importer、DetectZipType | [导入策略 go/importer](./go-importer.md) | - | - |
 | initRecycleBin / GetRepoRoot / createLoadGuard | [回收站界面 recycle-bin](./recycle-bin.md) | - | - |
 | IsInside / IsInsideResolved | [路径安全 go/paths](./go-paths.md) | - | - |
@@ -229,17 +249,23 @@
 | 截图 / 导出 PNG / 多角度截图 / 预览缓存 | [截图与导出 export](./utils-export.md) | 离屏截图渲染器资源与 blob URL 必须释放，防内存泄漏 | - |
 | 截图、导出 PNG、多角度截图 | [截图导出 export](./export.md) | 离屏截图渲染器资源与 blob URL 必须显式释放，禁止依赖 GC 回收 | ADR-127 |
 | 离屏截图渲染器 | [截图导出 export](./export.md) | - | ADR-127 |
+| 模型详情、摘要卡片、summaryCardHTML | [摘要生成 summarize](./utils-summarize.md) | 模型摘要必须走 summarize.ts 的 summaryCardHTML，禁止手写详情卡片 HTML | - |
 | 透明背景 / 预览缓存 / blob URL | [截图导出 export](./export.md) | - | ADR-127 |
+| 预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) | - | - |
 
 ## 🎯 配置与注册表
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
+| 存储子目录、storageSubDir、LoadResourceTypes、注册表加载 | [资源类型工具 resource-types](./utils-resource-types.md) | - | - |
 | 共享类型、AppConfig、配置 | [共享类型 go/types](./go-types.md) | 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义 | - |
 | 检查更新、更新下载、update | [自动更新 go/updater](./go-updater.md) | 更新检查必须走 go/updater，前端禁止手写更新下载逻辑 | - |
+| 扩展名、支持的文件类型、拖拽过滤 | [扩展名映射 extensions](./utils-extensions.md) | 扩展名判定必须走 extensions.ts 的 isSupportedExt，拖拽导入场景禁止等待异步注册表 | - |
 | 新增资源类型 / 修改 resource_types.json / 文件类型 | [资源注册表 registry](./resource-registry.md) | resource_types.json 是唯一事实来源；前端只读不判、禁本地重算 | - |
 | 注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) | - | - |
+| 资源类型、RESOURCE_TYPES、类型标签 | [资源类型工具 resource-types](./utils-resource-types.md) | 资源类型注册表必须经 LoadResourceTypes 加载，前端禁止手写类型映射 | - |
 | LoadRegistry/ParseDedupConfig | [共享类型 go/types](./go-types.md) | - | - |
+| RESOURCE_EXTS/ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
 
 ## 🎯 模型格式与解析
@@ -252,6 +278,10 @@
 
 | 陷阱 | 位置 | 正确做法 |
 |------|------|----------|
+| 直接请求 MANAGE_EXTERNAL_STORAGE | - | 新版 Android 拒绝、Google Play 下架；必须走 SAF |
+| 目录选择未回传 URI | - | 后续访问失败；必须经 android-bridge 持久化 URI |
+| 各组件各自注册 | - | 重复监听、返回键冲突；必须经 registerAndroidEvents |
+| 返回键未消费 | - | 直接退出应用；必须在有弹窗时 consume back 事件 |
 | 手写关键帧插值 | - | 与基岩官方行为不一致、T-pose 漂移；必须经 evaluateClip |
 | Molang 表达式缓存键不完整 | - | 相同逻辑不同骨骼重复求值；缓存 key 必须含 clip/bone 标识 |
 | 子组件持 *App 字段 | - | 对象级循环依赖、GC 无法回收；必须经回调注入 |
@@ -308,8 +338,12 @@
 | 未走 DetectZipType | - | 误判 zip 类型、解压错误；必须先 DetectZipType 分流 |
 | 手写落地逻辑 | - | LinkMode 不一致、ERROR_NOT_SAME_DEVICE 未处理；必须经 go/installer |
 | 落地不原子替换 | - | 中断留下半文件；必须经 installer 的原子替换 |
+| app 层手写同步 | - | 与 go/instance 判定不一致；必须经 SyncResources |
+| BuildSyncItems 未去重 | - | 重复同步同一资源；必须在 BuildSyncItems 里做去重 |
 | 前端手写 Litematic 解析 | - | 与 Go 解析结果不一致、palette 映射错误；必须交 Go 解析 |
 | 未走 bedrock.go 做基岩版转换 | - | voxel 位置偏移；必须经 bedrock.go 转换 |
+| 直接 os.WriteFile | - | 并发写破坏日志；必须经 WriteFileAtomic 原子追加 |
+| 日志未轮转 | - | 单个文件无限膨胀；必须经日志轮转策略 |
 | 前端手写 mcmeta.json 解析 | - | 与 Go 解析字段不一致、漏检 pack_format；必须交 Go 解析 |
 | 未限制 LimitReader/maxLangSize | - | 大语言文件 OOM；必须用 LimitReader 截断 |
 | 手写路径安全检查 | - | 越权路径穿越、符号链接绕过；必须经 IsInside |
@@ -334,6 +368,8 @@
 | Canvas 不销毁 | - | 内存泄漏；必须复用 renderer 并dispose |
 | adapter 直接遍历 entry 数组 | - | 容器内多模型顺序不稳定、缺用户选择点；必须走 multiModelSelectNode |
 | litematic zip 多 nbt 未走 select | - | 默认取第一个，用户无法换选；必须复用 multiModelSelectNode |
+| 各页面各自实现评分 | - | 结果不一致、排名错乱；必须经 oldest-models 单点 |
+| bus.emit 未带 payload | - | 下游无法渲染推荐卡；必须经 bus.emit 携带完整 payload |
 | 在 page-store 里挂页面挂载 / 卸载逻辑 | - | 与 app-content 重复、状态串扰；必须分开 |
 | resolveInitialPage 无回退 | - | 隐私模式读不到 localStorage 时死页；必须经三优先级回退 repository |
 | 手写动画注入 | - | 与感知系统控制器冲突、节奏不同步；必须经感知控制器 |
@@ -359,6 +395,8 @@
 | CGO 未静态链接 | - | Android 缺少依赖库；必须经 compile-rust-static 静态编译 |
 | 直接 dlopen 加载 rust.dll | - | 平台差异处理不全、符号名不匹配；必须经 bridge_*.go 封装 |
 | Rust 后端未正确回收 | - | 内存泄漏；必须经 rustbridge 的 drop/destroy 生命周期 |
+| Worker 内 import i18n | - | 模块加载失败、Worker 崩溃；必须用 safeErrorMessage |
+| safeErrorMessage 不做字符串化 | - | null/undefined 错误丢信息；必须经 safeStr 兜底 |
 | adapter 直接创建场景对象 | - | 能力列表 / 菜单 / 状态同步不一致；必须经 sceneCapabilityRegistry 注册 |
 | 能力未实现 getMenuControls | - | 菜单缺控件；必须在 SceneCapability 接口中实现 getMenuControls |
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
@@ -367,6 +405,18 @@
 | PullSingleResource 未完成前刷新侧边栏 | - | 半同步状态显示；必须等 store 状态收敛 |
 | 手写重复 DOM | - | 样式不一致、缺可访问性；必须经 ui-components |
 | ui-components 内自定义元素 | - | 与全仓 Web Components 规范冲突；ui-components 只做 helper 函数 |
+| 手写 splice 排序 | - | 与拖拽 drop 逻辑不一致、边界溢出；必须经 moveItem |
+| moveItem 未 clamp | - | 拖拽到首/尾位置时报错；必须在 moveItem 内做 clamp |
+| 裸抛原始错误 | - | 用户看不懂、违反治理红线；必须经 friendlyError 翻译 |
+| 网络错误未分类 | - | 一律显示未知错误；必须经 friendlyError 的网络错误分支 |
+| 拖拽导入等待异步注册表 | - | 导入按钮短暂不可用；必须用 RESOURCE_EXTS 静态表 |
+| 静态表未与 resource_types.json 对齐 | - | 三端不一致；必须由契约测试守护 |
+| console.log 散落 | - | 无法按 tag 过滤、生产环境泄漏日志；必须经 dbg |
+| 环形缓冲区未限制大小 | - | 内存累积；必须经环形缓冲的 max 限制 |
+| 手写类型映射 | - | 与注册表不一致、分类错乱；必须经 LoadResourceTypes |
+| 新增资源类型未注册 | - | 前端无法识别；必须在 resource_types.json 中注册 |
+| 手写详情卡片 | - | 与 summaryCardHTML 样式不一致、作者信息重复；必须经 summaryCardHTML |
+| 加密模型未走 summarizeDecoded | - | 加密内容泄露；必须经 summarizeDecoded 的安全提取 |
 | 高频轮询 GitHub API | - | 触发限流、浪费带宽；必须经 canCheck 节流 |
 | check 未 markChecked | - | 重启后重复检查；必须在检查完成后 markChecked 记录时间戳 |
 | DOM 测试切 node 环境 | - | window/document 报错；必须保持 happy-dom 或治理源码副作用 |

@@ -74,7 +74,7 @@ const cmd = writeMode ? ['check', '--write', '--changed'] : ['check', '--changed
  * 必须用 shell:true——Windows 上 .cmd 脚本（biome.cmd）无法被直接 spawn
  * （EINVAL），需经 cmd.exe 运行（proc.mjs run 的 shell 透传）；POSIX 上 shell:true 同样安全。 */
 function runBiome() {
-  const r = run(biomeBin, cmd, {
+  const r = run(biomeBin!, cmd, {
     cwd: path.join(ROOT, 'frontend'),
     shell: true,
   });

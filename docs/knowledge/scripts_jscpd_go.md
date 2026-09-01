@@ -25,17 +25,19 @@ use_when:
 ## 核心职责
 
 - **扫描**：复用 `frontend/node_modules/jscpd/run-jscpd.js`，`--pattern ./go/**/*.go --format go --no-gitignore`，排除 `upstream/` vendor、`rust-core/target` 编译产物、前端 `.ts`。
-- **比对**：json reporter 产物（顶层 `duplicates[]`，每元素 `firstFile.name`/`secondFile.name`，Windows `\` 分隔）归一化为 `A#B` POSIX 文件对，与 baseline `clones[]` 集合差集。
+- **比对**：json reporter 产物（顶层 `duplicates[]`，每元素 `firstFile.name`/`secondFile.name`，Windows `\` 分隔）归一化为 `A#B` POSIX 文件对，与 baseline `clones[]` 集合差集。归一化/提取/漂移匹配共享层 = `scripts/_lib/jscpd-pairs.ts`（`pairsFrom`/`normPair`/`matchDrift`，行为由 `tests/test_jscpd_pairs.ts` 锁定，含 ADR-144 真实案例回归）。
 - **门禁**：新增对 → exit 1；无新增 → exit 0；无 baseline → exit 2。`--update` 将当前对冻结写 baseline。
-- **契约**：`--json` 输出 `{"_summary":{ok,issues,added,fixed,baseline,current}}` 供 `pre-push-gate.mjs` 的 `runTools` 解析（rc 判定兜底）。
+- **搬迁漂移提示（2026-09-01 ADR-144 复盘）**：文件搬迁/拆分会让重复对 key 变路径 → 增量门禁误报「新增」。失败输出对每个新增对用 `matchDrift`（added ↔ fixed 按 **basename 集**匹配）标注「疑似路径漂移(非新债)」+ 旧对来源：`exact`（basename 集相同，纯搬迁）/`partial`（部分交集，拆/并文件，附共享文件名）；未被漂移解释的消失旧对单列 `-` 列表供研判。**漂移是提示不是豁免**——仍计入 added/ok，放行由人确认后 `--update`。`_summary` 新增 `drifted` 计数。
+- **verbose 明细**：`--verbose` 在失败输出附新增对的重复块行号（`firstFile.start/end` ↔ `secondFile.start/end`）+ 片段头 3 行（截断 200 字符）。
+- **契约**：`--json` 输出 `{"_summary":{ok,issues,added,fixed,drifted,baseline,current}}` 供 `pre-push-gate.mjs` 的 `runTools` 解析（rc 判定兜底）。
 
 ## 对外 API / 入口
 
 ```bash
-node scripts/jscpd-go.ts            # 门禁:有新增重复对 → exit 1
+node scripts/jscpd-go.ts            # 门禁:有新增重复对 → exit 1（含搬迁漂移提示）
 node scripts/jscpd-go.ts --update   # 冻结当前债务 / 治理后收紧
 node scripts/jscpd-go.ts --json     # _summary 契约(JSON 模式)
-node scripts/jscpd-go.ts --verbose  # 打印 jscpd statistics 明细
+node scripts/jscpd-go.ts --verbose  # 打印 jscpd statistics + 新增对行号/片段
 ```
 
 - 退出码：0（通过/已更新）/ 1（门禁失败：新增重复对）/ 2（未找到 baseline）。
@@ -57,6 +59,7 @@ node scripts/jscpd-go.ts --verbose  # 打印 jscpd statistics 明细
 ## 相关
 
 - `scripts/jscpd-go.ts`（本卡 source）
+- `scripts/_lib/jscpd-pairs.ts`（pair 归一化/漂移匹配共享层）+ `tests/test_jscpd_pairs.ts`（行为锁定）
 - `scripts/pre-push-gate.ts`（门禁挂载）
 - `scripts/baseline/jscpd-go-baseline.json`（Go 账本）
 - `scripts/baseline/deadcode-baseline.json`（前端账本，零耦合）

@@ -714,6 +714,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-145：cli 解耦 app：消费方定义 AppService 接口",
+        "link": "/adr/ADR-145-cli-app-service-interface"
+      },
+      {
         "text": "ADR-144：types 解耦 container：识别大脑下沉 packs",
         "link": "/adr/ADR-144-types-container-decouple"
       },

@@ -93,7 +93,7 @@
 | 🍃 preview_3d_migration | preview-3d 领域根迁移 | leaf | — | 整目录搬家, 领域根提升, 相对引用修复, cmd 命令行限制, 目录归置 |
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | io-bound | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
 | 🏗 resource-packs | 资源包功能 resource-packs | architecture | — | 资源包, 光影包, 蓝图, 投影, resourcepack, shaderpack, 资源管理 |
-| 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 关键词, 标签筛选, 数值筛选, 三路交集, adv-filter, 高级筛选, SearchModels |
+| 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 关键词, 标签筛选, 数值筛选, 三路交集, adv-filter, 高级筛选, SearchModels, 网页版降级 |
 | 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 整合包列表, 同步状态, instance, PushSingleResource, PullSingleResource, sync:download:missing, app-sidebar |
 | 🏗 version-updater | 版本更新 version-updater | architecture | io-bound | 更新, 升级, 检查更新, 新版本, 静默检查, updater, 版本 |
 

@@ -37,6 +37,7 @@ export const KNOWLEDGE_NON_CARDS = new Set([
   'README.md',
   'AGENTS.md',
   'routes.md',       // gen-routes 产出（ADR-114 §被补充）
+  'routes-quick.md', // gen-routes-quick 产出（AI 高频场景路由表）
   'menu-map.md',     // 若后续 gen-menu-map 产出（BABY 预留）
   'graph.md',        // 若后续 gen-knowledge-graph 产出（BABY 预留）
   'tier-review.md',  // BABY 预留

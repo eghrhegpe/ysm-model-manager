@@ -14,6 +14,7 @@
  *   [ERROR] 知识卡 kind 非 kebab-case/snake_case（小写，允许 - 与 _）或含未填充占位符 <...>
  *   [WARN]  H1 标题与 name 不一致
  *   [WARN]  AGENTS.md 含手写事实索引（├──/└── 目录树）
+ *   [ERROR] 幽灵卡：docs/knowledge/ 下无 YAML frontmatter 的 .md 文件（排除 KNOWLEDGE_NON_CARDS）
  *   [ERROR] 索引文件（index.md）链接指向不存在的卡
  *
  * 用法：
@@ -32,7 +33,7 @@ import path from 'node:path';
 import { ROOT, walk } from './_lib/scan-files.ts';
 import { toPosix } from './_lib/to-posix.ts';
 import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.ts';
-import { PERF_TAGS } from './_lib/knowledge-cards.ts';
+import { PERF_TAGS, KNOWLEDGE_NON_CARDS } from './_lib/knowledge-cards.ts';
 import { parseArgs } from './_lib/parse-args.ts';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
@@ -96,7 +97,15 @@ function loadKnowledgeCards() {
 function checkKnowledgeMeta(cards: any[]) {
   let count = 0;
   for (const { cf, stem, text, fm } of cards) {
-    if (!/^\uFEFF?---\r?\n/.test(text)) continue;
+    // 幽灵卡检测：任何 .md 文件（排除 KNOWLEDGE_NON_CARDS）若无 YAML frontmatter，报错而非静默跳过。
+    // 历史教训：go-repoaudit.md / go-rustbridge.md / wasm-memory-pitfalls.md 曾以旧格式（行内 frontmatter）存在于
+    // docs/knowledge/ 下但未被 gen 脚本索引，check-knowledge-drift 也不检测——属于「漂移检查盲区」。
+    if (!/^\uFEFF?---\r?\n/.test(text)) {
+      if (!KNOWLEDGE_NON_CARDS.has(cf)) {
+        errors.push(`幽灵卡 ${cf} 无 YAML frontmatter（旧格式残留或误放文件）——须补 frontmatter 或移入 KNOWLEDGE_NON_CARDS`);
+      }
+      continue;
+    }
     count++;
     if (!fm) { errors.push(`知识卡 ${cf} 缺少 YAML frontmatter`); continue; }
 

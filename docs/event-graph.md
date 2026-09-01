@@ -209,7 +209,7 @@
 |------|----|
 | `frontend/src/features/oldest-models.ts` | 57 |
 | `frontend/src/features/recycle-bin.ts` | 186 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 385 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 382 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 274 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 341 |
 | `frontend/src/views/app-tree/events.ts` | 155 |
@@ -315,7 +315,7 @@
 | `frontend/src/features/pack-dnd.ts` | 167 |
 | `frontend/src/features/recycle-bin.ts` | 110 |
 | `frontend/src/features/recycle-bin.ts` | 170 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 432 |
 | `frontend/src/views/app-content/settings/init.ts` | 142 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
@@ -442,8 +442,8 @@
 | `frontend/src/utils/dom/directory-picker.ts` | 45 |
 | `frontend/src/utils/dom/directory-picker.ts` | 57 |
 | `frontend/src/utils/module-loader.ts` | 17 |
-| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 58 |
-| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 204 |
+| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 39 |
+| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 185 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 41 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 52 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 58 |
@@ -602,7 +602,7 @@
 | `frontend/src/features/pack-dnd.ts` | 168 |
 | `frontend/src/features/recycle-bin.ts` | 111 |
 | `frontend/src/features/recycle-bin.ts` | 171 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 436 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 433 |
 | `frontend/src/views/app-sidebar/index.ts` | 321 |
 
 **订阅方（on）：**

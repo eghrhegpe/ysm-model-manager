@@ -14,8 +14,8 @@
 
 ### 归属原则——先分清「生成物」还是「手写文件」
 - **生成物**（`docs/` 下 index / project-map / cli-commands、i18n locale JSON、`completions/` 等，由 `.githooks/pre-commit` 的 `GEN_CMDS` 产出）= 全体输入的纯函数。**不承担提交归属、不按归属裁剪**：改卡后由 pre-commit 自动 gen+stage，交就交当前全量态。
-- **手写文件**（源码、知识卡、AGENTS.md 等）→ 路径限定提交，只提交自己的文件：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
-- 并行会话活跃时（`git status` 可见他人改动），路径限定是唯一安全的提交方式。
+- **手写文件**（源码、知识卡、AGENTS.md 等）→ 路径限定提交，`git status --short` 确认 staged 只含自己的文件（一瞥），然后直接：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
+- 并行会话活跃时，放心让提交工具裁决提交归属。
 
 ### 职责归属——前端 vs Go（回归红线，不可违反）
 - 类型判定唯一事实源 = `resource_types.json` + Go（`internal/app/`）；前端只读不判（tab / preview / 3d / resourcepack 归类一律由 Go 扫描结果 + 该 JSON 派生）。

@@ -43,15 +43,22 @@ import { run } from './_lib/proc.ts';
 const ROOT = getRoot();
 const isWin = process.platform === 'win32';
 // 复用 pre-push-gate 的跨平台 bin 解析约定（win32 用 .cmd 包装）
-const biomeBin = path.join(ROOT, 'frontend', 'node_modules', '.bin', isWin ? 'biome.cmd' : 'biome');
+// monorepo 化后 biome 被 hoist 到 root node_modules/.bin（npm 10 workspace 安装位置），
+// 老结构仍在 frontend/node_modules/.bin——两处都找，兼容两种安装布局。
+const binName = isWin ? 'biome.cmd' : 'biome';
+const biomeCandidates = [
+  path.join(ROOT, 'node_modules', '.bin', binName),
+  path.join(ROOT, 'frontend', 'node_modules', '.bin', binName),
+];
+const biomeBin = biomeCandidates.find((p) => fs.existsSync(p));
 
-if (!fs.existsSync(biomeBin)) {
+if (!biomeBin) {
   if (process.argv.includes('--json')) {
     process.stdout.write(JSON.stringify({
-      _summary: { ok: false, errors: -1, note: 'biome 未安装（frontend/node_modules 缺失）——请 npm ci 后重推' },
+      _summary: { ok: false, errors: -1, note: 'biome 未安装（node_modules 缺失）——请 npm ci 后重推' },
     }));
   } else {
-    console.error('[check-biome] biome 未安装（frontend/node_modules 缺失）——请 npm ci 后重推');
+    console.error('[check-biome] biome 未安装（node_modules 缺失）——请 npm ci 后重推');
   }
   process.exit(1);
 }

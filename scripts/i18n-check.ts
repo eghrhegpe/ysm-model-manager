@@ -47,7 +47,7 @@ if (unknown && unknown.length) {
 }
 const log = json ? () => {} : console.log.bind(console);
 
-function extractKeys(file) {
+function extractKeys(file: string) {
   const text = readFileSync(file, 'utf8');
   const keys = new Set();
   const re = /^\s*['"]([^'"]+)['"]\s*:\s*(?!function\b|\()/gm;
@@ -58,12 +58,12 @@ function extractKeys(file) {
   return keys;
 }
 
-function loadBundle(lang) {
+function loadBundle(lang: string) {
   const file = resolve(LOCALES_DIR, `${lang}.ts`);
   return { lang, file, keys: extractKeys(file) };
 }
 
-function extractPlaceholders(file) {
+function extractPlaceholders(file: string) {
   const text = readFileSync(file, 'utf8');
   const map = new Map(); // key -> Set<string> of placeholder names
   // 捕获值开引号（组2）并用负向前瞻排除对应引号，兼容单/双引号两种源码风格。
@@ -155,7 +155,7 @@ if (totalMissing > 0) {
   log('\n✅ All translation bundles are key-aligned with the base.');
 }
 
-function extractKeyValues(file) {
+function extractKeyValues(file: string) {
   const text = readFileSync(file, 'utf8');
   const map = new Map();
   const re = /^\s*['"]([^'"]+)['"]\s*:\s*['"]((?:\\.|[^'\\])*)['"]/gm;

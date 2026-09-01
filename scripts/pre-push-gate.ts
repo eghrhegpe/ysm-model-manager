@@ -53,7 +53,7 @@ const PULL_HINT = '提示: git 报 rejected/non-fast-forward 时先 git pull 整
 
 /* ---------------- 工具 ---------------- */
 
-function sh(cmd, { cwd = ROOT, timeout = TIMEOUT } = {}) {
+function sh(cmd: string, { cwd = ROOT, timeout = TIMEOUT } = {}) {
   /** shell 执行命令（win32 兼容 .cmd），返回 { rc, out }。
    * 统一委托 _lib/proc.ts（超时/错误分类契约；shell:true 时 win32 走 cmd.exe、
    * POSIX 走 /bin/sh，承载管道/重定向命令）。
@@ -66,7 +66,7 @@ function sh(cmd, { cwd = ROOT, timeout = TIMEOUT } = {}) {
  * 异步版 sh——用 spawn 包装 Promise，供 Promise.all 并行执行。
  * 仅用于 npm 三件套并行（vite build / tsc --noEmit），不替代同步 sh。
  */
-function shAsync(cmd, { cwd = ROOT, timeout = TIMEOUT } = {}) {
+function shAsync(cmd: string, { cwd = ROOT, timeout = TIMEOUT } = {}) {
   return new Promise<{ rc: number | null; out: string }>((resolve) => {
     const child = spawn(cmd, [], { cwd, shell: true, timeout, stdio: ['ignore', 'pipe', 'pipe'] });
     let buf = '';
@@ -77,7 +77,7 @@ function shAsync(cmd, { cwd = ROOT, timeout = TIMEOUT } = {}) {
   });
 }
 
-function git(args, { cwd = ROOT } = {}) {
+function git(args: string[], { cwd = ROOT } = {}) {
   // core.quotepath=false：非 ASCII 文件名输出原始 UTF-8，避免引号/八进制转义破坏域匹配。
   // 数组参数直走 procRun（无 shell 拼接）：git ref 允许 $/`/;/| 等元字符，
   // 拼字符串后交给 sh() 经 shell 执行会构成命令注入（pre-push stdin 的 localRef 可被攻击者控制）。
@@ -87,7 +87,7 @@ function git(args, { cwd = ROOT } = {}) {
 
 /* ---------------- 变更域分析 ---------------- */
 
-function resolveChanges(localRef, localOid, remoteOid) {
+function resolveChanges(localRef: string, localOid: string, remoteOid: string) {
   /**
    * 计算本次 push 的变更文件集（相对被推送的 localOid，而非当前检出 HEAD——
    * 推非当前分支时 HEAD 与推送对象不一致，用 HEAD 会分析错快照，2026-08-12 排查）。
@@ -106,7 +106,7 @@ function resolveChanges(localRef, localOid, remoteOid) {
   // 避免多提交新分支只看 HEAD~1..HEAD 漏检中间提交（code_review P3）。
   // 分支名取自 stdin 的 localRef（推非当前分支时不能用 CURRENT_BRANCH）。
   // 不用 `2>/dev/null`：cmd.exe 下会解析为 dev\null 相对路径并中止整条命令（code_review P3）
-  const mergeBase = (ref) => {
+  const mergeBase = (ref: string) => {
     const r = git(['merge-base', localOid, ref]);
     return r.rc === 0 ? r.out.trim() : '';
   };
@@ -132,7 +132,7 @@ async function runContractTests() {
 
 /* ---------------- gofmt 只读校验 ---------------- */
 
-function gofmtCheck(goFiles) {
+function gofmtCheck(goFiles: string[]) {
   /** gofmt -l 只读检出未格式化文件（不修改）。修复由 pre-commit 提交时自动完成；
    * 此处若仍检出，说明提交绕过了 pre-commit（--no-verify 等），阻断并提示手动修复。 */
   return sh(`gofmt -l ${goFiles.map(shq).join(' ')}`).out.trim()
@@ -163,7 +163,7 @@ async function main() {
   // 统一结果收集与阻断标记
   const results: any[] = [];
   let blocked = false;
-  const record = (label, ok, { time = 0, note = '', tail = '' } = {}) => {
+  const record = (label: string, ok: boolean, { time = 0, note = '', tail = '' } = {}) => {
     results.push({ label, ok, time, note, tail });
     if (!ok) blocked = true;
   };
@@ -254,7 +254,7 @@ async function main() {
   /* --- 静态工具统一执行器 --- */
   // 回退 ADR-088 静态工具并行（实测 2m15s vs 基线 75s，runSpawn spawn 开销吃掉并行收益）
   // 恢复串行 runTools——域间并行（Go ∥ 前端）留作后续 Take巧，静态工具段不并行
-  const runTools = (tools) => {
+  const runTools = (tools: any[]) => {
     for (const entry of tools) {
       const tool = typeof entry === 'string' ? entry : entry.tool;
       const extraArgs = typeof entry === 'string' ? [] : entry.args || [];
@@ -467,8 +467,8 @@ async function main() {
       // 违规详情（供 tail 展示方向，不阻断推送）
       if (!ok && Array.isArray(parsed.results)) {
         rlTail = parsed.results
-          .filter((r) => r.count > 0)
-          .map((r) => `[${r.rule_id} ${r.name}] ` + r.violations.map((v) => `${v.file}:${v.line}`).join(', '))
+          .filter((r: any) => r.count > 0)
+          .map((r: any) => `[${r.rule_id} ${r.name}] ` + r.violations.map((v: any) => `${v.file}:${v.line}`).join(', '))
           .join('\n');
       }
     } catch { /* parse fail */ ok = false; scanHealthy = false; }

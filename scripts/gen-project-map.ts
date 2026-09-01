@@ -37,7 +37,7 @@ const JSON_OUT = args.has('--json');
  * label、末个 `|` 之前为 desc。返回 { 'avatar/': '...', 'bus.ts': '...', ... }。
  */
 function loadUsageFromDoc() {
-  const usage = {};
+  const usage: Record<string, string> = {};
   if (!fs.existsSync(OUT)) return usage;
   const text = readText(OUT).replace(/^\uFEFF/, '');
   for (const line of text.split('\n')) {
@@ -57,7 +57,7 @@ function loadUsageFromDoc() {
 }
 
 /** 一级子目录名（跳过隐藏项）。 */
-function subdirs(dir) {
+function subdirs(dir: string) {
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir, { withFileTypes: true })
@@ -73,7 +73,7 @@ function subdirs(dir) {
  * 此处同步过滤，避免它们出现在项目地图里污染「根级结构」视图。 */
 const ROOT_EXCLUDED = new Set(['link-checker-out.json', 'opencode.json']);
 
-function topFiles(dir, exts) {
+function topFiles(dir: string, exts: string[]) {
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir, { withFileTypes: true })
@@ -84,7 +84,7 @@ function topFiles(dir, exts) {
 }
 
 /** 渲染一行表格；文档未登记用途的条目显示占位并计入漂移提示。 */
-function row(label, usage, drift, kind, tail = '') {
+function row(label: string, usage: string, drift: { unregistered: string[] }, kind: string, tail = '') {
   if (!usage) {
     drift.unregistered.push(`${kind}:${label}`);
     return `| \`${label}\` | ⚠️ 用途待补（在 docs/project-map.md 本表补一句）${tail} |`;
@@ -93,17 +93,17 @@ function row(label, usage, drift, kind, tail = '') {
 }
 
 /** 测试文件判定（TS/JS 的 .test. / .spec.，Go 的 _test.）。 */
-function isTestFile(name) {
+function isTestFile(name: string) {
   return /[.](test|spec)[.]/i.test(name) || /_test[.]/.test(name);
 }
 
 /** 源码文件判定（语言扩展名且非测试）。 */
-function isSourceFile(name) {
+function isSourceFile(name: string) {
   return /[.](ts|js|mjs|cjs|tsx|jsx|go)$/.test(name) && !isTestFile(name);
 }
 
 /** 目录形态扫描：{ source: [], test: [], other: [], dirs: [] }（直接子项，字节序排序）。 */
-function scanShape(dir) {
+function scanShape(dir: string) {
   const shape: { source: string[]; test: string[]; other: string[]; dirs: string[] } = { source: [], test: [], other: [], dirs: [] };
   if (!fs.existsSync(dir)) return shape;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -118,15 +118,15 @@ function scanShape(dir) {
       shape.other.push(e.name);
     }
   }
-  for (const k of Object.keys(shape)) shape[k].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  for (const k of Object.keys(shape)) (shape as Record<string, string[]>)[k].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   return shape;
 }
 
 /** 形态缓存：同一目录只扫一次磁盘（shapeTail 生成 markdown 与 --json 输出共用）。 */
-const shapeCache = new Map();
-function scanShapeCached(dir) {
+const shapeCache = new Map<string, { source: string[]; test: string[]; other: string[]; dirs: string[] }>();
+function scanShapeCached(dir: string) {
   if (!shapeCache.has(dir)) shapeCache.set(dir, scanShape(dir));
-  return shapeCache.get(dir);
+  return shapeCache.get(dir)!;
 }
 
 /** 平铺源码名列表展示阈值：≤12 个列全名（防 AI 猜路径抓空），更长只显数字。 */
@@ -135,7 +135,7 @@ const SOURCE_LIST_CHARS = 100;
 
 /** 目录形态自动标注：〔源码 N: a.ts b.ts … · 测试 M · 子目录 K: x/ y/〕。
  *  结构变化后重跑脚本即更新（--check 接入 doctor 防漂移），形态描述不再靠手写。 */
-function shapeTail(dir) {
+function shapeTail(dir: string) {
   const sh = scanShapeCached(dir);
   const parts: string[] = [];
   if (sh.source.length > 0) {
@@ -268,7 +268,7 @@ if (JSON_OUT) {
   const structure: Record<string, any> = {};
   for (const zone of ['go', 'internal', 'frontend']) {
     structure[zone] = {};
-    for (const d of zones[zone]) {
+    for (const d of (zones as Record<string, string[]>)[zone]) {
       const key = d + '/';
       structure[zone][key] = { usage: usage[key] || null, ...scanShapeCached(path.join(ROOT, zone === 'frontend' ? 'frontend/src' : zone, d)) };
     }

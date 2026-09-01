@@ -52,12 +52,12 @@ files = r.out.split("\n").filter(Boolean)
 const violations: any[] = [];
 for (const file of files) {
   const src = readFileSync(file, "utf8");
-  const scan = (re, kind) => {
+  const scan = (re: RegExp, kind: string) => {
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(src))) {
       const n = m[1];
-      const key = MAP[n];
+      const key = (MAP as Record<string, string>)[n];
       if (!key) continue; // 不在档位表的裸数字（如未来新增档位前）——跳过，避免误报
       const line = src.slice(0, m.index).split("\n").length;
       violations.push({ file: path.relative(ROOT, file), line, n, key, kind });

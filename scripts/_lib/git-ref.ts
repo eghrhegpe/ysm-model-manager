@@ -32,7 +32,7 @@ import { ROOT, toPosix } from './scan-files.ts';
  * @param {string[]} args  git 命令参数数组
  * @returns {string}       stdout 文本
  */
-function git(args) {
+function git(args: string[]) {
   return execFileSync('git', ['-c', 'core.quotepath=false', ...args], {
     cwd: ROOT,
     encoding: 'utf8',
@@ -44,7 +44,7 @@ function git(args) {
 }
 
 /** git 命令，失败返回 null（如路径不存在 / 二进制 / 非 git 仓库）。 */
-export function gitMaybe(args) {
+export function gitMaybe(args: string[]) {
   try { return git(args); } catch { return null; }
 }
 
@@ -52,7 +52,7 @@ export function gitMaybe(args) {
  *  相对路径按 ROOT 解析（path.resolve），cwd 无关——此前直接用
  *  path.relative(ROOT, p) 对相对输入会按进程 cwd 解析而错位（code_review P3，
  *  一处修复覆盖 audit-split/rollback-impact/bloat-history/api-break 全部调用点）。 */
-function toGitPath(p) {
+function toGitPath(p: string) {
   return toPosix(path.relative(ROOT, path.resolve(ROOT, p)));
 }
 
@@ -67,7 +67,7 @@ function toGitPath(p) {
  * @param {string} p     路径（绝对路径或相对路径；内部自动归一化为正斜杠）
  * @returns {string|null} 文件文本内容；不存在/失败 → null
  */
-export function showAt(ref, p) {
+export function showAt(ref: string, p: string) {
   const gp = typeof p === 'string' ? toGitPath(p) : p;
   return gitMaybe(['show', `${ref}:${gp}`]);
 }
@@ -78,7 +78,7 @@ export function showAt(ref, p) {
  * - 二进制文件也算"存在"。
  * @returns {boolean}
  */
-export function existsAt(ref, p) {
+export function existsAt(ref: string, p: string) {
   return gitMaybe(['cat-file', '-e', `${ref}:${toGitPath(p)}`]) !== null;
 }
 
@@ -88,7 +88,7 @@ export function existsAt(ref, p) {
  * - 路径不存在/二进制 → null。
  * @returns {number|null}
  */
-export function lineCountAt(ref, p) {
+export function lineCountAt(ref: string, p: string) {
   const text = showAt(ref, p);
   if (!text) return null;
   const nl = (text.match(/\n/g) || []).length;
@@ -156,7 +156,7 @@ export function logPathDetail(p: string, opts: { limit?: number; follow?: boolea
  * @param {string} [dir] 目录（默认仓库根）
  * @returns {string[]}  相对仓库根的正斜杠路径列表
  */
-export function lsTree(ref, dir = '') {
+export function lsTree(ref: string, dir = '') {
   const args = ['ls-tree', '-r', '--name-only', ref];
   if (dir) args.push('--', dir);
   const out = gitMaybe(args);
@@ -227,7 +227,7 @@ export function renamePairs(older: string, newer: string, similarityThreshold = 
  * @param {string[]} paths
  * @returns {Map<string, string|null>}  path → 文本或 null
  */
-export function showAllAt(ref, paths) {
+export function showAllAt(ref: string, paths: string[]) {
   if (paths.length === 0) return new Map();
   const result = new Map();
   for (const p of paths) {

@@ -62,7 +62,7 @@ const HTML_SIGNAL =
 const LANG_PICKER = /value="(zh-CN|en|ja)"/;
 
 /** 把注释遮罩成同长空格（保留换行与字符偏移，行号才准）。 */
-function maskComments(src) {
+function maskComments(src: string) {
   return src
     .replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, " "))
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
@@ -76,7 +76,7 @@ function maskComments(src) {
  * 导致后续 STR_RE 跨行误配、把几十行代码吞进一个"字符串"（wasm.ts 4 处误报的根因）；
  * 且其声称要防的"正则含引号被误当字符串"全仓零发生（去掉后零新误报）。已删除。
  */
-function maskTsTypeIndex(src) {
+function maskTsTypeIndex(src: string) {
   return src.replace(
     /:\s*[A-Za-z$_][\w$]*\s*\[\s*["'][^"']*["']\s*\]/g,
     (m) => m.replace(/[^\n]/g, " "),
@@ -86,7 +86,7 @@ function maskTsTypeIndex(src) {
 /** 字符串字面量正则：单/双/反引号，反引号可跨行。 */
 const STR_RE = /(["'`])((?:\\.|(?!\1)[^\\])*?)\1/gs;
 
-function lineOf(src, idx) {
+function lineOf(src: string, idx: number) {
   let line = 1;
   for (let i = 0; i < idx && i < src.length; i++) {
     if (src[i] === "\n") line++;
@@ -94,7 +94,7 @@ function lineOf(src, idx) {
   return line;
 }
 
-function scanFile(file) {
+function scanFile(file: string) {
   const raw = fs.readFileSync(file, "utf8");
   const masked = maskTsTypeIndex(maskComments(raw));
   const hits: { line: number; snippet: string }[] = [];
@@ -144,7 +144,7 @@ function scanFile(file) {
   return hits;
 }
 
-function walk(dir, out) {
+function walk(dir: string, out: string[]) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) {

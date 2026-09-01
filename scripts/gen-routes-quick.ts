@@ -39,18 +39,18 @@ const BANNER =
   '<!-- 本文件由 scripts/gen-routes-quick.ts 自动生成，请勿手改。重跑：node scripts/gen-routes-quick.ts -->';
 const END_MARK = '<!--  END_GENERATED_SECTION -->';
 
-function fm(text, key) { return getScalar(parseFrontmatter(text), key); }
-function fmList(text, key) { return getList(parseFrontmatter(text), key); }
-function cell(s) { return String(s).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim(); }
+function fm(text: string, key: string) { return getScalar(parseFrontmatter(text), key); }
+function fmList(text: string, key: string) { return getList(parseFrontmatter(text), key); }
+function cell(s: string) { return String(s).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim(); }
 
 /** 卡片 adr: 字段 → ADR-XXX 字符串；无则 -。 */
-function adrLabel(text) {
+function adrLabel(text: string) {
   const adrs = fmList(text, 'adr').map((a) => String(a)).filter((a) => /ADR-\d+/i.test(a));
   return adrs.length ? adrs.join(', ') : '-';
 }
 
 /** 解析单条 pitfalls 记录: "「位置」描述 → 正确做法" → { trap, pos, fix }。 */
-function parsePitfall(raw) {
+function parsePitfall(raw: string) {
   const s = String(raw).trim();
   const arrow = s.indexOf(' → ');
   const left = arrow === -1 ? s : s.slice(0, arrow);
@@ -66,7 +66,7 @@ function parsePitfall(raw) {
   return { trap, pos: pos ? `\`${pos}\`` : '-', fix: cell(right) };
 }
 
-function render(cards) {
+function render(cards: Array<{ file: string; name: string; groups: string[]; intents: string[]; risks: string[]; adr: string; pitfalls: string[] }>) {
   const rows: Array<{ group: string; intent: string; risk: string; adr: string; card: any }> = [];
   // 意图 ↔ 分组循环配对（2026-08-31 审计修复）：
   // 旧实现 Math.min(groups, intents) 仅按索引配对，go-scanner 1 组 5 意图只出 1 行、
@@ -102,7 +102,7 @@ function render(cards) {
     groupMap.get(r.group).push(r);
   }
   for (const g of groupOrder) {
-    groupMap.get(g).sort((a, b) => a.intent.localeCompare(b.intent, 'zh-CN'));
+    groupMap.get(g).sort((a: any, b: any) => a.intent.localeCompare(b.intent, 'zh-CN'));
   }
 
   const out: string[] = [];
@@ -175,7 +175,7 @@ function main() {
   const pitCount = cards.reduce((s, c) => s + c.pitfalls.length, 0);
   console.error(`📄 ${cards.length} 张卡带 quick_groups，${total} 条高频意图，${pitCount} 条陷阱`);
 
-  const summary = (ok, check, generated) =>
+  const summary = (ok: boolean, check: boolean, generated: boolean) =>
     JSON.stringify({ ok, check, generated, count: total, intents: total, pitfalls: pitCount, cards: cards.map((c) => c.file) });
 
   if (args.check) {

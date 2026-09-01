@@ -18,7 +18,7 @@ import { parseArgs } from './_lib/parse-args.ts';
 const SEARCH_NAMES = ['main.json', 'arm.json', 'texture.png', 'texture2.png',
   'left_arm.json', 'right_arm.json', 'arrow.json'];
 
-function inspect(filepath) {
+function inspect(filepath: string) {
   const name = path.basename(filepath);
   const size = fs.statSync(filepath).size;
   const result = { file: name, size, format: 'unknown', has_bom: false,

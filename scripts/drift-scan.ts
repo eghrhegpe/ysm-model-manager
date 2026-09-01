@@ -37,7 +37,7 @@ const FE_DIR = join(ROOT, "frontend", "src");
 // ===== 工具函数 =====
 
 /** 递归收集文件 */
-function walkFiles(dir, ext, out: string[] = []) {
+function walkFiles(dir: string, ext: string, out: string[] = []) {
   for (const entry of readdirSync(dir)) {
     if (entry.startsWith(".") || entry === "node_modules" || entry === "testdata") continue;
     const full = join(dir, entry);
@@ -49,8 +49,8 @@ function walkFiles(dir, ext, out: string[] = []) {
 }
 
 /** 读取文件内容（忽略 _test.go / *.test.ts） */
-function readSrc(path) {
-  const base = path.split(/[/\\]/).pop();
+function readSrc(path: string) {
+  const base = path.split(/[/\\]/).pop()!;
   if (base.includes("_test.") || base.includes(".test.")) return null;
   try {
     return readFileSync(path, "utf-8");
@@ -60,7 +60,7 @@ function readSrc(path) {
 }
 
 /** 在内容中搜索正则，返回所有匹配行 */
-function findMatches(content, regex, filePath, filter) {
+function findMatches(content: string, regex: RegExp, filePath: string, filter: ((line: string, content: string, lineIdx: number) => boolean) | undefined) {
   const results: any[] = [];
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
@@ -98,7 +98,7 @@ const RULES = [
     regex: /os\.WriteFile\([^,]+,[^,]+,\s*(?:0o)?0644\)/,
     exclude: [/test/],
     // 排除 heredoc 字符串（如 GitHub Actions workflow）
-    filter: (line) => !line.startsWith("os.WriteFile(\"index.json\""),
+    filter: (line: string) => !line.startsWith("os.WriteFile(\"index.json\""),
   },
   {
     id: "HARDCODED_READ_LIMIT",
@@ -108,7 +108,7 @@ const RULES = [
     regex: /50\s*<<\s*20/,
     exclude: [/types\/extensions\.go/, /test/],
     // 排除常量定义本身和注释
-    filter: (line) => !line.startsWith("//") && !line.startsWith("const "),
+    filter: (line: string) => !line.startsWith("//") && !line.startsWith("const "),
   },
   {
     id: "INLINE_BAN_STRIP",
@@ -118,7 +118,7 @@ const RULES = [
     regex: /\[:len\([^)]+\)-(?:4|len\("\.ban"\))\]/,
     exclude: [/types\/extensions\.go/, /test/],
     // 排除注释行和函数定义本身
-    filter: (line) => !line.startsWith("//") && !line.startsWith("return name[:len(name)-4]"),
+    filter: (line: string) => !line.startsWith("//") && !line.startsWith("return name[:len(name)-4]"),
   },
   {
     id: "INLINE_ILLEGAL_CHARS",
@@ -136,7 +136,7 @@ const RULES = [
     regex: /^func formatSize\(/,
     exclude: [/fsutil\/format\.go/, /test/],
     // 排除委托实现（单行函数体含 fsutil.FormatSize）
-    filter: (line, content, lineIdx) => {
+    filter: (line: string, content: string, lineIdx: number) => {
       const lines = content.split("\n");
       const nextLine = lines[lineIdx + 1] || "";
       // 如果函数体是单行委托调用，不算重复
@@ -168,7 +168,7 @@ const RULES = [
     exclude: [/fsutil\/copy\.go/, /test/],
     // 薄包装降噪：函数体若委托 fsutil.CopyDirRecursive 即为已收敛适配器（ADR-044），
     // 仅标记真正独立实现（如 importer.go 的原子整树复制，语义独特暂不可收敛）。
-    filter: (line, content, lineIdx) => {
+    filter: (line: string, content: string, lineIdx: number) => {
       const lines = content.split("\n");
       for (let i = lineIdx; i < Math.min(lineIdx + 20, lines.length); i++) {
         if (lines[i].includes("fsutil.CopyDirRecursive")) return false;
@@ -183,7 +183,7 @@ const RULES = [
     glob: "*.go",
     regex: /fmt\.Errorf\([^)]*%v[^)]*,\s*err\)/,
     exclude: [/test/],
-    filter: (line) => {
+    filter: (line: string) => {
       if (line.startsWith("//")) return false;
       // 伴生 %w 时豁免：单个 fmt.Errorf 内已有 %w 保留主链，%v 仅格式化伴生参数
       // （双 %w 会创建 Unwrap() []error 多错误包装，errors.Unwrap() 返回 nil，
@@ -199,7 +199,7 @@ const RULES = [
     glob: "*.go",
     regex: /os\.(Open|Create)\(/,
     exclude: [/test/],
-    filter: (line, content, lineIdx) => {
+    filter: (line: string, content: string, lineIdx: number) => {
       const lines = content.split("\n");
       const trimmed = line.trim();
 
@@ -242,7 +242,7 @@ const RULES = [
     glob: "*.ts",
     regex: /\b(\w+)\s*=\s*(?:window\.)?(?:setInterval|setTimeout)\(/,
     exclude: [/test/],
-    filter: (line, content, lineIdx) => {
+    filter: (line: string, content: string, lineIdx: number) => {
       const trimmed = line.trim();
       // 排除注释行
       if (trimmed.startsWith("//") || trimmed.startsWith("*")) return false;
@@ -294,7 +294,7 @@ function scan() {
   return findings;
 }
 
-function formatOutput(findings, json) {
+function formatOutput(findings: any[], json: boolean) {
   if (json) {
     // 剥离 RegExp/函数字段（JSON 序列化会静默丢成 {}），机器输出保留有效字段
     const clean = findings.map(({ regex, exclude, filter, ...rest }) => rest);

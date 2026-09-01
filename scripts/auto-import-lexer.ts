@@ -77,7 +77,7 @@ export const GLOBALS = new Set([
  * @param {string} text 源码（已去 BOM/CRLF）
  * @returns {{ stripped: string, tokens: Array<{name:string,start:number,line:number}> }}
  */
-export function tokenize(text) {
+export function tokenize(text: string) {
   // 用 split('') 而非 [...text]：前者按 UTF-16 code unit 拆分，与下方 text.slice()/
   // split('\n') 的行号计算坐标一致；后者按 code point（emoji 占 1 元素）拆分，
   // 会导致含 emoji 的文件（如 toast 文案 📦）token 名/行号整体错位（误报缺失 import）。
@@ -90,7 +90,7 @@ export function tokenize(text) {
   // 正则字面量识别：`/` 前一个非空白字符属于这些时，视为正则开头
   const REGEX_PRECEDERS = new Set(['(', '=', ':', ',', '!', '&', '|', '?', '{', ';', '[']);
 
-  const backChar = (idx) => {
+  const backChar = (idx: number) => {
     let j = idx - 1;
     while (j >= 0 && /\s/.test(chars[j])) j--;
     return j >= 0 ? chars[j] : '';

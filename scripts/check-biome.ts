@@ -77,7 +77,7 @@ function runBiome() {
 }
 
 /** 从 biome 文本输出解析 "Found N errors. / Found N warnings." 概要（Biome 2.x 格式） */
-function parseSummary(text) {
+function parseSummary(text: string) {
   const errM = text.match(/Found\s+(\d+)\s+errors?/);
   const warnM = text.match(/Found\s+(\d+)\s+warnings?/);
   return {

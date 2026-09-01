@@ -45,7 +45,7 @@ const SETTINGS_OVERRIDDEN = new Set([
 ]);
 
 /** 组件名 → 实际覆盖它的 guide 页（组件名与功能页非一一对应） */
-const ALIAS_COVERED = {
+const ALIAS_COVERED: Record<string, string> = {
   'app-tree': 'repository', // 模型仓库树 → repository.md
   'app-resource-manager': 'resource-packs', // 资源包管理 → resource-packs.md
   'app-sync-manager': 'pack-sync', // 整合包同步 → pack-sync.md

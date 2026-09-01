@@ -27,12 +27,12 @@ const OUTPUT_DIR = path.join(ROOT, 'go', 'rustbridge', 'android-lib');
 const JNI_BASE = path.join(ROOT, 'build', 'android', 'app', 'src', 'main', 'jniLibs');
 
 // ABI → Rust target triple
-const ARCHES = {
+const ARCHES: Record<string, { rustTarget: string; abi: string }> = {
   arm64: { rustTarget: 'aarch64-linux-android', abi: 'arm64-v8a' },
   amd64: { rustTarget: 'x86_64-linux-android', abi: 'x86_64' },
 };
 
-function fail(msg) {
+function fail(msg: string) {
   console.error(`[compile-android-rust] ${msg}`);
   process.exit(1);
 }

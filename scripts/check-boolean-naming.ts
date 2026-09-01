@@ -46,7 +46,7 @@ const VALID_PREFIXES = new Set([
 const findings: any[] = [];
 let scannedCount = 0; // 实际读取成功的文件数（scanFile 静默跳过不可读文件，不能拿 walk 总数虚报，code_review P3）
 
-function checkName(name, loc) {
+function checkName(name: string, loc: string) {
   if (name.startsWith('_')) return; // 私有变量豁免（闭包状态命名自由）
   if (/^[a-zA-Z]$/.test(name)) return; // 单字母惯用短名
   if (/^[A-Z0-9_]+$/.test(name)) return; // 全大写常量
@@ -57,7 +57,7 @@ function checkName(name, loc) {
   }
 }
 
-function scanFile(file) {
+function scanFile(file: string) {
   let text;
   try {
     text = fs.readFileSync(file, 'utf-8');
@@ -95,7 +95,7 @@ function main() {
     process.exit(1);
   }
   const files = walk(SRC_DIR, { skipTest: true }); // 跳过测试文件：测试中的布尔命名不属生产规范（code_review P4-1）
-  for (const f of files) scanFile(f);
+  for (const f of files) scanFile(f as string);
 
   const uniq = new Map<string, any>(); // 去重（同名同文件多行可能重复）
   for (const f of findings) uniq.set(`${f.name}@${f.loc}`, f);

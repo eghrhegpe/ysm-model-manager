@@ -61,7 +61,7 @@ const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
 
 /** 仅保留应纳入 Go diff 门禁的源码：.go 且非 _test.go、非根覆盖产物 go-cover。 */
-export function isGoSource(f) {
+export function isGoSource(f: string) {
   return (
     f.endsWith('.go') &&
     !f.endsWith('_test.go') &&
@@ -71,7 +71,7 @@ export function isGoSource(f) {
 }
 
 /** 本次改动的非测试 Go 源码文件（repo-root 相对路径）。 */
-export function getChangedGoFiles(base, head, uncommitted, staged) {
+export function getChangedGoFiles(base: string, head: string, uncommitted: boolean, staged: boolean) {
   const out = getChangedFiles(base, head, uncommitted, staged);
   if (out === null) return null;
   return out.filter(isGoSource);
@@ -94,19 +94,19 @@ const EXEMPT_LIFECYCLE_FILES = new Set([
 ]);
 
 /** 是否命中生命周期/窗口事件豁免（编译可达但 headless 不可达）。导出供单测。 */
-export function isExemptLifecycle(f) {
+export function isExemptLifecycle(f: string) {
   return EXEMPT_LIFECYCLE_FILES.has(f);
 }
 
 /** 把改动文件映射到 go test 包模式（模块根相对，如 go/scanner → ./go/scanner/...）。 */
-export function packagePatternFor(file) {
+export function packagePatternFor(file: string) {
   const dir = path.posix.dirname(file);
   if (dir === '.') return '.';
   return `./${dir}/...`;
 }
 
 /** 跑 `go test -coverprofile` 解析出的文件→语句块映射。 */
-export function runCoverProfile(packagePattern, tmp) {
+export function runCoverProfile(packagePattern: string, tmp: string) {
   const r1 = run('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
     cwd: ROOT, stdio: 'ignore', timeout: 120000,
     // 2026-08-29 超时 30s→120s：冷缓存下 internal/app 全包（Wails app 层）覆盖插桩
@@ -141,7 +141,7 @@ export function runCoverProfile(packagePattern, tmp) {
  *       build constraint，避免 `&&/||/!` 语法误判。
  * 失败返回 null（保守：不豁免，沿用旧 0% 行为）。
  */
-export function goListGoFiles(packagePattern) {
+export function goListGoFiles(packagePattern: string) {
   const r = run('go', ['list', '-f', '{{.GoFiles}}', packagePattern], {
     cwd: ROOT, timeout: 30000,
   });
@@ -152,7 +152,7 @@ export function goListGoFiles(packagePattern) {
 }
 
 /** 解析 Go coverprofile 文本 → Map<repoRootRelPath, Array<{sl,el,n,count}>>。导出供单测。 */
-export function parseGoCover(profileText) {
+export function parseGoCover(profileText: string) {
   const byFile = new Map();
   for (const line of profileText.split('\n')) {
     if (line.startsWith('mode:')) continue;
@@ -174,7 +174,7 @@ export function parseGoCover(profileText) {
 }
 
 /** 去掉模块根前缀（ysm-model-manager/... → repo-root 相对）。 */
-export function stripModulePrefix(fullPath) {
+export function stripModulePrefix(fullPath: string) {
   const idx = fullPath.indexOf('/go/');
   if (idx >= 0) return fullPath.slice(idx + 1);
   const i2 = fullPath.indexOf('/internal/');
@@ -185,9 +185,9 @@ export function stripModulePrefix(fullPath) {
 }
 
 /** 变更行相关的语句覆盖率百分比（按语句块数加权，count>0 记覆盖）。 */
-export function stmtPctForChangedLines(blocks, changedLines) {
+export function stmtPctForChangedLines(blocks: any[], changedLines: Set<number>) {
   if (!blocks || blocks.length === 0) return 100;
-  const relevant = blocks.filter((b) => {
+  const relevant = blocks.filter((b: any) => {
     for (let line = b.sl; line <= b.el; line++) {
       if (changedLines.has(line)) return true;
     }
@@ -204,7 +204,7 @@ export function stmtPctForChangedLines(blocks, changedLines) {
 }
 
 /** Go 版建议区块（标题/称谓/提示与前端版区分，契约测试锁定文案）。 */
-export function buildSuggestBlock(failures, threshold) {
+export function buildSuggestBlock(failures: any[], threshold: number) {
   return buildSuggestBlockCore(failures, threshold, {
     title: '## Go 覆盖率建议（非阻断）',
     noun: 'Go 文件',
@@ -221,8 +221,8 @@ function main() {
     console.error(`[check-go-diff-coverage] 未知参数: ${args.unknown.join(' ')}（支持 --threshold/--base/--head/--files/--uncommitted/--staged/--suggest/--json）`);
     process.exit(USAGE_ERROR);
   }
-  const base = args.base ?? 'origin/main';
-  const head = args.head ?? 'HEAD';
+  const base = (args.base as string) ?? 'origin/main';
+  const head = (args.head as string) ?? 'HEAD';
   const threshold = Number(args.threshold ?? '60');
   const uncommitted = Boolean(args.uncommitted);
   const staged = Boolean(args.staged);

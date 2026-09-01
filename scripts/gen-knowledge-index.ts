@@ -66,7 +66,7 @@ const KNOWLEDGE_USAGE = [
 // ── 工具函数 ─────────────────────────────────────────
 
 /** 提取卡片 `## 概览` 段落内容作为摘要。 */
-function extractSummary(text) {
+function extractSummary(text: string) {
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
   // 匹配 ## 概览 到下一个 ## 标题之间的内容
   const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
@@ -126,7 +126,7 @@ function buildIndex() {
 
   for (const cat of Object.keys(groups).sort()) {
     const items = groups[cat];
-    const label = CATEGORY_LABELS[cat] || '';
+    const label = (CATEGORY_LABELS as Record<string, string>)[cat] || '';
     out += `## ${cat}（${items.length} 张）\n\n`;
     if (label) out += `*${label}*\n\n`;
     out += '| 标识 | 名称 | tier | 性能 | 关键词 |\n';
@@ -166,7 +166,7 @@ function buildIndex() {
     out += '| 标签 | 含义 | 卡片 |\n';
     out += '|------|------|------|\n';
     for (const [t, kinds] of [...byPerf.entries()].sort((a, b) => b[1].length - a[1].length)) {
-      out += `| ${t} | ${PERF_TAGS[t] || ''} | ${kinds.sort().join(', ')} |\n`;
+      out += `| ${t} | ${(PERF_TAGS as Record<string, string>)[t] || ''} | ${kinds.sort().join(', ')} |\n`;
     }
     out += '\n';
   }

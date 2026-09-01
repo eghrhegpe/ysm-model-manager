@@ -22,7 +22,7 @@ import { parseArgs } from './_lib/parse-args.ts';
 import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
 
 /** 解析 frontmatter：返回 { name, body, h1Exists }。 */
-function parseCard(text) {
+function parseCard(text: string) {
   const fm = parseFrontmatter(text);
   if (!fm) return null;
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');

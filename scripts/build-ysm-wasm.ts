@@ -152,7 +152,7 @@ console.log("[verify] ✅ glue 补丁锚点存在；建议跑 node scripts/_atti
 // 前端 base64 打包（与 pack-wasm.ps1 同格式）
 // wasm 文件：_getWasmBinary 返回 ArrayBuffer；glue 文件：_getGlueCode 返回 string
 //（ysm-parser.ts 把 glue 当 JS 源码 eval，必须 TextDecoder 解码，不能返回 ArrayBuffer）
-function toDataFile(filePath, fnName, comment, isGlue) {
+function toDataFile(filePath: string, fnName: string, comment: string, isGlue: boolean) {
   const b64 = readFileSync(filePath).toString("base64");
   const now = new Date().toISOString().replace("T", " ").slice(0, 19);
   const decode =
@@ -172,7 +172,7 @@ const wasmData = toDataFile(join(OUT_DIR, "YSMParser.wasm"), "_getWasmBinary", "
 const glueData = toDataFile(join(OUT_DIR, "YSMParser.js"), "_getGlueCode", "YSMParser.js 胶水代码", true);
 // P3-3（code_review）：原子写（临时文件 + renameSync）——直接 writeFileSync 在断点/失败时
 // 留下半截 base64 产物，前端 eval 直接坏；rename 同目录原子替换，产物要么旧要么完整
-function atomicWrite(target, content) {
+function atomicWrite(target: string, content: string) {
   const tmp = join(dirname(target), `.${basename(target)}.tmp`);
   writeFileSync(tmp, content, "utf8");
   renameSync(tmp, target);
@@ -182,7 +182,7 @@ atomicWrite(join(FRONT_SRC, "ysm-glue-data.js"), glueData);
 console.log(`[pack] ✅ 前端 data: ${statSync(join(FRONT_SRC, "ysm-wasm-data.js")).size}B / ${statSync(join(FRONT_SRC, "ysm-glue-data.js")).size}B`);
 
 // Go embed 拷贝（temp+rename 原子写，防中途留半截产物）
-const atomicCopy = (src, dst) => {
+const atomicCopy = (src: string, dst: string) => {
   const tmp = `${dst}.tmp`;
   copyFileSync(src, tmp);
   renameSync(tmp, dst);

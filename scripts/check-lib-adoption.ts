@@ -76,7 +76,7 @@ const RULES = [
 ];
 
 /** 采用特征：脚本 import 了该模块即视为已接入（自动豁免同规则的 smell）。 */
-function adoptedRe(lib) {
+function adoptedRe(lib: string) {
   return new RegExp(`_lib[\\\\/]${lib.replace('.', '\\.')}`);
 }
 
@@ -89,10 +89,10 @@ function collectLibs() {
 }
 
 /** 统计每个 _lib 模块被多少脚本引用（采用率全景）。 */
-function adoptionTable(files, texts, libs) {
+function adoptionTable(files: string[], texts: Map<string, string>, libs: string[]) {
   return libs.map((lib) => {
     const re = adoptedRe(lib);
-    const users = files.filter((f) => re.test(texts.get(f)));
+    const users = files.filter((f) => re.test(texts.get(f) as string));
     return { lib, users: users.length, scripts: users };
   });
 }

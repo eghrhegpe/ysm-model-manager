@@ -29,7 +29,7 @@ const OUTPUT_DIR = process.argv.includes('--output')
 const targetArg = process.argv.find(a => a.startsWith('--target='))?.split('=')[1]
   ?? (process.argv.indexOf('--target') >= 0 ? process.argv[process.argv.indexOf('--target') + 1] : undefined);
 
-function fail(msg) {
+function fail(msg: string) {
   console.error(`[compile-rust-static] ${msg}`);
   process.exit(1);
 }

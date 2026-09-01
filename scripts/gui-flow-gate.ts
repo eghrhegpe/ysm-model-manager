@@ -75,7 +75,7 @@ if (!raw) {
 if (opts.verbose) console.log('--- 原始 JSON stdout ---\n' + raw);
 
 /** 从 stdout 提取 JSON（跨运行：若 stdout 混入非 JSON 行则取首个 {...} 对象） */
-function extractJson(s) {
+function extractJson(s: string) {
   for (const line of s.split('\n').reverse()) {
     const t = line.trim();
     if (t.startsWith('{')) { try { return JSON.parse(t); } catch { /* 继续 */ } }
@@ -88,7 +88,7 @@ if (!resp) {
   process.exit(1);
 }
 
-const out = resp?.data?.output || '';
+const out: string = resp?.data?.output || '';
 const lines = out.split('\n');
 
 // 阶段行：✅ [n] 名称 (x.xxms)（对齐 Go printFlowReport）
@@ -105,7 +105,7 @@ for (const l of lines) {
   }
 }
 const totalMatch = lines.map((l) => l.trim()).find((l) => totalRe.test(l));
-const totalMs = totalMatch ? parseFloat(totalMatch.match(totalRe)[1]) : null;
+const totalMs = totalMatch ? parseFloat(totalMatch.match(totalRe)![1]) : null;
 
 if (opts.verbose) {
   console.log('--- 解析的阶段 ---');
@@ -127,8 +127,8 @@ for (const name of ['① 配置加载', '② 模型扫描']) {
 const scanStats = (out.match(/YAML:\s*\d+\.?\d*\s*,\s*YSM:\s*\d+/) || [''])[0];
 let hasModel = false;
 if (scanStats) {
-  const yamlCount = parseInt(scanStats.match(/YAML:\s*(\d+)/)[1], 10);
-  const ysmCount = parseInt(scanStats.match(/YSM:\s*(\d+)/)[1], 10);
+  const yamlCount = parseInt(scanStats.match(/YAML:\s*(\d+)/)![1], 10);
+  const ysmCount = parseInt(scanStats.match(/YSM:\s*(\d+)/)![1], 10);
   hasModel = yamlCount > 0 || ysmCount > 0;
 }
 

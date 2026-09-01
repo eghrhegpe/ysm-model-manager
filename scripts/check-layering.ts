@@ -55,18 +55,18 @@ const TRACKED_RULES = [
 /* ---------- 收集源文件（复用 _lib/scan-files 共享遍历层） ---------- */
 const SCAN_OPTS = {
   exts: ['.ts', '.tsx'],
-  skipDir: (n) => n.startsWith('.') || n === 'node_modules' || n === '__tests__' || n === 'test-utils',
+  skipDir: (n: string) => n.startsWith('.') || n === 'node_modules' || n === '__tests__' || n === 'test-utils',
   skipFile: /\.(d|test|spec)\.tsx?$/,
 };
 
 /** 文件所属层：'views' | 'features' | 'services' | 'utils' | 'core' | null */
-function layerOf(srcRelPath) {
+function layerOf(srcRelPath: string) {
   const top = srcRelPath.split('/')[0];
   return LAYER_ORDER.includes(top) ? top : null;
 }
 
 /** 解析 import 目标，归一化为相对 src 的路径前缀（如 'views/foo'） */
-function resolveTarget(spec, fromSrcRel) {
+function resolveTarget(spec: string, fromSrcRel: string) {
   if (spec.startsWith('@/')) return spec.slice(2);
   if (spec.startsWith('.')) {
     const abs = resolve(dirname(resolve(SRC_ROOT, fromSrcRel)), spec);
@@ -88,11 +88,11 @@ const BARE_IMPORT_RE = /^\s*import\s*['"]([^'"]+)['"]/gm;
  * 多行匹配启用后 [^'"]*? 可跨行，模板字面量/注释内的 import 形状文本
  * 若不被剥离会误判为真实 import → 幽灵违规（code_review P3）。
  */
-function stripNoise(text) {
+function stripNoise(text: string) {
   return text
-    .replace(/`(?:\\.|[^`\\])*`/g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\/.*$/gm, (m) => m.replace(/[^\n]/g, ' '));
+    .replace(/`(?:\\.|[^`\\])*`/g, (m: string) => m.replace(/[^\n]/g, ' '))
+    .replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, ' '))
+    .replace(/\/\/.*$/gm, (m: string) => m.replace(/[^\n]/g, ' '));
 }
 
 /**
@@ -100,7 +100,7 @@ function stripNoise(text) {
  * 返回 [{ spec, typeOnly, line }]（line 为 1-based 起始行）。
  * 导出供契约测试复用（tests/test_check_layering.ts）。
  */
-export function matchImports(text) {
+export function matchImports(text: string) {
   const clean = stripNoise(text);
   const out: Array<{ spec: string; typeOnly: boolean; line: number }> = [];
   for (const m of clean.matchAll(IMPORT_RE)) {
@@ -166,7 +166,7 @@ function main() {
   }
 
   /* ---------- 基线比对 ---------- */
-  const key = (v) => `${v.from}:${v.to}`;
+  const key = (v: any) => `${v.from}:${v.to}`;
   const rZero = violations.filter((v) => v.rule === 'R1' || v.rule === 'R2');
   const tracked = violations.filter((v) => v.rule === 'R3' || v.rule === 'R4');
 

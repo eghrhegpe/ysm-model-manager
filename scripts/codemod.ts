@@ -84,7 +84,7 @@ function ensureTsMorph() {
 // ── helpers ────────────────────────────────────────────────────────────
 
 /** 查找导出的函数/类/变量声明 */
-function findExportDecl(name) {
+function findExportDecl(name: string) {
   for (const sf of project.getSourceFiles()) {
     // 函数声明
     for (const fn of sf.getFunctions()) {
@@ -144,7 +144,7 @@ function saveWithRollback() {
  * parent 是 PropertyAccessExpression（属性名 = 函数名），再上一层才是 CallExpression。
  * 仅凭「parent 是 CallExpression」会把 obj.foo() 调用方漏掉（漏补 undefined → 编译错，批次4 P2）。
  */
-function callExprOf(ref, funcName) {
+function callExprOf(ref: any, funcName: string) {
   const parent = ref?.getParent();
   if (!parent) return null;
   if (parent.getKind() === SyntaxKind.CallExpression) return parent;
@@ -156,7 +156,7 @@ function callExprOf(ref, funcName) {
 }
 
 /** 在 frontend/src 下 grep 字符串匹配（纯 Node.js，跨平台） */
-function grepString(pattern) {
+function grepString(pattern: string) {
   // ysm 源码目录为 frontend/src（联邦为 frontend/src）
   const srcDir = path.join(FRONTEND, 'src');
   const results: string[] = [];
@@ -165,7 +165,7 @@ function grepString(pattern) {
   return results;
 }
 
-function walkAndGrep(dir, results, regex) {
+function walkAndGrep(dir: string, results: string[], regex: RegExp) {
   let entries;
   try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
   for (const e of entries) {
@@ -196,19 +196,19 @@ function walkAndGrep(dir, results, regex) {
 }
 
 /** 收集 AST 节点下所有 Identifier 名称 */
-function collectIdentifiers(node, out) {
+function collectIdentifiers(node: any, out: Set<string>) {
   if (!node) return;
   if (node.getKind && node.getKind() === SyntaxKind.Identifier) {
     out.add(node.getText());
   }
   if (node.forEachChild) {
-    node.forEachChild((c) => collectIdentifiers(c, out));
+    node.forEachChild((c: any) => collectIdentifiers(c, out));
   }
 }
 
 /** 从源文件 import 声明中筛选出函数体内用到的那些 */
-function resolveFunctionImports(funcNode, srcSf) {
-  const used = new Set();
+function resolveFunctionImports(funcNode: any, srcSf: any) {
+  const used = new Set<string>();
   collectIdentifiers(funcNode, used);
 
   const result: any[] = []; // { declaration, default, named[], namespace }
@@ -218,7 +218,7 @@ function resolveFunctionImports(funcNode, srcSf) {
     const namedBindings = imp.getNamedImports();
     const namespaceName = imp.getNamespaceImport()?.getText();
 
-    const matchedNamed = namedBindings.filter((ni) => used.has(ni.getName()));
+    const matchedNamed = namedBindings.filter((ni: any) => used.has(ni.getName()));
     const matchedDefault = defaultName && used.has(defaultName);
     const matchedNamespace = namespaceName && used.has(namespaceName);
 
@@ -228,7 +228,7 @@ function resolveFunctionImports(funcNode, srcSf) {
       declaration: imp,
       moduleSpecifier: mod,
       default: matchedDefault ? defaultName : null,
-      named: matchedNamed.map((ni) => ({ node: ni, name: ni.getName() })),
+      named: matchedNamed.map((ni: any) => ({ node: ni, name: ni.getName() })),
       namespace: matchedNamespace ? namespaceName : null,
     });
   }
@@ -236,9 +236,9 @@ function resolveFunctionImports(funcNode, srcSf) {
 }
 
 /** 向目标文件添加 import（自动去重） */
-function ensureImport(destSf, moduleSpecifier, defaultName, namedNames) {
+function ensureImport(destSf: any, moduleSpecifier: string, defaultName: string | null | undefined, namedNames: string[]) {
   const existing = destSf.getImportDeclarations().filter(
-    (imp) => imp.getModuleSpecifierValue() === moduleSpecifier
+    (imp: any) => imp.getModuleSpecifierValue() === moduleSpecifier
   );
 
   if (existing.length === 0) {
@@ -256,7 +256,7 @@ function ensureImport(destSf, moduleSpecifier, defaultName, namedNames) {
     if (defaultName && !ex.getDefaultImport()) {
       ex.setDefaultImport(defaultName);
     }
-    const existingNamed = new Set(ex.getNamedImports().map((n) => n.getName()));
+    const existingNamed = new Set(ex.getNamedImports().map((n: any) => n.getName()));
     for (const n of namedNames) {
       if (!existingNamed.has(n)) {
         ex.addNamedImport(n);
@@ -267,7 +267,7 @@ function ensureImport(destSf, moduleSpecifier, defaultName, namedNames) {
 
 // ── rename-function ────────────────────────────────────────────────────
 
-function cmdRenameFunction(oldName, newName) {
+function cmdRenameFunction(oldName: string, newName: string) {
   const target = findExportDecl(oldName);
   if (!target) {
     console.error(`❌ 未找到导出符号 "${oldName}"`);
@@ -306,7 +306,7 @@ function cmdRenameFunction(oldName, newName) {
 
 // ── move-function ──────────────────────────────────────────────────────
 
-function cmdMoveFunction(funcName, destRelPath) {
+function cmdMoveFunction(funcName: string, destRelPath: string) {
   const target = findExportDecl(funcName);
   if (!target) {
     console.error(`❌ 未找到导出符号 "${funcName}"`);
@@ -351,7 +351,7 @@ function cmdMoveFunction(funcName, destRelPath) {
   // 3. 清理源文件的孤立 import
   //    收集源文件剩余语句中仍用的标识符
   //    （ts-morph v28：getStatements() 已排除被移除节点，无需 wasRemoved 判断）
-  const remainingNames = new Set();
+  const remainingNames = new Set<string>();
   for (const topStmt of srcSf.getStatements()) {
     collectIdentifiers(topStmt, remainingNames);
   }
@@ -365,7 +365,7 @@ function cmdMoveFunction(funcName, destRelPath) {
     // 检查是否有 default import 仍被使用
     const defaultStillUsed = defaultName && remainingNames.has(defaultName);
     // 检查 named imports 哪些仍被使用
-    const stillUsedNamed = namedBindings.filter((ni) =>
+    const stillUsedNamed = namedBindings.filter((ni: any) =>
       remainingNames.has(ni.getName())
     );
 
@@ -414,7 +414,7 @@ function cmdMoveFunction(funcName, destRelPath) {
       destSf,
       ui.moduleSpecifier,
       ui.default,
-      ui.named.map((n) => n.name)
+      ui.named.map((n: any) => n.name)
     );
     addedCount++;
   }
@@ -433,7 +433,7 @@ function cmdMoveFunction(funcName, destRelPath) {
 
 // ── add-param ──────────────────────────────────────────────────────────
 
-function cmdAddParam(funcName, paramSignature, defaultValue) {
+function cmdAddParam(funcName: string, paramSignature: string, defaultValue: string | undefined) {
   const target = findExportDecl(funcName);
   if (!target) {
     console.error(`❌ 未找到导出符号 "${funcName}"`);
@@ -453,7 +453,7 @@ function cmdAddParam(funcName, paramSignature, defaultValue) {
 
   // P2-4 幂等守卫：add-param 非幂等（重复运行会给定义叠加同名参数、给调用方叠 undefined），
   // 参数已存在时直接拒绝，避免二次破坏
-  if (fn.getParameters().some((p) => p.getName() === paramName)) {
+  if (fn.getParameters().some((p: any) => p.getName() === paramName)) {
     console.error(`❌ "${funcName}" 已存在参数 "${paramName}"；add-param 非幂等，重复运行会叠加，请先 git checkout 还原再执行`);
     process.exit(1);
   }

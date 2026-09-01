@@ -29,23 +29,36 @@ import { parseArgs } from './_lib/parse-args.ts';
 
 const REDLINE = 400; // ADR-040：单文件 ≤400 行
 
+/** compare() 的返回形状（human/toJ 消费）。 */
+interface BreakReport {
+  older: string;
+  newer: string;
+  renames: Array<{ oldPath: string; newPath: string; similarity: number }>;
+  mods: any[];
+  removedTraces: any[];
+  addedFiles: string[];
+  removedFiles: string[];
+  modifiedCount: number;
+  redlineFiles: any[];
+}
+
 // ── 核心比对 ──
 // 优化：只用 git diff --name-only 拿变更文件清单（而非 diffTree 全量遍历），
 // 大幅减少 showAt 调用次数。对大 diff（如 merge base → HEAD）可快 10x+。
 const SOURCE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.go']);
-function isSourceFile(p) {
+function isSourceFile(p: string) {
   const ext = path.extname(p).toLowerCase();
   return SOURCE_EXTS.has(ext);
 }
 
-function gitDiffNames(older, newer) {
+function gitDiffNames(older: string, newer: string) {
   // git diff --name-only older newer：只列变更路径，O(1) 次调用
   const out = gitMaybe(['diff', '--name-only', older, newer]);
   if (!out) return [];
   return out.trim().split('\n').filter(Boolean);
 }
 
-function compare(older, newer, scope) {
+function compare(older: string, newer: string, scope: string | undefined): BreakReport {
   // 1. 变更文件清单（git diff --name-only，只列实际变化的文件）
   const allChanged = gitDiffNames(older, newer);
   // 2. rename 配对（用于从"删除"和"新增"中排除 rename 产生的假象）
@@ -133,7 +146,7 @@ function compare(older, newer, scope) {
 // ── 调用方扫描（基于 newer ref 的文本）──
 // 只对 go/ + frontend/src 扫描：源码目录才有导出符号，docs/novel 等目录
 // 即使路径存在也不含顶层声明，盲目全仓扫描会触发大量 git show 噪音并超时。
-function scanCallersInRef(terms, newer, scope) {
+function scanCallersInRef(terms: string[], newer: string, scope: string | undefined) {
   if (!terms.length) return new Map();
   const callers = new Map();
   const exts = ['.ts', '.tsx', '.js', '.jsx', '.go'];
@@ -187,7 +200,7 @@ function scanCallersInRef(terms, newer, scope) {
 }
 
 // ── 输出 ──
-function human(report, callers, compact) {
+function human(report: BreakReport, callers: Map<string, string[]>, compact: boolean) {
   const L: string[] = [];
   L.push('\u2550'.repeat(66));
   L.push(` api-break —— ${report.older} ←→ ${report.newer}`);
@@ -285,7 +298,7 @@ function human(report, callers, compact) {
   return L.join('\n');
 }
 
-function toJ(report, callers) {
+function toJ(report: BreakReport, callers: Map<string, string[]>) {
   const allDeletedExp = report.mods.flatMap((m) => m.deletedExp).concat(
     report.removedTraces.flatMap((r) => [...r.exp])
   );
@@ -343,7 +356,7 @@ if (args.unknown.length) {
 const JSON_OUT = args.json;
 const QUIET = args.quiet;
 const REDLINE_ONLY = args.redline;
-const SCOPE = args.scope;
+const SCOPE = args.scope as string | undefined;
 const COMPACT = args.compact;
 const nonOpts = args._;
 if (nonOpts.length < 2) {
@@ -378,7 +391,7 @@ if (JSON_OUT) {
 } else if (QUIET && allDeletedExp.length === 0) {
   console.log(`⚠️ ${report.redlineFiles.length} 个超红线文件（ADR-040）`);
 } else {
-  console.log(human(report, callers, COMPACT));
+  console.log(human(report, callers, COMPACT as boolean));
 }
 if (REDLINE_ONLY && report.redlineFiles.length > 0) process.exit(1);
 process.exit(0);

@@ -17,7 +17,7 @@ import { ROOT } from './_lib/scan-files.ts';
 const SKIP_DIRS = new Set(['node_modules', 'archive', '.git', 'vendor', 'upstream', 'build', 'dist']);
 const SKIP_FILES = new Set(['.doc-next-steps.md']); // 自动生成产物，引用路径可能过期，不应计入断链
 
-function walkMd(dir) {
+function walkMd(dir: string) {
   const out: string[] = [];
   let entries;
   try {
@@ -33,7 +33,7 @@ function walkMd(dir) {
   return out;
 }
 
-function extractLinks(filepath) {
+function extractLinks(filepath: string) {
   /** 提取 md 文件中的 Markdown 链接。 */
   const links: [string, string, number][] = [];
   let text;
@@ -56,13 +56,13 @@ function extractLinks(filepath) {
 }
 
 /** 判断给定字符偏移是否位于 fenced 代码块（```...```）内：统计到 pos 为止的 ``` 围栏数，奇数即在块内。 */
-function insideFence(text, pos) {
+function insideFence(text: string, pos: number) {
   const upTo = text.slice(0, pos);
   const fences = (upTo.match(/^```/gm) || []).length;
   return fences % 2 === 1;
 }
 
-function resolvePath(filepath, rawPath) {
+function resolvePath(filepath: string, rawPath: string) {
   /** 将 Markdown 相对路径解析为实际文件系统路径，并分离 `#anchor`（批次4 P3：锚点此前被丢弃不校验）。 */
   if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) return null; // 外部链接跳过
   if (rawPath.startsWith('file://')) return null; // 源码引用(file://...)非文档链接，跳过
@@ -88,7 +88,7 @@ function resolvePath(filepath, rawPath) {
  * `## 标题 {#custom}` 取自定义 id；普通标题生成 slug（去标点、空格→连字符、小写）。
  * 中文标题另加「原文无空格」候选——vitepress 对纯中文标题的 anchor 即原文。
  */
-function collectAnchors(mdFile) {
+function collectAnchors(mdFile: string) {
   const anchors = new Set();
   let text;
   try { text = fs.readFileSync(mdFile, 'utf8'); } catch { return anchors; }
@@ -111,7 +111,7 @@ function collectAnchors(mdFile) {
   return anchors;
 }
 
-function checkLinks(files): [number, any[]] {
+function checkLinks(files: string[]): [number, any[]] {
   /** 检查文件列表中的所有内部链接。 */
   const broken: any[] = [];
   let okCount = 0;

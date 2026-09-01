@@ -44,7 +44,7 @@ if (!fs.existsSync(inputPath)) {
 const entries = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
 
 /** 按 url 聚合（同一源文件可能被多次采到）：函数级「被走到」比例 */
-function aggregate(entriesList) {
+function aggregate(entriesList: any[]) {
   const byUrl = new Map();
   for (const e of entriesList) {
     if (!e || typeof e.url !== 'string' || !e.functions) continue;
@@ -58,7 +58,7 @@ function aggregate(entriesList) {
       // V8 precise：ranges 是「已覆盖区间」列表，count>0 的段才算执行过。
       // 不能只看 ranges.length——未执行函数也可能带 count=0 的区间（块级覆盖），
       // `length > 0` 恒真 → 全部判为已走到（假绿，批次4 P1）。以 count>0 为准。
-      const executed = Array.isArray(fn.ranges) && fn.ranges.some((r) => r && r.count > 0);
+      const executed = Array.isArray(fn.ranges) && fn.ranges.some((r: any) => r && r.count > 0);
       if (executed) agg.hit++;
     }
   }

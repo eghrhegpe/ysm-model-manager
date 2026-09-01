@@ -35,7 +35,7 @@ const KNOWLEDGE_DIR = path.join(ROOT, 'docs', 'knowledge');
 // ---------- symbols 字段解析 ----------
 
 // 解析 symbols: 块（块列表），无该字段返回 null
-function parseSymbols(fm) {
+function parseSymbols(fm: string) {
   const lines = fm.split(/\r?\n/);
   let idx = -1;
   for (let i = 0; i < lines.length; i++) {
@@ -57,7 +57,7 @@ function parseSymbols(fm) {
 }
 
 // 用新符号列表替换 frontmatter 中的 symbols: 块；本无该字段返回 null。
-function withUpdatedSymbols(fm, newSymbols) {
+function withUpdatedSymbols(fm: string, newSymbols: string[]) {
   const lines = fm.split(/\r?\n/);
   let idx = -1;
   for (let i = 0; i < lines.length; i++) {
@@ -84,7 +84,7 @@ function withUpdatedSymbols(fm, newSymbols) {
  * 收集 source_files 指向源码的导出符号。
  * source_files 可为目录（递归收 .ts/.tsx/.js/.jsx/.go）或单个文件。
  */
-function collectSymbols(sourceFiles) {
+function collectSymbols(sourceFiles: string[]) {
   const set = new Set<any>();
   for (const src of sourceFiles) {
     const abs = path.join(ROOT, src);
@@ -125,7 +125,7 @@ function walkDir(dir: string, out: string[] = []) {
 }
 
 // 集合相等（顺序无关）
-function setsEqual(a, b) {
+function setsEqual(a: string[], b: string[]) {
   if (a.length !== b.length) return false;
   const sb = new Set(b);
   return a.every((x) => sb.has(x));

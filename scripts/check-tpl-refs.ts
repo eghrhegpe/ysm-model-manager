@@ -30,7 +30,7 @@ const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');
 
 /** 收集单个文件中的 id 定义（id="xxx" / id='xxx' 字面量）。 */
-function collectDefinedIds(text) {
+function collectDefinedIds(text: string) {
   const out = new Set();
   // 双引号/单引号字面量 + 模板字符串内的静态 id="..."（模板 ${} 片段天然被排除，因为引号不闭合）
   for (const m of text.matchAll(/\bid="([a-zA-Z0-9_-]+)"/g)) out.add(m[1]);
@@ -42,7 +42,7 @@ function collectDefinedIds(text) {
 }
 
 /** 收集单个文件中的 getElementById 字面量引用。 */
-function collectRefs(text) {
+function collectRefs(text: string) {
   const out = new Map(); // id -> 行号
   for (const m of text.matchAll(/getElementById\("([a-zA-Z0-9_-]+)"\)/g)) {
     const line = text.slice(0, m.index).split('\n').length;

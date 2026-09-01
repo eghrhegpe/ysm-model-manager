@@ -34,7 +34,7 @@ const JSON_OUT = process.argv.includes('--json');
 /** 判定：README 中出现脚本 basename（含 .mjs）即视为已登记。
  *  basename 足够精确（README 表格列出的就是 basename），且能覆盖正文/口令表引用。
  *  纯函数供契约测试复用。 */
-export function missingFromReadme(files, readmeText) {
+export function missingFromReadme(files: string[], readmeText: string) {
   return files.filter((f) => {
     const base = f.includes('/') ? f.slice(f.lastIndexOf('/') + 1) : f;
     return !readmeText.includes(base);

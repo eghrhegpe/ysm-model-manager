@@ -20,7 +20,7 @@ const EXPORT_BLOCK_RE = /export\s*\{([^}]*)\}(?!\s*from)/g;
 const EXPORT_TYPE_RE = /export\s+(?:type|interface|enum)\s+([A-Za-z_$][\w$]*)/g;
 
 /** 拆分导出块内条目（含 `type X` 内联修饰符），返回 [{name, isType}]。 */
-export function splitBlockEntries(raw) {
+export function splitBlockEntries(raw: string) {
   const out: { name: string; isType: boolean }[] = [];
   for (const part of raw.split(',')) {
     const m = part.trim().match(/^(?:type\s+)?([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
@@ -34,7 +34,7 @@ export function splitBlockEntries(raw) {
  * @param {string} text 剥离后源码
  * @returns {Array<{name:string,isType:boolean,line:number}>}
  */
-export function extractExports(text) {
+export function extractExports(text: string) {
   const out: { name: string; isType: boolean; line: number }[] = [];
   for (const m of text.matchAll(EXPORT_NAMED_RE)) {
     const line = text.slice(0, m.index).split('\n').length;
@@ -59,7 +59,7 @@ const DEFINED_CLASS_RE = /\bclass\s+([A-Za-z_$][\w$]*)/g;
 const DEFINED_TYPE_RE = /\b(?:type|interface|enum)\s+([A-Za-z_$][\w$]*)/g;
 
 /** 从 openIdx 的左括号做括号配对，返回匹配的右括号下标；失败返回 -1。 */
-export function matchParen(text, openIdx) {
+export function matchParen(text: string, openIdx: number) {
   let depth = 0;
   for (let i = openIdx; i < text.length; i++) {
     if (text[i] === '(') depth++;
@@ -72,7 +72,7 @@ export function matchParen(text, openIdx) {
 }
 
 /** 顶层逗号拆分（忽略 {} [] () 嵌套）。 */
-export function splitTopLevelCommas(s) {
+export function splitTopLevelCommas(s: string) {
   const out: string[] = [];
   let depth = 0;
   let cur = '';
@@ -91,7 +91,7 @@ export function splitTopLevelCommas(s) {
 }
 
 /** 从单个参数段提取参数名（解构/rest/默认值兼容）。 */
-export function paramNamesOfSegment(seg) {
+export function paramNamesOfSegment(seg: string) {
   const s = seg.trim();
   if (!s) return [];
   const destructure = s.match(/^\{([^}]*)\}/) || s.match(/^\[([^\]]*)\]/);
@@ -111,7 +111,7 @@ export function paramNamesOfSegment(seg) {
  * @param {RegExp} startRe 以 `\(` 结尾的左括号定位正则
  * @returns {Set<string>}
  */
-export function collectParams(stripped, startRe) {
+export function collectParams(stripped: string, startRe: RegExp) {
   const names = new Set();
   for (const m of stripped.matchAll(startRe)) {
     const open = m.index + m[0].length - 1;
@@ -134,7 +134,7 @@ export function collectParams(stripped, startRe) {
 const METHOD_START_RE = /(?:\{|\}|,|;|\n)\s*(?:(?:public|private|protected|readonly|static|abstract|async)\s+)*([A-Za-z_$][\w$]*)\??\s*\(/g;
 
 /** 收集对象字面量/类体中的方法定义名（`foo(): void {` 形式）及其形参名。 */
-export function collectMethods(stripped) {
+export function collectMethods(stripped: string) {
   const names = new Set();
   for (const m of stripped.matchAll(METHOD_START_RE)) {
     const open = m.index + m[0].length - 1;
@@ -161,7 +161,7 @@ export function collectMethods(stripped) {
  * @param {string} stripped 剥离后源码
  * @returns {Set<string>}
  */
-export function extractDefined(stripped) {
+export function extractDefined(stripped: string) {
   const out = new Set();
   for (const m of stripped.matchAll(DEFINED_VAR_RE)) {
     if (m[1]) out.add(m[1]);
@@ -223,7 +223,7 @@ const IMPORT_NS_RE = /import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*/g;
  * @param {string} stripped 剥离后源码
  * @returns {Set<string>}
  */
-export function extractImported(stripped) {
+export function extractImported(stripped: string) {
   const out = new Set();
   for (const m of stripped.matchAll(IMPORT_RE)) {
     if (m[1]) out.add(m[1]);

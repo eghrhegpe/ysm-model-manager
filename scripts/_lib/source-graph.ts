@@ -21,12 +21,12 @@ export const EXCLUDE_FILES = [/\.d\.ts$/, /\.test\.tsx?$/, /\.spec\.tsx?$/, /\.g
 export const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
 const IMPORT_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 
-export function isSourceFile(name, extensions = SOURCE_EXTENSIONS) {
+export function isSourceFile(name: string, extensions = SOURCE_EXTENSIONS) {
   return extensions.some((ext) => name.endsWith(ext))
     && !EXCLUDE_FILES.some((re) => re.test(name));
 }
 
-export function shouldTraverseDir(name) {
+export function shouldTraverseDir(name: string) {
   return !name.startsWith('.') && !EXCLUDE_DIRS.has(name);
 }
 
@@ -40,12 +40,12 @@ export function walkSourceFiles(srcDir: string, dir: string = srcDir, base: stri
   }).map((item) => ({ file: (item as { abs: string }).abs, rel: (item as { rel: string }).rel }));
 }
 
-function stripImportExtension(spec) {
+function stripImportExtension(spec: string) {
   const extension = path.extname(spec).toLowerCase();
   return IMPORT_EXTENSIONS.includes(extension) ? spec.slice(0, -extension.length) : spec;
 }
 
-function resolveCandidates(basePath) {
+function resolveCandidates(basePath: string) {
   const normalized = stripImportExtension(basePath);
   return [
     ...SOURCE_EXTENSIONS.map((ext) => normalized + ext),
@@ -53,7 +53,7 @@ function resolveCandidates(basePath) {
   ];
 }
 
-export function resolveSourceImport(spec, importerFile, srcDir) {
+export function resolveSourceImport(spec: string, importerFile: string, srcDir: string) {
   let basePath;
   if (spec.startsWith('@/')) {
     basePath = path.join(srcDir, spec.slice(2));
@@ -89,7 +89,7 @@ export function parseSourceImports(filePath: string, srcDir: string): ImportEdge
   const reDyna = /await\s+import\s*\(\s*['"]([^'"]+)['"]\s*\)/gm;
 
   /** 记录 spec：type-only 一旦为真不被后续普通导入降级。 */
-  const put = (spec, isTypeOnly) => {
+  const put = (spec: string, isTypeOnly: boolean) => {
     if (!spec) return;
     if (specs.has(spec)) {
       if (isTypeOnly) specs.set(spec, true);
@@ -174,7 +174,7 @@ export function scanSourceGraph(srcDir: string, { scope = null, localOnly = fals
  * 提取 JS/TS 文件中的 export 符号列表（仅对外可见的导出）。
  * 实现见 tsDecls(text, exportedOnly=true)。
  */
-export function getExportedSymbols(filePath, textOverride) {
+export function getExportedSymbols(filePath: string, textOverride: string | null | undefined) {
   const text = textOverride ?? fs.readFileSync(filePath, 'utf8');
   return [...tsDecls(text, true)].sort();
 }
@@ -184,13 +184,13 @@ export function getExportedSymbols(filePath, textOverride) {
  * func / type / const / var，含 `func (r *X) Method` 方法（记为 `X.Method`）。
  * 实现见 goDecls(text, exportedOnly=true)。
  */
-export function getGoExportedSymbols(filePath, textOverride) {
+export function getGoExportedSymbols(filePath: string, textOverride: string | null | undefined) {
   const text = textOverride ?? fs.readFileSync(filePath, 'utf8');
   return [...goDecls(text, true)].sort();
 }
 
 /** 按扩展名分发：.go → Go 提取；其余 → JS/TS 提取。 */
-export function getExportedSymbolsAny(filePath, textOverride) {
+export function getExportedSymbolsAny(filePath: string, textOverride: string | null | undefined) {
   if (filePath.toLowerCase().endsWith('.go')) return getGoExportedSymbols(filePath, textOverride);
   return getExportedSymbols(filePath, textOverride);
 }
@@ -211,17 +211,17 @@ export function getExportedSymbolsAny(filePath, textOverride) {
  * @param {boolean} exportedOnly true = 仅首字母大写的导出符号；false = 导出+私有全量
  * @returns {Set<string>}
  */
-function goDecls(text, exportedOnly) {
+function goDecls(text: string, exportedOnly: boolean) {
   const out = new Set();
-  const isExp = (n) => !!n && /^[A-Z]/.test(n);
-  const add = (n) => { if (n && (!exportedOnly || isExp(n))) out.add(n); };
+  const isExp = (n: string) => !!n && /^[A-Z]/.test(n);
+  const add = (n: string) => { if (n && (!exportedOnly || isExp(n))) out.add(n); };
   let m;
 
   // 剥离块注释（等长空格替换，保持行数与列位不变，行号语义不受影响）。
   // 必需：块注释内可独立成行写 `func Phantom(`，行首锚定挡不住它。
   // 不剥行注释：行首锚定已能排除 `// func Ghost(`，而剥离会把字符串里的 `//`
   // （如 URL 常量）误当注释、破坏源码结构——故只处理块注释。
-  const src = text.replace(/\/\*[\s\S]*?\*\//g, (m0) => m0.replace(/[^\n]/g, ' '));
+  const src = text.replace(/\/\*[\s\S]*?\*\//g, (m0: string) => m0.replace(/[^\n]/g, ' '));
 
   // func Name(...) / func (r *T) Name(...)
   // 行首锚定（容忍缩进）：注释里的 `// func Ghost(` 天然被排除。
@@ -275,9 +275,9 @@ function goDecls(text, exportedOnly) {
  * @param {boolean} exportedOnly true = 仅 export 的符号；false = 导出+私有全量
  * @returns {Set<string>}
  */
-function tsDecls(text, exportedOnly) {
+function tsDecls(text: string, exportedOnly: boolean) {
   const out = new Set();
-  const add = (n) => { if (n) out.add(n); };
+  const add = (n: string) => { if (n) out.add(n); };
   const E = exportedOnly ? 'export\\s+' : '(?:export\\s+)?';
   let m;
 
@@ -311,7 +311,7 @@ function tsDecls(text, exportedOnly) {
   const reRe = /^export\s*(?:type\s*)?\{([^}]+)\}/gm;
   while ((m = reRe.exec(text))) {
     for (const part of m[1].split(',')) {
-      const name = part.trim().split(/\s+as\s+/).pop().trim();
+      const name = part.trim().split(/\s+as\s+/).pop()!.trim();
       if (/^[A-Za-z0-9_$]+$/.test(name)) add(name);
     }
   }
@@ -324,27 +324,27 @@ function tsDecls(text, exportedOnly) {
 }
 
 /** Go 顶层声明：导出+私有全量（不按首字母过滤）。 */
-export function goTopFuncs(text) {
+export function goTopFuncs(text: string) {
   return [...goDecls(text, false)].sort();
 }
 
 /** TS/JS 顶层声明：导出+私有全量。 */
-export function tsTopDecls(text) {
+export function tsTopDecls(text: string) {
   return [...tsDecls(text, false)].sort();
 }
 
 /** 按扩展名分发顶层声明提取：.go → goTopFuncs；其余 → tsTopDecls。 */
-export function topDeclsAny(path, text) {
+export function topDeclsAny(path: string, text: string) {
   return path.toLowerCase().endsWith('.go') ? goTopFuncs(text) : tsTopDecls(text);
 }
 
 /** 方法符号 Type.Method 的裸方法名（调用方文本匹配用）。 */
-export function searchName(sym) {
-  return sym.includes('.') ? sym.split('.').pop() : sym;
+export function searchName(sym: string) {
+  return sym.includes('.') ? sym.split('.').pop()! : sym;
 }
 
 /** 行数口径：换行数 +（非空且不以换行结尾 ? 1 : 0），与 line-counter 一致。 */
-export function countLines(text) {
+export function countLines(text: string | null) {
   if (text === null || typeof text !== 'string') return null;
   const nl = (text.match(/\n/g) || []).length;
   return nl + (text.length > 0 && !text.endsWith('\n') ? 1 : 0);

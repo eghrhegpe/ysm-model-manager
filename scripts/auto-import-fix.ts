@@ -27,7 +27,7 @@ import { readText, relPosix } from './_lib/scan-files.ts';
  * @param {Array<{file:string,missing:Array}>} suggestions run() 输出
  * @returns {{ fixed: number, skipped: number }}
  */
-export function applyFixes(suggestions) {
+export function applyFixes(suggestions: Array<{ file: string; missing: any[] }>) {
   let fixed = 0;
   let skipped = 0;
   for (const s of suggestions) {
@@ -86,7 +86,7 @@ export function applyFixes(suggestions) {
 
 // ── 输出 ─────────────────────────────────────────────
 
-export function fmtText({ files, suggestions, totals }, srcDir) {
+export function fmtText({ files, suggestions, totals }: { files: string[]; suggestions: Array<{ file: string; missing: any[] }>; totals: { totalMissing: number; typeOnly: number; ambiguous: number } }, srcDir: string) {
   const lines = [
     `扫描 ${files.length} 个文件（${relPosix(srcDir)}），缺失 import 建议 ${totals.totalMissing} 条`
     + `（类型 ${totals.typeOnly}，歧义 ${totals.ambiguous}）。`,
@@ -115,7 +115,7 @@ export function fmtText({ files, suggestions, totals }, srcDir) {
   return lines.join('\n');
 }
 
-export function fmtJson({ files, suggestions, totals }) {
+export function fmtJson({ files, suggestions, totals }: { files: string[]; suggestions: Array<{ file: string; missing: any[] }>; totals: { totalMissing: number; typeOnly: number; ambiguous: number } }) {
   return JSON.stringify(
     {
       _summary: { scanned: files.length, missing: totals.totalMissing },

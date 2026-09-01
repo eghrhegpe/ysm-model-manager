@@ -43,7 +43,7 @@ for (const dir of [U1, U2]) {
 }
 
 // ---- Step 2: 列条目 + 抽 manifest（_listzip.go）----
-const listZip = (abs) => {
+const listZip = (abs: string) => {
   const r = spawnSync("go", ["run", path.join(ROOT, "_tools", "listzip.go"), abs], {
     cwd: ROOT,
     maxBuffer: 50 * 1024 * 1024,
@@ -55,7 +55,7 @@ const listZip = (abs) => {
 // ---- Step 3: ParseFromZip 真实解析（_tools/maidparse.go 独立程序）----
 const PARSE_SRC = path.join(ROOT, "_tools", "maidparse.go");
 
-const parseZip = (abs) => {
+const parseZip = (abs: string) => {
   const r = spawnSync("go", ["run", PARSE_SRC, abs], {
     cwd: ROOT,
     maxBuffer: 50 * 1024 * 1024,
@@ -76,7 +76,7 @@ for (const z of zips) {
   if (info.manifest) {
     try {
       const m = JSON.parse(info.manifest);
-      const pick = (g) => Array.isArray(g?.model) ? g.model :
+      const pick = (g: any) => Array.isArray(g?.model) ? g.model :
                      Array.isArray(g?.model_list) ? g.model_list : [];
       const groups = [
         pick(m),
@@ -90,7 +90,7 @@ for (const z of zips) {
         manifestInfo = {
           has: true,
           modelCount: best.length,
-          firstFew: best.slice(0, 5).map((x) => ({
+          firstFew: best.slice(0, 5).map((x: any) => ({
             name: x.name || x.model_id,
             model_id: x.model_id,
             model: x.model,
@@ -104,7 +104,7 @@ for (const z of zips) {
   // L1 粗略估计：从 info.entries 里统计 *.geo.json / *.json 数量（排除 animation/controller/ysm/描述符）
   let l1GeoCount = 0;
   let l1PngCount = 0;
-  const maidEntry = info.entries.find((e) => e.toLowerCase().endsWith("/maid_model.json"));
+  const maidEntry = info.entries.find((e: string) => e.toLowerCase().endsWith("/maid_model.json"));
   const maidNs = (maidEntry ? maidEntry.toLowerCase().split("/").slice(0, -1).join("/") + "/" : "");
   for (const e of info.entries) {
     const low = e.toLowerCase();

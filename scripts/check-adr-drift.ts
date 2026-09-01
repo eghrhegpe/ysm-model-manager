@@ -76,7 +76,7 @@ const AUDIT_REVIEWED = [
 ];
 
 // 文档侧漂移：含全部 token 的段落中，存在「无翻牌排除词」的段落 → 命中
-function docHasDrift(text, item) {
+function docHasDrift(text: string, item: { tokens: string[]; exclude?: string[]; fact: string }) {
   const hit = item.tokens.every((t) => text.includes(t));
   if (!hit) return false;
   if (!item.exclude || !item.exclude.length) return true;
@@ -84,7 +84,7 @@ function docHasDrift(text, item) {
   // 若存在任一含 token 段落且不含任何排除词 → 漂移（该段落未被翻牌覆盖）。
   const paras = text.split(/\n\s*\n/);
   const tokenParas = paras.filter((p) => item.tokens.every((t) => p.includes(t)));
-  return tokenParas.some((p) => !item.exclude.some((x) => p.includes(x)));
+  return tokenParas.some((p) => !item.exclude!.some((x) => p.includes(x)));
 }
 
 // ---- 代码侧正向断言（事实源 = 源码）----

@@ -30,7 +30,7 @@ const RELEASES_DIR = path.join(ROOT, 'docs', 'releases');
 const EXEMPT_TAGS = new Set(['v1.7.0-open-source-prep.20260617']);
 
 
-function run(cmd) {
+function run(cmd: string[]) {
   const r = runProc(cmd[0], cmd.slice(1), { timeout: 30000, cwd: ROOT });
   return r.ok ? r.out.trim() : '';
 }
@@ -150,7 +150,7 @@ function checkReleaseNotes() {
     console.error('');
     console.error('  如何修（AI 可执行）：对每个缺失 tag，用下方命令收集数据后参照 docs/releases/v1.8.8.md 模板补写 vX.md，再重跑 --check 验证：');
     // 前驱映射（版本序前一 tag，无则仓库根 commit）：补写命令的区间数据来源
-    const prevOf = (t) => {
+    const prevOf = (t: string) => {
       const i = tags.indexOf(t);
       return i > 0 ? tags[i - 1] : 'HEAD根commit';
     };

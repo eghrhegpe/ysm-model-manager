@@ -31,7 +31,7 @@ export const RE_CLAIM_A = /(?:取代|替代|推翻|废弃|废除)\s*了?\s*\[?AD
 export const RE_CLAIM_B = /ADR-(\d+)\s*[）)]?\s*(?:已\s*(?:废弃|过时|放弃|搁置|退役)|被\s*(?:取代|推翻|替代))/;
 
 /** 由无状态正则派生一个带 g 的副本，供 String.prototype.matchAll 使用。 */
-export function globalOf(re) {
+export function globalOf(re: RegExp) {
   return new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
 }
 

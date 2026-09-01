@@ -36,7 +36,7 @@ function findAdb() {
 }
 
 /** 列出已连接（state=device）的设备序列号 */
-function connectedDevices(adb) {
+function connectedDevices(adb: string) {
   const r = run(adb, ['devices']);
   if (!r.ok) return [];
   return r.out
@@ -47,7 +47,7 @@ function connectedDevices(adb) {
     .map((l) => l.split(/\s+/)[0]);
 }
 
-function fail(msg) {
+function fail(msg: string) {
   console.error(`[android-install] ${msg}`);
   process.exit(1);
 }

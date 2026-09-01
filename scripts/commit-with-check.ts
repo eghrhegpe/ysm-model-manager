@@ -64,12 +64,12 @@ if (!checkOnly && !message) {
 // ── 辅助函数 ──
 // Q0 修复（子代理锐评）：加 -c core.quotepath=false，解非 ASCII 文件名八进制转义
 // 否则 git diff --cached --name-only 输出转义串 → classify 判 'other' → 零检查静默放行+自动提交
-function git(args) {
+function git(args: string[]) {
   const r = run('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT });
   return r.ok ? r.out.trim() : '';
 }
 
-function gitArray(args, opts = {}) {
+function gitArray(args: string[], opts: any = {}) {
   const r = run('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT, ...opts });
   return r.ok ? 0 : (r.rc > 0 ? r.rc : 1);
 }

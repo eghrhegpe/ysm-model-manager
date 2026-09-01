@@ -49,7 +49,7 @@ const STRICT = process.argv.includes('--strict');
 // ── 检查 1：退出码失效 ─────────────────────────────────
 
 /** 裸 main(); 调用但 main 内靠 return 传失败、无 process.exit 兜底 → 退出码恒 0。 */
-function checkExitCode(text) {
+function checkExitCode(text: string) {
   const hasBareMain = /^main\(\);\s*$/m.test(text);
   if (!hasBareMain) return [];
   const hasProcessExit = /process\.exit\(/.test(text);
@@ -76,7 +76,7 @@ const DOMAIN_WALK_RE =
   /endsWith\(\s*['"]\.(md|go|tsx|jsx|ts)['"]|EXCLUDE|SKIP_DIRS|symbolExclude|onFile|ts\|tsx|js\|jsx/;
 
 /** 取 walk 定义后的函数体窗口（到下一个顶层声明或 1200 字符）。 */
-function extractWalkWindow(text) {
+function extractWalkWindow(text: string) {
   const m = text.match(INLINE_WALK_RE);
   if (!m) return null;
   const rest = text.slice(m.index);
@@ -86,12 +86,12 @@ function extractWalkWindow(text) {
 }
 
 /** 仅当 walk 为通用样板时告警；领域专用收集器放行。 */
-function isDomainWalk(text) {
+function isDomainWalk(text: string) {
   const win = extractWalkWindow(text);
   return !!win && DOMAIN_WALK_RE.test(win);
 }
 
-function checkSharedLayer(text) {
+function checkSharedLayer(text: string) {
   const out: string[] = [];
   if (INLINE_WALK_RE.test(text) && !isDomainWalk(text)) {
     out.push('内联 walk() 定义（应 import 共享层 _lib/，如 _lib/scan-files.ts）');
@@ -112,7 +112,7 @@ function checkSharedLayer(text) {
 const CHECK_TOOL_RE =
   /^(check-|adr-check|binding-check|event-audit|comment-checker|link-checker|type-consistency|review|doctor|pre-push-gate)|-check\.(mjs|ts)$/;
 
-function checkJsonContract(file, text) {
+function checkJsonContract(file: string, text: string) {
   if (!CHECK_TOOL_RE.test(file)) return [];
   const hasJsonFlag = /['"]--json['"]|\-\-json/.test(text);
   const hasJsonOutput = /JSON\.stringify\(/.test(text);
@@ -125,7 +125,7 @@ function checkJsonContract(file, text) {
 // ── 检查 4：文件头 5 字段（统一文档约定）─────────────────
 
 /** 提取文件顶部第一个 JSDoc 块（不含后续注释）。 */
-function extractHeader(text) {
+function extractHeader(text: string) {
   const start = text.indexOf('/**');
   if (start < 0) return null;
   const end = text.indexOf('*/', start);
@@ -133,7 +133,7 @@ function extractHeader(text) {
   return text.slice(start, end + 2);
 }
 
-function checkHeader(file, text) {
+function checkHeader(file: string, text: string) {
   const head = extractHeader(text);
   if (!head) return [`[文件头] ${file} 缺少 JSDoc 文件头`];
   const issues: string[] = [];
@@ -166,7 +166,7 @@ const HANDWRITTEN_POSITIONAL_RE =
 // 当成脚本真的 import 了 parseArgs 而误报「未消费 unknown」（2026-08-31 审计修复）。
 const PARSEARGS_IMPORT_RE = /^[ \t]*import\s+\{[^}]*\}\s+from\s+['"]\.\/_lib\/parse-args\.(mjs|ts)['"];?/m;
 
-function checkArgvContract(text) {
+function checkArgvContract(text: string) {
   const usesParseArgs = PARSEARGS_IMPORT_RE.test(text);
   if (!usesParseArgs) {
     if (HANDWRITTEN_ARGV_RE.test(text) && HANDWRITTEN_POSITIONAL_RE.test(text)) {

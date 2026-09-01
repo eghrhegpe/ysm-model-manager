@@ -98,7 +98,7 @@ function parseCliArgs() {
 
 // ── 提取键 ──────────────────────────────────────────
 /** 纯文本 → 键集合（checkCI 对 git show 输出直接复用，免落临时文件）。 */
-function extractKeysFromText(text) {
+function extractKeysFromText(text: string) {
   const keys = new Set<string>();
   // 匹配 "key": "value" 或 'key': 'value'，排除函数类型
   const re = /^\s*['"]([^'"]+)['"]\s*:\s*(?!function\b|\()/gm;
@@ -109,12 +109,12 @@ function extractKeysFromText(text) {
   return keys;
 }
 
-function extractKeys(file) {
+function extractKeys(file: string) {
   return extractKeysFromText(readFileSync(file, 'utf8'));
 }
 
 function loadAllKeys() {
-  const result = {};
+  const result: Record<string, Set<string>> = {};
   for (const file of readdirSync(LOCALES_DIR).filter((f) => f.endsWith('.ts'))) {
     const lang = basename(file, '.ts');
     result[lang] = extractKeys(resolve(LOCALES_DIR, file));
@@ -151,7 +151,7 @@ const COMMON_ENTITIES = new Set([
  *
  * @returns {'role' | 'subns'}
  */
-function classifySecondSegment(seg) {
+function classifySecondSegment(seg: string) {
   if (KNOWN_ROLES.has(seg)) return 'role';
 
   // 子命名空间特征
@@ -185,7 +185,7 @@ function classifySecondSegment(seg) {
 }
 
 // ── 启发式：根据实体名猜测角色（用于违规建议）──
-function guessRole(entity) {
+function guessRole(entity: string) {
   const e = entity.toLowerCase();
   if (/tab$|nav$|page$/.test(e)) return 'tab';
   if (/^(export|import|copy|paste|delete|remove|add|open|close|save|reload|clear|reset|apply|cancel|submit|confirm|refresh|retry|download|upload|install|uninstall|enable|disable|run|stop|start|pause|resume|toggle|select|deselect|choose)/.test(e)) return 'action';
@@ -203,7 +203,7 @@ function guessRole(entity) {
 /**
  * @returns {{ ok: boolean, reason?: string, suggestion?: string }}
  */
-function validateKey(key) {
+function validateKey(key: string) {
   const parts = key.split('.');
 
   // 单段键允许（很少，如 lang）
@@ -320,7 +320,7 @@ function listViolations() {
 }
 
 // ── 子命令：--entity <name> ──────────────────────────
-function listByEntity(entity) {
+function listByEntity(entity: string) {
   const all = loadAllKeys();
   const baseLang = 'zh-CN';
   const lower = entity.toLowerCase();
@@ -411,7 +411,7 @@ function checkCI() {
 }
 
 // ── --check <key1> <key2> ──────────────────────────
-function checkKeys(keys) {
+function checkKeys(keys: string[]) {
   let allOk = true;
   for (const key of keys) {
     const result = validateKey(key);
@@ -433,9 +433,9 @@ function main() {
   if (args['list-violations']) {
     listViolations();
   } else if (args.entity) {
-    listByEntity(args.entity);
+    listByEntity(args.entity as string);
   } else if (allCheckKeys.length > 0) {
-    checkKeys(allCheckKeys);
+    checkKeys(allCheckKeys as string[]);
   } else {
     checkCI();
   }

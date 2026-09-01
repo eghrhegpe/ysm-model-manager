@@ -65,7 +65,7 @@ if (process.env.YSM_SKIP_CSS_LAYER === "1") {
 
 const CSS_MARKER = /export const [A-Za-z]+CSS|:host\b|adoptedStyleSheets/;
 
-function walkDir(dir): string[] {
+function walkDir(dir: string): string[] {
   return walk(dir, { exts: [".ts"], skipDir: () => false, skipFile: (n) => n.endsWith(".test.ts") }) as string[];
 }
 
@@ -115,14 +115,14 @@ const KNOWN_NO_CSS_CLASSES = new Set([
 ]);
 
 // 提取 CSS 文本中的类名（.foo / .foo-bar）与 @keyframes 名
-function extractClasses(cssText) {
+function extractClasses(cssText: string) {
   const classes = new Set();
   const re = /\.([a-zA-Z][a-zA-Z0-9-]*)/g;
   let m;
   while ((m = re.exec(cssText)) !== null) classes.add(m[1]);
   return classes;
 }
-function extractKeyframes(cssText) {
+function extractKeyframes(cssText: string) {
   const kf = new Set();
   const re = /@keyframes\s+([a-zA-Z0-9_-]+)/g;
   let m;
@@ -130,7 +130,7 @@ function extractKeyframes(cssText) {
   return kf;
 }
 // 提取 animation: 引用的 keyframe 名（含简写 animation: name dur ...）
-function extractAnimationRefs(cssText) {
+function extractAnimationRefs(cssText: string) {
   const refs = new Set();
   const re = /animation\s*:\s*([^;]+)/g;
   let m;
@@ -146,7 +146,7 @@ function extractAnimationRefs(cssText) {
   return refs;
 }
 // 提取 HTML 模板里 class="..." 使用的类名（仅纯 CSS 标识符，过滤拼接噪声如 ' + ( ? ')
-function extractHtmlClasses(htmlText) {
+function extractHtmlClasses(htmlText: string) {
   const classes = new Set<string>();
   const re = /class\s*=\s*"([^"]*)"/g;
   let m;
@@ -168,7 +168,7 @@ const DOMAIN_PREFIXES = {
   "app-preview": ["preview", "dp-"],
 };
 
-function readSafe(p) {
+function readSafe(p: string) {
   const abs = path.resolve(ROOT, p);
   try {
     return fs.readFileSync(abs, "utf8");
@@ -180,7 +180,7 @@ function readSafe(p) {
 // 提取某 @keyframes 内 `from` 块的 translate 参数（如 "translateY(6px)"）。
 // 兼容多行（components.css）与单行（shadow 侧）写法；忽略空格/分号差异，只比对参数值。
 // 返回 null 表示未找到该 keyframe 或 from 无 translate。
-function extractKeyframeTranslate(cssText, name) {
+function extractKeyframeTranslate(cssText: string, name: string) {
   const re = new RegExp(
     "@keyframes\\s+" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*\\{",
     "g",
@@ -304,7 +304,7 @@ for (const dom of SHADOW_DOMAINS) {
     if (t) cssAgg += "\n" + t;
   }
   const cssClasses = extractClasses(cssAgg);
-  const prefixes = DOMAIN_PREFIXES[dom.name] || [];
+  const prefixes = (DOMAIN_PREFIXES as Record<string, string[]>)[dom.name] || [];
   for (const f of dom.html) {
     const t = readSafe(f);
     if (!t) continue;

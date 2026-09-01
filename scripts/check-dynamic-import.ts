@@ -45,19 +45,19 @@ const DYNAMIC_IMPORT_RE = /(?:^|[^A-Za-z0-9_$])import\s*\(\s*['"]([^'"]+)['"]\s*
 const TYPE_REF_RE = /(?:type\s+[A-Za-z_$][\w$]*\s*=\s*import\(|typeof\s+import\(|Array<import\(|import\([^)]*\)\s*\.\s*[A-Z][\w$]*\b(?!\s*\())/;
 
 /** 是否为 await import（失败沿 async 链传播，由调用方处理，不算静默）。 */
-function isAwaitImport(text, start) {
+function isAwaitImport(text: string, start: number) {
   const before = text.slice(Math.max(0, start - 12), start);
   return /await\s*$/.test(before);
 }
 
 /** 是否为 loadView 包装器内的动态导入（loadView 内部统一 .catch + toast，不算裸导入）。 */
-function isLoadViewWrapped(text, start) {
+function isLoadViewWrapped(text: string, start: number) {
   const before = text.slice(Math.max(0, start - 240), start + 1);
   return /loadView\s*\(\s*['"][^'"]*['"]\s*,\s*(?:async\s*)?\([^)]*\)\s*=>\s*$/.test(before);
 }
 
 /** 是否为裸 import(...) 且无 .catch（fire-and-forget，失败静默）。 */
-function isBareImport(text, start) {
+function isBareImport(text: string, start: number) {
   // 不是 await import，且向后 240 字符内无 .catch( / try{ → 无失败处理。
   // 窗口取 240 字符无法覆盖跨行 Promise 链（.then(...) 回调长时 .catch 落在窗口外，
   // 会把「有 .catch 的链」误判为裸导入——如 app-tree/events.ts:172）。放宽到 2000 字符，
@@ -65,13 +65,13 @@ function isBareImport(text, start) {
   const tail = text.slice(start, start + 2000);
   return !/\.catch\s*\(|try\s*\{/.test(tail);
 }/** 空 catch 吞错（catch(() => {}) / .catch(() => {})）。 */
-function isEmptyCatch(text, start) {
+function isEmptyCatch(text: string, start: number) {
   const tail = text.slice(start, start + 160);
   return /\.catch\s*\(\s*\(\)\s*=>\s*\{\s*\}\)/.test(tail) || /\.catch\s*\(\s*\(\)\s*=>\s*\{\}\)/.test(tail);
 }
 
 /** 是否为轻量工具模块（utils/ 下非组件、非 3d 渲染的纯函数文件）。 */
-function isLightweightUtil(spec) {
+function isLightweightUtil(spec: string) {
   return /\/utils\/[^/]+\.ts$/.test(spec) && !/\/utils\/dom\/(?:css|html)\.ts$/.test(spec);
 }
 
@@ -99,7 +99,7 @@ function main() {
 
       const spec = m[1];
       const line = text.slice(0, m.index).split('\n').length;
-      const rel = relPosix(f);
+      const rel = relPosix(f as string);
 
       // 1. .js 后缀残留（同目录存在 .ts 对应）
       //    豁免 bindings/ 路径：vite.config.js wailsBindingsResolve 插件约定

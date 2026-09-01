@@ -61,7 +61,7 @@ const GENERATED_MARKER_RE = /\/\/\s*=====\s*自动生成|\/\*\s*自动生成|<!-
 const TEST_FILE_RE = /\.(test|spec)\.[jt]s$/;
 const TEST_DIR_NAME = '__tests__';
 
-function isGeneratedFile(f) {
+function isGeneratedFile(f: string) {
   if (GENERATED_FILE_RE.test(f)) return true;
   try {
     const head = readText(f).slice(0, 200);
@@ -69,7 +69,7 @@ function isGeneratedFile(f) {
   } catch { return false; }
 }
 
-function isTestFile(f) {
+function isTestFile(f: string) {
   const name = path.basename(f);
   if (TEST_FILE_RE.test(name)) return true;       // TS: *.test.ts / *.spec.ts / *.test.js
   if (name.endsWith('_test.go')) return true;    // Go: *_test.go
@@ -111,7 +111,7 @@ const GO_FUNC_RE = /^(?<indent>[ \t]*)func\s+(?:\((?<recv>[^)]*)\)\s+)?(?<name>[
 //   4. 字符串/注释转义的简化处理：不追求 100% 精确（比如反引号内嵌变量模板），够用即可——
 //      即使误判也是"少算几行"方向，不会导致"虚高假阳性"（那是红线方向更危险）
 
-function findFunctionEnd(lines, startLine, isGo) {
+function findFunctionEnd(lines: string[], startLine: number, isGo: boolean) {
   const n = lines.length;
   // 1) 找到第一个 { 的位置
   let braceLine = -1, braceCol = -1;
@@ -220,10 +220,10 @@ function findFunctionEnd(lines, startLine, isGo) {
       if (hitTs || hitGo) {
         // 用正则抓下一行的声明缩进，比当前函数声明行起始缩进 <= 才算跨块
         const nextM = nextLine.match(/^(?<sp>[ \t]*)\S/);
-        const nextIndent = nextM ? nextM.groups.sp.length : Infinity;
+        const nextIndent = nextM ? nextM.groups!.sp.length : Infinity;
         // 找当前声明行缩进（缓存下来更高效，但调用链改造大，省点：从 lines[startLine] 重取）
         const startM = lines[startLine].match(/^(?<sp>[ \t]*)\S/);
-        const startIndent = startM ? startM.groups.sp.length : 0;
+        const startIndent = startM ? startM.groups!.sp.length : 0;
         if (nextIndent <= startIndent) {
           return { endLine: li, truncated: true };
         }
@@ -234,7 +234,7 @@ function findFunctionEnd(lines, startLine, isGo) {
 }
 
 // ─── 单文件函数提取 ──
-function extractFunctions(file) {
+function extractFunctions(file: string) {
   const isGo = file.endsWith('.go');
   let text;
   try { text = readText(file); } catch (e) {
@@ -252,9 +252,10 @@ function extractFunctions(file) {
     if (isGo) {
       const m = line.match(GO_FUNC_RE);
       if (!m) continue;
-      const name = m.groups.recv
-        ? `${m.groups.recv.trim().replace(/^[\*\(\s]+|\s+.*$/g, '').split(/\s+/)[0] || ''}.${m.groups.name}`
-        : m.groups.name;
+      const g = m.groups!;
+      const name = g.recv
+        ? `${g.recv.trim().replace(/^[\*\(\s]+|\s+.*$/g, '').split(/\s+/)[0] || ''}.${g.name}`
+        : g.name;
       const end = findFunctionEnd(lines, li, true);
       if (!end) continue;
       const count = end.endLine - li + 1;
@@ -266,8 +267,8 @@ function extractFunctions(file) {
       const mArrow = line.match(TS_ARROW_DECL_RE);
       const mIface = line.match(TS_INTERFACE_TYPE_RE);
       if (mFunc || mClass || mArrow || mIface) {
-        const m = mFunc || mClass || mArrow || mIface;
-        const name = m.groups.name;
+        const m = (mFunc || mClass || mArrow || mIface)!;
+        const name = m.groups!.name;
         let kind = 'func';
         if (mFunc) kind = 'func';
         else if (mClass) kind = 'class';
@@ -277,7 +278,7 @@ function extractFunctions(file) {
           const raw = line.trim().slice(0, 9).toLowerCase();
           kind = raw.startsWith('interface') ? 'interface' : (raw.startsWith('enum') ? 'enum' : 'type');
         }
-        const indent = m.groups.indent.length;
+        const indent = m.groups!.indent.length;
         // class / interface / type / enum 也算"块状声明"，一起统计（用户要知道大类型定义）
         const end = findFunctionEnd(lines, li, false);
         if (!end) continue;
@@ -292,9 +293,9 @@ function extractFunctions(file) {
       if (classIndentBaseline !== null) {
         const mm = line.match(TS_CLASS_METHOD_RE);
         if (mm) {
-          const indent = mm.groups.indent.length;
+          const indent = mm.groups!.indent.length;
           if (indent > classIndentBaseline) {
-            const name = mm.groups.name;
+            const name = mm.groups!.name;
             if (/^(if|for|while|switch|catch)$/.test(name)) continue; // 控制流关键字误匹配
             const end = findFunctionEnd(lines, li, false);
             if (!end) continue;
@@ -313,7 +314,7 @@ function extractFunctions(file) {
 }
 
 // ─── 三档分级 ──
-function tierOf(lines, yellow) {
+function tierOf(lines: number, yellow: number) {
   const orange = yellow * 2;
   const red = yellow * 3;
   if (lines > red) return { key: 'red',    label: '🟥', threshold: red };
@@ -323,7 +324,7 @@ function tierOf(lines, yellow) {
 }
 
 // ─── --funcs 主入口 ──
-function runFuncsMode(args) {
+function runFuncsMode(args: any) {
   const yellow = args.threshold;
   const orange = yellow * 2;
   const red = yellow * 3;
@@ -346,8 +347,8 @@ function runFuncsMode(args) {
     // frontend/src/utils 不会有 .go，go/ysm 不会有 .ts/.js；两者通吃无歧义
     const exts = ['.ts', '.js', '.go'];
     const files = walk(root, { exts, skipTest: false }).filter((f) => {
-      if (isTestFile(f)) { stats.skippedTest++; return false; }
-      if (isGeneratedFile(f)) { stats.skippedGenerated++; return false; }
+      if (isTestFile(f as string)) { stats.skippedTest++; return false; }
+      if (isGeneratedFile(f as string)) { stats.skippedGenerated++; return false; }
       return true;
     }) as string[];
     stats.totalFiles += files.length;
@@ -375,7 +376,7 @@ function runFuncsMode(args) {
 
   // 排序：红→橙→黄，同档按行数降序
   const TIER_ORDER = { red: 0, orange: 1, yellow: 2 };
-  items.sort((a, b) => (TIER_ORDER[a.tier] - TIER_ORDER[b.tier]) || (b.lines - a.lines));
+  items.sort((a, b) => ((TIER_ORDER as Record<string, number>)[a.tier] - (TIER_ORDER as Record<string, number>)[b.tier]) || (b.lines - a.lines));
 
   if (args.json) {
     const summary = {
@@ -410,7 +411,7 @@ function runFuncsMode(args) {
   }
 }
 
-function walkFiles(dir, patterns, skip: (p: string) => boolean = () => false) {
+function walkFiles(dir: string, patterns: string | string[], skip: (p: string) => boolean = () => false) {
   const list = Array.isArray(patterns) ? patterns : [patterns];
   const out: string[] = [];
   if (!fs.existsSync(dir)) return out;
@@ -431,13 +432,13 @@ function walkFiles(dir, patterns, skip: (p: string) => boolean = () => false) {
   return out;
 }
 
-function pyLineCount(text) {
+function pyLineCount(text: string) {
   // Python 等价行计数：换行数 + (非空且不以换行结尾 ? 1 : 0)
   const nl = (text.match(/\n/g) || []).length;
   return nl + (text.length > 0 && !text.endsWith('\n') ? 1 : 0);
 }
 
-function countLines(paths) {
+function countLines(paths: string[][]) {
   /** 统计匹配的文件总行数。 */
   let total = 0;
   for (const p of paths) {
@@ -460,7 +461,7 @@ function countLines(paths) {
 // 注意：GENERATED_FILE_RE / GENERATED_MARKER_RE / isGeneratedFile 已在文件前半段
 // 与 --funcs 模式共享定义（单一声明源，消除双端漂移）。
 
-function oversizedFiles(paths, threshold = 700) {
+function oversizedFiles(paths: string[][], threshold = 700) {
   /** 找出超过 threshold 行的文件（生成文件豁免）。 */
   const result: [number, string, boolean][] = [];
   for (const p of paths) {
@@ -478,7 +479,7 @@ function oversizedFiles(paths, threshold = 700) {
   return result.sort((a, b) => b[0] - a[0]);
 }
 
-function packageLines(base, pattern) {
+function packageLines(base: string, pattern: string | string[]) {
   /** 统计每个子目录的文件数（保持原 py 行为：count files）。 */
   const stats: [string, number][] = [];
   if (!fs.existsSync(base)) return stats;

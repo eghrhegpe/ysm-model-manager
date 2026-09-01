@@ -39,22 +39,22 @@ const BANNER =
   '<!-- 本文件由 scripts/gen-routes.ts 自动生成，请勿手改。重跑：node scripts/gen-routes.ts -->';
 
 /** 提取 frontmatter 单字段（收口共享 getScalar：剥 # 注释、<...> 占位符返回 undefined）。 */
-function fm(text, key) {
+function fm(text: string, key: string) {
   return getScalar(parseFrontmatter(text), key);
 }
 
 /** 提取 frontmatter 列表字段（收口共享 getList，兼容单行与块列表）。 */
-function fmList(text, key) {
+function fmList(text: string, key: string) {
   return getList(parseFrontmatter(text), key);
 }
 
 /** 单元格转义。 */
-function cell(s) {
+function cell(s: string) {
   return String(s).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
 }
 
 /** 提取 frontmatter 里的 ADR 引用编号（adr: 列表 → [138, 148]）。 */
-function adrNumbers(text) {
+function adrNumbers(text: string) {
   return fmList(text, 'adr')
     .map((a) => (String(a).match(/ADR-(\d+)/i) || [])[1])
     .filter(Boolean)
@@ -63,7 +63,7 @@ function adrNumbers(text) {
 }
 
 /** 提取 `## 概览` 段落作为摘要（同 gen-knowledge-index 的 extractSummary，精简版）。 */
-function extractSummary(text) {
+function extractSummary(text: string) {
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
   const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
   if (!m) return '';
@@ -72,7 +72,7 @@ function extractSummary(text) {
   return Array.from(summary).slice(0, 120).join('') + '…';
 }
 
-function renderRoutes(cards, kwToCards) {
+function renderRoutes(cards: Array<{ file: string; name: string; useWhen: string[]; adrs: number[]; summary: string }>, kwToCards: Map<string, any[]>) {
   const out: string[] = [];
   out.push(BANNER);
   out.push('');
@@ -189,7 +189,7 @@ function main() {
   if (conflicts.length) {
     console.warn(`⚠️  ${conflicts.length} 个 use_when 关键词被多张卡共用（路由有歧义，建议人工消歧）:`);
     for (const [kw, list] of conflicts.slice(0, 15)) {
-      console.warn(`   - 「${kw}」→ ${list.map((c) => c.file).join(', ')}`);
+      console.warn(`   - 「${kw}」→ ${list.map((c: any) => c.file).join(', ')}`);
     }
     if (conflicts.length > 15) console.warn(`   … 其余 ${conflicts.length - 15} 个省略`);
   } else {
@@ -199,7 +199,7 @@ function main() {
   const output = renderRoutes(routable, kwToCards);
   console.error(`📄 ${routable.length} 张 architecture 卡可路由（${cards.length - routable.length} 张无 use_when 关键词）`);
 
-  const summary = (ok, check, generated) =>
+  const summary = (ok: boolean, check: boolean, generated: boolean) =>
     JSON.stringify({ ok, check, generated, count: routable.length, conflicts: conflicts.length, cards: routable.map((c) => c.file) });
 
   if (isCheck) {

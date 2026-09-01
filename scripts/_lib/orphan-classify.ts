@@ -94,7 +94,7 @@ export function classifyScript(script: string, ctx: OrphanCtx): { status: 'mount
   // （AGENTS.md 工具口令表即为后者）。只认全名会把手册工具误判成化石。
   // 2026-09 顶层 .mjs→.ts 迁移后统一按 .(mjs|ts) 剥后缀。
   const bare = script.replace(/\.(mjs|ts)$/, '');
-  const mentioned = (text) => text.includes(script) || text.includes(bare);
+  const mentioned = (text: string) => text.includes(script) || text.includes(bare);
 
   if (mentioned(ctx.mountText)) {
     return { status: 'mounted' };

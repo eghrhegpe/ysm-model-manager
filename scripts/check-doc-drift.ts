@@ -42,7 +42,7 @@ const infos: string[] = [];
 
 // ── 工具函数 ──────────────────────────────────────────
 
-function readText(rel) {
+function readText(rel: string) {
   const p = path.join(ROOT, rel);
   try {
     return fs.readFileSync(p, 'utf-8');

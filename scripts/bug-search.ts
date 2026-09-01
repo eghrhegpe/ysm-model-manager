@@ -49,7 +49,7 @@ function loadBugs() {
   return bugs;
 }
 
-function search(keyword, bugs) {
+function search(keyword: string, bugs: any[]) {
   /** 在 bug 列表中搜索关键词，返回匹配的 bug 子集。 */
   const kw = keyword.toLowerCase();
   const results: any[] = [];

@@ -32,7 +32,7 @@ const JSON_OUT = process.argv.includes('--json');
 
 function collectGo() {
   const out: string[] = [];
-  const walk = (dir) => {
+  const walk = (dir: string) => {
     if (!fs.existsSync(dir)) return;
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
       if (ent.name.startsWith('.')) continue;
@@ -54,7 +54,7 @@ function collectGo() {
 
 // ── import 路径提取 ─────────────────────────────────
 
-function extractImports(text) {
+function extractImports(text: string) {
   const imports = new Set<string>();
   // 块式 import ( ... )
   const blockRe = /import\s*\(([\s\S]*?)\)/g;
@@ -71,7 +71,7 @@ function extractImports(text) {
 }
 
 // 目录 → 包节点 key（相对 ROOT，posix 风格；根目录用 "."）
-function dirKey(file) {
+function dirKey(file: string) {
   const rel = path.relative(ROOT, path.dirname(file));
   return toPosix(rel) || '.';
 }

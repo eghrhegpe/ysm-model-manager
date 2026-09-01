@@ -20,7 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, readText, writeText } from './_lib/scan-files.ts';
-import { parseCliCommands, CAT_NAMES, CAT_ORDER } from './_lib/cli-registry.ts';
+import { parseCliCommands, CAT_NAMES, CAT_ORDER, type CliCommand } from './_lib/cli-registry.ts';
 
 const OUT = path.join(ROOT, 'docs', 'cli-commands.md');
 
@@ -29,11 +29,11 @@ const JSON_OUT = process.argv.includes('--json');
 
 /* ---------------- 渲染 ---------------- */
 
-function flagTypeLabel(type) {
-  return { string: 'string', bool: 'bool', int: 'int', float64: 'float' }[type] || type;
+function flagTypeLabel(type: string) {
+  return ({ string: 'string', bool: 'bool', int: 'int', float64: 'float' } as Record<string, string>)[type] || type;
 }
 
-function renderFlags(flags) {
+function renderFlags(flags: Array<{ flag: string; type: string; help: string; def?: string }>) {
   if (flags.length === 0) return '';
   const rows = flags
     .map((fl) => {
@@ -45,7 +45,7 @@ function renderFlags(flags) {
   return `\n| 选项 | 类型 | 说明 |\n|------|------|------|\n${rows}\n`;
 }
 
-function renderSubcommands(cmdName, subs) {
+function renderSubcommands(cmdName: string, subs: Array<{ name: string; desc: string }>) {
   if (subs.length === 0) return '';
   const rows = subs
     .map((s) => `| \`${s.name}\` | ${s.desc || '—'} |`)
@@ -53,7 +53,7 @@ function renderSubcommands(cmdName, subs) {
   return `\n**子命令**（用法：\`app --cli --files-root <路径> ${cmdName} <子命令> [选项...]\`）：\n\n| 子命令 | 说明 |\n|--------|------|\n${rows}\n`;
 }
 
-function renderCommands(commands) {
+function renderCommands(commands: CliCommand[]) {
   const byCat: Record<string, any[]> = {};
   for (const c of commands) (byCat[c.category] ||= []).push(c);
 
@@ -61,7 +61,7 @@ function renderCommands(commands) {
   for (const cat of CAT_ORDER) {
     const list = byCat[cat];
     if (!list || list.length === 0) continue;
-    parts.push(`## ${CAT_NAMES[cat] || cat}\n`);
+    parts.push(`## ${(CAT_NAMES as Record<string, string>)[cat] || cat}\n`);
     for (const c of list) {
       parts.push(`### \`${c.name}\``);
       parts.push(c.description);
@@ -117,7 +117,7 @@ if (JSON_OUT) {
       count: commands.length,
       commands: commands.map((c) => ({
         name: c.name,
-        category: CAT_NAMES[c.category] || c.category,
+        category: (CAT_NAMES as Record<string, string>)[c.category] || c.category,
         description: c.description,
         subcommands: c.subcommands.map((s) => s.name),
         flags: c.flags.map((f) => f.flag),

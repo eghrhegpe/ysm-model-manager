@@ -112,7 +112,7 @@ const IMPORT_EXTS = ['ts', 'js'];
  * @param {Set<string>} moduleSet 已收集模块绝对路径集合
  * @returns {string|null} 解析到的绝对路径；包导入或不存在返回 null
  */
-export function resolveImport(fromFile, spec, moduleSet) {
+export function resolveImport(fromFile: string, spec: string, moduleSet: Set<string>) {
   if (!spec.startsWith('./') && !spec.startsWith('../')) return null; // 包导入跳过
   const base = path.dirname(fromFile);
   const candidates = [path.join(base, spec)];
@@ -129,12 +129,12 @@ export function resolveImport(fromFile, spec, moduleSet) {
 }
 
 /** 相对仓库根的正斜杠路径（报告展示用）；toPosix 复用 ./to-posix.mjs，避免重复定义。 */
-export function relPosix(p) {
+export function relPosix(p: string) {
   return toPosix(path.relative(ROOT, p));
 }
 
 /** 容错读文本：去 BOM + 统一 CRLF → LF（Windows 下编辑的源文件常见）。 */
-export function readText(fp) {
+export function readText(fp: string) {
   return fs.readFileSync(fp, 'utf-8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
 }
 
@@ -143,7 +143,7 @@ export function readText(fp) {
  * 与 readText 配套：readText 归一化读 → 比较/处理 → writeText 按原风格写回，
  * 生成器在 CRLF 检出（Windows autocrlf）下 --check 幂等判定不失效。
  */
-export function writeText(fp, content) {
+export function writeText(fp: string, content: string) {
   let eol = '\n';
   try {
     if (fs.readFileSync(fp, 'utf-8').includes('\r\n')) eol = '\r\n';

@@ -23,7 +23,7 @@ import { extractExports, extractDefined, extractImported } from './auto-import-s
 // ── 相对导入路径 ─────────────────────────────────────
 
 /** 从 fromFile 到 toFile 的相对导入说明符（正斜杠，补扩展名，./ 开头）。 */
-export function relativeImportSpec(fromFile, toFile) {
+export function relativeImportSpec(fromFile: string, toFile: string) {
   let rel = toPosix(path.relative(path.dirname(fromFile), toFile));
   if (!rel.startsWith('.')) rel = './' + rel;
   return rel;
@@ -37,7 +37,7 @@ export function relativeImportSpec(fromFile, toFile) {
  * @param {Map<string, Array<{file:string,isType:boolean}>>} symbolMap 全局导出表
  * @returns {Array<{symbol:string,line:number,typeOnly:boolean,candidates:string[]}>}
  */
-export function checkFile(file, symbolMap) {
+export function checkFile(file: string, symbolMap: Map<string, Array<{ file: string; isType: boolean }>>) {
   const text = readText(file);
   const { stripped, tokens } = tokenize(text);
   const defined = extractDefined(stripped);
@@ -102,7 +102,7 @@ export function checkFile(file, symbolMap) {
 }
 
 /** 构建全局导出符号表：name → [{file, isType}]。 */
-export function buildSymbolMap(files) {
+export function buildSymbolMap(files: string[]) {
   const map = new Map();
   for (const f of files) {
     const stripped = tokenize(readText(f)).stripped;
@@ -123,7 +123,7 @@ export function collectFiles({ srcDir = SRC_DIR, targets = [], includeJs = false
   if (targets.length > 0) {
     return targets.map((t) => path.resolve(t)).filter((p) => fs.existsSync(p) && fs.statSync(p).isFile());
   }
-  return all.filter((p) => (includeJs ? true : (p as string).endsWith('.ts')));
+  return all.filter((p) => (includeJs ? true : (p as string).endsWith('.ts'))) as string[];
 }
 
 /**
@@ -133,8 +133,8 @@ export function collectFiles({ srcDir = SRC_DIR, targets = [], includeJs = false
 export function run({ srcDir = SRC_DIR, targets = [], includeJs = false }: { srcDir?: string; targets?: string[]; includeJs?: boolean } = {}) {
   const files = collectFiles({ srcDir, targets, includeJs });
   // 符号表始终基于全量 walk（单文件模式也要跨模块解析）
-  const symbolMap = buildSymbolMap(walk(srcDir));
-  const suggestions: any[] = [];
+  const symbolMap = buildSymbolMap(walk(srcDir) as string[]);
+  const suggestions: Array<{ file: string; missing: any[] }> = [];
   for (const f of files) {
     const found = checkFile(f, symbolMap);
     if (found.length) suggestions.push({ file: f, missing: found });

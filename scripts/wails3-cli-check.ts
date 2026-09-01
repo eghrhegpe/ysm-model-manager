@@ -42,7 +42,7 @@ const EXCLUDE_DIRS = new Set([
 const EXCLUDE_FILES = new Set(['docs/adr/ADR-001-wails3-migration.md']);
 
 /** 递归遍历，跳过排除目录；子目录/文件读取失败（权限/竞态）跳过不崩溃（code_review P3）。 */
-function* walk(dir, rel) {
+function* walk(dir: string, rel: string): Generator<{ full: string; relPath: string }> {
   let names;
   try {
     names = fs.readdirSync(dir);
@@ -71,7 +71,7 @@ const fileExts = new Set(['.md', '.yml', '.yaml', '.ps1', '.sh', '.mjs', '.json'
 const results: string[] = [];
 let scanned = 0;
 
-function scanFile(full, relPath) {
+function scanFile(full: string, relPath: string) {
   if (EXCLUDE_FILES.has(relPath)) return;
   let text;
   try {

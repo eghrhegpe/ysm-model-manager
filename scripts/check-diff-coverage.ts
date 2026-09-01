@@ -49,7 +49,7 @@ const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
 
 /** 仅保留应纳入 diff 门禁的源码：frontend/src 下、非测试、非 index/wails 绑定产物。 */
-function isSourceFile(f) {
+function isSourceFile(f: string) {
   return (
     f.endsWith('.ts') &&
     f.includes('src/') &&
@@ -61,7 +61,7 @@ function isSourceFile(f) {
 }
 
 /** 把 repo 相对路径映射到 coverage-final.json 的绝对路径 key。 */
-function matchCoverageKey(rel, covKeys) {
+function matchCoverageKey(rel: string, covKeys: string[]) {
   const norm = rel.split('/').join('/');
   const stripped = norm.replace(/^frontend\//, '');
   for (const k of covKeys) {
@@ -74,7 +74,7 @@ function matchCoverageKey(rel, covKeys) {
 }
 
 /** 变更行相关的语句覆盖率百分比（Istanbul coverage-final.json 条目）。 */
-export function statementPctForChangedLines(entry, changedLines) {
+export function statementPctForChangedLines(entry: any, changedLines: Set<number>) {
   const s = entry?.s || {};
   const sm = entry?.statementMap || {};
   const ids = Object.keys(s);
@@ -102,7 +102,7 @@ export function statementPctForChangedLines(entry, changedLines) {
 }
 
 /** 前端版建议区块（标题/称谓/提示与 Go 版区分）。 */
-export function buildSuggestBlock(failures, threshold) {
+export function buildSuggestBlock(failures: any[], threshold: number) {
   return buildSuggestBlockCore(failures, threshold);
 }
 
@@ -118,8 +118,8 @@ function main() {
   const coveragePath = args.coverage
     ? resolve(ROOT, args.coverage as string)
     : resolve(ROOT, 'frontend', 'coverage', 'coverage-final.json');
-  const base = args.base ?? 'origin/main';
-  const head = args.head ?? 'HEAD';
+  const base = (args.base as string) ?? 'origin/main';
+  const head = (args.head as string) ?? 'HEAD';
   const threshold = Number(args.threshold ?? '60');
   if (!Number.isFinite(threshold)) {
     console.error(`[diff-coverage] --threshold 需为数字，收到：${args.threshold ?? '60'}`);
@@ -149,7 +149,7 @@ function main() {
   // git() 在命令失败时返回 ''（catch 吞错），若不加校验，base 不可达/浅克隆未 fetch
   // 会使 diff 全空 → srcFiles=[] → 错误落入「本次无改动源码需要检查。通过。」分支。
   // 门禁模式（默认/json/文本）fail-closed 退出 USAGE_ERROR；--suggest 提示模式保持非阻断。
-  const failOrWarn = (msg) => {
+  const failOrWarn = (msg: string) => {
     if (suggest) {
       console.error(`[diff-coverage] ${msg}（建议模式：跳过）`);
       process.exit(0);

@@ -25,11 +25,11 @@ import { checkStale } from './_lib/stale-baseline.ts';
  * ⚠️ 缓存在 main() 入口创建，确保每次 CLI 调用有独立生命周期，
  * 避免模块顶层 mutable state 被 import 复用时跨调用污染。
  */
-function createFileLinesCache() {
+function createFileLinesCache(): Map<string, string[]> {
   return new Map();
 }
 
-function readFileLines(file, cache) {
+function readFileLines(file: string, cache: Map<string, string[]>) {
   try {
     const abs = path.resolve(ROOT, file.replace(/^\.?\//, ''));
     if (!cache.has(abs)) cache.set(abs, fs.readFileSync(abs, 'utf-8').split('\n'));
@@ -43,7 +43,7 @@ function readFileLines(file, cache) {
  * 读取文件第 `line` 行附近（±radius 行）是否包含 `pattern`（正则）。
  * 用于单行 rg 结果需要上下文判定的场景（如 .file( 是否已在 new Promise 包裹内）。
  */
-function hasContext(file, line, pattern, radius = 8, cache) {
+function hasContext(file: string, line: number, pattern: RegExp, radius = 8, cache: Map<string, string[]>) {
   const lines = readFileLines(file, cache);
   if (!lines) return false;
   const start = Math.max(0, line - 1 - radius);
@@ -56,7 +56,7 @@ function hasContext(file, line, pattern, radius = 8, cache) {
 // 用于 R3 续行豁免——只豁免真正在块注释内的行，避免「* 开头正则」误豁免
 // 真实代码续行（乘法链等，R3 是阻断规则，豁免不得宽于意图）。与 rg 口径一致，
 // 不处理字符串字面量内的 /*（红线扫描本身是启发式，足够）。
-function inBlockComment(file, lineno, cache) {
+function inBlockComment(file: string, lineno: number, cache: Map<string, string[]>) {
   const lines = readFileLines(file, cache);
   if (!lines) return false;
   let inBlock = false;
@@ -86,7 +86,7 @@ function inBlockComment(file, lineno, cache) {
 // 保留「规则扫描不中断」，但 runBaseline 比对前会检查该标志——
 // 扫描不可用即 fail-closed 拒绝放行，避免 rgSafe 失败返回 [] 使 --baseline newV=[] 退 0 假绿。
 let rgHealthy = true;
-function rgTracked(pattern, paths, globs) {
+function rgTracked(pattern: string, paths: string | string[], globs: string[]): string[] {
   try { return rgStrict(pattern, paths, globs); }
   catch (e) { rgHealthy = false; console.error('[warn] ' + (e as any).message); return []; }
 }
@@ -116,8 +116,8 @@ function runChecks() {
   // 可能把含控制字符的行带进 snippet；这些字符会让 JSON.stringify 产出非法 JSON（被
   // JSON.parse 以 "Unterminated string" 拒绝），导致 CI 契约测试假红。此处源头归一。
   const CTRL_RE = new RegExp('[\\u0000-\\u001F\\u007F-\\u009F]', 'g');
-  const cleanSnippet = (s) => String(s).replace(CTRL_RE, '').trim().slice(0, 120);
-  const add = (ruleId, name, lines, fix = '') => {
+  const cleanSnippet = (s: string) => String(s).replace(CTRL_RE, '').trim().slice(0, 120);
+  const add = (ruleId: string, name: string, lines: string[], fix = '') => {
     const violations: Array<{ file: string; line: number; snippet: string }> = [];
     for (const l of lines) {
       const [file, lineno, text] = parseRgLine(l);
@@ -378,7 +378,7 @@ function runChecks() {
   return results;
 }
 
-function outputText(results) {
+function outputText(results: any[]) {
   const out = ['========== Check Redlines =========='];
   out.push('⚠️ 正则红线扫描候选清单，非审核结论——violations 需逐条人工确认，勿直接采信');
   for (const r of results) {
@@ -396,7 +396,7 @@ function outputText(results) {
   process.stdout.write(out.join('\n') + '\n');
 }
 
-function outputJson(results, summary: any = null) {
+function outputJson(results: any[], summary: any = null) {
   process.stdout.write(JSON.stringify({
     _summary: summary ?? {
       rules: results.length,
@@ -416,7 +416,7 @@ function outputJson(results, summary: any = null) {
  * @param {Set<string>|null} changedSet 本次变更的相对文件路径集合
  * @returns {string[]} 仅含变更文件内违规的键
  */
-export function redlineFilterKeysByChangedFiles(keys, changedSet) {
+export function redlineFilterKeysByChangedFiles(keys: string[], changedSet: Set<string> | null | undefined) {
   if (!changedSet) return keys;
   return keys.filter((k) => changedSet.has(k.split(':')[0]));
 }
@@ -430,7 +430,7 @@ function resolveChangedSet() {
   return files.length ? new Set(files) : null;
 }
 
-function collectViolationKeys(results) {
+function collectViolationKeys(results: any[]) {
   const blocking: string[] = [];
   const advisory: string[] = [];
   for (const r of results) {
@@ -456,7 +456,7 @@ function collectViolationKeys(results) {
 }
 
 /** --baseline 模式：读入红线条目与基线比对，只报新增；阻断仅限真红线（债务型规则 WARN）。 */
-function runBaseline(results) {
+function runBaseline(results: any[]) {
   const current = collectViolationKeys(results);
   const allKeys = [...current.blocking, ...current.advisory];
   // 扫描健康门（fail-closed，比对前）：rg 缺失/执行失败时上方 rgTracked() 已返回 []，
@@ -494,7 +494,7 @@ function runBaseline(results) {
   // 其他文件的既有债务不干扰当前提交——避免 commit-with-check 只改 Go/文档时被
   // 仓库内其他文件的存量新增红线卡住。基线安全语义不变：真改动文件引入的违规仍阻断。
   const changedSet = resolveChangedSet();
-  const inChanged = (k) => !changedSet || changedSet.has(k.split(':')[0]);
+  const inChanged = (k: string) => !changedSet || changedSet.has(k.split(':')[0]);
   const baseSeen = baseSet.has.bind(baseSet);
   const newBlocking = current.blocking.filter((k) => inChanged(k) && !baseSeen(k));
   const newAdvisory = current.advisory.filter((k) => inChanged(k) && !baseSeen(k));

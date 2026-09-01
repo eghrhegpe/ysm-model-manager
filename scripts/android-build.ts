@@ -34,7 +34,7 @@ const MIN_SDK = '21'; // app/build.gradle minSdk
 const OVERLAY = path.join(ROOT, 'build', 'android', 'overlay.json');
 
 /** ABI → GOARCH / NDK target / jniLibs 子目录 */
-const ARCHES = {
+const ARCHES: Record<string, { goarch: string; ndkTarget: string; abi: string }> = {
   arm64: { goarch: 'arm64', ndkTarget: `aarch64-linux-android${MIN_SDK}`, abi: 'arm64-v8a' },
   amd64: { goarch: 'amd64', ndkTarget: `x86_64-linux-android${MIN_SDK}`, abi: 'x86_64' },
 };
@@ -48,7 +48,7 @@ function hostTag() {
 }
 
 /** Windows 读 User 级环境变量（新开终端不继承，显式读 registry；非 Windows 直接返回空） */
-function readUserEnv(name) {
+function readUserEnv(name: string) {
   if (process.platform !== 'win32') return '';
   try {
     const r = run('reg', ['query', 'HKCU\\Environment', '/v', name]);
@@ -91,7 +91,7 @@ function findNdk() {
   return null;
 }
 
-function fail(msg): never {
+function fail(msg: string): never {
   console.error(`[android-build] ${msg}`);
   process.exit(1);
 }

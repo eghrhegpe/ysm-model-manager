@@ -20,7 +20,7 @@ import { run } from './_lib/proc.ts';
 const ROOT = getRoot();
 const ANDROID_DIR = path.join(ROOT, 'build', 'android');
 
-function fail(msg) {
+function fail(msg: string) {
   console.error(`[android-check] ${msg}`);
   process.exit(1);
 }

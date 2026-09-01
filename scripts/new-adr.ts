@@ -62,11 +62,11 @@ function maxFromRegistry() {
   return max;
 }
 
-const pad = (n) => String(n).padStart(3, '0');
+const pad = (n: number) => String(n).padStart(3, '0');
 
 // ── slug 生成 ───────────────────────────────────────────
 
-function toSlug(title, explicit) {
+function toSlug(title: string, explicit: string) {
   if (explicit) return explicit.replace(/[^a-z0-9-]/gi, '').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
   const m = title.match(/[a-zA-Z0-9]+/g);
   if (!m) return null;
@@ -80,7 +80,7 @@ function today() {
 
 // ── 模板 ────────────────────────────────────────────────
 
-function buildTemplate(num, title, slug, related) {
+function buildTemplate(num: number, title: string, slug: string, related: string) {
   const n = pad(num);
   const rel = related ? `**相关**：\`${related}\`` : '**相关**：待补（`docs/adr/` / 关联代码路径）';
   return `# ADR-${n}：${title}
@@ -115,7 +115,7 @@ function buildTemplate(num, title, slug, related) {
 
 // ── 登记表占号 ──────────────────────────────────────────
 
-function registerLine(regText, num, title) {
+function registerLine(regText: string, num: number, title: string) {
   const n = pad(num);
   const newLine = `| ADR-${n} | ${title.replace(/\|/g, '\\|')} | ✅ 已采纳 | ${today()} |`;
   // 定位登记表最后一行 `| ADR-xxx |`
@@ -130,7 +130,7 @@ function registerLine(regText, num, title) {
 // 新 ADR（supersedingNum）取代既有 ADR：在对方首部状态行下加「被 [ADR-NNN] 取代」。
 // 幂等：对方已有「被取代」标注则跳过。
 
-function annotateSuperseded(targetRefs, supersedingNum) {
+function annotateSuperseded(targetRefs: string[], supersedingNum: number) {
   let ok = true;
   for (const ref of targetRefs) {
     const m = String(ref).match(/(\d{1,3})/);
@@ -242,7 +242,7 @@ function main() {
     return 1;
   }
 
-  const slug = toSlug(args.title, args.slug);
+  const slug = toSlug(args.title, args.slug as string);
   if (!slug) {
     console.error('[FAIL] 标题无 ASCII 字符，无法推导文件名，请用 --slug 显式指定 kebab-case');
     return 1;
@@ -293,7 +293,7 @@ function main() {
     }
 
     // 1. 生成模板文件
-    fs.writeFileSync(filePath, buildTemplate(num, args.title, slug, args.related), 'utf8');
+    fs.writeFileSync(filePath, buildTemplate(num, args.title, slug, args.related as string), 'utf8');
     console.log(`[OK] 已生成 ${path.relative(ROOT, filePath)}`);
 
     // 2. 登记表占号（写失败回删已写的 ADR 文件，不留中间态）

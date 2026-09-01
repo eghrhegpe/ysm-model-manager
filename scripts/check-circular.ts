@@ -34,11 +34,11 @@ const DYNAMIC_IMPORT_RE = /(?:^|[^A-Za-z0-9_$])import\s*\(\s*['"]([^'"]+)['"]\s*
  * 注释/模板字面量中的 import 形状文本若不剥离，会被 IMPORT_RE / DYNAMIC_IMPORT_RE
  * 误判为真实依赖边 → 幽灵环。
  */
-function stripNoise(text) {
+function stripNoise(text: string) {
   return text
-    .replace(/`(?:\\.|[^`\\])*`/g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\/.*$/gm, (m) => m.replace(/[^\n]/g, ' '));
+    .replace(/`(?:\\.|[^`\\])*`/g, (m: string) => m.replace(/[^\n]/g, ' '))
+    .replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, ' '))
+    .replace(/\/\/.*$/gm, (m: string) => m.replace(/[^\n]/g, ' '));
 }
 
 // ── 主流程 ────────────────────────────────────────────
@@ -67,8 +67,8 @@ function main() {
       const stmt = m[0];
       const braceM = stmt.match(/\{([^}]*)\}/);
       const allTypeNamed = braceM
-        ? braceM[1].split(',').map((s) => s.trim()).filter(Boolean).length > 0 &&
-          braceM[1].split(',').map((s) => s.trim()).filter(Boolean).every((s) => /^type\s+/.test(s))
+        ? braceM[1].split(',').map((s: string) => s.trim()).filter(Boolean).length > 0 &&
+          braceM[1].split(',').map((s: string) => s.trim()).filter(Boolean).every((s: string) => /^type\s+/.test(s))
         : false;
       // 默认导入（`import store, { type State }`）是运行时值依赖，即使花括号全 type
       // 也不能跳过——否则丢失 f→./store 依赖边造成假阴性环（code_review P3）。

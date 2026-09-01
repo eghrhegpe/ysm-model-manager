@@ -34,7 +34,7 @@ const OUT = join(DOCS, '.vitepress', 'sidebar.gen.mjs');
 const HIDDEN_FILE_RE = /^\./;
 
 /** 相对路径 → VitePress 链接（cleanUrls 去 .md；index.md → 目录） */
-function linkify(rel) {
+function linkify(rel: string) {
   let p = '/' + toPosix(rel).replace(/\.md$/, '');
   if (p.endsWith('/index')) p = p.slice(0, -'index'.length);
   return p;
@@ -44,7 +44,7 @@ function linkify(rel) {
  * 侧边栏显示标题（自动渲染，优先中文）：
  *   frontmatter `title` → frontmatter `name`（知识卡）→ 首个 H1 → 文件名。
  */
-function readTitle(rel) {
+function readTitle(rel: string) {
   let raw = '';
   try {
     raw = readFileSync(join(DOCS, rel), 'utf8');
@@ -64,12 +64,12 @@ function readTitle(rel) {
   return null;
 }
 
-function stripQuotes(s) {
+function stripQuotes(s: string) {
   return s.replace(/^["']|["']$/g, '').trim();
 }
 
 /** 列出 relDir 下顶层 .md（不含子目录、不含隐藏文件、不含 index/README 白名单），按文件名排序。 */
-function mdNames(relDir) {
+function mdNames(relDir: string) {
   const abs = join(DOCS, relDir);
   if (!statSync(abs, { throwIfNoEntry: false })?.isDirectory()) return [];
   return readdirSync(abs)
@@ -78,7 +78,7 @@ function mdNames(relDir) {
 }
 
 /** 扫描目录生成 items：标题取页面 H1/frontmatter title，回退文件名。 */
-function scanItems(relDir, exclude: string[] = []) {
+function scanItems(relDir: string, exclude: string[] = []) {
   return mdNames(relDir)
     .filter((f) => !exclude.includes(f))
     .map((f) => {
@@ -135,7 +135,7 @@ const ARCH_ORDER = [
   'pitfalls.md',
   'review-report.md',
 ];
-const archWeight = (name) => {
+const archWeight = (name: string) => {
   const i = ARCH_ORDER.indexOf(name);
   return i === -1 ? ARCH_ORDER.length : i;
 };

@@ -19,7 +19,7 @@ import { getRoot } from './_lib/scan-files.ts';
 const ROOT = getRoot();
 
 /** 读取 resource_types.json，同时校验结构：顶层缺 resourceTypes / id 重复时报错（code_review P3-3/3-4）。 */
-function readResourceTypes(issues) {
+function readResourceTypes(issues: any[]) {
   const fp = path.join(ROOT, 'resource_types.json');
   const data = JSON.parse(fs.readFileSync(fp, 'utf-8'));
   if (!data || !Array.isArray(data.resourceTypes)) {
@@ -65,7 +65,7 @@ const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
 
 /** 统一输出（含哨兵分支）：读取/解析失败时输出可解析的 JSON，避免 pre-push-gate 解析空串。 */
-function emit(issues) {
+function emit(issues: any[]) {
   if (jsonMode) {
     const out = { _summary: { issues: issues.length }, issues };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
@@ -95,9 +95,9 @@ try {
         });
       } else {
         // 两端运行时均 toLowerCase 归一化（extensions.ts L40 / extensions.go L34），比对保持一致
-        const jsExts = (jsTypes as any)[tid].map((e) => e.toLowerCase());
-        const jsonExts = rt.extensions.map((e) => e.toLowerCase());
-        if (new Set(jsExts).size !== new Set(jsonExts).size || !jsonExts.every((e) => jsExts.includes(e)) || !jsExts.every((e) => jsonExts.includes(e))) {
+        const jsExts = (jsTypes as any)[tid].map((e: string) => e.toLowerCase());
+        const jsonExts = rt.extensions.map((e: string) => e.toLowerCase());
+        if (new Set(jsExts).size !== new Set(jsonExts).size || !jsonExts.every((e: string) => jsExts.includes(e)) || !jsExts.every((e: string) => jsonExts.includes(e))) {
           issues.push({
             type: 'ext_mismatch', id: tid,
             json_exts: jsonExts, js_exts: jsExts,

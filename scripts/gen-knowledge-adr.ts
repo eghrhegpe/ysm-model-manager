@@ -30,13 +30,13 @@ import { ROOT } from './_lib/scan-files.ts';
 import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
 
 /** 提取 frontmatter 块。 */
-function fmBlock(text) {
+function fmBlock(text: string) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   return m ? m[1] : '';
 }
 
 /** 提取 frontmatter 列表字段全部项。 */
-function fmList(text, key) {
+function fmList(text: string, key: string) {
   const lines = fmBlock(text).split(/\r?\n/);
   const out: string[] = [];
   let inList = false;
@@ -61,7 +61,7 @@ function fmList(text, key) {
 }
 
 /** 扫描 source_files 源码里的 `[doc:adr-NNN]` 显式标记，返回升序 ADR-NNN 列表。 */
-function scanDocAdrMarkers(sourceFiles) {
+function scanDocAdrMarkers(sourceFiles: string[]) {
   const found = new Set<number>();
   for (const sf of sourceFiles) {
     const abs = path.join(ROOT, sf);
@@ -80,7 +80,7 @@ function scanDocAdrMarkers(sourceFiles) {
 }
 
 /** 把 adr 列表写入 frontmatter：移除旧的空 `adr:` 键（`adr: []` 行内空列表 / `adr:` 空块），再在 `tier:` 行后插入 `adr:` 块。 */
-function writeAdrBlock(text, adrList) {
+function writeAdrBlock(text: string, adrList: string[]) {
   const fm = fmBlock(text);
   if (!fm) return text;
   // 移除旧的空 adr 键（两种形态：`adr: []` 行内 / `adr:` 后无内容的空块），

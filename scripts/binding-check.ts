@@ -35,7 +35,7 @@ const FRAMEWORK_METHODS = new Set(['ServiceStartup', 'ServiceShutdown']);
 const SERVER_INJECTED = new Set(['SetAllowedCommands']);
 
 /** 括号配对：从 open 位置找到与之匹配的右括号（跳过嵌套层级），找不到返回文本末尾。 */
-function matchingParen(text, open) {
+function matchingParen(text: string, open: number) {
   let depth = 0;
   for (let i = open; i < text.length; i++) {
     if (text[i] === '(') depth += 1;
@@ -48,14 +48,14 @@ function matchingParen(text, open) {
 }
 
 /** 粗略 arity：参数段内逗号数 + 1（无参为 0），仅用于绑定签名对账。 */
-function paramArity(text, open, close) {
+function paramArity(text: string, open: number, close: number) {
   const params = text.slice(open + 1, close).trim();
   if (params === '') return 0;
   return 1 + (params.match(/,/g) ?? []).length;
 }
 
 /** 参数段原文（不含括号）。 */
-function paramBody(text, open, close) {
+function paramBody(text: string, open: number, close: number) {
   return text.slice(open + 1, close).trim();
 }
 
@@ -65,7 +65,7 @@ function paramBody(text, open, close) {
  * variadic `...T` 归一为 `[]T`（数组语义，对齐 TS 侧 `...name: T[]`），
  * 此前剥成标量 `T` 会与 Wails 生成的 `...x: T[]` 误判漂移（FindDuplicateFiles 回归）。
  */
-function goParamTypes(body) {
+function goParamTypes(body: string) {
   if (!body) return [];
   return body.split(',').map((seg) => {
     const toks = seg.trim().split(/\s+/);
@@ -77,7 +77,7 @@ function goParamTypes(body) {
 }
 
 /** TS 参数类型序列：`a: string, b: number` → ['string','number']；无类型标注段 → null。 */
-function tsParamTypes(body) {
+function tsParamTypes(body: string) {
   if (!body) return [];
   return body.split(',').map((seg) => {
     const s = seg.trim();
@@ -99,7 +99,7 @@ const GO2TS = new Map([
 ]);
 
 /** Go 标量/切片 → 期望 TS 类型；复杂类型（struct 等）返回 null（跳过比对，避免误报）。 */
-function goTypeToExpected(t) {
+function goTypeToExpected(t: string): string | null {
   const arr = t.match(/^\[\](.+)$/);
   if (arr) {
     const inner = goTypeToExpected(arr[1]);
@@ -109,7 +109,7 @@ function goTypeToExpected(t) {
 }
 
 /** TS 类型归一：Array<T>→T[]、去 Promise 包装、去 `| null`、统一引号，供宽松比对。 */
-function tsTypeNormalize(t) {
+function tsTypeNormalize(t: string) {
   return t
     .replace(/^Array<(.+)>$/, '$1[]')
     .replace(/^Promise<(.+)>$/, '$1')
@@ -120,7 +120,7 @@ function tsTypeNormalize(t) {
 
 /** 类型漂移检测（批次4 P2）：arity 相同但参数类型变了（string↔int）不改变参数个数，
  * 纯 arity 对账会漏检。逐参比对映射后的期望类型，返回漂移描述列表。 */
-function matchParamTypes(goTypes, tsTypes) {
+function matchParamTypes(goTypes: Array<string | null>, tsTypes: Array<string | null>) {
   const drift: string[] = [];
   const n = Math.max(goTypes.length, tsTypes.length);
   for (let i = 0; i < n; i++) {
@@ -166,7 +166,7 @@ function extractGoExports() {
 function extractBindingsExports() {
   /** 从 v3 契约产物 app.ts 提取所有导出的包装函数（name → {file, arity, params}）。
    * 产物缺失时返回 missing=true——CI 保鲜：绑定产物没生成 = 契约无法对账，必须 fail 而非空过。 */
-  const result = { funcs: {}, missing: false };
+  const result = { funcs: {} as Record<string, any>, missing: false };
   if (!fs.existsSync(BINDINGS_FILE)) {
     result.missing = true;
     return result;

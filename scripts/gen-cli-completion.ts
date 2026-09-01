@@ -19,7 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, writeText } from './_lib/scan-files.ts';
-import { parseCliCommands } from './_lib/cli-registry.ts';
+import { parseCliCommands, type CliCommand } from './_lib/cli-registry.ts';
 
 const OUT_DIR = path.join(ROOT, 'completions');
 const CHECK = process.argv.includes('--check');
@@ -27,7 +27,7 @@ const JSON_OUT = process.argv.includes('--json');
 
 /* ---------------- 候选数据 ---------------- */
 
-function buildCandidates(commands) {
+function buildCandidates(commands: CliCommand[]) {
   // 顶层命令名（按字母序，脚本内确定性稳定）
   const topNames = commands.map((c) => c.name);
   // 父命令 → 子命令列表（有子命令的命令）
@@ -51,7 +51,7 @@ function renderBash({ topNames, parentSubs, cmdFlags, count }: {
   cmdFlags: Record<string, string[]>;
   count: number;
 }) {
-  const caseBranch = (cmd, subs) =>
+  const caseBranch = (cmd: string, subs: string[]) =>
     `    ${cmd}) COMPREPLY=( $(compgen -W "${subs.join(' ')}" -- "$cur") ); return ;;`;
 
   const subCases = Object.entries(parentSubs)

@@ -28,12 +28,12 @@ const REDLINE = 400;
 // （N 个主文件 × M 个路径次 spawn），缓存后每 (ref,path) 只 git show 一次。
 const showCache = new Map();
 const existsCache = new Map();
-function showAt(ref, path) {
+function showAt(ref: string, path: string) {
   const k = `${ref}\u0000${path}`;
   if (!showCache.has(k)) showCache.set(k, gitShowAt(ref, path));
   return showCache.get(k);
 }
-function existsAt(ref, path) {
+function existsAt(ref: string, path: string) {
   const k = `${ref}\u0000${path}`;
   if (!existsCache.has(k)) existsCache.set(k, gitExistsAt(ref, path));
   return existsCache.get(k);
@@ -41,7 +41,7 @@ function existsAt(ref, path) {
 
 // ── 提交信息 ──
 
-function commitMeta(ref) {
+function commitMeta(ref: string) {
   const fmt = '%H%x09%h%x09%an%x09%ad%x09%s';
   const line = (gitMaybe(['show', '-s', `--format=${fmt}`, '--date=short', ref]) || '').trim();
   if (!line) return null;
@@ -50,7 +50,7 @@ function commitMeta(ref) {
 }
 
 /** numstat 解析文件清单：adds	dels	path（--no-renames 防 rename 花括号污染）。 */
-function fileList(commit) {
+function fileList(commit: string) {
   const out = (gitMaybe(['show', '--numstat', '--format=', '--no-renames', commit]) || '').trim();
   if (!out) return [];
   return out.split('\n').map((l) => {
@@ -69,7 +69,7 @@ function fileList(commit) {
 // ── 分类：被拆主文件 / 新子文件 / 被移文件 / 边角修改 ──
 
 /** 重命名检测：--find-renames 输出形如 `0\t0\tfrontend/src/{wails => backend}/app.ts`。 */
-function detectRenames(commit) {
+function detectRenames(commit: string) {
   const out = gitMaybe(['show', '--numstat', '--format=', '--find-renames', commit]) || '';
   const renames: { from: string; to: string }[] = [];
   for (const line of out.split('\n')) {
@@ -81,7 +81,7 @@ function detectRenames(commit) {
   return renames;
 }
 
-function classify(files, commit, renameFroms) {
+function classify(files: any[], commit: string, renameFroms: Set<string>) {
   const mainThreshold = 80; // 删除 ≥80 行才视为「被拆主文件」
   for (const f of files) {
     if (f.binary) { f.kind = 'binary'; continue; }
@@ -100,7 +100,7 @@ function classify(files, commit, renameFroms) {
 }
 
 /** 被移除文件的符号去向追踪：旧顶层声明 → 合入哪个文件 / 彻底删除。 */
-function removedFileTrace(commit, rmPath, allPaths) {
+function removedFileTrace(commit: string, rmPath: string, allPaths: string[]) {
   const oldText = showAt(`${commit}^`, rmPath);
   if (oldText === null) return { syms: [], merged: {}, gone: [] };
   const oldAll = topDeclsAny(rmPath, oldText) as string[];
@@ -125,7 +125,7 @@ function removedFileTrace(commit, rmPath, allPaths) {
 // 只追导出符号会漏掉真正去向，故迁移追踪用全量顶层声明口径。
 
 /** 单文件真删洞察：旧顶层声明 - 新顶层声明（死代码清理/改名收敛场景），无被拆主文件也可用。 */
-function deletedSyms(commit, path) {
+function deletedSyms(commit: string, path: string) {
   const oldText = showAt(`${commit}^`, path);
   const newText = showAt(commit, path);
   if (oldText === null || newText === null) return [];
@@ -136,7 +136,7 @@ function deletedSyms(commit, path) {
     .map((s) => ({ name: s, wasExport: oldExp.includes(s) }));
 }
 
-function funcMigration(commit, mainPath, allPaths) {
+function funcMigration(commit: string, mainPath: string, allPaths: string[]) {
   const oldText = showAt(`${commit}^`, mainPath);
   const oldAll: string[] = oldText ? (topDeclsAny(mainPath, oldText) as string[]) : [];
   const oldExp: string[] = oldText ? (getExportedSymbolsAny(mainPath, oldText) as string[]) : [];
@@ -166,7 +166,23 @@ function funcMigration(commit, mainPath, allPaths) {
 
 // ── 输出──
 
-function human(report, compact = false) {
+/** audit() 成功分支的返回形状（human 消费）。 */
+interface AuditReport {
+  kind: string;
+  commit: { hash: string; short: string; author: string; date: string; subject: string };
+  files: any[];
+  totalIns: number;
+  totalDel: number;
+  renames: Array<{ from: string; to: string }>;
+  migrations: Record<string, any>;
+  cleans: Record<string, Array<{ name: string; wasExport: boolean }>>;
+  removals: Record<string, any>;
+  newExports: Record<string, any>;
+  redline: { limit: number; max: number; over: any[] };
+  history: Record<string, any>;
+}
+
+function human(report: AuditReport, compact = false) {
   const c = report.commit;
   const L: string[] = [];
   L.push('═'.repeat(66));
@@ -205,7 +221,7 @@ function human(report, compact = false) {
       L.push(`       ✗ [${tag}] ${d.name}  （彻底删除）`);
     }
   }
-  const cleans = Object.entries(report.cleans as Record<string, any>);
+  const cleans = Object.entries(report.cleans);
   if (cleans.length) {
     L.push('');
     L.push('②b 修改文件清理洞察（本文件内真删的顶层声明）');
@@ -275,7 +291,7 @@ function human(report, compact = false) {
 
 // ── 主流程 ──
 
-function audit(commit) {
+function audit(commit: string): any {
   const meta = commitMeta(commit);
   if (!meta) return { error: `commit 无效: ${commit}` };
   const renames = detectRenames(commit);

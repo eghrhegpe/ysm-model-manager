@@ -44,7 +44,7 @@ const statusRows: any[] = [];
 // ── 技术债提取 ────────────────────────────────────────
 
 /** 从状态字符串提取债类型与严重度。 */
-function extractDebt(adr, title, raw) {
+function extractDebt(adr: number, title: string, raw: string) {
   const debtType: string[] = [];
   // 兼容「违规未修复」与 AGENTS.md 措辞「违规或未修复」（含「或」，code_review P2-2）
   if (/违规未修复|违规或未修复/.test(raw)) debtType.push('违规未修复');
@@ -98,7 +98,7 @@ function checkStatus() {
 
 // ── 检查 2：登记表同步 ────────────────────────────────
 
-function checkRegistry(statusRowsMap) {
+function checkRegistry(statusRowsMap: Record<string, any>) {
   let regText = '';
   try {
     regText = fs.readFileSync(REG_FILE, 'utf-8');

@@ -28,7 +28,7 @@ import zlib from "node:zlib";
 
 // ---------- PNG 解码（最小实现：8bit、非隔行） ----------
 
-function decodePng(buf) {
+function decodePng(buf: Buffer) {
   const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
   if (!buf.subarray(0, 8).equals(sig)) throw new Error("非 PNG");
   let pos = 8;
@@ -110,7 +110,7 @@ function decodePng(buf) {
 const TILE = 8;
 const F_VISIBLE = 1, F_HOLE = 2, F_TRANSLUCENT = 4;
 
-function flagsForAlpha(a) {
+function flagsForAlpha(a: number) {
   if (a === 255) return F_VISIBLE;
   if (a === 0) return F_HOLE;
   return F_TRANSLUCENT;
@@ -121,7 +121,7 @@ class AlphaIndex {
   height: number;
   stride: number;
   grids: Record<string, Int32Array>;
-  constructor(png) {
+  constructor(png: any) {
     this.width = png.width;
     this.height = png.height;
     const cols = Math.ceil(this.width / TILE);
@@ -146,7 +146,7 @@ class AlphaIndex {
   }
 
   /** 查询像素矩形 [x0..x1]×[y0..y1] 内各 flags 是否出现 */
-  query(x0, y0, x1, y1) {
+  query(x0: number, y0: number, x1: number, y1: number) {
     const t0x = Math.floor(Math.max(0, x0) / TILE), t1x = Math.floor(Math.min(this.width - 1, x1) / TILE);
     const t0y = Math.floor(Math.max(0, y0) / TILE), t1y = Math.floor(Math.min(this.height - 1, y1) / TILE);
     let flags = 0;
@@ -161,7 +161,7 @@ class AlphaIndex {
 }
 
 /** 纹理全局模式——与前端 classifyRgba 同口径：半透明占比超阈→blend；只有全透→cutout */
-function globalMode(png, blendMinRatio = 0) {
+function globalMode(png: any, blendMinRatio = 0) {
   let hasHole = false;
   let translucent = 0;
   const px = png.rgba;
@@ -177,7 +177,7 @@ function globalMode(png, blendMinRatio = 0) {
 
 // ---------- Bedrock box-UV 六面矩形 ----------
 
-function boxUvFaces(cube) {
+function boxUvFaces(cube: any) {
   const [w, h, d] = cube.size ?? [0, 0, 0];
   if (Array.isArray(cube.uv)) {
     if (!cube.uv.length && cube.uv.length !== 0) return [];
@@ -206,7 +206,7 @@ function boxUvFaces(cube) {
   return out;
 }
 
-function modeOfFlags(flags) {
+function modeOfFlags(flags: number) {
   if (flags & F_TRANSLUCENT) return "blend";
   if (flags & F_HOLE) return "cutout";
   return "opaque";
@@ -214,7 +214,7 @@ function modeOfFlags(flags) {
 
 // ---------- 主流程 ----------
 
-function analyzeModel(modelDir, modelName) {
+function analyzeModel(modelDir: string, modelName: string) {
   const geoDir = path.join(modelDir, "models");
   const texDir = path.join(modelDir, "textures");
   if (!fs.existsSync(geoDir) || !fs.existsSync(texDir)) return null;

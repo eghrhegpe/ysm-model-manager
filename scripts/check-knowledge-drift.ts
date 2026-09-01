@@ -93,7 +93,7 @@ function loadKnowledgeCards() {
 
 // ── 检查 1：知识卡 frontmatter 治理 ──────────────────
 
-function checkKnowledgeMeta(cards) {
+function checkKnowledgeMeta(cards: any[]) {
   let count = 0;
   for (const { cf, stem, text, fm } of cards) {
     if (!/^\uFEFF?---\r?\n/.test(text)) continue;
@@ -159,7 +159,7 @@ function checkKnowledgeMeta(cards) {
 
 // ── 检查 2：source_files 存在性 + 路径格式 + 语义漂移 ──
 
-function checkKnowledgeSources(cards) {
+function checkKnowledgeSources(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
     // 抽出 + 归一（反斜杠 → 正斜杠），供存在性 / 格式 / 语义三检共用
@@ -192,7 +192,7 @@ function checkKnowledgeSources(cards) {
 // GetVersion→GetAppVersion 等重构后知识卡正文失效）。知识卡 frontmatter 可声明
 // `invariant_anchors:`（list），每项 `文件相对路径|应含模式`（| 分隔，模式为字面子串或
 // `re:` 前缀正则）。锚不命中 → ERROR（机制描述漂移即红，纳入 ADR-043 fail-closed 契约）。
-function checkKnowledgeAnchors(cards) {
+function checkKnowledgeAnchors(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
     const anchors = getList(fm, 'invariant_anchors');
@@ -282,13 +282,13 @@ const SOURCE_ROOTS = ['frontend/src', 'go'];
 const WALK_EXCLUDE_RE = /(node_modules|[\\/]dist[\\/]|[\\/]bindings[\\/]|[\\/]test[\\/]|web-spike[\\/]|\.test\.|_test\.|\.spec\.)/;
 
 /** 某卡 source_files 条目是否覆盖源文件 rel：文件精确匹配 / 目录前缀匹配。 */
-function covers(rel, entry) {
+function covers(rel: string, entry: string) {
   const e = entry.replace(/\/+$/, '');
   return rel === e || rel.startsWith(e + '/');
 }
 
 /** 源码文件单遍收集（_lib/scan-files.walk，领域排除走 skipDir/skipFile）。 */
-function walkSources(dir): string[] {
+function walkSources(dir: string): string[] {
   return walk(dir, {
     exts: ['.ts', '.js', '.go'],
     skipDir: (n) => /^(node_modules|dist|bindings|test|web-spike)$/.test(n) || WALK_EXCLUDE_RE.test(n),
@@ -296,9 +296,9 @@ function walkSources(dir): string[] {
   }) as string[];
 }
 
-function checkKnowledgeCoverage(cards) {
+function checkKnowledgeCoverage(cards: any[]) {
   // 收集所有卡的 source_files（去尾斜杠）
-  const referenced = new Set();
+  const referenced = new Set<string>();
   for (const { fm } of cards) {
     if (!fm) continue;
     for (const src of parseSourceFiles(fm)) {
@@ -349,7 +349,7 @@ function checkKnowledgeCoverage(cards) {
 // 与 git 联动：git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.ts --affected {}
 // 匹配规则复用 covers()：文件精确命中 / 目录前缀命中（source_files 可整目录引用）。
 
-function runAffected(changed) {
+function runAffected(changed: string[]) {
   if (changed.length === 0) {
     console.log('用法: node scripts/check-knowledge-drift.ts --affected <变更文件...>');
     console.log('  常与 git 联动: git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.ts --affected {}');

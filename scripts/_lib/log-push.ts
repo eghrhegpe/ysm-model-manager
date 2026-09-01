@@ -25,7 +25,7 @@ const LOG_FILE = path.join(ROOT, '.git', 'push-log');
  * 双写日志：stdout（stderr）+ 追加到 .git/push-log。
  * @param {string} line 日志行（已含 [OK]/[FAIL] 等标记）
  */
-export function logPush(line) {
+export function logPush(line: string) {
   // 1. stderr 写终端（stdout 可能被 git pre-push 钩子吞掉）
   process.stderr.write(line + '\n');
   // 2. 追加到 .git/push-log（持久化，不被 git 跟踪）

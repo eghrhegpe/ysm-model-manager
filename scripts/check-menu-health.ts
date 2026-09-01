@@ -52,7 +52,7 @@ const MENU_FILES = [
 const LOCALE_FILE = 'frontend/src/core/i18n/locales/zh-CN.ts';
 const LEGAL_KINDS = new Set(['panel', 'action', 'divider']);
 
-function readRel(rel) {
+function readRel(rel: string) {
   return fs.readFileSync(path.resolve(ROOT, rel), 'utf-8');
 }
 
@@ -71,8 +71,8 @@ function deriveLegalGroups() {
 }
 
 // 收集 zh-CN 语言包所有 preview.* 键
-function collectZhCNPreviewKeys() {
-  const keys = new Set();
+function collectZhCNPreviewKeys(): Set<string> {
+  const keys = new Set<string>();
   const src = readRel(LOCALE_FILE);
   const re = /"preview\.([a-zA-Z0-9_\-\.]+)"/g;
   let m;
@@ -84,7 +84,7 @@ function collectZhCNPreviewKeys() {
 
 // 从 `id` 匹配位置回溯最近未配对的 `{`，再配对找到对象闭合 `}`。
 // 跳过字符串字面量内的 { }（避免误配 render 函数体）。
-export function extractItemBlock(content, idPos) {
+export function extractItemBlock(content: string, idPos: number) {
   // 往前找最近的 {（跳过字符串内）
   let i = idPos - 1;
   let depth = 0;
@@ -128,7 +128,7 @@ const RENDER_CUSTOM_RE = /renderCustom:\s*\(/;
 
 /** 剥离 item 块内顶层 children: [...] 数组（子节点的 renderCustom 不计入父项 dualChannel——
  *  a48f74fd review P2：正则作用于整块会把 children 子节点误判为父项双通道） */
-function stripTopChildren(block) {
+function stripTopChildren(block: string) {
   const m = block.match(/children:\s*\[/);
   if (!m) return block;
   const start = block.indexOf(m[0]) + m[0].length - 1; // '[' 位置
@@ -141,7 +141,7 @@ function stripTopChildren(block) {
   return block;
 }
 
-export function parseItem(block, id): {
+export function parseItem(block: string, id: string): {
   id: string;
   labelKey: string | null;
   dockGroup: string | null;
@@ -151,7 +151,7 @@ export function parseItem(block, id): {
   dualChannel: boolean;
   file?: string;
 } {
-  const field = (re) => {
+  const field = (re: RegExp) => {
     const m = block.match(re);
     return m ? m[1] : null;
   };
@@ -173,7 +173,7 @@ export function parseItem(block, id): {
   };
 }
 
-export function parseFile(rel) {
+export function parseFile(rel: string) {
   const content = readRel(rel);
   const items: Array<ReturnType<typeof parseItem>> = [];
   const idRe = /id:\s*"([a-z0-9\-]+)"/g;
@@ -191,7 +191,7 @@ export function parseFile(rel) {
 }
 
 /** 单 item 规则判定（rule 2-6）——导出供契约测试端到端覆盖门禁拦截路径（a48f74fd review P3） */
-export function itemViolations(it, zhCNKeys) {
+export function itemViolations(it: any, zhCNKeys: Set<string>) {
   const v: Array<{ rule: string; item: string; file?: string; detail: string }> = [];
   // 2. labelKey 非空
   if (!it.labelKey) v.push({ rule: 'labelKey-present', item: it.id, file: it.file, detail: '缺 labelKey' });
@@ -295,7 +295,7 @@ if (JSON_MODE) {
     console.log(' [OK] 6 项校验全通过：id 唯一 · labelKey 非空 · i18n 齐全 · dockGroup 合法 · kind 合法 · render/run 完备');
     console.log(`   覆盖文件：${MENU_FILES.map((f) => f.split('/').pop()).join(' · ')}`);
     // 按 dockGroup 统计
-    const byGroup = allItems.reduce((acc, it) => { acc[it.dockGroup || '(无组)'] = (acc[it.dockGroup || '(无组)'] || 0) + 1; return acc; }, {});
+    const byGroup = allItems.reduce((acc, it) => { acc[it.dockGroup || '(无组)'] = (acc[it.dockGroup || '(无组)'] || 0) + 1; return acc; }, {} as Record<string, number>);
     Object.entries(byGroup).forEach(([g, n]) => console.log(`   ${g === '(无组)' ? ' 无 dockGroup' : g}: ${n} 项`));
     if (sharedIds.length) console.log(`   跨适配器共享 id（设计如此，按次挂载互斥）：${sharedIds.join(', ')}`);
   } else {

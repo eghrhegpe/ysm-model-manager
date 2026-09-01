@@ -55,7 +55,7 @@ const APPENDIX = [
  * 返回 [{ file, rel, title, num }]。
  * num = 文件名开头数字（无则 Infinity）；title = 文件名去扩展名。
  */
-function scanChapters(dir, regionDir) {
+function scanChapters(dir: string, regionDir: string) {
   const full = path.join(dir, regionDir);
   if (!fs.existsSync(full)) return [];
   const entries = fs.readdirSync(full, { withFileTypes: true });
@@ -77,7 +77,7 @@ function scanChapters(dir, regionDir) {
 }
 
 /** 从章节文件抽取 H1 标题（第一行 `# xxx`）。失败回退到文件名。 */
-function extractH1(dir, regionDir, fileName) {
+function extractH1(dir: string, regionDir: string, fileName: string) {
   const full = path.join(dir, regionDir, fileName);
   try {
     // 用 readText 去 BOM + 统一 CRLF→LF：带 BOM 的章节文件首行 `# 标题` 才会被正则命中（code_review P2-1）
@@ -176,7 +176,7 @@ function countAll() {
 
 // ── 渲染 ─────────────────────────────────────────────
 
-const escCell = (x) => x.replace(/\|/g, '\\|');
+const escCell = (x: string) => x.replace(/\|/g, '\\|');
 
 function renderIndex() {
   const stats = countAll();

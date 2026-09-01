@@ -38,14 +38,14 @@ let regNums = new Set<number>();
 let gaps: number[] = [];
 
 // 文本位置 → 行号（1-based，报错定位用）
-function lineNo(text, index) {
+function lineNo(text: string, index: number) {
   return text.slice(0, index).split(/\r?\n/).length;
 }
 
 // 找「**状态…：」但写法不合规的行（如「**状态：** ✅ 已采纳」），供精准报错。
 // 逐行检测而非整文正则：避免 m 模式下 ^ 与字符类把前一行换行符当行首（回溯歧义）。
 // 跳过：表格行（|）、标题（#）、引用（>）、空行、规范列表项（- **状态**：）。
-function findStatusLike(text) {
+function findStatusLike(text: string) {
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -76,7 +76,7 @@ if (!files.length) {
 // 合法状态前缀（AGENTS.md：✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代；
 // 存量文件存在无 emoji 的「已采纳」写法，两者均放行，避免误报存量）
 const VALID_STATUS = ['✅ 已采纳', '🔄 部分采纳', '🧊 已废弃', '❌ 已取代', '已采纳', '部分采纳', '已废弃', '已取代'];
-const fileMeta = {};
+const fileMeta: Record<number, any> = {};
 for (const f of files) {
   const text = fs.readFileSync(path.join(ADR_DIR, f), 'utf-8');
   const titleM = text.match(/^# ADR-(\d{3})[：:]\s*(.+)$/m);
@@ -98,7 +98,7 @@ for (const f of files) {
   } else if (!statusRaw) {
     errors.push(`STATUS_MISSING: ${f} 缺少 '- **状态**：' 行`);
   } else if (!VALID_STATUS.some((s) => statusRaw.startsWith(s))) {
-    errors.push(`BAD_STATUS: ${f} 第 ${lineNo(text, statusM!.index)} 行状态「${statusRaw}」不在合法枚举 ${VALID_STATUS.join(' / ')}（code_review P2-1）`);
+    errors.push(`BAD_STATUS: ${f} 第 ${lineNo(text, statusM!.index!)} 行状态「${statusRaw}」不在合法枚举 ${VALID_STATUS.join(' / ')}（code_review P2-1）`);
   }
   fileMeta[num] = {
     file: f,
@@ -119,7 +119,7 @@ try {
 }
 
 regNums = new Set<number>();
-const regRows = {};
+const regRows: Record<number, boolean> = {};
 for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) {
   const num = parseInt(m[1], 10);
   regNums.add(num);

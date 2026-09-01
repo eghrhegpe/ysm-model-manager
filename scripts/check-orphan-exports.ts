@@ -48,7 +48,7 @@ const EXPORT_BLOCK_RE = /export\s*\{([^}]*)\}(?!\s*from)/g;
 const IMPORT_RE = /import\s+(?:([A-Za-z_$][\w$]*)\s*,?\s*)?(?:\{([^}]*)\})?\s*from\s*['"]([^'"]+)['"]/g;
 
 /** 提取模块导出符号（含行号）。 */
-function extractExports(file, text) {
+function extractExports(file: string, text: string) {
   const out: any[] = [];
   for (const m of text.matchAll(EXPORT_NAMED_RE)) {
     const line = text.slice(0, m.index).split('\n').length;
@@ -77,7 +77,7 @@ const THEN_NS_ALIAS_RE = /import\(\s*['"]([^'"]+)['"]\s*\)\.then\(\s*\(\s*([A-Za
  * 解析动态导入规格（同 resolveImport，多一次 .js → .ts 回退）。
  * TS 源文件常被 `import("./x.js")` 引用（binding 的 .js 风格），磁盘是 .ts。
  */
-function resolveDynImport(file, spec, moduleSet) {
+function resolveDynImport(file: string, spec: string, moduleSet: Set<string>) {
   let target = resolveImport(file, spec, moduleSet);
   if (!target && spec.endsWith('.js')) {
     target = resolveImport(file, spec.slice(0, -3) + '.ts', moduleSet);
@@ -86,9 +86,9 @@ function resolveDynImport(file, spec, moduleSet) {
 }
 
 /** 提取模块消费的符号（跨文件，返回 [目标模块, 符号名] 列表）。 */
-function extractImports(file, text, moduleSet) {
+function extractImports(file: string, text: string, moduleSet: Set<string>) {
   const out: any[] = [];
-  const pushNamed = (target, rawList) => {
+  const pushNamed = (target: string, rawList: string) => {
     for (const raw of rawList.split(',')) {
       const sym = raw.trim().match(/^([A-Za-z_$][\w$]*)/);
       if (sym) out.push([target, sym[1]]);
@@ -183,13 +183,13 @@ function main() {
   }
 
   const files = walk(SRC_DIR);
-  const moduleSet = new Set(files);
+  const moduleSet = new Set(files as string[]);
 
   // 符号 → 导出文件映射
   const symbolOwners = new Map(); // symbol → [{file, line}]
   for (const f of files) {
     const text = fs.readFileSync(f as string, 'utf-8');
-    for (const exp of extractExports(f, text)) {
+    for (const exp of extractExports(f as string, text)) {
       if (!symbolOwners.has(exp.name)) symbolOwners.set(exp.name, []);
       symbolOwners.get(exp.name).push({ file: f, line: exp.line });
     }
@@ -199,7 +199,7 @@ function main() {
   const consumed = new Map(); // `${symbol}@${file}` → 消费次数
   for (const f of files) {
     const text = fs.readFileSync(f as string, 'utf-8');
-    for (const [target, sym] of extractImports(f, text, moduleSet)) {
+    for (const [target, sym] of extractImports(f as string, text, moduleSet)) {
       const key = `${sym}@${target}`;
       consumed.set(key, (consumed.get(key) || 0) + 1);
     }

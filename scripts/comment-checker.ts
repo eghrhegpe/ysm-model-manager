@@ -46,7 +46,7 @@ function scanCommentedCode() {
   /** 检测注释掉的代码行；跳过 JSDoc 示例（// 后 ≥2 空格）与 why/prose 注释 */
   const results: any[] = [];
   const fileCache = new Map();
-  const readLine = (f, ln) => {
+  const readLine = (f: string, ln: number) => {
     if (!fileCache.has(f)) {
       try { fileCache.set(f, fs.readFileSync(f, 'utf8').split('\n')); }
       catch { fileCache.set(f, []); }
@@ -122,7 +122,7 @@ const total = Object.values(results).reduce((s, v) => s + v.length, 0);
 
 if (jsonMode) {
   // _summary 含分类计数 + 截断标记（子代理消费：先看计数，需明细再 --full）
-  const counts = {};
+  const counts: Record<string, number> = {};
   let truncated = false;
   const LIMIT = 50;
   for (const [cat, items] of Object.entries(results)) {
@@ -142,7 +142,7 @@ if (jsonMode) {
     debug_log: '调试日志',
   };
   for (const [cat, items] of Object.entries(results)) {
-    const name = names[cat] ?? cat;
+    const name = (names as Record<string, string>)[cat] ?? cat;
     console.log(`--- ${name} (${items.length} 处) ---`);
     for (const it of items.slice(0, 8)) {
       console.log(`  ${it.file}:${it.line}  ${it.snippet.slice(0, 80)}`);

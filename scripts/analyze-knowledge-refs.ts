@@ -69,12 +69,12 @@ function loadCards() {
 }
 
 /** 路径深度 = 目录层数（文件自身算 0；`a/b/c.ts` → 2）。 */
-function pathDepth(p) {
+function pathDepth(p: string) {
   return p.split('/').filter(Boolean).length - 1;
 }
 
 /** 校验 source_files 是否真实存在于磁盘（对齐 check-knowledge-drift 的判定）。 */
-function resolveSource(p, kind) {
+function resolveSource(p: string, kind: string) {
   const full = path.join(ROOT, p);
   if (fs.existsSync(full)) return { p, kind: 'file', depth: pathDepth(p) };
   if (fs.existsSync(full) && fs.statSync(full).isDirectory()) return { p, kind: 'dir', depth: pathDepth(p) };
@@ -89,7 +89,54 @@ function resolveSource(p, kind) {
 
 // ── 2. 主分析 ────────────────────────────────────────
 
-function analyze(cards) {
+/** 单张知识卡（loadCards 产出）。 */
+interface Card {
+  file: string;
+  kind: string;
+  name: string;
+  category: string;
+  tier: string;
+  sourceFiles: string[];
+  tests: string[];
+  useWhen: string[];
+  body: string;
+}
+
+/** 卡 → 源码逐卡分析行。 */
+interface PerCard {
+  kind: string;
+  name: string;
+  file: string;
+  category: string;
+  tier: string;
+  sourceCount: number;
+  okCount: number;
+  maxDepth: number;
+  avgDepth: number;
+  refs: string[];
+  missing: string[];
+}
+
+/** analyze() 的完整返回形状（render 消费）。 */
+interface AnalyzeData {
+  generatedAt: string;
+  summary: {
+    cardCount: number;
+    categoryCount: number;
+    totalSourceRefs: number;
+    totalOkRefs: number;
+    totalMissingRefs: number;
+    totalCrossLinks: number;
+    maxCardDepth: number;
+  };
+  perCard: PerCard[];
+  byCategory: Record<string, { count: number; sourceFiles: number; maxDepth: number; kinds: string[]; label: string }>;
+  reverseRefs: Array<{ path: string; cardCount: number; cards: any[]; depth: number; exists: boolean }>;
+  crossLinks: Record<string, any>;
+  islands: { noSource: string[]; noIn: string[] };
+}
+
+function analyze(cards: Card[]): AnalyzeData {
   // A. 卡 → 源码
   const perCard = cards.map((c) => {
     const refs = c.sourceFiles.map((sf) => resolveSource(sf, c.kind));
@@ -145,7 +192,7 @@ function analyze(cards) {
     byCategory[cat] = byCategory[cat] || { count: 0, sourceFiles: 0, maxDepth: 0, kinds: [] };
     byCategory[cat].count++;
     byCategory[cat].sourceFiles += c.sourceFiles.length;
-    byCategory[cat].maxDepth = Math.max(byCategory[cat].maxDepth, perCard.find((p) => p.kind === c.kind).maxDepth);
+    byCategory[cat].maxDepth = Math.max(byCategory[cat].maxDepth, perCard.find((p) => p.kind === c.kind)!.maxDepth);
     byCategory[cat].kinds.push(c.kind);
   }
 
@@ -185,7 +232,7 @@ function analyze(cards) {
     byCategory: Object.fromEntries(
       Object.entries(byCategory).map(([cat, v]) => [
         cat,
-        { ...v, label: CATEGORY_LABELS[cat] || cat, kinds: v.kinds.sort() },
+        { ...v, label: (CATEGORY_LABELS as Record<string, string>)[cat] || cat, kinds: v.kinds.sort() },
       ])
     ),
     reverseRefs,
@@ -196,10 +243,10 @@ function analyze(cards) {
 
 // ── 3. 渲染 Markdown 报告 ────────────────────────────
 
-function mdTable(rows) {
+function mdTable(rows: any[]) {
   if (!rows.length) return '*（空）*';
   const headers = Object.keys(rows[0]);
-  const esc = (s) => String(s).replace(/\|/g, '\\|');
+  const esc = (s: string) => String(s).replace(/\|/g, '\\|');
   const lines = [
     `| ${headers.map(esc).join(' | ')} |`,
     `|${headers.map(() => '---').join('|')}|`,
@@ -208,7 +255,7 @@ function mdTable(rows) {
   return lines.join('\n');
 }
 
-function render(cards, data) {
+function render(cards: Card[], data: AnalyzeData) {
   const s = data.summary;
   const L: string[] = [];
   L.push('# 知识卡引用深度与耦合分析');

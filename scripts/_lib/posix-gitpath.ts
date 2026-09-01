@@ -24,7 +24,7 @@ import { toNative } from './to-posix.ts';
  * @param {string} root 仓库根目录（用于解析相对路径）
  * @returns {string} 归一后的绝对路径（平台原生分隔符）；空值原样返回
  */
-export function normalizeGitPath(p, root) {
+export function normalizeGitPath(p: string, root: string) {
   if (!p) return p;
   // msys 风格 /c/Users/... → C:/Users/... 仅发生在 win32（Git Bash 特有）。
   // 非 win32 平台不做此变换，避免把 /home/x 误判成 msys（h:/...）再 join root。

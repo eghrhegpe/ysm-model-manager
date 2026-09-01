@@ -63,7 +63,7 @@ if (files.length === 0) {
 }
 
 // ── 解析 trace ──
-function loadTrace(p) {
+function loadTrace(p: string) {
   const abs = path.isAbsolute(p) ? p : path.resolve(process.cwd(), p);
   if (!fs.existsSync(abs)) {
     console.error(`错误：文件不存在 — ${abs}`);
@@ -79,7 +79,7 @@ function loadTrace(p) {
 }
 
 // ── 分析核心 ──
-function analyze(label, trace) {
+function analyze(label: string, trace: any) {
   const { evs } = trace;
   const threads = new Map();
   const procs = new Map();
@@ -220,13 +220,13 @@ function analyze(label, trace) {
 }
 
 // ── 文本报告 ──
-function fmtTime(us) {
+function fmtTime(us: number) {
   if (us >= 1e6) return `${(us / 1e6).toFixed(3)}s`;
   if (us >= 1e3) return `${(us / 1e3).toFixed(2)}ms`;
   return `${us.toFixed(0)}µs`;
 }
 
-function printReport(r) {
+function printReport(r: any) {
   const lines: string[] = [];
   lines.push('');
   lines.push('='.repeat(70));
@@ -240,7 +240,7 @@ function printReport(r) {
   lines.push(`── Top ${r.topEvents.length} 最长事件 ──`);
   lines.push(`${'dur'.padEnd(12)} ${'name'.padEnd(40)} ${'cat'.padEnd(25)} ${'pid'.padEnd(6)} thread`);
   for (const e of r.topEvents) {
-    const tname = r.byThread.find(t => t.pid === e.pid && t.tid === e.tid)?.name || '?';
+    const tname = r.byThread.find((t: any) => t.pid === e.pid && t.tid === e.tid)?.name || '?';
     lines.push(`${fmtTime(e.dur).padEnd(12)} ${e.name.slice(0, 40).padEnd(40)} ${(e.cat||'').slice(0,25).padEnd(25)} ${String(e.pid).padEnd(6)} ${tname}`);
   }
 

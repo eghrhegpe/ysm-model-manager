@@ -46,7 +46,7 @@ let jscpdParseFailed = false;
 
 // ── 工具探测与执行 ────────────────────────────────────
 
-function bin(name) {
+function bin(name: string) {
   // 与 doctor.ts frontendBin 对齐：win32 优先 .cmd（npm shim 真实形态，shell:true 走 cmd.exe），
   // 其它平台优先 plain（无扩展名可执行）。.ps1 仅作最后兜底（cmd.exe 不直接执行 .ps1）。
   // monorepo 化（workspaces）后依赖被 hoist 到根 node_modules/.bin，frontend 不再必有——
@@ -58,7 +58,7 @@ function bin(name) {
   return candidates.find((c) => fs.existsSync(c)) || null;
 }
 
-function run(name, args, opts: { allowExit1?: boolean } = {}) {
+function run(name: string, args: string[], opts: { allowExit1?: boolean } = {}) {
   const exe = bin(name);
   if (!exe) {
     errors.push(`[工具缺失] ${name} 未安装：cd frontend && npm i -D ${name}`);
@@ -81,7 +81,7 @@ function run(name, args, opts: { allowExit1?: boolean } = {}) {
 
 const KNIP_TYPES = ['exports', 'types', 'enumMembers', 'unlisted', 'dependencies', 'devDependencies', 'binaries', 'namespaceMembers', 'duplicates', 'catalog', 'catalogReferences', 'optionalPeerDependencies', 'unresolved'];
 
-function parseKnip(stdout) {
+function parseKnip(stdout: string) {
   try {
     const data = JSON.parse(stdout);
     const out: string[] = [];
@@ -124,7 +124,7 @@ function parseJscpd() {
   try {
     const data = JSON.parse(fs.readFileSync(JSCPD_REPORT, 'utf-8'));
     const clones = data.duplicates || [];
-    return clones.map((c) => {
+    return clones.map((c: any) => {
       // jscpd 在 Windows 输出反斜杠路径（如 views\a.ts），基线为正斜杠——
       // 统一 toPosix 归一化，否则跨平台比对全部误判「新增」（code_review P3）
       const f1 = toPosix(c.firstFile?.name || '?');
@@ -147,13 +147,13 @@ function parseJscpd() {
 // 若不在责任集会被当「他人遗留」自动收编进基线、永久洗白（code_review P2-2）。
 
 function resolveResponsibleFiles() {
-  const git = (...args) => {
+  const git = (...args: string[]) => {
     const r = spawnSync('git', args, { encoding: 'utf-8' });
     return r.status === 0 ? r.stdout : null;
   };
-  const collect = (out) => {
+  const collect = (out: string | null) => {
     if (out === null || !out.trim()) return [];
-    return out.trim().split('\n').filter(Boolean).map((p) => toPosix(p));
+    return out.trim().split('\n').filter(Boolean).map((p: string) => toPosix(p));
   };
   const files = new Set([
     ...collect(git('diff', '--cached', '--name-only')),

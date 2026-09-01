@@ -29,12 +29,12 @@ import { getExportedSymbolsAny, topDeclsAny, searchName } from './_lib/source-gr
 import { walk, ROOT, toPosix } from './_lib/scan-files.ts';
 import { parseArgs } from './_lib/parse-args.ts';
 
-function analyze(commit) {
+function analyze(commit: string) {
   const parent = commit + '^';
   // 注意：`git diff --name-only parent commit` 不带 `--` 在 ref 前，
   // 否则 parent/commit 会被当成路径 spec 处理，返回空。
   const modified = (gitMaybe(['diff', '--name-only', parent, commit]) || '').trim().split('\n').filter(Boolean);
-  const parents = {}, news = {}, parentExps = {};
+  const parents: Record<string, any> = {}, news: Record<string, any> = {}, parentExps: Record<string, any> = {};
   for (const p of modified) {
     const pt = showAt(parent, p);
     const nt = showAt(commit, p);
@@ -52,7 +52,7 @@ function analyze(commit) {
   return { commit, removed };
 }
 
-function scanCallers(searchTerms, scope) {
+function scanCallers(searchTerms: string[], scope: string) {
   const callers = new Map();
   const scanDirs: string[] = [];
   if (scope) {
@@ -83,7 +83,7 @@ function scanCallers(searchTerms, scope) {
   return callers;
 }
 
-function human(result, quiet) {
+function human(result: any, quiet: boolean) {
   const L: string[] = [];
   L.push('\u2550'.repeat(66));
   L.push(' rollback-impact -- ' + result.commit);
@@ -117,7 +117,7 @@ function human(result, quiet) {
   return L.join('\n');
 }
 
-function toJ(result) {
+function toJ(result: any) {
   const callersMap: Record<string, string[]> = {};
   for (const r of result.removed) callersMap[r.sym] = result.callers.get(r.sym) || [];
   let total = 0;
@@ -139,8 +139,8 @@ if (!commitArg) {
   process.exit(2);
 }
 const result = analyze(commitArg) as { commit: string; removed: { sym: any; file: string; wasExport: any }[]; callers: Map<string, string[]> };
-if (result.removed.length) result.callers = scanCallers(result.removed.map((r) => r.sym), SCOPE);
+if (result.removed.length) result.callers = scanCallers(result.removed.map((r) => r.sym), SCOPE as string);
 else result.callers = new Map();
 if (JSON_OUT) console.log(JSON.stringify(toJ(result), null, 2));
-else console.log(human(result, QUIET));
+else console.log(human(result, QUIET as boolean));
 process.exit(0);

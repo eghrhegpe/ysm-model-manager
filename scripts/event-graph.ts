@@ -96,16 +96,16 @@ function readBusContract() {
 
 /* ---------------- 源码扫描 ---------------- */
 
-function stripNoise(text) {
+function stripNoise(text: string) {
   // 块注释替换为等宽空白（保留换行数），否则后续所有行号整体漂移
   return text
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, ' '))
     .replace(/\/\/.*$/gm, ' ');
 }
 
 function collectSrcFiles() {
   const files: string[] = [];
-  const walk = (dir) => {
+  const walk = (dir: string) => {
     if (!fs.existsSync(dir)) return;
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
       if (ent.name.startsWith('.')) continue;
@@ -136,7 +136,7 @@ const CALL_HEAD_RE = /(?:^|[^A-Za-z0-9_$])([A-Za-z_$][\w$]*)\s*\??\.\s*(emit|on|
 const REGEX_PRECEDING_RE = /[({[,;:!&|?+\-*%~^=]$/;
 
 /** src[i]==='/' 时按正则字面量跳过：字符类内 / 不闭合、吃尾部 flags；越界/跨行返回 null（降级当普通字符） */
-function skipRegex(src, i) {
+function skipRegex(src: string, i: number) {
   let inClass = false;
   for (i++; i < src.length; i++) {
     const c = src[i];
@@ -150,12 +150,12 @@ function skipRegex(src, i) {
 }
 
 /** 从左括号下一字符起提取平衡实参段；字符串与正则字面量内容不参与配对。返回段数组或 null */
-function extractArgs(src, openParen) {
+function extractArgs(src: string, openParen: number) {
   let d = 0, i = openParen + 1;
   const n = src.length;
   let cur = '', lastSig = '('; // lastSig：最近非空白字符（正则/除法判定用）
   const parts: string[] = [];
-  const note = (c) => { if (!/\s/.test(c)) lastSig = c; };
+  const note = (c: string) => { if (!/\s/.test(c)) lastSig = c; };
   while (i < n) {
     const c = src[i];
     if (c === "'" || c === '"' || c === '`') {
@@ -184,15 +184,15 @@ function extractArgs(src, openParen) {
   return null; // 括号不平衡（跨模板拼接等），交由编译期兜底
 }
 
-function scanFiles(files, includeHtml, contract, arityIssues) {
+function scanFiles(files: string[], includeHtml: boolean, contract: any, arityIssues: any[]) {
   const eventMap = new Map();
-  function add(event, method, file, line) {
+  function add(event: string, method: string, file: string, line: number) {
     if (!eventMap.has(event)) eventMap.set(event, { emit: [], on: [], once: [], off: [] });
     eventMap.get(event)[method].push({ file, line });
   }
   /** 顶层非空段计数 */
-  const argcOf = (args) => args.map((s) => s.trim()).filter(Boolean).length;
-  function scanFile(filePath, rel) {
+  const argcOf = (args: string[]) => args.map((s) => s.trim()).filter(Boolean).length;
+  function scanFile(filePath: string, rel: string) {
     const text = stripNoise(fs.readFileSync(filePath, 'utf-8'));
     let m;
     const headRe = new RegExp(CALL_HEAD_RE.source, 'g');
@@ -221,7 +221,7 @@ function scanFiles(files, includeHtml, contract, arityIssues) {
   return { eventMap };
 }
 
-function checkContract(eventMap, contract, arityIssues) {
+function checkContract(eventMap: Map<string, any>, contract: any, arityIssues: any[]) {
   const undeclared: string[] = [], orphans: string[] = [], ghosts: string[] = [];
   for (const [ev, d] of eventMap) {
     if (!contract.names.has(ev) && !undeclared.includes(ev)) undeclared.push(ev);
@@ -239,7 +239,7 @@ function checkContract(eventMap, contract, arityIssues) {
 
 /* ---------------- 报告渲染 ---------------- */
 
-function renderMarkdown(eventMap, anomalies) {
+function renderMarkdown(eventMap: Map<string, any>, anomalies: any) {
   const out: string[] = [];
   out.push('# Bus 事件契约报告');
   out.push('');
@@ -296,7 +296,7 @@ function renderMarkdown(eventMap, anomalies) {
     const d = eventMap.get(ev);
     let status = "✅";
     if (anomalies.undeclared.includes(ev)) status = "⚠️ 未声明";
-    else if (anomalies.arityIssues.some((a) => a.event === ev)) status = "⛔ 实参违约";
+    else if (anomalies.arityIssues.some((a: any) => a.event === ev)) status = "⛔ 实参违约";
     else if (d.emit.length > 0 && d.on.length === 0 && d.once.length === 0) status = "🔇 孤儿发射";
     else if (d.emit.length === 0 && (d.on.length > 0 || d.once.length > 0)) status = "👻 鬼订阅";
     out.push(`| \`${ev}\` | ${d.emit.length} | ${d.on.length} | ${d.once.length} | ${d.off.length} | ${status} |`);
@@ -316,16 +316,16 @@ function renderMarkdown(eventMap, anomalies) {
   return out.join('\n');
 }
 
-function renderJSON(eventMap, anomalies) {
+function renderJSON(eventMap: Map<string, any>, anomalies: any) {
   const events = [...eventMap.keys()].sort();
   const data: Record<string, any> = {};
   for (const ev of events) {
     const d = eventMap.get(ev);
     data[ev] = {
-      emit: d.emit.map((e) => `${e.file}:${e.line}`),
-      on: d.on.map((e) => `${e.file}:${e.line}`),
-      once: d.once.map((e) => `${e.file}:${e.line}`),
-      off: d.off.map((e) => `${e.file}:${e.line}`),
+      emit: d.emit.map((e: any) => `${e.file}:${e.line}`),
+      on: d.on.map((e: any) => `${e.file}:${e.line}`),
+      once: d.once.map((e: any) => `${e.file}:${e.line}`),
+      off: d.off.map((e: any) => `${e.file}:${e.line}`),
     };
   }
   return JSON.stringify({
@@ -341,7 +341,7 @@ function renderJSON(eventMap, anomalies) {
   }, null, 2);
 }
 
-function printAnomalyReport(anomalies) {
+function printAnomalyReport(anomalies: any) {
   if (!anomalies.undeclared.length && !anomalies.orphans.length && !anomalies.ghosts.length
     && !anomalies.arityIssues.length && !anomalies.voidDrift.length) {
     console.warn("[event-graph] ✅ 无异常");
@@ -384,7 +384,7 @@ function main() {
   console.warn(`[event-graph] BusEvents 权威清单：${contract.names.size} 个事件`);
   const files = collectSrcFiles();
   console.warn(`[event-graph] 扫描源码文件：${files.length} 个`);
-  const arityIssues = [];
+  const arityIssues: any[] = [];
   const { eventMap } = scanFiles(files, true, contract, arityIssues);
   console.warn(`[event-graph] 扫描到事件：${eventMap.size} 个`);
   const anomalies = checkContract(eventMap, contract, arityIssues);

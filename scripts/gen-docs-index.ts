@@ -42,7 +42,7 @@ const KNOWN = new Set(['--check', '--adr', '--guide', '--releases', '--knowledge
 const unknown = args.filter((a) => a.startsWith('--') && !KNOWN.has(a));
 if (unknown.length) { console.error('[FAIL] 未知参数: ' + unknown.join(', ') + '（--help 查看用法）'); process.exit(1); }
 const CHECK = args.includes('--check');
-const want = (flag) => args.includes(`--${flag}`);
+const want = (flag: string) => args.includes(`--${flag}`);
 const ONLY = args.some((a) => a.startsWith('--') && ['--adr', '--releases', '--knowledge', '--guide'].includes(a));
 const RUN_ADR = !ONLY || want('adr');
 const RUN_RELEASES = !ONLY || want('releases');
@@ -51,11 +51,11 @@ const RUN_GUIDE = !ONLY || want('guide');
 
 // ── 共享工具 ────────────────────────────────────────────
 
-const escCell = (x) => x.replace(/\|/g, '\\|');
-const pad = (n) => String(n).padStart(3, '0');
+const escCell = (x: string) => x.replace(/\|/g, '\\|');
+const pad = (n: number) => String(n).padStart(3, '0');
 
-function replaceGenRegion(text, name, content) {
-  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function replaceGenRegion(text: string, name: string, content: string) {
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const open = `<!-- GEN: ${name} -->`;
   const close = `<!-- /GEN: ${name} -->`;
   const re = new RegExp(esc(open) + '[\\s\\S]*?' + esc(close));
@@ -64,7 +64,7 @@ function replaceGenRegion(text, name, content) {
 }
 
 /** 写入或校验单个文件的一个 GEN 区。返回 {ok, changed}。 */
-function applyRegion(file, name, content) {
+function applyRegion(file: string, name: string, content: string) {
   if (!fs.existsSync(file)) {
     console.error(`[FAIL] ${path.relative(ROOT, file)} 不存在`);
     return { ok: false, changed: false };
@@ -85,7 +85,7 @@ function applyRegion(file, name, content) {
 }
 
 /** 整文件重写（非 GEN 区，如 adr/index.md）：一致则 OK；--check 下不一致则 FAIL。返回 {ok, changed}。 */
-function applyWholeFile(file, content, label) {
+function applyWholeFile(file: string, content: string, label: string) {
   const current = fs.existsSync(file) ? readText(file) : null; // 归一化比较，CRLF 下幂等不失效
   if (current === content) return { ok: true, changed: false };
   if (CHECK) {
@@ -125,7 +125,7 @@ function parseAdrs() {
   return list.sort((a, b) => b.num - a.num); // 新→旧（与 BABY 版对齐，最新决策在最前）
 }
 
-function mapStatus(adr) {
+function mapStatus(adr: any) {
   const key = classifyStatus(adr.statusRaw);
   const label = STATE_LABEL[key] ?? key;
   const supersededBy = adr.supersededBy;
@@ -135,7 +135,7 @@ function mapStatus(adr) {
 
 // ── adr 分区：登记表 + 状态统计 ────────────────────────
 
-function buildAdrRegistry(list) {
+function buildAdrRegistry(list: any[]) {
   let out = '| 编号 | 标题 | 状态 | 日期 |\n';
   out += '|------|------|------|------|\n';
   for (const a of list) {
@@ -162,7 +162,7 @@ const ADR_USAGE_RULES = [
   '6. **新 ADR 落地后**：本页自动重写（改文件首部即可），无需手动同步；历史 `PROJECT_STATUS.md` 已冻结于 `docs/archive/`，不再维护。',
 ];
 
-function groupAdrs(list) {
+function groupAdrs(list: any[]) {
   const groups: Record<string, any[]> = {};
   for (const g of DISPLAY_GROUPS) groups[g.key] = [];
   for (const a of list) {
@@ -173,7 +173,7 @@ function groupAdrs(list) {
   return groups;
 }
 
-function buildAdrIndex(list) {
+function buildAdrIndex(list: any[]) {
   const groups = groupAdrs(list);
   const total = list.length;
 
@@ -229,7 +229,7 @@ function buildAdrIndex(list) {
 }
 
 /** 登记表行内的 ADR 文件名 → 相对链接。 */
-function hrefTo(file) {
+function hrefTo(file: string) {
   return `./${file}`;
 }
 
@@ -248,7 +248,7 @@ function parseGuidePages() {
     if (!f.endsWith('.md') || GUIDE_SKIP.has(f)) continue;
     const text = fs.readFileSync(path.join(GUIDE_DIR, f), 'utf8');
     const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-    const get = (key) => {
+    const get = (key: string) => {
       if (!fm) return '';
       const m = fm[1].match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
       // 剥 YAML 外层引号（frontmatter 标题常带 "..."），避免索引表显示引号残留
@@ -298,7 +298,7 @@ function parseVersions() {
     if (!m) continue; // 排除 vX.Y.Z-compare.md 等
     vers.push({ major: +m[1], minor: +m[2], patch: +m[3], file: f, label: `v${m[1]}.${m[2]}.${m[3]}` });
   }
-  const cmp = (a, b) => a.major - b.major || a.minor - b.minor || a.patch - b.patch;
+  const cmp = (a: any, b: any) => a.major - b.major || a.minor - b.minor || a.patch - b.patch;
   vers.sort(cmp);
   return vers;
 }

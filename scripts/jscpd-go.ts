@@ -49,11 +49,11 @@ baseline: ${path.relative(ROOT, BASELINE)}`);
   process.exit(0);
 }
 
-function runJscpd(tmpDir) {
+function runJscpd(tmpDir: string) {
   const r = spawnSync(
     'node',
     [
-      JSCPD,
+      JSCPD!,
       '--pattern', PATTERN,
       '--format', FORMAT,
       '--no-gitignore', // 全量 Go 债务,不因 .gitignore 漏扫
@@ -79,8 +79,8 @@ function runJscpd(tmpDir) {
 }
 
 // v5: 顶层 duplicates[];每元素 firstFile.name / secondFile.name(Windows 用 \ 分隔)
-function pairsFrom(report) {
-  const set = new Set();
+function pairsFrom(report: any) {
+  const set = new Set<string>();
   for (const d of report.duplicates || []) {
     const a = d.firstFile.name.split('\\').join('/');
     const b = d.secondFile.name.split('\\').join('/');
@@ -93,7 +93,7 @@ function pairsFrom(report) {
 
 // R24 review P3：基线由旧 pairsFrom（未排序）生成——加载时套用同款归一化，
 // 否则首个 A#B/B#A 翻转对会被误判为「新增重复对」+ fixed 矛盾计数。
-function normPair(p) {
+function normPair(p: string) {
   const [a, b] = p.split('#');
   return [a, b].sort().join('#');
 }
@@ -106,7 +106,7 @@ function loadBase() {
   }
   return base;
 }
-function warnStale(base) {
+function warnStale(base: any) {
   const w = checkStale(base.generated, 'jscpd-go');
   if (w) console.warn(w);
 }
@@ -175,7 +175,7 @@ function main() {
     warnStale(base);
     const baseSet = new Set(base.clones || []);
     const added = current.filter((p) => !baseSet.has(p));
-    const fixed = (base.clones || []).filter((p) => !current.includes(p));
+    const fixed = (base.clones || []).filter((p: string) => !current.includes(p));
     const summary = {
       ok: added.length === 0,
       added: added.length,

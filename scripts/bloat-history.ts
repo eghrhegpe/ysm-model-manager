@@ -30,7 +30,7 @@ import { ROOT } from './_lib/scan-files.ts';
 import { run } from './_lib/proc.ts';
 import { parseArgs } from './_lib/parse-args.ts';
 
-function sigAny(p, text) {
+function sigAny(p: string, text: string | null) {
   if (!text) return { lines: null, exports: 0, tops: 0 };
   return {
     lines: countLines(text),
@@ -40,7 +40,7 @@ function sigAny(p, text) {
 }
 
 // ── 数据收集 ──
-function collect(path, limit) {
+function collect(path: string, limit: number) {
   const commits = logPathDetail(path, { limit, follow: true });
   if (!commits.length) return null;
   const records: any[] = [];
@@ -64,7 +64,7 @@ function collect(path, limit) {
 }
 
 // ── 输出 ──
-function human(report, firstN) {
+function human(report: any, firstN: number | null) {
   const L: string[] = [];
   const records = firstN ? report.records.slice(0, firstN) : report.records;
   L.push('\u2550'.repeat(66));
@@ -128,7 +128,7 @@ function human(report, firstN) {
   return L.join('\n');
 }
 
-function toJ(report, firstN) {
+function toJ(report: any, firstN: number | null) {
   const records = firstN ? report.records.slice(0, firstN) : report.records;
   const out = {
     kind: 'bloat-history',

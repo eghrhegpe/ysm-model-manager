@@ -32,7 +32,7 @@ const FRONTEND_JS_DIR = path.join(ROOT, 'frontend', 'src');
 /** 递归收集前端测试文件相对仓库路径（.test/.spec + .ts/.js）。 */
 function collectTestFiles() {
   const out: string[] = [];
-  const walk = (dir, rel) => {
+  const walk = (dir: string, rel: string) => {
     let entries;
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -51,18 +51,18 @@ function collectTestFiles() {
 }
 
 /** 提取 frontmatter 块。 */
-function fmBlock(text) {
+function fmBlock(text: string) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   return m ? m[1] : '';
 }
 
 /** 测试文件 basename（去 .test/.spec + 扩展名后缀）。 */
-function testBase(rel) {
+function testBase(rel: string) {
   return path.basename(rel).replace(/\.(test|spec)\.(ts|js)$/, '');
 }
 
 /** 卡与测试的匹配判定：测试 basename 含卡名，或卡 source_files basename 含测试 basename 前缀。 */
-function matchTests(cardName, sourceBases, testFiles) {
+function matchTests(cardName: string, sourceBases: string[], testFiles: string[]) {
   const hit: string[] = [];
   for (const tf of testFiles) {
     const tb = testBase(tf);
@@ -80,7 +80,7 @@ function matchTests(cardName, sourceBases, testFiles) {
 }
 
 /** 把 tests 列表写入 frontmatter：移除旧 tests 块（无论空/非空）→ 与已有条目合并去重 → 在 source_files 后插入。 */
-function writeTests(text, tests) {
+function writeTests(text: string, tests: string[]) {
   const fm = fmBlock(text);
   if (!fm) return text;
   // 解析已有 tests 块内的条目（仅 tests: 字段，排除 source_files 等其它列表）

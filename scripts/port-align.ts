@@ -82,7 +82,7 @@ async function loadTsPort() {
 // ============================================================
 
 // ZYX intrinsic = Rz × Ry × Rx（对齐 bedrock.js / Three.js 'ZYX' 分支，逐元素核对）
-function eulerToMatrixZYX(rxDeg, ryDeg, rzDeg) {
+function eulerToMatrixZYX(rxDeg: number, ryDeg: number, rzDeg: number) {
   const rx = (rxDeg * Math.PI) / 180;
   const ry = (ryDeg * Math.PI) / 180;
   const rz = (rzDeg * Math.PI) / 180;
@@ -97,7 +97,7 @@ function eulerToMatrixZYX(rxDeg, ryDeg, rzDeg) {
 }
 
 // 3x3 旋转矩阵 → 四元数 [qx,qy,qz,qw]（标准 THREE.Matrix4 口径，row-major 输入）
-function matrixToQuat(m) {
+function matrixToQuat(m: number[]) {
   const [m00, m01, m02, m10, m11, m12, m20, m21, m22] = m;
   const trace = m00 + m11 + m22;
   let qx, qy, qz, qw;
@@ -131,11 +131,11 @@ function matrixToQuat(m) {
 
 // 零厚度 clamp（对齐 cube-mesh.ts THICKNESS_EPSILON = CUBE_EPS = 0.001）
 const EPS = 0.001;
-const clampThick = (v) => (v < EPS ? EPS : v);
+const clampThick = (v: number) => (v < EPS ? EPS : v);
 
 // 给定归一化 spec，产出权威预期：8 角几何(相对 cube pivot) + cp + localPosition
 // 完全按 bedrock.js parseCube 口径复刻，不引用任何咱们的 TS 代码。
-function oracleCube(s, bonePivot) {
+function oracleCube(s: any, bonePivot: number[]) {
   // parseCube: L656-657 rotation X/Y 翻号（Z 不变）→ 喂给 eulerToQuaternion 的正是这串
   const bbRot = [-s.rotation[0], -s.rotation[1], s.rotation[2]];
 
@@ -192,16 +192,16 @@ function oracleCube(s, bonePivot) {
 }
 
 // 纯函数 eulerToQuaternion 的权威预期（直接喂 (rx,ry,rz)，不翻号）
-function oracleEuler(rx, ry, rz) {
+function oracleEuler(rx: number, ry: number, rz: number) {
   return matrixToQuat(eulerToMatrixZYX(rx, ry, rz));
 }
 
 // ============================================================
 // 3. 比对工具
 // ============================================================
-const r4 = (v) => Math.round(v * 1e4) / 1e4;
+const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
 
-function cornersFromPositions(positions) {
+function cornersFromPositions(positions: number[]) {
   const map = new Map();
   for (let i = 0; i < positions.length; i += 3) {
     const k = `${r4(positions[i])},${r4(positions[i + 1])},${r4(positions[i + 2])}`;
@@ -210,7 +210,7 @@ function cornersFromPositions(positions) {
   return [...map.values()];
 }
 
-function matchCorners(actual, expected) {
+function matchCorners(actual: number[][], expected: number[][]) {
   if (actual.length !== expected.length) return `角数不符(实际${actual.length}/期望${expected.length})`;
   // 角点当点集比对：每个期望角必须能在实际角集中找到 ≤TOL 的最近邻。
   // 用包含式（非 1:1 双射）以兼容零厚度薄板的 ±epsilon 镜像退化维度
@@ -231,14 +231,14 @@ function matchCorners(actual, expected) {
 }
 
 // 四元数带符号归一（q 与 -q 等价）→ 比绝对值
-function matchQuat(actual, expected) {
-  const norm = (q) => (q[3] < 0 ? q.map((v) => -v) : q);
+function matchQuat(actual: number[], expected: number[]) {
+  const norm = (q: number[]) => (q[3] < 0 ? q.map((v) => -v) : q);
   const a = norm(actual), e = norm(expected);
   const d = Math.max(...a.map((v, i) => Math.abs(v - e[i])));
   return d <= TOL ? null : `四元数 ${a.map(r4)} vs ${e.map(r4)} (Δ=${r4(d)})`;
 }
 
-function matchVec3(actual, expected, name) {
+function matchVec3(actual: number[], expected: number[], name: string) {
   const d = Math.max(...actual.map((v, i) => Math.abs(v - expected[i])));
   return d <= TOL ? null : `${name} ${actual.map(r4)} vs ${expected.map(r4)} (Δ=${r4(d)})`;
 }
@@ -272,7 +272,7 @@ const SIZES = [
 const BONE_PIVOT = [10, -5, 3];
 const TEX = 64;
 
-function makeSpec(pivotSet, inflate, origin, rotation, size) {
+function makeSpec(pivotSet: boolean, inflate: number, origin: number[], rotation: number[], size: number[]) {
   return {
     origin: [...origin],
     size: [...size],
@@ -365,8 +365,8 @@ for (const rotation of ROTATIONS) {
 // 6. 覆盖矩阵 + 分歧报告
 // ============================================================
 console.log('\n── 覆盖矩阵（多样性可见度）──');
-const axisCount = (r) => r.filter((v) => Math.abs(v) > 1e-6).length;
-const axisBuckets = { '0轴': 0, '1轴': 0, '2轴': 0, '3轴': 0 };
+const axisCount = (r: number[]) => r.filter((v) => Math.abs(v) > 1e-6).length;
+const axisBuckets: Record<string, number> = { '0轴': 0, '1轴': 0, '2轴': 0, '3轴': 0 };
 for (const r of ROTATIONS) axisBuckets[`${axisCount(r)}轴`]++;
 console.log(`  pivotSet:        ${PIVOT_SET.length} 取值 (${PIVOT_SET.join('/')})`);
 console.log(`  inflate:         ${INFLATE.length} 取值 (${INFLATE.join('/')})`);

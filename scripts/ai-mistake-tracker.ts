@@ -53,7 +53,7 @@ const RULE_VIOLATIONS = {
 const HOTSPOT_PREFIXES = ["frontend/src/", "internal/", "go/", "scripts/"];
 
 
-function _run(cmd) {
+function _run(cmd: string[]) {
   const r = run("git", cmd, {
     cwd: ROOT,
     timeout: 30000,
@@ -80,26 +80,26 @@ function gitLog(limit = 200) {
   return commits;
 }
 
-function gitFilesChanged(commitHash) {
+function gitFilesChanged(commitHash: string) {
   const output = _run(["diff-tree", "--no-commit-id", "-r", "--name-only", commitHash]);
   return output.split("\n").map((f) => f.trim()).filter(Boolean);
 }
 
 
-function categorizeCommit(message) {
+function categorizeCommit(message: string) {
   for (const [cat, pattern] of CATEGORIES) {
     if (pattern.test(message)) return cat;
   }
   return "other";
 }
 
-function isFixCommit(message) {
+function isFixCommit(message: string) {
   // P2（code_review）：严格限定 `<type>: <desc>` 的 fix: / fix(scope): 前缀——
   // 过宽的 /^\s*fix/i 会把 fixup! / fixed: / fixme: / fixture 都算 fix，污染占比与修复链统计
   return /^\s*fix(?:\([^)]*\))?\s*:/i.test(message);
 }
 
-function findFixChains(commits, minChain = 3) {
+function findFixChains(commits: Array<{ hash: string; message: string; date: string; files: string[] }>, minChain = 3) {
   const chains: any[] = [];
   let current: any[] = [];
 
@@ -132,7 +132,7 @@ function findFixChains(commits, minChain = 3) {
   return chains.sort((a, b) => b.length - a.length);
 }
 
-function fileHotspots(commits, topN = 15) {
+function fileHotspots(commits: Array<{ hash: string; message: string; date: string; files: string[] }>, topN = 15) {
   const counter = new Map();
   for (const c of commits) {
     if (!isFixCommit(c.message)) continue;
@@ -145,7 +145,7 @@ function fileHotspots(commits, topN = 15) {
   return [...counter.entries()].sort((a, b) => b[1] - a[1]).slice(0, topN);
 }
 
-function categoryStats(commits) {
+function categoryStats(commits: Array<{ hash: string; message: string; date: string; files: string[] }>) {
   const stats = new Map();
   for (const c of commits) {
     if (!isFixCommit(c.message)) continue;
@@ -168,7 +168,7 @@ function ruleViolationScan(limit = 50) {
 }
 
 
-function formatReport(commits, chains, hotspots, catStats, violations) {
+function formatReport(commits: Array<{ hash: string; message: string; date: string; files: string[] }>, chains: any[], hotspots: any[], catStats: any[], violations: any[]) {
   const lines: string[] = [];
   lines.push("=".repeat(60));
   lines.push("  AI Mistake Tracker Report");

@@ -24,7 +24,7 @@ import { getRoot } from './scan-files.ts';
  * @param {string[]} [globs] glob 过滤，如 ['*.js', '*.ts']
  * @returns {string[]} "文件:行号:内容" 行
  */
-export function rg(pattern, paths, globs = null) {
+export function rg(pattern: string, paths: string | string[], globs: string[] | null = null) {
   // P1（code_review）：路径契约校验——传绝对路径给 rg 会让输出带绝对路径前缀，
   // 消费者 parseRgLine 按 `:` 切分拿错路径（Windows 盘符冒号尤其）；undefined/空数组
   // 会抛 TypeError 或误扫整个 ROOT。统一在入口拒绝，把编程错误与扫描失败分开。
@@ -67,7 +67,7 @@ export function rg(pattern, paths, globs = null) {
  * @param {string[]} [globs] glob 过滤
  * @returns {string[]}
  */
-export function rgSafe(pattern, paths, globs = null) {
+export function rgSafe(pattern: string, paths: string | string[], globs: string[] | null = null) {
   try {
     return rg(pattern, paths, globs);
   } catch (e) {

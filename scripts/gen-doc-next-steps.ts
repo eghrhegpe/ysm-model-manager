@@ -32,7 +32,7 @@ const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 const OUT_PATH = path.join(ROOT, 'docs', '.doc-next-steps.md');
 
 // ── 子进程跑检查器，吞掉非零退出（检查器遇错会 exit(1)），只取 stdout ──
-function runChecker(script) {
+function runChecker(script: string) {
   const p = path.join(SCRIPTS_DIR, script);
   if (!fs.existsSync(p)) return { ok: false, raw: `检查器缺失: ${script}` };
   const r = spawnSync(process.execPath, [p, '--json'], {
@@ -51,7 +51,7 @@ function runChecker(script) {
 
 // ── 行号解析（带简单缓存，避免重复读同一文件）──
 const _fileCache = new Map();
-function readFileCached(rel) {
+function readFileCached(rel: string) {
   const fp = path.join(ROOT, toPosix(rel));
   if (!_fileCache.has(fp)) {
     _fileCache.set(fp, fs.existsSync(fp) ? fs.readFileSync(fp, 'utf8') : null);
@@ -59,7 +59,7 @@ function readFileCached(rel) {
   return _fileCache.get(fp);
 }
 /** 由字符偏移 position 反推 1-based 行号 + 该行原文（用于断链精确定位）。 */
-function locFromPos(rel, position) {
+function locFromPos(rel: string, position: number) {
   const text = readFileCached(rel);
   if (text == null) return { line: '?', content: '' };
   const lineNo = text.slice(0, position).split('\n').length;
@@ -67,7 +67,7 @@ function locFromPos(rel, position) {
   return { line: lineNo, content: content.trim() };
 }
 /** 在文件中找首个包含 sub 的行号（用于知识卡 source_files 条目定位）。 */
-function lineOfSubstring(rel, sub) {
+function lineOfSubstring(rel: string, sub: string) {
   const text = readFileCached(rel);
   if (text == null) return '?';
   const lines = text.split('\n');
@@ -79,7 +79,7 @@ function lineOfSubstring(rel, sub) {
 const disp = toPosix;
 
 // ── 分类构建 ──
-function section(title, fixHint, items) {
+function section(title: string, fixHint: string, items: string[]) {
   if (!items.length) return [];
   const L = [`## ${title}`, '', `> 如何修：${fixHint}`, ''];
   L.push(...items);
@@ -101,7 +101,7 @@ function main() {
   const adrGaps = ac.ok ? ac.data.gaps || [] : [];
 
   // ── 知识卡失效条目（source_files 失效带精确行号）──
-  const kdItems = kdErr.map((m) => {
+  const kdItems = kdErr.map((m: any) => {
     const mm = m.match(/知识卡\s+(\S+\.md)\s+的 source_files 引用不存在:\s*(.+)$/);
     if (mm) {
       const cf = mm[1];
@@ -115,7 +115,7 @@ function main() {
   });
 
   // ── 断链条目（带精确行号 + 原文，AI 直跳即改）──
-  const linkItems = broken.map((b) => {
+  const linkItems = broken.map((b: any) => {
     const rel = disp(b.file);
     const { line, content } = locFromPos(b.file, b.position);
     const anchor = b.position != null ? `#L${line}` : '';
@@ -123,7 +123,7 @@ function main() {
   });
 
   // ── ADR 条目 ──
-  const adrItems = adrErr.map((m) => {
+  const adrItems = adrErr.map((m: any) => {
     const mm = m.match(/(ADR-\d{3}[^\s:]*|\S+\.md)/);
     const where = mm ? `\`${mm[1]}\`` : '（见消息）';
     return `- ${where} → ${m}`;
@@ -158,13 +158,13 @@ function main() {
   if (adrGaps.length) {
     L.push('## 🟡 ADR 编号空缺（INFO，可占用）');
     L.push('');
-    L.push('- ' + adrGaps.map((n) => `ADR-${String(n).padStart(3, '0')}`).join('、') + ' 尚未占用，新建 ADR 时优先占用。');
+    L.push('- ' + adrGaps.map((n: any) => `ADR-${String(n).padStart(3, '0')}`).join('、') + ' 尚未占用，新建 ADR 时优先占用。');
     L.push('');
   }
 
   L.push(...section('🟡 知识卡待补（WARN）',
     '为未覆盖的源码文件补建知识卡（new-knowledge-card.ts）并登记 source_files；其余按消息统一 H1/改指针',
-    kdWarn.map((m) => `- ${m}`)));
+    kdWarn.map((m: any) => `- ${m}`)));
 
   // ── AI 下一步建议（最高优先级单条）──
   L.push('## AI 下一步建议');

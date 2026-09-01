@@ -26,7 +26,7 @@ const _RE_ACCEPTED = /已采纳|采纳|Accepted|accepted|✅/;
  * 状态归一化（check-adr-health 兼容入口）。
  * 返回 { key, raw }；key ∈ 'accepted'|'partial'|'deprecated'|'superseded'|'unknown'。
  */
-export function normalizeState(raw) {
+export function normalizeState(raw: string): { key: string; raw: string } {
   if (!raw) return { key: 'unknown', raw: '(未标注状态)' };
   const s = raw.trim();
   // ❌ 行首优先：`❌ 已取代（xxx 决策废弃 xxx）` 中「决策废弃」是描述性正文，
@@ -41,7 +41,7 @@ export function normalizeState(raw) {
   return { key: 'unknown', raw: s };
 }
 
-export const STATE_LABEL = {
+export const STATE_LABEL: Record<string, string> = {
   accepted: '✅ 已采纳',
   partial: '🔄 部分采纳',
   deprecated: '🧊 已废弃',
@@ -68,7 +68,7 @@ export const DISPLAY_GROUPS = [
  * 行首 emoji 优先：`❌ 已取代` → replaced，`🧊 已废弃` → deprecated，
  * 不受正文中「废弃/过时」等描述词干扰（ADR-050 回归用例）。
  */
-export function classifyStatus(raw) {
+export function classifyStatus(raw: string) {
   const s = raw.trim();
   // 行首 emoji 优先
   if (/^❌/.test(s)) return 'replaced';

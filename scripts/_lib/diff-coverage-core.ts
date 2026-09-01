@@ -17,7 +17,7 @@ import { ROOT } from './scan-files.ts';
 import { run } from './proc.ts';
 
 /** 跑 git（失败返回 null，区别于“成功但无输出”的 ''）：调用方 fail-closed，拒绝空跑放行。 */
-export function git(args) {
+export function git(args: string[]): string | null {
   const r = run('git', args, { cwd: ROOT });
   return r.ok ? r.out.trim() : null;
 }
@@ -27,8 +27,8 @@ export function git(args) {
  * 不做语言过滤——由入口按自身 isSource 裁剪（前端 .ts / Go 非测试 .go）。
  * @returns {string[]|null} git 失败返回 null（调用方 fail-closed）。
  */
-export function getChangedFiles(base, head, uncommitted, staged) {
-  const out = new Set();
+export function getChangedFiles(base: string, head: string, uncommitted: boolean, staged: boolean) {
+  const out = new Set<string>();
   // --staged：仅本次暂存区（prepare-commit-msg 场景 = 本次 commit 的文件），
   // 避免 --base origin/main 在本地领先时把历史未推送改动也纳入噪音。
   if (staged) {
@@ -61,7 +61,7 @@ export function getChangedFiles(base, head, uncommitted, staged) {
 }
 
 /** 解析 `--unified=0` diff 输出，提取新增行号。 */
-export function addLinesFromDiff(out, diff) {
+export function addLinesFromDiff(out: Set<number>, diff: string | null): void {
   if (!diff) return;
   const lines = diff.split('\n');
   let currentLine = 0;
@@ -84,7 +84,7 @@ export function addLinesFromDiff(out, diff) {
 }
 
 /** 解析 `git diff --name-status` 的 R 行（R<sim>\t<from>\t<to>）→ Map<to, {from, sim}>。 */
-export function parseRenameStatus(out) {
+export function parseRenameStatus(out: string) {
   const map = new Map();
   out.split('\n').forEach((l) => {
     const m = l.match(/^R(\d+)\t(.+?)\t(.+)$/);
@@ -93,23 +93,23 @@ export function parseRenameStatus(out) {
   return map;
 }
 
-export function detectRenames(base, head, staged) {
+export function detectRenames(base: string, head: string, staged: boolean) {
   // --staged：用暂存区 name-status 检测 rename（prepare-commit-msg 场景）
   if (staged) {
-    return parseRenameStatus(git(['diff', '--cached', '--name-status', '--find-renames=30']));
+    return parseRenameStatus(git(['diff', '--cached', '--name-status', '--find-renames=30'])!);
   }
   // 三圆点：PR 相对 main 合并基
-  const map = parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', `${base}...${head}`]));
+  const map = parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', `${base}...${head}`])!);
   // 兜底：直推 main 时三圆点可能为空，退化为两点
   if (map.size === 0) {
-    return parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', base, head]));
+    return parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', base, head])!);
   }
   return map;
 }
 
 /** 获取变更文件的具体行号集合（新文件行号）。 */
-export function getChangedLines(file, base, head, uncommitted, renameOld, staged) {
-  const out = new Set();
+export function getChangedLines(file: string, base: string, head: string, uncommitted: boolean, renameOld: string | undefined, staged: boolean) {
+  const out = new Set<number>();
   // --staged：仅暂存区变更行（本次 commit 的文件）
   if (staged) {
     // [code_review P3] staged rename：pathspec 限定单路径会把旧路径的删除项
@@ -151,7 +151,7 @@ export function getChangedLines(file, base, head, uncommitted, renameOld, staged
  *   - noun  {string}  文件称谓（默认「文件」；Go 版传「Go 文件」）
  *   - hint  {string}  数据来源提示行（默认前端 vitest 文案；Go 版传 go test -coverprofile 文案）
  */
-export function buildSuggestBlock(failures, threshold, { title = '## 覆盖率建议（非阻断）', noun = '文件', hint = '本建议基于最近一次 `vitest --coverage` 产物；新逻辑未跑测试时数据可能滞后。' } = {}) {
+export function buildSuggestBlock(failures: { file: string; pct: number }[], threshold: number, { title = '## 覆盖率建议（非阻断）', noun = '文件', hint = '本建议基于最近一次 `vitest --coverage` 产物；新逻辑未跑测试时数据可能滞后。' }: { title?: string; noun?: string; hint?: string } = {}) {
   const lines = failures.map((f) => `- \`${f.file}\` — ${f.pct.toFixed(1)}%`);
   return [
     title,

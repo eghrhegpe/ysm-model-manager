@@ -119,7 +119,7 @@ export async function runLauncherDetect(): Promise<void> {
     const App = await getApp();
     const instances = await App.DetectLauncherInstances(launcherDir);
     if (!instances?.length) {
-      bus.emit("toast:show", { msg: t("launcher.detect.noInstances"), duration: 3500, type: "warn" });
+      bus.emit("toast:show", { msg: t("launcher.detect.noInstances"), duration: TOAST_MS.normal, type: "warn" });
       return;
     }
     const selection = await showLauncherInstancePicker(instances);
@@ -139,7 +139,7 @@ export async function runLauncherDetect(): Promise<void> {
     bus.emit("stats:refresh"); // sidebar 防抖重载实例列表
     bus.emit("toast:show", {
       msg: t("launcher.detect.success", { launcher: selection.instance.launcher, version: selection.instance.gameVersion }),
-      duration: 3000,
+      duration: TOAST_MS.normal,
       type: "success",
     });
   } catch (error) {

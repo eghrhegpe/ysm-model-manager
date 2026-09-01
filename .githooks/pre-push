@@ -1,6 +1,6 @@
 #!/bin/sh
 # YSM 本地质量门禁（pre-push hook 薄壳）
-# 职责：定位仓库根与 node → 透传 git 参数与 stdin → 调用 scripts/pre-push-gate.mjs → 透传退出码。
+# 职责：定位仓库根与 node → 透传 git 参数与 stdin → 调用 scripts/pre-push-gate.ts → 透传退出码。
 # 安装：git config core.hooksPath .githooks
 # 逃生阀：YSM_SKIP_GATE=1 git push   或   git push --no-verify
 # 调试：  YSM_GATE_DEBUG=1 git push
@@ -24,4 +24,4 @@ if [ "${YSM_GATE_DEBUG:-0}" = "1" ]; then
   echo "[pre-push] remote=$1 url=$2" >&2
 fi
 
-exec "$NODE" "$ROOT/scripts/pre-push-gate.mjs" "$@"
+exec "$NODE" "$ROOT/scripts/pre-push-gate.ts" "$@"

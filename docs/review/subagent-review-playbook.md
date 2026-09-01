@@ -46,9 +46,9 @@ node scripts/check-doc-drift.mjs --json  # 文档三一致
 目的：用项目真实反模式给子代理当锚，避免自由发散。
 
 ```bash
-node scripts/ai-mistake-tracker.mjs --limit 12 --json  # 高频犯错区 / 文件热力图
-node scripts/check-redlines.mjs --audit               # 12 红线 + B 类盘问锚点
-node scripts/funcmap.mjs -o funcmap.md                # 符号级 file:line 导航
+node scripts/ai-mistake-tracker.ts --limit 12 --json  # 高频犯错区 / 文件热力图
+node scripts/check-redlines.ts --audit               # 12 红线 + B 类盘问锚点
+rg --line-number '^(export )?(async )?(function|const|class) ' frontend/src  # 符号级 file:line 导航（funcmap 已拆除，rg 取代）
 ```
 
 把 `ai-mistake-tracker` 的「反模式分类」与「文件热点」作为子代理 prompt 的优先关注项。

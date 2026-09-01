@@ -445,5 +445,5 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   main();
 }
 
-// 导出纯函数供测试 import（见 scripts/i18n-key-naming.test.mjs）
+// 导出纯函数供测试 import（见 tests/test_i18n_key_naming.ts）
 export { validateKey, classifySecondSegment, guessRole, extractKeys, loadAllKeys };

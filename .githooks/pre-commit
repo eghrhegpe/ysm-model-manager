@@ -183,7 +183,7 @@ fi
 
 # ── gofmt 自动修复（staged go 文件；失败仅提示不阻断） ──
 # 修复必须发生在提交时：pre-push 内 commit --amend 是假成功（push 推的是钩子前快照 oid，
-# 钩子里 amend 只改本地 HEAD → 分叉，见 pre-push-gate.mjs 已知坑 2026-08-12）。
+# 钩子里 amend 只改本地 HEAD → 分叉，见 pre-push-gate.ts 已知坑 2026-08-12）。
 # pre-commit 修复 + stage 后，pre-push 只读校验兜底（检出未格式化即阻断，防 --no-verify 绕过）。
 if command -v gofmt >/dev/null 2>&1; then
   STAGED_GO=$(git diff --cached --name-only --diff-filter=ACM -- '*.go' 2>/dev/null || true)

@@ -8,9 +8,9 @@
 
 ### 查证优先——不确定就查，不靠记忆推断
 - **业务知识**：`docs/knowledge/routes-quick.md`（AI 第一站）→ `docs/knowledge/routes.md`（兜底）→ `grep -r <关键词> docs/knowledge/` → 知识卡 `source_files` 源码 / CLI 实证。
-- **工具/钩子/脚本行为**：直接 `read .githooks/pre-commit`、`read scripts/xx.mjs`——行为以源码为准，不凭记忆。
-- **文件路径不确认**：`node scripts/gen-project-map.mjs --json` 拿真实路径。
-- 查到的经验**写回知识卡**，让下次直接命中：`node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]`。
+- **工具/钩子/脚本行为**：直接 `read .githooks/pre-commit`、`read scripts/xx.ts`——行为以源码为准，不凭记忆。
+- **文件路径不确认**：`node scripts/gen-project-map.ts --json` 拿真实路径。
+- 查到的经验**写回知识卡**，让下次直接命中：`node scripts/new-knowledge-card.ts <kind> <name> <category> <source_file> [--leaf]`。
 
 ### 归属原则——先分清「生成物」还是「手写文件」
 - **生成物**（`docs/` 下 index / project-map / cli-commands、i18n locale JSON、`completions/` 等，由 `.githooks/pre-commit` 的 `GEN_CMDS` 产出）= 全体输入的纯函数。**不承担提交归属、不按归属裁剪**：改卡后由 pre-commit 自动 gen+stage，交就交当前全量态。
@@ -37,7 +37,7 @@
 git commit -m "<type>: <简短描述>" -- <自己的文件...>
 
 # 一键验证+提交（按 staged 文件自动裁剪门禁；--fast 跳 vitest / --docs 仅文档 / --check 只验不交）
-node scripts/commit-with-check.mjs -m "<msg>"
+node scripts/commit-with-check.ts -m "<msg>"
 git push --verbose 2>&1 | Select-Object -Last 50   # 仅在完成大型任务后统一推送，推送后使用gh 盯GitHub ci运行情况
 
 # 怕文件未保存？
@@ -51,7 +51,7 @@ git checkout -- <file>              # 精确恢复单文件（进入提交阶段
 git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区（进入提交阶段后请勿使用）
 ```
 
-- 验证按域裁剪：Go → `go build ./go/...`；前端 → build + typecheck；文档 → `node scripts/doctor.mjs --docs`（秒级）；发版前 → `node scripts/doctor.mjs`（全量）。
+- 验证按域裁剪：Go → `go build ./go/...`；前端 → build + typecheck；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
 - 临时回退用 `git commit` + `git reset --soft HEAD~1` 记录问题文件；不碰 `git stash/push/pop`（`list`/`show` 只读可用）。
 
 ## 钩子自动化（自动执行，你只需手动三件事）
@@ -70,7 +70,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | Go Binding 函数名 | grep `internal/app/` 确认函数名 |
 | Wails 绑定 | `npm run generate:bindings -ts`（不手写） |
 | Bug 历史 | `bug-search <关键词>` |
-| CLI 命令参数 | `docs/cli-commands.md`（`gen-cli-doc.mjs` 自动生成，单一事实源 = 源码注册） |
+| CLI 命令参数 | `docs/cli-commands.md`（`gen-cli-doc.ts` 自动生成，单一事实源 = 源码注册） |
 | 缓存问题 | `texture_cache` 包 + `cache-status`/`cache-verify`；清理走 `cache-clear` |
 | 性能诊断 | `file-bench` / `analyze-mmd` / `scan-dir` |
 | 搜索模型/数值范围 | 关键词 + 标签 + 数值三路交集；见 `go-cli-search.md` / `toolbar-search.md` / `dialog-adv-filter.md` |
@@ -92,7 +92,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 
 ## ADR 与审核
 
-- 新 ADR 走 `node scripts/new-adr.mjs "标题" [...]`（不手写编号）；状态：`✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代`；触及既有 ADR 时在对方首部标「被 [ADR-NNN] 取代」。
+- 新 ADR 走 `node scripts/new-adr.ts "标题" [...]`（不手写编号）；状态：`✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代`；触及既有 ADR 时在对方首部标「被 [ADR-NNN] 取代」。
 - **ADR 只记决策方向和理由，不记实施进度**。实施进度（哪步做了哪步没做）写进知识卡——知识卡有 `check-knowledge-drift` 自动检测，ADR 没有。ADR 状态字段只记生命周期（已采纳/部分采纳/已废弃/已取代），不记"§2.3 仍排期"这类待办状态——这类状态和实际严重脱节（ADR-042 案例：记录"四项未建模"，实际三项已落地、一项无需实现）。
 - 审核流水线 / 反模式 / 致命陷阱 / 治理红线 / 防御范式 → `docs/audit-framework.md`（含 ADR-109 三份 Checklist：代码审查 / 跨平台 / 前端 3D）。
 - **铁律**：改完代码同步知识卡（`check-knowledge-drift` 由钩子自动兜底）。
@@ -115,15 +115,15 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | 前端 | 原生 HTML/CSS/TS（Web Components + Shadow DOM） |
 | 3D | Three.js + YSMParser WASM |
 | 数据 | resource_types.json 单一事实源 + creators / workshop_sites / workshop-github.json |
-| 脚本/测试 | Node（.mjs 零依赖）；Go 单测 + Node 契约测试（tests/*.mjs） |
+| 脚本/测试 | Node（.ts 零依赖）；Go 单测 + Node 契约测试（tests/*.ts） |
 
 ```bash
 cd frontend && npx vite build                # 前端
 go build ./go/...                            # Go
-for f in tests/*.mjs; do node "$f"; done     # 契约测试
-node scripts/doctor.mjs --docs               # 只改文档时（秒级）
-node scripts/doctor.mjs                      # 发版前全量
-node scripts/android-build.mjs / android-install.mjs   # 安卓打包 / 安装
+for f in tests/*.ts; do node "$f"; done     # 契约测试
+node scripts/doctor.ts --docs               # 只改文档时（秒级）
+node scripts/doctor.ts                      # 发版前全量
+node scripts/android-build.ts / android-install.ts   # 安卓打包 / 安装
 ```
 
 - Go 测试一律带 `-timeout`（死循环/死锁会硬卡；`cli` 包有 `os.Pipe` + `captureOutput` 历史坑）。
@@ -144,7 +144,7 @@ node scripts/android-build.mjs / android-install.mjs   # 安卓打包 / 安装
 ## CLI 模式
 
 脱离 GUI 的命令行操作，源码 `cli.go`；基本格式 `go run . --cli --files-root <仓库根> <命令> [选项...]`。
-**完整命令 / 分类 / 选项见 [`docs/cli-commands.md`](docs/cli-commands.md)**——`gen-cli-doc.mjs` 自动生成，pre-commit 同步 + `--check` 接 doctor 防漂移。新增命令只改源码注册，不在此维护。
+**完整命令 / 分类 / 选项见 [`docs/cli-commands.md`](docs/cli-commands.md)**——`gen-cli-doc.ts` 自动生成，pre-commit 同步 + `--check` 接 doctor 防漂移。新增命令只改源码注册，不在此维护。
 
 ## 工作树同步
 

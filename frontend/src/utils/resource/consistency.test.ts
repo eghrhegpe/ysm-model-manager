@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { ALL_RESOURCE_TYPES, RESOURCE_TYPES } from "./types.ts";
 import { RESOURCE_EXTS, ALL_EXTS } from "./extensions.ts";
-import resourceTypesJson from "../../../../resource_types.json" with { type: "json" };
+import resourceTypesJson from "#root/resource_types.json" with { type: "json" };
 
 const jsonTypes = (
   resourceTypesJson as { resourceTypes: Array<{ id: string; extensions?: string[] }> }

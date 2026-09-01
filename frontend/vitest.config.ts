@@ -1,5 +1,9 @@
 import { defineConfig } from "vitest/config";
 import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
+// ADR-146：复用 vite.config.js 的 resolve.alias（含 `#root` 过渡别名）——
+// vitest 有独立 config 时不自动继承 vite.config，这里显式取 resolve 段，
+// 保持别名单一事实源（tsconfig.paths ↔ vite.config.js 双写校验不受影响）。
+import viteConfig from "./vite.config.js";
 
 // 测试环境分流约定（瓶颈治理，参照 MikuMikuAR ADR-255）：
 // isolate=true 下 happy-dom 是每文件重建（~1.2s/文件），环境累加曾是墙钟大头。
@@ -11,6 +15,7 @@ import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
 // test-setup.ts 的 idb/three/i18n mock 已兼容双模式，setupFiles 在 isolate:true 下每 worker 重执行。
 export default defineConfig({
   plugins: [wasmDataStubs()],
+  resolve: viteConfig.resolve,
   test: {
     include: ["src/**/*.test.{js,ts}"],
     environment: "happy-dom",

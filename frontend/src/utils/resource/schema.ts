@@ -11,7 +11,7 @@
 // 语义边界：本类型只建模「前端消费」的字段子集；完整 schema 事实源是 Go 端
 // go/types/resource.go（+ 根 resource_types.json）。Go 新增未被前端消费的字段
 // 不要求在此补声明；前端一旦消费新字段，再补进这里。
-import resourceTypesJson from "../../../../resource_types.json" with { type: "json" };
+import resourceTypesJson from "#root/resource_types.json" with { type: "json" };
 
 /** 压缩容器条目指纹（zipEntries）：name 为段模式，match 为 exact/prefix/suffix */
 export interface ZipEntryMatch {

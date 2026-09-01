@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { RESOURCE_EXTS, ALL_EXTS, getExts, isSupportedExt, extBelongsTo } from "./extensions.ts";
 // P2 修复：直接 import 根目录 resource_types.json 做双向对账（仿 types.test.ts:9）——
 // 原测试全部硬编码断言，三端一致性只靠退出码恒 0 陷阱的外部脚本守护
-import resourceTypesJson from "../../../../resource_types.json" with { type: "json" };
+import resourceTypesJson from "#root/resource_types.json" with { type: "json" };
 
 describe("RESOURCE_EXTS ↔ resource_types.json 双向对账（P2）", () => {
   const jsonTypes = (resourceTypesJson as { resourceTypes: Array<{ id: string; extensions: string[] }> }).resourceTypes;

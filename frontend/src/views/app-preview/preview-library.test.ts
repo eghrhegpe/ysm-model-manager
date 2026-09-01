@@ -8,7 +8,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { ALL_RESOURCE_TYPES, NO_3D_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { getRegisteredRoutes, scanModelsByType } from "./preview-library.ts";
-import resourceTypesJson from "../../../../resource_types.json";
+import resourceTypesJson from "#root/resource_types.json";
 
 // 阻断 Wails runtime 加载链（scanModelsByType 内部 getApp()）——mock 提供绑定
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));

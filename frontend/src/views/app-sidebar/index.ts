@@ -44,30 +44,13 @@ function checkedSetFor(rtype: string): Set<string> {
 /** 推送等待/兜底超时（陷阱 #3：任何 await 必须有兜底，按钮才不会永久卡死） */
 const SYNC_TIMEOUT_MS = 30_000;
 
-// ---------- 包级类型（供 asb* 函数共享，类型提级） ----------
-interface AsbSyncFlags {
-  getSyncInProgress: () => boolean;
-  setSyncInProgress: (v: boolean) => void;
-}
-interface AsbSidebarContext {
-  getRtype: () => string;
-  getInstances: () => SidebarInstance[];
-  getRoot: () => ShadowRoot;
-  getCardCleanup: () => (() => void) | null;
-  setCardCleanup: (fn: (() => void) | null) => void;
-  getDocClickHandler: () => (() => void) | null;
-  setDocClickHandler: (fn: (() => void) | null) => void;
-}
-
-// ---------- asb* 包级函数：_bindSelectAll ----------
-function asbBindSelectAll(ctx: AsbSidebarContext): void {
-  const root = ctx.getRoot();
+// ---------- bindSelectAll ----------
+function bindSelectAll(root: ShadowRoot, rtype: string, instances: SidebarInstance[]): void {
   const cb = root.getElementById("sb-select-all") as HTMLInputElement | null;
   if (!cb) return;
   cb.addEventListener("change", () => {
     const checked = cb.checked;
-    const set = checkedSetFor(ctx.getRtype());
-    const instances = ctx.getInstances();
+    const set = checkedSetFor(rtype);
     root.querySelectorAll(".chk").forEach((c) => {
       const input = c as HTMLInputElement;
       input.checked = checked;
@@ -80,11 +63,10 @@ function asbBindSelectAll(ctx: AsbSidebarContext): void {
   });
 }
 
-// ---------- asb* 包级函数：asbRestoreCheckboxes ----------
-function asbRestoreCheckboxes(ctx: AsbSidebarContext): void {
-  const set = checkedSetFor(ctx.getRtype());
-  const instances = ctx.getInstances();
-  ctx.getRoot().querySelectorAll(".chk").forEach((c) => {
+// ---------- restoreCheckboxes ----------
+function restoreCheckboxes(root: ShadowRoot, rtype: string, instances: SidebarInstance[]): void {
+  const set = checkedSetFor(rtype);
+  root.querySelectorAll(".chk").forEach((c) => {
     const input = c as HTMLInputElement;
     const idx = parseInt(input.dataset.idx || "", 10);
     if (!isNaN(idx) && instances[idx]) {
@@ -97,31 +79,35 @@ function asbRestoreCheckboxes(ctx: AsbSidebarContext): void {
   });
 }
 
-// ---------- asb* 包级函数：_renderCards ----------
-function asbRenderCards(ctx: AsbSidebarContext): void {
-  const root = ctx.getRoot();
+// ---------- renderCards ----------
+function renderCards(
+  root: ShadowRoot,
+  rtype: string,
+  instances: SidebarInstance[],
+  cardCleanup: (() => void) | null,
+): { cardCleanup: (() => void) | null } {
   const container = root.getElementById("sidebar-instance-list");
-  if (!container) return;
-  const instances = ctx.getInstances();
+  if (!container) return { cardCleanup };
   renderVersionCards(container, instances);
-  if (ctx.getCardCleanup()) {
-    ctx.getCardCleanup()!();
-    ctx.setCardCleanup(null);
+  if (cardCleanup) {
+    cardCleanup();
+    cardCleanup = null;
   }
-  ctx.setCardCleanup(bindCardEvents(root, instances));
-  asbRestoreCheckboxes(ctx);
+  cardCleanup = bindCardEvents(root, instances);
+  restoreCheckboxes(root, rtype, instances);
+  return { cardCleanup };
 }
 
-// ---------- asb* 包级函数：_bindSyncSelected 辅助 ----------
-function asbCloseAllMenus(pushMenu: HTMLElement, pullMenu: HTMLElement): void {
+// ---------- closeAllMenus ----------
+function closeAllMenus(pushMenu: HTMLElement, pullMenu: HTMLElement): void {
   pushMenu.style.display = "none";
   pullMenu.style.display = "none";
 }
 
-function asbGetSelected(ctx: AsbSidebarContext): string[] {
+// ---------- getSelected ----------
+function getSelected(root: ShadowRoot, instances: SidebarInstance[]): string[] {
   const sel: string[] = [];
-  const instances = ctx.getInstances();
-  ctx.getRoot().querySelectorAll(".chk:checked").forEach((c) => {
+  root.querySelectorAll(".chk:checked").forEach((c) => {
     const input = c as HTMLInputElement;
     const idx = parseInt(input.dataset.idx || "", 10);
     if (!isNaN(idx) && instances[idx])
@@ -130,36 +116,39 @@ function asbGetSelected(ctx: AsbSidebarContext): string[] {
   return sel;
 }
 
-function asbResolveTypes(t: string): string[] {
-  return t === "all" ? ALL_RESOURCE_TYPES : [t];
+// ---------- resolveTypes ----------
+function resolveTypes(rt: string): string[] {
+  return rt === "all" ? ALL_RESOURCE_TYPES : [rt];
 }
 
+// ---------- beginSync ----------
 // push/pull 前置守卫共用的入闸流程（取 selected → 判空 toast → 置 inprogress → 关菜单 → 按钮 loading）
-function asbBeginSync(
+function beginSync(
   e: Event,
   verb: string,
-  ctx: AsbSidebarContext,
-  flags: AsbSyncFlags,
+  root: ShadowRoot,
+  instances: SidebarInstance[],
+  syncInProgress: { val: boolean },
   closeAll: () => void,
   btn: HTMLButtonElement,
 ): string[] | null {
   const target = e.target as HTMLElement | null;
   const item = target ? target.closest(".dd-item") : null;
   if (!item) return null;
-  const selected = asbGetSelected(ctx);
+  const selected = getSelected(root, instances);
   if (!selected.length) {
     bus.emit("toast:show", { msg: t("sidebar.selectPackFirst", { verb }), duration: TOAST_MS.success, type: "info" });
     return null;
   }
-  if (flags.getSyncInProgress()) return null;
-  flags.setSyncInProgress(true);
+  if (syncInProgress.val) return null;
+  syncInProgress.val = true;
   closeAll();
   btn.textContent = "⏳";
   btn.disabled = true;
   return selected;
 }
 
-function asbBindToggleMenu(
+function bindToggleMenu(
   btn: HTMLButtonElement,
   menu: HTMLElement,
   onToggle: () => void,
@@ -173,23 +162,24 @@ function asbBindToggleMenu(
   menu.addEventListener("click", (e) => e.stopPropagation());
 }
 
-// ---------- asb* 包级函数：_bindSyncSelected pushMenu 大闭包升格 ----------
-function asbHandlePushMenuClick(
+// ---------- handlePushMenuClick ----------
+function handlePushMenuClick(
   e: Event,
   pushBtn: HTMLButtonElement,
   pushMenu: HTMLElement,
   pullMenu: HTMLElement,
-  ctx: AsbSidebarContext,
-  flags: AsbSyncFlags,
+  root: ShadowRoot,
+  getInstances: () => SidebarInstance[],
+  syncInProgress: { val: boolean },
 ): void {
-  const selected = asbBeginSync(e, t("sidebar.verbPush"), ctx, flags, () => asbCloseAllMenus(pushMenu, pullMenu), pushBtn);
+  const selected = beginSync(e, t("sidebar.verbPush"), root, getInstances(), syncInProgress, () => closeAllMenus(pushMenu, pullMenu), pushBtn);
   if (!selected) return;
-  const types = asbResolveTypes((e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all");
-  void asbRunPush(selected, types, pushBtn, flags);
+  const types = resolveTypes((e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all");
+  void runPush(selected, types, pushBtn, syncInProgress);
 }
 
 /** 单品推送：等待该 token 的下载完成事件；命中 skipped / 超时分别 reject 带 kind */
-async function asbPushOne(insName: string, rt: string): Promise<void> {
+async function pushOne(insName: string, rt: string): Promise<void> {
   const token = `${insName}:${rt}:${Date.now()}`;
   await new Promise<void>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -198,21 +188,21 @@ async function asbPushOne(insName: string, rt: string): Promise<void> {
       unsub();
       if (timer) clearTimeout(timer);
       if (payload.skipped) {
-        reject(asbKindError(`推送被跳过（已有同步进行中）: ${insName}/${rt}`, "skipped"));
+        reject(kindError(`推送被跳过（已有同步进行中）: ${insName}/${rt}`, "skipped"));
       } else {
         resolve();
       }
     });
     timer = setTimeout(() => {
       unsub();
-      reject(asbKindError(`推送超时: ${insName}/${rt}`, "timeout"));
+      reject(kindError(`推送超时: ${insName}/${rt}`, "timeout"));
     }, SYNC_TIMEOUT_MS);
     bus.emit("sync:download:missing", { instanceName: insName, rtype: rt, token });
   });
 }
 
 /** 等待当前同步活动归位（最后一次非 skipped done 后 resolve），防后续推送竞态 */
-async function asbWaitBusQuiet(): Promise<void> {
+async function waitBusQuiet(): Promise<void> {
   await new Promise<void>((resolve) => {
     const waitUnsub = bus.on("sync:download:done", (p) => {
       if (p?.skipped) return;
@@ -226,22 +216,22 @@ async function asbWaitBusQuiet(): Promise<void> {
   });
 }
 
-function asbKindError(msg: string, kind: "skipped" | "timeout"): Error {
+function kindError(msg: string, kind: "skipped" | "timeout"): Error {
   const err = new Error(msg) as Error & { kind?: "skipped" | "timeout" };
   err.kind = kind;
   return err;
 }
 
-function asbPushErrorKind(e: unknown): "skipped" | "timeout" | undefined {
+function pushErrorKind(e: unknown): "skipped" | "timeout" | undefined {
   return (e as Error & { kind?: "skipped" | "timeout" })?.kind;
 }
 
 /** 推送主流程：顺序逐包逐类型推送，跳过的按类型计数 → 汇总 toast + 按钮复位统一收口 */
-async function asbRunPush(
+async function runPush(
   selected: string[],
   types: string[],
   pushBtn: HTMLButtonElement,
-  flags: AsbSyncFlags,
+  syncInProgress: { val: boolean },
 ): Promise<void> {
   let skipped = 0;
   let timedOut = 0;
@@ -249,12 +239,12 @@ async function asbRunPush(
     for (const insName of selected) {
       for (const rt of types) {
         try {
-          await asbPushOne(insName, rt);
+          await pushOne(insName, rt);
         } catch (e) {
-          const kind = asbPushErrorKind(e);
+          const kind = pushErrorKind(e);
           if (kind === "skipped") skipped++;
           else timedOut++;
-          if (kind !== "skipped") await asbWaitBusQuiet();
+          if (kind !== "skipped") await waitBusQuiet();
         }
       }
     }
@@ -271,31 +261,32 @@ async function asbRunPush(
   } finally {
     pushBtn.textContent = "⬆️ " + t("sidebar.pushSelected") + " ▾";
     pushBtn.disabled = false;
-    flags.setSyncInProgress(false);
+    syncInProgress.val = false;
   }
 }
 
-// ---------- asb* 包级函数：_bindSyncSelected pullMenu 大闭包升格 ----------
-function asbHandlePullMenuClick(
+// ---------- handlePullMenuClick ----------
+function handlePullMenuClick(
   e: Event,
   pullBtn: HTMLButtonElement,
   pushMenu: HTMLElement,
   pullMenu: HTMLElement,
-  ctx: AsbSidebarContext,
-  flags: AsbSyncFlags,
+  root: ShadowRoot,
+  getInstances: () => SidebarInstance[],
+  syncInProgress: { val: boolean },
 ): void {
-  const selected = asbBeginSync(e, t("sidebar.verbPull"), ctx, flags, () => asbCloseAllMenus(pushMenu, pullMenu), pullBtn);
+  const selected = beginSync(e, t("sidebar.verbPull"), root, getInstances(), syncInProgress, () => closeAllMenus(pushMenu, pullMenu), pullBtn);
   if (!selected) return;
-  const types = asbResolveTypes((e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all");
-  void asbRunPull(selected, types, pullBtn, flags);
+  const types = resolveTypes((e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all");
+  void runPull(selected, types, pullBtn, syncInProgress);
 }
 
 /** 拉取主流程：并行拉取各类型资源，计数成功/失败 → 汇总 toast + 刷新统计与树 */
-async function asbRunPull(
+async function runPull(
   selected: string[],
   types: string[],
   pullBtn: HTMLButtonElement,
-  flags: AsbSyncFlags,
+  syncInProgress: { val: boolean },
 ): Promise<void> {
   let totalPulled = 0;
   let failed = 0;
@@ -324,32 +315,41 @@ async function asbRunPull(
   } finally {
     pullBtn.textContent = "⬇️ " + t("sidebar.pullSelected") + " ▾";
     pullBtn.disabled = false;
-    flags.setSyncInProgress(false);
+    syncInProgress.val = false;
   }
 }
 
-// ---------- asb* 包级函数：_bindSyncSelected 主装配 ----------
-function asbBindSyncSelected(ctx: AsbSidebarContext, flags: AsbSyncFlags): void {
-  const root = ctx.getRoot();
+// ---------- bindSyncSelected 主装配 ----------
+function bindSyncSelected(
+  root: ShadowRoot,
+  getInstances: () => SidebarInstance[],
+  getCardCleanup: () => (() => void) | null,
+  setCardCleanup: (fn: (() => void) | null) => void,
+  getDocClickHandler: () => (() => void) | null,
+  setDocClickHandler: (fn: (() => void) | null) => void,
+  getSyncInProgress: () => boolean,
+  setSyncInProgress: (v: boolean) => void,
+): void {
   const pushBtn = root.querySelector(".sidebar-push-selected") as HTMLButtonElement | null;
   const pushMenu = root.getElementById("sidebar-push-menu") as HTMLElement | null;
   const pullBtn = root.querySelector(".sidebar-pull-selected") as HTMLButtonElement | null;
   const pullMenu = root.getElementById("sidebar-pull-menu") as HTMLElement | null;
   if (!pushBtn || !pushMenu || !pullBtn || !pullMenu) return;
 
-  const closeAll = () => asbCloseAllMenus(pushMenu, pullMenu);
+  const closeAll = () => closeAllMenus(pushMenu, pullMenu);
 
-  asbBindToggleMenu(pushBtn, pushMenu, closeAll);
-  asbBindToggleMenu(pullBtn, pullMenu, closeAll);
+  bindToggleMenu(pushBtn, pushMenu, closeAll);
+  bindToggleMenu(pullBtn, pullMenu, closeAll);
 
-  if (ctx.getDocClickHandler()) {
-    document.removeEventListener("click", ctx.getDocClickHandler()!);
+  const prevHandler = getDocClickHandler();
+  if (prevHandler) {
+    document.removeEventListener("click", prevHandler);
   }
-  ctx.setDocClickHandler(() => closeAll());
-  document.addEventListener("click", ctx.getDocClickHandler()!);
+  setDocClickHandler(() => closeAll());
+  document.addEventListener("click", getDocClickHandler()!);
 
-  pushMenu.addEventListener("click", (e) => asbHandlePushMenuClick(e, pushBtn, pushMenu, pullMenu, ctx, flags));
-  pullMenu.addEventListener("click", (e) => asbHandlePullMenuClick(e, pullBtn, pushMenu, pullMenu, ctx, flags));
+  pushMenu.addEventListener("click", (e) => handlePushMenuClick(e, pushBtn, pushMenu, pullMenu, root, getInstances, { get val() { return getSyncInProgress(); }, set val(v) { setSyncInProgress(v); } }));
+  pullMenu.addEventListener("click", (e) => handlePullMenuClick(e, pullBtn, pushMenu, pullMenu, root, getInstances, { get val() { return getSyncInProgress(); }, set val(v) { setSyncInProgress(v); } }));
 }
 
 // ---------- AppSidebar 类 ----------
@@ -373,9 +373,6 @@ class AppSidebar extends WebComponentBase {
   /** _loading 进行中又有新请求 → 标记待补跑（完成后用最新 rtype 再跑一次） */
   private _pendingReload = false;
 
-  private _asbCtx: AsbSidebarContext;
-  private _asbFlags: AsbSyncFlags;
-
   constructor() {
     super();
     this._root = this.attachShadow({ mode: "open" });
@@ -385,20 +382,6 @@ class AppSidebar extends WebComponentBase {
     // 对齐仓库页 initRepositoryPage 的 savedRtype 恢复：属性优先，缺省读
     // currentRepoType()（localStorage repo_rtype 权威源，由 app-nav 切换器落盘）。
     this._rtype = this.getAttribute("rtype") || currentRepoType();
-
-    this._asbCtx = {
-      getRtype: () => this._rtype,
-      getInstances: () => this._instances,
-      getRoot: () => this._root,
-      getCardCleanup: () => this._cardCleanup,
-      setCardCleanup: (fn) => { this._cardCleanup = fn; },
-      getDocClickHandler: () => this._docClickHandler,
-      setDocClickHandler: (fn) => { this._docClickHandler = fn; },
-    };
-    this._asbFlags = {
-      getSyncInProgress: () => this._syncInProgress,
-      setSyncInProgress: (v) => { this._syncInProgress = v; },
-    };
   }
 
   attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {
@@ -450,15 +433,25 @@ class AppSidebar extends WebComponentBase {
   }
 
   private _bindSelectAll(): void {
-    asbBindSelectAll(this._asbCtx);
+    bindSelectAll(this._root, this._rtype, this._instances);
   }
 
   private _bindSyncSelected(): void {
-    asbBindSyncSelected(this._asbCtx, this._asbFlags);
+    bindSyncSelected(
+      this._root,
+      () => this._instances,
+      () => this._cardCleanup,
+      (fn) => { this._cardCleanup = fn; },
+      () => this._docClickHandler,
+      (fn) => { this._docClickHandler = fn; },
+      () => this._syncInProgress,
+      (v) => { this._syncInProgress = v; },
+    );
   }
 
   private _renderCards(): void {
-    asbRenderCards(this._asbCtx);
+    const { cardCleanup } = renderCards(this._root, this._rtype, this._instances, this._cardCleanup);
+    this._cardCleanup = cardCleanup;
   }
 
   private async _reload(force = false): Promise<void> {

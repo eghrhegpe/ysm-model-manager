@@ -23,6 +23,10 @@
  *   口径：相对引用解析后 (a) 落于 src 外（越界）或 (b) == src/e2e/mock-data.ts（ADR 内定入基线）
  *   且非 bindings/**（bindings 由 wails 插件解析，不计入）。
  *
+ * 设计意图：把 ADR-146 的「目录级别名 + 反桶契约 + 跨边界冻结」从纸面规则固化为 CI 可执行的
+ *           卡点，使别名增量迁移（D5）有护栏——新增跨边界引用即 FAIL（防人工记忆失守），
+ *           存量桶 / 深 wander 仅 WARN 观察，不阻断日常开发。
+ *
  * 用法：
  *   node scripts/check-path-hygiene.ts          # 违规退 1
  *   node scripts/check-path-hygiene.ts --json   # JSON（CI / pre-push-gate 消费）
@@ -88,7 +92,8 @@ for (const { abs, rel } of files) {
   const reexportSources = new Set<string>();
   for (const line of code.split('\n')) {
     const rm = REXPORT_RE.exec(line);
-    if (rm) reexportSources.add(rm[2]);
+    const reexportSpec = rm?.[2];
+    if (reexportSpec) reexportSources.add(reexportSpec);
   }
   if (reexportSources.size >= R1_BARREL_THRESHOLD && !R1_BARREL_WHITELIST.has(relPosix)) {
     r1Hits.push(`${relPosix}（来源数 ${reexportSources.size}）`);
@@ -109,6 +114,7 @@ for (const { abs, rel } of files) {
   SPEC_RE.lastIndex = 0;
   while ((m = SPEC_RE.exec(code)) !== null) {
     const spec = m[2];
+    if (!spec) continue;
     const c = classifyImport(spec, abs);
     if (!c.resolved) continue; // 包导入 / 未登记别名（catch-all 已禁，双写一致性会 FAIL）
     if (c.isBindings) continue; // bindings 由 wails 插件解析，R3/R4 均不计
@@ -139,7 +145,13 @@ function loadViteAliasFinds(): Set<string> {
   const keys = new Set<string>();
   const m = txt.match(/ALIAS_DIRS\s*=\s*\[([\s\S]*?)\]/);
   if (m) {
-    for (const dm of m[1].matchAll(/["']([^"']+)["']/g)) keys.add(`@/${dm[1]}`);
+    const arrText = m[1];
+    if (arrText) {
+      for (const dm of arrText.matchAll(/["']([^"']+)["']/g)) {
+        const dir = dm[1];
+        if (dir) keys.add(`@/${dir}`);
+      }
+    }
   }
   if (/find:\s*["']#root["']/.test(txt)) keys.add('#root');
   return keys;

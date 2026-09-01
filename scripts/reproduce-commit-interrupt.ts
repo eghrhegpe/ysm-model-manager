@@ -2,6 +2,10 @@
 /**
  * reproduce-commit-interrupt.ts — 复现「commit 进行中被中断」的残留现场（ADR-151 配套诊断）。
  *
+ * 设计意图：kill -9 / 工具层强杀时 finally 不执行、git 子进程被连带杀死——临时 index 恒残留
+ * 且 HEAD 推进与否取决于被杀时机。本脚本用真实数据复现该场景，供排查「提交超时/残留」类
+ * 事故时对照现场，避免靠猜。属手动诊断工具（无流水线挂载，README 登记为 documented 档）。
+ *
  * 背景（2026-09-01 实战）：commit-with-check 提交阶段全量门禁超时被工具层中断，
  * 提交本身已落地（HEAD 推进成功），但留下两处残留：
  *   1. `.git/index.ymm.<pid>` 临时 index 未清理（父进程被杀，finally 未执行）
@@ -13,6 +17,7 @@
  *
  * 用法：node scripts/reproduce-commit-interrupt.ts
  * 退出码：0 = 两变体均复现成功；1 = 任一失败
+ * 依赖：零依赖（node:child_process / node:fs / node:os / node:path）；运行时需 git 与 taskkill（Windows）
  * 清理：脚本 finally 删临时仓库。
  */
 import { execFileSync, spawn } from 'node:child_process';

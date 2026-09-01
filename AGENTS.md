@@ -39,8 +39,9 @@ git commit -m "<type>: <简短描述>" -- <自己的文件...>
 # 一键验证+提交（按 staged 文件自动裁剪门禁；--fast 跳 vitest / --docs 仅文档 / --check 只验不交）
 node scripts/commit-with-check.ts -m "<msg>"
 node scripts/commit-with-check.ts -m "<msg>" --files <paths...>   # 白名单直取，无需先 git add
-# 并行会话活跃时：禁止裸 git commit（会打包整个共享 index 吞他人暂存）；走 commit-with-check
-# （临时 index 白名单提交，ADR-151）——先 git status --short 确认只含自己的文件
+# 并行会话活跃时：禁止裸 git commit（含 `--only` 路径限定——pre-commit 钩子的快照判定会
+# 误 stage 并行会话手改的 docs 文件并卷进提交，实证 e96b47e3）；一律走 commit-with-check
+# （临时 index + gen-stage 双隔离，ADR-151）——先 git status --short 确认只含自己的文件
 git push --verbose 2>&1 | Select-Object -Last 50   # 仅在完成大型任务后统一推送，推送后使用gh 盯GitHub ci运行情况
 
 # 怕文件未保存？

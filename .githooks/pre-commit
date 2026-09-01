@@ -75,15 +75,16 @@ done
 # ── stage 生成的文档（只 stage 本次 gen 实际 touch 的文件，无 diff 则无副作用） ──
 # 2026-08-17 P2-2 修复：不再无条件 `git add docs/`——并发共享 checkout 下会把他人
 # 未提交 docs/locales 半成品扫进本次 commit。改为 gen 前后快照对比，只 add 变化文件。
+# ADR-151 续（2026-09-01 卷带实证）：snap 快照 diff 用「mtime 变化」判定 gen 产物在并发
+# 下失效——并行会话手改的卡恰在快照窗口内被 touch → 误判 gen 产物 → 被 --only 提交卷带
+# （实证 fbx-cli-pipeline.md / frontend_test_audit.md 卷进 e96b47e3）。
+# 修复：stage 判定下沉到 scripts/_lib/gen-stage.ts（单一事实源，契约测试守护）——
+#   stage = 快照变化 ∩ 非并行 dirty（git status --porcelain 排除；?? 未跟踪按 gen 前后
+#   存在性区分：gen 前存在=并行新建排除，不存在=gen 新建保留）。补全型 gen 产物正常入库。
 ADD_FAIL=""
 if [ -f "$GEN_SNAP" ]; then
-  find docs/ frontend/public/locales/ completions/ -type f -printf '%T@ %s %p\n' 2>/dev/null | sort > /tmp/ysm_gen_snap_after.txt || node -e '
-const fs=require("fs"),path=require("path");
-const out=[];
-for(const base of ["docs","frontend/public/locales","completions"]){if(!fs.existsSync(base))continue;const w=(d)=>{for(const e of fs.readdirSync(d)){const p=path.join(d,e),s=fs.statSync(p);if(s.isDirectory())w(p);else out.push(`${s.mtimeMs} ${s.size} ${p}`);}};w(base);}
-fs.writeFileSync("/tmp/ysm_gen_snap_after.txt",out.sort().join("\n"));' 2>/dev/null || true
-  # diff 快照：新增/内容变化的文件（`>` 侧），路径取第 4 列（diff 行比快照行多 1 个 `>` 前缀）
-  diff "$GEN_SNAP" /tmp/ysm_gen_snap_after.txt 2>/dev/null | grep '^>' | awk '{print $4}' | sort -u > /tmp/ysm_gen_to_stage.txt
+  # 生成物 stage 清单：快照变化 − 并行 dirty（替代原 find/diff/awk 脆弱管道）
+  node scripts/_lib/gen-stage.ts "$GEN_SNAP" > /tmp/ysm_gen_to_stage.txt 2>/dev/null
 while IFS= read -r p; do
     [ -z "$p" ] && continue
     [ -f "$p" ] || continue

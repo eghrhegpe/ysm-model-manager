@@ -66,7 +66,10 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
           global: dirs?.global ?? "",
           instance: dirs?.instance ?? "",
           warningCode: dirs?.warningCode,
-          warningParams: dirs?.warningParams ?? undefined,
+          // Go map 生成类型（可 undefined 索引）→ 前端窄类型（label/dir/subDir 可选）
+          warningParams: dirs?.warningParams
+            ? { label: dirs.warningParams.label ?? "", dir: dirs.warningParams.dir ?? "", subDir: dirs.warningParams.subDir ?? "" }
+            : undefined,
         };
       } catch {
         /* 目录摘要非关键路径，静默降级 */

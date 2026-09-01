@@ -527,7 +527,7 @@
 | `frontend/src/views/app-sync-manager/network.ts` | 47 |
 | `frontend/src/views/app-sync-manager/network.ts` | 55 |
 | `frontend/src/views/app-sync-manager/store.ts` | 35 |
-| `frontend/src/views/app-sync-manager/store.ts` | 78 |
+| `frontend/src/views/app-sync-manager/store.ts` | 81 |
 | `frontend/src/views/app-toast/index.ts` | 133 |
 | `frontend/src/views/app-toast/index.ts` | 152 |
 | `frontend/src/views/app-toast/index.ts` | 161 |

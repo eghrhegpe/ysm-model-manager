@@ -1722,6 +1722,10 @@ export const autoSidebar = [
             "link": "/knowledge/preview-controls"
           },
           {
+            "text": "预览面板设置与显示控制",
+            "link": "/knowledge/preview-settings"
+          },
+          {
             "text": "回收站界面 recycle-bin",
             "link": "/knowledge/recycle-bin"
           },

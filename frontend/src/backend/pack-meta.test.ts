@@ -155,8 +155,8 @@ describe("browserAdapter.ReadShaderpackLang — 光影包详情（TS 平移 go/p
     }, "shaderpack");
     const meta = await browserAdapter.ReadShaderpackLang(path);
     expect(meta.name).toBe("带空格标题");
-    expect(meta.entries["a"]).toBe("b=c");
-    expect("no-eq-line" in meta.entries).toBe(false);
+    expect(meta.entries ?? {}).toEqual({ "a": "b=c", "pack.name": "带空格标题" });
+    expect("no-eq-line" in (meta.entries ?? {})).toBe(false);
   });
 
   it("无 lang/en_US.lang（仅有 zh_CN.lang）→ {name:\"\",entries:{}}（对齐 go 空结果）", async () => {

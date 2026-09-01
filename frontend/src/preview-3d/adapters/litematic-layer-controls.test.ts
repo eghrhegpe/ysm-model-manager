@@ -37,6 +37,7 @@ const mockVoxelCall = vi.fn(() =>
     groups: [{ positions: [[0, 0, 0], [1, 1, 1], [2, 2, 2]], color: "#ff0000" }],
     // 三轴尺寸不同：断言轴切换联动 slider max（Y=11 / X=7 / Z=13）
     size: [7, 11, 13],
+    truncated: false,
     maxBlocks: 100,
   }),
 );

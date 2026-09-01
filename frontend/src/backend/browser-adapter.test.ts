@@ -722,8 +722,9 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
     await importWebFiles([zipFile], "resourcepack");
     const detail = await browserAdapter.ListPackModelsDetail("/web/resourcepack/材质包/材质包.zip");
     expect(detail!.total).toBe(4);
-    expect(detail!.models).toHaveLength(4);
-    const byPath = new Map(detail!.models.map((m) => [m.path, m.cubes]));
+    const models = detail!.models ?? [];
+    expect(models).toHaveLength(4);
+    const byPath = new Map(models.map((m) => [m.path, m.cubes]));
     expect(byPath.get("assets/minecraft/models/block/stone.json")).toBe(0);
     expect(byPath.get("assets/minecraft/models/block/door.json")).toBe(1);
     expect(byPath.get("assets/minecraft/models/block/wall.json")).toBe(3);

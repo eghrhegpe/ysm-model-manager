@@ -28,7 +28,7 @@ export interface HealthReport {
     total_size: number;
     /** 禁用文件数（.disabled/.ban，Go types.IsDisableSuffix 单一口径） */
     banned?: number;
-    by_type: Record<string, number> | null;
+    by_type: { [key: string]: number | undefined } | null;
   };
   dedup: {
     groups: number;

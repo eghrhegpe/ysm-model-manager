@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 146 张知识卡
+> 总计: 147 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -78,7 +78,7 @@
 - **wails-bridge**（Wails 桥接 app.ts）：`backend/app.ts` 是前端调用后端 Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。**ADR-049 平台双路由**：网页版（无 …
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
-## feature（11 张）
+## feature（12 张）
 
 *业务功能（导入队列、同步、社区）*
 
@@ -89,6 +89,7 @@
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
 | 🍃 oldest-models | 资历最深模型 oldest-models | leaf | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
 | 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器, MMD 播放, VRM 材质, YSM schema, 截图按钮, 相机控制, 模型切换, multiModelSelectNode, preview menu node |
+| 🏗 preview-settings | 预览面板设置与显示控制 | architecture | — | 预览设置, 显示控制, 骨骼名称, 帧率, 像素比, 视锥剔除, 状态层, 3D 偏好, 组件选择, 截图灯光, activeComponent |
 | 🍃 preview_3d_migration | preview-3d 领域根迁移 | leaf | — | 整目录搬家, 领域根提升, 相对引用修复, cmd 命令行限制, 目录归置 |
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | io-bound | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
 | 🏗 resource-packs | 资源包功能 resource-packs | architecture | — | 资源包, 光影包, 蓝图, 投影, resourcepack, shaderpack, 资源管理 |
@@ -103,6 +104,7 @@
 - **import-queue**（全局导入执行 import-executor）：**2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex…
 - **oldest-models**（资历最深模型 oldest-models）：`oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按…
 - **preview-controls**（3D 预览控制器（声明式菜单节点））：> ⚠️ **重要前提（ADR-076 v2 Phase 2 重构后）**：相机操作已收编进**核心声明式根菜单**（⚙️ 按钮 → `mountPreviewRootMenu` 的 `camera` 项），底部导航弹窗已删除。现存的 `m…
+- **preview-settings**（预览面板设置与显示控制）：> **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖…
 - **preview_3d_migration**（preview-3d 领域根迁移）：ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 `frontend/src/preview-3d/`。纯改名、收益最低、但暗礁最多。三刀顺序不可逆：第一刀正类型（依赖倒置修复）→ 第二…
 - **recycle-bin**（回收站界面 recycle-bin）：`recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调…
 - **resource-packs**（资源包功能 resource-packs）：**已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager…

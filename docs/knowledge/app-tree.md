@@ -41,6 +41,7 @@ invariant_anchors:
   - `_unsubs` 仅收集 bus 订阅（`bindBusEvents` 返回的 unsub 数组 + `bus.on("tree:set-search")`），DOM 委托事件（click/contextmenu，通过 `addEventListener` 绑定于 `#tree` 等容器）随 ShadowRoot detach 自动清理，不进入 `_unsubs`
 - `_load` — 加载条目数据；`_renderTree` — 渲染树（grid/list 双模式）
 - 搜索状态：`_search`（关键词字符串）和 `_filterPaths`（精确路径 Set）共同驱动树过滤
+- **ADR-147 已落地（2026-09-01）**：`_typeFilter` 死字段已移除——原「按资源类型过滤」字段从未被生产代码赋非空值，仅测试自证用例写入；12 处读取点（bus-handlers 6 + events 2 + index 4）三元简化为 `_rootAttr || RESOURCE_TYPES.YSM`，`_rootAttr`（root 属性）是唯一 rtype 来源；`index.extra.test.ts` 自证用例删除；新增 `tests/test_private_access_contract.ts` 孤儿守卫：测试引用已删除的私有字段（无类声明且非 `_vsRows` 白名单）即红，防「删字段漏清测试」漂移
 
 ### 搜索过滤与渲染管线
 

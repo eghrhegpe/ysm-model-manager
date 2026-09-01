@@ -5,6 +5,7 @@
  */
 
 import { compileMolang, type MolangFn } from "./molang.ts";
+import { logWarn } from "../core/log.ts";
 
 // ── 类型定义 ────────────────────────────────────────
 
@@ -697,7 +698,7 @@ export function evaluateClip(
   const inStack = new Set<string>();
   const visit = (name: string): void => {
     if (inStack.has(name)) {
-      console.warn(`[animation] 骨骼层级存在环，跳过回边: ${name}`);
+      logWarn("animation", `骨骼层级存在环，跳过回边: ${name}`);
       return;
     }
     if (visited.has(name)) return;
@@ -756,13 +757,6 @@ export function evaluateClip(
         scale: tLocal.scale ? [...tLocal.scale] : undefined,
       });
     }
-  }
-
-  // Debug: 如果有变换且非零，打印前 5 个
-  if (import.meta.env.DEV && result.size > 0) {
-    const entries = [...result.entries()].slice(0, 5);
-    void entries;
-    // rot/pos debug removed (noisy)
   }
 
   return result;

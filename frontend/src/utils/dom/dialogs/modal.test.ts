@@ -1,6 +1,6 @@
 // ===== 统一模态弹窗测试（modal.ts）=====
 // 覆盖：closeDlg / registerDlg / modalConfirm / modalPrompt / modalSelect
-//       + trapFocus / fmtMB / modalProgress / 键盘与遮罩交互
+//       + trapFocus / modalProgress / 键盘与遮罩交互（fmtMB 用例已迁 format/fmt-mb.test.ts）
 // 注意：_activeOverlay/_closeActive 是模块级单例，每个用例必须把弹窗关干净，
 // 否则残留的 _closeActive 会在下一个用例 registerDlg 时触发（脏状态）。
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -13,7 +13,6 @@ import {
   modalSelect,
   modalProgress,
   trapFocus,
-  fmtMB,
   __resetModalStateForTest,
 } from "./modal.ts";
 
@@ -358,20 +357,6 @@ describe("trapFocus — 焦点陷阱", () => {
     overlay.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, shiftKey: true }));
     expect(document.activeElement).toBe(btn1);
     overlay.remove();
-  });
-});
-
-describe("fmtMB — 字节格式化", () => {
-  it("正常值 → x.x MB", () => {
-    expect(fmtMB(5 * 1024 * 1024)).toBe("5.0 MB");
-    expect(fmtMB(1024 * 1024 * 1.25)).toBe("1.3 MB");
-  });
-
-  it("非有限数/负数 → 0.0 MB（ADR-044 ② 数值守卫）", () => {
-    expect(fmtMB(NaN)).toBe("0.0 MB");
-    expect(fmtMB(Infinity)).toBe("0.0 MB");
-    expect(fmtMB(-1)).toBe("0.0 MB");
-    expect(fmtMB(0)).toBe("0.0 MB");
   });
 });
 

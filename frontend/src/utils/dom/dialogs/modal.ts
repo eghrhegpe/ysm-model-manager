@@ -17,12 +17,8 @@ export const VIEW_TESTIDS: readonly string[] = [
 
 
 
-declare global {
-  interface HTMLElement {
-    /** 关闭动画中标记（closeDlg 防重复触发） */
-    _closing?: boolean;
-  }
-}
+/** 关闭动画中标记（closeDlg 防重复触发）；WeakSet 随元素 GC 回收，不污染 HTMLElement 全局类型 */
+const _closingOverlays = new WeakSet<HTMLElement>();
 
 /** 可聚焦元素选择器 */
 const FOCUSABLE_SEL =
@@ -67,8 +63,8 @@ export function closeDlg<T>(
   value: T,
   delay = 120,
 ): void {
-  if (!overlay || overlay._closing) return;
-  overlay._closing = true;
+  if (!overlay || _closingOverlays.has(overlay)) return;
+  _closingOverlays.add(overlay);
   overlay.classList.add("dlg-closing");
   setTimeout(() => {
     overlay.remove();
@@ -122,7 +118,7 @@ export function closeActiveDialog(): boolean {
   return true;
 }
 
-function dgMoBuildOverlay<T>(
+function buildOverlay<T>(
   tabIndex: number,
   closable: boolean,
   cancelValue: T,
@@ -142,7 +138,7 @@ function dgMoBuildOverlay<T>(
   return { overlay, close };
 }
 
-function dgMoBuildBox(
+function appendDialogBox(
   overlay: HTMLElement,
   width: string | undefined,
   buildBox: (box: HTMLElement) => void,
@@ -157,7 +153,7 @@ function dgMoBuildBox(
   return box;
 }
 
-function dgMoBindDialogLife<T>(
+function registerDialogLife<T>(
   overlay: HTMLElement,
   closable: boolean,
   cancelValue: T,
@@ -186,9 +182,9 @@ function createDialog<T>(opts: {
   buildBox: (box: HTMLElement) => void;
 }): { overlay: HTMLElement; box: HTMLElement; close: (value: T) => void } {
   const { width, tabIndex = 0, cancelValue, resolve, closable = true, buildBox } = opts;
-  const { overlay, close } = dgMoBuildOverlay(tabIndex, closable, cancelValue, resolve);
-  const box = dgMoBuildBox(overlay, width, buildBox);
-  dgMoBindDialogLife(overlay, closable, cancelValue, close);
+  const { overlay, close } = buildOverlay(tabIndex, closable, cancelValue, resolve);
+  const box = appendDialogBox(overlay, width, buildBox);
+  registerDialogLife(overlay, closable, cancelValue, close);
   return { overlay, box, close };
 }
 
@@ -201,7 +197,7 @@ export interface ModalPromptOptions {
   okText?: string;
 }
 
-function dgMoBuildPromptBox(
+function promptBoxBuilder(
   title: string,
   icon: string | undefined,
   value: string | undefined,
@@ -221,51 +217,6 @@ function dgMoBuildPromptBox(
   };
 }
 
-function dgMoBindPromptCancelClick(box: HTMLElement, close: (value: string | null) => void): void {
-  (box.querySelector("#mp-cancel") as HTMLElement).onclick = (): void => close(null);
-}
-
-function dgMoBindPromptOkClick(
-  input: HTMLInputElement,
-  errEl: HTMLElement | null,
-  box: HTMLElement,
-  close: (value: string | null) => void,
-): void {
-  (box.querySelector("#mp-ok") as HTMLElement).onclick = (): void => {
-    const v = input.value.trim();
-    if (!v) {
-      input.focus();
-      if (errEl) errEl.textContent = "⚠️ " + t("dialog.fieldRequired");
-      return;
-    }
-    close(v);
-  };
-}
-
-function dgMoBindPromptInput(input: HTMLInputElement, errEl: HTMLElement | null): void {
-  input.addEventListener("input", (): void => {
-    if (errEl) errEl.textContent = "";
-  });
-}
-
-function dgMoBindPromptKeydown(
-  input: HTMLInputElement,
-  errEl: HTMLElement | null,
-  close: (value: string | null) => void,
-): void {
-  input.addEventListener("keydown", (e: KeyboardEvent): void => {
-    if (e.key === "Enter") {
-      const v = input.value.trim();
-      if (!v) {
-        if (errEl) errEl.textContent = "⚠️ " + t("dialog.fieldRequired");
-        return;
-      }
-      close(v);
-    }
-    if (e.key === "Escape") close(null);
-  });
-}
-
 /**
  * 弹出带输入框的模态框，类似 styled prompt()
  * @param opts 选项
@@ -276,16 +227,37 @@ export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
     const { title, icon, value, placeholder, okText } = opts;
     const { box, close } = createDialog<string | null>({
       title, icon, tabIndex: 0, cancelValue: null, resolve,
-      buildBox: dgMoBuildPromptBox(title, icon, value, placeholder, okText),
+      buildBox: promptBoxBuilder(title, icon, value, placeholder, okText),
     });
     const input = box.querySelector("#mp-input") as HTMLInputElement;
     input.focus();
     input.select();
     const errEl = box.querySelector("#mp-err") as HTMLElement | null;
-    dgMoBindPromptCancelClick(box, close);
-    dgMoBindPromptOkClick(input, errEl, box, close);
-    dgMoBindPromptInput(input, errEl);
-    dgMoBindPromptKeydown(input, errEl, close);
+    // 空值校验（OK 点击与 Enter 共用）；有值返回并 close，空值标错返回 null
+    const requireValue = (refocus: boolean): string | null => {
+      const v = input.value.trim();
+      if (!v) {
+        if (refocus) input.focus();
+        if (errEl) errEl.textContent = "⚠️ " + t("dialog.fieldRequired");
+        return null;
+      }
+      return v;
+    };
+    (box.querySelector("#mp-cancel") as HTMLElement).onclick = (): void => close(null);
+    (box.querySelector("#mp-ok") as HTMLElement).onclick = (): void => {
+      const v = requireValue(true);
+      if (v !== null) close(v);
+    };
+    input.addEventListener("input", (): void => {
+      if (errEl) errEl.textContent = "";
+    });
+    input.addEventListener("keydown", (e: KeyboardEvent): void => {
+      if (e.key === "Enter") {
+        const v = requireValue(false);
+        if (v !== null) close(v);
+      }
+      if (e.key === "Escape") close(null);
+    });
   });
 }
 
@@ -298,15 +270,13 @@ export interface ModalSelectOptions {
   okText?: string;
 }
 
-function dgMoBuildSelectBox(
+function selectBoxBuilder(
   title: string,
   icon: string | undefined,
   items: string[],
-  placeholder: string | undefined,
   okText: string | undefined,
 ): (box: HTMLElement) => void {
   return (box): void => {
-    void placeholder;
     box.innerHTML =
       '<div class="dlg-title" style="margin:0">' +
       esc(icon || "") +
@@ -332,28 +302,6 @@ function dgMoBuildSelectBox(
   };
 }
 
-function dgMoBindSelectCancelClick(box: HTMLElement, close: (value: string | null) => void): void {
-  (box.querySelector("#ms-cancel") as HTMLElement).onclick = (): void => close(null);
-}
-
-function dgMoBindSelectOkClick(
-  select: HTMLSelectElement,
-  box: HTMLElement,
-  close: (value: string | null) => void,
-): void {
-  (box.querySelector("#ms-ok") as HTMLElement).onclick = (): void => close(select.value);
-}
-
-function dgMoBindSelectKeydown(
-  select: HTMLSelectElement,
-  close: (value: string | null) => void,
-): void {
-  select.addEventListener("keydown", (e: KeyboardEvent): void => {
-    if (e.key === "Enter") close(select.value);
-    if (e.key === "Escape") close(null);
-  });
-}
-
 /**
  * 弹出下拉选择框
  * @param opts 选项
@@ -361,16 +309,19 @@ function dgMoBindSelectKeydown(
  */
 export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
   return new Promise((resolve) => {
-    const { title, icon, items, placeholder, okText } = opts;
+    const { title, icon, items, okText } = opts;
     const { box, close } = createDialog<string | null>({
       title, icon, width: "400px", tabIndex: -1, cancelValue: null, resolve,
-      buildBox: dgMoBuildSelectBox(title, icon, items, placeholder, okText),
+      buildBox: selectBoxBuilder(title, icon, items, okText),
     });
     const select = box.querySelector("#ms-select") as HTMLSelectElement;
     select.focus();
-    dgMoBindSelectCancelClick(box, close);
-    dgMoBindSelectOkClick(select, box, close);
-    dgMoBindSelectKeydown(select, close);
+    (box.querySelector("#ms-cancel") as HTMLElement).onclick = (): void => close(null);
+    (box.querySelector("#ms-ok") as HTMLElement).onclick = (): void => close(select.value);
+    select.addEventListener("keydown", (e: KeyboardEvent): void => {
+      if (e.key === "Enter") close(select.value);
+      if (e.key === "Escape") close(null);
+    });
   });
 }
 
@@ -386,7 +337,7 @@ export interface ModalConfirmOptions {
   bodyHTML?: string;
 }
 
-function dgMoBuildConfirmBox(
+function confirmBoxBuilder(
   title: string,
   icon: string | undefined,
   message: string,
@@ -406,24 +357,6 @@ function dgMoBuildConfirmBox(
   };
 }
 
-function dgMoBindConfirmCancelClick(box: HTMLElement, close: (value: boolean) => void): void {
-  (box.querySelector("#mc-cancel") as HTMLElement).onclick = (): void => close(false);
-}
-
-function dgMoBindConfirmOkClick(box: HTMLElement, close: (value: boolean) => void): void {
-  (box.querySelector("#mc-ok") as HTMLElement).onclick = (): void => close(true);
-}
-
-function dgMoBindConfirmKeydown(box: HTMLElement, close: (value: boolean) => void): void {
-  box.addEventListener("keydown", (e: KeyboardEvent): void => {
-    if (e.key === "Enter") {
-      if (e.isComposing) return;
-      if (e.target instanceof HTMLButtonElement) return;
-      close(true);
-    }
-    if (e.key === "Escape") close(false);
-  });
-}
 
 /**
  * 弹出确认对话框
@@ -435,11 +368,18 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
     const { title, icon, message, okText, danger, width, bodyHTML } = opts;
     const { box, close } = createDialog<boolean>({
       title, icon, width, tabIndex: 0, cancelValue: false, resolve,
-      buildBox: dgMoBuildConfirmBox(title, icon, message, okText, danger, bodyHTML),
+      buildBox: confirmBoxBuilder(title, icon, message, okText, danger, bodyHTML),
     });
-    dgMoBindConfirmCancelClick(box, close);
-    dgMoBindConfirmOkClick(box, close);
-    dgMoBindConfirmKeydown(box, close);
+    (box.querySelector("#mc-cancel") as HTMLElement).onclick = (): void => close(false);
+    (box.querySelector("#mc-ok") as HTMLElement).onclick = (): void => close(true);
+    box.addEventListener("keydown", (e: KeyboardEvent): void => {
+      if (e.key === "Enter") {
+        if (e.isComposing) return;
+        if (e.target instanceof HTMLButtonElement) return;
+        close(true);
+      }
+      if (e.key === "Escape") close(false);
+    });
   });
 }
 
@@ -457,13 +397,11 @@ export interface ModalProgressHandle {
   close(): void;
 }
 
-/** 格式化字节为 MB（进度弹窗/窗口标题共用） */
-export function fmtMB(n: number): string {
-  if (!Number.isFinite(n) || n < 0) return "0.0 MB";
-  return (n / 1024 / 1024).toFixed(1) + " MB";
-}
+/** 格式化字节为 MB（实现下沉至 format/fmt-mb.ts；re-export 兼容既有消费方，可逐步移除） */
+import { fmtMB } from "../../../utils/format/fmt-mb.ts";
+export { fmtMB };
 
-function dgMoBuildProgressDoms(): {
+function buildProgressDoms(): {
   pctEl: HTMLDivElement;
   track: HTMLDivElement;
   fill: HTMLDivElement;
@@ -480,7 +418,7 @@ function dgMoBuildProgressDoms(): {
   return { pctEl, track, fill };
 }
 
-function dgMoBuildProgressBox(
+function progressBoxBuilder(
   title: string,
   icon: string | undefined,
   track: HTMLDivElement,
@@ -493,7 +431,7 @@ function dgMoBuildProgressBox(
   };
 }
 
-function dgMoGuardProgressClose(
+function guardProgressClose(
   closed: { value: boolean },
   settleClose: (value: undefined) => void,
 ): () => void {
@@ -504,7 +442,7 @@ function dgMoGuardProgressClose(
   };
 }
 
-function dgMoUpdateProgressFinite(
+function updateProgressFinite(
   done: number,
   total: number,
   fill: HTMLDivElement,
@@ -515,12 +453,12 @@ function dgMoUpdateProgressFinite(
   pctEl.textContent = `${pct}%（${fmtMB(done)} / ${fmtMB(total)}）`;
 }
 
-function dgMoUpdateProgressUnknown(done: number, fill: HTMLDivElement, pctEl: HTMLDivElement): void {
+function updateProgressUnknown(done: number, fill: HTMLDivElement, pctEl: HTMLDivElement): void {
   fill.style.width = "60%";
   pctEl.textContent = `${t("dialog.downloaded")} ${fmtMB(done)}`;
 }
 
-function dgMoUpdateProgress(
+function updateProgressHandler(
   closed: { value: boolean },
   fill: HTMLDivElement,
   pctEl: HTMLDivElement,
@@ -529,9 +467,9 @@ function dgMoUpdateProgress(
     if (closed.value) return;
     if (!Number.isFinite(done) || !Number.isFinite(total)) return;
     if (total > 0) {
-      dgMoUpdateProgressFinite(done, total, fill, pctEl);
+      updateProgressFinite(done, total, fill, pctEl);
     } else {
-      dgMoUpdateProgressUnknown(done, fill, pctEl);
+      updateProgressUnknown(done, fill, pctEl);
     }
   };
 }
@@ -543,17 +481,16 @@ function dgMoUpdateProgress(
  */
 export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
   const { title, icon, width, closable = true } = opts;
-  const { pctEl, track, fill } = dgMoBuildProgressDoms();
-  const { box, close: settleClose } = createDialog<undefined>({
+  const { pctEl, track, fill } = buildProgressDoms();
+  const { close: settleClose } = createDialog<undefined>({
     title, icon, width, tabIndex: 0, cancelValue: undefined, closable,
     resolve: () => {},
-    buildBox: dgMoBuildProgressBox(title, icon, track, pctEl),
+    buildBox: progressBoxBuilder(title, icon, track, pctEl),
   });
-  void box;
   const closed = { value: false };
-  const close = dgMoGuardProgressClose(closed, settleClose);
+  const close = guardProgressClose(closed, settleClose);
   return {
-    update: dgMoUpdateProgress(closed, fill, pctEl),
+    update: updateProgressHandler(closed, fill, pctEl),
     close,
   };
 }
@@ -591,7 +528,7 @@ export interface ModalPickerResult {
 }
 
 /** 收集 footer 自定义区带 name 的表单控件值（关闭时结算，DOM 移除前读取） */
-function dgMoCollectFooter(box: HTMLElement): { checked: Record<string, boolean>; values: Record<string, string> } {
+function collectFooter(box: HTMLElement): { checked: Record<string, boolean>; values: Record<string, string> } {
   const checked: Record<string, boolean> = {};
   const values: Record<string, string> = {};
   box.querySelectorAll<HTMLElement>("[name]").forEach((el) => {
@@ -623,7 +560,7 @@ function safeHintColor(c?: string): string {
   return "var(--muted,#888)";
 }
 
-function dgMoBuildPickerBox(
+function pickerBoxBuilder(
   title: string,
   icon: string | undefined,
   subtitle: string | undefined,
@@ -663,11 +600,11 @@ export function modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult
     const { title, icon, width, subtitle, items, footerHTML, cancelText } = opts;
     const { box, close } = createDialog<ModalPickerResult | null>({
       title, icon, width: width || "480px", tabIndex: 0, cancelValue: null, resolve,
-      buildBox: dgMoBuildPickerBox(title, icon, subtitle, items, footerHTML, cancelText),
+      buildBox: pickerBoxBuilder(title, icon, subtitle, items, footerHTML, cancelText),
     });
     box.querySelectorAll<HTMLButtonElement>("[data-testid='pick-item']").forEach((row) => {
       row.addEventListener("click", () => {
-        const footer = dgMoCollectFooter(box);
+        const footer = collectFooter(box);
         close({ index: Number(row.dataset.idx || "0"), footerChecked: footer.checked, footerValues: footer.values });
       });
     });

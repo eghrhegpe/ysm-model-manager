@@ -23,7 +23,7 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   // 过滤链（自上而下 AND，任一失败即丢弃）：
   //   1. 节点级 visibleWhen(ctx)（菜单即数据 P1 扩展；未定义 → 通过）
   //   2. viewer-mode 全局过滤（canWebAction 单一判定：纯前端 + binding 探测）
-  // 连续 divider 会在渲染时折叠，无需此处去重。
+  // divider 折叠在此处（filter 之后）统一收口，渲染层 views/context-menu/index.ts 不再做去重。
   const items = def.items.filter((item) => {
     if (item.visibleWhen && !item.visibleWhen(norm)) return false;
     if (item.divider) return true;
@@ -31,7 +31,18 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
     if (!isViewer) return true;
     return canWebAction(item.action);
   });
-  return items.map((item) => {
+  // divider 折叠：移除首/尾 divider 与相邻（连续）divider，避免渲染层出现多余/重复分割线。
+  // 渲染层 show() 仅 item.divider → <hr>，无折叠逻辑，故折叠在此处（菜单即数据）收口。
+  const collapsed = items.filter((it, i) => {
+    if (!it.divider) return true;
+    const prev = items[i - 1];
+    const next = items[i + 1];
+    const prevDivider = prev?.divider === true;
+    const nextDivider = next?.divider === true;
+    const atEdge = i === 0 || next === undefined;
+    return !(prevDivider || nextDivider || atEdge);
+  });
+  return collapsed.map((item) => {
     if (item.divider) return { divider: true };
     const label = item.label ? item.label(norm) : undefined;
     const action = item.action;

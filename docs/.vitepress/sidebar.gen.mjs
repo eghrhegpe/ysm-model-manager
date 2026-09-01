@@ -705,6 +705,10 @@ export const autoSidebar = [
       {
         "text": "Bus 事件契约报告",
         "link": "/event-graph"
+      },
+      {
+        "text": "YSM 知识库全量体检报告",
+        "link": "/knowledge-audit-20260705"
       }
     ]
   },
@@ -1916,20 +1920,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "go/repoaudit",
-            "link": "/knowledge/go-repoaudit"
-          },
-          {
-            "text": "go/rustbridge",
-            "link": "/knowledge/go-rustbridge"
-          },
-          {
             "text": "AI 急速版路由表（高频场景）",
             "link": "/knowledge/routes-quick"
-          },
-          {
-            "text": "WASM 内存管理陷阱",
-            "link": "/knowledge/wasm-memory-pitfalls"
           }
         ]
       }

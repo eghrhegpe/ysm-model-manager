@@ -101,7 +101,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menus.ts` | 57 |
+| `frontend/src/core/context-menus.ts` | 68 |
 
 ### `dir:batch-rename`
 
@@ -194,7 +194,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menus.ts` | 58 |
+| `frontend/src/core/context-menus.ts` | 69 |
 | `frontend/src/features/community/events.ts` | 196 |
 
 **订阅方（on）：**
@@ -527,7 +527,7 @@
 | `frontend/src/views/app-sync-manager/network.ts` | 47 |
 | `frontend/src/views/app-sync-manager/network.ts` | 55 |
 | `frontend/src/views/app-sync-manager/store.ts` | 35 |
-| `frontend/src/views/app-sync-manager/store.ts` | 69 |
+| `frontend/src/views/app-sync-manager/store.ts` | 74 |
 | `frontend/src/views/app-toast/index.ts` | 133 |
 | `frontend/src/views/app-toast/index.ts` | 152 |
 | `frontend/src/views/app-toast/index.ts` | 161 |

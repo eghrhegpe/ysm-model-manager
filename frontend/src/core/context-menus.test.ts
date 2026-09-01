@@ -978,3 +978,77 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
     }
   });
 });
+
+// ===== buildMenuItems divider 折叠（ADR-021 B 层：单一事实源收口，渲染层不再去重）=====
+// 背景：context-menus.ts 旧注释声称「连续 divider 会在渲染时折叠」，但渲染层
+// views/context-menu/index.ts 的 show() 仅 item.divider → <hr>，无折叠逻辑。
+// 折叠已收敛至 buildMenuItems（菜单即数据），此处断言：最终 items 首尾不为 divider、
+// 任意相邻两元素不同时为 divider。
+describe("buildMenuItems divider 折叠（单一事实源收口）", () => {
+  const PROBE_TYPE = "__test_divider_fold__" as unknown as CtxShowPayload["type"];
+
+  function pushDef(
+    items: Array<{ divider?: boolean; label?: () => string; visibleWhen?: (ctx: CtxShowPayload) => boolean }>,
+  ) {
+    MENU_DEFS.push({ type: PROBE_TYPE, items: items as never });
+  }
+  function popDef() {
+    const i = MENU_DEFS.findIndex((d) => d.type === PROBE_TYPE);
+    if (i >= 0) MENU_DEFS.splice(i, 1);
+  }
+  afterEach(popDef);
+
+  /** 断言：无首/尾 divider、无相邻 divider */
+  function assertDividersCollapsed(items: MenuItem[]) {
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i].divider) continue;
+      expect(i, `divider 不应位于首/尾 (index ${i}/${items.length})`).not.toBe(0);
+      expect(i, `divider 不应位于首/尾 (index ${i}/${items.length})`).not.toBe(items.length - 1);
+      expect(items[i - 1]?.divider, `相邻 divider 未折叠 (index ${i})`).toBeFalsy();
+      expect(items[i + 1]?.divider, `相邻 divider 未折叠 (index ${i})`).toBeFalsy();
+    }
+  }
+
+  it("数据中连续 divider → 全部折叠（冗余相邻消除）", () => {
+    pushDef([
+      { label: () => "A" },
+      { divider: true },
+      { divider: true },
+      { label: () => "B" },
+    ]);
+    const payload = showMenu(PROBE_TYPE);
+    assertDividersCollapsed(payload.items);
+    expect(payload.items).toHaveLength(2); // 仅 A、B
+  });
+
+  it("首/尾 divider → 移除，中间单 divider 保留", () => {
+    pushDef([
+      { divider: true },
+      { label: () => "A" },
+      { divider: true },
+      { label: () => "B" },
+      { divider: true },
+    ]);
+    const payload = showMenu(PROBE_TYPE);
+    assertDividersCollapsed(payload.items);
+    // [div, A, div, B, div] → [A, div, B]
+    expect(payload.items).toHaveLength(3);
+    expect(payload.items[0].divider).toBeFalsy();
+    expect(payload.items[1].divider).toBe(true);
+    expect(payload.items[2].divider).toBeFalsy();
+  });
+
+  it("visibleWhen 隐藏相邻项 → 原本不相邻的 divider 变相邻并折叠", () => {
+    pushDef([
+      { label: () => "A" },
+      { divider: true },
+      { label: () => "B", visibleWhen: () => false }, // 被隐藏，使两个 divider 相邻
+      { divider: true },
+      { label: () => "C" },
+    ]);
+    const payload = showMenu(PROBE_TYPE);
+    assertDividersCollapsed(payload.items);
+    const labels = payload.items.filter((i) => !i.divider).map((i) => i.label);
+    expect(labels).toEqual(["A", "C"]); // B 被隐藏，两个 divider 相邻折叠为无
+  });
+});

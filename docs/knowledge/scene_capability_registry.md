@@ -37,7 +37,7 @@ ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Gr
 - **能力工厂注册与实例化**：`add(factory)` 登记工厂；`createAll({ scene, renderer })` 先 `dispose()` 旧实例，再逐个工厂 try/catch 创建（单个能力抛错不阻断其余）
 - **统一生命周期**（mount-preview-core 驱动）：
   1. `createAll` → 2. `getById` 引用 → 3. `loadAll`（localStorage 恢复）→ 4. `setPreset(adapter.id)`（模型类别预设，已有持久化值不覆盖用户显式选择）→ 5. `apply()` 挂入场景 → 会话结束 `saveAll()` + `dispose()`
-- **声明式菜单**：每 cap 的 `getMenuControls()` 返回 `MenuControlDef[]`，`preview-menu` 的 `renderCapControls` 统一渲染五种控件（`toggle / slider / select / button / divider`）。**菜单层不碰能力实现**——引擎/锥角/预设等参数操作全部由 cap 自报控件
+- **声明式菜单**：每 cap 的 `getMenuControls()` 返回 `MenuControlDef[]`，`preview-menu` 的 `renderCapControls` 统一渲染十种控件（`toggle / slider / select / button / divider / image / color / timeline / histogram / preset-thumb`，全 kind 带 `cap-<id>` testid）。**菜单层不碰能力实现**——引擎/锥角/预设等参数操作全部由 cap 自报控件。2026-09 起 cap 控件可经 `PreviewMenuNode.controls`（声明式节点新 kind）原生进任意面板，settings/env 不再 `renderCustom` 套壳
 - **持久化**：`persistState` / `restoreState`（localStorage 前缀 `ysm-scene-cap-`，隐私模式安全降级静默）
 
 ## 对外 API / 入口

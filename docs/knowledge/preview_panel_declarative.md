@@ -43,6 +43,8 @@ ADR-125 把**设置面板**的控件统一到 `MenuControlDef[]`（B 层单渲�
 schemaBuilders（声明式 schema）→ children（声明式节点，P4-B 新增）→ renderCustom（命令式逃生舱）→ action（动作）→ fillers（过程式映射）
 ```
 
+schemaBuilders 分支 2026-09 归一：内容统一走 `renderMenu(list, nodes, { ..., renderCustomDirect: true })`——`controls` kind（cap 控件组）与 `renderCustom`（custom 直接填充）都由 renderMenu 渲染，原 `renderPreviewSchemaContent` 已删。
+
 children 分支：`node.children?.length` 时递归 `renderMenu(list, node.children, { makeRow, makePanelView, menu, actionCtx })`。
 
 ### panel + children 是合法组合

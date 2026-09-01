@@ -447,4 +447,30 @@ describe("renderMenu 新 kind", () => {
     renderMenu(container, nodes, makeDeps() as any);
     expect(container.childElementCount).toBe(0);
   });
+
+  it("renderCustomDirect=true: custom 节点直接调 renderCustom 填充容器（schema 面板语义）", () => {
+    let called = 0;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "camera",
+        kind: "custom",
+        renderCustom: (list) => {
+          called++;
+          const d = document.createElement("div");
+          d.dataset.testid = "cam-ctrl";
+          d.textContent = "camera controls";
+          list.appendChild(d);
+        },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, { ...(makeDeps() as any), renderCustomDirect: true });
+    expect(called).toBe(1);
+    expect(container.querySelector('[data-testid="cam-ctrl"]')).not.toBeNull();
+    // 默认（false）保持列表行语义：custom 转行壳，不调 renderCustom
+    const container2 = document.createElement("div");
+    renderMenu(container2, nodes, makeDeps() as any);
+    expect(called).toBe(1); // 未再调用
+    expect(container2.querySelector('[data-testid="preview-camera"]')).not.toBeNull();
+  });
 });

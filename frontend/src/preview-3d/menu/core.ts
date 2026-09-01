@@ -28,8 +28,7 @@ import { tr } from "../../core/i18n/tr.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
-import { renderAdapterPanelContent } from "./render.ts";
-import { previewSnapshot } from "../state/preview-state.ts";
+import { renderAdapterPanelContent, renderMenu } from "./render.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 export { roleBaseName };
@@ -166,62 +165,6 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   return row;
 }
 
-/** [子函数 3/9] 声明式 Schema 面板内容渲染器（原 renderSchemaContent 闭包升格） */
-function renderPreviewSchemaContent(
-  list: HTMLElement,
-  nodes: PreviewMenuNode[],
-  hideMenu: () => void,
-): void {
-  for (const node of nodes) {
-    // [doc:adr-126-p4-d] visibleWhen 吃状态层快照（previewSnapshot()）——AGENTS.md 硬约束
-    if (node.visibleWhen && !node.visibleWhen(previewSnapshot())) continue;
-    if (node.kind === "sectionTitle") {
-      const st = document.createElement("div");
-      st.className = "section-title";
-      st.dataset.testid = node.id;
-      st.textContent = node.labelKey
-        ? tr(node.labelKey, node.fallback ?? node.id)
-        : node.id;
-      list.appendChild(st);
-      continue;
-    }
-    if (node.kind === "divider") {
-      const hr = document.createElement("div");
-      hr.dataset.testid = node.id;
-      hr.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
-      list.appendChild(hr);
-      continue;
-    }
-    if (node.kind === "field") {
-      const row = document.createElement("div");
-      row.className = "slide-item field-row";
-      row.dataset.testid = "preview-" + node.id;
-      const k = document.createElement("span");
-      k.className = "field-label";
-      k.textContent = node.labelKey ? tr(node.labelKey, node.id) : node.id;
-      const v = document.createElement("span");
-      v.className = "field-value";
-      v.textContent = String(
-        node.value ?? (node.labelKey ? tr(node.labelKey, node.id) : node.id),
-      );
-      row.append(k, v);
-      list.appendChild(row);
-      continue;
-    }
-    if (node.kind === "controls") {
-      // 声明式节点直持 cap 控件组：委托 renderCapControls（与 renderMenu 同通道，防两处分叉）
-      const ctrls = typeof node.controls === "function" ? node.controls() : node.controls;
-      if (ctrls?.length) renderCapControls(list, ctrls, previewSnapshot());
-      continue;
-    }
-    const fn = node.renderCustom;
-    if (fn) {
-      fn(list, hideMenu);
-      continue;
-    }
-  }
-}
-
 /** buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） */
 export interface PreviewMenuRouters {
   schemaBuilders: Record<string, (menu?: SlideMenuHandle) => PreviewMenuNode[]>;
@@ -300,7 +243,15 @@ export function renderPreviewPanel(
   list.title = `panel: ${node.id}${node.legacyTestId ? ` · testid: ${node.legacyTestId}` : ""}`;
   try {
     if (routers.schemaBuilders[node.id]) {
-      renderPreviewSchemaContent(list, routers.schemaBuilders[node.id]!(menu), hideMenu);
+      // schema 面板内容统一走 renderMenu（renderCustomDirect：custom 直接填充面板，
+      // 与 renderPreviewPanel 五级衰退的其余通道同源——2026-09 双轨归一，删 renderPreviewSchemaContent）
+      renderMenu(list, routers.schemaBuilders[node.id]!(menu), {
+        makeRow: panelDeps.makeRow,
+        makePanelView: panelDeps.makePanelView,
+        menu,
+        actionCtx,
+        renderCustomDirect: true,
+      });
     } else if (
       renderAdapterPanelContent(list, node, {
         makeRow: panelDeps.makeRow,

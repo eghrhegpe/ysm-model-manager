@@ -83,3 +83,28 @@ describe("renderCapControls — visibleWhen B 轨谓词", () => {
     expect(list.querySelector('[data-testid="cap-y"]')).toBeNull();
   });
 });
+
+describe("renderCapControls — 全 kind testid 覆盖（2026-09 补齐）", () => {
+  it("color/timeline/histogram/preset-thumb/image/divider 都带 cap-<id> testid", () => {
+    const list = document.createElement("div");
+    renderCapControls(list, [
+      { id: "c-color", kind: "color", labelKey: "c", fallback: "c", getValue: () => 0xffffff, setValue: () => {} },
+      { id: "c-time", kind: "timeline", labelKey: "c", fallback: "c", getValue: () => 12, setValue: () => {} },
+      { id: "c-hist", kind: "histogram", labelKey: "c", fallback: "c", getValue: () => [1, 2, 3], setValue: () => {} },
+      { id: "c-thumb", kind: "preset-thumb", labelKey: "c", fallback: "c", getValue: () => "x", setValue: () => {}, thumb: { size: 40, options: [{ value: "a", label: "a", getThumb: () => null }], activeValue: () => "a", onSelect: () => {} } },
+      { id: "c-img", kind: "image", labelKey: "c", fallback: "c", getValue: () => "https://x/y.png", setValue: () => {} },
+      { id: "c-div", kind: "divider", labelKey: "c", fallback: "c", getValue: () => false, setValue: () => {} },
+    ]);
+    for (const id of ["c-color", "c-time", "c-hist", "c-thumb", "c-img", "c-div"]) {
+      expect(list.querySelector(`[data-testid="cap-${id}"]`), `${id} 应有 cap- testid`).not.toBeNull();
+    }
+  });
+
+  it("image 无内容时跳过（不占位、无 testid）", () => {
+    const list = document.createElement("div");
+    renderCapControls(list, [
+      { id: "c-img-empty", kind: "image", labelKey: "c", fallback: "c", getValue: () => null, setValue: () => {} },
+    ]);
+    expect(list.querySelector('[data-testid="cap-c-img-empty"]')).toBeNull();
+  });
+});

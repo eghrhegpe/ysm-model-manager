@@ -61,6 +61,15 @@ interface RenderMenuDeps {
   makePanelView: (node: PreviewMenuNode) => SlideMenuView;
   menu: SlideMenuHandle;
   actionCtx: PreviewActionMenuCtx;
+  /**
+   * custom 节点渲染语义（双轨归一，2026-09）：
+   * - false（默认，列表行语义）：custom 走 makeRow 行壳——过渡行为，仅剩测试锁定；
+   * - true（面板内容语义）：custom 直接调 renderCustom(list) 填充容器——
+   *   schema 面板（settings/env/camera 等）内容经此渲染。
+   * 两轨语义曾分裂于 renderPreviewSchemaContent（直接填充）vs renderMenu（行壳），
+   * 现由本开关归一：schema 路径传 true，列表路径保持默认。
+   */
+  renderCustomDirect?: boolean;
 }
 
 /** 统一 label 取值：labelKey→tr(fallback)；无 labelKey 直接用 node.id */
@@ -447,6 +456,10 @@ export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], dep
       if (ctrls?.length) renderCapControls(container, ctrls, snapshot);
     } else if (node.kind === "divider" || node.kind === "sectionTitle") {
       rmAppendDecor(container, node);
+    } else if (node.kind === "custom" && deps.renderCustomDirect && node.renderCustom) {
+      // 面板内容语义：直接调 renderCustom(container) 填充（schema 面板路径；
+      // closePopup 可选，MikuMikuAR 单参用法兼容）。
+      node.renderCustom(container);
     } else {
       rmAppendLeaf(container, node, deps);
     }

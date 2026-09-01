@@ -231,6 +231,7 @@ function renderCapImage(parent: HTMLElement, c: MenuControlDef): void {
 function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item";
+  row.dataset.testid = "cap-" + c.id;
   row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
   const label = document.createElement("span");
   label.className = "slide-label";
@@ -257,6 +258,7 @@ function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
 function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item";
+  row.dataset.testid = "cap-" + c.id;
   row.style.cssText = "display:flex;flex-direction:column;gap:4px;padding:6px 10px";
 
   // 顶部：当前时间数字 + 标签
@@ -350,6 +352,7 @@ function renderCapHistogram(parent: HTMLElement, c: MenuControlDef): void {
   const data = Array.isArray(raw) ? (raw as number[]) : [];
   const row = document.createElement("div");
   row.className = "slide-item";
+  row.dataset.testid = "cap-" + c.id;
   row.style.cssText = "display:flex;flex-direction:column;gap:4px;padding:6px 10px";
 
   const label = document.createElement("span");
@@ -395,6 +398,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
   if (!thumb) return;
   const row = document.createElement("div");
   row.className = "slide-item";
+  row.dataset.testid = "cap-" + c.id;
   row.style.cssText = "display:flex;flex-direction:column;gap:4px;padding:6px 10px";
   const label = document.createElement("span");
   label.className = "slide-label";

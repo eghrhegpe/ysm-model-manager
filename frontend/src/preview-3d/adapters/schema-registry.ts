@@ -30,8 +30,8 @@ export function makeYsmModelSchemaId(sessionId: string): string {
   return `${YSM_MODEL_SCHEMA_ID}-${sessionId}`;
 }
 
-/** 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） */
-export type SchemaBuilder = (snapshot: PreviewSnapshot) => PreviewMenuNode[];
+/** 面板 builder：吃状态层快照（Partial——builder 只读自己关心的键，键存在性仍编译期守卫），产出声明式节点（纯数据，零 DOM） */
+export type SchemaBuilder = (snapshot: Partial<PreviewSnapshot>) => PreviewMenuNode[];
 
 /** 注册表（模块级单例；与 sceneCapabilityRegistry 同范式） */
 const registry = new Map<string, SchemaBuilder>();

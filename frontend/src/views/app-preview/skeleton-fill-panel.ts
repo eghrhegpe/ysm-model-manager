@@ -322,7 +322,7 @@ export function buildYsmModelSchema(
     spec: Spec3D;
     texArr: import("three").Texture[];
   },
-  snapshot: PreviewSnapshot,
+  snapshot: Partial<PreviewSnapshot>,
   sessionActiveComponent?: { get: () => number; set: (n: number) => void },
 ): PreviewMenuNode[] {
   // 会话态真源 = 闭包（per-scene）；缺省（旧调用/测试）回退快照读 ui.activeComponent（兼容）

@@ -28,8 +28,8 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 | 项 | 旧（ADR-125） | 新（P4-A） |
 |----|--------------|-----------|
 | 模块 | `state/settings-state.ts` | `state/preview-state.ts` |
-| 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀归位，原 `preview-menu/node-types.ts:14-21` 七域模板） |
-| 已知路径常量 | `SETTINGS_PATHS` | `KNOWN_PATHS`（仍只列 6 项落地） |
+| 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀归位；**2026-09 收紧 = `typeof KNOWN_PATHS[number]`，类型契约即运行时实现**，未落地键编译期报错） |
+| 已知路径常量 | `SETTINGS_PATHS` | `KNOWN_PATHS`（9 项落地：6 横切 + env.waterMode/groundMatSource + ui.activeComponent） |
 | 快照函数 | `settingsSnapshot()` | `previewSnapshot()` |
 | 公共函数名 | `getStateValue/setStateValue/subscribeSettings/isPathAvailable/resetSettingsListeners/toStatePath` | **保持同名**（通用名，跨子步零额外回归） |
 
@@ -47,18 +47,20 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 
 ```ts
 // 路径类型（编译期契约）
-type PreviewStatePath          // state/preview-state.ts，七域模板（ADR-129 第一刀归位）
-const KNOWN_PATHS              // 窄集合：readonly ["render.frustumCull", ...]（6 项）
+type PreviewStatePath          // = typeof KNOWN_PATHS[number]（9 键联合，2026-09 收紧：类型=实现）
+const KNOWN_PATHS              // readonly ["render.frustumCull", ...]（9 项）
 
 // 状态层（入参窄类型 = typeof KNOWN_PATHS[number]，编译期守「加新路径 = 扩 KNOWN_PATHS + 填 binding」）
 getStateValue(path)                       // 读
 setStateValue(path, v, { notify?: false }) // 写（滑块高频传 notify:false）
 isPathAvailable(path)                     // cap 派生项在 cap 缺席时 false
-previewSnapshot()                         // Record<PreviewStatePath, unknown>，未落地键 undefined，供 visibleWhen 纯函数谓词消费
+previewSnapshot()                         // Record<PreviewStatePath, unknown>（全键有值，无黑洞键），供 visibleWhen 纯函数谓词消费
 subscribeSettings(listener) → off          // 订阅变更
 resetSettingsListeners()                  // 测试隔离
 toStatePath(path)                         // 恒等函数（编译期守卫 PreviewStatePath 定义域）
 ```
+
+> 谓词签名已放宽为 `(s: Partial<PreviewSnapshot>) => boolean`（node 级 visibleWhen / cap 级 MenuControlDef.visibleWhen / SchemaBuilder）：**键存在性仍编译期守卫**（写 `s["ui.mode"]` 报 TS7053），但调用方可传部分快照（代表性快照天然是部分状态）。菜单图 `RepresentativeSnapshot.snapshot` 同步为 `Partial<PreviewSnapshot>`。
 
 ## 与其他子系统关系
 
@@ -72,15 +74,15 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 
 ## 不变量
 
-1. 六条已落地路径的读写必须经状态层，**不得**在菜单侧直接 `safeSet` 那两个 localStorage 键。
+1. 九条已落地路径的读写必须经状态层，**不得**在菜单侧直接 `safeSet` 那两个 localStorage 键。
 2. cap 派生路径**永不落盘**——双写即双源。
 3. `getStateValue/setStateValue/isPathAvailable` 的入参类型是 `typeof KNOWN_PATHS[number]`（窄联合）——加新路径必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住。
-4. `previewSnapshot()` 返回宽类型 `Record<PreviewStatePath, unknown>`——未落地键位是 undefined，谓词读 `s["ui.mode"]` 安全（falsy）。
+4. `PreviewStatePath` = `KNOWN_PATHS` 联合（2026-09 收紧）——**不存在未落地键**，谓词写 `s["ui.mode"]` 编译报错（TS7053），静默假死从根上消除；谓词入参为 `Partial<PreviewSnapshot>`（可传部分快照，键存在性仍守卫）。
 5. 业务状态（角色/动作/面板导航）**不进本层**——留在 sceneRegistry / SlideMenuHandle / 节点字段。
 
 ## 相关
 
 - ADR-126（本决策 P4-A）、ADR-125（P1 血统）、ADR-085（S2 补全对象）、ADR-093（sceneRegistry 归属）
-- 契约测试：`frontend/src/preview-3d/state/preview-state.test.ts`（20 例，随迁自 settings-state.test.ts）
+- 契约测试：`frontend/src/preview-3d/state/preview-state.test.ts`（28 例）+ `menu/node-render.test.ts` 编译期契约（@ts-expect-error 锁未落地键报错）
 - 消费者：`preview-menu/settings.ts`（`buildCrossCuttingControls` 三项横切控件读写走本层）
 - 后续：P4-B 面板 schema 化（**已落地 P4-B-1/2**）、P4-D 可见性谓词化（**已落地：`visibleWhen: (s: PreviewSnapshot) => boolean`**，node-types.ts 签名升级，renderMenu 统一消费 `previewSnapshot()`——原 renderPreviewSchemaContent 调用点已随该函数删除收编）、P4-C dockGroup 解耦（按需加 `ui.activePanel`）

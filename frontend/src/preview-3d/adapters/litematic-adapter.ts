@@ -275,7 +275,7 @@ function mdLiBuildSliceSchema(
     shell.layerVal = shell.layerMax;
     shell.layerVal2 = shell.layerMax;
   };
-  const layerSlider = (id: string, labelKey: string, fallback: string, pick: "layerVal" | "layerVal2", visibleWhen: (s: PreviewSnapshot) => boolean): PreviewMenuNode => ({
+  const layerSlider = (id: string, labelKey: string, fallback: string, pick: "layerVal" | "layerVal2", visibleWhen: (s: Partial<PreviewSnapshot>) => boolean): PreviewMenuNode => ({
     id,
     kind: "slider",
     labelKey,

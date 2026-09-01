@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderMenu } from "./core.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { mockMenuHandle } from "../adapters/menu-test-fixtures.ts";
 
@@ -236,6 +237,15 @@ describe("renderMenu 新 kind", () => {
     expect(received).toBeTypeOf("object");
     expect(received as Record<string, unknown>).toHaveProperty("render.maxFps");
     expect(container.querySelector('[data-testid="preview-gated"]')).not.toBeNull();
+  });
+
+  it("编译期契约：谓词读未落地键（如 ui.mode）是类型错误（2026-09 收紧，防静默假死回归）", () => {
+    // PreviewStatePath 已收紧为 KNOWN_PATHS 联合：`s["ui.mode"]` 编译报错（TS7053）。
+    // 下方指令断言该错误存在——若将来类型放宽回宽联合，指令变 unused 编译失败。
+    // 用静态 import 的 PreviewSnapshot（动态 import 类型会退化 any 掩盖索引错误）。
+    // @ts-expect-error 未落地键 ui.mode 不在 PreviewStatePath
+    const bad = (s: Partial<PreviewSnapshot>): boolean => s["ui.mode"] === "self";
+    expect(typeof bad).toBe("function");
   });
 
   it("deep nesting: 3 层文件夹递归渲染", () => {

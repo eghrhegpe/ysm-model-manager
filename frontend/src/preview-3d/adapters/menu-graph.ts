@@ -20,10 +20,12 @@ import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { getSchema, listSchemas } from "./schema-registry.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "../menu/defs.ts";
 
-/** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn） */
+/** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn）。
+ *  2026-09 收紧：Partial<PreviewSnapshot>——键位必须是已落地路径（写 ui.mode 等未落地键编译报错），
+ *  但允许只给部分键（代表性快照天然是部分状态）。谓词读未落地键 = 编译期错误，不再静默假死。 */
 export interface RepresentativeSnapshot {
   name: string;
-  snapshot: PreviewSnapshot;
+  snapshot: Partial<PreviewSnapshot>;
 }
 
 /** 导航图节点（菜单节点的投影，只读不写） */
@@ -79,11 +81,12 @@ export interface CollectMenuGraphOpts {
   registryIds?: string[];
 }
 
-/** 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二） */
+/** 节点级谓词收集（递归）：与 cap 级 collectVisiblePredicates 严格区分（ADR-128 §5 死穴二）。
+ *  谓词签名 Partial<PreviewSnapshot>（2026-09 收紧：键存在性编译期守卫，未落地键报错） */
 export function collectNodePredicates(
   nodes: PreviewMenuNode[],
-): Array<{ nodeId: string; predicate: (s: PreviewSnapshot) => boolean }> {
-  const out: Array<{ nodeId: string; predicate: (s: PreviewSnapshot) => boolean }> = [];
+): Array<{ nodeId: string; predicate: (s: Partial<PreviewSnapshot>) => boolean }> {
+  const out: Array<{ nodeId: string; predicate: (s: Partial<PreviewSnapshot>) => boolean }> = [];
   for (const n of nodes) {
     if (n.visibleWhen) out.push({ nodeId: n.id, predicate: n.visibleWhen });
     if (n.children) out.push(...collectNodePredicates(n.children));
@@ -149,7 +152,7 @@ export function collectMenuGraph(opts: CollectMenuGraphOpts): MenuGraph {
   const registryIds = opts.registryIds ?? fullRegistry;
   // 隐式假设：registry builder 输出不随快照变化（当前 builders 不消费快照）。
   // 若未来演进到 builder 按快照导出不同 options/节点，此处需改为逐档执行并合并（P5② 已知假设）。
-  const snapForBuilder = snapshots[0]?.snapshot ?? ({} as PreviewSnapshot);
+  const snapForBuilder = snapshots[0]?.snapshot ?? ({} as Partial<PreviewSnapshot>);
 
   const allPanels: MenuGraphNode[] = [];
   const allResolvedNodes: PreviewMenuNode[][] = [];

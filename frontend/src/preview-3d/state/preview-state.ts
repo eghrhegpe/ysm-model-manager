@@ -29,23 +29,6 @@
 
 // [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters 平铺的 preview-menu-node-types.ts，
 // state 反向 import adapters → 类型归位 state，adapters 反过来前向 import state，方向正）
-/** 状态路径：类型化字符串（沿用 MikuMikuAR 契约；ysm 侧 state 映射表尚未建立时为占位） */
-export type PreviewStatePath =
-  | `env.${string}`
-  | `render.${string}`
-  | `light.${string}`
-  | `ui.${string}`
-  | `perception.${string}`
-  | `motion.${string}`
-  | `model.${string}`;
-
-/**
- * 状态层快照：`visibleWhen: (s: PreviewSnapshot) => boolean` 纯函数谓词吃的快照形状。
- * 由本文件 `previewSnapshot()` 产出（Record<PreviewStatePath, unknown>）。
- * 未落地路径的值为 undefined（谓词读 `s["ui.mode"]` 安全——falsy）。
- * [doc:adr-126-p4-d] 与 AGENTS.md「3d菜单只允许 visibleWhen: (s) => boolean」对齐。
- */
-export type PreviewSnapshot = Record<PreviewStatePath, unknown>;
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import { isFrustumCullEnabled, setFrustumCullEnabled } from "../frustum-cull.ts";
@@ -62,9 +45,10 @@ import { safeSet } from "../../utils/dom/storage.ts";
 /**
  * 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。
  *
- * 7 域路径类型契约 `PreviewStatePath`（本文件定义，ADR-129 第一刀归位自 adapters）在类型层
- * 全声明（env/render/light/ui/perception/motion/model），但 binding 层只填已落地的
- * 6 项横切设置。其余域按需在 P4-C/D 落 binding：未落地项 `isPathAvailable()=false`。
+ * 2026-09 收紧：`PreviewStatePath` 类型 = 本集合（类型契约即运行时实现）。
+ * 原「7 域模板字面量宽类型」让未落地键（如 ui.mode / env.sky）在类型层合法、
+ * 运行时却恒 undefined——谓词读它们静默假死。现未落地键在编译期即报错：
+ * 新增路径必须「扩 KNOWN_PATHS + 填 binding」两步走，缺一步编译不过。
  */
 export const KNOWN_PATHS = [
   "render.frustumCull",
@@ -80,7 +64,22 @@ export const KNOWN_PATHS = [
   // [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
   // 会话态不落盘；面板侧 subscribe 变更 → 调 showModelGroup 副作用（views 层装配）。
   "ui.activeComponent",
-] as const satisfies readonly PreviewStatePath[];
+] as const;
+
+/**
+ * 状态路径：已落地路径的联合（类型契约 = 运行时实现）。
+ * 写未落地键（如 `ui.mode` / `env.sky`）编译报错——把「谓词读黑洞键静默假死」
+ * 挡在编译期。新路径两步走：扩 KNOWN_PATHS + 填 bindings。
+ */
+export type PreviewStatePath = typeof KNOWN_PATHS[number];
+
+/**
+ * 状态层快照：`visibleWhen: (s: PreviewSnapshot) => boolean` 纯函数谓词吃的快照形状。
+ * 由本文件 `previewSnapshot()` 产出（Record<PreviewStatePath, unknown>）。
+ * 键位 = KNOWN_PATHS（全部有真实来源，无黑洞键）。
+ * [doc:adr-126-p4-d] 与 AGENTS.md「3d菜单只允许 visibleWhen: (s) => boolean」对齐。
+ */
+export type PreviewSnapshot = Record<PreviewStatePath, unknown>;
 
 /**
  * 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。

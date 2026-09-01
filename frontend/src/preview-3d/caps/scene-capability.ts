@@ -35,11 +35,12 @@ export interface MenuControlDef {
   settingsOrder?: number;
   /** 条件显隐（A 轨闭包）：定义且返回 false 时控件隐藏（依赖 cap 自身 params，禁止跨 cap 探查）。未定义则始终显示。 */
   visible?: () => boolean;
-  /** 条件显隐（B 轨纯函数谓词）：吃状态层快照 PreviewSnapshot，返回 false 时隐藏。
+  /** 条件显隐（B 轨纯函数谓词）：吃状态层快照 PreviewSnapshot（2026-09 放宽为 Partial——谓词只读自己关心的键，
+   *  键存在性仍编译期守卫，未落地键报错），返回 false 时隐藏。
    *  与节点级 visibleWhen 同构，用于把 cap 控件条件显隐从「闭包依赖运行时 params」升级为「状态层快照驱动」，
    *  配合 preview-state 的 env.waterMode / env.groundMatSource 等 cap 状态上浮路径，消除快照冻结类 bug 根源。
    *  A 轨 visible 与 B 轨 visibleWhen 并存时两者 AND（皆通过才显示）。未定义则仅看 visible。 */
-  visibleWhen?: (s: PreviewSnapshot) => boolean;
+  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean;
   /** slider 配置 */
   slider?: {
     min: number;

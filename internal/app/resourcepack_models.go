@@ -1,11 +1,10 @@
 // ===== 资源包 block/item 模型读取绑定（ADR-080 PackModelAdapter）=====
-// ListPackModels 枚举容器内模型 JSON 条目；ReadPackEntry 读单条目内容（base64）。
+// ListPackModels 枚举容器内模型 JSON 条目；ReadPackEntry 读单条目内容（[]byte → base64）。
 // 复用 container.Reader（ADR-068），统一支持 .zip / 目录 / .7z。
 
 package app
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log"
@@ -149,17 +148,18 @@ func readPackEntry(e container.Entry) []byte {
 	return data
 }
 
-// ReadPackEntry 读取容器内条目内容（base64 字符串）。
-// entry 非法/缺失/超限返回空串（前端渲染兜底跳过）。
-func (a *App) ReadPackEntry(path, entry string) string {
+// ReadPackEntry 读取容器内条目内容（[]byte，Wails 自动转 base64——与 ReadFileBytes 同口径，
+// ADR-143 P2 统一同语义两写法；原手撸 base64.StdEncoding 返回 string 已废弃）。
+// entry 非法/缺失/超限返回 nil（前端渲染兜底跳过）。
+func (a *App) ReadPackEntry(path, entry string) []byte {
 	if !packEntrySafe(entry) {
 		log.Printf("[packs] ReadPackEntry 非法条目 %q", entry)
-		return ""
+		return nil
 	}
 	r, err := container.Open(path)
 	if err != nil {
 		log.Printf("[packs] ReadPackEntry 打开失败 %s: %v", path, err)
-		return ""
+		return nil
 	}
 	defer r.Close()
 	for _, e := range r.Entries() {
@@ -168,16 +168,16 @@ func (a *App) ReadPackEntry(path, entry string) string {
 		}
 		rc, err := e.Open()
 		if err != nil {
-			return ""
+			return nil
 		}
 		data, err := io.ReadAll(io.LimitReader(rc, maxPackEntrySize))
 		rc.Close()
 		if err != nil {
 			log.Printf("[packs] ReadPackEntry 读取失败 %s/%s: %v", path, entry, err)
-			return ""
+			return nil
 		}
-		return base64.StdEncoding.EncodeToString(data)
+		return data
 	}
 	log.Printf("[packs] ReadPackEntry 条目不存在 %s/%s", path, entry)
-	return ""
+	return nil
 }

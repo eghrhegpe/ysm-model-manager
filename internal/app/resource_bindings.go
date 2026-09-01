@@ -64,19 +64,6 @@ func (a *App) ReadShaderpackLang(path string) (types.ShaderpackLang, error) {
 
 // ===== Litematica 蓝图/投影绑定 =====
 
-// voxelErrorJSON 体素构建失败的错误 JSON。
-// 契约（对齐 dedup FindDuplicateFiles 的 {error} 模式）：成功 → LitematicVoxelData JSON；
-// 失败 → {"error": string}。前端 litematic-adapter 按 error 字段区分「解析失败」与
-// 「空数据」——不再把失败吞成 "{}"（原契约下用户永远只看到"体素数据为空"，
-// 无法分辨是文件格式不支持还是真的没有方块，排查需翻日志）。
-func voxelErrorJSON(fnName string, err error) string {
-	data, merr := json.Marshal(map[string]string{"error": fmt.Sprintf("%s: %v", fnName, err)})
-	if merr != nil {
-		return `{"error":"json marshal failed"}`
-	}
-	return string(data)
-}
-
 // buildVoxelData 调用体素构建函数并返回 typed 结果（ADR-143 P1：去 string-JSON）。
 func buildVoxelData(tag, fnName, path string, buildFn func(string, int) (*types.LitematicVoxelData, error), maxBlocks int) (*types.LitematicVoxelData, error) {
 	data, err := buildFn(path, maxBlocks)
@@ -444,20 +431,6 @@ func (a *App) saveConfig(cfg types.AppConfig) error {
 	return nil
 }
 
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// ImportResourcePack 使用策略模式导入资源包
-func (a *App) ImportResourcePack(srcPath, rtype string) string {
-	dstDir, _ := a.GetRepoRoot(rtype)
-	if dstDir == "" {
-		return "未设置" + rtype + "目录"
-	}
-	h := importer.Get(rtype)
-	if h == nil {
-		return fmt.Sprintf("未知的资源类型: %s", rtype)
-	}
-	return h.Import(srcPath, dstDir)
-}
-
 // ImportByType 统一导入入口——根据资源类型自动选择导入策略
 func (a *App) ImportByType(rtype, srcPath string) string {
 	h := importer.Get(rtype)
@@ -516,25 +489,6 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 	return nil
 }
 
-// findDuplicateErrorJSON 返回结构化错误 JSON（绑定契约：DedupGroup[] | {error}）。
-// 前端社区诊断按 JSON.parse 后 {error} 字段区分扫描失败与无重复（避免假绿）；
-// 使用 json.Marshal 生成，而非 strconv.Quote 拼接（避免手工拼接 JSON 的转义遗漏）。
-// 委托 DedupErrorJSON，与 go/types 解析入口保持单一事实源（杜绝双实现漂移）。
-func findDuplicateErrorJSON(msg string) string {
-	return DedupErrorJSON(msg)
-}
-
-// marshalJSON 序列化为紧凑 JSON，失败时返回 fallback（非空串）+ 记录日志。
-// 统一替代 data, _ := json.Marshal 模式，避免前端 JSON.parse("") 抛异常而无法定位问题（规律六）。
-func marshalJSON(tag string, v interface{}, fallback string) string {
-	data, err := json.Marshal(v)
-	if err != nil {
-		log.Printf("[%s] JSON 序列化失败: %v", tag, err)
-		return fallback
-	}
-	return string(data)
-}
-
 // marshalJSONIndent 序列化为缩进 JSON，失败时返回 fallback + 记录日志。
 func marshalJSONIndent(tag string, v interface{}, fallback string) string {
 	data, err := json.MarshalIndent(v, "", "  ")
@@ -569,21 +523,6 @@ func (a *App) FindDuplicateFiles(dir string, configStr ...string) ([]dedup.Group
 		return nil, err
 	}
 	return groups, nil
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// CountDuplicateFiles 快速统计重复文件数量。
-// 契约（见 docs/wails-bindings.md）：成功 → {groups, extra}；失败 → {error: string}。
-func (a *App) CountDuplicateFiles(dir string) string {
-	if !a.isPathInRootOrSelf(dir) {
-		return findDuplicateErrorJSON("路径超出仓库目录")
-	}
-	groups, extra, err := dedup.CountDuplicates(dir, true)
-	if err != nil {
-		log.Printf("[dedup] CountDuplicateFiles 扫描失败: %v", err)
-		return findDuplicateErrorJSON(err.Error())
-	}
-	return marshalJSON("CountDuplicateFiles", map[string]int{"groups": groups, "extra": extra}, findDuplicateErrorJSON("JSON 序列化失败"))
 }
 
 // InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache）

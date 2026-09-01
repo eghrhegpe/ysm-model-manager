@@ -3,7 +3,6 @@ package app
 
 import (
 	"archive/zip"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -83,16 +82,12 @@ func TestReadPackEntry(t *testing.T) {
 	p := makePackZip(t, packZipFiles)
 
 	got := a.ReadPackEntry(p, "assets/minecraft/models/block/stone.json")
-	if got == "" {
+	if len(got) == 0 {
 		t.Fatal("stone.json 读取为空")
 	}
-	// 返回值为 base64，解码后应含 cube_all parent 引用
-	raw, err := base64.StdEncoding.DecodeString(got)
-	if err != nil {
-		t.Fatalf("返回值不是合法 base64: %v", err)
-	}
-	if !strings.Contains(string(raw), "cube_all") {
-		t.Errorf("解码内容应含 cube_all 引用，实际 %q", string(raw))
+	// 返回 []byte（Wails 转 base64 交给前端）；内容应含 cube_all parent 引用
+	if !strings.Contains(string(got), "cube_all") {
+		t.Errorf("内容应含 cube_all 引用，实际 %q", string(got))
 	}
 }
 
@@ -107,7 +102,7 @@ func TestReadPackEntry_Guard(t *testing.T) {
 		"assets\\minecraft", // 反斜杠
 		"assets/minecraft/models/block/missing.json", // 不存在
 	} {
-		if got := a.ReadPackEntry(p, entry); got != "" {
+		if got := a.ReadPackEntry(p, entry); len(got) != 0 {
 			t.Errorf("非法条目 %q 应返回空，实际非空", entry)
 		}
 	}

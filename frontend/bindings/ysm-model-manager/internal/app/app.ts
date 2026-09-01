@@ -178,15 +178,6 @@ export function CopyModelFile(src: string, dstDir: string): $CancellablePromise<
 }
 
 /**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * CountDuplicateFiles 快速统计重复文件数量。
- * 契约（见 docs/wails-bindings.md）：成功 → {groups, extra}；失败 → {error: string}。
- */
-export function CountDuplicateFiles(dir: string): $CancellablePromise<string> {
-    return $Call.ByID(2412651574, dir);
-}
-
-/**
  * CountInstanceResources 统计指定整合包中可清空的资源文件数
  * 只统计仓库中已有的文件（同 clearInstanceDir 逻辑）
  * rtype 为空时统计全部类型，否则只统计指定类型
@@ -726,14 +717,6 @@ export function ImportModelFolderTo(folderName: string, subpath: string, rtype: 
 
 /**
  * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * ImportResourcePack 使用策略模式导入资源包
- */
-export function ImportResourcePack(srcPath: string, rtype: string): $CancellablePromise<string> {
-    return $Call.ByID(2578913479, srcPath, rtype);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
  */
 export function ImportWorkshopSitesCSV(csvContent: string): $CancellablePromise<void> {
     return $Call.ByID(1342547047, csvContent);
@@ -1033,10 +1016,11 @@ export function ReadNbtStructure(path: string): $CancellablePromise<{ [_ in stri
 }
 
 /**
- * ReadPackEntry 读取容器内条目内容（base64 字符串）。
- * entry 非法/缺失/超限返回空串（前端渲染兜底跳过）。
+ * ReadPackEntry 读取容器内条目内容（[]byte，Wails 自动转 base64——与 ReadFileBytes 同口径，
+ * ADR-143 P2 统一同语义两写法；原手撸 base64.StdEncoding 返回 string 已废弃）。
+ * entry 非法/缺失/超限返回 nil（前端渲染兜底跳过）。
  */
-export function ReadPackEntry(path: string, entry: string): $CancellablePromise<string> {
+export function ReadPackEntry(path: string, entry: string): $CancellablePromise<string | null> {
     return $Call.ByID(1997958062, path, entry);
 }
 

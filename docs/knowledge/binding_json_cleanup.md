@@ -27,7 +27,7 @@ use_when:
 
 ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struct 化）、**2 条 Deprecated**（直接删）、**3 条豁免**（合法 JSON 文本协议）、**16 条真字符串**（只规范错误通道）。前端 30+ 处生产代码以 `JSON.parse(...) as 手写类型` 消费病灶档，类型断层 + 三套错误语义（`error` / `"{}"` 吞错 / `{error}` 字段）由此而来。
 
-**进度**：P0×6 全部 ✅（2026-09-01）；P1×17 全部 ✅（2026-09-01）。剩 P2（Deprecated 删除 + error_json.go 工具族退役 + ReadPackEntry base64 统一）。
+**进度**：P0×6 全部 ✅（2026-09-01）；P1×17 全部 ✅（2026-09-01）；P2 全部 ✅（2026-09-01）——Deprecated 删除、error_json.go 工具族退役、ReadPackEntry 统一 []byte、binding-check 治理闸上线。
 
 **进度约定**：铲一条把状态列改 ✅ 并同步删除前端对应 `JSON.parse` 断言；整批完成在本表登记。ADR-143 只记决策，不记进度。
 
@@ -63,12 +63,12 @@ ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑
 | `GetInstanceSyncStatus` | app_install_instance.go:576 | sync-manager/store.ts:48 | ✅ |
 | `SyncResources` | app_install_instance.go:352 | sync-manager/index.ts、store.ts | ✅ |
 
-## 二、Deprecated（2 条，直接删不迁移）
+## 二、Deprecated（2 条，已删除 ✅）
 
 | 绑定 | Go 位置 | 状态 |
 |---|---|---|
-| `CountDuplicateFiles` | resource_bindings.go:585 | ⬜ 前端 0 消费 |
-| `ImportResourcePack` | resource_bindings.go:454 | ⬜ 前端 0 消费 |
+| `CountDuplicateFiles` | resource_bindings.go:585（已删） | ✅ 2026-09-01 |
+| `ImportResourcePack` | resource_bindings.go:454（已删） | ✅ 2026-09-01 |
 
 ## 三、豁免（3 条，合法 JSON 文本协议，别误铲）
 
@@ -83,15 +83,15 @@ ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑
 - `DoUpdate`（app_config.go:316）`"success"`/`"失败: ..."` 文本；`ImportByType`（resource_bindings.go:467）importer 文本结果
 - 类型 ID 串：`DetectResourceType` / `DetectZipType`
 - 路径/配置/版本：`GetDefaultRepoRoot`、`GetGlobalCustomDir`、`GetYSMRepoRoot`、`GetConfigPath`、`GetLinkMode`、`FindPreviewImage`、`ExtractPreviewTexture`、`SelectImportZip`、`SelectImportFile`、`GetAppVersion`、`CurrentVersion`
-- `ReadPackEntry`（resourcepack_models.go:166）手撸 base64 串——与 `ReadFileBytes` 的 `[]byte` 同语义两写法，随 P2 评估统一为 `[]byte`
+- `ReadPackEntry`（resourcepack_models.go:166）✅ 已统一为 `[]byte`（Wails 自动转 base64，与 `ReadFileBytes` 同口径，2026-09-01）
 
-## 铲债步骤（每批固定动作）
+## 铲债步骤（已全部执行完毕 ✅）
 
 1. Go 侧改 `(T, error)` struct 返回 → `go build ./go/...`
 2. `npm run generate:bindings -ts`（必须带 `-ts`，回归红线）
 3. 前端消费点同批切换：删 `JSON.parse` + `as` 断言，改 `try/catch`；web 侧 `web-fs`/`web-store` 对应实现同步改
 4. browser-adapter 契约测试（contract-b1/b2/b3）+ 消费方测试更新 → `npx vite build` + `npm run typecheck`
-5. 本表状态列打 ✅；`error_json.go` 工具族（ErrorJSON/SyncErrorJSON/ResolveErrorJSON/DedupErrorJSON）随最后一批退役
+5. 状态列打 ✅；`error_json.go` 工具族（ErrorJSON/SyncErrorJSON/ResolveErrorJSON/DedupErrorJSON）P2 已退役删除
 
 ## 不变量
 
@@ -104,4 +104,4 @@ ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑
 
 - ADR-143（决策方向）、ADR-014（类型化渐进迁移）、ADR-049（平台双路由）
 - 知识卡 `wails-bridge`（getApp 唯一入口）、`backend-idb`（browserAdapter 数据面）
-- 治理闸：`binding-check` 增「string 承载 JSON 须命中 §三白名单」静态规则（ADR-143 §2.5）
+- 治理闸：✅ `binding-check` 已上线「导出绑定返回 string 须命中 STRING_RETURN_ALLOWLIST」静态规则（ADR-143 §2.5，2026-09-01）——新增 string 返回方法若不在白名单（真字符串/豁免）即报错，防 string-JSON 暗道回潮

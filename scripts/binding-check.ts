@@ -34,6 +34,50 @@ const FRAMEWORK_METHODS = new Set(['ServiceStartup', 'ServiceShutdown']);
 // 首方注入方法：Go 端调用注入，不要求前端 JS 存在对应绑定
 const SERVER_INJECTED = new Set(['SetAllowedCommands']);
 
+// ===== ADR-143 §2.5 治理闸：string 承载 JSON 禁止（返回 string 须命中允许清单）=====
+// 允许返回 string 的导出方法 = 真字符串语义（路径/文本/版本/base64/类型ID/对话框路径）+
+// 豁免（JSON 文本协议，见 docs/knowledge/binding_json_cleanup.md §三）。
+// 新增「返回 string 的导出绑定」若不在此清单 → 报错：要么是真字符串（补进清单），
+// 要么是 string 承载 JSON（违规，改 struct 返回）。
+const STRING_RETURN_ALLOWLIST = new Set([
+  // ---- 豁免：合法 JSON 文本协议（跨进程/导出物）----
+  'ExecuteCLI',              // CLI 子进程 --json 跨进程协议
+  'GetAllowedCLICommands',   // 同上
+  'ExportModelStructureJSON',// 导出物即 JSON 文件
+  // ---- 真字符串：版本/文本 ----
+  'GetAppVersion',
+  'CurrentVersion',
+  'DoUpdate',                // "success"/"失败: ..." 文本结果
+  'ImportByType',            // importer 文本结果
+  'GetLinkMode',
+  'DetectZipType',
+  'DetectResourceType',
+  // ---- 真字符串：路径/配置 ----
+  'GetYSMRepoRoot',
+  'GetConfigPath',
+  'GetDefaultRepoRoot',
+  'GetGlobalCustomDir',
+  'FindPreviewImage',
+  'ExtractPreviewTexture',
+  'SelectImportZip',
+  'SelectImportFile',
+  'SelectDirectory',
+  'GetRepoRoot',             // (string, error)
+  'InstallModelFile',
+  'InstallModelWithOverlay',
+  'SavePreviewTempFile',
+  'DownloadFromGitHub',
+  'GenerateRepoIndex',
+  'ExportWorkshopSitesCSV',
+  'ExportWorkshopSitesJSONFile',
+  'ExportWorkshopCreatorsJSONFile',
+  'BackupWorkshopCreators',
+  'CachedCreatorAvatar',
+  'GetCachedTextureByHash',
+  'ValidateMinecraftDir',    // (string, string)
+  'MoveToRecycleEx',         // (string, string)
+]);
+
 /** 括号配对：从 open 位置找到与之匹配的右括号（跳过嵌套层级），找不到返回文本末尾。 */
 function matchingParen(text: string, open: number) {
   let depth = 0;
@@ -156,7 +200,16 @@ function extractGoExports() {
         const open = m.index + m[0].length - 1; // m[0] 以参数列表的 `(` 收尾
         const close = matchingParen(text, open);
         const body = paramBody(text, open, close);
-        exports[name] = { file: path.basename(fp), arity: paramArity(text, open, close), params: goParamTypes(body) };
+        // 返回类型：参数右括号后、函数体 `{` 前（多返回 `(T, error)` 或单 `T`）
+        const retMatch = text.slice(close + 1).match(/^\s*([^\s{]+)/);
+        const retType = retMatch ? retMatch[1]!.replace(/^\(/, '').split(',')[0]!.trim() : '';
+        exports[name] = {
+          file: path.basename(fp),
+          arity: paramArity(text, open, close),
+          params: goParamTypes(body),
+          // ADR-143 §2.5：首个返回类型（string 承载 JSON 检测用；`(string, error)` → "string"）
+          retType: retType === 'string' || retType === '(string' ? 'string' : retType,
+        };
       }
     }
   }
@@ -220,6 +273,20 @@ const jsNames = new Set(Object.keys(jsExports));
 const goNames = new Set(Object.keys(goExports));
 for (const name of [...jsNames].filter((n) => !goNames.has(n)).sort()) {
   issues.push({ type: 'extra_in_js', func: name, js_file: path.relative(ROOT, BINDINGS_FILE) });
+}
+
+// ADR-143 §2.5 治理闸：导出绑定返回 string 须命中允许清单（防 string-JSON 暗道回潮）。
+// 白名单 = 真字符串语义（路径/文本/版本/base64）+ 豁免（JSON 文本协议）。
+// 新增 string 返回方法不在此清单 → 报错：真字符串补清单，JSON 承载者改 struct。
+for (const [name, f] of Object.entries(goExports).sort(([a], [b]) => a.localeCompare(b))) {
+  if (f.retType === 'string' && !STRING_RETURN_ALLOWLIST.has(name)) {
+    issues.push({
+      type: 'string_return_not_allowed',
+      func: name,
+      go_file: f.file,
+      message: `导出绑定返回 string 未命中白名单（ADR-143 §2.5）：若是真字符串（路径/文本/版本）请补进 scripts/binding-check.ts STRING_RETURN_ALLOWLIST；若是 string 承载 JSON 则违规，请改 struct 返回。豁免 JSON 文本协议见 docs/knowledge/binding_json_cleanup.md §三。`,
+    });
+  }
 }
 
 const out = { _summary: { go_functions: Object.keys(goExports).length, js_functions: Object.keys(jsExports).length, issues: issues.length }, issues };

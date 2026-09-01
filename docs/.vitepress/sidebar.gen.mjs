@@ -718,6 +718,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-147：移除 app-tree _typeFilter 死字段与自证测试",
+        "link": "/adr/ADR-147-remove-apptree-typefilter-dead-field"
+      },
+      {
         "text": "ADR-146：TS 路径别名与反桶契约",
         "link": "/adr/ADR-146-path-alias-anti-barrel"
       },
@@ -1936,16 +1940,6 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
-          }
-        ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "AI 急速版路由表（高频场景）",
-            "link": "/knowledge/routes-quick"
           }
         ]
       }

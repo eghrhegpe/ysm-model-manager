@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { toPosix } from './to-posix.ts';
+import { tryResolveAlias } from './alias-resolve.ts';
 export { toPosix };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -113,12 +114,20 @@ const IMPORT_EXTS = ['ts', 'js'];
  * @returns {string|null} 解析到的绝对路径；包导入或不存在返回 null
  */
 export function resolveImport(fromFile: string, spec: string, moduleSet: Set<string>) {
+  // ADR-146 闸二：别名 spec 优先展开（治 check-circular 开闸后环检测假阴性）。
+  // tryResolveAlias 对非别名 spec（相对/裸包名）返回 null，自然落入下方相对路径分支。
+  const aliasAbs = tryResolveAlias(spec);
+  if (aliasAbs) return matchModule(aliasAbs, moduleSet);
   if (!spec.startsWith('./') && !spec.startsWith('../')) return null; // 包导入跳过
-  const base = path.dirname(fromFile);
-  const candidates = [path.join(base, spec)];
-  if (!path.extname(spec)) {
+  return matchModule(path.join(path.dirname(fromFile), spec), moduleSet);
+}
+
+/** 绝对路径 → 补 .ts/.js/index.* 候选 → moduleSet 命中返回绝对路径，否则 null。别名与相对路径共用。 */
+function matchModule(abs: string, moduleSet: Set<string>): string | null {
+  const candidates = [abs];
+  if (!path.extname(abs)) {
     for (const ext of IMPORT_EXTS) {
-      candidates.push(path.join(base, `${spec}.${ext}`), path.join(base, spec, `index.${ext}`));
+      candidates.push(`${abs}.${ext}`, path.join(abs, `index.${ext}`));
     }
   }
   for (const c of candidates) {

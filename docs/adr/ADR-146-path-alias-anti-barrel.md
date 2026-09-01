@@ -87,7 +87,7 @@ ADR-138 把 `features/preview-3d` 上提为 `src/preview-3d` 时，代价是**�
 
 | 规则 | 判定 | 级别 | 白名单 |
 |------|------|------|--------|
-| **R0 别名闸** | 任何含别名的 import → FAIL | **FAIL（临时）** | 无；闸二开启时整条规则删除 |
+| ~~R0 别名闸~~ | ~~（已随闸二删除，2026-09-01）~~ | — | — |
 | **R1 聚合桶嫌疑** | 单文件 re-export **来源模块数 ≥ 3** | WARN（观察期） | `src/utils/types-re-export.ts`（转发垫层，来源数=1，天然不触发） |
 | **R2 目录深度** | 相对 `src/` 深度 ≤ 3 | WARN（观察期） | 无 |
 | **R3 import 上跳** | ≤ 3 级 | WARN（观察期） | 跨仓根资源允许 4 级（`resource_types.json` / `creators.json` / `workshop*.json` / `bindings/**` / `e2e/mock-data.ts`） |

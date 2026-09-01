@@ -30,6 +30,7 @@ import { resolve, dirname, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from './_lib/parse-args.ts';
 import { walk, toPosix } from './_lib/scan-files.ts';
+import { resolveAliasToSrcRel } from './_lib/alias-resolve.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -67,7 +68,10 @@ function layerOf(srcRelPath: string) {
 
 /** 解析 import 目标，归一化为相对 src 的路径前缀（如 'views/foo'） */
 function resolveTarget(spec: string, fromSrcRel: string) {
-  if (spec.startsWith('@/')) return spec.slice(2);
+  // ADR-146 闸二：别名 spec 走真实别名配置（替代脆弱的 spec.slice(2) 硬编码）。
+  // '@/...' 落 src 内 → 返回相对路径；'#root...' 落 src 外 → null（不污染分层判定）。
+  const aliasRel = resolveAliasToSrcRel(spec);
+  if (aliasRel !== null) return aliasRel;
   if (spec.startsWith('.')) {
     const abs = resolve(dirname(resolve(SRC_ROOT, fromSrcRel)), spec);
     const rel = toPosix(relative(SRC_ROOT, abs));

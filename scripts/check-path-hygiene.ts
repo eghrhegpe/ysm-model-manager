@@ -4,12 +4,11 @@
  *
  * 把「目录级别名 + 反桶契约 + 跨边界冻结」固化为 CI 可执行规则。
  * 启用分两闸（ADR-146 D4）：
- *   闸一（配置闸，本脚本即落点）：别名已登记但 R0 按住不许用，直到闸二脚本改造完成。
- *   闸二（使用闸）：check-layering/check-circular/check-tpl-refs/auto-import* 改造成
- *     别名感知解析 + 单测绿 → 删除 R0 规则 → 启动增量迁移（D5）。
+ *   闸一（配置闸）：登记别名 + R0 按住不许用，已随 d2fa4f7c 提交。
+ *   闸二（使用闸）：脚本改造成别名感知解析 + 单测绿 → R0 规则已删除 → 启动增量迁移（D5）。
+ *     本脚本不再含别名闸；自闸二起新文件用别名（D5），存量文件顺手切换（禁止 codemod 全量）。
  *
  * 规则：
- *   R0 别名闸       任何含别名（`@/...` / `#root/...`）的 import → FAIL（临时，闸二删此规则）
  *   R1 聚合桶嫌疑   单文件 re-export 来源模块数 ≥ 3 → WARN（观察期；白名单 types-re-export.ts）
  *   R2 目录深度     相对 src/ 的目录层级 > 3 → WARN（观察期）
  *   R3 import 上跳  相对路径 `../` 上跳 > 3 且目标仍在 src 内（真·内部深 wander）→ WARN（观察期）
@@ -53,9 +52,6 @@ const R1_BARREL_THRESHOLD = 3; // re-export 来源模块数 ≥ 3 → 嫌疑
 const R2_DEPTH_MAX = 3; // 目录层级 > 3 → WARN
 const R3_UPLEVEL_MAX = 3; // `../` 上跳 > 3 且仍在 src 内 → WARN
 
-// 别名说明符前缀（R0）：`@/` 斜杠紧随 @ 之后，可区别于 npm scope（`@scope/pkg` 不会误判）
-const ALIAS_PREFIXES = ['@/', '#root/'];
-
 // 解析前剥离注释，避免注释/反引号字符串里的 `from '...'` 被误判为真实 import
 // （例：types-re-export.ts 文档注释含消费方示例，曾致 R4/R0 误报）。保留 `://` 协议头。
 function stripComments(src: string): string {
@@ -75,8 +71,7 @@ interface Finding { rule: string; file: string; detail: string; }
 const fails: Finding[] = [];
 const warns: Finding[] = [];
 
-// R0 / R1 / R3 / R4 计数
-let r0Count = 0;
+// R1 / R3 / R4 计数
 const r1Hits: string[] = [];
 const r3Hits: string[] = [];
 let r4Count = 0;
@@ -90,17 +85,6 @@ for (const { abs, rel } of files) {
   const code = stripComments(readFileSync(abs, 'utf-8'));
   const relPosix = toPosix(rel);
   const dirOfFile = dirname(abs);
-
-  // ---- R0 别名闸 ----
-  let m: RegExpExecArray | null;
-  SPEC_RE.lastIndex = 0;
-  while ((m = SPEC_RE.exec(code)) !== null) {
-    const spec = m[2];
-    if (ALIAS_PREFIXES.some((p) => spec.startsWith(p))) {
-      r0Count++;
-      fails.push({ rule: 'R0', file: relPosix, detail: `含别名 import：${spec}` });
-    }
-  }
 
   // ---- R1 聚合桶嫌疑（按 re-export 来源模块数）----
   const reexportSources = new Set<string>();
@@ -121,6 +105,7 @@ for (const { abs, rel } of files) {
   }
 
   // ---- R3 上跳 / R4 跨边界 ----
+  let m: RegExpExecArray | null;
   SPEC_RE.lastIndex = 0;
   while ((m = SPEC_RE.exec(code)) !== null) {
     const spec = m[2];
@@ -211,7 +196,6 @@ const summary = {
   ok,
   fail: failCount,
   warn: warnCount,
-  r0_alias: { count: r0Count, gate: '临时（闸二删除）' },
   r1_barrel: { hits: r1Hits.length, samples: r1Hits.slice(0, 5) },
   r2_depth: { warns: warns.filter((w) => w.rule === 'R2').length },
   r3_uplevel: { hits: r3Hits.length, samples: r3Hits.slice(0, 5) },
@@ -223,7 +207,6 @@ if (JSON_FLAG) {
   process.stdout.write(JSON.stringify({ _summary: summary, fails, warns }, null, 2) + '\n');
 } else {
   process.stdout.write(`check-path-hygiene: ${ok ? 'PASS' : 'FAIL'} (fail=${failCount} warn=${warnCount})\n`);
-  if (r0Count) process.stdout.write(`  R0 别名闸: ${r0Count} 条含别名 import（闸二前禁止）\n`);
   if (r1Hits.length) process.stdout.write(`  R1 聚合桶嫌疑: ${r1Hits.join('; ')}\n`);
   if (r3Hits.length) process.stdout.write(`  R3 内部深 wander: ${r3Hits.slice(0, 5).join('; ')}\n`);
   process.stdout.write(`  R4 跨边界冻结: ${r4Count}/${baseline} ${r4Ok ? 'OK' : 'EXCEED'}\n`);

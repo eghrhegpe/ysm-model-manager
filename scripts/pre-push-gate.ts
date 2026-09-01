@@ -40,7 +40,7 @@ import path from 'node:path';
 import { ROOT } from './_lib/scan-files.ts';
 import { run as procRun } from './_lib/proc.ts';
 import { planFromFiles, groupByDomain, domainSummaryText } from './_lib/domain-classify.ts';
-import { runContractTestsParallel } from './_lib/contract-tests.ts';
+import { runContractTestsParallel, selectContractTests } from './_lib/contract-tests.ts';
 import { logPush } from './_lib/log-push.ts';
 import { shq } from './_lib/proc.ts';
 import { ALL_STATIC_TOOLS, DOC_STATIC_TOOLS, DOC_EXTRA_SCRIPTS, FRONTEND_STATIC_TOOLS, GO_STATIC_TOOLS } from './_lib/gate-config.ts';
@@ -124,11 +124,6 @@ function resolveChanges(localRef: string, localOid: string, remoteOid: string) {
 }
 
 /* ---------------- 检查执行 ---------------- */
-
-async function runContractTests() {
-  /** tests/*.ts 全量契约测试（宪法基石，退出码可信）。并行执行。 */
-  return runContractTestsParallel();
-}
 
 /* ---------------- gofmt 只读校验 ---------------- */
 
@@ -549,14 +544,22 @@ async function main() {
     record('gen-docs-index', gd.rc === 0, { time: Date.now() - t0, tail: gd.rc ? gd.out.trim().split('\n').slice(-4).join('\n') : '' });
   }
 
-  /* --- 契约测试 --- */
-  if (plan.contractTests) {
+  /* --- 契约测试（按域裁剪 #2：变更域 → 只跑相关契约测试） --- */
+  // 规则（与 doctor 共用 _lib/contract-tests.ts 的 selectContractTests）：
+  //   --all 全量模式 → 全量（发版前体检，不可裁剪）
+  //   --files / push 模式 → 按变更域（byDomain 键集）选子集：改 go 跑 go 相关、改前端跑前端相关、
+  //     改 data 跑 schema、改 docs 跑文档契约；改 scripts/tests（域 'tests'）→ 全量（工具自身改动影响面大）
+  //   --docs 轻量模式 → 跳过（byDomain 为空 → 子集空）
+  const contractFiles = allMode
+    ? undefined // 全量
+    : selectContractTests(Object.keys(byDomain));
+  if (allMode || (contractFiles && contractFiles.length > 0)) {
     const t0 = Date.now();
-    const tests = await runContractTests();
+    const tests = await runContractTestsParallel(contractFiles);
     const ok = tests.length === 0 || tests.every((t) => t.ok);
     record(`contract tests (${tests.length})`, ok, {
       time: Date.now() - t0,
-      note: tests.length === 0 ? '无 tests/*.ts，跳过'
+      note: tests.length === 0 ? '无匹配契约测试，跳过'
         : (ok ? '全部通过' : tests.filter((t) => !t.ok).map((t) => `${t.name}\n${t.out}`).join('\n')),
     });
   }

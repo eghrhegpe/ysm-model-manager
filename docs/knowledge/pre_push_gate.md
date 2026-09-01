@@ -67,7 +67,7 @@ pitfalls:
 
 **ADR 域**（plan.adr）：`adr-check`
 
-**契约测试**（plan.contractTests）：`tests/*.ts` 全量并行
+**契约测试**（按域裁剪，2026-09 #2）：`_lib/contract-tests.ts` 的 `selectContractTests(变更域)` 选子集——`--all` 全量；`--files`/push 按 `byDomain` 键集命中 `CONTRACT_TEST_DOMAINS` 映射（go/frontend/data/docs 各跑相关子集，mixed 跨端契约任一端变更都触发）；改 scripts/tests（域 `tests`）→ 全量（工具自身改动影响面大）。映射表事实来源 `docs/contract-tests-audit.md`，规则锁定 `tests/test_contract_domain_select.ts`
 
 ### 静态工具（`runTools`，串行）
 

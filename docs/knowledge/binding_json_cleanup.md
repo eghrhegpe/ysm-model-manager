@@ -27,6 +27,8 @@ use_when:
 
 ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struct 化）、**2 条 Deprecated**（直接删）、**3 条豁免**（合法 JSON 文本协议）、**16 条真字符串**（只规范错误通道）。前端 30+ 处生产代码以 `JSON.parse(...) as 手写类型` 消费病灶档，类型断层 + 三套错误语义（`error` / `"{}"` 吞错 / `{error}` 字段）由此而来。
 
+**进度**：P0×6 全部 ✅（2026-09-01，见下方状态列）；P1×17 未动。
+
 **进度约定**：铲一条把状态列改 ✅ 并同步删除前端对应 `JSON.parse` 断言；整批完成在本表登记。ADR-143 只记决策，不记进度。
 
 ## 一、JSON 病灶（23 条，struct 化 + `(T, error)`）
@@ -35,12 +37,12 @@ ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑
 
 | 绑定 | Go 位置 | 前端消费点（手写断言） | 状态 |
 |---|---|---|---|
-| `LoadResourceTypes` | resource_bindings.go:27 | registry.ts:25、app-preview/index.ts:235、site/edit.ts:215、sync-manager/store.ts:24 | ⬜ |
-| `GetModel3DSpec` | app_model.go:415 | screenshot-render.ts:90、model3d-loader.ts:64、skeleton-render.ts:104、debug.ts:96 | ⬜ |
-| `Build3DSpecFromGeometryJSON` | app_model.go:455 | screenshot-render.ts:99、model3d-loader.ts:97、spec-builder.ts:156 | ⬜ |
-| `DetectConflicts` | app_sync.go:15 | diagnostics/conflicts.ts:247 | ⬜ |
-| `ResolveConflicts` | app_sync.go:59 | diagnostics/conflicts.ts:407 | ⬜ |
-| `FindDuplicateFiles` | resource_bindings.go:556 | diagnostics/dedup.ts:276 | ⬜ |
+| `LoadResourceTypes` | resource_bindings.go:27 | registry.ts:25、app-preview/index.ts:235、site/edit.ts:215、sync-manager/store.ts:24 | ✅ |
+| `GetModel3DSpec` | app_model.go:415 | screenshot-render.ts:90、model3d-loader.ts:64、skeleton-render.ts:104、debug.ts:96 | ✅ |
+| `Build3DSpecFromGeometryJSON` | app_model.go:455 | screenshot-render.ts:99、model3d-loader.ts:97、spec-builder.ts:156 | ✅ |
+| `DetectConflicts` | app_sync.go:15 | diagnostics/conflicts.ts:247 | ✅ |
+| `ResolveConflicts` | app_sync.go:59 | diagnostics/conflicts.ts:407 | ✅ |
+| `FindDuplicateFiles` | resource_bindings.go:556 | diagnostics/dedup.ts:276 | ✅ |
 
 > `GetModel3DSpec` 与 `Build3DSpecFromGeometryJSON` 输出同为 Spec3D 形状、消费方重叠（screenshot-render / model3d-loader），必须同批切换——前者 P0 而后者留 P1 会导致同一文件改两遍。后者入参 geometryJSON 是 JSON 文本，不违规（红线只管返回值）。
 

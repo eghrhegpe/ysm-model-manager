@@ -555,53 +555,48 @@ async function importAs(type: string, name: string, bytes: Uint8Array): Promise<
 describe("Get*VoxelData — web 实现端到端（ADR-070 M2）", () => {
   it("GetLitematicVoxelData：JSON 字段名对齐 LitematicVoxelData + litematic-adapter 消费（color/positions/size/truncated/maxBlocks）", async () => {
     const path = await importAs("litematic", "投影.litematic", makeLitematicGz());
-    const raw = await browserAdapter.GetLitematicVoxelData(path);
-    const data = JSON.parse(raw) as VoxelData;
-    expect(data.size).toEqual([1, 1, 1]);
-    expect(data.groups).toHaveLength(1);
-    expect(data.groups![0].color).toBe(STONE_COLOR);
-    expect(data.groups![0].positions).toEqual([[0, 0, 0]]);
-    expect(data.truncated).toBe(false);
-    expect(data.maxBlocks).toBe(200000); // 对齐 voxelMaxBlocks 默认值
+    const data = await browserAdapter.GetLitematicVoxelData(path);
+    expect(data).not.toBeNull();
+    expect(data!.size).toEqual([1, 1, 1]);
+    expect(data!.groups).toHaveLength(1);
+    expect(data!.groups![0].color).toBe(STONE_COLOR);
+    expect(data!.groups![0].positions).toEqual([[0, 0, 0]]);
+    expect(data!.truncated).toBe(false);
+    expect(data!.maxBlocks).toBe(200000); // 对齐 voxelMaxBlocks 默认值
   });
 
   it("GetNbtVoxelData / GetSchematicVoxelData 端到端", async () => {
     const nbtPath = await importAs("blueprint", "建筑.nbt", makeNbtStructureGz());
-    const nbt = JSON.parse(await browserAdapter.GetNbtVoxelData(nbtPath)) as VoxelData;
-    expect(nbt.groups![0].positions).toEqual([[0, 0, 0]]);
-    expect(nbt.maxBlocks).toBe(200000);
+    const nbt = await browserAdapter.GetNbtVoxelData(nbtPath);
+    expect(nbt).not.toBeNull();
+    expect(nbt!.groups![0].positions).toEqual([[0, 0, 0]]);
+    expect(nbt!.maxBlocks).toBe(200000);
 
     const schPath = await importAs("blueprint", "建筑.schematic", makeSchematicGz());
-    const sch = JSON.parse(await browserAdapter.GetSchematicVoxelData(schPath)) as VoxelData;
-    expect(sch.size).toEqual([1, 1, 1]);
-    expect(sch.groups![0].positions).toEqual([[0, 0, 0]]);
-    expect(sch.truncated).toBe(false);
+    const sch = await browserAdapter.GetSchematicVoxelData(schPath);
+    expect(sch).not.toBeNull();
+    expect(sch!.size).toEqual([1, 1, 1]);
+    expect(sch!.groups![0].positions).toEqual([[0, 0, 0]]);
+    expect(sch!.truncated).toBe(false);
   });
 
-  it("失败路径：文件不存在 / 非 gzip / 缺 palette 结构 → {error}（对齐 marshalVoxelData → voxelErrorJSON）", async () => {
-    const errOf = async (p: Promise<string>): Promise<string> => {
-      const raw = await p;
-      const data = JSON.parse(raw) as { error?: string };
-      expect(data.error, `应返回 {error}，got ${raw}`).toBeTruthy();
-      return data.error!;
-    };
+  it("失败路径：文件不存在 / 非 gzip / 缺 palette 结构 → null（ADR-143 P1 error 通道）", async () => {
     // 文件不存在
-    await errOf(browserAdapter.GetLitematicVoxelData("/web/litematic/无/无.litematic"));
-    await errOf(browserAdapter.GetNbtVoxelData("/web/blueprint/无/无.nbt"));
-    await errOf(browserAdapter.GetSchematicVoxelData("/web/blueprint/无/无.schematic"));
-    // 非 gzip / 非 NBT → 具体解析错误（未知标签/截断）
+    expect(await browserAdapter.GetLitematicVoxelData("/web/litematic/无/无.litematic")).toBeNull();
+    expect(await browserAdapter.GetNbtVoxelData("/web/blueprint/无/无.nbt")).toBeNull();
+    expect(await browserAdapter.GetSchematicVoxelData("/web/blueprint/无/无.schematic")).toBeNull();
+    // 非 gzip / 非 NBT → null
     const bad = await importAs("litematic", "坏.litematic", new TextEncoder().encode("not nbt"));
-    const badErr = await errOf(browserAdapter.GetLitematicVoxelData(bad));
-    expect(badErr.length).toBeGreaterThan(0);
+    expect(await browserAdapter.GetLitematicVoxelData(bad)).toBeNull();
     // .nbt 缺 size/blocks/palette
     const emptyNbt = await importAs("blueprint", "空.nbt", gz(nbtRoot(nbtInt("DataVersion", 2566))));
-    await errOf(browserAdapter.GetNbtVoxelData(emptyNbt));
+    expect(await browserAdapter.GetNbtVoxelData(emptyNbt)).toBeNull();
     // .schematic 缺 Width/Height/Length
     const emptySch = await importAs("blueprint", "空.schematic", gz(nbtRoot(nbtInt("Version", 1))));
-    await errOf(browserAdapter.GetSchematicVoxelData(emptySch));
+    expect(await browserAdapter.GetSchematicVoxelData(emptySch)).toBeNull();
   });
 
-  it("全部 region 数据损坏的 .litematic → {error}（对齐 BuildVoxelData 显式报错）", async () => {
+  it("全部 region 数据损坏的 .litematic → null（对齐 BuildVoxelData 显式报错）", async () => {
     const palette = nbtList("BlockStatePalette", 0x0a,
       nbtCompoundBody(nbtString("Name", "minecraft:air")),
       nbtCompoundBody(nbtString("Name", "minecraft:stone")),
@@ -617,10 +612,9 @@ describe("Get*VoxelData — web 实现端到端（ADR-070 M2）", () => {
       nbtCompound("Regions", region),
     ));
     const path = await importAs("litematic", "坏.litematic", root);
-    const raw = await browserAdapter.GetLitematicVoxelData(path);
-    const data = JSON.parse(raw) as { error?: string };
-    // view 返回 null（region 全损坏）→ readVoxelJson 给通用错误；精确原因由桌面 Go 路径给出
-    expect(data.error).toBeTruthy();
+    const data = await browserAdapter.GetLitematicVoxelData(path);
+    // view 返回 null（region 全损坏）→ null（ADR-143 P1：失败走 null 而非 {error} JSON）
+    expect(data).toBeNull();
   });
 });
 

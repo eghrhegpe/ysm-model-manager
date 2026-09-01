@@ -9,34 +9,30 @@ import type { SyncItem } from "./tpl.ts";
 // getApp 全绑定 mock（P1 修复：mocks 提为 vi.hoisted 可引用，原内联 vi.fn 无法精确断言）
 const { mocks } = vi.hoisted(() => {
   const mocks = {
-    LoadResourceTypes: vi.fn().mockResolvedValue(
-      JSON.stringify({
-        resourceTypes: [
-          { id: "ysm", name: "YSM 模型", icon: "💎" },
-          { id: "EntityPlayer", name: "PMX 模型", icon: "🎭" },
-          { id: "SceneModel", name: "场景模型", icon: "🏰" },
-          { id: "vrm", name: "VRM 模型", icon: "🥽" },
-          { id: "resourcepack", name: "资源包", icon: "🎨" },
-          { id: "shaderpack", name: "光影包", icon: "☀️" },
-          { id: "blueprint", name: "蓝图", icon: "⚙️" },
-          { id: "litematic", name: "投影", icon: "📐" },
-        ],
-      }),
-    ),
-    GetInstanceSyncStatus: vi.fn().mockResolvedValue(
-      JSON.stringify([
-        { path: "a.ysm", name: "模型A", status: "synced", type: "ysm", size: 1024 },
-        { path: "b.ysm", name: "模型B", status: "missing", type: "ysm", size: 2048 },
-        { path: "c.ysm", name: "模型C", status: "disabled", type: "ysm", size: 512 },
-        { path: "d.ysm", name: "模型D", status: "synced", type: "ysm", size: 0 },
-      ]),
-    ),
+    LoadResourceTypes: vi.fn().mockResolvedValue({
+      resourceTypes: [
+        { id: "ysm", name: "YSM 模型", icon: "💎" },
+        { id: "EntityPlayer", name: "PMX 模型", icon: "🎭" },
+        { id: "SceneModel", name: "场景模型", icon: "🏰" },
+        { id: "vrm", name: "VRM 模型", icon: "🥽" },
+        { id: "resourcepack", name: "资源包", icon: "🎨" },
+        { id: "shaderpack", name: "光影包", icon: "☀️" },
+        { id: "blueprint", name: "蓝图", icon: "⚙️" },
+        { id: "litematic", name: "投影", icon: "📐" },
+      ],
+    }),
+    GetInstanceSyncStatus: vi.fn().mockResolvedValue([
+      { path: "a.ysm", name: "模型A", status: "synced", type: "ysm", size: 1024 },
+      { path: "b.ysm", name: "模型B", status: "missing", type: "ysm", size: 2048 },
+      { path: "c.ysm", name: "模型C", status: "disabled", type: "ysm", size: 512 },
+      { path: "d.ysm", name: "模型D", status: "synced", type: "ysm", size: 0 },
+    ]),
     PushSingleResourceToInstance: vi.fn().mockResolvedValue(undefined),
     PullSingleResourceFromInstance: vi.fn().mockResolvedValue(undefined),
     GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
-    GetSyncScanDirs: vi.fn().mockResolvedValue(
-      JSON.stringify({ global: "/repo/schematics", instance: "/mc/inst/x/schematics", warningCode: "" }),
-    ),
+    GetSyncScanDirs: vi.fn().mockResolvedValue({
+      global: "/repo/schematics", instance: "/mc/inst/x/schematics", warningCode: "",
+    }),
     ScanModelEntriesWithLabel: vi.fn().mockResolvedValue([]),
   };
   return { mocks };
@@ -89,9 +85,9 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("仓库基准过宽 → 摘要栏显示告警而非目录", async () => {
-    mocks.GetSyncScanDirs.mockResolvedValue(
-      JSON.stringify({ global: "/mc", instance: "/mc/inst/x/schematics", warningCode: "scan_dir_wide", warningParams: { label: "蓝图", dir: "/mc", subDir: "schematics" } }),
-    );
+    mocks.GetSyncScanDirs.mockResolvedValue({
+      global: "/mc", instance: "/mc/inst/x/schematics", warningCode: "scan_dir_wide", warningParams: { label: "蓝图", dir: "/mc", subDir: "schematics" },
+    });
     const el = document.createElement("app-sync-manager");
     el.setAttribute("instance", "test");
     document.body.appendChild(el);

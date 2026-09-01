@@ -645,7 +645,7 @@ describe("initDiagnostics — 同步冲突与体检扫描入口", () => {
 
   it("diag-scan-health 点击 → 体检报告渲染到 diag-health-list", async () => {
     mockApp({
-      RepoHealthAudit: vi.fn(() => JSON.stringify(buildReport())),
+      RepoHealthAudit: vi.fn(() => buildReport()),
       GetRepoRoot: vi.fn(async () => "/repo"),
     });
     const { root } = makeRoot();

@@ -174,50 +174,49 @@ describe("readWebFile", () => {
 
 // ===== §6 NBT meta / voxel（视图 mock，锁装配与失败契约）=====
 describe("NBT meta 读取（ReadLitematicMeta / ReadNbtStructure / ReadSchematic）", () => {
-  it("成功链：读文件 → parseNbtRoot → 视图 → JSON", async () => {
+  it("成功链：读文件 → parseNbtRoot → 视图 → typed 对象", async () => {
     await seedGroup("blueprint", "图A", { "a.litematic": enc.encode("nbt") });
     nbtp.parseNbtRoot.mockReturnValue({ tag: 1 });
     nbtp.litematicMetaView.mockReturnValue({ meta: 1 });
-    const out = JSON.parse((await webFsBindings.ReadLitematicMeta("/web/blueprint/图A/a.litematic")) as string);
+    const out = await webFsBindings.ReadLitematicMeta("/web/blueprint/图A/a.litematic");
     expect(out).toEqual({ meta: 1 });
     expect(nbtp.parseNbtRoot).toHaveBeenCalled();
   });
 
-  it("失败契约：文件缺失 / 视图 null / 解析抛错 → {}", async () => {
-    expect(await webFsBindings.ReadLitematicMeta("/web/blueprint/图A/无.litematic")).toBe("{}");
+  it("失败契约：文件缺失 / 视图 null / 解析抛错 → null", async () => {
+    expect(await webFsBindings.ReadLitematicMeta("/web/blueprint/图A/无.litematic")).toBeNull();
     await seedGroup("blueprint", "图A", { "a.litematic": enc.encode("nbt") });
     nbtp.parseNbtRoot.mockReturnValue({ tag: 1 });
     nbtp.litematicMetaView.mockReturnValue(null);
-    expect(await webFsBindings.ReadNbtStructure("/web/blueprint/图A/a.litematic")).toBe("{}");
+    expect(await webFsBindings.ReadNbtStructure("/web/blueprint/图A/a.litematic")).toBeNull();
     nbtp.parseNbtRoot.mockImplementation(() => {
       throw new Error("bad nbt");
     });
-    expect(await webFsBindings.ReadSchematic("/web/blueprint/图A/a.litematic")).toBe("{}");
+    expect(await webFsBindings.ReadSchematic("/web/blueprint/图A/a.litematic")).toBeNull();
   });
 });
 
 describe("voxel 读取（GetNbtVoxelData / GetSchematicVoxelData / GetLitematicVoxelData）", () => {
-  it("成功链：decodeVoxelNbt → view → JSON", async () => {
+  it("成功链：decodeVoxelNbt → view → typed VoxelData", async () => {
     await seedGroup("litematic", "投A", { "a.litematic": enc.encode("nbt") });
     vox.decodeVoxelNbt.mockReturnValue({ tag: 1 });
     vox.litematicVoxelView.mockReturnValue({ blocks: 3 });
-    const out = JSON.parse((await webFsBindings.GetLitematicVoxelData("/web/litematic/投A/a.litematic")) as string);
+    const out = await webFsBindings.GetLitematicVoxelData("/web/litematic/投A/a.litematic");
     expect(out).toEqual({ blocks: 3 });
   });
 
-  it("失败契约：缺文件 / 解码 null / 视图 null / 抛错 → {error}", async () => {
-    const err = async (p: Promise<string>) => (JSON.parse((await p) as string) as { error: string }).error;
-    expect(await err(webFsBindings.GetNbtVoxelData("/web/litematic/投A/无.litematic"))).toContain("文件读取失败");
+  it("失败契约：缺文件 / 解码 null / 视图 null / 抛错 → null", async () => {
+    expect(await webFsBindings.GetNbtVoxelData("/web/litematic/投A/无.litematic")).toBeNull();
     await seedGroup("litematic", "投A", { "a.litematic": enc.encode("nbt") });
     vox.decodeVoxelNbt.mockReturnValue(null);
-    expect(await err(webFsBindings.GetNbtVoxelData("/web/litematic/投A/a.litematic"))).toContain("文件解码失败");
+    expect(await webFsBindings.GetNbtVoxelData("/web/litematic/投A/a.litematic")).toBeNull();
     vox.decodeVoxelNbt.mockReturnValue({ tag: 1 });
-    vox.litematicVoxelView.mockReturnValue(null);
-    expect(await err(webFsBindings.GetSchematicVoxelData("/web/litematic/投A/a.litematic"))).toContain("无法解析");
+    vox.schematicVoxelView.mockReturnValue(null);
+    expect(await webFsBindings.GetSchematicVoxelData("/web/litematic/投A/a.litematic")).toBeNull();
     vox.litematicVoxelView.mockImplementation(() => {
       throw new Error("view exploded");
     });
-    expect(await err(webFsBindings.GetLitematicVoxelData("/web/litematic/投A/a.litematic"))).toContain("view exploded");
+    expect(await webFsBindings.GetLitematicVoxelData("/web/litematic/投A/a.litematic")).toBeNull();
   });
 });
 
@@ -236,17 +235,17 @@ describe("ListContainerEntries / GetVoxelDataInContainer", () => {
       })),
     });
     const path = "/web/litematic/包A/box.zip";
-    const out = JSON.parse((await webFsBindings.ListContainerEntries(path, "NBT, .schematic")));
+    const out = await webFsBindings.ListContainerEntries(path, "NBT, .schematic");
     expect(out).toEqual(["a.nbt", "b.nbt", "sub/ok.schematic"]);
     // 空白名单 → 放行全部安全条目
-    const all = JSON.parse((await webFsBindings.ListContainerEntries(path, "")));
+    const all = await webFsBindings.ListContainerEntries(path, "");
     expect(all).toContain("c.txt");
   });
 
   it("失败契约：缺文件 / 非 zip → []", async () => {
-    expect(await webFsBindings.ListContainerEntries("/web/litematic/包A/无.zip", ".nbt")).toBe("[]");
+    expect(await webFsBindings.ListContainerEntries("/web/litematic/包A/无.zip", ".nbt")).toEqual([]);
     await seedGroup("litematic", "包A", { "坏.zip": enc.encode("not a zip") });
-    expect(await webFsBindings.ListContainerEntries("/web/litematic/包A/坏.zip", ".nbt")).toBe("[]");
+    expect(await webFsBindings.ListContainerEntries("/web/litematic/包A/坏.zip", ".nbt")).toEqual([]);
   });
 
   it("容器内体素：ext 分派视图 + 成功/缺条目/非法路径契约", async () => {
@@ -255,16 +254,16 @@ describe("ListContainerEntries / GetVoxelDataInContainer", () => {
     const path = "/web/litematic/包B/box.zip";
     vox.decodeVoxelNbt.mockReturnValue({ tag: 1 });
     vox.nbtVoxelView.mockReturnValue({ blocks: 1 });
-    const out = JSON.parse((await webFsBindings.GetVoxelDataInContainer(path, "inner.nbt", ".nbt")) as string);
+    const out = await webFsBindings.GetVoxelDataInContainer(path, "inner.nbt", ".nbt");
     expect(out).toEqual({ blocks: 1 });
     expect(vox.nbtVoxelView).toHaveBeenCalled();
-    // 非法条目路径（.. 穿越）
-    const bad = JSON.parse((await webFsBindings.GetVoxelDataInContainer(path, "../x.nbt", ".nbt")) as string);
-    expect(bad.error).toContain("非法条目路径");
-    // 容器内不存在该条目
+    // 非法条目路径（.. 穿越）→ null
+    const bad = await webFsBindings.GetVoxelDataInContainer(path, "../x.nbt", ".nbt");
+    expect(bad).toBeNull();
+    // 容器内不存在该条目 → null
     vox.decodeVoxelNbt.mockReturnValue({ tag: 1 });
-    const miss = JSON.parse((await webFsBindings.GetVoxelDataInContainer(path, "没有.nbt", ".nbt")) as string);
-    expect(miss.error).toContain("容器内不存在");
+    const miss = await webFsBindings.GetVoxelDataInContainer(path, "没有.nbt", ".nbt");
+    expect(miss).toBeNull();
   });
 });
 
@@ -279,41 +278,41 @@ describe("ReadPackMeta / ReadShaderpackLang", () => {
     await seedGroup("resourcepack", "材质A", {
       "p.zip": ab2u8(zipSync({ "pack.mcmeta": strToU8('{"pack":{"pack_format":15,"description":"描述"}}'), "pack.png": PNG })),
     });
-    const meta = JSON.parse((await webFsBindings.ReadPackMeta("/web/resourcepack/材质A/p.zip")) as string);
-    expect(meta.pack_format).toBe(15);
-    expect(meta.description).toBe("描述");
-    expect(meta.thumbnail).toBe(`data:image/png;base64,${btoa("PNGDATA")}`);
+    const meta = await webFsBindings.ReadPackMeta("/web/resourcepack/材质A/p.zip");
+    expect(meta?.pack_format).toBe(15);
+    expect(meta?.description).toBe("描述");
+    expect(meta?.thumbnail).toBe(`data:image/png;base64,${btoa("PNGDATA")}`);
   });
 
-  it("失败契约：缺文件 / 无 mcmeta → {}", async () => {
-    expect(await webFsBindings.ReadPackMeta("/web/resourcepack/材质A/无.zip")).toBe("{}");
+  it("失败契约：缺文件 / 无 mcmeta → null", async () => {
+    expect(await webFsBindings.ReadPackMeta("/web/resourcepack/材质A/无.zip")).toBeNull();
     await seedGroup("resourcepack", "材质A", { "空.zip": ab2u8(zipSync({ "other.txt": strToU8("x") })) });
-    expect(await webFsBindings.ReadPackMeta("/web/resourcepack/材质A/空.zip")).toBe("{}");
+    expect(await webFsBindings.ReadPackMeta("/web/resourcepack/材质A/空.zip")).toBeNull();
   });
 
-  it("光影包 lang 读取 + 失败契约 {\"name\":\"\",\"entries\":{}}", async () => {
+  it("光影包 lang 读取 + 失败契约 {name:\"\",entries:{}}", async () => {
     await seedGroup("shaderpack", "光影A", {
       "s.zip": ab2u8(zipSync({ "lang/en_us.lang": strToU8("key=value\n") })),
     });
-    const lang = JSON.parse((await webFsBindings.ReadShaderpackLang("/web/shaderpack/光影A/s.zip")) as string);
+    const lang = await webFsBindings.ReadShaderpackLang("/web/shaderpack/光影A/s.zip");
     expect(lang.entries).toEqual({ key: "value" });
-    expect(await webFsBindings.ReadShaderpackLang("/web/shaderpack/光影A/无.zip")).toBe(
-      '{"name":"","entries":{}}',
+    expect(await webFsBindings.ReadShaderpackLang("/web/shaderpack/光影A/无.zip")).toEqual(
+      { name: "", entries: {} },
     );
   });
 });
 
 // ===== 资源包 3D（ListPackModels / Detail / ReadPackEntry）=====
 describe("资源包 3D 装配", () => {
-  it("ListPackModels：zip 全条目 JSON；缺文件 → []", async () => {
+  it("ListPackModels：zip 全条目；缺文件 → []", async () => {
     await seedGroup("resourcepack", "包C", {
       "p.zip": ab2u8(zipSync({ "assets/m/models/block/a.json": strToU8("{}") })),
     });
     const path = "/web/resourcepack/包C/p.zip";
-    expect(JSON.parse((await webFsBindings.ListPackModels(path)))).toEqual([
+    expect(await webFsBindings.ListPackModels(path)).toEqual([
       "assets/m/models/block/a.json",
     ]);
-    expect(await webFsBindings.ListPackModels("/web/resourcepack/包C/无.zip")).toBe("[]");
+    expect(await webFsBindings.ListPackModels("/web/resourcepack/包C/无.zip")).toEqual([]);
   });
 
   it("ListPackModelsDetail：assets/*/models/{block,item} 过滤 + cubes 计数 + 坏 JSON 容错", async () => {
@@ -325,14 +324,14 @@ describe("资源包 3D 装配", () => {
         "textures/x.png": PNG,
       })),
     });
-    const out = JSON.parse((await webFsBindings.ListPackModelsDetail("/web/resourcepack/包D/p.zip")) as string);
+    const out = await webFsBindings.ListPackModelsDetail("/web/resourcepack/包D/p.zip");
     expect(out.total).toBe(2);
     expect(out.models).toEqual([
       { path: "assets/m/models/block/a.json", cubes: 3 },
       { path: "assets/m/models/item/b.json", cubes: 0 },
     ]);
-    expect(await webFsBindings.ListPackModelsDetail("/web/resourcepack/包D/无.zip")).toBe(
-      JSON.stringify({ models: [], total: 0 }),
+    expect(await webFsBindings.ListPackModelsDetail("/web/resourcepack/包D/无.zip")).toEqual(
+      { models: [], total: 0 },
     );
   });
 
@@ -815,28 +814,27 @@ describe("防御分支补刀", () => {
     });
     const path = "/web/litematic/包G/g.zip";
     // 空白名单放行全部安全条目（含无点条目）
-    const all = JSON.parse((await webFsBindings.ListContainerEntries(path, "")));
+    const all = await webFsBindings.ListContainerEntries(path, "");
     expect(all).toEqual(["noext", "ok.nbt"]);
     // 非空白名单：无点条目 / 绝对路径条目被剔除
-    const out = JSON.parse((await webFsBindings.ListContainerEntries(path, ".nbt")));
+    const out = await webFsBindings.ListContainerEntries(path, ".nbt");
     expect(out).toEqual(["ok.nbt"]);
   });
 
-  it("容器体素：容器文件缺失 / 解码 null / 视图 null / 视图抛错 → {error}", async () => {
-    const err = async (p: Promise<string>) => (JSON.parse((await p) as string) as { error: string }).error;
+  it("容器体素：容器文件缺失 / 解码 null / 视图 null / 视图抛错 → null", async () => {
     const zip = zipSync({ "inner.nbt": enc.encode("nbt") });
     await seedGroup("litematic", "包H", { "box.zip": ab2u8(zip) });
     const path = "/web/litematic/包H/box.zip";
-    expect(await err(webFsBindings.GetVoxelDataInContainer("/web/litematic/包H/无.zip", "inner.nbt", ".nbt"))).toContain("文件读取失败");
+    expect(await webFsBindings.GetVoxelDataInContainer("/web/litematic/包H/无.zip", "inner.nbt", ".nbt")).toBeNull();
     vox.decodeVoxelNbt.mockReturnValue(null);
-    expect(await err(webFsBindings.GetVoxelDataInContainer(path, "inner.nbt", ".nbt"))).toContain("文件解码失败");
+    expect(await webFsBindings.GetVoxelDataInContainer(path, "inner.nbt", ".nbt")).toBeNull();
     vox.decodeVoxelNbt.mockReturnValue({ tag: 1 });
     vox.nbtVoxelView.mockReturnValue(null);
-    expect(await err(webFsBindings.GetVoxelDataInContainer(path, "inner.nbt", ".nbt"))).toContain("无法解析");
+    expect(await webFsBindings.GetVoxelDataInContainer(path, "inner.nbt", ".nbt")).toBeNull();
     vox.nbtVoxelView.mockImplementation(() => {
       throw new Error("boom");
     });
-    expect(await err(webFsBindings.GetVoxelDataInContainer(path, "inner.nbt", ".nbt"))).toContain("boom");
+    expect(await webFsBindings.GetVoxelDataInContainer(path, "inner.nbt", ".nbt")).toBeNull();
   });
 
   it("pack/shader/models：坏 mcmeta / 非 zip 字节 → 各自失败契约", async () => {
@@ -846,16 +844,16 @@ describe("防御分支补刀", () => {
     });
     const bad = "/web/resourcepack/包I/坏mcmeta.zip";
     const nz = "/web/resourcepack/包I/非zip.zip";
-    expect(await webFsBindings.ReadPackMeta(bad)).toBe("{}");
-    expect(await webFsBindings.ReadPackMeta(nz)).toBe("{}");
-    expect(await webFsBindings.ReadShaderpackLang(nz)).toBe('{"name":"","entries":{}}');
-    expect(await webFsBindings.ListPackModels(nz)).toBe("[]");
-    expect(await webFsBindings.ListPackModelsDetail(nz)).toBe(JSON.stringify({ models: [], total: 0 }));
+    expect(await webFsBindings.ReadPackMeta(bad)).toBeNull();
+    expect(await webFsBindings.ReadPackMeta(nz)).toBeNull();
+    expect(await webFsBindings.ReadShaderpackLang(nz)).toEqual({ name: "", entries: {} });
+    expect(await webFsBindings.ListPackModels(nz)).toEqual([]);
+    expect(await webFsBindings.ListPackModelsDetail(nz)).toEqual({ models: [], total: 0 });
     expect(await webFsBindings.ReadPackEntry(nz, "x")).toBe("");
     // 光影包：zip 无 lang 条目 → 空结构
     await seedGroup("shaderpack", "光影B", { "s.zip": ab2u8(zipSync({ "other.txt": strToU8("x") })) });
-    expect(await webFsBindings.ReadShaderpackLang("/web/shaderpack/光影B/s.zip")).toBe(
-      '{"name":"","entries":{}}',
+    expect(await webFsBindings.ReadShaderpackLang("/web/shaderpack/光影B/s.zip")).toEqual(
+      { name: "", entries: {} },
     );
   });
 
@@ -863,7 +861,7 @@ describe("防御分支补刀", () => {
     await seedGroup("resourcepack", "包J", {
       "p.zip": ab2u8(zipSync({ "assets/m/readme.json": strToU8("{}") })),
     });
-    const out = JSON.parse((await webFsBindings.ListPackModelsDetail("/web/resourcepack/包J/p.zip")) as string);
+    const out = await webFsBindings.ListPackModelsDetail("/web/resourcepack/包J/p.zip");
     expect(out.total).toBe(0);
   });
 

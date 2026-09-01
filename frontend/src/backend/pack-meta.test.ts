@@ -52,14 +52,11 @@ describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/m
       { "pack.mcmeta": packMeta, "pack.png": pngBytes },
       "resourcepack",
     );
-    const parsed = JSON.parse((await browserAdapter.ReadPackMeta(path)) as string) as {
-      pack_format: number;
-      description: string;
-      thumbnail: string;
-    };
-    expect(parsed.pack_format).toBe(15);
-    expect(parsed.description).toBe("测试资源包");
-    expect(parsed.thumbnail).toBe(`data:image/png;base64,${btoa("fake-png-data")}`);
+    const parsed = await browserAdapter.ReadPackMeta(path);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.pack_format).toBe(15);
+    expect(parsed!.description).toBe("测试资源包");
+    expect(parsed!.thumbnail).toBe(`data:image/png;base64,${btoa("fake-png-data")}`);
   });
 
   it("description 支持文本组件数组（[{\"text\":...}] 含 extra 拼接）与对象形态（对齐 go Desc）", async () => {
@@ -71,14 +68,14 @@ describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/m
         },
       }),
     }, "resourcepack");
-    const arrMeta = JSON.parse((await browserAdapter.ReadPackMeta(arrPath)) as string) as { description: string };
-    expect(arrMeta.description).toBe("Hello World!");
+    const arrMeta = await browserAdapter.ReadPackMeta(arrPath);
+    expect(arrMeta!.description).toBe("Hello World!");
 
     const objPath = await importZip("对象.zip", {
       "pack.mcmeta": JSON.stringify({ pack: { pack_format: 12, description: { text: "对象描述" } } }),
     }, "resourcepack");
-    const objMeta = JSON.parse((await browserAdapter.ReadPackMeta(objPath)) as string) as { description: string };
-    expect(objMeta.description).toBe("对象描述");
+    const objMeta = await browserAdapter.ReadPackMeta(objPath);
+    expect(objMeta!.description).toBe("对象描述");
   });
 
   it("supported_formats / min_format / max_format 三种形态归一为 [min, max]（int / [int,int] / 对象）", async () => {
@@ -93,45 +90,40 @@ describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/m
         },
       }),
     }, "resourcepack");
-    const meta = JSON.parse((await browserAdapter.ReadPackMeta(path)) as string) as {
-      supported_formats: number[];
-      min_format: number[];
-      max_format: number[];
-    };
-    expect(meta.supported_formats).toEqual([3, 7]);
-    expect(meta.min_format).toEqual([1, 2]);
-    expect(meta.max_format).toEqual([12, 12]);
+    const meta = await browserAdapter.ReadPackMeta(path);
+    expect(meta).not.toBeNull();
+    expect(meta!.supported_formats).toEqual([3, 7]);
+    expect(meta!.min_format).toEqual([1, 2]);
+    expect(meta!.max_format).toEqual([12, 12]);
   });
 
   it("zip 内路径大小写不敏感（PACK.MCMETA 命中）+ BOM 剥离（对齐 go StripBOM）", async () => {
     const path = await importZip("大写.zip", {
       "PACK.MCMETA": "\uFEFF{\"pack\":{\"pack_format\":9,\"description\":\"bom\"}}",
     }, "resourcepack");
-    const meta = JSON.parse((await browserAdapter.ReadPackMeta(path)) as string) as {
-      pack_format: number;
-      description: string;
-    };
-    expect(meta.pack_format).toBe(9);
-    expect(meta.description).toBe("bom");
+    const meta = await browserAdapter.ReadPackMeta(path);
+    expect(meta).not.toBeNull();
+    expect(meta!.pack_format).toBe(9);
+    expect(meta!.description).toBe("bom");
   });
 
-  it("无 pack.mcmeta 的 zip → \"{}\"（对齐 Go ErrPackMetaNotFound → binding \"{}\"）", async () => {
+  it("无 pack.mcmeta 的 zip → null（对齐 Go ErrPackMetaNotFound → error 通道）", async () => {
     const path = await importZip("无meta.zip", { "readme.txt": "hello" }, "resourcepack");
-    expect(await browserAdapter.ReadPackMeta(path)).toBe("{}");
+    expect(await browserAdapter.ReadPackMeta(path)).toBeNull();
   });
 
-  it("坏 zip（非 zip 内容）→ \"{}\"（对齐 Go 打开失败 → \"{}\"）", async () => {
+  it("坏 zip（非 zip 内容）→ null（对齐 Go 打开失败 → error 通道）", async () => {
     const path = await importZip("坏包.zip", { "pack.mcmeta": "x" }, "resourcepack");
-    // 覆盖 IDB 中内容为非 zip 字节：extractZip 抛错 → "{}"
+    // 覆盖 IDB 中内容为非 zip 字节：extractZip 抛错 → null
     idbMock.idbSet("files", "file:resourcepack/坏包/坏包.zip", {
       data: enc.encode("not a zip").buffer,
       size: 10,
     });
-    expect(await browserAdapter.ReadPackMeta(path)).toBe("{}");
+    expect(await browserAdapter.ReadPackMeta(path)).toBeNull();
   });
 
-  it("文件不存在 → \"{}\"", async () => {
-    expect(await browserAdapter.ReadPackMeta("/web/resourcepack/不存在/a.zip")).toBe("{}");
+  it("文件不存在 → null", async () => {
+    expect(await browserAdapter.ReadPackMeta("/web/resourcepack/不存在/a.zip")).toBeNull();
   });
 });
 
@@ -140,10 +132,7 @@ describe("browserAdapter.ReadShaderpackLang — 光影包详情（TS 平移 go/p
     const path = await importZip("光影包.zip", {
       "lang/en_US.lang": "pack.name=光影测试包\ntitle=My Shader\nsome.key=任意值",
     }, "shaderpack");
-    const meta = JSON.parse((await browserAdapter.ReadShaderpackLang(path)) as string) as {
-      name: string;
-      entries: Record<string, string>;
-    };
+    const meta = await browserAdapter.ReadShaderpackLang(path);
     expect(meta.name).toBe("光影测试包"); // pack.name 先命中，title 不再覆盖
     expect(meta.entries).toEqual({
       "pack.name": "光影测试包",
@@ -156,7 +145,7 @@ describe("browserAdapter.ReadShaderpackLang — 光影包详情（TS 平移 go/p
     const path = await importZip("小写光影.zip", {
       "lang/en_us.lang": "shaderpack.name=小写路径光影",
     }, "shaderpack");
-    const meta = JSON.parse((await browserAdapter.ReadShaderpackLang(path)) as string) as { name: string };
+    const meta = await browserAdapter.ReadShaderpackLang(path);
     expect(meta.name).toBe("小写路径光影");
   });
 
@@ -164,25 +153,22 @@ describe("browserAdapter.ReadShaderpackLang — 光影包详情（TS 平移 go/p
     const path = await importZip("注释.zip", {
       "lang/en_US.lang": "# 注释行\n\npack.name= 带空格标题 \nno-eq-line\na=b=c\n",
     }, "shaderpack");
-    const meta = JSON.parse((await browserAdapter.ReadShaderpackLang(path)) as string) as {
-      name: string;
-      entries: Record<string, string>;
-    };
+    const meta = await browserAdapter.ReadShaderpackLang(path);
     expect(meta.name).toBe("带空格标题");
     expect(meta.entries["a"]).toBe("b=c");
     expect("no-eq-line" in meta.entries).toBe(false);
   });
 
-  it("无 lang/en_US.lang（仅有 zh_CN.lang）→ {\"name\":\"\",\"entries\":{}}（对齐 go 空结果）", async () => {
+  it("无 lang/en_US.lang（仅有 zh_CN.lang）→ {name:\"\",entries:{}}（对齐 go 空结果）", async () => {
     const path = await importZip("中文光影.zip", {
       "lang/zh_cn.lang": "pack.name=中文",
     }, "shaderpack");
-    expect(await browserAdapter.ReadShaderpackLang(path)).toBe('{"name":"","entries":{}}');
+    expect(await browserAdapter.ReadShaderpackLang(path)).toEqual({ name: "", entries: {} });
   });
 
-  it("文件不存在 / 非 zip → {\"name\":\"\",\"entries\":{}}", async () => {
-    expect(await browserAdapter.ReadShaderpackLang("/web/shaderpack/不存在/a.zip")).toBe(
-      '{"name":"","entries":{}}',
+  it("文件不存在 / 非 zip → {name:\"\",entries:{}}", async () => {
+    expect(await browserAdapter.ReadShaderpackLang("/web/shaderpack/不存在/a.zip")).toEqual(
+      { name: "", entries: {} },
     );
   });
 });

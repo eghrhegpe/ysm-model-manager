@@ -27,7 +27,7 @@ use_when:
 
 ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struct 化）、**2 条 Deprecated**（直接删）、**3 条豁免**（合法 JSON 文本协议）、**16 条真字符串**（只规范错误通道）。前端 30+ 处生产代码以 `JSON.parse(...) as 手写类型` 消费病灶档，类型断层 + 三套错误语义（`error` / `"{}"` 吞错 / `{error}` 字段）由此而来。
 
-**进度**：P0×6 全部 ✅（2026-09-01，见下方状态列）；P1×17 未动。
+**进度**：P0×6 全部 ✅（2026-09-01）；P1×17 全部 ✅（2026-09-01）。剩 P2（Deprecated 删除 + error_json.go 工具族退役 + ReadPackEntry base64 统一）。
 
 **进度约定**：铲一条把状态列改 ✅ 并同步删除前端对应 `JSON.parse` 断言；整批完成在本表登记。ADR-143 只记决策，不记进度。
 
@@ -50,18 +50,18 @@ ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑
 
 | 绑定 | Go 位置 | 前端消费点（手写断言） | 状态 |
 |---|---|---|---|
-| `ReadPackMeta` | resource_bindings.go:37 | pack-meta.ts:104、detail.ts:154 | ⬜ |
-| `ReadShaderpackLang` | resource_bindings.go:61 | detail.ts:274 | ⬜ |
-| `ReadSchematic` / `ReadNbtStructure` / `ReadLitematicMeta` | resource_bindings.go:115/124/133 | litematic-meta.ts:114-120 | ⬜ |
-| `GetNbtVoxelData` / `GetSchematicVoxelData` / `GetLitematicVoxelData` | resource_bindings.go:105/110/143 | litematic-adapter.ts:78、litematic-3d.ts:81 | ⬜ |
-| `ListContainerEntries` | container_entries.go:75 | pack-3d.ts:45 等 | ⬜ |
-| `GetVoxelDataInContainer` | container_entries.go:110 | pack-3d.ts:45 等 | ⬜ |
-| `ListPackModels` / `ListPackModelsDetail` | resourcepack_models.go:73/100 | pack-3d.ts:45 | ⬜ |
-| `RepoHealthAudit` | resource_bindings.go:605 | health-report.ts:48、health.ts:35、oldest-models.ts:66 | ⬜ |
-| `RepoHealthAuditAll` | resource_bindings.go:626 | health.ts（注释明说全仓泛泛、实战走单仓） | ⬜ |
-| `GetSyncScanDirs` | app_install_instance.go:527 | sync-manager/store.ts:56 | ⬜ |
-| `GetInstanceSyncStatus` | app_install_instance.go:576 | sync-manager/store.ts:48 | ⬜ |
-| `SyncResources` | app_install_instance.go:352 | sync-manager/index.ts、store.ts | ⬜ |
+| `ReadPackMeta` | resource_bindings.go:37 | pack-meta.ts:104、detail.ts:154 | ✅ |
+| `ReadShaderpackLang` | resource_bindings.go:61 | detail.ts:274 | ✅ |
+| `ReadSchematic` / `ReadNbtStructure` / `ReadLitematicMeta` | resource_bindings.go:115/124/133 | litematic-meta.ts:114-120 | ✅ |
+| `GetNbtVoxelData` / `GetSchematicVoxelData` / `GetLitematicVoxelData` | resource_bindings.go:105/110/143 | litematic-adapter.ts:78、litematic-3d.ts:81 | ✅ |
+| `ListContainerEntries` | container_entries.go:75 | pack-3d.ts:45 等 | ✅ |
+| `GetVoxelDataInContainer` | container_entries.go:110 | pack-3d.ts:45 等 | ✅ |
+| `ListPackModels` / `ListPackModelsDetail` | resourcepack_models.go:73/100 | pack-3d.ts:45 | ✅ |
+| `RepoHealthAudit` | resource_bindings.go:605 | health-report.ts:48、health.ts:35、oldest-models.ts:66 | ✅ |
+| `RepoHealthAuditAll` | resource_bindings.go:626 | health.ts（注释明说全仓泛泛、实战走单仓） | ✅ |
+| `GetSyncScanDirs` | app_install_instance.go:527 | sync-manager/store.ts:56 | ✅ |
+| `GetInstanceSyncStatus` | app_install_instance.go:576 | sync-manager/store.ts:48 | ✅ |
+| `SyncResources` | app_install_instance.go:352 | sync-manager/index.ts、store.ts | ✅ |
 
 ## 二、Deprecated（2 条，直接删不迁移）
 

@@ -20,8 +20,8 @@
 | 主内容区、页面切换、nav:change、仓库页、全局 handler | [主内容页 app-content](./app-content.md) | `app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工… |
 | 组件入口、模块装配、启动流程、主题初始化、服务注册、检查更新、import 组件、新组件注册、窗口显示、startup reveal | [组件入口 app-modules](./app-modules.md) ⚠️歧义（另见 version-updater.md） | `app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组… |
 | 预览、模型预览、2D 骨骼、3D 预览、Litematic、蓝图、缩略图、WASM 解码、放大预览 | [预览面板 app-preview](./app-preview.md) ⚠️歧义（另见 dom-fab.md、go-threejs.md、model3d.md等） | `app-preview` 是仓库页右侧的预览面板组件（Shadow DOM），负责 YSM 模型的详情/2D 骨骼/3D 预览、Litematic 蓝图 3D 预览、资源包与光影包信息展示。它按 `model:select` 事件驱动，解… |
-| 侧边栏、整合包列表、版本卡片、推送、拉取、一键安装、同步状态、勾选、整合包拖拽导入、启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) ⚠️歧义（另见 app-sync-manager.md） | `app-sidebar` 是仓库页左栏的整合包列表组件（Shadow DOM），展示当前资源类型下各整合包（Minecraft 版本实例）的同步状态卡片，支持选中联动、勾选批量推送/拉取、一键安装缺失资源。它遵循标准组件拆分规范（inde… |
-| 整合包同步、同步状态、推送资源、拉取资源、待推送、可拉取、已禁用、实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) ⚠️歧义（另见 app-sidebar.md） | `app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本… |
+| 侧边栏、整合包列表、版本卡片、推送、拉取、一键安装、同步状态、勾选、整合包拖拽导入、启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) ⚠️歧义（另见 sync-manager.md、app-sync-manager.md等） | `app-sidebar` 是仓库页左栏的整合包列表组件（Shadow DOM），展示当前资源类型下各整合包（Minecraft 版本实例）的同步状态卡片，支持选中联动、勾选批量推送/拉取、一键安装缺失资源。它遵循标准组件拆分规范（inde… |
+| 整合包同步、同步状态、推送资源、拉取资源、待推送、可拉取、已禁用、实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) ⚠️歧义（另见 sync-manager.md、app-sidebar.md等） | `app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本… |
 | 树形、资源列表、tree、节点、树、目录树 | [资源树 app-tree](./app-tree.md) | `app-tree` 是 YSM 核心的资源目录树组件，使用 Web Components 实现，支持展开/折叠、右键菜单、文件图标显示。 |
 | 缺失 import、auto-import、导出符号、tokenize、词法、缺失导入、goimports、大脚本拆分 | [auto-import 拆分与缺失 import 检测](./auto_import_split.md) ⚠️歧义（另见 source-graph.md） | `scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆… |
 | 网页版、浏览器模式、web mode、IndexedDB、IDB、浏览器后端、browser adapter、跨域隔离、COI、NBT 解析、体素、体素颜色、Web CLI、社区下载、网页版文件系统、网页版仓库 | [网页版后端 backend-web](./backend_web.md) ⚠️歧义（另见 backend-idb.md、wails-bridge.md、go-litematic.md等） | `frontend/src/backend/` 是 YSM 网页版（ADR-049 Web Edition）的后端抽象层。在桌面/Android 环境下走 Wails Go 绑定替代，网页版使用 `browser-adapter.ts` +… |
@@ -38,6 +38,7 @@
 | FAB、悬浮按钮、3D 预览、overlay、ADR-057 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) ⚠️歧义（另见 app-preview.md、go-threejs.md、model3d.md等） | 3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu… |
 | 漂移检测、双轨、重复实现、口径漂移 | [drift-scan（双轨漂移检测）](./drift-scan.md) ⚠️歧义（另见 extensibility-index.md） | — |
 | 事件、事件总线、通信、emit、跨组件通信、bus | [事件总线 bus.ts](./event-bus.md) | `bus.ts` 是 YSM 前端的唯一事件中枢，基于发布/订阅模式。所有跨组件、跨页面的异步通信都经过此总线，避免组件间直接耦合。 |
+| 截图、导出 PNG、多角度截图、透明背景、预览缓存、blob URL、saveScreenshot、renderMultiAngle | [截图导出 export](./export.md) ⚠️歧义（另见 utils-export.md等） | > **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到… |
 | 拓展点对账、落地状态、ADR 闭环 | [可拓展点索引对账（vs HEAD @ d517113c…）](./extensibility-index-reconciliation.md) | — |
 | 可拓展点、扩展入口、硬编码、重复实现、插件化 | [可拓展点发掘索引（extensibility inventory）](./extensibility-index.md) ⚠️歧义（另见 drift-scan.md） | — |
 | 新增资源类型、新增文件格式、新增网页桥接、新增同步逻辑、残留手改清单 | [拓展点 / 扩展入口 探索报告（Round 2）](./extensibility-round2.md) | — |
@@ -95,9 +96,10 @@
 | README、脚本索引、登记处、脚本登记、check-readme-index、脚本漂移、脚本对账 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | `scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审… |
 | 搜索、筛选、关键词、标签筛选、数值筛选、三路交集、adv-filter、高级筛选、SearchModels | [搜索筛选编排 search](./search.md) ⚠️歧义（另见 go-tags.md、model-stats.md等） | 搜索筛选的**跨层端到端编排层**：前端工具栏搜索输入 → 关键词 + 标签 + 数值三路交集 → 后端 Go 一次性过滤 → 白名单回填 `buildTree` 精确匹配。 |
 | 符号提取、导出符号、顶层声明、api-break、audit-split、rollback-impact、bloat-history、依赖图、check-lib-adoption | [源码符号提取共享层 source-graph.ts](./source-graph.md) ⚠️歧义（另见 auto_import_split.md） | — |
+| 整合包同步、推送、拉取、整合包列表、同步状态、instance、PushSingleResource、PullSingleResource、sync:download:missing、app-sidebar | [整合包同步管理器 sync-manager](./sync-manager.md) ⚠️歧义（另见 app-sync-manager.md、app-sidebar.md等） | `app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**： |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试、mock、G-1 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) ⚠️歧义（另见 frontend_test_audit.md） | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 sle… |
 | UI 组件、UI 组件库、卡片组件、折叠面板、加载动画、滑块、行组件、预设、图标、幻灯片菜单、组件样式 | [UI 组件库 ui-components](./ui_components.md) ⚠️歧义（另见 dialog-batch-rename.md） | `frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 … |
-| 截图、导出 PNG、多角度截图、预览缓存、缩略图、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 app-preview.md、go-avatar.md、go-packs.md） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图入口… |
+| 截图、导出 PNG、多角度截图、预览缓存、缩略图、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 export.md、app-preview.md、go-avatar.md等） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图入口… |
 | 更新、升级、检查更新、新版本、静默检查、updater、版本 | [版本更新 version-updater](./version-updater.md) ⚠️歧义（另见 go-updater.md、app-modules.md等） | `version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda… |
 | vitest、测试环境、node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | — |
 | API、Binding、接口、Go 方法、调用后端、有哪些方法、App 方法、getApp、方法签名、app.ts 绑定 | [Wails Binding API 总览 internal/app](./wails-bindings.md) ⚠️歧义（另见 wails-bridge.md等） | `internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(… |

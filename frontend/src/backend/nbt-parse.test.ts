@@ -256,59 +256,62 @@ async function importAs(type: string, name: string, bytes: Uint8Array): Promise<
 }
 
 describe("ReadLitematicMeta — web 实现（ADR-070 M1）", () => {
-  it("返回 LitematicMeta 兼容 JSON（全字段对齐 Go json tag）", async () => {
+  it("返回 LitematicMeta 兼容对象（全字段对齐 Go json tag）", async () => {
     const path = await importAs("litematic", "测试.litematic", makeLitematicGz());
-    const meta = JSON.parse(await browserAdapter.ReadLitematicMeta(path)) as Record<string, unknown>;
-    expect(meta["name"]).toBe("测试投影");
-    expect(meta["author"]).toBe("作者A");
-    expect(meta["description"]).toBe("M1 测试蓝图");
-    expect(meta["version"]).toBe(5);
-    expect(meta["minecraftDataVersion"]).toBe(3700);
-    expect(meta["totalBlocks"]).toBe(42);
-    expect(meta["totalVolume"]).toBe(4096);
-    expect(meta["timeCreated"]).toBe(1767344640000);
-    expect(meta["timeModified"]).toBe(1767344700000);
-    expect(meta["enclosingSize"]).toEqual([16, 8, 4]);
-    expect(meta["regionCount"]).toBe(1);
-    expect(meta["blockStats"]).toEqual([]);
-    expect(meta["previewImage"]).toBe("");
+    const meta = await browserAdapter.ReadLitematicMeta(path);
+    expect(meta).not.toBeNull();
+    expect(meta!["name"]).toBe("测试投影");
+    expect(meta!["author"]).toBe("作者A");
+    expect(meta!["description"]).toBe("M1 测试蓝图");
+    expect(meta!["version"]).toBe(5);
+    expect(meta!["minecraftDataVersion"]).toBe(3700);
+    expect(meta!["totalBlocks"]).toBe(42);
+    expect(meta!["totalVolume"]).toBe(4096);
+    expect(meta!["timeCreated"]).toBe(1767344640000);
+    expect(meta!["timeModified"]).toBe(1767344700000);
+    expect(meta!["enclosingSize"]).toEqual([16, 8, 4]);
+    expect(meta!["regionCount"]).toBe(1);
+    expect(meta!["blockStats"]).toEqual([]);
+    expect(meta!["previewImage"]).toBe("");
   });
 
-  it("缺 Metadata compound → '{}'（对齐 ParseMeta error → '{}'）", async () => {
+  it("缺 Metadata compound → null（对齐 ParseMeta error → error 通道）", async () => {
     const path = await importAs("litematic", "空.litematic", gz(nbtRoot(nbtInt("Version", 5))));
-    expect(await browserAdapter.ReadLitematicMeta(path)).toBe("{}");
+    expect(await browserAdapter.ReadLitematicMeta(path)).toBeNull();
   });
 });
 
 describe("ReadNbtStructure — web 实现（ADR-070 M1）", () => {
-  it("返回兼容 JSON（size/blockCount/entityCount/paletteStats/dataVersion）", async () => {
+  it("返回兼容对象（size/blockCount/entityCount/paletteStats/dataVersion）", async () => {
     const path = await importAs("blueprint", "建筑.nbt", makeNbtStructureGz());
-    const meta = JSON.parse(await browserAdapter.ReadNbtStructure(path)) as Record<string, unknown>;
-    expect(meta["dataVersion"]).toBe(2566);
-    expect(meta["size"]).toEqual([3, 4, 5]);
-    expect(meta["blockCount"]).toBe(1);
-    expect(meta["entityCount"]).toBe(1);
+    const meta = await browserAdapter.ReadNbtStructure(path);
+    expect(meta).not.toBeNull();
+    expect(meta!["dataVersion"]).toBe(2566);
+    expect(meta!["size"]).toEqual([3, 4, 5]);
+    expect(meta!["blockCount"]).toBe(1);
+    expect(meta!["entityCount"]).toBe(1);
     // palette 条目按 Name 计 1（对齐 ParseNbtStructure:302-321；同 Count 稳定排序保插入序）
-    expect(meta["paletteStats"]).toEqual([
+    expect(meta!["paletteStats"]).toEqual([
       { name: "minecraft:stone", count: 1 },
       { name: "minecraft:dirt", count: 1 },
     ]);
   });
 
-  it("缺 size/blocks/palette → '{}'（对齐 ParseNbtStructure:282-284 判定）", async () => {
+  it("缺 size/blocks/palette → null（对齐 ParseNbtStructure:282-284 判定）", async () => {
     const path = await importAs("blueprint", "空.nbt", gz(nbtRoot(nbtInt("DataVersion", 2566))));
-    expect(await browserAdapter.ReadNbtStructure(path)).toBe("{}");
+    expect(await browserAdapter.ReadNbtStructure(path)).toBeNull();
   });
 
   it("基岩版 1.21+ sub_levels：聚合 size/blockCount/paletteStats", async () => {
     const path = await importAs("blueprint", "基岩.nbt", makeBedrockStructureGz());
-    const meta = JSON.parse(await browserAdapter.ReadNbtStructure(path)) as Record<string, unknown>;
+    const meta = await browserAdapter.ReadNbtStructure(path);
+    expect(meta).not.toBeNull();
     // 全局包围盒：min 取各子结构最小、max 取最大 → size = (max-min+1)
-    expect(meta["size"]).toEqual([5 - 0 + 1, 6 - 0 + 1, 7 - 0 + 1]); // [6, 7, 8]
-    expect(meta["blockCount"]).toBe(6);
-    expect(meta["entityCount"]).toBe(1);
+    expect(meta!["size"]).toEqual([5 - 0 + 1, 6 - 0 + 1, 7 - 0 + 1]); // [6, 7, 8]
+    expect(meta!["blockCount"]).toBe(6);
+    expect(meta!["entityCount"]).toBe(1);
     // 按 palette_id 引用 block_palette.Name 统计真实方块数：stone×2, dirt×2, oak_log×2
-    expect(meta["paletteStats"]).toEqual([
+    expect(meta!["paletteStats"]).toEqual([
       { name: "minecraft:stone", count: 2 },
       { name: "minecraft:dirt", count: 2 },
       { name: "minecraft:oak_log", count: 2 },
@@ -317,41 +320,42 @@ describe("ReadNbtStructure — web 实现（ADR-070 M1）", () => {
 });
 
 describe("ReadSchematic — web 实现（ADR-070 M1）", () => {
-  it("返回兼容 JSON（version/size/blockCount/palette/实体计数）", async () => {
+  it("返回兼容对象（version/size/blockCount/palette/实体计数）", async () => {
     const path = await importAs("blueprint", "建筑.schematic", makeSchematicGz());
-    const meta = JSON.parse(await browserAdapter.ReadSchematic(path)) as Record<string, unknown>;
-    expect(meta["version"]).toBe(2);
-    expect(meta["dataVersion"]).toBe(2566);
-    expect(meta["size"]).toEqual([10, 5, 8]);
-    expect(meta["blockCount"]).toBe(400);
-    expect(meta["paletteSize"]).toBe(1);
-    expect(meta["paletteMax"]).toBe(1);
-    expect(meta["name"]).toBe("测试建筑");
-    expect(meta["author"]).toBe("作者A");
-    expect(meta["tileEntityCount"]).toBe(1);
-    expect(meta["entityCount"]).toBe(1);
+    const meta = await browserAdapter.ReadSchematic(path);
+    expect(meta).not.toBeNull();
+    expect(meta!["version"]).toBe(2);
+    expect(meta!["dataVersion"]).toBe(2566);
+    expect(meta!["size"]).toEqual([10, 5, 8]);
+    expect(meta!["blockCount"]).toBe(400);
+    expect(meta!["paletteSize"]).toBe(1);
+    expect(meta!["paletteMax"]).toBe(1);
+    expect(meta!["name"]).toBe("测试建筑");
+    expect(meta!["author"]).toBe("作者A");
+    expect(meta!["tileEntityCount"]).toBe(1);
+    expect(meta!["entityCount"]).toBe(1);
   });
 
-  it("仅剩 ≤1 字段（只含 Version）→ '{}'（对齐 ParseSchematicSummary:261-263）", async () => {
+  it("仅剩 ≤1 字段（只含 Version）→ null（对齐 ParseSchematicSummary:261-263）", async () => {
     const path = await importAs("blueprint", "空.schematic", gz(nbtRoot(nbtInt("Version", 2))));
-    expect(await browserAdapter.ReadSchematic(path)).toBe("{}");
+    expect(await browserAdapter.ReadSchematic(path)).toBeNull();
   });
 });
 
-describe("三个 binding — 失败路径 → '{}'", () => {
-  it("文件不存在 → '{}'", async () => {
-    expect(await browserAdapter.ReadLitematicMeta("/web/litematic/无/无.litematic")).toBe("{}");
-    expect(await browserAdapter.ReadNbtStructure("/web/blueprint/无/无.nbt")).toBe("{}");
-    expect(await browserAdapter.ReadSchematic("/web/blueprint/无/无.schematic")).toBe("{}");
+describe("三个 binding — 失败路径 → null", () => {
+  it("文件不存在 → null", async () => {
+    expect(await browserAdapter.ReadLitematicMeta("/web/litematic/无/无.litematic")).toBeNull();
+    expect(await browserAdapter.ReadNbtStructure("/web/blueprint/无/无.nbt")).toBeNull();
+    expect(await browserAdapter.ReadSchematic("/web/blueprint/无/无.schematic")).toBeNull();
   });
 
-  it("非 gzip / 非 NBT 数据 → '{}'", async () => {
+  it("非 gzip / 非 NBT 数据 → null", async () => {
     const bad = await importAs("litematic", "坏.litematic", new TextEncoder().encode("not nbt"));
-    expect(await browserAdapter.ReadLitematicMeta(bad)).toBe("{}");
+    expect(await browserAdapter.ReadLitematicMeta(bad)).toBeNull();
     const badNbt = await importAs("blueprint", "坏.nbt", Uint8Array.from([0x01, 0x02, 0x03]));
-    expect(await browserAdapter.ReadNbtStructure(badNbt)).toBe("{}");
+    expect(await browserAdapter.ReadNbtStructure(badNbt)).toBeNull();
     const badSch = await importAs("blueprint", "坏.schematic", new TextEncoder().encode("notgzip"));
-    expect(await browserAdapter.ReadSchematic(badSch)).toBe("{}");
+    expect(await browserAdapter.ReadSchematic(badSch)).toBeNull();
   });
 
   it("gzip ISIZE 超大 → 预筛拒收抛错 → '{}'", async () => {

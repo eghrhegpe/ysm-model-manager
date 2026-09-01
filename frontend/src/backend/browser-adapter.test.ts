@@ -700,8 +700,7 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
     });
     const zipFile = new File([zipBytes], "材质包.zip");
     await importWebFiles([zipFile], "resourcepack");
-    const raw = (await browserAdapter.ListPackModels("/web/resourcepack/材质包/材质包.zip")) as string;
-    const entries = JSON.parse(raw) as string[];
+    const entries = await browserAdapter.ListPackModels("/web/resourcepack/材质包/材质包.zip");
     expect(entries).toContain("assets/minecraft/models/block/cube.json");
     const b64 = (await browserAdapter.ReadPackEntry(
       "/web/resourcepack/材质包/材质包.zip",
@@ -721,11 +720,10 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
     });
     const zipFile = new File([zipBytes], "材质包.zip");
     await importWebFiles([zipFile], "resourcepack");
-    const raw = (await browserAdapter.ListPackModelsDetail("/web/resourcepack/材质包/材质包.zip")) as string;
-    const detail = JSON.parse(raw) as { models: Array<{ path: string; cubes: number }>; total: number };
-    expect(detail.total).toBe(4);
-    expect(detail.models).toHaveLength(4);
-    const byPath = new Map(detail.models.map((m) => [m.path, m.cubes]));
+    const detail = await browserAdapter.ListPackModelsDetail("/web/resourcepack/材质包/材质包.zip");
+    expect(detail!.total).toBe(4);
+    expect(detail!.models).toHaveLength(4);
+    const byPath = new Map(detail!.models.map((m) => [m.path, m.cubes]));
     expect(byPath.get("assets/minecraft/models/block/stone.json")).toBe(0);
     expect(byPath.get("assets/minecraft/models/block/door.json")).toBe(1);
     expect(byPath.get("assets/minecraft/models/block/wall.json")).toBe(3);
@@ -733,8 +731,8 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
   });
 
   it("ListPackModelsDetail：空包 / 失败 → 合法空结构", async () => {
-    const raw = (await browserAdapter.ListPackModelsDetail("/web/resourcepack/缺失/不存在.zip")) as string;
-    expect(JSON.parse(raw)).toEqual({ models: [], total: 0 });
+    const detail = await browserAdapter.ListPackModelsDetail("/web/resourcepack/缺失/不存在.zip");
+    expect(detail).toEqual({ models: [], total: 0 });
   });
 
   it("FindPreviewImage：模型同目录 preview.png 转 data URI", async () => {

@@ -1702,6 +1702,10 @@ export const autoSidebar = [
             "link": "/knowledge/community-feature"
           },
           {
+            "text": "截图导出 export",
+            "link": "/knowledge/export"
+          },
+          {
             "text": "全局导入执行 import-executor",
             "link": "/knowledge/import-queue"
           },
@@ -1728,6 +1732,10 @@ export const autoSidebar = [
           {
             "text": "搜索筛选编排 search",
             "link": "/knowledge/search"
+          },
+          {
+            "text": "整合包同步管理器 sync-manager",
+            "link": "/knowledge/sync-manager"
           },
           {
             "text": "版本更新 version-updater",

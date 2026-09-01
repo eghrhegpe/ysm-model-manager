@@ -10,6 +10,15 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as dedup$0 from "../../go/dedup/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as sync$0 from "../../go/sync/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as threejs$0 from "../../go/threejs/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as types$0 from "../../go/types/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -79,9 +88,9 @@ export function BatchExtractCreatorAvatars(): $CancellablePromise<{ [_ in string
  * 用途：Android 上 Go 端无 .ysm 解码通道（Node WASM 不可用，runYSMNodeJSDecode 恒 nil）时，
  * 前端用 WebView 内 WASM 解码 .ysm 拿到 geometry JSON，再调本函数构建 spec——
  * 复用 threejs.BuildMulti 全量顶点算法（ADR-004：Go 绑定为唯一事实来源），桌面端主路径不变。
- * 返回 "{}" 表示不可用（前端据此决定是否报错/提示）。
+ * 返回 nil 表示不可用（前端据此决定是否报错/提示）。
  */
-export function Build3DSpecFromGeometryJSON(geometryJSON: string): $CancellablePromise<string> {
+export function Build3DSpecFromGeometryJSON(geometryJSON: string): $CancellablePromise<threejs$0.Model3DSpec | null> {
     return $Call.ByID(2035968503, geometryJSON);
 }
 
@@ -233,11 +242,9 @@ export function DeleteResourcePack(path: string, rtype: string): $CancellablePro
 
 /**
  * DetectConflicts 检测指定整合包与全局仓库之间的文件冲突
- * rtype: 资源类型 ID
- * instanceName: 整合包名称
- * 返回冲突报告 JSON
+ * 返回 typed ConflictReport（Wails codegen 自动序列化），失败 → error
  */
-export function DetectConflicts(rtype: string, instanceName: string): $CancellablePromise<string> {
+export function DetectConflicts(rtype: string, instanceName: string): $CancellablePromise<sync$0.ConflictReport | null> {
     return $Call.ByID(2472631939, rtype, instanceName);
 }
 
@@ -344,11 +351,10 @@ export function ExtractYsmSummary(path: string): $CancellablePromise<ysm$0.YsmSu
 }
 
 /**
- * FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串）。
- * 契约（见 docs/wails-bindings.md）：成功 → DedupGroup[]；失败 → {error: string}。
- * configStr: 可选的去重配置 JSON 字符串，格式: {"strategy":"...", "keepPolicy":"...", "priorityPath":"..."}
+ * FindDuplicateFiles 扫描目录返回所有重复文件分组。
+ * 失败 → error（非 {error} 字符串），调用方 catch 即可区分失败与无重复。
  */
-export function FindDuplicateFiles(dir: string, ...configStr: string[]): $CancellablePromise<string> {
+export function FindDuplicateFiles(dir: string, ...configStr: string[]): $CancellablePromise<dedup$0.Group[] | null> {
     return $Call.ByID(1295941240, dir, configStr);
 }
 
@@ -475,7 +481,7 @@ export function GetMinecraftPaths(): $CancellablePromise<string[] | null> {
     return $Call.ByID(2122198272);
 }
 
-export function GetModel3DSpec(modelPath: string): $CancellablePromise<string> {
+export function GetModel3DSpec(modelPath: string): $CancellablePromise<threejs$0.Model3DSpec | null> {
     return $Call.ByID(2923299250, modelPath);
 }
 
@@ -832,6 +838,12 @@ export function ListPackModelsDetail(path: string): $CancellablePromise<string> 
     return $Call.ByID(440793901, path);
 }
 
+/**
+ * ListRecycleBin 列出回收站条目。recyclePath 非空时只遍历与之相关的资源根
+ * （任一方向互相包含即视为相关），为空则退回全量遍历。
+ * 单根包含判定复用 go/paths.IsInside——其已覆盖空路径、NUL 字节、filepath.Rel
+ * 前缀误判（.. 与 ..foo）、Windows 大小写不敏感等边界，此处不另造一套。
+ */
 export function ListRecycleBin(recyclePath: string): $CancellablePromise<types$0.ModelEntry[] | null> {
     return $Call.ByID(3420025601, recyclePath);
 }
@@ -849,9 +861,9 @@ export function LoadGitHubRepos(): $CancellablePromise<types$0.WorkshopCreator[]
 }
 
 /**
- * LoadResourceTypes 加载资源类型注册表
+ * LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/types.LoadRegistry）
  */
-export function LoadResourceTypes(): $CancellablePromise<string> {
+export function LoadResourceTypes(): $CancellablePromise<types$0.ResourceTypeRegistry | null> {
     return $Call.ByID(3636552016);
 }
 
@@ -1119,9 +1131,9 @@ export function ResetWorkshopConfigs(): $CancellablePromise<types$0.WorkshopSite
  * defaultStrategy: 默认解决策略 (force_remote/force_local/manual)
  * rtype: 资源类型 ID
  * instanceName: 整合包名称
- * 返回解决结果 JSON
+ * 返回 typed SyncResolveResult，失败 → error
  */
-export function ResolveConflicts(conflictsJSON: string, defaultStrategy: string, rtype: string, instanceName: string): $CancellablePromise<string> {
+export function ResolveConflicts(conflictsJSON: string, defaultStrategy: string, rtype: string, instanceName: string): $CancellablePromise<types$0.SyncResolveResult | null> {
     return $Call.ByID(1918295312, conflictsJSON, defaultStrategy, rtype, instanceName);
 }
 

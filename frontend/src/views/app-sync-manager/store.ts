@@ -20,10 +20,15 @@ export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
   const gen = self._gen;
   try {
     const { LoadResourceTypes } = await getApp();
-    const raw = await LoadResourceTypes();
-    const parsed = JSON.parse(raw) as { resourceTypes?: Array<{ id: string; name?: string; icon?: string; dirLevelSync?: boolean }> };
+    const reg = await LoadResourceTypes();
     if (gen !== self._gen) return;
-    self._typeConfig = parsed.resourceTypes || [];
+    // 只取前端需要的字段子集
+    self._typeConfig = (reg?.resourceTypes || []).map(r => ({
+      id: r.id,
+      name: r.name,
+      icon: r.icon,
+      dirLevelSync: r.dirLevelSync,
+    }));
   } catch {
     if (gen !== self._gen || !self.isConnected) return;
     self._typeConfig = [];

@@ -23,14 +23,13 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// LoadResourceTypes 加载资源类型注册表
-func (a *App) LoadResourceTypes() string {
-	// 单源化：直接返回 go/types 内嵌的 resource_types.json（internal/app 复用同一 embed）
-	data := types.BundledRegistryJSON()
-	if len(data) == 0 {
-		return "{}"
+// LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/types.LoadRegistry）
+func (a *App) LoadResourceTypes() (*types.ResourceTypeRegistry, error) {
+	reg := types.LoadRegistry()
+	if reg == nil || len(reg.ResourceTypes) == 0 {
+		return nil, fmt.Errorf("资源类型注册表为空")
 	}
-	return string(data)
+	return reg, nil
 }
 
 // ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png）
@@ -550,12 +549,11 @@ func marshalJSONIndent(tag string, v interface{}, fallback string) string {
 	return string(data)
 }
 
-// FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串）。
-// 契约（见 docs/wails-bindings.md）：成功 → DedupGroup[]；失败 → {error: string}。
-// configStr: 可选的去重配置 JSON 字符串，格式: {"strategy":"...", "keepPolicy":"...", "priorityPath":"..."}
-func (a *App) FindDuplicateFiles(dir string, configStr ...string) string {
+// FindDuplicateFiles 扫描目录返回所有重复文件分组。
+// 失败 → error（非 {error} 字符串），调用方 catch 即可区分失败与无重复。
+func (a *App) FindDuplicateFiles(dir string, configStr ...string) ([]dedup.Group, error) {
 	if !a.isPathInRootOrSelf(dir) {
-		return findDuplicateErrorJSON("路径超出仓库目录")
+		return nil, fmt.Errorf("路径超出仓库目录")
 	}
 
 	// 解析配置（统一入口 go/types.ParseDedupConfig）
@@ -564,19 +562,17 @@ func (a *App) FindDuplicateFiles(dir string, configStr ...string) string {
 		cfg, err := types.ParseDedupConfig(configStr[0])
 		if err != nil {
 			log.Printf("[dedup] 配置解析失败: %v", err)
-			return findDuplicateErrorJSON(fmt.Sprintf("配置解析失败: %v", err))
+			return nil, fmt.Errorf("配置解析失败: %w", err)
 		}
 		dedupConfig = cfg
 	}
 
 	groups, err := dedup.FindDuplicateFiles(dir, true, dedupConfig)
 	if err != nil {
-		// 失败时返回 {error: ...}，前端据此区分失败与无重复，避免假绿
-		// （根符号链接/权限错误时用户以为全扫到了而实际没扫）
 		log.Printf("[dedup] FindDuplicateFiles 扫描失败: %v", err)
-		return findDuplicateErrorJSON(err.Error())
+		return nil, err
 	}
-	return marshalJSON("FindDuplicateFiles", groups, findDuplicateErrorJSON("JSON 序列化失败"))
+	return groups, nil
 }
 
 // Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。

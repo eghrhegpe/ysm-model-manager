@@ -92,8 +92,7 @@ if (typeof window !== "undefined") {
   window.debugGetSpec = async (path?: string): Promise<unknown> => {
     try {
       const { GetModel3DSpec } = await getApp();
-      const jsonStr = await GetModel3DSpec(path || "");
-      const spec = JSON.parse(jsonStr);
+      const spec = await GetModel3DSpec(path || "");
       dbg("model3d", "spec:", spec);
       return spec;
     } catch (e) {

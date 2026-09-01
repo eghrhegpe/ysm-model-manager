@@ -231,9 +231,8 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   private async _preloadTypeRegistry(): Promise<void> {
     try {
       const { LoadResourceTypes } = await getApp();
-      const raw = await LoadResourceTypes();
-      const reg = JSON.parse(raw) as { resourceTypes?: Array<{ id: string; name?: string; icon?: string }> };
-      this._typeCache = reg.resourceTypes || [];
+      const reg = await LoadResourceTypes();
+      this._typeCache = reg?.resourceTypes || [];
     } catch (e) { console.warn("[preview] LoadResourceTypes:", e); }
   }
 

@@ -18,11 +18,17 @@ export type {
     ImportLog,
     InstanceStatus,
     LauncherInstance,
+    ModRequirement,
     ModelEntry,
+    NestedPattern,
     PackInfo,
+    ResourceType,
+    ResourceTypeRegistry,
     RuntimeLog,
     SearchResult,
     SubModel,
+    SyncResolveResult,
+    Variant,
     VersionInstance,
     WindowState,
     WorkshopCreator,
@@ -30,5 +36,6 @@ export type {
     WorkshopSite,
     YsmAuthor,
     YsmLicense,
-    YsmMetadata
+    YsmMetadata,
+    ZipEntryMatch
 } from "./models.js";

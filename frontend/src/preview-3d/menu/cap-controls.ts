@@ -59,8 +59,9 @@ function ensureCapSection(
 }
 
 /** divider：无 group 挂顶层作组间视觉分隔；有 group 挂 body 内作组内分隔 */
-function renderCapDivider(parent: HTMLElement): void {
+function renderCapDivider(parent: HTMLElement, c: MenuControlDef): void {
   const hr = document.createElement("div");
+  hr.dataset.testid = "cap-" + c.id;
   hr.style.cssText = "height:1px;background:rgba(255,255,255,0.12);margin:4px 10px";
   parent.appendChild(hr);
 }
@@ -216,6 +217,7 @@ function renderCapImage(parent: HTMLElement, c: MenuControlDef): void {
   if (!url) return; // 无内容时跳过（不占位）
   const row = document.createElement("div");
   row.className = "slide-item";
+  row.dataset.testid = "cap-" + c.id;
   row.style.cssText = "padding:6px 10px";
   const img = document.createElement("img");
   img.src = url;
@@ -464,7 +466,7 @@ export function renderCapControls(
     if (c.visibleWhen && snapshot && !c.visibleWhen(snapshot)) continue;
     const parent = ensureCapSection(sectionMap, list, c.group) ?? list;
     switch (c.kind) {
-      case "divider": renderCapDivider(parent); break;
+      case "divider": renderCapDivider(parent, c); break;
       case "toggle": renderCapToggle(parent, c); break;
       case "slider": renderCapSlider(parent, c); break;
       case "select": renderCapSelect(parent, c); break;

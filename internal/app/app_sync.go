@@ -3,51 +3,46 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	ysmsync "ysm-model-manager/go/sync"
+	"ysm-model-manager/go/types"
 )
 
 // DetectConflicts 检测指定整合包与全局仓库之间的文件冲突
-// rtype: 资源类型 ID
-// instanceName: 整合包名称
-// 返回冲突报告 JSON
-func (a *App) DetectConflicts(rtype, instanceName string) string {
+// 返回 typed ConflictReport（Wails codegen 自动序列化），失败 → error
+func (a *App) DetectConflicts(rtype, instanceName string) (*ysmsync.ConflictReport, error) {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
-		return SyncErrorJSON("未配置游戏根目录")
+		return nil, fmt.Errorf("未配置游戏根目录")
 	}
 
 	globalDir, err := a.filesRootForSync(rtype)
 	if err != nil || globalDir == "" {
 		if err != nil {
 			log.Printf("[conflict] 获取全局资源目录失败: %v", err)
-			return SyncErrorJSON("获取全局资源目录失败: " + err.Error())
+			return nil, fmt.Errorf("获取全局资源目录失败: %w", err)
 		}
-		return SyncErrorJSON("未找到全局资源目录")
+		return nil, fmt.Errorf("未找到全局资源目录")
 	}
 
 	targetDir, err := a.findInstanceDir(rtype, instanceName, cfg.McRoot)
 	if err != nil || targetDir == "" {
 		if err != nil {
 			log.Printf("[conflict] 获取整合包目录失败: %v", err)
-			return SyncErrorJSON("获取整合包目录失败: " + err.Error())
+			return nil, fmt.Errorf("获取整合包目录失败: %w", err)
 		}
-		return SyncErrorJSON("未找到整合包目录: " + instanceName)
+		return nil, fmt.Errorf("未找到整合包目录: %s", instanceName)
 	}
 
 	report, err := ysmsync.DetectConflicts(targetDir, globalDir, rtype)
 	if err != nil {
 		log.Printf("[conflict] DetectConflicts 失败: %v", err)
-		return SyncErrorJSON("冲突检测失败: " + err.Error())
+		return nil, fmt.Errorf("冲突检测失败: %w", err)
 	}
 
-	data, err := json.Marshal(report)
-	if err != nil {
-		log.Printf("[conflict] JSON 序列化失败: %v", err)
-		return SyncErrorJSON("JSON 序列化失败")
-	}
-	return string(data)
+	return report, nil
 }
 
 // ResolveConflicts 批量解决冲突
@@ -55,41 +50,40 @@ func (a *App) DetectConflicts(rtype, instanceName string) string {
 // defaultStrategy: 默认解决策略 (force_remote/force_local/manual)
 // rtype: 资源类型 ID
 // instanceName: 整合包名称
-// 返回解决结果 JSON
-func (a *App) ResolveConflicts(conflictsJSON, defaultStrategy, rtype, instanceName string) string {
+// 返回 typed SyncResolveResult，失败 → error
+func (a *App) ResolveConflicts(conflictsJSON, defaultStrategy, rtype, instanceName string) (*types.SyncResolveResult, error) {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
-		return ResolveErrorJSON("未配置游戏根目录")
+		return nil, fmt.Errorf("未配置游戏根目录")
 	}
 
 	globalDir, err := a.filesRootForSync(rtype)
 	if err != nil || globalDir == "" {
 		if err != nil {
 			log.Printf("[conflict] 获取全局资源目录失败: %v", err)
-			return ResolveErrorJSON("获取全局资源目录失败: " + err.Error())
+			return nil, fmt.Errorf("获取全局资源目录失败: %w", err)
 		}
-		return ResolveErrorJSON("未找到全局资源目录")
+		return nil, fmt.Errorf("未找到全局资源目录")
 	}
 
 	targetDir, err := a.findInstanceDir(rtype, instanceName, cfg.McRoot)
 	if err != nil || targetDir == "" {
 		if err != nil {
 			log.Printf("[conflict] 获取整合包目录失败: %v", err)
-			return ResolveErrorJSON("获取整合包目录失败: " + err.Error())
+			return nil, fmt.Errorf("获取整合包目录失败: %w", err)
 		}
-		return ResolveErrorJSON("未找到整合包目录: " + instanceName)
+		return nil, fmt.Errorf("未找到整合包目录: %s", instanceName)
 	}
 
 	// 解析冲突列表
 	var conflicts []ysmsync.FileConflict
 	if err := json.Unmarshal([]byte(conflictsJSON), &conflicts); err != nil {
 		log.Printf("[conflict] 解析冲突列表失败: %v", err)
-		return ResolveErrorJSON("解析冲突列表失败: " + err.Error())
+		return nil, fmt.Errorf("解析冲突列表失败: %w", err)
 	}
 
 	if len(conflicts) == 0 {
-		return marshalJSON("ResolveConflicts", map[string]int{"resolved": 0, "failed": 0, "manual": 0},
-			`{"resolved":0,"failed":0,"manual":0}`)
+		return &types.SyncResolveResult{Resolved: 0, Failed: 0, Manual: 0}, nil
 	}
 
 	// 执行解决
@@ -100,16 +94,5 @@ func (a *App) ResolveConflicts(conflictsJSON, defaultStrategy, rtype, instanceNa
 		globalDir,
 	)
 
-	result := map[string]int{
-		"resolved": resolved,
-		"failed":   failed,
-		"manual":   manual,
-	}
-
-	data, err := json.Marshal(result)
-	if err != nil {
-		log.Printf("[conflict] JSON 序列化失败: %v", err)
-		return ResolveErrorJSON("JSON 序列化失败")
-	}
-	return string(data)
+	return &types.SyncResolveResult{Resolved: resolved, Failed: failed, Manual: manual}, nil
 }

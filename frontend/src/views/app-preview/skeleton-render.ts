@@ -100,8 +100,9 @@ export async function buildStatsCard(
   let spec: Spec3D | null = null;
   try {
     const { GetModel3DSpec } = await getApp();
-    const jsonStr = await GetModel3DSpec(modelPath);
-    if (jsonStr) spec = JSON.parse(jsonStr) as Spec3D;
+    const modelSpec = await GetModel3DSpec(modelPath);
+    // Model3DSpec → Spec3D 类型转换
+    spec = modelSpec ? (modelSpec as unknown as Spec3D) : null;
   } catch {
     // spec 获取失败不阻断——回退到聚合数据
   }

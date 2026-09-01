@@ -21,20 +21,21 @@ export async function loadResourceRegistry(): Promise<ResourceRegistry> {
   if (_registry) return _registry;
   try {
     const App = await getApp();
-    const raw = await App.LoadResourceTypes();
-    const data = JSON.parse(raw || "{}") as { resourceTypes?: ResourceTypeEntry[] };
-    // P2 修复：仅当拿到非空 resourceTypes 才写缓存——
-    // Go 端 LoadResourceTypes 失败时返回 "{}"（见 resource_bindings.go 的 LoadResourceTypes），
-    // 原实现 JSON.parse("{}") 成功 → _registry={} 被缓存（对象 truthy），
-    // 整会话永远返回空注册表，违反「失败不缓存可重试」契约
-    if (!Array.isArray(data.resourceTypes) || data.resourceTypes.length === 0) {
-      // P3 修复：空/畸形响应补 warn——Go 端损坏 JSON 会回退嵌入基线并告警（go/types/resource.go），
-      // 前端原静默返回 {} 无任何痕迹，消费方图标回退 📦 难排查；失败不缓存可重试语义不变
+    const reg = await App.LoadResourceTypes();
+    // Go 端返回 null 或空注册表 → 本次不缓存可重试（与 P2 修复语义一致）
+    if (!reg || !Array.isArray(reg.resourceTypes) || reg.resourceTypes.length === 0) {
       console.warn("[registry] LoadResourceTypes 返回空注册表（Go 端可能失败），本次不缓存可重试");
       return {};
     }
-    _registry = data.resourceTypes.reduce<ResourceRegistry>((map, t) => {
-      map[t.id] = t;
+    _registry = reg.resourceTypes.reduce<ResourceRegistry>((map, t) => {
+      // Go 绑定返回 null → 前端 undefined（schema 兼容性转换）
+      const entry: ResourceTypeEntry = {
+        ...t,
+        extensions: t.extensions || undefined,
+        variants: t.variants || undefined,
+        zipEntries: t.zipEntries || undefined,
+      };
+      map[t.id] = entry;
       return map;
     }, {});
     return _registry;

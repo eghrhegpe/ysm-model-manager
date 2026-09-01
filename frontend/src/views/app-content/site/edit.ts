@@ -178,7 +178,7 @@ function eeBindFetchBtn(
             return [];
           }),
           App.LoadResourceTypes().catch(function () {
-            return "{}";
+            return null;
           }),
         ]);
         const community = results[0],
@@ -212,8 +212,10 @@ function eeBindFetchBtn(
         }
         let resourceTypes: unknown[] = [];
         try {
-          const parsed = JSON.parse(resourceTypesRaw || "{}") as { resourceTypes?: unknown[] };
-          resourceTypes = parsed.resourceTypes || [];
+          const reg = resourceTypesRaw;
+          if (reg && Array.isArray(reg.resourceTypes)) {
+            resourceTypes = reg.resourceTypes;
+          }
         } catch (e) { console.warn("[site-edit] parse resourceTypes:", e); }
         if (resourceTypes.length) {
           logs.push(t("workshop.logTypes", { n: resourceTypes.length }));

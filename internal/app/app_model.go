@@ -412,59 +412,77 @@ func (a *App) AnalyzeBedrockModelEntry(modelPath, subPath string) types.BedrockM
 	return *geoJSON
 }
 
-func (a *App) GetModel3DSpec(modelPath string) string {
+func (a *App) GetModel3DSpec(modelPath string) (*threejs.Model3DSpec, error) {
 	// 剥禁用后缀（.ban/.disabled），与 scanner 口径一致
 	modelPath = types.StripDisableSuffix(modelPath)
 	// 路径守卫：GetModel3DSpec 是 Wails binding，原实现无校验可读取系统任意文件。
 	// 与 ReadFileBytes/AnalyzeBedrockModel 对齐 isPathInRootOrSelf。
 	if !a.isPathInRootOrSelf(modelPath) {
-		return "{}"
+		return nil, fmt.Errorf("路径超出仓库目录")
 	}
 	// 多组件路径（YSMViewer 式）：.ysm（WASM 解码）/ .zip / 解压目录 ysm.json
 	// 各自组件独立构建，合并 spec.models；纹理 texIdx 由解析层全局化（组件 i → i），
 	// 前端 texArr 全局数组按序索引。
 	ext := strings.ToLower(filepath.Ext(modelPath))
 	if comps, texNames := a.collect3DComponents(modelPath, ext); len(comps) > 0 {
-		spec, err := threejs.BuildMulti(comps, nil)
-		if err == nil && spec != "{}" {
+		specJSON, err := threejs.BuildMulti(comps, nil)
+		if err == nil && specJSON != "{}" {
 			// R1 契约：注入组件序纹理名（texArrOrder），前端比对 texArr 序防止贴错纹理
 			if len(texNames) > 0 {
-				spec = injectTexArrOrder(spec, texNames)
+				specJSON = injectTexArrOrder(specJSON, texNames)
 			}
 			// ADR-114 perComponent：组件名 → [data URI] 注入 spec——此前该数据只存在于
 			// AnalyzeBedrockModel 链（zip/7z 的 ParseFromZipEntry 未填、解压目录合并路径无
 			// 组件概念），前端从未拿到过；统一从 3D spec 注入，三路（zip/7z/解压目录）同源。
-			spec = injectComponentTextures(spec, comps)
-			return spec
+			specJSON = injectComponentTextures(specJSON, comps)
+			var spec threejs.Model3DSpec
+			if err := json.Unmarshal([]byte(specJSON), &spec); err != nil {
+				return nil, fmt.Errorf("解析 Model3DSpec 失败: %w", err)
+			}
+			return &spec, nil
 		}
 	}
 	// 单组件兜底（.7z 或多组件失败时）
 	model := a.AnalyzeBedrockModel(modelPath)
-	spec, err := threejs.Build(model)
+	specJSON, err := threejs.Build(model)
 	if err != nil {
-		return "{}"
+		return nil, err
 	}
-	return spec
+	if specJSON == "{}" {
+		return &threejs.Model3DSpec{}, nil
+	}
+	var spec threejs.Model3DSpec
+	if err := json.Unmarshal([]byte(specJSON), &spec); err != nil {
+		return nil, fmt.Errorf("解析 Model3DSpec 失败: %w", err)
+	}
+	return &spec, nil
 }
 
 // Build3DSpecFromGeometryJSON 从 bedrock geometry JSON 构建 3D spec（纯 Go，无 Node 依赖）。
 // 用途：Android 上 Go 端无 .ysm 解码通道（Node WASM 不可用，runYSMNodeJSDecode 恒 nil）时，
 // 前端用 WebView 内 WASM 解码 .ysm 拿到 geometry JSON，再调本函数构建 spec——
 // 复用 threejs.BuildMulti 全量顶点算法（ADR-004：Go 绑定为唯一事实来源），桌面端主路径不变。
-// 返回 "{}" 表示不可用（前端据此决定是否报错/提示）。
-func (a *App) Build3DSpecFromGeometryJSON(geometryJSON string) string {
+// 返回 nil 表示不可用（前端据此决定是否报错/提示）。
+func (a *App) Build3DSpecFromGeometryJSON(geometryJSON string) (*threejs.Model3DSpec, error) {
 	if geometryJSON == "" {
-		return "{}"
+		return nil, fmt.Errorf("geometryJSON 为空")
 	}
 	model := geometry.ParseBedrockGeometry([]byte(geometryJSON))
 	if model == nil || len(model.Bones) == 0 {
-		return "{}"
+		return &threejs.Model3DSpec{}, nil
 	}
-	spec, err := threejs.BuildMulti([]types.BedrockModel{*model}, nil)
-	if err != nil || spec == "{}" {
-		return "{}"
+	specJSON, err := threejs.BuildMulti([]types.BedrockModel{*model}, nil)
+	if err != nil {
+		return nil, err
 	}
-	return spec
+	if specJSON == "{}" {
+		return &threejs.Model3DSpec{}, nil
+	}
+	var spec threejs.Model3DSpec
+	if err := json.Unmarshal([]byte(specJSON), &spec); err != nil {
+		return nil, fmt.Errorf("解析 Model3DSpec 失败: %w", err)
+	}
+	return &spec, nil
 }
 
 // injectTexArrOrder 在 spec JSON 中注入 texArrOrder（组件序纹理名数组，R1 契约）。

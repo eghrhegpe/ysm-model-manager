@@ -87,7 +87,9 @@ export async function renderMultiAngle(
     let spec: Spec3D | null = null;
     try {
       const { GetModel3DSpec } = await getApp();
-      spec = JSON.parse(await GetModel3DSpec(modelPath)) as Spec3D;
+      const modelSpec = await GetModel3DSpec(modelPath);
+      // Model3DSpec → Spec3D 类型转换（Go binding null→undefined 兼容）
+      spec = modelSpec ? (modelSpec as unknown as Spec3D) : null;
     } catch {
       console.warn("[screenshot] spec 获取失败");
     }

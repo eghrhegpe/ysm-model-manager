@@ -22,34 +22,16 @@ interface DgCfInstanceFile {
   name: string;
 }
 
-// ===== 同步冲突绑定 JSON 契约类型 =====
-// DetectConflicts / ResolveConflicts 是字符串绑定（Go 侧 json.Marshal 后返回），
-// 解析后形状对齐 Go go/sync/conflict.go FileConflict / ConflictReport 与
-// internal/app/error_json.go ErrorJSON（error 字段附加）。
-interface DgCfFileConflict {
-  path: string;
-  type: "content_modified" | "size_mismatch";
-  localModTime: string;
-  remoteModTime: string;
-  localSize: number;
-  remoteSize: number;
-  localHash?: string;
-  remoteHash?: string;
-  suggestedStrategy: "force_remote" | "force_local" | "manual";
-}
+// ===== 同步冲突绑定类型（已 struct 化，ADR-143 P0） =====
+// DetectConflicts / ResolveConflicts 现返回 typed struct，失败走 error 通道（Promise reject）
+import type { ConflictReport } from "../../../../bindings/ysm-model-manager/go/sync/models.ts";
+import type { FileConflict } from "../../../../bindings/ysm-model-manager/go/sync/models.ts";
+import type { SyncResolveResult } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 
-interface DgCfSyncDetectionResult {
-  conflicts: DgCfFileConflict[];
-  totalConflicts: number;
-  error?: string;
-}
-
-interface DgCfResolveResult {
-  resolved: number;
-  failed: number;
-  manual: number;
-  error?: string;
-}
+// 兼容旧 interface，实际使用 binding 生成的类型
+type DgCfFileConflict = FileConflict;
+type DgCfSyncDetectionResult = ConflictReport;
+type DgCfResolveResult = SyncResolveResult;
 
 // ===== scanConflicts 子函数 =====
 
@@ -243,11 +225,10 @@ async function dgCfRunSyncDetection(
     '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div><div class="stat-row diag-msg diag-msg-muted" style="text-align:center">' +
     t("diagnostics.scanningConflicts") +
     "</div>";
-  const resultJSON = await DetectConflicts(rtype, instanceName);
-  const result = JSON.parse(resultJSON) as DgCfSyncDetectionResult;
-  if (result.error) {
+  const result = await DetectConflicts(rtype, instanceName);
+  if (!result) {
     list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-error">❌ ' + esc(result.error) + "</div>";
+      '<div class="stat-row diag-msg diag-msg-error">❌ ' + t("diagnostics.conflictDetectionFailed") + "</div>";
     return;
   }
   const conflicts = result.conflicts || [];
@@ -403,17 +384,16 @@ async function dgCfExecuteResolve(
   try {
     const { ResolveConflicts } = await getApp();
     const conflictsJSON = JSON.stringify(conflicts);
-    const resultJSON = await ResolveConflicts(conflictsJSON, strategy, rtype, instanceName);
-    const result = JSON.parse(resultJSON) as DgCfResolveResult;
+    const result = await ResolveConflicts(conflictsJSON, strategy, rtype, instanceName);
+    if (!result) {
+      list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">❌ ${t("diagnostics.resolveFailed")}</div>`;
+      return;
+    }
     let resultMsg = `✅ ${t("diagnostics.resolvedCount", { n: result.resolved || 0 })}`;
     if (result.failed > 0) resultMsg += ` | ❌ ${t("diagnostics.failedCount", { n: result.failed })}`;
     if (result.manual > 0) resultMsg += ` | ⚠️ ${t("diagnostics.manualCount", { n: result.manual })}`;
-    if (result.error) {
-      list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">❌ ${esc(result.error)}</div>`;
-    } else {
-      list.innerHTML += `<div class="stat-row diag-msg diag-msg-success" style="margin-top:12px">${resultMsg}</div>`;
-      setTimeout(() => scanSyncConflicts(list, esc, rtype, instanceName), 1500);
-    }
+    list.innerHTML += `<div class="stat-row diag-msg diag-msg-success" style="margin-top:12px">${resultMsg}</div>`;
+    setTimeout(() => scanSyncConflicts(list, esc, rtype, instanceName), 1500);
   } catch (err) {
     list.innerHTML += `<div class="stat-row diag-msg diag-msg-error" style="margin-top:12px">❌ ${esc(String(err))}</div>`;
   }

@@ -58,7 +58,9 @@ async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
   let jsonStr = getCachedSpec(model._modelPath);
   if (!jsonStr) {
     const { GetModel3DSpec } = await getApp();
-    jsonStr = await GetModel3DSpec(model._modelPath);
+    const spec = await GetModel3DSpec(model._modelPath);
+    // typed spec → string 缓存（缓存接口维持 string 类型不变）
+    jsonStr = spec ? JSON.stringify(spec) : "{}";
     cacheSpec(model._modelPath, jsonStr);
   }
   const parsed = JSON.parse(jsonStr) as ModelSpec;
@@ -84,22 +86,25 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<ModelSpec | n
   try {
     const decoded = await decodeYsmViaWasm(model._modelPath!);
     if (!decoded?.geometryRaw) return null;
-    let specStr: string;
     if (isWebPlatform()) {
-      // 网页版：Go binding 不可用（恒 "{}" 桩），调纯 TS 移植
-      specStr = buildSpecFromGeometryJSON(decoded.geometryRaw);
+      // 网页版：Go binding 不可用（恒 null 桩），调纯 TS 移植
+      const specStr = buildSpecFromGeometryJSON(decoded.geometryRaw);
+      if (!specStr || specStr === "{}") return null;
+      const spec = JSON.parse(specStr) as ModelSpec;
+      if (!spec.models?.length) return null;
+      cacheSpec(model._modelPath!, specStr);
+      return spec;
     } else {
-      // Android：Go binding 可用
+      // Android：Go binding 可用（返回 typed Model3DSpec | null）
       const { Build3DSpecFromGeometryJSON } = await getApp();
-      specStr = await Build3DSpecFromGeometryJSON(decoded.geometryRaw);
+      const spec = await Build3DSpecFromGeometryJSON(decoded.geometryRaw);
+      if (!spec) return null;
+      const specStr = JSON.stringify(spec);
+      // 兜底结果写 spec 缓存：否则每次预览都重新 WASM 解码（时间翻倍）
+      cacheSpec(model._modelPath!, specStr);
+      console.warn("[3D] GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）");
+      return spec as unknown as ModelSpec;
     }
-    if (!specStr || specStr === "{}") return null;
-    const spec = JSON.parse(specStr) as ModelSpec;
-    if (!spec.models?.length) return null;
-    // 兜底结果写 spec 缓存：否则每次预览都重新 WASM 解码（时间翻倍）
-    cacheSpec(model._modelPath!, specStr);
-    console.warn("[3D] GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）");
-    return spec;
   } catch (e) {
     console.warn("[3D] 前端 WASM 解码兜底失败:", e);
     return null;

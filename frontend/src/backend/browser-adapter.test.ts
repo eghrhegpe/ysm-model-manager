@@ -581,12 +581,13 @@ describe("R2 FSA 句柄持久化（蓝图 docs/roadmap/web-edition.md §R2，参
 });
 
 describe("browserAdapter — LoadResourceTypes（注册表驱动视图降级消除）", () => {
-  it("返回与 resource_types.json 同形状 JSON（registry.ts 不再静默降级为空）", async () => {
-    const json = (await browserAdapter.LoadResourceTypes()) as string;
-    const parsed = JSON.parse(json) as { resourceTypes: Array<{ id: string }> };
-    expect(Array.isArray(parsed.resourceTypes)).toBe(true);
-    expect(parsed.resourceTypes.some((rt) => rt.id === "ysm")).toBe(true);
-    expect(parsed.resourceTypes.length).toBeGreaterThanOrEqual(7);
+  it("返回与 resource_types.json 同形状的结构体（registry.ts 不再静默降级为空）", async () => {
+    const reg = await browserAdapter.LoadResourceTypes();
+    expect(reg).not.toBeNull();
+    expect(Array.isArray(reg?.resourceTypes)).toBe(true);
+    const resourceTypes = reg!.resourceTypes!;
+    expect(resourceTypes.some((rt) => rt.id === "ysm")).toBe(true);
+    expect(resourceTypes.length).toBeGreaterThanOrEqual(7);
   });
 });
 

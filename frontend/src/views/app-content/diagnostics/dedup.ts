@@ -221,8 +221,9 @@ export function getDedupConfig(): Readonly<{ strategy: string; keepPolicy: strin
 }
 
 // ===== startDedup / executeDedupScan 子函数 =====
+import type { Group as DedupGroup, FileEntry as DedupFileEntry } from "../../../../bindings/ysm-model-manager/go/dedup/models.ts";
 type DgDdGetRepoRootFn = (rtype: string) => Promise<string>;
-type DgDdFindDuplicateFilesFn = (dir: string, configStr: string) => Promise<string>;
+type DgDdFindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
 type DgDdMoveToRecycleFn = (path: string) => Promise<void>;
 type DgDdRegType = Awaited<ReturnType<typeof loadResourceRegistry>>;
 
@@ -273,20 +274,18 @@ async function dgDdScanEachDirectory(
     await new Promise((r) => setTimeout(r, 10));
     const dedupConfig = getDedupConfig();
     const configStr = JSON.stringify(dedupConfig);
-    const jsonStr = await FindDuplicateFiles(target.dir, configStr);
-    const parsed = JSON.parse(jsonStr || "[]") as
-      | DgDdDedupGroup[]
-      | { error?: string };
-    if (!Array.isArray(parsed) && parsed.error) {
+    const groups = await FindDuplicateFiles(target.dir, configStr);
+    if (!groups) {
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-error" style="justify-content:center">❌ ' +
-        t("diagnostics.scanFailed", { reason: esc(parsed.error) }) +
+        t("diagnostics.scanFailed", { reason: "扫描返回空" }) +
         "</div>";
       return { allResults, earlyExit: true };
     }
-    const groups = (parsed as DgDdDedupGroup[]) || [];
     if (groups.length)
-      allResults.push({ icon: target.icon, label: target.label, groups });
+      allResults.push({ icon: target.icon, label: target.label, groups: groups.map(g => ({
+        files: (g.files || []).map(f => ({ path: f.path, name: f.name, size: f.size, modTime: f.modTime ? new Date(f.modTime).toISOString() : undefined }))
+      })) });
   }
   return { allResults, earlyExit: false };
 }

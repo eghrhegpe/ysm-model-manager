@@ -98,6 +98,16 @@ type SyncConfig struct {
 	ConflictPolicy string `json:"conflictPolicy"`
 }
 
+// SyncResolveResult ResolveConflicts 的返回结果
+type SyncResolveResult struct {
+	// Resolved 成功解决数
+	Resolved int `json:"resolved"`
+	// Failed 解决失败数
+	Failed int `json:"failed"`
+	// Manual 需人工介入数
+	Manual int `json:"manual"`
+}
+
 // ParseDedupConfig 解析去重配置 JSON 字符串（绑定层 configStr 的统一入口）。
 // raw 为空串 → 返回 nil,nil（未配置，消费端走默认行为）；非法 JSON → 返回错误。
 // 提取为公共函数，避免 FindDuplicateFiles / CountDuplicates 等入口各自内联 json.Unmarshal

@@ -401,6 +401,30 @@ export enum LogLevel {
 };
 
 /**
+ * ModRequirement mod 依赖声明（ADR-110）：
+ *   - JarKeywords：文件名关键词匹配（如 "mmdskin" 匹配 mmdskin-1.0.jar）
+ *   - ModID/DisplayName：内容检测型（读 mods.toml，如 touhou_little_maid）
+ * 
+ * 两者互斥：有 ModID 时优先内容检测，否则用 JarKeywords 文件名匹配。
+ */
+export interface ModRequirement {
+    /**
+     * 文件名关键词（小写匹配）
+     */
+    "jarKeywords"?: string[] | null;
+
+    /**
+     * mods.toml 中的 modId
+     */
+    "modId"?: string;
+
+    /**
+     * mods.toml 中的 displayName
+     */
+    "displayName"?: string;
+}
+
+/**
  * ModelEntry 模型文件条目
  */
 export interface ModelEntry {
@@ -440,6 +464,41 @@ export interface ModelEntry {
 }
 
 /**
+ * NestedPattern 嵌套模型模式配置（ADR-XXX）：
+ * 支持任意深度的嵌套路径检测，用于识别多层嵌套的模型结构。
+ * 例如 maid-model 的 assets/<namespace>/maid_model.json 结构，
+ * 或其他更深层的嵌套目录结构。
+ * 
+ * 配置示例：
+ * 
+ * 	{
+ * 	  "entryDir": "assets",           // 入口目录（相对于模型根目录）
+ * 	  "entryFiles": ["maid_model.json", "chair_model.json"]  // 入口文件名
+ * 	}
+ * 
+ * 运行时行为：
+ *  1. 从模型根目录开始，递归查找 entryDir 指定的目录
+ *  2. 在 entryDir 下查找 entryFiles 中任一文件
+ *  3. 找到后将该目录识别为模型目录（含层级信息）
+ */
+export interface NestedPattern {
+    /**
+     * 入口目录名（如 "assets"），为空则直接在根目录查找
+     */
+    "entryDir": string;
+
+    /**
+     * 入口文件名列表（如 ["maid_model.json"]）
+     */
+    "entryFiles": string[] | null;
+
+    /**
+     * 最大递归深度（默认 10），防止无限递归
+     */
+    "maxDepth"?: number;
+}
+
+/**
  * PackInfo 模型整合包信息（ysm-pack.json）
  */
 export interface PackInfo {
@@ -450,6 +509,125 @@ export interface PackInfo {
      * ysm-pack.png 的 base64 data URI
      */
     "imageBase64"?: string;
+}
+
+/**
+ * ResourceType 一种受支持的资源类型定义
+ */
+export interface ResourceType {
+    "id": string;
+    "name": string;
+    "icon": string;
+
+    /**
+     * 所属分组（ADR-092）：minecraft / minecraft-mod / mmd / vrm / other
+     */
+    "group": string;
+
+    /**
+     * 分组显示名，仅该组首个类型携带（消除双写）
+     */
+    "groupLabel"?: string;
+
+    /**
+     * 分组图标，同上
+     */
+    "groupIcon"?: string;
+    "extensions": string[] | null;
+    "storageSubDir": string;
+
+    /**
+     * 整合包内实际存放目录（安装+扫描统一路径）
+     */
+    "instanceDir": string;
+    "instanceLevel": boolean;
+
+    /**
+     * "3d" / "thumbnail" / "none"
+     */
+    "preview": string;
+
+    /**
+     * "ysm" / "mcmeta" / "shader" / "zipentry" / "extension"
+     */
+    "detector": string;
+
+    /**
+     * AppConfig 字段名（如 YsmRoot）
+     */
+    "configField": string;
+
+    /**
+     * AppConfig 回退字段名（如 VrcRoot→MmdRoot）
+     */
+    "configFallback": string;
+
+    /**
+     * 目录型资源（删除/同步整目录）
+     */
+    "isDir": boolean;
+
+    /**
+     * 扩展名参与 SHA256 哈希（ShouldHashExt 注册表驱动）
+     */
+    "hashable": boolean;
+
+    /**
+     * 文件夹级资源同步（sync.SyncResourcesDirLevel）
+     */
+    "dirLevelSync": boolean;
+
+    /**
+     * instance 视图额外扫描整合包目录（非模型类型兜底）
+     */
+    "scanInstance": boolean;
+
+    /**
+     * 兜底扫描只认此目录名（空=不限定，ScanInstance=true 时生效）
+     */
+    "fallbackDir"?: string;
+
+    /**
+     * 安装白名单扩展名（空=全部放行，仅可执行文件黑名单除外）
+     */
+    "installExts": string[] | null;
+
+    /**
+     * ZIP 内容特征条目（importer.DetectZipType 注册表驱动）
+     */
+    "zipEntries": ZipEntryMatch[] | null;
+
+    /**
+     * 嵌套模型目录（ADR-095）：模型入口在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）
+     */
+    "nestedModelDir": boolean;
+
+    /**
+     * 嵌套模式配置（ADR-XXX）：支持任意深度的嵌套路径检测
+     */
+    "nestedPatterns"?: NestedPattern[] | null;
+
+    /**
+     * 检测优先级（同指纹计数打平时高者胜：专用指纹类型 > 通用指纹类型，如 maid-model > resourcepack）
+     */
+    "priority"?: number;
+
+    /**
+     * mod 依赖声明（ADR-110：mod 下沉注册表）
+     */
+    "mod"?: ModRequirement | null;
+
+    /**
+     * 格式变体（ADR-111：variants 解耦，按扩展名分发预览器）
+     */
+    "variants"?: Variant[] | null;
+}
+
+/**
+ * ResourceTypeRegistry 资源类型注册表
+ */
+export interface ResourceTypeRegistry {
+    "resourceTypes": ResourceType[] | null;
 }
 
 /**
@@ -502,6 +680,43 @@ export interface SubModel {
      * 默认绑定的纹理槽索引（对应 Textures 数组下标）
      */
     "texSlot"?: number;
+}
+
+/**
+ * SyncResolveResult ResolveConflicts 的返回结果
+ */
+export interface SyncResolveResult {
+    /**
+     * Resolved 成功解决数
+     */
+    "resolved": number;
+
+    /**
+     * Failed 解决失败数
+     */
+    "failed": number;
+
+    /**
+     * Manual 需人工介入数
+     */
+    "manual": number;
+}
+
+/**
+ * Variant 格式变体声明（ADR-111：variants 解耦）：
+ * 同一资源类型内不同格式变体的预览器路由。
+ * 例如角色模型（EntityPlayer）内 .pmx 用 mmd 预览器，.vrm 用 vrm 预览器。
+ */
+export interface Variant {
+    /**
+     * 扩展名（如 ".pmx"、".vrm"）
+     */
+    "ext": string;
+
+    /**
+     * 预览器 id（如 "mmd"、"vrm"）
+     */
+    "preview": string;
 }
 
 /**
@@ -625,4 +840,19 @@ export interface YsmMetadata {
      * 附加链接（平台→URL）
      */
     "links"?: { [_ in string]?: string } | null;
+}
+
+/**
+ * ZipEntryMatch ZIP 内容特征条目：检测 ZIP 内是否存在命中条目名
+ */
+export interface ZipEntryMatch {
+    /**
+     * 条目名（小写比较）
+     */
+    "name": string;
+
+    /**
+     * "exact" / "prefix" / "suffix"
+     */
+    "match": string;
 }

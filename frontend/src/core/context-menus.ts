@@ -14,6 +14,24 @@ type MenuCtx = import("./context-menu-handlers.ts").MenuCtx;
 // utils/dom/capabilities.ts 的 canWebAction()（纯前端恒可达 + binding 走 can() 探测，
 // 2026-XX P3 收敛）——本文件不再持有任何硬编码白名单。
 
+/**
+ * 安全求值节点级 visibleWhen：谓词可能抛异常（如访问 ctx.foo.bar 而 foo 为 undefined），
+ * 若直接炸穿会拖垮整条菜单渲染。此处异常兜底为「不可见 + console.warn」，
+ * 单条谓词 bug 不应让整份菜单消失（ADR-021 B 层 P1 扩展护栏）。
+ */
+function isItemVisible(item: { action?: string; visibleWhen?: (ctx: MenuCtx) => boolean }, ctx: MenuCtx): boolean {
+  if (!item.visibleWhen) return true;
+  try {
+    return item.visibleWhen(ctx);
+  } catch (err) {
+    console.warn(
+      `[context-menus] visibleWhen 抛异常（action=${item.action ?? "divider"}），按不可见处理`,
+      err,
+    );
+    return false;
+  }
+}
+
 function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   const def = getMenuDef(ctx.type);
   if (!def) return [];
@@ -21,11 +39,11 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   const norm: MenuCtx = { ...ctx, paths };
   const isViewer = isViewerMode();
   // 过滤链（自上而下 AND，任一失败即丢弃）：
-  //   1. 节点级 visibleWhen(ctx)（菜单即数据 P1 扩展；未定义 → 通过）
+  //   1. 节点级 visibleWhen(ctx)（菜单即数据 P1 扩展；未定义 → 通过；抛异常 → 不可见）
   //   2. viewer-mode 全局过滤（canWebAction 单一判定：纯前端 + binding 探测）
   // divider 折叠在此处（filter 之后）统一收口，渲染层 views/context-menu/index.ts 不再做去重。
   const items = def.items.filter((item) => {
-    if (item.visibleWhen && !item.visibleWhen(norm)) return false;
+    if (!isItemVisible(item, norm)) return false;
     if (item.divider) return true;
     if (!item.action) return true;
     if (!isViewer) return true;

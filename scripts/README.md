@@ -85,6 +85,7 @@
 | `check-adr-health.ts` | `node scripts/check-adr-health.ts` / `--debt` | ADR 状态机值域 / 登记表同步 / 技术债清单 |
 | `check-biome.ts` | `node scripts/check-biome.ts` / `--strict` / `--write` / `--json` | **Biome 委托检查器**（P0）：TS 7 太新 dependency-cruiser 静默漏检，Biome 自研 Rust 解析器全解析；增量策略 `biome check --changed`（仅查相对 main 的变更文件），`--write` 自动修复；空变更集判通过 |
 | `check-menu-health.ts` | `node scripts/check-menu-health.ts` / `--json` | **3D 预览菜单表健康门禁**（ADR-085 配套）：6 条校验（id 唯一 / labelKey 非空且入语言包 / dockGroup 类型 / kind 合法 / panel 有渲染通道 / action 有 run），正则解析 4 个菜单表文件 |
+| `check-ctx-menu-i18n.ts` | `node scripts/check-ctx-menu-i18n.ts` / `--json` / `--strict` | **右键菜单 i18n key 存在性门禁**（2026-09-01 新增）：扫描 `menu-defs.ts` + `context-menu*-handlers.ts` 里的字面量 `tr("key")` 调用，逐一核对 key 是否存在于 zh-CN 基准语言包；缺失即违规并阻断推送（tr 缺失键静默回退英文）。已挂 pre-push-gate |
 | `check-proc-adoption.ts` | `node scripts/check-proc-adoption.ts` / `--json` / `--strict` | 子进程直调收敛检查（ADR-043 落地率守护）：扫描 scripts/ 直调 `execFileSync`/`execSync` 而未走 `_lib/proc.ts` 的脚本（WARN 报告，`--strict` 时 exit 1） |
 | `check-lib-adoption.ts` | `node scripts/check-lib-adoption.ts` / `--json` / `--strict` | **\_lib 共享层采用率闸门**：规则表驱动，报「手搓了 \_lib 已有能力却未 import」的脚本，并输出全模块采用率全景 + 零引用模块告警。**与 check-proc-adoption 分工**：后者专管 `proc.mjs`（子进程），本项管其余模块（`scan-files` / `parse-args` / `frontmatter` / `source-graph` / `to-posix` / `git-ref`），proc 显式跳过不重复报。已挂 pre-push-gate，WARN 不阻断 |
 | `check-readme-index.ts` | `node scripts/check-readme-index.ts` / `--json` | **README 索引对账**（登记处漂移守护）：扫描 scripts/（含 hooks/，排除 _lib 与测试）与 scripts/README.md 全文对账，零提及脚本 → 阻断。让「唯一登记处」声明可机检 |

@@ -977,6 +977,22 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
       isViewerModeMock.mockReturnValue(false);
     }
   });
+
+  it("visibleWhen 抛异常 → 被吞、按不可见处理、不炸整条菜单（护栏）", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      // 故意访问 undefined.bar 抛 TypeError
+      pushProbe((ctx) => (ctx as unknown as { bar: { baz: boolean } }).bar.baz);
+      let payload!: { items: MenuItem[] };
+      expect(() => {
+        payload = showMenu("batch", payloadCtx("batch"));
+      }).not.toThrow(); // 异常被 isItemVisible 兜底，不应炸出
+      expect(actionsOf(payload)).not.toContain(PROBE_ACTION); // 抛异常的 item 按不可见剔除
+      expect(warnSpy).toHaveBeenCalled(); // 应发 warn 便于定位
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
 
 // ===== buildMenuItems divider 折叠（ADR-021 B 层：单一事实源收口，渲染层不再去重）=====

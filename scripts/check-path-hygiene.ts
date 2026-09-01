@@ -32,9 +32,10 @@
  * 依赖：node:fs / node:path / node:url / 本地模块 _lib/scan-files.ts
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve, dirname, relative, sep } from 'node:path';
+import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { walk, toPosix } from './_lib/scan-files.ts';
+import { classifyImport } from './_lib/alias-resolve.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -104,31 +105,23 @@ for (const { abs, rel } of files) {
     warns.push({ rule: 'R2', file: relPosix, detail: `目录层级 ${dirDepth} > ${R2_DEPTH_MAX}` });
   }
 
-  // ---- R3 上跳 / R4 跨边界 ----
+  // ---- R3 上跳 / R4 跨边界（别名感知：复用 alias-resolve.classifyImport）----
+  // R3 仅对非别名的「字面相对 wander」触发（别名说明符字面无 `../`，切别名后 R3 自然归零，符合 D5）；
+  // R4 按展开后真实跨边界触发（#root/resource_types.json 仍计，冻结基线 14 不变）。
   let m: RegExpExecArray | null;
   SPEC_RE.lastIndex = 0;
   while ((m = SPEC_RE.exec(code)) !== null) {
     const spec = m[2];
-    if (!spec.startsWith('./') && !spec.startsWith('../')) continue; // 包导入跳过
-    const upLevels = (spec.match(/\.\.\//g) || []).length;
-    const targetAbs = resolve(dirOfFile, spec);
-    const relFromSrc = toPosix(relative(SRC_ROOT, targetAbs));
-    // bindings 物理位于 frontend/bindings（src 之外），其引用相对 src 以 `..` 开头，
-    // 故不能按「相对 src 是否以 bindings/ 开头」判定；改为按路径段含 bindings 判定（稳健）。
-    const isBindings = toPosix(targetAbs).split('/').includes('bindings');
-    if (isBindings) continue; // bindings 由 wails 插件解析，R3/R4 均不计
-    const escapesSrc = relFromSrc.startsWith('..'); // 落于 src 外（越界）
-    const insideSrc = !escapesSrc;
-
-    // R3：真·内部深 wander（上跳 > 3 且目标仍在 src 内）
-    if (upLevels > R3_UPLEVEL_MAX && insideSrc) {
+    const c = classifyImport(spec, abs);
+    if (!c.resolved) continue; // 包导入 / 未登记别名（catch-all 已禁，双写一致性会 FAIL）
+    if (c.isBindings) continue; // bindings 由 wails 插件解析，R3/R4 均不计
+    // R3：真·内部深 wander（字面相对上跳 > 3 且目标仍在 src 内）——别名不触
+    if (!c.isAlias && c.upLevels > R3_UPLEVEL_MAX && !c.escapesSrc) {
       r3Hits.push(`${relPosix} ← ${spec}`);
-      warns.push({ rule: 'R3', file: relPosix, detail: `上跳 ${upLevels} 级且目标仍在 src 内` });
+      warns.push({ rule: 'R3', file: relPosix, detail: `上跳 ${c.upLevels} 级且目标仍在 src 内` });
     }
-
-    // R4：越界（落于 src 外）或 == src/e2e/mock-data.ts（ADR 内定入基线）
-    const isMockData = toPosix(targetAbs).replace(/\.ts$/, '') === toPosix(resolve(SRC_ROOT, 'e2e/mock-data.ts'));
-    if (escapesSrc || isMockData) {
+    // R4：越界（展开后落 src 外）或 == src/e2e/mock-data.ts（ADR 内定入基线）
+    if (c.escapesSrc || c.isMockData) {
       r4Count++;
     }
   }

@@ -14,7 +14,7 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { tryResolveAlias, resolveAliasToSrcRel, loadAliases, SRC_ROOT } from '../scripts/_lib/alias-resolve.ts';
+import { tryResolveAlias, resolveAliasToSrcRel, loadAliases, classifyImport, SRC_ROOT } from '../scripts/_lib/alias-resolve.ts';
 import { resolveImport } from '../scripts/_lib/scan-files.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -89,6 +89,55 @@ check('resolveImport 相对路径分支不受影响', () => {
   const target = path.join(SRC_ROOT, 'views', 'sibling.ts');
   const fromFile = path.join(SRC_ROOT, 'views', 'v.ts');
   assert.strictEqual(resolveImport(fromFile, './sibling', new Set([target])), target);
+});
+
+check('classifyImport 别名内部 @/utils/x → 解析、isAlias、不越界（R4 不计）', () => {
+  const fromFile = path.join(SRC_ROOT, 'views', 'app-content', 'v.ts');
+  const c = classifyImport('@/utils/types-re-export', fromFile);
+  assert.ok(c.resolved && c.isAlias, '应解析且为别名');
+  assert.strictEqual(c.escapesSrc, false, '落 src 内不应越界');
+  assert.strictEqual(c.isBindings, false);
+});
+
+check('classifyImport #root/resource_types.json → 解析、isAlias、越界（R4 仍计）', () => {
+  const fromFile = path.join(SRC_ROOT, 'views', 'v.ts');
+  const c = classifyImport('#root/resource_types.json', fromFile);
+  assert.ok(c.resolved && c.isAlias, '应解析且为别名');
+  assert.strictEqual(c.escapesSrc, true, '#root 落 src 外应越界，R4 必须计');
+});
+
+check('classifyImport 相对深路径 ../../../utils/x（4 层目录文件）→ 字面 ../ 层数=3、不越界', () => {
+  const fromFile = path.join(SRC_ROOT, 'views', 'app-content', 'diagnostics', 'conflicts.ts');
+  const c = classifyImport('../../../utils/x', fromFile);
+  assert.ok(c.resolved && !c.isAlias, '相对路径非别名');
+  assert.strictEqual(c.upLevels, 3, '字面 ../ 层数应为 3');
+  assert.strictEqual(c.escapesSrc, false, 'src 内引用不越界');
+});
+
+check('classifyImport 相对 ../../../../resource_types.json → 越界（R4 计）', () => {
+  const fromFile = path.join(SRC_ROOT, 'utils', 'resource', 'v.ts');
+  const c = classifyImport('../../../../resource_types.json', fromFile);
+  assert.ok(c.resolved && !c.isAlias);
+  assert.strictEqual(c.escapesSrc, true, '根 JSON 落 src 外应越界');
+});
+
+check('classifyImport 未登记别名 @/nope/x → resolved:false（catch-all 已禁，双写一致性兜底）', () => {
+  const fromFile = path.join(SRC_ROOT, 'views', 'v.ts');
+  const c = classifyImport('@/nope/x', fromFile);
+  assert.strictEqual(c.resolved, false, '未登记目录级别名应跳过，不误判');
+});
+
+check('classifyImport 裸包名 @wailsio/runtime → resolved:false', () => {
+  const fromFile = path.join(SRC_ROOT, 'views', 'v.ts');
+  const c = classifyImport('@wailsio/runtime', fromFile);
+  assert.strictEqual(c.resolved, false);
+  assert.strictEqual(c.isAlias, false);
+});
+
+check('classifyImport e2e/mock-data.ts 相对引用 → isMockData:true（R4 内定入基线）', () => {
+  const fromFile = path.join(SRC_ROOT, 'core', 'handlers', 'v.ts');
+  const c = classifyImport('../../e2e/mock-data.ts', fromFile);
+  assert.ok(c.resolved && c.isMockData, '应标记 mock-data，R4 不计新增跨边界');
 });
 
 if (fails.length) {

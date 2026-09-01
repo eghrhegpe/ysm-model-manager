@@ -92,3 +92,62 @@ export function resolveAliasToSrcRel(spec: string): string | null {
   const rel = toPosix(path.relative(SRC_ROOT, abs));
   return rel.startsWith('..') ? null : rel;
 }
+
+/** classifyImport 的结构化输出，供 check-path-hygiene 的 R3/R4 判定复用。 */
+export interface SpecClass {
+  /** 是否参与 R3/R4 判定（包导入 / 未登记别名 → false，由双写一致性兜底）。 */
+  resolved: boolean;
+  /** 展开后的绝对路径（未解析成功时为 null）。 */
+  targetAbs: string | null;
+  /** 字面（相对）或展开后（别名）相对 fromFile 的 `../` 层数。 */
+  upLevels: number;
+  /** 是否别名说明符（@/ 或 #root/）。 */
+  isAlias: boolean;
+  /** 展开后落于 frontend/src 之外（越界）。 */
+  escapesSrc: boolean;
+  /** 目标物理位于 frontend/bindings（wails 插件解析，R3/R4 不计）。 */
+  isBindings: boolean;
+  /** 目标 == src/e2e/mock-data.ts（ADR R4 内定入基线）。 */
+  isMockData: boolean;
+}
+
+const MOCK_DATA_ABS = path.join(SRC_ROOT, 'e2e', 'mock-data');
+
+/**
+ * 把一个 import 说明符分类为 R3/R4 判定所需的真实解析结果（别名感知）。
+ *
+ * - 别名（@/ 或 #root/）：经 tryResolveAlias 展开；未登记别名（catch-all 被禁，双写一致性会 FAIL）返 resolved:false
+ * - 相对路径（./ 或 ../）：resolve(dirname(fromFile), spec)
+ * - 裸包名（@wailsio/runtime 等）：resolved:false，跳过
+ *
+ * 设计要点——R3 与 R4 口径不同：
+ *   R3 监控「字面相对 wander」（上跳 > 3 且目标仍在 src 内）：别名说明符字面无 `../`，
+ *     故 isAlias 时不应触发 R3——D5 的目的正是用别名抹平深相对路径，切完后 R3 自然归零。
+ *   R4 监控「展开后真实跨边界」：#root/resource_types.json 展开落 src 外 → escapesSrc=true → 仍计 R4，
+ *     与切别名前 ../../../../resource_types.json 等价，故冻结基线 14 不变。
+ */
+export function classifyImport(spec: string, fromFileAbs: string): SpecClass {
+  let targetAbs: string | null = null;
+  let isAlias = false;
+  if (spec.startsWith('@/') || spec.startsWith('#root/')) {
+    const a = tryResolveAlias(spec);
+    if (!a) {
+      // 未登记别名：白名单目录级，catch-all 已禁；双写一致性会 FAIL，此处跳过避免误判。
+      return { resolved: false, targetAbs: null, upLevels: 0, isAlias: true, escapesSrc: false, isBindings: false, isMockData: false };
+    }
+    targetAbs = a;
+    isAlias = true;
+  } else if (spec.startsWith('./') || spec.startsWith('../')) {
+    targetAbs = path.resolve(path.dirname(fromFileAbs), spec);
+  } else {
+    return { resolved: false, targetAbs: null, upLevels: 0, isAlias: false, escapesSrc: false, isBindings: false, isMockData: false };
+  }
+  // 相对路径取字面 `../` 层数（spec 可能越界，path.relative 展开后会失真）；别名无字面 `../`，取展开后真实层数。
+  const upLevels = isAlias
+    ? (toPosix(path.relative(fromFileAbs, targetAbs)).match(/\.\.\//g) || []).length
+    : (spec.match(/\.\.\//g) || []).length;
+  const escaped = toPosix(path.relative(SRC_ROOT, targetAbs)).startsWith('..');
+  const isBindings = toPosix(targetAbs).split('/').includes('bindings');
+  const isMock = toPosix(targetAbs).replace(/\.ts$/, '') === toPosix(MOCK_DATA_ABS);
+  return { resolved: true, targetAbs, upLevels, isAlias, escapesSrc: escaped, isBindings, isMockData: isMock };
+}

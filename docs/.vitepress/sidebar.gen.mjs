@@ -718,6 +718,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-148：preview-3d 容器类适配器统一工厂(方案 C)决策方向",
+        "link": "/adr/ADR-148-container-preview-factory"
+      },
+      {
         "text": "ADR-147：移除 app-tree _typeFilter 死字段与自证测试",
         "link": "/adr/ADR-147-remove-apptree-typefilter-dead-field"
       },

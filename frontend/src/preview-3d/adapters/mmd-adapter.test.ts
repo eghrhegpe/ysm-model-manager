@@ -1292,8 +1292,10 @@ describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
       listAllFilePaths: hoisted.listPathsMock,
       addOpLog: vi.fn().mockResolvedValue(undefined),
       getCachedTexture: vi.fn().mockResolvedValue(null),
+      // ADR-072：KTX2 缓存经 port 注入（壳层实现）——测试从 port mock，不再 mock getApp
+      getCachedTextureByHash: vi.fn().mockResolvedValue(opts.cacheHit ? btoa("KTX2DATA") : null),
+      hasCachedTextures: vi.fn().mockResolvedValue(opts.cacheHit ? { h1: true } : {}),
     };
-    void opts;
   }
 
   function fakeRenderer() {
@@ -1309,11 +1311,6 @@ describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
     hoisted.ktx2LoadAsyncMock.mockResolvedValue(new THREE.CompressedTexture([], 1, 1));
     hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
-    vi.mocked(getApp).mockResolvedValue({
-      HasCachedTextures: async () => ({ h1: true }),
-      GetCachedTextureByHash: async () => btoa("KTX2DATA"),
-    } as unknown as AppBindings);
-
     const port = makeRichPort({ cacheHit: true });
     const { ctx } = makeCtx();
     ctx.renderer = fakeRenderer();
@@ -1371,11 +1368,6 @@ describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
     hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
     hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
-    vi.mocked(getApp).mockResolvedValue({
-      HasCachedTextures: async () => ({}),
-      GetCachedTextureByHash: async () => null,
-    } as unknown as AppBindings);
-
     const port = makeRichPort({ cacheHit: false });
     const { ctx } = makeCtx();
     ctx.renderer = fakeRenderer();
@@ -1842,8 +1834,8 @@ describe("worker 纹理解码应用（pendingTexture / decoded 位图）", () =>
 });
 
 describe("KTX2 替换异常（stage3 直载容错）", () => {
-  /** 与 KTX2 缓存直载 describe 同款 rich port（WithMeta 提供 hash） */
-  function makeRichPort(): MmdDataPort {
+  /** 与 KTX2 缓存直载 describe 同款 rich port（WithMeta 提供 hash）；ADR-072 后经 port 注入缓存方法 */
+  function makeRichPort(opts: { cacheHit: boolean; emptyHash?: boolean }): MmdDataPort {
     return {
       readFileBytes: hoisted.readBytesMock,
       readFileBytesBatch: vi.fn().mockResolvedValue({
@@ -1855,6 +1847,9 @@ describe("KTX2 替换异常（stage3 直载容错）", () => {
       listAllFilePaths: hoisted.listPathsMock,
       addOpLog: vi.fn().mockResolvedValue(undefined),
       getCachedTexture: vi.fn().mockResolvedValue(null),
+      // ADR-072：KTX2 缓存经 port 注入（壳层实现）——测试从 port mock，不再 mock getApp
+      getCachedTextureByHash: vi.fn().mockResolvedValue(opts.emptyHash ? "" : btoa("KTX2")),
+      hasCachedTextures: vi.fn().mockResolvedValue(opts.cacheHit ? { h1: true } : {}),
     };
   }
 
@@ -1870,11 +1865,7 @@ describe("KTX2 替换异常（stage3 直载容错）", () => {
     hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
     hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
-    vi.mocked(getApp).mockResolvedValue({
-      HasCachedTextures: async () => ({ h1: true }),
-      GetCachedTextureByHash: async () => "",
-    } as unknown as AppBindings);
-    const port = makeRichPort();
+    const port = makeRichPort({ cacheHit: true, emptyHash: true });
     const { ctx } = makeCtx();
     ctx.renderer = fakeRenderer();
     const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
@@ -1892,11 +1883,7 @@ describe("KTX2 替换异常（stage3 直载容错）", () => {
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
     hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
     hoisted.ktx2LoadAsyncMock.mockRejectedValue(new Error("ktx fail"));
-    vi.mocked(getApp).mockResolvedValue({
-      HasCachedTextures: async () => ({ h1: true }),
-      GetCachedTextureByHash: async () => btoa("KTX2"),
-    } as unknown as AppBindings);
-    const port = makeRichPort();
+    const port = makeRichPort({ cacheHit: true });
     const { ctx } = makeCtx();
     ctx.renderer = fakeRenderer();
     const built = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());

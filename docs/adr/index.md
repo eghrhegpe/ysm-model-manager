@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **144** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **145** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 140 |
+| [✅ 已采纳](#已采纳) | 141 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -32,10 +32,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（140）
+### ✅ 已采纳（141）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-148](./ADR-148-container-preview-factory.md) | preview-3d 容器类适配器统一工厂(方案 C)决策方向 | ✅ 已采纳 |
 | [ADR-147](./ADR-147-remove-apptree-typefilter-dead-field.md) | 移除 app-tree _typeFilter 死字段与自证测试 | ✅ 已采纳 |
 | [ADR-146](./ADR-146-path-alias-anti-barrel.md) | TS 路径别名与反桶契约 | ✅ 已采纳 |
 | [ADR-145](./ADR-145-cli-app-service-interface.md) | cli 解耦 app：消费方定义 AppService 接口 | ✅ 已采纳 |
@@ -188,6 +189,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-148 | preview-3d 容器类适配器统一工厂(方案 C)决策方向 | ✅ 已采纳 | 2026-09-01 |
 | ADR-147 | 移除 app-tree _typeFilter 死字段与自证测试 | ✅ 已采纳 | 2026-09-01 |
 | ADR-146 | TS 路径别名与反桶契约 | ✅ 已采纳 | 2026-09-01 |
 | ADR-145 | cli 解耦 app：消费方定义 AppService 接口 | ✅ 已采纳 | 2026-09-01 |

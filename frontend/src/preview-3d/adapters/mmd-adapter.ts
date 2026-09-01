@@ -72,6 +72,10 @@ export interface MmdDataPort {
   addOpLog(op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void>;
   /** 读取纹理文件并检查 KTX2 缓存，返回 { format, data, hash }（已废弃，保留兼容） */
   getCachedTexture?(path: string): Promise<{ format: string; data: string; hash: string } | null>;
+  /** KTX2 缓存按 hash 直取（壳层注入 GetCachedTextureByHash；缺失/桥不可用 → null） */
+  getCachedTextureByHash?(hash: string): Promise<string | null>;
+  /** 批量查缓存命中（壳层注入 HasCachedTextures；返回 hash → 是否命中） */
+  hasCachedTextures?(hashes: string[]): Promise<Record<string, boolean>>;
 }
 
 /** 环形日志面板诊断（AGENTS.md：排查卡顿往环形日志塞日志而非死盯 console）；失败静默不阻断 */
@@ -591,11 +595,9 @@ async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> {
       },
       getCachedTextureByHash: async (hash: string): Promise<string | null> => {
         try {
-          const { getApp } = await import("../../backend/app.ts");
-          const app = await getApp();
-          // 类型化直调；browserAdapter 未实现/绑定缺失 → catch 返回 null（保留原 fn 守卫语义）
-          const b64 = await app.GetCachedTextureByHash(hash);
-          return b64 || null;
+          // ADR-072：适配器 0 backend import——KTX2 缓存经 port 注入（壳层实现），
+          // port 未提供该方法（可选）→ undefined || null；空串/缺绑定均归一 null（保留原守卫语义）
+          return (await c.effectivePort.getCachedTextureByHash?.(hash)) || null;
         } catch {
           return null;
         }
@@ -734,15 +736,13 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
   c.ctx.loadingEl.remove();
   c.cachedHashes = null;
   if (c.blobUrlToHash.size > 0 && c.ctx.renderer) {
-    const { getApp } = await import("../../backend/app.ts");
-    const app = await getApp();
-    // 类型化直调（AppBindings 具名方法）；browserAdapter 可能缺这两个方法——用
-    // typeof-function 检查保留原「缺方法跳过缓存优化」守卫语义（审查 P3：`in`
-    // 只查键存在性不查可调用性，非函数值会 TypeError 且本块无 try/catch 包裹，
-    // 整个 MMD 3D 构建失败）
-    if (typeof app.HasCachedTextures === "function" && typeof app.GetCachedTextureByHash === "function") {
+    // ADR-072：适配器 0 backend import——KTX2 缓存经 port 注入（壳层实现）；
+    // port 缺方法（可选）→ 跳过缓存优化（保留原 typeof-function 守卫语义）
+    const hasCachedTextures = c.effectivePort.hasCachedTextures;
+    const getCachedTextureByHash = c.effectivePort.getCachedTextureByHash;
+    if (typeof hasCachedTextures === "function" && typeof getCachedTextureByHash === "function") {
       const allHashes = [...new Set(c.blobUrlToHash.values())];
-      const cacheStatus = (await app.HasCachedTextures(allHashes)) ?? {};
+      const cacheStatus = (await hasCachedTextures(allHashes)) ?? {};
       c.cachedHashes = new Set(allHashes.filter((h) => cacheStatus[h]));
       if (c.cachedHashes.size > 0) {
         const ktx2Loader = new KTX2Loader()
@@ -763,7 +763,7 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
             const hash = c.blobUrlToHash.get(img.src);
             if (!hash || !c.cachedHashes.has(hash)) continue;
             replaceTasks.push(
-              app.GetCachedTextureByHash(hash).then((ktx2B64) => {
+              getCachedTextureByHash(hash).then((ktx2B64) => {
                 if (!ktx2B64) return;
                 const ktxBytes = b64ToBytes(ktx2B64);
                 const ktxBlob = new Blob([bytesToArrayBuffer(ktxBytes)]);

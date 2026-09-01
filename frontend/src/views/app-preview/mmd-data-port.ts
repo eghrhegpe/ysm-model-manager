@@ -49,5 +49,25 @@ export async function makeMmdDataPort(scope: string): Promise<MmdDataPort> {
         return null;
       }
     },
+    // KTX2 缓存按 hash 直取（ADR-072：适配器经 port 调用，壳层注入 Go RPC）
+    getCachedTextureByHash: async (hash) => {
+      try {
+        return (await App.GetCachedTextureByHash(hash)) || null;
+      } catch {
+        return null; // 桥不可用/绑定缺失 → null（保留原 fn 守卫语义）
+      }
+    },
+    // 批量查缓存命中（缓存优化跳过守卫，与 getCachedTextureByHash 同 gate）
+    hasCachedTextures: async (hashes): Promise<Record<string, boolean>> => {
+      try {
+        const r = await App.HasCachedTextures(hashes);
+        // bindings 生成类型为 boolean | undefined——归一为布尔（undefined → false）
+        const out: Record<string, boolean> = {};
+        if (r) for (const k of Object.keys(r)) out[k] = !!r[k];
+        return out;
+      } catch {
+        return {};
+      }
+    },
   };
 }

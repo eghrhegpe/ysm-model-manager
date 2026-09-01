@@ -12,7 +12,9 @@
  * 规则（孤儿守卫）：
  *   扫描 frontend/src/views/app-tree/*.test.ts 中对私有字段的两种引用形态：
  *     1. 写入：`. _xxx =`（排除 `==`/`===`/`=>`）——自证循环特征
- *     2. 断言：`as unknown as { _xxx` / `as unknown as X & { _xxx` ——读断言
+ *     2. 断言：`as unknown as { _xxx` / `as unknown as X & { _xxx` / `as X & { _xxx`
+ *       ——读断言；`{` 与字段名可跨行（如 `as unknown as AppTree & {` 换行
+ *       `_filterPaths: Set<string> | null;`），按整文件内容括号平衡窗口收集全部 `_xxx`
  *   断言该字段要么仍声明于 index.ts 的 AppTree 类，要么在 KNOWN_EXTERNAL
  *   白名单（非 AppTree 自有、属虚拟滚动容器等外部对象的字段，如 _vsRows）。
  *   删除字段但未清理测试 → 立即红；清理后转绿。
@@ -57,32 +59,75 @@ function extractClassPrivateFields(filePath) {
     end = i;
   }
   const body = content.slice(start, end);
-  // 类体缩进成员声明：`  _xxx =` / `  _xxx:` / `private _xxx =` / `private _xxx:`
-  //（`private` 关键字在 TS 类字段上合法，_ready/_deleting/_pendingRoot 等即此形态）
-  const re = /^\s{2}(?:private\s+)?_([a-zA-Z]\w*)\s*(?::[^=;]*)?=(?!=)|^\s{2}(?:private\s+)?_([a-zA-Z]\w*)\s*:/gm;
+  // 类体缩进成员声明：字段（`_xxx =` / `_xxx:`）与方法（`_xxx(`）都算「已声明」，
+  // 允许任意修饰符序列（private/protected/public/async/static，如 `private async _deleteSelected`）。
+  // 方法也算入 declared：测试合法 stub 方法（`el._load = vi.fn()`），排除会误报孤儿。
+  const re = /^\s{2}(?:(?:private|protected|public|async|static)\s+)*_([a-zA-Z]\w*)\s*(?=[:=(])/gm;
   let m;
-  while ((m = re.exec(body)) !== null) fields.add(m[1] || m[2]);
+  while ((m = re.exec(body)) !== null) fields.add(m[1]);
   return fields;
 }
 
-// ─── 2. 扫描测试文件：私有字段引用（写入 + as-unknown-as 断言） ───
+// ─── 2. 扫描测试文件：私有字段引用（写入 + 断言） ───
 function scanTestRefs(filePath) {
-  const lines = readFileSync(filePath, "utf8").split("\n");
+  const content = readFileSync(filePath, "utf8");
   const hits = [];
+  const lines = content.split("\n");
+  // 写入形态：`. _xxx =`（排除 `==`/`===`/`=>`）——逐行即可（写入不跨行）
   for (let i = 0; i < lines.length; i++) {
-    // 写入形态：`. _xxx =`（排除 `==`/`===`/`=>`）
     const writeRe = /\.\s*_([a-zA-Z]\w*)\s*=(?!=)/g;
     let m;
     while ((m = writeRe.exec(lines[i])) !== null) {
       hits.push({ field: m[1], line: i + 1, kind: "write" });
     }
-    // 断言形态：`as unknown as { _xxx` 或 `as unknown as X & { _xxx`
-    const assertRe = /as unknown as [^;{]*?\{[^}]*?_([a-zA-Z]\w*)/g;
-    while ((m = assertRe.exec(lines[i])) !== null) {
-      hits.push({ field: m[1], line: i + 1, kind: "assert" });
+  }
+  // 断言形态：`as unknown as X & {` / `as X & {` / `as {`，`{` 与字段名可跨行
+  //（index.extra.test.ts `as unknown as AppTree & {` 换行 `_filterPaths:` 即此形态；
+  //  toolbar-events.test.ts `as HTMLElement & {` 亦如此）。对整文件匹配断言起点，
+  //  括号平衡取窗口，收集窗口内全部 `_xxx`（含嵌套花括号，如 `Array<{...}>`）。
+  const castRe = /as\s+(?:unknown\s+as\s+)?[^{;]*?\{/g;
+  let cm;
+  while ((cm = castRe.exec(content)) !== null) {
+    const openIdx = content.indexOf("{", cm.index);
+    if (openIdx < 0) continue;
+    const closeIdx = findBalancedBrace(content, openIdx);
+    if (closeIdx < 0) continue;
+    const window = content.slice(openIdx, closeIdx + 1);
+    const fRe = /_([a-zA-Z]\w*)/g;
+    let f;
+    while ((f = fRe.exec(window)) !== null) {
+      hits.push({ field: f[1], line: lineAt(content, openIdx), kind: "assert" });
     }
+    castRe.lastIndex = closeIdx + 1; // 从窗口末尾继续，避免同一断言重复扫描
   }
   return hits;
+}
+
+/** 从 openIdx（`{`）做括号平衡，返回匹配 `}` 的下标；字符串字面量内的括号跳过 */
+function findBalancedBrace(content, openIdx) {
+  let depth = 0;
+  let inStr = null;
+  for (let i = openIdx; i < content.length; i++) {
+    const ch = content[i];
+    if (inStr) {
+      if (ch === "\\") { i++; continue; }
+      if (ch === inStr) inStr = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") { inStr = ch; continue; }
+    if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) return i; }
+  }
+  return -1;
+}
+
+/** 偏移量 → 1 起始行号 */
+function lineAt(content, offset) {
+  let n = 1;
+  for (let i = 0; i < offset && i < content.length; i++) {
+    if (content[i] === "\n") n++;
+  }
+  return n;
 }
 
 // ─── 主逻辑 ───

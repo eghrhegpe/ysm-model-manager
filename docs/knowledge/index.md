@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 142 张知识卡
+> 总计: 143 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -78,7 +78,7 @@
 - **wails-bridge**（Wails 桥接 app.ts）：`backend/app.ts` 是前端调用后端 Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。**ADR-049 平台双路由**：网页版（无 …
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
-## feature（7 张）
+## feature（8 张）
 
 *业务功能（导入队列、同步、社区）*
 
@@ -90,6 +90,7 @@
 | 🍃 preview_3d_migration | preview-3d 领域根迁移 | leaf | — | 整目录搬家, 领域根提升, 相对引用修复, cmd 命令行限制, 目录归置 |
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | io-bound | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
 | 🏗 resource-packs | 资源包功能 resource-packs | architecture | — | 资源包, 光影包, 蓝图, 投影, resourcepack, shaderpack, 资源管理 |
+| 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 关键词, 标签筛选, 数值筛选, 三路交集, adv-filter, 高级筛选, SearchModels |
 | 🏗 version-updater | 版本更新 version-updater | architecture | io-bound | 更新, 升级, 检查更新, 新版本, 静默检查, updater, 版本 |
 
 ### 摘要
@@ -100,6 +101,7 @@
 - **preview_3d_migration**（preview-3d 领域根迁移）：ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 `frontend/src/preview-3d/`。纯改名、收益最低、但暗礁最多。三刀顺序不可逆：第一刀正类型（依赖倒置修复）→ 第二…
 - **recycle-bin**（回收站界面 recycle-bin）：`recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调…
 - **resource-packs**（资源包功能 resource-packs）：**已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager…
+- **search**（搜索筛选编排 search）：搜索筛选的**跨层端到端编排层**：前端工具栏搜索输入 → 关键词 + 标签 + 数值三路交集 → 后端 Go 一次性过滤 → 白名单回填 `buildTree` 精确匹配。
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
 ## go（40 张）

@@ -92,7 +92,10 @@ func runInstanceSync(ctx *CmdContext) error {
 		return newParamErrf("instance sync: --instance 参数不能为空")
 	}
 
-	result := ctx.App.SyncResources(*rtype, *instanceName)
+	result, err := ctx.App.SyncResources(*rtype, *instanceName)
+	if err != nil {
+		return err
+	}
 	fmt.Println(result)
 	return nil
 }

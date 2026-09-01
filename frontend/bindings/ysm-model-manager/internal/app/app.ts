@@ -13,6 +13,9 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 import * as dedup$0 from "../../go/dedup/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as repoaudit$0 from "../../go/repoaudit/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as sync$0 from "../../go/sync/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -456,13 +459,9 @@ export function GetInstanceStatus(mcRoot: string, repoDir: string, rtype: string
 }
 
 /**
- * GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表）
- * subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDirGrouping 类型有效——路径限定。
- * rtype 可选，指定资源类型 ID（如 ysm/maid-model），非空时只遍历该类型，避免全类型扫描
- * 触发 walk error 刷屏；空时保持现状（全类型遍历）。
  * GetInstanceSyncStatus 整合包同步状态（组装逻辑已下沉 go/instance，此处仅注入依赖）
  */
-export function GetInstanceSyncStatus(instanceName: string, subtype: string, rtype: string): $CancellablePromise<string> {
+export function GetInstanceSyncStatus(instanceName: string, subtype: string, rtype: string): $CancellablePromise<types$0.ResourceSyncItem[] | null> {
     return $Call.ByID(839308247, instanceName, subtype, rtype);
 }
 
@@ -473,7 +472,7 @@ export function GetLinkMode(): $CancellablePromise<string> {
 /**
  * GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置）
  */
-export function GetLitematicVoxelData(path: string): $CancellablePromise<string> {
+export function GetLitematicVoxelData(path: string): $CancellablePromise<types$0.LitematicVoxelData | null> {
     return $Call.ByID(2172897631, path);
 }
 
@@ -503,7 +502,7 @@ export function GetModelTexSizes(filesRoot: string): $CancellablePromise<ysm$0.T
 /**
  * GetNbtVoxelData 读取 .nbt 结构文件体素数据
  */
-export function GetNbtVoxelData(path: string): $CancellablePromise<string> {
+export function GetNbtVoxelData(path: string): $CancellablePromise<types$0.LitematicVoxelData | null> {
     return $Call.ByID(2164005593, path);
 }
 
@@ -539,7 +538,7 @@ export function GetRuntimeLogs(): $CancellablePromise<types$0.RuntimeLog[] | nul
 /**
  * GetSchematicVoxelData 读取 .schematic 文件体素数据
  */
-export function GetSchematicVoxelData(path: string): $CancellablePromise<string> {
+export function GetSchematicVoxelData(path: string): $CancellablePromise<types$0.LitematicVoxelData | null> {
     return $Call.ByID(199377974, path);
 }
 
@@ -562,18 +561,18 @@ export function GetSubDirMap(): $CancellablePromise<{ [_ in string]?: string } |
  * 用途：让前端同步页展示“到底从哪个文件夹扫”，尤其兜底命中 Sable-Schematics 时用户可见。
  * 不触发全量扫描，仅做目录解析 + 标准目录存在性/证据检查，体感轻量。
  */
-export function GetSyncScanDirs(rtype: string, instanceName: string): $CancellablePromise<string> {
+export function GetSyncScanDirs(rtype: string, instanceName: string): $CancellablePromise<types$0.SyncScanDirs> {
     return $Call.ByID(2038029643, rtype, instanceName);
 }
 
 /**
- * GetVoxelDataInContainer 读取容器内 gzip NBT 条目并构建体素数据（JSON 与 Get*VoxelData
- * 同形状：成功 → LitematicVoxelData；失败 → {"error": string}）。
+ * GetVoxelDataInContainer 读取容器内 gzip NBT 条目并构建体素数据（与 Get*VoxelData
+ * 同形状：成功 → *types.LitematicVoxelData；失败 → error）。
  * entry 为容器内条目路径（如 "subdir/a.nbt"）；ext 决定体素构建器分派
  * （.nbt → BuildNbtVoxelDataFromRoot / .schematic → BuildSchematicVoxelDataFromRoot /
  * 其余 → BuildVoxelDataFromRoot，对齐 VOXEL_RPC_BY_EXT 前端映射）。
  */
-export function GetVoxelDataInContainer(path: string, entry: string, ext: string): $CancellablePromise<string> {
+export function GetVoxelDataInContainer(path: string, entry: string, ext: string): $CancellablePromise<types$0.LitematicVoxelData | null> {
     return $Call.ByID(3637455095, path, entry, ext);
 }
 
@@ -800,11 +799,10 @@ export function ListByTag(tag: string): $CancellablePromise<string[] | null> {
 }
 
 /**
- * ListContainerEntries 枚举容器内匹配扩展名白名单的条目路径（升序 JSON 数组）。
- * exts 逗号分隔（如 ".nbt,.litematic,.schematic"）；失败/无匹配返回 "[]"。
- * 容器路径自身不校验扩展名（.zip/.7z/目录均走 container.Open 分派）。
+ * ListContainerEntries 枚举容器内匹配扩展名白名单的条目路径（升序）。
+ * exts 逗号分隔（如 ".nbt,.litematic,.schematic"）；失败 → error。
  */
-export function ListContainerEntries(path: string, exts: string): $CancellablePromise<string> {
+export function ListContainerEntries(path: string, exts: string): $CancellablePromise<string[] | null> {
     return $Call.ByID(3328832690, path, exts);
 }
 
@@ -822,19 +820,19 @@ export function ListModelAuthors(): $CancellablePromise<types$0.AuthorInfo[] | n
 
 /**
  * ListPackModels 枚举资源包容器内的 block/item 模型 JSON 条目路径（升序）。
- * 失败或无模型返回 "[]"（前端据此回退缩略图通道）。
+ * 失败或无模型返回空数组（前端据此回退缩略图通道）。
  */
-export function ListPackModels(path: string): $CancellablePromise<string> {
+export function ListPackModels(path: string): $CancellablePromise<string[] | null> {
     return $Call.ByID(426377372, path);
 }
 
 /**
  * ListPackModelsDetail 枚举资源包容器内的 block/item 模型（升序）+ 立方体数（elements 长度）。
- * 失败或无模型返回 {"models":[],"total":0}。封顶前 packModelDetailCap 条带 cubes（防大包
+ * 失败或无模型返回空列表。封顶前 packModelDetailCap 条带 cubes（防大包
  * 全量解析），total 报告全量模型数——前端超限只显示 total。跨类型路由：详情页模型清单区
  * 经此一屏拿到「路径 + 立方体数」，点击单模型直达 pack-model-adapter 3D（ADR-131 P3）。
  */
-export function ListPackModelsDetail(path: string): $CancellablePromise<string> {
+export function ListPackModelsDetail(path: string): $CancellablePromise<types$0.PackModelDetailList | null> {
     return $Call.ByID(440793901, path);
 }
 
@@ -1023,14 +1021,14 @@ export function ReadFileBytesBatchWithMeta(paths: string[] | null): $Cancellable
 /**
  * ReadLitematicMeta 读取投影文件元数据（作者/时间/版本/方块统计/预览图）
  */
-export function ReadLitematicMeta(path: string): $CancellablePromise<string> {
+export function ReadLitematicMeta(path: string): $CancellablePromise<types$0.LitematicMeta | null> {
     return $Call.ByID(3216421386, path);
 }
 
 /**
  * ReadNbtStructure 读取 .nbt 结构文件基本信息
  */
-export function ReadNbtStructure(path: string): $CancellablePromise<string> {
+export function ReadNbtStructure(path: string): $CancellablePromise<{ [_ in string]?: any } | null> {
     return $Call.ByID(304829738, path);
 }
 
@@ -1045,21 +1043,21 @@ export function ReadPackEntry(path: string, entry: string): $CancellablePromise<
 /**
  * ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png）
  */
-export function ReadPackMeta(path: string): $CancellablePromise<string> {
+export function ReadPackMeta(path: string): $CancellablePromise<types$0.PackMetaView | null> {
     return $Call.ByID(1762327275, path);
 }
 
 /**
  * ReadSchematic 读取 .schematic 文件基本信息
  */
-export function ReadSchematic(path: string): $CancellablePromise<string> {
+export function ReadSchematic(path: string): $CancellablePromise<{ [_ in string]?: any } | null> {
     return $Call.ByID(2285677248, path);
 }
 
 /**
  * ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名
  */
-export function ReadShaderpackLang(path: string): $CancellablePromise<string> {
+export function ReadShaderpackLang(path: string): $CancellablePromise<types$0.ShaderpackLang> {
     return $Call.ByID(3411986111, path);
 }
 
@@ -1098,19 +1096,18 @@ export function ReplaceWorkshopCreatorsFromJSON(jsonContent: string): $Cancellab
 }
 
 /**
- * RepoHealthAudit 一键全仓体检（审计 + 去重），返回 JSON 字符串。
- * 契约（与 FindDuplicateFiles 同模式）：成功 → repoaudit.HealthReport；失败 → {error: string}。
+ * RepoHealthAudit 一键全仓体检（审计 + 去重），返回 typed HealthReport。
  * 与 CLI health-report 同源（go/repoaudit 唯一实现），GUI/CLI 双端消双轨。
  */
-export function RepoHealthAudit(dir: string): $CancellablePromise<string> {
+export function RepoHealthAudit(dir: string): $CancellablePromise<repoaudit$0.HealthReport | null> {
     return $Call.ByID(3995157004, dir);
 }
 
 /**
  * RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。
- * 无有效目录时返回错误提示（与 RepoHealthAudit 同源格式）。
+ * 无有效目录时返回错误。
  */
-export function RepoHealthAuditAll(): $CancellablePromise<string> {
+export function RepoHealthAuditAll(): $CancellablePromise<repoaudit$0.HealthReport | null> {
     return $Call.ByID(2158058199);
 }
 
@@ -1387,7 +1384,7 @@ export function SyncModelToggleStatus(instanceCustomDir: string, filesRoot: stri
 /**
  * SyncResources 获取全局 ↔ 整合包的资源同步状态
  */
-export function SyncResources(rtype: string, instanceName: string): $CancellablePromise<string> {
+export function SyncResources(rtype: string, instanceName: string): $CancellablePromise<types$0.ResourceSyncResult> {
     return $Call.ByID(2551449925, rtype, instanceName);
 }
 

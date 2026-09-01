@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/container"
+	"ysm-model-manager/go/types"
 )
 
 // maxPackEntrySize 单条目读取上限（64MB）：模型 JSON 远小于此，纹理 PNG 亦足够。
@@ -21,13 +22,6 @@ const maxPackEntrySize = 64 << 20
 // packModelDetailCap 模型清单封顶条数（防大包：数百+ 模型时只解析前 N 条立方体数，
 // total 报告全量；前端清单懒加载，超限只显示 total）。
 const packModelDetailCap = 200
-
-// PackModelDetail 单模型清单项（path + 立方体数，供详情页模型清单区）。
-// Path 为容器内条目路径（升序）；Cubes = JSON elements 数组长度（无 elements 为 0）。
-type PackModelDetail struct {
-	Path  string `json:"path"`
-	Cubes int    `json:"cubes"`
-}
 
 // packModelElementsCount 数 JSON 模型 elements 数组长度（Java block/item model：
 // 每个 element 一个立方体；无 elements（纯 parent 模板如 cube_all）为 0）。
@@ -69,12 +63,12 @@ func packEntrySafe(name string) bool {
 }
 
 // ListPackModels 枚举资源包容器内的 block/item 模型 JSON 条目路径（升序）。
-// 失败或无模型返回 "[]"（前端据此回退缩略图通道）。
-func (a *App) ListPackModels(path string) string {
+// 失败或无模型返回空数组（前端据此回退缩略图通道）。
+func (a *App) ListPackModels(path string) ([]string, error) {
 	r, err := container.Open(path)
 	if err != nil {
 		log.Printf("[packs] ListPackModels 打开失败 %s: %v", path, err)
-		return "[]"
+		return nil, err
 	}
 	defer r.Close()
 	seen := map[string]bool{}
@@ -90,18 +84,18 @@ func (a *App) ListPackModels(path string) string {
 		}
 	}
 	sort.Strings(out)
-	return marshalJSON("ListPackModels", out, "[]")
+	return out, nil
 }
 
 // ListPackModelsDetail 枚举资源包容器内的 block/item 模型（升序）+ 立方体数（elements 长度）。
-// 失败或无模型返回 {"models":[],"total":0}。封顶前 packModelDetailCap 条带 cubes（防大包
+// 失败或无模型返回空列表。封顶前 packModelDetailCap 条带 cubes（防大包
 // 全量解析），total 报告全量模型数——前端超限只显示 total。跨类型路由：详情页模型清单区
 // 经此一屏拿到「路径 + 立方体数」，点击单模型直达 pack-model-adapter 3D（ADR-131 P3）。
-func (a *App) ListPackModelsDetail(path string) string {
+func (a *App) ListPackModelsDetail(path string) (*types.PackModelDetailList, error) {
 	r, err := container.Open(path)
 	if err != nil {
 		log.Printf("[packs] ListPackModelsDetail 打开失败 %s: %v", path, err)
-		return marshalJSON("ListPackModelsDetail", packDetailList{Models: []PackModelDetail{}}, "{}")
+		return nil, err
 	}
 	defer r.Close()
 	seen := map[string]bool{}
@@ -121,25 +115,19 @@ func (a *App) ListPackModelsDetail(path string) string {
 		}
 	}
 	sort.Strings(all)
-	out := packDetailList{Total: len(all)}
+	out := &types.PackModelDetailList{Total: len(all)}
 	if len(all) > packModelDetailCap {
 		all = all[:packModelDetailCap]
 	}
-	out.Models = make([]PackModelDetail, 0, len(all))
+	out.Models = make([]types.PackModelDetail, 0, len(all))
 	for _, n := range all {
 		cubes := 0
 		if data := readPackEntry(byName[n]); len(data) > 0 {
 			cubes = packModelElementsCount(data)
 		}
-		out.Models = append(out.Models, PackModelDetail{Path: n, Cubes: cubes})
+		out.Models = append(out.Models, types.PackModelDetail{Path: n, Cubes: cubes})
 	}
-	return marshalJSON("ListPackModelsDetail", out, "{}")
-}
-
-// packDetailList ListPackModelsDetail 返回值。
-type packDetailList struct {
-	Models []PackModelDetail `json:"models"`
-	Total  int               `json:"total"`
+	return out, nil
 }
 
 // readPackEntry 读取已解析的容器条目原始字节（packEntrySafe 守卫复用 ReadPackEntry 口径；

@@ -8,7 +8,6 @@
 package app
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"sort"
@@ -69,14 +68,13 @@ func parseContainerExts(exts string) map[string]bool {
 	return out
 }
 
-// ListContainerEntries 枚举容器内匹配扩展名白名单的条目路径（升序 JSON 数组）。
-// exts 逗号分隔（如 ".nbt,.litematic,.schematic"）；失败/无匹配返回 "[]"。
-// 容器路径自身不校验扩展名（.zip/.7z/目录均走 container.Open 分派）。
-func (a *App) ListContainerEntries(path string, exts string) string {
+// ListContainerEntries 枚举容器内匹配扩展名白名单的条目路径（升序）。
+// exts 逗号分隔（如 ".nbt,.litematic,.schematic"）；失败 → error。
+func (a *App) ListContainerEntries(path string, exts string) ([]string, error) {
 	r, err := container.Open(path)
 	if err != nil {
 		log.Printf("[container] ListContainerEntries 打开失败 %s: %v", path, err)
-		return "[]"
+		return nil, err
 	}
 	defer r.Close()
 	extSet := parseContainerExts(exts)
@@ -99,23 +97,23 @@ func (a *App) ListContainerEntries(path string, exts string) string {
 		}
 	}
 	sort.Strings(out)
-	return marshalJSON("ListContainerEntries", out, "[]")
+	return out, nil
 }
 
-// GetVoxelDataInContainer 读取容器内 gzip NBT 条目并构建体素数据（JSON 与 Get*VoxelData
-// 同形状：成功 → LitematicVoxelData；失败 → {"error": string}）。
+// GetVoxelDataInContainer 读取容器内 gzip NBT 条目并构建体素数据（与 Get*VoxelData
+// 同形状：成功 → *types.LitematicVoxelData；失败 → error）。
 // entry 为容器内条目路径（如 "subdir/a.nbt"）；ext 决定体素构建器分派
 // （.nbt → BuildNbtVoxelDataFromRoot / .schematic → BuildSchematicVoxelDataFromRoot /
 // 其余 → BuildVoxelDataFromRoot，对齐 VOXEL_RPC_BY_EXT 前端映射）。
-func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) string {
+func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) (*types.LitematicVoxelData, error) {
 	if !containerEntrySafe(entry) {
 		log.Printf("[container] GetVoxelDataInContainer 非法条目 %q", entry)
-		return voxelErrorJSON("GetVoxelDataInContainer", errString("非法条目路径"))
+		return nil, errString("非法条目路径")
 	}
 	r, err := container.Open(path)
 	if err != nil {
 		log.Printf("[container] GetVoxelDataInContainer 打开失败 %s: %v", path, err)
-		return voxelErrorJSON("GetVoxelDataInContainer", err)
+		return nil, err
 	}
 	defer r.Close()
 	for _, e := range r.Entries() {
@@ -123,22 +121,22 @@ func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) str
 			continue
 		}
 		if !containerEntrySafe(e.Name()) {
-			return voxelErrorJSON("GetVoxelDataInContainer", errString("条目路径非法"))
+			return nil, errString("条目路径非法")
 		}
 		rc, oerr := e.Open()
 		if oerr != nil {
-			return voxelErrorJSON("GetVoxelDataInContainer", oerr)
+			return nil, oerr
 		}
 		data, rerr := io.ReadAll(io.LimitReader(rc, maxContainerEntrySize))
 		rc.Close()
 		if rerr != nil {
 			log.Printf("[container] GetVoxelDataInContainer 读取失败 %s/%s: %v", path, entry, rerr)
-			return voxelErrorJSON("GetVoxelDataInContainer", rerr)
+			return nil, rerr
 		}
 		root, derr := litematic.OpenGzRootFromBytes(data)
 		if derr != nil {
 			log.Printf("[container] GetVoxelDataInContainer NBT 解码失败 %s/%s: %v", path, entry, derr)
-			return voxelErrorJSON("GetVoxelDataInContainer", derr)
+			return nil, derr
 		}
 		var vd *types.LitematicVoxelData
 		switch strings.ToLower(ext) {
@@ -151,17 +149,12 @@ func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) str
 		}
 		if derr != nil {
 			log.Printf("[container] GetVoxelDataInContainer 体素构建失败 %s/%s: %v", path, entry, derr)
-			return voxelErrorJSON("GetVoxelDataInContainer", derr)
+			return nil, derr
 		}
-		result, merr := json.Marshal(vd)
-		if merr != nil {
-			log.Printf("[container] GetVoxelDataInContainer 序列化失败 %s/%s: %v", path, entry, merr)
-			return voxelErrorJSON("GetVoxelDataInContainer", merr)
-		}
-		return string(result)
+		return vd, nil
 	}
 	log.Printf("[container] GetVoxelDataInContainer 条目不存在 %s/%s", path, entry)
-	return voxelErrorJSON("GetVoxelDataInContainer", errString("容器内不存在该条目"))
+	return nil, errString("容器内不存在该条目")
 }
 
 // errString 包装字符串为 error（voxelErrorJSON 入参统一）。

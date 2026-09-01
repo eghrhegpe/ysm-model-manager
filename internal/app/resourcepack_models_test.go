@@ -4,7 +4,6 @@ package app
 import (
 	"archive/zip"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -51,14 +50,12 @@ var packZipFiles = map[string]string{
 func TestListPackModels(t *testing.T) {
 	a := &App{}
 	p := makePackZip(t, packZipFiles)
-	got := a.ListPackModels(p)
-
-	var models []string
-	if err := json.Unmarshal([]byte(got), &models); err != nil {
-		t.Fatalf("ListPackModels 返回非法 JSON: %v", err)
+	got, err := a.ListPackModels(p)
+	if err != nil {
+		t.Fatalf("ListPackModels 返回 error: %v", err)
 	}
-	if len(models) != 3 {
-		t.Fatalf("期望 3 个模型（block/stone + block/cube_all + item/stone），实际 %d: %v", len(models), models)
+	if len(got) != 3 {
+		t.Fatalf("期望 3 个模型（block/stone + block/cube_all + item/stone），实际 %d: %v", len(got), got)
 	}
 	// 升序
 	want := []string{
@@ -67,17 +64,17 @@ func TestListPackModels(t *testing.T) {
 		"assets/minecraft/models/item/stone.json",
 	}
 	for i := range want {
-		if models[i] != want[i] {
-			t.Errorf("models[%d] = %q，期望 %q", i, models[i], want[i])
+		if got[i] != want[i] {
+			t.Errorf("got[%d] = %q，期望 %q", i, got[i], want[i])
 		}
 	}
 }
 
 func TestListPackModels_NonZip(t *testing.T) {
 	a := &App{}
-	// 非 zip 路径（如 .7z 无模型或不存在文件）→ "[]"
-	if got := a.ListPackModels(filepath.Join(t.TempDir(), "notexist.zip")); got != "[]" {
-		t.Errorf("不存在文件期望 []，实际 %q", got)
+	// 非 zip 路径（如 .7z 无模型或不存在文件）→ error
+	if got, err := a.ListPackModels(filepath.Join(t.TempDir(), "notexist.zip")); err == nil {
+		t.Errorf("不存在文件期望 error，实际 got=%v", got)
 	}
 }
 
@@ -125,27 +122,16 @@ var packDetailZipFiles = map[string]string{
 	"assets/minecraft/textures/block/stone.png": "PNG-PLACEHOLDER",
 }
 
-// listPackModelDetail 解析 ListPackModelsDetail 的 JSON 结构
-func unmarshalPackDetail(t *testing.T, raw string) struct {
-	Models []PackModelDetail `json:"models"`
-	Total  int               `json:"total"`
-} {
-	t.Helper()
-	var out struct {
-		Models []PackModelDetail `json:"models"`
-		Total  int               `json:"total"`
-	}
-	if err := json.Unmarshal([]byte(raw), &out); err != nil {
-		t.Fatalf("ListPackModelsDetail 返回非法 JSON: %v", err)
-	}
-	return out
-}
-
 func TestListPackModelsDetail(t *testing.T) {
 	a := &App{}
 	p := makePackZip(t, packDetailZipFiles)
-	got := a.ListPackModelsDetail(p)
-	res := unmarshalPackDetail(t, got)
+	res, err := a.ListPackModelsDetail(p)
+	if err != nil {
+		t.Fatalf("ListPackModelsDetail 返回 error: %v", err)
+	}
+	if res == nil {
+		t.Fatal("ListPackModelsDetail 返回 nil")
+	}
 
 	if res.Total != 4 {
 		t.Fatalf("期望 4 个模型，实际 total=%d: %v", res.Total, res.Models)
@@ -185,8 +171,10 @@ func TestListPackModelsDetail_Cap(t *testing.T) {
 		files[name] = `{"elements":[{"from":[0,0,0],"to":[16,16,16]}]}`
 	}
 	p := makePackZip(t, files)
-	got := a.ListPackModelsDetail(p)
-	res := unmarshalPackDetail(t, got)
+	res, err := a.ListPackModelsDetail(p)
+	if err != nil {
+		t.Fatalf("ListPackModelsDetail 返回 error: %v", err)
+	}
 
 	if res.Total != 250 {
 		t.Errorf("total 应 250，实际 %d", res.Total)
@@ -198,24 +186,8 @@ func TestListPackModelsDetail_Cap(t *testing.T) {
 
 func TestListPackModelsDetail_NonZip(t *testing.T) {
 	a := &App{}
-	raw := a.ListPackModelsDetail(filepath.Join(t.TempDir(), "notexist.zip"))
-	var out struct {
-		Models []PackModelDetail `json:"models"`
-		Total  int               `json:"total"`
-	}
-	if err := json.Unmarshal([]byte(raw), &out); err != nil {
-		t.Fatalf("不存在文件期望合法 JSON，实际 %q", raw)
-	}
-	if out.Total != 0 || len(out.Models) != 0 {
-		t.Errorf("不存在文件期望空清单，实际 total=%d models=%d", out.Total, len(out.Models))
-	}
-	// 契约（审核修复）：失败路径 models 必须序列化为 [] 而非 null——与 docstring 及
-	// web 镜像 listWebPackModelsDetail 同构，后续消费者直接 .length 不炸
-	if strings.Contains(raw, `"models":null`) {
-		t.Errorf("失败路径 models 应序列化为 []，实际含 null：%q", raw)
-	}
-	if !strings.Contains(raw, `"models":[]`) {
-		t.Errorf("失败路径应含 \"models\":[]，实际 %q", raw)
+	if got, err := a.ListPackModelsDetail(filepath.Join(t.TempDir(), "notexist.zip")); err == nil || got != nil {
+		t.Errorf("不存在文件期望返回 error（got=%v err=%v）", got, err)
 	}
 }
 
@@ -255,8 +227,10 @@ func TestListPackModelsDetail_InvalidEntriesExcluded(t *testing.T) {
 		"other/outside.json":                    `{"elements":[{}]}`,
 	}
 	p := makePackZip(t, files)
-	raw := a.ListPackModelsDetail(p)
-	res := unmarshalPackDetail(t, raw)
+	res, err := a.ListPackModelsDetail(p)
+	if err != nil {
+		t.Fatalf("ListPackModelsDetail 返回 error: %v", err)
+	}
 	if res.Total != 1 {
 		t.Fatalf("期望仅 1 个 block 模型（custom/outside 不入列），实际 total=%d: %v", res.Total, res.Models)
 	}

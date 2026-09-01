@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +13,14 @@ import (
 // （前端 WASM 解码出 geometry JSON → 本 binding 复用 threejs.BuildMulti 构建 spec）
 func TestBuild3DSpecFromGeometryJSON(t *testing.T) {
 	a := &App{}
-	if got := a.Build3DSpecFromGeometryJSON(""); got != "{}" {
-		t.Fatalf("空输入应返回 {}，got %q", got)
+	// 空输入 → error（got 为 nil）
+	if got, err := a.Build3DSpecFromGeometryJSON(""); err == nil || got != nil {
+		t.Fatalf("空输入应返回 error 且 got=nil，got %v err %v", got, err)
 	}
-	if got := a.Build3DSpecFromGeometryJSON("not json"); got != "{}" {
-		t.Fatalf("非法 JSON 应返回 {}，got %q", got)
+	// 非法 JSON → ParseBedrockGeometry 返回 nil → 空 spec（无 models）。
+	// 旧契约返回 "{}"（不可用信号）；新契约下仍无 models，但非 error。
+	if got, err := a.Build3DSpecFromGeometryJSON("not json"); got == nil || len(got.Models) != 0 {
+		t.Fatalf("非法 JSON 应返回空 spec，got %v err %v", got, err)
 	}
 
 	const geo = `{
@@ -28,23 +30,18 @@ func TestBuild3DSpecFromGeometryJSON(t *testing.T) {
     "bones": [{ "name": "bone1", "pivot": [0, 0, 0], "cubes": [{ "origin": [-4, 0, -4], "size": [8, 8, 8] }] }]
   }]
 }`
-	got := a.Build3DSpecFromGeometryJSON(geo)
-	if got == "{}" {
-		t.Fatal("合法 geometry 应构建出 spec，got {}")
+	got, err := a.Build3DSpecFromGeometryJSON(geo)
+	if err != nil {
+		t.Fatalf("合法 geometry 不应报错: %v", err)
 	}
-	var spec struct {
-		Models []struct {
-			MeshGroups []any `json:"meshGroups"`
-		} `json:"models"`
+	if got == nil {
+		t.Fatal("合法 geometry 应构建出 spec，got nil")
 	}
-	if err := json.Unmarshal([]byte(got), &spec); err != nil {
-		t.Fatalf("spec 非合法 JSON: %v", err)
+	if len(got.Models) == 0 {
+		t.Fatalf("spec.models 为空")
 	}
-	if len(spec.Models) == 0 {
-		t.Fatalf("spec.models 为空: %s", got)
-	}
-	if len(spec.Models[0].MeshGroups) == 0 {
-		t.Fatalf("spec.models[0].meshGroups 为空（cube 未生成顶点）: %s", got)
+	if len(got.Models[0].MeshGroups) == 0 {
+		t.Fatalf("spec.models[0].MeshGroups 为空（cube 未生成顶点）")
 	}
 }
 

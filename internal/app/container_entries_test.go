@@ -5,7 +5,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -110,18 +109,17 @@ func TestListContainerEntries(t *testing.T) {
 		"readme.txt":             []byte("hi"),
 		"builds/note.json":       []byte("{}"),
 	})
-	got := a.ListContainerEntries(p, ".nbt,.litematic,.schematic")
-	var entries []string
-	if err := json.Unmarshal([]byte(got), &entries); err != nil {
-		t.Fatalf("ListContainerEntries 返回非法 JSON: %v", err)
+	got, err := a.ListContainerEntries(p, ".nbt,.litematic,.schematic")
+	if err != nil {
+		t.Fatalf("ListContainerEntries 返回 error: %v", err)
 	}
 	want := []string{"builds/house.nbt", "builds/tower.litematic", "maps/area.schematic"}
-	if len(entries) != len(want) {
-		t.Fatalf("期望 %d 条，实际 %d: %v", len(want), len(entries), entries)
+	if len(got) != len(want) {
+		t.Fatalf("期望 %d 条，实际 %d: %v", len(want), len(got), got)
 	}
 	for i := range want {
-		if entries[i] != want[i] {
-			t.Errorf("entries[%d] = %q，期望 %q", i, entries[i], want[i])
+		if got[i] != want[i] {
+			t.Errorf("got[%d] = %q，期望 %q", i, got[i], want[i])
 		}
 	}
 }
@@ -136,34 +134,33 @@ func TestListContainerEntries_ExtFilter(t *testing.T) {
 		"d.txt":       []byte("x"),
 	})
 	// 单扩展名过滤（无点前缀也生效）
-	got := a.ListContainerEntries(p, "nbt")
-	var entries []string
-	if err := json.Unmarshal([]byte(got), &entries); err != nil {
-		t.Fatalf("非法 JSON: %v", err)
+	got, err := a.ListContainerEntries(p, "nbt")
+	if err != nil {
+		t.Fatalf("ListContainerEntries 返回 error: %v", err)
 	}
-	if len(entries) != 1 || entries[0] != "a.nbt" {
-		t.Errorf("仅 .nbt 期望 [a.nbt]，实际 %v", entries)
+	if len(got) != 1 || got[0] != "a.nbt" {
+		t.Errorf("仅 .nbt 期望 [a.nbt]，实际 %v", got)
 	}
 	// 空 exts → 放行全部非目录
-	gotAll := a.ListContainerEntries(p, "")
-	if err := json.Unmarshal([]byte(gotAll), &entries); err != nil {
-		t.Fatalf("空 exts 非法 JSON: %v", err)
+	gotAll, err := a.ListContainerEntries(p, "")
+	if err != nil {
+		t.Fatalf("空 exts 返回 error: %v", err)
 	}
-	if len(entries) != 4 {
-		t.Errorf("空 exts 期望 4 条，实际 %v", entries)
+	if len(gotAll) != 4 {
+		t.Errorf("空 exts 期望 4 条，实际 %v", gotAll)
 	}
 }
 
 func TestListContainerEntries_EmptyAndBad(t *testing.T) {
 	a := &App{}
-	// 坏 zip / 不存在 → "[]"
-	if got := a.ListContainerEntries(filepath.Join(t.TempDir(), "nope.zip"), ".nbt"); got != "[]" {
-		t.Errorf("不存在文件期望 []，实际 %q", got)
+	// 坏 zip / 不存在 → error
+	if got, err := a.ListContainerEntries(filepath.Join(t.TempDir(), "nope.zip"), ".nbt"); err == nil {
+		t.Errorf("不存在文件期望 error，实际 %v", got)
 	}
-	// 空容器 → "[]"
+	// 空容器 → 空数组
 	p := makeContainerZip(t, map[string][]byte{"readme.txt": []byte("x")})
-	if got := a.ListContainerEntries(p, ".nbt"); got != "[]" {
-		t.Errorf("无匹配期望 []，实际 %q", got)
+	if got, err := a.ListContainerEntries(p, ".nbt"); err != nil || len(got) != 0 {
+		t.Errorf("无匹配期望空数组，实际 got=%v err=%v", got, err)
 	}
 }
 
@@ -175,42 +172,31 @@ func TestGetVoxelDataInContainer(t *testing.T) {
 		"builds/tower.litematic": nbt,
 		"maps/area.schematic":    gzSchematicBytes(t),
 	})
-	// .nbt 分支：BuildNbtVoxelDataFromRoot（无 size/blocks/palette → error JSON 契约）
-	raw := a.GetVoxelDataInContainer(p, "builds/house.nbt", ".nbt")
-	var m map[string]any
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		t.Fatalf("GetVoxelDataInContainer .nbt 返回非法 JSON: %v", err)
-	}
-	if _, hasErr := m["error"]; !hasErr {
-		t.Errorf("非 structure NBT 期望 error 字段，实际 %q", raw)
+	// .nbt 分支：BuildNbtVoxelDataFromRoot（无 size/blocks/palette → error）
+	if got, err := a.GetVoxelDataInContainer(p, "builds/house.nbt", ".nbt"); err == nil {
+		t.Errorf("非 structure NBT 期望返回 error，实际 got=%v", got)
 	}
 	// .litematic 分支（默认）：Version-only root → Size [0,0,0] 空数据（合法）
-	rawL := a.GetVoxelDataInContainer(p, "builds/tower.litematic", ".litematic")
-	var mL map[string]any
-	if err := json.Unmarshal([]byte(rawL), &mL); err != nil {
-		t.Fatalf("GetVoxelDataInContainer .litematic 返回非法 JSON: %v", err)
+	gotL, errL := a.GetVoxelDataInContainer(p, "builds/tower.litematic", ".litematic")
+	if errL != nil {
+		t.Fatalf(".litematic 空数据不应报 error: %v", errL)
 	}
-	if _, hasErr := mL["error"]; hasErr {
-		t.Errorf(".litematic 空数据不应报 error，实际 %q", rawL)
+	if gotL == nil {
+		t.Fatal(".litematic 空数据应返回非 nil")
 	}
-	if sz, ok := mL["size"]; ok {
-		if arr, ok := sz.([]any); ok && len(arr) != 3 {
-			t.Errorf("size 应为 3 元素，实际 %v", sz)
-		}
+	if gotL.Size != ([3]int{0, 0, 0}) {
+		t.Errorf("size 应为 [0,0,0]，实际 %v", gotL.Size)
 	}
 	// .schematic 分支：Width 2 Height 1 Length 1 → 1 个方块组
-	rawS := a.GetVoxelDataInContainer(p, "maps/area.schematic", ".schematic")
-	var mS map[string]any
-	if err := json.Unmarshal([]byte(rawS), &mS); err != nil {
-		t.Fatalf("GetVoxelDataInContainer .schematic 返回非法 JSON: %v", err)
+	gotS, errS := a.GetVoxelDataInContainer(p, "maps/area.schematic", ".schematic")
+	if errS != nil {
+		t.Fatalf(".schematic 正常数据不应报 error: %v", errS)
 	}
-	if _, hasErr := mS["error"]; hasErr {
-		t.Fatalf(".schematic 正常数据不应报 error，实际 %q", rawS)
+	if gotS == nil {
+		t.Fatal(".schematic 应返回非 nil")
 	}
-	if groups, ok := mS["groups"].([]any); ok {
-		if len(groups) == 0 {
-			t.Errorf(".schematic 应有 1 个 stone 方块组，实际空 groups")
-		}
+	if len(gotS.Groups) == 0 {
+		t.Errorf(".schematic 应有 1 个 stone 方块组，实际空 groups")
 	}
 }
 
@@ -224,26 +210,16 @@ func TestGetVoxelDataInContainer_Guard(t *testing.T) {
 		"/abs/a.nbt",
 		"missing.nbt",
 	} {
-		raw := a.GetVoxelDataInContainer(p, entry, ".nbt")
-		var m map[string]any
-		if err := json.Unmarshal([]byte(raw), &m); err != nil {
-			t.Fatalf("非法条目 %q 返回非法 JSON: %v", entry, err)
-		}
-		if _, hasErr := m["error"]; !hasErr {
-			t.Errorf("非法条目 %q 期望 error 字段，实际 %q", entry, raw)
+		if got, err := a.GetVoxelDataInContainer(p, entry, ".nbt"); err == nil {
+			t.Errorf("非法条目 %q 期望返回 error，实际 got=%v", entry, got)
 		}
 	}
 }
 
 func TestGetVoxelDataInContainer_BadZip(t *testing.T) {
 	a := &App{}
-	raw := a.GetVoxelDataInContainer(filepath.Join(t.TempDir(), "nope.zip"), "a.nbt", ".nbt")
-	var m map[string]any
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		t.Fatalf("坏 zip 期望 error JSON，实际 %q", raw)
-	}
-	if _, hasErr := m["error"]; !hasErr {
-		t.Errorf("坏 zip 期望 error 字段，实际 %q", raw)
+	if got, err := a.GetVoxelDataInContainer(filepath.Join(t.TempDir(), "nope.zip"), "a.nbt", ".nbt"); err == nil {
+		t.Errorf("坏 zip 期望返回 error，实际 got=%v", got)
 	}
 }
 

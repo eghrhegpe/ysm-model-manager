@@ -157,16 +157,22 @@ func hasExt(ext string, exts []string) bool {
 }
 
 // ReadShaderpackLang 从光影包 ZIP 中读取 lang/en_US.lang，尝试提取显示名
-// 返回 {name, entries}，name 为空时前端用文件名兜底
+// 返回 {name, entries} JSON 串，name 为空时前端用文件名兜底
 func ReadShaderpackLang(path string) string {
+	name, entries := ReadShaderpackLangParts(path)
 	result := map[string]interface{}{
-		"name":    "",
-		"entries": map[string]string{},
+		"name":    name,
+		"entries": entries,
 	}
+	return marshalShaderpackResult(result)
+}
 
+// ReadShaderpackLangParts 解析光影包 lang/en_US.lang，返回 name + entries。
+// 与 ReadShaderpackLang 共用解析逻辑（后者仅多一层 JSON 序列化，历史契约保留）。
+func ReadShaderpackLangParts(path string) (string, map[string]string) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return marshalShaderpackResult(result)
+		return "", map[string]string{}
 	}
 
 	var langData []byte
@@ -190,7 +196,7 @@ func ReadShaderpackLang(path string) string {
 	} else if strings.HasSuffix(strings.ToLower(path), ".zip") {
 		r, err := zip.OpenReader(path)
 		if err != nil {
-			return marshalShaderpackResult(result)
+			return "", map[string]string{}
 		}
 		defer r.Close()
 		for _, f := range r.File {
@@ -216,7 +222,7 @@ func ReadShaderpackLang(path string) string {
 	}
 
 	if len(langData) == 0 {
-		return marshalShaderpackResult(result)
+		return "", map[string]string{}
 	}
 
 	// 解析 .lang 文件（key=value 格式）
@@ -248,9 +254,7 @@ func ReadShaderpackLang(path string) string {
 		}
 	}
 
-	result["name"] = name
-	result["entries"] = entries
-	return marshalShaderpackResult(result)
+	return name, entries
 }
 
 // marshalShaderpackResult 序列化光影包 lang 读取结果（规律六：不吞错）

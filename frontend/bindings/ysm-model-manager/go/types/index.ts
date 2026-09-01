@@ -3,7 +3,8 @@
 
 export {
     LinkType,
-    LogLevel
+    LogLevel,
+    SyncStatus
 } from "./models.js";
 
 export type {
@@ -18,18 +19,29 @@ export type {
     ImportLog,
     InstanceStatus,
     LauncherInstance,
+    LitematicBlockStat,
+    LitematicMeta,
+    LitematicVoxelData,
     ModRequirement,
     ModelEntry,
     NestedPattern,
     PackInfo,
+    PackMetaView,
+    PackModelDetail,
+    PackModelDetailList,
+    ResourceSyncItem,
+    ResourceSyncResult,
     ResourceType,
     ResourceTypeRegistry,
     RuntimeLog,
     SearchResult,
+    ShaderpackLang,
     SubModel,
     SyncResolveResult,
+    SyncScanDirs,
     Variant,
     VersionInstance,
+    VoxelGroup,
     WindowState,
     WorkshopCreator,
     WorkshopPresetSearch,

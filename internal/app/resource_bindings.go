@@ -33,32 +33,33 @@ func (a *App) LoadResourceTypes() (*types.ResourceTypeRegistry, error) {
 }
 
 // ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png）
-func (a *App) ReadPackMeta(path string) string {
+func (a *App) ReadPackMeta(path string) (*types.PackMetaView, error) {
 	meta, thumb, err := packs.ReadPackMeta(path)
 	if err != nil {
 		log.Printf("[packs] ReadPackMeta 失败 %s: %v", path, err)
-		return "{}"
+		return nil, err
 	}
-	result := map[string]interface{}{
-		"pack_format": meta.Pack.PackFormat,
-		"description": meta.Desc(),
-		"thumbnail":   thumb,
+	view := &types.PackMetaView{
+		PackFormat:  meta.Pack.PackFormat,
+		Description: meta.Desc(),
+		Thumbnail:   thumb,
 	}
 	if meta.Pack.SupportedFormats != nil {
-		result["supported_formats"] = []int{meta.Pack.SupportedFormats.Min, meta.Pack.SupportedFormats.Max}
+		view.SupportedFormats = []int{meta.Pack.SupportedFormats.Min, meta.Pack.SupportedFormats.Max}
 	}
 	if meta.Pack.MinFormat != nil {
-		result["min_format"] = []int{meta.Pack.MinFormat.Min, meta.Pack.MinFormat.Max}
+		view.MinFormat = []int{meta.Pack.MinFormat.Min, meta.Pack.MinFormat.Max}
 	}
 	if meta.Pack.MaxFormat != nil {
-		result["max_format"] = []int{meta.Pack.MaxFormat.Min, meta.Pack.MaxFormat.Max}
+		view.MaxFormat = []int{meta.Pack.MaxFormat.Min, meta.Pack.MaxFormat.Max}
 	}
-	return marshalJSON("ReadPackMeta", result, "{}")
+	return view, nil
 }
 
 // ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名
-func (a *App) ReadShaderpackLang(path string) string {
-	return packs.ReadShaderpackLang(path)
+func (a *App) ReadShaderpackLang(path string) (types.ShaderpackLang, error) {
+	name, entries := packs.ReadShaderpackLangParts(path)
+	return types.ShaderpackLang{Name: name, Entries: entries}, nil
 }
 
 // ===== Litematica 蓝图/投影绑定 =====
@@ -76,19 +77,14 @@ func voxelErrorJSON(fnName string, err error) string {
 	return string(data)
 }
 
-// marshalVoxelData 调用体素构建函数并序列化为 JSON。
-func marshalVoxelData(tag, fnName, path string, buildFn func(string, int) (*types.LitematicVoxelData, error), maxBlocks int) string {
+// buildVoxelData 调用体素构建函数并返回 typed 结果（ADR-143 P1：去 string-JSON）。
+func buildVoxelData(tag, fnName, path string, buildFn func(string, int) (*types.LitematicVoxelData, error), maxBlocks int) (*types.LitematicVoxelData, error) {
 	data, err := buildFn(path, maxBlocks)
 	if err != nil {
 		log.Printf("[%s] %s 失败 %s: %v", tag, fnName, path, err)
-		return voxelErrorJSON(fnName, err)
+		return nil, err
 	}
-	result, merr := json.Marshal(data)
-	if merr != nil {
-		log.Printf("[%s] %s 序列化失败 %s: %v", tag, fnName, path, merr)
-		return voxelErrorJSON(fnName, merr)
-	}
-	return string(result)
+	return data, nil
 }
 
 // voxelMaxBlocks 从配置读取体素渲染上限，未设置时默认 200000。
@@ -101,46 +97,46 @@ func (a *App) voxelMaxBlocks() int {
 }
 
 // GetNbtVoxelData 读取 .nbt 结构文件体素数据
-func (a *App) GetNbtVoxelData(path string) string {
-	return marshalVoxelData("nbt", "BuildNbtVoxelData", path, litematic.BuildNbtVoxelData, a.voxelMaxBlocks())
+func (a *App) GetNbtVoxelData(path string) (*types.LitematicVoxelData, error) {
+	return buildVoxelData("nbt", "BuildNbtVoxelData", path, litematic.BuildNbtVoxelData, a.voxelMaxBlocks())
 }
 
 // GetSchematicVoxelData 读取 .schematic 文件体素数据
-func (a *App) GetSchematicVoxelData(path string) string {
-	return marshalVoxelData("schematic", "BuildSchematicVoxelData", path, litematic.BuildSchematicVoxelData, a.voxelMaxBlocks())
+func (a *App) GetSchematicVoxelData(path string) (*types.LitematicVoxelData, error) {
+	return buildVoxelData("schematic", "BuildSchematicVoxelData", path, litematic.BuildSchematicVoxelData, a.voxelMaxBlocks())
 }
 
 // ReadSchematic 读取 .schematic 文件基本信息
-func (a *App) ReadSchematic(path string) string {
+func (a *App) ReadSchematic(path string) (map[string]interface{}, error) {
 	result := litematic.ParseSchematicSummary(path)
 	if result == nil {
-		return "{}"
+		return nil, fmt.Errorf("无法解析 schematic")
 	}
-	return marshalJSON("ReadSchematic", result, "{}")
+	return result, nil
 }
 
 // ReadNbtStructure 读取 .nbt 结构文件基本信息
-func (a *App) ReadNbtStructure(path string) string {
+func (a *App) ReadNbtStructure(path string) (map[string]interface{}, error) {
 	result := litematic.ParseNbtStructure(path)
 	if result == nil {
-		return "{}"
+		return nil, fmt.Errorf("无法解析 NBT 结构")
 	}
-	return marshalJSON("ReadNbtStructure", result, "{}")
+	return result, nil
 }
 
 // ReadLitematicMeta 读取投影文件元数据（作者/时间/版本/方块统计/预览图）
-func (a *App) ReadLitematicMeta(path string) string {
+func (a *App) ReadLitematicMeta(path string) (*types.LitematicMeta, error) {
 	meta, err := litematic.ParseMeta(path)
 	if err != nil {
 		log.Printf("[litematic] ParseMeta 失败 %s: %v", path, err)
-		return "{}"
+		return nil, err
 	}
-	return marshalJSON("ReadLitematicMeta", meta, "{}")
+	return meta, nil
 }
 
 // GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置）
-func (a *App) GetLitematicVoxelData(path string) string {
-	return marshalVoxelData("litematic", "BuildVoxelData", path, litematic.BuildVoxelData, a.voxelMaxBlocks())
+func (a *App) GetLitematicVoxelData(path string) (*types.LitematicVoxelData, error) {
+	return buildVoxelData("litematic", "BuildVoxelData", path, litematic.BuildVoxelData, a.voxelMaxBlocks())
 }
 
 // Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
@@ -595,34 +591,33 @@ func (a *App) InvalidateScanCache() {
 	a.ClearScanCache()
 }
 
-// RepoHealthAudit 一键全仓体检（审计 + 去重），返回 JSON 字符串。
-// 契约（与 FindDuplicateFiles 同模式）：成功 → repoaudit.HealthReport；失败 → {error: string}。
+// RepoHealthAudit 一键全仓体检（审计 + 去重），返回 typed HealthReport。
 // 与 CLI health-report 同源（go/repoaudit 唯一实现），GUI/CLI 双端消双轨。
-func (a *App) RepoHealthAudit(dir string) string {
+func (a *App) RepoHealthAudit(dir string) (*repoaudit.HealthReport, error) {
 	if dir == "" {
-		return findDuplicateErrorJSON("请先配置仓库目录")
+		return nil, fmt.Errorf("请先配置仓库目录")
 	}
 	if !a.isPathInRootOrSelf(dir) {
-		return findDuplicateErrorJSON("路径超出仓库目录")
+		return nil, fmt.Errorf("路径超出仓库目录")
 	}
 	abs, err := filepath.Abs(dir)
 	if err != nil {
-		return findDuplicateErrorJSON(fmt.Sprintf("无法解析路径: %v", err))
+		return nil, fmt.Errorf("无法解析路径: %w", err)
 	}
 	report, err := repoaudit.HealthReportFor(abs)
 	if err != nil {
 		log.Printf("[repoaudit] 体检失败 %s: %v", abs, err)
-		return findDuplicateErrorJSON(err.Error())
+		return nil, err
 	}
-	return marshalJSON("RepoHealthAudit", report, findDuplicateErrorJSON("JSON 序列化失败"))
+	return &report, nil
 }
 
 // RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。
-// 无有效目录时返回错误提示（与 RepoHealthAudit 同源格式）。
-func (a *App) RepoHealthAuditAll() string {
+// 无有效目录时返回错误。
+func (a *App) RepoHealthAuditAll() (*repoaudit.HealthReport, error) {
 	roots := a.GetAllRepoRoots()
 	if len(roots) == 0 {
-		return findDuplicateErrorJSON("请先配置仓库目录")
+		return nil, fmt.Errorf("请先配置仓库目录")
 	}
 	type auditResult struct {
 		rtype  string
@@ -679,7 +674,7 @@ func (a *App) RepoHealthAuditAll() string {
 	if merged.Completeness.Checked > 0 {
 		merged.Completeness.Percentage = float64(merged.Completeness.Valid) / float64(merged.Completeness.Checked) * 100
 	}
-	return marshalJSON("RepoHealthAudit", merged, findDuplicateErrorJSON("JSON 序列化失败"))
+	return &merged, nil
 }
 
 // InstallResourceToInstance 将资源文件安装到指定整合包

@@ -385,6 +385,97 @@ export enum LinkType {
 };
 
 /**
+ * LitematicBlockStat 方块类型统计
+ */
+export interface LitematicBlockStat {
+    /**
+     * "minecraft:stone"
+     */
+    "name": string;
+    "count": number;
+}
+
+/**
+ * LitematicMeta 投影文件元数据（对应 .litematic 中 Metadata compound）
+ */
+export interface LitematicMeta {
+    "name": string;
+    "author": string;
+    "description": string;
+
+    /**
+     * unix 毫秒
+     */
+    "timeCreated": number;
+
+    /**
+     * unix 毫秒
+     */
+    "timeModified": number;
+
+    /**
+     * MC 数据版本号
+     */
+    "minecraftDataVersion": number;
+
+    /**
+     * Litematica 格式版本
+     */
+    "version": number;
+
+    /**
+     * 非空气方块总数
+     */
+    "totalBlocks": number;
+
+    /**
+     * 包围盒总体积（含空气）
+     */
+    "totalVolume": number;
+
+    /**
+     * [x, y, z]
+     */
+    "enclosingSize": number[];
+    "regionCount": number;
+
+    /**
+     * 按数量降序排列
+     */
+    "blockStats": LitematicBlockStat[] | null;
+
+    /**
+     * "data:image/png;base64,..." 或 ""
+     */
+    "previewImage": string;
+}
+
+/**
+ * LitematicVoxelData 体素渲染数据
+ */
+export interface LitematicVoxelData {
+    /**
+     * 包围盒尺寸 [x, y, z]
+     */
+    "size": number[];
+
+    /**
+     * 按颜色分组的方块
+     */
+    "groups": VoxelGroup[] | null;
+
+    /**
+     * 超过上限被截断
+     */
+    "truncated": boolean;
+
+    /**
+     * 生效的渲染上限
+     */
+    "maxBlocks": number;
+}
+
+/**
  * LogLevel 日志级别（诊断页按 Level 过滤；向后兼容——旧日志无此字段时前端按 Status 兜底）
  */
 export enum LogLevel {
@@ -509,6 +600,82 @@ export interface PackInfo {
      * ysm-pack.png 的 base64 data URI
      */
     "imageBase64"?: string;
+}
+
+/**
+ * PackMetaView ReadPackMeta 的返回视图（pack.mcmeta 摘要，ADR-143 P1 struct 化）
+ */
+export interface PackMetaView {
+    "pack_format": number;
+    "description": string;
+    "thumbnail": string;
+    "supported_formats"?: number[] | null;
+    "min_format"?: number[] | null;
+    "max_format"?: number[] | null;
+}
+
+/**
+ * PackModelDetail ListPackModelsDetail 单条模型（路径 + 立方体数）
+ */
+export interface PackModelDetail {
+    "path": string;
+    "cubes": number;
+}
+
+/**
+ * PackModelDetailList ListPackModelsDetail 的返回（封顶 + total 全量）
+ */
+export interface PackModelDetailList {
+    "models": PackModelDetail[] | null;
+    "total": number;
+}
+
+/**
+ * ResourceSyncItem 单个资源文件的同步状态
+ */
+export interface ResourceSyncItem {
+    "path": string;
+    "name": string;
+    "status": SyncStatus;
+    "type": string;
+    "icon": string;
+    "size": number;
+
+    /**
+     * IsDir 标记该条目是文件夹（true）还是文件（false）
+     * 前端据此分流渲染：文件夹 → sm-dir（可展开），文件 → sm-item（扁平）
+     */
+    "isDir": boolean;
+
+    /**
+     * SubDir MMD 子目录分组（ADR-096：dirLevel 同步单元若位于
+     * mmdSubdirNames 命中的用途子目录内，填子目录名；根下为 ""=EntityPlayer）
+     */
+    "subdir"?: string;
+
+    /**
+     * Children 子条目列表（文件夹级同步单元的内部文件状态）
+     * 当同步单元是文件夹且存在内容级差异时，填充此字段
+     * 用于展示文件夹内部每个文件的真实同步状态
+     */
+    "children"?: ResourceSyncItem[] | null;
+}
+
+/**
+ * ResourceSyncResult 资源同步结果
+ */
+export interface ResourceSyncResult {
+    "synced": string[] | null;
+
+    /**
+     * 全局有但整合包没有（可推送）
+     */
+    "missing": string[] | null;
+
+    /**
+     * 整合包有但全局没有（可拉取）
+     */
+    "extra": string[] | null;
 }
 
 /**
@@ -662,6 +829,14 @@ export interface SearchResult {
 }
 
 /**
+ * ShaderpackLang ReadShaderpackLang 的返回（光影包 lang/en_US.lang 摘要）
+ */
+export interface ShaderpackLang {
+    "name": string;
+    "entries": { [_ in string]?: string } | null;
+}
+
+/**
  * SubModel 子模型条目（多角色加载）。
  * 来源优先级：L0（maid_model.json model[] 权威清单）→ L1（geoFiles 枚举兜底）。
  */
@@ -703,6 +878,39 @@ export interface SyncResolveResult {
 }
 
 /**
+ * SyncScanDirs GetSyncScanDirs 的返回（同步页展示实际扫描目录对）
+ */
+export interface SyncScanDirs {
+    "global": string;
+    "instance": string;
+    "warningCode": string;
+    "warningParams": { [_ in string]?: string } | null;
+}
+
+/**
+ * SyncStatus 资源文件同步状态
+ */
+export enum SyncStatus {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    SyncStatusSynced = "synced",
+    SyncStatusMissing = "missing",
+    SyncStatusOptional = "optional",
+    SyncStatusDisabled = "disabled",
+    SyncStatusLegacy = "legacy",
+
+    /**
+     * SyncStatusDiverged 文件夹级聚合状态：两侧同名文件夹存在内容级差异
+     * 子文件有 missing/optional/disabled 时，父文件夹标记为 diverged
+     * 前端渲染：继承 missing 的可操作属性（⬇️图标 + 推送按钮）
+     */
+    SyncStatusDiverged = "diverged",
+};
+
+/**
  * Variant 格式变体声明（ADR-111：variants 解耦）：
  * 同一资源类型内不同格式变体的预览器路由。
  * 例如角色模型（EntityPlayer）内 .pmx 用 mmd 预览器，.vrm 用 vrm 预览器。
@@ -727,6 +935,21 @@ export interface VersionInstance {
     "VersionDir": string;
     "CustomDir": string;
     "Exists": boolean;
+}
+
+/**
+ * VoxelGroup 同一颜色的方块组
+ */
+export interface VoxelGroup {
+    /**
+     * 十六进制颜色 "#7F7F7F"
+     */
+    "color": string;
+
+    /**
+     * [[x,y,z], ...]
+     */
+    "positions": number[][] | null;
 }
 
 /**

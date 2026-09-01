@@ -64,7 +64,7 @@
 | 回收站、删除、恢复、recycle、软删除 | [回收站 go/recycle](./go-recycle.md) ⚠️歧义（另见 recycle-bin.md、go-fileops.md等） | `go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`），包级函数… |
 | 扫描、扫描条目、文件树、哈希、缓存、作者提取、ScanEntries、索引生成 | [扫描核心 go/scanner](./go-scanner.md) ⚠️歧义（另见 go-avatar.md） | `go/scanner/` 包实现仓库文件扫描、哈希计算、缓存失效、作者提取、索引生成（ADR-003 P2 下沉，薄壳 `internal/app/app_scan.go` 仅保留依赖 App 的方法）。 |
 | 整合包、同步、实例、硬链接、符号链接、缺失、多余、.ban、PrismLauncher | [整合包同步 go/sync](./go-sync.md) ⚠️歧义（另见 go-instance.md、go-fileops.md等） | `go/sync/` 包负责模型库（全局仓库）与 Minecraft 整合包实例之间的同步：发现实例（原版 / PrismLauncher 布局）、按 SHA256 哈希对比出缺失/多余/禁用文件、按文件名或文件夹对比资源包差异、检测目标文… |
-| 标签、tag、分类、筛选、tag-editor | [标签系统 go/tags](./go-tags.md) ⚠️歧义（另见 dialog-tag-editor.md等） | `go/tags/` 包提供模型标签的线程安全持久化存储，是前端 tag-editor 弹窗的后端。标签存放在配置目录的 `tags.json`，以文件绝对路径为 key、标签列表为 value，与模型文件本身解耦（移动/链接模型不污染文件… |
+| 标签、tag、分类、筛选、tag-editor | [标签系统 go/tags](./go-tags.md) ⚠️歧义（另见 dialog-tag-editor.md、search.md等） | `go/tags/` 包提供模型标签的线程安全持久化存储，是前端 tag-editor 弹窗的后端。标签存放在配置目录的 `tags.json`，以文件绝对路径为 key、标签列表为 value，与模型文件本身解耦（移动/链接模型不污染文件… |
 | 3D 预览、骨骼、three.js、spec、顶点、UV、四元数、模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) ⚠️歧义（另见 app-preview.md、dom-fab.md、model3d.md等） | `go/threejs/` 包根据 YSMViewer 的 `ThreeJsPayloadBuilder.cs` 移植，把已解析的 `types.BedrockModel` 转换为 Three.js 可直接消费的 JSON spec：顶点、… |
 | 共享类型、AppConfig、配置、注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) ⚠️歧义（另见 resource-registry.md） | `go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_regist… |
 | 更新、自动更新、版本升级、updater | [自动更新 go/updater](./go-updater.md) ⚠️歧义（另见 version-updater.md等） | `go/updater/` 包负责 YSM 应用的自动更新机制。 |
@@ -72,7 +72,7 @@
 | YSM、解析、摘要、ysm 文件、元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | `go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。 |
 | 翻译、多语言、i18n、t()、语言切换、lang:changed | [国际化 i18n 模块](./i18n.md) | `i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化… |
 | 导入、导入队列、拖拽导入、文件夹导入、覆盖导入、import、拖拽 | [全局导入执行 import-executor](./import-queue.md) ⚠️歧义（另见 go-importer.md、global-handlers.md、pointer-events.md等） | **2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex… |
-| 模型统计、骨骼数、立方体数、纹理尺寸、SearchModels、数值筛选、Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | `frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo… |
+| 模型统计、骨骼数、立方体数、纹理尺寸、SearchModels、数值筛选、Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) ⚠️歧义（另见 search.md等） | `frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo… |
 | 2D 预览、骨骼图、Canvas 渲染、前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。 |
 | 3D 预览、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底、OrbitControls | [3D 预览渲染 model3d](./model3d.md) ⚠️歧义（另见 app-preview.md、dom-fab.md、go-threejs.md等） | 前端 Three.js 3D 渲染层（`frontend/src/preview-3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/m… |
 | 多模型、多组件、模型选择、select、zip 多模型、多 entry、多候选、ADR-132、蓝图 zip、litematic zip、容器内多 nbt | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的 |
@@ -92,6 +92,7 @@
 | 脚本参数、argv、parseArgs、手写参数解析、positional、未知 flag、脚本卫生、hygiene | [脚本 argv 规范与已知豁免 parse-args.ts](./scripts_argv.md) | `scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30… |
 | jscpd、go 重复代码、复制粘贴检测、duplicate、重复对、增量门禁、新增重复、独立 baseline | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | `scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd… |
 | README、脚本索引、登记处、脚本登记、check-readme-index、脚本漂移、脚本对账 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | `scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审… |
+| 搜索、筛选、关键词、标签筛选、数值筛选、三路交集、adv-filter、高级筛选、SearchModels | [搜索筛选编排 search](./search.md) ⚠️歧义（另见 go-tags.md、model-stats.md等） | 搜索筛选的**跨层端到端编排层**：前端工具栏搜索输入 → 关键词 + 标签 + 数值三路交集 → 后端 Go 一次性过滤 → 白名单回填 `buildTree` 精确匹配。 |
 | 符号提取、导出符号、顶层声明、api-break、audit-split、rollback-impact、bloat-history、依赖图、check-lib-adoption | [源码符号提取共享层 source-graph.ts](./source-graph.md) ⚠️歧义（另见 auto_import_split.md） | — |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试、mock、G-1 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) ⚠️歧义（另见 frontend_test_audit.md） | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 sle… |
 | UI 组件、UI 组件库、卡片组件、折叠面板、加载动画、滑块、行组件、预设、图标、幻灯片菜单、组件样式 | [UI 组件库 ui-components](./ui_components.md) ⚠️歧义（另见 dialog-batch-rename.md） | `frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 … |

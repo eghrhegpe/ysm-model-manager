@@ -1,6 +1,6 @@
-// ===== app_sync.go（同步冲突检测/解决绑定）JSON 契约测试 =====
-// 覆盖：错误消息 JSON 转义（含引号/反斜杠仍可解析）、缺失目录时 error 字段
-// 必须存在（防假阴性「✅ 无冲突」）、空冲突报告合法 JSON（code_review P2 回归）。
+// ===== app_sync.go（同步冲突检测/解决绑定）契约测试 =====
+// 覆盖：错误消息 JSON 转义（含引号/反斜杠仍可解析）、缺失目录时返回 Go error
+// 必须非 nil（防假阴性「✅ 无冲突」）、空冲突报告合法（code_review P2 回归）。
 package app
 
 import (
@@ -42,44 +42,20 @@ func TestBuildSyncErrorJSON_EscapesUnsafeMessage(t *testing.T) {
 	}
 }
 
-// 未配置游戏根目录 → 必须返回带 error 字段的 JSON，而非「空冲突报告」——
+// 未配置游戏根目录 → 必须返回 error，而非「空冲突报告」——
 // 否则前端把「无法扫描」当「✅ 未检测到同步冲突」假阴性（code_review P2）。
 func TestDetectConflicts_NoMcRoot_ReturnsError(t *testing.T) {
 	a := repoApp(t, types.AppConfig{}) // McRoot 空
-	got := a.DetectConflicts("ysm", "test-instance")
-	if !json.Valid([]byte(got)) {
-		t.Fatalf("返回非法 JSON: %s", got)
-	}
-	var parsed struct {
-		Error     string `json:"error"`
-		Conflicts any    `json:"conflicts"`
-	}
-	if err := json.Unmarshal([]byte(got), &parsed); err != nil {
-		t.Fatalf("解析失败: %v", err)
-	}
-	if parsed.Error == "" {
-		t.Error("错误响应必须含非空 error 字段，避免假阴性（code_review P2）")
-	}
-	if parsed.Conflicts == nil {
-		t.Error("conflicts 字段必须存在")
+	if _, err := a.DetectConflicts("ysm", "test-instance"); err == nil {
+		t.Fatal("错误响应必须返回非 nil error，避免假阴性（code_review P2）")
 	}
 }
 
-// 未配置游戏根目录时 ResolveConflicts 也必须带 error 字段。
+// 未配置游戏根目录时 ResolveConflicts 也必须返回 error。
 func TestResolveConflicts_NoMcRoot_ReturnsError(t *testing.T) {
 	a := repoApp(t, types.AppConfig{})
-	got := a.ResolveConflicts(`[]`, "force_remote", "ysm", "test-instance")
-	var parsed struct {
-		Error    string `json:"error"`
-		Resolved int    `json:"resolved"`
-		Failed   int    `json:"failed"`
-		Manual   int    `json:"manual"`
-	}
-	if err := json.Unmarshal([]byte(got), &parsed); err != nil {
-		t.Fatalf("非法 JSON: %v / raw: %s", err, got)
-	}
-	if parsed.Error == "" {
-		t.Error("ResolveConflicts 错误响应必须含 error 字段")
+	if _, err := a.ResolveConflicts(`[]`, "force_remote", "ysm", "test-instance"); err == nil {
+		t.Fatal("ResolveConflicts 错误响应必须返回非 nil error")
 	}
 }
 
@@ -127,19 +103,9 @@ func TestDetectConflicts_NoFilesRoot_ReturnsError(t *testing.T) {
 	base := t.TempDir()
 	// FilesRoot 空 → GetRepoRoot 返回空 → filesRootForSync 失败
 	a := repoApp(t, types.AppConfig{FilesRoot: "", McRoot: base})
-	got := a.DetectConflicts("ysm", "test-instance")
 
-	if !json.Valid([]byte(got)) {
-		t.Fatalf("返回非法 JSON: %s", got)
-	}
-	var parsed struct {
-		Error string `json:"error"`
-	}
-	if err := json.Unmarshal([]byte(got), &parsed); err != nil {
-		t.Fatalf("解析失败: %v", err)
-	}
-	if parsed.Error == "" {
-		t.Error("错误响应必须含非空 error 字段")
+	if _, err := a.DetectConflicts("ysm", "test-instance"); err == nil {
+		t.Fatal("错误响应必须返回非 nil error")
 	}
 }
 
@@ -148,22 +114,13 @@ func TestDetectConflicts_NoInstance_ReturnsError(t *testing.T) {
 	base := t.TempDir()
 	// McRoot 有效，FilesRoot 也有效（为了通过前置检查），但 instanceName 不存在
 	a := repoApp(t, types.AppConfig{FilesRoot: base, McRoot: base})
-	got := a.DetectConflicts("ysm", "non-existent-instance")
 
-	if !json.Valid([]byte(got)) {
-		t.Fatalf("返回非法 JSON: %s", got)
-	}
-	var parsed struct {
-		Error string `json:"error"`
-	}
-	if err := json.Unmarshal([]byte(got), &parsed); err != nil {
-		t.Fatalf("解析失败: %v", err)
-	}
-	if parsed.Error == "" {
-		t.Error("错误响应必须含非空 error 字段")
+	_, err := a.DetectConflicts("ysm", "non-existent-instance")
+	if err == nil {
+		t.Fatal("错误响应必须返回非 nil error")
 	}
 	// 进一步断言错误信息内容
-	if !strings.Contains(parsed.Error, "未找到整合包") {
-		t.Errorf("错误信息应包含 '未找到整合包', got %q", parsed.Error)
+	if !strings.Contains(err.Error(), "未找到整合包") {
+		t.Errorf("错误信息应包含 '未找到整合包', got %q", err.Error())
 	}
 }

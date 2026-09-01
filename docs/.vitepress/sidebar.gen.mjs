@@ -1722,6 +1722,10 @@ export const autoSidebar = [
             "link": "/knowledge/resource-packs"
           },
           {
+            "text": "搜索筛选编排 search",
+            "link": "/knowledge/search"
+          },
+          {
             "text": "版本更新 version-updater",
             "link": "/knowledge/version-updater"
           }

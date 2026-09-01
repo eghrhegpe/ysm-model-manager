@@ -349,14 +349,15 @@ func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 // ========== 资源同步 ==========
 
 // SyncResources 获取全局 ↔ 整合包的资源同步状态
-func (a *App) SyncResources(rtype, instanceName string) string {
+func (a *App) SyncResources(rtype, instanceName string) (types.ResourceSyncResult, error) {
 	cfg := a.LoadAppConfig()
+	empty := types.ResourceSyncResult{}
 	if cfg.McRoot == "" {
-		return `{"synced":[],"missing":[],"extra":[]}`
+		return empty, fmt.Errorf("未配置游戏根目录")
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
 	if globalDir == "" {
-		return `{"synced":[],"missing":[],"extra":[]}`
+		return empty, fmt.Errorf("未设置%s目录", rtype)
 	}
 
 	// 找整合包
@@ -366,7 +367,7 @@ func (a *App) SyncResources(rtype, instanceName string) string {
 		if ins.Name == instanceName {
 			subDir := types.SubDirMap(rtype)
 			if subDir == "" {
-				return `{"synced":[],"missing":[],"extra":[]}`
+				return empty, fmt.Errorf("未知资源类型: %s", rtype)
 			}
 			// 与展示层同口径：FindInstDir 标准目录无该类型文件时兜底扫描
 			// （Sable-Schematics 等非标准目录；原直拼 schematics 与此 binding
@@ -376,13 +377,13 @@ func (a *App) SyncResources(rtype, instanceName string) string {
 		}
 	}
 	if targetDir == "" {
-		return `{"synced":[],"missing":[],"extra":[]}`
+		return empty, fmt.Errorf("未找到整合包: %s", instanceName)
 	}
 
 	// ADR-064 审核修复：原未传 rtype → IsResourceAllowed 全扩展集过滤返回跨类型条目；
 	// 传 rtype 保持与同步管理器同口径（虽然前端当前不消费此 binding，防未来埋雷）
 	result := ysmsync.SyncResources(globalDir, targetDir, rtype)
-	return marshalJSON("SyncResourcesToInstance", result, `{"error":"json marshal failed"}`)
+	return result, nil
 }
 
 // PushResourceToInstance 将全局中缺失的资源推送到整合包
@@ -524,10 +525,11 @@ func globalRootSuspicious(dir string) bool {
 //
 // 用途：让前端同步页展示“到底从哪个文件夹扫”，尤其兜底命中 Sable-Schematics 时用户可见。
 // 不触发全量扫描，仅做目录解析 + 标准目录存在性/证据检查，体感轻量。
-func (a *App) GetSyncScanDirs(rtype, instanceName string) string {
+func (a *App) GetSyncScanDirs(rtype, instanceName string) (types.SyncScanDirs, error) {
 	cfg := a.LoadAppConfig()
+	empty := types.SyncScanDirs{WarningParams: map[string]string{}}
 	if cfg.McRoot == "" {
-		return `{"global":"","instance":"","warningCode":"","warningParams":{}}`
+		return empty, fmt.Errorf("未配置游戏根目录")
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
 	warningCode := ""
@@ -554,29 +556,21 @@ func (a *App) GetSyncScanDirs(rtype, instanceName string) string {
 			break
 		}
 	}
-	return marshalJSON(
-		"GetSyncScanDirs",
-		map[string]any{
-			"global":        globalDir,
-			"instance":      instanceDir,
-			"warningCode":   warningCode,
-			"warningParams": warningParams,
-		},
-		`{"global":"","instance":"","warningCode":"","warningParams":{}}`,
-	)
+	return types.SyncScanDirs{
+		Global:        globalDir,
+		Instance:      instanceDir,
+		WarningCode:   warningCode,
+		WarningParams: warningParams,
+	}, nil
 }
 
 // ========== 整合包全类型同步状态 ==========
 
-// GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表）
-// subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDirGrouping 类型有效——路径限定。
-// rtype 可选，指定资源类型 ID（如 ysm/maid-model），非空时只遍历该类型，避免全类型扫描
-// 触发 walk error 刷屏；空时保持现状（全类型遍历）。
 // GetInstanceSyncStatus 整合包同步状态（组装逻辑已下沉 go/instance，此处仅注入依赖）
-func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype string) string {
+func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype string) ([]types.ResourceSyncItem, error) {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
-		return "[]"
+		return nil, fmt.Errorf("未配置游戏根目录")
 	}
 
 	// 加载资源类型注册表
@@ -621,7 +615,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 		}
 	}
 	if targetIns == nil {
-		return "[]"
+		return nil, fmt.Errorf("未找到整合包: %s", instanceName)
 	}
 
 	// 收集各资源类型的仓库根目录（同步基准：subDirGrouping 类型用 group 根，与仓库树对齐）
@@ -631,7 +625,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 	}
 
 	items := instance.BuildSyncItems(targetIns, registry.ResourceTypes, roots, subtype)
-	return marshalJSON("BuildSyncItems", items, `{"error":"json marshal failed"}`)
+	return items, nil
 }
 
 // ========== YSM 检测 ==========

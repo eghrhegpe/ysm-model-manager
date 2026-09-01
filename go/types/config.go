@@ -108,6 +108,42 @@ type SyncResolveResult struct {
 	Manual int `json:"manual"`
 }
 
+// PackMetaView ReadPackMeta 的返回视图（pack.mcmeta 摘要，ADR-143 P1 struct 化）
+type PackMetaView struct {
+	PackFormat       int    `json:"pack_format"`
+	Description      string `json:"description"`
+	Thumbnail        string `json:"thumbnail"`
+	SupportedFormats []int  `json:"supported_formats,omitempty"`
+	MinFormat        []int  `json:"min_format,omitempty"`
+	MaxFormat        []int  `json:"max_format,omitempty"`
+}
+
+// ShaderpackLang ReadShaderpackLang 的返回（光影包 lang/en_US.lang 摘要）
+type ShaderpackLang struct {
+	Name    string            `json:"name"`
+	Entries map[string]string `json:"entries"`
+}
+
+// SyncScanDirs GetSyncScanDirs 的返回（同步页展示实际扫描目录对）
+type SyncScanDirs struct {
+	Global        string            `json:"global"`
+	Instance      string            `json:"instance"`
+	WarningCode   string            `json:"warningCode"`
+	WarningParams map[string]string `json:"warningParams"`
+}
+
+// PackModelDetail ListPackModelsDetail 单条模型（路径 + 立方体数）
+type PackModelDetail struct {
+	Path  string `json:"path"`
+	Cubes int    `json:"cubes"`
+}
+
+// PackModelDetailList ListPackModelsDetail 的返回（封顶 + total 全量）
+type PackModelDetailList struct {
+	Models []PackModelDetail `json:"models"`
+	Total  int               `json:"total"`
+}
+
 // ParseDedupConfig 解析去重配置 JSON 字符串（绑定层 configStr 的统一入口）。
 // raw 为空串 → 返回 nil,nil（未配置，消费端走默认行为）；非法 JSON → 返回错误。
 // 提取为公共函数，避免 FindDuplicateFiles / CountDuplicates 等入口各自内联 json.Unmarshal

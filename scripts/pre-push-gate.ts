@@ -365,7 +365,7 @@ async function main() {
     const t3 = Date.now();
     const bc = await shAsync('node scripts/binding-check.ts --json');
     record('binding-check', bc.rc === 0, { time: Date.now() - t3, tail: bc.rc ? bc.out.trim().split('\n').slice(-4).join('\n') : '' });
-    }),
+    })(),
     (async () => {
       if (!plan.frontend) return;
     // 分层守护：前端目录间反向依赖（R1/R2 零容忍 + R3/R4 基线，现基线 0 条）
@@ -454,7 +454,7 @@ async function main() {
     // 与 frontend/package.json test 对齐：--maxWorkers 8（24 核默认并发过载反慢 ~10s）
     const ft = await shAsync('npx vitest run --maxWorkers 8', { cwd: path.join(ROOT, 'frontend') });
     record('vitest run', ft.rc === 0, { time: Date.now() - t1, tail: ft.rc ? ft.out.trim().split('\n').slice(-4).join('\n') : '' });
-    })
+    })()
   ]);
 
   /* --- 数据域 --- */

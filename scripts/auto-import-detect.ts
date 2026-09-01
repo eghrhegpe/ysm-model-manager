@@ -35,11 +35,15 @@ export function relativeImportSpec(fromFile: string, toFile: string) {
  * 检测单个文件的缺失 import。
  * @param {string} file 绝对路径
  * @param {Map<string, Array<{file:string,isType:boolean}>>} symbolMap 全局导出表
+ * @param {Map<string, {stripped:string, tokens:Array<{name:string,start:number,line:number}>}>} [cache]
+ *   跨调用共享的 tokenize 缓存（run() 里 buildSymbolMap 与 checkFile 复用同一份词法结果，
+ *   避免同一文件被 tokenize 两遍——全量扫描下这是检测总耗时的双倍来源）。
  * @returns {Array<{symbol:string,line:number,typeOnly:boolean,candidates:string[]}>}
  */
-export function checkFile(file: string, symbolMap: Map<string, Array<{ file: string; isType: boolean }>>) {
-  const text = readText(file);
-  const { stripped, tokens } = tokenize(text);
+export function checkFile(file: string, symbolMap: Map<string, Array<{ file: string; isType: boolean }>>, cache?: Map<string, { stripped: string; tokens: Array<{ name: string; start: number; line: number }>; text: string }>) {
+  const entry = cache?.get(file) ?? (() => { const text = readText(file); const { stripped, tokens } = tokenize(text); return { stripped, tokens, text }; })();
+  if (cache && !cache.has(file)) cache.set(file, entry);
+  const { stripped, tokens, text } = entry;
   const defined = extractDefined(stripped);
   const imported = extractImported(stripped);
   const selfExports = new Set(extractExports(stripped).map((e) => e.name));
@@ -101,11 +105,17 @@ export function checkFile(file: string, symbolMap: Map<string, Array<{ file: str
   return out;
 }
 
-/** 构建全局导出符号表：name → [{file, isType}]。 */
-export function buildSymbolMap(files: string[]) {
+/** 构建全局导出符号表：name → [{file, isType}]。
+ * @param {string[]} files 绝对路径列表
+ * @param {Map<string, {stripped:string, tokens:Array<{name:string,start:number,line:number}>, text:string}>} [cache]
+ *   共享 tokenize 缓存（run() 传入，与 checkFile 复用同一份词法结果）。
+ */
+export function buildSymbolMap(files: string[], cache?: Map<string, { stripped: string; tokens: Array<{ name: string; start: number; line: number }>; text: string }>) {
   const map = new Map();
   for (const f of files) {
-    const stripped = tokenize(readText(f)).stripped;
+    const entry = cache?.get(f) ?? (() => { const text = readText(f); const { stripped, tokens } = tokenize(text); return { stripped, tokens, text }; })();
+    if (cache && !cache.has(f)) cache.set(f, entry);
+    const stripped = entry.stripped;
     for (const e of extractExports(stripped)) {
       if (!map.has(e.name)) map.set(e.name, []);
       map.get(e.name).push({ file: f, isType: e.isType });
@@ -131,12 +141,18 @@ export function collectFiles({ srcDir = SRC_DIR, targets = [], includeJs = false
  * @param {{srcDir:string, targets:string[], includeJs:boolean}} opts
  */
 export function run({ srcDir = SRC_DIR, targets = [], includeJs = false }: { srcDir?: string; targets?: string[]; includeJs?: boolean } = {}) {
-  const files = collectFiles({ srcDir, targets, includeJs });
+  const all = walk(srcDir) as string[];
+  const files = targets.length > 0
+    ? targets.map((t) => path.resolve(t)).filter((p) => fs.existsSync(p) && fs.statSync(p).isFile())
+    : all.filter((p) => includeJs || (p as string).endsWith('.ts'));
+  // tokenize 单次缓存：buildSymbolMap 与 checkFile 复用同一份词法结果，
+  // 避免同一文件被 readText+tokenize 两遍（全量 400+ 文件时接近双倍耗时）。
+  const cache = new Map<string, { stripped: string; tokens: Array<{ name: string; start: number; line: number }>; text: string }>();
   // 符号表始终基于全量 walk（单文件模式也要跨模块解析）
-  const symbolMap = buildSymbolMap(walk(srcDir) as string[]);
+  const symbolMap = buildSymbolMap(all, cache);
   const suggestions: Array<{ file: string; missing: any[] }> = [];
   for (const f of files) {
-    const found = checkFile(f, symbolMap);
+    const found = checkFile(f, symbolMap, cache);
     if (found.length) suggestions.push({ file: f, missing: found });
   }
   const totalMissing = suggestions.reduce((n, s) => n + s.missing.length, 0);

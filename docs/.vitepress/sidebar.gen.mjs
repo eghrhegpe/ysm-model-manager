@@ -714,6 +714,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-144：types 解耦 container：识别大脑下沉 packs",
+        "link": "/adr/ADR-144-types-container-decouple"
+      },
+      {
+        "text": "ADR-143：绑定返回值去 string-JSON 化（铲债决策）",
+        "link": "/adr/ADR-143-binding-json-to-struct"
+      },
+      {
         "text": "ADR-142：缓存三通道统一：texture-cache 内存池 + 磁盘压缩分层",
         "link": "/adr/ADR-142-texture-cache-channel-unification"
       },
@@ -1314,6 +1322,10 @@ export const autoSidebar = [
           {
             "text": "浏览器后端 IndexedDB 封装",
             "link": "/knowledge/backend-idb"
+          },
+          {
+            "text": "string-JSON 绑定铲债清单",
+            "link": "/knowledge/binding_json_cleanup"
           },
           {
             "text": "事件总线 bus.ts",

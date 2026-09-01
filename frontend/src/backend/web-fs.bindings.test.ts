@@ -1044,4 +1044,41 @@ describe("scanWebModels 根扫描批量收敛（P0-1）", () => {
     expect(entries.find((e) => e.Path.includes("模型C"))?.Size).toBe("x".length);
     expect(entries.find((e) => e.Path.includes("模型D"))?.Size).toBe("y".length);
   });
+
+  it("同首段不同子组：分桶后前缀匹配正确，不串组", async () => {
+    // 两个组共享首段"分类"，但子组不同
+    await seedGroup("ysm", "分类/组A", { "a.ysm": enc.encode("aaa"), "tex/a.png": PNG });
+    await seedGroup("ysm", "分类/组B", { "b.ysm": enc.encode("bbb"), "tex/b.png": PNG });
+    await seedGroup("ysm", "其他/组C", { "c.ysm": enc.encode("ccc") });
+    const entries = await scanWebModels("/web/ysm");
+    expect(entries).toHaveLength(3);
+    // 每个组的主文件和大小应正确对应
+    const byPath = Object.fromEntries(entries.map((e) => [e.Path, e]));
+    expect(byPath["/web/ysm/分类/组A/a.ysm"]?.Size).toBe("aaa".length + PNG.length);
+    expect(byPath["/web/ysm/分类/组B/b.ysm"]?.Size).toBe("bbb".length + PNG.length);
+    expect(byPath["/web/ysm/其他/组C/c.ysm"]?.Size).toBe("ccc".length);
+    // 主文件正确：组A选 a.ysm（rank 3），组B选 b.ysm，组C选 c.ysm
+    expect(byPath["/web/ysm/分类/组A/a.ysm"].Name).toBe("a.ysm");
+    expect(byPath["/web/ysm/分类/组B/b.ysm"].Name).toBe("b.ysm");
+    expect(byPath["/web/ysm/其他/组C/c.ysm"].Name).toBe("c.ysm");
+  });
+
+  it("大库场景：100 个单段组 + 50 个多段组，分桶后扫描正确且高效", async () => {
+    // 创建 100 个单段组
+    for (let i = 0; i < 100; i++) {
+      await seedGroup("ysm", `组${i}`, { [`file${i}.ysm`]: enc.encode(`data${i}`) });
+    }
+    // 创建 50 个多段组（共享首段"分类"）
+    for (let i = 0; i < 50; i++) {
+      await seedGroup("ysm", `分类/子组${i}`, { [`sub${i}.ysm`]: enc.encode(`subdata${i}`) });
+    }
+    idb.idbGetAll.mockClear();
+    const entries = await scanWebModels("/web/ysm");
+    expect(entries).toHaveLength(150);
+    // 验证 getAll 调用次数：dir + file 各 1 次（共 2 次）
+    const getAllCalls = idb.idbGetAll.mock.calls;
+    expect(getAllCalls).toHaveLength(2);
+    expect(getAllCalls.some((c) => c[1] === "dir:ysm/")).toBe(true);
+    expect(getAllCalls.some((c) => c[1] === "file:ysm/")).toBe(true);
+  });
 });

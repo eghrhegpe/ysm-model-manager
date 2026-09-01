@@ -14,7 +14,7 @@ source_files:
   - frontend/src/views/app-preview/view-shell.ts
   - frontend/src/views/app-preview/mmd-siblings.ts
   - frontend/src/preview-3d/adapters/camera-controls.ts
-  - frontend/src/preview-3d/schema-registry.ts
+  - frontend/src/preview-3d/adapters/schema-registry.ts
 tests:
   - frontend/src/views/app-preview/mmd-controls.test.ts
   - frontend/src/views/app-preview/vrm-controls.test.ts

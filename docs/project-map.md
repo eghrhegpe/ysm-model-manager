@@ -99,7 +99,6 @@
 | `CONTRIBUTING.md` | 贡献指南 |
 | `README.md` | 项目说明（面向用户） |
 | `SECURITY.md` | 安全政策（漏洞报告渠道与披露流程） |
-| `_audit.json` | ⚠️ 用途待补（在 docs/project-map.md 本表补一句） |
 | `creators.json` | 创作者数据 |
 | `embed.go` | 内嵌资源声明（embed 文件系统） |
 | `main.go` | 程序入口（薄壳，GUI 构建） |

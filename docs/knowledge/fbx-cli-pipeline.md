@@ -5,7 +5,6 @@ tier: architecture
 category: go
 source_files:
   - go/cli/
-  - scripts/
 use_when:
   - FBX
   - CLI

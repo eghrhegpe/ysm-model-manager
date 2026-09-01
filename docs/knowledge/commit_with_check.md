@@ -7,6 +7,7 @@ source_files:
   - scripts/commit-with-check.ts
   - scripts/_lib/commit-temp-index.ts
   - scripts/_lib/gen-cmds.ts
+  - scripts/reproduce-commit-interrupt.ts
 use_when:
   - commit-with-check
   - 自动提交
@@ -57,6 +58,7 @@ node scripts/commit-with-check.ts -m "feat: xxx" --keep-index      # 提交后�
 - 越界文件必须 exit 1（并发夹带/意外 stage 检出口）；插队仅 notice 不自动回退（共享 checkout 下 reset 会撤他人提交）
 - 临时索引成功/失败两路径均清理（`.git` 无 `index.ymm.*` 残留）
 - `--files` 白名单路径内容取工作区，不依赖主 index 已暂存
+- **中断残留边界**：进程被 `kill -9` / 工具层强杀时 `finally` 无法执行——临时 index 恒残留；若 git 子进程已写 ref 则 HEAD 推进（commit 落地）、未写完则丢弃。复现：`node scripts/reproduce-commit-interrupt.ts`（双变体：A 未完成被中断 / B 已完成清理未跑，即实战场景）。启动时清扫遗留 `index.ymm.*`（按 pid 存活判定）为待落地对策
 
 ## 相关
 

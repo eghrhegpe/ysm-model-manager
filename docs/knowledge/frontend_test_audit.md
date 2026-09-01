@@ -4,7 +4,21 @@ name: 前端测试基建审计
 tier: architecture
 category: core
 source_files:
-  - tests/
+  - tests/test_resource_schema.ts
+  - tests/test_mock_contract.ts
+  - tests/test_bus_contract.ts
+  - tests/test_cli_doc_parity.ts
+  - tests/test_api_break.ts
+  - tests/test_cli_completion_parity.ts
+  - tests/test_check_layering.ts
+  - tests/test_testid_contract.ts
+  - tests/test_html_integrity.ts
+  - tests/check-knowledge-drift-affected.ts
+  - tests/verify-adr-042.ts
+  - tests/test_codemod_guards.ts
+  - tests/test_private_access_contract.ts
+  - tests/test_scripts_json.ts
+  - tests/test_config_defaults.ts
   - frontend/e2e/
   - frontend/e2e-web/
 use_when:

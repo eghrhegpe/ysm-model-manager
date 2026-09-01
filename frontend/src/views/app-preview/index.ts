@@ -156,6 +156,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   }
 
   disconnectedCallback(): void {
+    // 切页：作废在飞预览渲染（代际守卫），并重置 _typeReg 重建窗口
+    // —— 若上一实例 _typeReg 曾因 LoadResourceTypes 迟到而冻结为 {}，重挂载后自愈
+    this._previewGuard.invalidate();
     // 快照遍历：unsub 内部可能 splice 自身（如 close3D 的 P3 修复），
     // 用 slice() 防止 forEach 遍历中移除元素导致跳项
     this.unsubs.slice().forEach((fn) => fn());
@@ -233,6 +236,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       const { LoadResourceTypes } = await getApp();
       const reg = await LoadResourceTypes();
       this._typeCache = reg?.resourceTypes || [];
+      this._typeReg = null; // 强制下次 _typeMeta 按新 _typeCache 重建；防 LoadResourceTypes 迟到时 _typeReg 永久冻结为 {}
     } catch (e) { console.warn("[preview] LoadResourceTypes:", e); }
   }
 

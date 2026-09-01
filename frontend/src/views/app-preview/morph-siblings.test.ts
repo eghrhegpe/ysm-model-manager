@@ -11,7 +11,7 @@ const { getAppMock, getRepoRootMock, scanFilteredMock } = vi.hoisted(() => ({
 }));
 vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
 
-import { resolveMorphSiblings } from "./morph-siblings.ts";
+import { resolveMorphSiblings } from "./siblings.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

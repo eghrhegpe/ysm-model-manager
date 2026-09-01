@@ -11,7 +11,7 @@ const { getAppMock, getRepoRootMock, scanFilteredMock } = vi.hoisted(() => ({
 }));
 vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
 
-import { resolveSceneSiblings } from "./scene-siblings.ts";
+import { resolveSceneSiblings } from "./siblings.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

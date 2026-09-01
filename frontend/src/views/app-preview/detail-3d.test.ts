@@ -45,10 +45,8 @@ vi.mock("./mmd-siblings.ts", () => ({
 vi.mock("./fbx-siblings.ts", () => ({
   resolveFbxSiblings: resolveFbxSiblingsMock,
 }));
-vi.mock("./scene-siblings.ts", () => ({
+vi.mock("./siblings.ts", () => ({
   resolveSceneSiblings: resolveSceneSiblingsMock,
-}));
-vi.mock("./morph-siblings.ts", () => ({
   resolveMorphSiblings: resolveMorphSiblingsMock,
 }));
 vi.mock("./stage-siblings.ts", () => ({

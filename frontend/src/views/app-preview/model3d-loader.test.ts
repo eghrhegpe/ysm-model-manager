@@ -364,4 +364,41 @@ describe("preloadModel / fetchSpec", () => {
       clearLoadTraces();
     }
   });
+
+  it("LRU：满员（>20）淘汰最久未用首项，被淘汰路径再次访问重新走 GetModel3DSpec", async () => {
+    // 兜底 SPEC_CACHE_MAX=20：第 21 个不同路径入缓存时，cacheSpec 淘汰 Map 首项（最久未用）
+    specMock.mockResolvedValue(spec());
+    vi.stubGlobal("Image", FakeImage);
+    try {
+      const first = "/m/lru-evict-0.ysm";
+      await preloadModel({ _modelPath: first, texture: "t.png" }); // 入缓存（spec 调用 1）
+      for (let i = 1; i <= 20; i++) {
+        await preloadModel({ _modelPath: `/m/lru-evict-${i}.ysm`, texture: "t.png" }); // 第 21 次触发淘汰首项
+      }
+      expect(specMock.mock.calls.filter((c) => c[0] === first).length).toBe(1); // 尚未重访
+      await preloadModel({ _modelPath: first, texture: "t.png" }); // 已淘汰 → 重新请求
+      expect(specMock.mock.calls.filter((c) => c[0] === first).length).toBe(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("LRU：高频命中刷新访问序，重访项不被后续冷数据挤出", async () => {
+    // getCachedSpec 读命中 delete+set 刷新到最近 → hot 项在满员后仍存活
+    specMock.mockResolvedValue(spec());
+    vi.stubGlobal("Image", FakeImage);
+    try {
+      const hot = "/m/lru-hot.ysm";
+      await preloadModel({ _modelPath: hot, texture: "t.png" }); // 入缓存
+      for (let i = 1; i <= 19; i++) {
+        await preloadModel({ _modelPath: `/m/lru-cold-${i}.ysm`, texture: "t.png" }); // 填满 20
+      }
+      await preloadModel({ _modelPath: hot, texture: "t.png" }); // 命中 → 刷新到最近
+      await preloadModel({ _modelPath: "/m/lru-cold-20.ysm", texture: "t.png" }); // 第 21 次：淘汰最旧冷项，非 hot
+      await preloadModel({ _modelPath: hot, texture: "t.png" }); // 仍命中
+      expect(specMock.mock.calls.filter((c) => c[0] === hot).length).toBe(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

@@ -3,22 +3,33 @@
 // 归位 views 层（ADR-072 根治：依赖 getApp 读仓库根，属视图壳数据能力，
 // 不该被 preview-3d/adapters 反向 import —— 那会与 adapter → controls 形成循环依赖环）。
 import { getApp } from "../../backend/app.ts";
-import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 
 /**
  * 解析某资源类型的同目录候选主文件路径列表。
  * @param rtype  资源类型 id（RESOURCE_TYPES.*），传给 Go `GetRepoRoot` + `ScanModelEntriesFiltered`
  * @returns 候选绝对路径列表；根为空 / 扫描失败 → []（调用方下拉不渲染，不阻断）
  */
-export async function resolveSiblingsByType(rtype: string): Promise<string[]> {
+export async function resolveSiblingsByType(rtype: string, filterExt?: RegExp): Promise<string[]> {
   try {
     const app = await getApp();
     const root = await app.GetRepoRoot(rtype);
     if (!root) return [];
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
     const entries = await app.ScanModelEntriesFiltered(root, rtype, "", label);
-    return (entries || []).map((e) => e.Path || "");
+    const paths = (entries || []).map((e) => e.Path || "");
+    return filterExt ? paths.filter((p) => filterExt.test(p)) : paths;
   } catch {
     return [];
   }
+}
+
+// 场景模型候选（只扫 SceneModel 子目录）；保留最小扩展名守卫防列表出现加载不了的破碎预览
+export async function resolveSceneSiblings(): Promise<string[]> {
+  return resolveSiblingsByType(RESOURCE_TYPES.SCENE, /\.(pmx|pmd)$/i);
+}
+
+// CustomMorph 候选（只扫 CustomMorph 子目录的 VPD）；保留最小扩展名守卫防不可应用条目
+export async function resolveMorphSiblings(): Promise<string[]> {
+  return resolveSiblingsByType(RESOURCE_TYPES.CUSTOM_MORPH, /\.(vpd)$/i);
 }

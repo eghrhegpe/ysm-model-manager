@@ -210,8 +210,8 @@
 | `frontend/src/features/oldest-models.ts` | 57 |
 | `frontend/src/features/recycle-bin.ts` | 186 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 384 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 274 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 341 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 273 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 340 |
 | `frontend/src/views/app-tree/events.ts` | 155 |
 | `frontend/src/views/app-tree/events.ts` | 252 |
 | `frontend/src/views/app-tree/index.ts` | 410 |
@@ -501,10 +501,10 @@
 | `frontend/src/views/app-content/workshop-tabs.ts` | 91 |
 | `frontend/src/views/app-content/workshop-tabs.ts` | 139 |
 | `frontend/src/views/app-nav/index.ts` | 114 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 287 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 353 |
-| `frontend/src/views/app-preview/index.ts` | 244 |
-| `frontend/src/views/app-preview/index.ts` | 266 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 286 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 352 |
+| `frontend/src/views/app-preview/index.ts` | 248 |
+| `frontend/src/views/app-preview/index.ts` | 270 |
 | `frontend/src/views/app-preview/preview-library.ts` | 98 |
 | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |

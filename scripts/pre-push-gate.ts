@@ -126,7 +126,7 @@ function resolveChanges(localRef: string, localOid: string, remoteOid: string) {
 /* ---------------- 检查执行 ---------------- */
 
 async function runContractTests() {
-  /** tests/*.mjs 全量契约测试（宪法基石，退出码可信）。并行执行。 */
+  /** tests/*.ts 全量契约测试（宪法基石，退出码可信）。并行执行。 */
   return runContractTestsParallel();
 }
 
@@ -506,7 +506,7 @@ async function main() {
     const ok = tests.length === 0 || tests.every((t) => t.ok);
     record(`contract tests (${tests.length})`, ok, {
       time: Date.now() - t0,
-      note: tests.length === 0 ? '无 tests/*.mjs，跳过'
+      note: tests.length === 0 ? '无 tests/*.ts，跳过'
         : (ok ? '全部通过' : tests.filter((t) => !t.ok).map((t) => `${t.name}\n${t.out}`).join('\n')),
     });
   }

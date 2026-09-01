@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in tests/*.mjs; do node "$f"; done
+          for f in tests/*.ts; do node "$f"; done
           node scripts/link-checker.ts --strict
 
       - name: 配置 Pages

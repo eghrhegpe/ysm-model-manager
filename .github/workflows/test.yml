@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # 契约测试（test_api_break.mjs）用真实历史 ref 对做端到端断言，
+          # 契约测试（test_api_break.ts）用真实历史 ref 对做端到端断言，
           # 浅克隆（默认 depth=1）拿不到历史提交会报「无效 ref」——拉全量历史
           fetch-depth: 0
 
@@ -66,10 +66,10 @@ jobs:
           Add-Content -Path "$env:GITHUB_PATH" -Value $bin
           & "$bin\rg.exe" --version
 
-      - name: 契约测试（tests/，Node .mjs，禁止修改测试文件）
+      - name: 契约测试（tests/，Node .ts，禁止修改测试文件）
         shell: pwsh
         run: |
-          $files = Get-ChildItem tests/*.mjs
+          $files = Get-ChildItem tests/*.ts
           foreach ($f in $files) {
             node $f.FullName
             if ($LASTEXITCODE -ne 0) {

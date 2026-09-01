@@ -25,7 +25,9 @@ import { frameCameraSide } from "../camera-setup.ts";
 
 /** Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） */
 export interface PackDeps {
-  readEntry(path: string, entry: string): Promise<string>;
+  // ADR-143 P2：ReadPackEntry 失败返回 null（base64 或 null），消费点（loadTexture /
+  // parseJavaModel 的 PackEntryReader）均已处理 null——接口如实声明而非收紧
+  readEntry(path: string, entry: string): Promise<string | null>;
 }
 
 /** 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） */

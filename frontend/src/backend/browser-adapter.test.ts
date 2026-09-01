@@ -196,7 +196,7 @@ describe("browserAdapter — Phase 2 配置（localStorage）", () => {
 
 describe("browserAdapter — Phase 2 3D 兜底守卫（ADR-049 P2-2 路径可达）", () => {
   it("GetModel3DSpec 网页版恒空（让 model3d-loader WASM 兜底守卫可达，而非 WebUnsupportedError 逃逸）", async () => {
-    expect(await browserAdapter.GetModel3DSpec("/web/ysm/狐狸/狐狸.ysm")).toBe("{}");
+    expect(await browserAdapter.GetModel3DSpec("/web/ysm/狐狸/狐狸.ysm")).toBeNull();
   });
 });
 

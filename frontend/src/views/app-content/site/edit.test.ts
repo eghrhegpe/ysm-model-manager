@@ -328,7 +328,7 @@ describe("bindEditEvents 拉取配置", () => {
       SaveWorkshopCreators: vi.fn().mockResolvedValue(undefined),
       SaveWorkshopSites: vi.fn().mockResolvedValue(undefined),
       LoadGitHubRepos: vi.fn().mockResolvedValue([]),
-      LoadResourceTypes: vi.fn().mockResolvedValue("{}"),
+      LoadResourceTypes: vi.fn().mockResolvedValue(null),
       ...overrides,
     });
   }
@@ -336,7 +336,7 @@ describe("bindEditEvents 拉取配置", () => {
   it("全量更新 → merge + 双 Save + 汇总 toast + refresh + 按钮复位", async () => {
     mockFetchApp({
       LoadGitHubRepos: vi.fn().mockResolvedValue(["r1", "r2"]),
-      LoadResourceTypes: vi.fn().mockResolvedValue(JSON.stringify({ resourceTypes: [{ id: "ysm" }, { id: "mmd" }] })),
+      LoadResourceTypes: vi.fn().mockResolvedValue({ resourceTypes: [{ id: "ysm" }, { id: "mmd" }] }),
     });
     fetchCreatorsMock.mockResolvedValue([{ name: "甲" }]);
     fetchSitesMock.mockResolvedValue([{ id: "s1" }]);
@@ -398,11 +398,10 @@ describe("bindEditEvents 拉取配置", () => {
     }
   });
 
-  it("resourceTypes 非法 JSON → console.warn 兜底，仍走「已是最新配置」", async () => {
-    mockFetchApp({ LoadResourceTypes: vi.fn().mockResolvedValue("not json{") });
+  it("resourceTypes null → 兜底，仍走「已是最新配置」", async () => {
+    mockFetchApp({ LoadResourceTypes: vi.fn().mockResolvedValue(null) });
     fetchCreatorsMock.mockResolvedValue([]);
     fetchSitesMock.mockResolvedValue([]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { state, searchResults, refresh } = mount();
     searchResults.insertAdjacentHTML("beforeend", '<button class="cr-fetch-btn">🌐 更新配置</button>');
     const emitSpy = spyBusEmit();
@@ -415,11 +414,9 @@ describe("bindEditEvents 拉取配置", () => {
           expect.objectContaining({ msg: expect.stringContaining("已是最新配置") }),
         ),
       );
-      expect(warnSpy).toHaveBeenCalled();
       expect(refresh).not.toHaveBeenCalled();
     } finally {
       emitSpy.mockRestore();
-      warnSpy.mockRestore();
     }
   });
 

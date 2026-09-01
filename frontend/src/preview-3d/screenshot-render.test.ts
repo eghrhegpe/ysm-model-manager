@@ -189,7 +189,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   threeStub.WebGLRenderer.instances.length = 0; // 防跨测试累积
   getAppMock.mockResolvedValue({ GetModel3DSpec: specMock });
-  specMock.mockResolvedValue(JSON.stringify(validSpec));
+  specMock.mockResolvedValue(validSpec);
   loadTexturesMock.mockResolvedValue([{}]);
   stubSceneGraph();
   threeStub.WebGLRenderer.toDataURLValue = "data:image/png;base64,QUFB";
@@ -202,26 +202,26 @@ describe("renderMultiAngle — 防御路径", () => {
     expect(await renderMultiAngle("/m/a.ysm", [])).toBeNull();
   });
 
-  it("spec 非法 JSON → console.warn + 返回 null", async () => {
-    specMock.mockResolvedValue("not-json{{{");
+  it("spec 为 null → 返回 null（无 warn，null 非异常路径）", async () => {
+    specMock.mockResolvedValue(null);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       expect(await renderMultiAngle("/m/a.ysm", [])).toBeNull();
-      expect(warn.mock.calls[0]?.[0]).toContain("[screenshot] spec 获取失败");
+      expect(warn).not.toHaveBeenCalled();
     } finally {
       warn.mockRestore();
     }
   });
 
   it("spec.models 为空 → 返回 null（不创建渲染器）", async () => {
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     expect(await renderMultiAngle("/m/a.ysm", [])).toBeNull();
     expect(threeStub.WebGLRenderer.instances).toHaveLength(0);
   });
 
   it("spec.models 为空 + 注入 decodeYsm 兜底 → buildSpecFromGeometryJSON 重建 spec", async () => {
     // ADR-136：WASM 兜底由视图层经 options.decodeYsm 注入（不再直接 import views/wasm.ts）
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     buildSpecMock.mockReturnValue(JSON.stringify(validSpec));
     const decodeYsm = vi.fn().mockResolvedValue({ geometryRaw: JSON.stringify(validSpec.models[0]) });
     const shots = await renderMultiAngle("/m/a.ysm", [], { decodeYsm: decodeYsm as never });
@@ -231,7 +231,7 @@ describe("renderMultiAngle — 防御路径", () => {
   });
 
   it("注入 decodeYsm 返回 null（解码失败）→ 返回 null", async () => {
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     buildSpecMock.mockReturnValue(JSON.stringify(validSpec));
     const decodeYsm = vi.fn().mockResolvedValue(null);
     expect(await renderMultiAngle("/m/a.ysm", [], { decodeYsm: decodeYsm as never })).toBeNull();

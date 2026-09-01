@@ -57,11 +57,10 @@ beforeEach(() => {
 });
 
 describe("preloadModel / fetchSpec", () => {
-  const spec = (texArrOrder?: string[]) =>
-    JSON.stringify({
-      models: [{ meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] }],
-      texArrOrder,
-    });
+  const spec = (texArrOrder?: string[]) => ({
+    models: [{ meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] }],
+    texArrOrder,
+  });
 
   it("同一路径二次调用 → GetModel3DSpec 只调一次（LRU 缓存命中）", async () => {
     specMock.mockResolvedValue(spec());
@@ -123,13 +122,13 @@ describe("preloadModel / fetchSpec", () => {
     // 键 = SourceName（如 "main"/"arrow"），对齐 spec.models[i].name；
     // 前端 ysm-object.ts 以 mg.name || mg.id 查表，SourceName 直连命中。
     specMock.mockResolvedValue(
-      JSON.stringify({
+      {
         models: [
           { id: "comp_0", name: "main", meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] },
           { id: "comp_1", name: "arrow", meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] },
         ],
         componentTextures: { arrow: ["data:image/png;base64,QUJD"] },
-      }),
+      },
     );
     vi.stubGlobal("Image", FakeImage);
     try {
@@ -214,7 +213,7 @@ describe("preloadModel / fetchSpec", () => {
   });
 
   it("spec 无 models → 抛错（fetchSpec 空 spec 守卫）", async () => {
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     await expect(
       preloadModel({ _modelPath: "/m/empty.ysm", texture: "t.png" }),
     ).rejects.toThrow("3D spec 为空");
@@ -222,9 +221,9 @@ describe("preloadModel / fetchSpec", () => {
 
   it("Android spec 空 → WASM 兜底成功（fetchSpecViaWasmFallback 构建 spec）", async () => {
     isViewerModeMock.mockReturnValue(true);
-    specMock.mockResolvedValue(JSON.stringify({ models: [] })); // Go 恒空（无 Node 通道）
+    specMock.mockResolvedValue({ models: [] }); // Go 恒空（无 Node 通道）
     buildSpecMock.mockResolvedValue(
-      JSON.stringify({ models: [{ meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] }] }),
+      { models: [{ meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] }] },
     );
     decodeWasmMock.mockResolvedValue({ geometryRaw: '{"geometry":"x"}' });
     vi.stubGlobal("Image", FakeImage); // 纹理加载需同步 onload 的 Image mock
@@ -240,18 +239,18 @@ describe("preloadModel / fetchSpec", () => {
 
   it("Android WASM 兜底解码失败 → 仍抛 3D spec 为空（不吞错）", async () => {
     isViewerModeMock.mockReturnValue(true);
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     decodeWasmMock.mockResolvedValue(null); // 解码失败
     await expect(
       preloadModel({ _modelPath: "/m/android-fail.ysm", texture: "t.png" }),
     ).rejects.toThrow("3D spec 为空");
   });
 
-  it("Android Go binding 返回 {}（无数据）→ 兜底 null → 抛 3D spec 为空", async () => {
+  it("Android Go binding 返回 null（无数据）→ 兜底 null → 抛 3D spec 为空", async () => {
     isViewerModeMock.mockReturnValue(true);
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     decodeWasmMock.mockResolvedValue({ geometryRaw: '{"geometry":"x"}' });
-    buildSpecMock.mockResolvedValue("{}"); // Go binding 无数据
+    buildSpecMock.mockResolvedValue(null); // Go binding 无数据
     try {
       await expect(
         preloadModel({ _modelPath: "/m/android-empty.ysm", texture: "t.png" }),
@@ -264,7 +263,7 @@ describe("preloadModel / fetchSpec", () => {
   it("网页版（__YSM_BACKEND__=browser）spec 空 → WASM 兜底成功（P2-2 闭环：纯 TS 移植）", async () => {
     isViewerModeMock.mockReturnValue(true);
     isWebPlatformMock.mockReturnValue(true);
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     tsSpecBuilderMock.mockReturnValue(
       JSON.stringify({ models: [{ meshGroups: [{ boneId: "root", positions: [0, 0, 0], normals: [], uvs: [], indices: [] }] }] }),
     );
@@ -284,7 +283,7 @@ describe("preloadModel / fetchSpec", () => {
   it("网页版 WASM 兜底解码失败 → 仍抛 3D spec 为空（镜像 Android 失败用例）", async () => {
     isViewerModeMock.mockReturnValue(true);
     isWebPlatformMock.mockReturnValue(true);
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     decodeWasmMock.mockResolvedValue(null); // 解码失败
     try {
       await expect(
@@ -298,7 +297,7 @@ describe("preloadModel / fetchSpec", () => {
   it("网页版纯 TS 返回 {}（无数据）→ 兜底 null → 抛 3D spec 为空", async () => {
     isViewerModeMock.mockReturnValue(true);
     isWebPlatformMock.mockReturnValue(true);
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     decodeWasmMock.mockResolvedValue({ geometryRaw: '{"geometry":"x"}' });
     tsSpecBuilderMock.mockReturnValue("{}"); // 纯 TS 移植无数据
     try {
@@ -313,7 +312,7 @@ describe("preloadModel / fetchSpec", () => {
   it("网页版 WASM 兜底 geometryRaw 为空（\"\"/undefined）→ 兜底 null → 抛 3D spec 为空", async () => {
     isViewerModeMock.mockReturnValue(true);
     isWebPlatformMock.mockReturnValue(true);
-    specMock.mockResolvedValue(JSON.stringify({ models: [] }));
+    specMock.mockResolvedValue({ models: [] });
     try {
       for (const [i, empty] of (["", undefined] as const).entries()) {
         decodeWasmMock.mockResolvedValue({ geometryRaw: empty });

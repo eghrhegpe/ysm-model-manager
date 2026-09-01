@@ -87,8 +87,9 @@ declare const __APP_VERSION__: string;
 
 export const webCommonBindings = {
   // 注册表驱动视图（recycle-bin/oldest-models/community/app-resource-manager）依赖
-  // LoadResourceTypes；直接返回同形状 JSON 字符串，消除 registry.ts 静默降级为空
-  LoadResourceTypes: () => Promise.resolve(JSON.stringify(resourceTypesJson)),
+  // LoadResourceTypes；直接返回同形状 struct（ADR-143 P0：去 string-JSON 化），
+  // 消除 registry.ts 静默降级为空
+  LoadResourceTypes: () => Promise.resolve(resourceTypesJson),
   // P2 修复（审核）：网页版无 Go 侧 version.Version，补版本 binding 让导航/设置页
   // 不再触发 fail-fast（原缺失导致 app-nav catch 兜底硬编码 "v1.0.0"、设置页版本
   // 卡「加载中」）；版本号由构建注入（__APP_VERSION__，发版脚本传 WEB_VERSION），
@@ -99,11 +100,11 @@ export const webCommonBindings = {
   // 守卫可达。P2-2 已闭环（2026-08-12）：网页版渲染走 model3d-loader web 分支的
   // buildSpecFromGeometryJSON（spec-builder.ts 纯 TS 移植，Go app_model.go 同契约），
   // 本 binding 桩仅供 Android 兜底通道形状占位（网页版不会调用到它）。
-  GetModel3DSpec: () => Promise.resolve("{}"),
+  GetModel3DSpec: () => Promise.resolve(null),
   Build3DSpecFromGeometryJSON: (_geo: string) => {
     // 占位：网页版不调此 binding（TS 移植替代，见 spec-builder.ts）；仅保持 Proxy
     // binding 形状完整，Android 路径仍走 Go 真实现
-    return Promise.resolve("{}");
+    return Promise.resolve(null);
   },
   // 网页版系统浏览器即当前浏览器：等价 Go Browser.OpenURL。
   // 不用 noopener 特性串（其下 window.open 恒返回 null 无法检测拦截）；

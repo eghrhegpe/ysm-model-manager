@@ -66,7 +66,7 @@ function mockApp(overrides: Record<string, unknown> = {}) {
     GetImportLogs: vi.fn(() => []),
     GetRuntimeLogs: vi.fn(() => []),
     ClearImportLogs: vi.fn(),
-    FindDuplicateFiles: vi.fn(() => "[]"),
+    FindDuplicateFiles: vi.fn(() => []),
     GetRepoRoot: vi.fn(() => "/repo"),
     MoveToRecycle: vi.fn(),
     LoadAppConfig: vi.fn(() => ({ mcRoot: "/mc" })),
@@ -249,14 +249,14 @@ describe("initDiagnostics — 日志面板", () => {
 });
 
 describe("startDedup", () => {
-  const groupJson = JSON.stringify([
+  const groupJson = [
     {
       files: [
         { path: "/a/dup.ysm", name: "dup.ysm", size: 1024, modTime: 2000 },
         { path: "/b/dup.ysm", name: "dup.ysm", size: 2048, modTime: 1000 },
       ],
     },
-  ]);
+  ];
 
   it("rtype 指定 → 单目录扫描 + 渲染组 + exec 移入回收站", async () => {
     loadResourceRegistry.mockResolvedValue({

@@ -42,8 +42,8 @@ function mockApp(overrides: Record<string, unknown> = {}) {
     LoadAppConfig: vi.fn(() => ({ mcRoot: "/mc" })),
     ListVersionInstances: vi.fn(() => []),
     ScanModelEntriesWithLabel: vi.fn(() => []),
-    DetectConflicts: vi.fn(() => JSON.stringify({ conflicts: [], totalConflicts: 0 })),
-    ResolveConflicts: vi.fn(() => JSON.stringify({ resolved: 1, failed: 0, manual: 0 })),
+    DetectConflicts: vi.fn(() => ({ conflicts: [], totalConflicts: 0 })),
+    ResolveConflicts: vi.fn(() => ({ resolved: 1, failed: 0, manual: 0 })),
     ...overrides,
   });
 }
@@ -258,7 +258,7 @@ describe("scanSyncConflicts", () => {
         { Name: "insA", Exists: true },
         { Name: "insC", Exists: true },
       ]),
-      DetectConflicts: vi.fn(() => JSON.stringify({ conflicts: [], totalConflicts: 0 })),
+      DetectConflicts: vi.fn(() => ({ conflicts: [], totalConflicts: 0 })),
     });
     const list = document.createElement("div");
     await scanSyncConflicts(list, esc);
@@ -274,16 +274,14 @@ describe("scanSyncConflicts", () => {
     expect(app.DetectConflicts).toHaveBeenCalledWith("EntityPlayer", "insC");
   });
 
-  it("检测结果带 error 字段 → 展示错误原文", async () => {
+  it("DetectConflicts 拒绝（error 通道）→ 展示扫描失败", async () => {
     mockApp({
-      DetectConflicts: vi.fn(() =>
-        JSON.stringify({ conflicts: [], totalConflicts: 0, error: "同步服务未启动" }),
-      ),
+      DetectConflicts: vi.fn(() => Promise.reject(new Error("同步服务未启动"))),
     });
     const list = document.createElement("div");
     await scanSyncConflicts(list, esc, "ysm", "insA");
     await waitFor(() => expect(list.textContent).toContain("同步服务未启动"));
-    expect(list.innerHTML).toContain("❌");
+    expect(list.innerHTML).toContain("diag-msg-error");
   });
 
   it("检测无冲突 → ✅ 未检测到同步冲突", async () => {
@@ -323,7 +321,7 @@ describe("scanSyncConflicts", () => {
       },
     ];
     mockApp({
-      DetectConflicts: vi.fn(() => JSON.stringify({ conflicts, totalConflicts: 3 })),
+      DetectConflicts: vi.fn(() => ({ conflicts, totalConflicts: 3 })),
     });
     const list = document.createElement("div");
     await scanSyncConflicts(list, esc, "ysm", "insA");
@@ -364,10 +362,11 @@ describe("同步冲突解决（do-resolve-btn）", () => {
   }
 
   it("点击解决 → ResolveConflicts 透传冲突/策略/类型/实例 + 结果计数 + 1.5s 后自动复扫", async () => {
-    const detectFn = vi.fn(() =>
-      JSON.stringify({ conflicts: [makeConflict()], totalConflicts: 1 }),
-    );
-    const resolveFn = vi.fn(() => JSON.stringify({ resolved: 2, failed: 1, manual: 1 }));
+    const detectFn = vi.fn(() => ({
+      conflicts: [makeConflict()],
+      totalConflicts: 1,
+    }));
+    const resolveFn = vi.fn(() => ({ resolved: 2, failed: 1, manual: 1 }));
     mockApp({ DetectConflicts: detectFn, ResolveConflicts: resolveFn });
     const list = document.createElement("div");
     await scanSyncConflicts(list, esc, "ysm", "insA");
@@ -396,13 +395,12 @@ describe("同步冲突解决（do-resolve-btn）", () => {
     }
   });
 
-  it("解决结果带 error 字段 → 展示错误原文，不自动复扫", async () => {
-    const detectFn = vi.fn(() =>
-      JSON.stringify({ conflicts: [makeConflict()], totalConflicts: 1 }),
-    );
-    const resolveFn = vi.fn(() =>
-      JSON.stringify({ resolved: 0, failed: 0, manual: 0, error: "网络中断" }),
-    );
+  it("ResolveConflicts 拒绝 → 展示错误原文，不自动复扫", async () => {
+    const detectFn = vi.fn(() => ({
+      conflicts: [makeConflict()],
+      totalConflicts: 1,
+    }));
+    const resolveFn = vi.fn(() => Promise.reject(new Error("网络中断")));
     mockApp({ DetectConflicts: detectFn, ResolveConflicts: resolveFn });
     const list = document.createElement("div");
     await scanSyncConflicts(list, esc, "ysm", "insA");
@@ -415,9 +413,10 @@ describe("同步冲突解决（do-resolve-btn）", () => {
 
   it("ResolveConflicts 拒绝 → 追加错误行（异常兜底）", async () => {
     mockApp({
-      DetectConflicts: vi.fn(() =>
-        JSON.stringify({ conflicts: [makeConflict()], totalConflicts: 1 }),
-      ),
+      DetectConflicts: vi.fn(() => ({
+        conflicts: [makeConflict()],
+        totalConflicts: 1,
+      })),
       ResolveConflicts: vi.fn(() => Promise.reject(new Error("写入失败"))),
     });
     const list = document.createElement("div");

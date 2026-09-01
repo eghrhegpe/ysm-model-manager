@@ -62,7 +62,7 @@ describe("safeStr JSON.stringify undefined 分支", () => {
 describe("window.debugGetSpec 装配", () => {
   it("GetModel3DSpec 成功 → 返回解析后的 spec 并写 dbg ring", async () => {
     getAppMock.mockResolvedValue({
-      GetModel3DSpec: vi.fn().mockResolvedValue(JSON.stringify({ bones: [1, 2] })),
+      GetModel3DSpec: vi.fn().mockResolvedValue({ bones: [1, 2] }),
     });
     const spec = await window.debugGetSpec("/models/a.ysm");
     expect(spec).toEqual({ bones: [1, 2] });

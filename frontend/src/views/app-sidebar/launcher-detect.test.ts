@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { bus, type BusEvents } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 
 const { getAppMock, pickDirMock } = vi.hoisted(() => ({
   getAppMock: vi.fn(),
@@ -99,7 +100,7 @@ describe("runLauncherDetect", () => {
       expect(app.DetectLauncherInstances).toHaveBeenCalledWith("/picked");
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toEqual([
-        { msg: t("launcher.detect.noInstances"), duration: 3500, type: "warn" },
+        { msg: t("launcher.detect.noInstances"), duration: TOAST_MS.normal, type: "warn" },
       ]);
       expect(document.querySelector("[data-testid='dlg-overlay']")).toBeNull();
     } finally {

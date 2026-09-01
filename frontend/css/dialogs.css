@@ -1,0 +1,111 @@
+/* ===== 统一模态弹窗样式（ADR-149 外提自 modal.ts）=====
+ * 与 components.css 的 dlg-* 同前缀，但本表专放 modal.ts 五类弹窗
+ * （modalPrompt / modalSelect / modalConfirm / modalProgress / modalPicker）
+ * 的静态装饰类。加载顺序须位于 components.css 之后（index.html 保证），
+ * 以便 dlg-title-flush / dlg-footer-flush 等覆盖类生效。
+ * 动态值（box.width / fill.width / hint color）仍由 JS 写内联，不在此静态化。
+ */
+
+/* 字段框：prompt 输入框 / select 下拉（全宽、内边距 6px 8px、字号 12px、盒模型 border-box） */
+.dlg-field {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--bd);
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+/* 标题 flush 覆盖（区别于 components.css .dlg-title 的 margin-bottom:4px） */
+.dlg-title-flush {
+  margin: 0;
+}
+
+/* footer flush 覆盖（保留 components.css .dlg-footer 的 border-top 与 flex 布局） */
+.dlg-footer-flush {
+  padding: 0;
+}
+
+/* confirm 消息区：预包装、行高 1.5、超限 55vh 滚动 */
+.dlg-msg {
+  font-size: 11px;
+  color: var(--txt);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+/* box 子项间距（替代原 box.style.gap） */
+.dlg-gap-lg {
+  gap: 10px;
+}
+
+/* 进度弹窗三段 */
+.dlg-prog-pct {
+  font-size: 11px;
+  color: var(--txt);
+  text-align: right;
+}
+.dlg-prog-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bd);
+  overflow: hidden;
+}
+.dlg-prog-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent, #66d9ef);
+  transition: width 0.2s;
+}
+
+/* picker 富列表 */
+.dlg-pick-list {
+  margin: 2px 0;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+.dlg-pick-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 6px 0;
+  padding: 10px;
+  border: 1px solid var(--bd, #444);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+}
+.dlg-pick-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+}
+.dlg-pick-meta {
+  color: var(--accent, #89b4fa);
+}
+.dlg-pick-sub {
+  font-size: 10px;
+  color: var(--muted, #888);
+  margin-top: 5px;
+}
+/* hint 颜色动态（safeHintColor 校验后写内联），此处只给字号与间距 */
+.dlg-pick-hint {
+  font-size: 10px;
+  margin-top: 2px;
+}
+.dlg-pick-subtitle {
+  font-size: 10px;
+  color: var(--muted, #888);
+  margin: 5px 0 10px;
+}
+.dlg-pick-cancel-wrap {
+  margin-top: 12px;
+  text-align: right;
+}

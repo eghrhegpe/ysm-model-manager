@@ -718,6 +718,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-149：modal.ts 内联样式外提为弹窗类（dialogs.css）",
+        "link": "/adr/ADR-149-modal-ts-dialogs-css"
+      },
+      {
         "text": "ADR-148：preview-3d 容器类适配器统一工厂(方案 C)决策方向",
         "link": "/adr/ADR-148-container-preview-factory"
       },

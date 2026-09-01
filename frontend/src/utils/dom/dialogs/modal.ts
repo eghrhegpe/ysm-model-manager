@@ -144,8 +144,7 @@ function appendDialogBox(
   buildBox: (box: HTMLElement) => void,
 ): HTMLElement {
   const box = document.createElement("div");
-  box.className = "dlg-box dlg-pad";
-  box.style.gap = "10px";
+  box.className = "dlg-box dlg-pad dlg-gap-lg";
   if (width) box.style.width = width;
   buildBox(box);
   overlay.appendChild(box);
@@ -206,10 +205,10 @@ function promptBoxBuilder(
 ): (box: HTMLElement) => void {
   return (box): void => {
     box.innerHTML = `
-      <div class="dlg-title" style="margin:0">${esc(icon || "")} ${esc(title)}</div>
-      <input id="mp-input" data-testid="dlg-input" maxlength="255" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px;box-sizing:border-box">
+      <div class="dlg-title dlg-title-flush">${esc(icon || "")} ${esc(title)}</div>
+      <input id="mp-input" data-testid="dlg-input" class="dlg-field" maxlength="255" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}">
       <div id="mp-err" class="dlg-err"></div>
-      <div class="dlg-footer" style="padding:0">
+      <div class="dlg-footer dlg-footer-flush">
         <button id="mp-cancel" data-testid="dlg-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
         <button id="mp-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${esc(okText || t("dialog.ok"))} (Enter)</button>
       </div>
@@ -278,12 +277,12 @@ function selectBoxBuilder(
 ): (box: HTMLElement) => void {
   return (box): void => {
     box.innerHTML =
-      '<div class="dlg-title" style="margin:0">' +
+      '<div class="dlg-title dlg-title-flush">' +
       esc(icon || "") +
       " " +
       esc(title) +
       "</div>" +
-      '<select id="ms-select" data-testid="dlg-select" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px">' +
+      '<select id="ms-select" data-testid="dlg-select" class="dlg-field">' +
       (items || [])
         .map(
           (item) =>
@@ -291,7 +290,7 @@ function selectBoxBuilder(
         )
         .join("") +
       "</select>" +
-      '<div class="dlg-footer" style="padding:0">' +
+      '<div class="dlg-footer dlg-footer-flush">' +
       '<button id="ms-cancel" data-testid="dlg-cancel" class="dlg-btn">' +
       t("dialog.cancelEsc") +
       "</button>" +
@@ -347,9 +346,9 @@ function confirmBoxBuilder(
 ): (box: HTMLElement) => void {
   return (box): void => {
     box.innerHTML = `
-      <div class="dlg-title" style="margin:0">${esc(icon || "")} ${esc(title)}</div>
-      ${bodyHTML ?? `<div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap;max-height:55vh;overflow-y:auto">${esc(message)}</div>`}
-      <div class="dlg-footer" style="padding:0">
+      <div class="dlg-title dlg-title-flush">${esc(icon || "")} ${esc(title)}</div>
+      ${bodyHTML ?? `<div class="dlg-msg">${esc(message)}</div>`}
+      <div class="dlg-footer dlg-footer-flush">
         <button id="mc-cancel" data-testid="dlg-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
         <button id="mc-ok" data-testid="dlg-ok" class="dlg-btn ${danger ? "dlg-btn-danger" : "dlg-btn-primary"}">${esc(okText || t("dialog.ok"))} (Enter)</button>
       </div>
@@ -407,13 +406,11 @@ function buildProgressDoms(): {
   fill: HTMLDivElement;
 } {
   const pctEl = document.createElement("div");
-  pctEl.style.cssText = "font-size:11px;color:var(--txt);text-align:right";
+  pctEl.className = "dlg-prog-pct";
   const track = document.createElement("div");
-  track.style.cssText =
-    "height:8px;border-radius:4px;background:var(--bd);overflow:hidden";
+  track.className = "dlg-prog-track";
   const fill = document.createElement("div");
-  fill.style.cssText =
-    "height:100%;width:0%;background:var(--accent,#66d9ef);transition:width .2s";
+  fill.className = "dlg-prog-fill";
   track.appendChild(fill);
   return { pctEl, track, fill };
 }
@@ -425,7 +422,7 @@ function progressBoxBuilder(
   pctEl: HTMLDivElement,
 ): (box: HTMLElement) => void {
   return (box): void => {
-    box.innerHTML = `<div class="dlg-title" style="margin:0">${esc(icon || "")} ${esc(title)}</div>`;
+    box.innerHTML = `<div class="dlg-title dlg-title-flush">${esc(icon || "")} ${esc(title)}</div>`;
     box.appendChild(track);
     box.appendChild(pctEl);
   };
@@ -572,19 +569,19 @@ function pickerBoxBuilder(
     const rows = items
       .map(
         (it, i) =>
-          `<button data-idx="${i}" data-testid="pick-item" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px;border:1px solid var(--bd,#444);border-radius:8px;background:transparent;color:inherit;cursor:pointer;font-family:inherit">
-  <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(it.label)}</span>${it.meta ? `<span style="color:var(--accent,#89b4fa)">${esc(it.meta)}</span>` : ""}</div>
-  ${it.sub ? `<div style="font-size:10px;color:var(--muted,#888);margin-top:5px">${esc(it.sub)}</div>` : ""}
-  ${it.hint ? `<div style="font-size:10px;color:${safeHintColor(it.hintColor)};margin-top:2px">${esc(it.hint)}</div>` : ""}
+          `<button data-idx="${i}" data-testid="pick-item" class="dlg-pick-row">
+  <div class="dlg-pick-row-head"><span>${esc(it.label)}</span>${it.meta ? `<span class="dlg-pick-meta">${esc(it.meta)}</span>` : ""}</div>
+  ${it.sub ? `<div class="dlg-pick-sub">${esc(it.sub)}</div>` : ""}
+  ${it.hint ? `<div class="dlg-pick-hint" style="color:${safeHintColor(it.hintColor)}">${esc(it.hint)}</div>` : ""}
 </button>`,
       )
       .join("");
     box.innerHTML =
-      `<div class="dlg-title" style="margin:0">${esc(icon || "")} ${esc(title)}</div>` +
-      (subtitle ? `<div style="font-size:10px;color:var(--muted,#888);margin:5px 0 10px">${esc(subtitle)}</div>` : "") +
-      `<div data-testid="pick-list" style="margin:2px 0;max-height:55vh;overflow-y:auto">${rows}</div>` +
+      `<div class="dlg-title dlg-title-flush">${esc(icon || "")} ${esc(title)}</div>` +
+      (subtitle ? `<div class="dlg-pick-subtitle">${esc(subtitle)}</div>` : "") +
+      `<div data-testid="pick-list" class="dlg-pick-list">${rows}</div>` +
       (footerHTML || "") +
-      `<div style="margin-top:12px;text-align:right"><button id="pk-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancelText || t("dialog.cancelEsc"))}</button></div>`;
+      `<div class="dlg-pick-cancel-wrap"><button id="pk-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancelText || t("dialog.cancelEsc"))}</button></div>`;
   };
 }
 

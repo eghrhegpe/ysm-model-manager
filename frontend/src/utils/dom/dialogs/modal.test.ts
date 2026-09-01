@@ -12,6 +12,7 @@ import {
   modalPrompt,
   modalSelect,
   modalProgress,
+  modalPicker,
   trapFocus,
   __resetModalStateForTest,
 } from "./modal.ts";
@@ -508,6 +509,87 @@ describe("modalSelect — 下拉框", () => {
     modalSelect({ title: "选择", items: ["默认项", "其他"] });
     const select = document.querySelector("#ms-select") as HTMLSelectElement;
     expect(select.value).toBe("默认项");
+    closeActiveDlg();
+  });
+});
+
+describe("内联样式外提回归（ADR-149）", () => {
+  // 红→绿：外提后静态装饰须走 dialogs.css 的类，不得再以内联 style 出现；
+  // 动态值（box.width / fill.width / hint color）仍保留 inline。
+  it("modalPrompt：字段框挂 dlg-field，且无静态内联样式", () => {
+    modalPrompt({ title: "命名" });
+    const input = document.querySelector("#mp-input") as HTMLInputElement;
+    expect(input.classList.contains("dlg-field")).toBe(true);
+    // 外提的静态属性（圆角 / 盒模型）不得再以内联出现
+    expect(input.style.borderRadius).toBe("");
+    expect(input.style.boxSizing).toBe("");
+    closeActiveDlg();
+  });
+
+  it("modalConfirm：标题 dlg-title-flush、footer dlg-footer-flush、消息 dlg-msg，无内联 margin/padding", () => {
+    modalConfirm({ title: "确认?", message: "继续?" });
+    const title = document.querySelector(".dlg-title") as HTMLElement;
+    expect(title.classList.contains("dlg-title-flush")).toBe(true);
+    expect(title.getAttribute("style")).toBeNull();
+    const footer = document.querySelector("#mc-cancel")?.parentElement as HTMLElement;
+    expect(footer.classList.contains("dlg-footer-flush")).toBe(true);
+    expect(footer.getAttribute("style")).toBeNull();
+    const msg = document.querySelector(".dlg-msg") as HTMLElement;
+    expect(msg).not.toBeNull();
+    closeActiveDlg();
+  });
+
+  it("modalSelect：下拉框挂 dlg-field", () => {
+    modalSelect({ title: "选择", items: ["A"] });
+    const select = document.querySelector("#ms-select") as HTMLSelectElement;
+    expect(select.classList.contains("dlg-field")).toBe(true);
+    expect(select.style.borderRadius).toBe("");
+    closeActiveDlg();
+  });
+
+  it("appendDialogBox：box 间距走 dlg-gap-lg，无内联 gap", () => {
+    modalConfirm({ title: "确认?", message: "继续?" });
+    const box = document.querySelector(".dlg-box") as HTMLElement;
+    expect(box.classList.contains("dlg-gap-lg")).toBe(true);
+    expect(box.style.gap).toBe("");
+    closeActiveDlg();
+  });
+
+  it("modalProgress：进度条三段挂 dlg-prog-* 类，动态 width 仍走 inline", () => {
+    vi.useFakeTimers();
+    const h = modalProgress({ title: "下载" });
+    const pctEl = document.querySelector(".dlg-prog-pct") as HTMLElement;
+    const track = document.querySelector(".dlg-prog-track") as HTMLElement;
+    const fill = document.querySelector(".dlg-prog-fill") as HTMLElement;
+    expect(pctEl).not.toBeNull();
+    expect(track).not.toBeNull();
+    expect(fill).not.toBeNull();
+    // 静态外观外提，初始无内联 width（由类给 0%）；动态百分比仍写 inline
+    expect(fill.style.width).toBe("");
+    h.update(25 * 1024 * 1024, 100 * 1024 * 1024);
+    expect(fill.style.width).toBe("25%");
+    closeActiveDlg();
+  });
+
+  it("modalPicker：列表/行/元/子/提示/副标题/取消包均挂类（hint color 动态留 inline）", () => {
+    modalPicker({
+      title: "选择",
+      subtitle: "说明",
+      items: [
+        { label: "行1", meta: "M", sub: "S", hint: "H", hintColor: "#ff0000" },
+      ],
+    });
+    expect(document.querySelector(".dlg-pick-list")).not.toBeNull();
+    const row = document.querySelector('[data-testid="pick-item"]') as HTMLElement;
+    expect(row.classList.contains("dlg-pick-row")).toBe(true);
+    expect(row.querySelector(".dlg-pick-meta")).not.toBeNull();
+    expect(row.querySelector(".dlg-pick-sub")).not.toBeNull();
+    const hint = row.querySelector(".dlg-pick-hint") as HTMLElement;
+    expect(hint).not.toBeNull();
+    // hint 颜色经 safeHintColor 校验后动态写入 inline（白名单值保留）
+    expect(hint.style.color).toBe("#ff0000");
+    expect(document.querySelector(".dlg-pick-subtitle")).not.toBeNull();
+    expect(document.querySelector(".dlg-pick-cancel-wrap")).not.toBeNull();
     closeActiveDlg();
   });
 });

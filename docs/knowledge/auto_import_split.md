@@ -30,11 +30,12 @@ use_when:
 
 ## 核心职责
 
-- **词法层** `auto-import-lexer.mjs`：KEYWORDS/GLOBALS 白名单 + `tokenize(text)`——剥离注释/字符串/模板字面量/正则字面量（UTF-16 坐标，emoji 不破坏行号），收集代码状态标识符 token。
-- **符号层** `auto-import-symbols.mjs`：`extractExports`（含 export type/block，**排除 re-export**）/ `extractDefined`（const/解构/函数/参数/方法）/ `extractImported`（命名/别名/默认/命名空间）+ 括号配对/逗号拆分/参数名工具。
-- **检测层** `auto-import-detect.mjs`：`checkFile(file, symbolMap)`（去重/属性访问/对象 key/类字段判定）+ `buildSymbolMap` + `collectFiles` + `run`。
-- **修复层** `auto-import-fix.mjs`：`applyFixes`（幂等写回，歧义跳过/聚合/CRLF 保留）+ `fmtText`/`fmtJson`。
-- **入口** `auto-import.mjs`：CLI 解析 + `main` + `--watch`。
+- **词法层** `auto-import-lexer.ts`：KEYWORDS/GLOBALS 白名单 + `tokenize(text)`——剥离注释/字符串/模板字面量/正则字面量（UTF-16 坐标，emoji 不破坏行号），收集代码状态标识符 token。
+- **符号层** `auto-import-symbols.ts`：`extractExports`（含 export type/block，**排除 re-export**）/ `extractDefined`（const/解构/函数/参数/方法）/ `extractImported`（命名/别名/默认/命名空间）+ 括号配对/逗号拆分/参数名工具。
+- **检测层** `auto-import-detect.ts`：`checkFile(file, symbolMap, cache?)`（去重/属性访问/对象 key/类字段判定）+ `buildSymbolMap` + `collectFiles` + `run`。
+- **修复层** `auto-import-fix.ts`：`applyFixes`（幂等写回，歧义跳过/聚合/CRLF 保留）+ `fmtText`/`fmtJson`。
+- **入口** `auto-import.ts`：CLI 解析 + `main` + `--watch`。
+- **tokenize 单次缓存（2026-09-01，commit `fd3d0431`）**：`run()` 内 `buildSymbolMap` 与 `checkFile` 共享同一份 `Map<file, {stripped, tokens, text}>` 缓存——同一文件不再 readText+tokenize 两遍（全量 726 文件时检测总耗时近乎双倍）。`checkFile`/`buildSymbolMap` 第三个参数 `cache?` 跨调用复用；`run()` 显式传入，单文件模式符号表仍基于全量 walk 构建。
 
 ## 对外 API / 入口
 
@@ -45,10 +46,10 @@ node scripts/auto-import.ts --include-js|--fix|--watch|--json|--strict
 ```
 
 ```js
-import { tokenize } from './auto-import-lexer.mjs';
-import { extractExports } from './auto-import-symbols.mjs';
-import { checkFile } from './auto-import-detect.mjs';
-import { applyFixes } from './auto-import-fix.mjs';
+import { tokenize } from './auto-import-lexer.ts';
+import { extractExports } from './auto-import-symbols.ts';
+import { checkFile } from './auto-import-detect.ts';
+import { applyFixes } from './auto-import-fix.ts';
 ```
 
 ## 与其他子系统关系
@@ -68,8 +69,8 @@ import { applyFixes } from './auto-import-fix.mjs';
 
 ## 相关
 
-- `scripts/auto-import.ts` + 4 个 `auto-import-*.mjs`（本卡 source）
+- `scripts/auto-import.ts` + 4 个 `auto-import-*.ts`（本卡 source）
 - `docs/adr/ADR-141-large-script-split-baseline.md`（拆分基线）
 - `scripts/pre-push-gate.ts`（门禁挂载）
-- `tests/test_auto_import.mjs`（13 项契约测试）
+- `tests/test_auto_import.ts`（13 项契约测试）
 - `docs/knowledge/scripts_argv.md`（姊妹治理卡）

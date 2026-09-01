@@ -703,6 +703,10 @@ export const autoSidebar = [
         "link": "/cli-roadmap"
       },
       {
+        "text": "契约测试现状查证（任务 #1 交付物）",
+        "link": "/contract-tests-audit"
+      },
+      {
         "text": "Bus 事件契约报告",
         "link": "/event-graph"
       },
@@ -1856,6 +1860,10 @@ export const autoSidebar = [
           {
             "text": "YSM 动画分组与配置菜单提取",
             "link": "/knowledge/format-ysm-anim-config"
+          },
+          {
+            "text": "推送前门禁 pre-push-gate",
+            "link": "/knowledge/pre_push_gate"
           },
           {
             "text": "提交前钩子 pre-commit",

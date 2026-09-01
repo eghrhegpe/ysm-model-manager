@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "dev:web": "vite --mode web",
-    "gen:locales": "node ../scripts/generate-locale-json.mjs",
+    "gen:locales": "node ../scripts/generate-locale-json.ts",
     "build": "npm run gen:locales && vite build",
     "build:dev": "npm run gen:locales && vite build",
     "build:web": "npm run gen:locales && vite build --config vite.web.config.ts",
@@ -17,9 +17,9 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "test:e2e:web": "playwright test --config playwright.web.config.ts",
-    "codemod": "node ../scripts/codemod.mjs",
+    "codemod": "node ../scripts/codemod.ts",
     "generate:bindings": "cd .. && wails3 generate bindings -clean=true -ts -i",
-    "verify:port": "node ../scripts/port-align.mjs"
+    "verify:port": "node ../scripts/port-align.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",

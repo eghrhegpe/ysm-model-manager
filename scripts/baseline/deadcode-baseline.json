@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-01T04:57:41.571Z",
+  "generated": "2026-09-01T05:48:52.680Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -23,6 +23,7 @@
     "src/preview-3d/caps/ground-surface-spec.ts|exports|TILE_WORLD_SIZE",
     "src/preview-3d/caps/ground-surface-spec.ts|types|GroundSurfaceAppearanceSpec",
     "src/preview-3d/caps/light-capability.ts|types|AmbientLightParams",
+    "src/preview-3d/caps/scene-capability.ts|types|MenuControlKind",
     "src/preview-3d/caps/sky-capability.ts|types|SkyModelType",
     "src/preview-3d/caps/water-capability.ts|exports|DEFAULT_WATER_PARAMS",
     "src/preview-3d/decoder/geometry.ts|types|BedrockBone",

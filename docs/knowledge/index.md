@@ -2,9 +2,19 @@
 
 # 知识卡索引
 
-> 总计: 147 张知识卡
+> 总计: 148 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
+
+## ci（1 张）
+
+| 标识 | 名称 | tier | 性能 | 关键词 |
+|------|------|------|------|--------|
+| 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离 |
+
+### 摘要
+
+- **pre-commit-hook**（提交前钩子 pre-commit）：`.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0…
 
 ## config（10 张）
 

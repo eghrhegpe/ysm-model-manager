@@ -268,6 +268,13 @@
 | RESOURCE_EXTS/ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
 
+## 🎯 提交与钩子
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 防吞并发会话未提交漂移 | [提交前钩子 pre-commit](./pre-commit-hook.md) | - | - |
+| 提交前文档自动同步 | [提交前钩子 pre-commit](./pre-commit-hook.md) | 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2） | - |
+
 ## 🎯 模型格式与解析
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |

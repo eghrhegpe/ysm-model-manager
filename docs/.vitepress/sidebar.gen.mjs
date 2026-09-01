@@ -718,6 +718,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-150：pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固)",
+        "link": "/adr/ADR-150-pre-commit-git-add-u-docs-p2-2"
+      },
+      {
         "text": "ADR-149：modal.ts 内联样式外提为弹窗类（dialogs.css）",
         "link": "/adr/ADR-149-modal-ts-dialogs-css"
       },
@@ -1948,6 +1952,16 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
+          }
+        ]
+      },
+      {
+        "text": "ci",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "提交前钩子 pre-commit",
+            "link": "/knowledge/pre-commit-hook"
           }
         ]
       }

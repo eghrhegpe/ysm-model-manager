@@ -113,6 +113,7 @@ ADR-138 把 `features/preview-3d` 上提为 `src/preview-3d` 时，代价是**�
 - **闸二准入条件**：上述脚本（含 `check-path-hygiene` 自身 R3/R4 扫描）全部支持别名解析，且有单测覆盖别名路径的解析。
   - 补丁说明：`check-path-hygiene` 的 R3/R4 扫描原按相对路径文本匹配，别名一上会对其失明（D4 最警告的假阴性正是作用在本门禁自身）。已新增 `alias-resolve.classifyImport` 供其复用：R3 仅监控非别名的字面相对 wander（别名说明符字面无 `../`，切别名后 R3 自然归零，符合 D5 目的），R4 按展开后真实跨边界触发（`#root/resource_types.json` 仍计，冻结基线 14 不变）。该补丁是 D5 推进的硬前置。
 - **撤销 R0 的提交须同时删除 R0 规则本身**，不留死规则占位。
+- 2026-09-01 复核：`check-tpl-refs`（仅查 `getElementById`/`id=`，不解析 import specifier）与 `auto-import*`（符号级检测，不解析 specifier 路径，默认退出码 0 非阻断）经核验为 **import 无关**——别名 import 对其透明、不存在假阴性，故正确排除在改造面外；盲目改造反而引入无谓风险。`frontend/AGENTS.md` 与 `pre-push-gate.ts` 的 R0 残留注释/死键已在同期清理。
 - **与 D5 的关系**：D5「新文件一律用别名」自**闸二**起生效；闸一期间新文件仍写相对路径。两闸之间不存在"别名已可用但门禁看不见"的窗口期。
 
 ### D5. 增量迁移，禁止一次性 codemod 全量重写

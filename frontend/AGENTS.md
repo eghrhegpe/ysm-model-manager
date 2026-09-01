@@ -93,8 +93,8 @@ frontend/src/
 
 - **目录级别名（已登记）**：新写跨目录 import 优先用 `@/<顶层目录>/...`（如 `@/utils/dom/...`、`@/core/bus/...`）；
   `#root/<file>` 仅用于读仓库根 JSON（过渡措施，只减不增）。catch-all `@/*` **永久禁止**。
-- **闸控**：当前为闸一（配置闸），`check-path-hygiene.ts` 的 R0 规则**禁止任何含别名的 import**——
-  在 `check-layering`/`check-circular`/`check-tpl-refs`/`auto-import*` 改造为别名感知解析（闸二）前，写别名会门禁 FAIL。
+- **闸控**：`check-path-hygiene.ts` 的 R0 别名闸已随闸二（2026-09-01）整条删除——`check-layering`/`check-circular`/`check-path-hygiene` 自身 R3/R4 均已别名感知，写别名（已登记目录级名）通过门禁；
+  未登记目录的别名（catch-all 式）由 `tsconfig.paths` 白名单 + 双写一致性 + 构建解析共同拦截。`check-tpl-refs`/`auto-import*` 经核验为 import 无关（仅查 `getElementById`/`id=` 与 import 符号名），无需别名感知。
 - **反桶契约（禁聚合桶）**：
   1. 不新增以 re-export 为主体的聚合文件（不限于 `index.ts`，含 `*-re-export.ts` 这类命名）；
      现有 9 个入口 `index.ts` 保持真模块身份。

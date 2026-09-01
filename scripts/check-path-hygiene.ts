@@ -48,7 +48,7 @@ const JSON_FLAG = process.argv.includes('--json');
 const UPDATE_FLAG = process.argv.includes('--update');
 
 // ---- 规则常量 ----
-const R1_BARREL_WHITELIST = new Set(['src/utils/types-re-export.ts']); // 来源数=1 的 bindings 转发垫层
+const R1_BARREL_WHITELIST = new Set(['utils/types-re-export.ts']); // 来源数=1 的 bindings 转发垫层（relPosix 相对 SRC_ROOT，无 src/ 前缀）
 const R1_BARREL_THRESHOLD = 3; // re-export 来源模块数 ≥ 3 → 嫌疑
 const R2_DEPTH_MAX = 3; // 目录层级 > 3 → WARN
 const R3_UPLEVEL_MAX = 3; // `../` 上跳 > 3 且仍在 src 内 → WARN
@@ -63,9 +63,6 @@ function stripComments(src: string): string {
 
 // ---- 扫描所有前端源码（rel 模式，相对 SRC_ROOT）----
 const files = walk(SRC_ROOT, { rel: true }) as Array<{ abs: string; rel: string }>;
-
-// 预建 src 内文件绝对路径集合，供跨边界判定（是否仍落在 src 内）
-const srcAbsSet = new Set(files.map((f) => resolve(f.abs)));
 
 // ---- 收集结果 ----
 interface Finding { rule: string; file: string; detail: string; }
@@ -157,7 +154,7 @@ const consistencyOk = missingInVite.length === 0 && missingInTs.length === 0;
 let baseline = 14; // ADR-146 文档意图值（非 bindings 跨边界 14 条）
 if (existsSync(BASELINE_FILE)) {
   try { baseline = JSON.parse(readFileSync(BASELINE_FILE, 'utf-8')).crossBoundaryNonBindings; } catch { /* 损坏则用默认 */ }
-} else if (!JSON_FLAG || true) {
+} else {
   // 首跑冻结：以当前实际值写入基线文件（只减不增的锚点）
   writeFileSync(BASELINE_FILE, JSON.stringify({ crossBoundaryNonBindings: r4Count }, null, 2) + '\n', 'utf-8');
   baseline = r4Count;

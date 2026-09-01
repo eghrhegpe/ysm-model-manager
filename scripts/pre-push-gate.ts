@@ -375,9 +375,9 @@ async function main() {
           : `零容忍 ${lz.zero_tolerance} + 新增回归 ${lz.regressions}`),
     });
 
-    // ADR-146：路径卫生门禁（别名闸 R0 + 反桶 R1 + 深度 R2 + 上跳 R3 + 跨边界冻结 R4 + 双写一致性）
-    // 闸一（配置闸）：R0 按住别名不许用，直到 check-layering/check-circular/check-tpl-refs/auto-import*
-    // 改造成别名感知解析 + 单测绿（闸二）后删除 R0 规则。当前 rc=0 即通过（WARN 不阻断）。
+    // ADR-146：路径卫生门禁（反桶 R1 + 深度 R2 + 上跳 R3 + 跨边界冻结 R4 + 双写一致性）。
+    // R0 别名闸已于闸二（2026-09-01）整条删除——check-layering/check-circular/check-path-hygiene 自身均已别名感知，
+    // 写别名通过门禁（WARN 不阻断，仅 R4/一致性 FAIL 才会 rc≠0）。
     const tP = Date.now();
     const ph = await shAsync('node scripts/check-path-hygiene.ts --json');
     let pz: any = null;
@@ -387,7 +387,7 @@ async function main() {
       time: Date.now() - tP,
       note: pz === null ? '输出解析失败（scripts/check-path-hygiene.ts 缺失？）'
         : (pOk ? `路径卫生合规（warn ${pz.warn}）`
-          : `FAIL ${pz.fail}：R0=${pz.r0_alias?.count} R4=${pz.r4_cross_boundary?.count}/${pz.r4_cross_boundary?.baseline} 一致性=${pz.consistency?.ok}`),
+          : `FAIL ${pz.fail}：R4=${pz.r4_cross_boundary?.count}/${pz.r4_cross_boundary?.baseline} 一致性=${pz.consistency?.ok}`),
     });
 
     // ADR-085：菜单表健康门禁——"加菜单项只改表"的自动兜底（秒级正则扫描，早失败早停）。

@@ -83,7 +83,7 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
   if (!name) return;
   try {
     const { RenameDir, GetRepoRoot } = await getApp();
-    const rtype = vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+    const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? filesRoot + "/" + dir : dir;
     await RenameDir(absDir, name.trim());
@@ -110,7 +110,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
   if (!name) return;
   try {
     const { CreateDir, GetRepoRoot } = await getApp();
-    const rtype = vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+    const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot
       ? filesRoot + "/" + dir + "/" + name.trim()
@@ -137,7 +137,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
   if (!confirmed) return;
   try {
     const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } = await getApp();
-    const rtype = vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+    const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? filesRoot + "/" + dir : dir;
     const allFiles = await ListAllFilePaths(absDir);
@@ -180,7 +180,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
 async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void> {
   try {
     const { ScanModelEntriesFiltered, GetRepoRoot } = await getApp();
-    const rtype = vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+    const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? filesRoot + "/" + dir : dir;
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
@@ -238,7 +238,7 @@ async function reload(vm: AppTree): Promise<void> {
   } catch (e) { console.warn("[app-tree] ClearScanCache:", e); }
   const gen = vm._gen;
   try {
-    const rtype = vm._rootAttr || vm._typeFilter || "";
+    const rtype = vm._rootAttr || "";
     const r = vm._subdirAttr
       ? await get<typeof loadEntries>("loadEntries")(rtype, vm._subdirAttr)
       : await get<typeof loadEntries>("loadEntries")(rtype);
@@ -304,7 +304,7 @@ async function runBatchToggle(
     }
     if (ok > 0) {
       await reload(vm);
-      if ((vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
+      if ((vm._rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
         bus.emit("sync:toggle:status");
       }
     }

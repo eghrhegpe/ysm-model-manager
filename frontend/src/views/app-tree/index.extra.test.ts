@@ -2,7 +2,7 @@
 // 目标：index.ts 入口编排层的剩余缺口——键盘快捷键（Ctrl+F / Delete 全分支）、
 // 批量删除（_deleteSelected 成功/部分失败/取消/防重入/代际丢弃/错误出口）、
 // root 属性变更（ready 后 / 挂载中 pendingRoot / 快速连切 / 失败路径）、
-// _load 空返回与抛错、_loadAuthorsAsync 失败、_typeFilter/_filterPaths 过滤、
+// _load 空返回与抛错、_loadAuthorsAsync 失败、_filterPaths 过滤、
 // connectedCallback 初始化异常兜底、disconnected 键盘监听清理。
 // mock 策略：backend/app.ts（getApp 可控）、modal.ts（modalConfirm 可控）、
 // toolbar-events.ts（抛错注入）；registry 用真实实现 + register("loadEntries")。
@@ -443,21 +443,6 @@ describe("app-tree index 入口生命周期（补位）", () => {
     const el = await mountEl();
     expect((el as unknown as { _authors: unknown[] })._authors).toEqual([]);
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length >= 1);
-  });
-
-  it("_typeFilter 过滤渲染（只渲染匹配 type 的行）", async () => {
-    entriesData.length = 0;
-    entriesData.push(
-      { name: "a.ysm", path: "a.ysm", fullPath: "/repo/a.ysm", type: "ysm", banned: false, size: 1, modTime: 0 },
-      { name: "c.mmd", path: "c.mmd", fullPath: "/repo/c.mmd", type: "mmd", banned: false, size: 2, modTime: 0 },
-    );
-    const el = document.createElement("app-tree") as unknown as AppTree & { _typeFilter: string };
-    el._typeFilter = "ysm";
-    document.body.appendChild(el);
-    await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
-    await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
-    expectSingleRow(el, "a", "c");
-    expect((el as unknown as { _entries: TreeEntry[] })._entries.length).toBe(2); // 过滤只影响渲染
   });
 
   it("_filterPaths 过滤渲染（只渲染命中路径的行）", async () => {

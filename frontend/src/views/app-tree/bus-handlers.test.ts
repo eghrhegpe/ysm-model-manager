@@ -99,7 +99,6 @@ function makeEntry(over: Partial<TreeEntry> = {}): TreeEntry {
 
 interface VM {
   _rootAttr: string;
-  _typeFilter: string | null;
   _subdirAttr: string;
   _batchBusy: boolean;
   _toggleBusy: boolean;
@@ -112,7 +111,6 @@ interface VM {
 function makeVM(entries: TreeEntry[] = []): VM {
   return {
     _rootAttr: "ysm",
-    _typeFilter: null,
     _subdirAttr: "",
     _batchBusy: false,
     _toggleBusy: false,

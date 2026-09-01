@@ -97,7 +97,6 @@ function makeHarness(): Harness {
   const stat = root.getElementById("ftr-stat") as HTMLElement;
   const vm = {
     _rootAttr: null,
-    _typeFilter: "ysm",
     _dirOpen: {} as Record<string, boolean>,
     _gen: 0,
     _load: vi.fn().mockResolvedValue(undefined),
@@ -340,7 +339,7 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
 
   it("非 YSM rtype → 不发 sync:toggle:status", async () => {
     const h = makeHarness();
-    (h.vm as unknown as { _typeFilter: string })._typeFilter = "mmd";
+    h.vm._rootAttr = "mmd";
     h.container.appendChild(fileRow("/repo/a.pmx", "a.pmx"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fl .ck") as Element);

@@ -48,7 +48,7 @@ function atTeStartRename(ctx: AtTeCtx, path: string): void {
 }
 
 function atTeGetRtype(vm: AppTree): string {
-  return vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+  return vm._rootAttr || RESOURCE_TYPES.YSM;
 }
 
 // ===== 事件段 1：DnD 拖入 — 由 import-dnd.ts bindTreeDnD 在 document 层处理，此处不重复注册 =====
@@ -469,7 +469,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
       else if (e.banned && enable) e.banned = false;
     }
     vm._renderTree();
-    if ((vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
+    if ((vm._rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
       bus.emit("sync:toggle:status");
     }
   }

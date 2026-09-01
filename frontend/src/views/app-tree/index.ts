@@ -71,8 +71,7 @@ export class AppTree extends WebComponentBase {
   _entries: TreeEntry[] = [];
   _search = "";
   _sort = "name";
-  _typeFilter = "";
-  _rootAttr = ""; // 由 root 属性指定，覆盖 _typeFilter 加载用
+  _rootAttr = ""; // 由 root 属性指定（ADR-147：_typeFilter 已移除，root 是唯一 rtype 来源）
   _subdirAttr = ""; // 由 subdir 属性指定，ADR-094 位置路由：mmd 子类型扫子目录
   _dirOpen: Record<string, boolean> = {};
   _filesRoot = "";
@@ -136,7 +135,7 @@ export class AppTree extends WebComponentBase {
       // 仓库页 DnD 绑定（组件级，ADR-060）；透传当前树类型作导入落盘上下文。
       // P2 审核修复：传 getter 而非按值——root 支持动态切换，闭包惰性解析防旧类型残留
       const treeDnDEl = this._root.getElementById("tree");
-      if (treeDnDEl) this._unsubs.push(bindTreeDnD(treeDnDEl, () => this._rootAttr || this._typeFilter));
+      if (treeDnDEl) this._unsubs.push(bindTreeDnD(treeDnDEl, () => this._rootAttr));
 
       // 监听创作者详情→搜索本地模型
       this._unsubs.push(
@@ -234,7 +233,7 @@ export class AppTree extends WebComponentBase {
 
   async _load(): Promise<void> {
     try {
-      const rtype = this._rootAttr || this._typeFilter;
+      const rtype = this._rootAttr;
       // ADR-094：仅当有子目录时才传 subdir（无 subdir 保持单参，向后兼容）
       const r = this._subdirAttr
         ? await get<typeof loadEntries>("loadEntries")(rtype, this._subdirAttr)
@@ -270,11 +269,7 @@ export class AppTree extends WebComponentBase {
       c._vsCleanup();
       c._vsCleanup = null;
     }
-    // 按类型过滤
     let filtered: TreeEntry[] = Array.isArray(this._entries) ? this._entries : [];
-    if (this._typeFilter) {
-      filtered = filtered.filter((e) => e.type === this._typeFilter);
-    }
     // [DBG] 诊断：_renderTree 入参（entries 数 / filterPaths 大小）
     dbg(
       "_renderTree",
@@ -283,9 +278,7 @@ export class AppTree extends WebComponentBase {
         " search=" +
         JSON.stringify(this._search) +
         " filterPaths=" +
-        (this._filterPaths ? this._filterPaths.size : "null") +
-        " typeFilter=" +
-        JSON.stringify(this._typeFilter),
+        (this._filterPaths ? this._filterPaths.size : "null"),
     );
     renderTree(
       c as HTMLElement,
@@ -414,7 +407,7 @@ export class AppTree extends WebComponentBase {
     }
 
     updateSelectCount(this._root);
-    bus.emit("model:select", { path: nextKey, rtype: this._rootAttr || this._typeFilter || RESOURCE_TYPES.YSM });
+    bus.emit("model:select", { path: nextKey, rtype: this._rootAttr || RESOURCE_TYPES.YSM });
     rememberModelPath(nextKey);
 
     const allRows = container._vsRows || [];

@@ -18,10 +18,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ROOT, toPosix } from './_lib/scan-files.ts';
 import { parseArgs } from './_lib/parse-args.ts';
+import { KNOWLEDGE_ORDER } from './_lib/knowledge-cards.ts';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
-const KNOWN_CATEGORIES = ['core', 'go', 'ui', 'feature', 'utils', 'config'];
+const KNOWN_CATEGORIES = KNOWLEDGE_ORDER;
 // 与 check-knowledge-drift.ts KIND_RE 同款：小写字母开头，仅 a-z0-9_-
 const KIND_RE = /^[a-z][a-z0-9_-]*$/;
 

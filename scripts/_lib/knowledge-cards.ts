@@ -1,7 +1,7 @@
 /**
  * knowledge-cards.ts — 知识卡常量共享层（ADR-114 §被补充）。
  *
- * YSM 有 6 个 category（core/go/ui/feature/utils/config），
+ * YSM 有 7 个 category（core/go/ui/feature/rendering/utils/config），
  * 与 BABY MikuMikuAR 的 8 桶（env/scene/physics/rendering/motion/ui/core/backend）不同——
  * 两边语义独立，切勿混用。
  *
@@ -19,7 +19,7 @@ import path from 'node:path';
 import { ROOT } from './scan-files.ts';
 
 /** 知识卡分类展示顺序（sidebar / 索引共用）。 */
-export const KNOWLEDGE_ORDER = ['core', 'go', 'ui', 'feature', 'utils', 'config'];
+export const KNOWLEDGE_ORDER = ['core', 'go', 'ui', 'feature', 'rendering', 'utils', 'config'];
 
 /** 分类 → 中文标签（sidebar / 索引 / 路由表共用）。 */
 export const CATEGORY_LABELS = {
@@ -27,6 +27,7 @@ export const CATEGORY_LABELS = {
   go: 'Go 后端包（安装、下载、回收站、YSM 解析等）',
   ui: '前端 UI 组件（tree、sidebar、preview、content）',
   feature: '业务功能（导入队列、同步、社区）',
+  rendering: '3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）',
   utils: '工具函数（display、fmt、dom、animation）',
   config: '配置与注册表（resource_types、AppConfig）',
 };

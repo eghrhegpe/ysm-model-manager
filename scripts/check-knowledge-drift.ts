@@ -33,7 +33,7 @@ import path from 'node:path';
 import { ROOT, walk } from './_lib/scan-files.ts';
 import { toPosix } from './_lib/to-posix.ts';
 import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.ts';
-import { PERF_TAGS, KNOWLEDGE_NON_CARDS } from './_lib/knowledge-cards.ts';
+import { PERF_TAGS, KNOWLEDGE_NON_CARDS, KNOWLEDGE_ORDER } from './_lib/knowledge-cards.ts';
 import { parseArgs } from './_lib/parse-args.ts';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
@@ -62,7 +62,7 @@ const errors: string[] = [];
 const warns: string[] = [];
 
 // ── 枚举 ──────────────────────────────────────────────
-const CATEGORY_ENUM = new Set(['core', 'go', 'ui', 'feature', 'utils', 'config']);
+const CATEGORY_ENUM = new Set(KNOWLEDGE_ORDER);
 const TIER_ENUM = new Set(['architecture', 'leaf']);
 const REQUIRED_FIELDS = ['kind', 'name', 'category', 'tier'];
 const KIND_RE = /^[a-z0-9][a-z0-9_-]*$/;

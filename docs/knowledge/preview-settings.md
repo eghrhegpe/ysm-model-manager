@@ -50,13 +50,7 @@ use_when:
   - 显示控制
   - 骨骼名称
   - 帧率
-  - 像素比
-  - 视锥剔除
-  - 状态层
-  - 3D 偏好
-  - 组件选择
   - 截图灯光
-  - activeComponent
 invariant_anchors:
   - frontend/src/preview-3d/state/preview-state.ts|KNOWN_PATHS
   - frontend/src/preview-3d/state/preview-state.ts|setStateValue

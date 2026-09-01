@@ -8,30 +8,14 @@ source_files:
   - .githooks/pre-push
   - scripts/_lib/gate-config.ts
 use_when:
-  - pre-push
   - 推送门禁
   - 质量门禁
   - 域级检查
+  - 门禁阻断
   - go build
-  - go test
-  - go vet
-  - binding-check
-  - check-layering
-  - check-path-hygiene
-  - check-menu-health
-  - check-ctx-menu-i18n
   - vite build
-  - vitest
-  - tsc
-  - type-consistency
-  - link-checker
-  - release-notes
-  - check-redlines
-  - adr-check
-  - gen-docs-index
   - 契约测试
   - Promise.all
-  - 门禁
 quick_groups:
   - 提交与钩子
 quick_intents:

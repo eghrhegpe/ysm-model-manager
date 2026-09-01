@@ -19,14 +19,9 @@ pitfalls:
 
 use_when:
   - 自主动画
-  - 自动跳舞
   - 眨眼
-  - 呼吸
-  - 视线追踪
-  - 口型同步
   - 节拍检测
   - 模型感知
-  - 自动运动
 perf:
   - cpu-bound
 invariant_anchors:

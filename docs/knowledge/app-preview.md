@@ -31,13 +31,9 @@ pitfalls:
 use_when:
   - 预览
   - 模型预览
-  - 2D 骨骼
   - 3D 预览
   - Litematic
-  - 蓝图
-  - 缩略图
   - WASM 解码
-  - 放大预览
 invariant_anchors:
   - frontend/src/views/app-preview/index.ts|_previewGuard
   - frontend/src/views/app-preview/detail.ts|detailGen

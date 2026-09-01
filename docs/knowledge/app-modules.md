@@ -28,10 +28,6 @@ use_when:
   - 主题初始化
   - 服务注册
   - 检查更新
-  - import 组件
-  - 新组件注册
-  - 窗口显示
-  - startup reveal
 perf:
   - io-bound
 invariant_anchors:

@@ -18,13 +18,7 @@ use_when:
   - 审计
   - 白名单
   - 绑定层
-  - 覆盖率
-  - 健康分
-invariant_anchors:
-  - go/cli/cli.go|RunCLI
-  - go/cli/cli.go|ExecuteCLIWithApp
 ---
-
 # CLI 质量摸排 Checklist
 
 ## 概览

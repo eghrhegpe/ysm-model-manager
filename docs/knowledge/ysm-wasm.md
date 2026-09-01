@@ -23,11 +23,8 @@ use_when:
   - WASM
   - YSMParser
   - ysm 解码
-  - 加密模型
   - wasm 加载
-  - Emscripten
   - MEMFS
-  - node 解码
   - callMain
 invariant_anchors:
   - go/avatar/avatar_decode.go|DecodeYSMFiles

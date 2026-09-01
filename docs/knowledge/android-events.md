@@ -23,13 +23,9 @@ use_when:
   - android:back
   - 返回键
   - 弹窗
-  - 退出
   - 系统事件
   - ScreenLocked
   - NetworkChanged
-  - permissionGranted
-  - closeActiveDialog
-  - registerAndroidEvents
 invariant_anchors:
   - frontend/src/core/handlers/android-events.ts|registerAndroidEvents
 ---

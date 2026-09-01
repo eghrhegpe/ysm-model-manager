@@ -36,14 +36,9 @@ use_when:
   - pointerdown
   - pointermove
   - pointerup
-  - setPointerCapture
-  - touch-action
   - 触屏
   - 拖拽
   - 旋转
-  - hover
-  - mouseenter
-  - 全窗预览
 invariant_anchors:
   - frontend/src/preview-3d/adapters/input-and-animation.ts|setPointerCapture
 ---

@@ -19,7 +19,6 @@ pitfalls:
 
 use_when:
   - UI 组件
-  - UI 组件库
   - 卡片组件
   - 折叠面板
   - 加载动画
@@ -27,8 +26,6 @@ use_when:
   - 行组件
   - 预设
   - 图标
-  - 幻灯片菜单
-  - 组件样式
 invariant_anchors:
   - frontend/src/ui/control-registry.ts|registerControl
   - frontend/src/ui/control-registry.ts|getControl

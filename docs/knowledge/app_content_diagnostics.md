@@ -32,17 +32,11 @@ pitfalls:
   - 性能 trace 未释放 → 长时占用内存；file-bench / perf-trace 完成后必须 stop 回收
 use_when:
   - 诊断页
-  - 诊断
   - 冲突
   - 去重流程
   - 日志
-  - 体检
   - 性能
   - oldest
-  - doDedup
-  - 仓库体检
-  - initDiagnostics
-  - startDedup
 perf:
   - cpu-bound
   - gpu-bound

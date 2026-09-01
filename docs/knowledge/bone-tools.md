@@ -28,13 +28,10 @@ pitfalls:
 use_when:
   - 骨骼工具
   - 骨骼树
-  - 骨骼列表
   - 骨骼拾取
-  - 骨骼显隐
   - BoneNode
   - BoneTree
   - buildBoneTree
-  - makeBonePanelRenderer
 perf:
   - cpu-bound
 invariant_anchors:

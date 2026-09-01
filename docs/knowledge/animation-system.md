@@ -35,14 +35,9 @@ use_when:
   - 动画
   - 骨骼动画
   - 关键帧
-  - 动画播放
   - Molang
   - 数字滚动
   - stagger 入场
-  - 关闭动画
-  - 状态机
-  - 动画控制器
-  - AnimationController
 perf:
   - cpu-bound
 invariant_anchors:

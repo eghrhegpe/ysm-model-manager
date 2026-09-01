@@ -25,15 +25,10 @@ pitfalls:
 use_when:
   - 整合包分类
   - 路由
-  - location 路由
   - zipentry 指纹
   - 蓝图
-  - 投影
-  - vrm
-  - pmx
   - 回归
   - last-wins
-  - priority 裁决
 invariant_anchors:
   - go/packs/classify.go|ClassifyResource
   - go/packs/classify.go|DetectByEntries

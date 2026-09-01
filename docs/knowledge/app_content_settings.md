@@ -29,17 +29,10 @@ pitfalls:
 
 use_when:
   - 设置页
-  - 设置
   - 主题设置
   - 键位
   - 路径配置
   - 界面偏好
-  - 字号
-  - initSettings
-  - SaveAppConfig
-  - ui-prefs
-  - keymap
-  - worker 线程数
 invariant_anchors:
   - frontend/src/views/app-content/settings/init.ts|initSettings
 ---

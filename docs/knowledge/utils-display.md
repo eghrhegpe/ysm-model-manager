@@ -17,15 +17,12 @@ pitfalls:
   - 搜索高亮未走 esc → XSS；必须在高亮前经 esc 转义
 
 use_when:
-  - 文件名
   - 文件名显示
-  - 美化文件名
   - renderDisplayName
   - 作者标签
   - 作品标签
   - 文件名着色
   - 搜索高亮
-  - ban 文件
 invariant_anchors:
   - frontend/src/utils/dom/display.ts|parseModelName
   - frontend/src/utils/dom/display.ts|renderDisplayName

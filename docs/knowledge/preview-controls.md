@@ -34,13 +34,9 @@ pitfalls:
 use_when:
   - 3D 控制器
   - MMD 播放
-  - VRM 材质
-  - YSM schema
   - 截图按钮
   - 相机控制
   - 模型切换
-  - multiModelSelectNode
-  - preview menu node
 invariant_anchors:
   - frontend/src/views/app-preview/ysm-controls.ts|registerYsmModelSchema
   - frontend/src/views/app-preview/mmd-controls.ts|playNodes

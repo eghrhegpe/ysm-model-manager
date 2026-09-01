@@ -25,11 +25,7 @@ use_when:
   - 存储授权
   - 目录选择
   - MANAGE_EXTERNAL_STORAGE
-  - 权限
-  - 选择目录
   - SAF
-  - android-bridge
-  - pickDirectory
 invariant_anchors:
   - frontend/src/backend/platform.ts|requestStoragePermission
 ---

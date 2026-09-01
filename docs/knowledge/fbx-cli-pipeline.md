@@ -14,13 +14,7 @@ use_when:
   - GLB
   - fbx2gltf
   - assimp
-  - qmuntal
-  - 加载模型
-  - 模型格式
-invariant_anchors:
-  - go/cli/cli.go|RunCLI
 ---
-
 # FBX CLI 处理管线 fbx-cli-pipeline
 
 ## 概览

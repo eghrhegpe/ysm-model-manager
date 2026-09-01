@@ -28,14 +28,7 @@ use_when:
   - xdg-open
   - 重启
   - Node.js
-  - sidecar
-  - watcher
-  - 平台隔离
-  - build tag
-invariant_anchors:
-  - internal/app/app_files.go|runtime.GOOS
 ---
-
 # Android 平台守卫（Go 侧）
 
 ## 概览

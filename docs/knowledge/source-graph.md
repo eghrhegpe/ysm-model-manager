@@ -14,9 +14,7 @@ use_when:
   - rollback-impact
   - bloat-history
   - 依赖图
-  - check-lib-adoption
 ---
-
 # 源码符号提取共享层 source-graph.ts
 
 > **设计模式**：单一内核 + 分发层（"一个正则两套口径"），支撑 Go + JS/TS 双栈符号提取。6 个审计/检测工具共用，避免各自内联导致逐步分叉。

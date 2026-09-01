@@ -279,6 +279,44 @@ function checkAgentsNoHandcraftedIndex() {
   }
 }
 
+// ── 检查 5.5：use_when / quick_intents 上限门禁（ADR-152 续，知识卡质量治理）──
+// use_when 被滥用为「术语清单」（如 optimization_log 18 条），导致路由表歧义放大。
+// 设计意图：
+//   - use_when: 用户自然语言查询关键词，上限 8 条（>8 WARN，>12 ERROR）
+//   - quick_intents: 高频用户查询，上限 5 条（>5 WARN，>8 ERROR）
+//   - invariant_anchors: architecture 卡必须声明（缺失 WARN），指向具体源码位置
+const USE_WHEN_WARN = 8;
+const USE_WHEN_ERROR = 12;
+const QUICK_INTENTS_WARN = 5;
+const QUICK_INTENTS_ERROR = 8;
+
+function checkKnowledgeQuality(cards: any[]) {
+  for (const { cf, fm, tier } of cards) {
+    if (!fm) continue;
+    // use_when 上限
+    const uw = getList(fm, 'use_when');
+    if (uw.length > USE_WHEN_ERROR) {
+      errors.push(`知识卡 ${cf} 的 use_when 过量: ${uw.length} 条（上限 ${USE_WHEN_ERROR}，超 ${uw.length - USE_WHEN_ERROR} 条）——请合并或移除冗余关键词`);
+    } else if (uw.length > USE_WHEN_WARN) {
+      warns.push(`知识卡 ${cf} 的 use_when 略多: ${uw.length} 条（建议上限 ${USE_WHEN_WARN}）`);
+    }
+    // quick_intents 上限
+    const qi = getList(fm, 'quick_intents');
+    if (qi.length > QUICK_INTENTS_ERROR) {
+      errors.push(`知识卡 ${cf} 的 quick_intents 过量: ${qi.length} 条（上限 ${QUICK_INTENTS_ERROR}）——请合并为复合查询词`);
+    } else if (qi.length > QUICK_INTENTS_WARN) {
+      warns.push(`知识卡 ${cf} 的 quick_intents 略多: ${qi.length} 条（建议上限 ${QUICK_INTENTS_WARN}）`);
+    }
+    // invariant_anchors 缺失（architecture 卡必须声明）
+    if (tier === 'architecture') {
+      const inv = getList(fm, 'invariant_anchors');
+      if (inv.length === 0) {
+        warns.push(`知识卡 ${cf}（architecture）缺少 invariant_anchors——请声明机制锚点（格式：文件路径|应含模式）`);
+      }
+    }
+  }
+}
+
 // ── 检查 5：代码→卡片覆盖盲区（WARN，不阻断）──
 // 适配自 MikuMikuAR check-doc-drift.ts checkKnowledgeCoverage（INFO 级）。
 // 从「代码现实」出发：扫描源码目录下每个文件，确认至少 1 张知识卡的
@@ -423,6 +461,7 @@ function main() {
   checkKnowledgeAnchors(cards);
   checkIndexLinks();
   checkAgentsNoHandcraftedIndex();
+  checkKnowledgeQuality(cards);
   checkKnowledgeCoverage(cards);
 
   const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };

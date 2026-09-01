@@ -41,13 +41,10 @@ use_when:
   - 整合包同步
   - 推送
   - 拉取
-  - 整合包列表
   - 同步状态
-  - instance
   - PushSingleResource
   - PullSingleResource
   - sync:download:missing
-  - app-sidebar
 invariant_anchors:
   - frontend/src/views/app-sidebar/index.ts|runPush
   - frontend/src/views/app-sidebar/index.ts|runPull

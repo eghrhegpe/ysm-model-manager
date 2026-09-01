@@ -24,20 +24,11 @@ tests:
   - frontend/src/preview-3d/adapters/mmd-ktx2-texture-loader.test.ts
   - frontend/src/utils/main-thread-watch.test.ts
 use_when:
-  - 优化
-  - 性能
-  - 瓶颈
-  - 优化记录
-  - optimization
-  - perf
-  - KTX2
+  - 性能优化
+  - KTX2 编码
   - 纹理缓存
-  - 加载速度
-  - 内存
-  - GPU 内存
-  - 闪退
-  - 泄漏
-  - dispose
+  - 主线程监控
+  - 内存泄漏
 perf:
   - cpu-bound
   - gpu-bound

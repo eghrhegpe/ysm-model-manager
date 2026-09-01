@@ -28,11 +28,7 @@ use_when:
   - 数值范围搜索
   - 标签过滤
   - 多线程统计角标
-  - 网页版导入
-  - tool-bar-search
-  - 工具栏搜索
   - 降级提示
-  - consumeWebSearchDegraded
 invariant_anchors:
   - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
   - frontend/src/views/app-tree/toolbar-search.ts|consumeWebSearchDegraded

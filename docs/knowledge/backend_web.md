@@ -21,20 +21,9 @@ pitfalls:
 use_when:
   - 网页版
   - 浏览器模式
-  - web mode
-  - IndexedDB
-  - IDB
-  - 浏览器后端
   - browser adapter
+  - IndexedDB
   - 跨域隔离
-  - COI
-  - NBT 解析
-  - 体素
-  - 体素颜色
-  - Web CLI
-  - 社区下载
-  - 网页版文件系统
-  - 网页版仓库
 invariant_anchors:
   - frontend/src/backend/app.ts|getApp
   - frontend/src/backend/browser-adapter.ts|browserAdapter

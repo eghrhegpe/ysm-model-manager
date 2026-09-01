@@ -37,7 +37,6 @@ use_when:
   - activeComponent
   - 组件选择
   - YSM maid 同台
-  - ysm-model
   - sessionId
 ---
 

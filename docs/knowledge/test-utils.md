@@ -22,13 +22,7 @@ use_when:
   - flaky
   - 异步等待
   - 组件测试
-  - mock
-  - G-1
-invariant_anchors:
-  - frontend/src/test-utils/events.ts|fireEvent
-  - frontend/src/test-utils/events.ts|fireClick
 ---
-
 # 测试工具 test-utils（G-1 抗脆弱测试基础设施）
 
 ## 概览

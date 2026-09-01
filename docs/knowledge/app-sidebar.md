@@ -40,11 +40,7 @@ use_when:
   - 版本卡片
   - 推送
   - 拉取
-  - 一键安装
   - 同步状态
-  - 勾选
-  - 整合包拖拽导入
-  - 启动器检测
 invariant_anchors:
   - frontend/src/views/app-sidebar/events.ts|_lastEmittedPkg
 ---

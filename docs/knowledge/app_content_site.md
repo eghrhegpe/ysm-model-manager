@@ -34,16 +34,10 @@ pitfalls:
   - site 拖拽排序未回写 workshop-data → 刷新丢失；必须经 events.ts 的 drag 事件统一落盘
 use_when:
   - 创意工坊
-  - 站点
   - 站点视图
-  - 创作者频道
   - 浏览模式
   - 卡片拖拽
-  - 编辑模式
-  - renderSiteView
-  - site-view
-  - browseMode
-  - 收藏创作者
+  - workshop-data
 invariant_anchors:
   - frontend/src/views/app-content/site-view.ts|renderSiteView
 ---

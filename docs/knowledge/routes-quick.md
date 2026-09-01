@@ -31,7 +31,6 @@
 | Rust 扫描器、rust_backend | [Rust 桥 rustbridge](./rustbridge.md) | Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载 | - |
 | rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
 | ScreenLocked、NetworkChanged、permissionGranted | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
-| Wails 绑定、Go 调用 | [Wails 桥接 app.ts](./wails-bridge.md) | 前端必须经 getApp() 访问，禁止直调 window.go | ADR-049 |
 
 ## 🎯 3D 预览与模型追加
 
@@ -61,7 +60,6 @@
 | 头像、作者、创作者 avatar | [头像 go/avatar](./go-avatar.md) | 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接 | - |
 | 头像缓存、缩略图 | [头像 go/avatar](./go-avatar.md) | - | - |
 | 投影、litematic、schematic、nbt、蓝图 | [Litematic 解析 go/litematic](./go-litematic.md) | Litematic 蓝图必须走 go/litematic 的 parser/schematic/structure 三层解析，禁止前端手写 Litematic 解析 | - |
-| 相机控制、OrbitControls | [3D 预览渲染 model3d](./model3d.md) | 相机定位公式固定：position(0, 80, -120), target(0, 80, 0) | - |
 | 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
 | 渲染联邦、shared renderer、rAF 复用 | [联邦渲染能力 (Render Federation)](./render-federation.md) | 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer | ADR-125 |
 | 预览面板、模型预览、2D 骨骼 / 3D 预览 | [预览面板 app-preview](./app-preview.md) | 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则 | - |
@@ -280,12 +278,6 @@
 | 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
 | 提交前文档自动同步 | [提交前钩子 pre-commit](./pre-commit-hook.md) | 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2） | - |
 | 推送被门禁阻断怎么办 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查 | - |
-
-## 🎯 模型格式与解析
-
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
-|----------|--------|----------|----------|
-| YSM 烘焙 / 几何反推 / pivot 错位 / BlockBench 导出 | [YSM 烘焙与几何反推](./ysm-baked.md) | cube 语义已烘焙为纯顶点面，禁止前端反推 origin/size/uv | - |
 
 ## 🚨 高频陷阱速查
 

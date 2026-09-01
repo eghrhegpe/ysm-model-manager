@@ -31,11 +31,7 @@ pitfalls:
 use_when:
   - API
   - Binding
-  - 接口
-  - Go 方法
   - 调用后端
-  - 有哪些方法
-  - App 方法
   - getApp
   - 方法签名
   - app.ts 绑定

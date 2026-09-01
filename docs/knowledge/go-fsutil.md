@@ -28,16 +28,10 @@ pitfalls:
 use_when:
   - 遍历
   - walk
-  - 空目录
-  - 文件数
   - 原子写
   - 复制
-  - 权限常量
   - 硬链接
   - 跨设备
-  - BOM
-  - 读取上限
-  - base64 受限解码
 perf:
   - io-bound
 invariant_anchors:

@@ -30,13 +30,9 @@ pitfalls:
 use_when:
   - 整合包
   - 同步
-  - 实例
   - 硬链接
-  - 符号链接
   - 缺失
   - 多余
-  - .ban
-  - PrismLauncher
 perf:
   - io-bound
 invariant_anchors:

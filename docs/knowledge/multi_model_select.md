@@ -34,16 +34,11 @@ pitfalls:
 
 use_when:
   - 多模型
-  - 多组件
   - 模型选择
   - select
   - zip 多模型
   - 多 entry
-  - 多候选
   - ADR-132
-  - 蓝图 zip
-  - litematic zip
-  - 容器内多 nbt
 ---
 
 # 多模型选择菜单原语 multiModelSelectNode

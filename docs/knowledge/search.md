@@ -36,12 +36,8 @@ pitfalls:
 use_when:
   - 搜索
   - 筛选
-  - 关键词
-  - 标签筛选
-  - 数值筛选
   - 三路交集
   - adv-filter
-  - 高级筛选
   - SearchModels
   - 网页版降级
 ---

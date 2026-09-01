@@ -23,12 +23,10 @@ use_when:
   - slide-menu
   - slide 菜单
   - 去桶化
-  - ADR 卡片
   - 两级菜单
   - 轻量导航栈
   - createSlideMenu
   - slideRow
-  - 行组件
 invariant_anchors:
   - frontend/src/ui/ui-slide-menu.ts|createSlideMenu
   - frontend/src/ui/ui-slide-menu.ts|home

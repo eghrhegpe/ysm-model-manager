@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 150 张知识卡
+> 总计: 151 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -16,7 +16,7 @@
 | 🏗 extensibility-index-reconciliation | 可拓展点索引对账（vs HEAD @ d517113c…） | architecture | — | 拓展点对账, 落地状态, ADR 闭环 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单 |
-| 🏗 optimization_log | 优化记录 optimization-log | architecture | cpu-bound, gpu-bound, concurrent, memory-heavy | 优化, 性能, 瓶颈, 优化记录, optimization, perf, KTX2, 纹理缓存, 加载速度, 内存, GPU 内存, 闪退, 泄漏, dispose |
+| 🏗 optimization_log | 优化记录 optimization-log | architecture | cpu-bound, gpu-bound, concurrent, memory-heavy | 性能优化, KTX2 编码, 纹理缓存, 主线程监控, 内存泄漏 |
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
 | 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
 | 🏗 scripts_jscpd_go | Go 端 jscpd 重复检测脚本 | architecture | — | jscpd, go 重复代码, 复制粘贴检测, duplicate, 重复对, 增量门禁, 新增重复, 独立 baseline |
@@ -37,13 +37,13 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🏗 android-bridge | Android 桥接层：存储授权 + 目录选择器 | architecture | — | Android, 存储授权, 目录选择, MANAGE_EXTERNAL_STORAGE, 权限, 选择目录, SAF, android-bridge, pickDirectory |
-| 🏗 android-events | Android 系统事件消费（back/网络/存储授权） | architecture | — | android:back, 返回键, 弹窗, 退出, 系统事件, ScreenLocked, NetworkChanged, permissionGranted, closeActiveDialog, registerAndroidEvents |
+| 🏗 android-bridge | Android 桥接层：存储授权 + 目录选择器 | architecture | — | Android, 存储授权, 目录选择, MANAGE_EXTERNAL_STORAGE, SAF |
+| 🏗 android-events | Android 系统事件消费（back/网络/存储授权） | architecture | — | android:back, 返回键, 弹窗, 系统事件, ScreenLocked, NetworkChanged |
 | 🏗 backend-idb | 浏览器后端 IndexedDB 封装 | architecture | io-bound | IndexedDB, 网页版, backend, 模型库, browser adapter, web mode |
-| 🏗 backend_web | 网页版后端 backend-web | architecture | — | 网页版, 浏览器模式, web mode, IndexedDB, IDB, 浏览器后端, browser adapter, 跨域隔离, COI, NBT 解析, 体素, 体素颜色, Web CLI, 社区下载, 网页版文件系统, 网页版仓库 |
+| 🏗 backend_web | 网页版后端 backend-web | architecture | — | 网页版, 浏览器模式, browser adapter, IndexedDB, 跨域隔离 |
 | 🏗 binding_json_cleanup | string-JSON 绑定铲债清单 | architecture | — | string-JSON, JSON.parse 断言, 绑定 struct 化, 铲债清单, 错误通道统一, ADR-143, 绑定返回 string |
 | 🏗 event-bus | 事件总线 bus.ts | architecture | — | 事件, 事件总线, 通信, emit, 跨组件通信, bus |
-| 🍃 event-graph-guard | Bus 事件契约守卫 | leaf | — | 未传参, 缺参, bus 事件, 事件契约, 事件漂移, 内联脚本, 可选链, 跨行调用, 孤儿发射, event-graph |
+| 🍃 event-graph-guard | Bus 事件契约守卫 | leaf | — | 未传参, 缺参, bus 事件, 事件契约, 事件漂移, 内联脚本, 可选链, 跨行调用 |
 | 🏗 frontend_test_audit | 前端测试基建审计 | architecture | — | 代码审核, 测试基建, 契约测试, e2e, flaky, 假绿, 覆盖盲区 |
 | 🏗 global-handlers | 全局事件处理 global-handlers | architecture | — | 全局事件, 拖拽导入, 拖拽提示, 同步缺失, 清空整合包, 导出清单 |
 | 🏗 i18n | 国际化 i18n 模块 | architecture | — | 翻译, 多语言, i18n, t(), 语言切换, lang:changed |
@@ -51,11 +51,11 @@
 | 🍃 ik_solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | cpu-bound | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD |
 | 🏗 model-stats | Web Worker 模型统计层 model-stats | architecture | cpu-bound, concurrent | 模型统计, 骨骼数, 立方体数, 纹理尺寸, SearchModels, 数值筛选, Web Worker, 批量统计 |
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | — | 页面, 当前页, 状态管理, page store, currentPage |
-| 🏗 pointer-events | Pointer Events 统一交互（触屏 + 桌面） | architecture | — | pointerdown, pointermove, pointerup, setPointerCapture, touch-action, 触屏, 拖拽, 旋转, hover, mouseenter, 全窗预览 |
+| 🏗 pointer-events | Pointer Events 统一交互（触屏 + 桌面） | architecture | — | pointerdown, pointermove, pointerup, 触屏, 拖拽, 旋转 |
 | 🏗 rust-android-bridge | Rust Scanner Bridge 全平台支持 | architecture | — | Android, Linux, macOS, rust_backend, CGO |
 | 🍃 theme | 主题系统 theme | leaf | — | 主题, 换肤, 深色, 浅色, 跟随系统, 动画开关, 字号, 界面偏好 |
-| 🏗 wails-bridge | Wails 桥接 app.ts | architecture | — | Wails, 桥接, getApp, Go 调用, Binding, window.go.main.App, 网页版, browser adapter, 浏览器后端 |
-| 🏗 ysm-baked | YSM 烘焙与几何反推 | architecture | cpu-bound | 烘焙, 几何反推, pivot, 骨骼错位, 模型错位, UV 对不上, 贴图错位, RawYsmModel, RawFace, YSM 导出, BlockBench |
+| 🏗 wails-bridge | Wails 桥接 app.ts | architecture | — | Wails, 桥接, getApp, Go 调用, Binding, window.go.main.App, 网页版, browser adapter |
+| 🏗 ysm-baked | YSM 烘焙与几何反推 | architecture | — | 烘焙, 几何反推, pivot, 骨骼错位, 模型错位, UV 对不上, 贴图错位, RawYsmModel |
 
 ### 摘要
 
@@ -88,13 +88,13 @@
 | 🏗 export | 截图导出 export | architecture | — | 截图, 导出 PNG, 多角度截图, 透明背景, 预览缓存, blob URL, saveScreenshot, renderMultiAngle |
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
 | 🏗 oldest-models | 资历最深模型 oldest-models | architecture | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
-| 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器, MMD 播放, VRM 材质, YSM schema, 截图按钮, 相机控制, 模型切换, multiModelSelectNode, preview menu node |
-| 🏗 preview-settings | 预览面板设置与显示控制 | architecture | — | 预览设置, 显示控制, 骨骼名称, 帧率, 像素比, 视锥剔除, 状态层, 3D 偏好, 组件选择, 截图灯光, activeComponent |
+| 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器, MMD 播放, 截图按钮, 相机控制, 模型切换 |
+| 🏗 preview-settings | 预览面板设置与显示控制 | architecture | — | 预览设置, 显示控制, 骨骼名称, 帧率, 截图灯光 |
 | 🍃 preview_3d_migration | preview-3d 领域根迁移 | leaf | — | 整目录搬家, 领域根提升, 相对引用修复, cmd 命令行限制, 目录归置 |
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | io-bound | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
 | 🏗 resource-packs | 资源包功能 resource-packs | architecture | — | 资源包, 光影包, 蓝图, 投影, resourcepack, shaderpack, 资源管理 |
-| 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 关键词, 标签筛选, 数值筛选, 三路交集, adv-filter, 高级筛选, SearchModels, 网页版降级 |
-| 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 整合包列表, 同步状态, instance, PushSingleResource, PullSingleResource, sync:download:missing, app-sidebar |
+| 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 三路交集, adv-filter, SearchModels, 网页版降级 |
+| 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 同步状态, PushSingleResource, PullSingleResource, sync:download:missing |
 | 🏗 version-updater | 版本更新 version-updater | architecture | io-bound | 更新, 升级, 检查更新, 新版本, 静默检查, updater, 版本 |
 
 ### 摘要
@@ -119,12 +119,12 @@
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🏗 app_cycle_injection | App↔子组件对象级环打破范式（回调注入） | architecture | — | 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）, 评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct, 想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零 |
-| 🏗 classify-routing | 分类路由与回归护栏 | architecture | — | 整合包分类, 路由, location 路由, zipentry 指纹, 蓝图, 投影, vrm, pmx, 回归, last-wins, priority 裁决 |
-| 🏗 cli_quality_audit | CLI 质量摸排 Checklist | architecture | — | CLI, 质量摸排, 代码审核, 代码审查, bug 排查, 审计, 白名单, 绑定层, 覆盖率, 健康分 |
+| 🏗 classify-routing | 分类路由与回归护栏 | architecture | — | 整合包分类, 路由, zipentry 指纹, 蓝图, 回归, last-wins |
+| 🏗 cli_quality_audit | CLI 质量摸排 Checklist | architecture | — | CLI, 质量摸排, 代码审核, 代码审查, bug 排查, 审计, 白名单, 绑定层 |
 | 🍃 doctor_gate_overlap | 质量闸门双调度器重叠审计 | leaf | — | 双调度器, 质量闸门重叠, doctor gate 差异, 治理红线下沉 |
 | 🏗 drift-scan | drift-scan（双轨漂移检测） | architecture | — | 漂移检测, 双轨, 重复实现, 口径漂移 |
-| 🏗 fbx-cli-pipeline | FBX CLI 处理管线 fbx-cli-pipeline | architecture | — | FBX, CLI, 命令行, 转换, glTF, GLB, fbx2gltf, assimp, qmuntal, 加载模型, 模型格式 |
-| 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android, 平台守卫, RevealInExplorer, OpenFolder, RestartApplication, xdg-open, 重启, Node.js, sidecar, watcher, 平台隔离, build tag |
+| 🏗 fbx-cli-pipeline | FBX CLI 处理管线 fbx-cli-pipeline | architecture | — | FBX, CLI, 命令行, 转换, glTF, GLB, fbx2gltf, assimp |
+| 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android, 平台守卫, RevealInExplorer, OpenFolder, RestartApplication, xdg-open, 重启, Node.js |
 | 🍃 go-avatar-decode | Go 头像提取：纯函数 vs Node+WASM 解码分界 | leaf | io-bound, single-thread | 改头像提取 / DecodeYSMFiles / ExtractAvatarURI 逻辑或补 avatar 测试时 |
 | 🏗 go-avatar | 头像 go/avatar | architecture | io-bound | 头像, 作者, 创作者, avatar, 缓存, 缩略图 |
 | 🏗 go-cli-search | CLI 搜索命令 search | architecture | — | CLI 搜索, 命令行搜索, search 命令, 关键词搜索, 数值范围搜索, 模型搜索, go run search, runSearch |
@@ -134,7 +134,7 @@
 | 🏗 go-download | 下载器 go/download | architecture | io-bound, single-thread | 下载, 进度, download, 进度条, 下载进度 |
 | 🏗 go-executil | 进程隐藏窗口 go/executil | architecture | — | 子进程隐藏控制台窗口, 跨平台 HideWindow, 外部进程启动 |
 | 🏗 go-fileops | 文件操作 go/fileops | architecture | io-bound | 移动, 复制, 重命名, 删除, fileops, 启用禁用, .ban, ysm.json 整组操作 |
-| 🍃 go-fsutil | 文件基础设施 go/fsutil | leaf | io-bound | 遍历, walk, 空目录, 文件数, 原子写, 复制, 权限常量, 硬链接, 跨设备, BOM, 读取上限, base64 受限解码 |
+| 🍃 go-fsutil | 文件基础设施 go/fsutil | leaf | io-bound | 遍历, walk, 原子写, 复制, 硬链接, 跨设备 |
 | 🏗 go-geometry | Geometry 存档 go/geometry | architecture | io-bound, memory-heavy | geometry, 基岩版, bedrock, 模型解析, zip, 7z, 纹理, 动画 |
 | 🏗 go-importer | 导入策略 go/importer | architecture | io-bound | 导入, 策略, 导入队列, importer |
 | 🏗 go-installer | 模型安装 go/installer | architecture | io-bound | 安装, installer, 模型导入, 下载模型 |
@@ -146,7 +146,7 @@
 | 🏗 go-paths | 路径安全 go/paths | architecture | — | 路径, 安全, path, 路径校验 |
 | 🏗 go-recycle | 回收站 go/recycle | architecture | io-bound | 回收站, 删除, 恢复, recycle, 软删除 |
 | 🏗 go-scanner | 扫描核心 go/scanner | architecture | io-bound, concurrent | 扫描, 扫描条目, 文件树, 哈希, 缓存, 作者提取, ScanEntries, 索引生成 |
-| 🏗 go-sync | 整合包同步 go/sync | architecture | io-bound | 整合包, 同步, 实例, 硬链接, 符号链接, 缺失, 多余, .ban, PrismLauncher |
+| 🏗 go-sync | 整合包同步 go/sync | architecture | io-bound | 整合包, 同步, 硬链接, 缺失, 多余 |
 | 🏗 go-tags | 标签系统 go/tags | architecture | io-bound | 标签, tag, 分类, 筛选, tag-editor |
 | 🍃 go-testutil | 测试辅助函数 go/internal/testutil | leaf | — | 跨包复用测试 helper, 创建测试文件, 构造内存 ZIP |
 | 🏗 go-threejs | 3D 骨骼 spec go/threejs | architecture | cpu-bound, concurrent | 3D 预览, 骨骼, three.js, spec, 顶点, UV, 四元数, 模型渲染 |
@@ -158,7 +158,7 @@
 | 🍃 go_conc | 通用泛型并发工具 go/conc | leaf | — | 并发, 并行, worker 池, 批量并发, 输入序收集 |
 | 🏗 go_repoaudit | 仓库审计 go/repoaudit | architecture | io-bound, memory-heavy | 仓库审计, 健康分数, 完整性检查, 缓存命中率, repoaudit, health-report, 去重 |
 | 🏗 rustbridge | Rust 桥 rustbridge | architecture | io-bound, concurrent | Rust 扫描器, rust_backend, 桥 DLL, Wails 后端迁移 Rust |
-| 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 接口, Go 方法, 调用后端, 有哪些方法, App 方法, getApp, 方法签名, app.ts 绑定 |
+| 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 调用后端, getApp, 方法签名, app.ts 绑定 |
 
 ### 摘要
 
@@ -208,15 +208,15 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼列表, 骨骼拾取, 骨骼显隐, BoneNode, BoneTree, buildBoneTree, makeBonePanelRenderer |
+| 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼拾取, BoneNode, BoneTree, buildBoneTree |
 | 🍃 ground-cap-gcbuildmaterialgroup-133 | ground-cap-gcBuildMaterialGroup-133 | leaf | — | 拆 gcBuildMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
-| 🏗 model3d | 3D 预览渲染 model3d | architecture | gpu-bound | 3D 预览, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底, OrbitControls |
+| 🏗 model3d | 3D 预览渲染 model3d | architecture | — | 3D 预览, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
 | 🍃 mount-preview-module-singleton-race | mount-preview-module-singleton-race | leaf | concurrent | 修 mount3D 并发竞态, 评审模块级单例守卫 |
 | 🍃 mount3d-584-giant | mount3D-584-giant | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
-| 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 自动跳舞, 眨眼, 呼吸, 视线追踪, 口型同步, 节拍检测, 模型感知, 自动运动 |
+| 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 眨眼, 节拍检测, 模型感知 |
 | 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
@@ -243,16 +243,16 @@
 | 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | — | — |
 | 🍃 3d-patterns | 3D 区审核与修复模式提炼 | leaf | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
 | 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:change, 仓库页, 全局 handler |
-| 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新, import 组件, 新组件注册, 窗口显示, startup reveal |
+| 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新 |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:change, 菜单, 页面记忆, 版本号 |
-| 🏗 app-preview | 预览面板 app-preview | architecture | — | 预览, 模型预览, 2D 骨骼, 3D 预览, Litematic, 蓝图, 缩略图, WASM 解码, 放大预览 |
-| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture | — | 侧边栏, 整合包列表, 版本卡片, 推送, 拉取, 一键安装, 同步状态, 勾选, 整合包拖拽导入, 启动器检测 |
+| 🏗 app-preview | 预览面板 app-preview | architecture | — | 预览, 模型预览, 3D 预览, Litematic, WASM 解码 |
+| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture | — | 侧边栏, 整合包列表, 版本卡片, 推送, 拉取, 同步状态 |
 | 🏗 app-sync-manager | 整合包同步页 app-sync-manager | architecture | io-bound | 整合包同步, 同步状态, 推送资源, 拉取资源, 待推送, 可拉取, 已禁用, 实例资源 |
 | 🍃 app-toast | Toast 通知 app-toast | leaf | — | toast, 通知, 提示, 消息, 撤销, 反馈, 报错提示 |
 | 🏗 app-tree | 资源树 app-tree | architecture | — | 树形, 资源列表, tree, 节点, 树, 目录树 |
-| 🍃 app_content_diagnostics | 诊断与冲突页 diagnostics | leaf | cpu-bound, gpu-bound, concurrent | 诊断页, 诊断, 冲突, 去重流程, 日志, 体检, 性能, oldest, doDedup, 仓库体检, initDiagnostics, startDedup |
-| 🍃 app_content_settings | 设置页 settings | leaf | — | 设置页, 设置, 主题设置, 键位, 路径配置, 界面偏好, 字号, initSettings, SaveAppConfig, ui-prefs, keymap, worker 线程数 |
-| 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点, 站点视图, 创作者频道, 浏览模式, 卡片拖拽, 编辑模式, renderSiteView, site-view, browseMode, 收藏创作者 |
+| 🍃 app_content_diagnostics | 诊断与冲突页 diagnostics | leaf | cpu-bound, gpu-bound, concurrent | 诊断页, 冲突, 去重流程, 日志, 性能, oldest |
+| 🍃 app_content_settings | 设置页 settings | leaf | — | 设置页, 主题设置, 键位, 路径配置, 界面偏好 |
+| 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点视图, 浏览模式, 卡片拖拽, workshop-data |
 | 🏗 context-menu | 右键菜单系统 | architecture | — | 右键菜单, 右键, 上下文菜单, ctx:show, menu:show, 批量操作, 移入回收站, 重命名 |
 | 🏗 dialog-adv-filter | 高级筛选 adv-filter | architecture | — | 高级筛选, 筛选, 骨骼数, 立方体, 纹理尺寸, 按标签筛选, 条件过滤 |
 | 🏗 dialog-batch-rename | 批量重命名 batch-rename | architecture | — | 批量重命名, 批量改名, 查找替换, 正则替换, 统一作者, 预设, batch-rename |
@@ -261,16 +261,16 @@
 | 🏗 dialog-tag-editor | 标签编辑器 tag-editor | architecture | — | 标签, 打标签, 编辑标签, tag, 标签弹窗, 分类标记 |
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, 3D 预览, overlay, ADR-057 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
-| 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | — | 多模型, 多组件, 模型选择, select, zip 多模型, 多 entry, 多候选, ADR-132, 蓝图 zip, litematic zip, 容器内多 nbt |
-| 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, ysm-model, sessionId |
+| 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | — | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
+| 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, sessionId |
 | 🍃 preview_menu_settings_state | 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125） | leaf | — | 新增 3D 预览设置项, 新增 cap 想让某个开关出现在设置面板, 排查设置项改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, ADR-125 三块落地状态核对 |
 | 🍃 preview_panel_declarative | 3D 预览面板内容声明式化通道（ADR-126 P4-B） | leaf | gpu-bound | 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）, 评估"面板内容该走 renderCustom 还是 children 声明式", 排查面板内容不出现 / 渲染通道冲突, P4-B 子步（1→2→3）状态通道复用参考 |
 | 🍃 preview_state | 3D 预览全域状态层（ADR-126 P4-A） | leaf | — | 新增 3D 预览面板跨 cap 设置项, 排查预览面板状态改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, P4 子步（A→B→D→C）状态通道复用参考, 评估"某状态是否应进 previewState vs 留在 sceneRegistry/SlideMenu/节点字段" |
 | 🍃 shared-styles | 共享样式 shared-styles | leaf | — | 共享样式, 按钮样式, btn-base, focus-visible, tree 样式, Shadow DOM 样式, CSS 变量 |
-| 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture | — | 测试工具, testid, getByTestId, waitFor, sleep, flaky, 异步等待, 组件测试, mock, G-1 |
-| 🍃 toolbar-search | 工具栏搜索编排 toolbar-search | leaf | — | 搜索编排, 高级筛选, 关键词搜索, 数值范围搜索, 标签过滤, 多线程统计角标, 网页版导入, tool-bar-search, 工具栏搜索, 降级提示, consumeWebSearchDegraded |
-| 🍃 ui-slide-menu | ADR 去桶化 slide-menu 外壳组件 | leaf | — | slide-menu, slide 菜单, 去桶化, ADR 卡片, 两级菜单, 轻量导航栈, createSlideMenu, slideRow, 行组件 |
-| 🏗 ui_components | UI 组件库 ui-components | architecture | — | UI 组件, UI 组件库, 卡片组件, 折叠面板, 加载动画, 滑块, 行组件, 预设, 图标, 幻灯片菜单, 组件样式 |
+| 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture | — | 测试工具, testid, getByTestId, waitFor, sleep, flaky, 异步等待, 组件测试 |
+| 🍃 toolbar-search | 工具栏搜索编排 toolbar-search | leaf | — | 搜索编排, 高级筛选, 关键词搜索, 数值范围搜索, 标签过滤, 多线程统计角标, 降级提示 |
+| 🍃 ui-slide-menu | ADR 去桶化 slide-menu 外壳组件 | leaf | — | slide-menu, slide 菜单, 去桶化, 两级菜单, 轻量导航栈, createSlideMenu, slideRow |
+| 🏗 ui_components | UI 组件库 ui-components | architecture | — | UI 组件, 卡片组件, 折叠面板, 加载动画, 滑块, 行组件, 预设, 图标 |
 
 ### 摘要
 
@@ -304,24 +304,25 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/ui/ui-slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（m…
 - **ui_components**（UI 组件库 ui-components）：`frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 …
 
-## utils（25 张）
+## utils（26 张）
 
 *工具函数（display、fmt、dom、animation）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | 动画, 骨骼动画, 关键帧, 动画播放, Molang, 数字滚动, stagger 入场, 关闭动画, 状态机, 动画控制器, AnimationController |
+| 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | 动画, 骨骼动画, 关键帧, Molang, 数字滚动, stagger 入场 |
 | 🏗 commit_with_check | 提交脚本 commit-with-check | architecture | — | commit-with-check, 自动提交, 并发提交, 临时索引, 白名单提交, 门禁后自动 commit |
 | 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步, 日志 |
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
 | 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离 |
+| 🏗 pre_push_gate | 推送前门禁 pre-push-gate | architecture | — | 推送门禁, 质量门禁, 域级检查, 门禁阻断, go build, vite build, 契约测试, Promise.all |
 | 🏗 safe_error_msg | 安全错误消息提取 utils | architecture | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
-| 🏗 script_shared_cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重, 脚本重构 |
-| 🏗 source-graph | 源码符号提取共享层 source-graph.ts | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图, check-lib-adoption |
+| 🏗 script_shared_cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重 |
+| 🏗 source-graph | 源码符号提取共享层 source-graph.ts | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图 |
 | 🏗 utils-array | 数组工具 moveItem | architecture | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
-| 🍃 utils-display | 文件名显示 display | leaf | — | 文件名, 文件名显示, 美化文件名, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮, ban 文件 |
+| 🍃 utils-display | 文件名显示 display | leaf | — | 文件名显示, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮 |
 | 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
 | 🏗 utils-errors | 错误处理 errors | architecture | — | 错误提示, 友好错误, friendlyError, toast 文案, 报错翻译, 网络错误, 文件被占用 |
 | 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存, 缩略图, blob URL 释放 |
@@ -334,7 +335,7 @@
 | 🏗 utils-summarize | 摘要生成 summarize | architecture | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
 | 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | concurrent | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
 | 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | cpu-bound | YSM 动画, 基岩动画, molang, 动画管线 |
-| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, 加密模型, wasm 加载, Emscripten, MEMFS, node 解码, callMain |
+| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, wasm 加载, MEMFS, callMain |
 
 ### 摘要
 
@@ -345,6 +346,7 @@
 - **dom_tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
 - **format-ysm-anim-config**（YSM 动画分组与配置菜单提取）：前端镜像 Go 端 `appendAnimGroupsAndConfigs` 逻辑的纯函数模块（`summary.go`）。加密 `.ysm` 经 WASM 解码后，`ysm.json` 的 `properties` 字段可读，但原 `wa…
 - **pre-commit-hook**（提交前钩子 pre-commit）：`.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0…
+- **pre_push_gate**（推送前门禁 pre-push-gate）：`.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器，681 行）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（…
 - **safe_error_msg**（安全错误消息提取 utils）：`frontend/src/utils/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `friendlyErr…
 - **script_shared_cores**（scripts 共享核演进（diff-coverage-core + cycles））：`scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复：
 - **utils-array**（数组工具 moveItem）：纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。
@@ -369,8 +371,8 @@
 | 标签 | 含义 | 卡片 |
 |------|------|------|
 | io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, go_repoaudit, import-queue, oldest-models, recycle-bin, rustbridge, version-updater |
-| cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app_content_diagnostics, bone-tools, go-threejs, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-baked, ysm-wasm |
-| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, model3d, mount3d-584-giant, optimization_log, preview_core, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
+| cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app_content_diagnostics, bone-tools, go-threejs, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-wasm |
+| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, mount3d-584-giant, optimization_log, preview_core, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
 | concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app_content_diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, optimization_log, rustbridge, worker-bridge-settleerror-fallback |
 | memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go_repoaudit, optimization_log, utils-export |
 | single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, ysm-wasm |

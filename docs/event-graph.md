@@ -219,7 +219,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-preview/index.ts` | 117 |
+| `frontend/src/views/app-preview/index.ts` | 146 |
 
 ### `nav:changed`
 
@@ -503,8 +503,8 @@
 | `frontend/src/views/app-nav/index.ts` | 114 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 286 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 352 |
-| `frontend/src/views/app-preview/index.ts` | 248 |
-| `frontend/src/views/app-preview/index.ts` | 270 |
+| `frontend/src/views/app-preview/index.ts` | 264 |
+| `frontend/src/views/app-preview/index.ts` | 286 |
 | `frontend/src/views/app-preview/preview-library.ts` | 98 |
 | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |

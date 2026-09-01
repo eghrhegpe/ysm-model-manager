@@ -85,16 +85,16 @@
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🏗 community-feature | 社区下载 community | architecture | io-bound | 创意工坊, 社区, 下载队列, 镜像源, 批量下载, github 仓库, 下载进度, workshop |
-| 🏗 export | 截图导出 export | architecture | — | 截图, 导出 PNG, 多角度截图, 透明背景, 预览缓存, blob URL, saveScreenshot, renderMultiAngle |
+| 🏗 export | 截图导出 export | architecture | — | — |
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
 | 🍃 oldest-models | 资历最深模型 oldest-models | leaf | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
 | 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器, MMD 播放, VRM 材质, YSM schema, 截图按钮, 相机控制, 模型切换, multiModelSelectNode, preview menu node |
-| 🏗 preview-settings | 预览面板设置与显示控制 | architecture | — | 预览设置, 显示控制, 骨骼名称, 帧率, 像素比, 视锥剔除, 状态层, 3D 偏好, 组件选择, 截图灯光, activeComponent |
+| 🏗 preview-settings | 预览面板设置与显示控制 | architecture | — | — |
 | 🍃 preview_3d_migration | preview-3d 领域根迁移 | leaf | — | 整目录搬家, 领域根提升, 相对引用修复, cmd 命令行限制, 目录归置 |
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | io-bound | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
 | 🏗 resource-packs | 资源包功能 resource-packs | architecture | — | 资源包, 光影包, 蓝图, 投影, resourcepack, shaderpack, 资源管理 |
 | 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 关键词, 标签筛选, 数值筛选, 三路交集, adv-filter, 高级筛选, SearchModels, 网页版降级 |
-| 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 整合包列表, 同步状态, instance, PushSingleResource, PullSingleResource, sync:download:missing, app-sidebar |
+| 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | — |
 | 🏗 version-updater | 版本更新 version-updater | architecture | io-bound | 更新, 升级, 检查更新, 新版本, 静默检查, updater, 版本 |
 
 ### 摘要
@@ -208,17 +208,17 @@
 |------|------|------|------|--------|
 | 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | — | — |
 | 🍃 3d-patterns | 3D 区审核与修复模式提炼 | leaf | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
-| 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:change, 仓库页, 全局 handler |
+| 🏗 app-content | 主内容页 app-content | architecture | — | — |
 | 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新, import 组件, 新组件注册, 窗口显示, startup reveal |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:change, 菜单, 页面记忆, 版本号 |
 | 🏗 app-preview | 预览面板 app-preview | architecture | — | 预览, 模型预览, 2D 骨骼, 3D 预览, Litematic, 蓝图, 缩略图, WASM 解码, 放大预览 |
-| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture | — | 侧边栏, 整合包列表, 版本卡片, 推送, 拉取, 一键安装, 同步状态, 勾选, 整合包拖拽导入, 启动器检测 |
+| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture | — | — |
 | 🏗 app-sync-manager | 整合包同步页 app-sync-manager | architecture | io-bound | 整合包同步, 同步状态, 推送资源, 拉取资源, 待推送, 可拉取, 已禁用, 实例资源 |
 | 🍃 app-toast | Toast 通知 app-toast | leaf | — | toast, 通知, 提示, 消息, 撤销, 反馈, 报错提示 |
 | 🏗 app-tree | 资源树 app-tree | architecture | — | 树形, 资源列表, tree, 节点, 树, 目录树 |
-| 🍃 app_content_diagnostics | 诊断与冲突页 diagnostics | leaf | cpu-bound, gpu-bound, concurrent | 诊断页, 诊断, 冲突, 去重流程, 日志, 体检, 性能, oldest, doDedup, 仓库体检, initDiagnostics, startDedup |
+| 🍃 app_content_diagnostics | 诊断与冲突页 diagnostics | leaf | cpu-bound, gpu-bound, concurrent | — |
 | 🍃 app_content_settings | 设置页 settings | leaf | — | 设置页, 设置, 主题设置, 键位, 路径配置, 界面偏好, 字号, initSettings, SaveAppConfig, ui-prefs, keymap, worker 线程数 |
-| 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点, 站点视图, 创作者频道, 浏览模式, 卡片拖拽, 编辑模式, renderSiteView, site-view, browseMode, 收藏创作者 |
+| 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | — |
 | 🏗 context-menu | 右键菜单系统 | architecture | — | 右键菜单, 右键, 上下文菜单, ctx:show, menu:show, 批量操作, 移入回收站, 重命名 |
 | 🍃 dialog-adv-filter | 高级筛选 adv-filter | leaf | — | 高级筛选, 筛选, 骨骼数, 立方体, 纹理尺寸, 按标签筛选, 条件过滤 |
 | 🏗 dialog-batch-rename | 批量重命名 batch-rename | architecture | — | 批量重命名, 批量改名, 查找替换, 正则替换, 统一作者, 预设, batch-rename |
@@ -276,7 +276,7 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | 动画, 骨骼动画, 关键帧, 动画播放, Molang, 数字滚动, stagger 入场, 关闭动画, 状态机, 动画控制器, AnimationController |
+| 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | — |
 | 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼列表, 骨骼拾取, 骨骼显隐, BoneNode, BoneTree, buildBoneTree, makeBonePanelRenderer |
 | 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步, 日志 |
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |

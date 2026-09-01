@@ -86,6 +86,35 @@ const PREVIEW_HANDLERS: Record<string, PreviewShowFn> = {
   "fbx": (ctx, path, meta) => showFbxPreview(ctx, path, meta),
 };
 
+/**
+ * 3D 预览清理注册表：切页时无差别全清（WebGL renderer + rAF 循环）。
+ * 新增格式 = 这里加一行，disconnectedCallback 自动遍历。
+ * FBX 走共享单例（scene-3d），无需独立 cleanup，故不在表中。
+ */
+const PREVIEW_CLEANUP: Array<() => void> = [
+  cleanupLitematic3D,
+  cleanupVrm3D,
+  cleanupMmd3D,
+  cleanupScene3D,
+  cleanupPack3D,
+  cleanupEmpty3D,
+  cleanupMaid3D,
+];
+
+/**
+ * 3D 预览作废注册表：任意新选择作废在飞渲染，防跨类型污染。
+ * 新增格式 = 这里加一行，model:select handler 自动遍历。
+ */
+const PREVIEW_INVALIDATE: Array<() => void> = [
+  invalidateLitematicPreview,
+  invalidateVrmPreview,
+  invalidateMmdPreview,
+  invalidateScenePreview,
+  invalidatePackPreview,
+  invalidateEmptyPreview,
+  invalidateMaidPreview,
+];
+
 // 注册缓存淘汰回调：释放 blob URL（Set 去重：重复 URL 只 revoke 一次，revoke 幂等无害）
 cacheSetEvictHandler((key, val) => {
   if (!val) return;
@@ -130,16 +159,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         // 双全屏叠加 + 旧 renderer 死屏残留。closeActive3DOverlay 保留 _prefer3D，
         // 新模型 loadModel2D 仍会按设计自动弹 3D（skeleton.ts:64）。
         closeActive3DOverlay();
-        // P2 修复（code_review）：任意新选择作废在途 litematic 解析——
-        // litematicGen 只在 showLitematic 自身递增，切到 YSM/资源包（走 _detailGen）
-        // 不触碰它，litematic A 迟到会写进 B 的 #preview-detail（跨类型污染）
-        invalidateLitematicPreview();
-        invalidateVrmPreview();
-        invalidateMmdPreview();
-        invalidateScenePreview();
-        invalidatePackPreview();
-        invalidateEmptyPreview();
-        invalidateMaidPreview();
+        // P2 修复（code_review）：任意新选择作废在途渲染——防跨类型污染
+        // （litematic A 迟到写进 B 的 #preview-detail）
+        PREVIEW_INVALIDATE.forEach((fn) => fn());
         try {
           if (isDir) {
             await this._showPackInfo(path);
@@ -163,13 +185,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     // 用 slice() 防止 forEach 遍历中移除元素导致跳项
     this.unsubs.slice().forEach((fn) => fn());
     // 清理体素 3D（WebGL renderer + rAF 循环）：防切页后 GPU 资源残留
-    cleanupLitematic3D();
-    cleanupVrm3D();
-    cleanupMmd3D();
-    cleanupScene3D();
-    cleanupPack3D();
-    cleanupEmpty3D();
-    cleanupMaid3D();
+    PREVIEW_CLEANUP.forEach((fn) => fn());
   }
 
   private _render(): void {

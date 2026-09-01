@@ -34,6 +34,17 @@ tests:
   - frontend/src/views/app-toast/index.test.ts
   - frontend/src/views/app-tree/index.extra.test.ts
   - frontend/src/views/context-menu/index.test.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 预览设置、显示控制、骨骼名称开关
+  - 帧率 / 像素比 / 视锥剔除 / 3D 偏好
+  - 截图灯光、activeComponent、组件选择
+quick_risk_lines:
+  - 预览设置集中由 preview-state.ts 的 KNOWN_PATHS 注册管理，新增选项必须经注册而非直接读写状态
+pitfalls:
+  - 直接改 preview-state 未注册字段 → 切页/换模后状态回滚、选项失效；应走 KNOWN_PATHS
+  - 截图灯光与预览灯光混用 → 导出 PNG 与实时预览不一致；截图灯光必须走 shot-panel 独立通道
 use_when:
   - 预览设置
   - 显示控制

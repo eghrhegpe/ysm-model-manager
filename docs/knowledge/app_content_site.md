@@ -20,6 +20,18 @@ tests:
   - frontend/src/views/app-content/site/drag.test.ts
   - frontend/src/views/app-content/workshop-data.test.ts
   - frontend/src/views/app-content/workshop-browse-mode.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 创意工坊、站点 / 创作者频道
+  - 浏览模式、编辑模式切换
+  - 卡片拖拽、站点卡片渲染
+  - workshop-data / workshop-browse-mode
+quick_risk_lines:
+  - 浏览 / 编辑模式切换必须经 workshop-browse-mode 统一切换，禁止视图层各自判断
+pitfalls:
+  - 各视图层自己判断模式 → 状态分裂、拖拽行为不一致；必须经 workshop-browse-mode 单点
+  - site 拖拽排序未回写 workshop-data → 刷新丢失；必须经 events.ts 的 drag 事件统一落盘
 use_when:
   - 创意工坊
   - 站点

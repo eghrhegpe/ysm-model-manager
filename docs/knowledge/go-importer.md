@@ -5,6 +5,18 @@ tier: architecture
 category: go
 source_files:
   - go/importer/
+quick_groups:
+  - 文件操作与标签
+quick_intents:
+  - 导入、导入策略、导入队列
+  - importer、DetectZipType
+  - fsutil.WriteFileAtomic
+quick_risk_lines:
+  - 导入必须走 go/importer，落地用 fsutil.WriteFileAtomic 原子替换，禁止直写目标文件
+pitfalls:
+  - 直写目标文件 → 中断留下半文件；必须经 WriteFileAtomic 的 tmp+rename
+  - 未走 DetectZipType → 误判 zip 类型、解压错误；必须先 DetectZipType 分流
+
 use_when:
   - 导入
   - 策略

@@ -21,6 +21,18 @@ tests:
   - frontend/src/views/app-tree/toolbar-events.test.ts
   - frontend/src/utils/dom/dialogs/adv-filter.test.ts
   - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
+quick_groups:
+  - 模型扫描与仓库管理
+quick_intents:
+  - 搜索、筛选、关键词 / 标签 / 数值三路交集
+  - SearchModels、adv-filter、网页版降级
+  - dgAfIntersectPaths
+quick_risk_lines:
+  - 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑
+pitfalls:
+  - 前端本地重算筛选逻辑 → 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行
+  - adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 dgAfIntersectPaths
+
 use_when:
   - 搜索
   - 筛选

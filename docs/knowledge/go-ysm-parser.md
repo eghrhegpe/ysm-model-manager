@@ -5,6 +5,18 @@ tier: architecture
 category: go
 source_files:
   - go/ysm/
+quick_groups:
+  - 模型扫描与仓库管理
+quick_intents:
+  - YSM 解析、摘要 ExtractYsmSummary
+  - AnalyzeYSMModel、HasYSMMod
+  - YSM 文件元数据
+quick_risk_lines:
+  - YSM 解析必须走 go/ysm 的 AnalyzeYSMModel，前端禁止手写 YSM 解析逻辑
+pitfalls:
+  - 前端手写 YSM 解析 → 与 Go 解析结果不一致、漏掉 HasYSMMod 判定；必须交 Go 解析
+  - 跳过 ExtractYsmSummary 走全文解析 → 详情展示性能差；摘要必须复用
+
 use_when:
   - YSM
   - 解析

@@ -5,6 +5,17 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 拆 mount3D 巨函数
+  - 评审 mount-preview-core.ts
+quick_risk_lines:
+  - mount3D 巨函数（584 行）必须逐步拆分，禁止继续往里加新逻辑
+pitfalls:
+  - 继续往 mount3D 加逻辑 → 巨函数膨胀、不可评审；必须先拆出内联闭包
+  - safeDispose 未复用 → 重复写释放逻辑、资源泄漏；必须经 safeDispose 原语
+
 use_when:
   - 拆 mount3D 巨函数
   - 评审 mount-preview-core.ts

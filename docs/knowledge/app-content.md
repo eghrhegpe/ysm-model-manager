@@ -36,6 +36,17 @@ tests:
   - frontend/src/views/app-toast/index.test.ts
   - frontend/src/views/app-tree/render.test.ts
   - frontend/src/views/context-menu/index.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 主内容区、页面切换、仓库页 / 创作者页 / 社区页
+  - nav:change 事件分发、全局 handler 注册
+  - 页面初始化流程、订阅桶 / 会话状态
+quick_risk_lines:
+  - 主内容区页面切换必须经 nav:change / app-nav 路由分发，禁止页面之间直接 init 对方
+pitfalls:
+  - 页面 A 直接调用页面 B 的 init → 重复初始化 / 订阅泄漏；必须经 nav:change 单点分发
+  - subscription-bucket 未退订 → 跨页残留监听、状态串扰；每次切换必须 clear 旧桶
 use_when:
   - 主内容区
   - 页面切换

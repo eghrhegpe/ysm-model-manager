@@ -5,6 +5,18 @@ tier: architecture
 category: go
 source_files:
   - go/dedup/
+quick_groups:
+  - 模型扫描与仓库管理
+quick_intents:
+  - 去重、重复检测、dedup
+  - filepath.WalkDir 路径安全
+  - IsRecycleDir 守卫
+quick_risk_lines:
+  - 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较
+pitfalls:
+  - 手写去重比较 → 与 go/dedup 判定不一致、漏检；必须经 go/dedup
+  - filepath.WalkDir 跟符号链接 → 目录遍历循环；必须跳过 ModeSymlink 条目
+
 use_when:
   - 去重
   - 重复检测

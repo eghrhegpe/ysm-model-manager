@@ -7,6 +7,18 @@ source_files:
   - frontend/src/app-modules.ts
   - frontend/src/theme-core.ts
   - frontend/css/variables.css
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 主题、换肤、深色 / 浅色 / 跟随系统
+  - 动画开关、字号、界面偏好
+  - normalizeTheme、variables.css
+quick_risk_lines:
+  - 主题值必须经 normalizeTheme 白名单过滤，白名单外回落 system，防脏值污染持久层
+pitfalls:
+  - 脏主题值直写 → 无效 CSS 变量、页面错乱；必须经 normalizeTheme 过滤
+  - 跟随系统主题未监听 prefers-color-scheme → 系统切换主题后页面未同步；必须挂 change 监听
+
 use_when:
   - 主题
   - 换肤

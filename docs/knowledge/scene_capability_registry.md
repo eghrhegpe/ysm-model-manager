@@ -10,6 +10,19 @@ tests:
   - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
   - frontend/src/preview-3d/caps/ground-capability.test.ts
   - frontend/src/preview-3d/caps/light-capability.test.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 场景能力 / cap / registry
+  - 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）
+  - createAll / loadAll / setPreset / saveAll / dispose
+  - 3D 菜单控件声明式渲染
+quick_risk_lines:
+  - 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象
+pitfalls:
+  - adapter 直接创建场景对象 → 能力列表 / 菜单 / 状态同步不一致；必须经 sceneCapabilityRegistry 注册
+  - 能力未实现 getMenuControls → 菜单缺控件；必须在 SceneCapability 接口中实现 getMenuControls
+
 use_when:
   - 场景能力 / cap / registry / SceneCapability
   - 3D 菜单控件声明式渲染（getMenuControls）

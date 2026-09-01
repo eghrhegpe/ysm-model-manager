@@ -11,6 +11,18 @@ tests:
   - frontend/src/views/app-sync-manager/index.test.ts
   - frontend/src/views/app-toast/index.test.ts
   - frontend/src/views/context-menu/index.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 资源树、tree、目录树
+  - 节点选择、多选、右键菜单
+  - tree:set-search、bus-handlers、selectState
+quick_risk_lines:
+  - app-tree 的 bus 订阅必须经 _unsubs 收集，disconnectedCallback 必须清理全部订阅
+pitfalls:
+  - bus 订阅未进 _unsubs → 组件卸载后监听泄漏；必须经 bindBusEvents 返回的 unsub 数组收集
+  - DOM 委托事件进 _unsubs → disconnect 时重复 off 报错；DOM 委托事件应靠 ShadowRoot detach 自动清理
+
 use_when:
   - 树形
   - 资源列表

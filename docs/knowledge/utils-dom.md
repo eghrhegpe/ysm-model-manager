@@ -5,6 +5,17 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/utils/dom/
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - DOM 工具、esc 转义、搜索高亮、XSS
+  - toast-ms / focus-restore
+quick_risk_lines:
+  - HTML 内容注入必须走 esc() 转义，禁止直接 innerHTML 拼接用户输入
+pitfalls:
+  - 直拼 innerHTML → XSS 注入；必须经 esc() 转义
+  - toast 时长内联魔法数字 → 与全应用不一致；必须用 toast-ms 的语义常量
+
 use_when:
   - esc
   - HTML 转义
@@ -45,6 +56,7 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 
 - 全项目消费最广的工具函数之一：`app-preview`（index / tpl / preview-detail / preview-skeleton / preview-litematic-3d / preview-litematic-meta）、`app-content/index.ts`、`app-tree/render.ts`（hl 高亮）、`dialogs/tag-editor.ts` 等
 - `utils/display.ts` / `utils/mc-format.ts` / `utils/summarize.ts` **均已 import 本模块的 `esc`**（无局部副本——早期声明「各有同行为局部副本」已过时）
+- `dialogs/`（弹窗基座，含 `modal.ts`）静态装饰样式已外提至独立 `css/dialogs.css`（ADR-149），详见 [dialog-modal](./dialog-modal.md)；本卡不覆盖弹窗样式细节
 
 ## 不变量
 

@@ -5,6 +5,17 @@ tier: leaf
 category: go
 source_files:
   - go/avatar/avatar_decode.go
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 头像提取、DecodeYSMFiles、ExtractAvatarURI
+  - 纯函数 vs Node+WASM 解码分界
+quick_risk_lines:
+  - 头像提取路径必须按扩展名分发（.ysm → WASM 解码 / .zip/.7z → 归档解压 / .json → 直读），禁止跨扩展名混用
+pitfalls:
+  - 跨扩展名混用提取逻辑 → 解析失败、抛异常；必须按扩展名分发
+  - 测试环境三件套（nodeJSPath / glueCode / wasmBinary）为空 → 静默降级空列表；必须在测试里 mock 三件套
+
 use_when:
   - 改头像提取 / DecodeYSMFiles / ExtractAvatarURI 逻辑或补 avatar 测试时
 perf:

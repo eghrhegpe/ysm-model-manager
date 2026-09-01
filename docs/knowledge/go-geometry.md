@@ -7,6 +7,18 @@ source_files:
   - go/geometry/parse.go
   - go/geometry/archive.go
   - go/geometry/ysm_parser.go
+quick_groups:
+  - 模型扫描与仓库管理
+quick_intents:
+  - Geometry 存档、基岩版 bedrock
+  - 模型解析、zip / 7z / 纹理 / 动画
+  - parse.go / archive.go
+quick_risk_lines:
+  - Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip
+pitfalls:
+  - 直接 unzip → 7z 未支持、纹理提取缺路径安全；必须经 go/geometry
+  - 未走 ysm_parser.go → .ysm 解析不一致；必须经 go/ysm 兜底
+
 use_when:
   - geometry
   - 基岩版

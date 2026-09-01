@@ -19,6 +19,18 @@ tests:
   - frontend/src/views/app-preview/mmd-controls.test.ts
   - frontend/src/views/app-preview/vrm-controls.test.ts
   - frontend/src/views/app-preview/ysm-controls.test.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 3D 控制器、MMD 播放、VRM 材质 / YSM schema
+  - 截图按钮、相机控制、模型切换
+  - multiModelSelectNode / preview menu node
+quick_risk_lines:
+  - 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联
+pitfalls:
+  - 新加相机按钮 → 直接注入 mmd-controls → 切类型时按钮消失；必须走 setAdapterItems 注入核心根菜单
+  - YSM schema 未走 registerYsmModelSchema 注册 → schema 变更不同步到菜单；必须经 schema-registry
+
 use_when:
   - 3D 控制器
   - MMD 播放

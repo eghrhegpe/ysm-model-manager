@@ -6,6 +6,17 @@ category: feature
 source_files:
   - scripts/pre-push-gate.ts
   - scripts/check-dynamic-import.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 整目录搬家、领域根提升、相对引用修复
+  - cmd 命令行限制、目录归置
+quick_risk_lines:
+  - preview-3d 目录重排必须走 pre-push-gate / check-dynamic-import 校验，禁止手动改相对引用
+pitfalls:
+  - 手动改相对引用 → 漏改、构建报错；必须经 check-dynamic-import 自动修复
+  - 重排不跑 pre-push-gate → 回归未检出；必须在 push 前跑 pre-push-gate
+
 use_when:
   - 整目录搬家
   - 领域根提升

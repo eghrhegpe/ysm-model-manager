@@ -13,6 +13,22 @@ tests:
   - frontend/src/utils/animation/animation-controller.test.ts
   - frontend/src/utils/animation/animation.test.ts
   - frontend/src/utils/animation/molang.test.ts
+use_when:
+  - YSM 动画
+  - 基岩动画
+  - molang
+  - 动画管线
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - YSM 动画管线、基岩动画
+  - ysm-animation-player、molang
+  - 动画解析 / 求值 / 渲染注入
+quick_risk_lines:
+  - YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析
+pitfalls:
+  - 手写动画解析 → 与基岩版 animation.json 语义不一致；必须经 ysm-animation-player
+  - Molang 求值未缓存 → 每帧重复求值、性能差；必须缓存 Molang 表达式
 created: 2026-08-xx
 updated: 2026-08-xx
 description: YSM (Bedrock) 模型在 3D 预览中的动画解析、求值与渲染注入管线
@@ -58,7 +74,7 @@ rAF 循环消费动态 Spec → Three.js 画面随时间轴动起来
 | 模块 | 文件路径 | 职责 |
 |------|---------|------|
 | **动画玩家** | `preview-3d/ysm-animation-player.ts` | 完整的状态机：时间推进、Clip 切换、控制器管理。导出符号 `createYsmAnimPlayer`。 |
-| **Molang 求值器** | `utils/animation/molang-bridge.ts` | 表达式解析与执行。处理如 `math.sin(@variable.time)` 等公式。 |
+| **Molang 求值器** | `utils/animation/molang.ts` | 表达式解析与执行（内嵌 molangjs，见 animation-system.md）。处理如 `math.sin(@variable.time)` 等公式。 |
 | **插值引擎** | `utils/animation/animation.ts` | `parseBedrockAnimationJSON`, `evaluateClip`。使用 Catmull-Rom 样条插值。 |
 | **适配器桥接** | `preview-3d/ysm-adapter.ts` | 将解码数据喂入 Player，并挂载到 `renderModel3D` 实例。 |
 

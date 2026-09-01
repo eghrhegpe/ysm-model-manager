@@ -16,6 +16,18 @@ tests:
   - frontend/src/core/handlers/instance-ops.test.ts
   - frontend/src/core/handlers/sync.test.ts
   - frontend/src/features/dnd-shared.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 全局事件、拖拽导入、拖拽提示
+  - 同步缺失、清空整合包、导出清单
+  - registerGlobalHandlers、instance-ops
+quick_risk_lines:
+  - 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler
+pitfalls:
+  - 各页面各自注册全局事件 → 重复绑定、冲突处理；必须经 global-handlers 单点
+  - 拖拽导入未进 import-dnd → 与全局拖拽状态冲突；必须经 features/import-dnd.ts
+
 use_when:
   - 全局事件
   - 拖拽导入

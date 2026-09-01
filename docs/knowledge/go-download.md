@@ -6,6 +6,18 @@ category: go
 source_files:
   - go/download/
   - internal/app/app_download.go
+quick_groups:
+  - 文件操作与标签
+quick_intents:
+  - 下载、下载进度、进度条
+  - download、HTTPStatusError、TruncationError
+  - 校验和校验
+quick_risk_lines:
+  - 下载必须走 go/download，必须带校验和校验防截断 / 部分响应
+pitfalls:
+  - 下载不校验 checksum → 静默损坏文件；必须经 ErrChecksumMismatch 拦截
+  - 部分响应未识别 → 后续续传逻辑失效；必须经 ErrPartialResponse 分类
+
 use_when:
   - 下载
   - 进度

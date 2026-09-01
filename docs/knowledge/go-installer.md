@@ -6,6 +6,18 @@ category: go
 source_files:
   - go/installer/installer.go
   - go/installer/
+quick_groups:
+  - 文件操作与标签
+quick_intents:
+  - 模型安装、模型导入、下载模型
+  - LinkMode（copy / hardlink / symlink）
+  - ERROR_NOT_SAME_DEVICE
+quick_risk_lines:
+  - 模型落地必须走 go/installer，按 LinkMode 选择落地方式，落地前做路径安全校验
+pitfalls:
+  - 手写落地逻辑 → LinkMode 不一致、ERROR_NOT_SAME_DEVICE 未处理；必须经 go/installer
+  - 落地不原子替换 → 中断留下半文件；必须经 installer 的原子替换
+
 use_when:
   - 安装
   - installer

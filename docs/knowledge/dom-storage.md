@@ -6,6 +6,16 @@ category: utils
 source_files:
   - frontend/src/utils/dom/storage.ts
 tests: []
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - localStorage、隐私模式、safeGet / safeSet
+quick_risk_lines:
+  - localStorage 读写必须走 safeGet/safeSet，禁止裸调 localStorage，防隐私模式中断启动
+pitfalls:
+  - 裸调 localStorage → 隐私模式抛异常、启动链中断；必须经 safeGet/safeSet
+  - safeSet 不带 fallback → 存储禁用时静默失败；必须在 safeSet 中设 fallback 或 try/catch
+
 use_when:
   - localStorage
   - 隐私模式

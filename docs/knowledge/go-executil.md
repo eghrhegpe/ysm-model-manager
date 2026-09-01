@@ -6,6 +6,17 @@ category: go
 source_files:
   - go/executil/hidewindow_windows.go
   - go/executil/hidewindow_other.go
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 子进程隐藏控制台窗口、HideWindow
+  - 外部进程启动、跨平台 HideWindow
+quick_risk_lines:
+  - 子进程隐藏控制台窗口必须走 go/executil 的 HideWindow，禁止直调 os/exec 不带隐藏标志
+pitfalls:
+  - 直调 os/exec 不带隐藏标志 → Windows 子进程闪控制台窗口；必须经 HideWindow
+  - Unix 平台 HideWindow 未 no-op → 编译失败；必须在 build tags 中区分平台
+
 use_when:
   - 子进程隐藏控制台窗口
   - 跨平台 HideWindow

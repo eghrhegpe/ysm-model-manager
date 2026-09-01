@@ -235,7 +235,7 @@
 | 统一作者 / 作品、5 个内置预设 | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | 右键菜单、添加菜单项 | [右键菜单系统](./context-menu.md) | 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 core/context-menus.ts | - |
 | createCard / createSlideMenu / createLoading | [UI 组件库 ui-components](./ui_components.md) | - | - |
-| FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 dom/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 <style> | - |
+| FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 dom/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签 | - |
 | modalAdvFilter | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | modalTagEditor | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
 | overlay、ADR-057、ensureFabStyles | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | - | - |
@@ -313,8 +313,8 @@
 | 正则替换不分离扩展名 | - | 把 .ext 一起替换掉；必须只对文件名主体替换 |
 | 手写 tag-editor 弹窗 | - | 弹窗样式 / 焦点陷阱与全局不一致；必须复用 modal.ts |
 | 标签写回用直写 tags.json | - | 并发写破坏文件；必须经 go/tags Store 的 tmp+os.Rename 原子替换 |
-| 各组件各自注入 <style> | - | 多次注入、样式冲突；必须经 ensureFabStyles 一次注入 |
-| FAB 挂 document.body 但样式在 Shadow DOM | - | light DOM 按钮不继承；必须经 ensureFabStyles 注入 head |
+| 各组件各自注入 style 标签 | - | 多次注入、样式冲突；必须经 ensureFabStyles 一次注入 |
+| FAB 挂 document.body 但样式在 Shadow DOM | - | light DOM 按钮不继承；必须经 ensureFabStyles 注入 head 标签 |
 | once off 错对象 | `bus.off(event, 原fn)` | 用 once 返回的 unsub 函数取消 |
 | 离屏 Canvas 不释放 | - | 内存泄漏、连续截图卡死；必须在完成回调里 release |
 | blob URL 不 revokeObjectURL | - | 浏览器内存累积；导出 / 失败分支都必须 revoke |

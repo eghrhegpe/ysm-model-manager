@@ -16,6 +16,18 @@ source_files:
   - internal/app/app_workshop.go
   - internal/app/resource_bindings.go
   - internal/app/wasm_embed.go
+quick_groups:
+  - 后端桥接与数据存储
+quick_intents:
+  - API 总览、Binding 有哪些方法、App 方法签名
+  - GetAppVersion / ScanModelEntries / SearchModels
+  - 调后端、app.ts 绑定、getApp
+quick_risk_lines:
+  - 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go
+pitfalls:
+  - 直调 window.go 方法 → Wails 启动时序不确定、方法未就绪时调用失败；必须经 getApp() 代理
+  - 在 web 模式直调 wails binding → window.go 不存在；必须走 backend-web 的 browser-adapter
+
 use_when:
   - API
   - Binding

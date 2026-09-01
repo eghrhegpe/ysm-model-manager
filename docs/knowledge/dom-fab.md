@@ -13,9 +13,9 @@ quick_intents:
   - FAB、悬浮按钮、3D 预览
   - overlay、ADR-057、ensureFabStyles
 quick_risk_lines:
-  - FAB 控制层必须走 dom/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 <style>
+  - FAB 控制层必须走 dom/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签
 pitfalls:
-  - 各组件各自注入 <style> → 多次注入、样式冲突；必须经 ensureFabStyles 一次注入
+  - 各组件各自注入 style 标签 → 多次注入、样式冲突；必须经 ensureFabStyles 一次注入
   - FAB 挂 document.body 但样式在 Shadow DOM → light DOM 按钮不继承；必须经 ensureFabStyles 注入 head 标签
 
 use_when:

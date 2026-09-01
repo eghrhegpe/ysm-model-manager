@@ -5,6 +5,18 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/core/
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 工具函数、防抖、异步工具
+  - swallowError / fireAndForget / retry / timeout
+  - 纯函数
+quick_risk_lines:
+  - swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底
+pitfalls:
+  - swallowError 吞掉业务异常 → 静默失败、无法排查；必须用于"预期内可忽略"的错误
+  - fireAndForget 无 error 兜底 → 异常丢失；必须挂 onerror 回调或全局 error 监听
+
 use_when:
   - 工具函数
   - 工具方法

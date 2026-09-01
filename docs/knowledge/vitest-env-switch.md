@@ -5,6 +5,17 @@ tier: architecture
 category: config
 source_files:
   - frontend/vitest.config.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - Vitest 环境切换、测试环境
+  - node 环境、happy-dom、测试切换
+quick_risk_lines:
+  - 只有纯逻辑测试（不碰 DOM）才能切 @vitest-environment node，源码顶层副作用必须先治理
+pitfalls:
+  - DOM 测试切 node 环境 → window/document 报错；必须保持 happy-dom 或治理源码副作用
+  - 用 vi.mock 硬扛源码副作用 → 治标不治本；必须先做惰性化守卫/神桶拆分
+
 use_when:
   - vitest
   - 测试环境

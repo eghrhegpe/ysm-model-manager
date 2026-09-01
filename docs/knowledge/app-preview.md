@@ -15,6 +15,19 @@ tests:
   - frontend/src/views/app-toast/index.test.ts
   - frontend/src/utils/dom/feedback.test.ts
   - frontend/src/views/context-menu/index.test.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 预览面板、模型预览、2D 骨骼 / 3D 预览
+  - Litematic / 蓝图、资源包 / 光影包
+  - model:select、WASM 解码、放大预览
+  - app-preview 组件、_previewGuard、detailGen
+quick_risk_lines:
+  - 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则
+pitfalls:
+  - 手写 .(ysm|zip|json) 判定 → .7z 漏判、注册表变更不同步；必须经 matchTypeByExt(RESOURCE_TYPES.YSM)
+  - async 窗口期无 container.isConnected 守卫 → 组件卸载后异步回调写已卸载 DOM；每个 await 后必须检查 isConnected
+
 use_when:
   - 预览
   - 模型预览

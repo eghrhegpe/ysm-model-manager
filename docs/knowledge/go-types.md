@@ -11,6 +11,18 @@ source_files:
   - go/types/bedrock.go
   - go/types/
   - resource_types.json
+quick_groups:
+  - 配置与注册表
+quick_intents:
+  - 共享类型、AppConfig、配置
+  - 注册表、扩展名、LinkType、BedrockModel
+  - LoadRegistry/ParseDedupConfig
+quick_risk_lines:
+  - 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义
+pitfalls:
+  - 复制类型定义 → 类型不一致、重构时漏改；必须经 go/types 单点
+  - LoadRegistry 失败未兜底 → 启动崩溃；必须在 LoadRegistry 里做默认值兜底
+
 use_when:
   - 共享类型
   - AppConfig

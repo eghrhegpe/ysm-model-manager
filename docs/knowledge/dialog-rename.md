@@ -6,6 +6,18 @@ category: ui
 source_files:
   - frontend/src/utils/dom/dialogs/rename.ts
   - frontend/src/utils/dom/dialogs/rename-format.ts
+quick_groups:
+  - UI 交互与弹窗
+quick_intents:
+  - 重命名、改名、命名规范
+  - 读取 YSM 头部（作者 / 介绍）
+  - rename-format、showRenameDialog
+quick_risk_lines:
+  - rename 弹窗必须复用 modal.ts 的 Promise API，非法字符与长度校验在弹窗内完成
+pitfalls:
+  - 重命名不校验非法字符 → 后端 RenameFile 报错 / 文件名含控制字符；必须在校验阶段拦截
+  - 读取 YSM 头部后按钮 loading 态未 finally 恢复 → 用户卡死；必须在 finally 恢复按钮态
+
 use_when:
   - 重命名
   - 改名

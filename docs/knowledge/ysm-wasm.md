@@ -7,6 +7,18 @@ source_files:
   - frontend/src/wasm/
   - internal/app/wasm_decoder.go
   - go/avatar/avatar_decode.go
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - WASM 解析器、YSMParser、ysm 解码
+  - 加密模型、wasm 加载、Emscripten
+  - MEMFS / node 解码 / callMain
+quick_risk_lines:
+  - YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析
+pitfalls:
+  - 手写 YSM 字节流解析 → 与 YSMParser WASM 输出不一致；必须经 ysm-wasm
+  - wasmBinary 未释放 → 内存泄漏；必须复用 wasm 实例并释放
+
 use_when:
   - WASM
   - YSMParser

@@ -10,6 +10,19 @@ source_files:
   - frontend/src/preview-3d/caps/scene-capability.ts
 tests:
   - frontend/src/preview-3d/state/preview-state.test.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 新增 3D 预览设置项、新增 cap 让开关出现在设置面板
+  - 排查设置项改了不生效 / 重开面板值不对
+  - 条件显隐控件不出现
+  - ADR-125 三块落地状态核对
+quick_risk_lines:
+  - 3D 预览设置必须走 preview-state 的 KNOWN_PATHS 注册 + 自动 cap 聚合，禁止横切设置项各自有独立读写通道
+pitfalls:
+  - 横切设置项各自有独立读写通道 → 状态单向流失效、菜单控件与状态不同步；必须走 preview-state
+  - cap 未自动聚合 → 新增 cap 后菜单缺控件；必须在 cap 实现 getMenuControls 并注册
+
 use_when:
   - 新增 3D 预览设置项
   - 新增 cap 想让某个开关出现在设置面板

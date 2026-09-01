@@ -13,6 +13,18 @@ tests:
   - frontend/src/preview-3d/adapters/vrm-bone.test.ts
   - frontend/src/preview-3d/adapters/vrm-bone-ui.test.ts
   - frontend/src/preview-3d/mmd-bones.test.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 骨骼工具、骨骼树、骨骼列表
+  - 骨骼拾取、骨骼显隐、BoneNode / BoneTree
+  - buildBoneTree / makeBonePanelRenderer
+quick_risk_lines:
+  - 骨骼树必须走 bone-tools 的 buildBoneTree，禁止在 adapter 里手写骨骼树构建
+pitfalls:
+  - adapter 手写骨骼树 → 与 bone-tools 输出不一致、缺骨骼显隐控制；必须经 buildBoneTree
+  - VRM 骨骼映射未走 vrm-bone.ts → 骨骼名不匹配、动画错乱；必须经 vrm-bone.ts 映射
+
 use_when:
   - 骨骼工具
   - 骨骼树

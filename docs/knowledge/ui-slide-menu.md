@@ -8,6 +8,17 @@ source_files:
   - frontend/src/ui/ui-slide-menu-styles.ts
   - frontend/src/ui/ui-helpers.ts
   - frontend/src/ui/ui-components-styles.ts
+quick_groups:
+  - UI 交互与弹窗
+quick_intents:
+  - slide-menu、slide 菜单、去桶化
+  - 两级菜单、轻量导航栈、createSlideMenu / slideRow
+quick_risk_lines:
+  - slide-menu 外壳必须复用 ui-slide-menu 的轻量导航栈，禁止手写导航栈
+pitfalls:
+  - 手写导航栈 → 与 ui-slide-menu 的 home/navigate/back 契约不一致；必须复用
+  - slide-menu 挂业务 registry/schema → 外壳层混入业务；必须保持外壳纯净
+
 use_when:
   - slide-menu
   - slide 菜单

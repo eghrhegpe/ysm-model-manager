@@ -20,6 +20,18 @@ source_files:
 tests:
   - rust-core/src/tests.rs
   - go/rustbridge/parse_test.go
+quick_groups:
+  - 后端桥接与数据存储
+quick_intents:
+  - Rust 扫描器、rust_backend
+  - 桥 DLL、Wails 后端迁移 Rust
+  - bridge_windows/bridge_android/bridge_linux
+quick_risk_lines:
+  - Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载
+pitfalls:
+  - 直接 dlopen 加载 rust.dll → 平台差异处理不全、符号名不匹配；必须经 bridge_*.go 封装
+  - Rust 后端未正确回收 → 内存泄漏；必须经 rustbridge 的 drop/destroy 生命周期
+
 use_when:
   - Rust 扫描器
   - rust_backend

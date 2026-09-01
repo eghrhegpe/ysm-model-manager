@@ -25,6 +25,18 @@ tests:
   - frontend/src/views/app-sidebar/events.test.ts
   - frontend/src/views/app-sidebar/loader.test.ts
   - frontend/src/views/app-sidebar/render.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 整合包同步、推送 / 拉取
+  - 整合包列表、同步状态、勾选
+  - PushSingleResource / PullSingleResource
+  - sync:download:missing 缺包回拉
+quick_risk_lines:
+  - 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource
+pitfalls:
+  - app-sidebar 直接发 push/pull 请求 → 并发冲突 / 状态错乱；必须经 sync-manager 排队
+  - PullSingleResource 未完成前刷新侧边栏 → 半同步状态显示；必须等 store 状态收敛
 use_when:
   - 整合包同步
   - 推送
@@ -37,8 +49,8 @@ use_when:
   - sync:download:missing
   - app-sidebar
 invariant_anchors:
-  - frontend/src/views/app-sidebar/index.ts|asbRunPush
-  - frontend/src/views/app-sidebar/index.ts|asbRunPull
+  - frontend/src/views/app-sidebar/index.ts|runPush
+  - frontend/src/views/app-sidebar/index.ts|runPull
   - frontend/src/views/app-sync-manager/network.ts|performSingleOp
   - frontend/src/views/app-sync-manager/store.ts|applyFilter
   - frontend/src/views/app-sync-manager/index.ts|_gen
@@ -66,8 +78,8 @@ invariant_anchors:
 - **摘要栏**：`GetSyncScanDirs` 显示实际扫描目录 + `scan_dir_wide` 告警
 
 ### `app-sidebar`（整包级）
-- **`asbRunPush`**：顺序 `for insName × for rtype` → `sync:download:missing` handler 后台安装缺失，等 `sync:download:done` token（30s 超时，skipped reject）
-- **`asbRunPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
+- **`runPush`**：顺序 `for insName × for rtype` → `sync:download:missing` handler 后台安装缺失，等 `sync:download:done` token（30s 超时，skipped reject）
+- **`runPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
 - **`_syncInProgress`** 守卫：防止并发 sync 竞态
 
 ### `core/handlers/sync.ts`（bus 调度）
@@ -92,7 +104,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 ```
 用户点击 push 菜单项
   → asbBeginSync（取 selected + _syncInProgress + 按钮 loading）
-  → asbRunPush
+  → runPush
     → 顺序 for insName × for rtype
        → asbPushOne(insName, rt)
          → token = `${insName}:${rt}:${Date.now()}`
@@ -147,8 +159,8 @@ sidebar 卡片点击
           卸载：disconnectedCallback 清理 unsubs + 复位状态
 
 sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
-  → asbRunPush → sync:download:missing handler → 后台安装缺失
-  → asbRunPull → PullResourceFromInstance 后台整包拉取
+  → runPush → sync:download:missing handler → 后台安装缺失
+  → runPull → PullResourceFromInstance 后台整包拉取
 ```
 
 **`core/handlers/sync.ts`** 是**整包级**调度，与 `app-sync-manager` 组件的**逐文件级**操作分工明确：
@@ -180,3 +192,4 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - [go-installer](./go-installer.md) — 缺失文件安装（`InstallModelTo`/`InstallResourceToInstance`）
 - [go-tags](./go-tags.md) — `SyncModelToggleStatus` 启禁同步的后端
 - [go-watcher](./go-watcher.md) — 文件监听触发自动同步
+

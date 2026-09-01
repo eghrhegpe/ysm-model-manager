@@ -5,6 +5,18 @@ tier: leaf
 category: ui
 source_files:
   - frontend/src/views/app-nav/
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 导航栏、切页、nav:change
+  - 页面记忆、版本号、折叠展开
+  - nav_page 恢复
+quick_risk_lines:
+  - nav:change 事件必须仅由 app-nav 派发，其他页面禁止自派 nav:change
+pitfalls:
+  - 页面 A 直接派 nav:change → 与 app-nav 状态分裂、高亮错位；必须经 app-nav 派发
+  - 折叠态未持久化 → 刷新恢复宽版；必须经 safeSet 落 localStorage nav_collapsed
+
 use_when:
   - 导航栏
   - 导航

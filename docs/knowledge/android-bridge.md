@@ -9,6 +9,17 @@ source_files:
 tests:
   - frontend/src/features/version-updater.test.ts
   - tests/test_android_bridge_contract.mjs
+quick_groups:
+  - 后端桥接与数据存储
+quick_intents:
+  - Android 存储授权、目录选择器
+  - MANAGE_EXTERNAL_STORAGE、SAF、权限
+quick_risk_lines:
+  - Android 存储授权必须走 android-bridge 的 SAF 授权流程，禁止直接请求 MANAGE_EXTERNAL_STORAGE
+pitfalls:
+  - 直接请求 MANAGE_EXTERNAL_STORAGE → 新版 Android 拒绝、Google Play 下架；必须走 SAF
+  - 目录选择未回传 URI → 后续访问失败；必须经 android-bridge 持久化 URI
+
 use_when:
   - Android
   - 存储授权

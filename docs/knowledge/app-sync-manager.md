@@ -7,6 +7,18 @@ source_files:
   - frontend/src/views/app-sync-manager/
 tests:
   - frontend/src/views/app-sync-manager/index.test.ts
+quick_groups:
+  - 模型扫描与仓库管理
+quick_intents:
+  - 整合包同步页、推送 / 拉取资源
+  - 待推送 / 可拉取 / 已禁用 / 实例资源
+  - 同步状态、app-sync-manager
+quick_risk_lines:
+  - app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态
+pitfalls:
+  - 各列各自查询同步状态 → 状态不一致、并发冲突；必须经 _gen 单点生成
+  - 同步操作未进队列 → 并发 push/pull 冲突；必须经 sync-manager 排队
+
 use_when:
   - 整合包同步
   - 同步状态

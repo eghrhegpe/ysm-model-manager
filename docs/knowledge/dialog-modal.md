@@ -52,7 +52,7 @@ quick_risk_lines:
 - 导出：`esc(s: string): string`、`closeDlg<T>(overlay, resolve, value, delay?)`、`registerDlg(overlay, cancelClose)`、`modalPrompt(opts: ModalPromptOptions): Promise<string | null>`、`modalSelect(opts: ModalSelectOptions): Promise<string | null>`、`modalConfirm(opts: ModalConfirmOptions): Promise<boolean>`、`modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult | null>`
 - 选项接口：`ModalPromptOptions` / `ModalSelectOptions` / `ModalConfirmOptions` / `ModalPickerOptions` / `ModalPickerItem` / `ModalPickerResult`（title/icon/message 或 items/okText/danger/width；picker 另支持 subtitle/footerHTML，footer 控件按 name 聚合为 footerChecked/footerValues）
 - 监听/派发 bus：无（弹窗为纯 DOM 层，反馈由调用方负责）
-- CSS 依赖：全局样式中的 `.dlg-overlay`/`.dlg-box`/`.dlg-btn`/`.dlg-btn-primary`/`.dlg-btn-danger`/`.dlg-closing` 等类
+- CSS 依赖：全局样式中的 `.dlg-overlay`/`.dlg-box`/`.dlg-btn`/`.dlg-btn-primary`/`.dlg-btn-danger`/`.dlg-closing` 等类；**弹窗内部静态装饰样式（字段框/footer/title 消息区/进度条/picker 行）已外提为独立 `css/dialogs.css`（ADR-149），由 index.html `<link>` 加载、置于 `components.css` 之后；仅运行时动态值（box/fill 宽度、hint 安全色）保留 inline，禁止在 modal.ts 内联静态装饰**
 
 ## 与其他子系统关系
 

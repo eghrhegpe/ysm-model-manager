@@ -18,6 +18,17 @@ tests:
   - frontend/src/preview-3d/adapters/switch-preview.test.ts
   - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
   - frontend/src/views/app-preview/ysm-controls.test.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - schema 注册、per-scene、多模型同框
+  - schema 键冲突、ADR-132
+quick_risk_lines:
+  - schema 注册必须用 per-scene 键，禁止跨场景共用 schema key
+pitfalls:
+  - 跨场景共用 schema key → 多模型同框时 schema 冲突、菜单项混乱；必须用 per-scene 键
+  - switch-preview 未清 schema 注册表 → 旧模型 schema 残留；必须经 switch-preview 清理
+
 use_when:
   - schema 注册
   - per-scene

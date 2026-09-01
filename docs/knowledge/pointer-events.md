@@ -20,6 +20,18 @@ tests:
   - frontend/src/views/app-preview/skeleton.test.ts
   - frontend/src/views/app-content/app-content.methods.test.ts
   - frontend/src/views/app-tree/toolbar-events.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - pointerdown / pointermove / pointerup、触屏 + 桌面统一
+  - setPointerCapture、touch-action、拖拽
+  - input-and-animation
+quick_risk_lines:
+  - 所有交互必须用 pointerdown/pointermove/pointerup 统一处理，禁止混用 mousedown/touchstart
+pitfalls:
+  - 混用 mousedown + touchstart → 触屏双触发、桌面手势冲突；必须经 pointer events 统一
+  - 拖拽不设 touch-action:none → 浏览器滚动吃掉手势；必须在拖拽元素上禁用 touch-action
+
 use_when:
   - pointerdown
   - pointermove

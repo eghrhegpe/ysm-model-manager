@@ -5,6 +5,17 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/utils/dom/display.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 文件名显示、美化文件名、renderDisplayName
+  - 作者标签、作品标签、文件名着色、搜索高亮
+quick_risk_lines:
+  - 文件名展示必须走 display.ts 的 renderDisplayName，禁止手写文件名解析
+pitfalls:
+  - 手写文件名解析 → 与 parseModelName 判定不一致、作者 / 作品提取错位；必须经 renderDisplayName
+  - 搜索高亮未走 esc → XSS；必须在高亮前经 esc 转义
+
 use_when:
   - 文件名
   - 文件名显示

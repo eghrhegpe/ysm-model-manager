@@ -5,6 +5,19 @@ tier: architecture
 category: core
 source_files:
   - frontend/src/backend/
+quick_groups:
+  - 后端桥接与数据存储
+quick_intents:
+  - 网页版 / 浏览器模式 / web mode
+  - IndexedDB / IDB / 浏览器后端
+  - browser adapter、跨域隔离 COI
+  - NBT 解析 / 体素 / 网页版文件系统
+quick_risk_lines:
+  - 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用
+pitfalls:
+  - 网页版直调 window.go → 无 wails runtime 时报错；必须经 browserAdapter
+  - 跨域资源共享不处理 COI → SharedArrayBuffer 等 API 不可用；必须设置 cross-origin-isolation 头
+
 use_when:
   - 网页版
   - 浏览器模式

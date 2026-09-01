@@ -5,6 +5,17 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - mount3D 并发竞态、模块级单例守卫
+  - _singletonOverlay / _singletonScene / _singletonRenderer
+quick_risk_lines:
+  - mount3D 并发必须经 _isInitializing 守卫，禁止多并发同时创建单例
+pitfalls:
+  - 无并发守卫 → 多 mount3D 并发时单例创建竞态、黑屏；必须经 _isInitializing 守卫
+  - cleanupPreview 未清零 _handles → 资源泄漏；必须在 cleanupPreview 里清零全部句柄
+
 use_when:
   - 修 mount3D 并发竞态
   - 评审模块级单例守卫

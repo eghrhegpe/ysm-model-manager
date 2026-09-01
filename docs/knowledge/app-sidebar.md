@@ -22,6 +22,18 @@ tests:
   - frontend/src/views/app-tree/data.test.ts
   - frontend/src/views/app-tree/render.test.ts
   - frontend/src/views/context-menu/index.test.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - 侧边栏、整合包列表、版本卡片
+  - 推送 / 拉取、同步状态、勾选
+  - 一键安装、整合包拖拽导入
+  - 启动器检测
+quick_risk_lines:
+  - 侧边栏的 push/pull 必须经 events.ts 的 runPush/runPull 转发到 sync-manager，禁止直接调 API
+pitfalls:
+  - events.ts 里直接调 PushSingleResource → 绕过排队，并发冲突；必须经 runPush/runPull
+  - _lastEmittedPkg 未更新 → 拖拽导入重复触发；每次导入必须刷新该锚点
 use_when:
   - 侧边栏
   - 整合包列表
@@ -47,7 +59,7 @@ invariant_anchors:
 
 ## 核心职责
 
-- `index.ts` — `<app-sidebar>` 生命周期编排：`observedAttributes: ["rtype"]`、订阅刷新事件、全选/同步所选（推送走 `sync:download:missing` 事件 + correlation token，拉取直调 `PullResourceFromInstance`）、`_reload` 带 `_loading` 并发守卫。**构造函数 rtype 缺省读 `currentRepoType()`**（P1 修复：tpl.ts 挂载 `<app-sidebar>` 不传 rtype 属性，此前恒回落 YSM，整合包标题首屏显示 `(ysm)` 须手动切导航标签才被 `repo:rtype-changed` 纠正；现与仓库页 `initRepositoryPage` 的 `savedRtype` 恢复逻辑对齐，首屏即正确）。**同步所选由一组 `asb*` 包级助手承载（2026-08-26 批4.0 扁平化，非 withEventTimeout）**：`asbHandlePushMenuClick`/`asbHandlePullMenuClick` 只做入闸（`asbBeginSync`）+ 取类型 + `void asbRunPush`/`asbRunPull` 收口；推送并发原语拆为 `asbPushOne`（等单 token done、skipped/超时分别 reject 带 `kind`）、`asbWaitBusQuiet`（等同步归位防竞态），错误归类走 `asbKindError`/`asbPushErrorKind`
+- `index.ts` — `<app-sidebar>` 生命周期编排：`observedAttributes: ["rtype"]`、订阅刷新事件、全选/同步所选（推送走 `sync:download:missing` 事件 + correlation token，拉取直调 `PullResourceFromInstance`）、`_reload` 带 `_loading` 并发守卫。**构造函数 rtype 缺省读 `currentRepoType()`**（P1 修复：tpl.ts 挂载 `<app-sidebar>` 不传 rtype 属性，此前恒回落 YSM，整合包标题首屏显示 `(ysm)` 须手动切导航标签才被 `repo:rtype-changed` 纠正；现与仓库页 `initRepositoryPage` 的 `savedRtype` 恢复逻辑对齐，首屏即正确）。**同步所选由一组 `asb*` 包级助手承载（2026-08-26 批4.0 扁平化，非 withEventTimeout）**：`asbHandlePushMenuClick`/`asbHandlePullMenuClick` 只做入闸（`asbBeginSync`）+ 取类型 + `void runPush`/`runPull` 收口；推送并发原语拆为 `asbPushOne`（等单 token done、skipped/超时分别 reject 带 `kind`）、`asbWaitBusQuiet`（等同步归位防竞态），错误归类走 `asbKindError`/`asbPushErrorKind`
 - `tpl.ts` — 布局模板：`headerHTML` / `footerHTML` / `listContainerHTML` / `instanceCardHeaderHTML`（版本卡片头）
 - `data.ts` — 数据层类型：`SidebarInstance` 接口
 - `loader.ts` — `loadInstances(rtype)`：调 Go 拉取实例与同步状态并转换为渲染格式（含 MMD `.pmx` 变体按父文件夹聚合 `groupMmdVariants`），前后派发 `loading:start` / `loading:end`；**同 rtype 在途请求合并**（2026-08-21：`_inflight` 表按归一后 rtype 键去重并发调用，空 rtype 回退 ysm 同键——配合 go/scanner 在途合并，治点击整合包时多组件并发触发的重复扫描刷屏）
@@ -86,3 +98,4 @@ invariant_anchors:
 - `internal/app/app_install.go` — `GetResourceInstanceStatus` / `PullResourceFromInstance` / `InstallModelTo` binding
 - `go/sync/` — 整合包同步核心逻辑
 - 知识卡：`app_content`、`app_sync_manager`、`context_menu`、`go_sync`、`app_modules`
+

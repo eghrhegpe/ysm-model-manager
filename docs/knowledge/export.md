@@ -21,6 +21,17 @@ tests:
   - frontend/src/preview-3d/texture-loader.test.ts
   - frontend/src/views/app-preview/skeleton-render.test.ts
   - frontend/src/views/app-preview/mmd-controls.test.ts
+quick_groups:
+  - 截图导出与缓存
+quick_intents:
+  - 截图、导出 PNG、多角度截图
+  - 透明背景 / 预览缓存 / blob URL
+  - 离屏截图渲染器
+quick_risk_lines:
+  - 离屏截图渲染器资源与 blob URL 必须显式释放，禁止依赖 GC 回收
+pitfalls:
+  - 离屏 Canvas 不释放 → 内存泄漏、连续截图卡死；必须在完成回调里 release
+  - blob URL 不 revokeObjectURL → 浏览器内存累积；导出 / 失败分支都必须 revoke
 use_when:
   - 截图
   - 导出 PNG

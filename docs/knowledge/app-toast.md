@@ -7,6 +7,17 @@ source_files:
   - frontend/src/views/app-toast/index.ts
   - frontend/src/utils/dom/feedback.ts
   - frontend/src/utils/dom/toast-ms.ts
+quick_groups:
+  - UI 交互与弹窗
+quick_intents:
+  - Toast 通知、提示、反馈、报错提示
+  - 撤销、消息、toast-ms
+quick_risk_lines:
+  - Toast 必须复用 utils/dom/toast-ms.ts 的毫秒级反馈，禁止手写浮层
+pitfalls:
+  - 手写 toast 浮层 → 与全局反馈样式不一致、缺撤销按钮；必须复用 toast-ms
+  - toast 未设置防重入 → 快速触发多个 toast 重叠；必须挂防重入锁
+
 use_when:
   - toast
   - 通知

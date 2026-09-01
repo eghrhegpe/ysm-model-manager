@@ -13,6 +13,18 @@ source_files:
   - go/fsutil/hardlink_other.go
   - go/fsutil/crossdevice_other.go
   - go/fsutil/
+quick_groups:
+  - 文件操作与标签
+quick_intents:
+  - 文件遍历 / walk、原子写、复制
+  - 硬链接、跨设备、权限常量
+  - BOM、base64 受限解码、读取上限
+quick_risk_lines:
+  - 文件系统操作必须走 go/fsutil 的 walk/write/copy 封装，禁止在业务代码里直接 os.Open/os.WriteFile
+pitfalls:
+  - 业务代码直调 os.WriteFile → 并发写破坏文件、缺 BOM 处理；必须经 fsutil.AtomicWrite
+  - filepath.Walk 跟符号链接 → 目录遍历循环 / 越权；必须用 fsutil.walk 的 IsRecycleDir 守卫
+
 use_when:
   - 遍历
   - walk

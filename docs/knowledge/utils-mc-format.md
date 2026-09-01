@@ -6,6 +6,18 @@ category: utils
 source_files:
   - frontend/src/utils/format/mc-format.ts
   - frontend/src/utils/format/pack-format.ts
+quick_groups:
+  - 跨组件通信与页面
+quick_intents:
+  - MC 格式、§ 颜色、MC 颜色码
+  - pack_format、MC 版本、资源包版本
+  - renderFormattedText / describeVersionRange
+quick_risk_lines:
+  - MC 文本格式化必须走 mc-format.ts 的 renderFormattedText，禁止手写 § 颜色解析
+pitfalls:
+  - 手写 § 颜色解析 → 与 renderFormattedText 不一致、特殊字符未处理；必须经 renderFormattedText
+  - pack_format 未走 describeVersionRange → 版本显示不友好；必须经 describeVersionRange
+
 use_when:
   - 分节符
   - § 颜色

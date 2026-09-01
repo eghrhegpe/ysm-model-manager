@@ -15,6 +15,18 @@ tests:
   - frontend/src/features/dnd-shared.test.ts
   - frontend/src/features/dnd-collector.test.ts
   - frontend/src/features/pack-dnd.test.ts
+quick_groups:
+  - 文件操作与标签
+quick_intents:
+  - 导入队列、拖拽导入、文件夹导入
+  - 覆盖导入、import-executor
+  - dnd-shared / dnd-collector / pack-dnd
+quick_risk_lines:
+  - 导入必须走 import-executor 单点编排 + dnd-collector 收集，禁止各组件各自调 ImportModel
+pitfalls:
+  - 各组件各自调 ImportModel → 并发冲突、队列状态混乱；必须经 import-executor
+  - dnd-collector 未做去重 → 同文件重复导入；必须在 collector 阶段去重
+
 use_when:
   - 导入
   - 导入队列

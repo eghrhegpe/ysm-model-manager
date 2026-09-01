@@ -76,12 +76,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   summaryMock.mockResolvedValue(null);
   headerMock.mockResolvedValue(null);
-  readPackMock.mockResolvedValue("{}");
+  readPackMock.mockResolvedValue(null);
   resolveMmdSiblingsMock.mockResolvedValue([]);
   readFileBytesMock.mockResolvedValue(btoa("PMX"));
   readPmxStatsMock.mockResolvedValue(null);
-  packModelsMock.mockResolvedValue("{\"models\":[],\"total\":0}");
-  shaderLangMock.mockResolvedValue("{}");
+  packModelsMock.mockResolvedValue({ models: [], total: 0 });
+  shaderLangMock.mockResolvedValue({ name: "", entries: {} });
   createPack3DMock.mockResolvedValue(undefined);
   localStorage.clear();
 });
@@ -103,14 +103,12 @@ describe("showSimplePreview 简单类型预览", () => {
 
 describe("showResourcePack 资源包信息", () => {
   it("成功 → 渲染描述与 pack_format 版本", async () => {
-    readPackMock.mockResolvedValue(
-      JSON.stringify({
-        description: "测试资源包",
-        pack_format: 12,
-        min_format: [8, 12],
-        max_format: [12, 13],
-      }),
-    );
+    readPackMock.mockResolvedValue({
+      description: "测试资源包",
+      pack_format: 12,
+      min_format: [8, 12],
+      max_format: [12, 13],
+    });
     const ctx = makeCtx();
     await showResourcePack(ctx, "/packs/pack.mcmeta");
     expect(ctx.root.innerHTML).toContain("测试资源包");
@@ -126,14 +124,14 @@ describe("showResourcePack 资源包信息", () => {
   });
 
   it("模型清单（ADR-131 P3）：渲染 path + 方块数，点击直达 3D（startEntry）", async () => {
-    readPackMock.mockResolvedValue(JSON.stringify({ description: "包", pack_format: 12 }));
-    packModelsMock.mockResolvedValue(JSON.stringify({
+    readPackMock.mockResolvedValue({ description: "包", pack_format: 12 });
+    packModelsMock.mockResolvedValue({
       models: [
         { path: "assets/minecraft/models/block/door.json", cubes: 1 },
         { path: "assets/minecraft/models/block/wall.json", cubes: 3 },
       ],
       total: 2,
-    }));
+    });
     const ctx = makeCtx();
     await showResourcePack(ctx, "/packs/pack.mcmeta");
     // 异步清单区补渲染：等 packModelsMock 调用后 host 出现
@@ -155,7 +153,7 @@ describe("showResourcePack 资源包信息", () => {
   });
 
   it("模型清单：无模型 / total 0 → 不渲染清单区（仅 FAB）", async () => {
-    readPackMock.mockResolvedValue(JSON.stringify({}, ));
+    readPackMock.mockResolvedValue({});
     const ctx = makeCtx();
     await showResourcePack(ctx, "/packs/empty.mcmeta");
     await Promise.resolve();
@@ -412,32 +410,33 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
 
   it("ReadPackMeta 在途时切走 → 恢复后 153 早退", async () => {
     const ctx = makeCtx();
-    let resolveRead: (v: string) => void = () => {};
-    readPackMock.mockImplementationOnce(() => new Promise<string>((r) => (resolveRead = r)));
+    let resolveRead: (v: Record<string, unknown> | null) => void = () => {};
+    readPackMock.mockImplementationOnce(() => new Promise<Record<string, unknown> | null>((r) => (resolveRead = r)));
     const pending = showResourcePack(ctx, "/p/a.zip");
     await vi.waitFor(() => expect(readPackMock).toHaveBeenCalled());
     detailGen.invalidate();
-    resolveRead("{}");
+    resolveRead({});
     await pending;
     expect(ctx.root.getElementById("preview-content")).toBeNull();
   });
 
   it("ListPackModelsDetail 在途时切走 → 恢复后 203 静默早退", async () => {
     const ctx = makeCtx();
-    let resolveList: (v: string) => void = () => {};
-    packModelsMock.mockImplementationOnce(() => new Promise<string>((r) => (resolveList = r)));
+    let resolveList: (v: { models: Array<{ path: string; cubes: number }>; total: number } | null) => void = () => {};
+    packModelsMock.mockImplementationOnce(() => new Promise<{ models: Array<{ path: string; cubes: number }>; total: number } | null>((r) => (resolveList = r)));
     readPackMock.mockResolvedValue(
-      JSON.stringify({ pack: { pack_format: 15, description: "x" } }),
+      { description: "x", pack_format: 15 },
     );
     await showResourcePack(ctx, "/p/stale.zip");
     detailGen.invalidate();
-    resolveList(JSON.stringify({ models: [{ path: "assets/a.json", cubes: 2 }], total: 1 }));
+    resolveList({ models: [{ path: "assets/a.json", cubes: 2 }], total: 1 });
     await sleep(50);
     expect(ctx.root.querySelector(".pack-model-item")).toBeNull();
   });
 
   it("FAB 点击 → createPack3D（182）", async () => {
     const ctx = makeCtx();
+    readPackMock.mockResolvedValue({ description: "", pack_format: 12 });
     await showResourcePack(ctx, "/p/fab.zip");
     const fab = ctx.root.querySelector("#btn-pack-model-3d") as HTMLButtonElement;
     fab.click();
@@ -448,22 +447,20 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
 
 describe("showShaderpack 光影包详情", () => {
   beforeEach(() => {
-    shaderLangMock.mockResolvedValue("{}");
+    shaderLangMock.mockResolvedValue({ name: "", entries: {} });
   });
 
   it("成功：displayName + .comment 配置简介（去 § 格式码，截前 3 条）", async () => {
-    shaderLangMock.mockResolvedValue(
-      JSON.stringify({
-        name: "光影A",
-        entries: {
-          "settings.comment": "§a第一§c条",
-          "quality.comment": "第二条",
-          "shadow.comment": "第三条",
-          "misc.comment": "第四条（应被截断）",
-          "unrelated": "v",
-        },
-      }),
-    );
+    shaderLangMock.mockResolvedValue({
+      name: "光影A",
+      entries: {
+        "settings.comment": "§a第一§c条",
+        "quality.comment": "第二条",
+        "shadow.comment": "第三条",
+        "misc.comment": "第四条（应被截断）",
+        "unrelated": "v",
+      },
+    });
     const ctx = makeCtx();
     await showShaderpack(ctx, "/s/a.zip", { icon: "✨", label: "光影" });
     const html = (ctx.root.getElementById("preview-content") as HTMLElement).innerHTML;
@@ -474,7 +471,7 @@ describe("showShaderpack 光影包详情", () => {
   });
 
   it("无 .comment 条目 → 回退「📦 光影包 (N 项配置)」", async () => {
-    shaderLangMock.mockResolvedValue(JSON.stringify({ entries: { a: "1", b: "2" } }));
+    shaderLangMock.mockResolvedValue({ entries: { a: "1", b: "2" } });
     const ctx = makeCtx();
     await showShaderpack(ctx, "/s/b.zip");
     const html = (ctx.root.getElementById("preview-content") as HTMLElement).innerHTML;
@@ -492,13 +489,13 @@ describe("showShaderpack 光影包详情", () => {
   });
 
   it("在途时切走（detailGen.invalidate）→ 恢复后 stale 早退（275）", async () => {
-    let resolveLang: (v: string) => void = () => {};
-    shaderLangMock.mockImplementationOnce(() => new Promise<string>((r) => (resolveLang = r)));
+    let resolveLang: (v: { name: string; entries: Record<string, string> }) => void = () => {};
+    shaderLangMock.mockImplementationOnce(() => new Promise<{ name: string; entries: Record<string, string> }>((r) => (resolveLang = r)));
     const ctx = makeCtx();
     const pending = showShaderpack(ctx, "/s/stale.zip");
     await vi.waitFor(() => expect(shaderLangMock).toHaveBeenCalled());
     detailGen.invalidate();
-    resolveLang(JSON.stringify({ name: "迟到的光影" }));
+    resolveLang({ name: "迟到的光影", entries: {} });
     await pending;
     const content = ctx.root.getElementById("preview-content") as HTMLElement;
     expect(content.innerHTML).toContain("⏳"); // 停留在加载占位

@@ -30,25 +30,18 @@ function makePackDeps() {
 
 /** 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） */
 export async function createPack3D(path: string, opts?: Mount3DOptions & { startEntry?: string }): Promise<void> {
-  let raw: string;
   let App: Awaited<ReturnType<typeof getApp>> | null = null;
   try {
     App = await getApp();
   } catch {
     App = null; // 桥不可用（browser 模式）→ 空清单
   }
-  // 类型化直调；仅「绑定缺失」回退 "[]"（审查 P3：真实 ListPackModels 错误仍传播，
+  // 类型化直调；仅「绑定缺失」回退空数组（审查 P3：真实 ListPackModels 错误仍传播，
   // 调用方有 .catch("[preview] pack3D:") 记录；不能 catch-all 吞掉导致无预览无诊断）
-  raw = App && typeof App.ListPackModels === "function" ? await App.ListPackModels(path) : "[]";
-  let entries: string[] = [];
-  try {
-    const arr = JSON.parse(raw) as unknown;
-    entries = Array.isArray(arr)
-      // 与 Go/web 的大小写不敏感清单（packModelEntryMatch / webPackModelEntryMatch）一致：
-      // Block/Item 大写目录的包也能被筛中，否则详情页点模型行静默无响应
-      ? (arr as string[]).filter((e) => e.toLowerCase().includes("/block/") || e.toLowerCase().includes("/item/"))
-      : [];
-  } catch {}
+  let arr: string[] | null = App && typeof App.ListPackModels === "function" ? await App.ListPackModels(path) : [];
+  // 与 Go/web 的大小写不敏感清单（packModelEntryMatch / webPackModelEntryMatch）一致：
+  // Block/Item 大写目录的包也能被筛中，否则详情页点模型行静默无响应
+  const entries = (arr ?? []).filter((e) => e.toLowerCase().includes("/block/") || e.toLowerCase().includes("/item/"));
   if (entries.length === 0) return;
 
   // 指定初始 entry（详情页模型清单点击直达；ADR-131 P3），否则首个 entry

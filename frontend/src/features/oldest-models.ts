@@ -59,12 +59,10 @@ function handleContainerClick(e: MouseEvent): void {
 }
 
 /** 仓库统计：调 Go RepoHealthAudit（与诊断页/CLI 同源单一口径），
- * 前端只做分档展示，不自算评分。解析失败/后端业务错误直接抛出，
- * 由 render 的 catch 统一展示。 */
+ * 前端只做分档展示，不自算评分。失败（Go error 通道）由 render 的 catch 统一展示。 */
 async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
   const { RepoHealthAudit } = await getApp();
   const report = parseHealthReport(await RepoHealthAudit(filesRoot));
-  if (report instanceof Error) throw report;
   if (!report) throw new Error(t("diagnostics.healthParseFailed"));
   const score = report.score;
   return {

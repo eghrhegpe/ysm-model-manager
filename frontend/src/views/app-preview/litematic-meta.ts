@@ -111,13 +111,16 @@ async function parseLitematicMeta(ext: string, path: string): Promise<LitematicM
   const { ReadLitematicMeta, ReadNbtStructure, ReadSchematic } = await getApp();
   let meta: LitematicMeta;
   if (ext === ".nbt") {
-    meta = JSON.parse((await ReadNbtStructure(path)) || "{}") as LitematicMeta;
+    const raw = await ReadNbtStructure(path);
+    meta = raw as unknown as LitematicMeta;
     if (!meta || (!meta.size && !meta.blockCount)) throw new Error("无法解析");
   } else if (ext === ".schematic") {
-    meta = JSON.parse((await ReadSchematic(path)) || "{}") as LitematicMeta;
+    const raw = await ReadSchematic(path);
+    meta = raw as unknown as LitematicMeta;
     if (!meta || (!meta.size && !meta.blockCount)) throw new Error("无法解析");
   } else {
-    meta = JSON.parse((await ReadLitematicMeta(path)) || "{}") as LitematicMeta;
+    const raw = await ReadLitematicMeta(path);
+    meta = raw as unknown as LitematicMeta;
     if (!meta || (!meta.name && !meta.author && meta.totalBlocks === undefined)) throw new Error("无法解析");
   }
   return meta;

@@ -19,12 +19,12 @@ vi.mock("../load-trace.ts", () => ({
 
 import { buildLitematicScene } from "./litematic-adapter.ts";
 
-const VALID_JSON = JSON.stringify({
+const VALID_JSON = {
   groups: [{ positions: [[1, 2, 3], [4, 5, 6]], color: "#ff0000" }],
   size: [16, 16, 16],
   truncated: false,
   maxBlocks: 200000,
-});
+};
 
 function makeCtx() {
   const scene = new THREE.Scene();
@@ -142,8 +142,8 @@ describe("buildLitematicScene 容器内多模型（ADR-132）", () => {
 });
 
 describe("buildLitematicScene 错误/空数据路径（回归）", () => {
-  it("voxelCall 返回 error JSON → earlyResult（loadingEl 显示错误，无 dispose 崩溃）", async () => {
-    const voxelCall = vi.fn().mockResolvedValue(JSON.stringify({ error: "BuildNbtVoxelData: not a structure NBT file" }));
+  it("voxelCall 返回 null（error 通道）→ earlyResult（loadingEl 显示空态，无 dispose 崩溃）", async () => {
+    const voxelCall = vi.fn().mockResolvedValue(null);
     const ctx = makeCtx();
     const result = await buildLitematicScene(ctx, "/x.nbt", voxelCall);
     expect(result.dispose).toBeDefined();
@@ -151,7 +151,7 @@ describe("buildLitematicScene 错误/空数据路径（回归）", () => {
   });
 
   it("空 groups → earlyResult（voxelEmpty）", async () => {
-    const voxelCall = vi.fn().mockResolvedValue(JSON.stringify({ groups: [], size: [10, 10, 10] }));
+    const voxelCall = vi.fn().mockResolvedValue({ groups: [], size: [10, 10, 10] });
     const ctx = makeCtx();
     const result = await buildLitematicScene(ctx, "/empty.litematic", voxelCall);
     expect(result.dispose).toBeDefined();

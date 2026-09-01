@@ -149,16 +149,9 @@ export async function showResourcePack(
   try {
     const App = await getApp();
     const { ReadPackMeta } = App;
-    const jsonStr = await ReadPackMeta(path);
+    const meta = await ReadPackMeta(path);
     if (detailGen.stale(gen)) return;
-    const meta = JSON.parse(jsonStr) as {
-      description?: string;
-      thumbnail?: string;
-      pack_format?: number;
-      supported_formats?: number[];
-      min_format?: number | number[];
-      max_format?: number | number[];
-    };
+    if (!meta) throw new Error("资源包信息为空");
     const basename = path.split(/[/\\]/).pop() || "";
     const desc = renderFormattedText(meta.description || "");
     if (detailGen.stale(gen)) return;
@@ -197,17 +190,13 @@ async function renderPackModelList(
   path: string,
 ): Promise<void> {
   try {
-    const raw = await App.ListPackModelsDetail(path);
+    const detail = await App.ListPackModelsDetail(path);
     if (detailGen.stale(gen)) return;
-    const detail = JSON.parse(raw) as {
-      models?: Array<{ path: string; cubes: number }>;
-      total?: number;
-    };
-    const models = detail.models ?? [];
+    const models = detail?.models ?? [];
     const host = ctx.root.querySelector<HTMLElement>("#pack-model-list");
     if (!host) return;
     if (models.length === 0) return; // 无模型 → 不渲染清单区（仅 FAB 3D 入口）
-    const total = detail.total ?? models.length;
+    const total = detail?.total ?? models.length;
     const overflow = total > models.length
       ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${t("preview.modelListOverflow", { n: models.length })}</div>`
       : "";
@@ -269,16 +258,15 @@ export async function showShaderpack(
 </div>`;
   try {
     const { ReadShaderpackLang } = await getApp();
-    const jsonStr = await ReadShaderpackLang(path);
+    const spMeta = await ReadShaderpackLang(path);
     if (detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
-    const spMeta = JSON.parse(jsonStr || "{}") as { name?: string; entries?: Record<string, string> };
-    const displayName = spMeta.name || basename;
-    const entries = spMeta.entries || {};
+    const displayName = spMeta?.name || basename;
+    const entries = spMeta?.entries ?? {};
     // 取前几条 option 描述作为简介（与 app-resource-manager 同口径，去 § 格式码）
     const descs = Object.entries(entries)
       .filter(([k]) => k.includes(".comment"))
       .slice(0, 3)
-      .map(([, v]) => v.replace(/§[0-9a-fklmnor]/g, ""))
+      .map(([, v]) => (v ?? "").replace(/§[0-9a-fklmnor]/g, ""))
       .filter(Boolean);
     const desc = descs.length
       ? descs.join("\n")

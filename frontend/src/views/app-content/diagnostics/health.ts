@@ -32,16 +32,7 @@ export async function runHealthAudit(
 
     const { RepoHealthAudit, GetRepoRoot } = await getApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
-    const raw = await RepoHealthAudit(filesRoot);
-    const report = parseHealthReport(raw);
-    if (report instanceof Error) {
-      // 后端业务错误（如路径超出仓库目录），展示原文案
-      list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">❌ ' +
-        esc(report.message) +
-        "</div>";
-      return;
-    }
+    const report = parseHealthReport(await RepoHealthAudit(filesRoot));
     if (!report) {
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-error">❌ ' +
@@ -52,8 +43,8 @@ export async function runHealthAudit(
 
     list.innerHTML = renderHealthReport(report, esc);
   } catch (e) {
-    // 后端 {error: string} 或调用失败：区分展示
-    const msg = isBackendError(e) ? e.message : friendlyError(e, t("diagnostics.healthFailed"));
+    // Go error 通道（路径校验等业务错误）或调用失败：统一展示
+    const msg = friendlyError(e, t("diagnostics.healthFailed"));
     list.innerHTML =
       '<div class="stat-row diag-msg diag-msg-error">❌ ' + esc(msg) + "</div>";
   } finally {

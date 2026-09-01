@@ -31,26 +31,22 @@ beforeEach(() => {
 });
 
 describe("parseHealthReport", () => {
-  it("合法 JSON 且含 score/completeness → 解析成功", () => {
-    const r = parseHealthReport(JSON.stringify(buildReport()));
+  it("合法 report 且含 score/completeness → 解析成功", () => {
+    const r = parseHealthReport(buildReport());
     expect(r).not.toBeNull();
-    expect(r).not.toBeInstanceOf(Error);
-    if (r && !(r instanceof Error)) {
+    if (r) {
       expect(r.score).toBe(85);
       expect(r.dedup.groups).toBe(1);
     }
   });
 
-  it("非法 JSON → null", () => {
-    expect(parseHealthReport("not json")).toBeNull();
+  it("null → null", () => {
+    expect(parseHealthReport(null)).toBeNull();
   });
 
-  it("后端业务错误 {error: string} → Error 实例（非 null 也非 HealthReport）", () => {
-    const err = parseHealthReport(JSON.stringify({ error: "路径超出仓库目录" }));
-    expect(err).toBeInstanceOf(Error);
-    if (err instanceof Error) {
-      expect(err.message).toBe("路径超出仓库目录");
-    }
+  it("结构不合法（缺 score）→ null", () => {
+    const r = parseHealthReport({ timestamp: "x", directory: "/", completeness: { checked: 0, valid: 0, invalid: 0, percentage: 0 } } as never);
+    expect(r).toBeNull();
   });
 });
 
@@ -83,9 +79,9 @@ describe("renderHealthReport", () => {
 });
 
 describe("runHealthAudit", () => {
-  it("成功：RepoHealthAudit 返回 JSON → 渲染到容器", async () => {
+  it("成功：RepoHealthAudit 返回 typed report → 渲染到容器", async () => {
     getApp.mockResolvedValue({
-      RepoHealthAudit: vi.fn(() => JSON.stringify(buildReport())),
+      RepoHealthAudit: vi.fn(() => buildReport()),
       GetRepoRoot: vi.fn(async () => "/m"),
     });
     const list = document.createElement("div");
@@ -95,9 +91,9 @@ describe("runHealthAudit", () => {
     expect(list.innerHTML).toContain("数据源");
   });
 
-  it("后端业务错误 {error: string} → 展示原文案（非'解析失败'）", async () => {
+  it("后端业务错误（Go error 通道）→ 展示原文案（非'解析失败'）", async () => {
     getApp.mockResolvedValue({
-      RepoHealthAudit: vi.fn(() => JSON.stringify({ error: "路径超出仓库目录" })),
+      RepoHealthAudit: vi.fn(() => Promise.reject(new Error("路径超出仓库目录"))),
       GetRepoRoot: vi.fn(async () => "/m"),
     });
     const list = document.createElement("div");
@@ -106,9 +102,9 @@ describe("runHealthAudit", () => {
     expect(list.innerHTML).not.toContain("解析失败");
   });
 
-  it("真解析失败（非法 JSON）→ 展示解析失败文案", async () => {
+  it("返回 null → 展示解析失败文案", async () => {
     getApp.mockResolvedValue({
-      RepoHealthAudit: vi.fn(() => "not json"),
+      RepoHealthAudit: vi.fn(() => null),
       GetRepoRoot: vi.fn(async () => "/m"),
     });
     const list = document.createElement("div");
@@ -129,10 +125,10 @@ describe("runHealthAudit", () => {
   });
 
   it("重入守卫：并发第二次调用直接返回", async () => {
-    let resolveFn: (v: string) => void = () => {};
+    let resolveFn: (v: Record<string, unknown> | null) => void = () => {};
     const healthAuditMock = vi.fn(
       () =>
-        new Promise<string>((res) => {
+        new Promise<Record<string, unknown> | null>((res) => {
           resolveFn = res;
         }),
     );
@@ -146,7 +142,7 @@ describe("runHealthAudit", () => {
     // 等 RepoHealthAudit mock 首次调用（resolveFn 赋值）后再解析——runHealthAudit
     // 现多一步 GetRepoRoot await，直接 resolveFn 会在 mock 调用前执行（初始空函数）
     await vi.waitFor(() => expect(healthAuditMock).toHaveBeenCalled());
-    resolveFn(JSON.stringify(buildReport()));
+    resolveFn(buildReport());
     await p1;
     await waitFor(() => expect(list.innerHTML).toContain("85"));
   });

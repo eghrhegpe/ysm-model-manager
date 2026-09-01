@@ -10,6 +10,7 @@ import { buildLitematicScene, type LitematicBuildOpts } from "../../preview-3d/a
 import { getApp } from "../../backend/app.ts";
 import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
 import { RESOURCE_TYPES, VOXEL_RPC_BY_EXT, extOf } from "../../utils/resource/types.ts";
+import type { VoxelData } from "../../backend/voxel-parse.ts";
 
 /** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */
 const CONTAINER_VOXEL_EXTS = ".nbt,.litematic,.schematic";
@@ -28,20 +29,22 @@ function entryExtOf(entry: string): string {
 /** voxelCall 注入（视图壳层保留 getApp；适配器 0 backend import，ADR-072 边界判据）。
  *  voxelFn 是 VOXEL_RPC_BY_EXT 的 Go RPC 名（GetNbtVoxelData / GetSchematicVoxelData /
  *  GetLitematicVoxelData，三签名一致）——动态 key 保留（工厂注入），但取方法走类型化
- *  索引（AppBindings 具名方法），替换原 `as unknown as Record<string,...>` 手写断言。 */
-function makeVoxelCall(voxelFn: string): (path: string) => Promise<string> {
-  return async (path: string): Promise<string> => {
+ *  索引（AppBindings 具名方法），替换原 `as unknown as Record<string,...>` 手写断言。
+ *  ADR-143 P1：绑定返回 typed VoxelData | null（原 string JSON）。 */
+function makeVoxelCall(voxelFn: string): (path: string) => Promise<VoxelData | null> {
+  return async (path: string): Promise<VoxelData | null> => {
     const App = await getApp();
     // 动态 key：按 VOXEL_RPC_BY_EXT 值域收窄到 AppBindings 具名方法（if/else 链，
     // 审查 P3：嵌套三元 + 未知值静默回退 GetLitematicVoxelData 会让注册表新增 RPC
     // 名时错调 builder——未知名显式抛错，注册表增长失败响亮；空串仍走默认语义）
-    let fn: (p: string) => Promise<string>;
+    let fn: (p: string) => Promise<VoxelData | null>;
     if (voxelFn === "GetNbtVoxelData") {
-      fn = App.GetNbtVoxelData;
+      // Go 绑定返回 LitematicVoxelData（生成类型），与前端 VoxelData 结构同源（null 差异）
+      fn = ((p: string) => App.GetNbtVoxelData(p)) as unknown as (p: string) => Promise<VoxelData | null>;
     } else if (voxelFn === "GetSchematicVoxelData") {
-      fn = App.GetSchematicVoxelData;
+      fn = ((p: string) => App.GetSchematicVoxelData(p)) as unknown as (p: string) => Promise<VoxelData | null>;
     } else if (voxelFn === "" || voxelFn === "GetLitematicVoxelData") {
-      fn = App.GetLitematicVoxelData;
+      fn = ((p: string) => App.GetLitematicVoxelData(p)) as unknown as (p: string) => Promise<VoxelData | null>;
     } else {
       throw new Error(`未识别的 voxel RPC 名: ${voxelFn}`);
     }
@@ -54,10 +57,10 @@ function makeVoxelCall(voxelFn: string): (path: string) => Promise<string> {
  *  容器（a.nbt + x.schematic 混排，均在白名单）切换时派发各自 builder，而非沿用首条目 ext
  *  （审核修复 P1：旧实现捕获 entries[0] 的 ext 一次，第二格式必走错 builder）；未知扩展名
  *  回退捕获的默认 ext（单格式容器保持原语义，default → BuildVoxelDataFromRoot）。 */
-function makeContainerVoxelCall(containerPath: string, fallbackExt: string): (entryPath: string) => Promise<string> {
-  return async (entryPath: string): Promise<string> => {
+function makeContainerVoxelCall(containerPath: string, fallbackExt: string): (entryPath: string) => Promise<VoxelData | null> {
+  return async (entryPath: string): Promise<VoxelData | null> => {
     const App = await getApp();
-    return await App.GetVoxelDataInContainer(containerPath, entryPath, entryExtOf(entryPath) || fallbackExt);
+    return (await App.GetVoxelDataInContainer(containerPath, entryPath, entryExtOf(entryPath) || fallbackExt)) as unknown as VoxelData | null;
   };
 }
 
@@ -77,9 +80,8 @@ function makeLitematicAdapter(voxelFn: string, container?: LitematicBuildOpts): 
 async function listContainerEntries(containerPath: string): Promise<string[]> {
   try {
     const App = await getApp();
-    const raw = await App.ListContainerEntries(containerPath, CONTAINER_VOXEL_EXTS);
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as string[]) : [];
+    const parsed = await App.ListContainerEntries(containerPath, CONTAINER_VOXEL_EXTS);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }

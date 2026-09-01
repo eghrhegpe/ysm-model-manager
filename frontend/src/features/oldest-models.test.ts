@@ -53,9 +53,9 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-/** 构造 RepoHealthAudit 合法返回（字段与 go/repoaudit.HealthReport JSON 对齐） */
-function auditReport(overrides: Record<string, unknown> = {}): string {
-  return JSON.stringify({
+/** 构造 RepoHealthAudit 合法返回（字段与 go/repoaudit.HealthReport 对齐；ADR-143 P1 后 typed） */
+function auditReport(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
     timestamp: "2026-08-30T00:00:00Z",
     directory: "/repo",
     score: 87,
@@ -64,7 +64,7 @@ function auditReport(overrides: Record<string, unknown> = {}): string {
     resources: { total_files: 7, total_size: 1051136, banned: 1, by_type: {} },
     dedup: { groups: 0, extra_files: 0, reclaim_bytes: 0 },
     ...overrides,
-  });
+  };
 }
 
 const sampleEntries = [
@@ -291,7 +291,7 @@ describe("loadOldestModel", () => {
   });
 
   it("RepoHealthAudit 返回后端业务错误 → 显示错误信息", async () => {
-    mocks.RepoHealthAudit.mockResolvedValue(JSON.stringify({ error: "审计目录不可用" }));
+    mocks.RepoHealthAudit.mockRejectedValue(new Error("审计目录不可用"));
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);

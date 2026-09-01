@@ -91,11 +91,11 @@ const FORMAT_VERSION_MAP: Record<string, string> = {
   88: "26.2",
 };
 
-/** ReadPackMeta 返回的 JSON 对象（仅覆盖用到的字段） */
+/** ReadPackMeta 返回的 meta 对象（ADR-143 P1 后 Go 直出 typed struct，字段可空数组） */
 export interface PackMeta {
-  supported_formats?: number[];
-  min_format?: number | number[];
-  max_format?: number | number[];
+  supported_formats?: number[] | null;
+  min_format?: number | number[] | null;
+  max_format?: number | number[] | null;
   pack_format?: number;
 }
 

@@ -1714,6 +1714,10 @@ export const autoSidebar = [
             "link": "/knowledge/preview_3d_migration"
           },
           {
+            "text": "3D 预览控制器（声明式菜单节点）",
+            "link": "/knowledge/preview-controls"
+          },
+          {
             "text": "回收站界面 recycle-bin",
             "link": "/knowledge/recycle-bin"
           },

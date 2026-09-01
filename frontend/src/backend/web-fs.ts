@@ -229,40 +229,28 @@ const VOXEL_MAX_BLOCKS = 200000;
 async function readVoxelJson(
   path: string,
   view: (root: Record<string, unknown>, maxBlocks: number) => VoxelData | null,
-): Promise<string> {
+): Promise<VoxelData | null> {
   try {
     const b64 = await readWebFile(path);
-    if (!b64) return voxelErrorJson("文件读取失败或不存在");
+    if (!b64) return null;
     // IO（读文件）与解码（b64 → NBT root）解耦：decodeVoxelNbt 为纯函数
-    // （voxel-parse.ts），此处只做装配——读文件 → 纯解码 → 纯视图 → 契约化 JSON
-    return voxelToJson(b64, view);
-  } catch (err) {
-    // 对齐 Go marshalVoxelData 的 {error} 契约：失败带具体原因，
-    // 前端可区分「解析失败」与「空数据」，不再吞成 "{}"
-    return voxelErrorJson(safeErrorMessage(err));
-  }
-}
-
-/** 体素失败契约 JSON：{"error": string}（对齐 Go internal/app voxelErrorJSON） */
-function voxelErrorJson(msg: string): string {
-  try {
-    return JSON.stringify({ error: msg });
+    // （voxel-parse.ts），此处只做装配——读文件 → 纯解码 → 纯视图 → typed VoxelData
+    return voxelFromBase64(b64, view);
   } catch {
-    return '{"error":"json stringify failed"}';
+    // ADR-143 P1：失败走 null（error 通道语义由 binding 层处理）
+    return null;
   }
 }
 
-/** 体素装配：b64 → 解码 → 视图 → 契约化 JSON（readVoxelJson / readWebVoxelInContainer 共用段）。
- *  失败返回 {"error"} 契约（解码失败 / 视图判定无效），消除两处重复（jscpd）。 */
-function voxelToJson(
+/** 体素装配：b64 → 解码 → 视图 → typed VoxelData（readVoxelJson / readWebVoxelInContainer 共用段）。
+ *  失败返回 null（解码失败 / 视图判定无效），消除两处重复（jscpd）。 */
+function voxelFromBase64(
   b64: string,
   view: (root: Record<string, unknown>, maxBlocks: number) => VoxelData | null,
-): string {
+): VoxelData | null {
   const root = decodeVoxelNbt(b64);
-  if (!root) return voxelErrorJson("文件解码失败");
-  const data = view(root, VOXEL_MAX_BLOCKS);
-  if (!data) return voxelErrorJson("无法解析为有效的体素结构（格式不支持或字段缺失）");
-  return JSON.stringify(data);
+  if (!root) return null;
+  return view(root, VOXEL_MAX_BLOCKS);
 }
 
 /** zip 容器读取装配：readWebFile → base64 → extractZip（失败返回 null，调用方转 "[]"）。
@@ -309,18 +297,18 @@ function webContainerEntrySafe(name: string): boolean {
   return !name.includes("..") && !name.includes("\\");
 }
 
-/** 容器内条目枚举：ListContainerEntries 镜像（exts 逗号分隔；失败 → "[]"） */
-async function listWebContainerEntries(path: string, exts: string): Promise<string> {
+/** 容器内条目枚举：ListContainerEntries 镜像（exts 逗号分隔；失败 → []） */
+async function listWebContainerEntries(path: string, exts: string): Promise<string[]> {
   try {
     const entries = await readWebZipEntries(path);
-    if (!entries) return "[]";
+    if (!entries) return [];
     const extSet = webParseContainerExts(exts);
     const out = Object.keys(entries)
       .filter((k) => !k.endsWith("/") && webContainerEntrySafe(k) && webContainerExtMatch(k, extSet))
       .sort();
-    return JSON.stringify(out);
+    return out;
   } catch {
-    return "[]";
+    return [];
   }
 }
 
@@ -330,19 +318,20 @@ async function readWebVoxelInContainer(
   entry: string,
   ext: string,
   view: (root: Record<string, unknown>, maxBlocks: number) => VoxelData | null,
-): Promise<string> {
+): Promise<VoxelData | null> {
   try {
-    if (!webContainerEntrySafe(entry)) return voxelErrorJson("非法条目路径");
+    if (!webContainerEntrySafe(entry)) return null;
     const b64 = await readWebFile(path);
-    if (!b64) return voxelErrorJson("文件读取失败或不存在");
+    if (!b64) return null;
     const bytes = base64ToBytes(b64);
-    if (!bytes) return voxelErrorJson("文件解码失败");
+    if (!bytes) return null;
     const { entries } = extractZip(bytes);
     const raw = findZipEntry(entries, entry);
-    if (!raw) return voxelErrorJson("容器内不存在该条目");
-    return voxelToJson(zipEntryToBase64(raw), view);
-  } catch (err) {
-    return voxelErrorJson(safeErrorMessage(err));
+    if (!raw) return null;
+    const vd = voxelFromBase64(zipEntryToBase64(raw), view);
+    return vd;
+  } catch {
+    return null;
   }
 }
 
@@ -356,18 +345,17 @@ async function readWebVoxelInContainer(
 async function readNbtMetaJson(
   path: string,
   extract: (root: Record<string, unknown>) => Record<string, unknown> | null,
-): Promise<string> {
+): Promise<Record<string, unknown> | null> {
   try {
     const b64 = await readWebFile(path);
-    if (!b64) return "{}";
+    if (!b64) return null;
     const bytes = base64ToBytes(b64);
-    if (!bytes) return "{}";
+    if (!bytes) return null;
     const root = parseNbtRoot(bytes);
     const view = extract(root);
-    if (!view) return "{}";
-    return JSON.stringify(view);
+    return view ?? null;
   } catch {
-    return "{}";
+    return null;
   }
 }
 
@@ -379,42 +367,43 @@ async function readNbtMetaJson(
  * 任何一步失败（文件缺失 / 非 zip / 无 mcmeta / 超限 / 解析失败）→ "{}"（对齐 Go
  * binding 契约：ReadPackMeta error → "{}"）。
  */
-async function readPackMetaJson(path: string): Promise<string> {
+async function readPackMetaJson(path: string): Promise<Record<string, unknown> | null> {
   try {
     const b64 = await readWebFile(path);
-    if (!b64) return "{}";
+    if (!b64) return null;
     const bytes = base64ToBytes(b64);
-    if (!bytes) return "{}";
+    if (!bytes) return null;
     const { entries } = extractZip(bytes);
     const mcmeta = findZipEntry(entries, "pack.mcmeta");
-    if (!mcmeta) return "{}";
+    if (!mcmeta) return null;
     const meta = parsePackMetaJson(mcmeta);
-    if (!meta) return "{}";
+    if (!meta) return null;
     // pack.png → base64 缩略图（10MB 限额，超限置空——对齐 go zip 分支 LimitReader+1 截断探测）
     meta.thumbnail = packPngToThumbnail(findZipEntry(entries, "pack.png"));
-    return JSON.stringify(meta);
+    return meta;
   } catch {
-    return "{}";
+    return null;
   }
 }
 
 /**
  * 光影包详情 binding（TS 平移 go/packs/mcmeta.go ReadShaderpackLang）。读 IDB → base64 →
  * 字节 → extractZip → 找 lang/en_US.lang（大小写不敏感，1MB 限额）→ key=value 解析 →
- * {name, entries}。任何一步失败 → {"name":"","entries":{}}（对齐 Go binding 契约）。
+ * {name, entries}。任何一步失败 → {name:"",entries:{}}（对齐 Go binding 契约）。
  */
-async function readShaderpackLangJson(path: string): Promise<string> {
+async function readShaderpackLangJson(path: string): Promise<{ name: string; entries: Record<string, string> }> {
   try {
     const b64 = await readWebFile(path);
-    if (!b64) return '{"name":"","entries":{}}';
+    if (!b64) return { name: "", entries: {} };
     const bytes = base64ToBytes(b64);
-    if (!bytes) return '{"name":"","entries":{}}';
+    if (!bytes) return { name: "", entries: {} };
     const { entries } = extractZip(bytes);
     const lang = findZipEntry(entries, "lang/en_us.lang");
-    if (!lang) return '{"name":"","entries":{}}';
-    return parseShaderpackLang(lang);
+    if (!lang) return { name: "", entries: {} };
+    const parsed = JSON.parse(parseShaderpackLang(lang)) as { name: string; entries: Record<string, string> };
+    return parsed;
   } catch {
-    return '{"name":"","entries":{}}';
+    return { name: "", entries: {} };
   }
 }
 /** Uint8Array → base64（fllate entry 可能共享底层 buffer，先拷贝再编码） */
@@ -424,14 +413,14 @@ function zipEntryToBase64(bytes: Uint8Array): string {
   return arrayBufferToBase64(copy.buffer);
 }
 
-/** 资源包 3D：ListPackModels 枚举 zip 内条目 JSON 字符串（对齐 Go ListPackModels 契约） */
-async function listWebPackModels(path: string): Promise<string> {
+/** 资源包 3D：ListPackModels 枚举 zip 内条目（对齐 Go ListPackModels 契约，返回 string[]） */
+async function listWebPackModels(path: string): Promise<string[]> {
   try {
     const entries = await readWebZipEntries(path);
-    if (!entries) return "[]";
-    return JSON.stringify(Object.keys(entries));
+    if (!entries) return [];
+    return Object.keys(entries);
   } catch {
-    return "[]";
+    return [];
   }
 }
 
@@ -447,11 +436,11 @@ function webPackModelEntryMatch(name: string): boolean {
 
 /**
  * 资源包模型清单：ListPackModelsDetail 镜像（对齐 Go 绑定契约）——
- * 返回 {"models":[{path,cubes}],"total":N}，cubes = JSON elements 数组长度，
- * 封顶前 200 条（防大包），total 全量。失败返回合法空结构（详情卡清单区降级）。
+ * 返回 {models:[{path,cubes}],total:N}，cubes = JSON elements 数组长度，
+ * 封顶前 200 条（防大包），total 全量。失败返回空结构（详情卡清单区降级）。
  */
-async function listWebPackModelsDetail(path: string): Promise<string> {
-  const empty = () => JSON.stringify({ models: [], total: 0 });
+async function listWebPackModelsDetail(path: string): Promise<{ models: Array<{ path: string; cubes: number }>; total: number }> {
+  const empty = () => ({ models: [], total: 0 });
   try {
     const b64 = await readWebFile(path);
     if (!b64) return empty();
@@ -470,7 +459,7 @@ async function listWebPackModelsDetail(path: string): Promise<string> {
       } catch { /* 单条目 JSON 异常 → cubes 0（对齐 Go packModelElementsCount） */ }
       return { path: k, cubes };
     });
-    return JSON.stringify({ models, total });
+    return { models, total };
   } catch {
     return empty();
   }

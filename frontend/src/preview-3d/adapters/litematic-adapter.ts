@@ -16,14 +16,7 @@ import { multiModelSelectNode } from "../menu/multi-model.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { renderLoadingState } from "./preview-loading.ts";
-
-/** 体素数据（GetLitematicVoxelData 等返回 JSON） */
-interface VoxelData {
-  groups: Array<{ positions: number[][]; color?: string }>;
-  size: number[];
-  truncated?: boolean;
-  maxBlocks?: number;
-}
+import type { VoxelData } from "../../backend/voxel-parse.ts";
 
 // 提取魔法数值常量（体素尺寸 / 默认色 / chunk 维 / 截断上限）
 const CHUNK_SIZE = 32; // 空间分块维：每 chunk 持一个 InstancedMesh，32³ ≈ 32k 方块上限
@@ -72,21 +65,9 @@ type MdLiLoadResult =
 async function mdLiLoadAndParseData(
   ctx: PreviewBuildCtx,
   path: string,
-  voxelCall: (path: string) => Promise<string>,
+  voxelCall: (path: string) => Promise<VoxelData | null>,
 ): Promise<MdLiLoadResult> {
-  const jsonStr = await voxelCall(path);
-  const data = JSON.parse(jsonStr) as VoxelData & { error?: string };
-  if (data.error) {
-    ctx.loadingEl.innerHTML = "";
-    const icon = document.createElement("div");
-    icon.style.cssText = "font-size:32px";
-    icon.textContent = "⚠️";
-    const msg = document.createElement("div");
-    msg.textContent = data.error;
-    msg.style.cssText = "max-width:420px;word-break:break-all;text-align:center;opacity:0.85";
-    ctx.loadingEl.append(icon, msg);
-    return { ok: false, earlyResult: { dispose() {} } };
-  }
+  const data = await voxelCall(path);
   if (!data || !data.groups || !data.groups.length) {
     ctx.loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>${t("preview.voxelEmpty")}</div>`;
     return { ok: false, earlyResult: { dispose() {} } };
@@ -150,7 +131,7 @@ function mdLiBuildBlockMesh(
   const instancedMeshes: Array<THREE.InstancedMesh> = [];
   const materials: Array<THREE.MeshLambertMaterial> = [];
   const groupMeshes: Array<Array<{ mesh: THREE.InstancedMesh; ck: number }>> = [];
-  for (const group of data.groups) {
+  for (const group of data.groups ?? []) {
     const gMeshes: Array<{ mesh: THREE.InstancedMesh; ck: number }> = [];
     groupMeshes.push(gMeshes);
     if (!group.positions || !group.positions.length) continue;
@@ -209,8 +190,8 @@ function mdLiApplyLayer(
   const target = shell.layerVal - 1;
   const lo = shell.layerVal - 1;
   const hi = shell.layerVal2 > shell.layerVal ? shell.layerVal2 : shell.layerVal;
-  for (let g = 0; g < rawGroups.length; g++) {
-    const positions = rawGroups[g].positions;
+  for (let g = 0; g < (rawGroups ?? []).length; g++) {
+    const positions = rawGroups![g].positions;
     const meshes = groupMeshes[g] ?? [];
     for (const { mesh, ck } of meshes) {
       let count = 0;
@@ -425,7 +406,7 @@ export interface LitematicBuildOpts {
 export async function buildLitematicScene(
   ctx: PreviewBuildCtx,
   path: string,
-  voxelCall: (path: string) => Promise<string>,
+  voxelCall: (path: string) => Promise<VoxelData | null>,
   opts?: LitematicBuildOpts,
 ): Promise<PreviewScene> {
   const tStart = performance.now();

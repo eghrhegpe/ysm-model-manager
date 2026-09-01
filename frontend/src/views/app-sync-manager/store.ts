@@ -48,17 +48,26 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
   const gen = self._gen;
   try {
     const { GetInstanceSyncStatus } = await getApp();
-    const json = await GetInstanceSyncStatus(self._instance, self._subtype || "", self._selectedType || "");
+    const items = await GetInstanceSyncStatus(self._instance, self._subtype || "", self._selectedType || "");
     if (gen !== self._gen) return;
-    self._allItems = (JSON.parse(json) as SyncItem[]) || [];
+    // Go 生成类型 children 可 null → 前端 SyncItem 用 undefined（结构同源，仅空值形态差异）
+    self._allItems = (items || []).map((it) => ({
+      ...it,
+      children: it.children ?? undefined,
+    })) as unknown as SyncItem[];
     if (self._selectedType) {
       // 目录可见性：顺带取实际扫描目录（非阻断，失败仅不显示摘要）
       try {
         const { GetSyncScanDirs } = await getApp();
-        const dirsJson = await GetSyncScanDirs(self._selectedType, self._instance);
+        const dirs = await GetSyncScanDirs(self._selectedType, self._instance);
         if (gen !== self._gen) return;
         if (!self._scanDirs) self._scanDirs = {};
-        self._scanDirs[self._selectedType] = JSON.parse(dirsJson) as { global: string; instance: string; warningCode?: string; warningParams?: { label: string; dir: string; subDir: string } };
+        self._scanDirs[self._selectedType] = {
+          global: dirs?.global ?? "",
+          instance: dirs?.instance ?? "",
+          warningCode: dirs?.warningCode,
+          warningParams: dirs?.warningParams ?? undefined,
+        };
       } catch {
         /* 目录摘要非关键路径，静默降级 */
       }

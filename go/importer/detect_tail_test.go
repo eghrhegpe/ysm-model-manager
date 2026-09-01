@@ -8,12 +8,16 @@ import (
 	"testing"
 )
 
-// buildZipB64 用 archive/zip 构造内存 zip 并转 base64（标准填充，len%4==0）
-func buildZipB64(t *testing.T, entries map[string]string) string {
+// buildZipB64 用 archive/zip 构造内存 zip 并转 base64（标准填充，len%4==0）。
+// entries 为有序 slice（非 map）：map 迭代序随机会让条目写入顺序不定，而全量
+// DetectZipType 按 local header 顺序解析（data descriptor 流式写入下只取到首条），
+// 顺序不同会让「全量 vs 尾部探针」判定不一致，测试偶发红（2026-09-01 定位）。
+func buildZipB64(t *testing.T, entries [][2]string) string {
 	t.Helper()
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
-	for name, content := range entries {
+	for _, e := range entries {
+		name, content := e[0], e[1]
 		fw, err := w.Create(name)
 		if err != nil {
 			t.Fatalf("Create %s: %v", name, err)
@@ -29,8 +33,10 @@ func buildZipB64(t *testing.T, entries map[string]string) string {
 }
 
 func TestDetectZipTypeFromBase64Tail(t *testing.T) {
-	// 正常 zip：尾部探针与全量 DetectZipType 同答案
-	b64 := buildZipB64(t, map[string]string{"ysm.json": "{}", "model/body.ysm": "x"})
+	// 正常 zip：尾部探针与全量 DetectZipType 同答案。ysm.json 恒为首条——
+	// 全量路径按 local header 顺序解析，data descriptor 流式写入下只取首条；
+	// 若 ysm.json 不在首条，全量会误判 unknown 与尾部不一致（map 序曾致偶发红）。
+	b64 := buildZipB64(t, [][2]string{{"ysm.json", "{}"}, {"model/body.ysm", "x"}})
 	want := ""
 	if full := DetectZipType(mustDecode(t, b64)); full != "" {
 		want = full
@@ -56,9 +62,9 @@ func TestDetectZipTypeFromBase64Tail(t *testing.T) {
 	}
 
 	// 多条目 zip（窗口内）条目名完整解析：条目数多但不超 4MB 窗口
-	many := map[string]string{"ysm.json": "{}"}
+	many := [][2]string{{"ysm.json", "{}"}}
 	for i := 0; i < 500; i++ {
-		many["textures/tex_"+string(rune('a'+i%26))+string(rune('a'+i/26))+".png"] = "x"
+		many = append(many, [2]string{"textures/tex_" + string(rune('a'+i%26)) + string(rune('a'+i/26)) + ".png", "x"})
 	}
 	b64Many := buildZipB64(t, many)
 	if id, ok := DetectZipTypeFromBase64Tail(b64Many); !ok || id == "" {

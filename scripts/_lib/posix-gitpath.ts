@@ -30,7 +30,7 @@ export function normalizeGitPath(p: string, root: string) {
   // 非 win32 平台不做此变换，避免把 /home/x 误判成 msys（h:/...）再 join root。
   if (process.platform === 'win32') {
     const m = p.match(/^\/([a-zA-Z])\/(.*)$/);
-    if (m) p = `${m[1].toUpperCase()}:/${m[2]}`;
+    if (m) p = `${m[1]!.toUpperCase()}:/${m[2]!}`;
   }
   return path.isAbsolute(p) ? toNative(p) : path.join(root, p);
 }

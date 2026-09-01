@@ -63,14 +63,14 @@ export function checkFile(file: string, symbolMap: Map<string, Array<{ file: str
     if (reExportRanges.some(([a, b]) => start > a && start < b)) continue;
     // 属性访问 obj.prop 的 prop：前一个非空白字符是 `.`（用 stripped，注释已剥为空）
     let j = start - 1;
-    while (j >= 0 && /\s/.test(stripped[j])) j--;
+    while (j >= 0 && /\s/.test(stripped[j]!)) j--;
     if (j >= 0 && stripped[j] === '.') continue;
     // 对象字面量 key `{ bus: 1 }` / 接口字段 `{ esc: string; fillSearch: ... }`：key 非引用。
     // 前一个非空白（stripped，注释/空白已归一）是 `{`/`,`/`;` 且后一个非空白是 `:` 才判定为 key；
     // `{ bus }` 简写属性与 `[bus, fmt]` 数组元素不满足 `:` 条件，仍按引用处理。
     if (j >= 0 && (stripped[j] === '{' || stripped[j] === ',' || stripped[j] === ';')) {
       let k = start + name.length;
-      while (k < text.length && /\s/.test(text[k])) k++;
+      while (k < text.length && /\s/.test(text[k]!)) k++;
       if (text[k] === ':') continue;
     }
     // 类字段 / 接口可选属性定义（mock 对象 `render = vi.fn()`、接口 `render?: Type`）：
@@ -79,7 +79,7 @@ export function checkFile(file: string, symbolMap: Map<string, Array<{ file: str
     // （2026-08-17 修复：3d 适配器/测试的 mock render 字段被误报为缺失 import）。
     if (j >= 0 && (stripped[j] === '\n' || stripped[j] === ';' || stripped[j] === '}')) {
       let k = start + name.length;
-      while (k < text.length && /\s/.test(text[k])) k++;
+      while (k < text.length && /\s/.test(text[k]!)) k++;
       if (text[k] === '=' || text[k] === '?') continue;
     }
     if (seen.has(name)) continue;

@@ -39,7 +39,7 @@ const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');
 const STRICT = ARGS.has('--strict');
 const minIdx = [...ARGS].indexOf('--min-consumers');
-const MIN_CONSUMERS = minIdx >= 0 ? parseInt([...ARGS][minIdx + 1], 10) || 0 : 0;
+const MIN_CONSUMERS = minIdx >= 0 ? parseInt([...ARGS][minIdx + 1]!, 10) || 0 : 0;
 
 // ── 导出/导入解析 ─────────────────────────────────────
 
@@ -56,7 +56,7 @@ function extractExports(file: string, text: string) {
   }
   for (const m of text.matchAll(EXPORT_BLOCK_RE)) {
     const line = text.slice(0, m.index).split('\n').length;
-    for (const raw of m[1].split(',')) {
+    for (const raw of m[1]!.split(',')) {
       const n = raw.trim().match(/^([A-Za-z_$][\w$]*)/);
       if (n) out.push({ name: n[1], line });
     }
@@ -95,39 +95,39 @@ function extractImports(file: string, text: string, moduleSet: Set<string>) {
     }
   };
   for (const m of text.matchAll(IMPORT_RE)) {
-    const target = resolveImport(file, m[3], moduleSet);
+    const target = resolveImport(file, m[3]!, moduleSet);
     if (!target || target === file) continue;
     if (m[2]) pushNamed(target, m[2]);
   }
   // 重导出 `export { a, b } from "./y"`：转发即消费（桶文件链），否则仅经桶文件
   // 转发消费的符号会被误报孤儿（code_review P2，实证 test-utils/index.ts）。
   for (const m of text.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g)) {
-    const target = resolveImport(file, m[2], moduleSet);
+    const target = resolveImport(file, m[2]!, moduleSet);
     if (!target || target === file) continue;
-    pushNamed(target, m[1]);
+    pushNamed(target, m[1]!);
   }
   // 动态导入：const { a, b } = await import("spec")
   for (const m of text.matchAll(DYN_DESTRUCT_RE)) {
-    const target = resolveDynImport(file, m[2], moduleSet);
+    const target = resolveDynImport(file, m[2]!, moduleSet);
     if (!target || target === file) continue;
-    pushNamed(target, m[1]);
+    pushNamed(target, m[1]!);
   }
   // 动态导入：import("spec").then(({ a, b }) => ...)
   for (const m of text.matchAll(THEN_DESTRUCT_RE)) {
-    const target = resolveDynImport(file, m[1], moduleSet);
+    const target = resolveDynImport(file, m[1]!, moduleSet);
     if (!target || target === file) continue;
-    pushNamed(target, m[2]);
+    pushNamed(target, m[2]!);
   }
   // 动态导入：先存命名空间别名、后取属性（如 download-queue.test.ts 第 78-83 行）
   //   const mod = await import("./x.ts");  mod.foo;  mod.bar();
   const nsAliases: any[] = []; // [alias, target]
   for (const m of text.matchAll(DYN_NS_ALIAS_RE)) {
-    const target = resolveDynImport(file, m[2], moduleSet);
+    const target = resolveDynImport(file, m[2]!, moduleSet);
     if (!target) continue;
     nsAliases.push([m[1], target]);
   }
   for (const m of text.matchAll(THEN_NS_ALIAS_RE)) {
-    const target = resolveDynImport(file, m[1], moduleSet);
+    const target = resolveDynImport(file, m[1]!, moduleSet);
     if (!target) continue;
     nsAliases.push([m[2], target]);
   }
@@ -162,7 +162,7 @@ function extractImports(file: string, text: string, moduleSet: Set<string>) {
   }
   // 命名空间导入 import * as ns：扫描 ns.<symbol> 用法对齐具体符号
   for (const m of text.matchAll(/\bimport\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*['"]([^'"]+)['"]/g)) {
-    const target = resolveImport(file, m[2], moduleSet);
+    const target = resolveImport(file, m[2]!, moduleSet);
     if (!target || target === file) continue;
     const ns = m[1];
     const useRe = new RegExp(`\\b${ns}\\.([A-Za-z_$][\\w$]*)\\b`, 'g');
@@ -218,7 +218,7 @@ function main() {
       const blockRe = /export\s*\{([^}]*)\}(?!\s*from)/;
       for (let i = 0; i < lines.length; i++) {
         if (i + 1 === line) continue; // 跳过 export 声明行本身
-        const ln = lines[i];
+        const ln = lines[i]!;
         if (namedRe.test(ln) || blockRe.test(ln)) continue;
         if (useRe.test(ln)) selfCount++;
       }

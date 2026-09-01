@@ -77,8 +77,8 @@ function readBusContract() {
     const st = cur; cur = '';
     const m = st.match(/\s*"([^"]+)"\s*:\s*([\s\S]*)/);
     if (!m) return;
-    names.add(m[1]);
-    if (/^void\b/.test(m[2].trim())) voidDeclarations.add(m[1]);
+    names.add(m[1]!);
+    if (/^void\b/.test(m[2]!.trim())) voidDeclarations.add(m[1]!);
   };
   for (const ch of body) {
     if (ch === '{' || ch === '[' || ch === '(') d++;
@@ -143,7 +143,7 @@ function skipRegex(src: string, i: number) {
     if (c === '\\') { i++; continue; }
     if (inClass) { if (c === ']') inClass = false; continue; }
     if (c === '[') { inClass = true; continue; }
-    if (c === '/') { while (i + 1 < src.length && /[a-z]/i.test(src[i + 1])) i++; return i; }
+    if (c === '/') { while (i + 1 < src.length && /[a-z]/i.test(src[i + 1]!)) i++; return i; }
     if (c === '\n') return null;
   }
   return null;
@@ -157,7 +157,7 @@ function extractArgs(src: string, openParen: number) {
   const parts: string[] = [];
   const note = (c: string) => { if (!/\s/.test(c)) lastSig = c; };
   while (i < n) {
-    const c = src[i];
+    const c = src[i]!;
     if (c === "'" || c === '"' || c === '`') {
       const q = c;
       cur += c; i++;
@@ -197,14 +197,14 @@ function scanFiles(files: string[], includeHtml: boolean, contract: any, arityIs
     let m;
     const headRe = new RegExp(CALL_HEAD_RE.source, 'g');
     while ((m = headRe.exec(text)) !== null) {
-      const receiver = m[1], method = m[2];
+      const receiver = m[1]!, method = m[2]!;
       const openParen = m.index + m[0].length - 1;
       const args = extractArgs(text, openParen);
       if (!args) continue; // 括号不平衡（跨模板拼接等），交由编译期兜底
       const nameM = (args[0] ?? '').trim().match(/^["'`]([^"'`]*)["'`]$/);
       if (!nameM) continue; // 非字面量事件名不记录（与旧版单行正则行为一致）
       const line = text.slice(0, m.index).split('\n').length;
-      add(nameM[1], method, rel, line);
+      add(nameM[1]!, method, rel, line);
       // emit 实参契约（仅 bus 接收者；自定义 emitter 不误伤）
       if (receiver === 'bus' && method === 'emit') {
         const event = nameM[1];

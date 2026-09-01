@@ -67,7 +67,7 @@ function extractSummary(text: string) {
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
   const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
   if (!m) return '';
-  const summary = m[1].replace(/\n{2,}/g, ' ').replace(/\s+/g, ' ').trim();
+  const summary = m[1]!.replace(/\n{2,}/g, ' ').replace(/\s+/g, ' ').trim();
   if (summary.length <= 120) return summary;
   return Array.from(summary).slice(0, 120).join('') + '…';
 }
@@ -136,7 +136,7 @@ function main() {
   });
   const JSON_OUT = args.json;
   if (args.help) {
-    const _src = fs.readFileSync(process.argv[1], 'utf-8');
+    const _src = fs.readFileSync(process.argv[1]!, 'utf-8');
     const _s = _src.indexOf('/**');
     const _e = _src.indexOf('*/', _s);
     console.log(_src.slice(_s, _e + 2).replace(/^ \* ?/gm, '').trim());

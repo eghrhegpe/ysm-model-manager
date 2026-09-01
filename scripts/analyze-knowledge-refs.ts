@@ -165,7 +165,7 @@ function analyze(cards: Card[]): AnalyzeData {
     const re = /\]\(\.\/([a-z0-9_-]+)\.md\)/g;
     let m;
     while ((m = re.exec(c.body))) {
-      const target = m[1];
+      const target = m[1]!;
       if (kindSet.has(target) && target !== c.kind) links.push(target);
     }
     const uniq = [...new Set(links)];

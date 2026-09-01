@@ -39,7 +39,7 @@ function parseSymbols(fm: string) {
   const lines = fm.split(/\r?\n/);
   let idx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (/^symbols\s*:/.test(lines[i])) {
+    if (/^symbols\s*:/.test(lines[i]!)) {
       idx = i;
       break;
     }
@@ -47,11 +47,11 @@ function parseSymbols(fm: string) {
   if (idx === -1) return null;
   const out: string[] = [];
   for (let i = idx + 1; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i]!;
     if (/^\S/.test(line)) break; // 下一个顶格 key
     if (line.trim() === '') break; // 空行（块结束）
     const item = line.match(/^\s*-\s*(.+?)\s*$/);
-    if (item) out.push(item[1].replace(/^['"]|['"]$/g, ''));
+    if (item) out.push(item[1]!.replace(/^['"]|['"]$/g, ''));
   }
   return out;
 }
@@ -61,7 +61,7 @@ function withUpdatedSymbols(fm: string, newSymbols: string[]) {
   const lines = fm.split(/\r?\n/);
   let idx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (/^symbols\s*:/.test(lines[i])) {
+    if (/^symbols\s*:/.test(lines[i]!)) {
       idx = i;
       break;
     }
@@ -69,7 +69,7 @@ function withUpdatedSymbols(fm: string, newSymbols: string[]) {
   if (idx === -1) return null;
   let end = idx + 1;
   while (end < lines.length) {
-    const line = lines[end];
+    const line = lines[end]!;
     if (/^\S/.test(line) || line.trim() === '') break;
     end++;
   }

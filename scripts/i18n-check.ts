@@ -35,7 +35,7 @@ const { strict, json, help, unknown } = parseArgs(process.argv.slice(2), {
   defaults: {},
 });
 if (help) {
-  const _src = readFileSync(process.argv[1], 'utf-8');
+  const _src = readFileSync(process.argv[1]!, 'utf-8');
   const _s = _src.indexOf('/**');
   const _e = _src.indexOf('*/', _s);
   console.log(_src.slice(_s, _e + 2).replace(/^ \* ?/gm, '').trim());
@@ -72,11 +72,11 @@ function extractPlaceholders(file: string) {
   let m;
   while ((m = re.exec(text)) !== null) {
     const key = m[1];
-    const val = m[2];
+    const val = m[2]!;
     const ph = new Set();
     const phRe = /\{(\w+)\}/g;
     let p;
-    while ((p = phRe.exec(val)) !== null) ph.add(p[1]);
+    while ((p = phRe.exec(val)) !== null) ph.add(p[1]!);
     if (ph.size > 0) map.set(key, ph);
   }
   return map;
@@ -211,7 +211,7 @@ const LOCALE_TS = readFileSync(LOCALE_TS_PATH, 'utf8');
 // 语言清单从 t.ts AVAILABLE_LANGS 迁到 locale.ts SUPPORTED_LANGS（对象数组 `{ code, label, key }`）
 const langsMatch = LOCALE_TS.match(/SUPPORTED_LANGS\s*=\s*\[([\s\S]*?)\]\s*(?:as\s+const)?\s*;/);
 const availableLangs = langsMatch
-  ? [...langsMatch[1].matchAll(/code\s*:\s*['"]([^'"]+)['"]/g)].map((m) => m[1])
+  ? [...langsMatch[1]!.matchAll(/code\s*:\s*['"]([^'"]+)['"]/g)].map((m) => m[1]!)
   : [];
 const langFiles = readdirSync(LOCALES_DIR)
   .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts')) // 排除测试文件 zh-CN.test.ts

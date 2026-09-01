@@ -35,7 +35,7 @@ export function parseArgs(argv: string[] = [], { bools = [], strings = [], defau
   const known = new Set([...bools, ...strings]);
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     // P2（code_review）：--help / -h 显式支持，不再被当未知参数/位置参数
     if (arg === '--help' || arg === '-h') {
       result.help = true;
@@ -46,7 +46,7 @@ export function parseArgs(argv: string[] = [], { bools = [], strings = [], defau
       result._.push(arg);
       if (arg === '--') {
         // 把剩余所有参数都当作位置参数
-        for (let j = i + 1; j < argv.length; j++) result._.push(argv[j]);
+        for (let j = i + 1; j < argv.length; j++) result._.push(argv[j]!);
         break;
       }
       continue;
@@ -73,7 +73,7 @@ export function parseArgs(argv: string[] = [], { bools = [], strings = [], defau
       else result[name] = /^(1|true|yes)$/i.test(inline); // --check=false → false（P2）
     } else if (isString) {
       if (inline !== undefined) { result[name] = inline; continue; } // --dir=X（P2）
-      if (i + 1 >= argv.length || argv[i + 1].startsWith('--')) {
+      if (i + 1 >= argv.length || argv[i + 1]!.startsWith('--')) {
         console.warn(`⚠️  参数 --${name} 缺少值，使用默认值: ${JSON.stringify(result[name])}`);
         continue;
       }

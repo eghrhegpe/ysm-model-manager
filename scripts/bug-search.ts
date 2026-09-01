@@ -35,7 +35,7 @@ function loadBugs() {
 
     const m2 = line.match(/^### (.+)$/);
     if (m2 && current) {
-      currentSection = m2[1];
+      currentSection = m2[1]!;
       current.sections[currentSection] = '';
       continue;
     }

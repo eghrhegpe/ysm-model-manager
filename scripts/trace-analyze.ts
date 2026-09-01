@@ -39,11 +39,11 @@ let filterPid: number | null = null;
 let filterTid: number | null = null;
 
 for (let i = 0; i < ARGS.length; i++) {
-  const a = ARGS[i];
+  const a = ARGS[i]!;
   if (a === '--json') { jsonOut = true; }
-  else if (a === '--top') { topN = parseInt(ARGS[++i], 10) || 30; }
-  else if (a === '--pid') { filterPid = parseInt(ARGS[++i], 10); }
-  else if (a === '--tid') { filterTid = parseInt(ARGS[++i], 10); }
+  else if (a === '--top') { topN = parseInt(ARGS[++i] ?? "", 10) || 30; }
+  else if (a === '--pid') { filterPid = parseInt(ARGS[++i] ?? "", 10); }
+  else if (a === '--tid') { filterTid = parseInt(ARGS[++i] ?? "", 10); }
   else if (a === '--help' || a === '-h') {
     console.log(`用法：node scripts/trace-analyze.ts <trace.json> [trace2.json] [选项]
   --json          输出 JSON（供子代理/CI 消费）
@@ -296,8 +296,8 @@ function printReport(r: any) {
 // ── 主流程 ──
 if (files.length === 2) {
   // 双 trace 对比模式
-  const a = analyze('Trace A', loadTrace(files[0]));
-  const b = analyze('Trace B', loadTrace(files[1]));
+  const a = analyze('Trace A', loadTrace(files[0]!));
+  const b = analyze('Trace B', loadTrace(files[1]!));
   if (jsonOut) {
     console.log(JSON.stringify({ a, b }, null, 2));
   } else {
@@ -318,7 +318,7 @@ if (files.length === 2) {
     }
   }
 } else {
-  const r = analyze('Trace', loadTrace(files[0]));
+  const r = analyze('Trace', loadTrace(files[0]!));
   if (jsonOut) {
     console.log(JSON.stringify(r, null, 2));
   } else {

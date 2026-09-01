@@ -68,22 +68,22 @@ function scanFile(file: string) {
   const lines = text.split(/\r?\n/);
   const rel = relPosix(file);
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i]!;
     const loc = `${rel}:${i + 1}`;
 
     // 1. 字面量初始化（排除 import 与解构行）
     if (!/^\s*(import|export\s+default)/.test(line)) {
       for (const m of line.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:true|false)\b/g)) {
-        checkName(m[1], loc);
+        checkName(m[1]!, loc);
       }
       // 2. 类型注解 x: boolean
       for (const m of line.matchAll(/\b([A-Za-z_$][\w$]*)\s*:\s*boolean\b/g)) {
-        checkName(m[1], loc);
+        checkName(m[1]!, loc);
       }
     }
     // 3. 函数返回类型 function f(): boolean
     for (const m of line.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*:\s*boolean\b/g)) {
-      checkName(m[1], loc);
+      checkName(m[1]!, loc);
     }
   }
 }

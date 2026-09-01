@@ -107,9 +107,9 @@ if (output) {
   for (const ln of output.split('\n')) {
     const m = ln.trimEnd().match(STAGE_RE);
     if (m) {
-      const name = m[1].trim();
+      const name = m[1]!.trim();
       if (name === '总计') continue;
-      stages.set(name, parseFloat(m[2]));
+      stages.set(name, parseFloat(m[2]!));
       maxStage += 1;
     }
   }

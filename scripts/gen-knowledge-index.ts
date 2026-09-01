@@ -71,7 +71,7 @@ function extractSummary(text: string) {
   // 匹配 ## 概览 到下一个 ## 标题之间的内容
   const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
   if (!m) return '';
-  const summary = m[1].replace(/\n{2,}/g, ' ').replace(/\s+/g, ' ').trim();
+  const summary = m[1]!.replace(/\n{2,}/g, ' ').replace(/\s+/g, ' ').trim();
   // 按码点截断（Array.from）：避免切断 surrogate pair（emoji）产生 U+FFFD（code_review P4-3）
   if (summary.length <= 120) return summary;
   return Array.from(summary).slice(0, 120).join('') + '…';
@@ -125,7 +125,7 @@ function buildIndex() {
   out += '> 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。\n\n';
 
   for (const cat of Object.keys(groups).sort()) {
-    const items = groups[cat];
+    const items = groups[cat]!;
     const label = (CATEGORY_LABELS as Record<string, string>)[cat] || '';
     out += `## ${cat}（${items.length} 张）\n\n`;
     if (label) out += `*${label}*\n\n`;

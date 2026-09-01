@@ -212,9 +212,9 @@ export function renamePairs(older: string, newer: string, similarityThreshold = 
   for (const line of out.trim().split('\n')) {
     const m = line.match(/^R(\d+)\t(.+)\t(.+)$/);
     if (m) pairs.push({
-      similarity: Number(m[1]),
-      oldPath: m[2],
-      newPath: m[3],
+      similarity: Number(m[1]!),
+      oldPath: m[2]!,
+      newPath: m[3]!,
     });
   }
   return pairs;

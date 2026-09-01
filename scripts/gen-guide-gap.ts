@@ -63,10 +63,10 @@ function main() {
   const text = fs.readFileSync(APP_MODULES, 'utf8');
   const faces: Set<string> = new Set();
   // 组件路径：import "./views/app-xxx.ts" / import("./views/app-xxx/index.ts")
-  for (const m of text.matchAll(/components\/(app-[a-z0-9-]+)\//g)) faces.add(m[1]);
-  for (const m of text.matchAll(/components\/(app-[a-z0-9-]+)\.ts/g)) faces.add(m[1]);
+  for (const m of text.matchAll(/components\/(app-[a-z0-9-]+)\//g)) faces.add(m[1]!);
+  for (const m of text.matchAll(/components\/(app-[a-z0-9-]+)\.ts/g)) faces.add(m[1]!);
   // register 服务名：register("loadInstances", ...)
-  for (const m of text.matchAll(/register\(\s*"([a-z][a-zA-Z0-9]+)"/g)) faces.add(m[1]);
+  for (const m of text.matchAll(/register\(\s*"([a-z][a-zA-Z0-9]+)"/g)) faces.add(m[1]!);
   const uniqueFaces = [...faces].sort();
 
   // 2. guide 页面名（去 .md，排除 index/README/中文总览）

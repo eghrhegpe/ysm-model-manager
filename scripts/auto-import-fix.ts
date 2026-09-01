@@ -61,7 +61,7 @@ export function applyFixes(suggestions: Array<{ file: string; missing: any[] }>)
     const fileLines = text.split('\n');
     let insertAt = 0;
     while (insertAt < fileLines.length) {
-      const t = fileLines[insertAt].trim();
+      const t = fileLines[insertAt]!.trim();
       if (t === '' || t.startsWith('//') || t.startsWith('/*') || t.startsWith('*')) {
         insertAt++;
         continue;
@@ -71,7 +71,7 @@ export function applyFixes(suggestions: Array<{ file: string; missing: any[] }>)
     // 插入：import 块后保留一个空行分隔（若插入点前一行为空则避免双重空行，
     // 移除的是 tail 末尾的空行，而非首个 import 行）
     const tail = [...newLines, ''];
-    if (insertAt > 0 && fileLines[insertAt - 1].trim() === '') {
+    if (insertAt > 0 && fileLines[insertAt - 1]!.trim() === '') {
       tail.pop();
     }
     fileLines.splice(insertAt, 0, ...tail);

@@ -48,8 +48,8 @@ function extractLinks(filepath: string) {
   let m;
   while ((m = re.exec(text)) !== null) {
     if (insideFence(text, m.index)) continue; // 位于 fenced 代码块内 → 跳过
-    const linkText = m[1];
-    const rawPath = m[2].split(/\s+/)[0]; // 去掉 title 部分
+    const linkText = m[1]!;
+    const rawPath = m[2]!.split(/\s+/)[0]!; // 去掉 title 部分
     links.push([linkText, rawPath, m.index]);
   }
   return links;
@@ -95,7 +95,7 @@ function collectAnchors(mdFile: string) {
   for (const line of text.split('\n')) {
     const m = line.match(/^#{1,6}\s+(.+)$/);
     if (!m) continue;
-    const title = m[1].trim();
+    const title = m[1]!.trim();
     const custom = title.match(/\{#([A-Za-z0-9_-]+)\}\s*$/);
     if (custom) { anchors.add(custom[1]); continue; }
     const textOnly = title.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_`]/g, '');

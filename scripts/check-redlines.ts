@@ -63,7 +63,7 @@ function inBlockComment(file: string, lineno: number, cache: Map<string, string[
   // 扫描到 lineno-1 行（不含当前行）：当前行若以 /* 开头已被前一 filter 豁免
   const max = Math.min(lines.length, lineno - 1);
   for (let i = 0; i < max; i++) {
-    const line = lines[i];
+    const line = lines[i]!;
     let idx = 0;
     while (idx < line.length) {
       if (!inBlock) {
@@ -418,7 +418,7 @@ function outputJson(results: any[], summary: any = null) {
  */
 export function redlineFilterKeysByChangedFiles(keys: string[], changedSet: Set<string> | null | undefined) {
   if (!changedSet) return keys;
-  return keys.filter((k) => changedSet.has(k.split(':')[0]));
+  return keys.filter((k) => changedSet.has(k.split(':')[0]!));
 }
 
 /** 解析 --files <换行分隔文件列表>（与 pre-push-gate --files 同约定）；缺省返回 null。 */
@@ -494,7 +494,7 @@ function runBaseline(results: any[]) {
   // 其他文件的既有债务不干扰当前提交——避免 commit-with-check 只改 Go/文档时被
   // 仓库内其他文件的存量新增红线卡住。基线安全语义不变：真改动文件引入的违规仍阻断。
   const changedSet = resolveChangedSet();
-  const inChanged = (k: string) => !changedSet || changedSet.has(k.split(':')[0]);
+  const inChanged = (k: string) => !changedSet || changedSet.has(k.split(':')[0]!);
   const baseSeen = baseSet.has.bind(baseSet);
   const newBlocking = current.blocking.filter((k) => inChanged(k) && !baseSeen(k));
   const newAdvisory = current.advisory.filter((k) => inChanged(k) && !baseSeen(k));

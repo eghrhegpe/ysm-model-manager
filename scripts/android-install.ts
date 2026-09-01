@@ -44,7 +44,7 @@ function connectedDevices(adb: string) {
     .slice(1)
     .map((l) => l.trim())
     .filter((l) => /\sdevice$/.test(l))
-    .map((l) => l.split(/\s+/)[0]);
+    .map((l) => l.split(/\s+/)[0]!);
 }
 
 function fail(msg: string) {

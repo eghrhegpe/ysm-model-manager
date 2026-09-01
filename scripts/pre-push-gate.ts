@@ -224,7 +224,7 @@ async function main() {
     const fileSet = new Set<string>();
     const pushed: { localRef: string; localOid: string; remoteOid: string }[] = [];
     for (const line of lines) {
-      const [localRef, localOid, , remoteOid] = line.trim().split(/\s+/);
+      const [localRef, localOid, , remoteOid] = line.trim().split(/\s+/) as [string, string, string, string];
       if (!localOid || /^0+$/.test(localOid)) continue; // delete ref，跳过
       const refFiles = resolveChanges(localRef, localOid, remoteOid);
       if (refFiles === null) {
@@ -243,7 +243,7 @@ async function main() {
     plan = planFromFiles(files);
     byDomain = groupByDomain(files);
 
-    const { localRef, localOid } = pushed[0];
+    const { localRef, localOid } = pushed[0]!;
     const multiRef = pushed.length > 1;
     console.log(`推送: ${multiRef ? `${pushed.length} 个 ref` : localRef} ${multiRef ? '' : `${localOid.slice(0, 7)} `}→ ${remoteName} (${remoteUrl || '?'})`);
     domainSummary = domainSummaryText(byDomain);

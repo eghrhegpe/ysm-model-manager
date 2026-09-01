@@ -61,9 +61,9 @@ function readRel(rel: string) {
 const LEGAL_GROUPS = deriveLegalGroups();
 
 function deriveLegalGroups() {
-  const defs = readRel(MENU_FILES[0]);
+  const defs = readRel(MENU_FILES[0]!);
   const m = defs.match(/type\s+PreviewMenuGroupId\s*=\s*([^;]+);/);
-  const ids = m ? [...m[1].matchAll(/"([a-z0-9-]+)"/g)].map((x) => x[1]) : [];
+  const ids = m ? [...m[1]!.matchAll(/"([a-z0-9-]+)"/g)].map((x) => x[1]) : [];
   if (!ids.length) {
     throw new Error('check-menu-health: 无法从 preview-menu/defs.ts 推导 PreviewMenuGroupId（单一事实来源缺失），拒绝用兜底硬编码清单');
   }
@@ -153,7 +153,7 @@ export function parseItem(block: string, id: string): {
 } {
   const field = (re: RegExp) => {
     const m = block.match(re);
-    return m ? m[1] : null;
+    return m ? m[1]! : null;
   };
   return {
     id,
@@ -181,7 +181,7 @@ export function parseFile(rel: string) {
   while ((m = idRe.exec(content)) !== null) {
     const block = extractItemBlock(content, m.index + 3); // 跳 id:
     if (!block) continue;
-    const item = parseItem(block, m[1]);
+    const item = parseItem(block, m[1]!);
     // 无 kind 字段 → 非菜单项对象（如 GroupDef / PreviewAdapter.id），跳过
     if (!item.kind) continue;
     item.file = rel;

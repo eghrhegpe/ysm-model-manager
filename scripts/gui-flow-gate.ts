@@ -100,12 +100,12 @@ let failedLine = '';
 for (const l of lines) {
   const m = l.trim().match(stageRe);
   if (m) {
-    seen.set(m[2].trim(), { ok: m[1] === '✅', ms: parseFloat(m[3]) });
+    seen.set(m[2]!.trim(), { ok: m[1] === '✅', ms: parseFloat(m[3]!) });
     if (m[1] === '❌' && !failedLine) failedLine = l.trim();
   }
 }
 const totalMatch = lines.map((l) => l.trim()).find((l) => totalRe.test(l));
-const totalMs = totalMatch ? parseFloat(totalMatch.match(totalRe)![1]) : null;
+const totalMs = totalMatch ? parseFloat(totalMatch.match(totalRe)![1]!) : null;
 
 if (opts.verbose) {
   console.log('--- 解析的阶段 ---');
@@ -127,8 +127,8 @@ for (const name of ['① 配置加载', '② 模型扫描']) {
 const scanStats = (out.match(/YAML:\s*\d+\.?\d*\s*,\s*YSM:\s*\d+/) || [''])[0];
 let hasModel = false;
 if (scanStats) {
-  const yamlCount = parseInt(scanStats.match(/YAML:\s*(\d+)/)![1], 10);
-  const ysmCount = parseInt(scanStats.match(/YSM:\s*(\d+)/)![1], 10);
+  const yamlCount = parseInt(scanStats.match(/YAML:\s*(\d+)/)![1]!, 10);
+  const ysmCount = parseInt(scanStats.match(/YSM:\s*(\d+)/)![1]!, 10);
   hasModel = yamlCount > 0 || ysmCount > 0;
 }
 

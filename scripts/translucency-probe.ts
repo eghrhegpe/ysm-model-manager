@@ -44,9 +44,9 @@ function decodePng(buf: Buffer) {
       ihdr = {
         width: data.readUInt32BE(0),
         height: data.readUInt32BE(4),
-        bitDepth: data[8],
-        colorType: data[9],
-        interlace: data[12],
+        bitDepth: data[8]!,
+        colorType: data[9]!,
+        interlace: data[12]!,
       };
     } else if (type === "IDAT") idat.push(data);
     else if (type === "PLTE") palette.push(data);
@@ -71,10 +71,10 @@ function decodePng(buf: Buffer) {
     const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
     const cur = new Uint8Array(stride);
     for (let x = 0; x < stride; x++) {
-      const a = x >= channels ? cur[x - channels] : 0;
-      const b = prev[x];
-      const c = x >= channels ? prev[x - channels] : 0;
-      let v = line[x];
+      const a = x >= channels ? cur[x - channels]! : 0;
+      const b = prev[x]!;
+      const c = x >= channels ? prev[x - channels]! : 0;
+      let v = line[x]!;
       if (filter === 1) v += a;
       else if (filter === 2) v += b;
       else if (filter === 3) v += (a + b) >> 1;
@@ -89,15 +89,15 @@ function decodePng(buf: Buffer) {
       const o = (y * width + x) * 4;
       if (colorType === 6) out.set(cur.subarray(x * 4, x * 4 + 4), o);
       else if (colorType === 2) {
-        out[o] = cur[x * 3]; out[o + 1] = cur[x * 3 + 1]; out[o + 2] = cur[x * 3 + 2]; out[o + 3] = 255;
+        out[o] = cur[x * 3]!; out[o + 1] = cur[x * 3 + 1]!; out[o + 2] = cur[x * 3 + 2]!; out[o + 3] = 255;
       } else if (colorType === 4) {
-        out[o] = out[o + 1] = out[o + 2] = cur[x * 2]; out[o + 3] = cur[x * 2 + 1];
+        out[o] = out[o + 1] = out[o + 2] = cur[x * 2]!; out[o + 3] = cur[x * 2 + 1]!;
       } else if (colorType === 0) {
-        out[o] = out[o + 1] = out[o + 2] = cur[x]; out[o + 3] = 255;
+        out[o] = out[o + 1] = out[o + 2] = cur[x]!; out[o + 3] = 255;
       } else if (colorType === 3) {
-        const idx = cur[x];
-        out[o] = pal[idx * 3]; out[o + 1] = pal[idx * 3 + 1]; out[o + 2] = pal[idx * 3 + 2];
-        out[o + 3] = trns && idx < trns.length ? trns[idx] : 255;
+        const idx = cur[x]!;
+        out[o] = pal![idx * 3]!; out[o + 1] = pal![idx * 3 + 1]!; out[o + 2] = pal![idx * 3 + 2]!;
+        out[o + 3] = trns && idx < trns.length ? trns[idx]! : 255;
       }
     }
     prev = cur;
@@ -133,15 +133,15 @@ class AlphaIndex {
     const px = png.rgba;
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
-        const f = flagsForAlpha(px[(y * this.width + x) * 4 + 3]);
+        const f = flagsForAlpha(px[(y * this.width + x) * 4 + 3]!);
         const cell = (Math.floor(y / TILE) + 1) * this.stride + (Math.floor(x / TILE) + 1);
-        this.grids[f][cell]++;
+        this.grids[f]![cell] = this.grids[f]![cell]! + 1;
       }
     }
     for (const g of Object.values(this.grids)) {
       for (let ty = 1; ty < rows + 1; ty++)
         for (let tx = 1; tx < cols + 1; tx++)
-          g[ty * this.stride + tx] += g[(ty - 1) * this.stride + tx] + g[ty * this.stride + tx - 1] - g[(ty - 1) * this.stride + tx - 1];
+          g[ty * this.stride + tx]! += g[(ty - 1) * this.stride + tx]! + g[ty * this.stride + tx - 1]! - g[(ty - 1) * this.stride + tx - 1]!;
     }
   }
 
@@ -152,8 +152,8 @@ class AlphaIndex {
     let flags = 0;
     for (const [f, g] of Object.entries(this.grids)) {
       const n =
-        g[(t1y + 1) * this.stride + (t1x + 1)] - g[t0y * this.stride + (t1x + 1)] -
-        g[(t1y + 1) * this.stride + t0x] + g[t0y * this.stride + t0x];
+        g[(t1y + 1) * this.stride + (t1x + 1)]! - g[t0y * this.stride + (t1x + 1)]! -
+        g[(t1y + 1) * this.stride + t0x]! + g[t0y * this.stride + t0x]!;
       if (n > 0) flags |= Number(f);
     }
     return flags;

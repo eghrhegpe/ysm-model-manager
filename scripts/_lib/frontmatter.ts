@@ -14,7 +14,7 @@ import fs from 'node:fs';
 /** 提取 frontmatter 块字符串（`---...---` 之间），无则 null。 */
 export function parseFrontmatter(text: string): string | null {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return m ? m[1] : null;
+  return m ? m[1]! : null;
 }
 
 /** 提取标量字段（`key: value`，去注释）。 */
@@ -22,7 +22,7 @@ export function getScalar(fm: string | null, key: string): string | undefined {
   if (!fm) return undefined;
   const line = fm.match(new RegExp('^' + escapeRe(key) + '\\s*:\\s*(.+)$', 'm'));
   if (!line) return undefined;
-  const v = line[1].trim();
+  const v = line[1]!.trim();
   if (v === '' || v.startsWith('<')) return undefined;
   // 仅当 # 前有空白才按行内注释剥离（code_review P2）：`name: C# 指南` 的 # 属合法值
   // 不得截断，`name: Foo  # 说明` 的 # 前有空白才是注释
@@ -38,7 +38,7 @@ export function getAllScalars(fm: string): Record<string, string> {
   const map: Record<string, string> = {};
   for (const line of fm.split(/\r?\n/)) {
     const m = line.match(/^([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
-    if (m) map[m[1]] = m[2].trim();
+    if (m) map[m[1]!] = m[2]!.trim();
   }
   return map;
 }
@@ -53,14 +53,14 @@ export function getList(fm: string | null, key: string): string[] {
     const head = line.match(new RegExp('^' + escapeRe(key) + '\\s*:\\s*(.*)$'));
     if (head) {
       inList = true;
-      const inline = head[1].replace(/\s*#.*$/, '').trim();
+      const inline = head[1]!.replace(/\s*#.*$/, '').trim();
       if (inline && !inline.startsWith('<')) out.push(inline);
       continue;
     }
     if (!inList) continue;
     const item = line.match(/^\s*-\s*(.+)$/);
     if (item) {
-      const v = item[1].replace(/\s*#.*$/, '').trim();
+      const v = item[1]!.replace(/\s*#.*$/, '').trim();
       if (v && !v.startsWith('<')) out.push(v);
     } else if (/^\S/.test(line)) {
       inList = false;
@@ -87,9 +87,9 @@ export function parseSourceFiles(fm: string | null): string[] {
     const head = line.match(/^source_files\s*:\s*(.*)$/);
     if (head) {
       seen = true;
-      const inline = head[1].match(/\[([^\]]*)\]/);
+      const inline = head[1]!.match(/\[([^\]]*)\]/);
       if (inline) {
-        inline[1].split(',').forEach((s) => {
+        inline[1]!.split(',').forEach((s) => {
           const v = s.trim().replace(/^['"]|['"]$/g, '');
           if (v) out.push(v);
         });
@@ -101,7 +101,7 @@ export function parseSourceFiles(fm: string | null): string[] {
     if (seen) {
       const item = line.match(/^\s*-\s*(.+?)\s*$/);
       if (item) {
-        const v = item[1].replace(/^['"]|['"]$/g, '').trim();
+        const v = item[1]!.replace(/^['"]|['"]$/g, '').trim();
         if (v) out.push(v);
       }
     }
@@ -132,14 +132,14 @@ export function parseAdrHeader(filePath: string): { num: number; title: string; 
   let supersedes = '';
 
   for (let i = 0; i < Math.min(lines.length, 25); i++) {
-    const line = lines[i];
+    const line = lines[i]!;
 
     // 标题：# ADR-NNN：Title 或 # ADR-NNN: Title 或 # ADR-NNN Title
     const mTitle = line.match(/^#\s+ADR-(\d{3})\s*[：:]\s*(.+)/)
       || line.match(/^#\s+ADR-(\d{3})\s+(.+)/);
     if (mTitle && num === null) {
-      num = parseInt(mTitle[1], 10);
-      title = mTitle[2].trim();
+      num = parseInt(mTitle[1]!, 10);
+      title = mTitle[2]!.trim();
       continue;
     }
 
@@ -148,7 +148,7 @@ export function parseAdrHeader(filePath: string): { num: number; title: string; 
       || line.match(/^[-*]\s*\*\*状态\*\*\s*[：:]\s*(.+)/)
       || line.match(/^\|\s*\*\*状态\*\*\s*\|\s*(.+?)\s*\|\s*$/);
     if (mStatus) {
-      status = mStatus[1].trim();
+      status = mStatus[1]!.trim();
       statusLine = i;
       continue;
     }
@@ -157,21 +157,21 @@ export function parseAdrHeader(filePath: string): { num: number; title: string; 
     const mDate = line.match(/^[-*]\s*\*\*日期\*\*\s*[：:]\s*(.+)/)
       || line.match(/^\|\s*\*\*日期\*\*\s*\|\s*(.+?)\s*\|\s*$/);
     if (mDate) {
-      date = mDate[1].trim();
+      date = mDate[1]!.trim();
       continue;
     }
 
     // **被取代**：[ADR-NNN] 取代（new-adr.ts --supersedes 写入的独立标注行）
     const mSupBy = line.match(/^[-*]\s*\*\*被取代\*\*\s*[：:]\s*\[?ADR-(\d+)\]?/);
     if (mSupBy && supersededBy === null) {
-      supersededBy = parseInt(mSupBy[1], 10);
+      supersededBy = parseInt(mSupBy[1]!, 10);
       continue;
     }
 
     // **被补充**：[ADR-NNN]（后续 ADR 对本 ADR 的补充/扩展）
     const mSup = line.match(/^[-*]\s*\*\*被补充\*\*\s*[：:]\s*(.+)/);
     if (mSup && !supersedes) {
-      supersedes = mSup[1].trim();
+      supersedes = mSup[1]!.trim();
       continue;
     }
 

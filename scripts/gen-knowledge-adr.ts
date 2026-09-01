@@ -32,7 +32,7 @@ import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-car
 /** 提取 frontmatter 块。 */
 function fmBlock(text: string) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return m ? m[1] : '';
+  return m ? m[1]! : '';
 }
 
 /** 提取 frontmatter 列表字段全部项。 */
@@ -44,14 +44,14 @@ function fmList(text: string, key: string) {
     const head = line.match(new RegExp('^' + key + '\\s*:\\s*(.*)$'));
     if (head) {
       inList = true;
-      const inline = head[1].replace(/#.*$/, '').trim();
+      const inline = head[1]!.replace(/#.*$/, '').trim();
       if (inline && !inline.startsWith('<')) out.push(inline);
       continue;
     }
     if (!inList) continue;
     const item = line.match(/^\s*-\s*(.+)$/);
     if (item) {
-      const v = item[1].replace(/#.*$/, '').trim();
+      const v = item[1]!.replace(/#.*$/, '').trim();
       if (v && !v.startsWith('<')) out.push(v);
     } else if (/^\S/.test(line)) {
       inList = false;
@@ -72,7 +72,7 @@ function scanDocAdrMarkers(sourceFiles: string[]) {
     } catch {
       continue;
     }
-    for (const m of src.matchAll(/\[doc:adr-(\d+)\]/g)) found.add(parseInt(m[1], 10));
+    for (const m of src.matchAll(/\[doc:adr-(\d+)\]/g)) found.add(parseInt(m[1]!, 10));
   }
   return [...found]
     .sort((a, b) => a - b)
@@ -126,7 +126,7 @@ function main() {
     if (existing.length) continue; // 已有手写关联，不动
     // YSM 双栈：source_files 支持 go/、frontend/、internal/ 三前缀（P2-1：此前漏 internal/，
     // 指向 internal/ 包的卡无法补全 adr 关联，--check 假绿）
-    const sources = [...fmTxt.matchAll(/^\s*-\s*((?:go|frontend|internal)\/\S+)\s*$/gm)].map((m) => m[1]);
+    const sources = [...fmTxt.matchAll(/^\s*-\s*((?:go|frontend|internal)\/\S+)\s*$/gm)].map((m) => m[1]!);
     const adrs = scanDocAdrMarkers(sources);
     if (adrs.length) targets.push({ file: f, text, adrs });
   }

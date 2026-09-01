@@ -24,7 +24,7 @@ export function splitBlockEntries(raw: string) {
   const out: { name: string; isType: boolean }[] = [];
   for (const part of raw.split(',')) {
     const m = part.trim().match(/^(?:type\s+)?([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
-    if (m) out.push({ name: m[2] || m[1], isType: part.trim().startsWith('type') });
+    if (m) out.push({ name: (m[2] || m[1])!, isType: part.trim().startsWith('type') });
   }
   return out;
 }
@@ -38,15 +38,15 @@ export function extractExports(text: string) {
   const out: { name: string; isType: boolean; line: number }[] = [];
   for (const m of text.matchAll(EXPORT_NAMED_RE)) {
     const line = text.slice(0, m.index).split('\n').length;
-    out.push({ name: m[1], isType: false, line });
+    out.push({ name: m[1]!, isType: false, line });
   }
   for (const m of text.matchAll(EXPORT_BLOCK_RE)) {
     const line = text.slice(0, m.index).split('\n').length;
-    for (const e of splitBlockEntries(m[1])) out.push({ ...e, line });
+    for (const e of splitBlockEntries(m[1]!)) out.push({ ...e, line });
   }
   for (const m of text.matchAll(EXPORT_TYPE_RE)) {
     const line = text.slice(0, m.index).split('\n').length;
-    out.push({ name: m[1], isType: true, line });
+    out.push({ name: m[1]!, isType: true, line });
   }
   return out;
 }
@@ -97,7 +97,7 @@ export function paramNamesOfSegment(seg: string) {
   const destructure = s.match(/^\{([^}]*)\}/) || s.match(/^\[([^\]]*)\]/);
   if (destructure) {
     // 解构参数 { a, b = 1 } / { a: rename }
-    return splitTopLevelCommas(destructure[1])
+    return splitTopLevelCommas(destructure[1]!)
       .map((x) => x.trim().match(/^[A-Za-z_$][\w$]*/)?.[0])
       .filter(Boolean);
   }
@@ -141,7 +141,7 @@ export function collectMethods(stripped: string) {
     const close = matchParen(stripped, open);
     if (close < 0) continue;
     let k = close + 1;
-    while (k < stripped.length && /\s/.test(stripped[k])) k++;
+    while (k < stripped.length && /\s/.test(stripped[k]!)) k++;
     // 方法定义：右括号后跟 `{`（方法体）或 `:`（返回类型注解）或 `=>`（箭头）
     if (stripped[k] === '{' || stripped[k] === ':' || (stripped[k] === '=' && stripped[k + 1] === '>')) {
       names.add(m[1]);
@@ -186,7 +186,7 @@ export function extractDefined(stripped: string) {
     const close = matchParen(stripped, m.index);
     if (close < 0) continue;
     let k = close + 1;
-    while (k < stripped.length && /\s/.test(stripped[k])) k++;
+    while (k < stripped.length && /\s/.test(stripped[k]!)) k++;
     // 支持带返回类型注解的箭头函数 `(t: string): string[] => ...`：
     // 参数 `)` 后先遇到 `:`（返回类型），须跳过类型到顶层 `=>` 才判为箭头函数。
     if (stripped[k] === ':') {

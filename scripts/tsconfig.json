@@ -6,6 +6,8 @@
     "strict": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "skipLibCheck": true,
     "esModuleInterop": true,

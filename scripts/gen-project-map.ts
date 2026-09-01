@@ -118,7 +118,7 @@ function scanShape(dir: string) {
       shape.other.push(e.name);
     }
   }
-  for (const k of Object.keys(shape)) (shape as Record<string, string[]>)[k].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  for (const k of Object.keys(shape)) (shape as Record<string, string[]>)[k]!.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   return shape;
 }
 
@@ -163,10 +163,10 @@ function build() {
   const rootFiles = topFiles(ROOT, ['.go', '.json', '.md']);
 
   const goRows = goDirs
-    .map((d) => row(d + '/', usage[d + '/'], drift, 'go', shapeTail(path.join(ROOT, 'go', d))))
+    .map((d) => row(d + '/', usage[d + '/']!, drift, 'go', shapeTail(path.join(ROOT, 'go', d))))
     .join('\n');
   const intRows = internalDirs
-    .map((d) => row(d + '/', usage[d + '/'], drift, 'internal', shapeTail(path.join(ROOT, 'internal', d))))
+    .map((d) => row(d + '/', usage[d + '/']!, drift, 'internal', shapeTail(path.join(ROOT, 'internal', d))))
     .join('\n');
   const feRows = [...feDirs, ...feFiles]
     .map((n) => {
@@ -174,11 +174,11 @@ function build() {
       const isDir = !n.includes('.');
       const key = isDir ? n + '/' : n;
       const tail = isDir ? shapeTail(path.join(ROOT, 'frontend', 'src', n)) : '';
-      return row(key, usage[key], drift, 'frontend', tail);
+      return row(key, usage[key]!, drift, 'frontend', tail);
     })
     .join('\n');
   const rootRows = rootFiles
-    .map((n) => row(n, usage[n], drift, 'root'))
+    .map((n) => row(n, usage[n]!, drift, 'root'))
     .join('\n');
 
   const md = `# 项目结构地图
@@ -268,7 +268,7 @@ if (JSON_OUT) {
   const structure: Record<string, any> = {};
   for (const zone of ['go', 'internal', 'frontend']) {
     structure[zone] = {};
-    for (const d of (zones as Record<string, string[]>)[zone]) {
+    for (const d of (zones as Record<string, string[]>)[zone]!) {
       const key = d + '/';
       structure[zone][key] = { usage: usage[key] || null, ...scanShapeCached(path.join(ROOT, zone === 'frontend' ? 'frontend/src' : zone, d)) };
     }

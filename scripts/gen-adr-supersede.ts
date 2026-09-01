@@ -136,12 +136,12 @@ function main() {
       ? Math.min(lines.length, meta.statusLine + 1)
       : Math.min(lines.length, 20);
     for (let i = headerEnd; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i]!;
 
       // ② 明确宣称结构
       const targets: any[] = [];
-      for (const m of line.matchAll(RE_CLAIM_A_G)) targets.push(parseInt(m[1], 10));
-      for (const m of line.matchAll(RE_CLAIM_B_G)) targets.push(parseInt(m[1], 10));
+      for (const m of line.matchAll(RE_CLAIM_A_G)) targets.push(parseInt(m[1]!, 10));
+      for (const m of line.matchAll(RE_CLAIM_B_G)) targets.push(parseInt(m[1]!, 10));
 
       const claimedThisLine: any[] = [];
       for (const target of targets) {
@@ -160,7 +160,7 @@ function main() {
       const selfMarked = (RE_SUPERSEDED_BY.test(meta.status) && !isPartial)
         || RE_SELF_DEPRECATED.test(meta.status);
       if (claimedThisLine.length === 0 && !selfMarked && RE_DEPRECATED_WORD.test(line) && !RE_NEGATED.test(line)) {
-        const others = [...new Set([...line.matchAll(/ADR-(\d+)/g)].map((m) => parseInt(m[1], 10)))]
+        const others = [...new Set([...line.matchAll(/ADR-(\d+)/g)].map((m) => parseInt(m[1]!, 10)))]
           .filter((n) => n !== num && adrNums.has(n));
         const anyOtherMarked = others.some((o) => {
           const t = adrList.find((e) => e.num === o);
@@ -181,7 +181,7 @@ function main() {
       // ⑤ 表格弱宣称
       const mTable = line.match(RE_TABLE_FIRST_COL);
       if (mTable && RE_TABLE_VERB.test(line) && !RE_TABLE_NEGATED.test(line)) {
-        const target = parseInt(mTable[1], 10);
+        const target = parseInt(mTable[1]!, 10);
         if (target !== num && adrNums.has(target)) {
           const tMeta = adrList.find((e) => e.num === target);
           const numPat = String(num).replace('.', '\\.');

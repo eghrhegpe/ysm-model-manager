@@ -64,14 +64,14 @@ function findMatches(content: string, regex: RegExp, filePath: string, filter: (
   const results: any[] = [];
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(regex);
+    const m = lines[i]!.match(regex);
     if (m) {
       // 应用过滤器
-      if (filter && !filter(lines[i].trim(), content, i)) continue;
+      if (filter && !filter(lines[i]!.trim(), content, i)) continue;
       results.push({
         file: relative(ROOT, filePath),
         line: i + 1,
-        text: lines[i].trim(),
+        text: lines[i]!.trim(),
         match: m[0],
       });
     }
@@ -171,7 +171,7 @@ const RULES = [
     filter: (line: string, content: string, lineIdx: number) => {
       const lines = content.split("\n");
       for (let i = lineIdx; i < Math.min(lineIdx + 20, lines.length); i++) {
-        if (lines[i].includes("fsutil.CopyDirRecursive")) return false;
+        if (lines[i]!.includes("fsutil.CopyDirRecursive")) return false;
       }
       return true;
     },
@@ -216,11 +216,11 @@ const RULES = [
 
       // 检查当前行及后 15 行是否有 defer close 或显式 close
       for (let i = lineIdx; i < Math.min(lineIdx + 16, lines.length); i++) {
-        if (lines[i].includes(`${varName}.Close()`)) {
+        if (lines[i]!.includes(`${varName}.Close()`)) {
           return false;
         }
         // 所有权转移豁免：传给 ReadLimitedEntry 等自管 close 的封装函数（内部 defer Close）
-        if (lines[i].includes(`ReadLimitedEntry(${varName}`)) {
+        if (lines[i]!.includes(`ReadLimitedEntry(${varName}`)) {
           return false;
         }
       }
@@ -249,7 +249,7 @@ const RULES = [
       // 提取变量名
       const m = trimmed.match(/\b(\w+)\s*=\s*(?:window\.)?(?:setInterval|setTimeout)\(/);
       if (!m) return false;
-      const varName = m[1];
+      const varName = m[1]!;
       // 排除常见非泄漏模式：r, resolve, reject（Promise 延迟）
       if (["r", "resolve", "reject", "next", "t"].includes(varName)) return false;
       // 检查同文件是否有对应的 clearTimeout/clearInterval（多种模式）

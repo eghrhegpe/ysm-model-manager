@@ -23,7 +23,7 @@ import { run } from './_lib/proc.ts';
 const ROOT = getRoot();
 const RUST_DIR = path.join(ROOT, 'rust-wails-bridge');
 const OUTPUT_DIR = process.argv.includes('--output')
-  ? process.argv[process.argv.indexOf('--output') + 1]
+  ? process.argv[process.argv.indexOf('--output') + 1]!
   : path.join(ROOT, 'go', 'rustbridge', 'static-lib');
 
 const targetArg = process.argv.find(a => a.startsWith('--target='))?.split('=')[1]

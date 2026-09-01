@@ -75,8 +75,8 @@ function detectRenames(commit: string) {
   for (const line of out.split('\n')) {
     const m = line.match(/^\d+\t\d+\t(.+)$/);
     if (!m) continue;
-    const rm = m[1].match(/\{(.+?) => (.+?)\}/);
-    if (rm) renames.push({ from: rm[1], to: rm[2] });
+    const rm = m[1]!.match(/\{(.+?) => (.+?)\}/);
+    if (rm) renames.push({ from: rm[1]!, to: rm[2]! });
   }
   return renames;
 }

@@ -84,9 +84,9 @@ function render(cards: Array<{ file: string; name: string; groups: string[]; int
     }
     for (let i = 0; i < iLen; i++) {
       rows.push({
-        group: c.groups[Math.min(i, gLen - 1)],
-        intent: c.intents[i],
-        risk: c.risks.length > i ? c.risks[i] : '-',
+        group: c.groups[Math.min(i, gLen - 1)]!,
+        intent: c.intents[i]!,
+        risk: c.risks.length > i ? c.risks[i]! : '-',
         adr: c.adr,
         card: c,
       });
@@ -136,7 +136,7 @@ function main() {
   const args = parseArgs(process.argv.slice(2), { bools: ['check', 'json'], strings: [], defaults: {} });
   const JSON_OUT = args.json;
   if (args.help) {
-    const src = fs.readFileSync(process.argv[1], 'utf-8');
+    const src = fs.readFileSync(process.argv[1]!, 'utf-8');
     const s = src.indexOf('/**'), e = src.indexOf('*/', s);
     console.log(src.slice(s, e + 2).replace(/^ \* ?/gm, '').trim());
     process.exit(0);

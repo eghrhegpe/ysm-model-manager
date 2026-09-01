@@ -64,7 +64,7 @@ function scanChapters(dir: string, regionDir: string) {
     .map((e) => {
       const name = e.name;
       const m = name.match(/^(\d+)-(.+)\.md$/);
-      const num = m ? parseInt(m[1], 10) : Infinity;
+      const num = m ? parseInt(m[1]!, 10) : Infinity;
       const title = m ? m[2] : name.replace(/\.md$/, '');
       return { name, num, title };
     })
@@ -85,7 +85,7 @@ function extractH1(dir: string, regionDir: string, fileName: string) {
     const lines = content.split('\n');
     for (const line of lines) {
       const m = line.match(/^#\s+(.+?)\s*$/);
-      if (m) return m[1];
+      if (m) return m[1]!;
     }
   } catch { /* fall through */ }
   return fileName.replace(/\.md$/, '');

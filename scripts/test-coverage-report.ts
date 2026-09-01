@@ -32,11 +32,11 @@ const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
 const suggestMode = args.includes('--suggest');
 const topIdx = args.indexOf('--top');
-const topN = topIdx !== -1 ? parseInt(args[topIdx + 1], 10) : 15;
+const topN = topIdx !== -1 ? parseInt(args[topIdx + 1]!, 10) : 15;
 const inputIdx = args.indexOf('--input');
-const inputPath = inputIdx !== -1 ? args[inputIdx + 1] : DEFAULT_INPUT;
+const inputPath = inputIdx !== -1 ? args[inputIdx + 1]! : DEFAULT_INPUT;
 const thIdx = args.indexOf('--threshold');
-const thresholdArg = thIdx !== -1 ? parseInt(args[thIdx + 1], 10) : NaN;
+const thresholdArg = thIdx !== -1 ? parseInt(args[thIdx + 1]!, 10) : NaN;
 
 /** 语句覆盖率阈值：优先从 frontend/vitest.config.ts coverage.thresholds.statements
  *  提取（单一事实源，2026-08-04 校准为 45；vitest.config.ts:17-24 定义 thresholds——
@@ -47,7 +47,7 @@ function resolveThreshold() {
     const cfgPath = path.join(ROOT, 'frontend', 'vitest.config.ts');
     const cfg = fs.readFileSync(cfgPath, 'utf8');
     const m = cfg.match(/statements\s*:\s*(\d+)/);
-    if (m) return parseInt(m[1], 10);
+    if (m) return parseInt(m[1]!, 10);
   } catch {
     /* 读不到配置则用默认值 */
   }
@@ -71,8 +71,8 @@ function compactRanges(lines: number[]) {
   let i = 0;
   while (i < sorted.length) {
     let j = i;
-    while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) j++;
-    out.push(j === i ? `${sorted[i]}` : `${sorted[i]}-${sorted[j]}`);
+    while (j + 1 < sorted.length && sorted[j + 1]! === sorted[j]! + 1) j++;
+    out.push(j === i ? `${sorted[i]!}` : `${sorted[i]!}-${sorted[j]!}`);
     i = j + 1;
   }
   return out.join(', ');

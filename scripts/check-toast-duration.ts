@@ -56,7 +56,7 @@ for (const file of files) {
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(src))) {
-      const n = m[1];
+      const n = m[1]!;
       const key = (MAP as Record<string, string>)[n];
       if (!key) continue; // 不在档位表的裸数字（如未来新增档位前）——跳过，避免误报
       const line = src.slice(0, m.index).split("\n").length;

@@ -250,9 +250,9 @@ function parseGuidePages() {
     const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     const get = (key: string) => {
       if (!fm) return '';
-      const m = fm[1].match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
+      const m = fm[1]!.match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
       // 剥 YAML 外层引号（frontmatter 标题常带 "..."），避免索引表显示引号残留
-      return m ? m[1].trim().replace(/\s*#.*$/, '').trim().replace(/^["']|["']$/g, '').trim() : '';
+      return m ? m[1]!.trim().replace(/\s*#.*$/, '').trim().replace(/^["']|["']$/g, '').trim() : '';
     };
     pages.push({ file: f, title: get('title') || f.replace(/\.md$/, ''), desc: get('description') || '' });
   }
@@ -296,7 +296,7 @@ function parseVersions() {
   for (const f of fs.readdirSync(RELEASE_DIR)) {
     const m = /^v(\d+)\.(\d+)\.(\d+)\.md$/.exec(f);
     if (!m) continue; // 排除 vX.Y.Z-compare.md 等
-    vers.push({ major: +m[1], minor: +m[2], patch: +m[3], file: f, label: `v${m[1]}.${m[2]}.${m[3]}` });
+    vers.push({ major: +m[1]!, minor: +m[2]!, patch: +m[3]!, file: f, label: `v${m[1]}.${m[2]}.${m[3]}` });
   }
   const cmp = (a: any, b: any) => a.major - b.major || a.minor - b.minor || a.patch - b.patch;
   vers.sort(cmp);

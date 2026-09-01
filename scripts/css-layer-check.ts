@@ -135,7 +135,7 @@ function extractAnimationRefs(cssText: string) {
   const re = /animation\s*:\s*([^;]+)/g;
   let m;
   while ((m = re.exec(cssText)) !== null) {
-    const body = m[1];
+    const body = m[1]!;
     if (/\bnone\b/.test(body)) continue;
     // 取第一个 token 作为关键帧名（animation: name duration ...）
     const first = body.trim().split(/\s+/)[0];
@@ -151,7 +151,7 @@ function extractHtmlClasses(htmlText: string) {
   const re = /class\s*=\s*"([^"]*)"/g;
   let m;
   while ((m = re.exec(htmlText)) !== null) {
-    for (const c of m[1].split(/\s+/)) {
+    for (const c of m[1]!.split(/\s+/)) {
       // 仅收「字母开头、仅含字母数字连字符」的 token；排除 ' + ( ? : ) 等模板拼接碎片
       if (/^[a-zA-Z][a-zA-Z0-9-]*$/.test(c)) classes.add(c);
     }
@@ -203,7 +203,7 @@ function extractKeyframeTranslate(cssText: string, name: string) {
     const fromMatch = body.match(/from\s*\{[^}]*\}/);
     if (!fromMatch) continue;
     const tr = fromMatch[0].match(/transform\s*:\s*translate[XY]\s*\(([^)]+)\)/);
-    if (tr) return tr[1].replace(/\s+/g, "");
+    if (tr) return tr[1]!.replace(/\s+/g, "");
   }
   return null;
 }

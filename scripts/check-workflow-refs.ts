@@ -43,7 +43,7 @@ function main() {
     const text = fs.readFileSync(path.join(WF_DIR, f), 'utf8');
     for (const m of text.matchAll(REF_RE)) {
       const rel = `${m[2]}/${m[3]}`;
-      const abs = path.join(ROOT, m[2], m[3]);
+      const abs = path.join(ROOT, m[2]!, m[3]!);
       refs.push({ file: f, ref: rel });
       if (!fs.existsSync(abs)) {
         errors.push(`[${f}] 引用不存在的路径: ${rel}`);

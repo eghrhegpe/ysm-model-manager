@@ -118,7 +118,7 @@ function findFunctionEnd(lines: string[], startLine: number, isGo: boolean) {
   let inSingle = false, inDouble = false, inBacktick = false, inLineComment = false;
   outer:
   for (let li = startLine; li < n; li++) {
-    const line = lines[li];
+    const line = lines[li]!;
     inLineComment = false;
     for (let ci = 0; ci < line.length; ci++) {
       const c = line[ci];
@@ -150,7 +150,7 @@ function findFunctionEnd(lines: string[], startLine: number, isGo: boolean) {
           // 跨多行块注释：跳到下一个 */
           li++;
           for (; li < n; li++) {
-            const nl = lines[li];
+            const nl = lines[li]!;
             const idx = nl.indexOf('*/');
             if (idx >= 0) { ci = idx + 1; break; }
           }
@@ -170,7 +170,7 @@ function findFunctionEnd(lines: string[], startLine: number, isGo: boolean) {
   inSingle = false; inDouble = false; inBacktick = false; inLineComment = false;
   // 从 { 的下一个字符继续
   for (let li = braceLine; li < n; li++) {
-    const line = lines[li];
+    const line = lines[li]!;
     let ci = (li === braceLine) ? braceCol + 1 : 0;
     inLineComment = false;
     for (; ci < line.length; ci++) {
@@ -189,7 +189,7 @@ function findFunctionEnd(lines: string[], startLine: number, isGo: boolean) {
         if (!found) {
           li++;
           for (; li < n; li++) {
-            const nl = lines[li];
+            const nl = lines[li]!;
             const idx = nl.indexOf('*/');
             if (idx >= 0) { ci = idx + 1; break; }
           }
@@ -214,16 +214,16 @@ function findFunctionEnd(lines: string[], startLine: number, isGo: boolean) {
     // 保守性失败），遇到这种新声明也必须硬截断，否则会把后面 N 个函数都吞进前一个函数体内，
     // 造成"行数虚高假阳性"（红线方向，比漏算更危险）。
     if (li + 1 < n) {
-      const nextLine = lines[li + 1];
+      const nextLine = lines[li + 1]!;
       const hitTs = !isGo && (TS_FUNCTION_DECL_RE.test(nextLine) || TS_CLASS_DECL_RE.test(nextLine) || TS_ARROW_DECL_RE.test(nextLine) || TS_INTERFACE_TYPE_RE.test(nextLine));
       const hitGo = isGo && GO_FUNC_RE.test(nextLine);
       if (hitTs || hitGo) {
         // 用正则抓下一行的声明缩进，比当前函数声明行起始缩进 <= 才算跨块
         const nextM = nextLine.match(/^(?<sp>[ \t]*)\S/);
-        const nextIndent = nextM ? nextM.groups!.sp.length : Infinity;
+        const nextIndent = nextM ? nextM.groups!.sp!.length : Infinity;
         // 找当前声明行缩进（缓存下来更高效，但调用链改造大，省点：从 lines[startLine] 重取）
-        const startM = lines[startLine].match(/^(?<sp>[ \t]*)\S/);
-        const startIndent = startM ? startM.groups!.sp.length : 0;
+        const startM = lines[startLine]!.match(/^(?<sp>[ \t]*)\S/);
+        const startIndent = startM ? startM.groups!.sp!.length : 0;
         if (nextIndent <= startIndent) {
           return { endLine: li, truncated: true };
         }
@@ -247,7 +247,7 @@ function extractFunctions(file: string) {
   let classIndentBaseline = null; // null = 不在类体内；数字 = 进入类时的声明行缩进空格数
 
   for (let li = 0; li < lines.length; li++) {
-    const line = lines[li];
+    const line = lines[li]!;
 
     if (isGo) {
       const m = line.match(GO_FUNC_RE);
@@ -255,7 +255,7 @@ function extractFunctions(file: string) {
       const g = m.groups!;
       const name = g.recv
         ? `${g.recv.trim().replace(/^[\*\(\s]+|\s+.*$/g, '').split(/\s+/)[0] || ''}.${g.name}`
-        : g.name;
+        : g.name!;
       const end = findFunctionEnd(lines, li, true);
       if (!end) continue;
       const count = end.endLine - li + 1;
@@ -268,7 +268,7 @@ function extractFunctions(file: string) {
       const mIface = line.match(TS_INTERFACE_TYPE_RE);
       if (mFunc || mClass || mArrow || mIface) {
         const m = (mFunc || mClass || mArrow || mIface)!;
-        const name = m.groups!.name;
+        const name = m.groups!.name!;
         let kind = 'func';
         if (mFunc) kind = 'func';
         else if (mClass) kind = 'class';
@@ -278,7 +278,7 @@ function extractFunctions(file: string) {
           const raw = line.trim().slice(0, 9).toLowerCase();
           kind = raw.startsWith('interface') ? 'interface' : (raw.startsWith('enum') ? 'enum' : 'type');
         }
-        const indent = m.groups!.indent.length;
+        const indent = m.groups!.indent!.length;
         // class / interface / type / enum 也算"块状声明"，一起统计（用户要知道大类型定义）
         const end = findFunctionEnd(lines, li, false);
         if (!end) continue;
@@ -293,9 +293,9 @@ function extractFunctions(file: string) {
       if (classIndentBaseline !== null) {
         const mm = line.match(TS_CLASS_METHOD_RE);
         if (mm) {
-          const indent = mm.groups!.indent.length;
+          const indent = mm.groups!.indent!.length;
           if (indent > classIndentBaseline) {
-            const name = mm.groups!.name;
+            const name = mm.groups!.name!;
             if (/^(if|for|while|switch|catch)$/.test(name)) continue; // 控制流关键字误匹配
             const end = findFunctionEnd(lines, li, false);
             if (!end) continue;
@@ -376,7 +376,7 @@ function runFuncsMode(args: any) {
 
   // 排序：红→橙→黄，同档按行数降序
   const TIER_ORDER = { red: 0, orange: 1, yellow: 2 };
-  items.sort((a, b) => ((TIER_ORDER as Record<string, number>)[a.tier] - (TIER_ORDER as Record<string, number>)[b.tier]) || (b.lines - a.lines));
+  items.sort((a, b) => ((TIER_ORDER as Record<string, number>)[a.tier]! - (TIER_ORDER as Record<string, number>)[b.tier]!) || (b.lines - a.lines));
 
   if (args.json) {
     const summary = {

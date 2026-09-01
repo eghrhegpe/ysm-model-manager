@@ -79,7 +79,7 @@ function parseCliArgs() {
   });
 
   if (args.help) {
-    const _src = readFileSync(process.argv[1], 'utf-8');
+    const _src = readFileSync(process.argv[1]!, 'utf-8');
     const _s = _src.indexOf('/**');
     const _e = _src.indexOf('*/', _s);
     console.log(_src.slice(_s, _e + 2).replace(/^ \* ?/gm, '').trim());
@@ -104,7 +104,7 @@ function extractKeysFromText(text: string) {
   const re = /^\s*['"]([^'"]+)['"]\s*:\s*(?!function\b|\()/gm;
   let m;
   while ((m = re.exec(text)) !== null) {
-    keys.add(m[1]);
+    keys.add(m[1]!);
   }
   return keys;
 }
@@ -166,11 +166,11 @@ function classifySecondSegment(seg: string) {
     const match = seg.match(/^([a-z]+)([A-Z][a-z]+)$/);
     if (match) {
       const [, entity, rolePart] = match;
-      const rolePartLower = rolePart.toLowerCase();
+      const rolePartLower = rolePart!.toLowerCase();
       // rolePart 本身是已知角色 → role
       if (KNOWN_ROLES.has(rolePartLower)) return 'role';
       // entity + 整体都在 COMMON_ENTITIES → role
-      if (COMMON_ENTITIES.has(entity) && COMMON_ENTITIES.has(seg.toLowerCase())) return 'role';
+      if (COMMON_ENTITIES.has(entity!) && COMMON_ENTITIES.has(seg.toLowerCase())) return 'role';
     }
     return 'subns'; // 其他驼峰视为子命名空间
   }
@@ -212,7 +212,7 @@ function validateKey(key: string) {
   const ns = parts[0];
 
   // 例外命名空间：自身就是角色，两段合法
-  if (EXEMPT_NAMESPACES.has(ns)) {
+  if (EXEMPT_NAMESPACES.has(ns!)) {
     // 两段合法（menu.openFolder）；三段及以上第二段当子命名空间——
     // 单凭字面无法区分子命名空间与自创角色，且 ADR-124 注释明确"角色不限于白名单"，
     // 三段成段即默认合法，避免 audio/cache 等子命名空间词被误判为"角色不在白名单"阻断提交。
@@ -223,7 +223,7 @@ function validateKey(key: string) {
   if (parts.length === 2) {
     // 两段：第二段是子命名空间 → 合法（preview.postprocessingGroupBloom）
     // 第二段是角色 → 违规，但 KNOWN_TWO_SEG_ENTITIES 里的保留（preview.skeletonTab 等复合实体）
-    const second = parts[1];
+    const second = parts[1]!;
     const classify = classifySecondSegment(second);
     if (classify === 'role') {
       // 在已知合法两段 entity 表里 → 保留（整体是不可拆分的业务术语）
@@ -326,7 +326,7 @@ function listByEntity(entity: string) {
   const lower = entity.toLowerCase();
 
   const found: string[] = [];
-  for (const key of all[baseLang]) {
+  for (const key of all[baseLang]!) {
     if (key.toLowerCase().includes(lower)) found.push(key);
   }
 

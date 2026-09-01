@@ -132,7 +132,7 @@ function main() {
 
   // 单遍函数替换：链式 .replace 会让 name/source 中的 `{tier}` 等占位符与 `$` 序列被二次替换/错替（code_review P3）
   const content = TEMPLATE.replace(/\{(kind|name|tier|category|source)\}/g, (m, k) =>
-    ({ kind, name, tier: isLeaf ? 'leaf' : 'architecture', category, source } as Record<string, string>)[k]);
+    ({ kind, name, tier: isLeaf ? 'leaf' : 'architecture', category, source } as Record<string, string>)[k]!);
 
   fs.writeFileSync(fullPath, content, 'utf8');
   console.log(`[OK] 已创建 ${fullPath}`);

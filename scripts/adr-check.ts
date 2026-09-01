@@ -48,7 +48,7 @@ function lineNo(text: string, index: number) {
 function findStatusLike(text: string) {
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i]!;
     if (!/\*\*状态\s*[：:]/.test(line)) continue; // 无「**状态：」键
     const head = line.trimStart()[0];
     if (!head || head === '|' || head === '#' || head === '>') continue; // 空行/表格/标题/引用
@@ -87,12 +87,12 @@ for (const f of files) {
     errors.push(`TITLE_MISSING: ${f} 缺少 '# ADR-NNN：' 标题`);
     continue;
   }
-  const num = parseInt(titleM[1], 10);
+  const num = parseInt(titleM[1]!, 10);
   if (fileMeta[num]) {
     errors.push(`DUP_NUM: 编号 ADR-${String(num).padStart(3, '0')} 撞号：${fileMeta[num].file} 与 ${f}`);
     continue; // 撞号时保留首个文件元数据供后续对账，避免被覆盖（code_review P3-1）
   }
-  const statusRaw = statusM ? statusM[1].trim() : '';
+  const statusRaw = statusM ? statusM[1]!.trim() : '';
   if (statusLike) {
     errors.push(`STATUS_FORMAT: ${f} 第 ${statusLike.no} 行「${statusLike.line}」写法不合规——状态行必须是「- **状态**：」前缀的列表项，如「- **状态**：✅ 已采纳」`);
   } else if (!statusRaw) {
@@ -103,7 +103,7 @@ for (const f of files) {
   fileMeta[num] = {
     file: f,
     num,
-    title: titleM[2].trim(),
+    title: titleM[2]!.trim(),
     status: statusRaw || '(未标注状态)',
   };
 }
@@ -121,7 +121,7 @@ try {
 regNums = new Set<number>();
 const regRows: Record<number, boolean> = {};
 for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) {
-  const num = parseInt(m[1], 10);
+  const num = parseInt(m[1]!, 10);
   regNums.add(num);
   regRows[num] = true;
 }
@@ -142,7 +142,7 @@ for (const num of [...regNums].sort((a, b) => a - b)) {
 const nums = Object.keys(fileMeta).map(Number).sort((a, b) => a - b);
 gaps = [];
 if (nums.length > 1) {
-  for (let i = nums[0]; i <= nums[nums.length - 1]; i++) {
+  for (let i = nums[0]!; i <= nums[nums.length - 1]!; i++) {
     if (!fileMeta[i] && !regNums.has(i)) gaps.push(i);
   }
 }

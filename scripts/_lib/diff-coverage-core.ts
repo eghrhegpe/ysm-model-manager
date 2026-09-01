@@ -68,7 +68,7 @@ export function addLinesFromDiff(out: Set<number>, diff: string | null): void {
   for (const line of lines) {
     const hdr = line.match(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,(\d+))?\s+@@/);
     if (hdr) {
-      currentLine = parseInt(hdr[1], 10);
+      currentLine = parseInt(hdr[1]!, 10);
       continue;
     }
     if (currentLine === 0) continue;

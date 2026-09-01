@@ -108,7 +108,7 @@ function checkRegistry(statusRowsMap: Record<string, any>) {
   }
   const regMap: Record<string, any> = {};
   for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|\s*([^|]+)\|\s*([^|]+)\|/gm)) {
-    regMap[parseInt(m[1], 10)] = { title: m[2].trim(), raw: m[3].trim() };
+    regMap[parseInt(m[1]!, 10)] = { title: m[2]!.trim(), raw: m[3]!.trim() };
   }
   for (const [num, reg] of Object.entries(regMap)) {
     const file = statusRowsMap[num];

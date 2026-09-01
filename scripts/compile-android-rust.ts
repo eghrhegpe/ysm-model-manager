@@ -54,7 +54,7 @@ const arches = archArg === 'all' ? Object.keys(ARCHES) : [archArg];
 console.log('[compile-android-rust] 检查 Rust Android targets …');
 const targets = run('rustup', ['target', 'list', '--installed'], { cwd: ROOT });
 for (const arch of arches) {
-  const target = ARCHES[arch].rustTarget;
+  const target = ARCHES[arch]!.rustTarget;
   if (!targets.out.includes(target)) {
     console.log(`[compile-android-rust] 安装 target: ${target}`);
     const r = run('rustup', ['target', 'add', target], { cwd: ROOT, timeout: 60_000 });
@@ -66,7 +66,7 @@ ${r.out.slice(-400)}`);
 // ---- 编译 ----
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 for (const arch of arches) {
-  const a = ARCHES[arch];
+  const a = ARCHES[arch]!;
   const outLib = path.join(OUTPUT_DIR, `libysm_model_manager_wails_bridge_${a.abi}.a`);
   console.log(`[compile-android-rust] 编译 ${arch}（${a.rustTarget}）…`);
   const r = run('cargo', [
@@ -92,7 +92,7 @@ ${r.out.slice(-800)}`);
 
 // ---- 同步到 jniLibs（供 gradle 打包时直接可见，调试用）----
 for (const arch of arches) {
-  const a = ARCHES[arch];
+  const a = ARCHES[arch]!;
   const src = path.join(OUTPUT_DIR, `libysm_model_manager_wails_bridge_${a.abi}.a`);
   const dst = path.join(JNI_BASE, a.abi, 'libysm_model_manager_wails_bridge.a');
   fs.mkdirSync(path.dirname(dst), { recursive: true });

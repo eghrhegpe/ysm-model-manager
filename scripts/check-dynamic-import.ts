@@ -97,7 +97,7 @@ function main() {
       if (TYPE_REF_RE.test(ctx)) continue;
       dynamicCount++;
 
-      const spec = m[1];
+      const spec = m[1]!;
       const line = text.slice(0, m.index).split('\n').length;
       const rel = relPosix(f as string);
 

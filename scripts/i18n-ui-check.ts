@@ -101,7 +101,7 @@ function scanFile(file: string) {
   STR_RE.lastIndex = 0;
   let m;
   while ((m = STR_RE.exec(masked)) !== null) {
-    const lit = m[2];
+    const lit = m[2]!;
     const start = m.index;
     if (!HAN.test(lit)) continue;
     if (!HTML_SIGNAL.test(lit)) continue;

@@ -83,10 +83,10 @@ function scanFile(full: string, relPath: string) {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
     RE.lastIndex = 0;
-    const m = RE.exec(lines[i]);
+    const m = RE.exec(lines[i]!);
     if (m) {
       results.push(
-        `${relPath}:${i + 1}  「${lines[i].trim().slice(0, 100)}」 → v3 CLI 应写 wails3 ${m[1]}`,
+        `${relPath}:${i + 1}  「${lines[i]!.trim().slice(0, 100)}」 → v3 CLI 应写 wails3 ${m[1]}`,
       );
     }
   }

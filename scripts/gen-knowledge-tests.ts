@@ -87,7 +87,7 @@ function writeTests(text: string, tests: string[]) {
   // 注意：块边界用 `\n\s*$`（空行/文件尾）而非 `\s*$`——后者在 m 模式下匹配任意行尾，会把块截断在首行
   const testsBlock = fm.match(/^tests:\s*\n([\s\S]*?)(?=^[a-z_]+:|\n\s*$)/m);
   const existing = testsBlock
-    ? [...testsBlock[1].matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1])
+    ? [...testsBlock[1]!.matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1])
     : [];
   const merged = [...new Set([...existing, ...tests])].sort();
   const lines = merged.map((t) => `  - ${t}`).join('\n');
@@ -98,7 +98,7 @@ function writeTests(text: string, tests: string[]) {
   // 在 source_files 块结束后插入新的 tests 块
   const sfEnd = newFm.match(/^(source_files:[\s\S]*?)(?=^[a-z_]+:|\n\s*$)/m);
   if (sfEnd) {
-    newFm = newFm.replace(sfEnd[1], `${sfEnd[1]}tests:\n${lines}\n`);
+    newFm = newFm.replace(sfEnd[1]!, `${sfEnd[1]}tests:\n${lines}\n`);
   } else {
     // 无 source_files（罕见）→ 在 tier 行后插入
     newFm = newFm.replace(/^(tier:.*)$/m, `$1\ntests:\n${lines}`);
@@ -135,12 +135,12 @@ function main() {
     // tests 非空但含重复条目（历史重复登记）也需清理
     const testsBlock = fmTxt.match(/^tests:\s*\n([\s\S]*?)(?=^[a-z_]+:)/m);
     const existingTests = testsBlock
-      ? [...testsBlock[1].matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1])
+      ? [...testsBlock[1]!.matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1])
       : [];
     const testsHasDup = existingTests.length !== new Set(existingTests).size;
     if (!testsEmpty && !testsHasDup) continue;
     const cardName = f.replace(/\.md$/, '');
-    const sources = [...fmTxt.matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1]);
+    const sources = [...fmTxt.matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1]!);
     const sourceBases = sources.map((s) => path.basename(s).replace(/\.(ts|js)$/, ''));
     const tests = matchTests(cardName, sourceBases, testFiles);
     if (tests.length) targets.push({ file: f, text, tests });

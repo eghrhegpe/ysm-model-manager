@@ -54,7 +54,7 @@ function maxFromRegistry() {
   try {
     const text = fs.readFileSync(REG_FILE, 'utf8');
     for (const m of text.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) {
-      max = Math.max(max, parseInt(m[1], 10));
+      max = Math.max(max, parseInt(m[1]!, 10));
     }
   } catch {
     /* 登记表不存在则只以磁盘为准 */
@@ -121,7 +121,7 @@ function registerLine(regText: string, num: number, title: string) {
   // 定位登记表最后一行 `| ADR-xxx |`
   const matches = [...regText.matchAll(/^\|\s*ADR-\d{3}\s*\|.*$/gm)];
   if (!matches.length) return null;
-  const last = matches[matches.length - 1];
+  const last = matches[matches.length - 1]!;
   const idx = last.index + last[0].length;
   return regText.slice(0, idx) + '\n' + newLine + regText.slice(idx);
 }
@@ -139,7 +139,7 @@ function annotateSuperseded(targetRefs: string[], supersedingNum: number) {
       ok = false;
       continue;
     }
-    const tNum = parseInt(m[1], 10);
+    const tNum = parseInt(m[1]!, 10);
     const fname = fs.readdirSync(ADR_DIR).find((f) => new RegExp(`^ADR-${pad(tNum)}-`).test(f));
     if (!fname) {
       console.error(`[FAIL] 未找到 ADR-${pad(tNum)} 文件`);

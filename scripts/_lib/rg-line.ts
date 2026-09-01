@@ -20,15 +20,15 @@ export function parseRgLine(line: string): [string, number, string] {
     let filePart: string;
     let rest: string;
     // Windows 盘符：C:/... → parts[0]='C'（单字符字母），parts[1] 以 / 开头
-    if (parts[0].length === 1 && /[a-zA-Z]/.test(parts[0]) && parts[1].startsWith('/')) {
-      filePart = parts[0] + ':' + parts[1];
+    if (parts[0]!.length === 1 && /[a-zA-Z]/.test(parts[0]!) && parts[1]!.startsWith('/')) {
+      filePart = parts[0]! + ':' + parts[1]!;
       rest = parts.slice(2).join(':');
     } else {
-      filePart = parts[0];
+      filePart = parts[0]!;
       rest = parts.slice(1).join(':');
     }
     const restParts = rest.split(':');
-    const first = restParts[0];
+    const first = restParts[0]!;
     if (/^\d+$/.test(first)) {
       return [filePart, parseInt(first, 10), restParts.slice(1).join(':').trim() || ''];
     }

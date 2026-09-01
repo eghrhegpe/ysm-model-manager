@@ -85,7 +85,7 @@ function findNdk() {
         .readdirSync(ndkDir)
         .filter((d) => fs.statSync(path.join(ndkDir, d)).isDirectory())
         .sort();
-      if (versions.length > 0) return path.join(ndkDir, versions[versions.length - 1]);
+      if (versions.length > 0) return path.join(ndkDir, versions[versions.length - 1]!);
     }
   }
   return null;
@@ -173,7 +173,7 @@ const RUST_LIB_DIR = path.join(ROOT, 'go', 'rustbridge', 'android-lib');
 // ---- 2. Go 交叉编译 libwails.so（per ABI）----
 console.log(`[android-build] 版本注入: ${version}`);
 for (const arch of arches) {
-  const a = ARCHES[arch];
+  const a = ARCHES[arch]!;
   const cc = path.join(toolchain, 'bin', a.ndkTarget + '-clang');
   if (!fs.existsSync(cc)) fail(`缺少编译器: ${cc}`);
   const out = path.join(JNI_BASE, a.abi, 'libwails.so');

@@ -61,7 +61,7 @@ const SCAN_OPTS = {
 
 /** 文件所属层：'views' | 'features' | 'services' | 'utils' | 'core' | null */
 function layerOf(srcRelPath: string) {
-  const top = srcRelPath.split('/')[0];
+  const top = srcRelPath.split('/')[0]!;
   return LAYER_ORDER.includes(top) ? top : null;
 }
 
@@ -106,11 +106,11 @@ export function matchImports(text: string) {
   for (const m of clean.matchAll(IMPORT_RE)) {
     // `import type … from`（整句 type-only），或具名项全部带 `type` 前缀
     const typeOnly =
-      Boolean(m[1]) || /^\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?\s*,?\s*)+\}\s*$/.test(m[2]);
-    out.push({ spec: m[3], typeOnly, line: clean.slice(0, m.index).split('\n').length });
+      Boolean(m[1]) || /^\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?\s*,?\s*)+\}\s*$/.test(m[2]!);
+    out.push({ spec: m[3]!, typeOnly, line: clean.slice(0, m.index).split('\n').length });
   }
   for (const b of clean.matchAll(BARE_IMPORT_RE)) {
-    out.push({ spec: b[1], typeOnly: false, line: clean.slice(0, b.index).split('\n').length }); // 副作用导入，必为运行时
+    out.push({ spec: b[1]!, typeOnly: false, line: clean.slice(0, b.index).split('\n').length }); // 副作用导入，必为运行时
   }
   return out;
 }
@@ -146,14 +146,14 @@ function main() {
 
       let rule: string | null = null;
       for (let i = 0; i < ZERO_TOLERANCE.length; i++) {
-        if (fromLayer === ZERO_TOLERANCE[i].from && ZERO_TOLERANCE[i].to.includes(toLayer)) {
+        if (fromLayer === ZERO_TOLERANCE[i]!.from && ZERO_TOLERANCE[i]!.to.includes(toLayer)) {
           rule = `R${i + 1}`;
           break;
         }
       }
       if (!rule) {
         for (let i = 0; i < TRACKED_RULES.length; i++) {
-          if (fromLayer === TRACKED_RULES[i].from && TRACKED_RULES[i].to.includes(toLayer)) {
+          if (fromLayer === TRACKED_RULES[i]!.from && TRACKED_RULES[i]!.to.includes(toLayer)) {
             rule = i === 0 ? 'R3' : 'R4';
             break;
           }

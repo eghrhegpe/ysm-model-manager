@@ -70,9 +70,9 @@ function gitLog(limit = 200) {
     const parts = line.split("|");
     if (parts.length >= 3) {
       commits.push({
-        hash: parts[0].slice(0, 8),
-        message: parts[1].trim(),
-        date: parts[2].trim(),
+        hash: parts[0]!.slice(0, 8),
+        message: parts[1]!.trim(),
+        date: parts[2]!.trim(),
         files: [],
       });
     }

@@ -84,7 +84,7 @@ function checkAdr() {
     return;
   }
   const regNums = new Set<number>();
-  for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) regNums.add(parseInt(m[1], 10));
+  for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) regNums.add(parseInt(m[1]!, 10));
 
   for (const num of Object.keys(fileMeta).map(Number).sort((a, b) => a - b)) {
     if (!regNums.has(num)) errors.push(`[ADR] ADR-${String(num).padStart(3, '0')} (${fileMeta[num].file}) 未在登记表占号`);
@@ -132,7 +132,7 @@ function checkKnowledge() {
     const idxText = readText(`docs/knowledge/${idx}`);
     if (!idxText) continue;
     for (const m of idxText.matchAll(/\]\(\.\/([a-zA-Z0-9_-]+\.md)\)/g)) {
-      if (!fs.existsSync(path.join(KC_DIR, m[1]))) errors.push(`[知识卡] 索引 ${idx} 链接指向不存在的卡: ${m[1]}`);
+      if (!fs.existsSync(path.join(KC_DIR, m[1]!))) errors.push(`[知识卡] 索引 ${idx} 链接指向不存在的卡: ${m[1]}`);
     }
   }
   return count;
@@ -162,7 +162,7 @@ function checkArchRefs() {
       continue;
     }
     for (const m of text.matchAll(CODE_PATH_RE)) {
-      const ref = m[1];
+      const ref = m[1]!;
       if (staleRefs.has(ref)) continue;
       if (!fs.existsSync(path.join(ROOT, ref))) {
         errors.push(`[架构树] ${doc} 引用不存在的路径: ${ref}`);
@@ -180,13 +180,13 @@ function checkAgentsTree() {
     infos.push('[架构树] AGENTS.md 未找到 §4.2 前端树代码块，跳过');
     return;
   }
-  const lines = blockM[1].split(/\r?\n/);
+  const lines = blockM[1]!.split(/\r?\n/);
   const rootIdx = lines.findIndex((l) => l.includes('frontend/src/'));
   if (rootIdx < 0) return;
   for (const line of lines.slice(rootIdx + 1)) {
     const segM = line.match(/^\s{2}([^\s—]+)/);
     if (!segM) continue;
-    const seg = segM[1];
+    const seg = segM[1]!;
     if (!fs.existsSync(path.join(ROOT, 'frontend/src', seg))) {
       warns.push(`[架构树] AGENTS.md §4.2 描述 frontend/src/${seg} 但磁盘不存在（疑似规划中目录或已删除）`);
     }

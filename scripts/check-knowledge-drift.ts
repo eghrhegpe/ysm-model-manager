@@ -243,7 +243,7 @@ function checkIndexLinks() {
     if (!fs.existsSync(file)) continue;
     const text = fs.readFileSync(file, 'utf8');
     for (const m of text.matchAll(LINK_RE)) {
-      const target = m[1];
+      const target = m[1]!;
       if (!fs.existsSync(path.join(KC_DIR, target))) {
         errors.push(`索引 ${idx} 链接指向不存在的卡: ${target}`);
       }

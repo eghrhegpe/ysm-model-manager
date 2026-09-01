@@ -184,9 +184,9 @@ function walkAndGrep(dir: string, results: string[], regex: RegExp) {
           const lines = content.split('\n');
           for (let i = 0; i < lines.length; i++) {
             regex.lastIndex = 0;
-            if (regex.test(lines[i])) {
+            if (regex.test(lines[i]!)) {
               const rel = toPosix(path.relative(FRONTEND, full));
-              results.push(`${rel}:${i + 1}: ${lines[i].trim().slice(0, 120)}`);
+              results.push(`${rel}:${i + 1}: ${lines[i]!.trim().slice(0, 120)}`);
             }
           }
         }

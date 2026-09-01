@@ -91,14 +91,14 @@ function extractFlags(body: string): CliFlag[] {
     if (!nameM) continue;
     const strs = [...call.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((a) => a[1]);
     const entry = {
-      flag: nameM[1],
-      type: m[1].toLowerCase().replace(/var$/, ''),
-      help: strs.length >= 2 ? strs[strs.length - 1] : '',
+      flag: nameM[1]!,
+      type: m[1]!.toLowerCase().replace(/var$/, ''),
+      help: strs.length >= 2 ? strs[strs.length - 1]! : '',
       def: '',
     };
     // 三字符串形态：name, 默认值, help（默认值为字符串字面量）
-    if (strs.length >= 3) entry.def = strs[strs.length - 2];
-    else if (!entry.help && strs.length >= 2) entry.def = strs[strs.length - 1];
+    if (strs.length >= 3) entry.def = strs[strs.length - 2]!;
+    else if (!entry.help && strs.length >= 2) entry.def = strs[strs.length - 1]!;
     flags.push(entry);
   }
   return flags;
@@ -111,7 +111,7 @@ function extractSubcommands(body: string): string[] {
   if (sw < 0) return out;
   const re = /case\s+"([a-z0-9-]+)":/g;
   let m;
-  while ((m = re.exec(body.slice(sw)))) out.push(m[1]);
+  while ((m = re.exec(body.slice(sw)))) out.push(m[1]!);
   return out;
 }
 
@@ -126,7 +126,7 @@ function collectSubDescByFunc(): Record<string, Record<string, string>> {
       const desc: Record<string, string> = {};
       const re = /fmt\.Println\("  ([a-z0-9-]+)\s{2,}([^"]*)"\)/g;
       let m;
-      while ((m = re.exec(fn.body))) desc[m[1]] = m[2].trim();
+      while ((m = re.exec(fn.body))) desc[m[1]!] = m[2]!.trim();
       byFunc[fn.name] = desc;
     }
   }
@@ -171,7 +171,7 @@ export function parseCliCommands(): CliCommand[] {
     const local = new RegExp(CMD_RE.source, 'g');
     let m;
     while ((m = local.exec(text))) {
-      regs.push({ name: m[1], category: m[2], description: m[3], runFn: m[4], file: f });
+      regs.push({ name: m[1]!, category: m[2]!, description: m[3]!, runFn: m[4]!, file: f });
     }
   }
 

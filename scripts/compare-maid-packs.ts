@@ -163,7 +163,7 @@ for (const r of reports) {
   }
   rows.push([r.category, r.name.slice(0, 38), L0n, l1, parse, sub, diff]);
 }
-const widths = rows[0].map((_, i) => Math.max(...rows.map((r) => String(r[i]).length)));
+const widths = rows[0]!.map((_, i) => Math.max(...rows.map((r) => String(r[i]).length)));
 for (const r of rows) {
-  console.log(r.map((c, i) => String(c).padEnd(widths[i])).join(" | "));
+  console.log(r.map((c, i) => String(c).padEnd(widths[i]!)).join(" | "));
 }

@@ -99,9 +99,9 @@ export function parseSourceImports(filePath: string, srcDir: string): ImportEdge
   };
 
   let match;
-  while ((match = reFrom.exec(text))) put(match[2], Boolean(match[1]));
-  while ((match = reSide.exec(text))) put(match[1], false);
-  while ((match = reDyna.exec(text))) put(match[1], false);
+  while ((match = reFrom.exec(text))) put(match[2]!, Boolean(match[1]!));
+  while ((match = reSide.exec(text))) put(match[1]!, false);
+  while ((match = reDyna.exec(text))) put(match[1]!, false);
 
   for (const [spec, isTypeOnly] of specs) {
     const resolved = resolveSourceImport(spec, filePath, srcDir);
@@ -229,7 +229,7 @@ function goDecls(text: string, exportedOnly: boolean) {
   // 泛型接收者 `r *Foo[T]` 末尾无裸标识符，提取失败时回退裸方法名而非丢弃。
   const reFunc = /^[ \t]*func\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
   while ((m = reFunc.exec(src))) {
-    const name = m[2];
+    const name = m[2]!;
     if (exportedOnly && !isExp(name)) continue;
     if (m[1]) {
       const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
@@ -244,7 +244,7 @@ function goDecls(text: string, exportedOnly: boolean) {
 
   // type Name ... / const Name = ... / var Name = ...（单行形式）
   const reDecl = /^[ \t]*(?:type|const|var)\s+([A-Za-z0-9_]+)/gm;
-  while ((m = reDecl.exec(src))) add(m[1]);
+  while ((m = reDecl.exec(src))) add(m[1]!);
 
   // 分组声明 `const ( A = ... )`、`var (...)`、`type (...)`。
   // 块结束不依赖 `\n)`（缩进闭合会失配、成员内嵌 `\n)` 会越界）——
@@ -258,11 +258,11 @@ function goDecls(text: string, exportedOnly: boolean) {
     let blockEnd = -1;
     const lines = src.slice(gm.index).split('\n');
     for (let li = 1; li < lines.length; li++) {
-      if (/^[ \t]*\)/.test(lines[li])) { blockEnd = gm.index + lines.slice(0, li).join('\n').length + 1; break; }
+      if (/^[ \t]*\)/.test(lines[li]!)) { blockEnd = gm.index + lines.slice(0, li).join('\n').length + 1; break; }
     }
     const block = blockEnd > gm.index ? src.slice(gm.index, blockEnd) : '';
     let bm;
-    while ((bm = reGroupBody.exec(block))) add(bm[1]);
+    while ((bm = reGroupBody.exec(block))) add(bm[1]!);
   }
 
   return out;
@@ -288,7 +288,7 @@ function tsDecls(text: string, exportedOnly: boolean) {
     `^${E}(?:default\\s+)?(?:declare\\s+)?(?:async\\s+)?(?:function|class|interface|type|enum)\\s+([A-Za-z0-9_$]+)`,
     'gm',
   );
-  while ((m = reDecl.exec(text))) add(m[1]);
+  while ((m = reDecl.exec(text))) add(m[1]!);
 
   // const / let / var 赋值。`const enum E` 的符号名是 enum 之后的标识符——
   // 旧实现会把关键字 `enum` 本身当符号名（实测 `export const enum E` → `enum`）。
@@ -296,13 +296,13 @@ function tsDecls(text: string, exportedOnly: boolean) {
     `^${E}(?:declare\\s+)?(?:const|let|var)\\s+(?:enum\\s+)?([A-Za-z0-9_$]+)`,
     'gm',
   );
-  while ((m = reVal.exec(text))) add(m[1]);
+  while ((m = reVal.exec(text))) add(m[1]!);
 
   // 解构声明 `export const { a, b } = obj`（含默认值 `{ a = 1 }`）
   const reDestr = new RegExp(`^${E}(?:const|let|var)\\s*\\{([^}]+)\\}`, 'gm');
   while ((m = reDestr.exec(text))) {
-    for (const part of m[1].split(',')) {
-      const name = part.trim().split(/\s*[:=]\s*/)[0].trim();
+    for (const part of m[1]!.split(',')) {
+      const name = part.trim().split(/\s*[:=]\s*/)[0]!.trim();
       if (/^[A-Za-z0-9_$]+$/.test(name)) add(name);
     }
   }
@@ -310,7 +310,7 @@ function tsDecls(text: string, exportedOnly: boolean) {
   // `export { a, b as c }` / `export type { T }`（取 as 之后的对外名）
   const reRe = /^export\s*(?:type\s*)?\{([^}]+)\}/gm;
   while ((m = reRe.exec(text))) {
-    for (const part of m[1].split(',')) {
+    for (const part of m[1]!.split(',')) {
       const name = part.trim().split(/\s+as\s+/).pop()!.trim();
       if (/^[A-Za-z0-9_$]+$/.test(name)) add(name);
     }
@@ -318,7 +318,7 @@ function tsDecls(text: string, exportedOnly: boolean) {
 
   // `export default Name;`（容忍行尾分号：这是最常见写法，`\s*$` 会被 `;` 挡掉）
   const reDefaultId = /^export\s+default\s+([A-Za-z0-9_$]+)\s*;?\s*$/gm;
-  while ((m = reDefaultId.exec(text))) add(m[1]);
+  while ((m = reDefaultId.exec(text))) add(m[1]!);
 
   return out;
 }

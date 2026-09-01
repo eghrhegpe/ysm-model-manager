@@ -62,11 +62,11 @@ function extractImports(text: string) {
   while ((m = blockRe.exec(text))) {
     const strRe = /"(?:[^"\\]|\\.)*"/g;
     let s;
-    while ((s = strRe.exec(m[1]))) imports.add(s[0].slice(1, -1));
+    while ((s = strRe.exec(m[1]!))) imports.add(s[0]!.slice(1, -1));
   }
   // 单行 import "path"
   const singleRe = /import\s+"([^"]+)"/g;
-  while ((m = singleRe.exec(text))) imports.add(m[1]);
+  while ((m = singleRe.exec(text))) imports.add(m[1]!);
   return imports;
 }
 

@@ -110,7 +110,7 @@ function codeAsserts() {
   try {
     const text = fs.readFileSync(dlPath, 'utf-8');
     const structM = text.match(/type DownloadQueue struct\s*\{([\s\S]*?)\n\}/);
-    const body = structM ? structM[1] : '';
+    const body = structM ? structM[1]! : '';
     const hasAppField = /\*\s*App\b/.test(body);
     results.push({
       name: 'DownloadQueue 无 *App 字段',

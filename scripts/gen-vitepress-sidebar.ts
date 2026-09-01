@@ -53,11 +53,11 @@ function readTitle(rel: string) {
   }
   const fm = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (fm) {
-    const block = fm[1];
+    const block = fm[1]!;
     const titleM = block.match(/^\s*title:\s*(.+?)\s*$/m);
-    if (titleM) return stripQuotes(titleM[1]);
+    if (titleM) return stripQuotes(titleM[1]!);
     const nameM = block.match(/^\s*name:\s*(.+?)\s*$/m);
-    if (nameM) return stripQuotes(nameM[1]);
+    if (nameM) return stripQuotes(nameM[1]!);
   }
   const h1 = raw.match(/^\s*#\s+(.+?)\s*$/m);
   if (h1) return h1[1];

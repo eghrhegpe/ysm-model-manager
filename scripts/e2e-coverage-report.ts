@@ -32,7 +32,7 @@ const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
 const allMode = args.includes('--all');
 const inputIdx = args.indexOf('--input');
-const inputPath = inputIdx !== -1 ? args[inputIdx + 1] : DEFAULT_INPUT;
+const inputPath = inputIdx !== -1 ? args[inputIdx + 1]! : DEFAULT_INPUT;
 
 if (!fs.existsSync(inputPath)) {
   console.error(`[e2e-coverage] 未找到采集产物 ${inputPath}`);

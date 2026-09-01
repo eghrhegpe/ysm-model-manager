@@ -98,7 +98,10 @@ function eulerToMatrixZYX(rxDeg: number, ryDeg: number, rzDeg: number) {
 
 // 3x3 旋转矩阵 → 四元数 [qx,qy,qz,qw]（标准 THREE.Matrix4 口径，row-major 输入）
 function matrixToQuat(m: number[]) {
-  const [m00, m01, m02, m10, m11, m12, m20, m21, m22] = m;
+  // 3x3 矩阵按行展开的 9 元数组（调用方契约），noUncheckedIndexedAccess 下用元组断言替代解构内 `!`
+  const [m00, m01, m02, m10, m11, m12, m20, m21, m22] = m as unknown as [
+    number, number, number, number, number, number, number, number, number
+  ];
   const trace = m00 + m11 + m22;
   let qx, qy, qz, qw;
   if (trace > 0) {
@@ -180,9 +183,9 @@ function oracleCube(s: any, bonePivot: number[]) {
   //   Y: cp[1] - bonePivot[1]  — Y 不翻号
   //   Z: cp[2] - bonePivot[2]  — Z 不翻号
   const localPosition = [
-    bonePivot[0] + cp[0],
-    cp[1] - bonePivot[1],
-    cp[2] - bonePivot[2],
+    bonePivot[0]! + cp[0]!,
+    cp[1]! - bonePivot[1]!,
+    cp[2]! - bonePivot[2]!,
   ];
 
   // cube 旋转四元数（喂 bbRot 给 eulerToQuaternion 的权威结果）
@@ -204,7 +207,7 @@ const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
 function cornersFromPositions(positions: number[]) {
   const map = new Map();
   for (let i = 0; i < positions.length; i += 3) {
-    const k = `${r4(positions[i])},${r4(positions[i + 1])},${r4(positions[i + 2])}`;
+    const k = `${r4(positions[i]!)},${r4(positions[i + 1]!)},${r4(positions[i + 2]!)}`;
     if (!map.has(k)) map.set(k, [positions[i], positions[i + 1], positions[i + 2]]);
   }
   return [...map.values()];
@@ -219,9 +222,9 @@ function matchCorners(actual: number[][], expected: number[][]) {
     let best = Infinity;
     for (const a of actual) {
       const d = Math.max(
-        Math.abs(a[0] - e[0]),
-        Math.abs(a[1] - e[1]),
-        Math.abs(a[2] - e[2]),
+        Math.abs(a[0]! - e[0]!),
+        Math.abs(a[1]! - e[1]!),
+        Math.abs(a[2]! - e[2]!),
       );
       if (d < best) best = d;
     }
@@ -232,14 +235,14 @@ function matchCorners(actual: number[][], expected: number[][]) {
 
 // 四元数带符号归一（q 与 -q 等价）→ 比绝对值
 function matchQuat(actual: number[], expected: number[]) {
-  const norm = (q: number[]) => (q[3] < 0 ? q.map((v) => -v) : q);
+  const norm = (q: number[]) => (q[3]! < 0 ? q.map((v) => -v) : q);
   const a = norm(actual), e = norm(expected);
-  const d = Math.max(...a.map((v, i) => Math.abs(v - e[i])));
+  const d = Math.max(...a.map((v, i) => Math.abs(v - e[i]!)));
   return d <= TOL ? null : `四元数 ${a.map(r4)} vs ${e.map(r4)} (Δ=${r4(d)})`;
 }
 
 function matchVec3(actual: number[], expected: number[], name: string) {
-  const d = Math.max(...actual.map((v, i) => Math.abs(v - expected[i])));
+  const d = Math.max(...actual.map((v, i) => Math.abs(v - expected[i]!)));
   return d <= TOL ? null : `${name} ${actual.map(r4)} vs ${expected.map(r4)} (Δ=${r4(d)})`;
 }
 
@@ -351,8 +354,8 @@ let eulerCases = 0;
 let eulerPass = 0;
 for (const rotation of ROTATIONS) {
   eulerCases++;
-  const actual = eulerToQuaternion(rotation[0], rotation[1], rotation[2]);
-  const expected = oracleEuler(rotation[0], rotation[1], rotation[2]);
+  const actual = eulerToQuaternion(rotation[0]!, rotation[1]!, rotation[2]!);
+  const expected = oracleEuler(rotation[0]!, rotation[1]!, rotation[2]!);
   const err = matchQuat(actual, expected);
   if (err) {
     failures.push({ phase: 'euler', label: `r=${rotation}`, why: err });
@@ -367,7 +370,10 @@ for (const rotation of ROTATIONS) {
 console.log('\n── 覆盖矩阵（多样性可见度）──');
 const axisCount = (r: number[]) => r.filter((v) => Math.abs(v) > 1e-6).length;
 const axisBuckets: Record<string, number> = { '0轴': 0, '1轴': 0, '2轴': 0, '3轴': 0 };
-for (const r of ROTATIONS) axisBuckets[`${axisCount(r)}轴`]++;
+for (const r of ROTATIONS) {
+  const key = `${axisCount(r)}轴`;
+  axisBuckets[key] = axisBuckets[key]! + 1;
+}
 console.log(`  pivotSet:        ${PIVOT_SET.length} 取值 (${PIVOT_SET.join('/')})`);
 console.log(`  inflate:         ${INFLATE.length} 取值 (${INFLATE.join('/')})`);
 console.log(`  origin 符号:     ${ORIGINS.length} 组 (正/负/零/混合)`);

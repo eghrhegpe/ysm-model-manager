@@ -70,7 +70,7 @@ function goParamTypes(body: string) {
   return body.split(',').map((seg) => {
     const toks = seg.trim().split(/\s+/);
     if (toks.length < 2) return null;
-    let t = toks[toks.length - 1];
+    let t = toks[toks.length - 1]!;
     if (t.startsWith('...')) t = `[]${t.slice(3)}`;
     return t;
   });
@@ -83,7 +83,7 @@ function tsParamTypes(body: string) {
     const s = seg.trim();
     const idx = s.indexOf(':');
     if (idx === -1) return null;
-    return s.slice(idx + 1).split('=')[0].trim().replace(/\?$/, '').trim();
+    return s.slice(idx + 1).split('=')[0]!.trim().replace(/\?$/, '').trim();
   });
 }
 
@@ -102,7 +102,7 @@ const GO2TS = new Map([
 function goTypeToExpected(t: string): string | null {
   const arr = t.match(/^\[\](.+)$/);
   if (arr) {
-    const inner = goTypeToExpected(arr[1]);
+    const inner = goTypeToExpected(arr[1]!);
     return inner ? `${inner}[]` : null;
   }
   return GO2TS.get(t) ?? null;
@@ -148,9 +148,9 @@ function extractGoExports() {
     // P2-2：接收者名任意 + 指针/值均可（`func (a *App)` / `func (app *App)` / `func (a App)`），
     // 硬编码 `a *App` 会把合法变体静默漏扫（假阳性 extra_in_js 或假绿）
     for (const m of text.matchAll(/func \(\w+ \*?App\) (\w+)\(/g)) {
-      const name = m[1];
+      const name = m[1]!;
       // 跳过大写开头的非导出函数（Go 惯例）+ 框架生命周期方法
-      if (name[0] === name[0].toLowerCase()) continue;
+      if (name[0]! === name[0]!.toLowerCase()) continue;
       if (FRAMEWORK_METHODS.has(name)) continue;
       if (!(name in exports)) {
         const open = m.index + m[0].length - 1; // m[0] 以参数列表的 `(` 收尾
@@ -173,7 +173,7 @@ function extractBindingsExports() {
   }
   const text = fs.readFileSync(BINDINGS_FILE, 'utf-8');
   for (const m of text.matchAll(/export function (\w+)\(/g)) {
-    const name = m[1];
+    const name = m[1]!;
     if (!(name in result.funcs)) {
       const open = m.index + m[0].length - 1; // m[0] 以参数列表的 `(` 收尾
       const close = matchingParen(text, open);

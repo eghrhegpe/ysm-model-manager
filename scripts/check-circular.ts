@@ -67,19 +67,19 @@ function main() {
       const stmt = m[0];
       const braceM = stmt.match(/\{([^}]*)\}/);
       const allTypeNamed = braceM
-        ? braceM[1].split(',').map((s: string) => s.trim()).filter(Boolean).length > 0 &&
-          braceM[1].split(',').map((s: string) => s.trim()).filter(Boolean).every((s: string) => /^type\s+/.test(s))
+        ? braceM[1]!.split(',').map((s: string) => s.trim()).filter(Boolean).length > 0 &&
+          braceM[1]!.split(',').map((s: string) => s.trim()).filter(Boolean).every((s: string) => /^type\s+/.test(s))
         : false;
       // 默认导入（`import store, { type State }`）是运行时值依赖，即使花括号全 type
       // 也不能跳过——否则丢失 f→./store 依赖边造成假阴性环（code_review P3）。
       const hasRuntimeDefault = /^import\s+[A-Za-z_$][\w$]*\s*,/.test(stmt);
       if (/^\s*import\s+type\b/.test(stmt) || (allTypeNamed && !hasRuntimeDefault)) continue;
-      const target = resolveImport(f, m[1], moduleSet);
+      const target = resolveImport(f, m[1]!, moduleSet);
       if (target && target !== f) deps.add(target);
     }
     // 动态 import('...') 同样构成运行时依赖（加载即执行模块副作用）
     for (const m of text.matchAll(DYNAMIC_IMPORT_RE)) {
-      const target = resolveImport(f, m[1], moduleSet);
+      const target = resolveImport(f, m[1]!, moduleSet);
       if (target && target !== f) deps.add(target);
     }
     graph.set(f, [...deps]);

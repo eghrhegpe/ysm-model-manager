@@ -92,12 +92,12 @@ export function tokenize(text: string) {
 
   const backChar = (idx: number) => {
     let j = idx - 1;
-    while (j >= 0 && /\s/.test(chars[j])) j--;
-    return j >= 0 ? chars[j] : '';
+    while (j >= 0 && /\s/.test(chars[j]!)) j--;
+    return j >= 0 ? chars[j]! : '';
   };
 
   while (i < n) {
-    const c = chars[i];
+    const c = chars[i]!;
     // 行注释
     if (c === '/' && chars[i + 1] === '/') {
       while (i < n && chars[i] !== '\n') {
@@ -229,7 +229,7 @@ export function tokenize(text: string) {
             stripped[i] = ' ';
             i++;
             // 吞 flags
-            while (i < n && /[a-z]/i.test(chars[i])) {
+            while (i < n && /[a-z]/i.test(chars[i]!)) {
               stripped[i] = ' ';
               i++;
             }
@@ -247,7 +247,7 @@ export function tokenize(text: string) {
     // 标识符
     if (/[A-Za-z_$]/.test(c)) {
       const start = i;
-      while (i < n && /[A-Za-z0-9_$]/.test(chars[i])) i++;
+      while (i < n && /[A-Za-z0-9_$]/.test(chars[i]!)) i++;
       const name = text.slice(start, i);
       const line = text.slice(0, start).split('\n').length;
       tokens.push({ name, start, line });

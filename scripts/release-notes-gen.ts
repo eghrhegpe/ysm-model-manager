@@ -31,7 +31,7 @@ const EXEMPT_TAGS = new Set(['v1.7.0-open-source-prep.20260617']);
 
 
 function run(cmd: string[]) {
-  const r = runProc(cmd[0], cmd.slice(1), { timeout: 30000, cwd: ROOT });
+  const r = runProc(cmd[0]!, cmd.slice(1), { timeout: 30000, cwd: ROOT });
   return r.ok ? r.out.trim() : '';
 }
 
@@ -50,7 +50,7 @@ function collect() {
     if (!clean) continue;
     const parts = clean.split(' ');
     if (parts.length >= 2) {
-      commits.push({ hash: parts[0], message: parts.slice(1).join(' ') });
+      commits.push({ hash: parts[0]!, message: parts.slice(1).join(' ') });
     }
   }
 
@@ -58,10 +58,10 @@ function collect() {
   const categories: Record<string, { hash: string; message: string }[]> = { feat: [], fix: [], docs: [], refactor: [], test: [], other: [] };
   for (const c of commits) {
     const m = c.message.match(/^(feat|fix|docs|refactor|test|perf|chore|style)/);
-    let key = m ? m[1] : 'other';
+    let key = m ? m[1]! : 'other';
     if (key === 'perf') key = 'feat';
-    if (key in categories) categories[key].push(c);
-    else categories['other'].push(c);
+    if (key in categories) categories[key]!.push(c);
+    else categories['other']!.push(c);
   }
 
   // 4. diff 统计
@@ -71,11 +71,11 @@ function collect() {
   let deletions = 0;
   for (const line of diffStat.split('\n')) {
     let m = line.match(/(\d+) files? changed/);
-    if (m) filesChanged = parseInt(m[1], 10);
+    if (m) filesChanged = parseInt(m[1]!, 10);
     m = line.match(/(\d+) insertions?\(\+\)/);
-    if (m) insertions = parseInt(m[1], 10);
+    if (m) insertions = parseInt(m[1]!, 10);
     m = line.match(/(\d+) deletions?\(-\)/);
-    if (m) deletions = parseInt(m[1], 10);
+    if (m) deletions = parseInt(m[1]!, 10);
   }
 
   // 5. 文件列表（按目录分组）
@@ -90,7 +90,7 @@ function collect() {
   const dirs: Record<string, number> = {};
   for (const f of changedFiles) {
     const parts = f.split('/');
-    const top = parts.length > 1 ? parts[0] : f;
+    const top = parts.length > 1 ? parts[0]! : f;
     dirs[top] = (dirs[top] ?? 0) + 1;
   }
 

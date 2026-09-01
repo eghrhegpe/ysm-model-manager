@@ -159,7 +159,7 @@ export function parseGoCover(profileText: string) {
     if (!line.trim()) continue;
     const m = line.match(/^(.+?):(\d+)\.(\d+),(\d+)\.(\d+)\s+(\d+)\s+(\d+)$/);
     if (!m) continue;
-    const rel = stripModulePrefix(m[1]);
+    const rel = stripModulePrefix(m[1]!);
     if (!rel) continue;
     const block = {
       sl: Number(m[2]),

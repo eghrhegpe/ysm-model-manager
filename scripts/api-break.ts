@@ -363,7 +363,7 @@ if (nonOpts.length < 2) {
   console.error('用法: node scripts/api-break.ts <older> <newer> [--scope <dir>] [--json] [--quiet] [--redline] [--compact]');
   process.exit(2);
 }
-const [older, newer] = nonOpts;
+const older = nonOpts[0]!, newer = nonOpts[1]!;
 
 // ref 有效性校验：git diff 失败会被 gitMaybe 吞成空清单 → 无效 ref 会得到
 // 静默的「兼容」假结论（门禁工具危险信号）；先 rev-parse 验证两个 ref，无效退出 2

@@ -11,7 +11,6 @@
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
 import type { PreviewMenuNode } from "./node-types.ts";
-import { renderCapControls } from "./cap-controls.ts";
 import { buildCameraControls } from "../adapters/camera-controls.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
@@ -52,39 +51,27 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
     return null;
   })();
   if (!lightCap) {
-    return [{ id: "lighting-empty", kind: "custom", renderCustom: (list) => {
-      bsRenderEmptyRow(list, tr("preview.noLightCap", "进入 3D 后再打开灯光面板"));
-    }}];
+    return [{ id: "lighting-empty", kind: "sectionTitle", labelKey: "preview.noLightCap", fallback: "进入 3D 后再打开灯光面板" }];
   }
-  return [{ id: "lighting", kind: "custom", renderCustom: (list) => {
-    renderCapControls(list, lightCap.getMenuControls());
-  }}];
+  return [{ id: "lighting", kind: "controls", controls: () => lightCap.getMenuControls() }];
 }
 
 /** 阴影面板 schema：从 shadow cap 自报控件渲染 */
 export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
   const fromReg = sceneCapabilityRegistry.getById("shadow") as import("../caps/shadow-capability.ts").ShadowCapability | null;
   if (!fromReg) {
-    return [{ id: "shadow-empty", kind: "custom", renderCustom: (list) => {
-      bsRenderEmptyRow(list, tr("preview.noShadowCap", "进入 3D 后再打开阴影面板"));
-    }}];
+    return [{ id: "shadow-empty", kind: "sectionTitle", labelKey: "preview.noShadowCap", fallback: "进入 3D 后再打开阴影面板" }];
   }
-  return [{ id: "shadow", kind: "custom", renderCustom: (list) => {
-    renderCapControls(list, fromReg.getMenuControls());
-  }}];
+  return [{ id: "shadow", kind: "controls", controls: () => fromReg.getMenuControls() }];
 }
 
 /** 后处理面板 schema：从 postprocessing cap 自报控件渲染 */
 export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
   const fromReg = sceneCapabilityRegistry.getById("postprocessing") as import("../caps/postprocessing-capability.ts").PostprocessingCapability | null;
   if (!fromReg) {
-    return [{ id: "postproc-empty", kind: "custom", renderCustom: (list) => {
-      bsRenderEmptyRow(list, tr("preview.noPostprocCap", "进入 3D 后再打开后处理面板"));
-    }}];
+    return [{ id: "postproc-empty", kind: "sectionTitle", labelKey: "preview.noPostprocCap", fallback: "进入 3D 后再打开后处理面板" }];
   }
-  return [{ id: "postproc", kind: "custom", renderCustom: (list) => {
-    renderCapControls(list, fromReg.getMenuControls());
-  }}];
+  return [{ id: "postproc", kind: "controls", controls: () => fromReg.getMenuControls() }];
 }
 
 /** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 */
@@ -187,7 +174,8 @@ export function buildSettingsControls(): MenuControlDef[] {
 // ── 通用节点工厂 ──
 
 /** 性能档位 select（低/中/高/自定义）：切档 = 数据表套用（perf-presets.ts）+ 面板刷新。
- *  自定义 = 不套用，保持用户手调。档位表是纯数据，新增档位/参数零代码接线。 */
+ *  自定义 = 不套用，保持用户手调。档位表是纯数据，新增档位/参数零代码接线。
+ *  声明式 select 节点（control.get/set 闭包 + onChange 刷新），不再手写 DOM 壳。 */
 function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
   const LEVELS: Array<{ value: PerfLevel; labelKey: string; fallback: string }> = [
     { value: "low", labelKey: "preview.settingsPerfLow", fallback: "低" },
@@ -197,32 +185,15 @@ function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
   ];
   return {
     id: "settings-perf-preset",
-    kind: "custom",
-    renderCustom: (list: HTMLElement): void => {
-      const row = document.createElement("div");
-      row.className = "slide-item";
-      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
-      const label = document.createElement("span");
-      label.className = "slide-label";
-      label.style.cssText = "flex:1;font-size:12px";
-      label.textContent = tr("preview.settingsPerfPreset", "性能档位");
-      const sel = document.createElement("select");
-      sel.className = "setting-select";
-      sel.style.cssText = "font-size:11px;padding:2px 4px";
-      for (const lv of LEVELS) {
-        const o = document.createElement("option");
-        o.value = lv.value;
-        o.textContent = tr(lv.labelKey, lv.fallback);
-        sel.appendChild(o);
-      }
-      sel.value = getPerfPreset();
-      sel.onchange = (): void => {
-        setPerfPreset(sel.value as PerfLevel);
+    kind: "select",
+    control: {
+      options: LEVELS.map((lv) => ({ value: lv.value, label: tr(lv.labelKey, lv.fallback) })),
+      get: (): unknown => getPerfPreset(),
+      set: (v): void => {
+        setPerfPreset(v as PerfLevel);
         // 切档后兄弟控件（fps/分辨率/Bloom）显示值已变——重渲染当前面板
         menu?.refresh();
-      };
-      row.append(label, sel);
-      list.appendChild(row);
+      },
     },
   };
 }
@@ -232,43 +203,24 @@ function bsBuildSectionTitle(id: string, labelKey: string, fallback: string): Pr
 }
 
 /**
- * 把一组 MenuControlDef 包成单个声明式节点，交给通用渲染器 renderCapControls。
+ * 把一组 MenuControlDef 包成声明式 controls 节点，交给唯一控件渲染器 renderCapControls。
  *
  * `controls` 传**函数引用**时每次渲染求值（惰性）——规避 ADR-125 P3 明令禁止的
  * 「构建期求值 → cap 后创建则永不可见」（即 05fe24b7 所修同类病）：
- * schema 只持有 supplier，cap 何时创建、面板何时重渲染，都取最新全量。
+ * 节点只持有 supplier，cap 何时创建、面板何时重渲染，都取最新全量。
  */
 function bsBuildControlsRow(
   id: string,
   controls: MenuControlDef[] | (() => MenuControlDef[]),
 ): PreviewMenuNode {
-  return {
-    id,
-    kind: "custom",
-    renderCustom: (list: HTMLElement): void => {
-      const resolved = typeof controls === "function" ? controls() : controls;
-      renderCapControls(list, resolved);
-    },
-  };
-}
-
-/** cap 缺席时的单行提示（不空白） */
-function bsRenderEmptyRow(list: HTMLElement, text: string): void {
-  const row = document.createElement("div");
-  row.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
-  row.textContent = text;
-  list.appendChild(row);
+  return { id, kind: "controls", controls };
 }
 
 function bsBuildNote(): PreviewMenuNode {
   return {
     id: "settings-note",
-    kind: "custom",
-    renderCustom: (list: HTMLElement): void => {
-      const note = document.createElement("div");
-      note.style.cssText = "padding:8px 10px;font-size:11px;color:rgba(255,255,255,0.4);line-height:1.5";
-      note.textContent = tr("preview.settingsNote", "分辨率上限需重新进入 3D 预览生效；其余开关即时生效。");
-      list.appendChild(note);
-    },
+    kind: "sectionTitle",
+    labelKey: "preview.settingsNote",
+    fallback: "分辨率上限需重新进入 3D 预览生效；其余开关即时生效。",
   };
 }

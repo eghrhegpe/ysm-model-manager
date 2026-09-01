@@ -11,6 +11,7 @@ import { tr } from "../../core/i18n/tr.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
 import { previewSnapshot, setStateValue, isPathAvailable, KNOWN_PATHS } from "../state/preview-state.ts";
 import { getSchema } from "../adapters/schema-registry.ts";
+import { renderCapControls } from "./cap-controls.ts";
 
 // i18n 取值统一走共享 tr()（core/i18n/tr.ts，支持缺失键兜底 + params 插值）
 
@@ -439,6 +440,11 @@ export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], dep
       rmAppendToggle(container, node);
     } else if (node.kind === "material-row") {
       rmAppendMaterialRow(container, node);
+    } else if (node.kind === "controls") {
+      // 声明式节点直持 cap 控件组：委托 renderCapControls（唯一控件渲染器）。
+      // 惰性：controls 为函数时每次渲染重取（cap 后创建/参数变更后重渲染可见最新全量）。
+      const ctrls = typeof node.controls === "function" ? node.controls() : node.controls;
+      if (ctrls?.length) renderCapControls(container, ctrls, snapshot);
     } else if (node.kind === "divider" || node.kind === "sectionTitle") {
       rmAppendDecor(container, node);
     } else {

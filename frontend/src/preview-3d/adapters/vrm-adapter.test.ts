@@ -222,7 +222,7 @@ function makeCtx() {
   };
 }
 
-/** 从 built 对象读取注入的菜单项（render 双参对齐 PreviewMenuItemDef，严格逆变下单参不可赋） */
+/** 从 built 对象读取注入的菜单项（renderCustom 双参对齐声明式节点逃生舱） */
 function registeredItems(built: { menuItems?: Array<{ id: string; kind: string; dockGroup?: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void }> | null }): Array<{
   id: string;
   kind: string;

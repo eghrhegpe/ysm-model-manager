@@ -4,20 +4,10 @@
 // 渲染与 handler 见 preview-menu.ts；测试遍历本表 + 适配器真实注入项断言结构与
 // dock 渲染（preview-menu-items.test.ts，对齐 MikuMikuAR 声明式菜单测试范式）。
 //
-// 方案 A 收尾：CORE_MENU_ITEMS 已统一为 PreviewMenuNode[]，
-// 适配器注入也是 PreviewMenuNode[]——整条链路统一 Node，不再有 PreviewMenuItemDef 往返转换。
+// 整条链路已统一 PreviewMenuNode（方案 A 收尾）：CORE_MENU_ITEMS 与适配器注入
+// 都是 PreviewMenuNode[]，不再有 PreviewMenuItemDef 往返转换。
 
 import type { PreviewMenuNode } from "./node-types.ts";
-//
-// ⚠️ 与声明式节点类型的映射（方案 A 第 1 步，见 preview-menu-node-types.ts）：
-// 本文件 PreviewMenuItemDef 是 flat 面板项（dock 壳用）；未来声明式渲染器按
-// preview-menu-node-types.ts 的 PreviewMenuNode（含 children / visibleWhen / control）
-// 递归渲染。两者关系：
-//   PreviewMenuItemDef.render  → PreviewMenuNode.renderCustom（逃生舱）
-//   PreviewMenuItemDef.run     → PreviewMenuNode.action
-//   PreviewMenuItemDef.dockGroup / sharedOnly / requiresEnvironment → 节点同名字段
-// 迁移路径：新菜单项优先写成 PreviewMenuNode（可嵌套、可守卫），存量 flat 项经
-// 逃生舱过渡，逐步把高频面板（模型信息/截图/骨骼）迁成数据节点。
 //
 // 能力驱动显示（用户 2026-08-16 决策 + 2026-08-19 环境拆组）：
 // - 有骨骼/模型工具（适配器注入 model 组项）→ 显示「🧍 模型」
@@ -27,34 +17,7 @@ import type { PreviewMenuNode } from "./node-types.ts";
 //    后续地面/水面系统继续膨胀也不挤占场景组）
 // - 有场景/相机能力（shared 模式）→ 显示「🎛️ 场景」
 
-export type PreviewMenuItemKind = "panel" | "action" | "divider";
 export type PreviewMenuGroupId = "model" | "motion" | "env" | "scene" | "settings";
-
-export interface PreviewMenuItemDef {
-  /** 稳定 id；渲染为 data-testid="preview-<id>"，必要时保留 legacyTestId 兼容既有 e2e 选择器 */
-  id: string;
-  icon: string;
-  /** i18n 键；缺失时回退 fallback（tr 兜底，杜绝原始键名显示） */
-  labelKey: string;
-  /** i18n 缺失时的回退文案 */
-  fallback: string;
-  kind: PreviewMenuItemKind;
-  danger?: boolean;
-  /** 仅 shared 模式显示（self 模式相机由适配器底部导航提供，避免双份） */
-  sharedOnly?: boolean;
-  /** self 模式隐藏（相机由适配器自驱时 camBridge 控件语义错位，如 camera 视图项） */
-  hideInSelfMode?: boolean;
-  /** 仅环境能力可用（skyCap/groundCap 任一非空）时显示 */
-  requiresEnvironment?: boolean;
-  /** 归属底栏分组（🧍 模型 / 💃 动作 / 🌍 场景）；无 dockGroup 的项只出现在设置聚合视图 */
-  dockGroup?: PreviewMenuGroupId;
-  /** 面板型保留 legacy data-testid（兼容既有 e2e 选择器，如 preview-close-3d / env-menu-btn / ysm-roles-entry） */
-  legacyTestId?: string;
-  /** panel 型：子面板填充（适配器注入的专属项必需；core 固定项走 fillers 映射） */
-  render?: (list: HTMLElement, closePopup: () => void) => void;
-  /** action 型：点击执行（适配器注入的专属项必需；core 固定项走 runners 映射） */
-  run?: () => void;
-}
 
 /** 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） */
 export interface PreviewMenuGroupDef {

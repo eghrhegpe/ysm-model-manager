@@ -208,6 +208,12 @@ function renderPreviewSchemaContent(
       list.appendChild(row);
       continue;
     }
+    if (node.kind === "controls") {
+      // 声明式节点直持 cap 控件组：委托 renderCapControls（与 renderMenu 同通道，防两处分叉）
+      const ctrls = typeof node.controls === "function" ? node.controls() : node.controls;
+      if (ctrls?.length) renderCapControls(list, ctrls, previewSnapshot());
+      continue;
+    }
     const fn = node.renderCustom;
     if (fn) {
       fn(list, hideMenu);

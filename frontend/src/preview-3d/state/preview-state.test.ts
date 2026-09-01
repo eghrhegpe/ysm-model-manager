@@ -23,12 +23,28 @@ import {
   collectSettingsCapControls,
   buildSettingsControls,
   buildSettingsSchema,
+  buildLightingSchema,
+  buildShadowSchema,
+  buildPostprocessingSchema,
 } from "../menu/settings.ts";
 import type { PreviewMenuCtx } from "../menu/core.ts";
+import { renderMenu } from "../menu/render.ts";
 import { collectVisiblePredicates } from "../menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "../render-budget.ts";
+
+/** renderMenu 最小 deps 桩（本文件只渲染控件节点，不触发 folder/panel 导航） */
+const renderMenuStubDeps = {
+  makeRow: (n: { id: string; icon?: string }) => {
+    const d = document.createElement("div");
+    d.dataset.testid = "preview-" + n.id;
+    return d;
+  },
+  makePanelView: () => ({ title: "", render: () => {} }),
+  menu: { navigate: () => {} } as never,
+  actionCtx: { toast: () => {}, closeAllOverlays: () => {} },
+};
 
 /** 最小 fake cap：仅实现状态层会探到的开关语义 + 自报控件 */
 function makeFakeCap(
@@ -332,7 +348,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     const presetNode = nodes.find((n) => n.id === "settings-perf-preset")!;
     expect(presetNode).toBeDefined();
     const list = document.createElement("div");
-    (presetNode as { renderCustom: (l: HTMLElement) => void }).renderCustom(list);
+    renderMenu(list, [presetNode], renderMenuStubDeps);
     const sel = list.querySelector("select") as HTMLSelectElement | null;
     expect(sel).not.toBeNull();
     expect(sel!.options.length).toBe(4);
@@ -368,7 +384,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     )!;
     const renderRowIds = (): string[] => {
       const list = document.createElement("div");
-      (qualityNode as { renderCustom: (l: HTMLElement) => void }).renderCustom(list);
+      renderMenu(list, [qualityNode], renderMenuStubDeps);
       return [...list.querySelectorAll("[data-testid^='cap-']")].map((el) =>
         (el as HTMLElement).dataset.testid!.replace(/^cap-/, ""),
       );
@@ -402,6 +418,26 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
   it("回归红线：横切控件 id 与 cap 自报 id 不撞车", () => {
     const ids = buildSettingsControls().map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("cap schema 面板为 controls 声明式节点（惰性函数引用，非 custom 套壳）", () => {
+    // 灯光/阴影/后处理面板不再用 renderCustom 套壳手调 renderCapControls——
+    // 直接是 controls 节点，渲染委托唯一控件渲染器（AGENTS.md「禁止手写 3d 菜单」）。
+    mountCaps(
+      makeFakeCap("light"),
+      makeFakeCap("shadow"),
+      makeFakeCap("postprocessing"),
+    );
+    const ctx = { getCap: () => null } as unknown as PreviewMenuCtx;
+    const lighting = buildLightingSchema(ctx);
+    expect(lighting[0]!.kind).toBe("controls");
+    expect(typeof (lighting[0] as { controls?: unknown }).controls).toBe("function");
+    const shadow = buildShadowSchema(ctx);
+    expect(shadow[0]!.kind).toBe("controls");
+    expect(typeof (shadow[0] as { controls?: unknown }).controls).toBe("function");
+    const postproc = buildPostprocessingSchema(ctx);
+    expect(postproc[0]!.kind).toBe("controls");
+    expect(typeof (postproc[0] as { controls?: unknown }).controls).toBe("function");
   });
 });
 

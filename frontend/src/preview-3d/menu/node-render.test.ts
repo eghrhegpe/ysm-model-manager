@@ -377,4 +377,74 @@ describe("renderMenu 新 kind", () => {
     expect(row.querySelector(".slide-label")).toBeNull();
     expect(row.querySelector('input[type="range"]')).not.toBeNull();
   });
+
+  it("controls: 声明式节点直持 MenuControlDef[]，委托 renderCapControls 渲染（cap-xxx testid）", () => {
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "lighting",
+        kind: "controls",
+        controls: [
+          {
+            id: "light-intensity",
+            kind: "slider",
+            labelKey: "preview.lightIntensity",
+            fallback: "强度",
+            getValue: () => 1,
+            setValue: () => {},
+            slider: { min: 0, max: 2, step: 0.01 },
+          },
+          {
+            id: "light-color",
+            kind: "color",
+            labelKey: "preview.lightColor",
+            fallback: "颜色",
+            getValue: () => 0xffffff,
+            setValue: () => {},
+          },
+        ],
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    // cap 控件 testid 前缀 cap-（renderCapControls 口径；slider/toggle/select/button 有，
+    // color/timeline/histogram/preset-thumb 为既有未覆盖，按输入类型断言）
+    expect(container.querySelector('[data-testid="cap-light-intensity"]')).not.toBeNull();
+    expect(container.querySelector('input[type="range"]')).not.toBeNull();
+    expect(container.querySelector('input[type="color"]')).not.toBeNull();
+  });
+
+  it("controls: 惰性函数引用每次渲染重取（cap 后挂载可见，非构建期冻结）", () => {
+    let mounted = false;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "quality",
+        kind: "controls",
+        controls: () => (mounted
+          ? [{
+              id: "pp-enabled",
+              kind: "toggle",
+              labelKey: "preview.pp",
+              fallback: "后处理",
+              getValue: () => false,
+              setValue: () => {},
+            }]
+          : []),
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    expect(container.querySelector('[data-testid="cap-pp-enabled"]')).toBeNull();
+    mounted = true;
+    renderMenu(container, nodes, makeDeps() as any);
+    expect(container.querySelector('[data-testid="cap-pp-enabled"]')).not.toBeNull();
+  });
+
+  it("controls: controls 为空数组/空函数时不渲染任何行（无副作用）", () => {
+    const nodes: PreviewMenuNode[] = [
+      { id: "empty", kind: "controls", controls: [] },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    expect(container.childElementCount).toBe(0);
+  });
 });

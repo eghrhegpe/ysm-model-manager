@@ -1,10 +1,8 @@
 // preview-menu-node-types.test.ts — [doc:adr-093-ysm] 声明式节点类型契约测试
-// 方案 A 第 1 步：MenuNode 类型层移植（纯类型 + 纯函数，零 DOM/零 three 依赖）。
 // 断言：
-//   1. 类型形状：PreviewMenuNode 与 PreviewMenuItemDef 字段映射齐全（compile-time + 结构契约）
-//   2. folder 递归：collectPreviewLeafNodes 展平嵌套，isPreviewFolderNode 判 folder
-//   3. id 唯一性：collectPreviewNodeIds 供全局唯一契约
-//   4. 迁移样例：一个「声明式 YSM 详情树」样例能被正确展平、字段合法（声明式形状的活样本）
+//   1. folder 递归：collectPreviewLeafNodes 展平嵌套，isPreviewFolderNode 判 folder
+//   2. id 唯一性：collectPreviewNodeIds 供全局唯一契约
+//   3. 迁移样例：一个「声明式 YSM 详情树」样例能被正确展平、字段合法（声明式形状的活样本）
 import { describe, it, expect } from "vitest";
 import {
   isPreviewFolderNode,
@@ -12,10 +10,6 @@ import {
   collectPreviewNodeIds,
   type PreviewMenuNode,
 } from "./node-types.ts";
-import {
-  type PreviewMenuItemDef,
-  type PreviewMenuItemKind,
-} from "./defs.ts";
 
 /** 迁移样例：YSM 角色详情（未来目标态——详情=模型信息面板本体 + 动作折叠区） */
 const ysmDetailTree: PreviewMenuNode[] = [
@@ -94,30 +88,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
   },
 ];
 
-describe("PreviewMenuNode 类型契约（方案 A 第 1 步）", () => {
-  it("字段映射：PreviewMenuItemDef 的每个字段都能在 PreviewMenuNode 表达", () => {
-    // compile-time 探针：flat 项可安全赋值为节点（PreviewMenuItemDef 是 PreviewMenuNode 子集）
-    const flat: PreviewMenuItemDef = {
-      id: "probe",
-      icon: "🧪",
-      labelKey: "probe.label",
-      fallback: "探针",
-      kind: "panel" as PreviewMenuItemKind,
-      dockGroup: "model",
-      sharedOnly: false,
-      requiresEnvironment: false,
-      render: (list: HTMLElement): void => {
-        list.textContent = "probe";
-      },
-    };
-    // 结构契约：flat 项 → 节点（无 children 时是叶）
-    const node: PreviewMenuNode = flat as unknown as PreviewMenuNode;
-    expect(node.kind).toBe("panel");
-    expect(node.dockGroup).toBe("model");
-    expect(node.requiresEnvironment).toBe(false);
-    expect(Array.isArray(node.children)).toBe(false);
-  });
-
+describe("PreviewMenuNode 类型契约", () => {
   it("folder 判定：kind==='folder' 或有 children 均视为可下钻", () => {
     expect(isPreviewFolderNode(ysmDetailTree[0])).toBe(true);
     const leaf: PreviewMenuNode = { id: "l", kind: "panel" };

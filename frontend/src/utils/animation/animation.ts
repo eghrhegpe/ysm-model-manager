@@ -82,6 +82,13 @@ interface RawKeyframeObject {
  * Molang 常量折叠：尝试从 Molang 字符串中提取纯数字。
  * 处理 "q.life_time * 0 + 30" → 30, "math.sin(0) * 0 + 45" → 45
  * 只处理「变量乘 0 后加减常数」的窄模式，含真实变量时返回 null。
+ *
+ * ⚠️ 勿扩展正则覆盖面：bench 实证（bench-fold-molang.ts，2026-09-01）
+ * 折叠 ~578ns vs compileMolang ~625ns，收益 ≈ 0；molangjs parse 本身便宜，
+ * 折叠无敌人可打，扩展正则只会徒增维护成本。
+ * 保留理由仅剩「跳过闭包创建」；未来重构解析链时整体移除，由 compileMolang 统一承接。
+ * 详见 docs/knowledge/animation-system.md
+ *
  * 导出供 bench 实证编译开销（bench-fold-molang.ts），解析链外勿调用。
  */
 export function foldMolangConstant(str: unknown): number | null {

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-01T05:48:52.680Z",
+  "generated": "2026-09-01T23:35:05.131Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -51,7 +51,9 @@
     "src/ui/ui-slide-menu-styles.ts|exports|slideMenuCss",
     "src/ui/ui-slide-menu-styles.ts|exports|slideMenuStyleSheet",
     "src/utils/animation/animation-controller.ts|types|ControllerTransition",
+    "src/utils/animation/animation.ts|exports|foldMolangConstant",
     "src/utils/animation/animation.ts|types|MolangAxes",
+    "src/utils/animation/bench-fold-molang.ts|file|src/utils/animation/bench-fold-molang.ts",
     "src/utils/animation/molang-lib/molang-prism-syntax.js|file|src/utils/animation/molang-lib/molang-prism-syntax.js",
     "src/utils/dom/dialogs/modal.ts|exports|VIEW_TESTIDS",
     "src/utils/dom/dialogs/modal.ts|types|ModalPickerItem",

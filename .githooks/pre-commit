@@ -64,22 +64,9 @@ snap_docs() {
 trap 'rm -f "$GEN_SNAP" "$GEN_SNAP_AFTER"' EXIT
 snap_docs "$GEN_SNAP"
 echo "[pre-commit] 文档自动同步..."
-GEN_CMDS='gen-docs-index.ts
-event-graph.ts
-gen-knowledge-index.ts
-build-novel-index.ts
-gen-project-map.ts
-gen-vitepress-sidebar.ts
-gen-knowledge-h1.ts
-gen-knowledge-symbols.ts
-gen-knowledge-adr.ts
-gen-knowledge-tests.ts
-gen-routes.ts
-gen-routes-quick.ts
-gen-cli-doc.ts
-gen-cli-completion.ts
-generate-locale-json.ts'
-echo "$GEN_CMDS" | while IFS= read -r line; do
+# ADR-151 项 6：gen 清单收敛到 scripts/_lib/gen-cmds.ts 单一事实源（TS 侧 import / sh 侧逐行消费），
+# 取代内联 15 个清单——避免与 commit-with-check 内联清单漂移（原漂移 4 个命令）。
+node scripts/_lib/gen-cmds.ts | while IFS= read -r line; do
   [ -z "$line" ] && continue
   # shellcheck disable=SC2086（有意分词以携带 --file 等参数）
   node scripts/$line >/dev/null 2>&1 || echo "⚠️  scripts/$line 执行失败（不阻断）"

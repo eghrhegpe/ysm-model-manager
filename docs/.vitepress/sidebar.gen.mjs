@@ -718,6 +718,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-151：commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit",
+        "link": "/adr/ADR-151-commit-temp-index-concurrency"
+      },
+      {
         "text": "ADR-150：pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固)",
         "link": "/adr/ADR-150-pre-commit-git-add-u-docs-p2-2"
       },
@@ -1828,6 +1832,10 @@ export const autoSidebar = [
           {
             "text": "动画系统 animation",
             "link": "/knowledge/animation-system"
+          },
+          {
+            "text": "提交脚本 commit-with-check",
+            "link": "/knowledge/commit_with_check"
           },
           {
             "text": "核心工具函数 core-utils",

@@ -718,6 +718,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-152：gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收）",
+        "link": "/adr/ADR-152-gen-stage-concurrency-root"
+      },
+      {
         "text": "ADR-151：commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit",
         "link": "/adr/ADR-151-commit-temp-index-concurrency"
       },

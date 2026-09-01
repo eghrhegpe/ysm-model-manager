@@ -60,7 +60,7 @@ node scripts/commit-with-check.ts -m "feat: xxx" --keep-index      # 提交后�
 - 临时索引成功/失败两路径均清理（`.git` 无 `index.ymm.*` 残留）
 - `--files` 白名单路径内容取工作区，不依赖主 index 已暂存
 - **中断残留边界**：进程被 `kill -9` / 工具层强杀时 `finally` 无法执行——临时 index 恒残留；若 git 子进程已写 ref 则 HEAD 推进（commit 落地）、未写完则丢弃。复现：`node scripts/reproduce-commit-interrupt.ts`（双变体：A 未完成被中断 / B 已完成清理未跑，即实战场景）。启动时清扫遗留 `index.ymm.*`（按 pid 存活判定）为待落地对策
-- **并发卷带边界（ADR-151 续，2026-09-01 实证）**：裸 `git commit -- <paths>`（`--only`）会运行 pre-commit 钩子；钩子的 snap_docs 快照 diff 用「mtime/size 变化」判定 gen 产物，**并发下失效**——并行会话手改的卡恰在快照窗口内被 touch → 误判 gen 产物 → stage 进 index → 被 `--only` 提交卷带（实证 fbx-cli-pipeline.md / frontend_test_audit.md 卷进 e96b47e3）。修复：stage 判定下沉 `_lib/gen-stage.ts`（stage = 快照变化 ∩ 非并行 dirty，`??` 按 gen 前后存在性区分），契约测试 `tests/test_gen_stage.ts` 守护。**并行会话活跃时禁用裸 `git commit -- <paths>`，一律走 commit-with-check（临时 index + gen-stage 双隔离）**
+- **并发卷带边界（ADR-151 续，2026-09-01 实证）**：裸 `git commit -- <paths>`（`--only`）会运行 pre-commit 钩子；钩子的 snap_docs 快照 diff 用「mtime/size 变化」判定 gen 产物，**并发下失效**——并行会话手改的卡恰在快照窗口内被 touch → 误判 gen 产物 → stage 进 index → 被 `--only` 提交卷带（实证 fbx-cli-pipeline.md / frontend_test_audit.md 卷进 e96b47e3）。修复：stage 判定下沉 `_lib/gen-stage.ts`（stage = 快照变化 ∩ 非并行 dirty，`??` 按 gen 前后存在性区分），契约测试 `tests/test_gen_stage.ts` 守护。**并行会话活跃时禁用裸 `git commit -- <paths>`，一律走 commit-with-check（临时 index + gen-stage 双隔离）**。实证验收：`b659efae` 门禁 19/19 PASS、outOfScope=`[]`、interleaved=false。
 
 ## 相关
 

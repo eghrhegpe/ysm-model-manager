@@ -32,7 +32,7 @@ quick_risk_lines:
 ## 核心职责
 
 - `snap_docs()`：gen 前/后遍历 `docs/`、`frontend/public/locales/`、`completions/` 记录 `(mtime,size,path)` 快照；**node 优先**生成（跨平台稳），`find -printf` 仅 GNU 快路径
-- 精确 stage：diff 快照取 `>` 侧（新增/变化文件）逐一 `git add`，无 diff 无副作用
+- 精确 stage：diff 快照取 `>` 侧（新增/变化文件）逐一 `git add`，无 diff 无副作用；**并发下失效修复**（2026-09-01）：stage 判定下沉 `_lib/gen-stage.ts`（stage = 快照变化 ∩ 非并行 dirty，`??` 按 gen 前后存在性区分），契约测试 `tests/test_gen_stage.ts` 守护
 - 兜底收窄（ADR-150）：`GEN_SNAP` 缺失时**不** `git add -u docs/`，仅置 `GEN_SKIPPED=1` 跳过并告警——防止吞并行会话未提交漂移（实证 `ebb921a5` 误吞 96 张知识卡）
 - drift `--affected` 秒级接入（ADR-087）：取本次 stage 文件查知识卡漂移，不自动 stage
 - 智能 stage：改源码自动 stage 同名 `.test.ts`（防误 stage）

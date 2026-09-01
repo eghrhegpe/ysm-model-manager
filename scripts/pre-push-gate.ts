@@ -426,8 +426,16 @@ async function main() {
 
     // npm 三件套并行优化：vite build ∥ tsc --noEmit，vitest 串行在后
     // （vitest 是重活儿，独占资源更稳；build 与 tsc 无依赖，墙钟减半）
-    const tscBin = path.join(ROOT, 'frontend', 'node_modules', '.bin', process.platform === 'win32' ? 'tsc.cmd' : 'tsc');
-    const tscExists = fs.existsSync(tscBin);
+    // tsc 路径解析：优先 frontend/node_modules（独立装），回退根 node_modules
+    // （npm workspace hoisting 场景——根 package.json workspaces 含 frontend，
+    // typescript 在根 devDependencies，装到根 node_modules/.bin/tsc）。
+    const tscName = process.platform === 'win32' ? 'tsc.cmd' : 'tsc';
+    const tscCands = [
+      path.join(ROOT, 'frontend', 'node_modules', '.bin', tscName),
+      path.join(ROOT, 'node_modules', '.bin', tscName),
+    ];
+    const tscBin = tscCands.find((p) => fs.existsSync(p));
+    const tscExists = !!tscBin;
     const t0 = Date.now();
     const [fb, tscResult] = await Promise.all([
       shAsync('npx vite build', { cwd: path.join(ROOT, 'frontend') }),

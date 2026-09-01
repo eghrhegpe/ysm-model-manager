@@ -1812,7 +1812,7 @@ export const autoSidebar = [
             "link": "/knowledge/mount-preview-module-singleton-race"
           },
           {
-            "text": "mount3D-584-giant",
+            "text": "mount3D 巨函数现状（2026-08-27 已部分拆分）",
             "link": "/knowledge/mount3d-584-giant"
           },
           {

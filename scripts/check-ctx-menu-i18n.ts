@@ -18,7 +18,10 @@
  *   右键菜单契约关心的就是手写 key。注释里的 tr("menu.xxx") 示例也一并 strip，避免误报。
  *
  * 复用：ROOT 取自 _lib/scan-files.ts；参数解析用 _lib/parse-args.ts；zh-CN key
- * 提取正则与 i18n-check.ts 同源。零运行时依赖（仅 node:fs/path/url）。
+ * 提取正则与 i18n-check.ts 同源。零依赖（仅 node:fs/path/url）。
+ *
+ * 设计意图：把右键菜单「声明 ↔ handler ↔ i18n」三件套的 key 对齐盲区做成 CI
+ *           硬门禁，让「新增菜单项忘了写 zh-CN」在推送前被拦下而非静默回退英文。
  *
  * 用法：
  *   node scripts/check-ctx-menu-i18n.ts            # 文本报告（不阻断，打印缺失项）

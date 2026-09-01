@@ -264,6 +264,7 @@ async function main() {
       // 必须解析 --json 的 _summary 判定——与文件头「不得依赖退出码」契约对齐。
       let ok = r.rc === 0;
       let note = '';
+      let tail = '';
       try {
         const parsed = JSON.parse(r.out);
         const s = parsed._summary || parsed;
@@ -275,6 +276,12 @@ async function main() {
           .map(([k, v]) => `${k}=${v}`)
           .join(' ');
         if (cnt) note = cnt;
+        // 可观测性（2026-09-01）：FAIL 时 tail 优先用 _summary.warns_list 摘要——
+        // 缩进 JSON 的数组内容在 tail 截断下不可见，摘要进 _summary 让 FAIL 块直接可读。
+        // 无 warns_list（如 binding-check 等 issues 形态）回退原始输出尾部。
+        if (!ok && Array.isArray(s.warns_list) && s.warns_list.length) {
+          tail = `warns_list:\n${s.warns_list.map((w: string) => `  - ${w}`).join('\n')}`;
+        }
       } catch { /* 非 JSON 输出，退回 rc 判定 */ }
       // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
       // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
@@ -296,7 +303,12 @@ async function main() {
           }
         }
       }
-      record(tool, ok, { time: Date.now() - t0, note, tail: !ok ? r.out.trim().split('\n').slice(-12).join('\n') : '' });
+      record(tool, ok, {
+        time: Date.now() - t0,
+        note,
+        // warns_list 摘要优先（FAIL 可读性）；否则回退原始输出尾部
+        tail: !ok ? (tail || r.out.trim().split('\n').slice(-12).join('\n')) : '',
+      });
     }
   };
 
@@ -378,6 +390,23 @@ async function main() {
       tail: mOk ? '' : mh.out.trim().split('\n').slice(-4).join('\n'),
     });
     if (!mOk) blocked = true; // 菜单表违规阻断推送（硬错误：加错键/漏 i18n 会破坏菜单渲染）
+
+    // 右键菜单 i18n key 门禁（2026-09-01 新增）：menu-defs.ts / context-menu*-handlers.ts
+    // 里所有字面量 tr("key") 必须存在于 zh-CN 基准包，否则运行时静默回退英文。
+    // 与 check-menu-health 同口径——漏 i18n 破坏菜单文案契约，硬阻断。
+    const tC = Date.now();
+    const ci = await shAsync('node scripts/check-ctx-menu-i18n.ts --json');
+    let cz: any = null;
+    try { cz = JSON.parse(ci.out)._summary; } catch { /* parse fail */ }
+    const cOk = ci.rc === 0 && cz && cz.ok === true;
+    record('check-ctx-menu-i18n', cOk, {
+      time: Date.now() - tC,
+      note: cz === null ? '输出解析失败'
+        : (cOk ? `右键菜单 ${cz.total} 个 tr() key 全绿`
+          : `${cz.violations} 个 key 缺失（运行时静默回退英文）`),
+      tail: cOk ? '' : ci.out.trim().split('\n').slice(-8).join('\n'),
+    });
+    if (!cOk) blocked = true;
 
     // npm 三件套并行优化：vite build ∥ tsc --noEmit，vitest 串行在后
     // （vitest 是重活儿，独占资源更稳；build 与 tsc 无依赖，墙钟减半）
@@ -595,7 +624,13 @@ async function main() {
   if (gofmt && !gofmt.ok) {
     gofmtHint = 'gofmt 检出未格式化——gofmt -w 修复后 git add + git commit 重推。';
   }
-  logPush(`修复指引: 按上方 [FAIL] 项处理；${gofmtHint}紧急绕过: git push --no-verify`);
+  // 修复指引：script-hygiene FAIL（新脚本文件头不合规）→ 补 JSDoc 头字段（见 check-script-hygiene.ts 注释）
+  const hygiene = results.find((r) => r.label === 'check-script-hygiene.ts');
+  let hygieneHint = '';
+  if (hygiene && !hygiene.ok && hygiene.tail?.includes('文件头')) {
+    hygieneHint = 'script-hygiene：新脚本缺文件头字段——补「文件名+描述/依赖/用法/退出码/设计意图」后重推。';
+  }
+  logPush(`修复指引: 按上方 [FAIL] 项处理；${gofmtHint}${hygieneHint}紧急绕过: git push --no-verify`);
   logPush(PULL_HINT);
   return 1;
 }

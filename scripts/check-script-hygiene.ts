@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-script-hygiene.ts — scripts/ 工具脚本卫生检查（四口径，WARN 级不阻断）。
+ * check-script-hygiene.ts — scripts/ 工具脚本卫生检查（六口径）。
  *
  * 口径沉淀自 2026-08-04 全量审核，并扩展对齐两端 README 同款
  * 「脚本文件头规范（统一约定）」节（MikuMikuAR ↔ ysm-model-manager 共用）：
@@ -22,7 +22,7 @@
  *      import 了 parseArgs 却不消费 `args.unknown` 同样告警。
  *   6. 【2026-08-31 新增】孤儿脚本：未被流水线挂载（git 钩子 / pre-push-gate / Taskfile /
  *      Actions / package.json）、无 scripts/ 内脚本调用、文档无记录的脚本——化石风险，
- *      建议归档或补登记。判定内核来自 _lib/orphan-classify.ts（WARN 不阻断）。
+ *      建议归档或补登记。判定内核来自 _lib/orphan-classify.ts。
  *
  * 设计意图：让 MikuMikuAR 与 ysm-model-manager 共用一套 .mjs 文档约定可被机检、
  *           可自执行，把统一的「文件头规范」从纸面落到 CI/子代理可消费的卡点。
@@ -30,10 +30,12 @@
  *
  * 用法：
  *   node scripts/check-script-hygiene.ts           # 文本报告
- *   node scripts/check-script-hygiene.ts --json    # JSON（CI 用）
+ *   node scripts/check-script-hygiene.ts --json    # JSON（CI 用，_summary.warns_list 摘要前几条）
  *   node scripts/check-script-hygiene.ts --strict  # 有 WARN → 退出码 1
  *
  * 退出码：默认 0（提示工具）；--strict 且存在 WARN → 1。
+ * 注意：doctor / pre-push-gate 经 gate-config 挂 `--strict`（硬门禁）——
+ *       新脚本/改动脚本必须文件头合规；纯本机自查可不带 --strict。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -224,8 +226,11 @@ function main() {
   if (JSON_OUT) {
     // _summary.ok 对齐 --json 契约（pre-push-gate runTools 优先读 s.ok）：
     // 默认模式 WARN 不阻断 → ok=true（提示工具）；--strict 模式有 WARN 即不通过。
+    // warns_list：前 5 条 warn 摘要（pre-push-gate tail 展示用——JSON 缩进数组
+    // 在 tail 截断下看不到内容，摘要进 _summary 让 FAIL 块可读，2026-09-01 可观测性修复）。
     const ok = STRICT ? warns.length === 0 : true;
-    console.log(JSON.stringify({ _summary: { scripts: files.length, warns: warns.length, ok }, warns }, null, 2));
+    const warnsList = warns.slice(0, 5);
+    console.log(JSON.stringify({ _summary: { scripts: files.length, warns: warns.length, ok, warns_list: warnsList }, warns }, null, 2));
     if (STRICT && warns.length) process.exit(1);
     return;
   }

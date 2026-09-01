@@ -75,7 +75,8 @@ if (GATE_MODE) {
 } else {
   // 全量模式：编译 + 构建 + 文件 + 红线 + Git（全量体检）。
   // --strict 不再忽略（2026-08-17 门禁锐评 P2-4）：runTools 已解析 _summary 判定
-  // （i18n-check/auto-import 挂 --strict 硬门禁；orphan/boolean-naming/script-hygiene
-  // 为审计类默认报告数量、退出码恒 0——与 deadcode/redlines 基线债务同口径：推送后修）。
+  // （i18n-check/auto-import/script-hygiene 挂 --strict 硬门禁——新脚本必须文件头合规；
+  // orphan/boolean-naming 为审计类默认报告数量、退出码恒 0——与 deadcode/redlines
+  // 基线债务同口径：推送后修。2026-09-01 对齐注释与 gate-config 实际挂载）。
   delegate(['--all', '--dry-run']);
 }

@@ -230,6 +230,9 @@ func (a *App) ReadFileBytesBatchWithMeta(paths []string) map[string]ReadFileMeta
 		meta ReadFileMeta
 	}
 	metas := conc.Parallel(paths, func(_ int, p string) (fileMeta, bool) {
+		if !a.isPathInRootOrSelf(p) {
+			return fileMeta{}, false
+		}
 		data, hash := a.readFileWithHash(p)
 		if data == nil {
 			return fileMeta{}, false

@@ -7,6 +7,7 @@ const idbMock = (globalThis as unknown as {
     idbGet: Mock;
     idbSet: Mock;
     idbKeys: Mock;
+    idbGetAll: Mock;
     idbDel: Mock;
     _store: Map<string, unknown>;
   };
@@ -470,6 +471,29 @@ describe("selectLocalRepo — FSA 授权本地仓库（ADR-049 能力门控缺�
   it("环境无 showDirectoryPicker → reject WebUnsupportedError（fail-fast 明确报错）", async () => {
     delete (window as { showDirectoryPicker?: unknown }).showDirectoryPicker;
     await expect(selectLocalRepo()).rejects.toBeInstanceOf(WebUnsupportedError);
+  });
+
+  it("用户取消选择（AbortError）→ 静默返回 {ok:false}，不抛错", async () => {
+    Object.defineProperty(window, "showDirectoryPicker", {
+      value: vi.fn(async () => {
+        const e = new DOMException("用户取消了选择", "AbortError");
+        throw e;
+      }),
+      writable: true,
+      configurable: true,
+    });
+    await expect(selectLocalRepo()).resolves.toEqual({ ok: false, imported: 0, failed: 0, dir: "" });
+  });
+
+  it("选择器真实失败（非 AbortError）→ 仍向上抛（UI 显示友好错误）", async () => {
+    Object.defineProperty(window, "showDirectoryPicker", {
+      value: vi.fn(async () => {
+        throw new Error("picker broken");
+      }),
+      writable: true,
+      configurable: true,
+    });
+    await expect(selectLocalRepo()).rejects.toThrow("picker broken");
   });
 });
 

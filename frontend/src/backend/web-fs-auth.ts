@@ -133,13 +133,27 @@ async function _collectModelFiles(
 /**
  * 网页版授权本地仓库目录：showDirectoryPicker → 递归扫主文件 → importWebFiles 落 IDB。
  * 必须在用户手势中调用（FSA 要求）。无 FSA 能力时抛明确错误。
+ * 用户取消选择（AbortError）→ 静默返回 {ok:false,...}（「取消 = 无操作」，与桌面
+ * 文件选择取消一致；friendlyError 不识别 AbortError，若抛错会显示英文原文错误）。
  * 返回 { ok, imported, failed, dir }，dir 为授权目录名（供 UI 展示状态）。
  */
 export async function selectLocalRepo(): Promise<{ ok: boolean; imported: number; failed: number; dir: string }> {
   if (typeof (window as { showDirectoryPicker?: unknown }).showDirectoryPicker !== "function") {
     throw new WebUnsupportedError(t("webFs.fsaUnsupported"));
   }
-  const handle = (await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker());
+  let handle: FileSystemDirectoryHandle;
+  try {
+    handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
+  } catch (err) {
+    // 用户取消选择框：浏览器抛 AbortError（DOMException name=AbortError）。静默返回
+    // 「无操作」，不向 UI 抛错——取消不是失败，也不该显示 friendlyError 的英文原文
+    const name = (err as { name?: unknown })?.name;
+    if (name === "AbortError") {
+      return { ok: false, imported: 0, failed: 0, dir: "" };
+    }
+    // 其他选择器失败（权限被拒/浏览器异常）→ 真实失败，向上抛（UI 显示友好错误）
+    throw err;
+  }
   // R2 持久化：句柄结构化克隆落库，下次启动无手势 queryPermission 自愈免重选
   await saveFsaRootHandle(handle);
   return scanFsaHandle(handle);

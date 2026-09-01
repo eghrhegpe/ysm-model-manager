@@ -15,8 +15,8 @@ export const fileKey = (type: string, name: string, rel: string): string =>
 // 该类型主文件；.json 仅 ysm.json（IsYsmEntryJSON 口径）；.ysm/.zip 为 YSM 主文件
 // （多文件模型竞争时优先）。原实现只认 .ysm/.zip/ysm.json，蓝图/投影/MMD/VRC
 // 的 .nbt/.schematic/.litematic/.pmx/.pmd/.vrca/.vrm 全被归为辅助文件不显示。
-const MAIN_FILE_RANK_YSM = 3;
-const MAIN_FILE_RANK_JSON = 2;
+export const MAIN_FILE_RANK_YSM = 3;
+export const MAIN_FILE_RANK_JSON = 2;
 export const MAIN_FILE_RANK_TYPE = 1; // 其他类型主文件（注册表扩展名，.json 除外）
 export const MAIN_FILE_RANK_NONE = 0;
 

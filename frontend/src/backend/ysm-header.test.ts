@@ -19,6 +19,7 @@ const idbMock = (globalThis as unknown as {
     idbGet: Mock;
     idbSet: Mock;
     idbKeys: Mock;
+    idbGetAll: Mock;
     idbDel: Mock;
     _store: Map<string, unknown>;
   };

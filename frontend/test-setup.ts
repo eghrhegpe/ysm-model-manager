@@ -35,6 +35,11 @@ vi.hoisted(() => {
       idbKeys: vi.fn(async (_s: string, prefix: string) =>
         [...store.keys()].filter((k) => k.startsWith(prefix)),
       ),
+      idbGetAll: vi.fn(async (_s: string, prefix: string) =>
+        [...store.entries()]
+          .filter(([k]) => k.startsWith(prefix))
+          .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)),
+      ),
       idbDel: vi.fn(async (_s: string, k: string) => {
         store.delete(k);
       }),
@@ -45,9 +50,9 @@ vi.hoisted(() => {
 });
 vi.mock("./src/backend/idb.ts", () => {
   const m = (globalThis as Record<string, unknown>).__YSM_TEST_IDB__ as {
-    idbGet: unknown; idbSet: unknown; idbKeys: unknown; idbDel: unknown;
+    idbGet: unknown; idbSet: unknown; idbKeys: unknown; idbGetAll: unknown; idbDel: unknown;
   };
-  return { idbGet: m.idbGet, idbSet: m.idbSet, idbKeys: m.idbKeys, idbDel: m.idbDel };
+  return { idbGet: m.idbGet, idbSet: m.idbSet, idbKeys: m.idbKeys, idbGetAll: m.idbGetAll, idbDel: m.idbDel };
 });
 
 // 1. Wails runtime 全局阻断（测试环境无需真实 runtime；组件测试可省去各自 vi.mock）

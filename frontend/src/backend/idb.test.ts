@@ -7,7 +7,7 @@
 // 穿透修复，供 browser-adapter 系共享），此处显式 unmock 恢复真实实现（否则 22 用例全被 mock 吞）。
 vi.unmock("./idb.ts");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { __resetDBForTest, idbDel, idbGet, idbKeys, idbSet, openDB } from "./idb.ts";
+import { __resetDBForTest, idbDel, idbGet, idbGetAll, idbKeys, idbSet, openDB } from "./idb.ts";
 
 // MEMORY_MAX_KEYS=200 / MEMORY_MAX_BYTES=64MB（与 idb.ts 常量保持一致——此处验证驱逐行为）
 const MEMORY_MAX_KEYS = 200;
@@ -183,7 +183,12 @@ function makeFakeIDBWithTx(opts: { writeError?: Error } = {}): {
             onerror: null as (() => void) | null,
           };
           const next = () => {
-            req.result = i < keys.length ? { key: keys[i++], continue: () => setTimeout(next, 0) } : null;
+            if (i < keys.length) {
+              req.result = { key: keys[i], value: store.get(keys[i]), continue: () => setTimeout(next, 0) };
+              i++;
+            } else {
+              req.result = null;
+            }
             req.onsuccess?.();
           };
           setTimeout(next, 0);
@@ -283,7 +288,8 @@ describe("idb IDB 事务路径", () => {
         let i = 0;
         const req = { result: null as unknown, onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
         const next = () => {
-          req.result = i < keys.length ? { key: keys[i++], continue: () => setTimeout(next, 0) } : null;
+          req.result = i < keys.length ? { key: keys[i], value: store.get(keys[i]), continue: () => setTimeout(next, 0) } : null;
+          i++;
           req.onsuccess?.();
         };
         setTimeout(next, 0);
@@ -319,6 +325,38 @@ describe("idb IDB 事务路径", () => {
   it("put 失败（QuotaExceeded）→ 事务 abort → idbSet reject（不静默吞错）", async () => {
     makeFakeIDBWithTx({ writeError: new Error("QuotaExceededError") });
     await expect(idbSet("files", "dir:big", { data: new ArrayBuffer(8) })).rejects.toThrow("QuotaExceededError");
+  });
+
+  it("idbGetAll：前缀批量取值（key+value 成对、key 升序）", async () => {
+    makeFakeIDBWithTx();
+    await idbSet("files", "file:ysm/a/main.ysm", { size: 1 });
+    await idbSet("files", "file:ysm/a/tex/p.png", { size: 2 });
+    await idbSet("files", "file:ysm/b/other.ysm", { size: 3 });
+    await idbSet("files", "cfg:x", { n: 9 });
+    const rows = await idbGetAll("files", "file:ysm/");
+    // key 升序：a/main.ysm < a/tex/p.png < b/other.ysm
+    expect(rows.map(([k]) => k)).toEqual([
+      "file:ysm/a/main.ysm",
+      "file:ysm/a/tex/p.png",
+      "file:ysm/b/other.ysm",
+    ]);
+    expect(rows.map(([, v]) => (v as { size: number }).size)).toEqual([1, 2, 3]);
+  });
+
+  it("idbGetAll：前缀不命中 → 空数组（不抛错）", async () => {
+    makeFakeIDBWithTx();
+    await idbSet("files", "file:ysm/a/main.ysm", { size: 1 });
+    expect(await idbGetAll("files", "file:vrm/")).toEqual([]);
+  });
+
+  it("idbGetAll：内存降级路径（无 indexedDB）同语义", async () => {
+    // 未 stub indexedDB → 纯内存模式
+    await idbSet("files", "file:ysm/a/main.ysm", { size: 5 });
+    await idbSet("files", "file:ysm/b/x.ysm", { size: 6 });
+    await idbSet("files", "cfg:y", { n: 1 });
+    const rows = await idbGetAll("files", "file:ysm/");
+    expect(rows.map(([k]) => k)).toEqual(["file:ysm/a/main.ysm", "file:ysm/b/x.ysm"]);
+    expect(rows.map(([, v]) => (v as { size: number }).size)).toEqual([5, 6]);
   });
 });
 

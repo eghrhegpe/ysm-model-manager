@@ -25,7 +25,7 @@
 // │  §15 导入分组            → web-fs-import.ts                                   │
 // │  §16 binding 装配        → 下文    webFsBindings（Top 6 注册表驱动）           │
 // └──────────────────────────────────────────────────────────────────────────────┘
-import { idbGet, idbSet, idbKeys, idbDel } from "./idb.ts";
+import { idbGet, idbSet, idbKeys, idbDel, idbGetAll } from "./idb.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 import { t } from "../core/i18n/t.ts";
 import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
@@ -93,30 +93,60 @@ export async function scanWebModels(dir: string): Promise<ModelEntry[]> {
 
 /** 根目录扫描：每个模型组收敛为一条主文件 ModelEntry */
 async function scanWebModelGroups(type: string, root: string): Promise<ModelEntry[]> {
-  const keys = await idbKeys("files", `dir:${type}/`);
+  // P0-1 优化：原本每模型组 1 次 meta get + 1 次 file 前缀扫 + N 次 file get
+  // （N+1 串行事务，千级模型 ~2000+ 往返）。改为两次前缀批量操作收敛：
+  //   ① idbGetAll("dir:type/")   一次事务拿全部 dir key+value（含 addedAt meta）
+  //   ② idbGetAll("file:type/")  一次事务拿全部文件 key+value（含 size）
+  // 内存按组名收敛，主文件竞争 / 大小汇总在内存完成——总 IDB 事务数 O(1)。
+  const [dirRows, fileRows] = await Promise.all([
+    idbGetAll("files", `dir:${type}/`),
+    idbGetAll("files", `file:${type}/`),
+  ]);
+  const dirPrefix = `dir:${type}/`;
+  const filePrefix = `file:${type}/`;
+  // dir 值按完整 name 索引（key 升序 → name 有序）
+  const dirMeta = new Map<string, { name?: string; addedAt?: number }>();
+  for (const [k, v] of dirRows) {
+    const name = k.slice(dirPrefix.length, -1);
+    if (name) dirMeta.set(name, v as { name?: string; addedAt?: number });
+  }
+  // 文件行按「dir name 前缀」归组：文件 key = file:<type>/<name>/<rel>，
+  // name 可含多段路径（目录树），故以 dir name + "/" 为前缀匹配（一次遍历，O(文件)）
+  const filesByGroup = new Map<string, Array<[string, { size?: number }]>>();
+  const groupNames = [...dirMeta.keys()];
+  for (const [fk, fv] of fileRows) {
+    const rel = fk.slice(filePrefix.length);
+    // 找最长的 dir name 前缀（组名有序，取首个命中的最具体组——dir key 升序下
+    // 短组名在前，须取「最长匹配」而非首命中）
+    let bestGroup = "";
+    for (const name of groupNames) {
+      if (rel.startsWith(`${name}/`) && name.length > bestGroup.length) bestGroup = name;
+    }
+    if (!bestGroup) continue; // 孤儿文件（无对应 dir key）
+    const fileRel = rel.slice(bestGroup.length + 1);
+    const arr = filesByGroup.get(bestGroup);
+    if (arr) arr.push([fileRel, fv as { size?: number }]);
+    else filesByGroup.set(bestGroup, [[fileRel, fv as { size?: number }]]);
+  }
   const entries: ModelEntry[] = [];
-  for (const k of keys) {
-    const meta = await idbGet<{ name: string; addedAt: number }>("files", k);
-    const name = meta?.name ?? k.slice(`dir:${type}/`.length, -1);
+  for (const [name, meta] of dirMeta) {
     // 汇总该模型全部文件大小；Path/Name 指向主文件（含扩展名，与桌面
     // scanner.go:136 Name=filepath.Base(p) 含扩展名、Ext=原扩展名一致——
     // 否则 loader.ts 的 name.endsWith(ext) 过滤会恒失败使列表为空）。
     // 主文件优先选 .ysm/.zip/.json，避免多文件模型误选首文件（如 a_tex.png）
     // 导致解码失败；孤儿 dir key（文件被删）无主文件则跳过，避免 Path 以 / 结尾。
-    const fileKeys = await idbKeys("files", `file:${type}/${name}/`);
+    const groupRows = filesByGroup.get(name) ?? [];
     let size = 0;
     let mainRel = "";
     let mainRank = 0;
-    for (const fk of fileKeys) {
-      const f = await idbGet<{ size: number }>("files", fk);
+    for (const [fileRel, f] of groupRows) {
       size += f?.size ?? 0;
-      const rel = fk.slice(`file:${type}/${name}/`.length);
       // 嵌套 rel（含 /，如 tex/face.png）不参与主文件竞争：主文件必须在模型组根层
       // （对齐桌面目录模型：组根放 ysm.json/main.json，子目录为纹理/附属资源）
-      const rank = rel.includes("/") ? MAIN_FILE_RANK_NONE : mainFileRank(rel);
+      const rank = fileRel.includes("/") ? MAIN_FILE_RANK_NONE : mainFileRank(fileRel);
       if (rank > mainRank) {
         mainRank = rank;
-        mainRel = rel;
+        mainRel = fileRel;
       }
     }
     // 仅 .ysm / ysm.json 可作主文件（对齐桌面 IsYsmEntryJSON 白名单）；其余（如 a.json 动作文件）
@@ -826,15 +856,30 @@ async function webAnalyzeBedrockModelEntry(
 // ===== §8 路径解析（parseWebModelPath / parseWebModelDir）=====
 /**
  * /web/<type>/<name>/<rel> → 三段解析（多段 name 支持）。
- * name 与 rel 均可含 /，边界无法靠正则无歧义拆分——枚举 dir:<type>/ 前缀
- * 反向匹配「最长 dir name 前缀」（MikuMikuAR ListDirRecursive 两轮匹配模式）。
+ * name 与 rel 均可含 /，边界无法靠正则无歧义拆分——先按路径段前缀**精确探测**
+ * dir key（O(1) 单点 get，不扫全库），全 miss 才枚举 dir:<type>/ 前缀反向匹配
+ * 「最长 dir name 前缀」（MikuMikuAR ListDirRecursive 两轮匹配模式，旧语义兜底）。
  * rel 允许为空串（目录形态路径，如删除整组）。非 /web/ 前缀直接 null。
+ *
+ * P0-2 优化背景：绝大多数调用传的是 scanWebModels / listWebModelDirFiles 生成的
+ * 精确路径（name 边界即某段前缀），段前缀探测一次命中，零全库扫描；
+ * 模糊输入（如组内 rel 子树 /web/ysm/组R/tex）才回退全库反查。
  */
 async function parseWebModelPath(p: string): Promise<{ type: string; name: string; rel: string } | null> {
   const pm = parseWebPath(p);
   if (!pm) return null;
   const { type, rest } = pm;
   const prefix = `dir:${type}/`;
+  // ① 精确探测：从最长段前缀开始逐段试 dir key（name 可含多段路径）
+  const segments = rest.split("/");
+  for (let i = segments.length; i >= 1; i--) {
+    const name = segments.slice(0, i).join("/");
+    if (await idbGet("files", dirKey(type, name))) {
+      const rel = i === segments.length ? "" : segments.slice(i).join("/");
+      return { type, name, rel };
+    }
+  }
+  // ② 回退：全库 dir: 前缀反查（模糊输入，与旧实现同语义）
   const dirKeys = await idbKeys("files", prefix);
   let best = "";
   for (const dk of dirKeys) {

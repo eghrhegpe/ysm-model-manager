@@ -233,3 +233,38 @@ export async function idbKeys(store: Store, prefix: string): Promise<string[]> {
     req.onerror = () => reject(req.error);
   });
 }
+
+/** 前缀批量取值（P0-1：scanWebModels 单次事务收敛，替代 N 次单 key get）。
+ *  返回 [key, value][]，key 为 store 内完整 key（含前缀），按 key 升序（对齐
+ *  idbKeys 语义）。真实浏览器用 openCursor + IDBKeyRange 区间定位（O(命中)，
+ *  cursor 自带 key，无 getAll/getAllKeys 对齐问题）；node 测试 / 内存降级走
+ *  Map 过滤。 */
+export async function idbGetAll(store: Store, prefix: string): Promise<Array<[string, unknown]>> {
+  const db = await getIdb();
+  if (!db) {
+    const m = memoryStore.get(store);
+    if (!m) return [];
+    return [...m.entries()]
+      .filter(([k]) => k.startsWith(prefix))
+      .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  }
+  return new Promise<Array<[string, unknown]>>((resolve, reject) => {
+    const os = db.transaction(store, "readonly").objectStore(store);
+    const useRange = prefix !== "" && typeof IDBKeyRange !== "undefined";
+    const req = useRange
+      ? os.openCursor(IDBKeyRange.bound(prefix, prefix + "\uffff", false, false))
+      : os.openCursor();
+    const out: Array<[string, unknown]> = [];
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        const key = String(cursor.key);
+        if (key.startsWith(prefix)) out.push([key, cursor.value]);
+        cursor.continue();
+      } else {
+        resolve(out);
+      }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}

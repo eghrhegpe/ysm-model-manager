@@ -42,6 +42,7 @@ const idb = (globalThis as unknown as {
     idbGet: Mock;
     idbSet: Mock;
     idbKeys: Mock;
+    idbGetAll: Mock;
     idbDel: Mock;
     _store: Map<string, unknown>;
   };
@@ -948,5 +949,99 @@ describe("防御分支补刀", () => {
   it("FSA 包装：无 showDirectoryPicker → authState=unsupported / SelectLocalRepo reject", async () => {
     await expect(webFsBindings.GetFsaAuthState()).resolves.toBe("unsupported");
     await expect(webFsBindings.SelectLocalRepo()).rejects.toThrow();
+  });
+});
+
+// ===== parseWebModelPath 精确探测 + 回退语义（P0-2 优化回归锁）=====
+// 优化前：每个路径解析都全库扫 dir: 前缀（O(全库)）；优化后：先按路径段前缀
+// 精确探测 dir key（O(1)），全 miss 才回退全库反查（兼容"name 边界不确定"的模糊输入）。
+// 本 describe 经 ListAllFilePaths（listWebModelDirFiles → parseWebModelPath 链路）间接锁定：
+//   ① 精确路径 → 命中（不依赖全库反查路径，且命中 dir key 探测）
+//   ② 模糊子目录（组内 rel 子树）→ 回退语义仍工作
+//   ③ 模型组不存在 / 非 web → null（不误命中）
+describe("parseWebModelPath 精确探测 + 回退语义（经 ListAllFilePaths 间接）", () => {
+  it("精确模型路径：单段 name", async () => {
+    await seedGroup("ysm", "组P", { "main.ysm": enc.encode("x"), "tex/face.png": PNG });
+    expect(await webFsBindings.ListAllFilePaths("/web/ysm/组P")).toEqual([
+      "/web/ysm/组P/main.ysm",
+      "/web/ysm/组P/tex/face.png",
+    ]);
+  });
+
+  it("精确模型路径：多段 name（目录树，name=分类1/组Q）", async () => {
+    await seedGroup("ysm", "分类1/组Q", { "main.ysm": enc.encode("x") });
+    // 整组：name=分类1/组Q，rel=""
+    expect(await webFsBindings.ListAllFilePaths("/web/ysm/分类1/组Q")).toEqual([
+      "/web/ysm/分类1/组Q/main.ysm",
+    ]);
+  });
+
+  it("模糊子目录：rel 子树（组内 tex/）回退语义仍收敛", async () => {
+    await seedGroup("ysm", "组R", { "main.ysm": enc.encode("x"), "tex/face.png": PNG });
+    // /web/ysm/组R/tex 不是 dir key 精确边界 → 走回退反查，收敛到 rel=tex 子树
+    expect(await webFsBindings.ListAllFilePaths("/web/ysm/组R/tex")).toEqual([
+      "/web/ysm/组R/tex/face.png",
+    ]);
+  });
+
+  it("模型组不存在 / 非 web → 不误命中", async () => {
+    await seedGroup("ysm", "组S", { "main.ysm": enc.encode("x") });
+    expect(await webFsBindings.ListAllFilePaths("/web/ysm/不存在组")).toEqual([]);
+    expect(await webFsBindings.ListAllFilePaths("/notweb/x")).toEqual([]);
+  });
+
+  it("精确路径解析不依赖全库 dir 扫描（idbKeys 调用次数受控）", async () => {
+    // 灌入多个不相关模型组，确保精确路径命中走 O(1) 探测而非全库反查
+    await seedGroup("ysm", "无关A", { "a.ysm": enc.encode("x") });
+    await seedGroup("ysm", "无关B", { "b.ysm": enc.encode("x") });
+    await seedGroup("ysm", "目标组", { "main.ysm": enc.encode("x") });
+    const keysBefore = idb.idbKeys.mock.calls.length;
+    expect(await webFsBindings.ListAllFilePaths("/web/ysm/目标组")).toEqual([
+      "/web/ysm/目标组/main.ysm",
+    ]);
+    // 精确命中路径：不应触发 dir: 前缀全库扫描（仅 file: 前缀枚举）
+    const newCalls = idb.idbKeys.mock.calls.slice(keysBefore);
+    expect(newCalls.some((c) => c[1] === "dir:ysm/")).toBe(false);
+  });
+});
+
+// ===== scanWebModelGroups 批量收敛（P0-1 性能语义锁）=====
+// 优化后：根扫描 = 2 次前缀批量操作（dir + file，各 1 次事务），不再逐组 get /
+// 逐文件 get。本 describe 断言 IDB 调用次数受控，防回归到 N+1 串行查询。
+describe("scanWebModels 根扫描批量收敛（P0-1）", () => {
+  it("多模型组：idbGetAll 前缀批量取，不逐组逐文件 get", async () => {
+    await seedGroup("ysm", "组1", { "a.ysm": enc.encode("x"), "tex/p.png": PNG });
+    await seedGroup("ysm", "组2", { "b.ysm": enc.encode("y") });
+    await seedGroup("ysm", "分类1/组3", { "c.ysm": enc.encode("z"), "tex/q.png": PNG });
+    idb.idbKeys.mockClear();
+    idb.idbGet.mockClear();
+    idb.idbGetAll.mockClear();
+
+    const entries = await scanWebModels("/web/ysm");
+    expect(entries).toHaveLength(3);
+    expect(entries.map((e) => e.Name).sort()).toEqual(["a.ysm", "b.ysm", "c.ysm"]);
+
+    // 前缀批量：dir + file 各一次 getAll（或 keys）；不出现逐组/逐文件的 get
+    const getAllCalls = idb.idbGetAll.mock.calls;
+    expect(getAllCalls.some((c) => c[1] === "dir:ysm/")).toBe(true);
+    expect(getAllCalls.some((c) => c[1] === "file:ysm/")).toBe(true);
+    // 不逐文件 get（file: 前缀的 idbGet 调用应为 0——dir meta 也走 getAll 了）
+    const fileGets = idb.idbGet.mock.calls.filter((c) => String(c[1]).startsWith("file:"));
+    expect(fileGets).toHaveLength(0);
+  });
+
+  it("多段 name（目录树）分组正确：文件归入完整 name 组", async () => {
+    await seedGroup("ysm", "分类1/模型C", { "模型C.ysm": enc.encode("x") });
+    await seedGroup("ysm", "分类2/模型D", { "模型D.ysm": enc.encode("y") });
+    const entries = await scanWebModels("/web/ysm");
+    expect(entries).toHaveLength(2);
+    const paths = entries.map((e) => e.Path).sort();
+    expect(paths).toEqual([
+      "/web/ysm/分类1/模型C/模型C.ysm",
+      "/web/ysm/分类2/模型D/模型D.ysm",
+    ]);
+    // 分组不串：组1 的文件不落入组2
+    expect(entries.find((e) => e.Path.includes("模型C"))?.Size).toBe("x".length);
+    expect(entries.find((e) => e.Path.includes("模型D"))?.Size).toBe("y".length);
   });
 });

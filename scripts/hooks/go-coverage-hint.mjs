@@ -156,7 +156,7 @@ export function collectLowCoverage(root, changedFiles, threshold = GO_FUNC_COVER
 function getDiffCoverageFuncCount(ROOT) {
   const r = run(
     process.execPath,
-    [path.join(ROOT, 'scripts', 'check-go-diff-coverage.mjs'), '--suggest', '--staged', '--threshold', String(GO_FUNC_COVERAGE_THRESHOLD)],
+    [path.join(ROOT, 'scripts', 'check-go-diff-coverage.ts'), '--suggest', '--staged', '--threshold', String(GO_FUNC_COVERAGE_THRESHOLD)],
     { cwd: ROOT },
   );
   if (!r.ok) return 0;

@@ -52,7 +52,7 @@ export function buildBlock(files, start = BLOCK_START, end = BLOCK_END) {
     }),
   ];
   if (files.length > MAX_SUGGEST_FILES) {
-    lines.push(`- …其余 ${files.length - MAX_SUGGEST_FILES} 个见 node scripts/test-coverage-report.mjs --suggest`);
+    lines.push(`- …其余 ${files.length - MAX_SUGGEST_FILES} 个见 node scripts/test-coverage-report.ts --suggest`);
   }
   lines.push(end);
   return lines.join('\n');
@@ -60,7 +60,7 @@ export function buildBlock(files, start = BLOCK_START, end = BLOCK_END) {
 
 /** 调 test-coverage-report --suggest --json，取低于阈值的文件清单（永远不抛）。 */
 function getLowCoverageFiles(ROOT) {
-  const r = run(process.execPath, [path.join(ROOT, 'scripts', 'test-coverage-report.mjs'), '--suggest', '--json'], { cwd: ROOT });
+  const r = run(process.execPath, [path.join(ROOT, 'scripts', 'test-coverage-report.ts'), '--suggest', '--json'], { cwd: ROOT });
   if (!r.ok) return [];
   try {
     const j = JSON.parse(r.out);
@@ -73,7 +73,7 @@ function getLowCoverageFiles(ROOT) {
 /** 调 check-diff-coverage --suggest --staged，取本次暂存变更的「变更行覆盖率」建议区块。
  * 返回 📈 包裹的 Markdown 区块，或 null（无缺口/无数据，--suggest 永远 exit 0 不抛）。 */
 function getDiffCoverageBlock(ROOT) {
-  const r = run(process.execPath, [path.join(ROOT, 'scripts', 'check-diff-coverage.mjs'), '--suggest', '--staged'], { cwd: ROOT });
+  const r = run(process.execPath, [path.join(ROOT, 'scripts', 'check-diff-coverage.ts'), '--suggest', '--staged'], { cwd: ROOT });
   if (!r.ok) return null;
   const out = r.out.trim();
   if (!out) return null;

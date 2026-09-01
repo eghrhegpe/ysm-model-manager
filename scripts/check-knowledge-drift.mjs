@@ -271,7 +271,7 @@ function checkAgentsNoHandcraftedIndex() {
 }
 
 // ── 检查 5：代码→卡片覆盖盲区（WARN，不阻断）──
-// 适配自 MikuMikuAR check-doc-drift.mjs checkKnowledgeCoverage（INFO 级）。
+// 适配自 MikuMikuAR check-doc-drift.ts checkKnowledgeCoverage（INFO 级）。
 // 从「代码现实」出发：扫描源码目录下每个文件，确认至少 1 张知识卡的
 // source_files 引用了它（目录条目按前缀匹配，文件条目按精确匹配）。
 // 未覆盖 = 代码有模块、知识库无卡片 → WARN 提醒补登，不阻断 CI。

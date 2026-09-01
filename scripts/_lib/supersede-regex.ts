@@ -5,7 +5,7 @@
  * 原 YSM 版为不完整的半搬运（缺 RE_PARTIAL / RE_NEGATED_CLAIM，
  * RE_SUPERSEDED_BY 无 ** 粗体兼容，RE_NEGATED 仅覆盖推翻），已补全。
  *
- * 分层语义（与 gen-adr-supersede.mjs 的五层判别对应）：
+ * 分层语义（与 gen-adr-supersede.ts 的五层判别对应）：
  *   ① RE_SUPERSEDED_BY   状态行声明「被 ADR-NNN 取代/推翻」(已登记)
  *     RE_PARTIAL         局部限定词(部分/§N/条目 N)
  *   ② RE_CLAIM_A/B       正文「取代/废弃了 ADR-NNN」紧邻宣称(漏标告警)

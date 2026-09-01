@@ -2,7 +2,7 @@
 /**
  * cycles.ts — 有向图环检测共享核（DFS 三色标记）。
  *
- * 统一 check-circular.mjs（前端 ESM 文件级图）与 check-circular-go.mjs
+ * 统一 check-circular.ts（前端 ESM 文件级图）与 check-circular-go.ts
  * （Go 包级图）的 findCycles 算法——此前两脚本逐行复制同一 DFS 三色实现，
  * 出现「同一算法改两遍」风险。抽核后单点修 bug。
  *

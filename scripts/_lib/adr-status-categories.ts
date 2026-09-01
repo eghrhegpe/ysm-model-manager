@@ -16,7 +16,7 @@
 
 // ── 状态归一化（check-adr-health 兼容）──
 // 精确优先顺序：partial 必须早于 accepted（'Partially Accepted' 含 'Accepted' 子串）。
-// 与 check-adr-health.mjs normalizeState 同口径（已同步）。
+// 与 check-adr-health.ts normalizeState 同口径（已同步）。
 const _RE_PARTIAL = /部分采纳|部分|Partially Accepted|partially|🔄/;
 const _RE_DEPRECATED = /已废弃|废弃|Deprecated|deprecated|🧊/;
 const _RE_SUPERSEDED = /已取代|取代|Superseded|superseded|❌/;

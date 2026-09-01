@@ -152,7 +152,7 @@ function main() {
     [...lcFail, ...linkItems]));
 
   L.push(...section('🔴 ADR 体系问题（ERROR）',
-    '走 new-adr.mjs 重新叫号 / 在 docs/adr/README.md 登记表占号或删幽灵行，与磁盘对账',
+    '走 new-adr.ts 重新叫号 / 在 docs/adr/README.md 登记表占号或删幽灵行，与磁盘对账',
     adrItems));
 
   if (adrGaps.length) {
@@ -163,7 +163,7 @@ function main() {
   }
 
   L.push(...section('🟡 知识卡待补（WARN）',
-    '为未覆盖的源码文件补建知识卡（new-knowledge-card.mjs）并登记 source_files；其余按消息统一 H1/改指针',
+    '为未覆盖的源码文件补建知识卡（new-knowledge-card.ts）并登记 source_files；其余按消息统一 H1/改指针',
     kdWarn.map((m) => `- ${m}`)));
 
   // ── AI 下一步建议（最高优先级单条）──
@@ -175,7 +175,7 @@ function main() {
   } else if (broken.length) {
     advice = `修 ${broken.length} 条断链（见上方「断链」清单，逐条到 path#Ln 改路径或补目标）。`;
   } else if (adrErr.length) {
-    advice = `修 ${adrErr.length} 处 ADR 体系问题（撞号/漏登/幽灵），走 new-adr.mjs 与登记表对账。`;
+    advice = `修 ${adrErr.length} 处 ADR 体系问题（撞号/漏登/幽灵），走 new-adr.ts 与登记表对账。`;
   } else if (kdWarn.length) {
     advice = `处理 ${kdWarn.length} 条知识卡提醒（覆盖盲区 / H1 不一致 / 手写树），属非阻断建议，可排期补。`;
   } else if (adrGaps.length) {

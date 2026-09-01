@@ -355,7 +355,7 @@
 
 ```bash
 # 新建知识卡
-node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]
+node scripts/new-knowledge-card.ts <kind> <name> <category> <source_file> [--leaf]
 
 # 漂移检查
 node scripts/check-knowledge-drift.mjs

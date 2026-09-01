@@ -4,7 +4,7 @@ name: README 登记处对账 check-readme-index.mjs
 tier: architecture
 category: config
 source_files:
-  - scripts/check-readme-index.mjs
+  - scripts/check-readme-index.ts
 use_when:
   - README
   - 脚本索引

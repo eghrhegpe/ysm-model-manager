@@ -30,16 +30,16 @@ export type GateTool = string | {
  * 覆盖 Go + 前端 + 文档 + 脚本治理全栈；与域检查重叠的项（check-layering / binding-check）已剔除。
  */
 export const ALL_STATIC_TOOLS: GateTool[] = [
-  'check-doc-drift.mjs',
-  'check-adr-health.mjs',
-  'check-boolean-naming.mjs',
-  'check-circular.mjs',
-  'check-circular-go.mjs',
-  'check-orphan-exports.mjs',
+  'check-doc-drift.ts',
+  'check-adr-health.ts',
+  'check-boolean-naming.ts',
+  'check-circular.ts',
+  'check-circular-go.ts',
+  'check-orphan-exports.ts',
   'check-deadcode-baseline.mjs',
   'jscpd-go.mjs',
-  'check-tpl-refs.mjs',
-  'check-dynamic-import.mjs',
+  'check-tpl-refs.ts',
+  'check-dynamic-import.ts',
   { tool: 'auto-import.mjs', args: ['--strict'] },
   { tool: 'gen-project-map.mjs', args: ['--check'] },
   { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
@@ -48,15 +48,15 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: 'gen-routes-quick.mjs', args: ['--check'] },
   { tool: 'gen-cli-doc.mjs', args: ['--check'] },
   { tool: 'gen-cli-completion.mjs', args: ['--check'] },
-  { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
-  'check-proc-adoption.mjs',
-  'check-lib-adoption.mjs',
-  'check-workflow-refs.mjs',
-  'check-readme-index.mjs',
-  { tool: 'i18n-check.mjs', args: ['--strict'] },
-  'i18n-ui-check.mjs',
+  { tool: 'check-script-hygiene.ts', args: ['--strict'] },
+  'check-proc-adoption.ts',
+  'check-lib-adoption.ts',
+  'check-workflow-refs.ts',
+  'check-readme-index.ts',
+  { tool: 'i18n-check.ts', args: ['--strict'] },
+  'i18n-ui-check.ts',
   { tool: 'css-layer-check.mjs', args: ['--strict'] },
-  'check-toast-duration.mjs',
+  'check-toast-duration.ts',
 ];
 
 /**
@@ -64,8 +64,8 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
  * 仅含 docs/ 域相关项（link-checker / adr-check 由域检查覆盖，不在此处重复）。
  */
 export const DOC_STATIC_TOOLS: GateTool[] = [
-  'check-doc-drift.mjs',
-  'check-adr-health.mjs',
+  'check-doc-drift.ts',
+  'check-adr-health.ts',
   { tool: 'gen-project-map.mjs', args: ['--check'] },
   { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
   { tool: 'build-novel-index.mjs', args: ['--check'] },
@@ -73,10 +73,10 @@ export const DOC_STATIC_TOOLS: GateTool[] = [
   { tool: 'gen-routes-quick.mjs', args: ['--check'] },
   { tool: 'gen-cli-doc.mjs', args: ['--check'] },
   { tool: 'gen-cli-completion.mjs', args: ['--check'] },
-  { tool: 'check-script-hygiene.mjs', args: ['--strict'] },
-  'check-proc-adoption.mjs',
-  'check-workflow-refs.mjs',
-  'check-readme-index.mjs',
+  { tool: 'check-script-hygiene.ts', args: ['--strict'] },
+  'check-proc-adoption.ts',
+  'check-workflow-refs.ts',
+  'check-readme-index.ts',
 ];
 
 /**
@@ -85,7 +85,7 @@ export const DOC_STATIC_TOOLS: GateTool[] = [
  */
 export const DOC_EXTRA_SCRIPTS: GateTool[] = [
   'check-knowledge-drift.mjs',
-  'check-adr-drift.mjs',
+  'check-adr-drift.ts',
 ];
 
 /**
@@ -93,27 +93,27 @@ export const DOC_EXTRA_SCRIPTS: GateTool[] = [
  * 与 ALL_STATIC_TOOLS 分工：后者全量扫描，此项增量门禁——只拦本次变更引入的新违规。
  */
 export const FRONTEND_STATIC_TOOLS: GateTool[] = [
-  'check-circular.mjs',
-  'check-boolean-naming.mjs',
-  'check-orphan-exports.mjs',
+  'check-circular.ts',
+  'check-boolean-naming.ts',
+  'check-orphan-exports.ts',
   'check-deadcode-baseline.mjs',
-  'check-tpl-refs.mjs',
-  'check-dynamic-import.mjs',
+  'check-tpl-refs.ts',
+  'check-dynamic-import.ts',
   { tool: 'auto-import.mjs', args: ['--strict'] },
-  { tool: 'i18n-check.mjs', args: ['--strict'] },
-  'i18n-ui-check.mjs',
+  { tool: 'i18n-check.ts', args: ['--strict'] },
+  'i18n-ui-check.ts',
   { tool: 'event-graph.mjs', args: ['--strict'] },
-  'check-toast-duration.mjs',
-  { tool: 'check-biome.mjs', args: ['--strict'] },
+  'check-toast-duration.ts',
+  { tool: 'check-biome.ts', args: ['--strict'] },
 ];
 
 /**
  * Go 域 push 模式补挂静态工具（plan.go=true 时追加）。
  */
 export const GO_STATIC_TOOLS: GateTool[] = [
-  'check-circular-go.mjs',
+  'check-circular-go.ts',
   'jscpd-go.mjs',
-  'check-go-diff-coverage.mjs',
+  'check-go-diff-coverage.ts',
 ];
 
 /**

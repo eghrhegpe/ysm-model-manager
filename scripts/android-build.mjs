@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 一键构建 Android 调试/生产 APK（Windows/macOS/Linux 宿主通用）。
- * 补齐 android-install.mjs 的缺口：它只跑 gradle installDebug（打包 jniLibs 里
+ * 补齐 android-install.ts 的缺口：它只跑 gradle installDebug（打包 jniLibs 里
  * 已有的旧 libwails.so），本脚本先做前端构建 + NDK 交叉编译 libwails.so + gradle
  * assembleDebug，产出全新 APK。
  * 依赖：Android SDK（ANDROID_HOME/ANDROID_SDK_ROOT，含 NDK）+ Go（cgo 交叉编译）
@@ -18,7 +18,7 @@
  *   node scripts/android-build.mjs --help
  *   node scripts/android-build.mjs --rust-backend        启用 Rust scanner bridge（调试用）
  * 退出码：0 成功；1 环境缺失/构建失败（错误信息直通）。
- * 设计意图：一键构建 Android APK，补齐 android-install.mjs 的缺口（只做 installDebug，不重编 libwails.so）。
+ * 设计意图：一键构建 Android APK，补齐 android-install.ts 的缺口（只做 installDebug，不重编 libwails.so）。
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -223,4 +223,4 @@ if (!g.ok) fail(`gradle ${task} 失败：\n${g.out.slice(-1200)}`);
 const apkDir = path.join(ANDROID_DIR, 'app', 'build', 'outputs', 'apk', production ? 'release' : 'debug');
 const apk = path.join(apkDir, `app-${production ? 'release' : 'debug'}.apk`);
 console.log(`[android-build] ✅ 完成：${apk}（${fs.existsSync(apk) ? (fs.statSync(apk).size / 1024 / 1024).toFixed(1) : '?'} MB）`);
-console.log('[android-build] 装到设备：node scripts/android-install.mjs');
+console.log('[android-build] 装到设备：node scripts/android-install.ts');

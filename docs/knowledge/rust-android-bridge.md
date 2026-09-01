@@ -10,7 +10,7 @@ source_files:
   - go/rustbridge/types.go
   - go/scanner/rust_backend.go
   - scripts/compile-android-rust.mjs
-  - scripts/compile-rust-static.mjs
+  - scripts/compile-rust-static.ts
   - scripts/android-build.mjs
   - build/linux/Taskfile.yml
   - build/darwin/Taskfile.yml

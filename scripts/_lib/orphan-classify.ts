@@ -85,12 +85,12 @@ export function buildContext(): OrphanCtx {
 
 /**
  * 判定单个脚本的存活状态。
- * @param {string} script 相对 scripts/ 的 posix 路径（如 `api-break.mjs`）
+ * @param {string} script 相对 scripts/ 的 posix 路径（如 `api-break.ts`）
  * @param {{mountText: string, docText: string, siblings: Array<{name:string, text:string}>}} ctx
  * @returns {{status: 'mounted'|'called'|'documented'|'orphan', callers?: string[], reason?: string}}
  */
 export function classifyScript(script: string, ctx: OrphanCtx): { status: 'mounted' | 'called' | 'documented' | 'orphan'; callers?: string[]; reason?: string } {
-  // 两种形态都认：文档/挂载点里既有全名 `api-break.mjs`，也有省略后缀的 `api-break`
+  // 两种形态都认：文档/挂载点里既有全名 `api-break.ts`，也有省略后缀的 `api-break`
   // （AGENTS.md 工具口令表即为后者）。只认全名会把手册工具误判成化石。
   const bare = script.replace(/\.mjs$/, '');
   const mentioned = (text) => text.includes(script) || text.includes(bare);

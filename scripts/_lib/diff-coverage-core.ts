@@ -2,7 +2,7 @@
 /**
  * diff-coverage-core.ts — 变更行覆盖率门禁共享核。
  *
- * 统一 check-diff-coverage.mjs（前端 Istanbul）与 check-go-diff-coverage.mjs
+ * 统一 check-diff-coverage.ts（前端 Istanbul）与 check-go-diff-coverage.ts
  * （Go coverprofile）的「git 变更收集 + 变更行提取 + rename 处理 + 建议区块」。
  * 两入口各自保留语言专属策略（isSource 过滤 / 覆盖率数据源 / 包分组循环）。
  *

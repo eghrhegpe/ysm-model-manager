@@ -14,26 +14,26 @@ function ctx({ mount = '', doc = '', siblings = {} } = {}) {
 // ── 四态判定 ──
 
 test('被流水线挂载 → mounted', () => {
-  const c = ctx({ mount: 'node scripts/api-break.mjs --check', siblings: { 'api-break.mjs': '' } });
-  assert.deepEqual(classifyScript('api-break.mjs', c), { status: 'mounted' });
+  const c = ctx({ mount: 'node scripts/api-break.ts --check', siblings: { 'api-break.ts': '' } });
+  assert.deepEqual(classifyScript('api-break.ts', c), { status: 'mounted' });
 });
 
 test('被其它脚本引用 → called，并列出调用方', () => {
   const c = ctx({
     siblings: {
-      'rollback-impact.mjs': '',
-      'audit-split.mjs': "spawnSync('node', ['scripts/rollback-impact.mjs'])",
+      'rollback-impact.ts': '',
+      'audit-split.ts': "spawnSync('node', ['scripts/rollback-impact.ts'])",
     },
   });
-  assert.deepEqual(classifyScript('rollback-impact.mjs', c), {
+  assert.deepEqual(classifyScript('rollback-impact.ts', c), {
     status: 'called',
-    callers: ['audit-split.mjs'],
+    callers: ['audit-split.ts'],
   });
 });
 
 test('仅在文档出现 → documented（手册工具，不算化石）', () => {
-  const c = ctx({ doc: 'api-break：两 ref 破坏性变更检测', siblings: { 'api-break.mjs': '' } });
-  assert.deepEqual(classifyScript('api-break.mjs', c), { status: 'documented' });
+  const c = ctx({ doc: 'api-break：两 ref 破坏性变更检测', siblings: { 'api-break.ts': '' } });
+  assert.deepEqual(classifyScript('api-break.ts', c), { status: 'documented' });
 });
 
 test('三者皆无 → orphan', () => {
@@ -69,8 +69,8 @@ test('自身引用自己不算调用方（否则任何脚本都算被调用）',
 });
 
 test('文件名前缀相近不误判（check-circular 不被 check-circular-go 牵连）', () => {
-  const c = ctx({ siblings: { 'check-circular.mjs': '', 'check-circular-go.mjs': 'go 版本' } });
-  assert.equal(classifyScript('check-circular.mjs', c).status, 'orphan');
+  const c = ctx({ siblings: { 'check-circular.ts': '', 'check-circular-go.ts': 'go 版本' } });
+  assert.equal(classifyScript('check-circular.ts', c).status, 'orphan');
 });
 
 // ── findOrphans ──

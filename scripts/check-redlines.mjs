@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 代码红线审查。12 条规则 × 违规扫描（依赖 ripgrep）。
- * W3 empty JSDoc / W4 TODO 无编号已移交 comment-checker.mjs（避免双重扫描）。
+ * W3 empty JSDoc / W4 TODO 无编号已移交 comment-checker.ts（避免双重扫描）。
  * 由 scripts/review.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
  * 设计意图：治理审查工具（原 review.mjs，2026-08-05 更名去误导）
  * 用法：
@@ -329,7 +329,7 @@ function runChecks() {
     ),
     'getApp()');
 
-  // W3 empty JSDoc / W4 TODO no ticket 已移交 comment-checker.mjs（扫描范围更全，
+  // W3 empty JSDoc / W4 TODO no ticket 已移交 comment-checker.ts（扫描范围更全，
   // W4 覆盖 go+frontend，避免双重扫描），此处不再重复。
 
   add('W5', 'async DOM race (callback sets innerHTML without stale guard)',

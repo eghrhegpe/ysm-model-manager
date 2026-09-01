@@ -4,7 +4,7 @@ name: drift-scan（双轨漂移检测）
 tier: architecture
 category: go
 source_files:
-  - scripts/drift-scan.mjs
+  - scripts/drift-scan.ts
 use_when:
   - 漂移检测
   - 双轨

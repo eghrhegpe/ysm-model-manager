@@ -158,7 +158,7 @@ const ADR_USAGE_RULES = [
   '2. **占号**：写文件**前**先在本表登记占号（并提交登记），再创建文件——多会话并行时以登记顺序为准，撞号者必须让位改号。',
   '3. **命名**：文件名 `ADR-NNN-kebab-case.md`（如 `ADR-013-governance-convergence.md`）。',
   '4. **必填字段**：状态 / 日期 / 决策人 / 相关；正文结构：背景（Context）→ 决策（Decision）→ 后果（Consequences）→ 数据溯源。',
-  '5. **状态值**：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代` / `⚠️ 已采纳（违规或未修复，自动从文件首部识别）`。状态变更只改文件首部，本页由 `gen-docs-index.mjs` 自动重写。取代关系用 `- **被取代**：[ADR-NNN] 取代` 独立行标注（`gen-adr-supersede.mjs` 扫描）。',
+  '5. **状态值**：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代` / `⚠️ 已采纳（违规或未修复，自动从文件首部识别）`。状态变更只改文件首部，本页由 `gen-docs-index.mjs` 自动重写。取代关系用 `- **被取代**：[ADR-NNN] 取代` 独立行标注（`gen-adr-supersede.ts` 扫描）。',
   '6. **新 ADR 落地后**：本页自动重写（改文件首部即可），无需手动同步；历史 `PROJECT_STATUS.md` 已冻结于 `docs/archive/`，不再维护。',
 ];
 
@@ -224,7 +224,7 @@ function buildAdrIndex(list) {
   out += '\n';
 
   out += '---\n\n';
-  out += '*登记表由 `gen-docs-index.mjs` 自动重写；一致性校验已接入：`node scripts/check-adr-health.mjs`（状态值域 + 登记同步 + 技术债）+ `node scripts/check-doc-drift.mjs`（编号连续性/漏登/幽灵）+ `node scripts/gen-adr-supersede.mjs`（取代关系扫描）。*\n';
+  out += '*登记表由 `gen-docs-index.mjs` 自动重写；一致性校验已接入：`node scripts/check-adr-health.ts`（状态值域 + 登记同步 + 技术债）+ `node scripts/check-doc-drift.ts`（编号连续性/漏登/幽灵）+ `node scripts/gen-adr-supersede.ts`（取代关系扫描）。*\n';
   return out;
 }
 

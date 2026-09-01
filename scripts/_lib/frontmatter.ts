@@ -161,7 +161,7 @@ export function parseAdrHeader(filePath: string): { num: number; title: string; 
       continue;
     }
 
-    // **被取代**：[ADR-NNN] 取代（new-adr.mjs --supersedes 写入的独立标注行）
+    // **被取代**：[ADR-NNN] 取代（new-adr.ts --supersedes 写入的独立标注行）
     const mSupBy = line.match(/^[-*]\s*\*\*被取代\*\*\s*[：:]\s*\[?ADR-(\d+)\]?/);
     if (mSupBy && supersededBy === null) {
       supersededBy = parseInt(mSupBy[1], 10);

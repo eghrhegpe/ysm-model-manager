@@ -5,7 +5,7 @@ tier: leaf
 category: feature
 source_files:
   - scripts/pre-push-gate.mjs
-  - scripts/check-dynamic-import.mjs
+  - scripts/check-dynamic-import.ts
 use_when:
   - 整目录搬家
   - 领域根提升

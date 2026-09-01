@@ -15,7 +15,22 @@
     "isolatedModules": true,
     "useDefineForClassFields": true,
     "allowImportingTsExtensions": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@/preview-3d/*": ["./src/preview-3d/*"],
+      "@/views/*": ["./src/views/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/backend/*": ["./src/backend/*"],
+      "@/core/*": ["./src/core/*"],
+      "@/ui/*": ["./src/ui/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/workers/*": ["./src/workers/*"],
+      "@/services/*": ["./src/services/*"],
+      "@/wasm/*": ["./src/wasm/*"],
+      "@/test-utils/*": ["./src/test-utils/*"],
+      "@/web-spike/*": ["./src/web-spike/*"],
+      "#root/*": ["../*"]
+    }
   },
   "include": [
     "src/**/*.ts",

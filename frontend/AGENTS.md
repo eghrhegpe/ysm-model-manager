@@ -88,3 +88,17 @@ frontend/src/
 - 测试工具：`test-utils/` 提供 `render` / `queryByTestId` / `waitFor`
 - 测试文件与源文件同目录，`*.test.ts` 命名
 - 测试跑：`npx vitest`（单文件用 `npx vitest --run <file>`）
+
+## 路径别名与反桶契约（ADR-146）
+
+- **目录级别名（已登记）**：新写跨目录 import 优先用 `@/<顶层目录>/...`（如 `@/utils/dom/...`、`@/core/bus/...`）；
+  `#root/<file>` 仅用于读仓库根 JSON（过渡措施，只减不增）。catch-all `@/*` **永久禁止**。
+- **闸控**：当前为闸一（配置闸），`check-path-hygiene.ts` 的 R0 规则**禁止任何含别名的 import**——
+  在 `check-layering`/`check-circular`/`check-tpl-refs`/`auto-import*` 改造为别名感知解析（闸二）前，写别名会门禁 FAIL。
+- **反桶契约（禁聚合桶）**：
+  1. 不新增以 re-export 为主体的聚合文件（不限于 `index.ts`，含 `*-re-export.ts` 这类命名）；
+     现有 9 个入口 `index.ts` 保持真模块身份。
+  2. 零依赖 / 纯模块禁止从聚合模块导入，必须引具体叶（单文件 re-export 来源模块数 ≥ 3 即 R1 嫌疑）。
+  3. 不为省一行 import 建「公共出口」聚合文件；需多符号时逐个 import 具体模块。
+  4. `src/utils/types-re-export.ts` 是 bindings 转发垫层（来源数=1），白名单存量保留，与别名互补。
+- **迁移策略**：新文件自闸二起用别名；存量文件保持相对路径，仅当该文件因他故被改时顺手切别名，**禁止一次性 codemod 全量重写**。

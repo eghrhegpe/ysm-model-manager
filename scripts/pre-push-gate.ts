@@ -375,6 +375,21 @@ async function main() {
           : `零容忍 ${lz.zero_tolerance} + 新增回归 ${lz.regressions}`),
     });
 
+    // ADR-146：路径卫生门禁（别名闸 R0 + 反桶 R1 + 深度 R2 + 上跳 R3 + 跨边界冻结 R4 + 双写一致性）
+    // 闸一（配置闸）：R0 按住别名不许用，直到 check-layering/check-circular/check-tpl-refs/auto-import*
+    // 改造成别名感知解析 + 单测绿（闸二）后删除 R0 规则。当前 rc=0 即通过（WARN 不阻断）。
+    const tP = Date.now();
+    const ph = await shAsync('node scripts/check-path-hygiene.ts --json');
+    let pz: any = null;
+    try { pz = JSON.parse(ph.out)._summary; } catch { /* parse fail */ }
+    const pOk = ph.rc === 0;
+    record('check-path-hygiene', pOk, {
+      time: Date.now() - tP,
+      note: pz === null ? '输出解析失败（scripts/check-path-hygiene.ts 缺失？）'
+        : (pOk ? `路径卫生合规（warn ${pz.warn}）`
+          : `FAIL ${pz.fail}：R0=${pz.r0_alias?.count} R4=${pz.r4_cross_boundary?.count}/${pz.r4_cross_boundary?.baseline} 一致性=${pz.consistency?.ok}`),
+    });
+
     // ADR-085：菜单表健康门禁——"加菜单项只改表"的自动兜底（秒级正则扫描，早失败早停）。
     // 校验：id 唯一 / labelKey 非空 / i18n 三语齐全 / dockGroup 合法 / kind 合法 / render·run 完备。
     const tM = Date.now();

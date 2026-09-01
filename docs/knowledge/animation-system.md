@@ -19,6 +19,18 @@ tests:
   - frontend/src/utils/animation/animation.test.ts
   - frontend/src/utils/animation/stagger.test.ts
   - frontend/src/utils/animation/animation-controller.test.ts
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 骨骼动画、关键帧、动画播放
+  - Molang 表达式求值
+  - 数字滚动、stagger 入场、关闭动画
+  - AnimationController、状态机
+quick_risk_lines:
+  - 基岩 animation.json 解析后必须走 evaluateClip 插值，禁止前端手写关键帧插值逻辑
+pitfalls:
+  - 手写关键帧插值 → 与基岩官方行为不一致、T-pose 漂移；必须经 evaluateClip
+  - Molang 表达式缓存键不完整 → 相同逻辑不同骨骼重复求值；缓存 key 必须含 clip/bone 标识
 use_when:
   - 动画
   - 骨骼动画
@@ -52,6 +64,7 @@ invariant_anchors:
 - 关键帧插值求值（线性/step）与骨骼层级变换传播（父级变换累积到子级）
 - UI 数字滚动动画与列表 stagger 入场延迟计算
 - **Molang 表达式编译**（ADR-100 L4）：内嵌 molangjs 源码，把 `.animation.json` 里的 Molang 字符串编译为 `(animTime) => number` 求值闭包；安全口径：DSL 解析器非 eval；性能口径：LRU 缓存 400 条，加载期编译 AST / 运行期纯求值
+- **`foldMolangConstant` 常量折叠已有 bench 实证**（`frontend/src/utils/animation/bench-fold-molang.ts`，2026-09-01）：molangjs parse 本身仅 ~600ns，折叠正则 ~580ns，**收益 ≈ 0**——该优化目前"不亏不赚"，保留原因只剩「跳过闭包创建」，不值得为它扩展正则覆盖面；若未来重构解析链可整体移除，由 compileMolang 统一承接
 
 ## 对外 API / 入口
 

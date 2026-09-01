@@ -79,11 +79,12 @@ interface RawKeyframeObject {
 // ── 工具函数 ────────────────────────────────────────
 
 /**
- * 常量折叠：尝试从 Molang 字符串中提取纯数字。
+ * Molang 常量折叠：尝试从 Molang 字符串中提取纯数字。
  * 处理 "q.life_time * 0 + 30" → 30, "math.sin(0) * 0 + 45" → 45
- * 只处理变量乘以 0 后加常数的模式，含真实变量时返回 null。
+ * 只处理「变量乘 0 后加减常数」的窄模式，含真实变量时返回 null。
+ * 导出供 bench 实证编译开销（bench-fold-molang.ts），解析链外勿调用。
  */
-function foldMolangConstant(str: unknown): number | null {
+export function foldMolangConstant(str: unknown): number | null {
   if (typeof str !== "string") return null;
   // 尝试直接解析为数字
   const direct = Number(str);

@@ -59,7 +59,7 @@ affected: false
 ### 坑 / 残留
 
 - **detector 仅支持 5 种**（`ysm/mcmeta/shader/zipentry/extension/空`）。新的二进制格式（非 ZIP 内容指纹型）必须自己写 `isXxxFile` 并加入 switch，无法仅靠 JSON 声明。
-- **`.json` 特判锁死在 `IsYsmEntryJSON`**——新增类型若想允许 `manifest.json` 作为入口，需扩 `IsYsmEntryJSON` 或改 `IsTypeModelFile`。
+- **`.json` 特判锁死在 `IsYsmEntryJSON`**——新增类型若想允许 `manifest.json` 作为入口，需扩 `IsYsmEntryJSON` 或改 `packs.IsTypeModelFile`（ADR-144 下沉）。
 - **`ShouldHashExt` 钉住清单**：新增 hashable 类型需补单测，否则清单漂移会静默。
 - **前端三处必改**：`RESOURCE_TYPES`（键映射）/ `RESOURCE_TYPE_LABELS`（短标签）/ `icon.ts`。这三处与 JSON 无派生关系，是**最痛残留**。
 - **`PREVIEW_HANDLERS` 每加一行**：无 handler → 预览区静默空白（fail-fast 未覆盖预览派发）。
@@ -178,7 +178,7 @@ affected: false
 
 ### 5.2 `types` 过滤扩展
 
-- **入口**：`go/types/extensions.go`（`NormalizeResourceName` / `IsResourceAllowed` / `IsTypeModelFile`）。
+- **入口**：`go/types/extensions.go`（`NormalizeResourceName` / `IsResourceAllowed`）+ `go/packs/classify.go`（`IsTypeModelFile`，ADR-144 下沉）。
 - **扩展点**：新类型的扩展集自动进 `AllExts()` / `SupportedExtsForType()`，过滤器自动生效。
 - **坑**：`.json` 特判**只放行 ysm.json**——新类型如用 `.json` 清单（如 `manifest.json`）会被全量拒绝。需要把 `IsYsmEntryJSON` 泛化为 `IsEntryManifest(base, rtype)` 或引入 `registryEntries` 字段。
 

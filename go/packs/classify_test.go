@@ -1,5 +1,6 @@
-// ===== types.ClassifyResource 回归护栏（golden + isolation + order）=====
+// ===== packs.ClassifyResource 回归护栏（golden + isolation + order）=====
 //
+// 归属（ADR-144）：原 go/types/classify_test.go，随识别大脑整体下沉到 go/packs。
 // 设计目标（对应整合包反复回归的根因）：
 //  1. golden：每个语料路径必须稳定判为 expect —— 把"人眼发现回归"变成 CI 提交前拦截。
 //  2. isolation（remove-each-type）：移除任一类型后，其余语料分类不得改变（归 victim
@@ -8,13 +9,13 @@
 //  3. order：shuffle 注册表顺序后语料分类稳定（确定性伪 shuffle，可复现）。配合
 //     (priority desc, id asc) 双键裁决，证明收敛后不再依赖注册表顺序。
 //
-// 语料来源：go/types/testdata/classify-golden.json（编译期内嵌单一事实源
+// 语料来源：go/packs/testdata/classify-golden.json（编译期内嵌单一事实源
 // resource_types.json 经 LoadRegistry 加载）。重点护栏：
 //   - schematics/gear.zip 在仓库根（无 location 上下文）→ blueprint：
 //     审计口径=container、导入口径=blueprint 的现行犯修复点（按内容指纹判型）。
 //   - random.zip（含 readme.txt，无任一指纹）→ container：反 last-wins 护栏，
 //     ".zip" 不再仅靠扩展名落到注册表末位类型。
-package types_test
+package packs_test
 
 import (
 	"archive/zip"
@@ -23,6 +24,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 )
 
@@ -94,7 +96,7 @@ func TestClassifyGolden(t *testing.T) {
 	reg := types.LoadRegistry()
 	built := buildAll(t)
 	for _, c := range loadGolden(t) {
-		if got := types.ClassifyResource(built[c.Path], reg); got != c.Expect {
+		if got := packs.ClassifyResource(built[c.Path], reg); got != c.Expect {
 			t.Errorf("ClassifyResource(%q) = %q, 期望 %q", c.Path, got, c.Expect)
 		}
 	}
@@ -107,7 +109,7 @@ func TestClassifyIsolation(t *testing.T) {
 	built := buildAll(t)
 	baseline := map[string]string{}
 	for _, c := range loadGolden(t) {
-		baseline[c.Path] = types.ClassifyResource(built[c.Path], base)
+		baseline[c.Path] = packs.ClassifyResource(built[c.Path], base)
 	}
 	for _, victim := range base.ResourceTypes {
 		shrunk := removeType(base, victim.ID)
@@ -115,7 +117,7 @@ func TestClassifyIsolation(t *testing.T) {
 			if baseline[c.Path] == victim.ID {
 				continue // 归 victim 的条目允许变化
 			}
-			if got := types.ClassifyResource(built[c.Path], shrunk); got != baseline[c.Path] {
+			if got := packs.ClassifyResource(built[c.Path], shrunk); got != baseline[c.Path] {
 				t.Errorf("移除类型 %q 后 %q 漂移: %q → %q", victim.ID, c.Path, baseline[c.Path], got)
 			}
 		}
@@ -130,11 +132,11 @@ func TestClassifyOrderIndependent(t *testing.T) {
 	built := buildAll(t)
 	ref := map[string]string{}
 	for _, c := range loadGolden(t) {
-		ref[c.Path] = types.ClassifyResource(built[c.Path], reg)
+		ref[c.Path] = packs.ClassifyResource(built[c.Path], reg)
 	}
 	shuffled := shuffle(reg)
 	for _, c := range loadGolden(t) {
-		if got := types.ClassifyResource(built[c.Path], shuffled); got != ref[c.Path] {
+		if got := packs.ClassifyResource(built[c.Path], shuffled); got != ref[c.Path] {
 			t.Errorf("顺序变化后 %q: %q → %q", c.Path, ref[c.Path], got)
 		}
 	}

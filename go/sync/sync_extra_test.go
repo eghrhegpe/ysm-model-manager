@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 )
 
@@ -101,43 +102,43 @@ func TestIsSyncAllowed_UnsupportedExt(t *testing.T) {
 // ====== isModelFile ======
 
 func TestIsModelFile_Ysm(t *testing.T) {
-	if !types.IsTypeModelFile("model.ysm", "ysm") {
+	if !packs.IsTypeModelFile("model.ysm", "ysm") {
 		t.Error("model.ysm should be ysm model")
 	}
-	if !types.IsTypeModelFile("model.zip", "ysm") {
+	if !packs.IsTypeModelFile("model.zip", "ysm") {
 		t.Error("model.zip should be ysm model")
 	}
-	if !types.IsTypeModelFile("model.7z", "ysm") {
+	if !packs.IsTypeModelFile("model.7z", "ysm") {
 		t.Error("model.7z should be ysm model")
 	}
-	if !types.IsTypeModelFile("ysm.json", "ysm") {
+	if !packs.IsTypeModelFile("ysm.json", "ysm") {
 		t.Error("ysm.json should be ysm model")
 	}
 }
 
 func TestIsModelFile_YsmNegative(t *testing.T) {
-	if types.IsTypeModelFile("readme.txt", "ysm") {
+	if packs.IsTypeModelFile("readme.txt", "ysm") {
 		t.Error(".txt should NOT be ysm model")
 	}
-	if types.IsTypeModelFile("model.pmx", "ysm") {
+	if packs.IsTypeModelFile("model.pmx", "ysm") {
 		t.Error(".pmx should NOT be ysm model")
 	}
 }
 
 func TestIsModelFile_EntityPlayer(t *testing.T) {
-	if !types.IsTypeModelFile("model.pmx", "EntityPlayer") {
+	if !packs.IsTypeModelFile("model.pmx", "EntityPlayer") {
 		t.Error(".pmx should be EntityPlayer model")
 	}
-	if !types.IsTypeModelFile("model.pmd", "EntityPlayer") {
+	if !packs.IsTypeModelFile("model.pmd", "EntityPlayer") {
 		t.Error(".pmd should be EntityPlayer model")
 	}
 	// EntityPlayer 是 zipentry 检测器类型：.zip 必须内装 .pmx/.pmd 才算模型，
 	// 纯 .zip 文件名不再直判（否则同步推送会搬运坏包/纯打包物）。
 	zipPath := writeEntityPlayerZip(t)
-	if !types.IsTypeModelFile(zipPath, "EntityPlayer") {
+	if !packs.IsTypeModelFile(zipPath, "EntityPlayer") {
 		t.Error("内装 .pmx 的 .zip 应识别为 EntityPlayer 模型")
 	}
-	if types.IsTypeModelFile(filepath.Join(t.TempDir(), "plain.zip"), "EntityPlayer") {
+	if packs.IsTypeModelFile(filepath.Join(t.TempDir(), "plain.zip"), "EntityPlayer") {
 		t.Error("空/纯打包 .zip 不得识别为 EntityPlayer 模型")
 	}
 }
@@ -166,13 +167,13 @@ func writeEntityPlayerZip(t *testing.T) string {
 }
 
 func TestIsModelFile_EntityPlayerNegative(t *testing.T) {
-	if types.IsTypeModelFile("model.ysm", "EntityPlayer") {
+	if packs.IsTypeModelFile("model.ysm", "EntityPlayer") {
 		t.Error(".ysm should NOT be EntityPlayer model")
 	}
 }
 
 func TestIsModelFile_UnknownType(t *testing.T) {
-	if types.IsTypeModelFile("model.ysm", "unknown") {
+	if packs.IsTypeModelFile("model.ysm", "unknown") {
 		t.Error("unknown type should return false")
 	}
 }

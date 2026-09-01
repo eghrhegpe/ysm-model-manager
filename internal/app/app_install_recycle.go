@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/recycle"
 	"ysm-model-manager/go/scanner"
@@ -143,7 +144,7 @@ func (a *App) ClearCustomDir(customDir string) (int, error) {
 		// ADR-064 锚定：扩展名判定走注册表（原硬编码 .ysm/.zip/.7z，新增 YSM
 		// 承载格式或资源类型时清理功能失效）；IsTypeModelFile 内部剥 .ban/.disabled
 		fileName := filepath.Base(p)
-		if !types.IsTypeModelFile(fileName, "ysm") {
+		if !packs.IsTypeModelFile(fileName, "ysm") {
 			return nil
 		}
 

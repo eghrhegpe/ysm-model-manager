@@ -9,6 +9,7 @@ package importer
 import (
 	"encoding/base64"
 
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 )
 
@@ -103,8 +104,8 @@ func DetectZipTypeFromBase64Tail(b64 string) (string, bool) {
 	if len(entries) != totalEntries {
 		return "", false // 条目数对不上：解析不完整，宁可兜底不误判
 	}
-	id := types.DetectByEntries(entries, types.LoadRegistry())
-	if id == types.ClassContainer || id == types.ClassOther {
+	id := packs.DetectByEntries(entries, types.LoadRegistry())
+	if id == packs.ClassContainer || id == packs.ClassOther {
 		return "", true
 	}
 	return id, true

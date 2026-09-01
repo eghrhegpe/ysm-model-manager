@@ -39,7 +39,7 @@ invariant_anchors:
 
 ## 不变量
 
-- 条目过滤统一走 `types.IsTypeModelFile`（ADR-064 阶段一收敛，原 `extMatch` 内联实现删除）；资源包文件夹（`pack.mcmeta`）在三分支放行（`fsutil.IsResourcePackFolder` 兜底，保持 SyncResources 判定的真实状态）
+- 条目过滤统一走 `packs.IsTypeModelFile`（ADR-064 阶段一收敛，原 `extMatch` 内联实现删除；ADR-144 随识别大脑下沉 packs）；资源包文件夹（`pack.mcmeta`）在三分支放行（`fsutil.IsResourcePackFolder` 兜底，保持 SyncResources 判定的真实状态）
 - **兜底 Walk（IsScanInstance）已移除**（ADR-064 阶段二）：`SyncResources` 相对路径对比全树递归收集所有受支持文件（含嵌套），同名不同目录不再 map 去重丢失，原兜底已无新增条目可补，删除防重复列示——`TestBuildSyncItems_FallbackWalk` 语义由 SyncResources 的 Extra 覆盖后仍通过
 - 内部参数收敛（2026-08-26）：`resolveItemMeta` 返回 `itemMeta` 结构体（isDirEntry/status/defaultStatus/icon 四元组），`appendOneItem` 升格为 `rtypeCtx` 方法（rt/globalDir/instDir/isDirLevel 上下文），11 参收敛为接收者+路径+meta
 - **展示树镜像磁盘层级（仓库是权威源）**：`BuildSyncItems` 对 dirLevel 类型（`IsDirLevelSync`）用 `nestDirLevelTree` 把 `SyncResourcesDirLevel` 的扁平单元按相对路径段重建为嵌套容器树——中间目录（仅含子模型夹、自身非模型文件夹，如 `wine_fox_json`）自动成为可展开容器节点，模型夹/文件为叶子。仓库怎么来，整合包就怎么来。**容器节点必须填 `Type`**（`nestDirLevelTree`/`treeChildren` 接收 rtype）——前端 `applyFilter` 按 `i.type === 选中类型` 过滤，容器缺 Type(=空串)会被整体丢弃，导致整棵嵌套子树（嵌套1→嵌套2→动力臂.ysm）不显示

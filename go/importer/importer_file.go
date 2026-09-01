@@ -14,6 +14,7 @@ import (
 
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
 )
@@ -141,9 +142,10 @@ func WriteFileAtomic(destPath string, data []byte) error {
 }
 
 // DetectZipType 扫描容器条目名识别资源类型
-// #5 收敛：收集全部条目名后委托 types.DetectByEntries 做 (priority desc, id asc)
+// #5 收敛：收集全部条目名后委托 packs.DetectByEntries 做 (priority desc, id asc)
 // 裁决（注册表顺序无关）；无指纹/结果为 "container"/"other" 时返回 ""（未知，
 // 由调用方决定报错/降级——ADR-082 续：识别不出就是识别不出，不假装 YSM）。
+// DetectByEntries 归属（ADR-144）：识别逻辑随识别大脑下沉 packs。
 func DetectZipType(data []byte) string {
 	var entries []string
 	if len(data) >= 4 && bytes.HasPrefix(data, sevenZipSig) {
@@ -174,8 +176,8 @@ func DetectZipType(data []byte) string {
 	if len(entries) == 0 {
 		return ""
 	}
-	id := types.DetectByEntries(entries, types.LoadRegistry())
-	if id == "" || id == types.ClassContainer || id == types.ClassOther {
+	id := packs.DetectByEntries(entries, types.LoadRegistry())
+	if id == "" || id == packs.ClassContainer || id == packs.ClassOther {
 		return ""
 	}
 	return id

@@ -38,6 +38,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 )
 
@@ -53,7 +54,7 @@ func isDirTypeModelFolder(path string, rtype string) bool {
 		if e.IsDir() {
 			continue
 		}
-		if types.IsTypeModelFile(filepath.Join(path, e.Name()), rtype) {
+		if packs.IsTypeModelFile(filepath.Join(path, e.Name()), rtype) {
 			return true
 		}
 	}
@@ -224,7 +225,7 @@ func isDirTypeModelFolderMemo(path string, rtype string, memo nestedDirMemo) boo
 		if e.IsDir() {
 			continue
 		}
-		if types.IsTypeModelFile(filepath.Join(path, e.Name()), rtype) {
+		if packs.IsTypeModelFile(filepath.Join(path, e.Name()), rtype) {
 			return true
 		}
 	}
@@ -369,7 +370,7 @@ func collectEntriesWalk(rootDir string, rtype string) map[string]string {
 		}
 		if !info.IsDir() {
 			// 平铺模型文件：在任意深度收集（不再限定 rootDir 顶层）
-			if types.IsTypeModelFile(path, rtype) {
+			if packs.IsTypeModelFile(path, rtype) {
 				if key := relKeyDirLevel(rootDir, path, false); key != "" {
 					entries[key] = path
 				}
@@ -451,7 +452,7 @@ func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) m
 		if p != rootDir && !strings.HasPrefix(p, rootDir+sep) {
 			continue // 不在 rootDir 下的条目忽略（防御）
 		}
-		if !types.IsTypeModelFile(p, rtype) {
+		if !packs.IsTypeModelFile(p, rtype) {
 			continue
 		}
 		dirHasModelFile[filepath.Dir(p)] = true
@@ -628,7 +629,7 @@ func collectFolderFilesFromScan(folder, rtype string, entries []types.ModelEntry
 		if fsutil.IsRecycleDir(filepath.Dir(p)) {
 			continue
 		}
-		if !types.IsTypeModelFile(p, rtype) {
+		if !packs.IsTypeModelFile(p, rtype) {
 			continue
 		}
 		rel, err := filepath.Rel(folder, p)
@@ -667,7 +668,7 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 			return nil
 		}
 		// 只收集模型文件
-		if types.IsTypeModelFile(path, rtype) {
+		if packs.IsTypeModelFile(path, rtype) {
 			rel, err := filepath.Rel(folder, path)
 			if err != nil {
 				return nil

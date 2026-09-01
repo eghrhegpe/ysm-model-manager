@@ -20,6 +20,8 @@ import (
 	"strings"
 
 	"github.com/bodgit/sevenzip"
+
+	"ysm-model-manager/go/types"
 )
 
 // Entry 统一容器条目（zip.File / sevenzip.File / 目录文件）。
@@ -140,22 +142,12 @@ func (e dirEntry) Open() (io.ReadCloser, error) {
 // ---------------------------------------------------------------------------
 // 打开入口
 
-// stripDisableSuffix 剥离禁用后缀（.disabled/.ban，大小写不敏感）。
-// 语义与 types.StripDisableSuffix 对齐；本包不能引 types（types 依赖 container，循环依赖）。
-func stripDisableSuffix(name string) string {
-	lower := strings.ToLower(name)
-	for _, sfx := range []string{".disabled", ".ban"} {
-		if strings.HasSuffix(lower, sfx) {
-			return name[:len(name)-len(sfx)]
-		}
-	}
-	return name
-}
-
 // Open 按扩展名分派打开容器（.zip → zip、.7z → sevenzip、目录 → dir）。
 // 分派前剥离禁用后缀（.disabled/.ban）：ToggleEnable 改名后的 xxx.zip.disabled
 // 仍能按真实容器类型打开（c08c62bc P3 回归——否则指纹核验对禁用容器失效）；
 // 打开路径用原值（磁盘上文件就叫 xxx.zip.disabled）。
+// 禁用后缀剥离复用 types.StripDisableSuffix（ADR-144：types 已不依赖本包，
+// 解除循环禁令，删掉本包内联实现）。
 func Open(path string) (Reader, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -164,7 +156,7 @@ func Open(path string) (Reader, error) {
 	if info.IsDir() {
 		return openDir(path)
 	}
-	switch strings.ToLower(filepath.Ext(stripDisableSuffix(path))) {
+	switch strings.ToLower(filepath.Ext(types.StripDisableSuffix(path))) {
 	case ".zip":
 		return OpenZipPath(path)
 	case ".7z":
@@ -279,7 +271,7 @@ func OpenDir(root string) (Reader, error) {
 // Open/DetectResourceType 同口径，code_review P3——否则同步指纹链路把
 // 禁用容器当非 zip 排除，与指纹核验路径分类分叉）。
 func ZipMatchesEntries(path string, match func(string) bool) bool {
-	if !strings.EqualFold(filepath.Ext(stripDisableSuffix(path)), ".zip") {
+	if !strings.EqualFold(filepath.Ext(types.StripDisableSuffix(path)), ".zip") {
 		return false
 	}
 	rc, err := OpenZipPath(path)

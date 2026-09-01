@@ -44,7 +44,7 @@ invariant_anchors:
 
 - 由 `app-content` instances 页响应 `package:selected` 挂载（见知识卡 `app_content`）；选中卡片来自 `app-sidebar`（见知识卡 `app_sidebar`）
 - 数据源对应 Go 端 `go/sync` 包；binding 位于 `internal/app/app_install.go`（`GetInstanceSyncStatus` / `PushSingleResourceToInstance` / `PullSingleResourceFromInstance`）与 `app_scan.go`（`ListVersionInstances`）（见知识卡 `go_sync`）
-- Go 端 `SyncResources` / `SyncResourcesDirLevel` 的 Walk 会 `SkipDir` 跳过 `.recycle`（sync.go 统一 collect 闭包内 `fsutil.IsRecycleDir`），口径与 `scanner.ScanEntries` 对齐；否则回收站内模型会被当成仓库活跃模型，在本面板误显示为 `missing` 且可推送。ADR-064 后 `SyncResources` 为相对路径对比（嵌套文件可见可拉取），条目经 `types.IsTypeModelFile` 过滤
+- Go 端 `SyncResources` / `SyncResourcesDirLevel` 的 Walk 会 `SkipDir` 跳过 `.recycle`（sync.go 统一 collect 闭包内 `fsutil.IsRecycleDir`），口径与 `scanner.ScanEntries` 对齐；否则回收站内模型会被当成仓库活跃模型，在本面板误显示为 `missing` 且可推送。ADR-064 后 `SyncResources` 为相对路径对比（嵌套文件可见可拉取），条目经 `packs.IsTypeModelFile` 过滤（ADR-144 下沉）
 - 类型标签切换派发 `repo:rtype-changed`，与仓库页 subtab、`app-sidebar` 统计共享同一类型状态
 - 错误消息经 `friendlyError` 转用户可读文案后 toast
 

@@ -11,6 +11,7 @@ import (
 
 	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 )
 
@@ -50,7 +51,7 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 				}
 				// ADR-064 锚定：扩展名判定走注册表（原硬编码 .ysm/.zip/.7z/.json，
 				// 新增 YSM 承载格式或类型时头像提取失效）
-				if types.IsTypeModelFile(e.Name, "ysm") {
+				if packs.IsTypeModelFile(e.Name, "ysm") {
 					// 同作者多个模型取 ModTime 最新者（R20 审核 P3-3）：
 					// 原「只看第一个」可能漏掉更新模型的头像；ModTime 相等时
 					// 先扫描到的胜出（保持扫描顺序确定性）
@@ -104,7 +105,7 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 				author := strings.TrimSpace(name[1:idx])
 				if author == authorName {
 					// ADR-064 锚定：同上方头像提取，扩展名判定走注册表
-					if types.IsTypeModelFile(e.Name, "ysm") {
+					if packs.IsTypeModelFile(e.Name, "ysm") {
 						foundPath = e.Path
 						info["found_path"] = foundPath
 						break

@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
 
 // makeTestZip 构造含条目的 zip 内存字节。
@@ -91,13 +93,13 @@ func TestOpen_UnsupportedExt(t *testing.T) {
 // 剥离禁用后缀后分派（c08c62bc P3 回归锁）：ToggleEnable 改名后的 xxx.zip.disabled
 // 必须仍按真实容器类型打开，否则指纹核验对禁用容器失效、扫描结果跨 tab 泄漏错类。
 func TestOpen_DisableSuffixDispatch(t *testing.T) {
-	if got := stripDisableSuffix("a.zip"); got != "a.zip" {
+	if got := types.StripDisableSuffix("a.zip"); got != "a.zip" {
 		t.Errorf("无后缀应原样返回: %q", got)
 	}
-	if got := stripDisableSuffix("a.zip.disabled"); got != "a.zip" {
+	if got := types.StripDisableSuffix("a.zip.disabled"); got != "a.zip" {
 		t.Errorf(".disabled 应剥离: %q", got)
 	}
-	if got := stripDisableSuffix("A.ZIP.BAN"); got != "A.ZIP" {
+	if got := types.StripDisableSuffix("A.ZIP.BAN"); got != "A.ZIP" {
 		t.Errorf(".ban 大小写不敏感剥离且保留原名大小写: %q", got)
 	}
 

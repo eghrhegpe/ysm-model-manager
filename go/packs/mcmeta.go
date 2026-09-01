@@ -134,16 +134,16 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 	return &meta, thumb, nil
 }
 
-// DetectResourceType 薄壳委托 types.ClassifyResource（#5 收敛：三套编排统一于 types 包，
-// packs 不再持有独立分类逻辑）。签名保持不变——cli/flow.go classifyForScan 直接调用。
+// DetectResourceType 识别入口（ADR-144：识别大脑下沉本包后为同包直调，薄壳撤销）。
+// 签名保持不变——cli/flow.go classifyForScan / internal/app 直接调用。
 func DetectResourceType(path string, registry *types.ResourceTypeRegistry) string {
-	return types.ClassifyResource(path, registry)
+	return ClassifyResource(path, registry)
 }
 
-// isYsmFile 薄壳委托 types.IsYsmFile（#5 收敛）。
+// isYsmFile 委托同包 IsYsmFile（ADR-144：识别大脑下沉本包）。
 // 保留 packs 包可见性——packs_extra_test.go/mcmeta_test.go 直接引用。
 func isYsmFile(path string) bool {
-	return types.IsYsmFile(path)
+	return IsYsmFile(path)
 }
 
 // hasExt 扩展名集合成员判定（测试直接引用，保留）。

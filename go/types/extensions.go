@@ -5,11 +5,8 @@ package types
 
 import (
 	"path"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
-
-	"ysm-model-manager/go/container"
 )
 
 // ===== 已移除壳-叶架构（ADR-XXX 大统一）=====
@@ -211,45 +208,8 @@ func IsResourceAllowed(name string) bool {
 	return false
 }
 
-// IsTypeModelFile 判断文件名是否为指定资源类型的模型文件（ADR-064 收敛）：
-// 扩展名命中该类型注册表扩展集（SupportedExtsForType），.json 仅放行 ysm.json。
-// 原 sync.isModelFile 与 instance.extMatch 收敛于此（差异：空扩展集返回 false，
-// 与 isModelFile 严格语义一致；extMatch 的空集放行分支在 BuildSyncItems 中
-// 不会触发——未知类型早被 SubDirMap 空拦截跳过）。
-func IsTypeModelFile(name, rtype string) bool {
-	// filepath.Base 兼容裸名与完整路径调用（code review P1：4 个调用点已改传完整
-	// 路径——裸名精确判断（ysm.json 特判/ext）对完整路径失效会误判）；zip 分支
-	// 用原始 name 开文件（见下），不受 base 取 Base 影响
-	base := NormalizeResourceName(filepath.Base(name))
-	// ysm.json 特判（.json 扩展名在注册表中但只有 ysm.json 算模型文件）：
-	// 仅当该类型扩展集含 .json（ysm）时放行——resourcepack/shaderpack 扩展集
-	// 只有 .zip，整合包目录散落的 ysm.json 不得作为其独立同步条目（P3 修复：
-	// 整合包推送/拉取列表被 ysm.json 刷屏）。
-	if IsYsmEntryJSON(base) {
-		for _, e := range SupportedExtsForType(rtype) {
-			if strings.EqualFold(e, ".json") {
-				return true
-			}
-		}
-		return false
-	}
-	ext := strings.ToLower(filepath.Ext(base))
-	rt := RegistryType(rtype)
-	for _, e := range SupportedExtsForType(rtype) {
-		if ext == strings.ToLower(e) && !strings.EqualFold(e, ".json") {
-			// zipentry 检测器类型：.zip 是「装模型的容器」而非模型实体，
-			// 必须枚举 zip 内含条目、命中本类型 zipEntries 指纹才算模型
-			// （与 packs.DetectResourceType 的 case "zipentry" 语义对齐）。
-			// 否则任何 .zip（坏包/纯打包物）会被同步推送/拉取链路误判为
-			// 顶层模型文件搬运——ADR 收敛：不为文件操作放粗放判定。
-			if strings.EqualFold(e, ".zip") && rt != nil && rt.Detector == "zipentry" {
-				return container.ZipMatchesEntries(name, rt.MatchZipEntry)
-			}
-			return true
-		}
-	}
-	return false
-}
+// IsTypeModelFile 已下沉至 go/packs/classify.go（ADR-144：其 zipentry 分支需开容器
+// 做指纹判定，随识别大脑一并下沉；消费方改调 packs.IsTypeModelFile）。
 
 // ShouldHashExt 判断扩展名是否需要计算 SHA256 哈希（用于同步系统文件匹配）。
 // 注册表驱动：任何声明 hashable 的资源类型的扩展名均计入哈希。
@@ -314,6 +274,24 @@ func ExtBelongsTo(ext string) []string {
 	reg := LoadRegistry()
 	var result []string
 	for _, rt := range reg.ResourceTypes {
+		for _, e := range rt.EffectiveExtensions() {
+			if strings.ToLower(e) == ext {
+				result = append(result, rt.ID)
+				break
+			}
+		}
+	}
+	return result
+}
+
+// ExtBelongsToBy 返回扩展名在指定注册表中的声明者 ID 列表（ExtBelongsTo 的可注入版本）。
+// 纯注册表查询，归属本包（ADR-144：types/resource.go 守卫与 packs.ClassifyExt 共用；
+// 若随识别大脑下沉 packs 会造成 types→packs 反向依赖，故保留于此）。
+func ExtBelongsToBy(ext string, reg *ResourceTypeRegistry) []string {
+	ext = strings.ToLower(ext)
+	var result []string
+	for i := range reg.ResourceTypes {
+		rt := &reg.ResourceTypes[i]
 		for _, e := range rt.EffectiveExtensions() {
 			if strings.ToLower(e) == ext {
 				result = append(result, rt.ID)

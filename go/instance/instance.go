@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
@@ -176,7 +177,7 @@ func resolveItemMeta(
 		}
 	}
 	// 放行条件：扩展名命中 → 资源包夹 → dirLevel 的目录入口（三者任一）
-	if !types.IsTypeModelFile(p, rtype) && !fsutil.IsResourcePackFolder(p) && !isDirEntry {
+	if !packs.IsTypeModelFile(p, rtype) && !fsutil.IsResourcePackFolder(p) && !isDirEntry {
 		return meta, false
 	}
 	lowName := strings.ToLower(filepath.Base(p))

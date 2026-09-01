@@ -40,7 +40,7 @@ invariant_anchors:
 | 目标目录可创建 | `MKDIR_FAILED` |
 | 非覆盖模式下目标不存在 | `FILE_EXISTS` |
 
-类型路由：`.zip` 走 `DetectZipType(data)` 按 ZIP local file header 里的文件名判定（`pack.mcmeta`→resourcepack、`shaders/`→shaderpack、`ysm.json`/`models/`→ysm，默认 ysm）；其余扩展名回退 `types.ExtBelongsTo`。魔数不匹配（ZIP `PK\x03\x04` / 7z `7z¼¯`）**只记 warn 日志仍照常导入**，不阻断。
+类型路由：`.zip` 走 `DetectZipType(data)` 按 ZIP local file header 里的文件名判定（`pack.mcmeta`→resourcepack、`shaders/`→shaderpack、`ysm.json`/`models/`→ysm，默认 ysm）；其余扩展名回退 `types.ExtBelongsTo`。魔数不匹配（ZIP `PK\x03\x04` / 7z `7z¼¯`）**只记 warn 日志仍照常导入**，不阻断。`DetectZipType` 收集条目名后委托 `packs.DetectByEntries`（ADR-144 下沉，原 `types.DetectByEntries`）。
 
 ## 对外 API / 入口
 

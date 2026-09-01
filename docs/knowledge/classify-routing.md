@@ -4,11 +4,12 @@ name: 分类路由与回归护栏
 tier: architecture
 category: go
 source_files:
-  - go/types/classify.go
+  - go/packs/classify.go
   - go/types/resource.go
   - resource_types.json
 tests:
-  - go/types/classify_test.go
+  - go/packs/classify_test.go
+  - go/packs/model_file_test.go
 use_when:
   - 整合包分类
   - 路由
@@ -22,8 +23,8 @@ use_when:
   - last-wins
   - priority 裁决
 invariant_anchors:
-  - go/types/classify.go|ClassifyResource
-  - go/types/classify.go|DetectByEntries
+  - go/packs/classify.go|ClassifyResource
+  - go/packs/classify.go|DetectByEntries
   - go/types/resource.go|validateRegistrySchema
 ---
 
@@ -48,13 +49,15 @@ invariant_anchors:
 
 | # | 根因 | 现场 | 现状 |
 |---|------|------|------|
-| 1 | 三套编排各自为政 | `repoaudit.Audit` / `packs.DetectResourceType` / `importer.DetectZipType` 三套独立链路，一处修到不了另一处 | `packs`→`types.ClassifyResource`、`importer`→`types.DetectByEntries`（commit `bc95fbb4`）；`repoaudit.Classify` 仍自有实现（**有意保留**：审计口径遇未知容器标 `container`，与导入口径 content-fingerprint 语义不同） |
-| 2 | 共享扩展名 last-wins | `extToTypeID[e]=rt.ID` 覆盖写，`.zip` 被 15 类型声明 → 落注册表末位 | `repoaudit.initExtMap` 改收单声明者，多/零声明者 → `"other"`；`types.ClassifyResource` 兜底仅 `container`/`other`，禁裸扩展名 last-wins |
+| 1 | 三套编排各自为政 | `repoaudit.Audit` / `packs.DetectResourceType` / `importer.DetectZipType` 三套独立链路，一处修到不了另一处 | `packs`→`ClassifyResource`、`importer`→`packs.DetectByEntries`（commit `bc95fbb4` 收敛至 types，ADR-144 下沉至 packs）；`repoaudit.Classify` 仍自有实现（**有意保留**：审计口径遇未知容器标 `container`，与导入口径 content-fingerprint 语义不同） |
+| 2 | 共享扩展名 last-wins | `extToTypeID[e]=rt.ID` 覆盖写，`.zip` 被 15 类型声明 → 落注册表末位 | `repoaudit.initExtMap` 改收单声明者，多/零声明者 → `"other"`；`ClassifyResource` 兜底仅 `container`/`other`，禁裸扩展名 last-wins |
 | 3 | 无结果不变量守卫 | 仅 fmt 诊断、schema 检查，无「包 X 必须判为 Y」「加类型 Z 不得改 X」断言 | 见下方护栏设计（commit `634fb63f`） |
 
 > 旧债卡 `extensibility-index-reconciliation.md` Top #2「双入口检测器未合并单一入口」因此降为**部分闭环**：packs+importer 已统一于 `types` 分类器核心，repoaudit 未折叠（语义差异有意保留）。
 
-## `types.ClassifyResource` 三阶段（路由核心）
+## `packs.ClassifyResource` 三阶段（路由核心）
+
+> 归属（ADR-144）：识别大脑（ClassifyResource / DetectByEntries / IsTypeModelFile / ClassContainer / ClassOther）随依赖 container 的识别逻辑从 `go/types` 下沉到 `go/packs`；`types` 回归纯类型/注册表/纯函数层。消费方（importer / instance / sync / internal-app）改调 `packs.` 前缀。`ExtBelongsToBy`（纯注册表查询）留 `types`，供 `packs.ClassifyExt` 与 types/resource.go 守卫共用，避免 types→packs 反向依赖。
 
 1. **Phase 1 — location 路由**：按路径目录 suffix 匹配 `storageSubDir`/`instanceDir`，且要求扩展名认同 + `detector` 通过才返回（比旧 `TypeByLocation` 更严）。
 2. **Phase 2 — 容器指纹 + Priority 裁决**：`zipentry`/`ysm`/`mcmeta`/`shader` detector 命中后，用 **`(priority desc, id asc)`** 双键裁决，消除注册表顺序依赖。
@@ -66,7 +69,7 @@ ADR-069：importer 魔数路径（不真开容器、靠魔数嗅探）语义由 
 
 | 护栏 | 载体 | 作用 |
 |------|------|------|
-| golden | `go/types/testdata/classify-golden.json`（18 例）+ `TestClassifyGolden` | 每类型 + 雷区断言。`schematics/gear.zip`@仓库根 → `blueprint`（钉死 audit=`container`/导入=`blueprint` 分叉现行犯）；`random.zip`→`container`（反 last-wins） |
+| golden | `go/packs/testdata/classify-golden.json`（18 例）+ `TestClassifyGolden` | 每类型 + 雷区断言。`schematics/gear.zip`@仓库根 → `blueprint`（钉死 audit=`container`/导入=`blueprint` 分叉现行犯）；`random.zip`→`container`（反 last-wins） |
 | isolation | `TestClassifyIsolation` | 移除任一类型后，其余语料分类不变（归 victim 的用例跳过）—— 从结构上证明新增类型不会连坐改掉旧类型 |
 | order | `TestClassifyOrderIndependent` | shuffle 注册表顺序后语料稳定 —— 逼出「同 Priority 取注册序在前者」隐患，要求 `priority` 作唯一 tiebreak |
 | schema 守卫 4 | `validateRegistrySchema` | 禁「仅共享扩展名且无指纹/无 location 锚点」的类型（灭 last-wins 回归源） |
@@ -85,4 +88,4 @@ ADR-069：importer 魔数路径（不真开容器、靠魔数嗅探）语义由 
 - [go_types](./go-types.md) — `types` 共享类型层（注册表加载、zipentry 契约 ADR-067）
 - [resource_registry](./resource-registry.md) — `resource_types.json` 单一事实源
 - [extensibility_index_reconciliation](./extensibility-index-reconciliation.md) — Top #2 双入口检测器（部分闭环）
-- 测试：`go/types/classify_test.go`、`go/types/testdata/classify-golden.json`、`go/types/registry_schema_guard_test.go`
+- 测试：`go/packs/classify_test.go`、`go/packs/model_file_test.go`、`go/packs/testdata/classify-golden.json`、`go/types/registry_schema_guard_test.go`

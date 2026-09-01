@@ -13,6 +13,12 @@ source_files:
   - internal/app/pathmgr_android.go
 tests:
   - internal/app/app_config_test.go
+quick_groups:
+  - 后端桥接与数据存储
+quick_intents:
+  - Android 平台守卫、RevealInExplorer 降级
+  - 跨平台路径处理、pathmgr
+  - 平台分支、WASM decoder 平台差异
 use_when:
   - Android
   - 平台守卫

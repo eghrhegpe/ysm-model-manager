@@ -2,7 +2,7 @@
 kind: ground-cap-gcbuildmaterialgroup-133
 name: ground-cap-gcBuildMaterialGroup-133
 tier: leaf
-category: utils
+category: rendering
 source_files:
   - frontend/src/preview-3d/caps/ground-capability.ts
 quick_groups:

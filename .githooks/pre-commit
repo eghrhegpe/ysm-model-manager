@@ -44,8 +44,10 @@ cd "$ROOT"
 GEN_SNAP="/tmp/ysm_gen_snap_before_$$.txt"
 GEN_SNAP_AFTER="/tmp/ysm_gen_snap_after_$$.txt"
 snap_docs() {
-  if find docs/ frontend/public/locales/ completions/ -type f -printf '%T@ %s %p\n' 2>/dev/null | sort > "$1"; then
-    [ -s "$1" ] || node -e '
+  # 跨平台优先 node（Windows Git Bash 下 find -printf 偶发不可靠，会令 GEN_SNAP 缺失
+  # 进而跌入兜底 git add -u docs/ 吞他人半成品）；find 仅作 GNU 快路径
+  if command -v node >/dev/null 2>&1; then
+    node -e '
       const fs=require("fs"),path=require("path");
       const out=[];
       for (const base of ["docs","frontend/public/locales","completions"]) {
@@ -54,8 +56,10 @@ snap_docs() {
         walk(base);
       }
       fs.writeFileSync(process.argv[1], out.sort().join("\n"));
-    ' "$1" 2>/dev/null || true
+    ' "$1" 2>/dev/null && [ -s "$1" ] && return 0
   fi
+  # GNU 平台 find 快路径（失败静默，交由下方兜底分支处理）
+  find docs/ frontend/public/locales/ completions/ -type f -printf '%T@ %s %p\n' 2>/dev/null | sort > "$1" || true
 }
 trap 'rm -f "$GEN_SNAP" "$GEN_SNAP_AFTER"' EXIT
 snap_docs "$GEN_SNAP"
@@ -104,12 +108,15 @@ while IFS= read -r p; do
   git rev-parse --git-dir >/dev/null 2>&1 && cp /tmp/ysm_gen_to_stage.txt "$(git rev-parse --git-dir)/ysm_gen_staged" 2>/dev/null || true
   rm -f "$GEN_SNAP" /tmp/ysm_gen_snap_after.txt
 else
-  # 快照缺失（find 异常）→ 兜底只 stage 已跟踪 docs/locales/completions 的修改（-u 不 stage 新文件）
-  git add -u docs/ frontend/public/locales/ completions/ 2>/dev/null || ADD_FAIL="$ADD_FAIL docs/locales/completions"
+  # 快照缺失（find/node 均异常）→ 严禁兜底 git add -u docs/：会吞他人未提交 docs 半成品
+  # （违反 2026-08-17 P2-2 并发隔离）。仅置标志，由下方统一告警，不自动 stage。
+  GEN_SKIPPED=1
 fi
 
 if [ -n "$ADD_FAIL" ]; then
   echo "⚠️  git add 失败（$ADD_FAIL），文档产物未 stage（不阻断 commit，请检查索引状态）"
+elif [ -n "${GEN_SKIPPED:-}" ]; then
+  echo "⚠️  文档快照缺失，自动 stage 已跳过（不吞未提交 docs 漂移）；如需 sync 请手动 git add 本次 gen 产物"
 else
   echo "[pre-commit] ✅ 文档已同步并 stage（仅本次 gen 产物）"
 fi

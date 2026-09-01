@@ -2,7 +2,7 @@
 kind: mount3d-584-giant
 name: mount3D-584-giant
 tier: leaf
-category: utils
+category: rendering
 source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
 quick_groups:

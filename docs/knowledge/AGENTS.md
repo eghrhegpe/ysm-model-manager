@@ -18,7 +18,7 @@ docs/knowledge/
 kind: event-bus             # kebab-case 标识符，等于文件名（去掉 .md）
 name: 事件总线 bus.ts         # 人类可读名称
 tier: architecture | leaf    # architecture=核心架构, leaf=叶子节点
-category: core               # core|go|ui|feature|utils|config
+category: core               # core|go|ui|feature|rendering|utils|config
 source_files:                # 必须真实存在于磁盘；仓库相对 POSIX 路径，禁止反斜杠/绝对路径/..；勿指向 bindings/dist/node_modules 等生成物或测试文件（实现放 source_files，测试放 tests:）
   - frontend/src/bus.ts
 use_when:                    # 用户自然语言关键词
@@ -98,6 +98,7 @@ node scripts/check-knowledge-drift.ts --affected <f>…  # 主动：源码变更
 | go | Go 后端包（安装、下载、回收站、YSM 解析等） |
 | ui | 前端 UI 组件（tree、sidebar、preview、content） |
 | feature | 业务功能（导入队列、同步、社区） |
+| rendering | 3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation） |
 | utils | 工具函数（display、fmt、dom、animation） |
 | config | 配置与注册表（resource_types、AppConfig） |
 

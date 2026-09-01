@@ -2,7 +2,7 @@
 kind: model3d
 name: 3D 预览渲染 model3d
 tier: architecture
-category: utils
+category: rendering
 source_files:
   - frontend/src/preview-3d/
   - frontend/src/views/app-preview/model3d-loader.ts

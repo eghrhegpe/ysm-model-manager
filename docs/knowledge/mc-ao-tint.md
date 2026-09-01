@@ -2,7 +2,7 @@
 kind: mc-ao-tint
 name: MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现
 tier: leaf
-category: utils
+category: rendering
 source_files:
   - frontend/src/preview-3d/adapters/pack-model-adapter.ts
   - frontend/src/preview-3d/mc-tints.ts

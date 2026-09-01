@@ -2,7 +2,7 @@
 kind: perception
 name: 3D 感知系统 perception
 tier: architecture
-category: utils
+category: rendering
 source_files:
   - frontend/src/preview-3d/perception/
 quick_groups:

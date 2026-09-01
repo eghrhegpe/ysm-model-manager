@@ -2,7 +2,7 @@
 kind: mount-preview-module-singleton-race
 name: mount-preview-module-singleton-race
 tier: leaf
-category: utils
+category: rendering
 source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
 quick_groups:

@@ -1442,6 +1442,10 @@ export const autoSidebar = [
             "link": "/knowledge/fbx-cli-pipeline"
           },
           {
+            "text": "通用泛型并发工具 go/conc",
+            "link": "/knowledge/go_conc"
+          },
+          {
             "text": "仓库审计 go/repoaudit",
             "link": "/knowledge/go_repoaudit"
           },
@@ -1764,32 +1768,12 @@ export const autoSidebar = [
         ]
       },
       {
-        "text": "utils",
+        "text": "rendering",
         "collapsed": true,
         "items": [
           {
-            "text": "动画系统 animation",
-            "link": "/knowledge/animation-system"
-          },
-          {
             "text": "跨格式骨骼工具层 bone-tools",
             "link": "/knowledge/bone-tools"
-          },
-          {
-            "text": "核心工具函数 core-utils",
-            "link": "/knowledge/core_utils"
-          },
-          {
-            "text": "悬浮提示 tooltip",
-            "link": "/knowledge/dom_tooltip"
-          },
-          {
-            "text": "localStorage 安全读写 safeGet/safeSet",
-            "link": "/knowledge/dom-storage"
-          },
-          {
-            "text": "YSM 动画分组与配置菜单提取",
-            "link": "/knowledge/format-ysm-anim-config"
           },
           {
             "text": "地面材质 spec 单一事实源 ground-surface-spec",
@@ -1832,12 +1816,42 @@ export const autoSidebar = [
             "link": "/knowledge/render-federation"
           },
           {
-            "text": "安全错误消息提取 utils",
-            "link": "/knowledge/safe_error_msg"
-          },
-          {
             "text": "场景能力注册表 scene-capability-registry",
             "link": "/knowledge/scene_capability_registry"
+          }
+        ]
+      },
+      {
+        "text": "utils",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "动画系统 animation",
+            "link": "/knowledge/animation-system"
+          },
+          {
+            "text": "核心工具函数 core-utils",
+            "link": "/knowledge/core_utils"
+          },
+          {
+            "text": "悬浮提示 tooltip",
+            "link": "/knowledge/dom_tooltip"
+          },
+          {
+            "text": "localStorage 安全读写 safeGet/safeSet",
+            "link": "/knowledge/dom-storage"
+          },
+          {
+            "text": "YSM 动画分组与配置菜单提取",
+            "link": "/knowledge/format-ysm-anim-config"
+          },
+          {
+            "text": "提交前钩子 pre-commit",
+            "link": "/knowledge/pre-commit-hook"
+          },
+          {
+            "text": "安全错误消息提取 utils",
+            "link": "/knowledge/safe_error_msg"
           },
           {
             "text": "scripts 共享核演进（diff-coverage-core + cycles）",
@@ -1952,16 +1966,6 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
-          }
-        ]
-      },
-      {
-        "text": "ci",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "提交前钩子 pre-commit",
-            "link": "/knowledge/pre-commit-hook"
           }
         ]
       }

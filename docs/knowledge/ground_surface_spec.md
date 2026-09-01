@@ -2,7 +2,7 @@
 kind: ground_surface_spec
 name: 地面材质 spec 单一事实源 ground-surface-spec
 tier: leaf
-category: utils
+category: rendering
 source_files:
   - frontend/src/preview-3d/caps/ground-surface-spec.ts
   - frontend/src/preview-3d/caps/ground-capability.ts

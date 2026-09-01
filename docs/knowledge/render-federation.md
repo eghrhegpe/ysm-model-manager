@@ -1,7 +1,7 @@
 ---
 kind: render-federation
 name: 联邦渲染能力 (Render Federation)
-category: utils
+category: rendering
 tier: architecture
 adr:
   - ADR-125

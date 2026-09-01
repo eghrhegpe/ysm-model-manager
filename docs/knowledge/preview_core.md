@@ -4,7 +4,7 @@ name: 统一 3D 预览核心 preview-core
 tier: architecture
 adr:
   - ADR-125
-category: utils
+category: rendering
 source_files:
   - frontend/src/preview-3d/adapters/
   - frontend/src/preview-3d/bone-tools.ts

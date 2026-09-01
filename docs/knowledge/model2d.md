@@ -2,7 +2,7 @@
 kind: model2d
 name: 2D 预览渲染 model2d
 tier: architecture
-category: utils
+category: rendering
 source_files:
   - frontend/src/views/app-preview/model2d/model2d.ts
 tests:

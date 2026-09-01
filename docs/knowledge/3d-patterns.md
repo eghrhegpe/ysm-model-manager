@@ -19,6 +19,17 @@ use_when:
   - 循环依赖破壁
   - 审核驱动开发
   - 并发防护 gen 守卫
+quick_groups:
+  - 3D 预览与模型追加
+quick_intents:
+  - 3D 渲染循环优化、Vector3 复用
+  - 纹理缓存、AbortController 事件管理
+  - 资源生命周期 dispose、循环依赖破壁
+quick_risk_lines:
+  - 3D 资源释放必须走 dispose 链路，禁止依赖 GC
+pitfalls:
+  - Vector3 频繁 new 造成 GC 抖动；必须复用或池化
+  - AbortController 未清理导致事件泄漏；必须在 dispose 时 abort + removeEventListener
 invariant_anchors:
   - frontend/src/preview-3d/debug-render.ts|rebuildDebug
   - frontend/src/preview-3d/model-group-builder.ts|buildModelGroup

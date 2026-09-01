@@ -10,9 +10,12 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 调后端、app.ts 绑定、getApp | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
+| 跨平台路径处理、pathmgr | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
+| 平台分支、WASM decoder 平台差异 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | 桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend_web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
 | Android 存储授权、目录选择器 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | Android 存储授权必须走 android-bridge 的 SAF 授权流程，禁止直接请求 MANAGE_EXTERNAL_STORAGE | - |
+| Android 平台守卫、RevealInExplorer 降级 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | android:back 返回键、弹窗退出 | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | Android 系统事件必须经 android-events 的 registerAndroidEvents 单点注册，禁止各组件各自注册 | - |
 | Android/Linux/macOS Rust 桥 | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径 | - |
 | API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |

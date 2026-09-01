@@ -136,4 +136,4 @@ grep docs/adr/ 查找相关决策和状态。
 - 本文件自动生成，**请勿手改**；重跑 `node scripts/gen-routes.ts` 重新生成。
 - 新增/修改知识卡：更新 frontmatter 的 `use_when`（意图关键词）后重跑即可自动入列。
 - `use_when` 为空或不含关键词的卡不会出现在路由表（但仍可经索引/关联图抵达）。
-- 表外分类（`category` 非 core/go/ui/feature/utils/config）的卡仍按 use_when 参与路由。
+- 表外分类（`category` 非 core/go/ui/feature/rendering/utils/config）的卡仍按 use_when 参与路由。

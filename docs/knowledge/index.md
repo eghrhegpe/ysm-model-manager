@@ -2,19 +2,9 @@
 
 # 知识卡索引
 
-> 总计: 148 张知识卡
+> 总计: 149 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
-
-## ci（1 张）
-
-| 标识 | 名称 | tier | 性能 | 关键词 |
-|------|------|------|------|--------|
-| 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离 |
-
-### 摘要
-
-- **pre-commit-hook**（提交前钩子 pre-commit）：`.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0…
 
 ## config（10 张）
 
@@ -122,7 +112,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（40 张）
+## go（41 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -165,6 +155,7 @@
 | 🍃 go-version | 版本号 go/version | leaf | — | 版本, version, 更新, ldflags |
 | 🏗 go-watcher | 文件监听 go/watcher | architecture | io-bound | 监听, 文件变化, 刷新, watcher |
 | 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture | io-bound | YSM, 解析, 摘要, ysm 文件, 元数据 |
+| 🍃 go_conc | 通用泛型并发工具 go/conc | leaf | — | 并发, 并行, worker 池, 批量并发, 输入序收集 |
 | 🏗 go_repoaudit | 仓库审计 go/repoaudit | architecture | io-bound, memory-heavy | 仓库审计, 健康分数, 完整性检查, 缓存命中率, repoaudit, health-report, 去重 |
 | 🏗 rustbridge | Rust 桥 rustbridge | architecture | io-bound, concurrent | Rust 扫描器, rust_backend, 桥 DLL, Wails 后端迁移 Rust |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 接口, Go 方法, 调用后端, 有哪些方法, App 方法, getApp, 方法签名, app.ts 绑定 |
@@ -207,8 +198,41 @@
 - **go-version**（版本号 go/version）：`go/version/` 只有一件事：持有应用版本号。默认 `"dev"`，发版构建时通过 `-ldflags -X` 注入正式版本，供界面展示与自动更新的版本比较。
 - **go-watcher**（文件监听 go/watcher）：`go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。
 - **go-ysm-parser**（YSM 解析 go/ysm）：`go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。
+- **go_conc**（通用泛型并发工具 go/conc）：`go/conc` 提供唯一泛型并行入口 `Parallel[T,R]`，收敛 `internal/app` 三处手写 worker 池（`app_scan.go:runConcurrentAnalyze` / `app_model.go:…
 - **go_repoaudit**（仓库审计 go/repoaudit）：`go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
+
+## rendering（12 张）
+
+*3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
+
+| 标识 | 名称 | tier | 性能 | 关键词 |
+|------|------|------|------|--------|
+| 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼列表, 骨骼拾取, 骨骼显隐, BoneNode, BoneTree, buildBoneTree, makeBonePanelRenderer |
+| 🍃 ground-cap-gcbuildmaterialgroup-133 | ground-cap-gcBuildMaterialGroup-133 | leaf | — | 拆 gcBuildMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
+| 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
+| 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
+| 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
+| 🏗 model3d | 3D 预览渲染 model3d | architecture | gpu-bound | 3D 预览, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底, OrbitControls |
+| 🍃 mount-preview-module-singleton-race | mount-preview-module-singleton-race | leaf | concurrent | 修 mount3D 并发竞态, 评审模块级单例守卫 |
+| 🍃 mount3d-584-giant | mount3D-584-giant | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
+| 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 自动跳舞, 眨眼, 呼吸, 视线追踪, 口型同步, 节拍检测, 模型感知, 自动运动 |
+| 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
+| 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
+| 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
+
+### 摘要
+
+- **bone-tools**（跨格式骨骼工具层 bone-tools）：`frontend/src/preview-3d/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D 层级树两…
+- **ground-cap-gcbuildmaterialgroup-133**（ground-cap-gcBuildMaterialGroup-133）：`ground-capability.ts` `gcBuildMaterialGroup` 约 55 行（T2 工厂化后从 133 行降至 <60 行），构建「表面材质」菜单组 14 个控件。已按建议抽 `gcSliderDef`/`gcC…
+- **ground_surface_spec**（地面材质 spec 单一事实源 ground-surface-spec）：ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMateria…
+- **model2d**（2D 预览渲染 model2d）：Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。
+- **model3d**（3D 预览渲染 model3d）：前端 Three.js 3D 渲染层（`frontend/src/preview-3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/m…
+- **mount-preview-module-singleton-race**（mount-preview-module-singleton-race）：`mount-preview-core.ts:155-170` 模块级 `let _singletonOverlay/_singletonBody/_singletonViewContainer/_singletonScene/_singl…
+- **mount3d-584-giant**（mount3D-584-giant）：`mount3D`（mount-preview-core.ts:240-823）584 行真·巨鲸，内部 12+ 内联闭包，是今日 3D 层审核（ts-package-review）的头号坏味道。今日 commits（1f1b60d4/fd…
+- **perception**（3D 感知系统 perception）：`preview-3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。
+- **preview_core**（统一 3D 预览核心 preview-core）：ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚手架（旧实现各内联 ~250 行同构），成为所有富格式 3D 预览的**单一事实来源外壳**。内容差异经 `PreviewAdapter.bui…
+- **scene_capability_registry**（场景能力注册表 scene-capability-registry）：ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Ground / Environment / Fog / Shadow / Reflector / Light / Postprocessing）由统一注册表**创…
 
 ## ui（31 张）
 
@@ -280,30 +304,19 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/ui/ui-slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（m…
 - **ui_components**（UI 组件库 ui-components）：`frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 …
 
-## utils（35 张）
+## utils（24 张）
 
 *工具函数（display、fmt、dom、animation）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | 动画, 骨骼动画, 关键帧, 动画播放, Molang, 数字滚动, stagger 入场, 关闭动画, 状态机, 动画控制器, AnimationController |
-| 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼列表, 骨骼拾取, 骨骼显隐, BoneNode, BoneTree, buildBoneTree, makeBonePanelRenderer |
 | 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步, 日志 |
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
-| 🍃 ground-cap-gcbuildmaterialgroup-133 | ground-cap-gcBuildMaterialGroup-133 | leaf | — | 拆 gcBuildMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
-| 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
-| 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
-| 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
-| 🏗 model3d | 3D 预览渲染 model3d | architecture | gpu-bound | 3D 预览, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底, OrbitControls |
-| 🍃 mount-preview-module-singleton-race | mount-preview-module-singleton-race | leaf | concurrent | 修 mount3D 并发竞态, 评审模块级单例守卫 |
-| 🍃 mount3d-584-giant | mount3D-584-giant | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
-| 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 自动跳舞, 眨眼, 呼吸, 视线追踪, 口型同步, 节拍检测, 模型感知, 自动运动 |
-| 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
-| 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
+| 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离 |
 | 🏗 safe_error_msg | 安全错误消息提取 utils | architecture | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
-| 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
 | 🏗 script_shared_cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重, 脚本重构 |
 | 🏗 source-graph | 源码符号提取共享层 source-graph.ts | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图, check-lib-adoption |
 | 🏗 utils-array | 数组工具 moveItem | architecture | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
@@ -325,21 +338,12 @@
 ### 摘要
 
 - **animation-system**（动画系统 animation）：前端动画体系分两层：**模型骨骼动画**（基岩版 animation.json 解析 + 关键帧插值求值）与 **UI 动效**（数字里程表滚动、stagger 入场延迟）。UI 层的 CSS 动画可被全局 `no-animations` …
-- **bone-tools**（跨格式骨骼工具层 bone-tools）：`frontend/src/preview-3d/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D 层级树两…
 - **core_utils**（核心工具函数 core-utils）：`utils/core/` 是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。
 - **dom-storage**（localStorage 安全读写 safeGet/safeSet）：`localStorage` 安全读写工具层（ADR-044 策略 A），收敛项目内所有 `localStorage` 调用，避免隐私模式/存储禁用下裸调抛错中断启动链（`initTheme`/`applyUIPrefs`/`setting…
 - **dom_tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
 - **format-ysm-anim-config**（YSM 动画分组与配置菜单提取）：前端镜像 Go 端 `appendAnimGroupsAndConfigs` 逻辑的纯函数模块（`summary.go`）。加密 `.ysm` 经 WASM 解码后，`ysm.json` 的 `properties` 字段可读，但原 `wa…
-- **ground-cap-gcbuildmaterialgroup-133**（ground-cap-gcBuildMaterialGroup-133）：`ground-capability.ts` `gcBuildMaterialGroup` 约 55 行（T2 工厂化后从 133 行降至 <60 行），构建「表面材质」菜单组 14 个控件。已按建议抽 `gcSliderDef`/`gcC…
-- **ground_surface_spec**（地面材质 spec 单一事实源 ground-surface-spec）：ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMateria…
-- **model2d**（2D 预览渲染 model2d）：Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。
-- **model3d**（3D 预览渲染 model3d）：前端 Three.js 3D 渲染层（`frontend/src/preview-3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/m…
-- **mount-preview-module-singleton-race**（mount-preview-module-singleton-race）：`mount-preview-core.ts:155-170` 模块级 `let _singletonOverlay/_singletonBody/_singletonViewContainer/_singletonScene/_singl…
-- **mount3d-584-giant**（mount3D-584-giant）：`mount3D`（mount-preview-core.ts:240-823）584 行真·巨鲸，内部 12+ 内联闭包，是今日 3D 层审核（ts-package-review）的头号坏味道。今日 commits（1f1b60d4/fd…
-- **perception**（3D 感知系统 perception）：`preview-3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。
-- **preview_core**（统一 3D 预览核心 preview-core）：ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚手架（旧实现各内联 ~250 行同构），成为所有富格式 3D 预览的**单一事实来源外壳**。内容差异经 `PreviewAdapter.bui…
+- **pre-commit-hook**（提交前钩子 pre-commit）：`.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0…
 - **safe_error_msg**（安全错误消息提取 utils）：`frontend/src/utils/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `friendlyErr…
-- **scene_capability_registry**（场景能力注册表 scene-capability-registry）：ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Ground / Environment / Fog / Shadow / Reflector / Light / Postprocessing）由统一注册表**创…
 - **script_shared_cores**（scripts 共享核演进（diff-coverage-core + cycles））：`scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复：
 - **utils-array**（数组工具 moveItem）：纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。
 - **utils-display**（文件名显示 display）：模型文件名解析 + 美化显示管线。YSM 社区文件名遵循 `[作者]【作品】角色 日期.ext` 命名约定，本模块把它解析为结构化字段，并在原文件名上原位着色（作者/作品/日期各自样式），是 UI 侧文件名展示的唯一入口。
@@ -409,5 +413,6 @@ node scripts/gen-knowledge-index.ts
 | go | Go 后端包（安装、下载、回收站、YSM 解析等） |
 | ui | 前端 UI 组件（tree、sidebar、preview、content） |
 | feature | 业务功能（导入队列、同步、社区） |
+| rendering | 3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation） |
 | utils | 工具函数（display、fmt、dom、animation） |
 | config | 配置与注册表（resource_types、AppConfig） |

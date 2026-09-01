@@ -27,7 +27,7 @@
 | 网页版、浏览器模式、browser adapter、IndexedDB、跨域隔离 | [网页版后端 backend-web](./backend_web.md) ⚠️歧义（另见 backend-idb.md、wails-bridge.md等） | `frontend/src/backend/` 是 YSM 网页版（ADR-049 Web Edition）的后端抽象层。在桌面/Android 环境下走 Wails Go 绑定替代，网页版使用 `browser-adapter.ts` +… |
 | IndexedDB、网页版、backend、模型库、browser adapter、web mode | [浏览器后端 IndexedDB 封装](./backend-idb.md) ⚠️歧义（另见 backend_web.md、wails-bridge.md等） | `backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id… |
 | string-JSON、JSON.parse 断言、绑定 struct 化、铲债清单、错误通道统一、ADR-143、绑定返回 string | [string-JSON 绑定铲债清单](./binding_json_cleanup.md) | ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struc… |
-| 整合包分类、路由、zipentry 指纹、蓝图、回归、last-wins | [分类路由与回归护栏](./classify-routing.md) ⚠️歧义（另见 go-litematic.md、resource-packs.md） | 整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需… |
+| 整合包分类、路由、zipentry 指纹、蓝图、回归、last-wins | [分类路由与回归护栏](./classify-routing.md) ⚠️歧义（另见 go-litematic.md） | 整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需… |
 | CLI、质量摸排、代码审核、代码审查、bug 排查、审计、白名单、绑定层 | [CLI 质量摸排 Checklist](./cli_quality_audit.md) ⚠️歧义（另见 fbx-cli-pipeline.md、frontend_repo_audit.md、frontend_test_audit.md等） | 本文档记录 YSM 项目 Go CLI 层（`go/cli/` + `internal/app/` + `frontend/src/services/`）代码审核的**高频问题模式**与**修复 Checklist**。2026-08-19… |
 | commit-with-check、自动提交、并发提交、临时索引、白名单提交、门禁后自动 commit | [提交脚本 commit-with-check](./commit_with_check.md) | `commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD… |
 | 创意工坊、社区、下载队列、镜像源、批量下载、github 仓库、下载进度、workshop | [社区下载 community](./community-feature.md) ⚠️歧义（另见 go-download.md） | `features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，五个文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染站点卡片与模型列表、`e… |
@@ -61,7 +61,7 @@
 | 导入、策略、导入队列、importer | [导入策略 go/importer](./go-importer.md) ⚠️歧义（另见 import-queue.md等） | `go/importer/` 包分两块：`importer.go` 的**按资源类型注册的复制策略表**（`Handler` 接口，供本地路径导入/安装复用），以及 `importer_file.go` 的 **base64 单文件导入核心… |
 | 安装、installer、模型导入、下载模型 | [模型安装 go/installer](./go-installer.md) | `go/installer/`（单文件 `installer.go`）负责把仓库中的模型/资源文件**落地**到 Minecraft 整合包实例目录：按 `LinkMode`（`copy` / `hardlink` / `symlink`）… |
 | 整合包、实例、版本实例、VersionInstance、同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) ⚠️歧义（另见 go-sync.md） | `go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建，是 `app_install.go` 中 `GetInstanceSyncStatus` Binding 的下沉逻辑（知识卡旧文称 `GetReso… |
-| 投影、litematic、schematic、nbt、蓝图、体素、方块 | [Litematic 解析 go/litematic](./go-litematic.md) ⚠️歧义（另见 resource-packs.md、classify-routing.md等） | `go/litematic/` 包解析 Minecraft 建筑蓝图文件：Litematica 投影（`.litematic`，NBT gzip）、MCEdit 旧版 `.schematic`、原版结构 `.nbt`，产出元数据、方块统计（… |
+| 投影、litematic、schematic、nbt、蓝图、体素、方块 | [Litematic 解析 go/litematic](./go-litematic.md) ⚠️歧义（另见 classify-routing.md） | `go/litematic/` 包解析 Minecraft 建筑蓝图文件：Litematica 投影（`.litematic`，NBT gzip）、MCEdit 旧版 `.schematic`、原版结构 `.nbt`，产出元数据、方块统计（… |
 | 导入日志、操作记录、日志、import log、历史 | [导入日志 go/logs](./go-logs.md) ⚠️歧义（另见 core_utils.md） | `go/logs/` 包提供两套互不相干的日志设施：**操作日志**（`Logger`，持久化）把导入/扫描/下载/同步/重命名/删除/UI 报错等操作的成败结果写入用户配置目录下的 `ysm-import-logs.json`；**运行时… |
 | 资源包、光影包、mcmeta、pack_format、缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) ⚠️歧义（另见 resource-packs.md、go-avatar.md、utils-export.md等） | `go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级… |
 | 路径、安全、path、路径校验 | [路径安全 go/paths](./go-paths.md) | `go/paths/` 包提供路径安全校验，防止路径穿越攻击和非法路径访问。 |
@@ -93,7 +93,7 @@
 | 预览设置、显示控制、骨骼名称、帧率、截图灯光 | [预览面板设置与显示控制](./preview-settings.md) | > **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖… |
 | 回收站、恢复文件、清空回收站、软删除、recycle、还原 | [回收站界面 recycle-bin](./recycle-bin.md) ⚠️歧义（另见 go-recycle.md等） | `recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调… |
 | 联邦渲染、shared renderer、rAF 复用、多 3D 场景 | [联邦渲染能力 (Render Federation)](./render-federation.md) | — |
-| 资源包、光影包、蓝图、投影、resourcepack、shaderpack、资源管理 | [资源包功能 resource-packs](./resource-packs.md) ⚠️歧义（另见 go-packs.md、classify-routing.md、go-litematic.md等） | **已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager… |
+| 资源包、光影包、resourcepack、shaderpack | [资源包功能 resource-packs（已归档）](./resource-packs.md) ⚠️歧义（另见 go-packs.md等） | **已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager… |
 | 资源类型、注册表、resource_types、registry、文件类型 | [资源注册表 registry](./resource-registry.md) ⚠️歧义（另见 utils-resource-types.md、go-types.md） | `resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。 |
 | Android、Linux、macOS、rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) ⚠️歧义（另见 android-bridge.md、go-android-platform-guard.md、rustbridge.md） | — |
 | Rust 扫描器、rust_backend、桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) ⚠️歧义（另见 rust-android-bridge.md） | — |

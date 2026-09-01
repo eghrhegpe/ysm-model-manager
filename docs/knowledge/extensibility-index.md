@@ -10,11 +10,15 @@ use_when:
   - 重复实现
   - 插件化
 affected: false
+status: snapshot
+last_verified: 2026-09-01
 ---
 
 <!-- 本文件为一次性发掘成果，由 AtomCode 于 2026-08-15 派发 6 个 explore 子代理汇总而成。非自动生成；如需更新请新增批次。 -->
 
 # 可拓展点发掘索引（extensibility inventory）
+
+> ⚠️ **批次 1 快照（2026-08-15）**：本卡为 6 个 explore 子代理的输出汇总，此后又经 ADR-064/065/067/068/069 + web M1/M2 闭环了 Top 10 的 60%。状态对账见 [extensibility-index-reconciliation.md](./extensibility-index-reconciliation.md)（2026-08-17）；新拓展点探索见 [extensibility-round2.md](./extensibility-round2.md)（2026-08-16+）。
 
 > 范围：YSM model manager 全量非测试源码（frontend/src/** + go/**），323 TS + 181 Go 文件。
 > 方法：6 个 explore 子代理按模块边界并行深读，输出按「现状 → 可拓展为 → 价值」三元组。

@@ -10,6 +10,8 @@ use_when:
   - 新增同步逻辑
   - 残留手改清单
 affected: false
+status: active
+last_verified: 2026-08-27
 ---
 
 # 拓展点 / 扩展入口 探索报告（Round 2）
@@ -79,7 +81,7 @@ affected: false
 | 打开分派 | `container.go`（`Open`） | 需加 switch | `ext == ".zip" || ".7z" || info.IsDir()`，其他扩展返回"不支持" |
 | 内容指纹 | `container.go`（`matchZipArchive`） + `types.go`（`MatchZipEntry`） | 自动（对已有容器） | `matchZipEntry` 只认已注册的容器打开器 |
 | 前端 WASM 预览 | `frontend/src/preview-3d/decoder/wasm-decode.ts` + `preview-3d/adapters/` | 需加适配器 | YSM/WASM 硬编码 `.ysm`；Litematic/VRM/MMD 有独立适配器 |
-| 预览派发 | `app-preview/index.ts`（`PREVIEW_HANDLERS`） | 需加 handler | 统一核心（D2，mount-preview-core）尚未落地——目前仍是每格式独立 adapter |
+| 预览派发 | `app-preview/index.ts`（`PREVIEW_HANDLERS`） | 需加 handler | 统一外壳（D2，mount-preview-core）**已部分落地**——`mount3D` 提供单例外壳 / rAF / 会话生命周期 / `_gen` 代际守卫，但适配器各自实现 `build()` 内容层；handler 注册仍需手工一行 |
 
 ### 步骤
 
@@ -91,7 +93,7 @@ affected: false
    - 前端：在 `preview-3d/adapters/` 新增 `vrm-adaptor.ts`（或扩 `vrm-3d.ts`），实现统一 `decode/preview` 接口。
    - `app-preview/index.ts` 挂 `PREVIEW_HANDLERS`。
 3. **预览核心统一**（ADR-066 D2，"mount-preview-core"）：
-   - 尚未落地；当前 `YsmAdapter/LitematicAdapter/VRMAdapter/MmdAdapter` 各自独立。建议把 `PreviewCtx` + `showXxx` 收敛到 `mountPreview(ctx, adapterFn, config)`。
+   - **已部分落地**：`mount3D` 薄壳已统一外壳 / rAF / 生命周期 / `_gen` 并发守卫（见 [mount3D 巨函数现状](./mount3d-584-giant.md)），但 `YsmAdapter/LitematicAdapter/VRMAdapter/MmdAdapter` 仍各自实现 `build()` 内容层（差异注入）。下一步建议把 `PreviewCtx` + `showXxx` 进一步收敛到 `mountPreview(ctx, adapterFn, config)` 声明式入口，让内容层也走注册表。
 
 ### 坑
 

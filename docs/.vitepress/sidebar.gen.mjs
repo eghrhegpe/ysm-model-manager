@@ -1762,7 +1762,7 @@ export const autoSidebar = [
             "link": "/knowledge/recycle-bin"
           },
           {
-            "text": "资源包功能 resource-packs",
+            "text": "资源包功能 resource-packs（已归档）",
             "link": "/knowledge/resource-packs"
           },
           {
@@ -1808,7 +1808,7 @@ export const autoSidebar = [
             "link": "/knowledge/model3d"
           },
           {
-            "text": "mount-preview-module-singleton-race",
+            "text": "mount3D 并发竞态（已闭环 — _gen 代际守卫）",
             "link": "/knowledge/mount-preview-module-singleton-race"
           },
           {

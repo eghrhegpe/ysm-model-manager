@@ -1,6 +1,6 @@
 ---
 kind: resource-packs
-name: 资源包功能 resource-packs
+name: 资源包功能 resource-packs（已归档）
 tier: architecture
 category: feature
 source_files:
@@ -26,14 +26,13 @@ pitfalls:
 use_when:
   - 资源包
   - 光影包
-  - 蓝图
-  - 投影
   - resourcepack
   - shaderpack
-  - 资源管理
+status: archived
+last_verified: 2026-08-27
 ---
 
-# 资源包功能 resource-packs
+# 资源包功能 resource-packs（已归档）
 
 ## 概览
 

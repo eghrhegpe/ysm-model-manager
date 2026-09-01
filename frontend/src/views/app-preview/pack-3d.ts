@@ -18,7 +18,8 @@ registerReRoute(RESOURCE_TYPES.PACK, (path) => createPack3D(path));
 /** 经 getApp 注入 Go 绑定（适配器 0 backend import，ADR-072 边界判据） */
 function makePackDeps() {
   return {
-    readEntry: async (path: string, entry: string): Promise<string> => {
+    // ADR-143 P2：ReadPackEntry 统一 []byte（Wails 转 base64），失败返回 null
+    readEntry: async (path: string, entry: string): Promise<string | null> => {
       const App = await getApp();
       // 类型化直调；仅「绑定缺失」回退空串（审查 P3：原 fn? 守卫只覆盖缺绑定，
       // 真实 Go 读取错误必须继续传播给调用方，不能 catch-all 吞掉）

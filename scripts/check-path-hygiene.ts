@@ -20,7 +20,7 @@
  *
  * R4 冻结基线存于 docs/.path-hygiene-baseline.json：脚本首跑冻结当前实际值；
  *   仅减不增（`--update` 可收紧）；新增跨边界引用即 FAIL（防人工记忆失守）。
- *   口径：相对引用解析后 (a) 落于 src 外（越界）或 (b) == src/e2e/mock-data.ts（ADR 内定入基线）
+ *   口径：classifyImport 展开后 (a) 落于 src 外（越界，含 #root 别名逃逸）或 (b) == frontend/e2e/mock-data.ts（真实位置，ADR 内定入基线）
  *   且非 bindings/**（bindings 由 wails 插件解析，不计入）。
  *
  * 设计意图：把 ADR-146 的「目录级别名 + 反桶契约 + 跨边界冻结」从纸面规则固化为 CI 可执行的
@@ -86,7 +86,6 @@ const REXPORT_RE = /^\s*export\s+(?:type\s+)?(?:\*\s+from|[\s\S]*?\bfrom\s+)(['"
 for (const { abs, rel } of files) {
   const code = stripComments(readFileSync(abs, 'utf-8'));
   const relPosix = toPosix(rel);
-  const dirOfFile = dirname(abs);
 
   // ---- R1 聚合桶嫌疑（按 re-export 来源模块数）----
   const reexportSources = new Set<string>();
@@ -123,7 +122,7 @@ for (const { abs, rel } of files) {
       r3Hits.push(`${relPosix} ← ${spec}`);
       warns.push({ rule: 'R3', file: relPosix, detail: `上跳 ${c.upLevels} 级且目标仍在 src 内` });
     }
-    // R4：越界（展开后落 src 外）或 == src/e2e/mock-data.ts（ADR 内定入基线）
+    // R4：越界（展开后落 src 外，含 #root 别名逃逸）或 == frontend/e2e/mock-data.ts（真实位置，ADR 内定入基线）
     if (c.escapesSrc || c.isMockData) {
       r4Count++;
     }

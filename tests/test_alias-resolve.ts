@@ -14,6 +14,8 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { tryResolveAlias, resolveAliasToSrcRel, loadAliases, classifyImport, SRC_ROOT } from '../scripts/_lib/alias-resolve.ts';
 import { resolveImport } from '../scripts/_lib/scan-files.ts';
 
@@ -134,10 +136,28 @@ check('classifyImport 裸包名 @wailsio/runtime → resolved:false', () => {
   assert.strictEqual(c.isAlias, false);
 });
 
-check('classifyImport e2e/mock-data.ts 相对引用 → isMockData:true（R4 内定入基线）', () => {
-  const fromFile = path.join(SRC_ROOT, 'core', 'handlers', 'v.ts');
-  const c = classifyImport('../../e2e/mock-data.ts', fromFile);
-  assert.ok(c.resolved && c.isMockData, '应标记 mock-data，R4 不计新增跨边界');
+check('classifyImport e2e/mock-data.ts 真实引用形状（3 层 ../ → frontend/e2e）→ isMockData:true 且越界', () => {
+  const fromFile = path.join(SRC_ROOT, 'core', 'handlers', 'sync.test.ts');
+  const c = classifyImport('../../../e2e/mock-data.ts', fromFile);
+  assert.ok(c.resolved && c.isMockData, '应标记 mock-data（真实位置 frontend/e2e），R4 内定入基线');
+  assert.strictEqual(c.escapesSrc, true, '物理在 src 外，同时越界');
+});
+
+check('classifyImport bindings 路径 → isBindings:true（R3/R4 豁免）', () => {
+  const fromFile = path.join(SRC_ROOT, 'views', 'v.ts');
+  const c = classifyImport('#root/bindings/wails.ts', fromFile);
+  assert.ok(c.resolved && c.isBindings, '路径段含 bindings 应豁免，不计 R3/R4');
+});
+
+check('gate 集成：check-path-hygiene --json 的 r4Count === 冻结基线（防漂移静默）', () => {
+  const script = path.join(ROOT, 'scripts', 'check-path-hygiene.ts');
+  const r = spawnSync(process.execPath, [script, '--json'], { encoding: 'utf-8' });
+  assert.strictEqual(r.status, 0, `门禁应 PASS，stderr: ${r.stderr}`);
+  const out = JSON.parse(r.stdout);
+  assert.strictEqual(out._summary.ok, true, 'summary.ok 应为 true');
+  const baseline = JSON.parse(readFileSync(path.join(ROOT, 'docs', '.path-hygiene-baseline.json'), 'utf-8')).crossBoundaryNonBindings;
+  assert.strictEqual(out._summary.r4_cross_boundary.count, baseline, '实时计数必须等于冻结基线');
+  assert.strictEqual(out._summary.r4_cross_boundary.baseline, baseline, '脚本侧 baseline 读取应与文件一致');
 });
 
 if (fails.length) {

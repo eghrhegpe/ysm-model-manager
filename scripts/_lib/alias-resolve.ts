@@ -107,11 +107,12 @@ export interface SpecClass {
   escapesSrc: boolean;
   /** 目标物理位于 frontend/bindings（wails 插件解析，R3/R4 不计）。 */
   isBindings: boolean;
-  /** 目标 == src/e2e/mock-data.ts（ADR R4 内定入基线）。 */
+  /** 目标物理 == frontend/e2e/mock-data.ts（ADR R4 内定入基线；真实位置在 src 外）。 */
   isMockData: boolean;
 }
 
-const MOCK_DATA_ABS = path.join(SRC_ROOT, 'e2e', 'mock-data');
+/** 真实物理位置 frontend/e2e/mock-data（src 外；真实引用 3 层 `../` 展开后经 escapesSrc 或 isMockData 计 R4）。 */
+const MOCK_DATA_ABS = path.join(REPO_ROOT, 'frontend', 'e2e', 'mock-data');
 
 /**
  * 把一个 import 说明符分类为 R3/R4 判定所需的真实解析结果（别名感知）。
@@ -142,10 +143,9 @@ export function classifyImport(spec: string, fromFileAbs: string): SpecClass {
   } else {
     return { resolved: false, targetAbs: null, upLevels: 0, isAlias: false, escapesSrc: false, isBindings: false, isMockData: false };
   }
-  // 相对路径取字面 `../` 层数（spec 可能越界，path.relative 展开后会失真）；别名无字面 `../`，取展开后真实层数。
-  const upLevels = isAlias
-    ? (toPosix(path.relative(fromFileAbs, targetAbs)).match(/\.\.\//g) || []).length
-    : (spec.match(/\.\.\//g) || []).length;
+  // 相对路径取字面 `../` 层数（spec 可能越界，path.relative 展开后会失真）。
+  // 别名说明符字面无 `../` → upLevels 恒 0：R3 对别名短路（!c.isAlias 守卫），无 off-by-one 语义。
+  const upLevels = (spec.match(/\.\.\//g) || []).length;
   const escaped = toPosix(path.relative(SRC_ROOT, targetAbs)).startsWith('..');
   const isBindings = toPosix(targetAbs).split('/').includes('bindings');
   const isMock = toPosix(targetAbs).replace(/\.ts$/, '') === toPosix(MOCK_DATA_ABS);

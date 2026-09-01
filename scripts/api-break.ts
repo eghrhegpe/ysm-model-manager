@@ -14,7 +14,7 @@
  *   node scripts/api-break.ts v1.11 v1.12                  # 版本发布间检查
  *   node scripts/api-break.ts abc123 def456 --scope go/    # 限定扫描范围
  *
- * 依赖：scripts/_lib/{git-ref,source-graph,scan-files}.mjs（零外部依赖）。
+ * 依赖：scripts/_lib/{git-ref,source-graph,scan-files}.ts（零外部依赖）。
  *
  * 退出码：0 成功；`--redline` 且存在 >400 行文件 → 1；缺参/ref 无效 → 2。
  */

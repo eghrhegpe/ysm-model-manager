@@ -7,7 +7,7 @@ source_files:
   - frontend/src/core/i18n/locales/zh-CN.ts
   - frontend/src/core/i18n/locales/en.ts
   - frontend/src/core/i18n/locales/ja.ts
-  - scripts/i18n-key-naming.mjs
+  - scripts/i18n-key-naming.ts
   - tests/test_i18n_key_naming.mjs
 tests:
   - tests/test_i18n_key_naming.mjs

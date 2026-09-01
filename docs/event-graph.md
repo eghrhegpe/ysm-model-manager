@@ -1,6 +1,6 @@
 # Bus 事件契约报告
 
-> **自动生成** — 由 `scripts/event-graph.mjs` 生成。
+> **自动生成** — 由 `scripts/event-graph.ts` 生成。
 > 基于 `frontend/src/bus.ts` 的 `BusEvents` 接口校验所有调用方（含 html 内联、可选链调用）。
 
 ## ✅ 无异常

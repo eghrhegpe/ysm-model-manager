@@ -6,6 +6,6 @@
 
 - 浏览知识卡：见 `index.md` 分类索引
 - 操作手册（新建/漂移检查/约束）：见 `index.md` 的「使用说明」段
-- 快速命令：`node scripts/new-knowledge-card.mjs ...`（完整见 index.md 使用说明）
+- 快速命令：`node scripts/new-knowledge-card.ts ...`（完整见 index.md 使用说明）
 
 *本页为仓库目录展示指针；完整内容见 index.md。*

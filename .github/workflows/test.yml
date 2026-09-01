@@ -80,7 +80,7 @@ jobs:
 
       - name: 绑定契约对账（binding-check — Go 导出 vs -ts 产物）
         shell: pwsh
-        run: node scripts/binding-check.mjs
+        run: node scripts/binding-check.ts
 
       - name: 绑定产物保鲜（重新生成必须零 diff）
         shell: pwsh
@@ -95,7 +95,7 @@ jobs:
       - name: ADR 登记一致性（adr-check — G-2 治理门槛）
         shell: pwsh
         run: |
-          node scripts/adr-check.mjs | Out-String -Width 200
+          node scripts/adr-check.ts | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # P1 修复（2026-08-17，门禁锐评 P1-5）：CI 此前零治理检查，远端无防线——
@@ -105,7 +105,7 @@ jobs:
       - name: 红线零新增门禁（check-redlines — R1-R10/W1-W6）
         shell: pwsh
         run: |
-          node scripts/check-redlines.mjs --json --baseline | Out-String -Width 200
+          node scripts/check-redlines.ts --json --baseline | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: 安装前端依赖
@@ -116,7 +116,7 @@ jobs:
       - name: 死代码基线门禁（check-deadcode-baseline，依赖 knip/jscpd → npm ci 后跑）
         shell: pwsh
         run: |
-          node scripts/check-deadcode-baseline.mjs --json | Out-String -Width 200
+          node scripts/check-deadcode-baseline.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: 构建更新助手 helper（embed 前置，修复 CI 缺 ysm-updater-helper.exe）
@@ -244,7 +244,7 @@ jobs:
         working-directory: frontend
         run: |
           npx playwright test --config playwright.coverage.config.ts
-          node ../scripts/e2e-coverage-report.mjs --json
+          node ../scripts/e2e-coverage-report.ts --json
 
       - uses: actions/upload-artifact@v6
         with:

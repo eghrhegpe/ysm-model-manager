@@ -2,7 +2,7 @@
 /**
  * ripgrep.ts — rg 调用共享层（scripts/_lib）。
  *
- * 统一 check-redlines.mjs / comment-checker.ts 的内联 rg() 封装：
+ * 统一 check-redlines.ts / comment-checker.ts 的内联 rg() 封装：
  *   1. 统一参数：--no-heading -n --path-separator /（正斜杠输出，Windows 友好）
  *   2. glob 过滤：'-g *.js' 追加到命令尾部
  *   3. 目标路径：相对仓库根拼接（paths 可为 string | string[]）

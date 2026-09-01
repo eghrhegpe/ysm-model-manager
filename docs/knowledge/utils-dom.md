@@ -20,14 +20,14 @@ invariant_anchors:
 
 ## 概览
 
-HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / 恢复（a11y）。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（8 档语义常量，新增 `persist=10000` / `sticky=60000` 长期通知档；消费方禁止内联魔法数字；`scripts/check-toast-duration.mjs` 门禁守护 R7 红线）；`focus-restore.ts` 提供模态/浮层/全屏预览的「记触发元素 + 还焦点 + 跨 Shadow DOM Tab 循环」三件套，避免各组件重复实现焦点管理。
+HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / 恢复（a11y）。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（8 档语义常量，新增 `persist=10000` / `sticky=60000` 长期通知档；消费方禁止内联魔法数字；`scripts/check-toast-duration.ts` 门禁守护 R7 红线）；`focus-restore.ts` 提供模态/浮层/全屏预览的「记触发元素 + 还焦点 + 跨 Shadow DOM Tab 循环」三件套，避免各组件重复实现焦点管理。
 
 ## 核心职责
 
 - HTML 特殊字符转义（innerHTML 拼接防注入）
 - 搜索关键词高亮（转义后返回 `<mark>` 包裹的安全 HTML）
 - 文件下载：`downloadTextFile(content, filename)`（Blob → ObjectURL → anchor download → revoke），供 `context-menu-handlers` 等 core 层调用，不再直接操作 `document/URL`（P2-2 DOM 职责下沉）
-- toast 时长语义化：`TOAST_MS` 8 档常量（quick=1500 / success=2000 / info=2500 / normal=3000 / verbose=4000 / long=5000 / persist=10000 / sticky=60000），全仓 toast 裸 `duration` 已收敛至该单一事实源（commit `b1508ac5`）；契约测试 `toast-ms.test.ts` 断言语档值与单调性；门禁 `scripts/check-toast-duration.mjs` 扫描非测试 src 捕捉裸时长（非阻断 [WARN] 观察期），防回流
+- toast 时长语义化：`TOAST_MS` 8 档常量（quick=1500 / success=2000 / info=2500 / normal=3000 / verbose=4000 / long=5000 / persist=10000 / sticky=60000），全仓 toast 裸 `duration` 已收敛至该单一事实源（commit `b1508ac5`）；契约测试 `toast-ms.test.ts` 断言语档值与单调性；门禁 `scripts/check-toast-duration.ts` 扫描非测试 src 捕捉裸时长（非阻断 [WARN] 观察期），防回流
 - **能力门控 `capabilities.ts`**（同目录但非 DOM 工具——经 `backend/platform-web.ts` 的 `canBinding()` 三态矩阵判定，2026-XX 收拢）：`can(binding)` 对外 API；`canWebAction(action)` 是**查看器/web 模式右键菜单可达性的单一判定**（P2-3/P3 收敛）——纯前端动作 `VIEWER_PURE_ACTIONS`（noop / batch.copy-paths / batch.export-list / file.copy-path）恒可达 + `VIEWER_WEB_ACTION_BINDINGS` 内 action 走 `can()` 探测；原 `context-menus.ts` 内嵌 `VIEWER_WEB_ACTION_BINDINGS` / `VIEWER_OK_ACTIONS` 均已迁此，新增右键 web binding 或纯前端动作只改这里
 
 ## 对外 API / 入口
@@ -52,7 +52,7 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 - `&` 必须最先替换，避免二次转义后续生成的实体
 - hl 只高亮首个命中（全量高亮请用 display.ts 的 renderModelNameWithHighlight）
 - **hl 在原始 text 上定位**（非先整体转义——`&lt;` 错位陷阱有判别性测试锁定：`hl("&lt;","lt")` → `&amp;<mark>lt</mark>;`，P3 补测）；**Unicode 大小写折叠长度变化（如土耳其 İ）时降级纯转义**（P3 修复：折叠后 idx 用于切片原始 text 会静默错切空 mark）
-- toast 时长：消费方一律引用 `TOAST_MS` 语义档，禁止内联魔法数字或另起同名命名（防止语义漂移）；`scripts/check-toast-duration.mjs` 门禁守护（R7 红线，非阻断观察期，待 rollout 稳定翻硬闸）
+- toast 时长：消费方一律引用 `TOAST_MS` 语义档，禁止内联魔法数字或另起同名命名（防止语义漂移）；`scripts/check-toast-duration.ts` 门禁守护（R7 红线，非阻断观察期，待 rollout 稳定翻硬闸）
 
 ## 已知遗留（2026-08-29 a11y 审查登记）
 

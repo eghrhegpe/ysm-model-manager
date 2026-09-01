@@ -51,7 +51,7 @@ invariant_anchors:
 - `treeCSS` 内联 `${btnBaseCSS}` **与 `${focusVisibleCSS}`**（P2 修复：原仅内联按钮体系，`.srch-inp`/`.sort-sel` 显式 `outline:none` 导致键盘聚焦无可见焦点环，a11y 缺口）；保持按钮体系单一来源，不得复制改写
 - 动画必须可被 `no-animations` 类关闭——**Shadow DOM 内必须用 `:host-context(.no-animations)`**（P2 修复：该类挂在 documentElement 上，后代选择器不能跨界上溯 shadow 边界）。**2026-08-09 已把 content-css.ts（4 处）/app-nav（logo-icon）/app-preview（css.ts）的 `.no-animations` 后代选择器全部改为 `:host-context`**——原仅 app-tree 一处收口，其余 6 处跨 shadow 永不生效（P2 修复扩大）
 - **`--bg2` 幽灵变量**（P3 观察）：`app-tree-styles.ts` `.adv-filter` 消费 `var(--bg2)` 全库无定义（content-css.ts 已用 `var(--bg2,transparent)` fallback 佐证）——计算值失效静默降级，待定义或补 fallback
-- **@keyframes 不穿 Shadow DOM 边界**（2026-08-24 铁律，区别于 CSS 变量）：CSS 自定义属性可跨界上溯/下穿 shadow，但 `@keyframes` 只能在其定义的同一 shadow 树（或 document 层 light DOM）内被 `animation` 引用生效。任何 Shadow DOM 组件若 `animation: <name>` 引用一个仅定义在 `frontend/css/components.css`（全局 `<link>`，document 层）的 keyframe，则该动画**静默失效**（`getAnimations()` 返回 0，无动画不破功能故长期潜伏）。修复范式：把所需 keyframe 复制进该 shadow 层的 CSS 源（如 `contentLayoutCSS` / `sidebar-css.ts`），全局副本保留给 light DOM 的 dialog 用。机检 `scripts/css-layer-check.mjs`（pre-push 阻断）已覆盖此断言
+- **@keyframes 不穿 Shadow DOM 边界**（2026-08-24 铁律，区别于 CSS 变量）：CSS 自定义属性可跨界上溯/下穿 shadow，但 `@keyframes` 只能在其定义的同一 shadow 树（或 document 层 light DOM）内被 `animation` 引用生效。任何 Shadow DOM 组件若 `animation: <name>` 引用一个仅定义在 `frontend/css/components.css`（全局 `<link>`，document 层）的 keyframe，则该动画**静默失效**（`getAnimations()` 返回 0，无动画不破功能故长期潜伏）。修复范式：把所需 keyframe 复制进该 shadow 层的 CSS 源（如 `contentLayoutCSS` / `sidebar-css.ts`），全局副本保留给 light DOM 的 dialog 用。机检 `scripts/css-layer-check.ts`（pre-push 阻断）已覆盖此断言
 
 ## 相关
 

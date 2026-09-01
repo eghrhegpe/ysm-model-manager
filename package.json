@@ -16,7 +16,7 @@
   "scripts": {
     "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "lint:scripts": "biome check scripts/",
-    "deadcode": "node scripts/check-deadcode-baseline.mjs",
-    "jscpd-go": "node scripts/jscpd-go.mjs"
+    "deadcode": "node scripts/check-deadcode-baseline.ts",
+    "jscpd-go": "node scripts/jscpd-go.ts"
   }
 }

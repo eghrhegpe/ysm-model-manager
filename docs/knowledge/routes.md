@@ -1,11 +1,11 @@
-<!-- 本文件由 scripts/gen-routes.mjs 自动生成，请勿手改。重跑：node scripts/gen-routes.mjs -->
+<!-- 本文件由 scripts/gen-routes.ts 自动生成，请勿手改。重跑：node scripts/gen-routes.ts -->
 
 # AI 知识库路由表
 
 本表把用户的自然语言意图映射到首张知识卡。AI 应先命中首选卡，再沿卡片的 `source_files`、API 和子系统关系继续追踪；不要直接扫描整个 `frontend/src/` 或 `go/`。
 
-> 由 `scripts/gen-routes.mjs` 自动生成：首选卡按卡片 `use_when` 关键词命中，摘要提供快速上下文。
-> 更新后重新生成：`node scripts/gen-routes.mjs`。
+> 由 `scripts/gen-routes.ts` 自动生成：首选卡按卡片 `use_when` 关键词命中，摘要提供快速上下文。
+> 更新后重新生成：`node scripts/gen-routes.ts`。
 
 > ⚠️ **歧义标注**：行内出现「⚠️歧义（另见…）」表示该意图关键词被多张卡共享——AI 需按上下文择层，仍不确定则参考本表生成时的 WARN 冲突清单消歧。
 
@@ -23,7 +23,7 @@
 | 侧边栏、整合包列表、版本卡片、推送、拉取、一键安装、同步状态、勾选、整合包拖拽导入、启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) ⚠️歧义（另见 app-sync-manager.md） | `app-sidebar` 是仓库页左栏的整合包列表组件（Shadow DOM），展示当前资源类型下各整合包（Minecraft 版本实例）的同步状态卡片，支持选中联动、勾选批量推送/拉取、一键安装缺失资源。它遵循标准组件拆分规范（inde… |
 | 整合包同步、同步状态、推送资源、拉取资源、待推送、可拉取、已禁用、实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) ⚠️歧义（另见 app-sidebar.md） | `app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本… |
 | 树形、资源列表、tree、节点、树、目录树 | [资源树 app-tree](./app-tree.md) | `app-tree` 是 YSM 核心的资源目录树组件，使用 Web Components 实现，支持展开/折叠、右键菜单、文件图标显示。 |
-| 缺失 import、auto-import、导出符号、tokenize、词法、缺失导入、goimports、大脚本拆分 | [auto-import 拆分与缺失 import 检测](./auto_import_split.md) ⚠️歧义（另见 source-graph.md） | `scripts/auto-import.mjs` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本… |
+| 缺失 import、auto-import、导出符号、tokenize、词法、缺失导入、goimports、大脚本拆分 | [auto-import 拆分与缺失 import 检测](./auto_import_split.md) ⚠️歧义（另见 source-graph.md） | `scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆… |
 | 网页版、浏览器模式、web mode、IndexedDB、IDB、浏览器后端、browser adapter、跨域隔离、COI、NBT 解析、体素、体素颜色、Web CLI、社区下载、网页版文件系统、网页版仓库 | [网页版后端 backend-web](./backend_web.md) ⚠️歧义（另见 backend-idb.md、wails-bridge.md、go-litematic.md等） | `frontend/src/backend/` 是 YSM 网页版（ADR-049 Web Edition）的后端抽象层。在桌面/Android 环境下走 Wails Go 绑定替代，网页版使用 `browser-adapter.ts` +… |
 | IndexedDB、网页版、backend、模型库、browser adapter、web mode | [浏览器后端 IndexedDB 封装](./backend-idb.md) ⚠️歧义（另见 backend_web.md、wails-bridge.md等） | `backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id… |
 | 整合包分类、路由、location 路由、zipentry 指纹、蓝图、投影、vrm、pmx、回归、last-wins、priority 裁决 | [分类路由与回归护栏](./classify-routing.md) ⚠️歧义（另见 app-preview.md、go-litematic.md、resource-packs.md等） | 整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需… |
@@ -89,7 +89,7 @@
 | 场景能力 / cap / registry / SceneCapability、3D 菜单控件声明式渲染（getMenuControls）、新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）、3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）、「光」指代消歧（light 是光源，fog/shadow/reflector 不是） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Ground / Environment / Fog / Shadow / Reflector / Light / Postprocessing）由统一注册表**创… |
 | 覆盖率门禁、diff-coverage、循环依赖、共享核、_lib、check-circular、findCycles、脚本去重、脚本重构 | [scripts 共享核演进（diff-coverage-core + cycles）](./script_shared_cores.md) | `scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复： |
 | 脚本参数、argv、parseArgs、手写参数解析、positional、未知 flag、脚本卫生、hygiene | [脚本 argv 规范与已知豁免 parse-args.ts](./scripts_argv.md) | `scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30… |
-| jscpd、go 重复代码、复制粘贴检测、duplicate、重复对、增量门禁、新增重复、独立 baseline | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | `scripts/jscpd-go.mjs` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscp… |
+| jscpd、go 重复代码、复制粘贴检测、duplicate、重复对、增量门禁、新增重复、独立 baseline | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | `scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd… |
 | README、脚本索引、登记处、脚本登记、check-readme-index、脚本漂移、脚本对账 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | `scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审… |
 | 符号提取、导出符号、顶层声明、api-break、audit-split、rollback-impact、bloat-history、依赖图、check-lib-adoption | [源码符号提取共享层 source-graph.ts](./source-graph.md) ⚠️歧义（另见 auto_import_split.md） | — |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试、mock、G-1 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) ⚠️歧义（另见 frontend_test_audit.md） | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 sle… |
@@ -109,12 +109,12 @@
 读取 docs/knowledge/AGENTS.md 和首选卡片，再按 source_files 阅读源码。
 grep docs/adr/ 查找相关决策和状态。
 以源码为最终事实来源；如果卡片过时，先报告漂移，再决定是否同步更新。
-修改后运行最小相关测试和 node scripts/doctor.mjs --docs。
+修改后运行最小相关测试和 node scripts/doctor.ts --docs。
 ```
 
 ## 维护规则
 
-- 本文件自动生成，**请勿手改**；重跑 `node scripts/gen-routes.mjs` 重新生成。
+- 本文件自动生成，**请勿手改**；重跑 `node scripts/gen-routes.ts` 重新生成。
 - 新增/修改知识卡：更新 frontmatter 的 `use_when`（意图关键词）后重跑即可自动入列。
 - `use_when` 为空或不含关键词的卡不会出现在路由表（但仍可经索引/关联图抵达）。
 - 表外分类（`category` 非 core/go/ui/feature/utils/config）的卡仍按 use_when 参与路由。

@@ -4,7 +4,7 @@ name: Go 端 jscpd 重复检测脚本
 tier: architecture
 category: config
 source_files:
-  - scripts/jscpd-go.mjs
+  - scripts/jscpd-go.ts
 use_when:
   - jscpd
   - go 重复代码
@@ -20,7 +20,7 @@ use_when:
 
 ## 概览
 
-`scripts/jscpd-go.mjs` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd-go-baseline.json` 比对，只拦「新增重复对」。与前端 `deadcode-baseline.json` 的 `jscpd` 数组零耦合，属治理/门禁类（config）脚本。接入决策见 `docs/adr/ADR-135-go-jscpd.md`。
+`scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd-go-baseline.json` 比对，只拦「新增重复对」。与前端 `deadcode-baseline.json` 的 `jscpd` 数组零耦合，属治理/门禁类（config）脚本。接入决策见 `docs/adr/ADR-135-go-jscpd.md`。
 
 ## 核心职责
 
@@ -32,17 +32,17 @@ use_when:
 ## 对外 API / 入口
 
 ```bash
-node scripts/jscpd-go.mjs            # 门禁:有新增重复对 → exit 1
-node scripts/jscpd-go.mjs --update   # 冻结当前债务 / 治理后收紧
-node scripts/jscpd-go.mjs --json     # _summary 契约(JSON 模式)
-node scripts/jscpd-go.mjs --verbose  # 打印 jscpd statistics 明细
+node scripts/jscpd-go.ts            # 门禁:有新增重复对 → exit 1
+node scripts/jscpd-go.ts --update   # 冻结当前债务 / 治理后收紧
+node scripts/jscpd-go.ts --json     # _summary 契约(JSON 模式)
+node scripts/jscpd-go.ts --verbose  # 打印 jscpd statistics 明细
 ```
 
 - 退出码：0（通过/已更新）/ 1（门禁失败：新增重复对）/ 2（未找到 baseline）。
 
 ## 与其他子系统关系
 
-- `scripts/pre-push-gate.mjs`：`GO_STATIC_TOOLS` + `ALL_STATIC_TOOLS` 均登记 `jscpd-go.mjs`（单一实现源，`doctor --all` 与真实 `git push` 双路径生效）。
+- `scripts/pre-push-gate.ts`：`GO_STATIC_TOOLS` + `ALL_STATIC_TOOLS` 均登记 `jscpd-go.mjs`（单一实现源，`doctor --all` 与真实 `git push` 双路径生效）。
 - `scripts/baseline/jscpd-go-baseline.json`：Go 重复账本（生成物，首版 174 对），由手写 `--update` 维护，pre-commit 的 `GEN_CMDS` 不覆盖。
 - `scripts/baseline/deadcode-baseline.json`：**绝不写回**其 `jscpd` 段，前端 78 条基线零污染、零重洗。
 - `check-deadcode-baseline.mjs`：前端 jscpd 门禁，与本工具平行、互不相交。
@@ -56,8 +56,8 @@ node scripts/jscpd-go.mjs --verbose  # 打印 jscpd statistics 明细
 
 ## 相关
 
-- `scripts/jscpd-go.mjs`（本卡 source）
-- `scripts/pre-push-gate.mjs`（门禁挂载）
+- `scripts/jscpd-go.ts`（本卡 source）
+- `scripts/pre-push-gate.ts`（门禁挂载）
 - `scripts/baseline/jscpd-go-baseline.json`（Go 账本）
 - `scripts/baseline/deadcode-baseline.json`（前端账本，零耦合）
 - `docs/adr/ADR-135-go-jscpd.md`（接入决策）

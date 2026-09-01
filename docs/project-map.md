@@ -1,9 +1,9 @@
 # 项目结构地图
 
-> **自动生成**：目录结构由 `node scripts/gen-project-map.mjs` 扫描磁盘生成；
+> **自动生成**：目录结构由 `node scripts/gen-project-map.ts` 扫描磁盘生成；
 > 目录用途是人工知识，直接维护在本文档的表格里（脚本从本文件读回复用，无外部基线）。
-> 改目录结构后运行脚本刷新；`--check` 已接入 `doctor.mjs` 防漂移。
-> 🤖 **AI 代理优先** `node scripts/gen-project-map.mjs --json` 取结构化路径（源码/测试/子目录区分，含文件清单），
+> 改目录结构后运行脚本刷新；`--check` 已接入 `doctor.ts` 防漂移。
+> 🤖 **AI 代理优先** `node scripts/gen-project-map.ts --json` 取结构化路径（源码/测试/子目录区分，含文件清单），
 > 别按表格猜路径——平铺文件（如 `features/import-dnd.ts`）不是子目录。
 
 ## Go 端

@@ -44,23 +44,23 @@ perf:                        # 可选，性能画像标签（受控词表 = scri
 ### 新建卡片
 
 ```bash
-node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]
-# 例: node scripts/new-knowledge-card.mjs go_dedup "去重 go/dedup" go go/dedup/
+node scripts/new-knowledge-card.ts <kind> <name> <category> <source_file> [--leaf]
+# 例: node scripts/new-knowledge-card.ts go_dedup "去重 go/dedup" go go/dedup/
 ```
 
 ### 更新索引（生成物，不手改）
 
 ```bash
-node scripts/gen-knowledge-index.mjs
+node scripts/gen-knowledge-index.ts
 ```
 
 ### 漂移检查
 
 ```bash
-node scripts/check-knowledge-drift.mjs                  # 文本报告（被动：卡间/卡→源码引用漂移）
-node scripts/check-knowledge-drift.mjs --json           # JSON（CI 用，doctor --docs 调用）
-node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变更即列出受影响知识卡（治未病）
-# 常与 git 联动：git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.mjs --affected {}
+node scripts/check-knowledge-drift.ts                  # 文本报告（被动：卡间/卡→源码引用漂移）
+node scripts/check-knowledge-drift.ts --json           # JSON（CI 用，doctor --docs 调用）
+node scripts/check-knowledge-drift.ts --affected <f>…  # 主动：源码变更即列出受影响知识卡（治未病）
+# 常与 git 联动：git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.ts --affected {}
 ```
 
 > 主动防御：`--affected` 接收变更文件清单（仓库相对 POSIX 路径），输出引用了它们的知识卡，
@@ -117,8 +117,8 @@ node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变�
 |------|------|
 | `scripts/_lib/frontmatter.ts` | frontmatter 解析共享库 |
 | `scripts/_lib/knowledge-cards.ts` | 知识卡常量共享层（KNOWLEDGE_ORDER / CATEGORY_LABELS / NON_CARDS / PERF_TAGS） |
-| `scripts/gen-knowledge-index.mjs` | 按分类生成 `index.md` |
-| `scripts/gen-routes.mjs` | AI 意图路由表自动生成（`routes.md`） |
-| `scripts/gen-routes-quick.mjs` | AI 高频路由表自动生成（`routes-quick.md`，第一站） |
-| `scripts/check-knowledge-drift.mjs` | 知识卡漂移检查（ERROR/WARN） |
-| `scripts/new-knowledge-card.mjs` | 卡片模板生成器 |
+| `scripts/gen-knowledge-index.ts` | 按分类生成 `index.md` |
+| `scripts/gen-routes.ts` | AI 意图路由表自动生成（`routes.md`） |
+| `scripts/gen-routes-quick.ts` | AI 高频路由表自动生成（`routes-quick.md`，第一站） |
+| `scripts/check-knowledge-drift.ts` | 知识卡漂移检查（ERROR/WARN） |
+| `scripts/new-knowledge-card.ts` | 卡片模板生成器 |

@@ -1,8 +1,8 @@
 # CLI 命令参考
 
-> **自动生成**：由 `node scripts/gen-cli-doc.mjs` 从 `go/cli/` 命令注册表（`RegisterCommandC` + `print*Usage`）
+> **自动生成**：由 `node scripts/gen-cli-doc.ts` 从 `go/cli/` 命令注册表（`RegisterCommandC` + `print*Usage`）
 > 静态提取生成，**单一事实来源 = 源码注册**。新增命令/子命令/选项只改 `go/cli/` 源码，
-> 重跑本脚本即同步；`--check` 已接入 `doctor.mjs` 防漂移。
+> 重跑本脚本即同步；`--check` 已接入 `doctor.ts` 防漂移。
 >
 > 顶层命令共 **39** 个。入口姿势与常用场景见根 `AGENTS.md`「CLI 模式使用说明」。
 

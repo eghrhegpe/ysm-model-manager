@@ -1,5 +1,5 @@
 # ysm CLI — PowerShell 补全（自动生成，勿手改；来源：go/cli 注册表）
-# 生成：node scripts/gen-cli-completion.mjs（顶层命令 39 个）
+# 生成：node scripts/gen-cli-completion.ts（顶层命令 39 个）
 # 启用：Add-Content $PROFILE ". $(Resolve-Path ./completions/_ysm.ps1)"
 $ysmTopCommands = @('analyze', 'analyze-mmd', 'avatar', 'benchmark', 'cache-clear', 'cache-diag', 'cache-status', 'cache-verify', 'concurrent-bench', 'config', 'config-show', 'copy', 'creator', 'dedup', 'download', 'export', 'file-bench', 'gui-flow', 'health-report', 'install', 'instance', 'link-mode', 'list', 'move', 'perf-log', 'perf-snapshot', 'recycle', 'rename', 'repo-audit', 'resource-scan', 'resource-types', 'scan', 'scan-dir', 'search', 'single-bench', 'tags', 'toggle', 'verify', 'workshop')
 $ysmSubs = @{

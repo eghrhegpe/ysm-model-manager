@@ -29,7 +29,7 @@ const DYNAMIC_IMPORT_RE = /(?:^|[^A-Za-z0-9_$])import\s*\(\s*['"]([^'"]+)['"]\s*
 
 /**
  * 剥离注释与模板字面量（空格等长替换，保持行结构/行号）。
- * 复用 check-layering.mjs stripNoise 的最小实现——该函数未导出，直接 import 需改动
+ * 复用 check-layering.ts stripNoise 的最小实现——该函数未导出，直接 import 需改动
  * check-layering 的模块接口，故复制而非跨脚本依赖（P2-1 code_review）。
  * 注释/模板字面量中的 import 形状文本若不剥离，会被 IMPORT_RE / DYNAMIC_IMPORT_RE
  * 误判为真实依赖边 → 幽灵环。

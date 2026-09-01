@@ -11,7 +11,7 @@
  *   - audit-split：针对单次"拆分"提交，报拆/新/改/红线/迁移（面向拆分审查）；
  *   - bloat-history：针对单个文件全生命周期，报增长曲线 + 跳点（面向膨胀追溯）。
  *
- * 依赖：scripts/_lib/{git-ref,source-graph,scan-files}.mjs + node:child_process（零外部依赖）。
+ * 依赖：scripts/_lib/{git-ref,source-graph,scan-files}.ts + node:child_process（零外部依赖）。
  *
  * 用法：
  *   node scripts/bloat-history.ts <path>                      # 默认最多 30 条

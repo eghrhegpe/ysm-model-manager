@@ -97,7 +97,7 @@ use_when:
 
 - `scripts/_lib/scan-files.ts` 的 `walk`：source-graph 借用它做源码文件收集（`.ts/.tsx/.js/.jsx` 扩展名），但符号提取本身不依赖 walk。
 - `scripts/_lib/to-posix.ts`：Windows 路径归一（`C:\foo` → `C:/foo`），symbol 提取结果里路径统一正斜杠。
-- `scripts/check-lib-adoption.mjs`：采用率闸门——检测「手搓了某模块能覆盖的能力却未 import」。source-graph 的 `getExportedSymbolsAny` / `topDeclsAny` 在其 RULES 表里已有 `advice` 条目（见 check-lib-adoption.mjs L63）。
+- `scripts/check-lib-adoption.ts`：采用率闸门——检测「手搓了某模块能覆盖的能力却未 import」。source-graph 的 `getExportedSymbolsAny` / `topDeclsAny` 在其 RULES 表里已有 `advice` 条目（见 check-lib-adoption.mjs L63）。
 - `docs/adr/ADR-141-large-script-split-baseline.md`：2026-08-31 审计实证 source-graph 与 auto-import.extractExports 在 re-export 处理上存在 15 文件差异，结论「不复用」——这是**差异化设计不是复制**（source-graph 把转发符号也算本文件导出，auto-import 故意排除转发名）。
 - `tests/test_scripts_lib.mjs`：契约测试，当前覆盖 scan-files / ripgrep / to-posix / parseRgLine，**尚未覆盖 source-graph**——这是待补缺口。
 
@@ -121,9 +121,9 @@ use_when:
 ## 相关
 
 - `scripts/_lib/source-graph.ts`（本卡 source）
-- `scripts/api-break.mjs`（破坏性变更检测，主力调用方）
-- `scripts/audit-split.mjs`（refactor 提交审计，主力调用方）
-- `scripts/rollback-impact.mjs`（revert 影响面分析，主力调用方）
-- `scripts/bloat-history.mjs`（单文件膨胀轨迹，主力调用方）
+- `scripts/api-break.ts`（破坏性变更检测，主力调用方）
+- `scripts/audit-split.ts`（refactor 提交审计，主力调用方）
+- `scripts/rollback-impact.ts`（revert 影响面分析，主力调用方）
+- `scripts/bloat-history.ts`（单文件膨胀轨迹，主力调用方）
 - `docs/adr/ADR-141-large-script-split-baseline.md`（2026-08-31 审计基线，含 source-graph 复用实证）
 - `docs/knowledge/script_shared_cores.md`（共享核登记卡）

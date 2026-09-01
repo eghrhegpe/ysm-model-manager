@@ -47,8 +47,8 @@ if (args.unknown.length) { console.error(`❌ 未知参数: ${args.unknown.join(
 
 ## 与其他子系统关系
 
-- `scripts/check-script-hygiene.mjs`：检查口径五条——① 退出码失效（裸 `main();`）② 共享层内联（含内联 parseArgs）③ `--json` 契约 ④ 文件头 5 字段 ⑤ **positional 须走 parse-args**。默认 WARN 不阻断，`--strict` 下 `warns>0` 退 1。
-- `scripts/pre-push-gate.mjs`：ALL_STATIC_TOOLS / DOC_STATIC_TOOLS 均挂 `check-script-hygiene --strict`。
+- `scripts/check-script-hygiene.ts`：检查口径五条——① 退出码失效（裸 `main();`）② 共享层内联（含内联 parseArgs）③ `--json` 契约 ④ 文件头 5 字段 ⑤ **positional 须走 parse-args**。默认 WARN 不阻断，`--strict` 下 `warns>0` 退 1。
+- `scripts/pre-push-gate.ts`：ALL_STATIC_TOOLS / DOC_STATIC_TOOLS 均挂 `check-script-hygiene --strict`。
 - `docs/knowledge/` 内其他卡：`check-knowledge-drift --affected` 会在本卡 source_files（parse-args.ts）变更时提示复核。
 
 ## 不变量
@@ -62,6 +62,6 @@ if (args.unknown.length) { console.error(`❌ 未知参数: ${args.unknown.join(
 ## 相关
 
 - `scripts/_lib/parse-args.ts`（本卡 source）
-- `scripts/check-script-hygiene.mjs`（检查口径）
-- `scripts/pre-push-gate.mjs`（门禁挂载）
-- `scripts/commit-with-check.mjs`（已知豁免示例：`-m` 单字符带值）
+- `scripts/check-script-hygiene.ts`（检查口径）
+- `scripts/pre-push-gate.ts`（门禁挂载）
+- `scripts/commit-with-check.ts`（已知豁免示例：`-m` 单字符带值）

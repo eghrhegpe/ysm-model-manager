@@ -8,7 +8,7 @@
  *   导出清单 → 受影响文件历史提交。与防御型 check-*（fail-closed 门禁）不同，这是
  *   情报型（proactive audit）：输出洞察供 AI/人直接消费，不阻断任何流程。
  *
- * 依赖：scripts/_lib/{source-graph,git-ref,parse-args}.mjs（零外部依赖）
+ * 依赖：scripts/_lib/{source-graph,git-ref,parse-args}.ts（零外部依赖）
  * 用法：
  *   node scripts/audit-split.ts <commit>            # 审计单次提交（人读文本）
  *   node scripts/audit-split.ts <commit> --json     # 机读 JSON（供子代理/CI 消费）

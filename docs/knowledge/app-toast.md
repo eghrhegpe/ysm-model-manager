@@ -32,7 +32,7 @@ invariant_anchors:
 ## 对外 API / 入口
 
 - 自定义元素：`<app-toast>`
-- 监听 bus：`toast:show`，载荷 `{ msg, undo?, duration?, type?, click? }`（`type`：`error` / `success` / `info` / `warn`；默认时长 4000ms 来自 `utils/dom/toast-ms.ts` 的 `TOAST_MS.verbose`；全仓 toast 时长已收敛至 `TOAST_MS` 8 档单一事实源（含新增 `persist=10000` / `sticky=60000` 长期通知档），消费方统一引用语义档，内联魔法数字由 `scripts/check-toast-duration.mjs` 门禁守护 R7 红线）
+- 监听 bus：`toast:show`，载荷 `{ msg, undo?, duration?, type?, click? }`（`type`：`error` / `success` / `info` / `warn`；默认时长 4000ms 来自 `utils/dom/toast-ms.ts` 的 `TOAST_MS.verbose`；全仓 toast 时长已收敛至 `TOAST_MS` 8 档单一事实源（含新增 `persist=10000` / `sticky=60000` 长期通知档），消费方统一引用语义档，内联魔法数字由 `scripts/check-toast-duration.ts` 门禁守护 R7 红线）
 - 实例方法：`show(msg, undoCallback, duration, type, clickCallback)`（一般不经由方法直调，统一走 bus）
 - 派发 bus：无
 

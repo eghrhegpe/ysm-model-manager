@@ -18,7 +18,7 @@ use_when:
 
 ## 位置
 
-- 脚本：`scripts/drift-scan.mjs`
+- 脚本：`scripts/drift-scan.ts`
 - 扫描范围：`go/` 和 `frontend/src/`
 
 ## 背景
@@ -37,10 +37,10 @@ use_when:
 
 ```bash
 # 人类可读输出
-node scripts/drift-scan.mjs
+node scripts/drift-scan.ts
 
 # JSON 输出（供 CI 集成）
-node scripts/drift-scan.mjs --json
+node scripts/drift-scan.ts --json
 ```
 
 ## 检测规则

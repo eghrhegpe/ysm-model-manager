@@ -45,10 +45,10 @@ export function collectScripts(opts: { skipHooks?: boolean; dir?: string } = {})
         if (entry.name.startsWith('_') || (skipHooks && entry.name === 'hooks')) continue;
         visit(abs);
       } else if (
-        // 2026-09 顶层 .mjs→.ts 迁移过渡期：双兼容收集；迁移完成后收窄为仅 .ts
-        (entry.name.endsWith('.mjs') || entry.name.endsWith('.ts')) &&
+        // 2026-09 顶层 .mjs→.ts 迁移完成：仅收 .ts（.mjs 已全量断除）
+        entry.name.endsWith('.ts') &&
         !entry.name.startsWith('_') &&
-        !/\.test\.(mjs|ts)$/.test(entry.name)
+        !/\.test\.ts$/.test(entry.name)
       ) {
         out.push(path.relative(dir, abs).replace(/\\/g, '/'));
       }

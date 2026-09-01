@@ -60,21 +60,21 @@ snap_docs() {
 trap 'rm -f "$GEN_SNAP" "$GEN_SNAP_AFTER"' EXIT
 snap_docs "$GEN_SNAP"
 echo "[pre-commit] 文档自动同步..."
-GEN_CMDS='gen-docs-index.mjs
-event-graph.mjs
-gen-knowledge-index.mjs
-build-novel-index.mjs
-gen-project-map.mjs
-gen-vitepress-sidebar.mjs
-gen-knowledge-h1.mjs
-gen-knowledge-symbols.mjs
-gen-knowledge-adr.mjs
-gen-knowledge-tests.mjs
-gen-routes.mjs
-gen-routes-quick.mjs
-gen-cli-doc.mjs
-gen-cli-completion.mjs
-generate-locale-json.mjs'
+GEN_CMDS='gen-docs-index.ts
+event-graph.ts
+gen-knowledge-index.ts
+build-novel-index.ts
+gen-project-map.ts
+gen-vitepress-sidebar.ts
+gen-knowledge-h1.ts
+gen-knowledge-symbols.ts
+gen-knowledge-adr.ts
+gen-knowledge-tests.ts
+gen-routes.ts
+gen-routes-quick.ts
+gen-cli-doc.ts
+gen-cli-completion.ts
+generate-locale-json.ts'
 echo "$GEN_CMDS" | while IFS= read -r line; do
   [ -z "$line" ] && continue
   # shellcheck disable=SC2086（有意分词以携带 --file 等参数）
@@ -126,7 +126,7 @@ if [ -n "$CHANGED_FILES" ]; then
   FILTERED=$(printf '%s\n' "$CHANGED_FILES" | grep -vE '^docs/(knowledge/index|project-map)\.md$' | grep -v '^frontend/public/locales/' || true)
   if [ -n "$FILTERED" ]; then
     # 批量 + --quiet：stem 列表供 prepare-commit-msg 消费；终端展示由 prepare-commit-msg 负责（避免双重输出）
-    node scripts/check-knowledge-drift.mjs --affected --quiet $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"
+    node scripts/check-knowledge-drift.ts --affected --quiet $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"
   fi
 fi
 
@@ -167,7 +167,7 @@ fi
 if [ "${YSM_SKIP_CSS_LAYER:-0}" != "1" ]; then
   echo ""
   echo "[pre-commit] Shadow 样式越界检查..."
-  node scripts/css-layer-check.mjs 2>&1 || echo "⚠️  css-layer-check 执行失败（不阻断）"
+  node scripts/css-layer-check.ts 2>&1 || echo "⚠️  css-layer-check 执行失败（不阻断）"
 fi
 
 # ── i18n 新增键三段式检查（非阻断提示；ADR-124）──
@@ -178,7 +178,7 @@ fi
 if [ "${YSM_SKIP_I18N_KEY:-0}" != "1" ]; then
   echo ""
   echo "[pre-commit] i18n 新增键三段式检查（ADR-124）..."
-  node scripts/i18n-key-naming.mjs 2>&1 || echo "⚠️  i18n-key-naming 发现违规或执行失败（不阻断，pre-push 测试兜底）"
+  node scripts/i18n-key-naming.ts 2>&1 || echo "⚠️  i18n-key-naming 发现违规或执行失败（不阻断，pre-push 测试兜底）"
 fi
 
 # ── gofmt 自动修复（staged go 文件；失败仅提示不阻断） ──

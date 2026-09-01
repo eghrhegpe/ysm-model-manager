@@ -1,4 +1,4 @@
-// ===== 自动生成：scripts/gen-vitepress-sidebar.mjs（勿手改）=====
+// ===== 自动生成：scripts/gen-vitepress-sidebar.ts（勿手改）=====
 // 按内容类型分组导航：用户指南 / 发版记录 / 架构与规范 / 决策记录 / 知识卡 / 小说
 export const autoSidebar = [
   {

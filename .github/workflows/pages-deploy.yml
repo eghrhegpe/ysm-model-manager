@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           for f in tests/*.mjs; do node "$f"; done
-          node scripts/link-checker.mjs --strict
+          node scripts/link-checker.ts --strict
 
       - name: 配置 Pages
         uses: actions/configure-pages@v5

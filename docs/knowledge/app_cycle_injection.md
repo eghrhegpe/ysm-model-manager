@@ -107,5 +107,5 @@ a.queue = NewDownloadQueue(
 - `docs/adr/ADR-002-project-health-assessment.md`（P1：DownloadQueue↔App 环打破）
 - `docs/adr/ADR-134-container-type-cache-component.md`（将 `containerTypeCache` 包级全局收进组件的最小重构决策，已落地）
 - `internal/app/app_container_cache.go` + `app_container_cache_test.go`（ADR-134 落地：组件 + 注入式单测）
-- `scripts/check-circular-go.mjs`（包级环检测，不含对象级——盲区由本卡覆盖）
+- `scripts/check-circular-go.ts`（包级环检测，不含对象级——盲区由本卡覆盖）
 - `internal/app/app_download_test.go`（注入后独立测试样板）

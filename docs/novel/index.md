@@ -2,7 +2,7 @@
 
 > 在一座由四种语言搭建的巴别塔里，每堵墙本该保护你，却在暗处开了裂缝。
 
-> 本页由 `scripts/build-novel-index.mjs` 自动生成（内容不含时间戳，保证 `--check` 幂等）。
+> 本页由 `scripts/build-novel-index.ts` 自动生成（内容不含时间戳，保证 `--check` 幂等）。
 > 单一事实来源 = `docs/novel/` 目录树。请勿手改；新增章节后重跑生成器。
 
 ---

@@ -4,17 +4,17 @@ name: 质量闸门双调度器重叠审计
 tier: leaf
 category: go
 source_files:
-  - scripts/doctor.mjs
-  - scripts/pre-push-gate.mjs
-  - scripts/check-redlines.mjs
+  - scripts/doctor.ts
+  - scripts/pre-push-gate.ts
+  - scripts/check-redlines.ts
 use_when:
   - 双调度器
   - 质量闸门重叠
   - doctor gate 差异
   - 治理红线下沉
 invariant_anchors:
-  - scripts/doctor.mjs|function delegate
-  - scripts/check-redlines.mjs|function runChecks
+  - scripts/doctor.ts|function delegate
+  - scripts/check-redlines.ts|function runChecks
 ---
 
 # 质量闸门双调度器重叠审计

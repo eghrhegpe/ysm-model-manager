@@ -17,14 +17,14 @@ NODE=$(command -v node 2>/dev/null)
 # 辅助脚本内部用 process.execPath 自取 node，无需透传 NODE_BIN；各自独立逃生阀
 # 位置参数用 ${n:-} 守卫：git 某些调用路径下 $2 可能未设置，避免 nounset 中止提交
 if [ "${YSM_SKIP_KNOWLEDGE_HINT:-0}" != "1" ]; then
-  "$NODE" "$ROOT/scripts/hooks/knowledge-affected-hint.mjs" "${1:-}" "${2:-}" || true
+  "$NODE" "$ROOT/scripts/hooks/knowledge-affected-hint.ts" "${1:-}" "${2:-}" || true
 fi
 if [ "${YSM_SKIP_COVERAGE_HINT:-0}" != "1" ]; then
-  "$NODE" "$ROOT/scripts/hooks/coverage-suggest-hint.mjs" "${1:-}" "${2:-}" || true
+  "$NODE" "$ROOT/scripts/hooks/coverage-suggest-hint.ts" "${1:-}" "${2:-}" || true
 fi
 # Go 函数覆盖率建议（非阻断）：仅本次 staged 改动包跑 coverprofile，指出低覆盖函数。
 # 逃生阀：YSM_SKIP_GO_COVERAGE_HINT=1 git commit
 if [ "${YSM_SKIP_GO_COVERAGE_HINT:-0}" != "1" ]; then
-  "$NODE" "$ROOT/scripts/hooks/go-coverage-hint.mjs" "${1:-}" "${2:-}" || true
+  "$NODE" "$ROOT/scripts/hooks/go-coverage-hint.ts" "${1:-}" "${2:-}" || true
 fi
 exit 0

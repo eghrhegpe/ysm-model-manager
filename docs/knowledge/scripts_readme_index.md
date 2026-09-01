@@ -34,8 +34,8 @@ use_when:
 ## 对外 API / 入口
 
 ```bash
-node scripts/check-readme-index.mjs           # 文本报告（有零提及 → exit 1）
-node scripts/check-readme-index.mjs --json    # JSON（CI / doctor 消费）
+node scripts/check-readme-index.ts           # 文本报告（有零提及 → exit 1）
+node scripts/check-readme-index.ts --json    # JSON（CI / doctor 消费）
 ```
 
 ```js
@@ -47,9 +47,9 @@ const missing = missingFromReadme(['doctor.mjs', 'gen-routes.mjs'], readmeText);
 ## 与其他子系统关系
 
 - `scripts/README.md`：被对账的登记处本体。**新增脚本后必须登记 README**，否则本 check 阻断。
-- `scripts/pre-push-gate.mjs`：挂载于 `ALL_STATIC_TOOLS`（--all 全量）+ `DOC_STATIC_TOOLS`（--docs / docs 域 push）两处。
-- `scripts/check-workflow-refs.mjs`：姊妹闸——它守 `.github/workflows/*.yml` 引用的脚本存在性，本 check 守 README 登记完整性。
-- `scripts/check-script-hygiene.mjs`：同为脚本体系卫生闸，五口径（退出码 / 共享层内联 / --json 契约 / 文件头 5 字段 / parse-args），不覆盖 README 登记。
+- `scripts/pre-push-gate.ts`：挂载于 `ALL_STATIC_TOOLS`（--all 全量）+ `DOC_STATIC_TOOLS`（--docs / docs 域 push）两处。
+- `scripts/check-workflow-refs.ts`：姊妹闸——它守 `.github/workflows/*.yml` 引用的脚本存在性，本 check 守 README 登记完整性。
+- `scripts/check-script-hygiene.ts`：同为脚本体系卫生闸，五口径（退出码 / 共享层内联 / --json 契约 / 文件头 5 字段 / parse-args），不覆盖 README 登记。
 - `tests/test_check_readme_index.mjs`：契约测试（6 项：纯函数判定 / hooks 子目录 / 前缀不误判 / 全量 0 缺失 / 拦截路径）。
 - `docs/knowledge/scripts_argv.md`：姊妹治理卡——脚本 argv 走 parse-args 的规范；本卡负责登记侧。
 
@@ -62,8 +62,8 @@ const missing = missingFromReadme(['doctor.mjs', 'gen-routes.mjs'], readmeText);
 
 ## 相关
 
-- `scripts/check-readme-index.mjs`（本卡 source）
+- `scripts/check-readme-index.ts`（本卡 source）
 - `scripts/README.md`（被对账的登记处）
-- `scripts/pre-push-gate.mjs`（门禁挂载）
+- `scripts/pre-push-gate.ts`（门禁挂载）
 - `tests/test_check_readme_index.mjs`（契约测试）
 - `docs/knowledge/scripts_argv.md`（姊妹治理卡：argv 规范）

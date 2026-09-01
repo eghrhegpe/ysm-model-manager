@@ -1,4 +1,4 @@
-<!-- 本文件由 scripts/gen-knowledge-index.mjs 自动生成，禁止手改 -->
+<!-- 本文件由 scripts/gen-knowledge-index.ts 自动生成，禁止手改 -->
 
 # 知识卡索引
 
@@ -25,10 +25,10 @@
 
 ### 摘要
 
-- **auto_import_split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.mjs` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本…
+- **auto_import_split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆…
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
 - **scripts_argv**（脚本 argv 规范与已知豁免 parse-args.ts）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30…
-- **scripts_jscpd_go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.mjs` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscp…
+- **scripts_jscpd_go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd…
 - **scripts_readme_index**（README 登记处对账 check-readme-index.mjs）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
 ## core（18 张）
@@ -63,7 +63,7 @@
 - **backend-idb**（浏览器后端 IndexedDB 封装）：`backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id…
 - **backend_web**（网页版后端 backend-web）：`frontend/src/backend/` 是 YSM 网页版（ADR-049 Web Edition）的后端抽象层。在桌面/Android 环境下走 Wails Go 绑定替代，网页版使用 `browser-adapter.ts` +…
 - **event-bus**（事件总线 bus.ts）：`bus.ts` 是 YSM 前端的唯一事件中枢，基于发布/订阅模式。所有跨组件、跨页面的异步通信都经过此总线，避免组件间直接耦合。
-- **event-graph-guard**（Bus 事件契约守卫）：`scripts/event-graph.mjs` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
+- **event-graph-guard**（Bus 事件契约守卫）：`scripts/event-graph.ts` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
 - **frontend_test_audit**（前端测试基建审计）：2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.mjs` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（…
 - **global-handlers**（全局事件处理 global-handlers）：`core/handlers/global.ts` 是全应用唯一的 core 全局 handler 注册入口（致命陷阱 #2 的解法）：app-content 的 `connectedCallback` 调一次 `registerGloba…
 - **i18n**（国际化 i18n 模块）：`i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化…
@@ -358,10 +358,10 @@
 node scripts/new-knowledge-card.ts <kind> <name> <category> <source_file> [--leaf]
 
 # 漂移检查
-node scripts/check-knowledge-drift.mjs
+node scripts/check-knowledge-drift.ts
 
 # 重新生成索引
-node scripts/gen-knowledge-index.mjs
+node scripts/gen-knowledge-index.ts
 ```
 
 ### 文件结构

@@ -1,5 +1,5 @@
 # ysm CLI — bash 补全（自动生成，勿手改；来源：go/cli 注册表）
-# 生成：node scripts/gen-cli-completion.mjs（顶层命令 39 个）
+# 生成：node scripts/gen-cli-completion.ts（顶层命令 39 个）
 # 启用：echo "source $(pwd)/completions/ysm.bash" >> ~/.bashrc
 _ysm_complete() {
   local cur prev words cword

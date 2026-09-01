@@ -24,7 +24,7 @@ import { ROOT } from './_lib/scan-files.ts';
 import { spawnSync } from 'node:child_process';
 import { parseArgs } from './_lib/parse-args.ts';
 
-// 与 adr-check.mjs / gen-docs-index.mjs 保持一致：ADR 目录在 docs/adr（非 docs/architecture/adr）
+// 与 adr-check.ts / gen-docs-index.ts 保持一致：ADR 目录在 docs/adr（非 docs/architecture/adr）
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const REG_FILE = path.join(ADR_DIR, 'index.md'); // 登记表已并入 index（ADR 双文件合并）
 
@@ -316,11 +316,11 @@ function main() {
         console.error('[FAIL] 被取代标注处理失败，请检查 --supersedes 参数');
         return 1;
       }
-      console.log('[提示] 被取代的 ADR 状态如需同步为「❌ 已取代」，请编辑对应文件首部后跑 gen-docs-index.mjs');
+      console.log('[提示] 被取代的 ADR 状态如需同步为「❌ 已取代」，请编辑对应文件首部后跑 gen-docs-index.ts');
     }
 
     // 3. 自动对账
-    const res = spawnSync(process.execPath, [path.join('scripts', 'adr-check.mjs')], {
+    const res = spawnSync(process.execPath, [path.join('scripts', 'adr-check.ts')], {
       cwd: ROOT,
       encoding: 'utf8',
     });

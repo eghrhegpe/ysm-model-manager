@@ -4,7 +4,7 @@ name: Bus 事件契约守卫
 tier: leaf
 category: core
 source_files:
-  - scripts/event-graph.mjs
+  - scripts/event-graph.ts
 tests:
   - tests/test_bus_contract.mjs
 use_when:
@@ -24,7 +24,7 @@ use_when:
 
 ## 概览
 
-`scripts/event-graph.mjs` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
+`scripts/event-graph.ts` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
 接口提取权威事件清单，扫描 `frontend/src/**/*.ts|js`（排除 .test.ts）与 `frontend/*.html`
 内联脚本，产出 `docs/event-graph.md`（生成物，pre-commit GEN_CMDS 自动同步）。
 
@@ -58,16 +58,16 @@ use_when:
 ## 对外 API / 入口
 
 ```bash
-node scripts/event-graph.mjs                 # 生成 docs/event-graph.md
-node scripts/event-graph.mjs --check         # 校验生成物新鲜度（pre-push ALL_STATIC_TOOLS）
-node scripts/event-graph.mjs --strict        # 硬错误阻断（pre-push FRONTEND_STATIC_TOOLS 已挂）
-node scripts/event-graph.mjs --json          # 机读报告
+node scripts/event-graph.ts                 # 生成 docs/event-graph.md
+node scripts/event-graph.ts --check         # 校验生成物新鲜度（pre-push ALL_STATIC_TOOLS）
+node scripts/event-graph.ts --strict        # 硬错误阻断（pre-push FRONTEND_STATIC_TOOLS 已挂）
+node scripts/event-graph.ts --json          # 机读报告
 ```
 
 ## 与其他子系统关系
 
 - 契约事实源 = `frontend/src/bus.ts`（BusEvents + VOID_EVENTS；运行时缺参 console.warn 同源）
-- 门禁挂点：`scripts/pre-push-gate.mjs` 的 `ALL_STATIC_TOOLS`（--check+autoFix）与
+- 门禁挂点：`scripts/pre-push-gate.ts` 的 `ALL_STATIC_TOOLS`（--check+autoFix）与
   `FRONTEND_STATIC_TOOLS`（--strict）；契约测试 `tests/test_bus_contract.mjs`
 - TS 类型表只约束 .ts 调用方；html 内联 / 运行时边界靠本守卫兜底
 

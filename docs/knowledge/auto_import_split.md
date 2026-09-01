@@ -4,11 +4,11 @@ name: auto-import 拆分与缺失 import 检测
 tier: architecture
 category: config
 source_files:
-  - scripts/auto-import.mjs
-  - scripts/auto-import-lexer.mjs
-  - scripts/auto-import-symbols.mjs
-  - scripts/auto-import-detect.mjs
-  - scripts/auto-import-fix.mjs
+  - scripts/auto-import.ts
+  - scripts/auto-import-lexer.ts
+  - scripts/auto-import-symbols.ts
+  - scripts/auto-import-detect.ts
+  - scripts/auto-import-fix.ts
 use_when:
   - 缺失 import
   - auto-import
@@ -24,7 +24,7 @@ use_when:
 
 ## 概览
 
-`scripts/auto-import.mjs` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆分基线** 拆为五层模块（词法/符号/检测/修复/入口），主入口文件名不变（doctor/pre-push 挂载点零改动）。
+`scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆分基线** 拆为五层模块（词法/符号/检测/修复/入口），主入口文件名不变（doctor/pre-push 挂载点零改动）。
 
 原理：扫 frontend/src 提取全局导出符号表 → 对目标文件做词法剥离收集标识符 → 排除关键词/全局/本文件定义/已导入/属性访问 → 剩余标识符 ∩ 导出表 = 疑似缺失 import，输出建议（不写文件，`--fix` 才写）。
 
@@ -39,9 +39,9 @@ use_when:
 ## 对外 API / 入口
 
 ```bash
-node scripts/auto-import.mjs                      # 检测全部 .ts
-node scripts/auto-import.mjs <file.ts>            # 单文件
-node scripts/auto-import.mjs --include-js|--fix|--watch|--json|--strict
+node scripts/auto-import.ts                      # 检测全部 .ts
+node scripts/auto-import.ts <file.ts>            # 单文件
+node scripts/auto-import.ts --include-js|--fix|--watch|--json|--strict
 ```
 
 ```js
@@ -53,9 +53,9 @@ import { applyFixes } from './auto-import-fix.mjs';
 
 ## 与其他子系统关系
 
-- `scripts/pre-push-gate.mjs`：ALL_STATIC_TOOLS 挂 `auto-import.mjs --strict`（有缺失建议阻断推送），doctor 全量模式并入。
-- `scripts/check-script-hygiene.mjs`：五口径扫 scripts/（含 auto-import 系列，文件头/共享层内联/parse-args），拆分后各模块须过。
-- `scripts/check-readme-index.mjs`：auto-import 系列须登记 scripts/README.md（ADR-141 拆分后新增 4 个模块已登记）。
+- `scripts/pre-push-gate.ts`：ALL_STATIC_TOOLS 挂 `auto-import.mjs --strict`（有缺失建议阻断推送），doctor 全量模式并入。
+- `scripts/check-script-hygiene.ts`：五口径扫 scripts/（含 auto-import 系列，文件头/共享层内联/parse-args），拆分后各模块须过。
+- `scripts/check-readme-index.ts`：auto-import 系列须登记 scripts/README.md（ADR-141 拆分后新增 4 个模块已登记）。
 - `scripts/_lib/source-graph.ts`：`getExportedSymbols` 与 `extractExports` 疑似重复，**实证结论 = 不复用**——source-graph 把 re-export 符号也算本文件导出（726 文件中 15 个差异全为此形态），接入会破坏 --fix 候选指向。
 - `docs/knowledge/scripts_argv.md`：姊妹治理卡——argv 规范；本卡负责 auto-import 拆分与缺失 import 检测。
 
@@ -68,8 +68,8 @@ import { applyFixes } from './auto-import-fix.mjs';
 
 ## 相关
 
-- `scripts/auto-import.mjs` + 4 个 `auto-import-*.mjs`（本卡 source）
+- `scripts/auto-import.ts` + 4 个 `auto-import-*.mjs`（本卡 source）
 - `docs/adr/ADR-141-large-script-split-baseline.md`（拆分基线）
-- `scripts/pre-push-gate.mjs`（门禁挂载）
+- `scripts/pre-push-gate.ts`（门禁挂载）
 - `tests/test_auto_import.mjs`（13 项契约测试）
 - `docs/knowledge/scripts_argv.md`（姊妹治理卡）

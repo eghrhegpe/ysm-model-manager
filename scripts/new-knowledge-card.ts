@@ -22,7 +22,7 @@ import { parseArgs } from './_lib/parse-args.ts';
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
 const KNOWN_CATEGORIES = ['core', 'go', 'ui', 'feature', 'utils', 'config'];
-// 与 check-knowledge-drift.mjs KIND_RE 同款：小写字母开头，仅 a-z0-9_-
+// 与 check-knowledge-drift.ts KIND_RE 同款：小写字母开头，仅 a-z0-9_-
 const KIND_RE = /^[a-z][a-z0-9_-]*$/;
 
 const TEMPLATE = `---
@@ -103,7 +103,7 @@ function main() {
   const isLeaf = args.leaf;
   const kind = toSnakeCase(kindRaw);
   if (!KIND_RE.test(kind)) {
-    // 与 check-knowledge-drift.mjs KIND_RE 同款校验：中文/camelCase/前导数字会静默归一成必挂卡的命名（code_review P2）
+    // 与 check-knowledge-drift.ts KIND_RE 同款校验：中文/camelCase/前导数字会静默归一成必挂卡的命名（code_review P2）
     console.error(`[FAIL] kind 非法: ${kind}（须小写字母开头，仅 a-z0-9_-）`);
     return 1;
   }
@@ -139,18 +139,18 @@ function main() {
 
   // 创建后对账（与 new-adr.ts 写后立即 spawnSync(adr-check) 同族闭环，code_review P2-4）：
   // 漂移检查（source_files/必填字段契约）失败或索引不同步时提示，避免 commit/pre-push 才暴露。
-  const driftRes = spawnSync(process.execPath, [path.join('scripts', 'check-knowledge-drift.mjs')], { cwd: ROOT, encoding: 'utf8' });
+  const driftRes = spawnSync(process.execPath, [path.join('scripts', 'check-knowledge-drift.ts')], { cwd: ROOT, encoding: 'utf8' });
   process.stdout.write(driftRes.stdout || '');
   process.stderr.write(driftRes.stderr || '');
   if (driftRes.status !== 0) {
-    console.error(`[FAIL] 新卡未通过知识卡漂移检查，请修正后重跑 node scripts/check-knowledge-drift.mjs`);
+    console.error(`[FAIL] 新卡未通过知识卡漂移检查，请修正后重跑 node scripts/check-knowledge-drift.ts`);
     return 1;
   }
-  const idxRes = spawnSync(process.execPath, [path.join('scripts', 'gen-knowledge-index.mjs')], { cwd: ROOT, encoding: 'utf8' });
+  const idxRes = spawnSync(process.execPath, [path.join('scripts', 'gen-knowledge-index.ts')], { cwd: ROOT, encoding: 'utf8' });
   process.stdout.write(idxRes.stdout || '');
   process.stderr.write(idxRes.stderr || '');
   if (idxRes.status !== 0) {
-    console.error(`[FAIL] 知识卡索引未同步，请重跑 node scripts/gen-knowledge-index.mjs`);
+    console.error(`[FAIL] 知识卡索引未同步，请重跑 node scripts/gen-knowledge-index.ts`);
     return 1;
   }
 }

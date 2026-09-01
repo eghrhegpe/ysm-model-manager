@@ -1,4 +1,4 @@
-<!-- 本文件由 scripts/gen-routes-quick.mjs 自动生成，请勿手改。重跑：node scripts/gen-routes-quick.mjs -->
+<!-- 本文件由 scripts/gen-routes-quick.ts 自动生成，请勿手改。重跑：node scripts/gen-routes-quick.ts -->
 
 # AI 急速版路由表（高频场景）
 

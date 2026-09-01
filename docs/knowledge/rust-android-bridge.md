@@ -9,9 +9,9 @@ source_files:
   - go/rustbridge/bridge_darwin.go
   - go/rustbridge/types.go
   - go/scanner/rust_backend.go
-  - scripts/compile-android-rust.mjs
+  - scripts/compile-android-rust.ts
   - scripts/compile-rust-static.ts
-  - scripts/android-build.mjs
+  - scripts/android-build.ts
   - build/linux/Taskfile.yml
   - build/darwin/Taskfile.yml
 tests:

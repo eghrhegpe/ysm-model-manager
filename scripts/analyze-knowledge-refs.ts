@@ -336,8 +336,8 @@ function render(cards, data) {
   L.push('3. **Go 端最深仅 3 层**（`go/`、`internal/` 路径天然浅），**无需移动**——深度问题全部在前端。');
   L.push('4. **零互链卡 46 张**中，`frontend_test_audit` / `cli_quality_audit` 等审计报告型卡是历史快照，');
   L.push('   可归档到 `docs/review/` 而非知识卡目录（卡目录保持「可导航的活文档」）。');
-  L.push('5. 移动任何源码前，先跑 `node scripts/check-knowledge-drift.mjs --affected <新路径>` 验证卡面');
-  L.push('   同步；源码移动后统一 `node scripts/gen-knowledge-index.mjs` 刷新索引。');
+  L.push('5. 移动任何源码前，先跑 `node scripts/check-knowledge-drift.ts --affected <新路径>` 验证卡面');
+  L.push('   同步；源码移动后统一 `node scripts/gen-knowledge-index.ts` 刷新索引。');
   L.push('');
   return L.join('\n');
 }

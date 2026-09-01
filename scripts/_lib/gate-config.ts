@@ -1,7 +1,7 @@
 /**
  * gate-config.ts — pre-push-gate 静态工具清单单一配置层。
  *
- * 设计意图：pre-push-gate.mjs 职责是「按域调度检查」，但它长期内联了 4 个工具清单
+ * 设计意图：pre-push-gate.ts 职责是「按域调度检查」，但它长期内联了 4 个工具清单
  * （ALL_STATIC_TOOLS / DOC_STATIC_TOOLS / FRONTEND_STATIC_TOOLS / GO_STATIC_TOOLS，
  * 合计 40+ 项）。新增检查时同时改 gate 和清单的两处描述极易漂移（ADR-088 Take巧 #3 实证）。
  * 本模块把清单数据与 gate 调度逻辑解耦：gate 读配置，清单单一维护点。
@@ -36,18 +36,18 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   'check-circular.ts',
   'check-circular-go.ts',
   'check-orphan-exports.ts',
-  'check-deadcode-baseline.mjs',
-  'jscpd-go.mjs',
+  'check-deadcode-baseline.ts',
+  'jscpd-go.ts',
   'check-tpl-refs.ts',
   'check-dynamic-import.ts',
-  { tool: 'auto-import.mjs', args: ['--strict'] },
-  { tool: 'gen-project-map.mjs', args: ['--check'] },
-  { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
-  { tool: 'build-novel-index.mjs', args: ['--check'] },
-  { tool: 'gen-routes.mjs', args: ['--check'] },
-  { tool: 'gen-routes-quick.mjs', args: ['--check'] },
-  { tool: 'gen-cli-doc.mjs', args: ['--check'] },
-  { tool: 'gen-cli-completion.mjs', args: ['--check'] },
+  { tool: 'auto-import.ts', args: ['--strict'] },
+  { tool: 'gen-project-map.ts', args: ['--check'] },
+  { tool: 'event-graph.ts', args: ['--check'], autoFix: true },
+  { tool: 'build-novel-index.ts', args: ['--check'] },
+  { tool: 'gen-routes.ts', args: ['--check'] },
+  { tool: 'gen-routes-quick.ts', args: ['--check'] },
+  { tool: 'gen-cli-doc.ts', args: ['--check'] },
+  { tool: 'gen-cli-completion.ts', args: ['--check'] },
   { tool: 'check-script-hygiene.ts', args: ['--strict'] },
   'check-proc-adoption.ts',
   'check-lib-adoption.ts',
@@ -55,7 +55,7 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   'check-readme-index.ts',
   { tool: 'i18n-check.ts', args: ['--strict'] },
   'i18n-ui-check.ts',
-  { tool: 'css-layer-check.mjs', args: ['--strict'] },
+  { tool: 'css-layer-check.ts', args: ['--strict'] },
   'check-toast-duration.ts',
 ];
 
@@ -66,13 +66,13 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
 export const DOC_STATIC_TOOLS: GateTool[] = [
   'check-doc-drift.ts',
   'check-adr-health.ts',
-  { tool: 'gen-project-map.mjs', args: ['--check'] },
-  { tool: 'event-graph.mjs', args: ['--check'], autoFix: true },
-  { tool: 'build-novel-index.mjs', args: ['--check'] },
-  { tool: 'gen-routes.mjs', args: ['--check'] },
-  { tool: 'gen-routes-quick.mjs', args: ['--check'] },
-  { tool: 'gen-cli-doc.mjs', args: ['--check'] },
-  { tool: 'gen-cli-completion.mjs', args: ['--check'] },
+  { tool: 'gen-project-map.ts', args: ['--check'] },
+  { tool: 'event-graph.ts', args: ['--check'], autoFix: true },
+  { tool: 'build-novel-index.ts', args: ['--check'] },
+  { tool: 'gen-routes.ts', args: ['--check'] },
+  { tool: 'gen-routes-quick.ts', args: ['--check'] },
+  { tool: 'gen-cli-doc.ts', args: ['--check'] },
+  { tool: 'gen-cli-completion.ts', args: ['--check'] },
   { tool: 'check-script-hygiene.ts', args: ['--strict'] },
   'check-proc-adoption.ts',
   'check-workflow-refs.ts',
@@ -84,7 +84,7 @@ export const DOC_STATIC_TOOLS: GateTool[] = [
  * 仅含未被域检查覆盖的 drift 守护项。
  */
 export const DOC_EXTRA_SCRIPTS: GateTool[] = [
-  'check-knowledge-drift.mjs',
+  'check-knowledge-drift.ts',
   'check-adr-drift.ts',
 ];
 
@@ -96,13 +96,13 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   'check-circular.ts',
   'check-boolean-naming.ts',
   'check-orphan-exports.ts',
-  'check-deadcode-baseline.mjs',
+  'check-deadcode-baseline.ts',
   'check-tpl-refs.ts',
   'check-dynamic-import.ts',
-  { tool: 'auto-import.mjs', args: ['--strict'] },
+  { tool: 'auto-import.ts', args: ['--strict'] },
   { tool: 'i18n-check.ts', args: ['--strict'] },
   'i18n-ui-check.ts',
-  { tool: 'event-graph.mjs', args: ['--strict'] },
+  { tool: 'event-graph.ts', args: ['--strict'] },
   'check-toast-duration.ts',
   { tool: 'check-biome.ts', args: ['--strict'] },
 ];
@@ -112,7 +112,7 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
  */
 export const GO_STATIC_TOOLS: GateTool[] = [
   'check-circular-go.ts',
-  'jscpd-go.mjs',
+  'jscpd-go.ts',
   'check-go-diff-coverage.ts',
 ];
 

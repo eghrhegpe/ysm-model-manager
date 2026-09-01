@@ -6,11 +6,11 @@
  * 两边语义独立，切勿混用。
  *
  * 历史：此前 5 个脚本各自复制 KNOWLEDGE_ORDER / CATEGORY_LABELS / NON_CARDS
- *   - gen-knowledge-index.mjs（CATEGORY_LABELS + NON_CARDS）
- *   - gen-knowledge-adr.mjs（NON_CARDS，含 menu-map/graph/tier-review 冗余项）
- *   - gen-knowledge-h1.mjs（NON_CARDS）
- *   - gen-knowledge-tests.mjs（NON_CARDS）
- *   - gen-vitepress-sidebar.mjs（KNOWLEDGE_ORDER）
+ *   - gen-knowledge-index.ts（CATEGORY_LABELS + NON_CARDS）
+ *   - gen-knowledge-adr.ts（NON_CARDS，含 menu-map/graph/tier-review 冗余项）
+ *   - gen-knowledge-h1.ts（NON_CARDS）
+ *   - gen-knowledge-tests.ts（NON_CARDS）
+ *   - gen-vitepress-sidebar.ts（KNOWLEDGE_ORDER）
  * 由本模块单点导出，补词/删词只改此处。
  *
  * 零依赖（仅 node:path）。

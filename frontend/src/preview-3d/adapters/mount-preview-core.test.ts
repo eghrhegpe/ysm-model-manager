@@ -95,6 +95,8 @@ vi.mock("../caps/scene-capability-registry.ts", () => ({
     createAll: vi.fn(() => [...capsById.values()]),
     getById: vi.fn((id: string) => capsById.get(id) ?? null),
     loadAll: vi.fn(),
+    saveAll: vi.fn(),
+    dispose: vi.fn(),
   },
 }));
 
@@ -125,6 +127,7 @@ vi.mock("../frustum-cull.ts", () => ({
   cullModelGroups: vi.fn(),
   registerModelRoot: vi.fn(),
   unregisterModelRoot: vi.fn(),
+  clearModelRoots: vi.fn(),
 }));
 
 import {

@@ -90,5 +90,5 @@ export class TextureCacheImpl {
   }
 }
 
-/** 全局单例（随 3D 会话生命周期；disposeAll 由 cleanup-3d.ts 调用） */
+/** 全局单例（随 3D 会话生命周期；disposeAll 由 mount-preview-core fullCleanup 调用） */
 export const textureCache = new TextureCacheImpl();

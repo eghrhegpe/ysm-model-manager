@@ -29,7 +29,7 @@ use_when:
 ## 与其他子系统关系
 
 - `mpBuildSharedInfra` L905-1002 复用 `_singletonScene/_singletonCamera/_singletonRenderer/_singletonControls` 四个单例。
-- `runFullCleanup`（cleanup-3d.ts）经 `CleanupContext` 注入这些单例的引用，cleanup 时统一释放。
+- `fullCleanup`（mount-preview-core.ts 内联）在会话清理时统一释放内容层 + 能力 + 监听（原 cleanup-3d.ts 的 `runFullCleanup`/`CleanupContext` 僵尸实现已删除）。
 
 ## 不变量
 

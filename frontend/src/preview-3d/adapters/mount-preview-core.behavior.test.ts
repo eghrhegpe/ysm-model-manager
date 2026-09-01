@@ -212,16 +212,7 @@ vi.mock("./input-and-animation.ts", () => ({
   })),
 }));
 
-vi.mock("./cleanup-3d.ts", () => {
-  return {
-    runFullCleanup: vi.fn((ctx: any) => {
-      ctx.isDisposed.v = true;
-      ctx.nullHandle?.();
-      ctx.nullBuilt?.();
-      ctx.nullPostProc?.();
-    }),
-  };
-});
+
 
 // ── 测试环境初始化 ──────────────────────────────────────────────────────
 /** document.createElement 创建的元素注册表（外壳单例断言用：统计 view-container 数量） */
@@ -586,11 +577,7 @@ describe("生命周期事件顺序", () => {
     expect(hasActivePreview()).toBe(true);
 
     cleanupPreview();
-    // cleanupPreview 调 _handle.cleanup() → fullCleanup → runFullCleanup(cleanupCtx)
-    // 但 fullCleanup 是内嵌在 mount3D try 内的局部函数，经 _handle.cleanup 暴露；
-    // _handle.cleanup = fullCleanup，fullCleanup 里会调 adapter.onClose（cleanup-3d.ts 内）
-    // 我们的 mock 的 runFullCleanup 简化为 nullHandle + isDisposed，未调用 adapter.onClose
-    // —— 这是测试 mock 层的问题，不代表源码错误。
+    // cleanupPreview → _handle.cleanup() → 内嵌 fullCleanup（清理逻辑已内联，无 runFullCleanup）
     expect(hasActivePreview()).toBe(false);
   });
 });

@@ -50,7 +50,7 @@ ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Gr
 
 - **mount-preview-core**：`createAll` 建实例 → `getById("sky"/"ground"/"light"/"fog"/"shadow"/"reflector"/"environment"/"postprocessing")` 引用 → 生命周期驱动；Shadow 额外调 `syncLights` / `applyMeshCasts`（与 Light 解耦，经 scene 遍历取光）
 - **preview-menu / preview-menu/env**：环境面板由 `preview-menu/core.ts` 经 `buildEnvSchema`（声明式 schemaBuilder，内部调 `renderEnvLevel`）只收 **ENV_IDS 白名单**（sky/ground/environment/fog/reflector，`getAll().filter(ENV_IDS.has)`），`fillLighting` 查 `light`，阴影面板查 `shadow`——同一能力控件**不会双面板重复**
-- **cleanup-3d**：会话清理统一 `saveAll()` + `dispose()`，cap 自身 dispose 还原构造前状态（`scene.fog` / `renderer.shadowMap` / tone mapping 等）
+- **mount-preview-core `fullCleanup`**：会话清理统一 `saveAll()` + `dispose()`，cap 自身 dispose 还原构造前状态（`scene.fog` / `renderer.shadowMap` / tone mapping 等）
 - **i18n**：cap 的 `labelKey`/`descKey` 需三语入库（`frontend/src/core/i18n/locales/`），缺键时 `tr()` 回退 fallback 中文
 
 ## 不变量

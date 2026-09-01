@@ -38,10 +38,10 @@ import { ReflectorCapability } from "../caps/reflector-capability.ts";
 import { EnvironmentCapability } from "../caps/environment-capability.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
 import type { PostprocessingCapability } from "../caps/postprocessing-capability.ts";
-import { runFullCleanup, type CleanupContext } from "./cleanup-3d.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import type { SwitchContext } from "./switch-preview.ts";
 import { safeDispose } from "../safe-dispose.ts";
+import { textureCache } from "../texture-cache.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { collectSceneStats } from "../scene-stats.ts";
@@ -49,7 +49,7 @@ import { mergeStatsMenuItems } from "../menu/stats.ts";
 import { applyPerfPreset, getPerfPreset } from "../state/perf-presets.ts";
 import { fitCameraToRoots } from "../camera-setup.ts";
 import { assembleBoneSelectInfo, getMeshBoneId } from "../bone-raycast.ts";
-import { cullModelGroups, isFrustumCullEnabled, restoreModelGroupsVisible } from "../frustum-cull.ts";
+import { cullModelGroups, isFrustumCullEnabled, restoreModelGroupsVisible, clearModelRoots } from "../frustum-cull.ts";
 import { logWarn } from "../../utils/core/log.ts";
 import { bindInputHandlers } from "./input-and-animation.ts";
 import type { InputOptions } from "./input-and-animation.ts";
@@ -312,7 +312,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   let onDragPointerMove: (e: PointerEvent) => void = () => {};
   let onResize: () => void = () => {};
 
-  // 焦点陷阱 cleanup（每次 mount3D 新建，closeOverlay / runFullCleanup 释放）
+  // 焦点陷阱 cleanup（每次 mount3D 新建，closeOverlay / fullCleanup 释放）
   let focusTrapCleanup: (() => void) | null = null;
 
   // 单例外壳：首次创建，后续 mount3D 复用同一 DOM（避免重建导致黑屏）
@@ -604,46 +604,8 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   // session.cleanupFn / session.built / session.sceneBaseline / session.allBuilt
   // 已在 mount3D 头部 session 对象初始化时声明，此处不再重复 let。
 
-  const cleanupCtx: CleanupContext = {
-    menuHandle,
-    isDisposed: session.isDisposed,
-    animId: _globalAnimId,
-    onKeyDown,
-    onKeyUp,
-    getEscH: () => session.escH,
-    onDragPointerDown,
-    onDragPointerUp,
-    onDragPointerMove,
-    onResize,
-    onUnifiedPick: session.onUnifiedPick,
-    allBuilt: session.allBuilt,
-    nullBuilt: () => { session.built = null; },
-    skyCap: infra?.skyCap ?? null,
-    groundCap: infra?.groundCap ?? null,
-    lightCap: infra?.lightCap ?? null,
-    fogCap: infra?.fogCap ?? null,
-    shadowCap: infra?.shadowCap ?? null,
-    reflectorCap: infra?.reflectorCap ?? null,
-    environmentCap: infra?.environmentCap ?? null,
-    postProc: infra?.postProc ?? null,
-    nullPostProc: () => { infra!.postProc = null; }, // session 构建于 infra 建立后，恒非空
-    postProcCap: infra?.postProcCap ?? null,
-    renderer: infra?.renderer,
-    scene: infra?.scene,
-    controls: infra?.controls,
-    overlay,
-    nullHandle: () => {
-      const idx = _handles.findIndex(h => h.gen === myGen);
-      if (idx >= 0) _handles.splice(idx, 1);
-    },
-    adapter,
-    getTipTimeoutId: () => session.tipTimeoutId,
-    // 无障碍：把焦点陷阱 cleanup 注入，runFullCleanup 末尾释放并 returnFocus
-    focusTrapCleanup: () => {
-      focusTrapCleanup?.();
-      focusTrapCleanup = null;
-    },
-  };
+  // 清理统一内联于下方 fullCleanup（原 cleanup-3d.ts 的 runFullCleanup/CleanupContext 是
+  // 从未被调用的僵尸实现，已随本次修复删除——单一事实来源，杜绝双清理路径漂移）。
 
   const switchCtx: SwitchContext = {
     scene: infra?.scene,
@@ -836,6 +798,23 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       }
       session.allBuilt.length = 0;
       sceneRegistry.reset();
+      // ⑦ 输入监听解绑（bindInputHandlers 内注册）——旧实现漏解绑，跨会话累积
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("pointerup", onDragPointerUp);
+      window.removeEventListener("pointermove", onDragPointerMove);
+      window.removeEventListener("resize", onResize);
+      if (infra) {
+        infra.renderer.domElement.removeEventListener("pointerdown", onDragPointerDown);
+        if (session.onUnifiedPick) infra.renderer.domElement.removeEventListener("click", session.onUnifiedPick);
+      }
+      // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用
+      sceneCapabilityRegistry.saveAll();
+      sceneCapabilityRegistry.dispose();
+      _sceneCaps.length = 0;
+      // ⑨ 纹理缓存池 session 结束统一释放 + 视锥裁剪注册清空
+      textureCache.disposeAll();
+      clearModelRoots();
       // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
       if (loadingEl.parentNode) loadingEl.remove();
       // 从全局 perFrame 回调列表移除本 session
@@ -887,7 +866,6 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
 }
 
 // ===== §5 私有工具函数（mount3D 拆出的包级子函数，命名前缀 mp*/MountPreview）=====
-// → cleanup-3d.ts（runFullCleanup / CleanupContext）
 // → input-and-animation.ts（bindInputHandlers / InputOptions）
 // → switch-preview.ts（switchToSession / SwitchContext）
 

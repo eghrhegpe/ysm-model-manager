@@ -1,6 +1,6 @@
 // ===== 后处理管线契约接口（ADR-081 L2）=====
 // PostprocessingManager 已退役，由 PostprocessingCapability（caps/）统一接管。
-// 保留 PostprocessingLike 作为跨层最小契约（mount-preview-core / cleanup-3d 使用）。
+// 保留 PostprocessingLike 作为跨层最小契约（mount-preview-core 使用）。
 
 import type { LightCapability } from "../caps/light-capability.ts";
 

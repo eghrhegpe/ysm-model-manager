@@ -44,7 +44,7 @@ if (others.length === 0) {
 }
 
 const out = runNode([
-  'scripts/check-go-diff-coverage.mjs',
+  'scripts/check-go-diff-coverage.ts',
   '--files', others.join(','),
   '--json',
 ]);

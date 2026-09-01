@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // 静态 import：check-layering.mjs 带 invokedDirectly 守卫，被 import 时不执行 main()
-import { matchImports } from '../scripts/check-layering.mjs';
+import { matchImports } from '../scripts/check-layering.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -32,7 +32,7 @@ function check(name, fn) {
 
 function runLayering(args) {
   try {
-    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'check-layering.mjs'), ...args], {
+    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'check-layering.ts'), ...args], {
       cwd: ROOT,
       encoding: 'utf8',
     });

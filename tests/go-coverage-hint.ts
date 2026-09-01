@@ -12,7 +12,7 @@ import {
   stripModulePrefix,
   packagePatternFor,
   GO_FUNC_COVERAGE_THRESHOLD,
-} from '../scripts/hooks/go-coverage-hint.mjs';
+} from '../scripts/hooks/go-coverage-hint.ts';
 
 const errors = [];
 function check(name, fn) {

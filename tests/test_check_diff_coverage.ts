@@ -16,7 +16,7 @@ import {
   parseRenameStatus,
   statementPctForChangedLines,
   buildSuggestBlock,
-} from '../scripts/check-diff-coverage.mjs';
+} from '../scripts/check-diff-coverage.ts';
 
 const fails = [];
 function check(name, fn) {

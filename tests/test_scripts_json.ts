@@ -22,17 +22,17 @@ const NODE = process.execPath;
 
 // [脚本名, 参数] —— 只测无参数即可输出 JSON 的快速脚本
 const JSON_SCRIPTS = [
-  ['check-redlines.mjs', '--json'],
-  ['check-circular.mjs', '--json'],
-  ['check-orphan-exports.mjs', '--json'],
-  ['check-boolean-naming.mjs', '--json'],
-  ['check-adr-health.mjs', '--json'],
-  ['check-knowledge-drift.mjs', '--json'],
-  ['check-doc-drift.mjs', '--json'],
-  ['comment-checker.mjs', '--json'],
-  ['type-consistency.mjs', '--json'],
-  ['link-checker.mjs', '--json'],
-  ['adr-check.mjs', '--json'],
+  ['check-redlines.ts', '--json'],
+  ['check-circular.ts', '--json'],
+  ['check-orphan-exports.ts', '--json'],
+  ['check-boolean-naming.ts', '--json'],
+  ['check-adr-health.ts', '--json'],
+  ['check-knowledge-drift.ts', '--json'],
+  ['check-doc-drift.ts', '--json'],
+  ['comment-checker.ts', '--json'],
+  ['type-consistency.ts', '--json'],
+  ['link-checker.ts', '--json'],
+  ['adr-check.ts', '--json'],
 ];
 
 const errors = [];
@@ -75,7 +75,7 @@ for (const [name, flag] of JSON_SCRIPTS) {
 
 // ── comment-checker 专项：_summary 含分类计数 + 截断标记 ─
 {
-  const r = spawnSync(NODE, [path.join(SCRIPTS, 'comment-checker.mjs'), '--json'], { encoding: 'utf-8', timeout: 60000, maxBuffer: 32 * 1024 * 1024 });
+  const r = spawnSync(NODE, [path.join(SCRIPTS, 'comment-checker.ts'), '--json'], { encoding: 'utf-8', timeout: 60000, maxBuffer: 32 * 1024 * 1024 });
   const data = JSON.parse((r.stdout || '').trim());
   const CATS = ['AI_fluff', 'empty_jsdoc', 'commented_code', 'todo_no_ticket', 'debug_log'];
   for (const cat of CATS) {

@@ -18,9 +18,9 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { tokenize } from '../scripts/auto-import-lexer.mjs';
-import { extractExports, extractDefined, extractImported, splitBlockEntries } from '../scripts/auto-import-symbols.mjs';
-import { checkFile } from '../scripts/auto-import-detect.mjs';
+import { tokenize } from '../scripts/auto-import-lexer.ts';
+import { extractExports, extractDefined, extractImported, splitBlockEntries } from '../scripts/auto-import-symbols.ts';
+import { checkFile } from '../scripts/auto-import-detect.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -177,7 +177,7 @@ check('checkFile 不误报：已定义/已导入/全局/属性访问', () => {
 // ── run 全量 parity ──────────────────────────────────
 
 check('run 全量扫描当前仓库 0 缺失（与拆分前基线一致）', () => {
-  const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'auto-import.mjs'), '--json'], {
+  const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'auto-import.ts'), '--json'], {
     cwd: ROOT,
     encoding: 'utf8',
   });

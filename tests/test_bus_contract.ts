@@ -20,7 +20,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const GUARD = path.join(ROOT, 'scripts', 'event-graph.mjs');
+const GUARD = path.join(ROOT, 'scripts', 'event-graph.ts');
 
 let failed = 0;
 const ok = (cond, msg) => {

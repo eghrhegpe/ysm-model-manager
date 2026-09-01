@@ -19,11 +19,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './scan-files.ts';
 
-/** 列出 tests/ 目录下所有 .mjs 文件（按文件名排序）。 */
+/** 列出 tests/ 目录下所有 .ts 文件（按文件名排序）。 */
 export function collectContractTests() {
   const dir = path.join(ROOT, 'tests');
   if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).filter((f) => f.endsWith('.mjs')).sort();
+  return fs.readdirSync(dir).filter((f) => f.endsWith('.ts') && !f.startsWith('_')).sort();
 }
 
 /**

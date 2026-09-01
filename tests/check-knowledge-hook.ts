@@ -7,7 +7,7 @@ import assert from 'node:assert';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stripBlock, buildBlock, BLOCK_START, BLOCK_END, findStaleSnippets, diffIntroducesNew, parseCardText } from '../scripts/hooks/knowledge-affected-hint.mjs';
+import { stripBlock, buildBlock, BLOCK_START, BLOCK_END, findStaleSnippets, diffIntroducesNew, parseCardText } from '../scripts/hooks/knowledge-affected-hint.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -55,7 +55,7 @@ check('--quiet 仅吐 card stem', () => {
   const out = execFileSync(
     process.execPath,
     [
-      path.join(ROOT, 'scripts', 'check-knowledge-drift.mjs'),
+      path.join(ROOT, 'scripts', 'check-knowledge-drift.ts'),
       '--affected', '--quiet',
       'frontend/src/services/registry.ts', 'go/avatar/resource.go',
     ],
@@ -71,7 +71,7 @@ check('--quiet 仅吐 card stem', () => {
 check('--quiet 无命中输出空', () => {
   const out = execFileSync(
     process.execPath,
-    [path.join(ROOT, 'scripts', 'check-knowledge-drift.mjs'), '--affected', '--quiet', 'README.md'],
+    [path.join(ROOT, 'scripts', 'check-knowledge-drift.ts'), '--affected', '--quiet', 'README.md'],
     { encoding: 'utf8' },
   );
   assert.strictEqual(out.trim(), '');

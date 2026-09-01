@@ -65,7 +65,7 @@ let r;
 try {
   // 1. 词表内标签 → 放行
   writeTmpCard(['perf:', '  - cpu-bound', '  - concurrent']);
-  r = run('check-knowledge-drift.mjs', '--json');
+  r = run('check-knowledge-drift.ts', '--json');
   const legalOut = r.stdout ? JSON.parse(r.stdout) : { errors: [] };
   ok(
     '词表内标签无 ERROR',
@@ -75,7 +75,7 @@ try {
 
   // 2. 词表外标签 → ERROR 提示词表
   writeTmpCard(['perf:', '  - warp-speed']);
-  r = run('check-knowledge-drift.mjs', '--json');
+  r = run('check-knowledge-drift.ts', '--json');
   ok('非法标签退出码 1', r.status === 1, `status=${r.status}`);
   const badOut = r.stdout ? JSON.parse(r.stdout) : { errors: [] };
   ok(
@@ -89,7 +89,7 @@ try {
 
 // 3. 索引渲染：性能画像汇总段 + 已知标注卡
 // 先确保索引与卡同步（幂等重生成，等价 pre-commit GEN_CMDS 行为）
-r = run('gen-knowledge-index.mjs');
+r = run('gen-knowledge-index.ts');
 ok('gen-knowledge-index 退出码 0', r.status === 0, `stderr=${r.stderr?.slice(0, 150)}`);
 
 const indexText = fs.readFileSync(path.join(KC_DIR, 'index.md'), 'utf8');
@@ -102,7 +102,7 @@ const optRow = indexText.split('\n').find((l) => l.includes('optimization_log'))
 ok('optimization_log 行含 gpu-bound', Boolean(optRow && optRow.includes('gpu-bound')), `行内容: ${optRow?.slice(0, 160)}`);
 
 // 4. 索引自校验（--check 幂等：生成后应已同步）
-r = run('gen-knowledge-index.mjs', '--check');
+r = run('gen-knowledge-index.ts', '--check');
 ok('index --check 同步', r.status === 0, `stderr=${r.stderr?.slice(0, 150)}`);
 
 if (errors.length) {

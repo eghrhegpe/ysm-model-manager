@@ -16,7 +16,7 @@
  *   6. KNOWN_TWO_SEG_ENTITIES 保留旧键 — 两段合法（兼容期）
  *   7. 单段键 — 合法
  */
-import { validateKey } from '../scripts/i18n-key-naming.mjs';
+import { validateKey } from '../scripts/i18n-key-naming.ts';
 
 const errors = [];
 let okCount = 0;
@@ -105,7 +105,7 @@ assertOk('app');
 if (errors.length) {
   console.error(`❌ i18n-key-naming 校验误判（${errors.length} 处）：`);
   for (const e of errors) console.error('  - ' + e);
-  console.error('\n误判会阻断 commit/push，修复 scripts/i18n-key-naming.mjs 的 validateKey 后再接门禁。');
+  console.error('\n误判会阻断 commit/push，修复 scripts/i18n-key-naming.ts 的 validateKey 后再接门禁。');
   process.exit(1);
 }
 

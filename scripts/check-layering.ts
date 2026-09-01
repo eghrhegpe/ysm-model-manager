@@ -98,7 +98,7 @@ function stripNoise(text) {
 /**
  * 提取文本中所有 import/export-from 语句（支持多行）。
  * 返回 [{ spec, typeOnly, line }]（line 为 1-based 起始行）。
- * 导出供契约测试复用（tests/test_check_layering.mjs）。
+ * 导出供契约测试复用（tests/test_check_layering.ts）。
  */
 export function matchImports(text) {
   const clean = stripNoise(text);

@@ -15,7 +15,7 @@ import {
   addLinesFromDiff,
   buildSuggestBlock,
   isExemptLifecycle,
-} from '../scripts/check-go-diff-coverage.mjs';
+} from '../scripts/check-go-diff-coverage.ts';
 
 const errors = [];
 function check(name, fn) {

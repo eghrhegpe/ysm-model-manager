@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 契约测试：scripts/api-break.mjs — 任意两 ref 间破坏性变更检测。
+ * 契约测试：scripts/api-break.ts — 任意两 ref 间破坏性变更检测。
  *
  * 用真实 git 历史做端到端断言（仓库是 git 仓库，ref 对固定存在）：
  *   1. 缺参数 → 退出码 2 + 用法提示
@@ -20,7 +20,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SCRIPT = path.join(ROOT, 'scripts', 'api-break.mjs');
+const SCRIPT = path.join(ROOT, 'scripts', 'api-break.ts');
 const NODE = process.execPath;
 
 const errors = [];

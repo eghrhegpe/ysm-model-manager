@@ -15,7 +15,7 @@ import assert from 'node:assert';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { missingFromReadme } from '../scripts/check-readme-index.mjs';
+import { missingFromReadme } from '../scripts/check-readme-index.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -31,7 +31,7 @@ function check(name, fn) {
 
 function runCheck(args) {
   try {
-    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'check-readme-index.mjs'), ...args], {
+    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'check-readme-index.ts'), ...args], {
       cwd: ROOT,
       encoding: 'utf8',
     });
@@ -42,24 +42,24 @@ function runCheck(args) {
 }
 
 check('missingFromReadme：README 含 basename → 已登记', () => {
-  const missing = missingFromReadme(['doctor.mjs', 'check-redlines.mjs'], '| `doctor.mjs` | 全量闸门 |\n| `check-redlines.mjs` | 红线 |');
+  const missing = missingFromReadme(['doctor.ts', 'check-redlines.ts'], '| `doctor.ts` | 全量闸门 |\n| `check-redlines.ts` | 红线 |');
   assert.deepEqual(missing, [], '两个脚本均已提及 → 不应有缺失');
 });
 
 check('missingFromReadme：README 缺 basename → 零提及', () => {
-  const missing = missingFromReadme(['doctor.mjs', 'gen-routes.mjs'], '| `doctor.mjs` | 全量闸门 |');
-  assert.deepEqual(missing, ['gen-routes.mjs'], 'gen-routes.mjs 未提及 → 应报缺失');
+  const missing = missingFromReadme(['doctor.ts', 'gen-routes.ts'], '| `doctor.ts` | 全量闸门 |');
+  assert.deepEqual(missing, ['gen-routes.ts'], 'gen-routes.ts 未提及 → 应报缺失');
 });
 
 check('missingFromReadme：子目录脚本（hooks/）按 basename 判定', () => {
-  const missing = missingFromReadme(['hooks/knowledge-affected-hint.mjs'], '| `knowledge-affected-hint.mjs` | 知识卡提示 |');
+  const missing = missingFromReadme(['hooks/knowledge-affected-hint.ts'], '| `knowledge-affected-hint.ts` | 知识卡提示 |');
   assert.deepEqual(missing, [], 'hooks/ 脚本以 basename 登记 → 不应误报');
 });
 
 check('missingFromReadme：同名前缀不误判（doctor vs doctor-x）', () => {
-  // README 提及 doctor-x.mjs 不应让 doctor.mjs 误判为已登记（basename 精确匹配，非前缀）
-  const missing = missingFromReadme(['doctor.mjs'], '| `doctor-x.mjs` | 别的 |');
-  assert.deepEqual(missing, ['doctor.mjs'], 'doctor.mjs 未被精确提及 → 应报缺失');
+  // README 提及 doctor-x.ts 不应让 doctor.ts 误判为已登记（basename 精确匹配，非前缀）
+  const missing = missingFromReadme(['doctor.ts'], '| `doctor-x.ts` | 别的 |');
+  assert.deepEqual(missing, ['doctor.ts'], 'doctor.ts 未被精确提及 → 应报缺失');
 });
 
 check('全量扫描当前仓库应 0 缺失（rc=0 + --json 契约）', () => {
@@ -76,7 +76,7 @@ check('门禁拦截路径：漂移 README 缺脚本 → rc=1 且列出缺失', (
   // 此处验证：把真实脚本清单里第一个脚本从 README 全文剔除 → missingFromReadme 必报它。
   const { out } = runCheck(['--json']);
   const data = JSON.parse(out);
-  const first = data._summary.scripts > 0 ? 'doctor.mjs' : null;
+  const first = data._summary.scripts > 0 ? 'doctor.ts' : null;
   if (first) {
     const fakeReadme = '没有任何脚本登记的空文档';
     const missing = missingFromReadme([first], fakeReadme);

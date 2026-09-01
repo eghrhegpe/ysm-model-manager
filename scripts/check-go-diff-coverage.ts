@@ -17,7 +17,7 @@
  *   scripts/_lib/diff-coverage-core.ts（与 check-diff-coverage.ts 共享）；
  *   本文件仅保留 Go 专属策略：isGoSource 过滤 + 包分组 + `go test -coverprofile` +
  *   `go list` 编译集 oracle 豁免。下方 re-export 供契约测试 import（
- *   tests/test_check_go_diff_coverage.mjs），签名不变。
+ *   tests/test_check_go_diff_coverage.ts），签名不变。
  *
  * 用法（仓库根运行，命令统一 node scripts/<name>.mjs）：
  *   node scripts/check-go-diff-coverage.ts                          # base=origin/main, threshold=60
@@ -54,7 +54,7 @@ import {
   buildSuggestBlock as buildSuggestBlockCore,
 } from './_lib/diff-coverage-core.ts';
 
-// ── re-export（契约测试 import 路径锁：tests/test_check_go_diff_coverage.mjs）──
+// ── re-export（契约测试 import 路径锁：tests/test_check_go_diff_coverage.ts）──
 export { addLinesFromDiff, parseRenameStatus, detectRenames, getChangedLines, getChangedFiles, git };
 
 const USAGE_ERROR = 2;

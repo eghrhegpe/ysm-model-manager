@@ -91,7 +91,7 @@ try {
 // ── 3. toPosix / relPosix ────────────────────────────
 assert(toPosix('a\\b\\c.ts') === 'a/b/c.ts', `toPosix 应转反斜杠（got: ${toPosix('a\\b\\c.ts')}）`);
 assert(toPosix('a/b/c.ts') === 'a/b/c.ts', 'toPosix 已正斜杠应不变');
-assert(relPosix(path.join(ROOT, 'scripts', 'x.mjs')) === 'scripts/x.mjs', `relPosix 应相对 ROOT 且正斜杠（got: ${relPosix(path.join(ROOT, 'scripts', 'x.mjs'))}）`);
+assert(relPosix(path.join(ROOT, 'scripts', 'x.ts')) === 'scripts/x.ts', `relPosix 应相对 ROOT 且正斜杠（got: ${relPosix(path.join(ROOT, 'scripts', 'x.ts'))}）`);
 
 // ── 4. readText：BOM + CRLF 容错 ─────────────────────
 {

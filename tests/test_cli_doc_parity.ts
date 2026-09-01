@@ -59,7 +59,7 @@ const missingInDoc = [...registered].filter((c) => !documented.has(c));
 const extraInDoc = [...documented].filter((c) => !registered.has(c));
 must(
   missingInDoc.length === 0,
-  `CLI 已注册但 docs/cli-commands.md 缺失 ${missingInDoc.length} 个命令: ${missingInDoc.join(', ')}（运行 node scripts/gen-cli-doc.mjs）`,
+  `CLI 已注册但 docs/cli-commands.md 缺失 ${missingInDoc.length} 个命令: ${missingInDoc.join(', ')}（运行 node scripts/gen-cli-doc.ts）`,
 );
 must(
   extraInDoc.length === 0,
@@ -84,7 +84,7 @@ must(registered.size >= 38, `顶层命令数异常（期望 ≥38，实际 ${reg
 if (errors.length) {
   console.error('❌ 契约测试失败（CLI 注册表 ↔ 文档 parity）：');
   for (const e of errors) console.error(`  - ${e}`);
-  console.error('  提示：命令/子命令/选项变更后运行 `node scripts/gen-cli-doc.mjs` 刷新 docs/cli-commands.md。');
+  console.error('  提示：命令/子命令/选项变更后运行 `node scripts/gen-cli-doc.ts` 刷新 docs/cli-commands.md。');
   process.exit(1);
 }
 console.log(`✅ 契约测试通过：CLI 注册表 ↔ 文档 parity 一致（${registered.size} 个顶层命令全部在册，AGENTS.md 入口指向生成文档）`);

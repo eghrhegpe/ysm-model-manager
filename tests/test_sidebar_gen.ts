@@ -31,7 +31,7 @@ function check(name, fn) {
 }
 
 // 运行生成器（真实 docs 目录树）
-const res = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'gen-vitepress-sidebar.mjs')], {
+const res = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'gen-vitepress-sidebar.ts')], {
   cwd: ROOT,
   encoding: 'utf8',
 });

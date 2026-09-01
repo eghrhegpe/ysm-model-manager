@@ -37,7 +37,7 @@ assert(classify('creators.json') === 'data', 'creators.json 应归 data');
 assert(classify('docs/adr/ADR-085-menu-single-source.md') === 'docs', 'docs/ 应归 docs');
 assert(classify('README.md') === 'docs', '根 .md 应归 docs');
 assert(classify('tests/test_api_break.mjs') === 'tests', 'tests/ 应归 tests');
-assert(classify('scripts/pre-push-gate.mjs') === 'tests', 'scripts/ 应归 tests');
+assert(classify('scripts/pre-push-gate.ts') === 'tests', 'scripts/ 应归 tests');
 assert(classify('build.ps1') === 'other', '未知根文件应归 other');
 
 // ---- 2. planFromFiles 四类场景 ----
@@ -62,7 +62,7 @@ const pTests = planFromFiles(['tests/test_api_break.mjs']);
 assert(pTests.contractTests === true, '纯测试：应跑契约测试');
 assert(pTests.redlines === false, '纯测试：不应触发 redlines');
 
-const pScripts = planFromFiles(['scripts/check-menu-health.mjs']);
+const pScripts = planFromFiles(['scripts/check-menu-health.ts']);
 assert(pScripts.contractTests === true, 'scripts 改动：应跑契约测试（脚本本身也要验）');
 assert(pScripts.redlines === false, 'scripts 改动：不应触发 redlines');
 

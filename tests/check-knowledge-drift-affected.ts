@@ -22,7 +22,7 @@ function runAffected(...files) {
   // 进程正常跑完却退出码非 0 → 不重试，交断言判真实回归（2026-08-31 审计加固）。
   let r = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
-    r = spawnSync(NODE, [path.join(SCRIPTS, 'check-knowledge-drift.mjs'), '--affected', ...files], {
+    r = spawnSync(NODE, [path.join(SCRIPTS, 'check-knowledge-drift.ts'), '--affected', ...files], {
       encoding: 'utf-8',
       timeout: 30000,
     });

@@ -8,9 +8,9 @@ source_files:
   - frontend/src/core/i18n/locales/en.ts
   - frontend/src/core/i18n/locales/ja.ts
   - scripts/i18n-key-naming.ts
-  - tests/test_i18n_key_naming.mjs
+  - tests/test_i18n_key_naming.ts
 tests:
-  - tests/test_i18n_key_naming.mjs
+  - tests/test_i18n_key_naming.ts
   - frontend/src/core/i18n/locales-consistency.test.ts
 use_when:
   - 翻译准确度
@@ -74,7 +74,7 @@ error / model / pack / workshop / skeleton / dialog / toast / settings / nav / t
 
 ## 测试守护
 
-`tests/test_i18n_key_naming.mjs`（40 合规 + 3 违规用例）守护 `validateKey` 逻辑不回归误判，被 pre-push 自动跑。
+`tests/test_i18n_key_naming.ts`（40 合规 + 3 违规用例）守护 `validateKey` 逻辑不回归误判，被 pre-push 自动跑。
 
 ## 与 ADR-124 的关系
 

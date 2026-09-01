@@ -13,11 +13,11 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ROOT } from '../scripts/_lib/scan-files.ts';
-import { buildBlock, MAX_SUGGEST_FILES, formatCovTime, buildStaleHint } from '../scripts/hooks/coverage-suggest-hint.mjs';
-import { stripBlock } from '../scripts/hooks/knowledge-affected-hint.mjs';
-import { BLOCK_START, BLOCK_END } from '../scripts/hooks/coverage-suggest-hint.mjs';
+import { buildBlock, MAX_SUGGEST_FILES, formatCovTime, buildStaleHint } from '../scripts/hooks/coverage-suggest-hint.ts';
+import { stripBlock } from '../scripts/hooks/knowledge-affected-hint.ts';
+import { BLOCK_START, BLOCK_END } from '../scripts/hooks/coverage-suggest-hint.ts';
 
-const HINT = path.join(ROOT, 'scripts/hooks/coverage-suggest-hint.mjs');
+const HINT = path.join(ROOT, 'scripts/hooks/coverage-suggest-hint.ts');
 const COV = path.join(ROOT, 'frontend/coverage/coverage-final.json');
 
 const errors = [];
@@ -58,7 +58,7 @@ check('buildBlock 超上限省略', () => {
   const lines = block.split('\n');
   // 首行标记 + 20 个文件 + 1 省略行 + 尾标记
   assert.equal(lines.length, 1 + MAX_SUGGEST_FILES + 1 + 1);
-  assert.ok(lines.some((l) => l.includes(`其余 5 个见 node scripts/test-coverage-report.mjs`)));
+  assert.ok(lines.some((l) => l.includes(`其余 5 个见 node scripts/test-coverage-report.ts`)));
 });
 
 // ── 1.5 stale 提示：时间戳 + 刷新命令 ──
@@ -105,7 +105,7 @@ check('--suggest 解析真实 coverage（低覆盖率文件 > 0）', () => {
     console.log('  ↳ skip: 无 frontend/coverage/coverage-final.json（CI 未跑 vitest --coverage），跳过真实数据断言');
     return;
   }
-  const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts/test-coverage-report.mjs'), '--suggest', '--json'], { encoding: 'utf8' });
+  const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts/test-coverage-report.ts'), '--suggest', '--json'], { encoding: 'utf8' });
   const j = JSON.parse(out);
   assert.ok(Array.isArray(j.files));
   assert.ok(j._summary.files > 0, `应有源文件（实际 ${j._summary.files}）`);
@@ -188,7 +188,7 @@ check('--suggest 缺数据 graceful（exit 0 且提示）', () => {
   const missing = path.join(ROOT, 'frontend/coverage/__nonexistent__.json');
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, 'scripts/test-coverage-report.mjs'), '--suggest', '--input', missing],
+    [path.join(ROOT, 'scripts/test-coverage-report.ts'), '--suggest', '--input', missing],
     { encoding: 'utf8' },
   );
   assert.equal(r.status, 0, '缺数据应 exit 0');

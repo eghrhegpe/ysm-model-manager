@@ -36,7 +36,7 @@ for (const f of fs.readdirSync(CLI_DIR)) {
 // ── 2) 三个 shell 文件存在 ──
 const FILES = ['ysm.bash', '_ysm.ps1', '_ysm'];
 for (const f of FILES) {
-  must(fs.existsSync(path.join(COMP_DIR, f)), `MISSING: completions/${f}（运行 node scripts/gen-cli-completion.mjs）`);
+  must(fs.existsSync(path.join(COMP_DIR, f)), `MISSING: completions/${f}（运行 node scripts/gen-cli-completion.ts）`);
 }
 
 // ── 3) 命令候选覆盖：bash 顶层词表应含全部注册命令 ──
@@ -49,13 +49,13 @@ if (fs.existsSync(path.join(COMP_DIR, 'ysm.bash'))) {
   const missing = [...registered].filter((c) => !candidates.has(c));
   must(
     missing.length === 0,
-    `bash 补全缺少 ${missing.length} 个命令候选: ${missing.join(', ')}（运行 node scripts/gen-cli-completion.mjs）`,
+    `bash 补全缺少 ${missing.length} 个命令候选: ${missing.join(', ')}（运行 node scripts/gen-cli-completion.ts）`,
   );
 }
 
 // ── 4) --check 幂等（产物最新）──
 try {
-  execFileSync(process.execPath, ['scripts/gen-cli-completion.mjs', '--check'], {
+  execFileSync(process.execPath, ['scripts/gen-cli-completion.ts', '--check'], {
     cwd: ROOT,
     stdio: 'pipe',
     encoding: 'utf8',
@@ -69,7 +69,7 @@ try {
 if (errors.length) {
   console.error('❌ 契约测试失败（CLI 注册表 ↔ shell 补全 parity）：');
   for (const e of errors) console.error(`  - ${e}`);
-  console.error('  提示：命令/子命令变更后运行 `node scripts/gen-cli-completion.mjs` 刷新 completions/。');
+  console.error('  提示：命令/子命令变更后运行 `node scripts/gen-cli-completion.ts` 刷新 completions/。');
   process.exit(1);
 }
 console.log(`✅ 契约测试通过：${registered.size} 个顶层命令全部进入 bash/pwsh/zsh 补全，产物最新`);

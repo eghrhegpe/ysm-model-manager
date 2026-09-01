@@ -3,7 +3,7 @@
  * gui-flow-gate.ts — 独立性能集成门禁（B-1「真跑」层）。
  *
  * 补充说明（与静态契约对比）：
- *  - tests/test_cli_gui_flow_contract.mjs 只做「格式/白名单静态契约」，快速、进每次 push 门禁；
+ *  - tests/test_cli_gui_flow_contract.ts 只做「格式/白名单静态契约」，快速、进每次 push 门禁；
  *  - 本脚本**真跑** go/cli 的 gui-flow，验证后端加载链健康（配置→扫描→分析→缓存→数据→渲染预估），
  *    是「CLI 作为 GUI 无头验证替身」的核心体现——CLI 跑通 ≈ Go 后端加载链 OK。
  *
@@ -21,7 +21,7 @@
  * 退出码：0=通过，1=失败。
  * 依赖：node:child_process / node:path / scripts/_lib/scan-files.ts（零外部依赖）。
  * 设计意图：把 CLI 当 GUI 的「无头验证替身」——真跑 gui-flow 验证 Go 后端加载链健康
- *           （配置→扫描→分析→缓存→数据→渲染预估）。与 tests/test_cli_gui_flow_contract.mjs
+ *           （配置→扫描→分析→缓存→数据→渲染预估）。与 tests/test_cli_gui_flow_contract.ts
  *           的静态契约互补：静态层进每次 push 门禁，本门禁做真跑集成验证，CI/手动可选触发。
  */
 import path from 'node:path';

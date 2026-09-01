@@ -172,7 +172,7 @@ fi
 
 # ── i18n 新增键三段式检查（非阻断提示；ADR-124）──
 # CI 模式只查本次 diff 里的新增/修改 i18n 键是否符合三段式。违规走 stderr 提示，
-# 不阻断 commit——误判/漏报由 tests/test_i18n_key_naming.mjs 在 pre-push 守护
+# 不阻断 commit——误判/漏报由 tests/test_i18n_key_naming.ts 在 pre-push 守护
 # （契约测试断言 validateKey 对 40 合规 + 3 违规用例的行为不回归）。
 # 逃生阀：YSM_SKIP_I18N_KEY=1。
 if [ "${YSM_SKIP_I18N_KEY:-0}" != "1" ]; then

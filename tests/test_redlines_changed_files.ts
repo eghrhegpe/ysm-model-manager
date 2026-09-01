@@ -19,7 +19,7 @@
  * 用法：node tests/test_redlines_changed_files.mjs
  * 退出码：0 = 通过；1 = 失败。
  */
-import { redlineFilterKeysByChangedFiles } from '../scripts/check-redlines.mjs';
+import { redlineFilterKeysByChangedFiles } from '../scripts/check-redlines.ts';
 
 const failures = [];
 let assertCount = 0;

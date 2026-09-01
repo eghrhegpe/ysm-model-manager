@@ -15,7 +15,7 @@ import assert from 'node:assert';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseItem, itemViolations } from '../scripts/check-menu-health.mjs';
+import { parseItem, itemViolations } from '../scripts/check-menu-health.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -31,7 +31,7 @@ function check(name, fn) {
 
 function runMenuHealth(args) {
   try {
-    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'check-menu-health.mjs'), ...args], {
+    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'check-menu-health.ts'), ...args], {
       cwd: ROOT,
       encoding: 'utf8',
     });

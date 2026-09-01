@@ -29,7 +29,7 @@ function check(name, fn) {
 }
 
 function runCodemod(args) {
-  return spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'codemod.mjs'), ...args], {
+  return spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'codemod.ts'), ...args], {
     cwd: ROOT,
     encoding: 'utf8',
   });

@@ -18,14 +18,14 @@ auto_fields:
     - decodeYsmFile:180
     - decodeYsmFileFromMemory:131
     - DecodeYSMFiles:75
-    - decodeYsmInWorker:214
-    - decodeYsmInWorkerMemfs:253
+    - decodeYsmInWorker:218
+    - decodeYsmInWorkerMemfs:257
     - ensureDir:92
     - FS:112
     - FSLike:14
     - initYSMParser:55
     - initYsmParserInWorker:52
-    - initYsmParserInWorkerMt:115
+    - initYsmParserInWorkerMt:119
     - patchGlueHeapExport:141
     - resolveWasmFactory:154
     - SetNodeJS:44

@@ -15,7 +15,10 @@ const __dirname = dirname(__filename);
 const frontendSrc = join(__dirname, '../src');
 
 // 正则：匹配 window.go.main.App.xxx( 调用
-const BYPASS_REGEX = /window\.go\.main\.App\.\w+\(/g;
+// 匹配绕过 bindings 的直接调用：
+//   window.go.main.App.SearchModels(    ← 点访问
+//   window['go']['main']['App']['SearchModels'](  ← 方括号访问
+const BYPASS_REGEX = /window(?:\.go\.main\.App|\['go'\]\['main'\]\['App'\])\.\w+\(/g;
 
 // --json 输出格式（与 gate 的 runTools --json 契约对齐）
 const wantJson = process.argv.includes('--json');

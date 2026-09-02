@@ -59,10 +59,13 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 调后端、app.ts 绑定、getApp | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
+| 进程重启不可用、Node.js 侧边车禁用 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | 跨平台路径处理、pathmgr | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | 平台分支、WASM decoder 平台差异 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
+| 前端能力黑名单同步（ANDROID_UNAVAILABLE） | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | 桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend_web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
+| 文件浏览/打开文件夹失败处理 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | Android 存储授权、目录选择器 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | Android 存储授权必须走 android-bridge 的 SAF 授权流程，禁止直接请求 MANAGE_EXTERNAL_STORAGE | - |
 | Android 平台守卫、RevealInExplorer 降级 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | android:back 返回键、弹窗退出 | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | Android 系统事件必须经 android-events 的 registerAndroidEvents 单点注册，禁止各组件各自注册 | - |
@@ -70,6 +73,7 @@
 | API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
 | bridge_windows/bridge_android/bridge_linux | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend_web.md) | - | - |
+| build-tag 双文件平台隔离 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | closeActiveDialog、registerAndroidEvents | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
 | compile-android-rust/compile-rust-static | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
 | GetAppVersion / ScanModelEntries / SearchModels | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
@@ -79,7 +83,9 @@
 | NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend_web.md) | - | - |
 | Rust 扫描器、rust_backend | [Rust 桥 rustbridge](./rustbridge.md) | Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载 | - |
 | rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
+| SAF 废弃、MANAGE_EXTERNAL_STORAGE 权限模型 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | ScreenLocked、NetworkChanged、permissionGranted | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
+| watcher 监听跳过、fsnotify 平台限制 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 
 ## 🎯 模型扫描与仓库管理
 
@@ -138,6 +144,7 @@
 | 纯函数 | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | 错误提示、友好错误、friendlyError | [错误处理 errors](./utils-errors.md) | 所有异常路径必须经 friendlyError 转中文提示，禁止裸抛原始错误到 UI | - |
 | 错误消息提取、Worker 错误、catch | [安全错误消息提取 utils](./safe_error_msg.md) | Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖 | - |
+| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | tr() 依赖 t() 缺失返回 key 本身——两函数强耦合 | ADR-124 |
 | 调试日志、dbg、调试开关 | [常量与调试 constants/debug](./utils-misc.md) | 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码 | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
@@ -149,16 +156,19 @@
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
 | 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
+| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124 |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
 | 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 外部进程启动、跨平台 HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | - | - |
+| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124 |
 | 新组件注册、import 组件、startup reveal | [组件入口 app-modules](./app-modules.md) | - | - |
 | 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | - | ADR-109 |
 | 页面初始化流程、订阅桶 / 会话状态 | [主内容页 app-content](./app-content.md) | - | - |
 | 页面状态管理、当前页、page store | [页面状态管理 page-store.ts](./page-store.md) | page-store 只管理当前页标识（只读 getter），不协调页面挂载 / 卸载，那是 app-content 的职责 | - |
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
+| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource | - |
 | 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:change / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
@@ -236,11 +246,14 @@
 | 弹确认框 / 输入框 / 下拉选择 / modal | [弹窗基座 modal](./dialog-modal.md) | 业务弹窗必须复用 modal.ts 的 Promise API（prompt/select/confirm/picker），禁止手写弹窗 | - |
 | 读取 YSM 头部（作者 / 介绍） | [重命名弹窗 rename](./dialog-rename.md) | - | - |
 | 分类标记、全库标签建议 | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
+| 富列表选择（picker，支持自定义 footer 表单） | [弹窗基座 modal](./dialog-modal.md) | - | - |
 | 高级筛选、骨骼数 / 立方体 / 纹理尺寸数值范围 | [高级筛选 adv-filter](./dialog-adv-filter.md) | adv-filter 弹窗必须复用 modal.ts 的 Promise API，禁止手写弹窗 DOM | - |
 | 加载动画、滑块、行组件、预设 chip | [UI 组件库 ui-components](./ui_components.md) | - | - |
+| 进度弹窗（closable=false 防误关） | [弹窗基座 modal](./dialog-modal.md) | - | - |
 | 批量重命名、查找替换、正则替换 | [批量重命名 batch-rename](./dialog-batch-rename.md) | batch-rename 弹窗必须是模块级单例 dialogEl，重复打开先 close() 结算上一个 Promise | - |
 | 统一作者 / 作品、5 个内置预设 | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | 右键菜单、添加菜单项 | [右键菜单系统](./context-menu.md) | 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 core/context-menus.ts | - |
+| 执行破坏性操作前的二次确认（danger 模式） | [弹窗基座 modal](./dialog-modal.md) | 破坏性操作（删除/清空/覆盖）必须用 modalConfirm，danger=true 标红按钮 | - |
 | 重命名、改名、命名规范 | [重命名弹窗 rename](./dialog-rename.md) | rename 弹窗必须复用 modal.ts 的 Promise API，非法字符与长度校验在弹窗内完成 | - |
 | createCard / createSlideMenu / createLoading | [UI 组件库 ui-components](./ui_components.md) | - | - |
 | FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 dom/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签 | - |
@@ -255,12 +268,45 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 截图 / 导出 PNG / 多角度截图 / 预览缓存 | [截图与导出 export](./utils-export.md) | 离屏截图渲染器资源与 blob URL 必须释放，防内存泄漏 | - |
+| 截图 / 导出 PNG / 多角度四角度截图 | [截图与导出 export](./utils-export.md) | 离屏截图渲染器资源与 blob URL 必须释放，防内存泄漏 | - |
 | 截图、导出 PNG、多角度截图 | [截图导出 export](./export.md) | 离屏截图渲染器资源与 blob URL 必须显式释放，禁止依赖 GC 回收 | ADR-127 |
 | 离屏截图渲染器 | [截图导出 export](./export.md) | - | ADR-127 |
 | 模型详情、摘要卡片、summaryCardHTML | [摘要生成 summarize](./utils-summarize.md) | 模型摘要必须走 summarize.ts 的 summaryCardHTML，禁止手写详情卡片 HTML | - |
 | 透明背景 / 预览缓存 / blob URL | [截图导出 export](./export.md) | - | ADR-127 |
+| 透明背景截图 / preserveDrawingBuffer | [截图与导出 export](./utils-export.md) | - | - |
+| 预览缓存 cacheGet / cacheSet / cacheSetEvictHandler | [截图与导出 export](./utils-export.md) | - | - |
 | 预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) | - | - |
+| renderMultiAngle / AngleShot | [截图与导出 export](./utils-export.md) | - | - |
+
+## 🎯 审计与质量门禁
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 前端代码审计 / 质量评审 / 技术债评估 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
+
+## 🎯 重构与技术债评估
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| XSS 风险排查 / innerHTML 注入点核查 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
+
+## 🎯 XSS 与 DOM 安全
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 重构前影响面评估 / 拆分方案参考 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
+
+## 🎯 Worker/桥接架构审计
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 审核红线 / 治理规范符合性 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
+
+## 🎯 测试覆盖缺口盘点
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 测试覆盖缺口定位 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
 
 ## 🎯 3D spec 渲染与模型追加
 
@@ -285,6 +331,34 @@
 | RESOURCE_EXTS/ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
 
+## 🎯 3D 渲染与预览核心
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 挂载/切换 3D 预览（mount3D / switchPreview） | [3D 预览渲染 model3d](./model3d.md) | 几何计算（顶点/UV/四元数）在 Go 端完成，前端不得私改几何口径 | ADR-129 |
+
+## 🎯 多模型同框与场景管理
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 多模型同框叠加（keepInScene=true） | [3D 预览渲染 model3d](./model3d.md) | 所有 3D 渲染内容必须经 mount3D 统一会话外壳，禁止独立维护 renderer/scene/camera | ADR-129 |
+
+## 🎯 骨骼/几何渲染层
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 骨骼拾取与选中（pickBone / setBoneVisible） | [3D 预览渲染 model3d](./model3d.md) | dispose() 必须遍历子对象调用 geometry?.dispose() / material?.dispose() / texture?.dispose()，Object3D.remove() 不释放 WebGL 资源 | ADR-129 |
+
+## 🎯 纹理加载与 spec 构建
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 3D 截图（单角度 / 多角度） | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
+| 调试模式切换（normal / pivot / bone overlay） | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
+| 纹理预加载与缓存（preloadModel / specCache） | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
+| 渲染性能调优（perf preset / adaptive render budget） | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
+| 自由相机漫游（WASD + 空格/Shift 升降） | [3D 预览渲染 model3d](./model3d.md) | 100MB 阈值是网页版唯一防线，低端设备（4GB RAM）峰值内存可能触顶 OOM | ADR-129 |
+
 ## 🎯 提交与钩子
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -294,6 +368,99 @@
 | 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
 | 提交前文档自动同步 | [提交前钩子 pre-commit](./pre-commit-hook.md) | 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2） | - |
 | 推送被门禁阻断怎么办 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查 | - |
+
+## 🎯 门禁集成与 pre-push 流程
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 运行 Go 重复门禁 / 检查是否有新增重复对 | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
+
+## 🎯 baseline 维护与冻结策略
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 冻结当前 Go 重复债务到 baseline（治理后收紧） | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
+
+## 🎯 搬迁漂移研判与豁免决策
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 查看重复对的详细位置（行号 + 片段） | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
+| 判定「新增重复对」是真实新增还是文件搬迁/拆分 | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
+
+## 🎯 脚本治理与文档一致性
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
+
+## 🎯 门禁守护
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | - | - |
+| 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
+| CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | - | - |
+
+## 🎯 testid 查询与元素选择
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 按 testid 查询/匹配 DOM 元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用固定 sleep 等待正向结果——真 flaky | - |
+
+## 🎯 异步等待策略与 flaky 治理
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 等待 DOM 内容或 mock 调用出现 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
+
+## 🎯 事件模拟（fire 系列）
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 等待组件 init 链落定（无业务可观察条件时） | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止把负向定时器窗口断言换成短 sleep | - |
+
+## 🎯 组件挂载/卸载编排
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 断言某行为不再发生（负向定时器窗口） | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
+| 挂载/卸载自定义元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
+| 将 sleep 替换为 waitFor（正向等待） | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
+| 派发 click / input / keydown / drag & drop 等模拟事件 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
+
+## 🎯 后端桥接与平台路由
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 调用 Go Binding / getApp 获取后端 | [Wails 桥接 app.ts](./wails-bridge.md) | 前端所有 Go 调用必须走 getApp()，禁止直接访问 window.go.main.App（治理红线 4.2） | ADR-049 |
+
+## 🎯 网页版与 IndexedDB
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 检测平台类型 / 网页模式 | [Wails 桥接 app.ts](./wails-bridge.md) | Binding 函数名写错穿透到运行时 undefined（Mock bridge 形态与生成模块不同，类型造假风险） | ADR-049 |
+| 网页版路由 / browser adapter | [Wails 桥接 app.ts](./wails-bridge.md) | 改 Go 文件后必须 wails3 build + 重启，纯 dev 模式看不到新 Binding | ADR-049 |
+| IndexedDB 模型库（browser 模式） | [Wails 桥接 app.ts](./wails-bridge.md) | window.go 空对象 {} 会被缓存为 _App（P3 修复前），导致缺失方法静默穿透整个会话 | ADR-049 |
+
+## 🎯 预览渲染与反推
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 骨骼错位 / 模型错位排查 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
+
+## 🎯 骨骼与几何校正
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| UV 对不上 / 贴图错位定位 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
+
+## 🎯 UV / 贴图定位
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 烘焙数据反推原理理解 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
+| WASM 解析器版本更新 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
 
 ## 🚨 高频陷阱速查
 
@@ -336,6 +503,13 @@
 | adv-filter 输入不校验就提交 | - | min > max 传后端报错；必须在 validate() 拦截并在 |
 | 重复打开 batch-rename 不 close | - | 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算 |
 | 正则替换不分离扩展名 | - | 把 .ext 一起替换掉；必须只对文件名主体替换 |
+| 弹窗 Promise 只 resolve 不 reject：取消/关闭一律返回 null/false，调用方无需 catch | - | - |
+| registerDlg 前必须先把 overlay append 到 document.body，顺序颠倒会导致 trapFocus 失效 | - | - |
+| 新弹窗打开时旧弹窗会被自动结算（cancelClose），调用方不可依赖语义判断结果 | `用户主动关闭` | - |
+| modalProgress 的 closable=false 时，Esc/遮罩点击/android back 均不关闭，必须由代码显式调用 handle.close() | - | - |
+| modalPicker 的 footerHTML 由调用方负责转义；bodyHTML 同理，禁止直插未 esc 的字符串 | - | - |
+| closeDlg 经 WeakSet(_closingOverlays) 防重复触发，同一弹窗再次调用会静默跳过 | - | - |
+| 测试中必须 afterEach 调用 __resetModalStateForTest() 清槽位，否则跨用例残留状态污染 | - | - |
 | 重命名不校验非法字符 | - | 后端 RenameFile 报错 / 文件名含控制字符；必须在校验阶段拦截 |
 | 读取 YSM 头部后按钮 loading 态未 finally 恢复 | - | 用户卡死；必须在 finally 恢复按钮态 |
 | 手写 tag-editor 弹窗 | - | 弹窗样式 / 焦点陷阱与全局不一致；必须复用 modal.ts |
@@ -345,8 +519,22 @@
 | once off 错对象 | `bus.off(event, 原fn)` | 用 once 返回的 unsub 函数取消 |
 | 离屏 Canvas 不释放 | - | 内存泄漏、连续截图卡死；必须在完成回调里 release |
 | blob URL 不 revokeObjectURL | - | 浏览器内存累积；导出 / 失败分支都必须 revoke |
+| 修改 innerHTML 注入前必须 esc()；静态注册表值（app-nav gid/label）同样要走 esc()，不可因"来源可控"跳过 | - | - |
+| 骨骼名/用户路径等外部数据写入 DOM 走 textContent/createTextNode，不要 esc() 后拼进 innerHTML | - | - |
+| 模块级 let 可变全局（_dedupBusy / _dedupStrategy）必须有 reset 路径或注释豁免理由，否则并发测试会串扰 | - | - |
+| catch 静默仅允许在 binding 装配层；其余层至少 warn 留痕 | - | - |
+| Wails 桥只经 getApp()/bindings，禁止业务模块直 import @wailsio/runtime | - | - |
+| 资源归类一律由 Go 扫描 + resource_types.json 派生，前端只读不重算 | - | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
+| 陷阱：Android 上 xdg-open/exec 链静默失败会掩盖问题 | `静默成功` | 必须返回含「请手动」提示的明确错误 |
+| 陷阱：watcher 守卫缺失时，fw.Add 逐目录失败后 loop 空转 = running=true 假活；Android 必须直接跳过 | `假活` | - |
+| 陷阱：把 RevealInExplorer/OpenFolder 等绑定全部 false | `一刀切` | 应仅在 ANDROID_UNAVAILABLE 黑名单内才禁 |
+| 陷阱：误引入 SAF/URI 桥 | `content:// URI` | SAF 已弃用，禁止复活 |
+| 陷阱：平台差异大的逻辑用 runtime.GOOS 分支 | `build-tag 混用` | 应用 build-tag 双文件保证编译期隔离 |
+| 陷阱：Android 沙盒私有目录与公共仓库根混用 | `路径管理混乱` | androidPathManager 严格分离 |
+| 陷阱：Go 新增桌面专属拒绝项未同步 platform-web.ts | `前端/后端黑名单不同步` | 三谓词测试 platform-parity.test.ts 会爆 |
+| 陷阱：Android 上调用 os.Executable + exec.Command | `重启假设` | Activity 生命周期不兼容，显式拒绝 |
 | 手写头像路径拼接 | - | 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验 |
 | 头像缓存不失效 | - | 换头像后仍显示旧图；必须经缓存失效策略 |
 | CLI 手写搜索 | - | 与 GUI 搜索结果不一致、参数不统一；必须复用 go/cli 的 SearchModels |
@@ -393,6 +581,12 @@
 | Worker 未独立加载 WASM | - | 与主线程 WASM 实例冲突；必须在 Worker 内独立 open 解码 |
 | 手写骨骼画布 | - | 与 model2d 输出不一致、缺鼠标拾取；必须复用 model2d.ts |
 | Canvas 不销毁 | - | 内存泄漏；必须复用 renderer 并dispose |
+| 「Fatal trap | - | - |
+| mesh 级视锥剔除必须关闭（mesh.frustumCulled = false），否则骨骼旋转时扁平部件（如脸部）会误判不可见 | - | - |
+| dispose 必须完整执行：cancelAnimationFrame、移除 keydown/keyup/pointer/resize/fullscreenchange 监听、dispose geometry/material/texture，缺一即泄漏 | - | - |
+| 纹理绑定不得静默兜底：槽位越界/缺图应报错+ 灰色占位，严禁「找第一张可用」贴错图 | `纹理槽位缺失` | - |
+| perComponent 纹理索引分类与绑定索引必须同一空间：组件分支恒用局部槽 0（arr === compTexArr ? 0），非组件回退全局 texIdx/resolvedTexIdx | - | - |
+| 大文件解码 peak 内存可达 ~3-4× 文件大小（base64 | - | Uint8Array → WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存） |
 | adapter 直接遍历 entry 数组 | - | 容器内多模型顺序不稳定、缺用户选择点；必须走 multiModelSelectNode |
 | litematic zip 多 nbt 未走 select | - | 默认取第一个，用户无法换选；必须复用 multiModelSelectNode |
 | 各页面各自实现评分 | - | 结果不一致、排名错乱；必须经 oldest-models 单点 |
@@ -418,6 +612,10 @@
 | initRecycleBin 不返回清理函数 | - | 监听泄漏；必须在 app-content 切换页时调用返回的清理函数 |
 | 各自创建 renderer | - | 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享 |
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
+| services/registry.ts 是 Service 注册表（register/get/unregister/clear）≠ resource_types.json 资源类型定义；混淆两者会在场景误改 register 而非 JSON | `新增类型` | - |
+| loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回  时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试 | `"{}"` | - |
+| services/registry.get 用 Map.has() 判定，falsy 值  如实返回（P3 修复）；误判走 null 分支会导致功能静默失效 | `不存在` | - |
+| MMD 子类型 instanceDir 必须精确为 （含子级），漏写一级右键打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定 | `打开文件夹` | - |
 | 硬编码 Windows 路径 | - | Android/Linux 启动失败；必须经平台桥的编译脚本 |
 | CGO 未静态链接 | - | Android 缺少依赖库；必须经 compile-rust-static 静态编译 |
 | 直接 dlopen 加载 rust.dll | - | 平台差异处理不全、符号名不匹配；必须经 bridge_*.go 封装 |
@@ -426,16 +624,37 @@
 | safeErrorMessage 不做字符串化 | - | null/undefined 错误丢信息；必须经 safeStr 兜底 |
 | adapter 直接创建场景对象 | - | 能力列表 / 菜单 / 状态同步不一致；必须经 sceneCapabilityRegistry 注册 |
 | 能力未实现 getMenuControls | - | 菜单缺控件；必须在 SceneCapability 接口中实现 getMenuControls |
+| → 看 drift 提示而非直接 --update；exact = 纯搬，partial = 拆/并文件 | `文件搬迁/拆分导致误报` | - |
+| → 有遗留债务时误用会把债写进 baseline，需先治理再冻结 | `--update 会冻结当前状态` | - |
+| → 仅表示 baseline 不存在，需首次跑一次并 --update 创建账本 | `exit 2 不是失败` | - |
+| → 绝不要往 deadcode-baseline.json 的 jscpd 段写回，两账本独立演进 | `与前端 deadcode baseline 零耦合` | - |
+| → normPair 处理 ，但原始 key 仍可能含反斜杠 | `迁移 Windows 路径时归一化 POSIX` | - |
+| 新增脚本后忘记在 README.md 登记 | - | check-readme-index 阻断推送（exit 1） |
+| README 只写脚本名前缀（如  而非 `doctor.ts`）→ 前缀匹配不够，必须精确匹配 basename | `doctor` | - |
+| 脚本改名后未同步更新 README | - | 旧名不匹配，新名未登记，产生漂移 |
+| 误把  共享层或测试文件当作需要登记的脚本（它们被排除在外） | `_lib/` | - |
+| 删除脚本时简单删行而非移入区 | `已删除` | 与磁盘状态不一致导致误报 |
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 dgAfIntersectPaths | - | - |
 | app-sidebar 直接发 push/pull 请求 | - | 并发冲突 / 状态错乱；必须经 sync-manager 排队 |
 | PullSingleResource 未完成前刷新侧边栏 | - | 半同步状态显示；必须等 store 状态收敛 |
+| getAllByTestId 前缀查询不会返回的兄弟 testid（如 tree-dir 不会命中 tree-dir-toggle）；误用精确查询会抛错，应先查前缀再 JS 过滤 | `后缀非数字` | - |
+| waitFor 超时/异常携带原始错误（P2 修复后）；旧实现静默吞错掩盖真实根因，迁移旧卡时注意不要写 | `捕获后重新 throw 通用消息` | - |
+| 参数不存在于 waitFor 签名，旧知识卡/口语中可能出现误导 | `interval?` | - |
+| 异步等待必须按选型：正等结果→waitFor，init 落定→排空调度轮次，负向窗口→保留真实 sleep | `三分法` | - |
+| 将 init 落定硬凑成 waitFor 条件会与组件内部实现耦合，条件易碎 | - | - |
+| 将负向定时器窗口换成短 sleep 会导致防抖真坏了也漏报 | - | - |
+| testid 值禁止含空格或大小写混排（Design.md §19.1），本层未做入口校验（P3） | - | - |
 | 手写重复 DOM | - | 样式不一致、缺可访问性；必须经 ui-components |
 | ui-components 内自定义元素 | - | 与全仓 Web Components 规范冲突；ui-components 只做 helper 函数 |
 | 手写 splice 排序 | - | 与拖拽 drop 逻辑不一致、边界溢出；必须经 moveItem |
 | moveItem 未 clamp | - | 拖拽到首/尾位置时报错；必须在 moveItem 内做 clamp |
 | 裸抛原始错误 | - | 用户看不懂、违反治理红线；必须经 friendlyError 翻译 |
 | 网络错误未分类 | - | 一律显示未知错误；必须经 friendlyError 的网络错误分支 |
+| 离屏 renderer 未 dispose / blob URL 未通过 evict 回调释放 | - | WebGL 上下文 + 内存泄漏；整个「renderer 创建 → 场景构建 → 四角度循环」必须都在 try/finally 内 |
+| cacheSet 覆盖同 key 旧值不触发 evict | - | WASM 解码产物的旧 blob URL 泄漏；淘汰与覆盖都必须走 evict 回调 |
+| GetModel3DSpec / JSON.parse 失败直接 reject | - | 消费者无 catch → unhandled rejection；失败应统一返回 null（P2 修复） |
+| try 起点在角度循环而非场景构建段 | - | 场景构建抛错时 renderer 永不 dispose（P2 修复） |
 | 拖拽导入等待异步注册表 | - | 导入按钮短暂不可用；必须用 RESOURCE_EXTS 静态表 |
 | 静态表未与 resource_types.json 对齐 | - | 三端不一致；必须由契约测试守护 |
 | console.log 散落 | - | 无法按 tag 过滤、生产环境泄漏日志；必须经 dbg |
@@ -450,8 +669,18 @@
 | 用 vi.mock 硬扛源码副作用 | - | 治标不治本；必须先做惰性化守卫/神桶拆分 |
 | 直调 window.go 方法 | - | Wails 启动时序不确定、方法未就绪时调用失败；必须经 getApp() 代理 |
 | 在 web 模式直调 wails binding | - | window.go 不存在；必须走 backend-web 的 browser-adapter |
+| 解构直连 | `const { SomeBinding } = window.go.main.App` | 绕过 getApp 缓存/路由，违反红线 §3.2 |
+| 忘记 wails3 build 就运行 | - | 新 Binding 在桌面端不可见、报 undefined |
+| getApp 首次调用失败后直接返回错误，没有重试语义（P2 修复：import 失败会重置 _appPromise 并 rethrow，防永久毒化） | - | - |
+| 认为 browserAdapter 有状态会被缓存 | - | 实际是无状态 Proxy，每次调用 getBrowserAdapter 直接返回，不走 _App 缓存 |
+| 拼错 webImpls 键名 | - | 原先运行时静默无响应，Phase 3 修复后通过 satisfies Record 保留字面量键 + AssertSubset 在编译期暴露 |
 | 手写动画解析 | - | 与基岩版 animation.json 语义不一致；必须经 ysm-animation-player |
 | Molang 求值未缓存 | - | 每帧重复求值、性能差；必须缓存 Molang 表达式 |
+| 预览错 ≠ 文件坏：cube 的 origin/size/uv 是反推猜测，模组直读烘焙数据所以游戏内正常；骨骼姿态差异先怀疑反推误判 | - | - |
+| 复杂嵌套旋转 / 极近重合顶点 / 非标准几何体：反推可能误判 pivot 或 rotation | - | 关联部件错位甚至方块崩溃，这是上游已知限制，不要在几何反推端打补丁硬修 |
+| WASM 更新需双向同步：WASM 资产（两个 *-data.js）与模组侧同一 C++ 源码但导出面不同，更新需逐端同步重出 | - | - |
+| UV 解析多种形态： 兼容数组 `[x,y]`、对象 `{uv,uv_size}`、JSON 字符串 faceUV、兜底 `[0,0]`，贴图错位优先排查此处而非几何本身 | `parseBedrockGeometryFromJSON` | - |
+| texture slot 绑定规则：第 i 个模型 | - | 第 i 个纹理，错位需按此顺序排查 |
 | 手写 YSM 字节流解析 | - | 与 YSMParser WASM 输出不一致；必须经 ysm-wasm |
 | wasmBinary 未释放 | - | 内存泄漏；必须复用 wasm 实例并释放 |
 | Worker 内静态 import WASM 数据模块 | - | 另一变体成 1.5MB 死重；必须动态 import |

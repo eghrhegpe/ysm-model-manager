@@ -14,7 +14,7 @@
 | 用户意图或关键词 | 首选知识卡 | 摘要 |
 |---|---|---|
 | 3D 渲染循环优化、Vector3 复用、纹理缓存、AbortController 事件管理、资源生命周期 dispose、循环依赖破壁、审核驱动开发、并发防护 gen 守卫 | [3D 区审核与修复模式提炼](./3d-patterns.md) ⚠️歧义（另见 optimization_log.md） | — |
-| Android、存储授权、目录选择、MANAGE_EXTERNAL_STORAGE、SAF | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) ⚠️歧义（另见 go-android-platform-guard.md、rust-android-bridge.md） | Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 WebView，桌面端无此桥返回 `null`）与跨平台目录选择器。解决 Android 上 Wails 官方**拒绝目录选择**（… |
+| Android、存储授权、目录选择、MANAGE_EXTERNAL_STORAGE、SAF | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) ⚠️歧义（另见 go-android-platform-guard.md、rust-android-bridge.md等） | Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 WebView，桌面端无此桥返回 `null`）与跨平台目录选择器。解决 Android 上 Wails 官方**拒绝目录选择**（… |
 | android:back、返回键、弹窗、系统事件、ScreenLocked、NetworkChanged | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) ⚠️歧义（另见 dialog-modal.md） | 前端消费 Java 层经 Wails 事件总线转发的 `android:*` 系统事件（ADR-046 P2，参照 MikuMikuAR ADR-017 A3-04）。桌面端无 Java 层，这些事件永不触发，注册无害。生命周期由 `reg… |
 | 动画、骨骼动画、关键帧、Molang、数字滚动、stagger 入场 | [动画系统 animation](./animation-system.md) ⚠️歧义（另见 go-geometry.md） | 前端动画体系分两层：**模型骨骼动画**（基岩版 animation.json 解析 + 关键帧插值求值）与 **UI 动效**（数字里程表滚动、stagger 入场延迟）。UI 层的 CSS 动画可被全局 `no-animations` … |
 | 诊断页、冲突、去重流程、诊断页日志 tab、性能、oldest | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | `diagnostics/` 是 `app-content` 的「诊断与冲突」页子域（6 个 tab：冲突 / 日志 / 体检 / 去重 / 性能 / 资历），由主卡 `app-content` 的 `init-pages.ts` 在切到诊… |
@@ -46,12 +46,12 @@
 | 截图、导出 PNG、多角度截图、透明背景、预览缓存、blob URL、saveScreenshot、renderMultiAngle | [截图导出 export](./export.md) ⚠️歧义（另见 utils-export.md等） | > **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到… |
 | 拓展点对账、落地状态、ADR 闭环 | [可拓展点索引对账（vs HEAD @ d517113c…）](./extensibility-index-reconciliation.md) | — |
 | 可拓展点、扩展入口、硬编码、重复实现、插件化 | [可拓展点发掘索引（extensibility inventory）](./extensibility-index.md) ⚠️歧义（另见 drift-scan.md） | — |
-| 新增资源类型、新增文件格式、新增网页桥接、新增同步逻辑、残留手改清单 | [拓展点 / 扩展入口 探索报告（Round 2）](./extensibility-round2.md) | — |
+| 新增资源类型、新增文件格式、新增网页桥接、新增同步逻辑、残留手改清单、拓展点探索 | [拓展点 / 扩展入口 探索报告（Round 2）](./extensibility-round2.md) | — |
 | FBX、CLI、命令行、转换、glTF、GLB、fbx2gltf、assimp | [FBX CLI 处理管线 fbx-cli-pipeline](./fbx-cli-pipeline.md) ⚠️歧义（另见 cli_quality_audit.md） | **CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**： |
 | 代码审核、代码审查、审计、前端质量、技术债、重构排期、XSS、innerHTML | [前端 TS 整包审计](./frontend_repo_audit.md) ⚠️歧义（另见 cli_quality_audit.md、frontend_test_audit.md等） | 2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全… |
 | 代码审核、测试基建、契约测试、e2e、flaky、假绿、覆盖盲区 | [前端测试基建审计](./frontend_test_audit.md) ⚠️歧义（另见 cli_quality_audit.md、frontend_repo_audit.md、pre_push_gate.md等） | 2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.mjs` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（… |
 | 全局事件、拖拽导入、拖拽提示、同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) ⚠️歧义（另见 import-queue.md） | `core/handlers/global.ts` 是全应用唯一的 core 全局 handler 注册入口（致命陷阱 #2 的解法）：app-content 的 `connectedCallback` 调一次 `registerGloba… |
-| Android、平台守卫、RevealInExplorer、OpenFolder、RestartApplication、xdg-open、重启、Node.js | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) ⚠️歧义（另见 android-bridge.md、rust-android-bridge.md） | ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的桌面能力**显式拒绝/降级，避免 `xdg-open`/`exec` 链静默失败（错误分类反模式——失败要可见）。结合既有的 build-tag 平台双文件（`… |
+| Android、平台守卫、RevealInExplorer、OpenFolder、RestartApplication、xdg-open、重启、Node.js、SAF、MANAGE_EXTERNAL_STORAGE、watcher 守卫、fsnotify、build-tag、pathmgr | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) ⚠️歧义（另见 android-bridge.md、rust-android-bridge.md等） | ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的桌面能力**显式拒绝/降级，避免 `xdg-open`/`exec` 链静默失败（错误分类反模式——失败要可见）。结合既有的 build-tag 平台双文件（`… |
 | 头像、作者、创作者、avatar、缓存、头像缩略图 | [头像 go/avatar](./go-avatar.md) ⚠️歧义（另见 go-scanner.md） | `go/avatar/` 包负责创作者头像的提取与缓存：从模型文件（.ysm 二进制 / .zip / 解压目录 .json）的 `metadata.authors[].avatar` 声明中取出头像图片，缓存到**平台配置根 `os.Us… |
 | CLI 搜索、命令行搜索、search 命令、关键词搜索、数值范围搜索、模型搜索、go run search、runSearch | [CLI 搜索命令 search](./go-cli-search.md) | `go/cli/model.go` 的 `search` 命令是 YSM CLI 模式的模型搜索入口，注册为 `RegisterCommandC("search", CatModel, "搜索模型（支持关键词过滤）", runSearch)… |
 | 容器、解包、zip、7z、ContainerReader、归档、压缩包、目录容器 | [统一容器桥接层 go/container](./go-container.md) ⚠️歧义（另见 go-geometry.md等） | `go/container/` 包是统一容器桥接层（ADR-068）：收敛 ysm/geometry/avatar/packs 各自独立的「打开容器→找条目」实现（调研实测 zip.OpenReader 10 处 / zip.NewRead… |

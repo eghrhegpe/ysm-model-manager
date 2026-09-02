@@ -346,8 +346,8 @@ auto_fields:
     - decodeVoxelNbt:663
     - decodeYsmFile:180
     - decodeYsmFileFromMemory:131
-    - decodeYsmInWorker:214
-    - decodeYsmInWorkerMemfs:253
+    - decodeYsmInWorker:218
+    - decodeYsmInWorkerMemfs:257
     - decodeYsmViaWasm:22
     - DEFAULT_COMMUNITY_URL:402
     - DEFAULT_ENV_PARAMS:138
@@ -643,7 +643,7 @@ auto_fields:
     - initWorkshopTabs:41
     - initYSMParser:55
     - initYsmParserInWorker:52
-    - initYsmParserInWorkerMt:115
+    - initYsmParserInWorkerMt:119
     - injectSkySunScalePatch:126
     - InputHandlers:43
     - InputOptions:28
@@ -1483,6 +1483,25 @@ use_when:
   - 重构排期
   - XSS
   - innerHTML
+pitfalls:
+  - 修改 innerHTML 注入前必须 esc()；静态注册表值（app-nav gid/label）同样要走 esc()，不可因"来源可控"跳过
+  - 骨骼名/用户路径等外部数据写入 DOM 走 textContent/createTextNode，不要 esc() 后拼进 innerHTML
+  - 模块级 let 可变全局（_dedupBusy / _dedupStrategy）必须有 reset 路径或注释豁免理由，否则并发测试会串扰
+  - catch 静默仅允许在 binding 装配层；其余层至少 warn 留痕
+  - Wails 桥只经 getApp()/bindings，禁止业务模块直 import @wailsio/runtime
+  - 资源归类一律由 Go 扫描 + resource_types.json 派生，前端只读不重算
+quick_groups:
+  - 审计与质量门禁
+  - 重构与技术债评估
+  - XSS 与 DOM 安全
+  - Worker/桥接架构审计
+  - 测试覆盖缺口盘点
+quick_intents:
+  - 前端代码审计 / 质量评审 / 技术债评估
+  - XSS 风险排查 / innerHTML 注入点核查
+  - 重构前影响面评估 / 拆分方案参考
+  - 审核红线 / 治理规范符合性
+  - 测试覆盖缺口定位
 status: snapshot
 ---
 

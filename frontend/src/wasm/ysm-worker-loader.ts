@@ -78,6 +78,8 @@ async function loadBaseAssets(): Promise<ParserAssets> {
         glue: (glueMod._getGlueCode() as string | null) ?? null,
       };
     })();
+    // 失败时清缓存，避免 rejected promise 永久驻留致 worker 不可恢复
+    baseAssetsPromise!.catch(() => { baseAssetsPromise = null; });
   }
   return baseAssetsPromise;
 }
@@ -98,6 +100,8 @@ async function loadMtAssets(): Promise<ParserAssets> {
         glue: (glueMod._getGlueCodeMt() as string | null) ?? null,
       };
     })();
+    // 失败时清缓存，避免 rejected promise 永久驻留致 worker 不可恢复
+    mtAssetsPromise!.catch(() => { mtAssetsPromise = null; });
   }
   return mtAssetsPromise;
 }

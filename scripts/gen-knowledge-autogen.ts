@@ -60,15 +60,15 @@ function parseAutoFields(fm: string) {
     }
     if (line.trim() === '') continue;
     // 有缩进 → 可能是子键或列表项
-    // 子键格式：`  symbols_with_lines:`（2 空格缩进）
-    const subKeyMatch = line.match(/^\s{2}(\w+)\s*:/);
+    // 子键格式：`  symbols_with_lines:`（2 空格缩进）；宽松匹配任意缩进以兼容 tab
+    const subKeyMatch = line.match(/^\s+(\w+)\s*:/);
     if (subKeyMatch) {
       currentKey = subKeyMatch[1]!;
       if (!out[currentKey]) out[currentKey] = [];
       continue;
     }
-    // 列表项格式：`    - SymbolName:42`（4 空格缩进）
-    const item = line.match(/^\s{4}-\s+(.+?)\s*$/);
+    // 列表项格式：`    - SymbolName:42`（4 空格缩进）；宽松匹配任意缩进 + 可选空格
+    const item = line.match(/^\s+-\s+(.+?)\s*$/);
     if (item && currentKey) {
       out[currentKey]!.push(item[1]!.trim());
     }
@@ -108,8 +108,12 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
     }
     const block: string[] = ['auto_fields:'];
     for (const [key, values] of Object.entries(newFields)) {
-      block.push(`  ${key}:`);
-      for (const v of values) block.push(`    - ${v}`);
+      if (values.length === 0) {
+        block.push(`  ${key}: []`);
+      } else {
+        block.push(`  ${key}:`);
+        for (const v of values) block.push(`    - ${v}`);
+      }
     }
     return [...lines.slice(0, end), ...block, ...lines.slice(end)].join('\n');
   }
@@ -122,8 +126,12 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
   }
   const block: string[] = ['auto_fields:'];
   for (const [key, values] of Object.entries(newFields)) {
-    block.push(`  ${key}:`);
-    for (const v of values) block.push(`    - ${v}`);
+    if (values.length === 0) {
+      block.push(`  ${key}: []`);
+    } else {
+      block.push(`  ${key}:`);
+      for (const v of values) block.push(`    - ${v}`);
+    }
   }
   return [...lines.slice(0, idx), ...block, ...lines.slice(end)].join('\n');
 }
@@ -313,11 +321,18 @@ function main() {
     const added = targetSymbols.filter((s) => !existingSet.has(s));
     const removed = existingSymbols.filter((s) => !targetSet.has(s));
 
+    // 区分「行号漂移」(moved) 与「符号增删」(added/removed)：
+    // added 和 removed 的 symbol 部分相同但 line 不同 → moved
+    const addedSyms = new Set(added.map((s) => s.split(':')[0]));
+    const moved = removed.filter((s) => addedSyms.has(s.split(':')[0]));
+    const pureAdded = added.filter((s) => !moved.some((m) => m.split(':')[0] === s.split(':')[0]));
+    const pureRemoved = removed.filter((s) => !moved.some((m) => m.split(':')[0] === s.split(':')[0]));
+
     if (added.length === 0 && removed.length === 0 && !isFull) continue; // 一致且非 full 模式 → 跳过
 
     if (isCheck) {
       if (added.length || removed.length) {
-        drifts.push({ file: cf, added, removed });
+        drifts.push({ file: cf, added: pureAdded, removed: pureRemoved, moved });
       }
       continue;
     }

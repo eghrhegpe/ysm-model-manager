@@ -15,12 +15,12 @@
 | 🏗 auto_import_split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
 | 🏗 extensibility-index-reconciliation | 可拓展点索引对账（vs HEAD @ d517113c…） | architecture | — | 拓展点对账, 落地状态, ADR 闭环 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
-| 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单 |
+| 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单, 拓展点探索 |
 | 🏗 optimization_log | 优化记录 optimization-log | architecture | cpu-bound, gpu-bound, concurrent, memory-heavy | 性能优化, KTX2 编码, 纹理缓存, 主线程监控, 内存泄漏 |
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
 | 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
 | 🏗 scripts_jscpd_go | Go 端 jscpd 重复检测脚本 | architecture | — | jscpd, go 重复代码, 复制粘贴检测, duplicate, 重复对, 增量门禁, 新增重复, 独立 baseline |
-| 🏗 scripts_readme_index | README 登记处对账 check-readme-index.mjs | architecture | — | README, 脚本索引, 登记处, 脚本登记, check-readme-index, 脚本漂移, 脚本对账 |
+| 🏗 scripts_readme_index | README 登记处对账 check-readme-index.mjs | architecture | single-thread | README, 脚本索引, 登记处, 脚本登记, check-readme-index, 脚本漂移, 脚本对账 |
 | 🏗 vitest-env-switch | Vitest 环境切换规则 | architecture | — | vitest, 测试环境, node 环境, happy-dom, 测试切换 |
 
 ### 摘要
@@ -124,7 +124,7 @@
 | 🍃 doctor_gate_overlap | 质量闸门双调度器重叠审计 | leaf | — | 双调度器, 质量闸门重叠, doctor gate 差异, 治理红线下沉 |
 | 🏗 drift-scan | drift-scan（双轨漂移检测） | architecture | — | 漂移检测, 双轨, 重复实现, 口径漂移 |
 | 🏗 fbx-cli-pipeline | FBX CLI 处理管线 fbx-cli-pipeline | architecture | — | FBX, CLI, 命令行, 转换, glTF, GLB, fbx2gltf, assimp |
-| 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android, 平台守卫, RevealInExplorer, OpenFolder, RestartApplication, xdg-open, 重启, Node.js |
+| 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android, 平台守卫, RevealInExplorer, OpenFolder, RestartApplication, xdg-open, 重启, Node.js, SAF, MANAGE_EXTERNAL_STORAGE, watcher 守卫, fsnotify, build-tag, pathmgr |
 | 🍃 go-avatar-decode | Go 头像提取：纯函数 vs Node+WASM 解码分界 | leaf | io-bound, single-thread | 改头像提取 / DecodeYSMFiles / ExtractAvatarURI 逻辑或补 avatar 测试时 |
 | 🏗 go-avatar | 头像 go/avatar | architecture | io-bound | 头像, 作者, 创作者, avatar, 缓存, 头像缩略图 |
 | 🏗 go-cli-search | CLI 搜索命令 search | architecture | — | CLI 搜索, 命令行搜索, search 命令, 关键词搜索, 数值范围搜索, 模型搜索, go run search, runSearch |
@@ -213,7 +213,7 @@
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
-| 🏗 model3d | 3D 预览渲染 model3d | architecture | — | 3D 渲染层, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
+| 🏗 model3d | 3D 预览渲染 model3d | architecture | memory-heavy, gpu-bound | 3D 渲染层, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
 | 🍃 mount-preview-module-singleton-race | mount3D 并发竞态（已闭环 — _gen 代际守卫） | leaf | concurrent | mount3D 并发竞态（已闭环）, 评审模块级单例守卫（历史） |
 | 🍃 mount3d-584-giant | mount3D 巨函数现状（2026-08-27 已部分拆分） | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
 | 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 眨眼, 节拍检测, 模型感知 |
@@ -277,7 +277,7 @@
 - **app-content**（主内容页 app-content）：`app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工…
 - **app-modules**（组件入口 app-modules）：`app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组…
 - **app-nav**（顶部导航 app-nav）：`app-nav` 是应用的主导航菜单组件（Shadow DOM，渲染为左侧固定栏），列出模型仓库、整合包管理、创作者频道、创意工坊、诊断与冲突、设置 6 个入口，底部显示应用版本号。它是 `nav:change` 事件的唯一派发源，并在启…
-- **app-preview**（预览面板 app-preview）：`app-preview` 是仓库页右侧的预览面板组件（Shadow DOM），负责 YSM 模型的详情/2D 骨骼/3D 预览、Litematic 蓝图 3D 预览、资源包与光影包信息展示。它按 `model:select` 事件驱动，解…
+- **app-preview**（预览面板 app-preview）：`app-preview` 是仓库页右侧的预览面板组件（Shadow DOM），按 `model:select` 事件驱动。负责 YSM 模型的详情 / 2D 骨骼 / 3D 预览、Litematic 蓝图 3D 预览、资源包与光影包信息展…
 - **app-sidebar**（侧边栏 app-sidebar）：`app-sidebar` 是仓库页左栏的整合包列表组件（Shadow DOM），展示当前资源类型下各整合包（Minecraft 版本实例）的同步状态卡片，支持选中联动、勾选批量推送/拉取、一键安装缺失资源。它遵循标准组件拆分规范（inde…
 - **app-sync-manager**（整合包同步页 app-sync-manager）：`app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本…
 - **app-toast**（Toast 通知 app-toast）：`app-toast` 是全局 Toast 通知组件（Shadow DOM，固定悬浮于视口底部居中），是全应用唯一的操作反馈出口。治理红线要求所有异常路径必须有 toast 反馈，各模块统一通过 `bus.emit("toast:show"…
@@ -311,7 +311,7 @@
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | 动画, 骨骼动画, 关键帧, Molang, 数字滚动, stagger 入场 |
-| 🏗 commit_with_check | 提交脚本 commit-with-check | architecture | — | commit-with-check, 自动提交, 并发提交, 临时索引, 白名单提交, 门禁后自动 commit |
+| 🏗 commit-with-check | 提交脚本 commit-with-check | architecture | — | commit-with-check, 自动提交, 并发提交, 临时索引, 白名单提交, 门禁后自动 commit |
 | 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步 |
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
@@ -340,7 +340,7 @@
 ### 摘要
 
 - **animation-system**（动画系统 animation）：前端动画体系分两层：**模型骨骼动画**（基岩版 animation.json 解析 + 关键帧插值求值）与 **UI 动效**（数字里程表滚动、stagger 入场延迟）。UI 层的 CSS 动画可被全局 `no-animations` …
-- **commit_with_check**（提交脚本 commit-with-check）：`commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD…
+- **commit-with-check**（提交脚本 commit-with-check）：`commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD…
 - **core_utils**（核心工具函数 core-utils）：`utils/core/` 是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。
 - **dom-storage**（localStorage 安全读写 safeGet/safeSet）：`localStorage` 安全读写工具层（ADR-044 策略 A），收敛项目内所有 `localStorage` 调用，避免隐私模式/存储禁用下裸调抛错中断启动链（`initTheme`/`applyUIPrefs`/`setting…
 - **dom_tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
@@ -358,7 +358,7 @@
 - **utils-fmt**（格式化工具 fmt）：字节数与时间戳的格式化纯函数集，服务于列表行的尺寸与日期展示。
 - **utils-icon**（图标映射 icon）：文件名 → 图标 emoji 的映射工具，用于列表/树行的文件类型图标展示。
 - **utils-mc-format**（MC 格式判定 mc-format）：两个 Minecraft 相关的纯工具：`mc-format.ts` 把 § 分节符颜色/格式码渲染为 HTML；`pack-format.ts` 把 pack_format 数值映射为可读的 MC 版本描述。
-- **utils-misc**（常量与调试 constants/debug）：前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。原 `constants.ts`（预览画布/缩放/下载守护等全局数值常量）因长期无消费方已在死代码清理中移除，本卡同时承接「常量治理」的约定说明。
+- **utils-misc**（常量与调试 constants/debug）：前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。
 - **utils-resource-types**（资源类型工具 resource-types）：前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/registry.t…
 - **utils-summarize**（摘要生成 summarize）：把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。
 - **worker-bridge-settleerror-fallback**（worker-bridge-settleError-fallback）：`worker-bridge.ts:94-105` `settleError` 三分支结算：`terminatePool` → reject；`makeErrorResponse` 存在 → resolve 错误响应；else → reje…
@@ -372,10 +372,10 @@
 |------|------|------|
 | io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, rustbridge, version-updater |
 | cpu-bound | CPU 密集（解析/编译/解算/编码） | 3d-oversize-file-codesplit-feasibility, animation-system, app_content_diagnostics, bone-tools, go-threejs, ground-cap-materialgroup-factories, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-wasm |
-| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, mount3d-584-giant, multi_model_select, optimization_log, preview_core, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
+| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, model3d, mount3d-584-giant, multi_model_select, optimization_log, preview_core, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
 | concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app_content_diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, optimization_log, rustbridge, worker-bridge-settleerror-fallback |
-| memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, optimization_log, utils-export |
-| single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, ysm-wasm |
+| memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, model3d, optimization_log, utils-export |
+| single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, scripts_readme_index, ysm-wasm |
 
 ---
 

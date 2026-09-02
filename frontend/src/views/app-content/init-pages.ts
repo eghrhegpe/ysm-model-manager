@@ -283,14 +283,18 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
 }
 
 /**
- * 初始化创意工坊页（委托到 init-workshop.ts）
+ * 初始化创意工坊页（转发壳：实现见 ./init-workshop.ts）。
+ * init-pages 是页面 init 的统一集合点，page-registry / app-content 单文件取齐全部
+ * 页面，此转发避免误判为与 init-workshop.ts 的同名重复。
  */
 export function initWorkshopPage(host: AppContentHost): void {
   _initWorkshopPage(host);
 }
 
 /**
- * 初始化 GitHub 页（委托到 init-github.ts）
+ * 初始化 GitHub 页（转发壳：实现见 ./init-github.ts）。
+ * init-pages 是页面 init 的统一集合点，page-registry / app-content 单文件取齐全部
+ * 页面，此转发避免误判为与 init-github.ts 的同名重复。
  */
 export function initGithubPage(host: AppContentHost): void {
   _initGithubPage(host);

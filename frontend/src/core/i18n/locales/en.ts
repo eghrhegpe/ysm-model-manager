@@ -309,6 +309,7 @@ export const en: Record<string, string> = {
   "import.readDropFailed": "Failed to read dropped file",
   "import.ysmJsonHint": "ysm.json is the model manifest. Please drag the entire model folder (including geometry/animations/textures) to import as a group",
   "import.emptyFolder": "Folder contains no readable files",
+  "import.emptyFile": "File is empty, skipped",
   "import.alreadyExists": "Already exists, please rename the folder before importing",
   "import.success": "Import successful",
   "import.processing": "Importing…",

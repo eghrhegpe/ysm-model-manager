@@ -289,6 +289,7 @@
   "import.readDropFailed": "ドロップされたファイルの読み取りに失敗しました",
   "import.ysmJsonHint": "ysm.jsonはモデルのマニフェストです。geometry／アニメーション／テクスチャを含むモデルフォルダ全体をドラッグして、グループとしてインポートしてください",
   "import.emptyFolder": "フォルダ内に読み取り可能なファイルがありません",
+  "import.emptyFile": "ファイルが空のためスキップしました",
   "import.alreadyExists": "既に存在します。インポート前にフォルダ名を変更してください",
   "import.success": "インポート成功",
   "import.processing": "インポート中…",

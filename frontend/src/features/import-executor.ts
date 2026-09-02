@@ -9,7 +9,7 @@ import { t } from "../core/i18n/t.ts";
 import { getApp } from "../backend/app.ts";
 import { importWebFiles } from "../backend/browser-adapter.ts";
 import { currentRepoType } from "./repo-rtype.ts";
-import { groupCollected, isImportableFile } from "./dnd-shared.ts";
+import { groupCollected, isImportableFile, fileToBase64, buildFolderItems } from "./dnd-shared.ts";
 import type { CollectedEntry } from "./dnd-shared.ts";
 import { isFileExistsError, friendlyError } from "../utils/dom/errors.ts";
 import { dbg } from "../utils/debug/debug.ts";
@@ -34,29 +34,6 @@ const refreshRepo = (): void => {
   bus.emit("stats:refresh");
   bus.emit("tree:reload");
 };
-
-/** File → base64（10s 超时兜底，防 FileReader 悬挂卡死导入）；pack-dnd 复用 */
-export const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    // P3 修复（子代理审计）：无超时兜底——FileReader 既不走 onload 也不走 onerror 时
-    // Promise 永久 pending → directImport/importFolder 卡死、_inFlight 永不释放
-    // （该文件/文件夹后续提交被永久静默拦截）；10s 超时 reject + abort（与
-    // import-dnd entry.file 的 5s 超时范式对齐，取更大值覆盖大文件读取）
-    const timer = setTimeout(() => {
-      reader.abort();
-      reject(new Error("读取文件超时: " + file.name));
-    }, 10000);
-    reader.onload = () => {
-      clearTimeout(timer);
-      resolve(String(reader.result).split(",")[1] || "");
-    };
-    reader.onerror = () => {
-      clearTimeout(timer);
-      reject(new Error("读取文件失败: " + file.name));
-    };
-    reader.readAsDataURL(file);
-  });
 
 /** 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） */
 export const directImport = async (file: File): Promise<void> => {
@@ -118,25 +95,9 @@ export const importFolder = async (
   const folderName = parts[parts.length - 1] || "模型";
   const subpath = parts.slice(0, -1).join("/");
   try {
-    const items: Array<{ RelPath: string; Base64: string }> = [];
-    let skipped = 0; // 读取失败跳过计数（ADR-082 续：成功 toast 反馈跳过数，不全静默）
-    for (const c of files) {
-      const rel = c.relPath.startsWith(dir + "/")
-        ? c.relPath.slice(dir.length + 1)
-        : c.relPath;
-      // P3 修复：per-file 读取失败跳过该文件，不拖垮整组——
-      // 原实现 fileToBase64 reject 会冒泡到外层 catch，文件夹里 1 个坏文件 → 整组导入失败
-      let b64 = "";
-      try {
-        b64 = await fileToBase64(c.file);
-      } catch (e) {
-        console.warn("[import] 跳过读取失败文件:", rel, e);
-        skipped++;
-        continue;
-      }
-      if (!b64) continue;
-      items.push({ RelPath: rel, Base64: b64 });
-    }
+    // 共享构建（dnd-shared.buildFolderItems）：relPath 切片 + per-file base64，
+    // 读取失败计入 skipped 跳过整组不拖垮；空 base64 自动 continue
+    const { items, skipped } = await buildFolderItems(dir, files);
     if (!items.length) {
       toast("❌ " + t("import.emptyFolder"), "error", TOAST_MS.verbose);
       return;

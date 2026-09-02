@@ -35,8 +35,8 @@ auto_fields:
     - AppContentState:19
     - appContentStyle:19
     - bindSiteEvents:85
-    - clearAllCommunityCache:71
-    - CommunityData:25
+    - clearAllCommunityCache:72
+    - CommunityData:26
     - contentCreatorCSS:2
     - contentCSS:14
     - contentDiagCSS:4
@@ -46,15 +46,15 @@ auto_fields:
     - contentUtilCSS:2
     - createWorkshopRefs:29
     - creditsHTML:101
-    - DEFAULT_COMMUNITY_URL:402
+    - DEFAULT_COMMUNITY_URL:407
     - diagnosticsHTML:86
     - extractAvatars:13
-    - fetchCommunityCreators:280
-    - fetchCommunitySites:346
-    - fillSearch:226
-    - forceRefreshCommunityMerge:52
-    - forceRefreshCommunitySites:63
-    - forceRefreshScanAuthors:57
+    - fetchCommunityCreators:285
+    - fetchCommunitySites:351
+    - fillSearch:231
+    - forceRefreshCommunityMerge:53
+    - forceRefreshCommunitySites:64
+    - forceRefreshScanAuthors:58
     - getLastModelPath:307
     - getSiteIcon:46
     - getTagIconFromRole:54
@@ -70,13 +70,13 @@ auto_fields:
     - initWorkshopPage:38
     - initWorkshopTabs:41
     - instancesHTML:63
-    - loadCommunityData:90
-    - loadLocalAuthors:133
-    - LocalAuthorLike:18
-    - LocalCreator:9
-    - mergeCommunityCreators:309
-    - mergeCommunitySites:381
-    - mergeLocalAuthorsInto:149
+    - loadCommunityData:95
+    - loadLocalAuthors:138
+    - LocalAuthorLike:19
+    - LocalCreator:10
+    - mergeCommunityCreators:314
+    - mergeCommunitySites:386
+    - mergeLocalAuthorsInto:154
     - openSite:20
     - PAGE_REGISTRY:30
     - PageDefinition:23

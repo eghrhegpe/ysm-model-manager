@@ -7,9 +7,9 @@ source_files:
   - frontend/src/bus.ts
 auto_fields:
   symbols_with_lines:
-    - bus:207
-    - Bus:138
-    - BusEventName:113
+    - bus:209
+    - Bus:140
+    - BusEventName:114
     - BusEvents:69
     - CtxShowPayload:50
     - MenuItem:18

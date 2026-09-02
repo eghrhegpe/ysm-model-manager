@@ -104,7 +104,8 @@ function cmDqCleanupProgressUI(ctx: CmDqCtx, errorSummary?: string): void {
       getApp()
         .then((App) => {
           if (App.ClearScanCache) App.ClearScanCache();
-          import("../../views/app-content/community-data.ts").then(m => m.clearAllCommunityCache()).catch((e) => console.warn("[download-queue] clearAllCommunityCache:", e));
+          // 解除 features → views 反向依赖：经 bus 事件解耦，订阅在 views 层注册（ADR-039 范式）
+          bus.emit("community:clearCache");
         }),
     );
   } catch (_) {

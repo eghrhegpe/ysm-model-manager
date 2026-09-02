@@ -3,6 +3,7 @@ import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { withCached, invalidateCache, type CachePolicy } from "../../utils/cache/with-cached.ts";
 import { getApp } from "../../backend/app.ts";
+import { bus } from "../../bus.ts";
 import type { WorkshopSite, WorkshopCreator } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
 /** 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） */
@@ -75,6 +76,10 @@ export function clearAllCommunityCache(): void {
   invalidateCache(SITES_FETCH_KEY);
   dbg("cache", "all community cache cleared");
 }
+
+// 解耦 features → views：features 层（download-queue）经 bus 触发社区缓存失效，
+// 此处集中订阅（模块级注册一次，ESM 单例不会重复）。ADR-039 范式。
+bus.on("community:clearCache", clearAllCommunityCache);
 
 /**
  * 加载站点 + 创作者数据（纯数据，不碰 DOM）——首屏快路径。

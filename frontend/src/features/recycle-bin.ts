@@ -164,7 +164,7 @@ function onRecycleEmptyClick(opts: {
     opts.setEmptyBusy(true);
     try {
       const { EmptyRecycleBin } = await opts.getApp();
-      const n = await EmptyRecycleBin("");
+      const n = Number(await EmptyRecycleBin("")) || 0; // 旧桥可能返回 undefined，兜底防「undefined 个文件」
       opts.onShowToast(`♻️ ${opts.t("recycle.cleared", { n })}`, TOAST_EMPTY_OK_MS, "success");
       opts.loadRecycleBin();
       bus.emit("stats:refresh");

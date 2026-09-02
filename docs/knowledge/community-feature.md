@@ -14,7 +14,7 @@ auto_fields:
     - cancelDownloads:284
     - classifyDownloadSize:14
     - countMissing:61
-    - createDownloadQueue:329
+    - createDownloadQueue:330
     - createProgressGuard:267
     - createVirtualList:31
     - DOWNLOAD_CONFIRM_BYTES:7

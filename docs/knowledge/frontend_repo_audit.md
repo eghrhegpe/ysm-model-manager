@@ -116,7 +116,7 @@ auto_fields:
     - bindEvents:17
     - bindFooter:242
     - bindInputHandlers:122
-    - bindPackCardDnD:184
+    - bindPackCardDnD:176
     - bindPathClick:53
     - bindPerfCopyHandlers:74
     - bindRepoEvents:340
@@ -159,6 +159,7 @@ auto_fields:
     - buildEnvSchema:239
     - buildFbxScene:168
     - buildFbxSceneFromData:214
+    - buildFolderItems:105
     - buildGroundSurfaceSpec:92
     - buildLightingSchema:46
     - buildLipMorphIndices:132
@@ -194,9 +195,9 @@ auto_fields:
     - buildYsmModelSchema:319
     - buildYsmObject:50
     - buildYsmScene:500
-    - bus:207
-    - Bus:138
-    - BusEventName:113
+    - bus:209
+    - Bus:140
+    - BusEventName:114
     - BusEvents:69
     - bytesToArrayBuffer:15
     - bytesToBase64:17
@@ -238,7 +239,7 @@ auto_fields:
     - cleanupYsm3D:87
     - clear:42
     - clearAllCache:139
-    - clearAllCommunityCache:71
+    - clearAllCommunityCache:72
     - clearControls:53
     - clearLoadTraces:63
     - clearModelRoots:99
@@ -257,7 +258,7 @@ auto_fields:
     - COLLAPSIBLE:29
     - collectAllWebEntries:622
     - collectBlobUrls:48
-    - collectDropFiles:99
+    - collectDropFiles:147
     - CollectedEntry:23
     - CollectedFile:6
     - collectFiles:35
@@ -270,7 +271,7 @@ auto_fields:
     - collectSceneStats:35
     - collectSettingsCapControls:157
     - collectVisiblePredicates:455
-    - CommunityData:25
+    - CommunityData:26
     - compileMolang:71
     - compKey:18
     - computeBoneLocalPos:24
@@ -299,7 +300,7 @@ auto_fields:
     - createBreathController:48
     - createBrowseModeRef:13
     - createCrCard:45
-    - createDownloadQueue:329
+    - createDownloadQueue:330
     - createFbx3D:26
     - createFbxParser:27
     - createFootIKController:27
@@ -349,7 +350,7 @@ auto_fields:
     - decodeYsmInWorker:218
     - decodeYsmInWorkerMemfs:257
     - decodeYsmViaWasm:22
-    - DEFAULT_COMMUNITY_URL:402
+    - DEFAULT_COMMUNITY_URL:407
     - DEFAULT_ENV_PARAMS:138
     - DEFAULT_FOG_PARAMS:30
     - DEFAULT_GROUND_PARAMS:53
@@ -369,7 +370,7 @@ auto_fields:
     - devLog:8
     - diagnosticsHTML:86
     - DIR_HANDLERS:10
-    - directImport:62
+    - directImport:39
     - DirectionalLightParams:36
     - dirKey:9
     - Disposable:5
@@ -419,7 +420,7 @@ auto_fields:
     - Events:56
     - EventSelf:9
     - executeCLI:99
-    - executeCollected:180
+    - executeCollected:141
     - executeTimeline:622
     - expectContainsAtLeast:17
     - expectNotContains:36
@@ -449,8 +450,8 @@ auto_fields:
     - FbxSceneData:88
     - fbxSceneToData:209
     - FbxSkeletonData:45
-    - fetchCommunityCreators:280
-    - fetchCommunitySites:346
+    - fetchCommunityCreators:285
+    - fetchCommunitySites:351
     - FetchModelsResult:42
     - FieldRestorer:159
     - FILE_HANDLERS:14
@@ -458,13 +459,13 @@ auto_fields:
     - fileKey:10
     - fileRowCommon:11
     - fileRowHTML:19
-    - fileToBase64:39
+    - fileToBase64:83
     - fill3DPanel:18
     - fillAuthorsAsync:232
     - fillMmdModelPanel:44
     - fillMmdShotPanel:213
     - fillRoles:282
-    - fillSearch:226
+    - fillSearch:231
     - fillSwitch:217
     - fillYsmShotPanel:74
     - filterAnimFiles:24
@@ -504,9 +505,9 @@ auto_fields:
     - foldMolangConstant:94
     - footerHTML:40
     - FootIKController:13
-    - forceRefreshCommunityMerge:52
-    - forceRefreshCommunitySites:63
-    - forceRefreshScanAuthors:57
+    - forceRefreshCommunityMerge:53
+    - forceRefreshCommunitySites:64
+    - forceRefreshScanAuthors:58
     - formatBytes:11
     - formatCapSliderValue:99
     - formatLongTask:63
@@ -590,7 +591,7 @@ auto_fields:
     - groupSites:233
     - groupStorageRootOf:156
     - GroupTypeOption:135
-    - handleInstanceDrop:47
+    - handleInstanceDrop:48
     - HANDLERS:139
     - handleTreeDrop:28
     - has:32
@@ -616,9 +617,9 @@ auto_fields:
     - IKConfig:27
     - IKResult:45
     - ImportFile:20
-    - importFolder:99
+    - importFolder:76
     - importWebFiles:16
-    - importWebFilesWithToast:205
+    - importWebFilesWithToast:166
     - initAdvancedGrid:194
     - initControl:165
     - initDedupConfig:208
@@ -668,7 +669,7 @@ auto_fields:
     - isBusy:21
     - isContainerExt:271
     - isCrossOriginIsolated:34
-    - isEditableTarget:84
+    - isEditableTarget:132
     - isFaved:77
     - isFileExistsError:87
     - isFrustumCullEnabled:111
@@ -729,7 +730,7 @@ auto_fields:
     - litematicVoxelView:349
     - loadAuthors:19
     - loadBrowseMode:20
-    - loadCommunityData:90
+    - loadCommunityData:95
     - loadData:47
     - loadDiagnosticsLogs:189
     - loadEntries:68
@@ -739,7 +740,7 @@ auto_fields:
     - loadingHTML:275
     - LoadingProgressMode:14
     - loadInstances:37
-    - loadLocalAuthors:133
+    - loadLocalAuthors:138
     - loadLocale:43
     - loadMcTints:29
     - loadModel2D:59
@@ -758,8 +759,8 @@ auto_fields:
     - LoadTraceTexture:6
     - loadTypeConfig:19
     - loadView:14
-    - LocalAuthorLike:18
-    - LocalCreator:9
+    - LocalAuthorLike:19
+    - LocalCreator:10
     - LocalCreatorLike:43
     - logError:11
     - logWarn:5
@@ -804,10 +805,10 @@ auto_fields:
     - MenuGraph:58
     - MenuGraphNode:32
     - MenuItem:18
-    - mergeCommunityCreators:309
-    - mergeCommunitySites:381
+    - mergeCommunityCreators:314
+    - mergeCommunitySites:386
     - mergeCubes:261
-    - mergeLocalAuthorsInto:149
+    - mergeLocalAuthorsInto:154
     - mergeStatsMenuItems:59
     - MeshData:109
     - MeshFragment:14
@@ -894,8 +895,8 @@ auto_fields:
     - OrderedTexInput:7
     - PackAdapterOpts:34
     - PackDeps:27
-    - PackDndBusy:26
-    - PackDndInstance:32
+    - PackDndBusy:27
+    - PackDndInstance:33
     - PackEntryReader:73
     - PackMeta:95
     - packPngToThumbnail:125

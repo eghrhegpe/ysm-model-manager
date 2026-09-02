@@ -18,9 +18,10 @@ import {
   collectDropFiles,
   groupCollected,
   isEditableTarget,
+  fileToBase64,
+  buildFolderItems,
   type CollectedEntry,
 } from "./dnd-shared.ts";
-import { fileToBase64 } from "./import-executor.ts";
 
 /** drop 处理期间的 busy 守卫（由绑定闭包持有，每组件实例独立） */
 export interface PackDndBusy {
@@ -117,17 +118,8 @@ export async function handleInstanceDrop(
       const parts = g.dir.split("/");
       const folderName = parts[parts.length - 1] || "模型";
       const subpath = parts.slice(0, -1).join("/");
-      const items: Array<{ RelPath: string; Base64: string }> = [];
-      for (const c of g.files) {
-        const rel = c.relPath.startsWith(g.dir + "/")
-          ? c.relPath.slice(g.dir.length + 1)
-          : c.relPath;
-        try {
-          items.push({ RelPath: rel, Base64: await fileToBase64(c.file) });
-        } catch (err) {
-          console.warn("[pack-dnd] 跳过读取失败文件:", rel, err);
-        }
-      }
+      // 共享构建（dnd-shared.buildFolderItems）：relPath 切片 + per-file base64，读取失败跳过
+      const { items } = await buildFolderItems(g.dir, g.files);
       if (!items.length) {
         failures.push(`${folderName}: ${t("import.emptyFolder")}`);
         continue;

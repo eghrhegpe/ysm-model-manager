@@ -15,6 +15,7 @@
 | `batch:disable-all` | 1 | 1 | 0 | 0 | ✅ |
 | `batch:enable-all` | 1 | 1 | 0 | 0 | ✅ |
 | `batch:rename` | 1 | 1 | 0 | 0 | ✅ |
+| `community:clearCache` | 1 | 1 | 0 | 0 | ✅ |
 | `ctx:show` | 4 | 1 | 0 | 0 | ✅ |
 | `dir:batch-rename` | 1 | 1 | 0 | 0 | ✅ |
 | `dir:mkdir` | 1 | 1 | 0 | 0 | ✅ |
@@ -87,6 +88,18 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/views/app-tree/bus-handlers.ts` | 35 |
+
+### `community:clearCache`
+
+**发射方：**
+| 文件 | 行 |
+|------|----|
+| `frontend/src/features/community/download-queue.ts` | 108 |
+
+**订阅方（on）：**
+| 文件 | 行 |
+|------|----|
+| `frontend/src/views/app-content/community-data.ts` | 81 |
 
 ### `ctx:show`
 
@@ -309,10 +322,10 @@
 | `frontend/src/core/handlers/sync.ts` | 86 |
 | `frontend/src/core/handlers/sync.ts` | 215 |
 | `frontend/src/features/community/download-queue-store.ts` | 258 |
-| `frontend/src/features/community/download-queue.ts` | 114 |
+| `frontend/src/features/community/download-queue.ts` | 115 |
 | `frontend/src/features/import-executor.ts` | 34 |
-| `frontend/src/features/import-executor.ts` | 220 |
-| `frontend/src/features/pack-dnd.ts` | 167 |
+| `frontend/src/features/import-executor.ts` | 181 |
+| `frontend/src/features/pack-dnd.ts` | 159 |
 | `frontend/src/features/recycle-bin.ts` | 110 |
 | `frontend/src/features/recycle-bin.ts` | 170 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 434 |
@@ -406,8 +419,8 @@
 | `frontend/src/core/handlers/sync.ts` | 223 |
 | `frontend/src/core/handlers/sync.ts` | 248 |
 | `frontend/src/features/community/download-queue-store.ts` | 247 |
-| `frontend/src/features/community/download-queue.ts` | 272 |
-| `frontend/src/features/community/download-queue.ts` | 298 |
+| `frontend/src/features/community/download-queue.ts` | 273 |
+| `frontend/src/features/community/download-queue.ts` | 299 |
 | `frontend/src/features/community/events.ts` | 141 |
 | `frontend/src/features/community/events.ts` | 153 |
 | `frontend/src/features/community/events.ts` | 222 |
@@ -420,9 +433,9 @@
 | `frontend/src/features/import-dnd.ts` | 102 |
 | `frontend/src/features/import-dnd.ts` | 188 |
 | `frontend/src/features/import-executor.ts` | 29 |
-| `frontend/src/features/import-executor.ts` | 211 |
-| `frontend/src/features/import-executor.ts` | 224 |
-| `frontend/src/features/pack-dnd.ts` | 37 |
+| `frontend/src/features/import-executor.ts` | 172 |
+| `frontend/src/features/import-executor.ts` | 185 |
+| `frontend/src/features/pack-dnd.ts` | 38 |
 | `frontend/src/features/recycle-bin.ts` | 244 |
 | `frontend/src/features/version-updater.ts` | 149 |
 | `frontend/src/features/version-updater.ts` | 158 |
@@ -596,10 +609,10 @@
 | `frontend/src/core/handlers/sync.ts` | 130 |
 | `frontend/src/core/handlers/sync.ts` | 255 |
 | `frontend/src/features/community/download-queue-store.ts` | 257 |
-| `frontend/src/features/community/download-queue.ts` | 113 |
+| `frontend/src/features/community/download-queue.ts` | 114 |
 | `frontend/src/features/import-executor.ts` | 35 |
-| `frontend/src/features/import-executor.ts` | 219 |
-| `frontend/src/features/pack-dnd.ts` | 168 |
+| `frontend/src/features/import-executor.ts` | 180 |
+| `frontend/src/features/pack-dnd.ts` | 160 |
 | `frontend/src/features/recycle-bin.ts` | 111 |
 | `frontend/src/features/recycle-bin.ts` | 171 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |

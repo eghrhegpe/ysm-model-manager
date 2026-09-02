@@ -289,6 +289,7 @@
   "import.readDropFailed": "读取拖入文件失败",
   "import.ysmJsonHint": "ysm.json 是模型清单，请拖入整个模型文件夹（含 geometry/动画/纹理，将整组导入）",
   "import.emptyFolder": "文件夹内没有可读取的文件",
+  "import.emptyFile": "文件为空，已跳过",
   "import.alreadyExists": "已存在，请重命名文件夹后再导入",
   "import.success": "导入成功",
   "import.processing": "正在导入…",

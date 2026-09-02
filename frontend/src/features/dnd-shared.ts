@@ -76,6 +76,54 @@ export const groupCollected = (
   return { folders, singles };
 };
 
+// ===== File → base64 + 文件夹条目构建（DnD 域共享，消除重复）=====
+
+/** File → base64（10s 超时兜底，防 FileReader 悬挂卡死导入）。
+ *  原位于 import-executor.ts，下沉至此统一收口，消除 pack-dnd → import-executor 横向依赖。 */
+export const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    // P3 修复（子代理审计）：无超时兜底——FileReader 既不走 onload 也不走 onerror 时
+    // Promise 永久 pending → 调用方卡死、在途标记永不释放。取 10s 覆盖大文件读取
+    const timer = setTimeout(() => {
+      reader.abort();
+      reject(new Error("读取文件超时: " + file.name));
+    }, 10000);
+    reader.onload = () => {
+      clearTimeout(timer);
+      resolve(String(reader.result).split(",")[1] || "");
+    };
+    reader.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("读取文件失败: " + file.name));
+    };
+    reader.readAsDataURL(file);
+  });
+
+/** 文件夹整组导入条目：relPath 去 dir 前缀 + per-file base64（单文件读取失败计入 skipped 跳过，不拖垮整组）。
+ *  importFolder 与 handleInstanceDrop 共用，消除两份同构构建逻辑。 */
+export const buildFolderItems = async (
+  dir: string,
+  files: CollectedEntry[],
+): Promise<{ items: Array<{ RelPath: string; Base64: string }>; skipped: number }> => {
+  const items: Array<{ RelPath: string; Base64: string }> = [];
+  let skipped = 0;
+  for (const c of files) {
+    const rel = c.relPath.startsWith(dir + "/")
+      ? c.relPath.slice(dir.length + 1)
+      : c.relPath;
+    try {
+      const b64 = await fileToBase64(c.file);
+      if (!b64) continue; // 0 字节文件：base64 为空，跳过（与 importFolder 旧行为一致）
+      items.push({ RelPath: rel, Base64: b64 });
+    } catch (e) {
+      console.warn("[dnd-shared] 跳过读取失败文件:", rel, e);
+      skipped++;
+    }
+  }
+  return { items, skipped };
+};
+
 // ===== drop 事件文件收集（仓库页 / 整合包卡片共用收集口径）=====
 
 const fileKey = (f: File): string => f.name + ":" + f.size + ":" + f.lastModified;

@@ -76,6 +76,7 @@ export interface BusEvents {
   // 数据刷新
   "stats:refresh": void;
   "tree:reload": void;
+  "community:clearCache": void; // features → views 解耦（download-queue 触发社区缓存失效）
   "tree:set-search": string; // tree 搜索关键字（app-tree 实证：srch.value = name）
   "avatar:refresh": { author: string; dataUri: string };
   // 模型 / 选择
@@ -123,6 +124,7 @@ type VoidEventName = {
 const VOID_EVENTS = [
   "stats:refresh",
   "tree:reload",
+  "community:clearCache",
   "sync:toggle:status",
   "batch:enable-all",
   "batch:disable-all",

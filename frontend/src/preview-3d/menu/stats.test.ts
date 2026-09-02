@@ -65,6 +65,26 @@ describe("buildStatsPanel", () => {
       expect(f.fallback).toBeTruthy();
     }
   });
+
+  it("为 0 就藏：体素类格式（litematic：bones/morphs/textures = 0）→ 该三行带 visibleWhen=false 守卫，网格/三角面/材质不守卫", () => {
+    const panel = buildStatsPanel(stats({ boneCount: 0, textureCount: 0, morphCount: 0 }));
+    const guarded = ["stat-bones", "stat-textures", "stat-morphs"];
+    for (const f of panel.children!) {
+      if (guarded.includes(f.id)) {
+        expect(f.visibleWhen, `${f.id} 应带 visibleWhen 守卫`).toBeDefined();
+        expect(f.visibleWhen!(null as unknown as PreviewSnapshot)).toBe(false);
+      } else {
+        expect(f.visibleWhen, `${f.id} 不应带守卫`).toBeUndefined();
+      }
+    }
+  });
+
+  it("为 0 就藏：值 > 0 的行不带守卫（VRM 骨骼/纹理/表情正常展示）", () => {
+    const panel = buildStatsPanel(stats({ morphCount: 8 }));
+    for (const f of panel.children!) {
+      expect(f.visibleWhen).toBeUndefined();
+    }
+  });
 });
 
 describe("mergeStatsMenuItems", () => {

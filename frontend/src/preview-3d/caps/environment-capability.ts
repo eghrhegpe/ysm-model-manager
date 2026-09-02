@@ -653,15 +653,21 @@ export class EnvironmentCapability implements SceneCapability {
 
   private pmremToSceneEnv(srcTex: THREE.Texture | null): void {
     if (!srcTex) return;
-    this.pmrem = new THREE.PMREMGenerator(this.renderer);
-    this.pmrem.compileEquirectangularShader();
-    const rt = this.pmrem.fromEquirectangular(srcTex);
-    this.envRT = rt;
-    this.envTexture = rt.texture;
-    this.scene.environment = this.envTexture;
-    this.applyBackground(srcTex);
-    if (srcTex !== this.customHdrTex && this.backgroundSrcTex !== srcTex) {
-      srcTex.dispose();
+    try {
+      this.pmrem = new THREE.PMREMGenerator(this.renderer);
+      this.pmrem.compileEquirectangularShader();
+      const rt = this.pmrem.fromEquirectangular(srcTex);
+      this.envRT = rt;
+      this.envTexture = rt.texture;
+      this.scene.environment = this.envTexture;
+      this.applyBackground(srcTex);
+      if (srcTex !== this.customHdrTex && this.backgroundSrcTex !== srcTex) {
+        srcTex.dispose();
+      }
+    } catch (e) {
+      console.error("[environment] PMREM 生成失败:", e);
+      this.disposeEnvironment();
+      this.scene.environment = this.prevEnvironment;
     }
   }
 

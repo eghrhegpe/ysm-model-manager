@@ -109,6 +109,7 @@ export class WaterCapability implements SceneCapability {
     });
 
     mat.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms): void => {
+      mat.userData.shader = shader;
       shader.uniforms["uTime"] = this.waterTime;
       // 边缘羽化（pool 专用）：距离边 d < roundness*size/2 时 opacity 平滑衰减
       const round = Math.max(0, Math.min(0.5, w.poolRoundness));

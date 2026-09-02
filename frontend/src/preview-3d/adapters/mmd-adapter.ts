@@ -937,6 +937,13 @@ async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
 
 async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
   c.buildSucceeded = false;
+  await mdMmStage3MountAndDebug(c);
+  await mdMmStage3Ktx2Hydrate(c);
+  await mdMmStage3Ktx2Schedule(c);
+}
+
+// 3.1 挂载 + 网格调试诊断（scene 守卫 → add → registerModelRoot → boundingBox diag）
+async function mdMmStage3MountAndDebug(c: MdMmStage3Ctx): Promise<void> {
   // 结构化守卫替代 !：scene 可选（self 模式适配器自驱 renderer 时为 undefined）
   const scene = c.ctx.scene;
   if (!scene) {
@@ -987,6 +994,10 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
   }
   c.ctx.loadingEl.remove();
   c.cachedHashes = null;
+}
+
+// 3.2 KTX2 缓存命中 → 按 hash 聚槽 → 单次解码替换（读路径）
+async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
   if (c.blobUrlToHash.size > 0 && c.ctx.renderer) {
     // ADR-072：适配器 0 backend import——KTX2 缓存经 port 注入（壳层实现）；
     // port 缺方法（可选）→ 跳过缓存优化（保留原 typeof-function 守卫语义）
@@ -1072,6 +1083,10 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
       }
     }
   }
+}
+
+// 3.3 后台编码调度（写路径持久化通道，gate = saveCachedTexture）
+async function mdMmStage3Ktx2Schedule(c: MdMmStage3Ctx): Promise<void> {
   // P2-3（审核）：后台编码 gate 从「已废弃 getCachedTexture」改为 saveCachedTexture——
   // 读路径已用 hasCachedTextures/getCachedTextureByHash，写路径真正需要的是持久化通道；
   // 原 gate 挂在废弃方法上，一旦按「已废弃」清理会静默停掉后台编码（缓存永不写入）。
@@ -1402,61 +1417,7 @@ function mdMmStage6Result(
         autoDance.apply(dt, semanticBones ?? {});
       }
     },
-    dispose: (): void => {
-      const renderer = c.ctx.renderer;
-      if (renderer) {
-        const memBefore = (
-          renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }
-        ).info?.memory;
-        if (memBefore) {
-          dbg(
-            "gpu-leak",
-            `mmd dispose before: geometries=${memBefore.geometries} textures=${memBefore.textures}`,
-          );
-        }
-      }
-      try {
-        c.bonePanelRef.current?.();
-        // 从 scene 移除 mesh（disposeMmdMesh 只释放 GPU 资源，不处理 scene graph 引用）
-        c.ctx.scene?.remove(c.mesh);
-        unregisterModelRoot(c.mesh);
-        c.mixer.stopAllAction();
-        c.mixer.uncacheRoot(c.mesh);
-        c.cameraMixer?.stopAllAction();
-        breath.dispose();
-        gaze.dispose();
-        blink.dispose();
-        lipSync.dispose();
-        autoDance.dispose();
-        footIK.dispose();
-      } catch (e) {
-        dbg("mmd", { op: "dispose-aux-fail", err: safeErrorMessage(e) });
-      } finally {
-        cancelPendingEncodings();
-        c.stopLongTaskWatch();
-        for (const url of c.blobUrls) URL.revokeObjectURL(url);
-      }
-      try {
-        disposeMmdMesh(c.mesh, mmdDiag, c.port, "dispose-tex");
-        c.mmd?.dispose();
-        // KTX2Loader 内部持有 WASM 解码器 + worker pool，不 dispose 会泄漏
-        c.ktx2Loader?.dispose();
-        c.ktx2CacheLoader?.dispose();
-      } catch (e) {
-        dbg("mmd", { op: "dispose-mesh-fail", err: safeErrorMessage(e) });
-      }
-      if (renderer) {
-        const memAfter = (
-          renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }
-        ).info?.memory;
-        if (memAfter) {
-          dbg(
-            "gpu-leak",
-            `mmd dispose after: geometries=${memAfter.geometries} textures=${memAfter.textures}`,
-          );
-        }
-      }
-    },
+    dispose: (): void => mdMmStage6Dispose(c, s5),
     screenshot: () =>
       Promise.resolve(screenshotFromRenderer(c.ctx.renderer!, c.ctx.scene, c.ctx.camera)),
     semanticBones,
@@ -1480,6 +1441,67 @@ function mdMmStage6Result(
   };
   mdMmStage6bTrace(c, tStart);
   return result;
+}
+
+// 6b-dispose：scene graph 拆解 → mixers → 感知释放 → 资源 dispose（自包含，仅消费 c + s5）
+function mdMmStage6Dispose(
+  c: MdMmStage6Ctx,
+  s5: ReturnType<typeof mdMmStage5Menu>,
+): void {
+  const { breath, gaze, blink, lipSync, autoDance, footIK } = s5;
+  const renderer = c.ctx.renderer;
+  if (renderer) {
+    const memBefore = (
+      renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }
+    ).info?.memory;
+    if (memBefore) {
+      dbg(
+        "gpu-leak",
+        `mmd dispose before: geometries=${memBefore.geometries} textures=${memBefore.textures}`,
+      );
+    }
+  }
+  try {
+    c.bonePanelRef.current?.();
+    // 从 scene 移除 mesh（disposeMmdMesh 只释放 GPU 资源，不处理 scene graph 引用）
+    c.ctx.scene?.remove(c.mesh);
+    unregisterModelRoot(c.mesh);
+    c.mixer.stopAllAction();
+    c.mixer.uncacheRoot(c.mesh);
+    c.cameraMixer?.stopAllAction();
+    breath.dispose();
+    gaze.dispose();
+    blink.dispose();
+    lipSync.dispose();
+    autoDance.dispose();
+    footIK.dispose();
+  } catch (e) {
+    dbg("mmd", { op: "dispose-aux-fail", err: safeErrorMessage(e) });
+  } finally {
+    cancelPendingEncodings();
+    c.stopLongTaskWatch();
+    for (const url of c.blobUrls) URL.revokeObjectURL(url);
+  }
+  try {
+    disposeMmdMesh(c.mesh, mmdDiag, c.port, "dispose-tex");
+    c.mmd?.dispose();
+    // KTX2Loader 内部持有 WASM 解码器 + worker pool，不 dispose 会泄漏
+    c.ktx2Loader?.dispose();
+    c.ktx2CacheLoader?.dispose();
+  } catch (e) {
+    dbg("mmd", { op: "dispose-mesh-fail", err: safeErrorMessage(e) });
+  }
+  if (renderer) {
+    const memAfter = (
+      renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }
+    ).info?.memory;
+    if (memAfter) {
+      dbg(
+        "gpu-leak",
+        `mmd dispose after: geometries=${memAfter.geometries} textures=${memAfter.textures}`,
+      );
+    }
+  }
 }
 
 function mdMmStage6bTrace(c: MdMmStage6bCtx, tStart: number): void {

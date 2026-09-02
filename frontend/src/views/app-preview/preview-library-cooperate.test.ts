@@ -39,7 +39,7 @@ function setActiveSession(rtype: string): void {
     path: "current.glb",
     rtype,
     roots: [],
-    built: { dispose: vi.fn() } as never,
+    content: { dispose: vi.fn() } as never,
   });
 }
 

@@ -18,7 +18,7 @@ function regRole(path: string, menuItems: PreviewMenuNode[] | null = null): stri
     path,
     rtype: "test",
     roots: [new THREE.Object3D()],
-    built: { dispose: vi.fn() } as unknown as PreviewScene,
+    content: { dispose: vi.fn() } as unknown as PreviewScene,
     boneMaps: null,
     menuItems,
     onBonePick: null,
@@ -213,7 +213,7 @@ describe("角色面板（roles）", () => {
       path: "assets/minecraft/models/block/blunderbuss.json",
       rtype: "resourcepack",
       roots: [],
-      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      content: { dispose: vi.fn() } as unknown as PreviewScene,
       displayName: "3D-muskets",
     });
     expect(roleBaseName(sceneRegistry.get(id)!)).toBe("3D-muskets");
@@ -227,7 +227,7 @@ describe("角色面板（roles）", () => {
         path: p,
         rtype: "resourcepack",
         roots: [],
-        built: { dispose: vi.fn() } as unknown as PreviewScene,
+        content: { dispose: vi.fn() } as unknown as PreviewScene,
         displayName: "3D-muskets",
         components: [
           "assets/minecraft/models/block/blunderbuss.json",
@@ -240,7 +240,7 @@ describe("角色面板（roles）", () => {
       path: "assets/minecraft/models/block/blunderbuss.json",
       rtype: "resourcepack",
       roots: [],
-      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      content: { dispose: vi.fn() } as unknown as PreviewScene,
       displayName: "3D-muskets",
       components: [
         "assets/minecraft/models/block/blunderbuss.json",

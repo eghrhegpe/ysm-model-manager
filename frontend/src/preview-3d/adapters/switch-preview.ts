@@ -40,9 +40,9 @@ export interface SwitchContext {
    */
   setSceneBaseline?: (s: Set<THREE.Object3D>) => void;
   /** 可变：build 后赋值 */
-  getBuilt: () => PreviewScene | null;
+  getContent: () => PreviewScene | null;
   setBuilt: (s: PreviewScene | null) => void;
-  allBuilt: PreviewScene[];
+  allContent: PreviewScene[];
   loadingEl: HTMLElement;
   viewContainer: HTMLElement;
   overlay: HTMLElement;
@@ -108,7 +108,7 @@ export async function switchToSession(
   // build 成功但代际已失效（用户已关闭/切换）→ 丢弃新内容层
   if (guardSwitchAborted(ctx, next)) return;
 
-  // 兑现本次切换：登记 built / 历史 / 注册表 / 相机灯光阴影 env 同步 / 基线更新
+  // 兑现本次切换：登记 content / 历史 / 注册表 / 相机灯光阴影 env 同步 / 基线更新
   ctx.setBuilt(next);
   // [ADR-159] 容器元数据继承：unregister 前捕获前一活跃 entry 的 displayName/components，
   // 同容器（资源包）会话内切换透传给新 entry（keep=false 时旧 entry 即将被注销，必须先取）。
@@ -174,7 +174,7 @@ function clearSwitchContent(ctx: SwitchContext, keep: boolean): Set<THREE.Object
   }
   // 释放旧内容层 GPU 资源（非同台模式才 dispose；同台模式下旧模型仍需保持）
   if (!keep) {
-    try { ctx.getBuilt()?.dispose(); } catch (e) { console.error("[preview] 旧内容层 dispose 失败:", e); }
+    try { ctx.getContent()?.dispose(); } catch (e) { console.error("[preview] 旧内容层 dispose 失败:", e); }
     // 审核 P3-1：dispose 后立即停驱动旧 perFrame——否则 await build 窗口内
     // rAF 仍每帧驱动已释放的旧 update（有 try/catch 兜底不崩，但每帧刷警告）。
     // build 成功后 syncSwitchView 注册新回调；失败则 recoverSwitchFailure 已兜底。
@@ -221,7 +221,7 @@ async function buildSwitchContent(
 }
 
 /**
- * 切换失败恢复（原 switchToSession §4 catch 块，P1/P2 守卫 + GPU/sceneRegistry/allBuilt 清理）。
+ * 切换失败恢复（原 switchToSession §4 catch 块，P1/P2 守卫 + GPU/sceneRegistry/allContent 清理）。
  */
 function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): void {
   // P2 守卫（对齐 mount3D 主流程 gen 守卫）：build 失败迟到且用户已关闭/切换
@@ -234,18 +234,18 @@ function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): vo
   // P1 修复（审核 ADR-109 Checklist）：build 失败后旧内容层已 dispose（上方清除段）
   // 但 perFrame 回调仍指向已 dispose 的 update → rAF 每帧驱动已释放对象；
   // sceneRegistry 残留旧 entry → count 虚高（误触 MAX_MODELS）+ visibleRoots 含
-  // detached root（取景幽灵）；allBuilt 残留已释放引用（GPU 资源孤儿泄漏）
+  // detached root（取景幽灵）；allContent 残留已释放引用（GPU 资源孤儿泄漏）
   ctx.setPerFrame(null);
   if (keep) {
-    // 同台模式：旧 built 未 dispose（清除段跳过），此处补释放
-    try { ctx.getBuilt()?.dispose(); } catch (_) {}
+    // 同台模式：旧 content 未 dispose（清除段跳过），此处补释放
+    try { ctx.getContent()?.dispose(); } catch (_) {}
   }
   const prevId = sceneRegistry.getActiveId();
   if (prevId) sceneRegistry.unregister(prevId);
-  for (const b of ctx.allBuilt) {
+  for (const b of ctx.allContent) {
     safeDispose(b);
   }
-  ctx.allBuilt.length = 0;
+  ctx.allContent.length = 0;
   ctx.setBuilt(null);
   if (!ctx.loadingEl.parentNode) ctx.viewContainer.appendChild(ctx.loadingEl);
   showLoadFailure(ctx.loadingEl, e);
@@ -265,21 +265,21 @@ function guardSwitchAborted(ctx: SwitchContext, next: PreviewScene): boolean {
 }
 
 /**
- * 维护 allBuilt 历史（P3-1）。非同台模式先 dispose 其余条目再清空——否则
+ * 维护 allContent 历史（P3-1）。非同台模式先 dispose 其余条目再清空——否则
  * keep=true 追加的多模型在清除段被移出 scene 但从未 dispose → GPU 孤儿泄漏，
- * 且 sceneRegistry 残留计数虚高（误触 MAX_MODELS 拦截）。随后统一 push 新 built。
+ * 且 sceneRegistry 残留计数虚高（误触 MAX_MODELS 拦截）。随后统一 push 新 content。
  */
 function pushSwitchHistory(ctx: SwitchContext, keep: boolean, next: PreviewScene): void {
   if (!keep) {
-    const active = ctx.getBuilt();
-    for (const b of ctx.allBuilt) {
+    const active = ctx.getContent();
+    for (const b of ctx.allContent) {
       if (b !== active) {
         safeDispose(b);
       }
     }
-    ctx.allBuilt.length = 0;
+    ctx.allContent.length = 0;
   }
-  ctx.allBuilt.push(next);
+  ctx.allContent.push(next);
 }
 
 /**
@@ -317,7 +317,7 @@ function registerSwitchScene(
       path: newPath,
       rtype: ctx.getCurrentRtype?.() ?? "",
       roots: added,
-      built: next,
+      content: next,
       boneMaps: next.boneMaps ?? null,
       menuItems,
       onBonePick: next.onBonePick ?? null,
@@ -326,7 +326,7 @@ function registerSwitchScene(
     });
     return menuItems;
   }
-  sceneRegistry.register({ path: newPath, rtype: "", roots: [], built: next });
+  sceneRegistry.register({ path: newPath, rtype: "", roots: [], content: next });
   return [];
 }
 

@@ -129,7 +129,7 @@ describe("mountPreviewRootMenu", () => {
 
   it("🧍 dock 按钮：已有加载角色（YS'M/PMX 多角色）→ 直达 roles 面板，adapter model 项不在 dock 根", () => {
     // 模拟 YS'M/PMX 加载后 sceneRegistry 非空（角色级管理成为主入口）
-    sceneRegistry.register({ path: "/m/a.ysm", rtype: "ysm", roots: [], built: {} as unknown as PreviewScene });
+    sceneRegistry.register({ path: "/m/a.ysm", rtype: "ysm", roots: [], content: {} as unknown as PreviewScene });
     const handle = mountPreviewRootMenu(overlay, makeCtx({ getSiblings: () => ["/m/b.ysm"] }));
     const adapterModelItem = {
       id: "model",

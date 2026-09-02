@@ -616,7 +616,7 @@ describe("部分配置缺失时的降级行为", () => {
     const adapter = makeAdapter({
       scene: {
         dispose: vi.fn(),
-        // 不返回 update —— 源码 `perFrame = built.update ?? null`
+        // 不返回 update —— 源码 `perFrame = content.update ?? null`
       },
     });
     await mount3D(adapter as PreviewAdapter, "/minimal.ysm");
@@ -698,12 +698,12 @@ describe("unloadRole 真实路径（角色面板卸载）", () => {
     await mount3D(adapter as PreviewAdapter, "/model.ysm");
     const entry = mockEntries().get("/model.ysm");
     expect(entry).toBeDefined();
-    const disposeSpy = entry.built.dispose;
+    const disposeSpy = entry.content.dispose;
 
     // 预置第二个角色（menuItems null）模拟 cooperate 双角色——卸载后它成为新活跃
     mockEntries().set("/second.ysm", {
       path: "/second.ysm",
-      built: { dispose: vi.fn() },
+      content: { dispose: vi.fn() },
       menuItems: null,
       roots: [],
     });
@@ -727,7 +727,7 @@ describe("unloadRole 真实路径（角色面板卸载）", () => {
     // 预置带 menuItems 的第二个角色（mock getActiveId 返回第一个 key = 该角色）
     mockEntries().set("/b.ysm", {
       path: "/b.ysm",
-      built: { dispose: vi.fn() },
+      content: { dispose: vi.fn() },
       menuItems: [{ id: "model", kind: "panel", dockGroup: "model", icon: "x", labelKey: "", fallback: "m", render: () => {} }],
       roots: [],
     });
@@ -745,7 +745,7 @@ describe("unloadRole 真实路径（角色面板卸载）", () => {
     const adapter = syncAdapter();
     await mount3D(adapter as PreviewAdapter, "/only.ysm");
     const entry = mockEntries().get("/only.ysm");
-    const disposeSpy = entry.built.dispose;
+    const disposeSpy = entry.content.dispose;
 
     const ctx = lastMenuCtx();
     ctx.unloadRole!("/only.ysm");

@@ -189,7 +189,7 @@ export function invalidatePreview(): void {
   _gen++;
 }
 
-/** 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） */
+/** 清理所有 3D 预览（dispose content + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） */
 export function cleanupPreview(): void {
   _gen++;
   // 快照遍历：handle.cleanup() → fullCleanup → finishSession 会从 _handles 摘除自身，
@@ -294,9 +294,9 @@ export async function mount3D(
     camSpeed: loadTdCamSpeed(),
     orbitMode: loadTdRotMode(),
     euler: new THREE.Euler(0, 0, 0, "YXZ"),
-    built: null,
+    content: null,
     sceneBaseline: null,
-    allBuilt: [],
+    allContent: [],
     perFrame: null,
     onUnifiedPick: null,
     escH: () => {},
@@ -376,7 +376,7 @@ export async function mount3D(
     setSpeed: (n: number) => {
       session.camSpeed = n;
     },
-    // built 在 try 块内声明，此处经模块级 _handle（PreviewHandle 含 resetCamera? 契约）延迟调用
+    // content 在 try 块内声明，此处经模块级 _handle（PreviewHandle 含 resetCamera? 契约）延迟调用
     reset: () => {
       _handles[_handles.length - 1]?.handle.resetCamera?.();
     },
@@ -624,7 +624,7 @@ export async function mount3D(
     if (tip.parentNode) tip.remove();
   }, TIP_AUTO_DISMISS_MS);
 
-  // session.cleanupFn / session.built / session.sceneBaseline / session.allBuilt
+  // session.cleanupFn / session.content / session.sceneBaseline / session.allContent
   // 已在 mount3D 头部 session 对象初始化时声明，此处不再重复 let。
 
   // 清理统一内联于下方 fullCleanup（原 cleanup-3d.ts 的 runFullCleanup/CleanupContext 是
@@ -636,11 +636,11 @@ export async function mount3D(
     setSceneBaseline: (s) => {
       session.sceneBaseline = s;
     },
-    getBuilt: () => session.built,
+    getContent: () => session.content,
     setBuilt: (s) => {
-      session.built = s;
+      session.content = s;
     },
-    allBuilt: session.allBuilt,
+    allContent: session.allContent,
     loadingEl,
     viewContainer,
     overlay,
@@ -688,17 +688,17 @@ export async function mount3D(
   /**
    * 卸载单个角色（角色面板 ⚙ → 卸载角色，MikuMikuAR buildModelToolsLevel 移植）：
    * 移除其场景根节点 + 释放内容层 GPU + 注册表注销（焦点自动转移）+ 相机取景重算。
-   * 函数声明提升：引用 allBuilt（§4 声明）在调用时已初始化。
+   * 函数声明提升：引用 allContent（§4 声明）在调用时已初始化。
    */
   function unloadRole(id: string): void {
     mpUnloadRole(
       {
-        allBuilt: session.allBuilt,
+        allContent: session.allContent,
         scene: infra?.scene,
         controls: infra?.controls,
         camera: infra?.camera,
         menuHandle,
-        getBuilt: () => session.built,
+        getContent: () => session.content,
         setPerFrame: (f) => switchCtx.setPerFrame(f),
         // 从全局 perFrame 列表移除指定回调（原 mpUnloadRole 内联 _globalPerFrames splice 逻辑）
         removePerFrame: (f) => {
@@ -716,7 +716,7 @@ export async function mount3D(
 
     const i = infra; // self 模式 infra=null，跳过 sceneBaseline；shared 模式恒非空
     if (i) session.sceneBaseline = new Set(i.scene.children);
-    session.built = await adapter.build(
+    session.content = await adapter.build(
       {
         scene: i?.scene,
         camera: i?.camera,
@@ -740,10 +740,10 @@ export async function mount3D(
     if (session.aborted.v || myGen !== _gen) {
       // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
       // 避免外壳资源泄漏；内容层 GPU 资源经 fullCleanup 一并释放。
-      // 注意：会话登记进 allBuilt 发生在下方（build 成功之后），此处必须补登记，
+      // 注意：会话登记进 allContent 发生在下方（build 成功之后），此处必须补登记，
       // 否则刚 build 完的内容层不在 dispose 列表里 → GPU 资源泄漏。
-      if (session.built && !session.allBuilt.includes(session.built)) {
-        session.allBuilt.push(session.built);
+      if (session.content && !session.allContent.includes(session.content)) {
+        session.allContent.push(session.content);
       }
       fullCleanup();
       return;
@@ -759,41 +759,41 @@ export async function mount3D(
       // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
       syncLightTargetFromContent(i.scene, session.sceneBaseline, i.lightCap ?? null);
       // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
-      if (i.shadowCap && session.built) {
+      if (i.shadowCap && session.content) {
         const roots = session.sceneBaseline
           ? i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
           : [];
         i.shadowCap.applyMeshCasts(roots);
       }
       // 首模型 mesh envMapIntensity 同步
-      if (i.environmentCap && session.built) {
+      if (i.environmentCap && session.content) {
         const roots = session.sceneBaseline
           ? i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
           : [];
         i.environmentCap.syncMeshIntensity(roots);
       }
     }
-    switchCtx.setPerFrame(session.built.update ?? null);
+    switchCtx.setPerFrame(session.content.update ?? null);
     // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
     // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
-    if (session.built) session.allBuilt.push(session.built);
+    if (session.content) session.allContent.push(session.content);
     // ADR-093 T2：首模型注册进场景注册表（roots 经 scene.children 差量捕获）
-    if (session.built) {
+    if (session.content) {
       const added =
         infra && session.sceneBaseline
           ? infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
           : [];
       // ADR-131 P1：post-build 采集场景统计，合并统计面板进菜单（「能渲染就能出统计」）
       const stats = collectSceneStats(added);
-      const menuItems = mergeStatsMenuItems(session.built.menuItems, stats);
+      const menuItems = mergeStatsMenuItems(session.content.menuItems, stats);
       sceneRegistry.register({
         path,
         rtype: opts.rtype ?? adapter.id,
         roots: added,
-        built: session.built,
-        boneMaps: session.built.boneMaps ?? null,
+        content: session.content,
+        boneMaps: session.content.boneMaps ?? null,
         menuItems,
-        onBonePick: session.built.onBonePick ?? null,
+        onBonePick: session.content.onBonePick ?? null,
         displayName: opts.displayName,
         components: opts.components,
       });
@@ -802,7 +802,7 @@ export async function mount3D(
       if (menuItems.length > 0) menuHandle.setAdapterItems(menuItems);
     }
 
-    // ADR-076 v2 Phase 3：适配器控件全部经声明式根菜单注入（ctx.menu.setAdapterItems / built.menuItems）
+    // ADR-076 v2 Phase 3：适配器控件全部经声明式根菜单注入（ctx.menu.setAdapterItems / content.menuItems）
     // 不再有 topBar 或 sidePanel 额外挂载
 
     function fullCleanup(): void {
@@ -824,16 +824,16 @@ export async function mount3D(
       _singletonOverlay = null;
       _singletonBody = null;
       _singletonViewContainer = null;
-      // ⑥ 只清理内容层（dispose built + 移除 scene children），保留 renderer/canvas 存活
+      // ⑥ 只清理内容层（dispose content + 移除 scene children），保留 renderer/canvas 存活
       //    避免销毁 WebGL context 导致黑屏窗口期
       if (infra && session.sceneBaseline) {
         const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
         for (const c of stale) infra.scene.remove(c);
       }
-      for (const b of session.allBuilt) {
+      for (const b of session.allContent) {
         safeDispose(b);
       }
-      session.allBuilt.length = 0;
+      session.allContent.length = 0;
       sceneRegistry.reset();
       // ⑦ 输入监听解绑（bindInputHandlers 内注册）——旧实现漏解绑，跨会话累积
       document.removeEventListener("keydown", onKeyDown);
@@ -880,12 +880,12 @@ export async function mount3D(
     session.cleanupFn = fullCleanup;
     const sessionHandle = {
       cleanup: fullCleanup,
-      resetCamera: session.built.resetCamera,
-      setRotationMode: session.built.setRotationMode,
-      setSpeed: session.built.setSpeed,
-      showModelGroup: session.built.showModelGroup,
-      onBoneSelect: session.built.onBoneSelect,
-      screenshot: session.built.screenshot,
+      resetCamera: session.content.resetCamera,
+      setRotationMode: session.content.setRotationMode,
+      setSpeed: session.content.setSpeed,
+      showModelGroup: session.content.showModelGroup,
+      onBoneSelect: session.content.onBoneSelect,
+      screenshot: session.content.screenshot,
       // 当前会话内切换模型：复用外壳（renderer/rAF/controls/灯光）重建内容层（ADR-066 §5.6）
       // 支持 keepInScene 模式：true 时不移除旧模型，新模型追加到同一场景（多模型同台）
       switchTo: (newPath: string, options?: { keepInScene?: boolean }) =>
@@ -894,7 +894,7 @@ export async function mount3D(
     _handles.push({ handle: sessionHandle, gen: myGen });
   } catch (e) {
     document.removeEventListener("keydown", session.escH);
-    session.built?.dispose();
+    session.content?.dispose();
     // P2 守卫（对齐旧 skeleton close3D 语义）：加载期间被 ESC/切模型/invalidate
     // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，
     // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。
@@ -936,11 +936,11 @@ interface MpSessionState {
   /** 每帧复用的临时欧拉角（WASD 自由相机时读 camera.quaternion） */
   euler: THREE.Euler;
   /** 当前会话内容层（switchTo 后会被替换） */
-  built: PreviewScene | null;
+  content: PreviewScene | null;
   /** 场景子节点基线快照（区分固有装饰与内容层增量） */
   sceneBaseline: Set<THREE.Object3D> | null;
   /** cooperate 模式下已追加的内容句柄列表（fullCleanup 逐一 dispose） */
-  allBuilt: PreviewScene[];
+  allContent: PreviewScene[];
   /** 每帧回调（setPerFrame 统一注册/注销） */
   perFrame: ((dt: number) => void) | null;
   /** 统一多模型拾取器（仅 count>=2 激活） */

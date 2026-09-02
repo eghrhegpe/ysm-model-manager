@@ -22,7 +22,7 @@ function makeEntry(
     path,
     rtype: "test",
     roots,
-    built: { dispose: vi.fn() } as any,
+    content: { dispose: vi.fn() } as any,
     boneMaps: (opts?.boneMaps ?? null) as any,
     menuItems: opts?.menuItems ?? null,
     onBonePick: opts?.onBonePick ?? null,

@@ -1,10 +1,10 @@
 // ===== 多模型同框：场景注册表（ADR-093）=====
-// 单一事实来源：替代裸 allBuilt 数组，承载每个已加载模型的元数据，
+// 单一事实来源：替代裸 allContent 数组，承载每个已加载模型的元数据，
 // 供相机多包围盒累加 / dispatch 拾取归属 / GPU 上限 / 未来 dock 模型列表 UI 消费。
 //
 // 生命周期：随活跃 3D 会话。mount-preview-core 新鲜 mount（!cooperate）先
 // cleanupPreview() → fullCleanup 内 sceneRegistry.reset()；会话关闭同样 reset。
-// （allBuilt 仍负责逐条 dispose，注册表与之并存，不重复释放。）
+// （allContent 仍负责逐条 dispose，注册表与之并存，不重复释放。）
 //
 // root 捕获用「build 前后 scene.children 差量」法（适配器无关），详见 ADR-093 §2.2。
 import * as THREE from "three";
@@ -25,8 +25,8 @@ export interface ModelEntry {
   rtype: string;
   /** build 前后 scene.children 差量捕获的顶层根节点（隐藏/取景/归属用；差量漏捕时为 []） */
   roots: THREE.Object3D[];
-  /** 内容层句柄（dispose 等；与 allBuilt 同一引用） */
-  built: PreviewScene;
+  /** 内容层句柄（dispose 等；与 allContent 同一引用） */
+  content: PreviewScene;
   visible: boolean;
   /** 骨骼映射（dispatch 用；未接入格式为 null） */
   boneMaps: BoneMaps | null;
@@ -54,7 +54,7 @@ type RegisterInput = {
   path: string;
   rtype: string;
   roots: THREE.Object3D[];
-  built: PreviewScene;
+  content: PreviewScene;
   boneMaps?: BoneMaps | null;
   menuItems?: PreviewMenuNode[] | null;
   onBonePick?: ((boneId: string) => void) | null;
@@ -82,7 +82,7 @@ function mdSrBuildEntryFromInput(id: string, input: RegisterInput): ModelEntry {
     path: input.path,
     rtype: input.rtype,
     roots: input.roots,
-    built: input.built,
+    content: input.content,
     visible: true,
     boneMaps: input.boneMaps ?? null,
     menuItems: input.menuItems ?? null,

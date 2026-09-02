@@ -47,7 +47,7 @@ export function mpMakeUnifiedPickHandler(
             entry.boneMaps.childrenMap,
             hit.object,
           );
-          entry.built.onBoneSelect?.(info);
+          entry.content.onBoneSelect?.(info);
           entry.onBonePick?.(boneId);
         }
       }

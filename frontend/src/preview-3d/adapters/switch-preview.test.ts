@@ -1,5 +1,5 @@
 // ===== switchToSession 陈旧字段修复测试 =====
-// 验证：ctx 中经 getter 访问的字段（built / sceneBaseline）
+// 验证：ctx 中经 getter 访问的字段（content / sceneBaseline）
 // 在 ctx 构造后被修改时，switchToSession 能读到最新值——
 // 而非构造时快照的旧值（修复前的 bug）。
 
@@ -26,7 +26,7 @@ afterEach(() => {
 function makeMockCtx(): {
   ctx: SwitchContext;
   state: {
-    built: PreviewScene | null;
+    content: PreviewScene | null;
     sceneBaseline: Set<THREE.Object3D> | null;
     perFrame: ((dt: number) => void) | null;
     currentPath: string;
@@ -36,7 +36,7 @@ function makeMockCtx(): {
   mockAdapter: { build: ReturnType<typeof vi.fn> };
 } {
   const state = {
-    built: null as PreviewScene | null,
+    content: null as PreviewScene | null,
     sceneBaseline: null as Set<THREE.Object3D> | null,
     perFrame: null as ((dt: number) => void) | null,
     currentPath: "initial.glb",
@@ -47,7 +47,7 @@ function makeMockCtx(): {
   const loadingEl = document.createElement("div");
   const viewContainer = document.createElement("div");
   const overlay = document.createElement("div");
-  const allBuilt: PreviewScene[] = [];
+  const allContent: PreviewScene[] = [];
 
   const mockAdapter = {
     build: vi.fn().mockResolvedValue({
@@ -58,9 +58,9 @@ function makeMockCtx(): {
   const ctx: SwitchContext = {
     scene: mockScene,
     getSceneBaseline: () => state.sceneBaseline,
-    getBuilt: () => state.built,
-    setBuilt: (s) => { state.built = s; },
-    allBuilt,
+    getContent: () => state.content,
+    setBuilt: (s) => { state.content = s; },
+    allContent,
     loadingEl,
     viewContainer,
     overlay,
@@ -92,15 +92,15 @@ function makeMockCtx(): {
 }
 
 describe("switchToSession 陈旧字段修复", () => {
-  it("built 字段在 ctx 构造后被 setBuilt 更新，switchTo 能读到最新值（旧模型 dispose）", async () => {
+  it("content 字段在 ctx 构造后被 setBuilt 更新，switchTo 能读到最新值（旧模型 dispose）", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const oldDispose = vi.fn();
     // 模拟首次 build 后的状态
-    state.built = { dispose: oldDispose } as PreviewScene;
+    state.content = { dispose: oldDispose } as PreviewScene;
 
     await switchToSession(ctx, "new.glb");
 
-    // 关键断言：旧模型的 dispose 必须被调用（修复前因 ctx.built 快照为 null 而永不触发）
+    // 关键断言：旧模型的 dispose 必须被调用（修复前因 ctx.content 快照为 null 而永不触发）
     expect(oldDispose).toHaveBeenCalledTimes(1);
     expect(mockAdapter.build).toHaveBeenCalledWith(
       expect.objectContaining({}),
@@ -227,7 +227,7 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
       path: "initial.glb",
       rtype: "vrm",
       roots: [mesh],
-      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      content: { dispose: vi.fn() } as unknown as PreviewScene,
       menuItems: mergeStatsMenuItems(firstMenuItems, collectSceneStats(mesh)),
     });
 
@@ -263,7 +263,7 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
       path: "initial.glb",
       rtype: "vrm",
       roots: [mesh],
-      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      content: { dispose: vi.fn() } as unknown as PreviewScene,
       menuItems: [{ id: "model-a", kind: "panel", icon: "x", labelKey: "", fallback: "A" }],
     });
 
@@ -320,7 +320,7 @@ describe("switchToSession 守卫分支", () => {
         path: `m${i}.glb`,
         rtype: "vrm",
         roots: [],
-        built: { dispose: vi.fn() } as unknown as PreviewScene,
+        content: { dispose: vi.fn() } as unknown as PreviewScene,
       });
     }
     const toasts: unknown[] = [];
@@ -345,20 +345,20 @@ describe("switchToSession 守卫分支", () => {
 });
 
 describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
-  it("build 抛错 → 恢复链：旧 perFrame 置空 + allBuilt 清空 + loadingEl 归位 + inFlight 复位", async () => {
+  it("build 抛错 → 恢复链：旧 perFrame 置空 + allContent 清空 + loadingEl 归位 + inFlight 复位", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    // 预置：旧 built 已在 allBuilt 内（首次 mount 后形态）
+    // 预置：旧 content 已在 allContent 内（首次 mount 后形态）
     const oldBuilt = { dispose: vi.fn() } as unknown as PreviewScene;
-    state.built = oldBuilt;
+    state.content = oldBuilt;
     state.perFrame = () => {};
-    ctx.allBuilt.push(oldBuilt);
+    ctx.allContent.push(oldBuilt);
     sceneRegistry.reset();
     sceneRegistry.register({
       path: "initial.glb",
       rtype: "vrm",
       roots: [],
-      built: oldBuilt,
+      content: oldBuilt,
     });
     mockAdapter.build.mockRejectedValue(new Error("boom"));
 
@@ -367,8 +367,8 @@ describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
     expect(errSpy).toHaveBeenCalled();
     expect(state.perFrame).toBeNull();
     // 旧内容层 dispose（清除段）+ 失败恢复不重复 push
-    expect(state.built).toBeNull();
-    expect(ctx.allBuilt).toHaveLength(0);
+    expect(state.content).toBeNull();
+    expect(ctx.allContent).toHaveLength(0);
     // loadingEl 无父节点时归位 viewContainer（showLoadFailure 前置）
     expect(ctx.loadingEl.parentNode).toBe(ctx.viewContainer);
     // 注册表残留旧 entry 已注销
@@ -378,11 +378,11 @@ describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
     expect(ctx.inFlight).toBe(false);
   });
 
-  it("keep=true build 失败 → 补释放旧 built（清除段跳过 dispose 的兜底）", async () => {
+  it("keep=true build 失败 → 补释放旧 content（清除段跳过 dispose 的兜底）", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     vi.spyOn(console, "error").mockImplementation(() => {});
     const oldDispose = vi.fn();
-    state.built = { dispose: oldDispose } as unknown as PreviewScene;
+    state.content = { dispose: oldDispose } as unknown as PreviewScene;
     mockAdapter.build.mockRejectedValue(new Error("boom"));
 
     await switchToSession(ctx, "bad.glb", { keepInScene: true });
@@ -395,7 +395,7 @@ describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
   it("aborted 迟到失败 → 静默复位 inFlight，不弹错不清理", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    state.built = { dispose: vi.fn() } as unknown as PreviewScene;
+    state.content = { dispose: vi.fn() } as unknown as PreviewScene;
     state.perFrame = () => {};
     // 延迟 reject：beginSwitch 放行后、build 悬置期间翻转 aborted（P2 迟到失败场景）
     let rejectBuild!: (e: unknown) => void;
@@ -408,11 +408,11 @@ describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
     await p;
 
     // P2 守卫：不 console.error、recoverSwitchFailure 不做额外清理，仅复位 inFlight。
-    // （审核 P3-1 后 perFrame 在 clearSwitchContent dispose 旧 built 时已被置空——
-    // 旧内容层已释放，rAF 不再驱动其 update；recoverSwitchFailure 本身仍不清 allBuilt。）
+    // （审核 P3-1 后 perFrame 在 clearSwitchContent dispose 旧 content 时已被置空——
+    // 旧内容层已释放，rAF 不再驱动其 update；recoverSwitchFailure 本身仍不清 allContent。）
     expect(errSpy).not.toHaveBeenCalled();
     expect(state.perFrame).toBeNull();
-    expect(state.built).not.toBeNull();
+    expect(state.content).not.toBeNull();
     expect(ctx.inFlight).toBe(false);
   });
 });
@@ -431,9 +431,9 @@ describe("switchToSession 代际/中止守卫丢弃新内容层", () => {
     resolveBuild({ dispose: nextDispose } as unknown as PreviewScene);
     await p;
 
-    // 新内容层被 safeDispose，切换未兑现（built 不变、路径不变、菜单不刷新）
+    // 新内容层被 safeDispose，切换未兑现（content 不变、路径不变、菜单不刷新）
     expect(nextDispose).toHaveBeenCalledTimes(1);
-    expect(state.built).toBeNull();
+    expect(state.content).toBeNull();
     expect(state.currentPath).toBe("initial.glb");
     expect(ctx.menuHandle.setAdapterItems).not.toHaveBeenCalled();
     expect(ctx.inFlight).toBe(false);
@@ -452,39 +452,39 @@ describe("switchToSession 代际/中止守卫丢弃新内容层", () => {
     await p;
 
     expect(nextDispose).toHaveBeenCalledTimes(1);
-    expect(state.built).toBeNull();
+    expect(state.content).toBeNull();
   });
 });
 
 describe("switchToSession 内容层历史与基线维护", () => {
-  it("非 keep 切换：allBuilt 中非 active 的孤儿条目被 safeDispose（GPU 孤儿泄漏防护）", async () => {
+  it("非 keep 切换：allContent 中非 active 的孤儿条目被 safeDispose（GPU 孤儿泄漏防护）", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const orphanDispose = vi.fn();
     const activeDispose = vi.fn();
     const orphan = { dispose: orphanDispose } as unknown as PreviewScene;
     const active = { dispose: activeDispose } as unknown as PreviewScene;
-    ctx.allBuilt.push(orphan, active);
-    state.built = active; // active 不在历史清理段重复释放（清除段 dispose）
+    ctx.allContent.push(orphan, active);
+    state.content = active; // active 不在历史清理段重复释放（清除段 dispose）
 
     await switchToSession(ctx, "new.glb");
 
     expect(orphanDispose).toHaveBeenCalledTimes(1);
-    // 切换后 allBuilt 只含新 built
-    expect(ctx.allBuilt).toHaveLength(1);
-    expect(state.built).not.toBe(orphan);
+    // 切换后 allContent 只含新 content
+    expect(ctx.allContent).toHaveLength(1);
+    expect(state.content).not.toBe(orphan);
   });
 
-  it("keep=true 追加：allBuilt 保留历史并 push 新 built", async () => {
+  it("keep=true 追加：allContent 保留历史并 push 新 content", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const oldDispose = vi.fn();
-    state.built = { dispose: oldDispose } as unknown as PreviewScene;
-    ctx.allBuilt.push(state.built);
+    state.content = { dispose: oldDispose } as unknown as PreviewScene;
+    ctx.allContent.push(state.content);
 
     await switchToSession(ctx, "extra.glb", { keepInScene: true });
 
-    // 同台模式旧 built 不释放（仍在场景中）
+    // 同台模式旧 content 不释放（仍在场景中）
     expect(oldDispose).not.toHaveBeenCalled();
-    expect(ctx.allBuilt).toHaveLength(2);
+    expect(ctx.allContent).toHaveLength(2);
   });
 
   it("updateSwitchBaseline：切换后基线排除本次新增量（幽灵网格累积防护）", async () => {
@@ -508,7 +508,7 @@ describe("switchToSession 内容层历史与基线维护", () => {
   it("旧内容层 dispose 抛错 → console.error 记录但不阻断切换", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    state.built = {
+    state.content = {
       dispose: () => { throw new Error("dispose fail"); },
     } as unknown as PreviewScene;
 
@@ -571,8 +571,8 @@ describe("switchToSession 场景注册与视图同步（scene=null 退化 + caps
     const rootA = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     const rootB = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     mockScene.add(rootA, rootB);
-    sceneRegistry.register({ path: "a.glb", rtype: "vrm", roots: [rootA], built: { dispose: vi.fn() } as unknown as PreviewScene });
-    sceneRegistry.register({ path: "b.glb", rtype: "vrm", roots: [rootB], built: { dispose: vi.fn() } as unknown as PreviewScene });
+    sceneRegistry.register({ path: "a.glb", rtype: "vrm", roots: [rootA], content: { dispose: vi.fn() } as unknown as PreviewScene });
+    sceneRegistry.register({ path: "b.glb", rtype: "vrm", roots: [rootB], content: { dispose: vi.fn() } as unknown as PreviewScene });
 
     mockAdapter.build.mockResolvedValue({ dispose: vi.fn() } as unknown as PreviewScene);
     ctx.camera = new THREE.PerspectiveCamera();
@@ -616,15 +616,15 @@ describe("switchToSession 清理与排开边界", () => {
 });
 
 // ===== perFrame await 窗口修复（审核 P3-1）=====
-// 旧问题：clearSwitchContent dispose 旧 built 后、syncSwitchView 重设 perFrame 前
+// 旧问题：clearSwitchContent dispose 旧 content 后、syncSwitchView 重设 perFrame 前
 // 存在 await build 窗口，rAF 仍每帧驱动已 dispose 的旧 update（try/catch 兜底不崩，
-// 但每帧刷警告日志）。修复：dispose 旧 built 后立即 setPerFrame(null)。
+// 但每帧刷警告日志）。修复：dispose 旧 content 后立即 setPerFrame(null)。
 describe("switchToSession perFrame await 窗口（审核 P3-1）", () => {
-  it("非 keep 切换：旧 built dispose 后、build 期间 perFrame 已置空", async () => {
+  it("非 keep 切换：旧 content dispose 后、build 期间 perFrame 已置空", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const oldUpdate = vi.fn();
     state.perFrame = oldUpdate;
-    state.built = { dispose: vi.fn() } as unknown as PreviewScene;
+    state.content = { dispose: vi.fn() } as unknown as PreviewScene;
     state.sceneBaseline = new Set();
     let seenDuringBuild: ((dt: number) => void) | null = oldUpdate;
     mockAdapter.build.mockImplementation(async () => {
@@ -636,11 +636,11 @@ describe("switchToSession perFrame await 窗口（审核 P3-1）", () => {
     expect(state.perFrame).not.toBe(oldUpdate); // 结束后为新模型 update
   });
 
-  it("keep=true 同台：旧 built 未 dispose，build 期间 perFrame 保持旧值不中断", async () => {
+  it("keep=true 同台：旧 content 未 dispose，build 期间 perFrame 保持旧值不中断", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const oldUpdate = vi.fn();
     state.perFrame = oldUpdate;
-    state.built = { dispose: vi.fn() } as unknown as PreviewScene;
+    state.content = { dispose: vi.fn() } as unknown as PreviewScene;
     state.sceneBaseline = new Set();
     let seenDuringBuild: ((dt: number) => void) | null = null;
     mockAdapter.build.mockImplementation(async () => {

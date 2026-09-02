@@ -114,7 +114,7 @@ function makeCtx() {
 }
 
 /** 最近一次 setAdapterItems 收到的适配器项 */
-/** 从 preview(built) 对象读取注入的菜单项 */
+/** 从 preview(content) 对象读取注入的菜单项 */
 function registeredItems(preview: { menuItems?: Array<{ id: string; kind: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void; children?: Array<{ id: string; kind: string }>; schemaId?: string }> | null }): Array<{
   id: string;
   kind: string;
@@ -559,7 +559,7 @@ describe("buildYsmScene 守卫与多模型模式", () => {
       path: "other.ysm",
       rtype: "ysm",
       roots: [],
-      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      content: { dispose: vi.fn() } as unknown as PreviewScene,
     });
     const ctx = makeCtx();
     const preview = await buildYsmScene(ctx, "/m/a.ysm", {

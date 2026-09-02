@@ -13,16 +13,16 @@ import { sceneRegistry } from "./scene-registry.ts";
 
 /** mpUnloadRole 所需的外部会话引用（原 mount3D 内嵌闭包变量，显式参数化注入） */
 export interface MpUnloadCtx {
-  allBuilt: PreviewScene[];
+  allContent: PreviewScene[];
   scene: THREE.Scene | undefined;
   controls: OrbitControls | undefined;
   camera: THREE.PerspectiveCamera | undefined;
   menuHandle: PreviewMenuHandle;
   /** 当前会话内容层（switchTo 后会被替换，经 getter 读最新值） */
-  getBuilt: () => PreviewScene | null;
+  getContent: () => PreviewScene | null;
   /** 复位 perFrame（null）——对称维护全局 perFrame 列表（consume switchToSession 的同源注销逻辑） */
   setPerFrame: (f: ((dt: number) => void) | null) => void;
-  /** 从全局 perFrame 列表移除指定回调（unload 非当前源 built 时，_globalPerFrames 按引用移除） */
+  /** 从全局 perFrame 列表移除指定回调（unload 非当前源 content 时，_globalPerFrames 按引用移除） */
   removePerFrame: (f: (dt: number) => void) => void;
 }
 
@@ -33,18 +33,18 @@ export function mpUnloadRole(ctx: MpUnloadCtx, id: string): void {
   if (!entry) return;
   // 卸载的是当前会话内容层源时，perFrame 指向其 update——先记下以便停掉
   // rAF 回调，避免每帧驱动已 dispose 的内容层（空场景 session 半死状态，P3）
-  const wasCurrentSource = ctx.getBuilt() === entry.built;
-  // 无条件释放内容层 GPU：cooperate 跨 session 场景下 allBuilt 可能不含
-  // entry.built（角色面板显示注册表全部角色，可卸载另一 session 注册的），
-  // 以 allBuilt 命中与否决定 dispose 会漏释放（P3 round2）
-  safeDispose(entry.built);
-  const bi = ctx.allBuilt.indexOf(entry.built);
-  if (bi >= 0) ctx.allBuilt.splice(bi, 1);
+  const wasCurrentSource = ctx.getContent() === entry.content;
+  // 无条件释放内容层 GPU：cooperate 跨 session 场景下 allContent 可能不含
+  // entry.content（角色面板显示注册表全部角色，可卸载另一 session 注册的），
+  // 以 allContent 命中与否决定 dispose 会漏释放（P3 round2）
+  safeDispose(entry.content);
+  const bi = ctx.allContent.indexOf(entry.content);
+  if (bi >= 0) ctx.allContent.splice(bi, 1);
   for (const r of entry.roots) {
     if (ctx.scene) ctx.scene.remove(r);
   }
-  // 停掉持有该 built 的 perFrame（无论归属哪个 session；全局 perFrame 按引用移除）
-  const upd = entry.built.update;
+  // 停掉持有该 content 的 perFrame（无论归属哪个 session；全局 perFrame 按引用移除）
+  const upd = entry.content.update;
   if (upd) ctx.removePerFrame(upd);
   if (wasCurrentSource) ctx.setPerFrame(null);
   sceneRegistry.unregister(id);

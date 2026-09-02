@@ -1211,7 +1211,7 @@ describe("PMX worker 路径成功（worker 构建内容层）", () => {
     return disposeSpy;
   }
 
-  it("worker 解析成功 → buildPmxSceneSliced 建 mesh（IK/刚体受限 warn）+ parser.dispose", async () => {
+  it("worker 解析成功 → buildPmxScene（sliced）建 mesh（IK/刚体受限 warn）+ parser.dispose", async () => {
     setupWorkerOk();
     const port = makePort();
     const { ctx, scene } = makeCtx();

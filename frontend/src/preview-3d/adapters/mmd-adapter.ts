@@ -55,7 +55,7 @@ import { filterAnimFiles, getCustomAnimPath } from "./mmd-anim-library.ts";
 import { cancelPendingEncodings, scheduleBackgroundEncoding } from "./mmd-ktx2-encoder.ts";
 import { Ktx2TextureLoader } from "./mmd-ktx2-texture-loader.ts";
 import {
-  buildPmxSceneSliced,
+  buildPmxScene,
   createPmxParser,
   type PmxBuildResult,
   type PmxParser,
@@ -786,7 +786,7 @@ async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
       const pmxResult = await c.pmxParsePromise;
       c.pmxParsedData = pmxResult;
       if (pmxResult.ok && pmxResult.vertices && pmxResult.faces) {
-        c.workerResult = await buildPmxSceneSliced(pmxResult, { texUrlMap: c.texMap });
+        c.workerResult = await buildPmxScene(pmxResult, { texUrlMap: c.texMap, sliced: true });
         if (c.workerResult) {
           await mmdDiag(
             c.effectivePort,

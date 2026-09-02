@@ -22,6 +22,7 @@ import type { FbxSceneData } from "./fbx-scene-to-data.ts";
 import { buildBoneTree } from "../bone-tools.ts";
 import { fbxBonesToBoneNodes } from "../fbx-bones.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import { concurrentMap } from "./mmd-utils.ts"; // 有界并发映射（对齐 ADR-101 后端 goroutine 池设计）
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { frameCameraSide } from "../camera-setup.ts";
 
@@ -137,25 +138,23 @@ async function buildFbxTexUrlMap(
       }
     }
   }
-  // 有界并发读取（对齐 mmd-adapter TEXTURE_READ_CHUNK_SIZE=4，ADR-101）：
+  // 有界并发读取（复用 mmd-utils.concurrentMap，对齐 mmd-adapter TEXTURE_READ_CHUNK_SIZE=4，ADR-101）：
   // 串行 Go RPC 让加载延迟随纹理数线性增长（审核 P3）
   const CHUNK_SIZE = 4;
-  const nameList = [...names];
-  for (let i = 0; i < nameList.length; i += CHUNK_SIZE) {
-    const chunk = nameList.slice(i, i + CHUNK_SIZE);
-    await Promise.all(
-      chunk.map(async (name) => {
-        try {
-          // 磁盘文件名大小写可能不一致 → 原样 + lowercase 双试
-          let b64 = await port.readFileBytes(`${dir}/${name}`);
-          if (!b64) b64 = await port.readFileBytes(`${dir}/${name.toLowerCase()}`);
-          if (!b64) return;
-          const bytes = bytesToArrayBuffer(b64ToBytes(b64));
-          map.set(name, URL.createObjectURL(new Blob([bytes], { type: "image/png" })));
-        } catch { /* 单个纹理读取失败跳过，不阻断渲染 */ }
-      }),
-    );
-  }
+  await concurrentMap(
+    [...names],
+    async (name) => {
+      try {
+        // 磁盘文件名大小写可能不一致 → 原样 + lowercase 双试
+        let b64 = await port.readFileBytes(`${dir}/${name}`);
+        if (!b64) b64 = await port.readFileBytes(`${dir}/${name.toLowerCase()}`);
+        if (!b64) return;
+        const bytes = bytesToArrayBuffer(b64ToBytes(b64));
+        map.set(name, URL.createObjectURL(new Blob([bytes], { type: "image/png" })));
+      } catch { /* 单个纹理读取失败跳过，不阻断渲染 */ }
+    },
+    CHUNK_SIZE,
+  );
   return map;
 }
 

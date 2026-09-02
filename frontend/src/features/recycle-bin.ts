@@ -1,6 +1,6 @@
 // ===== 回收站管理（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
-import { t as _t } from "../core/i18n/t.ts";
+import { t as _t, type LocaleKey } from "../core/i18n/t.ts";
 import { modalConfirm as _modalConfirm } from "../utils/dom/dialogs/modal.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
@@ -87,7 +87,7 @@ function setupRecycleActions(
     opt: {
       confirm?: { title: string; icon: string; message: string; okText: string };
       binding: (path: string) => Promise<unknown>;
-      toastKey: string;
+      toastKey: LocaleKey;
     },
   ): void => {
     listEl.querySelectorAll(selector).forEach((btnEl) => {

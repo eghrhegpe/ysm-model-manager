@@ -1,6 +1,6 @@
 // ===== 诊断页：日志加载（操作日志 + 运行时日志） =====
 // ADR-040 按职责切文件：原 init.ts（797 行）拆分——日志加载（本文件）/ 去重（dedup.ts）/ 冲突扫描（conflicts.ts）
-import { t } from "../../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../../core/i18n/t.ts";
 import { getApp } from "../../../backend/app.ts";
 import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
@@ -57,7 +57,7 @@ function dgLsCheckStale(gen: number): boolean {
   return gen !== diagLoadSeq;
 }
 
-function dgLsSetEmpty(list: HTMLElement, key: string, type: "muted" | "error" = "muted"): void {
+function dgLsSetEmpty(list: HTMLElement, key: LocaleKey, type: "muted" | "error" = "muted"): void {
   const cls = type === "error" ? "diag-stat-error" : "diag-stat-muted";
   list.innerHTML = `<div class="stat-row diag-stat ${cls}">${t(key)}</div>`;
 }

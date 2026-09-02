@@ -1,6 +1,7 @@
 // ===== 高级筛选条件：解析 + 校验（纯函数层）=====
 // 从 utils/dom/dialogs/adv-filter.ts 抽出，供单测覆盖（ADR-023 L3）。
 // 注意：Go SearchModels 只支持 6 个范围 + 1 关键字（见 adv-filter.ts 头部注释）。
+import type { LocaleKey } from "../../../core/i18n/t.ts";
 
 /** 筛选条件 */
 export interface AdvFilterValue {
@@ -29,7 +30,7 @@ export function parseFilterNumber(raw: string): number | null {
  * 校验三组 min/max 范围（仅两端都填数字时比对），返回错误 i18n key 或 null。
  * 纯函数层不引入 t()——返回稳定 key，由 UI 层（adv-filter.ts）翻译展示。
  */
-export function validateAdvFilter(data: AdvFilterValue): string | null {
+export function validateAdvFilter(data: AdvFilterValue): LocaleKey | null {
   if (
     data.minBones != null &&
     data.maxBones != null &&

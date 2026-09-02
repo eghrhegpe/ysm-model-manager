@@ -48,7 +48,9 @@ describe("t()", () => {
   it("缺失 key → 返回 key 本身 + console.warn", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      expect(t("nav.notExist")).toBe("nav.notExist");
+      // 故意用非 LocaleKey 的运行时 key（变量绕开编译期 keyof 校验）测「JSON 语言包滞后」降级语义
+      const missingKey = "nav.notExist" as unknown as Parameters<typeof t>[0];
+      expect(t(missingKey)).toBe("nav.notExist");
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("缺失 key"));
     } finally {
       warn.mockRestore();
@@ -58,8 +60,9 @@ describe("t()", () => {
   it("同一缺失 key 只告警一次（warnedKeys 节流）", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      t("dup.missing");
-      t("dup.missing");
+      const missingKey = "dup.missing" as unknown as Parameters<typeof t>[0];
+      t(missingKey);
+      t(missingKey);
       expect(warn).toHaveBeenCalledTimes(1);
     } finally {
       warn.mockRestore();

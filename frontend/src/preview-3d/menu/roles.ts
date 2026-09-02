@@ -8,16 +8,17 @@
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
 import { sceneRegistry, type ModelEntry } from "../adapters/scene-registry.ts";
 import { renderMenu, renderAdapterPanelContent } from "./render.ts";
 import { fillSwitch } from "./switch.ts";
 import type { PreviewMenuCtx } from "./core.ts";
 
-/** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
+/** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
+ *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
 const tr = (key: string, fallback: string): string => {
-  const v = t(key);
+  const v = t(key as LocaleKey);
   return v === key ? fallback : v;
 };
 

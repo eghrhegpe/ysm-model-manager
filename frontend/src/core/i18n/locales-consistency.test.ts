@@ -23,8 +23,9 @@ function placeholders(s: string): string[] {
 }
 
 describe("语言包 key 对齐（基准 zh-CN）", () => {
-  const zhKeys = Object.keys(zhCN);
-  const zhSet = new Set(zhKeys);
+  // zh-CN 无 index signature（keyof 类型化后），key 数组断言为 keyof 联合以便索引
+  const zhKeys = Object.keys(zhCN) as Array<keyof typeof zhCN>;
+  const zhSet = new Set<string>(zhKeys);
 
   it("三个语言包 key 总数一致", () => {
     expect(zhKeys.length).toBeGreaterThan(0);

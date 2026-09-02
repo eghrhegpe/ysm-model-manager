@@ -6,11 +6,13 @@
 //
 // 判定语义：t() 缺失键返回 key 本身（t.ts:21）——「v === key」即命中兜底。
 // 该判定是单一事实来源，与 t() 缺失键行为强耦合，t() 行为变化需同步 tr()。
-import { t } from "./t.ts";
+import { t, type LocaleKey } from "./t.ts";
 
 /**
  * i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。
- * @param key - 翻译键（如 "menu.openFolder"）
+ * @param key - 翻译键（如 "menu.openFolder"）。有意接受任意 string：
+ *   tr() 是「缺失兜底」语义，允许运行时动态 key（如 group 标题原文兜底）——
+ *   经 LocaleKey 收窄后仍可在编译期拦截字面量拼错（字符串变量数据驱动放行）。
  * @param fallback - 键缺失时的兜底字符串（建议用英文/原 key 之外的稳定文案）
  * @param params - 插值参数，透传 t(key, params)（同 t 的 {n} 语法）
  * @returns 翻译结果；缺失则返回 fallback
@@ -20,6 +22,6 @@ export function tr(
   fallback: string,
   params?: Record<string, string | number>,
 ): string {
-  const v = t(key, params);
+  const v = t(key as LocaleKey, params);
   return v === key ? fallback : v;
 }

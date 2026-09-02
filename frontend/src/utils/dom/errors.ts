@@ -3,11 +3,12 @@
 //
 // ADR-051 决策：删除正则兜底表，只消费结构化 AppError.Code。
 
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 // CODE_KEYS 覆盖所有有明确分类语义的 Code；未列出的 Code（IO_ERROR/MKDIR_FAILED/
 // WRITE_FAILED/FILE_EMPTY/FILE_TOO_LARGE/LINK_FAILED）语义靠 Reason 中文透传，
 // 不在此武断归类（各 Code 的 Reason/Suggestion 比通用分类更具体，映射会误导用户）。
-const CODE_KEYS: Record<string, string> = {
+// 值收窄为 LocaleKey：映射表的 key 必须是语言包合法 key（字面量拼错编译期报错）。
+const CODE_KEYS: Record<string, LocaleKey> = {
   FILE_EXISTS: "error.alreadyExists",
   ALREADY_EXISTS: "error.alreadyExists",
   INVALID_PARAM: "error.invalidArg",

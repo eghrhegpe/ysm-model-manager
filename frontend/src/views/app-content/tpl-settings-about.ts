@@ -1,5 +1,5 @@
 // ===== tpl-settings-about.ts — 设置页 About/Credits 标签页模板（从 tpl-settings.ts 拆出，ADR-040 P1）=====
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import { GH_DOCS, GH_RELEASES, GH_REPO } from "../../utils/gh-links.ts";
 
 /** About 标签页（版本/特性/技术栈/链接/快速上手） */
@@ -95,7 +95,7 @@ export function aboutHTML(): string {
 const CONTRIBUTORS = [
   { name: "zuogeren1", github: "zuogeren1", descKey: "credits.zuogeren1Contribute" },
   { name: "JiangKaslana", github: "JiangKaslana", descKey: "credits.jiangkaslanaContribute" },
-];
+] as const satisfies ReadonlyArray<{ name: string; github: string; descKey: LocaleKey }>;
 
 /** Credits 标签页（灵感来源/特别感谢） */
 export function creditsHTML(): string {

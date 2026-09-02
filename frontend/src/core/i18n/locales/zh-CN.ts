@@ -3,7 +3,9 @@
 // key 格式：扁平化命名空间，"." 分隔，如 "nav.repository"
 // ⚠️ 本目录是纯数据目录，禁止放 .test.ts（会被构建脚本扫描）。
 
-export const zhCN: Record<string, string> = {
+// 无显式类型注解：让 key 推断为字面量联合，供 t.ts 的 LocaleKey = keyof typeof zhCN 类型化消费
+// （锐评整改；生成脚本经 mod.exports 取对象，不依赖此注解）
+export const zhCN = {
   // ── 语言自名（SUPPORTED_LANGS.key 引用；P2 修复：原 key 缺失 → 设置页下拉若
   // 按 key 渲染会裸奔，i18n-check KNOWN_INTENTIONAL 期望存在）──
   "lang.zh-CN": "简体中文",
@@ -365,6 +367,7 @@ export const zhCN: Record<string, string> = {
   "diagnostics.refresh": "刷新",
   "diagnostics.clearLog": "清空日志",
   "diagnostics.conflict": "冲突检测",
+  "diagnostics.conflictDetectionFailed": "冲突检测失败",
   "diagnostics.all": "全部",
   "diagnostics.success": "成功",
   "diagnostics.failed": "失败",
@@ -848,6 +851,7 @@ export const zhCN: Record<string, string> = {
   "diagnostics.resolveForceLocal": "强制保留本地版本",
   "diagnostics.resolveManual": "手动解决",
   "diagnostics.resolveConflicts": "解决冲突",
+  "diagnostics.resolveFailed": "解决冲突失败",
   "diagnostics.resolvedCount": "已解决 {n}",
   "diagnostics.failedCount": "失败 {n}",
   "diagnostics.manualCount": "需手动处理 {n}",
@@ -1392,6 +1396,7 @@ export const zhCN: Record<string, string> = {
   "preview.showPanel": "▶ 显示信息",
   "preview.noLightCap": "进入 3D 后再打开灯光面板",
   "preview.hint.clickBone": "点击骨骼查看详情",
+  "preview.bone.empty": "该模型无可显示的骨骼",
   "preview.customMorph": "自定义表情",
   "preview.vpdPose": "VPD 姿势",
   "preview.singleFrameMorph": "单帧 morph",

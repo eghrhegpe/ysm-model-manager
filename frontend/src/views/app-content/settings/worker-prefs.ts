@@ -3,7 +3,7 @@
 // 默认关闭（opt-in）：主线程解析为稳定基线；开启后走 worker 解析，失败自动降级主线程——
 // 设置页提供手动开关作为回退保险。读写统一走 safeGet/safeSet（隐私模式安全）。
 import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../../core/i18n/t.ts";
 import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 
@@ -13,8 +13,8 @@ const TOAST_DURATION_MS = TOAST_MS.quick;
 interface WorkerSwitch {
   id: string;
   storageKey: string;
-  onMsg: string;
-  offMsg: string;
+  onMsg: LocaleKey;
+  offMsg: LocaleKey;
 }
 
 const WORKER_SWITCHES: ReadonlyArray<WorkerSwitch> = [

@@ -12,7 +12,7 @@
 
 import type { PreviewMenuNode } from "./node-types.ts";
 import { buildCameraControls } from "../adapters/camera-controls.ts";
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { getStateValue, setStateValue } from "../state/preview-state.ts";
@@ -20,9 +20,10 @@ import { getPerfPreset, setPerfPreset, type PerfLevel } from "../state/perf-pres
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import type { PreviewMenuCtx } from "./core.ts";
 
-/** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
+/** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
+ *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
 const tr = (key: string, fallback: string): string => {
-  const v = t(key);
+  const v = t(key as LocaleKey);
   return v === key ? fallback : v;
 };
 

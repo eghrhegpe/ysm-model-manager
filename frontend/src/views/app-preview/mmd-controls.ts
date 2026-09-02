@@ -7,7 +7,7 @@
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import * as THREE from "three";
 import type { MMD } from "@moeru/three-mmd";
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import { cardContainer, addFieldRow } from "../../ui/ui-helpers.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
@@ -224,7 +224,7 @@ export function fillMmdShotPanel(
     const item = document.createElement("button");
     item.type = "button";
     item.className = "ysm-3d-popbtn ysm-3d-popbtn--row";
-    item.textContent = "📷 " + t("preview.screenshot" + key[0].toUpperCase() + key.slice(1));
+    item.textContent = "📷 " + t(("preview.screenshot" + key[0].toUpperCase() + key.slice(1)) as LocaleKey);
     item.dataset.testid = "shot-" + key;
     item.onclick = (): void => {
       void saveShot(key);

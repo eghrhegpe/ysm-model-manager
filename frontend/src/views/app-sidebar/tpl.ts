@@ -2,7 +2,7 @@
 import { ALL_RESOURCE_TYPES, GROUP_OF, RESOURCE_TYPES, typeIconOf } from "../../utils/resource/types.ts";
 import { shortLabelOf } from "../../utils/resource/short-label.ts";
 import { esc } from "../../utils/dom/html.ts";
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -47,7 +47,7 @@ export function footerHTML(): string {
 }
 
 /** 同步菜单类型展示配置（顺序 = 渲染顺序，UX 约定保留；icon 从 JSON 派生防手写漂移——拓展点残留清单 #5） */
-const SYNC_TYPE_MENU: ReadonlyArray<{ id: string; icon: string; labelKey?: string; label?: string }> = [
+const SYNC_TYPE_MENU: ReadonlyArray<{ id: string; icon: string; labelKey?: LocaleKey; label?: string }> = [
   { id: RESOURCE_TYPES.YSM, icon: typeIconOf(RESOURCE_TYPES.YSM), label: "YSM" },
   { id: RESOURCE_TYPES.MMD, icon: typeIconOf(RESOURCE_TYPES.MMD), label: "MMD" },
   { id: RESOURCE_TYPES.PACK, icon: typeIconOf(RESOURCE_TYPES.PACK), labelKey: "rtype.pack" },

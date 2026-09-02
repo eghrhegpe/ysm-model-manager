@@ -3,7 +3,7 @@
 // 展示（innerHTML + toast）。renderLoadingState：litematic/mmd/vrm 三个
 // adapter 各自拼接的进度条 HTML（仅 emoji / 进度模式不同）。抽一处收口，
 // 改文案 / 改样式只需改这一处。
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import { bus } from "../../bus.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
@@ -17,7 +17,7 @@ export type LoadingProgressMode = "indeterminate" | "determinate";
 export function renderLoadingState(
   loadingEl: HTMLElement,
   icon: string,
-  labelKey: string,
+  labelKey: LocaleKey,
   mode: LoadingProgressMode = "indeterminate",
   /** determinate 模式进度条 id（外部用 querySelector 更新宽度） */
   barId = "ysm-progress",

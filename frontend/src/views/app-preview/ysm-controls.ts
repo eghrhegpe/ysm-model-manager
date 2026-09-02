@@ -9,7 +9,7 @@ import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import * as THREE from "three";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
@@ -77,7 +77,7 @@ export function fillYsmShotPanel(list: HTMLElement, ctx: YsmControlsContext): vo
     const item = document.createElement("button");
     item.type = "button";
     item.className = "ysm-3d-popbtn ysm-3d-popbtn--row";
-    item.textContent = "📷 " + t("preview.screenshot" + key[0].toUpperCase() + key.slice(1));
+    item.textContent = "📷 " + t(("preview.screenshot" + key[0].toUpperCase() + key.slice(1)) as LocaleKey);
     item.dataset.testid = "shot-" + key;
     item.onclick = (): void => {
       void saveShot(key);

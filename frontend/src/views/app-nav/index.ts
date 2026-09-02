@@ -5,7 +5,7 @@ import { bus, type PageName } from "../../bus.ts";
 import { resolveInitialPage, sanitizePage } from "../../core/page-store.ts";
 import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { t } from "../../core/i18n/t.ts";
+import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import { getApp } from "../../backend/app.ts";
 import { can } from "../../utils/dom/capabilities.ts";
 import { RESOURCE_TYPES, GROUP_META, GROUP_OF, GROUP_TYPE_OPTIONS, type GroupTypeOption } from "../../utils/resource/types.ts";
@@ -229,9 +229,9 @@ class AppNav extends WebComponentBase {
         ${items
           .map(
             (item) => `
-          <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${item.id}" title="${t(item.key)}" role="button" tabindex="0">
+          <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${item.id}" title="${t(item.key as LocaleKey)}" role="button" tabindex="0">
             <span class="icon">${item.icon}</span>
-            <span class="nav-text">${t(item.key)}</span>
+            <span class="nav-text">${t(item.key as LocaleKey)}</span>
           </div>
         `,
           )

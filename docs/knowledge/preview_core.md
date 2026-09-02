@@ -53,7 +53,7 @@ auto_fields:
     - cancelPendingEncodings:71
     - captureTextureName:102
     - cleanupPreview:196
-    - collectAllWebEntries:1270
+    - collectAllWebEntries:596
     - collectMenuGraph:147
     - CollectMenuGraphOpts:73
     - collectNodePredicates:86
@@ -164,7 +164,6 @@ auto_fields:
     - PreviewScene:104
     - readPmxStats:39
     - readVrmMeta:110
-    - readWebFile:212
     - reauthorizeFsaRoot:73
     - registerSchema:41
     - renderLoadingState:17
@@ -176,7 +175,7 @@ auto_fields:
     - resolveMmdZipConfig:41
     - ResolveModeBridge:158
     - ResolveModeResponse:15
-    - scanAllWebModels:911
+    - scanAllWebModels:233
     - scanWebModels:87
     - sceneRegistry:206
     - scheduleBackgroundEncoding:267
@@ -206,7 +205,7 @@ auto_fields:
     - VrmMetaInfo:89
     - VrmModelInfoCtx:173
     - VrmPanelHooks:180
-    - webFsBindings:1285
+    - webFsBindings:611
     - WorkerBridge:29
     - WorkerErrorStrategy:22
     - YSM_MODEL_SCHEMA_ID:20

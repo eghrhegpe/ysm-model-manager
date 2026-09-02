@@ -29,7 +29,7 @@ auto_fields:
     - base64ToBytes:66
     - batchStatsWebModels:173
     - browserAdapter:70
-    - collectAllWebEntries:1270
+    - collectAllWebEntries:596
     - consumeWebSearchDegraded:58
     - getAndroidBridge:24
     - getApp:18
@@ -53,11 +53,10 @@ auto_fields:
     - parseWebPath:32
     - prefetchStatsWorker:113
     - readDeclaredBackend:31
-    - readWebFile:212
     - reauthorizeFsaRoot:18
     - rescanFsaRoot:18
     - resolveWebMode:46
-    - scanAllWebModels:911
+    - scanAllWebModels:233
     - scanWebModels:87
     - selectLocalRepo:16
     - STATS_BATCH_LIMIT:19
@@ -79,7 +78,7 @@ auto_fields:
     - webCommonBindings:95
     - webCommunityBindings:247
     - webDirType:46
-    - webFsBindings:1285
+    - webFsBindings:611
     - WebModelStats:5
     - WebModelStatsWithPath:14
     - webStoreBindings:191

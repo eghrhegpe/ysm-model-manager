@@ -10,12 +10,12 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - ALL_STATIC_TOOLS:42
-    - DOC_EXTRA_SCRIPTS:96
-    - DOC_STATIC_TOOLS:76
-    - FRONTEND_STATIC_TOOLS:105
+    - DOC_EXTRA_SCRIPTS:98
+    - DOC_STATIC_TOOLS:77
+    - FRONTEND_STATIC_TOOLS:107
     - GateTool:30
-    - GO_STATIC_TOOLS:123
-    - SCRIPTS_TYPECHECK:133
+    - GO_STATIC_TOOLS:125
+    - SCRIPTS_TYPECHECK:135
   use_when:
     - 推送门禁
     - 质量门禁

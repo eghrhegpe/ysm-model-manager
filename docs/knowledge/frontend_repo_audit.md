@@ -255,7 +255,7 @@ auto_fields:
     - closeActiveDialog:111
     - closeDlg:60
     - COLLAPSIBLE:29
-    - collectAllWebEntries:1270
+    - collectAllWebEntries:596
     - collectBlobUrls:48
     - collectDropFiles:99
     - CollectedEntry:23
@@ -346,8 +346,8 @@ auto_fields:
     - decodeVoxelNbt:663
     - decodeYsmFile:180
     - decodeYsmFileFromMemory:131
-    - decodeYsmInWorker:198
-    - decodeYsmInWorkerMemfs:237
+    - decodeYsmInWorker:214
+    - decodeYsmInWorkerMemfs:253
     - decodeYsmViaWasm:22
     - DEFAULT_COMMUNITY_URL:402
     - DEFAULT_ENV_PARAMS:138
@@ -642,8 +642,8 @@ auto_fields:
     - initWorkshopPage:38
     - initWorkshopTabs:41
     - initYSMParser:55
-    - initYsmParserInWorker:54
-    - initYsmParserInWorkerMt:101
+    - initYsmParserInWorker:52
+    - initYsmParserInWorkerMt:115
     - injectSkySunScalePatch:126
     - InputHandlers:43
     - InputOptions:28
@@ -719,6 +719,10 @@ auto_fields:
     - listMmdMaterials:31
     - listSchemas:62
     - listVrmMaterials:28
+    - listWebContainerEntries:46
+    - listWebModelDirFiles:116
+    - listWebPackModels:61
+    - listWebPackModelsDetail:86
     - LITEMATIC_SLICE_SCHEMA_ID:219
     - LitematicBuildOpts:394
     - litematicMetaView:322
@@ -916,6 +920,8 @@ auto_fields:
     - parsePackMetaJson:92
     - parseShaderpackLang:135
     - parseWebDirPath:39
+    - parseWebModelDir:135
+    - parseWebModelPath:82
     - parseWebPath:32
     - parseYsmHeaderFromBytes:101
     - parseYsmJsonDirect:23
@@ -1002,10 +1008,16 @@ auto_fields:
     - QueueError:36
     - readDeclaredBackend:31
     - readFileBytes:14
+    - readPackMetaJson:20
     - readPmxStats:39
+    - readShaderpackLangJson:44
     - readVarInt:60
+    - readVoxelJson:59
     - readVrmMeta:110
-    - readWebFile:212
+    - readWebFile:19
+    - readWebPackEntry:113
+    - readWebVoxelInContainer:61
+    - readWebZipEntries:43
     - reauthorizeFsaRoot:18
     - rebuildDebug:58
     - rebuildParsedName:16
@@ -1142,7 +1154,7 @@ auto_fields:
     - saveBrowseMode:31
     - saveCfg:25
     - saveScreenshot:201
-    - scanAllWebModels:911
+    - scanAllWebModels:233
     - scanConflicts:151
     - scanModelsByType:155
     - scanSyncConflicts:243
@@ -1369,8 +1381,10 @@ auto_fields:
     - VirtualList:21
     - VirtualListOpts:8
     - VolumetricParams:65
+    - VOXEL_MAX_BLOCKS:28
     - VOXEL_RPC_BY_EXT:302
     - VoxelData:41
+    - voxelFromBase64:32
     - VoxelGroup:36
     - VrmBonePanelCtx:21
     - VrmDataPort:33
@@ -1395,12 +1409,17 @@ auto_fields:
     - WaterMode:18
     - WaterParams:21
     - WEB_ROOT:14
+    - webAnalyzeBedrockModel:248
+    - webAnalyzeBedrockModelEntry:345
     - webCliBindings:12
     - webCommonBindings:95
     - webCommunityBindings:247
     - WebComponentBase:7
+    - webContainerEntrySafe:39
     - webDirType:46
-    - webFsBindings:1285
+    - webExtractPreviewTexture:172
+    - webFindPreviewImage:137
+    - webFsBindings:611
     - WebModelStats:5
     - WebModelStatsWithPath:14
     - webStoreBindings:191

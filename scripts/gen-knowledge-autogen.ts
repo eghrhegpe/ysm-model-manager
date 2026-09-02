@@ -24,7 +24,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseFrontmatter, getList } from './_lib/frontmatter.ts';
 import { parseArgs } from './_lib/parse-args.ts';
-import { getExportedSymbolsAny } from './_lib/source-graph.ts';
 import { ROOT } from './_lib/scan-files.ts';
 import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
 
@@ -137,7 +136,6 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
  */
 function extractSymbolsWithLines(filePath: string): Array<{ symbol: string; line: number }> {
   const text = fs.readFileSync(filePath, 'utf8');
-  const lines = text.split(/\r?\n/);
   const result: Array<{ symbol: string; line: number }> = [];
 
   // 剥离块注释（保持行数不变）
@@ -306,12 +304,14 @@ function main() {
     const existing = parseAutoFields(fm);
     const existingSymbols = existing?.['symbols_with_lines'] ?? [];
 
-    // 集合比较（符号名层面，去掉行号后缀）
-    const existingSet = new Set(existingSymbols.map((s) => s.split(':')[0]));
-    const targetSet = new Set(targetSymbols.map((s) => s.split(':')[0]));
+    // 全量比较（Symbol:line 整串）——行号移动也是漂移，必须触发更新。
+    // 旧逻辑按符号名比较（s.split(':')[0]），createBus:12 → createBus:15 不报漂移，
+    // 导致 --check 假绿、write 模式不刷新，auto_fields 行号永久 stale。
+    const existingSet = new Set(existingSymbols);
+    const targetSet = new Set(targetSymbols);
 
-    const added = targetSymbols.filter((s) => !existingSet.has(s.split(':')[0]));
-    const removed = existingSymbols.filter((s) => !targetSet.has(s.split(':')[0]));
+    const added = targetSymbols.filter((s) => !existingSet.has(s));
+    const removed = existingSymbols.filter((s) => !targetSet.has(s));
 
     if (added.length === 0 && removed.length === 0 && !isFull) continue; // 一致且非 full 模式 → 跳过
 

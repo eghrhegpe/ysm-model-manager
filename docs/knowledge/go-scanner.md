@@ -7,17 +7,17 @@ source_files:
   - go/scanner/
 auto_fields:
   symbols_with_lines:
-    - ComputeFileHash:514
+    - ComputeFileHash:521
     - EffectiveCacheTTL:149
-    - GenerateRepoIndex:692
+    - GenerateRepoIndex:699
     - InvalidateCache:193
     - InvalidatePath:209
-    - ListModelAuthors:580
+    - ListModelAuthors:587
     - OnCacheInvalidated:174
     - ScanEntries:264
-    - ScanEntriesLite:537
+    - ScanEntriesLite:544
     - ScanEntriesWithHit:271
-    - ScanLocalAuthors:610
+    - ScanLocalAuthors:617
     - SetErrorSink:101
   use_when:
     - 扫描
@@ -39,8 +39,6 @@ auto_fields:
   quick_intents:
     - 扫描模型、ScanModelEntries
     - 资源类型识别、rtype 判定
-    - 去重检测、dedup
-    - 整合包同步、sync
     - 仓库审计、健康分
   quick_risk_lines:
     - 容器指纹缓存失效需调 ClearScanCache
@@ -65,13 +63,20 @@ quick_groups:
 quick_intents:
   - 扫描模型、ScanModelEntries
   - 资源类型识别、rtype 判定
-  - 去重检测、dedup
-  - 整合包同步、sync
   - 仓库审计、健康分
 quick_risk_lines:
   - 容器指纹缓存失效需调 ClearScanCache
   - resource_types.json 是唯一事实来源
 status: active
+
+  pitfalls:
+    - 容器指纹缓存失效需调 ClearScanCache——文件变更后不失效会导致缓存命中旧数据
+    - resource_types.json 是唯一事实来源——修改类型定义后必须重新扫描
+    - ScanEntries 排除 .recycle 目录——换用不排 .recycle 的 scanFn 会重新引入误判
+    - ScanEntriesWithHit 缓存 30s TTL——频繁扫描会反复重算
+    - 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空
+    - 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配
+    - Go/Rust 双扫描器口径必须一致——parity_test.go 锁三条谓词
 ---
 
 # 扫描核心 go/scanner

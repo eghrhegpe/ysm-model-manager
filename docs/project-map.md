@@ -28,7 +28,7 @@
 | `instance/` | 整合包实例同步状态组装（ADR-003 补充下沉） 〔源码 1: instance.go · 测试 2〕 |
 | `internal/` | Go 内部工具（testutil 测试工具） 〔子目录 1: testutil/〕 |
 | `launcher/` | 桌面启动器（HMCL/PCL/Minecraft）实例自动检测 〔源码 1: detect.go · 测试 1〕 |
-| `litematic/` | Litematica 投影文件 (.litematic) 解析与预览数据 〔源码 10: bedrock.go block_colors.go block_ids.go block_ids_data.go nbt.go palette.go parser.go schematic.g… · 测试 7 · 子目录 1: gen/〕 |
+| `litematic/` | Litematica 投影文件 (.litematic) 解析与预览数据 〔源码 10: bedrock.go block_colors.go block_ids.go block_ids_data.go nbt.go palette.go parser.go schematic.g… · 测试 8 · 子目录 1: gen/〕 |
 | `logs/` | 导入日志 〔源码 2: logs.go runtime.go · 测试 5〕 |
 | `packs/` | 资源包元数据读取（pack.mcmeta / 光影包 lang / 资源类型检测） 〔源码 2: classify.go mcmeta.go · 测试 6 · 子目录 1: testdata/〕 |
 | `paths/` | 路径安全 〔源码 1: safe.go · 测试 3〕 |
@@ -40,7 +40,7 @@
 | `tags/` | 模型标签持久化存储 〔源码 1: tags.go · 测试 3〕 |
 | `texture_cache/` | 纹理缓存管理（KTX2/PNG 缓存，支持后台编码与快速命中） 〔源码 1: texture_cache.go · 测试 2〕 |
 | `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） 〔源码 3: spec-bones.go spec-cube.go spec.go · 测试 7〕 |
-| `types/` | 共享类型 + 注册表 〔源码 7: bedrock.go config.go extensions.go findinst.go location.go resource.go types.go · 测试 17 · 子目录 1: testdata/〕 |
+| `types/` | 共享类型 + 注册表 〔源码 7: bedrock.go config.go extensions.go findinst.go location.go resource.go types.go · 测试 18 · 子目录 1: testdata/〕 |
 | `updater/` | 自动更新 〔源码 3: updater.go updater_other.go updater_windows.go · 测试 8〕 |
 | `version/` | 版本号 〔源码 1: version.go · 测试 1〕 |
 | `watcher/` | 文件监听 〔源码 1: watcher.go · 测试 3〕 |
@@ -64,7 +64,7 @@
 
 | 路径 | 用途 |
 |------|------|
-| `backend/` | 后端适配层：Wails 绑定入口（app.ts）+ 平台判定（platform.ts）+ 浏览器适配（browser-adapter.ts）+ IndexedDB 模型库（idb.ts） 〔源码 28 · 测试 24〕 |
+| `backend/` | 后端适配层：Wails 绑定入口（app.ts）+ 平台判定（platform.ts）+ 浏览器适配（browser-adapter.ts）+ IndexedDB 模型库（idb.ts） 〔源码 28 · 测试 26〕 |
 | `core/` | 基础设施（buttons / global-handlers / theme / context-menus） 〔源码 8: context-menu-dir-handlers.ts context-menu-file-handlers.ts context-menu-handlers.ts context-menu-… · 测试 3 · 子目录 2: handlers/ i18n/〕 |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） 〔源码 9: dnd-collector.ts dnd-shared.ts import-dnd.ts import-executor.ts oldest-models.ts pack-dnd.ts recy… · 测试 8 · 子目录 1: community/〕 |
 | `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 43 · 测试 36 · 子目录 7: adapters/ caps/ decoder/ menu/ perception/ state/ vendor/〕 |

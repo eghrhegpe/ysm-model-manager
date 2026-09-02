@@ -273,6 +273,13 @@ func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 	if dir == "" {
 		return []types.ModelEntry{}, false
 	}
+	// 符号链接根目录检查（与 go/dedup ErrSymlinkRoot 口径对齐）：
+	// scanner 走 WalkDir 会 lstat 根、读到链接目标后正常下钻，
+	// 恶意/误操作构造的链接可让扫描读到目标外文件（Path 字段泄露绝对路径）。
+	if fi, err := os.Lstat(dir); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+		emitScanError("[scanner] 扫描根目录是符号链接: %s", dir)
+		return []types.ModelEntry{}, false
+	}
 	// 记录扫描开始时间（进入时），TTL 从此时刻算，不被扫描耗时侵蚀
 	startTime := time.Now()
 retry:

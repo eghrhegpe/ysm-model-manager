@@ -29,7 +29,7 @@ auto_fields:
     - base64ToBytes:66
     - batchStatsWebModels:173
     - browserAdapter:70
-    - collectAllWebEntries:614
+    - collectAllWebEntries:622
     - consumeWebSearchDegraded:58
     - getAndroidBridge:24
     - getApp:18
@@ -79,7 +79,7 @@ auto_fields:
     - webCommonBindings:95
     - webCommunityBindings:247
     - webDirType:46
-    - webFsBindings:629
+    - webFsBindings:637
     - WebModelStats:5
     - WebModelStatsWithPath:14
     - webStoreBindings:191
@@ -117,9 +117,31 @@ auto_fields:
   quick_groups:
     - 后端桥接与数据存储
   quick_intents:
-    - IndexedDB、网页版存储
+    - IndexedDB、网页版存储、idbGet/idbSet/idbDel CRUD
+    - 网页模式切换、browser-adapter 桥接
+    - FSA 授权、本地仓库挂载
+    - zip 导入、模型扫描、Stats Worker 统计
+    - 日志环持久化、社区/工坊数据
   quick_risk_lines:
     - 事务必须接线 complete/error/abort 三事件
+    - fail-fast：未实现 binding 必须抛 WebUnsupportedError，禁止 undefined 穿透
+    - 内存降级 OOM 保护：隐私模式无界写入会撑爆堆
+    - browserAdapter Proxy 的 then 陷阱：返回 undefined 避免被误判为 thenable
+    - zip entry 路径必须经 sanitizeZipEntryPath 清洗（防 .. 穿越）
+    - DetectZipType base64 超 50MB 静默返回空，避免 atob 内存压力
+    - 多标签页互锁：db.onversionchange 关闭旧连接并置空 dbPromise；onblocked 明确 reject
+    - 前缀扫描性能门槛 R1 万级 key：用 IDBKeyRange.bound 区间定位而非全库 startsWith
+  pitfalls:
+    - 事务不接线 error/abort → Promise 永不 settle，读操作卡死
+    - 隐私模式下 IndexedDB 受限，必须自动降级到内存 Map（有限制：200 条/64MB FIFO）
+    - db.onversionchange 触发后 dbPromise 为空，后续所有操作立即失败；必须在降级路径中处理
+    - Proxy.then 陷阱：若 thenable 检测误判，浏览器会按 Promise 处理返回结果，导致链式调用崩溃
+    - idbKeys 前缀扫描边界：prefix+'\uffff' 语义是「以 prefix 开头的最大可能字符串」，不能写错范围否则漏键
+    - FSA 授权恢复：restoreFsaRootHandle 只 queryPermission，禁止 requestPermission（启动期无手势会被拦截）
+    - zip 导入双阶段分组：先粗分组再主文件目录收敛，若跳过会导致路径混乱/组名歧义
+    - 日志环写入 fire-and-forget：不 await，不阻塞主流程；若需要一致性需改架构
+    - 内存 Map 驱逐 FIFO 近似 LRU：命中当前 key 时移到队尾，但未访问的旧 key 仍在内存中
+    - 3D/预览 binding 缺失：网页版 ReadFileBytesBatch、GetPackInfo、FindPreviewImage 等可能未实现，依赖 'Foo' in browserAdapter 探测
 tests:
   - frontend/src/app-modules.test.ts
   - frontend/src/backend/app.test.ts

@@ -445,8 +445,11 @@ async function renameWebFile(oldPath: string, newName: string): Promise<void> {
   // 单次读取兼作「存在校验 + rekey 取值」，消除同 key 双读
   const val = await idbGet("files", oldKey);
   if (val === undefined) throw new Error(t("webFs.renameModelMissing", { path: oldPath }));
-  await idbSet("files", newKey, val);
-  await idbDel("files", oldKey);
+  // 单事务「写新+删旧」，避免两步非原子崩溃留双 key
+  await idbTx("files", [
+    { kind: "put", key: newKey, value: val },
+    { kind: "del", key: oldKey },
+  ]);
   // 移动按全路径 key 的 ban/tags 标记
   const newPath = oldPath.replace(/\/[^/]+$/, `/${finalName}`);
   for (const prefix of ["ban:", "tags:"]) {
@@ -454,8 +457,10 @@ async function renameWebFile(oldPath: string, newName: string): Promise<void> {
     const newMk = `${prefix}${newPath}`;
     const mv = await idbGet("config", oldMk);
     if (mv !== undefined) {
-      await idbSet("config", newMk, mv);
-      await idbDel("config", oldMk);
+      await idbTx("config", [
+        { kind: "put", key: newMk, value: mv },
+        { kind: "del", key: oldMk },
+      ]);
     }
   }
 }
@@ -504,6 +509,9 @@ async function rekeyWebModelGroup(type: string, oldName: string, newName: string
   };
   try {
     // 阶段一：写新 key（dir + file + 标记），全成功才进阶段二；按 store 单事务提交
+    // ⚠️ 读-改-写窗口：idbKeys 扫旧 key + 逐个 idbGet 读旧值与下方 idbTx 写新值
+    // 之间无事务包裹。若并发的 renameOrCopy 同时改写同一组 key，读到的旧值可能与
+    // 写入时的新值不一致。当前 web 端单用户操作，并发概率低；多 tab 并发时可能残留。
     const fileOps: IdbOp[] = [];
     const cfgOps: IdbOp[] = [];
     const dv = await idbGet("files", dirKey(type, oldName));

@@ -255,7 +255,7 @@ auto_fields:
     - closeActiveDialog:111
     - closeDlg:60
     - COLLAPSIBLE:29
-    - collectAllWebEntries:614
+    - collectAllWebEntries:622
     - collectBlobUrls:48
     - collectDropFiles:99
     - CollectedEntry:23
@@ -1417,7 +1417,7 @@ auto_fields:
     - webDirType:46
     - webExtractPreviewTexture:172
     - webFindPreviewImage:137
-    - webFsBindings:629
+    - webFsBindings:637
     - WebModelStats:5
     - WebModelStatsWithPath:14
     - webStoreBindings:191

@@ -23,7 +23,7 @@ auto_fields:
     - base64ToBytes:66
     - batchStatsWebModels:173
     - browserAdapter:70
-    - collectAllWebEntries:614
+    - collectAllWebEntries:622
     - consumeWebSearchDegraded:58
     - getAndroidBridge:24
     - getApp:18
@@ -63,7 +63,7 @@ auto_fields:
     - webCommonBindings:95
     - webCommunityBindings:247
     - webDirType:46
-    - webFsBindings:629
+    - webFsBindings:637
     - WebModelStats:18
     - webStoreBindings:191
     - WebUnsupportedError:8

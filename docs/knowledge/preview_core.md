@@ -53,7 +53,7 @@ auto_fields:
     - cancelPendingEncodings:71
     - captureTextureName:102
     - cleanupPreview:196
-    - collectAllWebEntries:614
+    - collectAllWebEntries:622
     - collectMenuGraph:147
     - CollectMenuGraphOpts:73
     - collectNodePredicates:86
@@ -206,7 +206,7 @@ auto_fields:
     - VrmMetaInfo:89
     - VrmModelInfoCtx:173
     - VrmPanelHooks:180
-    - webFsBindings:629
+    - webFsBindings:637
     - WorkerBridge:29
     - WorkerErrorStrategy:22
     - YSM_MODEL_SCHEMA_ID:20

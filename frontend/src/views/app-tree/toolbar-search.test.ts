@@ -2,7 +2,7 @@
 // 兄弟文件 toolbar-events.test.ts 已覆盖 openAdvFilterDialog 桌面主链路；本文件锁
 // 网页版分支：统计角标（showStatsBadge/hideStatsBadge/onStatsProgress 接线）、
 // Worker 降级提示（consumeWebSearchDegraded + 3s 自动隐藏）、全空筛选早退
-// （dgAfEarlyEmpty）、网页版「导入文件」（pickWebFilesAndImport 的 change 链路）。
+// （advFilterEarlyEmpty）、网页版「导入文件」（pickWebFilesAndImport 的 change 链路）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { openAdvFilterDialog, pickWebFilesAndImport } from "./toolbar-search.ts";
 import { getExts } from "../../utils/resource/extensions.ts";
@@ -83,7 +83,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("openAdvFilterDialog — 全空筛选早退（dgAfEarlyEmpty）", () => {
+describe("openAdvFilterDialog — 全空筛选早退（advFilterEarlyEmpty）", () => {
   it("弹窗取消（null）→ 无后续动作", async () => {
     const { $, vm } = setupDom();
     modalAdvFilterMock.mockResolvedValue(null);

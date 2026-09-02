@@ -50,7 +50,7 @@ auto_fields:
     - WebModelStats
   invariant_anchors:
     - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
-    - frontend/src/views/app-tree/toolbar-search.ts|dgAfIntersectPaths
+    - frontend/src/views/app-tree/toolbar-search.ts|advFilterIntersectPaths
     - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
     - frontend/src/backend/web-stats.ts|consumeWebSearchDegraded
   tests:
@@ -63,12 +63,12 @@ auto_fields:
   quick_intents:
     - 搜索、筛选、关键词 / 标签 / 数值三路交集
     - SearchModels、adv-filter、网页版降级
-    - dgAfIntersectPaths
+    - advFilterIntersectPaths
   quick_risk_lines:
     - 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑
   pitfalls:
     - 前端本地重算筛选逻辑 → 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行
-    - adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 dgAfIntersectPaths
+    - adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths
   use_when:
     - 搜索
     - 筛选
@@ -78,7 +78,7 @@ auto_fields:
     - 网页版降级
 invariant_anchors:
   - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
-  - frontend/src/views/app-tree/toolbar-search.ts|dgAfIntersectPaths
+  - frontend/src/views/app-tree/toolbar-search.ts|advFilterIntersectPaths
   - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
   - frontend/src/backend/web-stats.ts|consumeWebSearchDegraded
 tests:
@@ -91,12 +91,12 @@ quick_groups:
 quick_intents:
   - 搜索、筛选、关键词 / 标签 / 数值三路交集
   - SearchModels、adv-filter、网页版降级
-  - dgAfIntersectPaths
+  - advFilterIntersectPaths
 quick_risk_lines:
   - 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑
 pitfalls:
   - 前端本地重算筛选逻辑 → 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行
-  - adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 dgAfIntersectPaths
+  - adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths
 
 use_when:
   - 搜索
@@ -125,7 +125,7 @@ status: active
   │
   └─ 高级筛选：openAdvFilterDialog($) 编排入口
        │
-       ├─ 8 段 dgAf* 私有子函数线性流水线
+       ├─ 8 段 advFilter* 私有子函数线性流水线
        ├─ 组装三路参数
        │   ├─ 关键词 + 6 数值范围 → getApp().SearchModels()
        │   ├─ 标签列表 → getApp().ListByTag()
@@ -140,7 +140,7 @@ status: active
 
 - **三路交集语义**：`SearchModels`（关键词 + 6 数值范围一次性过滤）+ `ListByTag`（标签路径集）+ 客户端 `Set` 交集 → `_filterPaths` 白名单 → `buildTree` 精确匹配
 - **两路搜索**：inline `#srch` debounce 150ms 仅做前端 `_search` 文本匹配（轻量路径）；高级筛选走 Go 后端 + 白名单（全量路径），两者叠加生效
-- **编排入口唯一**：`openAdvFilterDialog($, vm)`（`toolbar-search.ts`），8 段 `dgAf*` 私有子函数串成线性流水线
+- **编排入口唯一**：`openAdvFilterDialog($, vm)`（`toolbar-search.ts`），8 段 `advFilter*` 私有子函数串成线性流水线
 
 ## 错误 / 降级分支（三路）
 

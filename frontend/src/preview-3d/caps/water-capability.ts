@@ -574,7 +574,7 @@ export class WaterCapability implements SceneCapability {
 
   /** 返回菜单控件定义（框架自动渲染） */
   getMenuControls(): MenuControlDef[] {
-    return gcBuildWaterGroup(this);
+    return buildWaterGroup(this);
   }
 
   /** 保存状态到 localStorage（water 键；legacy "ground" 键的水字段不再由本能力写） */
@@ -654,7 +654,7 @@ const WATER_GROUP_LOOK = "preview.waterGroupLook";   // 外观
 const WATER_GROUP_POOL = "preview.waterGroupPool";   // 水池
 const WATER_GROUP_WAVE = "preview.waterGroupWave";   // 波纹
 
-function gcBuildWaterGroup(cap: WaterCapability): MenuControlDef[] {
+function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
   const wSlider = (
     id: string,
     labelKey: string,

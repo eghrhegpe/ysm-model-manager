@@ -39,32 +39,32 @@ function hideStatsBadge(): void {
   if (statsBadge) statsBadge.style.display = "none";
 }
 
-// --- dgAf* = dialog-adv-filter 子函数（openAdvFilterDialog 按 8 段拆出）---
+// --- advFilter* = dialog-adv-filter 子函数（openAdvFilterDialog 按 8 段拆出）---
 
-function dgAfIsUnset(v: unknown): boolean {
+function advFilterIsUnset(v: unknown): boolean {
   return v == null || v === "";
 }
 
-function dgAfToNum(v: unknown): number {
+function advFilterToNum(v: unknown): number {
   return v == null ? 0 : parseInt(String(v), 10) || 0;
 }
 
-function dgAfHasNumRange(rv: AdvFilterValue): boolean {
+function advFilterHasNumRange(rv: AdvFilterValue): boolean {
   return (
-    !dgAfIsUnset(rv.minBones) ||
-    !dgAfIsUnset(rv.maxBones) ||
-    !dgAfIsUnset(rv.minCubes) ||
-    !dgAfIsUnset(rv.maxCubes) ||
-    !dgAfIsUnset(rv.minTex) ||
-    !dgAfIsUnset(rv.maxTex)
+    !advFilterIsUnset(rv.minBones) ||
+    !advFilterIsUnset(rv.maxBones) ||
+    !advFilterIsUnset(rv.minCubes) ||
+    !advFilterIsUnset(rv.maxCubes) ||
+    !advFilterIsUnset(rv.minTex) ||
+    !advFilterIsUnset(rv.maxTex)
   );
 }
 
-function dgAfHasRange(rv: AdvFilterValue, kw: string): boolean {
-  return dgAfHasNumRange(rv) || !!kw;
+function advFilterHasRange(rv: AdvFilterValue, kw: string): boolean {
+  return advFilterHasNumRange(rv) || !!kw;
 }
 
-async function dgAfReadCurAndOpenDialog($: $Id): Promise<AdvFilterValue | null> {
+async function advFilterReadCurAndOpenDialog($: $Id): Promise<AdvFilterValue | null> {
   const $v = (id: string): string => ($(id) as HTMLInputElement | null)?.value || "";
   const cur: Record<string, string> = {
     keyword: $v("srch"),
@@ -87,18 +87,18 @@ async function dgAfReadCurAndOpenDialog($: $Id): Promise<AdvFilterValue | null> 
   return result as AdvFilterValue;
 }
 
-interface dgAfBackfillResult {
+interface advFilterBackfillResult {
   kw: string;
   hasTag: boolean;
   hasNumRange: boolean;
   isAllEmpty: boolean;
 }
 
-function dgAfBackfillInlinePanel(
+function advFilterBackfillInlinePanel(
   $: $Id,
   rv: AdvFilterValue,
   vm: AppTree,
-): dgAfBackfillResult {
+): advFilterBackfillResult {
   const setVal = (id: string, v: unknown): void => {
     const el = $(id) as HTMLInputElement | null;
     if (el) el.value = v == null ? "" : String(v);
@@ -116,25 +116,25 @@ function dgAfBackfillInlinePanel(
   }
   const kw = srchEl?.value || "";
   const hasTag = !!(rv.tag && !(rv.tag === ""));
-  const hasNumRange = dgAfHasNumRange(rv);
+  const hasNumRange = advFilterHasNumRange(rv);
   const isAllEmpty =
     !kw &&
     !hasTag &&
-    dgAfIsUnset(rv.minBones) &&
-    dgAfIsUnset(rv.maxBones) &&
-    dgAfIsUnset(rv.minCubes) &&
-    dgAfIsUnset(rv.maxCubes) &&
-    dgAfIsUnset(rv.minTex) &&
-    dgAfIsUnset(rv.maxTex);
+    advFilterIsUnset(rv.minBones) &&
+    advFilterIsUnset(rv.maxBones) &&
+    advFilterIsUnset(rv.minCubes) &&
+    advFilterIsUnset(rv.maxCubes) &&
+    advFilterIsUnset(rv.minTex) &&
+    advFilterIsUnset(rv.maxTex);
   return { kw, hasTag, hasNumRange, isAllEmpty };
 }
 
-function dgAfEarlyEmpty(vm: AppTree): void {
+function advFilterEarlyEmpty(vm: AppTree): void {
   vm._filterPaths = null;
   vm._renderTree();
 }
 
-async function dgAfFetchTagPaths(tag: string): Promise<Set<string> | null> {
+async function advFilterFetchTagPaths(tag: string): Promise<Set<string> | null> {
   try {
     const { ListByTag } = await getApp();
     const paths = await ListByTag(tag);
@@ -149,14 +149,14 @@ async function dgAfFetchTagPaths(tag: string): Promise<Set<string> | null> {
   }
 }
 
-type dgAfSearchResult = Set<string> | "cancel" | "error";
+type advFilterSearchResult = Set<string> | "cancel" | "error";
 
-async function dgAfSearchModelPaths(
+async function advFilterSearchModelPaths(
   vm: AppTree,
   rv: AdvFilterValue,
   kw: string,
   hasNumRange: boolean,
-): Promise<dgAfSearchResult> {
+): Promise<advFilterSearchResult> {
   const filesRoot = vm._filesRoot;
   if (!filesRoot) {
     bus.emit("toast:show", {
@@ -179,12 +179,12 @@ async function dgAfSearchModelPaths(
     const results = await SearchModels(
       filesRoot,
       kw,
-      dgAfToNum(rv.minBones),
-      dgAfToNum(rv.maxBones),
-      dgAfToNum(rv.minCubes),
-      dgAfToNum(rv.maxCubes),
-      dgAfToNum(rv.minTex),
-      dgAfToNum(rv.maxTex),
+      advFilterToNum(rv.minBones),
+      advFilterToNum(rv.maxBones),
+      advFilterToNum(rv.minCubes),
+      advFilterToNum(rv.maxCubes),
+      advFilterToNum(rv.minTex),
+      advFilterToNum(rv.maxTex),
     );
     return results?.length ? new Set(results.map((r) => r.path)) : new Set();
   } catch (e: unknown) {
@@ -203,7 +203,7 @@ async function dgAfSearchModelPaths(
   }
 }
 
-function dgAfWarnWebDegraded(hasNumRange: boolean): void {
+function advFilterWarnWebDegraded(hasNumRange: boolean): void {
   if (isWebPlatform() && hasNumRange && consumeWebSearchDegraded()) {
     bus.emit("toast:show", {
       msg: t("tree.webStatsDegraded"),
@@ -215,7 +215,7 @@ function dgAfWarnWebDegraded(hasNumRange: boolean): void {
   }
 }
 
-function dgAfIntersectPaths(
+function advFilterIntersectPaths(
   vm: AppTree,
   tagPaths: Set<string> | null,
   modelPaths: Set<string> | null,
@@ -231,7 +231,7 @@ function dgAfIntersectPaths(
   }
 }
 
-function dgAfToastAndRender(vm: AppTree): void {
+function advFilterToastAndRender(vm: AppTree): void {
   const size = vm._filterPaths?.size ?? 0;
   if (size > 0) {
     bus.emit("toast:show", {
@@ -252,34 +252,34 @@ function dgAfToastAndRender(vm: AppTree): void {
 // 打开弹窗版筛选器（应用结果到 inline 面板 + 后端搜索）
 export async function openAdvFilterDialog($: $Id, vm: AppTree): Promise<void> {
   dbg("adv-filter", "open:start", { filesRoot: vm._filesRoot });
-  const rv = await dgAfReadCurAndOpenDialog($);
+  const rv = await advFilterReadCurAndOpenDialog($);
   if (!rv) return;
 
-  const { kw, hasTag, hasNumRange, isAllEmpty } = dgAfBackfillInlinePanel($, rv, vm);
+  const { kw, hasTag, hasNumRange, isAllEmpty } = advFilterBackfillInlinePanel($, rv, vm);
   if (isAllEmpty) {
-    dgAfEarlyEmpty(vm);
+    advFilterEarlyEmpty(vm);
     return;
   }
 
   let tagPaths: Set<string> | null = null;
   if (hasTag) {
-    tagPaths = await dgAfFetchTagPaths(rv.tag!);
+    tagPaths = await advFilterFetchTagPaths(rv.tag!);
   }
 
   let modelPaths: Set<string> | null = null;
-  if (dgAfHasRange(rv, kw)) {
-    const r = await dgAfSearchModelPaths(vm, rv, kw, hasNumRange);
+  if (advFilterHasRange(rv, kw)) {
+    const r = await advFilterSearchModelPaths(vm, rv, kw, hasNumRange);
     if (r === "cancel") return;
     if (r === "error") {
-      dgAfEarlyEmpty(vm);
+      advFilterEarlyEmpty(vm);
       return;
     }
     modelPaths = r;
   }
 
-  dgAfWarnWebDegraded(hasNumRange);
-  dgAfIntersectPaths(vm, tagPaths, modelPaths);
-  dgAfToastAndRender(vm);
+  advFilterWarnWebDegraded(hasNumRange);
+  advFilterIntersectPaths(vm, tagPaths, modelPaths);
+  advFilterToastAndRender(vm);
 }
 
 // 网页版「导入文件」：桌面走 SelectImportFile（Wails 原生对话框）；网页版无该 binding →

@@ -25,7 +25,7 @@ import { collectSceneStats, type SceneStats } from "../scene-stats.ts";
 import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { materialNodes } from "./material-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
-import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { BoneTree } from "../bone-tools.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 
@@ -559,6 +559,28 @@ export interface VrmMenuItemsOpts {
   perception?: {
     state: PerceptionState;
     caps: PerceptionCapability[];
+  };
+}
+
+/**
+ * ADR-161 §2.5 工厂：VRM 挂载主入口（make<Format>Adapter 命名章程）。
+ * 依赖（IO/面板 hooks）由视图层组装经 deps 注入——adapters 层不反向依赖 views。
+ * 用法：`const adapter = makeVrmAdapter({ port, readFileBytes, panels, listAllFilePaths }); mount3D(adapter, path)`
+ */
+export interface VrmAdapterDeps {
+  /** 诊断端口（addOpLog 等） */
+  port: VrmDataPort;
+  /** 包内文件读取（view-shell 注入） */
+  readFileBytes: (p: string) => Promise<string | null>;
+  /** 面板 UI hooks（model/shot/play 菜单节点，视图层组装） */
+  panels?: VrmPanelHooks;
+  /** VRMA 动作扫描文件枚举（可选） */
+  listAllFilePaths?: (dir: string) => Promise<string[] | null>;
+}
+export function makeVrmAdapter(deps: VrmAdapterDeps): PreviewAdapter {
+  return {
+    id: "vrm",
+    build: (ctx, path) => buildVrmScene(ctx, path, deps.port, deps.readFileBytes, deps.panels, deps.listAllFilePaths),
   };
 }
 

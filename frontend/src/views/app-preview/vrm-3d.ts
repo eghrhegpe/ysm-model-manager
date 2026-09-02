@@ -4,7 +4,7 @@
 // 公开符号，index.ts 与既有测试无需改动。
 
 import { mount3D, cleanupPreview, invalidatePreview, switchPreview, type PreviewAdapter, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { buildVrmScene, type VrmPanelHooks } from "../../preview-3d/adapters/vrm-adapter.ts";
+import { makeVrmAdapter, type VrmPanelHooks } from "../../preview-3d/adapters/vrm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
 import { playNodes } from "./mmd-controls.ts";
@@ -35,10 +35,13 @@ const vrmPanelHooks: VrmPanelHooks = {
   playNodes,
 };
 
-const vrmAdapter: PreviewAdapter = {
-  id: "vrm",
-  build: (ctx, path) => buildVrmScene(ctx, path, { addOpLog }, readFileBytes, vrmPanelHooks, listAllFilePaths),
-};
+// ADR-161 §2.5：挂载入口统一走 make<Format>Adapter 工厂（vrm-adapter.ts），本文件仅组装 deps
+const vrmAdapter: PreviewAdapter = makeVrmAdapter({
+  port: { addOpLog },
+  readFileBytes,
+  panels: vrmPanelHooks,
+  listAllFilePaths,
+});
 
 /** 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 */
 export async function createVrm3D(path: string, opts?: Mount3DOptions): Promise<void> {

@@ -77,7 +77,7 @@ import {
 } from "./mmd-utils.ts";
 import { bytesToBase64, prepareMmdZipInput } from "./mmd-zip-overlay.ts";
 import { morphNodes } from "./morph-controls.ts";
-import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import {
   type PerceptionCapability,
   type PerceptionState,
@@ -1614,6 +1614,25 @@ export interface MmdMenuItemsOpts {
   perception?: {
     state: PerceptionState;
     caps: PerceptionCapability[];
+  };
+}
+
+/**
+ * ADR-161 §2.5 工厂：MMD 挂载主入口（make<Format>Adapter 命名章程）。
+ * dataPort 以工厂函数注入（views mmd-data-port 组装，每次 build 现取）——
+ * adapters 层不反向依赖 views。
+ * 用法：`const adapter = makeMmdAdapter({ dataPort: () => makeMmdDataPort("mmd-preview"), panels }); mount3D(adapter, path)`
+ */
+export interface MmdAdapterDeps {
+  /** PMX 数据端口工厂（views mmd-data-port；惰性、每 build 现取） */
+  dataPort: () => Promise<MmdDataPort>;
+  /** 面板 UI hooks（model/shot/play 菜单节点，视图层组装） */
+  panels?: MmdPanelHooks;
+}
+export function makeMmdAdapter(deps: MmdAdapterDeps): PreviewAdapter {
+  return {
+    id: "mmd",
+    build: async (ctx, path) => buildMmdScene(ctx, path, await deps.dataPort(), deps.panels),
   };
 }
 

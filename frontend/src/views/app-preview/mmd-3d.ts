@@ -3,7 +3,7 @@
 // invalidateMmdPreview 公开符号，index.ts 分发对齐 vrm-3d.ts 模式。
 
 import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { buildMmdScene, type MmdPanelHooks } from "../../preview-3d/adapters/mmd-adapter.ts";
+import { makeMmdAdapter, type MmdPanelHooks } from "../../preview-3d/adapters/mmd-adapter.ts";
 import { makeMmdDataPort } from "./mmd-data-port.ts";
 import { fillMmdModelPanel, fillMmdShotPanel, mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
@@ -19,10 +19,11 @@ const mmdPanelHooks: MmdPanelHooks = {
   playNodes,
 };
 
-const mmdAdapter: PreviewAdapter = {
-  id: "mmd",
-  build: async (ctx, path) => buildMmdScene(ctx, path, await makeMmdDataPort("mmd-preview"), mmdPanelHooks),
-};
+// ADR-161 §2.5：挂载入口统一走 make<Format>Adapter 工厂（mmd-adapter.ts），本文件仅组装 deps
+const mmdAdapter: PreviewAdapter = makeMmdAdapter({
+  dataPort: () => makeMmdDataPort("mmd-preview"),
+  panels: mmdPanelHooks,
+});
 
 /** 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） */
 export async function createMmd3D(path: string, opts?: Mount3DOptions): Promise<void> {

@@ -171,19 +171,6 @@ export function extractZip(data: Uint8Array): ExtractResult {
 }
 
 /**
- * 尝试 GBK 解码 fflateKey 的原始字节（当 gpf bit 11 未设时）。
- * 返回 { realName, fflateKey } 对，供调用方把 entries 的 key 从 fflateKey 重映射到 realName。
- * 解码失败（非 GBK 字节序列）→ 退回 fflateKey 原值。
- */
-export function gbkDecodeEntry(m: ZipEntryMeta): { realName: string; fflateKey: string } {
-  if (m.gpfUtf8) {
-    return { realName: m.fflateKey, fflateKey: m.fflateKey };
-  }
-  const real = decodeGbkBytes(m.nameBytes);
-  return { realName: real ?? m.fflateKey, fflateKey: m.fflateKey };
-}
-
-/**
  * detectZipType：扫描 ZIP local file header 文件名段（不解压数据），
  * 识别资源类型。Go DetectZipType 的 1:1 TS 平移
  * （go/importer/importer_file.go:122-151）。
@@ -254,22 +241,4 @@ function lowerLatin1(bytes: Uint8Array): string {
     s += c >= 0x41 && c <= 0x5a ? String.fromCharCode(c + 0x20) : String.fromCharCode(c);
   }
   return s;
-}
-
-/**
- * GBK 字节解码（简化版）。
- * 前端无完整 GBK 码表（~23000 字，嵌入 ~150KB）——
- * YSM 模型 ZIP 内文件名几乎全为 ASCII（ysm.json / models/*.json / textures/*.png），
- * 中文文件名仅在 Windows 创建者目录名等边缘场景出现。
- *
- * 策略：返回 {realName, fflateKey} 对。
- * - gpfUtf8=true → realName = fflateKey（fflate UTF-8 解码已正确）
- * - gpfUtf8=false → realName = fflateKey（降级透传，数据访问不受影响）
- *   调用方如需真名，可用 nameBytes 自行 GBK 解码
- *   （例如通过 Go 后端 CachedCreatorAvatar 的 SafeName 路径，或引入完整 GBK 表）
- */
-function decodeGbkBytes(bytes: Uint8Array): string | null {
-  if (bytes.length === 0) return "";
-  // 前端无完整 GBK 码表：返回 null 触发降级（gbkDecodeEntry 回退 fflateKey）
-  return null;
 }

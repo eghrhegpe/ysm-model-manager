@@ -34,7 +34,7 @@ import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/model
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
 // rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
 import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
-import { arrayBufferToBase64, base64ToBytes, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
+import { arrayBufferToBase64, base64ToBytes, u8ToBase64, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
 // R2 导入增强：detectZipType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
 import { extractZip, detectZipType } from "./extract.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
@@ -328,7 +328,7 @@ async function readWebVoxelInContainer(
     const { entries } = extractZip(bytes);
     const raw = findZipEntry(entries, entry);
     if (!raw) return null;
-    const vd = voxelFromBase64(zipEntryToBase64(raw), view);
+    const vd = voxelFromBase64(u8ToBase64(raw), view);
     return vd;
   } catch {
     return null;
@@ -406,12 +406,6 @@ async function readShaderpackLangJson(path: string): Promise<{ name: string; ent
     return { name: "", entries: {} };
   }
 }
-/** Uint8Array → base64（fllate entry 可能共享底层 buffer，先拷贝再编码） */
-function zipEntryToBase64(bytes: Uint8Array): string {
-  const copy = new Uint8Array(bytes.length);
-  copy.set(bytes);
-  return arrayBufferToBase64(copy.buffer);
-}
 
 /** 资源包 3D：ListPackModels 枚举 zip 内条目（对齐 Go ListPackModels 契约，返回 string[]） */
 async function listWebPackModels(path: string): Promise<string[]> {
@@ -474,7 +468,7 @@ async function readWebPackEntry(path: string, entry: string): Promise<string> {
     if (!bytes) return "";
     const { entries } = extractZip(bytes);
     const raw = findZipEntry(entries, entry);
-    return raw ? zipEntryToBase64(raw) : "";
+    return raw ? u8ToBase64(raw) : "";
   } catch {
     return "";
   }
@@ -486,7 +480,7 @@ function imageMimeOfPath(p: string): string {
 }
 
 function imageDataUri(bytes: Uint8Array, mime = "image/png"): string {
-  return `data:${mime};base64,${zipEntryToBase64(bytes)}`;
+  return `data:${mime};base64,${u8ToBase64(bytes)}`;
 }
 
 /** 从 IDB 读一个图片文件并转 data URI；不存在/读取失败返回 "" */
@@ -1315,14 +1309,10 @@ export const webFsBindings = {
     if (base64Data.length > Math.ceil(MAX_IMPORT_BYTES / 3) * 4) {
       return Promise.resolve("");
     }
-    try {
-      const bin = atob(base64Data);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      return Promise.resolve(detectZipType(bytes) || "");
-    } catch {
-      return Promise.resolve("");
-    }
+    // base64 → 字节统一走 web-common.base64ToBytes（复用容错原语，非法输入返回 null → ""）
+    const bytes = base64ToBytes(base64Data);
+    if (!bytes) return Promise.resolve("");
+    return Promise.resolve(detectZipType(bytes) || "");
   },
   // ADR-070 M1：蓝图/投影详情面板恢复（原 fail-fast 报「读取失败」）。
   // TS 平移 go/litematic/parser.go 三函数（ParseMeta/ParseSchematicSummary/ParseNbtStructure），

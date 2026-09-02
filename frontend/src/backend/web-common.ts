@@ -74,6 +74,13 @@ export function base64ToBytes(b64: string): Uint8Array | null {
   }
 }
 
+/** Uint8Array → base64（先拷贝隔离 view 偏移共享 buffer，再对齐 arrayBufferToBase64 分块防栈溢出） */
+export function u8ToBase64(bytes: Uint8Array): string {
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return arrayBufferToBase64(copy.buffer);
+}
+
 // ===== 基础 binding 片段（Top 6 注册表驱动：browser-adapter.ts 只做 {...} 装配）=====
 // 网页版无 Go 侧版本/3D 通道，这些 binding 为占位或常量实现；LoadResourceTypes
 // 依赖 resource_types.json（vite 构建期内联，与 extensions.ts 同源），放本文件避免

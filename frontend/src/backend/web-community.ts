@@ -12,7 +12,7 @@ import workshopSitesJson from "../../../workshop_sites.json" with { type: "json"
 import { decodeYsmFile } from "../wasm/ysm-parser.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 import { scanWebModels, readWebFile, collectAllWebEntries, typeFromWebDir } from "./web-fs.ts";
-import { WEB_ROOT, arrayBufferToBase64 } from "./web-common.ts";
+import { WEB_ROOT, arrayBufferToBase64, base64ToBytes } from "./web-common.ts";
 import { safeGet, safeSet, safeRemove } from "../utils/dom/storage.ts";
 import { stripDisableSuffix } from "../utils/dom/display.ts";
 
@@ -118,12 +118,9 @@ async function batchExtractCreatorAvatars(): Promise<Record<string, string>> {
 
       const b64 = await readWebFile(e.Path);
       if (!b64) continue;
-      let bytes: Uint8Array;
-      try {
-        bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-      } catch {
-        continue;
-      }
+      // base64 → 字节统一走 web-common.base64ToBytes（非法输入返回 null → 跳过该模型）
+      const bytes = base64ToBytes(b64);
+      if (!bytes) continue;
       try {
         const files = await decodeYsmFile(bytes);
         // 优先找 avatar/ 目录下首张图（对齐 Go ExtractAvatarURI 降级分支）

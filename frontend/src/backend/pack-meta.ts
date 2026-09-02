@@ -8,7 +8,7 @@
 //   ReadShaderpackLang 失败 → {"name":"","entries":{}}
 // 限额对齐 go/packs/mcmeta.go：pack.mcmeta 1MB / pack.png 10MB / lang 1MB。
 
-import { arrayBufferToBase64 } from "./web-common.ts";
+import { u8ToBase64 } from "./web-common.ts";
 
 // 对齐 go/packs/mcmeta.go maxMcmetaSize / maxPackPng / maxLangSize
 const MAX_MCMETA_SIZE = 1 << 20;
@@ -25,13 +25,6 @@ export function findZipEntry(entries: Record<string, Uint8Array>, lowName: strin
     if (key.toLowerCase() === lowName) return entries[key];
   }
   return null;
-}
-
-/** Uint8Array → base64（对齐 arrayBufferToBase64 分块防栈溢出；拷贝隔离 view 偏移共享 buffer） */
-function u8ToBase64(bytes: Uint8Array): string {
-  const copy = new Uint8Array(bytes.length);
-  copy.set(bytes);
-  return arrayBufferToBase64(copy.buffer);
 }
 
 /** 剥离 UTF-8 BOM（PowerShell 写入的 JSON 可能带 EF BB BF 前缀，对齐 go fsutil.StripBOM） */

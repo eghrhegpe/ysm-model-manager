@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { zipSync, strToU8 } from "fflate";
 import { b64ToBytes, bytesToBase64 } from "../base64.ts";
-import { extractZip, gbkDecodeEntry } from "../../backend/extract.ts";
+import { extractZip } from "../../backend/extract.ts";
 import {
   resolveMmdZipConfig,
   makeZipOverlayPort,
@@ -160,7 +160,9 @@ describe("ZipOverlayPort 三条路由", () => {
   const entryPaths: string[] = [];
   const seen = new Set<string>();
   for (const meta of realExtract.metas) {
-    const { realName, fflateKey } = gbkDecodeEntry(meta);
+    // 前端无 GBK 码表：文件名以 fflateKey 原值（Latin-1 解码）直接使用
+    const realName = meta.fflateKey;
+    const fflateKey = meta.fflateKey;
     const bytes = realExtract.entries[fflateKey];
     if (!bytes || !realName) continue;
     const key = realName.toLowerCase().replace(/\\/g, "/");

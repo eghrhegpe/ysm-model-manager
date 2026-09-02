@@ -13,8 +13,9 @@
 // - 超出 100MB 跳过（对齐 import-dnd oversize 过滤）
 import { idbGet, idbSet, idbDel } from "./idb.ts";
 import { MAX_IMPORT_BYTES } from "./web-common.ts";
-// R2 导入增强：ZIP 解压（extractZip 解出文件 + gbkDecodeEntry 还原中文名）
-import { extractZip, gbkDecodeEntry } from "./extract.ts";
+// R2 导入增强：ZIP 解压（extractZip 解出文件；文件名以 fflateKey 入库——
+// 前端无 GBK 码表，非 UTF-8 中文名降级透传 fflateKey，数据访问不受影响）
+import { extractZip } from "./extract.ts";
 import { dirKey, fileKey, mainFileRank, MAIN_FILE_RANK_TYPE } from "./web-fs-shared.ts";
 
 /**
@@ -76,8 +77,8 @@ async function expandZipFiles(files: File[]): Promise<File[]> {
       // 安全审计：先用 sanitizeZipEntryPath 清洗路径，再判断公共前缀
       // 避免恶意 zip 的 `..` 段干扰 findCommonTopDir（CodeReview 第五轮发现）
       const sanitizedMetas = metas.map((m) => {
-        const { realName } = gbkDecodeEntry(m);
-        return { fflateKey: realName ? (sanitizeZipEntryPath(realName) ?? "") : "", _meta: m };
+        // 文件名以 fflateKey 原值入库（前端无 GBK 码表，非 UTF-8 中文名降级透传）
+        return { fflateKey: sanitizeZipEntryPath(m.fflateKey) ?? "", _meta: m };
       }).filter((m) => m.fflateKey !== "");
       // 检测 zip 内是否有公共顶层目录（如 "狐狸/ysm.json" → 公共前缀 "狐狸/"）
       // 扁平 zip（"ysm.json" + "models/main.json"）无公共前缀 → 用 zipStem 防碎片化
@@ -105,7 +106,7 @@ async function expandZipFiles(files: File[]): Promise<File[]> {
         out.push(...expanded);
       }
       // GBK 中文名降级提示：gpf 未设时 fflateKey 为 Latin-1 乱码，
-      // 前端无 GBK 码表无法解码真名——仅 dev 日志，用户端用 modelPath 不影响预览
+      // 前端无 GBK 码表无法解码真名——仅提示，用户端用 modelPath 不影响预览
       if (metas.length > 0 && metas.some((m) => !m.gpfUtf8)) {
         console.warn("[web] ZIP 含非 UTF-8 文件名（可能为 GBK），解压后文件名以 fflateKey 原值入库（中文可能乱码）");
       }

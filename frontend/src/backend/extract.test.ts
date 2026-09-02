@@ -6,8 +6,6 @@ import {
   detectZipType,
   parseZipCentralDir,
   extractZip,
-  gbkDecodeEntry,
-  type ZipEntryMeta,
   type ZipType,
 } from "./extract.ts";
 
@@ -397,28 +395,10 @@ describe("extractZip", () => {
   });
 });
 
-// --- gbkDecodeEntry ---
-
-describe("gbkDecodeEntry", () => {
-  it("UTF-8 文件名 → 原样返回", () => {
-    const meta: ZipEntryMeta = {
-      fflateKey: "ysm.json",
-      nameBytes: new TextEncoder().encode("ysm.json"),
-      gpfUtf8: true,
-      compression: 0,
-      compressedSize: 0,
-      uncompressedSize: 0,
-    };
-    const r = gbkDecodeEntry(meta);
-    expect(r.realName).toBe("ysm.json");
-    expect(r.fflateKey).toBe("ysm.json");
-  });
-});
-
 // --- 集成场景 ---
 
-describe("集成：GBK 中文文件名 ZIP 解压", () => {
-  it("GBK 原始字节 → parseZipCentralDir 正确提取 nameBytes → gbkDecodeEntry 尝试解码", () => {
+describe("集成：非 UTF-8 中文文件名 ZIP 解压（GBK 字节 → 降级 fflateKey）", () => {
+  it("parseZipCentralDir 正确提取 nameBytes → fflateKey Latin-1 降级", () => {
     // 模拟 Windows GBK 文件名 "角色.png" 的原始字节
     // 角: 0xB1D6 (GBK)  色: 0xB4DC (GBK)  .:0x2E  p:0x70  n:0x6E  g:0x47
     const gbkBytes = new Uint8Array([0xB1, 0xD6, 0xB4, 0xDC, 0x2E, 0x70, 0x6E, 0x67]);
@@ -428,19 +408,14 @@ describe("集成：GBK 中文文件名 ZIP 解压", () => {
 
     const metas = parseZipCentralDir(zip);
     expect(metas).toHaveLength(1);
-    // nameBytes 是原始 GBK 字节
+    // nameBytes 是原始 GBK 字节（保留供调用方自行解码，如引入完整 GBK 码表后还原真名）
     expect(metas[0].nameBytes).toEqual(gbkBytes);
     // gpfUtf8 = false（gpf bit 11 未设）
     expect(metas[0].gpfUtf8).toBe(false);
-    // fflateKey 是 Latin-1 解码的乱码（charCode = 字节值）
+    // fflateKey 是 Latin-1 解码的乱码（charCode = 字节值）——
+    // 前端无 GBK 码表，文件名一律以 fflateKey 原值入库（数据可访问、key 唯一）
     expect(metas[0].fflateKey).toBe(
       String.fromCharCode(0xB1, 0xD6, 0xB4, 0xDC) + ".png"
     );
-
-    // gbkDecodeEntry：gpf 未设时前端无 GBK 码表 → 降级返回 fflateKey 原值
-    // （保证数据可访问、key 唯一，nameBytes 保留原始字节供调用方自行解码）
-    const decoded = gbkDecodeEntry(metas[0]);
-    expect(decoded.realName).toBe(metas[0].fflateKey);
-    expect(decoded.fflateKey).toBe(metas[0].fflateKey);
   });
 });

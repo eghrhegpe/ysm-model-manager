@@ -61,11 +61,14 @@ describe("契约 B1 — SearchModels 关键词口径对齐 Go app_scan.go:124", 
     void p;
   });
 
-  it("关键词大小写不敏感口径一致（Go: strings.ToLower 后 Contains；web 同口径，应 PASS）", async () => {
-    await importOne("狐狸.ysm");
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "HU", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
-    // 仅验证大小写匹配口径与 Go 一致（不依赖具体模型名；用已存在的文件名片段）
-    expect(Array.isArray(hit)).toBe(true);
+  it("关键词大小写不敏感口径一致（Go: strings.ToLower 后 Contains；web 同口径）", async () => {
+    await importOne("Fox.ysm");
+    // 小写关键词应命中大写文件名（ToLower 折叠：'fox' 命中 'Fox.ysm'）
+    const hitLower = (await browserAdapter.SearchModels("/web/ysm", "fox", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(hitLower.map((h) => h.name)).toContain("Fox.ysm");
+    // 大写关键词同样命中（Go: strings.ToLower(keyword) 后比较，大小写均折叠）
+    const hitUpper = (await browserAdapter.SearchModels("/web/ysm", "FOX", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(hitUpper.map((h) => h.name)).toContain("Fox.ysm");
   });
 });
 

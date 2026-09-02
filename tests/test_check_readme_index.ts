@@ -12,10 +12,11 @@
  * 运行：node tests/test_check_readme_index.mjs
  */
 import assert from 'node:assert';
+import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { missingFromReadme } from '../scripts/check-readme-index.ts';
+import { missingFromReadme, findReadmeRow, assertionViolations } from '../scripts/check-readme-index.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -82,6 +83,37 @@ check('门禁拦截路径：漂移 README 缺脚本 → rc=1 且列出缺失', (
     const missing = missingFromReadme([first], fakeReadme);
     assert.deepEqual(missing, [first], '空 README 应报所有脚本缺失（拦截路径真实执行）');
   }
+});
+
+// ── ADR-158：README 描述过时断言（提及了但说错了）──
+check('findReadmeRow：定位 commit-with-check 表格行', () => {
+  const readme = fs.readFileSync(path.join(ROOT, 'scripts/README.md'), 'utf8');
+  const row = findReadmeRow(readme, 'commit-with-check.ts');
+  assert.ok(row, '应能定位 commit-with-check.ts 表格行');
+  assert.ok(row!.includes('_lib/commit-check'), '当前行应含新委托模块 _lib/commit-check');
+});
+
+check('assertionViolations：当前 README 应 0 违规', () => {
+  const readme = fs.readFileSync(path.join(ROOT, 'scripts/README.md'), 'utf8');
+  const violations = assertionViolations(readme);
+  assert.deepEqual(violations, [], `当前 README 不应有过时描述，实际：${violations.join(' | ')}`);
+});
+
+check('assertionViolations：回退旧措辞应被捕获（mustNotInclude 命中 + mustInclude 缺失）', () => {
+  const staleRow =
+    '| `commit-with-check.ts` | xxx | **验证全部委托 pre-push-gate（单一源头）**，门禁全绿才 commit |';
+  const readme = `前言\n\n${staleRow}\n\n后记`;
+  const violations = assertionViolations(readme);
+  assert.ok(violations.length >= 2, `应捕获 commit-with-check 的过时描述（mustNotInclude + mustInclude），实际：${violations.join(' | ')}`);
+  assert.ok(violations.some((v) => v.includes('验证全部委托 pre-push-gate')), '应捕获 mustNotInclude 命中');
+  assert.ok(violations.some((v) => v.includes('_lib/commit-check')), '应捕获 mustInclude 缺失');
+});
+
+check('全量扫描当前仓库应 0 描述违规（rc=0 + --json 含 assertionViolations）', () => {
+  const { rc, out } = runCheck(['--json']);
+  const data = JSON.parse(out);
+  assert.equal(rc, 0, `预期 rc=0，实际 ${rc}；输出：${out.slice(0, 600)}`);
+  assert.equal(data._summary.assertionViolations, 0, `预期 0 描述违规，实际 ${data._summary.assertionViolations}`);
 });
 
 if (fails.length) {

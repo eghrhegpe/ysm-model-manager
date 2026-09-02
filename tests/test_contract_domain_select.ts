@@ -18,7 +18,7 @@
  * 退出码：0 = 通过；1 = 失败。
  */
 import assert from 'node:assert';
-import { collectContractTests, selectContractTests, CONTRACT_TEST_DOMAINS } from '../scripts/_lib/contract-tests.ts';
+import { collectContractTests, selectContractTests, CONTRACT_TEST_DOMAINS, CONTRACT_TEST_TARGETS } from '../scripts/_lib/contract-tests.ts';
 
 const failures = [];
 let assertCount = 0;
@@ -80,6 +80,22 @@ for (const m of MIXED) {
 check(selectContractTests([]).length === 0, '空变更域应返回空集');
 check(selectContractTests(['other']).length === 0, '纯 other 域不应触发契约测试');
 
+// ---- 7. 按文件精确裁剪（提供 changedFiles）：tests 域不再全量 ----
+const precise = selectContractTests(['tests'], ['scripts/_lib/commit-temp-index.ts']);
+check(precise.length < all.length, `按文件裁剪：应小于全量（${all.length}），实为 ${precise.length}`);
+check(has(precise, 'test_commit_temp_index.ts'), '改 commit-temp-index 应触发 test_commit_temp_index');
+check(!has(precise, 'test_domain_classify.ts'), '改 commit-temp-index 不应触发 test_domain_classify');
+check(has(precise, 'test_scripts_json.ts'), '宽哨兵 test_scripts_json 应随 scripts 改动触发');
+// fail-safe：改动未被任何 tests 域测试覆盖 → 回落全量
+const fallback = selectContractTests(['tests'], ['tests/unknown-xyz.ts']);
+check(fallback.length === all.length, `无覆盖改动应回落全量，实为 ${fallback.length}`);
+// 无文件信息同样回落全量（等价原行为保守策略）
+const noFiles = selectContractTests(['tests'], []);
+check(noFiles.length === all.length, `无文件信息应回落全量，实为 ${noFiles.length}`);
+// 非 tests 域 + changedFiles 不影响按域子集（changedFiles 仅作用于 tests 域裁剪）
+const goWithFiles = selectContractTests(['go'], ['go/internal/app/foo.go']);
+check(goWithFiles.length === goSet.length, '非 tests 域按文件裁剪应保持按域子集');
+
 // ---- 5. 映射表完整性：collectContractTests 全部文件必须登记 CONTRACT_TEST_DOMAINS ----
 for (const f of all) {
   check(Array.isArray(CONTRACT_TEST_DOMAINS[f]) && CONTRACT_TEST_DOMAINS[f].length > 0,
@@ -91,6 +107,15 @@ const allBasename = new Set(all);
 for (const f of Object.keys(CONTRACT_TEST_DOMAINS)) {
   check(allBasename.has(f),
     `${f} 在 CONTRACT_TEST_DOMAINS 但 tests/ 目录不存在（僵尸条目）`);
+}
+
+// ---- 7b. tests 域测试必须登记 CONTRACT_TEST_TARGETS（精确裁剪防静默漏检）----
+for (const f of all) {
+  const doms = CONTRACT_TEST_DOMAINS[f] || [];
+  if (doms.includes('tests')) {
+    check(Array.isArray(CONTRACT_TEST_TARGETS[f]) && CONTRACT_TEST_TARGETS[f].length > 0,
+      `${f} 标 tests 域但未登记 CONTRACT_TEST_TARGETS（精确裁剪下会静默漏检）`);
+  }
 }
 
 // ---- 汇总 ----

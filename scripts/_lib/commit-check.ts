@@ -122,10 +122,10 @@ export async function runCommitChecks(files: string[]): Promise<CommitCheckResul
     }
   }
 
-  /* --- 3. 变更域契约测试（按域选子集；scripts→tests 域按策略仍跑全量）--- */
+  /* --- 3. 变更域契约测试（按域选子集；scripts→tests 域按变更文件精确裁剪，不再全量）--- */
   {
     const domains = [...new Set(files.map((f) => classify(f)))] as Domain[];
-    const selected = selectContractTests(domains);
+    const selected = selectContractTests(domains, files);
     if (selected.length > 0) {
       const t0 = Date.now();
       const tests = await runContractTestsParallel(selected);

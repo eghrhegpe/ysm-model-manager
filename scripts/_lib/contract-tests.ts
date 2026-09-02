@@ -93,20 +93,102 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
 };
 
 /**
- * 按变更域选择要跑的契约测试子集（#2 按域裁剪核心规则）。
+ * 契约测试 → 保护源模块映射（#3 按文件精确裁剪的事实来源，2026-09-02 引入）。
+ * 与 CONTRACT_TEST_DOMAINS 互补：后者回答「测哪些域」，本表回答「测哪些具体文件」。
+ * 仅在 selectContractTests 收到 changedFiles 时用于 tests 域裁剪（替代原 tests→全量回落）。
+ *
+ * 值语义：
+ *   - 精确文件相对路径（相对仓库根）：改该文件即触发此测试。
+ *   - 以 '/' 结尾的目录哨兵：改该目录下任意文件即触发（用于宽敏感测试）。
+ *   - 缺省/空数组：保守保留（命中即跑）——不漏检，仅削弱轻量化。
+ *
+ * 安全网：若 changedFiles 未命中任一 tests 域测试 → selectContractTests 回落全量，
+ * 避免「改动未被任何测试覆盖」时静默零验证。
+ * 维护：新增 tests 域测试须同步登记本表，否则精确模式下该测试永不触发（静默漏检）。
+ */
+export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
+  // —— 宽敏感哨兵：改任意 scripts 即跑（跨脚本 JSON 输出 / codemod 守卫稳定性）——
+  'test_scripts_json.ts': ['scripts/'],
+  'test_codemod_guards.ts': ['scripts/'],
+  // —— 精确：仅改对应源文件才触发 ——
+  'coverage-suggest-hint.ts': ['scripts/hooks/coverage-suggest-hint.ts', 'scripts/test-coverage-report.ts', 'scripts/hooks/knowledge-affected-hint.ts'],
+  'go-coverage-hint.ts': ['scripts/hooks/go-coverage-hint.ts'],
+  'test_alias-resolve.ts': ['scripts/_lib/alias-resolve.ts', 'scripts/_lib/scan-files.ts'],
+  'test_api_break.ts': ['scripts/api-break.ts'],
+  'test_auto_import.ts': ['scripts/auto-import-lexer.ts', 'scripts/auto-import-symbols.ts', 'scripts/auto-import-detect.ts'],
+  'test_check_diff_coverage.ts': ['scripts/check-diff-coverage.ts'],
+  'test_check_go_diff_coverage.ts': ['scripts/check-go-diff-coverage.ts'],
+  'test_check_go_diff_coverage_skip.ts': ['scripts/check-go-diff-coverage.ts'],
+  'test_collect_scripts_lib.ts': ['scripts/_lib/collect-scripts.ts'],
+  'test_commit_temp_index.ts': ['scripts/_lib/commit-temp-index.ts', 'scripts/commit-with-check.ts', 'scripts/_lib/commit-check.ts'],
+  'test_contract_domain_select.ts': ['scripts/_lib/contract-tests.ts'],
+  'test_deadcode_attrib.ts': ['scripts/_lib/deadcode-attrib.ts'],
+  'test_domain_classify.ts': ['scripts/_lib/domain-classify.ts'],
+  'test_gen_stage.ts': ['scripts/_lib/gen-stage.ts'],
+  'test_jscpd_pairs.ts': ['scripts/_lib/jscpd-pairs.ts'],
+  'test_redlines_changed_files.ts': ['scripts/check-redlines.ts'],
+  'test_scripts_lib.ts': ['scripts/_lib/scan-files.ts', 'scripts/_lib/to-posix.ts', 'scripts/_lib/ripgrep.ts', 'scripts/_lib/rg-line.ts'],
+  // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——
+  'test_gate_iife_correctness.ts': ['scripts/pre-push-gate.ts'],
+  'test_check_readme_index.ts': ['scripts/check-readme-index.ts'],
+  'test_sidebar_gen.ts': ['scripts/'],
+};
+
+/**
+ * 按变更域 + 变更文件选择要跑的契约测试子集（#2 按域裁剪 + #3 按文件精确裁剪）。
  * @param changedDomains 变更文件归类后的域集合（classify 返回值去重；'tests' 含 tests/ 与 scripts/）。
+ * @param changedFiles   可选，相对仓库根的文件路径数组。提供时 tests 域由「全量回落」改为
+ *                       按 CONTRACT_TEST_TARGETS 精确裁剪，使 scripts 工具改动只跑相关测试。
  * @returns 命中测试文件名列表（collectContractTests 子集，保持字母序）。
  * 规则：
- *   - 变更域含 'tests'（改 tools/scripts/_lib 或 tests 自身）→ 全量（工具改动影响面大，不可裁剪）。
- *   - 否则 → 各变更域交集匹配（含 mixed 测试：任一端变更都触发）。
+ *   - 不传 changedFiles：保持原行为（向后兼容 pre-push / doctor）。
+ *       · 变更域含 'tests'（改 tools/scripts/_lib 或 tests 自身）→ 全量（工具改动影响面大）。
+ *       · 否则 → 各变更域交集匹配（含 mixed 测试：任一端变更都触发）。
+ *   - 传 changedFiles 且含 'tests' 域：tests 域测试按文件精确裁剪（替代全量回落）；
+ *     无任一测试命中 → 回落全量（fail-safe，避免零验证漏检）。
  *   - 无变更域或仅有 other → 空（不跑）。
  */
-export function selectContractTests(changedDomains: ReadonlySet<string> | readonly string[]): string[] {
+export function selectContractTests(
+  changedDomains: ReadonlySet<string> | readonly string[],
+  changedFiles?: readonly string[],
+): string[] {
   const domains = new Set(changedDomains as Iterable<string>);
   const all = collectContractTests();
   if (domains.size === 0) return [];
-  if (domains.has('tests')) return all;
-  return all.filter((f) => (CONTRACT_TEST_DOMAINS[f] || []).some((d) => domains.has(d)));
+
+  // 按域筛选（含 mixed 跨端契约）—— 既有精确逻辑，非 tests 域直接返回子集
+  const byDomain = all.filter((f) => (CONTRACT_TEST_DOMAINS[f] || []).some((d) => domains.has(d)));
+
+  // 未提供 changedFiles：保持原行为（pre-push / doctor 仍全量回落）
+  if (!changedFiles || changedFiles.length === 0) {
+    if (domains.has('tests')) return all;
+    return byDomain;
+  }
+
+  // 提供 changedFiles 且变更含 tests 域：用「按文件精确裁剪」替代全量回落
+  if (domains.has('tests')) {
+    const testsDomain = byDomain.filter((f) => (CONTRACT_TEST_DOMAINS[f] || []).includes('tests'));
+    const nonTests = byDomain.filter((f) => !(CONTRACT_TEST_DOMAINS[f] || []).includes('tests'));
+    const precise = testsDomain.filter((f) => targetsHit(f, changedFiles));
+    // fail-safe：改动未被任何 tests 域测试覆盖 → 回落全量，避免零验证漏检
+    if (precise.length === 0) return all;
+    return [...new Set([...nonTests, ...precise])].sort();
+  }
+
+  return byDomain;
+}
+
+/** 该测试是否应因 changedFiles 而运行（true = 命中 = 保守保留）。 */
+function targetsHit(testFile: string, changedFiles: readonly string[]): boolean {
+  const targets = CONTRACT_TEST_TARGETS[testFile];
+  if (!targets || targets.length === 0) return true; // 未登记 → 保守保留（不漏检）
+  return targets.some((t) => {
+    if (t.endsWith('/')) {
+      const dir = t.slice(0, -1);
+      return changedFiles.some((c) => c === dir || c.startsWith(dir + '/'));
+    }
+    return changedFiles.includes(t);
+  });
 }
 
 /**

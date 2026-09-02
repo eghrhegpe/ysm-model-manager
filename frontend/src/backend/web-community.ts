@@ -26,6 +26,10 @@ const WEB_CREATORS_KEY = "web:workshop-creators";
 const WEB_SITES_KEY = "web:workshop-sites";
 const WEB_GITHUB_KEY = "web:github-repos";
 
+// 模块级串行队列：MergeWorkshopCreatorsFromJSON 的读-改-写串行化，
+// 防 localStorage 无事务锁导致的并发 lost update。
+let mergeSeq: Promise<unknown> = Promise.resolve();
+
 function cloneJson<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
@@ -35,8 +39,9 @@ function loadWebCreators(): WorkshopCreator[] {
   if (ov !== null) {
     try {
       return JSON.parse(ov) as WorkshopCreator[];
-    } catch {
+    } catch (e) {
       // 覆盖数据损坏则回退默认 bundled，避免整个社区加载崩溃
+      console.warn("[web-community] 覆盖数据损坏，回退默认:", safeErrorMessage(e));
     }
   }
   return cloneJson(creatorsJson as unknown as WorkshopCreator[]);
@@ -299,31 +304,44 @@ export const webCommunityBindings = {
     if (!Array.isArray(imported) || imported.length < MIN_IMPORT) {
       return Promise.reject(new Error(t("webCommunity.importTooFew", { count: imported.length, min: MIN_IMPORT })));
     }
-    const existing = loadWebCreators();
-    const existMap = new Map<string, number>();
-    existing.forEach((c, i) => existMap.set(c.name, i));
-    let added = 0;
-    let updated = 0;
-    for (const cr of imported) {
-      const idx = existMap.get(cr.name);
-      if (idx !== undefined) {
-        const e = existing[idx];
-        if (cr.desc && !e.desc) e.desc = cr.desc;
-        if (cr.type) e.type = cr.type;
-        if (cr.role) e.role = cr.role;
-        updated++;
-      } else {
-        existing.push(cr);
-        existMap.set(cr.name, existing.length - 1);
-        added++;
+    // 逐字段校验：cr.name 必须是非空字符串，非法元素跳过（防 __proto__ 注入 / 畸形数据污染）
+    imported = imported.filter((cr): cr is WorkshopCreator =>
+      cr != null && typeof cr === "object" && typeof cr.name === "string" && cr.name.length > 0
+    );
+    if (imported.length < MIN_IMPORT) {
+      return Promise.reject(new Error(t("webCommunity.importTooFew", { count: imported.length, min: MIN_IMPORT })));
+    }
+    // 串行化读-改-写：localStorage 无事务锁，并发 merge 各自读到同一份 existing，
+    // 后写者覆盖先写者的 added 条目 → lost update。模块级 Promise 链串行排队。
+    const runMerge = (): Promise<[number, number]> => {
+      const existing = loadWebCreators();
+      const existMap = new Map<string, number>();
+      existing.forEach((c, i) => existMap.set(c.name, i));
+      let added = 0;
+      let updated = 0;
+      for (const cr of imported) {
+        const idx = existMap.get(cr.name);
+        if (idx !== undefined) {
+          const e = existing[idx]!;
+          if (cr.desc && !e.desc) e.desc = cr.desc;
+          if (cr.type) e.type = cr.type;
+          if (cr.role) e.role = cr.role;
+          updated++;
+        } else {
+          existing.push(cr);
+          existMap.set(cr.name, existing.length - 1);
+          added++;
+        }
       }
-    }
-    // localStorage 天然事务（setItem 原子）：reject 早于 saveWebCreators → 等价回滚，
-    // 无需桌面版 BackupWorkshopCreators 式备份（审核 1d 确认，平台差异可接受）
-    if (existing.length < 100) {
-      return Promise.reject(new Error(t("webCommunity.mergeTooFew", { count: existing.length })));
-    }
-    saveWebCreators(existing);
-    return Promise.resolve([added, updated]);
+      if (existing.length < 100) {
+        return Promise.reject(new Error(t("webCommunity.mergeTooFew", { count: existing.length })));
+      }
+      saveWebCreators(existing);
+      return Promise.resolve([added, updated]);
+    };
+    const result = mergeSeq.then(runMerge);
+    // 链回序列：无论成功/失败，都释放 token 让下一次 merge 进队
+    mergeSeq = result.then(() => undefined, () => undefined);
+    return result;
   },
 } satisfies Record<string, (...args: never[]) => Promise<unknown>>;

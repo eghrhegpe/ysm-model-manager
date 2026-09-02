@@ -13,7 +13,8 @@ import fs from 'node:fs';
 
 /** 提取 frontmatter 块字符串（`---...---` 之间），无则 null。 */
 export function parseFrontmatter(text: string): string | null {
-  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  // BOM 容错：UTF-8 BOM（\uFEFF）在文件开头时，^--- 不匹配（BOM 在 ^ 和 --- 之间）
+  const m = text.replace(/^\uFEFF/, '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
   return m ? m[1]! : null;
 }
 

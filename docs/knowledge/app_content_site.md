@@ -14,32 +14,32 @@ source_files:
   - frontend/src/views/app-content/workshop-browse-mode.ts
 auto_fields:
   symbols_with_lines:
-    - bindBrowseEvents:495
-    - bindDragEvents:14
-    - bindEditEvents:528
-    - BrowseMode:5
-    - BrowseModeRef:8
-    - buildSiteHtml:373
-    - BuildSiteHtmlCtx:25
-    - CleanupFn:43
-    - CrCardCtx:14
-    - createBrowseModeRef:13
-    - createCrCard:45
-    - CreatorIdentity:10
-    - CreatorIdentityInput:17
-    - getCreatorIdentity:24
-    - getTagFromRole:50
-    - isFaved:77
-    - loadBrowseMode:20
-    - loadFavs:65
-    - LocalCreatorLike:43
-    - parseDescTags:55
-    - renderSiteView:54
-    - RenderSiteViewCtx:16
-    - RepoAuthorLike:13
-    - saveBrowseMode:31
-    - SiteViewState:13
-    - toggleFav:81
+    - bindBrowseEvents
+    - bindDragEvents
+    - bindEditEvents
+    - BrowseMode
+    - BrowseModeRef
+    - buildSiteHtml
+    - BuildSiteHtmlCtx
+    - CleanupFn
+    - CrCardCtx
+    - createBrowseModeRef
+    - createCrCard
+    - CreatorIdentity
+    - CreatorIdentityInput
+    - getCreatorIdentity
+    - getTagFromRole
+    - isFaved
+    - loadBrowseMode
+    - loadFavs
+    - LocalCreatorLike
+    - parseDescTags
+    - renderSiteView
+    - RenderSiteViewCtx
+    - RepoAuthorLike
+    - saveBrowseMode
+    - SiteViewState
+    - toggleFav
   tests:
     - frontend/src/views/app-content/site-view.test.ts
     - frontend/src/views/app-content/site/render.test.ts

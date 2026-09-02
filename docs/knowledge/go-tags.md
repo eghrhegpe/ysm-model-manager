@@ -8,14 +8,14 @@ source_files:
   - go/tags/
 auto_fields:
   symbols_with_lines:
-    - NewStore:26
-    - Store:19
-    - Store.AddTag:181
-    - Store.AllTags:257
-    - Store.GetTags:107
-    - Store.ListByTag:233
-    - Store.RemoveTag:204
-    - Store.SetTags:149
+    - NewStore
+    - Store
+    - Store.AddTag
+    - Store.AllTags
+    - Store.GetTags
+    - Store.ListByTag
+    - Store.RemoveTag
+    - Store.SetTags
   use_when:
     - 标签
     - tag

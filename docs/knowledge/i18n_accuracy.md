@@ -11,14 +11,14 @@ source_files:
   - tests/test_i18n_key_naming.ts
 auto_fields:
   symbols_with_lines:
-    - classifySecondSegment:449
-    - en:4
-    - extractKeys:449
-    - guessRole:449
-    - ja:5
-    - loadAllKeys:449
-    - validateKey:449
-    - zhCN:8
+    - classifySecondSegment
+    - en
+    - extractKeys
+    - guessRole
+    - ja
+    - loadAllKeys
+    - validateKey
+    - zhCN
   tests:
     - frontend/src/core/i18n/locales-consistency.test.ts
     - tests/test_i18n_key_naming.ts

@@ -6,6 +6,8 @@ category: feature
 source_files:
   - scripts/pre-push-gate.ts
   - scripts/check-dynamic-import.ts
+auto_fields:
+  symbols_with_lines: []
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

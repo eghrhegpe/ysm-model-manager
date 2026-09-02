@@ -8,19 +8,19 @@ source_files:
   - go/installer/
 auto_fields:
   symbols_with_lines:
-    - CopyFile:637
-    - CopyFileLocked:645
-    - ErrPartialInstall:27
-    - Install:50
-    - InstallDir:174
-    - InstallDirLocked:191
-    - InstallDirRel:184
-    - InstallDirRelLocked:197
-    - InstallLock:21
-    - InstallLocked:133
-    - InstallToGlobal:524
-    - InstallWithOverlay:553
-    - IsValidRepoRoot:795
+    - CopyFile
+    - CopyFileLocked
+    - ErrPartialInstall
+    - Install
+    - InstallDir
+    - InstallDirLocked
+    - InstallDirRel
+    - InstallDirRelLocked
+    - InstallLock
+    - InstallLocked
+    - InstallToGlobal
+    - InstallWithOverlay
+    - IsValidRepoRoot
   quick_groups:
     - 文件操作与标签
   quick_intents:

@@ -13,23 +13,23 @@ source_files:
   - frontend/src/views/app-content/settings/worker-prefs.ts
 auto_fields:
   symbols_with_lines:
-    - applyUIPrefs:13
-    - bindPathClick:53
-    - cardRefreshers:17
-    - cfg:14
-    - initAdvancedGrid:194
-    - initKeymap:131
-    - initMcDetect:319
-    - initSettings:314
-    - initTheme:24
-    - initUiPrefs:53
-    - initWorkerPrefs:36
-    - isBusy:21
-    - resetSettingsStore:27
-    - saveCfg:25
-    - setBusy:22
-    - SettingsCfg:11
-    - toastError:8
+    - applyUIPrefs
+    - bindPathClick
+    - cardRefreshers
+    - cfg
+    - initAdvancedGrid
+    - initKeymap
+    - initMcDetect
+    - initSettings
+    - initTheme
+    - initUiPrefs
+    - initWorkerPrefs
+    - isBusy
+    - resetSettingsStore
+    - saveCfg
+    - setBusy
+    - SettingsCfg
+    - toastError
   tests:
     - frontend/src/views/app-content/settings/init.test.ts
     - frontend/src/views/app-content/settings/keymap.test.ts

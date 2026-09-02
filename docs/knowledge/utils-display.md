@@ -7,13 +7,13 @@ source_files:
   - frontend/src/utils/dom/display.ts
 auto_fields:
   symbols_with_lines:
-    - ParsedModelName:22
-    - parseModelName:61
-    - renderDisplayName:130
-    - renderModelName:199
-    - renderModelNameWithHighlight:208
-    - stripBanSuffix:19
-    - stripDisableSuffix:14
+    - ParsedModelName
+    - parseModelName
+    - renderDisplayName
+    - renderModelName
+    - renderModelNameWithHighlight
+    - stripBanSuffix
+    - stripDisableSuffix
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

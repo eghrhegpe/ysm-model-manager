@@ -19,6 +19,8 @@ source_files:
   - tests/test_private_access_contract.ts
   - tests/test_scripts_json.ts
   - tests/test_config_defaults.ts
+auto_fields:
+  symbols_with_lines: []
 affected: false
 use_when:
   - 代码审核

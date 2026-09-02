@@ -5,6 +5,8 @@ tier: architecture
 category: config
 source_files:
   - frontend/vitest.config.ts
+auto_fields:
+  symbols_with_lines: []
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

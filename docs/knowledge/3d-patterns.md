@@ -12,30 +12,30 @@ source_files:
   - frontend/src/views/app-preview/skeleton.ts
 auto_fields:
   symbols_with_lines:
-    - _resetSingletons:214
-    - buildModelGroup:299
-    - cleanupPreview:193
-    - closeActive3DOverlay:36
-    - disposeDebugGroup:14
-    - disposeSceneMeshes:40
-    - getRegisteredRoutes:34
-    - hasActivePreview:236
-    - invalidatePreview:188
-    - loadModel2D:59
-    - mount3D:267
-    - Mount3DOptions:241
-    - openModel3DFullscreen:62
-    - OpenModel3DOptions:39
-    - PreviewAdapter:134
-    - PreviewBuildCtx:85
-    - PreviewHandle:144
-    - PreviewScene:108
-    - rebuildDebug:58
-    - registerReRoute:26
-    - scanModelsByType:155
-    - setActive3DClose:42
-    - switchPreview:227
-    - withPreviewExtras:172
+    - _resetSingletons
+    - buildModelGroup
+    - cleanupPreview
+    - closeActive3DOverlay
+    - disposeDebugGroup
+    - disposeSceneMeshes
+    - getRegisteredRoutes
+    - hasActivePreview
+    - invalidatePreview
+    - loadModel2D
+    - mount3D
+    - Mount3DOptions
+    - openModel3DFullscreen
+    - OpenModel3DOptions
+    - PreviewAdapter
+    - PreviewBuildCtx
+    - PreviewHandle
+    - PreviewScene
+    - rebuildDebug
+    - registerReRoute
+    - scanModelsByType
+    - setActive3DClose
+    - switchPreview
+    - withPreviewExtras
   tests:
     - frontend/src/preview-3d/adapters/mount-preview-core.behavior.test.ts
     - frontend/src/preview-3d/adapters/mount-preview-core.test.ts

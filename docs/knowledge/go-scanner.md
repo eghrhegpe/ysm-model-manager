@@ -7,18 +7,18 @@ source_files:
   - go/scanner/
 auto_fields:
   symbols_with_lines:
-    - ComputeFileHash:521
-    - EffectiveCacheTTL:149
-    - GenerateRepoIndex:699
-    - InvalidateCache:193
-    - InvalidatePath:209
-    - ListModelAuthors:587
-    - OnCacheInvalidated:174
-    - ScanEntries:264
-    - ScanEntriesLite:544
-    - ScanEntriesWithHit:271
-    - ScanLocalAuthors:617
-    - SetErrorSink:101
+    - ComputeFileHash
+    - EffectiveCacheTTL
+    - GenerateRepoIndex
+    - InvalidateCache
+    - InvalidatePath
+    - ListModelAuthors
+    - OnCacheInvalidated
+    - ScanEntries
+    - ScanEntriesLite
+    - ScanEntriesWithHit
+    - ScanLocalAuthors
+    - SetErrorSink
   use_when:
     - 扫描
     - 扫描条目

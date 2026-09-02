@@ -7,22 +7,22 @@ source_files:
   - go/dedup/
 auto_fields:
   symbols_with_lines:
-    - CountDuplicates:269
-    - DeepHash:23
-    - DeepHash.ComputeHash:29
-    - DeepHash.Name:25
-    - ErrSymlinkRoot:22
-    - FileEntry:25
-    - FindDuplicateFiles:209
-    - Group:33
-    - HashAlgorithm:15
-    - NameSizeHash:73
-    - NameSizeHash.ComputeHash:79
-    - NameSizeHash.Name:75
-    - NewHashAlgorithm:89
-    - QuickHash:51
-    - QuickHash.ComputeHash:57
-    - QuickHash.Name:53
+    - CountDuplicates
+    - DeepHash
+    - DeepHash.ComputeHash
+    - DeepHash.Name
+    - ErrSymlinkRoot
+    - FileEntry
+    - FindDuplicateFiles
+    - Group
+    - HashAlgorithm
+    - NameSizeHash
+    - NameSizeHash.ComputeHash
+    - NameSizeHash.Name
+    - NewHashAlgorithm
+    - QuickHash
+    - QuickHash.ComputeHash
+    - QuickHash.Name
   quick_groups:
     - 模型扫描与仓库管理
   quick_intents:

@@ -11,19 +11,19 @@ source_files:
   - frontend/src/preview-3d/screenshot.ts
 auto_fields:
   symbols_with_lines:
-    - AngleShot:55
-    - cacheGet:43
-    - cacheSet:65
-    - cacheSetEvictHandler:39
-    - CacheValue:10
-    - collectBlobUrls:48
-    - loadTextures:9
-    - renderMultiAngle:77
-    - RenderMultiAngleOptions:66
-    - screenshotFromRenderer:27
-    - ScreenshotLights:18
-    - ScreenshotOpts:13
-    - toScreenshotLights:26
+    - AngleShot
+    - cacheGet
+    - cacheSet
+    - cacheSetEvictHandler
+    - CacheValue
+    - collectBlobUrls
+    - loadTextures
+    - renderMultiAngle
+    - RenderMultiAngleOptions
+    - screenshotFromRenderer
+    - ScreenshotLights
+    - ScreenshotOpts
+    - toScreenshotLights
   tests:
     - frontend/src/preview-3d/decoder/cache.test.ts
     - frontend/src/preview-3d/screenshot-render.test.ts

@@ -11,17 +11,17 @@ source_files:
   - go/geometry/ysm_parser.go
 auto_fields:
   symbols_with_lines:
-    - ExtractFirstPNGFrom7z:153
-    - ExtractFirstPNGFromZip:143
-    - IsArmModelName:59
-    - IsMainModelName:1475
-    - ParseBedrockGeometry:240
-    - ParseComponentsFrom7z:1693
-    - ParseComponentsFromZip:1482
-    - ParseFrom7z:1391
-    - ParseFrom7zEntry:1409
-    - ParseFromZip:1385
-    - ParseFromZipEntry:1404
+    - ExtractFirstPNGFrom7z
+    - ExtractFirstPNGFromZip
+    - IsArmModelName
+    - IsMainModelName
+    - ParseBedrockGeometry
+    - ParseComponentsFrom7z
+    - ParseComponentsFromZip
+    - ParseFrom7z
+    - ParseFrom7zEntry
+    - ParseFromZip
+    - ParseFromZipEntry
   quick_groups:
     - 模型扫描与仓库管理
   quick_intents:

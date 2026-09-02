@@ -7,25 +7,25 @@ source_files:
   - frontend/src/utils/core/
 auto_fields:
   symbols_with_lines:
-    - Abortable:137
-    - addDisposableListener:13
-    - clamp:5
-    - clamp01:13
-    - clampInt:9
-    - clampPct:28
-    - debounce:8
-    - DebouncedTimer:102
-    - delay:21
-    - Disposable:5
-    - fireAndForget:16
-    - lerp:18
-    - lerpArray:23
-    - LoadingGuard:70
-    - logError:11
-    - logWarn:5
-    - makeLazyLoader:36
-    - swallowError:11
-    - waitForFrame:26
+    - Abortable
+    - addDisposableListener
+    - clamp
+    - clamp01
+    - clampInt
+    - clampPct
+    - debounce
+    - DebouncedTimer
+    - delay
+    - Disposable
+    - fireAndForget
+    - lerp
+    - lerpArray
+    - LoadingGuard
+    - logError
+    - logWarn
+    - makeLazyLoader
+    - swallowError
+    - waitForFrame
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

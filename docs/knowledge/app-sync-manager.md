@@ -7,35 +7,35 @@ source_files:
   - frontend/src/views/app-sync-manager/
 auto_fields:
   symbols_with_lines:
-    - _lastSelectedType:17
-    - actionBtnHTML:62
-    - applyFilter:140
-    - AppSyncManager:72
-    - bindEvents:17
-    - containerHTML:146
-    - emptyHTML:261
-    - EventSelf:9
-    - itemHTML:218
-    - LAST_TYPE_KEY:13
-    - loadData:47
-    - loadingHTML:275
-    - loadTypeConfig:19
-    - NetworkSelf:14
-    - performSingleOp:27
-    - render:33
-    - setLastSelectedType:19
-    - STATUS_COLOR:49
-    - STATUS_ICON:40
-    - statusColorOf:59
-    - statusIconOf:58
-    - statusTabHTML:189
-    - syncDirRowHTML:79
-    - SyncItem:17
-    - SyncManagerSelf:27
-    - SyncRenderSelf:20
-    - SyncStoreSelf:13
-    - tabStatus:92
-    - VIEW_TESTIDS:10
+    - _lastSelectedType
+    - actionBtnHTML
+    - applyFilter
+    - AppSyncManager
+    - bindEvents
+    - containerHTML
+    - emptyHTML
+    - EventSelf
+    - itemHTML
+    - LAST_TYPE_KEY
+    - loadData
+    - loadingHTML
+    - loadTypeConfig
+    - NetworkSelf
+    - performSingleOp
+    - render
+    - setLastSelectedType
+    - STATUS_COLOR
+    - STATUS_ICON
+    - statusColorOf
+    - statusIconOf
+    - statusTabHTML
+    - syncDirRowHTML
+    - SyncItem
+    - SyncManagerSelf
+    - SyncRenderSelf
+    - SyncStoreSelf
+    - tabStatus
+    - VIEW_TESTIDS
   tests:
     - frontend/src/views/app-sync-manager/index.test.ts
   quick_groups:

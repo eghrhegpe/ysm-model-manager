@@ -7,7 +7,7 @@ source_files:
   - go/version/version.go
 auto_fields:
   symbols_with_lines:
-    - Version:6
+    - Version
   quick_groups:
     - 配置与注册表
   quick_intents:

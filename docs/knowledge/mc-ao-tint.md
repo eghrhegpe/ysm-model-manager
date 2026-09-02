@@ -8,13 +8,13 @@ source_files:
   - frontend/src/preview-3d/mc-tints.ts
 auto_fields:
   symbols_with_lines:
-    - buildPackScene:341
-    - getTintColorSync:56
-    - loadMcTints:29
-    - makePackAdapter:66
-    - PackAdapterOpts:34
-    - PackDeps:27
-    - packTextureLabel:52
+    - buildPackScene
+    - getTintColorSync
+    - loadMcTints
+    - makePackAdapter
+    - PackAdapterOpts
+    - PackDeps
+    - packTextureLabel
   reference_files:
     - PrismarineJS/prismarine-viewer viewer/lib/models.js (getSectionGeometry)  # 仅只读参考，不引入其渲染器
   use_when:

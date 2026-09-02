@@ -8,36 +8,36 @@ source_files:
   - internal/app/app_download.go
 auto_fields:
   symbols_with_lines:
-    - App.CancelQueue:76
-    - App.DownloadFromGitHub:249
-    - App.EnqueueDownloads:46
-    - App.GetModelTexSizes:261
-    - App.QueueStatus:96
-    - Downloader:108
-    - Downloader.File:536
-    - Downloader.FileWithChecksum:542
-    - Downloader.FromGitHubAPI:547
-    - Downloader.FromGitHubAPIWithChecksum:552
-    - Downloader.WithRetry:140
-    - DownloadQueue:23
-    - ErrChecksumMismatch:72
-    - ErrNonBinaryContentType:67
-    - ErrPartialResponse:65
-    - ErrRedirectChainTooLong:61
-    - ErrRedirectToUnsafeScheme:63
-    - ErrTruncated:69
-    - ErrUnsupportedScheme:59
-    - HTTPStatusError:78
-    - HTTPStatusError.Error:83
-    - New:212
-    - NewDownloadQueue:41
-    - NewWithClient:221
-    - ProgressFn:105
-    - ResolveSavePath:576
-    - RetryPolicy:133
-    - TruncationError:91
-    - TruncationError.Error:96
-    - TruncationError.Unwrap:102
+    - App.CancelQueue
+    - App.DownloadFromGitHub
+    - App.EnqueueDownloads
+    - App.GetModelTexSizes
+    - App.QueueStatus
+    - Downloader
+    - Downloader.File
+    - Downloader.FileWithChecksum
+    - Downloader.FromGitHubAPI
+    - Downloader.FromGitHubAPIWithChecksum
+    - Downloader.WithRetry
+    - DownloadQueue
+    - ErrChecksumMismatch
+    - ErrNonBinaryContentType
+    - ErrPartialResponse
+    - ErrRedirectChainTooLong
+    - ErrRedirectToUnsafeScheme
+    - ErrTruncated
+    - ErrUnsupportedScheme
+    - HTTPStatusError
+    - HTTPStatusError.Error
+    - New
+    - NewDownloadQueue
+    - NewWithClient
+    - ProgressFn
+    - ResolveSavePath
+    - RetryPolicy
+    - TruncationError
+    - TruncationError.Error
+    - TruncationError.Unwrap
   quick_groups:
     - 文件操作与标签
   quick_intents:

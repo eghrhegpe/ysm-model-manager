@@ -9,14 +9,14 @@ source_files:
   - frontend/src/utils/resource/registry.ts
 auto_fields:
   symbols_with_lines:
-    - clear:42
-    - get:24
-    - has:32
-    - loadResourceRegistry:20
-    - register:18
-    - ResourceTypeEntry:10
-    - ServiceName:11
-    - unregister:37
+    - clear
+    - get
+    - has
+    - loadResourceRegistry
+    - register
+    - ResourceTypeEntry
+    - ServiceName
+    - unregister
   tests:
     - frontend/src/services/registry.test.ts
     - frontend/src/utils/resource/registry.test.ts

@@ -7,16 +7,16 @@ source_files:
   - frontend/src/bus.ts
 auto_fields:
   symbols_with_lines:
-    - bus:209
-    - Bus:140
-    - BusEventName:114
-    - BusEvents:69
-    - CtxShowPayload:50
-    - MenuItem:18
-    - ModelSelectPayload:42
-    - NavPagePayload:38
-    - PageName:30
-    - ToastPayload:7
+    - bus
+    - Bus
+    - BusEventName
+    - BusEvents
+    - CtxShowPayload
+    - MenuItem
+    - ModelSelectPayload
+    - NavPagePayload
+    - PageName
+    - ToastPayload
   tests:
     - frontend/src/bus.test.ts
   use_when:

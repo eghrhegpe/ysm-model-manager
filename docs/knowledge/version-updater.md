@@ -7,9 +7,9 @@ source_files:
   - frontend/src/features/version-updater.ts
 auto_fields:
   symbols_with_lines:
-    - checkUpdateSilent:171
-    - initVersionUpdater:210
-    - UpdateInfo:15
+    - checkUpdateSilent
+    - initVersionUpdater
+    - UpdateInfo
   tests:
     - frontend/src/features/version-updater.test.ts
   quick_groups:

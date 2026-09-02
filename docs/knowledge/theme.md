@@ -11,10 +11,10 @@ source_files:
   - frontend/css/variables.css
 auto_fields:
   symbols_with_lines:
-    - applyTheme:21
-    - initTheme:34
-    - normalizeTheme:17
-    - unregisterDevtools:153
+    - applyTheme
+    - initTheme
+    - normalizeTheme
+    - unregisterDevtools
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

@@ -8,9 +8,9 @@ source_files:
   - frontend/src/utils/format/pack-format.ts
 auto_fields:
   symbols_with_lines:
-    - describeVersionRange:108
-    - PackMeta:95
-    - renderFormattedText:45
+    - describeVersionRange
+    - PackMeta
+    - renderFormattedText
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

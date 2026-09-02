@@ -9,21 +9,21 @@ source_files:
   - frontend/src/preview-3d/perception/
 auto_fields:
   symbols_with_lines:
-    - AutoDanceOptions:26
-    - BeatDetectorLike:18
-    - BeatDetectorOptions:27
-    - BlinkCallback:24
-    - BlinkOptions:42
-    - buildLipMorphIndices:132
-    - createAutoDanceController:69
-    - createBeatDetector:68
-    - createBlinkController:55
-    - createBreathController:48
-    - createGazeController:35
-    - createLipSyncController:51
-    - LipSyncCallback:26
-    - LipSyncOptions:36
-    - MultiLipSyncCallback:29
+    - AutoDanceOptions
+    - BeatDetectorLike
+    - BeatDetectorOptions
+    - BlinkCallback
+    - BlinkOptions
+    - buildLipMorphIndices
+    - createAutoDanceController
+    - createBeatDetector
+    - createBlinkController
+    - createBreathController
+    - createGazeController
+    - createLipSyncController
+    - LipSyncCallback
+    - LipSyncOptions
+    - MultiLipSyncCallback
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

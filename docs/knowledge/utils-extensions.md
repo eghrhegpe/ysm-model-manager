@@ -7,11 +7,11 @@ source_files:
   - frontend/src/utils/resource/extensions.ts
 auto_fields:
   symbols_with_lines:
-    - ALL_EXTS:21
-    - extBelongsTo:46
-    - getExts:36
-    - isSupportedExt:41
-    - RESOURCE_EXTS:16
+    - ALL_EXTS
+    - extBelongsTo
+    - getExts
+    - isSupportedExt
+    - RESOURCE_EXTS
   tests:
     - frontend/src/utils/resource/extensions.test.ts
   quick_groups:

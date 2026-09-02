@@ -8,13 +8,13 @@ source_files:
   - frontend/src/preview-3d/mmd-foot-ik.ts
 auto_fields:
   symbols_with_lines:
-    - createFootIKController:27
-    - extractIKChainFromTree:200
-    - FootIKController:13
-    - IKChain:24
-    - IKConfig:27
-    - IKResult:45
-    - solveIK:78
+    - createFootIKController
+    - extractIKChainFromTree
+    - FootIKController
+    - IKChain
+    - IKConfig
+    - IKResult
+    - solveIK
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

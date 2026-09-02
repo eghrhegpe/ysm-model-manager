@@ -8,9 +8,9 @@ source_files:
   - frontend/src/views/app-tree/app-tree-styles.ts
 auto_fields:
   symbols_with_lines:
-    - btnBaseCSS:1
-    - focusVisibleCSS:32
-    - treeCSS:3
+    - btnBaseCSS
+    - focusVisibleCSS
+    - treeCSS
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

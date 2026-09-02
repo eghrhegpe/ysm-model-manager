@@ -10,37 +10,37 @@ source_files:
   - frontend/src/preview-3d/caps/scene-capability.ts
 auto_fields:
   symbols_with_lines:
-    - buildCameraSchema:33
-    - buildCrossCuttingControls:106
-    - buildLightingSchema:47
-    - buildPostprocessingSchema:70
-    - buildSettingsControls:171
-    - buildSettingsSchema:79
-    - buildShadowSchema:61
-    - collectSettingsCapControls:158
-    - collectVisiblePredicates:457
-    - createListenerSet:209
-    - FieldRestorer:159
-    - formatCapSliderValue:101
-    - getStateValue:300
-    - isPathAvailable:325
-    - KNOWN_PATHS:53
-    - MenuControlDef:17
-    - MenuControlKind:14
-    - persistState:143
-    - previewSnapshot:334
-    - PreviewSnapshot:82
-    - PreviewStatePath:74
-    - renderCapControls:461
-    - resetActiveComponent:269
-    - resetSettingsListeners:341
-    - restoreFields:175
-    - restoreState:148
-    - SceneCapability:95
-    - SceneCapabilityLookup:91
-    - setStateValue:309
-    - subscribeSettings:279
-    - toStatePath:90
+    - buildCameraSchema
+    - buildCrossCuttingControls
+    - buildLightingSchema
+    - buildPostprocessingSchema
+    - buildSettingsControls
+    - buildSettingsSchema
+    - buildShadowSchema
+    - collectSettingsCapControls
+    - collectVisiblePredicates
+    - createListenerSet
+    - FieldRestorer
+    - formatCapSliderValue
+    - getStateValue
+    - isPathAvailable
+    - KNOWN_PATHS
+    - MenuControlDef
+    - MenuControlKind
+    - persistState
+    - previewSnapshot
+    - PreviewSnapshot
+    - PreviewStatePath
+    - renderCapControls
+    - resetActiveComponent
+    - resetSettingsListeners
+    - restoreFields
+    - restoreState
+    - SceneCapability
+    - SceneCapabilityLookup
+    - setStateValue
+    - subscribeSettings
+    - toStatePath
   tests:
     - frontend/src/preview-3d/state/preview-state.test.ts
   quick_groups:

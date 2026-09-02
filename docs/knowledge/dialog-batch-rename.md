@@ -8,11 +8,11 @@ source_files:
   - frontend/src/utils/dom/dialogs/batch-rename-util.ts
 auto_fields:
   symbols_with_lines:
-    - applyReplaceToName:41
-    - BatchRenameChange:21
-    - rebuildParsedName:16
-    - ReplaceResult:31
-    - showBatchRenameDialog:438
+    - applyReplaceToName
+    - BatchRenameChange
+    - rebuildParsedName
+    - ReplaceResult
+    - showBatchRenameDialog
   tests:
     - frontend/src/utils/dom/dialogs/batch-rename.test.ts
   quick_groups:

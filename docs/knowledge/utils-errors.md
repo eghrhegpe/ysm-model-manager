@@ -7,9 +7,9 @@ source_files:
   - frontend/src/utils/dom/errors.ts
 auto_fields:
   symbols_with_lines:
-    - friendlyError:45
-    - isFileExistsError:88
-    - stripPathSegments:73
+    - friendlyError
+    - isFileExistsError
+    - stripPathSegments
   tests:
     - frontend/src/utils/dom/errors.test.ts
   quick_groups:

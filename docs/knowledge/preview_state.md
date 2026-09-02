@@ -9,32 +9,32 @@ source_files:
   - frontend/src/preview-3d/menu/node-types.ts
 auto_fields:
   symbols_with_lines:
-    - buildCameraSchema:33
-    - buildCrossCuttingControls:106
-    - buildLightingSchema:47
-    - buildPostprocessingSchema:70
-    - buildSettingsControls:171
-    - buildSettingsSchema:79
-    - buildShadowSchema:61
-    - collectPreviewLeafNodes:131
-    - collectPreviewNodeIds:144
-    - collectSettingsCapControls:158
-    - getStateValue:300
-    - isPathAvailable:325
-    - isPreviewFolderNode:126
-    - KNOWN_PATHS:53
-    - PreviewActionMenuCtx:17
-    - PreviewControlSpec:40
-    - PreviewMenuNode:68
-    - PreviewMenuNodeKind:23
-    - previewSnapshot:334
-    - PreviewSnapshot:82
-    - PreviewStatePath:74
-    - resetActiveComponent:269
-    - resetSettingsListeners:341
-    - setStateValue:309
-    - subscribeSettings:279
-    - toStatePath:90
+    - buildCameraSchema
+    - buildCrossCuttingControls
+    - buildLightingSchema
+    - buildPostprocessingSchema
+    - buildSettingsControls
+    - buildSettingsSchema
+    - buildShadowSchema
+    - collectPreviewLeafNodes
+    - collectPreviewNodeIds
+    - collectSettingsCapControls
+    - getStateValue
+    - isPathAvailable
+    - isPreviewFolderNode
+    - KNOWN_PATHS
+    - PreviewActionMenuCtx
+    - PreviewControlSpec
+    - PreviewMenuNode
+    - PreviewMenuNodeKind
+    - previewSnapshot
+    - PreviewSnapshot
+    - PreviewStatePath
+    - resetActiveComponent
+    - resetSettingsListeners
+    - setStateValue
+    - subscribeSettings
+    - toStatePath
   tests:
     - frontend/src/preview-3d/state/preview-state.test.ts
   quick_groups:

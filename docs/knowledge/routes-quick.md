@@ -135,31 +135,31 @@
 | 纯函数 | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | 错误提示、友好错误、friendlyError | [错误处理 errors](./utils-errors.md) | 所有异常路径必须经 friendlyError 转中文提示，禁止裸抛原始错误到 UI | - |
 | 错误消息提取、Worker 错误、catch | [安全错误消息提取 utils](./safe_error_msg.md) | Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖 | - |
-| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | tr() 依赖 t() 缺失返回 key 本身——两函数强耦合 | ADR-124, ADR-124, ADR-124, ADR-124 |
+| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | tr() 依赖 t() 缺失返回 key 本身——两函数强耦合 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 调试日志、dbg、调试开关 | [常量与调试 constants/debug](./utils-misc.md) | 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码 | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
 | 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底 | - |
 | 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
-| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-124, ADR-124, ADR-124 |
+| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
 | 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
-| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-124, ADR-124, ADR-124 |
+| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
 | 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 外部进程启动、跨平台 HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | - | - |
-| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-124, ADR-124, ADR-124 |
+| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 新组件注册、import 组件、startup reveal | [组件入口 app-modules](./app-modules.md) | - | - |
 | 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | - | ADR-109 |
 | 页面初始化流程、订阅桶 / 会话状态 | [主内容页 app-content](./app-content.md) | - | - |
 | 页面状态管理、当前页、page store | [页面状态管理 page-store.ts](./page-store.md) | page-store 只管理当前页标识（只读 getter），不协调页面挂载 / 卸载，那是 app-content 的职责 | - |
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
-| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-124, ADR-124, ADR-124 |
+| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource | - |
 | 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:change / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
@@ -638,7 +638,7 @@
 | 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |
 | 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs | - | 误判为 gen 产物 |
 | gen 产物文件路径含空格时 git add 不加引号会断裂 | - | 必须用 git add -- "文件路径" |
-| snap_docs 使用 $$ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在 | - | - |
+| snap_docs 使用 $ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在 | - | - |
 | 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误 | - | - |
 | drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报 | - | - |
 | 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件 | - | - |

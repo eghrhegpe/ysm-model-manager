@@ -7,8 +7,8 @@ source_files:
   - frontend/src/utils/icon/icon.ts
 auto_fields:
   symbols_with_lines:
-    - fileIcon:36
-    - isYsmName:52
+    - fileIcon
+    - isYsmName
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

@@ -5,6 +5,8 @@ tier: leaf
 category: go
 source_files:
   - go/conc/pool.go
+auto_fields:
+  symbols_with_lines: []
 use_when:
   - 并发
   - 并行

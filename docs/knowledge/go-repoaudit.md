@@ -7,15 +7,15 @@ source_files:
   - go/repoaudit/
 auto_fields:
   symbols_with_lines:
-    - Audit:125
-    - CacheStatus:83
-    - Classify:372
-    - Completeness:75
-    - DedupSummary:103
-    - HealthReport:110
-    - HealthReportFor:259
-    - ResourceSummary:93
-    - Result:64
+    - Audit
+    - CacheStatus
+    - Classify
+    - Completeness
+    - DedupSummary
+    - HealthReport
+    - HealthReportFor
+    - ResourceSummary
+    - Result
   use_when:
     - 仓库审计
     - 健康分数

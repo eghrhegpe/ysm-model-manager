@@ -7,8 +7,8 @@ source_files:
   - frontend/src/views/app-nav/
 auto_fields:
   symbols_with_lines:
-    - navCSS:2
-    - VIEW_TESTIDS:18
+    - navCSS
+    - VIEW_TESTIDS
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

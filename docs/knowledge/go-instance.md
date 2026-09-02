@@ -7,10 +7,10 @@ source_files:
   - go/instance/
 auto_fields:
   symbols_with_lines:
-    - BuildSyncItems:323
-    - InvalidateSyncItemsCache:53
-    - RegisterInvalidationHook:45
-    - ResourceTypeInfo:22
+    - BuildSyncItems
+    - InvalidateSyncItemsCache
+    - RegisterInvalidationHook
+    - ResourceTypeInfo
   quick_groups:
     - 模型扫描与仓库管理
   quick_intents:

@@ -11,16 +11,16 @@ source_files:
   - scripts/reproduce-commit-interrupt.ts
 auto_fields:
   symbols_with_lines:
-    - CommitTempIndexOptions:39
-    - CommitTempIndexResult:51
-    - commitWithTempIndex:92
-    - computeStageList:86
-    - GEN_CMDS:17
-    - isHookArtifact:68
-    - normPath:40
-    - parsePorcelain:50
-    - PorcelainEntry:30
-    - StageInput:72
+    - CommitTempIndexOptions
+    - CommitTempIndexResult
+    - commitWithTempIndex
+    - computeStageList
+    - GEN_CMDS
+    - isHookArtifact
+    - normPath
+    - parsePorcelain
+    - PorcelainEntry
+    - StageInput
   use_when:
     - commit-with-check
     - 自动提交

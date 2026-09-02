@@ -8,12 +8,12 @@ source_files:
   - frontend/src/utils/dom/directory-picker.ts
 auto_fields:
   symbols_with_lines:
-    - emitAndroidBack:43
-    - getAndroidBridge:5
-    - isViewerMode:16
-    - pickDirectory:66
-    - registerAndroidBackHandler:30
-    - resolveAndroidRepoDir:26
+    - emitAndroidBack
+    - getAndroidBridge
+    - isViewerMode
+    - pickDirectory
+    - registerAndroidBackHandler
+    - resolveAndroidRepoDir
   tests:
     - frontend/src/features/version-updater.test.ts
     - tests/test_android_bridge_contract.ts

@@ -14,26 +14,26 @@ source_files:
   - frontend/src/views/app-content/diagnostics/perf-trace.ts
 auto_fields:
   symbols_with_lines:
-    - bindPerfCopyHandlers:74
-    - EscFn:9
-    - formatSize:114
-    - getDedupConfig:17
-    - initDedupConfig:208
-    - initDiagnostics:227
-    - initPerfPanel:14
-    - loadDiagnosticsLogs:189
-    - loadRuntimeLogs:209
-    - renderHealthReport:61
-    - renderLoadTraceSection:11
-    - resetDedupConfig:17
-    - runGuiFlow:432
-    - runHealthAudit:23
-    - runPerfLog:513
-    - runSingleBench:317
-    - scanConflicts:151
-    - scanSyncConflicts:243
-    - sectionHeader:34
-    - startDedup:17
+    - bindPerfCopyHandlers
+    - EscFn
+    - formatSize
+    - getDedupConfig
+    - initDedupConfig
+    - initDiagnostics
+    - initPerfPanel
+    - loadDiagnosticsLogs
+    - loadRuntimeLogs
+    - renderHealthReport
+    - renderLoadTraceSection
+    - resetDedupConfig
+    - runGuiFlow
+    - runHealthAudit
+    - runPerfLog
+    - runSingleBench
+    - scanConflicts
+    - scanSyncConflicts
+    - sectionHeader
+    - startDedup
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts

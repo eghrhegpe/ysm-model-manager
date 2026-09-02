@@ -7,10 +7,10 @@ source_files:
   - go/avatar/avatar_decode.go
 auto_fields:
   symbols_with_lines:
-    - DecodeYSMFiles:75
-    - FS:112
-    - SetNodeJS:44
-    - Write:66
+    - DecodeYSMFiles
+    - FS
+    - SetNodeJS
+    - Write
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

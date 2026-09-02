@@ -7,12 +7,12 @@ source_files:
   - frontend/src/utils/dom/tooltip.ts
 auto_fields:
   symbols_with_lines:
-    - attachTooltip:110
-    - ensureTooltipStyles:17
-    - promoteTitle:149
-    - promoteTitleIfPresent:158
-    - TooltipOptions:101
-    - YSW_TOOLTIP_CSS:9
+    - attachTooltip
+    - ensureTooltipStyles
+    - promoteTitle
+    - promoteTitleIfPresent
+    - TooltipOptions
+    - YSW_TOOLTIP_CSS
   tests:
     - frontend/src/utils/dom/tooltip.test.ts
   quick_groups:

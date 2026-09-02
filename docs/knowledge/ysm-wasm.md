@@ -9,31 +9,31 @@ source_files:
   - go/avatar/avatar_decode.go
 auto_fields:
   symbols_with_lines:
-    - _getGlueCode:3
-    - _getGlueCodeMt:3
-    - _getWasmBinary:3
-    - _getWasmBinaryMt:4
-    - classifyWasmError:55
-    - collectOutputFiles:102
-    - decodeYsmFile:184
-    - decodeYsmFileFromMemory:135
-    - DecodeYSMFiles:75
-    - decodeYsmInWorker:218
-    - decodeYsmInWorkerMemfs:257
-    - ensureDir:92
-    - FS:112
-    - FSLike:14
-    - initYSMParser:59
-    - initYsmParserInWorker:52
-    - initYsmParserInWorkerMt:119
-    - patchGlueHeapExport:141
-    - resolveWasmFactory:154
-    - SetNodeJS:44
-    - WasmModuleLike:26
-    - wipeDir:78
-    - Write:66
-    - writeHeapBytes:123
-    - YsmDecodedFile:8
+    - _getGlueCode
+    - _getGlueCodeMt
+    - _getWasmBinary
+    - _getWasmBinaryMt
+    - classifyWasmError
+    - collectOutputFiles
+    - decodeYsmFile
+    - decodeYsmFileFromMemory
+    - DecodeYSMFiles
+    - decodeYsmInWorker
+    - decodeYsmInWorkerMemfs
+    - ensureDir
+    - FS
+    - FSLike
+    - initYSMParser
+    - initYsmParserInWorker
+    - initYsmParserInWorkerMt
+    - patchGlueHeapExport
+    - resolveWasmFactory
+    - SetNodeJS
+    - WasmModuleLike
+    - wipeDir
+    - Write
+    - writeHeapBytes
+    - YsmDecodedFile
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

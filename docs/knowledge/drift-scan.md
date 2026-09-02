@@ -5,6 +5,8 @@ tier: architecture
 category: go
 source_files:
   - scripts/drift-scan.ts
+auto_fields:
+  symbols_with_lines: []
 use_when:
   - 漂移检测
   - 双轨

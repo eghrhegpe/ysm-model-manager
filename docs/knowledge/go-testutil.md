@@ -7,9 +7,9 @@ source_files:
   - go/internal/testutil/testutil.go
 auto_fields:
   symbols_with_lines:
-    - CreateTestFile:14
-    - MakeZipBytes:28
-    - WriteZipFile:48
+    - CreateTestFile
+    - MakeZipBytes
+    - WriteZipFile
   tests:
     - go/internal/testutil/testutil_test.go
   use_when:

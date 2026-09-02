@@ -525,9 +525,9 @@ function checkAutoFieldsFormat(cards: any[]) {
       const symMatch = sl.match(/^symbols_with_lines:\s*(.+)$/);
       if (symMatch) {
         const val = symMatch[1]!.trim();
-        // 允许：单个符号名 / 带行号的 "SymbolName:42"
+        // 允许：纯符号名（行号已减噪，见 ADR-159；保留 :\d+ 兼容旧卡片）
         if (val && !/^[A-Za-z0-9_$.]+(:\d+)?$/.test(val)) {
-          warns.push(`知识卡 ${cf} 的 auto_fields.symbols_with_lines 格式异常: ${val}（应为符号名或 Symbol:行号）`);
+          warns.push(`知识卡 ${cf} 的 auto_fields.symbols_with_lines 格式异常: ${val}（应为符号名）`);
         }
       }
     }

@@ -8,13 +8,13 @@ source_files:
   - frontend/src/utils/dom/dialogs/rename-format.ts
 auto_fields:
   symbols_with_lines:
-    - buildModelName:40
-    - BuildModelNameOptions:21
-    - buildRenameName:60
-    - ModelNameFields:27
-    - RenameFields:7
-    - showRenameDialog:210
-    - validateRenameFields:71
+    - buildModelName
+    - BuildModelNameOptions
+    - buildRenameName
+    - ModelNameFields
+    - RenameFields
+    - showRenameDialog
+    - validateRenameFields
   tests:
     - frontend/src/utils/dom/dialogs/rename-format.test.ts
     - frontend/src/utils/dom/dialogs/rename.test.ts

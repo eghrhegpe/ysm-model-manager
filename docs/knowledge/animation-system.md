@@ -16,35 +16,35 @@ source_files:
   - frontend/src/preview-3d/ysm-animation-player.ts
 auto_fields:
   symbols_with_lines:
-    - animateNumber:15
-    - AnimationClip:46
-    - AnimationController:36
-    - AnimationControllerRuntime:159
-    - BoneChannels:30
-    - BoneHierarchyNode:67
-    - BoneTransform:57
-    - compileMolang:71
-    - ControllerState:22
-    - ControllerTransition:10
-    - createYsmAnimPlayer:281
-    - Easings:2
-    - evaluateClip:654
-    - evaluateKeyframes:558
-    - executeTimeline:622
-    - findControllerForAnimation:260
-    - foldMolangConstant:94
-    - Keyframe:19
-    - Molang:637
-    - MolangAxes:16
-    - MolangFn:18
-    - parseAnimationControllerJSON:52
-    - parseBedrockAnimationJSON:482
-    - setMolangScope:39
-    - stagger:11
-    - TimelineEvent:38
-    - Vec3:13
-    - ysmAnimClipLabels:780
-    - YsmAnimPlayer:32
+    - animateNumber
+    - AnimationClip
+    - AnimationController
+    - AnimationControllerRuntime
+    - BoneChannels
+    - BoneHierarchyNode
+    - BoneTransform
+    - compileMolang
+    - ControllerState
+    - ControllerTransition
+    - createYsmAnimPlayer
+    - Easings
+    - evaluateClip
+    - evaluateKeyframes
+    - executeTimeline
+    - findControllerForAnimation
+    - foldMolangConstant
+    - Keyframe
+    - Molang
+    - MolangAxes
+    - MolangFn
+    - parseAnimationControllerJSON
+    - parseBedrockAnimationJSON
+    - setMolangScope
+    - stagger
+    - TimelineEvent
+    - Vec3
+    - ysmAnimClipLabels
+    - YsmAnimPlayer
   tests:
     - frontend/src/utils/animation/animate.test.ts
     - frontend/src/utils/animation/animation.test.ts

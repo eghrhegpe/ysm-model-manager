@@ -8,7 +8,7 @@ source_files:
   - go/executil/hidewindow_other.go
 auto_fields:
   symbols_with_lines:
-    - HideWindow:8
+    - HideWindow
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

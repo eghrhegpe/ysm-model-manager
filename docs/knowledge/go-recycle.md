@@ -7,20 +7,20 @@ source_files:
   - go/recycle/
 auto_fields:
   symbols_with_lines:
-    - CleanOpLogger:19
-    - DeduplicateEntries:141
-    - Move:438
-    - MoveResult:17
-    - New:34
-    - RemoveRepoDuplicates:25
-    - TrashManager:23
-    - TrashManager.Delete:376
-    - TrashManager.Empty:404
-    - TrashManager.List:207
-    - TrashManager.Move:49
-    - TrashManager.MoveEx:55
-    - TrashManager.RecycleDir:44
-    - TrashManager.Restore:267
+    - CleanOpLogger
+    - DeduplicateEntries
+    - Move
+    - MoveResult
+    - New
+    - RemoveRepoDuplicates
+    - TrashManager
+    - TrashManager.Delete
+    - TrashManager.Empty
+    - TrashManager.List
+    - TrashManager.Move
+    - TrashManager.MoveEx
+    - TrashManager.RecycleDir
+    - TrashManager.Restore
   use_when:
     - 回收站
     - 删除

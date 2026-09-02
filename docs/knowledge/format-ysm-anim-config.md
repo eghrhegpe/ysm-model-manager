@@ -7,8 +7,8 @@ source_files:
   - frontend/src/utils/format/ysm-anim-config.ts
 auto_fields:
   symbols_with_lines:
-    - extractAnimGroupsAndConfigs:34
-    - YsmProperties:14
+    - extractAnimGroupsAndConfigs
+    - YsmProperties
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

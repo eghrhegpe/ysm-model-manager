@@ -15,26 +15,26 @@ source_files:
   - frontend/src/views/app-tree/toolbar-events.ts
 auto_fields:
   symbols_with_lines:
-    - appContentStyle:19
-    - appendLitematicPreview:134
-    - BedrockBone:26
-    - BedrockCube:16
-    - BedrockModel:32
-    - bindEditEvents:528
-    - bindInputHandlers:122
-    - bindToolbarEvents:357
-    - calcBoneHitZones:11
-    - cleanupVoxel3D:139
-    - closeActive3DOverlay:36
-    - createLitematic3D:91
-    - initSettings:314
-    - InputHandlers:43
-    - InputOptions:28
-    - loadModel2D:59
-    - Model2DOptions:37
-    - openFullPreview:7
-    - renderModel2D:58
-    - setActive3DClose:42
+    - appContentStyle
+    - appendLitematicPreview
+    - BedrockBone
+    - BedrockCube
+    - BedrockModel
+    - bindEditEvents
+    - bindInputHandlers
+    - bindToolbarEvents
+    - calcBoneHitZones
+    - cleanupVoxel3D
+    - closeActive3DOverlay
+    - createLitematic3D
+    - initSettings
+    - InputHandlers
+    - InputOptions
+    - loadModel2D
+    - Model2DOptions
+    - openFullPreview
+    - renderModel2D
+    - setActive3DClose
   tests:
     - frontend/src/views/app-preview/model2d/model2d.test.ts
     - frontend/src/preview-3d/model3d.test.ts

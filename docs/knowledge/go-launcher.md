@@ -7,7 +7,7 @@ source_files:
   - go/launcher/detect.go
 auto_fields:
   symbols_with_lines:
-    - Detect:37
+    - Detect
   quick_groups:
     - 配置与注册表
   quick_intents:

@@ -7,13 +7,13 @@ source_files:
   - frontend/src/preview-3d/adapters/worker-bridge.ts
 auto_fields:
   symbols_with_lines:
-    - createResolveModeBridge:165
-    - createWorkerBridge:65
-    - CreateWorkerBridgeOpts:44
-    - ResolveModeBridge:158
-    - ResolveModeResponse:15
-    - WorkerBridge:29
-    - WorkerErrorStrategy:22
+    - createResolveModeBridge
+    - createWorkerBridge
+    - CreateWorkerBridgeOpts
+    - ResolveModeBridge
+    - ResolveModeResponse
+    - WorkerBridge
+    - WorkerErrorStrategy
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

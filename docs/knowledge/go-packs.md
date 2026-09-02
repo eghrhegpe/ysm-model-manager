@@ -8,22 +8,22 @@ source_files:
   - go/packs/
 auto_fields:
   symbols_with_lines:
-    - ClassContainer:38
-    - ClassifyExt:72
-    - ClassifyResource:44
-    - ClassOther:39
-    - CountZipEntryMatches:290
-    - DetectByEntries:83
-    - DetectResourceType:139
-    - ErrPackMetaNotFound:28
-    - ErrPackMetaTooLarge:30
-    - IsTypeModelFile:354
-    - IsYsmFile:270
-    - MatchYsmEntries:304
-    - MatchZipArchive:285
-    - ReadPackMeta:34
-    - ReadShaderpackLang:161
-    - ReadShaderpackLangParts:172
+    - ClassContainer
+    - ClassifyExt
+    - ClassifyResource
+    - ClassOther
+    - CountZipEntryMatches
+    - DetectByEntries
+    - DetectResourceType
+    - ErrPackMetaNotFound
+    - ErrPackMetaTooLarge
+    - IsTypeModelFile
+    - IsYsmFile
+    - MatchYsmEntries
+    - MatchZipArchive
+    - ReadPackMeta
+    - ReadShaderpackLang
+    - ReadShaderpackLangParts
   quick_groups:
     - 模型扫描与仓库管理
   quick_intents:

@@ -11,40 +11,40 @@ source_files:
   - resource_types.json
 auto_fields:
   symbols_with_lines:
-    - BundledRegistryJSON:410
-    - ClassContainer:38
-    - ClassifyExt:72
-    - ClassifyResource:44
-    - ClassOther:39
-    - CountZipEntryMatches:290
-    - DetectByEntries:83
-    - FormatRange:478
-    - FormatRange.UnmarshalJSON:484
-    - IsTypeModelFile:354
-    - IsYsmFile:270
-    - LitematicBlockStat:604
-    - LitematicMeta:587
-    - LitematicVoxelData:610
-    - LoadRegistry:166
-    - MatchYsmEntries:304
-    - MatchZipArchive:285
-    - ModKeywordsFor:442
-    - ModMetaFor:469
-    - ModRequirement:64
-    - NestedPattern:94
-    - PackMeta:569
-    - PackMeta.Desc:580
-    - RegistryType:417
-    - ResourceType:30
-    - ResourceType.EffectiveExtensions:102
-    - ResourceType.MatchZipEntry:120
-    - ResourceTypeRegistry:25
-    - ResourceTypeRegistry.FindByID:423
-    - SetBundledRegistryJSON:20
-    - SetRegistryPath:155
-    - Variant:73
-    - VoxelGroup:618
-    - ZipEntryMatch:111
+    - BundledRegistryJSON
+    - ClassContainer
+    - ClassifyExt
+    - ClassifyResource
+    - ClassOther
+    - CountZipEntryMatches
+    - DetectByEntries
+    - FormatRange
+    - FormatRange.UnmarshalJSON
+    - IsTypeModelFile
+    - IsYsmFile
+    - LitematicBlockStat
+    - LitematicMeta
+    - LitematicVoxelData
+    - LoadRegistry
+    - MatchYsmEntries
+    - MatchZipArchive
+    - ModKeywordsFor
+    - ModMetaFor
+    - ModRequirement
+    - NestedPattern
+    - PackMeta
+    - PackMeta.Desc
+    - RegistryType
+    - ResourceType
+    - ResourceType.EffectiveExtensions
+    - ResourceType.MatchZipEntry
+    - ResourceTypeRegistry
+    - ResourceTypeRegistry.FindByID
+    - SetBundledRegistryJSON
+    - SetRegistryPath
+    - Variant
+    - VoxelGroup
+    - ZipEntryMatch
   tests:
     - go/packs/classify_test.go
     - go/packs/model_file_test.go

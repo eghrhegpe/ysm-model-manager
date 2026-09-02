@@ -7,9 +7,9 @@ source_files:
   - frontend/src/utils/dom/storage.ts
 auto_fields:
   symbols_with_lines:
-    - safeGet:7
-    - safeRemove:25
-    - safeSet:16
+    - safeGet
+    - safeRemove
+    - safeSet
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

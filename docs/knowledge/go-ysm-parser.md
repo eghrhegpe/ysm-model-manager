@@ -7,32 +7,32 @@ source_files:
   - go/ysm/
 auto_fields:
   symbols_with_lines:
-    - AnalyzeYSMHeader:177
-    - AnalyzeYSMHeaderFromBytes:330
-    - AnalyzeYSMModel:45
-    - AnimGroup:29
-    - Author:18
-    - ConfigMenu:35
-    - DecodedFile:11
-    - DecodeYSM:32
-    - ExtractYsmSummary:319
-    - FindComponentsInExtractedYSM:773
-    - FindGeometryInExtractedYSM:461
-    - HasModInDir:110
-    - HasYSMMod:86
-    - IsModJar:21
-    - IsYSMJar:14
-    - Link:24
-    - ModelEntry:40
-    - PreviewInfo:41
-    - ScanFiles:161
-    - ScanModelTexSizes:25
-    - SetDecoder:25
-    - Stats:66
-    - TexInfo:17
-    - YSMHeader:18
-    - YSMModelMeta:15
-    - YsmSummary:49
+    - AnalyzeYSMHeader
+    - AnalyzeYSMHeaderFromBytes
+    - AnalyzeYSMModel
+    - AnimGroup
+    - Author
+    - ConfigMenu
+    - DecodedFile
+    - DecodeYSM
+    - ExtractYsmSummary
+    - FindComponentsInExtractedYSM
+    - FindGeometryInExtractedYSM
+    - HasModInDir
+    - HasYSMMod
+    - IsModJar
+    - IsYSMJar
+    - Link
+    - ModelEntry
+    - PreviewInfo
+    - ScanFiles
+    - ScanModelTexSizes
+    - SetDecoder
+    - Stats
+    - TexInfo
+    - YSMHeader
+    - YSMModelMeta
+    - YsmSummary
   quick_groups:
     - 模型扫描与仓库管理
   quick_intents:

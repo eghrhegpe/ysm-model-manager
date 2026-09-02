@@ -7,12 +7,12 @@ source_files:
   - go/watcher/
 auto_fields:
   symbols_with_lines:
-    - New:45
-    - ScanFunc:18
-    - Watcher:28
-    - Watcher.IsRunning:157
-    - Watcher.Start:61
-    - Watcher.Stop:109
+    - New
+    - ScanFunc
+    - Watcher
+    - Watcher.IsRunning
+    - Watcher.Start
+    - Watcher.Stop
   quick_groups:
     - 模型扫描与仓库管理
   quick_intents:

@@ -10,22 +10,22 @@ source_files:
   - internal/app/app.go
 auto_fields:
   symbols_with_lines:
-    - App:40
-    - App.CancelQueue:76
-    - App.DownloadFromGitHub:249
-    - App.EnqueueDownloads:46
-    - App.GetAppVersion:263
-    - App.GetModelTexSizes:261
-    - App.GetYSMRepoRoot:107
-    - App.OpenInBrowser:258
-    - App.QueueStatus:96
-    - App.ServiceShutdown:221
-    - App.ServiceStartup:122
-    - App.SetApp:104
-    - App.SetMainWindow:119
-    - DownloadQueue:23
-    - NewApp:75
-    - NewDownloadQueue:41
+    - App
+    - App.CancelQueue
+    - App.DownloadFromGitHub
+    - App.EnqueueDownloads
+    - App.GetAppVersion
+    - App.GetModelTexSizes
+    - App.GetYSMRepoRoot
+    - App.OpenInBrowser
+    - App.QueueStatus
+    - App.ServiceShutdown
+    - App.ServiceStartup
+    - App.SetApp
+    - App.SetMainWindow
+    - DownloadQueue
+    - NewApp
+    - NewDownloadQueue
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

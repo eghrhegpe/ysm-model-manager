@@ -10,26 +10,26 @@ source_files:
   - frontend/src/backend/web-stats.ts
 auto_fields:
   symbols_with_lines:
-    - __setStatsRunnerForTest:53
-    - batchStatsWebModels:173
-    - consumeWebSearchDegraded:58
-    - getStatsPoolSize:91
-    - ModelStatsResult:20
-    - onStatsProgress:40
-    - prefetchStatsWorker:113
-    - STATS_BATCH_LIMIT:19
-    - StatsFileInput:14
-    - statsFromDecodedFiles:76
-    - statsFromJsonBytes:120
-    - StatsRelReader:112
-    - StatsWorkerError:42
-    - StatsWorkerProgress:27
-    - StatsWorkerRequest:17
-    - StatsWorkerResponse:48
-    - StatsWorkerResult:35
-    - terminateStatsWorker:65
-    - WebModelStats:5
-    - WebModelStatsWithPath:14
+    - __setStatsRunnerForTest
+    - batchStatsWebModels
+    - consumeWebSearchDegraded
+    - getStatsPoolSize
+    - ModelStatsResult
+    - onStatsProgress
+    - prefetchStatsWorker
+    - STATS_BATCH_LIMIT
+    - StatsFileInput
+    - statsFromDecodedFiles
+    - statsFromJsonBytes
+    - StatsRelReader
+    - StatsWorkerError
+    - StatsWorkerProgress
+    - StatsWorkerRequest
+    - StatsWorkerResponse
+    - StatsWorkerResult
+    - terminateStatsWorker
+    - WebModelStats
+    - WebModelStatsWithPath
   tests:
     - frontend/src/workers/stats-core.test.ts
   quick_groups:

@@ -7,16 +7,16 @@ source_files:
   - frontend/src/utils/format/summarize.ts
 auto_fields:
   symbols_with_lines:
-    - DecodedStats:260
-    - findBones:272
-    - safeUrl:87
-    - summarizeDecoded:290
-    - SummaryAnimGroup:16
-    - SummaryAuthor:10
-    - summaryCardHTML:155
-    - SummaryConfigMenu:22
-    - YSMHeader:52
-    - YsmSummary:27
+    - DecodedStats
+    - findBones
+    - safeUrl
+    - summarizeDecoded
+    - SummaryAnimGroup
+    - SummaryAuthor
+    - summaryCardHTML
+    - SummaryConfigMenu
+    - YSMHeader
+    - YsmSummary
   tests:
     - frontend/src/utils/format/summarize-decoded.test.ts
     - frontend/src/utils/format/summarize.test.ts

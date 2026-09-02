@@ -16,10 +16,10 @@ source_files:
   - build/darwin/Taskfile.yml
 auto_fields:
   symbols_with_lines:
-    - Scan:41
-    - ScanError:7
-    - ScanManifest:69
-    - ScanResponse:12
+    - Scan
+    - ScanError
+    - ScanManifest
+    - ScanResponse
   tests:
     - tests/test_rust_bridge_tags.ts
   quick_groups:

@@ -7,12 +7,12 @@ source_files:
   - frontend/src/views/app-preview/model2d/model2d.ts
 auto_fields:
   symbols_with_lines:
-    - BedrockBone:26
-    - BedrockCube:16
-    - BedrockModel:32
-    - calcBoneHitZones:11
-    - Model2DOptions:37
-    - renderModel2D:58
+    - BedrockBone
+    - BedrockCube
+    - BedrockModel
+    - calcBoneHitZones
+    - Model2DOptions
+    - renderModel2D
   tests:
     - frontend/src/views/app-preview/model2d/model2d.test.ts
   quick_groups:

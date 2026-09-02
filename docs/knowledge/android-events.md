@@ -7,7 +7,7 @@ source_files:
   - frontend/src/core/handlers/android-events.ts
 auto_fields:
   symbols_with_lines:
-    - registerAndroidEvents:18
+    - registerAndroidEvents
   tests:
     - frontend/src/utils/dom/dialogs/modal.test.ts
   quick_groups:

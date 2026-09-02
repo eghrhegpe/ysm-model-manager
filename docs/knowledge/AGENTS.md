@@ -30,12 +30,12 @@ symbols:                     # 机器推导：由 gen-knowledge-symbols.ts 自�
   - once
   - emit
 auto_fields:                 # 机器推导（解法 B）：由 gen-knowledge-autogen.ts 自动生成
-  symbols_with_lines:        # 导出符号 + 起始行号
-    - createBus:12
-    - on:25
-    - off:30
-    - once:35
-    - emit:42
+  symbols_with_lines:        # 导出符号名清单（无行号，ADR-159 行号减噪）
+    - createBus
+    - on
+    - off
+    - once
+    - emit
 # 以下为人工策展字段（解法 B）：drift 检测仅报 WARN，不阻断
 use_when:                    # 人工策展：用户自然语言关键词
   - 事件
@@ -64,7 +64,7 @@ perf:                        # 可选，性能画像标签（受控词表 = scri
 
 | 类别 | 字段 | 维护方式 | drift 处理 |
 |------|------|----------|-----------|
-| **机器推导** | `source_files`, `tests`, `symbols`, `auto_fields.symbols_with_lines` | gen 脚本自动生成 | ERROR 级，阻断 |
+| **机器推导** | `source_files`, `tests`, `symbols`, `auto_fields.symbols_with_lines`（纯符号名，无行号，ADR-159） | gen 脚本自动生成 | ERROR 级，阻断 |
 | **人工策展** | `use_when`, `pitfalls`, `quick_groups`, `quick_intents`, `quick_risk_lines`, 正文 prose | 手写 | WARN 级，不阻断 |
 | **混合** | `invariant_anchors` | 手写声明 + 机器校验存在性 | ERROR 级，阻断 |
 
@@ -158,4 +158,4 @@ node scripts/check-knowledge-drift.ts --affected <f>…  # 主动：源码变更
 | `scripts/gen-routes-quick.ts` | AI 高频路由表自动生成（`routes-quick.md`，第一站） |
 | `scripts/check-knowledge-drift.ts` | 知识卡漂移检查（ERROR/WARN） |
 | `scripts/new-knowledge-card.ts` | 卡片模板生成器 |
-| `scripts/gen-knowledge-autogen.ts` | 机器推导字段生成器（解法 B：auto_fields.symbols_with_lines） |
+| `scripts/gen-knowledge-autogen.ts` | 机器推导字段生成器（解法 B：auto_fields.symbols_with_lines，纯符号名无行号，ADR-159） |

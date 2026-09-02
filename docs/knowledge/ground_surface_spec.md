@@ -8,23 +8,23 @@ source_files:
   - frontend/src/preview-3d/caps/ground-capability.ts
 auto_fields:
   symbols_with_lines:
-    - applyGroundSurfaceAppearance:280
-    - applyGroundSurfaceStructural:261
-    - buildGroundSurfaceSpec:92
-    - DEFAULT_GROUND_PARAMS:53
-    - DEFAULT_GROUND_SURFACE_PARAMS:46
-    - generateSurfacePixels:164
-    - GroundCapability:62
-    - GroundMaterialParams:19
-    - GroundParams:40
-    - GroundSurfaceAppearanceSpec:73
-    - GroundSurfaceMode:17
-    - groundSurfaceNeedsRebuild:132
-    - GroundSurfaceSpec:81
-    - GroundSurfaceStructuralSpec:61
-    - surfaceSpecKey:117
-    - textureRepeat:141
-    - TILE_WORLD_SIZE:139
+    - applyGroundSurfaceAppearance
+    - applyGroundSurfaceStructural
+    - buildGroundSurfaceSpec
+    - DEFAULT_GROUND_PARAMS
+    - DEFAULT_GROUND_SURFACE_PARAMS
+    - generateSurfacePixels
+    - GroundCapability
+    - GroundMaterialParams
+    - GroundParams
+    - GroundSurfaceAppearanceSpec
+    - GroundSurfaceMode
+    - groundSurfaceNeedsRebuild
+    - GroundSurfaceSpec
+    - GroundSurfaceStructuralSpec
+    - surfaceSpecKey
+    - textureRepeat
+    - TILE_WORLD_SIZE
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

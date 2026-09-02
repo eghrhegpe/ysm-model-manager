@@ -7,7 +7,7 @@ source_files:
   - frontend/src/features/oldest-models.ts
 auto_fields:
   symbols_with_lines:
-    - loadOldestModel:277
+    - loadOldestModel
   tests:
     - frontend/src/features/oldest-models.test.ts
   quick_groups:

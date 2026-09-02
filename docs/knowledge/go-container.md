@@ -10,21 +10,21 @@ source_files:
   - go/container/container.go
 auto_fields:
   symbols_with_lines:
-    - Close:76
-    - Entries:64
-    - Entry:28
-    - Incomplete:83
-    - IsDir:53
-    - Name:52
-    - Open:55
-    - Open7zBytes:199
-    - Open7zPath:190
-    - OpenDir:264
-    - OpenZipBytes:181
-    - OpenZipPath:172
-    - Reader:36
-    - UncompressedSize64:54
-    - ZipMatchesEntries:276
+    - Close
+    - Entries
+    - Entry
+    - Incomplete
+    - IsDir
+    - Name
+    - Open
+    - Open7zBytes
+    - Open7zPath
+    - OpenDir
+    - OpenZipBytes
+    - OpenZipPath
+    - Reader
+    - UncompressedSize64
+    - ZipMatchesEntries
   quick_groups:
     - 模型扫描与仓库管理
   quick_intents:

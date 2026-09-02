@@ -7,21 +7,21 @@ source_files:
   - go/paths/
 auto_fields:
   symbols_with_lines:
-    - ContainsMinecraftMarker:166
-    - ErrEmptyBase:20
-    - ErrEmptyPath:16
-    - ErrNotInside:22
-    - ErrNULByte:18
-    - ErrPathEscalation:32
-    - ErrPathEscalation.Error:40
-    - ErrPathEscalation.Unwrap:46
-    - ErrRelFailed:28
-    - ErrResolveBase:24
-    - ErrResolvePath:26
-    - HasTraversal:144
-    - IsInside:51
-    - IsInsideResolved:116
-    - ResolveOrKeep:135
+    - ContainsMinecraftMarker
+    - ErrEmptyBase
+    - ErrEmptyPath
+    - ErrNotInside
+    - ErrNULByte
+    - ErrPathEscalation
+    - ErrPathEscalation.Error
+    - ErrPathEscalation.Unwrap
+    - ErrRelFailed
+    - ErrResolveBase
+    - ErrResolvePath
+    - HasTraversal
+    - IsInside
+    - IsInsideResolved
+    - ResolveOrKeep
   quick_groups:
     - 文件操作与标签
   quick_intents:

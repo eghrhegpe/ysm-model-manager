@@ -7,23 +7,23 @@ source_files:
   - go/importer/
 auto_fields:
   symbols_with_lines:
-    - DetectZipType:149
-    - DetectZipTypeFromBase64Tail:32
-    - DirectoryCopyImporter:219
-    - DirectoryCopyImporter.Import:233
-    - DirectoryCopyImporter.Type:228
-    - Get:41
-    - Handler:21
-    - ImportFromBase64:42
-    - ImportLogger:35
-    - ImportOptions:29
-    - NewDirectoryCopy:224
-    - NewSimpleCopy:95
-    - Register:34
-    - SimpleCopyImporter:90
-    - SimpleCopyImporter.Import:101
-    - SimpleCopyImporter.Type:99
-    - WriteFileAtomic:134
+    - DetectZipType
+    - DetectZipTypeFromBase64Tail
+    - DirectoryCopyImporter
+    - DirectoryCopyImporter.Import
+    - DirectoryCopyImporter.Type
+    - Get
+    - Handler
+    - ImportFromBase64
+    - ImportLogger
+    - ImportOptions
+    - NewDirectoryCopy
+    - NewSimpleCopy
+    - Register
+    - SimpleCopyImporter
+    - SimpleCopyImporter.Import
+    - SimpleCopyImporter.Type
+    - WriteFileAtomic
   quick_groups:
     - 文件操作与标签
   quick_intents:

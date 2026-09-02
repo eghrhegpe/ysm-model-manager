@@ -12,14 +12,14 @@ source_files:
   - frontend/src/core/error-diary.ts
 auto_fields:
   symbols_with_lines:
-    - __TEST__resetDiary:29
-    - bindTreeDnD:123
-    - handleTreeDrop:28
-    - registerErrorDiary:51
-    - registerGlobalHandlers:12
-    - registerInstanceOps:12
-    - registerSync:260
-    - requireMcRoot:13
+    - __TEST__resetDiary
+    - bindTreeDnD
+    - handleTreeDrop
+    - registerErrorDiary
+    - registerGlobalHandlers
+    - registerInstanceOps
+    - registerSync
+    - requireMcRoot
   tests:
     - frontend/src/core/error-diary.test.ts
     - frontend/src/features/import-dnd.test.ts

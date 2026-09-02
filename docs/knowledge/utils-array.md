@@ -7,7 +7,7 @@ source_files:
   - frontend/src/utils/array.ts
 auto_fields:
   symbols_with_lines:
-    - moveItem:8
+    - moveItem
   tests:
     - frontend/src/utils/array.test.ts
   quick_groups:

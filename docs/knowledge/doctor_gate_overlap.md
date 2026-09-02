@@ -9,7 +9,7 @@ source_files:
   - scripts/check-redlines.ts
 auto_fields:
   symbols_with_lines:
-    - redlineFilterKeysByChangedFiles:421
+    - redlineFilterKeysByChangedFiles
   use_when:
     - 双调度器
     - 质量闸门重叠

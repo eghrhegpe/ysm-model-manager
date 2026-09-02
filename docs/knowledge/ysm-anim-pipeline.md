@@ -10,30 +10,30 @@ source_files:
   - frontend/src/utils/animation/animation.ts
 auto_fields:
   symbols_with_lines:
-    - AnimationClip:46
-    - BoneChannels:30
-    - BoneHierarchyNode:67
-    - BoneTransform:57
-    - buildYsmScene:503
-    - compileMolang:71
-    - createYsmAnimPlayer:281
-    - evaluateClip:654
-    - evaluateKeyframes:558
-    - executeTimeline:622
-    - foldMolangConstant:94
-    - Keyframe:19
-    - makeYsmAdapter:534
-    - MolangAxes:16
-    - MolangFn:18
-    - parseBedrockAnimationJSON:482
-    - setMolangScope:39
-    - TimelineEvent:38
-    - Vec3:13
-    - YsmAdapterOptions:44
-    - ysmAnimClipLabels:780
-    - YsmAnimPlayer:32
-    - ysmMenuItems:595
-    - YsmMenuItemsOpts:553
+    - AnimationClip
+    - BoneChannels
+    - BoneHierarchyNode
+    - BoneTransform
+    - buildYsmScene
+    - compileMolang
+    - createYsmAnimPlayer
+    - evaluateClip
+    - evaluateKeyframes
+    - executeTimeline
+    - foldMolangConstant
+    - Keyframe
+    - makeYsmAdapter
+    - MolangAxes
+    - MolangFn
+    - parseBedrockAnimationJSON
+    - setMolangScope
+    - TimelineEvent
+    - Vec3
+    - YsmAdapterOptions
+    - ysmAnimClipLabels
+    - YsmAnimPlayer
+    - ysmMenuItems
+    - YsmMenuItemsOpts
   tests:
     - frontend/src/preview-3d/ysm-animation-player.test.ts
     - frontend/src/utils/animation/animation-controller.test.ts

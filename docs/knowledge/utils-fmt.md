@@ -7,9 +7,9 @@ source_files:
   - frontend/src/utils/dom/format.ts
 auto_fields:
   symbols_with_lines:
-    - fmtDate:35
-    - formatBytes:11
-    - sizeColor:23
+    - fmtDate
+    - formatBytes
+    - sizeColor
   quick_groups:
     - 跨组件通信与页面
   quick_intents:

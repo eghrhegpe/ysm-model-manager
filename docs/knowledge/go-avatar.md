@@ -8,19 +8,19 @@ source_files:
   - go/avatar/
 auto_fields:
   symbols_with_lines:
-    - CacheAvatarsFromJSON:230
-    - CacheAvatarsFromModel:300
-    - CacheDir:30
-    - DecodeYSMFiles:75
-    - ExtractAvatarURI:215
-    - FS:112
-    - ReadCachedAvatar:139
-    - ReadFileFromContainer:54
-    - ReadFileFromZip:20
-    - SafeName:45
-    - SaveAvatarData:165
-    - SetNodeJS:44
-    - Write:66
+    - CacheAvatarsFromJSON
+    - CacheAvatarsFromModel
+    - CacheDir
+    - DecodeYSMFiles
+    - ExtractAvatarURI
+    - FS
+    - ReadCachedAvatar
+    - ReadFileFromContainer
+    - ReadFileFromZip
+    - SafeName
+    - SaveAvatarData
+    - SetNodeJS
+    - Write
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

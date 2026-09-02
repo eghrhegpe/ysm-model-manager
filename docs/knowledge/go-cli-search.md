@@ -8,8 +8,8 @@ source_files:
   - go/cli/cli.go
 auto_fields:
   symbols_with_lines:
-    - ExecuteCLIWithApp:83
-    - RunCLI:39
+    - ExecuteCLIWithApp
+    - RunCLI
   tests:
     - go/cli/cli_test.go
   quick_groups:

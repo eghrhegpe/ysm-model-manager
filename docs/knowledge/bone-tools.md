@@ -12,27 +12,27 @@ source_files:
   - frontend/src/preview-3d/mmd-bones.ts
 auto_fields:
   symbols_with_lines:
-    - BoneDetail:101
-    - BoneListItem:58
-    - BoneNode:11
-    - BoneTree:23
-    - buildBoneTree:36
-    - buildVrmBoneNodes:20
-    - buildVrmBoneTree:52
-    - findAncestorBoneId:153
-    - getBoneDetail:110
-    - getBonePath:78
-    - getBonePosition:93
-    - listBonesWithDepth:65
-    - makeBonePanelRenderer:40
-    - MmdBonePickResult:32
-    - mmdBonesToBoneNodes:16
-    - pickBone:169
-    - pickMmdBone:39
-    - RenderVrmBonePanel:31
-    - setBoneNodeVisible:129
-    - toggleBoneVisible:137
-    - VrmBonePanelCtx:21
+    - BoneDetail
+    - BoneListItem
+    - BoneNode
+    - BoneTree
+    - buildBoneTree
+    - buildVrmBoneNodes
+    - buildVrmBoneTree
+    - findAncestorBoneId
+    - getBoneDetail
+    - getBonePath
+    - getBonePosition
+    - listBonesWithDepth
+    - makeBonePanelRenderer
+    - MmdBonePickResult
+    - mmdBonesToBoneNodes
+    - pickBone
+    - pickMmdBone
+    - RenderVrmBonePanel
+    - setBoneNodeVisible
+    - toggleBoneVisible
+    - VrmBonePanelCtx
   tests:
     - frontend/src/preview-3d/bone-tools.test.ts
     - frontend/src/preview-3d/adapters/vrm-bone.test.ts

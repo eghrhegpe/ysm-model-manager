@@ -14,22 +14,22 @@ source_files:
   - frontend/src/core/handlers/instance-ops.ts
 auto_fields:
   symbols_with_lines:
-    - DIR_HANDLERS:10
-    - FILE_HANDLERS:14
-    - getMenuDef:128
-    - HANDLERS:139
-    - isUnsafeFolderName:42
-    - MENU_DEFS:40
-    - MenuCtx:136
-    - MenuDef:34
-    - refreshUI:18
-    - registerContextMenus:84
-    - registerInstanceOps:12
-    - resolveDstDir:54
-    - toast:24
-    - toastEmptyRtype:37
-    - toastError:32
-    - VIEW_TESTIDS:10
+    - DIR_HANDLERS
+    - FILE_HANDLERS
+    - getMenuDef
+    - HANDLERS
+    - isUnsafeFolderName
+    - MENU_DEFS
+    - MenuCtx
+    - MenuDef
+    - refreshUI
+    - registerContextMenus
+    - registerInstanceOps
+    - resolveDstDir
+    - toast
+    - toastEmptyRtype
+    - toastError
+    - VIEW_TESTIDS
   tests:
     - frontend/src/core/context-menus.test.ts
     - frontend/src/core/handlers/instance-ops.test.ts

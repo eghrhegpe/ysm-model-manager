@@ -17,38 +17,38 @@ source_files:
   - go/litematic/voxel.go
 auto_fields:
   symbols_with_lines:
-    - App.GetVoxelDataInContainer:108
-    - App.ListContainerEntries:73
-    - appendLitematicPreview:134
-    - buildLitematicScene:406
-    - BuildNbtVoxelData:296
-    - BuildNbtVoxelDataFromRoot:305
-    - buildPackScene:341
-    - BuildSchematicVoxelData:520
-    - BuildSchematicVoxelDataFromRoot:529
-    - BuildVoxelData:108
-    - BuildVoxelDataFromRoot:118
-    - CameraControlBridge:27
-    - cleanupVoxel3D:139
-    - createLitematic3D:91
-    - Error:168
-    - fillMmdModelPanel:44
-    - fillMmdShotPanel:213
-    - LITEMATIC_SLICE_SCHEMA_ID:219
-    - LitematicBuildOpts:394
-    - makePackAdapter:66
-    - MaterialControlBridge:180
-    - MmdBottomNavCtx:29
-    - mmdModelInfoNodes:62
-    - MmdPlayBridge:96
-    - mmdShotNodes:197
-    - multiModelSelectNode:39
-    - MultiModelSelectOpts:16
-    - OpenGzRootFromBytes:64
-    - PackAdapterOpts:34
-    - PackDeps:27
-    - packTextureLabel:52
-    - playNodes:114
+    - App.GetVoxelDataInContainer
+    - App.ListContainerEntries
+    - appendLitematicPreview
+    - buildLitematicScene
+    - BuildNbtVoxelData
+    - BuildNbtVoxelDataFromRoot
+    - buildPackScene
+    - BuildSchematicVoxelData
+    - BuildSchematicVoxelDataFromRoot
+    - BuildVoxelData
+    - BuildVoxelDataFromRoot
+    - CameraControlBridge
+    - cleanupVoxel3D
+    - createLitematic3D
+    - Error
+    - fillMmdModelPanel
+    - fillMmdShotPanel
+    - LITEMATIC_SLICE_SCHEMA_ID
+    - LitematicBuildOpts
+    - makePackAdapter
+    - MaterialControlBridge
+    - MmdBottomNavCtx
+    - mmdModelInfoNodes
+    - MmdPlayBridge
+    - mmdShotNodes
+    - multiModelSelectNode
+    - MultiModelSelectOpts
+    - OpenGzRootFromBytes
+    - PackAdapterOpts
+    - PackDeps
+    - packTextureLabel
+    - playNodes
   tests:
     - frontend/src/preview-3d/adapters/pack-model-adapter.test.ts
     - frontend/src/preview-3d/menu/multi-model.test.ts

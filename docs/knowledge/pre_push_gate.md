@@ -9,13 +9,13 @@ source_files:
   - scripts/_lib/gate-config.ts
 auto_fields:
   symbols_with_lines:
-    - ALL_STATIC_TOOLS:42
-    - DOC_EXTRA_SCRIPTS:98
-    - DOC_STATIC_TOOLS:77
-    - FRONTEND_STATIC_TOOLS:107
-    - GateTool:30
-    - GO_STATIC_TOOLS:125
-    - SCRIPTS_TYPECHECK:135
+    - ALL_STATIC_TOOLS
+    - DOC_EXTRA_SCRIPTS
+    - DOC_STATIC_TOOLS
+    - FRONTEND_STATIC_TOOLS
+    - GateTool
+    - GO_STATIC_TOOLS
+    - SCRIPTS_TYPECHECK
   use_when:
     - 推送门禁
     - 质量门禁

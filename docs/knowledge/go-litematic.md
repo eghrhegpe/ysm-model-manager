@@ -14,19 +14,19 @@ source_files:
   - go/litematic/
 auto_fields:
   symbols_with_lines:
-    - BuildNbtVoxelData:296
-    - BuildNbtVoxelDataFromRoot:305
-    - BuildSchematicVoxelData:520
-    - BuildSchematicVoxelDataFromRoot:529
-    - BuildVoxelData:108
-    - BuildVoxelDataFromRoot:118
-    - MapColor:10
-    - OpenGzRootFromBytes:64
-    - ParseMeta:30
-    - ParseNbtStructure:6
-    - ParseSchematicSummary:10
-    - ResolveBlockName:12
-    - ResolveBlockZH:26
+    - BuildNbtVoxelData
+    - BuildNbtVoxelDataFromRoot
+    - BuildSchematicVoxelData
+    - BuildSchematicVoxelDataFromRoot
+    - BuildVoxelData
+    - BuildVoxelDataFromRoot
+    - MapColor
+    - OpenGzRootFromBytes
+    - ParseMeta
+    - ParseNbtStructure
+    - ParseSchematicSummary
+    - ResolveBlockName
+    - ResolveBlockZH
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

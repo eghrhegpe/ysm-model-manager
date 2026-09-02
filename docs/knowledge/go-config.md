@@ -7,9 +7,9 @@ source_files:
   - go/config/config.go
 auto_fields:
   symbols_with_lines:
-    - Get:37
-    - Provider:21
-    - Set:28
+    - Get
+    - Provider
+    - Set
   quick_groups:
     - 配置与注册表
   quick_intents:

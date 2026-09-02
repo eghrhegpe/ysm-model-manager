@@ -11,26 +11,26 @@ source_files:
   - scripts/auto-import-fix.ts
 auto_fields:
   symbols_with_lines:
-    - applyFixes:30
-    - buildSymbolMap:113
-    - checkFile:43
-    - collectFiles:131
-    - collectMethods:137
-    - collectParams:114
-    - extractDefined:164
-    - extractExports:37
-    - extractImported:226
-    - fmtJson:118
-    - fmtText:89
-    - GLOBALS:33
-    - KEYWORDS:18
-    - matchParen:62
-    - paramNamesOfSegment:94
-    - relativeImportSpec:26
-    - run:143
-    - splitBlockEntries:23
-    - splitTopLevelCommas:75
-    - tokenize:80
+    - applyFixes
+    - buildSymbolMap
+    - checkFile
+    - collectFiles
+    - collectMethods
+    - collectParams
+    - extractDefined
+    - extractExports
+    - extractImported
+    - fmtJson
+    - fmtText
+    - GLOBALS
+    - KEYWORDS
+    - matchParen
+    - paramNamesOfSegment
+    - relativeImportSpec
+    - run
+    - splitBlockEntries
+    - splitTopLevelCommas
+    - tokenize
   use_when:
     - 缺失 import
     - auto-import

@@ -14,23 +14,23 @@ source_files:
   - frontend/src/views/app-sidebar/launcher-detect.ts
 auto_fields:
   symbols_with_lines:
-    - appSidebarStyle:21
-    - bindCardEvents:137
-    - bindFooter:242
-    - footerHTML:40
-    - groupMmdVariants:167
-    - headerHTML:21
-    - instanceCardHeaderHTML:114
-    - listContainerHTML:84
-    - loadInstances:37
-    - MmdVariantGroups:21
-    - renderVersionCards:8
-    - resetSelectedEmit:199
-    - runLauncherDetect:113
-    - runMcSearch:55
-    - sidebarCSS:3
-    - SidebarInstance:4
-    - VIEW_TESTIDS:9
+    - appSidebarStyle
+    - bindCardEvents
+    - bindFooter
+    - footerHTML
+    - groupMmdVariants
+    - headerHTML
+    - instanceCardHeaderHTML
+    - listContainerHTML
+    - loadInstances
+    - MmdVariantGroups
+    - renderVersionCards
+    - resetSelectedEmit
+    - runLauncherDetect
+    - runMcSearch
+    - sidebarCSS
+    - SidebarInstance
+    - VIEW_TESTIDS
   tests:
     - frontend/src/features/community/data.test.ts
     - frontend/src/views/app-nav/index.test.ts

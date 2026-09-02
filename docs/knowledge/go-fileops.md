@@ -7,19 +7,19 @@ source_files:
   - go/fileops/
 auto_fields:
   symbols_with_lines:
-    - CopyModelFile:311
-    - CreateDir:52
-    - DeleteModelFile:398
-    - ExtractPreviewTexture:50
-    - FindPreviewImage:24
-    - GetPackInfo:154
-    - IsFileBanned:158
-    - MoveModelFile:176
-    - RemoveDir:115
-    - RenameDir:96
-    - RenameFile:138
-    - ToggleModelEnable:26
-    - WriteModelFolder:20
+    - CopyModelFile
+    - CreateDir
+    - DeleteModelFile
+    - ExtractPreviewTexture
+    - FindPreviewImage
+    - GetPackInfo
+    - IsFileBanned
+    - MoveModelFile
+    - RemoveDir
+    - RenameDir
+    - RenameFile
+    - ToggleModelEnable
+    - WriteModelFolder
   use_when:
     - 移动
     - 复制

@@ -2,8 +2,8 @@
 /**
  * gen-knowledge-autogen.ts — 知识卡 `auto_fields:` 字段自动生成器（解法 B：机器推导字段）。
  *
- * 从卡片 `source_files` 指向的源码提取导出符号及其行号，写入 frontmatter 的
- * `auto_fields.symbols_with_lines:` 块列表。
+ * 从卡片 `source_files` 指向的源码提取导出符号（不含行号，行号减噪见 ADR-159），写入 frontmatter 的
+ * `auto_fields.symbols_with_lines:` 块列表（纯符号名清单）。
  *
  * 解法 B 核心：知识卡字段分两类——
  *   「机器推导」（行号、函数签名、source_files/symbols/tests）由本脚本自动生成；
@@ -305,34 +305,26 @@ function main() {
     }
 
     const target = collectSymbolsWithLines(sources);
-    // 格式化为 "SymbolName:line" 字符串列表
-    const targetSymbols = target.map((s) => `${s.symbol}:${s.line}`);
+    // 格式化为纯符号名列表（行号已减噪，见 ADR-159：Symbol:NN 漂移会产生提交噪音）
+    const targetSymbols = target.map((s) => s.symbol);
 
     // 解析现有 auto_fields
     const existing = parseAutoFields(fm);
     const existingSymbols = existing?.['symbols_with_lines'] ?? [];
 
-    // 全量比较（Symbol:line 整串）——行号移动也是漂移，必须触发更新。
-    // 旧逻辑按符号名比较（s.split(':')[0]），createBus:12 → createBus:15 不报漂移，
-    // 导致 --check 假绿、write 模式不刷新，auto_fields 行号永久 stale。
+    // 仅按符号名集合比对（顺序无关）。行号不进卡片（ADR-159 行号减噪）：
+    // 行号漂移不再触发重写；只有符号真实增删（改名/新增/移除）才重写该卡。
     const existingSet = new Set(existingSymbols);
     const targetSet = new Set(targetSymbols);
 
     const added = targetSymbols.filter((s) => !existingSet.has(s));
     const removed = existingSymbols.filter((s) => !targetSet.has(s));
 
-    // 区分「行号漂移」(moved) 与「符号增删」(added/removed)：
-    // added 和 removed 的 symbol 部分相同但 line 不同 → moved
-    const addedSyms = new Set(added.map((s) => s.split(':')[0]));
-    const moved = removed.filter((s) => addedSyms.has(s.split(':')[0]));
-    const pureAdded = added.filter((s) => !moved.some((m) => m.split(':')[0] === s.split(':')[0]));
-    const pureRemoved = removed.filter((s) => !moved.some((m) => m.split(':')[0] === s.split(':')[0]));
-
     if (added.length === 0 && removed.length === 0 && !isFull) continue; // 一致且非 full 模式 → 跳过
 
     if (isCheck) {
       if (added.length || removed.length) {
-        drifts.push({ file: cf, added: pureAdded, removed: pureRemoved, moved });
+        drifts.push({ file: cf, added, removed, moved: [] });
       }
       continue;
     }

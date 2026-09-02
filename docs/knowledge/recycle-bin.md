@@ -7,9 +7,9 @@ source_files:
   - frontend/src/features/recycle-bin.ts
 auto_fields:
   symbols_with_lines:
-    - initRecycleBin:239
-    - RecycleHost:32
-    - VIEW_TESTIDS:19
+    - initRecycleBin
+    - RecycleHost
+    - VIEW_TESTIDS
   tests:
     - frontend/src/features/recycle-bin.integration.test.ts
   quick_groups:

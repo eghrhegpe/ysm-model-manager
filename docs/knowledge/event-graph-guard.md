@@ -5,6 +5,8 @@ tier: leaf
 category: core
 source_files:
   - scripts/event-graph.ts
+auto_fields:
+  symbols_with_lines: []
 tests:
   - tests/test_bus_contract.mjs
 use_when:

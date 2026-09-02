@@ -8,12 +8,12 @@ source_files:
   - go/threejs/
 auto_fields:
   symbols_with_lines:
-    - BoneData:42
-    - Build:75
-    - BuildMulti:94
-    - MeshData:52
-    - Model3DSpec:20
-    - ModelGroup:31
+    - BoneData
+    - Build
+    - BuildMulti
+    - MeshData
+    - Model3DSpec
+    - ModelGroup
   quick_groups:
     - 3D spec 渲染与模型追加
   quick_intents:

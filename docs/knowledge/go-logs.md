@@ -8,19 +8,19 @@ source_files:
   - go/logs/runtime.go
 auto_fields:
   symbols_with_lines:
-    - DefaultRuntimeCap:11
-    - Logger:56
-    - Logger.Add:193
-    - Logger.AddOp:198
-    - Logger.Clear:279
-    - Logger.Flush:259
-    - Logger.GetAll:270
-    - NewLogger:78
-    - NewRuntimeBuffer:22
-    - RuntimeBuffer:15
-    - RuntimeBuffer.Clear:60
-    - RuntimeBuffer.GetAll:51
-    - RuntimeBuffer.Write:30
+    - DefaultRuntimeCap
+    - Logger
+    - Logger.Add
+    - Logger.AddOp
+    - Logger.Clear
+    - Logger.Flush
+    - Logger.GetAll
+    - NewLogger
+    - NewRuntimeBuffer
+    - RuntimeBuffer
+    - RuntimeBuffer.Clear
+    - RuntimeBuffer.GetAll
+    - RuntimeBuffer.Write
   quick_groups:
     - 文件操作与标签
   quick_intents:

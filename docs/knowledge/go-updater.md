@@ -7,21 +7,21 @@ source_files:
   - go/updater/
 auto_fields:
   symbols_with_lines:
-    - Check:139
-    - CheckWithClient:145
-    - CleanupOldVersion:450
-    - Download:254
-    - DownloadWithProgress:265
-    - ErrDownloadIncomplete:56
-    - ErrDownloadTooBig:54
-    - ErrHashMismatch:58
-    - ErrInvalidPackage:52
-    - ErrNotWindows:50
-    - InstallUpdate:474
-    - Release:108
-    - ReleaseAsset:102
-    - UpdateInfo:117
-    - Write:82
+    - Check
+    - CheckWithClient
+    - CleanupOldVersion
+    - Download
+    - DownloadWithProgress
+    - ErrDownloadIncomplete
+    - ErrDownloadTooBig
+    - ErrHashMismatch
+    - ErrInvalidPackage
+    - ErrNotWindows
+    - InstallUpdate
+    - Release
+    - ReleaseAsset
+    - UpdateInfo
+    - Write
   quick_groups:
     - 配置与注册表
   quick_intents:

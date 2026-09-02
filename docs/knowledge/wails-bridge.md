@@ -12,29 +12,29 @@ source_files:
   - frontend/src/backend/browser-adapter.ts
 auto_fields:
   symbols_with_lines:
-    - AppBindings:12
-    - arrayBufferToBase64:14
-    - browserAdapter:70
-    - detectZipType:183
-    - ExtractResult:49
-    - extractZip:142
-    - getAndroidBridge:24
-    - getApp:18
-    - getFsaAuthState:18
-    - importWebFiles:16
-    - isWebEntryMode:37
-    - MAX_IMPORT_BYTES:14
-    - parseZipCentralDir:63
-    - readDeclaredBackend:31
-    - reauthorizeFsaRoot:18
-    - rescanFsaRoot:18
-    - resolveWebMode:46
-    - selectLocalRepo:16
-    - WailsAndroidBridge:18
-    - WEB_ROOT:14
-    - WebUnsupportedError:14
-    - ZipEntryMeta:33
-    - ZipType:58
+    - AppBindings
+    - arrayBufferToBase64
+    - browserAdapter
+    - detectZipType
+    - ExtractResult
+    - extractZip
+    - getAndroidBridge
+    - getApp
+    - getFsaAuthState
+    - importWebFiles
+    - isWebEntryMode
+    - MAX_IMPORT_BYTES
+    - parseZipCentralDir
+    - readDeclaredBackend
+    - reauthorizeFsaRoot
+    - rescanFsaRoot
+    - resolveWebMode
+    - selectLocalRepo
+    - WailsAndroidBridge
+    - WEB_ROOT
+    - WebUnsupportedError
+    - ZipEntryMeta
+    - ZipType
   tests:
     - frontend/src/views/app-content/app-content.component.test.ts
     - frontend/src/views/app-preview/app-preview.component.test.ts

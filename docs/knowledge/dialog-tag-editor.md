@@ -8,10 +8,10 @@ source_files:
   - frontend/src/utils/dom/dialogs/tag-set.ts
 auto_fields:
   symbols_with_lines:
-    - addTagToSet:19
-    - MAX_TAG_LENGTH:12
-    - modalTagEditor:220
-    - TagSetResult:6
+    - addTagToSet
+    - MAX_TAG_LENGTH
+    - modalTagEditor
+    - TagSetResult
   tests:
     - frontend/src/utils/dom/dialogs/tag-editor.test.ts
   quick_groups:

@@ -5,6 +5,8 @@ tier: architecture
 category: config
 source_files:
   - scripts/jscpd-go.ts
+auto_fields:
+  symbols_with_lines: []
 use_when:
   - jscpd
   - go 重复代码

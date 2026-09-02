@@ -9,12 +9,12 @@ source_files:
   - frontend/src/startup-reveal.ts
 auto_fields:
   symbols_with_lines:
-    - applyTheme:46
-    - initTheme:46
-    - loadView:14
-    - normalizeTheme:46
-    - revealMainWindow:2
-    - unregisterDevtools:153
+    - applyTheme
+    - initTheme
+    - loadView
+    - normalizeTheme
+    - revealMainWindow
+    - unregisterDevtools
   tests:
     - frontend/src/app-modules.test.ts
   quick_groups:

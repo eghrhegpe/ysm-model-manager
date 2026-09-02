@@ -19,10 +19,10 @@ source_files:
   - rust-wails-bridge/
 auto_fields:
   symbols_with_lines:
-    - Scan:27
-    - ScanError:7
-    - ScanManifest:66
-    - ScanResponse:12
+    - Scan
+    - ScanError
+    - ScanManifest
+    - ScanResponse
   tests:
     - rust-core/src/tests.rs
     - go/rustbridge/parse_test.go

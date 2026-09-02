@@ -9,17 +9,17 @@ source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
 auto_fields:
   symbols_with_lines:
-    - _resetSingletons:214
-    - cleanupPreview:193
-    - hasActivePreview:236
-    - invalidatePreview:188
-    - mount3D:267
-    - Mount3DOptions:241
-    - PreviewAdapter:134
-    - PreviewBuildCtx:85
-    - PreviewHandle:144
-    - PreviewScene:108
-    - switchPreview:227
+    - _resetSingletons
+    - cleanupPreview
+    - hasActivePreview
+    - invalidatePreview
+    - mount3D
+    - Mount3DOptions
+    - PreviewAdapter
+    - PreviewBuildCtx
+    - PreviewHandle
+    - PreviewScene
+    - switchPreview
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

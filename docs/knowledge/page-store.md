@@ -7,11 +7,11 @@ source_files:
   - frontend/src/core/page-store.ts
 auto_fields:
   symbols_with_lines:
-    - PAGE_WHITELIST:28
-    - PageStore:54
-    - registerPageStore:61
-    - resolveInitialPage:40
-    - sanitizePage:38
+    - PAGE_WHITELIST
+    - PageStore
+    - registerPageStore
+    - resolveInitialPage
+    - sanitizePage
   tests:
     - frontend/src/core/page-store.test.ts
   quick_groups:

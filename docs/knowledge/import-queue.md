@@ -11,30 +11,30 @@ source_files:
   - frontend/src/features/pack-dnd.ts
 auto_fields:
   symbols_with_lines:
-    - bindPackCardDnD:176
-    - bindTreeDnD:123
-    - buildFolderItems:105
-    - collectDropFiles:147
-    - CollectedEntry:23
-    - CollectedFile:6
-    - collectFiles:35
-    - directImport:39
-    - executeCollected:147
-    - fileToBase64:83
-    - FolderGroup:40
-    - getExt:29
-    - groupCollected:52
-    - handleInstanceDrop:48
-    - handleTreeDrop:28
-    - ImportFile:20
-    - importFolder:82
-    - importWebFilesWithToast:172
-    - isEditableTarget:132
-    - isImportableFile:15
-    - isSupportedFile:9
-    - PackDndBusy:27
-    - PackDndInstance:33
-    - shouldEnterForm:23
+    - bindPackCardDnD
+    - bindTreeDnD
+    - buildFolderItems
+    - collectDropFiles
+    - CollectedEntry
+    - CollectedFile
+    - collectFiles
+    - directImport
+    - executeCollected
+    - fileToBase64
+    - FolderGroup
+    - getExt
+    - groupCollected
+    - handleInstanceDrop
+    - handleTreeDrop
+    - ImportFile
+    - importFolder
+    - importWebFilesWithToast
+    - isEditableTarget
+    - isImportableFile
+    - isSupportedFile
+    - PackDndBusy
+    - PackDndInstance
+    - shouldEnterForm
   tests:
     - frontend/src/features/import-executor.test.ts
     - frontend/src/features/import-dnd.test.ts

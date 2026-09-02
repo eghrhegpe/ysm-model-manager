@@ -9,12 +9,12 @@ source_files:
   - frontend/src/utils/dom/toast-ms.ts
 auto_fields:
   symbols_with_lines:
-    - FLASH_DURATION_MS:10
-    - flashBtn:28
-    - FlashOptions:13
-    - TOAST_MS:6
-    - ToastType:26
-    - VIEW_TESTIDS:12
+    - FLASH_DURATION_MS
+    - flashBtn
+    - FlashOptions
+    - TOAST_MS
+    - ToastType
+    - VIEW_TESTIDS
   quick_groups:
     - UI 交互与弹窗
   quick_intents:

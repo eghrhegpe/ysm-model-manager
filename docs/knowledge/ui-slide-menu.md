@@ -10,17 +10,17 @@ source_files:
   - frontend/src/ui/ui-components-styles.ts
 auto_fields:
   symbols_with_lines:
-    - addFieldRow:19
-    - cardContainer:18
-    - createSlideMenu:20
-    - installSlideMenuStyles:169
-    - installUiComponentsStyles:25
-    - slideMenuCss:9
-    - SlideMenuHandle:34
-    - slideMenuStyleSheet:165
-    - SlideMenuView:27
-    - uiComponentsCss:7
-    - uiComponentsStyleSheet:21
+    - addFieldRow
+    - cardContainer
+    - createSlideMenu
+    - installSlideMenuStyles
+    - installUiComponentsStyles
+    - slideMenuCss
+    - SlideMenuHandle
+    - slideMenuStyleSheet
+    - SlideMenuView
+    - uiComponentsCss
+    - uiComponentsStyleSheet
   quick_groups:
     - UI 交互与弹窗
   quick_intents:

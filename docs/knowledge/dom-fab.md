@@ -7,10 +7,10 @@ source_files:
   - frontend/src/utils/dom/fab.ts
 auto_fields:
   symbols_with_lines:
-    - createIconButton:105
-    - ensureFabStyles:76
-    - IconButtonOpts:91
-    - YSW_FAB_CSS:7
+    - createIconButton
+    - ensureFabStyles
+    - IconButtonOpts
+    - YSW_FAB_CSS
   tests:
     - frontend/src/utils/dom/fab.test.ts
   quick_groups:

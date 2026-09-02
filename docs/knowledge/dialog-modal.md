@@ -7,26 +7,26 @@ source_files:
   - frontend/src/utils/dom/dialogs/modal.ts
 auto_fields:
   symbols_with_lines:
-    - __resetModalStateForTest:88
-    - closeActiveDialog:111
-    - closeDlg:60
-    - fmtMB:401
-    - modalConfirm:365
-    - ModalConfirmOptions:328
-    - modalPicker:595
-    - ModalPickerItem:496
-    - ModalPickerOptions:505
-    - ModalPickerResult:518
-    - modalProgress:479
-    - ModalProgressHandle:393
-    - ModalProgressOptions:385
-    - modalPrompt:224
-    - ModalPromptOptions:191
-    - modalSelect:309
-    - ModalSelectOptions:264
-    - registerDlg:95
-    - trapFocus:32
-    - VIEW_TESTIDS:10
+    - __resetModalStateForTest
+    - closeActiveDialog
+    - closeDlg
+    - fmtMB
+    - modalConfirm
+    - ModalConfirmOptions
+    - modalPicker
+    - ModalPickerItem
+    - ModalPickerOptions
+    - ModalPickerResult
+    - modalProgress
+    - ModalProgressHandle
+    - ModalProgressOptions
+    - modalPrompt
+    - ModalPromptOptions
+    - modalSelect
+    - ModalSelectOptions
+    - registerDlg
+    - trapFocus
+    - VIEW_TESTIDS
   tests:
     - frontend/src/utils/dom/dialogs/modal.test.ts
   use_when:
@@ -38,7 +38,20 @@ auto_fields:
     - modal
     - prompt
     - confirm
+    - 弹窗
+    - 对话框
+    - 确认框
+    - 输入框弹窗
+    - 下拉选择弹窗
+    - modal
+    - prompt
+    - confirm
   invariant_anchors:
+    - frontend/src/utils/dom/dialogs/modal.ts|trapFocus
+    - frontend/src/utils/dom/dialogs/modal.ts|closeDlg
+    - frontend/src/utils/dom/dialogs/modal.ts|registerDlg
+    - frontend/src/utils/dom/dialogs/modal.ts|modalConfirm
+    - frontend/src/utils/dom/dialogs/modal.ts|modalPicker
     - frontend/src/utils/dom/dialogs/modal.ts|trapFocus
     - frontend/src/utils/dom/dialogs/modal.ts|closeDlg
     - frontend/src/utils/dom/dialogs/modal.ts|registerDlg
@@ -62,21 +75,6 @@ auto_fields:
     - modalPicker 的 footerHTML 由调用方负责转义；bodyHTML 同理，禁止直插未 esc 的字符串
     - closeDlg 经 WeakSet(_closingOverlays) 防重复触发，同一弹窗再次调用会静默跳过
     - 测试中必须 afterEach 调用 __resetModalStateForTest() 清槽位，否则跨用例残留状态污染
-  use_when:
-    - 弹窗
-    - 对话框
-    - 确认框
-    - 输入框弹窗
-    - 下拉选择弹窗
-    - modal
-    - prompt
-    - confirm
-  invariant_anchors:
-    - frontend/src/utils/dom/dialogs/modal.ts|trapFocus
-    - frontend/src/utils/dom/dialogs/modal.ts|closeDlg
-    - frontend/src/utils/dom/dialogs/modal.ts|registerDlg
-    - frontend/src/utils/dom/dialogs/modal.ts|modalConfirm
-    - frontend/src/utils/dom/dialogs/modal.ts|modalPicker
 tests:
   - frontend/src/utils/dom/dialogs/modal.test.ts
 use_when:

@@ -7,8 +7,8 @@ source_files:
   - frontend/src/utils/debug/debug.ts
 auto_fields:
   symbols_with_lines:
-    - dbg:38
-    - safeStr:61
+    - dbg
+    - safeStr
   tests:
     - frontend/src/preview-3d/debug-render.test.ts
     - frontend/src/utils/debug/debug.ring.test.ts

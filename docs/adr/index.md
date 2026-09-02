@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **149** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **150** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 145 |
+| [✅ 已采纳](#已采纳) | 146 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -32,10 +32,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（145）
+### ✅ 已采纳（146）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-153](./ADR-153-stats-worker-mt-lazy-import.md) | stats.worker mt WASM 条件加载——静态 import 改动态 import | ✅ 已采纳 |
 | [ADR-152](./ADR-152-gen-stage-concurrency-root.md) | gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收） | ✅ 已采纳 |
 | [ADR-151](./ADR-151-commit-temp-index-concurrency.md) | commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit | ✅ 已采纳 |
 | [ADR-150](./ADR-150-pre-commit-git-add-u-docs-p2-2.md) | pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固) | ✅ 已采纳 |
@@ -193,6 +194,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-153 | stats.worker mt WASM 条件加载——静态 import 改动态 import | ✅ 已采纳 | 2026-09-02 |
 | ADR-152 | gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收） | ✅ 已采纳 | 2026-09-01 |
 | ADR-151 | commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit | ✅ 已采纳 | 2026-09-01 |
 | ADR-150 | pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固) | ✅ 已采纳 | 2026-09-01 |

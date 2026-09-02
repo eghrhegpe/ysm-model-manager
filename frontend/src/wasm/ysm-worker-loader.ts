@@ -5,17 +5,13 @@
 //  2. 胶水代码 worker 安全：window 仅出现于 `globalThis.window?.prompt`（可选链，
 //     Worker 下 globalThis.window 为 undefined 直接跳过）；_scriptName 走
 //     `globalThis.document?.currentScript?.src`（同样可选链安全）。
-//  3. 数据文件用静态 import（随 Worker chunk 一起打包，Worker 内不支持动态 import()——
-//     vite 打包 Worker 为 IIFE，无法 code-splitting）。mt 数据虽捆进 chunk，但 Worker chunk
-//     本身是懒加载的（首次数值搜索才下载），且 SW 缓存后二次访问命中缓存。
+//  3. base 数据用静态 import（随 Worker chunk 打包）；mt 数据用动态 import（ADR-153：
+//     仅 crossOriginIsolated=true 时加载，节省非 COOP-COEP 环境 ~1.5 MB）。
 // 仅被 src/workers/stats.worker.ts 引用（Worker 内），主线程路径不受影响。
 // 解码链与 ysm-parser.ts 保持同口径：内存直解 → 失败时由调用方剥文本头部重试 → callMain。
 // 无状态公共部分（FS/Module 类型、错误分类、MEMFS 辅助）已收敛至 parser-shared.ts。
 import { _getWasmBinary } from "./ysm-wasm-data.js";
 import { _getGlueCode } from "./ysm-glue-data.js";
-// ADR-079 M3：pthread 多线程版（静态 import 随 Worker chunk 打包，懒加载不额外增加下载次数）
-import { _getWasmBinaryMt } from "./ysm-wasm-data-mt.js";
-import { _getGlueCodeMt } from "./ysm-glue-data-mt.js";
 import {
   classifyWasmError,
   collectOutputFiles,
@@ -54,22 +50,38 @@ export async function initYsmParserInWorker(): Promise<boolean> {
 }
 
 /**
- * ADR-079 M3/M4：pthread 多线程版初始化（需 crossOriginIsolated=true——SharedArrayBuffer
+ * ADR-153：懒加载 mt 数据模块（运行时动态 import，节省非 COOP-COEP 环境 ~1.5 MB）。
+ * 仅在 initYsmParserInWorkerMt 被调用时执行，后续调用复用缓存模块。
+ */
+async function loadMtAssets(): Promise<{ wasm: ArrayBuffer | null; glue: string | null }> {
+  const [wasmMod, glueMod] = await Promise.all([
+    import("./ysm-wasm-data-mt.js"),
+    import("./ysm-glue-data-mt.js"),
+  ]);
+  return {
+    wasm: (wasmMod._getWasmBinaryMt() as ArrayBuffer | null) ?? null,
+    glue: (glueMod._getGlueCodeMt() as string | null) ?? null,
+  };
+}
+
+/**
+ * ADR-079 M3/M4 + ADR-153：pthread 多线程版初始化（需 crossOriginIsolated=true——SharedArrayBuffer
  * 前提，见 backend/coi-sw.ts）。差异点：
  *  1. 用 mt 数据文件（pthread 编译产物，Atomics/SharedArrayBuffer/PThread）
  *  2. 注入 mainScriptUrlOrBlob（Blob URL）：Emscripten pthread worker 池从该 URL
  *     重新加载主胶水（new Worker(mainScriptUrlOrBlob)，worker 内 ENVIRONMENT_IS_PTHREAD
  *     分支等消息）——与单线程 base64+eval 注入架构的桥接（ADR-079 §4 补注）。
+ *  3. mt 数据懒加载（ADR-153）：动态 import，非 COOP-COEP 环境不下载。
  *  Blob URL 不能 revoke（pthread worker 生命周期内持续使用）。
  */
 export async function initYsmParserInWorkerMt(): Promise<boolean> {
-  const glue = _getGlueCodeMt() as string | null;
+  const { wasm, glue } = await loadMtAssets();
   if (!glue) throw new Error("mt 胶水代码空");
   const blobUrl = URL.createObjectURL(new Blob([glue], { type: "application/javascript" }));
   // init 失败时 pthread worker 未创建（或已随失败终止），Blob URL 不再被引用；
   // 成功路径按上方注释保留不 revoke（pthread worker 生命周期内持续使用）
   try {
-    return await initParserInWorker(_getWasmBinaryMt() as ArrayBuffer | null, glue, {
+    return await initParserInWorker(wasm, glue, {
       mainScriptUrlOrBlob: blobUrl,
     });
   } catch (e) {

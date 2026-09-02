@@ -1,5 +1,5 @@
 ---
-kind: go_conc
+kind: go-conc
 name: 通用泛型并发工具 go/conc
 tier: leaf
 category: go

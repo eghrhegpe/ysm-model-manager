@@ -8,6 +8,7 @@ const { mocks } = vi.hoisted(() => ({
   mocks: {
     initYsmParserInWorker: vi.fn(),
     initYsmParserInWorkerMt: vi.fn(),
+    // ADR-153：loadMtAssets 是内部函数，通过 mock initYsmParserInWorkerMt 间接覆盖
   },
 }));
 
@@ -16,6 +17,14 @@ vi.mock("../wasm/ysm-worker-loader.ts", () => ({
   initYsmParserInWorkerMt: mocks.initYsmParserInWorkerMt,
   decodeYsmInWorker: vi.fn(),
   decodeYsmInWorkerMemfs: vi.fn(),
+}));
+
+// ADR-153：mock 动态 import 返回 stub 模块（测试环境无需真实 WASM 数据）
+vi.mock("../wasm/ysm-wasm-data-mt.js", () => ({
+  _getWasmBinaryMt: () => new ArrayBuffer(0),
+}));
+vi.mock("../wasm/ysm-glue-data-mt.js", () => ({
+  _getGlueCodeMt: () => "",
 }));
 
 vi.mock("../backend/idb.ts", () => ({ idbGet: vi.fn().mockResolvedValue(null) }));

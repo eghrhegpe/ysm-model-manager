@@ -722,6 +722,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-153：stats.worker mt WASM 条件加载——静态 import 改动态 import",
+        "link": "/adr/ADR-153-stats-worker-mt-lazy-import"
+      },
+      {
         "text": "ADR-152：gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收）",
         "link": "/adr/ADR-152-gen-stage-concurrency-root"
       },
@@ -1454,14 +1458,6 @@ export const autoSidebar = [
             "link": "/knowledge/fbx-cli-pipeline"
           },
           {
-            "text": "通用泛型并发工具 go/conc",
-            "link": "/knowledge/go_conc"
-          },
-          {
-            "text": "仓库审计 go/repoaudit",
-            "link": "/knowledge/go_repoaudit"
-          },
-          {
             "text": "Android 平台守卫（Go 侧）",
             "link": "/knowledge/go-android-platform-guard"
           },
@@ -1476,6 +1472,10 @@ export const autoSidebar = [
           {
             "text": "CLI 搜索命令 search",
             "link": "/knowledge/go-cli-search"
+          },
+          {
+            "text": "通用泛型并发工具 go/conc",
+            "link": "/knowledge/go-conc"
           },
           {
             "text": "Go 配置单持有点 go/config",
@@ -1544,6 +1544,10 @@ export const autoSidebar = [
           {
             "text": "回收站 go/recycle",
             "link": "/knowledge/go-recycle"
+          },
+          {
+            "text": "仓库审计 go/repoaudit",
+            "link": "/knowledge/go-repoaudit"
           },
           {
             "text": "扫描核心 go/scanner",
@@ -1986,20 +1990,6 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
-          }
-        ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "组 2 核对报告（feature + utils，38 张）",
-            "link": "/knowledge/group2-verification-report"
-          },
-          {
-            "text": "组 3 核对报告（go，41 张）",
-            "link": "/knowledge/group3-check-report"
           }
         ]
       }

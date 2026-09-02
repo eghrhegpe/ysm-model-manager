@@ -1,5 +1,5 @@
 ---
-kind: go_repoaudit
+kind: go-repoaudit
 name: 仓库审计 go/repoaudit
 tier: architecture
 category: go

@@ -13,7 +13,7 @@ import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
-import type { Spec3D } from "../../preview-3d/model3d.ts";
+import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 // P1 修复（ADR-040）：fill3DPanel 已拆至 skeleton-fill-panel.ts，此处 re-export 兼容
 export { fill3DPanel } from "./skeleton-fill-panel.ts";
 
@@ -85,16 +85,17 @@ export function buildToggleRow(
 /** spec.models[] → 逐组件统计投影（骨骼 = bones.length；立方体 = Σ bones[]._cubeCount）。
  *  详情卡模型结构蓝卡与 3D「组件」下拉共用同一 spec 视图（ADR-160：详情统计 = spec 投影）；
  *  无组件返回 []，调用方回落聚合口径。 */
+// ADR-161 §2.1：spec 契约单一镜像——统计侧直接锚定 Go 绑定 Model3DSpec，
+// 不再经 Spec3D 镜像/unknown 袋（镜像缺 _cubeCount/textureWidth 曾逼出双层 as 谎言）。
 export function componentCountsFromSpec(
-  spec: { models?: unknown[] | null } | null | undefined,
+  spec: Model3DSpec | null | undefined,
 ): Array<{ name: string; bones: number; cubes: number }> {
   const models = spec?.models || [];
   return models.map((m) => {
-    const mm = m as { name?: string; id?: string; bones?: Array<{ _cubeCount?: number }> };
-    const bones = mm.bones?.length || 0;
+    const bones = m.bones ?? [];
     let cubes = 0;
-    for (const b of mm.bones || []) cubes += b._cubeCount || 0;
-    return { name: mm.name || mm.id || "?", bones, cubes };
+    for (const b of bones) cubes += b._cubeCount || 0;
+    return { name: m.name || m.id || "?", bones: bones.length, cubes };
   });
 }
 
@@ -113,20 +114,16 @@ export async function buildStatsCard(
   const card = document.createElement("div");
   card.className = "pv-card";
   // 获取3D spec 以对齐3D面板数据源（逐组件 bone/cube + 声明纹理尺寸）
-  let spec: Spec3D | null = null;
+  let spec: Model3DSpec | null = null;
   try {
     const { GetModel3DSpec } = await getApp();
-    const modelSpec = await GetModel3DSpec(modelPath);
-    // Model3DSpec → Spec3D 类型转换
-    spec = modelSpec ? (modelSpec as unknown as Spec3D) : null;
+    spec = await GetModel3DSpec(modelPath);
   } catch {
     // spec 获取失败不阻断——回退到聚合数据
   }
-  // 从 spec 提取逐组件数据：bone/cube 按 spec.models[] 拆分，纹理尺寸取第一个组件
-  const specModels = spec?.models || [];
   const componentCounts = componentCountsFromSpec(spec);
   // 纹理尺寸：取第一个组件的声明值（与3D面板对齐；spec 无数据时回退到 BedrockGeometry）
-  const m0 = specModels[0] as { textureWidth?: number; textureHeight?: number } | undefined;
+  const m0 = spec?.models?.[0];
   const texW = m0?.textureWidth ?? model.texWidth;
   const texH = m0?.textureHeight ?? model.texHeight;
   // 构造对齐3D面板的模型数据（逐组件 bone/cube + 声明纹理尺寸）

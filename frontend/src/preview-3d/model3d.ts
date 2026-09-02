@@ -4,7 +4,12 @@
 // 本文件保留：
 //   - Spec 结构（Go 返回的 models 结构）—— 活跃类型枢纽
 //   - 键位/相机偏好 re-export（keymap.ts 的对外统一出口）
-
+//
+// ADR-161 §2.1 镜像声明：下方 Spec3D 族 = Go 契约 Model3DSpec/ModelGroup/BoneData/
+// MeshData（bindings/ysm-model-manager/go/threejs/models.ts）的**渲染侧手写镜像**，
+// 绑定类型为唯一锚点。禁新增第四套 spec 类型名；缺字段（_cubeCount/textureWidth/
+// texArrOrder/componentTextures）请直锚绑定，勿在此补字段 or 用 as 双跳硬取——
+// 统计侧（skeleton-render componentCountsFromSpec）已直锚绑定为范式。
 import * as THREE from "three";
 
 // ── Spec 结构（Go 返回的 models 结构）────────────────

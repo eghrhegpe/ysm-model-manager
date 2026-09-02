@@ -1,5 +1,7 @@
 // ===== 3D 模型加载器（类型化版 — ADR-014 P2）=====
 // loadTextures 已随 ADR-136 第四刀归位 preview-3d/texture-loader.ts
+// ADR-161 §2.1：spec 契约单一镜像——本地 unknown 袋 ModelSpec 退役，
+// 出口类型锚定 Go 绑定 Model3DSpec（字段含 texArrOrder/componentTextures/_cubeCount，不再静默丢）。
 import * as THREE from "three";
 import { getApp } from "../../backend/app.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
@@ -8,6 +10,7 @@ import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
 import { buildSpecFromGeometryJSON } from "../../preview-3d/spec-builder.ts";
 import { loadTextures } from "../../preview-3d/texture-loader.ts";
 import { recordLoadTrace } from "../../preview-3d/load-trace.ts";
+import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {
@@ -21,11 +24,7 @@ export interface ModelLike {
   componentTextures?: Record<string, string[]>;
 }
 
-/** Go 返回的 3D spec（models 数组） */
-export interface ModelSpec {
-  models?: unknown[];
-  [key: string]: unknown;
-}
+/** Go 返回的 3D spec（models 数组）——锚定绑定类型，本地 unknown 袋已退役（ADR-161） */
 
 const specCache = new Map<string, string>();
 const SPEC_CACHE_MAX = 20;
@@ -53,7 +52,7 @@ function getCachedSpec(path: string): string | undefined {
 /** 并行加载纹理 URL 列表，返回 THREE.Texture 数组（ADR-136 归位 preview-3d/texture-loader.ts） */
 
 /** 获取模型 spec（Go 绑定为唯一事实来源，ADR-004；Android 等无 Node 环境降级前端 WASM 解码兜底） */
-async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
+async function fetchSpec(model: ModelLike): Promise<Model3DSpec> {
   if (!model._modelPath) return { models: [] };
   let jsonStr = getCachedSpec(model._modelPath);
   if (!jsonStr) {
@@ -63,7 +62,7 @@ async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
     jsonStr = spec ? JSON.stringify(spec) : "{}";
     cacheSpec(model._modelPath, jsonStr);
   }
-  const parsed = JSON.parse(jsonStr) as ModelSpec;
+  const parsed = JSON.parse(jsonStr) as Model3DSpec;
   if (!parsed.models?.length) {
     // 降级：仅无 Node 解码通道的平台（Android 双端桥 / 网页版 browser adapter，
     // GetModel3DSpec 恒空）走前端 WASM 解码兜底；桌面 Go 有 Node 通道，spec 空是
@@ -82,7 +81,7 @@ async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
  *  Android 路径调 Go binding Build3DSpecFromGeometryJSON；
  *  网页版路径（isWebPlatform）调纯 TS buildSpecFromGeometryJSON——
  *  Go binding 在网页版恒 "{}" 桩（ADR-049 P2-2 闭环）。 */
-async function fetchSpecViaWasmFallback(model: ModelLike): Promise<ModelSpec | null> {
+async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec | null> {
   try {
     const decoded = await decodeYsmViaWasm(model._modelPath!);
     if (!decoded?.geometryRaw) return null;
@@ -90,7 +89,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<ModelSpec | n
       // 网页版：Go binding 不可用（恒 null 桩），调纯 TS 移植
       const specStr = buildSpecFromGeometryJSON(decoded.geometryRaw);
       if (!specStr || specStr === "{}") return null;
-      const spec = JSON.parse(specStr) as ModelSpec;
+      const spec = JSON.parse(specStr) as Model3DSpec;
       if (!spec.models?.length) return null;
       cacheSpec(model._modelPath!, specStr);
       return spec;
@@ -103,7 +102,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<ModelSpec | n
       // 兜底结果写 spec 缓存：否则每次预览都重新 WASM 解码（时间翻倍）
       cacheSpec(model._modelPath!, specStr);
       console.warn("[3D] GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）");
-      return spec as unknown as ModelSpec;
+      return spec;
     }
   } catch (e) {
     console.warn("[3D] 前端 WASM 解码兜底失败:", e);
@@ -114,7 +113,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<ModelSpec | n
 /** 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标） */
 export async function preloadModel(model: ModelLike): Promise<{
   texArr: (THREE.Texture | null)[];
-  spec: ModelSpec;
+  spec: Model3DSpec;
   /** ADR-114 perComponent：组件名→Texture 数组（3D 渲染用，每组件独立纹理） */
   componentTexMap: Map<string, (THREE.Texture | null)[]>;
 }> {
@@ -145,8 +144,8 @@ export async function preloadModel(model: ModelLike): Promise<{
   // spec.componentTextures（zip/7z/解压目录三路同源）；model.componentTextures
   // 保留兼容（旧数据链）。
   const componentTexMap = new Map<string, (THREE.Texture | null)[]>();
-  const compTex = (spec as { componentTextures?: Record<string, string[]> }).componentTextures
-    ?? (model as ModelLike).componentTextures;
+  // 绑定类型自带 componentTextures（Record<string, string[]|null>|null），直读无需松断言
+  const compTex = spec.componentTextures ?? model.componentTextures;
   // 契约哨兵（回归 936169b1 防再犯）：多组件 spec 缺 componentTextures = perComponent
   // 契约断裂（此前是 typed 序列化静默丢字段），全体组件会回落全局 texArr[texIdx] 错贴纹理。
   // 缺失时渲染仍继续（.ysm WASM 路径本就无该字段），但必须显式告警而非静默跳过。
@@ -157,11 +156,11 @@ export async function preloadModel(model: ModelLike): Promise<{
   }
   if (compTex) {
     for (const [compName, texBase64Arr] of Object.entries(compTex)) {
-      const compTexArr = await loadTextures(texBase64Arr);
+      const compTexArr = await loadTextures(texBase64Arr ?? []);
       componentTexMap.set(compName, compTexArr);
     }
   }
-  const order = (spec as ModelSpec).texArrOrder as string[] | undefined;
+  const order = spec.texArrOrder as string[] | undefined;
   // R1 契约校验：texArrOrder[i] = 组件 i 实际贴图名（Go 端按 texSlot 分配，多组件可**共享**
   // 同一张声明纹理，如 arm 与 main 共享 skin；未声明组件用 basename）。故改为**存在性**比对：
   // 每个期望名必须存在于 texArr 实际清单 actualNames——缺失（未加载/越界）才 warn 不阻断。

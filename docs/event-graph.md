@@ -324,7 +324,7 @@
 | `frontend/src/features/community/download-queue-store.ts` | 258 |
 | `frontend/src/features/community/download-queue.ts` | 115 |
 | `frontend/src/features/import-executor.ts` | 34 |
-| `frontend/src/features/import-executor.ts` | 181 |
+| `frontend/src/features/import-executor.ts` | 187 |
 | `frontend/src/features/pack-dnd.ts` | 159 |
 | `frontend/src/features/recycle-bin.ts` | 110 |
 | `frontend/src/features/recycle-bin.ts` | 170 |
@@ -433,8 +433,8 @@
 | `frontend/src/features/import-dnd.ts` | 102 |
 | `frontend/src/features/import-dnd.ts` | 188 |
 | `frontend/src/features/import-executor.ts` | 29 |
-| `frontend/src/features/import-executor.ts` | 172 |
-| `frontend/src/features/import-executor.ts` | 185 |
+| `frontend/src/features/import-executor.ts` | 178 |
+| `frontend/src/features/import-executor.ts` | 191 |
 | `frontend/src/features/pack-dnd.ts` | 38 |
 | `frontend/src/features/recycle-bin.ts` | 244 |
 | `frontend/src/features/version-updater.ts` | 149 |
@@ -611,7 +611,7 @@
 | `frontend/src/features/community/download-queue-store.ts` | 257 |
 | `frontend/src/features/community/download-queue.ts` | 114 |
 | `frontend/src/features/import-executor.ts` | 35 |
-| `frontend/src/features/import-executor.ts` | 180 |
+| `frontend/src/features/import-executor.ts` | 186 |
 | `frontend/src/features/pack-dnd.ts` | 160 |
 | `frontend/src/features/recycle-bin.ts` | 111 |
 | `frontend/src/features/recycle-bin.ts` | 171 |

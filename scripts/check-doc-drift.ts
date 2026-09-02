@@ -26,6 +26,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.ts';
+import { run } from './_lib/proc.ts';
 import { parseFrontmatter, getScalar, parseSourceFiles, parseAdrHeader } from './_lib/frontmatter.ts';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
@@ -35,6 +36,22 @@ const BASELINE_FILE = path.join(ROOT, 'scripts/baseline/doc-drift-baseline.json'
 
 const JSON_OUT = process.argv.includes('--json');
 const FIX_MODE = process.argv.includes('--fix');
+
+// 文件驱动模式（commit-with-check / push 门禁传入）：仅校验本次变更的知识卡，
+// 避免并行会话留在 docs/knowledge/ 下的未跟踪草稿卡（如 commit-with-check.md）阻断本次提交。
+// 与 check-redlines --files 同款裁剪；无 --files 时退化为全量扫描（向后兼容 doctor --all）。
+const FILES_IDX = process.argv.indexOf('--files');
+const FILES_RAW = FILES_IDX !== -1 ? (process.argv[FILES_IDX + 1] || '') : '';
+const FILES_SET: Set<string> | null = FILES_RAW
+  ? new Set(FILES_RAW.split('\n').map((p) => p.trim()).filter(Boolean).map((p) => path.basename(p)))
+  : null;
+
+/** 未跟踪知识卡集合（git ls-files --others）。草稿不参与漂移打分——fail-open：git 不可用时返回空集不阻断。 */
+function getUntrackedCards(): Set<string> {
+  const r = run('git', ['ls-files', '--others', '--exclude-standard', '--', 'docs/knowledge'], { cwd: ROOT });
+  if (!r.ok) return new Set();
+  return new Set(r.out.split('\n').filter(Boolean).map((p) => path.basename(p)));
+}
 
 const errors: string[] = [];
 const warns: string[] = [];
@@ -99,9 +116,16 @@ function checkAdr() {
 
 function checkKnowledge() {
   if (!fs.existsSync(KC_DIR)) return 0;
+  // 未跟踪草稿跳过仅在 --files（commit/push 裁剪）模式启用：全局模式（doctor --all /
+  // 契约测试）须扫全部卡（含未跟踪草稿），否则会漏检。与 check-knowledge-drift 对齐。
+  const untracked = FILES_SET ? getUntrackedCards() : new Set<string>();
   const files = fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && !/^(readme|agents)\.md$/i.test(f));
   let count = 0;
   for (const cf of files) {
+    if (FILES_SET) {
+      if (untracked.has(cf)) continue;          // 跳过未跟踪草稿（并行会话残留，不打分）
+      if (!FILES_SET.has(cf)) continue;         // 仅查本次变更卡
+    }
     // P1-1 修复（code_review）：与 check-knowledge-drift 对齐——读文件剥 BOM（\uFEFF）。
     // 带 BOM 的知识卡 `^---` 锚定会失配 → 整卡静默跳过（假绿）；剥后 frontmatter 解析正常。
     const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf-8').replace(/^\uFEFF/, '');
@@ -127,12 +151,14 @@ function checkKnowledge() {
       if (!fs.existsSync(path.join(ROOT, v))) errors.push(`[知识卡] ${cf} 的 source_files 引用不存在: ${v}`);
     }
   }
-  // 索引断链
-  for (const idx of ['index.md']) {
-    const idxText = readText(`docs/knowledge/${idx}`);
-    if (!idxText) continue;
-    for (const m of idxText.matchAll(/\]\(\.\/([a-zA-Z0-9_-]+\.md)\)/g)) {
-      if (!fs.existsSync(path.join(KC_DIR, m[1]!))) errors.push(`[知识卡] 索引 ${idx} 链接指向不存在的卡: ${m[1]}`);
+  // 索引断链（全局一致性检查，仅非裁剪模式执行）
+  if (!FILES_SET) {
+    for (const idx of ['index.md']) {
+      const idxText = readText(`docs/knowledge/${idx}`);
+      if (!idxText) continue;
+      for (const m of idxText.matchAll(/\]\(\.\/([a-zA-Z0-9_-]+\.md)\)/g)) {
+        if (!fs.existsSync(path.join(KC_DIR, m[1]!))) errors.push(`[知识卡] 索引 ${idx} 链接指向不存在的卡: ${m[1]}`);
+      }
     }
   }
   return count;

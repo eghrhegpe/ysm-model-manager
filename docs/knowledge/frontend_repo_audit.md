@@ -420,7 +420,7 @@ auto_fields:
     - Events:56
     - EventSelf:9
     - executeCLI:99
-    - executeCollected:141
+    - executeCollected:147
     - executeTimeline:622
     - expectContainsAtLeast:17
     - expectNotContains:36
@@ -617,9 +617,9 @@ auto_fields:
     - IKConfig:27
     - IKResult:45
     - ImportFile:20
-    - importFolder:76
+    - importFolder:82
     - importWebFiles:16
-    - importWebFilesWithToast:166
+    - importWebFilesWithToast:172
     - initAdvancedGrid:194
     - initControl:165
     - initDedupConfig:208
@@ -1413,7 +1413,7 @@ auto_fields:
     - webAnalyzeBedrockModelEntry:345
     - webCliBindings:12
     - webCommonBindings:95
-    - webCommunityBindings:247
+    - webCommunityBindings:251
     - WebComponentBase:7
     - webDirType:46
     - webExtractPreviewTexture:172

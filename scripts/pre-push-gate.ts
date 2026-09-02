@@ -328,6 +328,37 @@ async function main() {
     }
   };
 
+  /* --- 文档漂移按 --files 裁剪执行器（与 check-redlines 同款数组式 procRun）---
+   * commit/push 文件驱动模式：仅校验本次变更知识卡，避免并行会话未跟踪草稿卡阻断本次提交。
+   * doc-drift / knowledge-drift 默认全扫 docs/knowledge/，此处强制 --files 裁剪。
+   * 数组式传参（shell:false）承载换行分隔的 --files 大列表（避开 cmd 8K 墙，见 check-redlines 注释）。 */
+  const runScopedDocDrift = (changedFiles: string[]) => {
+    if (changedFiles.length === 0) return;
+    for (const tool of ['check-doc-drift.ts', 'check-knowledge-drift.ts']) {
+      const t0 = Date.now();
+      const r = procRun('node', ['scripts/' + tool, '--json', '--files', changedFiles.join('\n')], {
+        cwd: ROOT, timeout: TIMEOUT,
+      });
+      const out = r.out || r.err || '';
+      let ok = r.rc === 0;
+      let note = '';
+      let tail = '';
+      try {
+        const parsed = JSON.parse(out);
+        const s = parsed._summary || parsed;
+        if (typeof s.ok === 'boolean') ok = s.ok;
+        else if (typeof s.errors === 'number') ok = s.errors === 0;
+        const cnt = Object.entries(s)
+          .filter(([k, v]) => /count|total|errors|issues|warns|violations|orphan|missing|flagged/.test(k) && typeof v === 'number')
+          .map(([k, v]) => `${k}=${v}`)
+          .join(' ');
+        if (cnt) note = cnt;
+      } catch { if (!ok) note = '输出解析失败（非 JSON），退回 rc 判定'; }
+      if (!ok) tail = out.trim().split('\n').slice(-12).join('\n');
+      record(tool, ok, { time: Date.now() - t0, note, tail: !ok ? tail : '' });
+    }
+  };
+
   /* --- 域间并行：Go ∥ 前端（ADR-088 Take巧 #1）--- */
   // Go 和前端域完全独立（无共享状态、无文件写冲突），用 Promise.all 并行。
   // Take巧 #4（静态工具并行）已回退（spawn 开销吃掉 sub-second 工具收益）；
@@ -620,8 +651,12 @@ async function main() {
     if (plan.frontend) runTools(FRONTEND_STATIC_TOOLS);
     if (plan.go) runTools(GO_STATIC_TOOLS);
     if (plan.docs || plan.adr) {
-      runTools(DOC_STATIC_TOOLS);
-      runTools(DOC_EXTRA_SCRIPTS);
+      // 文件驱动模式：doc-drift / knowledge-drift 按 --files 裁剪（与 check-redlines 同款），
+      // 避免并行会话留在 docs/knowledge/ 的未跟踪草稿卡（如 commit-with-check.md）阻断本次 commit。
+      // 二者从通用 runTools 摘除（否则无 --files 全扫），改由 runScopedDocDrift 数组式传 --files。
+      runTools(DOC_STATIC_TOOLS.filter((t) => t !== 'check-doc-drift.ts'));
+      runTools(DOC_EXTRA_SCRIPTS.filter((t) => t !== 'check-knowledge-drift.ts'));
+      runScopedDocDrift(files);
     }
   }
 

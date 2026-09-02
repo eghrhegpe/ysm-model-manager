@@ -19,7 +19,7 @@ auto_fields:
     - CollectedFile:6
     - collectFiles:35
     - directImport:39
-    - executeCollected:141
+    - executeCollected:147
     - fileToBase64:83
     - FolderGroup:40
     - getExt:29
@@ -27,8 +27,8 @@ auto_fields:
     - handleInstanceDrop:48
     - handleTreeDrop:28
     - ImportFile:20
-    - importFolder:76
-    - importWebFilesWithToast:166
+    - importFolder:82
+    - importWebFilesWithToast:172
     - isEditableTarget:132
     - isImportableFile:15
     - isSupportedFile:9

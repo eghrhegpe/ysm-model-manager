@@ -35,11 +35,12 @@ import { toPosix } from './_lib/to-posix.ts';
 import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.ts';
 import { PERF_TAGS, KNOWLEDGE_NON_CARDS, KNOWLEDGE_ORDER } from './_lib/knowledge-cards.ts';
 import { parseArgs } from './_lib/parse-args.ts';
+import { run } from './_lib/proc.ts';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
 // 参数解析统一走 _lib/parse-args（positional 脚本契约：未知 flag 白名单拦截）
-const ARGS = parseArgs(process.argv.slice(2), { bools: ['json', 'verbose', 'quiet', 'affected'] });
+const ARGS = parseArgs(process.argv.slice(2), { bools: ['json', 'verbose', 'quiet', 'affected'], strings: ['files'] });
 if (ARGS.help) {
   console.log('用法: node scripts/check-knowledge-drift.ts [--json|--verbose|--affected <f>…|--quiet]');
   console.log('  --json      机读 JSON（doctor --docs 调用）');
@@ -56,6 +57,11 @@ const JSON_OUT = ARGS.json;
 const VERBOSE = ARGS.verbose;
 const AFFECTED_MODE = ARGS.affected;
 const AFFECTED_PATHS = ARGS._;
+// 文件驱动模式（commit-with-check / push 门禁传入）：--files 为换行分隔的仓库相对路径，
+// 仅校验本次变更的知识卡，避免并行会话未跟踪草稿卡阻断本次提交。无 --files 退化为全量。
+const FILES_SET: Set<string> | null = ARGS.files
+  ? new Set(String(ARGS.files).split('\n').map((p) => p.trim()).filter(Boolean).map((p) => path.basename(p)))
+  : null;
 // --quiet：--affected 仅输出受影响卡 stem（每行一个），供钩子机读消费
 const QUIET = ARGS.quiet;
 const errors: string[] = [];
@@ -79,10 +85,28 @@ const ROOT_ESCAPE_RE = /\\|^[A-Za-z]:|^\/|^~|\.\.\//; // 反斜杠 / 绝对路�
 // 此前 checkKnowledgeMeta/Sources/Anchors/Coverage/runAffected 各自
 // readdirSync + readFileSync + parseFrontmatter（每卡 frontmatter 被解析 5 遍，
 // 同一目录被读盘 5 次）——统一为一次遍历，喂给全部检查器。
-function loadKnowledgeCards() {
+/** 未跟踪知识卡集合（git ls-files --others）。草稿不参与漂移打分——fail-open：git 不可用时返回空集不阻断。 */
+function getUntrackedCards(): Set<string> {
+  const r = run('git', ['ls-files', '--others', '--exclude-standard', '--', 'docs/knowledge'], { cwd: ROOT });
+  if (!r.ok) return new Set();
+  return new Set(r.out.split('\n').filter(Boolean).map((p) => path.basename(p)));
+}
+
+/**
+ * 单遍遍历骨架：readdir 一次 + 每卡 read+parseFrontmatter 一次。
+ * opts.filesSet：仅保留集合内的卡（--files 裁剪模式，与 check-redlines 对齐）。
+ *   未跟踪草稿跳过仅在 filesSet 存在（commit/push 裁剪）时启用——
+ *   全局模式（doctor --all / 契约测试）须扫全部卡（含未跟踪草稿），否则漏检。
+ */
+function loadKnowledgeCards(opts: { filesSet?: Set<string> | null } = {}) {
   if (!fs.existsSync(KC_DIR)) return [];
+  const untracked = opts.filesSet ? getUntrackedCards() : new Set<string>();
   const files = fs.readdirSync(KC_DIR).filter(
-    (f) => f.endsWith('.md') && !/^(readme|agents)\.md$/i.test(f)
+    (f) =>
+      f.endsWith('.md') &&
+      !/^(readme|agents)\.md$/i.test(f) &&
+      !untracked.has(f) &&
+      (!opts.filesSet || opts.filesSet.has(f))
   );
   return files.map((cf) => {
     // P1 修复（子代理审计）：带 BOM 的知识卡 `^---` 失配 → 整卡静默跳过（假绿）；
@@ -516,7 +540,8 @@ function main() {
     errors.push('docs/knowledge/ 目录不存在，扫描不完整');
   }
   // 单遍遍历：readdir + read + parseFrontmatter 各一次，喂给全部检查器
-  const cards = loadKnowledgeCards();
+  // 按 --files 裁剪（filesSet 存在时同时跳过未跟踪草稿，避免并行会话草稿卡阻断本次提交）
+  const cards = loadKnowledgeCards({ filesSet: FILES_SET });
   checkKnowledgeMeta(cards);
   checkKnowledgeSources(cards);
   checkKnowledgeAnchors(cards);

@@ -1039,9 +1039,10 @@ function assertValidRenameName(newName: string, kind: "目录" | "文件"): void
 // ===== §12 删除模型组 =====
 // --- 删除模型组（dir + 所有 file + 元数据标记）---
 async function deleteWebModel(type: string, name: string): Promise<void> {
-  // ADR-040 治理：整组删除收敛为单事务（idbTx）——dir + 全部 file + ban/tags 标记
-  // 任一失败 → 事务 abort → 全部回滚，杜绝「dir 已删 file 残留」的半删态。
-  // files / config 分属两个 store，各自单事务（IDB 单事务仅限单 store）
+  // ADR-040 治理：整组删除收敛为 idbTx——dir + 全部 file + ban/tags 标记
+  // files / config 分属两个 store，各自单事务（IDB 单事务仅限单 store）。
+  // 跨 store 仍非原子：files 事务提交后 config 事务失败会留 ban/tags 孤儿标记，
+  // 调用方需 best-effort 重试清理。
   const fileOps: IdbOp[] = [{ kind: "del", key: dirKey(type, name) }];
   const fks = await idbKeys("files", `file:${type}/${name}/`);
   for (const k of fks) fileOps.push({ kind: "del", key: k });
@@ -1203,12 +1204,15 @@ async function rekeyWebModelGroup(type: string, oldName: string, newName: string
       ];
       for (const k of fks) delFileOps.push({ kind: "del", key: k });
       await idbTx("files", delFileOps);
+      // 阶段二 config 删：两个 prefix 的删合并为单事务（与阶段一 cfgOps 对齐），
+      // 避免 ban: 删成功后 tags: 删失败导致旧 tags: 残留（新旧并存）。
+      const delCfgOps: IdbOp[] = [];
       for (const prefix of ["ban:", "tags:"]) {
         const scanPrefix = `${prefix}/web/${type}/${oldName}/`;
         const keys = await idbKeys("config", scanPrefix);
-        const delCfgOps: IdbOp[] = keys.map((k) => ({ kind: "del", key: k }));
-        if (delCfgOps.length) await idbTx("config", delCfgOps);
+        delCfgOps.push(...keys.map((k) => ({ kind: "del" as const, key: k })));
       }
+      if (delCfgOps.length) await idbTx("config", delCfgOps);
     }
   } catch (e) {
     await rollbackNew();

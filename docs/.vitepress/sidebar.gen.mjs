@@ -722,6 +722,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-155：commit-with-check 重构为独立轻量提交校验（与重型 push 门禁解耦）",
+        "link": "/adr/ADR-155-commit-with-check-lightweight"
+      },
+      {
         "text": "ADR-154：Go-TS 解析层 golden 对拍（双端互锁契约）",
         "link": "/adr/ADR-154-go-ts-golden"
       },

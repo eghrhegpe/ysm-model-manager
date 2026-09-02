@@ -1,31 +1,27 @@
 #!/usr/bin/env node
 /**
- * commit-with-check.ts — 验证 + 自动提交的 thin wrapper（ADR-086 配套，2026-08-17 重构；
+ * commit-with-check.ts — 验证 + 自动提交（轻量级提交校验，2026-09-02 重构；
  * ADR-151 临时索引白名单提交，2026-09-01）
  *
- * 设计意图：把 AI 的「确认性循环」（改代码→tsc→build→test→git add→commit→git log）
- * 压缩为「改代码→commit-with-check」单条命令——验证委托 pre-push-gate（单一源头），
- * 门禁全绿才 commit，杜绝绕过检查直接提交。
+ * 定位：commit 阶段的**轻量**校验，与重型 push 门禁（pre-push 钩子）职责分离。
+ *   - 本工具只回答「本次变更文件本身有没有问题」——按文件裁剪的廉价检查：
+ *     红线 / 文档漂移 / 变更域契约测试（详见 _lib/commit-check.ts）。
+ *   - go build / vite build / go test / vitest / link-checker / 全量静态工具等重型验证
+ *     **不在本工具范围**，留给 pre-push 钩子（避免与 push 双重付费、小提交纯增成本）。
  *
- * 并发隔离（ADR-151，2026-09-01）：旧实现「先 git add 后裸 `git commit -m`」在共享
- * checkout 下会被并行会话的裸 commit 打包整个主 index（实证：go/conc 5 文件被并行
- * fix(hooks) 提交 b4d23b78 卷走）。本版本提交阶段改用 commit-temp-index.ts：
+ * 把 AI 的「确认性循环」压缩为「改代码→commit-with-check」单条命令：轻量门禁全绿才
+ * commit，杜绝绕过检查直接提交；重型门禁由 push 阶段的 pre-push 钩子兜底。
+ *
+ * 并发隔离（ADR-151，2026-09-01）：提交阶段用 commit-temp-index.ts：
  *   GIT_INDEX_FILE 独立临时索引 + read-tree HEAD + add -- paths + commit，
  *   pre-commit 钩子继承临时索引 → gen 产物/gofmt 修复/智能 stage 测试全部落进本次提交，
  *   主 index 零接触。提交后双条件校验：越界文件 exit 1 / 并发插队 notice。
  *   新增 --files <paths> 白名单直取（不依赖先 git add，主 index 空也能提交）。
  *
- * 设计（thin wrapper）：
- *   1. 读白名单：--files 直取；否则读 git staged files（向后兼容旧用法）
- *   2. 检查全部委托给 pre-push-gate.ts（--files --dry-run / --docs --dry-run）
- *      ——检查清单单一源头 = pre-push-gate，不再平行维护第二套
- *   3. 门禁全绿后临时索引白名单提交（commit-temp-index.ts）
- *   4. 提交后自动显示 SHA + status（省 git log/git status 确认）
- *
  * 用法：
- *   node scripts/commit-with-check.ts -m "feat: xxx"                # 全量门禁 + 提交（读 staged）
+ *   node scripts/commit-with-check.ts -m "feat: xxx"                # 轻量门禁 + 提交（读 staged）
  *   node scripts/commit-with-check.ts -m "feat: xxx" --files a.ts b.ts  # 白名单直取（无需先 add）
- *   node scripts/commit-with-check.ts -m "feat: xxx" --docs         # 仅文档域门禁 + 提交
+ *   node scripts/commit-with-check.ts -m "feat: xxx" --docs         # 仅文档域轻量门禁 + 提交
  *   node scripts/commit-with-check.ts --check                       # 仅验证不提交
  *   node scripts/commit-with-check.ts -m "feat: xxx" --keep-index   # 提交后不清主 index
  *
@@ -34,11 +30,13 @@
  *   1 — 门禁失败 / 越界文件 / 提交失败，未提交
  *   2 — 用法错误
  *
- * 依赖：_lib/scan-files / _lib/domain-classify / _lib/proc / _lib/commit-temp-index / _lib/gen-cmds
+ * 依赖：_lib/scan-files / _lib/domain-classify / _lib/proc / _lib/commit-check /
+ *       _lib/commit-temp-index / _lib/gen-cmds
  */
 import { ROOT } from './_lib/scan-files.ts';
 import { groupByDomain, domainSummaryText } from './_lib/domain-classify.ts';
 import { run } from './_lib/proc.ts';
+import { runCommitChecks } from './_lib/commit-check.ts';
 import { commitWithTempIndex } from './_lib/commit-temp-index.ts';
 import { GEN_CMDS } from './_lib/gen-cmds.ts';
 
@@ -68,12 +66,12 @@ for (let i = 0; i < args.length; i++) {
   } else if (a.startsWith('--files=')) {
     files.push(...a.slice('--files='.length).split(/[, ]+/).filter(Boolean));
   } else if (a === '--fast') {
-    console.warn('⚠️  --fast 已移除：thin wrapper 统一走 pre-push-gate 全量门禁，不再支持跳过 vitest。');
+    console.warn('⚠️  --fast 已移除：轻量提交校验只跑按文件裁剪的检查，不跑重型门禁（go build/vite build 等留待 pre-push）。');
   } else if (a === '-h' || a === '--help') {
     console.log(`用法: node scripts/commit-with-check.ts -m "<msg>" [--files <paths>...] [--docs|--check] [--keep-index]
   -m, --message    commit message（必填，除非 --check）
   --files <paths>  白名单路径直取（无需先 git add；不传则读主 index staged 清单）
-  --docs           仅文档域检查（等价 pre-push-gate --docs --dry-run）
+  --docs           仅文档域轻量检查（红线/文档漂移/文档契约测试）
   --check          仅验证不提交
   --keep-index     提交后不清主 index（默认清理已提交路径的暂存态）
   --fast           已移除（thin wrapper 统一全量门禁）`);
@@ -98,6 +96,13 @@ function git(args: string[]) {
 let paths: string[];
 if (files.length > 0) {
   paths = files;
+} else if (docsMode) {
+  // docs 模式无 --files：收集已变更（staged + 工作树）的 docs/ 文件，按文件裁剪校验
+  const changed = [
+    ...git(['diff', '--cached', '--name-only', '--', 'docs/']).split('\n'),
+    ...git(['diff', '--name-only', '--', 'docs/']).split('\n'),
+  ];
+  paths = [...new Set(changed.map((s) => s.trim()).filter(Boolean))];
 } else {
   const stagedRaw = git(['diff', '--cached', '--name-only']);
   paths = stagedRaw ? stagedRaw.split('\n').filter(Boolean) : [];
@@ -111,17 +116,13 @@ if (paths.length === 0) {
 const byDomain = groupByDomain(paths);
 const domainSummary = domainSummaryText(byDomain);
 
-console.log('========== commit-with-check（thin wrapper → pre-push-gate）==========');
+console.log('========== commit-with-check（轻量级提交校验）==========');
 console.log(`变更域: ${domainSummary}`);
-console.log(`门禁: ${docsMode ? 'pre-push-gate --docs --dry-run' : 'pre-push-gate --files <paths> --dry-run'}`);
+console.log('门禁: 轻量清单（红线 / 文档漂移 / 变更域契约测试；重型构建留给 pre-push）');
 console.log('');
 
-// ── 2. 委托 pre-push-gate（唯一检查清单源头）──
-// P1 修复：传 paths 作 --files 参数，真按域裁剪（替代 --all 全量）
-// P2 修复（子代理锐评）：门禁前先跑 gen 刷新索引，解 gen 鸡生蛋
-// （门禁跑 gen-docs-index --check，若索引旧则 fail-closed 阻断；而 pre-commit 的 gen 修复在门禁之后才跑——永远轮不到修）
-// Q2 修复（子代理再洗礼）+ ADR-151 项 6：gen 清单收敛到 _lib/gen-cmds.ts 单一事实源
-// （原 commit-with-check 内联 11 个、pre-commit 内联 15 个，漂移 4 个；现统一取全集 15 个）
+(async () => {
+// gen 预刷新（仅文档相关变更）：避免 gen 产物过期 fail-closed
 if (docsMode || byDomain.docs?.length || byDomain.adr?.length) {
   let genOk = 0, genFail = 0;
   for (const cmd of GEN_CMDS) {
@@ -131,30 +132,30 @@ if (docsMode || byDomain.docs?.length || byDomain.adr?.length) {
     if (r.ok) genOk++;
     else genFail++;
   }
-  console.log(`[gen] 已预刷新 ${genOk}/${GEN_CMDS.length} 个 gen 脚本${genFail ? `（${genFail} 个失败，不阻断，门禁会再检）` : '（全绿）'}`);
+  console.log(`[gen] 已预刷新 ${genOk}/${GEN_CMDS.length} 个 gen 脚本${genFail ? `（${genFail} 个失败，不阻断）` : '（全绿）'}`);
 }
-// Q1 修复（子代理再洗礼）：传 --no-banner 抑制门禁横幅，由本脚本在 commit 成功后自己打印
-// （commit-with-check 恒走 dry-run，横幅在自动 commit 前出现会诱导 AI push 旧 HEAD）
-const gateArgs = docsMode
-  ? ['--docs', '--dry-run', '--no-banner']
-  : ['--files', paths.join('\n'), '--dry-run', '--no-banner'];
-let gateRc = 0;
-const gate = run(process.execPath, ['scripts/pre-push-gate.ts', ...gateArgs], {
-  cwd: ROOT,
-  stdio: 'inherit',
-  timeout: 600_000,
-});
-if (!gate.ok) gateRc = gate.rc > 0 ? gate.rc : 1;
 
-if (gateRc !== 0) {
+// 轻量校验：独立清单，不复用 pre-push-gate（避免重型构建/全量静态工具双重付费）
+const t0 = Date.now();
+const check = await runCommitChecks(paths);
+const gateMs = Date.now() - t0;
+
+for (const it of check.results) {
+  const mark = it.ok ? '✅' : '❌';
+  const t = `${(it.time / 1000).toFixed(1)}s`;
+  console.log(`${mark} ${it.label}  (${t})${it.note ? '  ' + it.note : ''}`);
+}
+console.log(`门禁耗时: ${(gateMs / 1000).toFixed(1)}s`);
+
+if (!check.ok) {
   console.log('');
-  console.log('结论: FAIL ❌ 门禁未通过，未提交');
+  console.log('结论: FAIL ❌ 轻量门禁未通过，未提交');
   process.exit(1);
 }
 
 if (checkOnly) {
   console.log('');
-  console.log('结论: PASS ✅ 门禁全绿（仅验证，未提交）');
+  console.log('结论: PASS ✅ 轻量门禁全绿（仅验证，未提交）');
   process.exit(0);
 }
 
@@ -186,10 +187,9 @@ const subject = git(['log', '-1', '--format=%s']);
 console.log(`✅ 已提交: ${sha} ${subject}`);
 console.log('');
 
-// Q1 修复：横幅在 commit 成功后打印（此时 HEAD 已更新，AI 看到「可直接 push」时 commit 已执行）
 console.log('════════════════════════════════════════');
-console.log('  ✅ 门禁全绿 + 已提交，可直接执行：git push');
-console.log('  （门禁已验，无需再手动跑 doctor --docs / tsc / build 确认）');
+console.log('  ✅ 轻量门禁全绿 + 已提交，可直接执行：git push');
+console.log('  （重型门禁 go build/vite build 等由 pre-push 钩子兜底）');
 console.log('════════════════════════════════════════');
 console.log('');
 
@@ -216,3 +216,4 @@ console.log(JSON.stringify({
 }));
 
 process.exit(0);
+})();

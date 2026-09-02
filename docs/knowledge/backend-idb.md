@@ -21,7 +21,7 @@ source_files:
   - frontend/src/workers/stats.worker.ts
 auto_fields:
   symbols_with_lines:
-    - __resetDBForTest:141
+    - __resetDBForTest:145
     - __resetWebLogStateForTest:118
     - __setStatsRunnerForTest:53
     - AppBindings:6
@@ -35,13 +35,13 @@ auto_fields:
     - getApp:18
     - getFsaAuthState:18
     - getStatsPoolSize:91
-    - idbDel:186
-    - idbGet:158
-    - idbGetAll:242
-    - idbKeys:207
-    - IdbOp:273
-    - idbSet:169
-    - idbTx:282
+    - idbDel:190
+    - idbGet:162
+    - idbGetAll:246
+    - idbKeys:211
+    - IdbOp:277
+    - idbSet:173
+    - idbTx:286
     - importWebFiles:16
     - isWebEntryMode:37
     - isWebPath:27

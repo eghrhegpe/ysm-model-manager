@@ -66,6 +66,8 @@ export function openDB(): Promise<IDBDatabase> {
 
 // --- 内存降级后端（IndexedDB 不可用 / open 失败 / 非浏览器）---
 const memoryStore = new Map<string, Map<string, unknown>>();
+// 模块级累计字节（按 store 分桶），避免每次 set 全量重算（N×200 次 JSON.stringify）
+const memoryTotalBytes = new Map<string, number>();
 let forcedMemory = false;
 const backendIsIdb = (): boolean => !forcedMemory && typeof indexedDB !== "undefined";
 
@@ -95,12 +97,13 @@ function memorySet(store: Store, key: string, value: unknown): void {
     m = new Map();
     memoryStore.set(store, m);
   }
-  // 已存在：先删再插，让重新写入的 key 移到队尾（近似 LRU）
-  if (m.has(key)) m.delete(key);
+  // 增量维护 totalBytes：已存在 key 先减旧值，写入后加新值
+  // 旧实现每次 set 全量重算（N×200 次 JSON.stringify，批量导入阻塞主线程）
+  let totalBytes = memoryTotalBytes.get(store) ?? 0;
+  if (m.has(key)) totalBytes -= estimateBytes(m.get(key));
   m.set(key, value);
+  totalBytes += estimateBytes(value);
 
-  let totalBytes = 0;
-  for (const v of m.values()) totalBytes += estimateBytes(v);
   // 双上限：条目数超限 或 字节估算超限 → 驱逐最旧（map 迭代首个）
   while (m.size > MEMORY_MAX_KEYS || (m.size > 1 && totalBytes > MEMORY_MAX_BYTES)) {
     const oldest = m.keys().next().value as string | undefined;
@@ -109,6 +112,7 @@ function memorySet(store: Store, key: string, value: unknown): void {
     if (evicted !== undefined) totalBytes -= estimateBytes(evicted);
     m.delete(oldest);
   }
+  memoryTotalBytes.set(store, totalBytes);
 }
 
 /** 取 IDB 连接；不可用或 open 失败时返回 null 并标记强制内存模式 */
@@ -177,8 +181,8 @@ export async function idbSet(store: Store, key: string, value: unknown): Promise
     const tx = db.transaction(store, "readwrite");
     tx.objectStore(store).put(value, key);
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error ?? new Error("IDB tx error"));
+    tx.onabort = () => reject(tx.error ?? new Error("IDB tx abort"));
   });
 }
 
@@ -193,8 +197,8 @@ export async function idbDel(store: Store, key: string): Promise<void> {
     const tx = db.transaction(store, "readwrite");
     tx.objectStore(store).delete(key);
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error ?? new Error("IDB tx error"));
+    tx.onabort = () => reject(tx.error ?? new Error("IDB tx abort"));
   });
 }
 
@@ -298,7 +302,7 @@ export async function idbTx(store: Store, ops: IdbOp[]): Promise<void> {
       else os.delete(op.key);
     }
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error ?? new Error("IDB tx error"));
+    tx.onabort = () => reject(tx.error ?? new Error("IDB tx abort"));
   });
 }

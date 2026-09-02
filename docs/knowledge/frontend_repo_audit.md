@@ -9,7 +9,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - __getTriggerForTest:64
-    - __resetDBForTest:141
+    - __resetDBForTest:145
     - __resetModalStateForTest:88
     - __resetWebLogStateForTest:118
     - __setEncodeImplForTest:205
@@ -605,13 +605,13 @@ auto_fields:
     - hl:16
     - IconButtonOpts:91
     - ICONS:3
-    - idbDel:186
-    - idbGet:158
-    - idbGetAll:242
-    - idbKeys:207
-    - IdbOp:273
-    - idbSet:169
-    - idbTx:282
+    - idbDel:190
+    - idbGet:162
+    - idbGetAll:246
+    - idbKeys:211
+    - IdbOp:277
+    - idbSet:173
+    - idbTx:286
     - IKChain:24
     - IKConfig:27
     - IKResult:45

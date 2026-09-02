@@ -69,7 +69,7 @@ auto_fields:
     - buildMmdScene:1512
     - buildModelGroup:299
     - buildOrderedTexKeys:21
-    - buildPackScene:303
+    - buildPackScene:341
     - buildPmxScene:76
     - buildPmxSceneSliced:209
     - buildPostprocessingSchema:70
@@ -83,9 +83,9 @@ auto_fields:
     - buildStatsPanel:25
     - buildVrmBoneNodes:20
     - buildVrmBoneTree:52
-    - buildVrmScene:506
+    - buildVrmScene:511
     - buildYsmObject:50
-    - buildYsmScene:500
+    - buildYsmScene:503
     - bytesToArrayBuffer:15
     - bytesToBase64:17
     - cacheGet:43
@@ -184,7 +184,7 @@ auto_fields:
     - fbxSceneToData:209
     - FbxSkeletonData:45
     - FieldRestorer:159
-    - fillRoles:285
+    - fillRoles:302
     - fillSwitch:218
     - filterAnimFiles:24
     - findAncestorBoneId:153
@@ -246,7 +246,7 @@ auto_fields:
     - isFrustumCullEnabled:111
     - isIdentityQuat:32
     - isLikelyTga:10
-    - isPathAvailable:319
+    - isPathAvailable:325
     - isPreviewFolderNode:126
     - isRenderableModel:320
     - isSkyEnvironmentOn:133
@@ -282,8 +282,8 @@ auto_fields:
     - makeBonePanelRenderer:40
     - makeBonesPanelItem:51
     - makeMenuCtx:12
-    - makePackAdapter:58
-    - makeYsmAdapter:531
+    - makePackAdapter:66
+    - makeYsmAdapter:534
     - makeYsmModelSchemaId:29
     - makeZipOverlayPort:120
     - matchSemanticBone:154
@@ -321,7 +321,7 @@ auto_fields:
     - MmdZipConfig:20
     - mockMenuHandle:36
     - MODEL_SKY_PRESETS:91
-    - modelDetailView:41
+    - modelDetailView:40
     - ModelEntry:21
     - modelEntryFor:85
     - ModelGroup:87
@@ -329,10 +329,10 @@ auto_fields:
     - ModelSpec:25
     - MorphMeshLike:10
     - morphNodes:20
-    - motionDetailView:115
+    - motionDetailView:132
     - mount3D:267
     - Mount3DOptions:241
-    - mountPreviewRootMenu:467
+    - mountPreviewRootMenu:475
     - mpApplyWasdCameraMotion:21
     - mpBuildSharedInfra:73
     - mpMakeUnifiedPickHandler:9
@@ -348,6 +348,7 @@ auto_fields:
     - PackAdapterOpts:34
     - PackDeps:27
     - PackEntryReader:73
+    - packTextureLabel:52
     - parseBedrockGeometryFromJSON:95
     - parseJavaModel:292
     - parseYsmJsonDirect:23
@@ -400,7 +401,7 @@ auto_fields:
     - PreviewMenuRouters:169
     - previewPixelRatio:58
     - PreviewScene:108
-    - previewSnapshot:328
+    - previewSnapshot:334
     - PreviewSnapshot:82
     - PreviewStatePath:74
     - readPmxStats:39
@@ -422,14 +423,14 @@ auto_fields:
     - RenderModeCapability:59
     - renderMultiAngle:77
     - RenderMultiAngleOptions:66
-    - renderPreviewPanel:225
+    - renderPreviewPanel:233
     - RenderVrmBonePanel:31
     - RepresentativeSnapshot:26
     - resetActiveComponent:269
     - resetEncoderState:83
     - resetSceneInfra:35
     - resetSchemas:67
-    - resetSettingsListeners:335
+    - resetSettingsListeners:341
     - resolveMmdZipConfig:41
     - ResolveModeBridge:158
     - ResolveModeResponse:15
@@ -438,7 +439,7 @@ auto_fields:
     - restoreFields:175
     - restoreModelGroupsVisible:122
     - restoreState:148
-    - roleBaseName:31
+    - roleBaseName:30
     - safeDispose:11
     - sampleAdaptivePixelRatio:74
     - SceneCapability:95
@@ -526,11 +527,11 @@ auto_fields:
     - VrmDataPort:33
     - VrmMaterialDetail:17
     - VrmMaterialListItem:11
-    - vrmMenuItems:564
-    - VrmMenuItemsOpts:526
+    - vrmMenuItems:569
+    - VrmMenuItemsOpts:531
     - VrmMetaInfo:89
-    - VrmModelInfoCtx:173
-    - VrmPanelHooks:180
+    - VrmModelInfoCtx:178
+    - VrmPanelHooks:185
     - vrmSemanticBoneMap:200
     - WaterCapability:66
     - WaterMode:18
@@ -541,8 +542,8 @@ auto_fields:
     - YSM_MODEL_SCHEMA_ID:20
     - YsmAdapterOptions:44
     - YsmAnimPlayer:32
-    - ysmMenuItems:592
-    - YsmMenuItemsOpts:550
+    - ysmMenuItems:595
+    - YsmMenuItemsOpts:553
     - YsmObjectHandle:25
     - ysmSemanticBoneMap:303
     - zipFindEntry:226
@@ -769,6 +770,8 @@ export function computeBoneLocalPos(
 - **纹理绑定不静默兜底**（2026-08-23 根除）：`mesh-builder.ts` 槽位越界/缺图 → 灰色占位 + `console.error`（含组件 boneId/期望索引），**绝不「找第一张可用」贴错图**——贴错皮肤还装没事比诚实暴露映射断裂糟糕得多（wine_fox 多组件渲染错乱帮凶）。排查入口：环形日志搜 `纹理槽位缺失`
 - **perComponent 纹理链**：Go `FindComponentsInExtractedYSM`（解压目录）/`buildComponents`（zip/7z）给未声明组件挂同名纹理 `ComponentTextures`（TexSlot=0 局部索引）→ `GetModel3DSpec` 经 `injectComponentTextures` 注入 `spec.componentTextures` → 前端 `preloadModel` 转 `componentTexMap` → `ysm-object.ts` 按 `mg.name || mg.id` 查表。**键 = SourceName**（如 "main"/"arm"/"arrow"），与 spec.models[i].name 同源（BuildMulti 中 Name=SourceName，fallback compID="comp_N"）。Go 侧注入时若 SourceName 为空则 fallback `comp_<i>`；前端查表顺序 `mg.name || mg.id` 两路均能命中。**分类索引与绑定索引同一空间**（2026-08-23 收口）：组件分支恒用局部槽 0（mesh-builder 对组件数组 `arr === compTexArr ? 0`），非组件回退全局 `mesh.texIdx`/`resolvedTexIdx`——绝不用全局 texIdx 查组件数组（WASM 路径 TexSlot=组件文件序 i，对长度 1 数组越界 → blend 组件误判 batchable 被烘进不透明批次）。Go 注入侧 SourceName 碰撞（zip 内两子目录同名 geometry）→ log 告警不静默丢映射
 - 治理红线 R1：模块级状态不挂 `window.__*`（场景状态收敛进 mount3D 会话 + sceneRegistry）
+- **spec.models[] 语义随格式漂移**（ADR-160）：zip 内每个 geo 文件 = 一个组件（`ModelGroup`），但组件「是什么」由格式适配器解释——YSM = main/arm/arrow 部件、maid = 角色、资源包 = 包内模型。**通用层（渲染/统计/菜单）不得假设「组件 = 角色」**，详情统计统一走 `componentCountsFromSpec`（skeleton-render.ts）投影，勿在消费侧另写一套 spec→统计口径
+
 
 ## ⚠️ 大文件性能阈值
 

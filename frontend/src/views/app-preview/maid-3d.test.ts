@@ -1,6 +1,6 @@
 // ===== 车万女仆详情预览测试 =====
 // 覆盖：showMaidPreview 渲染彩色分区（statsCardHTML 复用）、GetModel3DSpec 单视图收敛
-// （ADR-255：模型结构蓝卡静态逐角色行，取代 dp-submodels 交互清单 + Entry 逐角色预取）、
+// （ADR-160：模型结构蓝卡静态逐角色行，取代 dp-submodels 交互清单 + Entry 逐角色预取）、
 // metadata 段、spec 失败回落聚合口径、封面替换、FAB 进整包 3D。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
@@ -90,7 +90,7 @@ function baseModel(over: Record<string, unknown> = {}): Record<string, unknown> 
   };
 }
 
-/** GetModel3DSpec 契约（ADR-255）：zip 内每个 geo 文件 = 一个组件（= L0 角色），
+/** GetModel3DSpec 契约（ADR-160）：zip 内每个 geo 文件 = 一个组件（= L0 角色），
  *  蓝卡行 = spec.models 投影（骨骼 = bones.length，立方体 = Σ _cubeCount） */
 function baseSpec(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {

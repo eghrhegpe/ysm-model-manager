@@ -17,17 +17,17 @@ auto_fields:
     - BedrockCube:16
     - BedrockModel:32
     - BoneEntry:5
-    - buildBoneExportRow:168
+    - buildBoneExportRow:179
     - buildBoneNamesText:15
     - buildDepthMap:34
-    - buildStatsCard:90
+    - buildStatsCard:106
     - buildToggleRow:48
     - buildYsmModelSchema:326
     - calcBoneHitZones:11
     - CameraControlBridge:19
     - cleanupEmpty3D:40
     - cleanupLitematic3D:255
-    - cleanupMaid3D:88
+    - cleanupMaid3D:82
     - cleanupMmd3D:33
     - cleanupPack3D:64
     - cleanupScene3D:38
@@ -35,6 +35,7 @@ auto_fields:
     - cleanupVrm3D:59
     - cleanupYsm3D:87
     - closeActive3DOverlay:36
+    - componentCountsFromSpec:88
     - createFbx3D:26
     - createLitematic3D:91
     - createMmd3D:28
@@ -57,7 +58,7 @@ auto_fields:
     - HitZone:9
     - invalidateEmptyPreview:45
     - invalidateLitematicPreview:29
-    - invalidateMaidPreview:93
+    - invalidateMaidPreview:87
     - invalidateMmdPreview:43
     - invalidatePackPreview:69
     - invalidateScenePreview:43
@@ -102,7 +103,7 @@ auto_fields:
     - resolveSceneSiblings:28
     - resolveSiblingsByType:13
     - resolveStageSiblings:13
-    - saveScreenshot:201
+    - saveScreenshot:212
     - scanModelsByType:155
     - sec:6
     - setActive3DClose:42
@@ -111,7 +112,7 @@ auto_fields:
     - shotButtonNodes:65
     - showFbxPreview:169
     - showLitematic:187
-    - showMaidPreview:327
+    - showMaidPreview:271
     - showMmdPreview:116
     - showModelDetail:27
     - showMorphPreview:229
@@ -225,13 +226,38 @@ status: active
 - `wasm.ts` — `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `cache.ts` 缓存）；同目录 `.animation.json` 扫描驱动 `createYsmAnimPlayer`。
 - `litematic-3d.ts` — `createLitematic3D` / `cleanupVoxel3D`：通用外壳归 `mount-preview-core.ts` 的 `mount3D(adapter, path)`，体素内容层归 `litematic-adapter.ts` 的 `buildLitematicScene`。
 - `litematic-meta.ts` — `showLitematic`（Go `ReadLitematicMeta` / `ReadNbtStructure` / `ReadSchematic`）。
-- `maid-3d.ts` — 车万女仆详情 + 3D 预览（Bedrock generic 模式），详情卡复用 YSM `statsCardHTML` 彩色分区。**L0 清单逐角色统计并行预取**（对齐 YSM 详情「不点击即见」）：首屏渲染后 `prefetchEntryStats()` 并发上限 3 逐 entry 调 `AnalyzeBedrockModelEntry`，每完成一个渐进重绘，chip 加 `.chip-stat`（N 骨骼 · M 立方体）；当前选中角色的统计卡同步用 entry 数据覆盖聚合值（与点击切换口径一致）；失败/无 sourcePath 角色保持无统计行不阻断；`subs.length <= 1` 不预取；`detailGen.stale(gen)` 守卫丢弃在途预取。
+- `maid-3d.ts` — 车万女仆详情 + 3D 预览（Bedrock generic 模式），详情卡复用 YSM `statsCardHTML` 彩色分区。**GetModel3DSpec 单视图（ADR-160）**：详情数据 = `AnalyzeBedrockModel`（聚合纹理/尺寸/metadata/格式）+ `GetModel3DSpec`（逐组件统计唯一源）；蓝卡逐组件行 = `componentCountsFromSpec(spec)` 投影（与 YSM 详情、3D「组件」下拉同构），纯静态无选中态；大字 = 组件合计，spec 失败回落聚合口径；FAB = 整包 3D（不再传 `subModelIdx`/`subPath`，角色切换收敛在 3D 组件下拉）。交互式 L0 清单（dp-submodels/chip）与 `AnalyzeBedrockModelEntry` 逐角色预取已退役。
 - `utils.ts` — 共享类型与工具：`PreviewCtx`、`getPrefer3D` / `setPrefer3D`、`stripYsgpTextHeader`。
 - `geometry.ts` — `BedrockCube` / `BedrockBone` / `BedrockGeometry` 类型 + `parseBedrockGeometryFromJSON`。
-- `tpl.ts` — `modelDetailHTML`（详情面板）/ `statsCardHTML`（统计卡：彩色分区 + L0 清单角色 + 纹理分类）。
+- `tpl.ts` — `modelDetailHTML`（详情面板）/ `statsCardHTML`（统计卡：彩色分区 + 逐组件行 componentCounts + 纹理分类）。
 - `texture-order.ts` — `buildOrderedTexKeys`：纹理有序列表计算，与 Go `internal/app/texture_order.go` 口径严格对称。
 - `parse-ysm-json.ts` — `parseYsmJsonDirect(json)`：解压后 YSM 的 `ysm.json` 直接解析，双格式分支（YSM 专属 / 标准 Bedrock）。
 - `cache.ts` — 模块级预览缓存。
+
+### maid 详情数据源与子实体词汇（ADR-160）
+
+**数据源分工（详情两调用各司其职，不重复口径）**：
+
+| 用途 | 数据源 | 说明 |
+|------|--------|------|
+| 蓝卡逐组件行（骨骼/立方体） | `GetModel3DSpec(zip).models` → `componentCountsFromSpec` | 与 3D「组件」下拉同一 spec 视图；骨骼 = `bones.length`、立方体 = Σ `bones[]._cubeCount` |
+| 大字合计（骨/立方体） | 上者 reduce | spec 不可得（解析失败）时回落 `AnalyzeBedrockModel` 聚合 `boneCount`/`cubeCount` |
+| 纹理/尺寸/metadata/格式 | `AnalyzeBedrockModel` | 纹理尺寸优先 spec 首组件声明值（对齐 3D 面板口径） |
+
+**子实体词汇映射（一物一名；跨层搜索命中表）**：maid「角色」= 容器内一个组件 = zip 内一个 geo 文件 = `spec.models[i]`。
+
+| 旧名 / 曾用层名 | 统一词 | 现状 |
+|-----------------|--------|------|
+| `spec.models[i]` / `ModelGroup`（Go） | **组件** | 唯一权威视图：详情蓝卡行 + 3D「组件」下拉共用 |
+| `BedrockSubModel` / `subModels[]` | 组件 | 概念并入 spec.models，前端不再消费 |
+| `subPath` / `subModelIdx` | — | 已从 `MaidOpenOptions` / adapter 参数退役（整包加载） |
+| `Entry` / `AnalyzeBedrockModelEntry` | — | 逐角色预取退役，3D 整包 spec 替代 |
+| `L0` / `dp-submodels` / chip 清单 | — | 交互清单退役；「角色数」= 蓝卡组件行数 |
+| 菜单「组件」/ `comps` | 组件 | 3D 内角色切换通道（ADR-132 `multiModelSelectNode`） |
+
+**搜索提示**：找 maid 角色级统计 → 入口 `GetModel3DSpec` / `componentCountsFromSpec` / `spec.models`；
+「🧩 L0 清单角色 (10)」等旧 UI 术语代码内已不存在，对应物 = 蓝卡静态组件行 + 3D 组件下拉。
+
 
 ## 对外 API / 入口
 

@@ -44,7 +44,7 @@ export interface MaidOpenOptions {
  * 打开车万女仆 3D 预览（Bedrock generic 模式）。
  * 与 YSM 共享 spec→Three.js 渲染管道，跳过动画/语义骨骼等 YSM 专属特性。
  * 整包加载：3D spec = GetModel3DSpec(zip) 全量（组件 = 角色 geo 文件），
- * 角色切换在 3D 内「组件」下拉完成（ADR-255——详情页不再承载角色选择）。
+ * 角色切换在 3D 内「组件」下拉完成（ADR-160——详情页不再承载角色选择）。
  */
 async function createMaid3D(
   path: string,
@@ -117,7 +117,7 @@ type MaidModelInfo = {
 
 /** 车万女仆 → statsCardHTML 入参映射（复用 YSM 彩色统计卡渲染）。
  *  componentCounts 由 GetModel3DSpec spec.models 投影（与 3D「组件」下拉同构，
- *  ADR-255 单视图）——模型结构蓝卡静态渲染逐角色行，取代原交互式角色清单；
+ *  ADR-160 单视图）——模型结构蓝卡静态渲染逐角色行，取代原交互式角色清单；
  *  subCount = 组件数（extraCount = texCount - subCount 口径）。 */
 function toStatsCardModel(
   info: MaidModelInfo,
@@ -141,7 +141,7 @@ function toStatsCardModel(
  * 渲染补充详情（纯字符串拼接）：彩色分区（statsCardHTML）之外的补充信息——
  * format 版本、ysm.json metadata（name/license/tips/authors）。
  * 骨骼/立方体/纹理数/尺寸已由 statsCardHTML 彩色分区承载，此处不重复；
- * 逐角色行由蓝卡 componentCounts 静态渲染（ADR-255），不再有「选中角色」概念。
+ * 逐角色行由蓝卡 componentCounts 静态渲染（ADR-160），不再有「选中角色」概念。
  */
 function dpRenderDetail(
   modelInfo: MaidModelInfo,
@@ -188,7 +188,7 @@ function dpRenderPanel(
   previewUri?: string | null,
 ): void {
   // 彩色统计卡（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——复用 YSM statsCardHTML。
-  // 数据源收敛（ADR-255）：逐角色行 = GetModel3DSpec spec.models 投影（与 3D「组件」下拉同构），
+  // 数据源收敛（ADR-160）：逐角色行 = GetModel3DSpec spec.models 投影（与 3D「组件」下拉同构），
   // 不再走 AnalyzeBedrockModel + Entry 逐角色预取的交互清单。
   const statsHTML = modelInfo
     ? `<div class="pv-card">${statsCardHTML(toStatsCardModel(modelInfo, componentCounts), basename)}</div>`
@@ -220,7 +220,7 @@ function dpRenderPanel(
 }
 
 /** 进入 3D 预览（并发防护：loading3D/model3dGuard 放 state 随预览实例隔离）。
- *  整包加载（ADR-255）：3D spec = GetModel3DSpec(zip) 全量，组件下拉即角色切换——
+ *  整包加载（ADR-160）：3D spec = GetModel3DSpec(zip) 全量，组件下拉即角色切换——
  *  不再按详情页选中角色传 subPath 单 entry。 */
 async function dpToggle3D(
   state: MaidPreviewState,
@@ -289,7 +289,7 @@ export async function showMaidPreview(
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
 
-  // 数据获取（ADR-255 单视图收敛）：
+  // 数据获取（ADR-160 单视图收敛）：
   //  ① AnalyzeBedrockModel —— 聚合纹理/尺寸/格式/metadata（纹理绿卡/文件信息/补充详情用）
   //  ② GetModel3DSpec —— 逐组件统计唯一源：spec.models[] 与 3D「组件」下拉同一视图，
   //     模型结构蓝卡静态渲染逐角色行；spec 不可得（拆分失败）时回落 ① 聚合口径。

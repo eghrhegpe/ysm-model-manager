@@ -83,7 +83,7 @@ export function buildToggleRow(
 }
 
 /** spec.models[] → 逐组件统计投影（骨骼 = bones.length；立方体 = Σ bones[]._cubeCount）。
- *  详情卡模型结构蓝卡与 3D「组件」下拉共用同一 spec 视图（ADR-255：详情统计 = spec 投影）；
+ *  详情卡模型结构蓝卡与 3D「组件」下拉共用同一 spec 视图（ADR-160：详情统计 = spec 投影）；
  *  无组件返回 []，调用方回落聚合口径。 */
 export function componentCountsFromSpec(
   spec: { models?: unknown[] | null } | null | undefined,

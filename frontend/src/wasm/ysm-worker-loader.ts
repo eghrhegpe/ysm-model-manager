@@ -5,13 +5,13 @@
 //  2. 胶水代码 worker 安全：window 仅出现于 `globalThis.window?.prompt`（可选链，
 //     Worker 下 globalThis.window 为 undefined 直接跳过）；_scriptName 走
 //     `globalThis.document?.currentScript?.src`（同样可选链安全）。
-//  3. base 数据用静态 import（随 Worker chunk 打包）；mt 数据用动态 import（ADR-153：
-//     仅 crossOriginIsolated=true 时加载，节省非 COOP-COEP 环境 ~1.5 MB）。
+//  3. base / mt 两组数据均用动态 import（ADR-153）：二者互斥，按 crossOriginIsolated
+//     二选一加载——COI 环境只需 mt，非 COI 只需 base，任一环境都不再携带 ~1.5 MB 死重。
+//     base 不可移除：崩溃恢复路径（resetYsmParserInWorker）在 COI 环境下仍走单线程。
+//     与主线程 ysm-parser.ts:67-68 的动态 import 口径对齐。
 // 仅被 src/workers/stats.worker.ts 引用（Worker 内），主线程路径不受影响。
 // 解码链与 ysm-parser.ts 保持同口径：内存直解 → 失败时由调用方剥文本头部重试 → callMain。
 // 无状态公共部分（FS/Module 类型、错误分类、MEMFS 辅助）已收敛至 parser-shared.ts。
-import { _getWasmBinary } from "./ysm-wasm-data.js";
-import { _getGlueCode } from "./ysm-glue-data.js";
 import {
   classifyWasmError,
   collectOutputFiles,
@@ -45,15 +45,39 @@ let waiters: Array<(ok: boolean) => void> = [];
  * 间接 eval（仅执行 auto-generated 内嵌胶水代码，可信链，ADR-039 §2.1）→ 调工厂。
  * 失败抛错；成功后 wasmModule 常驻，后续任务复用（Worker 常驻，无需重复加载）。
  */
+/** ADR-153：WASM 资产组（base / mt 同构，均由动态 import 按需产出） */
+interface ParserAssets {
+  wasm: ArrayBuffer | null;
+  glue: string | null;
+}
+
 export async function initYsmParserInWorker(): Promise<boolean> {
-  return initParserInWorker(_getWasmBinary() as ArrayBuffer | null, _getGlueCode() as string | null);
+  const { wasm, glue } = await loadBaseAssets();
+  return initParserInWorker(wasm, glue);
+}
+
+/**
+ * ADR-153：懒加载 base 数据模块（运行时动态 import）。
+ * 不可移除——COI 环境下 mt 是主路径，但 WASM 硬崩溃重置单例后
+ * （resetYsmParserInWorker，见 decodeYsmInWorker 的 fatal/exit 分支）
+ * 恢复路径仍走单线程 init，故 base 必须保留为可按需加载项。
+ */
+async function loadBaseAssets(): Promise<ParserAssets> {
+  const [wasmMod, glueMod] = await Promise.all([
+    import("./ysm-wasm-data.js"),
+    import("./ysm-glue-data.js"),
+  ]);
+  return {
+    wasm: (wasmMod._getWasmBinary() as ArrayBuffer | null) ?? null,
+    glue: (glueMod._getGlueCode() as string | null) ?? null,
+  };
 }
 
 /**
  * ADR-153：懒加载 mt 数据模块（运行时动态 import，节省非 COOP-COEP 环境 ~1.5 MB）。
  * 仅在 initYsmParserInWorkerMt 被调用时执行，后续调用复用缓存模块。
  */
-async function loadMtAssets(): Promise<{ wasm: ArrayBuffer | null; glue: string | null }> {
+async function loadMtAssets(): Promise<ParserAssets> {
   const [wasmMod, glueMod] = await Promise.all([
     import("./ysm-wasm-data-mt.js"),
     import("./ysm-glue-data-mt.js"),

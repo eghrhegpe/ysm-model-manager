@@ -35,7 +35,7 @@ export async function setup2DCanvas(
     textureImg = new Image();
     await new Promise((r) => {
       textureImg!.onload = r;
-      textureImg!.onerror = r;
+      textureImg!.onerror = () => { textureImg = null; r(null); };
       textureImg!.src = model.texture as string;
     });
   }

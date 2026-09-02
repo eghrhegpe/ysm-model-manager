@@ -43,7 +43,7 @@ export function fill3DPanel(
   spec: Spec3D,
   _model3d: PanelHandle,
   modelSel: HTMLSelectElement,
-): void {
+): () => void {
   // 组件化统计 + 纹理（随 modelSel 切换；ADR-114 perComponent 专属/全局双向）
   const compTex = (spec as { componentTextures?: Record<string, string[]> }).componentTextures;
   const statsBox = mkTestDiv("model-stats");
@@ -68,6 +68,13 @@ export function fill3DPanel(
 
   // 骨骼列表/详情已移除——骨骼只走 id:"bones" 独立菜单项（makeBonePanelRenderer），
   // 与 MMD/VRM/FBX 对齐，消除 fill3DPanel 内嵌骨骼 section 与菜单 bones 项的重复入口。
+
+  // 返回清理函数：unmount 时调用，移除 change 监听器 + 清空 DOM
+  return () => {
+    modelSel.removeEventListener("change", renderCurrent);
+    statsBox.remove();
+    texBox.remove();
+  };
 }
 
 // ===== 内部辅助（从 skeleton-render.ts 复用）=====

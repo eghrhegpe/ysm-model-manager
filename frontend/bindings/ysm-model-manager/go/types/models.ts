@@ -234,6 +234,17 @@ export interface CustomFileInfo {
 }
 
 /**
+ * DownloadTask 下载队列任务。
+ * 归属（ADR-145）：同上，跨包契约 DTO 下沉至 types（JSON tag 原样保留 → bindings 零漂移）。
+ */
+export interface DownloadTask {
+    "url": string;
+    "saveDir": string;
+    "name": string;
+    "size": number;
+}
+
+/**
  * FileInventory zip 内文件归属清单（对齐 Modern YSM parseGlobalResources 的分流思想，
  * 但只识别归属、不解析内容——不造双路径，前端直接消费准确清单，不再事后按文件名猜）。
  */
@@ -628,6 +639,16 @@ export interface PackModelDetail {
 export interface PackModelDetailList {
     "models": PackModelDetail[] | null;
     "total": number;
+}
+
+/**
+ * QueueStatusInfo 下载队列状态（替代多返回值，Wails 自动映射为 JS object）。
+ * 归属（ADR-145）：跨包契约 DTO 下沉至 types——go/cli 定义 AppService 接口时
+ * 需引用本类型，若不随 DTO 下沉则 cli 得反向 import internal/app（死结）。
+ */
+export interface QueueStatusInfo {
+    "remaining": number;
+    "running": boolean;
 }
 
 /**

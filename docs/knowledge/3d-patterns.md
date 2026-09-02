@@ -22,7 +22,7 @@ auto_fields:
     - hasActivePreview:236
     - invalidatePreview:188
     - loadModel2D:59
-    - mount3D:263
+    - mount3D:267
     - Mount3DOptions:241
     - openModel3DFullscreen:62
     - OpenModel3DOptions:39

@@ -8,7 +8,7 @@ source_files:
   - frontend/src/views/app-tree/toolbar-events.ts
 auto_fields:
   symbols_with_lines:
-    - bindToolbarEvents:356
+    - bindToolbarEvents:357
     - openAdvFilterDialog:253
     - pickWebFilesAndImport:287
   tests:

@@ -16,7 +16,7 @@
 | `cli/` | CLI 命令（脱离 GUI 的模型管理/诊断/缓存操作，入口 main.go 经 cli.RunCLI 接线） 〔源码 26 · 测试 4〕 |
 | `conc/` | 通用泛型并行工具（`Parallel[T,R]`，worker 池 + 序号还原，预期收敛 `internal/app` 三处手写并发） 〔源码 1: pool.go · 测试 1〕 |
 | `config/` | 运行阈值配置共享单持有点（ADR-091 D12：atomic 存 provider，取代 4 包各自 configFunc） 〔源码 1: config.go · 测试 1〕 |
-| `container/` | 统一容器桥接层（zip/7z/目录 Entry-Reader 抽象，ADR-068） 〔源码 1: container.go · 测试 2〕 |
+| `container/` | 统一容器桥接层（zip/7z/目录 Entry-Reader 抽象，ADR-068） 〔源码 2: container.go encoding.go · 测试 3〕 |
 | `dedup/` | 文件去重检测（纯函数，不绑回收站/UI） 〔源码 2: dedup.go strategy.go · 测试 5〕 |
 | `download/` | 纯下载逻辑（不依赖 Wails runtime） 〔源码 1: download.go · 测试 7〕 |
 | `executil/` | 外部进程工具（HideWindow 平台双实现，收敛自三处副本） 〔源码 2: hidewindow_other.go hidewindow_windows.go · 测试 3〕 |
@@ -39,7 +39,7 @@
 | `sync/` | 整合包同步 〔源码 9: conflict.go sync.go sync_cache.go sync_diff.go sync_dirlevel.go sync_discovery.go sync_hash.go sy… · 测试 17〕 |
 | `tags/` | 模型标签持久化存储 〔源码 1: tags.go · 测试 3〕 |
 | `texture_cache/` | 纹理缓存管理（KTX2/PNG 缓存，支持后台编码与快速命中） 〔源码 1: texture_cache.go · 测试 2〕 |
-| `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） 〔源码 3: spec-bones.go spec-cube.go spec.go · 测试 7〕 |
+| `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） 〔源码 3: spec-bones.go spec-cube.go spec.go · 测试 8〕 |
 | `types/` | 共享类型 + 注册表 〔源码 7: bedrock.go config.go extensions.go findinst.go location.go resource.go types.go · 测试 18 · 子目录 1: testdata/〕 |
 | `updater/` | 自动更新 〔源码 3: updater.go updater_other.go updater_windows.go · 测试 8〕 |
 | `version/` | 版本号 〔源码 1: version.go · 测试 1〕 |

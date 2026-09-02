@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **156** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **157** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 152 |
+| [✅ 已采纳](#已采纳) | 153 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -32,10 +32,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（152）
+### ✅ 已采纳（153）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-160](./ADR-160-subentity-component-spec-projection.md) | 子实体统一为组件视图:GetModel3DSpec spec.models 唯一源 + 详情统计 = spec 投影(maid L0 清单退役) | ✅ 已采纳 |
 | [ADR-159](./ADR-159-scene-registry-container-semantics.md) | sceneRegistry 容器语义：displayName + components（资源包=实体、包内模型=组件） | ✅ 已采纳 |
 | [ADR-158](./ADR-158-readme-drift-assertions.md) | check-readme-index 增加描述过时断言（提及但说错可机检） | ✅ 已采纳 |
 | [ADR-157](./ADR-157-contract-test-targets-precise.md) | 契约测试 TARGETS 宽哨兵收敛为精确文件清单 | ✅ 已采纳 |
@@ -200,6 +201,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-160 | 子实体统一为组件视图:GetModel3DSpec spec.models 唯一源 + 详情统计 = spec 投影(maid L0 清单退役) | ✅ 已采纳 | 2026-09-02 |
 | ADR-159 | sceneRegistry 容器语义：displayName + components（资源包=实体、包内模型=组件） | ✅ 已采纳 | 2026-09-02 |
 | ADR-158 | check-readme-index 增加描述过时断言（提及但说错可机检） | ✅ 已采纳 | 2026-09-02 |
 | ADR-157 | 契约测试 TARGETS 宽哨兵收敛为精确文件清单 | ✅ 已采纳 | 2026-09-02 |

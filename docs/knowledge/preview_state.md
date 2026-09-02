@@ -9,29 +9,29 @@ source_files:
   - frontend/src/preview-3d/menu/node-types.ts
 auto_fields:
   symbols_with_lines:
-    - buildCameraSchema:32
-    - buildCrossCuttingControls:105
-    - buildLightingSchema:46
-    - buildPostprocessingSchema:69
-    - buildSettingsControls:170
-    - buildSettingsSchema:78
-    - buildShadowSchema:60
-    - collectPreviewLeafNodes:128
-    - collectPreviewNodeIds:141
-    - collectSettingsCapControls:157
+    - buildCameraSchema:33
+    - buildCrossCuttingControls:106
+    - buildLightingSchema:47
+    - buildPostprocessingSchema:70
+    - buildSettingsControls:171
+    - buildSettingsSchema:79
+    - buildShadowSchema:61
+    - collectPreviewLeafNodes:131
+    - collectPreviewNodeIds:144
+    - collectSettingsCapControls:158
     - getStateValue:300
-    - isPathAvailable:319
-    - isPreviewFolderNode:123
+    - isPathAvailable:325
+    - isPreviewFolderNode:126
     - KNOWN_PATHS:53
     - PreviewActionMenuCtx:17
     - PreviewControlSpec:40
     - PreviewMenuNode:68
     - PreviewMenuNodeKind:23
-    - previewSnapshot:328
+    - previewSnapshot:334
     - PreviewSnapshot:82
     - PreviewStatePath:74
     - resetActiveComponent:269
-    - resetSettingsListeners:335
+    - resetSettingsListeners:341
     - setStateValue:309
     - subscribeSettings:279
     - toStatePath:90

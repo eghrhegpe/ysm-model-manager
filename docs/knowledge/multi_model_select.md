@@ -23,7 +23,7 @@ auto_fields:
     - buildLitematicScene:406
     - BuildNbtVoxelData:296
     - BuildNbtVoxelDataFromRoot:305
-    - buildPackScene:289
+    - buildPackScene:341
     - BuildSchematicVoxelData:520
     - BuildSchematicVoxelDataFromRoot:529
     - BuildVoxelData:108
@@ -36,7 +36,7 @@ auto_fields:
     - fillMmdShotPanel:213
     - LITEMATIC_SLICE_SCHEMA_ID:219
     - LitematicBuildOpts:394
-    - makePackAdapter:58
+    - makePackAdapter:66
     - MaterialControlBridge:180
     - MmdBottomNavCtx:29
     - mmdModelInfoNodes:62
@@ -47,6 +47,7 @@ auto_fields:
     - OpenGzRootFromBytes:64
     - PackAdapterOpts:34
     - PackDeps:27
+    - packTextureLabel:52
     - playNodes:114
   tests:
     - frontend/src/preview-3d/adapters/pack-model-adapter.test.ts

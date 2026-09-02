@@ -15,34 +15,37 @@ auto_fields:
   symbols_with_lines:
     - __setStatsRunnerForTest:53
     - AdvFilterResult:19
-    - AdvFilterValue:6
-    - AppTree:69
+    - AdvFilterValue:7
+    - AppTree:53
     - appTreeStyle:20
     - batchStatsWebModels:173
-    - bindToolbarEvents:356
+    - bindToolbarEvents:357
     - buildTree:84
-    - cleanupVirtualScroll:338
+    - cleanupVirtualScroll:376
     - consumeWebSearchDegraded:58
     - flattenVisible:287
     - getRenderMode:46
     - getStatsPoolSize:91
+    - getVsMode:370
+    - getVsRows:360
     - modalAdvFilter:181
     - onStatsProgress:40
     - openAdvFilterDialog:253
-    - parseFilterNumber:21
+    - parseFilterNumber:22
     - pickWebFilesAndImport:287
     - prefetchStatsWorker:113
     - RenderMode:40
-    - renderTree:347
+    - renderTree:386
     - ROW_H_GRID:20
     - ROW_H_LIST:21
     - setRenderMode:51
+    - setVsRows:365
     - STATS_BATCH_LIMIT:19
     - terminateStatsWorker:65
     - TreeNode:34
     - TreeRow:24
-    - updateStat:414
-    - validateAdvFilter:32
+    - updateStat:457
+    - validateAdvFilter:33
     - VIEW_TESTIDS:34
     - WebModelStats:18
   invariant_anchors:

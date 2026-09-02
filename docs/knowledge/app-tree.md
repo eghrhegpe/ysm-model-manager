@@ -8,14 +8,14 @@ source_files:
   - frontend/src/views/app-tree/
 auto_fields:
   symbols_with_lines:
-    - AppTree:69
+    - AppTree:53
     - appTreeStyle:20
     - AuthorInfo:6
     - bindBusEvents:26
-    - bindToolbarEvents:356
-    - bindTreeEvents:497
+    - bindToolbarEvents:357
+    - bindTreeEvents:498
     - buildTree:84
-    - cleanupVirtualScroll:338
+    - cleanupVirtualScroll:376
     - emptyHTML:68
     - fileRowCommon:11
     - fileRowHTML:19
@@ -24,6 +24,8 @@ auto_fields:
     - folderRowHTML:44
     - footerHTML:60
     - getRenderMode:46
+    - getVsMode:370
+    - getVsRows:360
     - headerHTML:35
     - listFileRowHTML:8
     - listFolderRowHTML:27
@@ -32,20 +34,21 @@ auto_fields:
     - openAdvFilterDialog:253
     - pickWebFilesAndImport:287
     - RenderMode:40
-    - renderTree:347
+    - renderTree:386
     - ROW_H_GRID:20
     - ROW_H_LIST:21
     - selectSingle:31
     - selectState:4
     - setRenderMode:51
+    - setVsRows:365
     - spinnerHTML:72
     - toggleSelect:16
     - treeCSS:3
     - TreeEntry:11
     - TreeNode:34
     - TreeRow:24
-    - updateSelectCount:392
-    - updateStat:414
+    - updateSelectCount:393
+    - updateStat:457
     - VIEW_TESTIDS:7
   tests:
     - frontend/src/views/app-nav/index.test.ts

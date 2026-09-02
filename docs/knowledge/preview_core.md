@@ -34,10 +34,10 @@ auto_fields:
     - buildFbxScene:168
     - buildFbxSceneFromData:214
     - buildLitematicScene:406
-    - buildMmdScene:1501
+    - buildMmdScene:1512
     - BuildNbtVoxelData:296
     - BuildNbtVoxelDataFromRoot:305
-    - buildPackScene:289
+    - buildPackScene:341
     - buildPmxScene:76
     - buildPmxSceneSliced:209
     - BuildSchematicVoxelData:520
@@ -46,8 +46,8 @@ auto_fields:
     - BuildVoxelDataFromRoot:118
     - buildVrmBoneNodes:20
     - buildVrmBoneTree:52
-    - buildVrmScene:506
-    - buildYsmScene:500
+    - buildVrmScene:511
+    - buildYsmScene:503
     - bytesToBase64:17
     - CameraControlBridge:13
     - cancelPendingEncodings:71
@@ -117,8 +117,8 @@ auto_fields:
     - makeBonePanelRenderer:40
     - makeBonesPanelItem:51
     - makeMenuCtx:12
-    - makePackAdapter:58
-    - makeYsmAdapter:531
+    - makePackAdapter:66
+    - makeYsmAdapter:534
     - makeYsmModelSchemaId:29
     - makeZipOverlayPort:120
     - MaterialBridgeLike:10
@@ -126,12 +126,12 @@ auto_fields:
     - matTexSlots:36
     - MatTexSlots:35
     - MAX_KTX2_PIXELS:65
-    - MAX_MODELS:209
+    - MAX_MODELS:218
     - MenuGraph:58
     - MenuGraphNode:32
     - MmdDataPort:89
-    - mmdMenuItems:1614
-    - MmdMenuItemsOpts:1582
+    - mmdMenuItems:1625
+    - MmdMenuItemsOpts:1593
     - MmdPanelHooks:158
     - MmdZipConfig:20
     - mockMenuHandle:36
@@ -139,7 +139,7 @@ auto_fields:
     - ModelEntry:21
     - MorphMeshLike:10
     - morphNodes:20
-    - mount3D:263
+    - mount3D:267
     - Mount3DOptions:241
     - mpApplyWasdCameraMotion:21
     - mpBuildSharedInfra:73
@@ -152,6 +152,7 @@ auto_fields:
     - OpenGzRootFromBytes:64
     - PackAdapterOpts:34
     - PackDeps:27
+    - packTextureLabel:52
     - PerceptionCapability:19
     - perceptionNodes:36
     - PerceptionState:10
@@ -194,7 +195,7 @@ auto_fields:
     - ResolveModeResponse:15
     - scanAllWebModels:251
     - scanWebModels:105
-    - sceneRegistry:206
+    - sceneRegistry:215
     - scheduleBackgroundEncoding:267
     - SchemaBuilder:34
     - selectLocalRepo:89
@@ -206,7 +207,7 @@ auto_fields:
     - SwitchContext:32
     - switchPreview:227
     - switchToSession:95
-    - syncLightTargetFromContent:423
+    - syncLightTargetFromContent:434
     - TexDecodeConfig:15
     - TexDecodeRequest:9
     - TexDecodeResponse:17
@@ -218,18 +219,18 @@ auto_fields:
     - unregisterSchema:47
     - VrmBonePanelCtx:21
     - VrmDataPort:33
-    - vrmMenuItems:564
-    - VrmMenuItemsOpts:526
+    - vrmMenuItems:569
+    - VrmMenuItemsOpts:531
     - VrmMetaInfo:89
-    - VrmModelInfoCtx:173
-    - VrmPanelHooks:180
+    - VrmModelInfoCtx:178
+    - VrmPanelHooks:185
     - webFsBindings:637
     - WorkerBridge:29
     - WorkerErrorStrategy:22
     - YSM_MODEL_SCHEMA_ID:20
     - YsmAdapterOptions:44
-    - ysmMenuItems:592
-    - YsmMenuItemsOpts:550
+    - ysmMenuItems:595
+    - YsmMenuItemsOpts:553
     - zipFindEntry:226
   tests:
     - frontend/src/preview-3d/adapters/mmd-adapter.test.ts

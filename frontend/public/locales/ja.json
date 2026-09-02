@@ -977,6 +977,8 @@
   "preview.stats.materials": "マテリアル",
   "preview.stats.textures": "テクスチャ",
   "preview.stats.morphs": "表情",
+  "preview.stats.cubes": "立方体(Cubes)",
+  "preview.pack.textures": "专属纹理",
   "preview.stats.file": "📊 ファイル統計",
   "preview.stats.vertices": "頂点",
   "preview.stats.faces": "面数",

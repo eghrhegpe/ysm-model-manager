@@ -722,6 +722,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-160：子实体统一为组件视图:GetModel3DSpec spec.models 唯一源 + 详情统计 = spec 投影(maid L0 清单退役)",
+        "link": "/adr/ADR-160-subentity-component-spec-projection"
+      },
+      {
+        "text": "ADR-159：sceneRegistry 容器语义：displayName + components（资源包=实体、包内模型=组件）",
+        "link": "/adr/ADR-159-scene-registry-container-semantics"
+      },
+      {
         "text": "ADR-158：check-readme-index 增加描述过时断言（提及但说错可机检）",
         "link": "/adr/ADR-158-readme-drift-assertions"
       },
@@ -1968,10 +1976,6 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
-          },
-          {
-            "text": "perf 契约测试临时卡",
-            "link": "/knowledge/zzz-perf-contract-tmp"
           }
         ]
       },

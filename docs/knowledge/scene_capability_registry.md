@@ -56,7 +56,7 @@ auto_fields:
     - LightCapability:368
     - lightDirToPosition:348
     - LightParams:79
-    - MAX_MODELS:209
+    - MAX_MODELS:218
     - MenuControlDef:17
     - MenuControlKind:14
     - MODEL_SKY_PRESETS:91
@@ -77,7 +77,7 @@ auto_fields:
     - SceneCapabilityLookup:91
     - sceneCapabilityRegistry:111
     - SceneCapabilityRegistry:32
-    - sceneRegistry:206
+    - sceneRegistry:215
     - SHADOW_PRESETS:49
     - ShadowCapability:171
     - ShadowParams:24

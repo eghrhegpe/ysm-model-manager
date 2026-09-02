@@ -18,22 +18,23 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AngleShot:55
-    - buildBoneExportRow:168
-    - buildStatsCard:90
+    - buildBoneExportRow:179
+    - buildStatsCard:106
     - buildToggleRow:48
-    - buildYsmScene:500
+    - buildYsmScene:503
     - cacheGet:43
     - cacheSet:65
     - cacheSetEvictHandler:39
     - CacheValue:10
     - collectBlobUrls:48
+    - componentCountsFromSpec:88
     - fill3DPanel:18
     - loadTextures:9
     - makeShotAction:34
-    - makeYsmAdapter:531
+    - makeYsmAdapter:534
     - renderMultiAngle:77
     - RenderMultiAngleOptions:66
-    - saveScreenshot:201
+    - saveScreenshot:212
     - screenshotFromRenderer:27
     - ScreenshotLights:18
     - ScreenshotOpts:13
@@ -43,8 +44,8 @@ auto_fields:
     - TextureCacheImpl:18
     - toScreenshotLights:26
     - YsmAdapterOptions:44
-    - ysmMenuItems:592
-    - YsmMenuItemsOpts:550
+    - ysmMenuItems:595
+    - YsmMenuItemsOpts:553
   tests:
     - frontend/src/preview-3d/screenshot-render.test.ts
     - frontend/src/preview-3d/decoder/cache.test.ts

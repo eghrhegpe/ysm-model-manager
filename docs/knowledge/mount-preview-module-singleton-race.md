@@ -11,7 +11,7 @@ auto_fields:
     - cleanupPreview:193
     - hasActivePreview:236
     - invalidatePreview:188
-    - mount3D:263
+    - mount3D:267
     - Mount3DOptions:241
     - PreviewAdapter:134
     - PreviewBuildCtx:85

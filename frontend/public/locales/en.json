@@ -977,6 +977,8 @@
   "preview.stats.materials": "Materials",
   "preview.stats.textures": "Textures",
   "preview.stats.morphs": "Morphs",
+  "preview.stats.cubes": "Cubes",
+  "preview.pack.textures": "Referenced Textures",
   "preview.stats.file": "📊 File Stats",
   "preview.stats.vertices": "Vertices",
   "preview.stats.faces": "Faces",

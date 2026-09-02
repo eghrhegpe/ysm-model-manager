@@ -1,8 +1,8 @@
 {
-  "generated": "2026-09-01T07:42:48.506Z",
+  "generated": "2026-09-02T08:50:16.505Z",
   "scope": "./go/**/*.go",
   "language": "go",
-  "duplicates": 438,
+  "duplicates": 439,
   "clones": [
     "go/avatar/avatar_extra_test.go#go/avatar/avatar_extra_test.go",
     "go/avatar/avatar_extra_test.go#go/avatar/avatar_node_test.go",
@@ -87,6 +87,7 @@
     "go/litematic/malformed_test.go#go/litematic/malformed_test.go",
     "go/litematic/malformed_test.go#go/litematic/voxel_test.go",
     "go/litematic/nbt_test.go#go/litematic/nbt_test.go",
+    "go/litematic/parity_voxel_test.go#go/types/parity_test.go",
     "go/litematic/parser_extra_test.go#go/litematic/parser_test.go",
     "go/litematic/parser_test.go#go/litematic/parser_test.go",
     "go/litematic/voxel.go#go/litematic/voxel.go",

@@ -14,7 +14,7 @@ auto_fields:
     - BoneChannels:30
     - BoneHierarchyNode:67
     - BoneTransform:57
-    - buildYsmScene:500
+    - buildYsmScene:503
     - compileMolang:71
     - createYsmAnimPlayer:281
     - evaluateClip:654
@@ -22,7 +22,7 @@ auto_fields:
     - executeTimeline:622
     - foldMolangConstant:94
     - Keyframe:19
-    - makeYsmAdapter:531
+    - makeYsmAdapter:534
     - MolangAxes:16
     - MolangFn:18
     - parseBedrockAnimationJSON:482
@@ -32,8 +32,8 @@ auto_fields:
     - YsmAdapterOptions:44
     - ysmAnimClipLabels:780
     - YsmAnimPlayer:32
-    - ysmMenuItems:592
-    - YsmMenuItemsOpts:550
+    - ysmMenuItems:595
+    - YsmMenuItemsOpts:553
   tests:
     - frontend/src/preview-3d/ysm-animation-player.test.ts
     - frontend/src/utils/animation/animation-controller.test.ts

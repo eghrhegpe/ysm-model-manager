@@ -53,7 +53,7 @@ auto_fields:
     - lightDirToPosition:348
     - LightParams:79
     - MODEL_SKY_PRESETS:91
-    - mount3D:263
+    - mount3D:267
     - Mount3DOptions:241
     - POSTPROC_PRESETS:359
     - PostprocessingCapability:369

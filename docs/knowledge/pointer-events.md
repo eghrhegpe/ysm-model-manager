@@ -22,7 +22,7 @@ auto_fields:
     - BedrockModel:32
     - bindEditEvents:528
     - bindInputHandlers:122
-    - bindToolbarEvents:356
+    - bindToolbarEvents:357
     - calcBoneHitZones:11
     - cleanupVoxel3D:139
     - closeActive3DOverlay:36

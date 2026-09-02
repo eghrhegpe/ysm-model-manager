@@ -15,8 +15,8 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - _resetSingletons:214
-    - buildYsmModelSchema:319
-    - buildYsmScene:500
+    - buildYsmModelSchema:326
+    - buildYsmScene:503
     - CameraControlBridge:19
     - cleanupPreview:193
     - fill3DPanel:39
@@ -26,9 +26,9 @@ auto_fields:
     - hasSchema:57
     - invalidatePreview:188
     - listSchemas:62
-    - makeYsmAdapter:531
+    - makeYsmAdapter:534
     - makeYsmModelSchemaId:29
-    - mount3D:263
+    - mount3D:267
     - Mount3DOptions:241
     - PanelHandle:13
     - PreviewAdapter:134
@@ -42,18 +42,18 @@ auto_fields:
     - SwitchContext:32
     - switchPreview:227
     - switchToSession:95
-    - syncLightTargetFromContent:423
+    - syncLightTargetFromContent:434
     - unregisterSchema:47
     - YSM_MODEL_SCHEMA_ID:20
     - YsmAdapterOptions:44
     - YsmContentHandle:33
     - YsmControlsContext:46
-    - ysmMenuItems:592
-    - YsmMenuItemsOpts:550
+    - ysmMenuItems:595
+    - YsmMenuItemsOpts:553
     - YsmModel:24
-    - ysmModelStats:271
-    - YsmModelStats:263
-    - ysmModelTextureSlots:291
+    - ysmModelStats:278
+    - YsmModelStats:270
+    - ysmModelTextureSlots:298
     - ysmShotNodes:69
   tests:
     - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts

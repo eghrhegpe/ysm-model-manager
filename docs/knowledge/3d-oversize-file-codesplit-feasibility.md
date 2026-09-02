@@ -17,7 +17,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - _resetSingletons:214
-    - buildMmdScene:1501
+    - buildMmdScene:1512
     - cleanupPreview:193
     - DEFAULT_GROUND_PARAMS:53
     - GroundCapability:62
@@ -25,10 +25,10 @@ auto_fields:
     - hasActivePreview:236
     - invalidatePreview:188
     - MmdDataPort:89
-    - mmdMenuItems:1614
-    - MmdMenuItemsOpts:1582
+    - mmdMenuItems:1625
+    - MmdMenuItemsOpts:1593
     - MmdPanelHooks:158
-    - mount3D:263
+    - mount3D:267
     - Mount3DOptions:241
     - PreviewAdapter:134
     - PreviewBuildCtx:85

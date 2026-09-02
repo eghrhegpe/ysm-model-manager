@@ -16,7 +16,7 @@ auto_fields:
     - App.AnalyzeBedrockModel:249
     - App.AnalyzeBedrockModelEntry:311
     - App.AnalyzeYSMModel:39
-    - App.Build3DSpecFromGeometryJSON:410
+    - App.Build3DSpecFromGeometryJSON:408
     - App.ClearInstanceResources:66
     - App.CountInstanceResources:26
     - App.DeduplicateCustomDir:153
@@ -69,7 +69,7 @@ auto_fields:
     - App.ResetResourceRoot:398
     - App.ResolveConflicts:54
     - App.SavePreviewTempFile:74
-    - App.SaveScreenshotFile:521
+    - App.SaveScreenshotFile:495
     - App.SelectImportFile:356
     - App.SelectImportZip:343
     - App.SetResourceRoot:378

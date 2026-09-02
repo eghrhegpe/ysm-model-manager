@@ -11,7 +11,7 @@ auto_fields:
     - __resetModalStateForTest:88
     - addTagToSet:19
     - AdvFilterResult:19
-    - AdvFilterValue:6
+    - AdvFilterValue:7
     - applyReplaceToName:41
     - attachTooltip:110
     - BatchRenameChange:21
@@ -40,12 +40,12 @@ auto_fields:
     - fmtMB:401
     - focusVisibleCSS:32
     - formatBytes:11
-    - friendlyError:44
+    - friendlyError:45
     - getAndroidBridge:5
     - hl:16
     - IconButtonOpts:91
     - installScrollSync:36
-    - isFileExistsError:87
+    - isFileExistsError:88
     - isInputBlocked:87
     - isViewerMode:16
     - MAX_TAG_LENGTH:12
@@ -66,7 +66,7 @@ auto_fields:
     - modalTagEditor:220
     - ModelNameFields:27
     - ParsedModelName:22
-    - parseFilterNumber:21
+    - parseFilterNumber:22
     - parseModelName:61
     - pickDirectory:66
     - popInputBlock:81
@@ -93,14 +93,14 @@ auto_fields:
     - sizeColor:23
     - stripBanSuffix:19
     - stripDisableSuffix:14
-    - stripPathSegments:72
+    - stripPathSegments:73
     - TagSetResult:6
     - TOAST_MS:6
     - ToastType:26
     - TooltipOptions:101
     - trapFocus:32
     - trapFocusAcrossShadow:156
-    - validateAdvFilter:32
+    - validateAdvFilter:33
     - validateRenameFields:71
     - VIEW_TESTIDS:10
     - VIEWER_PURE_ACTIONS:38

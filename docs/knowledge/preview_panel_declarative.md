@@ -15,30 +15,30 @@ source_files:
   - frontend/src/views/app-preview/shot-panel-shared.ts
 auto_fields:
   symbols_with_lines:
-    - buildMmdScene:1501
+    - buildMmdScene:1512
     - buildPreviewMenuRouters:181
-    - buildYsmScene:500
+    - buildYsmScene:503
     - CameraControlBridge:19
-    - collectPreviewLeafNodes:128
-    - collectPreviewNodeIds:141
+    - collectPreviewLeafNodes:131
+    - collectPreviewNodeIds:144
     - fillMmdModelPanel:44
     - fillMmdShotPanel:213
     - fillYsmShotPanel:74
-    - isPreviewFolderNode:123
+    - isPreviewFolderNode:126
     - makeShotAction:34
-    - makeYsmAdapter:531
+    - makeYsmAdapter:534
     - MaterialControlBridge:180
     - MmdBottomNavCtx:29
     - MmdDataPort:89
-    - mmdMenuItems:1614
-    - MmdMenuItemsOpts:1582
+    - mmdMenuItems:1625
+    - MmdMenuItemsOpts:1593
     - mmdModelInfoNodes:62
     - MmdPanelHooks:158
     - MmdPlayBridge:96
     - mmdShotNodes:197
     - MorphMeshLike:10
     - morphNodes:20
-    - mountPreviewRootMenu:467
+    - mountPreviewRootMenu:475
     - playNodes:114
     - PreviewActionMenuCtx:17
     - PreviewControlSpec:40
@@ -51,14 +51,14 @@ auto_fields:
     - renderAdapterPanelContent:482
     - renderCapControls:70
     - renderMenu:35
-    - renderPreviewPanel:225
+    - renderPreviewPanel:233
     - roleBaseName:34
     - shotButtonNodes:65
     - YsmAdapterOptions:44
     - YsmContentHandle:33
     - YsmControlsContext:46
-    - ysmMenuItems:592
-    - YsmMenuItemsOpts:550
+    - ysmMenuItems:595
+    - YsmMenuItemsOpts:553
     - YsmModel:24
     - ysmShotNodes:69
   tests:

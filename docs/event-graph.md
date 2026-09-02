@@ -58,7 +58,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/toolbar-events.ts` | 213 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 214 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -70,7 +70,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/toolbar-events.ts` | 212 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 213 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -107,9 +107,9 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/views/app-sidebar/events.ts` | 123 |
-| `frontend/src/views/app-tree/events.ts` | 296 |
-| `frontend/src/views/app-tree/events.ts` | 320 |
-| `frontend/src/views/app-tree/events.ts` | 331 |
+| `frontend/src/views/app-tree/events.ts` | 297 |
+| `frontend/src/views/app-tree/events.ts` | 321 |
+| `frontend/src/views/app-tree/events.ts` | 332 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -225,9 +225,9 @@
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 384 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 273 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
-| `frontend/src/views/app-tree/events.ts` | 155 |
-| `frontend/src/views/app-tree/events.ts` | 252 |
-| `frontend/src/views/app-tree/index.ts` | 410 |
+| `frontend/src/views/app-tree/events.ts` | 156 |
+| `frontend/src/views/app-tree/events.ts` | 253 |
+| `frontend/src/views/app-tree/index.ts` | 390 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -245,7 +245,7 @@
 | `frontend/src/views/app-nav/index.ts` | 34 |
 | `frontend/src/views/app-nav/index.ts` | 175 |
 | `frontend/src/views/app-sidebar/events.ts` | 250 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 117 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -339,8 +339,8 @@
 | `frontend/src/views/app-tree/bus-handlers.ts` | 59 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 93 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 162 |
-| `frontend/src/views/app-tree/events.ts` | 98 |
-| `frontend/src/views/app-tree/events.ts` | 379 |
+| `frontend/src/views/app-tree/events.ts` | 99 |
+| `frontend/src/views/app-tree/events.ts` | 380 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -380,8 +380,8 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/views/app-tree/bus-handlers.ts` | 308 |
-| `frontend/src/views/app-tree/events.ts` | 96 |
-| `frontend/src/views/app-tree/events.ts` | 473 |
+| `frontend/src/views/app-tree/events.ts` | 97 |
+| `frontend/src/views/app-tree/events.ts` | 474 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -444,9 +444,9 @@
 | `frontend/src/features/version-updater.ts` | 216 |
 | `frontend/src/features/version-updater.ts` | 250 |
 | `frontend/src/features/version-updater.ts` | 260 |
-| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 437 |
+| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 441 |
 | `frontend/src/preview-3d/adapters/preview-loading.ts` | 38 |
-| `frontend/src/preview-3d/adapters/switch-preview.ts` | 147 |
+| `frontend/src/preview-3d/adapters/switch-preview.ts` | 153 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 387 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 401 |
@@ -557,33 +557,33 @@
 | `frontend/src/views/app-tree/bus-handlers.ts` | 276 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 311 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 317 |
-| `frontend/src/views/app-tree/events.ts` | 69 |
-| `frontend/src/views/app-tree/events.ts` | 77 |
-| `frontend/src/views/app-tree/events.ts` | 102 |
-| `frontend/src/views/app-tree/events.ts` | 130 |
-| `frontend/src/views/app-tree/events.ts` | 171 |
-| `frontend/src/views/app-tree/events.ts` | 180 |
-| `frontend/src/views/app-tree/events.ts` | 196 |
-| `frontend/src/views/app-tree/events.ts` | 203 |
-| `frontend/src/views/app-tree/events.ts` | 382 |
-| `frontend/src/views/app-tree/events.ts` | 425 |
-| `frontend/src/views/app-tree/events.ts` | 433 |
-| `frontend/src/views/app-tree/events.ts` | 476 |
-| `frontend/src/views/app-tree/events.ts` | 486 |
-| `frontend/src/views/app-tree/index.ts` | 206 |
-| `frontend/src/views/app-tree/index.ts` | 346 |
-| `frontend/src/views/app-tree/index.ts` | 354 |
-| `frontend/src/views/app-tree/index.ts` | 455 |
-| `frontend/src/views/app-tree/index.ts` | 462 |
+| `frontend/src/views/app-tree/events.ts` | 70 |
+| `frontend/src/views/app-tree/events.ts` | 78 |
+| `frontend/src/views/app-tree/events.ts` | 103 |
+| `frontend/src/views/app-tree/events.ts` | 131 |
+| `frontend/src/views/app-tree/events.ts` | 172 |
+| `frontend/src/views/app-tree/events.ts` | 181 |
+| `frontend/src/views/app-tree/events.ts` | 197 |
+| `frontend/src/views/app-tree/events.ts` | 204 |
+| `frontend/src/views/app-tree/events.ts` | 383 |
+| `frontend/src/views/app-tree/events.ts` | 426 |
+| `frontend/src/views/app-tree/events.ts` | 434 |
+| `frontend/src/views/app-tree/events.ts` | 477 |
+| `frontend/src/views/app-tree/events.ts` | 487 |
+| `frontend/src/views/app-tree/index.ts` | 190 |
+| `frontend/src/views/app-tree/index.ts` | 326 |
+| `frontend/src/views/app-tree/index.ts` | 334 |
+| `frontend/src/views/app-tree/index.ts` | 435 |
+| `frontend/src/views/app-tree/index.ts` | 442 |
 | `frontend/src/views/app-tree/loader.ts` | 31 |
 | `frontend/src/views/app-tree/loader.ts` | 55 |
 | `frontend/src/views/app-tree/toolbar-events.ts` | 44 |
 | `frontend/src/views/app-tree/toolbar-events.ts` | 55 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 161 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 312 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 330 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 336 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 347 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 162 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 313 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 331 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 337 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 348 |
 | `frontend/src/views/app-tree/toolbar-search.ts` | 143 |
 | `frontend/src/views/app-tree/toolbar-search.ts` | 162 |
 | `frontend/src/views/app-tree/toolbar-search.ts` | 192 |
@@ -633,4 +633,4 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/index.ts` | 142 |
+| `frontend/src/views/app-tree/index.ts` | 126 |

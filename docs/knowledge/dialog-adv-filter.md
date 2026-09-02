@@ -9,10 +9,10 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AdvFilterResult:19
-    - AdvFilterValue:6
+    - AdvFilterValue:7
     - modalAdvFilter:181
-    - parseFilterNumber:21
-    - validateAdvFilter:32
+    - parseFilterNumber:22
+    - validateAdvFilter:33
   tests:
     - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
     - frontend/src/utils/dom/dialogs/adv-filter.test.ts

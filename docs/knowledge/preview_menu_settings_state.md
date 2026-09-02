@@ -10,30 +10,30 @@ source_files:
   - frontend/src/preview-3d/caps/scene-capability.ts
 auto_fields:
   symbols_with_lines:
-    - buildCameraSchema:32
-    - buildCrossCuttingControls:105
-    - buildLightingSchema:46
-    - buildPostprocessingSchema:69
-    - buildSettingsControls:170
-    - buildSettingsSchema:78
-    - buildShadowSchema:60
-    - collectSettingsCapControls:157
-    - collectVisiblePredicates:455
+    - buildCameraSchema:33
+    - buildCrossCuttingControls:106
+    - buildLightingSchema:47
+    - buildPostprocessingSchema:70
+    - buildSettingsControls:171
+    - buildSettingsSchema:79
+    - buildShadowSchema:61
+    - collectSettingsCapControls:158
+    - collectVisiblePredicates:457
     - createListenerSet:209
     - FieldRestorer:159
-    - formatCapSliderValue:99
+    - formatCapSliderValue:101
     - getStateValue:300
-    - isPathAvailable:319
+    - isPathAvailable:325
     - KNOWN_PATHS:53
     - MenuControlDef:17
     - MenuControlKind:14
     - persistState:143
-    - previewSnapshot:328
+    - previewSnapshot:334
     - PreviewSnapshot:82
     - PreviewStatePath:74
-    - renderCapControls:459
+    - renderCapControls:461
     - resetActiveComponent:269
-    - resetSettingsListeners:335
+    - resetSettingsListeners:341
     - restoreFields:175
     - restoreState:148
     - SceneCapability:95

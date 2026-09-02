@@ -24,7 +24,7 @@ auto_fields:
     - App.AnalyzeBedrockModel:249
     - App.AnalyzeBedrockModelEntry:311
     - App.AnalyzeYSMModel:39
-    - App.Build3DSpecFromGeometryJSON:410
+    - App.Build3DSpecFromGeometryJSON:408
     - App.ClearTextureCache:84
     - App.ExtractYSMHeader:57
     - App.ExtractYSMHeaderFromBase64:61
@@ -39,11 +39,11 @@ auto_fields:
     - App.ReadFileBytesBatchWithMeta:212
     - App.SaveCachedTexture:74
     - App.SavePreviewTempFile:74
-    - App.SaveScreenshotFile:521
+    - App.SaveScreenshotFile:495
     - applyWorkerDecodedTextures:169
     - BasisEncoderLike:13
     - BasisModuleLike:29
-    - buildMmdScene:1501
+    - buildMmdScene:1512
     - buildPmxScene:76
     - buildPmxSceneSliced:209
     - CacheDir:29
@@ -69,8 +69,8 @@ auto_fields:
     - LongTaskInfo:11
     - MAX_KTX2_PIXELS:65
     - MmdDataPort:89
-    - mmdMenuItems:1614
-    - MmdMenuItemsOpts:1582
+    - mmdMenuItems:1625
+    - MmdMenuItemsOpts:1593
     - MmdPanelHooks:158
     - PmxBoneData:56
     - PmxBuilderConfig:29

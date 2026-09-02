@@ -23,13 +23,14 @@ auto_fields:
     - BedrockBone:26
     - BedrockCube:16
     - BedrockModel:32
-    - buildBoneExportRow:168
+    - buildBoneExportRow:179
     - buildDepthMap:34
-    - buildStatsCard:90
+    - buildStatsCard:106
     - buildToggleRow:48
-    - buildYsmModelSchema:319
+    - buildYsmModelSchema:326
     - calcBoneHitZones:11
     - closeActive3DOverlay:36
+    - componentCountsFromSpec:88
     - createAdaptiveRenderBudget:63
     - fill3DPanel:18
     - getFrameIntervalMs:44
@@ -39,7 +40,7 @@ auto_fields:
     - getStateValue:300
     - invalidateMaxFpsCache:30
     - iRow:15
-    - isPathAvailable:319
+    - isPathAvailable:325
     - KNOWN_PATHS:53
     - loadModel2D:59
     - makeShotAction:34
@@ -55,14 +56,14 @@ auto_fields:
     - PreviewImageLoader:25
     - previewPixelRatio:58
     - PreviewRoot:8
-    - previewSnapshot:328
+    - previewSnapshot:334
     - PreviewSnapshot:82
     - PreviewStatePath:74
     - renderModel2D:58
     - resetActiveComponent:269
-    - resetSettingsListeners:335
+    - resetSettingsListeners:341
     - sampleAdaptivePixelRatio:74
-    - saveScreenshot:201
+    - saveScreenshot:212
     - sec:6
     - setActive3DClose:42
     - setPrefer3D:39
@@ -74,9 +75,9 @@ auto_fields:
     - subscribeSettings:279
     - toStatePath:90
     - YsmDecoder:15
-    - ysmModelStats:271
-    - YsmModelStats:263
-    - ysmModelTextureSlots:291
+    - ysmModelStats:278
+    - YsmModelStats:270
+    - ysmModelTextureSlots:298
   tests:
     - frontend/src/preview-3d/decoder/utils.test.ts
     - frontend/src/preview-3d/render-budget.test.ts

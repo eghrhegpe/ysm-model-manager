@@ -25,7 +25,7 @@ auto_fields:
     - App.AnalyzeYSMModel:39
     - App.BackupWorkshopCreators:331
     - App.BatchExtractCreatorAvatars:24
-    - App.Build3DSpecFromGeometryJSON:410
+    - App.Build3DSpecFromGeometryJSON:408
     - App.CachedCreatorAvatar:19
     - App.CacheModelAvatars:144
     - App.CancelQueue:76
@@ -115,7 +115,7 @@ auto_fields:
     - App.RevealInExplorer:268
     - App.SaveAppConfig:134
     - App.SavePreviewTempFile:74
-    - App.SaveScreenshotFile:521
+    - App.SaveScreenshotFile:495
     - App.SaveThresholds:213
     - App.SaveWindowPosition:369
     - App.SaveWorkshopCreators:168

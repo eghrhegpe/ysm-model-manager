@@ -977,6 +977,8 @@
   "preview.stats.materials": "材质",
   "preview.stats.textures": "纹理",
   "preview.stats.morphs": "表情",
+  "preview.stats.cubes": "立方体(Cubes)",
+  "preview.pack.textures": "专属纹理",
   "preview.stats.file": "📊 文件统计",
   "preview.stats.vertices": "顶点",
   "preview.stats.faces": "面数",

@@ -51,7 +51,7 @@ auto_fields:
     - addVector3SliderRow:210
     - addWatchDirRow:646
     - AdvFilterResult:19
-    - AdvFilterValue:6
+    - AdvFilterValue:7
     - ALL_EXTS:21
     - ALL_RESOURCE_TYPES:47
     - ALLOWED_CLI_COMMANDS:12
@@ -85,7 +85,7 @@ auto_fields:
     - applyWorkerDecodedTextures:169
     - appSidebarStyle:21
     - AppSyncManager:72
-    - AppTree:69
+    - AppTree:53
     - appTreeStyle:20
     - ARIA_ATTR:17
     - arrayBufferToBase64:14
@@ -121,9 +121,9 @@ auto_fields:
     - bindPerfCopyHandlers:74
     - bindRepoEvents:340
     - bindSiteEvents:85
-    - bindToolbarEvents:356
+    - bindToolbarEvents:357
     - bindTreeDnD:123
-    - bindTreeEvents:497
+    - bindTreeEvents:498
     - bitsPerEntry:99
     - BlinkCallback:24
     - BlinkOptions:42
@@ -146,13 +146,13 @@ auto_fields:
     - browserAdapter:70
     - btnBaseCSS:1
     - buildArgsMap:191
-    - buildBoneExportRow:168
+    - buildBoneExportRow:179
     - buildBoneHierarchy:14
     - buildBoneNamesText:15
     - buildBoneTree:36
     - buildCameraControls:31
-    - buildCameraSchema:32
-    - buildCrossCuttingControls:105
+    - buildCameraSchema:33
+    - buildCrossCuttingControls:106
     - buildCubeMeshData:192
     - buildDepthMap:34
     - buildDownloadTasks:31
@@ -161,40 +161,40 @@ auto_fields:
     - buildFbxSceneFromData:214
     - buildFolderItems:105
     - buildGroundSurfaceSpec:92
-    - buildLightingSchema:46
+    - buildLightingSchema:47
     - buildLipMorphIndices:132
     - buildLitematicScene:406
-    - buildMmdScene:1501
+    - buildMmdScene:1512
     - buildModelGroup:299
     - buildModelName:40
     - BuildModelNameOptions:21
     - buildModelRow:117
     - buildOrderedTexKeys:21
-    - buildPackScene:289
+    - buildPackScene:341
     - buildPmxScene:76
     - buildPmxSceneSliced:209
-    - buildPostprocessingSchema:69
+    - buildPostprocessingSchema:70
     - buildPresetChipGroup:35
     - buildPreviewMenuRouters:181
     - buildRenameName:60
     - buildSceneMesh:54
-    - buildSettingsControls:170
-    - buildSettingsSchema:78
-    - buildShadowSchema:60
+    - buildSettingsControls:171
+    - buildSettingsSchema:79
+    - buildShadowSchema:61
     - buildSiteHtml:373
     - BuildSiteHtmlCtx:25
     - buildSpecFromGeometryJSON:128
     - buildSpecFromModel:67
-    - buildStatsCard:90
+    - buildStatsCard:106
     - buildStatsPanel:25
     - buildToggleRow:48
     - buildTree:84
     - buildVrmBoneNodes:20
     - buildVrmBoneTree:52
-    - buildVrmScene:506
-    - buildYsmModelSchema:319
+    - buildVrmScene:511
+    - buildYsmModelSchema:326
     - buildYsmObject:50
-    - buildYsmScene:500
+    - buildYsmScene:503
     - bus:209
     - Bus:140
     - BusEventName:114
@@ -228,12 +228,12 @@ auto_fields:
     - cleanupEmpty3D:40
     - CleanupFn:43
     - cleanupLitematic3D:255
-    - cleanupMaid3D:88
+    - cleanupMaid3D:82
     - cleanupMmd3D:33
-    - cleanupPack3D:60
+    - cleanupPack3D:64
     - cleanupPreview:193
     - cleanupScene3D:38
-    - cleanupVirtualScroll:338
+    - cleanupVirtualScroll:376
     - cleanupVoxel3D:139
     - cleanupVrm3D:59
     - cleanupYsm3D:87
@@ -267,14 +267,15 @@ auto_fields:
     - CollectMenuGraphOpts:73
     - collectNodePredicates:86
     - collectOutputFiles:102
-    - collectPreviewLeafNodes:128
-    - collectPreviewNodeIds:141
+    - collectPreviewLeafNodes:131
+    - collectPreviewNodeIds:144
     - collectSceneStats:35
-    - collectSettingsCapControls:157
-    - collectVisiblePredicates:455
+    - collectSettingsCapControls:158
+    - collectVisiblePredicates:457
     - CommunityData:26
     - compileMolang:71
     - compKey:18
+    - componentCountsFromSpec:88
     - computeBoneLocalPos:24
     - concurrentMap:51
     - ConsoleLogger:6
@@ -468,9 +469,9 @@ auto_fields:
     - fillAuthorsAsync:232
     - fillMmdModelPanel:44
     - fillMmdShotPanel:213
-    - fillRoles:282
+    - fillRoles:302
     - fillSearch:231
-    - fillSwitch:217
+    - fillSwitch:218
     - fillYsmShotPanel:74
     - filterAnimFiles:24
     - filterModels:72
@@ -513,7 +514,7 @@ auto_fields:
     - forceRefreshCommunitySites:64
     - forceRefreshScanAuthors:58
     - formatBytes:11
-    - formatCapSliderValue:99
+    - formatCapSliderValue:101
     - formatLongTask:63
     - formatSize:114
     - frameCameraSide:21
@@ -574,6 +575,8 @@ auto_fields:
     - getTextureDecoder:149
     - getTintColorSync:56
     - getVrmMaterialDetail:62
+    - getVsMode:370
+    - getVsRows:360
     - GH_DOCS:7
     - GH_RELEASES:6
     - GH_REPO:5
@@ -661,10 +664,10 @@ auto_fields:
     - invalidateCache:131
     - invalidateEmptyPreview:45
     - invalidateLitematicPreview:29
-    - invalidateMaidPreview:93
+    - invalidateMaidPreview:87
     - invalidateMaxFpsCache:30
     - invalidateMmdPreview:43
-    - invalidatePackPreview:65
+    - invalidatePackPreview:69
     - invalidatePreview:188
     - invalidateScenePreview:43
     - invalidateVrmPreview:64
@@ -683,8 +686,8 @@ auto_fields:
     - isInputBlocked:87
     - isLikelyTga:10
     - isModelMissing:45
-    - isPathAvailable:319
-    - isPreviewFolderNode:123
+    - isPathAvailable:325
+    - isPreviewFolderNode:126
     - isRecyclePath:56
     - isRenderableModel:320
     - isSkyEnvironmentOn:133
@@ -784,9 +787,9 @@ auto_fields:
     - makeLazyLoader:36
     - makeMenuCtx:12
     - makeMmdDataPort:11
-    - makePackAdapter:58
+    - makePackAdapter:66
     - makeShotAction:34
-    - makeYsmAdapter:531
+    - makeYsmAdapter:534
     - makeYsmModelSchemaId:29
     - makeZipOverlayPort:120
     - mapColor:92
@@ -803,7 +806,7 @@ auto_fields:
     - MAX_FPS_KEY:23
     - MAX_IMPORT_BYTES:14
     - MAX_KTX2_PIXELS:65
-    - MAX_MODELS:209
+    - MAX_MODELS:218
     - MAX_PIXEL_RATIO_KEY:5
     - MAX_TAG_LENGTH:12
     - MENU_DEFS:40
@@ -819,7 +822,7 @@ auto_fields:
     - mergeCommunitySites:386
     - mergeCubes:261
     - mergeLocalAuthorsInto:154
-    - mergeStatsMenuItems:59
+    - mergeStatsMenuItems:68
     - MeshData:109
     - MeshFragment:14
     - MMD_SEMANTIC_CANDIDATES:92
@@ -831,8 +834,8 @@ auto_fields:
     - MmdDataPort:89
     - MmdMaterialDetail:19
     - MmdMaterialListItem:13
-    - mmdMenuItems:1614
-    - MmdMenuItemsOpts:1582
+    - mmdMenuItems:1625
+    - MmdMenuItemsOpts:1593
     - mmdModelInfoNodes:62
     - MmdPanelHooks:158
     - MmdPlayBridge:96
@@ -861,7 +864,7 @@ auto_fields:
     - Model2DOptions:37
     - modelDetailHTML:20
     - ModelDetailMeta:6
-    - modelDetailView:38
+    - modelDetailView:40
     - ModelEntry:21
     - modelEntryFor:85
     - ModelGroup:87
@@ -876,11 +879,11 @@ auto_fields:
     - MolangFn:18
     - MorphMeshLike:10
     - morphNodes:20
-    - motionDetailView:112
-    - mount3D:263
+    - motionDetailView:132
+    - mount3D:267
     - Mount3DOptions:241
     - mountCustomElement:30
-    - mountPreviewRootMenu:467
+    - mountPreviewRootMenu:475
     - moveItem:8
     - mpApplyWasdCameraMotion:21
     - mpBuildSharedInfra:73
@@ -917,6 +920,7 @@ auto_fields:
     - PackEntryReader:73
     - PackMeta:95
     - packPngToThumbnail:125
+    - packTextureLabel:52
     - PAGE_REGISTRY:30
     - PAGE_WHITELIST:28
     - PageDefinition:23
@@ -929,7 +933,7 @@ auto_fields:
     - parseCLIResponse:202
     - parseDescTags:55
     - ParsedModelName:22
-    - parseFilterNumber:21
+    - parseFilterNumber:22
     - parseHealthReport:46
     - parseJavaModel:292
     - parseModelName:61
@@ -1009,7 +1013,7 @@ auto_fields:
     - previewPixelRatio:58
     - PreviewRoot:8
     - PreviewScene:108
-    - previewSnapshot:328
+    - previewSnapshot:334
     - PreviewSnapshot:82
     - PreviewStatePath:74
     - PreviewTab:219
@@ -1089,12 +1093,12 @@ auto_fields:
     - renderMultiAngle:77
     - RenderMultiAngleOptions:66
     - RenderOptions:6
-    - renderPreviewPanel:225
+    - renderPreviewPanel:233
     - renderRepoHeaderHTML:298
     - RenderResult:13
     - renderSiteView:54
     - RenderSiteViewCtx:16
-    - renderTree:347
+    - renderTree:386
     - renderVersionCards:8
     - RenderVrmBonePanel:31
     - ReplaceResult:31
@@ -1114,7 +1118,7 @@ auto_fields:
     - resetSceneInfra:35
     - resetSchemas:67
     - resetSelectedEmit:199
-    - resetSettingsListeners:335
+    - resetSettingsListeners:341
     - resetSettingsStore:27
     - resolveAndroidRepoDir:26
     - resolveBlockName:107
@@ -1152,7 +1156,7 @@ auto_fields:
     - returnFocus:44
     - revealMainWindow:2
     - ROLE:6
-    - roleBaseName:29
+    - roleBaseName:30
     - ROW_H_GRID:20
     - ROW_H_LIST:21
     - runGuiFlow:432
@@ -1172,7 +1176,7 @@ auto_fields:
     - sanitizePage:38
     - saveBrowseMode:31
     - saveCfg:25
-    - saveScreenshot:201
+    - saveScreenshot:212
     - scanAllWebModels:251
     - scanConflicts:151
     - scanModelsByType:155
@@ -1183,7 +1187,7 @@ auto_fields:
     - SceneCapabilityLookup:91
     - sceneCapabilityRegistry:111
     - SceneCapabilityRegistry:32
-    - sceneRegistry:206
+    - sceneRegistry:215
     - SceneStats:19
     - scheduleBackgroundEncoding:267
     - SchemaBuilder:34
@@ -1227,6 +1231,7 @@ auto_fields:
     - setup2DCanvas:23
     - setVrmMaterialOpacity:48
     - setVrmMaterialVisible:38
+    - setVsRows:365
     - SHADOW_PRESETS:49
     - ShadowCapability:171
     - ShadowParams:24
@@ -1239,7 +1244,7 @@ auto_fields:
     - showFbxPreview:169
     - showLitematic:187
     - showLoadFailure:35
-    - showMaidPreview:313
+    - showMaidPreview:271
     - showMmdPreview:116
     - showModelDetail:27
     - showModelGroup:29
@@ -1329,7 +1334,7 @@ auto_fields:
     - switchToSession:95
     - syncDirRowHTML:79
     - SyncItem:17
-    - syncLightTargetFromContent:423
+    - syncLightTargetFromContent:434
     - SyncManagerSelf:27
     - SyncRenderSelf:20
     - SyncStoreSelf:13
@@ -1389,10 +1394,10 @@ auto_fields:
     - unregisterModelRoot:23
     - unregisterSchema:47
     - UpdateInfo:15
-    - updateSelectCount:392
-    - updateStat:414
+    - updateSelectCount:393
+    - updateStat:457
     - useCurrentResourceType:28
-    - validateAdvFilter:32
+    - validateAdvFilter:33
     - validateRenameFields:71
     - Vec3:13
     - VIEW_TESTIDS:7
@@ -1410,12 +1415,12 @@ auto_fields:
     - VrmMaterialControlBridge:18
     - VrmMaterialDetail:17
     - VrmMaterialListItem:11
-    - vrmMenuItems:564
-    - VrmMenuItemsOpts:526
+    - vrmMenuItems:569
+    - VrmMenuItemsOpts:531
     - VrmMetaInfo:89
-    - VrmModelInfoCtx:173
+    - VrmModelInfoCtx:178
     - vrmModelInfoNodes:26
-    - VrmPanelHooks:180
+    - VrmPanelHooks:185
     - vrmSemanticBoneMap:200
     - vrmShotNodes:42
     - WailsAndroidBridge:18
@@ -1465,12 +1470,12 @@ auto_fields:
     - YsmDecoder:15
     - YSMHeader:52
     - YsmHeaderShape:37
-    - ysmMenuItems:592
-    - YsmMenuItemsOpts:550
+    - ysmMenuItems:595
+    - YsmMenuItemsOpts:553
     - YsmModel:24
-    - ysmModelStats:271
-    - YsmModelStats:263
-    - ysmModelTextureSlots:291
+    - ysmModelStats:278
+    - YsmModelStats:270
+    - ysmModelTextureSlots:298
     - YsmObjectHandle:25
     - YsmOpenOptions:37
     - YsmProperties:14

@@ -158,9 +158,9 @@ async function main() {
   // 统一结果收集与阻断标记
   const results: any[] = [];
   let blocked = false;
-  const record = (label: string, ok: boolean, { time = 0, note = '', tail = '' } = {}) => {
+  const record = (label: string, ok: boolean, { time = 0, note = '', tail = '', noBlock = false } = {}) => {
     results.push({ label, ok, time, note, tail });
-    if (!ok) blocked = true;
+    if (!ok && !noBlock) blocked = true;
   };
 
   let plan;
@@ -450,7 +450,12 @@ async function main() {
     const t1 = Date.now();
     // 与 frontend/package.json test 对齐：--maxWorkers 8（24 核默认并发过载反慢 ~10s）
     const ft = await shAsync('npx vitest run --maxWorkers 8', { cwd: path.join(ROOT, 'frontend') });
-    record('vitest run', ft.rc === 0, { time: Date.now() - t1, tail: ft.rc ? ft.out.trim().split('\n').slice(-4).join('\n') : '' });
+    // 失败时抓失败测试名：vitest 输出里 ❯/×/FAIL 行含测试文件名+用例名，
+    // 比取最后 4 行（汇总数字）更易定位。最多取 8 行避免 tail 过长。
+    const vitestTail = ft.rc
+      ? (ft.out.match(/^(?:❯|×|FAIL)[^\n]*$/gm) || ft.out.trim().split('\n').slice(-4)).slice(0, 8).join('\n')
+      : '';
+    record('vitest run', ft.rc === 0, { time: Date.now() - t1, tail: vitestTail });
     })()
   ]);
 
@@ -519,8 +524,12 @@ async function main() {
           .join('\n');
       }
     } catch { /* parse fail */ ok = false; scanHealthy = false; }
+    // 基线债务（红线新增）不阻断推送：推送后修；发布前全量 doctor 仍会报告（2026-08-13 决策）
+    // 但扫描不可用（fail-closed）必须阻断——扫描本身没跑成，不能当作「债务」放行
+    // noBlock=true 让 record 不置 blocked；!scanHealthy 由下方第 534 行兜底阻断
     record('check-redlines', ok, {
       time: Date.now() - t0,
+      noBlock: true,
       // note 顺序：newV===null 唯一标识 JSON parse 失败（rg 不可用时 newViolations
       // 非 null——runBaseline fail-closed 返回 allKeys），必须先于 scanHealthy 判定
       note: newV === null ? '输出解析失败——fail-closed 阻断，红线门禁未执行'
@@ -529,8 +538,6 @@ async function main() {
             : `${newV} 条新增红线违规（基线 ${baseCount} 条）——债务项，推送后处理`)),
       tail: rlTail,
     });
-    // 基线债务（红线新增）不阻断推送：推送后修；发布前全量 doctor 仍会报告（2026-08-13 决策）
-    // 但扫描不可用（fail-closed）必须阻断——扫描本身没跑成，不能当作「债务」放行
     if (!scanHealthy) blocked = true;
   }
   if (plan.adr) {

@@ -219,6 +219,8 @@ interface MdMmTextureState {
   blobUrlToRel: Map<string, string>;
   blobUrlToHash: Map<string, string>;
   cachedHashes: Set<string> | null;
+  ktx2Loader: KTX2Loader | null;
+  ktx2CacheLoader: KTX2Loader | null;
 }
 
 /** 动画/相机域：播放状态 + 相机轨道 */
@@ -374,6 +376,8 @@ type MdMmStage3Ctx = Pick<
   | "ctx"
   | "effectivePath"
   | "effectivePort"
+  | "ktx2CacheLoader"
+  | "ktx2Loader"
   | "mesh"
   | "port"
 >;
@@ -435,6 +439,8 @@ type MdMmStage6Ctx = Pick<
   | "cameraAnimTarget"
   | "cameraMixer"
   | "ctx"
+  | "ktx2CacheLoader"
+  | "ktx2Loader"
   | "mesh"
   | "mixer"
   | "mmd"
@@ -981,7 +987,7 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
       const cacheStatus = (await hasCachedTextures(allHashes)) ?? {};
       c.cachedHashes = new Set(allHashes.filter((h) => cacheStatus[h]));
       if (c.cachedHashes.size > 0) {
-        const ktx2Loader = new KTX2Loader()
+        c.ktx2CacheLoader = new KTX2Loader()
           .setTranscoderPath("/basis/")
           .detectSupport(c.ctx.renderer);
         const allMats: THREE.Material[] = Array.isArray(c.mesh.material)
@@ -1006,7 +1012,7 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
                 const ktxUrl = URL.createObjectURL(ktxBlob);
                 c.blobUrls.push(ktxUrl);
                 return (
-                  ktx2Loader
+                  c.ktx2CacheLoader!
                     .loadAsync(ktxUrl)
                     .then((compressedTex) => {
                       matTexSlots(mat)[key] = compressedTex;
@@ -1384,6 +1390,8 @@ function mdMmStage6Result(
       }
       try {
         c.bonePanelRef.current?.();
+        // 从 scene 移除 mesh（disposeMmdMesh 只释放 GPU 资源，不处理 scene graph 引用）
+        c.ctx.scene?.remove(c.mesh);
         unregisterModelRoot(c.mesh);
         c.mixer.stopAllAction();
         c.mixer.uncacheRoot(c.mesh);
@@ -1404,6 +1412,9 @@ function mdMmStage6Result(
       try {
         disposeMmdMesh(c.mesh, mmdDiag, c.port, "dispose-tex");
         c.mmd?.dispose();
+        // KTX2Loader 内部持有 WASM 解码器 + worker pool，不 dispose 会泄漏
+        c.ktx2Loader?.dispose();
+        c.ktx2CacheLoader?.dispose();
       } catch (e) {
         dbg("mmd", { op: "dispose-mesh-fail", err: safeErrorMessage(e) });
       }

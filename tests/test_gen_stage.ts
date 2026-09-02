@@ -112,7 +112,9 @@ check('场景E: ?? 未跟踪的新 gen 产物 → 不因 dirty 被误杀', () =>
     { path: 'completions/ysm.bash', x: '?', y: '?' },
   ];
   const snapChanged = ['completions/ysm.bash'];
-  const stage = computeStageList({ dirtyEntries: dirty, snapChanged });
+  // 守卫契约：调用方必须传 snapBeforePaths，否则 ?? 文件一律 fail-closed 排除（防卷带）。
+  // 此处传空集合 = 「gen 前该文件不存在」→ 判定为 gen 新建产物 → 安全进 stage（非并行 dirty）。
+  const stage = computeStageList({ dirtyEntries: dirty, snapChanged, snapBeforePaths: new Set() });
   assert.deepEqual(
     [...stage],
     ['completions/ysm.bash'],

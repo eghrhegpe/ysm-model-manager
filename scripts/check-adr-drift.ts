@@ -175,8 +175,13 @@ function codeAsserts() {
   // 6. r10/r11 纹理+MMD 生命周期防倒退：mmd-adapter 必含 uncacheRoot + 全纹理槽释放
   //    mmd-adapter 走自有释放路径（TEX_SLOTS 含 emissiveMap + tex.dispose() 遍历），不调通用 disposeMaterial
   const mmdAdapterPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-adapter.ts');
+  const mmdUtilsPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-utils.ts');
   try {
-    const text = fs.existsSync(mmdAdapterPath) ? fs.readFileSync(mmdAdapterPath, 'utf-8') : '';
+    const textA = fs.existsSync(mmdAdapterPath) ? fs.readFileSync(mmdAdapterPath, 'utf-8') : '';
+    const textU = fs.existsSync(mmdUtilsPath) ? fs.readFileSync(mmdUtilsPath, 'utf-8') : '';
+    // r10/r11 释放逻辑已拆分至 mmd-utils.ts（DISPOSE_TEX_KEYS 含 emissiveMap 等槽位），
+    // 合并两文件扫描，守卫语义不变：uncacheRoot + 全纹理槽释放 + blobUrl 撤销 必须共存
+    const text = textA + '\n' + textU;
     const hasUncacheRoot = /uncacheRoot\s*\(/.test(text);
     const hasFullSlotDispose =
       /["']emissiveMap["']/.test(text) && /tex\.dispose\(\)|mat\.dispose\(\)/.test(text) && /blobUrls?/.test(text);

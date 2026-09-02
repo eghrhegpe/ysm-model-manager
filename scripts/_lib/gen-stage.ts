@@ -86,8 +86,11 @@ export interface StageInput {
 export function computeStageList(input: StageInput): string[] {
   const { dirtyEntries, snapChanged, snapBeforePaths } = input;
   const before = snapBeforePaths ?? new Set<string>();
+  // dirty 路径防御性归一化（parsePorcelain 已归一，但调用方可能直传反斜杠路径）
+  const dirtyMap = new Map<string, PorcelainEntry>();
+  for (const d of dirtyEntries) dirtyMap.set(normPath(d.path), d);
   // snapBeforePaths 缺省保护：before 为空 Set 时，
-  // L101 `if (!before.has(p))` 恒 true → 所有 ?? 都 stage（fail-open）。
+  // L107 `if (!before.has(p))` 恒 true → 所有 ?? 都 stage（fail-open）。
   // 调用方必须传入 snapBeforePaths，否则按 fail-closed 返回空清单。
   if (!snapBeforePaths && snapChanged.some((raw) => {
     const d = dirtyMap.get(normPath(raw));
@@ -96,9 +99,6 @@ export function computeStageList(input: StageInput): string[] {
     console.error('[gen-stage] snapBeforePaths 缺省且有 ?? 文件，fail-closed 输出空清单');
     return [];
   }
-  // dirty 路径防御性归一化（parsePorcelain 已归一，但调用方可能直传反斜杠路径）
-  const dirtyMap = new Map<string, PorcelainEntry>();
-  for (const d of dirtyEntries) dirtyMap.set(normPath(d.path), d);
   const stage = new Set<string>();
   for (const raw of snapChanged) {
     const p = normPath(raw);

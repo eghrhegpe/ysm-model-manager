@@ -6,7 +6,7 @@ import { assembleBoneSelectInfo, getMeshBoneId } from "../bone-raycast.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 
 /** 统一多模型拾取器工厂：点击命中模型 → 切活跃 + 换菜单 + 骨骼回调透传 */
-export function mpMakeUnifiedPickHandler(
+export function makeUnifiedPickHandler(
   renderer: THREE.WebGLRenderer,
   camera: THREE.PerspectiveCamera,
   scene: THREE.Scene,

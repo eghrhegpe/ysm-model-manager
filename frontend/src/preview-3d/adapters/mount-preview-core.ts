@@ -71,15 +71,15 @@ import { sceneRegistry } from "./scene-registry.ts";
 import {
   clearSceneCaps,
   getSceneCaps,
-  type MpSharedInfra,
-  mpBuildSharedInfra,
+  type SharedInfra,
+  buildSharedInfra,
   resetSceneInfra,
 } from "./shared-infra.ts";
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
-import { mpMakeUnifiedPickHandler } from "./unified-pick.ts";
-import { type MpUnloadCtx, mpUnloadModel } from "./unload-model.ts";
-import { type MpWasdReuse, mpApplyWasdCameraMotion } from "./wasd-camera.ts";
+import { makeUnifiedPickHandler } from "./unified-pick.ts";
+import { type UnloadCtx, unloadModel } from "./unload-model.ts";
+import { type WasdReuse, applyWasdCameraMotion } from "./wasd-camera.ts";
 
 /** 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） */
 export interface PreviewBuildCtx {
@@ -328,9 +328,9 @@ export async function mount3D(
   let mouseDown = false;
   const lastMouse = { x: 0, y: 0 };
 
-  // infra（scene/camera/renderer/controls/orbitTarget + 全部 cap）由 mpBuildSharedInfra
+  // infra（scene/camera/renderer/controls/orbitTarget + 全部 cap）由 buildSharedInfra
   // 一次性构造返回；self 模式下 infra 保持 null，所有访问经 infra?. 短路为 undefined。
-  let infra: MpSharedInfra | null = null;
+  let infra: SharedInfra | null = null;
 
   // 事件 handler（仅一次性赋值，cleanupCtx 按值快照；不进 session）
   let onKeyDown: (e: KeyboardEvent) => void = () => {};
@@ -456,7 +456,7 @@ export async function mount3D(
           }
         }
       : undefined,
-    unloadModel,
+    unloadModel: unloadSessionModel,
     toast: (msg: string): void => {
       bus.emit("toast:show", { msg, duration: TOAST_MS.normal });
     },
@@ -517,9 +517,9 @@ export async function mount3D(
   document.addEventListener("keydown", session.escH);
 
   if (!selfMode) {
-    infra = mpBuildSharedInfra(adapter, viewContainer, menuHandle);
-    // 块内 infra 已非 null（mpBuildSharedInfra 必返回完整对象）；用局部 const 锁定非空，
-    // 避免 animate 闭包穿越控制流回退到 MpSharedInfra | null。
+    infra = buildSharedInfra(adapter, viewContainer, menuHandle);
+    // 块内 infra 已非 null（buildSharedInfra 必返回完整对象）；用局部 const 锁定非空，
+    // 避免 animate 闭包穿越控制流回退到 SharedInfra | null。
     const sc = infra.scene;
     const cam = infra.camera;
     const rd = infra.renderer;
@@ -549,7 +549,7 @@ export async function mount3D(
     onKeyDown = handlers.onKeyDown;
 
     // ADR-093 T5：统一多模型拾取器（仅 count>=2 激活，单模型完全沿用逐模型 registerBoneRaycast，零回归）
-    session.onUnifiedPick = mpMakeUnifiedPickHandler(rd, cam, sc);
+    session.onUnifiedPick = makeUnifiedPickHandler(rd, cam, sc);
     rd.domElement.addEventListener("click", session.onUnifiedPick);
     onKeyUp = handlers.onKeyUp;
     onDragPointerDown = handlers.onDragPointerDown;
@@ -589,7 +589,7 @@ export async function mount3D(
         lastTime = now;
         // 推进逐帧动态效果（水面波纹/弹簧骨骼等；能力自行决定是否需要更新）
         for (const c of getSceneCaps()) c.update?.(dt);
-        mpApplyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, session.orbitMode, ot, {
+        applyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, session.orbitMode, ot, {
           camDir: _camDir,
           forward: _forward,
           right: _right,
@@ -710,8 +710,8 @@ export async function mount3D(
    * 移除其场景根节点 + 释放内容层 GPU + 注册表注销（焦点自动转移）+ 相机取景重算。
    * 函数声明提升：引用 allContent（§4 声明）在调用时已初始化。
    */
-  function unloadModel(id: string): void {
-    mpUnloadModel(
+  function unloadSessionModel(id: string): void {
+    unloadModel(
       {
         allContent: session.allContent,
         scene: infra?.scene,
@@ -720,7 +720,7 @@ export async function mount3D(
         menuHandle,
         getContent: () => session.content,
         setPerFrame: (f) => switchCtx.setPerFrame(f),
-        // 从全局 perFrame 列表移除指定回调（原 mpUnloadModel 内联 _globalPerFrames splice 逻辑）
+        // 从全局 perFrame 列表移除指定回调（原 unloadModel 内联 _globalPerFrames splice 逻辑）
         removePerFrame: (f) => {
           const idx = _globalPerFrames.indexOf(f);
           if (idx >= 0) _globalPerFrames.splice(idx, 1);
@@ -925,16 +925,16 @@ export async function mount3D(
 }
 
 // ===== §5 mount3D 会话状态（其余私有工具已拆出独立模块）=====
-// → shared-infra.ts（场景单例 + mpBuildSharedInfra + mpSyncShadowLights）
-// → wasd-camera.ts（mpApplyWasdCameraMotion + MpWasdReuse）
-// → unified-pick.ts（mpMakeUnifiedPickHandler）
-// → unload-model.ts（mpUnloadModel + MpUnloadCtx）
+// → shared-infra.ts（场景单例 + buildSharedInfra + syncShadowLights）
+// → wasd-camera.ts（applyWasdCameraMotion + WasdReuse）
+// → unified-pick.ts（makeUnifiedPickHandler）
+// → unload-model.ts（unloadModel + UnloadCtx）
 // → input-and-animation.ts（bindInputHandlers / InputOptions）
 // → switch-preview.ts（switchToSession / SwitchContext）
 
 /**
  * mount3D 会话级可变状态收敛体（原 30+ 裸 let，收敛后仅剩 keys/mouseDown/lastMouse 等少量 input let）。
- * infra 字段（scene/camera/renderer/controls/orbitTarget + 全部 cap）复用 {@link MpSharedInfra}，
+ * infra 字段（scene/camera/renderer/controls/orbitTarget + 全部 cap）复用 {@link SharedInfra}，
  * 本接口仅收敛 session 级可变状态——闭包读写统一经此对象，降低认知负担。
  */
 interface MpSessionState {

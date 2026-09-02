@@ -1,6 +1,6 @@
 // ===== 3D 预览共享基础设施（从 mount-preview-core.ts §5 抽出）=====
 // 持有场景级单例（scene/camera/renderer/OrbitControls + 程序化能力列表），
-// 由 mpBuildSharedInfra 一次性装配；cleanup/重置经导出访问器收敛——
+// 由 buildSharedInfra 一次性装配；cleanup/重置经导出访问器收敛——
 // mount-preview-core 不再直接读写这些单例变量。
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -28,7 +28,7 @@ let _singletonCamera: THREE.PerspectiveCamera | null = null;
 let _singletonRenderer: THREE.WebGLRenderer | null = null;
 let _singletonControls: OrbitControls | null = null;
 /** 程序化能力列表（注册表统一创建），供 rAF 循环逐帧调用 update（水面波纹/弹簧骨骼等）。
- *  shared 模式下 caps 由 mpBuildSharedInfra 单次填充，render loop 直接遍历，避免逐能力硬编码。 */
+ *  shared 模式下 caps 由 buildSharedInfra 单次填充，render loop 直接遍历，避免逐能力硬编码。 */
 let _sceneCaps: SceneCapability[] = [];
 
 /** 置空场景级单例（cleanupPreview / _resetSingletons 调用；renderer/canvas 保留语义由调用方承担） */
@@ -49,8 +49,8 @@ export function getSceneCaps(): readonly SceneCapability[] {
   return _sceneCaps;
 }
 
-/** mpBuildSharedInfra 返回的 shared 基础设施 + 程序化能力引用（mount3D 赋值给会话局部变量） */
-export interface MpSharedInfra {
+/** buildSharedInfra 返回的 shared 基础设施 + 程序化能力引用（mount3D 赋值给会话局部变量） */
+export interface SharedInfra {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
@@ -68,13 +68,13 @@ export interface MpSharedInfra {
   postProcCap: PostprocessingCapability | null;
 }
 
-/** mpBuildSharedInfra：shared 模式基础设施 + 程序化能力装配（scene/camera/renderer/OrbitControls 单例复用 + caps 创建/preset/Shadow/postProc 联动）。
+/** buildSharedInfra：shared 模式基础设施 + 程序化能力装配（scene/camera/renderer/OrbitControls 单例复用 + caps 创建/preset/Shadow/postProc 联动）。
  *  返回带出的局部引用，mount3D 仅赋值给会话变量；self 模式走适配器自驱，不走本函数。 */
-export function mpBuildSharedInfra(
+export function buildSharedInfra(
   adapter: PreviewAdapter,
   viewContainer: HTMLElement,
   menuHandle: PreviewMenuHandle,
-): MpSharedInfra {
+): SharedInfra {
   // 复用单例 scene（多模型共享同一场景）
   if (!_singletonScene) {
     _singletonScene = new THREE.Scene();
@@ -133,7 +133,7 @@ export function mpBuildSharedInfra(
   // 全部挂入场景
   for (const cap of caps) cap.apply();
   // ShadowCapability 同步：光 castShadow（光已由 LightCapability 创建）
-  if (shadowCap && lightCap) mpSyncShadowLights(scene, shadowCap, lightCap);
+  if (shadowCap && lightCap) syncShadowLights(scene, shadowCap, lightCap);
   // 后处理体积光管线（ADR-081 L2）：PostprocessingCapability（registry 驱动）
   const postProcCap =
     (sceneCapabilityRegistry.getById("postprocessing") as PostprocessingCapability) ?? null;
@@ -182,9 +182,9 @@ export function mpBuildSharedInfra(
   };
 }
 
-/** mpSyncShadowLights：ShadowCapability 同步光 castShadow（优先 setLightCap 精准注入 3 方向灯+聚光灯；
+/** syncShadowLights：ShadowCapability 同步光 castShadow（优先 setLightCap 精准注入 3 方向灯+聚光灯；
  *  再 scene.traverse 收集外部自定义灯走 syncLights 兜底），防误吞外部灯 */
-function mpSyncShadowLights(
+function syncShadowLights(
   scene: THREE.Scene,
   shadowCap: ShadowCapability,
   lightCap: LightCapability,

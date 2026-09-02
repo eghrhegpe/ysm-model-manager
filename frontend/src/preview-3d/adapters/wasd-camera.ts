@@ -6,10 +6,10 @@ import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { TdKeyAction } from "../keymap.ts";
 
 /** rAF 相机运动复用的 Vector3 实例（避免每帧 GC 分配）；只读常量 */
-const mpUP = new THREE.Vector3(0, 1, 0);
+const upVec = new THREE.Vector3(0, 1, 0);
 
-/** mpApplyWasdCameraMotion 的复用向量槽位（rAF loop 一次性创建，每帧传入） */
-export interface MpWasdReuse {
+/** applyWasdCameraMotion 的复用向量槽位（rAF loop 一次性创建，每帧传入） */
+export interface WasdReuse {
   camDir: THREE.Vector3;
   forward: THREE.Vector3;
   right: THREE.Vector3;
@@ -18,7 +18,7 @@ export interface MpWasdReuse {
 
 /** rAF 帧内 WASD/方向键 → 相机平移与焦点跟随（纯函数，无单例依赖；
  *  仅改传入 cam/ctr/ot 引用，移动向量经 reuse 复用，返回值 void） */
-export function mpApplyWasdCameraMotion(
+export function applyWasdCameraMotion(
   keys: Partial<Record<TdKeyAction, boolean>>,
   cam: THREE.PerspectiveCamera,
   ctr: OrbitControls,
@@ -26,11 +26,11 @@ export function mpApplyWasdCameraMotion(
   dt: number,
   orbitMode: boolean,
   ot: THREE.Vector3,
-  reuse: MpWasdReuse,
+  reuse: WasdReuse,
 ): void {
   cam.getWorldDirection(reuse.camDir);
   reuse.forward.set(reuse.camDir.x, 0, reuse.camDir.z).normalize();
-  reuse.right.crossVectors(reuse.forward, mpUP).normalize();
+  reuse.right.crossVectors(reuse.forward, upVec).normalize();
   reuse.move.set(0, 0, 0);
   // 动作表驱动（input-and-animation 已按键位表把 code 映射成动作；方向键双轨也在此折叠）
   if (keys.forward) reuse.move.add(reuse.forward);

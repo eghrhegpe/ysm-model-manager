@@ -53,7 +53,7 @@ auto_fields:
     - cancelPendingEncodings:71
     - captureTextureName:102
     - cleanupPreview:196
-    - collectAllWebEntries:596
+    - collectAllWebEntries:614
     - collectMenuGraph:147
     - CollectMenuGraphOpts:73
     - collectNodePredicates:86
@@ -87,14 +87,14 @@ auto_fields:
     - getBonePath:78
     - getBonePosition:93
     - getCustomAnimPath:12
-    - getFsaAuthState:73
+    - getFsaAuthState:89
     - getSchema:52
     - getTextureDecoder:149
     - GroundCapability:62
     - GroundParams:40
     - hasActivePreview:240
     - hasSchema:57
-    - importWebFiles:72
+    - importWebFiles:88
     - injectSkySunScalePatch:126
     - InputHandlers:43
     - InputOptions:28
@@ -164,23 +164,24 @@ auto_fields:
     - PreviewScene:104
     - readPmxStats:39
     - readVrmMeta:110
-    - reauthorizeFsaRoot:73
+    - readWebFile:91
+    - reauthorizeFsaRoot:89
     - registerSchema:41
     - renderLoadingState:17
     - RenderVrmBonePanel:31
     - RepresentativeSnapshot:26
-    - rescanFsaRoot:73
+    - rescanFsaRoot:89
     - resetEncoderState:83
     - resetSchemas:67
     - resolveMmdZipConfig:41
     - ResolveModeBridge:158
     - ResolveModeResponse:15
-    - scanAllWebModels:233
-    - scanWebModels:87
+    - scanAllWebModels:251
+    - scanWebModels:105
     - sceneRegistry:206
     - scheduleBackgroundEncoding:267
     - SchemaBuilder:34
-    - selectLocalRepo:73
+    - selectLocalRepo:89
     - setBoneNodeVisible:129
     - showLoadFailure:35
     - SkyCapability:315
@@ -196,7 +197,7 @@ auto_fields:
     - TextureDecoder:40
     - TextureTooLargeError:68
     - toggleBoneVisible:137
-    - typeFromWebDir:78
+    - typeFromWebDir:96
     - unregisterSchema:47
     - VrmBonePanelCtx:21
     - VrmDataPort:33
@@ -205,7 +206,7 @@ auto_fields:
     - VrmMetaInfo:89
     - VrmModelInfoCtx:173
     - VrmPanelHooks:180
-    - webFsBindings:611
+    - webFsBindings:629
     - WorkerBridge:29
     - WorkerErrorStrategy:22
     - YSM_MODEL_SCHEMA_ID:20

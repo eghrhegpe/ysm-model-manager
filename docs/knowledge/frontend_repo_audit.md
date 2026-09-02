@@ -255,7 +255,7 @@ auto_fields:
     - closeActiveDialog:111
     - closeDlg:60
     - COLLAPSIBLE:29
-    - collectAllWebEntries:596
+    - collectAllWebEntries:614
     - collectBlobUrls:48
     - collectDropFiles:99
     - CollectedEntry:23
@@ -1154,11 +1154,11 @@ auto_fields:
     - saveBrowseMode:31
     - saveCfg:25
     - saveScreenshot:201
-    - scanAllWebModels:233
+    - scanAllWebModels:251
     - scanConflicts:151
     - scanModelsByType:155
     - scanSyncConflicts:243
-    - scanWebModels:87
+    - scanWebModels:105
     - SceneCapability:95
     - SceneCapabilityFactory:24
     - SceneCapabilityLookup:91
@@ -1355,7 +1355,7 @@ auto_fields:
     - TreeNode:34
     - TreeRow:24
     - tryFetchModels:242
-    - typeFromWebDir:78
+    - typeFromWebDir:96
     - typeIconOf:291
     - u8ToBase64:78
     - uiComponentsCss:7
@@ -1381,7 +1381,6 @@ auto_fields:
     - VirtualList:21
     - VirtualListOpts:8
     - VolumetricParams:65
-    - VOXEL_MAX_BLOCKS:28
     - VOXEL_RPC_BY_EXT:302
     - VoxelData:41
     - voxelFromBase64:32
@@ -1415,11 +1414,10 @@ auto_fields:
     - webCommonBindings:95
     - webCommunityBindings:247
     - WebComponentBase:7
-    - webContainerEntrySafe:39
     - webDirType:46
     - webExtractPreviewTexture:172
     - webFindPreviewImage:137
-    - webFsBindings:611
+    - webFsBindings:629
     - WebModelStats:5
     - WebModelStatsWithPath:14
     - webStoreBindings:191

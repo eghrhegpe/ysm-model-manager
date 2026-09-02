@@ -12,11 +12,13 @@
 // │  §1  key 规约 + 主文件优先级 → web-fs-shared.ts                               │
 // │  §3  FSA 授权持久化      → web-fs-auth.ts                                    │
 // │  §4  模型库扫描           → 下文    scanWebModels / scanAllWebModels           │
-// │  §5  文件读取            → 下文    readWebFile                                 │
-// │  §6  NBT/体素 meta 读取   → 下文    readVoxelJson / readNbtMetaJson           │
-// │  §7  pack/shaderpack 读取 → 下文    readPackMetaJson / readShaderpackLangJson │
-// │  §8  路径解析            → 下文    parseWebModelPath / parseWebModelDir       │
-// │  §9  列表                → 下文    listWebModelDirFiles                       │
+// │  §5  文件读取            → web-fs-read.ts  readWebFile                        │
+// │  §6  NBT/体素 meta 读取   → 下文    readNbtMetaJson；web-fs-read.ts readVoxelJson│
+// │  §6.5 容器内条目枚举+体素 → web-fs-container.ts                               │
+// │  §7  pack/shaderpack 读取 → web-fs-pack.ts                                    │
+// │  #5  Bedrock 预览 fallback → web-fs-bedrock.ts                                │
+// │  §8  路径解析            → web-fs-read.ts  parseWebModelPath / parseWebModelDir│
+// │  §9  列表                → web-fs-read.ts  listWebModelDirFiles；下文 scanAllWebModels│
 // │  §10 搜索                → 下文    searchWebModels                            │
 // │  §11 重命名              → 下文    assertValidRenameName / renameWebDir/File  │
 // │  §12 删除               → 下文    deleteWebModel                              │
@@ -36,21 +38,15 @@ import resourceTypesJson from "../../../resource_types.json" with { type: "json"
 import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
 // rtype 扩展名白名单（resource_types.json 派生，单一事实源；ScanModelEntriesFiltered 过滤用）
 import { getExts } from "../utils/resource/extensions.ts";
-import { arrayBufferToBase64, base64ToBytes, u8ToBase64, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
+import { base64ToBytes, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
 // R2 导入增强：detectZipType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
-import { extractZip, detectZipType } from "./extract.ts";
+import { detectZipType } from "./extract.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
 import { parseNbtRoot, litematicMetaView, nbtStructureView, schematicSummaryView } from "./nbt-parse.ts";
 // ADR-070 M2：蓝图/投影 voxel 读取（TS 平移 go/litematic/voxel.go；parseNbtRootExact 提供
 // LongArray 精确 64 位——BlockStates 打包位解码必需，number 归一会丢低 10 位）
 import { parseNbtRootExact } from "./nbt-parse.ts";
-import { litematicVoxelView, nbtVoxelView, schematicVoxelView, decodeVoxelNbt, type VoxelData } from "./voxel-parse.ts";
-// 资源包/光影包详情 meta 读取（TS 平移 go/packs/mcmeta.go 的解析层；binding 装配见下方
-// webFsBindings 的 ReadPackMeta/ReadShaderpackLang 条目——读 IDB → 解 zip → 本文件纯解析）
-import { findZipEntry, parsePackMetaJson, parseShaderpackLang, packPngToThumbnail } from "./pack-meta.ts";
-// #5：Bedrock 纯解析复用（decoder/geometry.ts 是完全前端的 JSON→BedrockGeometry 解析器）
-import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "../preview-3d/decoder/geometry.ts";
-import { parseYsmJsonDirect } from "../preview-3d/decoder/parse-ysm-json.ts";
+import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "./voxel-parse.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
 // 预填、rename.ts:92 重命名 tips、detail.ts:58-62 详情 stats/license、loader.ts:140 作者兜底）
@@ -66,11 +62,33 @@ import { batchStatsWebModels, type WebModelStats } from "./web-stats.ts";
 // 拆分子模块（ADR-040 职责切分延续）
 import { dirKey, fileKey, mainFileRank, MAIN_FILE_RANK_NONE, MAIN_FILE_RANK_TYPE } from "./web-fs-shared.ts";
 import { getFsaAuthState, reauthorizeFsaRoot, rescanFsaRoot, selectLocalRepo } from "./web-fs-auth.ts";
+// 共享读取装配 + 路径反解（web-fs-read.ts 叶子，断 container/pack/bedrock ↔ 主文件 循环）
+import {
+  readWebFile,
+  readVoxelJson,
+  parseWebModelPath,
+  parseWebModelDir,
+  listWebModelDirFiles,
+} from "./web-fs-read.ts";
+// §6.5 容器内条目枚举 + 体素（ADR-132 遗留 1）
+import { listWebContainerEntries, readWebVoxelInContainer } from "./web-fs-container.ts";
+// §7 pack/shaderpack meta 读取
+import {
+  readPackMetaJson,
+  readShaderpackLangJson,
+  listWebPackModels,
+  listWebPackModelsDetail,
+  readWebPackEntry,
+} from "./web-fs-pack.ts";
+// #5 Bedrock 预览 fallback 链
+import { webFindPreviewImage, webExtractPreviewTexture, webAnalyzeBedrockModel, webAnalyzeBedrockModelEntry } from "./web-fs-bedrock.ts";
 
 // 公共 API 原路径透出（browser-adapter / web-store / web-community 消费面零改动）：
 // importWebFiles 主文件不再直接消费（FSA 入库走 web-fs-auth），仅门面转出
 export { importWebFiles } from "./web-fs-import.ts";
 export { getFsaAuthState, reauthorizeFsaRoot, rescanFsaRoot, selectLocalRepo } from "./web-fs-auth.ts";
+// readWebFile 移入 web-fs-read.ts 后经此透出，web-community 消费面不变
+export { readWebFile } from "./web-fs-read.ts";
 
 // ===== §1 key 规约 → web-fs-shared.ts =====
 
@@ -204,139 +222,6 @@ async function scanWebModelFilesInDir(dir: string): Promise<ModelEntry[]> {
   return entries;
 }
 
-// ===== §5 文件读取（readWebFile）=====
-/** 读文件（/web/<type>/<rest> → IDB → base64；wasm.ts 解码链零改动复用）
- *  模型组 name 与组内 rel 在 file key 中无缝拼接（file:<type>/<name>/<rel>），
- *  多段 name（目录树，如 /web/ysm/分类1/狐狸/狐狸.ysm）无需拆分边界：
- *  直接以 <type> 后全部路径段作 key（对齐 MikuMikuAR dir key 匹配模式）。 */
-export async function readWebFile(path: string): Promise<string | null> {
-  const pm = parseWebPath(path);
-  if (!pm) return null;
-  const f = await idbGet<{ data: ArrayBuffer }>("files", `file:${pm.type}/${pm.rest}`);
-  if (!f) return null;
-  return arrayBufferToBase64(f.data);
-}
-
-/**
- * ADR-070 M2：蓝图/投影 voxel binding 公共读取骨架（TS 平移 go/litematic/voxel.go 的
- * openGzRoot + BuildVoxelData/BuildNbtVoxelData/BuildSchematicVoxelData + internal/app
- * marshalVoxelData）。读 IDB → base64 → 字节 → parseNbtRootExact → voxelView → JSON 字符串。
- * 任何一步失败（文件缺失 / 畸形 NBT / 视图判定无效）→ "{}"（对齐 Go binding 契约：
- * marshalVoxelData error → "{}"）。
- * 体素渲染上限对齐 internal/app/resource_bindings.go voxelMaxBlocks 默认 200000
- * （网页版无 AppConfig，直接用默认值）。
- */
-const VOXEL_MAX_BLOCKS = 200000;
-
-async function readVoxelJson(
-  path: string,
-  view: (root: Record<string, unknown>, maxBlocks: number) => VoxelData | null,
-): Promise<VoxelData | null> {
-  try {
-    const b64 = await readWebFile(path);
-    if (!b64) return null;
-    // IO（读文件）与解码（b64 → NBT root）解耦：decodeVoxelNbt 为纯函数
-    // （voxel-parse.ts），此处只做装配——读文件 → 纯解码 → 纯视图 → typed VoxelData
-    return voxelFromBase64(b64, view);
-  } catch {
-    // ADR-143 P1：失败走 null（error 通道语义由 binding 层处理）
-    return null;
-  }
-}
-
-/** 体素装配：b64 → 解码 → 视图 → typed VoxelData（readVoxelJson / readWebVoxelInContainer 共用段）。
- *  失败返回 null（解码失败 / 视图判定无效），消除两处重复（jscpd）。 */
-function voxelFromBase64(
-  b64: string,
-  view: (root: Record<string, unknown>, maxBlocks: number) => VoxelData | null,
-): VoxelData | null {
-  const root = decodeVoxelNbt(b64);
-  if (!root) return null;
-  return view(root, VOXEL_MAX_BLOCKS);
-}
-
-/** zip 容器读取装配：readWebFile → base64 → extractZip（失败返回 null，调用方转 "[]"）。
- *  listWebContainerEntries / listWebPackModels 共用前缀，消除重复（jscpd）。 */
-async function readWebZipEntries(path: string): Promise<ReturnType<typeof extractZip>["entries"] | null> {
-  const b64 = await readWebFile(path);
-  if (!b64) return null;
-  const bytes = base64ToBytes(b64);
-  if (!bytes) return null;
-  return extractZip(bytes).entries;
-}
-// ===== §6.5 容器内条目枚举 + 体素读取（ADR-132 遗留 1：蓝图/litematic zip 多 nbt 预览）=====
-// 镜像 Go internal/app/container_entries.go 的 ListContainerEntries / GetVoxelDataInContainer：
-// 读 IDB → base64 → 字节 → extractZip → 按扩展名白名单过滤（ListContainerEntries）；
-// 容器内条目 → findZipEntry → 字节 → decodeVoxelNbt → voxelView（GetVoxelDataInContainer）。
-// 失败契约对齐 Go：枚举失败 → "[]"；体素失败 → {"error": string}。
-
-/** 容器内条目扩展名白名单（对齐 litematic-3d.ts CONTAINER_VOXEL_EXTS） */
-const CONTAINER_VOXEL_EXTS = new Set([".nbt", ".litematic", ".schematic"]);
-
-/** 镜像 Go parseContainerExts：逗号分隔扩展名白名单（无点前缀自动补；空 → 放行全部） */
-function webParseContainerExts(exts: string): Set<string> {
-  const out = new Set<string>();
-  for (const e of exts.split(",")) {
-    const e2 = e.trim().toLowerCase();
-    if (!e2) continue;
-    out.add(e2.startsWith(".") ? e2 : "." + e2);
-  }
-  return out;
-}
-
-/** 镜像 Go containerExtMatch：条目名扩展名是否在白名单内（大小写不敏感） */
-function webContainerExtMatch(name: string, exts: Set<string>): boolean {
-  if (exts.size === 0) return true;
-  const i = name.lastIndexOf(".");
-  if (i < 0) return false;
-  return exts.has(name.slice(i).toLowerCase());
-}
-
-/** 镜像 Go containerEntrySafe：禁 .. / 反斜杠 / 绝对路径（防穿越） */
-function webContainerEntrySafe(name: string): boolean {
-  if (!name) return false;
-  if (name.startsWith("/")) return false;
-  return !name.includes("..") && !name.includes("\\");
-}
-
-/** 容器内条目枚举：ListContainerEntries 镜像（exts 逗号分隔；失败 → []） */
-async function listWebContainerEntries(path: string, exts: string): Promise<string[]> {
-  try {
-    const entries = await readWebZipEntries(path);
-    if (!entries) return [];
-    const extSet = webParseContainerExts(exts);
-    const out = Object.keys(entries)
-      .filter((k) => !k.endsWith("/") && webContainerEntrySafe(k) && webContainerExtMatch(k, extSet))
-      .sort();
-    return out;
-  } catch {
-    return [];
-  }
-}
-
-/** 容器内体素读取：GetVoxelDataInContainer 镜像（entry 为 zip 内条目路径，ext 决定视图分派） */
-async function readWebVoxelInContainer(
-  path: string,
-  entry: string,
-  ext: string,
-  view: (root: Record<string, unknown>, maxBlocks: number) => VoxelData | null,
-): Promise<VoxelData | null> {
-  try {
-    if (!webContainerEntrySafe(entry)) return null;
-    const b64 = await readWebFile(path);
-    if (!b64) return null;
-    const bytes = base64ToBytes(b64);
-    if (!bytes) return null;
-    const { entries } = extractZip(bytes);
-    const raw = findZipEntry(entries, entry);
-    if (!raw) return null;
-    const vd = voxelFromBase64(u8ToBase64(raw), view);
-    return vd;
-  } catch {
-    return null;
-  }
-}
-
 // ===== §6 NBT/体素 meta 读取（ADR-070 M1/M2）=====
 /**
  * ADR-070 M1：蓝图/投影 meta binding 公共读取骨架（TS 平移 go/litematic/parser.go 的
@@ -359,551 +244,6 @@ async function readNbtMetaJson(
   } catch {
     return null;
   }
-}
-
-// ===== §7 pack/shaderpack meta 读取 =====
-/**
- * 资源包详情 binding 公共骨架（TS 平移 go/packs/mcmeta.go ReadPackMeta + internal/app
- * resource_bindings.go:34 的 result 装配）。读 IDB → base64 → 字节 → extractZip →
- * 找 pack.mcmeta（1MB 限额）→ JSON 解析 → 找 pack.png（10MB 限额）→ base64 缩略图。
- * 任何一步失败（文件缺失 / 非 zip / 无 mcmeta / 超限 / 解析失败）→ "{}"（对齐 Go
- * binding 契约：ReadPackMeta error → "{}"）。
- */
-async function readPackMetaJson(path: string): Promise<Record<string, unknown> | null> {
-  try {
-    const b64 = await readWebFile(path);
-    if (!b64) return null;
-    const bytes = base64ToBytes(b64);
-    if (!bytes) return null;
-    const { entries } = extractZip(bytes);
-    const mcmeta = findZipEntry(entries, "pack.mcmeta");
-    if (!mcmeta) return null;
-    const meta = parsePackMetaJson(mcmeta);
-    if (!meta) return null;
-    // pack.png → base64 缩略图（10MB 限额，超限置空——对齐 go zip 分支 LimitReader+1 截断探测）
-    meta.thumbnail = packPngToThumbnail(findZipEntry(entries, "pack.png"));
-    return meta;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * 光影包详情 binding（TS 平移 go/packs/mcmeta.go ReadShaderpackLang）。读 IDB → base64 →
- * 字节 → extractZip → 找 lang/en_US.lang（大小写不敏感，1MB 限额）→ key=value 解析 →
- * {name, entries}。任何一步失败 → {name:"",entries:{}}（对齐 Go binding 契约）。
- */
-async function readShaderpackLangJson(path: string): Promise<{ name: string; entries: Record<string, string> }> {
-  try {
-    const b64 = await readWebFile(path);
-    if (!b64) return { name: "", entries: {} };
-    const bytes = base64ToBytes(b64);
-    if (!bytes) return { name: "", entries: {} };
-    const { entries } = extractZip(bytes);
-    const lang = findZipEntry(entries, "lang/en_us.lang");
-    if (!lang) return { name: "", entries: {} };
-    const parsed = JSON.parse(parseShaderpackLang(lang)) as { name: string; entries: Record<string, string> };
-    return parsed;
-  } catch {
-    return { name: "", entries: {} };
-  }
-}
-
-/** 资源包 3D：ListPackModels 枚举 zip 内条目（对齐 Go ListPackModels 契约，返回 string[]） */
-async function listWebPackModels(path: string): Promise<string[]> {
-  try {
-    const entries = await readWebZipEntries(path);
-    if (!entries) return [];
-    return Object.keys(entries);
-  } catch {
-    return [];
-  }
-}
-
-/** 资源包模型 entry 判定（镜像 Go packModelEntryMatch：assets/<ns>/models/{block,item}/**\/*.json） */
-function webPackModelEntryMatch(name: string): boolean {
-  const n = name.toLowerCase();
-  if (!n.startsWith("assets/") || !n.endsWith(".json")) return false;
-  const idx = n.indexOf("/models/");
-  if (idx < 0) return false;
-  const rest = n.slice(idx + "/models/".length);
-  return rest.startsWith("block/") || rest.startsWith("item/");
-}
-
-/**
- * 资源包模型清单：ListPackModelsDetail 镜像（对齐 Go 绑定契约）——
- * 返回 {models:[{path,cubes}],total:N}，cubes = JSON elements 数组长度，
- * 封顶前 200 条（防大包），total 全量。失败返回空结构（详情卡清单区降级）。
- */
-async function listWebPackModelsDetail(path: string): Promise<{ models: Array<{ path: string; cubes: number }>; total: number }> {
-  const empty = () => ({ models: [], total: 0 });
-  try {
-    const b64 = await readWebFile(path);
-    if (!b64) return empty();
-    const bytes = base64ToBytes(b64);
-    if (!bytes) return empty();
-    const { entries } = extractZip(bytes);
-    const keys = Object.keys(entries).filter((k) => webPackModelEntryMatch(k)).sort();
-    const total = keys.length;
-    const capped = keys.slice(0, 200);
-    const models = capped.map((k) => {
-      const bytes = entries[k];
-      let cubes = 0;
-      try {
-        const parsed = JSON.parse(new TextDecoder().decode(bytes)) as { elements?: unknown[] };
-        cubes = Array.isArray(parsed.elements) ? parsed.elements.length : 0;
-      } catch { /* 单条目 JSON 异常 → cubes 0（对齐 Go packModelElementsCount） */ }
-      return { path: k, cubes };
-    });
-    return { models, total };
-  } catch {
-    return empty();
-  }
-}
-
-/** 资源包 3D：ReadPackEntry 读取 zip 内指定条目并返回 base64（对齐 Go 契约） */
-async function readWebPackEntry(path: string, entry: string): Promise<string> {
-  try {
-    const b64 = await readWebFile(path);
-    if (!b64) return "";
-    const bytes = base64ToBytes(b64);
-    if (!bytes) return "";
-    const { entries } = extractZip(bytes);
-    const raw = findZipEntry(entries, entry);
-    return raw ? u8ToBase64(raw) : "";
-  } catch {
-    return "";
-  }
-}
-// ===== #5 Bedrock 预览 fallback 链（FindPreviewImage / ExtractPreviewTexture / AnalyzeBedrockModel）=====
-
-function imageMimeOfPath(p: string): string {
-  return /\.jpe?g$/i.test(p) ? "image/jpeg" : "image/png";
-}
-
-function imageDataUri(bytes: Uint8Array, mime = "image/png"): string {
-  return `data:${mime};base64,${u8ToBase64(bytes)}`;
-}
-
-/** 从 IDB 读一个图片文件并转 data URI；不存在/读取失败返回 "" */
-async function readImageDataUri(p: string): Promise<string> {
-  const b64 = await readWebFile(p);
-  if (!b64) return "";
-  const bytes = base64ToBytes(b64);
-  if (!bytes) return "";
-  return imageDataUri(bytes, imageMimeOfPath(p));
-}
-/** ysm.json manifest 元数据（parseYsmJsonDirect 塞在 BedrockGeometry._ysmMeta） */
-interface YsmManifestMeta {
-  modelFiles?: unknown[];
-  texFiles?: unknown[];
-  defaultTexture?: string | null;
-}
-
-/** 按相对路径（可带反斜杠/大小写差异）在 zip entries 中找字节 */
-function findEntryByRel(entries: Record<string, Uint8Array>, rel: string): Uint8Array | null {
-  const norm = rel.replace(/\\/g, "/").toLowerCase();
-  for (const key of Object.keys(entries)) {
-    if (key.replace(/\\/g, "/").toLowerCase() === norm) return entries[key];
-  }
-  return null;
-}
-
-/** 解析 ysm.json 字节 → manifest 元数据（没有 ysm.json 规范结构返回 null） */
-function parseYsmManifestMeta(bytes: Uint8Array): YsmManifestMeta | null {
-  try {
-    const json = JSON.parse(new TextDecoder("utf-8").decode(bytes)) as unknown;
-    const decoded = parseYsmJsonDirect(json);
-    if (!decoded?.geometry) return null;
-    const meta = (decoded.geometry as { _ysmMeta?: YsmManifestMeta })._ysmMeta;
-    return meta && meta.modelFiles?.length ? meta : null;
-  } catch (err) {
-    // 静默吞异常曾导致 ysm.json 结构不符时无任何线索（69ab1f03 code review）；
-    // 此处留 warn 便于排查，null 语义不变（降级走单 geometry 路径）
-    console.warn("[web-fs] parseYsmManifestMeta 解析失败，降级单 geometry:", safeErrorMessage(err));
-    return null;
-  }
-}
-
-/**
- * 按 ysm.json manifest 声明序合并多 geometry（对齐 wasm.ts mdWsHandleYsmJsonSpec 的合并规则）。
- * @param meta parseYsmJsonDirect 输出的 _ysmMeta（texFiles 已按 default_texture 置首）
- * @param readFile 相对路径读取器；zip 用 entries 查表，解压目录用 IDB 读文件
- */
-async function mergeBedrockFromManifest(
-  meta: YsmManifestMeta,
-  readFile: (rel: string) => Promise<Uint8Array | null>,
-): Promise<BedrockGeometry | null> {
-  const allBones: BedrockGeometry["bones"] = [];
-  let boneCount = 0;
-  let cubeCount = 0;
-  let maxTexW = 0;
-  let maxTexH = 0;
-  const processed = new Set<string>();
-
-  for (const mf of meta.modelFiles || []) {
-    const raw = typeof mf === "string" ? mf : (mf as { path?: string })?.path || "";
-    if (!raw || processed.has(raw)) continue;
-    processed.add(raw);
-    const rel = raw.startsWith("models/") || raw.startsWith("models\\")
-      ? raw
-      : "models/" + raw;
-    // 兼容 manifest 里只写 baseName（如 "main"）而磁盘上是 main.json / main.geo.json
-    const candidates = [rel, raw, rel + ".json", rel + ".geo.json", raw + ".json", raw + ".geo.json"];
-    let bytes: Uint8Array | null = null;
-    for (const c of candidates) {
-      bytes = await readFile(c);
-      if (bytes) break;
-    }
-    if (!bytes) continue;
-    const parsed = parseBedrockGeometryFromJSON(new TextDecoder("utf-8").decode(bytes));
-    if (!parsed?.bones?.length) continue;
-    allBones.push(...parsed.bones);
-    boneCount += parsed.boneCount;
-    cubeCount += parsed.cubeCount;
-    maxTexW = Math.max(maxTexW, parsed.texWidth);
-    maxTexH = Math.max(maxTexH, parsed.texHeight);
-  }
-
-  if (!allBones.length) return null;
-
-  const textures: string[] = [];
-  const textureNames: string[] = [];
-  for (const tf of meta.texFiles || []) {
-    const raw = typeof tf === "string" ? tf : (tf as { uv?: string })?.uv || "";
-    if (!raw) continue;
-    const rel = raw.startsWith("textures/") || raw.startsWith("textures\\")
-      ? raw
-      : "textures/" + raw;
-    const candidates = [rel, raw, rel + ".png", rel + ".jpg", raw + ".png", raw + ".jpg"];
-    let bytes: Uint8Array | null = null;
-    for (const c of candidates) {
-      bytes = await readFile(c);
-      if (bytes) break;
-    }
-    if (!bytes) continue;
-    textures.push(imageDataUri(bytes, imageMimeOfPath(raw)));
-    textureNames.push(raw.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "");
-  }
-
-  return {
-    bones: allBones,
-    boneCount,
-    cubeCount,
-    texWidth: maxTexW,
-    texHeight: maxTexH,
-    textures,
-    textureNames,
-  };
-}
-
-/** 找模型同目录候选预览图（对齐 fileops.FindPreviewImage 的候选顺序） */
-async function webFindPreviewImage(modelPath: string): Promise<string> {
-  const slash = modelPath.lastIndexOf("/");
-  if (slash <= 0) return "";
-  const dir = modelPath.slice(0, slash);
-  const files = await listWebModelDirFiles(dir);
-  if (!files.length) return "";
-  const base = modelPath.slice(slash + 1).replace(/\.[^.]+$/, "") || "";
-  const candidates = [
-    `${base}.png`,
-    `${base}.jpg`,
-    "preview.png",
-    "cover.png",
-    "thumbnail.png",
-  ];
-  for (const c of candidates) {
-    const low = c.toLowerCase();
-    const hit = files.find((p) => p.split(/[/\\]/).pop()?.toLowerCase() === low);
-    if (hit) {
-      const uri = await readImageDataUri(hit);
-      if (uri) return uri;
-    }
-  }
-  return "";
-}
-
-/** 从 zip entries 中取首个 PNG（偏好 textures/ 目录，再回退任意根层 PNG） */
-function firstPngFromEntries(entries: Record<string, Uint8Array>): { key: string; data: Uint8Array } | null {
-  const keys = Object.keys(entries);
-  const tex = keys.find((k) => /^textures\//i.test(k) && /\.png$/i.test(k));
-  const any = keys.find((k) => /\.png$/i.test(k));
-  const hit = tex ?? any;
-  return hit ? { key: hit, data: entries[hit] } : null;
-}
-
-/** 提取 zip/7z/json 的首张预览纹理（对齐 fileops.ExtractPreviewTexture 语义，7z 网页版不支持） */
-async function webExtractPreviewTexture(modelPath: string): Promise<string> {
-  const dot = modelPath.lastIndexOf(".");
-  const ext = dot >= 0 ? modelPath.slice(dot).toLowerCase() : "";
-  if (ext === ".zip") {
-    const b64 = await readWebFile(modelPath);
-    if (!b64) return "";
-    const bytes = base64ToBytes(b64);
-    if (!bytes) return "";
-    try {
-      const { entries } = extractZip(bytes);
-      const hit = firstPngFromEntries(entries);
-      return hit ? imageDataUri(hit.data, imageMimeOfPath(hit.key)) : "";
-    } catch {
-      return "";
-    }
-  }
-  if (ext === ".json") {
-    const slash = modelPath.lastIndexOf("/");
-    const dir = slash > 0 ? modelPath.slice(0, slash) : "";
-    const files = dir ? await listWebModelDirFiles(dir) : [];
-    for (const p of files) {
-      if (!/\.png$/i.test(p)) continue;
-      const uri = await readImageDataUri(p);
-      if (uri) return uri;
-    }
-  }
-  return "";
-}
-
-/** 从 zip entries 挑第一个含 minecraft:geometry 的 JSON key */
-function findGeometryEntryKey(entries: Record<string, Uint8Array>): string | null {
-  const maxProbe = 1 << 20; // 1MB 探测上限，避免超大 JSON 全量解码
-  for (const key of Object.keys(entries)) {
-    if (!/\.json$/i.test(key)) continue;
-    const data = entries[key].subarray(0, maxProbe);
-    try {
-      if (new TextDecoder().decode(data).includes('"minecraft:geometry"')) return key;
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-/** 收集 zip entries 里的全部纹理 data URI + 文件名（按 key 排序，对齐“同序”消费） */
-function collectTexturesFromEntries(entries: Record<string, Uint8Array>): { textures: string[]; textureNames: string[] } {
-  const keys = Object.keys(entries).filter((k) => /\.png$/i.test(k)).sort((a, b) => a.localeCompare(b));
-  const textures: string[] = [];
-  const textureNames: string[] = [];
-  for (const k of keys) {
-    textures.push(imageDataUri(entries[k], imageMimeOfPath(k)));
-    textureNames.push(k.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ?? "");
-  }
-  return { textures, textureNames };
-}
-
-/** 从 BedrockGeometry 组装 Go 契约形状的 BedrockModel（公共字段） */
-function toBedrockModelContract(
-  geo: BedrockGeometry,
-  extras: { textures?: string[]; textureNames?: string[]; animations?: string[] } = {},
-): Record<string, unknown> {
-  const textures = extras.textures?.length ? extras.textures : undefined;
-  return {
-    boneCount: geo.boneCount,
-    cubeCount: geo.cubeCount,
-    texWidth: geo.texWidth,
-    texHeight: geo.texHeight,
-    bones: geo.bones,
-    texture: textures?.[0],
-    textures,
-    textureNames: extras.textureNames?.length ? extras.textureNames : undefined,
-    animations: extras.animations?.length ? extras.animations : undefined,
-  };
-}
-
-/** web AnalyzeBedrockModel：.zip 读 IDB→解包→找 geometry JSON→复用户内解析器；.json 扫模型组文件 */
-async function webAnalyzeBedrockModel(modelPath: string): Promise<Record<string, unknown>> {
-  const dot = modelPath.lastIndexOf(".");
-  const ext = dot >= 0 ? modelPath.slice(dot).toLowerCase() : "";
-  if (ext === ".ysm") return {}; // .ysm 仍由前端 WASM 主路径负责，不重复实现二进制解析
-  const b64 = await readWebFile(modelPath);
-  if (!b64) return {};
-  const bytes = base64ToBytes(b64);
-  if (!bytes) return {};
-
-  let geo: BedrockGeometry | null = null;
-  let textures: string[] = [];
-  let textureNames: string[] = [];
-  let animations: string[] = [];
-
-  try {
-    if (ext === ".zip") {
-      const { entries } = extractZip(bytes);
-      // 先尝试 ysm.json manifest：按声明序合并多角色 geometry + 纹理
-      const ysmBytes = findEntryByRel(entries, "ysm.json");
-      const manifestMeta = ysmBytes ? parseYsmManifestMeta(ysmBytes) : null;
-      if (manifestMeta) {
-        geo = await mergeBedrockFromManifest(manifestMeta, async (rel) => findEntryByRel(entries, rel));
-        if (geo) {
-          textures = geo.textures || [];
-          textureNames = geo.textureNames || [];
-        }
-      }
-      if (!geo?.bones?.length) {
-        const geoKey = findGeometryEntryKey(entries);
-        if (geoKey) geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[geoKey]));
-        const tex = collectTexturesFromEntries(entries);
-        textures = tex.textures;
-        textureNames = tex.textureNames;
-      }
-      animations = Object.keys(entries)
-        .filter((k) => /\.animation\.json$/i.test(k))
-        .map((k) => new TextDecoder().decode(entries[k]));
-    } else if (ext === ".json") {
-      const slash = modelPath.lastIndexOf("/");
-      const dir = slash > 0 ? modelPath.slice(0, slash) : "";
-      const files = dir ? await listWebModelDirFiles(dir) : [];
-      // 当前文件若是 ysm.json 且带 manifest → 按声明序合并
-      const manifestMeta = parseYsmManifestMeta(bytes);
-      if (manifestMeta) {
-        geo = await mergeBedrockFromManifest(manifestMeta, async (rel) => {
-          const p = `${dir}/${rel}`;
-          const b64 = await readWebFile(p);
-          return b64 ? base64ToBytes(b64) : null;
-        });
-        if (geo) {
-          textures = geo.textures || [];
-          textureNames = geo.textureNames || [];
-        }
-      }
-      // 无 manifest 或 manifest 未命中 → 回退“找第一个 geometry”
-      if (!geo?.bones?.length) {
-        for (const p of files) {
-          if (!/\.json$/i.test(p)) continue;
-          const fb64 = await readWebFile(p);
-          if (!fb64) continue;
-          const fbytes = base64ToBytes(fb64);
-          if (!fbytes) continue;
-          try {
-            const text = new TextDecoder().decode(fbytes.subarray(0, 1 << 20));
-            if (text.includes('"minecraft:geometry"')) {
-              const parsed = parseBedrockGeometryFromJSON(text);
-              if (parsed?.bones?.length) { geo = parsed; break; }
-            }
-          } catch {
-            continue;
-          }
-        }
-      }
-      if (textures.length === 0) {
-        for (const p of files) {
-          if (!/\.png$/i.test(p)) continue;
-          const uri = await readImageDataUri(p);
-          if (uri) {
-            textures.push(uri);
-            textureNames.push(p.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ?? "");
-          }
-        }
-      }
-    }
-  } catch {
-    return {};
-  }
-
-  if (!geo?.bones?.length) return {};
-  return toBedrockModelContract(geo, {
-    textures,
-    textureNames,
-    animations,
-  });
-}
-
-/** web AnalyzeBedrockModelEntry：按 subPath 从 zip 中定位单角色 geometry（未命中返回空模型） */
-async function webAnalyzeBedrockModelEntry(
-  modelPath: string,
-  subPath: string,
-): Promise<Record<string, unknown>> {
-  if (!subPath) return {};
-  const dot = modelPath.lastIndexOf(".");
-  const ext = dot >= 0 ? modelPath.slice(dot).toLowerCase() : "";
-  if (ext !== ".zip") return {};
-  const b64 = await readWebFile(modelPath);
-  if (!b64) return {};
-  const bytes = base64ToBytes(b64);
-  if (!bytes) return {};
-  try {
-    const { entries } = extractZip(bytes);
-    const sp = subPath.toLowerCase().replace(/\\/g, "/");
-    const hitKey = Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/") === sp)
-      ?? Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/").endsWith("/" + sp))
-      ?? Object.keys(entries).find((k) => {
-          const base = k.split(/[/\\]/).pop()?.toLowerCase() ?? "";
-          const want = sp.split("/").pop() ?? "";
-          return base === want || base.replace(/\.geo\.json$/, "").replace(/\.json$/, "") === want.replace(/\.geo\.json$/, "").replace(/\.json$/, "");
-        });
-    if (!hitKey || !/\.json$/i.test(hitKey)) return {};
-    const geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[hitKey]));
-    if (!geo?.bones?.length) return {};
-    const tex = collectTexturesFromEntries(entries);
-    return toBedrockModelContract(geo, { textures: tex.textures, textureNames: tex.textureNames });
-  } catch {
-    return {};
-  }
-}
-
-// ===== §8 路径解析（parseWebModelPath / parseWebModelDir）=====
-/**
- * /web/<type>/<name>/<rel> → 三段解析（多段 name 支持）。
- * name 与 rel 均可含 /，边界无法靠正则无歧义拆分——先按路径段前缀**精确探测**
- * dir key（O(1) 单点 get，不扫全库），全 miss 才枚举 dir:<type>/ 前缀反向匹配
- * 「最长 dir name 前缀」（MikuMikuAR ListDirRecursive 两轮匹配模式，旧语义兜底）。
- * rel 允许为空串（目录形态路径，如删除整组）。非 /web/ 前缀直接 null。
- *
- * P0-2 优化背景：绝大多数调用传的是 scanWebModels / listWebModelDirFiles 生成的
- * 精确路径（name 边界即某段前缀），段前缀探测一次命中，零全库扫描；
- * 模糊输入（如组内 rel 子树 /web/ysm/组R/tex）才回退全库反查。
- */
-async function parseWebModelPath(p: string): Promise<{ type: string; name: string; rel: string } | null> {
-  const pm = parseWebPath(p);
-  if (!pm) return null;
-  const { type, rest } = pm;
-  const prefix = `dir:${type}/`;
-  // ① 精确探测：从最长段前缀开始逐段试 dir key（name 可含多段路径）
-  const segments = rest.split("/");
-  for (let i = segments.length; i >= 1; i--) {
-    const name = segments.slice(0, i).join("/");
-    if (await idbGet("files", dirKey(type, name))) {
-      const rel = i === segments.length ? "" : segments.slice(i).join("/");
-      return { type, name, rel };
-    }
-  }
-  // ② 回退：全库 dir: 前缀反查（模糊输入，与旧实现同语义）
-  const dirKeys = await idbKeys("files", prefix);
-  let best = "";
-  for (const dk of dirKeys) {
-    const name = dk.slice(prefix.length, -1); // 去尾 ':'
-    if (name && (rest === name || rest.startsWith(`${name}/`)) && name.length > best.length) {
-      best = name;
-    }
-  }
-  if (!best) return null;
-  return { type, name: best, rel: rest.slice(best.length + 1) };
-}
-/** /web/<type>/<name> → 类型+模型名（目录形态；name 可含多段路径） */
-function parseWebModelDir(p: string): { type: string; name: string } | null {
-  return parseWebDirPath(p);
-}
-
-/**
- * 递归列出指定 /web 目录下全部文件完整路径（对齐桌面 ListAllFilePaths：
- * 递归完整路径、不限制扩展名）。支持多段 name（目录树）与组内子目录（rel 含 /）。
- * 目录形态路径（/web/<type>/<name> 或 /web/<type>/<name>/<subdir>）经
- * parseWebModelPath 反解出 {type, name, rel}，再枚举 file:<type>/<name>/ 前缀，
- * 过滤 rel.startsWith(目录rel + "/") 归入该子树。非 /web 路径返回 []。
- */
-async function listWebModelDirFiles(p: string): Promise<string[]> {
-  const pm = await parseWebModelPath(p);
-  if (!pm) return [];
-  const { type, name, rel } = pm;
-  const prefix = `file:${type}/${name}/`;
-  const keys = await idbKeys("files", prefix);
-  const out: string[] = [];
-  // 目录 rel 为空 = 整个模型组；否则只取 rel 子树（rel 或其子目录）
-  const dirPrefix = rel ? `${rel}/` : "";
-  for (const k of keys) {
-    const fileRel = k.slice(prefix.length);
-    if (!dirPrefix || fileRel === rel || fileRel.startsWith(dirPrefix)) {
-      out.push(`${WEB_ROOT}/${type}/${name}/${fileRel}`);
-    }
-  }
-  return out;
 }
 
 // ===== §9 列表（递归列出 /web 目录全部文件路径）=====

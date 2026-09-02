@@ -32,11 +32,20 @@ describe("bytesToArrayBuffer", () => {
     expect(new Uint8Array(buf)).toEqual(src);
   });
 
+  it("P3-8 整视图（offset 0 全长）直接复用底层 buffer，零拷贝", () => {
+    const src = new Uint8Array([1, 2, 3, 255]);
+    const buf = bytesToArrayBuffer(src);
+    // 整覆盖视图：直接返回 buffer（同一引用），不产生 slice 复制
+    expect(buf).toBe(src.buffer);
+  });
+
   it("偏移视图（subarray）只切出视图范围，不带前缀脏数据", () => {
     const full = new Uint8Array([9, 9, 1, 2, 3, 9]);
     const view = full.subarray(2, 5);
     const buf = bytesToArrayBuffer(view);
     expect(buf.byteLength).toBe(3);
     expect(new Uint8Array(buf)).toEqual(new Uint8Array([1, 2, 3]));
+    // 偏移视图才复制：不与底层 buffer 同引用
+    expect(buf).not.toBe(full.buffer);
   });
 });

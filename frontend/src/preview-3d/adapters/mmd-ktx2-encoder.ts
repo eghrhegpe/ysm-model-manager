@@ -1,4 +1,5 @@
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { bytesToBase64 } from "../base64.ts";
 
 // ===== MMD 纹理 KTX2 后台编码器 =====
 // 在浏览器中通过 WASM basis_encoder 将 PNG 纹理编码为 KTX2 格式，
@@ -33,16 +34,6 @@ const completedHashes = new Set<string>();
 
 /** 正在进行中的编码 hash 集合（防止重复调度） */
 const inProgressHashes = new Set<string>();
-
-/** 将 Uint8Array 转为 base64 字符串（分块处理，避免大数组栈溢出） */
-function bytesToBase64(bytes: Uint8Array): string {
-  const CHUNK = 0x8000; // 32768 字节/块
-  const chunks: string[] = [];
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    chunks.push(String.fromCharCode(...bytes.subarray(i, i + CHUNK)));
-  }
-  return btoa(chunks.join(""));
-}
 
 /** 信号量：获取执行槽位，返回释放函数 */
 function acquire(): Promise<() => void> {
@@ -121,8 +112,8 @@ import { encodeToKTX2Basis, TextureTooLargeError, MAX_KTX2_PIXELS } from "./mmd-
 import type { Ktx2EncodeResponse } from "./mmd-ktx2-worker.ts";
 import { createWorkerBridge, type WorkerBridge } from "./worker-bridge.ts";
 
-/** Worker 池大小（与 MAX_CONCURRENT 对齐：3 个并行编码线程） */
-const KTX2_WORKER_COUNT = 3;
+/** Worker 池大小（P3-12：单一事实源 = MAX_CONCURRENT——原手写 3 靠注释「对齐」，易漂移） */
+const KTX2_WORKER_COUNT = MAX_CONCURRENT;
 
 /** 单次编码超时（ms）：4096² 实测 ~10s，120s 仅兜底防 worker 僵尸 */
 const KTX2_ENCODE_TIMEOUT_MS = 120_000;

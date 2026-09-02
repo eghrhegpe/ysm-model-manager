@@ -14,8 +14,6 @@ import { b64ToBytes, bytesToArrayBuffer, bytesToBase64 } from "../base64.ts";
 import { extractZip } from "../../backend/extract.ts";
 import type { MmdDataPort } from "./mmd-adapter.ts";
 
-export { bytesToBase64 };
-
 /** ZIP 解析产物（传给 overlay 的配置） */
 export interface MmdZipConfig {
   /** 原 zip 文件路径（用作虚拟路径前缀的锚点） */

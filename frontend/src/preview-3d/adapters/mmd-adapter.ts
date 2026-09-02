@@ -76,7 +76,8 @@ import {
   matTexSlots,
   TEXTURE_EXTS,
 } from "./mmd-utils.ts";
-import { bytesToBase64, prepareMmdZipInput } from "./mmd-zip-overlay.ts";
+import { prepareMmdZipInput } from "./mmd-zip-overlay.ts";
+import { bytesToBase64 } from "../base64.ts"; // P3-7：bytesToBase64 统一源在 base64.ts，不走 zip-overlay re-export 垫层
 import { morphNodes } from "./morph-controls.ts";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import {

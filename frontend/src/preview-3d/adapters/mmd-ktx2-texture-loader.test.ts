@@ -128,4 +128,31 @@ describe("Ktx2TextureLoader", () => {
     const loaded = onLoad.mock.calls[0][0] as THREE.Texture;
     expect(returned).toBe(loaded);
   });
+
+  it("P3-10 mergeCompressedInto 补齐 colorSpace/wrap/anisotropy/flipY（脱离 three-mmd 兜底也正确）", async () => {
+    // 压缩源带非默认字段（模拟 KTX2Loader 直载产物）
+    const compressed = new THREE.CompressedTexture([], 0, 0);
+    compressed.colorSpace = THREE.SRGBColorSpace;
+    compressed.wrapS = THREE.RepeatWrapping;
+    compressed.wrapT = THREE.ClampToEdgeWrapping;
+    compressed.anisotropy = 8;
+    compressed.flipY = false;
+    const deps = makeDeps({
+      ktx2Loader: { loadAsync: vi.fn().mockResolvedValue(compressed) },
+    });
+    const loader = new Ktx2TextureLoader(deps);
+    const onLoad = vi.fn();
+
+    const returned = loader.load("textures/ziyan_body.png", onLoad);
+    await vi.waitFor(() => expect(onLoad).toHaveBeenCalled());
+
+    // 合并后的占位纹理事后能看到与压缩源一致的字段——不依赖 three-mmd onLoad 兜底
+    const loaded = onLoad.mock.calls[0][0] as THREE.Texture;
+    expect(loaded.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(loaded.wrapS).toBe(THREE.RepeatWrapping);
+    expect(loaded.wrapT).toBe(THREE.ClampToEdgeWrapping);
+    expect(loaded.anisotropy).toBe(8);
+    expect(loaded.flipY).toBe(false);
+    expect(loaded).toBe(returned); // 对象身份仍保持
+  });
 });

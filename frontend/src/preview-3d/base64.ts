@@ -11,9 +11,19 @@ export function b64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
-/** Uint8Array → ArrayBuffer（Blob 构造要求 ArrayBufferView<ArrayBuffer>，规避 SharedArrayBuffer 泛型） */
+/**
+ * Uint8Array → ArrayBuffer（Blob 构造要求 ArrayBufferView<ArrayBuffer>，规避 SharedArrayBuffer 泛型）。
+ * P3-8（审核）：仅在偏移视图（byteOffset≠0 或覆盖不全）时才 slice 复制——b64ToBytes 产出的
+ * 专用 ArrayBuffer 视图（offset 0 全长）直接返回 buffer，零拷贝。原实现无条件 slice 整份复制，
+ * 每个纹理在 blob/解码两条路径各瞬时空付一份内存。
+ */
 export function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const { buffer, byteOffset, byteLength } = bytes;
+  // 整视图覆盖底层 buffer → 直接复用（无拷贝）；偏移/截断视图才需 slice 收窄
+  if (byteOffset === 0 && byteLength === buffer.byteLength) {
+    return buffer as ArrayBuffer;
+  }
+  return buffer.slice(byteOffset, byteOffset + byteLength) as ArrayBuffer;
 }
 
 /** Uint8Array → base64（分块防栈溢出，对齐 atob 解码口径） */

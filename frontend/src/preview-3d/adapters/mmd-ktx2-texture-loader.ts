@@ -29,7 +29,13 @@ export interface Ktx2TextureLoaderDeps {
   fallbackLoader: THREE.TextureLoader;
 }
 
-/** 将 CompressedTexture 的关键字段合并到占位纹理（保持对象身份一致） */
+/**
+ * 将 CompressedTexture 的关键字段合并到占位纹理（保持对象身份一致）。
+ * P3-10（审核）：补齐 colorSpace / wrapS / wrapT / anisotropy / flipY——原实现只合
+ * image/mipmaps/format/type/filters，靠 three-mmd onLoad 回调（dist/index.js:2210-2213
+ * 统一设 flipY=false / wrap=T / colorSpace=SRGB）隐性兜底；本 loader 一旦脱离 three-mmd
+ * 上下文复用/直测即产出错误颜色与寻址的纹理。补齐后与 mergePlainInto 字段面一致。
+ */
 function mergeCompressedInto(placeholder: THREE.Texture, src: THREE.CompressedTexture): void {
   placeholder.image = src.image;
   (placeholder as unknown as { mipmaps: unknown[] }).mipmaps = src.mipmaps;
@@ -38,6 +44,12 @@ function mergeCompressedInto(placeholder: THREE.Texture, src: THREE.CompressedTe
   placeholder.minFilter = src.minFilter;
   placeholder.magFilter = src.magFilter;
   placeholder.generateMipmaps = src.generateMipmaps;
+  // P3-10：从压缩源补拷字段（KTX2Loader 已正确设置 colorSpace/wrap 等）
+  placeholder.colorSpace = src.colorSpace;
+  placeholder.wrapS = src.wrapS;
+  placeholder.wrapT = src.wrapT;
+  placeholder.anisotropy = src.anisotropy;
+  placeholder.flipY = src.flipY;
   // 压缩纹理上传路径开关：three WebGLTextures 按 isCompressedTexture 分支
   (placeholder as unknown as { isCompressedTexture: boolean }).isCompressedTexture = true;
   placeholder.needsUpdate = true;

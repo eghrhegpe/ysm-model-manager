@@ -95,6 +95,12 @@ export async function encodeToKTX2Basis(img: { data: Uint8Array; width: number; 
     enc.setQualityLevel(128); // 质量 1-255，128 是平衡值
     enc.setUASTC(false); // ETC1S（更小，兼容性更好）
     enc.setMipGen(false); // 预览不需要 mipmap
+    // P3-9 审核结论（记录，暂不改）：输出缓冲按 w*h*4（RGBA 全尺寸）分配是保守上限。
+    // 曾有提议缩小到 ETC1S 典型 ~1/6 或 grow-retry——但本产物 basis_encoder.js 的
+    // embind 绑定经混淆（方法名/溢出语义不可静态核查），encode(dst) 在缓冲不足时
+    // 返回值的契约未被实证；且典型 MMD 贴图 512²~2048² 时 w*h*4 仅 1~16MB，
+    // 64MB 峰值只在 4096² 上限纹理出现（此时编码本就 ~10s 重型操作）。
+    // 风险/收益不成比例：待日后换可核查的 basis 构建（含 encode 返回语义文档）再优化。
     const out = new Uint8Array(img.width * img.height * 4);
     const n = enc.encode(out);
     if (n <= 0) throw new Error(`BasisEncoder.encode 返回 ${n}`);

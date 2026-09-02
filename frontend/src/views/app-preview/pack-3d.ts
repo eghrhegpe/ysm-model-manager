@@ -49,11 +49,34 @@ export async function createPack3D(path: string, opts?: Mount3DOptions & { start
   const { startEntry, ...mountOpts } = opts ?? {};
   const initialEntry = startEntry && entries.includes(startEntry) ? startEntry : entries[0]!;
   // 适配器持 zipPath（解析模型文件所需的容器路径）+ 多模型候选（ADR-132：根菜单 select）
+  // pack 场景覆盖「resourcepack」类型 tab 候选源：返回 zip 内 15 个模型 entry（siblings），
+  // 而非 scanModelsByType 的仓库根资源包扫描（后者只列其他 .zip 包 → 角色面板「切换」区列不出
+  // 包内模型、点 📦 仅重开整个包回到 blunderbuss，数据不统一，ADR-131/132）。
+  const extras = withPreviewExtras({ siblings: entries, ...mountOpts });
+  extras.getModelsByType = packModelsByType(entries, extras.getModelsByType);
   await mount3D(
     makePackAdapter(makePackDeps(), path, { modelEntries: entries }),
     initialEntry,
-    withPreviewExtras({ siblings: entries, ...mountOpts }),
+    extras,
   );
+}
+
+/**
+ * pack 场景「resourcepack」类型 tab 的候选源覆盖（修复 3D 内切换面板数据不统一）。
+ * - rtype === "resourcepack"：返回 zip 内全部模型 entry（siblings），使角色面板「切换」区列出
+ *   包内 15 个模型，点选即 switchTo 复用外壳重建（不重开整个包）。
+ * - 其他类型：委托 base（scanModelsByType 仓库根扫描），保留跨类型切换能力。
+ */
+export function packModelsByType(
+  entries: string[],
+  base?: (rtype: string, subtype?: string) => Promise<string[]>,
+): (rtype: string, subtype?: string) => Promise<string[]> {
+  return (rtype: string, subtype?: string): Promise<string[]> =>
+    rtype === RESOURCE_TYPES.PACK
+      ? Promise.resolve(entries)
+      : base
+        ? base(rtype, subtype)
+        : Promise.resolve([]);
 }
 
 /** 清理资源包 3D（WebGL renderer + rAF 循环）：组件销毁前调用，防 GPU 资源残留 */

@@ -56,28 +56,28 @@ auto_fields:
     - buildBoneHierarchy:14
     - buildBoneTree:36
     - buildCameraControls:31
-    - buildCameraSchema:32
-    - buildCrossCuttingControls:105
+    - buildCameraSchema:33
+    - buildCrossCuttingControls:106
     - buildCubeMeshData:192
     - buildEnvSchema:239
     - buildFbxScene:168
     - buildFbxSceneFromData:214
     - buildGroundSurfaceSpec:92
-    - buildLightingSchema:46
+    - buildLightingSchema:47
     - buildLipMorphIndices:132
     - buildLitematicScene:406
-    - buildMmdScene:1501
+    - buildMmdScene:1512
     - buildModelGroup:299
     - buildOrderedTexKeys:21
-    - buildPackScene:289
+    - buildPackScene:303
     - buildPmxScene:76
     - buildPmxSceneSliced:209
-    - buildPostprocessingSchema:69
+    - buildPostprocessingSchema:70
     - buildPreviewMenuRouters:181
     - buildSceneMesh:54
-    - buildSettingsControls:170
-    - buildSettingsSchema:78
-    - buildShadowSchema:60
+    - buildSettingsControls:171
+    - buildSettingsSchema:79
+    - buildShadowSchema:61
     - buildSpecFromGeometryJSON:128
     - buildSpecFromModel:67
     - buildStatsPanel:25
@@ -103,11 +103,11 @@ auto_fields:
     - collectMenuGraph:147
     - CollectMenuGraphOpts:73
     - collectNodePredicates:86
-    - collectPreviewLeafNodes:128
-    - collectPreviewNodeIds:141
+    - collectPreviewLeafNodes:131
+    - collectPreviewNodeIds:144
     - collectSceneStats:35
-    - collectSettingsCapControls:157
-    - collectVisiblePredicates:455
+    - collectSettingsCapControls:158
+    - collectVisiblePredicates:457
     - compKey:18
     - computeBoneLocalPos:24
     - concurrentMap:51
@@ -184,8 +184,8 @@ auto_fields:
     - fbxSceneToData:209
     - FbxSkeletonData:45
     - FieldRestorer:159
-    - fillRoles:282
-    - fillSwitch:217
+    - fillRoles:285
+    - fillSwitch:218
     - filterAnimFiles:24
     - findAncestorBoneId:153
     - fitCameraToRoots:68
@@ -196,7 +196,7 @@ auto_fields:
     - FogMode:15
     - FogParams:17
     - FootIKController:13
-    - formatCapSliderValue:99
+    - formatCapSliderValue:101
     - frameCameraSide:21
     - FrameSideOptions:8
     - generateSurfacePixels:164
@@ -247,7 +247,7 @@ auto_fields:
     - isIdentityQuat:32
     - isLikelyTga:10
     - isPathAvailable:319
-    - isPreviewFolderNode:123
+    - isPreviewFolderNode:126
     - isRenderableModel:320
     - isSkyEnvironmentOn:133
     - JavaModelFace:44
@@ -295,14 +295,14 @@ auto_fields:
     - MAX_FPS_DEFAULT:22
     - MAX_FPS_KEY:23
     - MAX_KTX2_PIXELS:65
-    - MAX_MODELS:209
+    - MAX_MODELS:218
     - MAX_PIXEL_RATIO_KEY:5
     - MenuControlDef:17
     - MenuControlKind:14
     - MenuGraph:58
     - MenuGraphNode:32
     - mergeCubes:261
-    - mergeStatsMenuItems:59
+    - mergeStatsMenuItems:68
     - MeshData:109
     - MeshFragment:14
     - MMD_SEMANTIC_CANDIDATES:92
@@ -313,15 +313,15 @@ auto_fields:
     - MmdDataPort:89
     - MmdMaterialDetail:19
     - MmdMaterialListItem:13
-    - mmdMenuItems:1614
-    - MmdMenuItemsOpts:1582
+    - mmdMenuItems:1625
+    - MmdMenuItemsOpts:1593
     - MmdPanelHooks:158
     - mmdSemanticBoneMap:216
     - mmdSemanticMorphMap:87
     - MmdZipConfig:20
     - mockMenuHandle:36
     - MODEL_SKY_PRESETS:91
-    - modelDetailView:38
+    - modelDetailView:41
     - ModelEntry:21
     - modelEntryFor:85
     - ModelGroup:87
@@ -329,8 +329,8 @@ auto_fields:
     - ModelSpec:25
     - MorphMeshLike:10
     - morphNodes:20
-    - motionDetailView:112
-    - mount3D:263
+    - motionDetailView:115
+    - mount3D:267
     - Mount3DOptions:241
     - mountPreviewRootMenu:467
     - mpApplyWasdCameraMotion:21
@@ -438,7 +438,7 @@ auto_fields:
     - restoreFields:175
     - restoreModelGroupsVisible:122
     - restoreState:148
-    - roleBaseName:29
+    - roleBaseName:31
     - safeDispose:11
     - sampleAdaptivePixelRatio:74
     - SceneCapability:95
@@ -446,7 +446,7 @@ auto_fields:
     - SceneCapabilityLookup:91
     - sceneCapabilityRegistry:111
     - SceneCapabilityRegistry:32
-    - sceneRegistry:206
+    - sceneRegistry:215
     - SceneStats:19
     - scheduleBackgroundEncoding:267
     - SchemaBuilder:34
@@ -499,7 +499,7 @@ auto_fields:
     - SwitchContext:32
     - switchPreview:227
     - switchToSession:95
-    - syncLightTargetFromContent:423
+    - syncLightTargetFromContent:434
     - TdKeyAction:8
     - TexDecodeConfig:15
     - TexDecodeRequest:9
@@ -713,7 +713,7 @@ export function computeBoneLocalPos(
 - `keymap.ts` — 键位/相机偏好持久化（`loadTdKeymap` / `loadTdCamSpeed` / `loadTdRotMode`）
 - `debug-render.ts` — debug 叠加层渲染（pivot 标记 / 骨骼线框）
 - `model3d-spec.ts` — JS 端 spec 类型定义与 `buildSpecFromModel` 构建器；`CUBE_EPS` 被 cube-mesh.ts 消费（零厚度面修正/合并 epsilon 单点），`fetchSpec` 被 model3d-loader.ts 调用。与 Go `threejs.Build()` 口径不一致（cubePivot/cubeOrigin 不做 X 取反），仅作前端 spec 类型枢纽与测试黄金样本使用
-- `scene-stats.ts` — **3D 场景统计提取器（ADR-131 P0）**：`collectSceneStats(roots)` 一次 traverse 出 `SceneStats`（boneCount / meshCount / triangleCount / materialCount / textureCount / morphCount）。材质/纹理按实例去重；骨骼 = `SkinnedMesh.skeleton.bones` ∪ 裸 Bone（Set 去重不双计）；表情数取 `morphTargetInfluences` 最长网格；Line/Points 不计入网格与三角面。纯函数零视图依赖，供 mount-preview-core post-build 挂点采统计（「能渲染就能出统计」），映射进 `StatsCardModel` 由视图层完成。实现陷阱：异步纹理 onLoad 前 `texture.image` 为 null，本提取器只计纹理数，尺寸由调用方 onLoad 后补
+- `scene-stats.ts` — **3D 场景统计提取器（ADR-131 P0）**：`collectSceneStats(roots)` 一次 traverse 出 `SceneStats`（boneCount / meshCount / triangleCount / materialCount / textureCount / morphCount）。材质/纹理按实例去重；骨骼 = `SkinnedMesh.skeleton.bones` ∪ 裸 Bone（Set 去重不双计）；表情数取 `morphTargetInfluences` 最长网格；Line/Points 不计入网格与三角面。纯函数零视图依赖，供 mount-preview-core post-build 挂点采统计（「能渲染就能出统计」），映射进 `StatsCardModel` 由视图层完成。实现陷阱：异步纹理 onLoad 前 `texture.image` 为 null，本提取器只计纹理数，尺寸由调用方 onLoad 后补采。**展示侧（menu/stats.ts）**：「为 0 就藏」——骨骼/纹理/表情三行值为 0 时带 `visibleWhen` 守卫不渲染（体素类格式如 litematic 天然恒 0，展示无信息量）；网格/三角面/材质三行不守卫
 
 ## 加载/桥接层
 

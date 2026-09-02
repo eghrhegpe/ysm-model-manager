@@ -37,7 +37,9 @@ export default defineConfig({
   },
   // worker 是独立 bundle，顶层 plugins 不覆盖 worker 内 import；
   // 须单独挂 wasmDataStubs 让 worker 里的 ysm-wasm-data.js 缺失时也能构建（与主配置对齐）
+  // ADR-153：worker 内动态 import()（mt WASM 按需加载）需要 ESM 格式（默认 iife 不支持 code-splitting）
   worker: {
+    format: "es",
     plugins: () => [wasmDataStubs()],
   },
   server: {

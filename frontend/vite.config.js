@@ -35,6 +35,10 @@ export default defineConfig({
     ],
   },
   worker: {
+    // ADR-153：worker 内动态 import()（mt WASM 按需加载）需要 ESM 格式——
+    // 默认 iife 不支持 code-splitting，构建报 "IIFE output formats are not
+    // supported for code-splitting builds"。所有 new Worker 均用 { type: "module" }。
+    format: "es",
     plugins: () => [wasmDataStubs()],
   },
   // utils/resource/{types,extensions}.ts 直接 import 仓库根 resource_types.json

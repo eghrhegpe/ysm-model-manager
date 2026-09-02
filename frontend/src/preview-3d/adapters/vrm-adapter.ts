@@ -124,7 +124,12 @@ export async function readVrmMeta(
       loader.parse(buffer, "", resolve, reject);
     });
     const vrm = (gltf.userData as { vrm?: VRM }).vrm;
-    if (!vrm) return null;
+    if (!vrm) {
+      // 非 VRM 的合法 glb：GLTFLoader 已构建 scene graph 并上传 GPU，
+      // 必须释放，否则每次 meta 卡预览泄漏一份 geometry/material/texture
+      VRMUtils.deepDispose(gltf.scene);
+      return null;
+    }
     const meta = vrm.meta;
     let info: VrmMetaInfo;
     if (meta.metaVersion === "0") {

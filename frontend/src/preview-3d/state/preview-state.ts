@@ -311,7 +311,13 @@ export function setStateValue(
   value: unknown,
   opts?: { notify?: boolean },
 ): void {
-  bindings[path].set(value);
+  // cap set 可能抛错（cap 缺失、内部状态异常）；
+  // 不包 try/catch 时异常直接传播，notify 不执行，订阅者收不到变更通知
+  try {
+    bindings[path].set(value);
+  } catch (e) {
+    console.warn(`[preview-state] setStateValue("${path}") failed:`, e);
+  }
   if (opts?.notify !== false) notify(path);
 }
 

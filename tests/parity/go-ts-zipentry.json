@@ -1,0 +1,32 @@
+{
+  "_comment": "Go-TS 识别层指纹契约向量（双端互锁，ADR-154 pilot 1）：被 go/types/parity_zipentry_test.go 与 frontend/src/backend/zipentry.parity.test.ts 双端读取，锁死 types.MatchZipEntry ↔ utils/resource/types.ts matchZipEntryTS 的 input→output 对（注册表顺序首命中语义，不含 priority 裁决——容器级 detectZipType 对拍待 ADR-154 §2.4）。语料来源：go/packs/testdata/classify-golden.json 的 entries 字段 + 全类型 zipEntries 指纹 + 边界。改任一端口径，另一端 CI 当场红。单一权威 = Go types.MatchZipEntry。",
+  "match_zip_entry": [
+    ["pack.mcmeta", "resourcepack"],
+    ["PACK.MCMETA", "resourcepack"],
+    ["nested/MyPack/pack.mcmeta", "resourcepack"],
+    ["shaders/", "shaderpack"],
+    ["shaders/bar.fsh", "shaderpack"],
+    ["shaderpacks/MyPack/shaders/bar.fsh", "shaderpack"],
+    ["ysm.json", "ysm"],
+    ["YSM.JSON", "ysm"],
+    ["models/", "ysm"],
+    ["MyModel/models/main.json", "ysm"],
+    ["assets/mc/maid_model.json", "maid-model"],
+    ["chair_model.json", "maid-model"],
+    ["gear.nbt", "blueprint"],
+    ["schematics/gear.zip/gear.nbt", "blueprint"],
+    ["house.litematic", "litematic"],
+    ["char.pmx", "EntityPlayer"],
+    ["stage.pmx", "EntityPlayer"],
+    ["char.vrm", "EntityPlayer"],
+    ["dance.vmd", "CustomAnim"],
+    ["smile.vpd", "CustomMorph"],
+    ["toon.glsl", "mmd-shader"],
+    ["wave.vmd", "CustomAnim"],
+    ["face.vpd", "CustomMorph"],
+    ["unknown.txt", ""],
+    ["readme.txt", ""],
+    ["", ""],
+    ["foo.ban", ""]
+  ]
+}

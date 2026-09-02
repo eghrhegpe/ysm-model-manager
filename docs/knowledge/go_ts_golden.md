@@ -4,17 +4,83 @@ name: Go-TS 解析层 golden 对拍（ADR-154 双端互锁）
 tier: architecture
 category: go
 source_files:
+  - tests/parity/go-ts-zipentry.json
+  - frontend/src/utils/resource/types.ts
+  - frontend/src/backend/voxel-colors.ts
+  - go/types/extensions.go
+  - go/litematic/block_colors.go
+  - go/litematic/block_ids.go
+tests:
   - go/types/parity_zipentry_test.go
   - go/litematic/parity_voxel_test.go
-  - tests/parity/go-ts-zipentry.json
   - frontend/src/backend/zipentry.parity.test.ts
   - frontend/src/backend/voxel-colors.parity.test.ts
 auto_fields:
   symbols_with_lines:
-    - TestParity_MatchZipEntry:41
-    - TestParity_VoxelBlockVariant:75
-    - TestParity_VoxelColorKeyCoverage:93
-    - TestParity_VoxelColorMap:64
+    - ALL_RESOURCE_TYPES:47
+    - AllExts:65
+    - AllSubDirs:433
+    - AMBIGUOUS_EXTS:313
+    - ContainerExts:86
+    - DisableSuffixes:151
+    - ExtBelongsTo:272
+    - ExtBelongsToBy:290
+    - extOf:168
+    - getPreviewableTypeTabs:226
+    - GROUP_META:104
+    - GROUP_OF:119
+    - GROUP_TYPE_OPTIONS:140
+    - GroupIcon:380
+    - GroupLabel:366
+    - groupLabelOf:125
+    - GroupOf:337
+    - GroupStorageRoot:349
+    - groupStorageRootOf:156
+    - GroupTypeOption:135
+    - InstallExtsFor:246
+    - isContainerExt:271
+    - IsContainerExt:93
+    - IsDirLevelSync:224
+    - IsDisableSuffix:172
+    - IsNestedModelDir:19
+    - IsResourceAllowed:197
+    - IsScanInstance:237
+    - IsSupportedExt:138
+    - IsYsmEntryJSON:146
+    - isYsmWasmPreview:296
+    - mapColor:92
+    - MapColor:10
+    - matchTypeByExt:249
+    - MatchZipEntry:257
+    - matchZipEntryTS:376
+    - MaxImportSize:52
+    - MaxImportSizeMB:55
+    - MaxReadLimit:61
+    - NestedPatternsFor:28
+    - NO_3D_TYPES:203
+    - NormalizeResourceName:185
+    - PreviewTab:219
+    - resolveBlockName:107
+    - ResolveBlockName:12
+    - ResolveBlockZH:26
+    - resolveDefaultPreviewKey:281
+    - resolvePreviewKey:56
+    - resolvePreviewKeyByExt:87
+    - resolvePreviewKeyToRtype:72
+    - resolveTypeSafe:326
+    - RESOURCE_TYPE_LABELS:28
+    - RESOURCE_TYPES:9
+    - ShouldHashExt:217
+    - StorageSubDir:328
+    - StripBanSuffix:167
+    - StripDisableSuffix:156
+    - SubDirAll:421
+    - SubDirEntry:394
+    - SubDirMap:405
+    - SupportedExtsForSubtype:322
+    - SupportedExtsForType:309
+    - typeIconOf:291
+    - VOXEL_RPC_BY_EXT:302
 use_when:
   - 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移
   - 新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性

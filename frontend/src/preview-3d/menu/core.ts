@@ -210,8 +210,16 @@ export function buildPreviewMenuRouters(
           makePanelView,
           m!,
           (items) => shell.handle?.setAdapterItems(items),
-          // 🧍 模型 dock → 角色列表 → 点角色名 → 模型详情（统计/纹理 + 工具行）
-          (e) => modelDetailView(e, { makeRow, makePanelView, menu: m!, actionCtx }),
+          // 🧍 模型 dock → 角色列表 → 点角色名 → 模型详情（组件导航置顶 + 统计/纹理 + 工具行）
+          (e) =>
+            modelDetailView(e, {
+              makeRow,
+              makePanelView,
+              menu: m!,
+              actionCtx,
+              // 缺省参数契约：无 options 不透传 undefined（下游 mock/实现零噪音）
+              switchTo: (p, o) => (o === undefined ? ctx.switchTo(p) : ctx.switchTo(p, o)),
+            }),
         ),
     },
     runners: {

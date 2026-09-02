@@ -219,8 +219,23 @@ describe("角色面板（roles）", () => {
     expect(roleBaseName(sceneRegistry.get(id)!)).toBe("3D-muskets");
   });
 
-  it("[ADR-159] 活跃 entry 带 components → 角色面板平铺组件区：点名 switchTo 替换、➕ keepInScene 追加", async () => {
-    const switchTo = vi.fn(() => Promise.resolve());
+  it("[ADR-159 呈现收敛] 容器 entry 详情置顶组件区：顶层不渲染、点角色名进详情见 2 行；点名切活跃并重渲、➕ keepInScene 追加", async () => {
+    // mock switchTo 带真实切换副作用：注销语义简化为 register 新 path（register 即置活跃），
+    // 重渲取 getActiveId 才能看到 ✓ 高亮随组件移动。
+    const switchTo = vi.fn((p: string): Promise<void> => {
+      sceneRegistry.register({
+        path: p,
+        rtype: "resourcepack",
+        roots: [],
+        built: { dispose: vi.fn() } as unknown as PreviewScene,
+        displayName: "3D-muskets",
+        components: [
+          "assets/minecraft/models/block/blunderbuss.json",
+          "assets/minecraft/models/item/musket.json",
+        ],
+      });
+      return Promise.resolve();
+    });
     sceneRegistry.register({
       path: "assets/minecraft/models/block/blunderbuss.json",
       rtype: "resourcepack",
@@ -234,24 +249,37 @@ describe("角色面板（roles）", () => {
     });
     const handle = mountPreviewRootMenu(overlay, makeCtx({ switchTo }));
     (overlay.querySelector('[data-testid="dock-model"]') as HTMLElement).click();
-    // 组件区平铺：标题 + 2 行（当前行 ✓ 无 ➕，他行有 ➕）
-    expect(overlay.querySelector('[data-testid="preview-components-list"]')).not.toBeNull();
+    // 组件区已收进详情：角色列表顶层不再平铺（呈现收敛守卫）
+    expect(overlay.querySelector('[data-testid="preview-components-list"]')).toBeNull();
+    // 点角色名（容器实体）进详情 → 组件区置顶 2 行（当前行 ✓ 无 ➕，他行有 ➕）
+    const aRow = overlay.querySelector('[data-testid="preview-role-row"]') as HTMLElement;
+    (aRow.querySelector('[data-testid="preview-role-name"]') as HTMLElement).click();
     const rows = overlay.querySelectorAll('[data-testid="preview-component-row"]');
     expect(rows.length).toBe(2);
-    const other = [...rows].find((el) => el.getAttribute("data-component-path")?.includes("musket.json")) as HTMLElement;
-    // 点组件名 → switchTo 替换（不带 keepInScene）
-    (other.querySelector("span:nth-child(2)") as HTMLElement).click();
+    const musket = [...rows].find((el) => el.getAttribute("data-component-path")?.includes("musket.json")) as HTMLElement;
+    // 点组件名 → switchTo 替换（不带 keepInScene），落定后重渲：✓ 高亮随新活跃移动
+    (musket.querySelector("span:nth-child(2)") as HTMLElement).click();
     expect(switchTo).toHaveBeenCalledWith("assets/minecraft/models/item/musket.json");
-    // 点 ➕ → keepInScene 追加
-    (other.querySelector('[data-testid="preview-component-append"]') as HTMLElement).click();
-    expect(switchTo).toHaveBeenLastCalledWith("assets/minecraft/models/item/musket.json", { keepInScene: true });
+    await vi.waitFor(() => {
+      const after = [...overlay.querySelectorAll('[data-testid="preview-component-row"]')];
+      const musketNow = after.find((el) => el.getAttribute("data-component-path")?.includes("musket.json")) as HTMLElement;
+      expect(musketNow.textContent).toContain("✓");
+    });
+    // 切换后原当前行（blunderbuss）出现 ➕ → 点 ➕ → keepInScene 追加
+    const blunder = [...overlay.querySelectorAll('[data-testid="preview-component-row"]')].find((el) =>
+      el.getAttribute("data-component-path")?.includes("blunderbuss.json"),
+    ) as HTMLElement;
+    (blunder.querySelector('[data-testid="preview-component-append"]') as HTMLElement).click();
+    expect(switchTo).toHaveBeenLastCalledWith("assets/minecraft/models/block/blunderbuss.json", { keepInScene: true });
     handle.dispose();
   });
 
-  it("[ADR-159] 无 components（普通模型）→ 不渲染组件区（回归守卫）", () => {
+  it("[ADR-159 呈现收敛] 无 components（普通模型）→ 详情内不渲染组件区（回归守卫）", () => {
     regRole("/m/a.ysm");
     const handle = mountPreviewRootMenu(overlay, makeCtx());
     (overlay.querySelector('[data-testid="dock-model"]') as HTMLElement).click();
+    const aRow = overlay.querySelector('[data-testid="preview-role-row"]') as HTMLElement;
+    (aRow.querySelector('[data-testid="preview-role-name"]') as HTMLElement).click();
     expect(overlay.querySelector('[data-testid="preview-components-list"]')).toBeNull();
     handle.dispose();
   });

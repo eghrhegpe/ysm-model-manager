@@ -7,7 +7,6 @@
 
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
-import { swallowError } from "../../utils/core/async.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
@@ -45,67 +44,85 @@ export function modelDetailView(
     makePanelView: (node: PreviewMenuNode) => SlideMenuView;
     menu: SlideMenuHandle;
     actionCtx: PreviewActionMenuCtx;
+    /** [ADR-159 呈现收敛] 容器组件导航：点名切活跃组件 / ➕ keepInScene 追加同框 */
+    switchTo: (path: string, options?: { keepInScene?: boolean }) => Promise<void> | void;
   },
 ): SlideMenuView {
-  const modelItems = (e.menuItems ?? []).filter((d) => d.kind === "panel" && d.dockGroup === "model");
-  const primary = modelItems[0];
-  const toolItems = modelItems.slice(1);
+  const panelDeps = {
+    makeRow: deps.makeRow,
+    makePanelView: deps.makePanelView,
+    menu: deps.menu,
+    actionCtx: deps.actionCtx,
+  };
   return {
     title: roleBaseName(e),
     render: (l) => {
-      l.innerHTML = "";
-      if (modelItems.length === 0) {
-        const empty = document.createElement("div");
-        empty.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
-        empty.textContent = tr("preview.roleNoDetail", "（该角色无可查看项）");
-        l.appendChild(empty);
-        return;
-      }
-      // 模型信息面板本体直渲（1 跳看内容，用户「最想进入」）——走与 ⚙ 面板同一条
-      // 三通道衰退（schema-registry → children → renderCustom，renderAdapterPanelContent
-      // 共享实现）。P5 事故修复：旧直渲门只认 renderCustom，四类适配器模型面板迁离后
-      // （ysm/maid→schemaId、mmd/vrm→children）统计/纹理/组件 select 在此集体消失。
-      if (primary) {
-        const infoHost = document.createElement("div");
-        infoHost.dataset.panelId = primary.id;
-        infoHost.dataset.panelTestId = primary.legacyTestId ?? "";
-        try {
-          const handled = renderAdapterPanelContent(infoHost, primary, {
-            makeRow: deps.makeRow,
-            makePanelView: deps.makePanelView,
-            menu: deps.menu,
-            actionCtx: deps.actionCtx,
-            hideMenu: () => deps.menu.back(),
-          });
-          if (handled) {
-            l.appendChild(infoHost);
-            const sep = document.createElement("div");
-            sep.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
-            l.appendChild(sep);
-          }
-        } catch (err) {
-          console.error("[preview-menu] 模型信息面板渲染失败", primary.id, err);
-          const errRow = document.createElement("div");
-          errRow.style.cssText = "padding:8px 10px;color:#ff7b7b;font-size:12px";
-          errRow.textContent = `${tr("preview.renderFail", "Panel render failed")}: ${safeErrorMessage(err)}`;
-          l.appendChild(errRow);
-        }
-      }
-      // 工具行（截图/材质）：单项平铺，多项折叠
-      const sections: PreviewMenuNode[] = [];
-      if (toolItems.length === 1) {
-        sections.push(toolItems[0]);
-      } else if (toolItems.length > 1) {
-        sections.push({
-          id: "preview-role-tools",
-          kind: "folder",
-          labelKey: "preview.roleToolsSection",
-          fallback: "工具",
-          defaultOpen: true,
-          children: toolItems,
+      // [ADR-159 呈现收敛] 渲染以「当前活跃 entry」为基准：组件切换后重渲，统计/高亮自动跟随；
+      // 组件区置顶（镜像 mmd 面板「组件 → 名称/概览」范式），无 components 零输出。
+      const renderAll = (): void => {
+        l.innerHTML = "";
+        const cur = sceneRegistry.get(sceneRegistry.getActiveId() ?? "") ?? e;
+        const hadComponents = renderComponentsSection(l, {
+          entry: cur,
+          switchTo: deps.switchTo,
+          onChanged: renderAll,
         });
-      }
-      if (sections.length > 0) renderMenu(l, sections, deps);
+        const modelItems = (cur.menuItems ?? []).filter((d) => d.kind === "panel" && d.dockGroup === "model");
+        if (modelItems.length === 0) {
+          if (!hadComponents) {
+            const empty = document.createElement("div");
+            empty.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+            empty.textContent = tr("preview.roleNoDetail", "（该角色无可查看项）");
+            l.appendChild(empty);
+          }
+          return;
+        }
+        const primary = modelItems[0];
+        const toolItems = modelItems.slice(1);
+        // 模型信息面板本体直渲（1 跳看内容，用户「最想进入」）——走与 ⚙ 面板同一条
+        // 三通道衰退（schema-registry → children → renderCustom，renderAdapterPanelContent
+        // 共享实现）。P5 事故修复：旧直渲门只认 renderCustom，四类适配器模型面板迁离后
+        // （ysm/maid→schemaId、mmd/vrm→children）统计/纹理/组件 select 在此集体消失。
+        if (primary) {
+          const infoHost = document.createElement("div");
+          infoHost.dataset.panelId = primary.id;
+          infoHost.dataset.panelTestId = primary.legacyTestId ?? "";
+          try {
+            const handled = renderAdapterPanelContent(infoHost, primary, {
+              ...panelDeps,
+              hideMenu: () => deps.menu.back(),
+            });
+            if (handled) {
+              l.appendChild(infoHost);
+              const sep = document.createElement("div");
+              sep.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
+              l.appendChild(sep);
+            }
+          } catch (err) {
+            console.error("[preview-menu] 模型信息面板渲染失败", primary.id, err);
+            const errRow = document.createElement("div");
+            errRow.style.cssText = "padding:8px 10px;color:#ff7b7b;font-size:12px";
+            errRow.textContent = `${tr("preview.renderFail", "Panel render failed")}: ${safeErrorMessage(err)}`;
+            l.appendChild(errRow);
+          }
+        }
+        // 工具行（截图/材质）：单项平铺，多项折叠
+        const sections: PreviewMenuNode[] = [];
+        if (toolItems.length === 1) {
+          sections.push(toolItems[0]);
+        } else if (toolItems.length > 1) {
+          sections.push({
+            id: "preview-role-tools",
+            kind: "folder",
+            labelKey: "preview.roleToolsSection",
+            fallback: "工具",
+            defaultOpen: true,
+            children: toolItems,
+          });
+        }
+        if (sections.length > 0) renderMenu(l, sections, panelDeps);
+      };
+      renderAll();
     },
   };
 }
@@ -308,31 +325,50 @@ export function fillRoles(
 
   reRender();
 
-  // [ADR-159] 容器组件区：活跃 entry 带 components（资源包 = zip 内全部模型）时平铺——
-  // 点名字 switchTo 切为活跃组件（同容器同适配器，不判类型 tab），➕ keepInScene 追加同框。
-  frRenderComponents(list, ctx);
-
+  // [ADR-159 呈现收敛] 组件导航收进 modelDetailView 详情（镜像 mmd 面板范式），
+  // 顶层不再平铺组件区——「加载角色」保持纯角色列表 + 底部加载入口。
   frAppendSeparator(list);
   fillSwitch(list, ctx);
 }
 
-/** [ADR-159] 容器组件区渲染（fillRoles 内嵌段）：包内模型永久平铺，替代旧「切换角色 ›」二级钻取 */
-function frRenderComponents(list: HTMLElement, ctx: PreviewMenuCtx): void {
-  const activeId = sceneRegistry.getActiveId();
-  const active = activeId ? sceneRegistry.get(activeId) : undefined;
-  const components = active?.components ?? [];
-  if (components.length === 0) return;
+/** [ADR-159 呈现收敛] 容器组件导航段：entry 带 components（资源包 = zip 内模型）时平铺。
+ *  初版挂「加载角色」面板顶层（fillRoles），与组件详情（stats）分居两处、导航绕；现收进
+ *  modelDetailView 详情置顶渲染——点组件名 switchTo 切活跃、➕ keepInScene 追加同框，
+ *  onChanged 于切换落定后回调（详情据此重渲：✓ 高亮 + 统计跟随新组件）。
+ *  返回是否实际渲染（供调用方决定空态文案）。 */
+function renderComponentsSection(
+  container: HTMLElement,
+  opts: {
+    entry: ModelEntry;
+    switchTo: (path: string, options?: { keepInScene?: boolean }) => Promise<void> | void;
+    onChanged?: () => void;
+  },
+): boolean {
+  const { entry } = opts;
+  const components = entry.components ?? [];
+  if (components.length === 0) return false;
+
+  // 切换落定后回调 onChanged（switchTo 可能异步；void 返回视为即时完成）
+  const runSwitch = (path: string, keep: boolean): void => {
+    const after = (): void => opts.onChanged?.();
+    const r = keep ? opts.switchTo(path, { keepInScene: true }) : opts.switchTo(path);
+    if (r && typeof (r as Promise<void>).then === "function") {
+      void (r as Promise<void>).then(after, () => undefined);
+    } else {
+      after();
+    }
+  };
 
   const title = document.createElement("div");
   title.dataset.testid = "preview-components-title";
   title.textContent = `${tr("preview.component", "组件")}（${components.length}）`;
   title.style.cssText = "padding:6px 10px 2px;color:rgba(255,255,255,0.5);font-size:11px";
-  list.appendChild(title);
+  container.appendChild(title);
 
   const box = document.createElement("div");
   box.dataset.testid = "preview-components-list";
   box.style.cssText = "max-height:220px;overflow-y:auto";
-  const curNorm = (active?.path ?? "").replace(/\\/g, "/").toLowerCase();
+  const curNorm = (entry.path ?? "").replace(/\\/g, "/").toLowerCase();
   for (const p of components) {
     const isCur = p.replace(/\\/g, "/").toLowerCase() === curNorm;
     const row = document.createElement("div");
@@ -358,16 +394,15 @@ function frRenderComponents(list: HTMLElement, ctx: PreviewMenuCtx): void {
         "width:20px;height:20px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;border-radius:4px;cursor:pointer;font-size:11px;line-height:1";
       append.onclick = (ev): void => {
         ev.stopPropagation();
-        const r = ctx.switchTo(p, { keepInScene: true });
-        if (r && typeof (r as Promise<void>).then === "function") swallowError(r as Promise<void>);
+        runSwitch(p, true);
       };
       row.appendChild(append);
     }
     row.onclick = (): void => {
-      const r = ctx.switchTo(p);
-      if (r && typeof (r as Promise<void>).then === "function") swallowError(r as Promise<void>);
+      runSwitch(p, false);
     };
     box.appendChild(row);
   }
-  list.appendChild(box);
+  container.appendChild(box);
+  return true;
 }

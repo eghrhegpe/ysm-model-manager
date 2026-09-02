@@ -290,7 +290,7 @@ function main() {
 
   let updated = 0;
   let skippedNoSources = 0;
-  const drifts: Array<{ file: string; added: string[]; removed: string[] }> = [];
+  const drifts: Array<{ file: string; added: string[]; removed: string[]; moved: string[] }> = [];
 
   for (const cf of cards) {
     const file = path.join(KNOW_DIR, cf);
@@ -367,6 +367,7 @@ function main() {
           const parts: string[] = [];
           if (d.added.length) parts.push('+[' + d.added.slice(0, 5).join(', ') + (d.added.length > 5 ? '…' : '') + ']');
           if (d.removed.length) parts.push('-[' + d.removed.slice(0, 5).join(', ') + (d.removed.length > 5 ? '…' : '') + ']');
+          if (d.moved.length) parts.push('~[' + d.moved.slice(0, 5).join(', ') + (d.moved.length > 5 ? '…' : '') + ']');
           console.error(`   - ${d.file} 漂移: ${parts.join(' ')}`);
         }
       }

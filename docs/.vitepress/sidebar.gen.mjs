@@ -1988,6 +1988,20 @@ export const autoSidebar = [
             "link": "/knowledge/vitest-env-switch"
           }
         ]
+      },
+      {
+        "text": "其他",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "组 2 核对报告（feature + utils，38 张）",
+            "link": "/knowledge/group2-verification-report"
+          },
+          {
+            "text": "组 3 核对报告（go，41 张）",
+            "link": "/knowledge/group3-check-report"
+          }
+        ]
       }
     ]
   },

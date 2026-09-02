@@ -109,6 +109,17 @@ describe("web 模式（isWeb=true）— no-op 桩不抛错", () => {
     const result6 = win.NonExistentMethod();
     await expect(result6).resolves.toBeUndefined();
   });
+
+  it("Window 不是 thenable：.then 返回 undefined，await Window 不挂起（browser-adapter 对称守卫）", async () => {
+    const { Window } = await loadWebRuntime();
+    // thenable 探测陷阱：await/`Promise.resolve(Window)` 会访问 .then——
+    // 若返回 async 函数会被误判为 thenable，await 调它后 onFulfilled 永不被调 → 永久挂起。
+    // 守卫返回 undefined，让 Window 不是 thenable（与 browser-adapter.ts:75 对称）。
+    expect((Window as unknown as Record<string, unknown>).then).toBeUndefined();
+    // await 非 thenable 值直接返回自身（不挂起；若误判 thenable 这里会超时挂起）
+    const awaited = await Window;
+    expect(awaited).toBe(Window);
+  });
 });
 
 describe("导出面锁定", () => {

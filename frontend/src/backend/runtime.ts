@@ -36,9 +36,18 @@ const webEvents: RuntimeEvents = {
 // Web 模式 Window 方法：用 Proxy 动态捕获任意方法名，全部返回 Promise.resolve()。
 // Proxy 无法用 satisfies 对账（handler 返回的是动态函数，非静态形状），保留
 // as unknown as 兜底——但 dbg 留痕让 Web 模式下的假操作可观测。
+// thenable 探测陷阱：await Window 会访问 .then——若返回 async 函数会被误判为
+// thenable，await 调它后 onFulfilled 永不被调 → 永久挂起。返回 undefined 让
+// Window 不是 thenable（与 browser-adapter.ts:75 对称）。
 const webWindow: typeof WailsWindow = new Proxy({}, {
-  get: () => async () => {
-    dbg("runtime-bridge", "web no-op Window method");
+  get(_target, prop) {
+    // thenable 探测陷阱（见上）——返回 undefined 让 await Window 不挂起
+    if (prop === "then") return undefined;
+    // symbol（如 Symbol.toStringTag）不拦截，返回 undefined 走默认行为
+    if (typeof prop === "symbol") return undefined;
+    return async () => {
+      dbg("runtime-bridge", "web no-op Window method");
+    };
   },
 }) as unknown as typeof WailsWindow;
 

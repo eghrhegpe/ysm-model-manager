@@ -1409,17 +1409,27 @@ export const webFsBindings = {
   GetRepoRoot: (rtype: string) => Promise.resolve(`${WEB_ROOT}/${rtype.replace(/\//g, "_")}`),
   GetDefaultRepoRoot: () => Promise.resolve(WEB_ROOT),
   // 搜索：关键词 + 数值范围条件（min/max 骨骼/立方体/纹理，>0 才过滤；统计走
-  // Web Worker 批量分析，Worker 不可用降级为仅关键词匹配并在 UI 提示）
-  SearchModels: (filesRoot: string, keyword: string, ...rest: number[]) =>
+  // Web Worker 批量分析，Worker 不可用降级为仅关键词匹配并在 UI 提示）。
+  // 签名与 Go appservice.go:19 对齐（8 具名参数）——Go 侧增/改参数时类型检查即报漂移
+  SearchModels: (
+    filesRoot: string,
+    keyword: string,
+    minBones = 0,
+    maxBones = 0,
+    minCubes = 0,
+    maxCubes = 0,
+    minTex = 0,
+    maxTex = 0,
+  ) =>
     searchWebModels(
       filesRoot,
       keyword,
-      rest[0] ?? 0,
-      rest[1] ?? 0,
-      rest[2] ?? 0,
-      rest[3] ?? 0,
-      rest[4] ?? 0,
-      rest[5] ?? 0,
+      minBones,
+      maxBones,
+      minCubes,
+      maxCubes,
+      minTex,
+      maxTex,
     ),
   // ADR-111 统一删除入口（web 侧）：接收 rtype 参数但 web 模式按模型粒度删除
   DeleteResourcePack: async (path: string, _rtype: string) => {

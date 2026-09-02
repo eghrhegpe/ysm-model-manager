@@ -1064,6 +1064,7 @@ export const zhCN = {
   "preview.stats.textures": "纹理",
   "preview.stats.morphs": "表情",
   "preview.stats.cubes": "立方体(Cubes)",
+  "preview.pack.textures": "专属纹理",
   // MMD 详情卡（P2：PMX 文件解析口径，与渲染实测区分）
   "preview.stats.file": "📊 文件统计",
   "preview.stats.vertices": "顶点",

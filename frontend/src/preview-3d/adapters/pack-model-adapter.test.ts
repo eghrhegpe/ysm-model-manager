@@ -30,7 +30,7 @@ vi.mock("../mc-tints.ts", () => ({
   getTintColorSync: vi.fn(() => 0x4a9d2b),
 }));
 
-import { buildPackScene, makePackAdapter, type PackDeps } from "./pack-model-adapter.ts";
+import { buildPackScene, makePackAdapter, packTextureLabel, type PackDeps } from "./pack-model-adapter.ts";
 
 /** 构造假 Java 模型 */
 function makeJavaModel(overrides: Partial<{
@@ -430,6 +430,56 @@ describe("setRotationMode / setSpeed", () => {
     preview.setSpeed!(2.5);
     expect((ctx.cameraControls as any).setSpeed).toHaveBeenCalledWith(2.5);
     preview.dispose!();
+  });
+});
+
+// ===== [ADR-159 续] 专属纹理段（dockGroup:"stats" → 并入统一统计面板）=====
+describe("pack-model 专属纹理段（ADR-159 续）", () => {
+  it("faces 引用纹理 → menuItems 含 sectionTitle + 每纹理 row（短名 + 引用面数 + 完整条目）", async () => {
+    hoisted.parseMock.mockResolvedValue(makeJavaModel({
+      faces: [
+        { dir: "north", verts: [0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "assets/musketmod/textures/item/blunderbuss.png", tintindex: null, texColor: null, cullface: "north" },
+        { dir: "south", verts: [1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "assets/musketmod/textures/item/blunderbuss.png", tintindex: null, texColor: null, cullface: "south" },
+        { dir: "up", verts: [0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: "assets/musketmod/textures/item/musket.png", tintindex: null, texColor: null, cullface: "up" },
+      ],
+    }));
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "assets/musketmod/models/item/blunderbuss.json", deps, "/packs/3d-muskets.zip");
+
+    const items = preview.menuItems ?? [];
+    // 顶层含 sectionTitle + 2 row（3 面去重 → 2 纹理），且 dockGroup:"stats" 供 mergeStatsMenuItems 抽出
+    expect(items.filter((n) => n.id === "pack-textures-title").length).toBe(1);
+    const rows = items.filter((n) => n.id.startsWith("pack-tex-"));
+    expect(rows).toHaveLength(2);
+    expect(rows.every((n) => n.kind === "row" && n.dockGroup === "stats")).toBe(true);
+    // 首现序 + 短名（musketmod:item/blunderbuss）+ 引用面数 + 完整 png 条目
+    const first = rows[0]!;
+    expect(first.fallback).toBe("musketmod:item/blunderbuss");
+    expect(first.labelKey).toBe("musketmod:item/blunderbuss");
+    expect(first.value).toBe("2 面 · assets/musketmod/textures/item/blunderbuss.png");
+    const second = rows[1]!;
+    expect(second.value).toBe("1 面 · assets/musketmod/textures/item/musket.png");
+    preview.dispose!();
+  });
+
+  it("纯色模型（faces 无 texEntry）→ 无专属纹理段（有 Cubes 已足够，守卫）", async () => {
+    hoisted.parseMock.mockResolvedValue(makeJavaModel({
+      faces: [{ dir: "north", verts: [0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1], uv: [0, 0, 1, 0, 1, 1, 0, 1], texEntry: null, tintindex: null, texColor: "#ff0000", cullface: "north" }],
+    }));
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "wool.json", deps, "/packs.zip");
+    expect(preview.menuItems?.some((n) => n.id === "pack-textures-title")).toBe(false);
+    expect(preview.menuItems?.some((n) => n.id.startsWith("pack-tex-"))).toBe(false);
+    preview.dispose!();
+  });
+
+  it("packTextureLabel 短名转换：assets/<ns>/textures/<p>.png → <ns>:<p>；非常规路径回退 basename", () => {
+    expect(packTextureLabel("assets/musketmod/textures/item/blunderbuss.png")).toBe("musketmod:item/blunderbuss");
+    expect(packTextureLabel("assets/minecraft/textures/block/dirt.png")).toBe("minecraft:block/dirt");
+    expect(packTextureLabel("textures/block/dirt.png")).toBe("dirt");
+    expect(packTextureLabel("plain.png")).toBe("plain");
   });
 });
 

@@ -48,6 +48,14 @@ function tintCategoryForPath(texEntry: string | null): string {
 }
 const NO_TEX_FALLBACK = 0xcccccc;
 
+/** 纹理条目（assets/<ns>/textures/<path>.png）→ 展示短名 <ns>:<path>（去 assets/ 与 textures/ 前缀 + .png）。 */
+export function packTextureLabel(texEntry: string): string {
+  const m = texEntry.match(/^assets\/([^/]+)\/textures\/(.+)\.png$/i);
+  if (m) return `${m[1]}:${m[2]}`;
+  const base = texEntry.split("/").pop() || texEntry;
+  return base.replace(/\.png$/i, "");
+}
+
 interface PackState {
   group: THREE.Group | null;
   disposables: THREE.Object3D[];
@@ -283,6 +291,36 @@ async function buildPackScene(
       value: model!.elementCount,
       dockGroup: "stats",
     });
+  }
+
+  // [ADR-159 续] 专属纹理段：faces 实际引用的纹理条目（去重、保首现序、带引用面数）。
+  // 统一面板「纹理 N」是渲染实测口径（材质贴图对象数）；此处回答「这个模型实际贴哪些图」——
+  // 每行 = 展示短名（<ns>:<path>）+ 小字（引用面数 · zip 内完整 png 路径），镜像 YSM 纹理行范式。
+  // 纯色模型（faces 全 texColor/无 texEntry）无纹理可示 → 整段不渲染（有 Cubes 已足够）。
+  const texCounts = new Map<string, number>();
+  for (const f of model!.faces) {
+    if (f.texEntry) texCounts.set(f.texEntry, (texCounts.get(f.texEntry) ?? 0) + 1);
+  }
+  if (texCounts.size > 0) {
+    menuItems.push({
+      id: "pack-textures-title",
+      kind: "sectionTitle",
+      labelKey: "preview.pack.textures",
+      fallback: "专属纹理",
+      dockGroup: "stats",
+    });
+    let texIdx = 0;
+    for (const [entry, faceCount] of texCounts) {
+      const label = packTextureLabel(entry);
+      menuItems.push({
+        id: `pack-tex-${texIdx++}`,
+        kind: "row",
+        labelKey: label,
+        fallback: label,
+        value: `${faceCount} 面 · ${entry}`,
+        dockGroup: "stats",
+      });
+    }
   }
 
   return {

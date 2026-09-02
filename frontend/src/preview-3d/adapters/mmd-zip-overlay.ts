@@ -193,6 +193,10 @@ export function makeZipOverlayPort(
 
     // ---- getCachedTexture：透传（KTX2 缓存与 zip 无关）----
     getCachedTexture: inner.getCachedTexture,
+    // ---- KTX2 缓存读/写通道：透传（zip 内纹理 hash 为空不命中，zip 外委托 inner）----
+    getCachedTextureByHash: inner.getCachedTextureByHash,
+    hasCachedTextures: inner.hasCachedTextures,
+    saveCachedTexture: inner.saveCachedTexture,
   };
 
   return { port: overlay, rootPath: ROOT };

@@ -2,7 +2,8 @@ import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 
 // ===== MMD 纹理 KTX2 后台编码器 =====
 // 在浏览器中通过 WASM basis_encoder 将 PNG 纹理编码为 KTX2 格式，
-// 结果通过 SaveCachedTexture 保存到 Go 侧缓存目录。下次加载时直接命中缓存。
+// 结果经 port.saveCachedTexture 保存到 Go 侧缓存目录（ADR-072：适配器 0 backend import，
+// 壳层注入 SaveCachedTexture）。下次加载时直接命中缓存。
 //
 // 编码在后台进行（Promise），不阻塞模型加载和渲染。
 // 编码失败静默降级，不影响已有 PNG 纹理。
@@ -210,7 +211,7 @@ export function __setEncodeImplForTest(fn: typeof encodeImpl): void {
  * 将单个 PNG 纹理编码为 KTX2 并缓存。
  * @param hash 纹理内容的 SHA256 hash（来自 GetCachedTexture）
  * @param pngBlobUrl blob URL 指向 PNG 纹理数据
- * @param port 数据端口（用于 SaveCachedTexture 调用）
+ * @param port 数据端口（经 saveCachedTexture 落盘；缺失 → 编码但不持久化）
  * @returns 编码成功 true，失败 false（静默降级）
  */
 export async function encodeAndCacheTexture(
@@ -232,14 +233,11 @@ export async function encodeAndCacheTexture(
     if (port.addOpLog) {
       void port.addOpLog("ktx2-encode", hash, "ok", `bytes=${ktx2Bytes.length} original=${imageData.width}x${imageData.height}`);
     }
-    // 通过 Go 绑定保存缓存；仅「绑定缺失」跳过持久化仍算编码成功（审查 P3：
-    // 缺绑定若走 catch→false，completedHashes 永不标记，每次加载同一纹理重编码 +
-    // 刷 fail 日志——原 fn? 守卫语义是「无持久化 = 本次会话成功」；真实保存错误仍走外层 catch）
-    const { getApp } = await import("../../backend/app.ts");
-    const app = await getApp();
-    if (typeof app.SaveCachedTexture === "function") {
-      await app.SaveCachedTexture(hash, ktx2B64);
-    }
+    // 通过 port 保存缓存（ADR-072：适配器 0 backend import——壳层注入 SaveCachedTexture）。
+    // 仅「持久化通道缺失」跳过落盘仍算编码成功（审查 P3：缺通道若走 catch→false，
+    // completedHashes 永不标记，每次加载同一纹理重编码 + 刷 fail 日志——原 fn? 守卫
+    // 语义是「无持久化 = 本次会话成功」；真实保存错误由壳层内部吞掉，不阻断编码）
+    await port.saveCachedTexture?.(hash, ktx2B64);
     // 标记为已完成
     completedHashes.add(hash);
     return true;

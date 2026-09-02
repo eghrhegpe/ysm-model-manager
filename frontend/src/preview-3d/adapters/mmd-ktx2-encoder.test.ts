@@ -11,18 +11,12 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
-    SaveCachedTexture: hoisted.saveTextureMock,
-  }),
-}));
-
 import { encodeAndCacheTexture, scheduleBackgroundEncoding, cancelPendingEncodings, resetEncoderState, __setEncodeImplForTest } from "./mmd-ktx2-encoder.ts";
 import type { MmdDataPort } from "./mmd-adapter.ts";
 
 // ===== 辅助函数 =====
 
-/** 创建 Mock 端口 */
+/** 创建 Mock 端口（saveCachedTexture 直挂 hoisted mock——ADR-072：落盘经 port 注入，不再 mock backend） */
 function makePort(): MmdDataPort {
   return {
     readFileBytes: vi.fn(),
@@ -30,6 +24,7 @@ function makePort(): MmdDataPort {
     listAllFilePaths: vi.fn(),
     addOpLog: hoisted.addOpLogMock,
     getCachedTexture: vi.fn(),
+    saveCachedTexture: hoisted.saveTextureMock,
   };
 }
 
@@ -541,6 +536,7 @@ describe("scheduleBackgroundEncoding 幂等与在途清理（增量）", () => {
       listAllFilePaths: vi.fn(),
       addOpLog: vi.fn(),
       getCachedTexture: vi.fn(),
+      saveCachedTexture: hoisted.saveTextureMock,
     };
   }
 
@@ -643,6 +639,7 @@ describe("encodeToKTX2 主线程入口（默认 encodeImpl：Worker 池 / 同步
       listAllFilePaths: vi.fn(),
       addOpLog: vi.fn(),
       getCachedTexture: vi.fn(),
+      saveCachedTexture: hoisted.saveTextureMock,
     };
   }
 

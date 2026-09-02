@@ -65,6 +65,8 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
   const pending = new Map<number, {
     resolve: (r: TexDecodeResponse) => void;
     timer: ReturnType<typeof setTimeout>;
+    /** 任务归属的 worker（崩溃时据此精确清算，P2-4） */
+    worker: Worker;
   }>();
 
   // Worker 消息处理
@@ -78,7 +80,34 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
         entry.resolve(e.data);
       }
     };
-    w.onerror = () => { /* Worker 错误由 timeout 兜底 */ };
+    // P2-4（审核）：Worker 崩溃不再静默等 8s 超时——立即清算该 worker 名下全部在途
+    // 任务（resolve ok:false → 该批次 completed++ → 主线程 fallback 接管），terminate
+    // 崩溃实例并重建替补。原 `w.onerror = () => {}` 让崩溃 worker 的任务全部空等到
+    // 超时，每次加载被拖 8s；且共享单例池从不重建崩溃 worker（越用越少、坏的不换）。
+    w.onerror = () => {
+      for (const [id, entry] of [...pending]) {
+        if (entry.worker !== w) continue;
+        clearTimeout(entry.timer);
+        pending.delete(id);
+        entry.resolve({ id, ok: false, error: "Worker 崩溃", relPath: "", width: 0, height: 0 });
+      }
+      // 终止崩溃实例并重建替补
+      try { w.terminate(); } catch { /* 已崩溃 */ }
+      const idx = workers.indexOf(w);
+      if (idx !== -1) {
+        try {
+          const replacement = new Worker(
+            new URL("./mmd-texture-decode.worker.ts", import.meta.url),
+            { type: "module" },
+          );
+          replacement.onmessage = w.onmessage;
+          replacement.onerror = w.onerror;
+          workers[idx] = replacement;
+        } catch {
+          // 重建失败（资源耗尽/受限环境）：池少一个 worker，仍可继续（round-robin 容错）
+        }
+      }
+    };
   }
 
   function decodeAll(tasks: Array<{ relPath: string; bytes: ArrayBuffer; mimeType: string }>): Promise<Map<string, DecodedTexture>> {
@@ -118,11 +147,16 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
                 height: resp.height!,
                 refCount: 0,
               });
+            } else if (resp.bitmap) {
+              // 迟到/异常回包带位图但 ok=false：位图已 transfer 到主线程，无人 close——
+              // 立即释放防 GPU 位图泄漏（P2-4 附带的超时迟到路径清理）
+              resp.bitmap.close();
             }
             completed++;
             if (completed >= total) resolve(results);
           },
           timer,
+          worker: w,
         });
 
         w.postMessage(req, [task.bytes]);
@@ -153,11 +187,33 @@ export function getTextureDecoder(): TextureDecoder {
   return sharedDecoder;
 }
 
-/** 释放共享解码器 */
-function disposeTextureDecoder(): void {
+/** 释放共享解码器（适配器 dispose/清理路径调用，防 Worker 池越积越多） */
+export function disposeTextureDecoder(): void {
   if (sharedDecoder) {
     sharedDecoder.dispose();
     sharedDecoder = null;
+  }
+}
+
+/**
+ * 关闭解码结果中未被任何纹理引用的 ImageBitmap（P2-5 审核）。
+ * decodeAll 产物 refCount=0 起步；只有 applyWorkerDecodedTextures 命中并创建纹理
+ * 后才 refCount>0（纹理 dispose 时归零 close）。构建中途抛错 / PMX 路径与磁盘不匹配 /
+ * 替换数为 0 时，未命中的位图 refCount 恒 0、永不被 close → 每次失败加载泄漏 N 张
+ * GPU 位图。本函数在 apply 收尾/失败路径调用，只关 refCount<=0 的（已应用的由
+ * 纹理 dispose 监听负责，双保险幂等——ImageBitmap.close 重复调用无害）。
+ */
+export function closeUnusedDecodedBitmaps(decoded: Map<string, DecodedTexture>): void {
+  for (const [, d] of decoded) {
+    // refCount<0 = 已由本函数关过（-1 标记）；=0 未应用 → 关；>0 已应用 → 纹理 dispose 负责
+    if (d.refCount === 0) {
+      try {
+        d.bitmap.close();
+        d.refCount = -1; // 标记已关，防重复 close 路径再计数
+      } catch {
+        /* 已关闭/不可关：幂等 */
+      }
+    }
   }
 }
 

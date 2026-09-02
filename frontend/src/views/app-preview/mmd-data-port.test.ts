@@ -18,6 +18,7 @@ function makeAppMock() {
     ListAllFilePaths: vi.fn(),
     AddOpLog: vi.fn().mockResolvedValue(undefined),
     GetCachedTexture: vi.fn(),
+    SaveCachedTexture: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -133,6 +134,22 @@ describe("makeMmdDataPort", () => {
     App.GetCachedTexture.mockRejectedValue(new Error("cache rpc down"));
     const port = await makeMmdDataPort("mmd-preview");
     expect(await port.getCachedTexture!("/t.png")).toBeNull();
+  });
+
+  it("saveCachedTexture：委托 SaveCachedTexture（P2-1 落盘通道）", async () => {
+    const App = makeAppMock();
+    getAppMock.mockResolvedValue(App);
+    const port = await makeMmdDataPort("mmd-preview");
+    await port.saveCachedTexture!("h1", "b64data");
+    expect(App.SaveCachedTexture).toHaveBeenCalledWith("h1", "b64data");
+  });
+
+  it("saveCachedTexture：RPC 抛异常被吞掉（无持久化通道不阻断编码）", async () => {
+    const App = makeAppMock();
+    getAppMock.mockResolvedValue(App);
+    App.SaveCachedTexture.mockRejectedValue(new Error("save rpc down"));
+    const port = await makeMmdDataPort("mmd-preview");
+    await expect(port.saveCachedTexture!("h1", "b64")).resolves.toBeUndefined();
   });
 
   it("scope 打标随端口实例区分（mmd-preview / mmd-scene 各自透传）", async () => {

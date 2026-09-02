@@ -62,6 +62,7 @@ import {
 } from "./mmd-pmx-parser.ts";
 import {
   applyWorkerDecodedTextures,
+  closeUnusedDecodedBitmaps,
   type DecodedTexture,
   getTextureDecoder,
 } from "./mmd-texture-decoder.ts";
@@ -101,6 +102,9 @@ export interface MmdDataPort {
   getCachedTextureByHash?(hash: string): Promise<string | null>;
   /** 批量查缓存命中（壳层注入 HasCachedTextures；返回 hash → 是否命中） */
   hasCachedTextures?(hashes: string[]): Promise<Record<string, boolean>>;
+  /** 保存 KTX2 编码结果到 Go 侧缓存（壳层注入 SaveCachedTexture；缺失 = 无持久化通道，
+   *  后台编码仍执行但本次不落盘——替代已废弃 getCachedTexture 作为编码 gate 的语义） */
+  saveCachedTexture?(hash: string, ktx2B64: string): Promise<void>;
 }
 
 /** 环形日志面板诊断（AGENTS.md：排查卡顿往环形日志塞日志而非死盯 console）；失败静默不阻断 */
@@ -875,8 +879,10 @@ async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     c.pmxParser?.dispose();
   }
   if (c.decodedTexturesPromise) {
+    // P2-5（审核）：decoded 提到 try 外声明——apply 抛错路径也能 close 未命中位图
+    let decoded: Map<string, DecodedTexture> | null = null;
     try {
-      const decoded = await c.decodedTexturesPromise;
+      decoded = await c.decodedTexturesPromise;
       const allMats2: THREE.Material[] = Array.isArray(c.mesh.material)
         ? c.mesh.material
         : c.mesh.material
@@ -922,6 +928,9 @@ async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
         "Worker 解码纹理应用失败，使用主线程 fallback",
       );
     }
+    // P2-5：apply 收尾（含抛错路径）统一释放未命中位图（refCount 恒 0 的——已应用的
+    // 由纹理 dispose 监听归零 close）。防每次失败加载泄漏 N 张 GPU 位图。
+    if (decoded) closeUnusedDecodedBitmaps(decoded);
   }
 }
 
@@ -995,7 +1004,11 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
           : c.mesh.material
             ? [c.mesh.material]
             : [];
-        const replaceTasks: Array<Promise<void>> = [];
+        // P2-6（审核）：按 hash 聚合材质槽，一个 hash 只 loadAsync 一次——原逐槽替换
+        // 会让共享同一纹理的 N 个材质槽各解码一次 KTX2（three-mmd 用 ctx.textures[fullPath]
+        // 缓存共享身份），浪费 GPU 内存且破坏纹理共享。聚合后同一 hash 的所有槽
+        // 赋同一份 CompressedTexture 实例，保持与原纹理一致的共享语义。
+        const slotsByHash = new Map<string, Array<{ mat: THREE.Material; key: string }>>();
         for (const mat of allMats) {
           for (const key of DISPOSE_TEX_KEYS) {
             const tex = matTexSlots(mat)[key];
@@ -1004,30 +1017,40 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
             if (!img?.src?.startsWith("blob:")) continue;
             const hash = c.blobUrlToHash.get(img.src);
             if (!hash || !c.cachedHashes.has(hash)) continue;
-            replaceTasks.push(
-              getCachedTextureByHash(hash).then((ktx2B64) => {
-                if (!ktx2B64) return;
-                const ktxBytes = b64ToBytes(ktx2B64);
-                const ktxBlob = new Blob([bytesToArrayBuffer(ktxBytes)]);
-                const ktxUrl = URL.createObjectURL(ktxBlob);
-                c.blobUrls.push(ktxUrl);
-                return (
-                  c.ktx2CacheLoader!
-                    .loadAsync(ktxUrl)
-                    .then((compressedTex) => {
-                      matTexSlots(mat)[key] = compressedTex;
-                      tex.dispose();
-                      mat.needsUpdate = true;
-                    })
-                    // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve，
-                    // 供外层 Promise.all await 与 replaced= 计数——不可改 fire-and-forget）
-                    .catch((err) =>
-                      dbg("ktx2-replace-fail", { hash, key, err: safeErrorMessage(err) }),
-                    )
-                );
-              }),
-            );
+            const arr = slotsByHash.get(hash);
+            if (arr) arr.push({ mat, key });
+            else slotsByHash.set(hash, [{ mat, key }]);
           }
+        }
+        // 逐 hash 单次替换：loadAsync 一次 → 同一份压缩纹理赋给所有共享槽
+        const replaceTasks: Array<Promise<void>> = [];
+        for (const [hash, slots] of slotsByHash) {
+          replaceTasks.push(
+            getCachedTextureByHash(hash).then((ktx2B64) => {
+              if (!ktx2B64) return;
+              const ktxBytes = b64ToBytes(ktx2B64);
+              const ktxBlob = new Blob([bytesToArrayBuffer(ktxBytes)]);
+              const ktxUrl = URL.createObjectURL(ktxBlob);
+              c.blobUrls.push(ktxUrl);
+              return (
+                c.ktx2CacheLoader!
+                  .loadAsync(ktxUrl)
+                  .then((compressedTex) => {
+                    for (const { mat, key } of slots) {
+                      const prev = matTexSlots(mat)[key];
+                      matTexSlots(mat)[key] = compressedTex;
+                      if (prev instanceof THREE.Texture) prev.dispose();
+                      mat.needsUpdate = true;
+                    }
+                  })
+                  // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve，
+                  // 供外层 Promise.all await 与 replaced= 计数——不可改 fire-and-forget）
+                  .catch((err) =>
+                    dbg("ktx2-replace-fail", { hash, slots: slots.length, err: safeErrorMessage(err) }),
+                  )
+              );
+            }),
+          );
         }
         await Promise.all(replaceTasks);
         await mmdDiag(
@@ -1035,7 +1058,7 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
           "ktx2-replace",
           "cache-hit",
           "ok",
-          `cached=${c.cachedHashes.size} replaced=${replaceTasks.length} total=${allHashes.length}`,
+          `cached=${c.cachedHashes.size} replaced=${replaceTasks.length} slots=${slotsByHash.size} total=${allHashes.length}`,
         );
       } else {
         await mmdDiag(
@@ -1048,7 +1071,10 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
       }
     }
   }
-  if (c.blobUrlToHash.size > 0 && c.effectivePort.getCachedTexture) {
+  // P2-3（审核）：后台编码 gate 从「已废弃 getCachedTexture」改为 saveCachedTexture——
+  // 读路径已用 hasCachedTextures/getCachedTextureByHash，写路径真正需要的是持久化通道；
+  // 原 gate 挂在废弃方法上，一旦按「已废弃」清理会静默停掉后台编码（缓存永不写入）。
+  if (c.blobUrlToHash.size > 0 && c.effectivePort.saveCachedTexture) {
     // 局部 const 收窄替代 !：filter 闭包内 TS 不保持 c.cachedHashes 的收窄
     const cachedHashes = c.cachedHashes;
     const toEncode = cachedHashes

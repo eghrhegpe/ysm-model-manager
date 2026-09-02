@@ -69,5 +69,14 @@ export async function makeMmdDataPort(scope: string): Promise<MmdDataPort> {
         return {};
       }
     },
+    // KTX2 编码结果落盘（ADR-072：适配器经 port 调用，壳层注入 Go RPC；
+    // 绑定缺失/桥不可用 → 静默跳过持久化，编码本身仍算成功）
+    saveCachedTexture: async (hash, ktx2B64) => {
+      try {
+        await App.SaveCachedTexture(hash, ktx2B64);
+      } catch {
+        /* 无持久化通道不阻断编码 */
+      }
+    },
   };
 }

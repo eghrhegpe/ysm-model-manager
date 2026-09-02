@@ -258,6 +258,14 @@ describe("ZipOverlayPort 三条路由", () => {
     await overlay2.getCachedTexture!("test");
     expect(mockFn).toHaveBeenCalledWith("test");
   });
+
+  it("saveCachedTexture：透传至 inner port（P2-1 落盘通道不因 zip overlay 丢失）", async () => {
+    const mockFn = vi.fn().mockResolvedValue(undefined);
+    const portWithSave: MmdDataPort = { ...innerPort, saveCachedTexture: mockFn as MmdDataPort["saveCachedTexture"] };
+    const { port: overlay2 } = makeZipOverlayPort(portWithSave, config);
+    await overlay2.saveCachedTexture!("h1", "b64");
+    expect(mockFn).toHaveBeenCalledWith("h1", "b64");
+  });
 });
 
 describe("prepareMmdZipInput 端到端", () => {

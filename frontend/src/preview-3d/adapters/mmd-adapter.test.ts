@@ -1346,6 +1346,47 @@ describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
     expect(hoisted.scheduleBackgroundEncodingMock).not.toHaveBeenCalled();
   });
 
+  it("P2-6 共享纹理去重：两材质槽同 hash → KTX2 只 loadAsync 一次，两槽同一压缩纹理实例", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    // 两个 CompressedTexture 实例（若被解码两次会得到两个不同实例）
+    hoisted.ktx2LoadAsyncMock
+      .mockResolvedValueOnce(new THREE.CompressedTexture([], 1, 1))
+      .mockResolvedValueOnce(new THREE.CompressedTexture([], 2, 2));
+    // 多材质模型：两个材质共享同一 blob 纹理（src 相同 → 同 hash）
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => {
+      const base = fakeMmdRich();
+      const mesh = base.mesh as THREE.SkinnedMesh;
+      const origMats = Array.isArray(mesh.material) ? (mesh.material as THREE.Material[]) : [mesh.material];
+      const sharedTex = new THREE.Texture();
+      (sharedTex as unknown as { image: { src: string } }).image = { src: "blob:mock-url" };
+      const mat2 = new THREE.MeshBasicMaterial();
+      mat2.map = sharedTex;
+      // 原材质 map 已是 blob:mock-url（fakeMmdRich 首项）——两槽同 hash
+      mesh.material = [origMats[0], mat2];
+      return Promise.resolve(base);
+    });
+    const port = makeRichPort({ cacheHit: true });
+    const { ctx } = makeCtx();
+    ctx.renderer = fakeRenderer();
+    const content = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+
+    // 去重：一个 hash 只触发一次 loadAsync（两槽共享同一份压缩纹理）
+    expect(hoisted.ktx2LoadAsyncMock).toHaveBeenCalledTimes(1);
+    const mesh = (ctx.scene as THREE.Scene).children.find((c) => (c as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh;
+    const mats = mesh.material as THREE.MeshBasicMaterial[];
+    expect(mats.length).toBe(2);
+    const map0 = mats[0].map as unknown as { isCompressedTexture?: boolean };
+    const map1 = mats[1].map as unknown as { isCompressedTexture?: boolean };
+    expect(map0.isCompressedTexture).toBe(true);
+    expect(map1.isCompressedTexture).toBe(true);
+    // 共享身份保持：两槽指向同一实例（P2-6 修复点）
+    expect(mats[0].map).toBe(mats[1].map);
+    content.dispose();
+  });
+
   it("GetCachedTextureByHash 返回空串 → getCachedTextureByHash 归一为 null", async () => {
     vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});

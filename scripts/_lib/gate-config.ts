@@ -17,12 +17,22 @@
  * 依赖：零依赖（纯数据结构）
  */
 
+/**
+ * 阻断策略：控制 record() 是否因 FAIL 置 blocked=true。
+ *   hard        FAIL → 阻断（默认，隐式）
+ *   debt        FAIL → 只记录，不阻断（债务类，推送后修）
+ *   failClosed  FAIL → 只记录，不阻断；仅工具本身不可用（如 rg 缺失）才阻断——
+ *               由调用方在 record() 之外单独判断，此处保留字段作语义标注。
+ */
+type BlockPolicy = 'hard' | 'debt' | 'failClosed';
+
 /** 静态工具条目：字符串（简单调用）或带参数对象。 */
 export type GateTool = string | {
   tool: string;
   args?: string[];
   autoFix?: boolean;
   allowRc2?: boolean;
+  blockPolicy?: BlockPolicy;
 };
 
 /**
@@ -48,6 +58,7 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: 'gen-routes-quick.ts', args: ['--check'], autoFix: true },
   { tool: 'gen-cli-doc.ts', args: ['--check'], autoFix: true },
   { tool: 'gen-cli-completion.ts', args: ['--check'], autoFix: true },
+  { tool: 'gen-knowledge-autogen.ts', args: ['--check'], autoFix: true },
   { tool: 'check-script-hygiene.ts', args: ['--strict'] },
   'check-proc-adoption.ts',
   'check-lib-adoption.ts',
@@ -73,6 +84,7 @@ export const DOC_STATIC_TOOLS: GateTool[] = [
   { tool: 'gen-routes-quick.ts', args: ['--check'], autoFix: true },
   { tool: 'gen-cli-doc.ts', args: ['--check'], autoFix: true },
   { tool: 'gen-cli-completion.ts', args: ['--check'], autoFix: true },
+  { tool: 'gen-knowledge-autogen.ts', args: ['--check'], autoFix: true },
   { tool: 'check-script-hygiene.ts', args: ['--strict'] },
   'check-proc-adoption.ts',
   'check-workflow-refs.ts',

@@ -158,9 +158,15 @@ async function main() {
   // 统一结果收集与阻断标记
   const results: any[] = [];
   let blocked = false;
-  const record = (label: string, ok: boolean, { time = 0, note = '', tail = '', noBlock = false } = {}) => {
+  /**
+   * 记录检查结果。ok=false 时按 blockPolicy 决定是否阻断：
+   *   hard（默认）     → blocked=true
+   *   debt             → 只记录，不阻断
+   *   failClosed       → 只记录，不阻断（调用方须在 record() 外自行判断 fail-closed 场景）
+   */
+  const record = (label: string, ok: boolean, { time = 0, note = '', tail = '', blockPolicy }: { time?: number; note?: string; tail?: string; blockPolicy?: 'hard' | 'debt' | 'failClosed' }) => {
     results.push({ label, ok, time, note, tail });
-    if (!ok && !noBlock) blocked = true;
+    if (!ok && blockPolicy !== 'debt' && blockPolicy !== 'failClosed') blocked = true;
   };
 
   let plan;
@@ -253,6 +259,11 @@ async function main() {
     for (const entry of tools) {
       const tool = typeof entry === 'string' ? entry : entry.tool;
       const extraArgs = typeof entry === 'string' ? [] : entry.args || [];
+      // 解法 C：gen-*.ts 自动继承 autoFix=true（命名约定驱动）
+      // 显式声明 autoFix=false 优先，其余 obj 看 entry.autoFix，string 条目全为 false
+      const effectiveAutoFix = typeof entry === 'object' && 'autoFix' in entry
+        ? entry.autoFix
+        : tool.startsWith('gen-');
       // 文件驱动模式（commit-with-check 等）下，check-go-diff-coverage 必须按
       // --staged 只查本次暂存区——否则回退 base=origin/main 全库 diff，把
       // origin/main 之后所有未推送改动（含并行会话提交）误算进本次覆盖门禁，
@@ -287,7 +298,7 @@ async function main() {
       // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
       // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
       // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
-      if (!ok && typeof entry === 'object' && entry.autoFix) {
+      if (!ok && effectiveAutoFix) {
         const fixR = sh(`node scripts/${tool} --json`); // 写盘刷新（无 --check）
         if (fixR.rc === 0) {
           const re = sh(`node scripts/${tool} --json ${extraArgs.join(' ')}`);
@@ -405,7 +416,7 @@ async function main() {
           : `${mz.violations} 条菜单表违规（id/labelKey/i18n/dockGroup/kind/render-run）`),
       tail: mOk ? '' : mh.out.trim().split('\n').slice(-4).join('\n'),
     });
-    if (!mOk) blocked = true; // 菜单表违规阻断推送（硬错误：加错键/漏 i18n 会破坏菜单渲染）
+    // 菜单表违规 = hard（默认）：record() 已自动置 blocked，无需重复手动设
 
     // 右键菜单 i18n key 门禁（2026-09-01 新增）：menu-defs.ts / context-menu*-handlers.ts
     // 里所有字面量 tr("key") 必须存在于 zh-CN 基准包，否则运行时静默回退英文。
@@ -422,7 +433,22 @@ async function main() {
           : `${cz.violations} 个 key 缺失（运行时静默回退英文）`),
       tail: cOk ? '' : ci.out.trim().split('\n').slice(-8).join('\n'),
     });
-    if (!cOk) blocked = true;
+    // 右键菜单 i18n 缺失 = hard（默认）：record() 已自动置 blocked，无需重复手动设
+
+    // 问题 3-A 解法：禁止绕过 bindings 直接调 window.go.main.App.xxx
+    // 前端调 Go 函数必须走 bindings/ 强类型接口，避免参数错位编译期不报错
+    const tB = Date.now();
+    const bu = await shAsync('node scripts/check-binding-usage.ts --json', { cwd: path.join(ROOT, 'frontend') });
+    let buz: any = null;
+    try { buz = JSON.parse(bu.out)._summary; } catch { /* parse fail */ }
+    const buOk = bu.rc === 0 && buz && buz.ok === true;
+    record('check-binding-usage', buOk, {
+      time: Date.now() - tB,
+      note: buz === null ? '输出解析失败'
+        : (buOk ? '无绕过 bindings 的直接调用'
+          : `${buz.violations} 处绕过 bindings 直接调 window.go.main.App`),
+      tail: buOk ? '' : bu.out.trim().split('\n').slice(-8).join('\n'),
+    });
 
     // npm 三件套并行优化：vite build ∥ tsc --noEmit，vitest 串行在后
     // （vitest 是重活儿，独占资源更稳；build 与 tsc 无依赖，墙钟减半）
@@ -438,10 +464,11 @@ async function main() {
       }).catch(() => ({ rc: -1, out: '' })),
     ]);
     const wallA = Date.now() - t0;
+    const tscRc = tscResult.rc ?? -1;
     record('vite build', fb.rc === 0, { time: wallA, tail: fb.rc ? fb.out.trim().split('\n').slice(-4).join('\n') : '' });
-    if (tscResult.rc >= 0) {
+    if (tscRc >= 0) {
       const lines = tscResult.out.trim().split('\n').filter(Boolean);
-      record('tsc --noEmit', tscResult.rc === 0, { time: wallA, note: tscResult.rc === 0 ? '' : `${lines.length} errors`, tail: tscResult.rc === 0 ? '' : lines.slice(-5).join('\n') });
+      record('tsc --noEmit', tscRc === 0, { time: wallA, note: tscRc === 0 ? '' : `${lines.length} errors`, tail: tscRc === 0 ? '' : lines.slice(-5).join('\n') });
     } else {
       record('tsc --noEmit', false, { time: 0, note: 'tsc 未安装（npx tsc --version 失败）——请 npm ci 后重推' });
     }
@@ -525,11 +552,10 @@ async function main() {
       }
     } catch { /* parse fail */ ok = false; scanHealthy = false; }
     // 基线债务（红线新增）不阻断推送：推送后修；发布前全量 doctor 仍会报告（2026-08-13 决策）
-    // 但扫描不可用（fail-closed）必须阻断——扫描本身没跑成，不能当作「债务」放行
-    // noBlock=true 让 record 不置 blocked；!scanHealthy 由下方第 534 行兜底阻断
+    // failClosed：扫描本身不可用（rg 缺失/fail-closed）才阻断——由下方 !scanHealthy 兜底
     record('check-redlines', ok, {
       time: Date.now() - t0,
-      noBlock: true,
+      blockPolicy: 'failClosed',
       // note 顺序：newV===null 唯一标识 JSON parse 失败（rg 不可用时 newViolations
       // 非 null——runBaseline fail-closed 返回 allKeys），必须先于 scanHealthy 判定
       note: newV === null ? '输出解析失败——fail-closed 阻断，红线门禁未执行'

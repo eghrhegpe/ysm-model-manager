@@ -17,6 +17,9 @@ const frontendSrc = join(__dirname, '../src');
 // 正则：匹配 window.go.main.App.xxx( 调用
 const BYPASS_REGEX = /window\.go\.main\.App\.\w+\(/g;
 
+// --json 输出格式（与 gate 的 runTools --json 契约对齐）
+const wantJson = process.argv.includes('--json');
+
 // 排除的文件（bindings 声明文件等）
 const EXCLUDE_FILES = ['bindings.ts', 'bindings.d.ts'];
 
@@ -83,17 +86,28 @@ async function main() {
   }
 
   if (allViolations.length > 0) {
-    console.error('\n⚠️  检测到绕过 bindings 的直接调用：\n');
-    for (const v of allViolations) {
-      console.error(`  ${v.file}:${v.line}:${v.column}`);
-      console.error(`    ${v.match}`);
+    if (wantJson) {
+      console.log(JSON.stringify({
+        _summary: { ok: false, violations: allViolations.length },
+        violations: allViolations,
+      }));
+    } else {
+      console.error('\n⚠️  检测到绕过 bindings 的直接调用：\n');
+      for (const v of allViolations) {
+        console.error(`  ${v.file}:${v.line}:${v.column}`);
+        console.error(`    ${v.match}`);
+      }
+      console.error('\n请改用 bindings 导入的函数，例如：');
+      console.error('  import { SearchModels } from "./bindings";');
+      console.error('  SearchModels(filesRoot, keyword, minBones, ...);\n');
     }
-    console.error('\n请改用 bindings 导入的函数，例如：');
-    console.error('  import { SearchModels } from "./bindings";');
-    console.error('  SearchModels(filesRoot, keyword, minBones, ...);\n');
     process.exit(1);
   } else {
-    console.log('✅ 未发现绕过 bindings 的直接调用');
+    if (wantJson) {
+      console.log(JSON.stringify({ _summary: { ok: true, violations: 0 } }));
+    } else {
+      console.log('✅ 未发现绕过 bindings 的直接调用');
+    }
     process.exit(0);
   }
 }

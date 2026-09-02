@@ -267,12 +267,12 @@ function collectSymbolsWithLines(sourceFiles: string[]): Array<{ symbol: string;
 // ---------- 主流程 ----------
 
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ['check', 'full'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ['check', 'full', 'json'] });
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check --full）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check --full --json）`);
     process.exit(1);
   }
-  const { check: isCheck, full: isFull } = parsed;
+  const { check: isCheck, full: isFull, json: wantJson } = parsed;
 
   if (!fs.existsSync(KNOW_DIR)) {
     console.error('❌ docs/knowledge/ 不存在，请确认在仓库根目录运行');
@@ -344,16 +344,24 @@ function main() {
 
   if (isCheck) {
     if (drifts.length) {
-      console.error(`❌ ${drifts.length} 张卡 auto_fields 漂移，请运行：node scripts/gen-knowledge-autogen.ts`);
-      for (const d of drifts) {
-        const parts: string[] = [];
-        if (d.added.length) parts.push('+[' + d.added.slice(0, 5).join(', ') + (d.added.length > 5 ? '…' : '') + ']');
-        if (d.removed.length) parts.push('-[' + d.removed.slice(0, 5).join(', ') + (d.removed.length > 5 ? '…' : '') + ']');
-        console.error(`   - ${d.file} 漂移: ${parts.join(' ')}`);
+      if (wantJson) {
+        console.log(JSON.stringify({ _summary: { ok: false, drifts: drifts.length, scanned: cards.length } }));
+      } else {
+        console.error(`❌ ${drifts.length} 张卡 auto_fields 漂移，请运行：node scripts/gen-knowledge-autogen.ts`);
+        for (const d of drifts) {
+          const parts: string[] = [];
+          if (d.added.length) parts.push('+[' + d.added.slice(0, 5).join(', ') + (d.added.length > 5 ? '…' : '') + ']');
+          if (d.removed.length) parts.push('-[' + d.removed.slice(0, 5).join(', ') + (d.removed.length > 5 ? '…' : '') + ']');
+          console.error(`   - ${d.file} 漂移: ${parts.join(' ')}`);
+        }
       }
       process.exit(1);
     }
-    console.log(`✅ 知识卡 auto_fields: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无 source_files ${skippedNoSources} 张）`);
+    if (wantJson) {
+      console.log(JSON.stringify({ _summary: { ok: true, scanned: cards.length, skipped: skippedNoSources } }));
+    } else {
+      console.log(`✅ 知识卡 auto_fields: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无 source_files ${skippedNoSources} 张）`);
+    }
     process.exit(0);
   }
 

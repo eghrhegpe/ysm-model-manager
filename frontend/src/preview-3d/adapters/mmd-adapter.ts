@@ -543,7 +543,11 @@ async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
   c.pmxParsePromise = null;
   if (c.usePmxWorker) {
     c.pmxParser = createPmxParser();
-    c.pmxParsePromise = c.pmxParser.parse(bytesToArrayBuffer(c.bytes));
+    // worker parse 走 postMessage transfer——同步 detach 传入的 ArrayBuffer。必须给独立
+    // 拷贝（slice），否则 c.bytes 的 buffer 被 detach 后，下方 573 行 Blob 构造拿到的
+    // 是同源已 detach buffer（byteLength 0 → 异常或空模型 blob），zip 模式的 entries
+    // 字节同样被连带清空（e7f20226 bytesToArrayBuffer 零拷贝与 transfer 的冲突点）
+    c.pmxParsePromise = c.pmxParser.parse(bytesToArrayBuffer(c.bytes.slice()));
     void mmdDiag(
       c.effectivePort,
       "pmx-parse-dispatch",

@@ -38,6 +38,10 @@ interface WorkerModuleConfig {
 let wasmModule: WasmModuleLike | null = null;
 let loading = false;
 let waiters: Array<(ok: boolean) => void> = [];
+// ADR-153 asset-load promise 缓存：并发首次 init / 崩溃重置后 re-init 去重，
+// 避免 N 个并发 caller 各自 import() + _getWasmBinary()（~1.5 MB ArrayBuffer 分配/次）。
+let baseAssetsPromise: Promise<ParserAssets> | null = null;
+let mtAssetsPromise: Promise<ParserAssets> | null = null;
 
 /**
  * Worker 内独立初始化 WASM（懒加载单例，生命周期等同 Worker 本身）。
@@ -45,15 +49,15 @@ let waiters: Array<(ok: boolean) => void> = [];
  * 间接 eval（仅执行 auto-generated 内嵌胶水代码，可信链，ADR-039 §2.1）→ 调工厂。
  * 失败抛错；成功后 wasmModule 常驻，后续任务复用（Worker 常驻，无需重复加载）。
  */
+export async function initYsmParserInWorker(): Promise<boolean> {
+  const { wasm, glue } = await loadBaseAssets();
+  return initParserInWorker(wasm, glue);
+}
+
 /** ADR-153：WASM 资产组（base / mt 同构，均由动态 import 按需产出） */
 interface ParserAssets {
   wasm: ArrayBuffer | null;
   glue: string | null;
-}
-
-export async function initYsmParserInWorker(): Promise<boolean> {
-  const { wasm, glue } = await loadBaseAssets();
-  return initParserInWorker(wasm, glue);
 }
 
 /**
@@ -63,14 +67,19 @@ export async function initYsmParserInWorker(): Promise<boolean> {
  * 恢复路径仍走单线程 init，故 base 必须保留为可按需加载项。
  */
 async function loadBaseAssets(): Promise<ParserAssets> {
-  const [wasmMod, glueMod] = await Promise.all([
-    import("./ysm-wasm-data.js"),
-    import("./ysm-glue-data.js"),
-  ]);
-  return {
-    wasm: (wasmMod._getWasmBinary() as ArrayBuffer | null) ?? null,
-    glue: (glueMod._getGlueCode() as string | null) ?? null,
-  };
+  if (!baseAssetsPromise) {
+    baseAssetsPromise = (async () => {
+      const [wasmMod, glueMod] = await Promise.all([
+        import("./ysm-wasm-data.js"),
+        import("./ysm-glue-data.js"),
+      ]);
+      return {
+        wasm: (wasmMod._getWasmBinary() as ArrayBuffer | null) ?? null,
+        glue: (glueMod._getGlueCode() as string | null) ?? null,
+      };
+    })();
+  }
+  return baseAssetsPromise;
 }
 
 /**
@@ -78,14 +87,19 @@ async function loadBaseAssets(): Promise<ParserAssets> {
  * 仅在 initYsmParserInWorkerMt 被调用时执行，后续调用复用缓存模块。
  */
 async function loadMtAssets(): Promise<ParserAssets> {
-  const [wasmMod, glueMod] = await Promise.all([
-    import("./ysm-wasm-data-mt.js"),
-    import("./ysm-glue-data-mt.js"),
-  ]);
-  return {
-    wasm: (wasmMod._getWasmBinaryMt() as ArrayBuffer | null) ?? null,
-    glue: (glueMod._getGlueCodeMt() as string | null) ?? null,
-  };
+  if (!mtAssetsPromise) {
+    mtAssetsPromise = (async () => {
+      const [wasmMod, glueMod] = await Promise.all([
+        import("./ysm-wasm-data-mt.js"),
+        import("./ysm-glue-data-mt.js"),
+      ]);
+      return {
+        wasm: (wasmMod._getWasmBinaryMt() as ArrayBuffer | null) ?? null,
+        glue: (glueMod._getGlueCodeMt() as string | null) ?? null,
+      };
+    })();
+  }
+  return mtAssetsPromise;
 }
 
 /**
@@ -169,6 +183,8 @@ async function initParserInWorker(
 function resetYsmParserInWorker(): void {
   wasmModule = null;
   loading = false;
+  baseAssetsPromise = null;
+  mtAssetsPromise = null;
   const g = globalThis as Record<string, unknown>;
   delete g.Module;
 }

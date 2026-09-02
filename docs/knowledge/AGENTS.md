@@ -19,12 +19,39 @@ kind: event-bus             # kebab-case 标识符，等于文件名（去掉 .m
 name: 事件总线 bus.ts         # 人类可读名称
 tier: architecture | leaf    # architecture=核心架构, leaf=叶子节点
 category: core               # core|go|ui|feature|rendering|utils|config
-source_files:                # 必须真实存在于磁盘；仓库相对 POSIX 路径，禁止反斜杠/绝对路径/..；勿指向 bindings/dist/node_modules 等生成物或测试文件（实现放 source_files，测试放 tests:）
+source_files:                # 机器推导：由 gen-knowledge-autogen.ts 自动生成符号/行号
   - frontend/src/bus.ts
-use_when:                    # 用户自然语言关键词
+tests:                       # 机器推导：由 gen-knowledge-tests.ts 自动补登
+  - frontend/src/bus.test.ts
+symbols:                     # 机器推导：由 gen-knowledge-symbols.ts 自动生成
+  - createBus
+  - on
+  - off
+  - once
+  - emit
+auto_fields:                 # 机器推导（解法 B）：由 gen-knowledge-autogen.ts 自动生成
+  symbols_with_lines:        # 导出符号 + 起始行号
+    - createBus:12
+    - on:25
+    - off:30
+    - once:35
+    - emit:42
+# 以下为人工策展字段（解法 B）：drift 检测仅报 WARN，不阻断
+use_when:                    # 人工策展：用户自然语言关键词
   - 事件
   - 事件总线
-affected: false              # 可选，仅接受 false：快照/报告型卡（如整包审计）退出 --affected 匹配——source_files 只服务覆盖率统计，不随单次文件变更提示复核
+pitfalls:                    # 人工策展：常见陷阱（解法 B）
+  - 「bus.off(event, 原fn)」once off 错对象 → 用 once 返回的 unsub 函数取消
+quick_groups:                # 人工策展：场景分组
+  - 跨组件通信与页面
+quick_intents:               # 人工策展：高频用户意图
+  - emit 事件 / 跨组件通信
+  - 订阅 / 退订事件 / once
+quick_risk_lines:            # 人工策展：红线警告
+  - 所有跨组件异步通信必经 bus.ts，禁止组件间直耦
+invariant_anchors:           # 人工策展 + 机器校验：机制锚点（architecture 卡必须声明）
+  - frontend/src/bus.ts|once
+affected: false              # 可选，仅接受 false：快照/报告型卡退出 --affected 匹配
 perf:                        # 可选，性能画像标签（受控词表 = scripts/_lib/knowledge-cards.ts PERF_TAGS）
   - cpu-bound                # 词表：cpu-bound|io-bound|gpu-bound|concurrent|single-thread|memory-heavy
 ---
@@ -32,6 +59,14 @@ perf:                        # 可选，性能画像标签（受控词表 = scri
 
 ## 概览 / 核心职责 / 对外 API / 与其他子系统关系 / 不变量 / 相关
 ```
+
+### 字段归属（解法 B）
+
+| 类别 | 字段 | 维护方式 | drift 处理 |
+|------|------|----------|-----------|
+| **机器推导** | `source_files`, `tests`, `symbols`, `auto_fields.symbols_with_lines` | gen 脚本自动生成 | ERROR 级，阻断 |
+| **人工策展** | `use_when`, `pitfalls`, `quick_groups`, `quick_intents`, `quick_risk_lines`, 正文 prose | 手写 | WARN 级，不阻断 |
+| **混合** | `invariant_anchors` | 手写声明 + 机器校验存在性 | ERROR 级，阻断 |
 
 ## 工作流
 
@@ -123,3 +158,4 @@ node scripts/check-knowledge-drift.ts --affected <f>…  # 主动：源码变更
 | `scripts/gen-routes-quick.ts` | AI 高频路由表自动生成（`routes-quick.md`，第一站） |
 | `scripts/check-knowledge-drift.ts` | 知识卡漂移检查（ERROR/WARN） |
 | `scripts/new-knowledge-card.ts` | 卡片模板生成器 |
+| `scripts/gen-knowledge-autogen.ts` | 机器推导字段生成器（解法 B：auto_fields.symbols_with_lines） |

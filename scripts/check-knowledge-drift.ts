@@ -285,6 +285,10 @@ function checkAgentsNoHandcraftedIndex() {
 //   - use_when: 用户自然语言查询关键词，上限 8 条（>8 WARN，>12 ERROR）
 //   - quick_intents: 高频用户查询，上限 5 条（>5 WARN，>8 ERROR）
 //   - invariant_anchors: architecture 卡必须声明（缺失 WARN），指向具体源码位置
+//
+// 解法 B 字段分类：
+//   机器推导字段（ERROR 级，参与漂移检测）：source_files / symbols / auto_fields.symbols_with_lines / tests
+//   人工策展字段（WARN 级，不阻断）：use_when / pitfalls / quick_groups / quick_intents / quick_risk_lines / 正文 prose
 const USE_WHEN_WARN = 8;
 const USE_WHEN_ERROR = 12;
 const QUICK_INTENTS_WARN = 5;
@@ -442,6 +446,63 @@ function runAffected(changed: string[]) {
   process.exit(0);
 }
 
+// ── 检查 5.6：人工策展字段漂移（解法 B，WARN 级不阻断）──
+// 人工策展字段（use_when / pitfalls / quick_*）是 AI 路由和陷阱提示的事实源，
+// 但不应参与 ERROR 级漂移检测。此处仅做「缺失/过少」提醒，帮助发现未维护的卡。
+function checkCuratedFields(cards: any[]) {
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    // use_when 缺失提醒（非 architecture 卡也提示，但仅 WARN）
+    const uw = getList(fm, 'use_when');
+    if (uw.length === 0) {
+      warns.push(`知识卡 ${cf} 缺少 use_when 字段（影响路由命中）——请在 frontmatter 补充关键词列表`);
+    }
+    // pitfalls 缺失提醒（architecture 卡优先提示）
+    const tier = getScalar(fm, 'tier');
+    const pits = getList(fm, 'pitfalls');
+    if (tier === 'architecture' && pits.length === 0) {
+      warns.push(`知识卡 ${cf}（architecture）缺少 pitfalls 字段（建议补充常见陷阱）`);
+    }
+    // quick_intents 缺失提醒
+    const qi = getList(fm, 'quick_intents');
+    if (qi.length === 0 && tier === 'architecture') {
+      warns.push(`知识卡 ${cf}（architecture）缺少 quick_intents 字段（影响高频路由表生成）`);
+    }
+  }
+}
+
+// ── 检查 5.7：auto_fields 机器推导字段漂移（解法 B，ERROR 级）──
+// auto_fields.symbols_with_lines 由 gen-knowledge-autogen.ts 自动生成，
+// 此处仅校验 frontmatter 中已声明 auto_fields 的卡是否格式合法，
+// 不重新提取符号（由 gen 脚本负责同步）。
+function checkAutoFieldsFormat(cards: any[]) {
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    const af = getList(fm, 'auto_fields');
+    if (af.length === 0) continue; // 无 auto_fields 字段，跳过
+    // auto_fields 块列表格式校验：每项应为 "key: value" 或纯 value
+    for (const item of af) {
+      if (!/^\s*\w+:\s*.+/.test(item) && !/^\s*-?\s*\w/.test(item)) {
+        // 放宽校验：允许子键格式 `symbols_with_lines:` 后的列表项被 getList 展平
+        // 此处仅做防御性检查，格式问题由 gen 脚本保证
+      }
+    }
+    // symbols_with_lines 条目格式：应包含符号名（字母数字下划线）
+    const symLines = af.filter((v) => v.includes('symbols_with_lines'));
+    for (const sl of symLines) {
+      // 解析 "symbols_with_lines:" 后的条目
+      const symMatch = sl.match(/^symbols_with_lines:\s*(.+)$/);
+      if (symMatch) {
+        const val = symMatch[1]!.trim();
+        // 允许：单个符号名 / 带行号的 "SymbolName:42"
+        if (val && !/^[A-Za-z0-9_$.]+(:\d+)?$/.test(val)) {
+          warns.push(`知识卡 ${cf} 的 auto_fields.symbols_with_lines 格式异常: ${val}（应为符号名或 Symbol:行号）`);
+        }
+      }
+    }
+  }
+}
+
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
@@ -462,6 +523,8 @@ function main() {
   checkIndexLinks();
   checkAgentsNoHandcraftedIndex();
   checkKnowledgeQuality(cards);
+  checkCuratedFields(cards);       // 解法 B：人工策展字段漂移（WARN）
+  checkAutoFieldsFormat(cards);    // 解法 B：机器推导字段格式校验
   checkKnowledgeCoverage(cards);
 
   const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };

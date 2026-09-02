@@ -25,6 +25,7 @@ export const GEN_CMDS: string[] = [
   'gen-knowledge-symbols.ts',
   'gen-knowledge-adr.ts',
   'gen-knowledge-tests.ts',
+  'gen-knowledge-autogen.ts',
   'gen-routes.ts',
   'gen-routes-quick.ts',
   'gen-cli-doc.ts',

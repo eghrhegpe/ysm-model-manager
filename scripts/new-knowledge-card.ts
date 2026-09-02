@@ -35,6 +35,18 @@ source_files:
   - {source}
 use_when:
   - TODO
+# 解法 B：人工策展字段（手写，drift 仅 WARN）
+pitfalls:
+  - TODO
+quick_groups:
+  - TODO
+quick_intents:
+  - TODO
+quick_risk_lines:
+  - TODO
+# 解法 B：invariant_anchors 混合字段（手写声明 + 机器校验）
+invariant_anchors:
+  - {source}|TODO
 ---
 
 # {name}

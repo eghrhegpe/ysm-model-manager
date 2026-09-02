@@ -21,16 +21,15 @@ quick_intents:
   - 防吞并发会话未提交漂移
 quick_risk_lines:
   - 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2）
+pitfalls:
+  - 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警
+  - 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs → 误判为 gen 产物
+  - gen 产物文件路径含空格时 git add 不加引号会断裂 → 必须用 git add -- "文件路径"
+  - snap_docs 使用 $$ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在
+  - 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误
+  - drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报
+  - 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件
 status: active
-
-  pitfalls:
-    - 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警
-    - 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs → 误判为 gen 产物
-    - gen 产物文件路径含空格时 git add $p 不加引号会断裂 → 必须用 git add -- \"$p\"
-    - snap_docs 使用 $$ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在
-    - 智能 stage 测试文件逻辑：base=\"${f%.ts}\" 会错误截断含多个 .ts 的文件名
-    - drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报
-    - 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件
 ---
 
 # 提交前钩子 pre-commit

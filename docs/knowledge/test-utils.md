@@ -87,12 +87,10 @@ quick_groups:
   - 组件挂载/卸载编排
 quick_intents:
   - 按 testid 查询/匹配 DOM 元素
-  - 等待 DOM 内容或 mock 调用出现
-  - 等待组件 init 链落定（无业务可观察条件时）
+  - 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定
   - 派发 click / input / keydown / drag & drop 等模拟事件
   - 挂载/卸载自定义元素
-  - 将 sleep 替换为 waitFor（正向等待）
-  - 断言某行为不再发生（负向定时器窗口）
+  - sleep 替换为 waitFor / 负向定时器窗口断言
 quick_risk_lines:
   - 禁止用固定 sleep 等待正向结果——真 flaky
   - 禁止用 waitFor 条件耦合组件内部实现细节

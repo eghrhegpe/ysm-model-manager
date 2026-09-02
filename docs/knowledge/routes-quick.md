@@ -356,10 +356,7 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 3D 截图（单角度 / 多角度） | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
-| 调试模式切换（normal / pivot / bone overlay） | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
-| 纹理预加载与缓存（preloadModel / specCache） | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
-| 渲染性能调优（perf preset / adaptive render budget） | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
+| 3D 截图 / 纹理预加载缓存 / 渲染性能调优 | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
 | 自由相机漫游（WASD + 空格/Shift 升降） | [3D 预览渲染 model3d](./model3d.md) | 100MB 阈值是网页版唯一防线，低端设备（4GB RAM）峰值内存可能触顶 OOM | ADR-129 |
 
 ## 🎯 提交与钩子
@@ -415,22 +412,20 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 等待 DOM 内容或 mock 调用出现 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
+| 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
 
 ## 🎯 事件模拟（fire 系列）
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 等待组件 init 链落定（无业务可观察条件时） | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止把负向定时器窗口断言换成短 sleep | - |
+| 派发 click / input / keydown / drag & drop 等模拟事件 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止把负向定时器窗口断言换成短 sleep | - |
 
 ## 🎯 组件挂载/卸载编排
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 断言某行为不再发生（负向定时器窗口） | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 | 挂载/卸载自定义元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
-| 将 sleep 替换为 waitFor（正向等待） | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
-| 派发 click / input / keydown / drag & drop 等模拟事件 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
+| sleep 替换为 waitFor / 负向定时器窗口断言 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 
 ## 🎯 后端桥接与平台路由
 
@@ -495,6 +490,14 @@
 | DOM 委托事件进 _unsubs | - | disconnect 时重复 off 报错；DOM 委托事件应靠 ShadowRoot detach 自动清理 |
 | 网页版直调 window.go | - | 无 wails runtime 时报错；必须经 browserAdapter |
 | 跨域资源共享不处理 COI | - | SharedArrayBuffer 等 API 不可用；必须设置 cross-origin-isolation 头 |
+| 事务不接线 error/abort | - | Promise 永不 settle，读操作卡死 |
+| 隐私模式下 IndexedDB 受限，必须自动降级到内存 Map（200 条/64MB FIFO） | - | - |
+| db.onversionchange 触发后 dbPromise 为空，后续所有操作立即失败；必须在降级路径中处理 | - | - |
+| Proxy.then 陷阱：若 thenable 检测误判，浏览器会按 Promise 处理返回结果，导致链式调用崩溃 | - | - |
+| idbKeys 前缀扫描边界：prefix+U+FFFF 语义是，写错范围会漏键 | `以 prefix 开头的最大可能字符串` | - |
+| FSA 授权恢复：restoreFsaRootHandle 只 queryPermission，禁止 requestPermission（启动期无手势会被拦截） | - | - |
+| zip 导入双阶段分组：先粗分组再主文件目录收敛，若跳过会导致路径混乱/组名歧义 | - | - |
+| 内存 Map 驱逐 FIFO 近似 LRU：命中当前 key 时移到队尾，但未访问的旧 key 仍在内存中 | - | - |
 | 前端手写分类 | - | 与 Go classify 判定不一致、last-wins 裁决丢失；必须交 Go 分类 |
 | 新增资源类型未更新 priority | - | 冲突时优先级错乱；必须经 classify.go 的 priority 表 |
 | 各组件各自发下载请求 | - | 并发冲突、进度丢失；必须经 download-queue 排队 |
@@ -545,6 +548,13 @@
 | 部分响应未识别 | - | 后续续传逻辑失效；必须经 ErrPartialResponse 分类 |
 | 直调 os/exec 不带隐藏标志 | - | Windows 子进程闪控制台窗口；必须经 HideWindow |
 | Unix 平台 HideWindow 未 no-op | - | 编译失败；必须在 build tags 中区分平台 |
+| ysm.json 单文件改名/删除/禁用 | - | 散架；必须整组操作父目录（MoveModel 按文件夹） |
+| 禁用走 .ban 后缀（整目录重命名 + .ban），启用反向操作 | - | - |
+| 删除操作必须走回收站（go/recycle）而非直接 os.Remove | - | - |
+| 文件移动/复制必须走 fsutil.AtomicWriteFile / CopyFile 原子操作 | - | - |
+| 路径穿越攻击防护：filepath.Clean + filepath.IsAbs + containsRoot 三重守卫 | - | - |
+| ysm.json 整组操作时 ysm.json 文件本身不能改名（清单文件名固定） | - | - |
+| 移动/复制大文件夹时需进度回调——同步操作可能长时间阻塞 | - | - |
 | 直接 unzip | - | 7z 未支持、纹理提取缺路径安全；必须经 go/geometry |
 | 未走 ysm_parser.go | - | .ysm 解析不一致；必须经 go/ysm 兜底 |
 | 直写目标文件 | - | 中断留下半文件；必须经 WriteFileAtomic 的 tmp+rename |
@@ -561,8 +571,29 @@
 | 未限制 LimitReader/maxLangSize | - | 大语言文件 OOM；必须用 LimitReader 截断 |
 | 手写路径安全检查 | - | 越权路径穿越、符号链接绕过；必须经 IsInside |
 | 符号链接未解析 | - | 路径穿越绕过 IsInside；必须用 IsInsideResolved 处理符号链接 |
+| 符号链接/硬链接直接删除（deleted_link）而非移入回收站——手搓删除逻辑会破坏链接语义 | - | - |
+| 回收站清理必须保留原路径结构（相对路径扁平化会导致恢复时路径冲突） | - | - |
+| 软删除 vs 硬删除：.recycle 目录下的文件仍可被扫描到——需排除 .recycle 目录 | - | - |
+| 恢复操作必须校验目标路径是否已存在——冲突时追加序号后缀 | - | - |
+| 回收站空间上限（配置项）超限时自动清理最旧条目 | - | - |
+| 跨设备移动（硬链接失效）时回收站中的条目变为独立副本 | - | - |
+| 批量清空回收站时需注意文件锁定——被占用文件跳过不报错 | - | - |
+| 容器指纹缓存失效需调 ClearScanCache——文件变更后不失效会导致缓存命中旧数据 | - | - |
+| resource_types.json 是唯一事实来源——修改类型定义后必须重新扫描 | - | - |
+| ScanEntries 排除 .recycle 目录——换用不排 .recycle 的 scanFn 会重新引入误判 | - | - |
+| ScanEntriesWithHit 缓存 30s TTL——频繁扫描会反复重算 | - | - |
+| 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空 | - | - |
+| 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配 | - | - |
+| Go/Rust 双扫描器口径必须一致——parity_test.go 锁三条谓词 | - | - |
 | app 层手写同步 | - | 与 go/sync 判定不一致、冲突未处理；必须经 go/sync |
 | 同步不做 hash 校验 | - | 文件变更未检测；必须经 sync_hash 校验 |
+| 标签以文件绝对路径为 key——移动文件后旧 key 的标签丢失 | - | - |
+| tags.json 写入走 tmp + os.Rename 原子替换——直写会导致读取时读到半截数据 | - | - |
+| Store 懒加载——首次 GetTags/SetTags 时才读盘，之前操作不触发 IO | - | - |
+| SetTags 自动 trim/去重/排序——传入重复标签不会报错而是去重 | - | - |
+| ListByTag 返回路径是排序的——不保证与原始写入顺序一致 | - | - |
+| tags.json 损坏时 Store 会创建 .corrupt 备份并返回空 Store | - | - |
+| AddTag 已存在则跳过——不会报错也不会计数 | - | - |
 | 前端手写骨骼转换 | - | 与 go/threejs 输出不一致、四元数旋转错乱；必须经 spec.go |
 | spec 字段漏转换 | - | 骨骼变形丢失；必须完整覆盖所有 spec 字段 |
 | 复制类型定义 | - | 类型不一致、重构时漏改；必须经 go/types 单点 |
@@ -573,6 +604,13 @@
 | watcher 未读 errs/done 通道 | - | goroutine 泄漏；必须 drain 通道 |
 | 前端手写 YSM 解析 | - | 与 Go 解析结果不一致、漏掉 HasYSMMod 判定；必须交 Go 解析 |
 | 跳过 ExtractYsmSummary 走全文解析 | - | 详情展示性能差；摘要必须复用 |
+| 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
+| navigator.languages 在老旧 WebView 可能 undefined | - | 兜底 navigator.language 防启动链打挂 |
+| 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |
+| getBundle 空对象 truthy | - | 用 Object.keys().length > 0 判空，否则 zh-CN 兜底永不触发 |
+| 缺失 key 只 console.warn 一次（warnedKeys 跨模块共享），发版前须主动扫裸 key | - | - |
+| 键名迁移无 legacy-key-map 兼容表；改名须同步改调用点 + 测试 + 三语言包 | - | - |
+| tr() 强耦合 t() 缺失行为（v === key 判定），t() 行为变化需同步修改 tr() | - | - |
 | 各组件各自调 ImportModel | - | 并发冲突、队列状态混乱；必须经 import-executor |
 | dnd-collector 未做去重 | - | 同文件重复导入；必须在 collector 阶段去重 |
 | 主线程同步跑统计 | - | 大库卡死 UI；必须经 Web Worker 后台统计 |
@@ -597,6 +635,13 @@
 | 拖拽不设 touch-action:none | - | 浏览器滚动吃掉手势；必须在拖拽元素上禁用 touch-action |
 | 改 Promise.all 并行结构漏写 () | - | 域级检查静默不跑（8/17 起 13 项失效实证） |
 | push 被拒直接 --no-verify | - | 绕过不留审计；应修 FAIL 项或 git pull 整合 |
+| 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |
+| 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs | - | 误判为 gen 产物 |
+| gen 产物文件路径含空格时 git add 不加引号会断裂 | - | 必须用 git add -- "文件路径" |
+| snap_docs 使用 $$ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在 | - | - |
+| 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误 | - | - |
+| drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报 | - | - |
+| 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件 | - | - |
 | 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
 | 异步回调写入已卸载 DOM | `skeleton.ts` | 每个 await 后检查 container.isConnected |
 | 手动调用导致 T-pose 回归 | `vrm.humanoid.update()` | 只用 vrm.update(dt) |

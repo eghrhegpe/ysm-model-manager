@@ -87,11 +87,8 @@ use_when:
   - wasm 加载
   - MEMFS
   - callMain
-  - stats.worker
   - 按需加载
   - crossOriginIsolated
-  - worker.format
-  - pthread
 invariant_anchors:
   - go/avatar/avatar_decode.go|DecodeYSMFiles
   - go/avatar/avatar_decode.go|SetNodeJS

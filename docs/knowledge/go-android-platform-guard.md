@@ -113,14 +113,11 @@ auto_fields:
     - build-tag
     - pathmgr
 quick_intents:
-  - Android 平台守卫、RevealInExplorer 降级
+  - Android 平台守卫、RevealInExplorer/OpenFolder 降级
   - 跨平台路径处理、pathmgr
   - 平台分支、WASM decoder 平台差异
-  - 文件浏览/打开文件夹失败处理
-  - 进程重启不可用、Node.js 侧边车禁用
   - watcher 监听跳过、fsnotify 平台限制
-  - SAF 废弃、MANAGE_EXTERNAL_STORAGE 权限模型
-  - 前端能力黑名单同步（ANDROID_UNAVAILABLE）
+  - SAF 废弃、前端能力黑名单同步（ANDROID_UNAVAILABLE）
 pitfalls:
   - 「静默成功」陷阱：Android 上 xdg-open/exec 链静默失败会掩盖问题 → 必须返回含「请手动」提示的明确错误
   - 「假活」陷阱：watcher 守卫缺失时，fw.Add 逐目录失败后 loop 空转 = running=true 假活；Android 必须直接跳过

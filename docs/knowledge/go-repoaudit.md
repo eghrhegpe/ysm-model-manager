@@ -58,8 +58,7 @@ quick_intents:
   - "完整体检 + 去重（HealthReportFor）"
   - "扩展名→资源类型分类（Classify）"
   - "模型文件完整性验证"
-  - "缓存命中率分析"
-  - "仓库评分与警告生成"
+  - "缓存命中率分析 / 仓库评分"
 status: active
 ---
 

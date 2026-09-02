@@ -125,7 +125,7 @@
 | Wails、桥接、getApp、Go 调用、Binding、window.go.main.App、网页版、browser adapter | [Wails 桥接 app.ts](./wails-bridge.md) ⚠️歧义（另见 wails-bindings.md、backend_web.md、backend-idb.md等） | `backend/app.ts` 是前端调用后端 Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。**ADR-049 平台双路由**：网页版（无 … |
 | YSM 动画、基岩动画、molang、动画管线 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | — |
 | 烘焙、几何反推、pivot、骨骼错位、模型错位、UV 对不上、贴图错位、RawYsmModel | [YSM 烘焙与几何反推](./ysm-baked.md) | YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。… |
-| WASM、YSMParser、ysm 解码、wasm 加载、MEMFS、callMain、stats.worker、按需加载、crossOriginIsolated、worker.format、pthread | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64… |
+| WASM、YSMParser、ysm 解码、wasm 加载、MEMFS、callMain、按需加载、crossOriginIsolated | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64… |
 
 ## 标准执行模板
 

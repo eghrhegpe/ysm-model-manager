@@ -597,10 +597,7 @@ quick_intents:
   - 多模型同框叠加（keepInScene=true）
   - 骨骼拾取与选中（pickBone / setBoneVisible）
   - 自由相机漫游（WASD + 空格/Shift 升降）
-  - 3D 截图（单角度 / 多角度）
-  - 纹理预加载与缓存（preloadModel / specCache）
-  - 渲染性能调优（perf preset / adaptive render budget）
-  - 调试模式切换（normal / pivot / bone overlay）
+  - 3D 截图 / 纹理预加载缓存 / 渲染性能调优
 quick_risk_lines:
   - 几何计算（顶点/UV/四元数）在 Go 端完成，前端不得私改几何口径
   - 所有 3D 渲染内容必须经 mount3D 统一会话外壳，禁止独立维护 renderer/scene/camera

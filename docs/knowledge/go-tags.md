@@ -48,16 +48,15 @@ quick_intents:
   - 打标签 / 标签存储 / 按标签筛选
 quick_risk_lines:
   - 标签以文件绝对路径为 key 存 tags.json；写入走 tmp + os.Rename 原子替换，禁止直写
+pitfalls:
+  - 标签以文件绝对路径为 key——移动文件后旧 key 的标签丢失
+  - tags.json 写入走 tmp + os.Rename 原子替换——直写会导致读取时读到半截数据
+  - Store 懒加载——首次 GetTags/SetTags 时才读盘，之前操作不触发 IO
+  - SetTags 自动 trim/去重/排序——传入重复标签不会报错而是去重
+  - ListByTag 返回路径是排序的——不保证与原始写入顺序一致
+  - tags.json 损坏时 Store 会创建 .corrupt 备份并返回空 Store
+  - AddTag 已存在则跳过——不会报错也不会计数
 status: active
-
-  pitfalls:
-    - 标签以文件绝对路径为 key——移动文件后旧 key 的标签丢失
-    - tags.json 写入走 tmp + os.Rename 原子替换——直写会导致读取时读到半截数据
-    - Store 懒加载——首次 GetTags/SetTags 时才读盘，之前操作不触发 IO
-    - SetTags 自动 trim/去重/排序——传入重复标签不会报错而是去重
-    - ListByTag 返回路径是排序的——不保证与原始写入顺序一致
-    - tags.json 损坏时 Store 会创建 .corrupt 备份并返回空 Store
-    - AddTag 已存在则跳过——不会报错也不会计数
 ---
 
 # 标签系统 go/tags

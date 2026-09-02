@@ -178,6 +178,15 @@ quick_intents:
   - IndexedDB、网页版存储
 quick_risk_lines:
   - 事务必须接线 complete/error/abort 三事件
+pitfalls:
+  - 事务不接线 error/abort → Promise 永不 settle，读操作卡死
+  - 隐私模式下 IndexedDB 受限，必须自动降级到内存 Map（200 条/64MB FIFO）
+  - db.onversionchange 触发后 dbPromise 为空，后续所有操作立即失败；必须在降级路径中处理
+  - Proxy.then 陷阱：若 thenable 检测误判，浏览器会按 Promise 处理返回结果，导致链式调用崩溃
+  - idbKeys 前缀扫描边界：prefix+U+FFFF 语义是「以 prefix 开头的最大可能字符串」，写错范围会漏键
+  - FSA 授权恢复：restoreFsaRootHandle 只 queryPermission，禁止 requestPermission（启动期无手势会被拦截）
+  - zip 导入双阶段分组：先粗分组再主文件目录收敛，若跳过会导致路径混乱/组名歧义
+  - 内存 Map 驱逐 FIFO 近似 LRU：命中当前 key 时移到队尾，但未访问的旧 key 仍在内存中
 status: active
 ---
 

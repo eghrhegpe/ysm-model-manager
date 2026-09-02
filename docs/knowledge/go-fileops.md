@@ -60,16 +60,15 @@ quick_intents:
   - 移动 / 复制 / 删除 / 重命名文件 / 文件夹导入
 quick_risk_lines:
   - 文件 CRUD 必须走 go/fileops，internal/app 薄壳仅转发
+pitfalls:
+  - ysm.json 单文件改名/删除/禁用 → 散架；必须整组操作父目录（MoveModel 按文件夹）
+  - 禁用走 .ban 后缀（整目录重命名 + .ban），启用反向操作
+  - 删除操作必须走回收站（go/recycle）而非直接 os.Remove
+  - 文件移动/复制必须走 fsutil.AtomicWriteFile / CopyFile 原子操作
+  - 路径穿越攻击防护：filepath.Clean + filepath.IsAbs + containsRoot 三重守卫
+  - ysm.json 整组操作时 ysm.json 文件本身不能改名（清单文件名固定）
+  - 移动/复制大文件夹时需进度回调——同步操作可能长时间阻塞
 status: active
-
-  pitfalls:
-    - ysm.json 单文件改名/删除/禁用 → 散架；必须整组操作父目录（MoveModel 按文件夹）
-    - 禁用走 .ban 后缀（整目录重命名 + .ban），启用反向操作
-    - 删除操作必须走回收站（go/recycle）而非直接 os.Remove
-    - 文件移动/复制必须走 fsutil.AtomicWriteFile / CopyFile 原子操作
-    - 路径穿越攻击防护：filepath.Clean + filepath.IsAbs + containsRoot 三重守卫
-    - ysm.json 整组操作时 ysm.json 文件本身不能改名（清单文件名固定）
-    - 移动/复制大文件夹时需进度回调——同步操作可能长时间阻塞
 ---
 
 # 文件操作 go/fileops

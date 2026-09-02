@@ -67,16 +67,15 @@ quick_intents:
 quick_risk_lines:
   - 容器指纹缓存失效需调 ClearScanCache
   - resource_types.json 是唯一事实来源
+pitfalls:
+  - 容器指纹缓存失效需调 ClearScanCache——文件变更后不失效会导致缓存命中旧数据
+  - resource_types.json 是唯一事实来源——修改类型定义后必须重新扫描
+  - ScanEntries 排除 .recycle 目录——换用不排 .recycle 的 scanFn 会重新引入误判
+  - ScanEntriesWithHit 缓存 30s TTL——频繁扫描会反复重算
+  - 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空
+  - 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配
+  - Go/Rust 双扫描器口径必须一致——parity_test.go 锁三条谓词
 status: active
-
-  pitfalls:
-    - 容器指纹缓存失效需调 ClearScanCache——文件变更后不失效会导致缓存命中旧数据
-    - resource_types.json 是唯一事实来源——修改类型定义后必须重新扫描
-    - ScanEntries 排除 .recycle 目录——换用不排 .recycle 的 scanFn 会重新引入误判
-    - ScanEntriesWithHit 缓存 30s TTL——频繁扫描会反复重算
-    - 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空
-    - 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配
-    - Go/Rust 双扫描器口径必须一致——parity_test.go 锁三条谓词
 ---
 
 # 扫描核心 go/scanner

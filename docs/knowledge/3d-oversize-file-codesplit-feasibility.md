@@ -5,6 +5,11 @@ tier: leaf
 category: ui
 perf:
   - cpu-bound
+use_when:
+  - code-split
+  - 超大文件
+  - mmd-adapter
+  - 拆分可行性
 source_files:
   - frontend/src/preview-3d/adapters/mmd-adapter.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts

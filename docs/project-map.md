@@ -73,7 +73,7 @@
 | `ui/` | 🥉 ui-helpers 原生 DOM 组件库（自 MikuMikuAR 迁移：slide-row / rows / header-toggle / advanced-rows / collapsible / preset / card / loading + 自包含 CSS 模块 `ui-components-styles.ts`，经 `installUiComponentsStyles()` / `uiComponentsStyleSheet` 接入） 〔源码 18 · 测试 12〕 |
 | `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） 〔源码 9: array.ts gh-links.ts health-report.ts main-thread-watch.ts module-loader.ts safe-error-msg.ts tex… · 测试 6 · 子目录 9: animation/ async/ cache/ core/ debug/ dom/ format/ icon/ resource/〕 |
 | `views/` | 页面级视图组件（app-content / app-tree / app-preview 等） 〔子目录 8: app-content/ app-nav/ app-preview/ app-sidebar/ app-sync-manager/ app-toast/ app-tree/ context-menu/〕 |
-| `wasm/` | WASM 生成数据（base64 豁免文件） 〔源码 9: parser-shared.ts ysm-glue-data-mt.js ysm-glue-data.js ysm-parser.ts ysm-wasm-data-mt.d.ts ysm-was… · 测试 1〕 |
+| `wasm/` | WASM 生成数据（base64 豁免文件） 〔源码 9: parser-shared.ts ysm-glue-data-mt.js ysm-glue-data.js ysm-parser.ts ysm-wasm-data-mt.d.ts ysm-was… · 测试 2〕 |
 | `web-spike/` | 网页版 spike 入口（main.ts，构建/冒烟验证） 〔源码 1: main.ts〕 |
 | `workers/` | Web Worker 批量统计（searchWebModels 数值条件走 Worker 线程，主线程零解析负载） 〔源码 3: stats-core.ts stats-protocol.ts stats.worker.ts · 测试 2〕 |
 | `app-modules.boot.test.ts` | app-modules 本体 boot 级启动装配测试（vi.resetModules 反复求值顶层副作用：服务注册/四视图装配/启动 IIFE 降级/系统主题跟随/devtools 接线） |

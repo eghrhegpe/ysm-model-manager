@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-01T23:35:05.131Z",
+  "generated": "2026-09-02T02:19:37.855Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -80,6 +80,7 @@
     "src/views/app-tree/row-tpl.ts|exports|VIEW_TESTIDS",
     "src/views/app-tree/tpl.ts|exports|VIEW_TESTIDS",
     "src/views/context-menu/index.ts|exports|VIEW_TESTIDS",
+    "src/wasm/ysm-glue-data-mt.js|exports|_getGlueCodeMt",
     "src/workers/stats-protocol.ts|types|StatsWorkerError",
     "src/workers/stats-protocol.ts|types|StatsWorkerProgress",
     "src/workers/stats-protocol.ts|types|StatsWorkerResult"

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-02T02:19:37.855Z",
+  "generated": "2026-09-02T14:58:56.693Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -28,6 +28,7 @@
     "src/preview-3d/caps/water-capability.ts|exports|DEFAULT_WATER_PARAMS",
     "src/preview-3d/decoder/geometry.ts|types|BedrockBone",
     "src/preview-3d/decoder/geometry.ts|types|BedrockCube",
+    "src/preview-3d/decoder/geometry.ts|types|BedrockSubModel",
     "src/preview-3d/load-trace.ts|types|LoadTraceAssets",
     "src/preview-3d/load-trace.ts|types|LoadTraceStage",
     "src/preview-3d/load-trace.ts|types|LoadTraceTexture",
@@ -48,6 +49,7 @@
     "src/test-utils/index.ts|exports|flushPromises",
     "src/ui/ui-components-styles.ts|exports|uiComponentsCss",
     "src/ui/ui-components-styles.ts|exports|uiComponentsStyleSheet",
+    "src/ui/ui-helpers.ts|exports|createSlideMenu",
     "src/ui/ui-slide-menu-styles.ts|exports|slideMenuCss",
     "src/ui/ui-slide-menu-styles.ts|exports|slideMenuStyleSheet",
     "src/utils/animation/animation-controller.ts|types|ControllerTransition",
@@ -94,7 +96,6 @@
     "src/backend/browser-adapter.contract-b2.test.ts#src/backend/browser-adapter.test.ts",
     "src/backend/browser-adapter.test.ts#src/backend/browser-adapter.test.ts",
     "src/backend/nbt-parse.test.ts#src/backend/voxel-parse.test.ts",
-    "src/backend/pack-meta.test.ts#src/backend/web-fs.bindings.test.ts",
     "src/backend/voxel-parse.test.ts#src/backend/voxel-parse.test.ts",
     "src/core/handlers/instance-ops.test.ts#src/core/handlers/instance-ops.test.ts",
     "src/core/handlers/instance-ops.test.ts#src/core/handlers/sync.test.ts",
@@ -109,6 +110,7 @@
     "src/preview-3d/adapters/mmd-adapter.ts#src/preview-3d/adapters/vrm-adapter.ts",
     "src/preview-3d/adapters/mmd-ktx2-encoder.test.ts#src/preview-3d/adapters/mmd-ktx2-encoder.test.ts",
     "src/preview-3d/adapters/mmd-pmx-parser.ts#src/preview-3d/adapters/mmd-pmx-parser.ts",
+    "src/preview-3d/adapters/unified-pick.ts#src/preview-3d/bone-raycast.ts",
     "src/preview-3d/adapters/vrm-adapter.test.ts#src/preview-3d/adapters/vrm-adapter.test.ts",
     "src/preview-3d/adapters/vrm-adapter.ts#src/preview-3d/adapters/ysm-adapter.ts",
     "src/preview-3d/adapters/ysm-3d.test.ts#src/preview-3d/adapters/ysm-3d.test.ts",

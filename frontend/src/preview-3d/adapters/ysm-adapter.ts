@@ -455,7 +455,8 @@ function mdYsMakeSceneHandle(
       obj.removeFromScene(ctx.scene as THREE.Scene);
       // 释放预加载纹理 GPU 资源（removeFromScene 的 disposeSceneMeshes 显式跳过纹理）
       for (const t of core.texArr) t?.dispose();
-      for (const arr of core.componentTexMap.values()) for (const t of arr) t?.dispose();
+      // componentTexMap 可能缺失（无组件纹理路径，buildYsmObject 同款 instanceof Map fallback）——dispose 不抛
+      if (core.componentTexMap) for (const arr of core.componentTexMap.values()) for (const t of arr) t?.dispose();
       ctx.renderer!.domElement.removeEventListener("keydown", onFKeyDown);
       if (debugState.debugGroup) {
         disposeDebugGroup(debugState.debugGroup);

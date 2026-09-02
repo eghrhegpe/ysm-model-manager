@@ -258,6 +258,10 @@ export interface Mount3DOptions {
   getModelsByType?: (rtype: string, subtype?: string) => Promise<string[]>;
   /** 类型 tab 列表（有 3D opener 的类型；经 withPreviewExtras 注入，缺省仅「当前目录」tab） */
   getTypeTabs?: () => string[];
+  /** [ADR-159] 实体展示名（容器类格式：资源包 = zip 名）；透传 sceneRegistry entry.displayName */
+  displayName?: string;
+  /** [ADR-159] 容器组件列表（资源包 = zip 内全部模型 entry）；透传 sceneRegistry entry.components */
+  components?: string[];
 }
 
 export async function mount3D(
@@ -790,6 +794,8 @@ export async function mount3D(
         boneMaps: session.built.boneMaps ?? null,
         menuItems,
         onBonePick: session.built.onBonePick ?? null,
+        displayName: opts.displayName,
+        components: opts.components,
       });
       // ADR-076 v2 Phase 3：注册后立刻注入菜单项，否则 dock-menu 无适配器专属控件
       // （ADR-131 §2.3：统计面板已并入 menuItems，一次注入不覆盖）

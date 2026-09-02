@@ -208,6 +208,54 @@ describe("角色面板（roles）", () => {
     }
   });
 
+  it("[ADR-159] roleBaseName 优先 displayName（容器实体名，如资源包 zip 名）", () => {
+    const id = sceneRegistry.register({
+      path: "assets/minecraft/models/block/blunderbuss.json",
+      rtype: "resourcepack",
+      roots: [],
+      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      displayName: "3D-muskets",
+    });
+    expect(roleBaseName(sceneRegistry.get(id)!)).toBe("3D-muskets");
+  });
+
+  it("[ADR-159] 活跃 entry 带 components → 角色面板平铺组件区：点名 switchTo 替换、➕ keepInScene 追加", async () => {
+    const switchTo = vi.fn(() => Promise.resolve());
+    sceneRegistry.register({
+      path: "assets/minecraft/models/block/blunderbuss.json",
+      rtype: "resourcepack",
+      roots: [],
+      built: { dispose: vi.fn() } as unknown as PreviewScene,
+      displayName: "3D-muskets",
+      components: [
+        "assets/minecraft/models/block/blunderbuss.json",
+        "assets/minecraft/models/item/musket.json",
+      ],
+    });
+    const handle = mountPreviewRootMenu(overlay, makeCtx({ switchTo }));
+    (overlay.querySelector('[data-testid="dock-model"]') as HTMLElement).click();
+    // 组件区平铺：标题 + 2 行（当前行 ✓ 无 ➕，他行有 ➕）
+    expect(overlay.querySelector('[data-testid="preview-components-list"]')).not.toBeNull();
+    const rows = overlay.querySelectorAll('[data-testid="preview-component-row"]');
+    expect(rows.length).toBe(2);
+    const other = [...rows].find((el) => el.getAttribute("data-component-path")?.includes("musket.json")) as HTMLElement;
+    // 点组件名 → switchTo 替换（不带 keepInScene）
+    (other.querySelector("span:nth-child(2)") as HTMLElement).click();
+    expect(switchTo).toHaveBeenCalledWith("assets/minecraft/models/item/musket.json");
+    // 点 ➕ → keepInScene 追加
+    (other.querySelector('[data-testid="preview-component-append"]') as HTMLElement).click();
+    expect(switchTo).toHaveBeenLastCalledWith("assets/minecraft/models/item/musket.json", { keepInScene: true });
+    handle.dispose();
+  });
+
+  it("[ADR-159] 无 components（普通模型）→ 不渲染组件区（回归守卫）", () => {
+    regRole("/m/a.ysm");
+    const handle = mountPreviewRootMenu(overlay, makeCtx());
+    (overlay.querySelector('[data-testid="dock-model"]') as HTMLElement).click();
+    expect(overlay.querySelector('[data-testid="preview-components-list"]')).toBeNull();
+    handle.dispose();
+  });
+
   it("替换角色：点击行不关菜单，不调 menu.refresh()（保留滚动位置 + 详情面板状态）", async () => {
     let currentPath = "/m/a.ysm";
     const switchTo = vi.fn((p: string) => {

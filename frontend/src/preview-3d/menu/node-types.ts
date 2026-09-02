@@ -95,8 +95,11 @@ export interface PreviewMenuNode {
   /** action 节点回调 */
   action?: (ctx: PreviewActionMenuCtx) => void | Promise<void>;
   /** ———— ysm 特有（预览器 dock 归属与模式守卫）———— */
-  /** 归属底栏分组（🧍 模型 / 💃 动作 / 🌍 环境 / 🎛️ 场景 / ⚙️ 设置）；无 dockGroup 只出现在设置聚合视图 */
-  dockGroup?: "model" | "motion" | "env" | "scene" | "settings";
+  /** 归属底栏分组（🧍 模型 / 💃 动作 / 🌍 环境 / 🎛️ 场景 / ⚙️ 设置 / 📊 统计附加行）；
+   *  无 dockGroup 只出现在设置聚合视图。
+   *  [ADR-159] "stats" = 统计附加行通道：适配器贡献 kind:"field" 节点（如资源包立方体数），
+   *  mergeStatsMenuItems 将其并入统计面板 children，随「能渲染就能出统计」通道展示 */
+  dockGroup?: "model" | "motion" | "env" | "scene" | "settings" | "stats";
   /** 仅 shared 模式显示（self 模式相机由适配器底部导航提供） */
   sharedOnly?: boolean;
   /** self 模式隐藏（相机由适配器自驱时 camBridge 控件语义错位） */

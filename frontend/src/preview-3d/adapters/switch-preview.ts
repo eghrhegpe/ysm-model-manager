@@ -110,13 +110,19 @@ export async function switchToSession(
 
   // 兑现本次切换：登记 built / 历史 / 注册表 / 相机灯光阴影 env 同步 / 基线更新
   ctx.setBuilt(next);
+  // [ADR-159] 容器元数据继承：unregister 前捕获前一活跃 entry 的 displayName/components，
+  // 同容器（资源包）会话内切换透传给新 entry（keep=false 时旧 entry 即将被注销，必须先取）。
+  const prevEntry = sceneRegistry.get(sceneRegistry.getActiveId() ?? "");
+  const containerMeta = prevEntry
+    ? { displayName: prevEntry.displayName, components: prevEntry.components }
+    : undefined;
   pushSwitchHistory(ctx, keep, next);
   unregisterSwitchPrevious(ctx, keep);
   // ADR-131 C1 修复：注册后立刻按新模型 menuItems 刷新 dock 菜单——switch 路径的
   // 适配器 build 不调 setAdapterItems（grep 实证），此前 dock 残留首次 mount 的菜单
   // （旧模型统计面板数值不匹配）；非空合并 menuItems 一次注入，空则清空适配器项
   // （对齐 mount3D 注册后注入 + mpUnloadRole 的两分支模式）。
-  const switchMenuItems = registerSwitchScene(ctx, newPath, next, beforeBuild);
+  const switchMenuItems = registerSwitchScene(ctx, newPath, next, beforeBuild, containerMeta);
   if (switchMenuItems.length > 0) ctx.menuHandle.setAdapterItems(switchMenuItems);
   else ctx.menuHandle.setAdapterItems([]);
   ctx.setCurrentPath(newPath);
@@ -291,6 +297,8 @@ function unregisterSwitchPrevious(ctx: SwitchContext, keep: boolean): void {
 /**
  * 注册进场景注册表（ADR-093 T2；keep 追加 / 普通切换均登记，单一事实来源）。
  * 有无 beforeBuild 快照决定是否携带 roots/boneMaps 等增量元数据。
+ * containerMeta [ADR-159]：容器元数据（displayName/components）——同容器会话内切换
+ * 由前一活跃 entry 继承（switchTo 前捕获，unregister 后仍可透传新 entry）。
  * 返回新注册 entry 的 merged menuItems（含统计面板；可能为空数组——调用方据此刷新 dock）。
  */
 function registerSwitchScene(
@@ -298,6 +306,7 @@ function registerSwitchScene(
   newPath: string,
   next: PreviewScene,
   beforeBuild: Set<THREE.Object3D> | null,
+  containerMeta?: { displayName?: string; components?: string[] },
 ): PreviewMenuNode[] {
   if (beforeBuild) {
     const added = ctx.scene ? ctx.scene.children.filter((c) => !beforeBuild.has(c)) : [];
@@ -312,6 +321,8 @@ function registerSwitchScene(
       boneMaps: next.boneMaps ?? null,
       menuItems,
       onBonePick: next.onBonePick ?? null,
+      displayName: containerMeta?.displayName,
+      components: containerMeta?.components,
     });
     return menuItems;
   }

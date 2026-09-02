@@ -271,6 +271,20 @@ async function buildPackScene(
   });
   if (select) menuItems.push(select);
 
+  // [ADR-159] 统计附加行：立方体（Cubes）数——vanilla 资源包无「声明/加载纹理尺寸」概念，
+  // 组件详情以 elementCount + 渲染实测统计为准。dockGroup:"stats" 由 mergeStatsMenuItems
+  // 并入统一统计面板 children（所有格式共享面板，附加行通道通用）。
+  if (model!.elementCount > 0) {
+    menuItems.push({
+      id: "pack-cubes-field",
+      kind: "field",
+      labelKey: "preview.stats.cubes",
+      fallback: "立方体(Cubes)",
+      value: model!.elementCount,
+      dockGroup: "stats",
+    });
+  }
+
   return {
     menuItems,
     dispose: () => disposeContent(state, ctx.scene!),

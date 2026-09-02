@@ -1059,6 +1059,7 @@ export const ja: Record<string, string> = {
   "preview.stats.materials": "マテリアル",
   "preview.stats.textures": "テクスチャ",
   "preview.stats.morphs": "表情",
+  "preview.stats.cubes": "立方体(Cubes)",
   // MMD 詳細カード（P2: PMX ファイル解析口径, 描画実測と区別）
   "preview.stats.file": "📊 ファイル統計",
   "preview.stats.vertices": "頂点",

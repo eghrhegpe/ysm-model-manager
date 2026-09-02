@@ -32,6 +32,10 @@ export interface ModelEntry {
   boneMaps: BoneMaps | null;
   /** 该模型声明式根菜单专属项（selectModel 时换菜单用；未接入为 null） */
   menuItems: PreviewMenuNode[] | null;
+  /** [ADR-159] 实体展示名（容器类格式：资源包 = zip 名剥扩展名）；缺省由 roleBaseName 取 path basename */
+  displayName?: string;
+  /** [ADR-159] 容器语义：同容器内全部组件路径（资源包 = zip 内全部模型 entry）；缺省非容器 */
+  components?: string[];
   /** 多模型下由统一拾取器调用：点中该模型骨骼时打开其面板（ADR-093 T5） */
   onBonePick: ((boneId: string) => void) | null;
 }
@@ -54,6 +58,9 @@ type RegisterInput = {
   boneMaps?: BoneMaps | null;
   menuItems?: PreviewMenuNode[] | null;
   onBonePick?: ((boneId: string) => void) | null;
+  /** [ADR-159] 容器语义（透传 ModelEntry，见其字段注释） */
+  displayName?: string;
+  components?: string[];
 };
 
 function mdSrDedupByExplicitKey(
@@ -80,6 +87,8 @@ function mdSrBuildEntryFromInput(id: string, input: RegisterInput): ModelEntry {
     boneMaps: input.boneMaps ?? null,
     menuItems: input.menuItems ?? null,
     onBonePick: input.onBonePick ?? null,
+    displayName: input.displayName,
+    components: input.components,
   };
 }
 

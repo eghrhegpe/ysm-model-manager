@@ -1058,6 +1058,7 @@ export const en: Record<string, string> = {
   "preview.stats.materials": "Materials",
   "preview.stats.textures": "Textures",
   "preview.stats.morphs": "Morphs",
+  "preview.stats.cubes": "Cubes",
   // MMD detail card (P2: PMX file-parse scope, distinct from runtime stats)
   "preview.stats.file": "📊 File Stats",
   "preview.stats.vertices": "Vertices",

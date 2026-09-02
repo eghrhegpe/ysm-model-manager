@@ -7,6 +7,7 @@
 
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
+import { swallowError } from "../../utils/core/async.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
@@ -23,11 +24,12 @@ const tr = (key: string, fallback: string): string => {
 };
 
 /** 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。
- *  剥离扩展名（.ysm/.json/.zip/.vrm/.pmx/.fbx/.litematic 等任意单段后缀）——
- *  用户实测 ysm.json 当标题反直觉：entry.path 可能指向包内入口文件（如 ysm.json），
- *  basename 直接展示会露出无意义的技术文件名；剥后缀后保留模型真名
- *  （如 [vup]子言-水手服(...)[VUP曼云]1.2.zip → [vup]子言-水手服(...)[VUP曼云]1.2）。 */
+ *  [ADR-159] 容器语义：entry 有 displayName（容器实体名，如 zip 名剥扩展名）时优先展示——
+ *  用户看到「包」而非包内首个模型的技术文件名。
+ *  否则剥离扩展名（.ysm/.json/.zip/.vrm/.pmx/.fbx/.litematic 等任意单段后缀）——
+ *  entry.path 可能指向包内入口文件（如 ysm.json），basename 直接展示会露出无意义的技术文件名。 */
 export function roleBaseName(e: ModelEntry): string {
+  if (e.displayName) return e.displayName;
   const base = e.path.split(/[/\\]/).pop() || e.path;
   // 剥最后一段 .ext（任意后缀，保留带点号的版本号如 1.2）
   const dot = base.lastIndexOf(".");
@@ -306,6 +308,66 @@ export function fillRoles(
 
   reRender();
 
+  // [ADR-159] 容器组件区：活跃 entry 带 components（资源包 = zip 内全部模型）时平铺——
+  // 点名字 switchTo 切为活跃组件（同容器同适配器，不判类型 tab），➕ keepInScene 追加同框。
+  frRenderComponents(list, ctx);
+
   frAppendSeparator(list);
   fillSwitch(list, ctx);
+}
+
+/** [ADR-159] 容器组件区渲染（fillRoles 内嵌段）：包内模型永久平铺，替代旧「切换角色 ›」二级钻取 */
+function frRenderComponents(list: HTMLElement, ctx: PreviewMenuCtx): void {
+  const activeId = sceneRegistry.getActiveId();
+  const active = activeId ? sceneRegistry.get(activeId) : undefined;
+  const components = active?.components ?? [];
+  if (components.length === 0) return;
+
+  const title = document.createElement("div");
+  title.dataset.testid = "preview-components-title";
+  title.textContent = `${tr("preview.component", "组件")}（${components.length}）`;
+  title.style.cssText = "padding:6px 10px 2px;color:rgba(255,255,255,0.5);font-size:11px";
+  list.appendChild(title);
+
+  const box = document.createElement("div");
+  box.dataset.testid = "preview-components-list";
+  box.style.cssText = "max-height:220px;overflow-y:auto";
+  const curNorm = (active?.path ?? "").replace(/\\/g, "/").toLowerCase();
+  for (const p of components) {
+    const isCur = p.replace(/\\/g, "/").toLowerCase() === curNorm;
+    const row = document.createElement("div");
+    row.dataset.testid = "preview-component-row";
+    row.dataset.componentPath = p;
+    row.style.cssText =
+      "display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px" +
+      (isCur ? ";background:rgba(124,131,255,0.25)" : "");
+    const mark = document.createElement("span");
+    mark.style.cssText = "width:14px;flex-shrink:0;text-align:center";
+    mark.textContent = isCur ? "✓" : "🧩";
+    const name = document.createElement("span");
+    name.style.cssText = "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+    name.textContent = p.split(/[/\\]/).pop() || p;
+    attachTooltip(name, p);
+    row.append(mark, name);
+    if (!isCur) {
+      const append = document.createElement("button");
+      append.dataset.testid = "preview-component-append";
+      append.textContent = "➕";
+      attachTooltip(append, () => tr("preview.appendModel", "追加到场景"));
+      append.style.cssText =
+        "width:20px;height:20px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;border-radius:4px;cursor:pointer;font-size:11px;line-height:1";
+      append.onclick = (ev): void => {
+        ev.stopPropagation();
+        const r = ctx.switchTo(p, { keepInScene: true });
+        if (r && typeof (r as Promise<void>).then === "function") swallowError(r as Promise<void>);
+      };
+      row.appendChild(append);
+    }
+    row.onclick = (): void => {
+      const r = ctx.switchTo(p);
+      if (r && typeof (r as Promise<void>).then === "function") swallowError(r as Promise<void>);
+    };
+    box.appendChild(row);
+  }
+  list.appendChild(box);
 }

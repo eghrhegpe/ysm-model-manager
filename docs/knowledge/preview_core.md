@@ -33,7 +33,7 @@ auto_fields:
     - buildCameraControls:31
     - buildFbxScene:168
     - buildFbxSceneFromData:214
-    - buildLitematicScene:406
+    - buildLitematicScene:416
     - buildMmdScene:1512
     - BuildNbtVoxelData:296
     - BuildNbtVoxelDataFromRoot:305
@@ -47,7 +47,7 @@ auto_fields:
     - buildVrmBoneNodes:20
     - buildVrmBoneTree:52
     - buildVrmScene:511
-    - buildYsmScene:503
+    - buildYsmScene:504
     - bytesToBase64:17
     - CameraControlBridge:13
     - cancelPendingEncodings:71
@@ -111,14 +111,16 @@ auto_fields:
     - Ktx2TextureLoaderDeps:21
     - listBonesWithDepth:65
     - listSchemas:62
-    - LITEMATIC_SLICE_SCHEMA_ID:219
-    - LitematicBuildOpts:394
+    - LITEMATIC_SLICE_SCHEMA_ID:226
+    - LitematicBuildOpts:404
     - LoadingProgressMode:14
     - makeBonePanelRenderer:40
     - makeBonesPanelItem:51
     - makeMenuCtx:12
+    - makeMmdAdapter:1632
     - makePackAdapter:66
-    - makeYsmAdapter:534
+    - makeVrmAdapter:580
+    - makeYsmAdapter:535
     - makeYsmModelSchemaId:29
     - makeZipOverlayPort:120
     - MaterialBridgeLike:10
@@ -129,8 +131,9 @@ auto_fields:
     - MAX_MODELS:218
     - MenuGraph:58
     - MenuGraphNode:32
+    - MmdAdapterDeps:1626
     - MmdDataPort:89
-    - mmdMenuItems:1625
+    - mmdMenuItems:1644
     - MmdMenuItemsOpts:1593
     - MmdPanelHooks:158
     - MmdZipConfig:20
@@ -146,7 +149,7 @@ auto_fields:
     - mpMakeUnifiedPickHandler:9
     - MpSharedInfra:53
     - MpUnloadCtx:15
-    - mpUnloadRole:31
+    - mpUnloadModel:31
     - MpWasdReuse:12
     - normalizeFbxScale:55
     - OpenGzRootFromBytes:64
@@ -217,9 +220,10 @@ auto_fields:
     - toggleBoneVisible:137
     - typeFromWebDir:96
     - unregisterSchema:47
+    - VrmAdapterDeps:570
     - VrmBonePanelCtx:21
     - VrmDataPort:33
-    - vrmMenuItems:569
+    - vrmMenuItems:591
     - VrmMenuItemsOpts:531
     - VrmMetaInfo:89
     - VrmModelInfoCtx:178
@@ -229,8 +233,8 @@ auto_fields:
     - WorkerErrorStrategy:22
     - YSM_MODEL_SCHEMA_ID:20
     - YsmAdapterOptions:44
-    - ysmMenuItems:595
-    - YsmMenuItemsOpts:553
+    - ysmMenuItems:596
+    - YsmMenuItemsOpts:554
     - zipFindEntry:226
   tests:
     - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
@@ -358,15 +362,15 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 ## 渲染会话词汇（ADR-161 章程）
 
-> **状态**：章程已采纳（2026-09-02），实施分批进行。**实施完成前，代码仍用旧名**（`built`/`roleDetailView`/`unloadRole` 等），检索请双词并搜；本章词表是「读懂代码」的翻译层，不是「代码已改名」的声明。
+> **状态**：✅ 已实施（2026-09-02 五节全落地）。`built`→`content`、`unloadRole`→`unloadModel`（unload-role.ts→unload-model.ts）、loader 出口锚定 `Model3DSpec` 均已成真；代码内「角色」不再指代会话实例。词表即现状，检索按新词。
 
 ### 四级尺度词（渲染会话域唯一口径）
 
-| 统一词 | 指代 | 代码锚点（现行 → 章程目标） |
-|--------|------|------------------------------|
-| **组件 component** | spec.models[i] = 一个包/文件内的一个 geo 内容 | Go `ModelGroup`（JSON 契约名保留）；前端镜像 `SpecModelGroup3D` |
+| 统一词 | 指代 | 代码锚点 |
+|--------|------|---------|
+| **组件 component** | spec.models[i] = 一个包/文件内的一个 geo 内容 | Go `ModelGroup`（JSON 契约名保留）；绑定类（`bindings/.../go/threejs/models.ts`） |
 | **模型 model** | 一个资源（zip/文件/目录），用户视角的「一个模型」 | 资源 path、详情卡标题 |
-| **内容层 scene content** | 会话中一个格式实例（一个 PreviewScene，ADR-093 可多模型同框） | `mount-preview-core.ts` `built` → `content` |
+| **内容层 scene content** | 会话中一个格式实例（一个 PreviewScene，ADR-093 可多模型同框） | `mount-preview-core.ts` `content`/`allContent`/`getContent`（原 built 系） |
 | **注册条目 entry** | sceneRegistry 中一个已注册模型实例（MAX_MODELS=8，ADR-159） | `scene-registry.ts` `ModelEntry` |
 
 数据流追索路径：**资源 path → model → `spec.models[i]`（组件，跨层唯一锚）→ 内容层（整模型挂进 ctx.scene）→ registry entry（会话实例）**。禁止以「model group」指代组件、「角色」指代会话实例。
@@ -374,7 +378,8 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 ### spec 契约单一镜像（禁第四套类型名）
 
 - spec 数据契约唯一事实源 = Go（`Model3DSpec`/`ModelGroup`/`BoneData`/`MeshData`），Wails 绑定类（`bindings/ysm-model-manager/go/threejs/models.ts`）为前端类型**锚点**。
-- 前端 `model3d.ts` 的 `Spec3D` 族是**镜像层**，须与绑定声明式等价（别名/改引），不得再增新 spec 类型名。
+- loader 出口已锚定绑定（本地 unknown 袋 `ModelSpec` 已退役）；统计侧 `componentCountsFromSpec`/`buildStatsCard` 直吃绑定 `Model3DSpec`，不再经镜像/双层 as。
+- 前端 `model3d.ts` 的 `Spec3D` 族为**渲染侧手写镜像**（活跃类型枢纽，12 文件消费），禁新增第四套 spec 类型名；缺字段（`_cubeCount`/`textureWidth`/`texArrOrder`/`componentTextures`）请直锚绑定，勿在此补字段 or 用 as 双跳硬取。
 - JS WASM 兜底 `buildSpecFromModel` 与 Go `threejs.Build()` 双实现口径不一致为已知遗留（model3d.md 不变量），产出结构同锚契约。
 
 ### 搜索直达（降低试错）
@@ -383,12 +388,12 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 |------|------|
 | 模型结构/组件统计 | `GetModel3DSpec` → `componentCountsFromSpec`（详情卡蓝卡行） |
 | 当前场景有几/哪几个模型 | `scene-registry.ts` `sceneRegistry`（entry 级） |
-| 一个格式怎么挂进场景 | 该格式 `make<Format>Adapter`（YSM=`makeYsmAdapter`；VRM/MMD 主入口补全中，见 ADR-161 §2.5） |
-| 卸载/释放 | `unloadRole`（卸载入口）/ `cleanupPreview`（整会话清理）——语义分层：卸载=注册表注销+内容层 GPU，清理=外壳级 |
+| 一个格式怎么挂进场景 | 该格式 `make<Format>Adapter`（YSM=`makeYsmAdapter` / VRM=`makeVrmAdapter` / MMD=`makeMmdAdapter` / Pack=`makePackAdapter`，均收 deps 注入，视图层仅组装） |
+| 卸载/释放 | `unloadModel`（卸载单模型实例）/ `cleanupPreview`（整会话清理）——语义分层：卸载=注册表注销+内容层 GPU，清理=外壳级 |
 
-### 角色一词注记
+### 角色一词注记（收敛后现状）
 
-本卡上文 `roles` 面板 / `roleDetailView` / `unloadRole` / 「角色」等为**现行代码命名**（用户可见层：车万女仆域角色语义 + 会话内模型实例列表）。ADR-161 §2.4 方向：代码内部会话实例口径收敛「模型实例」，`unload-role.ts` 文案改「卸载模型」——实施前两词均可检索，勿据此卡断言代码已改。
+「角色」现仅存两处合法语义：**用户可见层**（🧍 roles 面板/角色列表、`roleDetailView`/`roleBaseName` 等联邦用户词）与 **MikuMikuAR 联邦域**。代码内部会话实例口径一律「模型实例」：卸载入口 = `mpUnloadModel`（unload-model.ts，原 mpUnloadRole），菜单文案三语 =「卸载模型」（i18n 键 `preview.unloadRole` 键名保留，值已改）。maid L0 子实体「角色」已由 ADR-160 退役为「组件」，勿复活。
 
 ## 验证状态与迭代清单（2026-08-19）
 

@@ -48,9 +48,9 @@ auto_fields:
     - BoneGroupMap:6
     - BoneInfoLite:7
     - BoneListItem:58
-    - BoneMaps:62
+    - BoneMaps:67
     - BoneNode:11
-    - BoneSelectInfo:48
+    - BoneSelectInfo:53
     - BonesPanelItemOpts:32
     - BoneTree:23
     - buildBoneHierarchy:14
@@ -65,7 +65,7 @@ auto_fields:
     - buildGroundSurfaceSpec:92
     - buildLightingSchema:47
     - buildLipMorphIndices:132
-    - buildLitematicScene:406
+    - buildLitematicScene:416
     - buildMmdScene:1512
     - buildModelGroup:299
     - buildOrderedTexKeys:21
@@ -85,7 +85,7 @@ auto_fields:
     - buildVrmBoneTree:52
     - buildVrmScene:511
     - buildYsmObject:50
-    - buildYsmScene:503
+    - buildYsmScene:504
     - bytesToArrayBuffer:15
     - bytesToBase64:17
     - cacheGet:43
@@ -267,8 +267,8 @@ auto_fields:
     - listMmdMaterials:31
     - listSchemas:62
     - listVrmMaterials:28
-    - LITEMATIC_SLICE_SCHEMA_ID:219
-    - LitematicBuildOpts:394
+    - LITEMATIC_SLICE_SCHEMA_ID:226
+    - LitematicBuildOpts:404
     - LoadingProgressMode:14
     - loadMcTints:29
     - loadTdCamSpeed:45
@@ -282,8 +282,10 @@ auto_fields:
     - makeBonePanelRenderer:40
     - makeBonesPanelItem:51
     - makeMenuCtx:12
+    - makeMmdAdapter:1632
     - makePackAdapter:66
-    - makeYsmAdapter:534
+    - makeVrmAdapter:580
+    - makeYsmAdapter:535
     - makeYsmModelSchemaId:29
     - makeZipOverlayPort:120
     - matchSemanticBone:154
@@ -307,13 +309,14 @@ auto_fields:
     - MeshFragment:14
     - MMD_SEMANTIC_CANDIDATES:92
     - MMD_SEMANTIC_MORPH_CANDIDATES:43
+    - MmdAdapterDeps:1626
     - MmdBonePickResult:32
     - mmdBonesToBoneNodes:16
     - MmdDataDeserializer:5
     - MmdDataPort:89
     - MmdMaterialDetail:19
     - MmdMaterialListItem:13
-    - mmdMenuItems:1625
+    - mmdMenuItems:1644
     - MmdMenuItemsOpts:1593
     - MmdPanelHooks:158
     - mmdSemanticBoneMap:216
@@ -325,8 +328,7 @@ auto_fields:
     - ModelEntry:21
     - modelEntryFor:85
     - ModelGroup:87
-    - ModelLike:13
-    - ModelSpec:25
+    - ModelLike:16
     - MorphMeshLike:10
     - morphNodes:20
     - motionDetailView:132
@@ -338,7 +340,7 @@ auto_fields:
     - mpMakeUnifiedPickHandler:9
     - MpSharedInfra:53
     - MpUnloadCtx:15
-    - mpUnloadRole:31
+    - mpUnloadModel:31
     - MpWasdReuse:12
     - MultiLipSyncCallback:29
     - multiModelSelectNode:39
@@ -383,7 +385,7 @@ auto_fields:
     - PostprocessingCapability:369
     - PostprocessingLike:8
     - PostprocessingParams:35
-    - preloadModel:115
+    - preloadModel:114
     - prepareMmdZipInput:209
     - PREVIEW_FRAME_INTERVAL_MS:17
     - PREVIEW_MENU_GROUPS:32
@@ -482,13 +484,13 @@ auto_fields:
     - SkyModelType:83
     - SkyParams:30
     - solveIK:78
-    - Spec3D:43
+    - Spec3D:48
     - SpecBone:23
-    - SpecBone3D:11
+    - SpecBone3D:16
     - SpecBuildResult:38
     - SpecCube:11
     - SpecMeshData:46
-    - SpecMeshGroup3D:23
+    - SpecMeshGroup3D:28
     - SpecModelInput:31
     - splitMeshByFaceAlpha:24
     - SpotlightParams:51
@@ -523,11 +525,12 @@ auto_fields:
     - unregisterSchema:47
     - Vec3:23
     - VolumetricParams:65
+    - VrmAdapterDeps:570
     - VrmBonePanelCtx:21
     - VrmDataPort:33
     - VrmMaterialDetail:17
     - VrmMaterialListItem:11
-    - vrmMenuItems:569
+    - vrmMenuItems:591
     - VrmMenuItemsOpts:531
     - VrmMetaInfo:89
     - VrmModelInfoCtx:178
@@ -542,8 +545,8 @@ auto_fields:
     - YSM_MODEL_SCHEMA_ID:20
     - YsmAdapterOptions:44
     - YsmAnimPlayer:32
-    - ysmMenuItems:595
-    - YsmMenuItemsOpts:553
+    - ysmMenuItems:596
+    - YsmMenuItemsOpts:554
     - YsmObjectHandle:25
     - ysmSemanticBoneMap:303
     - zipFindEntry:226
@@ -728,7 +731,7 @@ export function computeBoneLocalPos(
 
 `model3d.ts`（类型枢纽，无渲染入口）：
 - 类型：`Spec3D` / `SpecModelGroup3D` / `SpecBone3D`（localPosition/localRotation 四元数 [x,y,z,w]/parentId）/ `SpecMeshGroup3D`（positions/normals/uvs/indices/texIdx）/ `BoneSelectInfo` / `BoneMaps`
-- **镜像注记（ADR-161）**：本文件 `Spec3D` 族为 spec 契约（Go `Model3DSpec`/`ModelGroup`/`BoneData`/`MeshData`）的**前端镜像层**，类型锚点是 Wails 绑定类（`bindings/ysm-model-manager/go/threejs/models.ts`）；禁新增第四套 spec 类型名。跨层词汇与尺度词（组件/模型/内容层/entry）见 [preview_core](./preview_core.md)「渲染会话词汇」。
+- **镜像注记（ADR-161）**：本文件 `Spec3D` 族为 spec 契约（Go `Model3DSpec`/`ModelGroup`/`BoneData`/`MeshData`）的**渲染侧手写镜像**，类型锚点是 Wails 绑定类（`bindings/ysm-model-manager/go/threejs/models.ts`）；禁新增第四套 spec 类型名。loader 出口与详情统计（`componentCountsFromSpec`）已直锚绑定（2026-09-02 落地）。跨层词汇与尺度词（组件/模型/内容层/entry）见 [preview_core](./preview_core.md)「渲染会话词汇」。
 - re-export：键位/相机偏好（`DEFAULT_TD_KEYMAP` / `loadTdKeymap` / `loadTdCamSpeed` / `loadTdRotMode`，对外统一出口）
 
 渲染入口在统一预览核心 [preview_core](./preview_core.md)（`mount-preview-core.ts`）：

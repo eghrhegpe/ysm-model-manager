@@ -2,6 +2,8 @@
 kind: mount3d-584-giant
 name: mount3D 巨函数现状（2026-08-27 已部分拆分）
 tier: leaf
+adr:
+  - ADR-091
 category: rendering
 source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts

@@ -2,6 +2,9 @@
 kind: app-preview
 name: 预览面板 app-preview
 tier: architecture
+adr:
+  - ADR-137
+  - ADR-138
 category: ui
 source_files:
   - frontend/src/views/app-preview/

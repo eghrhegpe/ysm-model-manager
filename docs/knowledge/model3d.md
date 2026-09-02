@@ -2,6 +2,8 @@
 kind: model3d
 name: 3D 预览渲染 model3d
 tier: architecture
+adr:
+  - ADR-129
 category: rendering
 source_files:
   - frontend/src/preview-3d/

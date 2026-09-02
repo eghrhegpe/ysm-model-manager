@@ -2,6 +2,8 @@
 kind: theme
 name: 主题系统 theme
 tier: leaf
+adr:
+  - ADR-146
 category: core
 source_files:
   - frontend/src/app-modules.ts

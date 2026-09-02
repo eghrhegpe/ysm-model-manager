@@ -2,6 +2,8 @@
 kind: scene_capability_registry
 name: 场景能力注册表 scene-capability-registry
 tier: architecture
+adr:
+  - ADR-132
 category: rendering
 source_files:
   - frontend/src/preview-3d/caps/

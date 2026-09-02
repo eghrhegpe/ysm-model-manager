@@ -2,6 +2,8 @@
 kind: go-types
 name: 共享类型 go/types
 tier: architecture
+adr:
+  - ADR-144
 category: go
 source_files:
   - go/types/types.go

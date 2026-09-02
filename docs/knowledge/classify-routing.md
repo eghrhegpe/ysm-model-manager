@@ -2,6 +2,8 @@
 kind: classify-routing
 name: 分类路由与回归护栏
 tier: architecture
+adr:
+  - ADR-093
 category: go
 source_files:
   - go/packs/classify.go

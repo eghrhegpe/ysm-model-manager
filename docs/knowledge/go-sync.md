@@ -2,6 +2,8 @@
 kind: go-sync
 name: 整合包同步 go/sync
 tier: architecture
+adr:
+  - ADR-064
 category: go
 source_files:
   - go/sync/sync.go

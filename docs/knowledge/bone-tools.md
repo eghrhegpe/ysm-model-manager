@@ -2,6 +2,8 @@
 kind: bone-tools
 name: 跨格式骨骼工具层 bone-tools
 tier: leaf
+adr:
+  - ADR-109
 category: rendering
 source_files:
   - frontend/src/preview-3d/bone-tools.ts

@@ -29,7 +29,7 @@ status: snapshot
 
 ## 概览
 
-`worker-bridge.ts:89-97` `settleError` 三分支结算：`terminatePool` → reject；`makeErrorResponse` 存在 → resolve 错误响应；else → reject。L65 `const onWorkerError = opts.onWorkerError ?? "resolveAllError"` 把联合窄化成 `string`，后续 L94 `if (onWorkerError === "terminatePool")` 比较合法但 L95 `else if (makeErrorResponse)` 兜底——若未来加第三种策略，`settleError` 静默走 `makeErrorResponse` 分支。
+`worker-bridge.ts:94-105` `settleError` 三分支结算：`terminatePool` → reject；`makeErrorResponse` 存在 → resolve 错误响应；else → reject（P2 已加 assertNever 兜底）。L70 `const onWorkerError = opts.onWorkerError ?? "resolveAllError"` 把联合窄化成 `string`，后续 L99 `if (onWorkerError === "terminatePool")` 比较合法但 L100 `else if (makeErrorResponse)` 兜底——若未来加第三种策略，`settleError` 静默走 `makeErrorResponse` 分支。
 
 ## 核心职责
 

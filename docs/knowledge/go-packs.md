@@ -22,7 +22,7 @@ use_when:
   - 光影包
   - mcmeta
   - pack_format
-  - 缩略图
+  - 包封面缩略图
   - 类型检测
 perf:
   - io-bound

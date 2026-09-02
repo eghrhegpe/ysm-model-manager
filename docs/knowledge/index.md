@@ -142,7 +142,7 @@
 | 🍃 go-launcher | 启动器实例发现 go/launcher | leaf | — | 改启动器发现/实例目录解析逻辑时 |
 | 🏗 go-litematic | Litematic 解析 go/litematic | architecture | — | 投影, litematic, schematic, nbt, 蓝图, 体素, 方块 |
 | 🏗 go-logs | 导入日志 go/logs | architecture | io-bound | 导入日志, 操作记录, 操作日志, import log, 历史 |
-| 🏗 go-packs | 资源包 mcmeta go/packs | architecture | io-bound | 资源包, 光影包, mcmeta, pack_format, 缩略图, 类型检测 |
+| 🏗 go-packs | 资源包 mcmeta go/packs | architecture | io-bound | 资源包, 光影包, mcmeta, pack_format, 包封面缩略图, 类型检测 |
 | 🏗 go-paths | 路径安全 go/paths | architecture | — | 路径, 安全, path, 路径校验 |
 | 🏗 go-recycle | 回收站 go/recycle | architecture | io-bound | 回收站, 删除, 恢复, recycle, 软删除 |
 | 🏗 go-scanner | 扫描核心 go/scanner | architecture | io-bound, concurrent | 扫描, 扫描条目, 文件树, 哈希, 缓存, 作者提取, ScanEntries, 索引生成 |

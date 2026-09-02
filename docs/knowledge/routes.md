@@ -66,7 +66,7 @@
 | 整合包、实例、版本实例、VersionInstance、同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) ⚠️歧义（另见 go-sync.md） | `go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建，是 `app_install.go` 中 `GetInstanceSyncStatus` Binding 的下沉逻辑（知识卡旧文称 `GetReso… |
 | 投影、litematic、schematic、nbt、蓝图、体素、方块 | [Litematic 解析 go/litematic](./go-litematic.md) ⚠️歧义（另见 classify-routing.md） | `go/litematic/` 包解析 Minecraft 建筑蓝图文件：Litematica 投影（`.litematic`，NBT gzip）、MCEdit 旧版 `.schematic`、原版结构 `.nbt`，产出元数据、方块统计（… |
 | 导入日志、操作记录、操作日志、import log、历史 | [导入日志 go/logs](./go-logs.md) | `go/logs/` 包提供两套互不相干的日志设施：**操作日志**（`Logger`，持久化）把导入/扫描/下载/同步/重命名/删除/UI 报错等操作的成败结果写入用户配置目录下的 `ysm-import-logs.json`；**运行时… |
-| 资源包、光影包、mcmeta、pack_format、缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) ⚠️歧义（另见 resource-packs.md等） | `go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级… |
+| 资源包、光影包、mcmeta、pack_format、包封面缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) ⚠️歧义（另见 resource-packs.md等） | `go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级… |
 | 路径、安全、path、路径校验 | [路径安全 go/paths](./go-paths.md) | `go/paths/` 包提供路径安全校验，防止路径穿越攻击和非法路径访问。 |
 | 回收站、删除、恢复、recycle、软删除 | [回收站 go/recycle](./go-recycle.md) ⚠️歧义（另见 recycle-bin.md、go-fileops.md等） | `go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`），包级函数… |
 | 扫描、扫描条目、文件树、哈希、缓存、作者提取、ScanEntries、索引生成 | [扫描核心 go/scanner](./go-scanner.md) ⚠️歧义（另见 go-avatar.md） | `go/scanner/` 包实现仓库文件扫描、哈希计算、缓存失效、作者提取、索引生成（ADR-003 P2 下沉，薄壳 `internal/app/app_scan.go` 仅保留依赖 App 的方法）。 |

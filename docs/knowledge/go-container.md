@@ -2,6 +2,9 @@
 kind: go-container
 name: 统一容器桥接层 go/container
 tier: architecture
+adr:
+  - ADR-068
+  - ADR-069
 category: go
 source_files:
   - go/container/container.go

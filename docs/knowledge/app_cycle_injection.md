@@ -2,6 +2,8 @@
 kind: app_cycle_injection
 name: App↔子组件对象级环打破范式（回调注入）
 tier: architecture
+adr:
+  - ADR-109
 category: go
 source_files:
   - internal/app/app_download.go

@@ -2,6 +2,8 @@
 kind: perception
 name: 3D 感知系统 perception
 tier: architecture
+adr:
+  - ADR-138
 category: rendering
 source_files:
   - frontend/src/preview-3d/perception/

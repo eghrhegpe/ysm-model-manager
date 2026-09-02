@@ -35,7 +35,9 @@ auto_fields:
     - fillMmdModelPanel
     - fillMmdShotPanel
     - LITEMATIC_SLICE_SCHEMA_ID
+    - LitematicAdapterDeps
     - LitematicBuildOpts
+    - makeLitematicAdapter
     - makePackAdapter
     - MaterialControlBridge
     - MmdBottomNavCtx

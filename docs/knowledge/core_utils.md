@@ -9,6 +9,9 @@ auto_fields:
   symbols_with_lines:
     - Abortable
     - addDisposableListener
+    - asArray
+    - asNumber
+    - asString
     - clamp
     - clamp01
     - clampInt
@@ -18,6 +21,8 @@ auto_fields:
     - delay
     - Disposable
     - fireAndForget
+    - getCompound
+    - isObj
     - lerp
     - lerpArray
     - LoadingGuard

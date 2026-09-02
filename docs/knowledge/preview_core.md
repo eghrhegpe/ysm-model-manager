@@ -39,7 +39,6 @@ auto_fields:
     - BuildNbtVoxelDataFromRoot
     - buildPackScene
     - buildPmxScene
-    - buildPmxSceneSliced
     - BuildSchematicVoxelData
     - BuildSchematicVoxelDataFromRoot
     - BuildVoxelData
@@ -74,6 +73,7 @@ auto_fields:
     - Error
     - estimateTexGpuBytes
     - FBX_TARGET_MAX_DIM
+    - FbxAdapterDeps
     - FbxDataPort
     - FbxGeometryData
     - FbxMaterialData
@@ -113,10 +113,13 @@ auto_fields:
     - listBonesWithDepth
     - listSchemas
     - LITEMATIC_SLICE_SCHEMA_ID
+    - LitematicAdapterDeps
     - LitematicBuildOpts
     - LoadingProgressMode
     - makeBonePanelRenderer
     - makeBonesPanelItem
+    - makeFbxAdapter
+    - makeLitematicAdapter
     - makeMenuCtx
     - makeMmdAdapter
     - makePackAdapter

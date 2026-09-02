@@ -183,8 +183,12 @@ function codeAsserts() {
     // 合并两文件扫描，守卫语义不变：uncacheRoot + 全纹理槽释放 + blobUrl 撤销 必须共存
     const text = textA + '\n' + textU;
     const hasUncacheRoot = /uncacheRoot\s*\(/.test(text);
+    // 全槽释放：emissiveMap 槽位存在 + 实际 dispose 调用（safeDispose 包装或裸 tex/mat.dispose——
+    // 2026-09 起释放统一走 safeDispose 包装，正则须同收两种形态防误报）+ blobUrl 撤销
     const hasFullSlotDispose =
-      /["']emissiveMap["']/.test(text) && /tex\.dispose\(\)|mat\.dispose\(\)/.test(text) && /blobUrls?/.test(text);
+      /["']emissiveMap["']/.test(text) &&
+      /(?:safeDispose\s*\(\s*(?:tex|mat)\s*\)|tex\.dispose\(\)|mat\.dispose\(\))/.test(text) &&
+      /blobUrls?/.test(text);
     const ok = hasUncacheRoot && hasFullSlotDispose;
     results.push({
       name: 'r10/r11 MMD 生命周期',

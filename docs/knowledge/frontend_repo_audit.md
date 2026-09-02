@@ -89,7 +89,10 @@ auto_fields:
     - appTreeStyle
     - ARIA_ATTR
     - arrayBufferToBase64
+    - asArray
+    - asNumber
     - assembleBoneSelectInfo
+    - asString
     - attachTooltip
     - attenuateAmbientForSky
     - AuthorInfo
@@ -172,7 +175,6 @@ auto_fields:
     - buildOrderedTexKeys
     - buildPackScene
     - buildPmxScene
-    - buildPmxSceneSliced
     - buildPostprocessingSchema
     - buildPresetChipGroup
     - buildPreviewMenuRouters
@@ -256,6 +258,7 @@ auto_fields:
     - closeActive3DOverlay
     - closeActiveDialog
     - closeDlg
+    - closeUnusedDecodedBitmaps
     - COLLAPSIBLE
     - collectAllWebEntries
     - collectBlobUrls
@@ -382,6 +385,7 @@ auto_fields:
     - disposeEnvSubscriptions
     - disposeMaterial
     - disposeSceneMeshes
+    - disposeTextureDecoder
     - DOWNLOAD_CONFIRM_BYTES
     - DOWNLOAD_REJECT_BYTES
     - DownloadCandidate
@@ -441,6 +445,7 @@ auto_fields:
     - extractZip
     - FakeImage
     - FBX_TARGET_MAX_DIM
+    - FbxAdapterDeps
     - fbxBonesToBoneNodes
     - FbxDataPort
     - FbxGeometryData
@@ -536,6 +541,7 @@ auto_fields:
     - getBundle
     - getByTestId
     - getCacheTtlMs
+    - getCompound
     - getControl
     - getControlCount
     - getCreatorIdentity
@@ -686,6 +692,7 @@ auto_fields:
     - isInputBlocked
     - isLikelyTga
     - isModelMissing
+    - isObj
     - isPathAvailable
     - isPreviewFolderNode
     - isRecyclePath
@@ -734,6 +741,7 @@ auto_fields:
     - listWebPackModels
     - listWebPackModelsDetail
     - LITEMATIC_SLICE_SCHEMA_ID
+    - LitematicAdapterDeps
     - LitematicBuildOpts
     - litematicMetaView
     - litematicVoxelView
@@ -784,7 +792,9 @@ auto_fields:
     - mainFileRank
     - makeBonePanelRenderer
     - makeBonesPanelItem
+    - makeFbxAdapter
     - makeLazyLoader
+    - makeLitematicAdapter
     - makeMenuCtx
     - makeMmdAdapter
     - makeMmdDataPort

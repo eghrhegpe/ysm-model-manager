@@ -444,7 +444,7 @@
 | `frontend/src/features/version-updater.ts` | 216 |
 | `frontend/src/features/version-updater.ts` | 250 |
 | `frontend/src/features/version-updater.ts` | 260 |
-| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 441 |
+| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 461 |
 | `frontend/src/preview-3d/adapters/preview-loading.ts` | 38 |
 | `frontend/src/preview-3d/adapters/switch-preview.ts` | 153 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |

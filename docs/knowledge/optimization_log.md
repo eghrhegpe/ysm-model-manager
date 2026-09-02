@@ -45,7 +45,6 @@ auto_fields:
     - BasisModuleLike
     - buildMmdScene
     - buildPmxScene
-    - buildPmxSceneSliced
     - CacheDir
     - CachedTextureResult
     - CacheEntry
@@ -53,8 +52,10 @@ auto_fields:
     - CacheStats
     - cancelPendingEncodings
     - ClearCache
+    - closeUnusedDecodedBitmaps
     - createPmxParser
     - DecodedTexture
+    - disposeTextureDecoder
     - encodeAndCacheTexture
     - encodeToKTX2Basis
     - formatLongTask

@@ -71,7 +71,6 @@ auto_fields:
     - buildOrderedTexKeys
     - buildPackScene
     - buildPmxScene
-    - buildPmxSceneSliced
     - buildPostprocessingSchema
     - buildPreviewMenuRouters
     - buildSceneMesh
@@ -171,6 +170,7 @@ auto_fields:
     - eulerToQuaternion
     - extractIKChainFromTree
     - FBX_TARGET_MAX_DIM
+    - FbxAdapterDeps
     - fbxBonesToBoneNodes
     - FbxDataPort
     - FbxGeometryData
@@ -270,6 +270,7 @@ auto_fields:
     - listSchemas
     - listVrmMaterials
     - LITEMATIC_SLICE_SCHEMA_ID
+    - LitematicAdapterDeps
     - LitematicBuildOpts
     - LoadingProgressMode
     - loadMcTints
@@ -283,6 +284,8 @@ auto_fields:
     - LoadTraceTexture
     - makeBonePanelRenderer
     - makeBonesPanelItem
+    - makeFbxAdapter
+    - makeLitematicAdapter
     - makeMenuCtx
     - makeMmdAdapter
     - makePackAdapter

@@ -9,7 +9,9 @@ auto_fields:
   symbols_with_lines:
     - buildLitematicScene
     - LITEMATIC_SLICE_SCHEMA_ID
+    - LitematicAdapterDeps
     - LitematicBuildOpts
+    - makeLitematicAdapter
 use_when:
   - 黑话
   - 命名

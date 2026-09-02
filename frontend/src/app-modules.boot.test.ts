@@ -131,6 +131,14 @@ const flushMicro = async () => {
  *  setTimeout 恢复错乱，导致后续用例 flush 泵挂起 20s 超时——实测主题跟随/devtools
  *  用例全挂）。 */
 async function boot(opts: { microFlush?: boolean } = {}) {
+  // [治本] vi.resetModules 清模块缓存但不清 document 上残留的 keydown listener；
+  // 上一用例 _devMode=true 注册的匿名 listener 会跨用例残留，当本用例
+  // dispatchEvent(F12) 时触发旧 Window.OpenDevTools 闭包 → m.openDevTools
+  // 被调用 → 「未启用」断言失败。每次 boot 前用 unregisterDevtools 清旧 listener。
+  try {
+    const prev = await import("./app-modules.ts");
+    prev.unregisterDevtools?.();
+  } catch { /* 首次 import 无残留 */ }
   vi.resetModules();
   mockViews();
   const { bus } = await import("./bus.ts");

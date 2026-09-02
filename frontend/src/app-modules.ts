@@ -134,13 +134,24 @@ const _devMode =
   (typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("dev")) ||
   _devtoolsFlag;
+// 具名 handler：可被 unregisterDevtools 移除（测试反复求值本模块时，
+// vi.resetModules 清模块缓存但不清 document 上残留的 listener，叠加注册
+// 会导致跨用例污染——devtools「未启用」用例被前一个 _devMode=true 用例
+// 残留的 listener 触发 Window.OpenDevTools()）。
+const _devtoolsKeydown = (e: KeyboardEvent) => {
+  if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
+    e.preventDefault();
+    try {
+      Window.OpenDevTools();
+    } catch (_) {}
+  }
+};
 if (_devMode && typeof document !== "undefined") {
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
-      e.preventDefault();
-      try {
-        Window.OpenDevTools();
-      } catch (_) {}
-    }
-  });
+  document.addEventListener("keydown", _devtoolsKeydown);
+}
+/** 测试清理钩子：移除 devtools keydown listener（生产环境无需调用）。 */
+export function unregisterDevtools(): void {
+  if (typeof document !== "undefined") {
+    document.removeEventListener("keydown", _devtoolsKeydown);
+  }
 }

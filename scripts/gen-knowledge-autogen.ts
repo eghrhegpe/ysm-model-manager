@@ -365,11 +365,15 @@ function main() {
     process.exit(0);
   }
 
-  console.log(
-    updated === 0
-      ? `✅ 知识卡 auto_fields: 已是最新，无需修改（扫描 ${cards.length} 张卡）`
-      : `✅ 已更新 ${updated} 张卡的 auto_fields: 字段`
-  );
+  if (wantJson) {
+    console.log(JSON.stringify({ _summary: { ok: true, updated, scanned: cards.length } }));
+  } else {
+    console.log(
+      updated === 0
+        ? `✅ 知识卡 auto_fields: 已是最新，无需修改（扫描 ${cards.length} 张卡）`
+        : `✅ 已更新 ${updated} 张卡的 auto_fields: 字段`
+    );
+  }
   process.exit(0);
 }
 

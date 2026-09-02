@@ -260,7 +260,7 @@ async function main() {
       const tool = typeof entry === 'string' ? entry : entry.tool;
       const extraArgs = typeof entry === 'string' ? [] : entry.args || [];
       // 解法 C：gen-*.ts 自动继承 autoFix=true（命名约定驱动）
-      // 显式声明 autoFix=false 优先，其余 obj 看 entry.autoFix，string 条目全为 false
+      // 显式声明 autoFix 优先（obj 看自身字段，string 条目按 tool.startsWith('gen-') 判定）
       const effectiveAutoFix = typeof entry === 'object' && 'autoFix' in entry
         ? entry.autoFix
         : tool.startsWith('gen-');

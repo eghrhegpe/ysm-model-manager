@@ -93,7 +93,6 @@
 | 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | - |
 | 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
-| 去重检测、dedup | [扫描核心 go/scanner](./go-scanner.md) | - | - |
 | 日志查看、性能分析 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
 | 容器解析、container_entries | [统一容器桥接层 go/container](./go-container.md) | 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举 | ADR-068, ADR-069 |
 | 扫描模型、ScanModelEntries | [扫描核心 go/scanner](./go-scanner.md) | 容器指纹缓存失效需调 ClearScanCache | - |
@@ -106,7 +105,6 @@
 | 整合包分类、路由、location 路由 | [分类路由与回归护栏](./classify-routing.md) | 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑 | ADR-093 |
 | 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
 | 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | ADR-064 |
-| 整合包同步、sync | [扫描核心 go/scanner](./go-scanner.md) | - | - |
 | 整合包同步页、推送 / 拉取资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态 | - |
 | 资历最深、老模型、仓库评分 | [资历最深模型 oldest-models](./oldest-models.md) | 资历排行必须经 oldest-models.ts 统一计算，禁止各页面各自实现评分逻辑 | - |
 | 资源包 / 光影包、mcmeta、pack_format | [资源包 mcmeta go/packs](./go-packs.md) | 资源包元数据必须走 go/packs 的 mcmeta 解析，前端禁止手写 mcmeta.json 解析 | - |

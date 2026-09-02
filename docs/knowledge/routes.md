@@ -21,7 +21,7 @@
 | 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）、评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct、想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | `internal/app` 是 Wails 绑定层（`package app`），`App` 是 god-object，持有若干子组件 |
 | 主内容区、页面切换、nav:change、仓库页、全局 handler | [主内容页 app-content](./app-content.md) | `app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工… |
 | 组件入口、模块装配、启动流程、主题初始化、服务注册、检查更新 | [组件入口 app-modules](./app-modules.md) ⚠️歧义（另见 version-updater.md） | `app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组… |
-| 预览、模型预览、3D 预览、Litematic、WASM 解码 | [预览面板 app-preview](./app-preview.md) ⚠️歧义（另见 go-threejs.md、preview_core.md） | `app-preview` 是仓库页右侧的预览面板组件（Shadow DOM），负责 YSM 模型的详情/2D 骨骼/3D 预览、Litematic 蓝图 3D 预览、资源包与光影包信息展示。它按 `model:select` 事件驱动，解… |
+| 预览、模型预览、3D 预览、Litematic、WASM 解码 | [预览面板 app-preview](./app-preview.md) ⚠️歧义（另见 go-threejs.md、preview_core.md） | `app-preview` 是仓库页右侧的预览面板组件（Shadow DOM），按 `model:select` 事件驱动。负责 YSM 模型的详情 / 2D 骨骼 / 3D 预览、Litematic 蓝图 3D 预览、资源包与光影包信息展… |
 | 侧边栏、整合包列表、版本卡片、推送、拉取、同步状态卡片 | [侧边栏 app-sidebar](./app-sidebar.md) ⚠️歧义（另见 sync-manager.md等） | `app-sidebar` 是仓库页左栏的整合包列表组件（Shadow DOM），展示当前资源类型下各整合包（Minecraft 版本实例）的同步状态卡片，支持选中联动、勾选批量推送/拉取、一键安装缺失资源。它遵循标准组件拆分规范（inde… |
 | 整合包同步、同步状态、推送资源、拉取资源、待推送、可拉取、已禁用、实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) ⚠️歧义（另见 sync-manager.md） | `app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本… |
 | 树形、资源列表、tree、节点、树、目录树 | [资源树 app-tree](./app-tree.md) | `app-tree` 是 YSM 核心的资源目录树组件，使用 Web Components 实现，支持展开/折叠、右键菜单、文件图标显示。 |
@@ -31,7 +31,7 @@
 | string-JSON、JSON.parse 断言、绑定 struct 化、铲债清单、错误通道统一、ADR-143、绑定返回 string | [string-JSON 绑定铲债清单](./binding_json_cleanup.md) | ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struc… |
 | 整合包分类、路由、zipentry 指纹、蓝图、回归、last-wins | [分类路由与回归护栏](./classify-routing.md) ⚠️歧义（另见 go-litematic.md） | 整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需… |
 | CLI、质量摸排、代码审核、代码审查、bug 排查、审计、白名单、绑定层 | [CLI 质量摸排 Checklist](./cli_quality_audit.md) ⚠️歧义（另见 fbx-cli-pipeline.md、frontend_repo_audit.md、frontend_test_audit.md等） | 本文档记录 YSM 项目 Go CLI 层（`go/cli/` + `internal/app/` + `frontend/src/services/`）代码审核的**高频问题模式**与**修复 Checklist**。2026-08-19… |
-| commit-with-check、自动提交、并发提交、临时索引、白名单提交、门禁后自动 commit | [提交脚本 commit-with-check](./commit_with_check.md) | `commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD… |
+| commit-with-check、自动提交、并发提交、临时索引、白名单提交、门禁后自动 commit | [提交脚本 commit-with-check](./commit-with-check.md) | `commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD… |
 | 创意工坊、社区、下载队列、镜像源、批量下载、github 仓库、下载进度、workshop | [社区下载 community](./community-feature.md) ⚠️歧义（另见 go-download.md） | `features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，五个文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染站点卡片与模型列表、`e… |
 | 右键菜单、右键、上下文菜单、ctx:show、menu:show、批量操作、移入回收站 | [右键菜单系统](./context-menu.md) | 右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`core/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `menu:show` 载荷，`view… |
 | 工具函数、工具方法、纯函数、防抖、异步 | [核心工具函数 core-utils](./core_utils.md) | `utils/core/` 是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。 |
@@ -115,7 +115,7 @@
 | 错误提示、友好错误、friendlyError、toast 文案、报错翻译、网络错误、文件被占用 | [错误处理 errors](./utils-errors.md) | 把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。 |
 | 截图、导出 PNG、多角度截图、预览缓存淘汰、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 export.md等） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。… |
 | 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS、ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) ⚠️歧义（另见 go-types.md） | 前端扩展名 → 资源类型映射的集中定义。拖拽导入等场景需要同步判断扩展名（无法等待异步注册表加载），故提供这份静态默认表；事实来源仍是 `resource_types.json`，三端一致性由契约测试守护。 |
-| 调试日志、dbg、调试开关、环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | 前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。原 `constants.ts`（预览画布/缩放/下载守护等全局数值常量）因长期无消费方已在死代码清理中移除，本卡同时承接「常量治理」的约定说明。 |
+| 调试日志、dbg、调试开关、环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | 前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。 |
 | 资源类型、RESOURCE_TYPES、类型标签、存储子目录、storageSubDir、LoadResourceTypes、注册表加载 | [资源类型工具 resource-types](./utils-resource-types.md) ⚠️歧义（另见 resource-registry.md） | 前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/registry.t… |
 | 模型详情、摘要卡片、summaryCardHTML、预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) | 把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。 |
 | 更新、升级、检查更新、新版本、静默检查、updater、版本 | [版本更新 version-updater](./version-updater.md) ⚠️歧义（另见 app-modules.md、go-updater.md） | `version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda… |

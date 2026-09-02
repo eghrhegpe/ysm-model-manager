@@ -1847,7 +1847,7 @@ export const autoSidebar = [
           },
           {
             "text": "提交脚本 commit-with-check",
-            "link": "/knowledge/commit_with_check"
+            "link": "/knowledge/commit-with-check"
           },
           {
             "text": "核心工具函数 core-utils",

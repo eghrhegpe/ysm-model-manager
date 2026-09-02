@@ -209,7 +209,7 @@
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼拾取, BoneNode, BoneTree, buildBoneTree |
-| 🍃 ground-cap-materialgroup-factories | ground-cap 材质菜单工厂（material-group factories） | leaf | — | 拆 gcBuildMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
+| 🍃 ground-cap-materialgroup-factories | ground-cap 材质菜单工厂（material-group factories） | leaf | cpu-bound | 拆 gcBuildMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
@@ -240,7 +240,7 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | — | — |
+| 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | cpu-bound | — |
 | 🏗 3d-patterns | 3D 区审核与修复模式提炼 | architecture | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
 | 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:change, 仓库页, 全局 handler |
 | 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新 |
@@ -261,7 +261,7 @@
 | 🏗 dialog-tag-editor | 标签编辑器 tag-editor | architecture | — | 标签, 打标签, 编辑标签, tag, 标签弹窗, 分类标记 |
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, FAB 3D 预览入口, overlay, ADR-057 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
-| 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | — | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
+| 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | gpu-bound | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
 | 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, sessionId |
 | 🍃 preview_menu_settings_state | 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125） | leaf | — | 新增 3D 预览设置项, 新增 cap 想让某个开关出现在设置面板, 排查设置项改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, ADR-125 三块落地状态核对 |
 | 🍃 preview_panel_declarative | 3D 预览面板内容声明式化通道（ADR-126 P4-B） | leaf | gpu-bound | 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）, 评估"面板内容该走 renderCustom 还是 children 声明式", 排查面板内容不出现 / 渲染通道冲突, P4-B 子步（1→2→3）状态通道复用参考 |
@@ -371,8 +371,8 @@
 | 标签 | 含义 | 卡片 |
 |------|------|------|
 | io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, rustbridge, version-updater |
-| cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app_content_diagnostics, bone-tools, go-threejs, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-wasm |
-| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, mount3d-584-giant, optimization_log, preview_core, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
+| cpu-bound | CPU 密集（解析/编译/解算/编码） | 3d-oversize-file-codesplit-feasibility, animation-system, app_content_diagnostics, bone-tools, go-threejs, ground-cap-materialgroup-factories, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-wasm |
+| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, mount3d-584-giant, multi_model_select, optimization_log, preview_core, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
 | concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app_content_diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, optimization_log, rustbridge, worker-bridge-settleerror-fallback |
 | memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, optimization_log, utils-export |
 | single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, ysm-wasm |

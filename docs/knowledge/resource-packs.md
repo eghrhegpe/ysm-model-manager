@@ -4,8 +4,8 @@ name: 资源包功能 resource-packs（已归档）
 tier: architecture
 category: feature
 source_files:
-  - frontend/src/views/app-preview/detail.ts
   - frontend/src/views/app-nav/
+affected: false
 tests:
   - frontend/src/views/app-preview/detail.test.ts
 invariant_anchors:

@@ -3,6 +3,8 @@ kind: 3d-oversize-file-codesplit-feasibility
 name: 3D 层超大文件 code-split 可行性
 tier: leaf
 category: ui
+perf:
+  - cpu-bound
 source_files:
   - frontend/src/preview-3d/adapters/mmd-adapter.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts

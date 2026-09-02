@@ -6,8 +6,6 @@ category: core
 source_files:
   - frontend/src/preview-3d/decoder/wasm-decode.ts
   - frontend/src/preview-3d/decoder/geometry.ts
-  - frontend/public/wasm/YSMParser.js
-  - frontend/public/wasm/YSMParser.wasm
 tests:
   - frontend/src/preview-3d/decoder/geometry.test.ts
 use_when:

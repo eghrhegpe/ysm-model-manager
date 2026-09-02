@@ -4,7 +4,42 @@ name: 网页版后端 backend-web
 tier: architecture
 category: core
 source_files:
-  - frontend/src/backend/
+  - frontend/src/backend/app.ts
+  - frontend/src/backend/browser-adapter.ts
+  - frontend/src/backend/idb.ts
+  - frontend/src/backend/platform.ts
+  - frontend/src/backend/web-common.ts
+  - frontend/src/backend/web-fs.ts
+  - frontend/src/backend/web-store.ts
+  - frontend/src/backend/web-stats.ts
+  - frontend/src/backend/web-community.ts
+tests:
+  - frontend/src/app-modules.boot.test.ts
+  - frontend/src/app-modules.test.ts
+  - frontend/src/backend/app.test.ts
+  - frontend/src/backend/browser-adapter.contract-b1.test.ts
+  - frontend/src/backend/browser-adapter.contract-b2.test.ts
+  - frontend/src/backend/browser-adapter.contract-b3.test.ts
+  - frontend/src/backend/browser-adapter.test.ts
+  - frontend/src/backend/idb.test.ts
+  - frontend/src/backend/platform-parity.test.ts
+  - frontend/src/backend/platform-web.test.ts
+  - frontend/src/backend/platform.test.ts
+  - frontend/src/backend/web-common.test.ts
+  - frontend/src/backend/web-fs-shared.test.ts
+  - frontend/src/backend/web-fs.bindings.test.ts
+  - frontend/src/backend/web-fs.test.ts
+  - frontend/src/backend/web-stats.test.ts
+  - frontend/src/backend/web-store.logs.test.ts
+  - frontend/src/views/app-content/app-content.component.test.ts
+  - frontend/src/views/app-content/app-content.methods.test.ts
+  - frontend/src/views/app-preview/app-preview.component.test.ts
+  - frontend/src/views/app-preview/app-preview.methods.test.ts
+  - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
+  - frontend/src/views/app-sidebar/app-sidebar.sync.test.ts
+  - frontend/src/views/app-tree/app-tree.component.test.ts
+  - frontend/src/views/app-tree/app-tree.state.test.ts
+affected: false
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

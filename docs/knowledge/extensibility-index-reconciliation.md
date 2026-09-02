@@ -9,7 +9,7 @@ use_when:
   - ADR 闭环
 affected: false
 status: snapshot
-last_verified: 2026-09-01
+last_verified: 2026-08-17
 ---
 
 <!-- 拓展点索引对账（2026-08-17）——逐条核对 extensibility-index.md 中「可拓展点」与当前 HEAD（含 ADR-064/065/067/068 + web M1/M2 + 硬编码清理）的落地状态。仅调研不改代码。 -->

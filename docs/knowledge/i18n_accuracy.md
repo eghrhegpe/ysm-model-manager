@@ -10,7 +10,6 @@ source_files:
   - scripts/i18n-key-naming.ts
   - tests/test_i18n_key_naming.ts
 tests:
-  - tests/test_i18n_key_naming.ts
   - frontend/src/core/i18n/locales-consistency.test.ts
 use_when:
   - 翻译准确度

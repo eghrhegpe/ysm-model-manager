@@ -3,6 +3,8 @@ kind: ground-cap-materialgroup-factories
 name: ground-cap 材质菜单工厂（material-group factories）
 tier: leaf
 category: rendering
+perf:
+  - cpu-bound
 source_files:
   - frontend/src/preview-3d/caps/ground-capability.ts
 quick_groups:

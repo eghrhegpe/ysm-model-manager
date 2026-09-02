@@ -1443,5 +1443,8 @@
   "webFs.moveInvalidDstDir": "移動/コピーに失敗しました：無効な移動先ディレクトリ: {path}",
   "webFs.moveModelMissing": "移動/コピーに失敗しました：モデルが存在しません: {path}",
   "webFs.moveNested": "移動/コピーに失敗しました：移動先ディレクトリをソース内に置くことはできません: {path}",
-  "webFs.moveTargetExists": "移動/コピーに失敗しました：移動先が既に存在します: {path}"
+  "webFs.moveTargetExists": "移動/コピーに失敗しました：移動先が既に存在します: {path}",
+  "webCommunity.importJsonParseFailed": "JSON のインポート解析に失敗しました：{err}",
+  "webCommunity.importTooFew": "インポートデータ異常：{count} 件のみ（期待値 >=20）",
+  "webCommunity.mergeTooFew": "マージ結果異常：{count} 件"
 }

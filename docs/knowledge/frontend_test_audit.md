@@ -19,8 +19,7 @@ source_files:
   - tests/test_private_access_contract.ts
   - tests/test_scripts_json.ts
   - tests/test_config_defaults.ts
-  - frontend/e2e/
-  - frontend/e2e-web/
+affected: false
 use_when:
   - 代码审核
   - 测试基建

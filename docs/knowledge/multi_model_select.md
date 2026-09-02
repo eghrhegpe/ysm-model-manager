@@ -5,6 +5,8 @@ tier: architecture
 adr:
   - ADR-132
 category: ui
+perf:
+  - gpu-bound
 source_files:
   - frontend/src/preview-3d/menu/multi-model.ts
   - frontend/src/views/app-preview/mmd-controls.ts

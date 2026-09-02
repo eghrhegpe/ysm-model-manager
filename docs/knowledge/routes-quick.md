@@ -52,7 +52,6 @@
 | 节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | - | - |
 | 截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132 |
 | 截图灯光、activeComponent、组件选择 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
-| 蓝图、投影、资源管理 | [资源包功能 resource-packs（已归档）](./resource-packs.md) | - | - |
 | 模型切换、会话内替换 | [统一 3D 预览核心 preview-core](./preview_core.md) | switchTo 仅同类型；跨类型用 switchExternal | ADR-125 |
 | 模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) | - | - |
 | 前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | - | - |
@@ -67,7 +66,6 @@
 | 眨眼/呼吸/视线追踪/口型同步 | [3D 感知系统 perception](./perception.md) | - | - |
 | 帧率 / 像素比 / 视锥剔除 / 3D 偏好 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
 | 追加模型、同台加载、多模型同框 | [统一 3D 预览核心 preview-core](./preview_core.md) | 跨类型必须走 switchExternal，禁止直接调 adapter.build | ADR-125 |
-| 资源包、光影包、resourcepack / shaderpack | [资源包功能 resource-packs（已归档）](./resource-packs.md) | 资源包 / 光影包详情必须经 detail.ts 的 showResourcePack/showShaderpack，禁止手写详情渲染 | - |
 | AnimationController、状态机 | [动画系统 animation](./animation-system.md) | - | - |
 | app-preview 组件、_previewGuard、detailGen | [预览面板 app-preview](./app-preview.md) | - | - |
 | createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
@@ -81,7 +79,7 @@
 | palette / voxel / bedrock 转换 | [Litematic 解析 go/litematic](./go-litematic.md) | - | - |
 | schema 键冲突、ADR-132 | [preview-menu-session-key](./preview_menu_session_key.md) | - | ADR-132 |
 | schema 注册、per-scene、多模型同框 | [preview-menu-session-key](./preview_menu_session_key.md) | schema 注册必须用 per-scene 键，禁止跨场景共用 schema key | ADR-132 |
-| showResourcePack、showShaderpack | [资源包功能 resource-packs（已归档）](./resource-packs.md) | - | - |
+| showResourcePack、showShaderpack | [预览面板 app-preview](./app-preview.md) | - | - |
 | VRM 动画播放、VRMA | [统一 3D 预览核心 preview-core](./preview_core.md) | 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update() | ADR-125 |
 | WASM 解析器、YSMParser、ysm 解码 | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析 | - |
 | YSM 动画管线、基岩动画 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析 | - |
@@ -396,8 +394,6 @@
 | initRecycleBin 不返回清理函数 | - | 监听泄漏；必须在 app-content 切换页时调用返回的清理函数 |
 | 各自创建 renderer | - | 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享 |
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
-| 手写详情渲染 | - | 与模型详情样式不一致、缺 Go 侧 ReadPackMeta/ReadShaderpackLang；必须复用 |
-| 光影包配置未读 ReadShaderpackLang | - | 显示名 / 配置简介缺失；必须经 Go 侧读取 |
 | 硬编码 Windows 路径 | - | Android/Linux 启动失败；必须经平台桥的编译脚本 |
 | CGO 未静态链接 | - | Android 缺少依赖库；必须经 compile-rust-static 静态编译 |
 | 直接 dlopen 加载 rust.dll | - | 平台差异处理不全、符号名不匹配；必须经 bridge_*.go 封装 |

@@ -128,7 +128,7 @@ last_verified: 2026-08-27
 - **装配层已注册表化**（ADR-049/066）：不再手写大对象字面量。
 - **但仍是"对象字面量 merge"而非真正注册表**：
   - 缺 `registerBinding(name, fn, metadata)` API；
-  - 缺 `webOnly/desktopOnly` 能力标记（现在靠白名单字面量 `SelectLocalRepo/GetFsaAuthState`，38 行）；
+  - 缺 `webOnly/desktopOnly` 能力标记（现在靠白名单字面量 `SelectLocalRepo/GetFsaAuthState`，L51 `Exclude<...>` 单行声明，38 行硬编码已收敛）；
   - 拼错键名的编译期保护有限（`satisfies` 只查函数签名，不查具体参数类型）；
   - 无元数据（文档、废弃、能力依赖）。
 - **结论**：痛点**基本解决**（从 40+ 行手写降到 4 个对象 merge），但**仍非理想注册表**。下一步建议抽 `createBindingRegistry` + 显式 `register(name, fn, {desktopOnly?: bool})`。
@@ -137,7 +137,7 @@ last_verified: 2026-08-27
 
 - 新增 binding 若参数需 `ReadFileBytes` 类 IO 语义，需保证桌面端 Go 侧同名导出存在；否则桌面端正常、web 端 fail-fast。
 - `WebUnsupportedError` 抛出后调用方需显式 catch，否则堆栈穿透。
-- `PROTOTYPE_MEMBERS`（87-95 行）白名单若新增同名函数会冲突。
+- `PROTOTYPE_MEMBERS`（L100-107）白名单若新增同名函数会冲突。
 
 ---
 

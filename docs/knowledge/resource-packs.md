@@ -11,18 +11,6 @@ tests:
 invariant_anchors:
   - frontend/src/views/app-preview/detail.ts|showResourcePack
   - frontend/src/views/app-preview/detail.ts|showShaderpack
-quick_groups:
-  - 3D 预览与模型追加
-quick_intents:
-  - 资源包、光影包、resourcepack / shaderpack
-  - showResourcePack、showShaderpack
-  - 蓝图、投影、资源管理
-quick_risk_lines:
-  - 资源包 / 光影包详情必须经 detail.ts 的 showResourcePack/showShaderpack，禁止手写详情渲染
-pitfalls:
-  - 手写详情渲染 → 与模型详情样式不一致、缺 Go 侧 ReadPackMeta/ReadShaderpackLang；必须复用
-  - 光影包配置未读 ReadShaderpackLang → 显示名 / 配置简介缺失；必须经 Go 侧读取
-
 use_when:
   - 资源包
   - 光影包

@@ -44,7 +44,7 @@ use_when:
 
 ## 真 bug / 高优先级
 
-1. **`utils/resource/short-label.ts:21-22`**：引用 `RESOURCE_TYPES.MOD_MODEL` / `VANILLA_ASSETS`，但 types.ts 中不存在 → computed key 成字面量 `"undefined"` 死代码。修法：补常量或删行。
+1. ~~**`utils/resource/short-label.ts:21-22`**：引用 `RESOURCE_TYPES.MOD_MODEL` / `VANILLA_ASSETS`，但 types.ts 中不存在 → computed key 成字面量 `"undefined"` 死代码。~~ ✅ **已修复**（2026-08-28）：`short-label.ts` 改用 `SHORT_LABEL_MAP`（L11-21）集中映射 + `shortLabelOf(rtype)`（L24-25）回退 `RESOURCE_TYPE_LABELS` → 原始 id 兜底，不再依赖 `MOD_MODEL`/`VANILLA_ASSETS` 常量。
 2. **`preview-3d/perception/autodance.ts:157`**：`targetRot.multiply(restQuat)` 乘序疑似反了（期望 `restQuat * offset`），可能是静默 bug，需可视化验证。
 3. ~~**`preview-3d/adapters/vrm-bone-ui.ts:107`**：`field()` 内 k/v 未 `esc()`（骨骼名来自模型文件，理论 XSS）。~~ ✅ **已修复** 2026-08-26 `2fbfe5ce`：`field()` 改 `textContent`/`createTextNode` 注入，骨骼名/路径中 `<>&` 不再当 HTML 解析（同批 skeleton `iRow` 经 `da664cf2` 同法收口，见 app-preview.md 不变量）。
 

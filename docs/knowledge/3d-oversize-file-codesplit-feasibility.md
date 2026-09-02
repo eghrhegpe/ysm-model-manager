@@ -14,38 +14,39 @@ created: 2026-08-27
 
 ## 背景
 
-复用分析报告指出三个超大文件：mmd-adapter.ts(1330行)、mount-preview-core.ts(1113行)、caps/ground-capability.ts(~900行)。用户问「要现在拆吗」，先摸清 symbol 分布 + 依赖链出可行性报告。
+复用分析报告指出三个超大文件：mmd-adapter.ts(1366行)、mount-preview-core.ts(1202行)、caps/ground-capability.ts(559行)。用户问「要现在拆吗」，先摸清 symbol 分布 + 依赖链出可行性报告。
 
-## 数据
+## 数据（2026-08-27 实测）
 
 | 文件 | 行数 | symbol 数 | 导出 |
 |------|------|-----------|------|
-| mmd-adapter.ts | 1330 | 42 | `MmdDataPort` interface（唯一） |
-| mount-preview-core.ts | 1113 | 36 | `PreviewBuildCtx` interface（唯一） |
-| caps/ground-capability.ts | ~900 | — | ground cap 实现 |
+| mmd-adapter.ts | 1366 | 42 | `MmdDataPort` interface（唯一） |
+| mount-preview-core.ts | 1202 | 36 | `PreviewBuildCtx` interface（唯一） |
+| caps/ground-capability.ts | 559 | — | ground cap 实现 |
 
 ## 拆分建议：不拆
 
-### mmd-adapter.ts（1330 行）
+### mmd-adapter.ts（1366 行）
 
 **不拆**。理由：
 - 唯一导出 `MmdDataPort` interface——拆分意味着拆 interface，会断 adapter registry 注册链
-- 1330 行看着大，但内部函数都是 MMD 解析/纹理/骨骼的紧耦合逻辑——拆成多个文件后 import 链反而更乱
-- `mmd-ktx2-encoder.ts`(318) / `mmd-texture-decoder.ts`(303) 已经拆出去了，剩下的 1330 行是 MMD 适配器的核心逻辑，不宜再拆
+- 1366 行看着大，但内部函数都是 MMD 解析/纹理/骨骼的紧耦合逻辑——拆成多个文件后 import 链反而更乱
+- `mmd-ktx2-encoder.ts`(318) / `mmd-texture-decoder.ts`(303) 已经拆出去了，剩下的 1366 行是 MMD 适配器的核心逻辑，不宜再拆
 
-### mount-preview-core.ts（1113 行）
+### mount-preview-core.ts（1202 行）
 
 **不拆**。理由：
 - 与 mmd-adapter 同理——唯一导出 `PreviewBuildCtx` interface，拆 interface 会断契约链
-- `switch-preview.ts`(419) / `preview-menu/settings.ts`(301) / `preview-menu/roles.ts`(300) 已经拆出去了
-- 剩下的 1113 行是 mount-preview 的核心编排逻辑（场景注册 + 会话管理 + 资源加载），拆了会断生命周期链
+- `switch-preview.ts`(442) / `preview-menu/settings.ts`(226) / `preview-menu/roles.ts`(310) 已经拆出去了
+- 剩下的 1202 行是 mount-preview 的核心编排逻辑（场景注册 + 会话管理 + 资源加载），拆了会断生命周期链
+- ⚠️ 注：`mount3D` 本体仍 604 行（L263-L866），已拆出 5 个 `mp*` 子函数（见 [mount3D 巨函数现状](./mount3d-584-giant.md)），但会话管理部分未外拆
 
-### caps/ground-capability.ts（~900 行）
+### caps/ground-capability.ts（559 行）
 
 **不拆**。理由：
 - 每个 cap 是一个能力单元（ground/light/scene-registry），内部函数紧耦合
-- caps/ 已经按能力拆分了（15 个文件），再拆会过细
-- 900 行的能力单元是合理大小——Three.js 的 cap 实现天然偏大（材质/纹理/几何体/动画的编排）
+- caps/ 已经按能力拆分了（29 个文件），再拆会过细
+- 559 行的能力单元是合理大小——Three.js 的 cap 实现天然偏大（材质/纹理/几何体/动画的编排）
 
 ## 核心判断
 

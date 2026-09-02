@@ -422,14 +422,7 @@ export async function buildLitematicScene(
   const tStart = performance.now();
   mdLiShowLoading(ctx);
 
-  let loadRes: MdLiLoadResult;
-  try {
-    loadRes = await mdLiLoadAndParseData(ctx, path, voxelCall);
-  } catch (e) {
-    ctx.loadingEl.remove();
-    console.error("[litematic] voxelCall 失败:", e);
-    return { dispose() {} } as PreviewScene;
-  }
+  const loadRes = await mdLiLoadAndParseData(ctx, path, voxelCall);
   if (!loadRes.ok) return loadRes.earlyResult;
   const { data } = loadRes;
 

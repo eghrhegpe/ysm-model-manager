@@ -18,6 +18,11 @@
  *   主 index 零接触。提交后双条件校验：越界文件 exit 1 / 并发插队 notice。
  *   新增 --files <paths> 白名单直取（不依赖先 git add，主 index 空也能提交）。
  *
+ * 设计意图：把 AI 的「改代码→确认性循环」压缩为单条命令——轻量门禁（红线 / 文档漂移 /
+ *   变更域契约测试）全绿才提交，杜绝绕过检查直接提交；重型验证（gofmt / build / test /
+ *   全量静态）交给 pre-push 钩子兜底，避免小提交重复付费。适用场景：并行会话密集提交时，
+ *   AI 自行裁剪门禁、路径限定提交，并发隔离由 commit-temp-index 保障（ADR-151）。
+ *
  * 用法：
  *   node scripts/commit-with-check.ts -m "feat: xxx"                # 轻量门禁 + 提交（读 staged）
  *   node scripts/commit-with-check.ts -m "feat: xxx" --files a.ts b.ts  # 白名单直取（无需先 add）

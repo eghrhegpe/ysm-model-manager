@@ -1,5 +1,5 @@
-// ===== 角色卸载（从 mount-preview-core.ts §5 抽出）=====
-// 角色面板 ⚙ → 卸载角色（MikuMikuAR buildModelToolsLevel 移植）：
+// ===== 模型卸载（从 mount-preview-core.ts §5 抽出）=====
+// 角色面板 ⚙ → 卸载模型（MikuMikuAR buildModelToolsLevel 移植）：
 // 移除场景根节点 + 释放内容层 GPU + 注册表注销（焦点自动转移）+ 相机取景重算。
 // 原 mount3D 内嵌闭包提纯；全局 perFrame 列表操作经 ctx.removePerFrame 注入，
 // 本文件不持有任何模块级单例状态。
@@ -11,7 +11,7 @@ import { safeDispose } from "../safe-dispose.ts";
 import type { PreviewScene } from "./mount-preview-core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 
-/** mpUnloadRole 所需的外部会话引用（原 mount3D 内嵌闭包变量，显式参数化注入） */
+/** mpUnloadModel 所需的外部会话引用（原 mount3D 内嵌闭包变量，显式参数化注入） */
 export interface MpUnloadCtx {
   allContent: PreviewScene[];
   scene: THREE.Scene | undefined;
@@ -26,9 +26,9 @@ export interface MpUnloadCtx {
   removePerFrame: (f: (dt: number) => void) => void;
 }
 
-/** 卸载单个角色（角色面板 ⚙ → 卸载角色，MikuMikuAR buildModelToolsLevel 移植）：移除场景根节点 +
+/** 卸载单个模型实例（角色面板 ⚙ → 卸载模型，MikuMikuAR buildModelToolsLevel 移植）：移除场景根节点 +
  *  释放内容层 GPU + 注册表注销（焦点自动转移）+ 相机取景重算。原 mount3D 内嵌闭包提纯。 */
-export function mpUnloadRole(ctx: MpUnloadCtx, id: string): void {
+export function mpUnloadModel(ctx: MpUnloadCtx, id: string): void {
   const entry = sceneRegistry.get(id);
   if (!entry) return;
   // 卸载的是当前会话内容层源时，perFrame 指向其 update——先记下以便停掉
@@ -51,7 +51,7 @@ export function mpUnloadRole(ctx: MpUnloadCtx, id: string): void {
   const next = sceneRegistry.getActiveId();
   if (next) {
     // setActive 仅在 menuItems truthy 时换菜单；新活跃角色无专属项时显式清空
-    // dock 适配器项，杜绝残留已卸载角色的菜单绑定到已 dispose 内容层（P2）
+    // dock 适配器项，杜绝残留已卸载模型的菜单绑定到已 dispose 内容层（P2）
     const ne = sceneRegistry.get(next);
     if (ne?.menuItems) sceneRegistry.setActive(next);
     else ctx.menuHandle.setAdapterItems([]);

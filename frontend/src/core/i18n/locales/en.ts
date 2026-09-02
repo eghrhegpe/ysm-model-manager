@@ -1067,7 +1067,7 @@ export const en: Record<string, string> = {
   "preview.roleFocus": "Set as focus",
   "preview.roleTools": "Model tools",
   "preview.roleToolsSection": "Tools",
-  "preview.unloadRole": "Unload character",
+  "preview.unloadRole": "Unload model",
   "preview.noRoles": "(no loaded characters)",
   "preview.noOtherModel": "(no other models)",
   "preview.noTypeModel": "(no models of this type)",

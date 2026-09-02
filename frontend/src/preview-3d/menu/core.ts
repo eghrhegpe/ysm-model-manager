@@ -60,7 +60,7 @@ export interface PreviewMenuCtx {
    *  第二参透传 siblings，切换后新会话「当前目录」tab 有候选（P1-2） */
   switchExternal?: (path: string, siblings?: string[], options?: { keepInScene?: boolean }) => Promise<void> | void;
   /** 卸载已加载角色（mount3D 注入：移除 roots + dispose + 注册表注销 + 相机重算） */
-  unloadRole?: (id: string) => void;
+  unloadModel?: (id: string) => void;
   /** 动作节点真 ctx：mount3D 注入真实现，适配器动作可 toast/closeAllOverlays */
   toast: (message: string) => void;
   closeAllOverlays: () => void;
@@ -542,6 +542,6 @@ export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx):
  * 角色面板（MikuMikuAR buildModelRootItems 移植，2026-08-20）：
  * 顶部列出已加载角色（sceneRegistry），行首 radio 切换焦点、点名字进详情
  * （按该角色 menuItems 的 model 组 panel 能力显示——vrm/mmd/ysm 各显所能，
- * 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载角色，
+ * 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载模型，
  * 少用但重要）；底部复用 fillSwitch 加载入口（siblings + 类型 tab）。
  */

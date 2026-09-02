@@ -2,7 +2,7 @@
 // MikuMikuAR buildModelRootItems 移植（2026-08-20）：
 // 顶部列出已加载角色（sceneRegistry），行首 radio 切换焦点、点名字进详情
 // （按该角色 menuItems 的 model 组 panel 能力显示——vrm/mmd/ysm 各显所能，
-// 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载角色，
+// 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载模型，
 // 少用但重要）；底部复用 fillSwitch 加载入口（siblings + 类型 tab）。
 
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
@@ -166,7 +166,7 @@ interface FrRenderDeps {
 }
 
 interface FrToolsDeps {
-  unloadRole: (id: string) => void;
+  unloadModel: (id: string) => void;
   closePopup: () => void;
 }
 
@@ -287,11 +287,11 @@ function frBuildToolsView(e: ModelEntry, deps: FrToolsDeps): SlideMenuView {
       l.innerHTML = "";
       const unload = document.createElement("div");
       unload.dataset.testid = "preview-role-unload";
-      unload.textContent = "🗑 " + tr("preview.unloadRole", "卸载角色");
+      unload.textContent = "🗑 " + tr("preview.unloadModel", "卸载模型");
       unload.style.cssText =
         "display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#ff7b7b";
       unload.onclick = (): void => {
-        deps.unloadRole(e.id);
+        deps.unloadModel(e.id);
         deps.closePopup();
       };
       l.appendChild(unload);
@@ -319,7 +319,7 @@ export function fillRoles(
   list.appendChild(rolesBox);
 
   const renderDeps: FrRenderDeps = { setAdapterItems, makeRow, makePanelView, menu, actionCtx };
-  const toolsDeps: FrToolsDeps = { unloadRole: (id) => ctx.unloadRole?.(id), closePopup };
+  const toolsDeps: FrToolsDeps = { unloadModel: (id) => ctx.unloadModel?.(id), closePopup };
   const reRender: () => void = () => frRenderRoles(rolesBox, renderDeps, toolsDeps, onSelectRole, reRender);
   renderDeps.reRender = reRender;
 

@@ -67,7 +67,7 @@ import { bindInputHandlers } from "./input-and-animation.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 // §5 拆分（2026 锐评整改）：场景单例/基础设施装配 → shared-infra.ts；
-// WASD 相机运动 → wasd-camera.ts；统一拾取器 → unified-pick.ts；角色卸载 → unload-role.ts
+// WASD 相机运动 → wasd-camera.ts；统一拾取器 → unified-pick.ts；模型卸载 → unload-model.ts
 import {
   clearSceneCaps,
   getSceneCaps,
@@ -78,7 +78,7 @@ import {
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import { mpMakeUnifiedPickHandler } from "./unified-pick.ts";
-import { type MpUnloadCtx, mpUnloadRole } from "./unload-role.ts";
+import { type MpUnloadCtx, mpUnloadModel } from "./unload-model.ts";
 import { type MpWasdReuse, mpApplyWasdCameraMotion } from "./wasd-camera.ts";
 
 /** 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） */
@@ -436,7 +436,7 @@ export async function mount3D(
           }
         }
       : undefined,
-    unloadRole,
+    unloadModel,
     toast: (msg: string): void => {
       bus.emit("toast:show", { msg, duration: TOAST_MS.normal });
     },
@@ -686,12 +686,12 @@ export async function mount3D(
   };
 
   /**
-   * 卸载单个角色（角色面板 ⚙ → 卸载角色，MikuMikuAR buildModelToolsLevel 移植）：
+   * 卸载单个模型实例（角色面板 ⚙ → 卸载模型，MikuMikuAR buildModelToolsLevel 移植）：
    * 移除其场景根节点 + 释放内容层 GPU + 注册表注销（焦点自动转移）+ 相机取景重算。
    * 函数声明提升：引用 allContent（§4 声明）在调用时已初始化。
    */
-  function unloadRole(id: string): void {
-    mpUnloadRole(
+  function unloadModel(id: string): void {
+    mpUnloadModel(
       {
         allContent: session.allContent,
         scene: infra?.scene,
@@ -700,7 +700,7 @@ export async function mount3D(
         menuHandle,
         getContent: () => session.content,
         setPerFrame: (f) => switchCtx.setPerFrame(f),
-        // 从全局 perFrame 列表移除指定回调（原 mpUnloadRole 内联 _globalPerFrames splice 逻辑）
+        // 从全局 perFrame 列表移除指定回调（原 mpUnloadModel 内联 _globalPerFrames splice 逻辑）
         removePerFrame: (f) => {
           const idx = _globalPerFrames.indexOf(f);
           if (idx >= 0) _globalPerFrames.splice(idx, 1);
@@ -908,7 +908,7 @@ export async function mount3D(
 // → shared-infra.ts（场景单例 + mpBuildSharedInfra + mpSyncShadowLights）
 // → wasd-camera.ts（mpApplyWasdCameraMotion + MpWasdReuse）
 // → unified-pick.ts（mpMakeUnifiedPickHandler）
-// → unload-role.ts（mpUnloadRole + MpUnloadCtx）
+// → unload-model.ts（mpUnloadModel + MpUnloadCtx）
 // → input-and-animation.ts（bindInputHandlers / InputOptions）
 // → switch-preview.ts（switchToSession / SwitchContext）
 

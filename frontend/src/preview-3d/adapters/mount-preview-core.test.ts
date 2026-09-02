@@ -2,7 +2,7 @@
 // 覆盖：mount3D 主路径（shared 基础设施复用 + build 注入 + 注册表登记 + 菜单注入 +
 // perFrame 接线）、rAF 循环（WASD 相机运动 / 能力更新 / 统一渲染出口）、
 // ESC 关闭（fullCleanup 生命周期）、build 失败降级、build 中途 abort（代际守卫）、
-// unloadRole（注册表卸载）、统一多模型拾取器、cleanupPreview/_resetSingletons。
+// unloadModel（注册表卸载）、统一多模型拾取器、cleanupPreview/_resetSingletons。
 // WebGLRenderer/OrbitControls 为 fake（happy-dom 无 WebGL）；caps registry/菜单壳/input
 // 桩掉外壳依赖，scene/camera/Vector3/Box3 用 three 真实实现（纯 JS 无 GL 依赖）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -412,7 +412,7 @@ describe("rAF 渲染管线（WASD / perFrame / 能力 / 统一渲染出口）", 
   });
 });
 
-describe("unloadRole（注册表卸载角色）", () => {
+describe("unloadModel（注册表卸载模型）", () => {
   it("卸载指定角色：dispose + 移除 roots + 注销 + 菜单复位 + refreshDock", async () => {
     const content = makeBuilt();
     await mount3D({ id: "vrm", build: vi.fn(async () => content) }, "/m/a.vrm");
@@ -426,8 +426,8 @@ describe("unloadRole（注册表卸载角色）", () => {
       menuItems: [panelItem("role")] as unknown as PreviewMenuNode[],
     });
 
-    // 经菜单 ctx 触发 unloadRole（角色面板 ⚙ → 卸载）
-    (h.menuOpts!.unloadRole as (id: string) => void)(id);
+    // 经菜单 ctx 触发 unloadModel（角色面板 ⚙ → 卸载）
+    (h.menuOpts!.unloadModel as (id: string) => void)(id);
 
     expect(unloadBuilt.dispose).toHaveBeenCalledTimes(1);
     // 注册表注销（活跃 id 转移/清空）

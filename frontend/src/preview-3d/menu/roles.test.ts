@@ -128,17 +128,17 @@ describe("角色面板（roles）", () => {
     handle.dispose();
   });
 
-  it("点击 ⚙ → 工具子面板含卸载角色；点击卸载 → ctx.unloadRole 收到该角色 id", () => {
-    const unloadRole = vi.fn();
+  it("点击 ⚙ → 工具子面板含卸载模型；点击卸载 → ctx.unloadModel 收到该模型实例 id", () => {
+    const unloadModel = vi.fn();
     regRole("/m/a.ysm");
-    const handle = mountPreviewRootMenu(overlay, makeCtx({ unloadRole }));
+    const handle = mountPreviewRootMenu(overlay, makeCtx({ unloadModel }));
     (overlay.querySelector('[data-testid="dock-model"]') as HTMLElement).click();
     const aRow = overlay.querySelector(`[data-testid="preview-role-row"][data-role-id="m1"]`);
     (aRow!.querySelector('[data-testid="preview-role-tools"]') as HTMLElement).click();
     const unload = overlay.querySelector('[data-testid="preview-role-unload"]');
     expect(unload).not.toBeNull();
     (unload as HTMLElement).click();
-    expect(unloadRole).toHaveBeenCalledWith("m1");
+    expect(unloadModel).toHaveBeenCalledWith("m1");
     handle.dispose();
   });
 

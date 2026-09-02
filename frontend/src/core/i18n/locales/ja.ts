@@ -1068,7 +1068,7 @@ export const ja: Record<string, string> = {
   "preview.roleFocus": "焦点に設定",
   "preview.roleTools": "モデルツール",
   "preview.roleToolsSection": "ツール",
-  "preview.unloadRole": "キャラクターをアンロード",
+  "preview.unloadRole": "モデルをアンロード",
   "preview.noRoles": "（読み込み済みキャラクターなし）",
   "preview.noOtherModel": "（他のモデルなし）",
   "preview.noTypeModel": "（この種類のモデルなし）",

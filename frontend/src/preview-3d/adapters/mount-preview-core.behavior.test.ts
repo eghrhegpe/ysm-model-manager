@@ -676,17 +676,17 @@ describe("代际守卫（_gen）", () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────
-// describe 8: unloadRole 真实路径（角色面板卸载，code_review P2/P3 回归守卫）
-// 经 mock 的 mountPreviewRootMenu 捕获 mount3D 注入的 ctx.unloadRole，
+// describe 8: unloadModel 真实路径（角色面板卸载，code_review P2/P3 回归守卫）
+// 经 mock 的 mountPreviewRootMenu 捕获 mount3D 注入的 ctx.unloadModel，
 // 驱动真实实现：断言内容层 dispose / 注册表注销 / 焦点转移决策 / dock 清空。
 // ──────────────────────────────────────────────────────────────────────
-describe("unloadRole 真实路径（角色面板卸载）", () => {
+describe("unloadModel 真实路径（角色面板卸载）", () => {
   /** mock sceneRegistry 的内部 entries map（真实类型无此属性，测试直接预置/读取角色） */
   function mockEntries(): Map<string, any> {
     return (sceneRegistry as unknown as { _entries: Map<string, any> })._entries;
   }
 
-  /** 取最近一次 mount3D 传给 mountPreviewRootMenu 的 ctx（含真实 unloadRole 引用） */
+  /** 取最近一次 mount3D 传给 mountPreviewRootMenu 的 ctx（含真实 unloadModel 引用） */
   function lastMenuCtx(): PreviewMenuCtx {
     const calls = vi.mocked(mountPreviewRootMenu).mock.calls;
     expect(calls.length).toBeGreaterThan(0);
@@ -709,13 +709,13 @@ describe("unloadRole 真实路径（角色面板卸载）", () => {
     });
 
     const ctx = lastMenuCtx();
-    expect(ctx.unloadRole).toBeDefined();
-    ctx.unloadRole!("/model.ysm");
+    expect(ctx.unloadModel).toBeDefined();
+    ctx.unloadModel!("/model.ysm");
 
-    // 内容层 GPU 释放 + 注册表注销（真实 unloadRole 内 splice + unregister）
+    // 内容层 GPU 释放 + 注册表注销（真实 unloadModel 内 splice + unregister）
     expect(disposeSpy).toHaveBeenCalled();
     expect(sceneRegistry.unregister).toHaveBeenCalledWith("/model.ysm");
-    // 新活跃角色 menuItems === null → 显式清空 dock 适配器项（P2 修复：不残留已卸载角色的菜单）
+    // 新活跃角色 menuItems === null → 显式清空 dock 适配器项（P2 修复：不残留已卸载模型的菜单）
     const handle = vi.mocked(mountPreviewRootMenu).mock.results.at(-1)!.value as any;
     expect(handle.setAdapterItems).toHaveBeenCalledWith([]);
     cleanupPreview();
@@ -733,7 +733,7 @@ describe("unloadRole 真实路径（角色面板卸载）", () => {
     });
 
     const ctx = lastMenuCtx();
-    ctx.unloadRole!("/a.ysm");
+    ctx.unloadModel!("/a.ysm");
 
     expect(sceneRegistry.setActive).toHaveBeenCalledWith("/b.ysm");
     const handle = vi.mocked(mountPreviewRootMenu).mock.results.at(-1)!.value as any;
@@ -748,7 +748,7 @@ describe("unloadRole 真实路径（角色面板卸载）", () => {
     const disposeSpy = entry.content.dispose;
 
     const ctx = lastMenuCtx();
-    ctx.unloadRole!("/only.ysm");
+    ctx.unloadModel!("/only.ysm");
 
     expect(disposeSpy).toHaveBeenCalled();
     expect(sceneRegistry.getActiveId()).toBeUndefined();

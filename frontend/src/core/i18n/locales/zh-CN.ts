@@ -1072,7 +1072,7 @@ export const zhCN = {
   "preview.roleFocus": "设为焦点",
   "preview.roleTools": "模型工具",
   "preview.roleToolsSection": "工具",
-  "preview.unloadRole": "卸载角色",
+  "preview.unloadRole": "卸载模型",
   "preview.noRoles": "（无已加载角色）",
   "preview.noOtherModel": "（无其他模型）",
   "preview.noTypeModel": "（该类型暂无模型）",

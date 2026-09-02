@@ -25,7 +25,7 @@ export function makeMenuCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMen
     getViewContainer: () => document.createElement("div"),
     close: vi.fn(),
     switchTo: vi.fn(),
-    unloadRole: vi.fn(),
+    unloadModel: vi.fn(),
     toast: vi.fn(),
     closeAllOverlays: vi.fn(),
     ...overrides,

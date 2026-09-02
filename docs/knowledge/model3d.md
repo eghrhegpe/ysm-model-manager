@@ -728,6 +728,7 @@ export function computeBoneLocalPos(
 
 `model3d.ts`（类型枢纽，无渲染入口）：
 - 类型：`Spec3D` / `SpecModelGroup3D` / `SpecBone3D`（localPosition/localRotation 四元数 [x,y,z,w]/parentId）/ `SpecMeshGroup3D`（positions/normals/uvs/indices/texIdx）/ `BoneSelectInfo` / `BoneMaps`
+- **镜像注记（ADR-161）**：本文件 `Spec3D` 族为 spec 契约（Go `Model3DSpec`/`ModelGroup`/`BoneData`/`MeshData`）的**前端镜像层**，类型锚点是 Wails 绑定类（`bindings/ysm-model-manager/go/threejs/models.ts`）；禁新增第四套 spec 类型名。跨层词汇与尺度词（组件/模型/内容层/entry）见 [preview_core](./preview_core.md)「渲染会话词汇」。
 - re-export：键位/相机偏好（`DEFAULT_TD_KEYMAP` / `loadTdKeymap` / `loadTdCamSpeed` / `loadTdRotMode`，对外统一出口）
 
 渲染入口在统一预览核心 [preview_core](./preview_core.md)（`mount-preview-core.ts`）：

@@ -354,7 +354,41 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 - **`scene.background` 兜底（shared 模式，`mount-preview-core.ts`）**：核心创建 `scene` 并设 `scene.background = new THREE.Color("#1a1b2e")`；所有适配器 mount 进同一 `ctx.scene`
 - **天空落点（已实现，ADR-073 L1）**：统一核心在 shared 模式创建 `renderer` 后立即 `new SkyCapability({ scene, renderer }).apply()`（`mount-preview-core.ts`），复用 Three 官方 `Sky`（Preetham 散射）。YSM / VRM / MMD / Litematic 因共用同一 `ctx.scene` **零改动继承**——即「MMD 有天空 → YSM/VRM 自动获得」在 Three 域内的真·自动机制。能力层 `frontend/src/preview-3d/caps/sky-capability.ts` 封装 uniform 管线 + 可选 IBL（`setEnvironmentEnabled`，默认关）+ 会话级 tone mapping（dispose 还原）。`scene.background` 纯色保留为禁用天空时的兜底。
 - **self 模式**（`adapter.mode === "self"`，如个别单例）：核心仅提供外壳、不创建 `scene`，背景由适配器自管
-- **dock 🧍 模型组按钮恒定直达 roles 面板（2026-08-22 收口，commit e8d6f5aa）**：`renderDock` 模型组**不再**按 `sceneRegistry` 是否为空分流。生产环境每个 `built` 都经 `mount-preview-core.ts` 注册进 `sceneRegistry`，故注册表恒非空——原「无角色→组根视图」兜底分支是**死分支**，且会导致加载模型后 🧍 显示旧组根菜单（与 FAB 直进 roles 不一致）。🧍 永远走 `makePanelView(rolesDef)` 直接开角色面板（角色管理 + 内嵌加载入口 `fillSwitch`）。单模型实例工具（模型信息/截图/骨骼/材料）保留 `dockGroup:"model"` 不变，由 `roleDetailView` 按 `dockGroup==="model"` 过滤，从 dock 根**下沉到角色详情内可达**——YS'M+PMX 同台时天然自洽，且多蓝图/投影等注册的实体也能经各自详情卸载（复用类型无关的 `unloadRole`）。
+  - **dock 🧍 模型组按钮恒定直达 roles 面板（2026-08-22 收口，commit e8d6f5aa）**：`renderDock` 模型组**不再**按 `sceneRegistry` 是否为空分流。生产环境每个 `built` 都经 `mount-preview-core.ts` 注册进 `sceneRegistry`，故注册表恒非空——原「无角色→组根视图」兜底分支是**死分支**，且会导致加载模型后 🧍 显示旧组根菜单（与 FAB 直进 roles 不一致）。🧍 永远走 `makePanelView(rolesDef)` 直接开角色面板（角色管理 + 内嵌加载入口 `fillSwitch`）。单模型实例工具（模型信息/截图/骨骼/材料）保留 `dockGroup:"model"` 不变，由 `roleDetailView` 按 `dockGroup==="model"` 过滤，从 dock 根**下沉到角色详情内可达**——YS'M+PMX 同台时天然自洽，且多蓝图/投影等注册的实体也能经各自详情卸载（复用类型无关的 `unloadRole`）。
+
+## 渲染会话词汇（ADR-161 章程）
+
+> **状态**：章程已采纳（2026-09-02），实施分批进行。**实施完成前，代码仍用旧名**（`built`/`roleDetailView`/`unloadRole` 等），检索请双词并搜；本章词表是「读懂代码」的翻译层，不是「代码已改名」的声明。
+
+### 四级尺度词（渲染会话域唯一口径）
+
+| 统一词 | 指代 | 代码锚点（现行 → 章程目标） |
+|--------|------|------------------------------|
+| **组件 component** | spec.models[i] = 一个包/文件内的一个 geo 内容 | Go `ModelGroup`（JSON 契约名保留）；前端镜像 `SpecModelGroup3D` |
+| **模型 model** | 一个资源（zip/文件/目录），用户视角的「一个模型」 | 资源 path、详情卡标题 |
+| **内容层 scene content** | 会话中一个格式实例（一个 PreviewScene，ADR-093 可多模型同框） | `mount-preview-core.ts` `built` → `content` |
+| **注册条目 entry** | sceneRegistry 中一个已注册模型实例（MAX_MODELS=8，ADR-159） | `scene-registry.ts` `ModelEntry` |
+
+数据流追索路径：**资源 path → model → `spec.models[i]`（组件，跨层唯一锚）→ 内容层（整模型挂进 ctx.scene）→ registry entry（会话实例）**。禁止以「model group」指代组件、「角色」指代会话实例。
+
+### spec 契约单一镜像（禁第四套类型名）
+
+- spec 数据契约唯一事实源 = Go（`Model3DSpec`/`ModelGroup`/`BoneData`/`MeshData`），Wails 绑定类（`bindings/ysm-model-manager/go/threejs/models.ts`）为前端类型**锚点**。
+- 前端 `model3d.ts` 的 `Spec3D` 族是**镜像层**，须与绑定声明式等价（别名/改引），不得再增新 spec 类型名。
+- JS WASM 兜底 `buildSpecFromModel` 与 Go `threejs.Build()` 双实现口径不一致为已知遗留（model3d.md 不变量），产出结构同锚契约。
+
+### 搜索直达（降低试错）
+
+| 想找 | 直达 |
+|------|------|
+| 模型结构/组件统计 | `GetModel3DSpec` → `componentCountsFromSpec`（详情卡蓝卡行） |
+| 当前场景有几/哪几个模型 | `scene-registry.ts` `sceneRegistry`（entry 级） |
+| 一个格式怎么挂进场景 | 该格式 `make<Format>Adapter`（YSM=`makeYsmAdapter`；VRM/MMD 主入口补全中，见 ADR-161 §2.5） |
+| 卸载/释放 | `unloadRole`（卸载入口）/ `cleanupPreview`（整会话清理）——语义分层：卸载=注册表注销+内容层 GPU，清理=外壳级 |
+
+### 角色一词注记
+
+本卡上文 `roles` 面板 / `roleDetailView` / `unloadRole` / 「角色」等为**现行代码命名**（用户可见层：车万女仆域角色语义 + 会话内模型实例列表）。ADR-161 §2.4 方向：代码内部会话实例口径收敛「模型实例」，`unload-role.ts` 文案改「卸载模型」——实施前两词均可检索，勿据此卡断言代码已改。
 
 ## 验证状态与迭代清单（2026-08-19）
 

@@ -5,69 +5,94 @@
 // 浏览器读不了本地磁盘路径）→ 挂入核心场景 + 灯光 + 包围盒定相机。
 // 通用外壳（overlay/renderer/循环/释放）由 mount-preview-core.ts 拥有。
 
-import * as THREE from "three";
-import { MMDLoader, VmdObject, buildAnimation, buildCameraAnimation, VPDLoader, applyVPD, type VpdObject } from "@moeru/three-mmd";
+import {
+  applyVPD,
+  buildAnimation,
+  buildCameraAnimation,
+  MMDLoader,
+  VmdObject,
+  VPDLoader,
+  type VpdObject,
+} from "@moeru/three-mmd";
 import { MMDAmmoPlugin } from "@moeru/three-mmd-physics-ammo"; // 官方 Ammo.js 物理后端（PhysicsService 实装，非自研 cannon）
-import { t } from "../../core/i18n/t.ts";
-import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
+import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import { scheduleBackgroundEncoding, cancelPendingEncodings } from "./mmd-ktx2-encoder.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { t } from "../../core/i18n/t.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { safeGet } from "../../utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
-import { getTextureDecoder, applyWorkerDecodedTextures, type DecodedTexture } from "./mmd-texture-decoder.ts";
-import { createPmxParser, buildPmxSceneSliced, type PmxParser, type PmxBuildResult } from "./mmd-pmx-parser.ts";
-import { Ktx2TextureLoader } from "./mmd-ktx2-texture-loader.ts";
-import { safeDispose } from "../safe-dispose.ts";
-import { renderLoadingState } from "./preview-loading.ts";
-import { startMainThreadWatch, formatLongTask } from "../../utils/main-thread-watch.ts";
-import { recordLoadTrace } from "../load-trace.ts";
-import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
-import { prepareMmdZipInput, bytesToBase64 } from "./mmd-zip-overlay.ts";
+import { formatLongTask, startMainThreadWatch } from "../../utils/main-thread-watch.ts";
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import type {
+  MaterialControlBridge,
   MmdBottomNavCtx,
   MmdPlayBridge,
-  MaterialControlBridge,
 } from "../../views/app-preview/mmd-controls.ts";
-import {
-  listMmdMaterials,
-  getMmdMaterialDetail,
-  setMmdMaterialVisible,
-  setMmdMaterialOpacity,
-} from "../mmd-materials.ts";
+import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
+import { type BoneTree, buildBoneTree } from "../bone-tools.ts";
+import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
+import { recordLoadTrace } from "../load-trace.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { mmdBonesToBoneNodes } from "../mmd-bones.ts"; // ADR-077: pmx.bones 索引结构 → BoneNode[]
-import { buildBoneTree, type BoneTree } from "../bone-tools.ts";
-import { mmdSemanticBoneMap } from "../semantic-bones.ts";
-import { mmdSemanticMorphMap } from "../semantic-morphs.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK）
+import {
+  getMmdMaterialDetail,
+  listMmdMaterials,
+  setMmdMaterialOpacity,
+  setMmdMaterialVisible,
+} from "../mmd-materials.ts";
+import { createAutoDanceController } from "../perception/autodance.ts"; // 语义骨骼消费方：程序化生命力 L3
+import { createBlinkController } from "../perception/blink.ts"; // 语义 morph 消费方：程序化生命力 L1.5
 import { createBreathController } from "../perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
 import { createGazeController } from "../perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
-import { createBlinkController } from "../perception/blink.ts"; // 语义 morph 消费方：程序化生命力 L1.5
-import { createLipSyncController } from "../perception/lipsync.ts"; // 语义 morph 消费方：程序化生命力 L2
-import { createAutoDanceController } from "../perception/autodance.ts"; // 语义骨骼消费方：程序化生命力 L3
-import { buildLipMorphIndices } from "../perception/lipsync.ts"; // 多 morph index 提取
-import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK）
+import { buildLipMorphIndices, createLipSyncController } from "../perception/lipsync.ts"; // 多 morph index 提取
+import { safeDispose } from "../safe-dispose.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
-import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
+import { mmdSemanticBoneMap } from "../semantic-bones.ts";
+import { mmdSemanticMorphMap } from "../semantic-morphs.ts";
+import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { materialNodes } from "./material-controls.ts";
-import { morphNodes } from "./morph-controls.ts";
-import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
-import { getCustomAnimPath, filterAnimFiles } from "./mmd-anim-library.ts";
+import { filterAnimFiles, getCustomAnimPath } from "./mmd-anim-library.ts";
+import { cancelPendingEncodings, scheduleBackgroundEncoding } from "./mmd-ktx2-encoder.ts";
+import { Ktx2TextureLoader } from "./mmd-ktx2-texture-loader.ts";
+import {
+  buildPmxSceneSliced,
+  createPmxParser,
+  type PmxBuildResult,
+  type PmxParser,
+} from "./mmd-pmx-parser.ts";
+import {
+  applyWorkerDecodedTextures,
+  type DecodedTexture,
+  getTextureDecoder,
+} from "./mmd-texture-decoder.ts";
 // import { createBlinkController } from "../perception/blink.ts"; // 待 three-mmd 暴露 morph 权重 API 后接入
-
-/** 并发读取纹理的分片大小（fallback 路径：readFileBytesBatch 失败时降级）
- * 默认 4：平衡内存占用与 I/O 并发性，适合大多数 MMD 模型（通常 < 20 贴图）。
- * 若项目纹理数量大或网络/磁盘 I/O 慢，可调大（如 8/16）；内存紧张则调小（如 2）。
- * ADR-101：对齐后端 goroutine 池设计哲学。 */
-const TEXTURE_READ_CHUNK_SIZE = 4;
+// 纯辅助（纹理判定/TGA 检测/材质槽位/GPU 估算/有界并发映射）已拆至 mmd-utils.ts
+import {
+  concurrentMap,
+  DISPOSE_TEX_KEYS,
+  estimateTexGpuBytes,
+  isLikelyTga,
+  matTexSlots,
+  TEXTURE_EXTS,
+} from "./mmd-utils.ts";
+import { bytesToBase64, prepareMmdZipInput } from "./mmd-zip-overlay.ts";
+import { morphNodes } from "./morph-controls.ts";
+import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import {
+  type PerceptionCapability,
+  type PerceptionState,
+  perceptionNodes,
+} from "./perception-controls.ts";
+import { renderLoadingState } from "./preview-loading.ts";
 
 /** MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface MmdDataPort {
   readFileBytes(path: string): Promise<string | null>;
   readFileBytesBatch(paths: string[]): Promise<Record<string, string | null>>;
   /** 批量读取 + SHA256 hash（一次 RPC 返回数据和哈希，替代前端算 hash） */
-  readFileBytesBatchWithMeta?(paths: string[]): Promise<Record<string, { data: string | null; hash: string } | null>>;
+  readFileBytesBatchWithMeta?(
+    paths: string[],
+  ): Promise<Record<string, { data: string | null; hash: string } | null>>;
   listAllFilePaths(dir: string): Promise<string[] | null>;
   addOpLog(op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void>;
   /** 读取纹理文件并检查 KTX2 缓存，返回 { format, data, hash }（已废弃，保留兼容） */
@@ -91,58 +116,6 @@ async function mmdDiag(
   } catch {
     /* 诊断不阻断加载 */
   }
-}
-
-/**
- * 并发分片映射：将 items 按 chunkSize 分组，每组内 Promise.all 并发执行，
- * 组与组之间串行。fallback 批量读取的并发版——避免 N 次串行 await，
- * 又不一次性爆栈（ADR-101 配套前端优化，对齐后端 goroutine 池设计）。
- */
-async function concurrentMap<T, R>(
-  items: T[],
-  fn: (item: T) => Promise<R>,
-  chunkSize = TEXTURE_READ_CHUNK_SIZE,
-): Promise<R[]> {
-  if (items.length === 0) return [];
-  const results: R[] = new Array(items.length);
-  for (let i = 0; i < items.length; i += chunkSize) {
-    const chunk = items.slice(i, i + chunkSize);
-    const chunkResults = await Promise.all(chunk.map((item) => fn(item)));
-    for (let j = 0; j < chunkResults.length; j++) {
-      results[i + j] = chunkResults[j];
-    }
-  }
-  return results;
-}
-
-/** 同目录纹理候选扩展名（PMX/PMD 引用的贴图；.spa/.sph 特殊格式 Image 解不了，命中后降级无贴图） */
-const TEXTURE_EXTS = [".png", ".jpg", ".jpeg", ".bmp", ".tga", ".gif", ".webp"];
-
-/** 假 TGA 检测：合法 TGA 头部第 3 字节（图像类型）∈ {1,2,3,9,10,11}；MMD 素材常有扩展名 .tga 但内容非法的占位文件，跳过避免 TGALoader 刷错 */
-function isLikelyTga(bytes: Uint8Array): boolean {
-  if (bytes.length < 18) return false;
-  const type = bytes[2];
-  return type === 1 || type === 2 || type === 3 || type === 9 || type === 10 || type === 11;
-}
-
-/** 可释放的纹理字段名（MMDToonMaterial 特有 + 标准纹理，对齐 mesh.ts ALL_TEXTURE_KEYS 且扩 MMD 专属字段） */
-const DISPOSE_TEX_KEYS = [
-  "map", "emissiveMap", "normalMap", "roughnessMap",
-  "metalnessMap", "aoMap", "lightMap", "alphaMap", "envMap",
-  "sphereMap", "toonMap", "displacementMap", "bumpMap",
-] as const;
-
-// 材质纹理槽位读写：Three.js Material 类型不含 MMD 扩展贴图 key，
-// 断言收敛到此处（原 3 处散落的 mat as unknown as Record<string, unknown>）
-type MatTexSlots = Record<string, unknown>;
-const matTexSlots = (mat: THREE.Material): MatTexSlots => mat as unknown as MatTexSlots;
-
-/** 估算纹理 GPU 内存（字节），只计 RGBA 全尺寸；压缩纹理格式不在此列 */
-function estimateTexGpuBytes(tex: THREE.Texture): number {
-  const img = tex.image as HTMLImageElement | undefined;
-  if (!img?.width || !img?.height) return 0;
-  // RGBA8888 = 4B/px（最普适场景）；其它格式估算偏保守
-  return img.width * img.height * 4;
 }
 
 /** 释放 MMD mesh 的全部几何/材质/纹理，并记录统计到环形日志 */
@@ -184,11 +157,18 @@ async function disposeMmdMesh(
 /** 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） */
 export interface MmdPanelHooks {
   fillModelPanel: (list: HTMLElement, ctx: MmdBottomNavCtx) => void;
-  fillShotPanel: (list: HTMLElement, ctx: MmdBottomNavCtx, screenshot: (() => Promise<string | null>) | null) => void;
+  fillShotPanel: (
+    list: HTMLElement,
+    ctx: MmdBottomNavCtx,
+    screenshot: (() => Promise<string | null>) | null,
+  ) => void;
   /** 声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归）：R1 禁 utils 运行时依赖 views，
    *  mmdModelInfoNodes / mmdShotNodes / playNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
   modelInfoNodes?: (ctx: MmdBottomNavCtx) => PreviewMenuNode[];
-  shotNodes?: (ctx: MmdBottomNavCtx, screenshot: (() => Promise<string | null>) | null) => PreviewMenuNode[];
+  shotNodes?: (
+    ctx: MmdBottomNavCtx,
+    screenshot: (() => Promise<string | null>) | null,
+  ) => PreviewMenuNode[];
   /** [doc:adr-126-p5-收尾] play 面板声明式节点（toggle 播放/暂停 + select 动作 + 空态） */
   playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
 }
@@ -296,60 +276,150 @@ type MdMmDetectFormatCtx = Pick<MdMmBuildCtx, "modelBase">;
 
 type MdMmStage1Ctx = Pick<
   MdMmBuildCtx,
-  | "_traceFiles" | "_traceGpuMb" | "blobUrlToHash" | "blobUrlToRel" | "blobUrls"
-  | "bytes" | "ctx" | "decodeTasks" | "decodedTexturesPromise" | "dirPath"
-  | "effectivePath" | "effectivePort" | "modelB64" | "modelBase" | "modelBlobUrl"
-  | "origPath" | "path" | "pmxParsePromise" | "pmxParser" | "port"
-  | "stopLongTaskWatch" | "texHashMap" | "texMap" | "usePmxWorker" | "vmdPaths"
-  | "vpdPaths" | "zipModelOverride" | "zipModelCandidates"
+  | "_traceFiles"
+  | "_traceGpuMb"
+  | "blobUrlToHash"
+  | "blobUrlToRel"
+  | "blobUrls"
+  | "bytes"
+  | "ctx"
+  | "decodeTasks"
+  | "decodedTexturesPromise"
+  | "dirPath"
+  | "effectivePath"
+  | "effectivePort"
+  | "modelB64"
+  | "modelBase"
+  | "modelBlobUrl"
+  | "origPath"
+  | "path"
+  | "pmxParsePromise"
+  | "pmxParser"
+  | "port"
+  | "stopLongTaskWatch"
+  | "texHashMap"
+  | "texMap"
+  | "usePmxWorker"
+  | "vmdPaths"
+  | "vpdPaths"
+  | "zipModelOverride"
+  | "zipModelCandidates"
 >;
 
 type MdMmStage1bCtx = Pick<
   MdMmBuildCtx,
-  | "_traceFiles" | "blobUrlToHash" | "blobUrlToRel" | "blobUrls" | "decodeTasks"
-  | "decodedTexturesPromise" | "dirPath" | "effectivePort" | "texHashMap"
-  | "texMap" | "vmdPaths" | "vpdPaths"
+  | "_traceFiles"
+  | "blobUrlToHash"
+  | "blobUrlToRel"
+  | "blobUrls"
+  | "decodeTasks"
+  | "decodedTexturesPromise"
+  | "dirPath"
+  | "effectivePort"
+  | "texHashMap"
+  | "texMap"
+  | "vmdPaths"
+  | "vpdPaths"
 >;
 
 type MdMmStage2Ctx = Pick<
   MdMmBuildCtx,
-  | "_traceGpuMb" | "ctx" | "effectivePath" | "effectivePort" | "manager" | "mmd"
-  | "tBuildEnd" | "tParseEnd" | "tParseStart" | "texHashMap" | "texMap"
+  | "_traceGpuMb"
+  | "ctx"
+  | "effectivePath"
+  | "effectivePort"
+  | "manager"
+  | "mmd"
+  | "tBuildEnd"
+  | "tParseEnd"
+  | "tParseStart"
+  | "texHashMap"
+  | "texMap"
   | "textureLoadedAt"
 >;
 
 type MdMmParsePmxCtx = Pick<
   MdMmBuildCtx,
-  | "effectivePath" | "effectivePort" | "pmxParsePromise" | "pmxParsedData"
-  | "texMap" | "usePmxWorker" | "workerBuilt"
+  | "effectivePath"
+  | "effectivePort"
+  | "pmxParsePromise"
+  | "pmxParsedData"
+  | "texMap"
+  | "usePmxWorker"
+  | "workerBuilt"
 >;
 
 type MdMmParsePmdCtx = Pick<
   MdMmBuildCtx,
-  | "blobUrlToRel" | "decodedTexturesPromise" | "effectivePath" | "effectivePort"
-  | "manager" | "mesh" | "mmd" | "pmxParsedData" | "pmxParser" | "tParseEnd"
-  | "tParseStart" | "workerBuilt"
+  | "blobUrlToRel"
+  | "decodedTexturesPromise"
+  | "effectivePath"
+  | "effectivePort"
+  | "manager"
+  | "mesh"
+  | "mmd"
+  | "pmxParsedData"
+  | "pmxParser"
+  | "tParseEnd"
+  | "tParseStart"
+  | "workerBuilt"
 >;
 
 type MdMmStage3Ctx = Pick<
   MdMmBuildCtx,
-  | "blobUrlToHash" | "blobUrls" | "buildSucceeded" | "cachedHashes" | "ctx"
-  | "effectivePath" | "effectivePort" | "mesh" | "port"
+  | "blobUrlToHash"
+  | "blobUrls"
+  | "buildSucceeded"
+  | "cachedHashes"
+  | "ctx"
+  | "effectivePath"
+  | "effectivePort"
+  | "mesh"
+  | "port"
 >;
 
 type MdMmStage4Ctx = Pick<
   MdMmBuildCtx,
-  | "action" | "blobUrls" | "cameraAction" | "cameraAnimRoot" | "cameraAnimTarget"
-  | "cameraClips" | "cameraMixer" | "clips" | "ctx" | "curIdx" | "customAnimPath"
-  | "effectivePort" | "firstCameraClip" | "mesh" | "mixer" | "playing"
-  | "vmdPaths" | "vpdPaths" | "vpdPoses"
+  | "action"
+  | "blobUrls"
+  | "cameraAction"
+  | "cameraAnimRoot"
+  | "cameraAnimTarget"
+  | "cameraClips"
+  | "cameraMixer"
+  | "clips"
+  | "ctx"
+  | "curIdx"
+  | "customAnimPath"
+  | "effectivePort"
+  | "firstCameraClip"
+  | "mesh"
+  | "mixer"
+  | "playing"
+  | "vmdPaths"
+  | "vpdPaths"
+  | "vpdPoses"
 >;
 
 type MdMmStage5Ctx = Pick<
   MdMmBuildCtx,
-  | "action" | "bonePanelRef" | "boneTree" | "cameraAction" | "cameraClips"
-  | "cameraMixer" | "clips" | "ctx" | "curIdx" | "customAnimPath" | "mesh"
-  | "mixer" | "mmd" | "origPath" | "panels" | "perceptionState" | "playing"
+  | "action"
+  | "bonePanelRef"
+  | "boneTree"
+  | "cameraAction"
+  | "cameraClips"
+  | "cameraMixer"
+  | "clips"
+  | "ctx"
+  | "curIdx"
+  | "customAnimPath"
+  | "mesh"
+  | "mixer"
+  | "mmd"
+  | "origPath"
+  | "panels"
+  | "perceptionState"
+  | "playing"
   | "zipModelCandidates"
 >;
 
@@ -357,19 +427,51 @@ type MdMmStage5Ctx = Pick<
 // trace 字段（结构类型兼容：传给 stage6bTrace 的 c 必须满足 MdMmStage6bCtx）
 type MdMmStage6Ctx = Pick<
   MdMmBuildCtx,
-  | "action" | "blobUrls" | "bonePanelRef" | "cameraAction" | "cameraAnimRoot"
-  | "cameraAnimTarget" | "cameraMixer" | "ctx" | "mesh" | "mixer" | "mmd"
-  | "perceptionState" | "port" | "stopLongTaskWatch" | "vpdPoses" | "workerBuilt"
-  | "_traceFiles" | "_traceGpuMb" | "blobUrlToHash" | "buildSucceeded"
-  | "cachedHashes" | "clips" | "origPath" | "tBuildEnd" | "tParseEnd"
-  | "tParseStart" | "textureLoadedAt" | "usePmxWorker"
+  | "action"
+  | "blobUrls"
+  | "bonePanelRef"
+  | "cameraAction"
+  | "cameraAnimRoot"
+  | "cameraAnimTarget"
+  | "cameraMixer"
+  | "ctx"
+  | "mesh"
+  | "mixer"
+  | "mmd"
+  | "perceptionState"
+  | "port"
+  | "stopLongTaskWatch"
+  | "vpdPoses"
+  | "workerBuilt"
+  | "_traceFiles"
+  | "_traceGpuMb"
+  | "blobUrlToHash"
+  | "buildSucceeded"
+  | "cachedHashes"
+  | "clips"
+  | "origPath"
+  | "tBuildEnd"
+  | "tParseEnd"
+  | "tParseStart"
+  | "textureLoadedAt"
+  | "usePmxWorker"
 >;
 
 type MdMmStage6bCtx = Pick<
   MdMmBuildCtx,
-  | "_traceFiles" | "_traceGpuMb" | "blobUrlToHash" | "buildSucceeded"
-  | "cachedHashes" | "clips" | "mmd" | "origPath" | "tBuildEnd" | "tParseEnd"
-  | "tParseStart" | "textureLoadedAt" | "usePmxWorker"
+  | "_traceFiles"
+  | "_traceGpuMb"
+  | "blobUrlToHash"
+  | "buildSucceeded"
+  | "cachedHashes"
+  | "clips"
+  | "mmd"
+  | "origPath"
+  | "tBuildEnd"
+  | "tParseEnd"
+  | "tParseStart"
+  | "textureLoadedAt"
+  | "usePmxWorker"
 >;
 
 function mdMmDetectFormat(c: MdMmDetectFormatCtx): "pmx" | "pmd" {
@@ -379,7 +481,13 @@ function mdMmDetectFormat(c: MdMmDetectFormatCtx): "pmx" | "pmd" {
 }
 
 async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
-  renderLoadingState(c.ctx.loadingEl, "🎭", "preview.loadingModel", "determinate", "ysm-mmd-progress");
+  renderLoadingState(
+    c.ctx.loadingEl,
+    "🎭",
+    "preview.loadingModel",
+    "determinate",
+    "ysm-mmd-progress",
+  );
   c.stopLongTaskWatch = startMainThreadWatch((info) => {
     void mmdDiag(c.effectivePort, "main-thread", formatLongTask(info), "warn");
   });
@@ -399,24 +507,47 @@ async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
       base: zip.modelBase,
       b64: bytesToBase64(zip.modelBytes),
     };
-    void mmdDiag(c.effectivePort, "zip-preprocess", c.origPath, "ok",
-      `model=${zip.modelBase} zip内文件已映射到虚拟路径`);
+    void mmdDiag(
+      c.effectivePort,
+      "zip-preprocess",
+      c.origPath,
+      "ok",
+      `model=${zip.modelBase} zip内文件已映射到虚拟路径`,
+    );
   }
-  c.modelB64 = c.zipModelOverride?.b64 ?? await c.effectivePort.readFileBytes(c.effectivePath);
-  await mmdDiag(c.effectivePort, "read-model", c.effectivePath, c.modelB64 ? "ok" : "fail",
-    c.modelB64 ? `bytes=${c.modelB64.length}` : "ReadFileBytes 返回空");
+  c.modelB64 = c.zipModelOverride?.b64 ?? (await c.effectivePort.readFileBytes(c.effectivePath));
+  await mmdDiag(
+    c.effectivePort,
+    "read-model",
+    c.effectivePath,
+    c.modelB64 ? "ok" : "fail",
+    c.modelB64 ? `bytes=${c.modelB64.length}` : "ReadFileBytes 返回空",
+  );
   if (!c.modelB64) throw new Error("ReadFileBytes 返回空");
   c.bytes = c.zipModelOverride?.bytes ?? b64ToBytes(c.modelB64);
-  c.modelBase = c.zipModelOverride?.base ?? (c.effectivePath.split(/[/\\]/).pop() || "").toLowerCase();
+  c.modelBase =
+    c.zipModelOverride?.base ?? (c.effectivePath.split(/[/\\]/).pop() || "").toLowerCase();
   c.usePmxWorker = safeGet("mmd-pmx-worker") === "1";
   c.pmxParser = null;
   c.pmxParsePromise = null;
   if (c.usePmxWorker) {
     c.pmxParser = createPmxParser();
     c.pmxParsePromise = c.pmxParser.parse(bytesToArrayBuffer(c.bytes));
-    void mmdDiag(c.effectivePort, "pmx-parse-dispatch", c.effectivePath, "ok", "PMX binary parse dispatched to worker (mmd-pmx-worker=1)");
+    void mmdDiag(
+      c.effectivePort,
+      "pmx-parse-dispatch",
+      c.effectivePath,
+      "ok",
+      "PMX binary parse dispatched to worker (mmd-pmx-worker=1)",
+    );
   } else {
-    void mmdDiag(c.effectivePort, "pmx-parse-dispatch", c.effectivePath, "ok", "主线程 MMDLoader 路径（mmd-pmx-worker 默认关）");
+    void mmdDiag(
+      c.effectivePort,
+      "pmx-parse-dispatch",
+      c.effectivePath,
+      "ok",
+      "主线程 MMDLoader 路径（mmd-pmx-worker 默认关）",
+    );
   }
   c.dirPath = c.effectivePath.replace(/[^/\\]*$/, "").replace(/[/\\]$/, "");
   c.texMap = new Map();
@@ -441,8 +572,8 @@ async function mdMmStage1bFileScan(c: MdMmStage1bCtx): Promise<void> {
     const files = (await c.effectivePort.listAllFilePaths(c.dirPath)) || [];
     c._traceFiles = files.length;
     const texFiles = files.filter((p) => TEXTURE_EXTS.some((ext) => p.toLowerCase().endsWith(ext)));
-    let texBatch: Record<string, string | null> = {};
-    let texHashBatch: Record<string, string> = {};
+    const texBatch: Record<string, string | null> = {};
+    const texHashBatch: Record<string, string> = {};
     if (texFiles.length > 0) {
       try {
         if (c.effectivePort.readFileBytesBatchWithMeta) {
@@ -466,10 +597,19 @@ async function mdMmStage1bFileScan(c: MdMmStage1bCtx): Promise<void> {
           }
         }
       } catch {
-        void mmdDiag(c.effectivePort, "batch-read", c.dirPath, "warn", "批量读取失败，降级并发分片读取");
+        void mmdDiag(
+          c.effectivePort,
+          "batch-read",
+          c.dirPath,
+          "warn",
+          "批量读取失败，降级并发分片读取",
+        );
         const fallbackResults = await concurrentMap(texFiles, async (p) => {
-          try { return [p, await c.effectivePort.readFileBytes(p)] as const; }
-          catch { return [p, null] as const; }
+          try {
+            return [p, await c.effectivePort.readFileBytes(p)] as const;
+          } catch {
+            return [p, null] as const;
+          }
         });
         for (const [p, v] of fallbackResults) texBatch[p] = v;
       }
@@ -489,11 +629,19 @@ async function mdMmStage1bFileScan(c: MdMmStage1bCtx): Promise<void> {
       if (!p.toLowerCase().endsWith(".tga")) {
         const ext = p.split(".").pop()?.toLowerCase() || "";
         const mimeMap: Record<string, string> = {
-          png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
-          bmp: "image/bmp", gif: "image/gif", webp: "image/webp",
+          png: "image/png",
+          jpg: "image/jpeg",
+          jpeg: "image/jpeg",
+          bmp: "image/bmp",
+          gif: "image/gif",
+          webp: "image/webp",
         };
         const mime = mimeMap[ext] || "image/png";
-        c.decodeTasks.push({ relPath: rel || baseName, bytes: bytesToArrayBuffer(texBytes), mimeType: mime });
+        c.decodeTasks.push({
+          relPath: rel || baseName,
+          bytes: bytesToArrayBuffer(texBytes),
+          mimeType: mime,
+        });
       }
       c.texMap.set(rel, url);
       c.texMap.set(baseName, url);
@@ -506,13 +654,23 @@ async function mdMmStage1bFileScan(c: MdMmStage1bCtx): Promise<void> {
     if (c.decodeTasks.length > 0) {
       const decoder = getTextureDecoder();
       c.decodedTexturesPromise = decoder.decodeAll(c.decodeTasks);
-      void mmdDiag(c.effectivePort, "tex-decode-dispatch", c.dirPath, "ok",
-        `dispatched=${c.decodeTasks.length} textures to decode workers`);
+      void mmdDiag(
+        c.effectivePort,
+        "tex-decode-dispatch",
+        c.dirPath,
+        "ok",
+        `dispatched=${c.decodeTasks.length} textures to decode workers`,
+      );
     }
     c.vmdPaths.push(...files.filter((p) => p.toLowerCase().endsWith(".vmd")));
     c.vpdPaths.push(...files.filter((p) => p.toLowerCase().endsWith(".vpd")));
-    await mmdDiag(c.effectivePort, "list-files", c.dirPath, "ok",
-      `files=${files.length} tex=${files.filter((p) => TEXTURE_EXTS.some((ext) => p.toLowerCase().endsWith(ext))).length} vmd=${c.vmdPaths.length}`);
+    await mmdDiag(
+      c.effectivePort,
+      "list-files",
+      c.dirPath,
+      "ok",
+      `files=${files.length} tex=${files.filter((p) => TEXTURE_EXTS.some((ext) => p.toLowerCase().endsWith(ext))).length} vmd=${c.vmdPaths.length}`,
+    );
   } catch (e) {
     await mmdDiag(c.effectivePort, "list-files", c.dirPath, "fail", safeErrorMessage(e));
   }
@@ -619,15 +777,31 @@ async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
       if (pmxResult.ok && pmxResult.vertices && pmxResult.faces) {
         c.workerBuilt = await buildPmxSceneSliced(pmxResult, { texUrlMap: c.texMap });
         if (c.workerBuilt) {
-          await mmdDiag(c.effectivePort, "pmx-worker-build", c.effectivePath, "ok",
-            `vertices=${pmxResult.vertices.count} faces=${pmxResult.faces.count} bones=${pmxResult.bones?.length ?? 0} mats=${pmxResult.materials?.length ?? 0} (Worker path)`);
+          await mmdDiag(
+            c.effectivePort,
+            "pmx-worker-build",
+            c.effectivePath,
+            "ok",
+            `vertices=${pmxResult.vertices.count} faces=${pmxResult.faces.count} bones=${pmxResult.bones?.length ?? 0} mats=${pmxResult.materials?.length ?? 0} (Worker path)`,
+          );
         }
       } else if (!pmxResult.ok) {
-        await mmdDiag(c.effectivePort, "pmx-worker-build", c.effectivePath, "warn",
-          `Worker parse failed: ${pmxResult.error ?? "unknown"} (fallback to MMDLoader)`);
+        await mmdDiag(
+          c.effectivePort,
+          "pmx-worker-build",
+          c.effectivePath,
+          "warn",
+          `Worker parse failed: ${pmxResult.error ?? "unknown"} (fallback to MMDLoader)`,
+        );
       }
     } catch {
-      await mmdDiag(c.effectivePort, "pmx-worker-build", c.effectivePath, "warn", "Worker parse threw, fallback to MMDLoader");
+      await mmdDiag(
+        c.effectivePort,
+        "pmx-worker-build",
+        c.effectivePath,
+        "warn",
+        "Worker parse threw, fallback to MMDLoader",
+      );
     }
   }
 }
@@ -639,21 +813,33 @@ async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     c.tParseEnd = c.tParseStart;
     c.mmd = {
       mesh: c.workerBuilt.mesh,
-      pmx: c.pmxParsedData ? {
-        bones: c.pmxParsedData.bones ?? [],
-        materials: c.pmxParsedData.materials ?? [],
-        morphs: c.pmxParsedData.morphs ?? [],
-      } : undefined,
+      pmx: c.pmxParsedData
+        ? {
+            bones: c.pmxParsedData.bones ?? [],
+            materials: c.pmxParsedData.materials ?? [],
+            morphs: c.pmxParsedData.morphs ?? [],
+          }
+        : undefined,
       updateWithMixer: () => {},
       dispose: () => {},
     } as unknown as Awaited<ReturnType<MMDLoader["loadAsync"]>>;
-    if (c.pmxParsedData?.bones && c.pmxParsedData.bones.some(b => b.hasIK)) {
-      await mmdDiag(c.effectivePort, "worker-limit", c.effectivePath, "warn",
-        "Worker 路径：包含 IK 骨骼的模型，IK 计算将在主线程 fallback 模式下可用");
+    if (c.pmxParsedData?.bones && c.pmxParsedData.bones.some((b) => b.hasIK)) {
+      await mmdDiag(
+        c.effectivePort,
+        "worker-limit",
+        c.effectivePath,
+        "warn",
+        "Worker 路径：包含 IK 骨骼的模型，IK 计算将在主线程 fallback 模式下可用",
+      );
     }
     if (c.pmxParsedData?.rigidBodies && c.pmxParsedData.rigidBodies.length > 0) {
-      await mmdDiag(c.effectivePort, "worker-limit", c.effectivePath, "warn",
-        `Worker 路径：含 ${c.pmxParsedData.rigidBodies.length} 个刚体，物理模拟需 MMDLoader fallback`);
+      await mmdDiag(
+        c.effectivePort,
+        "worker-limit",
+        c.effectivePath,
+        "warn",
+        `Worker 路径：含 ${c.pmxParsedData.rigidBodies.length} 个刚体，物理模拟需 MMDLoader fallback`,
+      );
     }
     c.pmxParser?.dispose();
   } else {
@@ -685,24 +871,50 @@ async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
   if (c.decodedTexturesPromise) {
     try {
       const decoded = await c.decodedTexturesPromise;
-      const allMats2: THREE.Material[] = Array.isArray(c.mesh.material) ? c.mesh.material : c.mesh.material ? [c.mesh.material] : [];
-      const pendingMats = allMats2.filter(m => (m.userData as Record<string, unknown>)?.pendingTexture);
+      const allMats2: THREE.Material[] = Array.isArray(c.mesh.material)
+        ? c.mesh.material
+        : c.mesh.material
+          ? [c.mesh.material]
+          : [];
+      const pendingMats = allMats2.filter(
+        (m) => (m.userData as Record<string, unknown>)?.pendingTexture,
+      );
       if (pendingMats.length === 0 && decoded.size > 0) {
-        await mmdDiag(c.effectivePort, "tex-decode-apply", c.effectivePath, "warn",
-          `decoded=${decoded.size} bitmaps but 0 materials have pendingTexture! mats=${allMats2.length} userDatas=[${allMats2.map(m => Object.keys(m.userData || {}).join(",")).join("|")}]`);
+        await mmdDiag(
+          c.effectivePort,
+          "tex-decode-apply",
+          c.effectivePath,
+          "warn",
+          `decoded=${decoded.size} bitmaps but 0 materials have pendingTexture! mats=${allMats2.length} userDatas=[${allMats2.map((m) => Object.keys(m.userData || {}).join(",")).join("|")}]`,
+        );
       } else if (decoded.size > 0) {
         const { replaced, total } = applyWorkerDecodedTextures(c.mesh, decoded, c.blobUrlToRel);
         if (replaced > 0) {
-          await mmdDiag(c.effectivePort, "tex-decode-apply", c.effectivePath, "ok",
-            `worker-decoded=${replaced}/${total} textures (${decoded.size} bitmaps from workers)`);
+          await mmdDiag(
+            c.effectivePort,
+            "tex-decode-apply",
+            c.effectivePath,
+            "ok",
+            `worker-decoded=${replaced}/${total} textures (${decoded.size} bitmaps from workers)`,
+          );
         } else {
-          await mmdDiag(c.effectivePort, "tex-decode-apply", c.effectivePath, "warn",
-            `decoded=${decoded.size} bitmaps but replaced=0 (PMX路径与磁盘路径可能不匹配, pendingTexture keys=[...查环形日志tex-decode-dispatch])`);
+          await mmdDiag(
+            c.effectivePort,
+            "tex-decode-apply",
+            c.effectivePath,
+            "warn",
+            `decoded=${decoded.size} bitmaps but replaced=0 (PMX路径与磁盘路径可能不匹配, pendingTexture keys=[...查环形日志tex-decode-dispatch])`,
+          );
         }
       }
     } catch {
-      await mmdDiag(c.effectivePort, "tex-decode-apply", c.effectivePath, "warn",
-        "Worker 解码纹理应用失败，使用主线程 fallback");
+      await mmdDiag(
+        c.effectivePort,
+        "tex-decode-apply",
+        c.effectivePath,
+        "warn",
+        "Worker 解码纹理应用失败，使用主线程 fallback",
+      );
     }
   }
 }
@@ -712,7 +924,13 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
   // 结构化守卫替代 !：scene 可选（self 模式适配器自驱 renderer 时为 undefined）
   const scene = c.ctx.scene;
   if (!scene) {
-    await mmdDiag(c.effectivePort, "mesh-debug", c.effectivePath, "warn", "共享 scene 不可用，跳过挂载");
+    await mmdDiag(
+      c.effectivePort,
+      "mesh-debug",
+      c.effectivePath,
+      "warn",
+      "共享 scene 不可用，跳过挂载",
+    );
     return;
   }
   scene.add(c.mesh);
@@ -723,15 +941,33 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
     // computeBoundingBox 后 boundingBox 必非空；显式守卫替代 !
     const bb = geo.boundingBox;
     if (!bb) {
-      await mmdDiag(c.effectivePort, "mesh-debug", c.effectivePath, "warn", "几何 boundingBox 计算失败");
+      await mmdDiag(
+        c.effectivePort,
+        "mesh-debug",
+        c.effectivePath,
+        "warn",
+        "几何 boundingBox 计算失败",
+      );
       return;
     }
     const posAttr = geo.getAttribute("position") as THREE.BufferAttribute | undefined;
     const idx = geo.index;
-    const allMats = Array.isArray(c.mesh.material) ? c.mesh.material : c.mesh.material ? [c.mesh.material] : [];
-    const hasMap = allMats.filter(m => (m as THREE.MeshStandardMaterial).map).length;
-    await mmdDiag(c.effectivePort, "mesh-debug", c.effectivePath, "warn",
-      `posAttr=${posAttr?.count ?? "null"} idx=${idx?.count ?? "null"} bb=${bb.min.toArray().map(v=>v.toFixed(1))}/${bb.max.toArray().map(v=>v.toFixed(1))} visible=${c.mesh.visible} frustumCulled=${c.mesh.frustumCulled} mats=${allMats.length} hasMap=${hasMap} wm=${c.mesh.matrixWorld.elements[12].toFixed(1)},${c.mesh.matrixWorld.elements[13].toFixed(1)},${c.mesh.matrixWorld.elements[14].toFixed(1)} worldPos=${c.mesh.getWorldPosition(new THREE.Vector3()).toArray().map(v=>v.toFixed(1))}`);
+    const allMats = Array.isArray(c.mesh.material)
+      ? c.mesh.material
+      : c.mesh.material
+        ? [c.mesh.material]
+        : [];
+    const hasMap = allMats.filter((m) => (m as THREE.MeshStandardMaterial).map).length;
+    await mmdDiag(
+      c.effectivePort,
+      "mesh-debug",
+      c.effectivePath,
+      "warn",
+      `posAttr=${posAttr?.count ?? "null"} idx=${idx?.count ?? "null"} bb=${bb.min.toArray().map((v) => v.toFixed(1))}/${bb.max.toArray().map((v) => v.toFixed(1))} visible=${c.mesh.visible} frustumCulled=${c.mesh.frustumCulled} mats=${allMats.length} hasMap=${hasMap} wm=${c.mesh.matrixWorld.elements[12].toFixed(1)},${c.mesh.matrixWorld.elements[13].toFixed(1)},${c.mesh.matrixWorld.elements[14].toFixed(1)} worldPos=${c.mesh
+        .getWorldPosition(new THREE.Vector3())
+        .toArray()
+        .map((v) => v.toFixed(1))}`,
+    );
   }
   c.ctx.loadingEl.remove();
   c.cachedHashes = null;
@@ -769,22 +1005,40 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
                 const ktxBlob = new Blob([bytesToArrayBuffer(ktxBytes)]);
                 const ktxUrl = URL.createObjectURL(ktxBlob);
                 c.blobUrls.push(ktxUrl);
-                return ktx2Loader.loadAsync(ktxUrl).then((compressedTex) => {
-                  matTexSlots(mat)[key] = compressedTex;
-                  tex.dispose();
-                  mat.needsUpdate = true;
-                })
-                // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve，
-                // 供外层 Promise.all await 与 replaced= 计数——不可改 fire-and-forget）
-                .catch((err) => dbg("ktx2-replace-fail", { hash, key, err: safeErrorMessage(err) }));
+                return (
+                  ktx2Loader
+                    .loadAsync(ktxUrl)
+                    .then((compressedTex) => {
+                      matTexSlots(mat)[key] = compressedTex;
+                      tex.dispose();
+                      mat.needsUpdate = true;
+                    })
+                    // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve，
+                    // 供外层 Promise.all await 与 replaced= 计数——不可改 fire-and-forget）
+                    .catch((err) =>
+                      dbg("ktx2-replace-fail", { hash, key, err: safeErrorMessage(err) }),
+                    )
+                );
               }),
             );
           }
         }
         await Promise.all(replaceTasks);
-        await mmdDiag(c.effectivePort, "ktx2-replace", "cache-hit", "ok", `cached=${c.cachedHashes.size} replaced=${replaceTasks.length} total=${allHashes.length}`);
+        await mmdDiag(
+          c.effectivePort,
+          "ktx2-replace",
+          "cache-hit",
+          "ok",
+          `cached=${c.cachedHashes.size} replaced=${replaceTasks.length} total=${allHashes.length}`,
+        );
       } else {
-        await mmdDiag(c.effectivePort, "ktx2-replace", "cache-miss", "warn", `total=${allHashes.length}（缓存未命中，将后台编码）`);
+        await mmdDiag(
+          c.effectivePort,
+          "ktx2-replace",
+          "cache-miss",
+          "warn",
+          `total=${allHashes.length}（缓存未命中，将后台编码）`,
+        );
       }
     }
   }
@@ -811,15 +1065,21 @@ async function mdMmStage4Anim(c: MdMmStage4Ctx): Promise<void> {
       if (extraAnims.length > 0) {
         c.vmdPaths.push(...extraAnims.filter((p) => p.toLowerCase().endsWith(".vmd")));
         c.vpdPaths.push(...extraAnims.filter((p) => p.toLowerCase().endsWith(".vpd")));
-        void mmdDiag(c.effectivePort, "anim-lib-scan", c.customAnimPath, "ok",
-          `found=${extraAnims.length} (vmd=${extraAnims.filter((p) => p.toLowerCase().endsWith(".vmd")).length})`);
+        void mmdDiag(
+          c.effectivePort,
+          "anim-lib-scan",
+          c.customAnimPath,
+          "ok",
+          `found=${extraAnims.length} (vmd=${extraAnims.filter((p) => p.toLowerCase().endsWith(".vmd")).length})`,
+        );
       }
     } catch (e) {
       void mmdDiag(c.effectivePort, "anim-lib-scan", c.customAnimPath, "fail", safeErrorMessage(e));
     }
   }
   const allAnimPaths = [...c.vmdPaths, ...c.vpdPaths];
-  const animBatch = allAnimPaths.length > 0 ? await c.effectivePort.readFileBytesBatch(allAnimPaths) : {};
+  const animBatch =
+    allAnimPaths.length > 0 ? await c.effectivePort.readFileBytesBatch(allAnimPaths) : {};
   c.cameraClips = [];
   for (const v of c.vmdPaths) {
     try {
@@ -922,9 +1182,10 @@ function mdMmStage5Menu(c: MdMmStage5Ctx): {
   };
   const mats = c.mesh.material as unknown as THREE.Material[];
   c.bonePanelRef = { current: null };
-  c.boneTree = c.mmd?.pmx?.bones && c.mesh.skeleton
-    ? buildBoneTree(mmdBonesToBoneNodes(c.mmd?.pmx.bones, c.mesh.skeleton.bones))
-    : null;
+  c.boneTree =
+    c.mmd?.pmx?.bones && c.mesh.skeleton
+      ? buildBoneTree(mmdBonesToBoneNodes(c.mmd?.pmx.bones, c.mesh.skeleton.bones))
+      : null;
   c.perceptionState = { breath: true, gaze: true, blink: true, lipSync: true, autoDance: true };
   // perceptionCaps 仅本函数使用（菜单注入）——局部 const，不占用 ctx
   const perceptionCaps: PerceptionCapability[] = [
@@ -937,10 +1198,17 @@ function mdMmStage5Menu(c: MdMmStage5Ctx): {
   const items = mmdMenuItems({
     navCtx,
     panels: c.panels,
-    screenshot: () => Promise.resolve(screenshotFromRenderer(c.ctx.renderer!, c.ctx.scene, c.ctx.camera)),
+    screenshot: () =>
+      Promise.resolve(screenshotFromRenderer(c.ctx.renderer!, c.ctx.scene, c.ctx.camera)),
     material: {
-      list: () => listMmdMaterials((c.mmd?.pmx.materials as unknown as readonly { name: string }[]) ?? []),
-      getDetail: (i) => getMmdMaterialDetail((c.mmd?.pmx.materials as unknown as readonly { name: string }[]) ?? [], mats, i),
+      list: () =>
+        listMmdMaterials((c.mmd?.pmx.materials as unknown as readonly { name: string }[]) ?? []),
+      getDetail: (i) =>
+        getMmdMaterialDetail(
+          (c.mmd?.pmx.materials as unknown as readonly { name: string }[]) ?? [],
+          mats,
+          i,
+        ),
       setVisible: (i, v) => setMmdMaterialVisible(mats, i, v),
       setOpacity: (i, o) => {
         setMmdMaterialOpacity(mats, i, o);
@@ -996,12 +1264,25 @@ function mdMmStage5Menu(c: MdMmStage5Ctx): {
   const blink = createBlinkController();
   const lipSync = createLipSyncController({ multiMorph: true });
   const lipSyncTime = 0;
-  const lipIndices = (c.mesh.morphTargetDictionary && semanticMorphs
-    ? buildLipMorphIndices(semanticMorphs, c.mesh.morphTargetDictionary)
-    : undefined);
+  const lipIndices =
+    c.mesh.morphTargetDictionary && semanticMorphs
+      ? buildLipMorphIndices(semanticMorphs, c.mesh.morphTargetDictionary)
+      : undefined;
   const autoDance = createAutoDanceController({ bpm: 120, intensity: 0.3 });
   const footIK = createFootIKController(c.boneTree, semanticBones);
-  return { semanticBones, semanticMorphs, breath, gaze, blink, lipSync, lipSyncTime, lipIndices, autoDance, footIK, items };
+  return {
+    semanticBones,
+    semanticMorphs,
+    breath,
+    gaze,
+    blink,
+    lipSync,
+    lipSyncTime,
+    lipIndices,
+    autoDance,
+    footIK,
+    items,
+  };
 }
 
 function mdMmStage6Result(
@@ -1009,7 +1290,18 @@ function mdMmStage6Result(
   s5: ReturnType<typeof mdMmStage5Menu>,
   tStart: number,
 ): PreviewScene {
-  const { semanticBones, semanticMorphs, breath, gaze, blink, lipSync, lipIndices, autoDance, footIK, items } = s5;
+  const {
+    semanticBones,
+    semanticMorphs,
+    breath,
+    gaze,
+    blink,
+    lipSync,
+    lipIndices,
+    autoDance,
+    footIK,
+    items,
+  } = s5;
   let lipSyncTime = s5.lipSyncTime;
   const result: PreviewScene = {
     menuItems: items,
@@ -1028,31 +1320,46 @@ function mdMmStage6Result(
       if (!c.mesh.visible) return;
       c.mmd?.updateWithMixer(dt, c.mixer, { ik: true, grant: true });
       if (semanticBones) {
-        if ((!c.action || c.action.paused) && c.perceptionState.breath) breath.apply(dt, semanticBones);
+        if ((!c.action || c.action.paused) && c.perceptionState.breath)
+          breath.apply(dt, semanticBones);
         // camera 可选（self 模式 undefined）：缺失时 gaze 无法取观察点 → 跳过
-        if (c.perceptionState.gaze && c.ctx.camera) gaze.apply(dt, semanticBones, c.ctx.camera.position);
+        if (c.perceptionState.gaze && c.ctx.camera)
+          gaze.apply(dt, semanticBones, c.ctx.camera.position);
       }
       const blinkEntry = semanticMorphs.blink;
-      if (blinkEntry && c.mesh.morphTargetDictionary && c.mesh.morphTargetInfluences && (!c.action || c.action.paused) && c.perceptionState.blink) {
+      if (
+        blinkEntry &&
+        c.mesh.morphTargetDictionary &&
+        c.mesh.morphTargetInfluences &&
+        (!c.action || c.action.paused) &&
+        c.perceptionState.blink
+      ) {
         const idx = c.mesh.morphTargetDictionary[blinkEntry.name];
         if (idx !== undefined) {
           // 局部 const 收窄替代 !：回调闭包内 TS 不保持 c.mesh.morphTargetInfluences 的收窄
           const influences = c.mesh.morphTargetInfluences;
-          blink.apply(dt, (weight: number) => { influences![idx] = weight; });
+          blink.apply(dt, (weight: number) => {
+            influences![idx] = weight;
+          });
         }
       }
       if (lipIndices && (!c.action || c.action.paused) && c.perceptionState.lipSync) {
         lipSyncTime += dt;
-        const breathPhase = Math.sin(lipSyncTime / 2.5 * Math.PI * 2);
+        const breathPhase = Math.sin((lipSyncTime / 2.5) * Math.PI * 2);
         const openAmp = Math.max(0, breathPhase) * 0.4;
         // lipSync 分支缺 morphTargetInfluences 前置守卫——回调闭包内一并校验，替代 !
         const influences = c.mesh.morphTargetInfluences;
         lipSync.applyMulti(dt, { lipOpen: openAmp }, (morphId, weight) => {
-          const idx = morphId === "lipOpen" ? lipIndices.open
-            : morphId === "lipClose" ? lipIndices.close
-            : morphId === "lipPucker" ? lipIndices.pucker
-            : morphId === "lipSmile" ? lipIndices.smile
-            : undefined;
+          const idx =
+            morphId === "lipOpen"
+              ? lipIndices.open
+              : morphId === "lipClose"
+                ? lipIndices.close
+                : morphId === "lipPucker"
+                  ? lipIndices.pucker
+                  : morphId === "lipSmile"
+                    ? lipIndices.smile
+                    : undefined;
           if (idx !== undefined && influences) influences[idx] = weight;
         });
       }
@@ -1065,9 +1372,14 @@ function mdMmStage6Result(
     dispose: (): void => {
       const renderer = c.ctx.renderer;
       if (renderer) {
-        const memBefore = (renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }).info?.memory;
+        const memBefore = (
+          renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }
+        ).info?.memory;
         if (memBefore) {
-          dbg("gpu-leak", `mmd dispose before: geometries=${memBefore.geometries} textures=${memBefore.textures}`);
+          dbg(
+            "gpu-leak",
+            `mmd dispose before: geometries=${memBefore.geometries} textures=${memBefore.textures}`,
+          );
         }
       }
       try {
@@ -1096,31 +1408,37 @@ function mdMmStage6Result(
         dbg("mmd", { op: "dispose-mesh-fail", err: safeErrorMessage(e) });
       }
       if (renderer) {
-        const memAfter = (renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }).info?.memory;
+        const memAfter = (
+          renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }
+        ).info?.memory;
         if (memAfter) {
-          dbg("gpu-leak", `mmd dispose after: geometries=${memAfter.geometries} textures=${memAfter.textures}`);
+          dbg(
+            "gpu-leak",
+            `mmd dispose after: geometries=${memAfter.geometries} textures=${memAfter.textures}`,
+          );
         }
       }
     },
     screenshot: () =>
       Promise.resolve(screenshotFromRenderer(c.ctx.renderer!, c.ctx.scene, c.ctx.camera)),
     semanticBones,
-    applyPose: c.vpdPoses.length > 0
-      ? (index: number): void => {
-          const pose = c.vpdPoses[index];
-          if (!pose) return;
-          try {
-            // workerMode 已下沉：worker 构建路径等价于 c.workerBuilt 非空
-            if (c.workerBuilt) {
-              applyVPDToMesh(c.mesh!, pose.vpd);
-            } else {
-              applyVPD(c.mmd!, pose.vpd, { ik: true, grant: true });
+    applyPose:
+      c.vpdPoses.length > 0
+        ? (index: number): void => {
+            const pose = c.vpdPoses[index];
+            if (!pose) return;
+            try {
+              // workerMode 已下沉：worker 构建路径等价于 c.workerBuilt 非空
+              if (c.workerBuilt) {
+                applyVPDToMesh(c.mesh!, pose.vpd);
+              } else {
+                applyVPD(c.mmd!, pose.vpd, { ik: true, grant: true });
+              }
+            } catch (e) {
+              dbg("mmd", { op: "apply-vpd-fail", index, err: safeErrorMessage(e) });
             }
-          } catch (e) {
-            dbg("mmd", { op: "apply-vpd-fail", index, err: safeErrorMessage(e) });
           }
-        }
-      : undefined,
+        : undefined,
   };
   mdMmStage6bTrace(c, tStart);
   return result;
@@ -1130,17 +1448,32 @@ function mdMmStage6bTrace(c: MdMmStage6bCtx, tStart: number): void {
   c.tBuildEnd = performance.now();
   c.buildSucceeded = true;
   const _stages: import("../load-trace.ts").LoadTraceStage[] = [];
-  if (c.tParseStart > 0) _stages.push({ name: "读取", ms: Math.round(c.tParseStart - tStart), status: "ok" });
-  if (c.tParseEnd > 0) _stages.push({ name: "解析", ms: Math.round(c.tParseEnd - c.tParseStart), status: "ok" });
-  if (c.textureLoadedAt > 0) _stages.push({ name: "纹理加载", ms: Math.round(c.textureLoadedAt - c.tParseEnd), status: "ok" });
-  if (c.tBuildEnd > c.tParseEnd) _stages.push({ name: "build", ms: Math.round(c.tBuildEnd - c.tParseEnd), status: "ok" });
-  const _mats = Array.isArray(c.mmd?.mesh?.material) ? c.mmd.mesh.material : c.mmd?.mesh?.material ? [c.mmd.mesh.material] : [];
+  if (c.tParseStart > 0)
+    _stages.push({ name: "读取", ms: Math.round(c.tParseStart - tStart), status: "ok" });
+  if (c.tParseEnd > 0)
+    _stages.push({ name: "解析", ms: Math.round(c.tParseEnd - c.tParseStart), status: "ok" });
+  if (c.textureLoadedAt > 0)
+    _stages.push({
+      name: "纹理加载",
+      ms: Math.round(c.textureLoadedAt - c.tParseEnd),
+      status: "ok",
+    });
+  if (c.tBuildEnd > c.tParseEnd)
+    _stages.push({ name: "build", ms: Math.round(c.tBuildEnd - c.tParseEnd), status: "ok" });
+  const _mats = Array.isArray(c.mmd?.mesh?.material)
+    ? c.mmd.mesh.material
+    : c.mmd?.mesh?.material
+      ? [c.mmd.mesh.material]
+      : [];
   const _texDetails: import("../load-trace.ts").LoadTraceTexture[] = [];
   for (const m of _mats) {
     const img = (m as { map?: { image?: HTMLImageElement } })?.map?.image;
     if (img?.width && img?.height) {
       const src = (m as { map?: { source?: { src?: string } } })?.map?.source?.src ?? "";
-      _texDetails.push({ path: src.split("/").pop() ?? "texture", size: `${img.width}x${img.height}` });
+      _texDetails.push({
+        path: src.split("/").pop() ?? "texture",
+        size: `${img.width}x${img.height}`,
+      });
     }
   }
   recordLoadTrace({
@@ -1172,7 +1505,10 @@ export async function buildMmdScene(
   panels?: MmdPanelHooks,
 ): Promise<PreviewScene> {
   const c = {} as MdMmBuildCtx;
-  c.ctx = ctx; c.path = path; c.port = port; c.panels = panels;
+  c.ctx = ctx;
+  c.path = path;
+  c.port = port;
+  c.panels = panels;
   c.stopLongTaskWatch = () => {};
   c.blobUrls = [];
   c.buildSucceeded = false;
@@ -1203,7 +1539,7 @@ function applyVPDToMesh(mesh: THREE.SkinnedMesh, vpd: VpdObject): void {
 
   // 建立骨骼名 → bone 对象的映射（O(1) 查找）
   const bonesByName = new Map<string, THREE.Bone>();
-  mesh.skeleton?.bones.forEach(b => {
+  mesh.skeleton?.bones.forEach((b) => {
     if (b.name) bonesByName.set(b.name, b);
   });
 
@@ -1218,7 +1554,12 @@ function applyVPDToMesh(mesh: THREE.SkinnedMesh, vpd: VpdObject): void {
       position.set(transform.position[0], transform.position[1], -transform.position[2]);
       bone.position.add(position);
     }
-    rotation.set(-transform.rotation[0], -transform.rotation[1], transform.rotation[2], transform.rotation[3]);
+    rotation.set(
+      -transform.rotation[0],
+      -transform.rotation[1],
+      transform.rotation[2],
+      transform.rotation[3],
+    );
     bone.quaternion.multiply(rotation);
   }
 

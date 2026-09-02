@@ -278,7 +278,14 @@ async function mdWsTryJsonDispatch(
   bytes: Uint8Array,
 ): Promise<DecodedYsm | null> {
   const text = new TextDecoder("utf-8").decode(bytes);
-  const json = JSON.parse(text);
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    // 非 JSON（二进制 .ysm）或畸形 JSON → 抛错让外层 catch 缓存 _wasmFailed
+    // （非法 JSON 不可恢复，缓存跳过避免重复尝试）
+    throw new Error("JSON parse failed");
+  }
   const result = parseYsmJsonDirect(json);
   if (!result) return null;
 

@@ -331,6 +331,11 @@ export class SkyCapability implements SceneCapability {
   private enabled: boolean;
   private prevToneMapping: THREE.ToneMapping;
   private prevExposure: number;
+  /** 引用计数：多个 SkyCapability 共享同一 renderer 时，
+   *  tone mapping 只在第一个 attach 时设置，只在最后一个 dispose 时恢复 */
+  private static toneRefCount = new Map<THREE.WebGLRenderer, number>();
+  private static prevToneMap = new Map<THREE.WebGLRenderer, THREE.ToneMapping>();
+  private static prevExposureMap = new Map<THREE.WebGLRenderer, number>();
   /** God Rays（体积光束）*/
   private godRays: THREE.Group | null = null;
   private godRaysEnabled: boolean;
@@ -397,9 +402,15 @@ export class SkyCapability implements SceneCapability {
       return;
     }
     if (!this.sky.parent) this.scene.add(this.sky);
-    // 天空依赖 tone mapping 显色；作用域限制在本会话 renderer
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = this.params.exposure;
+    // 天空依赖 tone mapping 显色；引用计数仲裁多 session 共享 renderer
+    const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
+    if (cnt === 0) {
+      SkyCapability.prevToneMap.set(this.renderer, this.renderer.toneMapping);
+      SkyCapability.prevExposureMap.set(this.renderer, this.renderer.toneMappingExposure);
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = this.params.exposure;
+    }
+    SkyCapability.toneRefCount.set(this.renderer, cnt + 1);
     if (this.params.environment) this.regenerateEnvironment();
     else this.clearEnvironment();
     // 更新 god rays 和 sunset tint
@@ -437,6 +448,9 @@ export class SkyCapability implements SceneCapability {
       this.scene.environment = this.renderTarget.texture;
     } catch (e) {
       console.error("[sky] 环境贴图生成失败:", e);
+      // catch 后 renderTarget 可能悬空（fromScene 抛错时 renderTarget 已 dispose 但未重置）
+      this.renderTarget = null;
+      this.scene.environment = null;
     } finally {
       this.envSky.material.uniforms["showSunDisc"].value = 1;
     }
@@ -884,8 +898,17 @@ export class SkyCapability implements SceneCapability {
       this.renderTarget.dispose();
       this.renderTarget = null;
     }
-    this.renderer.toneMapping = this.prevToneMapping;
-    this.renderer.toneMappingExposure = this.prevExposure;
+    // 引用计数仲裁：只在最后一个 session 退出时恢复原始 tone mapping
+    const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
+    if (cnt <= 1) {
+      this.renderer.toneMapping = SkyCapability.prevToneMap.get(this.renderer) ?? this.prevToneMapping;
+      this.renderer.toneMappingExposure = SkyCapability.prevExposureMap.get(this.renderer) ?? this.prevExposure;
+      SkyCapability.toneRefCount.delete(this.renderer);
+      SkyCapability.prevToneMap.delete(this.renderer);
+      SkyCapability.prevExposureMap.delete(this.renderer);
+    } else {
+      SkyCapability.toneRefCount.set(this.renderer, cnt - 1);
+    }
     this.sky.geometry.dispose();
     (this.sky.material as THREE.Material).dispose();
     this.envSky.geometry.dispose();

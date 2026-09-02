@@ -64,6 +64,17 @@ use_when:
   - GLB
   - fbx2gltf
   - assimp
+pitfalls:
+  - "FBX 不直接解析——走 FBX2glTF + qmuntal/gltf 双段式"
+  - "FBX2glTF 是 npm 包装（node 脚本），需要 node 环境"
+  - "GLB 中间格式内存占用可能很大，大文件需监控"
+  - "GUI 预览（ADR-112 前端 worker）与 CLI 管线互补不冲突"
+  - "fbx2gltf 版本漂移可能导致输出 GLB 结构变化"
+quick_intents:
+  - "批量转换 FBX 到 GLB"
+  - "分析 FBX 模型结构（骨骼/材质/动画）"
+  - "CLI 模式 FBX 处理流程"
+  - "排查 FBX 转换失败原因"
 status: active
 ---
 # FBX CLI 处理管线 fbx-cli-pipeline

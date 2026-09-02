@@ -14,6 +14,21 @@ use_when:
   - 增量门禁
   - 新增重复
   - 独立 baseline
+pitfalls:
+  - 「文件搬迁/拆分导致误报」→ 看 drift 提示而非直接 --update；exact = 纯搬，partial = 拆/并文件
+  - 「--update 会冻结当前状态」→ 有遗留债务时误用会把债写进 baseline，需先治理再冻结
+  - 「exit 2 不是失败」→ 仅表示 baseline 不存在，需首次跑一次并 --update 创建账本
+  - 「与前端 deadcode baseline 零耦合」→ 绝不要往 deadcode-baseline.json 的 jscpd 段写回，两账本独立演进
+  - 「迁移 Windows 路径时归一化 POSIX」→ normPair 处理 `\`，但原始 key 仍可能含反斜杠
+quick_groups:
+  - 门禁集成与 pre-push 流程
+  - baseline 维护与冻结策略
+  - 搬迁漂移研判与豁免决策
+quick_intents:
+  - 运行 Go 重复门禁 / 检查是否有新增重复对
+  - 冻结当前 Go 重复债务到 baseline（治理后收紧）
+  - 查看重复对的详细位置（行号 + 片段）
+  - 判定「新增重复对」是真实新增还是文件搬迁/拆分
 status: active
 ---
 

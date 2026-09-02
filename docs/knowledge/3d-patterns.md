@@ -70,6 +70,10 @@ auto_fields:
   invariant_anchors:
     - frontend/src/preview-3d/debug-render.ts|rebuildDebug
     - frontend/src/preview-3d/model-group-builder.ts|buildModelGroup
+    - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
+    - frontend/src/preview-3d/cleanup-helper.ts|disposeSceneMeshes
+    - frontend/src/views/app-preview/preview-library.ts|registerReRoute
+    - frontend/src/views/app-preview/skeleton.ts|loadModel2D
 tests:
   - frontend/src/preview-3d/adapters/mount-preview-core.behavior.test.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.test.ts

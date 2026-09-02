@@ -27,6 +27,18 @@ use_when:
   - 未知 flag
   - 脚本卫生
   - hygiene
+pitfalls:
+  - "import parseArgs 但忘记消费 args.unknown → 拼错 flag 静默放行"
+  - "只声明 bools/strings 类型却未消费 unknown → 形同虚设"
+  - "-- 分隔符后参数均进 _ 数组"
+  - "string flag 值以 -- 开头会被当成下一个 flag 跳值"
+  - "在 hooks/ 目录手写 parse-args → 无意义"
+quick_intents:
+  - "迁移手写 argv 解析 → parse-args.ts"
+  - "拦截拼错的 flag → 消费 args.unknown"
+  - "消费 positional 参数 → 从 args._ 取值"
+  - "修复脚本卫生 WARN"
+  - "编写新脚本 → 直接 import parseArgs"
 status: active
 ---
 

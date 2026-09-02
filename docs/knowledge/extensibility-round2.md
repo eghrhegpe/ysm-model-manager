@@ -9,6 +9,24 @@ use_when:
   - 新增网页桥接
   - 新增同步逻辑
   - 残留手改清单
+  - 拓展点探索
+pitfalls:
+  - detector 仅支持 5 种（ysm/mcmeta/shader/zipentry/extension/空），新二进制格式需手改 switch
+  - .json 特判锁死在 IsYsmEntryJSON，新类型 manifest.json 入口被全量拒绝
+  - ShouldHashExt 钉住清单，新增 hashable 类型需补单测否则漂移静默
+  - 前端三处必改（RESOURCE_TYPES 键 / RESOURCE_TYPE_LABELS / icon.ts）与 JSON 无派生关系
+  - PREVIEW_HANDLERS 漏注册 → 预览区静默空白（fail-fast 未覆盖）
+  - i18n 三语言包（zh-CN/en/ja）rtype.* 显示名需手动补
+  - MaxImportSize=500MB 硬编码，大文件类型需改常量或 AppConfig
+  - PushSingleResource 硬编码 .json/.pmx/.pmd，新目录型扩展需改此行
+  - container.go Open switch 缺自注册机制，新容器格式需手加分支
+  - web-community localStorage 裸调未走 safeGet/safeSet（隐私模式风险）
+quick_intents:
+  - 新增资源类型：JSON 声明 + 前端三处键/标签/图标 + 预览 handler
+  - 新增文件格式：容器适配器实现 + WASM 预览适配器 + PREVIEW_HANDLERS
+  - 新增网页桥接 binding：web*Bindings 对象追加 + 编译期 AssertSubset 校验
+  - 新增同步逻辑：JSON 加 dirLevelSync 布尔 / 改 ResourceDiff diff key
+  - 排查"新类型不生效"：detector switch / isContainer 判定 / PushSingleResource 硬编码
 affected: false
 status: active
 supersedes: extensibility-index

@@ -1,5 +1,5 @@
 ---
-kind: commit_with_check
+kind: commit-with-check
 name: 提交脚本 commit-with-check
 tier: architecture
 category: utils
@@ -35,6 +35,18 @@ use_when:
   - 临时索引
   - 白名单提交
   - 门禁后自动 commit
+pitfalls:
+  - 并行会话活跃时禁止裸 git commit（含 --only 路径限定）——钩子快照窗口内会误判并行手改的卡为 gen 产物并 stage
+  - 忘记传 --files 且主 index 为空 → 脚本 exit 1 报「无提交目标」
+  - 越界文件校验是硬拦截（exit 1）：提交包含不在白名单 ∪ 生成物/测试清单内的文件时，需 git reset --soft HEAD~1 后重新用 --files
+  - 临时索引进程被强杀时 finally 无法执行，index.ymm 临时索引文件恒残留（pid 后缀）
+  - 非 ASCII 文件名八进制转义问题需保留 -c core.quotepath=false
+quick_intents:
+  - 一键验证 + 提交（门禁全绿才 commit）
+  - 白名单路径提交（无需先 git add）
+  - 仅验证不提交（--check 模式）
+  - 并发隔离提交（多 AI 会话共享 checkout）
+  - 排查门禁失败原因（看 FAIL 块）
 status: active
 ---
 

@@ -85,7 +85,20 @@ use_when:
   - 审计
   - 白名单
   - 绑定层
-status: snapshot
+pitfalls:
+  - "绑定层工具函数重复 → Go CLI 和前端 TS 各一份"
+  - "白名单漂移：ALLOWED_CLI_COMMANDS 在三处维护"
+  - "goroutine/channel 防御缺失：outputBuffer.done 未初始化导致 panic"
+  - "百分比计算三类陷阱：除零、超 100%、基数语义错误"
+  - "json.Marshal 吞错：_, err := json.Marshal(...) 前端收到 null 无法定位"
+quick_intents:
+  - "CLI 质量摸排 / 代码审查"
+  - "绑定层故障排查"
+  - "goroutine/channel 资源回收 bug"
+  - "百分比计算审计"
+  - "json.Marshal 吞错全仓扫描"
+status: archived
+affected: false
 ---
 # CLI 质量摸排 Checklist
 

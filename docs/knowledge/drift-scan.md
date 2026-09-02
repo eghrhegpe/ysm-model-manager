@@ -10,7 +10,25 @@ use_when:
   - 双轨
   - 重复实现
   - 口径漂移
-status: active
+  - 常量硬编码
+  - 错误链断裂
+  - 资源泄漏
+  - 定时器泄漏
+quick_intents:
+  - 运行漂移扫描 / 检查口径一致性
+  - 查找重复实现（formatSize、copyDir 等）
+  - 修复硬编码常量（权限、读取上限、超时）
+  - 修复错误链断裂（%v → %w）
+  - 排查文件描述符泄漏
+  - 排查定时器泄漏
+pitfalls:
+  - 新增常量/函数后忘记注册 drift-scan 规则 → 漂移漏检；改单一事实源后须同步更新正则或 add 新规则
+  - 正则只匹配一种写法（如旧 `INLINE_BAN_STRIP` 只认 `[:len(name)-4]`）→ 变体写法（`[:len(path)-len(".ban")]`）漏扫；写规则时穷举常见变体
+  - `FE_HARDCODED_FORMAT` 与 `DUPLICATE_FORMAT_SIZE` 语义重叠 → 前端 vs Go 各扫一轨，合并前需确认跨轨一致性
+  - `TIMER_LEAK` filter 排除了 `r/resolve/reject/next/t` 等短变量名 → 若代码中这些名字用作 timer 会变假阴性；命名尽量避开豁免词
+  - 脚本无 CI 挂载（情报型）→ 漏检不阻断提交；重要修复应在 commit 后主动跑一次确认归零
+status: archived
+affected: false
 ---
 
 # drift-scan（双轨漂移检测）

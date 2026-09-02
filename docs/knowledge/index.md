@@ -124,7 +124,7 @@
 | 🍃 doctor_gate_overlap | 质量闸门双调度器重叠审计 | leaf | — | 双调度器, 质量闸门重叠, doctor gate 差异, 治理红线下沉 |
 | 🏗 drift-scan | drift-scan（双轨漂移检测） | architecture | — | 漂移检测, 双轨, 重复实现, 口径漂移, 常量硬编码, 错误链断裂, 资源泄漏, 定时器泄漏 |
 | 🏗 fbx-cli-pipeline | FBX CLI 处理管线 fbx-cli-pipeline | architecture | — | FBX, CLI, 命令行, 转换, glTF, GLB, fbx2gltf, assimp |
-| 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | — |
+| 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android, 平台守卫, RevealInExplorer, OpenFolder, xdg-open, SAF, build-tag, pathmgr |
 | 🍃 go-avatar-decode | Go 头像提取：纯函数 vs Node+WASM 解码分界 | leaf | io-bound, single-thread | 改头像提取 / DecodeYSMFiles / ExtractAvatarURI 逻辑或补 avatar 测试时 |
 | 🏗 go-avatar | 头像 go/avatar | architecture | io-bound | 头像, 作者, 创作者, avatar, 缓存, 头像缩略图 |
 | 🏗 go-cli-search | CLI 搜索命令 search | architecture | — | CLI 搜索, 命令行搜索, search 命令, 关键词搜索, 数值范围搜索, 模型搜索, go run search, runSearch |

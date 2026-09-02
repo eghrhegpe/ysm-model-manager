@@ -156,7 +156,7 @@ status: active
 
 构造器不再硬编码 `"repository"`，而是与 `app-nav`、`PageStore` 三源同源调用 `resolveInitialPage()`（`core/page-store.ts`）：`app-content` 经 `app-modules.ts` 动态加载，可能晚于 `app-nav` 派发的初始 `nav:change`，事件被吞后若硬编码首页，会让 UI 实际渲染页与 `PageStore.currentPage` 脱节。旧版全局 DnD 曾依赖 `page === "repository"` 守卫，现仓库页 DnD 已改为 `app-tree` 组件级绑定，不再受该守卫影响。
 
-**i18n 收敛（2026-08-31）**：`app-content` 子域（工坊/站点编辑/诊断/设置）约 70 处裸中文 toast/弹窗/角色标签已全量迁移到 `workshop.*` / `diagnostics.*` / `settings.*` / `content.*` key（复用 `tree.browserFailed` / `content.settingsInitFailed` / `diagnostics.all`），三语言包同步（1431 keys）；残留仅 `dbg/console` 日志与 CLI 输出解析匹配符（非 UI 文案，不迁移）。新增 key 集中在 zh-CN.ts 各命名空间注释段，改 UI 文案只改语言包。
+UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `content.*`），改文案只改语言包。
 
 ## 核心职责
 
@@ -168,16 +168,15 @@ status: active
 
 - `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:change` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`
-- `content-css.ts` — 样式组合层：`[layout, repo, creator, diag, util, stg].join("\n")` 输出单一 CSS 字符串（6 个域文件），入口 `index.ts` 构造时 `root.adoptedStyleSheets = [appContentStyle]` 注入 Shadow DOM；CSS 全走 CSS 变量。注意：`.stg-*` 设置页样式与 `.tab-body` 已回迁本组合层（原误置于 `frontend/css/components.css` 全局 `<link>`，被 Shadow DOM 边界阻断不生效，见 2026-08-24 复盘）
-- `content-layout.ts` — 基础层：`::host` 变量（`--tag-*` / `--badge-*` / `--hm-*` / `--sidebar-w` / `--diag-left-w` / `--touch-min`）+ 通用 keyframes（`pageIn` / `ring-spin` / `card-in` / `detail-in` / `fade-in` / `dl-slide-up` + 跨 shadow 本地化副本 `fadeSlideUp` / `fadeSlideDown` / `fadeSlideLeft` / `breathe-subtle`：**CSS 变量可穿 shadow，@keyframes 不可，必须在 shadow 层本地重定义**）+ 骨架（`.page` / `.stat-card` / `.placeholder-box`）+ 通用卡片系统（`.model-card` / `.model-card-sm` / `.rec-card` / `.health-ring`）+ 工坊通用按钮类（`.ws-*`：从 content-creator.ts 归位，跨 creator/gh 复用）。注：`.btn` 裸类兼容层与 `.hdr-btn` 已于 2026-08-24 迁移清理（设置页 3 处裸 `.btn` → `.btn-base sm`，兼容层删除）
-  - **本地化 keyframe 契约（铁律，机检 1c 硬校验）**：`fadeSlideUp/Down/Left` 的 shadow 副本必须与 `frontend/css/components.css` 全局副本**参数值一致**（`translateY(6px)` / `translateY(-4px)` / `translateX(-8px)` 的 translate 数值）。注：不要求字节级一致（多行 vs 单行格式差异允许），仅比对 translate 参数值。`scripts/css-layer-check.ts` 检查 1c 从两侧正则提取 from translate 值比对，不一致即 ERROR 阻断 pre-push（评审 2026-08-24 第 2 条，封堵本次 6→10/-4→-10/-8→-14 漂移逃逸路径）。document 层 dialog 与 shadow 内容用同名动画，幅度分裂会造成观感不一致。`sidebar-css.ts` 的 `fadeSlideLeft` 同此契约。`stgTabIn(-6px)` 为 settings 独立新 keyframe，不在此契约内。
-- `content-repo.ts` — 仓库/实例/站点骨架（`.repo-*` / `.ins-*` / `.batch-*`）+ 资历页（`.oldest-*`）+ 热力图（`.hm-*` / `.pick-card`）+ 通用标签（`.tag-author` / `.tag-work` / `.tag-date` / `.link-badge-*`）
-- `content-creator.ts` — 创作者 `.cr-*` 全族：标签（`.cr-tag*`）/ 频道（`.cr-page` / `.cr-left` / `.cr-right`）/ 卡片（`.cr-creator-card` 基础列表行 + `.cr-creator-card--grid` BEM 修饰符网格变体 + `.cr-card-*` / `.cr-creator-grid`）/ 详情浮层（`.cr-detail-*`）/ 编辑（`.cr-edit-*` / `.cr-input*` / `.cr-drop-zone` / drag states）；含头像 `.cr-avatar` / `.cr-avatar-ring` 供 gh-card 复用（`.ws-*` 工坊类已迁 content-layout.ts）
-- `content-diag.ts` — 诊断页（`.diag-*` / `.perf-*` / `.log-row` / `.conflict-row` / `.scan-*` 动画）+ GitHub 工坊（`.gh-*` 全族：仓库列表 / 模型行 / 二级菜单 / 下载队列 / 错误页）。注：`.settings-group` / `.setting-row` 已于 2026-08-24 收口至 `content-stg.ts`（设置页资产归 settings 域托管），本文件不再含设置页样式；`#set-advanced-panel` 的 advPanel 动画在 content-stg.ts
-- `content-util.ts` — 杂项：回收站动画（`.recy-*`）/ 资源管理器（`.rm-*`）/ 预览拖拽（`.preview-resize-handle`）/ 主题选择器（`.theme-*`）/ 响应式 `@media (max-width:768px)`
-- `community-data.ts` — 社区数据层：`loadCommunityData` **首屏快路径**（并发 `App.DefaultWorkshopSites` / `LoadWorkshopCreators` / `ListModelAuthors`，**不含磁盘扫描**）；`loadLocalAuthors`（本地作者扫描，withCached 5min **STALE** 策略：过期返旧值后台刷新）+ `mergeLocalAuthorsInto`（幂等合并，同名去重 + type 分段精确比较）供调用方首屏渲染后异步补充——拆分前扫描坐在 Promise.all 里阻塞整个 tab 栏（大库秒级~分钟级）；另有 `fetchCommunityCreators` / `mergeCommunityCreators` / `fetchCommunitySites` / `mergeCommunitySites` / `fillSearch` / `DEFAULT_COMMUNITY_URL`
+- `content-css.ts` — 样式组合层：6 个域 CSS 文件 join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
+- `content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架卡片系统（`.page` / `.stat-card` / `.model-card` / `.health-ring` 等）+ 工坊通用按钮类（`.ws-*`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。
+- `content-repo.ts` — 仓库/实例/站点骨架 + 资历页 + 热力图 + 通用标签。
+- `content-creator.ts` — 创作者 `.cr-*` 全族样式（标签/频道/卡片/详情浮层/编辑）。
+- `content-diag.ts` — 诊断页 + GitHub 工坊 `.gh-*` 全族样式。
+- `content-util.ts` — 回收站动画 / 资源管理器 / 预览拖拽 / 主题选择器 / 响应式 `@media`。
+- `community-data.ts` — 社区数据层：`loadCommunityData` 首屏快路径（不含磁盘扫描）；`loadLocalAuthors` withCached 5min **STALE** 策略（过期返旧值后台刷新）；`mergeLocalAuthorsInto` 幂等合并（同名去重 + type 分段精确比较）。
 - `workshop-icons.ts` — SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`
-- `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded`（iframe）/ `NavigatePlazaWindow` / `OpenInBrowser`，`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 把搜索链路 `fillSearch` 拼好的带词链接**透传**给 `openSite`（曾丢弃入参只开首页 → 全站搜索退化为只开网站，P1 修复）
+- `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded` / `NavigatePlazaWindow` / `OpenInBrowser`；`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 须把搜索词链接**透传**给 `openSite`，不得丢弃。
 
 ## 对外 API / 入口
 
@@ -201,12 +200,12 @@ status: active
 - 全局事件 handler 只在 `app-content` 的 `connectedCallback` 注册一次（致命陷阱 #2），返回的 unsub 全部收进 `_globalUnsubs`
 - 初始页面**三源同源**：`app-nav`、`app-content`、`PageStore` 都只能通过 `resolveInitialPage()` 取初始页，禁止任一处硬编码页面名，否则 UI 与 `PageStore` 脱节（旧版 DnD 遮罩曾依赖该守卫误判；现 DnD 已组件化，不再依赖）
 - `resolveInitialPage()` 的 localStorage 取值必须过 `sanitizePage()` 白名单（`VALID_PAGES`）：历史页面名 `resources` 映射为 `repository`，其余未知/损坏值一律回退 `repository`，防止 `_render()` 落入 `default` 分支却无对应 init 分发而形成死页
-- 所有 `bus.on` 订阅（`_unsub` / `_globalUnsubs` / `_unsubs`）必须在 `disconnectedCallback` 逐一清理；`document` 级 resize 监听先移除再重绑，防止切页累积泄漏。**`_unsubs` 在 `_render()` 开头同样清理**（P2 修复：app-content 常驻不卸载，原仅 disconnectedCallback 清理 → 多次访问 repository 的 dedup/oldest/import/recycle 会让 `repo:rtype-changed` 监听跨访问累积，N 次访问后一次切换触发 N 次 doDedup）
+- 所有 `bus.on` 订阅（`_unsub` / `_globalUnsubs` / `_unsubs`）必须在 `disconnectedCallback` 逐一清理；`_unsubs` 在 `_render()` 开头同样清理（防 app-content 常驻下跨访问累积）；`document` 级 resize 监听先移除再重绑
 - `_render()` 内页面 init 分发整体包 try/catch：init 抛错不中断调用方，转 `console.error` + `toast:show` 反馈用户而非静默
 - 样式走 `adoptedStyleSheets` + CSS 变量，无硬编码颜色；`innerHTML` 拼接统一过 `_esc` / `esc`
 - 页面级临时缓存（`_workshopCache` / `_githubCache`）与 `_workshopTimer` 定时器在 `disconnectedCallback` 清空
-- 站点搜索带词链接必须**真传**到底层打开调用：`ctx.openUrl(url)` → `openSite(host, site, mode, url)` 的 `url` 不得丢弃，否则站点视图预设 / 卡片作者搜索 / 详情浮层全部退化为只开网站首页（实际触发时与 `searchUrl` 数据是否齐全无关，P1 修复锁定于 `workshop-site-opener.test.ts`）
-- 浏览模式按「点谁用谁 + 即时生效」，且收敛为**单源 ref**：`browseMode` 存为 `BrowseModeRef{ v }`（与 `wsEditModeRef:{v}` 同构），经 `ctx.browseMode` 贯穿到 `renderSiteView` 高亮（读 `.v`）与 `openUrl`→`openSite`，`setBrowseMode` 只改 `.v` + localStorage → 一处 set、处处一致，无值拷贝 stale。history：曾用单 toggle 按钮 `cycleBrowseMode` 循环切换（点谁都用循环）；后 openUrl 引用 live 变量而高亮读到 ctx 值拷贝旧值 →「能打开新模式但高亮不动」，本次重构 ref 根治；`bindSiteEvents` 死参 browseMode 已随重构清除
+- 站点搜索带词链接必须**真传**到底层打开调用：`ctx.openUrl(url)` → `openSite(host, site, mode, url)` 的 `url` 不得丢弃
+- 浏览模式收敛为**单源 ref**：`browseMode` 存为 `BrowseModeRef{ v }`，经 `ctx.browseMode` 贯穿到 `renderSiteView` 高亮与 `openUrl`→`openSite`，`setBrowseMode` 只改 `.v` + localStorage → 一处 set、处处一致，无值拷贝 stale
 
 ## 相关
 

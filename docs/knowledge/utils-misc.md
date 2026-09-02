@@ -65,7 +65,7 @@ status: active
 
 ## 概览
 
-前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。原 `constants.ts`（预览画布/缩放/下载守护等全局数值常量）因长期无消费方已在死代码清理中移除，本卡同时承接「常量治理」的约定说明。
+前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。
 
 ## 核心职责
 
@@ -78,10 +78,6 @@ status: active
 - `dbg(tag: string, ...args: unknown[]): void` — `[DBG:tag]` 前缀 console.log，并写入 `window._DBG_RING` 环形缓冲（上限 200 条）；URL `?nodebug=1` 或 localStorage `_debug=0` 时静默
 - `window._DBG_RING` — 最近 200 条日志复盘入口（含时间/tag/level/截断后的参数）
 - `window.debugGetSpec(path?)` — 控制台调试助手：动态 import `GetModel3DSpec` binding 取 Go 3D spec 骨骼数据
-
-常量治理（原 constants.ts 移除后的约定）：
-- 历史常量域：预览画布尺寸（180/600/60）、缩放范围（0.2-10）、旋转增量（0.5 度/像素）、下载守护时延（STUCK_GUARD_DELAY=2000，对应致命陷阱 #6）、日志上限（500）等
-- 新增魔法数值优先在使用它的模块内定义具名常量；跨模块共享的数值再考虑集中文件，避免重新积累死常量
 
 ## 与其他子系统关系
 

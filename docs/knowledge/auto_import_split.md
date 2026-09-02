@@ -49,6 +49,18 @@ use_when:
   - 缺失导入
   - goimports
   - 大脚本拆分
+pitfalls:
+  - "re-export 符号（export { X } from \".y\"）不算本文件导出，--fix 不会为其补 import"
+  - "模板插值 ${foo} 内标识符不检测，属于已知漏报局限"
+  - "歧义符号 --fix 跳过不写，需手动处理"
+  - "source-graph 把 re-export 也算导出，不复用是有意设计"
+  - "splitBlockEntries / splitTopLevelCommas 仅处理 import 块头部"
+  - "属性访问 obj.prop 中的 prop 被排除，不会触发缺失建议"
+quick_intents:
+  - "检测缺失 import（只读报告）"
+  - "自动修复缺失 import（--fix 写回，幂等）"
+  - "CI/门禁：strict 模式阻断有缺失的推送"
+  - "排查拆分后 parity 是否对齐"
 status: active
 ---
 

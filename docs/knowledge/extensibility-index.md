@@ -10,6 +10,19 @@ use_when:
   - 重复实现
   - 插件化
 affected: false
+pitfalls:
+  - "对账基准 d517113c 已老化；需先核 round2 或 grep 实测"
+  - "Top 1 RenderSession 对象化已独立立项，常规轮次内禁止 rush"
+  - "新增资源类型「5 处必改」残留：RESOURCE_TYPES / LABELS / icon.ts / PREVIEW_HANDLERS / 侧栏 tab"
+  - "ShouldHashExt 新增 hashable 类型必须同步补测试"
+  - "detector switch 仅 5 种；新二进制格式须手写 isXxxFile"
+  - "PREVIEW_HANDLERS 无 handler → 预览区静默空白"
+quick_intents:
+  - "新增一种资源类型 → 查 round2 §1"
+  - "新增一种文件格式 → 查 round2 §2"
+  - "新增 browser-adapter binding → 查 round2 §3"
+  - "新增同步策略 → 查 round2 §4"
+  - "对账拓展点落地状态"
 status: superseded
 last_verified: 2026-09-01
 ---

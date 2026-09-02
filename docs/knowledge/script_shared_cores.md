@@ -34,6 +34,18 @@ use_when:
   - check-circular
   - findCycles
   - 脚本去重
+pitfalls:
+  - "git() 失败返回 null ≠ 空字符串——null 触发调用方 fail-closed"
+  - "getChangedLines staged + renameOld 分支用 HEAD:old ↔ :new 两点 blob diff"
+  - "detectRenames / getChangedFiles 三圆点为空时兜底回退是必要路径"
+  - "findCycles 环 key 用排序后 join，A→B→C 与 B→C→A 视为同一环"
+  - "maxCycles 截断时 truncated=true，消费方必须检查 truncated 字段"
+quick_intents:
+  - "覆盖率门禁检查"
+  - "循环依赖检测"
+  - "git rename 识别与处理"
+  - "变更行提取"
+  - "建议区块拼装"
 status: active
 ---
 # scripts 共享核演进（diff-coverage-core + cycles）

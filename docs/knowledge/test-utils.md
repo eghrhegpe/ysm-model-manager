@@ -72,6 +72,44 @@ use_when:
   - 异步等待
   - 组件测试
 status: active
+pitfalls:
+  - getAllByTestId 前缀查询不会返回「后缀非数字」的兄弟 testid（如 tree-dir 不会命中 tree-dir-toggle）；误用精确查询会抛错，应先查前缀再 JS 过滤
+  - waitFor 超时/异常携带原始错误（P2 修复后）；旧实现静默吞错掩盖真实根因，迁移旧卡时注意不要写「捕获后重新 throw 通用消息」
+  - `interval?` 参数不存在于 waitFor 签名，旧知识卡/口语中可能出现误导
+  - 异步等待必须按「三分法」选型：正等结果→waitFor，init 落定→排空调度轮次，负向窗口→保留真实 sleep
+  - 将 init 落定硬凑成 waitFor 条件会与组件内部实现耦合，条件易碎
+  - 将负向定时器窗口换成短 sleep 会导致防抖真坏了也漏报
+  - testid 值禁止含空格或大小写混排（Design.md §19.1），本层未做入口校验（P3）
+quick_groups:
+  - testid 查询与元素选择
+  - 异步等待策略与 flaky 治理
+  - 事件模拟（fire 系列）
+  - 组件挂载/卸载编排
+quick_intents:
+  - 按 testid 查询/匹配 DOM 元素
+  - 等待 DOM 内容或 mock 调用出现
+  - 等待组件 init 链落定（无业务可观察条件时）
+  - 派发 click / input / keydown / drag & drop 等模拟事件
+  - 挂载/卸载自定义元素
+  - 将 sleep 替换为 waitFor（正向等待）
+  - 断言某行为不再发生（负向定时器窗口）
+quick_risk_lines:
+  - 禁止用固定 sleep 等待正向结果——真 flaky
+  - 禁止用 waitFor 条件耦合组件内部实现细节
+  - 禁止把负向定时器窗口断言换成短 sleep
+invariant_anchors:
+  - frontend/src/test-utils/events.ts|fireEvent
+  - frontend/src/test-utils/query-by-testid.ts|queryByTestId
+  - frontend/src/test-utils/render.ts|renderComponent
+  - frontend/src/test-utils/index.ts|mountCustomElement
+  - tests/test_testid_contract.ts|isKeyTestid
+  - frontend/src/views/app-nav/index.test.ts|describe
+  - frontend/src/views/app-sync-manager/index.test.ts|describe
+  - frontend/src/views/app-toast/index.test.ts|describe
+  - frontend/src/views/app-tree/render.test.ts|describe
+  - frontend/src/views/app-content/app-content.methods.test.ts|describe
+  - frontend/src/views/app-sidebar/app-sidebar.component.test.ts|describe
+  - frontend/src/views/context-menu/index.test.ts|describe
 ---
 # 测试工具 test-utils（G-1 抗脆弱测试基础设施）
 

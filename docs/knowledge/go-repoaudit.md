@@ -46,6 +46,20 @@ invariant_anchors:
   - go/repoaudit/repoaudit.go|func Audit
   - go/repoaudit/repoaudit.go|func Classify
   - go/repoaudit/repoaudit.go|sync.Once
+pitfalls:
+  - "CLI 与 GUI 共用同一 Audit 实现——改一处必须同步考虑两端行为"
+  - "isModelFileValid 拒绝空对象/数组——畸形 JSON 标记无效不报错"
+  - "Classify(ext) 首次 sync.Once 构建 ext→id map，构建失败永久缓存空 map"
+  - "HealthReportFor 包含去重扫描——大仓库可能耗时数秒"
+  - "缓存命中率计算基数是模型文件数而非总文件数"
+  - "Audit 返回的 Result 不含去重结果——去重必须走 HealthReportFor"
+quick_intents:
+  - "仓库健康审计（Audit）"
+  - "完整体检 + 去重（HealthReportFor）"
+  - "扩展名→资源类型分类（Classify）"
+  - "模型文件完整性验证"
+  - "缓存命中率分析"
+  - "仓库评分与警告生成"
 status: active
 ---
 

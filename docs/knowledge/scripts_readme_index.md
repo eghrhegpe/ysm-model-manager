@@ -8,14 +8,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - missingFromReadme:37
-  use_when:
-    - README
-    - 脚本索引
-    - 登记处
-    - 脚本登记
-    - check-readme-index
-    - 脚本漂移
-    - 脚本对账
 use_when:
   - README
   - 脚本索引
@@ -24,6 +16,29 @@ use_when:
   - check-readme-index
   - 脚本漂移
   - 脚本对账
+pitfalls:
+  - 新增脚本后忘记在 README.md 登记 → check-readme-index 阻断推送（exit 1）
+  - README 只写脚本名前缀（如 `doctor` 而非 `doctor.ts`）→ 前缀匹配不够，必须精确匹配 basename
+  - 脚本改名后未同步更新 README → 旧名不匹配，新名未登记，产生漂移
+  - 误把 `_lib/` 共享层或测试文件当作需要登记的脚本（它们被排除在外）
+  - 删除脚本时简单删行而非移入「已删除」区 → 与磁盘状态不一致导致误报
+quick_groups:
+  - 脚本治理与文档一致性
+  - 门禁守护
+quick_intents:
+  - 检查哪些脚本未登记在 README
+  - 验证新增脚本是否已正确登记
+  - 修复登记漂移（补全缺失的登记）
+  - CI/CD 门禁中校验 README 完整性
+quick_risk_lines:
+  - 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md
+  - README 是唯一事实源，AGENTS.md 工具口令表只是指针
+invariant_anchors:
+  - scripts/check-readme-index.ts|missingFromReadme
+  - scripts/_lib/collect-scripts.ts|collectScripts
+affected: false
+perf:
+  - single-thread
 status: active
 ---
 

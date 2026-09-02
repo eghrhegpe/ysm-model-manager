@@ -136,6 +136,19 @@ perf:
 invariant_anchors:
   - frontend/src/preview-3d/adapters/mmd-adapter.ts|mmdMenuItems
   - frontend/src/utils/main-thread-watch.ts|startMainThreadWatch
+pitfalls:
+  - "KTX2 编码前未检查缓存 hash → 重复 WASM 编码"
+  - "basis_encoder 默认 CDN 路径 404 → 需注入本地 /basis/ 路径"
+  - "loaders.gl 4.4.4 subarray().buffer 返回整个底层 ArrayBuffer（假成功）"
+  - "8192² 纹理 WASM 编码 abort → 需尺寸守卫"
+  - "getCachedTexture 对每个纹理单独 RPC → 改用 BatchWithMeta"
+  - "MMD dispose 仅释放物理引擎 → 需手动遍历纹理字段"
+quick_intents:
+  - "性能诊断 / 卡顿排查"
+  - "KTX2 缓存命中分析"
+  - "GPU 内存泄漏排查"
+  - "模型加载优化（PMX Worker 化）"
+  - "缓存清理 / 限流"
 status: snapshot
 ---
 

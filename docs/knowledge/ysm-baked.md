@@ -25,6 +25,21 @@ auto_fields:
     - UV 对不上
     - 贴图错位
     - RawYsmModel
+pitfalls:
+  - 预览错 ≠ 文件坏：cube 的 origin/size/uv 是反推猜测，模组直读烘焙数据所以游戏内正常；骨骼姿态差异先怀疑反推误判
+  - 复杂嵌套旋转 / 极近重合顶点 / 非标准几何体：反推可能误判 pivot 或 rotation → 关联部件错位甚至方块崩溃，这是上游已知限制，不要在几何反推端打补丁硬修
+  - WASM 更新需双向同步：WASM 资产（两个 *-data.js）与模组侧同一 C++ 源码但导出面不同，更新需逐端同步重出
+  - UV 解析多种形态：`parseBedrockGeometryFromJSON` 兼容数组 `[x,y]`、对象 `{uv,uv_size}`、JSON 字符串 faceUV、兜底 `[0,0]`，贴图错位优先排查此处而非几何本身
+  - texture slot 绑定规则：第 i 个模型 → 第 i 个纹理，错位需按此顺序排查
+quick_groups:
+  - 预览渲染与反推
+  - 骨骼与几何校正
+  - UV / 贴图定位
+quick_intents:
+  - 骨骼错位 / 模型错位排查
+  - UV 对不上 / 贴图错位定位
+  - 烘焙数据反推原理理解
+  - WASM 解析器版本更新
 tests:
   - frontend/src/preview-3d/decoder/geometry.test.ts
 use_when:

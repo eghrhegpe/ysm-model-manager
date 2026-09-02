@@ -49,6 +49,7 @@ use_when:
 perf:
   - concurrent
 status: archived
+affected: false
 last_verified: 2026-08-27
 ---
 

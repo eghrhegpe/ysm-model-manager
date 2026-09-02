@@ -53,6 +53,11 @@ quick_intents:
   - 新增资源类型 / 修改 resource_types.json / 文件类型
 quick_risk_lines:
   - resource_types.json 是唯一事实来源；前端只读不判、禁本地重算
+pitfalls:
+  - services/registry.ts 是 Service 注册表（register/get/unregister/clear）≠ resource_types.json 资源类型定义；混淆两者会在「新增类型」场景误改 register 而非 JSON
+  - loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回 `"{}"` 时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试
+  - services/registry.get 用 Map.has() 判定，falsy 值 `0/""/false/null` 如实返回（P3 修复）；误判「不存在」走 null 分支会导致功能静默失效
+  - MMD 子类型 instanceDir 必须精确为 `3d-skin/<子名>`（含子级），漏写一级右键「打开文件夹」打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定
 status: active
 ---
 

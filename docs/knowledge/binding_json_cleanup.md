@@ -95,6 +95,17 @@ use_when:
   - 错误通道统一
   - ADR-143
   - 绑定返回 string
+pitfalls:
+  - "新增 Wails 绑定禁止返回 string 承载 JSON——必须走 (T, error) struct 返回"
+  - "generate:bindings -ts 必须带 -ts 后缀，漏带会产出 .js bindings"
+  - "豁免档前端必须收敛到单一类型化解析器，禁止散落 JSON.parse"
+  - "binding-check 静态规则锁定 STRING_RETURN_ALLOWLIST"
+  - "ReadPackEntry 已统一为 []byte，前端 base64 decode 收敛到单一工具函数"
+quick_intents:
+  - "新增绑定 → 返回 (T, error) struct"
+  - "Wails binding 签名改动 → generate:bindings -ts 重新生成"
+  - "前端 JSON.parse + as 断言清理 → 改 try/catch"
+  - "铲债进度追踪 → 按 P0/P1/P2 档位核状态"
 status: active
 ---
 

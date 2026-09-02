@@ -44,6 +44,18 @@ use_when:
   - rollback-impact
   - bloat-history
   - 依赖图
+pitfalls:
+  - "goTopFuncs 注释承诺五类，实测只提取 func"
+  - "两组正则结果拼接序未排序 → 报告顺序不稳定"
+  - "注释里的 // func Ghost( 被当真符号 → 误报"
+  - "导出符号 vs 顶层声明混用 → 语义污染"
+  - "正则对字符串字面量中的 import from 会误匹配"
+quick_intents:
+  - "检测 API 破坏性变更 → api-break"
+  - "分析 refactor 提交影响面 → audit-split"
+  - "评估 revert 影响范围 → rollback-impact"
+  - "扫描源码依赖图 → scanSourceGraph"
+  - "提取符号 → gen-knowledge-symbols"
 status: active
 ---
 # 源码符号提取共享层 source-graph.ts

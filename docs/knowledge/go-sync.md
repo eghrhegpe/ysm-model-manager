@@ -170,25 +170,16 @@ status: active
 - `SyncResources` 对比 key 为**相对路径**（`relKey`：小写 + 正斜杠 + 去 `.disabled`/`.ban`，ADR-064 阶段二），同名文件按**大小**判定内容是否变化（复制会改 mtime，mtime 不可靠），大小不同归入 Missing 视为待更新；三个结果列表返回前均 `sort.Strings` 排序
 - 扩展名过滤统一走 `types.IsResourceAllowed`（`types.AllExts()` + `.json` 仅 `ysm.json`）与 `packs.IsTypeModelFile`（单类型扩展集 + `ysm.json`，ADR-144 下沉），原 `isSyncAllowed` / `isModelFile` / `instance.extMatch` 三处同义实现已收敛（ADR-064 阶段一）
 - **`SyncResourcesDirLevel` 容器 vs 叶子模型夹判定**（`collectEntries`，sync_dirlevel.go）：目录被 `isDirTypeModelFolder` 判真（直接含 .ysm/.ysm.json）后，若还直接含子模型文件夹（`containsModelSubfolder` 为真），则是「容器」而非「叶子模型夹」——**不下钻整体收编 SkipDir**，而继续下钻保留各子夹层级，由 `go/instance` 的 `nestDirLevelTree` 重建容器树。收发场景：`嵌套1/` 内含直接平铺 `动力臂.ysm` + `01_taisho_maid/` + `嵌套2/` 深层子夹，若被整体收编会把子夹层级吞掉，前端退化成摊平的 `01_taisho_maid/ysm.json` 文件行（违背仓库层级镜像）；只有「叶子模型夹」（含模型文件但无子模型夹）才 SkipDir 收编为单同步单元
-- **两阶段遍历-执行模式**（`SyncToggleStatus`，sync.go）：`filepath.WalkDir` 回调中**不直接执行** `os.Rename`，而是先收集 `[]renameOp`（含源路径、目标路径、操作类型），遍历完成后再批量执行。原因：`filepath.WalkDir` 在遍历过程中修改目录结构（如重命名文件）会导致后续条目被跳过或重复处理——文件丢失/重复/损坏风险。这是本包最重要的设计模式，所有在 WalkDir 回调中修改文件系统的操作都必须遵循此模式
-- `SyncToggleStatus` 与 `go/installer` 共用包级 `installer.InstallLock`（`sync.Mutex`，统一单锁——[ADR-056](../adr/ADR-056-shared-install-lock.md) 成文：2026-08-12 起原两包各自 `installLock`/`syncLock` 互不感知的并发竞态收敛为共享同一把锁，sync.go `InstallLock.Lock()`；2026-08-13 补齐回收/去重入口），防止与安装操作并发写同一文件
-- `RelinkDir`（sync_relink.go）整段持 `InstallLock`：自身对 custom 目录的 `os.Rename`/`os.RemoveAll`（目录级分支备份/回滚）纳锁，内部对 `installer.Install/InstallDir/CopyFile` 改用 **`*Locked` 变体**（`InstallLocked`/`InstallDirLocked`/`CopyFileLocked`，installer.go 新增导出）——避免同 goroutine 重入非重入 mutex 死锁（曾踩：整段持锁 + 调公开函数 → sync 测试挂起 119s）
-- 文件被占用（如 Minecraft 锁定）时 `isFileLocked` 识别后静默跳过不阻塞（errno 优先：Win ERROR_SHARING_VIOLATION(32) / Unix EBUSY(16)，再按消息兜底）
-- `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `.relink-bak`，重建成功才删备份、失败则回滚恢复——不能先 `RemoveAll` 再重建，否则失败即整目录丢失。**根层平铺的 ysm.json/.pmx 退化为 `installer.Install` 单文件路径**（P1 修复：`dstParent == customDir` 时原逻辑会把整个实例目录 rename 走、同目录其他模型随备份 RemoveAll 丢失）
-- 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`——用 `os.Stat` 会跟随链接、把符号链接误判成普通文件，进而按「复制」策略走回收站
-- 链接类型是删除策略依据：硬链接(nlink>1)/符号链接直接删，普通文件才移回收站（致命陷阱 #8）
-- 拉取侧 `copyFile`（sync_push.go）已修复为 **tmp+rename 原子落地**（P3 修复）：带 defer 清理半截文件，失败不清理残留；`copyDirRecursive`（sync_push.go）递归复制时保留符号链接语义（`os.Readlink` + `os.Symlink`），不跟随复制——与 [go_recycle](./go-recycle.md) 的 `copyDirRecursive` 口径已对齐
-- 冲突解决（conflict.go）的备份/覆盖/回滚三处拷贝已收敛 `fsutil.CopyFile` 原子 tmp+rename（ADR-044 收尾，原 `copyFileSafe` 直写壳已删）；失败路径契约（本地完好 + .bak 清理）由 `TestResolveConflict_ForceRemote_CopyFail_LocalIntact` 锁定
+- **两阶段遍历-执行模式**（`SyncToggleStatus`，sync.go）：`filepath.WalkDir` 回调中**不直接执行** `os.Rename`，而是先收集 `[]renameOp`，遍历完成后再批量执行。在 WalkDir 过程中修改目录结构会导致后续条目被跳过或重复处理。
+- `SyncToggleStatus` 与 `go/installer` 共用包级 `installer.InstallLock`（`sync.Mutex`），防止与安装操作并发写同一文件
+- `RelinkDir` 整段持 `InstallLock`，内部对 `installer.Install/InstallDir/CopyFile` 改用 `*Locked` 变体，避免同 goroutine 重入非重入 mutex 死锁
+- 文件被占用（如 Minecraft 锁定）时 `isFileLocked` 识别后静默跳过不阻塞
+- `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `.relink-bak`，重建成功才删备份、失败则回滚；根层平铺的 ysm.json/.pmx 退化为 `installer.Install` 单文件路径
+- 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`
+- 链接类型是删除策略依据：硬链接(nlink>1)/符号链接直接删，普通文件才移回收站
+- 拉取侧 `copyFile` 已修复为 **tmp+rename 原子落地**；`copyDirRecursive` 保留符号链接语义
+- 冲突解决的备份/覆盖/回滚三处拷贝已收敛 `fsutil.CopyFile` 原子 tmp+rename
 - 实例 custom 目录固定为 `config/yes_steve_model/custom`
-- **R27 修复链（2026-08-31）**：
-  - `DetectConflicts` hash 失败静默漏报（P2-1）：两端 size 相同但任一端 hash 为空时，标记 `HashFailed=true` + `ResolveManual` 冲突；`ResolveConflictsLocked` 检测到 `HashFailed` 时**不覆盖 SuggestedStrategy、直接计入 manual**（此类条目须人工审查，不随 defaultStrategy 自动处置）。旧实现 hash 空时跳过，哈希失败的真实冲突文件被漏报。
-  - `ResolveForceRemote` 恢复失败吞错（P2-2）：`CopyFile(remotePath, localPath)` 失败后恢复备份，恢复失败时返回带备份路径的复合错误，让调用方知悉恢复点位置。旧实现 `_ =` 吞掉恢复失败错误。
-  - `ResolveConflictsLocked` 锁契约收敛为文档约束（P2-3 修正）：初版 `assertInstallLock()` 运行时 panic 硬约束被 R27 code_review 否决——`TryLock` 在他人持锁时返回 false 不可靠，且生产环境 panic 不可接受；改为注释文档约束，调用方须自行确保持锁（`ResolveConflicts` 公开入口负责持锁）。
-  - `RelinkDir` 备份名带时间戳（P2-4）：`backup := fmt.Sprintf("%s.relink-bak-%d", dstParent, time.Now().UnixNano())`，与 conflict.go 的 `.bak-<ts>` 口径对齐，避免上一次 relink 失败留有的备份目录被本次无条件删除——恢复点丢失。
-  - 不完整 Walk 结果不入缓存（P3-2 + P3-3）：`collect` 闭包加 `partialFail` 标志，Walk 出现非根错误时设 true，`storeSyncScanCache` 仅在 `!rootFailed && !partialFail` 时存储，避免 30s TTL 内后续调用拿到残缺 entries。
-  - `SyncToggleStatus` 哈希计算持锁是有意设计（P3-1 确认）：修改文件系统（rename 加/去 .disabled 后缀）必须持锁防止与安装并发，把哈希移到锁外会引入 TOCTOU。>500MB 文件 `computeHash` 返回空，自动跳过哈希走 relKey 匹配。
-  - `SyncToggleStatus` 禁用统一收敛到 `.disabled`（P3-4 确认）：历史 `.ban` 文件 toggle 启用→再禁用时变成 `.disabled`，有意收敛非 bug。
-  - `SyncCustomToRepo` basename 去重是有意保守策略（P3-5 确认）：同名不同子目录的文件也会被跳过，避免仓库内同名文件被覆盖。哈希去重（`repoHashes`）已覆盖「同名同内容」场景，此处仅挡「同名不同内容」。
 
 ## 已知限制 / 待治理（2026-08-24 审计）
 

@@ -32,6 +32,17 @@ use_when:
   - shaderpack
 status: archived
 last_verified: 2026-08-27
+
+  pitfalls:
+    - resource-packs.ts 已于 2026-08-18 删除——引用旧路径会编译错误
+    - 独立资源管理组件 <app-resource-manager> 已于 2026-08-24 删除
+    - 启禁/详情已改由 ToggleEnable + app-preview 承载
+    - 旧代码中对 resource-packs.ts 或 <app-resource-manager> 的残留引用需排查
+  quick_intents:
+    - 理解资源包/光影包的历史架构迁移路径
+    - 查找资源包详情与启禁的当前入口（app-preview + ToggleEnable）
+    - 排查旧代码中的残留引用
+    - 已归档卡——仅作历史参考
 ---
 
 # 资源包功能 resource-packs（已归档）

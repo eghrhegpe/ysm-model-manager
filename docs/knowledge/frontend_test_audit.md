@@ -29,6 +29,19 @@ use_when:
   - 假绿
   - 覆盖盲区
 status: snapshot
+pitfalls:
+  - "verify-adr-042 失败不 exit(1) → 假门禁（已修复，GAP_FOUND 应阻断 pre-push）"
+  - "testid_contract 跳过测试文件 fixture HTML → 删真实钩子忘删 VIEW_TESTIDS 时契约仍绿"
+  - "vi.useFakeTimers 不取消已挂起真实 timer → 跨用例污染断言；治本需模块级登记 + afterEach clearTimeout"
+  - "test_config_defaults CI 无 UserConfigDir 时整体跳过 = 零覆盖假绿"
+  - "orch-test 零断言属开发笔记不应进 tests/ → 应移至 poc/ 脱离套件"
+  - "test_scripts_json 12 脚本串行 spawn 最坏 720s timeout → 可并行化或排除已知慢脚本"
+quick_intents:
+  - "审计前端测试基建覆盖率与质量"
+  - "定位契约测试盲区（binding/mock/bus 协议漂移）"
+  - "排查 e2e flaky / 假绿 / 残留 waitForTimeout"
+  - "补测高交互路径（sync-manager/recycle-bin/import-queue/community）"
+  - "治理测试耦合私有字段（孤儿守卫）"
 ---
 
 # 前端测试基建审计

@@ -46,7 +46,7 @@ describe("webCliBindings", () => {
     // 前端白名单是手选子集（网页版只放行安全的），允许少于 Go 全集，
     // 但绝不允许出现 Go 没注册的命令——否则 UI 放行了一个必然失败的入口。
     const goCommands = goCliCommands();
-    expect(goCommands.size).toBeGreaterThan(CLI_ALLOWLIST.length);
+    expect(goCommands.size).toBeGreaterThanOrEqual(CLI_ALLOWLIST.length);
     for (const cmd of CLI_ALLOWLIST) {
       expect(goCommands.has(cmd)).toBe(true);
     }

@@ -11,11 +11,14 @@ use_when:
   - 残留手改清单
 affected: false
 status: active
+supersedes: extensibility-index
 last_verified: 2026-08-27
 ---
 
 # 拓展点 / 扩展入口 探索报告（Round 2）
 
+> ⚠️ **本卡取代批次 1 拓展点发掘**：`extensibility-index.md` 为历史快照（`superseded`），`extensibility-index-reconciliation.md` 对账基准已老化（2026-08-17）。如需最新拓展点全景，请以本卡为准。
+>
 > 范围：基于 `resource_types.json` 单一事实来源 + ADR-064/066/067/068/069 新抽象（2026-08-16 ~ 08-17 落地）+ `docs/knowledge/extensibility-index.md`（8-15 产出，已部分过时）。
 > 只调研不改代码。结论 = 新增东西时"改哪里 / 会不会自动生效 / 残留手改清单"。
 

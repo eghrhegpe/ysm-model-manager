@@ -11,6 +11,7 @@ source_files:
   - tests/test_i18n_key_naming.ts
 tests:
   - frontend/src/core/i18n/locales-consistency.test.ts
+  - tests/test_i18n_key_naming.ts
 use_when:
   - 翻译准确度
   - 键名与值语义错位

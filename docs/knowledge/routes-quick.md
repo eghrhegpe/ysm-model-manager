@@ -456,6 +456,8 @@
 | Molang 求值未缓存 | - | 每帧重复求值、性能差；必须缓存 Molang 表达式 |
 | 手写 YSM 字节流解析 | - | 与 YSMParser WASM 输出不一致；必须经 ysm-wasm |
 | wasmBinary 未释放 | - | 内存泄漏；必须复用 wasm 实例并释放 |
+| Worker 内静态 import WASM 数据模块 | - | 另一变体成 1.5MB 死重；必须动态 import |
+| vite worker.format 未设 es | - | iife 强制 inlineDynamicImports，动态 import 构建直接失败 |
 
 ---
 <!--  END_GENERATED_SECTION -->

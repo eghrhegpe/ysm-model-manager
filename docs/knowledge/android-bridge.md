@@ -8,7 +8,7 @@ source_files:
   - frontend/src/utils/dom/directory-picker.ts
 tests:
   - frontend/src/features/version-updater.test.ts
-  - tests/test_android_bridge_contract.mjs
+  - tests/test_android_bridge_contract.ts
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:
@@ -67,7 +67,7 @@ Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 
 - **不碰 SAF**：禁止引入 `DocumentFile` / `content://` URI 读写（历史踩坑，MikuMikuAR ADR-194 废弃）
 - **isViewerMode ≠ 网页版**：`isViewerMode()`（有 Java 桥或 `resolveWebMode()`）与 `resolveWebMode()`（仅网页版）语义不同，**不可互换**。设置页 FSA 授权卡(`stg-web-repo-card`/`web-repo-auth-btn`)只该由 `resolveWebMode()` 渲染——它依赖 `showDirectoryPicker`(仅浏览器)。Android 虽为 viewer(mcRoot 缺位等),但走 Java 桥 `requestStoragePermission` + `resolveAndroidRepoDir`(本地路径卡),渲染 FSA 卡会报「浏览器不支持 FSA」(Android WebView 无 `showDirectoryPicker`)。tpl-settings 的 `isViewer`(游戏根/链接卡)与 `isWebViewer`(FSA 卡)两层判断即此约定(2026-08 修)
 - **类型安全**：桥访问不得用 `as any`（用 `unknown` 收窄）
-- **Java↔JS 桥契约（tests/test_android_bridge_contract.mjs 锁定）**：① MainActivity `addJavascriptInterface` 必须先于 `loadUrl`——页面首行 JS 起桥已可见，无冷启动竞态（桌面 WebView2 异步注入才有此问题）；调换顺序 → 前端启动期探测假阴性。② 被 JS 探测的方法必须带 `@JavascriptInterface`（API 17+ 未注解 public 方法不暴露，静默失败）。③ ProGuard keep WailsJSBridge/WailsBridge，防 release 剥离。④ 注册名 `"wails"` 与前端探测目标一致（上游 runtime_android.go 对齐：window.wails.invoke）。重构注入方式须同步该测试并重新论证首帧可用性
+- **Java↔JS 桥契约（`tests/test_android_bridge_contract.ts` 锁定）**：① MainActivity `addJavascriptInterface` 必须先于 `loadUrl`——页面首行 JS 起桥已可见，无冷启动竞态（桌面 WebView2 异步注入才有此问题）；调换顺序 → 前端启动期探测假阴性。② 被 JS 探测的方法必须带 `@JavascriptInterface`（API 17+ 未注解 public 方法不暴露，静默失败）。③ ProGuard keep WailsJSBridge/WailsBridge，防 release 剥离。④ 注册名 `"wails"` 与前端探测目标一致（上游 runtime_android.go 对齐：window.wails.invoke）。重构注入方式须同步该测试并重新论证首帧可用性
 - **目录解析唯一入口**：Android「需要目录路径」场景统一走 `resolveAndroidRepoDir`，禁止各调用方自行实现授权引导
 - **返回键注册表（ADR-057）**：handler 按栈顶优先（后注册先询问）；返回 `true` 即视为已消费并短路后续；桌面端无 `android:back` 事件，返回键逻辑恒不触发（零影响）；Android 端由 `MainActivity → android:back → emitAndroidBack()` 接通，注册表不再依赖原生桥直接调用
 

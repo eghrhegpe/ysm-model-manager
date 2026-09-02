@@ -56,18 +56,18 @@ YSM 模型的动画并非硬编码在渲染核心 `model3d.ts` 中，而是由**
 ## 调用链真相
 
 ```typescript
-// 1. 加载阶段
-loader/adapter → createYsmAnimPlayer(timeline, boneMapping)
+// 1. 加载阶段（适配器层 ysm-adapter.ts 的 build() 内）
+loader/adapter → createYsmAnimPlayer(boneByName, clips, boneHierarchy, clipLabels?)
 
-// 2. 驱动阶段 (每帧 rAF)
-adapters[0] = mdApAdvanceTimeAndController() // 推进时钟 + 状态机
+// 2. 驱动阶段（Player.apply(dt) 每帧 rAF 调，内部串接两步）
+mdApAdvanceTimeAndController(dt, state, ctx)  // 推进时钟 + 控制器状态机
+                                              // 内含 setMolangScope(controllerVariables) 完成 @variable.time 等变量求值
               ↓
-              molang-bridge 求值             // @variable.time 等变量实时计算
-              ↓
-mdApApplyPose(boneGroupMap)                 // 覆盖 THREE.Group.position/quaternion
+mdApApplyPose(dt, state, ctx)                 // 覆盖 THREE.Group.position/quaternion
+                                              // 内部调 evaluateClip(clip, state.elapsed, ctx.boneHierarchy, true) 拿插值结果
 
 // 3. 渲染消费
-rAF 循环消费动态 Spec → Three.js 画面随时间轴动起来
+rAF 循环 → Player.apply(dt) → Three.js 画面随时间轴动起来
 ```
 
 ## 核心模块职责
@@ -75,21 +75,27 @@ rAF 循环消费动态 Spec → Three.js 画面随时间轴动起来
 | 模块 | 文件路径 | 职责 |
 |------|---------|------|
 | **动画玩家** | `preview-3d/ysm-animation-player.ts` | 完整的状态机：时间推进、Clip 切换、控制器管理。导出符号 `createYsmAnimPlayer`。 |
-| **Molang 求值器** | `utils/animation/molang.ts` | 表达式解析与执行（内嵌 molangjs，见 animation-system.md）。处理如 `math.sin(@variable.time)` 等公式。 |
-| **插值引擎** | `utils/animation/animation.ts` | `parseBedrockAnimationJSON`, `evaluateClip`。使用 Catmull-Rom 样条插值。 |
-| **适配器桥接** | `preview-3d/ysm-adapter.ts` | 将解码数据喂入 Player，并挂载到 `renderModel3D` 实例。 |
+| **Molang 作用域桥** | `utils/animation/molang.ts` | 内嵌 molangjs 表达式求值器。`setMolangScope(vars)` 注入 `@variable.time` 等变量，由 `mdApAdvanceTimeAndController` 在每帧推 clock 时调用；见 animation-system.md。 |
+| **插值引擎** | `utils/animation/animation.ts` | `parseBedrockAnimationJSON`, `evaluateClip`。使用 Catmull-Rom 样条插值。由 `mdApApplyPose` 内部在每帧调 `evaluateClip(clip, elapsed, boneHierarchy, true)` 拿当前时刻的变换序列。 |
+| **适配器桥接** | `preview-3d/ysm-adapter.ts` | 将解码的 YSM 骨骼/动画/clip 数据喂入 `createYsmAnimPlayer`（在 `build()` 内），并注册到会话生命周期。 |
 
 ## 关键接口
 
-### `createYsmAnimPlayer(timeline, boneMapping)`
-- **用途**：创建动画播放器实例。
+### `createYsmAnimPlayer(boneByName, clips, boneHierarchy, clipLabels?)`
+- **用途**：创建 YSM 动画播放器实例。
 - **参数**：
-  - `timeline`: Bedrock 原始时间轴 JSON 结构。
-  - `boneMapping`: 骨骼路径 (`/bones/body`) 到 Three.js `Object3D` 实例的映射。
+  - `boneByName: Map<string, THREE.Object3D>`：骨骼名称 → 已创建 THREE.Group 节点的映射（适配器 `build()` 阶段生成）。
+  - `clips: AnimationClip[]`：Bedrock 动画切片列表（`parseBedrockAnimationJSON` 输出）。
+  - `boneHierarchy: BoneHierarchyNode[]`：骨骼层级结构（父子关系 + 索引）。
+  - `clipLabels?: string[]`：clip 可读名（缺省用 clip 索引）。
+- **返回**：`YsmAnimPlayer` 对象，含 `apply(dt)` / `dispose()` / `toggle()` / `isPlaying` / `selectClip` / `currentIndex` / `clips()` / `clipCount` / `getDuration` / `getTime` 等方法和只读访问器。
 
-### `mdApApplyPose(boneGroupMap)`
+### `Player.apply(dt: number)`
+- **用途**：每帧由 rAF 循环调用，串接两步：`mdApAdvanceTimeAndController(dt, state, ctx)`（推时钟 + Molang 求值 + clip 切换判断）→ `mdApApplyPose(dt, state, ctx)`（`evaluateClip` 取变换 → 覆盖 `position` / `quaternion`）。
+
+### `mdApApplyPose(dt, state, ctx)`
 - **用途**：将当前时间的骨骼变换结果应用到 Three.js 场景图。
-- **注意**：直接修改 `position` / `quaternion`，需在后续调 `updateMatrixWorld()`。
+- **注意**：内部调 `evaluateClip(clip, state.elapsed, ctx.boneHierarchy, true)` 拿插值后的变换；直接修改 `position` / `quaternion`，需在后续调 `updateMatrixWorld()`。
 
 ## 避坑指南
 

@@ -76,10 +76,11 @@ status: active
 
 ### 域二：3D 全域状态层
 - `preview-3d/state/preview-state.ts`（ADR-126 P4-A 升格；ADR-129 第一刀归位）
-- 10 条已落地横切设置路径（`KNOWN_PATHS`）：
-  - 直管 localStorage：`render.maxFps`（60）、`render.maxPixelRatio`（1.5）、`render.frustumCull`
-  - cap 派生（不落盘）：`render.bloom` / `render.wireframe` / `env.pmrem` / `env.waterMode` / `env.groundMatSource`
-  - per-scene 会话态（不落盘）：`ui.activeComponent`（`-1 = All`）
+- 9 条已落地横切设置路径（`KNOWN_PATHS`）：
+  - 直管 localStorage（3 条）：`render.maxFps`（60）、`render.maxPixelRatio`（1.5）、`render.frustumCull`
+  - cap 派生（不落盘，5 条）：`render.bloom` / `render.wireframe` / `env.pmrem` / `env.waterMode` / `env.groundMatSource`
+  - per-scene 会话态（不落盘，1 条）：`ui.activeComponent`（`-1 = All`）
+  - 详见 [preview_state](./preview_state.md)（卡间口径以 9 条为准）
 
 ### 域三：截图 & 填充面板
 - `shot-panel-shared.ts`（6 角度按钮）、`skeleton-render.ts`（`saveScreenshot`）、`skeleton-fill-panel.ts`（组件选择 + 统计 + 纹理）

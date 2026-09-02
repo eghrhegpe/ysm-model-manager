@@ -6,7 +6,7 @@ category: feature
 source_files:
   - frontend/src/features/recycle-bin.ts
 tests:
-  - frontend/src/features/recycle-bin.test.ts
+  - frontend/src/features/recycle-bin.integration.test.ts
 quick_groups:
   - 文件操作与标签
 quick_intents:

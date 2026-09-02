@@ -7,7 +7,7 @@
 // 穿透修复，供 browser-adapter 系共享），此处显式 unmock 恢复真实实现（否则 22 用例全被 mock 吞）。
 vi.unmock("./idb.ts");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { __resetDBForTest, idbDel, idbGet, idbGetAll, idbKeys, idbSet, openDB } from "./idb.ts";
+import { __resetDBForTest, idbDel, idbGet, idbGetAll, idbKeys, idbSet, idbTx, openDB } from "./idb.ts";
 
 // MEMORY_MAX_KEYS=200 / MEMORY_MAX_BYTES=64MB（与 idb.ts 常量保持一致——此处验证驱逐行为）
 const MEMORY_MAX_KEYS = 200;
@@ -357,6 +357,44 @@ describe("idb IDB 事务路径", () => {
     const rows = await idbGetAll("files", "file:ysm/");
     expect(rows.map(([k]) => k)).toEqual(["file:ysm/a/main.ysm", "file:ysm/b/x.ysm"]);
     expect(rows.map(([, v]) => (v as { size: number }).size)).toEqual([5, 6]);
+  });
+
+  it("idbTx：批量 put+del 单事务提交，全部落库（全有）", async () => {
+    const fake = makeFakeIDBWithTx();
+    await idbSet("files", "dir:old:", { name: "old" });
+    await idbTx("files", [
+      { kind: "put", key: "dir:new:", value: { name: "new" } },
+      { kind: "put", key: "file:new/a.ysm", value: { size: 1 } },
+      { kind: "del", key: "dir:old:" },
+    ]);
+    expect(fake.store.has("dir:new:")).toBe(true);
+    expect(fake.store.has("file:new/a.ysm")).toBe(true);
+    expect(fake.store.has("dir:old:")).toBe(false);
+  });
+
+  it("idbTx：任一 put 失败 → 事务 abort → 整批 reject（不静默吞错）", async () => {
+    // 第二个 put 触发 writeError → tx.onerror/onabort → idbTx reject。
+    // 真实 IDB 事务 abort 会回滚整个事务（全有或全无由 IDB 语义保证）；
+    // fake 仅锁「reject 不吞错」行为（fake 不模拟 abort 回滚，故不断言 store 残留）。
+    const fake = makeFakeIDBWithTx({ writeError: new Error("QuotaExceededError") });
+    await expect(
+      idbTx("files", [
+        { kind: "put", key: "dir:new:", value: { name: "new" } },
+        { kind: "put", key: "file:new/a.ysm", value: { size: 1 } },
+      ]),
+    ).rejects.toThrow("QuotaExceededError");
+  });
+
+  it("idbTx：内存降级路径（无 indexedDB）批量写删同语义", async () => {
+    // 未 stub indexedDB → 纯内存模式（同步执行天然原子）
+    await idbSet("files", "dir:old:", { name: "old" });
+    await idbTx("files", [
+      { kind: "put", key: "dir:new:", value: { name: "new" } },
+      { kind: "del", key: "dir:old:" },
+    ]);
+    const keys = await idbKeys("files", "dir:");
+    expect(keys).toEqual(["dir:new:"]);
+    expect(await idbGet("files", "dir:old:")).toBeUndefined();
   });
 });
 

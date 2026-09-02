@@ -25,7 +25,7 @@
 // │  §15 导入分组            → web-fs-import.ts                                   │
 // │  §16 binding 装配        → 下文    webFsBindings（Top 6 注册表驱动）           │
 // └──────────────────────────────────────────────────────────────────────────────┘
-import { idbGet, idbSet, idbKeys, idbDel, idbGetAll } from "./idb.ts";
+import { idbGet, idbSet, idbKeys, idbDel, idbGetAll, idbTx, type IdbOp } from "./idb.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 import { t } from "../core/i18n/t.ts";
 import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
@@ -1039,14 +1039,20 @@ function assertValidRenameName(newName: string, kind: "目录" | "文件"): void
 // ===== §12 删除模型组 =====
 // --- 删除模型组（dir + 所有 file + 元数据标记）---
 async function deleteWebModel(type: string, name: string): Promise<void> {
-  await idbDel("files", dirKey(type, name));
+  // ADR-040 治理：整组删除收敛为单事务（idbTx）——dir + 全部 file + ban/tags 标记
+  // 任一失败 → 事务 abort → 全部回滚，杜绝「dir 已删 file 残留」的半删态。
+  // files / config 分属两个 store，各自单事务（IDB 单事务仅限单 store）
+  const fileOps: IdbOp[] = [{ kind: "del", key: dirKey(type, name) }];
   const fks = await idbKeys("files", `file:${type}/${name}/`);
-  for (const k of fks) await idbDel("files", k);
-  // 清理 ban/tags 标记（best-effort）
+  for (const k of fks) fileOps.push({ kind: "del", key: k });
+  const cfgOps: IdbOp[] = [];
+  // 清理 ban/tags 标记（随主事务一起，原子）
   for (const prefix of ["ban:", "tags:"]) {
     const keys = await idbKeys("config", `${prefix}/web/${type}/${name}/`);
-    for (const k of keys) await idbDel("config", k);
+    for (const k of keys) cfgOps.push({ kind: "del", key: k });
   }
+  await idbTx("files", fileOps);
+  if (cfgOps.length) await idbTx("config", cfgOps);
 }
 
 // --- 重命名模型目录（dir + file + 标记整组 rekey）---
@@ -1140,6 +1146,9 @@ function webMoveTargetName(dstName: string, srcName: string): string {
  * move=true 移动（删旧 key）；move=false 复制（保留旧 key = 读旧写新）。
  * 审核 A #1（事务性）：两阶段——先写全部新 key（不删旧），全成功后才删旧 key；
  * 中途失败只回滚本次新建（best-effort），旧 key 完好 → 无 dir/file 分裂残留。
+ * ADR-040 治理：每阶段按 store 收敛为单事务（idbTx）——files 一批、config 一批，
+ * 单个 store 内全有或全无（IDB 单事务仅限单 store；跨 files/config 仍两段，符合
+ * IDB 能力上限）。原实现逐 key idbSet/idbDel 各开事务，中途崩溃会留新旧 key 并存。
  */
 async function rekeyWebModelGroup(type: string, oldName: string, newName: string, move: boolean): Promise<void> {
   const writtenNew: string[] = [];
@@ -1153,10 +1162,12 @@ async function rekeyWebModelGroup(type: string, oldName: string, newName: string
     }
   };
   try {
-    // 阶段一：写新 key（dir + file + 标记），全成功才进阶段二
+    // 阶段一：写新 key（dir + file + 标记），全成功才进阶段二；按 store 单事务提交
+    const fileOps: IdbOp[] = [];
+    const cfgOps: IdbOp[] = [];
     const dv = await idbGet("files", dirKey(type, oldName));
     if (dv !== undefined) {
-      await idbSet("files", dirKey(type, newName), { ...(dv as Record<string, unknown>), name: newName });
+      fileOps.push({ kind: "put", key: dirKey(type, newName), value: { ...(dv as Record<string, unknown>), name: newName } });
       writtenNew.push(dirKey(type, newName));
     }
     const oldPrefix = `file:${type}/${oldName}/`;
@@ -1166,7 +1177,7 @@ async function rekeyWebModelGroup(type: string, oldName: string, newName: string
       const val = await idbGet("files", k);
       if (val !== undefined) {
         const nk = fileKey(type, newName, rel);
-        await idbSet("files", nk, val);
+        fileOps.push({ kind: "put", key: nk, value: val });
         writtenNew.push(nk);
       }
     }
@@ -1178,19 +1189,25 @@ async function rekeyWebModelGroup(type: string, oldName: string, newName: string
         const val = await idbGet("config", k);
         if (val !== undefined) {
           const nk = `${prefix}/web/${type}/${newName}/${suffix}`;
-          await idbSet("config", nk, val);
+          cfgOps.push({ kind: "put", key: nk, value: val });
           writtenNew.push(nk);
         }
       }
     }
-    // 阶段二：全部新 key 写入成功 → 删旧 key（move 时）
+    if (fileOps.length) await idbTx("files", fileOps);
+    if (cfgOps.length) await idbTx("config", cfgOps);
+    // 阶段二：全部新 key 写入成功 → 删旧 key（move 时），同样按 store 单事务
     if (move) {
-      await idbDel("files", dirKey(type, oldName));
-      for (const k of fks) await idbDel("files", k);
+      const delFileOps: IdbOp[] = [
+        { kind: "del", key: dirKey(type, oldName) },
+      ];
+      for (const k of fks) delFileOps.push({ kind: "del", key: k });
+      await idbTx("files", delFileOps);
       for (const prefix of ["ban:", "tags:"]) {
         const scanPrefix = `${prefix}/web/${type}/${oldName}/`;
         const keys = await idbKeys("config", scanPrefix);
-        for (const k of keys) await idbDel("config", k);
+        const delCfgOps: IdbOp[] = keys.map((k) => ({ kind: "del", key: k }));
+        if (delCfgOps.length) await idbTx("config", delCfgOps);
       }
     }
   } catch (e) {

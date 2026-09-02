@@ -44,6 +44,7 @@ const idb = (globalThis as unknown as {
     idbKeys: Mock;
     idbGetAll: Mock;
     idbDel: Mock;
+    idbTx: Mock;
     _store: Map<string, unknown>;
   };
 }).__YSM_TEST_IDB__;
@@ -953,12 +954,9 @@ describe("防御分支补刀", () => {
   it("RenameDir：空白名 → reject；rekey 中途写失败 → 回滚新 key 且源完好", async () => {
     await seedGroup("ysm", "组M", { "main.ysm": enc.encode("x") });
     await expect(webFsBindings.RenameDir("/web/ysm/组M", "   ")).rejects.toThrow();
-    // 第 1 次 idbSet（新 dir key）放行，第 2 次（首个 file key）炸 → rollback
-    // test-setup 的 idbSet 构造为 vi.fn(真实写库实现)，getMockImplementation 恒非空
-    idb.idbSet.mockImplementationOnce(
-      idb.idbSet.getMockImplementation() as (...args: unknown[]) => unknown,
-    );
-    idb.idbSet.mockImplementationOnce(async () => {
+    // rekey 阶段一按 store 收敛为 idbTx 单事务：让 files 事务抛错 → catch 走 rollback
+    // （原注入点 idbSet 已不适用于 idbTx 批量提交，改注入事务失败）
+    idb.idbTx.mockImplementationOnce(async () => {
       throw new Error("disk full");
     });
     await expect(webFsBindings.RenameDir("/web/ysm/组M", "组N")).rejects.toThrow("disk full");

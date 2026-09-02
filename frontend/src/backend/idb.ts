@@ -268,3 +268,37 @@ export async function idbGetAll(store: Store, prefix: string): Promise<Array<[st
     req.onerror = () => reject(req.error);
   });
 }
+
+/** 单事务内的一个操作（put 写入 / del 删除） */
+export type IdbOp = { kind: "put"; key: string; value: unknown } | { kind: "del"; key: string };
+
+/**
+ * 多 key 单事务原语（ADR-040 治理：rekey/delete 原子性）。
+ * 一批 put/del 在同一 IDB readwrite 事务内执行——任一操作失败 → 事务 abort →
+ * 整批全部回滚（全有或全无），杜绝 rekeyWebModelGroup / deleteWebModel 的
+ * dir/file 分裂或标记残留。内存降级分支同步顺序执行（单微任务内完成，观察者
+ * 不可见中间态），天然原子。事务内不抛异常（IDB request 异常走 onerror/onabort）。
+ */
+export async function idbTx(store: Store, ops: IdbOp[]): Promise<void> {
+  const db = await getIdb();
+  if (!db) {
+    // 内存降级：同步执行，天然原子（无 await 让出控制权，外部观察不到中间态）。
+    // put 走 memorySet 保持驱逐语义（与 idbSet 单 key 路径同口径）
+    for (const op of ops) {
+      if (op.kind === "put") memorySet(store, op.key, op.value);
+      else memoryStore.get(store)?.delete(op.key);
+    }
+    return;
+  }
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(store, "readwrite");
+    const os = tx.objectStore(store);
+    for (const op of ops) {
+      if (op.kind === "put") os.put(op.value, op.key);
+      else os.delete(op.key);
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}

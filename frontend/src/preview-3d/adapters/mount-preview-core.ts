@@ -23,59 +23,63 @@
 // │  §5  私有工具             → L741   safeDispose                              │
 // └──────────────────────────────────────────────────────────────────────────────┘
 
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
-import { SkyCapability } from "../caps/sky-capability.ts";
-import { GroundCapability } from "../caps/ground-capability.ts";
-import { WaterCapability } from "../caps/water-capability.ts";
-import { LightCapability } from "../caps/light-capability.ts";
-import { FogCapability } from "../caps/fog-capability.ts";
-import { ShadowCapability } from "../caps/shadow-capability.ts";
-import { ReflectorCapability } from "../caps/reflector-capability.ts";
-import { EnvironmentCapability } from "../caps/environment-capability.ts";
-import type { PostprocessingLike } from "./postprocessing.ts";
-import type { PostprocessingCapability } from "../caps/postprocessing-capability.ts";
-import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
-import type { SwitchContext } from "./switch-preview.ts";
-import { safeDispose } from "../safe-dispose.ts";
-import { textureCache } from "../texture-cache.ts";
-import { showLoadFailure } from "./preview-loading.ts";
-import { sceneRegistry } from "./scene-registry.ts";
-import { collectSceneStats } from "../scene-stats.ts";
-import { mergeStatsMenuItems } from "../menu/stats.ts";
-import { applyPerfPreset, getPerfPreset } from "../state/perf-presets.ts";
-import { fitCameraToRoots } from "../camera-setup.ts";
-import { assembleBoneSelectInfo, getMeshBoneId } from "../bone-raycast.ts";
-import { cullModelGroups, isFrustumCullEnabled, restoreModelGroupsVisible, clearModelRoots } from "../frustum-cull.ts";
-import { logWarn } from "../../utils/core/log.ts";
-import { bindInputHandlers } from "./input-and-animation.ts";
-import type { InputOptions } from "./input-and-animation.ts";
-import { type SemanticBoneMap } from "../semantic-bones.ts";
+import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "../../bus.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { createIconButton } from "../../utils/dom/fab.ts";
+import { t } from "../../core/i18n/t.ts";
 import { installUiComponentsStyles } from "../../ui/ui-components-styles.ts";
-import { createSlideMenu } from "../../ui/ui-helpers.ts";
-import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
 import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
+import { logWarn } from "../../utils/core/log.ts";
+import {
+  rememberTrigger,
+  returnFocus,
+  trapFocusAcrossShadow,
+} from "../../utils/dom/focus-restore.ts";
+import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import {
+  clearModelRoots,
+  cullModelGroups,
+  isFrustumCullEnabled,
+  restoreModelGroupsVisible,
+} from "../frustum-cull.ts";
+import type { TdKeyAction } from "../keymap.ts";
 import { mountPreviewRootMenu, type PreviewMenuHandle } from "../menu/core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { type CameraControlBridge } from "./camera-controls.ts";
-import { type BoneSelectInfo, type BoneMaps, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
-import type { TdKeyAction } from "../keymap.ts";
-import { rememberTrigger, returnFocus, trapFocusAcrossShadow } from "../../utils/dom/focus-restore.ts";
-import { t } from "../../core/i18n/t.ts";
+import { mergeStatsMenuItems } from "../menu/stats.ts";
+import { type BoneMaps, type BoneSelectInfo, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
 import {
-  PREVIEW_FRAME_INTERVAL_MS,
   createAdaptiveRenderBudget,
   getFrameIntervalMs,
+  PREVIEW_FRAME_INTERVAL_MS,
   previewPixelRatio,
   sampleAdaptivePixelRatio,
   shouldRenderAtFps,
 } from "../render-budget.ts";
+import { safeDispose } from "../safe-dispose.ts";
+import { collectSceneStats } from "../scene-stats.ts";
+import type { SemanticBoneMap } from "../semantic-bones.ts";
+import { textureCache } from "../texture-cache.ts";
+import type { CameraControlBridge } from "./camera-controls.ts";
+import type { InputOptions } from "./input-and-animation.ts";
+import { bindInputHandlers } from "./input-and-animation.ts";
+import { showLoadFailure } from "./preview-loading.ts";
+import { sceneRegistry } from "./scene-registry.ts";
+// §5 拆分（2026 锐评整改）：场景单例/基础设施装配 → shared-infra.ts；
+// WASD 相机运动 → wasd-camera.ts；统一拾取器 → unified-pick.ts；角色卸载 → unload-role.ts
+import {
+  clearSceneCaps,
+  getSceneCaps,
+  type MpSharedInfra,
+  mpBuildSharedInfra,
+  resetSceneInfra,
+} from "./shared-infra.ts";
+import type { SwitchContext } from "./switch-preview.ts";
+import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
+import { mpMakeUnifiedPickHandler } from "./unified-pick.ts";
+import { type MpUnloadCtx, mpUnloadRole } from "./unload-role.ts";
+import { type MpWasdReuse, mpApplyWasdCameraMotion } from "./wasd-camera.ts";
 
 /** 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） */
 export interface PreviewBuildCtx {
@@ -172,20 +176,13 @@ let _singletonOverlay: HTMLElement | null = null;
 let _singletonBody: HTMLElement | null = null;
 /** 共享视窗容器（.preview-view-container：canvas 所在格子）：随外壳首次创建、后续复用 */
 let _singletonViewContainer: HTMLElement | null = null;
-/** 共享 scene（所有模型共用一个 scene，不同格式模型叠加在同一 WebGL context） */
-let _singletonScene: THREE.Scene | null = null;
-/** 共享 camera / renderer / controls（第一次 mount3D 创建，后续复用） */
-let _singletonCamera: THREE.PerspectiveCamera | null = null;
-let _singletonRenderer: THREE.WebGLRenderer | null = null;
-let _singletonControls: OrbitControls | null = null;
 /** 所有已挂载的 PreviewHandle（cooperate 模式下多模型各自独立） */
 const _handles: Array<{ handle: PreviewHandle; gen: number }> = [];
 /** rAF 全局唯一标识和 perFrame 回调列表（共享同一 renderer） */
 let _globalAnimId = 0;
-let _globalPerFrames: Array<(dt: number) => void> = [];
-/** 程序化能力列表（注册表统一创建），供 rAF 循环逐帧调用 update（水面波纹/弹簧骨骼等）。
- *  shared 模式下 caps 由 mpBuildSharedInfra 单次填充，render loop 直接遍历，避免逐能力硬编码。 */
-let _sceneCaps: SceneCapability[] = [];
+const _globalPerFrames: Array<(dt: number) => void> = [];
+// 场景级单例（_singletonScene/_singletonCamera/_singletonRenderer/_singletonControls/_sceneCaps）
+// 已随 §5 拆分收敛至 shared-infra.ts（resetSceneInfra / clearSceneCaps / getSceneCaps 访问）。
 
 /** 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） */
 export function invalidatePreview(): void {
@@ -198,7 +195,9 @@ export function cleanupPreview(): void {
   // 快照遍历：handle.cleanup() → fullCleanup → finishSession 会从 _handles 摘除自身，
   // 边遍历边删会跳元素（cooperate 多会话场景只清掉一半），故先复制一份
   for (const h of [..._handles]) {
-    try { h.handle.cleanup(); } catch (_) {}
+    try {
+      h.handle.cleanup();
+    } catch (_) {}
   }
   _handles.length = 0;
   // renderer/canvas/overlay 保留（下次 mount3D 直接复用，不重建 DOM）
@@ -208,10 +207,7 @@ export function cleanupPreview(): void {
   _singletonOverlay = null;
   _singletonBody = null;
   _singletonViewContainer = null;
-  _singletonScene = null;
-  _singletonCamera = null;
-  _singletonRenderer = null;
-  _singletonControls = null;
+  resetSceneInfra();
 }
 
 /** 测试用：重置所有模块级单例状态（不影响生产代码路径） */
@@ -219,10 +215,7 @@ export function _resetSingletons(): void {
   _singletonOverlay = null;
   _singletonBody = null;
   _singletonViewContainer = null;
-  _singletonScene = null;
-  _singletonCamera = null;
-  _singletonRenderer = null;
-  _singletonControls = null;
+  resetSceneInfra();
   _globalAnimId = 0;
   _globalPerFrames.length = 0;
   // [审核修复] mount 会话序号同属模块级单例态：重置后 sessionId 生成确定性可测
@@ -231,7 +224,10 @@ export function _resetSingletons(): void {
 }
 
 /** 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op */
-export async function switchPreview(path: string, options?: { keepInScene?: boolean }): Promise<void> {
+export async function switchPreview(
+  path: string,
+  options?: { keepInScene?: boolean },
+): Promise<void> {
   const active = _handles[_handles.length - 1];
   await active?.handle.switchTo?.(path, options);
 }
@@ -249,7 +245,11 @@ export interface Mount3DOptions {
   cooperate?: boolean;
   /** 跨类型跳转（切换模型选中不同类型：关当前 + 开目标；app 层 openModel3DFullscreen 注入）。
    *  第二参透传 siblings（当前会话候选），避免切换后新会话「当前目录」tab 为空 */
-  switchExternal?: (path: string, siblings?: string[], options?: { keepInScene?: boolean }) => Promise<void>;
+  switchExternal?: (
+    path: string,
+    siblings?: string[],
+    options?: { keepInScene?: boolean },
+  ) => Promise<void>;
   /** 当前会话资源类型（如 ysm/EntityPlayer/vrm/resourcepack）；类型 tab 点击时判断同类型走 switchTo */
   rtype?: string;
   /** 当前会话子类型（如 EntityPlayer/CustomAnim）——用于类型 tab 扫描时按 subtype 隔离扩展名 */
@@ -260,7 +260,11 @@ export interface Mount3DOptions {
   getTypeTabs?: () => string[];
 }
 
-export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount3DOptions = {}): Promise<void> {
+export async function mount3D(
+  adapter: PreviewAdapter,
+  path: string,
+  opts: Mount3DOptions = {},
+): Promise<void> {
   // 焦点记忆：记下当前 activeElement 作为关闭时 returnFocus 的目标
   // （FAB 按钮的 onclick 触发 mount3D → activeElement 即触发按钮）
   rememberTrigger();
@@ -298,7 +302,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   // input 状态（不进 session：bindInputHandlers 已显式接收 keys/mouseDown/lastMouse）
   const keys: Partial<Record<TdKeyAction, boolean>> = {};
   let mouseDown = false;
-  let lastMouse = { x: 0, y: 0 };
+  const lastMouse = { x: 0, y: 0 };
 
   // infra（scene/camera/renderer/controls/orbitTarget + 全部 cap）由 mpBuildSharedInfra
   // 一次性构造返回；self 模式下 infra 保持 null，所有访问经 infra?. 短路为 undefined。
@@ -365,9 +369,13 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       mouseDown = false;
     },
     getSpeed: () => session.camSpeed,
-    setSpeed: (n: number) => { session.camSpeed = n; },
+    setSpeed: (n: number) => {
+      session.camSpeed = n;
+    },
     // built 在 try 块内声明，此处经模块级 _handle（PreviewHandle 含 resetCamera? 契约）延迟调用
-    reset: () => { _handles[_handles.length - 1]?.handle.resetCamera?.(); },
+    reset: () => {
+      _handles[_handles.length - 1]?.handle.resetCamera?.();
+    },
   };
 
   // viewContainer：与 scene/canvas 同属共享外壳——首次 mount3D 创建，后续复用同一
@@ -393,7 +401,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     getCurrentPath: () => session.currentPath,
     getCurrentRtype: () => (opts.rtype && opts.rtype.trim() ? opts.rtype : adapter.id),
     getCurrentSubtype: () => opts.subtype ?? "",
-    getModelsByType: opts.getModelsByType ? (t: string, s?: string) => opts.getModelsByType!(t, s) : undefined,
+    getModelsByType: opts.getModelsByType
+      ? (t: string, s?: string) => opts.getModelsByType!(t, s)
+      : undefined,
     getTypeTabs: opts.getTypeTabs ? () => opts.getTypeTabs!() : undefined,
     getViewContainer: () => viewContainer,
     close: () => {
@@ -405,7 +415,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       const r = active?.handle.switchTo?.(p, options);
       // 透传 Promise：调用方（fillSwitch 替换/追加）在完成后局部刷新面板（renderRows 重读新当前路径）
       if (r) {
-        void r.catch((err: unknown) => logWarn("preview-menu", `switchTo 切换失败: ${String(err)}`));
+        void r.catch((err: unknown) =>
+          logWarn("preview-menu", `switchTo 切换失败: ${String(err)}`),
+        );
         return r;
       }
       return undefined;
@@ -414,7 +426,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       ? (p: string, s?: string[], options?: { keepInScene?: boolean }): void => {
           const r = opts.switchExternal!(p, s, options) as Promise<void> | void;
           if (r && typeof r.catch === "function") {
-            void r.catch((err: unknown) => logWarn("preview-menu", `switchExternal 切换失败: ${String(err)}`));
+            void r.catch((err: unknown) =>
+              logWarn("preview-menu", `switchExternal 切换失败: ${String(err)}`),
+            );
           }
         }
       : undefined,
@@ -453,7 +467,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     if (session.finished) return;
     session.finished = true;
     // 从模块级 handles 列表移除当前 session（hasActivePreview 以该列表为依据）
-    const idx = _handles.findIndex(h => h.gen === myGen);
+    const idx = _handles.findIndex((h) => h.gen === myGen);
     if (idx >= 0) _handles.splice(idx, 1);
     // 无障碍：释放焦点陷阱 + 把焦点还给触发 3D 的 FAB 按钮（rememberTrigger 在
     // mount3D 入口已记下 activeElement；元素已离文档时 returnFocus 静默跳过）
@@ -550,8 +564,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
         // 推进逐帧动态效果（水面波纹/弹簧骨骼等；能力自行决定是否需要更新）
-        const activeSession = _handles[_handles.length - 1];
-        for (const c of _sceneCaps) c.update?.(dt);
+        for (const c of getSceneCaps()) c.update?.(dt);
         mpApplyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, session.orbitMode, ot, {
           camDir: _camDir,
           forward: _forward,
@@ -561,12 +574,17 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
         // 驱动所有 session 的 perFrame 回调
         for (const fn of _globalPerFrames) {
           const pfStart = performance.now();
-          try { fn(dt); } catch (err) {
+          try {
+            fn(dt);
+          } catch (err) {
             logWarn("perFrame", `session 回调异常: ${String(err)}`);
           }
           const pfMs = performance.now() - pfStart;
           const pfNow = performance.now();
-          if (pfMs > PER_FRAME_WARN_MS && pfNow - _lastPerFrameWarnTs > PER_FRAME_WARN_THROTTLE_MS) {
+          if (
+            pfMs > PER_FRAME_WARN_MS &&
+            pfNow - _lastPerFrameWarnTs > PER_FRAME_WARN_THROTTLE_MS
+          ) {
             _lastPerFrameWarnTs = pfNow;
             logWarn("perFrame", `阻塞 ${pfMs.toFixed(1)}ms (>${PER_FRAME_WARN_MS}ms 阈值)`);
           }
@@ -593,7 +611,8 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
 
   // 操作提示条（自动消失，两种模式通用）
   const tip = document.createElement("div");
-  tip.style.cssText = "padding:5px 12px;background:#1b1c24;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-size:11px;text-align:center;flex-shrink:0";
+  tip.style.cssText =
+    "padding:5px 12px;background:#1b1c24;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-size:11px;text-align:center;flex-shrink:0";
   tip.textContent = "WASD 移动 · 空格/Shift 上下 · 拖动旋转 · 滚轮缩放 · ESC 关闭";
   overlay.insertBefore(tip, body);
   // 保存 timeoutId 供 cleanup 时 clearTimeout（收敛进 session.tipTimeoutId）
@@ -610,9 +629,13 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   const switchCtx: SwitchContext = {
     scene: infra?.scene,
     getSceneBaseline: () => session.sceneBaseline,
-    setSceneBaseline: (s) => { session.sceneBaseline = s; },
+    setSceneBaseline: (s) => {
+      session.sceneBaseline = s;
+    },
     getBuilt: () => session.built,
-    setBuilt: (s) => { session.built = s; },
+    setBuilt: (s) => {
+      session.built = s;
+    },
     allBuilt: session.allBuilt,
     loadingEl,
     viewContainer,
@@ -630,7 +653,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     shadowCap: infra?.shadowCap ?? null,
     environmentCap: infra?.environmentCap ?? null,
     getCurrentPath: () => session.currentPath,
-    setCurrentPath: (p) => { session.currentPath = p; },
+    setCurrentPath: (p) => {
+      session.currentPath = p;
+    },
     getCurrentRtype: () => (opts.rtype && opts.rtype.trim() ? opts.rtype : adapter.id),
     getCurrentSubtype: () => opts.subtype ?? "",
     getPerFrame: () => session.perFrame,
@@ -671,6 +696,11 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
         menuHandle,
         getBuilt: () => session.built,
         setPerFrame: (f) => switchCtx.setPerFrame(f),
+        // 从全局 perFrame 列表移除指定回调（原 mpUnloadRole 内联 _globalPerFrames splice 逻辑）
+        removePerFrame: (f) => {
+          const idx = _globalPerFrames.indexOf(f);
+          if (idx >= 0) _globalPerFrames.splice(idx, 1);
+        },
       },
       id,
     );
@@ -740,14 +770,15 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       }
     }
     switchCtx.setPerFrame(session.built.update ?? null);
-  // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
-  // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
+    // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
+    // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
     if (session.built) session.allBuilt.push(session.built);
     // ADR-093 T2：首模型注册进场景注册表（roots 经 scene.children 差量捕获）
     if (session.built) {
-      const added = infra && session.sceneBaseline
-        ? infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-        : [];
+      const added =
+        infra && session.sceneBaseline
+          ? infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+          : [];
       // ADR-131 P1：post-build 采集场景统计，合并统计面板进菜单（「能渲染就能出统计」）
       const stats = collectSceneStats(added);
       const menuItems = mergeStatsMenuItems(session.built.menuItems, stats);
@@ -806,12 +837,13 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       window.removeEventListener("resize", onResize);
       if (infra) {
         infra.renderer.domElement.removeEventListener("pointerdown", onDragPointerDown);
-        if (session.onUnifiedPick) infra.renderer.domElement.removeEventListener("click", session.onUnifiedPick);
+        if (session.onUnifiedPick)
+          infra.renderer.domElement.removeEventListener("click", session.onUnifiedPick);
       }
       // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用
       sceneCapabilityRegistry.saveAll();
       sceneCapabilityRegistry.dispose();
-      _sceneCaps.length = 0;
+      clearSceneCaps();
       // ⑨ 纹理缓存池 session 结束统一释放 + 视锥裁剪注册清空
       textureCache.disposeAll();
       clearModelRoots();
@@ -850,7 +882,8 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       screenshot: session.built.screenshot,
       // 当前会话内切换模型：复用外壳（renderer/rAF/controls/灯光）重建内容层（ADR-066 §5.6）
       // 支持 keepInScene 模式：true 时不移除旧模型，新模型追加到同一场景（多模型同台）
-      switchTo: (newPath: string, options?: { keepInScene?: boolean }) => switchToSession(switchCtx, newPath, options),
+      switchTo: (newPath: string, options?: { keepInScene?: boolean }) =>
+        switchToSession(switchCtx, newPath, options),
     };
     _handles.push({ handle: sessionHandle, gen: myGen });
   } catch (e) {
@@ -865,7 +898,11 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   }
 }
 
-// ===== §5 私有工具函数（mount3D 拆出的包级子函数，命名前缀 mp*/MountPreview）=====
+// ===== §5 mount3D 会话状态（其余私有工具已拆出独立模块）=====
+// → shared-infra.ts（场景单例 + mpBuildSharedInfra + mpSyncShadowLights）
+// → wasd-camera.ts（mpApplyWasdCameraMotion + MpWasdReuse）
+// → unified-pick.ts（mpMakeUnifiedPickHandler）
+// → unload-role.ts（mpUnloadRole + MpUnloadCtx）
 // → input-and-animation.ts（bindInputHandlers / InputOptions）
 // → switch-preview.ts（switchToSession / SwitchContext）
 
@@ -906,297 +943,4 @@ interface MpSessionState {
   escH: (e: KeyboardEvent) => void;
   /** 提示条自动消失定时器（cleanup 时 clearTimeout） */
   tipTimeoutId: ReturnType<typeof setTimeout> | undefined;
-}
-
-/** mpUnloadRole 所需的外部会话引用（原 mount3D 内嵌闭包变量，显式参数化注入） */
-interface MpUnloadCtx {
-  allBuilt: PreviewScene[];
-  scene: THREE.Scene | undefined;
-  controls: OrbitControls | undefined;
-  camera: THREE.PerspectiveCamera | undefined;
-  menuHandle: PreviewMenuHandle;
-  /** 当前会话内容层（switchTo 后会被替换，经 getter 读最新值） */
-  getBuilt: () => PreviewScene | null;
-  /** 复位 perFrame（null）——对称维护 _globalPerFrames（consume switchToSession 的同源注销逻辑） */
-  setPerFrame: (f: ((dt: number) => void) | null) => void;
-}
-
-/** 卸载单个角色（角色面板 ⚙ → 卸载角色，MikuMikuAR buildModelToolsLevel 移植）：移除场景根节点 +
- *  释放内容层 GPU + 注册表注销（焦点自动转移）+ 相机取景重算。原 mount3D 内嵌闭包提纯。 */
-function mpUnloadRole(ctx: MpUnloadCtx, id: string): void {
-  const entry = sceneRegistry.get(id);
-  if (!entry) return;
-  // 卸载的是当前会话内容层源时，perFrame 指向其 update——先记下以便停掉
-  // rAF 回调，避免每帧驱动已 dispose 的内容层（空场景 session 半死状态，P3）
-  const wasCurrentSource = ctx.getBuilt() === entry.built;
-  // 无条件释放内容层 GPU：cooperate 跨 session 场景下 allBuilt 可能不含
-  // entry.built（角色面板显示注册表全部角色，可卸载另一 session 注册的），
-  // 以 allBuilt 命中与否决定 dispose 会漏释放（P3 round2）
-  safeDispose(entry.built);
-  const bi = ctx.allBuilt.indexOf(entry.built);
-  if (bi >= 0) ctx.allBuilt.splice(bi, 1);
-  for (const r of entry.roots) {
-    if (ctx.scene) ctx.scene.remove(r);
-  }
-  // 停掉持有该 built 的 perFrame（无论归属哪个 session；_globalPerFrames 按引用移除）
-  const upd = entry.built.update;
-  if (upd) {
-    const fnIdx = _globalPerFrames.indexOf(upd);
-    if (fnIdx >= 0) _globalPerFrames.splice(fnIdx, 1);
-  }
-  if (wasCurrentSource) ctx.setPerFrame(null);
-  sceneRegistry.unregister(id);
-  const next = sceneRegistry.getActiveId();
-  if (next) {
-    // setActive 仅在 menuItems truthy 时换菜单；新活跃角色无专属项时显式清空
-    // dock 适配器项，杜绝残留已卸载角色的菜单绑定到已 dispose 内容层（P2）
-    const ne = sceneRegistry.get(next);
-    if (ne?.menuItems) sceneRegistry.setActive(next);
-    else ctx.menuHandle.setAdapterItems([]);
-  } else {
-    ctx.menuHandle.setAdapterItems([]);
-  }
-  if (ctx.camera && ctx.controls) {
-    const roots = sceneRegistry.visibleRoots();
-    if (roots.length) fitCameraToRoots(roots, ctx.camera, ctx.controls);
-  }
-  ctx.menuHandle.refreshDock();
-}
-
-/** mpBuildSharedInfra 返回的 shared 基础设施 + 程序化能力引用（mount3D 赋值给会话局部变量） */
-interface MpSharedInfra {
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
-  controls: OrbitControls;
-  orbitTarget: THREE.Vector3;
-  skyCap: SkyCapability | null;
-  groundCap: GroundCapability | null;
-  waterCap: WaterCapability | null;
-  lightCap: LightCapability | null;
-  fogCap: FogCapability | null;
-  shadowCap: ShadowCapability | null;
-  reflectorCap: ReflectorCapability | null;
-  environmentCap: EnvironmentCapability | null;
-  postProc: PostprocessingLike | null;
-  postProcCap: PostprocessingCapability | null;
-}
-
-/** mpBuildSharedInfra：shared 模式基础设施 + 程序化能力装配（scene/camera/renderer/OrbitControls 单例复用 + caps 创建/preset/Shadow/postProc 联动）。
- *  返回带出的局部引用，mount3D 仅赋值给会话变量；self 模式走适配器自驱，不走本函数。 */
-function mpBuildSharedInfra(adapter: PreviewAdapter, viewContainer: HTMLElement, menuHandle: PreviewMenuHandle): MpSharedInfra {
-  // 复用单例 scene（多模型共享同一场景）
-  if (!_singletonScene) {
-    _singletonScene = new THREE.Scene();
-    _singletonScene.background = new THREE.Color("#171820");
-  }
-  const scene = _singletonScene;
-  // 复用单例 camera（多模型共用同一相机，controls 控制同一套）
-  const ar = viewContainer.clientWidth / Math.max(viewContainer.clientHeight, 1);
-  if (!_singletonCamera) {
-    _singletonCamera = new THREE.PerspectiveCamera(50, ar, 0.05, 5000);
-  } else {
-    _singletonCamera.aspect = ar;
-    _singletonCamera.updateProjectionMatrix();
-  }
-  const camera = _singletonCamera;
-  // 复用单例 renderer（唯一 WebGL context）
-  if (!_singletonRenderer) {
-    _singletonRenderer = new THREE.WebGLRenderer({
-      antialias: true,
-      powerPreference: "high-performance",
-    });
-    _singletonRenderer.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
-    _singletonRenderer.setPixelRatio(previewPixelRatio(window.devicePixelRatio));
-    _singletonRenderer.domElement.style.touchAction = "none";
-    viewContainer.appendChild(_singletonRenderer.domElement);
-  }
-  const renderer = _singletonRenderer;
-  // 修复：fullCleanup（ESC/关闭按钮）会移除旧 viewContainer（连同 canvas），但
-  // 保留 _singletonRenderer——再次 mount3D 复用 renderer 时若不重新挂载 canvas，
-  // 渲染循环照常跑但 canvas 已脱离 DOM → 用户「第二次进 3D 预览」看到空白/无反应。
-  if (_singletonRenderer.domElement.parentNode !== viewContainer) {
-    viewContainer.appendChild(_singletonRenderer.domElement);
-  }
-  // 程序化能力（ADR-073 L1 + 统一注册表）：由 registry 统一创建并持久化
-  const caps = sceneCapabilityRegistry.createAll({ scene, renderer, camera });
-  _sceneCaps = caps;
-  const skyCap = (sceneCapabilityRegistry.getById("sky") as SkyCapability) ?? null;
-  const groundCap = (sceneCapabilityRegistry.getById("ground") as GroundCapability) ?? null;
-  const waterCap = (sceneCapabilityRegistry.getById("water") as WaterCapability) ?? null;
-  const lightCap = (sceneCapabilityRegistry.getById("light") as LightCapability) ?? null;
-  const fogCap = (sceneCapabilityRegistry.getById("fog") as FogCapability) ?? null;
-  const shadowCap = (sceneCapabilityRegistry.getById("shadow") as ShadowCapability) ?? null;
-  const reflectorCap = (sceneCapabilityRegistry.getById("reflector") as ReflectorCapability) ?? null;
-  const environmentCap = (sceneCapabilityRegistry.getById("environment") as EnvironmentCapability) ?? null;
-  // 从 localStorage 恢复上次会话状态
-  sceneCapabilityRegistry.loadAll();
-  // 按模型类别套用预设（已有持久化状态的 cap 不覆盖）
-  skyCap?.setPreset(adapter.id);
-  lightCap?.setPreset(adapter.id);
-  fogCap?.setPreset(adapter.id);
-  shadowCap?.setPreset(adapter.id);
-  reflectorCap?.setPreset(adapter.id);
-  environmentCap?.setPreset(adapter.id);
-  // 全部挂入场景
-  for (const cap of caps) cap.apply();
-  // ShadowCapability 同步：光 castShadow（光已由 LightCapability 创建）
-  if (shadowCap && lightCap) mpSyncShadowLights(scene, shadowCap, lightCap);
-  // 后处理体积光管线（ADR-081 L2）：PostprocessingCapability（registry 驱动）
-  const postProcCap = (sceneCapabilityRegistry.getById("postprocessing") as PostprocessingCapability) ?? null;
-  // 兼容老接口：postProc 变量也指向同一 capability（对外 render/setSize/dispose 方法签名一致）
-  const postProc = postProcCap;
-  // 按模型类别套用预设
-  postProcCap?.setPreset(adapter.id);
-  // SSR↔Reflector 联动（postprocessing-capability.setReflectorCap）：SSR 开启时自动禁用单平面镜面，防 z-fighting
-  postProcCap?.setReflectorCap(reflectorCap);
-  // 性能档位（薄壳版，perf-presets.ts 数据表驱动）：用户显式档位最后套用，覆盖模型预设的性能项
-  // （fps / 分辨率 / Bloom）；cap 缺席的派生路径 setStateValue 静默跳过，无副作用
-  applyPerfPreset(getPerfPreset());
-  // ADR-085 S3：caps 创建后触发 refreshDock()，修复 litematic/pack 的 environment 项时序缺失
-  // （菜单先于 caps 挂载，挂载时 requiresEnvironment 被过滤；此处重渲染补回）
-  menuHandle.refreshDock();
-  // 复用单例 controls（多模型共用同一套相机控制）
-  if (!_singletonControls) {
-    _singletonControls = new OrbitControls(camera, renderer.domElement);
-    _singletonControls.enableDamping = true;
-    _singletonControls.dampingFactor = 0.1;
-    _singletonControls.minDistance = 0.1;
-    _singletonControls.maxDistance = 5000;
-    _singletonControls.update();
-    _singletonControls.enableRotate = true;
-  }
-  const controls = _singletonControls;
-  // orbitTarget 是本次 mount 的会话局部变量：复用单例 controls（非首次）时不进上面的 if，
-  // 但必须每次从当前 controls 目标刷新，否则下方 orbitTarget!.copy 读到 undefined。
-  const orbitTarget = controls.target.clone();
-  return {
-    scene,
-    camera,
-    renderer,
-    controls,
-    orbitTarget,
-    skyCap,
-    groundCap,
-    waterCap,
-    lightCap,
-    fogCap,
-    shadowCap,
-    reflectorCap,
-    environmentCap,
-    postProc,
-    postProcCap,
-  };
-}
-
-/** rAF 相机运动复用的 Vector3 实例（避免每帧 GC 分配）；mpUP 只读常量 */
-const mpUP = new THREE.Vector3(0, 1, 0);
-
-/** mpSyncShadowLights：ShadowCapability 同步光 castShadow（优先 setLightCap 精准注入 3 方向灯+聚光灯；
- *  再 scene.traverse 收集外部自定义灯走 syncLights 兜底），防误吞外部灯 */
-function mpSyncShadowLights(scene: THREE.Scene, shadowCap: ShadowCapability, lightCap: LightCapability): void {
-  shadowCap.setLightCap(lightCap);
-  const lights: Array<THREE.DirectionalLight | THREE.SpotLight> = [];
-  scene.traverse((obj) => {
-    if ((obj as unknown as THREE.DirectionalLight).isDirectionalLight
-      || (obj as unknown as THREE.SpotLight).isSpotLight) {
-      lights.push(obj as THREE.DirectionalLight | THREE.SpotLight);
-    }
-  });
-  shadowCap.syncLights(lights);
-}
-
-/** mpApplyWasdCameraMotion 的复用向量槽位（rAF loop 一次性创建，每帧传入） */
-interface MpWasdReuse {
-  camDir: THREE.Vector3;
-  forward: THREE.Vector3;
-  right: THREE.Vector3;
-  move: THREE.Vector3;
-}
-
-/** mpApplyWasdCameraMotion：rAF 帧内 WASD/方向键 → 相机平移与焦点跟随（纯函数，无单例依赖；
- *  仅改传入 cam/ctr/ot 引用，移动向量经 reuse 复用，返回值 void） */
-function mpApplyWasdCameraMotion(
-  keys: Partial<Record<TdKeyAction, boolean>>,
-  cam: THREE.PerspectiveCamera,
-  ctr: OrbitControls,
-  camSpeed: number,
-  dt: number,
-  orbitMode: boolean,
-  ot: THREE.Vector3,
-  reuse: MpWasdReuse,
-): void {
-  cam.getWorldDirection(reuse.camDir);
-  reuse.forward.set(reuse.camDir.x, 0, reuse.camDir.z).normalize();
-  reuse.right.crossVectors(reuse.forward, mpUP).normalize();
-  reuse.move.set(0, 0, 0);
-  // 动作表驱动（input-and-animation 已按键位表把 code 映射成动作；方向键双轨也在此折叠）
-  if (keys.forward) reuse.move.add(reuse.forward);
-  if (keys.back) reuse.move.sub(reuse.forward);
-  if (keys.left) reuse.move.sub(reuse.right);
-  if (keys.right) reuse.move.add(reuse.right);
-  if (keys.up) reuse.move.y += 1;
-  if (keys.down) reuse.move.y -= 1;
-  if (reuse.move.length() > 0) {
-    reuse.move.normalize().multiplyScalar(camSpeed * dt);
-    cam.position.add(reuse.move);
-    if (orbitMode) ot.add(reuse.move);
-  }
-  if (orbitMode && ot) {
-    ctr.target.copy(ot);
-    ctr.update();
-    ot.copy(ctr.target);
-  } else {
-    ctr.target.copy(cam.position).addScaledVector(reuse.camDir, 10);
-    ctr.update();
-  }
-}
-
-/** mpMakeUnifiedPickHandler：统一多模型拾取器工厂（仅 count>=2 激活，单模型完全沿用逐模型
- *  registerBoneRaycast，零回归）；renderer/camera/scene 显式注入，语义骨骼映射经模块级导入消费 */
-function mpMakeUnifiedPickHandler(
-  renderer: THREE.WebGLRenderer,
-  camera: THREE.PerspectiveCamera,
-  scene: THREE.Scene,
-): (e: MouseEvent) => void {
-  const raycaster = new THREE.Raycaster();
-  const pickPointer = new THREE.Vector2();
-  return (e: MouseEvent): void => {
-    if (sceneRegistry.count() < 2) return;
-    const rect = renderer.domElement.getBoundingClientRect();
-    pickPointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    pickPointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(pickPointer, camera);
-    const hits = raycaster.intersectObjects(scene.children, true);
-    for (const hit of hits) {
-      // THREE Raycaster 不检查 visible，手动跳过隐藏链
-      let node: THREE.Object3D | null = hit.object;
-      let hidden = false;
-      while (node) {
-        if (!node.visible) { hidden = true; break; }
-        node = node.parent;
-      }
-      if (hidden) continue;
-      const entry = sceneRegistry.pickModelByObject(hit.object);
-      if (!entry) continue;
-      // 切活跃模型 + 换菜单（菜单会话级共享、后建覆盖前建，故需按归属换项）
-      sceneRegistry.setActive(entry.id);
-      if (entry.boneMaps) {
-        const boneId = getMeshBoneId(hit.object, entry.boneMaps.nameMap);
-        if (boneId) {
-          const info = assembleBoneSelectInfo(
-            boneId,
-            entry.boneMaps.boneGroupMap,
-            entry.boneMaps.nameMap,
-            entry.boneMaps.parentMap,
-            entry.boneMaps.childrenMap,
-            hit.object,
-          );
-          entry.built.onBoneSelect?.(info);
-          entry.onBonePick?.(boneId);
-        }
-      }
-      break;
-    }
-  };
 }

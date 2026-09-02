@@ -281,7 +281,7 @@ export function EmptyRecycleBin(src: string): $CancellablePromise<number> {
     return $Call.ByID(4211256250, src);
 }
 
-export function EnqueueDownloads(tasks: $models.DownloadTask[] | null): $CancellablePromise<void> {
+export function EnqueueDownloads(tasks: types$0.DownloadTask[] | null): $CancellablePromise<void> {
     return $Call.ByID(552244624, tasks);
 }
 
@@ -971,7 +971,7 @@ export function PushSingleResourceToInstance(rtype: string, instanceName: string
     return $Call.ByID(3553253805, rtype, instanceName, filePath);
 }
 
-export function QueueStatus(): $CancellablePromise<$models.QueueStatusInfo> {
+export function QueueStatus(): $CancellablePromise<types$0.QueueStatusInfo> {
     return $Call.ByID(1350901616);
 }
 

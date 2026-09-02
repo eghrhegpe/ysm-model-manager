@@ -22,24 +22,6 @@ export interface CachedTextureResult {
 }
 
 /**
- * DownloadTask 下载队列任务
- */
-export interface DownloadTask {
-    "url": string;
-    "saveDir": string;
-    "name": string;
-    "size": number;
-}
-
-/**
- * QueueStatusInfo 队列状态（替代多返回值，Wails 自动映射为 JS object）
- */
-export interface QueueStatusInfo {
-    "remaining": number;
-    "running": boolean;
-}
-
-/**
  * ReadFileMeta 是 ReadFileBytesBatchWithMeta 的单个文件元信息。
  */
 export interface ReadFileMeta {

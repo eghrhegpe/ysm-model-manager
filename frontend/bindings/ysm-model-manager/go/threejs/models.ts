@@ -45,6 +45,19 @@ export interface MeshData {
 
 export interface Model3DSpec {
     "models": ModelGroup[] | null;
+
+    /**
+     * TexArrOrder 组件序纹理名数组（R1 契约，GetModel3DSpec 注入）。
+     * 必须在此声明：typed 返回链（json.Unmarshal → Wails 序列化）会丢弃
+     * 结构体外字段——缺失曾致 perComponent 纹理/契约校验在前端静默失效（回归 936169b1）。
+     */
+    "texArrOrder"?: string[] | null;
+
+    /**
+     * ComponentTextures 组件名 → 声明纹理 base64 数组（ADR-114 perComponent，
+     * zip/7z/解压目录三路同源注入）。同上，缺失即前端纹理绑定回落全局槽错贴。
+     */
+    "componentTextures"?: { [_ in string]?: string[] | null } | null;
 }
 
 export interface ModelGroup {

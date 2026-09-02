@@ -147,6 +147,14 @@ export async function preloadModel(model: ModelLike): Promise<{
   const componentTexMap = new Map<string, (THREE.Texture | null)[]>();
   const compTex = (spec as { componentTextures?: Record<string, string[]> }).componentTextures
     ?? (model as ModelLike).componentTextures;
+  // 契约哨兵（回归 936169b1 防再犯）：多组件 spec 缺 componentTextures = perComponent
+  // 契约断裂（此前是 typed 序列化静默丢字段），全体组件会回落全局 texArr[texIdx] 错贴纹理。
+  // 缺失时渲染仍继续（.ysm WASM 路径本就无该字段），但必须显式告警而非静默跳过。
+  if ((spec.models?.length ?? 0) > 1 && !compTex) {
+    console.warn(
+      `[model3d] 契约预警: spec 含 ${spec.models?.length} 个组件但无 componentTextures —— perComponent 专属纹理缺失，组件将回落全局纹理槽（检查 Go 端 Model3DSpec 字段/注入链）`,
+    );
+  }
   if (compTex) {
     for (const [compName, texBase64Arr] of Object.entries(compTex)) {
       const compTexArr = await loadTextures(texBase64Arr);

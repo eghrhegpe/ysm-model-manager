@@ -371,18 +371,16 @@ func (a *App) GetModel3DSpec(modelPath string) (*threejs.Model3DSpec, error) {
 	if comps, texNames := a.collect3DComponents(modelPath, ext); len(comps) > 0 {
 		specJSON, err := threejs.BuildMulti(comps, nil)
 		if err == nil && specJSON != "{}" {
-			// R1 契约：注入组件序纹理名（texArrOrder），前端比对 texArr 序防止贴错纹理
-			if len(texNames) > 0 {
-				specJSON = injectTexArrOrder(specJSON, texNames)
-			}
-			// ADR-114 perComponent：组件名 → [data URI] 注入 spec——此前该数据只存在于
-			// AnalyzeBedrockModel 链（zip/7z 的 ParseFromZipEntry 未填、解压目录合并路径无
-			// 组件概念），前端从未拿到过；统一从 3D spec 注入，三路（zip/7z/解压目录）同源。
-			specJSON = injectComponentTextures(specJSON, comps)
 			var spec threejs.Model3DSpec
 			if err := json.Unmarshal([]byte(specJSON), &spec); err != nil {
 				return nil, fmt.Errorf("解析 Model3DSpec 失败: %w", err)
 			}
+			// R1 契约（texArrOrder）+ ADR-114 perComponent（componentTextures）：
+			// typed 字段直填，不再走「拼 map → 注入 string → 再 Unmarshal」双轨——
+			// 该双轨曾因结构体缺字段被 Unmarshal 静默丢弃（回归 936169b1）。
+			// nil 字段经 omitempty 序列化即「不注入」，与旧空值语义一致。
+			spec.TexArrOrder = texNames
+			spec.ComponentTextures = buildComponentTextureMap(comps)
 			return &spec, nil
 		}
 	}
@@ -429,27 +427,12 @@ func (a *App) Build3DSpecFromGeometryJSON(geometryJSON string) (*threejs.Model3D
 	return &spec, nil
 }
 
-// injectTexArrOrder 在 spec JSON 中注入 texArrOrder（组件序纹理名数组，R1 契约）。
-// 前端拿到后与 model.textureNames（texArr 实际序）比对，不一致即纹理错位预警。
-func injectTexArrOrder(spec string, texNames []string) string {
-	var m map[string]any
-	if err := json.Unmarshal([]byte(spec), &m); err != nil {
-		return spec
-	}
-	m["texArrOrder"] = texNames
-	b, err := json.Marshal(m)
-	if err != nil {
-		return spec
-	}
-	return string(b)
-}
-
-// injectComponentTextures 在 spec JSON 中注入 componentTextures（ADR-114 perComponent：
-// 组件名 → [data URI 纹理]）。全部为空时原样返回（不注入空对象）。
+// buildComponentTextureMap 从组件列表提取 componentTextures（ADR-114 perComponent）。
 // 键 = comps[i].SourceName（如 "main"/"arm"/"arrow"），与 spec.models[i].name 同源——
 // BuildMulti 中 Name = SourceName（若无则 fallback compID = "comp_N"），前端 ysm-object
 // 以 mg.name || mg.id 查表，两者均须能命中；用 SourceName 直连，避免 index-based 错位。
-func injectComponentTextures(spec string, comps []types.BedrockModel) string {
+// 全部为空时返回 nil（typed 字段 omitempty → 序列化不注入）。
+func buildComponentTextureMap(comps []types.BedrockModel) map[string][]string {
 	compTex := make(map[string][]string)
 	for i := range comps {
 		if len(comps[i].Bones) == 0 || len(comps[i].ComponentTextures) == 0 {
@@ -464,7 +447,7 @@ func injectComponentTextures(spec string, comps []types.BedrockModel) string {
 				if _, exists := compTex[key]; exists {
 					// SourceName 碰撞（如 zip 内两个子目录同名 geometry 文件）：后写覆盖前写，
 					// 前一个组件的纹理映射被静默丢弃 → 前端查表命中错图。诚实告警暴露数据问题。
-					log.Printf("[app] injectComponentTextures: SourceName 碰撞 key=%q（组件 %d 与先前组件同名），纹理映射被覆盖，检查模型组件命名", key, i)
+					log.Printf("[app] buildComponentTextureMap: SourceName 碰撞 key=%q（组件 %d 与先前组件同名），纹理映射被覆盖，检查模型组件命名", key, i)
 				}
 				compTex[key] = arr
 				break // 每组件取第一条有效纹理（当前口径单张主纹理）
@@ -472,18 +455,9 @@ func injectComponentTextures(spec string, comps []types.BedrockModel) string {
 		}
 	}
 	if len(compTex) == 0 {
-		return spec
+		return nil
 	}
-	var m map[string]any
-	if err := json.Unmarshal([]byte(spec), &m); err != nil {
-		return spec
-	}
-	m["componentTextures"] = compTex
-	b, err := json.Marshal(m)
-	if err != nil {
-		return spec
-	}
-	return string(b)
+	return compTex
 }
 
 // collect3DComponents 收集多组件列表（含 arm/载具等独立组件，不合并 bones）。

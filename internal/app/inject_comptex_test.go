@@ -1,84 +1,79 @@
-// ===== injectComponentTextures 单测（ADR-114 perComponent spec 注入）=====
+// ===== buildComponentTextureMap 单测（ADR-114 perComponent，typed 化后口径）=====
 package app
 
 import (
 	"encoding/json"
 	"testing"
 
+	"ysm-model-manager/go/threejs"
 	"ysm-model-manager/go/types"
 )
 
-// TestInjectComponentTextures 验证：comps 的 ComponentTextures 合并注入 spec JSON；
-// 全部为空时不注入键；非 data URI 噪声不进。
-func TestInjectComponentTextures(t *testing.T) {
+// TestBuildComponentTextureMap 验证：comps 的 ComponentTextures 提取为 typed map；
+// 全部为空时返回 nil（omitempty 序列化不注入）；SourceName 空值 fallback / 碰撞覆盖语义不变。
+func TestBuildComponentTextureMap(t *testing.T) {
 	comps := []types.BedrockModel{
 		{SourceName: "main"}, // 已声明组件：无 ComponentTextures
 		{SourceName: "arrow", Bones: []types.Bone2D{{Name: "arrow"}}, ComponentTextures: map[string][]string{
 			"arrow": {"data:image/png;base64,QUJD"},
 		}},
 	}
-
-	got := injectComponentTextures(`{"models":[{"id":"comp_0","name":"main"},{"id":"comp_1","name":"arrow"}]}`, comps)
-	var m struct {
-		Models            []map[string]any    `json:"models"`
-		ComponentTextures map[string][]string `json:"componentTextures"`
+	got := buildComponentTextureMap(comps)
+	if len(got) != 1 {
+		t.Fatalf("应提取 1 个组件纹理，实际 %v", got)
 	}
-	if err := json.Unmarshal([]byte(got), &m); err != nil {
-		t.Fatalf("注入后应为合法 JSON: %v", err)
-	}
-	// 键 = SourceName（对齐 spec.models[i].name，前端 mg.name 查表命中）
-	if len(m.ComponentTextures) != 1 {
-		t.Fatalf("应注入 1 个组件纹理，实际 %v", m.ComponentTextures)
-	}
-	if m.ComponentTextures["arrow"][0] != "data:image/png;base64,QUJD" {
-		t.Errorf("arrow 纹理内容不符: %v", m.ComponentTextures["arrow"])
-	}
-	if len(m.Models) != 2 {
-		t.Errorf("原有 spec 键不应被破坏")
+	if got["arrow"][0] != "data:image/png;base64,QUJD" {
+		t.Errorf("arrow 纹理内容不符: %v", got["arrow"])
 	}
 
-	// 无 perComponent 数据：原样返回，不注入空对象
-	unchanged := injectComponentTextures(`{"models":[{"id":"comp_0","name":"main"}]}`, []types.BedrockModel{{SourceName: "main"}})
-	if unchanged != `{"models":[{"id":"comp_0","name":"main"}]}` {
-		t.Errorf("无数据时应原样返回，实际 %s", unchanged)
+	// 无 perComponent 数据：nil（omitempty → 不注入）
+	if nilGot := buildComponentTextureMap([]types.BedrockModel{{SourceName: "main"}}); nilGot != nil {
+		t.Errorf("无数据时应返回 nil，实际 %v", nilGot)
 	}
 
 	// SourceName 为空时 fallback 到 comp_<i>
-	compsFallback := []types.BedrockModel{
+	gotFb := buildComponentTextureMap([]types.BedrockModel{
 		{SourceName: "", Bones: []types.Bone2D{{Name: "x"}}, ComponentTextures: map[string][]string{"x": {"data:image/png;base64,FALL"}}},
-	}
-	gotFb := injectComponentTextures(`{"models":[{"id":"comp_0","name":""}]}`, compsFallback)
-	var mFb struct {
-		ComponentTextures map[string][]string `json:"componentTextures"`
-	}
-	if err := json.Unmarshal([]byte(gotFb), &mFb); err != nil {
-		t.Fatalf("fallback 注入后应为合法 JSON: %v", err)
-	}
-	if len(mFb.ComponentTextures) != 1 {
-		t.Fatalf("fallback 应注入 1 个，实际 %v", mFb.ComponentTextures)
-	}
-	if mFb.ComponentTextures["comp_0"][0] != "data:image/png;base64,FALL" {
-		t.Errorf("fallback 键应为 comp_0，实际 %v", mFb.ComponentTextures)
+	})
+	if gotFb["comp_0"][0] != "data:image/png;base64,FALL" {
+		t.Errorf("fallback 键应为 comp_0，实际 %v", gotFb)
 	}
 
 	// SourceName 碰撞（zip 内两个子目录同名 geometry 文件）：后写覆盖前写并 log 告警
-	// ——不静默丢映射（前端查表命中错图），诚实暴露数据问题
-	compsDup := []types.BedrockModel{
+	gotDup := buildComponentTextureMap([]types.BedrockModel{
 		{SourceName: "dup", Bones: []types.Bone2D{{Name: "a"}}, ComponentTextures: map[string][]string{"a": {"data:image/png;base64,DUP1"}}},
 		{SourceName: "dup", Bones: []types.Bone2D{{Name: "b"}}, ComponentTextures: map[string][]string{"b": {"data:image/png;base64,DUP2"}}},
+	})
+	if gotDup["dup"][0] != "data:image/png;base64,DUP2" {
+		t.Errorf("碰撞后键 dup 应为后写纹理 DUP2，实际 %v", gotDup["dup"])
 	}
-	gotDup := injectComponentTextures(`{"models":[{"id":"comp_0","name":"dup"},{"id":"comp_1","name":"dup"}]}`, compsDup)
-	var mDup struct {
-		ComponentTextures map[string][]string `json:"componentTextures"`
+}
+
+// TestModel3DSpecTypedRoundTrip 守护回归 936169b1：typed 字段直填后经
+// Marshal/Unmarshal 往返必须保留（注入链已无 string 双轨，此测试防结构体字段被再删）。
+func TestModel3DSpecTypedRoundTrip(t *testing.T) {
+	spec := threejs.Model3DSpec{
+		TexArrOrder:       []string{"skin", "", "", "", "foxcar"},
+		ComponentTextures: map[string][]string{"foxcar": {"data:image/png;base64,XXX"}},
 	}
-	if err := json.Unmarshal([]byte(gotDup), &mDup); err != nil {
-		t.Fatalf("碰撞注入后应为合法 JSON: %v", err)
+	b, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatal(err)
 	}
-	// 后写覆盖：键存在但值为后一个组件的纹理
-	if len(mDup.ComponentTextures) != 1 {
-		t.Fatalf("碰撞应收敛为 1 个 key，实际 %v", mDup.ComponentTextures)
+	var back threejs.Model3DSpec
+	if err := json.Unmarshal(b, &back); err != nil {
+		t.Fatal(err)
 	}
-	if mDup.ComponentTextures["dup"][0] != "data:image/png;base64,DUP2" {
-		t.Errorf("碰撞后键 dup 应为后写纹理 DUP2，实际 %v", mDup.ComponentTextures)
+	if len(back.TexArrOrder) != 5 || back.TexArrOrder[4] != "foxcar" {
+		t.Fatalf("texArrOrder 往返丢失/错序: %#v", back.TexArrOrder)
+	}
+	if len(back.ComponentTextures["foxcar"]) != 1 {
+		t.Fatalf("componentTextures 往返丢失: %#v", back.ComponentTextures)
+	}
+
+	// 全空 spec：omitempty 不应序列化出空键（旧「不注入空对象」语义）
+	empty, _ := json.Marshal(threejs.Model3DSpec{})
+	if string(empty) == `{"texArrOrder":null,"componentTextures":null}` || len(empty) > 15 {
+		t.Errorf("空 spec 应最小序列化，实际 %s", string(empty))
 	}
 }

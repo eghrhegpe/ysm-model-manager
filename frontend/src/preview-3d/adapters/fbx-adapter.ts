@@ -286,6 +286,11 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
         group.traverse((o) => {
           const mesh = o as THREE.Mesh;
           if (mesh.geometry) mesh.geometry.dispose();
+          // SkinnedMesh.skeleton 持有 boneTexture（GPU 资源），不 dispose 会泄漏
+          const skinned = o as THREE.SkinnedMesh;
+          if (skinned.isSkinnedMesh && skinned.skeleton) {
+            skinned.skeleton.dispose();
+          }
           const mat = mesh.material;
           if (Array.isArray(mat)) mat.forEach((m) => disposeMaterial(m));
           else if (mat) disposeMaterial(mat as THREE.Material);

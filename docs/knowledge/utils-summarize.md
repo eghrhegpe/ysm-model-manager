@@ -31,6 +31,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/format/summarize.ts|summaryCardHTML
   - frontend/src/utils/format/summarize.ts|summarizeDecoded
+status: active
 ---
 
 # 摘要生成 summarize

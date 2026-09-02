@@ -28,6 +28,7 @@ use_when:
   - 注册表加载
 invariant_anchors:
   - frontend/src/utils/resource/registry.ts|_registry
+status: active
 ---
 
 # 资源类型工具 resource-types

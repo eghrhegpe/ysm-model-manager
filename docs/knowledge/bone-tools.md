@@ -37,6 +37,7 @@ perf:
 invariant_anchors:
   - frontend/src/preview-3d/bone-tools.ts|buildBoneTree
   - frontend/src/preview-3d/adapters/vrm-bone-ui.ts|makeBonePanelRenderer
+status: active
 ---
 
 # 跨格式骨骼工具层 bone-tools

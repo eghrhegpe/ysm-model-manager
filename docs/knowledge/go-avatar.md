@@ -30,6 +30,7 @@ perf:
 invariant_anchors:
   - go/avatar/avatar.go|isSafeAvatarPath
   - go/avatar/avatar.go|strings.NewReplacer
+status: active
 ---
 
 # 头像 go/avatar

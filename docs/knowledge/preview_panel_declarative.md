@@ -38,6 +38,7 @@ use_when:
 perf:
   - gpu-bound
 
+status: snapshot
 ---
 
 # 3D 预览面板内容声明式化通道（ADR-126 P4-B）

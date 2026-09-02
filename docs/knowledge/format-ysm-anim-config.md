@@ -25,6 +25,7 @@ use_when:
   - summarize
 invariant_anchors:
   - frontend/src/utils/format/ysm-anim-config.ts|extractAnimGroupsAndConfigs
+status: active
 ---
 
 # YSM 动画分组与配置菜单提取

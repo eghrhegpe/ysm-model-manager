@@ -25,6 +25,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/dom/storage.ts|safeGet
   - frontend/src/utils/dom/storage.ts|safeSet
+status: active
 ---
 
 # localStorage 安全读写 safeGet/safeSet

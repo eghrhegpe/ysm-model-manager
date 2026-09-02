@@ -15,6 +15,7 @@ use_when:
   - check-circular
   - findCycles
   - 脚本去重
+status: active
 ---
 # scripts 共享核演进（diff-coverage-core + cycles）
 

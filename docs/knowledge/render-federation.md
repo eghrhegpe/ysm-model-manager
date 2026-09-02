@@ -49,6 +49,7 @@ related_adrs:
   - ADR-097-scene-capability-registry
 perf:
   - gpu-bound
+status: active
 ---
 
 # 联邦渲染能力 (Render Federation)

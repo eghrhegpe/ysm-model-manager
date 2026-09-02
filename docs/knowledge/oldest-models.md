@@ -30,6 +30,7 @@ perf:
   - io-bound
 invariant_anchors:
   - frontend/src/features/oldest-models.ts|bus.emit
+status: active
 ---
 
 # 资历最深模型 oldest-models

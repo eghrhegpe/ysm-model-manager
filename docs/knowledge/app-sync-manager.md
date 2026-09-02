@@ -32,6 +32,7 @@ perf:
   - io-bound
 invariant_anchors:
   - frontend/src/views/app-sync-manager/index.ts|_gen
+status: active
 ---
 
 # 整合包同步页 app-sync-manager

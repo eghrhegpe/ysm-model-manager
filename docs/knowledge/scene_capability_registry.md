@@ -37,6 +37,7 @@ invariant_anchors:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|createAll
   - frontend/src/preview-3d/menu/env.ts|buildEnvSchema
   - frontend/src/preview-3d/menu/env.ts|renderEnvLevel
+status: active
 ---
 
 # 场景能力注册表 scene-capability-registry

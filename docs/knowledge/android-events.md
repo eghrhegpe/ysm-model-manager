@@ -28,6 +28,7 @@ use_when:
   - NetworkChanged
 invariant_anchors:
   - frontend/src/core/handlers/android-events.ts|registerAndroidEvents
+status: active
 ---
 
 # Android 系统事件消费（back/网络/存储授权）

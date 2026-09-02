@@ -30,6 +30,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/debug/debug.ts|dbg
   - frontend/src/utils/debug/debug.ts|safeStr
+status: active
 ---
 
 # 常量与调试 constants/debug

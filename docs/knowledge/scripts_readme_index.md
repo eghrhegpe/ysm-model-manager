@@ -13,6 +13,7 @@ use_when:
   - check-readme-index
   - 脚本漂移
   - 脚本对账
+status: snapshot
 ---
 
 # README 登记处对账 check-readme-index.mjs

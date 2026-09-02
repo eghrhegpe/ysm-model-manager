@@ -30,6 +30,7 @@ perf:
   - cpu-bound
 invariant_anchors:
   - frontend/src/views/app-preview/model2d/model2d.ts|const cosA = Math.cos(angle)
+status: active
 ---
 
 # 2D 预览渲染 model2d

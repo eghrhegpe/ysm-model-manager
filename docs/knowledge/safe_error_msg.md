@@ -26,6 +26,7 @@ use_when:
   - 异常提取
 invariant_anchors:
   - frontend/src/utils/safe-error-msg.ts|safeErrorMessage
+status: active
 ---
 
 # 安全错误消息提取 utils

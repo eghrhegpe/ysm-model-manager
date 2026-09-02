@@ -37,6 +37,7 @@ perf:
 invariant_anchors:
   - frontend/src/preview-3d/adapters/mmd-adapter.ts|mmdMenuItems
   - frontend/src/utils/main-thread-watch.ts|startMainThreadWatch
+status: snapshot
 ---
 
 # 优化记录 optimization-log

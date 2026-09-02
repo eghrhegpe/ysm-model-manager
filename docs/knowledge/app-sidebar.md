@@ -40,9 +40,10 @@ use_when:
   - 版本卡片
   - 推送
   - 拉取
-  - 同步状态
+  - 同步状态卡片
 invariant_anchors:
   - frontend/src/views/app-sidebar/events.ts|_lastEmittedPkg
+status: active
 ---
 
 # 侧边栏 app-sidebar

@@ -20,6 +20,7 @@ invariant_anchors:
   - go/repoaudit/repoaudit.go|func Audit
   - go/repoaudit/repoaudit.go|func Classify
   - go/repoaudit/repoaudit.go|sync.Once
+status: active
 ---
 
 # 仓库审计 go/repoaudit

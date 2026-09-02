@@ -20,6 +20,7 @@ use_when:
   - Opacity 误译
   - 术语统一
   - 翻译名实不符
+status: snapshot
 ---
 
 # i18n 翻译准确度扫描记录

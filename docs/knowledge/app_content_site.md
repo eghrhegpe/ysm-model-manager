@@ -40,6 +40,7 @@ use_when:
   - workshop-data
 invariant_anchors:
   - frontend/src/views/app-content/site-view.ts|renderSiteView
+status: active
 ---
 
 # 创意工坊站点视图 site

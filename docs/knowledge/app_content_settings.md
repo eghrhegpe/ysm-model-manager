@@ -35,6 +35,7 @@ use_when:
   - 界面偏好
 invariant_anchors:
   - frontend/src/views/app-content/settings/init.ts|initSettings
+status: active
 ---
 
 # 设置页 settings

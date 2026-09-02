@@ -18,7 +18,6 @@ use_when:
   - 导出 PNG
   - 多角度截图
   - 预览缓存
-  - 缩略图
   - blob URL 释放
 perf:
   - memory-heavy
@@ -32,6 +31,7 @@ quick_intents:
   - 截图 / 导出 PNG / 多角度截图 / 预览缓存
 quick_risk_lines:
   - 离屏截图渲染器资源与 blob URL 必须释放，防内存泄漏
+status: active
 ---
 
 # 截图与导出 export

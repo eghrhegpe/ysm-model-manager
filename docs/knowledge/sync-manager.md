@@ -52,6 +52,7 @@ invariant_anchors:
   - frontend/src/views/app-sync-manager/store.ts|applyFilter
   - frontend/src/views/app-sync-manager/index.ts|_gen
   - frontend/src/core/handlers/sync.ts|runDownloadMissing
+status: active
 ---
 
 # 整合包同步管理器 sync-manager

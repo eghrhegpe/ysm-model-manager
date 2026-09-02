@@ -25,6 +25,7 @@ use_when:
   - XSS
 invariant_anchors:
   - frontend/src/utils/dom/html.ts|export function esc
+status: active
 ---
 
 # DOM 工具 dom

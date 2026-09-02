@@ -33,6 +33,7 @@ invariant_anchors:
   - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
   - frontend/src/views/app-tree/toolbar-search.ts|consumeWebSearchDegraded
   - frontend/src/views/app-tree/toolbar-search.ts|pickWebFilesAndImport
+status: active
 ---
 
 # 工具栏搜索编排 toolbar-search

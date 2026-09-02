@@ -28,6 +28,7 @@ use_when:
   - SAF
 invariant_anchors:
   - frontend/src/backend/platform.ts|requestStoragePermission
+status: active
 ---
 
 # Android 桥接层：存储授权 + 目录选择器

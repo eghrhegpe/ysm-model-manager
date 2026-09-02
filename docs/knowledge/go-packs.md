@@ -29,6 +29,7 @@ perf:
 invariant_anchors:
   - go/packs/mcmeta.go|LimitReader
   - go/packs/mcmeta.go|maxLangSize
+status: active
 ---
 
 # 资源包 mcmeta go/packs

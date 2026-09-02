@@ -8,6 +8,7 @@ source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
   - frontend/src/preview-3d/caps/ground-capability.ts
 created: 2026-08-27
+status: snapshot
 ---
 
 # 3D 层超大文件 code-split 可行性

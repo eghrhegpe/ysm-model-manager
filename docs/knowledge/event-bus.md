@@ -26,6 +26,7 @@ quick_risk_lines:
   - once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper）
 pitfalls:
   - 「bus.off(event, 原fn)」once off 错对象 → 用 once 返回的 unsub 函数取消
+status: active
 ---
 
 # 事件总线 bus.ts

@@ -38,6 +38,7 @@ related_adrs:
   - ADR-113 (Molang 表达式支持)
 perf:
   - cpu-bound
+status: active
 ---
 
 # YSM (Bedrock) 动画管线

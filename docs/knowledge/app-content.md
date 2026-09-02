@@ -55,6 +55,7 @@ use_when:
   - 全局 handler
 invariant_anchors:
   - frontend/src/views/app-content/index.ts|_unsubs
+status: active
 ---
 
 # 主内容页 app-content

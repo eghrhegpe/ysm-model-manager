@@ -22,6 +22,7 @@ use_when:
 perf:
   - concurrent
 
+status: snapshot
 ---
 
 # worker-bridge-settleError-fallback

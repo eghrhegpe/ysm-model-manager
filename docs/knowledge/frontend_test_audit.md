@@ -29,6 +29,7 @@ use_when:
   - flaky
   - 假绿
   - 覆盖盲区
+status: snapshot
 ---
 
 # 前端测试基建审计

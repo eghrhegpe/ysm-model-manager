@@ -27,6 +27,7 @@ use_when:
 perf:
   - cpu-bound
 
+status: active
 ---
 
 # CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik

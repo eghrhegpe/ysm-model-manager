@@ -47,6 +47,7 @@ pitfalls:
   - 「frontend/src/preview-3d/menu/core.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
   - 「skeleton.ts」异步回调写入已卸载 DOM → 每个 await 后检查 container.isConnected
   - 「vrm.humanoid.update()」手动调用导致 T-pose 回归 → 只用 vrm.update(dt)
+status: active
 ---
 
 # 统一 3D 预览核心 preview-core

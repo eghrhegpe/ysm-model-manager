@@ -38,6 +38,7 @@ invariant_anchors:
   - go/types/resource.go|ResourceType
   - go/types/extensions.go|ShouldHashExt
   - go/types/types.go|ErrorCode
+status: active
 ---
 
 # 共享类型 go/types

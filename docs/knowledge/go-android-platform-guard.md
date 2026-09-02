@@ -28,6 +28,7 @@ use_when:
   - xdg-open
   - 重启
   - Node.js
+status: active
 ---
 # Android 平台守卫（Go 侧）
 

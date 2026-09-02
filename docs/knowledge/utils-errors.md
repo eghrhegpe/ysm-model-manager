@@ -30,6 +30,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/dom/errors.ts|friendlyError
   - frontend/src/utils/dom/errors.ts|isFileExistsError
+status: active
 ---
 
 # 错误处理 errors

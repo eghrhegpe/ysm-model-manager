@@ -21,6 +21,7 @@ invariant_anchors:
   - go/conc/pool.go|Parallel
 tests:
   - go/conc/pool_test.go
+status: active
 ---
 
 # 通用泛型并发工具 go/conc

@@ -26,6 +26,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/dom/display.ts|parseModelName
   - frontend/src/utils/dom/display.ts|renderDisplayName
+status: active
 ---
 
 # 文件名显示 display

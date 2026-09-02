@@ -22,6 +22,7 @@ quick_intents:
   - 回收站 / 软删除 / 恢复 / 清空回收站
 quick_risk_lines:
   - 删除必须走 .recycle 软删除（硬链接判定），禁止直接 os.Remove
+status: active
 ---
 
 # 回收站 go/recycle

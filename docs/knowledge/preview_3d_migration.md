@@ -23,6 +23,7 @@ use_when:
   - 相对引用修复
   - cmd 命令行限制
   - 目录归置
+status: snapshot
 ---
 
 # preview-3d 领域根迁移

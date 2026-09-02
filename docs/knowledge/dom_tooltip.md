@@ -24,6 +24,7 @@ use_when:
   - hover 提示
   - title 气泡
   - 3D 按钮
+status: active
 ---
 
 # 悬浮提示 tooltip

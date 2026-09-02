@@ -31,6 +31,7 @@ perf:
 invariant_anchors:
   - frontend/src/preview-3d/caps/ground-surface-spec.ts|buildGroundSurfaceSpec
   - frontend/src/preview-3d/caps/ground-surface-spec.ts|groundSurfaceNeedsRebuild
+status: active
 ---
 # 地面材质 spec 单一事实源 ground-surface-spec
 

@@ -34,6 +34,7 @@ use_when:
 invariant_anchors:
   - go/litematic/nbt.go|extractBits
   - go/litematic/voxel.go|maxRegionAxis
+status: active
 ---
 
 # Litematic 解析 go/litematic

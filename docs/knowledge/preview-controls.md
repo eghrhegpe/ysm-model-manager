@@ -42,6 +42,7 @@ invariant_anchors:
   - frontend/src/views/app-preview/mmd-controls.ts|playNodes
   - frontend/src/preview-3d/adapters/camera-controls.ts|CameraControlBridge
   - frontend/src/preview-3d/menu/core.ts|setAdapterItems
+status: active
 ---
 
 # 3D 预览控制器（声明式菜单节点）

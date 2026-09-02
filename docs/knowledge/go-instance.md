@@ -28,6 +28,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/instance/instance.go|ysmsync.SyncResources
+status: active
 ---
 
 # 整合包实例 go/instance

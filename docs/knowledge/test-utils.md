@@ -22,6 +22,7 @@ use_when:
   - flaky
   - 异步等待
   - 组件测试
+status: active
 ---
 # 测试工具 test-utils（G-1 抗脆弱测试基础设施）
 

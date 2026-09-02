@@ -32,6 +32,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
   - frontend/src/utils/dom/dialogs/adv-filter-util.ts|validateAdvFilter
+status: active
 ---
 
 # 高级筛选 adv-filter

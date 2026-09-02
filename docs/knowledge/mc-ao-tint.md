@@ -18,6 +18,7 @@ perf:
 invariant_anchors:
   - frontend/src/preview-3d/adapters/pack-model-adapter.ts|tintCategoryForPath
   - frontend/src/preview-3d/mc-tints.ts|getTintColorSync
+status: active
 ---
 
 # MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现

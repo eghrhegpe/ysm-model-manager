@@ -32,6 +32,7 @@ use_when:
 invariant_anchors:
   - go/cli/model.go|runSearch
   - go/cli/model.go|printSearchTable
+status: active
 ---
 
 # CLI 搜索命令 search

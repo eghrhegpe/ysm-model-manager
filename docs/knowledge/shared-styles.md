@@ -28,6 +28,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/dom/css.ts|btnBaseCSS
   - frontend/src/views/app-tree/app-tree-styles.ts|treeCSS
+status: active
 ---
 
 # 共享样式 shared-styles

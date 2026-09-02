@@ -32,6 +32,7 @@ perf:
 invariant_anchors:
   - frontend/src/features/version-updater.ts|canCheck
   - frontend/src/features/version-updater.ts|markChecked
+status: active
 ---
 
 # 版本更新 version-updater

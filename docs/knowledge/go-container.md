@@ -27,6 +27,7 @@ use_when:
   - 目录容器
 invariant_anchors:
   - go/container/container.go|OpenZipPath
+status: active
 ---
 
 # 统一容器桥接层 go/container

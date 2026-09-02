@@ -30,6 +30,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/format/mc-format.ts|renderFormattedText
   - frontend/src/utils/format/pack-format.ts|describeVersionRange
+status: active
 ---
 
 # MC 格式判定 mc-format

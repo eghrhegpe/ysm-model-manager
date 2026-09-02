@@ -38,6 +38,7 @@ perf:
 invariant_anchors:
   - frontend/src/features/community/download-queue.ts|isActiveStatus
   - frontend/src/features/community/data.ts|Promise.any
+status: active
 ---
 
 # 社区下载 community

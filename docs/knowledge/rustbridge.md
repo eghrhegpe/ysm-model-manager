@@ -42,6 +42,7 @@ perf:
   - concurrent
 invariant_anchors:
   - go/rustbridge/bridge_windows.go|func Scan
+status: active
 ---
 
 # Rust 桥 rustbridge

@@ -14,6 +14,7 @@ use_when:
   - 未知 flag
   - 脚本卫生
   - hygiene
+status: snapshot
 ---
 
 # 脚本 argv 规范与已知豁免 parse-args.ts

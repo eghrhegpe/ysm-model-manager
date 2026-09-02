@@ -31,6 +31,7 @@ perf:
 invariant_anchors:
   - frontend/src/features/recycle-bin.ts|GetRepoRoot
   - frontend/src/utils/async/load-guard.ts|createLoadGuard
+status: active
 ---
 
 # 回收站界面 recycle-bin

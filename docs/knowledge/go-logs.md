@@ -27,6 +27,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/logs/logs.go|fsutil.WriteFileAtomic
+status: active
 ---
 
 # 导入日志 go/logs

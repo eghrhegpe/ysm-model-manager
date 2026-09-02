@@ -33,6 +33,7 @@ invariant_anchors:
   - go/packs/classify.go|ClassifyResource
   - go/packs/classify.go|DetectByEntries
   - go/types/resource.go|validateRegistrySchema
+status: active
 ---
 
 # 分类路由与回归护栏

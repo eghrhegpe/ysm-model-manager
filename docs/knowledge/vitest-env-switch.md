@@ -23,6 +23,7 @@ use_when:
   - happy-dom
   - 测试切换
 affected: false
+status: active
 ---
 
 # Vitest 环境切换规则

@@ -29,6 +29,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/resource/extensions.ts|RESOURCE_EXTS
   - frontend/src/utils/resource/extensions.ts|isSupportedExt
+status: active
 ---
 
 # 扩展名映射 extensions

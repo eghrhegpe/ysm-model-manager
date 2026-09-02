@@ -19,6 +19,7 @@ use_when:
   - 错误通道统一
   - ADR-143
   - 绑定返回 string
+status: snapshot
 ---
 
 # string-JSON 绑定铲债清单

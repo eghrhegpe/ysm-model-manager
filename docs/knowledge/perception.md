@@ -28,6 +28,7 @@ invariant_anchors:
   - frontend/src/preview-3d/perception/autodance.ts|createAutoDanceController
   - frontend/src/preview-3d/perception/beat-detector.ts|createBeatDetector
   - frontend/src/preview-3d/perception/blink.ts|createBlinkController
+status: active
 ---
 
 # 3D 感知系统 perception

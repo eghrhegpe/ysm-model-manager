@@ -34,6 +34,7 @@ perf:
 invariant_anchors:
   - go/geometry/archive.go|fsutil.ReadLimitedEntry
   - go/geometry/ysm_parser.go|json.Decoder
+status: active
 ---
 
 # Geometry 存档 go/geometry

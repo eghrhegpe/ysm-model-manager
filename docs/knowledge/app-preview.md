@@ -16,7 +16,7 @@ tests:
   - frontend/src/utils/dom/feedback.test.ts
   - frontend/src/views/context-menu/index.test.ts
 quick_groups:
-  - 3D 预览与模型追加
+  - 3D 预览面板与模型追加
 quick_intents:
   - 预览面板、模型预览、2D 骨骼 / 3D 预览
   - Litematic / 蓝图、资源包 / 光影包
@@ -41,6 +41,7 @@ invariant_anchors:
   - frontend/src/views/app-preview/gen-guard.ts|GenGuard
   - frontend/src/views/app-preview/skeleton.ts|closeActive3DOverlay
   - frontend/src/views/app-preview/loader.ts|loadModelData
+status: active
 ---
 
 # 预览面板 app-preview

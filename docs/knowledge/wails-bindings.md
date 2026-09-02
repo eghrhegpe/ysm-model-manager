@@ -40,6 +40,7 @@ invariant_anchors:
   - internal/app/app_scan.go|func (a *App) ScanModelEntries
   - internal/app/app_scan.go|func (a *App) SearchModels
   - internal/app/app_install_import.go|InstallModelTo
+status: active
 ---
 
 # Wails Binding API 总览 internal/app

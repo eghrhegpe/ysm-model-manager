@@ -21,12 +21,13 @@ pitfalls:
 use_when:
   - FAB
   - 悬浮按钮
-  - 3D 预览
+  - FAB 3D 预览入口
   - overlay
   - ADR-057
 invariant_anchors:
   - frontend/src/utils/dom/fab.ts|ensureFabStyles
   - frontend/src/utils/dom/fab.ts|createIconButton
+status: active
 ---
 
 # 3D 预览悬浮 FAB 控制层

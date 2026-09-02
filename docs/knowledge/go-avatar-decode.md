@@ -22,6 +22,7 @@ perf:
   - io-bound
   - single-thread
 
+status: active
 ---
 
 # Go 头像提取：纯函数 vs Node+WASM 解码分界

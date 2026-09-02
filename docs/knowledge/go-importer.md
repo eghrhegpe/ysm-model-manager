@@ -27,6 +27,7 @@ perf:
 invariant_anchors:
   - go/importer/importer_file.go|fsutil.WriteFileAtomic
   - go/importer/importer_file.go|DetectZipType
+status: active
 ---
 
 # 导入策略 go/importer

@@ -28,6 +28,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/dom/dialogs/rename-format.ts|buildRenameName
   - frontend/src/utils/dom/dialogs/rename-format.ts|validateRenameFields
+status: active
 ---
 
 # 重命名弹窗 rename

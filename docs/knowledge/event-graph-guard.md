@@ -16,6 +16,7 @@ use_when:
   - 内联脚本
   - 可选链
   - 跨行调用
+status: active
 ---
 # Bus 事件契约守卫
 

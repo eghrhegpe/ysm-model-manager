@@ -33,6 +33,7 @@ invariant_anchors:
 perf:
   - cpu-bound
   - single-thread
+status: active
 ---
 
 # WASM 解析器 ysm-parser

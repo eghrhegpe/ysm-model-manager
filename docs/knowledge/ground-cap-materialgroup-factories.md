@@ -19,6 +19,7 @@ pitfalls:
 use_when:
   - 拆 gcBuildMaterialGroup 长函数
   - 评审 ground-capability.ts 菜单构建
+status: active
 ---
 
 # ground-cap-gcBuildMaterialGroup-133

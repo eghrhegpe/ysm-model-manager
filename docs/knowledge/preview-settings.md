@@ -56,6 +56,7 @@ invariant_anchors:
   - frontend/src/preview-3d/state/preview-state.ts|setStateValue
   - frontend/src/views/app-preview/skeleton-render.ts|buildToggleRow
   - frontend/src/preview-3d/render-budget.ts|MAX_FPS_DEFAULT
+status: active
 ---
 
 # 预览面板设置与显示控制

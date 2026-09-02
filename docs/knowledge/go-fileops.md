@@ -25,6 +25,7 @@ quick_intents:
   - 移动 / 复制 / 删除 / 重命名文件 / 文件夹导入
 quick_risk_lines:
   - 文件 CRUD 必须走 go/fileops，internal/app 薄壳仅转发
+status: active
 ---
 
 # 文件操作 go/fileops

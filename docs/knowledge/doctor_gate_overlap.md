@@ -15,6 +15,7 @@ use_when:
 invariant_anchors:
   - scripts/doctor.ts|function delegate
   - scripts/check-redlines.ts|function runChecks
+status: snapshot
 ---
 
 # 质量闸门双调度器重叠审计

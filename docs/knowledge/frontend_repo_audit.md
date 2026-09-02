@@ -15,6 +15,7 @@ use_when:
   - 重构排期
   - XSS
   - innerHTML
+status: snapshot
 ---
 
 # 前端 TS 整包审计

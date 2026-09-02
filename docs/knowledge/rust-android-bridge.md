@@ -36,6 +36,7 @@ use_when:
   - CGO
 invariant_anchors:
   - go/rustbridge/bridge_android.go|Scan
+status: active
 ---
 
 # Rust Scanner Bridge 全平台支持

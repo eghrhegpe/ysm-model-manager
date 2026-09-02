@@ -19,6 +19,7 @@ use_when:
   - UV 对不上
   - 贴图错位
   - RawYsmModel
+status: active
 ---
 # YSM 烘焙与几何反推
 

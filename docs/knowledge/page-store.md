@@ -27,6 +27,7 @@ use_when:
   - currentPage
 invariant_anchors:
   - frontend/src/core/page-store.ts|sanitizePage
+status: active
 ---
 
 # 页面状态管理 page-store.ts

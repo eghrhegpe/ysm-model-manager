@@ -147,12 +147,12 @@
 | 🏗 go-recycle | 回收站 go/recycle | architecture | io-bound | 回收站, 删除, 恢复, recycle, 软删除 |
 | 🏗 go-scanner | 扫描核心 go/scanner | architecture | io-bound, concurrent | 扫描, 扫描条目, 文件树, 哈希, 缓存, 作者提取, ScanEntries, 索引生成 |
 | 🏗 go-sync | 整合包同步 go/sync | architecture | io-bound | 整合包, 同步, 硬链接, 缺失, 多余 |
-| 🏗 go-tags | 标签系统 go/tags | architecture | io-bound | 标签, tag, 分类, 筛选, tag-editor |
+| 🏗 go-tags | 标签系统 go/tags | architecture | io-bound | 标签, tag, 分类, tag-editor |
 | 🍃 go-testutil | 测试辅助函数 go/internal/testutil | leaf | — | 跨包复用测试 helper, 创建测试文件, 构造内存 ZIP |
 | 🏗 go-threejs | 3D 骨骼 spec go/threejs | architecture | cpu-bound, concurrent | 3D 预览, 骨骼, three.js, spec, 顶点, UV, 四元数, 模型渲染 |
 | 🏗 go-types | 共享类型 go/types | architecture | — | 共享类型, AppConfig, 配置, 注册表, 扩展名, LinkType, BedrockModel |
-| 🏗 go-updater | 自动更新 go/updater | architecture | io-bound | 更新, 自动更新, 版本升级, updater |
-| 🍃 go-version | 版本号 go/version | leaf | — | 版本, version, 更新, ldflags |
+| 🏗 go-updater | 自动更新 go/updater | architecture | io-bound | 自动更新, 版本升级, updater |
+| 🍃 go-version | 版本号 go/version | leaf | — | 版本, version, ldflags |
 | 🏗 go-watcher | 文件监听 go/watcher | architecture | io-bound | 监听, 文件变化, 刷新, watcher |
 | 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture | io-bound | YSM, 解析, 摘要, ysm 文件, 元数据 |
 | 🍃 go_conc | 通用泛型并发工具 go/conc | leaf | — | 并发, 并行, worker 池, 批量并发, 输入序收集 |
@@ -213,7 +213,7 @@
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
-| 🏗 model3d | 3D 预览渲染 model3d | architecture | — | 3D 预览, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
+| 🏗 model3d | 3D 预览渲染 model3d | architecture | — | 3D 渲染层, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
 | 🍃 mount-preview-module-singleton-race | mount3D 并发竞态（已闭环 — _gen 代际守卫） | leaf | concurrent | mount3D 并发竞态（已闭环）, 评审模块级单例守卫（历史） |
 | 🍃 mount3d-584-giant | mount3D 巨函数现状（2026-08-27 已部分拆分） | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
 | 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 眨眼, 节拍检测, 模型感知 |
@@ -246,20 +246,20 @@
 | 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新 |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:change, 菜单, 页面记忆, 版本号 |
 | 🏗 app-preview | 预览面板 app-preview | architecture | — | 预览, 模型预览, 3D 预览, Litematic, WASM 解码 |
-| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture | — | 侧边栏, 整合包列表, 版本卡片, 推送, 拉取, 同步状态 |
+| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture | — | 侧边栏, 整合包列表, 版本卡片, 推送, 拉取, 同步状态卡片 |
 | 🏗 app-sync-manager | 整合包同步页 app-sync-manager | architecture | io-bound | 整合包同步, 同步状态, 推送资源, 拉取资源, 待推送, 可拉取, 已禁用, 实例资源 |
 | 🍃 app-toast | Toast 通知 app-toast | leaf | — | toast, 通知, 提示, 消息, 撤销, 反馈, 报错提示 |
 | 🏗 app-tree | 资源树 app-tree | architecture | — | 树形, 资源列表, tree, 节点, 树, 目录树 |
 | 🍃 app_content_diagnostics | 诊断与冲突页 diagnostics | leaf | cpu-bound, gpu-bound, concurrent | 诊断页, 冲突, 去重流程, 日志, 性能, oldest |
 | 🍃 app_content_settings | 设置页 settings | leaf | — | 设置页, 主题设置, 键位, 路径配置, 界面偏好 |
 | 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点视图, 浏览模式, 卡片拖拽, workshop-data |
-| 🏗 context-menu | 右键菜单系统 | architecture | — | 右键菜单, 右键, 上下文菜单, ctx:show, menu:show, 批量操作, 移入回收站, 重命名 |
+| 🏗 context-menu | 右键菜单系统 | architecture | — | 右键菜单, 右键, 上下文菜单, ctx:show, menu:show, 批量操作, 移入回收站 |
 | 🏗 dialog-adv-filter | 高级筛选 adv-filter | architecture | — | 高级筛选, 筛选, 骨骼数, 立方体, 纹理尺寸, 按标签筛选, 条件过滤 |
 | 🏗 dialog-batch-rename | 批量重命名 batch-rename | architecture | — | 批量重命名, 批量改名, 查找替换, 正则替换, 统一作者, 预设, batch-rename |
 | 🏗 dialog-modal | 弹窗基座 modal | architecture | — | 弹窗, 对话框, 确认框, 输入框弹窗, 下拉选择弹窗, modal, prompt, confirm |
 | 🍃 dialog-rename | 重命名弹窗 rename | leaf | — | 重命名, 改名, 命名规范, 作者 品牌 角色, rename, 读取头部 |
 | 🏗 dialog-tag-editor | 标签编辑器 tag-editor | architecture | — | 标签, 打标签, 编辑标签, tag, 标签弹窗, 分类标记 |
-| 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, 3D 预览, overlay, ADR-057 |
+| 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, FAB 3D 预览入口, overlay, ADR-057 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
 | 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | — | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
 | 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, sessionId |
@@ -312,7 +312,7 @@
 |------|------|------|------|--------|
 | 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | 动画, 骨骼动画, 关键帧, Molang, 数字滚动, stagger 入场 |
 | 🏗 commit_with_check | 提交脚本 commit-with-check | architecture | — | commit-with-check, 自动提交, 并发提交, 临时索引, 白名单提交, 门禁后自动 commit |
-| 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步, 日志 |
+| 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步 |
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
@@ -325,7 +325,7 @@
 | 🍃 utils-display | 文件名显示 display | leaf | — | 文件名显示, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮 |
 | 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
 | 🏗 utils-errors | 错误处理 errors | architecture | — | 错误提示, 友好错误, friendlyError, toast 文案, 报错翻译, 网络错误, 文件被占用 |
-| 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存, 缩略图, blob URL 释放 |
+| 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存, blob URL 释放 |
 | 🏗 utils-extensions | 扩展名映射 extensions | architecture | — | 扩展名, 支持的文件类型, 拖拽过滤, RESOURCE_EXTS, ALL_EXTS, 导入过滤, 扩展名归属 |
 | 🍃 utils-fmt | 格式化工具 fmt | leaf | — | 文件大小, 字节格式化, KB MB, 日期格式化, 友好日期, 文件大小颜色 |
 | 🍃 utils-icon | 图标映射 icon | leaf | — | 图标, emoji, 文件图标, fileIcon, 判断 YSM 文件 |

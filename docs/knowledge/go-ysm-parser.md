@@ -29,6 +29,7 @@ invariant_anchors:
   - go/ysm/summary.go|ExtractYsmSummary
   - go/ysm/parse.go|AnalyzeYSMModel
   - go/ysm/ysm.go|HasYSMMod
+status: active
 ---
 
 # YSM 解析 go/ysm

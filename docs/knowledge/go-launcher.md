@@ -13,6 +13,7 @@ quick_intents:
   - DetectLauncherInstances
 use_when:
   - 改启动器发现/实例目录解析逻辑时
+status: active
 ---
 
 # 启动器实例发现 go/launcher

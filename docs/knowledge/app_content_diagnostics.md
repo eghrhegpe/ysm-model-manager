@@ -43,6 +43,7 @@ perf:
   - concurrent
 invariant_anchors:
   - frontend/src/views/app-content/diagnostics/init.ts|startDedup
+status: active
 ---
 
 # 诊断与冲突页 diagnostics

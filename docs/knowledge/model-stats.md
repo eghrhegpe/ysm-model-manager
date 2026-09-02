@@ -37,6 +37,7 @@ perf:
 invariant_anchors:
   - frontend/src/workers/stats-core.ts|statsFromDecodedFiles
   - frontend/src/backend/web-stats.ts|batchStatsWebModels
+status: active
 ---
 
 # Web Worker 模型统计层 model-stats

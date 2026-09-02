@@ -25,6 +25,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/watcher/watcher.go|evs, errs, done := w.w.Events
+status: active
 ---
 
 # 文件监听 go/watcher

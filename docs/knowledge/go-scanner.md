@@ -31,6 +31,7 @@ quick_intents:
 quick_risk_lines:
   - 容器指纹缓存失效需调 ClearScanCache
   - resource_types.json 是唯一事实来源
+status: active
 ---
 
 # 扫描核心 go/scanner

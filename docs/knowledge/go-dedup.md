@@ -25,6 +25,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/dedup/dedup.go|fsutil.IsRecycleDir
+status: active
 ---
 
 # 去重 go/dedup

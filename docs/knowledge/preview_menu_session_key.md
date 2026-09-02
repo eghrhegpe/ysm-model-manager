@@ -38,6 +38,7 @@ use_when:
   - 组件选择
   - YSM maid 同台
   - sessionId
+status: active
 ---
 
 # preview-menu-session-key

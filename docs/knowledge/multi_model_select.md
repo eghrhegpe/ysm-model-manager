@@ -39,6 +39,7 @@ use_when:
   - zip 多模型
   - 多 entry
   - ADR-132
+status: active
 ---
 
 # 多模型选择菜单原语 multiModelSelectNode

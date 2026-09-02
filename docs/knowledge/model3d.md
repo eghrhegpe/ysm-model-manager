@@ -9,7 +9,7 @@ source_files:
 tests:
   - frontend/src/preview-3d/model3d-spec.test.ts
 use_when:
-  - 3D 预览
+  - 3D 渲染层
   - Three.js
   - 相机
   - 骨骼渲染
@@ -17,6 +17,7 @@ use_when:
   - 3D 截图
   - 纹理加载
   - spec 兜底
+status: active
 ---
 # 3D 预览渲染 model3d
 

@@ -27,7 +27,6 @@ use_when:
   - menu:show
   - 批量操作
   - 移入回收站
-  - 重命名
 invariant_anchors:
   - frontend/src/core/context-menus.ts|registerContextMenus
   - frontend/src/core/menu-defs.ts|MENU_DEFS
@@ -42,6 +41,7 @@ quick_risk_lines:
   - 禁止 view 层手写菜单项
 pitfalls:
   - 「view 层」内联菜单结构 → 必须声明进 menu-defs.ts
+status: active
 ---
 
 # 右键菜单系统

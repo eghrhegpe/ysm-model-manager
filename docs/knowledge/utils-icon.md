@@ -25,6 +25,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/icon/icon.ts|fileIcon
   - frontend/src/utils/icon/icon.ts|isYsmName
+status: active
 ---
 
 # 图标映射 icon

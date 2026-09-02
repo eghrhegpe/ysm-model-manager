@@ -10,7 +10,7 @@ use_when:
   - 重复实现
   - 插件化
 affected: false
-status: snapshot
+status: superseded
 last_verified: 2026-09-01
 ---
 

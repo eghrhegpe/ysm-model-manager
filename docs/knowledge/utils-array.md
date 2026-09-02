@@ -25,6 +25,7 @@ use_when:
   - 列表 reorder
 invariant_anchors:
   - frontend/src/utils/array.ts|moveItem
+status: active
 ---
 
 # 数组工具 moveItem

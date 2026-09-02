@@ -33,6 +33,7 @@ pitfalls:
 invariant_anchors:
   - frontend/src/preview-3d/debug-render.ts|rebuildDebug
   - frontend/src/preview-3d/model-group-builder.ts|buildModelGroup
+status: active
 ---
 
 # 3D 区审核与修复模式提炼

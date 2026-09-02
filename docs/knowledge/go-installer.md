@@ -28,6 +28,7 @@ perf:
 invariant_anchors:
   - go/installer/installer.go|ContainsMinecraftMarker
   - go/installer/installer.go|ERROR_NOT_SAME_DEVICE
+status: active
 ---
 
 # 模型安装 go/installer

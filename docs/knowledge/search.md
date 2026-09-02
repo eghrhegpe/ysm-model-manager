@@ -40,6 +40,7 @@ use_when:
   - adv-filter
   - SearchModels
   - 网页版降级
+status: active
 ---
 
 # 搜索筛选编排 search

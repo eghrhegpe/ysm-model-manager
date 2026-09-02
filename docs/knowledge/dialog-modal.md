@@ -28,6 +28,7 @@ quick_intents:
   - 弹确认框 / 输入框 / 下拉选择 / modal
 quick_risk_lines:
   - 业务弹窗必须复用 modal.ts 的 Promise API（prompt/select/confirm/picker），禁止手写弹窗
+status: active
 ---
 
 # 弹窗基座 modal

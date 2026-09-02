@@ -27,6 +27,7 @@ use_when:
   - 版本号
 invariant_anchors:
   - frontend/src/views/app-nav/tpl.ts|navCSS
+status: active
 ---
 
 # 顶部导航 app-nav

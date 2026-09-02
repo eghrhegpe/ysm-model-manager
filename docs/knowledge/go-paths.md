@@ -25,6 +25,7 @@ use_when:
 invariant_anchors:
   - go/paths/safe.go|IsInside
   - go/paths/safe.go|IsInsideResolved
+status: active
 ---
 
 # 路径安全 go/paths

@@ -45,6 +45,7 @@ invariant_anchors:
   - frontend/src/utils/animation/animation.ts|evaluateClip
   - frontend/src/utils/animation/animate.ts|animateNumber
   - frontend/src/utils/animation/stagger.ts|stagger
+status: active
 ---
 
 # 动画系统 animation

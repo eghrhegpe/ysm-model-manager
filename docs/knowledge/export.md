@@ -46,6 +46,7 @@ invariant_anchors:
   - frontend/src/preview-3d/screenshot-render.ts|renderMultiAngle
   - frontend/src/views/app-preview/skeleton-render.ts|saveScreenshot
   - frontend/src/preview-3d/decoder/cache.ts|cacheSet
+status: active
 ---
 
 # 截图导出 export

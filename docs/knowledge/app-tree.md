@@ -32,6 +32,7 @@ use_when:
   - 目录树
 invariant_anchors:
   - frontend/src/views/app-tree/bus-handlers.ts|selectState
+status: active
 ---
 
 # 资源树 app-tree

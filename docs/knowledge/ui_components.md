@@ -29,6 +29,7 @@ use_when:
 invariant_anchors:
   - frontend/src/ui/control-registry.ts|registerControl
   - frontend/src/ui/control-registry.ts|getControl
+status: active
 ---
 
 # UI 组件库 ui-components

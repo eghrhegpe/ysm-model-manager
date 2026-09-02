@@ -1793,7 +1793,7 @@ export const autoSidebar = [
           },
           {
             "text": "ground-cap-gcBuildMaterialGroup-133",
-            "link": "/knowledge/ground-cap-gcbuildmaterialgroup-133"
+            "link": "/knowledge/ground-cap-materialgroup-factories"
           },
           {
             "text": "MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现",

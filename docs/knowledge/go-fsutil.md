@@ -38,6 +38,7 @@ invariant_anchors:
   - go/fsutil/walk.go|IsRecycleDir
   - go/fsutil/write.go|WriteFileAtomic
   - go/fsutil/b64.go|DecodeBase64Limited
+status: active
 ---
 
 # 文件基础设施 go/fsutil

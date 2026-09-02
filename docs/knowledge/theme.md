@@ -31,6 +31,7 @@ use_when:
 invariant_anchors:
   - frontend/src/app-modules.ts|normalizeTheme
   - frontend/src/utils/dom/storage.ts|safeGet
+status: active
 ---
 
 # 主题系统 theme

@@ -7,7 +7,7 @@ source_files:
   - go/threejs/spec.go
   - go/threejs/
 quick_groups:
-  - 3D 预览与模型追加
+  - 3D spec 渲染与模型追加
 quick_intents:
   - 3D 骨骼 spec、three.js
   - 顶点 / UV / 四元数
@@ -32,6 +32,7 @@ perf:
   - concurrent
 invariant_anchors:
   - go/threejs/spec.go|collectBonePivots
+status: active
 ---
 
 # 3D 骨骼 spec go/threejs

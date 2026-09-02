@@ -39,11 +39,9 @@
 | 2D 预览、骨骼图、Canvas 渲染 | [2D 预览渲染 model2d](./model2d.md) | 2D 骨骼渲染必须走 model2d.ts 的 Canvas 渲染，禁止手写骨骼画布 | - |
 | 3D 菜单控件声明式渲染 | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
 | 3D 感知系统、自主动画、自动跳舞 | [3D 感知系统 perception](./perception.md) | 3D 感知必须走 perception 模块的控制器，禁止手写动画注入 | - |
-| 3D 骨骼 spec、three.js | [3D 骨骼 spec go/threejs](./go-threejs.md) | YSM 骨骼数据必须走 go/threejs 的 spec.go 转换为 three.js 格式，前端禁止手写骨骼转换 | - |
 | 3D 控制器、MMD 播放、VRM 材质 / YSM schema | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联 | ADR-127, ADR-132 |
 | 3D 预览菜单、根菜单、dock 按钮 | [统一 3D 预览核心 preview-core](./preview_core.md) | 适配器项经 setAdapterItems 注入，禁止内联 | ADR-125 |
 | 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | - |
-| 顶点 / UV / 四元数 | [3D 骨骼 spec go/threejs](./go-threejs.md) | - | - |
 | 动画解析 / 求值 / 渲染注入 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
 | 多 3D 场景共存 | [联邦渲染能力 (Render Federation)](./render-federation.md) | - | ADR-125 |
 | 多模型选择、多组件 / 多 entry | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 容器内多模型必须经 multiModelSelectNode 声明式菜单选择，禁止 adapter 直接遍历 entry 数组渲染 | ADR-132 |
@@ -53,7 +51,6 @@
 | 截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132 |
 | 截图灯光、activeComponent、组件选择 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
 | 模型切换、会话内替换 | [统一 3D 预览核心 preview-core](./preview_core.md) | switchTo 仅同类型；跨类型用 switchExternal | ADR-125 |
-| 模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) | - | - |
 | 前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | - | - |
 | 数字滚动、stagger 入场、关闭动画 | [动画系统 animation](./animation-system.md) | - | - |
 | 头像、作者、创作者 avatar | [头像 go/avatar](./go-avatar.md) | 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接 | - |
@@ -61,25 +58,20 @@
 | 投影、litematic、schematic、nbt、蓝图 | [Litematic 解析 go/litematic](./go-litematic.md) | Litematic 蓝图必须走 go/litematic 的 parser/schematic/structure 三层解析，禁止前端手写 Litematic 解析 | - |
 | 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
 | 渲染联邦、shared renderer、rAF 复用 | [联邦渲染能力 (Render Federation)](./render-federation.md) | 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer | ADR-125 |
-| 预览面板、模型预览、2D 骨骼 / 3D 预览 | [预览面板 app-preview](./app-preview.md) | 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则 | - |
 | 预览设置、显示控制、骨骼名称开关 | [预览面板设置与显示控制](./preview-settings.md) | 预览设置集中由 preview-state.ts 的 KNOWN_PATHS 注册管理，新增选项必须经注册而非直接读写状态 | ADR-132 |
 | 眨眼/呼吸/视线追踪/口型同步 | [3D 感知系统 perception](./perception.md) | - | - |
 | 帧率 / 像素比 / 视锥剔除 / 3D 偏好 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
 | 追加模型、同台加载、多模型同框 | [统一 3D 预览核心 preview-core](./preview_core.md) | 跨类型必须走 switchExternal，禁止直接调 adapter.build | ADR-125 |
 | AnimationController、状态机 | [动画系统 animation](./animation-system.md) | - | - |
-| app-preview 组件、_previewGuard、detailGen | [预览面板 app-preview](./app-preview.md) | - | - |
 | createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
 | isSafeAvatarPath | [头像 go/avatar](./go-avatar.md) | - | - |
-| Litematic / 蓝图、资源包 / 光影包 | [预览面板 app-preview](./app-preview.md) | - | - |
 | MEMFS / node 解码 / callMain | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
-| model:select、WASM 解码、放大预览 | [预览面板 app-preview](./app-preview.md) | - | - |
 | Molang 表达式求值 | [动画系统 animation](./animation-system.md) | - | - |
 | multiModelSelectNode | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | - | ADR-132 |
 | multiModelSelectNode / preview menu node | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132 |
 | palette / voxel / bedrock 转换 | [Litematic 解析 go/litematic](./go-litematic.md) | - | - |
 | schema 键冲突、ADR-132 | [preview-menu-session-key](./preview_menu_session_key.md) | - | ADR-132 |
 | schema 注册、per-scene、多模型同框 | [preview-menu-session-key](./preview_menu_session_key.md) | schema 注册必须用 per-scene 键，禁止跨场景共用 schema key | ADR-132 |
-| showResourcePack、showShaderpack | [预览面板 app-preview](./app-preview.md) | - | - |
 | VRM 动画播放、VRMA | [统一 3D 预览核心 preview-core](./preview_core.md) | 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update() | ADR-125 |
 | WASM 解析器、YSMParser、ysm 解码 | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析 | - |
 | YSM 动画管线、基岩动画 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析 | - |
@@ -140,6 +132,16 @@
 | tree:set-search、bus-handlers、selectState | [资源树 app-tree](./app-tree.md) | - | - |
 | updater | [版本更新 version-updater](./version-updater.md) | - | - |
 | Vitest 环境切换、测试环境 | [Vitest 环境切换规则](./vitest-env-switch.md) | 只有纯逻辑测试（不碰 DOM）才能切 @vitest-environment node，源码顶层副作用必须先治理 | - |
+
+## 🎯 3D 预览面板与模型追加
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 预览面板、模型预览、2D 骨骼 / 3D 预览 | [预览面板 app-preview](./app-preview.md) | 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则 | - |
+| app-preview 组件、_previewGuard、detailGen | [预览面板 app-preview](./app-preview.md) | - | - |
+| Litematic / 蓝图、资源包 / 光影包 | [预览面板 app-preview](./app-preview.md) | - | - |
+| model:select、WASM 解码、放大预览 | [预览面板 app-preview](./app-preview.md) | - | - |
+| showResourcePack、showShaderpack | [预览面板 app-preview](./app-preview.md) | - | - |
 
 ## 🎯 模型扫描与仓库管理
 
@@ -251,6 +253,14 @@
 | 模型详情、摘要卡片、summaryCardHTML | [摘要生成 summarize](./utils-summarize.md) | 模型摘要必须走 summarize.ts 的 summaryCardHTML，禁止手写详情卡片 HTML | - |
 | 透明背景 / 预览缓存 / blob URL | [截图导出 export](./export.md) | - | ADR-127 |
 | 预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) | - | - |
+
+## 🎯 3D spec 渲染与模型追加
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 3D 骨骼 spec、three.js | [3D 骨骼 spec go/threejs](./go-threejs.md) | YSM 骨骼数据必须走 go/threejs 的 spec.go 转换为 three.js 格式，前端禁止手写骨骼转换 | - |
+| 顶点 / UV / 四元数 | [3D 骨骼 spec go/threejs](./go-threejs.md) | - | - |
+| 模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) | - | - |
 
 ## 🎯 配置与注册表
 

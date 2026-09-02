@@ -23,10 +23,10 @@ use_when:
   - 纯函数
   - 防抖
   - 异步
-  - 日志
 invariant_anchors:
   - frontend/src/utils/core/async.ts|swallowError
   - frontend/src/utils/core/async.ts|fireAndForget
+status: active
 ---
 
 # 核心工具函数 core-utils

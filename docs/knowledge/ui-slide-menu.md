@@ -30,6 +30,7 @@ use_when:
 invariant_anchors:
   - frontend/src/ui/ui-slide-menu.ts|createSlideMenu
   - frontend/src/ui/ui-slide-menu.ts|home
+status: active
 ---
 
 # ADR 去桶化 slide-menu 外壳组件

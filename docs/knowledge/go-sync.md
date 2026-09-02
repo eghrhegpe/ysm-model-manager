@@ -38,6 +38,7 @@ perf:
 invariant_anchors:
   - go/sync/sync.go|fsutil.IsRecycleDir
   - go/sync/sync_relink.go|installer.CopyFile
+status: active
 ---
 
 # 整合包同步 go/sync

@@ -28,6 +28,7 @@ use_when:
   - 排查条件显隐控件不出现
   - P4 子步（A→B→D→C）状态通道复用参考
   - 评估"某状态是否应进 previewState vs 留在 sceneRegistry/SlideMenu/节点字段"
+status: active
 ---
 
 # 3D 预览全域状态层（ADR-126 P4-A）

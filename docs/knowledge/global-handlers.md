@@ -37,6 +37,7 @@ use_when:
   - 导出清单
 invariant_anchors:
   - frontend/src/core/handlers/global.ts|registerGlobalHandlers
+status: active
 ---
 
 # 全局事件处理 global-handlers

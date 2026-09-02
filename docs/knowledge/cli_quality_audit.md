@@ -18,6 +18,7 @@ use_when:
   - 审计
   - 白名单
   - 绑定层
+status: snapshot
 ---
 # CLI 质量摸排 Checklist
 

@@ -25,6 +25,7 @@ use_when:
   - 文件大小颜色
 invariant_anchors:
   - frontend/src/utils/dom/format.ts|Number.isFinite
+status: active
 ---
 
 # 格式化工具 fmt

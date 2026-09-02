@@ -14,6 +14,7 @@ use_when:
 invariant_anchors:
   - go/internal/testutil/testutil.go|CreateTestFile
   - go/internal/testutil/testutil.go|MakeZipBytes
+status: active
 ---
 
 # 测试辅助函数 go/internal/testutil

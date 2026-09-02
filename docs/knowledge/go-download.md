@@ -32,6 +32,7 @@ invariant_anchors:
   - go/download/download.go|ErrPartialResponse
   - go/download/download.go|ErrChecksumMismatch
   - go/download/download.go|HTTPStatusError
+status: active
 ---
 
 # 下载器 go/download

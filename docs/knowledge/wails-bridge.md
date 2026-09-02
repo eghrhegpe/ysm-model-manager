@@ -25,6 +25,7 @@ use_when:
   - window.go.main.App
   - 网页版
   - browser adapter
+status: active
 ---
 # Wails 桥接 app.ts
 

@@ -18,6 +18,7 @@ pitfalls:
 
 use_when:
   - 改配置注入/阈值逻辑，或消费包读阈值时
+status: active
 ---
 
 # Go 配置单持有点 go/config

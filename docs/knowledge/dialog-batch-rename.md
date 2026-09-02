@@ -31,6 +31,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/dom/dialogs/batch-rename.ts|showBatchRenameDialog
   - frontend/src/utils/dom/dialogs/batch-rename-util.ts|rebuildParsedName
+status: active
 ---
 
 # 批量重命名 batch-rename

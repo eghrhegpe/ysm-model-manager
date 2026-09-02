@@ -30,6 +30,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/dom/dialogs/tag-editor.ts|modalTagEditor
   - frontend/src/utils/dom/dialogs/tag-set.ts|addTagToSet
+status: active
 ---
 
 # 标签编辑器 tag-editor

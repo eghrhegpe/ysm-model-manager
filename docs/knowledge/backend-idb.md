@@ -55,6 +55,7 @@ quick_intents:
   - IndexedDB、网页版存储
 quick_risk_lines:
   - 事务必须接线 complete/error/abort 三事件
+status: active
 ---
 
 # 浏览器后端 IndexedDB 封装

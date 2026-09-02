@@ -41,6 +41,7 @@ use_when:
   - 旋转
 invariant_anchors:
   - frontend/src/preview-3d/adapters/input-and-animation.ts|setPointerCapture
+status: active
 ---
 
 # Pointer Events 统一交互（触屏 + 桌面）

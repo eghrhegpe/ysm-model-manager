@@ -33,6 +33,7 @@ perf:
 invariant_anchors:
   - frontend/src/utils/module-loader.ts|loadView
   - frontend/src/app-modules.ts|register
+status: active
 ---
 
 # 组件入口 app-modules

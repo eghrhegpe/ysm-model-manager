@@ -14,6 +14,7 @@ use_when:
   - GLB
   - fbx2gltf
   - assimp
+status: active
 ---
 # FBX CLI 处理管线 fbx-cli-pipeline
 

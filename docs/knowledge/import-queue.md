@@ -40,6 +40,7 @@ perf:
 invariant_anchors:
   - frontend/src/features/dnd-shared.ts|isImportableFile
   - frontend/src/features/import-executor.ts|executeCollected
+status: active
 ---
 
 # 全局导入执行 import-executor

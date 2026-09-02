@@ -10,7 +10,6 @@ use_when:
   - 标签
   - tag
   - 分类
-  - 筛选
   - tag-editor
 perf:
   - io-bound
@@ -23,6 +22,7 @@ quick_intents:
   - 打标签 / 标签存储 / 按标签筛选
 quick_risk_lines:
   - 标签以文件绝对路径为 key 存 tags.json；写入走 tmp + os.Rename 原子替换，禁止直写
+status: active
 ---
 
 # 标签系统 go/tags

@@ -17,7 +17,6 @@ pitfalls:
   - 更新未完成前继续操作 → 半更新状态、启动失败；必须等更新完成再操作
 
 use_when:
-  - 更新
   - 自动更新
   - 版本升级
   - updater
@@ -26,6 +25,7 @@ perf:
 invariant_anchors:
   - go/updater/updater.go|fetchExpectedHash
   - go/updater/updater.go|StatusCode
+status: active
 ---
 
 # 自动更新 go/updater

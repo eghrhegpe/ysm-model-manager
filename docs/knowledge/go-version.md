@@ -19,10 +19,10 @@ pitfalls:
 use_when:
   - 版本
   - version
-  - 更新
   - ldflags
 invariant_anchors:
   - go/version/version.go|ldflags
+status: active
 ---
 
 # 版本号 go/version

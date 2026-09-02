@@ -27,6 +27,7 @@ use_when:
 invariant_anchors:
   - frontend/src/backend/app.ts|getApp
   - frontend/src/backend/browser-adapter.ts|browserAdapter
+status: active
 ---
 
 # 网页版后端 backend-web

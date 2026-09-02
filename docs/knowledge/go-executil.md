@@ -23,6 +23,7 @@ use_when:
   - 外部进程启动
 invariant_anchors:
   - go/executil/hidewindow_windows.go|HideWindow
+status: active
 ---
 
 # 进程隐藏窗口 go/executil

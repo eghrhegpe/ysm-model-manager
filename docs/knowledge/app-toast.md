@@ -28,6 +28,7 @@ use_when:
   - 报错提示
 invariant_anchors:
   - frontend/src/views/app-toast/index.ts|防重入
+status: active
 ---
 
 # Toast 通知 app-toast

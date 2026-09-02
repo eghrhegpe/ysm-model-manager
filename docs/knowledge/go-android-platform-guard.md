@@ -11,6 +11,86 @@ source_files:
   - internal/app/app.go
   - internal/app/app_config_android.go
   - internal/app/pathmgr_android.go
+auto_fields:
+  symbols_with_lines:
+    - App:40
+    - App.CheckFileExists:456
+    - App.CheckUpdate:289
+    - App.ClearScanCache:379
+    - App.CopyModelFile:163
+    - App.CreateDir:23
+    - App.CurrentVersion:287
+    - App.DoUpdate:316
+    - App.ExportModelStructureJSON:24
+    - App.ExtractPreviewTexture:74
+    - App.FindPreviewImage:67
+    - App.GenerateRepoIndex:396
+    - App.GetAppVersion:263
+    - App.GetConfigPath:62
+    - App.GetGlobalCustomDir:424
+    - App.GetMinecraftPaths:479
+    - App.GetPackInfo:82
+    - App.GetSubDirMap:283
+    - App.GetWindowPosition:383
+    - App.GetYSMRepoRoot:107
+    - App.ImportModelFolder:175
+    - App.ImportModelFolderTo:193
+    - App.IsFileBanned:363
+    - App.ListAllFilePaths:447
+    - App.ListFileNames:430
+    - App.ListModelAuthors:387
+    - App.ListVersionInstances:419
+    - App.LoadAppConfig:260
+    - App.MoveModelFile:154
+    - App.OpenFolder:298
+    - App.OpenInBrowser:258
+    - App.OpenInstanceFolder:334
+    - App.RemoveDir:39
+    - App.RenameDir:27
+    - App.RenameFile:51
+    - App.RestartApplication:334
+    - App.RevealInExplorer:268
+    - App.SaveAppConfig:134
+    - App.SaveThresholds:213
+    - App.SaveWindowPosition:369
+    - App.ScanLocalAuthors:407
+    - App.ScanModelEntries:282
+    - App.ScanModelEntriesFiltered:328
+    - App.ScanModelEntriesWithLabel:304
+    - App.SearchAllModels:193
+    - App.SearchModels:62
+    - App.SelectDirectory:416
+    - App.ServiceShutdown:221
+    - App.ServiceStartup:122
+    - App.SetApp:104
+    - App.SetDownloadMirror:204
+    - App.SetMainWindow:119
+    - App.SetSessionFilesRoot:245
+    - App.ToggleEnable:372
+    - App.ToggleModelEnable:355
+    - App.ValidateMinecraftDir:481
+    - AppDataRoot:45
+    - DefaultRepoRoot:74
+    - FS:139
+    - NewApp:75
+    - Write:86
+  tests:
+    - internal/app/app_config_test.go
+  quick_groups:
+    - 后端桥接与数据存储
+  quick_intents:
+    - Android 平台守卫、RevealInExplorer 降级
+    - 跨平台路径处理、pathmgr
+    - 平台分支、WASM decoder 平台差异
+  use_when:
+    - Android
+    - 平台守卫
+    - RevealInExplorer
+    - OpenFolder
+    - RestartApplication
+    - xdg-open
+    - 重启
+    - Node.js
 tests:
   - internal/app/app_config_test.go
 quick_groups:

@@ -17,6 +17,75 @@ source_files:
   - go/sync/sync_cache.go
   - go/fsutil/hardlink_windows.go
   - go/fsutil/hardlink_other.go
+auto_fields:
+  symbols_with_lines:
+    - CompareGlobalInstanceHashes:29
+    - ConflictContentModified:18
+    - ConflictReport:62
+    - ConflictSizeMismatch:20
+    - ConflictType:14
+    - DetectConflicts:74
+    - DiffEntry:17
+    - DiffFolderContents:583
+    - DiffFolderContentsScan:598
+    - FileConflict:36
+    - FileDiffEntry:510
+    - FindMinecraftDir:47
+    - GetInstanceStatus:28
+    - GetInstanceStatusWith:157
+    - GetLinkType:513
+    - HasDotMinecraftSubdirs:30
+    - HasModInDirFn:19
+    - InvalidateSyncScanCaches:61
+    - IsHardLink:14
+    - ListVersions:15
+    - ListVersionsFunc:13
+    - Logger:19
+    - PullResources:98
+    - PullSingleResource:199
+    - PushResources:28
+    - PushSingleResource:238
+    - RegisterInvalidationHook:30
+    - RelinkDir:20
+    - ResolutionStrategy:24
+    - ResolveConflict:155
+    - ResolveConflicts:196
+    - ResolveConflictsLocked:211
+    - ResolveForceLocal:30
+    - ResolveForceRemote:28
+    - ResolveManual:32
+    - ResourceDiff:31
+    - ScanEntriesFn:300
+    - ScanFunc:24
+    - SortEntries:506
+    - SyncCustomToRepo:259
+    - SyncResources:407
+    - SyncResourcesDirLevel:303
+    - SyncResourcesDirLevelScan:312
+    - SyncResourcesWithConfig:412
+    - SyncToggleStatus:228
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - 整合包同步、推送 / 拉取
+    - sync_diff / sync_hash / sync_push / sync_relink
+    - 冲突处理 conflict.go
+  quick_risk_lines:
+    - 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑
+  pitfalls:
+    - app 层手写同步 → 与 go/sync 判定不一致、冲突未处理；必须经 go/sync
+    - 同步不做 hash 校验 → 文件变更未检测；必须经 sync_hash 校验
+  use_when:
+    - 整合包
+    - 同步
+    - 硬链接
+    - 缺失
+    - 多余
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/sync/sync.go|fsutil.IsRecycleDir
+    - go/sync/sync_relink.go|installer.CopyFile
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

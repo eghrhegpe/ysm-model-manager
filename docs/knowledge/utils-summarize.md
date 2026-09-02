@@ -5,6 +5,43 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/format/summarize.ts
+auto_fields:
+  symbols_with_lines:
+    - DecodedStats:260
+    - findBones:272
+    - safeUrl:87
+    - summarizeDecoded:290
+    - SummaryAnimGroup:16
+    - SummaryAuthor:10
+    - summaryCardHTML:155
+    - SummaryConfigMenu:22
+    - YSMHeader:52
+    - YsmSummary:27
+  tests:
+    - frontend/src/utils/format/summarize-decoded.test.ts
+    - frontend/src/utils/format/summarize.test.ts
+  quick_groups:
+    - 截图导出与缓存
+  quick_intents:
+    - 模型详情、摘要卡片、summaryCardHTML
+    - 预览卡片、加密模型、作者信息、动画分组、免费付费
+  quick_risk_lines:
+    - 模型摘要必须走 summarize.ts 的 summaryCardHTML，禁止手写详情卡片 HTML
+  pitfalls:
+    - 手写详情卡片 → 与 summaryCardHTML 样式不一致、作者信息重复；必须经 summaryCardHTML
+    - 加密模型未走 summarizeDecoded → 加密内容泄露；必须经 summarizeDecoded 的安全提取
+  use_when:
+    - 模型详情
+    - 摘要卡片
+    - summaryCardHTML
+    - 预览卡片
+    - 加密模型
+    - 作者信息
+    - 动画分组
+    - 免费付费
+  invariant_anchors:
+    - frontend/src/utils/format/summarize.ts|summaryCardHTML
+    - frontend/src/utils/format/summarize.ts|summarizeDecoded
 tests:
   - frontend/src/utils/format/summarize-decoded.test.ts
   - frontend/src/utils/format/summarize.test.ts

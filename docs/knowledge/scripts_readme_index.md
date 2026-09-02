@@ -5,6 +5,17 @@ tier: architecture
 category: config
 source_files:
   - scripts/check-readme-index.ts
+auto_fields:
+  symbols_with_lines:
+    - missingFromReadme:37
+  use_when:
+    - README
+    - 脚本索引
+    - 登记处
+    - 脚本登记
+    - check-readme-index
+    - 脚本漂移
+    - 脚本对账
 use_when:
   - README
   - 脚本索引

@@ -13,6 +13,241 @@ source_files:
   - internal/app/container_entries.go
   - go/litematic/voxel.go
   - frontend/src/backend/web-fs.ts
+auto_fields:
+  symbols_with_lines:
+    - __setEncodeImplForTest:205
+    - _clearPmxStatsCache:31
+    - _resetSingletons:218
+    - App.GetVoxelDataInContainer:108
+    - App.ListContainerEntries:73
+    - applyWorkerDecodedTextures:169
+    - BasisEncoderLike:13
+    - BasisModuleLike:29
+    - bindInputHandlers:122
+    - BoneDetail:101
+    - BoneListItem:58
+    - BoneNode:11
+    - BonesPanelItemOpts:32
+    - BoneTree:23
+    - buildBoneTree:36
+    - buildCameraControls:31
+    - buildFbxScene:168
+    - buildFbxSceneFromData:214
+    - buildLitematicScene:406
+    - buildMmdScene:1168
+    - BuildNbtVoxelData:296
+    - BuildNbtVoxelDataFromRoot:305
+    - buildPackScene:289
+    - buildPmxScene:76
+    - buildPmxSceneSliced:209
+    - BuildSchematicVoxelData:520
+    - BuildSchematicVoxelDataFromRoot:529
+    - BuildVoxelData:108
+    - BuildVoxelDataFromRoot:118
+    - buildVrmBoneNodes:20
+    - buildVrmBoneTree:52
+    - buildVrmScene:506
+    - buildYsmScene:500
+    - bytesToBase64:17
+    - CameraControlBridge:13
+    - cancelPendingEncodings:71
+    - captureTextureName:102
+    - cleanupPreview:196
+    - collectAllWebEntries:1270
+    - collectMenuGraph:147
+    - CollectMenuGraphOpts:73
+    - collectNodePredicates:86
+    - createFbxParser:27
+    - createPmxParser:54
+    - createResolveModeBridge:165
+    - createWorkerBridge:65
+    - CreateWorkerBridgeOpts:44
+    - DecodedTexture:23
+    - DEFAULT_GROUND_PARAMS:53
+    - DEFAULT_SKY_PARAMS:63
+    - encodeAndCacheTexture:216
+    - encodeToKTX2Basis:81
+    - Error:168
+    - FBX_TARGET_MAX_DIM:36
+    - FbxDataPort:29
+    - FbxGeometryData:16
+    - FbxMaterialData:29
+    - FbxMeshData:56
+    - FbxParser:18
+    - FbxParseRequest:17
+    - FbxParseResponse:23
+    - FbxScaleInfo:39
+    - FbxSceneBuilderConfig:44
+    - FbxSceneData:88
+    - fbxSceneToData:209
+    - FbxSkeletonData:45
+    - filterAnimFiles:24
+    - findAncestorBoneId:153
+    - getBoneDetail:110
+    - getBonePath:78
+    - getBonePosition:93
+    - getCustomAnimPath:12
+    - getFsaAuthState:73
+    - getSchema:52
+    - getTextureDecoder:149
+    - GroundCapability:62
+    - GroundParams:40
+    - hasActivePreview:240
+    - hasSchema:57
+    - importWebFiles:72
+    - injectSkySunScalePatch:126
+    - InputHandlers:43
+    - InputOptions:28
+    - invalidatePreview:191
+    - Ktx2EncodeRequest:9
+    - Ktx2EncodeResponse:17
+    - Ktx2TextureLoader:61
+    - Ktx2TextureLoaderDeps:21
+    - listBonesWithDepth:65
+    - listSchemas:62
+    - LITEMATIC_SLICE_SCHEMA_ID:219
+    - LitematicBuildOpts:394
+    - LoadingProgressMode:14
+    - makeBonePanelRenderer:40
+    - makeBonesPanelItem:51
+    - makeMenuCtx:12
+    - makePackAdapter:58
+    - makeYsmAdapter:531
+    - makeYsmModelSchemaId:29
+    - makeZipOverlayPort:120
+    - MaterialBridgeLike:10
+    - materialNodes:18
+    - MAX_KTX2_PIXELS:65
+    - MAX_MODELS:209
+    - MenuGraph:58
+    - MenuGraphNode:32
+    - MmdDataPort:66
+    - mmdMenuItems:1273
+    - MmdMenuItemsOpts:1241
+    - MmdPanelHooks:185
+    - MmdZipConfig:20
+    - mockMenuHandle:36
+    - MODEL_SKY_PRESETS:91
+    - ModelEntry:21
+    - MorphMeshLike:10
+    - morphNodes:20
+    - mount3D:263
+    - Mount3DOptions:245
+    - normalizeFbxScale:55
+    - OpenGzRootFromBytes:64
+    - PackAdapterOpts:34
+    - PackDeps:27
+    - PerceptionCapability:19
+    - perceptionNodes:36
+    - PerceptionState:10
+    - pickBone:169
+    - PmxBoneData:56
+    - PmxBuilderConfig:29
+    - PmxBuildResult:37
+    - PmxDisplayFrameData:130
+    - PmxFaceData:33
+    - PmxFileStats:16
+    - PmxJointData:115
+    - PmxMaterialData:39
+    - PmxMorphData:71
+    - pmxObjectToResponse:194
+    - PmxParser:46
+    - PmxParseRequest:17
+    - PmxParseResponse:78
+    - PmxRigidBodyData:98
+    - PmxVertexData:23
+    - PostprocessingLike:8
+    - prepareMmdZipInput:209
+    - PreviewAdapter:130
+    - PreviewBuildCtx:81
+    - PreviewHandle:140
+    - PreviewScene:104
+    - readPmxStats:39
+    - readVrmMeta:110
+    - readWebFile:212
+    - reauthorizeFsaRoot:73
+    - registerSchema:41
+    - renderLoadingState:17
+    - RenderVrmBonePanel:31
+    - RepresentativeSnapshot:26
+    - rescanFsaRoot:73
+    - resetEncoderState:83
+    - resetSchemas:67
+    - resolveMmdZipConfig:41
+    - ResolveModeBridge:158
+    - ResolveModeResponse:15
+    - scanAllWebModels:911
+    - scanWebModels:87
+    - sceneRegistry:206
+    - scheduleBackgroundEncoding:267
+    - SchemaBuilder:34
+    - selectLocalRepo:73
+    - setBoneNodeVisible:129
+    - showLoadFailure:35
+    - SkyCapability:315
+    - SkyModelType:83
+    - SkyParams:30
+    - SwitchContext:32
+    - switchPreview:234
+    - switchToSession:95
+    - syncLightTargetFromContent:423
+    - TexDecodeConfig:15
+    - TexDecodeRequest:9
+    - TexDecodeResponse:17
+    - TextureDecoder:40
+    - TextureTooLargeError:68
+    - toggleBoneVisible:137
+    - typeFromWebDir:78
+    - unregisterSchema:47
+    - VrmBonePanelCtx:21
+    - VrmDataPort:33
+    - vrmMenuItems:564
+    - VrmMenuItemsOpts:526
+    - VrmMetaInfo:89
+    - VrmModelInfoCtx:173
+    - VrmPanelHooks:180
+    - webFsBindings:1285
+    - WorkerBridge:29
+    - WorkerErrorStrategy:22
+    - YSM_MODEL_SCHEMA_ID:20
+    - YsmAdapterOptions:44
+    - ysmMenuItems:592
+    - YsmMenuItemsOpts:550
+    - zipFindEntry:226
+  tests:
+    - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
+    - frontend/src/preview-3d/adapters/ysm-3d.test.ts
+    - frontend/src/views/app-preview/litematic-3d.test.ts
+  use_when:
+    - 3D 预览
+    - 统一预览外壳
+    - 程序化天空 / sky / 背景 / scene.background
+    - PreviewAdapter 适配器
+    - 全模型预览（YSM / VRM / MMD / Litematic）
+    - mount3D
+  perf:
+    - gpu-bound
+  invariant_anchors:
+    - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
+    - frontend/src/preview-3d/adapters/mount-preview-core.ts|_singletonScene.background
+    - frontend/src/preview-3d/caps/sky-capability.ts|SkyCapability
+    - frontend/src/preview-3d/adapters/mount-preview-core.ts|PreviewAdapter
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 追加模型、同台加载、多模型同框
+    - 模型切换、会话内替换
+    - 3D 预览菜单、根菜单、dock 按钮
+    - VRM 动画播放、VRMA
+  quick_risk_lines:
+    - 跨类型必须走 switchExternal，禁止直接调 adapter.build
+    - switchTo 仅同类型；跨类型用 switchExternal
+    - 适配器项经 setAdapterItems 注入，禁止内联
+    - 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update()
+  pitfalls:
+    - 「frontend/src/preview-3d/menu/core.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
+    - 「skeleton.ts」异步回调写入已卸载 DOM → 每个 await 后检查 container.isConnected
+    - 「vrm.humanoid.update()」手动调用导致 T-pose 回归 → 只用 vrm.update(dt)
 tests:
   - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
   - frontend/src/preview-3d/adapters/ysm-3d.test.ts

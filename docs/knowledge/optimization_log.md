@@ -18,6 +18,105 @@ source_files:
   - internal/app/app_model.go
   - internal/app/app_texture_cache.go
   - go/texture_cache/texture_cache.go
+auto_fields:
+  symbols_with_lines:
+    - __setEncodeImplForTest:205
+    - App.AnalyzeBedrockModel:249
+    - App.AnalyzeBedrockModelEntry:311
+    - App.AnalyzeYSMModel:39
+    - App.Build3DSpecFromGeometryJSON:410
+    - App.ClearTextureCache:84
+    - App.ExtractYSMHeader:57
+    - App.ExtractYSMHeaderFromBase64:61
+    - App.ExtractYsmSummary:43
+    - App.GetCachedTexture:28
+    - App.GetCachedTextureByHash:96
+    - App.GetModel3DSpec:359
+    - App.HasCachedTexture:89
+    - App.HasCachedTextures:112
+    - App.ReadFileBytes:117
+    - App.ReadFileBytesBatch:139
+    - App.ReadFileBytesBatchWithMeta:212
+    - App.SaveCachedTexture:74
+    - App.SavePreviewTempFile:74
+    - App.SaveScreenshotFile:521
+    - applyWorkerDecodedTextures:169
+    - BasisEncoderLike:13
+    - BasisModuleLike:29
+    - buildMmdScene:1168
+    - buildPmxScene:76
+    - buildPmxSceneSliced:209
+    - CacheDir:29
+    - CachedTextureResult:19
+    - CacheEntry:137
+    - CachePath:48
+    - CacheStats:183
+    - cancelPendingEncodings:71
+    - ClearCache:112
+    - createPmxParser:54
+    - DecodedTexture:23
+    - encodeAndCacheTexture:216
+    - encodeToKTX2Basis:81
+    - formatLongTask:63
+    - GetCacheStats:190
+    - getTextureDecoder:149
+    - HasCached:96
+    - Ktx2EncodeRequest:9
+    - Ktx2EncodeResponse:17
+    - Ktx2TextureLoader:61
+    - Ktx2TextureLoaderDeps:21
+    - ListCacheFiles:144
+    - LongTaskInfo:11
+    - MAX_KTX2_PIXELS:65
+    - MmdDataPort:66
+    - mmdMenuItems:1273
+    - MmdMenuItemsOpts:1241
+    - MmdPanelHooks:185
+    - PmxBoneData:56
+    - PmxBuilderConfig:29
+    - PmxBuildResult:37
+    - PmxDisplayFrameData:130
+    - PmxFaceData:33
+    - PmxJointData:115
+    - PmxMaterialData:39
+    - PmxMorphData:71
+    - PmxParser:46
+    - PmxParseRequest:17
+    - PmxParseResponse:78
+    - PmxRigidBodyData:98
+    - PmxVertexData:23
+    - Prune:258
+    - PruneResult:249
+    - ReadCached:58
+    - ReadFileMeta:188
+    - resetEncoderState:83
+    - scheduleBackgroundEncoding:267
+    - SetCacheLimits:240
+    - startMainThreadWatch:24
+    - TexDecodeConfig:15
+    - TextureDecoder:40
+    - TextureHash:39
+    - TextureTooLargeError:68
+    - WriteCached:78
+  tests:
+    - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
+    - frontend/src/preview-3d/adapters/mmd-ktx2-encoder.test.ts
+    - frontend/src/preview-3d/adapters/mmd-ktx2-texture-loader.test.ts
+    - frontend/src/utils/main-thread-watch.test.ts
+  use_when:
+    - 性能优化
+    - KTX2 编码
+    - 纹理缓存
+    - 主线程监控
+    - 内存泄漏
+  perf:
+    - cpu-bound
+    - gpu-bound
+    - concurrent
+    - memory-heavy
+  invariant_anchors:
+    - frontend/src/preview-3d/adapters/mmd-adapter.ts|mmdMenuItems
+    - frontend/src/utils/main-thread-watch.ts|startMainThreadWatch
 tests:
   - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
   - frontend/src/preview-3d/adapters/mmd-ktx2-encoder.test.ts

@@ -15,6 +15,97 @@ source_files:
   - frontend/src/preview-3d/caps/fog-capability.ts
   - frontend/src/preview-3d/caps/shadow-capability.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
+auto_fields:
+  symbols_with_lines:
+    - _resetSingletons:218
+    - AmbientLightParams:46
+    - attenuateAmbientForSky:364
+    - cleanupPreview:196
+    - DEFAULT_ENV_PARAMS:138
+    - DEFAULT_FOG_PARAMS:30
+    - DEFAULT_GROUND_PARAMS:53
+    - DEFAULT_LIGHT_PARAMS:107
+    - DEFAULT_POSTPROC_PARAMS:87
+    - DEFAULT_SHADOW_PARAMS:39
+    - DEFAULT_SKY_PARAMS:63
+    - DirectionalLightParams:36
+    - drawEnvEquirect:158
+    - ENV_PRESET_BY_MODEL:147
+    - ENV_PRESET_LINKAGE:100
+    - ENV_PRESETS:43
+    - EnvironmentCapability:399
+    - EnvironmentParams:127
+    - EnvPreset:22
+    - EnvPresetId:20
+    - EnvPresetLinkage:88
+    - FOG_PRESETS:40
+    - FogCapability:68
+    - FogMode:15
+    - FogParams:17
+    - GroundCapability:62
+    - GroundParams:40
+    - hasActivePreview:240
+    - injectSkySunScalePatch:126
+    - invalidatePreview:191
+    - isSkyEnvironmentOn:133
+    - LIGHT_PRESETS:117
+    - LightCapability:368
+    - lightDirToPosition:348
+    - LightParams:79
+    - MODEL_SKY_PRESETS:91
+    - mount3D:263
+    - Mount3DOptions:245
+    - POSTPROC_PRESETS:359
+    - PostprocessingCapability:369
+    - PostprocessingParams:35
+    - PreviewAdapter:130
+    - PreviewBuildCtx:81
+    - PreviewHandle:140
+    - PreviewScene:104
+    - ReflectionMode:33
+    - SceneCapabilityFactory:24
+    - sceneCapabilityRegistry:111
+    - SceneCapabilityRegistry:32
+    - SHADOW_PRESETS:49
+    - ShadowCapability:171
+    - ShadowParams:24
+    - SkyCapability:315
+    - SkyModelType:83
+    - SkyParams:30
+    - SpotlightParams:51
+    - switchPreview:234
+    - VolumetricParams:65
+  tests:
+    - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
+    - frontend/src/preview-3d/caps/environment-capability.test.ts
+    - frontend/src/preview-3d/caps/fog-capability.test.ts
+    - frontend/src/preview-3d/caps/ground-capability.test.ts
+    - frontend/src/preview-3d/caps/light-capability.test.ts
+    - frontend/src/preview-3d/caps/postprocessing-capability.test.ts
+    - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
+    - frontend/src/preview-3d/caps/shadow-capability.test.ts
+    - frontend/src/preview-3d/caps/sky-capability.test.ts
+  use_when:
+    - 联邦渲染
+    - shared renderer
+    - rAF 复用
+    - 多 3D 场景
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 渲染联邦、shared renderer、rAF 复用
+    - 多 3D 场景共存
+  quick_risk_lines:
+    - 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer
+  pitfalls:
+    - 各自创建 renderer → 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享
+    - rAF 未统一节流 → 帧率不统一；必须经 federation 的 rAF 调度
+  related_adrs:
+    - ADR-073-federal-render-caps
+    - ADR-084-personal-lighting
+    - ADR-097-scene-capability-registry
+  perf:
+    - gpu-bound
 tests:
   - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
   - frontend/src/preview-3d/caps/environment-capability.test.ts

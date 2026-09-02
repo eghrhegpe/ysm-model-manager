@@ -9,6 +9,61 @@ source_files:
   - frontend/src/features/dnd-shared.ts
   - frontend/src/features/dnd-collector.ts
   - frontend/src/features/pack-dnd.ts
+auto_fields:
+  symbols_with_lines:
+    - bindPackCardDnD:184
+    - bindTreeDnD:123
+    - collectDropFiles:99
+    - CollectedEntry:23
+    - CollectedFile:6
+    - collectFiles:35
+    - directImport:62
+    - executeCollected:180
+    - fileToBase64:39
+    - FolderGroup:40
+    - getExt:29
+    - groupCollected:52
+    - handleInstanceDrop:47
+    - handleTreeDrop:28
+    - ImportFile:20
+    - importFolder:99
+    - importWebFilesWithToast:205
+    - isEditableTarget:84
+    - isImportableFile:15
+    - isSupportedFile:9
+    - PackDndBusy:26
+    - PackDndInstance:32
+    - shouldEnterForm:23
+  tests:
+    - frontend/src/features/import-executor.test.ts
+    - frontend/src/features/import-dnd.test.ts
+    - frontend/src/features/dnd-shared.test.ts
+    - frontend/src/features/dnd-collector.test.ts
+    - frontend/src/features/pack-dnd.test.ts
+  quick_groups:
+    - 文件操作与标签
+  quick_intents:
+    - 导入队列、拖拽导入、文件夹导入
+    - 覆盖导入、import-executor
+    - dnd-shared / dnd-collector / pack-dnd
+  quick_risk_lines:
+    - 导入必须走 import-executor 单点编排 + dnd-collector 收集，禁止各组件各自调 ImportModel
+  pitfalls:
+    - 各组件各自调 ImportModel → 并发冲突、队列状态混乱；必须经 import-executor
+    - dnd-collector 未做去重 → 同文件重复导入；必须在 collector 阶段去重
+  use_when:
+    - 导入
+    - 导入队列
+    - 拖拽导入
+    - 文件夹导入
+    - 覆盖导入
+    - import
+    - 拖拽
+  perf:
+    - io-bound
+  invariant_anchors:
+    - frontend/src/features/dnd-shared.ts|isImportableFile
+    - frontend/src/features/import-executor.ts|executeCollected
 tests:
   - frontend/src/features/import-executor.test.ts
   - frontend/src/features/import-dnd.test.ts

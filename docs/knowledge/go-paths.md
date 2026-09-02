@@ -5,6 +5,42 @@ tier: architecture
 category: go
 source_files:
   - go/paths/
+auto_fields:
+  symbols_with_lines:
+    - ContainsMinecraftMarker:166
+    - ErrEmptyBase:20
+    - ErrEmptyPath:16
+    - ErrNotInside:22
+    - ErrNULByte:18
+    - ErrPathEscalation:32
+    - ErrPathEscalation.Error:40
+    - ErrPathEscalation.Unwrap:46
+    - ErrRelFailed:28
+    - ErrResolveBase:24
+    - ErrResolvePath:26
+    - HasTraversal:144
+    - IsInside:51
+    - IsInsideResolved:116
+    - ResolveOrKeep:135
+  quick_groups:
+    - 文件操作与标签
+  quick_intents:
+    - 路径安全、路径校验、path
+    - IsInside / IsInsideResolved
+    - 路径穿越
+  quick_risk_lines:
+    - 路径校验必须走 go/paths 的 IsInside，禁止手写路径安全检查
+  pitfalls:
+    - 手写路径安全检查 → 越权路径穿越、符号链接绕过；必须经 IsInside
+    - 符号链接未解析 → 路径穿越绕过 IsInside；必须用 IsInsideResolved 处理符号链接
+  use_when:
+    - 路径
+    - 安全
+    - path
+    - 路径校验
+  invariant_anchors:
+    - go/paths/safe.go|IsInside
+    - go/paths/safe.go|IsInsideResolved
 quick_groups:
   - 文件操作与标签
 quick_intents:

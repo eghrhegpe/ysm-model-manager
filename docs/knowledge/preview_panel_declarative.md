@@ -13,6 +13,77 @@ source_files:
   - frontend/src/views/app-preview/mmd-controls.ts
   - frontend/src/views/app-preview/ysm-controls.ts
   - frontend/src/views/app-preview/shot-panel-shared.ts
+auto_fields:
+  symbols_with_lines:
+    - buildMmdScene:1168
+    - buildPreviewMenuRouters:181
+    - buildYsmScene:500
+    - CameraControlBridge:19
+    - collectPreviewLeafNodes:128
+    - collectPreviewNodeIds:141
+    - fillMmdModelPanel:44
+    - fillMmdShotPanel:213
+    - fillYsmShotPanel:74
+    - isPreviewFolderNode:123
+    - makeShotAction:34
+    - makeYsmAdapter:531
+    - MaterialControlBridge:180
+    - MmdBottomNavCtx:29
+    - MmdDataPort:66
+    - mmdMenuItems:1273
+    - MmdMenuItemsOpts:1241
+    - mmdModelInfoNodes:62
+    - MmdPanelHooks:185
+    - MmdPlayBridge:96
+    - mmdShotNodes:197
+    - MorphMeshLike:10
+    - morphNodes:20
+    - mountPreviewRootMenu:467
+    - playNodes:114
+    - PreviewActionMenuCtx:17
+    - PreviewControlSpec:40
+    - PreviewMenuCtx:38
+    - PreviewMenuHandle:74
+    - PreviewMenuNode:68
+    - PreviewMenuNodeKind:23
+    - PreviewMenuRouters:169
+    - registerYsmModelSchema:105
+    - renderAdapterPanelContent:482
+    - renderCapControls:70
+    - renderMenu:35
+    - renderPreviewPanel:225
+    - roleBaseName:34
+    - shotButtonNodes:65
+    - YsmAdapterOptions:44
+    - YsmContentHandle:33
+    - YsmControlsContext:46
+    - ysmMenuItems:592
+    - YsmMenuItemsOpts:550
+    - YsmModel:24
+    - ysmShotNodes:69
+  tests:
+    - frontend/src/preview-3d/menu/items.test.ts
+    - frontend/src/preview-3d/adapters/morph-controls.test.ts
+    - frontend/src/views/app-preview/mmd-controls.test.ts
+    - frontend/src/views/app-preview/ysm-controls.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）
+    - renderCustom vs children 声明式
+    - P4-B 子步（1→2→3）状态通道复用
+  quick_risk_lines:
+    - 3D 预览面板内容必须走声明式菜单节点（children / renderCustom），禁止在 adapter 里手写 DOM
+  pitfalls:
+    - adapter 手写 DOM → 与声明式菜单系统不一致、面板内容不出现；必须走声明式节点
+    - renderCustom 与 children 混用 → 渲染通道冲突；必须二选一
+  use_when:
+    - 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）
+    - 评估"面板内容该走 renderCustom 还是 children 声明式"
+    - 排查面板内容不出现 / 渲染通道冲突
+    - P4-B 子步（1→2→3）状态通道复用参考
+  perf:
+    - gpu-bound
 tests:
   - frontend/src/preview-3d/menu/items.test.ts
   - frontend/src/preview-3d/adapters/morph-controls.test.ts

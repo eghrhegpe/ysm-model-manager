@@ -8,6 +8,40 @@ source_files:
   - frontend/src/ui/ui-slide-menu-styles.ts
   - frontend/src/ui/ui-helpers.ts
   - frontend/src/ui/ui-components-styles.ts
+auto_fields:
+  symbols_with_lines:
+    - addFieldRow:19
+    - cardContainer:18
+    - createSlideMenu:20
+    - installSlideMenuStyles:169
+    - installUiComponentsStyles:25
+    - slideMenuCss:9
+    - SlideMenuHandle:34
+    - slideMenuStyleSheet:165
+    - SlideMenuView:27
+    - uiComponentsCss:7
+    - uiComponentsStyleSheet:21
+  quick_groups:
+    - UI 交互与弹窗
+  quick_intents:
+    - slide-menu、slide 菜单、去桶化
+    - 两级菜单、轻量导航栈、createSlideMenu / slideRow
+  quick_risk_lines:
+    - slide-menu 外壳必须复用 ui-slide-menu 的轻量导航栈，禁止手写导航栈
+  pitfalls:
+    - 手写导航栈 → 与 ui-slide-menu 的 home/navigate/back 契约不一致；必须复用
+    - slide-menu 挂业务 registry/schema → 外壳层混入业务；必须保持外壳纯净
+  use_when:
+    - slide-menu
+    - slide 菜单
+    - 去桶化
+    - 两级菜单
+    - 轻量导航栈
+    - createSlideMenu
+    - slideRow
+  invariant_anchors:
+    - frontend/src/ui/ui-slide-menu.ts|createSlideMenu
+    - frontend/src/ui/ui-slide-menu.ts|home
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

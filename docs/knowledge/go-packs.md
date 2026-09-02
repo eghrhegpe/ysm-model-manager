@@ -6,6 +6,46 @@ category: go
 source_files:
   - go/packs/mcmeta.go
   - go/packs/
+auto_fields:
+  symbols_with_lines:
+    - ClassContainer:38
+    - ClassifyExt:72
+    - ClassifyResource:44
+    - ClassOther:39
+    - CountZipEntryMatches:290
+    - DetectByEntries:83
+    - DetectResourceType:139
+    - ErrPackMetaNotFound:28
+    - ErrPackMetaTooLarge:30
+    - IsTypeModelFile:354
+    - IsYsmFile:270
+    - MatchYsmEntries:304
+    - MatchZipArchive:285
+    - ReadPackMeta:34
+    - ReadShaderpackLang:161
+    - ReadShaderpackLangParts:172
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - 资源包 / 光影包、mcmeta、pack_format
+    - 缩略图、类型检测
+  quick_risk_lines:
+    - 资源包元数据必须走 go/packs 的 mcmeta 解析，前端禁止手写 mcmeta.json 解析
+  pitfalls:
+    - 前端手写 mcmeta.json 解析 → 与 Go 解析字段不一致、漏检 pack_format；必须交 Go 解析
+    - 未限制 LimitReader/maxLangSize → 大语言文件 OOM；必须用 LimitReader 截断
+  use_when:
+    - 资源包
+    - 光影包
+    - mcmeta
+    - pack_format
+    - 包封面缩略图
+    - 类型检测
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/packs/mcmeta.go|LimitReader
+    - go/packs/mcmeta.go|maxLangSize
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

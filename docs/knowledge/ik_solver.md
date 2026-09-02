@@ -6,6 +6,34 @@ category: core
 source_files:
   - frontend/src/preview-3d/ik-solver.ts
   - frontend/src/preview-3d/mmd-foot-ik.ts
+auto_fields:
+  symbols_with_lines:
+    - createFootIKController:27
+    - extractIKChainFromTree:200
+    - FootIKController:13
+    - IKChain:24
+    - IKConfig:27
+    - IKResult:45
+    - solveIK:78
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - IK 求解、骨骼 IK、足部锚地
+    - foot IK、极向量 / pole、CCD
+  quick_risk_lines:
+    - IK 求解必须走 ik-solver 的 CCD 求解器 + mmd-foot-ik 的足部锚地，禁止手写 IK 逻辑
+  pitfalls:
+    - 手写 IK 逻辑 → 与 babylon-mmd 参考行为不一致、足部漂移；必须经 ik-solver
+    - extractIKChainFromTree 未做防环 → 骨骼链循环死循环；必须校验 parentId 链防环
+  use_when:
+    - IK 求解
+    - 骨骼 IK
+    - 足部锚地
+    - foot IK
+    - 极向量 / pole
+    - CCD
+  perf:
+    - cpu-bound
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

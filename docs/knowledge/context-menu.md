@@ -12,6 +12,53 @@ source_files:
   - frontend/src/core/context-menu-handlers.ts
   - frontend/src/core/context-menu-shared.ts
   - frontend/src/core/handlers/instance-ops.ts
+auto_fields:
+  symbols_with_lines:
+    - DIR_HANDLERS:10
+    - FILE_HANDLERS:14
+    - getMenuDef:128
+    - HANDLERS:139
+    - isUnsafeFolderName:42
+    - MENU_DEFS:40
+    - MenuCtx:136
+    - MenuDef:34
+    - refreshUI:18
+    - registerContextMenus:84
+    - registerInstanceOps:12
+    - resolveDstDir:54
+    - toast:24
+    - toastEmptyRtype:37
+    - toastError:32
+    - VIEW_TESTIDS:10
+  tests:
+    - frontend/src/core/context-menus.test.ts
+    - frontend/src/core/handlers/instance-ops.test.ts
+    - frontend/src/views/app-nav/index.test.ts
+    - frontend/src/views/app-sync-manager/index.test.ts
+    - frontend/src/views/app-toast/index.test.ts
+    - frontend/src/views/context-menu/index.test.ts
+  use_when:
+    - 右键菜单
+    - 右键
+    - 上下文菜单
+    - ctx:show
+    - menu:show
+    - 批量操作
+    - 移入回收站
+  invariant_anchors:
+    - frontend/src/core/context-menus.ts|registerContextMenus
+    - frontend/src/core/menu-defs.ts|MENU_DEFS
+    - frontend/src/core/menu-defs.ts|getMenuDef
+  quick_groups:
+    - UI 交互与弹窗
+  quick_intents:
+    - 右键菜单、添加菜单项
+    - 菜单行为执行、ctx:show
+  quick_risk_lines:
+    - 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 core/context-menus.ts
+    - 禁止 view 层手写菜单项
+  pitfalls:
+    - 「view 层」内联菜单结构 → 必须声明进 menu-defs.ts
 tests:
   - frontend/src/core/context-menus.test.ts
   - frontend/src/core/handlers/instance-ops.test.ts

@@ -17,6 +17,105 @@ source_files:
   - frontend/src/views/app-preview/model2d/model2d.ts
   - frontend/src/preview-3d/state/preview-state.ts
   - frontend/src/preview-3d/render-budget.ts
+auto_fields:
+  symbols_with_lines:
+    - AdaptiveRenderBudget:52
+    - BedrockBone:26
+    - BedrockCube:16
+    - BedrockModel:32
+    - buildBoneExportRow:168
+    - buildDepthMap:34
+    - buildStatsCard:90
+    - buildToggleRow:48
+    - buildYsmModelSchema:319
+    - calcBoneHitZones:11
+    - closeActive3DOverlay:36
+    - createAdaptiveRenderBudget:63
+    - fill3DPanel:18
+    - getFrameIntervalMs:44
+    - getMaxFps:33
+    - getMaxPixelRatio:10
+    - getPrefer3D:36
+    - getStateValue:300
+    - invalidateMaxFpsCache:30
+    - iRow:15
+    - isPathAvailable:319
+    - KNOWN_PATHS:53
+    - loadModel2D:59
+    - makeShotAction:34
+    - MAX_FPS_DEFAULT:22
+    - MAX_FPS_KEY:23
+    - MAX_PIXEL_RATIO_KEY:5
+    - Model2DOptions:37
+    - openFullPreview:7
+    - PanelHandle:13
+    - PREVIEW_FRAME_INTERVAL_MS:17
+    - PreviewCtx:32
+    - PreviewDebugger:20
+    - PreviewImageLoader:25
+    - previewPixelRatio:58
+    - PreviewRoot:8
+    - previewSnapshot:328
+    - PreviewSnapshot:82
+    - PreviewStatePath:74
+    - renderModel2D:58
+    - resetActiveComponent:269
+    - resetSettingsListeners:335
+    - sampleAdaptivePixelRatio:74
+    - saveScreenshot:201
+    - sec:6
+    - setActive3DClose:42
+    - setPrefer3D:39
+    - setStateValue:309
+    - setup2DCanvas:23
+    - shotButtonNodes:65
+    - shouldRenderAtFps:101
+    - shouldRenderPreviewFrame:90
+    - subscribeSettings:279
+    - toStatePath:90
+    - YsmDecoder:15
+    - ysmModelStats:271
+    - YsmModelStats:263
+    - ysmModelTextureSlots:291
+  tests:
+    - frontend/src/preview-3d/decoder/utils.test.ts
+    - frontend/src/preview-3d/render-budget.test.ts
+    - frontend/src/preview-3d/state/preview-state.test.ts
+    - frontend/src/test-utils/index.test.ts
+    - frontend/src/views/app-nav/index.test.ts
+    - frontend/src/views/app-preview/model2d/model2d.test.ts
+    - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
+    - frontend/src/views/app-preview/skeleton-render.test.ts
+    - frontend/src/views/app-preview/skeleton.test.ts
+    - frontend/src/views/app-preview/utils.test.ts
+    - frontend/src/views/app-preview/zoom.test.ts
+    - frontend/src/views/app-sync-manager/index.branches.test.ts
+    - frontend/src/views/app-sync-manager/index.test.ts
+    - frontend/src/views/app-toast/index.test.ts
+    - frontend/src/views/app-tree/index.extra.test.ts
+    - frontend/src/views/context-menu/index.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 预览设置、显示控制、骨骼名称开关
+    - 帧率 / 像素比 / 视锥剔除 / 3D 偏好
+    - 截图灯光、activeComponent、组件选择
+  quick_risk_lines:
+    - 预览设置集中由 preview-state.ts 的 KNOWN_PATHS 注册管理，新增选项必须经注册而非直接读写状态
+  pitfalls:
+    - 直接改 preview-state 未注册字段 → 切页/换模后状态回滚、选项失效；应走 KNOWN_PATHS
+    - 截图灯光与预览灯光混用 → 导出 PNG 与实时预览不一致；截图灯光必须走 shot-panel 独立通道
+  use_when:
+    - 预览设置
+    - 显示控制
+    - 骨骼名称
+    - 帧率
+    - 截图灯光
+  invariant_anchors:
+    - frontend/src/preview-3d/state/preview-state.ts|KNOWN_PATHS
+    - frontend/src/preview-3d/state/preview-state.ts|setStateValue
+    - frontend/src/views/app-preview/skeleton-render.ts|buildToggleRow
+    - frontend/src/preview-3d/render-budget.ts|MAX_FPS_DEFAULT
 tests:
   - frontend/src/preview-3d/decoder/utils.test.ts
   - frontend/src/preview-3d/render-budget.test.ts

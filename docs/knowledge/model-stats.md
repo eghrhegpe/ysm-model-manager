@@ -8,6 +8,56 @@ source_files:
   - frontend/src/workers/stats-protocol.ts
   - frontend/src/workers/stats.worker.ts
   - frontend/src/backend/web-stats.ts
+auto_fields:
+  symbols_with_lines:
+    - __setStatsRunnerForTest:53
+    - batchStatsWebModels:173
+    - consumeWebSearchDegraded:58
+    - getStatsPoolSize:91
+    - ModelStatsResult:20
+    - onStatsProgress:40
+    - prefetchStatsWorker:113
+    - STATS_BATCH_LIMIT:19
+    - StatsFileInput:14
+    - statsFromDecodedFiles:76
+    - statsFromJsonBytes:120
+    - StatsRelReader:112
+    - StatsWorkerError:42
+    - StatsWorkerProgress:27
+    - StatsWorkerRequest:17
+    - StatsWorkerResponse:48
+    - StatsWorkerResult:35
+    - terminateStatsWorker:65
+    - WebModelStats:5
+    - WebModelStatsWithPath:14
+  tests:
+    - frontend/src/workers/stats-core.test.ts
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - 模型统计、骨骼数/立方体数/纹理尺寸
+    - SearchModels 数值筛选
+    - Web Worker、批量统计
+  quick_risk_lines:
+    - 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿
+  pitfalls:
+    - 主线程同步跑统计 → 大库卡死 UI；必须经 Web Worker 后台统计
+    - Worker 未独立加载 WASM → 与主线程 WASM 实例冲突；必须在 Worker 内独立 open 解码
+  use_when:
+    - 模型统计
+    - 骨骼数
+    - 立方体数
+    - 纹理尺寸
+    - SearchModels
+    - 数值筛选
+    - Web Worker
+    - 批量统计
+  perf:
+    - cpu-bound
+    - concurrent
+  invariant_anchors:
+    - frontend/src/workers/stats-core.ts|statsFromDecodedFiles
+    - frontend/src/backend/web-stats.ts|batchStatsWebModels
 tests:
   - frontend/src/workers/stats-core.test.ts
 quick_groups:

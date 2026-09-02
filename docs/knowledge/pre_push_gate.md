@@ -7,6 +7,36 @@ source_files:
   - scripts/pre-push-gate.ts
   - .githooks/pre-push
   - scripts/_lib/gate-config.ts
+auto_fields:
+  symbols_with_lines:
+    - ALL_STATIC_TOOLS:42
+    - DOC_EXTRA_SCRIPTS:96
+    - DOC_STATIC_TOOLS:76
+    - FRONTEND_STATIC_TOOLS:105
+    - GateTool:30
+    - GO_STATIC_TOOLS:123
+    - SCRIPTS_TYPECHECK:133
+  use_when:
+    - 推送门禁
+    - 质量门禁
+    - 域级检查
+    - 门禁阻断
+    - go build
+    - vite build
+    - 契约测试
+    - Promise.all
+  quick_groups:
+    - 提交与钩子
+  quick_intents:
+    - 推送被门禁阻断怎么办
+    - 门禁检查项有哪些
+    - 改门禁并行结构
+  quick_risk_lines:
+    - 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查
+    - 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过
+  pitfalls:
+    - 改 Promise.all 并行结构漏写 () → 域级检查静默不跑（8/17 起 13 项失效实证）
+    - push 被拒直接 --no-verify → 绕过不留审计；应修 FAIL 项或 git pull 整合
 use_when:
   - 推送门禁
   - 质量门禁

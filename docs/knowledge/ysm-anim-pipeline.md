@@ -8,6 +8,59 @@ source_files:
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
   - frontend/src/utils/animation/molang.ts
   - frontend/src/utils/animation/animation.ts
+auto_fields:
+  symbols_with_lines:
+    - AnimationClip:46
+    - BoneChannels:30
+    - BoneHierarchyNode:67
+    - BoneTransform:57
+    - buildYsmScene:500
+    - compileMolang:71
+    - createYsmAnimPlayer:281
+    - evaluateClip:654
+    - evaluateKeyframes:558
+    - executeTimeline:622
+    - foldMolangConstant:94
+    - Keyframe:19
+    - makeYsmAdapter:531
+    - MolangAxes:16
+    - MolangFn:18
+    - parseBedrockAnimationJSON:482
+    - setMolangScope:39
+    - TimelineEvent:38
+    - Vec3:13
+    - YsmAdapterOptions:44
+    - ysmAnimClipLabels:780
+    - YsmAnimPlayer:32
+    - ysmMenuItems:592
+    - YsmMenuItemsOpts:550
+  tests:
+    - frontend/src/preview-3d/ysm-animation-player.test.ts
+    - frontend/src/utils/animation/animation-controller.test.ts
+    - frontend/src/utils/animation/animation.test.ts
+    - frontend/src/utils/animation/molang.test.ts
+  use_when:
+    - YSM 动画
+    - 基岩动画
+    - molang
+    - 动画管线
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - YSM 动画管线、基岩动画
+    - ysm-animation-player、molang
+    - 动画解析 / 求值 / 渲染注入
+  quick_risk_lines:
+    - YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析
+  pitfalls:
+    - 手写动画解析 → 与基岩版 animation.json 语义不一致；必须经 ysm-animation-player
+    - Molang 求值未缓存 → 每帧重复求值、性能差；必须缓存 Molang 表达式
+  related_adrs:
+    - ADR-061-3d (含勘误记录)
+    - ADR-100 (YSM 骨骼动画)
+    - ADR-113 (Molang 表达式支持)
+  perf:
+    - cpu-bound
 tests:
   - frontend/src/preview-3d/ysm-animation-player.test.ts
   - frontend/src/utils/animation/animation-controller.test.ts

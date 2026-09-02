@@ -6,6 +6,41 @@ category: go
 source_files:
   - go/logs/logs.go
   - go/logs/runtime.go
+auto_fields:
+  symbols_with_lines:
+    - DefaultRuntimeCap:11
+    - Logger:56
+    - Logger.Add:193
+    - Logger.AddOp:198
+    - Logger.Clear:279
+    - Logger.Flush:259
+    - Logger.GetAll:270
+    - NewLogger:78
+    - NewRuntimeBuffer:22
+    - RuntimeBuffer:15
+    - RuntimeBuffer.Clear:60
+    - RuntimeBuffer.GetAll:51
+    - RuntimeBuffer.Write:30
+  quick_groups:
+    - 文件操作与标签
+  quick_intents:
+    - 导入日志、操作记录、日志
+    - import log、历史
+  quick_risk_lines:
+    - 导入日志必须走 go/logs 的 WriteFileAtomic 追加，禁止直接 os.WriteFile
+  pitfalls:
+    - 直接 os.WriteFile → 并发写破坏日志；必须经 WriteFileAtomic 原子追加
+    - 日志未轮转 → 单个文件无限膨胀；必须经日志轮转策略
+  use_when:
+    - 导入日志
+    - 操作记录
+    - 操作日志
+    - import log
+    - 历史
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/logs/logs.go|fsutil.WriteFileAtomic
 quick_groups:
   - 文件操作与标签
 quick_intents:

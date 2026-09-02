@@ -13,6 +13,170 @@ source_files:
   - go/types/bedrock.go
   - go/types/
   - resource_types.json
+auto_fields:
+  symbols_with_lines:
+    - AllExts:65
+    - AllSubDirs:433
+    - AppConfig:10
+    - AppError:195
+    - AppError.Error:216
+    - AppError.Unwrap:214
+    - AppError.WithCause:208
+    - AuthorInfo:14
+    - BedrockModel:4
+    - Bone2D:55
+    - BundledRegistryJSON:410
+    - ContainerExts:86
+    - Cube2D:65
+    - CustomFileInfo:176
+    - DedupConfig:84
+    - DisableSuffixes:151
+    - DownloadTask:55
+    - ErrAlreadyExists:131
+    - ErrDecodeFailed:137
+    - ErrFileEmpty:139
+    - ErrFileExists:130
+    - ErrFileNameInvalid:134
+    - ErrFileTooLarge:138
+    - ErrInvalidParam:132
+    - ErrInvalidPath:133
+    - ErrIO:142
+    - ErrLinkFailed:143
+    - ErrMkdirFailed:140
+    - ErrorCode:127
+    - ErrUnknown:144
+    - ErrUnsupportedFmt:136
+    - ErrUnsupportedType:135
+    - ErrWriteFailed:141
+    - ExtBelongsTo:272
+    - ExtBelongsToBy:290
+    - FileInventory:33
+    - FindInstDir:71
+    - FormatRange:478
+    - FormatRange.UnmarshalJSON:484
+    - GroupIcon:380
+    - GroupLabel:366
+    - GroupOf:337
+    - GroupStorageRoot:349
+    - ImportFileItem:40
+    - ImportLog:96
+    - InstallExtsFor:246
+    - InstanceStatus:182
+    - IsContainerExt:93
+    - IsDirLevelSync:224
+    - IsDisableSuffix:172
+    - IsNestedModelDir:19
+    - IsResourceAllowed:197
+    - IsScanInstance:237
+    - IsSupportedExt:138
+    - IsYsmEntryJSON:146
+    - LauncherInstance:73
+    - LevelDebug:151
+    - LevelError:154
+    - LevelFatal:155
+    - LevelInfo:152
+    - LevelWarn:153
+    - LinkCopy:119
+    - LinkHard:120
+    - LinkSym:121
+    - LinkType:116
+    - LinkUnknown:122
+    - LitematicBlockStat:604
+    - LitematicMeta:587
+    - LitematicVoxelData:610
+    - LoadRegistry:166
+    - LogLevel:148
+    - MatchZipEntry:257
+    - MaxImportSize:52
+    - MaxImportSizeMB:55
+    - MaxReadLimit:61
+    - ModelEntry:21
+    - ModKeywordsFor:442
+    - ModMetaFor:469
+    - ModRequirement:64
+    - NestedPattern:94
+    - NestedPatternsFor:28
+    - NormalizeResourceName:185
+    - PackInfo:50
+    - PackMeta:569
+    - PackMeta.Desc:580
+    - PackMetaView:112
+    - PackModelDetail:136
+    - PackModelDetailList:142
+    - ParseDedupConfig:151
+    - QueueStatusInfo:48
+    - RegistryType:417
+    - ResourceSyncItem:251
+    - ResourceSyncResult:229
+    - ResourceType:30
+    - ResourceType.EffectiveExtensions:102
+    - ResourceType.MatchZipEntry:120
+    - ResourceTypeRegistry:25
+    - ResourceTypeRegistry.FindByID:423
+    - RuntimeLog:109
+    - SearchResult:84
+    - SetBundledRegistryJSON:20
+    - SetRegistryPath:155
+    - ShaderpackLang:122
+    - ShouldHashExt:217
+    - StatusToLevel:160
+    - StorageSubDir:328
+    - StripBanSuffix:167
+    - StripDisableSuffix:156
+    - SubDirAll:421
+    - SubDirEntry:394
+    - SubDirMap:405
+    - SubModel:48
+    - SupportedExtsForSubtype:322
+    - SupportedExtsForType:309
+    - SyncConfig:94
+    - SyncResolveResult:102
+    - SyncScanDirs:128
+    - SyncStatus:236
+    - SyncStatusDisabled:242
+    - SyncStatusDiverged:247
+    - SyncStatusLegacy:243
+    - SyncStatusMissing:240
+    - SyncStatusOptional:241
+    - SyncStatusSynced:239
+    - TypeByLocation:17
+    - Variant:73
+    - VersionInstance:63
+    - VoxelGroup:618
+    - WindowState:6
+    - WorkshopCreator:76
+    - WorkshopPresetSearch:57
+    - WorkshopSite:63
+    - YsmAuthor:98
+    - YsmLicense:92
+    - YsmMetadata:83
+    - ZipEntryMatch:111
+  quick_groups:
+    - 配置与注册表
+  quick_intents:
+    - 共享类型、AppConfig、配置
+    - 注册表、扩展名、LinkType、BedrockModel
+    - LoadRegistry/ParseDedupConfig
+  quick_risk_lines:
+    - 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义
+  pitfalls:
+    - 复制类型定义 → 类型不一致、重构时漏改；必须经 go/types 单点
+    - LoadRegistry 失败未兜底 → 启动崩溃；必须在 LoadRegistry 里做默认值兜底
+  use_when:
+    - 共享类型
+    - AppConfig
+    - 配置
+    - 注册表
+    - 扩展名
+    - LinkType
+    - BedrockModel
+  invariant_anchors:
+    - go/types/resource.go|LoadRegistry
+    - go/types/config.go|AppConfig
+    - go/types/config.go|ParseDedupConfig
+    - go/types/resource.go|ResourceType
+    - go/types/extensions.go|ShouldHashExt
+    - go/types/types.go|ErrorCode
 quick_groups:
   - 配置与注册表
 quick_intents:

@@ -5,6 +5,35 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/dom/errors.ts
+auto_fields:
+  symbols_with_lines:
+    - friendlyError:44
+    - isFileExistsError:87
+    - stripPathSegments:72
+  tests:
+    - frontend/src/utils/dom/errors.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 错误提示、友好错误、friendlyError
+    - toast 文案、报错翻译、网络错误
+    - isFileExistsError
+  quick_risk_lines:
+    - 所有异常路径必须经 friendlyError 转中文提示，禁止裸抛原始错误到 UI
+  pitfalls:
+    - 裸抛原始错误 → 用户看不懂、违反治理红线；必须经 friendlyError 翻译
+    - 网络错误未分类 → 一律显示未知错误；必须经 friendlyError 的网络错误分支
+  use_when:
+    - 错误提示
+    - 友好错误
+    - friendlyError
+    - toast 文案
+    - 报错翻译
+    - 网络错误
+    - 文件被占用
+  invariant_anchors:
+    - frontend/src/utils/dom/errors.ts|friendlyError
+    - frontend/src/utils/dom/errors.ts|isFileExistsError
 tests:
   - frontend/src/utils/dom/errors.test.ts
 quick_groups:

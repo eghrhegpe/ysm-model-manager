@@ -5,6 +5,30 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/preview-3d/adapters/worker-bridge.ts
+auto_fields:
+  symbols_with_lines:
+    - createResolveModeBridge:165
+    - createWorkerBridge:65
+    - CreateWorkerBridgeOpts:44
+    - ResolveModeBridge:158
+    - ResolveModeResponse:15
+    - WorkerBridge:29
+    - WorkerErrorStrategy:22
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - WorkerErrorStrategy 策略
+    - worker-bridge settleError 分支
+  quick_risk_lines:
+    - worker-bridge 的 settleError 三分支必须穷举所有 WorkerErrorStrategy 策略，禁止依赖 else 兜底
+  pitfalls:
+    - 依赖 else 兜底 → 新策略静默走 makeErrorResponse；必须在 settleError 里用 exhaust 匹配
+    - onWorkerError 联合类型未窄化 → 比较字符串时报错；必须经 L65 的 ?? 默认值
+  use_when:
+    - 扩展 WorkerErrorStrategy 策略
+    - 评审 worker-bridge settleError 分支
+  perf:
+    - concurrent
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

@@ -6,6 +6,44 @@ category: go
 source_files:
   - go/avatar/avatar.go
   - go/avatar/
+auto_fields:
+  symbols_with_lines:
+    - CacheAvatarsFromJSON:230
+    - CacheAvatarsFromModel:300
+    - CacheDir:30
+    - DecodeYSMFiles:75
+    - ExtractAvatarURI:215
+    - FS:112
+    - ReadCachedAvatar:139
+    - ReadFileFromContainer:54
+    - ReadFileFromZip:20
+    - SafeName:45
+    - SaveAvatarData:165
+    - SetNodeJS:44
+    - Write:66
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 头像、作者、创作者 avatar
+    - 头像缓存、缩略图
+    - isSafeAvatarPath
+  quick_risk_lines:
+    - 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接
+  pitfalls:
+    - 手写头像路径拼接 → 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验
+    - 头像缓存不失效 → 换头像后仍显示旧图；必须经缓存失效策略
+  use_when:
+    - 头像
+    - 作者
+    - 创作者
+    - avatar
+    - 缓存
+    - 头像缩略图
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/avatar/avatar.go|isSafeAvatarPath
+    - go/avatar/avatar.go|strings.NewReplacer
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

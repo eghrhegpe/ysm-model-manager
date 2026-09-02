@@ -6,6 +6,37 @@ category: ui
 source_files:
   - frontend/src/utils/dom/dialogs/batch-rename.ts
   - frontend/src/utils/dom/dialogs/batch-rename-util.ts
+auto_fields:
+  symbols_with_lines:
+    - applyReplaceToName:41
+    - BatchRenameChange:21
+    - rebuildParsedName:16
+    - ReplaceResult:31
+    - showBatchRenameDialog:438
+  tests:
+    - frontend/src/utils/dom/dialogs/batch-rename.test.ts
+  quick_groups:
+    - UI 交互与弹窗
+  quick_intents:
+    - 批量重命名、查找替换、正则替换
+    - 统一作者 / 作品、5 个内置预设
+    - showBatchRenameDialog
+  quick_risk_lines:
+    - batch-rename 弹窗必须是模块级单例 dialogEl，重复打开先 close() 结算上一个 Promise
+  pitfalls:
+    - 重复打开 batch-rename 不 close → 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算
+    - 正则替换不分离扩展名 → 把 .ext 一起替换掉；必须只对文件名主体替换
+  use_when:
+    - 批量重命名
+    - 批量改名
+    - 查找替换
+    - 正则替换
+    - 统一作者
+    - 预设
+    - batch-rename
+  invariant_anchors:
+    - frontend/src/utils/dom/dialogs/batch-rename.ts|showBatchRenameDialog
+    - frontend/src/utils/dom/dialogs/batch-rename-util.ts|rebuildParsedName
 tests:
   - frontend/src/utils/dom/dialogs/batch-rename.test.ts
 quick_groups:

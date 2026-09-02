@@ -6,6 +6,38 @@ category: ui
 source_files:
   - frontend/src/utils/dom/dialogs/adv-filter.ts
   - frontend/src/utils/dom/dialogs/adv-filter-util.ts
+auto_fields:
+  symbols_with_lines:
+    - AdvFilterResult:19
+    - AdvFilterValue:6
+    - modalAdvFilter:181
+    - parseFilterNumber:21
+    - validateAdvFilter:32
+  tests:
+    - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
+    - frontend/src/utils/dom/dialogs/adv-filter.test.ts
+  quick_groups:
+    - UI 交互与弹窗
+  quick_intents:
+    - 高级筛选、骨骼数 / 立方体 / 纹理尺寸数值范围
+    - 按标签筛选、条件过滤
+    - modalAdvFilter
+  quick_risk_lines:
+    - adv-filter 弹窗必须复用 modal.ts 的 Promise API，禁止手写弹窗 DOM
+  pitfalls:
+    - 手写 adv-filter 弹窗 DOM → 与全局弹窗样式 / 焦点陷阱不一致；必须复用 modal.ts 的 registerDlg
+    - adv-filter 输入不校验就提交 → min > max 传后端报错；必须在 validate() 拦截并在 #afv-err 显示
+  use_when:
+    - 高级筛选
+    - 筛选
+    - 骨骼数
+    - 立方体
+    - 纹理尺寸
+    - 按标签筛选
+    - 条件过滤
+  invariant_anchors:
+    - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
+    - frontend/src/utils/dom/dialogs/adv-filter-util.ts|validateAdvFilter
 tests:
   - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
   - frontend/src/utils/dom/dialogs/adv-filter.test.ts

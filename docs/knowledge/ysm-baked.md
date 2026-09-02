@@ -6,6 +6,25 @@ category: core
 source_files:
   - frontend/src/preview-3d/decoder/wasm-decode.ts
   - frontend/src/preview-3d/decoder/geometry.ts
+auto_fields:
+  symbols_with_lines:
+    - BedrockBone:26
+    - BedrockCube:6
+    - BedrockGeometry:41
+    - BedrockSubModel:19
+    - decodeYsmViaWasm:22
+    - parseBedrockGeometryFromJSON:95
+  tests:
+    - frontend/src/preview-3d/decoder/geometry.test.ts
+  use_when:
+    - 烘焙
+    - 几何反推
+    - pivot
+    - 骨骼错位
+    - 模型错位
+    - UV 对不上
+    - 贴图错位
+    - RawYsmModel
 tests:
   - frontend/src/preview-3d/decoder/geometry.test.ts
 use_when:

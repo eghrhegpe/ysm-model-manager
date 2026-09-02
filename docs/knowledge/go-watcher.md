@@ -5,6 +5,33 @@ tier: architecture
 category: go
 source_files:
   - go/watcher/
+auto_fields:
+  symbols_with_lines:
+    - New:45
+    - ScanFunc:18
+    - Watcher:28
+    - Watcher.IsRunning:157
+    - Watcher.Start:61
+    - Watcher.Stop:109
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - 文件监听、文件变化、刷新
+    - watcher、Events / errs / done
+  quick_risk_lines:
+    - 文件变更监听必须走 go/watcher 的事件流，禁止轮询文件系统
+  pitfalls:
+    - 轮询文件系统 → 延迟高、CPU 浪费；必须经 go/watcher 事件流
+    - watcher 未读 errs/done 通道 → goroutine 泄漏；必须 drain 通道
+  use_when:
+    - 监听
+    - 文件变化
+    - 刷新
+    - watcher
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/watcher/watcher.go|evs, errs, done := w.w.Events
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

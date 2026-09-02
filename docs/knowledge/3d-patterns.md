@@ -10,6 +10,66 @@ source_files:
   - frontend/src/preview-3d/cleanup-helper.ts
   - frontend/src/views/app-preview/preview-library.ts
   - frontend/src/views/app-preview/skeleton.ts
+auto_fields:
+  symbols_with_lines:
+    - _resetSingletons:218
+    - buildModelGroup:299
+    - cleanupPreview:196
+    - closeActive3DOverlay:36
+    - disposeDebugGroup:14
+    - disposeSceneMeshes:40
+    - getRegisteredRoutes:34
+    - hasActivePreview:240
+    - invalidatePreview:191
+    - loadModel2D:59
+    - mount3D:263
+    - Mount3DOptions:245
+    - openModel3DFullscreen:62
+    - OpenModel3DOptions:39
+    - PreviewAdapter:130
+    - PreviewBuildCtx:81
+    - PreviewHandle:140
+    - PreviewScene:104
+    - rebuildDebug:58
+    - registerReRoute:26
+    - scanModelsByType:155
+    - setActive3DClose:42
+    - switchPreview:234
+    - withPreviewExtras:172
+  tests:
+    - frontend/src/preview-3d/adapters/mount-preview-core.behavior.test.ts
+    - frontend/src/preview-3d/adapters/mount-preview-core.test.ts
+    - frontend/src/preview-3d/cleanup-helper.test.ts
+    - frontend/src/preview-3d/debug-render.test.ts
+    - frontend/src/views/app-preview/preview-library-cooperate.test.ts
+    - frontend/src/views/app-preview/preview-library-replace.test.ts
+    - frontend/src/views/app-preview/preview-library.test.ts
+    - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
+    - frontend/src/views/app-preview/skeleton-render.test.ts
+    - frontend/src/views/app-preview/skeleton.test.ts
+  use_when:
+    - 3D 渲染循环优化
+    - Vector3 复用
+    - 纹理缓存
+    - AbortController 事件管理
+    - 资源生命周期 dispose
+    - 循环依赖破壁
+    - 审核驱动开发
+    - 并发防护 gen 守卫
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 3D 渲染循环优化、Vector3 复用
+    - 纹理缓存、AbortController 事件管理
+    - 资源生命周期 dispose、循环依赖破壁
+  quick_risk_lines:
+    - 3D 资源释放必须走 dispose 链路，禁止依赖 GC
+  pitfalls:
+    - Vector3 频繁 new 造成 GC 抖动；必须复用或池化
+    - AbortController 未清理导致事件泄漏；必须在 dispose 时 abort + removeEventListener
+  invariant_anchors:
+    - frontend/src/preview-3d/debug-render.ts|rebuildDebug
+    - frontend/src/preview-3d/model-group-builder.ts|buildModelGroup
 tests:
   - frontend/src/preview-3d/adapters/mount-preview-core.behavior.test.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.test.ts

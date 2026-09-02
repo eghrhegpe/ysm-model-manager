@@ -6,6 +6,25 @@ category: utils
 source_files:
   - scripts/_lib/diff-coverage-core.ts
   - scripts/_lib/cycles.ts
+auto_fields:
+  symbols_with_lines:
+    - addLinesFromDiff:64
+    - buildSuggestBlock:154
+    - detectRenames:96
+    - findCycles:24
+    - getChangedFiles:30
+    - getChangedLines:111
+    - git:20
+    - parseRenameStatus:87
+  use_when:
+    - 覆盖率门禁
+    - diff-coverage
+    - 循环依赖
+    - 共享核
+    - _lib
+    - check-circular
+    - findCycles
+    - 脚本去重
 use_when:
   - 覆盖率门禁
   - diff-coverage

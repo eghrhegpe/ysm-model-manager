@@ -15,6 +15,64 @@ source_files:
   - frontend/src/views/app-preview/litematic-3d.ts
   - internal/app/container_entries.go
   - go/litematic/voxel.go
+auto_fields:
+  symbols_with_lines:
+    - App.GetVoxelDataInContainer:108
+    - App.ListContainerEntries:73
+    - appendLitematicPreview:134
+    - buildLitematicScene:406
+    - BuildNbtVoxelData:296
+    - BuildNbtVoxelDataFromRoot:305
+    - buildPackScene:289
+    - BuildSchematicVoxelData:520
+    - BuildSchematicVoxelDataFromRoot:529
+    - BuildVoxelData:108
+    - BuildVoxelDataFromRoot:118
+    - CameraControlBridge:27
+    - cleanupVoxel3D:139
+    - createLitematic3D:91
+    - Error:168
+    - fillMmdModelPanel:44
+    - fillMmdShotPanel:213
+    - LITEMATIC_SLICE_SCHEMA_ID:219
+    - LitematicBuildOpts:394
+    - makePackAdapter:58
+    - MaterialControlBridge:180
+    - MmdBottomNavCtx:29
+    - mmdModelInfoNodes:62
+    - MmdPlayBridge:96
+    - mmdShotNodes:197
+    - multiModelSelectNode:39
+    - MultiModelSelectOpts:16
+    - OpenGzRootFromBytes:64
+    - PackAdapterOpts:34
+    - PackDeps:27
+    - playNodes:114
+  tests:
+    - frontend/src/preview-3d/adapters/pack-model-adapter.test.ts
+    - frontend/src/preview-3d/menu/multi-model.test.ts
+    - frontend/src/views/app-preview/mmd-controls.test.ts
+    - frontend/src/preview-3d/adapters/litematic-adapter.test.ts
+    - frontend/src/views/app-preview/litematic-3d.test.ts
+    - internal/app/container_entries_test.go
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 多模型选择、多组件 / 多 entry
+    - zip 多模型、多候选、蓝图 zip、litematic zip
+    - multiModelSelectNode
+  quick_risk_lines:
+    - 容器内多模型必须经 multiModelSelectNode 声明式菜单选择，禁止 adapter 直接遍历 entry 数组渲染
+  pitfalls:
+    - adapter 直接遍历 entry 数组 → 容器内多模型顺序不稳定、缺用户选择点；必须走 multiModelSelectNode
+    - litematic zip 多 nbt 未走 select → 默认取第一个，用户无法换选；必须复用 multiModelSelectNode
+  use_when:
+    - 多模型
+    - 模型选择
+    - select
+    - zip 多模型
+    - 多 entry
+    - ADR-132
 tests:
   - frontend/src/preview-3d/adapters/pack-model-adapter.test.ts
   - frontend/src/preview-3d/menu/multi-model.test.ts

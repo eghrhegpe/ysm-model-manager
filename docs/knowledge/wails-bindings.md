@@ -16,6 +16,162 @@ source_files:
   - internal/app/app_workshop.go
   - internal/app/resource_bindings.go
   - internal/app/wasm_embed.go
+auto_fields:
+  symbols_with_lines:
+    - App:40
+    - App.AllTags:43
+    - App.AnalyzeBedrockModel:249
+    - App.AnalyzeBedrockModelEntry:311
+    - App.AnalyzeYSMModel:39
+    - App.BackupWorkshopCreators:331
+    - App.BatchExtractCreatorAvatars:24
+    - App.Build3DSpecFromGeometryJSON:410
+    - App.CachedCreatorAvatar:19
+    - App.CacheModelAvatars:144
+    - App.CancelQueue:76
+    - App.CheckFileExists:456
+    - App.CheckUpdate:289
+    - App.ClearScanCache:379
+    - App.CopyModelFile:163
+    - App.CreateDir:23
+    - App.CurrentVersion:287
+    - App.DebugExtractCreatorAvatar:85
+    - App.DefaultWorkshopSites:104
+    - App.DeleteResourcePack:455
+    - App.DetectResourceType:141
+    - App.DoUpdate:316
+    - App.DownloadFromGitHub:249
+    - App.EnqueueDownloads:46
+    - App.EnsureStorageDirs:225
+    - App.ExportModelStructureJSON:24
+    - App.ExportWorkshopCreatorsJSONFile:324
+    - App.ExportWorkshopSitesCSV:251
+    - App.ExportWorkshopSitesJSONFile:263
+    - App.ExtractPreviewTexture:74
+    - App.ExtractYSMHeader:57
+    - App.ExtractYSMHeaderFromBase64:61
+    - App.ExtractYsmSummary:43
+    - App.FindDuplicateFiles:504
+    - App.FindPreviewImage:67
+    - App.GenerateRepoIndex:396
+    - App.GetAllRepoRoots:201
+    - App.GetAppVersion:263
+    - App.GetConfigPath:62
+    - App.GetDefaultRepoRoot:154
+    - App.GetGlobalCustomDir:424
+    - App.GetLitematicVoxelData:125
+    - App.GetMinecraftPaths:479
+    - App.GetModel3DSpec:359
+    - App.GetModelTags:19
+    - App.GetModelTexSizes:261
+    - App.GetNbtVoxelData:87
+    - App.GetPackInfo:82
+    - App.GetRepoRoot:169
+    - App.GetSchematicVoxelData:92
+    - App.GetSubDirMap:283
+    - App.GetWasmBinary:6
+    - App.GetWindowPosition:383
+    - App.GetYSMRepoRoot:107
+    - App.ImportByType:435
+    - App.ImportModelFolder:175
+    - App.ImportModelFolderTo:193
+    - App.ImportWorkshopSitesCSV:293
+    - App.InstallResourceToInstance:621
+    - App.InvalidateScanCache:529
+    - App.IsFileBanned:363
+    - App.IsResourcePackEnabled:337
+    - App.ListAllFilePaths:447
+    - App.ListByTag:38
+    - App.ListFileNames:430
+    - App.ListModelAuthors:387
+    - App.ListVersionInstances:419
+    - App.LoadAppConfig:260
+    - App.LoadGitHubRepos:218
+    - App.LoadResourceTypes:27
+    - App.LoadWorkshopCreators:157
+    - App.MergeWorkshopCreatorsFromJSON:352
+    - App.MoveModelFile:154
+    - App.OpenFolder:298
+    - App.OpenInBrowser:258
+    - App.OpenInstanceFolder:334
+    - App.QueueStatus:96
+    - App.ReadFileBytes:117
+    - App.ReadFileBytesBatch:139
+    - App.ReadFileBytesBatchWithMeta:212
+    - App.ReadLitematicMeta:115
+    - App.ReadNbtStructure:106
+    - App.ReadPackMeta:36
+    - App.ReadSchematic:97
+    - App.ReadShaderpackLang:60
+    - App.RemoveDir:39
+    - App.RenameDir:27
+    - App.RenameFile:51
+    - App.ReplaceWorkshopCreatorsFromJSON:395
+    - App.RepoHealthAudit:535
+    - App.RepoHealthAuditAll:556
+    - App.ResetResourceRoot:398
+    - App.ResetWorkshopConfigs:229
+    - App.RestartApplication:334
+    - App.RevealInExplorer:268
+    - App.SaveAppConfig:134
+    - App.SavePreviewTempFile:74
+    - App.SaveScreenshotFile:521
+    - App.SaveThresholds:213
+    - App.SaveWindowPosition:369
+    - App.SaveWorkshopCreators:168
+    - App.SaveWorkshopCreatorsBySite:189
+    - App.SaveWorkshopPresetsBySite:205
+    - App.SaveWorkshopSites:115
+    - App.ScanLocalAuthors:407
+    - App.ScanModelEntries:282
+    - App.ScanModelEntriesFiltered:328
+    - App.ScanModelEntriesWithLabel:304
+    - App.SearchAllModels:193
+    - App.SearchModels:62
+    - App.SelectDirectory:416
+    - App.SelectImportFile:356
+    - App.SelectImportZip:343
+    - App.ServiceShutdown:221
+    - App.ServiceStartup:122
+    - App.SetApp:104
+    - App.SetDownloadMirror:204
+    - App.SetMainWindow:119
+    - App.SetModelTags:29
+    - App.SetResourceRoot:378
+    - App.SetSessionFilesRoot:245
+    - App.SetVoxelMaxBlocks:131
+    - App.ToggleEnable:372
+    - App.ToggleModelEnable:355
+    - App.ToggleResourcePack:298
+    - App.ValidateMinecraftDir:481
+    - App.ValidateWorkshopSites:276
+    - DownloadQueue:23
+    - NewApp:75
+    - NewDownloadQueue:41
+    - ReadFileMeta:188
+  quick_groups:
+    - 后端桥接与数据存储
+  quick_intents:
+    - API 总览、Binding 有哪些方法、App 方法签名
+    - GetAppVersion / ScanModelEntries / SearchModels
+    - 调后端、app.ts 绑定、getApp
+  quick_risk_lines:
+    - 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go
+  pitfalls:
+    - 直调 window.go 方法 → Wails 启动时序不确定、方法未就绪时调用失败；必须经 getApp() 代理
+    - 在 web 模式直调 wails binding → window.go 不存在；必须走 backend-web 的 browser-adapter
+  use_when:
+    - API
+    - Binding
+    - 调用后端
+    - getApp
+    - 方法签名
+    - app.ts 绑定
+  invariant_anchors:
+    - internal/app/app.go|func (a *App) GetAppVersion
+    - internal/app/app_scan.go|func (a *App) ScanModelEntries
+    - internal/app/app_scan.go|func (a *App) SearchModels
+    - internal/app/app_install_import.go|InstallModelTo
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

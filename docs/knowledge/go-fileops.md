@@ -5,6 +5,41 @@ tier: architecture
 category: go
 source_files:
   - go/fileops/
+auto_fields:
+  symbols_with_lines:
+    - CopyModelFile:311
+    - CreateDir:52
+    - DeleteModelFile:398
+    - ExtractPreviewTexture:50
+    - FindPreviewImage:24
+    - GetPackInfo:154
+    - IsFileBanned:158
+    - MoveModelFile:176
+    - RemoveDir:115
+    - RenameDir:96
+    - RenameFile:138
+    - ToggleModelEnable:26
+    - WriteModelFolder:20
+  use_when:
+    - 移动
+    - 复制
+    - 重命名
+    - 删除
+    - fileops
+    - 启用禁用
+    - .ban
+    - ysm.json 整组操作
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/fileops/folder_import.go|IsYsmEntryJSON
+    - go/fileops/folder_import.go|WriteModelFolder
+  quick_groups:
+    - 文件操作与标签
+  quick_intents:
+    - 移动 / 复制 / 删除 / 重命名文件 / 文件夹导入
+  quick_risk_lines:
+    - 文件 CRUD 必须走 go/fileops，internal/app 薄壳仅转发
 use_when:
   - 移动
   - 复制

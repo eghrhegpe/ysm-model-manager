@@ -13,6 +13,55 @@ source_files:
   - frontend/src/views/app-content/settings/init.ts
   - frontend/src/views/app-content/site/edit.ts
   - frontend/src/views/app-tree/toolbar-events.ts
+auto_fields:
+  symbols_with_lines:
+    - appContentStyle:19
+    - appendLitematicPreview:134
+    - BedrockBone:26
+    - BedrockCube:16
+    - BedrockModel:32
+    - bindEditEvents:528
+    - bindInputHandlers:122
+    - bindToolbarEvents:356
+    - calcBoneHitZones:11
+    - cleanupVoxel3D:139
+    - closeActive3DOverlay:36
+    - createLitematic3D:91
+    - initSettings:314
+    - InputHandlers:43
+    - InputOptions:28
+    - loadModel2D:59
+    - Model2DOptions:37
+    - openFullPreview:7
+    - renderModel2D:58
+    - setActive3DClose:42
+  tests:
+    - frontend/src/views/app-preview/model2d/model2d.test.ts
+    - frontend/src/preview-3d/model3d.test.ts
+    - frontend/src/views/app-preview/zoom.test.ts
+    - frontend/src/views/app-preview/skeleton.test.ts
+    - frontend/src/views/app-content/app-content.methods.test.ts
+    - frontend/src/views/app-tree/toolbar-events.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - pointerdown / pointermove / pointerup、触屏 + 桌面统一
+    - setPointerCapture、touch-action、拖拽
+    - input-and-animation
+  quick_risk_lines:
+    - 所有交互必须用 pointerdown/pointermove/pointerup 统一处理，禁止混用 mousedown/touchstart
+  pitfalls:
+    - 混用 mousedown + touchstart → 触屏双触发、桌面手势冲突；必须经 pointer events 统一
+    - 拖拽不设 touch-action:none → 浏览器滚动吃掉手势；必须在拖拽元素上禁用 touch-action
+  use_when:
+    - pointerdown
+    - pointermove
+    - pointerup
+    - 触屏
+    - 拖拽
+    - 旋转
+  invariant_anchors:
+    - frontend/src/preview-3d/adapters/input-and-animation.ts|setPointerCapture
 tests:
   - frontend/src/views/app-preview/model2d/model2d.test.ts
   - frontend/src/preview-3d/model3d.test.ts

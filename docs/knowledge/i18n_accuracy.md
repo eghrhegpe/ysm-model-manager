@@ -9,6 +9,27 @@ source_files:
   - frontend/src/core/i18n/locales/ja.ts
   - scripts/i18n-key-naming.ts
   - tests/test_i18n_key_naming.ts
+auto_fields:
+  symbols_with_lines:
+    - classifySecondSegment:449
+    - en:4
+    - extractKeys:449
+    - guessRole:449
+    - ja:5
+    - loadAllKeys:449
+    - validateKey:449
+    - zhCN:6
+  tests:
+    - frontend/src/core/i18n/locales-consistency.test.ts
+    - tests/test_i18n_key_naming.ts
+  use_when:
+    - 翻译准确度
+    - 键名与值语义错位
+    - i18n 翻译扫描
+    - en 丢 Count
+    - Opacity 误译
+    - 术语统一
+    - 翻译名实不符
 tests:
   - frontend/src/core/i18n/locales-consistency.test.ts
   - tests/test_i18n_key_naming.ts

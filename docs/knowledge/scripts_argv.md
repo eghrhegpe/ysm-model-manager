@@ -5,6 +5,19 @@ tier: architecture
 category: config
 source_files:
   - scripts/_lib/parse-args.ts
+auto_fields:
+  symbols_with_lines:
+    - parseArgs:28
+    - ParseArgsResult:21
+  use_when:
+    - 脚本参数
+    - argv
+    - parseArgs
+    - 手写参数解析
+    - positional
+    - 未知 flag
+    - 脚本卫生
+    - hygiene
 use_when:
   - 脚本参数
   - argv

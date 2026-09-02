@@ -6,6 +6,37 @@ category: ui
 source_files:
   - frontend/src/views/app-tree/toolbar-search.ts
   - frontend/src/views/app-tree/toolbar-events.ts
+auto_fields:
+  symbols_with_lines:
+    - bindToolbarEvents:356
+    - openAdvFilterDialog:253
+    - pickWebFilesAndImport:287
+  tests:
+    - frontend/src/views/app-tree/toolbar-events.test.ts
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - 搜索编排、高级筛选、关键词搜索
+    - 数值范围搜索、标签过滤
+    - 多线程统计角标、网页版导入
+    - 降级提示、consumeWebSearchDegraded
+  quick_risk_lines:
+    - toolbar-search 编排必须单点分发搜索链路（弹窗 → 后端 → 标签交集 → 降级 → 渲染），禁止各层各自调 SearchModels
+  pitfalls:
+    - 各层各自调 SearchModels → 重复请求 / 结果不一致；必须经 toolbar-search 单点编排
+    - 网页版降级不走 consumeWebSearchDegraded → 用户在受限环境无反馈；必须经该函数给出降级提示
+  use_when:
+    - 搜索编排
+    - 高级筛选
+    - 关键词搜索
+    - 数值范围搜索
+    - 标签过滤
+    - 多线程统计角标
+    - 降级提示
+  invariant_anchors:
+    - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
+    - frontend/src/views/app-tree/toolbar-search.ts|consumeWebSearchDegraded
+    - frontend/src/views/app-tree/toolbar-search.ts|pickWebFilesAndImport
 tests:
   - frontend/src/views/app-tree/toolbar-events.test.ts
 quick_groups:

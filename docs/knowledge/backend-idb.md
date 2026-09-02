@@ -19,6 +19,107 @@ source_files:
   - frontend/src/workers/stats-core.ts
   - frontend/src/workers/stats-protocol.ts
   - frontend/src/workers/stats.worker.ts
+auto_fields:
+  symbols_with_lines:
+    - __resetDBForTest:141
+    - __resetWebLogStateForTest:118
+    - __setStatsRunnerForTest:53
+    - AppBindings:6
+    - arrayBufferToBase64:14
+    - base64ToBytes:66
+    - batchStatsWebModels:173
+    - browserAdapter:70
+    - collectAllWebEntries:1270
+    - consumeWebSearchDegraded:58
+    - getAndroidBridge:24
+    - getApp:18
+    - getFsaAuthState:18
+    - getStatsPoolSize:91
+    - idbDel:186
+    - idbGet:158
+    - idbGetAll:242
+    - idbKeys:207
+    - IdbOp:273
+    - idbSet:169
+    - idbTx:282
+    - importWebFiles:16
+    - isWebEntryMode:37
+    - isWebPath:27
+    - MAX_IMPORT_BYTES:14
+    - ModelStatsResult:20
+    - onStatsProgress:40
+    - openDB:23
+    - parseWebDirPath:39
+    - parseWebPath:32
+    - prefetchStatsWorker:113
+    - readDeclaredBackend:31
+    - readWebFile:212
+    - reauthorizeFsaRoot:18
+    - rescanFsaRoot:18
+    - resolveWebMode:46
+    - scanAllWebModels:911
+    - scanWebModels:87
+    - selectLocalRepo:16
+    - STATS_BATCH_LIMIT:19
+    - StatsFileInput:14
+    - statsFromDecodedFiles:76
+    - statsFromJsonBytes:120
+    - StatsRelReader:112
+    - StatsWorkerError:42
+    - StatsWorkerProgress:27
+    - StatsWorkerRequest:17
+    - StatsWorkerResponse:48
+    - StatsWorkerResult:35
+    - Store:19
+    - terminateStatsWorker:65
+    - typeFromWebDir:78
+    - u8ToBase64:78
+    - WailsAndroidBridge:18
+    - WEB_ROOT:14
+    - webCommonBindings:95
+    - webCommunityBindings:247
+    - webDirType:46
+    - webFsBindings:1285
+    - WebModelStats:5
+    - WebModelStatsWithPath:14
+    - webStoreBindings:191
+    - WebUnsupportedError:8
+  tests:
+    - frontend/src/app-modules.test.ts
+    - frontend/src/backend/app.test.ts
+    - frontend/src/backend/browser-adapter.contract-b1.test.ts
+    - frontend/src/backend/browser-adapter.contract-b2.test.ts
+    - frontend/src/backend/browser-adapter.contract-b3.test.ts
+    - frontend/src/backend/browser-adapter.test.ts
+    - frontend/src/backend/idb.test.ts
+    - frontend/src/backend/platform.test.ts
+    - frontend/src/utils/resource/types.test.ts
+    - frontend/src/views/app-content/app-content.component.test.ts
+    - frontend/src/views/app-content/app-content.methods.test.ts
+    - frontend/src/views/app-preview/app-preview.component.test.ts
+    - frontend/src/views/app-preview/app-preview.methods.test.ts
+    - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
+    - frontend/src/views/app-sidebar/app-sidebar.sync.test.ts
+    - frontend/src/views/app-tree/app-tree.component.test.ts
+    - frontend/src/views/app-tree/app-tree.state.test.ts
+  use_when:
+    - IndexedDB
+    - 网页版
+    - backend
+    - 模型库
+    - browser adapter
+    - web mode
+  perf:
+    - io-bound
+  invariant_anchors:
+    - frontend/src/backend/idb.ts|openDB
+    - frontend/src/backend/browser-adapter.ts|browserAdapter
+  quick_groups:
+    - 后端桥接与数据存储
+  quick_intents:
+    - IndexedDB、网页版存储
+  quick_risk_lines:
+    - 事务必须接线 complete/error/abort 三事件
 tests:
   - frontend/src/app-modules.test.ts
   - frontend/src/backend/app.test.ts

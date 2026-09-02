@@ -5,6 +5,128 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/utils/dom/
+auto_fields:
+  symbols_with_lines:
+    - __getTriggerForTest:64
+    - __resetModalStateForTest:88
+    - addTagToSet:19
+    - AdvFilterResult:19
+    - AdvFilterValue:6
+    - applyReplaceToName:41
+    - attachTooltip:110
+    - BatchRenameChange:21
+    - btnBaseCSS:1
+    - buildModelName:40
+    - BuildModelNameOptions:21
+    - buildRenameName:60
+    - calcVisibleRange:17
+    - can:10
+    - canWebAction:46
+    - clearTrigger:59
+    - closeActiveDialog:111
+    - closeDlg:60
+    - copyText:6
+    - createIconButton:105
+    - downloadTextFile:13
+    - emitAndroidBack:43
+    - ensureFabStyles:76
+    - ensureTooltipStyles:17
+    - esc:4
+    - findTabbableAcrossShadow:116
+    - FLASH_DURATION_MS:10
+    - flashBtn:28
+    - FlashOptions:13
+    - fmtDate:35
+    - fmtMB:401
+    - focusVisibleCSS:32
+    - formatBytes:11
+    - friendlyError:44
+    - getAndroidBridge:5
+    - hl:16
+    - IconButtonOpts:91
+    - installScrollSync:36
+    - isFileExistsError:87
+    - isInputBlocked:87
+    - isViewerMode:16
+    - MAX_TAG_LENGTH:12
+    - modalAdvFilter:181
+    - modalConfirm:365
+    - ModalConfirmOptions:328
+    - modalPicker:595
+    - ModalPickerItem:496
+    - ModalPickerOptions:505
+    - ModalPickerResult:518
+    - modalProgress:479
+    - ModalProgressHandle:393
+    - ModalProgressOptions:385
+    - modalPrompt:224
+    - ModalPromptOptions:191
+    - modalSelect:309
+    - ModalSelectOptions:264
+    - modalTagEditor:220
+    - ModelNameFields:27
+    - ParsedModelName:22
+    - parseFilterNumber:21
+    - parseModelName:61
+    - pickDirectory:66
+    - popInputBlock:81
+    - promoteTitle:149
+    - promoteTitleIfPresent:158
+    - pushInputBlock:76
+    - rebuildParsedName:16
+    - refreshAdoptedStyleSheets:13
+    - registerAndroidBackHandler:30
+    - registerDlg:95
+    - rememberTrigger:30
+    - RenameFields:7
+    - renderDisplayName:130
+    - renderModelName:199
+    - renderModelNameWithHighlight:208
+    - ReplaceResult:31
+    - resolveAndroidRepoDir:26
+    - returnFocus:44
+    - safeGet:7
+    - safeRemove:25
+    - safeSet:16
+    - showBatchRenameDialog:438
+    - showRenameDialog:210
+    - sizeColor:23
+    - stripBanSuffix:19
+    - stripDisableSuffix:14
+    - stripPathSegments:72
+    - TagSetResult:6
+    - TOAST_MS:6
+    - ToastType:26
+    - TooltipOptions:101
+    - trapFocus:32
+    - trapFocusAcrossShadow:156
+    - validateAdvFilter:32
+    - validateRenameFields:71
+    - VIEW_TESTIDS:10
+    - VIEWER_PURE_ACTIONS:38
+    - VIEWER_WEB_ACTION_BINDINGS:20
+    - WebComponentBase:7
+    - YSW_FAB_CSS:7
+    - YSW_TOOLTIP_CSS:9
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - DOM 工具、esc 转义、搜索高亮、XSS
+    - toast-ms / focus-restore
+  quick_risk_lines:
+    - HTML 内容注入必须走 esc() 转义，禁止直接 innerHTML 拼接用户输入
+  pitfalls:
+    - 直拼 innerHTML → XSS 注入；必须经 esc() 转义
+    - toast 时长内联魔法数字 → 与全应用不一致；必须用 toast-ms 的语义常量
+  use_when:
+    - esc
+    - HTML 转义
+    - innerHTML
+    - 搜索高亮
+    - mark
+    - XSS
+  invariant_anchors:
+    - frontend/src/utils/dom/html.ts|export function esc
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

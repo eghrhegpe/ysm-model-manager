@@ -9,6 +9,25 @@ source_files:
   - scripts/_lib/gen-cmds.ts
   - scripts/_lib/gen-stage.ts
   - scripts/reproduce-commit-interrupt.ts
+auto_fields:
+  symbols_with_lines:
+    - CommitTempIndexOptions:39
+    - CommitTempIndexResult:51
+    - commitWithTempIndex:92
+    - computeStageList:86
+    - GEN_CMDS:17
+    - isHookArtifact:68
+    - normPath:40
+    - parsePorcelain:50
+    - PorcelainEntry:30
+    - StageInput:72
+  use_when:
+    - commit-with-check
+    - 自动提交
+    - 并发提交
+    - 临时索引
+    - 白名单提交
+    - 门禁后自动 commit
 use_when:
   - commit-with-check
   - 自动提交
@@ -63,8 +82,21 @@ node scripts/commit-with-check.ts -m "feat: xxx" --keep-index      # 提交后�
 - **中断残留边界**：进程被 `kill -9` / 工具层强杀时 `finally` 无法执行——临时 index 恒残留；若 git 子进程已写 ref 则 HEAD 推进（commit 落地）、未写完则丢弃。复现：`node scripts/reproduce-commit-interrupt.ts`（双变体：A 未完成被中断 / B 已完成清理未跑，即实战场景）。启动时清扫遗留 `index.ymm.*`（按 pid 存活判定）为待落地对策
 - **并发卷带边界（ADR-151 续，2026-09-01 实证）**：裸 `git commit -- <paths>`（`--only`）会运行 pre-commit 钩子；钩子的 snap_docs 快照 diff 用「mtime/size 变化」判定 gen 产物，**并发下失效**——并行会话手改的卡恰在快照窗口内被 touch → 误判 gen 产物 → stage 进 index → 被 `--only` 提交卷带（实证 fbx-cli-pipeline.md / frontend_test_audit.md 卷进 e96b47e3）。修复：stage 判定下沉 `_lib/gen-stage.ts`（stage = 快照变化 ∩ 非并行 dirty，`??` 按 gen 前后存在性区分），契约测试 `tests/test_gen_stage.ts` 守护。**并行会话活跃时禁用裸 `git commit -- <paths>`，一律走 commit-with-check（临时 index + gen-stage 双隔离）**。实证验收：`b659efae` 门禁 19/19 PASS、outOfScope=`[]`、interleaved=false。
 
+## 并发隔离演进方向（2026-09 评估）
+
+当前双隔离（临时索引 + gen-stage）是**应用层逻辑隔离**，够用但非真事务：git 暂存区仍全局共享，多 AI 会话共享 checkout 时，一个会话的 `git add` 仍会影响另一个会话的 `git status`。根因 = git 无「提交锁」，`index.lock` 只在 commit 毫秒级存在，真正危险窗口是「add 之后、commit 之前」。解法可行性评估：
+
+| 解法 | 可行性 | 成本 | 收益 | 结论 |
+|------|--------|------|------|------|
+| A：git worktree 物理隔离 | 高（git 原生，AGENTS.md 已有 worktree 同步规范） | 低（会话启动 `git worktree add ../ysm-wt-<session>`） | 并发卷带根除——暂存区/工作区物理隔离，b659efae 类补丁全不需要 | ✅ 架构级正解 |
+| B：暂存区 flock | 中（Windows flock 兼容性差） | 中（需跨平台锁机制） | 只防 commit 冲突，不防 gen 产物覆盖 | ❌ 否决 |
+| C：push 前 doctor --docs 预检 | 高（autoFix 已落地） | 已付 | 缓解生成物滚雪球，不解决并发根因 | ⚠️ 缓解方案 |
+
+**结论**：ADR-151+152 双隔离是**够用解**（当前规模实证 b659efae 19/19 PASS、outOfScope=`[]`）；worktree 是**完美解**。触发条件（并发会话 >5 或 gen 冲突频率上升）满足后再评估 worktree——届时需：① AGENTS.md worktree 规范从「串行 rebase 事后同步」升级为「并发隔离」；② 会话启动流程加 `git worktree add`；③ 合并流程走 `git merge` 非 rebase。
+
 ## 相关
 
 - ADR-151 — 临时索引白名单提交（并发隔离取代裸 git commit）
+- ADR-152 — gen-stage 并发卷带根除（快照变化 ∩ 非并行 dirty 判定）
 - [pre_commit_hook](./pre-commit-hook.md) — 提交前钩子（gen 同步/gofmt/智能 stage）
 - [scripts_readme_index](./scripts_readme_index.md) — 钩子/脚本总览

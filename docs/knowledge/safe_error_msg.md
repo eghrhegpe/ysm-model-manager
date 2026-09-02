@@ -5,6 +5,29 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/safe-error-msg.ts
+auto_fields:
+  symbols_with_lines:
+    - safeErrorMessage:19
+  tests:
+    - frontend/src/utils/safe-error-msg.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 错误消息提取、Worker 错误、catch
+    - safeErrorMessage、异常提取
+  quick_risk_lines:
+    - Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖
+  pitfalls:
+    - Worker 内 import i18n → 模块加载失败、Worker 崩溃；必须用 safeErrorMessage
+    - safeErrorMessage 不做字符串化 → null/undefined 错误丢信息；必须经 safeStr 兜底
+  use_when:
+    - 错误消息
+    - Worker 错误
+    - catch
+    - safeErrorMessage
+    - 异常提取
+  invariant_anchors:
+    - frontend/src/utils/safe-error-msg.ts|safeErrorMessage
 tests:
   - frontend/src/utils/safe-error-msg.test.ts
 quick_groups:

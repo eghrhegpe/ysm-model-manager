@@ -5,6 +5,25 @@ tier: leaf
 category: go
 source_files:
   - go/version/version.go
+auto_fields:
+  symbols_with_lines:
+    - Version:6
+  quick_groups:
+    - 配置与注册表
+  quick_intents:
+    - 版本号、版本检查、go-version
+    - version-check
+  quick_risk_lines:
+    - 版本号必须走 go/version 的 LoadVersion，禁止在多处手写版本号读取
+  pitfalls:
+    - 多处手写版本号读取 → 版本不一致、UI 显示与后端实际版本脱节；必须经 LoadVersion
+    - 版本号变更未同步 → 版本检测失效；必须在发版时更新 go/version
+  use_when:
+    - 版本
+    - version
+    - ldflags
+  invariant_anchors:
+    - go/version/version.go|ldflags
 quick_groups:
   - 配置与注册表
 quick_intents:

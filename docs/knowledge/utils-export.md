@@ -9,6 +9,43 @@ source_files:
   - frontend/src/preview-3d/texture-loader.ts
   - frontend/src/preview-3d/decoder/cache.ts
   - frontend/src/preview-3d/screenshot.ts
+auto_fields:
+  symbols_with_lines:
+    - AngleShot:55
+    - cacheGet:43
+    - cacheSet:65
+    - cacheSetEvictHandler:39
+    - CacheValue:10
+    - collectBlobUrls:48
+    - loadTextures:9
+    - renderMultiAngle:77
+    - RenderMultiAngleOptions:66
+    - screenshotFromRenderer:27
+    - ScreenshotLights:18
+    - ScreenshotOpts:13
+    - toScreenshotLights:26
+  tests:
+    - frontend/src/preview-3d/decoder/cache.test.ts
+    - frontend/src/preview-3d/screenshot-render.test.ts
+    - frontend/src/preview-3d/texture-loader.test.ts
+  use_when:
+    - 截图
+    - 导出 PNG
+    - 多角度截图
+    - 预览缓存淘汰
+    - blob URL 释放
+  perf:
+    - memory-heavy
+    - gpu-bound
+  invariant_anchors:
+    - frontend/src/preview-3d/decoder/cache.ts|cacheSet
+    - frontend/src/preview-3d/decoder/cache.ts|collectBlobUrls
+  quick_groups:
+    - 截图导出与缓存
+  quick_intents:
+    - 截图 / 导出 PNG / 多角度截图 / 预览缓存
+  quick_risk_lines:
+    - 离屏截图渲染器资源与 blob URL 必须释放，防内存泄漏
 tests:
   - frontend/src/preview-3d/decoder/cache.test.ts
   - frontend/src/preview-3d/screenshot-render.test.ts

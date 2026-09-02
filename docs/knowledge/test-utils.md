@@ -5,6 +5,55 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/test-utils/
+auto_fields:
+  symbols_with_lines:
+    - deriveTestIds:49
+    - expectContainsAtLeast:17
+    - expectNotContains:36
+    - extractIds:57
+    - FakeImage:4
+    - fireBlur:31
+    - fireClick:17
+    - fireDrag:67
+    - fireDrop:55
+    - fireEvent:6
+    - fireFocus:24
+    - fireInput:45
+    - fireKeyDown:38
+    - flushPromises:63
+    - getAllByTestId:48
+    - getByTestId:39
+    - jpgBytes:23
+    - MenuDefLike:8
+    - mountCustomElement:30
+    - pngBytes:6
+    - queryAllByTestId:57
+    - queryByTestId:30
+    - QueryContainer:11
+    - renderComponent:31
+    - RenderOptions:6
+    - RenderResult:13
+    - sleep:49
+    - unmountElement:42
+    - waitFor:72
+    - waitForElementToBeRemoved:101
+  tests:
+    - frontend/src/views/app-nav/index.test.ts
+    - frontend/src/views/app-sync-manager/index.test.ts
+    - frontend/src/views/app-toast/index.test.ts
+    - frontend/src/views/app-tree/render.test.ts
+    - frontend/src/views/app-content/app-content.methods.test.ts
+    - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
+    - frontend/src/views/context-menu/index.test.ts
+  use_when:
+    - 测试工具
+    - testid
+    - getByTestId
+    - waitFor
+    - sleep
+    - flaky
+    - 异步等待
+    - 组件测试
 tests:
   - frontend/src/views/app-nav/index.test.ts
   - frontend/src/views/app-sync-manager/index.test.ts

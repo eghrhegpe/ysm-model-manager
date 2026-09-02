@@ -14,6 +14,33 @@ source_files:
   - scripts/android-build.ts
   - build/linux/Taskfile.yml
   - build/darwin/Taskfile.yml
+auto_fields:
+  symbols_with_lines:
+    - Scan:41
+    - ScanError:7
+    - ScanManifest:69
+    - ScanResponse:12
+  tests:
+    - tests/test_rust_bridge_tags.ts
+  quick_groups:
+    - 后端桥接与数据存储
+  quick_intents:
+    - Android/Linux/macOS Rust 桥
+    - rust_backend、CGO
+    - compile-android-rust/compile-rust-static
+  quick_risk_lines:
+    - Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径
+  pitfalls:
+    - 硬编码 Windows 路径 → Android/Linux 启动失败；必须经平台桥的编译脚本
+    - CGO 未静态链接 → Android 缺少依赖库；必须经 compile-rust-static 静态编译
+  use_when:
+    - Android
+    - Linux
+    - macOS
+    - rust_backend
+    - CGO
+  invariant_anchors:
+    - go/rustbridge/bridge_android.go|Scan
 tests:
   - tests/test_rust_bridge_tags.ts
 quick_groups:

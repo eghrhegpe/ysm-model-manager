@@ -12,6 +12,56 @@ source_files:
   - frontend/src/views/app-sidebar/events.ts
   - frontend/src/views/app-sidebar/sidebar-css.ts
   - frontend/src/views/app-sidebar/launcher-detect.ts
+auto_fields:
+  symbols_with_lines:
+    - appSidebarStyle:21
+    - bindCardEvents:137
+    - bindFooter:242
+    - footerHTML:40
+    - groupMmdVariants:167
+    - headerHTML:21
+    - instanceCardHeaderHTML:114
+    - listContainerHTML:84
+    - loadInstances:37
+    - MmdVariantGroups:21
+    - renderVersionCards:8
+    - resetSelectedEmit:199
+    - runLauncherDetect:113
+    - runMcSearch:55
+    - sidebarCSS:3
+    - SidebarInstance:4
+    - VIEW_TESTIDS:9
+  tests:
+    - frontend/src/features/community/data.test.ts
+    - frontend/src/views/app-nav/index.test.ts
+    - frontend/src/views/app-sidebar/loader.test.ts
+    - frontend/src/views/app-sidebar/launcher-detect.test.ts
+    - frontend/src/views/app-sync-manager/index.test.ts
+    - frontend/src/views/app-toast/index.test.ts
+    - frontend/src/views/app-tree/data.test.ts
+    - frontend/src/views/app-tree/render.test.ts
+    - frontend/src/views/context-menu/index.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 侧边栏、整合包列表、版本卡片
+    - 推送 / 拉取、同步状态、勾选
+    - 一键安装、整合包拖拽导入
+    - 启动器检测
+  quick_risk_lines:
+    - 侧边栏的 push/pull 必须经 events.ts 的 runPush/runPull 转发到 sync-manager，禁止直接调 API
+  pitfalls:
+    - events.ts 里直接调 PushSingleResource → 绕过排队，并发冲突；必须经 runPush/runPull
+    - _lastEmittedPkg 未更新 → 拖拽导入重复触发；每次导入必须刷新该锚点
+  use_when:
+    - 侧边栏
+    - 整合包列表
+    - 版本卡片
+    - 推送
+    - 拉取
+    - 同步状态卡片
+  invariant_anchors:
+    - frontend/src/views/app-sidebar/events.ts|_lastEmittedPkg
 tests:
   - frontend/src/features/community/data.test.ts
   - frontend/src/views/app-nav/index.test.ts

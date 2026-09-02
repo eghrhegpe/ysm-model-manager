@@ -6,6 +6,39 @@ category: go
 source_files:
   - go/threejs/spec.go
   - go/threejs/
+auto_fields:
+  symbols_with_lines:
+    - BoneData:35
+    - Build:68
+    - BuildMulti:87
+    - MeshData:45
+    - Model3DSpec:20
+    - ModelGroup:24
+  quick_groups:
+    - 3D spec 渲染与模型追加
+  quick_intents:
+    - 3D 骨骼 spec、three.js
+    - 顶点 / UV / 四元数
+    - 模型渲染
+  quick_risk_lines:
+    - YSM 骨骼数据必须走 go/threejs 的 spec.go 转换为 three.js 格式，前端禁止手写骨骼转换
+  pitfalls:
+    - 前端手写骨骼转换 → 与 go/threejs 输出不一致、四元数旋转错乱；必须经 spec.go
+    - spec 字段漏转换 → 骨骼变形丢失；必须完整覆盖所有 spec 字段
+  use_when:
+    - 3D 预览
+    - 骨骼
+    - three.js
+    - spec
+    - 顶点
+    - UV
+    - 四元数
+    - 模型渲染
+  perf:
+    - cpu-bound
+    - concurrent
+  invariant_anchors:
+    - go/threejs/spec.go|collectBonePivots
 quick_groups:
   - 3D spec 渲染与模型追加
 quick_intents:

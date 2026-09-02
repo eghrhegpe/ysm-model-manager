@@ -6,6 +6,49 @@ category: rendering
 source_files:
   - frontend/src/preview-3d/caps/ground-surface-spec.ts
   - frontend/src/preview-3d/caps/ground-capability.ts
+auto_fields:
+  symbols_with_lines:
+    - applyGroundSurfaceAppearance:280
+    - applyGroundSurfaceStructural:261
+    - buildGroundSurfaceSpec:92
+    - DEFAULT_GROUND_PARAMS:53
+    - DEFAULT_GROUND_SURFACE_PARAMS:46
+    - generateSurfacePixels:164
+    - GroundCapability:62
+    - GroundMaterialParams:19
+    - GroundParams:40
+    - GroundSurfaceAppearanceSpec:73
+    - GroundSurfaceMode:17
+    - groundSurfaceNeedsRebuild:132
+    - GroundSurfaceSpec:81
+    - GroundSurfaceStructuralSpec:61
+    - surfaceSpecKey:117
+    - textureRepeat:141
+    - TILE_WORLD_SIZE:139
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 地面材质/地面贴图/地板/surface
+    - 材质重建与原地更新的判别（needsRebuild）
+    - 程序化纹理生成
+    - 自定义图片上传到地面
+    - GroundMaterialSpec/specKey/textureToken
+  quick_risk_lines:
+    - 地面材质必须走 ground-surface-spec 的 buildGroundSurfaceSpec，spec 是唯一数据源
+  pitfalls:
+    - 下游手写材质参数 → 与 spec 不一致、needsRebuild 判别错误；必须经 buildGroundSurfaceSpec
+    - specKey 不完整 → 相同材质不同渲染；specKey 必须含所有影响渲染的参数
+  use_when:
+    - 地面材质 / 地面贴图 / 地板 / surface
+    - 材质重建与原地更新的判别（needsRebuild）
+    - 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）
+    - 自定义图片上传到地面（TextureLoader）
+    - GroundMaterialSpec / specKey / textureToken
+  perf:
+    - cpu-bound
+  invariant_anchors:
+    - frontend/src/preview-3d/caps/ground-surface-spec.ts|buildGroundSurfaceSpec
+    - frontend/src/preview-3d/caps/ground-surface-spec.ts|groundSurfaceNeedsRebuild
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

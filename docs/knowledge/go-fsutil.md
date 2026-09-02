@@ -13,6 +13,73 @@ source_files:
   - go/fsutil/hardlink_other.go
   - go/fsutil/crossdevice_other.go
   - go/fsutil/
+auto_fields:
+  symbols_with_lines:
+    - CleanEmptyDirs:95
+    - ContainsIllegalNameChar:19
+    - CopyDirOptions:124
+    - CopyDirRecursive:149
+    - CopyFile:64
+    - CountFiles:59
+    - DecodeBase64Limited:20
+    - DirPerms:6
+    - ErrB64TooLarge:13
+    - ErrChmodFailed:34
+    - ErrCloseFailed:32
+    - ErrRenameFailed:36
+    - ErrSyncFailed:30
+    - ErrTempCreateFailed:26
+    - ErrWriteFailed:28
+    - FilePerms:9
+    - FormatSize:7
+    - IsCrossDeviceErr:14
+    - IsHardLink:14
+    - IsRecycleDir:113
+    - IsResourcePackFolder:121
+    - ReadLimitedEntry:60
+    - SHA256File:128
+    - StepChmod:38
+    - StepClose:37
+    - StepCloseSrc:32
+    - StepCopy:35
+    - StepCreateTmp:34
+    - StepError:43
+    - StepError.Error:48
+    - StepError.Unwrap:49
+    - StepMkdir:33
+    - StepOpen:31
+    - StepRename:39
+    - StepStat:30
+    - StepSync:36
+    - StripBOM:12
+    - UTF8BOM:9
+    - WalkAllDirs:25
+    - WalkAllFiles:13
+    - WriteFileAtomic:86
+  quick_groups:
+    - 文件操作与标签
+  quick_intents:
+    - 文件遍历 / walk、原子写、复制
+    - 硬链接、跨设备、权限常量
+    - BOM、base64 受限解码、读取上限
+  quick_risk_lines:
+    - 文件系统操作必须走 go/fsutil 的 walk/write/copy 封装，禁止在业务代码里直接 os.Open/os.WriteFile
+  pitfalls:
+    - 业务代码直调 os.WriteFile → 并发写破坏文件、缺 BOM 处理；必须经 fsutil.AtomicWrite
+    - filepath.Walk 跟符号链接 → 目录遍历循环 / 越权；必须用 fsutil.walk 的 IsRecycleDir 守卫
+  use_when:
+    - 遍历
+    - walk
+    - 原子写
+    - 复制
+    - 硬链接
+    - 跨设备
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/fsutil/walk.go|IsRecycleDir
+    - go/fsutil/write.go|WriteFileAtomic
+    - go/fsutil/b64.go|DecodeBase64Limited
 quick_groups:
   - 文件操作与标签
 quick_intents:

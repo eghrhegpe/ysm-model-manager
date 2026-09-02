@@ -7,6 +7,39 @@ source_files:
   - frontend/src/app-modules.ts
   - frontend/src/utils/module-loader.ts
   - frontend/src/startup-reveal.ts
+auto_fields:
+  symbols_with_lines:
+    - applyTheme:46
+    - initTheme:46
+    - loadView:14
+    - normalizeTheme:46
+    - revealMainWindow:2
+    - unregisterDevtools:153
+  tests:
+    - frontend/src/app-modules.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 组件入口、模块装配、启动流程
+    - 主题初始化、服务注册、检查更新
+    - 新组件注册、import 组件、startup reveal
+  quick_risk_lines:
+    - 新增 JS 组件必须登记进 app-modules.ts 的 import 列表，致命陷阱 #9
+  pitfalls:
+    - 新 JS 未登记进 app-modules.ts → 组件不加载、Shadow DOM 未升级；必须在 app-modules.ts 加入口
+    - 主题值未归一化 → 脏值污染 localStorage 持久层；必须经 normalizeTheme 白名单过滤
+  use_when:
+    - 组件入口
+    - 模块装配
+    - 启动流程
+    - 主题初始化
+    - 服务注册
+    - 检查更新
+  perf:
+    - io-bound
+  invariant_anchors:
+    - frontend/src/utils/module-loader.ts|loadView
+    - frontend/src/app-modules.ts|register
 tests:
   - frontend/src/app-modules.test.ts
 quick_groups:

@@ -7,6 +7,67 @@ source_files:
   - frontend/src/utils/resource/
   - frontend/src/utils/types-re-export.ts
   - frontend/src/features/repo-rtype.ts
+auto_fields:
+  symbols_with_lines:
+    - ALL_EXTS:21
+    - ALL_RESOURCE_TYPES:47
+    - allResourceTypes:55
+    - AMBIGUOUS_EXTS:313
+    - currentRepoType:18
+    - extBelongsTo:46
+    - extOf:168
+    - getExts:36
+    - getPreviewableTypeTabs:226
+    - GROUP_META:104
+    - GROUP_OF:119
+    - GROUP_TYPE_OPTIONS:140
+    - groupLabelOf:125
+    - groupStorageRootOf:156
+    - GroupTypeOption:135
+    - isContainerExt:271
+    - isSupportedExt:41
+    - isYsmWasmPreview:296
+    - loadResourceRegistry:20
+    - matchTypeByExt:249
+    - matchZipEntryTS:376
+    - NO_3D_TYPES:203
+    - PreviewTab:219
+    - resolveDefaultPreviewKey:281
+    - resolvePreviewKey:56
+    - resolvePreviewKeyByExt:87
+    - resolvePreviewKeyToRtype:72
+    - resolveTypeSafe:326
+    - RESOURCE_EXTS:16
+    - RESOURCE_TYPE_LABELS:28
+    - RESOURCE_TYPES:9
+    - ResourceType:29
+    - ResourceTypeEntry:10
+    - ResourceTypeVariant:23
+    - shortLabelOf:24
+    - typeIconOf:291
+    - useCurrentResourceType:28
+    - VOXEL_RPC_BY_EXT:302
+    - ZipEntryMatch:17
+  quick_groups:
+    - 配置与注册表
+  quick_intents:
+    - 资源类型、RESOURCE_TYPES、类型标签
+    - 存储子目录、storageSubDir、LoadResourceTypes、注册表加载
+  quick_risk_lines:
+    - 资源类型注册表必须经 LoadResourceTypes 加载，前端禁止手写类型映射
+  pitfalls:
+    - 手写类型映射 → 与注册表不一致、分类错乱；必须经 LoadResourceTypes
+    - 新增资源类型未注册 → 前端无法识别；必须在 resource_types.json 中注册
+  use_when:
+    - 资源类型
+    - RESOURCE_TYPES
+    - 类型标签
+    - 存储子目录
+    - storageSubDir
+    - LoadResourceTypes
+    - 注册表加载
+  invariant_anchors:
+    - frontend/src/utils/resource/registry.ts|_registry
 quick_groups:
   - 配置与注册表
 quick_intents:

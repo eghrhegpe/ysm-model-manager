@@ -6,6 +6,91 @@ category: feature
 source_files:
   - frontend/src/features/community/
   - frontend/src/utils/gh-links.ts
+auto_fields:
+  symbols_with_lines:
+    - bindRepoEvents:340
+    - buildDownloadTasks:31
+    - buildModelRow:117
+    - cancelDownloads:284
+    - classifyDownloadSize:14
+    - countMissing:61
+    - createDownloadQueue:329
+    - createProgressGuard:267
+    - createVirtualList:31
+    - DOWNLOAD_CONFIRM_BYTES:7
+    - DOWNLOAD_REJECT_BYTES:9
+    - DownloadCandidate:24
+    - DownloadQueue:63
+    - DownloadSizeDecision:11
+    - DownloadState:39
+    - DownloadTask:28
+    - enqueueDownloads:178
+    - FetchModelsResult:42
+    - filterModels:72
+    - getState:103
+    - getStateSnapshot:98
+    - GH_DOCS:7
+    - GH_RELEASES:6
+    - GH_REPO:5
+    - groupSites:233
+    - isActiveStatus:151
+    - isModelMissing:45
+    - isRecyclePath:56
+    - ModelRowCtx:108
+    - notify:84
+    - ProgressGuard:24
+    - ProgressGuardHooks:16
+    - QueueController:55
+    - QueueControllerOptions:46
+    - QueueError:36
+    - renderCardsHTML:250
+    - renderModelList:194
+    - renderRepoHeaderHTML:298
+    - RepoEventsContext:17
+    - RepoEventsHandle:29
+    - resume:112
+    - showProgress:9
+    - showRepoModels:27
+    - SITE_GROUP_ORDER:228
+    - STATE:54
+    - subscribe:76
+    - tryFetchModels:242
+    - VIEW_TESTIDS:11
+    - VirtualList:21
+    - VirtualListOpts:8
+    - WorkshopModel:27
+    - WorkshopSite:35
+  tests:
+    - frontend/src/features/community/data.test.ts
+    - frontend/src/features/community/download-queue.test.ts
+    - frontend/src/features/community/download-tasks.test.ts
+    - frontend/src/views/app-tree/data.test.ts
+    - frontend/src/views/app-tree/render.test.ts
+  quick_groups:
+    - 文件操作与标签
+  quick_intents:
+    - 创意工坊、社区下载、下载队列
+    - 镜像源、批量下载、github 仓库
+    - download-queue / download-tasks
+  quick_risk_lines:
+    - 社区下载必须走 community download-queue 排队，禁止各组件各自发下载请求
+  pitfalls:
+    - 各组件各自发下载请求 → 并发冲突、进度丢失；必须经 download-queue 排队
+    - 镜像源未走 gh-links → 下载慢、镜像不可用；必须经 gh-links 的 CDN 分流
+  use_when:
+    - 创意工坊
+    - 社区
+    - 下载队列
+    - 镜像源
+    - 批量下载
+    - github 仓库
+    - 下载进度
+    - workshop
+  perf:
+    - io-bound
+  invariant_anchors:
+    - frontend/src/features/community/download-queue.ts|isActiveStatus
+    - frontend/src/features/community/data.ts|Promise.any
 tests:
   - frontend/src/features/community/data.test.ts
   - frontend/src/features/community/download-queue.test.ts

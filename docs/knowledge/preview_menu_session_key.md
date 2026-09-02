@@ -12,6 +12,74 @@ source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
   - frontend/src/preview-3d/adapters/switch-preview.ts
   - frontend/src/views/app-preview/skeleton-fill-panel.ts
+auto_fields:
+  symbols_with_lines:
+    - _resetSingletons:218
+    - buildYsmModelSchema:319
+    - buildYsmScene:500
+    - CameraControlBridge:19
+    - cleanupPreview:196
+    - fill3DPanel:39
+    - fillYsmShotPanel:74
+    - getSchema:52
+    - hasActivePreview:240
+    - hasSchema:57
+    - invalidatePreview:191
+    - listSchemas:62
+    - makeYsmAdapter:531
+    - makeYsmModelSchemaId:29
+    - mount3D:263
+    - Mount3DOptions:245
+    - PanelHandle:13
+    - PreviewAdapter:130
+    - PreviewBuildCtx:81
+    - PreviewHandle:140
+    - PreviewScene:104
+    - registerSchema:41
+    - registerYsmModelSchema:105
+    - resetSchemas:67
+    - SchemaBuilder:34
+    - SwitchContext:32
+    - switchPreview:234
+    - switchToSession:95
+    - syncLightTargetFromContent:423
+    - unregisterSchema:47
+    - YSM_MODEL_SCHEMA_ID:20
+    - YsmAdapterOptions:44
+    - YsmContentHandle:33
+    - YsmControlsContext:46
+    - ysmMenuItems:592
+    - YsmMenuItemsOpts:550
+    - YsmModel:24
+    - ysmModelStats:271
+    - YsmModelStats:263
+    - ysmModelTextureSlots:291
+    - ysmShotNodes:69
+  tests:
+    - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
+    - frontend/src/preview-3d/adapters/schema-registry.test.ts
+    - frontend/src/preview-3d/adapters/switch-preview.test.ts
+    - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
+    - frontend/src/views/app-preview/ysm-controls.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - schema 注册、per-scene、多模型同框
+    - schema 键冲突、ADR-132
+  quick_risk_lines:
+    - schema 注册必须用 per-scene 键，禁止跨场景共用 schema key
+  pitfalls:
+    - 跨场景共用 schema key → 多模型同框时 schema 冲突、菜单项混乱；必须用 per-scene 键
+    - switch-preview 未清 schema 注册表 → 旧模型 schema 残留；必须经 switch-preview 清理
+  use_when:
+    - schema 注册
+    - per-scene
+    - 多模型同框
+    - schema 键冲突
+    - activeComponent
+    - 组件选择
+    - YSM maid 同台
+    - sessionId
 tests:
   - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
   - frontend/src/preview-3d/adapters/schema-registry.test.ts

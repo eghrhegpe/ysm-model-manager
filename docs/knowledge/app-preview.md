@@ -8,6 +8,169 @@ adr:
 category: ui
 source_files:
   - frontend/src/views/app-preview/
+auto_fields:
+  symbols_with_lines:
+    - addOpLog:20
+    - appendLitematicPreview:134
+    - appendMmdPreview:38
+    - BedrockBone:26
+    - BedrockCube:16
+    - BedrockModel:32
+    - BoneEntry:5
+    - buildBoneExportRow:168
+    - buildBoneNamesText:15
+    - buildDepthMap:34
+    - buildStatsCard:90
+    - buildToggleRow:48
+    - buildYsmModelSchema:319
+    - calcBoneHitZones:11
+    - CameraControlBridge:19
+    - cleanupEmpty3D:40
+    - cleanupLitematic3D:255
+    - cleanupMaid3D:88
+    - cleanupMmd3D:33
+    - cleanupPack3D:60
+    - cleanupScene3D:38
+    - cleanupVoxel3D:139
+    - cleanupVrm3D:59
+    - cleanupYsm3D:87
+    - closeActive3DOverlay:36
+    - createFbx3D:26
+    - createLitematic3D:91
+    - createMmd3D:28
+    - createPack3D:33
+    - createScene3D:33
+    - createVrm3D:44
+    - createYsm3D:50
+    - cubeVec:11
+    - detailGen:24
+    - drawMiniView:360
+    - drawView:360
+    - fill3DPanel:18
+    - fillAuthorsAsync:232
+    - fillMmdModelPanel:44
+    - fillMmdShotPanel:213
+    - fillYsmShotPanel:74
+    - GenGuard:13
+    - getPrefer3D:36
+    - getRegisteredRoutes:34
+    - HitZone:9
+    - invalidateEmptyPreview:45
+    - invalidateLitematicPreview:29
+    - invalidateMaidPreview:93
+    - invalidateMmdPreview:43
+    - invalidatePackPreview:65
+    - invalidateScenePreview:43
+    - invalidateVrmPreview:64
+    - invalidateYsmPreview:92
+    - iRow:15
+    - loadModel2D:59
+    - loadModelData:29
+    - LoadModelOpts:11
+    - MaidOpenOptions:37
+    - makeMmdDataPort:11
+    - makeShotAction:34
+    - MaterialControlBridge:180
+    - MmdBottomNavCtx:29
+    - mmdModelInfoNodes:62
+    - MmdPlayBridge:96
+    - mmdShotNodes:197
+    - Model2DOptions:37
+    - modelDetailHTML:20
+    - ModelDetailMeta:6
+    - ModelLike:13
+    - ModelSpec:25
+    - openEmpty3DFullscreen:35
+    - openFullPreview:7
+    - openModel3DFullscreen:62
+    - OpenModel3DOptions:39
+    - PanelHandle:13
+    - playNodes:114
+    - preloadModel:115
+    - previewCSS:2
+    - PreviewCtx:32
+    - PreviewDebugger:20
+    - PreviewImageLoader:25
+    - PreviewRoot:8
+    - readFileBytes:14
+    - registerReRoute:26
+    - registerYsmModelSchema:105
+    - renderModel2D:58
+    - resolveFbxSiblings:7
+    - resolveMmdSiblings:13
+    - resolveMorphSiblings:33
+    - resolveSceneSiblings:28
+    - resolveSiblingsByType:13
+    - resolveStageSiblings:13
+    - saveScreenshot:201
+    - scanModelsByType:155
+    - sec:6
+    - setActive3DClose:42
+    - setPrefer3D:39
+    - setup2DCanvas:23
+    - shotButtonNodes:65
+    - showFbxPreview:169
+    - showLitematic:187
+    - showMaidPreview:313
+    - showMmdPreview:116
+    - showModelDetail:27
+    - showMorphPreview:229
+    - showResourcePack:144
+    - showScenePreview:199
+    - showShaderpack:246
+    - showSimplePreview:228
+    - showStagePreview:296
+    - showVrmMeta:29
+    - statsCardHTML:88
+    - StatsCardModel:58
+    - VrmMaterialControlBridge:18
+    - vrmModelInfoNodes:26
+    - vrmShotNodes:42
+    - withPreviewExtras:172
+    - YsmContentHandle:33
+    - YsmControlsContext:46
+    - YsmDecoder:15
+    - YsmModel:24
+    - ysmModelStats:271
+    - YsmModelStats:263
+    - ysmModelTextureSlots:291
+    - YsmOpenOptions:37
+    - ysmShotNodes:69
+  tests:
+    - frontend/src/views/app-nav/index.test.ts
+    - frontend/src/views/app-preview/utils.test.ts
+    - frontend/src/views/app-preview/component.test.ts
+    - frontend/src/views/app-preview/maid-3d.test.ts
+    - frontend/src/views/app-sidebar/loader.test.ts
+    - frontend/src/views/app-sync-manager/index.test.ts
+    - frontend/src/views/app-toast/index.test.ts
+    - frontend/src/utils/dom/feedback.test.ts
+    - frontend/src/views/context-menu/index.test.ts
+  quick_groups:
+    - 3D 预览面板与模型追加
+  quick_intents:
+    - 预览面板、模型预览、2D 骨骼 / 3D 预览
+    - Litematic / 蓝图、资源包 / 光影包
+    - model:select、WASM 解码、放大预览
+    - app-preview 组件、_previewGuard、detailGen
+    - showResourcePack、showShaderpack
+  quick_risk_lines:
+    - 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则
+  pitfalls:
+    - 手写 .(ysm|zip|json) 判定 → .7z 漏判、注册表变更不同步；必须经 matchTypeByExt(RESOURCE_TYPES.YSM)
+    - async 窗口期无 container.isConnected 守卫 → 组件卸载后异步回调写已卸载 DOM；每个 await 后必须检查 isConnected
+  use_when:
+    - 预览
+    - 模型预览
+    - 3D 预览
+    - Litematic
+    - WASM 解码
+  invariant_anchors:
+    - frontend/src/views/app-preview/index.ts|_previewGuard
+    - frontend/src/views/app-preview/detail.ts|detailGen
+    - frontend/src/views/app-preview/gen-guard.ts|GenGuard
+    - frontend/src/views/app-preview/skeleton.ts|closeActive3DOverlay
+    - frontend/src/views/app-preview/loader.ts|loadModelData
 tests:
   - frontend/src/views/app-nav/index.test.ts
   - frontend/src/views/app-preview/utils.test.ts

@@ -9,6 +9,45 @@ source_files:
   - go/geometry/parse.go
   - go/geometry/archive.go
   - go/geometry/ysm_parser.go
+auto_fields:
+  symbols_with_lines:
+    - ExtractFirstPNGFrom7z:153
+    - ExtractFirstPNGFromZip:143
+    - IsArmModelName:59
+    - IsMainModelName:1475
+    - ParseBedrockGeometry:240
+    - ParseComponentsFrom7z:1693
+    - ParseComponentsFromZip:1482
+    - ParseFrom7z:1391
+    - ParseFrom7zEntry:1409
+    - ParseFromZip:1385
+    - ParseFromZipEntry:1404
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - Geometry 存档、基岩版 bedrock
+    - 模型解析、zip / 7z / 纹理 / 动画
+    - parse.go / archive.go
+  quick_risk_lines:
+    - Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip
+  pitfalls:
+    - 直接 unzip → 7z 未支持、纹理提取缺路径安全；必须经 go/geometry
+    - 未走 ysm_parser.go → .ysm 解析不一致；必须经 go/ysm 兜底
+  use_when:
+    - geometry
+    - 基岩版
+    - bedrock
+    - 模型解析
+    - zip
+    - 7z
+    - 纹理
+    - 动画
+  perf:
+    - io-bound
+    - memory-heavy
+  invariant_anchors:
+    - go/geometry/archive.go|fsutil.ReadLimitedEntry
+    - go/geometry/ysm_parser.go|json.Decoder
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

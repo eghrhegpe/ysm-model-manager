@@ -5,6 +5,63 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/views/app-sync-manager/
+auto_fields:
+  symbols_with_lines:
+    - _lastSelectedType:17
+    - actionBtnHTML:62
+    - applyFilter:140
+    - AppSyncManager:72
+    - bindEvents:17
+    - containerHTML:146
+    - emptyHTML:261
+    - EventSelf:9
+    - itemHTML:218
+    - LAST_TYPE_KEY:13
+    - loadData:47
+    - loadingHTML:275
+    - loadTypeConfig:19
+    - NetworkSelf:14
+    - performSingleOp:27
+    - render:33
+    - setLastSelectedType:19
+    - STATUS_COLOR:49
+    - STATUS_ICON:40
+    - statusColorOf:59
+    - statusIconOf:58
+    - statusTabHTML:189
+    - syncDirRowHTML:79
+    - SyncItem:17
+    - SyncManagerSelf:27
+    - SyncRenderSelf:20
+    - SyncStoreSelf:13
+    - tabStatus:92
+    - VIEW_TESTIDS:10
+  tests:
+    - frontend/src/views/app-sync-manager/index.test.ts
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - 整合包同步页、推送 / 拉取资源
+    - 待推送 / 可拉取 / 已禁用 / 实例资源
+    - 同步状态、app-sync-manager
+  quick_risk_lines:
+    - app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态
+  pitfalls:
+    - 各列各自查询同步状态 → 状态不一致、并发冲突；必须经 _gen 单点生成
+    - 同步操作未进队列 → 并发 push/pull 冲突；必须经 sync-manager 排队
+  use_when:
+    - 整合包同步
+    - 同步状态
+    - 推送资源
+    - 拉取资源
+    - 待推送
+    - 可拉取
+    - 已禁用
+    - 实例资源
+  perf:
+    - io-bound
+  invariant_anchors:
+    - frontend/src/views/app-sync-manager/index.ts|_gen
 tests:
   - frontend/src/views/app-sync-manager/index.test.ts
 quick_groups:

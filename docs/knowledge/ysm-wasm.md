@@ -7,6 +7,65 @@ source_files:
   - frontend/src/wasm/
   - internal/app/wasm_decoder.go
   - go/avatar/avatar_decode.go
+auto_fields:
+  symbols_with_lines:
+    - _getGlueCode:3
+    - _getGlueCodeMt:3
+    - _getWasmBinary:3
+    - _getWasmBinaryMt:4
+    - classifyWasmError:55
+    - collectOutputFiles:102
+    - decodeYsmFile:180
+    - decodeYsmFileFromMemory:131
+    - DecodeYSMFiles:75
+    - decodeYsmInWorker:198
+    - decodeYsmInWorkerMemfs:237
+    - ensureDir:92
+    - FS:112
+    - FSLike:14
+    - initYSMParser:55
+    - initYsmParserInWorker:54
+    - initYsmParserInWorkerMt:101
+    - patchGlueHeapExport:141
+    - resolveWasmFactory:154
+    - SetNodeJS:44
+    - WasmModuleLike:26
+    - wipeDir:78
+    - Write:66
+    - writeHeapBytes:123
+    - YsmDecodedFile:8
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - WASM 解析器、YSMParser、ysm 解码
+    - 加密模型、wasm 加载、Emscripten
+    - MEMFS / node 解码 / callMain
+  quick_risk_lines:
+    - YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析
+  pitfalls:
+    - 手写 YSM 字节流解析 → 与 YSMParser WASM 输出不一致；必须经 ysm-wasm
+    - wasmBinary 未释放 → 内存泄漏；必须复用 wasm 实例并释放
+    - Worker 内静态 import WASM 数据模块 → 另一变体成 1.5MB 死重；必须动态 import
+    - vite worker.format 未设 es → iife 强制 inlineDynamicImports，动态 import 构建直接失败
+  use_when:
+    - WASM
+    - YSMParser
+    - ysm 解码
+    - wasm 加载
+    - MEMFS
+    - callMain
+    - stats.worker
+    - 按需加载
+    - crossOriginIsolated
+    - worker.format
+    - pthread
+  invariant_anchors:
+    - go/avatar/avatar_decode.go|DecodeYSMFiles
+    - go/avatar/avatar_decode.go|SetNodeJS
+    - internal/app/wasm_decoder.go|decodeYSMViaNodeJS
+  perf:
+    - cpu-bound
+    - single-thread
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -18,6 +77,8 @@ quick_risk_lines:
 pitfalls:
   - 手写 YSM 字节流解析 → 与 YSMParser WASM 输出不一致；必须经 ysm-wasm
   - wasmBinary 未释放 → 内存泄漏；必须复用 wasm 实例并释放
+  - Worker 内静态 import WASM 数据模块 → 另一变体成 1.5MB 死重；必须动态 import
+  - vite worker.format 未设 es → iife 强制 inlineDynamicImports，动态 import 构建直接失败
 
 use_when:
   - WASM
@@ -26,6 +87,11 @@ use_when:
   - wasm 加载
   - MEMFS
   - callMain
+  - stats.worker
+  - 按需加载
+  - crossOriginIsolated
+  - worker.format
+  - pthread
 invariant_anchors:
   - go/avatar/avatar_decode.go|DecodeYSMFiles
   - go/avatar/avatar_decode.go|SetNodeJS
@@ -60,6 +126,20 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 - WASM 加载与初始化（base64 取二进制 + 间接 eval 执行胶水代码 + 工厂实例化，并发调用去重）
 - 内存直解 .ysm（优先路径，无文件 I/O）与 callMain + MEMFS 解码（回退路径）
 - WASM 虚拟文件系统管理（/input /output 目录清理与产物收集）
+
+## Worker 侧独立加载器（ADR-153 按需加载）
+
+`frontend/src/wasm/ysm-worker-loader.ts` 是 Worker 内的**独立**加载器——绝不共用主线程 `wasmModule` 单例（Worker 内 WASM 加载必须独立），被 `stats.worker.ts` 独占引用。
+
+**base / mt 双变体互斥**：运行时按 `crossOriginIsolated` 二选一——COI 环境走 pthread 多线程版（mt，需 SharedArrayBuffer），非 COI 走单线程版（base）。二者各约 1.5 MiB，同一环境只用其一。
+
+三条硬约束：
+
+1. **两组数据模块均必须动态 import**（`loadBaseAssets()` / `loadMtAssets()`）。静态 import 会让另一变体成为随 chunk 全量下载的死重，而 `app-modules.ts` 启动 2s 后的 `prefetchStatsWorker()` 会**主动预取**整个 worker chunk。实测：双向懒加载后 `stats.worker` chunk 从 1,606,069 B 降至 11,778 B（−99.3%），COI 环境总下载从 3.07 MiB 降至 1.62 MiB。
+2. **vite 的 `worker.format` 必须显式设为 `"es"`**（`vite.config.js` + `vite.web.config.ts` 两份都要）。Vite 默认 `iife`（源码 `config.worker?.format || "iife"`），iife 下 rollup 强制 `inlineDynamicImports` → 动态 import 无法 code-split → 构建报 `IIFE output formats are not supported for code-splitting builds`。此约束由 `frontend/src/wasm/lazy-import-guard.test.ts` 守卫。**改动任一处前先确认另一处未被回退。**
+3. **base 数据不可移除**。`resetYsmParserInWorker()` 在 WASM 硬崩溃（fatal / exit）后把单例置 null，此后 `decodeYsmInWorker` / `decodeYsmInWorkerMemfs` 的 `if (!wasmModule)` 分支走**单线程** init 恢复——单线程是 COI 环境下的合法崩溃恢复路径，只能从「常驻」降级为「按需加载」。
+
+守卫测试 `lazy-import-guard.test.ts` 直接对源码做静态断言（不依赖构建产物，build 前即可拦截退化）：loader 内不得出现四个数据模块的静态 import（含 `import "./mod.js"` 副作用形态），且两份 vite 配置的 worker 段须含 `format: "es"`。
 
 ## 对外 API / 入口
 

@@ -7,6 +7,17 @@ source_files:
   - scripts/doctor.ts
   - scripts/pre-push-gate.ts
   - scripts/check-redlines.ts
+auto_fields:
+  symbols_with_lines:
+    - redlineFilterKeysByChangedFiles:421
+  use_when:
+    - 双调度器
+    - 质量闸门重叠
+    - doctor gate 差异
+    - 治理红线下沉
+  invariant_anchors:
+    - scripts/doctor.ts|function delegate
+    - scripts/check-redlines.ts|function runChecks
 use_when:
   - 双调度器
   - 质量闸门重叠

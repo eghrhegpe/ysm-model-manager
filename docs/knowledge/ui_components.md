@@ -5,6 +5,93 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/ui/
+auto_fields:
+  symbols_with_lines:
+    - addActionRow:708
+    - addCardTitle:484
+    - addClearRow:73
+    - addCollapsible:24
+    - addColorSliderRow:38
+    - addDangerRow:499
+    - addDisabledRow:745
+    - addEmptyRow:461
+    - addFieldRow:19
+    - addInfoCard:571
+    - addInfoGrid:564
+    - addInlineToggleRow:776
+    - addModeRow:426
+    - addModeSlider:394
+    - addPresetChip:162
+    - addSectionTitle:137
+    - addSliderRow:382
+    - addToggleRow:128
+    - addVector3SliderRow:210
+    - addWatchDirRow:646
+    - ARIA_ATTR:17
+    - buildPresetChipGroup:35
+    - cardContainer:10
+    - clearControls:53
+    - COLLAPSIBLE:29
+    - ControlOptions:2
+    - ControlUpdater:9
+    - createHeaderToggle:100
+    - createIcon:10
+    - createIconBox:29
+    - createLeadingBtn:64
+    - createSlideMenu:20
+    - createTrailingBtn:55
+    - DragSliderController:24
+    - DragSliderOptions:9
+    - getControl:35
+    - getControlCount:58
+    - HeaderToggleConfig:10
+    - initControl:165
+    - installSlideMenuStyles:169
+    - installUiComponentsStyles:25
+    - PresetChipItem:16
+    - PREVIEW_OVERLAY_ID:11
+    - registerControl:29
+    - ROLE:6
+    - setControlRegistry:20
+    - slideMenuCss:9
+    - SlideMenuHandle:34
+    - slideMenuStyleSheet:165
+    - SlideMenuView:27
+    - SLIDER_BAR_CLASS:37
+    - SLIDER_QUARTER_LARGE_STEP:6
+    - SLIDER_QUARTER_SMALL_STEP:8
+    - slideRow:97
+    - SlideRowExtra:68
+    - sliderRow:604
+    - toggleRow:621
+    - TrailingAction:12
+    - uiComponentsCss:7
+    - uiComponentsStyleSheet:21
+    - unregisterControl:40
+    - withLoadingIndicator:10
+  quick_groups:
+    - UI 交互与弹窗
+  quick_intents:
+    - UI 组件库、卡片组件、折叠面板
+    - 加载动画、滑块、行组件、预设 chip
+    - createCard / createSlideMenu / createLoading
+  quick_risk_lines:
+    - UI 组件必须走 ui-components 的 helper 函数，禁止手写重复 DOM 结构
+  pitfalls:
+    - 手写重复 DOM → 样式不一致、缺可访问性；必须经 ui-components
+    - ui-components 内自定义元素 → 与全仓 Web Components 规范冲突；ui-components 只做 helper 函数
+  use_when:
+    - UI 组件
+    - 卡片组件
+    - 折叠面板
+    - 加载动画
+    - 滑块
+    - 行组件
+    - 预设
+    - 图标
+  invariant_anchors:
+    - frontend/src/ui/control-registry.ts|registerControl
+    - frontend/src/ui/control-registry.ts|getControl
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

@@ -5,6 +5,38 @@ tier: architecture
 category: rendering
 source_files:
   - frontend/src/views/app-preview/model2d/model2d.ts
+auto_fields:
+  symbols_with_lines:
+    - BedrockBone:26
+    - BedrockCube:16
+    - BedrockModel:32
+    - calcBoneHitZones:11
+    - Model2DOptions:37
+    - renderModel2D:58
+  tests:
+    - frontend/src/views/app-preview/model2d/model2d.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 2D 预览、骨骼图、Canvas 渲染
+    - 前视图、骨骼热区、鼠标拾取、线框图
+  quick_risk_lines:
+    - 2D 骨骼渲染必须走 model2d.ts 的 Canvas 渲染，禁止手写骨骼画布
+  pitfalls:
+    - 手写骨骼画布 → 与 model2d 输出不一致、缺鼠标拾取；必须复用 model2d.ts
+    - Canvas 不销毁 → 内存泄漏；必须复用 renderer 并dispose
+  use_when:
+    - 2D 预览
+    - 骨骼图
+    - Canvas 渲染
+    - 前视图
+    - 骨骼热区
+    - 鼠标拾取
+    - 线框图
+  perf:
+    - cpu-bound
+  invariant_anchors:
+    - frontend/src/views/app-preview/model2d/model2d.ts|const cosA = Math.cos(angle)
 tests:
   - frontend/src/views/app-preview/model2d/model2d.test.ts
 quick_groups:

@@ -11,6 +11,68 @@ source_files:
   - frontend/src/utils/dom/dialogs/adv-filter.ts
   - frontend/src/utils/dom/dialogs/adv-filter-util.ts
   - frontend/src/backend/web-stats.ts
+auto_fields:
+  symbols_with_lines:
+    - __setStatsRunnerForTest:53
+    - AdvFilterResult:19
+    - AdvFilterValue:6
+    - AppTree:69
+    - appTreeStyle:20
+    - batchStatsWebModels:173
+    - bindToolbarEvents:356
+    - buildTree:84
+    - cleanupVirtualScroll:338
+    - consumeWebSearchDegraded:58
+    - flattenVisible:287
+    - getRenderMode:46
+    - getStatsPoolSize:91
+    - modalAdvFilter:181
+    - onStatsProgress:40
+    - openAdvFilterDialog:253
+    - parseFilterNumber:21
+    - pickWebFilesAndImport:287
+    - prefetchStatsWorker:113
+    - RenderMode:40
+    - renderTree:347
+    - ROW_H_GRID:20
+    - ROW_H_LIST:21
+    - setRenderMode:51
+    - STATS_BATCH_LIMIT:19
+    - terminateStatsWorker:65
+    - TreeNode:34
+    - TreeRow:24
+    - updateStat:414
+    - validateAdvFilter:32
+    - VIEW_TESTIDS:34
+    - WebModelStats:18
+  invariant_anchors:
+    - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
+    - frontend/src/views/app-tree/toolbar-search.ts|dgAfIntersectPaths
+    - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
+    - frontend/src/backend/web-stats.ts|consumeWebSearchDegraded
+  tests:
+    - frontend/src/views/app-tree/toolbar-search.test.ts
+    - frontend/src/views/app-tree/toolbar-events.test.ts
+    - frontend/src/utils/dom/dialogs/adv-filter.test.ts
+    - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - 搜索、筛选、关键词 / 标签 / 数值三路交集
+    - SearchModels、adv-filter、网页版降级
+    - dgAfIntersectPaths
+  quick_risk_lines:
+    - 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑
+  pitfalls:
+    - 前端本地重算筛选逻辑 → 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行
+    - adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 dgAfIntersectPaths
+  use_when:
+    - 搜索
+    - 筛选
+    - 三路交集
+    - adv-filter
+    - SearchModels
+    - 网页版降级
 invariant_anchors:
   - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
   - frontend/src/views/app-tree/toolbar-search.ts|dgAfIntersectPaths

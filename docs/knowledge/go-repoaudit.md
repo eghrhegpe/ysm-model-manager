@@ -5,6 +5,32 @@ tier: architecture
 category: go
 source_files:
   - go/repoaudit/
+auto_fields:
+  symbols_with_lines:
+    - Audit:125
+    - CacheStatus:83
+    - Classify:372
+    - Completeness:75
+    - DedupSummary:103
+    - HealthReport:110
+    - HealthReportFor:259
+    - ResourceSummary:93
+    - Result:64
+  use_when:
+    - 仓库审计
+    - 健康分数
+    - 完整性检查
+    - 缓存命中率
+    - repoaudit
+    - health-report
+    - 去重
+  perf:
+    - io-bound
+    - memory-heavy
+  invariant_anchors:
+    - go/repoaudit/repoaudit.go|func Audit
+    - go/repoaudit/repoaudit.go|func Classify
+    - go/repoaudit/repoaudit.go|sync.Once
 use_when:
   - 仓库审计
   - 健康分数

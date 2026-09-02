@@ -10,6 +10,57 @@ source_files:
   - frontend/src/preview-3d/adapters/vrm-bone.ts
   - frontend/src/preview-3d/adapters/vrm-bone-ui.ts
   - frontend/src/preview-3d/mmd-bones.ts
+auto_fields:
+  symbols_with_lines:
+    - BoneDetail:101
+    - BoneListItem:58
+    - BoneNode:11
+    - BoneTree:23
+    - buildBoneTree:36
+    - buildVrmBoneNodes:20
+    - buildVrmBoneTree:52
+    - findAncestorBoneId:153
+    - getBoneDetail:110
+    - getBonePath:78
+    - getBonePosition:93
+    - listBonesWithDepth:65
+    - makeBonePanelRenderer:40
+    - MmdBonePickResult:32
+    - mmdBonesToBoneNodes:16
+    - pickBone:169
+    - pickMmdBone:39
+    - RenderVrmBonePanel:31
+    - setBoneNodeVisible:129
+    - toggleBoneVisible:137
+    - VrmBonePanelCtx:21
+  tests:
+    - frontend/src/preview-3d/bone-tools.test.ts
+    - frontend/src/preview-3d/adapters/vrm-bone.test.ts
+    - frontend/src/preview-3d/adapters/vrm-bone-ui.test.ts
+    - frontend/src/preview-3d/mmd-bones.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 骨骼工具、骨骼树、骨骼列表
+    - 骨骼拾取、骨骼显隐、BoneNode / BoneTree
+    - buildBoneTree / makeBonePanelRenderer
+  quick_risk_lines:
+    - 骨骼树必须走 bone-tools 的 buildBoneTree，禁止在 adapter 里手写骨骼树构建
+  pitfalls:
+    - adapter 手写骨骼树 → 与 bone-tools 输出不一致、缺骨骼显隐控制；必须经 buildBoneTree
+    - VRM 骨骼映射未走 vrm-bone.ts → 骨骼名不匹配、动画错乱；必须经 vrm-bone.ts 映射
+  use_when:
+    - 骨骼工具
+    - 骨骼树
+    - 骨骼拾取
+    - BoneNode
+    - BoneTree
+    - buildBoneTree
+  perf:
+    - cpu-bound
+  invariant_anchors:
+    - frontend/src/preview-3d/bone-tools.ts|buildBoneTree
+    - frontend/src/preview-3d/adapters/vrm-bone-ui.ts|makeBonePanelRenderer
 tests:
   - frontend/src/preview-3d/bone-tools.test.ts
   - frontend/src/preview-3d/adapters/vrm-bone.test.ts

@@ -5,6 +5,47 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/core/
+auto_fields:
+  symbols_with_lines:
+    - Abortable:137
+    - addDisposableListener:13
+    - clamp:5
+    - clamp01:13
+    - clampInt:9
+    - clampPct:28
+    - debounce:8
+    - DebouncedTimer:102
+    - delay:21
+    - Disposable:5
+    - fireAndForget:16
+    - lerp:18
+    - lerpArray:23
+    - LoadingGuard:70
+    - logError:11
+    - logWarn:5
+    - makeLazyLoader:36
+    - swallowError:11
+    - waitForFrame:26
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 工具函数、防抖、异步工具
+    - swallowError / fireAndForget / retry / timeout
+    - 纯函数
+  quick_risk_lines:
+    - swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底
+  pitfalls:
+    - swallowError 吞掉业务异常 → 静默失败、无法排查；必须用于"预期内可忽略"的错误
+    - fireAndForget 无 error 兜底 → 异常丢失；必须挂 onerror 回调或全局 error 监听
+  use_when:
+    - 工具函数
+    - 工具方法
+    - 纯函数
+    - 防抖
+    - 异步
+  invariant_anchors:
+    - frontend/src/utils/core/async.ts|swallowError
+    - frontend/src/utils/core/async.ts|fireAndForget
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

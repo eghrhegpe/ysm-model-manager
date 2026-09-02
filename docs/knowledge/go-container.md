@@ -8,6 +8,44 @@ adr:
 category: go
 source_files:
   - go/container/container.go
+auto_fields:
+  symbols_with_lines:
+    - Close:73
+    - Entries:61
+    - Entry:28
+    - Incomplete:80
+    - IsDir:50
+    - Name:49
+    - Open:52
+    - Open7zBytes:196
+    - Open7zPath:187
+    - OpenDir:261
+    - OpenZipBytes:178
+    - OpenZipPath:169
+    - Reader:36
+    - UncompressedSize64:51
+    - ZipMatchesEntries:273
+  quick_groups:
+    - 模型扫描与仓库管理
+  quick_intents:
+    - 容器解析、container_entries
+    - zip 多模型、多 entry
+  quick_risk_lines:
+    - 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举
+  pitfalls:
+    - 手写 zip 内枚举 → 与 go/container 判定不一致、多 entry 漏检；必须经 go/container
+    - 未处理 7z 格式 → 容器解析失败；必须经 go/container 的格式分流
+  use_when:
+    - 容器
+    - 解包
+    - zip
+    - 7z
+    - ContainerReader
+    - 归档
+    - 压缩包
+    - 目录容器
+  invariant_anchors:
+    - go/container/container.go|OpenZipPath
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

@@ -5,6 +5,39 @@ tier: architecture
 category: go
 source_files:
   - go/recycle/
+auto_fields:
+  symbols_with_lines:
+    - CleanOpLogger:19
+    - DeduplicateEntries:141
+    - Move:438
+    - MoveResult:17
+    - New:34
+    - RemoveRepoDuplicates:25
+    - TrashManager:23
+    - TrashManager.Delete:376
+    - TrashManager.Empty:404
+    - TrashManager.List:207
+    - TrashManager.Move:49
+    - TrashManager.MoveEx:55
+    - TrashManager.RecycleDir:44
+    - TrashManager.Restore:267
+  use_when:
+    - 回收站
+    - 删除
+    - 恢复
+    - recycle
+    - 软删除
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/fsutil/crossdevice_other.go|IsCrossDeviceErr
+    - go/recycle/recycle.go|deleted_link
+  quick_groups:
+    - 文件操作与标签
+  quick_intents:
+    - 回收站 / 软删除 / 恢复 / 清空回收站
+  quick_risk_lines:
+    - 删除必须走 .recycle 软删除（硬链接判定），禁止直接 os.Remove
 use_when:
   - 回收站
   - 删除

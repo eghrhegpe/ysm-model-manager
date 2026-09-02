@@ -8,6 +8,121 @@ category: rendering
 source_files:
   - frontend/src/preview-3d/caps/
   - frontend/src/preview-3d/adapters/scene-registry.ts
+auto_fields:
+  symbols_with_lines:
+    - AmbientLightParams:46
+    - applyGroundSurfaceAppearance:280
+    - applyGroundSurfaceStructural:261
+    - attenuateAmbientForSky:364
+    - buildGroundSurfaceSpec:92
+    - createListenerSet:209
+    - DEFAULT_ENV_PARAMS:138
+    - DEFAULT_FOG_PARAMS:30
+    - DEFAULT_GROUND_PARAMS:53
+    - DEFAULT_GROUND_SURFACE_PARAMS:46
+    - DEFAULT_LIGHT_PARAMS:107
+    - DEFAULT_POSTPROC_PARAMS:87
+    - DEFAULT_REFLECTOR_PARAMS:34
+    - DEFAULT_SHADOW_PARAMS:39
+    - DEFAULT_SKY_PARAMS:63
+    - DEFAULT_WATER_PARAMS:50
+    - DirectionalLightParams:36
+    - drawEnvEquirect:158
+    - ENV_PRESET_BY_MODEL:147
+    - ENV_PRESET_LINKAGE:100
+    - ENV_PRESETS:43
+    - EnvironmentCapability:399
+    - EnvironmentParams:127
+    - EnvPreset:22
+    - EnvPresetId:20
+    - EnvPresetLinkage:88
+    - FieldRestorer:159
+    - FOG_PRESETS:40
+    - FogCapability:68
+    - FogMode:15
+    - FogParams:17
+    - generateSurfacePixels:164
+    - GroundCapability:62
+    - GroundMaterialParams:19
+    - GroundParams:40
+    - GroundSurfaceAppearanceSpec:73
+    - GroundSurfaceMode:17
+    - groundSurfaceNeedsRebuild:132
+    - GroundSurfaceSpec:81
+    - GroundSurfaceStructuralSpec:61
+    - injectSkySunScalePatch:126
+    - isSkyEnvironmentOn:133
+    - LIGHT_PRESETS:117
+    - LightCapability:368
+    - lightDirToPosition:348
+    - LightParams:79
+    - MAX_MODELS:209
+    - MenuControlDef:17
+    - MenuControlKind:14
+    - MODEL_SKY_PRESETS:91
+    - ModelEntry:21
+    - persistState:143
+    - POSTPROC_PRESETS:359
+    - PostprocessingCapability:369
+    - PostprocessingParams:35
+    - ReflectionMode:33
+    - REFLECTOR_PRESETS:45
+    - ReflectorCapability:125
+    - ReflectorParams:18
+    - RenderModeCapability:59
+    - restoreFields:175
+    - restoreState:148
+    - SceneCapability:95
+    - SceneCapabilityFactory:24
+    - SceneCapabilityLookup:91
+    - sceneCapabilityRegistry:111
+    - SceneCapabilityRegistry:32
+    - sceneRegistry:206
+    - SHADOW_PRESETS:49
+    - ShadowCapability:171
+    - ShadowParams:24
+    - SkyCapability:315
+    - SkyModelType:83
+    - SkyParams:30
+    - SpotlightParams:51
+    - surfaceSpecKey:117
+    - textureRepeat:141
+    - TILE_WORLD_SIZE:139
+    - VolumetricParams:65
+    - WaterCapability:66
+    - WaterMode:18
+    - WaterParams:21
+    - WireframeCapability:14
+  tests:
+    - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
+    - frontend/src/preview-3d/caps/ground-capability.test.ts
+    - frontend/src/preview-3d/caps/light-capability.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 场景能力 / cap / registry
+    - 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）
+    - createAll / loadAll / setPreset / saveAll / dispose
+    - 3D 菜单控件声明式渲染
+  quick_risk_lines:
+    - 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象
+  pitfalls:
+    - adapter 直接创建场景对象 → 能力列表 / 菜单 / 状态同步不一致；必须经 sceneCapabilityRegistry 注册
+    - 能力未实现 getMenuControls → 菜单缺控件；必须在 SceneCapability 接口中实现 getMenuControls
+  use_when:
+    - 场景能力 / cap / registry / SceneCapability
+    - 3D 菜单控件声明式渲染（getMenuControls）
+    - 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）
+    - 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）
+    - 「光」指代消歧（light 是光源，fog/shadow/reflector 不是）
+  perf:
+    - gpu-bound
+  invariant_anchors:
+    - frontend/src/preview-3d/caps/scene-capability-registry.ts|sceneCapabilityRegistry
+    - frontend/src/preview-3d/caps/scene-capability.ts|SceneCapability
+    - frontend/src/preview-3d/adapters/mount-preview-core.ts|createAll
+    - frontend/src/preview-3d/menu/env.ts|buildEnvSchema
+    - frontend/src/preview-3d/menu/env.ts|renderEnvLevel
 tests:
   - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
   - frontend/src/preview-3d/caps/ground-capability.test.ts

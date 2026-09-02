@@ -15,6 +15,71 @@ source_files:
   - frontend/src/views/app-preview/mmd-siblings.ts
   - frontend/src/preview-3d/adapters/camera-controls.ts
   - frontend/src/preview-3d/adapters/schema-registry.ts
+auto_fields:
+  symbols_with_lines:
+    - addOpLog:20
+    - buildCameraControls:31
+    - CameraControlBridge:13
+    - fillMmdModelPanel:44
+    - fillMmdShotPanel:213
+    - fillYsmShotPanel:74
+    - getSchema:52
+    - hasSchema:57
+    - listSchemas:62
+    - makeYsmModelSchemaId:29
+    - MaterialControlBridge:180
+    - MmdBottomNavCtx:29
+    - mmdModelInfoNodes:62
+    - MmdPlayBridge:96
+    - mmdShotNodes:197
+    - playNodes:114
+    - readFileBytes:14
+    - registerSchema:41
+    - registerYsmModelSchema:105
+    - resetSchemas:67
+    - resolveMmdSiblings:13
+    - SchemaBuilder:34
+    - showFbxPreview:169
+    - showMmdPreview:116
+    - showMorphPreview:229
+    - showScenePreview:199
+    - showStagePreview:296
+    - showVrmMeta:29
+    - unregisterSchema:47
+    - VrmMaterialControlBridge:18
+    - vrmModelInfoNodes:26
+    - vrmShotNodes:42
+    - YSM_MODEL_SCHEMA_ID:20
+    - YsmContentHandle:33
+    - YsmControlsContext:46
+    - YsmModel:24
+    - ysmShotNodes:69
+  tests:
+    - frontend/src/views/app-preview/mmd-controls.test.ts
+    - frontend/src/views/app-preview/vrm-controls.test.ts
+    - frontend/src/views/app-preview/ysm-controls.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 3D 控制器、MMD 播放、VRM 材质 / YSM schema
+    - 截图按钮、相机控制、模型切换
+    - multiModelSelectNode / preview menu node
+  quick_risk_lines:
+    - 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联
+  pitfalls:
+    - 新加相机按钮 → 直接注入 mmd-controls → 切类型时按钮消失；必须走 setAdapterItems 注入核心根菜单
+    - YSM schema 未走 registerYsmModelSchema 注册 → schema 变更不同步到菜单；必须经 schema-registry
+  use_when:
+    - 3D 控制器
+    - MMD 播放
+    - 截图按钮
+    - 相机控制
+    - 模型切换
+  invariant_anchors:
+    - frontend/src/views/app-preview/ysm-controls.ts|registerYsmModelSchema
+    - frontend/src/views/app-preview/mmd-controls.ts|playNodes
+    - frontend/src/preview-3d/adapters/camera-controls.ts|CameraControlBridge
+    - frontend/src/preview-3d/menu/core.ts|setAdapterItems
 tests:
   - frontend/src/views/app-preview/mmd-controls.test.ts
   - frontend/src/views/app-preview/vrm-controls.test.ts

@@ -6,6 +6,72 @@ category: ui
 source_files:
   - frontend/src/views/app-tree/index.ts
   - frontend/src/views/app-tree/
+auto_fields:
+  symbols_with_lines:
+    - AppTree:69
+    - appTreeStyle:20
+    - AuthorInfo:6
+    - bindBusEvents:26
+    - bindToolbarEvents:356
+    - bindTreeEvents:497
+    - buildTree:84
+    - cleanupVirtualScroll:338
+    - emptyHTML:68
+    - fileRowCommon:11
+    - fileRowHTML:19
+    - flattenVisible:287
+    - folderRowCommon:34
+    - folderRowHTML:44
+    - footerHTML:60
+    - getRenderMode:46
+    - headerHTML:35
+    - listFileRowHTML:8
+    - listFolderRowHTML:27
+    - loadAuthors:19
+    - loadEntries:68
+    - openAdvFilterDialog:253
+    - pickWebFilesAndImport:287
+    - RenderMode:40
+    - renderTree:347
+    - ROW_H_GRID:20
+    - ROW_H_LIST:21
+    - selectSingle:31
+    - selectState:4
+    - setRenderMode:51
+    - spinnerHTML:72
+    - toggleSelect:16
+    - treeCSS:3
+    - TreeEntry:11
+    - TreeNode:34
+    - TreeRow:24
+    - updateSelectCount:392
+    - updateStat:414
+    - VIEW_TESTIDS:7
+  tests:
+    - frontend/src/views/app-nav/index.test.ts
+    - frontend/src/views/app-sync-manager/index.test.ts
+    - frontend/src/views/app-toast/index.test.ts
+    - frontend/src/views/context-menu/index.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 资源树、tree、目录树
+    - 节点选择、多选、右键菜单
+    - tree:set-search、bus-handlers、selectState
+  quick_risk_lines:
+    - app-tree 的 bus 订阅必须经 _unsubs 收集，disconnectedCallback 必须清理全部订阅
+  pitfalls:
+    - bus 订阅未进 _unsubs → 组件卸载后监听泄漏；必须经 bindBusEvents 返回的 unsub 数组收集
+    - DOM 委托事件进 _unsubs → disconnect 时重复 off 报错；DOM 委托事件应靠 ShadowRoot detach 自动清理
+  use_when:
+    - 树形
+    - 资源列表
+    - tree
+    - 节点
+    - 树
+    - 目录树
+  invariant_anchors:
+    - frontend/src/views/app-tree/bus-handlers.ts|selectState
 tests:
   - frontend/src/views/app-nav/index.test.ts
   - frontend/src/views/app-sync-manager/index.test.ts

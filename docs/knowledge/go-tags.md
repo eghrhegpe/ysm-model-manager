@@ -6,6 +6,32 @@ category: go
 source_files:
   - go/tags/tags.go
   - go/tags/
+auto_fields:
+  symbols_with_lines:
+    - NewStore:26
+    - Store:19
+    - Store.AddTag:181
+    - Store.AllTags:257
+    - Store.GetTags:107
+    - Store.ListByTag:233
+    - Store.RemoveTag:204
+    - Store.SetTags:149
+  use_when:
+    - 标签
+    - tag
+    - 分类
+    - tag-editor
+  perf:
+    - io-bound
+  invariant_anchors:
+    - go/tags/tags.go|fsutil.WriteFileAtomic
+    - go/tags/tags.go|.corrupt
+  quick_groups:
+    - 文件操作与标签
+  quick_intents:
+    - 打标签 / 标签存储 / 按标签筛选
+  quick_risk_lines:
+    - 标签以文件绝对路径为 key 存 tags.json；写入走 tmp + os.Rename 原子替换，禁止直写
 use_when:
   - 标签
   - tag

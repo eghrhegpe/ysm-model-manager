@@ -5,6 +5,20 @@ tier: architecture
 category: feature
 source_files:
   - frontend/src/views/app-nav/
+auto_fields:
+  symbols_with_lines:
+    - navCSS:2
+    - VIEW_TESTIDS:18
+  tests:
+    - frontend/src/views/app-preview/detail.test.ts
+  invariant_anchors:
+    - frontend/src/views/app-preview/detail.ts|showResourcePack
+    - frontend/src/views/app-preview/detail.ts|showShaderpack
+  use_when:
+    - 资源包
+    - 光影包
+    - resourcepack
+    - shaderpack
 affected: false
 tests:
   - frontend/src/views/app-preview/detail.test.ts

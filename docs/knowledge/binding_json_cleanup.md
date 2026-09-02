@@ -11,6 +11,82 @@ source_files:
   - internal/app/app_model.go
   - internal/app/container_entries.go
   - internal/app/resourcepack_models.go
+auto_fields:
+  symbols_with_lines:
+    - App.AnalyzeBedrockModel:249
+    - App.AnalyzeBedrockModelEntry:311
+    - App.AnalyzeYSMModel:39
+    - App.Build3DSpecFromGeometryJSON:410
+    - App.ClearInstanceResources:66
+    - App.CountInstanceResources:26
+    - App.DeduplicateCustomDir:153
+    - App.DeleteResourcePack:455
+    - App.DetectConflicts:15
+    - App.DetectResourceType:141
+    - App.EnsureStorageDirs:225
+    - App.ExtractYSMHeader:57
+    - App.ExtractYSMHeaderFromBase64:61
+    - App.ExtractYsmSummary:43
+    - App.FindDuplicateFiles:504
+    - App.GetAllRepoRoots:201
+    - App.GetDefaultRepoRoot:154
+    - App.GetInstanceStatus:198
+    - App.GetInstanceSyncStatus:570
+    - App.GetLitematicVoxelData:125
+    - App.GetModel3DSpec:359
+    - App.GetNbtVoxelData:87
+    - App.GetRepoRoot:169
+    - App.GetResourceInstanceStatus:210
+    - App.GetSchematicVoxelData:92
+    - App.GetSyncScanDirs:528
+    - App.GetVoxelDataInContainer:108
+    - App.HasYSMMod:635
+    - App.ImportByType:435
+    - App.InstallResourceToInstance:621
+    - App.InvalidateScanCache:529
+    - App.IsResourcePackEnabled:337
+    - App.ListContainerEntries:73
+    - App.ListPackModels:66
+    - App.ListPackModelsDetail:93
+    - App.LoadResourceTypes:27
+    - App.PullResourceFromInstance:413
+    - App.PullSingleResourceFromInstance:455
+    - App.PushResourceToInstance:391
+    - App.PushSingleResourceToInstance:476
+    - App.ReadFileBytes:117
+    - App.ReadFileBytesBatch:139
+    - App.ReadFileBytesBatchWithMeta:212
+    - App.ReadLitematicMeta:115
+    - App.ReadNbtStructure:106
+    - App.ReadPackEntry:154
+    - App.ReadPackMeta:36
+    - App.ReadSchematic:97
+    - App.ReadShaderpackLang:60
+    - App.RelinkAllInstanceResources:308
+    - App.RelinkCustomDir:283
+    - App.RepoHealthAudit:535
+    - App.RepoHealthAuditAll:556
+    - App.ResetResourceRoot:398
+    - App.ResolveConflicts:54
+    - App.SavePreviewTempFile:74
+    - App.SaveScreenshotFile:521
+    - App.SelectImportFile:356
+    - App.SelectImportZip:343
+    - App.SetResourceRoot:378
+    - App.SetVoxelMaxBlocks:131
+    - App.SyncModelToggleStatus:272
+    - App.SyncResources:352
+    - App.ToggleResourcePack:298
+    - Error:168
+    - ReadFileMeta:188
+  use_when:
+    - string-JSON
+    - JSON.parse 断言
+    - 绑定 struct 化
+    - 铲债清单
+    - 错误通道统一
+    - ADR-143
+    - 绑定返回 string
 use_when:
   - string-JSON
   - JSON.parse 断言

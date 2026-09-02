@@ -8,6 +8,38 @@ category: go
 source_files:
   - internal/app/app_download.go
   - internal/app/app.go
+auto_fields:
+  symbols_with_lines:
+    - App:40
+    - App.CancelQueue:76
+    - App.DownloadFromGitHub:249
+    - App.EnqueueDownloads:46
+    - App.GetAppVersion:263
+    - App.GetModelTexSizes:261
+    - App.GetYSMRepoRoot:107
+    - App.OpenInBrowser:258
+    - App.QueueStatus:96
+    - App.ServiceShutdown:221
+    - App.ServiceStartup:122
+    - App.SetApp:104
+    - App.SetMainWindow:119
+    - DownloadQueue:23
+    - NewApp:75
+    - NewDownloadQueue:41
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - App↔子组件对象级环、回调注入
+    - 循环依赖、NewApp 组装
+  quick_risk_lines:
+    - 子组件必须用回调注入替代 *App 反向指针，禁止在子组件 struct 里持 *App 字段
+  pitfalls:
+    - 子组件持 *App 字段 → 对象级循环依赖、GC 无法回收；必须经回调注入
+    - 回调未正确包装 → 空指针 panic；必须在新 App 时注入完整包装
+  use_when:
+    - 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）
+    - 评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct
+    - 想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

@@ -5,6 +5,51 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/utils/dom/dialogs/modal.ts
+auto_fields:
+  symbols_with_lines:
+    - __resetModalStateForTest:88
+    - closeActiveDialog:111
+    - closeDlg:60
+    - fmtMB:401
+    - modalConfirm:365
+    - ModalConfirmOptions:328
+    - modalPicker:595
+    - ModalPickerItem:496
+    - ModalPickerOptions:505
+    - ModalPickerResult:518
+    - modalProgress:479
+    - ModalProgressHandle:393
+    - ModalProgressOptions:385
+    - modalPrompt:224
+    - ModalPromptOptions:191
+    - modalSelect:309
+    - ModalSelectOptions:264
+    - registerDlg:95
+    - trapFocus:32
+    - VIEW_TESTIDS:10
+  tests:
+    - frontend/src/utils/dom/dialogs/modal.test.ts
+  use_when:
+    - 弹窗
+    - 对话框
+    - 确认框
+    - 输入框弹窗
+    - 下拉选择弹窗
+    - modal
+    - prompt
+    - confirm
+  invariant_anchors:
+    - frontend/src/utils/dom/dialogs/modal.ts|trapFocus
+    - frontend/src/utils/dom/dialogs/modal.ts|closeDlg
+    - frontend/src/utils/dom/dialogs/modal.ts|registerDlg
+    - frontend/src/utils/dom/dialogs/modal.ts|modalConfirm
+    - frontend/src/utils/dom/dialogs/modal.ts|modalPicker
+  quick_groups:
+    - UI 交互与弹窗
+  quick_intents:
+    - 弹确认框 / 输入框 / 下拉选择 / modal
+  quick_risk_lines:
+    - 业务弹窗必须复用 modal.ts 的 Promise API（prompt/select/confirm/picker），禁止手写弹窗
 tests:
   - frontend/src/utils/dom/dialogs/modal.test.ts
 use_when:

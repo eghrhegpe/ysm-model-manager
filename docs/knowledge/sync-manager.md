@@ -16,6 +16,82 @@ source_files:
   - frontend/src/views/app-sidebar/events.ts
   - frontend/src/views/app-sidebar/render.ts
   - frontend/src/core/handlers/sync.ts
+auto_fields:
+  symbols_with_lines:
+    - _lastSelectedType:17
+    - actionBtnHTML:62
+    - applyFilter:140
+    - appSidebarStyle:21
+    - AppSyncManager:72
+    - bindCardEvents:137
+    - bindEvents:17
+    - bindFooter:242
+    - containerHTML:146
+    - emptyHTML:261
+    - EventSelf:9
+    - groupMmdVariants:167
+    - itemHTML:218
+    - LAST_TYPE_KEY:13
+    - loadData:47
+    - loadingHTML:275
+    - loadInstances:37
+    - loadTypeConfig:19
+    - MmdVariantGroups:21
+    - NetworkSelf:14
+    - performSingleOp:27
+    - registerSync:260
+    - render:33
+    - renderVersionCards:8
+    - resetSelectedEmit:199
+    - setLastSelectedType:19
+    - STATUS_COLOR:49
+    - STATUS_ICON:40
+    - statusColorOf:59
+    - statusIconOf:58
+    - statusTabHTML:189
+    - syncDirRowHTML:79
+    - SyncItem:17
+    - SyncManagerSelf:27
+    - SyncRenderSelf:20
+    - SyncStoreSelf:13
+    - tabStatus:92
+    - VIEW_TESTIDS:10
+  tests:
+    - frontend/src/views/app-sync-manager/index.test.ts
+    - frontend/src/views/app-sync-manager/index.branches.test.ts
+    - frontend/src/views/app-sync-manager/tpl.test.ts
+    - frontend/src/views/app-sidebar/app-sidebar.sync.test.ts
+    - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
+    - frontend/src/views/app-sidebar/events.test.ts
+    - frontend/src/views/app-sidebar/loader.test.ts
+    - frontend/src/views/app-sidebar/render.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 整合包同步、推送 / 拉取
+    - 整合包列表、同步状态、勾选
+    - PushSingleResource / PullSingleResource
+    - sync:download:missing 缺包回拉
+  quick_risk_lines:
+    - 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource
+  pitfalls:
+    - app-sidebar 直接发 push/pull 请求 → 并发冲突 / 状态错乱；必须经 sync-manager 排队
+    - PullSingleResource 未完成前刷新侧边栏 → 半同步状态显示；必须等 store 状态收敛
+  use_when:
+    - 整合包同步
+    - 推送
+    - 拉取
+    - 跨组件同步编排
+    - 缺包回拉
+    - PullSingleResource
+    - sync:download:missing
+  invariant_anchors:
+    - frontend/src/views/app-sidebar/index.ts|runPush
+    - frontend/src/views/app-sidebar/index.ts|runPull
+    - frontend/src/views/app-sync-manager/network.ts|performSingleOp
+    - frontend/src/views/app-sync-manager/store.ts|applyFilter
+    - frontend/src/views/app-sync-manager/index.ts|_gen
+    - frontend/src/core/handlers/sync.ts|runDownloadMissing
 tests:
   - frontend/src/views/app-sync-manager/index.test.ts
   - frontend/src/views/app-sync-manager/index.branches.test.ts

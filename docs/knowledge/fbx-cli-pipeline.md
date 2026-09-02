@@ -5,6 +5,56 @@ tier: architecture
 category: go
 source_files:
   - go/cli/
+auto_fields:
+  symbols_with_lines:
+    - AppService:16
+    - CatCache:27
+    - CatConfig:29
+    - CatModel:25
+    - CatOther:30
+    - CatPerf:26
+    - CatResource:28
+    - CliCommand:16
+    - CmdContext:9
+    - DispatchCommand:71
+    - ErrParam:23
+    - ErrParam.Error:28
+    - ErrParam.Unwrap:35
+    - ErrRuntime:38
+    - ErrRuntime.Error:43
+    - ErrRuntime.Unwrap:50
+    - ExecuteCLIWithApp:83
+    - ExitCodeOf:53
+    - ExitParamErr:18
+    - ExitRuntimeErr:19
+    - ExitSuccess:17
+    - GetAllCommands:62
+    - GetAllowedCommands:110
+    - GetCommand:56
+    - IsCommandAllowed:103
+    - JsonError:22
+    - JsonResponse:12
+    - JsonResponse.ToJson:94
+    - MetaInfo:34
+    - NewJsonError:50
+    - NewJsonNotSupported:81
+    - NewJsonSuccess:39
+    - ParseCommandArgs:71
+    - PrintError:62
+    - RegisterCommand:37
+    - RegisterCommandC:42
+    - RunCLI:39
+    - String:191
+    - TimingInfo:29
+  use_when:
+    - FBX
+    - CLI
+    - 命令行
+    - 转换
+    - glTF
+    - GLB
+    - fbx2gltf
+    - assimp
 use_when:
   - FBX
   - CLI

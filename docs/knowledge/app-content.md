@@ -28,6 +28,96 @@ source_files:
   - frontend/src/views/app-content/workshop-tabs.ts
   - frontend/src/views/app-content/workshop-site-opener.ts
   - frontend/src/utils/icon/workshop-icons.ts
+auto_fields:
+  symbols_with_lines:
+    - aboutHTML:6
+    - AppContentHost:182
+    - AppContentState:19
+    - appContentStyle:19
+    - bindSiteEvents:85
+    - clearAllCommunityCache:71
+    - CommunityData:25
+    - contentCreatorCSS:2
+    - contentCSS:14
+    - contentDiagCSS:4
+    - contentLayoutCSS:10
+    - contentRepoCSS:2
+    - contentStgCSS:7
+    - contentUtilCSS:2
+    - createWorkshopRefs:29
+    - creditsHTML:101
+    - DEFAULT_COMMUNITY_URL:402
+    - diagnosticsHTML:86
+    - extractAvatars:13
+    - fetchCommunityCreators:280
+    - fetchCommunitySites:346
+    - fillSearch:226
+    - forceRefreshCommunityMerge:52
+    - forceRefreshCommunitySites:63
+    - forceRefreshScanAuthors:57
+    - getLastModelPath:307
+    - getSiteIcon:46
+    - getTagIconFromRole:54
+    - githubHTML:187
+    - GithubPageCtx:24
+    - ICONS:3
+    - initDiagnosticsPage:21
+    - initGithubPage:280
+    - initInstancesPage:28
+    - initPreviewResize:8
+    - initRepositoryPage:58
+    - initSettingsPage:275
+    - initWorkshopPage:38
+    - initWorkshopTabs:41
+    - instancesHTML:63
+    - loadCommunityData:90
+    - loadLocalAuthors:133
+    - LocalAuthorLike:18
+    - LocalCreator:9
+    - mergeCommunityCreators:309
+    - mergeCommunitySites:381
+    - mergeLocalAuthorsInto:149
+    - openSite:20
+    - PAGE_REGISTRY:30
+    - PageDefinition:23
+    - recycleHTML:5
+    - rememberModelPath:303
+    - RepoCacheEntry:13
+    - repositoryHTML:25
+    - resetAvatarConfigLoaded:171
+    - setShowSiteView:151
+    - settingsHTML:23
+    - SubscriptionBucket:11
+    - VIEW_TESTIDS:10
+    - workshopHTML:218
+    - WorkshopRefs:21
+  tests:
+    - frontend/src/utils/resource/types.test.ts
+    - frontend/src/views/app-content/community-data.test.ts
+    - frontend/src/views/app-nav/index.test.ts
+    - frontend/src/views/app-sync-manager/index.test.ts
+    - frontend/src/views/app-toast/index.test.ts
+    - frontend/src/views/app-tree/render.test.ts
+    - frontend/src/views/context-menu/index.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 主内容区、页面切换、仓库页 / 创作者页 / 社区页
+    - nav:change 事件分发、全局 handler 注册
+    - 页面初始化流程、订阅桶 / 会话状态
+  quick_risk_lines:
+    - 主内容区页面切换必须经 nav:change / app-nav 路由分发，禁止页面之间直接 init 对方
+  pitfalls:
+    - 页面 A 直接调用页面 B 的 init → 重复初始化 / 订阅泄漏；必须经 nav:change 单点分发
+    - subscription-bucket 未退订 → 跨页残留监听、状态串扰；每次切换必须 clear 旧桶
+  use_when:
+    - 主内容区
+    - 页面切换
+    - nav:change
+    - 仓库页
+    - 全局 handler
+  invariant_anchors:
+    - frontend/src/views/app-content/index.ts|_unsubs
 tests:
   - frontend/src/utils/resource/types.test.ts
   - frontend/src/views/app-content/community-data.test.ts

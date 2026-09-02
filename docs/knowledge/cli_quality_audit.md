@@ -7,6 +7,73 @@ source_files:
   - go/cli/
   - internal/app/cli_bridge.go
   - frontend/src/services/cli-bridge.ts
+auto_fields:
+  symbols_with_lines:
+    - ALLOWED_CLI_COMMANDS:12
+    - App.ExecuteCLI:31
+    - App.GetAllowedCLICommands:140
+    - App.SetAllowedCommands:15
+    - AppService:16
+    - buildArgsMap:191
+    - CatCache:27
+    - CatConfig:29
+    - CatModel:25
+    - CatOther:30
+    - CatPerf:26
+    - CatResource:28
+    - cliAnalyze:179
+    - CLIArgs:17
+    - cliCacheStatus:184
+    - CliCommand:16
+    - cliList:174
+    - CLIResponse:39
+    - cliSearch:165
+    - CmdContext:9
+    - DispatchCommand:71
+    - ErrParam:23
+    - ErrParam.Error:28
+    - ErrParam.Unwrap:35
+    - ErrRuntime:38
+    - ErrRuntime.Error:43
+    - ErrRuntime.Unwrap:50
+    - executeCLI:99
+    - ExecuteCLIWithApp:83
+    - ExitCodeOf:53
+    - ExitParamErr:18
+    - ExitRuntimeErr:19
+    - ExitSuccess:17
+    - GetAllCommands:62
+    - getAllowedCLICommands:150
+    - GetAllowedCommands:110
+    - GetCommand:56
+    - IsCommandAllowed:103
+    - JsonError:22
+    - JsonResponse:12
+    - JsonResponse.ToJson:94
+    - MetaInfo:34
+    - NewJsonError:50
+    - NewJsonNotSupported:81
+    - NewJsonSuccess:39
+    - parseCLIResponse:202
+    - ParseCommandArgs:71
+    - PrintError:62
+    - RegisterCommand:37
+    - RegisterCommandC:42
+    - resetDynamicCommandsCache:53
+    - RunCLI:39
+    - String:191
+    - TimingInfo:29
+  tests:
+    - frontend/src/services/cli-bridge.test.ts
+  use_when:
+    - CLI
+    - 质量摸排
+    - 代码审核
+    - 代码审查
+    - bug 排查
+    - 审计
+    - 白名单
+    - 绑定层
 tests:
   - frontend/src/services/cli-bridge.test.ts
 use_when:

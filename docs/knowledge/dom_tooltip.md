@@ -5,6 +5,32 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/utils/dom/tooltip.ts
+auto_fields:
+  symbols_with_lines:
+    - attachTooltip:110
+    - ensureTooltipStyles:17
+    - promoteTitle:149
+    - promoteTitleIfPresent:158
+    - TooltipOptions:101
+    - YSW_TOOLTIP_CSS:9
+  tests:
+    - frontend/src/utils/dom/tooltip.test.ts
+  quick_groups:
+    - UI 交互与弹窗
+  quick_intents:
+    - tooltip、悬浮提示、hover 提示
+    - title 气泡、3D 按钮
+  quick_risk_lines:
+    - 悬浮提示必须走 dom/tooltip.ts 的毛玻璃 tooltip，禁止用原生 title
+  pitfalls:
+    - 用原生 title → 延迟 ~1s、样式不可控；必须经 tooltip.ts
+    - tooltip 不监听跨 Shadow DOM → FAB 按钮无法接 tooltip；必须经 document.body 挂载
+  use_when:
+    - tooltip
+    - 悬浮提示
+    - hover 提示
+    - title 气泡
+    - 3D 按钮
 tests:
   - frontend/src/utils/dom/tooltip.test.ts
 quick_groups:

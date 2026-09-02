@@ -5,6 +5,28 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/array.ts
+auto_fields:
+  symbols_with_lines:
+    - moveItem:8
+  tests:
+    - frontend/src/utils/array.test.ts
+  quick_groups:
+    - 跨组件通信与页面
+  quick_intents:
+    - 数组排序、拖拽排序、moveItem
+    - 列表 reorder
+  quick_risk_lines:
+    - 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序
+  pitfalls:
+    - 手写 splice 排序 → 与拖拽 drop 逻辑不一致、边界溢出；必须经 moveItem
+    - moveItem 未 clamp → 拖拽到首/尾位置时报错；必须在 moveItem 内做 clamp
+  use_when:
+    - 数组排序
+    - 拖拽排序
+    - moveItem
+    - 列表 reorder
+  invariant_anchors:
+    - frontend/src/utils/array.ts|moveItem
 tests:
   - frontend/src/utils/array.test.ts
 quick_groups:

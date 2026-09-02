@@ -5,6 +5,20 @@ tier: leaf
 category: go
 source_files:
   - go/internal/testutil/testutil.go
+auto_fields:
+  symbols_with_lines:
+    - CreateTestFile:14
+    - MakeZipBytes:28
+    - WriteZipFile:48
+  tests:
+    - go/internal/testutil/testutil_test.go
+  use_when:
+    - 跨包复用测试 helper
+    - 创建测试文件
+    - 构造内存 ZIP
+  invariant_anchors:
+    - go/internal/testutil/testutil.go|CreateTestFile
+    - go/internal/testutil/testutil.go|MakeZipBytes
 tests:
   - go/internal/testutil/testutil_test.go
 use_when:

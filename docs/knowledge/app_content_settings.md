@@ -11,6 +11,48 @@ source_files:
   - frontend/src/views/app-content/settings/theme.ts
   - frontend/src/views/app-content/settings/ui-prefs.ts
   - frontend/src/views/app-content/settings/worker-prefs.ts
+auto_fields:
+  symbols_with_lines:
+    - applyUIPrefs:13
+    - bindPathClick:53
+    - cardRefreshers:17
+    - cfg:14
+    - initAdvancedGrid:194
+    - initKeymap:131
+    - initMcDetect:319
+    - initSettings:314
+    - initTheme:24
+    - initUiPrefs:53
+    - initWorkerPrefs:36
+    - isBusy:21
+    - resetSettingsStore:27
+    - saveCfg:25
+    - setBusy:22
+    - SettingsCfg:11
+    - toastError:8
+  tests:
+    - frontend/src/views/app-content/settings/init.test.ts
+    - frontend/src/views/app-content/settings/keymap.test.ts
+    - frontend/src/views/app-content/settings/theme.test.ts
+  quick_groups:
+    - 配置与注册表
+  quick_intents:
+    - 设置页、主题设置、键位、路径配置
+    - 界面偏好、字号、worker-prefs
+    - settings/init / keymap / store
+  quick_risk_lines:
+    - 设置项必须经 settings/store.ts 持久化，禁止页面组件各自读写 localStorage
+  pitfalls:
+    - 各组件各自读写 localStorage → 值不同步、设置页显示与页面行为不一致；必须经 store 单点
+    - 键位未持久化 → 重启恢复默认；必须经 store 的 safeSet 落盘
+  use_when:
+    - 设置页
+    - 主题设置
+    - 键位
+    - 路径配置
+    - 界面偏好
+  invariant_anchors:
+    - frontend/src/views/app-content/settings/init.ts|initSettings
 tests:
   - frontend/src/views/app-content/settings/init.test.ts
   - frontend/src/views/app-content/settings/keymap.test.ts

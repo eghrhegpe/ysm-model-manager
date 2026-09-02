@@ -9,6 +9,27 @@ source_files:
   - frontend/src/preview-3d/adapters/mmd-adapter.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
   - frontend/src/preview-3d/caps/ground-capability.ts
+auto_fields:
+  symbols_with_lines:
+    - _resetSingletons:218
+    - buildMmdScene:1168
+    - cleanupPreview:196
+    - DEFAULT_GROUND_PARAMS:53
+    - GroundCapability:62
+    - GroundParams:40
+    - hasActivePreview:240
+    - invalidatePreview:191
+    - MmdDataPort:66
+    - mmdMenuItems:1273
+    - MmdMenuItemsOpts:1241
+    - MmdPanelHooks:185
+    - mount3D:263
+    - Mount3DOptions:245
+    - PreviewAdapter:130
+    - PreviewBuildCtx:81
+    - PreviewHandle:140
+    - PreviewScene:104
+    - switchPreview:234
 created: 2026-08-27
 status: snapshot
 ---

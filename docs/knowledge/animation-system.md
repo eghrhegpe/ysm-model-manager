@@ -14,6 +14,68 @@ source_files:
   - frontend/src/utils/animation/molang-lib/math.js
   - frontend/src/utils/animation/molang-lib/molang-prism-syntax.js
   - frontend/src/preview-3d/ysm-animation-player.ts
+auto_fields:
+  symbols_with_lines:
+    - animateNumber:15
+    - AnimationClip:46
+    - AnimationController:36
+    - AnimationControllerRuntime:159
+    - BoneChannels:30
+    - BoneHierarchyNode:67
+    - BoneTransform:57
+    - compileMolang:71
+    - ControllerState:22
+    - ControllerTransition:10
+    - createYsmAnimPlayer:281
+    - Easings:2
+    - evaluateClip:654
+    - evaluateKeyframes:558
+    - executeTimeline:622
+    - findControllerForAnimation:260
+    - foldMolangConstant:94
+    - Keyframe:19
+    - Molang:637
+    - MolangAxes:16
+    - MolangFn:18
+    - parseAnimationControllerJSON:52
+    - parseBedrockAnimationJSON:482
+    - setMolangScope:39
+    - stagger:11
+    - TimelineEvent:38
+    - Vec3:13
+    - ysmAnimClipLabels:780
+    - YsmAnimPlayer:32
+  tests:
+    - frontend/src/utils/animation/animate.test.ts
+    - frontend/src/utils/animation/animation.test.ts
+    - frontend/src/utils/animation/stagger.test.ts
+    - frontend/src/utils/animation/animation-controller.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 骨骼动画、关键帧、动画播放
+    - Molang 表达式求值
+    - 数字滚动、stagger 入场、关闭动画
+    - AnimationController、状态机
+  quick_risk_lines:
+    - 基岩 animation.json 解析后必须走 evaluateClip 插值，禁止前端手写关键帧插值逻辑
+  pitfalls:
+    - 手写关键帧插值 → 与基岩官方行为不一致、T-pose 漂移；必须经 evaluateClip
+    - Molang 表达式缓存键不完整 → 相同逻辑不同骨骼重复求值；缓存 key 必须含 clip/bone 标识
+  use_when:
+    - 动画
+    - 骨骼动画
+    - 关键帧
+    - Molang
+    - 数字滚动
+    - stagger 入场
+  perf:
+    - cpu-bound
+  invariant_anchors:
+    - frontend/src/utils/animation/animation.ts|parseBedrockAnimationJSON
+    - frontend/src/utils/animation/animation.ts|evaluateClip
+    - frontend/src/utils/animation/animate.ts|animateNumber
+    - frontend/src/utils/animation/stagger.ts|stagger
 tests:
   - frontend/src/utils/animation/animate.test.ts
   - frontend/src/utils/animation/animation.test.ts

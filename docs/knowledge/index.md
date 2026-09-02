@@ -335,7 +335,7 @@
 | 🏗 utils-summarize | 摘要生成 summarize | architecture | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
 | 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | concurrent | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
 | 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | cpu-bound | YSM 动画, 基岩动画, molang, 动画管线 |
-| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, wasm 加载, MEMFS, callMain |
+| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, wasm 加载, MEMFS, callMain, stats.worker, 按需加载, crossOriginIsolated, worker.format, pthread |
 
 ### 摘要
 

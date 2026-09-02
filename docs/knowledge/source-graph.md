@@ -5,6 +5,36 @@ tier: architecture
 category: utils
 source_files:
   - scripts/_lib/source-graph.ts
+auto_fields:
+  symbols_with_lines:
+    - countLines:347
+    - EXCLUDE_DIRS:18
+    - EXCLUDE_FILES:19
+    - getExportedSymbols:177
+    - getExportedSymbolsAny:193
+    - getGoExportedSymbols:187
+    - goTopFuncs:327
+    - ImportEdge:71
+    - isSourceFile:24
+    - parseSourceImports:76
+    - resolveSourceImport:56
+    - scanSourceGraph:119
+    - searchName:342
+    - shouldTraverseDir:29
+    - SOURCE_EXTENSIONS:21
+    - SourceGraphResult:114
+    - topDeclsAny:337
+    - tsTopDecls:332
+    - walkSourceFiles:33
+  use_when:
+    - 符号提取
+    - 导出符号
+    - 顶层声明
+    - api-break
+    - audit-split
+    - rollback-impact
+    - bloat-history
+    - 依赖图
 use_when:
   - 符号提取
   - 导出符号

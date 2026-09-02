@@ -7,6 +7,54 @@ source_files:
   - frontend/src/preview-3d/state/preview-state.ts
   - frontend/src/preview-3d/menu/settings.ts
   - frontend/src/preview-3d/menu/node-types.ts
+auto_fields:
+  symbols_with_lines:
+    - buildCameraSchema:32
+    - buildCrossCuttingControls:105
+    - buildLightingSchema:46
+    - buildPostprocessingSchema:69
+    - buildSettingsControls:170
+    - buildSettingsSchema:78
+    - buildShadowSchema:60
+    - collectPreviewLeafNodes:128
+    - collectPreviewNodeIds:141
+    - collectSettingsCapControls:157
+    - getStateValue:300
+    - isPathAvailable:319
+    - isPreviewFolderNode:123
+    - KNOWN_PATHS:53
+    - PreviewActionMenuCtx:17
+    - PreviewControlSpec:40
+    - PreviewMenuNode:68
+    - PreviewMenuNodeKind:23
+    - previewSnapshot:328
+    - PreviewSnapshot:82
+    - PreviewStatePath:74
+    - resetActiveComponent:269
+    - resetSettingsListeners:335
+    - setStateValue:309
+    - subscribeSettings:279
+    - toStatePath:90
+  tests:
+    - frontend/src/preview-3d/state/preview-state.test.ts
+  quick_groups:
+    - 3D 预览与模型追加
+  quick_intents:
+    - 3D 预览面板跨 cap 设置项
+    - 预览面板状态改了不生效 / 重开面板值不对
+    - P4 子步（A→B→D→C）状态通道复用
+    - 新增 KNOWN_PATHS 路径
+  quick_risk_lines:
+    - 预览状态必须走 preview-state.ts 的 KNOWN_PATHS 注册，binding 只填已落地项，未落地键编译期报错
+  pitfalls:
+    - 直接改 preview-state 里的未注册键 → 切页 / 换模后状态回滚；必须经 KNOWN_PATHS 注册
+    - 把状态放 sceneRegistry / SlideMenu / 节点字段而非 previewState → 状态无法在 cap 切换时保留；状态通道需集中
+  use_when:
+    - 新增 3D 预览面板跨 cap 设置项
+    - 排查预览面板状态改了不生效 / 重开面板值不对
+    - 排查条件显隐控件不出现
+    - P4 子步（A→B→D→C）状态通道复用参考
+    - 评估"某状态是否应进 previewState vs 留在 sceneRegistry/SlideMenu/节点字段"
 tests:
   - frontend/src/preview-3d/state/preview-state.test.ts
 quick_groups:

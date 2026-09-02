@@ -13,6 +13,107 @@ source_files:
   - frontend/src/backend/web-store.ts
   - frontend/src/backend/web-stats.ts
   - frontend/src/backend/web-community.ts
+auto_fields:
+  symbols_with_lines:
+    - __resetDBForTest:141
+    - __resetWebLogStateForTest:118
+    - __setStatsRunnerForTest:53
+    - AppBindings:12
+    - arrayBufferToBase64:14
+    - base64ToBytes:66
+    - batchStatsWebModels:173
+    - browserAdapter:70
+    - collectAllWebEntries:1270
+    - consumeWebSearchDegraded:58
+    - getAndroidBridge:24
+    - getApp:18
+    - getFsaAuthState:18
+    - getStatsPoolSize:91
+    - idbDel:186
+    - idbGet:158
+    - idbGetAll:242
+    - idbKeys:207
+    - IdbOp:273
+    - idbSet:169
+    - idbTx:282
+    - importWebFiles:16
+    - isWebEntryMode:37
+    - isWebPath:27
+    - MAX_IMPORT_BYTES:14
+    - onStatsProgress:40
+    - openDB:23
+    - parseWebDirPath:39
+    - parseWebPath:32
+    - prefetchStatsWorker:113
+    - readDeclaredBackend:31
+    - readWebFile:212
+    - reauthorizeFsaRoot:18
+    - rescanFsaRoot:18
+    - resolveWebMode:46
+    - scanAllWebModels:911
+    - scanWebModels:87
+    - selectLocalRepo:16
+    - STATS_BATCH_LIMIT:19
+    - Store:19
+    - terminateStatsWorker:65
+    - typeFromWebDir:78
+    - u8ToBase64:78
+    - WailsAndroidBridge:18
+    - WEB_ROOT:14
+    - webCommonBindings:95
+    - webCommunityBindings:247
+    - webDirType:46
+    - webFsBindings:1285
+    - WebModelStats:18
+    - webStoreBindings:191
+    - WebUnsupportedError:8
+  tests:
+    - frontend/src/app-modules.boot.test.ts
+    - frontend/src/app-modules.test.ts
+    - frontend/src/backend/app.test.ts
+    - frontend/src/backend/browser-adapter.contract-b1.test.ts
+    - frontend/src/backend/browser-adapter.contract-b2.test.ts
+    - frontend/src/backend/browser-adapter.contract-b3.test.ts
+    - frontend/src/backend/browser-adapter.test.ts
+    - frontend/src/backend/idb.test.ts
+    - frontend/src/backend/platform-parity.test.ts
+    - frontend/src/backend/platform-web.test.ts
+    - frontend/src/backend/platform.test.ts
+    - frontend/src/backend/web-common.test.ts
+    - frontend/src/backend/web-fs-shared.test.ts
+    - frontend/src/backend/web-fs.bindings.test.ts
+    - frontend/src/backend/web-fs.test.ts
+    - frontend/src/backend/web-stats.test.ts
+    - frontend/src/backend/web-store.logs.test.ts
+    - frontend/src/views/app-content/app-content.component.test.ts
+    - frontend/src/views/app-content/app-content.methods.test.ts
+    - frontend/src/views/app-preview/app-preview.component.test.ts
+    - frontend/src/views/app-preview/app-preview.methods.test.ts
+    - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
+    - frontend/src/views/app-sidebar/app-sidebar.sync.test.ts
+    - frontend/src/views/app-tree/app-tree.component.test.ts
+    - frontend/src/views/app-tree/app-tree.state.test.ts
+  quick_groups:
+    - 后端桥接与数据存储
+  quick_intents:
+    - 网页版 / 浏览器模式 / web mode
+    - IndexedDB / IDB / 浏览器后端
+    - browser adapter、跨域隔离 COI
+    - NBT 解析 / 体素 / 网页版文件系统
+  quick_risk_lines:
+    - 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用
+  pitfalls:
+    - 网页版直调 window.go → 无 wails runtime 时报错；必须经 browserAdapter
+    - 跨域资源共享不处理 COI → SharedArrayBuffer 等 API 不可用；必须设置 cross-origin-isolation 头
+  use_when:
+    - 网页版
+    - 浏览器模式
+    - browser adapter
+    - IndexedDB
+    - 跨域隔离
+  invariant_anchors:
+    - frontend/src/backend/app.ts|getApp
+    - frontend/src/backend/browser-adapter.ts|browserAdapter
 tests:
   - frontend/src/app-modules.boot.test.ts
   - frontend/src/app-modules.test.ts

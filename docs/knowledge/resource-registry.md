@@ -7,6 +7,34 @@ source_files:
   - resource_types.json
   - frontend/src/services/registry.ts
   - frontend/src/utils/resource/registry.ts
+auto_fields:
+  symbols_with_lines:
+    - clear:42
+    - get:24
+    - has:32
+    - loadResourceRegistry:20
+    - register:18
+    - ResourceTypeEntry:10
+    - ServiceName:11
+    - unregister:37
+  tests:
+    - frontend/src/services/registry.test.ts
+    - frontend/src/utils/resource/registry.test.ts
+  use_when:
+    - 资源类型
+    - 注册表
+    - resource_types
+    - registry
+    - 文件类型
+  invariant_anchors:
+    - frontend/src/services/registry.ts|register
+    - frontend/src/services/registry.ts|get
+  quick_groups:
+    - 配置与注册表
+  quick_intents:
+    - 新增资源类型 / 修改 resource_types.json / 文件类型
+  quick_risk_lines:
+    - resource_types.json 是唯一事实来源；前端只读不判、禁本地重算
 tests:
   - frontend/src/services/registry.test.ts
   - frontend/src/utils/resource/registry.test.ts

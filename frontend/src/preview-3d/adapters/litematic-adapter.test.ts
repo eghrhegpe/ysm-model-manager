@@ -177,13 +177,11 @@ describe("loadingEl 语义契约", () => {
     const voxelCall = vi.fn().mockRejectedValue(new Error("RPC timeout"));
     const ctx = makeCtx();
     document.body.appendChild(ctx.loadingEl);
-    try {
-      await buildLitematicScene(ctx, "/broken.nbt", voxelCall);
-      expect.fail("应该抛错");
-    } catch {
-      // loadingEl 不应被 remove（parentNode 仍在）
-      expect(ctx.loadingEl.parentNode).not.toBeNull();
-    }
+    // 显式断言抛错（rejects），不用 try/catch——bare catch 会吞掉 expect.fail 的
+    // AssertionError，适配器「吞错返回空壳」的回归会让本测试假绿
+    await expect(buildLitematicScene(ctx, "/broken.nbt", voxelCall)).rejects.toThrow("RPC timeout");
+    // loadingEl 不应被 remove（parentNode 仍在）
+    expect(ctx.loadingEl.parentNode).not.toBeNull();
     document.body.removeChild(ctx.loadingEl);
   });
 

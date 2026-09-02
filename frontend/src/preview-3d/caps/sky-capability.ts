@@ -329,6 +329,9 @@ export class SkyCapability implements SceneCapability {
   private renderTarget: THREE.WebGLRenderTarget | null = null;
   private params: SkyParams;
   private enabled: boolean;
+  /** 本实例是否已向 toneRefCount 贡献过引用（apply 幂等标记——防重复 apply 抬高计数；
+   *  从未贡献的实例 dispose 不得拆共享 tone 状态，见 dispose/apply 注释） */
+  private toneApplied = false;
   private prevToneMapping: THREE.ToneMapping;
   private prevExposure: number;
   /** 引用计数：多个 SkyCapability 共享同一 renderer 时，
@@ -402,15 +405,20 @@ export class SkyCapability implements SceneCapability {
       return;
     }
     if (!this.sky.parent) this.scene.add(this.sky);
-    // 天空依赖 tone mapping 显色；引用计数仲裁多 session 共享 renderer
-    const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
-    if (cnt === 0) {
-      SkyCapability.prevToneMap.set(this.renderer, this.renderer.toneMapping);
-      SkyCapability.prevExposureMap.set(this.renderer, this.renderer.toneMappingExposure);
+    // 天空依赖 tone mapping 显色；引用计数仲裁多 session 共享 renderer。
+    // 幂等：本实例已贡献过就不再 +1（重复 apply（setEnabled 往返）不得抬高计数，
+    // 否则 dispose 永远到不了 0，tone mapping 永不恢复）。
+    if (!this.toneApplied) {
+      const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
+      if (cnt === 0) {
+        SkyCapability.prevToneMap.set(this.renderer, this.renderer.toneMapping);
+        SkyCapability.prevExposureMap.set(this.renderer, this.renderer.toneMappingExposure);
+      }
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.renderer.toneMappingExposure = this.params.exposure;
+      SkyCapability.toneRefCount.set(this.renderer, cnt + 1);
+      this.toneApplied = true;
     }
-    SkyCapability.toneRefCount.set(this.renderer, cnt + 1);
     if (this.params.environment) this.regenerateEnvironment();
     else this.clearEnvironment();
     // 更新 god rays 和 sunset tint
@@ -898,16 +906,21 @@ export class SkyCapability implements SceneCapability {
       this.renderTarget.dispose();
       this.renderTarget = null;
     }
-    // 引用计数仲裁：只在最后一个 session 退出时恢复原始 tone mapping
-    const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
-    if (cnt <= 1) {
-      this.renderer.toneMapping = SkyCapability.prevToneMap.get(this.renderer) ?? this.prevToneMapping;
-      this.renderer.toneMappingExposure = SkyCapability.prevExposureMap.get(this.renderer) ?? this.prevExposure;
-      SkyCapability.toneRefCount.delete(this.renderer);
-      SkyCapability.prevToneMap.delete(this.renderer);
-      SkyCapability.prevExposureMap.delete(this.renderer);
-    } else {
-      SkyCapability.toneRefCount.set(this.renderer, cnt - 1);
+    // 引用计数仲裁：只在最后一个贡献过的 session 退出时恢复原始 tone mapping。
+    // 本实例从未 apply 贡献过（enabled:false / loadState 恢复后未启用）→ 不得动共享
+    // 状态——否则会误删仍存活 session 的 prevToneMap/prevExposureMap 并提前还原 tone。
+    if (this.toneApplied) {
+      const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
+      if (cnt <= 1) {
+        this.renderer.toneMapping = SkyCapability.prevToneMap.get(this.renderer) ?? this.prevToneMapping;
+        this.renderer.toneMappingExposure = SkyCapability.prevExposureMap.get(this.renderer) ?? this.prevExposure;
+        SkyCapability.toneRefCount.delete(this.renderer);
+        SkyCapability.prevToneMap.delete(this.renderer);
+        SkyCapability.prevExposureMap.delete(this.renderer);
+      } else {
+        SkyCapability.toneRefCount.set(this.renderer, cnt - 1);
+      }
+      this.toneApplied = false;
     }
     this.sky.geometry.dispose();
     (this.sky.material as THREE.Material).dispose();

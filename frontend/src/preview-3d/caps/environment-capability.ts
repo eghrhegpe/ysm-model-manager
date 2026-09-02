@@ -668,6 +668,10 @@ export class EnvironmentCapability implements SceneCapability {
       console.error("[environment] PMREM 生成失败:", e);
       this.disposeEnvironment();
       this.scene.environment = this.prevEnvironment;
+      // 失败回滚必须与禁用分支/dispose 同构：buildEnvironment 先 disposeEnvironment()，
+      // 已把旧 backgroundSrcTex dispose 掉——成功路径靠 applyBackground 重挂新背景，
+      // 失败路径必须显式还原 prevBackground，否则 scene.background 悬空指向已释放纹理
+      this.applyBackground(null);
     }
   }
 

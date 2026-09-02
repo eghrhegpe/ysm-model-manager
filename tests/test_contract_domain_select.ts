@@ -85,9 +85,22 @@ const precise = selectContractTests(['tests'], ['scripts/_lib/commit-temp-index.
 check(precise.length < all.length, `按文件裁剪：应小于全量（${all.length}），实为 ${precise.length}`);
 check(has(precise, 'test_commit_temp_index.ts'), '改 commit-temp-index 应触发 test_commit_temp_index');
 check(!has(precise, 'test_domain_classify.ts'), '改 commit-temp-index 不应触发 test_domain_classify');
-check(has(precise, 'test_scripts_json.ts'), '宽哨兵 test_scripts_json 应随 scripts 改动触发');
+// 精确化验证（ADR-156 后续）：原 scripts/ 宽哨兵已收敛为具体脚本清单
+check(!has(precise, 'test_scripts_json.ts'), '改 commit-temp-index 不应触发 test_scripts_json（已精确化）');
+// test_scripts_json 仅对 11 个 --json 脚本敏感（test_scripts_json.ts:24-36 JSON_SCRIPTS）
+const redlinesHit = selectContractTests(['tests'], ['scripts/check-redlines.ts']);
+check(has(redlinesHit, 'test_scripts_json.ts'), '改 check-redlines（11 个 --json 脚本之一）应触发 test_scripts_json');
+check(has(redlinesHit, 'test_redlines_changed_files.ts'), '改 check-redlines 应触发 test_redlines_changed_files');
+// test_codemod_guards 仅对 codemod.ts 敏感
+const codemodHit = selectContractTests(['tests'], ['scripts/codemod.ts']);
+check(has(codemodHit, 'test_codemod_guards.ts'), '改 codemod 应触发 test_codemod_guards');
+check(!has(codemodHit, 'test_scripts_json.ts'), '改 codemod 不应触发 test_scripts_json（精确化）');
+// test_sidebar_gen 仅对 gen-vitepress-sidebar.ts 敏感
+const sidebarHit = selectContractTests(['tests'], ['scripts/gen-vitepress-sidebar.ts']);
+check(has(sidebarHit, 'test_sidebar_gen.ts'), '改 gen-vitepress-sidebar 应触发 test_sidebar_gen');
+check(!has(sidebarHit, 'test_scripts_json.ts'), '改 gen-vitepress-sidebar 不应触发 test_scripts_json（精确化）');
 // fail-safe：改动未被任何 tests 域测试覆盖 → 回落全量
-const fallback = selectContractTests(['tests'], ['tests/unknown-xyz.ts']);
+const fallback = selectContractTests(['tests'], ['scripts/unknown-xyz.ts']);
 check(fallback.length === all.length, `无覆盖改动应回落全量，实为 ${fallback.length}`);
 // 无文件信息同样回落全量（等价原行为保守策略）
 const noFiles = selectContractTests(['tests'], []);

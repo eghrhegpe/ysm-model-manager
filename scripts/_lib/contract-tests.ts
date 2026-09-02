@@ -107,9 +107,14 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
  * 维护：新增 tests 域测试须同步登记本表，否则精确模式下该测试永不触发（静默漏检）。
  */
 export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
-  // —— 宽敏感哨兵：改任意 scripts 即跑（跨脚本 JSON 输出 / codemod 守卫稳定性）——
-  'test_scripts_json.ts': ['scripts/'],
-  'test_codemod_guards.ts': ['scripts/'],
+  // —— 精确：test_scripts_json 仅对 11 个 --json 脚本敏感；test_codemod_guards 仅 codemod.ts ——
+  'test_scripts_json.ts': [
+    'scripts/check-redlines.ts', 'scripts/check-circular.ts', 'scripts/check-orphan-exports.ts',
+    'scripts/check-boolean-naming.ts', 'scripts/check-adr-health.ts', 'scripts/check-knowledge-drift.ts',
+    'scripts/check-doc-drift.ts', 'scripts/comment-checker.ts', 'scripts/type-consistency.ts',
+    'scripts/link-checker.ts', 'scripts/adr-check.ts',
+  ],
+  'test_codemod_guards.ts': ['scripts/codemod.ts'],
   // —— 精确：仅改对应源文件才触发 ——
   'coverage-suggest-hint.ts': ['scripts/hooks/coverage-suggest-hint.ts', 'scripts/test-coverage-report.ts', 'scripts/hooks/knowledge-affected-hint.ts'],
   'go-coverage-hint.ts': ['scripts/hooks/go-coverage-hint.ts'],
@@ -131,7 +136,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——
   'test_gate_iife_correctness.ts': ['scripts/pre-push-gate.ts'],
   'test_check_readme_index.ts': ['scripts/check-readme-index.ts'],
-  'test_sidebar_gen.ts': ['scripts/'],
+  'test_sidebar_gen.ts': ['scripts/gen-vitepress-sidebar.ts'],
 };
 
 /**

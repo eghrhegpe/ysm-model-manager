@@ -722,6 +722,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-157：契约测试 TARGETS 宽哨兵收敛为精确文件清单",
+        "link": "/adr/ADR-157-contract-test-targets-precise"
+      },
+      {
         "text": "ADR-156：契约测试按变更文件精确裁剪（scripts 改动不再全量）",
         "link": "/adr/ADR-156-contract-tests-precise-crop"
       },

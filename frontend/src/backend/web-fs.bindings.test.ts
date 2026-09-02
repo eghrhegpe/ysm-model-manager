@@ -767,6 +767,41 @@ describe("SearchModels（关键词 + 数值范围）", () => {
   });
 });
 
+// ===== ScanModelEntriesFiltered rtype 白名单过滤（对齐 Go app_scan.go:328-376）=====
+describe("ScanModelEntriesFiltered rtype 白名单过滤", () => {
+  it("rtype 匹配 → 保留；rtype 不匹配 → 条目被滤（EntityPlayer 白名单滤掉 .ysm）", async () => {
+    await seedGroup("ysm", "组A", { "main.ysm": enc.encode("x") });
+    // 同型 rtype：ysm 白名单含 .ysm → 保留
+    const keep = (await webFsBindings.ScanModelEntriesFiltered("/web/ysm/组A", "ysm", "", "ui")) as Array<{ Name: string }>;
+    expect(keep.map((e) => e.Name)).toEqual(["main.ysm"]);
+    // 异型 rtype：EntityPlayer 白名单(.pmx/.pmd/.vrm/.zip)不含 .ysm → 滤空
+    const drop = (await webFsBindings.ScanModelEntriesFiltered("/web/ysm/组A", "EntityPlayer", "", "ui")) as Array<{ Name: string }>;
+    expect(drop).toHaveLength(0);
+  });
+
+  it("rtype 空/未知 → 退化不过滤（对齐 Go：白名单为空时不过滤）", async () => {
+    await seedGroup("ysm", "组A", { "main.ysm": enc.encode("x") });
+    const empty = (await webFsBindings.ScanModelEntriesFiltered("/web/ysm/组A", "", "", "ui")) as Array<{ Name: string }>;
+    expect(empty.map((e) => e.Name)).toEqual(["main.ysm"]);
+    const unknown = (await webFsBindings.ScanModelEntriesFiltered("/web/ysm/组A", "no-such-type", "", "ui")) as Array<{ Name: string }>;
+    expect(unknown.map((e) => e.Name)).toEqual(["main.ysm"]);
+  });
+
+  it("过滤命中条目填充 type 字段（对齐 Go e.Type = rtype）", async () => {
+    await seedGroup("ysm", "组A", { "main.ysm": enc.encode("x") });
+    const hit = (await webFsBindings.ScanModelEntriesFiltered("/web/ysm/组A", "ysm", "", "ui")) as Array<{ type?: string }>;
+    expect(hit[0].type).toBe("ysm");
+  });
+
+  it("容器差异锁定：.zip 按扩展名白名单保留（web 不打开验真；Go 会打开容器指纹核验）", async () => {
+    await seedGroup("EntityPlayer", "组B", { "m.zip": enc.encode("zip") });
+    // EntityPlayer 白名单含 .zip → web 按扩展名保留（已知差异：Go containerCache 验真，
+    // 内容非 EntityPlayer 会被剔除；web 暂不验真，差异由本契约测试钉死）
+    const hit = (await webFsBindings.ScanModelEntriesFiltered("/web/EntityPlayer/组B", "EntityPlayer", "", "ui")) as Array<{ Name: string }>;
+    expect(hit.map((e) => e.Name)).toEqual(["m.zip"]);
+  });
+});
+
 describe("杂项装配", () => {
   it("ClearScanCache / InvalidateScanCache：网页版 no-op resolve", async () => {
     await expect(webFsBindings.ClearScanCache()).resolves.toBeUndefined();

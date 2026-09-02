@@ -34,6 +34,8 @@ import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/model
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
 // rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
 import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
+// rtype 扩展名白名单（resource_types.json 派生，单一事实源；ScanModelEntriesFiltered 过滤用）
+import { getExts } from "../utils/resource/extensions.ts";
 import { arrayBufferToBase64, base64ToBytes, u8ToBase64, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
 // R2 导入增强：detectZipType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
 import { extractZip, detectZipType } from "./extract.ts";
@@ -1267,10 +1269,19 @@ export const webFsBindings = {
   ScanModelEntries: (dir: string) => scanWebModels(dir),
   // 真实列表入口（loader/import-queue/resource-manager 等 6 处均调 WithLabel 版本）
   ScanModelEntriesWithLabel: (dir: string, _label: string) => scanWebModels(dir),
-  // app-tree/loader、preview-library/siblings 等按 rtype 扫描候选列表；网页版虚拟根
-  // /web/<rtype> 本身已按类型分区，scanWebModels 根目录即等效“按 rtype 过滤”，
-  // 非根目录则按目录前缀收敛，供目录批量重命名等场景使用
-  ScanModelEntriesFiltered: (dir: string, _rtype: string, _subtype: string, _label: string) => scanWebModels(dir),
+  // app-tree/loader、preview-library/siblings 等按 rtype 扫描候选列表。对齐 Go
+  // app_scan.go:328-376：按 rtype 扩展名白名单过滤 + 命中条目填 type 字段。
+  // subtype 参数已废弃（go/types/extensions.go:322 SupportedExtsForSubtype 直接忽略）。
+  // rtype 空/未知（getExts 返回空）→ 退化不过滤（对齐 Go：白名单为空时不过滤）。
+  // 已知差异（契约测试锁定）：Go 对 .zip/.7z 容器打开内容指纹核验（containerCache，
+  // 内容非本 rtype 则剔除）；web 暂不验真，仅按扩展名白名单保留容器条目。
+  ScanModelEntriesFiltered: async (dir: string, rtype: string, _subtype: string, _label: string) => {
+    const entries = await scanWebModels(dir);
+    const exts = getExts(rtype);
+    if (exts.length === 0) return entries;
+    const extSet = new Set(exts);
+    return entries.filter((e) => extSet.has(e.Ext)).map((e) => ({ ...e, type: rtype }));
+  },
   ReadFileBytes: (path: string) => readWebFile(path),
   // MMD/Scene 3D 批量读取（原缺失被 mmd-data-port catch 成空对象 → 贴图静默丢失）
   ReadFileBytesBatch: async (paths: string[] | null) => {

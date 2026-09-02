@@ -195,9 +195,11 @@ if (commitResult.outOfScope.length > 0) {
   console.error('❌ 提交包含越界文件（不在白名单 paths ∪ 生成物/测试清单），请核查：');
   for (const f of commitResult.outOfScope) console.error(`    ${f}`);
   // 自动回退已提交的 HEAD（--soft 保留工作区改动），AI 不会忽略提示直接 push
-  const rollback = git(['reset', '--soft', 'HEAD~1']);
-  if (rollback.exitCode !== 0) {
-    console.error(`❌ 自动回退失败：git reset --soft HEAD~1 退出码 ${rollback.exitCode}`);
+  // 注：git() 仅返回 stdout 字符串、吞掉错误，无法判 exitCode；
+  //     故回退段直接用 run() 取 ok 标志（ADR-155 重写时遗留的 .exitCode 类型 bug）
+  const rollback = run('git', ['-c', 'core.quotepath=false', 'reset', '--soft', 'HEAD~1'], { cwd: ROOT });
+  if (!rollback.ok) {
+    console.error('❌ 自动回退失败：git reset --soft HEAD~1 未成功执行。');
     console.error('提示：手动执行 git reset --soft HEAD~1 后重新用 --files 白名单提交。');
   } else {
     console.error('已自动回退 HEAD~1（工作区改动保留），请重新用 --files 白名单提交。');

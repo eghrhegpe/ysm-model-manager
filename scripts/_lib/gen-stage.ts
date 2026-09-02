@@ -187,7 +187,7 @@ if (isCli) {
     // 让 pre-commit 回退到保守策略（不 stage 任何生成物）。
     // 旧实现 porcelain='' → dirty 空 → 全量 stage（fail-open，并发隔离失效）
     console.error(`[gen-stage] git status 失败，fail-closed 输出空清单: ${(e as Error).message}`);
-    return [];
+    process.exit(0); // 顶层模块作用域不可 return；CLI 模式空输出 = 空 stage 清单（fail-closed 意图不变）
   }
   const dirty = parsePorcelain(porcelain);
   const stage = computeStageList({

@@ -71,18 +71,18 @@ function assertRootsAttached(mesh: THREE.SkinnedMesh, pmx: PmxParseResponse): vo
 describe("buildPmxScene — 多根骨骼挂载", () => {
   it("两个根骨骼都挂到 mesh（漏挂 → 蒙皮拉飞「空气角色」回归）", () => {
     const pmx = syntheticPmx();
-    const built = buildPmxScene(pmx, { texUrlMap: new Map() });
-    expect(built).not.toBeNull();
-    assertRootsAttached(built!.mesh, pmx);
+    const result = buildPmxScene(pmx, { texUrlMap: new Map() });
+    expect(result).not.toBeNull();
+    assertRootsAttached(result!.mesh, pmx);
   });
 
   it("单根骨骼：attachRootBones 不误挂多余子骨骼", () => {
     const pmx = syntheticPmx();
     // 只有一个根：把 rootB 改成 rootA 的子骨骼
     pmx.bones![1].parentBoneIndex = 0;
-    const built = buildPmxScene(pmx, { texUrlMap: new Map() });
-    expect(built).not.toBeNull();
-    const mesh = built!.mesh;
+    const result = buildPmxScene(pmx, { texUrlMap: new Map() });
+    expect(result).not.toBeNull();
+    const mesh = result!.mesh;
     expect(mesh.children.map((c) => (c as THREE.Bone).name)).toEqual(["rootA"]);
   });
 });
@@ -90,9 +90,9 @@ describe("buildPmxScene — 多根骨骼挂载", () => {
 describe("buildPmxSceneSliced — 多根骨骼挂载（切片版同锁）", () => {
   it("两个根骨骼都挂到 mesh，蒙皮矩阵 identity", async () => {
     const pmx = syntheticPmx();
-    const built = await buildPmxSceneSliced(pmx, { texUrlMap: new Map() });
-    expect(built).not.toBeNull();
-    assertRootsAttached(built!.mesh, pmx);
+    const result = await buildPmxSceneSliced(pmx, { texUrlMap: new Map() });
+    expect(result).not.toBeNull();
+    assertRootsAttached(result!.mesh, pmx);
   });
 });
 
@@ -199,10 +199,10 @@ describe("buildPmxScene — 材质/纹理构建", () => {
       } as typeof THREE.TextureLoader.prototype.load,
     );
     try {
-      const built = buildPmxScene(pmx, { texUrlMap });
-      expect(built).not.toBeNull();
+      const result = buildPmxScene(pmx, { texUrlMap });
+      expect(result).not.toBeNull();
       expect(loadSpy).toHaveBeenCalledTimes(1);
-      const [matA, matB] = built!.materials;
+      const [matA, matB] = result!.materials;
       expect(matA.name).toBe("服");
       expect(matA.transparent).toBe(true); // diffuse.a = 0.5 < 1
       expect(matA.side).toBe(THREE.DoubleSide); // flags & 0x01
@@ -218,10 +218,10 @@ describe("buildPmxScene — 材质/纹理构建", () => {
     const pmx = syntheticPmx();
     pmx.bones![0].parentBoneIndex = 1; // rootA 变 rootB 的子
     pmx.bones![1].parentBoneIndex = 0; // rootB 变 rootA 的子（人为无根环）
-    const built = buildPmxScene(pmx, { texUrlMap: new Map() });
-    expect(built).not.toBeNull();
+    const result = buildPmxScene(pmx, { texUrlMap: new Map() });
+    expect(result).not.toBeNull();
     // 兜底：bones[0] 挂到 mesh（防孤儿根整树不更新 matrixWorld）
-    expect(built!.mesh.children).toContain(built!.bones[0]);
+    expect(result!.mesh.children).toContain(result!.bones[0]);
   });
 });
 
@@ -230,9 +230,9 @@ describe("buildPmxSceneSliced — 材质/纹理构建（切片版同锁）", () 
     const pmx = pmxWithMaterials();
     // sliced 版对 texPath 统一 lowercase 后查表 → 仅注册 basename 键也命中
     const texUrlMap = new Map<string, string>([["face.png", "blob:tex-base"]]);
-    const built = await buildPmxSceneSliced(pmx, { texUrlMap });
-    expect(built).not.toBeNull();
-    const [matA, matB] = built!.materials;
+    const result = await buildPmxSceneSliced(pmx, { texUrlMap });
+    expect(result).not.toBeNull();
+    const [matA, matB] = result!.materials;
     expect(matA.name).toBe("服");
     expect(matA.transparent).toBe(true);
     expect(matA.side).toBe(THREE.DoubleSide);

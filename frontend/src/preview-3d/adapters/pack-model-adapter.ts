@@ -250,7 +250,7 @@ async function buildPackScene(
   }
 
   // 释放旧内容层（ADR-084 L2：switchTo 先 dispose 旧 group 再重建）
-  // 注意：core switchTo 已执行 built?.dispose()，但我们保留此处作为防御性清理（
+  // 注意：core switchTo 已执行 content?.dispose()，但我们保留此处作为防御性清理（
   // 首次 build 时 state 为空 no-op，重建时确保无残留）。
   // 核心在 switchTo 内已移除 sceneBaseline 之外的子节点（line 724-727），此处只需释放 GPU 资源。
   if (state.group && state.group.parent) {

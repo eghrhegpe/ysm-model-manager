@@ -213,15 +213,15 @@ function buildTrack(name: string, times: Float32Array, values: Float32Array): TH
  *  展平会丢放置/蒙皮 bind；动画轨道命名非 mesh 节点也需要其在场景树中存在） */
 export function buildFbxSceneFromData(data: FbxSceneData, config: FbxSceneBuilderConfig = {}): THREE.Group {
   const texUrlMap = config.texUrlMap;
-  const built: Array<THREE.Object3D | null> = data.nodes.map(() => null);
+  const nodeObjects: Array<THREE.Object3D | null> = data.nodes.map(() => null);
   // 第一遍：创建节点（Group 或 Mesh）
   data.nodes.forEach((node, i) => {
     if (node.isMesh && node.mesh) {
-      built[i] = buildMesh(node.mesh, texUrlMap);
+      nodeObjects[i] = buildMesh(node.mesh, texUrlMap);
     } else {
       const g = new THREE.Group();
       g.name = node.name;
-      built[i] = g;
+      nodeObjects[i] = g;
     }
   });
   // 第二遍：应用局部变换 + 按 parent 索引挂接（parent=-1 → 挂根）
@@ -234,14 +234,14 @@ export function buildFbxSceneFromData(data: FbxSceneData, config: FbxSceneBuilde
     group.scale.fromArray(data.rootTransform.scale);
   }
   data.nodes.forEach((node, i) => {
-    const obj = built[i];
+    const obj = nodeObjects[i];
     if (!obj) return;
     obj.name = node.name;
     obj.position.fromArray(node.transform.position);
     obj.quaternion.fromArray(node.transform.quaternion);
     obj.scale.fromArray(node.transform.scale);
-    if (node.parent >= 0 && node.parent < built.length && built[node.parent]) {
-      built[node.parent]!.add(obj);
+    if (node.parent >= 0 && node.parent < nodeObjects.length && nodeObjects[node.parent]) {
+      nodeObjects[node.parent]!.add(obj);
     } else {
       group.add(obj);
     }

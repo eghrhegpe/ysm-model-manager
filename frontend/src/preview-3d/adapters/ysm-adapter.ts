@@ -8,7 +8,7 @@
 // WASM/Go 兜底，由 skeleton 层注入），switchTo(newPath) 对 YSM 生效。
 //
 // YSM 特色保留：骨骼射线拾取（绑核心 renderer.domElement）、声明式根菜单专属项
-// （model/截图/骨骼 经 built.menuItems 由 mount 层统一 feed dock + 角色详情归口，ADR-076 v2 Phase 2、ADR-093）。
+// （model/截图/骨骼 经 content.menuItems 由 mount 层统一 feed dock + 角色详情归口，ADR-076 v2 Phase 2、ADR-093）。
 // 已知降级（后续补）：调试模式（F 键 normal/pivot/bone 可视化）暂不接入 shared。
 // ⚠️ 已解除：F 键调试模式现已接入 shared 模式，经 rebuildDebug 复用旧 renderModel3D 的
 // 相同逻辑（pivot 线 + 骨骼连接 + Sprite 标签），与旧单例路径行为一致。

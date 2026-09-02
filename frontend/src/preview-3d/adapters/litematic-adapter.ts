@@ -33,7 +33,7 @@ interface MdLiSizeInfo {
   grid: THREE.GridHelper;
 }
 
-interface MdLiBuiltMeshes {
+interface LitematicMeshSet {
   modelGroup: THREE.Group;
   instancedMeshes: Array<THREE.InstancedMesh>;
   materials: Array<THREE.MeshLambertMaterial>;
@@ -129,8 +129,8 @@ function mdLiResolveBlockTexture(groupColor: string | undefined): THREE.MeshLamb
 function mdLiBuildBlockMesh(
   ctx: PreviewBuildCtx,
   data: VoxelData,
-  si: MdLiSizeInfo,
-): MdLiBuiltMeshes {
+  sizeInfo: MdLiSizeInfo,
+): LitematicMeshSet {
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
   const modelGroup = new THREE.Group();
   ctx.scene!.add(modelGroup);
@@ -149,7 +149,7 @@ function mdLiBuildBlockMesh(
       const cx = Math.floor(p[0] / CHUNK_SIZE);
       const cy = Math.floor(p[1] / CHUNK_SIZE);
       const cz = Math.floor(p[2] / CHUNK_SIZE);
-      const ck = cx + cy * si.xChunks + cz * si.xChunks * si.yChunks;
+      const ck = cx + cy * sizeInfo.xChunks + cz * sizeInfo.xChunks * sizeInfo.yChunks;
       let arr = chunkMap.get(ck);
       if (!arr) {
         arr = [];
@@ -174,23 +174,23 @@ function mdLiBuildBlockMesh(
       gMeshes.push({ mesh, ck });
     }
   }
-  return { modelGroup, instancedMeshes, materials, groupMeshes, boxGeo, grid: si.grid };
+  return { modelGroup, instancedMeshes, materials, groupMeshes, boxGeo, grid: sizeInfo.grid };
 }
 
 // ===== 阶段④：分层切片（schema builder 注册 + applyLayer 体素过滤）=====
 
-function mdLiChunkKey(p: number[], si: MdLiSizeInfo): number {
+function mdLiChunkKey(p: number[], sizeInfo: MdLiSizeInfo): number {
   const cx = Math.floor(p[0] / CHUNK_SIZE);
   const cy = Math.floor(p[1] / CHUNK_SIZE);
   const cz = Math.floor(p[2] / CHUNK_SIZE);
-  return cx + cy * si.xChunks + cz * si.xChunks * si.yChunks;
+  return cx + cy * sizeInfo.xChunks + cz * sizeInfo.xChunks * sizeInfo.yChunks;
 }
 
 function mdLiApplyLayer(
   shell: MdLiLayerShell,
-  si: MdLiSizeInfo,
+  sizeInfo: MdLiSizeInfo,
   rawGroups: VoxelData["groups"],
-  groupMeshes: MdLiBuiltMeshes["groupMeshes"],
+  groupMeshes: LitematicMeshSet["groupMeshes"],
   mode: string,
 ): void {
   const dummy = new THREE.Object3D();
@@ -205,7 +205,7 @@ function mdLiApplyLayer(
       for (let i = 0; i < positions.length; i++) {
         const p = positions[i];
         if (!mdLiIsValidPos(p)) continue;
-        if (mdLiChunkKey(p, si) !== ck) continue;
+        if (mdLiChunkKey(p, sizeInfo) !== ck) continue;
         if (mode === "single" && p[shell.layerAxis] !== target) continue;
         if (mode !== "all" && mode !== "single" && !(p[shell.layerAxis] >= lo && p[shell.layerAxis] < hi)) continue;
         dummy.position.set(p[0], p[1], p[2]);
@@ -246,20 +246,20 @@ function mdLiClampLayer(n: number, layerMax: number): number {
  *  渲染重新执行——slider max 随轴切换保持新鲜（axis/mode select 均 refreshOnChange 触发）。
  *  快照参数不消费：动态数据全在闭包 shell（含模式），不入全局状态层。 */
 function mdLiBuildSliceSchema(
-  si: MdLiSizeInfo,
+  sizeInfo: MdLiSizeInfo,
   rawGroups: VoxelData["groups"],
-  groupMeshes: MdLiBuiltMeshes["groupMeshes"],
+  groupMeshes: LitematicMeshSet["groupMeshes"],
 ): SchemaBuilder {
   const shell: MdLiLayerShell = {
     layerAxis: 1,
-    layerMax: si.sizeY,
-    layerVal: si.sizeY,
-    layerVal2: si.sizeY,
+    layerMax: sizeInfo.sizeY,
+    layerVal: sizeInfo.sizeY,
+    layerVal2: sizeInfo.sizeY,
     mode: "all",
   };
-  const applyLayer = (): void => mdLiApplyLayer(shell, si, rawGroups, groupMeshes, shell.mode);
+  const applyLayer = (): void => mdLiApplyLayer(shell, sizeInfo, rawGroups, groupMeshes, shell.mode);
   const resetToMax = (): void => {
-    shell.layerMax = [si.sizeX, si.sizeY, si.sizeZ][shell.layerAxis];
+    shell.layerMax = [sizeInfo.sizeX, sizeInfo.sizeY, sizeInfo.sizeZ][shell.layerAxis];
     shell.layerVal = shell.layerMax;
     shell.layerVal2 = shell.layerMax;
   };
@@ -330,12 +330,12 @@ function mdLiBuildSliceSchema(
 
 /** 注册切片面板 builder + 产出 panel 入口节点（schemaId 是唯一渲染通道，契约禁双通道） */
 function mdLiRegisterSliceSchema(
-  si: MdLiSizeInfo,
+  sizeInfo: MdLiSizeInfo,
   rawGroups: VoxelData["groups"],
-  groupMeshes: MdLiBuiltMeshes["groupMeshes"],
+  groupMeshes: LitematicMeshSet["groupMeshes"],
   sliceKey: string, // per-scene 唯一 key（多模型并存防互相覆盖——5329a347 review P2）
 ): PreviewMenuNode {
-  registerSchema(sliceKey, mdLiBuildSliceSchema(si, rawGroups, groupMeshes));
+  registerSchema(sliceKey, mdLiBuildSliceSchema(sizeInfo, rawGroups, groupMeshes));
   return {
     id: "slice",
     icon: "🧊",
@@ -377,7 +377,7 @@ function mdLiShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
 
 function mdLiBuildResult(
   ctx: PreviewBuildCtx,
-  built: MdLiBuiltMeshes,
+  meshSet: LitematicMeshSet,
   menuItems: PreviewMenuNode[],
   sliceKey: string,
 ): PreviewScene {
@@ -388,13 +388,13 @@ function mdLiBuildResult(
       // 切片模式随 shell 闭包消亡——不动全局状态（P5 复盘：原 resetLitematicSliceMode
       // 重置全局单值，双场景下先关闭的会把后者的切片模式误重置回 all）
       // 先从 scene 移除，再 dispose GPU 资源（防 scene graph 残留导致 GC 无法回收）
-      ctx.scene?.remove(built.modelGroup);
-      ctx.scene?.remove(built.grid);
-      unregisterModelRoot(built.modelGroup);
-      built.instancedMeshes.forEach((m) => safeDispose(m));
-      built.materials.forEach((m) => safeDispose(m));
-      built.boxGeo.dispose();
-      safeDispose(built.grid);
+      ctx.scene?.remove(meshSet.modelGroup);
+      ctx.scene?.remove(meshSet.grid);
+      unregisterModelRoot(meshSet.modelGroup);
+      meshSet.instancedMeshes.forEach((m) => safeDispose(m));
+      meshSet.materials.forEach((m) => safeDispose(m));
+      meshSet.boxGeo.dispose();
+      safeDispose(meshSet.grid);
     },
     screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
   };
@@ -426,14 +426,14 @@ export async function buildLitematicScene(
   if (!loadRes.ok) return loadRes.earlyResult;
   const { data } = loadRes;
 
-  const si = mdLiSetupCameraAndGrid(ctx, data);
-  const built = mdLiBuildBlockMesh(ctx, data, si);
+  const sizeInfo = mdLiSetupCameraAndGrid(ctx, data);
+  const meshSet = mdLiBuildBlockMesh(ctx, data, sizeInfo);
 
   ctx.loadingEl.remove();
   mdLiRecordPerfTrace(path, tStart, data);
 
   const sliceKey = `${LITEMATIC_SLICE_SCHEMA_ID}-${++mdLiSliceInstance}`; // per-scene 唯一（多模型并存防覆盖）
-  const sliceItems = [mdLiRegisterSliceSchema(si, data.groups, built.groupMeshes, sliceKey)];
+  const sliceItems = [mdLiRegisterSliceSchema(sizeInfo, data.groups, meshSet.groupMeshes, sliceKey)];
   mdLiShowTruncatedWarning(ctx, data);
 
   // [doc:adr-132] 多模型选择菜单项（容器内全部 entry；切 entry 走 core switchTo 重建）
@@ -454,5 +454,5 @@ export async function buildLitematicScene(
     if (select) menuItems.push(select);
   }
 
-  return mdLiBuildResult(ctx, built, menuItems, sliceKey);
+  return mdLiBuildResult(ctx, meshSet, menuItems, sliceKey);
 }

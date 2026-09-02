@@ -45,18 +45,18 @@ const mockVoxelCall = vi.fn(() =>
 /** 构建场景并取当前注册的 slice builder 产出节点 */
 async function buildScene(): Promise<{
   ctx: PreviewBuildCtx;
-  built: Awaited<ReturnType<typeof buildLitematicScene>>;
+  content: Awaited<ReturnType<typeof buildLitematicScene>>;
   panel: PreviewMenuNode;
   sliceKey: string;
   nodes: PreviewMenuNode[];
 }> {
   const ctx = makeMockCtx();
-  const built = await buildLitematicScene(ctx, "/a.litematic", mockVoxelCall);
-  const items = built.menuItems ?? [];
+  const content = await buildLitematicScene(ctx, "/a.litematic", mockVoxelCall);
+  const items = content.menuItems ?? [];
   const panel = items[0]!;
   const sliceKey = panel.schemaId!; // per-scene 唯一 key（5329a347 review P2：不再固定 "litematic-slice"）
   const builder = getSchema(sliceKey)!;
-  return { ctx, built, panel, sliceKey, nodes: builder(previewSnapshot()) };
+  return { ctx, content, panel, sliceKey, nodes: builder(previewSnapshot()) };
 }
 
 const nodeById = (nodes: PreviewMenuNode[], id: string): PreviewMenuNode =>
@@ -226,9 +226,9 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
   });
 
   it("dispose 注销 schema；切片模式随 shell 闭包消亡（不动全局状态）", async () => {
-    const { built, nodes, sliceKey } = await buildScene();
+    const { content, nodes, sliceKey } = await buildScene();
     setMode(nodes, "single"); // 场景级会话态置位
-    built.dispose();
+    content.dispose();
     expect(getSchema(sliceKey)).toBeUndefined();
     // 模式存于闭包：dispose 后 shell 不可达，无全局残留可断言（跨场景零误伤的结构保证）
   });

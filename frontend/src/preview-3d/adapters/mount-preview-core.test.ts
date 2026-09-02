@@ -148,7 +148,7 @@ function panelItem(id: string): unknown {
 }
 
 /** 最小可用 content（adapter.build 返回） */
-function makeBuilt(): PreviewScene {
+function makeContent(): PreviewScene {
   return {
     update: vi.fn(),
     dispose: vi.fn(),
@@ -181,7 +181,7 @@ afterEach(() => {
 
 describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
   it("build 收到完整 ctx（scene/camera/renderer/controls/sessionId/switchTo）+ 注册表登记 + 菜单注入", async () => {
-    const content = makeBuilt();
+    const content = makeContent();
     const adapter: PreviewAdapter = {
       id: "vrm",
       build: vi.fn(async () => content),
@@ -217,7 +217,7 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
 
   it("switchPreview 转发到活跃会话；无会话时 no-op", async () => {
     await switchPreview("/x.vrm"); // 无会话 no-op 不抛
-    const content = makeBuilt();
+    const content = makeContent();
     await mount3D({ id: "vrm", build: vi.fn(async () => content) }, "/m/a.vrm");
     // 会话内 switchTo：转发到 handle.switchTo（复用外壳重建内容层）
     await expect(switchPreview("/m/other.vrm")).resolves.toBeUndefined();
@@ -226,7 +226,7 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
   });
 
   it("ESC → fullCleanup：dispose 内容层 + 移除 overlay + 注销注册表", async () => {
-    const content = makeBuilt();
+    const content = makeContent();
     const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => content), onClose: vi.fn() };
     await mount3D(adapter, "/m/a.vrm");
     const buildCtx = (adapter.build as ReturnType<typeof vi.fn>).mock.calls[0][0] as PreviewBuildCtx;
@@ -246,7 +246,7 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
   });
 
   it("build 期间被 invalidate：已产出的内容层仍须 dispose，不留 GPU 资源", async () => {
-    const content = makeBuilt();
+    const content = makeContent();
     let resolveBuild!: (b: PreviewScene) => void;
     const build = vi.fn(() => new Promise<PreviewScene>((res) => { resolveBuild = res; }));
     const adapter: PreviewAdapter = { id: "vrm", build, onClose: vi.fn() };
@@ -273,7 +273,7 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
   });
 
   it("build 期间 invalidatePreview（代际失效）→ 会话不注册不泄漏", async () => {
-    const content = makeBuilt();
+    const content = makeContent();
     let resolveBuild!: (v: PreviewScene) => void;
     const adapter: PreviewAdapter = {
       id: "vrm",
@@ -300,7 +300,7 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     };
     const p = mount3D(adapter, "/m/a.vrm");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); // 初始 escH → cleanupFn 尚空 → closeOverlay
-    resolveBuild(makeBuilt());
+    resolveBuild(makeContent());
     await p;
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(hasActivePreview()).toBe(false);
@@ -308,13 +308,13 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
   });
 
   it("菜单回调接线：switchExternal/toast/closeAllOverlays/getModelsByType/camBridge.reset/switchTo", async () => {
-    const built1 = makeBuilt();
-    const built2 = makeBuilt();
+    const content1 = makeContent();
+    const content2 = makeContent();
     const switchExternal = vi.fn(async () => {});
     const getModelsByType = vi.fn(async () => ["/m/x.vrm"]);
     const adapter: PreviewAdapter = {
       id: "vrm",
-      build: vi.fn().mockResolvedValueOnce(built1).mockResolvedValueOnce(built2),
+      build: vi.fn().mockResolvedValueOnce(content1).mockResolvedValueOnce(content2),
     };
     await mount3D(adapter, "/m/a.vrm", {
       rtype: "vrm",
@@ -344,7 +344,7 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
 
     // camBridge.reset → 活跃会话 content.resetCamera
     (mo.getCamBridge as () => Record<string, () => void>)().reset();
-    expect(built1.resetCamera).toHaveBeenCalledTimes(1);
+    expect(content1.resetCamera).toHaveBeenCalledTimes(1);
 
     // switchTo → 会话内切换（第二次 build + setPerFrame 新旧交接 + 注册表更新）
     await (mo.switchTo as (p: string) => Promise<void>)("/m/b.vrm");
@@ -360,7 +360,7 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
 
 describe("rAF 渲染管线（WASD / perFrame / 能力 / 统一渲染出口）", () => {
   it("帧循环驱动：caps.update + perFrame + WASD 全向相机运动 + 统一渲染出口", async () => {
-    const content = makeBuilt();
+    const content = makeContent();
     const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => content) };
     await mount3D(adapter, "/m/a.vrm");
     const buildCtx = (adapter.build as ReturnType<typeof vi.fn>).mock.calls[0][0] as PreviewBuildCtx;
@@ -414,22 +414,22 @@ describe("rAF 渲染管线（WASD / perFrame / 能力 / 统一渲染出口）", 
 
 describe("unloadModel（注册表卸载模型）", () => {
   it("卸载指定角色：dispose + 移除 roots + 注销 + 菜单复位 + refreshDock", async () => {
-    const content = makeBuilt();
+    const content = makeContent();
     await mount3D({ id: "vrm", build: vi.fn(async () => content) }, "/m/a.vrm");
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const unloadBuilt = { dispose: vi.fn(), update: vi.fn() } as unknown as PreviewScene;
+    const unloadContent = { dispose: vi.fn(), update: vi.fn() } as unknown as PreviewScene;
     const id = sceneRegistry.register({
       path: "/m/role.vrm",
       rtype: "vrm",
       roots: [mesh],
-      content: unloadBuilt,
+      content: unloadContent,
       menuItems: [panelItem("role")] as unknown as PreviewMenuNode[],
     });
 
     // 经菜单 ctx 触发 unloadModel（角色面板 ⚙ → 卸载）
     (h.menuOpts!.unloadModel as (id: string) => void)(id);
 
-    expect(unloadBuilt.dispose).toHaveBeenCalledTimes(1);
+    expect(unloadContent.dispose).toHaveBeenCalledTimes(1);
     // 注册表注销（活跃 id 转移/清空）
     expect(sceneRegistry.get(id)).toBeUndefined();
     // 活跃角色切换 → dock 换菜单（mount 会话 m1 仍在注册表且带统计 menuItems → 非空注入）
@@ -440,7 +440,7 @@ describe("unloadModel（注册表卸载模型）", () => {
 
 describe("统一多模型拾取器（count>=2 激活）", () => {
   it("点击命中模型 → setActive + 骨骼回调透传（boneMaps 分支）+ 隐藏链跳过", async () => {
-    const builtA = { ...makeBuilt(), onBoneSelect: vi.fn() } as unknown as PreviewScene;
+    const contentA = { ...makeContent(), onBoneSelect: vi.fn() } as unknown as PreviewScene;
     const onPickA = vi.fn();
     const adapter: PreviewAdapter = {
       id: "vrm",
@@ -454,7 +454,7 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
         const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
         meshB.position.set(0, 0, -8);
         ctx.scene!.add(groupA, meshB);
-        return makeBuilt();
+        return makeContent();
       }),
     };
     await mount3D(adapter, "/m/a.vrm");
@@ -473,7 +473,7 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
       path: "/m/a.vrm",
       rtype: "vrm",
       roots: [groupA],
-      content: builtA,
+      content: contentA,
       boneMaps: {
         boneGroupMap: new Map([["b1", groupA as THREE.Group]]),
         nameMap: new Map([["b1", "b1"]]),
@@ -482,7 +482,7 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
       },
       onBonePick: onPickA,
     });
-    const idB = sceneRegistry.register({ path: "/m/b.vrm", rtype: "vrm", roots: [meshB], content: makeBuilt() });
+    const idB = sceneRegistry.register({ path: "/m/b.vrm", rtype: "vrm", roots: [meshB], content: makeContent() });
 
     const dom = buildCtx.renderer!.domElement as unknown as { dispatchEvent: (e: unknown) => void };
     // 点击 canvas 中央 → 射线沿 -Z → 先命中近处 groupA
@@ -490,7 +490,7 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
     expect(sceneRegistry.getActiveId()).toBe(idA);
     // boneMaps 分支：boneId 解析 + 骨骼信息组装 + 回调透传
     expect(onPickA).toHaveBeenCalledWith("b1");
-    expect((builtA.onBoneSelect as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+    expect((contentA.onBoneSelect as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
 
     // 隐藏链跳过：藏 A → 同一点位命中被跳过 → 切到 B
     sceneRegistry.setVisible(idA, false);
@@ -499,10 +499,10 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
   });
 
   it("单模型（count<2）→ 点击不触发统一拾取", async () => {
-    const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => makeBuilt()) };
+    const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => makeContent()) };
     await mount3D(adapter, "/m/a.vrm");
     const buildCtx = (adapter.build as ReturnType<typeof vi.fn>).mock.calls[0][0] as PreviewBuildCtx;
-    sceneRegistry.register({ path: "/m/a.vrm", rtype: "vrm", roots: [], content: makeBuilt() });
+    sceneRegistry.register({ path: "/m/a.vrm", rtype: "vrm", roots: [], content: makeContent() });
     const setActiveSpy = vi.spyOn(sceneRegistry, "setActive");
     const dom = buildCtx.renderer!.domElement as unknown as { dispatchEvent: (e: unknown) => void };
     dom.dispatchEvent(new MouseEvent("click", { clientX: 10, clientY: 10, bubbles: true }));
@@ -512,7 +512,7 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
 
 describe("公开 API", () => {
   it("cleanupPreview：清理全部会话并复位单例（renderer/canvas 保留语义由实现承担）", async () => {
-    const content = makeBuilt();
+    const content = makeContent();
     await mount3D({ id: "vrm", build: vi.fn(async () => content) }, "/m/a.vrm");
     expect(hasActivePreview()).toBe(true);
     cleanupPreview();
@@ -523,13 +523,13 @@ describe("公开 API", () => {
   });
 
   it("cooperate=true 同台追加：allContent 累积，fullCleanup 逐一 dispose", async () => {
-    const builtA = makeBuilt();
-    const builtB = makeBuilt();
-    await mount3D({ id: "vrm", build: vi.fn(async () => builtA) }, "/m/a.vrm", { cooperate: true });
-    await mount3D({ id: "vrm", build: vi.fn(async () => builtB) }, "/m/b.vrm", { cooperate: true });
+    const contentA = makeContent();
+    const contentB = makeContent();
+    await mount3D({ id: "vrm", build: vi.fn(async () => contentA) }, "/m/a.vrm", { cooperate: true });
+    await mount3D({ id: "vrm", build: vi.fn(async () => contentB) }, "/m/b.vrm", { cooperate: true });
     expect(hasActivePreview()).toBe(true);
     cleanupPreview();
-    expect(builtA.dispose).toHaveBeenCalledTimes(1);
-    expect(builtB.dispose).toHaveBeenCalledTimes(1);
+    expect(contentA.dispose).toHaveBeenCalledTimes(1);
+    expect(contentB.dispose).toHaveBeenCalledTimes(1);
   });
 });

@@ -186,59 +186,59 @@ function renderPerfTrendSection(esc: EscFn): string {
   );
 }
 
-// ===== dgPc 共用收敛辅助：代际守卫/错误渲染/busy占位/CLI 调用守卫 =====
+// ===== perf-cli 共用收敛辅助：代际守卫/错误渲染/busy占位/CLI 调用守卫 =====
 
 type CLIResp = Awaited<ReturnType<typeof executeCLI>>;
 
-interface DgPcGenGuard {
+interface GenGuard {
   gen: number;
   stale: () => boolean;
 }
 
-function dgPcMakeGen(seqRef: { current: number }): DgPcGenGuard {
+function makeGenGuard(seqRef: { current: number }): GenGuard {
   const gen = ++seqRef.current;
   return { gen, stale: () => gen !== seqRef.current };
 }
 
-function dgPcGetOut(root: ShadowRoot, id: string): HTMLElement | null {
+function getOutBox(root: ShadowRoot, id: string): HTMLElement | null {
   return root.getElementById(id);
 }
 
-function dgPcSetBusy(out: HTMLElement): void {
+function setBusy(out: HTMLElement): void {
   out.innerHTML = busyHTML();
 }
 
-function dgPcSetErrorMsg(out: HTMLElement, msg: string, esc: EscFn): void {
+function setErrorMsg(out: HTMLElement, msg: string, esc: EscFn): void {
   out.innerHTML = errorHTML(msg, esc);
 }
 
-function dgPcSetErrorResp(out: HTMLElement, resp: CLIResp, esc: EscFn): void {
+function setErrorResp(out: HTMLElement, resp: CLIResp, esc: EscFn): void {
   out.innerHTML = errorHTML(resp.error?.message ?? t("diagnostics.perfFail"), esc);
 }
 
-function dgPcSetErrorCatch(out: HTMLElement, e: unknown, esc: EscFn): void {
+function setErrorCatch(out: HTMLElement, e: unknown, esc: EscFn): void {
   console.error("[diagnostics] perf-cli 失败:", e);
   out.innerHTML = errorHTML(`${t("diagnostics.perfFail")}: ${safeErrorMessage(e)}`, esc);
 }
 
-function dgPcRespHasOutput(resp: CLIResp): resp is CLIResp & { status: "success"; data: { output: string } } {
+function respHasOutput(resp: CLIResp): resp is CLIResp & { status: "success"; data: { output: string } } {
   return resp.status === "success" && !!resp.data?.output;
 }
 
 // ===== single-bench：7 阶段耗时柱状图 =====
 
-interface DgPcSbStage {
+interface SingleBenchStage {
   name: string;
   ms: number;
   status: string;
 }
 
-type DgPcSbParams = CLIArgs & {
+type SingleBenchParams = CLIArgs & {
   model: string;
   iterations: number;
 };
 
-function dgPcSbGetParams(root: ShadowRoot): DgPcSbParams {
+function singleBenchGetParams(root: ShadowRoot): SingleBenchParams {
   const model = (root.getElementById("diag-perf-model") as HTMLInputElement | null)
     ?.value.trim() ?? "";
   const iterRaw =
@@ -247,25 +247,25 @@ function dgPcSbGetParams(root: ShadowRoot): DgPcSbParams {
   return { model, iterations };
 }
 
-function dgPcSbValidateAndRender(
+function singleBenchValidateAndRender(
   root: ShadowRoot,
   out: HTMLElement,
   esc: EscFn,
-): DgPcSbParams | null {
-  const params = dgPcSbGetParams(root);
+): SingleBenchParams | null {
+  const params = singleBenchGetParams(root);
   if (!params.model) {
-    dgPcSetErrorMsg(out, t("diagnostics.perfModelRequired"), esc);
+    setErrorMsg(out, t("diagnostics.perfModelRequired"), esc);
     return null;
   }
   return params;
 }
 
-function dgPcSbParseStages(output: string): { stages: DgPcSbStage[]; total: number } | null {
+function singleBenchParseStages(output: string): { stages: SingleBenchStage[]; total: number } | null {
   const lines = output.split("\n");
   const stageRe = /^\s+(.+?)\s+(\d+(?:\.\d+)?)ms(?:\s+(.*))?$/;
   const totalRe = /⏱️\s*总耗时.*?([\d.]+)ms/;
 
-  const stages: DgPcSbStage[] = [];
+  const stages: SingleBenchStage[] = [];
   let maxMs = 0;
   for (const raw of lines) {
     const line = raw.trimEnd();
@@ -286,8 +286,8 @@ function dgPcSbParseStages(output: string): { stages: DgPcSbStage[]; total: numb
   return stages.length ? { stages, total } : null;
 }
 
-function dgPcSbRenderBars(
-  stages: DgPcSbStage[],
+function singleBenchRenderBars(
+  stages: SingleBenchStage[],
   total: number,
   rawOutput: string,
   esc: EscFn,
@@ -315,41 +315,41 @@ function dgPcSbRenderBars(
 }
 
 export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = dgPcMakeGen({ get current() { return perfSingleSeq; }, set current(v) { perfSingleSeq = v; } });
-  const out = dgPcGetOut(root, "diag-perf-single");
+  const { stale } = makeGenGuard({ get current() { return perfSingleSeq; }, set current(v) { perfSingleSeq = v; } });
+  const out = getOutBox(root, "diag-perf-single");
   if (!out) return;
-  const params = dgPcSbValidateAndRender(root, out, esc);
+  const params = singleBenchValidateAndRender(root, out, esc);
   if (!params) return;
-  dgPcSetBusy(out);
+  setBusy(out);
   try {
     const resp = await executeCLI("single-bench", params);
     if (stale()) return;
-    if (!dgPcRespHasOutput(resp)) {
-      dgPcSetErrorResp(out, resp, esc);
+    if (!respHasOutput(resp)) {
+      setErrorResp(out, resp, esc);
       return;
     }
-    const parsed = dgPcSbParseStages(resp.data.output);
+    const parsed = singleBenchParseStages(resp.data.output);
     if (!parsed) {
-      dgPcSetErrorMsg(out, t("diagnostics.perfFail"), esc);
+      setErrorMsg(out, t("diagnostics.perfFail"), esc);
       return;
     }
-    out.innerHTML = dgPcSbRenderBars(parsed.stages, parsed.total, resp.data.output, esc);
+    out.innerHTML = singleBenchRenderBars(parsed.stages, parsed.total, resp.data.output, esc);
   } catch (e) {
     if (stale()) return;
-    dgPcSetErrorCatch(out, e, esc);
+    setErrorCatch(out, e, esc);
   }
 }
 
 // ===== gui-flow：6 阶段状态（✅/❌ + 耗时） =====
 
-interface DgPcGfStage {
+interface GuiFlowStage {
   status: string;
   name: string;
   ms: number;
   desc: string[];
 }
 
-function dgPcGfWebModeCheck(): boolean {
+function guiFlowWebModeCheck(): boolean {
   if (isWebPlatform()) {
     bus.emit("toast:show", {
       msg: t("diagnostics.webNoPerf"),
@@ -361,8 +361,8 @@ function dgPcGfWebModeCheck(): boolean {
   return false;
 }
 
-function dgPcGfParseEntries(output: string): {
-  entries: DgPcGfStage[];
+function guiFlowParseEntries(output: string): {
+  entries: GuiFlowStage[];
   flowTotal: number | null;
   failed: boolean;
 } | null {
@@ -370,8 +370,8 @@ function dgPcGfParseEntries(output: string): {
   const stageRe = /^([✅❌])\s*\[\d+\]\s*(.+?)\s*\(([\d.]+)ms\)$/;
   const totalRe = /⏱️\s*总耗时:\s*([\d.]+)ms/;
 
-  const entries: DgPcGfStage[] = [];
-  let cur: DgPcGfStage | null = null;
+  const entries: GuiFlowStage[] = [];
+  let cur: GuiFlowStage | null = null;
   let flowTotal: number | null = null;
   for (const raw of lines) {
     const line = raw.trimEnd();
@@ -394,8 +394,8 @@ function dgPcGfParseEntries(output: string): {
   return { entries, flowTotal, failed };
 }
 
-function dgPcGfRenderStages(
-  entries: DgPcGfStage[],
+function guiFlowRenderStages(
+  entries: GuiFlowStage[],
   flowTotal: number | null,
   failed: boolean,
   rawOutput: string,
@@ -430,24 +430,24 @@ function dgPcGfRenderStages(
 }
 
 export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = dgPcMakeGen({ get current() { return perfGuiSeq; }, set current(v) { perfGuiSeq = v; } });
-  const out = dgPcGetOut(root, "diag-perf-gui-out");
+  const { stale } = makeGenGuard({ get current() { return perfGuiSeq; }, set current(v) { perfGuiSeq = v; } });
+  const out = getOutBox(root, "diag-perf-gui-out");
   if (!out) return;
-  if (dgPcGfWebModeCheck()) return;
-  dgPcSetBusy(out);
+  if (guiFlowWebModeCheck()) return;
+  setBusy(out);
   try {
     const resp = await executeCLI("gui-flow", { verbose: true });
     if (stale()) return;
-    if (!dgPcRespHasOutput(resp)) {
-      dgPcSetErrorResp(out, resp, esc);
+    if (!respHasOutput(resp)) {
+      setErrorResp(out, resp, esc);
       return;
     }
-    const parsed = dgPcGfParseEntries(resp.data.output);
+    const parsed = guiFlowParseEntries(resp.data.output);
     if (!parsed) {
-      dgPcSetErrorMsg(out, t("diagnostics.perfFail"), esc);
+      setErrorMsg(out, t("diagnostics.perfFail"), esc);
       return;
     }
-    out.innerHTML = dgPcGfRenderStages(
+    out.innerHTML = guiFlowRenderStages(
       parsed.entries,
       parsed.flowTotal,
       parsed.failed,
@@ -456,24 +456,24 @@ export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
     );
   } catch (e) {
     if (stale()) return;
-    dgPcSetErrorCatch(out, e, esc);
+    setErrorCatch(out, e, esc);
   }
 }
 
 // ===== perf-log：优化历史（按时间倒序） =====
 
-interface DgPcPlEntry {
+interface PerfLogEntry {
   date: string;
   area: string;
   commit: string;
   body: string[];
 }
 
-function dgPcPlParseEntries(output: string): DgPcPlEntry[] | null {
+function perfLogParseEntries(output: string): PerfLogEntry[] | null {
   const lines = output.split("\n");
   const headRe = /^─\s*(.+?)\s*─\s*(.+?)\s*─\s*(.+?)\s*$/;
-  const entries: DgPcPlEntry[] = [];
-  let cur: DgPcPlEntry | null = null;
+  const entries: PerfLogEntry[] = [];
+  let cur: PerfLogEntry | null = null;
   for (const raw of lines) {
     const line = raw;
     const hm = line.match(headRe);
@@ -493,7 +493,7 @@ function dgPcPlParseEntries(output: string): DgPcPlEntry[] | null {
   return entries.length ? entries : null;
 }
 
-function dgPcPlRenderCards(entries: DgPcPlEntry[], rawOutput: string, esc: EscFn): string {
+function perfLogRenderCards(entries: PerfLogEntry[], rawOutput: string, esc: EscFn): string {
   const cards = entries
     .map((e, i) => {
       const body = e.body.length
@@ -511,25 +511,25 @@ function dgPcPlRenderCards(entries: DgPcPlEntry[], rawOutput: string, esc: EscFn
 }
 
 export async function runPerfLog(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = dgPcMakeGen({ get current() { return perfHistSeq; }, set current(v) { perfHistSeq = v; } });
-  const out = dgPcGetOut(root, "diag-perf-hist");
+  const { stale } = makeGenGuard({ get current() { return perfHistSeq; }, set current(v) { perfHistSeq = v; } });
+  const out = getOutBox(root, "diag-perf-hist");
   if (!out) return;
-  dgPcSetBusy(out);
+  setBusy(out);
   try {
     const resp = await executeCLI("perf-log", {});
     if (stale()) return;
-    if (!dgPcRespHasOutput(resp)) {
-      dgPcSetErrorResp(out, resp, esc);
+    if (!respHasOutput(resp)) {
+      setErrorResp(out, resp, esc);
       return;
     }
-    const parsed = dgPcPlParseEntries(resp.data.output);
+    const parsed = perfLogParseEntries(resp.data.output);
     if (!parsed) {
-      dgPcSetErrorMsg(out, t("diagnostics.perfFail"), esc);
+      setErrorMsg(out, t("diagnostics.perfFail"), esc);
       return;
     }
-    out.innerHTML = dgPcPlRenderCards(parsed, resp.data.output, esc);
+    out.innerHTML = perfLogRenderCards(parsed, resp.data.output, esc);
   } catch (e) {
     if (stale()) return;
-    dgPcSetErrorCatch(out, e, esc);
+    setErrorCatch(out, e, esc);
   }
 }

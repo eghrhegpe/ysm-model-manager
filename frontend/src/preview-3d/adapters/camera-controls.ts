@@ -19,7 +19,7 @@ export interface CameraControlBridge {
   getSpeed(): number;
   /** 设置相机速度 */
   setSpeed(n: number): void;
-  /** 重置视角（shared 模式经 built.resetCamera，build 前调用安全——闭包延迟求值） */
+  /** 重置视角（shared 模式经 content.resetCamera，build 前调用安全——闭包延迟求值） */
   reset(): void;
 }
 

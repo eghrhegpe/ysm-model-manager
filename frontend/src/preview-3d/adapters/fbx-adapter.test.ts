@@ -120,7 +120,7 @@ describe("fbx-adapter", () => {
     const addSpy = vi.spyOn(scene, "add");
     const removeSpy = vi.spyOn(scene, "remove");
 
-    const built = await buildFbxScene(ctx, "/repo/mmd/CustomAnim/a.fbx", {
+    const content = await buildFbxScene(ctx, "/repo/mmd/CustomAnim/a.fbx", {
       readFileBytes: hoisted.readBytesMock,
     });
 
@@ -129,9 +129,9 @@ describe("fbx-adapter", () => {
     // 模型挂入场景
     expect(addSpy).toHaveBeenCalledTimes(1);
     // 返回标准 PreviewScene 契约
-    expect(typeof built.update).toBe("function");
-    expect(typeof built.dispose).toBe("function");
-    expect(typeof built.screenshot).toBe("function");
+    expect(typeof content.update).toBe("function");
+    expect(typeof content.dispose).toBe("function");
+    expect(typeof content.screenshot).toBe("function");
     // 相机取景已设置
     expect((ctx.camera as THREE.PerspectiveCamera).position.length()).toBeGreaterThan(0);
     expect((ctx.controls as { update: () => void }).update).toHaveBeenCalled();
@@ -140,9 +140,9 @@ describe("fbx-adapter", () => {
     expect((ctx.camera as THREE.PerspectiveCamera).far).toBeCloseTo(FBX_TARGET_MAX_DIM * 50, 0);
     expect((ctx.camera as THREE.PerspectiveCamera).position.z).toBeCloseTo(FBX_TARGET_MAX_DIM * 1.6, 0);
     // perFrame 驱动不抛（mixer.update）
-    expect(() => built.update?.(0.016)).not.toThrow();
+    expect(() => content.update?.(0.016)).not.toThrow();
     // dispose 释放并移出场景
-    built.dispose();
+    content.dispose();
     expect(removeSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -158,18 +158,18 @@ describe("fbx-adapter", () => {
     hoisted.setWithAnim(false);
     hoisted.readBytesMock.mockResolvedValue(Buffer.from("fake").toString("base64"));
     const ctx = makeCtx();
-    const built = await buildFbxScene(ctx, "/y.fbx", { readFileBytes: hoisted.readBytesMock });
-    expect(() => built.update?.(0.016)).not.toThrow();
-    expect(() => built.dispose()).not.toThrow();
+    const content = await buildFbxScene(ctx, "/y.fbx", { readFileBytes: hoisted.readBytesMock });
+    expect(() => content.update?.(0.016)).not.toThrow();
+    expect(() => content.dispose()).not.toThrow();
   });
 
   it("有骨骼（SkinnedMesh）→ menuItems 注入 🦴 bones 面板项（ADR-074 通用骨骼面板）", async () => {
     hoisted.setWithBones(true);
     hoisted.readBytesMock.mockResolvedValue(Buffer.from("fake").toString("base64"));
     const ctx = makeCtx();
-    const built = await buildFbxScene(ctx, "/z.fbx", { readFileBytes: hoisted.readBytesMock });
+    const content = await buildFbxScene(ctx, "/z.fbx", { readFileBytes: hoisted.readBytesMock });
 
-    const bonesItem = built.menuItems?.find((i) => i.id === "bones");
+    const bonesItem = content.menuItems?.find((i) => i.id === "bones");
     expect(bonesItem).toBeDefined();
     expect(bonesItem?.kind).toBe("panel");
     expect(bonesItem?.dockGroup).toBe("motion");
@@ -181,8 +181,8 @@ describe("fbx-adapter", () => {
     hoisted.setWithBones(false);
     hoisted.readBytesMock.mockResolvedValue(Buffer.from("fake").toString("base64"));
     const ctx = makeCtx();
-    const built = await buildFbxScene(ctx, "/w.fbx", { readFileBytes: hoisted.readBytesMock });
-    expect(built.menuItems?.find((i) => i.id === "bones")).toBeUndefined();
+    const content = await buildFbxScene(ctx, "/w.fbx", { readFileBytes: hoisted.readBytesMock });
+    expect(content.menuItems?.find((i) => i.id === "bones")).toBeUndefined();
   });
 });
 
@@ -316,7 +316,7 @@ describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
     hoisted.buildFromDataOverride = vi.fn(() => group);
 
     const ctx = makeCtx();
-    const built = await buildFbxScene(ctx, "/repo/fbx/a.fbx", {
+    const content = await buildFbxScene(ctx, "/repo/fbx/a.fbx", {
       readFileBytes: hoisted.readBytesMock,
       addOpLog: vi.fn(),
     });
@@ -329,9 +329,9 @@ describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
     // 尺度归一 + 相机取景按 worker 重建产物
     expect((ctx.camera as THREE.PerspectiveCamera).far).toBeCloseTo(FBX_TARGET_MAX_DIM * 50, 0);
     // 内嵌动画 → mixer 播放（update 不抛）
-    expect(() => built.update?.(0.016)).not.toThrow();
+    expect(() => content.update?.(0.016)).not.toThrow();
     // dispose → 纹理 blob URL 释放（模型 blob 已在 finally 释放）
-    built.dispose();
+    content.dispose();
     expect(revokeURL).toHaveBeenCalledWith("blob:tex-url");
     void parsedData;
   });
@@ -346,14 +346,14 @@ describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
       dispose: vi.fn(),
     });
     const ctx = makeCtx();
-    const built = await buildFbxScene(ctx, "/repo/fbx/b.fbx", {
+    const content = await buildFbxScene(ctx, "/repo/fbx/b.fbx", {
       readFileBytes: hoisted.readBytesMock,
       addOpLog: vi.fn(),
     });
     // 降级路径产出 mock FBXLoader 的 Group（含动画）
     expect(hoisted.loadImpl).toHaveBeenCalled();
-    expect(built.update).toBeDefined();
-    built.dispose();
+    expect(content.update).toBeDefined();
+    content.dispose();
     expect(revokeURL).toHaveBeenCalled();
   });
 
@@ -401,9 +401,9 @@ describe("fbx-adapter 主线程降级与边界", () => {
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
     const ctx = makeCtx();
-    const built = await buildFbxScene(ctx, "/repo/fbx/e.fbx", { readFileBytes: hoisted.readBytesMock });
-    await expect(built.screenshot?.()).resolves.toBeNull();
-    built.dispose();
+    const content = await buildFbxScene(ctx, "/repo/fbx/e.fbx", { readFileBytes: hoisted.readBytesMock });
+    await expect(content.screenshot?.()).resolves.toBeNull();
+    content.dispose();
   });
 
   it("纹理原样大小写命中 → 不做小写重试", async () => {

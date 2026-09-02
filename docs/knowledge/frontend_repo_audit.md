@@ -21,7 +21,7 @@ auto_fields:
     - _getWasmBinary:3
     - _getWasmBinaryMt:4
     - _lastSelectedType:17
-    - _resetSingletons:218
+    - _resetSingletons:214
     - Abortable:137
     - aboutHTML:6
     - actionBtnHTML:62
@@ -164,7 +164,7 @@ auto_fields:
     - buildLightingSchema:46
     - buildLipMorphIndices:132
     - buildLitematicScene:406
-    - buildMmdScene:1168
+    - buildMmdScene:1501
     - buildModelGroup:299
     - buildModelName:40
     - BuildModelNameOptions:21
@@ -231,7 +231,7 @@ auto_fields:
     - cleanupMaid3D:88
     - cleanupMmd3D:33
     - cleanupPack3D:60
-    - cleanupPreview:196
+    - cleanupPreview:193
     - cleanupScene3D:38
     - cleanupVirtualScroll:338
     - cleanupVoxel3D:139
@@ -243,6 +243,7 @@ auto_fields:
     - clearControls:53
     - clearLoadTraces:63
     - clearModelRoots:99
+    - clearSceneCaps:43
     - clearTrigger:59
     - CLI_ALLOWLIST:10
     - CLIAllowlistCommand:33
@@ -275,6 +276,7 @@ auto_fields:
     - compileMolang:71
     - compKey:18
     - computeBoneLocalPos:24
+    - concurrentMap:51
     - ConsoleLogger:6
     - consumeWebSearchDegraded:58
     - containerHTML:146
@@ -374,6 +376,7 @@ auto_fields:
     - DirectionalLightParams:36
     - dirKey:9
     - Disposable:5
+    - DISPOSE_TEX_KEYS:17
     - disposeDebugGroup:14
     - disposeEnvSubscriptions:30
     - disposeMaterial:36
@@ -414,6 +417,7 @@ auto_fields:
     - EnvPresetLinkage:88
     - esc:4
     - EscFn:9
+    - estimateTexGpuBytes:39
     - eulerToQuaternion:15
     - evaluateClip:654
     - evaluateKeyframes:558
@@ -514,7 +518,7 @@ auto_fields:
     - formatSize:114
     - frameCameraSide:21
     - FrameSideOptions:8
-    - friendlyError:44
+    - friendlyError:45
     - FsaAuthState:29
     - FSLike:14
     - generateSurfacePixels:164
@@ -554,6 +558,7 @@ auto_fields:
     - getPreviewableTypeTabs:226
     - getRegisteredRoutes:34
     - getRenderMode:46
+    - getSceneCaps:48
     - getSchema:52
     - getSemanticBone:186
     - getSemanticMorph:95
@@ -595,7 +600,7 @@ auto_fields:
     - HANDLERS:139
     - handleTreeDrop:28
     - has:32
-    - hasActivePreview:240
+    - hasActivePreview:236
     - hasBoneRotation:32
     - hasSceneStats:20
     - hasSchema:57
@@ -660,7 +665,7 @@ auto_fields:
     - invalidateMaxFpsCache:30
     - invalidateMmdPreview:43
     - invalidatePackPreview:65
-    - invalidatePreview:191
+    - invalidatePreview:188
     - invalidateScenePreview:43
     - invalidateVrmPreview:64
     - invalidateYsmPreview:92
@@ -671,11 +676,12 @@ auto_fields:
     - isCrossOriginIsolated:34
     - isEditableTarget:132
     - isFaved:77
-    - isFileExistsError:87
+    - isFileExistsError:88
     - isFrustumCullEnabled:111
     - isIdentityQuat:32
     - isImportableFile:15
     - isInputBlocked:87
+    - isLikelyTga:10
     - isModelMissing:45
     - isPathAvailable:319
     - isPreviewFolderNode:123
@@ -762,6 +768,8 @@ auto_fields:
     - LocalAuthorLike:19
     - LocalCreator:10
     - LocalCreatorLike:43
+    - LocaleKey:11
+    - LocaleParams:14
     - logError:11
     - logWarn:5
     - LongTaskInfo:11
@@ -789,6 +797,8 @@ auto_fields:
     - MaterialBridgeLike:10
     - MaterialControlBridge:180
     - materialNodes:18
+    - matTexSlots:36
+    - MatTexSlots:35
     - MAX_FPS_DEFAULT:22
     - MAX_FPS_KEY:23
     - MAX_IMPORT_BYTES:14
@@ -818,13 +828,13 @@ auto_fields:
     - mmdBonesToBoneNodes:16
     - MmdBottomNavCtx:29
     - MmdDataDeserializer:5
-    - MmdDataPort:66
+    - MmdDataPort:89
     - MmdMaterialDetail:19
     - MmdMaterialListItem:13
-    - mmdMenuItems:1273
-    - MmdMenuItemsOpts:1241
+    - mmdMenuItems:1614
+    - MmdMenuItemsOpts:1582
     - mmdModelInfoNodes:62
-    - MmdPanelHooks:185
+    - MmdPanelHooks:158
     - MmdPlayBridge:96
     - mmdSemanticBoneMap:216
     - mmdSemanticMorphMap:87
@@ -868,10 +878,17 @@ auto_fields:
     - morphNodes:20
     - motionDetailView:112
     - mount3D:263
-    - Mount3DOptions:245
+    - Mount3DOptions:241
     - mountCustomElement:30
     - mountPreviewRootMenu:467
     - moveItem:8
+    - mpApplyWasdCameraMotion:21
+    - mpBuildSharedInfra:73
+    - mpMakeUnifiedPickHandler:9
+    - MpSharedInfra:53
+    - MpUnloadCtx:15
+    - mpUnloadRole:31
+    - MpWasdReuse:12
     - MultiLipSyncCallback:29
     - multiModelSelectNode:39
     - MultiModelSelectOpts:16
@@ -974,13 +991,13 @@ auto_fields:
     - PREVIEW_MENU_GROUPS:32
     - PREVIEW_OVERLAY_ID:11
     - PreviewActionMenuCtx:17
-    - PreviewAdapter:130
-    - PreviewBuildCtx:81
+    - PreviewAdapter:134
+    - PreviewBuildCtx:85
     - PreviewControlSpec:40
     - previewCSS:2
     - PreviewCtx:32
     - PreviewDebugger:20
-    - PreviewHandle:140
+    - PreviewHandle:144
     - PreviewImageLoader:25
     - PreviewMenuCtx:38
     - PreviewMenuGroupDef:23
@@ -991,7 +1008,7 @@ auto_fields:
     - PreviewMenuRouters:169
     - previewPixelRatio:58
     - PreviewRoot:8
-    - PreviewScene:104
+    - PreviewScene:108
     - previewSnapshot:328
     - PreviewSnapshot:82
     - PreviewStatePath:74
@@ -1094,6 +1111,7 @@ auto_fields:
     - resetDedupConfig:17
     - resetDynamicCommandsCache:53
     - resetEncoderState:83
+    - resetSceneInfra:35
     - resetSchemas:67
     - resetSelectedEmit:199
     - resetSettingsListeners:335
@@ -1292,7 +1310,7 @@ auto_fields:
     - Store:19
     - stripBanSuffix:19
     - stripDisableSuffix:14
-    - stripPathSegments:72
+    - stripPathSegments:73
     - stripYsgpTextHeader:112
     - SubModel:72
     - subscribe:76
@@ -1307,7 +1325,7 @@ auto_fields:
     - surfaceSpecKey:117
     - swallowError:11
     - SwitchContext:32
-    - switchPreview:234
+    - switchPreview:227
     - switchToSession:95
     - syncDirRowHTML:79
     - SyncItem:17
@@ -1315,7 +1333,7 @@ auto_fields:
     - SyncManagerSelf:27
     - SyncRenderSelf:20
     - SyncStoreSelf:13
-    - t:12
+    - t:26
     - tabStatus:92
     - TagSetResult:6
     - TdKeyAction:8
@@ -1323,6 +1341,7 @@ auto_fields:
     - TexDecodeConfig:15
     - TexDecodeRequest:9
     - TexDecodeResponse:17
+    - TEXTURE_EXTS:7
     - TextureAlphaInfo:7
     - TextureAlphaMode:4
     - textureCache:94
@@ -1347,7 +1366,7 @@ auto_fields:
     - TooltipOptions:101
     - toScreenshotLights:26
     - toStatePath:90
-    - tr:18
+    - tr:20
     - TrailingAction:12
     - trapFocus:32
     - trapFocusAcrossShadow:156
@@ -1461,7 +1480,7 @@ auto_fields:
     - YsmSummaryShape:56
     - YSW_FAB_CSS:7
     - YSW_TOOLTIP_CSS:9
-    - zhCN:6
+    - zhCN:8
     - ZipEntryMatch:17
     - ZipEntryMeta:33
     - zipFindEntry:226

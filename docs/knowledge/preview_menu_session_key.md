@@ -14,33 +14,33 @@ source_files:
   - frontend/src/views/app-preview/skeleton-fill-panel.ts
 auto_fields:
   symbols_with_lines:
-    - _resetSingletons:218
+    - _resetSingletons:214
     - buildYsmModelSchema:319
     - buildYsmScene:500
     - CameraControlBridge:19
-    - cleanupPreview:196
+    - cleanupPreview:193
     - fill3DPanel:39
     - fillYsmShotPanel:74
     - getSchema:52
-    - hasActivePreview:240
+    - hasActivePreview:236
     - hasSchema:57
-    - invalidatePreview:191
+    - invalidatePreview:188
     - listSchemas:62
     - makeYsmAdapter:531
     - makeYsmModelSchemaId:29
     - mount3D:263
-    - Mount3DOptions:245
+    - Mount3DOptions:241
     - PanelHandle:13
-    - PreviewAdapter:130
-    - PreviewBuildCtx:81
-    - PreviewHandle:140
-    - PreviewScene:104
+    - PreviewAdapter:134
+    - PreviewBuildCtx:85
+    - PreviewHandle:144
+    - PreviewScene:108
     - registerSchema:41
     - registerYsmModelSchema:105
     - resetSchemas:67
     - SchemaBuilder:34
     - SwitchContext:32
-    - switchPreview:234
+    - switchPreview:227
     - switchToSession:95
     - syncLightTargetFromContent:423
     - unregisterSchema:47

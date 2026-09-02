@@ -15,7 +15,7 @@ source_files:
   - frontend/src/views/app-preview/shot-panel-shared.ts
 auto_fields:
   symbols_with_lines:
-    - buildMmdScene:1168
+    - buildMmdScene:1501
     - buildPreviewMenuRouters:181
     - buildYsmScene:500
     - CameraControlBridge:19
@@ -29,11 +29,11 @@ auto_fields:
     - makeYsmAdapter:531
     - MaterialControlBridge:180
     - MmdBottomNavCtx:29
-    - MmdDataPort:66
-    - mmdMenuItems:1273
-    - MmdMenuItemsOpts:1241
+    - MmdDataPort:89
+    - mmdMenuItems:1614
+    - MmdMenuItemsOpts:1582
     - mmdModelInfoNodes:62
-    - MmdPanelHooks:185
+    - MmdPanelHooks:158
     - MmdPlayBridge:96
     - mmdShotNodes:197
     - MorphMeshLike:10

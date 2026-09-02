@@ -7,7 +7,11 @@ source_files:
   - scripts/check-readme-index.ts
 auto_fields:
   symbols_with_lines:
+    - assertionViolations:87
+    - findReadmeRow:78
     - missingFromReadme:37
+    - README_ASSERTIONS:58
+    - ReadmeAssertion:51
 use_when:
   - README
   - 脚本索引

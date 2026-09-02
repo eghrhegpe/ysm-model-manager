@@ -43,7 +43,7 @@ auto_fields:
     - applyWorkerDecodedTextures:169
     - BasisEncoderLike:13
     - BasisModuleLike:29
-    - buildMmdScene:1168
+    - buildMmdScene:1501
     - buildPmxScene:76
     - buildPmxSceneSliced:209
     - CacheDir:29
@@ -68,10 +68,10 @@ auto_fields:
     - ListCacheFiles:144
     - LongTaskInfo:11
     - MAX_KTX2_PIXELS:65
-    - MmdDataPort:66
-    - mmdMenuItems:1273
-    - MmdMenuItemsOpts:1241
-    - MmdPanelHooks:185
+    - MmdDataPort:89
+    - mmdMenuItems:1614
+    - MmdMenuItemsOpts:1582
+    - MmdPanelHooks:158
     - PmxBoneData:56
     - PmxBuilderConfig:29
     - PmxBuildResult:37

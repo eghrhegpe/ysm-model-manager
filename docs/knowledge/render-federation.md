@@ -17,10 +17,10 @@ source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
 auto_fields:
   symbols_with_lines:
-    - _resetSingletons:218
+    - _resetSingletons:214
     - AmbientLightParams:46
     - attenuateAmbientForSky:364
-    - cleanupPreview:196
+    - cleanupPreview:193
     - DEFAULT_ENV_PARAMS:138
     - DEFAULT_FOG_PARAMS:30
     - DEFAULT_GROUND_PARAMS:53
@@ -44,9 +44,9 @@ auto_fields:
     - FogParams:17
     - GroundCapability:62
     - GroundParams:40
-    - hasActivePreview:240
+    - hasActivePreview:236
     - injectSkySunScalePatch:126
-    - invalidatePreview:191
+    - invalidatePreview:188
     - isSkyEnvironmentOn:133
     - LIGHT_PRESETS:117
     - LightCapability:368
@@ -54,14 +54,14 @@ auto_fields:
     - LightParams:79
     - MODEL_SKY_PRESETS:91
     - mount3D:263
-    - Mount3DOptions:245
+    - Mount3DOptions:241
     - POSTPROC_PRESETS:359
     - PostprocessingCapability:369
     - PostprocessingParams:35
-    - PreviewAdapter:130
-    - PreviewBuildCtx:81
-    - PreviewHandle:140
-    - PreviewScene:104
+    - PreviewAdapter:134
+    - PreviewBuildCtx:85
+    - PreviewHandle:144
+    - PreviewScene:108
     - ReflectionMode:33
     - SceneCapabilityFactory:24
     - sceneCapabilityRegistry:111
@@ -73,7 +73,7 @@ auto_fields:
     - SkyModelType:83
     - SkyParams:30
     - SpotlightParams:51
-    - switchPreview:234
+    - switchPreview:227
     - VolumetricParams:65
   tests:
     - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts

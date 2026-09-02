@@ -17,7 +17,7 @@ auto_fields:
   symbols_with_lines:
     - __setEncodeImplForTest:205
     - _clearPmxStatsCache:31
-    - _resetSingletons:218
+    - _resetSingletons:214
     - App.GetVoxelDataInContainer:108
     - App.ListContainerEntries:73
     - applyWorkerDecodedTextures:169
@@ -34,7 +34,7 @@ auto_fields:
     - buildFbxScene:168
     - buildFbxSceneFromData:214
     - buildLitematicScene:406
-    - buildMmdScene:1168
+    - buildMmdScene:1501
     - BuildNbtVoxelData:296
     - BuildNbtVoxelDataFromRoot:305
     - buildPackScene:289
@@ -52,11 +52,13 @@ auto_fields:
     - CameraControlBridge:13
     - cancelPendingEncodings:71
     - captureTextureName:102
-    - cleanupPreview:196
+    - cleanupPreview:193
+    - clearSceneCaps:43
     - collectAllWebEntries:622
     - collectMenuGraph:147
     - CollectMenuGraphOpts:73
     - collectNodePredicates:86
+    - concurrentMap:51
     - createFbxParser:27
     - createPmxParser:54
     - createResolveModeBridge:165
@@ -65,9 +67,11 @@ auto_fields:
     - DecodedTexture:23
     - DEFAULT_GROUND_PARAMS:53
     - DEFAULT_SKY_PARAMS:63
+    - DISPOSE_TEX_KEYS:17
     - encodeAndCacheTexture:216
     - encodeToKTX2Basis:81
     - Error:168
+    - estimateTexGpuBytes:39
     - FBX_TARGET_MAX_DIM:36
     - FbxDataPort:29
     - FbxGeometryData:16
@@ -88,17 +92,19 @@ auto_fields:
     - getBonePosition:93
     - getCustomAnimPath:12
     - getFsaAuthState:89
+    - getSceneCaps:48
     - getSchema:52
     - getTextureDecoder:149
     - GroundCapability:62
     - GroundParams:40
-    - hasActivePreview:240
+    - hasActivePreview:236
     - hasSchema:57
     - importWebFiles:88
     - injectSkySunScalePatch:126
     - InputHandlers:43
     - InputOptions:28
-    - invalidatePreview:191
+    - invalidatePreview:188
+    - isLikelyTga:10
     - Ktx2EncodeRequest:9
     - Ktx2EncodeResponse:17
     - Ktx2TextureLoader:61
@@ -117,14 +123,16 @@ auto_fields:
     - makeZipOverlayPort:120
     - MaterialBridgeLike:10
     - materialNodes:18
+    - matTexSlots:36
+    - MatTexSlots:35
     - MAX_KTX2_PIXELS:65
     - MAX_MODELS:209
     - MenuGraph:58
     - MenuGraphNode:32
-    - MmdDataPort:66
-    - mmdMenuItems:1273
-    - MmdMenuItemsOpts:1241
-    - MmdPanelHooks:185
+    - MmdDataPort:89
+    - mmdMenuItems:1614
+    - MmdMenuItemsOpts:1582
+    - MmdPanelHooks:158
     - MmdZipConfig:20
     - mockMenuHandle:36
     - MODEL_SKY_PRESETS:91
@@ -132,7 +140,14 @@ auto_fields:
     - MorphMeshLike:10
     - morphNodes:20
     - mount3D:263
-    - Mount3DOptions:245
+    - Mount3DOptions:241
+    - mpApplyWasdCameraMotion:21
+    - mpBuildSharedInfra:73
+    - mpMakeUnifiedPickHandler:9
+    - MpSharedInfra:53
+    - MpUnloadCtx:15
+    - mpUnloadRole:31
+    - MpWasdReuse:12
     - normalizeFbxScale:55
     - OpenGzRootFromBytes:64
     - PackAdapterOpts:34
@@ -158,10 +173,10 @@ auto_fields:
     - PmxVertexData:23
     - PostprocessingLike:8
     - prepareMmdZipInput:209
-    - PreviewAdapter:130
-    - PreviewBuildCtx:81
-    - PreviewHandle:140
-    - PreviewScene:104
+    - PreviewAdapter:134
+    - PreviewBuildCtx:85
+    - PreviewHandle:144
+    - PreviewScene:108
     - readPmxStats:39
     - readVrmMeta:110
     - readWebFile:91
@@ -172,6 +187,7 @@ auto_fields:
     - RepresentativeSnapshot:26
     - rescanFsaRoot:89
     - resetEncoderState:83
+    - resetSceneInfra:35
     - resetSchemas:67
     - resolveMmdZipConfig:41
     - ResolveModeBridge:158
@@ -188,12 +204,13 @@ auto_fields:
     - SkyModelType:83
     - SkyParams:30
     - SwitchContext:32
-    - switchPreview:234
+    - switchPreview:227
     - switchToSession:95
     - syncLightTargetFromContent:423
     - TexDecodeConfig:15
     - TexDecodeRequest:9
     - TexDecodeResponse:17
+    - TEXTURE_EXTS:7
     - TextureDecoder:40
     - TextureTooLargeError:68
     - toggleBoneVisible:137
@@ -229,7 +246,7 @@ auto_fields:
     - gpu-bound
   invariant_anchors:
     - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
-    - frontend/src/preview-3d/adapters/mount-preview-core.ts|_singletonScene.background
+    - frontend/src/preview-3d/adapters/shared-infra.ts|_singletonScene.background
     - frontend/src/preview-3d/caps/sky-capability.ts|SkyCapability
     - frontend/src/preview-3d/adapters/mount-preview-core.ts|PreviewAdapter
   quick_groups:
@@ -263,7 +280,7 @@ perf:
   - gpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
-  - frontend/src/preview-3d/adapters/mount-preview-core.ts|_singletonScene.background
+  - frontend/src/preview-3d/adapters/shared-infra.ts|_singletonScene.background
   - frontend/src/preview-3d/caps/sky-capability.ts|SkyCapability
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|PreviewAdapter
 quick_groups:

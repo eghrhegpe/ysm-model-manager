@@ -242,7 +242,7 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | cpu-bound | — |
+| 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | cpu-bound | code-split, 超大文件, mmd-adapter, 拆分可行性 |
 | 🏗 3d-patterns | 3D 区审核与修复模式提炼 | architecture | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
 | 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:change, 仓库页, 全局 handler |
 | 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新 |
@@ -337,7 +337,7 @@
 | 🏗 utils-summarize | 摘要生成 summarize | architecture | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
 | 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | concurrent | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
 | 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | cpu-bound | YSM 动画, 基岩动画, molang, 动画管线 |
-| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, wasm 加载, MEMFS, callMain, stats.worker, 按需加载, crossOriginIsolated, worker.format, pthread |
+| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, wasm 加载, MEMFS, callMain, 按需加载, crossOriginIsolated |
 
 ### 摘要
 

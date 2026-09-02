@@ -722,6 +722,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-158：check-readme-index 增加描述过时断言（提及但说错可机检）",
+        "link": "/adr/ADR-158-readme-drift-assertions"
+      },
+      {
         "text": "ADR-157：契约测试 TARGETS 宽哨兵收敛为精确文件清单",
         "link": "/adr/ADR-157-contract-test-targets-precise"
       },
@@ -1964,6 +1968,10 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
+          },
+          {
+            "text": "perf 契约测试临时卡",
+            "link": "/knowledge/zzz-perf-contract-tmp"
           }
         ]
       },

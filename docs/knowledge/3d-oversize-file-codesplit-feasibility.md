@@ -16,25 +16,25 @@ source_files:
   - frontend/src/preview-3d/caps/ground-capability.ts
 auto_fields:
   symbols_with_lines:
-    - _resetSingletons:218
-    - buildMmdScene:1168
-    - cleanupPreview:196
+    - _resetSingletons:214
+    - buildMmdScene:1501
+    - cleanupPreview:193
     - DEFAULT_GROUND_PARAMS:53
     - GroundCapability:62
     - GroundParams:40
-    - hasActivePreview:240
-    - invalidatePreview:191
-    - MmdDataPort:66
-    - mmdMenuItems:1273
-    - MmdMenuItemsOpts:1241
-    - MmdPanelHooks:185
+    - hasActivePreview:236
+    - invalidatePreview:188
+    - MmdDataPort:89
+    - mmdMenuItems:1614
+    - MmdMenuItemsOpts:1582
+    - MmdPanelHooks:158
     - mount3D:263
-    - Mount3DOptions:245
-    - PreviewAdapter:130
-    - PreviewBuildCtx:81
-    - PreviewHandle:140
-    - PreviewScene:104
-    - switchPreview:234
+    - Mount3DOptions:241
+    - PreviewAdapter:134
+    - PreviewBuildCtx:85
+    - PreviewHandle:144
+    - PreviewScene:108
+    - switchPreview:227
 created: 2026-08-27
 status: snapshot
 ---

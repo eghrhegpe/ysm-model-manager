@@ -12,7 +12,7 @@ auto_fields:
   symbols_with_lines:
     - __setEncodeImplForTest:205
     - _clearPmxStatsCache:31
-    - _resetSingletons:218
+    - _resetSingletons:214
     - AdaptiveRenderBudget:52
     - addMeshToBoneGroup:31
     - ALPHA_F_HOLE:6
@@ -66,7 +66,7 @@ auto_fields:
     - buildLightingSchema:46
     - buildLipMorphIndices:132
     - buildLitematicScene:406
-    - buildMmdScene:1168
+    - buildMmdScene:1501
     - buildModelGroup:299
     - buildOrderedTexKeys:21
     - buildPackScene:289
@@ -95,9 +95,10 @@ auto_fields:
     - CameraControlBridge:13
     - cancelPendingEncodings:71
     - captureTextureName:102
-    - cleanupPreview:196
+    - cleanupPreview:193
     - clearLoadTraces:63
     - clearModelRoots:99
+    - clearSceneCaps:43
     - collectBlobUrls:48
     - collectMenuGraph:147
     - CollectMenuGraphOpts:73
@@ -109,6 +110,7 @@ auto_fields:
     - collectVisiblePredicates:455
     - compKey:18
     - computeBoneLocalPos:24
+    - concurrentMap:51
     - ConsoleLogger:6
     - CORE_MENU_ITEMS:54
     - createAdaptiveRenderBudget:63
@@ -146,6 +148,7 @@ auto_fields:
     - devLog:8
     - DirectionalLightParams:36
     - Disposable:6
+    - DISPOSE_TEX_KEYS:17
     - disposeDebugGroup:14
     - disposeEnvSubscriptions:30
     - disposeMaterial:36
@@ -162,6 +165,7 @@ auto_fields:
     - EnvPreset:22
     - EnvPresetId:20
     - EnvPresetLinkage:88
+    - estimateTexGpuBytes:39
     - eulerToQuaternion:15
     - extractIKChainFromTree:200
     - FBX_TARGET_MAX_DIM:36
@@ -209,6 +213,7 @@ auto_fields:
     - getMmdMaterialDetail:71
     - getModelRootCount:29
     - getPerfPreset:50
+    - getSceneCaps:48
     - getSchema:52
     - getSemanticBone:186
     - getSemanticMorph:95
@@ -226,7 +231,7 @@ auto_fields:
     - groundSurfaceNeedsRebuild:132
     - GroundSurfaceSpec:81
     - GroundSurfaceStructuralSpec:61
-    - hasActivePreview:240
+    - hasActivePreview:236
     - hasBoneRotation:32
     - hasSceneStats:20
     - hasSchema:57
@@ -237,9 +242,10 @@ auto_fields:
     - InputHandlers:43
     - InputOptions:28
     - invalidateMaxFpsCache:30
-    - invalidatePreview:191
+    - invalidatePreview:188
     - isFrustumCullEnabled:111
     - isIdentityQuat:32
+    - isLikelyTga:10
     - isPathAvailable:319
     - isPreviewFolderNode:123
     - isRenderableModel:320
@@ -284,6 +290,8 @@ auto_fields:
     - matchSemanticMorph:60
     - MaterialBridgeLike:10
     - materialNodes:18
+    - matTexSlots:36
+    - MatTexSlots:35
     - MAX_FPS_DEFAULT:22
     - MAX_FPS_KEY:23
     - MAX_KTX2_PIXELS:65
@@ -302,12 +310,12 @@ auto_fields:
     - MmdBonePickResult:32
     - mmdBonesToBoneNodes:16
     - MmdDataDeserializer:5
-    - MmdDataPort:66
+    - MmdDataPort:89
     - MmdMaterialDetail:19
     - MmdMaterialListItem:13
-    - mmdMenuItems:1273
-    - MmdMenuItemsOpts:1241
-    - MmdPanelHooks:185
+    - mmdMenuItems:1614
+    - MmdMenuItemsOpts:1582
+    - MmdPanelHooks:158
     - mmdSemanticBoneMap:216
     - mmdSemanticMorphMap:87
     - MmdZipConfig:20
@@ -323,8 +331,15 @@ auto_fields:
     - morphNodes:20
     - motionDetailView:112
     - mount3D:263
-    - Mount3DOptions:245
+    - Mount3DOptions:241
     - mountPreviewRootMenu:467
+    - mpApplyWasdCameraMotion:21
+    - mpBuildSharedInfra:73
+    - mpMakeUnifiedPickHandler:9
+    - MpSharedInfra:53
+    - MpUnloadCtx:15
+    - mpUnloadRole:31
+    - MpWasdReuse:12
     - MultiLipSyncCallback:29
     - multiModelSelectNode:39
     - MultiModelSelectOpts:16
@@ -372,10 +387,10 @@ auto_fields:
     - PREVIEW_FRAME_INTERVAL_MS:17
     - PREVIEW_MENU_GROUPS:32
     - PreviewActionMenuCtx:17
-    - PreviewAdapter:130
-    - PreviewBuildCtx:81
+    - PreviewAdapter:134
+    - PreviewBuildCtx:85
     - PreviewControlSpec:40
-    - PreviewHandle:140
+    - PreviewHandle:144
     - PreviewMenuCtx:38
     - PreviewMenuGroupDef:23
     - PreviewMenuGroupId:20
@@ -384,7 +399,7 @@ auto_fields:
     - PreviewMenuNodeKind:23
     - PreviewMenuRouters:169
     - previewPixelRatio:58
-    - PreviewScene:104
+    - PreviewScene:108
     - previewSnapshot:328
     - PreviewSnapshot:82
     - PreviewStatePath:74
@@ -412,6 +427,7 @@ auto_fields:
     - RepresentativeSnapshot:26
     - resetActiveComponent:269
     - resetEncoderState:83
+    - resetSceneInfra:35
     - resetSchemas:67
     - resetSettingsListeners:335
     - resolveMmdZipConfig:41
@@ -481,13 +497,14 @@ auto_fields:
     - subscribeSettings:279
     - surfaceSpecKey:117
     - SwitchContext:32
-    - switchPreview:234
+    - switchPreview:227
     - switchToSession:95
     - syncLightTargetFromContent:423
     - TdKeyAction:8
     - TexDecodeConfig:15
     - TexDecodeRequest:9
     - TexDecodeResponse:17
+    - TEXTURE_EXTS:7
     - TextureAlphaInfo:7
     - TextureAlphaMode:4
     - textureCache:94

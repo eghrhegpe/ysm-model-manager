@@ -1551,4 +1551,9 @@ export const en: Record<string, string> = {
   "webFs.moveModelMissing": "Move/Copy failed: model not found: {path}",
   "webFs.moveNested": "Move/Copy failed: destination directory cannot be inside the source: {path}",
   "webFs.moveTargetExists": "Move/Copy failed: target already exists: {path}",
+
+  // ── Web community (web-community.ts creator/workshop JSON merge) ──
+  "webCommunity.importJsonParseFailed": "Import JSON parse failed: {err}",
+  "webCommunity.importTooFew": "Import data invalid: only {count} entries (expected >=20)",
+  "webCommunity.mergeTooFew": "Merge result invalid: {count} entries",
 };

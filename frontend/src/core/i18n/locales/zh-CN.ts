@@ -1555,4 +1555,9 @@ export const zhCN: Record<string, string> = {
   "webFs.moveModelMissing": "移动/复制失败：模型不存在: {path}",
   "webFs.moveNested": "移动/复制失败：目标目录不能位于源目录内: {path}",
   "webFs.moveTargetExists": "移动/复制失败：目标已存在: {path}",
+
+  // ── 网页版社区（web-community.ts 创作者/工坊 JSON 合并）──
+  "webCommunity.importJsonParseFailed": "导入 JSON 解析失败: {err}",
+  "webCommunity.importTooFew": "导入数据异常: 仅 {count} 条 (期望 >=20)",
+  "webCommunity.mergeTooFew": "合并后数据异常: {count} 条",
 };

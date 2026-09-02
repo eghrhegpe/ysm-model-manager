@@ -15,6 +15,9 @@ import { scanWebModels, readWebFile, collectAllWebEntries, typeFromWebDir } from
 import { WEB_ROOT, arrayBufferToBase64, base64ToBytes } from "./web-common.ts";
 import { safeGet, safeSet, safeRemove } from "../utils/dom/storage.ts";
 import { stripDisableSuffix } from "../utils/dom/display.ts";
+// i18n：错误消息统一走 t()（与 web-fs.ts 全量 t("webFs.*") 一致，避免硬编码中文
+// 漏掉 en/ja 三语言同步——friendlyError 对含中文消息直接透传，硬编码会在英文/日文用户侧裸显）
+import { t } from "../core/i18n/t.ts";
 
 // --- 社区/工坊数据（ADR-049 桥接增强 Batch 2）---
 // 网页版无 Go 侧磁盘配置文件：bundled JSON 作默认，localStorage 作用户覆盖层
@@ -290,10 +293,10 @@ export const webCommunityBindings = {
     try {
       imported = JSON.parse(jsonContent) as WorkshopCreator[];
     } catch (e) {
-      return Promise.reject(new Error("导入 JSON 解析失败: " + safeErrorMessage(e)));
+      return Promise.reject(new Error(t("webCommunity.importJsonParseFailed", { err: safeErrorMessage(e) })));
     }
     if (!Array.isArray(imported) || imported.length < 20) {
-      return Promise.reject(new Error(`导入数据异常: 仅 ${imported.length} 条 (期望 >=20)`));
+      return Promise.reject(new Error(t("webCommunity.importTooFew", { count: imported.length })));
     }
     const existing = loadWebCreators();
     const existMap = new Map<string, number>();
@@ -317,7 +320,7 @@ export const webCommunityBindings = {
     // localStorage 天然事务（setItem 原子）：reject 早于 saveWebCreators → 等价回滚，
     // 无需桌面版 BackupWorkshopCreators 式备份（审核 1d 确认，平台差异可接受）
     if (existing.length < 100) {
-      return Promise.reject(new Error(`合并后数据异常: ${existing.length} 条`));
+      return Promise.reject(new Error(t("webCommunity.mergeTooFew", { count: existing.length })));
     }
     saveWebCreators(existing);
     return Promise.resolve([added, updated]);

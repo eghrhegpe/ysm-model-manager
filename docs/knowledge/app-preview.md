@@ -22,14 +22,14 @@ auto_fields:
     - buildDepthMap:34
     - buildStatsCard:90
     - buildToggleRow:48
-    - buildYsmModelSchema:319
+    - buildYsmModelSchema:326
     - calcBoneHitZones:11
     - CameraControlBridge:19
     - cleanupEmpty3D:40
     - cleanupLitematic3D:255
     - cleanupMaid3D:88
     - cleanupMmd3D:33
-    - cleanupPack3D:60
+    - cleanupPack3D:64
     - cleanupScene3D:38
     - cleanupVoxel3D:139
     - cleanupVrm3D:59
@@ -59,7 +59,7 @@ auto_fields:
     - invalidateLitematicPreview:29
     - invalidateMaidPreview:93
     - invalidateMmdPreview:43
-    - invalidatePackPreview:65
+    - invalidatePackPreview:69
     - invalidateScenePreview:43
     - invalidateVrmPreview:64
     - invalidateYsmPreview:92
@@ -111,7 +111,7 @@ auto_fields:
     - shotButtonNodes:65
     - showFbxPreview:169
     - showLitematic:187
-    - showMaidPreview:313
+    - showMaidPreview:327
     - showMmdPreview:116
     - showModelDetail:27
     - showMorphPreview:229
@@ -131,9 +131,9 @@ auto_fields:
     - YsmControlsContext:46
     - YsmDecoder:15
     - YsmModel:24
-    - ysmModelStats:271
-    - YsmModelStats:263
-    - ysmModelTextureSlots:291
+    - ysmModelStats:278
+    - YsmModelStats:270
+    - ysmModelTextureSlots:298
     - YsmOpenOptions:37
     - ysmShotNodes:69
   tests:
@@ -225,7 +225,7 @@ status: active
 - `wasm.ts` — `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `cache.ts` 缓存）；同目录 `.animation.json` 扫描驱动 `createYsmAnimPlayer`。
 - `litematic-3d.ts` — `createLitematic3D` / `cleanupVoxel3D`：通用外壳归 `mount-preview-core.ts` 的 `mount3D(adapter, path)`，体素内容层归 `litematic-adapter.ts` 的 `buildLitematicScene`。
 - `litematic-meta.ts` — `showLitematic`（Go `ReadLitematicMeta` / `ReadNbtStructure` / `ReadSchematic`）。
-- `maid-3d.ts` — 车万女仆详情 + 3D 预览（Bedrock generic 模式），详情卡复用 YSM `statsCardHTML` 彩色分区。
+- `maid-3d.ts` — 车万女仆详情 + 3D 预览（Bedrock generic 模式），详情卡复用 YSM `statsCardHTML` 彩色分区。**L0 清单逐角色统计并行预取**（对齐 YSM 详情「不点击即见」）：首屏渲染后 `prefetchEntryStats()` 并发上限 3 逐 entry 调 `AnalyzeBedrockModelEntry`，每完成一个渐进重绘，chip 加 `.chip-stat`（N 骨骼 · M 立方体）；当前选中角色的统计卡同步用 entry 数据覆盖聚合值（与点击切换口径一致）；失败/无 sourcePath 角色保持无统计行不阻断；`subs.length <= 1` 不预取；`detailGen.stale(gen)` 守卫丢弃在途预取。
 - `utils.ts` — 共享类型与工具：`PreviewCtx`、`getPrefer3D` / `setPrefer3D`、`stripYsgpTextHeader`。
 - `geometry.ts` — `BedrockCube` / `BedrockBone` / `BedrockGeometry` 类型 + `parseBedrockGeometryFromJSON`。
 - `tpl.ts` — `modelDetailHTML`（详情面板）/ `statsCardHTML`（统计卡：彩色分区 + L0 清单角色 + 纹理分类）。

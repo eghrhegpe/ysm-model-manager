@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "../bus.ts";
 import { getApp, type AppBindings } from "../backend/app.ts";
-import { executeCollected, directImport, importFolder } from "./import-executor.ts";
+import { executeCollected, directImport, importFolder, importWebFilesWithToast } from "./import-executor.ts";
 import { t } from "../core/i18n/t.ts";
 
 const mocks = vi.hoisted(() => ({
@@ -19,6 +19,15 @@ vi.mock("../backend/app.ts", () => ({
     ImportModelFolderTo: mocks.ImportModelFolderTo,
   }),
 }));
+
+// importWebFilesWithToast 依赖（仅该路径用到）：保留真实 MAX_IMPORT_BYTES，
+// 仅替换 importWebFiles 为可控 mock
+const importWebFilesMock = vi.hoisted(() => vi.fn());
+vi.mock("../backend/browser-adapter.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../backend/browser-adapter.ts")>();
+  return { ...actual, importWebFiles: importWebFilesMock };
+});
+vi.mock("./repo-rtype.ts", () => ({ currentRepoType: vi.fn(() => "ysm") }));
 
 // happy-dom 已原生支持 FileReader（历史 jsdom 缺失，mock 保留以防环境切换）
 // failingReads：测试「组内读失败跳过」用的可控失败名单（readAsDataURL 触发 onerror）
@@ -280,5 +289,50 @@ describe("importFolder — 组内读失败跳过 / 空组 / busy / FILE_EXISTS",
     await importFolder("包", [{ file: mkFile("m.ysm"), relPath: "包/m.ysm" }], "maid-model");
     expect(mocks.ImportModelFolder).toHaveBeenCalledTimes(1);
     expect(mocks.ImportModelFolderTo).not.toHaveBeenCalled();
+  });
+});
+
+describe("importWebFilesWithToast — 网页版导入反馈（补零测试盲区）", () => {
+  beforeEach(() => {
+    importWebFilesMock.mockReset();
+  });
+
+  it("部分成功（imported=2, failed=1）→ 反馈双计数 + 刷新 tree/stats", async () => {
+    importWebFilesMock.mockResolvedValue({ imported: 2, failed: 1 });
+    const toasts: Array<{ msg: unknown; type?: unknown }> = [];
+    let reloaded = false;
+    let refreshed = false;
+    const offToast = bus.on("toast:show", (p) => toasts.push(p));
+    const offTree = bus.on("tree:reload", () => (reloaded = true));
+    const offStats = bus.on("stats:refresh", () => (refreshed = true));
+    const r = await importWebFilesWithToast([mkFile("a.ysm"), mkFile("b.ysm"), mkFile("c.ysm")]);
+    offToast();
+    offTree();
+    offStats();
+    expect(r).toEqual({ imported: 2, failed: 1 });
+    expect(toasts.some((x) => x.type === "warn" && String(x.msg).includes("2 个导入成功") && String(x.msg).includes("1 个失败"))).toBe(true);
+    expect(reloaded).toBe(true);
+    expect(refreshed).toBe(true);
+  });
+
+  it("全成功（failed=0）→ 成功 toast 不含失败字样", async () => {
+    importWebFilesMock.mockResolvedValue({ imported: 3, failed: 0 });
+    const toasts: Array<{ msg: unknown; type?: unknown }> = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    const r = await importWebFilesWithToast([mkFile("a.ysm"), mkFile("b.ysm"), mkFile("c.ysm")]);
+    off();
+    expect(r).toEqual({ imported: 3, failed: 0 });
+    expect(toasts.some((x) => x.type === "success" && !String(x.msg).includes("失败"))).toBe(true);
+  });
+
+  it("importWebFiles 灾难性抛错 → 错误 toast + 返回 failed=files.length（上限兜底，非堆内部分计数）", async () => {
+    importWebFilesMock.mockRejectedValue(new Error("QUOTA"));
+    const toasts: Array<{ msg: unknown; type?: unknown }> = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    const files = [mkFile("a.ysm"), mkFile("b.ysm"), mkFile("c.ysm")];
+    const r = await importWebFilesWithToast(files);
+    off();
+    expect(r).toEqual({ imported: 0, failed: files.length });
+    expect(toasts.some((x) => x.type === "error" && String(x.msg).includes("QUOTA"))).toBe(true);
   });
 });

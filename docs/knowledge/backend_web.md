@@ -61,7 +61,7 @@ auto_fields:
     - WailsAndroidBridge:18
     - WEB_ROOT:14
     - webCommonBindings:95
-    - webCommunityBindings:251
+    - webCommunityBindings:252
     - webDirType:46
     - webFsBindings:637
     - WebModelStats:18

@@ -7,7 +7,7 @@
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
 import { getApp } from "../backend/app.ts";
-import { importWebFiles } from "../backend/browser-adapter.ts";
+import { importWebFiles, MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
 import { currentRepoType } from "./repo-rtype.ts";
 import { groupCollected, isImportableFile, fileToBase64, buildFolderItems } from "./dnd-shared.ts";
 import type { CollectedEntry } from "./dnd-shared.ts";
@@ -43,6 +43,12 @@ export const directImport = async (file: File): Promise<void> => {
       "warn",
       4000,
     );
+    return;
+  }
+  // 桌面端单文件大小守卫（对齐 web 端 MAX_IMPORT_BYTES 过滤）：超大文件直接整文件
+  // base64 进内存会撑爆内存峰值，前置拦截并提示，不进入在途集合
+  if (file.size > MAX_IMPORT_BYTES) {
+    toast(`⚠️ ${file.name} 超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限，已跳过`, "warn", TOAST_MS.long);
     return;
   }
   // 键含 size+lastModified，防同名不同源文件误判在途

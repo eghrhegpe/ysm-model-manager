@@ -1413,7 +1413,7 @@ auto_fields:
     - webAnalyzeBedrockModelEntry:345
     - webCliBindings:12
     - webCommonBindings:95
-    - webCommunityBindings:251
+    - webCommunityBindings:252
     - WebComponentBase:7
     - webDirType:46
     - webExtractPreviewTexture:172

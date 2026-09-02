@@ -294,7 +294,9 @@ async function main() {
         if (!ok && Array.isArray(s.warns_list) && s.warns_list.length) {
           tail = `warns_list:\n${s.warns_list.map((w: string) => `  - ${w}`).join('\n')}`;
         }
-      } catch { /* 非 JSON 输出，退回 rc 判定 */ }
+      } catch { /* 非 JSON 输出，退回 rc 判定 */
+        if (!ok) note = note || `${tool} 输出解析失败（非 JSON），退回 rc 判定`;
+      }
       // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
       // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
       // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
@@ -312,6 +314,8 @@ async function main() {
           if (reOk) {
             ok = true;
             note = `autoFix: ${tool} 已自动刷新`;
+          } else {
+            note = note ? `${note}（autoFix 已尝试但仍 FAIL）` : `${tool} autoFix 已尝试但仍 FAIL`;
           }
         }
       }

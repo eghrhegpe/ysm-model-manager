@@ -41,7 +41,7 @@
 | 重命名、改名、命名规范、作者 品牌 角色、rename、读取头部 | [重命名弹窗 rename](./dialog-rename.md) ⚠️歧义（另见 go-fileops.md） | `rename.ts` 提供单个模型的结构化重命名弹窗：把文件名按 `[作者]【品牌】角色-变体 (年月).ext` 规范拆成五个输入框，实时预览新文件名，可选「📖 读取头部」从 YSM 文件头提取作者/介绍。弹窗只负责产出新文件名，实际落… |
 | 标签、打标签、编辑标签、tag、标签弹窗、分类标记 | [标签编辑器 tag-editor](./dialog-tag-editor.md) ⚠️歧义（另见 go-tags.md等） | `tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto… |
 | FAB、悬浮按钮、FAB 3D 预览入口、overlay、ADR-057 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | 3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu… |
-| 漂移检测、双轨、重复实现、口径漂移 | [drift-scan（双轨漂移检测）](./drift-scan.md) ⚠️歧义（另见 extensibility-index.md） | — |
+| 漂移检测、双轨、重复实现、口径漂移、常量硬编码、错误链断裂、资源泄漏、定时器泄漏 | [drift-scan（双轨漂移检测）](./drift-scan.md) ⚠️歧义（另见 extensibility-index.md） | — |
 | 事件、事件总线、通信、emit、跨组件通信、bus | [事件总线 bus.ts](./event-bus.md) | `bus.ts` 是 YSM 前端的唯一事件中枢，基于发布/订阅模式。所有跨组件、跨页面的异步通信都经过此总线，避免组件间直接耦合。 |
 | 截图、导出 PNG、多角度截图、透明背景、预览缓存、blob URL、saveScreenshot、renderMultiAngle | [截图导出 export](./export.md) ⚠️歧义（另见 utils-export.md等） | > **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到… |
 | 拓展点对账、落地状态、ADR 闭环 | [可拓展点索引对账（vs HEAD @ d517113c…）](./extensibility-index-reconciliation.md) | — |

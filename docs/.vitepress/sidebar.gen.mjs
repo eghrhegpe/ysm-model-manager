@@ -722,6 +722,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-154：Go-TS 解析层 golden 对拍（双端互锁契约）",
+        "link": "/adr/ADR-154-go-ts-golden"
+      },
+      {
         "text": "ADR-153：stats.worker WASM 资产条件加载——base / mt 双向动态 import",
         "link": "/adr/ADR-153-stats-worker-mt-lazy-import"
       },

@@ -145,12 +145,15 @@ describe("showMaidPreview 车万女仆详情", () => {
   });
 
   it("切角色 → AnalyzeBedrockModelEntry 重新取该角色的 boneCount/cubeCount", async () => {
-    // 初始聚合：bone=196, cube=922
-    analyzeEntryMock.mockResolvedValue({ boneCount: 42, cubeCount: 88 });
+    // 按 sourcePath 区分返回：main=42/88，arm=7/13
+    analyzeEntryMock.mockImplementation(async (_p: string, sp: string) =>
+      sp === "models/main.geo.json" ? { boneCount: 42, cubeCount: 88 } : { boneCount: 7, cubeCount: 13 },
+    );
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
-    // 初始渲染显示聚合值
-    expect(ctx.root.innerHTML).toContain("196");
+    // 预取完成后：初始选中角色 0 → 统计卡显示 42（预取对齐选中角色的口径）
+    await new Promise((r) => setTimeout(r, 20));
+    expect(ctx.root.innerHTML).toContain("42");
 
     // 模拟点击角色2（idx=1）
     const li = ctx.root.querySelector<HTMLLIElement>('.dp-sublist li[data-idx="1"]');
@@ -161,8 +164,45 @@ describe("showMaidPreview 车万女仆详情", () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(analyzeEntryMock).toHaveBeenCalledWith("/repo/maid.zip", "models/arm.geo.json");
     // 重新渲染后显示该角色的 boneCount/cubeCount
-    expect(ctx.root.innerHTML).toContain("42");
-    expect(ctx.root.innerHTML).toContain("88");
+    expect(ctx.root.innerHTML).toContain("7");
+    expect(ctx.root.innerHTML).toContain("13");
+  });
+
+  it("首屏并行预取：不点击即见逐角色统计（chip-stat，对齐 YSM 详情）", async () => {
+    analyzeEntryMock.mockImplementation(async (_p: string, sp: string) =>
+      sp === "models/main.geo.json" ? { boneCount: 42, cubeCount: 88 } : { boneCount: 7, cubeCount: 13 },
+    );
+    const ctx = makeCtx();
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    await new Promise((r) => setTimeout(r, 20));
+    // 两个角色的 entry 都被预取
+    expect(analyzeEntryMock).toHaveBeenCalledWith("/repo/maid.zip", "models/main.geo.json");
+    expect(analyzeEntryMock).toHaveBeenCalledWith("/repo/maid.zip", "models/arm.geo.json");
+    // chip 内直接展示统计行（不点击即见）
+    const html = ctx.root.innerHTML;
+    expect(html).toContain("chip-stat");
+    expect(html).toContain("42 骨骼 · 88 立方体");
+    expect(html).toContain("7 骨骼 · 13 立方体");
+  });
+
+  it("预取失败/entry 缺 sourcePath → chip 保持无统计行，不阻断渲染", async () => {
+    analyzeEntryMock.mockRejectedValue(new Error("bridge down"));
+    const ctx = makeCtx();
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    await new Promise((r) => setTimeout(r, 20));
+    const html = ctx.root.innerHTML;
+    expect(html).toContain("dp-submodels");
+    expect(html).not.toContain("chip-stat");
+  });
+
+  it("单角色包（subs.length <= 1）→ 不注入清单也不预取", async () => {
+    analyzeEntryMock.mockResolvedValue({ boneCount: 42, cubeCount: 88 });
+    const ctx = makeCtx();
+    analyzeMock.mockResolvedValue(baseModel({ subModels: [{ name: "独苗", texSlot: 0, sourcePath: "models/a.geo.json" }] }));
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(ctx.root.innerHTML).not.toContain("dp-submodels");
+    expect(analyzeEntryMock).not.toHaveBeenCalled();
   });
 
   it("AnalyzeBedrockModel 失败 → 降级显示无法读取提示", async () => {

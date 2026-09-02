@@ -115,4 +115,11 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
   color: var(--txt);
   font-weight: 500;
 }
+/* 逐角色统计（预取产物）：N 骨骼 · M 立方体——弱化展示，不与角色名/纹理槽争视觉 */
+.dp-sublist li .chip-stat {
+  flex-shrink: 0;
+  font-size: var(--fs-tiny);
+  color: var(--muted);
+  white-space: nowrap;
+}
 `;

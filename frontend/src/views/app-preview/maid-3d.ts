@@ -101,6 +101,9 @@ interface MaidPreviewState {
   model3dGuard: GenGuard;
 }
 
+/** L0 角色逐 entry 统计（预取产物；Map 缺项 = 在途/不可得/无 sourcePath） */
+type EntryStat = { bones: number; cubes: number };
+
 /** AnalyzeBedrockModel 返回的模型信息快照 */
 type MaidModelInfo = {
   boneCount?: number;
@@ -181,13 +184,23 @@ function dpRenderDetail(
   return rows.join("");
 }
 
-/** 渲染子模型选择列表（纯字符串拼接；>1 才显示，能力驱动） */
-function dpRenderSubList(subs: BedrockSubModel[], selSubIdx: number): string {
+/** 渲染子模型选择列表（纯字符串拼接；>1 才显示，能力驱动）。
+ *  entryStats：并行预取的逐角色统计——有数据的 chip 直接展示「N 骨骼 · M 立方体」，
+ *  对齐 YSM 详情「不点击即见逐组件统计」（ADR-132 同构语义的详情页对齐）。 */
+function dpRenderSubList(
+  subs: BedrockSubModel[],
+  selSubIdx: number,
+  entryStats?: Map<number, EntryStat>,
+): string {
   if (subs.length <= 1) return "";
   const chips = subs
     .map((s, i) => {
       const active = i === selSubIdx ? ' class="active"' : "";
-      return `<li data-idx="${i}"${active}><span class="chip-name">${esc(s.name)}</span>${s.texSlot !== undefined ? `<span class="chip-slot">🎨${s.texSlot}</span>` : ""}</li>`;
+      const st = entryStats?.get(i);
+      const statHtml = st
+        ? `<span class="chip-stat">${st.bones} 骨骼 · ${st.cubes} 立方体</span>`
+        : "";
+      return `<li data-idx="${i}"${active}><span class="chip-name">${esc(s.name)}</span>${statHtml}${s.texSlot !== undefined ? `<span class="chip-slot">🎨${s.texSlot}</span>` : ""}</li>`;
     })
     .join("");
   return `<div class="dp-submodels">
@@ -206,6 +219,7 @@ function dpRenderPanel(
   onSelect: (idx: number) => void,
   onToggle3d: () => void,
   previewUri?: string | null,
+  entryStats?: Map<number, EntryStat>,
 ): void {
   // 彩色统计卡（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——复用 YSM statsCardHTML，
   // 共用 AnalyzeBedrockModel 返回的 types.BedrockModel 数据源，与 YSM 详情同一设计语言。
@@ -213,7 +227,7 @@ function dpRenderPanel(
     ? `<div class="pv-card">${statsCardHTML(toStatsCardModel(modelInfo, subs.length), basename)}</div>`
     : "";
   const detail = dpRenderDetail(modelInfo, subs, selSubIdx);
-  const subList = dpRenderSubList(subs, selSubIdx);
+  const subList = dpRenderSubList(subs, selSubIdx, entryStats);
   // 封面缩略图（loadPreviewImage 产物）：有图时替换 🧸 大图标，无图回退 🧸 装饰。
   // 样式对齐资源包详情（detail.ts:171）：96px、圆角、边框、pixelated。
   const coverHtml = previewUri
@@ -372,6 +386,7 @@ export async function showMaidPreview(
       if (entry && displayModelInfo) {
         displayModelInfo.boneCount = entry.boneCount;
         displayModelInfo.cubeCount = entry.cubeCount;
+        state.entryStats.set(idx, { bones: entry.boneCount, cubes: entry.cubeCount });
         render();
       }
     } catch {
@@ -379,12 +394,13 @@ export async function showMaidPreview(
     }
   };
 
-  // 共享局域 state：选中子模型索引 + 3D 打开并发防护 + 封面预览图 URI
-  const state: MaidPreviewState & { previewUri?: string | null } = {
+  // 共享局域 state：选中子模型索引 + 3D 打开并发防护 + 封面预览图 URI + 逐角色统计预取缓存
+  const state: MaidPreviewState & { previewUri?: string | null; entryStats: Map<number, EntryStat> } = {
     selSubIdx: 0,
     loading3D: false,
     model3dGuard: new GenGuard(),
     previewUri: null,
+    entryStats: new Map(),
   };
   const render = (): void => {
     dpRenderPanel(
@@ -396,13 +412,53 @@ export async function showMaidPreview(
       (idx) => { state.selSubIdx = idx; render(); void refreshPerEntry(idx); },
       () => { void dpToggle3D(state, ctx, path, baseModelInfo, subs, state.selSubIdx); },
       state.previewUri,
+      state.entryStats,
     );
+  };
+
+  /** 并行预取全部 L0 角色的 boneCount/cubeCount（并发上限 3，防超大包拖垮桥接）。
+   *  对齐 YSM 详情「不点击即见逐组件统计」：每完成一个 entry 渐进重绘，
+   *  失败/无 sourcePath 的角色保持无统计行（不阻断）。 */
+  const prefetchEntryStats = async (): Promise<void> => {
+    if (!baseModelInfo || subs.length <= 1) return;
+    const targets = subs
+      .map((s, i) => ({ s, i }))
+      .filter(({ s }) => !!s.sourcePath);
+    if (targets.length === 0) return;
+    const CONCURRENCY = 3;
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      while (cursor < targets.length) {
+        const { s, i } = targets[cursor++]!;
+        const sourcePath = s.sourcePath;
+        if (!sourcePath) continue; // filter 已保证，类型收窄防御
+        try {
+          const { AnalyzeBedrockModelEntry } = await getApp();
+          const entry = await AnalyzeBedrockModelEntry(path, sourcePath);
+          if (detailGen.stale(gen)) return; // 用户已切走，丢弃在途预取
+          if (entry) {
+            state.entryStats.set(i, { bones: entry.boneCount, cubes: entry.cubeCount });
+            // 当前选中角色的统计卡同步对齐（与点击切换后的覆盖口径一致）
+            if (i === state.selSubIdx && displayModelInfo) {
+              displayModelInfo.boneCount = entry.boneCount;
+              displayModelInfo.cubeCount = entry.cubeCount;
+            }
+            render();
+          }
+        } catch {
+          // 单角色取数失败不阻断——chip 保持无统计行
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, () => worker()));
   };
 
   // 封面预览图（缓存 → WASM → Go 兜底，统一入口）：
   // 先渲染无图态（统计卡立即可见），异步取图后若命中再重绘替换 🧸。
   // 不 await 阻塞首帧——取图走 Go 解析 zip 可能数百 ms，用户无需等图才见统计卡。
   render();
+  // 逐角色统计并行预取（不阻塞首帧——渐进重绘补齐 chip 统计行）
+  void prefetchEntryStats();
   const cover = await ctx.loadPreviewImage(path);
   if (detailGen.stale(gen)) return; // 用户已切走，丢弃在途封面
   if (cover && cover !== state.previewUri) {

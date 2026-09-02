@@ -1462,6 +1462,10 @@ export const autoSidebar = [
             "link": "/knowledge/fbx-cli-pipeline"
           },
           {
+            "text": "Go-TS 解析层 golden 对拍（ADR-154 双端互锁）",
+            "link": "/knowledge/go_ts_golden"
+          },
+          {
             "text": "Android 平台守卫（Go 侧）",
             "link": "/knowledge/go-android-platform-guard"
           },

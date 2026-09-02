@@ -59,21 +59,14 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 调后端、app.ts 绑定、getApp | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
-| 进程重启不可用、Node.js 侧边车禁用 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
-| 跨平台路径处理、pathmgr | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
-| 平台分支、WASM decoder 平台差异 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
-| 前端能力黑名单同步（ANDROID_UNAVAILABLE） | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | 桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend_web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
-| 文件浏览/打开文件夹失败处理 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | Android 存储授权、目录选择器 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | Android 存储授权必须走 android-bridge 的 SAF 授权流程，禁止直接请求 MANAGE_EXTERNAL_STORAGE | - |
-| Android 平台守卫、RevealInExplorer 降级 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | android:back 返回键、弹窗退出 | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | Android 系统事件必须经 android-events 的 registerAndroidEvents 单点注册，禁止各组件各自注册 | - |
 | Android/Linux/macOS Rust 桥 | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径 | - |
 | API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
 | bridge_windows/bridge_android/bridge_linux | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend_web.md) | - | - |
-| build-tag 双文件平台隔离 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | closeActiveDialog、registerAndroidEvents | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
 | compile-android-rust/compile-rust-static | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
 | GetAppVersion / ScanModelEntries / SearchModels | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
@@ -83,9 +76,7 @@
 | NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend_web.md) | - | - |
 | Rust 扫描器、rust_backend | [Rust 桥 rustbridge](./rustbridge.md) | Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载 | - |
 | rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
-| SAF 废弃、MANAGE_EXTERNAL_STORAGE 权限模型 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | ScreenLocked、NetworkChanged、permissionGranted | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
-| watcher 监听跳过、fsnotify 平台限制 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 
 ## 🎯 模型扫描与仓库管理
 
@@ -308,6 +299,12 @@
 |----------|--------|----------|----------|
 | 测试覆盖缺口定位 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
 
+## 🎯 TODO
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| TODO | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go_ts_golden.md) | TODO | - |
+
 ## 🎯 3D spec 渲染与模型追加
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -527,14 +524,7 @@
 | 资源归类一律由 Go 扫描 + resource_types.json 派生，前端只读不重算 | - | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
-| 陷阱：Android 上 xdg-open/exec 链静默失败会掩盖问题 | `静默成功` | 必须返回含「请手动」提示的明确错误 |
-| 陷阱：watcher 守卫缺失时，fw.Add 逐目录失败后 loop 空转 = running=true 假活；Android 必须直接跳过 | `假活` | - |
-| 陷阱：把 RevealInExplorer/OpenFolder 等绑定全部 false | `一刀切` | 应仅在 ANDROID_UNAVAILABLE 黑名单内才禁 |
-| 陷阱：误引入 SAF/URI 桥 | `content:// URI` | SAF 已弃用，禁止复活 |
-| 陷阱：平台差异大的逻辑用 runtime.GOOS 分支 | `build-tag 混用` | 应用 build-tag 双文件保证编译期隔离 |
-| 陷阱：Android 沙盒私有目录与公共仓库根混用 | `路径管理混乱` | androidPathManager 严格分离 |
-| 陷阱：Go 新增桌面专属拒绝项未同步 platform-web.ts | `前端/后端黑名单不同步` | 三谓词测试 platform-parity.test.ts 会爆 |
-| 陷阱：Android 上调用 os.Executable + exec.Command | `重启假设` | Activity 生命周期不兼容，显式拒绝 |
+| TODO | - | - |
 | 手写头像路径拼接 | - | 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验 |
 | 头像缓存不失效 | - | 换头像后仍显示旧图；必须经缓存失效策略 |
 | CLI 手写搜索 | - | 与 GUI 搜索结果不一致、参数不统一；必须复用 go/cli 的 SearchModels |

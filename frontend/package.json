@@ -1,5 +1,6 @@
 {
   "name": "frontend",
+  "type": "module",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -15,11 +16,12 @@
     "test:audit": "vitest run --maxWorkers 8 --isolate=false --sequence.shuffle",
     "test:coverage": "vitest run --coverage --maxWorkers 8",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run check-bindings && tsc --noEmit",
     "test:e2e:web": "playwright test --config playwright.web.config.ts",
     "codemod": "node ../scripts/codemod.ts",
     "generate:bindings": "cd .. && wails3 generate bindings -clean=true -ts -i",
-    "verify:port": "node ../scripts/port-align.ts"
+    "verify:port": "node ../scripts/port-align.ts",
+    "check-bindings": "node scripts/check-binding-usage.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",

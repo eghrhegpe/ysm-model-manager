@@ -61,14 +61,19 @@ function scanFile(file: string) {
     const line = lines[i]!;
     const loc = `${rel}:${i + 1}`;
 
-    // 1. built 名词家族（跳过注释行——注释里讲历史是允许的，frontend_naming 卡正文即如此）
-    if (!/^\s*(\/\/|\*|\/\*)/.test(line)) {
-      for (const m of line.matchAll(BUILT_NOUN_RE)) {
-        findings.push({ name: m[0], loc, kind: 'builtNoun', line: line.trim().slice(0, 120) });
+    // 1. built 名词家族（注释讲历史允许——先剥行内尾注释/块注释，再对正文匹配。
+    //    章程卡正文不卡注释，frontend_naming 卡正文即如此；纯注释行剥后为空自然落空）
+    const codeLine = line
+      .replace(/\/\*.*?\*\/\s*/g, '') // 块注释（单行内）
+      .replace(/\s+\/\/.*$/, ''); // 行内尾注释（// 前须有空白，防误剥 http:// 之类）
+    const code = codeLine.trim();
+    if (code && !/^(\/\/|\*|\/\*)/.test(code)) {
+      for (const m of code.matchAll(BUILT_NOUN_RE)) {
+        findings.push({ name: m[0], loc, kind: 'builtNoun', line: code.slice(0, 120) });
       }
       // 1b. 裸 built 使用（场景对象语境）
-      for (const m of line.matchAll(BUILT_NAKED_RE)) {
-        findings.push({ name: `built${m[0].replace(/\s+/g, ' ').replace(/^built/, '')}`, loc, kind: 'builtNoun', line: line.trim().slice(0, 120) });
+      for (const m of code.matchAll(BUILT_NAKED_RE)) {
+        findings.push({ name: `built${m[0].replace(/\s+/g, ' ').replace(/^built/, '')}`, loc, kind: 'builtNoun', line: code.slice(0, 120) });
       }
     }
 
@@ -76,6 +81,9 @@ function scanFile(file: string) {
     let window = line;
     for (let j = 1; j <= 3 && i + j < lines.length; j++) window += '\n' + lines[i + j]!;
     for (const m of window.matchAll(WHL_TRIPLE_RE)) {
+      // 命中起点须落在当前行内（m.index 前无换行）才上报——否则同一条跨行 triple
+      // 会被相邻窗口（起点行与上一行各一次）重复命中，且 loc 指向窗口起点行导致错位
+      if (window.slice(0, m.index).includes('\n')) continue;
       findings.push({ name: 'w/h/l', loc, kind: 'whlTriple', line: line.trim().slice(0, 120) });
     }
   }

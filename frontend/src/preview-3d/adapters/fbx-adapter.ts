@@ -10,7 +10,7 @@
 
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { recordLoadTrace } from "../load-trace.ts";
@@ -306,5 +306,23 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
           ? screenshotFromRenderer(ctx.renderer, ctx.scene, ctx.camera)
           : null,
       ),
+  };
+}
+
+/** FBX 适配器工厂 deps（视图壳注入数据端口——ADR-072：适配器 0 backend import） */
+export interface FbxAdapterDeps {
+  /** FBX 数据端口（readFileBytes / addOpLog，视图层 view-shell 组装） */
+  port: FbxDataPort;
+}
+
+/**
+ * ADR-161 §2.5 工厂：FBX 挂载主入口（make<Format>Adapter 命名章程，对齐 mmd/vrm/ysm）。
+ * port 以 deps 注入（views 层 view-shell 组装），adapters 层不反向依赖 views。
+ * 用法：`const adapter = makeFbxAdapter({ port: fbxPort }); mount3D(adapter, path)`
+ */
+export function makeFbxAdapter(deps: FbxAdapterDeps): PreviewAdapter {
+  return {
+    id: "fbx",
+    build: (ctx, path) => buildFbxScene(ctx, path, deps.port),
   };
 }

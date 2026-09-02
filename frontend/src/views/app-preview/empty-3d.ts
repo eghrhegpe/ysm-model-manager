@@ -8,7 +8,12 @@
 import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter } from "../../preview-3d/adapters/mount-preview-core.ts";
 import { withPreviewExtras } from "./preview-library.ts";
 
-/** 空适配器：build 直接 resolve 空 scene，core 渲染空白场景 + 环境光/天空/地面 */
+/**
+ * 空适配器：build 直接 resolve 空 scene，core 渲染空白场景 + 环境光/天空/地面。
+ * 例外说明（P1#1 审计）：本 adapter 无 path、无数据端口、无格式解析——是「空环境
+ * 展示」特例而非格式适配器，不套用 make<Format>Adapter 工厂（无 deps 可注入）。
+ * 真格式（mmd/vrm/ysm/fbx/litematic/pack）的工厂均收在 preview-3d/adapters/ 层。
+ */
 const emptyAdapter: PreviewAdapter = {
   id: "empty",
   build: async (ctx) => {

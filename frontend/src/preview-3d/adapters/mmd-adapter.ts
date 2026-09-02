@@ -1677,10 +1677,12 @@ export interface MmdAdapterDeps {
   dataPort: () => Promise<MmdDataPort>;
   /** 面板 UI hooks（model/shot/play 菜单节点，视图层组装） */
   panels?: MmdPanelHooks;
+  /** 适配器 id 覆盖（场景 MMD 用 "mmd-scene" 独立预设；缺省 "mmd"） */
+  id?: string;
 }
 export function makeMmdAdapter(deps: MmdAdapterDeps): PreviewAdapter {
   return {
-    id: "mmd",
+    id: deps.id ?? "mmd",
     build: async (ctx, path) => buildMmdScene(ctx, path, await deps.dataPort(), deps.panels),
   };
 }

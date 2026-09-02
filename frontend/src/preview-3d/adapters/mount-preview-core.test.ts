@@ -533,3 +533,158 @@ describe("公开 API", () => {
     expect(contentB.dispose).toHaveBeenCalledTimes(1);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────
+// describe: finishSession 幂等契约
+// closeOverlay（ESC 早期路径）与 fullCleanup（post-build 路径）都会调
+// finishSession。源码注释明确：「不幂等则 onClose 会重复触发」。
+// 本组验证：两条路径交错进入时，adapter.onClose 仅被调用一次。
+// ──────────────────────────────────────────────────────────────────────
+describe("finishSession 幂等契约", () => {
+  it("build 期间 ESC（closeOverlay）后 build resolve 进 fullCleanup：onClose 只调一次", async () => {
+    let resolveBuild!: (v: PreviewScene) => void;
+    const onClose = vi.fn();
+    const adapter: PreviewAdapter = {
+      id: "vrm",
+      onClose,
+      build: vi.fn(() => new Promise<PreviewScene>((res) => { resolveBuild = res; })),
+    };
+    const p = mount3D(adapter, "/m/a.vrm");
+    // ESC 在 build await 期间触发 → closeOverlay → finishSession（第 1 次）
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    // build 完成 → 代际守卫命中 → fullCleanup → finishSession（第 2 次，应被幂等守卫拦截）
+    resolveBuild(makeContent());
+    await p;
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(hasActivePreview()).toBe(false);
+  });
+
+  it("build 成功后 ESC（fullCleanup）再重复 ESC：onClose 只调一次", async () => {
+    const onClose = vi.fn();
+    const adapter: PreviewAdapter = { id: "vrm", onClose, build: vi.fn(async () => makeContent()) };
+    await mount3D(adapter, "/m/a.vrm");
+    // build 成功后 ESC → fullCleanup → finishSession（第 1 次）
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    // 再次 ESC：escH 已在 fullCleanup 内 removeEventListener，第二次 dispatch 无效果
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(hasActivePreview()).toBe(false);
+  });
+
+  it("cleanupPreview → handle.cleanup → fullCleanup → finishSession：onClose 只调一次", async () => {
+    const onClose = vi.fn();
+    const adapter: PreviewAdapter = { id: "vrm", onClose, build: vi.fn(async () => makeContent()) };
+    await mount3D(adapter, "/m/a.vrm");
+    cleanupPreview();
+    // cleanupPreview 遍历 _handles 调 handle.cleanup（= fullCleanup）→ finishSession
+    // 之后再调 cleanupPreview 应 no-op（_handles 已空）
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(() => cleanupPreview()).not.toThrow();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// describe: switchExternal vs switchTo 路由契约
+// fix 历史反复出现「同源误走 switchExternal」「跨源误走 switchTo」。
+// 正确路由：同类型走 switchTo（会话内复用外壳），跨类型走 switchExternal
+// （关当前会话 + 开目标）。本组验证菜单 ctx 的路由接线。
+// ──────────────────────────────────────────────────────────────────────
+describe("switchExternal vs switchTo 路由契约", () => {
+  it("switchTo 走会话内切换（复用外壳，调 adapter.build 第二次）", async () => {
+    const content1 = makeContent();
+    const content2 = makeContent();
+    const adapter: PreviewAdapter = {
+      id: "vrm",
+      build: vi.fn().mockResolvedValueOnce(content1).mockResolvedValueOnce(content2),
+    };
+    await mount3D(adapter, "/m/a.vrm", { rtype: "vrm" });
+    // switchTo = 会话内切换：复用外壳，重建内容层
+    await (h.menuOpts!.switchTo as (p: string) => Promise<void>)("/m/b.vrm");
+    // adapter.build 被调用两次（首次 mount + 会话内 switchTo）
+    expect(adapter.build).toHaveBeenCalledTimes(2);
+    // 第二次 build 的 path 是新路径
+    expect((adapter.build as ReturnType<typeof vi.fn>).mock.calls[1][1]).toBe("/m/b.vrm");
+    // 注册表仍为 1（旧 m1 注销、新 m2 登记——switchTo 不创建新会话）
+    expect(sceneRegistry.count()).toBe(1);
+    cleanupPreview();
+  });
+
+  it("switchExternal 走跨类型跳转（透传到 opts.switchExternal 回调）", async () => {
+    const switchExternal = vi.fn(async () => {});
+    const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => makeContent()) };
+    await mount3D(adapter, "/m/a.vrm", { rtype: "vrm", switchExternal });
+    // switchExternal = 跨类型跳转：调 opts.switchExternal 回调（app 层 openModel3DFullscreen 注入）
+    (h.menuOpts!.switchExternal as (p: string) => void)("/m/b.mmd");
+    expect(switchExternal).toHaveBeenCalledWith("/m/b.mmd", undefined, undefined);
+    cleanupPreview();
+  });
+
+  it("switchExternal 缺失时菜单 ctx.switchExternal 为 undefined（不抛错）", async () => {
+    const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => makeContent()) };
+    await mount3D(adapter, "/m/a.vrm"); // 不传 switchExternal
+    expect(h.menuOpts!.switchExternal).toBeUndefined();
+    cleanupPreview();
+  });
+
+  it("switchTo 缺失时菜单 ctx.switchTo 仍可调（会话内切换的核心能力不可缺）", async () => {
+    const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => makeContent()) };
+    await mount3D(adapter, "/m/a.vrm");
+    expect(typeof h.menuOpts!.switchTo).toBe("function");
+    cleanupPreview();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// describe: switchToSession 并发抑制（inFlight）契约
+// fix 历史 r12 P1：连续点击触发重复 build，sceneRegistry 短暂不一致。
+// beginSwitch 置 inFlight=true，switchToSession 结束时 inFlight=false。
+// inFlight 期间再次调 switchTo 应被静默丢弃（beginSwitch 返回 false）。
+// ──────────────────────────────────────────────────────────────────────
+describe("switchToSession 并发抑制（inFlight）契约", () => {
+  it("切换进行中再次 switchTo：第二次被静默丢弃（adapter.build 不被第三次调用）", async () => {
+    let resolveBuild1!: (v: PreviewScene) => void;
+    let resolveBuild2!: (v: PreviewScene) => void;
+    const buildMock = vi.fn();
+    buildMock
+      .mockReturnValueOnce(new Promise<PreviewScene>((res) => { resolveBuild1 = res; }))
+      .mockReturnValueOnce(new Promise<PreviewScene>((res) => { resolveBuild2 = res; }))
+      .mockResolvedValueOnce(makeContent());
+    const adapter: PreviewAdapter = { id: "vrm", build: buildMock };
+    const p1 = mount3D(adapter, "/m/a.vrm");
+    resolveBuild1(makeContent()); // 首次 mount 完成
+    await p1;
+
+    // 启动第一次 switchTo（卡在 adapter.build 第二次调用）
+    const switchPromise1 = (h.menuOpts!.switchTo as (p: string) => Promise<void>)("/m/b.vrm");
+    // 立即启动第二次 switchTo（inFlight=true，应被静默丢弃）
+    const switchPromise2 = (h.menuOpts!.switchTo as (p: string) => Promise<void>)("/m/c.vrm");
+
+    // resolve 第二次 build（第一次 switchTo 的 build）
+    resolveBuild2(makeContent());
+    await switchPromise1;
+    await switchPromise2;
+
+    // inFlight 守卫在 beginSwitch 就 return false，不会调 buildSwitchContent
+    expect(buildMock).toHaveBeenCalledTimes(2); // 首次 mount + 第一次 switchTo
+    cleanupPreview();
+  });
+
+  it("build 失败后 inFlight 复位：后续 switchTo 不被死锁", async () => {
+    const buildMock = vi.fn();
+    buildMock
+      .mockResolvedValueOnce(makeContent()) // 首次 mount
+      .mockRejectedValueOnce(new Error("switch build failed")) // 第一次 switchTo 失败
+      .mockResolvedValueOnce(makeContent()); // 第二次 switchTo 成功
+    const adapter: PreviewAdapter = { id: "vrm", build: buildMock };
+    await mount3D(adapter, "/m/a.vrm");
+
+    // 第一次 switchTo：build 失败 → recoverSwitchFailure 复位 inFlight
+    await (h.menuOpts!.switchTo as (p: string) => Promise<void>)("/m/bad.vrm");
+    // 第二次 switchTo：inFlight 已复位，应正常执行
+    await (h.menuOpts!.switchTo as (p: string) => Promise<void>)("/m/good.vrm");
+
+    expect(buildMock).toHaveBeenCalledTimes(3); // 首次 mount + 失败的 switchTo + 成功的 switchTo
+    cleanupPreview();
+  });
+});

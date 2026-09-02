@@ -5,8 +5,8 @@
 // ADR-132 遗留 1：.zip 蓝图/投影容器先 ListContainerEntries 枚举 → 装配容器内多模型
 // adapter（containerPath + modelEntries + 容器内 voxelCall），修复「zip 被当 gzip 打开」坏预览。
 
-import { mount3D, cleanupPreview, invalidatePreview, switchPreview, type PreviewAdapter, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { buildLitematicScene, type LitematicBuildOpts } from "../../preview-3d/adapters/litematic-adapter.ts";
+import { mount3D, cleanupPreview, invalidatePreview, switchPreview, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { makeLitematicAdapter, type LitematicBuildOpts } from "../../preview-3d/adapters/litematic-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
 import { RESOURCE_TYPES, VOXEL_RPC_BY_EXT, extOf } from "../../utils/resource/types.ts";
@@ -64,18 +64,6 @@ function makeContainerVoxelCall(containerPath: string, fallbackExt: string): (en
   };
 }
 
-function makeLitematicAdapter(voxelFn: string, container?: LitematicBuildOpts): PreviewAdapter {
-  return {
-    id: "litematic",
-    build: (ctx, path) => {
-      const call = container?.containerPath
-        ? makeContainerVoxelCall(container.containerPath, container.entryExt ?? "")
-        : makeVoxelCall(voxelFn);
-      return buildLitematicScene(ctx, path, call, container);
-    },
-  };
-}
-
 /** 枚举 zip 容器内体素条目（ListContainerEntries；失败返回 []，调用方降级单模型裸路径） */
 async function listContainerEntries(containerPath: string): Promise<string[]> {
   try {
@@ -96,10 +84,13 @@ export async function createLitematic3D(path: string, voxelFn: string, opts?: Mo
     if (entries.length > 0) {
       const firstExt = entryExtOf(entries[0]);
       await mount3D(
-        makeLitematicAdapter(voxelFn, {
-          containerPath: path,
-          modelEntries: entries,
-          entryExt: firstExt,
+        makeLitematicAdapter({
+          voxelCall: makeContainerVoxelCall(path, firstExt),
+          container: {
+            containerPath: path,
+            modelEntries: entries,
+            entryExt: firstExt,
+          },
         }),
         entries[0],
         extraOpts,
@@ -109,7 +100,7 @@ export async function createLitematic3D(path: string, voxelFn: string, opts?: Mo
     // 枚举失败/空容器：降级裸路径（zip 会被 gzip 打开失败——修复前正是此路径报错，
     // 现降级仍走原错误契约而非崩溃）
   }
-  await mount3D(makeLitematicAdapter(voxelFn), path, extraOpts);
+  await mount3D(makeLitematicAdapter({ voxelCall: makeVoxelCall(voxelFn) }), path, extraOpts);
 }
 
 /** 按扩展名解析体素 RPC（对齐 litematic-meta.ts 的 VOXEL_RPC_BY_EXT 映射） */

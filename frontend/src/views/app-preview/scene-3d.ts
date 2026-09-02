@@ -6,8 +6,8 @@
 //
 // 内容层复用 buildMmdScene（mmd-adapter.ts），确保 PMX 解析/纹理绑定逻辑一致。
 
-import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { buildMmdScene, type MmdPanelHooks } from "../../preview-3d/adapters/mmd-adapter.ts";
+import { mount3D, cleanupPreview, invalidatePreview, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { makeMmdAdapter, type MmdPanelHooks } from "../../preview-3d/adapters/mmd-adapter.ts";
 import { makeMmdDataPort } from "./mmd-data-port.ts";
 import { fillMmdModelPanel, fillMmdShotPanel, mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
@@ -23,11 +23,12 @@ const scenePanelHooks: MmdPanelHooks = {
   playNodes,
 };
 
-/** 场景适配器：id = "mmd-scene"，驱动场景专属预设（天空/光照/阴影） */
-const sceneAdapter: PreviewAdapter = {
+/** 场景适配器：id 覆盖 = "mmd-scene"（驱动场景专属预设：天空/光照/阴影），build 同 MMD */
+const sceneAdapter = makeMmdAdapter({
+  dataPort: () => makeMmdDataPort("mmd-scene-preview"),
+  panels: scenePanelHooks,
   id: "mmd-scene",
-  build: async (ctx, path) => buildMmdScene(ctx, path, await makeMmdDataPort("mmd-scene-preview"), scenePanelHooks),
-};
+});
 
 /** 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） */
 export async function createScene3D(path: string, opts?: Mount3DOptions): Promise<void> {

@@ -104,11 +104,23 @@ export interface PreviewBuildCtx {
   menu: PreviewMenuHandle;
 }
 
-/** 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） */
+/**
+ * 适配器返回的内容场景契约（对齐 Model3DHandleX）。
+ * 字段分层（P1#3 审计定论）：
+ * - 硬契约：仅 dispose——cleanupPreview 无条件遍历调用（_handles → handle.cleanup →
+ *   fullCleanup → content.dispose），缺失会 GPU 泄漏；6 格式适配器全实现。
+ * - 能力可选：其余全部可选（接口注释"便于纯静态渲染"是有意设计）——update 供动态
+ *   内容（动画/SpringBone/感知），静态体素（litematic/pack）不实现；resetCamera /
+ *   setRotationMode / setSpeed / showModelGroup 等控制面按格式能力实现。
+ * - 消费方一律 `?.` 特性探测（mount-preview-core L784 perFrame=content.update ?? null、
+ *   L891 resetCamera/screenshot 透传 PreviewHandle 后再 ?.），缺字段 = 功能降级而非崩溃。
+ * - 新增适配器：dispose 必须实现；其余按格式能力"有就实现、没有就不实现"，勿为凑
+ *   字段数补空实现（空 update 是噪音，不是契约完整）。
+ */
 export interface PreviewScene {
   /** 每帧驱动（VRM SpringBone / 动画等）；无则仅静态渲染 */
   update?(dt: number): void;
-  /** 释放内容层 GPU 资源（几何/材质/纹理/helper） */
+  /** 释放内容层 GPU 资源（几何/材质/纹理/helper）——硬契约，cleanup 无条件调用 */
   dispose(): void;
   resetCamera?(): void;
   setRotationMode?(orbit: boolean): void;
@@ -132,6 +144,14 @@ export interface PreviewScene {
 }
 
 export interface PreviewAdapter {
+  /**
+   * 适配器标识（P1#2 审计定论：非自由命名——是 rtype / preview-key 契约的镜像）：
+   * - 与 Go resource_types.json 的 rtype ID 或 variants preview key 对齐（"mmd"/"vrm"/
+   *   "fbx"/"ysm"/"litematic"/"resourcepack"/"mmd-scene" 均为既有契约字符串）
+   * - 消费方：mount3D 的 getCurrentRtype 回退、caps 预设表按它分派
+   *   （shadow/sky/light/env/fog/postprocessing 的 PRESET_BY_MODEL 类表；未知 id 落 default）
+   * - 新增格式勿发明新命名风格——直接沿用对应 rtype/preview key 值
+   */
   id: string;
   /** "shared"（默认）：核心创建 renderer/scene/controls 并驱循环；"self"：适配器自驱（如 ysm 单例），核心仅提供外壳 */
   mode?: "shared" | "self";

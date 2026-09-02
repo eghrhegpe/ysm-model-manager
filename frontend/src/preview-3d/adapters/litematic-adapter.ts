@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { t } from "../../core/i18n/t.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
-import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
@@ -455,4 +455,24 @@ export async function buildLitematicScene(
   }
 
   return mdLiBuildResult(ctx, meshSet, menuItems, sliceKey);
+}
+
+/** Litematic 适配器工厂 deps（视图壳注入 voxel 数据读取——ADR-072：适配器 0 backend import） */
+export interface LitematicAdapterDeps {
+  /** 体素数据读取（裸文件或容器内条目均可——视图按路径上下文构造 voxelCall 闭包） */
+  voxelCall: (path: string) => Promise<VoxelData | null>;
+  /** 容器选项（ADR-132：zip 蓝图/投影包多模型）；缺省 = 裸文件单模型 */
+  container?: LitematicBuildOpts;
+}
+
+/**
+ * ADR-161 §2.5 工厂：Litematic/蓝图 挂载主入口（make<Format>Adapter 命名章程，对齐 mmd/vrm/ysm/fbx）。
+ * voxelCall 以 deps 注入（视图层经 getApp 组装 RPC 闭包），adapters 层不反向依赖 views。
+ * 用法：`const adapter = makeLitematicAdapter({ voxelCall, container? }); mount3D(adapter, entryPath)`
+ */
+export function makeLitematicAdapter(deps: LitematicAdapterDeps): PreviewAdapter {
+  return {
+    id: "litematic",
+    build: (ctx, path) => buildLitematicScene(ctx, path, deps.voxelCall, deps.container),
+  };
 }

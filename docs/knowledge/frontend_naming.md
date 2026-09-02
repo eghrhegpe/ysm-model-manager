@@ -70,11 +70,27 @@ invariant_anchors:
 ## 对外 API / 入口
 
 - 本次扫描方法：按「动词名词化 / 占位名 / get 泛化 / 缩写前缀 / 单字母 / 动词家族」六类正则扫生产 TS（排除 test/vendor/test-utils），每类可复扫。
-- 已知黑话存量：见上文表格；清理后本条改为「扫描命令 + 零残留验证」。
+
+## 清理进度（2026-09 批次）
+
+**✅ 已清理（commit 694083d8 / a46636c3）**：
+- 内容适配器 build 返回值 `built`→`content`（测试层 mmd/vrm/fbx/litematic/mount 全清，`registeredItems(built)` 参数同步）；生产残留注释（camera-controls/pack-model-adapter/ysm-adapter）同步。
+- `litematic-adapter.ts`：参数 `si`→`sizeInfo`（24 处）、内部网格中间态 `built`→`meshSet`、类型 `MdLiBuiltMeshes`→`LitematicMeshSet`。
+- `fbx-parser.ts`：两遍构建节点缓存 `built`→`nodeObjects`（非内容层语义，独立定名）。
+- `perf-cli.ts`：不可读前缀 `dgPc` 删除（文件归属冗余）、段缩写展开 `Sb/Gf/Pl`→`singleBench/guiFlow/perfLog`、类型 `DgPc*`→`SingleBench*/GuiFlow*/PerfLog*/GenGuard`（段前缀有消歧价值故展开保留，`guiFlowParseEntries`/`perfLogParseEntries` 防撞）。
+- `mount-preview-core.test.ts`：测试桩 `makeBuilt`→`makeContent`、`built1/2`→`content1/2`、`builtA/B`→`contentA/B`、`unloadBuilt`→`unloadContent`。
+
+**🔲 待清理（存量，未排期）**：
+- `backend/nbt-parse.ts` 单字母业务量（w/h/l/b/n/v）。
+- `getCompound` 双份定义（nbt-parse.ts + voxel-parse.ts 各一份）合并。
+- 生命周期动词家族一义多词（全仓 1683 次）语义边界定义。
+- 动词名词化（parsed/loaded/saved/selected 当名词，268 处/55 文件）词表统一。
+
+**决策注记**：`mdLi*`/`MdLi*` 前缀**保留**——它是有领域语义的格式标识（Minecraft Litematic），且 preview_core 词表以 `make<Format>Adapter` 为格式入口锚。章程禁的是「不可读前缀」（`dgPcSb` 已清），不是「格式标识」。
 
 ## 与其他子系统关系
 
-- **ADR-161**：本卡是其「实施中扩大发现」的沉淀；ADR-161 的 built→content 只落地 mount-preview-core，适配器/测试层残留见本卡 §概览。
+- **ADR-161**：本卡是其「实施中扩大发现」的沉淀；ADR-161 的 built→content 原只落地 mount-preview-core，适配器/测试层残留已由本卡清理进度追踪（见 §清理进度）。
 - **preview_core.md**：渲染会话词汇章节 = ADR-161 词表 + 实施状态；built 残留的「双词并搜」提示见该卡。
 
 ## 不变量

@@ -48,12 +48,12 @@ auto_fields:
     - buildVrmBoneTree
     - buildVrmScene
     - buildYsmScene
-    - bytesToBase64
     - CameraControlBridge
     - cancelPendingEncodings
     - captureTextureName
     - cleanupPreview
     - clearSceneCaps
+    - closeUnusedDecodedBitmaps
     - collectAllWebEntries
     - collectMenuGraph
     - CollectMenuGraphOpts
@@ -68,6 +68,7 @@ auto_fields:
     - DEFAULT_GROUND_PARAMS
     - DEFAULT_SKY_PARAMS
     - DISPOSE_TEX_KEYS
+    - disposeTextureDecoder
     - encodeAndCacheTexture
     - encodeToKTX2Basis
     - Error
@@ -362,7 +363,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 ## 渲染会话词汇（ADR-161 章程）
 
-> **状态**：🔄 主战场已实施 / 适配器层残留（2026-09 扩大扫描修正）。`mount-preview-core.ts` 内部 `built`→`content`/`allContent`/`getContent` 已落地（38 处），`unloadRole`→`unloadModel`（unload-role.ts→unload-model.ts）、loader 出口锚定 `Model3DSpec` 已落地；**但 `built` 黑话已扩散到内容适配器层与测试层，尚未清理**——`litematic-adapter.ts`（`built: MdLiBuiltMeshes`/`const built = mdLiBuildBlockMesh(...)`）、`fbx-parser.ts`、`pack-model-adapter.ts` 注释，及 mmd/vrm/fbx/litematic 全部适配器测试的 `const built = await buildXxxScene(...)`（250+ 处）。ADR-161 §2.3 划界过窄：只治了 mount-preview-core 内部，适配器 build 返回值仍叫 `built`。**检索 built 相关请双词并搜，清理范围见 [frontend_naming](./frontend_naming.md)（前端命名章程）**。代码内「角色」已不再指代会话实例。
+> **状态**：✅ 已实施 + 扩大范围清理（2026-09）。`mount-preview-core.ts` 内部 `built`→`content`/`allContent`/`getContent` 已落地，`unloadRole`→`unloadModel`（unload-role.ts→unload-model.ts）、loader 出口锚定 `Model3DSpec` 已落地；**2026-09 扩大扫描发现 `built` 黑话已扩散到内容适配器层与测试层并已清理**（commit 694083d8：mmd/vrm/fbx/litematic/mount 测试层 built→content、litematic si→sizeInfo/built→meshSet、fbx-parser built→nodeObjects、perf-cli dgPc 前缀展开）。词表即现状，检索按新词；清理详情与待办存量见 [frontend_naming](./frontend_naming.md)（前端命名章程）。代码内「角色」已不再指代会话实例。
 
 ### 四级尺度词（渲染会话域唯一口径）
 

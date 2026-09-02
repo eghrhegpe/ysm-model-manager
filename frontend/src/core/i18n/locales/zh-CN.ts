@@ -1558,6 +1558,6 @@ export const zhCN: Record<string, string> = {
 
   // ── 网页版社区（web-community.ts 创作者/工坊 JSON 合并）──
   "webCommunity.importJsonParseFailed": "导入 JSON 解析失败: {err}",
-  "webCommunity.importTooFew": "导入数据异常: 仅 {count} 条 (期望 >=20)",
+  "webCommunity.importTooFew": "导入数据异常: 仅 {count} 条 (期望 >={min})",
   "webCommunity.mergeTooFew": "合并后数据异常: {count} 条",
 };

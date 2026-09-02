@@ -295,8 +295,9 @@ export const webCommunityBindings = {
     } catch (e) {
       return Promise.reject(new Error(t("webCommunity.importJsonParseFailed", { err: safeErrorMessage(e) })));
     }
-    if (!Array.isArray(imported) || imported.length < 20) {
-      return Promise.reject(new Error(t("webCommunity.importTooFew", { count: imported.length })));
+    const MIN_IMPORT = 20;
+    if (!Array.isArray(imported) || imported.length < MIN_IMPORT) {
+      return Promise.reject(new Error(t("webCommunity.importTooFew", { count: imported.length, min: MIN_IMPORT })));
     }
     const existing = loadWebCreators();
     const existMap = new Map<string, number>();

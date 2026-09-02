@@ -1555,6 +1555,6 @@ export const ja: Record<string, string> = {
 
   // ── Web コミュニティ（web-community.ts クリエイター/ワークショップ JSON マージ）──
   "webCommunity.importJsonParseFailed": "JSON のインポート解析に失敗しました：{err}",
-  "webCommunity.importTooFew": "インポートデータ異常：{count} 件のみ（期待値 >=20）",
+  "webCommunity.importTooFew": "インポートデータ異常：{count} 件のみ（期待値 >={min}）",
   "webCommunity.mergeTooFew": "マージ結果異常：{count} 件",
 };

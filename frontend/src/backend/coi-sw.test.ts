@@ -114,6 +114,14 @@ describe("COI Service Worker（ADR-079 M1）", () => {
     expect(storageMock.safeSet).toHaveBeenCalledWith("ysm:coi-reload", reloadRec(1700000000000, 1));
   });
 
+  it("损坏 JSON → 视为无记录，允许 reload（n=1）", async () => {
+    storageMock.safeGet.mockReturnValue("not-json");
+    registerCoiServiceWorker();
+    await Promise.resolve();
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+    expect(storageMock.safeSet).toHaveBeenCalledWith("ysm:coi-reload", reloadRec(1700000000000, 1));
+  });
+
   it("无 serviceWorker 支持 → 静默 no-op（渐进增强）", () => {
     vi.stubGlobal("navigator", {});
     expect(() => registerCoiServiceWorker()).not.toThrow();

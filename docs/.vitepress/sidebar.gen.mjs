@@ -722,6 +722,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-162：知识卡符号锚点去行号（行号减噪）",
+        "link": "/adr/ADR-162-knowledge-card-symbol-anchor-strip-linenum"
+      },
+      {
+        "text": "ADR-161：渲染会话词汇章程:spec 契约单一镜像 + 尺度词消歧(组件/模型/内容层/条目)+ built 黑话退役",
+        "link": "/adr/ADR-161-render-vocabulary-charter"
+      },
+      {
         "text": "ADR-160：子实体统一为组件视图:GetModel3DSpec spec.models 唯一源 + 详情统计 = spec 投影(maid L0 清单退役)",
         "link": "/adr/ADR-160-subentity-component-spec-projection"
       },
@@ -1714,6 +1722,10 @@ export const autoSidebar = [
           {
             "text": "3D 预览悬浮 FAB 控制层",
             "link": "/knowledge/dom-fab"
+          },
+          {
+            "text": "前端命名章程（黑话治理）",
+            "link": "/knowledge/frontend_naming"
           },
           {
             "text": "前端 TS 整包审计",

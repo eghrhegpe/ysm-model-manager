@@ -115,7 +115,14 @@ function mdLiIsValidPos(p: number[]): boolean {
 
 /** blockState→texture atlas 映射（当前：group.color 兜底；命名预留后续 atlas 扩展） */
 function mdLiResolveBlockTexture(groupColor: string | undefined): THREE.MeshLambertMaterial {
-  return new THREE.MeshLambertMaterial({ color: groupColor || DEFAULT_VOXEL_COLOR });
+  let color = groupColor || DEFAULT_VOXEL_COLOR;
+  try {
+    new THREE.Color(color);
+  } catch {
+    // 非法 CSS 颜色（如 "#GGG" / 空串）→ 兜底色，防静默渲染黑色
+    color = DEFAULT_VOXEL_COLOR;
+  }
+  return new THREE.MeshLambertMaterial({ color });
 }
 
 /** 三维 voxel 核心：按 group→chunk 分块，每 chunk 独立 InstancedMesh（GPU 友好） */
@@ -380,6 +387,9 @@ function mdLiBuildResult(
       unregisterSchema(sliceKey); // per-scene key：只注销自己的，多模型并存不误伤（5329a347 review P2）
       // 切片模式随 shell 闭包消亡——不动全局状态（P5 复盘：原 resetLitematicSliceMode
       // 重置全局单值，双场景下先关闭的会把后者的切片模式误重置回 all）
+      // 先从 scene 移除，再 dispose GPU 资源（防 scene graph 残留导致 GC 无法回收）
+      ctx.scene?.remove(built.modelGroup);
+      ctx.scene?.remove(built.grid);
       unregisterModelRoot(built.modelGroup);
       built.instancedMeshes.forEach((m) => safeDispose(m));
       built.materials.forEach((m) => safeDispose(m));
@@ -412,7 +422,14 @@ export async function buildLitematicScene(
   const tStart = performance.now();
   mdLiShowLoading(ctx);
 
-  const loadRes = await mdLiLoadAndParseData(ctx, path, voxelCall);
+  let loadRes: MdLiLoadResult;
+  try {
+    loadRes = await mdLiLoadAndParseData(ctx, path, voxelCall);
+  } catch (e) {
+    ctx.loadingEl.remove();
+    console.error("[litematic] voxelCall 失败:", e);
+    return { dispose() {} } as PreviewScene;
+  }
   if (!loadRes.ok) return loadRes.earlyResult;
   const { data } = loadRes;
 

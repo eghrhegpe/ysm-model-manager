@@ -1792,7 +1792,7 @@ export const autoSidebar = [
             "link": "/knowledge/ground_surface_spec"
           },
           {
-            "text": "ground-cap-gcBuildMaterialGroup-133",
+            "text": "ground-cap 材质菜单工厂（material-group factories）",
             "link": "/knowledge/ground-cap-materialgroup-factories"
           },
           {

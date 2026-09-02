@@ -1,6 +1,6 @@
 ---
-kind: ground-cap-gcbuildmaterialgroup-133
-name: ground-cap-gcBuildMaterialGroup-133
+kind: ground-cap-materialgroup-factories
+name: ground-cap 材质菜单工厂（material-group factories）
 tier: leaf
 category: rendering
 source_files:
@@ -22,7 +22,7 @@ use_when:
 status: active
 ---
 
-# ground-cap-gcBuildMaterialGroup-133
+# ground-cap 材质菜单工厂（material-group factories）
 
 ## 概览
 

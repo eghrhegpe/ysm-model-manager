@@ -36,7 +36,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-153](./ADR-153-stats-worker-mt-lazy-import.md) | stats.worker mt WASM 条件加载——静态 import 改动态 import | ✅ 已采纳 |
+| [ADR-153](./ADR-153-stats-worker-mt-lazy-import.md) | stats.worker WASM 资产条件加载——base / mt 双向动态 import | ✅ 已采纳 |
 | [ADR-152](./ADR-152-gen-stage-concurrency-root.md) | gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收） | ✅ 已采纳 |
 | [ADR-151](./ADR-151-commit-temp-index-concurrency.md) | commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit | ✅ 已采纳 |
 | [ADR-150](./ADR-150-pre-commit-git-add-u-docs-p2-2.md) | pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固) | ✅ 已采纳 |
@@ -194,7 +194,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-153 | stats.worker mt WASM 条件加载——静态 import 改动态 import | ✅ 已采纳 | 2026-09-02 |
+| ADR-153 | stats.worker WASM 资产条件加载——base / mt 双向动态 import | ✅ 已采纳 | 2026-09-02 |
 | ADR-152 | gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收） | ✅ 已采纳 | 2026-09-01 |
 | ADR-151 | commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit | ✅ 已采纳 | 2026-09-01 |
 | ADR-150 | pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固) | ✅ 已采纳 | 2026-09-01 |

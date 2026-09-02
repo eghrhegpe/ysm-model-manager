@@ -722,7 +722,7 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "ADR-153：stats.worker mt WASM 条件加载——静态 import 改动态 import",
+        "text": "ADR-153：stats.worker WASM 资产条件加载——base / mt 双向动态 import",
         "link": "/adr/ADR-153-stats-worker-mt-lazy-import"
       },
       {

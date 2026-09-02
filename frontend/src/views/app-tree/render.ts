@@ -333,15 +333,54 @@ function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): voi
     "</div>";
 }
 
+// ——— 虚拟滚动实例状态（原 4 个 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/
+// _vsResizeObserver 收敛于此：WeakMap 无类型污染 + 元素 GC 自动回收，杜绝全局接口污染）———
+
+/** 单容器虚拟滚动实例状态 */
+interface VsState {
+  cleanup: (() => void) | null;
+  rows: TreeRow[];
+  mode: RenderMode | null;
+  resizeObserver: ResizeObserver | null;
+}
+
+const vsStates = new WeakMap<HTMLElement, VsState>();
+
+/** 取容器虚拟滚动状态（无则初始化空态；渲染/清理共用同一实例） */
+function vsOf(container: HTMLElement): VsState {
+  let s = vsStates.get(container);
+  if (!s) {
+    s = { cleanup: null, rows: [], mode: null, resizeObserver: null };
+    vsStates.set(container, s);
+  }
+  return s;
+}
+
+/** 读取容器当前虚拟滚动行数据（events.ts / toolbar-events.ts 消费；替代 container._vsRows 伪字段） */
+export function getVsRows(container: HTMLElement): TreeRow[] {
+  return vsOf(container).rows;
+}
+
+/** 写入容器虚拟滚动行数据（renderTree 内部用；测试注入模拟渲染结果亦走此入口） */
+export function setVsRows(container: HTMLElement, rows: TreeRow[]): void {
+  vsOf(container).rows = rows;
+}
+
+/** 读取容器当前渲染模式（index.ts 键盘导航行高计算用；替代 container._vsMode 伪字段） */
+export function getVsMode(container: HTMLElement): RenderMode | null {
+  return vsOf(container).mode;
+}
+
 // ——— 入口：每次数据变化（搜索/排序/展开/折叠）调用 ———
 /** 断开虚拟滚动相关监听 */
 export function cleanupVirtualScroll(container: HTMLElement): void {
-  container._vsCleanup?.();
-  container._vsCleanup = null;
-  container._vsResizeObserver?.disconnect();
-  container._vsResizeObserver = null;
-  container._vsRows = [];
-  container._vsMode = null;
+  const s = vsOf(container);
+  s.cleanup?.();
+  s.cleanup = null;
+  s.resizeObserver?.disconnect();
+  s.resizeObserver = null;
+  s.rows = [];
+  s.mode = null;
 }
 
 export function renderTree(
@@ -365,27 +404,30 @@ export function renderTree(
     cleanupVirtualScroll(container);
     return;
   }
-  container._vsRows = rows;
-  container._vsMode = mode;
+  const st = vsOf(container);
+  st.rows = rows;
+  st.mode = mode;
   const rowH = mode === "list" ? ROW_H_LIST : ROW_H_GRID;
   renderSlice(container, rows, rowH);
 
   // 首次渲染容器可能还没布局 → 等 layout 后重新计算可见范围
   if (container.clientHeight === 0) {
     requestAnimationFrame(() => {
-      if (container._vsRows && container._vsMode) {
-        const m = container._vsMode;
+      const s2 = vsOf(container);
+      if (s2.rows && s2.mode) {
+        const m = s2.mode;
         const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
-        renderSlice(container, container._vsRows, rh);
+        renderSlice(container, s2.rows, rh);
       }
     });
   }
 
   // 安装滚动同步（只装一次）
-  if (!container._vsCleanup) {
-    container._vsCleanup = installScrollSync(container, () => {
-      const r = container._vsRows;
-      const m = container._vsMode;
+  if (!st.cleanup) {
+    st.cleanup = installScrollSync(container, () => {
+      const s2 = vsOf(container);
+      const r = s2.rows;
+      const m = s2.mode;
       if (r && r.length) {
         const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
         renderSlice(container, r, rh);
@@ -394,16 +436,17 @@ export function renderTree(
   }
 
   // 容器尺寸变化时重新计算可见范围（侧边栏折叠/窗口 resize）
-  if (!container._vsResizeObserver) {
-    container._vsResizeObserver = new ResizeObserver(() => {
-      const r = container._vsRows;
-      const m = container._vsMode;
+  if (!st.resizeObserver) {
+    st.resizeObserver = new ResizeObserver(() => {
+      const s2 = vsOf(container);
+      const r = s2.rows;
+      const m = s2.mode;
       if (r && r.length) {
         const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
         renderSlice(container, r, rh);
       }
     });
-    container._vsResizeObserver.observe(container);
+    st.resizeObserver.observe(container);
   }
 }
 

@@ -21,7 +21,7 @@ export { appTreeStyle };
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
-import { renderTree, updateStat, getRenderMode, setRenderMode, cleanupVirtualScroll, type RenderMode, type TreeRow, ROW_H_GRID, ROW_H_LIST } from "./render.ts";
+import { renderTree, updateStat, getRenderMode, setRenderMode, cleanupVirtualScroll, getVsRows, getVsMode, type RenderMode, type TreeRow, ROW_H_GRID, ROW_H_LIST } from "./render.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
 import { get } from "../../services/registry.ts";
@@ -46,25 +46,9 @@ import { bindTreeDnD } from "../../features/import-dnd.ts";
 
 
 
-// —— 全局扩展：虚拟滚动容器属性 ——
-declare global {
-  interface ShadowRoot {
-    /** 作者列表缓存（root 上，供外部读取） */
-    _treeAuthors?: Array<AuthorInfo | string>;
-  }
-  interface HTMLElement {
-    /** 虚拟滚动清理函数（render/events 共用） */
-    _vsCleanup?: (() => void) | null;
-    /** 虚拟滚动行缓存 */
-    _vsRows?: TreeRow[];
-    /** 当前渲染模式 */
-    _vsMode?: RenderMode | null;
-    /** 尺寸变化观察器 */
-    _vsResizeObserver?: ResizeObserver | null;
-    /** 作者列表缓存（root 上，供外部读取） */
-    _treeAuthors?: AuthorInfo[];
-  }
-}
+// —— 全局扩展（已随 WeakMap 改造移除）——
+// 原 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/_vsResizeObserver 已收敛至
+// render.ts vsStates WeakMap（getVsRows/getVsMode 访问）；_treeAuthors 为死字段（无读取方）随删。
 
 export class AppTree extends WebComponentBase {
   _root: ShadowRoot;
@@ -264,11 +248,8 @@ export class AppTree extends WebComponentBase {
 
   _renderTree(): void {
     const c = this._root.getElementById("tree");
-    // 清理旧的虚拟滚动监听
-    if (c && c._vsCleanup) {
-      c._vsCleanup();
-      c._vsCleanup = null;
-    }
+    // 清理旧的虚拟滚动监听（cleanupVirtualScroll：断开 cleanup/resizeObserver + 复位状态）
+    if (c) cleanupVirtualScroll(c);
     let filtered: TreeEntry[] = Array.isArray(this._entries) ? this._entries : [];
     // [DBG] 诊断：_renderTree 入参（entries 数 / filterPaths 大小）
     dbg(
@@ -299,8 +280,7 @@ export class AppTree extends WebComponentBase {
       repoBtn.textContent = this._filesRoot
         ? `📁 ${this._filesRoot}`
         : t("tree.repoNotSet");
-    // 存到 root 上供需要时访问
-    this._root._treeAuthors = this._authors;
+    // 注意：_authors 仅作组件字段保留（曾写 _root._treeAuthors 伪字段，死写无读取方已删）
   }
 
   // ========== 键盘快捷键 ==========
@@ -381,7 +361,7 @@ export class AppTree extends WebComponentBase {
     ) return;
     const container = this._root.getElementById("tree");
     if (!container) return;
-    const fileRows = (container._vsRows || []).filter(r => r.type === "file");
+    const fileRows = getVsRows(container).filter(r => r.type === "file");
     if (!fileRows.length) return;
     e.preventDefault();
 
@@ -410,10 +390,10 @@ export class AppTree extends WebComponentBase {
     bus.emit("model:select", { path: nextKey, rtype: this._rootAttr || RESOURCE_TYPES.YSM });
     rememberModelPath(nextKey);
 
-    const allRows = container._vsRows || [];
+    const allRows = getVsRows(container);
     const rowIdx = allRows.findIndex(r => r.key === nextKey);
     if (rowIdx >= 0) {
-      const rowH = container._vsMode === "list" ? ROW_H_LIST : ROW_H_GRID;
+      const rowH = getVsMode(container) === "list" ? ROW_H_LIST : ROW_H_GRID;
       const targetScroll = rowIdx * rowH;
       if (targetScroll < container.scrollTop || targetScroll + rowH > container.scrollTop + container.clientHeight) {
         container.scrollTop = targetScroll;

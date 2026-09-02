@@ -4,6 +4,7 @@ import { t } from "../../core/i18n/t.ts";
 import { bus } from "../../bus.ts";
 import { selectState, toggleSelect, selectSingle } from "./data.ts";
 import type { AppTree } from "./index.ts";
+import { getVsRows } from "./render.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
 import type { TreeEntry } from "./loader.ts";
 import { getApp } from "../../backend/app.ts";
@@ -25,7 +26,7 @@ interface AtTeCtx {
 
 // ===== 闭包升格：辅助函数（atTe* 前缀） =====
 function atTeFindRow(container: HTMLElement, path: string): HTMLElement | null {
-  const rows = container._vsRows || [];
+  const rows = getVsRows(container);
   const idx = rows.findIndex((r) => r.key === path);
   if (idx === -1) return null;
   const selector = `[data-fullpath="${CSS.escape(path)}"], [data-path="${CSS.escape(path)}"]`;
@@ -220,7 +221,7 @@ function atTeClickRowFile(ctx: AtTeCtx, e: MouseEvent, fl: HTMLElement): boolean
     e.preventDefault();
     document.getSelection()?.removeAllRanges();
     if (!selectState.lastKey) return true;
-    const allPaths = (container._vsRows || [])
+    const allPaths = getVsRows(container)
       .filter((r) => r.type === "file")
       .map((r) => r.key);
     const startIdx = allPaths.indexOf(selectState.lastKey);
@@ -309,7 +310,7 @@ function atTeBindContextMenu(ctx: AtTeCtx): void {
       const fullPath = fl.dataset.fullpath || fl.dataset.path;
       const nameEl = fl.querySelector(".nm");
       const name = nameEl?.textContent?.replace(/^\S+\s/, "") || "";
-      const selectedPaths = (container._vsRows || [])
+      const selectedPaths = getVsRows(container)
         .filter((r) => r.type === "file" && selectState.keys.has(r.key))
         .map((r) => r.key);
       if (

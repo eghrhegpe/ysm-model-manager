@@ -10,6 +10,7 @@ import { selectState, selectSingle } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
+import { setVsRows } from "./render.ts";
 
 const {
   getAppMock,
@@ -89,8 +90,7 @@ interface Harness {
 
 function makeHarness(): Harness {
   const container = document.createElement("div");
-  (container as unknown as { _vsRows: Array<{ key: string; type: string }> })._vsRows =
-    [];
+  setVsRows(container, []);
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `<div id="ftr-stat"></div>`;
@@ -243,13 +243,14 @@ describe("click 行分派（文件选中）", () => {
     for (const p of ["/repo/a.ysm", "/repo/b.ysm", "/repo/c.ysm"]) {
       h.container.appendChild(fileRow(p, p.split("/").pop() || p));
     }
-    (
-      h.container as unknown as { _vsRows: Array<{ key: string; type: string }> }
-    )._vsRows = [
-      { key: "/repo/a.ysm", type: "file" },
-      { key: "/repo/b.ysm", type: "file" },
-      { key: "/repo/c.ysm", type: "file" },
-    ];
+    setVsRows(
+      h.container,
+      [
+        { key: "/repo/a.ysm", type: "file" },
+        { key: "/repo/b.ysm", type: "file" },
+        { key: "/repo/c.ysm", type: "file" },
+      ] as unknown as Parameters<typeof setVsRows>[1],
+    );
     bindTreeEvents(h.container, h.vm);
     selectSingle("/repo/a.ysm"); // 锚点
     const rows = h.container.querySelectorAll(".fl");
@@ -539,9 +540,7 @@ describe("dblclick 重命名", () => {
   it("双击行 → .nm 被 input.rename-inp 替换，value 为文件名并聚焦", () => {
     const h = makeHarness();
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
-    (
-      h.container as unknown as { _vsRows: Array<{ key: string; type: string }> }
-    )._vsRows = [{ key: "/repo/a.ysm", type: "file" }];
+    setVsRows(h.container, [{ key: "/repo/a.ysm", type: "file" }] as unknown as Parameters<typeof setVsRows>[1]);
     bindTreeEvents(h.container, h.vm);
     h.container
       .querySelector(".nm")!
@@ -555,9 +554,7 @@ describe("dblclick 重命名", () => {
   it("Enter → preventDefault + blur；focusout 后续走保存链（RenameFile → _load/_renderTree/stats:refresh）", async () => {
     const h = makeHarness();
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
-    (
-      h.container as unknown as { _vsRows: Array<{ key: string; type: string }> }
-    )._vsRows = [{ key: "/repo/a.ysm", type: "file" }];
+    setVsRows(h.container, [{ key: "/repo/a.ysm", type: "file" }] as unknown as Parameters<typeof setVsRows>[1]);
     bindTreeEvents(h.container, h.vm);
     h.container
       .querySelector(".nm")!
@@ -693,12 +690,10 @@ describe("contextmenu 右键菜单", () => {
     for (const p of ["/repo/a.ysm", "/repo/b.ysm"]) {
       h.container.appendChild(fileRow(p, p.split("/").pop() || p));
     }
-    (
-      h.container as unknown as { _vsRows: Array<{ key: string; type: string }> }
-    )._vsRows = [
+    setVsRows(h.container, [
       { key: "/repo/a.ysm", type: "file" },
       { key: "/repo/b.ysm", type: "file" },
-    ];
+    ] as unknown as Parameters<typeof setVsRows>[1]);
     selectState.keys.add("/repo/a.ysm");
     selectState.keys.add("/repo/b.ysm");
     bindTreeEvents(h.container, h.vm);

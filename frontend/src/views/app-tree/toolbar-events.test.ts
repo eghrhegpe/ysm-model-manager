@@ -17,6 +17,7 @@ const {
   GenerateRepoIndexMock,
   modalAdvFilterMock,
   setRenderModeMock,
+  getVsRowsMock,
   getAndroidBridgeMock,
   isViewerModeMock,
   resolveAndroidRepoDirMock,
@@ -31,6 +32,8 @@ const {
   GenerateRepoIndexMock: vi.fn(),
   modalAdvFilterMock: vi.fn(),
   setRenderModeMock: vi.fn(),
+  // 默认空行（全选/反选注入行数据经 mockReturnValue）；签名对齐 render.ts getVsRows
+  getVsRowsMock: vi.fn((_el: HTMLElement) => [] as Array<{ id: number; type: "file" | "folder"; key: string; depth: number; html: string }>),
   getAndroidBridgeMock: vi.fn(),
   isViewerModeMock: vi.fn().mockReturnValue(false), // 默认桌面（非查看器模式）
   resolveAndroidRepoDirMock: vi.fn(),
@@ -56,6 +59,7 @@ vi.mock("../../utils/dom/dialogs/adv-filter.ts", () => ({
 vi.mock("./render.ts", () => ({
   setRenderMode: setRenderModeMock,
   setRenderModeToRoot: vi.fn(),
+  getVsRows: getVsRowsMock,
 }));
 
 vi.mock("../../utils/debug/debug.ts", () => ({
@@ -418,15 +422,12 @@ describe("bindToolbarEvents — 全选/反选", () => {
   it("首次点击 → 全选可见文件行", () => {
     const { root, get, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    // #tree 上的 _vsRows（模拟渲染结果）
-    const tree = get("tree") as HTMLElement & {
-      _vsRows?: Array<{ id: number; type: "file" | "folder"; key: string; depth: number; html: string }>;
-    };
-    tree._vsRows = [
+    // getVsRows mock 注入（模拟渲染结果；WeakMap 版访问器经模块 mock 提供）
+    getVsRowsMock.mockReturnValue([
       { id: 0, type: "file", key: "/r/a.ysm", depth: 0, html: "" },
       { id: 1, type: "file", key: "/r/b.ysm", depth: 0, html: "" },
       { id: 2, type: "folder", key: "/r/dir", depth: 0, html: "" },
-    ];
+    ]);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-sel-all")!.click();
@@ -440,12 +441,9 @@ describe("bindToolbarEvents — 全选/反选", () => {
   });
 
   it("再次点击 → 全部反选", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    const tree = get("tree") as HTMLElement & {
-      _vsRows?: Array<{ id: number; type: "file" | "folder"; key: string; depth: number; html: string }>;
-    };
-    tree._vsRows = [{ id: 0, type: "file", key: "/r/a.ysm", depth: 0, html: "" }];
+    getVsRowsMock.mockReturnValue([{ id: 0, type: "file", key: "/r/a.ysm", depth: 0, html: "" }]);
     selectState.keys.add("/r/a.ysm");
     bindToolbarEvents(root, vm as unknown as AppTree);
 

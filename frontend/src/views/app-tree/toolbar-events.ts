@@ -11,7 +11,7 @@ import { selectState } from "./data.ts";
 import { modalAdvFilter, type AdvFilterValue } from "../../utils/dom/dialogs/adv-filter.ts";
 import { updateSelectCount } from "./events.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { setRenderMode, type RenderMode } from "./render.ts";
+import { setRenderMode, getVsRows, type RenderMode } from "./render.ts";
 import { getApp } from "../../backend/app.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { getAndroidBridge, isViewerMode } from "../../utils/dom/android-bridge.ts";
@@ -96,7 +96,8 @@ function atTlBindSelectAll(ctx: AtTlCtx): void {
   const selAllBtn = $("sel-all");
   if (!selAllBtn) return;
   selAllBtn.addEventListener("click", () => {
-    const rows = vm._root.getElementById("tree")?._vsRows || [];
+    const treeEl = vm._root.getElementById("tree");
+    const rows = treeEl ? getVsRows(treeEl) : [];
     const visible = rows.filter((r) => r.type === "file");
     const keys = visible.map((r) => r.key).filter(Boolean);
     const allSelected = keys.every((k) => selectState.keys.has(k));

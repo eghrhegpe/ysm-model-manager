@@ -86,6 +86,16 @@ export interface StageInput {
 export function computeStageList(input: StageInput): string[] {
   const { dirtyEntries, snapChanged, snapBeforePaths } = input;
   const before = snapBeforePaths ?? new Set<string>();
+  // snapBeforePaths 缺省保护：before 为空 Set 时，
+  // L101 `if (!before.has(p))` 恒 true → 所有 ?? 都 stage（fail-open）。
+  // 调用方必须传入 snapBeforePaths，否则按 fail-closed 返回空清单。
+  if (!snapBeforePaths && snapChanged.some((raw) => {
+    const d = dirtyMap.get(normPath(raw));
+    return d && d.x === '?' && d.y === '?';
+  })) {
+    console.error('[gen-stage] snapBeforePaths 缺省且有 ?? 文件，fail-closed 输出空清单');
+    return [];
+  }
   // dirty 路径防御性归一化（parsePorcelain 已归一，但调用方可能直传反斜杠路径）
   const dirtyMap = new Map<string, PorcelainEntry>();
   for (const d of dirtyEntries) dirtyMap.set(normPath(d.path), d);
@@ -172,7 +182,13 @@ if (isCli) {
       'git', ['-c', 'core.quotepath=false', 'status', '--porcelain'],
       { cwd: process.cwd(), encoding: 'utf8' },
     ) as string;
-  } catch { porcelain = ''; }
+  } catch (e) {
+    // fail-closed：git status 失败时输出空 stage 清单，
+    // 让 pre-commit 回退到保守策略（不 stage 任何生成物）。
+    // 旧实现 porcelain='' → dirty 空 → 全量 stage（fail-open，并发隔离失效）
+    console.error(`[gen-stage] git status 失败，fail-closed 输出空清单: ${(e as Error).message}`);
+    return [];
+  }
   const dirty = parsePorcelain(porcelain);
   const stage = computeStageList({
     dirtyEntries: dirty,

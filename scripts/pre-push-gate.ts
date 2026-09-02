@@ -324,6 +324,7 @@ async function main() {
         note,
         // warns_list 摘要优先（FAIL 可读性）；否则回退原始输出尾部
         tail: !ok ? (tail || r.out.trim().split('\n').slice(-12).join('\n')) : '',
+        blockPolicy: typeof entry === 'object' ? entry.blockPolicy : undefined,
       });
     }
   };

@@ -587,14 +587,14 @@ describe("生命周期事件顺序", () => {
 // ──────────────────────────────────────────────────────────────────────
 describe("部分配置缺失时的降级行为", () => {
   it("adapter.mode='self'：核心不创建 scene/camera/renderer，build ctx 内均为 undefined", async () => {
-    const builtScene: any = { dispose: vi.fn(), update: vi.fn() };
+    const contentScene: any = { dispose: vi.fn(), update: vi.fn() };
     let capturedCtx: any = null;
     const adapter = {
       id: "self-adapter",
       mode: "self" as const,
       build: async (ctx: any, _path: string) => {
         capturedCtx = ctx;
-        return builtScene;
+        return contentScene;
       },
       onClose: vi.fn(),
     };

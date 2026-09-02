@@ -99,6 +99,7 @@ auto_fields:
     - clearLoadTraces
     - clearModelRoots
     - clearSceneCaps
+    - closeUnusedDecodedBitmaps
     - collectBlobUrls
     - collectMenuGraph
     - CollectMenuGraphOpts
@@ -153,6 +154,7 @@ auto_fields:
     - disposeEnvSubscriptions
     - disposeMaterial
     - disposeSceneMeshes
+    - disposeTextureDecoder
     - drawEnvEquirect
     - encodeAndCacheTexture
     - encodeToKTX2Basis
@@ -755,7 +757,7 @@ export function computeBoneLocalPos(
 | 模型切换 | `switch-preview.ts` `switchToSession` | 复用外壳重建内容层（ADR-066 §5.6）；对外暴露为 `switchPreview`（mount-preview-core.ts） |
 | 多模型同框 | `switchPreview(path, { keepInScene: true })` | 旧内容不移除，新模型 add 进同一 scene（上限 `MAX_MODELS=8`，超量 toast 拒绝） |
 | 多蓝图同框（litematic） | `appendLitematicPreview(path)`（`litematic-3d.ts`） | 与 `appendMmdPreview`/`appendVrmPreview` 对称：经 `openModel3DFullscreen(path, { cooperate: true })` → `switchPreview({ keepInScene: true })` 收口；litematic 会话内点菜单 ➕（`preview-menu/core.ts` 行尾「➕ 追加」按钮，**任何非当前候选无条件显示，与类型无关**）亦可触发；各蓝图独立 entry + 各自 dispose，旧内容不误清（2026-08-23 Phase B-1 收口） |
-| 场景注册表 | `scene-registry.ts` `sceneRegistry` | 每模型 `roots`/`visible`/`built`/`boneMaps`/`menuItems` 元数据；相机多包围盒累加（`fitCameraToRoots`）、拾取归属、上限计数单一事实来源。**`built.menuItems` 是角色详情 sink**（2026-08-22 收口）：角色详情 `roleDetailView` 按 `entry.menuItems` 中 `kind==="panel" && dockGroup==="model"` 过滤渲染该实体的专属工具；适配器须**同时在 `build()` 返回值里带 `menuItems`**（如 ysm-adapter 既 `ctx.menu.setAdapterItems` 喂 dock 历史通道、又返回值带 `menuItems` 喂角色详情），否则注册进 `sceneRegistry` 的 entry 详情为空。litematic 蓝图切片即此：原仅经 `ctx.menu.setAdapterItems(sliceItems)`（dock 平铺通道），现改为 `buildLitematicScene` 返回值 `menuItems: sliceItems`，使其经角色详情 sink 显示与卸载（commit e8d6f5aa）。dock 模型组（🧍）自 2026-08-22 起恒定直达 roles 面板，不再平铺 model 组项 |
+| 场景注册表 | `scene-registry.ts` `sceneRegistry` | 每模型 `roots`/`visible`/`content`/`boneMaps`/`menuItems` 元数据；相机多包围盒累加（`fitCameraToRoots`）、拾取归属、上限计数单一事实来源。**`content.menuItems` 是角色详情 sink**（2026-08-22 收口）：角色详情 `roleDetailView` 按 `entry.menuItems` 中 `kind==="panel" && dockGroup==="model"` 过滤渲染该实体的专属工具；适配器须**同时在 `build()` 返回值里带 `menuItems`**（如 ysm-adapter 既 `ctx.menu.setAdapterItems` 喂 dock 历史通道、又返回值带 `menuItems` 喂角色详情），否则注册进 `sceneRegistry` 的 entry 详情为空。litematic 蓝图切片即此：原仅经 `ctx.menu.setAdapterItems(sliceItems)`（dock 平铺通道），现改为 `buildLitematicScene` 返回值 `menuItems: sliceItems`，使其经角色详情 sink 显示与卸载（commit e8d6f5aa）。dock 模型组（🧍）自 2026-08-22 起恒定直达 roles 面板，不再平铺 model 组项 |
 | 拾取 dispatch | 统一拾取器（仅 `registry.count() >= 2` 激活） | 射线命中 → `pickModelByObject` 沿父链反查归属 → `setActive` 切活跃模型 + 换菜单（ADR-093 T5） |
 
 **历史**：ADR-052 的 RenderSession 对象化（2026-08-11）曾为实现「多实例隔离」落地，但 UI 从未出现多面板并存场景——生产无调用方，render-session.ts 470 行随 ADR-052 P2 收尾删除；其「实例字段封装、显式 dispose」思想由 ADR-066 统一核心继承。

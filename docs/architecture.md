@@ -540,7 +540,7 @@ mount3D(adapter, path, opts?)
 
 同一 scene 内叠加多个模型（上限 `MAX_MODELS=8`）：
 
-- **场景注册表** `scene-registry.ts`：每模型存 `roots`/`visible`/`built`/`boneMaps`/`menuItems` 元数据
+- **场景注册表** `scene-registry.ts`：每模型存 `roots`/`visible`/`content`/`boneMaps`/`menuItems` 元数据
 - **相机累加** `fitCameraToRoots(registry.visibleRoots(), ...)`：只框可见注册模型
 - **拾取 dispatch**：统一拾取器（仅 `count >= 2` 激活）→ `pickModelByObject` 沿父链反查归属 → `setActive` 切活跃模型 + 换菜单
 - **统一路由** `openModel3DFullscreen(path, { cooperate? })`：跨类型追加入口

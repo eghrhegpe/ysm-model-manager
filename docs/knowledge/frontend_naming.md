@@ -79,6 +79,7 @@ invariant_anchors:
 - `fbx-parser.ts`：两遍构建节点缓存 `built`→`nodeObjects`（非内容层语义，独立定名）。
 - `perf-cli.ts`：不可读前缀 `dgPc` 删除（文件归属冗余）、段缩写展开 `Sb/Gf/Pl`→`singleBench/guiFlow/perfLog`、类型 `DgPc*`→`SingleBench*/GuiFlow*/PerfLog*/GenGuard`（段前缀有消歧价值故展开保留，`guiFlowParseEntries`/`perfLogParseEntries` 防撞）。
 - `mount-preview-core.test.ts`：测试桩 `makeBuilt`→`makeContent`、`built1/2`→`content1/2`、`builtA/B`→`contentA/B`、`unloadBuilt`→`unloadContent`。
+- **收尾清扫（文档同步）**：测试层最后 2 处漏网（`vrm-adapter.test.ts` `built2`、`mount-preview-core.behavior.test.ts` `builtScene`）→`content2`/`contentScene`；现状文档残留旧词同步（`architecture.md`/`model3d.md`/`preview_core.md` 的注册表元数据 `built`→`content`、abort 登记 `session.built`/`allBuilt`→`session.content`/`allContent`；ADR-093 实装表与 dispatch、ADR-131 合并注入）。至此「测试层全清」为真：`frontend/src` 生产+测试层 `built` 作内容层名词零残留（`postprocessing-capability.test.ts` 的 `built` 布尔旗标与 i18n「built-in」等英文非黑话，保留）。
 
 **🔲 待清理（存量，未排期）**：
 - `backend/nbt-parse.ts` 单字母业务量（w/h/l/b/n/v）。

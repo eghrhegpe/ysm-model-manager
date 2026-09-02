@@ -47,7 +47,7 @@ Go `ListPackModels`（`internal/app/resourcepack_models.go:49`）只返回路径
 
 - 挂点：`adapter.build` 返回后，用 sceneBaseline 差量定位内容层 roots → `collectSceneStats`。
 - 统计面板走既有声明式菜单 `PreviewMenuNode`（`preview-menu/node-types.ts` 的 `panel` / `field` 类型正合统计展示），`visibleWhen: (s) => stats 非空` 才显示——**不手写 3D 菜单，可被所有数组类菜单调用**（铁律）。
-- **合并注入**：核心层统计面板必须与 `built.menuItems` 合并后**一次** `setAdapterItems`，避免互相覆盖（`mount-preview-core.ts:760` 已有一次注入）。
+- **合并注入**：核心层统计面板必须与 `content.menuItems` 合并后**一次** `setAdapterItems`，避免互相覆盖（`mount-preview-core.ts:760` 已有一次注入）。
 
 ### 2.4 详情卡补行（P2 方向）
 

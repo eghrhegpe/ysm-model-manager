@@ -530,7 +530,7 @@ describe("VRMA 多动作切换", () => {
 
     const { ctx: ctx2 } = makeCtx();
     const port2 = makePort();
-    const built2 = await buildVrmScene(
+    const content2 = await buildVrmScene(
       ctx2,
       "/vrm/test.vrm",
       port2,
@@ -540,12 +540,12 @@ describe("VRMA 多动作切换", () => {
     );
 
     // 菜单项含 vrma-play，且 playNodes 被调用（bridge 传对）
-    const items2 = registeredItems(built2);
+    const items2 = registeredItems(content2);
     const playItem2 = items2.find((i: { id: string }) => i.id === "vrma-play");
     expect(playItem2).toBeDefined();
     expect(playNodes).toHaveBeenCalled();
 
-    built2.dispose();
+    content2.dispose();
   });
 
   it("目录扫描失败 → 白模降级不阻断", async () => {

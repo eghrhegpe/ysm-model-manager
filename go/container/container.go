@@ -46,7 +46,10 @@ type Reader interface {
 
 type zipEntry struct{ f *zip.File }
 
-func (e zipEntry) Name() string               { return e.f.Name }
+// Name 经 normalizeEntryName 归一化：Go archive/zip 对非 UTF-8 条目名只置
+// NonUTF8 标志不解码（GBK/Shift-JIS 字节透传成乱码），在容器出口统一救援，
+// avatar 提取 / zipentry 指纹 / 候选名三条消费链路零改动受益。
+func (e zipEntry) Name() string               { return normalizeEntryName(e.f.Name, e.f.NonUTF8) }
 func (e zipEntry) IsDir() bool                { return e.f.FileInfo().IsDir() }
 func (e zipEntry) UncompressedSize64() uint64 { return e.f.UncompressedSize64 }
 func (e zipEntry) Open() (io.ReadCloser, error) {
@@ -84,7 +87,7 @@ func (c *zipContainer) Incomplete() bool { return false }
 
 type sevenzipEntry struct{ f *sevenzip.File }
 
-func (e sevenzipEntry) Name() string               { return e.f.Name }
+func (e sevenzipEntry) Name() string               { return normalizeEntryName(e.f.Name, false) }
 func (e sevenzipEntry) IsDir() bool                { return e.f.FileInfo().IsDir() }
 func (e sevenzipEntry) UncompressedSize64() uint64 { return e.f.UncompressedSize }
 func (e sevenzipEntry) Open() (io.ReadCloser, error) {

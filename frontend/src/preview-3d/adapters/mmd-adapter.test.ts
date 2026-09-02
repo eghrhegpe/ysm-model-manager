@@ -1423,6 +1423,28 @@ describe("纹理哈希 + KTX2 缓存直载（renderer 路径）", () => {
     content.dispose();
   });
 
+  it("scene 缺失（self 模式）→ 守卫短路 3.2/3.3：不触发 KTX2 缓存读/后台编码（376d07ac 拆分回归）", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
+    hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmx", "/mmd/miku/tex.png"]);
+    hoisted.loaderLoadAsyncMock.mockImplementation(() => Promise.resolve(fakeMmdRich()));
+    const port = makeRichPort({ cacheHit: false });
+    const { ctx } = makeCtx();
+    ctx.renderer = fakeRenderer();
+    // self 模式：共享 scene 不可用 → 3.1 守卫 return false（拆分前会短路整个 stage3）
+    (ctx as { scene?: unknown }).scene = undefined;
+    const content = await buildMmdScene(ctx, "/mmd/miku/miku.pmx", port, makeMmdPanels());
+
+    // 拆分回归点：3.2/3.3 曾因守卫拆到 3.1 内而照常执行（未挂载模型也走缓存读/写）；
+    // 恢复短路语义后应无 ktx2-replace、无 scheduleBackgroundEncoding
+    const calls = (port.addOpLog as ReturnType<typeof vi.fn>).mock.calls as Array<[string, string, string, string?]>;
+    expect(calls.find((c) => c[0] === "ktx2-replace" && c[1] === "cache-miss")).toBeUndefined();
+    expect(hoisted.scheduleBackgroundEncodingMock).not.toHaveBeenCalled();
+    expect(content.update).toBeDefined();
+    content.dispose();
+  });
+
   it("gpu-leak 统计：dispose 前后读 renderer.info.memory（不抛）", async () => {
     vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:mock-url");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});

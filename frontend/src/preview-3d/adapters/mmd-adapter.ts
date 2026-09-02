@@ -937,13 +937,17 @@ async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
 
 async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
   c.buildSucceeded = false;
-  await mdMmStage3MountAndDebug(c);
+  // 拆分前：scene 缺失 / bb 失败的守卫 return 会短路整个 stage3（KTX2 缓存读 3.2
+  // 与后台编码写 3.3 一并跳过）——守卫拆到 3.1 后须在此恢复短路语义，防未挂载模型
+  // 仍触发缓存 hydrate/dispose 与 saveCachedTexture 持久化（376d07ac 回归点）。
+  if (!(await mdMmStage3MountAndDebug(c))) return;
   await mdMmStage3Ktx2Hydrate(c);
   await mdMmStage3Ktx2Schedule(c);
 }
 
 // 3.1 挂载 + 网格调试诊断（scene 守卫 → add → registerModelRoot → boundingBox diag）
-async function mdMmStage3MountAndDebug(c: MdMmStage3Ctx): Promise<void> {
+// 返回是否完成挂载（false = 守卫命中跳过挂载，调用方须短路 3.2/3.3）
+async function mdMmStage3MountAndDebug(c: MdMmStage3Ctx): Promise<boolean> {
   // 结构化守卫替代 !：scene 可选（self 模式适配器自驱 renderer 时为 undefined）
   const scene = c.ctx.scene;
   if (!scene) {
@@ -954,7 +958,7 @@ async function mdMmStage3MountAndDebug(c: MdMmStage3Ctx): Promise<void> {
       "warn",
       "共享 scene 不可用，跳过挂载",
     );
-    return;
+    return false;
   }
   scene.add(c.mesh);
   registerModelRoot(c.mesh);
@@ -971,7 +975,7 @@ async function mdMmStage3MountAndDebug(c: MdMmStage3Ctx): Promise<void> {
         "warn",
         "几何 boundingBox 计算失败",
       );
-      return;
+      return false;
     }
     const posAttr = geo.getAttribute("position") as THREE.BufferAttribute | undefined;
     const idx = geo.index;
@@ -994,6 +998,7 @@ async function mdMmStage3MountAndDebug(c: MdMmStage3Ctx): Promise<void> {
   }
   c.ctx.loadingEl.remove();
   c.cachedHashes = null;
+  return true;
 }
 
 // 3.2 KTX2 缓存命中 → 按 hash 聚槽 → 单次解码替换（读路径）

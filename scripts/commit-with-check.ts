@@ -98,23 +98,38 @@ function git(args: string[]) {
 }
 
 // ── 1. 白名单路径：--files 直取；否则读主 index staged 清单（向后兼容旧用法）──
+// 提交/校验双作用域（code_review P2 修复，2026-09-02）：commitWithTempIndex 按 paths
+// 从工作区取内容入库，若把「未暂存 docs」也塞进提交白名单，无关的 WIP 改动会被静默
+// 卷进提交（0a0fa360 回归）。故：
+//   paths       = 提交范围：--files 白名单 / staged docs（--docs）/ staged 全部
+//   checkPaths  = 校验范围：--docs 下含未暂存 docs（gen 预刷新产物/草稿，仅校验不入提交）
 let paths: string[];
+let checkPaths: string[];
 if (files.length > 0) {
   paths = files;
+  checkPaths = files;
 } else if (docsMode) {
-  // docs 模式无 --files：收集已变更（staged + 工作树）的 docs/ 文件，按文件裁剪校验
-  const changed = [
-    ...git(['diff', '--cached', '--name-only', '--', 'docs/']).split('\n'),
-    ...git(['diff', '--name-only', '--', 'docs/']).split('\n'),
-  ];
-  paths = [...new Set(changed.map((s) => s.trim()).filter(Boolean))];
+  // docs 模式无 --files：提交范围 = staged docs；校验范围 = staged ∪ 工作树 docs
+  const stagedDocs = git(['diff', '--cached', '--name-only', '--', 'docs/'])
+    .split('\n').map((s) => s.trim()).filter(Boolean);
+  const unstagedDocs = git(['diff', '--name-only', '--', 'docs/'])
+    .split('\n').map((s) => s.trim()).filter(Boolean);
+  paths = stagedDocs;
+  checkPaths = [...new Set([...stagedDocs, ...unstagedDocs])];
 } else {
   const stagedRaw = git(['diff', '--cached', '--name-only']);
   paths = stagedRaw ? stagedRaw.split('\n').filter(Boolean) : [];
+  checkPaths = paths;
 }
 
-if (paths.length === 0) {
+if (paths.length === 0 && checkPaths.length === 0) {
   console.error('⚠️  无提交目标。先 git add 再跑，或传 --files <paths> 直取白名单。');
+  process.exit(1);
+}
+if (paths.length === 0 && !checkOnly) {
+  // docs 模式仅检测到未暂存 docs：只提交已暂存文件，未暂存 WIP 需显式 git add 或 --files
+  //（0a0fa360 回归修复：此前会把未暂存 docs 静默卷进提交）
+  console.error('⚠️  仅检测到未暂存的 docs 改动。先 git add docs/ 再跑，或传 --files <paths> 白名单直取（--check 可只校验不提交）。');
   process.exit(1);
 }
 
@@ -141,8 +156,9 @@ if (docsMode || byDomain.docs?.length || byDomain.adr?.length) {
 }
 
 // 轻量校验：独立清单，不复用 pre-push-gate（避免重型构建/全量静态工具双重付费）
+// 校验范围用 checkPaths（--docs 下含未暂存 docs 的校验裁剪）；提交白名单仍是 paths。
 const t0 = Date.now();
-const check = await runCommitChecks(paths);
+const check = await runCommitChecks(checkPaths);
 const gateMs = Date.now() - t0;
 
 for (const it of check.results) {
@@ -174,11 +190,18 @@ if (!commitResult.ok) {
 }
 
 // ── 4. 提交后双条件校验 ──
-// a) 越界文件（不在 paths ∪ 生成物/测试白名单）→ exit 1 打印清单
+// a) 越界文件（不在 paths ∪ 生成物/测试白名单）→ 自动回退 HEAD 后 exit 1 打印清单
 if (commitResult.outOfScope.length > 0) {
   console.error('❌ 提交包含越界文件（不在白名单 paths ∪ 生成物/测试清单），请核查：');
   for (const f of commitResult.outOfScope) console.error(`    ${f}`);
-  console.error('提示：非预期夹带时 git reset --soft HEAD~1 后重新用 --files 白名单提交。');
+  // 自动回退已提交的 HEAD（--soft 保留工作区改动），AI 不会忽略提示直接 push
+  const rollback = git(['reset', '--soft', 'HEAD~1']);
+  if (rollback.exitCode !== 0) {
+    console.error(`❌ 自动回退失败：git reset --soft HEAD~1 退出码 ${rollback.exitCode}`);
+    console.error('提示：手动执行 git reset --soft HEAD~1 后重新用 --files 白名单提交。');
+  } else {
+    console.error('已自动回退 HEAD~1（工作区改动保留），请重新用 --files 白名单提交。');
+  }
   process.exit(1);
 }
 // b) 并发插队（HEAD^ != HEAD_BEFORE）→ 仅 notice 不失败（用户拍板：插队良性，天然 rebase 语义）

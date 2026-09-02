@@ -15,15 +15,15 @@ auto_fields:
     - _getWasmBinaryMt:4
     - classifyWasmError:55
     - collectOutputFiles:102
-    - decodeYsmFile:180
-    - decodeYsmFileFromMemory:131
+    - decodeYsmFile:184
+    - decodeYsmFileFromMemory:135
     - DecodeYSMFiles:75
     - decodeYsmInWorker:218
     - decodeYsmInWorkerMemfs:257
     - ensureDir:92
     - FS:112
     - FSLike:14
-    - initYSMParser:55
+    - initYSMParser:59
     - initYsmParserInWorker:52
     - initYsmParserInWorkerMt:119
     - patchGlueHeapExport:141

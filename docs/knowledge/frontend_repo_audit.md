@@ -345,8 +345,8 @@ auto_fields:
     - DecodedTexture:23
     - DecodedYsm:13
     - decodeVoxelNbt:663
-    - decodeYsmFile:180
-    - decodeYsmFileFromMemory:131
+    - decodeYsmFile:184
+    - decodeYsmFileFromMemory:135
     - decodeYsmInWorker:218
     - decodeYsmInWorkerMemfs:257
     - decodeYsmViaWasm:22
@@ -642,7 +642,7 @@ auto_fields:
     - initWorkerPrefs:36
     - initWorkshopPage:38
     - initWorkshopTabs:41
-    - initYSMParser:55
+    - initYSMParser:59
     - initYsmParserInWorker:52
     - initYsmParserInWorkerMt:119
     - injectSkySunScalePatch:126

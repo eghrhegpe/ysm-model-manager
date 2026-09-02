@@ -46,8 +46,12 @@ let waiters: Array<(ok: boolean) => void> = [];
 function resetYSMParser(): void {
   wasmModule = null;
   loading = false;
-  // @ts-expect-error 清理 Emscripten 全局注入点（MODULARIZE 挂载）
-  delete (window as Record<string, unknown>).Module;
+  const w = window as unknown as Record<string, unknown>;
+  delete w.Module;
+  // 清工厂引用：re-init 时 eval 重新定义 YSMParserModule，
+  // 但若胶水代码将来加 `if (typeof YSMParserModule !== 'undefined') return`，
+  // 残留工厂会导致 re-init 静默失败。与 ysm-worker-loader.ts:181 口径对齐。
+  delete w.YSMParserModule;
 }
 
 // classifyWasmError 见 parser-shared.ts（口径差异保留在下方两个 catch 块）

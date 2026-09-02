@@ -89,9 +89,13 @@ invariant_anchors:
 - **`postprocessing-capability.test.ts` `built` 布尔旗标**→`composerBuilt`（记录 buildComposer 是否被调，与同函数 `disposed` 对仗）。
 - **防回潮脚本**：`scripts/check-naming-blacktalk.ts`（WARN 级，仿 check-boolean-naming 范式，默认不入 doctor 闸门）：built 名词家族零容忍 + w/h/l 三轴单字母挤一行检测，手动 `node scripts/check-naming-blacktalk.ts [--strict]` 可跑。
 
+**✅ 已清理（commit 6ad4cdd5，2026-09）——知识库反向扫描发现**：
+- **`gc*` 私有前缀展开**（ground/water capability，7 生产符号）：`ground-capability.ts` `gcBuildMain`→`buildGroundMain`、`gcBuildMaterialGroup`→`buildGroundMaterialGroup`、`gcSliderDef`→`groundSliderDef`、`gcColorDef`→`groundColorDef`、`gcButtonDef`→`groundButtonDef`；`water-capability.ts` `gcBuildWaterGroup`→`buildWaterGroup`（**water 误用 gc 前缀**——前缀与语义矛盾，一并根除）。
+- **`dgAf*` 私有前缀展开**（toolbar-search.ts，14 生产符号 + 测试引用）：`dgAfIsUnset`→`advFilterIsUnset`、`dgAfToNum`→`advFilterToNum`、`dgAfHasNumRange`→`advFilterHasNumRange`、`dgAfReadCurAndOpenDialog`→`advFilterReadAndOpenDialog`、`dgAfBackfillInlinePanel`/`dgAfBackfillResult`→`advFilterBackfill*`、`dgAfEarlyEmpty`→`advFilterEarlyEmpty`、`dgAfFetchTagPaths`→`advFilterFetchTagPaths`、`dgAfSearchModelPaths`/`dgAfSearchResult`→`advFilterSearch*`、`dgAfWarnWebDegraded`→`advFilterWarnWebDegraded`、`dgAfIntersectPaths`→`advFilterIntersectPaths`、`dgAfToastAndRender`→`advFilterToastAndRender`。
+- 两张知识卡同步（ground-cap-materialgroup-factories.md / search.md）+ 生成物（index/routes-quick）由 gen 自动刷新。
+- **扫描方法沉淀**：知识卡教黑话符号 = 病灶固化（search.md 自称「8 段 dgAf* 流水线」、ground 卡教 gc* 工厂）——反向扫描「知识库正文里的可疑缩写 token」（2-3 字母小写前缀+驼峰）即可命中此类存量；`mdLi*` 等有领域语义的格式标识除外。
+
 **🔲 待清理（存量，未排期）**：
-- `backend/nbt-parse.ts` 单字母业务量（w/h/l/b/n/v）。
-- `getCompound` 双份定义（nbt-parse.ts + voxel-parse.ts 各一份）合并。
 - 生命周期动词家族一义多词（全仓 1683 次）语义边界定义。
 - 动词名词化（parsed/loaded/saved/selected 当名词，268 处/55 文件）词表统一。
 
@@ -104,7 +108,7 @@ invariant_anchors:
 
 ## 不变量
 
-- 内容适配器新代码不得再出现 `built` 作为场景对象变量名；`mdLi*`/`dgPc*` 等私有前缀不得新增。
+- 内容适配器新代码不得再出现 `built` 作为场景对象变量名；不可读私有缩写前缀（`gc*`/`dgAf*`/`dgPc*` 类，≤3 字母非领域词）不得新增——文件归属交给 import 路径，符号名交还语义（`buildGroundMaterialGroup`/`advFilterIntersectPaths` 优于 `gcBuild*`/`dgAf*`）；`mdLi*`/`MdLi*` 格式标识（Minecraft Litematic 领域词）除外。
 - 生命周期操作动词在文档/注释里与被治理词一致，不引入第 15 个动词。
 
 ## 相关

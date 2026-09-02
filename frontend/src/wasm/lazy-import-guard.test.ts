@@ -59,8 +59,17 @@ describe("ADR-153 守卫：WASM 资产按需加载", () => {
       ["vite.config.js", VITE_MAIN],
       ["vite.web.config.ts", VITE_WEB],
     ] as const) {
-      const workerBlock = read(file).split("worker:")[1] ?? "";
-      expect(workerBlock, `${label} 的 worker 段缺少 format: "es"`).toMatch(/format:\s*["']es["']/);
+      // 锚定 worker: { ... } 块体，避免文件他处的 format: "es" 掩盖缺失。
+      // 用花括号深度配平找块尾（块内注释可能含 { type: "module" } 等嵌套）。
+      const raw = read(file);
+      const start = raw.indexOf("worker:") + "worker:".length;
+      let depth = 0, end = start;
+      for (let i = start; i < raw.length; i++) {
+        if (raw[i] === "{") depth++;
+        else if (raw[i] === "}") { depth--; if (depth === 0) { end = i + 1; break; } }
+      }
+      const workerBody = raw.slice(start, end);
+      expect(workerBody, `${label} 的 worker 段缺少 format: "es"`).toMatch(/format:\s*["']es["']/);
     }
   });
 });

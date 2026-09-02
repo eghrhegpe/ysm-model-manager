@@ -35,7 +35,7 @@ status: active
 
 ## 概览
 
-`go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建，是 `app_install.go` 中 `GetInstanceSyncStatus` Binding 的下沉逻辑（知识卡旧文称 `GetResourceInstanceStatus` 为消费方属漂移——该 Binding 走 `ysmsync.GetInstanceStatus`/`CompareGlobalInstanceHashes`，与本包无关）。
+`go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建，是 `app_install.go` 中 `GetInstanceSyncStatus` Binding 的下沉逻辑。
 
 ## 核心职责
 

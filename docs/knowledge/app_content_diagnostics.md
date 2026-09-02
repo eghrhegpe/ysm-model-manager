@@ -69,8 +69,8 @@ status: active
 
 ## 与其他子系统关系
 
-- `go_logs`（Go 操作日志）→ `diagnostics/logs.ts` 消费端
-- `go_repoaudit`（Go 仓库审计）→ `diagnostics/health.ts` 消费端
+- `go-logs`（Go 操作日志）→ `diagnostics/logs.ts` 消费端
+- `go-repoaudit`（Go 仓库审计）→ `diagnostics/health.ts` 消费端
 - `preview-3d/load-trace.ts` → `diagnostics/perf-trace.ts` 加载轨迹
 - 主卡 `app-content` 负责页面编排与分发；本卡只管诊断页自身的初始化与渲染
 
@@ -83,5 +83,5 @@ status: active
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`
-- 知识卡：`go_logs`、`go_repoaudit`、`app-content`
+- 知识卡：`go-logs`、`go-repoaudit`、`app-content`
 - `frontend/src/views/app-content/content-diag.ts` — 诊断/工坊样式层（主卡持有）

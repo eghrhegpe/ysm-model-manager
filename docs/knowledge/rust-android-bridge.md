@@ -15,7 +15,7 @@ source_files:
   - build/linux/Taskfile.yml
   - build/darwin/Taskfile.yml
 tests:
-  - tests/test_rust_bridge_tags.mjs
+  - tests/test_rust_bridge_tags.ts
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

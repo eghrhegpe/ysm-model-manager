@@ -88,7 +88,7 @@ status: active
   - schematic.go 零尺寸除零（P2-2）：`result["size"] = []int{w, h, l}` 在 w/h/l 为 0 时仍设置，下游 voxel.go 的 `i % info.sizeX` 在 sizeX==0 时 panic。修复：`w > 0 && h > 0 && l > 0` 守卫，零尺寸不设 size。
   - structure.go 零尺寸静默（P3-2）：`sizeList` 元素非 int32 时 `comma, ok := sizeList[i].(int32)` 给零值，静默返回 `[0,0,0]`。修复：三元素任一类型断言失败或零尺寸则不设 size。
   - voxel.go 刷日志（P3-3）：`buildRegionInfo` 的 `log.Printf` 在错误已返回的情况下高频打印。修复：移除 `log.Printf`，降级为纯 error 返回。
-  - nbt.go:197 注释与控制流脱节（P4-1）：`default: return false` 注释说「交给 go-mc 报错」，但 `readRootCompound` 在 probe 返回 `ok=false` 时直接拒绝、根本不调用 go-mc。修复：改为「未知 tag 类型：畸形，调用方拒绝」。
+  - nbt.go:410 `default: return false` 注释（P4-1）：原注释说「交给 go-mc 报错」，但 `readRootCompound` 在 probe 返回 `ok=false` 时直接拒绝、根本不调用 go-mc。修复：改为「未知 tag 类型：畸形，调用方拒绝」。
 
 ## 相关
 

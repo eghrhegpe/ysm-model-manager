@@ -5,6 +5,55 @@
 > 本表由知识卡 frontmatter 的 `quick_*` 字段自动生成。
 > 新增高频场景请在对应知识卡 frontmatter 补充 `quick_groups`/`quick_intents`/`quick_risk_lines`/`pitfalls`。
 
+## 🎯 3D 预览与模型追加
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 2D 预览、骨骼图、Canvas 渲染 | [2D 预览渲染 model2d](./model2d.md) | 2D 骨骼渲染必须走 model2d.ts 的 Canvas 渲染，禁止手写骨骼画布 | - |
+| 3D 菜单控件声明式渲染 | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
+| 3D 感知系统、自主动画、自动跳舞 | [3D 感知系统 perception](./perception.md) | 3D 感知必须走 perception 模块的控制器，禁止手写动画注入 | - |
+| 3D 控制器、MMD 播放、VRM 材质 / YSM schema | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联 | ADR-127, ADR-132 |
+| 3D 渲染循环优化、Vector3 复用 | [3D 区审核与修复模式提炼](./3d-patterns.md) | 3D 资源释放必须走 dispose 链路，禁止依赖 GC | - |
+| 3D 预览菜单、根菜单、dock 按钮 | [统一 3D 预览核心 preview-core](./preview_core.md) | 适配器项经 setAdapterItems 注入，禁止内联 | ADR-125 |
+| 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | - |
+| 动画解析 / 求值 / 渲染注入 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
+| 多 3D 场景共存 | [联邦渲染能力 (Render Federation)](./render-federation.md) | - | ADR-125 |
+| 多模型选择、多组件 / 多 entry | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 容器内多模型必须经 multiModelSelectNode 声明式菜单选择，禁止 adapter 直接遍历 entry 数组渲染 | ADR-132 |
+| 骨骼动画、关键帧、动画播放 | [动画系统 animation](./animation-system.md) | 基岩 animation.json 解析后必须走 evaluateClip 插值，禁止前端手写关键帧插值逻辑 | - |
+| 加密模型、wasm 加载、Emscripten | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
+| 节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | - | - |
+| 截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132 |
+| 截图灯光、activeComponent、组件选择 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
+| 模型切换、会话内替换 | [统一 3D 预览核心 preview-core](./preview_core.md) | switchTo 仅同类型；跨类型用 switchExternal | ADR-125 |
+| 前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | - | - |
+| 数字滚动、stagger 入场、关闭动画 | [动画系统 animation](./animation-system.md) | - | - |
+| 头像、作者、创作者 avatar | [头像 go/avatar](./go-avatar.md) | 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接 | - |
+| 头像缓存、缩略图 | [头像 go/avatar](./go-avatar.md) | - | - |
+| 投影、litematic、schematic、nbt、蓝图 | [Litematic 解析 go/litematic](./go-litematic.md) | Litematic 蓝图必须走 go/litematic 的 parser/schematic/structure 三层解析，禁止前端手写 Litematic 解析 | - |
+| 纹理缓存、AbortController 事件管理 | [3D 区审核与修复模式提炼](./3d-patterns.md) | - | - |
+| 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
+| 渲染联邦、shared renderer、rAF 复用 | [联邦渲染能力 (Render Federation)](./render-federation.md) | 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer | ADR-125 |
+| 预览设置、显示控制、骨骼名称开关 | [预览面板设置与显示控制](./preview-settings.md) | 预览设置集中由 preview-state.ts 的 KNOWN_PATHS 注册管理，新增选项必须经注册而非直接读写状态 | ADR-132 |
+| 眨眼/呼吸/视线追踪/口型同步 | [3D 感知系统 perception](./perception.md) | - | - |
+| 帧率 / 像素比 / 视锥剔除 / 3D 偏好 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
+| 追加模型、同台加载、多模型同框 | [统一 3D 预览核心 preview-core](./preview_core.md) | 跨类型必须走 switchExternal，禁止直接调 adapter.build | ADR-125 |
+| 资源生命周期 dispose、循环依赖破壁 | [3D 区审核与修复模式提炼](./3d-patterns.md) | - | - |
+| AnimationController、状态机 | [动画系统 animation](./animation-system.md) | - | - |
+| createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
+| isSafeAvatarPath | [头像 go/avatar](./go-avatar.md) | - | - |
+| MEMFS / node 解码 / callMain | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
+| Molang 表达式求值 | [动画系统 animation](./animation-system.md) | - | - |
+| multiModelSelectNode | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | - | ADR-132 |
+| multiModelSelectNode / preview menu node | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132 |
+| palette / voxel / bedrock 转换 | [Litematic 解析 go/litematic](./go-litematic.md) | - | - |
+| schema 键冲突、ADR-132 | [preview-menu-session-key](./preview_menu_session_key.md) | - | ADR-132 |
+| schema 注册、per-scene、多模型同框 | [preview-menu-session-key](./preview_menu_session_key.md) | schema 注册必须用 per-scene 键，禁止跨场景共用 schema key | ADR-132 |
+| VRM 动画播放、VRMA | [统一 3D 预览核心 preview-core](./preview_core.md) | 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update() | ADR-125 |
+| WASM 解析器、YSMParser、ysm 解码 | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析 | - |
+| YSM 动画管线、基岩动画 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析 | - |
+| ysm-animation-player、molang | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
+| zip 多模型、多候选、蓝图 zip、litematic zip | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | - | ADR-132 |
+
 ## 🎯 后端桥接与数据存储
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -32,51 +81,56 @@
 | rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
 | ScreenLocked、NetworkChanged、permissionGranted | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
 
-## 🎯 3D 预览与模型追加
+## 🎯 模型扫描与仓库管理
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 2D 预览、骨骼图、Canvas 渲染 | [2D 预览渲染 model2d](./model2d.md) | 2D 骨骼渲染必须走 model2d.ts 的 Canvas 渲染，禁止手写骨骼画布 | - |
-| 3D 菜单控件声明式渲染 | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
-| 3D 感知系统、自主动画、自动跳舞 | [3D 感知系统 perception](./perception.md) | 3D 感知必须走 perception 模块的控制器，禁止手写动画注入 | - |
-| 3D 控制器、MMD 播放、VRM 材质 / YSM schema | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联 | ADR-127, ADR-132 |
-| 3D 预览菜单、根菜单、dock 按钮 | [统一 3D 预览核心 preview-core](./preview_core.md) | 适配器项经 setAdapterItems 注入，禁止内联 | ADR-125 |
-| 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | - |
-| 动画解析 / 求值 / 渲染注入 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
-| 多 3D 场景共存 | [联邦渲染能力 (Render Federation)](./render-federation.md) | - | ADR-125 |
-| 多模型选择、多组件 / 多 entry | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 容器内多模型必须经 multiModelSelectNode 声明式菜单选择，禁止 adapter 直接遍历 entry 数组渲染 | ADR-132 |
-| 骨骼动画、关键帧、动画播放 | [动画系统 animation](./animation-system.md) | 基岩 animation.json 解析后必须走 evaluateClip 插值，禁止前端手写关键帧插值逻辑 | - |
-| 加密模型、wasm 加载、Emscripten | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
-| 节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | - | - |
-| 截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132 |
-| 截图灯光、activeComponent、组件选择 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
-| 模型切换、会话内替换 | [统一 3D 预览核心 preview-core](./preview_core.md) | switchTo 仅同类型；跨类型用 switchExternal | ADR-125 |
-| 前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | - | - |
-| 数字滚动、stagger 入场、关闭动画 | [动画系统 animation](./animation-system.md) | - | - |
-| 头像、作者、创作者 avatar | [头像 go/avatar](./go-avatar.md) | 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接 | - |
-| 头像缓存、缩略图 | [头像 go/avatar](./go-avatar.md) | - | - |
-| 投影、litematic、schematic、nbt、蓝图 | [Litematic 解析 go/litematic](./go-litematic.md) | Litematic 蓝图必须走 go/litematic 的 parser/schematic/structure 三层解析，禁止前端手写 Litematic 解析 | - |
-| 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
-| 渲染联邦、shared renderer、rAF 复用 | [联邦渲染能力 (Render Federation)](./render-federation.md) | 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer | ADR-125 |
-| 预览设置、显示控制、骨骼名称开关 | [预览面板设置与显示控制](./preview-settings.md) | 预览设置集中由 preview-state.ts 的 KNOWN_PATHS 注册管理，新增选项必须经注册而非直接读写状态 | ADR-132 |
-| 眨眼/呼吸/视线追踪/口型同步 | [3D 感知系统 perception](./perception.md) | - | - |
-| 帧率 / 像素比 / 视锥剔除 / 3D 偏好 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
-| 追加模型、同台加载、多模型同框 | [统一 3D 预览核心 preview-core](./preview_core.md) | 跨类型必须走 switchExternal，禁止直接调 adapter.build | ADR-125 |
-| AnimationController、状态机 | [动画系统 animation](./animation-system.md) | - | - |
-| createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | - |
-| isSafeAvatarPath | [头像 go/avatar](./go-avatar.md) | - | - |
-| MEMFS / node 解码 / callMain | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
-| Molang 表达式求值 | [动画系统 animation](./animation-system.md) | - | - |
-| multiModelSelectNode | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | - | ADR-132 |
-| multiModelSelectNode / preview menu node | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132 |
-| palette / voxel / bedrock 转换 | [Litematic 解析 go/litematic](./go-litematic.md) | - | - |
-| schema 键冲突、ADR-132 | [preview-menu-session-key](./preview_menu_session_key.md) | - | ADR-132 |
-| schema 注册、per-scene、多模型同框 | [preview-menu-session-key](./preview_menu_session_key.md) | schema 注册必须用 per-scene 键，禁止跨场景共用 schema key | ADR-132 |
-| VRM 动画播放、VRMA | [统一 3D 预览核心 preview-core](./preview_core.md) | 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update() | ADR-125 |
-| WASM 解析器、YSMParser、ysm 解码 | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析 | - |
-| YSM 动画管线、基岩动画 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析 | - |
-| ysm-animation-player、molang | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
-| zip 多模型、多候选、蓝图 zip、litematic zip | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | - | ADR-132 |
+| 仓库审计、健康分 | [扫描核心 go/scanner](./go-scanner.md) | - | - |
+| 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | - |
+| 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
+| 关键词搜索、数值范围搜索 | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
+| 每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | - | - |
+| 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | - |
+| 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | - |
+| 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
+| 去重检测、dedup | [扫描核心 go/scanner](./go-scanner.md) | - | - |
+| 日志查看、性能分析 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
+| 容器解析、container_entries | [统一容器桥接层 go/container](./go-container.md) | 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举 | - |
+| 扫描模型、ScanModelEntries | [扫描核心 go/scanner](./go-scanner.md) | 容器指纹缓存失效需调 ClearScanCache | - |
+| 搜索、筛选、关键词 / 标签 / 数值三路交集 | [搜索筛选编排 search](./search.md) | 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑 | - |
+| 缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) | - | - |
+| 同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) | - | - |
+| 同步状态、app-sync-manager | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
+| 文件监听、文件变化、刷新 | [文件监听 go/watcher](./go-watcher.md) | 文件变更监听必须走 go/watcher 的事件流，禁止轮询文件系统 | - |
+| 诊断页、仓库体检、冲突 / 去重 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup | - |
+| 整合包分类、路由、location 路由 | [分类路由与回归护栏](./classify-routing.md) | 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑 | - |
+| 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
+| 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | - |
+| 整合包同步、sync | [扫描核心 go/scanner](./go-scanner.md) | - | - |
+| 整合包同步页、推送 / 拉取资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态 | - |
+| 资历最深、老模型、仓库评分 | [资历最深模型 oldest-models](./oldest-models.md) | 资历排行必须经 oldest-models.ts 统一计算，禁止各页面各自实现评分逻辑 | - |
+| 资源包 / 光影包、mcmeta、pack_format | [资源包 mcmeta go/packs](./go-packs.md) | 资源包元数据必须走 go/packs 的 mcmeta 解析，前端禁止手写 mcmeta.json 解析 | - |
+| 资源类型识别、rtype 判定 | [扫描核心 go/scanner](./go-scanner.md) | resource_types.json 是唯一事实来源 | - |
+| AnalyzeYSMModel、HasYSMMod | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
+| CLI 搜索、命令行搜索、search 命令 | [CLI 搜索命令 search](./go-cli-search.md) | CLI 搜索必须复用 go/cli 的 SearchModels 后端，禁止 CLI 层手写搜索逻辑 | - |
+| dgAfIntersectPaths | [搜索筛选编排 search](./search.md) | - | - |
+| filepath.WalkDir 路径安全 | [去重 go/dedup](./go-dedup.md) | - | - |
+| Geometry 存档、基岩版 bedrock | [Geometry 存档 go/geometry](./go-geometry.md) | Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip | - |
+| initDiagnostics、startDedup | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
+| IsRecycleDir 守卫 | [去重 go/dedup](./go-dedup.md) | - | - |
+| last-wins / priority 裁决 | [分类路由与回归护栏](./classify-routing.md) | - | - |
+| oldest 资历排行 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
+| parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | - |
+| runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
+| SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | - |
+| SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
+| sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | - |
+| watcher、Events / errs / done | [文件监听 go/watcher](./go-watcher.md) | - | - |
+| Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | - |
+| YSM 解析、摘要 ExtractYsmSummary | [YSM 解析 go/ysm](./go-ysm-parser.md) | YSM 解析必须走 go/ysm 的 AnalyzeYSMModel，前端禁止手写 YSM 解析逻辑 | - |
+| YSM 文件元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
+| zip 多模型、多 entry | [统一容器桥接层 go/container](./go-container.md) | - | - |
+| zipentry 指纹、蓝图 / 投影 / vrm / pmx | [分类路由与回归护栏](./classify-routing.md) | - | - |
 
 ## 🎯 跨组件通信与页面
 
@@ -143,53 +197,6 @@
 | model:select、WASM 解码、放大预览 | [预览面板 app-preview](./app-preview.md) | - | - |
 | showResourcePack、showShaderpack | [预览面板 app-preview](./app-preview.md) | - | - |
 
-## 🎯 模型扫描与仓库管理
-
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
-|----------|--------|----------|----------|
-| 仓库审计、健康分 | [扫描核心 go/scanner](./go-scanner.md) | - | - |
-| 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | - |
-| 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
-| 关键词搜索、数值范围搜索 | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
-| 每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | - | - |
-| 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | - |
-| 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | - |
-| 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
-| 去重检测、dedup | [扫描核心 go/scanner](./go-scanner.md) | - | - |
-| 容器解析、container_entries | [统一容器桥接层 go/container](./go-container.md) | 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举 | - |
-| 扫描模型、ScanModelEntries | [扫描核心 go/scanner](./go-scanner.md) | 容器指纹缓存失效需调 ClearScanCache | - |
-| 搜索、筛选、关键词 / 标签 / 数值三路交集 | [搜索筛选编排 search](./search.md) | 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑 | - |
-| 缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) | - | - |
-| 同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) | - | - |
-| 同步状态、app-sync-manager | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
-| 文件监听、文件变化、刷新 | [文件监听 go/watcher](./go-watcher.md) | 文件变更监听必须走 go/watcher 的事件流，禁止轮询文件系统 | - |
-| 整合包分类、路由、location 路由 | [分类路由与回归护栏](./classify-routing.md) | 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑 | - |
-| 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
-| 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | - |
-| 整合包同步、sync | [扫描核心 go/scanner](./go-scanner.md) | - | - |
-| 整合包同步页、推送 / 拉取资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态 | - |
-| 资历最深、老模型、仓库评分 | [资历最深模型 oldest-models](./oldest-models.md) | 资历排行必须经 oldest-models.ts 统一计算，禁止各页面各自实现评分逻辑 | - |
-| 资源包 / 光影包、mcmeta、pack_format | [资源包 mcmeta go/packs](./go-packs.md) | 资源包元数据必须走 go/packs 的 mcmeta 解析，前端禁止手写 mcmeta.json 解析 | - |
-| 资源类型识别、rtype 判定 | [扫描核心 go/scanner](./go-scanner.md) | resource_types.json 是唯一事实来源 | - |
-| AnalyzeYSMModel、HasYSMMod | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
-| CLI 搜索、命令行搜索、search 命令 | [CLI 搜索命令 search](./go-cli-search.md) | CLI 搜索必须复用 go/cli 的 SearchModels 后端，禁止 CLI 层手写搜索逻辑 | - |
-| dgAfIntersectPaths | [搜索筛选编排 search](./search.md) | - | - |
-| filepath.WalkDir 路径安全 | [去重 go/dedup](./go-dedup.md) | - | - |
-| Geometry 存档、基岩版 bedrock | [Geometry 存档 go/geometry](./go-geometry.md) | Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip | - |
-| IsRecycleDir 守卫 | [去重 go/dedup](./go-dedup.md) | - | - |
-| last-wins / priority 裁决 | [分类路由与回归护栏](./classify-routing.md) | - | - |
-| parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | - |
-| runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
-| SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | - |
-| SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
-| sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | - |
-| watcher、Events / errs / done | [文件监听 go/watcher](./go-watcher.md) | - | - |
-| Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | - |
-| YSM 解析、摘要 ExtractYsmSummary | [YSM 解析 go/ysm](./go-ysm-parser.md) | YSM 解析必须走 go/ysm 的 AnalyzeYSMModel，前端禁止手写 YSM 解析逻辑 | - |
-| YSM 文件元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
-| zip 多模型、多 entry | [统一容器桥接层 go/container](./go-container.md) | - | - |
-| zipentry 指纹、蓝图 / 投影 / vrm / pmx | [分类路由与回归护栏](./classify-routing.md) | - | - |
-
 ## 🎯 文件操作与标签
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -229,17 +236,20 @@
 | 菜单行为执行、ctx:show | [右键菜单系统](./context-menu.md) | 禁止 view 层手写菜单项 | - |
 | 打标签、编辑标签、tag-editor | [标签编辑器 tag-editor](./dialog-tag-editor.md) | tag-editor 弹窗必须复用 modal.ts 的 Promise API，标签写回走 go/tags Store 的原子替换 | - |
 | 弹确认框 / 输入框 / 下拉选择 / modal | [弹窗基座 modal](./dialog-modal.md) | 业务弹窗必须复用 modal.ts 的 Promise API（prompt/select/confirm/picker），禁止手写弹窗 | - |
+| 读取 YSM 头部（作者 / 介绍） | [重命名弹窗 rename](./dialog-rename.md) | - | - |
 | 分类标记、全库标签建议 | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
 | 高级筛选、骨骼数 / 立方体 / 纹理尺寸数值范围 | [高级筛选 adv-filter](./dialog-adv-filter.md) | adv-filter 弹窗必须复用 modal.ts 的 Promise API，禁止手写弹窗 DOM | - |
 | 加载动画、滑块、行组件、预设 chip | [UI 组件库 ui-components](./ui_components.md) | - | - |
 | 批量重命名、查找替换、正则替换 | [批量重命名 batch-rename](./dialog-batch-rename.md) | batch-rename 弹窗必须是模块级单例 dialogEl，重复打开先 close() 结算上一个 Promise | - |
 | 统一作者 / 作品、5 个内置预设 | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | 右键菜单、添加菜单项 | [右键菜单系统](./context-menu.md) | 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 core/context-menus.ts | - |
+| 重命名、改名、命名规范 | [重命名弹窗 rename](./dialog-rename.md) | rename 弹窗必须复用 modal.ts 的 Promise API，非法字符与长度校验在弹窗内完成 | - |
 | createCard / createSlideMenu / createLoading | [UI 组件库 ui-components](./ui_components.md) | - | - |
 | FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 dom/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签 | - |
 | modalAdvFilter | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | modalTagEditor | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
 | overlay、ADR-057、ensureFabStyles | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | - | - |
+| rename-format、showRenameDialog | [重命名弹窗 rename](./dialog-rename.md) | - | - |
 | showBatchRenameDialog | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | UI 组件库、卡片组件、折叠面板 | [UI 组件库 ui-components](./ui_components.md) | UI 组件必须走 ui-components 的 helper 函数，禁止手写重复 DOM 结构 | - |
 
@@ -291,12 +301,16 @@
 
 | 陷阱 | 位置 | 正确做法 |
 |------|------|----------|
+| Vector3 频繁 new 造成 GC 抖动；必须复用或池化 | - | - |
+| AbortController 未清理导致事件泄漏；必须在 dispose 时 abort + removeEventListener | - | - |
 | 直接请求 MANAGE_EXTERNAL_STORAGE | - | 新版 Android 拒绝、Google Play 下架；必须走 SAF |
 | 目录选择未回传 URI | - | 后续访问失败；必须经 android-bridge 持久化 URI |
 | 各组件各自注册 | - | 重复监听、返回键冲突；必须经 registerAndroidEvents |
 | 返回键未消费 | - | 直接退出应用；必须在有弹窗时 consume back 事件 |
 | 手写关键帧插值 | - | 与基岩官方行为不一致、T-pose 漂移；必须经 evaluateClip |
 | Molang 表达式缓存键不完整 | - | 相同逻辑不同骨骼重复求值；缓存 key 必须含 clip/bone 标识 |
+| 在仓库页直接调 doDedup | - | 缺上下文、无法展示冲突视图；必须走 diagnostics 页 initDiagnostics |
+| 性能 trace 未释放 | - | 长时占用内存；file-bench / perf-trace 完成后必须 stop 回收 |
 | 子组件持 *App 字段 | - | 对象级循环依赖、GC 无法回收；必须经回调注入 |
 | 回调未正确包装 | - | 空指针 panic；必须在新 App 时注入完整包装 |
 | 页面 A 直接调用页面 B 的 init | - | 重复初始化 / 订阅泄漏；必须经 nav:change 单点分发 |
@@ -324,6 +338,8 @@
 | adv-filter 输入不校验就提交 | - | min > max 传后端报错；必须在 validate() 拦截并在 |
 | 重复打开 batch-rename 不 close | - | 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算 |
 | 正则替换不分离扩展名 | - | 把 .ext 一起替换掉；必须只对文件名主体替换 |
+| 重命名不校验非法字符 | - | 后端 RenameFile 报错 / 文件名含控制字符；必须在校验阶段拦截 |
+| 读取 YSM 头部后按钮 loading 态未 finally 恢复 | - | 用户卡死；必须在 finally 恢复按钮态 |
 | 手写 tag-editor 弹窗 | - | 弹窗样式 / 焦点陷阱与全局不一致；必须复用 modal.ts |
 | 标签写回用直写 tags.json | - | 并发写破坏文件；必须经 go/tags Store 的 tmp+os.Rename 原子替换 |
 | 各组件各自注入 style 标签 | - | 多次注入、样式冲突；必须经 ensureFabStyles 一次注入 |

@@ -53,13 +53,13 @@ Worker 桥单请求失败结算：超时 / dispose / onerror 复用 `settleError
 
 ## 问题清单（ts-package-review 2026-08-27）
 
-1. **可扩展性隐患**：L65 `onWorkerError` 窄化成 `string`，L94 `if` 比较 + L95 `else if` 兜底——若未来加第三种策略（如 `retryPool`），`settleError` 静默走 `makeErrorResponse` 分支，语义反转。
-2. **当前非 bug**：只有两策略，L94-96 分支穷尽，行为正确。
+1. **可扩展性隐患**：L70 `onWorkerError` 窄化成 `string`，L99 `if` 比较 + L100 `else if` 兜底——若未来加第三种策略（如 `retryPool`），`settleError` 静默走 `makeErrorResponse` 分支，语义反转。
+2. **当前非 bug**：只有两策略，L99-L105 分支穷尽，行为正确。
 
 ## 建议动作
 
 1. `settleError` 的 `else if (makeErrorResponse)` 分支加 `assertNever(onWorkerError)` 兜底，未来加策略编译期报错。
-2. 或：`onWorkerError` 窄化成 `"resolveAllError" | "terminatePool"` 字面量联合（`const onWorkerError: WorkerErrorStrategy = opts.onWorkerError ?? "resolveAllError"`），L94 `if` 比较 + L95 `else` 兜底（无 `makeErrorResponse` 检查）——但需确认 `resolveAllError` 模式 `makeErrorResponse` 必传的 L71 校验仍生效。
+2. 或：`onWorkerError` 窄化成 `"resolveAllError" | "terminatePool"` 字面量联合（`const onWorkerError: WorkerErrorStrategy = opts.onWorkerError ?? "resolveAllError"`），L99 `if` 比较 + L100 `else` 兜底（无 `makeErrorResponse` 检查）——但需确认 `resolveAllError` 模式 `makeErrorResponse` 必传的 L76-81 校验仍生效。
 
 ## 相关
 

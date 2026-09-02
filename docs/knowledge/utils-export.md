@@ -38,7 +38,7 @@ status: active
 
 ## 概览
 
-预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图入口 `screenshotPreview()` 位于 [model3d](./model3d.md)。截图灯光提取（`toScreenshotLights`）与纹理加载（`loadTextures`）已随 ADR-136 第四刀归位 preview-3d（`screenshot-lights.ts` / `texture-loader.ts`）。
+预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面单帧截图经适配器的 `screenshotFn` 注入（非 `screenshotPreview`，已随 ADR-052 P3 移除）。截图灯光提取（`toScreenshotLights`）与纹理加载（`loadTextures`）已随 ADR-136 第四刀归位 preview-3d（`screenshot-lights.ts` / `texture-loader.ts`）。
 
 ## 核心职责
 
@@ -51,14 +51,14 @@ status: active
 - `renderMultiAngle(modelPath: string, texUrls: string[], opts?: { size? }): Promise<AngleShot[] | null>` — 经 `GetModel3DSpec` 取 spec + `loadTextures` 加载纹理，离屏 WebGLRenderer（alpha 透明背景，默认 512×512）渲染四角度，返回 `[{ name, base64 }]`（PNG base64 无 data: 前缀）；结束 traverse dispose 全部 geometry/material + renderer
 - `AngleShot` 接口：`{ name: "front" | "45" | "side" | "back45", base64 }`
 
-`preview-cache.ts`：
+`preview-3d/decoder/cache.ts`（preview-cache）：
 - `cacheGet(path: string): CacheValue | null` / `cacheSet(path, data)` — key 为模型绝对路径；上限 MAX_CACHE=50，超出时 FIFO 淘汰最旧条目并触发 evict 回调
 - `cacheSetEvictHandler(fn)` — 注册淘汰回调（释放 blob URL 等资源）
 - `CacheValue` 接口：texture/geometry/animations/authors/avatars/_decodedBy 等
 
 ## 与其他子系统关系
 
-- 消费方：`app-preview/skeleton-render.ts`（renderMultiAngle 多角度截图 + model3d.screenshotPreview 当前画面截图，经 `screenshot-lights.ts` toScreenshotLights 提取预览灯光）、`app-preview/index.ts` + `preview-loader.ts` + `preview-wasm.ts`（preview-cache 读写与 evict 注册）
+- 消费方：`app-preview/skeleton-render.ts`（renderMultiAngle 多角度截图）、`app-preview/index.ts`（preview-cache 读写与 evict 注册）
 - 依赖 [model3d](./model3d.md) 的 buildSceneMesh、`texture-loader.ts` 的 loadTextures；Go binding：GetModel3DSpec
 
 ## 不变量
@@ -71,6 +71,6 @@ status: active
 
 ## 相关
 
-- [model3d](./model3d.md) — 场景构建与 screenshotPreview
+- [model3d](./model3d.md) — 场景构建（screenshotPreview 已移除，截图经 adapter.screenshotFn 注入）
 - [app_preview](./app-preview.md) — 预览面板消费方
 - [wails_bindings](./wails-bindings.md) — GetModel3DSpec 等 Go binding

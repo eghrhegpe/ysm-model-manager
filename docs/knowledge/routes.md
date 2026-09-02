@@ -13,9 +13,11 @@
 
 | 用户意图或关键词 | 首选知识卡 | 摘要 |
 |---|---|---|
+| 3D 渲染循环优化、Vector3 复用、纹理缓存、AbortController 事件管理、资源生命周期 dispose、循环依赖破壁、审核驱动开发、并发防护 gen 守卫 | [3D 区审核与修复模式提炼](./3d-patterns.md) ⚠️歧义（另见 optimization_log.md） | — |
 | Android、存储授权、目录选择、MANAGE_EXTERNAL_STORAGE、SAF | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) ⚠️歧义（另见 go-android-platform-guard.md、rust-android-bridge.md） | Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 WebView，桌面端无此桥返回 `null`）与跨平台目录选择器。解决 Android 上 Wails 官方**拒绝目录选择**（… |
 | android:back、返回键、弹窗、系统事件、ScreenLocked、NetworkChanged | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) ⚠️歧义（另见 dialog-modal.md） | 前端消费 Java 层经 Wails 事件总线转发的 `android:*` 系统事件（ADR-046 P2，参照 MikuMikuAR ADR-017 A3-04）。桌面端无 Java 层，这些事件永不触发，注册无害。生命周期由 `reg… |
 | 动画、骨骼动画、关键帧、Molang、数字滚动、stagger 入场 | [动画系统 animation](./animation-system.md) ⚠️歧义（另见 go-geometry.md） | 前端动画体系分两层：**模型骨骼动画**（基岩版 animation.json 解析 + 关键帧插值求值）与 **UI 动效**（数字里程表滚动、stagger 入场延迟）。UI 层的 CSS 动画可被全局 `no-animations` … |
+| 诊断页、冲突、去重流程、日志、性能、oldest | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) ⚠️歧义（另见 go-logs.md） | `diagnostics/` 是 `app-content` 的「诊断与冲突」页子域（6 个 tab：冲突 / 日志 / 体检 / 去重 / 性能 / 资历），由主卡 `app-content` 的 `init-pages.ts` 在切到诊… |
 | 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）、评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct、想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | `internal/app` 是 Wails 绑定层（`package app`），`App` 是 god-object，持有若干子组件 |
 | 主内容区、页面切换、nav:change、仓库页、全局 handler | [主内容页 app-content](./app-content.md) | `app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工… |
 | 组件入口、模块装配、启动流程、主题初始化、服务注册、检查更新 | [组件入口 app-modules](./app-modules.md) ⚠️歧义（另见 version-updater.md） | `app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组… |
@@ -36,6 +38,7 @@
 | 高级筛选、筛选、骨骼数、立方体、纹理尺寸、按标签筛选、条件过滤 | [高级筛选 adv-filter](./dialog-adv-filter.md) ⚠️歧义（另见 search.md、model-stats.md等） | `adv-filter.ts` 提供模型高级筛选弹窗：关键字 + 骨骼数/立方体数/纹理尺寸三组数值范围 + 标签名，采集后返回结构化条件对象交给调用方执行搜索。控件集合与后端 `SearchModels` 的能力严格对齐（6 个范围参数 … |
 | 批量重命名、批量改名、查找替换、正则替换、统一作者、预设、batch-rename | [批量重命名 batch-rename](./dialog-batch-rename.md) ⚠️歧义（另见 ui_components.md） | `batch-rename.ts` 提供目录级批量重命名弹窗：接收文件条目列表，用 `parseModelName` 逐个解析出作者/作品/角色/日期，支持两种模式——「解析格式」（统一作者/作品批量改写）与「查找替换」（字面量或正则，含 … |
 | 弹窗、对话框、确认框、输入框弹窗、下拉选择弹窗、modal、prompt、confirm | [弹窗基座 modal](./dialog-modal.md) ⚠️歧义（另见 android-events.md） | `modal.ts` 是全应用统一的模态弹窗基座：提供 prompt（带输入框）、select（下拉选择）、confirm（确认）、picker（富列表选择）四种 Promise 化弹窗，以及共享的转义、关闭动画、活动弹窗单例管理。所有业务… |
+| 重命名、改名、命名规范、作者 品牌 角色、rename、读取头部 | [重命名弹窗 rename](./dialog-rename.md) ⚠️歧义（另见 go-fileops.md） | `rename.ts` 提供单个模型的结构化重命名弹窗：把文件名按 `[作者]【品牌】角色-变体 (年月).ext` 规范拆成五个输入框，实时预览新文件名，可选「📖 读取头部」从 YSM 文件头提取作者/介绍。弹窗只负责产出新文件名，实际落… |
 | 标签、打标签、编辑标签、tag、标签弹窗、分类标记 | [标签编辑器 tag-editor](./dialog-tag-editor.md) ⚠️歧义（另见 go-tags.md等） | `tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto… |
 | FAB、悬浮按钮、FAB 3D 预览入口、overlay、ADR-057 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | 3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu… |
 | 漂移检测、双轨、重复实现、口径漂移 | [drift-scan（双轨漂移检测）](./drift-scan.md) ⚠️歧义（另见 extensibility-index.md） | — |
@@ -56,13 +59,13 @@
 | 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) ⚠️歧义（另见 go_repoaudit.md） | `go/dedup/` 包提供资源去重检测，避免重复导入相同资源。 |
 | 下载、进度、download、进度条、下载进度 | [下载器 go/download](./go-download.md) ⚠️歧义（另见 community-feature.md） | `go/download/` 包负责模型资源的纯 HTTP 下载（不依赖 Wails runtime），支持 ctx 取消中断、进度回调与失败半文件清理。镜像回退策略（raw/jsd/api 排序）在 `internal/app/app_d… |
 | 子进程隐藏控制台窗口、跨平台 HideWindow、外部进程启动 | [进程隐藏窗口 go/executil](./go-executil.md) | `go/executil/` 包提供跨平台的外部进程执行工具，当前唯一功能是 **HideWindow**：在 Windows 上隐藏子进程控制台窗口，其他平台为 no-op。 |
-| 移动、复制、重命名、删除、fileops、启用禁用、.ban、ysm.json 整组操作 | [文件操作 go/fileops](./go-fileops.md) ⚠️歧义（另见 go-recycle.md） | `go/fileops/` 包实现文件 CRUD + 移动/复制/删除 + 文件夹整组导入 + 预览提取 + 启用禁用（ADR-003 P3 下沉，薄壳 `internal/app/app_files.go` 仅转发）。 |
+| 移动、复制、重命名、删除、fileops、启用禁用、.ban、ysm.json 整组操作 | [文件操作 go/fileops](./go-fileops.md) ⚠️歧义（另见 dialog-rename.md、go-recycle.md） | `go/fileops/` 包实现文件 CRUD + 移动/复制/删除 + 文件夹整组导入 + 预览提取 + 启用禁用（ADR-003 P3 下沉，薄壳 `internal/app/app_files.go` 仅转发）。 |
 | geometry、基岩版、bedrock、模型解析、zip、7z、纹理、动画 | [Geometry 存档 go/geometry](./go-geometry.md) ⚠️歧义（另见 go-container.md、animation-system.md等） | `go/geometry/` 包解析 Bedrock（基岩版）`minecraft:geometry` 模型：既支持单个 geometry JSON，也支持从 ZIP/7z 存档中按 `ysm.json` 清单合并多个模型文件、提取纹理与动… |
 | 导入、策略、导入队列、importer | [导入策略 go/importer](./go-importer.md) ⚠️歧义（另见 import-queue.md等） | `go/importer/` 包分两块：`importer.go` 的**按资源类型注册的复制策略表**（`Handler` 接口，供本地路径导入/安装复用），以及 `importer_file.go` 的 **base64 单文件导入核心… |
 | 安装、installer、模型导入、下载模型 | [模型安装 go/installer](./go-installer.md) | `go/installer/`（单文件 `installer.go`）负责把仓库中的模型/资源文件**落地**到 Minecraft 整合包实例目录：按 `LinkMode`（`copy` / `hardlink` / `symlink`）… |
 | 整合包、实例、版本实例、VersionInstance、同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) ⚠️歧义（另见 go-sync.md） | `go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建，是 `app_install.go` 中 `GetInstanceSyncStatus` Binding 的下沉逻辑（知识卡旧文称 `GetReso… |
 | 投影、litematic、schematic、nbt、蓝图、体素、方块 | [Litematic 解析 go/litematic](./go-litematic.md) ⚠️歧义（另见 classify-routing.md） | `go/litematic/` 包解析 Minecraft 建筑蓝图文件：Litematica 投影（`.litematic`，NBT gzip）、MCEdit 旧版 `.schematic`、原版结构 `.nbt`，产出元数据、方块统计（… |
-| 导入日志、操作记录、日志、import log、历史 | [导入日志 go/logs](./go-logs.md) | `go/logs/` 包提供两套互不相干的日志设施：**操作日志**（`Logger`，持久化）把导入/扫描/下载/同步/重命名/删除/UI 报错等操作的成败结果写入用户配置目录下的 `ysm-import-logs.json`；**运行时… |
+| 导入日志、操作记录、日志、import log、历史 | [导入日志 go/logs](./go-logs.md) ⚠️歧义（另见 app_content_diagnostics.md） | `go/logs/` 包提供两套互不相干的日志设施：**操作日志**（`Logger`，持久化）把导入/扫描/下载/同步/重命名/删除/UI 报错等操作的成败结果写入用户配置目录下的 `ysm-import-logs.json`；**运行时… |
 | 资源包、光影包、mcmeta、pack_format、缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) ⚠️歧义（另见 resource-packs.md、go-avatar.md等） | `go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级… |
 | 路径、安全、path、路径校验 | [路径安全 go/paths](./go-paths.md) | `go/paths/` 包提供路径安全校验，防止路径穿越攻击和非法路径访问。 |
 | 回收站、删除、恢复、recycle、软删除 | [回收站 go/recycle](./go-recycle.md) ⚠️歧义（另见 recycle-bin.md、go-fileops.md等） | `go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`），包级函数… |
@@ -81,7 +84,7 @@
 | 3D 渲染层、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底 | [3D 预览渲染 model3d](./model3d.md) | 前端 Three.js 3D 渲染层（`frontend/src/preview-3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/m… |
 | 多模型、模型选择、select、zip 多模型、多 entry、ADR-132 | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的 |
 | 资历最深、老模型、仓库评分、每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | `oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按… |
-| 性能优化、KTX2 编码、纹理缓存、主线程监控、内存泄漏 | [优化记录 optimization-log](./optimization_log.md) | — |
+| 性能优化、KTX2 编码、纹理缓存、主线程监控、内存泄漏 | [优化记录 optimization-log](./optimization_log.md) ⚠️歧义（另见 3d-patterns.md） | — |
 | 页面、当前页、状态管理、page store、currentPage | [页面状态管理 page-store.ts](./page-store.md) | `page-store.ts` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。核心职责是维护只读当前页状态与启动初始页解析——*… |
 | 自主动画、眨眼、节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | `preview-3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。 |
 | pointerdown、pointermove、pointerup、触屏、拖拽、旋转 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) ⚠️歧义（另见 import-queue.md） | ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `… |

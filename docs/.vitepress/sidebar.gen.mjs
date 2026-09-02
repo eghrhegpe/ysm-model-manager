@@ -722,6 +722,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-156：契约测试按变更文件精确裁剪（scripts 改动不再全量）",
+        "link": "/adr/ADR-156-contract-tests-precise-crop"
+      },
+      {
         "text": "ADR-155：commit-with-check 重构为独立轻量提交校验（与重型 push 门禁解耦）",
         "link": "/adr/ADR-155-commit-with-check-lightweight"
       },

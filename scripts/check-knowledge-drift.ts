@@ -246,7 +246,14 @@ function checkKnowledgeAnchors(cards: any[]) {
         errors.push(`知识卡 ${cf} 的机制锚文件不存在: ${file}`);
         continue;
       }
-      const content = fs.readFileSync(full, 'utf8');
+      // TOCTOU 防护：existsSync 与 readFileSync 之间文件可能被删/改名
+      let content: string;
+      try {
+        content = fs.readFileSync(full, 'utf8');
+      } catch (e) {
+        errors.push(`知识卡 ${cf} 的机制锚文件读取失败: ${file}（${(e as NodeJS.ErrnoException).message}）`);
+        continue;
+      }
       let hit = false;
       if (pat.startsWith('re:')) {
         try {

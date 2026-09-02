@@ -7,6 +7,8 @@ source_files:
   - frontend/src/utils/resource/
   - frontend/src/utils/types-re-export.ts
   - frontend/src/features/repo-rtype.ts
+tests:
+  - frontend/src/features/repo-rtype.test.ts
 auto_fields:
   symbols_with_lines:
     - ALL_EXTS:21

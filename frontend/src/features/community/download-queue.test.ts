@@ -347,6 +347,43 @@ describe("后端事件处理", () => {
   });
 });
 
+describe("后端事件 payload 守卫（eventArr 畸形数据）", () => {
+  it("非数组 payload（null/对象/字符串）不崩且 STATE 关键字段不变", () => {
+    const before = getState().status;
+    expect(() => emit("queue:status", null)).not.toThrow();
+    expect(() => emit("queue:status", { notArray: true })).not.toThrow();
+    expect(() => emit("queue:status", "bad")).not.toThrow();
+    expect(getState().status).toBe(before);
+  });
+
+  it("空数组 payload 被守卫拦截，不污染 STATE", () => {
+    emit("queue:file-start", ["f.ysm", 3, 2]);
+    const s1 = getState();
+    expect(s1.currentFile).toBe("f.ysm");
+    expect(() => emit("queue:file-start", [])).not.toThrow();
+    const s2 = getState();
+    expect(s2.currentFile).toBe("f.ysm"); // 未被空数组污染
+    expect(s2.total).toBe(3);
+    expect(s2.remaining).toBe(2);
+  });
+
+  it("download:progress 畸形 payload（非数组/空）不污染进度", () => {
+    emit("download:progress", [50, 100]);
+    expect(getState().progress).toEqual({ dl: 50, total: 100 });
+    expect(() => emit("download:progress", null)).not.toThrow();
+    expect(() => emit("download:progress", [])).not.toThrow();
+    expect(getState().progress).toEqual({ dl: 50, total: 100 }); // 不变
+  });
+
+  it("queue:file-done 畸形 payload（非数组/空）不污染 errorList/_lastDone", () => {
+    const seq0 = getState()._lastDoneSeq;
+    expect(() => emit("queue:file-done", null)).not.toThrow();
+    expect(() => emit("queue:file-done", [])).not.toThrow();
+    expect(getState()._lastDoneSeq).toBe(seq0); // 未新增
+    expect(getState().errorList).toEqual([]);
+  });
+});
+
 describe("resume", () => {
   it("QueueStatus 返回数字且 >0 → downloading", async () => {
     statusMock.mockResolvedValue(5);

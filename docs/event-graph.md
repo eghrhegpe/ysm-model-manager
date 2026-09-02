@@ -46,7 +46,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/features/community/download-queue-store.ts` | 360 |
+| `frontend/src/features/community/download-queue-store.ts` | 380 |
 
 **订阅方（on）：**
 | 文件 | 行 |

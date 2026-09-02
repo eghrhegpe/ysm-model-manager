@@ -295,11 +295,27 @@ export async function cancelDownloads(): Promise<void> {
 // ── 一次性注册全部后端事件 ──
 // Wails 脚本加载时执行一次，页面切换不受影响
 // v3: 事件 payload 为单对象，多参经 Go Emit 打包为数组，此处按 e.data 解构
+
+/**
+ * 后端事件 payload 守卫（P3 审计修复）：v3 事件 data 应为非空数组，
+ * 非数组 / 空数组视为畸形（Go Emit 异常、协议漂移、未来字段裁剪）直接丢弃，
+ * 避免 `const [a, b] = e.data` 解构出 undefined 污染 STATE 或写入脏值。
+ */
+function eventArr(e: { data: unknown }, tag: string): unknown[] | null {
+  if (!Array.isArray(e?.data) || (e.data as unknown[]).length === 0) {
+    dbg(`event:${tag} 畸形 payload,跳过`, e);
+    return null;
+  }
+  return e.data as unknown[];
+}
+
 if (!_registered) {
   _registered = true;
 
-  Events.On("queue:status", (e: { data: unknown[] }) => {
-    const [status, total, extra] = e.data as [string, number, unknown];
+  Events.On("queue:status", (e: { data: unknown }) => {
+    const arr = eventArr(e, "queue:status");
+    if (!arr) return;
+    const [status, total, extra] = arr as [string, number, unknown];
     dbg("event:queue:status", status, total, extra);
     STATE.total = total ?? STATE.total;
     if (status === "done" || status === "cancelled") {
@@ -318,8 +334,10 @@ if (!_registered) {
     }
   });
 
-  Events.On("queue:file-start", (e: { data: unknown[] }) => {
-    const [name, total, remaining] = e.data as [string, number, number];
+  Events.On("queue:file-start", (e: { data: unknown }) => {
+    const arr = eventArr(e, "queue:file-start");
+    if (!arr) return;
+    const [name, total, remaining] = arr as [string, number, number];
     dbg("event:queue:file-start", name, total, remaining);
     STATE.currentFile = name;
     STATE.total = total;
@@ -328,8 +346,10 @@ if (!_registered) {
     notify();
   });
 
-  Events.On("queue:file-done", (e: { data: unknown[] }) => {
-    const [name, status, errMsg] = e.data as [string, string, string];
+  Events.On("queue:file-done", (e: { data: unknown }) => {
+    const arr = eventArr(e, "queue:file-done");
+    if (!arr) return;
+    const [name, status, errMsg] = arr as [string, string, string];
     dbg("event:queue:file-done", name, status, errMsg);
     if (status === "fail") {
       STATE.errorList.push({ name, err: errMsg || t("error.unknown") });
@@ -375,8 +395,10 @@ if (!_registered) {
     }
   });
 
-  Events.On("download:progress", (e: { data: unknown[] }) => {
-    const [dl, total] = e.data as [number, number];
+  Events.On("download:progress", (e: { data: unknown }) => {
+    const arr = eventArr(e, "download:progress");
+    if (!arr) return;
+    const [dl, total] = arr as [number, number];
     dbg("event:download:progress", dl, total, typeof dl, typeof total);
     // P3 修复（审核）：进度回调边界守卫——非法数值（NaN/±Infinity/负数）归一为 0。
     // 否则 dl=NaN 会渲染成 "NaNMB"（幽灵数值），total 非法会让 pct 计算污染进度条。

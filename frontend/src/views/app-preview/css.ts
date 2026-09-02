@@ -78,48 +78,4 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 @media (max-width:480px){ .preview-fab{width:52px;height:52px;right:10px;bottom:10px;font-size:24px} }
 /* 触控热区 44px（Apple HIG） */
 @media (pointer:coarse){ .preview-fab{min-width:44px;min-height:44px} }
-
-/* === 子模型角色选择（maid-model L0 清单） === */
-.dp-submodels { text-align: left; }
-.dp-sublist {
-  list-style: none; padding: 0; margin: 0;
-  display: flex; flex-direction: column; gap: 4px;
-  max-height: 180px; overflow-y: auto;
-}
-.dp-sublist li {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 6px;
-  padding: 5px 8px; border-radius: var(--radius-sm);
-  border: 1px solid var(--bd); background: var(--surf);
-  font-size: var(--fs-xs); color: var(--txt);
-  cursor: pointer; transition: var(--tr-fast);
-  user-select: none;
-}
-.dp-sublist li:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--bd)); }
-.dp-sublist li.active {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border-color: var(--accent);
-  color: var(--txt);
-  font-weight: 600;
-}
-.dp-sublist li .chip-name {
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  flex: 1; min-width: 0;
-}
-.dp-sublist li .chip-slot {
-  flex-shrink: 0;
-  font-size: var(--fs-tiny);
-  padding: 1px 5px;
-  border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  color: var(--txt);
-  font-weight: 500;
-}
-/* 逐角色统计（预取产物）：N 骨骼 · M 立方体——弱化展示，不与角色名/纹理槽争视觉 */
-.dp-sublist li .chip-stat {
-  flex-shrink: 0;
-  font-size: var(--fs-tiny);
-  color: var(--muted);
-  white-space: nowrap;
-}
 `;

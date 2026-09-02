@@ -82,6 +82,22 @@ export function buildToggleRow(
   };
 }
 
+/** spec.models[] → 逐组件统计投影（骨骼 = bones.length；立方体 = Σ bones[]._cubeCount）。
+ *  详情卡模型结构蓝卡与 3D「组件」下拉共用同一 spec 视图（ADR-255：详情统计 = spec 投影）；
+ *  无组件返回 []，调用方回落聚合口径。 */
+export function componentCountsFromSpec(
+  spec: { models?: unknown[] | null } | null | undefined,
+): Array<{ name: string; bones: number; cubes: number }> {
+  const models = spec?.models || [];
+  return models.map((m) => {
+    const mm = m as { name?: string; id?: string; bones?: Array<{ _cubeCount?: number }> };
+    const bones = mm.bones?.length || 0;
+    let cubes = 0;
+    for (const b of mm.bones || []) cubes += b._cubeCount || 0;
+    return { name: mm.name || mm.id || "?", bones, cubes };
+  });
+}
+
 /**
  * 构建统计卡片（含作者列表）
  * 异步获取3D spec 以对齐3D面板逐组件数据源——bone/cube 按 spec.models[] 拆分，
@@ -108,12 +124,7 @@ export async function buildStatsCard(
   }
   // 从 spec 提取逐组件数据：bone/cube 按 spec.models[] 拆分，纹理尺寸取第一个组件
   const specModels = spec?.models || [];
-  const componentCounts = specModels.map((m) => {
-    const bones = m.bones?.length || 0;
-    let cubes = 0;
-    for (const b of m.bones || []) cubes += (b as { _cubeCount?: number })._cubeCount || 0;
-    return { name: m.name || m.id || "?", bones, cubes };
-  });
+  const componentCounts = componentCountsFromSpec(spec);
   // 纹理尺寸：取第一个组件的声明值（与3D面板对齐；spec 无数据时回退到 BedrockGeometry）
   const m0 = specModels[0] as { textureWidth?: number; textureHeight?: number } | undefined;
   const texW = m0?.textureWidth ?? model.texWidth;

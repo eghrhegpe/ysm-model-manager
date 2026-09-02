@@ -1,16 +1,16 @@
 // ===== 车万女仆详情预览测试 =====
-// 覆盖：showMaidPreview 渲染彩色分区（statsCardHTML 复用）、交互角色清单保留、metadata 段、
-// 切角色重新取数（AnalyzeBedrockModelEntry）、extraCount = texCount - subCount。
-// 数据源：Go AnalyzeBedrockModel 返回 types.BedrockModel（与 YSM 同一结构）。
+// 覆盖：showMaidPreview 渲染彩色分区（statsCardHTML 复用）、GetModel3DSpec 单视图收敛
+// （ADR-255：模型结构蓝卡静态逐角色行，取代 dp-submodels 交互清单 + Entry 逐角色预取）、
+// metadata 段、spec 失败回落聚合口径、封面替换、FAB 进整包 3D。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
 
-const { analyzeMock, analyzeEntryMock, mountMock, cleanupMock, makeAdapterMock, loadModelDataMock, preloadMock, androidBackMock } = vi.hoisted(() => ({
+const { analyzeMock, specMock, mountMock, cleanupMock, makeAdapterMock, loadModelDataMock, preloadMock, androidBackMock } = vi.hoisted(() => ({
   analyzeMock: vi.fn(),
-  analyzeEntryMock: vi.fn(),
+  specMock: vi.fn(),
   mountMock: vi.fn().mockResolvedValue(undefined),
   cleanupMock: vi.fn(),
-  makeAdapterMock: vi.fn(() => ({})),
+  makeAdapterMock: vi.fn((_path: unknown, _opts: unknown) => ({})),
   loadModelDataMock: vi.fn(),
   preloadMock: vi.fn(),
   androidBackMock: vi.fn(() => () => {}),
@@ -19,7 +19,7 @@ const { analyzeMock, analyzeEntryMock, mountMock, cleanupMock, makeAdapterMock, 
 vi.mock("../../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     AnalyzeBedrockModel: analyzeMock,
-    AnalyzeBedrockModelEntry: analyzeEntryMock,
+    GetModel3DSpec: specMock,
     ReadFileBytes: vi.fn().mockResolvedValue(null),
   }),
 }));
@@ -40,6 +40,9 @@ vi.mock("./model3d-loader.ts", () => ({
 vi.mock("./ysm-controls.ts", () => ({
   fillYsmShotPanel: vi.fn(),
   ysmShotNodes: vi.fn(() => []),
+  // createMaid3D 构造 adapter panels 时同步读取 registerYsmModelSchema——
+  // mock 缺此导出会在 makeYsmAdapter 调用前抛错（vitest mock 读取缺失导出即抛）
+  registerYsmModelSchema: vi.fn(),
 }));
 vi.mock("./preview-library.ts", () => ({
   registerReRoute: vi.fn(),
@@ -48,7 +51,6 @@ vi.mock("./preview-library.ts", () => ({
 vi.mock("../../utils/dom/android-bridge.ts", () => ({
   registerAndroidBackHandler: androidBackMock,
 }));
-// skeleton.ts 顶部有窗口级事件，mock 掉 3D 切换入口
 vi.mock("./skeleton.ts", () => ({
   setActive3DClose: vi.fn(),
 }));
@@ -78,10 +80,6 @@ function baseModel(over: Record<string, unknown> = {}): Record<string, unknown> 
     textureNames: ["main", "arm"],
     textureCategories: ["player", "player"],
     textures: ["data:image/png;base64,AAA", "data:image/png;base64,BBB"],
-    subModels: [
-      { name: "Eanes", texSlot: 0, sourcePath: "models/main.geo.json" },
-      { name: "备用", texSlot: 1, sourcePath: "models/arm.geo.json" },
-    ],
     metadata: {
       name: "Eanes（彩虹六号X碧蓝档案原创同人角色）",
       tips: "来自巴特蕾特学院。",
@@ -92,9 +90,22 @@ function baseModel(over: Record<string, unknown> = {}): Record<string, unknown> 
   };
 }
 
+/** GetModel3DSpec 契约（ADR-255）：zip 内每个 geo 文件 = 一个组件（= L0 角色），
+ *  蓝卡行 = spec.models 投影（骨骼 = bones.length，立方体 = Σ _cubeCount） */
+function baseSpec(over: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    models: [
+      { id: "comp_0", name: "Eanes", bones: [{ _cubeCount: 44 }, { _cubeCount: 44 }], textureWidth: 128, textureHeight: 256 },
+      { id: "comp_1", name: "备用", bones: [{ _cubeCount: 7 }], textureWidth: 128, textureHeight: 256 },
+    ],
+    ...over,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   analyzeMock.mockResolvedValue(baseModel());
+  specMock.mockResolvedValue(baseSpec());
 });
 
 describe("showMaidPreview 车万女仆详情", () => {
@@ -102,26 +113,33 @@ describe("showMaidPreview 车万女仆详情", () => {
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
     const html = ctx.root.innerHTML;
-    // 彩色分区三卡
     expect(html).toContain("pv-section-blue");
     expect(html).toContain("pv-section-green");
     expect(html).toContain("pv-section-orange");
-    // 骨骼/立方体数值高亮
-    expect(html).toContain("196");
-    expect(html).toContain("922");
     expect(html).toContain("128 × 256");
-    // 文件格式信息（.zip）
     expect(html).toContain(".zip");
   });
 
-  it("保留交互式角色清单（dp-submodels，maid 独有）", async () => {
+  it("模型结构蓝卡静态逐角色行（GetModel3DSpec 单视图，不点击即见）", async () => {
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
     const html = ctx.root.innerHTML;
-    expect(html).toContain("dp-submodels");
-    expect(html).toContain("dp-sublist");
-    expect(html).toContain("Eanes");
-    expect(html).toContain("备用");
+    // spec.models 投影为蓝卡行：Eanes 2 骨骼 · 88 立方体 / 备用 1 骨骼 · 7 立方体
+    // （数值包在 .pv-card-val span 内，故按蓝卡行 DOM 逐行断言 textContent）
+    expect(specMock).toHaveBeenCalledWith("/repo/maid.zip");
+    const rows = Array.from(ctx.root.querySelectorAll(".pv-section-blue .pv-card-row") ?? []);
+    const texts = rows.map((r) => (r.textContent ?? "").replace(/\s+/g, " ").trim());
+    expect(texts).toHaveLength(2);
+    expect(texts[0]).toContain("Eanes");
+    expect(texts[0]).toContain("2 骨骼");
+    expect(texts[0]).toContain("88 立方体");
+    expect(texts[1]).toContain("备用");
+    expect(texts[1]).toContain("1 骨骼");
+    expect(texts[1]).toContain("7 立方体");
+    // 不再渲染交互式角色清单（dp-submodels/chip 全移除）
+    expect(html).not.toContain("dp-submodels");
+    expect(html).not.toContain("dp-sublist");
+    expect(html).not.toContain("chip-stat");
   });
 
   it("渲染 metadata 段：名称 / 许可 / 作者 / tips", async () => {
@@ -134,75 +152,27 @@ describe("showMaidPreview 车万女仆详情", () => {
     expect(html).toContain("来自巴特蕾特学院。");
   });
 
-  it("extraCount = texCount - subCount（2角色2纹理 → 无额外纹理行）", async () => {
+  it("extraCount = texCount - 组件数（2 组件 2 纹理 → 无额外纹理行）", async () => {
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
     const html = ctx.root.innerHTML;
-    // 2 角色各绑定 1 张纹理，没有"额外纹理"
     expect(html).not.toContain("额外纹理");
-    // 角色纹理分类行应存在（2 张 player）
     expect(html).toContain("角色纹理 2 张");
   });
 
-  it("切角色 → AnalyzeBedrockModelEntry 重新取该角色的 boneCount/cubeCount", async () => {
-    // 按 sourcePath 区分返回：main=42/88，arm=7/13
-    analyzeEntryMock.mockImplementation(async (_p: string, sp: string) =>
-      sp === "models/main.geo.json" ? { boneCount: 42, cubeCount: 88 } : { boneCount: 7, cubeCount: 13 },
-    );
+  it("GetModel3DSpec 失败/无组件 → 回落 AnalyzeBedrockModel 聚合口径（大字 196/922）", async () => {
+    specMock.mockResolvedValue(null);
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
-    // 预取完成后：初始选中角色 0 → 统计卡显示 42（预取对齐选中角色的口径）
-    await new Promise((r) => setTimeout(r, 20));
-    expect(ctx.root.innerHTML).toContain("42");
-
-    // 模拟点击角色2（idx=1）
-    const li = ctx.root.querySelector<HTMLLIElement>('.dp-sublist li[data-idx="1"]');
-    expect(li).toBeTruthy();
-    li!.click();
-
-    // 等待异步取数完成
-    await new Promise((r) => setTimeout(r, 20));
-    expect(analyzeEntryMock).toHaveBeenCalledWith("/repo/maid.zip", "models/arm.geo.json");
-    // 重新渲染后显示该角色的 boneCount/cubeCount
-    expect(ctx.root.innerHTML).toContain("7");
-    expect(ctx.root.innerHTML).toContain("13");
-  });
-
-  it("首屏并行预取：不点击即见逐角色统计（chip-stat，对齐 YSM 详情）", async () => {
-    analyzeEntryMock.mockImplementation(async (_p: string, sp: string) =>
-      sp === "models/main.geo.json" ? { boneCount: 42, cubeCount: 88 } : { boneCount: 7, cubeCount: 13 },
-    );
-    const ctx = makeCtx();
-    await showMaidPreview(ctx, "/repo/maid.zip");
-    await new Promise((r) => setTimeout(r, 20));
-    // 两个角色的 entry 都被预取
-    expect(analyzeEntryMock).toHaveBeenCalledWith("/repo/maid.zip", "models/main.geo.json");
-    expect(analyzeEntryMock).toHaveBeenCalledWith("/repo/maid.zip", "models/arm.geo.json");
-    // chip 内直接展示统计行（不点击即见）
-    const html = ctx.root.innerHTML;
-    expect(html).toContain("chip-stat");
-    expect(html).toContain("42 骨骼 · 88 立方体");
-    expect(html).toContain("7 骨骼 · 13 立方体");
-  });
-
-  it("预取失败/entry 缺 sourcePath → chip 保持无统计行，不阻断渲染", async () => {
-    analyzeEntryMock.mockRejectedValue(new Error("bridge down"));
-    const ctx = makeCtx();
-    await showMaidPreview(ctx, "/repo/maid.zip");
-    await new Promise((r) => setTimeout(r, 20));
-    const html = ctx.root.innerHTML;
-    expect(html).toContain("dp-submodels");
-    expect(html).not.toContain("chip-stat");
-  });
-
-  it("单角色包（subs.length <= 1）→ 不注入清单也不预取", async () => {
-    analyzeEntryMock.mockResolvedValue({ boneCount: 42, cubeCount: 88 });
-    const ctx = makeCtx();
-    analyzeMock.mockResolvedValue(baseModel({ subModels: [{ name: "独苗", texSlot: 0, sourcePath: "models/a.geo.json" }] }));
-    await showMaidPreview(ctx, "/repo/maid.zip");
-    await new Promise((r) => setTimeout(r, 20));
-    expect(ctx.root.innerHTML).not.toContain("dp-submodels");
-    expect(analyzeEntryMock).not.toHaveBeenCalled();
+    // 无组件行：蓝卡回落为单一聚合行（骨骼/立方体大字）；
+    // 断言以「蓝卡行集合无逐组件行」为准——不能 not.toContain("Eanes")，
+    // metadata.name 合法携带 "Eanes"（彩虹六号同人），会误伤。
+    const rows = Array.from(ctx.root.querySelectorAll(".pv-section-blue .pv-card-row") ?? []);
+    const texts = rows.map((r) => (r.textContent ?? "").replace(/\s+/g, " ").trim());
+    expect(rows).toHaveLength(1);
+    expect(texts[0]).toContain("196");
+    expect(texts[0]).toContain("922");
+    expect(texts[0]).not.toContain("骨骼 ·"); // 无「N 骨骼 · M 立方体」逐组件行句式
   });
 
   it("AnalyzeBedrockModel 失败 → 降级显示无法读取提示", async () => {
@@ -212,32 +182,45 @@ describe("showMaidPreview 车万女仆详情", () => {
     expect(ctx.root.innerHTML).toContain("无法读取模型数据");
   });
 
+  it("FAB 进整包 3D：不传 subModelIdx/subPath（角色切换在 3D 内组件下拉）", async () => {
+    loadModelDataMock.mockResolvedValue({ model: { bones: [], cubeCount: 0 } });
+    const ctx = makeCtx();
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    const btn = ctx.root.getElementById("btn-3d-preview");
+    expect(btn).toBeTruthy();
+    btn!.click();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(makeAdapterMock).toHaveBeenCalled();
+    expect(cleanupMock).toHaveBeenCalled();
+    expect(mountMock).toHaveBeenCalled();
+    const adapterOpts = (makeAdapterMock.mock.calls[0]?.[1] ?? {}) as Record<string, unknown>;
+    // 整包加载语义：adapter 不再携带单 entry 选择参数
+    expect(adapterOpts).not.toHaveProperty("subModelIdx");
+    expect(adapterOpts).not.toHaveProperty("subPath");
+    expect(typeof adapterOpts.loader).toBe("function");
+  });
+
   it("loadPreviewImage 返回封面 → 渲染 img 替换 🧸 大图标", async () => {
     const ctx = makeCtx({
       loadPreviewImage: vi.fn().mockResolvedValue("data:image/png;base64,COVER"),
     });
     await showMaidPreview(ctx, "/repo/maid.zip");
     const html = ctx.root.innerHTML;
-    // 占位符里应有 img 且 src 为封面 data URI
     expect(html).toContain('<img src="data:image/png;base64,COVER"');
-    // 🧸 大图标被替换（占位符内不再有 .big-icon）
     expect(ctx.root.querySelector(".dp-placeholder .big-icon")).toBeNull();
   });
 
   it("loadPreviewImage 返回 null → 回退 🧸 大图标", async () => {
-    const ctx = makeCtx(); // 默认 mockResolvedValue(null)
+    const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
     const html = ctx.root.innerHTML;
-    // 无图 → 无 img
     expect(html).not.toContain("<img");
-    // 🧸 大图标保留
     expect(html).toContain('<div class="big-icon">🧸</div>');
   });
 
   it("占位符带紧凑头部类（dp-placeholder--head，避免 24px 空态留白）", async () => {
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
-    // maid 的占位符是头部内容区（封面/文件名），不是空态——需带紧凑修饰类
     expect(ctx.root.innerHTML).toContain('class="dp-placeholder dp-placeholder--head"');
   });
 });

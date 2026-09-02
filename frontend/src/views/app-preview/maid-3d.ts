@@ -20,7 +20,7 @@ import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
 import { setActive3DClose } from "./skeleton.ts";
 import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
 import type { PreviewCtx } from "./utils.ts";
-import type { BedrockSubModel } from "../../preview-3d/decoder/geometry.ts";
+import { componentCountsFromSpec } from "./skeleton-render.ts";
 import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { readFileBytes } from "./view-shell.ts";
@@ -38,27 +38,22 @@ export interface MaidOpenOptions {
   loader: (path: string) => Promise<BedrockGeometry | null>;
   onClose?: () => void;
   siblings?: string[];
-  /** 打开时默认选中的子模型索引（多角色包内切换）。
-   *  取值范围 [0, subModels.length)；越界或缺省 = 载入第 0 个（或未过滤的合并模型，后续接过滤）。 */
-  subModelIdx?: number;
-  /** 选中 subModel 的 zip 内相对路径（SubModel.SourcePath），有值时走 AnalyzeBedrockModelEntry 单模型解析。
-   *  由调用方根据 subModelIdx 从 subModels[subModelIdx].sourcePath 推导并显式传入（因为 loader 是外部闭包，
-   *  createMaid3D 内部拿不到 subModels 清单）。 */
-  subPath?: string;
 }
 
 /**
  * 打开车万女仆 3D 预览（Bedrock generic 模式）。
  * 与 YSM 共享 spec→Three.js 渲染管道，跳过动画/语义骨骼等 YSM 专属特性。
+ * 整包加载：3D spec = GetModel3DSpec(zip) 全量（组件 = 角色 geo 文件），
+ * 角色切换在 3D 内「组件」下拉完成（ADR-255——详情页不再承载角色选择）。
  */
 async function createMaid3D(
   path: string,
   texIdx = 0,
   opts: MaidOpenOptions,
 ): Promise<void> {
-  const rebuild = (idx: number, subIdx?: number): void => {
+  const rebuild = (idx: number): void => {
     cleanupPreview();
-    void createMaid3D(path, idx, { ...opts, subModelIdx: subIdx ?? opts.subModelIdx });
+    void createMaid3D(path, idx, opts);
   };
   cleanupPreview();
   await mount3D(
@@ -77,7 +72,6 @@ async function createMaid3D(
         // 注册 "ysm-model"——model 面板 schemaId 是唯一通道（无 fallback），不注册则静默空白。
         registerModelSchema: registerYsmModelSchema,
       },
-      subModelIdx: opts.subModelIdx ?? 0,
     } as Parameters<typeof makeYsmAdapter>[1]),
     path,
     withPreviewExtras({ siblings: opts.siblings }),
@@ -94,17 +88,18 @@ export function invalidateMaidPreview(): void {
   invalidatePreview();
 }
 
-/** 详情预览共享局域状态（选中子模型索引 + 3D 打开并发防护） */
+/** 详情预览共享局域状态（3D 打开并发防护） */
 interface MaidPreviewState {
-  selSubIdx: number;
   loading3D: boolean;
   model3dGuard: GenGuard;
 }
 
-/** L0 角色逐 entry 统计（预取产物；Map 缺项 = 在途/不可得/无 sourcePath） */
-type EntryStat = { bones: number; cubes: number };
+/** 逐组件统计（GetModel3DSpec spec.models 投影，与 3D「组件」下拉同一视图）。
+ *  聚合大字 = 组件合计；spec 不可得时回落 AnalyzeBedrockModel 聚合口径。 */
+type ComponentCount = { name: string; bones: number; cubes: number };
 
-/** AnalyzeBedrockModel 返回的模型信息快照 */
+/** AnalyzeBedrockModel 返回的模型信息快照（纹理/尺寸/metadata/格式；
+ *  骨/立方体由 spec 组件合计，见 showMaidPreview） */
 type MaidModelInfo = {
   boneCount?: number;
   cubeCount?: number;
@@ -117,15 +112,18 @@ type MaidModelInfo = {
   textureNames?: string[];
   /** 纹理分类：player = 角色皮肤可切换；projectile/vehicle 等 = 组件专属 */
   textureCategories?: string[];
-  subModels?: BedrockSubModel[];
   metadata?: YsmMetadata;
 } | null;
 
-/** 车万女仆 → statsCardHTML 入参映射（复用 YSM 彩色统计卡渲染，共用 types.BedrockModel 数据源）。
- *  subModels 不传——maid 用交互式 dp-submodels 角色清单（可点击切换），
- *  与 statsCardHTML 的静态 subBlock 重复，故在此剔除。
- *  subCount 传原 subModels 长度，用于修正 extraCount 公式（多角色包：texCount - subCount）。 */
-function toStatsCardModel(info: MaidModelInfo, subCount: number): StatsCardModel {
+/** 车万女仆 → statsCardHTML 入参映射（复用 YSM 彩色统计卡渲染）。
+ *  componentCounts 由 GetModel3DSpec spec.models 投影（与 3D「组件」下拉同构，
+ *  ADR-255 单视图）——模型结构蓝卡静态渲染逐角色行，取代原交互式角色清单；
+ *  subCount = 组件数（extraCount = texCount - subCount 口径）。 */
+function toStatsCardModel(
+  info: MaidModelInfo,
+  componentCounts: ComponentCount[],
+): StatsCardModel {
+  const texCount = info?.textures?.length ?? 0;
   return {
     boneCount: info?.boneCount ?? 0,
     cubeCount: info?.cubeCount ?? 0,
@@ -134,26 +132,22 @@ function toStatsCardModel(info: MaidModelInfo, subCount: number): StatsCardModel
     textures: info?.textures,
     textureNames: info?.textureNames,
     textureCategories: info?.textureCategories,
-    subCount,
+    subCount: componentCounts.length > 0 ? componentCounts.length : 1,
+    componentCounts: componentCounts.length > 0 ? componentCounts : undefined,
   };
 }
 
 /**
  * 渲染补充详情（纯字符串拼接）：彩色分区（statsCardHTML）之外的补充信息——
- * format 版本、选中角色、ysm.json metadata（name/license/tips/authors）。
- * 骨骼/立方体/纹理数/尺寸已由 statsCardHTML 彩色分区承载，此处不重复。
+ * format 版本、ysm.json metadata（name/license/tips/authors）。
+ * 骨骼/立方体/纹理数/尺寸已由 statsCardHTML 彩色分区承载，此处不重复；
+ * 逐角色行由蓝卡 componentCounts 静态渲染（ADR-255），不再有「选中角色」概念。
  */
 function dpRenderDetail(
   modelInfo: MaidModelInfo,
-  subs: BedrockSubModel[],
-  selSubIdx: number,
 ): string {
   const rows: string[] = [];
   if (modelInfo?.format) rows.push(`<div class="dp-hint">📐 ${t("preview.formatVersion")}: ${esc(modelInfo.format)}</div>`);
-  const sel = subs[selSubIdx];
-  if (subs.length > 1 && sel) {
-    rows.push(`<div class="dp-hint">🧸 ${t("preview.selectedCharacter")}: <b>${esc(sel.name)}</b></div>`);
-  }
   // ysm.json metadata 段（name/license/tips/authors，Modern YSM RawMetadata 对齐）
   const md = modelInfo?.metadata;
   if (md) {
@@ -184,50 +178,22 @@ function dpRenderDetail(
   return rows.join("");
 }
 
-/** 渲染子模型选择列表（纯字符串拼接；>1 才显示，能力驱动）。
- *  entryStats：并行预取的逐角色统计——有数据的 chip 直接展示「N 骨骼 · M 立方体」，
- *  对齐 YSM 详情「不点击即见逐组件统计」（ADR-132 同构语义的详情页对齐）。 */
-function dpRenderSubList(
-  subs: BedrockSubModel[],
-  selSubIdx: number,
-  entryStats?: Map<number, EntryStat>,
-): string {
-  if (subs.length <= 1) return "";
-  const chips = subs
-    .map((s, i) => {
-      const active = i === selSubIdx ? ' class="active"' : "";
-      const st = entryStats?.get(i);
-      const statHtml = st
-        ? `<span class="chip-stat">${st.bones} 骨骼 · ${st.cubes} 立方体</span>`
-        : "";
-      return `<li data-idx="${i}"${active}><span class="chip-name">${esc(s.name)}</span>${statHtml}${s.texSlot !== undefined ? `<span class="chip-slot">🎨${s.texSlot}</span>` : ""}</li>`;
-    })
-    .join("");
-  return `<div class="dp-submodels">
-    <div class="dp-hint" style="font-weight:600;margin-bottom:8px">🧩 ${t("preview.l0Roles")} (${subs.length})</div>
-    <ul class="dp-sublist" role="listbox">${chips}</ul>
-  </div>`;
-}
-
-/** 重绘主面板 + 事件重绑（sublist 选中 / FAB 进 3D） */
+/** 重绘主面板 + FAB 事件重绑 */
 function dpRenderPanel(
   ctx: PreviewCtx,
   basename: string,
   modelInfo: MaidModelInfo,
-  subs: BedrockSubModel[],
-  selSubIdx: number,
-  onSelect: (idx: number) => void,
+  componentCounts: ComponentCount[],
   onToggle3d: () => void,
   previewUri?: string | null,
-  entryStats?: Map<number, EntryStat>,
 ): void {
-  // 彩色统计卡（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——复用 YSM statsCardHTML，
-  // 共用 AnalyzeBedrockModel 返回的 types.BedrockModel 数据源，与 YSM 详情同一设计语言。
+  // 彩色统计卡（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——复用 YSM statsCardHTML。
+  // 数据源收敛（ADR-255）：逐角色行 = GetModel3DSpec spec.models 投影（与 3D「组件」下拉同构），
+  // 不再走 AnalyzeBedrockModel + Entry 逐角色预取的交互清单。
   const statsHTML = modelInfo
-    ? `<div class="pv-card">${statsCardHTML(toStatsCardModel(modelInfo, subs.length), basename)}</div>`
+    ? `<div class="pv-card">${statsCardHTML(toStatsCardModel(modelInfo, componentCounts), basename)}</div>`
     : "";
-  const detail = dpRenderDetail(modelInfo, subs, selSubIdx);
-  const subList = dpRenderSubList(subs, selSubIdx, entryStats);
+  const detail = dpRenderDetail(modelInfo);
   // 封面缩略图（loadPreviewImage 产物）：有图时替换 🧸 大图标，无图回退 🧸 装饰。
   // 样式对齐资源包详情（detail.ts:171）：96px、圆角、边框、pixelated。
   const coverHtml = previewUri
@@ -242,19 +208,10 @@ function dpRenderPanel(
   </div>
   ${statsHTML}
   ${detail ? `<div class="pv-card" style="margin-top:8px">${detail}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:11px;color:var(--txt-dim)">⚠️ 无法读取模型数据</div>` : ""}
-  ${subList ? `<div class="pv-card" style="margin-top:8px">${subList}</div>` : ""}
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
 
-  // subModel 选中点击
-  ctx.root.querySelectorAll<HTMLLIElement>(".dp-sublist li").forEach((li) => {
-    li.onclick = () => {
-      const idx = Number(li.getAttribute("data-idx"));
-      if (!Number.isFinite(idx) || idx < 0 || idx >= subs.length) return;
-      onSelect(idx);
-    };
-  });
-  // FAB 接线（含选中的 subModelIdx + 默认 texSlot）
+  // FAB 接线（进整包 3D；角色切换在 3D 内「组件」下拉）
   const btn3d = ctx.root.getElementById("btn-3d-preview");
   if (btn3d) {
     promoteTitleIfPresent(btn3d);
@@ -262,14 +219,13 @@ function dpRenderPanel(
   }
 }
 
-/** 进入 3D 预览（并发防护：loading3D/model3dGuard 放 state 随预览实例隔离） */
+/** 进入 3D 预览（并发防护：loading3D/model3dGuard 放 state 随预览实例隔离）。
+ *  整包加载（ADR-255）：3D spec = GetModel3DSpec(zip) 全量，组件下拉即角色切换——
+ *  不再按详情页选中角色传 subPath 单 entry。 */
 async function dpToggle3D(
   state: MaidPreviewState,
   ctx: PreviewCtx,
   path: string,
-  modelInfo: MaidModelInfo,
-  subs: BedrockSubModel[],
-  selSubIdx: number,
 ): Promise<void> {
   if (state.loading3D) return;
   state.loading3D = true;
@@ -291,26 +247,14 @@ async function dpToggle3D(
   setActive3DClose(() => close3D());
   unsubAndroidBack = registerAndroidBackHandler(() => { close3D(); return true; });
   try {
-    const sel = subs[selSubIdx];
-    // subPath：选中角色的 zip 内相对路径，用于 Go AnalyzeBedrockModelEntry 单模型解析
-    // 若 subModel.sourcePath 未声明（L1 兜底清单），则不走单 entry 路径，回退全量合并。
-    const subPath = subs.length > 1 ? sel?.sourcePath : undefined;
-    // texIdx 优先级：选中角色的 texSlot（若声明）→ 默认 0
-    const texCount = modelInfo?.textures?.length || 0;
-    const texStart = sel && typeof sel.texSlot === "number" && texCount
-      ? Math.min(sel.texSlot, texCount - 1)
-      : 0;
-    await createMaid3D(path, texStart, {
+    await createMaid3D(path, 0, {
       loader: async (p) =>
         (
           await loadModelData(p, ctx, {
             skipWasm: true,
-            subPath,
           })
         ).model,
       onClose,
-      subModelIdx: subs.length > 1 ? selSubIdx : undefined,
-      subPath,
     });
   } catch (e) {
     if (state.model3dGuard.stale(gen)) return;
@@ -345,13 +289,14 @@ export async function showMaidPreview(
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
 
-  // 调用 Go 端分析模型数据（含 subModels L0 清单）
-  // baseModelInfo：聚合数据（纹理/metadata/subModels），全角色共享不变
-  // displayModelInfo：当前显示用（聚合 + 当前角色的 boneCount/cubeCount 覆盖）
+  // 数据获取（ADR-255 单视图收敛）：
+  //  ① AnalyzeBedrockModel —— 聚合纹理/尺寸/格式/metadata（纹理绿卡/文件信息/补充详情用）
+  //  ② GetModel3DSpec —— 逐组件统计唯一源：spec.models[] 与 3D「组件」下拉同一视图，
+  //     模型结构蓝卡静态渲染逐角色行；spec 不可得（拆分失败）时回落 ① 聚合口径。
   let baseModelInfo: MaidModelInfo = null;
-  let displayModelInfo: MaidModelInfo = null;
+  let componentCounts: ComponentCount[] = [];
   try {
-    const { AnalyzeBedrockModel } = await getApp();
+    const { AnalyzeBedrockModel, GetModel3DSpec } = await getApp();
     const model = await AnalyzeBedrockModel(path);
     if (model) {
       baseModelInfo = {
@@ -363,102 +308,50 @@ export async function showMaidPreview(
         textures: model.textures as unknown[] | undefined,
         textureNames: model.textureNames as string[] | undefined,
         textureCategories: model.textureCategories as string[] | undefined,
-        subModels: model.subModels as BedrockSubModel[] | undefined,
         metadata: model.metadata ?? undefined,
       };
-      displayModelInfo = { ...baseModelInfo };
+    }
+    const spec = await GetModel3DSpec(path);
+    if (spec) {
+      componentCounts = componentCountsFromSpec(spec);
+      // 纹理尺寸优先 spec 首组件声明值（对齐 3D 面板 / YSM buildStatsCard 口径）
+      const m0 = (spec as { models?: Array<{ textureWidth?: number; textureHeight?: number }> }).models?.[0];
+      if (m0 && baseModelInfo) {
+        baseModelInfo.texWidth = m0.textureWidth ?? baseModelInfo.texWidth;
+        baseModelInfo.texHeight = m0.textureHeight ?? baseModelInfo.texHeight;
+      }
     }
   } catch (e) {
-    console.warn("[maid-preview] AnalyzeBedrockModel:", e);
+    console.warn("[maid-preview] 模型数据分析:", e);
+  }
+  // 大字口径：spec 组件合计优先（YSM 详情同款）；spec 空/失败回落 AnalyzeBedrockModel 聚合值
+  if (baseModelInfo && componentCounts.length > 0) {
+    baseModelInfo.boneCount = componentCounts.reduce((s, c) => s + c.bones, 0);
+    baseModelInfo.cubeCount = componentCounts.reduce((s, c) => s + c.cubes, 0);
   }
 
-  const subs = baseModelInfo?.subModels && baseModelInfo.subModels.length > 0 ? baseModelInfo.subModels : [];
-
-  /** 切角色时重新取该角色的 boneCount/cubeCount（AnalyzeBedrockModelEntry 返回单模型几何），
-   *  纹理/metadata/subModels 不变（聚合数据）。不阻塞渲染——异步更新后重绘。 */
-  const refreshPerEntry = async (idx: number): Promise<void> => {
-    if (!baseModelInfo || idx < 0 || idx >= subs.length) return;
-    const sub = subs[idx];
-    if (!sub.sourcePath) return; // 无 sourcePath 无法精确取数
-    try {
-      const { AnalyzeBedrockModelEntry } = await getApp();
-      const entry = await AnalyzeBedrockModelEntry(path, sub.sourcePath);
-      if (entry && displayModelInfo) {
-        displayModelInfo.boneCount = entry.boneCount;
-        displayModelInfo.cubeCount = entry.cubeCount;
-        state.entryStats.set(idx, { bones: entry.boneCount, cubes: entry.cubeCount });
-        render();
-      }
-    } catch {
-      // 取数失败不阻断——保持聚合数据
-    }
-  };
-
-  // 共享局域 state：选中子模型索引 + 3D 打开并发防护 + 封面预览图 URI + 逐角色统计预取缓存
-  const state: MaidPreviewState & { previewUri?: string | null; entryStats: Map<number, EntryStat> } = {
-    selSubIdx: 0,
+  // 共享局域 state：3D 打开并发防护 + 封面预览图 URI
+  const state: MaidPreviewState & { previewUri?: string | null } = {
     loading3D: false,
     model3dGuard: new GenGuard(),
     previewUri: null,
-    entryStats: new Map(),
   };
   const render = (): void => {
     dpRenderPanel(
       ctx,
       basename,
-      displayModelInfo,
-      subs,
-      state.selSubIdx,
-      (idx) => { state.selSubIdx = idx; render(); void refreshPerEntry(idx); },
-      () => { void dpToggle3D(state, ctx, path, baseModelInfo, subs, state.selSubIdx); },
+      baseModelInfo,
+      componentCounts,
+      () => { void dpToggle3D(state, ctx, path); },
       state.previewUri,
-      state.entryStats,
     );
-  };
-
-  /** 并行预取全部 L0 角色的 boneCount/cubeCount（并发上限 3，防超大包拖垮桥接）。
-   *  对齐 YSM 详情「不点击即见逐组件统计」：每完成一个 entry 渐进重绘，
-   *  失败/无 sourcePath 的角色保持无统计行（不阻断）。 */
-  const prefetchEntryStats = async (): Promise<void> => {
-    if (!baseModelInfo || subs.length <= 1) return;
-    const targets = subs
-      .map((s, i) => ({ s, i }))
-      .filter(({ s }) => !!s.sourcePath);
-    if (targets.length === 0) return;
-    const CONCURRENCY = 3;
-    let cursor = 0;
-    const worker = async (): Promise<void> => {
-      while (cursor < targets.length) {
-        const { s, i } = targets[cursor++]!;
-        const sourcePath = s.sourcePath;
-        if (!sourcePath) continue; // filter 已保证，类型收窄防御
-        try {
-          const { AnalyzeBedrockModelEntry } = await getApp();
-          const entry = await AnalyzeBedrockModelEntry(path, sourcePath);
-          if (detailGen.stale(gen)) return; // 用户已切走，丢弃在途预取
-          if (entry) {
-            state.entryStats.set(i, { bones: entry.boneCount, cubes: entry.cubeCount });
-            // 当前选中角色的统计卡同步对齐（与点击切换后的覆盖口径一致）
-            if (i === state.selSubIdx && displayModelInfo) {
-              displayModelInfo.boneCount = entry.boneCount;
-              displayModelInfo.cubeCount = entry.cubeCount;
-            }
-            render();
-          }
-        } catch {
-          // 单角色取数失败不阻断——chip 保持无统计行
-        }
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, () => worker()));
   };
 
   // 封面预览图（缓存 → WASM → Go 兜底，统一入口）：
   // 先渲染无图态（统计卡立即可见），异步取图后若命中再重绘替换 🧸。
   // 不 await 阻塞首帧——取图走 Go 解析 zip 可能数百 ms，用户无需等图才见统计卡。
   render();
-  // 逐角色统计并行预取（不阻塞首帧——渐进重绘补齐 chip 统计行）
-  void prefetchEntryStats();
+
   const cover = await ctx.loadPreviewImage(path);
   if (detailGen.stale(gen)) return; // 用户已切走，丢弃在途封面
   if (cover && cover !== state.previewUri) {

@@ -29,11 +29,12 @@
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { zipSync } from "fflate";
 
 /** 读取仓库已跟踪的 YSM fixture 目录，现场 zip 成 .ysm 文件字节 base64（CI 可复现）。 */
 function fixtureYsmBase64(): string {
-  const root = path.resolve(__dirname, "..", "..", "tests", "fixtures", "ysm", "01_taisho_maid");
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "tests", "fixtures", "ysm", "01_taisho_maid");
   const files: Record<string, Uint8Array> = {};
   const walk = (dir: string, base: string): void => {
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {

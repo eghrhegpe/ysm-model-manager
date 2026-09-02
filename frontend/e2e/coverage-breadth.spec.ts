@@ -13,8 +13,9 @@ import { test, expect } from "./fixture.ts";
 import { gotoApp, navItem, waitForTreeCount, clickTreeFile } from "./helpers.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const OUT_DIR = path.resolve(__dirname, "..", "e2e-coverage");
+const OUT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "e2e-coverage");
 const OUT_FILE = path.join(OUT_DIR, "coverage.json");
 
 test.describe("E2E 覆盖广度采集（G-4）", () => {

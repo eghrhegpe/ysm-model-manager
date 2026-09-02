@@ -6,7 +6,7 @@
  */
 
 import { readdirSync, readFileSync } from 'fs';
-import { join, extname } from 'path';
+import { join, extname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -31,16 +31,17 @@ interface Violation {
 }
 
 function scanFile(filePath: string): Violation[] {
-  const basename = filePath.split('/').pop() || '';
-  if (EXCLUDE_FILES.includes(basename)) return [];
-  
+  // 用 path.basename 跨平台取文件名（旧 split('/') 在 Windows 下不拆路径）
+  if (EXCLUDE_FILES.includes(basename(filePath))) return [];
+
   if (!['.ts', '.js'].includes(extname(filePath))) return [];
 
   let content: string;
   try {
     content = readFileSync(filePath, 'utf-8');
-  } catch {
-    return [];
+  } catch (e) {
+    // 读错不静默吞——守卫脚本必须 fail-loud，否则真实 bypass 被掩盖假绿
+    throw new Error(`无法读取 ${filePath}: ${(e as Error).message}`);
   }
 
   const violations: Violation[] = [];

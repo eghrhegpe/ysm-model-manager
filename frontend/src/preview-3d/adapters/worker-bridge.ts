@@ -187,3 +187,24 @@ export function createResolveModeBridge<Resp extends ResolveModeResponse>(
     dispose: () => bridge.dispose(),
   };
 }
+
+// ===== 单 worker 解析器工厂（pmx / fbx 同构，消除逐份复制）=====
+
+/** 单 worker resolve-mode 解析器工厂：Worker 不可用 → always-fail 降级守卫
+ *  （调用方 fallback 主线程路径）；否则 30s 超时 createResolveModeBridge 包装。
+ *  pmx/fbx 的 createXxxParser 降为一行薄封装，降级/超时协议不重复维护。
+ *  返回 { parse, dispose }（parse 语义对齐 createXxxParser，bridge.request 在此收敛）。 */
+export function createWorkerParser<Resp extends ResolveModeResponse>(
+  workerUrl: string,
+  timeoutMsg: string,
+): { parse: (bytes: ArrayBuffer) => Promise<Resp>; dispose: () => void } {
+  if (typeof Worker === "undefined") {
+    return {
+      parse: () =>
+        Promise.resolve({ id: 0, ok: false, error: "Worker 不可用（测试/受限环境）" } as Resp),
+      dispose: () => undefined,
+    };
+  }
+  const bridge = createResolveModeBridge<Resp>(workerUrl, 30000, timeoutMsg);
+  return { parse: (bytes) => bridge.request(bytes), dispose: () => bridge.dispose() };
+}

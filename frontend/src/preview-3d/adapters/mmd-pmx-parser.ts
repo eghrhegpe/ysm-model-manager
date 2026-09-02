@@ -12,7 +12,7 @@ import type {
   PmxMaterialData,
   PmxBoneData,
 } from "./mmd-pmx-parser.worker.ts";
-import { createResolveModeBridge } from "./worker-bridge.ts";
+import { createWorkerParser } from "./worker-bridge.ts";
 
 // ===== rAF 切片工具 =====
 // 每帧处理预算（毫秒），留给浏览器 60fps 渲染的时间
@@ -52,23 +52,10 @@ export interface PmxParser {
   dispose(): void;
 }
 
-/** 创建 PMX 解析器（Worker） */
+/** 创建 PMX 解析器（Worker）。测试/受限环境无 Worker → always-fail 降级守卫，
+ *  调用方（mmd-adapter）会 fallback 到 MMDLoader 主路径（对齐 web-stats 降级契约） */
 export function createPmxParser(): PmxParser {
-  // 降级守卫：测试/受限环境无 Worker（vitest node）——返回 always-fail parser，
-  // 调用方（mmd-adapter）会 fallback 到 MMDLoader 主路径（对齐 web-stats 降级契约）
-  if (typeof Worker === "undefined") {
-    return {
-      parse: () => Promise.resolve({ id: 0, ok: false, error: "Worker 不可用（测试/受限环境）" }),
-      dispose: () => undefined,
-    };
-  }
-
-  const bridge = createResolveModeBridge<PmxParseResponse>(
-    "./mmd-pmx-parser.worker.ts",
-    30000,
-    "PMX 解析超时（>30s）",
-  );
-  return { parse: (bytes) => bridge.request(bytes), dispose: () => bridge.dispose() };
+  return createWorkerParser<PmxParseResponse>("./mmd-pmx-parser.worker.ts", "PMX 解析超时（>30s）");
 }
 
 /**

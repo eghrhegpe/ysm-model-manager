@@ -5,7 +5,7 @@
 
 import * as THREE from "three";
 import type { FbxParseRequest, FbxParseResponse } from "./fbx-parser.worker.ts";
-import { createResolveModeBridge } from "./worker-bridge.ts";
+import { createWorkerParser } from "./worker-bridge.ts";
 import type {
   FbxSceneData,
   FbxMeshData,
@@ -25,19 +25,7 @@ export interface FbxParser {
 /** 创建 FBX 解析器（Worker）。测试/受限环境无 Worker → always-fail 降级守卫，
  *  调用方（fbx-adapter）会 fallback 到主线程 FBXLoader 路径 */
 export function createFbxParser(): FbxParser {
-  if (typeof Worker === "undefined") {
-    return {
-      parse: () => Promise.resolve({ id: 0, ok: false, error: "Worker 不可用（测试/受限环境）" }),
-      dispose: () => undefined,
-    };
-  }
-
-  const bridge = createResolveModeBridge<FbxParseResponse>(
-    "./fbx-parser.worker.ts",
-    30000,
-    "FBX 解析超时（>30s）",
-  );
-  return { parse: (bytes) => bridge.request(bytes), dispose: () => bridge.dispose() };
+  return createWorkerParser<FbxParseResponse>("./fbx-parser.worker.ts", "FBX 解析超时（>30s）");
 }
 
 /** 场景重建配置 */

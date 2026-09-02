@@ -41,8 +41,8 @@ use_when:
   - 整合包同步
   - 推送
   - 拉取
-  - 同步状态
-  - PushSingleResource
+  - 跨组件同步编排
+  - 缺包回拉
   - PullSingleResource
   - sync:download:missing
 invariant_anchors:

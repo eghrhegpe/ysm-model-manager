@@ -16,7 +16,7 @@ use_when:
   - 临时索引
   - 白名单提交
   - 门禁后自动 commit
-status: snapshot
+status: active
 ---
 
 # 提交脚本 commit-with-check

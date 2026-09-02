@@ -1,7 +1,7 @@
 ---
 kind: app_content_diagnostics
 name: 诊断与冲突页 diagnostics
-tier: leaf
+tier: architecture
 category: ui
 source_files:
   - frontend/src/views/app-content/diagnostics/init.ts
@@ -34,7 +34,7 @@ use_when:
   - 诊断页
   - 冲突
   - 去重流程
-  - 日志
+  - 诊断页日志 tab
   - 性能
   - oldest
 perf:

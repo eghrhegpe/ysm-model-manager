@@ -17,7 +17,7 @@ use_when:
   - 截图
   - 导出 PNG
   - 多角度截图
-  - 预览缓存
+  - 预览缓存淘汰
   - blob URL 释放
 perf:
   - memory-heavy

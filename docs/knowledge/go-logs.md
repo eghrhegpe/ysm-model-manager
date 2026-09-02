@@ -20,7 +20,7 @@ pitfalls:
 use_when:
   - 导入日志
   - 操作记录
-  - 日志
+  - 操作日志
   - import log
   - 历史
 perf:

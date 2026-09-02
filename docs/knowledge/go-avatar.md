@@ -24,7 +24,7 @@ use_when:
   - 创作者
   - avatar
   - 缓存
-  - 缩略图
+  - 头像缩略图
 perf:
   - io-bound
 invariant_anchors:

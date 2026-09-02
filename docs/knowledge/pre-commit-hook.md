@@ -21,7 +21,7 @@ quick_intents:
   - 防吞并发会话未提交漂移
 quick_risk_lines:
   - 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2）
-status: snapshot
+status: active
 ---
 
 # 提交前钩子 pre-commit

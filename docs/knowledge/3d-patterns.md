@@ -1,7 +1,7 @@
 ---
 kind: 3d-patterns
 name: 3D 区审核与修复模式提炼
-tier: leaf
+tier: architecture
 category: ui
 source_files:
   - frontend/src/preview-3d/debug-render.ts
@@ -10,6 +10,17 @@ source_files:
   - frontend/src/preview-3d/cleanup-helper.ts
   - frontend/src/views/app-preview/preview-library.ts
   - frontend/src/views/app-preview/skeleton.ts
+tests:
+  - frontend/src/preview-3d/adapters/mount-preview-core.behavior.test.ts
+  - frontend/src/preview-3d/adapters/mount-preview-core.test.ts
+  - frontend/src/preview-3d/cleanup-helper.test.ts
+  - frontend/src/preview-3d/debug-render.test.ts
+  - frontend/src/views/app-preview/preview-library-cooperate.test.ts
+  - frontend/src/views/app-preview/preview-library-replace.test.ts
+  - frontend/src/views/app-preview/preview-library.test.ts
+  - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
+  - frontend/src/views/app-preview/skeleton-render.test.ts
+  - frontend/src/views/app-preview/skeleton.test.ts
 use_when:
   - 3D 渲染循环优化
   - Vector3 复用

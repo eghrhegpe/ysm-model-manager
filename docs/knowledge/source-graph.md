@@ -14,7 +14,7 @@ use_when:
   - rollback-impact
   - bloat-history
   - 依赖图
-status: snapshot
+status: active
 ---
 # 源码符号提取共享层 source-graph.ts
 

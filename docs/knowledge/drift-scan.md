@@ -10,7 +10,7 @@ use_when:
   - 双轨
   - 重复实现
   - 口径漂移
-status: snapshot
+status: active
 ---
 
 # drift-scan（双轨漂移检测）

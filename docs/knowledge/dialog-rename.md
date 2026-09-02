@@ -1,11 +1,14 @@
 ---
 kind: dialog-rename
 name: 重命名弹窗 rename
-tier: leaf
+tier: architecture
 category: ui
 source_files:
   - frontend/src/utils/dom/dialogs/rename.ts
   - frontend/src/utils/dom/dialogs/rename-format.ts
+tests:
+  - frontend/src/utils/dom/dialogs/rename-format.test.ts
+  - frontend/src/utils/dom/dialogs/rename.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

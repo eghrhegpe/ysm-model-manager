@@ -18,7 +18,7 @@ use_when:
   - 缺失导入
   - goimports
   - 大脚本拆分
-status: snapshot
+status: active
 ---
 
 # auto-import 拆分与缺失 import 检测

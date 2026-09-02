@@ -14,7 +14,7 @@ use_when:
   - 增量门禁
   - 新增重复
   - 独立 baseline
-status: snapshot
+status: active
 ---
 
 # Go 端 jscpd 重复检测脚本

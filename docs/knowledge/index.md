@@ -94,7 +94,7 @@
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | io-bound | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
 | 🏗 resource-packs | 资源包功能 resource-packs（已归档） | architecture | — | 资源包, 光影包, resourcepack, shaderpack |
 | 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 三路交集, adv-filter, SearchModels, 网页版降级 |
-| 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 同步状态, PushSingleResource, PullSingleResource, sync:download:missing |
+| 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 跨组件同步编排, 缺包回拉, PullSingleResource, sync:download:missing |
 | 🏗 version-updater | 版本更新 version-updater | architecture | io-bound | 更新, 升级, 检查更新, 新版本, 静默检查, updater, 版本 |
 
 ### 摘要
@@ -126,7 +126,7 @@
 | 🏗 fbx-cli-pipeline | FBX CLI 处理管线 fbx-cli-pipeline | architecture | — | FBX, CLI, 命令行, 转换, glTF, GLB, fbx2gltf, assimp |
 | 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android, 平台守卫, RevealInExplorer, OpenFolder, RestartApplication, xdg-open, 重启, Node.js |
 | 🍃 go-avatar-decode | Go 头像提取：纯函数 vs Node+WASM 解码分界 | leaf | io-bound, single-thread | 改头像提取 / DecodeYSMFiles / ExtractAvatarURI 逻辑或补 avatar 测试时 |
-| 🏗 go-avatar | 头像 go/avatar | architecture | io-bound | 头像, 作者, 创作者, avatar, 缓存, 缩略图 |
+| 🏗 go-avatar | 头像 go/avatar | architecture | io-bound | 头像, 作者, 创作者, avatar, 缓存, 头像缩略图 |
 | 🏗 go-cli-search | CLI 搜索命令 search | architecture | — | CLI 搜索, 命令行搜索, search 命令, 关键词搜索, 数值范围搜索, 模型搜索, go run search, runSearch |
 | 🍃 go-config | Go 配置单持有点 go/config | leaf | — | 改配置注入/阈值逻辑，或消费包读阈值时 |
 | 🏗 go-container | 统一容器桥接层 go/container | architecture | — | 容器, 解包, zip, 7z, ContainerReader, 归档, 压缩包, 目录容器 |
@@ -141,7 +141,7 @@
 | 🏗 go-instance | 整合包实例 go/instance | architecture | io-bound | 整合包, 实例, 版本实例, VersionInstance, 同步项, BuildSyncItems, 资源同步 |
 | 🍃 go-launcher | 启动器实例发现 go/launcher | leaf | — | 改启动器发现/实例目录解析逻辑时 |
 | 🏗 go-litematic | Litematic 解析 go/litematic | architecture | — | 投影, litematic, schematic, nbt, 蓝图, 体素, 方块 |
-| 🏗 go-logs | 导入日志 go/logs | architecture | io-bound | 导入日志, 操作记录, 日志, import log, 历史 |
+| 🏗 go-logs | 导入日志 go/logs | architecture | io-bound | 导入日志, 操作记录, 操作日志, import log, 历史 |
 | 🏗 go-packs | 资源包 mcmeta go/packs | architecture | io-bound | 资源包, 光影包, mcmeta, pack_format, 缩略图, 类型检测 |
 | 🏗 go-paths | 路径安全 go/paths | architecture | — | 路径, 安全, path, 路径校验 |
 | 🏗 go-recycle | 回收站 go/recycle | architecture | io-bound | 回收站, 删除, 恢复, recycle, 软删除 |
@@ -241,7 +241,7 @@
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | — | — |
-| 🍃 3d-patterns | 3D 区审核与修复模式提炼 | leaf | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
+| 🏗 3d-patterns | 3D 区审核与修复模式提炼 | architecture | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
 | 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:change, 仓库页, 全局 handler |
 | 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新 |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:change, 菜单, 页面记忆, 版本号 |
@@ -250,14 +250,14 @@
 | 🏗 app-sync-manager | 整合包同步页 app-sync-manager | architecture | io-bound | 整合包同步, 同步状态, 推送资源, 拉取资源, 待推送, 可拉取, 已禁用, 实例资源 |
 | 🍃 app-toast | Toast 通知 app-toast | leaf | — | toast, 通知, 提示, 消息, 撤销, 反馈, 报错提示 |
 | 🏗 app-tree | 资源树 app-tree | architecture | — | 树形, 资源列表, tree, 节点, 树, 目录树 |
-| 🍃 app_content_diagnostics | 诊断与冲突页 diagnostics | leaf | cpu-bound, gpu-bound, concurrent | 诊断页, 冲突, 去重流程, 日志, 性能, oldest |
+| 🏗 app_content_diagnostics | 诊断与冲突页 diagnostics | architecture | cpu-bound, gpu-bound, concurrent | 诊断页, 冲突, 去重流程, 诊断页日志 tab, 性能, oldest |
 | 🍃 app_content_settings | 设置页 settings | leaf | — | 设置页, 主题设置, 键位, 路径配置, 界面偏好 |
 | 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点视图, 浏览模式, 卡片拖拽, workshop-data |
 | 🏗 context-menu | 右键菜单系统 | architecture | — | 右键菜单, 右键, 上下文菜单, ctx:show, menu:show, 批量操作, 移入回收站 |
 | 🏗 dialog-adv-filter | 高级筛选 adv-filter | architecture | — | 高级筛选, 筛选, 骨骼数, 立方体, 纹理尺寸, 按标签筛选, 条件过滤 |
 | 🏗 dialog-batch-rename | 批量重命名 batch-rename | architecture | — | 批量重命名, 批量改名, 查找替换, 正则替换, 统一作者, 预设, batch-rename |
 | 🏗 dialog-modal | 弹窗基座 modal | architecture | — | 弹窗, 对话框, 确认框, 输入框弹窗, 下拉选择弹窗, modal, prompt, confirm |
-| 🍃 dialog-rename | 重命名弹窗 rename | leaf | — | 重命名, 改名, 命名规范, 作者 品牌 角色, rename, 读取头部 |
+| 🏗 dialog-rename | 重命名弹窗 rename | architecture | — | 重命名, 改名, 命名规范, 作者 品牌 角色, rename, 读取头部 |
 | 🏗 dialog-tag-editor | 标签编辑器 tag-editor | architecture | — | 标签, 打标签, 编辑标签, tag, 标签弹窗, 分类标记 |
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, FAB 3D 预览入口, overlay, ADR-057 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
@@ -325,7 +325,7 @@
 | 🍃 utils-display | 文件名显示 display | leaf | — | 文件名显示, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮 |
 | 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
 | 🏗 utils-errors | 错误处理 errors | architecture | — | 错误提示, 友好错误, friendlyError, toast 文案, 报错翻译, 网络错误, 文件被占用 |
-| 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存, blob URL 释放 |
+| 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存淘汰, blob URL 释放 |
 | 🏗 utils-extensions | 扩展名映射 extensions | architecture | — | 扩展名, 支持的文件类型, 拖拽过滤, RESOURCE_EXTS, ALL_EXTS, 导入过滤, 扩展名归属 |
 | 🍃 utils-fmt | 格式化工具 fmt | leaf | — | 文件大小, 字节格式化, KB MB, 日期格式化, 友好日期, 文件大小颜色 |
 | 🍃 utils-icon | 图标映射 icon | leaf | — | 图标, emoji, 文件图标, fileIcon, 判断 YSM 文件 |

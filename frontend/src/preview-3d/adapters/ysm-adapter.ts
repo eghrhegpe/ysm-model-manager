@@ -453,6 +453,9 @@ function mdYsMakeSceneHandle(
       bonePanelRef.current?.();
       unregisterModelRoot(obj.rootGroup);
       obj.removeFromScene(ctx.scene as THREE.Scene);
+      // 释放预加载纹理 GPU 资源（removeFromScene 的 disposeSceneMeshes 显式跳过纹理）
+      for (const t of core.texArr) t?.dispose();
+      for (const arr of core.componentTexMap.values()) for (const t of arr) t?.dispose();
       ctx.renderer!.domElement.removeEventListener("keydown", onFKeyDown);
       if (debugState.debugGroup) {
         disposeDebugGroup(debugState.debugGroup);

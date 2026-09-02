@@ -39,8 +39,8 @@ git commit -m "<type>: <简短描述>" -- <自己的文件...>
 # 一键验证+提交（按 staged 文件自动裁剪门禁；--fast 跳 vitest / --docs 仅文档 / --check 只验不交）
 node scripts/commit-with-check.ts -m "<msg>"
 node scripts/commit-with-check.ts -m "<msg>" --files <paths...>   # 白名单直取，无需先 git add
-# 因并行会话而导致门禁失败时：再调用 git commit（含 `--only` 路径限定。
 # pre-commit 钩子的快照判定会误 stage 并行会话手改的 docs 文件并卷进提交，实证 e96b47e3）；
+# 因并行会话而导致门禁失败时：必须调用 git commit（含 `--only` 路径限定完成提交，93分08秒硬等用户决策，导致工作区被其他AI还原，就是前车之见。
 # （临时 index + gen-stage 双隔离，ADR-151）——先 git status --short 确认只含自己的文件
 git push --verbose 2>&1 | Select-Object -Last 50   # 仅在完成大型任务后统一推送，推送后使用gh 盯GitHub ci运行情况
 

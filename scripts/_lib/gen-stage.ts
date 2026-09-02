@@ -109,7 +109,9 @@ export function computeStageList(input: StageInput): string[] {
 // ── CLI：sh 侧消费（pre-commit 调用）──
 // node scripts/_lib/gen-stage.ts <snap_before> [snap_after]
 // 自身重遍历快照 → 计算变化 → 取 porcelain → 输出 stage 清单
-const SNAP_BASES = ['docs', 'frontend/public/locales', 'completions'];
+import { SNAP_DIRS } from './gen-config.ts';
+
+const SNAP_BASES = SNAP_DIRS;
 
 function snapshot(): Map<string, { mtime: number; size: number }> {
   const out = new Map<string, { mtime: number; size: number }>();

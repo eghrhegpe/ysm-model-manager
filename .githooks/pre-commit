@@ -41,6 +41,7 @@ cd "$ROOT"
 # docs/locales 半成品扫进本次 commit（2026-08-17 门禁锐评 P2-2 修复）。
 # 快照文件用 $$ 进程后缀 + trap 清理：并发 pre-commit 互不覆盖（code_review P2）；
 # find -printf 仅 GNU 可用（Windows Git Bash OK），BSD 平台降级用 node 一行替代。
+# gen 目标配置在 scripts/_lib/gen-config.ts（单一事实源），新增目标改此处即可。
 GEN_SNAP="/tmp/ysm_gen_snap_before_$$.txt"
 GEN_SNAP_AFTER="/tmp/ysm_gen_snap_after_$$.txt"
 snap_docs() {

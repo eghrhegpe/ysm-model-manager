@@ -85,6 +85,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   'test_deadcode_attrib.ts': ['tests'],
   'test_domain_classify.ts': ['tests'],
   'test_gen_stage.ts': ['tests'],
+  'test_gate_iife_correctness.ts': ['tests'],
   'test_jscpd_pairs.ts': ['tests'],
   'test_redlines_changed_files.ts': ['tests'],
   'test_scripts_json.ts': ['tests'],
@@ -119,6 +120,8 @@ export function selectContractTests(changedDomains: ReadonlySet<string> | readon
  * 但「进程正常跑完却断言失败」绝不重试，避免掩盖真实回归（2026-08-31 审计加固）。
  */
 const MAX_SPAWN_RETRY = 3;
+// spawn 失败计数（仅 ENOENT/EMFILE 等进程启动失败，不含测试断言失败）
+let spawnFailureCount = 0;
 
 /** 单次 spawn 结果（含"进程未起来"的 spawnError 分支）。 */
 interface SpawnOnceResult {
@@ -154,6 +157,10 @@ async function runTest(file: string): Promise<SpawnOnceResult> {
     // 仅「进程未起来」（spawn 瞬时 ENOENT / EMFILE 等）重试；
     // 进程正常跑完但断言失败 → 立即返回，交上层判失败，不掩盖真实回归。
     if (r.spawnError && /ENOENT|EMFILE|spawn/i.test(r.stderr || r.spawnError.message || '')) {
+      spawnFailureCount++;
+      if (spawnFailureCount > 5) {
+        console.warn('[contract-tests] 进程表饱和频繁（累计 5+ 次），考虑降低并发或检查系统负载');
+      }
       last = r;
       continue;
     }

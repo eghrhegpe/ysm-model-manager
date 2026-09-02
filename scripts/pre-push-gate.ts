@@ -426,30 +426,24 @@ async function main() {
 
     // npm 三件套并行优化：vite build ∥ tsc --noEmit，vitest 串行在后
     // （vitest 是重活儿，独占资源更稳；build 与 tsc 无依赖，墙钟减半）
-    // tsc 路径解析：优先 frontend/node_modules（独立装），回退根 node_modules
-    // （npm workspace hoisting 场景——根 package.json workspaces 含 frontend，
-    // typescript 在根 devDependencies，装到根 node_modules/.bin/tsc）。
-    const tscName = process.platform === 'win32' ? 'tsc.cmd' : 'tsc';
-    const tscCands = [
-      path.join(ROOT, 'frontend', 'node_modules', '.bin', tscName),
-      path.join(ROOT, 'node_modules', '.bin', tscName),
-    ];
-    const tscBin = tscCands.find((p) => fs.existsSync(p));
-    const tscExists = !!tscBin;
+    // tsc 路径解析：优先 npx 探测（workspace hoisting 兼容），回退硬编码路径
     const t0 = Date.now();
     const [fb, tscResult] = await Promise.all([
       shAsync('npx vite build', { cwd: path.join(ROOT, 'frontend') }),
-      tscExists
-        ? shAsync(`"${tscBin}" --noEmit`, { cwd: path.join(ROOT, 'frontend') })
-        : Promise.resolve({ rc: -1, out: '' }),
+      // npx tsc --version 探测（最简且最鲁棒的 monorepo 兼容方案）
+      shAsync('npx tsc --version').then((r) => {
+        if (r.rc !== 0) return { rc: -1, out: '' };
+        // tsc 可用，再跑 --noEmit 检查
+        return shAsync('npx tsc --noEmit', { cwd: path.join(ROOT, 'frontend') });
+      }).catch(() => ({ rc: -1, out: '' })),
     ]);
     const wallA = Date.now() - t0;
     record('vite build', fb.rc === 0, { time: wallA, tail: fb.rc ? fb.out.trim().split('\n').slice(-4).join('\n') : '' });
-    if (tscExists) {
+    if (tscResult.rc >= 0) {
       const lines = tscResult.out.trim().split('\n').filter(Boolean);
       record('tsc --noEmit', tscResult.rc === 0, { time: wallA, note: tscResult.rc === 0 ? '' : `${lines.length} errors`, tail: tscResult.rc === 0 ? '' : lines.slice(-5).join('\n') });
     } else {
-      record('tsc --noEmit', false, { time: 0, note: 'tsc 未安装（frontend/node_modules 缺失）——请 npm ci 后重推' });
+      record('tsc --noEmit', false, { time: 0, note: 'tsc 未安装（npx tsc --version 失败）——请 npm ci 后重推' });
     }
 
     // ADR-023 P3：L3 Vitest 随前端域变更回归（串行在后，独占资源）

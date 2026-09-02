@@ -86,6 +86,13 @@ for (const f of all) {
     `${f} 未登记 CONTRACT_TEST_DOMAINS（新增契约测试必须标注验证域）`);
 }
 
+// ---- 6. 反向校验：CONTRACT_TEST_DOMAINS 的每个 key 必须真实存在于 tests/ 目录 ----
+const allBasename = new Set(all);
+for (const f of Object.keys(CONTRACT_TEST_DOMAINS)) {
+  check(allBasename.has(f),
+    `${f} 在 CONTRACT_TEST_DOMAINS 但 tests/ 目录不存在（僵尸条目）`);
+}
+
 // ---- 汇总 ----
 if (failures.length === 0) {
   console.log(`✅ test_contract_domain_select 全部通过（${assertCount} 组断言；全量 ${all.length}，go ${goSet.length} / frontend ${frontSet.length} / data ${dataSet.length} / docs ${docsSet.length}）`);

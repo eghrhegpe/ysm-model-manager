@@ -157,3 +157,53 @@ describe("buildLitematicScene 错误/空数据路径（回归）", () => {
     expect(result.dispose).toBeDefined();
   });
 });
+
+// ===== loadingEl 语义契约（防 0a0e4bd3 → b18a647c 回归）=====
+// 契约 1：voxelCall 抛错时 buildLitematicScene 必须抛错（不能吞掉返回空壳）
+//         —— mount3D 的 catch 依赖此异常触发 showLoadFailure(loadingEl, e)
+// 契约 2：voxelCall 抛错时 loadingEl 必须保留（不能 remove）
+//         —— showLoadFailure 复用 loadingEl 渲染失败占位
+// 契约 3：成功时 loadingEl 必须被 remove（适配器自行清理）
+// 契约 4：空数据/null 时 loadingEl 必须保留并显示提示
+//         —— 适配器自己处理「软失败」，不抛错给 mount3D
+describe("loadingEl 语义契约", () => {
+  it("voxelCall 抛错 → buildLitematicScene 必须抛错（不能吞掉返回空壳）", async () => {
+    const voxelCall = vi.fn().mockRejectedValue(new Error("RPC timeout"));
+    const ctx = makeCtx();
+    await expect(buildLitematicScene(ctx, "/broken.nbt", voxelCall)).rejects.toThrow("RPC timeout");
+  });
+
+  it("voxelCall 抛错 → loadingEl 必须保留（showLoadFailure 的渲染载体）", async () => {
+    const voxelCall = vi.fn().mockRejectedValue(new Error("RPC timeout"));
+    const ctx = makeCtx();
+    document.body.appendChild(ctx.loadingEl);
+    try {
+      await buildLitematicScene(ctx, "/broken.nbt", voxelCall);
+      expect.fail("应该抛错");
+    } catch {
+      // loadingEl 不应被 remove（parentNode 仍在）
+      expect(ctx.loadingEl.parentNode).not.toBeNull();
+    }
+    document.body.removeChild(ctx.loadingEl);
+  });
+
+  it("成功 → loadingEl 必须被 remove（适配器自行清理）", async () => {
+    const voxelCall = vi.fn().mockResolvedValue(VALID_JSON);
+    const ctx = makeCtx();
+    document.body.appendChild(ctx.loadingEl);
+    const preview = await buildLitematicScene(ctx, "/valid.litematic", voxelCall);
+    expect(ctx.loadingEl.parentNode).toBeNull();
+    preview.dispose();
+  });
+
+  it("voxelCall 返回 null → loadingEl 必须保留并显示空态提示", async () => {
+    const voxelCall = vi.fn().mockResolvedValue(null);
+    const ctx = makeCtx();
+    document.body.appendChild(ctx.loadingEl);
+    const result = await buildLitematicScene(ctx, "/null.nbt", voxelCall);
+    expect(ctx.loadingEl.parentNode).not.toBeNull();
+    expect(ctx.loadingEl.textContent).toContain("⚠️");
+    result.dispose();
+    document.body.removeChild(ctx.loadingEl);
+  });
+});

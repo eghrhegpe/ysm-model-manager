@@ -637,7 +637,7 @@ export async function mount3D(
       session.sceneBaseline = s;
     },
     getContent: () => session.content,
-    setBuilt: (s) => {
+    setContent: (s) => {
       session.content = s;
     },
     allContent: session.allContent,

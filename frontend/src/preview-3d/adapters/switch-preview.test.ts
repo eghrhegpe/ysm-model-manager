@@ -59,7 +59,7 @@ function makeMockCtx(): {
     scene: mockScene,
     getSceneBaseline: () => state.sceneBaseline,
     getContent: () => state.content,
-    setBuilt: (s) => { state.content = s; },
+    setContent: (s) => { state.content = s; },
     allContent,
     loadingEl,
     viewContainer,
@@ -92,7 +92,7 @@ function makeMockCtx(): {
 }
 
 describe("switchToSession 陈旧字段修复", () => {
-  it("content 字段在 ctx 构造后被 setBuilt 更新，switchTo 能读到最新值（旧模型 dispose）", async () => {
+  it("content 字段在 ctx 构造后被 setContent 更新，switchTo 能读到最新值（旧模型 dispose）", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const oldDispose = vi.fn();
     // 模拟首次 build 后的状态
@@ -349,16 +349,16 @@ describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
     const { ctx, state, mockAdapter } = makeMockCtx();
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     // 预置：旧 content 已在 allContent 内（首次 mount 后形态）
-    const oldBuilt = { dispose: vi.fn() } as unknown as PreviewScene;
-    state.content = oldBuilt;
+    const oldContent = { dispose: vi.fn() } as unknown as PreviewScene;
+    state.content = oldContent;
     state.perFrame = () => {};
-    ctx.allContent.push(oldBuilt);
+    ctx.allContent.push(oldContent);
     sceneRegistry.reset();
     sceneRegistry.register({
       path: "initial.glb",
       rtype: "vrm",
       roots: [],
-      content: oldBuilt,
+      content: oldContent,
     });
     mockAdapter.build.mockRejectedValue(new Error("boom"));
 

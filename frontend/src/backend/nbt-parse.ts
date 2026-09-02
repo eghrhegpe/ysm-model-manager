@@ -14,6 +14,7 @@
 // 输入同时支持 gzip（魔数 1f 8b → gunzipSync）与已解压原始 NBT（按魔数判断）。
 
 import { gunzipSync } from "fflate";
+import { asArray, asNumber, asString, getCompound, isObj } from "../utils/core/nbt-guards.ts";
 
 // --- NBT 标签类型常量 ---
 const TAG_END = 0;
@@ -284,30 +285,7 @@ export function parseNbtRootExact(bytes: Uint8Array): Record<string, unknown> {
   return r.payload(TAG_COMPOUND, 0) as Record<string, unknown>;
 }
 
-// ===== 类型守卫（对齐 go/litematic/nbt.go getInt/getString/getCompound/getList）=====
-
-function isObj(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-function asString(v: unknown): string | undefined {
-  return typeof v === "string" ? v : undefined;
-}
-
-/** getInt/getLong 统一口径：整型（Byte/Short/Int/Long/Float/Double 均已归一为 number） */
-function asNumber(v: unknown): number | undefined {
-  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
-}
-
-function getCompound(o: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
-  const v = o[key];
-  return isObj(v) ? v : undefined;
-}
-
-/** getList 口径：List/ByteArray/IntArray 解析后均为 JS 数组，统一取数组值 */
-function asArray(v: unknown): unknown[] | undefined {
-  return Array.isArray(v) ? v : undefined;
-}
+// ===== 类型守卫（isObj/asString/asNumber/asArray/getCompound 已收敛至 utils/core/nbt-guards.ts）=====
 
 // ===== 三个 binding 的视图提取（对齐 go/litematic/parser.go 输出字段）=====
 // 返回 null 表示「无法解析/无有效内容」→ 调用方输出 "{}"（对齐 Go binding 契约）。
@@ -482,10 +460,10 @@ export function schematicSummaryView(root: Record<string, unknown>): Record<stri
   if (dataVersion !== undefined) out["dataVersion"] = dataVersion;
 
   // 对齐 ParseSchematicSummary:188-193：三轴齐全才输出 size
-  const w = asNumber(root["Width"]);
-  const h = asNumber(root["Height"]);
-  const l = asNumber(root["Length"]);
-  if (w !== undefined && h !== undefined && l !== undefined) out["size"] = [w, h, l];
+  const width = asNumber(root["Width"]);
+  const height = asNumber(root["Height"]);
+  const length = asNumber(root["Length"]);
+  if (width !== undefined && height !== undefined && length !== undefined) out["size"] = [width, height, length];
 
   // 对齐 ParseSchematicSummary:195-203：Metadata compound 的 Author/Name
   const metadata = getCompound(root, "Metadata");

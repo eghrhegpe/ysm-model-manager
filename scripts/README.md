@@ -98,6 +98,7 @@
 | `check-path-hygiene.ts` | `node scripts/check-path-hygiene.ts` / `--json` / `--update` | **路径卫生门禁**（ADR-146）：R1 聚合桶嫌疑（re-export 来源≥3 WARN）/ R2 目录深度 >3 / R3 内部上跳 >3 / R4 跨 src 边界冻结（基线只减不增 FAIL）/ tsconfig.paths ↔ vite alias 双写一致性（FAIL）；别名解析走 `_lib/alias-resolve.ts`，配套 `tests/test_alias-resolve.ts` |
 | `check-circular-go.ts` | `node scripts/check-circular-go.ts` / `--json` | Go 包级循环依赖检测（`go/` 目录下 import 图找环；ERROR 阻断，`--json` 供 CI 消费） |
 | `check-boolean-naming.ts` | `node scripts/check-boolean-naming.ts` / `--strict` | 布尔变量命名规范 |
+| `check-naming-blacktalk.ts` | `node scripts/check-naming-blacktalk.ts` / `--strict` / `--json` | 命名黑话防回潮（frontend_naming 章程）：built 名词家族零容忍（setBuilt/workerBuilt/builtScene 等）+ w/h/l 三轴单字母挤一行检测；WARN 级默认不入 doctor 闸门 |
 | `check-script-hygiene.ts` | `node scripts/check-script-hygiene.ts` / `--json` / `--strict` | 脚本卫生（五口径）：退出码失效（裸 main + return 失败码无 process.exit）/ 共享层内联（walk/rg/ROOT/parseArgs 样板）/ 检查类缺 `--json` 契约 / 文件头 5 字段 / positional 脚本未走 `_lib/parse-args.ts`（WARN 不阻断） |
 | `check-workflow-refs.ts` | `node scripts/check-workflow-refs.ts` / `--json` | 工作流引用完整性：`.github/workflows/*.yml` 的 `run:` 中 `scripts/`、`cmd/` 路径引用必须存在（迁移类死引用守护，如 cmd/build-*.ps1 → scripts/ 后 release.yml 漏同步） |
 | `css-layer-check.ts` | `node scripts/css-layer-check.ts` / `--strict` / `--json` | **Shadow DOM 样式越界检查**：shadow 内 `animation:` 引用无同层 @keyframes 定义 → ERROR（跨 shadow keyframe 静默失效）；全局 components.css 残留已回迁类 → ERROR；shadow 类无定义 → WARN（自动发现 shadow 域，无手写清单） |

@@ -41,7 +41,7 @@ export interface SwitchContext {
   setSceneBaseline?: (s: Set<THREE.Object3D>) => void;
   /** 可变：build 后赋值 */
   getContent: () => PreviewScene | null;
-  setBuilt: (s: PreviewScene | null) => void;
+  setContent: (s: PreviewScene | null) => void;
   allContent: PreviewScene[];
   loadingEl: HTMLElement;
   viewContainer: HTMLElement;
@@ -109,7 +109,7 @@ export async function switchToSession(
   if (guardSwitchAborted(ctx, next)) return;
 
   // 兑现本次切换：登记 content / 历史 / 注册表 / 相机灯光阴影 env 同步 / 基线更新
-  ctx.setBuilt(next);
+  ctx.setContent(next);
   // [ADR-159] 容器元数据继承：unregister 前捕获前一活跃 entry 的 displayName/components，
   // 同容器（资源包）会话内切换透传给新 entry（keep=false 时旧 entry 即将被注销，必须先取）。
   const prevEntry = sceneRegistry.get(sceneRegistry.getActiveId() ?? "");
@@ -246,7 +246,7 @@ function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): vo
     safeDispose(b);
   }
   ctx.allContent.length = 0;
-  ctx.setBuilt(null);
+  ctx.setContent(null);
   if (!ctx.loadingEl.parentNode) ctx.viewContainer.appendChild(ctx.loadingEl);
   showLoadFailure(ctx.loadingEl, e);
   ctx.inFlight = false;

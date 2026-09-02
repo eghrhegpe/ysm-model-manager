@@ -79,7 +79,15 @@ invariant_anchors:
 - `fbx-parser.ts`：两遍构建节点缓存 `built`→`nodeObjects`（非内容层语义，独立定名）。
 - `perf-cli.ts`：不可读前缀 `dgPc` 删除（文件归属冗余）、段缩写展开 `Sb/Gf/Pl`→`singleBench/guiFlow/perfLog`、类型 `DgPc*`→`SingleBench*/GuiFlow*/PerfLog*/GenGuard`（段前缀有消歧价值故展开保留，`guiFlowParseEntries`/`perfLogParseEntries` 防撞）。
 - `mount-preview-core.test.ts`：测试桩 `makeBuilt`→`makeContent`、`built1/2`→`content1/2`、`builtA/B`→`contentA/B`、`unloadBuilt`→`unloadContent`。
-- **收尾清扫（文档同步）**：测试层最后 2 处漏网（`vrm-adapter.test.ts` `built2`、`mount-preview-core.behavior.test.ts` `builtScene`）→`content2`/`contentScene`；现状文档残留旧词同步（`architecture.md`/`model3d.md`/`preview_core.md` 的注册表元数据 `built`→`content`、abort 登记 `session.built`/`allBuilt`→`session.content`/`allContent`；ADR-093 实装表与 dispatch、ADR-131 合并注入）。至此「测试层全清」为真：`frontend/src` 生产+测试层 `built` 作内容层名词零残留（`postprocessing-capability.test.ts` 的 `built` 布尔旗标与 i18n「built-in」等英文非黑话，保留）。
+- **收尾清扫（文档同步）**：测试层最后 2 处漏网（`vrm-adapter.test.ts` `built2`、`mount-preview-core.behavior.test.ts` `builtScene`）→`content2`/`contentScene`；现状文档残留旧词同步（`architecture.md`/`model3d.md`/`preview_core.md` 的注册表元数据 `built`→`content`、abort 登记 `session.built`/`allBuilt`→`session.content`/`allContent`；ADR-093 实装表与 dispatch、ADR-131 合并注入）。至此「测试层全清」为真：`frontend/src` 生产+测试层 `built` 作内容层名词零残留（i18n「built-in/not yet built」等英文非黑话，保留）。
+
+**✅ 已清理（commit 1af5f8e8 之后续扫，2026-09）**：
+- **setBuilt 链**（built→content 主战役 8f5a2b63 自身漏改的半边 setter）：`mount-preview-core.ts` `setBuilt`→`setContent`（与 getContent 对称）、`switch-preview.ts` `SwitchContext.setBuilt` 契约+3 调用点→`setContent`、测试桩/标题/`oldBuilt`→`oldContent` 同步。
+- **`workerBuilt`→`workerResult`**（mmd-adapter.ts 11 处）：worker 路径 `buildPmxSceneSliced` 产物缓存，与 `pmxParsedData` 对仗；`PmxBuildResult` 类型名保留（builder 正当领域词）。
+- **同函数双份定义收敛**（红线落地）：`isObj`/`asString`/`asNumber`/`asArray`/`getCompound` 曾 nbt-parse.ts 与 voxel-parse.ts 各抄一份逐行相同 → 提取 `frontend/src/utils/core/nbt-guards.ts` 共用，两文件改 import（voxel 独有 `asLongArray`/`asByteArray`/`paletteToColors` 非双份，就地保留）。搜索「getCompound」从两文件收敛为一。
+- **三轴单字母展开**：`nbt-parse.ts schematicSummaryView` 与 `voxel-parse.ts schematicVoxelView`/`indexToCoord` 的 `w/h/l`（Width/Height/Length）→`width/height/length`（知识卡 pitfall 教科书案例）。
+- **`postprocessing-capability.test.ts` `built` 布尔旗标**→`composerBuilt`（记录 buildComposer 是否被调，与同函数 `disposed` 对仗）。
+- **防回潮脚本**：`scripts/check-naming-blacktalk.ts`（WARN 级，仿 check-boolean-naming 范式，默认不入 doctor 闸门）：built 名词家族零容忍 + w/h/l 三轴单字母挤一行检测，手动 `node scripts/check-naming-blacktalk.ts [--strict]` 可跑。
 
 **🔲 待清理（存量，未排期）**：
 - `backend/nbt-parse.ts` 单字母业务量（w/h/l/b/n/v）。

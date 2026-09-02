@@ -209,7 +209,7 @@ interface MdMmParseState {
   pmxParser: PmxParser | null;
   pmxParsePromise: Promise<import("./mmd-pmx-parser.worker.ts").PmxParseResponse> | null;
   mmd: Awaited<ReturnType<MMDLoader["loadAsync"]>> | null;
-  workerBuilt: PmxBuildResult | null;
+  workerResult: PmxBuildResult | null;
   pmxParsedData: import("./mmd-pmx-parser.worker.ts").PmxParseResponse | null;
   mesh: THREE.SkinnedMesh;
 }
@@ -353,7 +353,7 @@ type MdMmParsePmxCtx = Pick<
   | "pmxParsedData"
   | "texMap"
   | "usePmxWorker"
-  | "workerBuilt"
+  | "workerResult"
 >;
 
 type MdMmParsePmdCtx = Pick<
@@ -369,7 +369,7 @@ type MdMmParsePmdCtx = Pick<
   | "pmxParser"
   | "tParseEnd"
   | "tParseStart"
-  | "workerBuilt"
+  | "workerResult"
 >;
 
 type MdMmStage3Ctx = Pick<
@@ -453,7 +453,7 @@ type MdMmStage6Ctx = Pick<
   | "port"
   | "stopLongTaskWatch"
   | "vpdPoses"
-  | "workerBuilt"
+  | "workerResult"
   | "_traceFiles"
   | "_traceGpuMb"
   | "blobUrlToHash"
@@ -779,15 +779,15 @@ async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> {
 }
 
 async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
-  c.workerBuilt = null;
+  c.workerResult = null;
   c.pmxParsedData = null;
   if (c.usePmxWorker && c.pmxParsePromise) {
     try {
       const pmxResult = await c.pmxParsePromise;
       c.pmxParsedData = pmxResult;
       if (pmxResult.ok && pmxResult.vertices && pmxResult.faces) {
-        c.workerBuilt = await buildPmxSceneSliced(pmxResult, { texUrlMap: c.texMap });
-        if (c.workerBuilt) {
+        c.workerResult = await buildPmxSceneSliced(pmxResult, { texUrlMap: c.texMap });
+        if (c.workerResult) {
           await mmdDiag(
             c.effectivePort,
             "pmx-worker-build",
@@ -818,12 +818,12 @@ async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
 }
 
 async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
-  if (c.workerBuilt) {
-    c.mesh = c.workerBuilt.mesh;
+  if (c.workerResult) {
+    c.mesh = c.workerResult.mesh;
     c.tParseStart = performance.now();
     c.tParseEnd = c.tParseStart;
     c.mmd = {
-      mesh: c.workerBuilt.mesh,
+      mesh: c.workerResult.mesh,
       pmx: c.pmxParsedData
         ? {
             bones: c.pmxParsedData.bones ?? [],
@@ -1466,8 +1466,8 @@ function mdMmStage6Result(
             const pose = c.vpdPoses[index];
             if (!pose) return;
             try {
-              // workerMode 已下沉：worker 构建路径等价于 c.workerBuilt 非空
-              if (c.workerBuilt) {
+              // workerMode 已下沉：worker 构建路径等价于 c.workerResult 非空
+              if (c.workerResult) {
                 applyVPDToMesh(c.mesh!, pose.vpd);
               } else {
                 applyVPD(c.mmd!, pose.vpd, { ik: true, grant: true });

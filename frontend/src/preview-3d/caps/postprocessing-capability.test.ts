@@ -448,13 +448,13 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     const renderer = makeRendererWithState();
     // 构造 off，套用 vrm（enabled:true）→ 应翻转为 on 并构建 composer
     const capOn = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
-    let built = false;
-    (capOn as unknown as { buildComposer: () => void }).buildComposer = () => { built = true; };
+    let composerBuilt = false;
+    (capOn as unknown as { buildComposer: () => void }).buildComposer = () => { composerBuilt = true; };
     (capOn as unknown as { disposeComposer: () => void }).disposeComposer = () => {};
     (capOn as unknown as { applyReflectorSync: () => void }).applyReflectorSync = () => {};
     capOn.setPreset("vrm");
     expect(capOn.isEnabled()).toBe(true);
-    expect(built).toBe(true);
+    expect(composerBuilt).toBe(true);
     // 构造 on，套用 ysm（enabled:false）→ 应翻转为 off 并销毁 composer
     const capOff = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
     let disposed = false;

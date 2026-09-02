@@ -10,6 +10,7 @@
 import { mapColor, resolveBlockName } from "./voxel-colors.ts";
 import { base64ToBytes } from "./web-common.ts";
 import { parseNbtRootExact } from "./nbt-parse.ts";
+import { asArray, asNumber, getCompound, isObj } from "../utils/core/nbt-guards.ts";
 
 /** 对齐 voxel.go:30 voxelBlock（各格式统一中间表示；坐标已过 int16 守卫） */
 interface VoxelBlock {
@@ -194,15 +195,8 @@ function finalizeVoxelData(
   return { size, groups, truncated, maxBlocks };
 }
 
-// ===== 类型守卫（对齐 nbt.go getCompound/getInt/getList/getLongArray 口径）=====
-
-function isObj(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-function asArray(v: unknown): unknown[] | undefined {
-  return Array.isArray(v) ? v : undefined;
-}
+// ===== 类型守卫（isObj/asArray/asNumber/getCompound 已收敛至 utils/core/nbt-guards.ts；
+//       保留本文件独有：asLongArray/asByteArray——LongArray 精确 64 位 bigint 与 ByteArray 非缺失语义）=====
 
 /** palette 列表 → 颜色数组（Name → mapColor；缺失 Name / 非 compound 元素兜底 fallback）。
  *  三处视图（schematic / bedrock / 区块）共用，消除重复（jscpd）。 */
@@ -224,21 +218,17 @@ function paletteToColors(paletteList: unknown[], fallback: string): string[] {
  *  坐标写入调用方复用的 out 对象（热循环避免每块一次 {x,y,z} 临时分配——审核 P3）。 */
 function indexToCoord(
   i: number,
-  w: number,
-  l: number,
+  width: number,
+  length: number,
   out: { x: number; y: number; z: number },
 ): { x: number; y: number; z: number } | null {
-  out.x = (i - 1) % w;
-  out.y = Math.floor((i - 1) / (w * l));
-  out.z = Math.floor((i - 1) / w) % l;
+  out.x = (i - 1) % width;
+  out.y = Math.floor((i - 1) / (width * length));
+  out.z = Math.floor((i - 1) / width) % length;
   if (out.x < INT16_MIN || out.x > INT16_MAX || out.y < INT16_MIN || out.y > INT16_MAX || out.z < INT16_MIN || out.z > INT16_MAX) {
     return null;
   }
   return out;
-}
-
-function asNumber(v: unknown): number | undefined {
-  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
 }
 
 /** getLongArray 口径：LongArray（parseNbtRootExact → bigint[]） */
@@ -251,11 +241,6 @@ function asByteArray(v: unknown): number[] | undefined {
   if (!Array.isArray(v)) return undefined;
   if (v.length > 0 && typeof v[0] !== "number") return undefined;
   return v as number[];
-}
-
-function getCompound(o: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
-  const v = o[key];
-  return isObj(v) ? v : undefined;
 }
 
 // ===== .litematic：Regions → BlockStatePalette + packed bits（对齐 BuildVoxelData）=====
@@ -574,16 +559,16 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
  * 无 Palette 用 Data + ResolveBlockName 数字 ID 解析）。
  */
 export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: number): VoxelData | null {
-  const w = asNumber(root["Width"]);
-  const h = asNumber(root["Height"]);
-  const l = asNumber(root["Length"]);
-  if (w === undefined || h === undefined || l === undefined) return null;
+  const width = asNumber(root["Width"]);
+  const height = asNumber(root["Height"]);
+  const length = asNumber(root["Length"]);
+  if (width === undefined || height === undefined || length === undefined) return null;
   // 对齐 Go voxel.go:556-564：维度上限（int32 可达 2^31-1，乘积可溢出——Go 用 int64 钳制）
   // 网页版用 JavaScript Number（双精度浮点，安全整数 2^53-1），512M 远小于安全范围，
   // 只需总块数守卫即可防溢出（不额外加 per-axis 上限，避免与 Go 功能分叉——2048×1×1 等长条 schematic 应放行）
-  if (!Number.isInteger(w) || !Number.isInteger(h) || !Number.isInteger(l)) return null;
-  if (w <= 0 || h <= 0 || l <= 0) return null;
-  const total = w * h * l;
+  if (!Number.isInteger(width) || !Number.isInteger(height) || !Number.isInteger(length)) return null;
+  if (width <= 0 || height <= 0 || length <= 0) return null;
+  const total = width * height * length;
   if (total > MAX_SCHEMATIC_BLOCKS) return null;
 
   const blocksBA = asByteArray(root["Blocks"]);
@@ -619,7 +604,7 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
         const c = paletteMap[r.value];
         if (c !== undefined) color = c;
         // 坐标由索引反推（对齐 voxel.go:437-439），int16 守卫
-        if (!indexToCoord(i, w, l, coord)) continue;
+        if (!indexToCoord(i, width, length, coord)) continue;
         return { color, x: coord.x, y: coord.y, z: coord.z };
       }
       return null;
@@ -639,14 +624,14 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
         const name = resolveBlockName(blockID, d);
         if (name !== "") color = mapColor(name);
       }
-      if (!indexToCoord(i, w, l, coord)) continue;
+      if (!indexToCoord(i, width, length, coord)) continue;
       return { color, x: coord.x, y: coord.y, z: coord.z };
     }
     return null;
   };
 
   const { colorGroups, truncated } = groupVoxelStream(next, maxBlocks);
-  return finalizeVoxelData([w, h, l], colorGroups, truncated, maxBlocks);
+  return finalizeVoxelData([width, height, length], colorGroups, truncated, maxBlocks);
 }
 
 /** 整型强校验（对齐 Go `.(int32)` 断言：非整型 number 判无效返回 null） */

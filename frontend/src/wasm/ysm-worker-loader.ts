@@ -15,29 +15,19 @@
 import {
   classifyWasmError,
   collectOutputFiles,
+  createLazyModule,
   ensureDir,
-  patchGlueHeapExport,
-  resolveWasmFactory,
+  installYsmModule,
   wipeDir,
   writeHeapBytes,
   type WasmModuleLike,
   type YsmDecodedFile,
+  type YsmModuleConfig,
 } from "./parser-shared.ts";
 
-/** Worker 全局注入点（Emscripten 胶水代码消费；worker 无 window，用 globalThis） */
-interface WorkerModuleConfig {
-  wasmBinary: ArrayBuffer;
-  print: () => void;
-  printErr: () => void;
-  noInitialRun: boolean;
-  HEAPU8?: Uint8Array;
-  /** ADR-079 M4：pthread 版需要——pthread worker 池从该 URL 重新加载主胶水 */
-  mainScriptUrlOrBlob?: string;
-}
-
-let wasmModule: WasmModuleLike | null = null;
-let loading = false;
-let waiters: Array<(ok: boolean) => void> = [];
+// WASM 为 Worker 级常驻单例：initYsmParserInWorker / initYsmParserInWorkerMt 共享同一懒加载
+// 状态机（收敛至 parser-shared.createLazyModule），资产来源（base/mt）由各自 init 注入。
+const mod = createLazyModule<WasmModuleLike>();
 // ADR-153 asset-load promise 缓存：并发首次 init / 崩溃重置后 re-init 去重，
 // 避免 N 个并发 caller 各自 import() + _getWasmBinary()（~1.5 MB ArrayBuffer 分配/次）。
 let baseAssetsPromise: Promise<ParserAssets> | null = null;
@@ -137,76 +127,59 @@ async function initParserInWorker(
   glueCode: string | null,
   extra?: { mainScriptUrlOrBlob?: string },
 ): Promise<boolean> {
-  if (wasmModule) return true;
-  if (loading) return new Promise<boolean>((r) => waiters.push(r));
-  loading = true;
-
-  const g = globalThis as Record<string, unknown>;
-  try {
-    // 1. 从内嵌 JS 拿 .wasm 二进制 + 胶水代码（数据文件为自动生成的 base64 常量）
+  return mod.ensureInit(async () => {
+    // 1. 资产校验（数据文件为自动生成的 base64 常量）
     if (!wasmBinary || !wasmBinary.byteLength) throw new Error("wasmBinary 空");
     if (!glueCode) throw new Error("胶水代码空");
 
-    // 2. 修改胶水代码：在所有 updateMemoryViews 调用后导出 HEAPU8 到 Module
-    const patchedGlue = patchGlueHeapExport(glueCode);
-
-    // 3. 设置 Module.wasmBinary（worker 全局，替代主线程的 window.Module）；
-    //    ADR-079 M4：pthread 变体额外注入 mainScriptUrlOrBlob（Blob URL）
-    const moduleCfg: WorkerModuleConfig = {
+    // 2/3/4/5 组装注入点 + 间接 eval + MODULARIZE 工厂，收敛于 installYsmModule
+    //    （ADR-079 M4：pthread 变体额外注入 mainScriptUrlOrBlob Blob URL；ADR-039 §2.1）
+    const moduleCfg: YsmModuleConfig = {
       wasmBinary,
       print: () => {},
       printErr: () => {},
       noInitialRun: true,
     };
     if (extra?.mainScriptUrlOrBlob) moduleCfg.mainScriptUrlOrBlob = extra.mainScriptUrlOrBlob;
-    g.Module = moduleCfg;
 
-    // 4. 间接 eval 执行胶水代码（worker 全局作用域，var YSMParserModule → g.YSMParserModule）
-    (0, eval)(patchedGlue);
-
-    // 5. 调用工厂（胶水为 MODULARIZE 产物：async factory(moduleArg)）
-    const factory = g.YSMParserModule as ((module: unknown) => unknown | Promise<unknown>) | undefined;
-    if (!factory) throw new Error("YSMParserModule 未定义");
-    wasmModule = await resolveWasmFactory(factory, moduleCfg);
-    loading = false; // 成功后复位，避免 wasmModule 被置空后 loading 恒真 → 永久挂起
-    waiters.forEach((r) => r(true));
-    waiters = [];
-    return true;
-  } catch (e) {
-    waiters.forEach((r) => r(false));
-    waiters = [];
-    loading = false;
-    // init 失败清理注入点，避免残留 wasmBinary 配置影响后续重试
-    delete g.Module;
-    delete g.YSMParserModule;
-    throw e;
-  }
+    const g = globalThis as Record<string, unknown>;
+    try {
+      return await installYsmModule(g, glueCode, moduleCfg);
+    } catch (e) {
+      // init 失败清理注入点，避免残留 wasmBinary 配置影响后续重试
+      delete g.Module;
+      delete g.YSMParserModule;
+      throw e;
+    }
+  });
 }
 
 /** 硬崩溃（内存越界/栈溢出等不可捕获 trap）后重置单例，下次调用可重新 init */
 function resetYsmParserInWorker(): void {
-  wasmModule = null;
-  loading = false;
+  mod.reset();
+  // 崩溃恢复路径强制重新取资产（base/mt 任一）——缓存清空，与初始 init 口径一致
   baseAssetsPromise = null;
   mtAssetsPromise = null;
   const g = globalThis as Record<string, unknown>;
   delete g.Module;
+  delete g.YSMParserModule; // 与 init 失败路径一致，清工厂引用防 re-init 静默失败
 }
 
 // classifyWasmError 见 parser-shared.ts（口径差异保留在下方 catch 块）
 
 /** 安全获取最新 WASM HEAPU8（patch 注入到 Module，内存扩容后自动更新） */
 function getHeap(): Uint8Array {
-  const g = globalThis as { Module?: WorkerModuleConfig };
+  const g = globalThis as { Module?: YsmModuleConfig };
   const h = g.Module?.HEAPU8;
   if (h) return h;
-  if (wasmModule?.HEAPU8) return wasmModule.HEAPU8;
+  const m = mod.get();
+  if (m?.HEAPU8) return m.HEAPU8;
   throw new Error("无法获取 WASM HEAPU8");
 }
 
 /** 将 JS 数据写入 WASM 内存，返回指针（写入算法见 parser-shared.writeHeapBytes） */
 function writeHeap(data: Uint8Array): number {
-  return writeHeapBytes(data, (len) => wasmModule!._malloc(len), getHeap);
+  return writeHeapBytes(data, (len) => mod.get()!._malloc(len), getHeap);
 }
 
 // FS 辅助（wipeDir/ensureDir/collectOutputFiles）见 parser-shared.ts（单一事实源）
@@ -216,12 +189,13 @@ function writeHeap(data: Uint8Array): number {
  * 失败返回 null（不抛错），由调用方决定是否走剥离文本头部重试 / callMain。
  */
 export async function decodeYsmInWorker(bytes: Uint8Array): Promise<YsmDecodedFile[] | null> {
-  if (!wasmModule) {
+  if (!mod.isInited()) {
     // init 失败以 throw 表达（不返回 false），异常自然向上抛由调用方处理
     await initYsmParserInWorker();
   }
-  const FS = wasmModule!.FS;
-  const ccall = wasmModule!.ccall;
+  const m = mod.get()!;
+  const FS = m.FS;
+  const ccall = m.ccall;
   if (!ccall) throw new Error("ccall 不可用，请重新编译 WASM");
 
   let ptr = 0;
@@ -246,7 +220,7 @@ export async function decodeYsmInWorker(bytes: Uint8Array): Promise<YsmDecodedFi
     }
     throw err;
   } finally {
-    if (ptr) wasmModule?._free(ptr);
+    if (ptr) mod.get()?._free(ptr);
   }
 }
 
@@ -255,11 +229,12 @@ export async function decodeYsmInWorker(bytes: Uint8Array): Promise<YsmDecodedFi
  * 失败返回空数组（不抛错）。
  */
 export async function decodeYsmInWorkerMemfs(bytes: Uint8Array): Promise<YsmDecodedFile[]> {
-  if (!wasmModule) {
+  if (!mod.isInited()) {
     // init 失败以 throw 表达（不返回 false），异常自然向上抛由调用方处理
     await initYsmParserInWorker();
   }
-  const FS = wasmModule!.FS;
+  const m = mod.get()!;
+  const FS = m.FS;
   if (!FS) throw new Error("YSMParser FS 不可用");
 
   try {
@@ -268,9 +243,9 @@ export async function decodeYsmInWorkerMemfs(bytes: Uint8Array): Promise<YsmDeco
     ensureDir(FS, "/input");
     ensureDir(FS, "/output");
     FS.writeFile("/input/model.ysm", bytes);
-    const hasCallMain = typeof wasmModule!.callMain === "function";
+    const hasCallMain = typeof m.callMain === "function";
     if (hasCallMain) {
-      wasmModule!.callMain!(["-i", "/input", "-o", "/output"]);
+      m.callMain!(["-i", "/input", "-o", "/output"]);
     }
   } catch (err) {
     const cls = classifyWasmError(err);

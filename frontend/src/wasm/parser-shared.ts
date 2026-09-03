@@ -162,3 +162,97 @@ export async function resolveWasmFactory(
   }
   return resolved as WasmModuleLike;
 }
+
+/**
+ * Emscripten 模块注入点配置（MODULARIZE 胶水消费；主线程 window.Module 与
+ * Worker globalThis.Module 结构同构，仅 Worker/主线程可选带 mainScriptUrlOrBlob）。
+ * 收敛 ysm-parser.ts 的 Window["Module"] 与 ysm-worker-loader.ts 的 WorkerModuleConfig。
+ */
+export interface YsmModuleConfig {
+  wasmBinary: ArrayBuffer;
+  print: () => void;
+  printErr: () => void;
+  noInitialRun: boolean;
+  HEAPU8?: Uint8Array;
+  /** ADR-079 M4：pthread 版需要——pthread worker 池从该 URL 重新加载主胶水 */
+  mainScriptUrlOrBlob?: string;
+}
+
+/** 懒加载单例句柄：并发安全、成功/失败分路、崩溃后可重置重入 */
+export interface LazyModule<T> {
+  /** 已装载实例；未 init 时为 null */
+  get(): T | null;
+  isInited(): boolean;
+  /**
+   * 懒加载：已装载返回 true；装载中则并入等待队列（装载结果完成后 resolve）；
+   * 首次触发 init，成功缓存实例返回 true，失败抛错（waiters 收到 false）。
+   */
+  ensureInit(init: () => Promise<T>): Promise<boolean>;
+  /** 重置（硬崩溃恢复）：清空实例与装载态，下次 ensureInit 可重新装载 */
+  reset(): void;
+}
+
+/**
+ * 并发安全懒加载单例状态机。收敛主线程 ysm-parser.ts 与 Worker ysm-worker-loader.ts
+ * 逐字重复的 wasmModule/loading/waiters 三件套 + init 守卫 + waiters 分路通知 + reset。
+ * 语义与两处现状逐条等价：一次初始化、并发并入等待队列、成功/失败分路通知、
+ * 崩溃后 reset() 再 init 可重入。init 的装配（取资产 / 注入点 host）由调用方注入。
+ */
+export function createLazyModule<T>(): LazyModule<T> {
+  let instance: T | null = null;
+  let loading = false;
+  let waiters: Array<(ok: boolean) => void> = [];
+
+  function settle(ok: boolean): void {
+    loading = false;
+    waiters.forEach((r) => r(ok));
+    waiters = [];
+  }
+
+  return {
+    get: () => instance,
+    isInited: () => instance !== null,
+    ensureInit(init) {
+      if (instance) return Promise.resolve(true);
+      if (loading) return new Promise<boolean>((r) => waiters.push(r));
+      loading = true;
+      return Promise.resolve()
+        .then(init)
+        .then((v) => {
+          instance = v;
+          settle(true);
+          return true;
+        })
+        .catch((e) => {
+          settle(false);
+          throw e;
+        });
+    },
+    reset() {
+      instance = null;
+      loading = false;
+      waiters = [];
+    },
+  };
+}
+
+/**
+ * 加载并安装 Emscripten 模块实例：patch 胶水 HEAPU8 导出 → 注入 Module →
+ * 间接 eval 执行胶水（全局作用域，可信链 ADR-039 §2.1）→ 解析 MODULARIZE 工厂。
+ * 收敛 ysm-parser.ts / ysm-worker-loader.ts 两处逐字重复的注入逻辑；
+ * host 差异（window vs globalThis）与 资产获取（wasm+glue）留在调用方。
+ */
+export async function installYsmModule(
+  host: Record<string, unknown>,
+  glueCode: string,
+  moduleCfg: YsmModuleConfig,
+): Promise<WasmModuleLike> {
+  const patchedGlue = patchGlueHeapExport(glueCode);
+  host.Module = moduleCfg;
+  (0, eval)(patchedGlue);
+  const factory = host.YSMParserModule as
+    | ((module: unknown) => unknown | Promise<unknown>)
+    | undefined;
+  if (!factory) throw new Error("YSMParserModule 未定义");
+  return resolveWasmFactory(factory, moduleCfg);
+}

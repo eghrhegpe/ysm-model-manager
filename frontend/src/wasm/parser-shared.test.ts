@@ -2,14 +2,17 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyWasmError,
-  ensureDir,
   collectOutputFiles,
+  createLazyModule,
+  ensureDir,
+  installYsmModule,
   patchGlueHeapExport,
   resolveWasmFactory,
   wipeDir,
   writeHeapBytes,
   type FSLike,
   type WasmModuleLike,
+  type YsmModuleConfig,
 } from "./parser-shared.ts";
 
 /** 内存 FS：最小 Emscripten MEMFS 语义 */
@@ -226,5 +229,123 @@ describe("resolveWasmFactory（工厂解析 + ccall 校验）", () => {
     await expect(resolveWasmFactory(() => ({} as unknown as WasmModuleLike), {})).rejects.toThrow(
       "YSMParserModule 工厂返回异常值",
     );
+  });
+});
+
+describe("createLazyModule（懒加载单例状态机：主线程 / Worker 共用）", () => {
+  const defer = (): { promise: Promise<void>; resolve: () => void } => {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  };
+
+  it("首次 ensureInit 调 init 缓存实例；成功后 get/isInited 反映", async () => {
+    const mod = createLazyModule<string>();
+    const initCalls = [] as string[];
+    const ok = await mod.ensureInit(async () => {
+      initCalls.push("x");
+      return "inst";
+    });
+    expect(ok).toBe(true);
+    expect(mod.get()).toBe("inst");
+    expect(mod.isInited()).toBe(true);
+    expect(initCalls).toHaveLength(1);
+  });
+
+  it("已装载后再 ensureInit → 立即 true，不再调 init", async () => {
+    const mod = createLazyModule<string>();
+    const init = () => Promise.resolve("inst");
+    await mod.ensureInit(init);
+    const calls = { n: 0 };
+    await expect(
+      mod.ensureInit(async () => (calls.n++, "other")),
+    ).resolves.toBe(true);
+    expect(calls.n).toBe(0); // 未触发新 init
+    expect(mod.get()).toBe("inst"); // 仍为首次实例
+  });
+
+  it("并发 ensureInit 共享一次 init（await 中的第二个 caller 并入等待队列）", async () => {
+    const mod = createLazyModule<string>();
+    const d = defer();
+    let initCount = 0;
+    const init = () => {
+      initCount++;
+      return d.promise.then(() => "inst");
+    };
+    const p1 = mod.ensureInit(init);
+    const p2 = mod.ensureInit(init); // loading 中 → 并入 waiters
+    d.resolve();
+    await expect(p1).resolves.toBe(true);
+    await expect(p2).resolves.toBe(true); // waiters 成功分路
+    expect(initCount).toBe(1); // 全程仅一次 init（并发去重）
+    expect(mod.get()).toBe("inst");
+  });
+
+  it("init 失败 → 触发者抛错、并发等待者 resolve(false)、未装载可重试", async () => {
+    const mod = createLazyModule<string>();
+    const d = defer();
+    const failInit = () => d.promise.then(() => {
+      throw new Error("boom");
+    });
+    // 首个调用者触发 init，第二个调用者在 loading 中并入 waiters
+    const pTrigger = mod.ensureInit(failInit);
+    const pWaiter = mod.ensureInit(failInit);
+    d.resolve();
+    await expect(pTrigger).rejects.toThrow("boom"); // 触发者收到异常
+    await expect(pWaiter).resolves.toBe(false); // 等待者分路为 false 而非抛错/挂起
+    expect(mod.isInited()).toBe(false);
+    // 失败后 loading 已复位 → 直接重试成功
+    await expect(mod.ensureInit(async () => "inst")).resolves.toBe(true);
+    expect(mod.get()).toBe("inst");
+  });
+
+  it("reset 清空实例与装载态，next ensureInit 重新 init", async () => {
+    const mod = createLazyModule<string>();
+    let n = 0;
+    await mod.ensureInit(async () => (n++, "first"));
+    expect(mod.get()).toBe("first");
+    mod.reset();
+    expect(mod.isInited()).toBe(false);
+    await expect(mod.ensureInit(async () => (n++, "second"))).resolves.toBe(true);
+    expect(mod.get()).toBe("second");
+    expect(n).toBe(2);
+  });
+});
+
+describe("installYsmModule（注入点 + 间接 eval + MODULARIZE 工厂组装）", () => {
+  const moduleCfg: YsmModuleConfig = {
+    wasmBinary: new ArrayBuffer(1),
+    print: () => {},
+    printErr: () => {},
+    noInitialRun: true,
+  };
+
+  it("patch 胶水 → host.Module 注入 → eval → 读 factory → resolveWasmFactory", async () => {
+    const host: Record<string, unknown> = {};
+    const fakeFactory = (m: unknown) => {
+      // 胶水会把 moduleArg 存起来，工厂返回合法模块
+      const module: WasmModuleLike = {
+        _malloc: (n) => n,
+        _free: () => {},
+        ccall: () => 1,
+        FS: {} as unknown as FSLike,
+      };
+      void m;
+      return module;
+    };
+    // 模仿 auto-generated 胶水：indirect eval 后把工厂挂到 host
+    //（真实胶水在 eval 时 `var YSMParserModule = ...` → 全局作用域）
+    const glue = "/* glue */";
+    // 手动模拟 installYsmModule 依赖的全局工厂（patchGlueHeapExport 不改变这一行为）
+    host.YSMParserModule = fakeFactory;
+    const result = await installYsmModule(host, glue, moduleCfg);
+    expect(result.ccall).toBeTypeOf("function");
+    expect(host.Module).toBe(moduleCfg); // 注入点落位
+  });
+
+  it("factory 缺失（eval 后 host.YSMParserModule 未定义）→ 抛错", async () => {
+    await expect(
+      installYsmModule({} as Record<string, unknown>, "/* glue */", moduleCfg),
+    ).rejects.toThrow("YSMParserModule 未定义");
   });
 });

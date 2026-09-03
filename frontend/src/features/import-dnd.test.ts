@@ -10,7 +10,7 @@ vi.mock("../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ImportModelFile: vi.fn().mockResolvedValue(undefined),
     ImportModelFolder: vi.fn().mockResolvedValue(undefined),
-    DetectZipType: vi.fn().mockResolvedValue("ysm"),
+    DetectContainerType: vi.fn().mockResolvedValue("ysm"),
   }),
 }));
 

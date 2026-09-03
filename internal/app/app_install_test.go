@@ -1,108 +1,21 @@
 // ===== app_install.go 薄壳级单测（零测试层补测）=====
-// 覆盖：ClearCustomDir 清理语义（根外拒绝/同名删除/非同名保留/.ban 处理/.recycle 跳过）/
-// countMatchingInDir 同名计数 / isResourcePackFolder 检测 / findRecycleRoot 多类型根命中 /
-// MoveToRecycleEx 未命中。避开 Wails runtime 与真实用户配置目录。
+// 覆盖：countMatchingInDir 同名计数 / isResourcePackFolder 检测 / findRecycleRoot 多类型根命中。
+// 避开 Wails runtime 与真实用户配置目录。
 package app
 
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"ysm-model-manager/go/types"
 )
 
-// installApp 构造注入 configCache + logger 的 App（AddOpLog/ClearCustomDir 依赖 logger）
+// installApp 构造注入 configCache + logger 的 App（AddOpLog 依赖 logger）
 func installApp(t *testing.T, cfg types.AppConfig) *App {
 	t.Helper()
 	a := scanApp(t, cfg)
 	return a
-}
-
-func TestClearCustomDir_Guard(t *testing.T) {
-	base := t.TempDir()
-	a := installApp(t, types.AppConfig{FilesRoot: base})
-
-	t.Run("空目录报错", func(t *testing.T) {
-		if _, err := a.ClearCustomDir("  "); err == nil {
-			t.Error("空目录应报错")
-		}
-	})
-
-	t.Run("根外路径拒绝", func(t *testing.T) {
-		outside := filepath.Join(base, "..", "outside")
-		if err := os.MkdirAll(outside, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := a.ClearCustomDir(outside); err == nil {
-			t.Error("根外路径应被守卫拒绝")
-		}
-	})
-
-	t.Run("仓库根本身拒绝（rel==. 防整删）", func(t *testing.T) {
-		root := filepath.Join(base, types.GroupStorageRoot("ysm"))
-		if err := os.MkdirAll(root, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := a.ClearCustomDir(root); err == nil {
-			t.Error("仓库根本身应被守卫拒绝")
-		}
-	})
-}
-
-func TestClearCustomDir_RemovalSemantics(t *testing.T) {
-	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
-	if err := os.MkdirAll(filepath.Join(root, ".recycle"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	// 仓库文件（供 repoByName 匹配）——ClearCustomDir 守卫基准是 ysmRoot()，
-	// 整合包自定义目录须位于 ysmRoot 内（真实场景：整合包的 ysm 子目录）；
-	// 注：仓库表由 ScanModelEntries(ysmRoot) 递归构建，custom 内文件也在扫描范围，
-	// 故「独有保留」分支（仓库无此文件）在该布局下不可达——只验证删除/跳过语义
-	if err := os.WriteFile(filepath.Join(root, "共享.ysm"), []byte("r"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	// 整合包目录（位于 ysmRoot 内，符合守卫契约）
-	custom := filepath.Join(root, "instances", "TestPack")
-	if err := os.MkdirAll(custom, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	files := map[string]string{
-		"共享.ysm":       "c",  // 仓库同名 → 删除
-		"共享.ysm.ban":   "cb", // .ban 后缀 → 截取后同名 → 删除
-		"textures.txt": "t",  // 非 .ysm/.zip/.7z → 跳过
-		"隐藏.ysm":       "h",  // 放入 .recycle → SkipDir 不处理
-	}
-	for name, content := range files {
-		dir := custom
-		if name == "隐藏.ysm" {
-			dir = filepath.Join(custom, ".recycle")
-		}
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	a := installApp(t, types.AppConfig{FilesRoot: base})
-
-	n, err := a.ClearCustomDir(custom)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != 2 {
-		t.Fatalf("应删除 2 个仓库同名文件, got %d", n)
-	}
-	// txt 保留、.recycle 内文件保留
-	if _, err := os.Stat(filepath.Join(custom, "textures.txt")); err != nil {
-		t.Error("非模型扩展名应保留")
-	}
-	if _, err := os.Stat(filepath.Join(custom, ".recycle", "隐藏.ysm")); err != nil {
-		t.Error(".recycle 目录内文件应跳过")
-	}
 }
 
 func TestCountMatchingInDir(t *testing.T) {
@@ -196,18 +109,4 @@ func TestFindRecycleRoot_MultiType(t *testing.T) {
 			t.Fatalf("ysm 子目录应命中, got %q", got)
 		}
 	})
-}
-
-func TestMoveToRecycleEx_NoRoot(t *testing.T) {
-	base := t.TempDir()
-	a := installApp(t, types.AppConfig{FilesRoot: base})
-	// 仓库根未创建：src 在根内子目录也找不到根（未配置目录不存在）→ error
-	outside := filepath.Join(t.TempDir(), "x.ysm")
-	if err := os.WriteFile(outside, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	action, reason := a.MoveToRecycleEx(outside)
-	if action != "error" || !strings.Contains(reason, "未找到") {
-		t.Errorf("外部路径应返回 error, got %q %q", action, reason)
-	}
 }

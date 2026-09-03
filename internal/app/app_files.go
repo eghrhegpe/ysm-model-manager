@@ -367,8 +367,8 @@ func (a *App) IsFileBanned(path string) bool {
 // ========== 统一启用/禁用（兄弟会话裁定：无 rtype，纯路径包含判定）==========
 // ToggleEnable 统一启禁入口——root 归属由「哪个已知根包含此路径」判定，而非按
 // rtype 路由：前端零类型信息过桥，杜绝「rtype 与实际位置不一致」（文件移动/复制后
-// rtype 过期）错根；允许集合与 ToggleResourcePack 同口径（FilesRoot + McRoot +
-// CustomRoots 值），内部复用 fileops 的 .disabled 统一机制（新标准，兼容历史 .ban）。
+// rtype 过期）错根；允许集合 = FilesRoot + McRoot + CustomRoots 值（原
+// ToggleResourcePack 同口径），内部复用 fileops 的 .disabled 统一机制（新标准，兼容历史 .ban）。
 func (a *App) ToggleEnable(path string) (bool, error) {
 	root := a.toggleRootFor(path)
 	if root == "" {
@@ -381,8 +381,8 @@ func (a *App) ToggleEnable(path string) (bool, error) {
 	return enabled, err
 }
 
-// toggleAllowedRoots 收集启禁允许的根集合（与 ToggleResourcePack 同口径：
-// FilesRoot + McRoot + CustomRoots 值），并追加 ysmRoot（GetRepoRoot("ysm")），
+// toggleAllowedRoots 收集启禁允许的根集合（FilesRoot + McRoot + CustomRoots 值），
+// 并追加 ysmRoot（GetRepoRoot("ysm")），
 // 使「对 ysm 仓库子根本身启禁」也落入根守卫（path==root 拒绝）。
 func (a *App) toggleAllowedRoots() []string {
 	cfg := a.LoadAppConfig()

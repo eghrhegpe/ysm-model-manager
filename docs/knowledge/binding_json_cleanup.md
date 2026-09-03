@@ -19,7 +19,6 @@ auto_fields:
     - App.Build3DSpecFromGeometryJSON
     - App.ClearInstanceResources
     - App.CountInstanceResources
-    - App.DeduplicateCustomDir
     - App.DeleteResourcePack
     - App.DetectConflicts
     - App.DetectResourceType
@@ -44,7 +43,6 @@ auto_fields:
     - App.ImportByType
     - App.InstallResourceToInstance
     - App.InvalidateScanCache
-    - App.IsResourcePackEnabled
     - App.ListContainerEntries
     - App.ListPackModels
     - App.ListPackModelsDetail
@@ -63,20 +61,15 @@ auto_fields:
     - App.ReadSchematic
     - App.ReadShaderpackLang
     - App.RelinkAllInstanceResources
-    - App.RelinkCustomDir
     - App.RepoHealthAudit
     - App.RepoHealthAuditAll
     - App.ResetResourceRoot
     - App.ResolveConflicts
-    - App.SavePreviewTempFile
     - App.SaveScreenshotFile
     - App.SelectImportFile
-    - App.SelectImportZip
     - App.SetResourceRoot
-    - App.SetVoxelMaxBlocks
     - App.SyncModelToggleStatus
     - App.SyncResources
-    - App.ToggleResourcePack
     - Error
     - ReadFileMeta
   use_when:

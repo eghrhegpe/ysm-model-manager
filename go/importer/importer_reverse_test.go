@@ -793,9 +793,9 @@ func TestDirectoryCopyImporter_Import_Symlink(t *testing.T) {
 	assertSymlinkCopied(t, filepath.Join(copied, "dir-link"), filepath.Join(src, "sub"))
 }
 
-// ===== DetectZipType 边界 =====
+// ===== DetectContainerType 边界 =====
 
-func TestDetectZipType_More(t *testing.T) {
+func TestDetectContainerType_More(t *testing.T) {
 	type zipEntry struct {
 		name string
 		comp []byte
@@ -838,8 +838,8 @@ func TestDetectZipType_More(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := DetectZipType(tc.data); got != tc.want {
-				t.Fatalf("DetectZipType = %q, 期望 %q", got, tc.want)
+			if got := DetectContainerType(tc.data); got != tc.want {
+				t.Fatalf("DetectContainerType = %q, 期望 %q", got, tc.want)
 			}
 		})
 	}

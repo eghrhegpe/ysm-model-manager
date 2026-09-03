@@ -781,7 +781,7 @@ export interface ResourceType {
     "installExts": string[] | null;
 
     /**
-     * ZIP 内容特征条目（importer.DetectZipType 注册表驱动）
+     * ZIP 内容特征条目（importer.DetectContainerType 注册表驱动）
      */
     "zipEntries": ZipEntryMatch[] | null;
 

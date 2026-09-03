@@ -3,7 +3,6 @@
 package app
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -246,20 +245,6 @@ func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
 	return sites, nil
 }
 
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// ========== CSV 导出/导入 ==========
-func (a *App) ExportWorkshopSitesCSV() (string, error) {
-	sites := a.DefaultWorkshopSites()
-	var buf strings.Builder
-	w := csv.NewWriter(&buf)
-	w.Write([]string{"id", "icon", "label", "url", "desc", "group", "searchUrl"})
-	for _, s := range sites {
-		w.Write([]string{s.ID, s.Icon, s.Label, s.URL, s.Desc, s.Group, s.SearchURL})
-	}
-	w.Flush()
-	return buf.String(), w.Error()
-}
-
 func (a *App) ExportWorkshopSitesJSONFile() (string, error) {
 	sites := a.DefaultWorkshopSites()
 	data, err := json.MarshalIndent(sites, "", "  ")
@@ -287,38 +272,6 @@ func (a *App) ValidateWorkshopSites() (int, error) {
 		return 0, fmt.Errorf("数据异常: %d 个站点 (期望 2-100)", len(sites))
 	}
 	return len(sites), a.SaveWorkshopSites(sites)
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) ImportWorkshopSitesCSV(csvContent string) error {
-	r := csv.NewReader(strings.NewReader(csvContent))
-	rows, err := r.ReadAll()
-	if err != nil {
-		return err
-	}
-	if len(rows) < 2 {
-		return fmt.Errorf("CSV 为空或只有表头")
-	}
-	var sites []types.WorkshopSite
-	for _, row := range rows[1:] {
-		if len(row) < 6 {
-			continue
-		}
-		s := types.WorkshopSite{
-			ID: row[0], Icon: row[1], Label: row[2], URL: row[3],
-			Desc: row[4], Group: row[5],
-		}
-		if len(row) > 6 {
-			s.SearchURL = row[6]
-		}
-		sites = append(sites, s)
-	}
-	// 有效行校验（R22 审核 P3-3）：全非法行（<6 列被跳过）时不得覆盖写空——
-	// 与 Merge/Replace 的「完整性校验后才落盘」口径一致，防清空用户站点配置
-	if len(sites) == 0 {
-		return fmt.Errorf("CSV 无有效数据行（每行至少 6 列）")
-	}
-	return a.SaveWorkshopSites(sites)
 }
 
 func (a *App) ExportWorkshopCreatorsJSONFile() (string, error) {
@@ -389,19 +342,4 @@ func (a *App) MergeWorkshopCreatorsFromJSON(jsonContent string) (int, int, error
 		return 0, 0, fmt.Errorf("合并后数据异常: %d 条, 已回滚", len(existing))
 	}
 	return added, updated, a.SaveWorkshopCreators(existing)
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) ReplaceWorkshopCreatorsFromJSON(jsonContent string) (int, error) {
-	var imported []types.WorkshopCreator
-	if err := json.Unmarshal([]byte(jsonContent), &imported); err != nil {
-		return 0, err
-	}
-	if len(imported) < 100 {
-		return 0, fmt.Errorf("替换数据异常: 仅 %d 条 (期望 >=100)", len(imported))
-	}
-	if _, err := a.BackupWorkshopCreators(); err != nil {
-		return 0, fmt.Errorf("备份创作者数据失败，中止替换: %w", err)
-	}
-	return len(imported), a.SaveWorkshopCreators(imported)
 }

@@ -11,7 +11,6 @@ auto_fields:
     - App.CancelQueue
     - App.DownloadFromGitHub
     - App.EnqueueDownloads
-    - App.GetModelTexSizes
     - App.QueueStatus
     - Downloader
     - Downloader.File

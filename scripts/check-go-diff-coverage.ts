@@ -179,7 +179,7 @@ export function runCoverProfile(packagePattern: string, tmp: string) {
   if (!r1.ok) {
     // 2026-08-31 瞬态失败重试一次：go/importer 等包存在低频插桩态测试抖动
     // （实测 `go test -cover` 92.9% 包覆盖、连续 11 次复跑全过，但整包 -coverprofile
-    // 偶发 1 次 TestDetectZipTypeFromBase64Tail 失败）——单次失败即 null 会让整包
+    // 偶发 1 次 TestDetectContainerTypeFromBase64Tail 失败）——单次失败即 null 会让整包
     // 误报 0% 阻断推送（假 0）。重试后仍失败 = 真缺陷，照旧拦截。
     const r2 = run('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
       cwd: ROOT, stdio: 'ignore', timeout: 120000,

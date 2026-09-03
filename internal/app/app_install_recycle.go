@@ -4,12 +4,10 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"ysm-model-manager/go/installer"
-	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/recycle"
 	"ysm-model-manager/go/scanner"
@@ -19,7 +17,7 @@ import (
 // ========== 回收站 ==========
 // R24 P3：recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批
 // 文件（实例目录 Rename/Remove、.recycle 内 Move）→ 统一纳入 InstallLock 互斥
-// （共享单锁闭环，与 ClearInstanceResources/DeduplicateCustomDir 同口径）。
+// （共享单锁闭环，与 ClearInstanceResources 同口径）。
 // ⚠️ 这些绑定不得在已持 InstallLock 的路径内被调用（非重入锁，会自死锁）。
 func (a *App) MoveToRecycle(src string) error {
 	installer.InstallLock.Lock()
@@ -42,24 +40,6 @@ func (a *App) MoveToRecycle(src string) error {
 	}
 	scanner.InvalidateCache()
 	return nil
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// 注意（R23 P3-3）：与 MoveToRecycle 不对称——findRecycleRoot 失败时无 ysmRoot 兜底，
-// 直接返回 error（保留旧绑定错误语义，避免静默降级到错误根目录）。
-func (a *App) MoveToRecycleEx(src string) (string, string) {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
-	root := a.findRecycleRoot(src)
-	if root == "" {
-		return "error", "未找到包含此文件的资源目录"
-	}
-	res := recycle.New(root).MoveEx(src)
-	if res.Action != "error" {
-		// 移动成功后失效扫描缓存——与 MoveToRecycle 对齐（防 30s 陈旧缓存"复活"）
-		scanner.InvalidateCache()
-	}
-	return res.Action, res.Reason
 }
 
 // findRecycleRoot 查找包含 src 路径的资源根目录（用于多类型回收）
@@ -100,77 +80,6 @@ func (a *App) findRecycleRoot(src string) string {
 		return r
 	}
 	return ""
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) ClearCustomDir(customDir string) (int, error) {
-	customDir = strings.TrimSpace(customDir)
-	if customDir == "" {
-		return 0, fmt.Errorf("目录为空")
-	}
-	// 补根守卫——原实现对任意 customDir 直接 WalkDir + os.Remove，
-	// 可删仓库外任意 .ysm/.zip/.7z（仅限与仓库同名的文件）
-	// 根级（customDir == ysmRoot）由 isPathInRoot 的 rel=="." 拒绝覆盖（2026-08-09 P1 修复）——
-	// 该函数已拒绝根路径本身，customDir==ysmRoot 时返回「路径超出仓库目录」
-	if !a.isPathInRoot(customDir) {
-		return 0, fmt.Errorf("路径超出仓库目录")
-	}
-
-	repoFiles := a.ScanModelEntries(a.ysmRoot())
-	repoByName := map[string]types.ModelEntry{}
-	for _, e := range repoFiles {
-		repoByName[e.Name] = e
-		// 双 key 登记：scanner 的 Name 含 .ban/.disabled 后缀（filepath.Base 原始名），
-		// 而 customDir 侧 lookupName 剥后缀——不登记剥后缀名则仓库禁用条目永远匹配不上
-		stripped := types.StripDisableSuffix(e.Name)
-		if stripped != e.Name {
-			repoByName[stripped] = e
-		}
-	}
-
-	count := 0
-	failures := 0
-	filepath.WalkDir(customDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			failures++
-			return nil
-		}
-		if d.IsDir() {
-			if strings.ToLower(d.Name()) == ".recycle" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		// ADR-064 锚定：扩展名判定走注册表（原硬编码 .ysm/.zip/.7z，新增 YSM
-		// 承载格式或资源类型时清理功能失效）；IsTypeModelFile 内部剥 .ban/.disabled
-		fileName := filepath.Base(p)
-		if !packs.IsTypeModelFile(fileName, "ysm") {
-			return nil
-		}
-
-		lookupName := types.StripDisableSuffix(fileName)
-
-		_, hasName := repoByName[lookupName]
-		if !hasName {
-			a.logger.Add(fileName, p, customDir, 0, "skipped", "仓库中无此文件，跳过删除（请先上传到仓库）")
-			return nil
-		}
-
-		if err := os.Remove(p); err != nil {
-			failures++
-			a.logger.Add(fileName, p, customDir, 0, "failed", err.Error())
-			return nil
-		}
-		count++
-		a.logger.Add(fileName, p, customDir, 0, "success", "已从整合包删除（仓库保留）")
-		return nil
-	})
-	// 无条件失效缓存——部分失败（failures>0）时已删 count 个文件，同样不能留陈旧缓存
-	scanner.InvalidateCache()
-	if failures > 0 {
-		return count, fmt.Errorf("清理完成: 成功 %d，失败 %d", count, failures)
-	}
-	return count, nil
 }
 
 // ListRecycleBin 列出回收站条目。recyclePath 非空时只遍历与之相关的资源根

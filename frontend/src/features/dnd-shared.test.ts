@@ -108,7 +108,7 @@ describe("shouldEnterForm — 是否进入命名表单", () => {
   it(".zip / .7z 默认直接导入（后端自动路由类型，不再探测进表单）", () => {
     expect(shouldEnterForm("archive.zip")).toBe(false);
     expect(shouldEnterForm("archive.7z")).toBe(false);
-    // 不再调用 DetectZipType
+    // 不再调用 DetectContainerType
     expect(getApp).not.toHaveBeenCalled();
   });
 

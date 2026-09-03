@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"ysm-model-manager/go/conc"
 	"ysm-model-manager/go/fsutil"
@@ -65,53 +64,6 @@ func (a *App) ExtractYSMHeaderFromBase64(base64Data string) ysm.YSMHeader {
 		return ysm.YSMHeader{}
 	}
 	return ysm.AnalyzeYSMHeaderFromBytes(data)
-}
-
-// previewTempTTL 临时预览文件存活期：写入前清扫过期文件，防长期运行累积磁盘
-const previewTempTTL = 24 * time.Hour
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) SavePreviewTempFile(base64Data string) (string, error) {
-	// base64 预大小守卫（同 ExtractYSMHeaderFromBase64）
-	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxReadLimit)
-	if err != nil {
-		return "", err
-	}
-	tmpDir := filepath.Join(os.TempDir(), "ysm-preview")
-	if err := os.MkdirAll(tmpDir, fsutil.DirPerms); err != nil {
-		return "", err
-	}
-	sweepPreviewTemp(tmpDir)
-	tmpFile, err := os.CreateTemp(tmpDir, "preview-*.ysm")
-	if err != nil {
-		return "", err
-	}
-	defer tmpFile.Close()
-	_, err = tmpFile.Write(data)
-	if err != nil {
-		return "", err
-	}
-	return tmpFile.Name(), nil
-}
-
-// sweepPreviewTemp 清扫 ysm-preview 目录中超期的临时文件（TTL 淘汰，借鉴 texture_cache 模式）。
-// 清扫失败静默忽略——临时目录清理不应阻塞预览主链路。
-func sweepPreviewTemp(tmpDir string) {
-	entries, err := os.ReadDir(tmpDir)
-	if err != nil {
-		return
-	}
-	cutoff := time.Now().Add(-previewTempTTL)
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		info, err := e.Info()
-		if err != nil || info.ModTime().After(cutoff) {
-			continue
-		}
-		_ = os.Remove(filepath.Join(tmpDir, e.Name()))
-	}
 }
 
 func (a *App) ReadFileBytes(path string) []byte {

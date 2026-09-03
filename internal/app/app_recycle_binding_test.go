@@ -1,8 +1,10 @@
-// ===== recycle 四绑定 InstallLock 行覆盖补测（推送门禁 36.4% → 过线）=====
-// R24 给 MoveToRecycle/MoveToRecycleEx/RestoreFromRecycle/DeleteFromRecycle/
-// EmptyRecycleBin 加了 InstallLock，既有测试只覆盖 MoveToRecycle——其余四绑定
-// 的 Lock/Unlock 变更行零覆盖拖低 check-go-diff-coverage。此处用最小路径
-// （错误/空目录分支）逐一执行四绑定，命中加锁行即可。
+// ===== recycle 绑定 InstallLock 行覆盖补测（推送门禁 36.4% → 过线）=====
+// R24 给 MoveToRecycle/RestoreFromRecycle/DeleteFromRecycle/EmptyRecycleBin
+// 加了 InstallLock，既有测试只覆盖 MoveToRecycle——其余绑定的 Lock/Unlock
+// 变更行零覆盖拖低 check-go-diff-coverage。此处用最小路径（错误/空目录分支）
+// 逐一执行，命中加锁行即可。
+// （MoveToRecycleEx 已随 Deprecated 绑定清理删除：其「findRecycleRoot 失败无
+// ysmRoot 兜底」语义无前端消费，见 go_design_critique 动刀记录）
 package app
 
 import (
@@ -10,15 +12,6 @@ import (
 	"path/filepath"
 	"testing"
 )
-
-func TestMoveToRecycleEx_OutsideAllRoots(t *testing.T) {
-	a, _, _ := packApp(t)
-	// src 在所有资源根之外 → findRecycleRoot 返回空 → "error" 分支（不加锁行同样执行）
-	action, _ := a.MoveToRecycleEx(filepath.Join(t.TempDir(), "ghost.ysm"))
-	if action != "error" {
-		t.Fatalf("根外路径应返回 error, got %q", action)
-	}
-}
 
 func TestRestoreFromRecycle_NotExist(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
@@ -48,17 +41,16 @@ func TestEmptyRecycleBin_NoRecycleDir(t *testing.T) {
 	}
 }
 
-// MoveToRecycleEx 成功路径（R24 加锁行）：src 落在资源根内 → findRecycleRoot 命中 →
-// recycle.New(root).MoveEx 成功 → scanner.InvalidateCache()。覆盖变更行 block[55-56]。
-func TestMoveToRecycleEx_Success(t *testing.T) {
+// MoveToRecycle 成功路径（R24 加锁行）：src 落在资源根内 → findRecycleRoot 命中 →
+// recycle.Move 成功 → scanner.InvalidateCache()。覆盖变更行。
+func TestMoveToRecycle_Success(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	src := filepath.Join(ysmRoot, "recycle-me.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	action, reason := a.MoveToRecycleEx(src)
-	if action != "recycled" {
-		t.Fatalf("应 recycled, got %q (%s)", action, reason)
+	if err := a.MoveToRecycle(src); err != nil {
+		t.Fatalf("回收失败: %v", err)
 	}
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Error("回收后源文件应已进入回收站")
@@ -73,8 +65,8 @@ func TestListRecycleBin_IteratesRoots(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if action, _ := a.MoveToRecycleEx(src); action != "recycled" {
-		t.Fatalf("预置回收失败: %s", action)
+	if err := a.MoveToRecycle(src); err != nil {
+		t.Fatalf("预置回收失败: %v", err)
 	}
 	entries := a.ListRecycleBin("")
 	if len(entries) != 1 {
@@ -95,8 +87,8 @@ func TestListRecycleBin_ScopeIncludesParentRelation(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if action, _ := a.MoveToRecycleEx(src); action != "recycled" {
-		t.Fatalf("预置回收失败: %s", action)
+	if actionErr := a.MoveToRecycle(src); actionErr != nil {
+		t.Fatalf("预置回收失败: %v", actionErr)
 	}
 	// 传入 ysmRoot 的父目录：recyclePath 包含回收根 → 该根被保留（双向 IsInside）
 	parent := filepath.Dir(ysmRoot)
@@ -111,8 +103,8 @@ func TestListRecycleBin_ScopedByRecyclePath(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if action, _ := a.MoveToRecycleEx(src); action != "recycled" {
-		t.Fatalf("预置回收失败: %s", action)
+	if actionErr := a.MoveToRecycle(src); actionErr != nil {
+		t.Fatalf("预置回收失败: %v", actionErr)
 	}
 
 	if got := len(a.ListRecycleBin(ysmRoot)); got != 1 {

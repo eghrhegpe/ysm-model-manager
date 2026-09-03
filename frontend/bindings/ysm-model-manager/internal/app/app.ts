@@ -123,13 +123,6 @@ export function CheckUpdate(): $CancellablePromise<updater$0.UpdateInfo | null> 
     return $Call.ByID(651964520);
 }
 
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function ClearCustomDir(customDir: string): $CancellablePromise<number> {
-    return $Call.ByID(2697468754, customDir);
-}
-
 export function ClearImportLogs(): $CancellablePromise<void> {
     return $Call.ByID(3815103174);
 }
@@ -156,14 +149,6 @@ export function ClearRuntimeLogs(): $CancellablePromise<void> {
  */
 export function ClearScanCache(): $CancellablePromise<void> {
     return $Call.ByID(3066626705);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * ClearTextureCache 清空纹理缓存（用户主动清理用）。
- */
-export function ClearTextureCache(): $CancellablePromise<void> {
-    return $Call.ByID(2838206023);
 }
 
 export function ClosePlazaWindow(): $CancellablePromise<void> {
@@ -204,14 +189,6 @@ export function DebugExtractCreatorAvatar(authorName: string): $CancellablePromi
     return $Call.ByID(1802835376, authorName);
 }
 
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle）
- */
-export function DeduplicateCustomDir(customDir: string): $CancellablePromise<[number, number]> {
-    return $Call.ByID(2166378965, customDir);
-}
-
 export function DefaultWorkshopSites(): $CancellablePromise<types$0.WorkshopSite[] | null> {
     return $Call.ByID(3846649579);
 }
@@ -243,6 +220,13 @@ export function DetectConflicts(rtype: string, instanceName: string): $Cancellab
 }
 
 /**
+ * DetectContainerType 通过 ZIP 内容检测资源类型（供前端导入路由使用）
+ */
+export function DetectContainerType(base64Data: string): $CancellablePromise<string> {
+    return $Call.ByID(685628447, base64Data);
+}
+
+/**
  * DetectLauncherInstances inspects a user-selected HMCL/PCL directory and
  * returns the resolved YSM directory for each Minecraft instance.
  */
@@ -255,13 +239,6 @@ export function DetectLauncherInstances(launcherDir: string): $CancellablePromis
  */
 export function DetectResourceType(path: string): $CancellablePromise<string> {
     return $Call.ByID(2113518140, path);
-}
-
-/**
- * DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用）
- */
-export function DetectZipType(base64Data: string): $CancellablePromise<string> {
-    return $Call.ByID(747133431, base64Data);
 }
 
 export function DoUpdate(url: string, expectedHash: string): $CancellablePromise<string> {
@@ -314,14 +291,6 @@ export function ExportModelStructureJSON(modelPath: string): $CancellablePromise
 
 export function ExportWorkshopCreatorsJSONFile(): $CancellablePromise<string> {
     return $Call.ByID(3313564853);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * ========== CSV 导出/导入 ==========
- */
-export function ExportWorkshopSitesCSV(): $CancellablePromise<string> {
-    return $Call.ByID(2284407588);
 }
 
 export function ExportWorkshopSitesJSONFile(): $CancellablePromise<string> {
@@ -429,13 +398,6 @@ export function GetDefaultRepoRoot(): $CancellablePromise<string> {
     return $Call.ByID(2892280306);
 }
 
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function GetGlobalCustomDir(mcRoot: string): $CancellablePromise<string> {
-    return $Call.ByID(4119708496, mcRoot);
-}
-
 export function GetImportLogs(): $CancellablePromise<types$0.ImportLog[] | null> {
     return $Call.ByID(1065567147);
 }
@@ -480,14 +442,6 @@ export function GetModel3DSpec(modelPath: string): $CancellablePromise<threejs$0
  */
 export function GetModelTags(modelPath: string): $CancellablePromise<string[] | null> {
     return $Call.ByID(234236959, modelPath);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型）
- */
-export function GetModelTexSizes(filesRoot: string): $CancellablePromise<ysm$0.TexInfo[] | null> {
-    return $Call.ByID(1273620259, filesRoot);
 }
 
 /**
@@ -567,15 +521,6 @@ export function GetVoxelDataInContainer(path: string, entry: string, ext: string
     return $Call.ByID(3637455095, path, entry, ext);
 }
 
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。
- * wasmBinary 由根包 main 的 init() 经 SetEmbedded 注入。
- */
-export function GetWasmBinary(): $CancellablePromise<string | null> {
-    return $Call.ByID(2670724632);
-}
-
 export function GetWindowPosition(): $CancellablePromise<types$0.WindowState> {
     return $Call.ByID(3862857718);
 }
@@ -645,52 +590,6 @@ export function ImportModelFile(fileName: string, base64Data: string): $Cancella
 }
 
 /**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function ImportModelFileOverwrite(fileName: string, base64Data: string): $CancellablePromise<void> {
-    return $Call.ByID(2920266218, fileName, base64Data);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function ImportModelFileOverwriteTo(fileName: string, subpath: string, base64Data: string): $CancellablePromise<void> {
-    return $Call.ByID(3849603631, fileName, subpath, base64Data);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。
- */
-export function ImportModelFileOverwriteToMMD(fileName: string, subpath: string, mmdSubdir: string, base64Data: string): $CancellablePromise<void> {
-    return $Call.ByID(445496335, fileName, subpath, mmdSubdir, base64Data);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function ImportModelFileSkipCheck(fileName: string, base64Data: string): $CancellablePromise<void> {
-    return $Call.ByID(334185050, fileName, base64Data);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function ImportModelFileTo(fileName: string, subpath: string, base64Data: string): $CancellablePromise<void> {
-    return $Call.ByID(191674492, fileName, subpath, base64Data);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。
- * mmdSubdir: MMD 用途子目录名（如 SceneModel/CustomAnim），对应 MMD 独立顶级类型。
- * subpath: 文件在子目录内的相对路径（文件夹导入时保留层级）。
- */
-export function ImportModelFileToMMD(fileName: string, subpath: string, mmdSubdir: string, base64Data: string): $CancellablePromise<void> {
-    return $Call.ByID(509903146, fileName, subpath, mmdSubdir, base64Data);
-}
-
-/**
  * ImportModelFolder 文件夹型模型整组导入（YSM 解压目录 / MMD 模型目录，保留子目录层级，ADR-038 关联）
  * folderName = 仓库文件夹名（模型名）；files = 相对路径 → base64 内容
  * rtype 按文件夹内容推断（非硬编码 ysm）：扫主文件扩展名经 ExtBelongsTo 判定，
@@ -716,13 +615,6 @@ export function ImportModelFolderTo(folderName: string, subpath: string, rtype: 
 }
 
 /**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function ImportWorkshopSitesCSV(csvContent: string): $CancellablePromise<void> {
-    return $Call.ByID(1342547047, csvContent);
-}
-
-/**
  * ========== 安装 ==========
  */
 export function InstallModelFile(src: string, mcRoot: string): $CancellablePromise<string> {
@@ -731,13 +623,6 @@ export function InstallModelFile(src: string, mcRoot: string): $CancellablePromi
 
 export function InstallModelTo(src: string, customDir: string): $CancellablePromise<void> {
     return $Call.ByID(547256422, src, customDir);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function InstallModelWithOverlay(src: string, customDir: string): $CancellablePromise<string> {
-    return $Call.ByID(4168467473, src, customDir);
 }
 
 /**
@@ -757,14 +642,6 @@ export function InvalidateScanCache(): $CancellablePromise<void> {
 
 export function IsFileBanned(path: string): $CancellablePromise<boolean> {
     return $Call.ByID(3330292233, path);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * IsResourcePackEnabled 检查资源包是否启用
- */
-export function IsResourcePackEnabled(path: string): $CancellablePromise<boolean> {
-    return $Call.ByID(2413288079, path);
 }
 
 /**
@@ -874,15 +751,6 @@ export function MoveModelFile(src: string, dstDir: string): $CancellablePromise<
  */
 export function MoveToRecycle(src: string): $CancellablePromise<void> {
     return $Call.ByID(1383304780, src);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * 注意（R23 P3-3）：与 MoveToRecycle 不对称——findRecycleRoot 失败时无 ysmRoot 兜底，
- * 直接返回 error（保留旧绑定错误语义，避免静默降级到错误根目录）。
- */
-export function MoveToRecycleEx(src: string): $CancellablePromise<[string, string]> {
-    return $Call.ByID(2099759785, src);
 }
 
 export function NavigatePlazaWindow(url: string, direct: boolean): $CancellablePromise<void> {
@@ -1052,14 +920,6 @@ export function RelinkAllInstanceResources(instanceName: string): $CancellablePr
     return $Call.ByID(3612469403, instanceName);
 }
 
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * RelinkCustomDir 重新应用链接模式到指定目录（兼容旧版）
- */
-export function RelinkCustomDir(customDir: string, filesRoot: string): $CancellablePromise<number> {
-    return $Call.ByID(3736551740, customDir, filesRoot);
-}
-
 export function RemoveDir(dir: string): $CancellablePromise<void> {
     return $Call.ByID(2521913290, dir);
 }
@@ -1070,13 +930,6 @@ export function RenameDir(oldPath: string, newName: string): $CancellablePromise
 
 export function RenameFile(oldPath: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(1176761595, oldPath, newName);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function ReplaceWorkshopCreatorsFromJSON(jsonContent: string): $CancellablePromise<number> {
-    return $Call.ByID(1355854287, jsonContent);
 }
 
 /**
@@ -1143,13 +996,6 @@ export function SaveAppConfig(filesRoot: string, rpRoot: string, mcRoot: string,
  */
 export function SaveCachedTexture(hash: string, b64Data: string): $CancellablePromise<void> {
     return $Call.ByID(3781776119, hash, b64Data);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- */
-export function SavePreviewTempFile(base64Data: string): $CancellablePromise<string> {
-    return $Call.ByID(3917626618, base64Data);
 }
 
 /**
@@ -1241,16 +1087,6 @@ export function ScanModelEntriesWithLabel(dir: string, label: string): $Cancella
 }
 
 /**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * SearchAllModels 跨类型搜索：遍历所有已配置资源类型的根目录，并发扫描 + 合并结果。
- * allRoots 为 rtype→root 映射（由 GetAllRepoRoots 提供）；每个搜索结果携带 Type 字段。
- * 关键词/数值过滤逻辑与 SearchModels 一致，但扫描范围覆盖全部类型。
- */
-export function SearchAllModels(allRoots: { [_ in string]?: string } | null, keyword: string, minBones: number, maxBones: number, minCubes: number, maxCubes: number, minTex: number, maxTex: number): $CancellablePromise<types$0.SearchResult[] | null> {
-    return $Call.ByID(2041765860, allRoots, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex);
-}
-
-/**
  * ========== 高级搜索 ==========
  * SearchModels 扫描模型条目后按关键词、骨骼数、立方体数、纹理尺寸范围过滤。
  * 并发优化：关键词预过滤后，用 goroutine 池并行 AnalyzeBedrockModel（I/O + CPU 混合型）。
@@ -1272,14 +1108,6 @@ export function SelectDirectory(): $CancellablePromise<string> {
  */
 export function SelectImportFile(filter: string, title: string): $CancellablePromise<string> {
     return $Call.ByID(3917673792, filter, title);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * SelectImportZip 打开文件选择器选取 .zip 文件
- */
-export function SelectImportZip(): $CancellablePromise<string> {
-    return $Call.ByID(3551213909);
 }
 
 /**
@@ -1347,14 +1175,6 @@ export function SetSessionFilesRoot(filesRoot: string): $CancellablePromise<void
 }
 
 /**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000
- */
-export function SetVoxelMaxBlocks(limit: number): $CancellablePromise<void> {
-    return $Call.ByID(1029825393, limit);
-}
-
-/**
  * SyncCustomToRepo 同步整合包自定义目录到仓库（执行逻辑下沉 go/sync）
  */
 export function SyncCustomToRepo(customDir: string, repoDir: string): $CancellablePromise<number> {
@@ -1389,19 +1209,6 @@ export function ToggleEnable(path: string): $CancellablePromise<boolean> {
  */
 export function ToggleModelEnable(path: string): $CancellablePromise<boolean> {
     return $Call.ByID(3300558263, path);
-}
-
-/**
- * Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
- * ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled）
- * 补路径守卫——原实现 os.Rename 对任意路径可重命名（对齐 ToggleModelEnable 经 fileops
- * 的 ysmRoot 防护；rename 目标派生自输入路径，越权路径会连带生成越权目标）。
- * 额外拒绝 path == 仓库根——IsInside 对「路径等于基准」按设计返回 nil，
- * 传入仓库根时 os.Rename(root, root+".disabled") 会把整个仓库移出配置位置（镜像 DeleteModelDir
- * 的 rel=="." 拒绝同类输入）
- */
-export function ToggleResourcePack(path: string): $CancellablePromise<boolean> {
-    return $Call.ByID(3911031138, path);
 }
 
 export function ValidateMinecraftDir(dir: string): $CancellablePromise<[string, string]> {

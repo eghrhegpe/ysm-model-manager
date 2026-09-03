@@ -2,7 +2,7 @@
 //
 // 背景（2026-08 收敛）：此前资源类型识别有三条独立编排——repoaudit.Audit
 // （TypeByLocation→container→Classify(ext)）、packs.DetectResourceType
-// （路径消歧+指纹+Priority）、importer.DetectZipType（魔数扫描+MatchZipEntry
+// （路径消歧+指纹+Priority）、importer.DetectContainerType（魔数扫描+MatchZipEntry
 // 首命中）——行为分叉导致回归此起彼伏。本文件是唯一规范实现，三处全部改调。
 //
 // 三阶段语义（+Phase 0 nested 指纹）：

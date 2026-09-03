@@ -656,15 +656,15 @@ describe("批量读取 / 根路径 / 类型识别 / YSM 头部摘要", () => {
     expect(await webFsBindings.GetDefaultRepoRoot()).toBe("/web");
   });
 
-  it("DetectZipType：空串 / 超大 base64 / 非法 base64 → \"\"；指纹 zip → 类型", async () => {
-    expect(await webFsBindings.DetectZipType("")).toBe("");
+  it("DetectContainerType：空串 / 超大 base64 / 非法 base64 → \"\"；指纹 zip → 类型", async () => {
+    expect(await webFsBindings.DetectContainerType("")).toBe("");
     // 守卫上限对齐 MAX_IMPORT_BYTES 的 base64 长度（audit #1：探测上限=导入上限，
     // 50~100MB 合法 zip 不再误杀）；超限 1 字符即拒
     const maxB64 = Math.ceil(MAX_IMPORT_BYTES / 3) * 4;
-    expect(await webFsBindings.DetectZipType("A".repeat(maxB64 + 1))).toBe("");
-    expect(await webFsBindings.DetectZipType("!!!not-base64!!!")).toBe("");
+    expect(await webFsBindings.DetectContainerType("A".repeat(maxB64 + 1))).toBe("");
+    expect(await webFsBindings.DetectContainerType("!!!not-base64!!!")).toBe("");
     const zipB64 = btoa(String.fromCharCode(...new Uint8Array(zipSync({ "ysm.json": strToU8("{}") }))));
-    expect(await webFsBindings.DetectZipType(zipB64)).toBe("ysm");
+    expect(await webFsBindings.DetectContainerType(zipB64)).toBe("ysm");
   });
 
   it("DetectResourceType：扩展名直判 / zip 指纹 / 缺失 → \"\"", async () => {

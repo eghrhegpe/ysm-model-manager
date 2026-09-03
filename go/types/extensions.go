@@ -89,7 +89,7 @@ func ContainerExts() []string {
 
 // IsContainerExt 判断扩展名是否是容器扩展名（大小写不敏感）。
 // 容器文件（.zip/.7z）的类型归属不能靠扩展名判定（ADR-067：任何类型都可能被
-// 包裹），必须走 zipEntries 内容指纹（packs.DetectResourceType / importer.DetectZipType）。
+// 包裹），必须走 zipEntries 内容指纹（packs.DetectResourceType / importer.DetectContainerType）。
 func IsContainerExt(ext string) bool {
 	low := strings.ToLower(ext)
 	return low == ".zip" || low == ".7z"
@@ -251,7 +251,7 @@ func InstallExtsFor(rtype string) []string {
 }
 
 // MatchZipEntry 按注册表 zipEntries 特征匹配 ZIP 条目名，返回命中的资源类型 ID。
-// importer.DetectZipType 注册表驱动（Top 2）：新增类型只需在 JSON 中声明
+// importer.DetectContainerType 注册表驱动（Top 2）：新增类型只需在 JSON 中声明
 // zipEntries（exact/prefix/suffix），无需修改检测器代码。
 // 按注册表顺序优先匹配（resourcepack → shaderpack → ysm → …），无命中返回空串。
 func MatchZipEntry(name string) string {

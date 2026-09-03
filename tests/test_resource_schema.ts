@@ -119,7 +119,7 @@ function validate() {
 
     // 容器宣告守卫（ADR-067）：extensions / subtypes.extensions 声明容器扩展名
     // （.zip/.7z）的类型必须具备 zipEntries 内容指纹——容器识别唯一途径是内容指纹，
-    // 无指纹的容器宣告 = 无主假阳性（ExtBelongsTo 列它为候选，DetectZipType 永远
+    // 无指纹的容器宣告 = 无主假阳性（ExtBelongsTo 列它为候选，DetectContainerType 永远
     // 无法命中）。与 go/packs DetectResourceType 容器分支准入语义一致。
     const hasContainerDecl = (list) => (list ?? []).some((e) => CONTAINER_EXTS.has(e.toLowerCase()));
     const hasFingerprint = (entries) => Array.isArray(entries) && entries.length > 0;

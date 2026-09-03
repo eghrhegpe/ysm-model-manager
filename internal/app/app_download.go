@@ -12,7 +12,6 @@ import (
 
 	"ysm-model-manager/go/download"
 	"ysm-model-manager/go/types"
-	"ysm-model-manager/go/ysm"
 )
 
 // QueueStatusInfo / DownloadTask 已下沉至 go/types（ADR-145：跨包契约 DTO）。
@@ -254,15 +253,4 @@ func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) 
 		return "", fmt.Errorf("不支持的 URL scheme: %s（仅支持 https）", rawURL)
 	}
 	return a.downloadFileWithQueue(context.Background(), rawURL, saveDir)
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型）
-func (a *App) GetModelTexSizes(filesRoot string) []ysm.TexInfo {
-	entries := a.ScanModelEntries(filesRoot)
-	var simple []ysm.ModelEntry
-	for _, e := range entries {
-		simple = append(simple, ysm.ModelEntry{Path: e.Path, Name: e.Name})
-	}
-	return ysm.ScanModelTexSizes(simple)
 }

@@ -89,61 +89,6 @@ func TestDefaultWorkshopSites_Contract(t *testing.T) {
 	}
 }
 
-func TestExportWorkshopSitesCSV_Format(t *testing.T) {
-	a := repoApp(t, types.AppConfig{})
-	csvStr, err := a.ExportWorkshopSitesCSV()
-	if err != nil {
-		t.Fatal(err)
-	}
-	lines := strings.Split(strings.TrimSpace(csvStr), "\n")
-	// 表头 + N 行站点
-	if len(lines) < 3 {
-		t.Fatalf("CSV 应含表头+至少2行, got %d 行", len(lines))
-	}
-	header := strings.Split(lines[0], ",")
-	wantHeader := []string{"id", "icon", "label", "url", "desc", "group", "searchUrl"}
-	if len(header) != len(wantHeader) {
-		t.Fatalf("CSV 表头列数不符: got %v", header)
-	}
-	for i, h := range wantHeader {
-		if header[i] != h {
-			t.Errorf("表头第 %d 列 = %q, 期望 %q", i, header[i], h)
-		}
-	}
-}
-
-func TestImportWorkshopSitesCSV_Validation(t *testing.T) {
-	// 隔离落点：注入临时配置根，避免写入真实 AppData（workshopSitesPath 现走 configDir）
-	orig := pathMgr
-	pathMgr = fakePathMgr{appData: t.TempDir()}
-	defer func() { pathMgr = orig }()
-
-	a := repoApp(t, types.AppConfig{})
-
-	t.Run("空内容报错", func(t *testing.T) {
-		if err := a.ImportWorkshopSitesCSV(""); err == nil {
-			t.Error("空 CSV 应报错")
-		}
-	})
-
-	t.Run("只有表头报错", func(t *testing.T) {
-		if err := a.ImportWorkshopSitesCSV("id,icon,label,url,desc,group,searchUrl\n"); err == nil {
-			t.Error("只有表头的 CSV 应报错")
-		}
-	})
-
-	t.Run("全有效行导入成功", func(t *testing.T) {
-		// 字段数须与表头一致（csv.ReadAll 对不一致行直接报错，非跳过）
-		content := "id,icon,label,url,desc,group,searchUrl\n" +
-			"bilibili,📺,B站,https://bilibili.com/,desc,search,https://search?q={{q}}\n" +
-			"github,🐙,GitHub,https://github.com/,desc,repo,\n"
-		// SaveWorkshopSites 会写 workshopSitesPath()（exe 相对）——测试环境 exe 目录可写
-		if err := a.ImportWorkshopSitesCSV(content); err != nil {
-			t.Fatalf("合法 CSV 导入失败: %v", err)
-		}
-	})
-}
-
 // 平台数据根缺失（pathMgr=nil）时，工坊配置落点应为空串且写操作 fail-fast，
 // 绝不在 CWD 留下文件（与 TestConfigDir_NoRelativeFallback / TestAvatarCacheDirEmpty_NoOp 同构）。
 func TestWorkshopConfigDirEmpty_NoOp(t *testing.T) {
@@ -317,29 +262,5 @@ func TestSaveWorkshopCreatorsBySite_TypeSegmentMatch(t *testing.T) {
 	}
 	if !names["a-new"] {
 		t.Error("新站点创作者应写入")
-	}
-}
-
-// 全非法行（<6 列）导入应报错且不覆盖写盘（R22 审核 P3-3）——
-// 原实现 sites 为空仍 SaveWorkshopSites([]) 覆盖清空用户站点配置。
-func TestImportWorkshopSitesCSV_AllInvalidRows(t *testing.T) {
-	orig := pathMgr
-	pathMgr = fakePathMgr{appData: t.TempDir()}
-	defer func() { pathMgr = orig }()
-
-	a := repoApp(t, types.AppConfig{})
-	// 先写一份有效站点配置
-	if err := a.SaveWorkshopSites([]types.WorkshopSite{{ID: "keep", URL: "https://keep.test"}}); err != nil {
-		t.Fatal(err)
-	}
-	// 导入全非法行（每行 <6 列）
-	content := "id,icon,label,url,desc,group\n" + "a,b,c\n" + "d,e,f\n"
-	if err := a.ImportWorkshopSitesCSV(content); err == nil {
-		t.Fatal("全非法行导入应报错")
-	}
-	// 原配置应保留（未被清空覆盖）
-	got := a.DefaultWorkshopSites()
-	if len(got) != 1 || got[0].ID != "keep" {
-		t.Fatalf("导入失败后原配置应保留, got %+v", got)
 	}
 }

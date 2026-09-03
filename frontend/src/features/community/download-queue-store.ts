@@ -153,7 +153,7 @@ export function isActiveStatus(s: DownloadState): boolean {
 }
 
 // ADR-123 P1：web 下载入库大小上限——超限回退浏览器直链（fetch 整文件进内存 +
-// base64 转换对大文件内存压力大，web-common 的 DetectZipType 同款 50MB 量级守卫）
+// base64 转换对大文件内存压力大，web-common 的 DetectContainerType 同款 50MB 量级守卫）
 const WEB_DOWNLOAD_IDB_LIMIT = 50 * 1024 * 1024;
 /** 网页版单文件 fetch 超时（code_review P2）：挂起服务器不永久卡队列，超时走直链兜底 */
 const WEB_DOWNLOAD_FETCH_TIMEOUT_MS = 15_000;

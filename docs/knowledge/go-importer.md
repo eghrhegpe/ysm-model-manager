@@ -7,8 +7,8 @@ source_files:
   - go/importer/
 auto_fields:
   symbols_with_lines:
-    - DetectZipType
-    - DetectZipTypeFromBase64Tail
+    - DetectContainerType
+    - DetectContainerTypeFromBase64Tail
     - DirectoryCopyImporter
     - DirectoryCopyImporter.Import
     - DirectoryCopyImporter.Type
@@ -28,13 +28,13 @@ auto_fields:
     - 文件操作与标签
   quick_intents:
     - 导入、导入策略、导入队列
-    - importer、DetectZipType
+    - importer、DetectContainerType
     - fsutil.WriteFileAtomic
   quick_risk_lines:
     - 导入必须走 go/importer，落地用 fsutil.WriteFileAtomic 原子替换，禁止直写目标文件
   pitfalls:
     - 直写目标文件 → 中断留下半文件；必须经 WriteFileAtomic 的 tmp+rename
-    - 未走 DetectZipType → 误判 zip 类型、解压错误；必须先 DetectZipType 分流
+    - 未走 DetectContainerType → 误判 zip 类型、解压错误；必须先 DetectContainerType 分流
   use_when:
     - 导入
     - 策略
@@ -44,18 +44,18 @@ auto_fields:
     - io-bound
   invariant_anchors:
     - go/importer/importer_file.go|fsutil.WriteFileAtomic
-    - go/importer/importer_file.go|DetectZipType
+    - go/importer/importer_file.go|DetectContainerType
 quick_groups:
   - 文件操作与标签
 quick_intents:
   - 导入、导入策略、导入队列
-  - importer、DetectZipType
+  - importer、DetectContainerType
   - fsutil.WriteFileAtomic
 quick_risk_lines:
   - 导入必须走 go/importer，落地用 fsutil.WriteFileAtomic 原子替换，禁止直写目标文件
 pitfalls:
   - 直写目标文件 → 中断留下半文件；必须经 WriteFileAtomic 的 tmp+rename
-  - 未走 DetectZipType → 误判 zip 类型、解压错误；必须先 DetectZipType 分流
+  - 未走 DetectContainerType → 误判 zip 类型、解压错误；必须先 DetectContainerType 分流
 
 use_when:
   - 导入
@@ -66,7 +66,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/importer/importer_file.go|fsutil.WriteFileAtomic
-  - go/importer/importer_file.go|DetectZipType
+  - go/importer/importer_file.go|DetectContainerType
 status: active
 ---
 
@@ -80,7 +80,7 @@ status: active
 
 - 策略注册表：按 rtype 取复制策略（`Register` / `Get`）
 - base64 单文件导入：解码 → 扩展名/路径/大小校验 → 内容类型检测 → 魔数校验 → 写盘
-- ZIP 内容类型识别（`DetectZipType`）
+- ZIP 内容类型识别（`DetectContainerType`）
 - 目录/文件复制（临时目录 + rename 原子落地，符号链接复制链接本身）
 
 ## ImportFromBase64 校验链（顺序即拒绝优先级）
@@ -95,7 +95,7 @@ status: active
 | 目标目录可创建 | `MKDIR_FAILED` |
 | 非覆盖模式下目标不存在 | `FILE_EXISTS` |
 
-类型路由：`.zip` 走 `DetectZipType(data)` 按 ZIP local file header 里的文件名判定（`pack.mcmeta`→resourcepack、`shaders/`→shaderpack、`ysm.json`/`models/`→ysm，默认 ysm）；其余扩展名回退 `types.ExtBelongsTo`。魔数不匹配（ZIP `PK\x03\x04` / 7z `7z¼¯`）**只记 warn 日志仍照常导入**，不阻断。`DetectZipType` 收集条目名后委托 `packs.DetectByEntries`（ADR-144 下沉，原 `types.DetectByEntries`）。
+类型路由：`.zip` 走 `DetectContainerType(data)` 按 ZIP local file header 里的文件名判定（`pack.mcmeta`→resourcepack、`shaders/`→shaderpack、`ysm.json`/`models/`→ysm，默认 ysm）；其余扩展名回退 `types.ExtBelongsTo`。魔数不匹配（ZIP `PK\x03\x04` / 7z `7z¼¯`）**只记 warn 日志仍照常导入**，不阻断。`DetectContainerType` 收集条目名后委托 `packs.DetectByEntries`（ADR-144 下沉，原 `types.DetectByEntries`）。
 
 ## 对外 API / 入口
 
@@ -103,12 +103,12 @@ status: active
 - `NewSimpleCopy` — 单文件/目录复制策略（`SimpleCopyImporter`）
 - `NewDirectoryCopy` — 以文件夹为单位的复制策略（`DirectoryCopyImporter`：EntityPlayer 等目录型类型）
 - `ImportFromBase64(fileName, base64Data, ImportOptions{SkipCheck, Overwrite}, rootFn, logger) (destPath, rtype string, err error)` — base64 导入核心（**2026-08-29 返回值扩展**：回传落盘绝对路径与判定类型，「先入仓库再推送」组合链路依赖两者定位产物，类型判定单一事实源仍在本函数）
-- `DetectZipType(data []byte) string` — ZIP 内容类型检测
+- `DetectContainerType(data []byte) string` — ZIP 内容类型检测
 - `init()` 注册：resourcepack / shaderpack / blueprint / EntityPlayer / SceneModel / CustomAnim / CustomMorph / StageAnim / mmd-shader / DefaultAnim / DefaultMorph / maid-model / ysm / litematic
 
 ## 与其他子系统关系
 
-- `internal/app/app_install.go`：薄壳转发 `ImportFromBase64`（注入 `a.GetRepoRoot` 与 `App.logger.Add`）与 `DetectZipType`
+- `internal/app/app_install.go`：薄壳转发 `ImportFromBase64`（注入 `a.GetRepoRoot` 与 `App.logger.Add`）与 `DetectContainerType`
 - `internal/app/resource_bindings.go`：按 rtype `importer.Get(rtype)` 取策略执行本地路径导入
 - `go/types/`：`IsSupportedExt` / `IsYsmEntryJSON` / `ExtBelongsTo` / `AppError`
 - 前端调用方见 [import_queue](./import-queue.md)（`import-executor.directImport` → `ImportModelFile`）

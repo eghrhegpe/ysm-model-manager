@@ -50,32 +50,26 @@ const STRING_RETURN_ALLOWLIST = new Set([
   'DoUpdate',                // "success"/"失败: ..." 文本结果
   'ImportByType',            // importer 文本结果
   'GetLinkMode',
-  'DetectZipType',
+  'DetectContainerType',
   'DetectResourceType',
   // ---- 真字符串：路径/配置 ----
   'GetYSMRepoRoot',
   'GetConfigPath',
   'GetDefaultRepoRoot',
-  'GetGlobalCustomDir',
   'FindPreviewImage',
   'ExtractPreviewTexture',
-  'SelectImportZip',
   'SelectImportFile',
   'SelectDirectory',
   'GetRepoRoot',             // (string, error)
   'InstallModelFile',
-  'InstallModelWithOverlay',
-  'SavePreviewTempFile',
   'DownloadFromGitHub',
   'GenerateRepoIndex',
-  'ExportWorkshopSitesCSV',
   'ExportWorkshopSitesJSONFile',
   'ExportWorkshopCreatorsJSONFile',
   'BackupWorkshopCreators',
   'CachedCreatorAvatar',
   'GetCachedTextureByHash',
   'ValidateMinecraftDir',    // (string, string)
-  'MoveToRecycleEx',         // (string, string)
 ]);
 
 /** 括号配对：从 open 位置找到与之匹配的右括号（跳过嵌套层级），找不到返回文本末尾。 */

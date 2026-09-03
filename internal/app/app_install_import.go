@@ -41,11 +41,6 @@ func (a *App) InstallModelTo(src, customDir string) error {
 	return err
 }
 
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) InstallModelWithOverlay(src, customDir string) (string, error) {
-	return installer.InstallWithOverlay(src, customDir)
-}
-
 // SyncCustomToRepo 同步整合包自定义目录到仓库（执行逻辑下沉 go/sync）
 func (a *App) SyncCustomToRepo(customDir, repoDir string) (int, error) {
 	n, err := ysmsync.SyncCustomToRepo(customDir, repoDir, a.ScanModelEntries, a.logger.Add)
@@ -59,12 +54,12 @@ func (a *App) ImportModelFile(fileName, base64Data string) error {
 	return a.importModelFile(fileName, base64Data, false)
 }
 
-// DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用）
-func (a *App) DetectZipType(base64Data string) string {
+// DetectContainerType 通过 ZIP 内容检测资源类型（供前端导入路由使用）
+func (a *App) DetectContainerType(base64Data string) string {
 	// 尾部探针优先（audit #1）：解码 base64 末尾窗口解析中央目录，内存 O(4MB) 与包
 	// 体积无关——探测能力覆盖到导入上限 MaxImportSize(500MB)，50~500MB 合法 zip
 	// 不再被 50MB 探测上限误杀为 unknown
-	if id, ok := importer.DetectZipTypeFromBase64Tail(base64Data); ok {
+	if id, ok := importer.DetectContainerTypeFromBase64Tail(base64Data); ok {
 		return id
 	}
 	// 兜底：7z 等头部指纹格式、zip64/中央目录超出尾部窗口的 zip → 整包解码，
@@ -73,22 +68,11 @@ func (a *App) DetectZipType(base64Data string) string {
 	if err != nil {
 		return "unknown"
 	}
-	return importer.DetectZipType(data)
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) ImportModelFileSkipCheck(fileName, base64Data string) error {
-	return a.importModelFile(fileName, base64Data, true)
+	return importer.DetectContainerType(data)
 }
 
 func (a *App) importModelFile(fileName, base64Data string, skipCheck bool) error {
 	_, _, err := a.importModelFileWithOptions(fileName, base64Data, importOptions{skipCheck: skipCheck})
-	return err
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) ImportModelFileOverwrite(fileName, base64Data string) error {
-	_, _, err := a.importModelFileWithOptions(fileName, base64Data, importOptions{overwrite: true})
 	return err
 }
 
@@ -113,30 +97,6 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 		a.ClearScanCache()
 	}
 	return destPath, rtype, err
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) ImportModelFileTo(fileName, subpath, base64Data string) error {
-	return a.importModelFileWithSubpath(fileName, subpath, base64Data, false)
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) ImportModelFileOverwriteTo(fileName, subpath, base64Data string) error {
-	return a.importModelFileWithSubpath(fileName, subpath, base64Data, true)
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// ImportModelFileToMMD 导入 MMD 模型文件到指定用途子目录（ADR-096）。
-// mmdSubdir: MMD 用途子目录名（如 SceneModel/CustomAnim），对应 MMD 独立顶级类型。
-// subpath: 文件在子目录内的相对路径（文件夹导入时保留层级）。
-func (a *App) ImportModelFileToMMD(fileName, subpath, mmdSubdir, base64Data string) error {
-	return a.importModelFileMMD(fileName, subpath, mmdSubdir, base64Data, false)
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// ImportModelFileOverwriteToMMD 覆盖导入 MMD 模型文件到指定用途子目录。
-func (a *App) ImportModelFileOverwriteToMMD(fileName, subpath, mmdSubdir, base64Data string) error {
-	return a.importModelFileMMD(fileName, subpath, mmdSubdir, base64Data, true)
 }
 
 // importModelFileMMD 导入 MMD 模型文件。

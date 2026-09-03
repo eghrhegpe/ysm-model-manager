@@ -8,7 +8,6 @@ export type {
     Link,
     PreviewInfo,
     Stats,
-    TexInfo,
     YSMHeader,
     YSMModelMeta,
     YsmSummary

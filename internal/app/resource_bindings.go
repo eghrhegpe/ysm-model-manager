@@ -17,7 +17,6 @@ import (
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/litematic"
 	"ysm-model-manager/go/packs"
-	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/repoaudit"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
@@ -124,17 +123,6 @@ func (a *App) ReadLitematicMeta(path string) (*types.LitematicMeta, error) {
 // GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置）
 func (a *App) GetLitematicVoxelData(path string) (*types.LitematicVoxelData, error) {
 	return buildVoxelData("litematic", "BuildVoxelData", path, litematic.BuildVoxelData, a.voxelMaxBlocks())
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000
-func (a *App) SetVoxelMaxBlocks(limit int) error {
-	if limit < 0 || limit > 5_000_000 {
-		limit = 0 // 恢复默认；防超大值导致体素全量产出卡顿
-	}
-	cfg := a.LoadAppConfig()
-	cfg.VoxelMaxBlocks = limit
-	return a.saveConfig(cfg)
 }
 
 // DetectResourceType 检测指定文件的资源类型
@@ -286,69 +274,6 @@ func specificRoot(cfg types.AppConfig, rtype string) string {
 	}
 
 	return ""
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled）
-// 补路径守卫——原实现 os.Rename 对任意路径可重命名（对齐 ToggleModelEnable 经 fileops
-// 的 ysmRoot 防护；rename 目标派生自输入路径，越权路径会连带生成越权目标）。
-// 额外拒绝 path == 仓库根——IsInside 对「路径等于基准」按设计返回 nil，
-// 传入仓库根时 os.Rename(root, root+".disabled") 会把整个仓库移出配置位置（镜像 DeleteModelDir
-// 的 rel=="." 拒绝同类输入）
-func (a *App) ToggleResourcePack(path string) bool {
-	// 根集合与 ToggleEnable 同口径（复用 toggleAllowedRoots：FilesRoot + McRoot +
-	// CustomRoots 值）；path==root 显式拒绝（os.Rename 无 fileops 根守卫兜底）
-	allowed := false
-	for _, root := range a.toggleAllowedRoots() {
-		if root == "" {
-			continue
-		}
-		if filepath.Clean(path) == filepath.Clean(root) {
-			return false
-		}
-		if paths.IsInsideResolved(root, path) == nil {
-			allowed = true
-		}
-	}
-	if !allowed {
-		return false
-	}
-	disabled := types.IsDisableSuffix(path)
-	var src, dst string
-	if disabled {
-		src = path
-		dst = types.StripDisableSuffix(path)
-	} else {
-		src = path
-		dst = path + types.DisableSuffixes[0]
-	}
-	if _, err := os.Stat(dst); err == nil {
-		return false
-	}
-	if err := os.Rename(src, dst); err != nil {
-		return false
-	}
-	scanner.InvalidatePath(filepath.Dir(path))
-	return true
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// IsResourcePackEnabled 检查资源包是否启用
-func (a *App) IsResourcePackEnabled(path string) bool {
-	return !types.IsDisableSuffix(path)
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// SelectImportZip 打开文件选择器选取 .zip 文件
-func (a *App) SelectImportZip() string {
-	path, err := a.app.Dialog.OpenFile().
-		SetTitle("选择资源包文件").
-		AddFilter("ZIP 资源包", "*.zip").
-		PromptForSingleSelection()
-	if err != nil {
-		return ""
-	}
-	return path
 }
 
 // SelectImportFile 打开文件选择器，按给定扩展名过滤

@@ -38,8 +38,8 @@ import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
 // rtype 扩展名白名单（resource_types.json 派生，单一事实源；ScanModelEntriesFiltered 过滤用）
 import { getExts } from "../utils/resource/extensions.ts";
 import { base64ToBytes, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
-// R2 导入增强：detectZipType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
-import { detectZipType } from "./extract.ts";
+// R2 导入增强：detectContainerType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
+import { detectContainerType } from "./extract.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
 import { parseNbtRoot, litematicMetaView, nbtStructureView, schematicSummaryView } from "./nbt-parse.ts";
 import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "./voxel-parse.ts";
@@ -676,8 +676,8 @@ export const webFsBindings = {
       return !!name && (rest === name || rest.startsWith(name + "/"));
     });
   },
-  // DetectZipType：base64 → 字节 → 内容指纹（extract.ts detectZipType，对齐 Go 语义）
-  DetectZipType: (base64Data: string) => {
+  // DetectContainerType：base64 → 字节 → 内容指纹（extract.ts detectContainerType，对齐 Go 语义）
+  DetectContainerType: (base64Data: string) => {
     if (!base64Data) return Promise.resolve("");
     // base64 大小守卫：上限对齐 MAX_IMPORT_BYTES（100MB 原始 → base64 约 133.4MB）——
     // 探测能力与导入上限同口径，50~100MB 的合法 zip 不再被旧 50MB 守卫误杀为 ""
@@ -688,7 +688,7 @@ export const webFsBindings = {
     // base64 → 字节统一走 web-common.base64ToBytes（复用容错原语，非法输入返回 null → ""）
     const bytes = base64ToBytes(base64Data);
     if (!bytes) return Promise.resolve("");
-    return Promise.resolve(detectZipType(bytes) || "");
+    return Promise.resolve(detectContainerType(bytes) || "");
   },
   // ADR-070 M1：蓝图/投影详情面板恢复（原 fail-fast 报「读取失败」）。
   // TS 平移 go/litematic/parser.go 三函数（ParseMeta/ParseSchematicSummary/ParseNbtStructure），
@@ -712,7 +712,7 @@ export const webFsBindings = {
       ext === ".nbt" ? nbtVoxelView : ext === ".schematic" ? schematicVoxelView : litematicVoxelView,
     ),
   // DetectResourceType：扩展名判定（resolveTypeSafe，歧义 .zip/.7z 返回 null）→
-  // 歧义容器读内容指纹（detectZipType）。ADR-066 web 识别层对齐 Go：
+  // 歧义容器读内容指纹（detectContainerType）。ADR-066 web 识别层对齐 Go：
   // 一处补上后非 YSM 类型（pack/shader/蓝图/投影/MMD/VRC）的预览路由不再误入
   // YSM 路径（原 fail-fast 导致 rtype="" 全落 YSM 解析报"无法解析"）
   DetectResourceType: async (path: string) => {
@@ -722,7 +722,7 @@ export const webFsBindings = {
     if (!b64) return "";
     const bytes = base64ToBytes(b64);
     if (!bytes) return "";
-    return detectZipType(bytes);
+    return detectContainerType(bytes);
   },
   // YSM 头部/摘要 web 实现（原 fail-fast → import-queue 作者预填/重命名 tips 静默降级、
   // 详情缺 stats/license）。失败不 reject：头部返回全空 YSMHeader、摘要返回最小空

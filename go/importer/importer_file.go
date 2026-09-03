@@ -19,7 +19,7 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// ZIP/7z 容器魔数（文件头签名）：importFromBuffer 魔数校验与 DetectZipType 扫描共用
+// ZIP/7z 容器魔数（文件头签名）：importFromBuffer 魔数校验与 DetectContainerType 扫描共用
 var (
 	zipLocalHeaderSig = []byte{0x50, 0x4B, 0x03, 0x04} // ZIP local file header（PK\x03\x04）
 	sevenZipSig       = []byte{0x37, 0x7A, 0xBC, 0xAF} // 7z 签名（7z\xBC\xAF）
@@ -73,9 +73,9 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	rtype := ""
 	// 容器集合单源：types.IsContainerExt
 	if types.IsContainerExt(ext) {
-		rtype = DetectZipType(data)
+		rtype = DetectContainerType(data)
 	}
-	// DetectZipType 无特征返回空（ADR-082 续）：扩展名不属于当前 rtype 注册表扩展名集合时，
+	// DetectContainerType 无特征返回空（ADR-082 续）：扩展名不属于当前 rtype 注册表扩展名集合时，
 	// 用扩展名反查真实类型（ADR-065：扩展名列表注册表驱动，消除手写 .zip/.ysm/.7z/.json
 	// 字面量漂移）。反查仍无结果 → 识别不出就是识别不出：明确报错，不假装 YSM 导入。
 	if rtype == "" {
@@ -141,12 +141,12 @@ func WriteFileAtomic(destPath string, data []byte) error {
 	return nil
 }
 
-// DetectZipType 扫描容器条目名识别资源类型
+// DetectContainerType 扫描容器条目名识别资源类型
 // #5 收敛：收集全部条目名后委托 packs.DetectByEntries 做 (priority desc, id asc)
 // 裁决（注册表顺序无关）；无指纹/结果为 "container"/"other" 时返回 ""（未知，
 // 由调用方决定报错/降级——ADR-082 续：识别不出就是识别不出，不假装 YSM）。
 // DetectByEntries 归属（ADR-144）：识别逻辑随识别大脑下沉 packs。
-func DetectZipType(data []byte) string {
+func DetectContainerType(data []byte) string {
 	var entries []string
 	if len(data) >= 4 && bytes.HasPrefix(data, sevenZipSig) {
 		r, err := container.Open7zBytes(data, int64(len(data)))

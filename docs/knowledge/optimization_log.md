@@ -25,7 +25,6 @@ auto_fields:
     - App.AnalyzeBedrockModelEntry
     - App.AnalyzeYSMModel
     - App.Build3DSpecFromGeometryJSON
-    - App.ClearTextureCache
     - App.ExtractYSMHeader
     - App.ExtractYSMHeaderFromBase64
     - App.ExtractYsmSummary
@@ -38,7 +37,6 @@ auto_fields:
     - App.ReadFileBytesBatch
     - App.ReadFileBytesBatchWithMeta
     - App.SaveCachedTexture
-    - App.SavePreviewTempFile
     - App.SaveScreenshotFile
     - applyWorkerDecodedTextures
     - BasisEncoderLike

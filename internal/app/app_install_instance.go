@@ -148,50 +148,6 @@ func (a *App) clearInstanceDir(dir string, rtype string, filesRoot string) int {
 	return recycle.RemoveRepoDuplicates(dir, filesRoot, a.ysmRoot(), a.logger.Add)
 }
 
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle）
-func (a *App) DeduplicateCustomDir(customDir string) (int, int, error) {
-	// 去重 Move 与安装/同步并发 Rename 同一 custom 目录文件 → 统一纳入 InstallLock 互斥（共享单锁闭环）
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
-	customDir = strings.TrimSpace(customDir)
-	if customDir == "" {
-		return 0, 0, fmt.Errorf("目录为空")
-	}
-	// 入口绝对化——与 dedup.go:41-43 对齐；相对路径下
-	// ScanModelEntries 产出相对 Path，recycle.Move 按 CWD 解析会移到错误位置
-	if abs, err := filepath.Abs(customDir); err == nil {
-		customDir = abs
-	}
-	// 根级守卫：isPathInRoot 对 rel==. 拒绝，防止把整个仓库当自定义目录去重；
-	// 仓库外路径显式报错而非静默 (0,0,nil)
-	if !a.isPathInRoot(customDir) {
-		return 0, 0, fmt.Errorf("路径超出仓库目录")
-	}
-
-	entries := a.ScanModelEntries(customDir)
-	if len(entries) == 0 {
-		return 0, 0, nil
-	}
-
-	// 过滤空文件——与检测侧 dedup.go:76-79（Size==0 跳过）
-	// 口径统一：空文件（占位符、空 .animation 等）不是重复文件，去重两侧结论一致
-	nonEmpty := entries[:0]
-	for _, e := range entries {
-		if e.Size == 0 {
-			continue
-		}
-		nonEmpty = append(nonEmpty, e)
-	}
-	if len(nonEmpty) == 0 {
-		return 0, 0, nil
-	}
-
-	removed, kept := recycle.DeduplicateEntries(nonEmpty, a.ysmRoot(), a.logger.Add)
-	scanner.InvalidateCache()
-	return removed, kept, nil
-}
-
 // ========== 状态同步 ==========
 // GetInstanceStatus 获取整合包状态（按资源类型限定路径）
 // rtype: 资源类型 ID，用于解析特定子目录；为空时使用 ins.CustomDir（向后兼容）
@@ -276,25 +232,6 @@ func (a *App) SyncModelToggleStatus(instanceCustomDir, filesRoot string) (int, i
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()
 	return n1, n2, err
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// RelinkCustomDir 重新应用链接模式到指定目录（兼容旧版）
-func (a *App) RelinkCustomDir(customDir, filesRoot string) (int, error) {
-	// 尝试从 filesRoot 推断 rtype
-	rtype := "ysm"
-	for _, d := range types.AllSubDirs() {
-		if strings.Contains(strings.ToLower(customDir), strings.ToLower(d.SubDir)) {
-			rtype = d.RType
-			break
-		}
-	}
-	n, err := a.relinkDir(customDir, filesRoot, rtype)
-	// 重链接会改实例目录，显式清同步结果缓存（RelinkAll 已走 scanner.InvalidateCache，
-	// 单目录入口补这一处防 30s 同步结果缓存遮盖变更）。
-	instance.InvalidateSyncItemsCache()
-	ysmsync.InvalidateSyncScanCaches()
-	return n, err
 }
 
 // relinkDir 重新应用链接模式到单个目录

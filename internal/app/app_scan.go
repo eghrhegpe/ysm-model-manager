@@ -186,73 +186,6 @@ func runConcurrentAnalyze(count int, analyze func(i int) *types.SearchResult) []
 	return results
 }
 
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-// SearchAllModels 跨类型搜索：遍历所有已配置资源类型的根目录，并发扫描 + 合并结果。
-// allRoots 为 rtype→root 映射（由 GetAllRepoRoots 提供）；每个搜索结果携带 Type 字段。
-// 关键词/数值过滤逻辑与 SearchModels 一致，但扫描范围覆盖全部类型。
-func (a *App) SearchAllModels(allRoots map[string]string, keyword string, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
-	if len(allRoots) == 0 {
-		return nil
-	}
-	kw := strings.ToLower(strings.TrimSpace(keyword))
-
-	// 收集所有类型的条目，每个条目携带类型标记。
-	// 先按 rtype 排序再迭代：Go map 迭代序随机，直接 range 会让同名跨类型条目
-	// 的 index tiebreak 逐次不同（sort.SliceStable by (Name, index) 的兜底键失效）。
-	type typedEntry struct {
-		entry types.ModelEntry
-		rtype string
-	}
-	var all []typedEntry
-	rtypes := make([]string, 0, len(allRoots))
-	for rtype := range allRoots {
-		rtypes = append(rtypes, rtype)
-	}
-	sort.Strings(rtypes)
-	for _, rtype := range rtypes {
-		root := allRoots[rtype]
-		// allRoots 来源 GetAllRepoRoots，路径已验证在仓库根内，无需重复守卫；
-		// 走 scanModelEntries（无日志薄壳）避免跨类型搜索刷 N 条扫描日志。
-		entries := a.scanModelEntries(root)
-		for _, e := range entries {
-			all = append(all, typedEntry{entry: e, rtype: rtype})
-		}
-	}
-	if len(all) == 0 {
-		return nil
-	}
-
-	// Phase 1：关键词预过滤
-	var candidates []typedEntry
-	if kw != "" {
-		for _, te := range all {
-			name := strings.ToLower(te.entry.Name)
-			if strings.Contains(name, kw) || strings.Contains(strings.ToLower(te.entry.Path), kw) {
-				candidates = append(candidates, te)
-			}
-		}
-	} else {
-		candidates = all
-	}
-	if len(candidates) == 0 {
-		return nil
-	}
-
-	// Phase 2：并发分析 + 过滤
-	return runConcurrentAnalyze(len(candidates), func(i int) *types.SearchResult {
-		te := candidates[i]
-		model := a.AnalyzeBedrockModel(te.entry.Path)
-		if !modelMatchesFilters(model, minBones, maxBones, minCubes, maxCubes, minTex, maxTex) {
-			return nil
-		}
-		return &types.SearchResult{
-			Name: te.entry.Name, Path: te.entry.Path, Type: te.rtype,
-			BoneCount: model.BoneCount, CubeCount: model.CubeCount,
-			TexWidth: model.TexWidth, TexHeight: model.TexHeight,
-		}
-	})
-}
-
 // ========== 模型扫描（薄壳）==========
 // scanModelEntries 扫描核心（无操作日志）：watcher 自动同步等后台路径使用，
 // 避免自动化触发刷屏操作日志面板。保持单返回值以兼容 watcher.ScanFunc 契约。
@@ -418,13 +351,6 @@ func (a *App) ScanLocalAuthors(rtype string) []types.WorkshopCreator {
 
 func (a *App) ListVersionInstances(mcRoot string) []types.VersionInstance {
 	return ysmsync.ListVersions(strings.TrimSpace(mcRoot))
-}
-
-// Deprecated: 前端已迁移统一入口（前端 0 消费），保留仅为兼容旧绑定面；待发版清理。
-func (a *App) GetGlobalCustomDir(mcRoot string) string {
-	// ADR-064 锚定：路径走注册表 SubDirMap（原硬编码 config/yes_steve_model/custom，
-	// YSM scanDir 变更时此处失联）
-	return filepath.Join(mcRoot, types.SubDirMap("ysm"))
 }
 
 func (a *App) ListFileNames(dir string) []string {

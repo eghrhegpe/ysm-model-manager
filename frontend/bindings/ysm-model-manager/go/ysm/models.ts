@@ -47,15 +47,6 @@ export interface Stats {
 }
 
 /**
- * TexInfo 轻量级纹理尺寸（不解析完整模型）
- */
-export interface TexInfo {
-    "path": string;
-    "texWidth": number;
-    "texHeight": number;
-}
-
-/**
  * YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型）
  */
 export interface YSMHeader {

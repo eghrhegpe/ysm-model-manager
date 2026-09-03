@@ -8,7 +8,7 @@ import (
 	"ysm-model-manager/go/scanner"
 )
 
-func TestImportModelFileTo_InvalidatesScannerCacheOnSuccess(t *testing.T) {
+func TestImportModelFileWithSubpath_InvalidatesScannerCacheOnSuccess(t *testing.T) {
 	a, ysm := guardedApp(t)
 
 	// 暖缓存：第二次调用应命中 30s scanCache
@@ -17,7 +17,7 @@ func TestImportModelFileTo_InvalidatesScannerCacheOnSuccess(t *testing.T) {
 		t.Fatal("暖缓存后二次扫描应命中")
 	}
 
-	if err := a.ImportModelFileTo("m.ysm", "", base64.StdEncoding.EncodeToString([]byte("x"))); err != nil {
+	if err := a.importModelFileWithSubpath("m.ysm", "", base64.StdEncoding.EncodeToString([]byte("x")), false); err != nil {
 		t.Fatalf("导入失败: %v", err)
 	}
 

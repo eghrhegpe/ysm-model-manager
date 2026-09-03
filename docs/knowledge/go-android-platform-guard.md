@@ -27,7 +27,6 @@ auto_fields:
     - App.GenerateRepoIndex
     - App.GetAppVersion
     - App.GetConfigPath
-    - App.GetGlobalCustomDir
     - App.GetMinecraftPaths
     - App.GetPackInfo
     - App.GetSubDirMap
@@ -57,7 +56,6 @@ auto_fields:
     - App.ScanModelEntries
     - App.ScanModelEntriesFiltered
     - App.ScanModelEntriesWithLabel
-    - App.SearchAllModels
     - App.SearchModels
     - App.SelectDirectory
     - App.ServiceShutdown

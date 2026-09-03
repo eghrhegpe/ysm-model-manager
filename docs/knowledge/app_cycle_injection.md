@@ -15,7 +15,6 @@ auto_fields:
     - App.DownloadFromGitHub
     - App.EnqueueDownloads
     - App.GetAppVersion
-    - App.GetModelTexSizes
     - App.GetYSMRepoRoot
     - App.OpenInBrowser
     - App.QueueStatus

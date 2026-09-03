@@ -5,13 +5,11 @@
 package app
 
 import (
-	"encoding/base64"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
@@ -26,53 +24,6 @@ func TestExtractYSMHeaderFromBase64_Oversized(t *testing.T) {
 	big := strings.Repeat("a", types.MaxReadLimit*2) // 解码后 > MaxReadLimit，预检必拒
 	if got := a.ExtractYSMHeaderFromBase64(big); got != (ysm.YSMHeader{}) {
 		t.Fatal("超大输入应返回零值 header")
-	}
-}
-
-// TestSavePreviewTempFile_Guards：解码守卫 + MkdirAll 失败可见 + 文件真实落盘。
-func TestSavePreviewTempFile_Guards(t *testing.T) {
-	a := &App{}
-	// 超大输入拒绝
-	big := strings.Repeat("a", types.MaxReadLimit*2)
-	if _, err := a.SavePreviewTempFile(big); !errors.Is(err, fsutil.ErrB64TooLarge) {
-		t.Fatalf("超大输入应返回 ErrB64TooLarge, got %v", err)
-	}
-	// 非法 base64 报错
-	if _, err := a.SavePreviewTempFile("!!!"); err == nil {
-		t.Fatal("非法 base64 应报错")
-	}
-	// 合法输入落盘
-	path, err := a.SavePreviewTempFile(base64.StdEncoding.EncodeToString([]byte("hello")))
-	if err != nil {
-		t.Fatalf("合法输入不应报错: %v", err)
-	}
-	defer os.RemoveAll(filepath.Dir(path))
-	data, err := os.ReadFile(path)
-	if err != nil || string(data) != "hello" {
-		t.Fatalf("落盘内容不符: %q err=%v", data, err)
-	}
-}
-
-// TestSweepPreviewTemp_TTL：超过 TTL 的文件被清扫，新文件保留。
-func TestSweepPreviewTemp_TTL(t *testing.T) {
-	dir := t.TempDir()
-	oldFile := filepath.Join(dir, "old.ysm")
-	newFile := filepath.Join(dir, "new.ysm")
-	for _, p := range []string{oldFile, newFile} {
-		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	stale := time.Now().Add(-2 * previewTempTTL)
-	if err := os.Chtimes(oldFile, stale, stale); err != nil {
-		t.Fatal(err)
-	}
-	sweepPreviewTemp(dir)
-	if _, err := os.Stat(oldFile); !os.IsNotExist(err) {
-		t.Error("超 TTL 文件应被清扫")
-	}
-	if _, err := os.Stat(newFile); err != nil {
-		t.Error("新文件应保留")
 	}
 }
 

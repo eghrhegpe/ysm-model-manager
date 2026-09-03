@@ -48,7 +48,7 @@ type ResourceType struct {
 	ScanInstance   bool            `json:"scanInstance"`             // instance 视图额外扫描整合包目录（非模型类型兜底）
 	FallbackDir    string          `json:"fallbackDir,omitempty"`    // 兜底扫描只认此目录名（空=不限定，ScanInstance=true 时生效）
 	InstallExts    []string        `json:"installExts"`              // 安装白名单扩展名（空=全部放行，仅可执行文件黑名单除外）
-	ZipEntries     []ZipEntryMatch `json:"zipEntries"`               // ZIP 内容特征条目（importer.DetectZipType 注册表驱动）
+	ZipEntries     []ZipEntryMatch `json:"zipEntries"`               // ZIP 内容特征条目（importer.DetectContainerType 注册表驱动）
 	NestedModelDir bool            `json:"nestedModelDir"`           // 嵌套模型目录（ADR-095）：模型入口在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）
 	NestedPatterns []NestedPattern `json:"nestedPatterns,omitempty"` // 嵌套模式配置（ADR-XXX）：支持任意深度的嵌套路径检测
 	Priority       int             `json:"priority,omitempty"`       // 检测优先级（同指纹计数打平时高者胜：专用指纹类型 > 通用指纹类型，如 maid-model > resourcepack）

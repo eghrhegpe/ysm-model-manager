@@ -1,9 +1,9 @@
 // @vitest-environment node
 // ===== extract.ts 契约测试 =====
-// 覆盖：detectZipType / parseZipCentralDir / extractZip / GBK 解码
+// 覆盖：detectContainerType / parseZipCentralDir / extractZip / GBK 解码
 import { describe, it, expect } from "vitest";
 import {
-  detectZipType,
+  detectContainerType,
   parseZipCentralDir,
   extractZip,
 } from "./extract.ts";
@@ -145,40 +145,40 @@ function buildMultiEntryZip(entries: Array<{ name: string; data: Uint8Array; utf
   return assembleZip(parts, eocd);
 }
 
-// --- detectZipType ---
+// --- detectContainerType ---
 
-describe("detectZipType", () => {
+describe("detectContainerType", () => {
   it("含 ysm.json 的 ZIP → ysm", () => {
     const zip = buildMinimalZip("ysm.json", new TextEncoder().encode("{}"));
-    expect(detectZipType(zip)).toBe("ysm");
+    expect(detectContainerType(zip)).toBe("ysm");
   });
 
   it("含 models/ 前缀的 ZIP → ysm", () => {
     const zip = buildMinimalZip("models/main.json", new TextEncoder().encode("{}"));
-    expect(detectZipType(zip)).toBe("ysm");
+    expect(detectContainerType(zip)).toBe("ysm");
   });
 
   it("含 pack.mcmeta 的 ZIP → resourcepack", () => {
     const zip = buildMinimalZip("pack.mcmeta", new TextEncoder().encode("{}"));
-    expect(detectZipType(zip)).toBe("resourcepack");
+    expect(detectContainerType(zip)).toBe("resourcepack");
   });
 
   it("含 shaders/ 前缀的 ZIP → shaderpack", () => {
     const zip = buildMinimalZip("shaders/minecraft.json", new TextEncoder().encode("{}"));
-    expect(detectZipType(zip)).toBe("shaderpack");
+    expect(detectContainerType(zip)).toBe("shaderpack");
   });
 
   it("蓝图/投影/MMD/VRC 后缀指纹（ADR-066 web 识别层）", () => {
-    expect(detectZipType(buildMinimalZip("schematics/main.nbt", new TextEncoder().encode("x")))).toBe("blueprint");
-    expect(detectZipType(buildMinimalZip("a/build.schematic", new TextEncoder().encode("x")))).toBe("blueprint");
-    expect(detectZipType(buildMinimalZip("project/a.litematic", new TextEncoder().encode("x")))).toBe("litematic");
-    expect(detectZipType(buildMinimalZip("model/a.pmx", new TextEncoder().encode("x")))).toBe("EntityPlayer");
-    expect(detectZipType(buildMinimalZip("avatar/a.vrm", new TextEncoder().encode("x")))).toBe("EntityPlayer"); // ADR-111: .vrm 是 EntityPlayer 的 variant
+    expect(detectContainerType(buildMinimalZip("schematics/main.nbt", new TextEncoder().encode("x")))).toBe("blueprint");
+    expect(detectContainerType(buildMinimalZip("a/build.schematic", new TextEncoder().encode("x")))).toBe("blueprint");
+    expect(detectContainerType(buildMinimalZip("project/a.litematic", new TextEncoder().encode("x")))).toBe("litematic");
+    expect(detectContainerType(buildMinimalZip("model/a.pmx", new TextEncoder().encode("x")))).toBe("EntityPlayer");
+    expect(detectContainerType(buildMinimalZip("avatar/a.vrm", new TextEncoder().encode("x")))).toBe("EntityPlayer"); // ADR-111: .vrm 是 EntityPlayer 的 variant
   });
 
   it("无可识别文件的 ZIP → null（识别不出就是识别不出，不假装 YSM）", () => {
     const zip = buildMinimalZip("readme.txt", new Uint8Array([0x52, 0x45, 0x41, 0x44]));
-    expect(detectZipType(zip)).toBeNull();
+    expect(detectContainerType(zip)).toBeNull();
   });
 
   it("多 entry 优先命中首个识别特征", () => {
@@ -186,7 +186,7 @@ describe("detectZipType", () => {
       { name: "readme.txt", data: new Uint8Array(4) },
       { name: "ysm.json", data: new Uint8Array(2) },
     ]);
-    expect(detectZipType(zip)).toBe("ysm");
+    expect(detectContainerType(zip)).toBe("ysm");
   });
 });
 
@@ -236,19 +236,19 @@ describe("parseZipCentralDir", () => {
     expect(metas).toHaveLength(0);
   });
 
-  it("detectZipType 非 LFH 魔数 → break 终止循环", () => {
+  it("detectContainerType 非 LFH 魔数 → break 终止循环", () => {
     // 构造含非 LFH 魔数的数据：PK\x03\x04 后跟着垃圾字节，第二次读取时签名不匹配
     const data = new Uint8Array(60);
     data[0] = 0x50; data[1] = 0x4b; data[2] = 0x03; data[3] = 0x04;
     // local file header 需要 30 字节 + 文件名，这里故意不填全，第 4 字节后直接垃圾
     for (let i = 4; i < 60; i++) data[i] = 0xff;
     // 第一个 LFH 签名有效，读取 nameLen(0xff00) 后发现 nameStart+nameLen 超出范围 → break
-    expect(detectZipType(data)).toBeNull();
+    expect(detectContainerType(data)).toBeNull();
   });
 
   it("文件名为 shaders（目录形态）→ shaderpack", () => {
     const zip = buildMinimalZip("shaders", new Uint8Array(0));
-    expect(detectZipType(zip)).toBe("shaderpack");
+    expect(detectContainerType(zip)).toBe("shaderpack");
   });
 });
 

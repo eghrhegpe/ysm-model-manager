@@ -5,8 +5,8 @@
 //      与 gpf bit 11 状态。中文 Windows GBK 文件名（gpf 未设）经 fflate Latin-1 解码后乱码，
 //      本函数提供 fflateKey → 原始字节 的反查，供调用方做 GBK 解码回真名。
 //   2. extractZip — unzipSync 全量解压 + ZIP 炸弹防护（条目数/总大小上限）
-//   3. detectZipType — 扫描 ZIP local file header 文件名段（不解压数据）识别资源类型
-//      （Go DetectZipType 的 TS 平移，go/importer/importer_file.go:122-151）
+//   3. detectContainerType — 扫描 ZIP local file header 文件名段（不解压数据）识别资源类型
+//      （Go DetectContainerType 的 TS 平移，go/importer/importer_file.go:122-151）
 //
 // 安全护栏：
 //   - MAX_ZIP_ENTRIES: 10000（防 zip bomb 条目膨胀）
@@ -53,7 +53,7 @@ export interface ExtractResult {
   allUtf8: boolean;
 }
 
-/** detectZipType 返回值 */
+/** detectContainerType 返回值 */
 // ADR-111：VRM 已合并进 EntityPlayer 的 variants，ZipType 不再含独立 VRM
 export type ZipType = typeof RESOURCE_TYPES.YSM | typeof RESOURCE_TYPES.PACK | typeof RESOURCE_TYPES.SHADER | typeof RESOURCE_TYPES.BLUEPRINT | typeof RESOURCE_TYPES.LITEMATIC | typeof RESOURCE_TYPES.MMD | null;
 
@@ -171,8 +171,8 @@ export function extractZip(data: Uint8Array): ExtractResult {
 }
 
 /**
- * detectZipType：扫描 ZIP local file header 文件名段（不解压数据），
- * 识别资源类型。Go DetectZipType 的 1:1 TS 平移
+ * detectContainerType：扫描 ZIP local file header 文件名段（不解压数据），
+ * 识别资源类型。Go DetectContainerType 的 1:1 TS 平移
  * （go/importer/importer_file.go:122-151）。
  * 只读 local file header 区（每 entry 约 30+nameLen 字节），
  * 不读压缩数据，O(n) 遍历 local headers 即可。
@@ -180,7 +180,7 @@ export function extractZip(data: Uint8Array): ExtractResult {
  * 消费方：web-fs.ts DetectResourceType（歧义 .zip/.7z 容器路由到内容指纹）——
  * 与 Go DetectResourceType/zipEntries 同语义（pack.mcmeta/shaders/ysm.json/类型后缀）。
  */
-export function detectZipType(data: Uint8Array): ZipType {
+export function detectContainerType(data: Uint8Array): ZipType {
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   let idx = 0;
   while (idx + 30 <= data.length) {
@@ -209,7 +209,7 @@ export function detectZipType(data: Uint8Array): ZipType {
     const compSize = dv.getUint32(idx + 18, true);
     idx += 30 + nameLen + extraLen + compSize;
   }
-  return null; // 无特征返回 null（识别不出就是识别不出，不假装 YSM，与 Go DetectZipType 对齐）
+  return null; // 无特征返回 null（识别不出就是识别不出，不假装 YSM，与 Go DetectContainerType 对齐）
 }
 
 // --- 编码工具函数 ---

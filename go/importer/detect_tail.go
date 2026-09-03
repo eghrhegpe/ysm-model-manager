@@ -1,5 +1,5 @@
 // ===== ZIP 尾部探针（audit #1：探测上限与导入上限口径对齐）=====
-// 背景：DetectZipType 原走「整包解码 → 顺序遍历 local file header」，探测上限
+// 背景：DetectContainerType 原走「整包解码 → 顺序遍历 local file header」，探测上限
 // MaxReadLimit(50MB) 与导入上限 MaxImportSize(500MB) 之间形成口径真空——
 // 50~500MB 的合法 zip 探测必返 unknown 但导入本身接受。类型判定只需全部条目名，
 // 而 zip 的完整条目名列表在末尾 central directory（EOCD 索引）——只需解码 base64
@@ -25,11 +25,11 @@ const (
 	zipEOCDMaxComment = 65535
 )
 
-// DetectZipTypeFromBase64Tail 解码 base64 末尾窗口、解析 zip 中央目录条目名并分类。
+// DetectContainerTypeFromBase64Tail 解码 base64 末尾窗口、解析 zip 中央目录条目名并分类。
 // 返回 (id, ok)：ok=true 表示尾部探针已给出确定答案（含空串——确为 zip 但无匹配类型）；
 // ok=false 表示无法从尾部判定（非 zip / zip64 / 中央目录超出窗口 / 解码失败），
 // 调用方应回退到整包解码路径。
-func DetectZipTypeFromBase64Tail(b64 string) (string, bool) {
+func DetectContainerTypeFromBase64Tail(b64 string) (string, bool) {
 	// base64 契约：标准填充编码（len%4==0），与 DecodeBase64Limited 同源输入
 	if len(b64) < 8 || len(b64)%4 != 0 {
 		return "", false
@@ -111,7 +111,7 @@ func DetectZipTypeFromBase64Tail(b64 string) (string, bool) {
 	return id, true
 }
 
-// le16/le32 小端读取：importer 包统一入口（DetectZipType 与尾部探针共用，避免逐位移位漂移）
+// le16/le32 小端读取：importer 包统一入口（DetectContainerType 与尾部探针共用，避免逐位移位漂移）
 func le16(b []byte) uint16 { return uint16(b[0]) | uint16(b[1])<<8 }
 func le32(b []byte) uint32 {
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24

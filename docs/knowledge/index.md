@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 157 张知识卡
+> 总计: 158 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -114,12 +114,13 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（43 张）
+## go（44 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
+| 🏗 adr173_gui_cli_paramspec | GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态 | architecture | — | 修改 GUI 桥可调用 CLI 命令的参数时（新增 flag / 需要传空值语义）, 排查 ExecuteCLI 参数丢失（空串/0/false 不见、顺序不定、拼写错误静默丢参）, 理解 internal/app 与 go/cli 之间参数规格如何跨包传递 |
 | 🏗 app_cycle_injection | App↔子组件对象级环打破范式（回调注入） | architecture | — | 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）, 评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct, 想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零 |
 | 🏗 classify-routing | 分类路由与回归护栏 | architecture | — | 整合包分类, 路由, zipentry 指纹, 蓝图, 回归, last-wins |
 | 🏗 cli_quality_audit | CLI 质量摸排 Checklist | architecture | — | CLI, 质量摸排, 代码审核, 代码审查, bug 排查, 审计, 白名单, 绑定层 |
@@ -166,6 +167,7 @@
 
 ### 摘要
 
+- **adr173_gui_cli_paramspec**（GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态）：GUI→CLI 参数链路（frontend buildArgsMap → Wails map → ExecuteCLI → os/exec 子进程 --cli）曾有四重损耗：
 - **app_cycle_injection**（App↔子组件对象级环打破范式（回调注入））：`internal/app` 是 Wails 绑定层（`package app`），`App` 是 god-object，持有若干子组件
 - **classify-routing**（分类路由与回归护栏）：整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需…
 - **cli_quality_audit**（CLI 质量摸排 Checklist）：本文档记录 YSM 项目 Go CLI 层（`go/cli/` + `internal/app/` + `frontend/src/services/`）代码审核的**高频问题模式**与**修复 Checklist**。2026-08-19…

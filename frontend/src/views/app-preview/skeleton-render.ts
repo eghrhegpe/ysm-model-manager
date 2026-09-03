@@ -254,10 +254,11 @@ async function renderFrame(model: BedrockGeometry & { textures?: string[] | null
     model.textures && model.textures.length > 1
       ? model.textures
       : [model.texture || ""];
+  const lights = toScreenshotLights();
   const results = await renderMultiAngle(model._modelPath || "", texUrls, {
     size: 512,
-    componentTextures: model.componentTextures,
-    lights: toScreenshotLights(),
+    ...(model.componentTextures != null ? { componentTextures: model.componentTextures } : {}),
+    ...(lights != null ? { lights } : {}),
     decodeYsm: decodeYsmViaWasm, // ADR-136：features 不反向 import views，WASM 兜底由视图层注入
   });
   if (!results) return null;

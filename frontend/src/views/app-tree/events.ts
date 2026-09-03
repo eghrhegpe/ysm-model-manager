@@ -298,7 +298,7 @@ function atTeBindContextMenu(ctx: AtTeCtx): void {
         x: e.clientX,
         y: e.clientY,
         type: "dir",
-        dir: fh.dataset.dir,
+        ...(fh.dataset.dir !== undefined ? { dir: fh.dataset.dir } : {}),
         rtype: atTeGetRtype(vm),
       });
       return;

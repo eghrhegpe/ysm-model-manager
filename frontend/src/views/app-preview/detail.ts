@@ -96,13 +96,13 @@ export async function showModelDetail(
           name: header?.name || summary?.name || basename.replace(/\.[^.]+$/, ""),
           authors: (dec.authors || []).map((a) => ({
             name: a.name,
-            roles: a.role,
+            ...(a.role != null ? { roles: a.role } : {}),
           })),
           animGroups: dec.animGroups || null,
           configMenus: dec.configMenus || null,
-          tips: header?.tips || undefined,
-          license: header?.license || undefined,
-          links: header?.linkHome ? { home: header.linkHome } : undefined,
+          ...(header?.tips ? { tips: header.tips } : {}),
+          ...(header?.license ? { license: header.license } : {}),
+          ...(header?.linkHome ? { links: { home: header.linkHome } } : {}),
         };
       }
     }

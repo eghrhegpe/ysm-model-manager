@@ -165,7 +165,7 @@ describe("app-sidebar — 推送所选", () => {
     await waitFor(() => {
       for (const p of missingPayloads) {
         bus.emit("sync:download:done", {
-          token: p.token,
+          ...(p.token !== undefined ? { token: p.token } : {}),
           instanceName: "insA",
           // 不再带 rtype：BusEvents["sync:download:done"] 无该字段（TS2353），
           // 真实生产者 sync.ts 也从不发，组件 handler 只匹配 token——删掉恢复类型门槛
@@ -192,7 +192,7 @@ describe("app-sidebar — 推送所选", () => {
     // 同上：串行 emit 下 waitFor 循环响应式补 skipped done
     await waitFor(() => {
       for (const p of missingPayloads) {
-        bus.emit("sync:download:done", { token: p.token, skipped: true });
+        bus.emit("sync:download:done", { ...(p.token !== undefined ? { token: p.token } : {}), skipped: true });
       }
       return toasts.some((t) => t.type === "warn" && t.msg.includes("推送完成"));
     });
@@ -224,7 +224,7 @@ describe("app-sidebar — 推送所选", () => {
     // 清理：waitFor 循环补发正确 token 让串行 promise 全部 settle，避免挂起 30s timer
     await waitFor(() => {
       for (const p of missingPayloads) {
-        bus.emit("sync:download:done", { token: p.token });
+        bus.emit("sync:download:done", p.token !== undefined ? { token: p.token } : {});
       }
       return pushBtn.disabled === false;
     });

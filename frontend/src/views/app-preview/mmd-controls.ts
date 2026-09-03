@@ -192,7 +192,7 @@ export function mmdShotNodes(
 ): PreviewMenuNode[] {
   if (!screenshotFn) return [];
   return shotButtonNodes(
-    { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], _modelPath: ctx.modelPath, texture: "" },
+    { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], texture: "", ...(ctx.modelPath !== undefined ? { _modelPath: ctx.modelPath } : {}) },
     screenshotFn,
   ).map((n) => ({ ...n, id: `mmd-${n.id}` }));
 }
@@ -209,7 +209,7 @@ export function fillMmdShotPanel(
 ): void {
   if (!screenshotFn) return;
   const saveShot = makeShotAction(
-    { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], _modelPath: ctx.modelPath, texture: "" },
+    { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], texture: "", ...(ctx.modelPath !== undefined ? { _modelPath: ctx.modelPath } : {}) },
     screenshotFn,
   );
   for (const key of ["current", "front", "45", "side", "back45", "all"] as const) {

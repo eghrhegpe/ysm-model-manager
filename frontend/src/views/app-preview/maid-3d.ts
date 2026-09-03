@@ -74,7 +74,7 @@ async function createMaid3D(
       },
     } as Parameters<typeof makeYsmAdapter>[0]),
     path,
-    withPreviewExtras({ siblings: opts.siblings }),
+    withPreviewExtras(opts.siblings != null ? { siblings: opts.siblings } : {}),
   );
 }
 
@@ -103,16 +103,16 @@ type ComponentCount = { name: string; bones: number; cubes: number };
 type MaidModelInfo = {
   boneCount?: number;
   cubeCount?: number;
-  format?: string;
-  texWidth?: number;
-  texHeight?: number;
+  format?: string | undefined;
+  texWidth?: number | undefined;
+  texHeight?: number | undefined;
   /** 纹理 base64 data URI 数组（与 YSM statsCard 同源，喂 statsCardHTML 用） */
-  textures?: unknown[];
+  textures?: unknown[] | undefined;
   /** 纹理文件名（去扩展名），与 textures 同序 */
-  textureNames?: string[];
+  textureNames?: string[] | undefined;
   /** 纹理分类：player = 角色皮肤可切换；projectile/vehicle 等 = 组件专属 */
-  textureCategories?: string[];
-  metadata?: YsmMetadata;
+  textureCategories?: string[] | undefined;
+  metadata?: YsmMetadata | undefined;
 } | null;
 
 /** 车万女仆 → statsCardHTML 入参映射（复用 YSM 彩色统计卡渲染）。
@@ -126,13 +126,13 @@ function toStatsCardModel(
   return {
     boneCount: info?.boneCount ?? 0,
     cubeCount: info?.cubeCount ?? 0,
-    texWidth: info?.texWidth,
-    texHeight: info?.texHeight,
-    textures: info?.textures,
-    textureNames: info?.textureNames,
-    textureCategories: info?.textureCategories,
+    ...(info?.texWidth !== undefined ? { texWidth: info.texWidth } : {}),
+    ...(info?.texHeight !== undefined ? { texHeight: info.texHeight } : {}),
+    ...(info?.textures != null ? { textures: info.textures } : {}),
+    ...(info?.textureNames != null ? { textureNames: info.textureNames } : {}),
+    ...(info?.textureCategories != null ? { textureCategories: info.textureCategories } : {}),
     subCount: componentCounts.length > 0 ? componentCounts.length : 1,
-    componentCounts: componentCounts.length > 0 ? componentCounts : undefined,
+    ...(componentCounts.length > 0 ? { componentCounts } : {}),
   };
 }
 

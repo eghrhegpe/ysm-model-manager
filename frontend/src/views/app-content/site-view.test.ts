@@ -118,7 +118,7 @@ describe("renderSiteView 编排壳", () => {
 
   it("7. repoAuthors 为字符串数组（旧数据兼容）→ 计数 0，顺序稳定", () => {
     const { ctx } = makeCtx({
-      repoAuthors: ["高产甲", "低产乙"] as unknown as Partial<RenderSiteViewCtx>["repoAuthors"],
+      repoAuthors: ["高产甲", "低产乙"] as unknown as NonNullable<Partial<RenderSiteViewCtx>["repoAuthors"]>,
     });
     renderSiteView(site, ctx);
     const received = binds.bindBrowseEvents.mock.calls[0][0] as unknown as {

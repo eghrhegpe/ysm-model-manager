@@ -71,7 +71,7 @@ export async function loadModelData(
       model._authors = cur.authors.filter(
         (a): a is NonNullable<BedrockGeometry["_authors"]>[number] =>
           typeof a === "object" && a !== null,
-      ) as BedrockGeometry["_authors"];
+      );
       model._avatars = cur.avatars || {};
     }
   }
@@ -214,9 +214,9 @@ async function loadModelViaGo(
     const decodedBy = subPathUsed ? "📦 Go 单角色（L0 清单）" : "📦 Go 原生解析";
     cacheSet(cacheKey, {
       ...(cacheGet(cacheKey) || {}),
-      texture: model.texture as string | undefined,
+      ...(model.texture !== undefined ? { texture: model.texture } : {}),
       geometry: model,
-      animations: goClips.length > 0 ? goClips : undefined,
+      ...(goClips.length > 0 ? { animations: goClips } : {}),
       _decodedBy: decodedBy,
     });
     return { model, decodedBy };

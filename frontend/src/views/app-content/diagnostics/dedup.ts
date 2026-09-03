@@ -284,7 +284,7 @@ async function scanEachDirectory(
     }
     if (groups.length)
       allResults.push({ icon: target.icon, label: target.label, groups: groups.map(g => ({
-        files: (g.files || []).map(f => ({ path: f.path, name: f.name, size: f.size, modTime: f.modTime ? new Date(f.modTime).toISOString() : undefined }))
+        files: (g.files || []).map(f => ({ path: f.path, name: f.name, size: f.size, ...(f.modTime ? { modTime: new Date(f.modTime).toISOString() } : {}) }))
       })) });
   }
   return { allResults, earlyExit: false };

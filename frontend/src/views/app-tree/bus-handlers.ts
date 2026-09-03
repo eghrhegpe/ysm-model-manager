@@ -37,7 +37,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
  * 批量重命名回调体（dir:batch-rename 与 batch:rename 共用，消除 32 行跨事件重复）：
  * 逐条调用 RenameFile，计数 ok/fail，清空选择态，reload + 统计刷新 + toast。
  */
-async function runBatchRename(vm: AppTree, renames: Array<{ oldPath?: string; newName: string }>): Promise<void> {
+async function runBatchRename(vm: AppTree, renames: Array<{ oldPath?: string | undefined; newName: string }>): Promise<void> {
   let ok = 0, fail = 0;
   const { RenameFile } = await getApp();
   for (const r of renames) {
@@ -68,10 +68,11 @@ function atBeHandleBatchDisableAll(vm: AppTree): void {
 }
 
 async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
+  const baseName = dir.split("/").pop();
   const name = await modalPrompt({
     title: t("tree.dirRenameTitle"),
     icon: "✂️",
-    value: dir.split("/").pop(),
+    ...(baseName !== undefined ? { value: baseName } : {}),
     placeholder: t("tree.inputNewFolder"),
     okText: t("tree.dirRenameOk"),
   });

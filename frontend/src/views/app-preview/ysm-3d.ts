@@ -63,7 +63,7 @@ export async function createYsm3D(
       loader: opts.loader,
       preload: (model) => preloadModel(model as ModelLike),
       onTextureChange: rebuild,
-      onClose: opts.onClose,
+      ...(opts.onClose != null ? { onClose: opts.onClose } : {}),
       listAllFilePaths,
       readTextFile: readFileBytes,
       // 面板填充回调由视图层注入，解除 utils→views 分层违规 R1（ADR 分层契约）
@@ -79,7 +79,7 @@ export async function createYsm3D(
       },
     }),
     path,
-    withPreviewExtras({ siblings: opts.siblings }),
+    withPreviewExtras(opts.siblings != null ? { siblings: opts.siblings } : {}),
   );
 }
 

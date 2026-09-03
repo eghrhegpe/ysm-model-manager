@@ -45,7 +45,7 @@ export function buildPresetChipGroup(
     for (const item of items) {
         const active = item.isActive ? item.isActive() : false;
         addPresetChip(group, item.label, active, item.onClick, {
-            wrap: item.wrap,
+            ...(item.wrap != null ? { wrap: item.wrap } : {}),
             ...(item.isActive
                 ? {
                       onUpdate: (btn: HTMLButtonElement) =>

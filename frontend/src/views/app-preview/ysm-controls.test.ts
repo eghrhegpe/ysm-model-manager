@@ -75,7 +75,7 @@ describe("ysmShotNodes（P4-B-2 声明式节点）", () => {
 
   it("screenshot 未定义（undefined，ctx 可选字段）时仍产出 6 按钮（面板常驻，走 fallback）", () => {
     // YSM 与 MMD 不同：screenshot 是 ctx 可选字段，缺失时面板不消失（saveScreenshot fallback）
-    const nodes = ysmShotNodes(makeCtx({ screenshot: undefined }));
+    const nodes = ysmShotNodes(makeCtx({}));
     expect(nodes.length).toBe(6);
   });
 

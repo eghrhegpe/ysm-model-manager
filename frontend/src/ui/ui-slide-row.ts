@@ -153,9 +153,9 @@ function srBuildCollapsibleVariant(
     const toggle = createHeaderToggle({
         value: headerToggle.value,
         onChange: (v) => headerToggle.onChange(v),
-        bind: headerToggle.bind,
-        disabled: headerToggle.disabled,
-        onDisabledClick: headerToggle.onDisabledClick,
+        ...(headerToggle.bind != null ? { bind: headerToggle.bind } : {}),
+        ...(headerToggle.disabled !== undefined ? { disabled: headerToggle.disabled } : {}),
+        ...(headerToggle.onDisabledClick != null ? { onDisabledClick: headerToggle.onDisabledClick } : {}),
     });
     row.appendChild(toggle);
 

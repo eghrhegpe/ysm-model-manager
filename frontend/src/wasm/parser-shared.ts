@@ -54,7 +54,7 @@ export interface WasmModuleLike {
  */
 export function classifyWasmError(err: unknown): {
   kind: "fatal" | "exit" | "unknown";
-  exitCode?: number;
+  exitCode?: number | undefined;
 } {
   const errObj = err as { name?: string; message?: string; status?: unknown };
   const errText =

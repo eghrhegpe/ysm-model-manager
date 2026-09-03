@@ -73,7 +73,7 @@ export function addCollapsible(
         const toggle = createHeaderToggle({
             value: config.headerToggle.value,
             onChange: (v) => config.headerToggle!.onChange(v),
-            bind: config.headerToggle.bind,
+            ...(config.headerToggle.bind != null ? { bind: config.headerToggle.bind } : {}),
         });
         header.appendChild(toggle);
     }

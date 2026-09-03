@@ -88,7 +88,7 @@ export function bindPerfCopyHandlers(root: ShadowRoot): void {
       bus.emit("toast:show", {
         msg: ok ? "✅ " + t("diagnostics.perfCopied") : "❌ " + t("diagnostics.perfCopyFail"),
         duration: ok ? 2000 : 3000,
-        type: ok ? undefined : "error",
+        ...(ok ? {} : { type: "error" as const }),
       });
     });
   }

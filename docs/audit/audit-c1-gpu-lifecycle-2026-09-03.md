@@ -210,7 +210,52 @@ model3d-loader。**ysm-adapter 无任何 release 断言**（pack-model 有
 
 | # | 项 | 状态 |
 |---|----|------|
-| C1-1 | YSM/女仆纹理缓存所有权违规 + 失败路径（本报告） | 🔴 待拍板修复 |
-| C1-2 | caps（sky/fog/light/reflector/water）dispose 完整性复查 | ⬜ 待审 |
-| C1-3 | 各适配器 `addEventListener`/`removeEventListener` 配对（ADR-109 §3） | ⬜ 待审 |
+| C1-1 | YSM/女仆纹理缓存所有权违规 + 失败路径（本报告） | ✅ 已修复（commit `20308f95` + 知识卡 `2a0bd58c`） |
+| C1-2 | caps（sky/fog/light/reflector/water/environment/ground/shadow/postprocessing/render-mode）dispose 完整性复查 | ✅ 已审（无泄漏） |
+| C1-3 | 各适配器 `addEventListener`/`removeEventListener` 配对（ADR-109 §3） | ✅ 已审（无泄漏） |
+
+---
+
+## 六、C1-2 / C1-3 复查结论
+
+### C1-2 能力层 GPU 释放闭环 —— ✅ 干净
+
+**清理链接入验证**：
+- `scene-capability-registry.ts` 的 `createAll()` 先 `dispose()` 旧实例再创建（`SceneCapability` 接口 `dispose(): void` 契约齐备）。
+- `mount-preview-core.ts:866-867`（`fullCleanup` ⑧）调用 `sceneCapabilityRegistry.saveAll()` + `dispose()`，全链接入。
+
+**10 个能力 dispose 体检**（逐一核验 public `dispose()` 是否真正调用私有释放器）：
+
+| 能力 | 释放内容 | 判定 |
+|------|----------|------|
+| sky | `disposeMeshGroup` 释放 ShaderMaterial（godRays/sunset 实测为 ShaderMaterial，过滤精确）+ `disposeAll` | ✅ |
+| water | 释放 RenderTarget（rtColor/rtDepth）+ ShaderMaterial | ✅ |
+| environment | blob URL 经 `finally` 内 `revokeObjectURL` 撤销（生命周期正确，非 dispose 内但无泄漏） | ✅ |
+| ground/fog/shadow/reflector/postprocessing/light/render-mode | 均释放对应 RT / ShaderMaterial / 订阅 | ✅ |
+
+**结论**：无缺失释放，无悬垂 RT。C1-2 零缺陷。
+
+### C1-3 事件监听器配对 —— ✅ 干净
+
+**预览核心链路**（`input-and-animation.ts` ↔ `mount-preview-core.ts`）：
+- 注册 6 个：`document.keydown/keyup` + `window.pointerup/pointermove/resize` + `rd.domElement.pointerdown`。
+- 解绑 6 个：`mount-preview-core.ts:855-859` 解绑全局 5 个；**:861** 在 `if (infra)` 块内解绑 `rd.domElement.pointerdown`。**配对完整**（摘要曾误判漏 `pointerdown`，实测 :861 已含）。
+- handler 引用同一性：`bindInputHandlers` 返回 → 保存 → 解绑同一引用；`escH` 可变引用经 `:889-895` getter 模式正确处理（旧实现漏解绑已被历史修复）。
+- 早退路径（`:124-135` 返回 noop）：未注册则不解绑无害，安全。
+
+**全屏预览链路**（`skeleton.ts`）：采用 **AbortController 模式**（`:93` 先 `abort()` 旧监听 → `:94-100` 用 `{ signal }` 绑定 → `:101` 经 `ctx.unsubs` 注销）。重新加载时 abort 上一轮，**无累积泄漏**，比手动 `removeEventListener` 更健壮。
+
+**其余全局监听**：`zoom.ts`（pointermove/up/cancel + keydown 对称解绑）、`init-preview.ts`（引用经 `_setResizeMove/_setResizeUp` 配对同一 `onMove/onUp`）、`environment-capability.ts`（`window.focus` 用 `{ once: true }` 自动解绑）、`context-menu`/`app-sidebar`/`app-tree`（均对称解绑）——全部配对完整。
+
+**结论**：无新增监听器泄漏。C1-3 零缺陷。
+
+---
+
+## 七、C1 总评
+
+C1 队列（GPU 资源生命周期专项）三项目全部结案：
+- **C1-1（P0）已修复入库**，5199 全量测试通过，新增 7 例回归测试锁定"所有权归缓存池"契约。
+- **C1-2 / C1-3 复查零缺陷**，清理链与监听配对设计正确，无需改动。
+
+> 修复趋势印证（见 `audit-review-plan-2026-09-03.md`）：dispose/泄漏类 fix 曾达 54 条，本专项封堵了其中 YSM/女仆主路径的系统性泄漏缺口，并确认其余路径已具备正确范式。建议将"缓存纹理所有权归池、消费方只 `release`"写入 ADR 固化。
 | C1-4 | MMD/VRM blob URL 与 `URL.revokeObjectURL` 时机 | ⬜ 待审 |

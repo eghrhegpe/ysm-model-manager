@@ -99,7 +99,7 @@ FBX ──FBX2glTF（npm 包装，node 脚本调）──▶ GLB ──qmuntal/g
 | `o5h/fbx` | Go FBX reader，作者自述 "Not well tested, but should work" |
 | `elicdavis/fbx` | v0.0.0-2020，无后续维护 |
 
-社区共识（StackOverflow）：FBX 格式**极泛化、允许厂商扩展**，自写 importer 极难；官方只有 Autodesk FBX SDK（C++）。这印证 ADR-112 选型——前端用 three 官方 FBXLoader 副本是正确姿势，Go 侧无等价物。
+社区共识（StackOverflow）：FBX 格式**极泛化、允许厂商扩展**，自写 importer 极难；官方只有 Autodesk FBX SDK（C++）。这印证 ADR-112 选型——前端走 three 官方 FBXLoader（`three/addons` 子路径，ADR-171 已删 `preview-3d/vendor/fbx` 自维护副本，改由 node_modules 版本管理接管）是正确姿势，Go 侧无等价物。
 
 ### ② CLI 转换工具——现成可用 ✅
 

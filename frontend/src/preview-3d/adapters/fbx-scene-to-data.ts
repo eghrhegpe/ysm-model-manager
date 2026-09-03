@@ -1,5 +1,5 @@
 // ===== FBX worker 场景序列化（ADR-112）=====
-// FBXLoader.parse()（vendor/fbx/FBXLoader.ts 官方源码副本）直接产出 THREE.Group，
+// FBXLoader.parse()（three/addons 官方 FBXLoader）直接产出 THREE.Group，
 // worker 内无法跨线程回传 THREE 对象：fbxSceneToData 把 Group 抽成纯数据
 // （节点层级 / 几何数组 / 材质参数 / 骨骼 + boneInverses / 动画轨道 / 纹理文件名 /
 // morph 目标），主线程凭 FbxSceneData 重建场景。纹理文件名由 worker 端 manager handler

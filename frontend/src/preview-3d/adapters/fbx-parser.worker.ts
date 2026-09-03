@@ -1,5 +1,6 @@
 // ===== FBX 解析 Worker（ADR-112）=====
-// 直接复用 three 官方 FBXLoader 源码副本（vendor/fbx/FBXLoader.ts，解析逻辑零改动），
+// 复用 three 官方 FBXLoader（three/addons 子路径，与主线程 fbx-adapter 同源，
+// 版本随 node_modules 走；ADR-171 已删 preview-3d/vendor/fbx 副本），
 // worker 内无权访问 DOM：FBXLoader.parse(FBXBuffer) 在 worker 中产出 THREE.Group，
 // 再经 fbxSceneToData 序列化为纯数据回主线程（主线程凭 FbxSceneData 重建场景）。
 //
@@ -9,7 +10,7 @@
 // 主线程按文件名（texUrlMap）用 blob URL 重建真实纹理。
 
 import * as THREE from "three";
-import { FBXLoader } from "../vendor/fbx/FBXLoader.ts";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { fbxSceneToData, captureTextureName, type FbxSceneData } from "./fbx-scene-to-data.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 

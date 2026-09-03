@@ -1,5 +1,5 @@
 // ===== FBX worker 场景序列化测试（fbxSceneToData）=====
-// 背景：FBXLoader.parse()（vendor/fbx/FBXLoader.ts 官方源码副本）直接产出 THREE.Group，
+// 背景：FBXLoader.parse()（three/addons 官方 FBXLoader）直接产出 THREE.Group，
 // worker 内无法跨线程回传 THREE 对象，须先经 fbxSceneToData 抽成纯数据
 // （几何数组 / 骨骼 / boneInverses / 动画轨道 / 纹理文件名），主线程再重建。
 // 本测试构造合成 Group（与 worker 内 FBXLoader 产物同构：SkinnedMesh 已 bind、

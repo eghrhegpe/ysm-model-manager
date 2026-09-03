@@ -1,6 +1,6 @@
 // ===== FBX 内容适配器（ADR-112：独立 FBX 预览地基）=====
-// 经 Go 绑定 ReadFileBytes 取字节；fbx-worker=1 时走 worker（官方 FBXLoader 源码副本
-// vendor/fbx/，零解析改动 → fbxSceneToData 纯数据回主线程重建），否则主线程
+// 经 Go 绑定 ReadFileBytes 取字节；fbx-worker=1 时走 worker（官方 FBXLoader 副本
+// three/addons，零解析改动 → fbxSceneToData 纯数据回主线程重建），否则主线程
 // blob URL → FBXLoader 解析。归一化后挂入核心场景 + 包围盒定相机；
 // AnimationMixer 播内嵌 animations，经核心 perFrame 循环驱动。
 // 通用外壳（overlay/renderer/循环/释放）由 mount-preview-core.ts 拥有。
@@ -178,7 +178,7 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
     new Blob([bytes], { type: "application/octet-stream" }),
   );
 
-  // 2) 加载：fbx-worker=1 走 worker —— 官方 FBXLoader 源码副本解析（vendor/fbx/，零解析改动），
+  // 2) 加载：fbx-worker=1 走 worker —— 官方 FBXLoader（three/addons，零解析改动），
   //    场景经 fbxSceneToData 纯数据回主线程重建；未开启/worker 解析失败 → 降级主线程 blob 路径
   //    （开关模式镜像 mmd-adapter.ts:mmd-pmx-worker，ADR-044 安全读写）
   let group: THREE.Group & { animations: THREE.AnimationClip[] };

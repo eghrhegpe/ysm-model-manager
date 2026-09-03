@@ -134,6 +134,13 @@ const recycleBusy = makeBusy();
 
 export type MenuCtx = import("../bus.ts").CtxShowPayload & { paths: string[] };
 
+// P2-1 表级窄化：file/dir 两张表各拿掉对立字段，编译期防跨表误取——
+//   file handler 读 ctx.dir / dir handler 读 ctx.path → 直接编译报错。
+// 仅用 Omit 收窄"能读到哪几个字段"，不收紧运行时（发射端 dir 可缺席，见 app-tree/events.ts
+// dir 发射的条件展开），因此 dir-handler 的 `ctx.dir || ""` 防守保留，行为与结构均不变。
+export type FileCtx = Omit<MenuCtx, "dir">;
+export type DirCtx = Omit<MenuCtx, "path">;
+
 /** 行为 handler 表（instance + batch + merge file/dir）；satisfies 断言覆盖 MENU_ACTIONS，漏挂拼错即编译错误 */
 export const HANDLERS = {
   noop: () => {},

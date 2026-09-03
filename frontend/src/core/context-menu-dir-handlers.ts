@@ -4,7 +4,7 @@ import { getApp } from "../backend/app.ts";
 import { tr } from "./i18n/tr.ts";
 import { refreshUI, toast, toastError, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
-import type { MenuCtx } from "./context-menu-handlers.ts";
+import type { DirCtx } from "./context-menu-handlers.ts";
 
 /** dir 类 handler 子表（精确 key 推断，供 HANDLERS satisfies 覆盖断言） */
 export const DIR_HANDLERS = {
@@ -49,4 +49,4 @@ export const DIR_HANDLERS = {
   },
   "dir.mkdir": (ctx) => bus.emit("dir:mkdir", { dir: ctx.dir || "" }),
   "dir.recycle": (ctx) => bus.emit("dir:recycle", { dir: ctx.dir || "" }),
-} satisfies Record<string, (ctx: MenuCtx) => void>;
+} satisfies Record<string, (ctx: DirCtx) => void>;

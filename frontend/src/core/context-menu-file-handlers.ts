@@ -7,7 +7,7 @@ import { tr } from "./i18n/tr.ts";
 import { refreshUI, toast, toastError, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
-import type { MenuCtx } from "./context-menu-handlers.ts";
+import type { FileCtx } from "./context-menu-handlers.ts";
 
 /** file 类 handler 子表（精确 key 推断，供 HANDLERS satisfies 覆盖断言） */
 export const FILE_HANDLERS = {
@@ -149,4 +149,4 @@ export const FILE_HANDLERS = {
       ok ? undefined : "error",
     );
   },
-} satisfies Record<string, (ctx: MenuCtx) => void>;
+} satisfies Record<string, (ctx: FileCtx) => void>;

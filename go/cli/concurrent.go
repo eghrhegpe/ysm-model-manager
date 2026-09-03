@@ -15,7 +15,14 @@ import (
 
 func init() {
 	RegisterCommandC("concurrent-bench", CatPerf, "并发能力基准测试（串行 vs 并行对比，建议先优化单模型）", runConcurrentBench)
-	RegisterCommandC("single-bench", CatPerf, "单模型加载基准测试（优化基础，单模型快=所有场景快）", runSingleBench)
+	RegisterCommandC("single-bench", CatPerf, "单模型加载基准测试（优化基础，单模型快=所有场景快）", runSingleBench,
+		ParamSpec{Key: "model", Type: ParamString},
+		ParamSpec{Key: "iterations", Type: ParamNumber},
+		ParamSpec{Key: "baseline", Type: ParamString},
+		ParamSpec{Key: "save-baseline", Type: ParamString},
+		ParamSpec{Key: "threshold", Type: ParamNumber},
+		ParamSpec{Key: "format", Type: ParamString},
+	)
 }
 
 // concurrentBenchResult 并发测试结果

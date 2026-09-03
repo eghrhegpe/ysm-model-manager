@@ -22,8 +22,13 @@ import { ROOT, readText } from './scan-files.ts';
 
 const CLI_DIR = path.join(ROOT, 'go', 'cli');
 
-/** 顶层命令注册：RegisterCommandC("name", CatX, "desc", runFn)。支持跨行。 */
-const CMD_RE = /RegisterCommandC\(\s*"([a-z0-9-]+)"\s*,\s*(\w+)\s*,\s*"((?:[^"\\]|\\.)*)"\s*,\s*(\w+)\s*\)/g;
+/**
+ * 顶层命令注册：RegisterCommandC("name", CatX, "desc", runFn[, ParamSpec{...}...])。支持跨行。
+ * ADR-173：runFn 后可尾随 0..N 个 ParamSpec 变参（ADR-173 A1 规格登记），解析只需前四组
+ * （name/category/desc/runFn），故不强制收尾 `)`——契约测试与生成器同口径，避免
+ * 尾随变参导致整条注册脱配（2026-09-03 教训：变参拆行曾使 5 命令从注册表解析中消失）。
+ */
+const CMD_RE = /RegisterCommandC\(\s*"([a-z0-9-]+)"\s*,\s*(\w+)\s*,\s*"((?:[^"\\]|\\.)*)"\s*,\s*(\w+)/g;
 
 /** 分类名常量（与 go/cli/registry.go 一致）。 */
 export const CAT_NAMES = {

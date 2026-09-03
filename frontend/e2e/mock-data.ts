@@ -98,6 +98,8 @@ export const MOCK_DATA = {
   // settings relink 依赖 SetLinkMode（community.ts 已解构），一并补齐
   SetLinkMode: undefined,
   SetAllowedCommands: undefined,
+  // ADR-173：规格注入绑定（main 装配调用，前端不消费；对齐 binding 契约）
+  SetAllowedCommandSpecs: undefined,
   // 对齐 binding 契约 PackInfo 非空对象——原 null 类型不符（子代理审计 P2）
   GetPackInfo: {
     name: "测试资源包",

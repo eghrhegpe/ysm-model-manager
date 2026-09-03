@@ -14,6 +14,25 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// cliSpecsToDTO 把 go/cli 注册表规格转换为 app 侧 DTO（ADR-173 A1→A2 装配通道）。
+// internal/app 不依赖 go/cli（ADR-145 架构），main 作为唯一装配点做字段级薄转换；
+// go/cli 侧字段改名/删除时此处立即编译失败，杜绝「规格漂移静默失效」。
+func cliSpecsToDTO(specs []cli.CommandSpec) []app.CommandSpecDTO {
+	dtos := make([]app.CommandSpecDTO, 0, len(specs))
+	for _, s := range specs {
+		dto := app.CommandSpecDTO{Name: s.Name, Params: make([]app.ParamSpecDTO, 0, len(s.Params))}
+		for _, p := range s.Params {
+			dto.Params = append(dto.Params, app.ParamSpecDTO{
+				Key:        p.Key,
+				Type:       string(p.Type),
+				AllowEmpty: p.AllowEmpty,
+			})
+		}
+		dtos = append(dtos, dto)
+	}
+	return dtos
+}
+
 func main() {
 	// ---- CLI Mode: 独立运行，脱离 Wails GUI，用于测试或自动化 ----
 	if len(os.Args) > 1 && os.Args[1] == "--cli" {
@@ -33,6 +52,9 @@ func main() {
 	var _ cli.AppService = appStruct
 	// CLI 桥接：从 cli 注册表注入可用命令列表（单一事实来源，新增命令自动可见）
 	appStruct.SetAllowedCommands(cli.GetAllowedCommands())
+	// ADR-173：注入命令参数规格——DTO 薄转换（internal/app 不依赖 go/cli，
+	// 两侧规格字段漂移在此编译期拦截）
+	appStruct.SetAllowedCommandSpecs(cliSpecsToDTO(cli.GetAllowedCommandSpecs()))
 	wailsApp := application.New(application.Options{
 		Name: "YSM 模型管理器",
 		Services: []application.Service{

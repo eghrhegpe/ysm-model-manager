@@ -12,12 +12,34 @@ type CmdContext struct {
 	Args      []string
 }
 
+// ParamType 参数值类型（ADR-173：桥接序列化按类型决定形态）
+// string → --key <val>；number → --key <n>（整数无小数点）；bool → 开关 --key 或 --key=false
+type ParamType string
+
+const (
+	ParamString ParamType = "string"
+	ParamNumber ParamType = "number"
+	ParamBool   ParamType = "bool"
+)
+
+// ParamSpec 单参数规格（ADR-173 A1：GUI→CLI 桥序列化元数据，与命令同处注册表声明）
+// 声明序即桥接层序列化输出序（纯 flag 命令无顺序依赖，但输出稳定可测）。
+// AllowEmpty=true 时显式空值（空串/0/false）允许跨桥产出，flag 侧须可接受对应形态
+// （空串 --key=、0 --key 0、false --key=false）；false 维持「空值=未传」现状语义。
+type ParamSpec struct {
+	Key        string
+	Type       ParamType
+	AllowEmpty bool
+}
+
 // CliCommand 命令注册结构
 type CliCommand struct {
 	Name        string
 	Category    string
 	Description string
-	Run         func(ctx *CmdContext) error
+	// Params 参数规格（ADR-173：默认 nil=未登记，桥接层走 legacy 降级保持兼容）
+	Params []ParamSpec
+	Run    func(ctx *CmdContext) error
 }
 
 // 命令分类常量
@@ -39,7 +61,9 @@ func RegisterCommand(name, description string, run func(ctx *CmdContext) error) 
 }
 
 // RegisterCommandC 注册带分类的 CLI 子命令
-func RegisterCommandC(name, category, description string, run func(ctx *CmdContext) error) {
+// params 为可选参数规格（ADR-173 A1），未传即无规格（桥接层按 legacy 规则降级）；
+// 变参保证既有 39 处注册零改动。
+func RegisterCommandC(name, category, description string, run func(ctx *CmdContext) error, params ...ParamSpec) {
 	if _, exists := cliCommands[name]; exists {
 		fmt.Fprintf(os.Stderr, "[WARN] CLI 命令 %q 重复注册，跳过\n", name)
 		return
@@ -48,6 +72,7 @@ func RegisterCommandC(name, category, description string, run func(ctx *CmdConte
 		Name:        name,
 		Category:    category,
 		Description: description,
+		Params:      params,
 		Run:         run,
 	}
 }

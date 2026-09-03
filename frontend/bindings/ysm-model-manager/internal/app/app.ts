@@ -277,7 +277,7 @@ export function EnsureStorageDirs(): $CancellablePromise<void> {
 /**
  * ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定）
  * 
- * # GUI→CLI 参数链路（#5 短期文档注释，中期收敛为 ParamSpec 元数据）
+ * # GUI→CLI 参数链路（ADR-173 落地后：规格单一事实源在 go/cli 注册表，本注释不再承担契约）
  * 
  * 	frontend cli-bridge.executeCLI → buildArgsMap（Record<string,string|number|boolean>）
  * 	→ Wails map[string]interface{}（JSON 序列化过桥，数值一律 float64）
@@ -285,14 +285,12 @@ export function EnsureStorageDirs(): $CancellablePromise<void> {
  * 	→ go/cli ParseCommandArgs 剥离全局参数（--files-root/--json）
  * 	→ 各命令内部 flag.FlagSet 解析（go/cli/registry.go 注册）
  * 
- * # 参数转换损耗点（新增命令参数必须同步核对）
+ * # 序列化规则（ADR-173 A2，详版见 buildCLIArgs）
  * 
- *   - string: 空串丢弃——无法传显式空值（如需传空串语义，改走 ParamSpec 白名单）
- *   - float64: 0 丢弃——无法传 0（0 与「未传」同义，flag 层也无法区分）
- *   - bool: false 丢弃——无法传显式 false（仅 true 会产出 --flag）
- *   - 其他类型（nil / int / map / slice）：静默跳过 + stderr 告警，防参数丢失
+ *   - 已登记 ParamSpec 的命令：按规格声明序输出；AllowEmpty=true 的参数可传显式空值
+ *     （空串 → --key=，0 → --key 0，false → --key=false）；规格外键告警 + legacy 追加。
+ *   - 未登记命令：legacy 规则（空串/0/false 丢弃）——与 flag 默认一致，行为零回归。
  *   - filesRoot: 特殊键名 → --files-root（必填，缺省回退 GetYSMRepoRoot()）
- *   - Go map 遍历无序 → 参数顺序不确定；仅 flag 语义命令安全，位置参数命令不可走此桥
  */
 export function ExecuteCLI(command: string, args: { [_ in string]?: any } | null): $CancellablePromise<string> {
     return $Call.ByID(302310740, command, args);
@@ -1144,6 +1142,14 @@ export function SelectDirectory(): $CancellablePromise<string> {
  */
 export function SelectImportFile(filter: string, title: string): $CancellablePromise<string> {
     return $Call.ByID(3917673792, filter, title);
+}
+
+/**
+ * SetAllowedCommandSpecs 注入命令参数规格（main.go 从 cli.GetAllowedCommandSpecs() 转换后调用）
+ * 与 SetAllowedCommands 独立 once：测试/旧装配只注入名单 → 规格为空 → ExecuteCLI 走 legacy 降级
+ */
+export function SetAllowedCommandSpecs(specs: $models.CommandSpecDTO[] | null): $CancellablePromise<void> {
+    return $Call.ByID(1471242080, specs);
 }
 
 /**

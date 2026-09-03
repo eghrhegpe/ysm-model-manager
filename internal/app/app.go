@@ -69,6 +69,10 @@ type App struct {
 	allowedCommands     []string
 	allowedCommandSet   map[string]bool
 	allowedCommandsOnce sync.Once
+	// ADR-173：命令参数规格（main.go 从 cli.GetAllowedCommandSpecs() 转换注入；
+	// 独立 once——旧装配/测试只注入名单时为空，ExecuteCLI 走 legacy 降级）
+	allowedSpecs     map[string][]ParamSpecDTO
+	allowedSpecsOnce sync.Once
 }
 
 // repoRoot 动态返回 YSM 模型存储根目录（始终从配置推导，无需手动维护缓存）

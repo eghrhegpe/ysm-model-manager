@@ -12,9 +12,23 @@ import (
 )
 
 func init() {
-	RegisterCommandC("search", CatModel, "搜索模型（支持关键词过滤）", runSearch)
-	RegisterCommandC("analyze", CatModel, "分析单个模型的详细信息", runAnalyze)
-	RegisterCommandC("list", CatModel, "列出所有模型的摘要信息", runList)
+	RegisterCommandC("search", CatModel, "搜索模型（支持关键词过滤）", runSearch,
+		ParamSpec{Key: "keyword", Type: ParamString},
+		ParamSpec{Key: "min-bones", Type: ParamNumber},
+		ParamSpec{Key: "max-bones", Type: ParamNumber},
+		ParamSpec{Key: "min-cubes", Type: ParamNumber},
+		ParamSpec{Key: "max-cubes", Type: ParamNumber},
+		ParamSpec{Key: "min-tex", Type: ParamNumber},
+		ParamSpec{Key: "max-tex", Type: ParamNumber},
+		ParamSpec{Key: "format", Type: ParamString},
+	)
+	RegisterCommandC("analyze", CatModel, "分析单个模型的详细信息", runAnalyze,
+		ParamSpec{Key: "model", Type: ParamString},
+	)
+	RegisterCommandC("list", CatModel, "列出所有模型的摘要信息", runList,
+		ParamSpec{Key: "limit", Type: ParamNumber},
+		ParamSpec{Key: "format", Type: ParamString},
+	)
 	RegisterCommandC("verify", CatModel, "验证模型文件完整性", runVerify)
 	RegisterCommandC("benchmark", CatModel, "性能基准测试", runBenchmark)
 	RegisterCommandC("export", CatModel, "导出模型结构信息", runExport)

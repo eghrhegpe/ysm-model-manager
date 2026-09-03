@@ -8,9 +8,37 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 )
+
+// ===== ADR-173 ParamSpec 注入（A1：规格单一事实源在 go/cli 注册表，经 main.go 薄转换注入）=====
+
+// ParamSpecDTO / CommandSpecDTO 是 go/cli ParamSpec/CommandSpec 的 app 侧镜像：
+// internal/app 不依赖 go/cli（ADR-145 架构：两侧互不 import，main 装配），
+// 字段名与 go/cli 对齐，漂移由 main.go 转换函数编译期拦截。
+type ParamSpecDTO struct {
+	Key        string // flag 键名（不含 -- 前缀）
+	Type       string // "string" / "number" / "bool"
+	AllowEmpty bool   // true=显式空值（空串/0/false）允许跨桥
+}
+
+type CommandSpecDTO struct {
+	Name   string
+	Params []ParamSpecDTO
+}
+
+// SetAllowedCommandSpecs 注入命令参数规格（main.go 从 cli.GetAllowedCommandSpecs() 转换后调用）
+// 与 SetAllowedCommands 独立 once：测试/旧装配只注入名单 → 规格为空 → ExecuteCLI 走 legacy 降级
+func (a *App) SetAllowedCommandSpecs(specs []CommandSpecDTO) {
+	a.allowedSpecsOnce.Do(func() {
+		a.allowedSpecs = make(map[string][]ParamSpecDTO, len(specs))
+		for _, s := range specs {
+			a.allowedSpecs[s.Name] = s.Params
+		}
+	})
+}
 
 // SetAllowedCommands 注入可用 CLI 命令列表（由 main.go 调用 cli.GetAllowedCommands() 提供）
 // 避免 app→cli 循环依赖：命令注册表单一事实来源在 go/cli，前端可见列表经此注入
@@ -32,7 +60,7 @@ func (a *App) isCommandExposedToFrontend(command string) bool {
 
 // ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定）
 //
-// # GUI→CLI 参数链路（#5 短期文档注释，中期收敛为 ParamSpec 元数据）
+// # GUI→CLI 参数链路（ADR-173 落地后：规格单一事实源在 go/cli 注册表，本注释不再承担契约）
 //
 //	frontend cli-bridge.executeCLI → buildArgsMap（Record<string,string|number|boolean>）
 //	→ Wails map[string]interface{}（JSON 序列化过桥，数值一律 float64）
@@ -40,14 +68,12 @@ func (a *App) isCommandExposedToFrontend(command string) bool {
 //	→ go/cli ParseCommandArgs 剥离全局参数（--files-root/--json）
 //	→ 各命令内部 flag.FlagSet 解析（go/cli/registry.go 注册）
 //
-// # 参数转换损耗点（新增命令参数必须同步核对）
+// # 序列化规则（ADR-173 A2，详版见 buildCLIArgs）
 //
-//   - string: 空串丢弃——无法传显式空值（如需传空串语义，改走 ParamSpec 白名单）
-//   - float64: 0 丢弃——无法传 0（0 与「未传」同义，flag 层也无法区分）
-//   - bool: false 丢弃——无法传显式 false（仅 true 会产出 --flag）
-//   - 其他类型（nil / int / map / slice）：静默跳过 + stderr 告警，防参数丢失
+//   - 已登记 ParamSpec 的命令：按规格声明序输出；AllowEmpty=true 的参数可传显式空值
+//     （空串 → --key=，0 → --key 0，false → --key=false）；规格外键告警 + legacy 追加。
+//   - 未登记命令：legacy 规则（空串/0/false 丢弃）——与 flag 默认一致，行为零回归。
 //   - filesRoot: 特殊键名 → --files-root（必填，缺省回退 GetYSMRepoRoot()）
-//   - Go map 遍历无序 → 参数顺序不确定；仅 flag 语义命令安全，位置参数命令不可走此桥
 func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 	start := time.Now()
 
@@ -81,35 +107,11 @@ func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 
 	cmdArgs = append(cmdArgs, command)
 
-	// 添加命令参数（#5：转换损耗语义见函数头注释——空串/0/false 丢弃）
-	for k, v := range args {
-		if k == "filesRoot" {
-			continue
-		}
-		switch val := v.(type) {
-		// param: <key> → --<key> <val> (string, 空串丢弃)
-		case string:
-			if val != "" {
-				cmdArgs = append(cmdArgs, "--"+k, val)
-			}
-		// param: <key> → --<key> <val> (number, 0 丢弃；JSON 数值恒 float64，整数转 %d 防精度漂移)
-		case float64:
-			if val != 0 {
-				if val == float64(int64(val)) {
-					cmdArgs = append(cmdArgs, "--"+k, fmt.Sprintf("%d", int64(val)))
-				} else {
-					cmdArgs = append(cmdArgs, "--"+k, fmt.Sprintf("%g", val))
-				}
-			}
-		// param: <key> → --<key> (bool, false 丢弃——仅 true 产出开关)
-		case bool:
-			if val {
-				cmdArgs = append(cmdArgs, "--"+k)
-			}
-		default:
-			// 不支持的类型（nil, int, map 等）静默跳过，防止前端参数丢失
-			fmt.Fprintf(os.Stderr, "[WARN] ExecuteCLI: 跳过不支持的参数类型 %T (key=%s)\n", v, k)
-		}
+	// 添加命令参数（ADR-173：已登记 ParamSpec 的命令按规格声明序序列化，
+	// 未登记命令走 legacy 规则降级——行为与 ADR-173 前完全等价）
+	cmdArgs, warnings := buildCLIArgs(command, cmdArgs, args, a.allowedSpecs[command])
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "[WARN] ExecuteCLI: %s\n", w)
 	}
 
 	// 3. 执行命令并捕获输出
@@ -147,9 +149,144 @@ func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 	return resp
 }
 
+// buildCLIArgs 把 GUI 参数 map 序列化为 CLI []string（纯函数，ADR-173 A2 可测核心）
+//
+// 路径选择：
+//   - specs 非空（命令已登记 ParamSpec）：按规格声明序输出已知键；
+//     AllowEmpty=true 时显式空值（空串/0/false）以 flag 可接受形态产出
+//     （--key= / --key 0 / --key=false），实现「未传 vs 传了空值」可区分；
+//     AllowEmpty=false 维持「空值=未传」现状语义；规格外键与类型不符键：
+//     告警 + legacy 规则尾部追加，不静默丢参（渐进期保行为等价，后续波可收紧为显式拒绝）。
+//   - specs 为空（未登记）：legacy 规则——空串/0/false 丢弃（与 flag 默认一致）。
+//
+// filesRoot 为全局参数，由调用方先行处理，不进入规格。
+// 返回值第二项为告警列表（统一由调用方打印，格式 [WARN] ExecuteCLI: ...）。
+func buildCLIArgs(command string, base []string, args map[string]interface{}, specs []ParamSpecDTO) ([]string, []string) {
+	if len(specs) == 0 {
+		return buildLegacyArgs(base, args)
+	}
+
+	var warnings []string
+	known := make(map[string]bool, len(specs))
+	for _, spec := range specs {
+		known[spec.Key] = true
+		v, present := args[spec.Key]
+		if !present {
+			continue
+		}
+		switch spec.Type {
+		case "string":
+			s, ok := v.(string)
+			if !ok {
+				warnings = append(warnings, fmt.Sprintf("参数 --%s 期望 string，实际 %T（已跳过）", spec.Key, v))
+				continue
+			}
+			if s != "" {
+				base = append(base, "--"+spec.Key, s)
+			} else if spec.AllowEmpty {
+				// 显式空串：--key=（flag 空串形态）
+				base = append(base, "--"+spec.Key+"=")
+			}
+		case "number":
+			f, ok := v.(float64)
+			if !ok {
+				warnings = append(warnings, fmt.Sprintf("参数 --%s 期望 number，实际 %T（已跳过）", spec.Key, v))
+				continue
+			}
+			if f != 0 {
+				base = append(base, "--"+spec.Key, formatCLINumber(f))
+			} else if spec.AllowEmpty {
+				// 显式 0：--key 0
+				base = append(base, "--"+spec.Key, "0")
+			}
+		case "bool":
+			b, ok := v.(bool)
+			if !ok {
+				warnings = append(warnings, fmt.Sprintf("参数 --%s 期望 bool，实际 %T（已跳过）", spec.Key, v))
+				continue
+			}
+			if b {
+				base = append(base, "--"+spec.Key)
+			} else if spec.AllowEmpty {
+				// 显式 false：--key=false（flag bool 可解析形态）
+				base = append(base, "--"+spec.Key+"=false")
+			}
+		default:
+			warnings = append(warnings, fmt.Sprintf("规格类型 %q 未知（key=%s，已跳过）", spec.Type, spec.Key))
+		}
+	}
+
+	// 规格外键（含拼写错误）：告警 + legacy 规则尾部追加——渐进期不丢参
+	var unknown []string
+	for k := range args {
+		if k == "filesRoot" || known[k] {
+			continue
+		}
+		unknown = append(unknown, k)
+	}
+	if len(unknown) > 0 {
+		sort.Strings(unknown) // 未知键是异常路径，排序保证输出稳定可测
+		for _, k := range unknown {
+			warnings = append(warnings, fmt.Sprintf("参数 --%s 不在命令 [%s] 的 ParamSpec 规格内，按 legacy 规则追加", k, command))
+			base = appendLegacyKey(base, k, args[k], &warnings)
+		}
+	}
+	return base, warnings
+}
+
+// buildLegacyArgs ADR-173 前的历史序列化规则（未登记规格命令的降级路径）：
+// 空串/0/false 丢弃（与 flag 默认值一致，语义无损）；仅 true 产出 bool 开关；
+// 键排序输出——历史实现 map 遍历无序，排序是纯增益（行为超集，无回归）。
+func buildLegacyArgs(base []string, args map[string]interface{}) ([]string, []string) {
+	var warnings []string
+	keys := make([]string, 0, len(args))
+	for k := range args {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if k == "filesRoot" {
+			continue
+		}
+		base = appendLegacyKey(base, k, args[k], &warnings)
+	}
+	return base, warnings
+}
+
+// appendLegacyKey 按 legacy 规则序列化单个键（规格路径与 legacy 路径共用）
+func appendLegacyKey(base []string, k string, v interface{}, warnings *[]string) []string {
+	switch val := v.(type) {
+	case string:
+		if val != "" {
+			return append(base, "--"+k, val)
+		}
+	case float64:
+		if val != 0 {
+			return append(base, "--"+k, formatCLINumber(val))
+		}
+	case bool:
+		if val {
+			return append(base, "--"+k)
+		}
+	default:
+		// 不支持的类型（nil, int, map 等）：告警防静默丢参
+		*warnings = append(*warnings, fmt.Sprintf("跳过不支持的参数类型 %T（key=%s）", v, k))
+	}
+	return base
+}
+
+// formatCLINumber JSON 数值恒 float64：整数转 %d 防精度漂移，非整数 %g
+func formatCLINumber(f float64) string {
+	if f == float64(int64(f)) {
+		return fmt.Sprintf("%d", int64(f))
+	}
+	return fmt.Sprintf("%g", f)
+}
+
 // isValidJsonResponse 判断字符串是否为含 status 字段的合法 JSON 响应
 // 用于子进程异常退出时区分「完整 JSON 错误文档」与「部分/非 JSON 输出」
 func isValidJsonResponse(s string) bool {
+
 	var m map[string]interface{}
 	if err := json.Unmarshal([]byte(s), &m); err != nil {
 		return false

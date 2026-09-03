@@ -8,5 +8,7 @@ export {
 
 export type {
     CachedTextureResult,
+    CommandSpecDTO,
+    ParamSpecDTO,
     ReadFileMeta
 } from "./models.js";

@@ -21,6 +21,33 @@ export interface CachedTextureResult {
     "hash": string;
 }
 
+export interface CommandSpecDTO {
+    "Name": string;
+    "Params": ParamSpecDTO[] | null;
+}
+
+/**
+ * ParamSpecDTO / CommandSpecDTO 是 go/cli ParamSpec/CommandSpec 的 app 侧镜像：
+ * internal/app 不依赖 go/cli（ADR-145 架构：两侧互不 import，main 装配），
+ * 字段名与 go/cli 对齐，漂移由 main.go 转换函数编译期拦截。
+ */
+export interface ParamSpecDTO {
+    /**
+     * flag 键名（不含 -- 前缀）
+     */
+    "Key": string;
+
+    /**
+     * "string" / "number" / "bool"
+     */
+    "Type": string;
+
+    /**
+     * true=显式空值（空串/0/false）允许跨桥
+     */
+    "AllowEmpty": boolean;
+}
+
 /**
  * ReadFileMeta 是 ReadFileBytesBatchWithMeta 的单个文件元信息。
  */

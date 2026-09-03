@@ -251,6 +251,175 @@ func TestMakeJsonResponse(t *testing.T) {
 	})
 }
 
+// ===== ADR-173 buildCLIArgs 序列化测试 =====
+
+var searchSpec = []ParamSpecDTO{
+	{Key: "keyword", Type: "string"},
+	{Key: "min-bones", Type: "number"},
+	{Key: "max-tex", Type: "number"},
+	{Key: "verbose", Type: "bool"},
+}
+
+// TestBuildCLIArgs_OrderedBySpec 规格路径按声明序输出（消除 map 无序）
+func TestBuildCLIArgs_OrderedBySpec(t *testing.T) {
+	got, warns := buildCLIArgs("search", []string{"--files-root", "/r"}, map[string]interface{}{
+		"verbose":   true,
+		"keyword":   "steve",
+		"max-tex":   float64(512),
+		"min-bones": float64(5),
+	}, searchSpec)
+	if len(warns) != 0 {
+		t.Errorf("不应有告警: %v", warns)
+	}
+	want := []string{"--files-root", "/r", "--keyword", "steve", "--min-bones", "5", "--max-tex", "512", "--verbose"}
+	assertStringSlicesEqual(t, got, want)
+}
+
+// TestBuildCLIArgs_EmptyValueDropped AllowEmpty=false：空串/0/false 丢弃（legacy 等价语义）
+func TestBuildCLIArgs_EmptyValueDropped(t *testing.T) {
+	got, warns := buildCLIArgs("search", nil, map[string]interface{}{
+		"keyword":   "",
+		"min-bones": float64(0),
+		"verbose":   false,
+	}, searchSpec)
+	if len(warns) != 0 {
+		t.Errorf("空值丢弃不应告警: %v", warns)
+	}
+	if len(got) != 0 {
+		t.Errorf("全部空值应被丢弃, 实际输出 %v", got)
+	}
+}
+
+// TestBuildCLIArgs_AllowEmpty 显式空值仅 AllowEmpty=true 时产出（未传 vs 传空 可区分）
+func TestBuildCLIArgs_AllowEmpty(t *testing.T) {
+	spec := []ParamSpecDTO{
+		{Key: "keyword", Type: "string", AllowEmpty: true},
+		{Key: "iterations", Type: "number", AllowEmpty: true},
+		{Key: "verbose", Type: "bool", AllowEmpty: true},
+	}
+	got, warns := buildCLIArgs("cmd", nil, map[string]interface{}{
+		"keyword":    "",
+		"iterations": float64(0),
+		"verbose":    false,
+	}, spec)
+	if len(warns) != 0 {
+		t.Errorf("不应有告警: %v", warns)
+	}
+	// --keyword=（空串）、--iterations 0、--verbose=false
+	want := []string{"--keyword=", "--iterations", "0", "--verbose=false"}
+	assertStringSlicesEqual(t, got, want)
+}
+
+// TestBuildCLIArgs_UnknownKeyWarned 规格外键：告警 + legacy 尾部追加（渐进期不丢参）
+func TestBuildCLIArgs_UnknownKeyWarned(t *testing.T) {
+	got, warns := buildCLIArgs("search", nil, map[string]interface{}{
+		"keyword": "steve",
+		"typo":    "oops",
+	}, searchSpec)
+	if len(warns) != 1 {
+		t.Fatalf("期望 1 条未知键告警, 实际 %d: %v", len(warns), warns)
+	}
+	want := []string{"--keyword", "steve", "--typo", "oops"}
+	assertStringSlicesEqual(t, got, want)
+}
+
+// TestBuildCLIArgs_TypeMismatchWarned 类型不符：告警跳过
+func TestBuildCLIArgs_TypeMismatchWarned(t *testing.T) {
+	got, warns := buildCLIArgs("search", nil, map[string]interface{}{
+		"keyword": float64(42), // 期望 string
+	}, searchSpec)
+	if len(warns) != 1 {
+		t.Fatalf("期望 1 条类型告警, 实际 %d: %v", len(warns), warns)
+	}
+	if len(got) != 0 {
+		t.Errorf("类型不符参数应跳过, 实际输出 %v", got)
+	}
+}
+
+// TestBuildCLIArgs_LegacyEquivalence 无规格命令走 legacy：空值丢/布尔开关/数字整数化
+func TestBuildCLIArgs_LegacyEquivalence(t *testing.T) {
+	got, warns := buildCLIArgs("verify", []string{"--files-root", "/r"}, map[string]interface{}{
+		"repair":     true,
+		"keyword":    "x",
+		"empty":      "",
+		"zero":       float64(0),
+		"threshold":  float64(2.5),
+		"iterations": float64(3),
+	}, nil)
+	if len(warns) != 0 {
+		t.Errorf("不应有告警: %v", warns)
+	}
+	// legacy 键按字典序输出（历史 map 无序的确定性超集）
+	want := []string{"--files-root", "/r", "--iterations", "3", "--keyword", "x", "--repair", "--threshold", "2.5"}
+	assertStringSlicesEqual(t, got, want)
+}
+
+// TestBuildCLIArgs_UnsupportedTypeWarned legacy 不支持类型：告警不产出
+func TestBuildCLIArgs_UnsupportedTypeWarned(t *testing.T) {
+	got, warns := buildCLIArgs("cmd", nil, map[string]interface{}{
+		"list": []string{"a"},
+	}, nil)
+	if len(warns) != 1 {
+		t.Fatalf("期望 1 条类型告警, 实际 %d: %v", len(warns), warns)
+	}
+	if len(got) != 0 {
+		t.Errorf("不支持类型应跳过, 实际输出 %v", got)
+	}
+}
+
+// TestBuildCLIArgs_FilesRootExcluded filesRoot 不入规格路径（全局参数由调用方处理）
+func TestBuildCLIArgs_FilesRootExcluded(t *testing.T) {
+	got, warns := buildCLIArgs("search", nil, map[string]interface{}{
+		"filesRoot": "/custom",
+		"keyword":   "steve",
+	}, searchSpec)
+	if len(warns) != 0 {
+		t.Errorf("filesRoot 不应告警: %v", warns)
+	}
+	want := []string{"--keyword", "steve"}
+	assertStringSlicesEqual(t, got, want)
+}
+
+func assertStringSlicesEqual(t *testing.T, got, want []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("长度不匹配:\n  got:  %v\n  want: %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("元素 [%d] 不匹配:\n  got:  %v\n  want: %v", i, got, want)
+		}
+	}
+}
+
+// TestExecuteCLI_WithSpecsInjected 模拟 main.go 双注入（名单 + ADR-173 规格）：
+// 登记命令走规格序列化路径后 ExecuteCLI 仍正常响应（非 not_supported），
+// 未登记命令（cache-status）不受规格注入影响
+func TestExecuteCLI_WithSpecsInjected(t *testing.T) {
+	a := NewApp()
+	a.SetAllowedCommands(cliBridgeTestCommands)
+	a.SetAllowedCommandSpecs([]CommandSpecDTO{
+		{Name: "search", Params: searchSpec},
+	})
+
+	for _, tc := range []struct {
+		cmd  string
+		args map[string]interface{}
+	}{
+		{"search", map[string]interface{}{"keyword": "steve", "format": "json"}},
+		{"cache-status", map[string]interface{}{}},
+	} {
+		result := a.ExecuteCLI(tc.cmd, tc.args)
+		var resp map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &resp); err != nil {
+			t.Fatalf("命令 %s JSON 解析失败: %v", tc.cmd, err)
+		}
+		if resp["status"] == "not_supported" {
+			t.Errorf("命令 %s 不应 not_supported", tc.cmd)
+		}
+	}
+}
+
 // TestAllowedCommandsCount 测试注入的命令列表与注册表保持一致（SetAllowedCommands 注入后）
 func TestAllowedCommandsCount(t *testing.T) {
 	// 注入后的可用命令列表（来自 cliBridgeTestCommands，对应 go/cli 注册表）

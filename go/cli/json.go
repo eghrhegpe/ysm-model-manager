@@ -115,3 +115,21 @@ func GetAllowedCommands() []string {
 	sort.Strings(names)
 	return names
 }
+
+// CommandSpec 命令 + 参数规格（ADR-173 A1：供 main.go 装配注入 app 桥接层）
+// 未登记规格的命令 Params 为 nil，app 侧对其走 legacy 降级序列化
+type CommandSpec struct {
+	Name   string
+	Params []ParamSpec
+}
+
+// GetAllowedCommandSpecs 返回全部注册命令的名称 + 参数规格（声明序=桥序列化序）
+// 与 GetAllowedCommands 同源派生，杜绝「名单与规格漂移」
+func GetAllowedCommandSpecs() []CommandSpec {
+	names := GetAllowedCommands()
+	specs := make([]CommandSpec, 0, len(names))
+	for _, name := range names {
+		specs = append(specs, CommandSpec{Name: name, Params: cliCommands[name].Params})
+	}
+	return specs
+}

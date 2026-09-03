@@ -123,13 +123,13 @@ Rust 扫描路径必须与 Go scanner 单点口径一致（code review 反复核
 |--------|----------|---------|
 | `.json` 条目门禁 | 仅 `ysm.json`（`is_model_json_name`，**含 TrimSpace** 对齐） | `types.IsYsmEntryJSON`（ADR-038 D2：.json 仅放行 ysm.json；legacy 几何是 FileInventory 分类非扫描条目） |
 | 禁用后缀剥离 | `strip_disable_suffix`（.ban/.disabled，大小写不敏感） | `types.StripDisableSuffix`（.disabled 在前 .ban 兼容） |
-| 目录级禁用 | `scan_fast` 跳过 `.ban`+`.disabled` 目录；`scan_index` 仅测试引用、下钻 `.ban`/`.disabled`（见下「未接线实验路径」） | `scanner.go` `IsDisableSuffix` 无条件 SkipDir（无 index 模式） |
+| 目录级禁用 | `scan_fast` 跳过 `.ban`+`.disabled` 目录；`scan_index_no_hash` 仅测试引用、下钻 `.ban`/`.disabled`（见下「未接线实验路径」） | `scanner.go` `IsDisableSuffix` 无条件 SkipDir（无 index 模式） |
 | 条目名 | ysm.json → 父目录名 | `scanner.go` 同口径重命名 |
 | 类型字段 | `ModelEntry.rtype`（registry 首声明优先） | `e.Type`（`SupportedExtsForSubtype` 白名单） |
 
 > **隔离后缀序分歧（无语义差异）**：Go 常量序 `.disabled`→`.ban`，Rust `.ban` 优先；两后缀互不为后缀，剥离结果逐字一致。
 
-> **未接线实验路径（非被依赖契约）**：目录级 `.ban`/`.disabled` 下钻仅存在于 Rust `scan_index`，且**无生产消费方**——rust-wails-bridge 两个生产入口（`ysm_scan`→`scan_fast` / `ysm_scan_manifest`→Go 预枚举）都不下钻禁用目录，`scan_index` 只被 `tests.rs` 引用。生产路径遵 Go 口径恒跳禁用目录。若未来「新桌面壳列出并再启用禁用模型」立项，应在**发现权单点**定归属：发现权留 Go（manifest 路径本来就是 Go 扫）则删孤儿 `scan_index` 在 Go 实现，勿双源共存。
+> **未接线实验路径（非被依赖契约）**：目录级 `.ban`/`.disabled` 下钻仅存在于 Rust `scan_index_no_hash`，且**无生产消费方**——rust-wails-bridge 两个生产入口（`ysm_scan`→`scan_fast` / `ysm_scan_manifest`→Go 预枚举）都不下钻禁用目录，`scan_index_no_hash` 只被 `tests.rs` 引用。生产路径遵 Go 口径恒跳禁用目录。若未来「新桌面壳列出并再启用禁用模型」立项，应在**发现权单点**定归属：发现权留 Go（manifest 路径本来就是 Go 扫）则删孤儿 `scan_index_no_hash` 在 Go 实现，勿双源共存。
 
 - **CI 覆盖**（`.github/workflows/test.yml`）：cargo test（rust-core + rust-wails-bridge）+ 构建桥 DLL + `go test -tags rust_backend`——rust_backend 路径不再零覆盖
 - **测试**：`rust-core/src/tests.rs` 的 `scan_preserves_go_filter_contract` 锁条目门禁（main/info.json 不入条目 + rtype 传播）

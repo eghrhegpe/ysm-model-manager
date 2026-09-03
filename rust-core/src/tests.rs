@@ -99,7 +99,7 @@ fn index_scan_discovers_banned_directories_without_changing_compat_scan() {
     fs::create_dir_all(&banned_dir).unwrap();
     fs::write(banned_dir.join("ysm.json"), b"{}").unwrap();
     assert!(scan_fast(root.path(), &policy()).entries.is_empty());
-    let indexed = scan_index(root.path(), &policy());
+    let indexed = scan_index_no_hash(root.path(), &policy());
     assert!(indexed.errors.is_empty(), "{:?}", indexed.errors);
     assert_eq!(indexed.entries.len(), 1);
     assert!(indexed.entries[0].path.starts_with(&banned_dir));
@@ -239,7 +239,7 @@ fn parity_is_disable_suffix() {
 #[test]
 fn disabled_dir_skipped_in_fast_but_discovered_in_index() {
     // scan_fast 对齐 Go scanner（.disabled 目录整组 SkipDir，ADR-038 D3.7）；
-    // scan_index 故意下钻以保禁用目录模型可再启用（与 .ban 对称，见 scan.rs doc）。
+    // scan_index_no_hash 故意下钻以保禁用目录模型可再启用（与 .ban 对称，见 scan.rs doc）。
     let root = TempRoot::new("disabled-dir");
     let dis_dir = root.path().join("ModelB.disabled");
     fs::create_dir_all(&dis_dir).unwrap();
@@ -249,7 +249,7 @@ fn disabled_dir_skipped_in_fast_but_discovered_in_index() {
     assert!(scan_fast(root.path(), &policy()).entries.is_empty());
 
     // index 模式整组下钻：ysm.json（重命名为父目录名）与 extra.ysm 都成为条目
-    let indexed = scan_index(root.path(), &policy());
+    let indexed = scan_index_no_hash(root.path(), &policy());
     assert!(indexed.errors.is_empty(), "{:?}", indexed.errors);
     assert_eq!(indexed.entries.len(), 2);
     assert!(

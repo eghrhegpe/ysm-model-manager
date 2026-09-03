@@ -27,7 +27,7 @@ pub fn scan_fast(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
 /// **预留接口**：当前无生产消费方（rust-wails-bridge 的两个生产入口均走 `scan_fast` 或
 /// `scan_impl_manifest`，不下钻禁用目录）。本函数仅被 `tests.rs` 引用。若未来「新桌面壳列出
 /// 并再启用禁用模型」立项，此处可直接复用；在此之前视为孤儿代码，行为变更需经代码评审。
-pub fn scan_index(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
+pub fn scan_index_no_hash(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
     scan_impl(root.as_ref(), policy, true)
 }
 

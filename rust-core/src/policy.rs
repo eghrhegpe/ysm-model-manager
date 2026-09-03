@@ -89,13 +89,13 @@ impl ScanPolicy {
 
     /// 按扩展名查资源类型 ID（如 ".ysm" → "ysm"）。未知扩展名返回空串。
     ///
-    /// **生命周期**：返回值借用 `&self`（HashMap 内部数据），调用方不得将结果
-    /// 存入持久结构；需持有 String 时调用 `.to_string()`。
-    pub fn rtype_for_ext(&self, ext: &str) -> &str {
+    /// 返回值是 `String`（克隆 HashMap 内部数据），调用方无需担心生命周期——
+    /// 可直接存入结构体字段或传递到异步边界。若性能敏感（热路径），可缓存结果。
+    pub fn rtype_for_ext(&self, ext: &str) -> String {
         self.ext_to_rtype
             .get(&normalize_ext(ext))
-            .map(String::as_str)
-            .unwrap_or("")
+            .cloned()
+            .unwrap_or_default()
     }
 
     pub(crate) fn is_mmd_subdir(&self, name: &str) -> bool {

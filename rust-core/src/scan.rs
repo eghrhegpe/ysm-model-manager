@@ -79,14 +79,8 @@ fn scan_impl(root: &Path, policy: &ScanPolicy, include_banned_dirs: bool) -> Sca
                 let subdir = first_relative_component(&root, &path)
                     .filter(|name| policy.is_mmd_subdir(name))
                     .unwrap_or_default();
-                let rtype = policy.rtype_for_ext(&ext).to_string();
-                candidates.push(Candidate {
-                    name: display_name,
-                    path,
-                    ext,
-                    subdir,
-                    rtype,
-                });
+                let rtype = policy.rtype_for_ext(&ext);
+                candidates.push(build_candidate(path, display_name, ext, subdir, rtype));
             }
             Err(err) => errors.push(ScanError {
                 path: err.path().unwrap_or(root.as_path()).to_path_buf(),
@@ -114,6 +108,20 @@ pub struct Candidate {
     pub ext: String,
     pub subdir: String,
     pub rtype: String,
+}
+
+/// 从路径和元数据构建 Candidate。
+///
+/// scan_impl（jwalk 路径）和 scan_impl_manifest（Go 预枚举路径）共用此函数，
+/// 避免字段初始化的两处重复——未来若 Candidate 加字段，只需改一处。
+fn build_candidate(
+    path: PathBuf,
+    name: String,
+    ext: String,
+    subdir: String,
+    rtype: String,
+) -> Candidate {
+    Candidate { name, path, ext, subdir, rtype }
 }
 
 /// Manifest-driven scan: skip filesystem discovery (jwalk) entirely and resolve metadata

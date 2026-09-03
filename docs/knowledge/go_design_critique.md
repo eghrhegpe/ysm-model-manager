@@ -106,8 +106,9 @@ pitfalls:
   - 警惕把「校验和不重试、截断可重试」这类有意的语义不对称「规范化」成对称——会消耗 GitHub API 配额
 quick_groups:
   - Go 后端评审与重构
-  - Wails 绑定治理
   - 可读性与命名治理
+  - Wails 绑定治理
+  - 隐式协议显式化
 quick_intents:
   - Go 后端设计评审 / 锐评
   - 找出难懂的 Go 函数

@@ -71,6 +71,8 @@ invariant_anchors:
 quick_groups:
   - 后端桥接与平台路由
   - 网页版与 IndexedDB
+  - 平台检测与模式路由
+  - IndexedDB 模型库
 quick_intents:
   - 调用 Go Binding / getApp 获取后端
   - 网页版路由 / browser adapter

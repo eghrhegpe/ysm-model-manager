@@ -25,6 +25,7 @@ auto_fields:
     - applyGroundSurfaceStructural
     - applyPerfPreset
     - applyRotationIfNonIdentity
+    - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - assembleBoneSelectInfo
@@ -624,7 +625,8 @@ quick_groups:
   - 3D 渲染与预览核心
   - 多模型同框与场景管理
   - 骨骼/几何渲染层
-  - 纹理加载与 spec 构建
+  - 相机与漫游控制
+  - 纹理缓存与渲染性能调优
 quick_intents:
   - 挂载/切换 3D 预览（mount3D / switchPreview）
   - 多模型同框叠加（keepInScene=true）

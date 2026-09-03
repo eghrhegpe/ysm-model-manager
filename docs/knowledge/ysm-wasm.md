@@ -15,6 +15,7 @@ auto_fields:
     - _getWasmBinaryMt
     - classifyWasmError
     - collectOutputFiles
+    - createLazyModule
     - DecodeYSMData
     - decodeYsmFile
     - decodeYsmFileFromMemory
@@ -27,6 +28,8 @@ auto_fields:
     - initYSMParser
     - initYsmParserInWorker
     - initYsmParserInWorkerMt
+    - installYsmModule
+    - LazyModule
     - patchGlueHeapExport
     - resolveWasmFactory
     - SetNodeJS
@@ -35,6 +38,7 @@ auto_fields:
     - Write
     - writeHeapBytes
     - YsmDecodedFile
+    - YsmModuleConfig
   quick_groups:
     - 3D 预览与模型追加
   quick_intents:

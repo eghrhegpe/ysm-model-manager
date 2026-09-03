@@ -43,4 +43,5 @@ index.md 由 pre-commit 钩子自动 gen+stage，无需手动 `gen-knowledge-ind
 - `source_files` 必须真实存在（[ERROR]）；格式非法（反斜杠/绝对路径/`..` 逃逸）[ERROR]；指向生成物（bindings/dist/node_modules）或测试文件 [WARN]
 - `kind` = 文件名 kebab-case；`name` = H1 标题
 - `perf` 标签必须在 PERF_TAGS 词表内；扩展新维度只改词表常量
+- `quick_groups` 与 `quick_intents` 按位置 1:1 配对：「1 个分组 + 多条意图」是常态（gen-routes-quick 全部并入该组、不鸣笛）；分组数 >1 时须与意图数等长，避免多余意图并入末组造成错位（gen-routes-quick 对多分组不均打 WARN）
 - `index.md` 等生成物禁止手改；卡片正文为人工维护内容

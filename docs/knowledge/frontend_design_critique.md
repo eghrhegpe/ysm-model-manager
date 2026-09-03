@@ -35,24 +35,26 @@ auto_fields:
     - closeDlg
     - createAdaptiveRenderBudget
     - createAutoDanceController
+    - createDedupSession
     - createGazeController
     - createResolveModeBridge
     - createWorkerBridge
     - CreateWorkerBridgeOpts
     - createWorkerParser
+    - DedupConfigShape
+    - DedupSession
     - Disposable
     - fillRoles
     - fmtMB
     - frRoleRowStyle
     - get
-    - getDedupConfig
+    - getDefaultKeepIdx
     - getFrameIntervalMs
     - getLastModelPath
     - getMaxFps
     - getMaxPixelRatio
     - has
     - initAdvancedGrid
-    - initDedupConfig
     - initDiagnosticsPage
     - initGithubPage
     - initInstancesPage
@@ -88,7 +90,6 @@ auto_fields:
     - register
     - registerDlg
     - rememberModelPath
-    - resetDedupConfig
     - ResolveModeBridge
     - ResolveModeResponse
     - roleBaseName
@@ -105,7 +106,6 @@ auto_fields:
     - showScenePreview
     - showStagePreview
     - showVrmMeta
-    - startDedup
     - trapFocus
     - uiComponentsCss
     - uiComponentsStyleSheet
@@ -149,7 +149,6 @@ pitfalls:
   - 性能预算不要用「数量上限」冒充（MAX_MODELS=8 是计数不是预算）——要查 draw call/三角面/纹理字节
 quick_groups:
   - 审计与质量门禁
-  - 重构与技术债评估
 quick_intents:
   - 前端设计评审 / 锐评
   - 主题系统审查（token 失守）

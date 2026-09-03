@@ -20,6 +20,7 @@ auto_fields:
     - _resetSingletons
     - App.GetVoxelDataInContainer
     - App.ListContainerEntries
+    - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - BasisEncoderLike

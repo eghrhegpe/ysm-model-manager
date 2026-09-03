@@ -85,6 +85,7 @@ quick_groups:
   - 异步等待策略与 flaky 治理
   - 事件模拟（fire 系列）
   - 组件挂载/卸载编排
+  - 异步等待进阶
 quick_intents:
   - 按 testid 查询/匹配 DOM 元素
   - 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定

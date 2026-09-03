@@ -111,7 +111,7 @@
 | CLI 搜索、命令行搜索、search 命令 | [CLI 搜索命令 search](./go-cli-search.md) | CLI 搜索必须复用 go/cli 的 SearchModels 后端，禁止 CLI 层手写搜索逻辑 | - |
 | filepath.WalkDir 路径安全 | [去重 go/dedup](./go-dedup.md) | - | - |
 | Geometry 存档、基岩版 bedrock | [Geometry 存档 go/geometry](./go-geometry.md) | Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip | ADR-068 |
-| initDiagnostics、startDedup | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
+| initDiagnostics、createDedupSession | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
 | IsRecycleDir 守卫 | [去重 go/dedup](./go-dedup.md) | - | - |
 | last-wins / priority 裁决 | [分类路由与回归护栏](./classify-routing.md) | - | ADR-093 |
 | oldest 资历排行 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
@@ -273,35 +273,10 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 前端代码审计 / 质量评审 / 技术债评估 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
-| 前端设计评审 / 锐评 | [前端设计锐评](./frontend_design_critique.md) | 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（rgba(124,131,255) 全仓 19 处待收编） | - |
-
-## 🎯 重构与技术债评估
-
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
-|----------|--------|----------|----------|
 | 3D 性能与内存预算审查 | [前端设计锐评](./frontend_design_critique.md) | 帧循环内禁止 new 对象分配，prealloc 复用是 3D 性能铁律（perception 是唯一站规则外的子系统） | - |
+| 前端设计评审 / 锐评 | [前端设计锐评](./frontend_design_critique.md) | 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（rgba(124,131,255) 全仓 19 处待收编） | - |
 | 页面生命周期审查（整 DOM 重建） | [前端设计锐评](./frontend_design_critique.md) | - | - |
 | 主题系统审查（token 失守） | [前端设计锐评](./frontend_design_critique.md) | 页面切换必须 tab-panel 常驻 + active 切换，禁止整 DOM innerHTML 重建 | - |
-| XSS 风险排查 / innerHTML 注入点核查 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
-
-## 🎯 XSS 与 DOM 安全
-
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
-|----------|--------|----------|----------|
-| 重构前影响面评估 / 拆分方案参考 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
-
-## 🎯 Worker/桥接架构审计
-
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
-|----------|--------|----------|----------|
-| 审核红线 / 治理规范符合性 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
-
-## 🎯 测试覆盖缺口盘点
-
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
-|----------|--------|----------|----------|
-| 测试覆盖缺口定位 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
 
 ## 🎯 Go 后端评审与重构
 
@@ -309,18 +284,23 @@
 |----------|--------|----------|----------|
 | Go 后端设计评审 / 锐评 | [Go 后端设计锐评](./go_design_critique.md) | 能显式化的不要靠注释说明，能拆分的不要堆在一个函数里（probeNbtDepth 四层闭包 / resolveBedrockGeometryFallback 四层策略 / buildSubModels 7 参数） | - |
 
-## 🎯 Wails 绑定治理
+## 🎯 可读性与命名治理
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 找出难懂的 Go 函数 | [Go 后端设计锐评](./go_design_critique.md) | 命名要向行为诚实：DetectZipType 实际处理 7z 应叫 DetectContainerType；叫 fallback 的实际是 4 层策略链 | - |
 
-## 🎯 可读性与命名治理
+## 🎯 Wails 绑定治理
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| Wails 绑定瘦身 / 清理 Deprecated 绑定 | [Go 后端设计锐评](./go_design_critique.md) | 全仓 6 处手写 LimitReader+1 探测应统一收编 fsutil.ReadLimitedEntry，撤回 ADR-044 的例外说明 | - |
+
+## 🎯 隐式协议显式化
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 隐式协议显式化 | [Go 后端设计锐评](./go_design_critique.md) | - | - |
-| Wails 绑定瘦身 / 清理 Deprecated 绑定 | [Go 后端设计锐评](./go_design_critique.md) | 全仓 6 处手写 LimitReader+1 探测应统一收编 fsutil.ReadLimitedEntry，撤回 ADR-044 的例外说明 | - |
 
 ## 🎯 契约对拍
 
@@ -375,12 +355,17 @@
 |----------|--------|----------|----------|
 | 骨骼拾取与选中（pickBone / setBoneVisible） | [3D 预览渲染 model3d](./model3d.md) | dispose() 必须遍历子对象调用 geometry?.dispose() / material?.dispose() / texture?.dispose()，Object3D.remove() 不释放 WebGL 资源 | ADR-129 |
 
-## 🎯 纹理加载与 spec 构建
+## 🎯 相机与漫游控制
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 自由相机漫游（WASD + 空格/Shift 升降） | [3D 预览渲染 model3d](./model3d.md) | 100MB 阈值是网页版唯一防线，低端设备（4GB RAM）峰值内存可能触顶 OOM | ADR-129 |
+
+## 🎯 纹理缓存与渲染性能调优
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 3D 截图 / 纹理预加载缓存 / 渲染性能调优 | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
-| 自由相机漫游（WASD + 空格/Shift 升降） | [3D 预览渲染 model3d](./model3d.md) | 100MB 阈值是网页版唯一防线，低端设备（4GB RAM）峰值内存可能触顶 OOM | ADR-129 |
 
 ## 🎯 提交与钩子
 
@@ -404,11 +389,16 @@
 |----------|--------|----------|----------|
 | 冻结当前 Go 重复债务到 baseline（治理后收紧） | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
 
-## 🎯 搬迁漂移研判与豁免决策
+## 🎯 重复对详情定位
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 查看重复对的详细位置（行号 + 片段） | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
+
+## 🎯 搬迁漂移研判与豁免决策
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
 | 判定「新增重复对」是真实新增还是文件搬迁/拆分 | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
 
 ## 🎯 脚本治理与文档一致性
@@ -416,11 +406,6 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
-
-## 🎯 门禁守护
-
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
-|----------|--------|----------|----------|
 | 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | - | - |
 | 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
 | CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | - | - |
@@ -448,6 +433,11 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 挂载/卸载自定义元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
+
+## 🎯 异步等待进阶
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
 | sleep 替换为 waitFor / 负向定时器窗口断言 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 
 ## 🎯 后端桥接与平台路由
@@ -460,27 +450,42 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 检测平台类型 / 网页模式 | [Wails 桥接 app.ts](./wails-bridge.md) | Binding 函数名写错穿透到运行时 undefined（Mock bridge 形态与生成模块不同，类型造假风险） | ADR-049 |
 | 网页版路由 / browser adapter | [Wails 桥接 app.ts](./wails-bridge.md) | 改 Go 文件后必须 wails3 build + 重启，纯 dev 模式看不到新 Binding | ADR-049 |
-| IndexedDB 模型库（browser 模式） | [Wails 桥接 app.ts](./wails-bridge.md) | window.go 空对象 {} 会被缓存为 _App（P3 修复前），导致缺失方法静默穿透整个会话 | ADR-049 |
 
-## 🎯 预览渲染与反推
+## 🎯 平台检测与模式路由
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 骨骼错位 / 模型错位排查 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
+| 检测平台类型 / 网页模式 | [Wails 桥接 app.ts](./wails-bridge.md) | Binding 函数名写错穿透到运行时 undefined（Mock bridge 形态与生成模块不同，类型造假风险） | ADR-049 |
+
+## 🎯 IndexedDB 模型库
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| IndexedDB 模型库（browser 模式） | [Wails 桥接 app.ts](./wails-bridge.md) | window.go 空对象 {} 会被缓存为 _App（P3 修复前），导致缺失方法静默穿透整个会话 | ADR-049 |
 
 ## 🎯 骨骼与几何校正
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| UV 对不上 / 贴图错位定位 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
+| 骨骼错位 / 模型错位排查 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
 
 ## 🎯 UV / 贴图定位
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
+| UV 对不上 / 贴图错位定位 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
+
+## 🎯 预览渲染与反推
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
 | 烘焙数据反推原理理解 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
+
+## 🎯 WASM 解析器维护
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
 | WASM 解析器版本更新 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
 
 ## 🚨 高频陷阱速查
@@ -553,12 +558,6 @@
 | safeDispose 静默吞错会让 dispose 抛错零信号——至少 console.warn 留痕 | - | - |
 | 帧循环内禁止 new THREE.Quaternion/Euler/Vector3——prealloc 闭包 scratch 复用（mount-preview-core 的 R1-P1-1 模式） | - | - |
 | 性能预算不要用冒充（MAX_MODELS=8 是计数不是预算）——要查 draw call/三角面/纹理字节 | `数量上限` | - |
-| 修改 innerHTML 注入前必须 esc()；静态注册表值（app-nav gid/label）同样要走 esc()，不可因"来源可控"跳过 | - | - |
-| 骨骼名/用户路径等外部数据写入 DOM 走 textContent/createTextNode，不要 esc() 后拼进 innerHTML | - | - |
-| 模块级 let 可变全局（_dedupBusy / _dedupStrategy）必须有 reset 路径或注释豁免理由，否则并发测试会串扰 | - | - |
-| catch 静默仅允许在 binding 装配层；其余层至少 warn 留痕 | - | - |
-| Wails 桥只经 getApp()/bindings，禁止业务模块直 import @wailsio/runtime | - | - |
-| 资源归类一律由 Go 扫描 + resource_types.json 派生，前端只读不重算 | - | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
 | 隐式协议（epoch 代际 / *Locked 变体 / \x00 缓存键 / 三态 bool 返回）靠注释续命，编译器零保护——新增字段/分支时静默爆炸 | - | - |

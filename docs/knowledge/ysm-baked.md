@@ -32,9 +32,10 @@ pitfalls:
   - UV 解析多种形态：`parseBedrockGeometryFromJSON` 兼容数组 `[x,y]`、对象 `{uv,uv_size}`、JSON 字符串 faceUV、兜底 `[0,0]`，贴图错位优先排查此处而非几何本身
   - texture slot 绑定规则：第 i 个模型 → 第 i 个纹理，错位需按此顺序排查
 quick_groups:
-  - 预览渲染与反推
   - 骨骼与几何校正
   - UV / 贴图定位
+  - 预览渲染与反推
+  - WASM 解析器维护
 quick_intents:
   - 骨骼错位 / 模型错位排查
   - UV 对不上 / 贴图错位定位

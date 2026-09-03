@@ -222,7 +222,7 @@
 |------|----|
 | `frontend/src/features/oldest-models.ts` | 57 |
 | `frontend/src/features/recycle-bin.ts` | 186 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 384 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 293 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 273 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
 | `frontend/src/views/app-tree/events.ts` | 156 |
@@ -281,7 +281,7 @@
 |------|----|
 | `frontend/src/features/repo-rtype.ts` | 33 |
 | `frontend/src/views/app-content/init-pages.ts` | 79 |
-| `frontend/src/views/app-content/init-pages.ts` | 255 |
+| `frontend/src/views/app-content/init-pages.ts` | 257 |
 | `frontend/src/views/app-nav/index.ts` | 167 |
 | `frontend/src/views/app-sidebar/index.ts` | 418 |
 | `frontend/src/views/app-sync-manager/index.ts` | 174 |
@@ -328,7 +328,7 @@
 | `frontend/src/features/pack-dnd.ts` | 159 |
 | `frontend/src/features/recycle-bin.ts` | 110 |
 | `frontend/src/features/recycle-bin.ts` | 170 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 434 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
 | `frontend/src/views/app-content/settings/init.ts` | 142 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
@@ -468,7 +468,7 @@
 | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 354 |
 | `frontend/src/views/app-content/index.ts` | 193 |
 | `frontend/src/views/app-content/init-pages.ts` | 168 |
-| `frontend/src/views/app-content/init-pages.ts` | 281 |
+| `frontend/src/views/app-content/init-pages.ts` | 283 |
 | `frontend/src/views/app-content/settings/init.ts` | 48 |
 | `frontend/src/views/app-content/settings/init.ts` | 84 |
 | `frontend/src/views/app-content/settings/init.ts` | 128 |
@@ -615,7 +615,7 @@
 | `frontend/src/features/pack-dnd.ts` | 160 |
 | `frontend/src/features/recycle-bin.ts` | 111 |
 | `frontend/src/features/recycle-bin.ts` | 171 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 436 |
 | `frontend/src/views/app-sidebar/index.ts` | 312 |
 
 **订阅方（on）：**

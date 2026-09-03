@@ -25,6 +25,7 @@ pitfalls:
 quick_groups:
   - 门禁集成与 pre-push 流程
   - baseline 维护与冻结策略
+  - 重复对详情定位
   - 搬迁漂移研判与豁免决策
 quick_intents:
   - 运行 Go 重复门禁 / 检查是否有新增重复对

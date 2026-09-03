@@ -1397,6 +1397,10 @@ export const autoSidebar = [
         "link": "/audit/audit-c1-gpu-lifecycle-2026-09-03"
       },
       {
+        "text": "Track C2 — 锐评遗留闭环（#1/#4/#6/#8/#9/#10）",
+        "link": "/audit/audit-c2-sharp-review-remain-2026-09-03"
+      },
+      {
         "text": "R14 — 全量测试覆盖率审计报告",
         "link": "/audit/audit-r14-coverage-2026-08-18"
       },
@@ -1732,10 +1736,6 @@ export const autoSidebar = [
             "link": "/knowledge/app-tree"
           },
           {
-            "text": "右键菜单系统",
-            "link": "/knowledge/context-menu"
-          },
-          {
             "text": "高级筛选 adv-filter",
             "link": "/knowledge/dialog-adv-filter"
           },
@@ -2028,10 +2028,6 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
-          },
-          {
-            "text": "perf 契约测试临时卡",
-            "link": "/knowledge/zzz-perf-contract-tmp"
           }
         ]
       },
@@ -2078,6 +2074,16 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
+          }
+        ]
+      },
+      {
+        "text": "其他",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "右键菜单系统",
+            "link": "/knowledge/context-menu"
           }
         ]
       }

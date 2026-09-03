@@ -387,6 +387,7 @@ auto_fields:
     - devLog
     - diagnosticsHTML
     - DIR_HANDLERS
+    - DirCtx
     - directImport
     - DirectionalLightParams
     - dirKey
@@ -476,6 +477,7 @@ auto_fields:
     - FetchModelsResult
     - FieldRestorer
     - FILE_HANDLERS
+    - FileCtx
     - fileIcon
     - fileKey
     - fileRowCommon

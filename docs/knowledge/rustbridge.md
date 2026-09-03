@@ -156,6 +156,16 @@ Rust 扫描路径必须与 Go scanner 单点口径一致（code review 反复核
 2. **契约测试**：Go/Rust 双实现语义等价——tests.rs 断言锁定（`scan_preserves_go_filter_contract` 是模板）——**非热路径禁止双源**（同步/解析/索引保持 Go 单点权威，避免漂移）
 3. **不扩散**：Rust 只做并行加速壳——业务逻辑（parseYsmArchive/SyncToggleStatus/索引）不 Rust 化——新增 Rust 模块需三闸 + ADR 决策
 
+## 扫描基线（2026-09-03，`ysm-scan-bench` 实测）
+
+> 用途：以后再评估「扫描要不要优化 / manifest 流水线要不要立项」，直接对照本基线，不重跑考古。
+
+- **样本**：`D:\YSM管理器测试文件夹`（690 文件 → 157 条目，~1.07 GB，93 个可 hash 文件，errors=0）
+- **发现（jwalk + metadata）**：7.5–13.8 ms —— 几乎免费
+- **全量 SHA-256（`--eager-hash`）**：350 ms —— 占总耗时 ~97%
+- **裁决**：发现占耗时可忽略，manifest 流水线（只省发现、省不掉 hash）收益 < 10 ms，**不立项**；`ScanManifest` 维持休眠终态（ADR-120 §3）。立项触发条件见「Rust 化三闸」第 1 闸——需万级文件库实测发现 ≥ 数百 ms 的性能证据。
+- 附注：`rust-core/src/scan.rs` `scan_index_no_hash` 有 dead_code 警告（仅测试引用的实验路径，见「未接线实验路径」节），无害。
+
 ## 相关
 
 - ADR：ADR-115（红线范式——跨类型/跨实现不得绕过单点契约）、ADR-120（manifest 扫描预留接口）、ADR-139（Android 隐含 linux build tag）

@@ -18,7 +18,7 @@ import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { getStateValue, setStateValue } from "../state/preview-state.ts";
 import { getPerfPreset, setPerfPreset, type PerfLevel } from "../state/perf-presets.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
-import type { PreviewMenuCtx } from "./core.ts";
+import type { PreviewMenuCtx } from "./node-types.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */

@@ -7,14 +7,12 @@
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
-import type { PreviewMenuNode } from "./node-types.ts";
-import type { PreviewActionMenuCtx } from "./node-types.ts";
+import type { PreviewMenuNode, PreviewActionMenuCtx, PreviewMenuCtx } from "./node-types.ts";
 import { disposeEnvSubscriptions, buildEnvSchema } from "./env.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { pushInputBlock } from "../../utils/dom/focus-restore.ts";
-import type { CameraControlBridge } from "../adapters/camera-controls.ts";
 import {
   buildCameraSchema,
   buildLightingSchema,
@@ -22,7 +20,6 @@ import {
   buildPostprocessingSchema,
   buildSettingsSchema,
 } from "./settings.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
 import { ensureFabStyles } from "../../utils/dom/fab.ts";
 import { tr } from "../../core/i18n/tr.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
@@ -33,37 +30,10 @@ import { renderAdapterPanelContent, renderMenu } from "./render.ts";
 export { roleBaseName };
 export { renderMenu } from "./render.ts";
 
-/** 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 */
-export interface PreviewMenuCtx {
-  selfMode: boolean;
-  /** 统一能力解析点：按 id 取场景能力实例。mount 层透传 sceneCapabilityRegistry.getById，
-   *  测试注入 fake——收编原 getSkyCap/getGroundCap/getLightCap 三字段，新增能力零 ctx 改动 */
-  getCap: (id: string) => SceneCapability | null;
-  getCamBridge: () => CameraControlBridge;
-  getSiblings: () => string[];
-  getCurrentPath: () => string;
-  /** 当前会话资源类型（如 ysm/EntityPlayer/vrm/resourcepack；空串未知）——类型 tab 点击时判断同类型走 switchTo */
-  getCurrentRtype?: () => string;
-  /** 当前会话子类型（如 EntityPlayer/CustomAnim；空串未知）——传递给 getModelsByType 做扩展名隔离 */
-  getCurrentSubtype?: () => string;
-  /** 按资源类型（+可选子类型）扫描候选模型路径（点击切换模型的类型 tab 时懒加载；缺省回退 siblings） */
-  getModelsByType?: (rtype: string, subtype?: string) => Promise<string[]>;
-  /** 类型 tab 列表（如 ["ysm","EntityPlayer","vrm","resourcepack"]；缺省仅「当前目录」tab） */
-  getTypeTabs?: () => string[];
-  /** 3D 渲染器容器：点击该区域关闭菜单（不再全局点击杀弹窗） */
-  getViewContainer: () => HTMLElement;
-  close: () => void;
-  /** 切换模型（同源复用外壳替换）。返回 Promise 供调用方在完成后局部刷新（如 fillSwitch 列表重渲染）；mount 层透传 handle.switchTo 的 Promise */
-  switchTo: (path: string, options?: { keepInScene?: boolean }) => Promise<void> | void;
-  /** 跨类型跳转（切换模型选中不同类型：关当前 + 开目标，由 app 层 openModel3DFullscreen 提供）。
-   *  第二参透传 siblings，切换后新会话「当前目录」tab 有候选（P1-2） */
-  switchExternal?: (path: string, siblings?: string[], options?: { keepInScene?: boolean }) => Promise<void> | void;
-  /** 卸载已加载角色（mount3D 注入：移除 roots + dispose + 注册表注销 + 相机重算） */
-  unloadModel?: (id: string) => void;
-  /** 动作节点真 ctx：mount3D 注入真实现，适配器动作可 toast/closeAllOverlays */
-  toast: (message: string) => void;
-  closeAllOverlays: () => void;
-}
+// [ADR-169] PreviewMenuCtx 已下沉 node-types.ts（类型叶）——断 core ⇄ env/roles/switch/settings
+// 纯 type 环（子模块原 type import 本文件 ctx，而本文件值 import 它们）。原位 re-export 保公共面，
+// 外部消费者（mount-preview-core / items.test 等）的 import 语句零改动。
+export type { PreviewMenuCtx } from "./node-types.ts";
 
 /** 通用控件渲染器：将 MenuControlDef[] 渲染为 DOM 行，替代手写 fill* 函数 */
 export { renderCapControls };

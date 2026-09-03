@@ -9,7 +9,7 @@ import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import { swallowError } from "../../utils/core/async.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { t, type LocaleKey } from "../../core/i18n/t.ts";
-import type { PreviewMenuCtx } from "./core.ts";
+import type { PreviewMenuCtx } from "./node-types.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */

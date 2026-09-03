@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderEnvLevel, buildEnvSchema } from "./env.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
-import type { PreviewMenuCtx } from "./core.ts";
+import type { PreviewMenuCtx } from "./node-types.ts";
 import type { CameraControlBridge } from "../adapters/camera-controls.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { setSceneCapabilityLookup } from "../state/preview-state.ts";

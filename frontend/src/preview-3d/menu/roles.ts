@@ -13,7 +13,7 @@ import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
 import { sceneRegistry, type ModelEntry } from "../adapters/scene-registry.ts";
 import { renderMenu, renderAdapterPanelContent } from "./render.ts";
 import { fillSwitch } from "./switch.ts";
-import type { PreviewMenuCtx } from "./core.ts";
+import type { PreviewMenuCtx } from "./node-types.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */

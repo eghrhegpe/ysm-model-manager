@@ -7,7 +7,7 @@ import type { EnvironmentCapability } from '../caps/environment-capability.ts';
 import { createHeaderToggle } from '../../ui/ui-header-toggle.ts';
 import type { SlideMenuHandle } from '../../ui/ui-slide-menu.ts';
 import { renderCapControls, formatCapSliderValue } from './cap-controls.ts';
-import type { PreviewMenuCtx } from './core.ts';
+import type { PreviewMenuCtx } from "./node-types.ts"; // [ADR-169] ctx 归位类型叶，断 core ⇄ 本模块纯 type 环
 import { tr } from '../../core/i18n/tr.ts';
 import { previewSnapshot, type PreviewSnapshot } from '../state/preview-state.ts';
 import { ENV_PRESET_LINKAGE, type EnvPresetId } from '../caps/environment-capability.ts';

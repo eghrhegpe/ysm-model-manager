@@ -1736,6 +1736,10 @@ export const autoSidebar = [
             "link": "/knowledge/app-tree"
           },
           {
+            "text": "右键菜单系统",
+            "link": "/knowledge/context-menu"
+          },
+          {
             "text": "高级筛选 adv-filter",
             "link": "/knowledge/dialog-adv-filter"
           },
@@ -2028,6 +2032,10 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
+          },
+          {
+            "text": "perf 契约测试临时卡",
+            "link": "/knowledge/zzz-perf-contract-tmp"
           }
         ]
       },
@@ -2074,16 +2082,6 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
-          }
-        ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "右键菜单系统",
-            "link": "/knowledge/context-menu"
           }
         ]
       }

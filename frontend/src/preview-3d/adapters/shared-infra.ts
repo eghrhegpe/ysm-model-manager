@@ -151,7 +151,8 @@ export function buildSharedInfra(
   // （fps / 分辨率 / Bloom）；cap 缺席的派生路径 setStateValue 静默跳过，无副作用
   applyPerfPreset(getPerfPreset());
   // ADR-085 S3：caps 创建后触发 refreshDock()，修复 litematic/pack 的 environment 项时序缺失
-  // （菜单先于 caps 挂载，挂载时 requiresEnvironment 被过滤；此处重渲染补回）
+  // （菜单先于 caps 挂载，挂载时 env.skyGroundCap 谓词为 false 被过滤；此处 lookup 已注入、
+  // 谓词重求值为 true，重渲染补回——requiresEnvironment 谓词化后同一机制原样生效）
   menuHandle.refreshDock();
   // 复用单例 controls（多模型共用同一套相机控制）
   if (!_singletonControls) {

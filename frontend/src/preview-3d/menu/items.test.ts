@@ -16,7 +16,7 @@ import { mmdMenuItems, type MmdMenuItemsOpts } from "../adapters/mmd-adapter.ts"
 import { vrmMenuItems, type VrmMenuItemsOpts } from "../adapters/vrm-adapter.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx } from "./core.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
-import type { YsmModel, YsmContentHandle } from "../../views/app-preview/ysm-controls.ts";
+import type { YsmModel, YsmContentHandle } from "../adapters/content-bridges.ts";
 import type { Spec3D } from "../model3d.ts";
 import { makeMenuCtx } from "../adapters/menu-test-fixtures.ts";
 import type { BoneTree } from "../bone-tools.ts";
@@ -130,7 +130,7 @@ function fakeVrmOpts(): VrmMenuItemsOpts {
   };
 }
 
-/** 环境能力假 cap（environment 面板 requiresEnvironment 过滤 + 渲染用） */
+/** 环境能力假 cap（environment 面板 env.skyGroundCap 谓词放行 + 渲染用） */
 const fakeCap = {
   getTimeOfDay: () => 9,
   setTime: vi.fn(),
@@ -372,7 +372,7 @@ describe("dock 行全量渲染（遍历真实菜单数组驱动）", () => {
     const envId = CORE_MENU_ITEMS.find((d) => d.id === "environment")!.id;
     expect(overlay.querySelector(`[data-testid="preview-${camId}"]`)).not.toBeNull();
     expect(overlay.querySelector(`[data-testid="preview-${envId}"]`)).toBeNull();
-    // 环境组独立 root 按钮存在（有 fakeCap → requiresEnvironment 放行）
+    // 环境组独立 root 按钮存在（有 fakeCap → env.skyGroundCap 谓词放行）
     const envGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "env")!.id;
     const envBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-${envGroupId}"]`);
     expect(envBtn).not.toBeNull();
@@ -389,7 +389,7 @@ describe("dock 行全量渲染（遍历真实菜单数组驱动）", () => {
     expect(noSib.overlay.querySelector(`[data-testid="dock-${modelGroupId}"]`)).not.toBeNull();
     noSib.handle.dispose();
     // selfMode 不再过滤 lighting/shadow/postproc（已去 sharedOnly）→ 🎛️ 场景组显；
-    // 无 cap → environment(requiresEnvironment) 过滤 → 🌍 环境组空
+    // 无 cap → environment(env.skyGroundCap 谓词 false) 过滤 → 🌍 环境组空
     const noScene = mountWith([], { selfMode: true, getCap: () => null });
     const sceneGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "scene")!.id;
     const envGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "env")!.id;

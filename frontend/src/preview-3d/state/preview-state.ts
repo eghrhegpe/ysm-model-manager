@@ -92,6 +92,15 @@ function capById(id: string): SceneCapability | undefined {
 /** [doc:adr-126-p5-b] 当前选中组件（会话态内存值）：-1 = All，其余 = 组件下标 */
 let _activeComponent = -1;
 
+/** [doc:adr-126-p4-d] 当前预览会话模式（shared/self）：menu/core.ts mount 入口同步一次，
+ *  dock 级 visibleWhen 谓词经快照 `s["ui.mode"]` 读取——默认 shared（谓词缺省可见） */
+let _uiMode: "shared" | "self" = "shared";
+
+/** 同步会话模式到状态层（mountPreviewRootMenu 入口调用；每次 mount 覆盖，防会话/测试残留） */
+export function setPreviewUiMode(mode: "shared" | "self"): void {
+  _uiMode = mode;
+}
+
 /** 判断对象上是否存在指定方法（结构性探测，避免 as 硬转后的运行期炸裂） */
 function hasMethod<T>(obj: unknown, name: keyof T): boolean {
   const bag = obj as unknown as Record<string, unknown> | null;
@@ -246,6 +255,22 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
       _activeComponent = Number.isFinite(n) ? n : -1;
     },
     available: () => true,
+  },
+  // [doc:adr-126-p4-d] 会话模式：mount 期写一次（setPreviewUiMode），dock 级 visibleWhen
+  // 谓词写 `(s) => s["ui.mode"] !== "self"` 与旧 hideInSelfMode 语义等价
+  "ui.mode": {
+    get: () => _uiMode,
+    set: (v) => {
+      _uiMode = v === "self" ? "self" : "shared";
+    },
+    available: () => true,
+  },
+  // [doc:adr-126-p4-d] 环境能力可用性：sky/ground cap 任一挂载（requiresEnvironment 语义）。
+  // 惰性经 ADR-168 lookup 注入点——与 ctx.getCap 同源，caps 后创建由 shared-infra refreshDock 补回
+  "env.skyGroundCap": {
+    get: () => !!(capById("sky") || capById("ground")),
+    set: () => {},
+    available: () => !!(capById("sky") || capById("ground")),
   },
 };
 

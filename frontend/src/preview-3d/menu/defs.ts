@@ -69,7 +69,9 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     fallback: "环境",
     kind: "panel",
     dockGroup: "env",
-    requiresEnvironment: true,
+    // 环境能力门禁（requiresEnvironment 谓词化）：sky/ground cap 任一挂载才显示；
+    // 经状态层 env.skyGroundCap 惰性解析，caps 后创建由 shared-infra refreshDock 补回
+    visibleWhen: (s) => !!s["env.skyGroundCap"],
     legacyTestId: "env-menu-btn",
   },
   {
@@ -79,9 +81,10 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     fallback: "视图",
     kind: "panel",
     dockGroup: "scene",
-    // self 模式隐藏：相机由适配器自驱，camBridge 控件（旋转/速度/重置）操作核心
-    // controls 会被适配器每帧覆盖（如 MMD 相机动画），呈现「无效空面板」——隐藏最诚实。
-    hideInSelfMode: true,
+    // self 模式隐藏（hideInSelfMode 谓词化）：相机由适配器自驱，camBridge 控件（旋转/速度/
+    // 重置）操作核心 controls 会被适配器每帧覆盖（如 MMD 相机动画），呈现「无效空面板」——
+    // 隐藏最诚实。谓词吃状态层 ui.mode（mount 入口同步 ctx.selfMode）
+    visibleWhen: (s) => s["ui.mode"] !== "self",
   },
   {
     id: "lighting",

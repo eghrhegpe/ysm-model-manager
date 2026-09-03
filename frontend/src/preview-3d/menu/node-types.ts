@@ -2,7 +2,9 @@
 //
 // 从 MikuMikuAR frontend/src/scene/shared/menu-node-types.ts 移植概念（ADR-093 生态）：
 //   - MenuNode / MenuKind / ControlSpec / StatePath —— 声明式菜单数据层的类型契约
-//   - 补充 ysm 特有字段：dockGroup / sharedOnly / requiresEnvironment（预览器 dock 分组 + self/shared 模式守卫）
+//   - 补充 ysm 特有字段：dockGroup（预览器 dock 分组）+ visibleWhen 谓词（self/shared 模式
+//     守卫、环境能力门禁——[doc:adr-126-p4-d] 双轨归一，sharedOnly/hideInSelfMode/
+//     requiresEnvironment 布尔已删，dock 与内容级同一求值器）
 //
 // 方向：适配器定义「菜单即数据」→ 单一渲染器递归渲染（renderMenu）。
 // controls kind 是 cap 生态（MenuControlDef）进 node 树的原生通道——声明式节点
@@ -135,12 +137,11 @@ export interface PreviewMenuNode {
    *  [ADR-159] "stats" = 统计附加行通道：适配器贡献 kind:"field" 节点（如资源包立方体数），
    *  mergeStatsMenuItems 将其并入统计面板 children，随「能渲染就能出统计」通道展示 */
   dockGroup?: "model" | "motion" | "env" | "scene" | "settings" | "stats";
-  /** 仅 shared 模式显示（self 模式相机由适配器底部导航提供） */
-  sharedOnly?: boolean;
-  /** self 模式隐藏（相机由适配器自驱时 camBridge 控件语义错位） */
-  hideInSelfMode?: boolean;
-  /** 仅环境能力可用（skyCap/groundCap 任一非空）时显示 */
-  requiresEnvironment?: boolean;
+  // 可见性统一走 visibleWhen（[doc:adr-126-p4-d] 谓词化收口）：sharedOnly/hideInSelfMode/
+  // requiresEnvironment 三个专有布尔已删除——dock 组过滤（menu/core.ts dockGroupItemsFor）
+  // 与内容级渲染（render.ts）共用同一求值器，谓词吃状态层快照
+  //   - self 模式隐藏 → (s) => s["ui.mode"] !== "self"
+  //   - 环境能力门禁 → (s) => !!s["env.skyGroundCap"]
 
   /** 危险操作（如删除/卸载），渲染红色文字 */
   danger?: boolean;

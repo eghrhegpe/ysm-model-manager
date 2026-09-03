@@ -35,6 +35,12 @@ export const KNOWN_PATHS = [
   // [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
   // 会话态不落盘；面板侧 subscribe 变更 → 调 showModelGroup 副作用（views 层装配）。
   "ui.activeComponent",
+  // [doc:adr-126-p4-d] 预览会话模式（shared/self）：mountPreviewRootMenu 入口同步一次，
+  // dock 级 visibleWhen 谓词消费（旧 hideInSelfMode/sharedOnly 语义收口到谓词）。
+  "ui.mode",
+  // [doc:adr-126-p4-d] 环境能力可用性（旧 requiresEnvironment 语义）：sky/ground cap 任一
+  // 挂载即 true，经 ADR-168 lookup 注入点惰性解析——caps 后创建由 refreshDock 补回。
+  "env.skyGroundCap",
 ] as const;
 
 /**

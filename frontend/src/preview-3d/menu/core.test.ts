@@ -29,9 +29,10 @@ describe("CORE_MENU_ITEMS 表结构", () => {
     });
   });
 
-  it("契约锚点：camera 归 🎛️ 场景组（非 sharedOnly）；roles 为模型组唯一 core 项（加载入口内嵌，dock 始终可见）", () => {
+  it("契约锚点：camera 归 🎛️ 场景组（self 模式隐藏由 visibleWhen 谓词承担，非旧 sharedOnly 布尔）；roles 为模型组唯一 core 项（加载入口内嵌，dock 始终可见）", () => {
     expect(CORE_MENU_ITEMS.find((d) => d.id === "camera")?.dockGroup).toBe("scene");
-    expect(CORE_MENU_ITEMS.find((d) => d.id === "camera")?.sharedOnly).toBeUndefined();
+    // [doc:adr-126-p4-d] 双轨归一：可见性统一 visibleWhen 谓词（sharedOnly 等布尔已删）
+    expect(typeof CORE_MENU_ITEMS.find((d) => d.id === "camera")?.visibleWhen).toBe("function");
     // 独立 switch 项已撤除（2026-08-21 合并）：模型组 core 项仅 roles，面板底部内嵌加载入口
     expect(CORE_MENU_ITEMS.filter((d) => d.dockGroup === "model").map((d) => d.id)).toEqual(["roles"]);
   });
@@ -65,9 +66,12 @@ describe("mountPreviewRootMenu", () => {
     expect(overlay.querySelector(`[data-testid="dock-scene"]`)).not.toBeNull();
   });
 
-  it("hideInSelfMode 守卫：self 模式 camera 项不进 scene 组根视图（相机自驱，camBridge 控件语义错位）；shared 模式保留", () => {
+  it("self 模式守卫（visibleWhen 谓词）：self 模式 camera 项不进 scene 组根视图（相机自驱，camBridge 控件语义错位）；shared 模式保留", () => {
     const camDef = CORE_MENU_ITEMS.find((d) => d.id === "camera")!;
-    expect(camDef.hideInSelfMode).toBe(true);
+    // [doc:adr-126-p4-d] hideInSelfMode → visibleWhen: (s) => s["ui.mode"] !== "self"（mount 同步 ctx.selfMode）
+    expect(camDef.visibleWhen).toBeTypeOf("function");
+    expect(camDef.visibleWhen?.({ "ui.mode": "self" })).toBe(false);
+    expect(camDef.visibleWhen?.({ "ui.mode": "shared" })).toBe(true);
     // shared 模式：scene 组根视图含 camera 行
     const sharedHandle = mountPreviewRootMenu(overlay, makeCtx());
     (overlay.querySelector(`[data-testid="dock-scene"]`) as HTMLElement).click();

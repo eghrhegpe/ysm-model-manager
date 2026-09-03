@@ -31,7 +31,7 @@ import type { PreviewMenuCtx } from "../menu/core.ts";
 import { renderMenu } from "../menu/render.ts";
 import { collectVisiblePredicates } from "../menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import { setSceneCapabilityLookup } from "./preview-state.ts";
+import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
 import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "../render-budget.ts";
 
@@ -145,6 +145,30 @@ describe("P1 状态层 — 横切路径读写闭环", () => {
     expect(getStateValue("ui.activeComponent")).toBe(-1);
     // 快照含该路径
     expect(previewSnapshot()["ui.activeComponent"]).toBe(-1);
+  });
+
+  it("[doc:adr-126-p4-d] ui.mode：默认 shared；setPreviewUiMode 写入（menu/core.ts mount 入口同步源）", () => {
+    expect(getStateValue("ui.mode")).toBe("shared");
+    expect(previewSnapshot()["ui.mode"]).toBe("shared");
+    setPreviewUiMode("self");
+    expect(getStateValue("ui.mode")).toBe("self");
+    // setStateValue 非法值回退 shared（binding 归一守卫）
+    setStateValue("ui.mode", "garbage");
+    expect(getStateValue("ui.mode")).toBe("shared");
+    setPreviewUiMode("shared");
+  });
+
+  it("[doc:adr-126-p4-d] env.skyGroundCap：sky/ground cap 任一挂载即 true（requiresEnvironment 谓词数据源）", () => {
+    expect(isPathAvailable("env.skyGroundCap")).toBe(false);
+    mountCaps(makeFakeCap("sky"), makeFakeCap("ground"));
+    expect(getStateValue("env.skyGroundCap")).toBe(true);
+    expect(previewSnapshot()["env.skyGroundCap"]).toBe(true);
+    // 仅 ground 也放行（OR 语义与旧 ctx.getCap("sky")||getCap("ground") 对齐）
+    mountCaps(makeFakeCap("ground"));
+    expect(getStateValue("env.skyGroundCap")).toBe(true);
+    // 全缺席 → false（caps 后创建由 refreshDock 补回，见 shared-infra）
+    mountCaps();
+    expect(getStateValue("env.skyGroundCap")).toBe(false);
   });
 
   it("render.frustumCull 读写闭环且落 localStorage", () => {

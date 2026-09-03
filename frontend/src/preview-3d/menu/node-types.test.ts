@@ -57,7 +57,6 @@ const ysmDetailTree: PreviewMenuNode[] = [
             fallback: "骨骼",
             icon: "🦴",
             dockGroup: "model",
-            sharedOnly: true,
             renderCustom: (): void => {
               /* 3D bone panel */
             },

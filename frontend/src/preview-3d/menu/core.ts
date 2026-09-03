@@ -25,6 +25,7 @@ import { tr } from "../../core/i18n/tr.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
+import { previewSnapshot, setPreviewUiMode } from "../state/preview-state.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 export { roleBaseName };
@@ -297,18 +298,17 @@ function previewMakeGroupView(
   };
 }
 
-/** dock 组内工具过滤链（共用：model 捷径的 allItems.find 与通用分支同条件，防两处漂移） */
+/** dock 组内工具过滤链（共用：与 render.ts 内容级同一 visibleWhen 求值器——
+ *  2026-09 双轨归一：sharedOnly/hideInSelfMode/requiresEnvironment 三布尔已删，
+ *  dock 侧与内容级同吃状态层快照谓词，组内全被 visibleWhen 隐藏时 dock 按钮自动不渲染） */
 function dockGroupItemsFor(
   g: PreviewMenuGroupDef,
   allItems: PreviewMenuNode[],
-  ctx: PreviewMenuCtx,
 ): PreviewMenuNode[] {
-  const hasEnv = !!(ctx.getCap("sky") || ctx.getCap("ground"));
+  const snapshot = previewSnapshot();
   return allItems
     .filter((d) => d.dockGroup === g.id && d.kind !== "divider")
-    .filter((d) => !(d.sharedOnly && ctx.selfMode))
-    .filter((d) => !(d.hideInSelfMode && ctx.selfMode))
-    .filter((d) => !(d.requiresEnvironment && !hasEnv));
+    .filter((d) => !d.visibleWhen || d.visibleWhen(snapshot));
 }
 
 /**
@@ -318,7 +318,7 @@ function dockGroupItemsFor(
  */
 function renderPreviewDock(
   dock: HTMLElement,
-  ctx: PreviewMenuCtx,
+  _ctx: PreviewMenuCtx, // dock 过滤已谓词化走状态层快照，ctx 仅保签名兼容（visibleWhen 谓词读 previewSnapshot）
   menu: SlideMenuHandle,
   showMenu: (view: SlideMenuView) => void,
   makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
@@ -331,7 +331,7 @@ function renderPreviewDock(
   dock.innerHTML = "";
   const allItems = [...CORE_MENU_ITEMS, ...adapterItemsRef.v];
   for (const g of PREVIEW_MENU_GROUPS) {
-    const groupItems = dockGroupItemsFor(g, allItems, ctx);
+    const groupItems = dockGroupItemsFor(g, allItems);
     if (groupItems.length === 0) continue;
 
     const btn = document.createElement("button");
@@ -442,6 +442,10 @@ function validateAdapterItemIds(items: PreviewMenuNode[]): void {
 // ===================================================================
 
 export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx): PreviewMenuHandle {
+  // [doc:adr-126-p4-d] 会话模式上浮状态层：dock 级 visibleWhen 谓词经 s["ui.mode"] 读取
+  // （旧 hideInSelfMode 语义）。每次 mount 覆盖写，防会话/测试残留（dispose 不复位——
+  // 下次 mount 必覆盖，间隙无谓词求值路径）
+  setPreviewUiMode(ctx.selfMode ? "self" : "shared");
   // 阶段 1：dock + popup + SlideMenu 外壳装配（含 show/hide）
   const { dock, popup, menu, showMenu, hideMenu } = buildPreviewMenuShell(overlay, ctx);
   // 阶段 2：action ctx 与 handle 延迟壳（fillRoles 回调在 handle 构造前就能安全引用）

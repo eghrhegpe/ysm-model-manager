@@ -239,12 +239,14 @@ describe("renderMenu 新 kind", () => {
     expect(container.querySelector('[data-testid="preview-gated"]')).not.toBeNull();
   });
 
-  it("编译期契约：谓词读未落地键（如 ui.mode）是类型错误（2026-09 收紧，防静默假死回归）", () => {
-    // PreviewStatePath 已收紧为 KNOWN_PATHS 联合：`s["ui.mode"]` 编译报错（TS7053）。
+  it("编译期契约：谓词读未落地键（如 ui.activePanel）是类型错误（2026-09 收紧，防静默假死回归）", () => {
+    // PreviewStatePath 已收紧为 KNOWN_PATHS 联合：未落地键编译报错（TS7053）。
+    // [doc:adr-126-p4-d] ui.mode / env.skyGroundCap 已随 dock 谓词化落地为合法键——
+    // 原「ui.mode 未落地」反例失效，换仍预留的 ui.activePanel（P4-C 拆 dockGroup 预留）。
     // 下方指令断言该错误存在——若将来类型放宽回宽联合，指令变 unused 编译失败。
     // 用静态 import 的 PreviewSnapshot（动态 import 类型会退化 any 掩盖索引错误）。
-    // @ts-expect-error 未落地键 ui.mode 不在 PreviewStatePath
-    const bad = (s: Partial<PreviewSnapshot>): boolean => s["ui.mode"] === "self";
+    // @ts-expect-error 未落地键 ui.activePanel 不在 PreviewStatePath
+    const bad = (s: Partial<PreviewSnapshot>): boolean => s["ui.activePanel"] === "panel";
     expect(typeof bad).toBe("function");
   });
 

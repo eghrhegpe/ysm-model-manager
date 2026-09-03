@@ -1,5 +1,6 @@
+#!/usr/bin/env node
 /**
- * 检测 ANDROID_UNAVAILABLE 黑名单的完整性。
+ * check-android-unavailable.ts — ANDROID_UNAVAILABLE 黑名单完整性检测（2026-09-04 新增）
  *
  * 逻辑：
  * 1. 从 frontend/src/backend/platform-web.ts 读取 ANDROID_UNAVAILABLE 黑名单
@@ -16,7 +17,16 @@
  * - SetMainWindow / SetApp：Wails 窗口注入
  * - 广场相关（Navigate/Plaza*）：Android 暂不支持广场窗口
  *
- * 运行：node scripts/check-android-unavailable.ts
+ * 用法：
+ *   node scripts/check-android-unavailable.ts         # 文本报告，退出码判定
+ *   node scripts/check-android-unavailable.ts --json  # 子代理/CI 机器消费（_summary JSON）
+ *
+ * 依赖：零外部依赖（node:fs/promises + node:path + node:url）；bindings/app.ts 未生成时自动跳过
+ *
+ * 退出码：0 = 黑名单完整 / bindings 未生成跳过；1 = 存在未覆盖的 desktop-only binding
+ *
+ * 设计意图：Android 侧缺桌面专属绑定能力时降级隐藏对应 UI（platform-web.ts 黑名单），
+ * 本脚本防止新增桌面 binding 时漏登黑名单导致 Android 崩溃或空 UI。
  */
 
 import { readFile } from "node:fs/promises";
@@ -84,6 +94,7 @@ async function readCurrentBlacklist(): Promise<Set<string>> {
 }
 
 async function main() {
+  const wantJson = process.argv.includes("--json");
   try {
     const bindings = await extractBindings();
     const blacklist = await readCurrentBlacklist();
@@ -92,7 +103,17 @@ async function main() {
     const uncoveredKnown = [...KNOWN_DESKTOP_ONLY].filter(name => !blacklist.has(name));
     const extraInBlacklist = [...blacklist].filter(name => !KNOWN_DESKTOP_ONLY.has(name) && !MAYBE_DESKTOP_ONLY.has(name));
 
-    let exitCode = 0;
+    const ok = uncoveredKnown.length === 0;
+
+    if (wantJson) {
+      // 门禁/子代理机器消费：_summary.ok 判定（pre-push-gate 契约）
+      console.log(JSON.stringify({
+        _summary: { ok, scanned: bindings.length, desktopOnly: blacklist.size, uncovered: uncoveredKnown.length },
+        uncovered: uncoveredKnown,
+        extraInBlacklist,
+      }));
+      return ok ? 0 : 1;
+    }
 
     if (uncoveredKnown.length > 0) {
       console.error("[android-guard] ⚠️ 以下明确 desktop-only binding 未在 ANDROID_UNAVAILABLE 中声明：");
@@ -101,7 +122,6 @@ async function main() {
       }
       console.error("");
       console.error("请在 frontend/src/backend/platform-web.ts 的 ANDROID_UNAVAILABLE 中添加。");
-      exitCode = 1;
     }
 
     if (extraInBlacklist.length > 0) {
@@ -111,10 +131,10 @@ async function main() {
       }
     }
 
-    if (exitCode === 0) {
+    if (ok) {
       console.log(`[android-guard] ✅ ${bindings.length} 个 binding，${blacklist.size} 个 desktop-only 声明完整`);
     }
-    return exitCode;
+    return ok ? 0 : 1;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       console.log("[android-guard] ⏭️ bindings/app.ts 未生成，跳过检测（build 后自动检测）");

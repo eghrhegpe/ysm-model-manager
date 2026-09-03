@@ -66,6 +66,7 @@
 | `e2e-coverage-report.ts` | `node scripts/e2e-coverage-report.ts` / `--input <path>` / `--all` / `--json` | 端到端广度报告（ADR-035 G-4）：读 Playwright V8 coverage 产物，输出「哪些源文件被真实交互走到」的广度报告（函数级覆盖比例，不做行级精确统计） |
 | `build-ysm-wasm.ts` | `node scripts/build-ysm-wasm.ts` / `--skip-build` | 统一 YSMParser WASM 构建（一份 web 产物服务前后端）：em++ 编译 → base64 打包前端 + Go embed 拷贝 |
 | `android-build.ts` | `node scripts/android-build.ts` / `--arch` / `--production` / `--rust-backend` | 一键构建 Android APK：前端构建 + NDK 交叉编译 libwails.so + gradle assembleDebug（补 android-install 只装不编的缺口） |
+| `check-android-unavailable.ts` | `node scripts/check-android-unavailable.ts` / `--json` | ANDROID_UNAVAILABLE 黑名单完整性检测：从 platform-web.ts 读黑名单、bindings/app.ts 提取 binding 名，报告未覆盖的 desktop-only binding（防 Android 漏登黑名单崩 UI/空 UI） |
 | `compile-android-rust.ts` | `node scripts/compile-android-rust.ts` / `--arch amd64|all` | 编 Rust scanner bridge 为 Android staticlib（.a）供 Go CGO 链接（android-build 前置单步） |
 | `compile-rust-static.ts` | `node scripts/compile-rust-static.ts` / `--target <triple>` | 编 Rust scanner bridge 为 staticlib 供 Go CGO 静态链接（Linux 构建链，build/linux/Taskfile.yml 调用） |
 | `compare-maid-packs.ts` | `node scripts/compare-maid-packs.ts` | 实战比对：单女仆 zip vs 多合一女仆包（L0 清单 vs L1 枚举差异；⚠️ 依赖 `_tools/` 暂缺失，当前不可运行） |

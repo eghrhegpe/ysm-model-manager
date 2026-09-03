@@ -60,6 +60,7 @@ import {
   type PmxBuildResult,
   type PmxParser,
 } from "./mmd-pmx-parser.ts";
+import { applyVPDToMesh } from "./mmd-vpd-mesh.ts"; // VPD 纯逻辑（worker 路径 mesh 直接应用）
 import {
   applyWorkerDecodedTextures,
   closeUnusedDecodedBitmaps,
@@ -1613,51 +1614,6 @@ export async function buildMmdScene(
       for (const url of c.blobUrls) URL.revokeObjectURL(url);
     }
   }
-}
-
-function applyVPDToMesh(mesh: THREE.SkinnedMesh, vpd: VpdObject): void {
-  const vpdBones = vpd?.bones;
-  if (!vpdBones) return;
-
-  // 建立骨骼名 → bone 对象的映射（O(1) 查找）
-  const bonesByName = new Map<string, THREE.Bone>();
-  mesh.skeleton?.bones.forEach((b) => {
-    if (b.name) bonesByName.set(b.name, b);
-  });
-
-  // VPD 骨骼变换（含坐标系转换）
-  const position = new THREE.Vector3();
-  const rotation = new THREE.Quaternion();
-  for (const [name, transform] of Object.entries(vpdBones)) {
-    const bone = bonesByName.get(name);
-    if (!bone || !transform) continue;
-
-    if (transform.position !== undefined) {
-      position.set(transform.position[0], transform.position[1], -transform.position[2]);
-      bone.position.add(position);
-    }
-    rotation.set(
-      -transform.rotation[0],
-      -transform.rotation[1],
-      transform.rotation[2],
-      transform.rotation[3],
-    );
-    bone.quaternion.multiply(rotation);
-  }
-
-  // Morph 影响
-  if (vpd.morphs) {
-    const dict = mesh.morphTargetDictionary;
-    for (const [name, weight] of Object.entries(vpd.morphs)) {
-      const index = dict?.[name];
-      if (index !== undefined && mesh.morphTargetInfluences) {
-        mesh.morphTargetInfluences[index] = weight;
-      }
-    }
-  }
-
-  mesh.updateMatrixWorld(true);
-  bonesByName.clear();
 }
 
 /** mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 */

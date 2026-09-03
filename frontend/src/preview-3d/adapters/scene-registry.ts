@@ -128,6 +128,18 @@ class SceneRegistry {
   register(input: RegisterInput): string {
     const existing = mdSrDedupByExplicitKey(this.byAuthor, this.byName, input);
     if (existing) {
+      // 去重命中：同 path 重载时旧 entry 持有已 dispose 的 content/roots，
+      // 须用新 input 刷新可变字段，否则取景幽灵 + 计数虚高（P2 审核修复）
+      const old = this.entries.get(existing);
+      if (old) {
+        old.content = input.content;
+        old.roots = input.roots;
+        old.boneMaps = input.boneMaps ?? null;
+        old.menuItems = input.menuItems ?? null;
+        old.onBonePick = input.onBonePick ?? null;
+        if (input.displayName !== undefined) old.displayName = input.displayName;
+        if (input.components !== undefined) old.components = input.components;
+      }
       this.activeId = existing;
       return existing;
     }

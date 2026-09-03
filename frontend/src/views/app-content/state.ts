@@ -46,9 +46,33 @@ export class AppContentState {
   /** 仓库视图异步清理函数 */
   repoEventsCleanup: (() => Promise<void>) | null = null;
 
+  /** 页面面板缓存（ADR-163：tab-panel 常驻化——首次访问渲染并缓存 DOM 节点，
+   *  切页复用节点不重建；key=页面名，value=面板节点） */
+  private pagePanels = new Map<string, HTMLElement>();
+
   constructor(root: ShadowRoot, current: string) {
     this.root = root;
     this.current = current;
+  }
+
+  // ===== 页面面板缓存操作（ADR-163）=====
+
+  /** 取缓存面板（未访问过 → undefined） */
+  getCachedPanel(key: string): HTMLElement | undefined {
+    return this.pagePanels.get(key);
+  }
+
+  /** 缓存面板（key 已存在则覆盖——调用方保证同 key 仅建一次） */
+  cachePanel(key: string, panel: HTMLElement): void {
+    this.pagePanels.set(key, panel);
+  }
+
+  /** 全量清空页面缓存并移除 DOM（lang:changed 全量重建 / disconnectedCallback 兜底） */
+  clearPanels(): void {
+    for (const panel of this.pagePanels.values()) {
+      panel.remove();
+    }
+    this.pagePanels.clear();
   }
 
   // ===== 标志位操作 =====

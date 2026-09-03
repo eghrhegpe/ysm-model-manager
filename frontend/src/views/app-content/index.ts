@@ -109,9 +109,12 @@ class AppContent extends WebComponentBase {
       // 渲染完成后发射搜索事件——app-tree 已挂载，bus 监听就绪
       bus.emit("tree:set-search", name);
     }));
-    // 语言热切换（ADR-045 增强）：lang:changed → 重渲染当前页（t() 读取新语言包），
-    // 替代整页 reload；settings 页 initSettings 会重新执行并恢复 set-lang 选中值
+    // 语言热切换（ADR-045 增强）：全量重建（ADR-163 常驻化下语言切换低频，重建可接受；
+    // 面板缓存的页面 t() 已按旧语言渲染，必须清缓存让下次访问按新语言重建）
     this.subs.addGlobal(bus.on("lang:changed", () => {
+      this.subs.cleanupPage();
+      this.state.setInsListenerReg(false);
+      this.state.clearPanels();
       this._render();
     }));
     this._render();
@@ -123,6 +126,8 @@ class AppContent extends WebComponentBase {
     this.subs.cleanupAll();
     // 清理拖拽监听 + 缓存 + 定时器
     this.state.cleanupTransient();
+    // ADR-163：清空常驻页面面板 DOM（防止组件销毁后面板残留泄漏）
+    this.state.clearPanels();
     // config-loaded Wails 订阅回收 + flag 复位（init-workshop.ts 模块级状态，
     // 经导出函数访问——组件重建后新实例可重新注册）
     resetAvatarConfigLoaded();
@@ -133,10 +138,16 @@ class AppContent extends WebComponentBase {
     }
   }
 
+  /**
+   * 渲染当前页（ADR-163 tab-panel 常驻化）：
+   * - 首次访问：构建面板 DOM + 执行 page.init（每页仅一次），缓存面板节点；
+   * - 再次访问：复用缓存节点、不重建、不重复 init——
+   *   保留树展开/滚动位置/输入焦点，消灭「再进 dedup 永久卡死」（busy 锁 finally 必复位 + 不再重复 init）。
+   * - 单面板挂载：root 下同一时刻仅保留当前面板（复用节点从缓存取回重挂），
+   *   其余面板分离 DOM 但引用仍在缓存——这样 root 内 id 天然唯一，页内
+   *   `host._root.getElementById` 无跨页冲突（无需页内查询作用域化）。
+   */
   _render(): void {
-    // 清理页面级订阅 + 复位标志（防跨页累积）
-    this.subs.cleanupPage();
-    this.state.setInsListenerReg(false);
     // 清理 workshop 延迟加载定时器（切页/语言热切换时防空跑网络请求）
     if (this.state.workshopTimer) {
       clearTimeout(this.state.workshopTimer);
@@ -144,23 +155,43 @@ class AppContent extends WebComponentBase {
     }
     try {
       const page = PAGE_REGISTRY[this._current] ?? PAGE_REGISTRY.instances;
-      this.state.root.innerHTML = `<div class="page">${page.html()}</div>`;
-
-      // 初始化预览面板拖拽调整宽度
-      this._initPreviewResize();
-
-      // P1-1（子代理审核）：消费注册表 init 字段，替代手动 if/else 链——
-      // 新增页面只需在 PAGE_REGISTRY 添加一行，init 自动执行（不再有死代码）。
-      // async init（如 settings）显式挂 catch 出口（ADR-044 ①：reject 转 toast）；
-      // 同步 init 抛错由外层 try/catch 统一兜底。
-      const initResult = page.init(this);
-      if (initResult instanceof Promise) {
-        void initResult.catch((e) => this._pageInitFailed(e));
+      const cached = this.state.getCachedPanel(this._current);
+      const isNew = !cached;
+      let panel: HTMLElement;
+      if (cached) {
+        panel = cached;
+      } else {
+        panel = document.createElement("div");
+        panel.className = "page";
+        panel.innerHTML = page.html();
+        this.state.cachePanel(this._current, panel);
       }
+      // 单面板挂载：先分离 root 下其余页面面板（复用节点状态保留在缓存引用中），
+      // 再挂回当前面板，保证同一时刻 root 下仅一个 .page。
+      const root = this.state.root;
+      for (const child of Array.from(root.children)) {
+        if (child !== panel && child.classList.contains("page")) child.remove();
+      }
+      root.appendChild(panel);
+      // init 必须在面板挂载后执行（init 经 host._root.getElementById 查询面板内容）
+      if (isNew) {
+        // P1-1（子代理审核）：消费注册表 init 字段，替代手动 if/else 链——
+        // 新增页面只需在 PAGE_REGISTRY 添加一行，init 自动执行（不再有死代码）。
+        // async init（如 settings）显式挂 catch 出口（ADR-044 ①：reject 转 toast）；
+        // 同步 init 抛错由外层 try/catch 统一兜底。
+        const initResult = page.init(this);
+        if (initResult instanceof Promise) {
+          void initResult.catch((e) => this._pageInitFailed(e));
+        }
+      }
+      // 初始化预览面板拖拽调整宽度（幂等：先移除旧监听再绑定）
+      this._initPreviewResize();
     } catch (e) {
-      // P2 修复（审核）：HTML 装配段（switch+innerHTML）与页 init 统一兜底——
+      // P2 修复（审核）：HTML 装配段与页 init 统一兜底——
       // 原装配段在 try 外，repositoryHTML() 等抛错会中断 _render 且无用户反馈，
       // 配合 nav:changed 后置广播，装配失败时状态不广播（杜绝「状态变、内容不渲染」）
+      // ADR-163：构建失败面板从缓存剔除，允许下次访问重试
+      this.state.clearPanels();
       this._pageInitFailed(e);
     }
   }

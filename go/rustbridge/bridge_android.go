@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"sort"
 	"unsafe"
 )
 
@@ -44,6 +45,9 @@ func Scan(root string, registryJSON []byte) (ScanResponse, error) {
 	if len(registryJSON) == 0 {
 		return ScanResponse{}, errors.New("Rust scanner registry is empty")
 	}
+	// ffiMu 由 common.go 统一管理，四平台共享串行化保护。
+	ffiMu.Lock()
+	defer ffiMu.Unlock()
 
 	var rootPtr *byte
 	if len(root) > 0 {
@@ -100,8 +104,12 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 	if output.ptr == nil || output.len == 0 || output.len > uintptr(^uint(0)>>1) {
 		return ScanResponse{}, errors.New("Rust scanner returned an invalid buffer")
 	}
-	defer C.ysm_buffer_free((*C.uchar)(output.ptr), C.size_t(output.len), C.size_t(output.cap))
+	defer C.ysm_buffer_free((*C.uchar)(output.ptr), C.size_t(output.len), C.size_t(output.cap)) //nolint:errcheck
 
 	data := append([]byte(nil), unsafe.Slice((*byte)(unsafe.Pointer(output.ptr)), int(output.len))...)
+	// manifest 路径 entries 按 path 排序，与 scan_json（eager）路径对称。
+	sort.Slice(response.Entries, func(i, j int) bool {
+		return response.Entries[i].Path < response.Entries[j].Path
+	})
 	return parseResponse(data, true)
 }

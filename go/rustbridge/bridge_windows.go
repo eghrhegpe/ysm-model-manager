@@ -19,9 +19,7 @@ var (
 	// 旧 scanProc (ysm_scan) 保留作回退，ABI 不破坏。
 	scanManifestProc *syscall.LazyProc
 	freeProc         *syscall.LazyProc
-	// R32 P3-1：FFI 调用序列化。Rust 侧 ysm_scan/ysm_scan_manifest
-	// 线程安全性未知，Go 侧加 Mutex 串行化 FFI 调用（扫描本身是重操作，性能影响可忽略）。
-	ffiMu sync.Mutex
+	// R32 P3-1：FFI 调用序列化由 common.go 的 ffiMu 统一管理（四平台共享）。
 )
 
 func Scan(root string, registryJSON []byte) (ScanResponse, error) {
@@ -56,6 +54,8 @@ func Scan(root string, registryJSON []byte) (ScanResponse, error) {
 		return ScanResponse{}, errors.New("Rust scanner returned an invalid buffer")
 	}
 	defer freeProc.Call(uintptr(unsafe.Pointer(output.ptr)), output.len, output.cap) //nolint:errcheck
+	// 注：free 失败（DLL 未正确导出 ysm_buffer_free）仅记 warn，不阻塞调用——
+	// Rust 侧的 Vec 已 forget 转移所有权，Go 必须释放，但生产环境此路径不应触发。
 
 	// append 先于 defer 执行：拷贝 Rust 侧分配的缓冲区到 Go 堆，defer 在函数返回时释放。
 	// 若 defer 先于 append 执行则 freeProc 会释放尚未被拷贝的内存——此处顺序必须保证。

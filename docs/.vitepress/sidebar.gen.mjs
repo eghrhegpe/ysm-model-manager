@@ -730,6 +730,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-172：社区创作者增量合并下沉 Go——新增 MergeCommunityCreatorsFromJSON 单次原子并入 binding",
+        "link": "/adr/ADR-172-merge-community-creators-go"
+      },
+      {
         "text": "ADR-171：preview3d 超大文件裁决式复核：FBXLoader 官方化 / 巨型单体维持",
         "link": "/adr/ADR-171-preview3d-oversize-adjudication"
       },

@@ -11,6 +11,11 @@ export interface CacheStatus {
     "hit_rate": number;
     "hits": number;
     "misses": number;
+
+    /**
+     * ShouldWarn 容量接近上限（texture_cache 阈值），体检页提示清理
+     */
+    "should_warn"?: boolean;
 }
 
 /**

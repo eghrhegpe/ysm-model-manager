@@ -500,9 +500,9 @@
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 114 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 142 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 149 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 225 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 232 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 247 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 238 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 245 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 260 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 146 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 271 |
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 133 |

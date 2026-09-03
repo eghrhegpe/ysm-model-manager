@@ -21,7 +21,7 @@ const { busEmit, busOn, getApp, loadResourceRegistry, can, isViewerMode } = vi.h
 
 vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("../../../backend/app.ts", () => ({ getApp }));
-vi.mock("../../../utils/resource/registry.ts", () => ({ loadResourceRegistry }));
+vi.mock("../../../services/resource-registry.ts", () => ({ loadResourceRegistry }));
 vi.mock("../../../utils/dom/capabilities.ts", () => ({ can }));
 vi.mock("../../../utils/dom/android-bridge.ts", () => ({
   isViewerMode,

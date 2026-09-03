@@ -8,14 +8,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // 文件顶部，工厂闭包捕获 loadMock；当前仅动态 import 触发工厂（安全），但一旦未来
 // 加静态 import，工厂在 const 初始化前执行会抛 TDZ ReferenceError。hoisted 消除该脆弱性
 const { loadMock } = vi.hoisted(() => ({ loadMock: vi.fn() }));
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({ LoadResourceTypes: loadMock }),
 }));
 
 // 模块级 _registry 缓存：每个用例重置模块再 import
 async function freshLoad() {
   vi.resetModules();
-  const mod = await import("./registry.ts");
+  const mod = await import("./resource-registry.ts");
   return mod.loadResourceRegistry;
 }
 

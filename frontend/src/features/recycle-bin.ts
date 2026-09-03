@@ -4,7 +4,7 @@ import { t as _t, type LocaleKey } from "../core/i18n/t.ts";
 import { modalConfirm as _modalConfirm } from "../utils/dom/dialogs/modal.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
-import { loadResourceRegistry } from "../utils/resource/registry.ts";
+import { loadResourceRegistry } from "../services/resource-registry.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { getApp as _getApp } from "../backend/app.ts";
 import { useCurrentResourceType } from "./repo-rtype.ts";

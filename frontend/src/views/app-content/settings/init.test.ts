@@ -62,7 +62,7 @@ const {
 
 vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("../../../backend/app.ts", () => ({ getApp }));
-vi.mock("../../../utils/resource/registry.ts", () => ({ loadResourceRegistry }));
+vi.mock("../../../services/resource-registry.ts", () => ({ loadResourceRegistry }));
 vi.mock("../../../preview-3d/model3d.ts", () => ({ loadTdKeymap }));
 vi.mock("../../../features/version-updater.ts", () => ({ initVersionUpdater }));
 vi.mock("../../../utils/dom/errors.ts", () => ({ friendlyError }));

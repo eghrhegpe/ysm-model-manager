@@ -32,7 +32,7 @@ vi.mock("../utils/dom/errors.ts", () => ({
   friendlyError: mocks.friendlyError,
 }));
 
-vi.mock("../utils/resource/registry.ts", () => ({
+vi.mock("../services/resource-registry.ts", () => ({
   loadResourceRegistry: mocks.loadResourceRegistry,
 }));
 

@@ -6,7 +6,7 @@ import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../backend/app.ts";
 import { isWebPlatform } from "../../../backend/platform-web.ts";
-import { loadResourceRegistry } from "../../../utils/resource/registry.ts";
+import { loadResourceRegistry } from "../../../services/resource-registry.ts";
 import { safeGet } from "../../../utils/dom/storage.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { isViewerMode } from "../../../utils/dom/android-bridge.ts";

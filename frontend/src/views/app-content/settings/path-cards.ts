@@ -9,7 +9,7 @@ import { esc } from "../../../utils/dom/html.ts";
 import { safeGet } from "../../../utils/dom/storage.ts";
 import { pickDirectory } from "../../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
-import type { ResourceTypeEntry } from "../../../utils/resource/registry.ts";
+import type { ResourceTypeEntry } from "../../../services/resource-registry.ts";
 import { groupStorageRootOf } from "../../../utils/resource/types.ts";
 import { cfg, cardRefreshers, isBusy, setBusy, toastError } from "./store.ts";
 

@@ -5,7 +5,7 @@
 import { t } from "../../../core/i18n/t.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../backend/app.ts";
-import { loadResourceRegistry } from "../../../utils/resource/registry.ts";
+import { loadResourceRegistry } from "../../../services/resource-registry.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { fileIcon } from "../../../utils/icon/icon.ts";

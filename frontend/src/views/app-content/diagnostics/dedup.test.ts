@@ -14,7 +14,7 @@ const { busEmit, getApp, loadResourceRegistry } = vi.hoisted(() => ({
 
 vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit } }));
 vi.mock("../../../backend/app.ts", () => ({ getApp }));
-vi.mock("../../../utils/resource/registry.ts", () => ({ loadResourceRegistry }));
+vi.mock("../../../services/resource-registry.ts", () => ({ loadResourceRegistry }));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");

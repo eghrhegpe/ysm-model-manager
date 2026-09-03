@@ -60,43 +60,31 @@
   - `scan_index_no_hash` 孤儿函数 → **维持监控 / 非阻塞**：等「禁用模型再启用」立项（届时复用此函数）或一次性删除；不强行现在动（避免未来重写）。
   - 注意：`parallel_go_rust_test.go` 仅锁 **scan_fast↔Go**（生产 LIVE 路径）；`scan_index_no_hash` 的刻意下钻分叉由 `rust-core/src/tests.rs` 单测锁定，不在跨引擎测试覆盖内（无消费方）。
 
-### #1 variants 消费化 —— 🔴 未闭环（待修，见 §三方案）
+### #1 variants 消费化 —— ✅ 已闭环（commit 968690d9，见 §三实施记录）
 
 ---
 
-## 三、#1 修复方案（待拍板）
+## 三、#1 实施记录（已闭环 · commit 968690d9）
 
-**问题根因**：`resource_types.json` 为 `EntityPlayer` 声明 `variants: [{ext:".vrm", preview:"vrm"}, ...]`，opener 侧（`preview-library.ts`，见 `preview-library.test.ts:5/45/70` 已消费 variants preview keys）已对齐，但 **show 派发侧**（`_showModelDetail` → `PREVIEW_HANDLERS`）仍手写 `extOf(path) === ".vrm"` 分支（`index.ts:70-76`），造成"同一 variants 事实源，两处维护"。
+**根因**：`resource_types.json` 为 `EntityPlayer` 声明 `variants: [{ext:".vrm", preview:"vrm"}, ...]`，opener 侧 `preview-library.ts` 已用 `resolvePreviewKey` 消费，但 show 派发侧（`_showModelDetail` → `PREVIEW_HANDLERS`）仍手写 `extOf(path) === ".vrm"` 分支，造成同一 variants 事实源两处维护（ADR-111 半截）。
 
-**改动点（基于当前代码，非文档旧方案，已适配复合 key 结构）**：
+**方案修正（相对原 §三 草案）**：原草案计划在 `schema.ts` 新建 `getVariantPreview`。实施时改为**直接复用 `types.ts:47` 既有的 `resolvePreviewKey`**（opener 同款函数）——避免重复造轮子、保证 show/opener 两端单一事实源（ADR-101 收敛原则）。`getVariantPreview` 草案作废，未创建。
 
-1. **`frontend/src/utils/resource/schema.ts`** — 新增 `getVariantPreview`（紧邻 `allResourceTypes:55`）：
+**改动（frontend/src/views/app-preview/index.ts，+5/-2）**：
+1. import 加 `resolvePreviewKey`（与 `RESOURCE_TYPES/extOf` 同源）；
+2. `_showModelDetail` 派发改复合 key：
    ```typescript
-   import { extOf } from "./extensions.ts"; // 确认 extOf 导出位置（index.ts 已用）
-   /** 锐评 #1：消费 variants 做预览派发，前端不再手写 ext 分支 */
-   export function getVariantPreview(rt: ResourceType | null, path: string): string {
-     if (!rt?.variants?.length) return rt?.id ?? "";
-     const ext = extOf(path);
-     return rt.variants.find((v) => v.ext === ext)?.preview ?? rt.id;
-   }
-   ```
-
-2. **`frontend/src/views/app-preview/index.ts`** — 派发改复合 key（`:294` 附近）：
-   ```typescript
-   const rt = allResourceTypes.find((t) => t.id === rtype) ?? null;
-   const previewKey = getVariantPreview(rt, path);
+   const previewKey = resolvePreviewKey(path, rtype);
    const handler = PREVIEW_HANDLERS[`${rtype}:${previewKey}`] ?? PREVIEW_HANDLERS[rtype];
    ```
-
-3. **`index.ts` `PREVIEW_HANDLERS`**（`:70-76`）— 去掉内部 if，改复合 key 条目：
+3. `PREVIEW_HANDLERS` 去掉 MMD handler 内手写 `if`，新增复合 key 条目路由 VRM meta 卡：
    ```typescript
    [RESOURCE_TYPES.MMD]: (ctx, path, meta) => showMmdPreview(ctx, path, meta),
    [`${RESOURCE_TYPES.MMD}:vrm`]: (ctx, path, meta) => showVrmMeta(ctx, path, meta),
    ```
+   无变体扩展名（如 `.pmx` / `.pmd`）回退 `PREVIEW_HANDLERS[rtype]` = `showMmdPreview`，与原 `else` 分支行为完全一致。
 
-**回归保护**：`app-preview.methods.test.ts:185-205` 验证 ADR-111 的 `.vrm`（路由 "vrm"）与 `.vrca`（未识别）场景——复合 key 派发需保持该测试通过；`preview-library.test.ts` 验证 opener 侧 variants 仍有效。修复后补一条 `getVariantPreview` 单测（variants 命中 / 未命中回退 rtype）。
-
-**成本**：低（~30 行）。**风险**：低（旧分支逻辑完整保留，外移为查表；有 ADR-111 测试兜底）。
+**验证**：app-preview 目录 351 测试全绿（含 `methods.test.ts` 的 `.vrm→showVrmMeta` / `.pmx→showMmdPreview` / `.vrca→未识别` ADR-111 断言）、`tsc --noEmit` 0 error、`vite build` 通过。回归保护由既有测试覆盖（`resolvePreviewKey` variants 解析 `types.test.ts` + show 派发行为 `methods.test.ts`），未新增冗余白盒测试。
 
 ---
 
@@ -112,5 +100,6 @@
 
 ## 五、后续
 
-- 拍板 #1 → 实施 + 补测试 + `vitest`/`tsc`/`vite build` 验证 + 提交。
-- #4 不强行改（符合"按需拆"原则，持续瘦身）；#6 的 parity 缺口已收口（测试入库），`scan_index_no_hash` 孤儿函数维持监控即可。
+- #1 已闭环（commit 968690d9）：show 派发复用 `resolvePreviewKey` 消费 variants，ADR-111 半截收口；验证见 §三。
+- #4 不强行改（符合"按需拆"原则，持续瘦身）；#6 的 parity 缺口已收口（commit 7cf18599），`scan_index_no_hash` 孤儿函数维持监控即可。
+- C2 六项（#1/#4/#6/#8/#9/#10）治理线程至此全部结案，无剩余待修项。

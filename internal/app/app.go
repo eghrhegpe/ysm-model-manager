@@ -38,7 +38,9 @@ func requireMcRoot(cfg types.AppConfig) error {
 }
 
 type App struct {
-	LinkMode           string
+	// linkMode 私有：须经 SetLinkMode/getLinkMode 访问（linkModeMu 保护）。
+	// 公有字段会被包外直写绕过锁（Go 评审 #5）；配置加载/保存点仍可在锁内直写。
+	linkMode           string
 	logger             *logs.Logger
 	runtimeLogs        *logs.RuntimeBuffer
 	watcher            *watcher.Watcher

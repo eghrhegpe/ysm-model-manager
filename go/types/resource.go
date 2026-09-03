@@ -380,26 +380,19 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 
 // loadRegistryBytes 解析注册表字节，单一事实来源为编译期嵌入：
 //  1. 显式路径（SetRegistryPath 设置的测试/自定义绝对路径，仅测试与显式覆盖使用）；
-//  2. 编译期嵌入的单源字节 bundledRegistryJSON（由根包 main 经 embed.go 注入，等同仓库根 resource_types.json）。
-//  3. 测试/未注入场景回退：仓库根 resource_types.json（go/types 包目录的 ../../resource_types.json）。
+//  2. 编译期嵌入的单源字节 bundledRegistryJSON（由根包 main 经 embed.go 注入，
+//     等同仓库根 resource_types.json；测试进程由各包 main_test.go 显式注入同一基线）。
 //
-// 注意：不再扫描 exe 同级/上级目录寻找 resource_types.json。
-// 旧部署模型（zip 附带数据 JSON、updater 覆盖 exe 旁文件）已于 2026-08 废弃
-// （见 internal/app/bundled_data.go：纯 exe 发布），
-// 残留的 exe 旁快照会静默遮蔽嵌入单源，导致「改了 root JSON 却不生效」
-// （本轮用户主推 6 次分类改动失败的根因）。嵌入单源即权威，杜绝漂移。
+// 注意：不再扫描 exe 同级/上级目录寻找 resource_types.json，亦无 CWD 相对回退
+// （Go 评审 #11：旧部署模型已废弃——zip 附带数据 JSON、updater 覆盖 exe 旁文件
+// 已于 2026-08 废弃（见 internal/app/bundled_data.go：纯 exe 发布），残留的 exe 旁
+// 快照或 CWD 下意外文件会静默遮蔽嵌入单源，导致「改了 root JSON 却不生效」。
+// 嵌入单源即权威，杜绝漂移。
 func loadRegistryBytes() []byte {
 	if registryPath != "" && registryPath != "resource_types.json" {
 		if b, err := os.ReadFile(registryPath); err == nil {
 			return b
 		}
-	}
-	if len(bundledRegistryJSON) > 0 {
-		return bundledRegistryJSON
-	}
-	// 测试/未注入场景：从 go/types 包目录回退读取仓库根 resource_types.json
-	if b, err := os.ReadFile(filepath.Join("..", "..", "resource_types.json")); err == nil {
-		return b
 	}
 	return bundledRegistryJSON
 }

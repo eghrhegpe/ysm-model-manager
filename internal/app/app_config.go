@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strings"
 
@@ -121,7 +120,7 @@ func (a *App) loadAppConfig() {
 	// 配置迁移逻辑简化：旧 repoRoot 字段已废弃，由 FilesRoot 统一承载
 	if cfg.LinkMode != "" {
 		a.linkModeMu.Lock()
-		a.LinkMode = cfg.LinkMode
+		a.linkMode = cfg.LinkMode
 		a.linkModeMu.Unlock()
 	}
 	// populate config cache
@@ -174,7 +173,7 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 	// 技术债 #4：保存成功后同步内存 LinkMode（与 SetLinkMode 同模式）——
 	// 原实现写盘后 installer 安装仍用旧链接模式直到重启（GetLinkMode 读 a.LinkMode）
 	a.linkModeMu.Lock()
-	a.LinkMode = cfg.LinkMode
+	a.linkMode = cfg.LinkMode
 	a.linkModeMu.Unlock()
 	// 技术债 #4：FilesRoot/McRoot 变化后重启 watcher——原 restartWatcher 是无调用点死代码，
 	// 保存后 watcher 仍监听旧目录（文件变更不再触发自动同步）；saveConfig 已更新 configCache，
@@ -509,33 +508,41 @@ func (a *App) ValidateMinecraftDir(dir string) (string, string) {
 
 // ========== 配置迁移（ADR-095）==========
 
-// getConfigFieldByReflection 通过反射读取 AppConfig 中指定字段的值
-func getConfigFieldByReflection(cfg types.AppConfig, fieldName string) string {
-	v := reflect.ValueOf(cfg)
-	f := v.FieldByName(fieldName)
-	if !f.IsValid() {
+// configFieldValue 显式映射注册表 ConfigField → AppConfig 字段值。
+// 替代反射读（Go 评审 #10）：case 分支由编译器校验字段存在，字段改名/删除即编译错误；
+// 注册表新增 ConfigField 但未登记映射时显式告警跳过，杜绝静默失效。
+func configFieldValue(cfg types.AppConfig, fieldName string) string {
+	switch fieldName {
+	case "YsmRoot":
+		return cfg.YsmRoot
+	case "ResourcepackRoot":
+		return cfg.ResourcepackRoot
+	case "ShaderpackRoot":
+		return cfg.ShaderpackRoot
+	case "SchematicRoot":
+		return cfg.SchematicRoot
+	case "LitematicRoot":
+		return cfg.LitematicRoot
+	case "MmdRoot":
+		return cfg.MmdRoot
+	case "VrcRoot":
+		return cfg.VrcRoot
+	default:
+		log.Printf("[config-migrate] 警告: 注册表 ConfigField %q 无显式映射, 迁移跳过", fieldName)
 		return ""
 	}
-	if f.Kind() == reflect.String {
-		return f.String()
-	}
-	return ""
 }
 
-// clearDeprecatedFields 清空 AppConfig 中标记为废弃的字段
+// clearDeprecatedFields 显式清空 AppConfig 中标记为废弃的字段（替代反射 FieldByName）。
+// 与 types/config.go 中 Deprecated 注释块对应。
 func clearDeprecatedFields(cfg *types.AppConfig) {
-	v := reflect.ValueOf(cfg).Elem()
-	// 与 types/config.go 中 Deprecated 注释块对应
-	deprecatedFields := []string{
-		"YsmRoot", "ResourcepackRoot", "ShaderpackRoot", "SchematicRoot",
-		"LitematicRoot", "MmdRoot", "VrcRoot",
-	}
-	for _, fieldName := range deprecatedFields {
-		f := v.FieldByName(fieldName)
-		if f.IsValid() && f.CanSet() && f.Kind() == reflect.String {
-			f.SetString("")
-		}
-	}
+	cfg.YsmRoot = ""
+	cfg.ResourcepackRoot = ""
+	cfg.ShaderpackRoot = ""
+	cfg.SchematicRoot = ""
+	cfg.LitematicRoot = ""
+	cfg.MmdRoot = ""
+	cfg.VrcRoot = ""
 }
 
 // migrateLegacyConfigFields 将 AppConfig 中已废弃的独立字段迁移到 CustomRoots map。
@@ -552,7 +559,7 @@ func migrateLegacyConfigFields(cfg *types.AppConfig) {
 			continue
 		}
 
-		fieldValue := getConfigFieldByReflection(*cfg, rt.ConfigField)
+		fieldValue := configFieldValue(*cfg, rt.ConfigField)
 		if fieldValue == "" {
 			continue
 		}

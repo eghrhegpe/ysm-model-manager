@@ -22,7 +22,7 @@ func (a *App) SetLinkMode(mode string) error {
 		return err
 	}
 	a.linkModeMu.Lock()
-	a.LinkMode = mode
+	a.linkMode = mode
 	a.linkModeMu.Unlock()
 	return nil
 }
@@ -32,7 +32,7 @@ func (a *App) SetLinkMode(mode string) error {
 func (a *App) getLinkMode() string {
 	a.linkModeMu.RLock()
 	defer a.linkModeMu.RUnlock()
-	return a.LinkMode
+	return a.linkMode
 }
 
 func (a *App) GetLinkMode() string {

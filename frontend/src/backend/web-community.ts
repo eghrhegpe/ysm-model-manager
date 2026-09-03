@@ -11,6 +11,7 @@ import workshopSitesJson from "../../../workshop_sites.json" with { type: "json"
 // 网页版头像提取复用前端 YSM 解包能力（替代 Go ExtractAvatarURI，ADR-049 缺口补齐）
 import { decodeYsmFile } from "../wasm/ysm-parser.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+import { hasRecycleSegment } from "../utils/recycle-path.ts";
 import { scanWebModels, readWebFile, collectAllWebEntries, typeFromWebDir } from "./web-fs.ts";
 import { WEB_ROOT, arrayBufferToBase64, base64ToBytes } from "./web-common.ts";
 import { safeGet, safeSet, safeRemove } from "../utils/dom/storage.ts";
@@ -211,17 +212,17 @@ async function scanWebLocalAuthors(): Promise<WorkshopCreator[]> {
   return result;
 }
 
-/** 相对路径是否含回收站目录段 .recycle（大小写不敏感，对齐 Go fsutil.IsRecycleDir） */
-function isRecycleRel(rel: string): boolean {
-  return rel.split("/").some((seg) => seg && seg.toLowerCase() === ".recycle");
-}
+// 回收站段判定：[G5 收口] 复用 utils/recycle-path.ts `hasRecycleSegment`（命名对齐 Go
+// sync.hasRecycleSegment，段语义 EqualFold）；原本地 isRecycleRel 已删除。
+// 对齐语义：Go 桌面 scanner/sync 对路径任一 .recycle 段跳过（walk 逐目录 IsRecycleDir
+// 递归效果 = 段判定），此处 rel 已统一正斜杠，直接段判定等价。
 
 /** GenerateRepoIndex 网页版：扫描虚拟根生成 index.json 内容（路径相对 repoPath，正斜杠） */
 async function generateWebRepoIndex(repoPath: string): Promise<string> {
   const entries = repoPath && repoPath.startsWith(WEB_ROOT)
     ? await scanWebModels(repoPath)
     : await collectAllWebEntries();
-  // 过滤 .recycle 段：回收站目录下的"已删/待清理"条目不进 index（对齐 Go 桌面 scanner 的 IsRecycleDir 跳过）
+  // 过滤 .recycle 段：回收站目录下的"已删/待清理"条目不进 index（对齐 Go 桌面 scanner 的回收站跳过）
   const list = entries
     .map((e) => {
       let rel = e.Path;
@@ -232,7 +233,7 @@ async function generateWebRepoIndex(repoPath: string): Promise<string> {
       }
       return { e, rel: rel.replace(/\\/g, "/") };
     })
-    .filter(({ rel }) => !isRecycleRel(rel))
+    .filter(({ rel }) => !hasRecycleSegment(rel))
     .map(({ e, rel }) => {
       // 对齐 go/scanner/scanner.go indexEntry json tag：小写 name/path/size + hash,omitempty
       const entry: { name: string; path: string; size: number; hash?: string } = {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { TextDecoder as NodeTextDecoder } from "node:util";
-import { showProgress, tryFetchModels, isRecyclePath } from "./data.ts";
+import { showProgress, tryFetchModels } from "./data.ts";
 
 if (typeof globalThis.TextDecoder === "undefined")
   globalThis.TextDecoder = NodeTextDecoder as typeof TextDecoder;
@@ -218,17 +218,6 @@ describe("tryFetchModels 失败路径（全部源失败时的根因诊断）", (
     const assertion = expect(promise).rejects.toThrow("NoIndex");
     await vi.advanceTimersByTimeAsync(4500);
     await assertion;
-  });
-});
-
-describe("isRecyclePath", () => {
-  it("回收站目录段 .recycle 命中（任意层级/大小写不敏感）", () => {
-    expect(isRecyclePath(".recycle/a.ysm")).toBe(true);
-    expect(isRecyclePath(".recycle/[作者]/a.ysm")).toBe(true);
-    expect(isRecyclePath("作者/.RECYCLE/a.ysm")).toBe(true); // EqualFold 对齐 Go
-    expect(isRecyclePath("作者/a.ysm")).toBe(false); // 普通子目录不误伤
-    expect(isRecyclePath("a.ysm")).toBe(false);
-    expect(isRecyclePath("")).toBe(false);
   });
 });
 

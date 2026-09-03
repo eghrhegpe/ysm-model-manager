@@ -2,6 +2,7 @@
 // tryFetchModels + 进度条
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { esc } from "../../utils/dom/html.ts";
+import { hasRecycleSegment } from "../../utils/recycle-path.ts";
 
 /**
  * 创建进度条 UI（插入到 searchResults 容器）
@@ -46,20 +47,11 @@ export interface FetchModelsResult {
 
 type MirrorStrategy = "" | "jsdelivr" | "githubapi";
 
-/**
- * 判断仓库相对路径是否含回收站目录段 `.recycle`（大小写不敏感，对齐 Go fsutil.IsRecycleDir，
- * EqualFold 语义：.RECYCLE/.Recycle 同样认定）。
- * 仓库 index.json 可能把 `.recycle/…` 下已删/待清理文件也索引进列表——加载端须过滤，
- * 否则文件出现在创意工坊下载列表；且 Go 下载器会 stripRecycleSegments 剥掉该段，
- * 剥后仅剩文件名者落到仓库根（观感即"下载平铺到根目录"）。
- */
-export function isRecyclePath(relPath: string): boolean {
-  const segs = relPath.split(/[/\\]/);
-  for (let i = 0; i < segs.length; i++) {
-    if (segs[i] && segs[i].toLowerCase() === ".recycle") return true;
-  }
-  return false;
-}
+// 回收站段判定：[G5 收口] 由 utils/recycle-path.ts `hasRecycleSegment` 单一实现
+// （命名对齐 Go sync.hasRecycleSegment；原本地 isRecyclePath 已删除）。
+// 语义背景：仓库 index.json 可能把 `.recycle/…` 下已删/待清理文件也索引进列表——
+// 加载端须过滤，否则文件出现在创意工坊下载列表；且 Go 下载器会 stripRecycleSegments
+// 剥掉该段，剥后仅剩文件名者落到仓库根（观感即"下载平铺到根目录"）。
 
 /** 单个镜像源抓取条目 */
 type FetchAttempt = { name: string; url: string; label: string };
@@ -292,7 +284,7 @@ export async function tryFetchModels(
     // 过滤回收站条目：.recycle 段下的"已删/待清理"文件不进下载列表（防下载剥段平铺根 + 语义上本就不该下载）
     return {
       models: (result.models as Array<{ path?: unknown }>).filter(
-        (m) => !isRecyclePath(typeof m?.path === "string" ? m.path : ""),
+        (m) => !hasRecycleSegment(typeof m?.path === "string" ? m.path : ""),
       ),
       source: result.source,
     };

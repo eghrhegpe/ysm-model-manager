@@ -67,8 +67,8 @@ func Scan(root string, registryJSON []byte) (ScanResponse, error) {
 	if status != 0 {
 		return ScanResponse{}, fmt.Errorf("Rust scanner ABI status %d", status)
 	}
-	if output.ptr == nil || output.len == 0 || output.len > uintptr(^uint(0)>>1) {
-		return ScanResponse{}, errors.New("Rust scanner returned an invalid buffer")
+	if err := validateOutput(output); err != nil {
+		return ScanResponse{}, err
 	}
 	defer C.ysm_buffer_free((*C.uchar)(output.ptr), C.size_t(output.len), C.size_t(output.cap)) //nolint:errcheck
 	data := append([]byte(nil), unsafe.Slice((*byte)(unsafe.Pointer(output.ptr)), int(output.len))...)

@@ -38,8 +38,6 @@ func scanEntriesWithRust(dir string) ([]types.ModelEntry, bool, bool) {
 	for _, scanError := range response.Errors {
 		emitScanError("[scanner] Rust scan error: %s: %s", scanError.Path, scanError.Message)
 	}
-	if response.Entries == nil {
-		response.Entries = []types.ModelEntry{}
-	}
+	// parseResponse 已将 nil Entries 兜底为 []types.ModelEntry{}（common.go），此处无需重复。
 	return response.Entries, response.Cacheable, true
 }

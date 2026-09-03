@@ -18,6 +18,15 @@ import (
 // 注意：ffiMu 仅保护 FFI 调用段（Lock→Call→append→defer free），不保护 load()（由 loadOnce sync.Once 保护）。
 var ffiMu sync.Mutex
 
+// validateOutput 校验 Rust 返回的 YsmBuffer：ptr 非空、len 在合法范围。
+// 两个平台桥（Windows DLL / CGO）共用，避免重复逻辑漂移。
+func validateOutput(output nativeBuffer) error {
+	if output.ptr == nil || output.len == 0 || output.len > uintptr(^uint(0)>>1) {
+		return errors.New("Rust scanner returned an invalid buffer")
+	}
+	return nil
+}
+
 // parseResponse 将 Rust 扫描器返回的缓冲区字节解码为 ScanResponse：
 // JSON 反序列化 → 透传 Rust 侧业务错误 → 空 Entries 兜底为 []。
 // 四个平台（windows/darwin/linux/android）共用此段，避免多份复制漂移。

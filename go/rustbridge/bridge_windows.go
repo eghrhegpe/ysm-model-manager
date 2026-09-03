@@ -51,8 +51,8 @@ func Scan(root string, registryJSON []byte) (ScanResponse, error) {
 	if status != 0 {
 		return ScanResponse{}, fmt.Errorf("Rust scanner ABI status %d: %w", status, callErr)
 	}
-	if output.ptr == nil || output.len == 0 || output.len > uintptr(^uint(0)>>1) {
-		return ScanResponse{}, errors.New("Rust scanner returned an invalid buffer")
+	if err := validateOutput(output); err != nil {
+		return ScanResponse{}, err
 	}
 	defer freeProc.Call(uintptr(unsafe.Pointer(output.ptr)), output.len, output.cap) //nolint:errcheck
 	// 注：free 失败（DLL 未正确导出 ysm_buffer_free）仅记 warn，不阻塞调用——

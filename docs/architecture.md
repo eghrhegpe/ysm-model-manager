@@ -840,3 +840,5 @@ app-content/community/core.ts:35-36
 - 设计规范（前端交互/动画标准权威）：`docs/Design.md`（§1 设计原则、§7 动画系统）
 - 样式借鉴（不同项目）：`MikuMikuAR/docs/architecture.md`
 - ADR-046（全平台化可行性）、ADR-047（Android 可用性规划）、ADR-049（网页版桥接）
+- 架构演进摘要：`docs/architecture-evolution-summary.md`
+- ADR-129（预览域根升格）、ADR-159（容器语义）、ADR-160（组件口径统一）、ADR-161（渲染词汇章程）

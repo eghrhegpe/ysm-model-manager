@@ -34,7 +34,11 @@ const m = vi.hoisted(() => ({
   windowShow: vi.fn(),
   openDevTools: vi.fn(),
   // revealMainWindow 观察点：记录收到的 show 回调（模块内写死 () => Window.Show()）
-  revealCalls: [] as unknown[],
+  // 元素带 { seq, show }：seq 为 boot 代际（见 mockReveal），断言只数当代，过滤
+  // coverage 慢环境下旧模块实例 IIFE 迟到 push（结构性竞态，见 boot() 注）
+  revealCalls: [] as Array<{ seq: number; show: () => void | Promise<void> }>,
+  bootSeq: 0,
+  curSeq: 0,
   // app-nav 动态 import 失败开关（factory 内读取，resetModules 后重求值时生效）
   failNav: { value: false },
 }));
@@ -57,17 +61,26 @@ vi.mock("./backend/runtime.ts", () => ({
   Window: { Show: m.windowShow, OpenDevTools: m.openDevTools },
 }));
 // revealMainWindow 真身依赖 readyState/rAF——mock 成"直接调 show 并兜错"，
-// 既触发模块内 () => Window.Show() 箭头，又让 boot 完成可观测
-vi.mock("./startup-reveal.ts", () => ({
-  revealMainWindow: async (show: () => void | Promise<void>) => {
-    m.revealCalls.push(show);
-    try {
-      await show();
-    } catch {
-      // 真身对 show() 失败也是静默（web 模式无原生窗口）
-    }
-  },
-}));
+// 既触发模块内 () => Window.Show() 箭头，又让 boot 完成可观测。
+// [结构性竞态修复] 不能用顶层 hoisted vi.mock：其 factory 只求值一次，所有
+// resetModules 实例共享同一 push 函数，旧实例 IIFE 在 coverage 慢环境下迟到 push
+// 无法与当代区分（CI 实测 got 2）。改 boot() 内 vi.doMock：factory 每次重注册重跑，
+// 闭包捕获 bootSeq 代际——旧实例持旧函数引用 push 旧 seq，当代新 seq，断言可滤。
+const mockReveal = () => {
+  const seq = ++m.bootSeq;
+  m.curSeq = seq;
+  vi.doMock("./startup-reveal.ts", () => ({
+    revealMainWindow: async (show: () => void | Promise<void>) => {
+      m.revealCalls.push({ seq, show });
+      try {
+        await show();
+      } catch {
+        // 真身对 show() 失败也是静默（web 模式无原生窗口）
+      }
+    },
+  }));
+  return seq;
+};
 
 // ── 视图组件 mock（静态 2 + 动态 5）：factory 推 marker 证明 import 执行 ──
 // 全部走 boot() 内 vi.doMock 而非 hoisted vi.mock：vitest 的 mock factory 求值
@@ -135,12 +148,19 @@ async function boot(opts: { microFlush?: boolean } = {}) {
   // 上一用例 _devMode=true 注册的匿名 listener 会跨用例残留，当本用例
   // dispatchEvent(F12) 时触发旧 Window.OpenDevTools 闭包 → m.openDevTools
   // 被调用 → 「未启用」断言失败。每次 boot 前用 unregisterDevtools 清旧 listener。
+  // mockReveal 先于 try-import 注册：下方 try import 会求值上一缓存实例并重跑其
+  // 顶层 IIFE（若上一轮未完成），该 IIFE 的 reveal push 也须带代际以便过滤。
+  mockReveal();
   try {
     const prev = await import("./app-modules.ts");
     prev.unregisterDevtools?.();
   } catch { /* 首次 import 无残留 */ }
   vi.resetModules();
+  // [结构性竞态修复] mockReveal 与 mockViews 同为 doMock：resetModules 清 doMock
+  // 注册表，故每次 boot 重注册；mockReveal 的 factory 每次重跑自增 bootSeq，
+  // 当代实例 IIFE 的 push 带最新 seq（curSeq），旧实例迟到 push 持旧 seq 被断言过滤。
   mockViews();
+  mockReveal();
   const { bus } = await import("./bus.ts");
   const toasts: Array<{ msg: string; duration?: number; type?: string }> = [];
   bus.on("toast:show", (p) => toasts.push(p as { msg: string; duration?: number; type?: string }));
@@ -183,6 +203,9 @@ function captureThemeChange() {
   }) as typeof window.matchMedia);
   return cbs;
 }
+
+/** 当代（最后一次 boot）的 reveal 记录：过滤 coverage 慢环境下旧实例 IIFE 迟到 push */
+const currentReveals = () => m.revealCalls.filter((c) => c.seq === m.curSeq);
 
 beforeEach(() => {
   vi.restoreAllMocks(); // 恢复上一用例的 matchMedia/console spy
@@ -245,7 +268,7 @@ describe("app-modules 启动装配", () => {
       m.applyUIPrefs.mock.invocationCallOrder[0],
     );
     // finally：await appContentReady 后 reveal，show 回调（Window.Show）被调用
-    expect(m.revealCalls).toHaveLength(1);
+    expect(currentReveals()).toHaveLength(1);
     expect(m.windowShow).toHaveBeenCalledTimes(1);
     expect(m.openDevTools).not.toHaveBeenCalled();
   });
@@ -257,7 +280,7 @@ describe("app-modules 启动装配", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { toasts } = await boot();
     expect(warn).toHaveBeenCalledWith("[error-diary] 错误日志注册失败:", expect.any(Error));
-    expect(m.revealCalls).toHaveLength(1);
+    expect(currentReveals()).toHaveLength(1);
     expect(toasts).toHaveLength(0); // error-diary 失败不 toast，仅 warn
   });
 
@@ -271,7 +294,7 @@ describe("app-modules 启动装配", () => {
     expect(toasts[0].msg).toContain("语言资源加载失败");
     expect(toasts[0].type).toBe("error");
     expect(toasts[0].duration).toBe(TOAST_MS.long);
-    expect(m.revealCalls).toHaveLength(1);
+    expect(currentReveals()).toHaveLength(1);
   });
 
   it("app-nav 动态加载失败 → error toast 且不阻塞其余装配", async () => {
@@ -285,7 +308,7 @@ describe("app-modules 启动装配", () => {
     expect(toasts[0].duration).toBe(TOAST_MS.long);
     // 其余视图与 reveal 不受影响
     expect(loaded.views).toContain("app-content");
-    expect(m.revealCalls).toHaveLength(1);
+    expect(currentReveals()).toHaveLength(1);
   });
 
   it("initTheme 失败 → error toast 主题初始化失败", async () => {
@@ -306,7 +329,7 @@ describe("app-modules 启动装配", () => {
     const { toasts } = await boot();
     expect(warn).toHaveBeenCalledWith("[ui-prefs] 界面偏好应用失败:", expect.any(Error));
     expect(toasts).toHaveLength(0);
-    expect(m.revealCalls).toHaveLength(1);
+    expect(currentReveals()).toHaveLength(1);
   });
 
   it("checkUpdateSilent 拒绝 → console.warn [updater] 静默", async () => {

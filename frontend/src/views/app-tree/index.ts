@@ -24,8 +24,7 @@ import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
 import { renderTree, updateStat, getRenderMode, cleanupVirtualScroll, getVsRows, getVsMode, type RenderMode, ROW_H_GRID, ROW_H_LIST } from "./render.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
-import { get } from "../../services/registry.ts";
-import type { loadEntries, TreeEntry } from "./loader.ts";
+import { loadEntries, type TreeEntry } from "./loader.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
 
 // ADR-133 阶段 B/C+：本文件内钩子的稳定 testid 声明（G-1 单一事实源，与钩子同处）。
@@ -220,8 +219,8 @@ export class AppTree extends WebComponentBase {
       const rtype = this._rootAttr;
       // ADR-094：仅当有子目录时才传 subdir（无 subdir 保持单参，向后兼容）
       const r = this._subdirAttr
-        ? await get<typeof loadEntries>("loadEntries")(rtype, this._subdirAttr)
-        : await get<typeof loadEntries>("loadEntries")(rtype);
+        ? await loadEntries(rtype, this._subdirAttr)
+        : await loadEntries(rtype);
       if (r && r.entries) {
         this._filesRoot = r.filesRoot;
         this._entries = r.entries;

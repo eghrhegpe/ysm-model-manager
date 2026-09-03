@@ -37,14 +37,10 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
 }));
 
-// mock registry（loadEntries 提供假数据，种子数据程序化 — 隔壁实证）
-vi.mock("../../services/registry.ts", () => ({
-  get: (name: string) => {
-    if (name === "loadEntries") {
-      return async () => ({ repoRoot: "/repo", entries: mockData.entries });
-    }
-    return undefined;
-  },
+// mock loader（registry.ts 已删 — 架构锐评 P1-2 修正版；loadEntries 假数据直供，
+// 种子数据程序化 — 隔壁实证）
+vi.mock("./loader.ts", () => ({
+  loadEntries: async () => ({ repoRoot: "/repo", entries: mockData.entries }),
 }));
 
 interface TreeLike extends HTMLElement {

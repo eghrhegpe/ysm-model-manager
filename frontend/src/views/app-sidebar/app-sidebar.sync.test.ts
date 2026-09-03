@@ -13,11 +13,17 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   PullResourceFromInstance: vi.fn().mockResolvedValue(0),
 }));
 
+// registry.ts 已删（架构锐评 P1-2 修正版）：loader 假实现注入改标准 vi.mock
+vi.mock("./loader.ts", () => ({ loadInstances: vi.fn() }));
+
 import { bus } from "../../bus.ts";
-import { register, clear as clearRegistry } from "../../services/registry.ts";
+import { loadInstances } from "./loader.ts";
 import "./index.ts"; // customElements.define("app-sidebar")
 import { mountCustomElement, unmountElement, waitFor } from "../../test-utils/index.ts";
 import type { SidebarInstance } from "./data.ts";
+
+/** loader mock 句柄（各用例 mockImplementation 设假数据，beforeEach mockReset 防泄漏） */
+const loadInstancesMock = vi.mocked(loadInstances);
 
 function makeInstances(): SidebarInstance[] {
   return [
@@ -51,7 +57,7 @@ const missingPayloads: Array<{ token?: string }> = [];
 const offs: Array<() => void> = [];
 
 beforeEach(async () => {
-  clearRegistry();
+  loadInstancesMock.mockReset();
   document.body.innerHTML = "";
   toasts.length = 0;
   statsRefreshed.length = 0;
@@ -77,7 +83,6 @@ beforeEach(async () => {
 afterEach(() => {
   offs.forEach((fn) => fn());
   offs.length = 0;
-  clearRegistry();
   document.body.innerHTML = "";
 });
 
@@ -90,7 +95,7 @@ async function mountSidebar(
   instances: SidebarInstance[] = makeInstances(),
   rtype: string = uniqueRtype(),
 ): Promise<HTMLElement> {
-  register("loadInstances", vi.fn(async () => instances));
+  loadInstancesMock.mockImplementation(async () => instances);
   const el = mountCustomElement("app-sidebar");
   // 用测试专用 rtype 隔离 _checkedSets；attributeChangedCallback 会带新 rtype 重新加载
   if (rtype !== "ysm") el.setAttribute("rtype", rtype);
@@ -295,9 +300,9 @@ describe("app-sidebar — 拉取所选", () => {
 
 describe("app-sidebar — _reload 失败分支", () => {
   it("loadInstances 抛错 → 实例清空且不抛", async () => {
-    register("loadInstances", vi.fn(async () => {
+    loadInstancesMock.mockImplementation(async () => {
       throw new Error("boom");
-    }));
+    });
     const el = mountCustomElement("app-sidebar");
     // 不抛异常即通过；等渲染兜底完成
     await waitFor(() => el.shadowRoot!.querySelector(".ws-empty"));
@@ -309,10 +314,10 @@ describe("app-sidebar — _reload 并发（pending 补跑防 rtype 错配）", (
   it("reload 进行中 rtype 切换 → 不直接执行，完成后用最新 rtype 补跑", async () => {
     const calls: string[] = [];
     let resolvers: Array<(v: SidebarInstance[]) => void> = [];
-    register("loadInstances", vi.fn((rtype: string) => {
+    loadInstancesMock.mockImplementation((rtype: string) => {
       calls.push(rtype);
       return new Promise<SidebarInstance[]>((res) => resolvers.push(res));
-    }));
+    });
     const el = mountCustomElement("app-sidebar");
     // 初始 reload 挂起（connectedCallback 50ms 防抖）
     await waitFor(() => calls.length === 1);

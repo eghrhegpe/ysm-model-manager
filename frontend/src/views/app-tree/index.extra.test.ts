@@ -5,7 +5,7 @@
 // _load 空返回与抛错、_loadAuthorsAsync 失败、_filterPaths 过滤、
 // connectedCallback 初始化异常兜底、disconnected 键盘监听清理。
 // mock 策略：backend/app.ts（getApp 可控）、modal.ts（modalConfirm 可控）、
-// toolbar-events.ts（抛错注入）；registry 用真实实现 + register("loadEntries")。
+// toolbar-events.ts（抛错注入）；loader mock（vi.mock 直供 loadEntries）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // —— 模块 mock（工厂不引用外部变量，可安全提升）——
@@ -18,17 +18,18 @@ vi.mock("../../utils/dom/dialogs/modal.ts", () => ({
   modalPrompt: vi.fn(),
 }));
 vi.mock("./toolbar-events.ts", () => ({ bindToolbarEvents: vi.fn() }));
+// registry.ts 已删（架构锐评 P1-2 修正版）：loader mock 直供 loadEntries
+vi.mock("./loader.ts", () => ({ loadEntries: vi.fn() }));
 
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { register, clear as clearRegistry } from "../../services/registry.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { getApp } from "../../backend/app.ts";
 import type { AppBindings } from "../../backend/app.ts";
 import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
 import { selectState } from "./data.ts";
-import type { TreeEntry } from "./loader.ts";
+import { loadEntries, type TreeEntry } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
 import { waitFor, queryAllByTestId } from "../../test-utils/index.ts";
 import type { AppTree } from "./index.ts";
@@ -66,6 +67,7 @@ const entriesData: TreeEntry[] = [];
 /** 可变 loader 实现（_load 每次调用时读取最新） */
 let loaderImpl: (rtype: string) => Promise<{ filesRoot: string; entries?: TreeEntry[] }>;
 let loader: ReturnType<typeof vi.fn>;
+const loadEntriesMock = vi.mocked(loadEntries);
 let emitSpy: ReturnType<typeof vi.spyOn>;
 
 function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void; reject: (e: unknown) => void } {
@@ -129,9 +131,9 @@ beforeEach(() => {
     { name: "b.ysm", path: "b.ysm", fullPath: "/repo/b.ysm", type: "ysm", banned: false, size: 2, modTime: 0 },
   );
   loaderImpl = defaultLoaderImpl;
-  loader = vi.fn((rtype: string) => loaderImpl(rtype));
-  clearRegistry();
-  register("loadEntries", loader);
+  loader = loadEntriesMock;
+  loadEntriesMock.mockClear();
+  loadEntriesMock.mockImplementation(((rtype: string) => loaderImpl(rtype)) as typeof loadEntries);
   selectState.keys.clear();
   selectState.lastKey = null;
   delete (globalThis as Record<string, unknown>)["__YSM_WEB__"];
@@ -139,7 +141,6 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.innerHTML = "";
-  clearRegistry();
   localStorage.removeItem("at_dirs");
   delete (globalThis as Record<string, unknown>)["__YSM_WEB__"];
 });

@@ -23,8 +23,7 @@ import { headerHTML, footerHTML, listContainerHTML } from "./tpl.ts";
 import { renderVersionCards } from "./render.ts";
 import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
 import { bindPackCardDnD } from "../../features/pack-dnd.ts";
-import { get } from "../../services/registry.ts";
-import type { loadInstances } from "./loader.ts";
+import { loadInstances } from "./loader.ts";
 import type { SidebarInstance } from "./data.ts";
 import { getApp } from "../../backend/app.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
@@ -464,7 +463,7 @@ class AppSidebar extends WebComponentBase {
     this._loading = true;
     const gen = ++this._reloadGen;
     try {
-      const instances = await get<typeof loadInstances>("loadInstances")(this._rtype, force ? { force: true } : undefined);
+      const instances = await loadInstances(this._rtype, force ? { force: true } : undefined);
       if (gen !== this._reloadGen) return; // 已被更新的重载取代，丢弃过期结果
       this._instances = instances;
       dbg(

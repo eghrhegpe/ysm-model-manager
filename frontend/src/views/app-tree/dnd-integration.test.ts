@@ -7,13 +7,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../../backend/app.ts", () => ({ getApp: vi.fn() }));
 vi.mock("./toolbar-events.ts", () => ({ bindToolbarEvents: vi.fn() }));
+// registry.ts 已删（架构锐评 P1-2 修正版）：loader mock 直供 loadEntries
+vi.mock("./loader.ts", () => ({ loadEntries: vi.fn() }));
 
-import { register, clear as clearRegistry } from "../../services/registry.ts";
+import { loadEntries } from "./loader.ts";
 import { getApp } from "../../backend/app.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
 import { waitFor } from "../../test-utils/index.ts";
 import type { AppTree } from "./index.ts";
 
+const loadEntriesMock = vi.mocked(loadEntries);
 const getAppMock = vi.mocked(getApp);
 
 const bindings = {
@@ -54,11 +57,7 @@ let el: AppTree;
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  clearRegistry();
-  register(
-    "loadEntries",
-    (() => Promise.resolve({ filesRoot: "/repo", entries: [...entries] })) as unknown as Parameters<typeof register>[1],
-  );
+  loadEntriesMock.mockImplementation(async () => ({ filesRoot: "/repo", entries: [...entries] }));
   getAppMock.mockResolvedValue(bindings as unknown as Awaited<ReturnType<typeof getAppMock>>);
   delete (globalThis as unknown as Record<string, unknown>)["__YSM_BACKEND__"];
   el = await mountEl();

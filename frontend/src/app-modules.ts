@@ -1,7 +1,6 @@
 // ===== 所有 ES module 组件的统一入口 =====
 import { TOAST_MS } from "./utils/dom/toast-ms.ts";
 import { bus } from "./bus.ts";
-import { register } from "./services/registry.ts";
 import { Window } from "./backend/runtime.ts";
 import { registerErrorDiary } from "./core/error-diary.ts";
 import { registerCoiServiceWorker } from "./backend/coi-sw.ts";
@@ -14,12 +13,6 @@ import { loadView } from "./utils/module-loader.ts";
 import { revealMainWindow } from "./startup-reveal.ts";
 
 // bus 已在 bus.ts 中挂载 window.bus，此处不再重复赋值
-
-// 注册全局可替换服务
-import { loadInstances } from "./views/app-sidebar/loader.ts";
-import { loadEntries } from "./views/app-tree/loader.ts";
-register("loadInstances", loadInstances);
-register("loadEntries", loadEntries);
 
 // 新版 Web Component（通过 ES Module 导入以支持 shadow DOM）
 // 静态导入（浏览器加载失败时直接报错，不 try/catch 以免静默吞错）

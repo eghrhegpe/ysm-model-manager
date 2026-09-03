@@ -4,8 +4,7 @@ import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
-import { get } from "../../services/registry.ts";
-import type { loadEntries } from "./loader.ts";
+import { loadEntries } from "./loader.ts";
 import { getApp } from "../../backend/app.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import type { AppTree } from "./index.ts";
@@ -236,8 +235,8 @@ async function reload(vm: AppTree): Promise<void> {
   try {
     const rtype = vm._rootAttr || "";
     const r = vm._subdirAttr
-      ? await get<typeof loadEntries>("loadEntries")(rtype, vm._subdirAttr)
-      : await get<typeof loadEntries>("loadEntries")(rtype);
+      ? await loadEntries(rtype, vm._subdirAttr)
+      : await loadEntries(rtype);
     if (atBeGenGuard(vm, gen)) return;
     if (r) {
       vm._filesRoot = r.filesRoot;

@@ -5,7 +5,6 @@
 //   - 可通过 URL ?nodebug=1 关闭（默认开启）
 //   - 可通过 window._DBG_RING 取最近 200 条（用于复盘）
 //   - 写完调试后请删除调用（调试日志用完即删，见 frontend/AGENTS.md）
-import { getApp } from "../../backend/app.ts";
 import { safeGet } from "../dom/storage.ts";
 
 interface RingEntry {
@@ -88,9 +87,12 @@ export function safeStr(v: unknown): string {
 
 // 调试：控制台可调 window.debugGetSpec(path) 获取 Go spec 骨骼数据
 // node 测试环境无 window，跳过挂载
+// 断环（架构锐评 P0-2）：模块顶层不再静态依赖 backend/app.ts——本文件为叶子工具，
+// 控制台钩子仅在调用时动态 import 桥（浏览器运行时按需加载，无静态环）。
 if (typeof window !== "undefined") {
   window.debugGetSpec = async (path?: string): Promise<unknown> => {
     try {
+      const { getApp } = await import("../../backend/app.ts");
       const { GetModel3DSpec } = await getApp();
       const spec = await GetModel3DSpec(path || "");
       dbg("model3d", "spec:", spec);

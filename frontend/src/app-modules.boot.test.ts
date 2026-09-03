@@ -210,13 +210,10 @@ afterEach(() => {
 });
 
 describe("app-modules 启动装配", () => {
-  it("import 即注册 loadInstances/loadEntries 并装配全部视图（含动态 import 执行）", async () => {
+  it("装配全部视图（含动态 import 执行）", async () => {
     await boot();
-    const reg = await import("./services/registry.ts");
-    expect(reg.has("loadInstances")).toBe(true);
-    expect(reg.has("loadEntries")).toBe(true);
-    expect(typeof reg.get("loadInstances")).toBe("function");
-    expect(typeof reg.get("loadEntries")).toBe("function");
+    // registry.ts 已删（架构锐评 P1-2 修正版）：loadInstances/loadEntries 由
+    // sidebar/tree 的 loader.ts 直连提供，无启动注册断言
     // 静态 2（context-menu/app-toast）+ loadView 4 + IIFE 内 app-nav
     expect([...loaded.views].sort()).toEqual([
       "app-content",

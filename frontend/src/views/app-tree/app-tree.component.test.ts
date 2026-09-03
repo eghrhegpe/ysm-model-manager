@@ -19,8 +19,14 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   SyncCustomToRepo: vi.fn().mockResolvedValue(undefined),
 }));
 
+// registry.ts 已删（架构锐评 P1-2 修正版）：组件测试改标准 vi.mock 注入，
+// importOriginal 保真包装真实 loader（替代原 register 运行时替身注入）
+vi.mock("./loader.ts", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("./loader.ts")>();
+  return { ...mod, loadEntries: vi.fn(mod.loadEntries) };
+});
+
 import { bus } from "../../bus.ts";
-import { register, clear as clearRegistry } from "../../services/registry.ts";
 import { loadEntries } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
 import { sleep, waitFor, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
@@ -31,15 +37,12 @@ describe("app-tree 生命周期配对", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     document.body.innerHTML = "";
-    clearRegistry();
-    // bus-handlers 的 reload 走 registry.get("loadEntries")——注入 spy 验证触发
-    loadSpy = vi.fn(loadEntries);
-    register("loadEntries", loadSpy);
+    // bus-handlers 的 reload 走 loader.loadEntries——vi.mock 注入 spy 验证触发
+    loadSpy = vi.mocked(loadEntries);
   });
 
   afterEach(() => {
     document.body.innerHTML = "";
-    clearRegistry();
   });
 
   it("connected → 渲染树容器（#tree 存在，生命周期跑通）", async () => {

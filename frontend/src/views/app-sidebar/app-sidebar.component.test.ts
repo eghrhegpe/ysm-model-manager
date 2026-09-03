@@ -13,8 +13,14 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   GetMinecraftPaths: vi.fn().mockResolvedValue([]),
 }));
 
+// registry.ts 已删（架构锐评 P1-2 修正版）：组件测试改标准 vi.mock 注入，
+// importOriginal 保真包装真实 loader（替代原 register 运行时替身注入）
+vi.mock("./loader.ts", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("./loader.ts")>();
+  return { ...mod, loadInstances: vi.fn(mod.loadInstances) };
+});
+
 import { bus } from "../../bus.ts";
-import { register, clear as clearRegistry } from "../../services/registry.ts";
 import { loadInstances } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-sidebar")
 // 正向等待一律 waitFor 条件轮询（原固定 sleep 慢机不够即假红，审计 P2）；
@@ -22,21 +28,19 @@ import "./index.ts"; // 触发 customElements.define("app-sidebar")
 // 已在各处注释标明。waitFor 定义见 src/test-utils/index.ts。
 import { sleep, waitFor, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
 
-/** loadInstances 调用计数（registry 注入 spy，验证 _reload 触发与清理） */
-function spyLoad(): ReturnType<typeof vi.fn> {
-  const spy = vi.fn(loadInstances);
-  register("loadInstances", spy);
-  return spy;
+/** loadInstances 调用计数（vi.mock 注入 spy，验证 _reload 触发与清理） */
+const loadInstancesMock = vi.mocked(loadInstances);
+function spyLoad(): typeof loadInstancesMock {
+  loadInstancesMock.mockClear();
+  return loadInstancesMock;
 }
 
 describe("app-sidebar 生命周期配对", () => {
   beforeEach(() => {
-    clearRegistry();
     document.body.innerHTML = "";
   });
 
   afterEach(() => {
-    clearRegistry();
     document.body.innerHTML = "";
   });
 

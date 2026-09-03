@@ -23,7 +23,7 @@ const {
   modalPromptMock,
   modalConfirmMock,
   showBatchRenameDialogMock,
-  getRegistryMock,
+  loadEntriesMock,
 } = vi.hoisted(() => ({
   SelectDirectoryMock: vi.fn(),
   SaveAppConfigMock: vi.fn(),
@@ -41,7 +41,7 @@ const {
   modalConfirmMock: vi.fn(),
   showBatchRenameDialogMock: vi.fn(),
   initInstanceActionsMock: vi.fn(() => []),
-  getRegistryMock: vi.fn(),
+  loadEntriesMock: vi.fn(),
 }));
 
 vi.mock("../../backend/app.ts", () => ({
@@ -63,8 +63,9 @@ vi.mock("../../backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("../../services/registry.ts", () => ({
-  get: getRegistryMock,
+// registry.ts 已删（架构锐评 P1-2 修正版）：loader mock 直供 loadEntries
+vi.mock("./loader.ts", () => ({
+  loadEntries: loadEntriesMock,
 }));
 
 vi.mock("../../utils/dom/dialogs/modal.ts", () => ({
@@ -151,11 +152,7 @@ beforeEach(() => {
   modalPromptMock.mockResolvedValue("");
   modalConfirmMock.mockResolvedValue(false);
   showBatchRenameDialogMock.mockResolvedValue(undefined);
-  getRegistryMock.mockImplementation((name: string) =>
-    name === "loadEntries"
-      ? async () => ({ filesRoot: "/repo", entries: [] as TreeEntry[] })
-      : undefined,
-  );
+  loadEntriesMock.mockImplementation(async () => ({ filesRoot: "/repo", entries: [] as TreeEntry[] }));
   selectState.keys.clear();
   selectState.lastKey = null;
 });
@@ -457,14 +454,10 @@ describe("bindBusEvents — 树刷新", () => {
     vm._rootAttr = "EntityPlayer";
     vm._subdirAttr = "EntityPlayer";
     let loadedArgs: [string, string?] = ["EntityPlayer"];
-    getRegistryMock.mockImplementation((name: string) =>
-      name === "loadEntries"
-        ? async (...args: [string, string?]) => {
-            loadedArgs = args;
-            return { filesRoot: "/repo/mmd/EntityPlayer", entries: [] as TreeEntry[] };
-          }
-        : undefined,
-    );
+    loadEntriesMock.mockImplementation(async (...args: [string, string?]) => {
+      loadedArgs = args;
+      return { filesRoot: "/repo/mmd/EntityPlayer", entries: [] as TreeEntry[] };
+    });
     await bind(vm);
 
     bus.emit("tree:reload");

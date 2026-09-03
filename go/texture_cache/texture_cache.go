@@ -12,12 +12,14 @@ package texture_cache
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"ysm-model-manager/go/fsutil"
@@ -25,7 +27,9 @@ import (
 
 // CacheDir 返回纹理缓存目录。
 // 默认走 os.UserConfigDir()/YSM-Model-Manager/texture_cache（与 avatar 同根，ADR-046 P2）。
-// 外部可覆盖此函数（测试时可设置临时目录）。
+// 外部可覆盖此函数（internal/app 启动期注入平台数据根；测试可设置临时目录）。
+// 并发契约：写入仅允许在启动期 / 测试 setup 发生，运行期视为只读常量——
+// 包级函数变量无内置并发防护，运行期写入须自行承担同步责任（跨测试污染同理）。
 var CacheDir = func() string {
 	base, err := os.UserConfigDir()
 	if err != nil || base == "" {
@@ -60,14 +64,13 @@ func ReadCached(hash string) (data []byte, ok bool, err error) {
 	if path == "" {
 		return nil, false, nil
 	}
-	if _, statErr := os.Stat(path); statErr != nil {
-		if os.IsNotExist(statErr) {
-			return nil, false, nil // 缓存未命中，非错误
-		}
-		return nil, false, fmt.Errorf("texture_cache: 检查缓存 %s: %w", path, statErr)
-	}
+	// 一步 ReadFile + fs.ErrNotExist 判定：不做 Stat-then-Read（TOCTOU 竞态——
+	// 两步之间文件可能被 Prune 删除，旧实现会把删除竞态误报为读错误而非 miss）。
 	data, err = os.ReadFile(path)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, false, nil // 缓存未命中（含并发淘汰竞态），非错误
+		}
 		return nil, false, fmt.Errorf("texture_cache: 读取缓存 %s: %w", path, err)
 	}
 	return data, true, nil
@@ -100,7 +103,7 @@ func HasCached(hash string) (bool, error) {
 	}
 	_, err := os.Stat(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return false, nil
 		}
 		return false, err
@@ -116,7 +119,7 @@ func ClearCache() error {
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
 		return err
@@ -133,6 +136,53 @@ func ClearCache() error {
 	return nil
 }
 
+// cacheScanEntry 缓存目录扫描单条目。
+type cacheScanEntry struct {
+	path string
+	name string
+	size int64
+	mod  time.Time
+	tmp  bool // 写入中间产物 .tmp（仅 Prune 按 TTL 关注，不占容量预算）
+}
+
+// scanCacheDir 扫描缓存目录：ReadDir 一次 + 逐文件 stat，过滤 .ktx2/.tmp。
+// 目录不存在返回 (nil, nil)（消费方按空目录语义处理）；stat 失败单条跳过并留日志。
+// ListCacheFiles / GetCacheStats / Prune 三处原各自 ReadDir+过滤+stat 的
+// 重复遍历收敛至此单一来源（外部锐评 2026-09：三份近亲遍历）。
+func scanCacheDir(dir string) ([]cacheScanEntry, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	files := make([]cacheScanEntry, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		isTmp := strings.HasSuffix(name, ".tmp")
+		if !isTmp && !strings.HasSuffix(name, ".ktx2") {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			log.Printf("texture_cache: 扫描跳过无法 stat 的文件 %s: %v", filepath.Join(dir, name), err)
+			continue
+		}
+		files = append(files, cacheScanEntry{
+			path: filepath.Join(dir, name),
+			name: name,
+			size: info.Size(),
+			mod:  info.ModTime(),
+			tmp:  isTmp,
+		})
+	}
+	return files, nil
+}
+
 // CacheEntry 缓存条目信息
 type CacheEntry struct {
 	Hash string
@@ -147,33 +197,20 @@ func ListCacheFiles() ([]CacheEntry, error) {
 		return nil, nil
 	}
 
-	entries, err := os.ReadDir(dir)
+	files, err := scanCacheDir(dir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
 		return nil, err
 	}
 
 	var result []CacheEntry
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
+	for _, f := range files {
+		if f.tmp {
+			continue // .tmp 中间产物不是缓存条目
 		}
-		name := e.Name()
-		if !strings.HasSuffix(name, ".ktx2") {
-			continue
-		}
-		path := filepath.Join(dir, name)
-		info, err := e.Info()
-		if err != nil {
-			continue
-		}
-		hash := strings.TrimSuffix(name, ".ktx2")
 		result = append(result, CacheEntry{
-			Hash: hash,
-			Path: path,
-			Size: info.Size(),
+			Hash: strings.TrimSuffix(f.name, ".ktx2"),
+			Path: f.path,
+			Size: f.size,
 		})
 	}
 	return result, nil
@@ -196,25 +233,14 @@ func GetCacheStats() CacheStats {
 		return stats
 	}
 
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return stats
-	}
-
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		if !strings.HasSuffix(name, ".ktx2") {
-			continue
-		}
-		info, err := e.Info()
-		if err != nil {
-			continue
+	// 统计只读：扫描错误按旧语义忽略（返回零值统计，不阻断体检页）
+	files, _ := scanCacheDir(dir)
+	for _, f := range files {
+		if f.tmp {
+			continue // .tmp 写入中间产物不计容量统计
 		}
 		stats.FileCount++
-		stats.TotalSize += info.Size()
+		stats.TotalSize += f.size
 	}
 
 	// 容量告警：接近上限（> 0.8 * maxCacheBytes）即提示，早于淘汰阈值预警清理。
@@ -237,6 +263,7 @@ var (
 	pruneInterval = 5 * time.Minute     // 写路径限频间隔（0 = 每次写都触发）
 	pruneMu       sync.Mutex            // 保护 lastPrune 与 SetCacheLimits 的并发读写
 	lastPrune     time.Time
+	pruneInFlight atomic.Bool // 后台淘汰防重入：已有 Prune 在跑时跳过本轮（限频下轮写再触发）
 	// removeFile 删除实现：测试可注入替换以模拟删除失败（P2 记账失真回归）
 	removeFile = os.Remove
 )
@@ -275,44 +302,12 @@ func Prune() (PruneResult, error) {
 	maxBytes := maxCacheBytes
 	maxAge := maxEntryAge
 	pruneMu.Unlock()
-	entries, err := os.ReadDir(dir)
+	files, err := scanCacheDir(dir)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return res, nil
-		}
 		return res, fmt.Errorf("texture_cache: 扫描缓存目录 %s: %w", dir, err)
 	}
-
-	type entry struct {
-		path string
-		size int64
-		mod  time.Time
-		tmp  bool // 写入中间产物 .tmp（仅按 TTL 清，不占容量预算）
-	}
-	var files []entry
-	now := time.Now()
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		isTmp := strings.HasSuffix(name, ".tmp")
-		if !isTmp && !strings.HasSuffix(name, ".ktx2") {
-			continue
-		}
-		info, err := e.Info()
-		if err != nil {
-			log.Printf("texture_cache: 淘汰跳过无法 stat 的文件 %s: %v", filepath.Join(dir, name), err)
-			continue
-		}
-		files = append(files, entry{
-			path: filepath.Join(dir, name),
-			size: info.Size(),
-			mod:  info.ModTime(),
-			tmp:  isTmp,
-		})
-	}
 	totalFiles := len(files)
+	now := time.Now()
 
 	// 最旧优先排序（确定性：同 mtime 按路径字典序）
 	sort.SliceStable(files, func(i, j int) bool {
@@ -387,6 +382,11 @@ func Prune() (PruneResult, error) {
 
 // maybePrune 写路径限频触发：距上次扫描未达间隔则跳过，避免每次写都 O(n) 扫目录。
 // lastPrune 在锁内更新后于锁外执行 Prune，避免慢扫描阻塞并发写。
+// 异步分叉（2026-09 外部锐评 #7）：interval>0（生产限频配置）时后台执行，
+// 淘汰的 O(n) 目录扫描不阻塞 WriteCached 调用方 goroutine（若调用发生在 UI 绑定
+// 线程上，同步扫描上千文件的缓存目录会冻结界面）；interval<=0（测试/调试配置，
+// 每次写都触发）保持同步，便于测试直连断言。pruneInFlight 防后台重入：
+// 已有 Prune 在跑时跳过本轮，限频语义下由后续写再触发。
 func maybePrune() {
 	pruneMu.Lock()
 	if pruneInterval > 0 && !lastPrune.IsZero() && time.Since(lastPrune) < pruneInterval {
@@ -395,7 +395,20 @@ func maybePrune() {
 	}
 	lastPrune = time.Now()
 	pruneMu.Unlock()
-	if _, err := Prune(); err != nil {
-		log.Printf("texture_cache: 写后淘汰失败: %v", err)
+
+	if pruneInterval <= 0 {
+		if _, err := Prune(); err != nil {
+			log.Printf("texture_cache: 写后淘汰失败: %v", err)
+		}
+		return
 	}
+	if !pruneInFlight.CompareAndSwap(false, true) {
+		return // 已有淘汰在跑：跳过本轮（限频下轮写再触发）
+	}
+	go func() {
+		defer pruneInFlight.Store(false)
+		if _, err := Prune(); err != nil {
+			log.Printf("texture_cache: 写后淘汰失败: %v", err)
+		}
+	}()
 }

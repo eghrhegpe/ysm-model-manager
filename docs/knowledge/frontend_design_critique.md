@@ -211,7 +211,11 @@ quick_risk_lines:
 
 - ✅ **刀① perception 帧内 prealloc**：`perception/gaze.ts`、`perception/autodance.ts` 闭包级 scratch（Quaternion/Euler/Vector3 复用），每帧 0 分配；EYE_IDS / 左右臂 Set 提常量。45 感知测试全绿。
 - ✅ **刀② accent 收编 var(--accent)**：8 文件 15 处 `rgba(124,131,255)` → `color-mix(in srgb,var(--accent) X%,transparent)`；`#7c83ff` → `var(--accent)`；canvas 2D（model2d-draw.ts）加 `accentRgba()` 运行时解析（fillStyle 不解析 CSS 变量）；`variables.css --mmd-morph-active-bg` 改派生。roles/switch/vrm-bone-ui 样式串提纯函数（happy-dom 不认 color-mix()，测试直断字符串）。全量 5171 测试 + typecheck + vite build 全绿。
-- ⏳ **刀③ _render → tab-panel 常驻**：ADR-163 已立项（`docs/adr/ADR-163-content-page-tab-panel-persistent.md`），待实施。
+- ✅ **刀③ _render → 页面面板常驻化**：兄弟会话 `486b9033` 实施完成（**单面板挂载复用**方案，非 ADR-163 原文「tab-panel 常驻 + active 切换」——落地方案更优）：
+  - `index.ts` 每页首次访问构建面板 + 执行 init（每页仅一次），之后复用缓存节点、不重建不重复 init——消灭「再进 dedup 永久卡死」（busy 锁 finally 必复位 + 不再重复 init）；
+  - **单面板挂载**：root 下同一时刻仅保留当前面板（其余从 DOM 分离、引用留缓存），root 内 id 天然唯一，页内 `host._root.getElementById` 无跨页冲突 → **无需页内查询作用域化**（省去 237 处 getElementById 改造）；
+  - `lang:changed` 全量重建（低频可接受）；`disconnectedCallback` 清面板缓存防泄漏。
+  - ⚠️ 与 ADR-163 的差异：ADR 写的是「tab-panel 常驻 + active 切换 + dedup 锁随页面实例化」，落地为「单面板挂载 + 缓存节点复用」，dedup 锁保持模块级（常驻后不再重复 init，锁问题自然消解）。ADR-163 决策方向仍成立，实施细节以本卡为准。
 
 ## 相关
 

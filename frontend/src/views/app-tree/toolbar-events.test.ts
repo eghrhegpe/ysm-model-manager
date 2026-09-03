@@ -76,7 +76,6 @@ vi.mock("../../utils/dom/directory-picker.ts", () => ({
 }));
 
 import { bindToolbarEvents } from "./toolbar-events.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
 // 构造 toolbar ShadowRoot（与 tpl.ts 结构对应的最小 DOM）
 function makeRoot(): { root: ShadowRoot; get: (id: string) => HTMLElement | null; getByTestId: (tid: string) => HTMLElement | null } {
@@ -188,7 +187,7 @@ afterEach(() => {
 
 describe("bindToolbarEvents — 高级筛选弹窗", () => {
   it("点击筛选按钮 → modalAdvFilter 收到当前输入框值", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     (getByTestId("tree-srch") as HTMLInputElement).value = "Alex";
     (getByTestId("tree-af-min-bones") as HTMLInputElement).value = "3";
@@ -204,7 +203,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("弹窗返回 null（取消）→ 不渲染树", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -215,7 +214,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("弹窗返回全空条件 → 清空筛选并渲染", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._filterPaths = new Set(["/a.ysm"]);
     modalAdvFilterMock.mockResolvedValue({
@@ -239,7 +238,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("弹窗返回筛选值 → 回填 inline + SearchModels/ListByTag 交集", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     modalAdvFilterMock.mockResolvedValue({
       keyword: "Alex",
@@ -278,7 +277,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("仅有 tag → _filterPaths 直接用 tagPaths", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     modalAdvFilterMock.mockResolvedValue({
       keyword: "",
@@ -301,7 +300,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("仅有范围条件 → 走 SearchModels 不查标签", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     modalAdvFilterMock.mockResolvedValue({
       keyword: "",
@@ -324,7 +323,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("匹配 0 个 → warn toast 且保留空筛选", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     modalAdvFilterMock.mockResolvedValue({
       keyword: "无",
@@ -347,7 +346,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("_filesRoot 空 → warn toast 且不搜索", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._filesRoot = null; // toolbar-search.ts 读 vm._filesRoot，非 GetRepoRoot
     modalAdvFilterMock.mockResolvedValue({
@@ -370,7 +369,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("ListByTag 失败 → error toast 且继续按范围搜索", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     modalAdvFilterMock.mockResolvedValue({
       keyword: "x",
@@ -394,7 +393,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   });
 
   it("SearchModels 失败 → error toast + 清空筛选", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     modalAdvFilterMock.mockResolvedValue({
       keyword: "x",
@@ -420,7 +419,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
 
 describe("bindToolbarEvents — 全选/反选", () => {
   it("首次点击 → 全选可见文件行", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     // getVsRows mock 注入（模拟渲染结果；WeakMap 版访问器经模块 mock 提供）
     getVsRowsMock.mockReturnValue([
@@ -455,7 +454,7 @@ describe("bindToolbarEvents — 全选/反选", () => {
 
 describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
   it("btn-repo → nav:change settings", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -467,7 +466,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
   it("srch 输入 → _search 立即更新，渲染 debounce 150ms", () => {
     vi.useFakeTimers();
     try {
-      const { root, get, getByTestId } = makeRoot();
+      const { root, getByTestId } = makeRoot();
       const vm = makeVM(root);
       bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -487,7 +486,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
   it("连续输入多个字符 → debounce 合并为一次渲染（用最新值）", () => {
     vi.useFakeTimers();
     try {
-      const { root, get, getByTestId } = makeRoot();
+      const { root, getByTestId } = makeRoot();
       const vm = makeVM(root);
       bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -508,7 +507,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
   });
 
   it("sort 切换 → 更新 _sort 并渲染", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -521,7 +520,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
   });
 
   it("btn-view-mode 点击 → 切换 list⇄grid + setRenderMode + 图标更新", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._renderMode = "list";
     bindToolbarEvents(root, vm as unknown as AppTree);
@@ -538,7 +537,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
   });
 
   it("af-clear → 清空全部输入与筛选", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._filterPaths = new Set(["/r/a.ysm"]);
     vm._search = "x";
@@ -558,7 +557,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
 
 describe("bindToolbarEvents — 作者菜单", () => {
   it("hover 填充作者按钮（含数量）", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, get } = makeRoot();
     const vm = makeVM(root);
     vm._authors = [{ Name: "Alex", Count: 3 }, "Bob"];
     bindToolbarEvents(root, vm as unknown as AppTree);
@@ -573,7 +572,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
   });
 
   it("作者为空 → 显示暂无作者", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, get } = makeRoot();
     const vm = makeVM(root);
     vm._authors = [];
     bindToolbarEvents(root, vm as unknown as AppTree);
@@ -608,7 +607,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
 
 describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-batch enable-all / disable-all → bus 事件", () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -619,7 +618,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more open-folder → OpenFolder(repoRoot)", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -631,7 +630,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more open-folder Android → 定位公共仓库目录（resolveAndroidRepoDir），不调 OpenFolder", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() });
     isViewerModeMock.mockReturnValue(true); // 查看器模式（Android）
@@ -646,7 +645,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more open-folder 未配置仓库 → 不调后端", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     vm._filesRoot = null;
     bindToolbarEvents(root, vm as unknown as AppTree);
@@ -659,7 +658,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more import-file 成功 → ImportByType + 刷新 + toast", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -675,7 +674,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more import-file 取消选择 → 不导入", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     SelectImportFileMock.mockResolvedValue("");
     bindToolbarEvents(root, vm as unknown as AppTree);
@@ -688,7 +687,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more import-file 后端失败 → warn toast", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     ImportByTypeMock.mockResolvedValue("文件已存在");
     bindToolbarEvents(root, vm as unknown as AppTree);
@@ -701,7 +700,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more import-dir 桌面成功 → SelectDirectory + ImportByType + 刷新", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -717,7 +716,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more import-dir Android 未授权 → 引导授权（resolveAndroidRepoDir 返回 null），不复制导入", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() });
     isViewerModeMock.mockReturnValue(true); // 查看器模式（Android）
@@ -736,7 +735,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more import-dir Android 已授权 → 定位公共仓库目录 + 刷新，不走桌面 Dialog", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() });
     isViewerModeMock.mockReturnValue(true); // 查看器模式（Android）
@@ -755,7 +754,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more refresh → 渲染 spinner + 重新加载", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -768,7 +767,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more genindex 成功 → toast + 按钮恢复", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
@@ -782,7 +781,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more genindex 未配置仓库 → warn toast 且不生成", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     GetRepoRootMock.mockResolvedValue("");
     bindToolbarEvents(root, vm as unknown as AppTree);
@@ -797,7 +796,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   });
 
   it("menu-more genindex 后端报错 → error toast + 按钮恢复", async () => {
-    const { root, get, getByTestId } = makeRoot();
+    const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     GenerateRepoIndexMock.mockRejectedValue(new Error("EACCES"));
     bindToolbarEvents(root, vm as unknown as AppTree);

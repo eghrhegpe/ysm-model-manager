@@ -23,7 +23,6 @@ const {
   modalPromptMock,
   modalConfirmMock,
   showBatchRenameDialogMock,
-  initInstanceActionsMock,
   getRegistryMock,
 } = vi.hoisted(() => ({
   SelectDirectoryMock: vi.fn(),
@@ -81,8 +80,6 @@ vi.mock("../../utils/dom/dialogs/batch-rename.ts", () => ({
 vi.mock("../../utils/dom/capabilities.ts", () => ({
   can: vi.fn(() => true),
 }));
-
-import { bindBusEvents } from "./bus-handlers.ts";
 
 function makeEntry(over: Partial<TreeEntry> = {}): TreeEntry {
   return {

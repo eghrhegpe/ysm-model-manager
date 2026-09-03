@@ -4,8 +4,6 @@ import {
   slideRow,
   createTrailingBtn,
   createLeadingBtn,
-  type TrailingAction,
-  type SlideRowExtra,
 } from "./ui-slide-row.ts";
 import { setControlRegistry } from "./control-registry.ts";
 
@@ -424,7 +422,6 @@ describe("整行 click", () => {
     const row = slideRow(container, "▶", "播放", false, fn);
 
     // 用 spy 让 getSelection 返回非空
-    const original = window.getSelection;
     const selSpy = vi.spyOn(window, "getSelection").mockReturnValueOnce({
       toString: () => "选中的文字",
     } as Selection);
@@ -654,7 +651,6 @@ describe("headerToggle 路径", () => {
       false,
       { value: false, onChange: vi.fn() },
     );
-    const original = window.getSelection;
     const selSpy2 = vi.spyOn(window, "getSelection").mockReturnValueOnce({
       toString: () => "sel",
     } as Selection);

@@ -36,8 +36,6 @@ function mockApp(over: Record<string, MockFn> = {}) {
   return m;
 }
 
-const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
-
 /** 监听 bus 事件收集载荷（测试结束 off 防幽灵监听器） */
 function watchBus<K extends keyof BusEvents>(event: K): {
   events: BusEvents[K][];

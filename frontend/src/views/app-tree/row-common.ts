@@ -33,7 +33,7 @@ export function fileRowCommon(
 /** 文件夹行公共计算：图标、颜色、箭头、开关 class、显示名、缩进 */
 export function folderRowCommon(
   k: string,
-  full: string,
+  _full: string,
   isOpen: boolean,
   isLocked: boolean,
   hasEnabled: boolean,

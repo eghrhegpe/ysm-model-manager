@@ -29,13 +29,6 @@ export interface SyncItem {
   children?: SyncItem[];
 }
 
-/** 子条目（从仓库 ScanModelEntriesWithLabel 扫出的内部文件，用于 dir-level 层级展示） */
-interface SyncFile {
-  name: string;
-  path: string;      // 相对父目录的完整路径（用于 data-path）
-  size: number;
-}
-
 // ===== 状态元数据表（单一事实源：syncDirRowHTML / itemHTML 共用，消除 ×2 三元链）=====
 export const STATUS_ICON: Record<string, string> = {
   synced: "✅",
@@ -83,8 +76,6 @@ export function syncDirRowHTML(
   index: number,
   opPath?: string,
 ): string {
-  const statusIcon = statusIconOf(syncItem.status);
-  const statusColor = statusColorOf(syncItem.status);
   const sizeStr = syncItem.size > 0 ? formatBytes(syncItem.size) : "";
   const actionBtn = actionBtnHTML(syncItem.status);
   const arrow = shouldOpen ? "▾" : "▸";
@@ -113,29 +104,6 @@ export function syncDirRowHTML(
         "</span>"
       : "") +
     actionBtn +
-    "</div>"
-  );
-}
-
-/** 子条目行 HTML（scan 出的内部文件：无状态、无按钮，纯展示层级结构） */
-function syncFileRowHTML(f: SyncFile, indent: number): string {
-  const sizeStr = f.size > 0 ? formatBytes(f.size) : "";
-  return (
-    '<div class="sm-item sm-file" data-path="' +
-    esc(f.path) +
-    '" style="padding-left:' +
-    (indent * 16 + 24) +
-    'px">' +
-    '<span style="flex-shrink:0;width:14px;text-align:center;color:var(--muted)">·</span>' +
-    '<span style="flex-shrink:0;font-size:var(--fs-tiny)">📄</span>' +
-    '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)">' +
-    f.name +
-    "</span>" +
-    (sizeStr
-      ? '<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-tiny)">' +
-        sizeStr +
-        "</span>"
-      : "") +
     "</div>"
   );
 }

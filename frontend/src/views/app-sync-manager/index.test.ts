@@ -2,7 +2,7 @@
 // 断言基于 data-testid 稳定钩子；交互模拟类型标签切换、状态筛选、按钮点击。
 // 注意：模块级变量 _lastSelectedType 在类型切换后泄漏，测试间隔离需靠 localStorage + 顺序。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getByTestId, getAllByTestId, waitFor, sleep, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
+import { waitFor, sleep, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
 import { bus } from "../../bus.ts";
 import type { SyncItem } from "./tpl.ts";
 

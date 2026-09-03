@@ -20,7 +20,7 @@ function setup(handler: (e: Event) => void, eventName: string) {
 
 describe("fireEvent", () => {
   it("派发 CustomEvent 并携带 detail", () => {
-    const { el, fn } = setup((e) => {}, "my-event");
+    const { el, fn } = setup((_e) => {}, "my-event");
     const ev = fireEvent(el, "my-event", { a: 1 });
     expect(fn).toHaveBeenCalledTimes(1);
     expect((fn.mock.calls[0][0] as CustomEvent).detail).toEqual({ a: 1 });
@@ -31,7 +31,7 @@ describe("fireEvent", () => {
 
 describe("fireClick", () => {
   it("派发 click MouseEvent", () => {
-    const { el, fn } = setup((e) => {}, "click");
+    const { el, fn } = setup((_e) => {}, "click");
     const ev = fireClick(el);
     expect(fn).toHaveBeenCalledTimes(1);
     expect(ev.type).toBe("click");
@@ -40,12 +40,12 @@ describe("fireClick", () => {
 
 describe("fireFocus / fireBlur", () => {
   it("派发 focus / blur（不冒泡）", () => {
-    const { el, fn } = setup((e) => {}, "focus");
+    const { el, fn } = setup((_e) => {}, "focus");
     const ev = fireFocus(el);
     expect(fn).toHaveBeenCalledTimes(1);
     expect(ev.bubbles).toBe(false);
 
-    const { el: el2, fn: fn2 } = setup((e) => {}, "blur");
+    const { el: el2, fn: fn2 } = setup((_e) => {}, "blur");
     const ev2 = fireBlur(el2);
     expect(fn2).toHaveBeenCalledTimes(1);
     expect(ev2.bubbles).toBe(false);
@@ -54,7 +54,7 @@ describe("fireFocus / fireBlur", () => {
 
 describe("fireKeyDown", () => {
   it("派发 keydown 并携带 key", () => {
-    const { el, fn } = setup((e) => {}, "keydown");
+    const { el, fn } = setup((_e) => {}, "keydown");
     fireKeyDown(el, "Escape");
     expect(fn).toHaveBeenCalledTimes(1);
     expect((fn.mock.calls[0][0] as KeyboardEvent).key).toBe("Escape");
@@ -79,7 +79,7 @@ describe("fireInput", () => {
 
 describe("fireDrop", () => {
   it("派发 drop DragEvent（默认不抛错）", () => {
-    const { el, fn } = setup((e) => {}, "drop");
+    const { el, fn } = setup((_e) => {}, "drop");
     const ev = fireDrop(el);
     expect(fn).toHaveBeenCalledTimes(1);
     expect(ev.type).toBe("drop");
@@ -87,7 +87,7 @@ describe("fireDrop", () => {
   });
 
   it("透传自定义 dataTransfer（环境支持时）", () => {
-    const { el, fn } = setup((e) => {}, "drop");
+    const { el, fn } = setup((_e) => {}, "drop");
     const dt = { files: [] } as unknown as DataTransfer;
     const ev = fireDrop(el, dt as unknown as Record<string, unknown>);
     expect(fn).toHaveBeenCalledTimes(1);

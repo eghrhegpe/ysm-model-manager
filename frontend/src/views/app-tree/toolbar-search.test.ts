@@ -181,24 +181,6 @@ describe("pickWebFilesAndImport — 网页版导入文件", () => {
     return { inputs, restore: () => spy.mockRestore() };
   }
 
-  async function triggerChange(files: File[]): Promise<HTMLInputElement> {
-    const { inputs, restore } = captureCreatedInput();
-    const pending = pickWebFilesAndImport(
-      "ysm",
-      async () => {},
-      () => {},
-    );
-    await Promise.resolve();
-    const input = inputs[0]!;
-    Object.defineProperty(input, "files", { value: files, configurable: true });
-    input.dispatchEvent(new Event("change"));
-    await pending;
-    await Promise.resolve();
-    await Promise.resolve();
-    restore();
-    return input;
-  }
-
   it("accept 取注册表扩展名 + click 触发选择器", async () => {
     const { inputs, restore } = captureCreatedInput();
     try {

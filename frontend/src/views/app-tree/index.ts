@@ -21,7 +21,7 @@ export { appTreeStyle };
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
-import { renderTree, updateStat, getRenderMode, setRenderMode, cleanupVirtualScroll, getVsRows, getVsMode, type RenderMode, type TreeRow, ROW_H_GRID, ROW_H_LIST } from "./render.ts";
+import { renderTree, updateStat, getRenderMode, cleanupVirtualScroll, getVsRows, getVsMode, type RenderMode, ROW_H_GRID, ROW_H_LIST } from "./render.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
 import { get } from "../../services/registry.ts";

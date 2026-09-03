@@ -4,7 +4,7 @@ import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS, ALL_RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPE_LABELS, ALL_RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { currentRepoType } from "../../features/repo-rtype.ts";
 import { sidebarCSS } from "./sidebar-css.ts";
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
@@ -323,8 +323,8 @@ async function runPull(
 function bindSyncSelected(
   root: ShadowRoot,
   getInstances: () => SidebarInstance[],
-  getCardCleanup: () => (() => void) | null,
-  setCardCleanup: (fn: (() => void) | null) => void,
+  _getCardCleanup: () => (() => void) | null,
+  _setCardCleanup: (fn: (() => void) | null) => void,
   getDocClickHandler: () => (() => void) | null,
   setDocClickHandler: (fn: (() => void) | null) => void,
   getSyncInProgress: () => boolean,

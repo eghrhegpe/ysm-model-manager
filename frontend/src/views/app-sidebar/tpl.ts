@@ -116,7 +116,7 @@ export function instanceCardHeaderHTML(
   synced: number,
   missing: number,
   extra: number,
-  status: string,
+  _status: string,
   idx = -1,
   hasMod = true,
   rtype = RESOURCE_TYPES.YSM,

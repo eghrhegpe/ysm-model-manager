@@ -101,7 +101,7 @@ describe("addCollapsible", () => {
   });
 
   it("testId 设置到 wrapper 上", () => {
-    const { container, wrapper } = render({ testId: "my-collapsible" });
+    const { wrapper } = render({ testId: "my-collapsible" });
     expect(wrapper.getAttribute("data-testid")).toBe("my-collapsible");
   });
 
@@ -234,7 +234,7 @@ describe("addCollapsible", () => {
   });
 
   it("点击 panel 不触发切换", () => {
-    const { header, panel } = render();
+    const { panel } = render();
     panel.click();
     expect(panel.classList.contains("open")).toBe(false);
   });

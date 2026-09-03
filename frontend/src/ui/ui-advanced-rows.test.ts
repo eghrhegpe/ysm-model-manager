@@ -10,26 +10,6 @@ import {
 // 测试辅助
 // ===================================================================
 
-/** 创建带 getBoundingClientRect mock 的元素（happy-dom 不计算真实布局） */
-const mkEl = (width = 200, left = 0): HTMLElement => {
-    const el = document.createElement("div");
-    Object.defineProperty(el, "getBoundingClientRect", {
-        value: () => ({
-            left,
-            top: 0,
-            right: left + width,
-            bottom: 20,
-            width,
-            height: 20,
-            x: left,
-            y: 0,
-        }),
-        configurable: true,
-        writable: true,
-    });
-    return el;
-};
-
 /** 便捷：拿到元素的 textContent */
 const txt = (node: HTMLElement | null): string | null => node?.textContent ?? null;
 

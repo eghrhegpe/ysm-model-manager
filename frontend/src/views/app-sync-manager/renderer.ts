@@ -164,7 +164,6 @@ async function renderList(self: SyncRenderSelf, listEl: HTMLElement): Promise<vo
     return;
   }
 
-  const dirOpen = self._dirOpen || {};
   const htmlParts: string[] = [];
 
   self._filteredItems.forEach((item, i) => {

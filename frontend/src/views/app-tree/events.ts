@@ -159,7 +159,7 @@ function atTeClickRowFolder(ctx: AtTeCtx, e: MouseEvent, fh: HTMLElement): boole
   return true;
 }
 
-function atTeClickRowPreview(ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElement): boolean {
+function atTeClickRowPreview(_ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElement): boolean {
   e.stopPropagation();
   const path = haPreview.dataset.path;
   const name = path?.split(/[/\\]/).pop() || "";
@@ -187,7 +187,7 @@ function atTeClickRowPreview(ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElement
   return true;
 }
 
-function atTeClickRowCopy(ctx: AtTeCtx, e: MouseEvent, haCopy: HTMLElement): boolean {
+function atTeClickRowCopy(_ctx: AtTeCtx, e: MouseEvent, haCopy: HTMLElement): boolean {
   e.stopPropagation();
   const path = haCopy.dataset.path;
   const name = path?.split(/[/\\]/).pop() || "";
@@ -269,7 +269,7 @@ function atTeBindRowClick(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement): boo
 
 // ===== 事件段 4：双击 =====
 function atTeBindRowDoubleClick(ctx: AtTeCtx): void {
-  const { container, vm } = ctx;
+  const { container } = ctx;
   container.addEventListener("dblclick", (e: MouseEvent) => {
     if (ctx.disposed) return;
     const target = e.target as HTMLElement | null;

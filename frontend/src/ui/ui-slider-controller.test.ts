@@ -88,7 +88,7 @@ describe("DragSliderController", () => {
 
     it("构造时保存 opts，value 为传入值", () => {
         const onChange = vi.fn();
-        const { controller } = setup({
+        setup({
             value: 37,
             min: 10,
             max: 90,

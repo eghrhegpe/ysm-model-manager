@@ -14,11 +14,6 @@ import { showBatchRenameDialog } from "../../utils/dom/dialogs/batch-rename.ts";
 import { selectState } from "./data.ts";
 import { can } from "../../utils/dom/capabilities.ts";
 
-interface AtBeCtx {
-  vm: AppTree;
-  cleanups: Array<() => void>;
-}
-
 function atBeGenGuard(vm: AppTree, gen: number): boolean {
   return gen !== vm._gen;
 }

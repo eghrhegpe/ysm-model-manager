@@ -52,7 +52,7 @@ export interface SyncManagerSelf {
 import { render } from "./renderer.ts";
 import { bindEvents } from "./events.ts";
 import { performSingleOp } from "./network.ts";
-import { LAST_TYPE_KEY, _lastSelectedType, setLastSelectedType } from "./state.ts";
+import { _lastSelectedType, setLastSelectedType } from "./state.ts";
 // P3 修复（子代理审计）：共享状态（LAST_TYPE_KEY / _lastSelectedType / setLastSelectedType）
 // 已下沉至 state.ts，打破 index ↔ events 循环依赖
 // 2026-08-18：sm-tabs 移除后类型完全由全局 nav 下拉驱动——订阅 repo:rtype-changed 跟随，
@@ -77,18 +77,18 @@ export class AppSyncManager extends WebComponentBase {
   private _instance = "";
   private _defaultType = RESOURCE_TYPES.YSM;
   private _selectedType = RESOURCE_TYPES.YSM;
-  private _statusFilter = "all";
+  _statusFilter = "all";
   private _subtype = "";
   private _allItems: SyncItem[] = [];
-  private _filteredItems: SyncItem[] = [];
-  private _typeConfig: Array<{ id: string; name?: string; icon?: string }> = [];
-  private _loading = false;
+  _filteredItems: SyncItem[] = [];
+  _typeConfig: Array<{ id: string; name?: string; icon?: string }> = [];
+  _loading = false;
   private _gen = 0;
   private _unsubs: Array<() => void> = [];
-  private _singleBusy = false;
-  private _dirOpen: Record<string, boolean> = {};
-  private _filesRoots: Record<string, string> = {};
-  private _scanDirs: Record<string, { global: string; instance: string; warning?: string }> = {};
+  _singleBusy = false;
+  _dirOpen: Record<string, boolean> = {};
+  _filesRoots: Record<string, string> = {};
+  _scanDirs: Record<string, { global: string; instance: string; warning?: string }> = {};
 
   connectedCallback(): void {
     this._instance = this.getAttribute("instance") || "";

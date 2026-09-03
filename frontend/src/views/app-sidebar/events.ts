@@ -92,7 +92,7 @@ function bindCardClickHandler(
 /** 构建卡片右键处理器闭包（ctx:show 菜单弹出，rtype/path 缺失拦截）。
  * 仅消费 st（最新实例数据）；root 保留作签名对称，右键路径不直接触 root。 */
 function bindCardContextHandler(
-  root: ShadowRoot,
+  _root: ShadowRoot,
   st: CardBindState,
 ): (e: MouseEvent) => void {
   return (e: MouseEvent): void => {

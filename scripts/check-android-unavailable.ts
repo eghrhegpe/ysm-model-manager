@@ -77,7 +77,8 @@ async function extractBindings(): Promise<string[]> {
   const names: string[] = [];
   for (const line of content.split("\n")) {
     const m = line.match(/^export function (\w+)\(/);
-    if (m) names.push(m[1]);
+    const sig = m?.[1];
+    if (sig) names.push(sig);
   }
   return names;
 }
@@ -88,7 +89,8 @@ async function readCurrentBlacklist(): Promise<Set<string>> {
   // 匹配 Set([...]) 内所有 "xxx" 或 'xxx' 字符串字面量（忽略注释行）
   const matches = content.matchAll(/["']([A-Z][a-zA-Z]+)["']/g);
   for (const m of matches) {
-    blacklist.add(m[1]);
+    const name = m[1];
+    if (name) blacklist.add(name);
   }
   return blacklist;
 }

@@ -190,9 +190,9 @@ invariant_anchors:
 - ✅ **刀② joinInFlightWaiter 三态 bool → joinResult struct**：`go/scanner/scanner.go` 新增 `joinResult{entries, hit, retry}` 替代 `([]ModelEntry, bool, bool)` 返回，调用点改 `res.hit / res.retry`——语义与注释同步逐字转移，scanner 单测全绿（含 singleflight 并发测试）。
 - ✅ **刀④b uniqueDest → generateConflictFreeDest**：`go/recycle/recycle.go` 纯改名（函数 + 6 处消费点 + 注释），零行为变化，recycle 测试全绿。
 - ✅ **刀③ LimitReader+1 收编（修正原「6 处统一收编」断言）**：实地审计 22 处 LimitReader 后修正——`extractYsmRootFromZip`（ysm/summary.go:218 需区分超限/读错误两种文案）、`mcmeta.go`（metaTooLarge 标志区分）、`nbt.go:36`（错误上抛）、`avatar_zip.go:37/70`+`avatar_extract.go:482`（超限 vs 读错误日志区分）**语义均比 fsutil.ReadLimitedEntry 更细，强收编会退化错误处理，保留**；真正的高 ROI 点 = `internal/app/resourcepack_models.go:143/173` 两处裸 `LimitReader` **缺 +1 探测（ADR-033 陷阱残留：恰 64MB 条目静默截断继续用）且 nil 语义与 fsutil 兼容** → 收编 `fsutil.ReadLimitedEntry`，顺带修掉截断 bug。内部 app 测试全绿。
+- ✅ **刀④c resolveBedrockGeometryFallback 拆 4 个具名策略**：`go/ysm/extracted.go` 主函数变 4 行链式调用（fallbackParseDirect / fallbackParseWrapped / fallbackWalkDir / fallbackParseBare），每层策略独立具名——逐字节保留原行为（含 WalkDir 10 层/排除目录/probes 封顶/texSlot=0 口径）。ysm + internal/app + geometry + threejs 测试全绿。
 - ➖ **绑定清理 + DetectZipType 改名降级为发版批次**（推迟，非放弃）：21 个 Deprecated 绑定中 5 个仍有 Go 测试消费（SavePreviewTempFile/ClearCustomDir/MoveToRecycleEx/ExportWorkshopSitesCSV/ImportWorkshopSitesCSV 各有专项测试做行为抓手）、e2e mock-data.ts 有 MissingMockKeys/StaleMockKeys 类型级守卫强制绑定面同步、删除后必须重新 generate:bindings 重写 frontend/bindings/ 且工作区已有未提交前端改动——独立发版级改动，不在锐评批次内混动。`DetectZipType→DetectContainerType` 因是 Wails 绑定名（前端 40 处消费面）同批降级，避免「绑定名 vs 内部名」双轨。
-- ➖ 待动：processForEpoch epoch → 状态机枚举（并发核心，需独立 ADR 级评估）
-- ➖ 待动：resolveBedrockGeometryFallback 拆 4 个具名策略（中风险，需先补单测拆分保护）
+- ➖ **processForEpoch epoch → 状态机枚举（暂缓，需 ADR 级评估）**：并发核心 + 现有测试（Sequential/Error/Cancel/QueueStatus）**未覆盖 cancel-restart 竞态路径**、epoch 三处递增无专门并发测试兜底——按「先写测试再写实现」铁律，需先补竞态测试（withFakeNode 式注入 epoch 推进）再谈枚举化，独立立项。
 
 ## 相关
 

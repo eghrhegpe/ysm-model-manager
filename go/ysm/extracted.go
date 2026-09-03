@@ -312,19 +312,32 @@ func sortMapModelNames(modelMapOrig map[string]string, excludeArm bool) []string
 const maxFallbackGeoProbes = 20
 
 // resolveBedrockGeometryFallback 封装 4 条兜底解析链（逐字节保留原行为）：
-//  1. 用 ysm.json 自身直接 Parse（可能含 format_version + minecraft:geometry 标准段）
-//  2. 用 {"minecraft":{"geometry":[...]}} 包裹段（TLM 部分简化包实际格式）
-//  3. WalkDir 递归子目录（限 10 层，排除 animations/controller/avatar）找第一个合法 geo JSON
-//  4. looksLikeGeometry 裸 geometry 元素兜底（避免把纯 {"files":{...}} 错包裹成零骨骼）
+//  1. fallbackParseDirect：ysm.json 自身直接 Parse（可能含 format_version + minecraft:geometry 标准段）
+//  2. fallbackParseWrapped：{"minecraft":{"geometry":[...]}} 包裹段（TLM 简化包实际格式）
+//  3. fallbackWalkDir：递归子目录（限 10 层，排除 animations/controller/avatar）找第一个合法 geo JSON
+//  4. fallbackParseBare：looksLikeGeometry 裸 geometry 元素兜底（避免把纯 {"files":{...}} 错包裹成零骨骼）
 //
 // 原 FindGeometry 内联 111 行（L382-449），升格后第 4 刀若新增兜底也共用。
 func resolveBedrockGeometryFallback(data []byte, ysmPath, dir string) *types.BedrockModel {
-	// 兜底 1：ysm.json 自身直接解析（可能是标准 geometry JSON，如极简自定义包）
-	geoJSON := geometry.ParseBedrockGeometry(data)
-	if geoJSON != nil {
-		return geoJSON
+	if m := fallbackParseDirect(data); m != nil {
+		return m
 	}
-	// 兜底 2：minecraft.geometry[] 包装段（TLM 简化自定义包常见格式）
+	if m := fallbackParseWrapped(data); m != nil {
+		return m
+	}
+	if m := fallbackWalkDir(dir, ysmPath); m != nil {
+		return m
+	}
+	return fallbackParseBare(data)
+}
+
+// fallbackParseDirect 兜底 1：ysm.json 自身直接解析（可能是标准 geometry JSON，如极简自定义包）
+func fallbackParseDirect(data []byte) *types.BedrockModel {
+	return geometry.ParseBedrockGeometry(data)
+}
+
+// fallbackParseWrapped 兜底 2：minecraft.geometry[] 包装段（TLM 简化自定义包常见格式）
+func fallbackParseWrapped(data []byte) *types.BedrockModel {
 	var root struct {
 		Minecraft struct {
 			Geometry []json.RawMessage `json:"geometry"`
@@ -333,12 +346,15 @@ func resolveBedrockGeometryFallback(data []byte, ysmPath, dir string) *types.Bed
 	if err := json.Unmarshal(data, &root); err == nil && len(root.Minecraft.Geometry) > 0 {
 		wrapped := append([]byte(`{"format_version":"1.12.0","minecraft:geometry":[`), root.Minecraft.Geometry[0]...)
 		wrapped = append(wrapped, ']', '}')
-		if gj := geometry.ParseBedrockGeometry(wrapped); gj != nil {
-			return gj
-		}
+		return geometry.ParseBedrockGeometry(wrapped)
 	}
-	// 兜底 3：WalkDir 子目录递归扫 10 层（排除 animations/controller/avatar），
-	// .json 解析候选数封顶 maxFallbackGeoProbes（畸形大目录防逐个 readFile+Parse DoS）
+	return nil
+}
+
+// fallbackWalkDir 兜底 3：WalkDir 子目录递归扫 10 层（排除 animations/controller/avatar），
+// .json 解析候选数封顶 maxFallbackGeoProbes（畸形大目录防逐个 readFile+Parse DoS）。
+// 命中第 1 个合法 geo JSON 即返回（texSlot=0，与原内联口径一致）。
+func fallbackWalkDir(dir, ysmPath string) *types.BedrockModel {
 	excludeDirs := map[string]bool{"animations": true, "controller": true, "avatar": true}
 	var found *types.BedrockModel
 	probes := 0
@@ -379,16 +395,18 @@ func resolveBedrockGeometryFallback(data []byte, ysmPath, dir string) *types.Bed
 		}
 		return nil
 	})
-	if found != nil {
-		return found
+	return found
+}
+
+// fallbackParseBare 兜底 4：bare geometry 元素（looksLikeGeometry 特征命中）。
+// 包装为 minecraft:geometry 数组段后 Parse——失败返回 nil（命中但非法也只是 nil）。
+func fallbackParseBare(data []byte) *types.BedrockModel {
+	if !looksLikeGeometry(data) {
+		return nil
 	}
-	// 兜底 4：bare geometry 元素（looksLikeGeometry 特征命中）
-	if looksLikeGeometry(data) {
-		wrapped := append([]byte(`{"format_version":"1.12.0","minecraft:geometry":[`), data...)
-		wrapped = append(wrapped, ']', '}')
-		return geometry.ParseBedrockGeometry(wrapped)
-	}
-	return nil
+	wrapped := append([]byte(`{"format_version":"1.12.0","minecraft:geometry":[`), data...)
+	wrapped = append(wrapped, ']', '}')
+	return geometry.ParseBedrockGeometry(wrapped)
 }
 
 // sortTexFilesByOrder 按 ysm.json texOrder 声明序重排 texFiles（声明的排前面；未声明的按原遍历序放后面）。

@@ -223,6 +223,18 @@ func TestGetVoxelDataInContainer_BadZip(t *testing.T) {
 	}
 }
 
+// TestGetVoxelDataInContainer_OverLimit 超限条目（> maxContainerEntrySize）应显式报错，
+// 而不是静默截断后继续用（ADR-033 陷阱：裸 LimitReader 截断后 err==nil 反模式）。
+// 全零 64MB+1 字节 zip 压缩后极小（deflate），测试内存/磁盘成本可控。
+func TestGetVoxelDataInContainer_OverLimit(t *testing.T) {
+	a := &App{}
+	big := bytes.Repeat([]byte{0}, maxContainerEntrySize+1)
+	p := makeContainerZip(t, map[string][]byte{"huge.nbt": big})
+	if got, err := a.GetVoxelDataInContainer(p, "huge.nbt", ".nbt"); err == nil {
+		t.Errorf("超限条目期望返回 error（不得静默截断），实际 got=%v", got)
+	}
+}
+
 func TestContainerExtMatch_Edge(t *testing.T) {
 	// 大小写不敏感
 	if !containerExtMatch("a.TXT", map[string]bool{".txt": true}) {

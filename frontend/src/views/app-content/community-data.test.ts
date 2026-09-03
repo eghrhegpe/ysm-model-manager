@@ -3,10 +3,11 @@
 // mergeCommunityCreators：新增/更新计数、字段补充、type 追加去重、_fromCommunity 标记。
 // mergeCommunitySites：按 id 去重新增。
 // fillSearch：{{q}} 替换为 encodeURIComponent 后的查询词。
+// ⚠️ dedupeCreators 已随 ADR-172（社区合并下沉 Go）删除——其写回链消费方移除，
+//   去重/段并入派生归 Go（MergeCommunityCreatorsFromJSON，Go 侧单测覆盖）。
 import { describe, it, expect } from "vitest";
 import {
   mergeCommunityCreators,
-  dedupeCreators,
   mergeCommunitySites,
   fillSearch,
   type LocalCreator,
@@ -78,28 +79,6 @@ describe("mergeCommunityCreators", () => {
     ]);
     expect(local[0].type).toBe("bilibili;afdian;x");
     // 首条已并 afdian/x → 第二条无新段 → 总 updated 计 1
-  });
-
-  it("同名不同站点独立记录 → dedupe 归一并保留全部站点段", () => {
-    const flat = [
-      localCreator("狐狸", { type: "bilibili" }),
-      localCreator("狐狸", { type: "afdian" }),
-    ];
-    const out = dedupeCreators(flat);
-    expect(out).toHaveLength(1);
-    expect(out[0].type).toBe("bilibili;afdian");
-  });
-
-  it("dedupe 同一引用重复（多段 type 进多组）→ 保留一份", () => {
-    const c = localCreator("A", { type: "bilibili;afdian" });
-    const out = dedupeCreators([c, c, c]);
-    expect(out).toHaveLength(1);
-    expect(out[0].type).toBe("bilibili;afdian");
-  });
-
-  it("dedupe 无 name 条目跳过", () => {
-    const out = dedupeCreators([{ type: "bilibili" } as LocalCreator]);
-    expect(out).toHaveLength(0);
   });
 });
 

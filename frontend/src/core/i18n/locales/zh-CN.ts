@@ -1529,4 +1529,5 @@ export const zhCN = {
   "webCommunity.importJsonParseFailed": "导入 JSON 解析失败: {err}",
   "webCommunity.importTooFew": "导入数据异常: 仅 {count} 条 (期望 >={min})",
   "webCommunity.mergeTooFew": "合并后数据异常: {count} 条",
+  "webCommunity.communityEmpty": "社区数据为空（无有效创作者条目）",
 };

@@ -344,4 +344,78 @@ export const webCommunityBindings = {
     mergeSeq = result.then(() => undefined, () => undefined);
     return result;
   },
+  // ADR-172：社区索引增量并入（web 桥）——语义镜像 Go MergeCommunityCreatorsFromJSON：
+  // desc/role 空补 + type 分号段并入（非覆盖，不丢站点）+ 幂等短路（无变更不写覆盖层）。
+  // 与 MergeWorkshopCreatorsFromJSON（手动导入：type 覆盖 + ≥20/≥100 硬校验）刻意区分，
+  // 前端自动/手动同步共用此 binding（community-data.ts tryAutoMergeCommunity / site edit.ts）。
+  MergeCommunityCreatorsFromJSON: (communityJSON: string): Promise<[number, number]> => {
+    let imported: WorkshopCreator[];
+    try {
+      imported = JSON.parse(communityJSON) as WorkshopCreator[];
+    } catch (e) {
+      return Promise.reject(new Error(t("webCommunity.importJsonParseFailed", { err: safeErrorMessage(e) })));
+    }
+    // 逐字段净化：name 必须非空字符串（对齐 Go 净化口径，防畸形数据污染覆盖层）
+    if (!Array.isArray(imported)) {
+      return Promise.reject(new Error(t("webCommunity.communityEmpty")));
+    }
+    imported = imported.filter((cr): cr is WorkshopCreator =>
+      cr != null && typeof cr === "object" && typeof cr.name === "string" && cr.name.length > 0
+    );
+    if (imported.length === 0) {
+      return Promise.reject(new Error(t("webCommunity.communityEmpty")));
+    }
+    // 串行化读-改-写：localStorage 无事务锁，与 MergeWorkshopCreatorsFromJSON 共用
+    // mergeSeq 队列（两类合并都写 WEB_CREATORS_KEY，须互斥防 lost update）
+    const runMerge = (): Promise<[number, number]> => {
+      const existing = loadWebCreators();
+      const existMap = new Map<string, number>();
+      existing.forEach((c, i) => existMap.set(c.name, i));
+      let added = 0;
+      let updated = 0;
+      for (const cr of imported) {
+        const idx = existMap.get(cr.name);
+        if (idx === undefined) {
+          existing.push(cr);
+          existMap.set(cr.name, existing.length - 1);
+          added++;
+          continue;
+        }
+        const e = existing[idx]!;
+        let changed = false;
+        if (cr.desc && !e.desc) {
+          e.desc = cr.desc;
+          changed = true;
+        }
+        // type 分号段并入（trim/去空/去重，镜像 Go mergeTypeSegments）
+        const segs = (e.type || "")
+          .split(";")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        for (const s of (cr.type || "").split(";")) {
+          const seg = s.trim();
+          if (seg && !segs.includes(seg)) {
+            segs.push(seg);
+            changed = true;
+          }
+        }
+        if (changed) e.type = segs.join(";");
+        if (cr.role && !e.role) {
+          e.role = cr.role;
+          changed = true;
+        }
+        if (changed) updated++;
+      }
+      // 幂等短路：本地已含社区全部条目 → 不写覆盖层（对齐 Go 无变更不落盘）
+      if (added === 0 && updated === 0) {
+        return Promise.resolve([0, 0]);
+      }
+      saveWebCreators(existing);
+      return Promise.resolve([added, updated]);
+    };
+    const result = mergeSeq.then(runMerge);
+    // 链回序列：无论成功/失败，都释放 token 让下一次 merge 进队
+    mergeSeq = result.then(() => undefined, () => undefined);
+    return result;
+  },
 } satisfies Record<string, (...args: never[]) => Promise<unknown>>;

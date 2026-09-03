@@ -9,6 +9,8 @@ const { mocks } = vi.hoisted(() => {
     ListModelAuthors: vi.fn(),
     ScanLocalAuthors: vi.fn(),
     SaveWorkshopCreators: vi.fn(),
+    // ADR-172：写回下沉后自动合并直传 Go binding，SaveWorkshopCreators 前端零调用
+    MergeCommunityCreatorsFromJSON: vi.fn().mockResolvedValue([0, 0]),
     isWebPlatform: vi.fn().mockReturnValue(false),
   };
   return { mocks };
@@ -21,6 +23,7 @@ vi.mock("../../backend/app.ts", () => ({
     ListModelAuthors: mocks.ListModelAuthors,
     ScanLocalAuthors: mocks.ScanLocalAuthors,
     SaveWorkshopCreators: mocks.SaveWorkshopCreators,
+    MergeCommunityCreatorsFromJSON: mocks.MergeCommunityCreatorsFromJSON,
   }),
 }));
 
@@ -107,52 +110,49 @@ describe("loadCommunityData", () => {
     expect(data.creators).toEqual([]);
   });
 
-  it("自动合并触发时单次 SaveWorkshopCreators 原子保存", async () => {
+  it("自动合并：社区索引 JSON 直传 Go binding，前端不再整存", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve({ ok: true, json: async () => [{ name: "社区新作者", desc: "c", type: "bilibili" }] }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    mocks.LoadWorkshopCreators.mockResolvedValue([{ name: "老作者", type: "bilibili" }]);
     await loadCommunityData();
-    await vi.waitFor(() => expect(mocks.SaveWorkshopCreators).toHaveBeenCalled());
-    const saved = mocks.SaveWorkshopCreators.mock.calls[0][0] as Array<{ name: string; type: string }>;
-    expect(mocks.SaveWorkshopCreators).toHaveBeenCalledTimes(1);
-    const names = saved.map((c) => c.name);
-    expect(names).toContain("社区新作者");
-    expect(names).toContain("老作者");
+    await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalled());
+    // ADR-172：前端只传拉取结果（JSON 字符串），合并/去重派生在 Go
+    const payload = JSON.parse(mocks.MergeCommunityCreatorsFromJSON.mock.calls[0][0]) as Array<{ name: string }>;
+    expect(payload.map((c) => c.name)).toContain("社区新作者");
+    // 红线验证：写回彻底不在前端——SaveWorkshopCreators 零调用
+    expect(mocks.SaveWorkshopCreators).not.toHaveBeenCalled();
   });
 
-  it("6h 内重复调用 -> 第二次跳过社区索引拉取，不触发 SaveWorkshopCreators", async () => {
+  it("6h 内重复调用 -> 第二次跳过社区索引拉取，仅幂等转发 Go", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve({ ok: true, json: async () => [{ name: "社区新作者", type: "bilibili" }] }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    mocks.LoadWorkshopCreators.mockResolvedValue([{ name: "老作者", type: "bilibili" }]);
     await loadCommunityData();
-    await vi.waitFor(() => expect(mocks.SaveWorkshopCreators).toHaveBeenCalledTimes(1));
-    // 重置 fetchMock 计数，追踪第二次调用
+    await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(1));
+    // 重置 fetchMock 与 binding 计数，追踪第二次调用
     fetchMock.mockClear();
+    mocks.MergeCommunityCreatorsFromJSON.mockClear();
     await loadCommunityData();
-    // tryAutoMergeCommunity 因限流跳过，不应再调用 fetch
+    // 6h 缓存命中 → 不重拉 fetch；缓存 community 仍幂等转发 Go（Go 侧无变更短路，
+    // 不备份不落盘——integration mock 返回 [0,0] 即模拟该短路结果）
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(mocks.SaveWorkshopCreators).toHaveBeenCalledTimes(1);
-    // 缓存已写入（withCached 内部状态）
+    await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(1));
+    expect(mocks.SaveWorkshopCreators).not.toHaveBeenCalled();
   });
 
   it("6h 窗口过期后再次调用 -> 重新触发社区索引拉取", async () => {
-    // 用不同名字避免 mergeCommunityCreators 修改原数组导致的重复命中
     const fetchMock = vi.fn(() =>
       Promise.resolve({ ok: true, json: async () => [{ name: "社区新作者B", type: "bilibili" }] }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    mocks.LoadWorkshopCreators.mockResolvedValue([{ name: "老作者", type: "bilibili" }]);
     await loadCommunityData();
-    await vi.waitFor(() => expect(mocks.SaveWorkshopCreators).toHaveBeenCalledTimes(1));
-    // 模拟 7 小时前
-    // 清除缓存模拟过期
+    await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(1));
+    // 模拟过期：清缓存后再次加载应重拉社区索引并转发
     forceRefreshCommunityMerge();
     await loadCommunityData();
-    await vi.waitFor(() => expect(mocks.SaveWorkshopCreators).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(2), { timeout: 3000 });
     expect(fetchMock).toHaveBeenCalled();
   });
 });

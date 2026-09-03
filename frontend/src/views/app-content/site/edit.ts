@@ -188,11 +188,24 @@ function eeBindFetchBtn(
         let changed = false;
 
         if (community && community.length) {
-          const r1 = m.mergeCommunityCreators(allCreators, community);
-          await App.SaveWorkshopCreators(allCreators);
-          if (r1.added || r1.updated) {
+          // ADR-172：落盘并入下沉 Go（Load 磁盘最新全量 → desc/role 空补 + type 分号段
+          // 并入 → 备份 → 单次 SaveWorkshopCreators 原子写），前端只传拉取结果、不重算。
+          // 原「TS mergeCommunityCreators + SaveWorkshopCreators(allCreators) 整存」用 UI
+          // 会话态覆盖磁盘——会连带持久化本地作者展示条目（_fromLocal，mergeLocalAuthorsInto
+          // 注入）且与磁盘并行修改互踩；现整存移除。计数以 Go 返回为准（权威）。
+          let added = 0,
+            updated = 0;
+          // 落盘失败自然冒泡到外层 catch 走 toast 错误提示
+          const [ga, gu] = await App.MergeCommunityCreatorsFromJSON(
+            JSON.stringify(community),
+          );
+          added = ga;
+          updated = gu;
+          if (added || updated) {
+            // UI 即时并入（仅内存展示，不驱动写回；输入与 Go 同源，结果等价）
+            m.mergeCommunityCreators(allCreators, community);
             logs.push(
-              t("workshop.logCreators", { added: r1.added, updated: r1.updated }),
+              t("workshop.logCreators", { added, updated }),
             );
             changed = true;
           }

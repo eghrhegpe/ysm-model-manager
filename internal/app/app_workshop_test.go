@@ -264,3 +264,148 @@ func TestSaveWorkshopCreatorsBySite_TypeSegmentMatch(t *testing.T) {
 		t.Error("新站点创作者应写入")
 	}
 }
+
+// ADR-172：社区索引增量并入——type 分号段并入（非覆盖，不丢站点）+ desc 空补 +
+// 新增计数 + 单次落盘。种子含 A(type bilibili)/A2(type bilibili;ba)/B，
+// 社区含 A(type 增 afdian, desc 补)/A2(type 已含不重复)/C(新增)。
+func TestMergeCommunityCreatorsFromJSON_SegmentMerge(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	seed := []types.WorkshopCreator{
+		{Name: "A", Type: "bilibili"},
+		{Name: "A2", Type: "bilibili;ba"},
+		{Name: "B", Type: "afdian"},
+	}
+	if err := a.SaveWorkshopCreators(seed); err != nil {
+		t.Fatal(err)
+	}
+	community := []types.WorkshopCreator{
+		{Name: "A", Type: "bilibili;afdian", Desc: "社区补充描述"},
+		{Name: "A2", Type: "bilibili;ba;afdian"},
+		{Name: "C", Type: "github", Desc: "新创作者"},
+	}
+	data, err := json.Marshal(community)
+	if err != nil {
+		t.Fatal(err)
+	}
+	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
+	if err != nil {
+		t.Fatalf("社区合并不应失败, got %v", err)
+	}
+	if added != 1 || updated != 2 {
+		t.Fatalf("期望 added=1 updated=2, got added=%d updated=%d", added, updated)
+	}
+	got := a.LoadWorkshopCreators()
+	byName := map[string]types.WorkshopCreator{}
+	for _, c := range got {
+		byName[c.Name] = c
+	}
+	if len(got) != 4 {
+		t.Fatalf("合并后应有 4 条（A/A2/B/C 无重复）, got %d", len(got))
+	}
+	// A：type 段并入 afdian（覆盖会丢本地段，此处验证并入不丢）
+	aCreator, ok := byName["A"]
+	if !ok {
+		t.Fatal("A 应保留")
+	}
+	if aCreator.Type != "bilibili;afdian" && aCreator.Type != "afdian;bilibili" {
+		t.Errorf("A.type 应含 bilibili+afdian 两段且不重复, got %q", aCreator.Type)
+	}
+	if aCreator.Desc != "社区补充描述" {
+		t.Errorf("A.desc 空时应被社区 desc 补充, got %q", aCreator.Desc)
+	}
+	// A2：段并入幂等——afdian 段新增, bilibili/ba 段不重复
+	a2Creator := byName["A2"]
+	for _, seg := range []string{"bilibili", "ba", "afdian"} {
+		if !inTypeSegments(a2Creator.Type, seg) {
+			t.Errorf("A2.type %q 应含段 %q", a2Creator.Type, seg)
+		}
+	}
+	// B：社区未提及，原样保留
+	if b, ok := byName["B"]; !ok || b.Type != "afdian" {
+		t.Errorf("B 应原样保留, got %+v ok=%v", b, ok)
+	}
+	// C：新增
+	if c, ok := byName["C"]; !ok || c.Type != "github" {
+		t.Errorf("C 应新增, got %+v ok=%v", c, ok)
+	}
+}
+
+// 幂等：同社区索引再并一次 → added=0 updated=0，落盘不膨胀。
+func TestMergeCommunityCreatorsFromJSON_Idempotent(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	seed := []types.WorkshopCreator{{Name: "A", Type: "bilibili"}}
+	if err := a.SaveWorkshopCreators(seed); err != nil {
+		t.Fatal(err)
+	}
+	community := []types.WorkshopCreator{{Name: "A", Type: "bilibili;afdian"}, {Name: "B", Type: "github"}}
+	data, _ := json.Marshal(community)
+	if _, _, err := a.MergeCommunityCreatorsFromJSON(string(data)); err != nil {
+		t.Fatal(err)
+	}
+	// 第二次并入同样社区：A 段已含、B 已存在 → 零变更
+	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if added != 0 || updated != 0 {
+		t.Fatalf("幂等并入应 added=0 updated=0, got added=%d updated=%d", added, updated)
+	}
+	if got := len(a.LoadWorkshopCreators()); got != 2 {
+		t.Fatalf("幂等并入后仍应 2 条, got %d", got)
+	}
+}
+
+// 净化：name 为空/非法的社区条目被过滤；全非法 → 报错不落盘。
+func TestMergeCommunityCreatorsFromJSON_EmptyInput(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	if _, _, err := a.MergeCommunityCreatorsFromJSON("[]"); err == nil {
+		t.Error("空数组应报错")
+	}
+	if _, _, err := a.MergeCommunityCreatorsFromJSON(`[{"name":"","type":"x"}]`); err == nil {
+		t.Error("全非法条目（name 空）应报错")
+	}
+	if _, _, err := a.MergeCommunityCreatorsFromJSON(`not-json`); err == nil {
+		t.Error("非法 JSON 应报错")
+	}
+	// 混合：1 条合法 + 1 条非法 → 合法者并入
+	if _, _, err := a.MergeCommunityCreatorsFromJSON(`[{"name":"","type":"x"},{"name":"OK","type":"bilibili"}]`); err != nil {
+		t.Fatalf("含合法条目的混合输入不应失败, got %v", err)
+	}
+	got := a.LoadWorkshopCreators()
+	if len(got) != 1 || got[0].Name != "OK" {
+		t.Errorf("仅合法条目应并入, got %+v", got)
+	}
+}
+
+// 全新用户（无用户配置 creators.json，bundled 兜底路径）：社区合并不应中止。
+func TestMergeCommunityCreatorsFromJSON_FreshUser(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	community := []types.WorkshopCreator{{Name: "A", Type: "bilibili"}, {Name: "B", Type: "afdian"}}
+	data, _ := json.Marshal(community)
+	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
+	if err != nil {
+		t.Fatalf("全新用户社区合并不应失败, got %v", err)
+	}
+	if added != 2 || updated != 0 {
+		t.Fatalf("期望 added=2 updated=0, got added=%d updated=%d", added, updated)
+	}
+	if got := len(a.LoadWorkshopCreators()); got != 2 {
+		t.Fatalf("全新用户并入后应 2 条, got %d", got)
+	}
+}

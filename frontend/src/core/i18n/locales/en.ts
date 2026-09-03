@@ -1525,4 +1525,5 @@ export const en: Record<string, string> = {
   "webCommunity.importJsonParseFailed": "Import JSON parse failed: {err}",
   "webCommunity.importTooFew": "Import data invalid: only {count} entries (expected >={min})",
   "webCommunity.mergeTooFew": "Merge result invalid: {count} entries",
+  "webCommunity.communityEmpty": "Community data is empty (no valid creator entries)",
 };

@@ -119,8 +119,8 @@ export async function loadCommunityData(): Promise<CommunityData> {
   const merged = (creators || []) as LocalCreator[];
 
   // 自动拉取社区索引（静默，后台执行）——R3-P0 后网页版已桥接
-  // 自动合并（网络拉取失败静默，保存到 localStorage）
-  tryAutoMergeCommunity([...merged]).catch((e) => { dbg("tryAutoMergeCommunity failed", e); });
+  // 自动并入（网络拉取失败静默；ADR-172 下沉 Go：binding 内部原子并入 + 备份）
+  tryAutoMergeCommunity().catch((e) => { dbg("tryAutoMergeCommunity failed", e); });
 
   return {
     sites: sites || [],
@@ -180,50 +180,23 @@ export function mergeLocalAuthorsInto(
   return creators;
 }
 
-/** 后台静默拉取社区索引并合并（withCached 6h TTL） */
-async function tryAutoMergeCommunity(creators: LocalCreator[]): Promise<void> {
+/** 后台静默拉取社区索引并并入本地（withCached 6h TTL） */
+async function tryAutoMergeCommunity(): Promise<void> {
   const community = await withCached(COMMUNITY_MERGE_KEY, COMMUNITY_MERGE_TTL_MS, async () => {
     return fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
   }, "STALE");
   if (!community.length) return;
-  const { added } = mergeCommunityCreators(creators, community);
-  if (added > 0) {
-    try {
-      const { LoadWorkshopCreators, SaveWorkshopCreators } =
-        await getApp();
-      // 写回路径说明（2026-09-03 复核修正）：
-      // 风险实为「前端逐站点循环调 SaveWorkshopCreatorsBySite N 次」的跨调用部分提交——
-      // 第 k 次成功、第 k+1 次失败时前 k 个站点已落盘。BySite 自身（Go 侧 app_workshop.go）
-      // 是单次 Load→过滤→SaveWorkshopCreators 的原子写，无内部部分提交。
-      // 2026-08-16 审核为规避跨调用部分提交，选择「前端一次合并 + 单次整体保存」（原子）。
-      // 代价：合并/去重派生逻辑落在 TS 侧（mergeLocalAuthorsInto/dedupeCreators），
-      // 触及 AGENTS.md「Go 派生结果只读」红线。长治方案：下沉 Go——新增单次原子
-      // 「多站点合并替换」binding（内部一次 Load→按 type 分号段过滤各 site→去重追加→
-      // WriteFileAtomic），前端只传社区拉取结果、不重算。此项跨 Go 层，须开 ADR 后动。
-      const all = (await LoadWorkshopCreators()) || [];
-      // 按站点分组（type 分号段），对齐原 SaveWorkshopCreatorsBySite 语义
-      const siteMap: Record<string, LocalCreator[]> = {};
-      creators.forEach((c) => {
-        const types = (c.type || "").split(";");
-        types.forEach((t) => {
-          if (!t) return;
-          if (!siteMap[t]) siteMap[t] = [];
-          siteMap[t].push(c);
-        });
-      });
-      const siteIDs = Object.keys(siteMap);
-      // 移除所有被更新站点的旧条目（type 精确/分号段匹配）
-      const kept = all.filter((c) => {
-        const t = c.type || "";
-        return !siteIDs.some((sid) => t === sid || t.includes(sid + ";") || t.endsWith(";" + sid));
-      });
-      // 去重：多段 type（如 "bilibili;afdian"）会被 push 进多个 siteMap 组，
-      // flat 后出现引用重复 + 可能的同名独立记录 → dedupeCreators 归一（type 分号段合并，不丢站点）
-      const flat = Object.values(siteMap).flat();
-      const merged = [...kept, ...dedupeCreators(flat)];
-      await SaveWorkshopCreators(merged as WorkshopCreator[]);
-    } catch (e) { dbg("SaveWorkshopCreators failed", e); }
-  }
+  try {
+    const { MergeCommunityCreatorsFromJSON } = await getApp();
+    // ADR-172：社区增量合并下沉 Go——合并/去重派生（Load 磁盘最新全量 → desc/role
+    // 空补 + type 分号段并入 → 备份 → 单次 SaveWorkshopCreators 原子写）全部在 Go 侧，
+    // 前端只传社区拉取结果、不重算。替代原 TS 写回链（mergeCommunityCreators +
+    // siteMap 分组 / kept 过滤 / dedupeCreators 重建，2026-09-03 锐评复核判定踩
+    // 「Go 派生结果只读」红线，ADR-172 §1）。
+    // 原子性：Go 一次 Load→并入→写，无「逐站循环调 SaveWorkshopCreatorsBySite N 次」
+    // 的跨调用部分提交窗口（2026-08-16 审核规避对象，见 ADR-172 §2 差异表）。
+    await MergeCommunityCreatorsFromJSON(JSON.stringify(community));
+  } catch (e) { dbg("MergeCommunityCreatorsFromJSON failed", e); }
 }
 
 /**
@@ -368,25 +341,6 @@ export function mergeCommunityCreators(
     }
   }
   return { merged: local, added, updated };
-}
-
-/**
- * 保存前兜底去重：同 name 条目归一为一条（分号段 type 合并），不丢任何站点。
- * flat 里重复有两种来源：① 同一对象因多段 type 进多个 siteMap 组的引用重复（跳过）；
- * ② 历史/输入脏数据中同名不同站点的独立记录（并入 type 段保留先者）。
- */
-export function dedupeCreators(flat: LocalCreator[]): LocalCreator[] {
-  const seen = new Map<string, LocalCreator>();
-  for (const c of flat) {
-    if (!c.name) continue;
-    const existing = seen.get(c.name);
-    if (existing) {
-      if (existing !== c) mergeTypeSegments(existing, c.type);
-    } else {
-      seen.set(c.name, c);
-    }
-  }
-  return [...seen.values()];
 }
 
 /**

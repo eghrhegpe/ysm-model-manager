@@ -1526,4 +1526,5 @@ export const ja: Record<string, string> = {
   "webCommunity.importJsonParseFailed": "JSON のインポート解析に失敗しました：{err}",
   "webCommunity.importTooFew": "インポートデータ異常：{count} 件のみ（期待値 >={min}）",
   "webCommunity.mergeTooFew": "マージ結果異常：{count} 件",
+  "webCommunity.communityEmpty": "コミュニティデータが空です（有効なクリエイターがありません）",
 };

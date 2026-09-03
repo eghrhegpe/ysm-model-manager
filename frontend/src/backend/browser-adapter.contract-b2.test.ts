@@ -195,6 +195,68 @@ describe("B2 契约：站点级编辑保存（R3-P0 web 补齐，镜像 Go app_w
   });
 });
 
+// ADR-172：社区索引增量并入契约——语义镜像 Go MergeCommunityCreatorsFromJSON：
+// type 分号段并入（非覆盖）/ desc/role 空补 / 无 ≥20/≥100 硬校验 / 幂等短路不写覆盖层。
+// 与 MergeWorkshopCreatorsFromJSON（type 覆盖 + 条数硬校验）刻意区分（ADR-172 §2 差异表）。
+describe("B2 契约：MergeCommunityCreatorsFromJSON（ADR-172 段并入）", () => {
+  it("type 分号段并入（本地段不丢）+ desc 空补 + 新增，返回 [added, updated]", async () => {
+    await browserAdapter.SaveWorkshopCreators([
+      { name: "A", desc: "", type: "bilibili" },
+      { name: "B", desc: "", type: "afdian" },
+    ]);
+    const [added, updated] = (await browserAdapter.MergeCommunityCreatorsFromJSON(
+      JSON.stringify([
+        { name: "A", desc: "社区补", type: "bilibili;afdian" },
+        { name: "C", desc: "新", type: "github" },
+      ]),
+    )) as [number, number];
+    expect(added).toBe(1);
+    expect(updated).toBe(1);
+    const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string; desc: string; type: string }>;
+    const a = got.find((c) => c.name === "A");
+    expect(a?.desc).toBe("社区补");
+    // 段并入：本地 bilibili 段保留 + 社区 afdian 段并入（覆盖会丢本地段）
+    expect(a?.type).toContain("bilibili");
+    expect(a?.type).toContain("afdian");
+    expect(got.map((c) => c.name)).toContain("C");
+    // B 原样保留
+    expect(got.some((c) => c.name === "B" && c.type === "afdian")).toBe(true);
+  });
+
+  it("幂等短路：同索引再并 → [0,0]，覆盖层不重写", async () => {
+    await browserAdapter.SaveWorkshopCreators([{ name: "A", type: "bilibili" }]);
+    const payload = JSON.stringify([
+      { name: "A", type: "bilibili;afdian" },
+      { name: "B", type: "github" },
+    ]);
+    const [a1, u1] = (await browserAdapter.MergeCommunityCreatorsFromJSON(payload)) as [number, number];
+    expect([a1, u1]).toEqual([1, 1]);
+    // 第二次：A 段已含、B 已存在 → 零变更，不写覆盖层
+    const [a2, u2] = (await browserAdapter.MergeCommunityCreatorsFromJSON(payload)) as [number, number];
+    expect([a2, u2]).toEqual([0, 0]);
+  });
+
+  it("空输入 / 全非法条目 → reject 不落盘", async () => {
+    const before = [{ name: "旧", type: "x" }];
+    await browserAdapter.SaveWorkshopCreators(before);
+    await expect(browserAdapter.MergeCommunityCreatorsFromJSON("[]")).rejects.toThrow();
+    await expect(
+      browserAdapter.MergeCommunityCreatorsFromJSON('[{"name":"","type":"x"}]'),
+    ).rejects.toThrow();
+    const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
+    expect(got).toHaveLength(1);
+    expect(got[0].name).toBe("旧");
+  });
+
+  it("少条数不设门槛（与 MergeWorkshopCreatorsFromJSON ≥20 硬校验区分）", async () => {
+    await browserAdapter.SaveWorkshopCreators([]);
+    const [added] = (await browserAdapter.MergeCommunityCreatorsFromJSON(
+      JSON.stringify([{ name: "唯一", type: "x" }]),
+    )) as [number, number];
+    expect(added).toBe(1); // 1 条也并入——社区增量合并不要求全量索引
+  });
+});
+
 describe("B2 契约：DefaultWorkshopSites — 恒返回站点列表", () => {
   it("默认返回 bundled 站点（含 id/url，非空）", async () => {
     const s = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string; url: string }>;

@@ -276,6 +276,23 @@ export function EnsureStorageDirs(): $CancellablePromise<void> {
 
 /**
  * ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定）
+ * 
+ * # GUI→CLI 参数链路（#5 短期文档注释，中期收敛为 ParamSpec 元数据）
+ * 
+ * 	frontend cli-bridge.executeCLI → buildArgsMap（Record<string,string|number|boolean>）
+ * 	→ Wails map[string]interface{}（JSON 序列化过桥，数值一律 float64）
+ * 	→ 本函数转 []string → os/exec 子进程 <exe> --cli <args> --json
+ * 	→ go/cli ParseCommandArgs 剥离全局参数（--files-root/--json）
+ * 	→ 各命令内部 flag.FlagSet 解析（go/cli/registry.go 注册）
+ * 
+ * # 参数转换损耗点（新增命令参数必须同步核对）
+ * 
+ *   - string: 空串丢弃——无法传显式空值（如需传空串语义，改走 ParamSpec 白名单）
+ *   - float64: 0 丢弃——无法传 0（0 与「未传」同义，flag 层也无法区分）
+ *   - bool: false 丢弃——无法传显式 false（仅 true 会产出 --flag）
+ *   - 其他类型（nil / int / map / slice）：静默跳过 + stderr 告警，防参数丢失
+ *   - filesRoot: 特殊键名 → --files-root（必填，缺省回退 GetYSMRepoRoot()）
+ *   - Go map 遍历无序 → 参数顺序不确定；仅 flag 语义命令安全，位置参数命令不可走此桥
  */
 export function ExecuteCLI(command: string, args: { [_ in string]?: any } | null): $CancellablePromise<string> {
     return $Call.ByID(302310740, command, args);
@@ -729,6 +746,25 @@ export function LoadWorkshopCreators(): $CancellablePromise<types$0.WorkshopCrea
     return $Call.ByID(3429491443);
 }
 
+/**
+ * MergeCommunityCreatorsFromJSON 把社区索引（增量）并入本地 creators 并单次原子写回。
+ * ADR-172：社区增量合并下沉 Go——替代前端 tryAutoMergeCommunity / site edit 同步
+ * 按钮的 TS 派生写回链（siteMap 分组 / kept 过滤 / dedupeCreators），解除 AGENTS.md
+ * 「Go 派生结果只读」红线债务（锐评复核 2026-09-03 判定，见 ADR-172 §1）。
+ * 
+ * 语义与 MergeWorkshopCreatorsFromJSON（手动全量导入，drag.ts 消费）刻意区分：
+ *   - type 冲突：分号段并入（不丢站点），非覆盖；
+ *   - 无 ≥20/≥100 条数硬校验：合并纯增不改（无删改分支），小库用户可正常合并；
+ *   - 备份同构（BackupWorkshopCreators，用户拍板保留）。
+ * 
+ * 一次 Load 最新全量（不依赖前端可能 stale 的会话副本）→ 逐条并入 → 单次
+ * SaveWorkshopCreators（fsutil.WriteFileAtomic）：无「逐站循环调 BySite N 次」的
+ * 跨调用部分提交窗口。
+ */
+export function MergeCommunityCreatorsFromJSON(communityJSON: string): $CancellablePromise<[number, number]> {
+    return $Call.ByID(2780591293, communityJSON);
+}
+
 export function MergeWorkshopCreatorsFromJSON(jsonContent: string): $CancellablePromise<[number, number]> {
     return $Call.ByID(2866539347, jsonContent);
 }
@@ -746,7 +782,7 @@ export function MoveModelFile(src: string, dstDir: string): $CancellablePromise<
  * ========== 回收站 ==========
  * R24 P3：recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批
  * 文件（实例目录 Rename/Remove、.recycle 内 Move）→ 统一纳入 InstallLock 互斥
- * （共享单锁闭环，与 ClearInstanceResources/DeduplicateCustomDir 同口径）。
+ * （共享单锁闭环，与 ClearInstanceResources 同口径）。
  * ⚠️ 这些绑定不得在已持 InstallLock 的路径内被调用（非重入锁，会自死锁）。
  */
 export function MoveToRecycle(src: string): $CancellablePromise<void> {
@@ -1196,8 +1232,8 @@ export function SyncResources(rtype: string, instanceName: string): $Cancellable
  * ========== 统一启用/禁用（兄弟会话裁定：无 rtype，纯路径包含判定）==========
  * ToggleEnable 统一启禁入口——root 归属由「哪个已知根包含此路径」判定，而非按
  * rtype 路由：前端零类型信息过桥，杜绝「rtype 与实际位置不一致」（文件移动/复制后
- * rtype 过期）错根；允许集合与 ToggleResourcePack 同口径（FilesRoot + McRoot +
- * CustomRoots 值），内部复用 fileops 的 .disabled 统一机制（新标准，兼容历史 .ban）。
+ * rtype 过期）错根；允许集合 = FilesRoot + McRoot + CustomRoots 值（原
+ * ToggleResourcePack 同口径），内部复用 fileops 的 .disabled 统一机制（新标准，兼容历史 .ban）。
  */
 export function ToggleEnable(path: string): $CancellablePromise<boolean> {
     return $Call.ByID(1450559684, path);

@@ -327,22 +327,26 @@ describe("bindEditEvents 拉取配置", () => {
     getAppMock.mockResolvedValue({
       SaveWorkshopCreators: vi.fn().mockResolvedValue(undefined),
       SaveWorkshopSites: vi.fn().mockResolvedValue(undefined),
+      // ADR-172：创作者落盘并入下沉 Go binding（默认幂等返回 [0,0]）
+      MergeCommunityCreatorsFromJSON: vi.fn().mockResolvedValue([0, 0]),
       LoadGitHubRepos: vi.fn().mockResolvedValue([]),
       LoadResourceTypes: vi.fn().mockResolvedValue(null),
       ...overrides,
     });
   }
 
-  it("全量更新 → merge + 双 Save + 汇总 toast + refresh + 按钮复位", async () => {
+  it("全量更新 → 创作者直传 Go binding + 站点整存 + 汇总 toast + refresh + 按钮复位", async () => {
     mockFetchApp({
       LoadGitHubRepos: vi.fn().mockResolvedValue(["r1", "r2"]),
       LoadResourceTypes: vi.fn().mockResolvedValue({ resourceTypes: [{ id: "ysm" }, { id: "mmd" }] }),
+      // ADR-172：Go 返回权威计数（段并入/去重派生在 Go 侧）
+      MergeCommunityCreatorsFromJSON: vi.fn().mockResolvedValue([1, 2]),
     });
     fetchCreatorsMock.mockResolvedValue([{ name: "甲" }]);
     fetchSitesMock.mockResolvedValue([{ id: "s1" }]);
     mergeCreatorsMock.mockReturnValue({ added: 1, updated: 2 });
     mergeSitesMock.mockReturnValue({ added: 1 });
-    const { state, searchResults, refresh, allCreators } = mount();
+    const { state, searchResults, refresh } = mount();
     searchResults.insertAdjacentHTML("beforeend", '<button class="cr-fetch-btn">🌐 更新配置</button>');
     const emitSpy = spyBusEmit();
     try {
@@ -358,8 +362,19 @@ describe("bindEditEvents 拉取配置", () => {
       expect(msg).toContain("站点: +1");
       expect(msg).toContain("GitHub: 2 仓库");
       expect(msg).toContain("类型: 2 种");
-      const app = (await getAppMock()) as { SaveWorkshopCreators: Mock; SaveWorkshopSites: Mock };
-      expect(app.SaveWorkshopCreators).toHaveBeenCalledWith(allCreators);
+      const app = (await getAppMock()) as {
+        MergeCommunityCreatorsFromJSON: Mock;
+        SaveWorkshopCreators: Mock;
+        SaveWorkshopSites: Mock;
+      };
+      // ADR-172：创作者合并 JSON 直传 Go，前端不重算
+      expect(app.MergeCommunityCreatorsFromJSON).toHaveBeenCalledWith(
+        JSON.stringify([{ name: "甲" }]),
+      );
+      // 红线验证：写回下沉后前端零整存（原 SaveWorkshopCreators(allCreators) 已移除）
+      expect(app.SaveWorkshopCreators).not.toHaveBeenCalled();
+      // UI 即时展示并入（仅内存，不驱动写回）
+      expect(mergeCreatorsMock).toHaveBeenCalled();
       expect(app.SaveWorkshopSites).toHaveBeenCalledWith(state.allSites);
       expect(refresh).toHaveBeenCalled();
       const btn = searchResults.querySelector(".cr-fetch-btn") as HTMLButtonElement;
@@ -370,9 +385,7 @@ describe("bindEditEvents 拉取配置", () => {
     }
   });
 
-  it("无变化（LoadGitHubRepos 拒绝被吞）→ 「已是最新配置」+ 不 refresh + 不 Save", async () => {
-    const saveC = vi.fn();
-    const saveS = vi.fn();
+  it("无变化（LoadGitHubRepos 拒绝被吞）→ 「已是最新配置」+ 不 refresh + binding 零调用", async () => {
     mockFetchApp({
       LoadGitHubRepos: vi.fn().mockRejectedValue(new Error("offline")),
     });
@@ -391,8 +404,15 @@ describe("bindEditEvents 拉取配置", () => {
         ),
       );
       expect(refresh).not.toHaveBeenCalled();
-      expect(saveC).not.toHaveBeenCalled();
-      expect(saveS).not.toHaveBeenCalled();
+      const app = (await getAppMock()) as {
+        MergeCommunityCreatorsFromJSON: Mock;
+        SaveWorkshopCreators: Mock;
+        SaveWorkshopSites: Mock;
+      };
+      // 无社区数据 → 创作者 binding 与写回零调用
+      expect(app.MergeCommunityCreatorsFromJSON).not.toHaveBeenCalled();
+      expect(app.SaveWorkshopCreators).not.toHaveBeenCalled();
+      expect(app.SaveWorkshopSites).not.toHaveBeenCalled();
     } finally {
       emitSpy.mockRestore();
     }
@@ -415,6 +435,9 @@ describe("bindEditEvents 拉取配置", () => {
         ),
       );
       expect(refresh).not.toHaveBeenCalled();
+      // 社区数据为空 → 创作者 binding 零调用（写回下沉后无 Save 路径可走）
+      const app = (await getAppMock()) as { MergeCommunityCreatorsFromJSON: Mock };
+      expect(app.MergeCommunityCreatorsFromJSON).not.toHaveBeenCalled();
     } finally {
       emitSpy.mockRestore();
     }

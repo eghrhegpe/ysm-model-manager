@@ -27,11 +27,6 @@ import {
   extractIds,
 } from "../../test-utils/index.ts";
 
-/** 测试假渲染器：同步写 innerHTML，规避 W5 异步竞态正则命中（纯同步 mock，无异步路径） */
-function setHtml(el: Element, html: string): void {
-  el.innerHTML = html;
-}
-
 // ── 假依赖工厂（结构/行渲染/轻面板用；重面板 fill3DPanel/截图/骨骼 不执行）──
 
 /** ysm 假依赖：仅喂结构断言与 dock 行渲染 */
@@ -47,7 +42,6 @@ function fakeYsmOpts(): YsmMenuItemsOpts {
     bonePanel: fakeBonePanel(),
     // [doc:adr-126-p4-b-2] ysmShotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）
     panels: {
-      fillShotPanel: () => {},
       shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "x" }],
     },
   };
@@ -81,12 +75,10 @@ function fakeMmdOpts(overrides: Partial<MmdMenuItemsOpts> = {}): MmdMenuItemsOpt
     },
     bonePanel: null,
     panels: {
-      fillModelPanel: (list) => setHtml(list, '<div data-testid="mmd-model-card">测试.pmx</div>'),
       playNodes: () => [
         { id: "play-toggle", kind: "toggle" as const, labelKey: "x", fallback: "播放", control: { get: () => false, set: () => {} } },
         { id: "play-select", kind: "select" as const, labelKey: "x", fallback: "动作", control: { options: [], get: () => "0", set: () => {} } },
       ],
-      fillShotPanel: () => {},
       // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
       modelInfoNodes: () => [{ id: "mmd-model-name", kind: "field", labelKey: "x", value: "测试.pmx" }],
       shotNodes: () => [],

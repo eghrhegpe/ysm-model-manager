@@ -12,7 +12,7 @@ import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { preloadModel, type ModelLike } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
+import { ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
@@ -68,9 +68,8 @@ export async function createYsm3D(
       readTextFile: readFileBytes,
       // 面板填充回调由视图层注入，解除 utils→views 分层违规 R1（ADR 分层契约）
       // [doc:adr-126-p5-收口] YSM model 面板已走 schema-registry（registerModelSchema），
-      // fillYsmModelPanel 旧路径删除（死代码）；shot 走 shotNodes 声明式节点
+      // fillYsmModelPanel/fillYsmShotPanel 旧路径删除（死代码）；shot 走 shotNodes 声明式节点
       panels: {
-        fillShotPanel: fillYsmShotPanel,
         shotNodes: ysmShotNodes,
         playNodes,
         // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容 = buildYsmModelSchema

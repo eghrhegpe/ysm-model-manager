@@ -35,14 +35,8 @@ export interface MmdDataPort {
  * MMD 内容构建：读 PMX/PMD 字节 + 同目录纹理 → 挂入核心 scene，返回每帧 update + dispose。
  * 成功路径自行移除 loadingEl（对齐 vrm/litematic 既有口径）。数据读取经 port 注入（ADR-072）。
  */
-/** 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） */
+/** 面板声明式节点工厂（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） */
 export interface MmdPanelHooks {
-  fillModelPanel: (list: HTMLElement, ctx: MmdBottomNavCtx) => void;
-  fillShotPanel: (
-    list: HTMLElement,
-    ctx: MmdBottomNavCtx,
-    screenshot: (() => Promise<string | null>) | null,
-  ) => void;
   /** 声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归）：R1 禁 utils 运行时依赖 views，
    *  mmdModelInfoNodes / mmdShotNodes / playNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
   modelInfoNodes?: (ctx: MmdBottomNavCtx) => PreviewMenuNode[];

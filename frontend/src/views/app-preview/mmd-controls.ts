@@ -5,11 +5,9 @@
 // （self 模式由 visibleWhen: s["ui.mode"]!=="self" 谓词隐藏，[doc:adr-126-p4-d]）。
 // 材质面板 buildMaterialControls 保留复用（纯渲染层，状态经 bridge 下沉 mmd-materials.ts，ADR-072）。
 
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
-import { cardContainer, addFieldRow } from "../../ui/ui-helpers.ts";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
-import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
+import { shotButtonNodes } from "./shot-panel-shared.ts";
 import type { CameraControlBridge } from "../../preview-3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
 // [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
@@ -21,24 +19,11 @@ import type {
 } from "../../preview-3d/adapters/content-bridges.ts";
 export type { MmdBottomNavCtx, MmdPlayBridge, MaterialControlBridge };
 
-/** MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） */
-export function fillMmdModelPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void {
-  const pmx = ctx.mmd.pmx;
-  cardContainer(list, (c) => {
-    addFieldRow(c, t("preview.nameLabel"), ctx.modelName);
-    addFieldRow(
-      c,
-      t("preview.modelOverview"),
-      `${pmx.bones.length} 骨骼 · ${pmx.materials.length} 材质 · ${pmx.morphs.length} 表情`,
-    );
-  });
-}
-
 /**
  * [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。
  * 纯数据：2 行 field（名称 + 骨骼/材质/表情计数），零 DOM。
  * adapter 的 model 面板节点带 `children: mmdModelInfoNodes(ctx)` → 渲染走 renderMenu（preview-menu/render.ts）。
- * fillMmdModelPanel 保留（向后兼容 + 既有测试零回归）；新面板路径走本函数。
+ * （fillMmdModelPanel 命令式旧轨已于 2026-09-03 随 G3 收口删除——生产装配零调用点）
  */
 export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
   const pmx = ctx.mmd.pmx;
@@ -148,7 +133,7 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
  * [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。
  * 共享逻辑在 shot-panel-shared.ts（SHOT_KEYS/SHOT_LABELS/makeShotAction/shotButtonNodes），
  * 此处只做 MMD 前缀 id 包装（`mmd-shot-*`）+ 能力缺失守卫（screenshotFn null → []）。
- * fillMmdShotPanel 保留（向后兼容）；新面板路径走本函数。
+ * （fillMmdShotPanel 命令式旧轨已于 2026-09-03 随 G3 收口删除——生产装配零调用点）
  */
 export function mmdShotNodes(
   ctx: MmdBottomNavCtx,
@@ -159,32 +144,4 @@ export function mmdShotNodes(
     { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], texture: "", ...(ctx.modelPath !== undefined ? { _modelPath: ctx.modelPath } : {}) },
     screenshotFn,
   ).map((n) => ({ ...n, id: `mmd-${n.id}` }));
-}
-
-/**
- * MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。
- * current / front / 45 / side / back45 / all 六角度——all 走 saveScreenshot 的 angle 路径。
- * @param screenshotFn 适配器注入的截图能力（screenshotFromRenderer 共享 renderer），null 时面板不渲染
- */
-export function fillMmdShotPanel(
-  list: HTMLElement,
-  ctx: MmdBottomNavCtx,
-  screenshotFn: (() => Promise<string | null>) | null,
-): void {
-  if (!screenshotFn) return;
-  const saveShot = makeShotAction(
-    { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], texture: "", ...(ctx.modelPath !== undefined ? { _modelPath: ctx.modelPath } : {}) },
-    screenshotFn,
-  );
-  for (const key of ["current", "front", "45", "side", "back45", "all"] as const) {
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "ysm-3d-popbtn ysm-3d-popbtn--row";
-    item.textContent = "📷 " + t(("preview.screenshot" + key[0].toUpperCase() + key.slice(1)) as LocaleKey);
-    item.dataset.testid = "shot-" + key;
-    item.onclick = (): void => {
-      void saveShot(key);
-    };
-    list.appendChild(item);
-  }
 }

@@ -167,7 +167,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       dockGroup: "model", // 底栏 🧍 模型组
       // [doc:adr-126-p4-b-1] 面板内容声明式化：children = modelInfoNodes 纯数据节点（经 panels 注入，
       // R1 禁 utils→views 运行时依赖），渲染走 renderMenu（preview-menu/render.ts）。
-      // fillModelPanel 逃生舱保留在 MmdPanelHooks（兼容既有面板），此处走新通道。
+      // fill* 命令式逃生舱字段已于 2026-09-03 随 G3 收口删除——nodes 为唯一通道。
       children: o.panels?.modelInfoNodes?.(o.navCtx) ?? [],
     },
     {

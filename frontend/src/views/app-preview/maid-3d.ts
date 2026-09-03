@@ -9,7 +9,7 @@ import { getApp } from "../../backend/app.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { preloadModel, type ModelLike } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
-import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
+import { ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
 import { statsCardHTML, type StatsCardModel } from "./tpl.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { detailGen } from "./detail.ts";
@@ -66,7 +66,6 @@ async function createMaid3D(
       onClose: opts.onClose,
       readTextFile: readFileBytes,
       panels: {
-        fillShotPanel: fillYsmShotPanel,
         shotNodes: ysmShotNodes,
         // [doc:adr-126-p5] 受控 schema 注册（P5-A review P1）：maid 也走 buildYsmModelSchema
         // 注册 "ysm-model"——model 面板 schemaId 是唯一通道（无 fallback），不注册则静默空白。

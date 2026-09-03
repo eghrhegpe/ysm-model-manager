@@ -20,9 +20,6 @@ auto_fields:
     - addOpLog
     - buildCameraControls
     - CameraControlBridge
-    - fillMmdModelPanel
-    - fillMmdShotPanel
-    - fillYsmShotPanel
     - getSchema
     - hasSchema
     - listSchemas
@@ -120,13 +117,12 @@ status: active
 
 | 导出 | 文件 | 职责 |
 |------|------|------|
-| `fillMmdModelPanel(list, ctx)` | mmd-controls.ts | 命令式（向后兼容） |
 | `mmdModelInfoNodes(ctx) → PreviewMenuNode[]` | mmd-controls.ts | 模型名称 field + 骨骼/材质/表情计数 + zip 多模型 `multiModelSelectNode` |
 | `playNodes(bridge) → PreviewMenuNode[]` | mmd-controls.ts | 空态提示+重新扫描 / 正常态 toggle+clip select+animDir |
 | `mmdShotNodes(ctx, screenshotFn)` | mmd-controls.ts | 六角度（`screenshotFn null` → 返回空数组） |
 | `vrmModelInfoNodes(ctx) → PreviewMenuNode[]` | vrm-controls.ts | 名称 + 骨骼/材质计数 |
 | `vrmShotNodes(screenshot, modelPath)` | vrm-controls.ts | 仅 `shot-current` |
-| `ysmShotNodes(ctx)` / `fillYsmShotPanel(list, ctx)` | ysm-controls.ts | 六角度（undefined 走 fallback，面板常驻） |
+| `ysmShotNodes(ctx)` | ysm-controls.ts | 六角度（undefined 走 fallback，面板常驻） |
 | `registerYsmModelSchema(ctx, sessionId?) → () => void` | ysm-controls.ts | 注册 schema 到 per-scene 键，返回 off 注销函数 |
 | `showVrmMeta/showMmdPreview/showFbxPreview/showScenePreview/showMorphPreview/showStagePreview` | detail-3d.ts | 3D 入口卡，各含 FAB 进 3D |
 | `readFileBytes(path)` / `addOpLog(scope, op, msg, status, err?)` | view-shell.ts | Wails 桥 / 环形日志诊断 |

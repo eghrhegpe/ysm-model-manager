@@ -6,9 +6,8 @@
 // （preview-menu/items.test.ts，对齐 MikuMikuAR 声明式菜单测试范式）。
 
 import * as THREE from "three";
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
-import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
+import { shotButtonNodes } from "./shot-panel-shared.ts";
 import type { CameraControlBridge } from "../../preview-3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
 // [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
@@ -26,26 +25,10 @@ import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
  * [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。
  * 共享逻辑在 shot-panel-shared.ts（shotButtonNodes），screenshot 为 ctx 可选字段
  * （undefined = 走 saveScreenshot fallback，面板常驻——与 MMD 能力缺失不注入不同）。
- * fillYsmShotPanel 保留（向后兼容）；新面板路径走本函数。
+ * （fillYsmShotPanel 命令式旧轨已于 2026-09-03 随 G3 收口删除——生产装配零调用点）
  */
 export function ysmShotNodes(ctx: YsmControlsContext): PreviewMenuNode[] {
   return shotButtonNodes(ctx.model, ctx.screenshot).map((n) => ({ ...n, id: `ysm-${n.id}` }));
-}
-
-/** 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） */
-export function fillYsmShotPanel(list: HTMLElement, ctx: YsmControlsContext): void {
-  const saveShot = makeShotAction(ctx.model, ctx.screenshot);
-  for (const key of ["current", "front", "45", "side", "back45", "all"] as const) {
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "ysm-3d-popbtn ysm-3d-popbtn--row";
-    item.textContent = "📷 " + t(("preview.screenshot" + key[0].toUpperCase() + key.slice(1)) as LocaleKey);
-    item.dataset.testid = "shot-" + key;
-    item.onclick = (): void => {
-      void saveShot(key);
-    };
-    list.appendChild(item);
-  }
 }
 
 /**

@@ -1,13 +1,12 @@
 // ===== mmd-controls 菜单面板测试（ADR-076 v2 Phase 2：底部导航收编为根菜单面板填充）=====
-// 覆盖：fillMmdModelPanel（信息卡）、fillMmdMorphPanel（表情列表 + morph 权重切换）、
-// buildMaterialControls（材质显隐 + 透明度）。切换模型/相机视图归 core 根菜单
-// （switch/camera 项），此处不再覆盖。morph 已拆独立菜单项（对齐材质折叠模式，2026-08-28）。
+// 覆盖：mmdModelInfoNodes（信息卡声明式节点）、mmdShotNodes / playNodes、buildMaterialControls
+// （材质显隐 + 透明度）。切换模型/相机视图归 core 根菜单（switch/camera 项），此处不再覆盖。
+// morph 已拆独立菜单项（对齐材质折叠模式，2026-08-28）。fill* 命令式旧轨已于 2026-09-03
+// 随 G3 收口删除（生产装配零调用点），对应 describe 一并移除。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { MMD } from "@moeru/three-mmd";
 import {
-  fillMmdModelPanel,
-  fillMmdShotPanel,
   mmdModelInfoNodes,
   mmdShotNodes,
   playNodes,
@@ -45,32 +44,6 @@ function makeCtx() {
   return { ctx, mesh, mmd };
 }
 
-// ---- 测试辅助工具函数 ----
-
-/** 创建 0 骨骼的 PMX（骨骼数为 0） */
-function makeZeroBoneCtx(): { ctx: MmdBottomNavCtx } {
-  const rawMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    Array.from({ length: 3 }, () => new THREE.MeshBasicMaterial()),
-  );
-  const mesh = rawMesh as unknown as THREE.SkinnedMesh;
-  const mmd = {
-    pmx: {
-      bones: [],
-      materials: Array.from({ length: 3 }, (_, i) => ({ name: `mat${i}` })),
-      morphs: [],
-    },
-  };
-  return {
-    ctx: {
-      mmd: mmd as unknown as MMD,
-      mesh,
-      modelName: "空骨骼.pmx",
-      modelPath: "/mmd/empty/empty.pmx",
-    } as MmdBottomNavCtx,
-  };
-}
-
 /** 创建自定义名称的上下文 */
 function makeCtxWithName(name: string): { ctx: MmdBottomNavCtx } {
   const rawMesh = new THREE.Mesh(
@@ -106,41 +79,6 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("fillMmdModelPanel", () => {
-  it("渲染信息卡（名称 + 骨骼/材质/表情计数），不渲染 morph 行（已拆独立面板）", () => {
-    const { ctx } = makeCtx();
-    const list = document.createElement("div");
-    fillMmdModelPanel(list, ctx);
-    expect(list.textContent).toContain("子言.pmx");
-    expect(list.textContent).toContain("364");
-    expect(list.textContent).toContain("28");
-    expect(list.textContent).toContain("55");
-    // morph 行与标题不在此面板（fillMmdMorphPanel 专属）
-    expect(list.querySelectorAll('[data-testid^="mmd-morph-"]').length).toBe(0);
-    expect(list.querySelector(".slide-sublabel")).toBeNull();
-  });
-
-  it("骨骼数为 0 时仍正确渲染（显示 0 骨骼）", () => {
-    const { ctx } = makeZeroBoneCtx();
-    const list = document.createElement("div");
-    fillMmdModelPanel(list, ctx);
-    expect(list.textContent).toContain("空骨骼.pmx");
-    expect(list.textContent).toContain("0 骨骼");
-    expect(list.textContent).toContain("3 材质");
-    expect(list.textContent).toContain("0 表情");
-  });
-
-  it("不同 modelName 在信息卡中显示正确值", () => {
-    const testNames = ["初音ミク.pmx", "Miku.pmd", "test_中文.pmx"];
-    for (const name of testNames) {
-      const { ctx } = makeCtxWithName(name);
-      const list = document.createElement("div");
-      fillMmdModelPanel(list, ctx);
-      expect(list.textContent).toContain(name);
-    }
-  });
-});
-
 describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
   it("产出 2 行 field：名称 + 骨骼/材质/表情计数，纯数据零 DOM", () => {
     const { ctx } = makeCtx();
@@ -151,7 +89,7 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
     expect(nodes[1].value).toContain("364"); // 骨骼
     expect(nodes[1].value).toContain("28");  // 材质
     expect(nodes[1].value).toContain("55");  // 表情
-    // 纯数据：不碰 DOM（与原 fillMmdModelPanel 的命令式渲染形成对照）
+    // 纯数据：不碰 DOM（G3 收口后 nodes 为唯一通道，命令式旧轨已删）
     expect(document.body.innerHTML).toBe("");
   });
 
@@ -270,50 +208,6 @@ describe("playNodes（[doc:adr-126-p5-收尾] 播放面板声明式节点）", (
 });
 
 describe("边界条件", () => {
-  it("fillMmdModelPanel 的 mesh 无 morphTargetDictionary → 静默返回", () => {
-    const rawMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial(),
-    );
-    // 不设 morphTargetDictionary
-    const mesh = rawMesh as unknown as THREE.SkinnedMesh;
-    const mmd = {
-      pmx: {
-        bones: new Array(10),
-        materials: [{ name: "mat0" }],
-        morphs: [],
-      },
-    };
-    const ctx: MmdBottomNavCtx = { mmd: mmd as unknown as MMD, mesh, modelName: "test.pmx" };
-    const list = document.createElement("div");
-    // 不应崩溃
-    expect(() => fillMmdModelPanel(list, ctx)).not.toThrow();
-    // 只有信息卡
-    expect(list.querySelectorAll('[data-testid^="mmd-morph-"]').length).toBe(0);
-  });
-
-  it("fillMmdModelPanel 的 mesh 无 morphTargetInfluences → 静默处理", () => {
-    const rawMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial(),
-    );
-    rawMesh.morphTargetDictionary = { "表情": 0 };
-    // 不设 morphTargetInfluences
-    (rawMesh as any).morphTargetInfluences = undefined;
-    const mesh = rawMesh as unknown as THREE.SkinnedMesh;
-    const mmd = {
-      pmx: {
-        bones: new Array(10),
-        materials: [{ name: "mat0" }],
-        morphs: [],
-      },
-    };
-    const ctx: MmdBottomNavCtx = { mmd: mmd as unknown as MMD, mesh, modelName: "test.pmx" };
-    const list = document.createElement("div");
-    // 不应崩溃
-    expect(() => fillMmdModelPanel(list, ctx)).not.toThrow();
-  });
-
   it("getMmdMaterialDetail 越界 index 返回 null", () => {
     const pmxMaterials = [{ name: "a" }, { name: "b" }];
     const materials = [new THREE.MeshBasicMaterial(), new THREE.MeshBasicMaterial()];
@@ -377,30 +271,5 @@ describe("边界条件", () => {
     const mat = new THREE.MeshBasicMaterial({ opacity: 1, transparent: false });
     setMmdMaterialOpacity([mat], 0, 0.8);
     expect(mat.transparent).toBe(true);
-  });
-});
-
-// ===== 覆盖率补强：fillMmdShotPanel（六角度截图按钮装配 + 点击触发截图链）=====
-describe("fillMmdShotPanel", () => {
-  it("screenshotFn 为 null → 早退不渲染任何按钮", () => {
-    const { ctx } = makeCtx();
-    const list = document.createElement("div");
-    fillMmdShotPanel(list, ctx, null);
-    expect(list.children).toHaveLength(0);
-  });
-
-  it("有 screenshotFn → 装配 6 个角度按钮（data-testid shot-*），点击触发截图链", async () => {
-    const { ctx } = makeCtx();
-    const fn = vi.fn(async () => "data:image/png;base64,AAA");
-    const list = document.createElement("div");
-    fillMmdShotPanel(list, ctx, fn);
-    const btns = list.querySelectorAll("button");
-    expect(btns).toHaveLength(6);
-    for (const key of ["current", "front", "45", "side", "back45", "all"]) {
-      expect(list.querySelector(`[data-testid="shot-${key}"]`)).toBeTruthy();
-    }
-    // 点击「当前视角」→ makeShotAction → saveScreenshot → screenshotFn()
-    (list.querySelector('[data-testid="shot-current"]') as HTMLElement).click();
-    await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1), { timeout: 3000 });
   });
 });

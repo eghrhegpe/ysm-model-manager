@@ -34,9 +34,10 @@ const ysmDetailTree: PreviewMenuNode[] = [
             fallback: "模型信息",
             icon: "🧍",
             dockGroup: "model",
-            // 逃生舱：现有 fillModelPanel 命令式渲染过渡
+            // renderCustom 逃生舱通道（schema-registry 声明不再允许新面板走此通道；
+            // 既有 3D bone panel 等保留——测试锚点仅验节点结构可承载 renderCustom）
             renderCustom: (list: HTMLElement): void => {
-              list.textContent = "fillModelPanel placeholder";
+              list.textContent = "renderCustom placeholder";
             },
           },
           {

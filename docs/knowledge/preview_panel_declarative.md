@@ -21,9 +21,6 @@ auto_fields:
     - CameraControlBridge
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
-    - fillMmdModelPanel
-    - fillMmdShotPanel
-    - fillYsmShotPanel
     - isPreviewFolderNode
     - makeMmdAdapter
     - makeShotAction
@@ -178,7 +175,7 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 
 - **ADR-125**：设置面板走 `MenuControlDef[]`（B 层），本卡的面板内容走 `PreviewMenuNode[]`（A 层 children）——两条声明式通道各自独立，不混用。
 - **renderMenu**（preview-menu/render.ts）：children 内容的渲染器，支持 field/button/row/folder/divider/sectionTitle + 逃生舱。
-- **mmd-adapter / mmd-controls**：P4-B-1 试点——model 面板 `children: o.panels?.modelInfoNodes?.(...)`，shot 面板条件注入 `children: o.panels?.shotNodes?.(...)`；`fillMmdModelPanel` / `fillMmdShotPanel` 保留（向后兼容 + 既有测试零回归）。
+- **mmd-adapter / mmd-controls**：P4-B-1 试点——model 面板 `children: o.panels?.modelInfoNodes?.(...)`，shot 面板条件注入 `children: o.panels?.shotNodes?.(...)`。（`fillMmdModelPanel` / `fillMmdShotPanel` 命令式旧轨已于 2026-09-03 随 G3 收口删除——生产装配零调用点，nodes 为唯一通道）
 - **注入通道回归（R1 分层）**：节点工厂（`mmdModelInfoNodes` / `mmdShotNodes` / `ysmShotNodes`）定义在 views，adapter 经 `MmdPanelHooks` / `YsmMenuItemsOpts.panels` 的可选字段（`modelInfoNodes` / `shotNodes`）由视图层注入（mmd-3d / scene-3d / ysm-3d / maid-3d）——**adapter 不得直接 import views 层工厂**（check-layering R1 零容忍，曾因直接 import 阻断推送，见 `44b4e1b2`）。注入缺失 → children 空、面板不渲染（测试桩同步补注入）。
 - **ADR-085**：S2「状态单向流」的大方向——面板内容从命令式 DOM 构建收敛为数据节点。
 
@@ -188,7 +185,7 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 2. **能力缺失 → 不注入项**（条件注入），不注入空 children 面板（对齐 bonePanel 范式）。
 3. **声明式节点零 DOM**：`mmdModelInfoNodes` / `mmdShotNodes` 是纯数据工厂，不碰 `document`（与 fillXxxPanel 命令式形成对照）。
 4. **R1 分层（零容忍）**：utils 侧 adapter **不得 import views 层节点工厂**——必须经 `panels` 注入通道（`modelInfoNodes` / `shotNodes` 可选字段）由视图层注入；`check-menu-health` 门禁认识 children 渲染通道（render/renderCustom/children 三选一，`f697a270` 起）。
-5. **新旧通道并存**：`fillMmdModelPanel` / `fillMmdShotPanel` 保留兼容，新面板路径走 children——每步独立可回滚。
+5. **新旧通道并存（2026-09-03 已收敛）**：`fillMmdModelPanel` / `fillMmdShotPanel` / `fillYsmShotPanel` 命令式旧轨随 G3 收口删除（生产装配零调用点，逃生舱接口字段一并移除）——新面板路径走 children，单一通道。
 7. **面板组装路径必须复用同一条通道衰退链**（P5 事故不变量）：adapter 面板内容渲染唯一实现 = `renderAdapterPanelContent`（preview-menu/render.ts，schemaId → children → renderCustom 三通道）；`renderPreviewPanel`（⚙ 根菜单）与 `modelDetailView`（roles 详情模型信息本体直渲）都调它。教训：P5 把 ysm/maid 模型面板迁到 schemaId、mmd/vrm 迁到 children 时，modelDetailView 旧直渲门 `primary?.renderCustom` 静默失明——统计/纹理/组件 select 在 roles 详情集体消失（用户 2026-08-29 实测报告），且无测试报警。三通道回归锁在 `preview-menu.roles.test.ts`（真实路径 dock-model → 角色行 → 详情）。
 6. `fillRoles` **不在 P4-B 范围**（已声明式，实测 sceneRegistry + menuItems + SlideMenuView 驱动）。
 

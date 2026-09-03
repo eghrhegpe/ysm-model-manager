@@ -1,9 +1,10 @@
 // ===== ysm-controls 菜单面板测试（[doc:adr-126-p4-b-2] 截图面板声明式化）=====
-// 覆盖：ysmShotNodes（声明式节点结构）、fillYsmShotPanel（命令式行为，向后兼容）。
+// 覆盖：ysmShotNodes（声明式节点结构）。fillYsmShotPanel 命令式旧轨已于 2026-09-03
+// 随 G3 收口删除（生产装配零调用点），对应 describe 一并移除。
 // 模型面板 fillYsmModelPanel / fill3DPanel 在 skeleton.test.ts / skeleton-fill-panel scope 覆盖。
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ysmShotNodes, fillYsmShotPanel, type YsmControlsContext } from "./ysm-controls.ts";
+import { ysmShotNodes, type YsmControlsContext } from "./ysm-controls.ts";
 
 // 截图链路（Wails 绑定 SaveScreenshotFile）在 node 测试环境不可用——
 // mock saveScreenshot 隔离副作用，只验证 ysmShotNodes 的 action 触发截图调用
@@ -88,33 +89,6 @@ describe("ysmShotNodes（P4-B-2 声明式节点）", () => {
     await vi.waitFor(() => {
       expect(saveScreenshotMock).toHaveBeenCalled();
     });
-  });
-});
-
-describe("fillYsmShotPanel（命令式，向后兼容）", () => {
-  it("渲染 6 个截图按钮，testid = shot-<key>", () => {
-    const list = document.createElement("div");
-    fillYsmShotPanel(list, makeCtx());
-    expect(list.querySelectorAll('[data-testid^="shot-"]').length).toBe(6);
-    expect(list.querySelector('[data-testid="shot-current"]')).not.toBeNull();
-  });
-
-  it("点击按钮触发 saveShot（saveScreenshot 以 model + 角度 key 被调）", async () => {
-    const list = document.createElement("div");
-    const ctx = makeCtx();
-    fillYsmShotPanel(list, ctx);
-    const btn = list.querySelector('[data-testid="shot-front"]') as HTMLElement;
-    expect(btn).not.toBeNull();
-    btn.click();
-    await vi.waitFor(() => {
-      expect(saveScreenshotMock).toHaveBeenCalled();
-    });
-    expect(saveScreenshotMock).toHaveBeenCalledWith(
-      ctx.model,
-      "front",
-      expect.any(Function),
-      expect.any(Function),
-    );
   });
 });
 

@@ -5,15 +5,13 @@
 import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
 import { makeMmdAdapter, type MmdPanelHooks } from "../../preview-3d/adapters/mmd-adapter.ts";
 import { makeMmdDataPort } from "./mmd-data-port.ts";
-import { fillMmdModelPanel, fillMmdShotPanel, mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
+import { mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.pmx/.pmd→"mmd"）
 registerReRoute("mmd", (path) => createMmd3D(path));
 
 const mmdPanelHooks: MmdPanelHooks = {
-  fillModelPanel: fillMmdModelPanel,
-  fillShotPanel: fillMmdShotPanel,
   modelInfoNodes: mmdModelInfoNodes,
   shotNodes: mmdShotNodes,
   playNodes,

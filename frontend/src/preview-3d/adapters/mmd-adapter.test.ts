@@ -153,7 +153,6 @@ function makePort(): MmdDataPort {
 /** 测试用 panels 桩：playNodes 喂真实结构 toggle + select（对齐 playNodes id 约定），其余 no-op */
 function makeMmdPanels(): MmdPanelHooks {
   return {
-    fillModelPanel: () => {},
     playNodes: (bridge) => {
       const nodes: Array<{
         id: string;
@@ -187,7 +186,6 @@ function makeMmdPanels(): MmdPanelHooks {
       }
       return nodes as unknown as PreviewMenuNode[];
     },
-    fillShotPanel: () => {},
     // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
     modelInfoNodes: () => [{ id: "stub-model", kind: "field", labelKey: "x", fallback: "x", value: "测试.pmx" }],
     shotNodes: () => [],

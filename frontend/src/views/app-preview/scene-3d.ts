@@ -9,15 +9,13 @@
 import { mount3D, cleanupPreview, invalidatePreview, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
 import { makeMmdAdapter, type MmdPanelHooks } from "../../preview-3d/adapters/mmd-adapter.ts";
 import { makeMmdDataPort } from "./mmd-data-port.ts";
-import { fillMmdModelPanel, fillMmdShotPanel, mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
+import { mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，SceneModel .pmx/.pmd→"mmd-scene"）
 registerReRoute("mmd-scene", (path) => createScene3D(path));
 
 const scenePanelHooks: MmdPanelHooks = {
-  fillModelPanel: fillMmdModelPanel,
-  fillShotPanel: fillMmdShotPanel,
   modelInfoNodes: mmdModelInfoNodes,
   shotNodes: mmdShotNodes,
   playNodes,

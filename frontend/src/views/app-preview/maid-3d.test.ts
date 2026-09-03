@@ -38,7 +38,6 @@ vi.mock("./model3d-loader.ts", () => ({
   preloadModel: preloadMock,
 }));
 vi.mock("./ysm-controls.ts", () => ({
-  fillYsmShotPanel: vi.fn(),
   ysmShotNodes: vi.fn(() => []),
   // createMaid3D 构造 adapter panels 时同步读取 registerYsmModelSchema——
   // mock 缺此导出会在 makeYsmAdapter 调用前抛错（vitest mock 读取缺失导出即抛）

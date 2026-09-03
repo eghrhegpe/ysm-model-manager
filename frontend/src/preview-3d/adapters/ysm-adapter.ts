@@ -72,11 +72,10 @@ export interface YsmAdapterOptions {
   /** 当前纹理下标（多纹理模型重建时传入） */
   texIdx?: number;
   /**
-   * 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1，ADR 分层契约）。
+   * 面板声明式节点工厂（视图层注入，解除 utils→views 运行时分层违规 R1，ADR 分层契约）。
    * 缺失时菜单 render / 骨骼拾取联动退化为 no-op（测试与无面板场景安全）。
    */
   panels?: {
-    fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
     shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
@@ -606,9 +605,8 @@ export interface YsmMenuItemsOpts {
     scene: THREE.Object3D | null | undefined;
     cleanupRef: YsmBonePanelRef;
   };
-  /** 面板填充回调（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
+  /** 面板声明式节点工厂（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
   panels?: {
-    fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
     shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];

@@ -50,7 +50,6 @@ const modelGroups: unknown[] = [];
 // 视图层面板填充函数（DI 注入）：单元测试仅验证适配器将 fill* 接线出去，
 // 真实 DOM 渲染由视图层测试覆盖（fill* 属 views 域，utils 不得运行时依赖）。
 const fakePanels = {
-  fillShotPanel: () => {},
   // [doc:adr-126-p4-b-2] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）——
   // 桩返回 6 个 button 节点，对齐 shotButtonNodes 结构（ysm-3d.test 断言 children.length === 6）
   shotNodes: () =>
@@ -406,7 +405,6 @@ describe("buildYsmScene 动画播放器集成（ADR-100）", () => {
       listAllFilePaths: listPaths,
       readTextFile,
       panels: {
-        fillShotPanel: () => {},
         // [doc:adr-126-p5-收尾] play 面板声明式化：playNodes 经 panels 注入（R1 合规），
         // 捕获 bridge 验证动作标签解码
         playNodes: (bridge) => {
@@ -447,7 +445,6 @@ describe("ysmMenuItems 独立菜单表测试", () => {
       },
       // [doc:adr-126-p4-b-2] shotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）——桩保证 shot 面板有渲染通道
       panels: {
-        fillShotPanel: () => {},
         shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "x" }],
       },
     };
@@ -629,7 +626,6 @@ describe("buildYsmScene 拾取/播放/调试/生命周期补全", () => {
       listAllFilePaths: listPaths,
       readTextFile,
       panels: {
-        fillShotPanel: () => {},
         shotNodes: (c) => { controlsCtx = c as unknown as Record<string, unknown>; return []; },
         playNodes: (bridge) => { playBridge = bridge as unknown as Record<string, (...a: unknown[]) => unknown>; return []; },
       },

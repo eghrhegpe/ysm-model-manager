@@ -135,7 +135,7 @@
 | `gen-knowledge-h1.ts` | 知识卡正文补 `# <name>` 标题（frontmatter 后插入，已有 h1 跳过） |
 | `gen-knowledge-adr.ts` | 知识卡 `adr:` 关联补全（扫描源码 `[doc:adr-NNN]` 标记，仅 architecture 卡） |
 | `gen-knowledge-tests.ts` | 知识卡 `tests:` 登记（扫描 frontend/src 测试文件按名匹配补登） |
-| `gen-knowledge-autogen.ts` | 知识卡 `auto_fields:` 生成（解法 B：机器推导字段，从源码提取导出符号，写入 symbols_with_lines 纯符号名，无行号见 ADR-159） |
+| `gen-knowledge-autogen.ts` | 知识卡 `auto_fields:` 生成（解法 B：机器推导字段，从源码提取导出符号，写入 symbols_with_lines 纯符号名，无行号见 ADR-159；`affected: false` 冻结快照卡豁免不刷，--check/--full 同豁免） |
 | `new-knowledge-card.ts` | 知识卡脚手架 |
 | `new-adr.ts` | 新 ADR 脚手架：双源占号 + 四段模板 + 登记表登记 + 自动 adr-check；用法 `node scripts/new-adr.ts "标题" [--slug kebab-name] [--related 关联内容] [--supersedes ADR-0XX,...] [--dry-run]` |
 | `gen-docs-index.ts` | 分区索引：**`docs/adr/index.md` 单文件承载全部**（状态分布 + 登记表 + 使用规则 + 状态分组，整文件重写，ADR 双文件合并后 README 为指针页）+ releases 最近版本/版本全览（GEN 标记区），knowledge 委托校验 |

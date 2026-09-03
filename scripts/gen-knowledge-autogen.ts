@@ -15,6 +15,9 @@
  *   node scripts/gen-knowledge-autogen.ts --check    # 只校验不写入（CI）
  *   node scripts/gen-knowledge-autogen.ts --full     # 重写全部卡片的 auto_fields（含已有）
  *
+ * 冻结豁免（2026-09-03）：frontmatter `affected: false` 卡（整包/整目录审计快照，如
+ * frontend_repo_audit）auto_fields 冻结——不随源码符号增删重写，--check/--full 同样豁免。
+ *
  * 零依赖（仅 node:fs / node:path）。
  * 设计意图：知识卡机器推导字段生成器（解法 B）
  * 退出码：1（check 模式发现漂移）
@@ -22,7 +25,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseFrontmatter, getList } from './_lib/frontmatter.ts';
+import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.ts';
 import { parseArgs } from './_lib/parse-args.ts';
 import { ROOT } from './_lib/scan-files.ts';
 import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
@@ -293,6 +296,7 @@ function main() {
 
   let updated = 0;
   let skippedNoSources = 0;
+  let skippedFrozen = 0;
   const drifts: Array<{ file: string; added: string[]; removed: string[]; moved: string[] }> = [];
 
   for (const cf of cards) {
@@ -304,6 +308,16 @@ function main() {
     const sources = getList(fm, 'source_files');
     if (sources.length === 0) {
       skippedNoSources++;
+      continue;
+    }
+
+    // 冻结快照豁免（2026-09-03）：frontmatter `affected: false` 卡是整包/整目录审计
+    // 快照（如 frontend_repo_audit / frontend_design_critique / go_design_critique），
+    // source_files 只服务覆盖率/存在性统计，不随单次文件变更提示复核。
+    // auto_fields 符号索引随源码增删整表重写是纯噪音——冻结：保留已有索引、正文不动。
+    // --check 同样豁免（否则 CI 会因陈旧索引误报漂移）；--full 也豁免（冻结优先于全量重写）。
+    if (getScalar(fm, 'affected') === 'false') {
+      skippedFrozen++;
       continue;
     }
 
@@ -355,7 +369,7 @@ function main() {
   if (isCheck) {
     if (drifts.length) {
       if (wantJson) {
-        console.log(JSON.stringify({ _summary: { ok: false, drifts: drifts.length, scanned: cards.length } }));
+        console.log(JSON.stringify({ _summary: { ok: false, drifts: drifts.length, scanned: cards.length, frozen: skippedFrozen } }));
       } else {
         console.error(`❌ ${drifts.length} 张卡 auto_fields 漂移，请运行：node scripts/gen-knowledge-autogen.ts`);
         for (const d of drifts) {
@@ -369,20 +383,20 @@ function main() {
       process.exit(1);
     }
     if (wantJson) {
-      console.log(JSON.stringify({ _summary: { ok: true, scanned: cards.length, skipped: skippedNoSources } }));
+      console.log(JSON.stringify({ _summary: { ok: true, scanned: cards.length, skipped: skippedNoSources, frozen: skippedFrozen } }));
     } else {
-      console.log(`✅ 知识卡 auto_fields: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无 source_files ${skippedNoSources} 张）`);
+      console.log(`✅ 知识卡 auto_fields: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无 source_files ${skippedNoSources} 张，冻结快照 ${skippedFrozen} 张）`);
     }
     process.exit(0);
   }
 
   if (wantJson) {
-    console.log(JSON.stringify({ _summary: { ok: true, updated, scanned: cards.length } }));
+    console.log(JSON.stringify({ _summary: { ok: true, updated, scanned: cards.length, frozen: skippedFrozen } }));
   } else {
     console.log(
       updated === 0
-        ? `✅ 知识卡 auto_fields: 已是最新，无需修改（扫描 ${cards.length} 张卡）`
-        : `✅ 已更新 ${updated} 张卡的 auto_fields: 字段`
+        ? `✅ 知识卡 auto_fields: 已是最新，无需修改（扫描 ${cards.length} 张卡，冻结快照 ${skippedFrozen} 张豁免不刷）`
+        : `✅ 已更新 ${updated} 张卡的 auto_fields: 字段（冻结快照 ${skippedFrozen} 张豁免不刷）`
     );
   }
   process.exit(0);

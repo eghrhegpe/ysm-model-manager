@@ -543,6 +543,42 @@ function checkAutoFieldsFormat(cards: any[]) {
   }
 }
 
+// ── 检查 5.8：auto_fields 内禁止人工策展子字段（ERROR 级，fail-closed）──
+// 教训（2026-09-03 全库治理）：quick_*/pitfalls/use_when/perf/invariant_anchors 等
+// 人工策展字段被写进 auto_fields 块（2 空格缩进）后，gen 脚本（frontmatter.ts getList）
+// 只匹配行首 key，嵌套版成为死数据——信息静默丢失（backend-idb 5 条意图只剩 1 条进路由表、
+// context-menu P2-1 条目读不到、go-android-platform-guard 整卡被路由跳过）。
+// 规范：人工策展字段一律顶格；auto_fields 只容纳机器推导字段（symbols_with_lines/symbols/tests）。
+const CURATED_SUBFIELDS = new Set([
+  'quick_groups',
+  'quick_intents',
+  'quick_risk_lines',
+  'pitfalls',
+  'use_when',
+  'perf',
+  'invariant_anchors',
+]);
+
+function checkNoCuratedInAutoFields(cards: any[]) {
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    const lines = fm.split(/\r?\n/);
+    let inAuto = false;
+    for (const line of lines) {
+      if (/^auto_fields\s*:/.test(line)) { inAuto = true; continue; }
+      if (inAuto && /^\S/.test(line)) break; // 块结束
+      if (!inAuto) continue;
+      const sub = line.match(/^ {2,}(\w+)\s*:/);
+      if (sub && CURATED_SUBFIELDS.has(sub[1]!)) {
+        errors.push(
+          `知识卡 ${cf} 的 auto_fields 内含人工策展字段 ${sub[1]}（gen 只读顶格，嵌套版是死数据）——请上提为顶格字段并删除嵌套块`
+        );
+        break; // 每卡报一次即可
+      }
+    }
+  }
+}
+
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
@@ -566,6 +602,7 @@ function main() {
   checkKnowledgeQuality(cards);
   checkCuratedFields(cards);       // 解法 B：人工策展字段漂移（WARN）
   checkAutoFieldsFormat(cards);    // 解法 B：机器推导字段格式校验
+  checkNoCuratedInAutoFields(cards); // 解法 B：auto_fields 禁人工策展子字段（ERROR）
   checkKnowledgeCoverage(cards);
 
   const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };

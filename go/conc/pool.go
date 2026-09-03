@@ -32,7 +32,9 @@ func Parallel[T, R any](items []T, fn func(i int, item T) (R, bool)) []R {
 	}
 	results := make([]R, n)
 	ok := make([]bool, n)
-	taskCh := make(chan int, n)
+	// 缓冲 = workers 而非 n：派发不被 worker 消费拖慢，又不物化整张任务表
+	// （cap=n 时 items + chan 双份驻留，纯浪费；无缓冲则派发与消费同步交接）
+	taskCh := make(chan int, workers)
 	var wg sync.WaitGroup
 	for range workers {
 		wg.Add(1)

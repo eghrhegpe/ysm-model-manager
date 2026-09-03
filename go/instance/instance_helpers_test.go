@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -114,11 +115,12 @@ func TestFileSize_ExistingAndMissing(t *testing.T) {
 	if err := os.WriteFile(p, make([]byte, 1024), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if got := fileSize(p); got != 1024 {
-		t.Fatalf("fileSize = %d, want 1024", got)
+	// fileSize 已收敛至 fsutil.FileSize（锐评 #17）
+	if got := fsutil.FileSize(p); got != 1024 {
+		t.Fatalf("fsutil.FileSize = %d, want 1024", got)
 	}
-	if got := fileSize(filepath.Join(dir, "nope.bin")); got != 0 {
-		t.Fatalf("缺失文件 fileSize 应为 0, got %d", got)
+	if got := fsutil.FileSize(filepath.Join(dir, "nope.bin")); got != 0 {
+		t.Fatalf("缺失文件 fsutil.FileSize 应为 0, got %d", got)
 	}
 }
 

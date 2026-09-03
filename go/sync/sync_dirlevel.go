@@ -529,7 +529,7 @@ func diffFolderContentsCore(globalFiles, instanceFiles map[string]string) []File
 			diffs = append(diffs, FileDiffEntry{
 				RelPath: relKey,
 				AbsPath: gEntry,
-				Size:    fileSize(gEntry),
+				Size:    fsutil.FileSize(gEntry),
 				Status:  types.SyncStatusSynced,
 			})
 		} else {
@@ -537,7 +537,7 @@ func diffFolderContentsCore(globalFiles, instanceFiles map[string]string) []File
 			diffs = append(diffs, FileDiffEntry{
 				RelPath: relKey,
 				AbsPath: gEntry,
-				Size:    fileSize(gEntry),
+				Size:    fsutil.FileSize(gEntry),
 				Status:  types.SyncStatusMissing,
 			})
 		}
@@ -549,7 +549,7 @@ func diffFolderContentsCore(globalFiles, instanceFiles map[string]string) []File
 			diffs = append(diffs, FileDiffEntry{
 				RelPath: relKey,
 				AbsPath: iEntry,
-				Size:    fileSize(iEntry),
+				Size:    fsutil.FileSize(iEntry),
 				Status:  types.SyncStatusOptional,
 			})
 		}
@@ -682,13 +682,4 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 		storeSyncScanCache(&syncFolderScanCache, cacheKey, entries)
 	}
 	return entries
-}
-
-// fileSize 获取文件大小
-func fileSize(path string) int64 {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return 0
-	}
-	return fi.Size()
 }

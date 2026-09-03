@@ -6,6 +6,7 @@ package fileops
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -159,13 +160,20 @@ var renameForMove = os.Rename
 
 // checkNotSelfNested 拒绝目录自嵌套移动/复制（dstDir 位于 src 子树内时拒绝，含等值情形）。
 func checkNotSelfNested(src, dstDir string) error {
-	if absSrc, err := filepath.Abs(src); err == nil {
-		if absDstDir, err := filepath.Abs(dstDir); err == nil {
-			if relToSrc, err := filepath.Rel(absSrc, absDstDir); err == nil &&
-				!strings.HasPrefix(relToSrc, ".."+string(filepath.Separator)) && relToSrc != ".." {
-				return fmt.Errorf("目标目录不能位于源目录内: %s", dstDir)
-			}
-		}
+	absSrc, err := filepath.Abs(src)
+	if err != nil {
+		return fmt.Errorf("解析源路径失败: %w", err)
+	}
+	absDstDir, err := filepath.Abs(dstDir)
+	if err != nil {
+		return fmt.Errorf("解析目标路径失败: %w", err)
+	}
+	relToSrc, err := filepath.Rel(absSrc, absDstDir)
+	if err != nil {
+		return fmt.Errorf("比较源与目标路径失败: %w", err)
+	}
+	if !strings.HasPrefix(relToSrc, ".."+string(filepath.Separator)) && relToSrc != ".." {
+		return fmt.Errorf("目标目录不能位于源目录内: %s", dstDir)
 	}
 	return nil
 }
@@ -179,6 +187,11 @@ func MoveModelFile(root, src, dstDir string) error {
 		return err
 	}
 	defer unlock()
+	// 空 root 即跳过整条边界校验（安全链单点开关）：生产调用方（绑定层/CLI）恒注入
+	// 仓库根，空 root 仅测试路径可达——此处留痕，防薄壳忘传后静默裸奔（锐评 #10）
+	if root == "" {
+		log.Printf("[fileops] MoveModelFile: root 为空，跳过仓库边界校验")
+	}
 	if root != "" {
 		absRoot, err := filepath.Abs(root)
 		if err != nil {
@@ -318,6 +331,10 @@ func CopyModelFile(root, src, dstDir string) error {
 	// dstDir，再 WalkDir 遍历到它）递归自嵌套无限膨胀直至 ENAMETOOLONG。
 	// 含 dstDir == src 等值情形（此时 dst=Join(src, Base(src)) 仍是 src 严格子目录，同样爆炸）。
 	// 放在 MkdirAll 之前执行：被拒复制不得在 src 内留下空 junk 目录（code_review）。
+	// 空 root 留痕（见 MoveModelFile 同款守卫注释）
+	if root == "" {
+		log.Printf("[fileops] CopyModelFile: root 为空，跳过仓库边界校验")
+	}
 	if root != "" {
 		absRoot, err := filepath.Abs(root)
 		if err != nil {

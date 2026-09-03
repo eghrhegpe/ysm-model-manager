@@ -128,9 +128,11 @@ func (w *Watcher) Stop() {
 	// 等待 loop 退出（上限防挂起）——close(done) 后 loop 退出是异步的，
 	// 不等待就返回会让「Stop→立即 Start」重启时旧 loop 与新 Start 的字段写读竞争
 	// （go test -race 检出 TestStartStopRestart），旧 loop 的 recover 还可能误关新 watcher
+	waitLoop := time.NewTimer(stopWaitTimeout)
 	select {
 	case <-w.loopDone:
-	case <-time.After(stopWaitTimeout):
+		waitLoop.Stop()
+	case <-waitLoop.C:
 		log.Printf("[watcher] 等待 loop 退出超时，强制停止")
 	}
 	// loop 退出后不可能再武装计时器（debounceSync 带 running 守卫），清掉已停止的
@@ -145,9 +147,11 @@ func (w *Watcher) Stop() {
 	// 等待正在执行的同步完成（上限，避免网络盘挂起阻塞退出/重启）
 	done := make(chan struct{})
 	go func() { w.wg.Wait(); close(done) }()
+	waitSync := time.NewTimer(stopWaitTimeout)
 	select {
 	case <-done:
-	case <-time.After(stopWaitTimeout):
+		waitSync.Stop()
+	case <-waitSync.C:
 		log.Printf("[watcher] 等待同步超时，强制停止")
 	}
 	log.Println("[watcher] 已停止")

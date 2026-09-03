@@ -105,15 +105,7 @@ func cloneSyncItems(items []types.ResourceSyncItem) []types.ResourceSyncItem {
 	return out
 }
 
-// fileSize 安全取文件大小（Stat 失败返回 0）——原 BuildSyncItems 内 sizeOf 闭包升格，
-// 后续 RepoAudit/sync.go 内若需大小统计可复用，避免各写 4 行 os.Stat 样板。
-func fileSize(path string) int64 {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return 0
-	}
-	return fi.Size()
-}
+// fileSize 已收敛至 fsutil.FileSize（锐评 #17：instance/sync_dirlevel 同款样板统一委托）
 
 // buildDirLevelChildren 为 dirLevelSync 类型的单个文件夹构建子文件条目列表。
 // 原 BuildSyncItems L168-200 buildChildrenForDir 闭包升格：仓库侧是权威源，
@@ -250,7 +242,7 @@ func (c *rtypeCtx) appendOneItem(typeItems *[]types.ResourceSyncItem, p string, 
 		Status:   meta.status,
 		Type:     c.rt.ID,
 		Icon:     icon,
-		Size:     fileSize(p),
+		Size:     fsutil.FileSize(p),
 		IsDir:    meta.isDirEntry,
 		Children: children,
 	})

@@ -597,7 +597,8 @@ func ResolveSavePath(rawURL, saveDir string) (savePath string, jsdURL, apiURL st
 	// raw.githubusercontent.com 结构化定位：/{owner}/{repo}/{branch}/{path...} 固定四段式，
 	// 分支名任意（dev/develop/release/1.0 等）都能拿到完整 relPath 与带正确分支的
 	// jsd/api 回退源，不再依赖 /main/ /master/ 枚举（枚举只对默认分支恰好是二者的仓库有效）。
-	if strings.HasPrefix(rawURL, "https://raw.githubusercontent.com/") {
+	// host 大小写不敏感（RFC 3986），且 u 已在上方 Parse——不用字符串前缀判定
+	if strings.EqualFold(u.Host, "raw.githubusercontent.com") {
 		if parts := strings.SplitN(strings.TrimPrefix(urlPath, "/"), "/", 4); len(parts) == 4 &&
 			parts[0] != "" && parts[1] != "" && parts[2] != "" && parts[3] != "" {
 			repoPath = parts[0] + "/" + parts[1]

@@ -143,10 +143,11 @@ func load() error {
 		}
 		// scanManifestProc 找不到是构建期错误：生产 DLL 必须含 ysm_scan_manifest 符号。
 		// 若此处触发说明 embed 的 DLL 与当前 Go 代码版本不一致，需重新执行 build:rust-bridge。
-		if scanManifestProc.Find() != nil {
-			loadErr = fmt.Errorf("load Rust scanner manifest entry point: %w", scanManifestProc.Find())
+		// 各 Find 结果链式保留首个错误（loadErr == nil 才覆盖）：双失败时报更根本的 manifest 缺失
+		if err := scanManifestProc.Find(); err != nil && loadErr == nil {
+			loadErr = fmt.Errorf("load Rust scanner manifest entry point: %w", err)
 		}
-		if err := freeProc.Find(); err != nil {
+		if err := freeProc.Find(); err != nil && loadErr == nil {
 			loadErr = fmt.Errorf("load Rust scanner free entry point: %w", err)
 		}
 	})

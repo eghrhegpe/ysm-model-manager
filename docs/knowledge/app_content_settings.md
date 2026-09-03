@@ -91,7 +91,7 @@ status: active
 - `init.ts` — 设置页 `initSettings`：直接解构 bindings（`LoadAppConfig` / `SaveAppConfig` / `SelectDirectory` / `GetMinecraftPaths` / `SetLinkMode`），配置变更派发 `config:updated` / `stats:refresh` / `toast:show`，并接入 `initVersionUpdater`；「启动默认页面」下拉读写 localStorage `ui-default-page`，显示值兜底 `repository`（与 `resolveInitialPage` 的兜底一致）
 - `store.ts` — 设置存储桥接：`LoadAppConfig` / `SaveAppConfig`（`backend/app.ts`）+ `core/context-menu-shared.ts` 共享
 - `keymap.ts` — 键位绑定编辑（依赖 `preview-3d/model3d.ts` 的 `loadTdKeymap`，相机快捷键与 3D 预览键位同源）
-- `path-cards.ts` — 路径配置卡片（目录选择器 `utils/dom/directory-picker` + 注册表 `utils/resource/registry`）
+- `path-cards.ts` — 路径配置卡片（目录选择器 `utils/dom/directory-picker` + 资源类型注册表 `services/resource-registry`）
 - `theme.ts` — 主题设置（写 `window.applyTheme` + localStorage，见知识卡 `theme`）
 - `ui-prefs.ts` — 界面偏好（字号 `--fs-scale` / 字体 / 密度 / 动画开关 `.no-animations`），`app-modules` 启动 IIFE 内 import 调用
 - `worker-prefs.ts` — worker 线程数偏好

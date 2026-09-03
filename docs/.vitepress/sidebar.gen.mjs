@@ -730,6 +730,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-166：前端 services 层收敛：registry 搬迁 / recycle-bin / dedup 会话工厂 / path-cards",
+        "link": "/adr/ADR-166-frontend-services-convergence"
+      },
+      {
         "text": "ADR-165：preview-3d 公共入口以真模块收敛视图层深导入",
         "link": "/adr/ADR-165-preview3d-public-entry"
       },
@@ -2024,6 +2028,10 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
+          },
+          {
+            "text": "perf 契约测试临时卡",
+            "link": "/knowledge/zzz-perf-contract-tmp"
           }
         ]
       },

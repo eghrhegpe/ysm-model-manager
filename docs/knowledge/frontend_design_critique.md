@@ -124,7 +124,7 @@ tests:
   - frontend/src/services/registry.test.ts
   - frontend/src/test-utils/index.test.ts
   - frontend/src/utils/dom/dialogs/modal.test.ts
-  - frontend/src/utils/resource/registry.test.ts
+  - frontend/src/services/resource-registry.test.ts
   - frontend/src/views/app-content/settings/theme.test.ts
   - frontend/src/views/app-nav/index.test.ts
   - frontend/src/views/app-preview/detail-3d.test.ts

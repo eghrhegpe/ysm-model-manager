@@ -36,10 +36,7 @@ fn scan_impl(root: &Path, policy: &ScanPolicy, include_banned_dirs: bool) -> Sca
     let mut errors = Vec::new();
     let mut candidates = Vec::new();
     let walk = WalkDir::new(&root).process_read_dir(move |_, _, _, children| {
-        for child in children
-            .iter_mut()
-            .filter_map(|result| result.as_mut().ok())
-        {
+        for child in children.iter_mut().filter_map(|r| r.as_mut().ok()) {
             if child.file_type.is_dir()
                 && should_skip_dir_name(&child.file_name.to_string_lossy(), include_banned_dirs)
             {

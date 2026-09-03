@@ -17,7 +17,7 @@ var bridgeDLL []byte
 
 func materializeDLL() (string, error) {
 	digest := sha256.Sum256(bridgeDLL)
-	version := hex.EncodeToString(digest[:8])
+	version := hex.EncodeToString(digest[:])
 	cacheRoot, err := os.UserCacheDir()
 	if err != nil {
 		return "", fmt.Errorf("locate user cache for Rust scanner: %w", err)

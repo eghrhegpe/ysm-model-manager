@@ -66,8 +66,16 @@ pub unsafe extern "C" fn ysm_scan(
         Ok(Err(error)) => ScanResponse::fatal(error),
         Err(_) => ScanResponse::fatal("Rust scanner panicked"),
     };
+    // encode_response 也包 catch_unwind：serde_json::to_vec 理论上不应 panic，但一旦失败
+    //（如递归结构、特化类型）外层 no_mangle 函数必须不被 unwind 穿透到 C 侧——否则 Go
+    // 收到未定义行为（DLL panic 越过 FFI 边界是 UB）。
+    let encoded = std::panic::catch_unwind(AssertUnwindSafe(|| encode_response(response)));
+    let buffer = match encoded {
+        Ok(buf) => buf,
+        Err(_) => encode_response(ScanResponse::fatal("response serialization panicked")),
+    };
     // SAFETY: null was rejected above and the caller owns writable output storage.
-    unsafe { ptr::write(out, encode_response(response)) };
+    unsafe { ptr::write(out, buffer) };
     0
 }
 
@@ -102,8 +110,14 @@ pub unsafe extern "C" fn ysm_scan_manifest(
         Ok(Err(error)) => ScanResponse::fatal(error),
         Err(_) => ScanResponse::fatal("Rust scanner panicked"),
     };
+    // 同上：encode_response 包 catch_unwind，防止序列化 panic 穿透 C 边界。
+    let encoded = std::panic::catch_unwind(AssertUnwindSafe(|| encode_response(response)));
+    let buffer = match encoded {
+        Ok(buf) => buf,
+        Err(_) => encode_response(ScanResponse::fatal("response serialization panicked")),
+    };
     // SAFETY: null was rejected above and the caller owns writable output storage.
-    unsafe { ptr::write(out, encode_response(response)) };
+    unsafe { ptr::write(out, buffer) };
     0
 }
 

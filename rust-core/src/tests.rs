@@ -34,7 +34,11 @@ impl TempRoot {
 
 impl Drop for TempRoot {
     fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.0);
+        // 清理失败仅 eprintln：测试环境中 temp 目录残留不影响后续测试（nonce 唯一），
+        // 但静默吞掉错误会让 CI 排查困难，故至少输出警告。
+        if fs::remove_dir_all(&self.0).is_err() {
+            eprintln!("[test] warn: failed to clean up TempRoot {:?}", self.0);
+        }
     }
 }
 
@@ -203,6 +207,10 @@ fn rtype_first_declared_wins() {
 // ===== Rust-Go 边界契约测试（共享 fixture）=====
 // 读 tests/parity/go-rust-predicates.json，与 Go go/types 端逐字对齐三个谓词。
 // 单一权威 = Go（ADR-038 D2）；cargo test 的 cwd = crate 根，经 CARGO_MANIFEST_DIR 定址。
+//
+// 注：parity fixture 只锁三个纯谓词（strip_disable_suffix / is_ysm_entry_json / is_disable_suffix）。
+// scan_fast vs scan_eager 的 hash 行为差异（fast 不补 hash、eager 补）是设计意图，
+// 由 fast_scan_defers_hash_then_parallel_hydration_matches_sha256 单测锁——不在 parity 范围内。
 const PARITY_FIXTURE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../tests/parity/go-rust-predicates.json"

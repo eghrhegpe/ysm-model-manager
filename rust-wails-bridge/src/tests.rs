@@ -251,3 +251,28 @@ fn invalid_manifest_is_fatal() {
         .unwrap()
         .contains("invalid manifest json"));
 }
+
+/// manifest 路径不填 rtype：与 eager 路径（scan_eager→scan_fast，policy.rtype_for_ext 填充）
+/// 行为不同，此差异是 ADR-120 的设计意图（Go 侧已枚举时信任调用方传入 type 字段），
+/// 用测试锁定避免未来重构时误改动。
+#[test]
+fn manifest_path_leaves_rtype_empty() {
+    let root = TempRoot::new();
+    fs::write(root.0.join("hero.ysm"), b"hero").unwrap();
+    let hero_path = root.0.join("hero.ysm").to_string_lossy().replace('\\', "/");
+    // manifest 中传入非空 type → scan_impl_manifest 信任调用方，ModelEntry.rtype = "ysm"
+    let manifest_with_type = format!(
+        r#"[{{"Path":"{}","Ext":".ysm","Name":"hero.ysm","subdir":"","type":"ysm"}}]"#,
+        hero_path,
+    );
+    let value = serde_json::to_value(scan_json_manifest(
+        &root.0.to_string_lossy(),
+        registry(),
+        &manifest_with_type,
+    ))
+    .unwrap();
+    // 桥 CompatModelEntry.r#type 字段从 entry.rtype 取出，若有值则序列化不为空
+    let entries = value["entries"].as_array().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0]["type"], "ysm");
+}

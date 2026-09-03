@@ -41,11 +41,15 @@ struct CompatModelEntry {
     mod_time: i64,
     #[serde(rename = "HasTags")]
     has_tags: bool,
+    // 注：v1.13 已 flatten Wails repository view，subdir 字段不再通过此 ABI 输出。
+    // 保留字段定义但恒空（skip_serializing_if），避免未来在此结构体上扩展时遗漏清空。
+    // 如需获取分组信息，请走 rust-core 内部 API（scan.rs first_relative_component）。
     #[serde(rename = "subdir", skip_serializing_if = "String::is_empty")]
     subdir: String,
-    // 对齐 Go `types.ModelEntry.Type`（`json:"type,omitempty"`）。当前 rust-core 不填
-    // rtype（见 `scan_impl_manifest` 注释），故桥输出恒为空；字段保留以覆盖完整契约，
-    // 避免未来 Rust 侧填 rtype 时被 ABI 静默丢弃（code review P3）。
+    // 对齐 Go `types.ModelEntry.Type`（`json:"type,omitempty"`）。
+    // eager 路径（scan_json）从 scan_fast 继承 rtype；manifest 路径（scan_json_manifest）
+    // 使用 Go 传入的 type 字段（即 ManifestEntry.rtype）。两者均走 skip_serializing_if，
+    // rtype 为空时省略该字段以保持 JSON 输出与当前 Go frontend 兼容。
     #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
     r#type: String,
 }

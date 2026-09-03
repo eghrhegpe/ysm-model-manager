@@ -88,6 +88,9 @@ impl ScanPolicy {
     }
 
     /// 按扩展名查资源类型 ID（如 ".ysm" → "ysm"）。未知扩展名返回空串。
+    ///
+    /// **生命周期**：返回值借用 `&self`（HashMap 内部数据），调用方不得将结果
+    /// 存入持久结构；需持有 String 时调用 `.to_string()`。
     pub fn rtype_for_ext(&self, ext: &str) -> &str {
         self.ext_to_rtype
             .get(&normalize_ext(ext))

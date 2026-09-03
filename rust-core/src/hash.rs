@@ -14,6 +14,8 @@ pub fn hydrate_hashes(entries: &mut [ModelEntry], policy: &ScanPolicy) -> Vec<Sc
             if !policy.should_hash_ext(&entry.ext) {
                 return None;
             }
+            // size < 0 守卫：与 Go scanner 语义对齐（Go i64 大小写负值表示异常），
+            // Rust 端 fs::metadata.len() 返回 u64 永不负，故此处实际永不触发，仅作契约锁。
             if entry.size < 0 || entry.size as u64 > policy.max_hash_bytes {
                 entry.hash.clear();
                 return Some(ScanError {

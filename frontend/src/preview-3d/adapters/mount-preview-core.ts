@@ -909,7 +909,17 @@ export async function mount3D(
     };
     _handles.push({ handle: sessionHandle, gen: myGen });
   } catch (e) {
+    // 失败路径清理（P1 修复，兄弟会话审核发现）
+    // adapter.build 抛错时 session.content 为 null，session.content?.dispose() 是 no-op，
+    // half-built mesh 留在 scene 中成为幽灵基线——下次 mount 把垃圾快照进 baseline。
+    // 此处不移除 overlay/DOM（fullCleanup 语义），只清场景中的半成品 + dispose 已注册 content。
     document.removeEventListener("keydown", session.escH);
+    if (infra && session.sceneBaseline) {
+      const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
+      for (const c of stale) infra.scene.remove(c);
+    }
+    for (const b of session.allContent) safeDispose(b);
+    session.allContent.length = 0;
     session.content?.dispose();
     // P2 守卫（对齐旧 skeleton close3D 语义）：加载期间被 ESC/切模型/invalidate
     // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，

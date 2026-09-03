@@ -4,7 +4,9 @@
 // 的地方均可调用（共享外壳 / 适配器自建 / renderMultiAngle 自建 renderer）。
 //
 // 关键约束：
-//   - preserveDrawingBuffer: true（否则 canvas 在下一帧被清空，toDataURL 返回空）
+//   - render(scene, camera) 后须在同一同步任务内 toDataURL——canvas 缓冲在
+//     下一帧/await 后被清空，preserveDrawingBuffer 在 r185 已不可运行时切换
+//     （P0 修复：getPreserveDrawingBuffer/setPreserveDrawingBuffer 是幽灵 API）
 //   - 调用前后 renderer 尺寸可能变化 → 用 render(target, camera) 后再 toDataURL
 //   - 空场景（未渲染过、canvas 未就绪）→ 返回 null，不抛
 import * as THREE from "three";
@@ -23,6 +25,9 @@ export interface ScreenshotOpts {
 /**
  * 从活跃的 renderer/scene/camera 截图，返回 PNG/JPEG base64（无 data: 前缀）。
  * 无 renderer / 未就绪 / 空 canvas → 返回 null。
+ *
+ * 调用方须保证：本函数返回前不让出事件循环（无 await / no setTimeout）——
+ * renderer.render() 写入 canvas 后，toDataURL 须在同一帧同步读取。
  */
 export function screenshotFromRenderer(
   renderer: THREE.WebGLRenderer | null | undefined,
@@ -35,13 +40,9 @@ export function screenshotFromRenderer(
   if (!domEl) return null;
   if (domEl.width <= 0 || domEl.height <= 0) return null;
 
+  // render → toDataURL 须同步连续调用，canvas 缓冲在下一帧被清空。
+  // preserveDrawingBuffer 在 r185 已不可运行时切换（幽灵 API，P0 修复）。
   try {
-    // 切换 preserveDrawingBuffer 确保渲染帧在 toDataURL 时可见
-    const preserveBefore = (renderer as unknown as { getPreserveDrawingBuffer?: () => boolean })
-      .getPreserveDrawingBuffer?.() ?? false;
-    (renderer as unknown as { setPreserveDrawingBuffer: (v: boolean) => void })
-      .setPreserveDrawingBuffer(true);
-
     // 按需覆盖尺寸（仅当调用方显式传入，且与当前不同才需 setSize 以避免刷新 GL 状态）
     const currentSize = renderer.getSize(new THREE.Vector2());
     const w = opts.width;
@@ -52,19 +53,9 @@ export function screenshotFromRenderer(
     renderer.render(scene, camera);
     const fmt = opts.format ?? "image/png";
     const dataUrl = domEl.toDataURL(fmt, opts.quality ?? 0.92);
-    // 还原 preserve 状态
-    (renderer as unknown as { setPreserveDrawingBuffer: (v: boolean) => void })
-      .setPreserveDrawingBuffer(preserveBefore);
     return dataUrl.split(",")[1] ?? null;
   } catch {
     // 异常（上下文丢失、GPU 出错、canvas 不可访问）→ 静默返回 null
-    // P2 修复（审核）：catch 不还原 preserveDrawingBuffer → renderer 永久留在
-    // preserve=true，影响后续帧性能。但 catch 无法读取 preserveBefore（在 try
-    // 局部）——改为无条件设回 false（screenshotFromRenderer 的调用方要么是
-    // 短生命周期 renderer（renderMultiAngle，dispose 后无所谓），要么是预览
-    // renderer（preserve 默认 false，截图后应还原 false））
-    (renderer as unknown as { setPreserveDrawingBuffer: (v: boolean) => void })
-      .setPreserveDrawingBuffer(false);
     return null;
   }
 }

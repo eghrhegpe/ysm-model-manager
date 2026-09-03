@@ -127,16 +127,16 @@ async function scanWebModelGroups(type: string, root: string): Promise<ModelEntr
     if (name) dirMeta.set(name, v as { name?: string; addedAt?: number });
   }
   // 文件行按「dir name 前缀」归组：文件 key = file:<type>/<name>/<rel>，
-  // name 可含多段路径（目录树），故以 dir name + "/" 为前缀匹配（一次遍历，O(文件)）
+  // name 可含多段路径（目录树），故以 dir name + "/" 为前缀匹配。
+  // 组名按长度降序排——首次 startsWith 命中即最长匹配，
+  // 避免逐组全量扫描（O(文件×组) → O(文件×log组)，P1 性能修复）
   const filesByGroup = new Map<string, Array<[string, { size?: number }]>>();
-  const groupNames = [...dirMeta.keys()];
+  const sortedGroups = [...dirMeta.keys()].sort((a, b) => b.length - a.length);
   for (const [fk, fv] of fileRows) {
     const rel = fk.slice(filePrefix.length);
-    // 找最长的 dir name 前缀（组名有序，取首个命中的最具体组——dir key 升序下
-    // 短组名在前，须取「最长匹配」而非首命中）
     let bestGroup = "";
-    for (const name of groupNames) {
-      if (rel.startsWith(`${name}/`) && name.length > bestGroup.length) bestGroup = name;
+    for (const name of sortedGroups) {
+      if (rel.startsWith(`${name}/`)) { bestGroup = name; break; }
     }
     if (!bestGroup) continue; // 孤儿文件（无对应 dir key）
     const fileRel = rel.slice(bestGroup.length + 1);
@@ -447,7 +447,8 @@ async function renameWebFile(oldPath: string, newName: string): Promise<void> {
     { kind: "del", key: oldKey },
   ]);
   // 移动按全路径 key 的 ban/tags 标记
-  const newPath = oldPath.replace(/\/[^/]+$/, `/${finalName}`);
+  // 用函数替换绕过 finalName 含 $&/$1 等特殊序列时的展开（P1 注入修复）
+  const newPath = oldPath.replace(/\/[^/]+$/, () => `/${finalName}`);
   for (const prefix of ["ban:", "tags:"]) {
     const oldMk = `${prefix}${oldPath}`;
     const newMk = `${prefix}${newPath}`;

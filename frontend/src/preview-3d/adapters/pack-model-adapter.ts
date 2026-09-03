@@ -257,7 +257,16 @@ async function buildPackScene(
     ctx.scene!.remove(state.group);
   }
 
-  const { group, disposables } = await buildModelGroup(deps, zipPath, model!, state.usedTextures);
+  let group: THREE.Group;
+  let disposables: THREE.Object3D[];
+  try {
+    ({ group, disposables } = await buildModelGroup(deps, zipPath, model!, state.usedTextures));
+  } catch (e) {
+    // 失败路径：buildModelGroup 内部 textureFor 已 textureCache.acquire，
+    // 但 build 抛错时 release（L210-211 dispose 路径）不会执行 → 引用计数永久泄漏（P1）
+    for (const url of state.usedTextures) textureCache.release(url);
+    throw e;
+  }
   state.group = group;
   state.disposables = disposables;
   ctx.scene!.add(group);

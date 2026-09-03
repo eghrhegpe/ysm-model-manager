@@ -720,10 +720,10 @@ function unmountOverlay(overlay: HTMLElement): void {
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
 }
 
-// ===== ADR-132 遗留 1：蓝图/litematic zip 容器内多模型装配 =====
-// createLitematic3D 对 .zip 路径先 ListContainerEntries 枚举 → 装配容器内多模型 adapter
+// ===== ADR-132 遗留 1：蓝图/litematic zip/7z 容器内多模型装配 =====
+// createLitematic3D 对 zip/7z 容器路径先 ListContainerEntries 枚举 → 装配容器内多模型 adapter
 // （containerPath + modelEntries + 容器内 voxelCall）→ 初始 entry = 首项；裸文件零回归。
-describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
+describe("createLitematic3D zip/7z 容器（ADR-132 遗留 1）", () => {
   it("zip 枚举出多 entry → 装配容器内 adapter，初始 build 首项 entry，voxelCall 走 GetVoxelDataInContainer", async () => {
     const voxelInContainer = vi.fn().mockResolvedValue(VALID_JSON);
     vi.mocked(getApp).mockResolvedValue({
@@ -785,6 +785,20 @@ describe("createLitematic3D .zip 容器（ADR-132 遗留 1）", () => {
     // 单候选无 select 节点（menuItems 仅 slice 面板）——经 schema-registry 验证 slice 仍注册
     const key = listSchemas().filter((k) => k.startsWith("litematic-slice-")).pop();
     expect(key).toBeTruthy();
+    unmountOverlay(overlay);
+  });
+
+  it("7z 蓝图包 → 同样走容器枚举（G1 收口 isContainerExt：Go container 统一支持 7z，修复 7z 被当裸容器打开）", async () => {
+    const voxelInContainer = vi.fn().mockResolvedValue(VALID_JSON);
+    vi.mocked(getApp).mockResolvedValue({
+      ListContainerEntries: vi.fn().mockResolvedValue(["builds/a.nbt"]),
+      GetVoxelDataInContainer: voxelInContainer,
+    } as unknown as AppBindings);
+    await createLitematic3D("/lib/blueprint.7z", "GetLitematicVoxelData");
+    // 修复前：.7z 不走枚举 → 裸路径（7z 当 gzip 打开失败）；修复后：容器内 voxelCall 读容器字节
+    expect(voxelInContainer).toHaveBeenCalledWith("/lib/blueprint.7z", "builds/a.nbt", ".nbt");
+    const overlay = lastOverlay();
+    expect(overlay).toBeTruthy();
     unmountOverlay(overlay);
   });
 

@@ -9,15 +9,18 @@ import { mount3D, cleanupPreview, type Mount3DOptions } from "../../preview-3d/a
 import { makeLitematicAdapter } from "../../preview-3d/adapters/litematic-adapter.ts";
 import { getApp } from "../../backend/app.ts";
 import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
-import { RESOURCE_TYPES, VOXEL_RPC_BY_EXT, extOf } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPES, VOXEL_RPC_BY_EXT, extOf, isContainerExt } from "../../utils/resource/types.ts";
 import type { VoxelData } from "../../parsers/voxel-parse.ts";
 
 /** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */
 const CONTAINER_VOXEL_EXTS = ".nbt,.litematic,.schematic";
 
-/** 是否容器路径（.zip 蓝图/投影包）——zip 内条目走容器枚举 + 容器内 voxelCall */
+/** 是否容器路径（.zip/.7z 蓝图/投影包）——容器内条目走枚举 + 容器内 voxelCall。
+ *  G1 收口：改 isContainerExt（原 .zip 特判）。Go container 包统一支持 zip/7z/目录
+ *  （go/container/container.go），.7z 蓝图包同样可 ListContainerEntries 枚举；
+ *  特判 .zip 会让 7z 包走裸容器路径（被当 gzip 打开失败，ADR-132 zip 同类缺陷）。 */
 function isContainerPath(path: string): boolean {
-  return extOf(path) === ".zip";
+  return isContainerExt(path);
 }
 
 /** 容器内条目扩展名（.nbt/.litematic/.schematic 等；无匹配回退空 = 走默认体素构建） */
@@ -78,7 +81,7 @@ async function listContainerEntries(containerPath: string): Promise<string[]> {
 /** 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 */
 export async function createLitematic3D(path: string, voxelFn: string, opts?: Mount3DOptions): Promise<void> {
   const extraOpts = withPreviewExtras(opts ?? {});
-  // ADR-132 遗留 1：.zip 蓝图/投影容器 → 先枚举容器内体素条目，装配容器内多模型 adapter
+  // ADR-132 遗留 1：zip/7z 容器 → 先枚举容器内体素条目，装配容器内多模型 adapter
   if (isContainerPath(path)) {
     const entries = await listContainerEntries(path);
     if (entries.length > 0) {

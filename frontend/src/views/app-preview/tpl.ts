@@ -1,6 +1,7 @@
 // ===== preview HTML 模板 =====
 import { esc } from "../../utils/dom/html.ts";
 import { t } from "../../core/i18n/t.ts";
+import { extOf } from "../../utils/resource/types.ts";
 
 /** 模型统计元数据（modelDetailHTML 入参） */
 export interface ModelDetailMeta {
@@ -89,15 +90,17 @@ export function statsCardHTML(
   model: StatsCardModel,
   modelPath: string,
 ): string {
-  const isYsm = /\.ysm$/i.test(modelPath);
-  const isJson = /\.json$/i.test(modelPath);
-  const fmt = isYsm
-    ? ".ysm"
-    : isJson
-      ? ".json (解压目录)"
-      : modelPath.endsWith(".zip")
-        ? ".zip"
-        : "其他";
+  // 派生显示格式：extOf 统一扩展名口径（G1 收口——原正则/endsWith 手写漂移点；
+  // 语义保持：.7z 无独立格式归「其他」，zip 容器单列）
+  const ext = extOf(modelPath);
+  const fmt =
+    ext === ".ysm"
+      ? ".ysm"
+      : ext === ".json"
+        ? ".json (解压目录)"
+        : ext === ".zip"
+          ? ".zip"
+          : "其他";
   // 解码器徽标已移至 summaryCardHTML 标题行（2026-08-30），此处不再渲染
   // 纹理分类统计（区分角色纹理 vs 独立模型组件纹理，2026-08-28）：
   // 统计卡「含 N 张额外纹理」口径不再把独立模型纹理混进角色纹理

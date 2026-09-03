@@ -66,14 +66,12 @@ const PREVIEW_HANDLERS: Record<string, PreviewShowFn> = {
   [RESOURCE_TYPES.LITEMATIC]: (ctx, path) => showLitematic(ctx, path),
   [RESOURCE_TYPES.BLUEPRINT]: (ctx, path) => showLitematic(ctx, path),
   [RESOURCE_TYPES.SHADER]: (ctx, path, meta) => showShaderpack(ctx, path, meta),
-  // MMD 角色模型（EntityPlayer）— ADR-111：按 variants 分发，.vrm 走 VRM meta 卡
-  [RESOURCE_TYPES.MMD]: (ctx, path, meta) => {
-    if (extOf(path) === ".vrm") {
-      showVrmMeta(ctx, path, meta);
-    } else {
-      showMmdPreview(ctx, path, meta);
-    }
-  },
+  // MMD 角色模型（EntityPlayer）— ADR-111 variants 复合 key 查表分发（G1 收口）：
+  // .vrm → resolvePreviewKey 得 "vrm" → 命中下方「EntityPlayer:vrm」条目走 VRM meta 卡；
+  // .pmx/.pmd/.zip(容器) → "mmd"/回退 rtype → 落本基础条目走 MMD 预览。
+  // handler 内零扩展名分支——与外层 `${rtype}:${previewKey}` 查表同源，不再双轨。
+  [`${RESOURCE_TYPES.MMD}:vrm`]: (ctx, path, meta) => showVrmMeta(ctx, path, meta),
+  [RESOURCE_TYPES.MMD]: (ctx, path, meta) => showMmdPreview(ctx, path, meta),
   // MMD 独立顶级类型（后端 DetectResourceType 路径消歧命中时直接路由）
   "SceneModel": (ctx, path) => showScenePreview(ctx, path),
   "CustomMorph": (ctx, path) => showMorphPreview(ctx, path),
@@ -268,7 +266,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   private async _showModelDetail(path: string, rtypeHint?: string): Promise<void> {
     const gen = this._previewGuard.current;
     // ADR-071 M1：web 端 .7z 明确"暂不支持"（识别为 ysm 但 WASM/解压均无法处理——
-    // 显示文件名即可，不尝试解析报错；替代原"点击预览必失败"）
+    // 显示文件名即可，不尝试解析报错；替代原"点击预览必失败"）。
+    // 平台守卫而非类型/变体分支：先于 DetectResourceType 精确拦 .7z（web 无 7z 解压器），
+    // 不可扩为 isContainerExt——web 端 .zip 走 browser-adapter zip 条目解析，误伤即断预览链。
     if (extOf(path) === ".7z" && isWebPlatform()) {
       bus.emit("toast:show", {
         msg: t("preview.web7zUnsupported"),

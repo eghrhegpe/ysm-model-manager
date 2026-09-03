@@ -162,7 +162,7 @@ export class AnimationControllerRuntime {
   private currentAnimIndex = 0;
   private timeInState = 0;
   /** 状态切换回调 */
-  private onStateChange?: (animationName: string, blendTime: number) => void;
+  private onStateChange?: ((animationName: string, blendTime: number) => void) | undefined;
 
   constructor(
     controller: AnimationController,

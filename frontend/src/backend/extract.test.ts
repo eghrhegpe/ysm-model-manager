@@ -129,7 +129,7 @@ function buildMultiEntryZip(entries: Array<{ name: string; data: Uint8Array; utf
 
   for (const entry of entries) {
     const part = buildZipEntry(new TextEncoder().encode(entry.name), entry.data, {
-      utf8: entry.utf8,
+      ...(entry.utf8 !== undefined ? { utf8: entry.utf8 } : {}),
       localHeaderOffset,
     });
     parts.push(part);

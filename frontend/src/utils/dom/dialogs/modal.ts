@@ -172,8 +172,8 @@ function registerDialogLife<T>(
  */
 function createDialog<T>(opts: {
   title: string;
-  icon?: string;
-  width?: string;
+  icon?: string | undefined;
+  width?: string | undefined;
   tabIndex?: number;
   cancelValue: T;
   resolve: (value: T) => void;

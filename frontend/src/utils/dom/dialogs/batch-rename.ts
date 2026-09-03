@@ -19,7 +19,7 @@ interface BatchEntry {
 
 /** 应用变更载荷 */
 export interface BatchRenameChange {
-  oldPath?: string;
+  oldPath?: string | undefined;
   oldName: string;
   newName: string;
 }

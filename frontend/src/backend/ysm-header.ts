@@ -123,8 +123,8 @@ function mergeHeaderFields(h: YsmHeaderShape, rich: YsmHeaderShape): void {
   if (rich.linkHome) h.linkHome = rich.linkHome;
   if (rich.linkUpdate) h.linkUpdate = rich.linkUpdate;
   if (rich.tips) h.tips = rich.tips;
-  if ((rich.format ?? 0) > 0) h.format = rich.format;
-  if ((rich.crypto ?? 0) > 0) h.crypto = rich.crypto;
+  if (rich.format != null && rich.format > 0) h.format = rich.format;
+  if (rich.crypto != null && rich.crypto > 0) h.crypto = rich.crypto;
   if (rich.hasFree) {
     h.hasFree = true;
     h.isFree = rich.isFree;

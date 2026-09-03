@@ -57,7 +57,7 @@ export function extractAnimGroupsAndConfigs(
       if (dv && !dv.startsWith("#")) items.push(dv);
     }
     // 整组都是内部引用时跳过整个组（与 Go 行为一致）
-    if (items.length > 0) animGroups.push({ id: g.id, name, items });
+    if (items.length > 0) animGroups.push({ name, items, ...(g.id != null ? { id: g.id } : {}) });
   }
 
   // 2) 松散动画兜底：未被任何分类组引用、且非 # 内部引用的顶层动画
@@ -78,7 +78,7 @@ export function extractAnimGroupsAndConfigs(
 
   // 3) 配置菜单：每个按钮即一个配置项
   for (const b of p.extra_animation_buttons ?? []) {
-    if (b.name) configMenus.push({ id: b.id, name: b.name });
+    if (b.name) configMenus.push({ name: b.name, ...(b.id != null ? { id: b.id } : {}) });
   }
 
   return { animGroups, configMenus };

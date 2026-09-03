@@ -28,12 +28,13 @@ export async function loadResourceRegistry(): Promise<ResourceRegistry> {
       return {};
     }
     _registry = reg.resourceTypes.reduce<ResourceRegistry>((map, t) => {
-      // Go 绑定返回 null → 前端 undefined（schema 兼容性转换）
+      // Go 绑定 null → 省略字段（前端以 undefined 读取，schema 兼容性转换）
+      const { extensions, variants, zipEntries, ...rest } = t;
       const entry: ResourceTypeEntry = {
-        ...t,
-        extensions: t.extensions || undefined,
-        variants: t.variants || undefined,
-        zipEntries: t.zipEntries || undefined,
+        ...rest,
+        ...(extensions ? { extensions } : {}),
+        ...(variants ? { variants } : {}),
+        ...(zipEntries ? { zipEntries } : {}),
       };
       map[t.id] = entry;
       return map;

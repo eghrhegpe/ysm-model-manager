@@ -17,12 +17,12 @@ export interface ToastPayload {
 
 export interface MenuItem {
   /** 行为标识（来自 menu-defs.ts，测试按此匹配） */
-  action?: string;
-  label?: string;
+  action?: string | undefined;
+  label?: string | undefined;
   divider?: boolean;
   icon?: string;
   danger?: boolean;
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
   // disabled / submenu 字段暂无调用方，按需再补
 }
 

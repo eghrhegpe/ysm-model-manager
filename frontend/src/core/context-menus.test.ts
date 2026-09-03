@@ -913,7 +913,7 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
       action: PROBE_ACTION,
       label: () => "probe",
       icon: "🧪",
-      visibleWhen,
+      ...(visibleWhen ? { visibleWhen } : {}),
     });
     probeIndex = def.items.length - 1;
     // 占位 handler：消除 filter 链路里 action 失配警告，filter 测试只关心 items 是否出现

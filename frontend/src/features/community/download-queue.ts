@@ -71,8 +71,8 @@ interface CmDqCtx {
   sr: HTMLElement;
   esc: (s: string) => string;
   getLocalMap: () => Map<string, string>;
-  onFileSuccess?: (name: string) => void;
-  onAllDone?: (result: { cancelled: boolean; errorList: QueueError[] }) => void;
+  onFileSuccess?: ((name: string) => void) | undefined;
+  onAllDone?: ((result: { cancelled: boolean; errorList: QueueError[] }) => void) | undefined;
   progressGuard: ProgressGuard;
   prev: CmDqPrev;
 }

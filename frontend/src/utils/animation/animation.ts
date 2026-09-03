@@ -55,9 +55,9 @@ export interface AnimationClip {
 
 /** 骨骼变换（evaluateClip 结果值） */
 export interface BoneTransform {
-  rotation?: Vec3;
-  position?: Vec3;
-  scale?: Vec3;
+  rotation?: Vec3 | undefined;
+  position?: Vec3 | undefined;
+  scale?: Vec3 | undefined;
 }
 
 /** 骨骼动画三通道名单点（收敛 4 处字面量重复，防通道名拼写漂移） */
@@ -120,7 +120,7 @@ export function foldMolangConstant(str: unknown): number | null {
 /** 关键帧值解析结果：数字基底 + 可选 Molang 动态轴（求值时覆盖对应轴） */
 interface ParsedKeyValue {
   vec: Vec3;
-  molang?: MolangAxes;
+  molang?: MolangAxes | undefined;
 }
 
 /** 解析单个轴值：数字直取；字符串先常量折叠，折不动则 Molang 编译（失败零占位） */
@@ -168,8 +168,8 @@ function extractKeyframe(kv: unknown): {
   post: Vec3;
   pre: Vec3;
   lerp: "linear" | "step" | "catmullrom";
-  postMolang?: MolangAxes;
-  preMolang?: MolangAxes;
+  postMolang?: MolangAxes | undefined;
+  preMolang?: MolangAxes | undefined;
 } | null {
   if (kv === null || kv === undefined) return null;
   if (Array.isArray(kv)) {

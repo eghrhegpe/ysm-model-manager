@@ -1,7 +1,8 @@
 // @vitest-environment node
 // ===== morph-siblings 视图壳数据准备测试 =====
 // 覆盖：resolveMorphSiblings（GetRepoRoot(CustomMorph) → ScanModelEntriesFiltered(root, 'CustomMorph', '', '自定义表情')，
-// 前端最小扩展名守卫只留 .vpd；根为空 / 扫描失败 / getApp 拒绝 → []，下拉不渲染）。
+// 预览候选白名单 = CustomMorph extensions 剔容器（.vpd，previewCandidateExtsOf 派生，
+// 锐评 G2 收口——替代原手写 /\.vpd$/i 正则）；根为空 / 扫描失败 / getApp 拒绝 → []，下拉不渲染）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { getAppMock, getRepoRootMock, scanFilteredMock } = vi.hoisted(() => ({

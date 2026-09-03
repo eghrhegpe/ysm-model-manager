@@ -16,6 +16,7 @@ import {
   groupLabelOf,
   groupStorageRootOf,
   getPreviewableTypeTabs,
+  previewCandidateExtsOf,
 } from "./types.ts";
 import resourceTypesJson from "#root/resource_types.json";
 
@@ -479,5 +480,36 @@ describe("getPreviewableTypeTabs 3D 切换面板 tab 派生", () => {
 
   it("每个 tab 都有非空标签", () => {
     expect(tabs.every((t) => t.label.length > 0)).toBe(true);
+  });
+});
+
+describe("previewCandidateExtsOf 预览候选白名单（锐评 G2 收口）", () => {
+  it("有 variants：命中 preview 组 → 该组 ext 并集（SceneModel + mmd-scene → .pmx/.pmd，不含 .vrm/.zip）", () => {
+    expect(previewCandidateExtsOf("SceneModel", "mmd-scene")).toEqual([".pmx", ".pmd"]);
+  });
+
+  it("EntityPlayer 各 preview 组互斥收窄（mmd → .pmx/.pmd；vrm → .vrm）", () => {
+    expect(previewCandidateExtsOf("EntityPlayer", "mmd")).toEqual([".pmx", ".pmd"]);
+    expect(previewCandidateExtsOf("EntityPlayer", "vrm")).toEqual([".vrm"]);
+  });
+
+  it("有 variants 但 previewKey 未命中 → []（宁空勿错，JSON 改 variant 名即响亮暴露）", () => {
+    expect(previewCandidateExtsOf("SceneModel", "no-such-preview")).toEqual([]);
+  });
+
+  it("有 variants 但 previewKey 缺省 → []（调用方必须显式声明组）", () => {
+    expect(previewCandidateExtsOf("SceneModel")).toEqual([]);
+  });
+
+  it("无 variants：extensions 剔容器（CustomMorph → .vpd，剔 .zip）", () => {
+    expect(previewCandidateExtsOf("CustomMorph")).toEqual([".vpd"]);
+  });
+
+  it("无 variants 且无容器 ext：全量返回（ysm → .ysm/.json）", () => {
+    expect(previewCandidateExtsOf("ysm")).toEqual([".ysm", ".json"]);
+  });
+
+  it("未知名 rtype → []（不抛错，调用方下拉不渲染）", () => {
+    expect(previewCandidateExtsOf("no-such-type")).toEqual([]);
   });
 });

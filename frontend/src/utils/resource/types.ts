@@ -55,6 +55,34 @@ export function resolvePreviewKey(filePath: string, rtype: string): string {
 }
 
 /**
+ * 某 rtype 的「裸文件预览候选」扩展名白名单（小写含点；JSON 单一源——锐评 G2 收口）。
+ * 语义背景：Go `ScanModelEntriesFiltered` 白名单 = 类型归属全 extensions（含 .vrm 等
+ * 异预览形态与 .zip/.7z 容器，仓库树/列表层正确）；而预览候选列表（siblings 下拉等）只需
+ * 「本预览适配器可直接加载的裸文件」子集。此处由 resource_types.json 派生该子集，
+ * 消除各消费方手写扩展名正则（scene/morph siblings 原 `/\.(pmx|pmd)$/i`、`/\.vpd$/i`）：
+ * - rtype 有 variants 且 previewKey 命中 → 该 preview 组 ext 并集
+ *   （SceneModel + "mmd-scene" → [".pmx",".pmd"]，不含 .vrm/.zip）；
+ * - rtype 有 variants 但 previewKey 缺省/未命中 → []（宁空勿错：调用方必须显式声明组，
+ *   列表空比静默混入异预览形态更响亮；JSON 改 variant 名即暴露）；
+ * - rtype 无 variants → extensions 剔容器 ext（全裸文件，如 CustomMorph → [".vpd"]）。
+ */
+export function previewCandidateExtsOf(rtype: string, previewKey?: string): string[] {
+  const entry = allResourceTypes.find((t) => t.id === rtype);
+  const variants = entry?.variants ?? [];
+  if (variants.length > 0) {
+    if (!previewKey) return [];
+    return Array.from(
+      new Set(
+        variants.filter((v) => v.preview === previewKey).map((v) => v.ext.toLowerCase()),
+      ),
+    );
+  }
+  return (entry?.extensions ?? [])
+    .filter((e) => e && !CONTAINER_EXTS.has(e))
+    .map((e) => e.toLowerCase());
+}
+
+/**
  * 预览键反解为资源类型 ID（ADR-111 逆向）。
  * 角色面板类型 tab 传入的是预览键（如 "mmd"），但 Go 侧 ScanModelEntriesFiltered
  * 需要真实资源类型 ID（如 "EntityPlayer"）才能命中扩展名白名单过滤。

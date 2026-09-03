@@ -213,13 +213,9 @@ async function tryAutoMergeCommunity(creators: LocalCreator[]): Promise<void> {
         return !siteIDs.some((sid) => t === sid || t.includes(sid + ";") || t.endsWith(";" + sid));
       });
       // 去重：多段 type（如 "bilibili;afdian"）会被 push 进多个 siteMap 组，
-      // flat 后同名条目重复 → 按 name 去重（mergeCommunityCreators 本就用 name 作 key）
+      // flat 后出现引用重复 + 可能的同名独立记录 → dedupeCreators 归一（type 分号段合并，不丢站点）
       const flat = Object.values(siteMap).flat();
-      const deduped = new Map<string, LocalCreator>();
-      for (const c of flat) {
-        if (c.name) deduped.set(c.name, c);
-      }
-      const merged = [...kept, ...deduped.values()];
+      const merged = [...kept, ...dedupeCreators(flat)];
       await SaveWorkshopCreators(merged as WorkshopCreator[]);
     } catch (e) { dbg("SaveWorkshopCreators failed", e); }
   }
@@ -308,6 +304,30 @@ export async function fetchCommunityCreators(
 }
 
 /**
+ * 把 incoming 的 type 分号段并入 target（trim / 去空 / 去重），返回是否有变更。
+ * 领域语义：name 是创作者唯一身份，type 是多站点集合（分号段）——
+ * 与 mergeLocalAuthorsInto 的 P4 分号段精确比较同源，防子串/覆盖误判丢失站点。
+ */
+function mergeTypeSegments(target: { type?: string }, incoming?: string): boolean {
+  if (!incoming) return false;
+  const segs = (target.type || "")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  let changed = false;
+  for (const seg of incoming.split(";")) {
+    const s = seg.trim();
+    if (!s) continue;
+    if (!segs.includes(s)) {
+      segs.push(s);
+      changed = true;
+    }
+  }
+  if (changed) target.type = segs.join(";");
+  return changed;
+}
+
+/**
  * 合并社区索引到本地 creators.json
  * @returns {{ merged: LocalCreator[]; added: number; updated: number }} 合并后的创作者列表、新增数、更新数
  */
@@ -327,8 +347,8 @@ export function mergeCommunityCreators(
         existing.desc = cc.desc;
         changed = true;
       }
-      if (cc.type && !existing.type) {
-        existing.type = cc.type;
+      // type 是分号段集合而非单值：冲突时须并入而非跳过——否则社区侧新增站点静默丢
+      if (cc.type && mergeTypeSegments(existing, cc.type)) {
         changed = true;
       }
       if (cc.role && !existing.role) {
@@ -343,6 +363,25 @@ export function mergeCommunityCreators(
     }
   }
   return { merged: local, added, updated };
+}
+
+/**
+ * 保存前兜底去重：同 name 条目归一为一条（分号段 type 合并），不丢任何站点。
+ * flat 里重复有两种来源：① 同一对象因多段 type 进多个 siteMap 组的引用重复（跳过）；
+ * ② 历史/输入脏数据中同名不同站点的独立记录（并入 type 段保留先者）。
+ */
+export function dedupeCreators(flat: LocalCreator[]): LocalCreator[] {
+  const seen = new Map<string, LocalCreator>();
+  for (const c of flat) {
+    if (!c.name) continue;
+    const existing = seen.get(c.name);
+    if (existing) {
+      if (existing !== c) mergeTypeSegments(existing, c.type);
+    } else {
+      seen.set(c.name, c);
+    }
+  }
+  return [...seen.values()];
 }
 
 /**

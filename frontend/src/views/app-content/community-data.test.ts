@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import {
   mergeCommunityCreators,
+  dedupeCreators,
   mergeCommunitySites,
   fillSearch,
   type LocalCreator,
@@ -58,6 +59,47 @@ describe("mergeCommunityCreators", () => {
     const local = [localCreator("A", { type: "bilibili;x" })];
     mergeCommunityCreators(local, [communityCreator("A", { type: "x" })]);
     expect(local[0].type).toBe("bilibili;x");
+  });
+
+  it("type 冲突（本地 bilibili / 社区 afdian）→ 分号段合并并计 updated", () => {
+    // 领域语义：name 唯一身份，type 是多站点集合——同名不同站点应归一而非覆盖丢失
+    const local = [localCreator("A", { type: "bilibili" })];
+    const r = mergeCommunityCreators(local, [communityCreator("A", { type: "afdian" })]);
+    expect(r.added).toBe(0);
+    expect(r.updated).toBe(1);
+    expect(local[0].type).toBe("bilibili;afdian");
+  });
+
+  it("社区 type 多段 → 整段并入且不重复", () => {
+    const local = [localCreator("A", { type: "bilibili" })];
+    mergeCommunityCreators(local, [
+      communityCreator("A", { type: "afdian;bilibili;x" }),
+      communityCreator("A", { type: "x" }),
+    ]);
+    expect(local[0].type).toBe("bilibili;afdian;x");
+    // 首条已并 afdian/x → 第二条无新段 → 总 updated 计 1
+  });
+
+  it("同名不同站点独立记录 → dedupe 归一并保留全部站点段", () => {
+    const flat = [
+      localCreator("狐狸", { type: "bilibili" }),
+      localCreator("狐狸", { type: "afdian" }),
+    ];
+    const out = dedupeCreators(flat);
+    expect(out).toHaveLength(1);
+    expect(out[0].type).toBe("bilibili;afdian");
+  });
+
+  it("dedupe 同一引用重复（多段 type 进多组）→ 保留一份", () => {
+    const c = localCreator("A", { type: "bilibili;afdian" });
+    const out = dedupeCreators([c, c, c]);
+    expect(out).toHaveLength(1);
+    expect(out[0].type).toBe("bilibili;afdian");
+  });
+
+  it("dedupe 无 name 条目跳过", () => {
+    const out = dedupeCreators([{ type: "bilibili" } as LocalCreator]);
+    expect(out).toHaveLength(0);
   });
 });
 

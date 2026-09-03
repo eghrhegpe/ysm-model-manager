@@ -7,7 +7,7 @@
 //  - P3 修复：空 base64（GPU 异常）不入结果集
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObjectMock, buildSpecMock, threeStub } =
+const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSceneMeshMock, buildYsmObjectMock, buildSpecMock, threeStub } =
   vi.hoisted(() => {
     class FakeVec {
       x = 0;
@@ -97,6 +97,8 @@ const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObje
       getAppMock: vi.fn(),
       specMock: vi.fn(),
       loadTexturesMock: vi.fn(),
+      // 审核 C1：loadTextures 的配对释放器（finally 段收编后走此函数归还引用）
+      releaseTextureUrlsMock: vi.fn(),
       buildSceneMeshMock: vi.fn(),
       buildYsmObjectMock: vi.fn(),
       buildSpecMock: vi.fn(),
@@ -128,7 +130,10 @@ const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, buildYsmObje
   });
 
 vi.mock("../backend/app.ts", () => ({ getApp: getAppMock }));
-vi.mock("./texture-loader.ts", () => ({ loadTextures: loadTexturesMock }));
+vi.mock("./texture-loader.ts", () => ({
+  loadTextures: loadTexturesMock,
+  releaseTextureUrls: releaseTextureUrlsMock,
+}));
 // buildSceneMesh/compKey 已从 model3d.ts 迁至 mesh.ts（model3d 拆分）——mock 目标同步迁移，
 // 否则 mock 失效会跑真实实现（three 被 mock 成 Fake 类，行为不符 → renderMultiAngle 返回 null）
 vi.mock("./mesh.ts", () => ({

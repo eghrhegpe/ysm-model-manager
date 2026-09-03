@@ -310,6 +310,33 @@ Three.js 资源（几何体、材质、纹理、渲染器）需要成对 dispose
 3. 最后清理渲染器（WebGLRenderer）
 4. 从内到外，避免悬空引用
 
+### 7.1 缓存纹理的所有权契约（审核 C1 教训，2026-09-03）
+
+**规则**：取自纹理缓存池的 Texture（`loadTextures()` → `textureCache.acquire(url)`）
+**所有权归缓存池**，消费方只持**引用**，清理时必须 **release，禁止 dispose**。
+
+| 场景 | 正确做法 | 错误做法 |
+|------|----------|----------|
+| 用完一批 `loadTextures(urls)` 结果 | `releaseTextureUrls(urls)`（`preview-3d/texture-loader.ts`） | 逐个 `tex.dispose()` |
+| 消费 `preloadModel()` 产物 | 调其返回的 `releaseTextures()`（幂等，含 componentTexMap 清单） | 自行遍历 `texArr` dispose |
+| 会话整体结束 | 核心 `fullCleanup` 自动 `textureCache.disposeAll()` | —— |
+
+**为何禁止 dispose**（三重后果，实测于 `texture-cache.ts`）：
+1. `release` 只减 refs，条目归零后**保留在池**供跨模型复用；`dispose` 留下 refs 恒 ≥1 的
+   僵尸条目，而 `evictZeroRefIfNeeded` 只淘汰 `refs===0` ⇒ **LRU 永久失效**，缓存越过
+   `maxEntries=200` 单调增长。
+2. 每次模型切换都 dispose ⇒ 缓存池正要复用的共享纹理被销毁，「同纹理只 upload 一次」
+   的 P0 优化完全失效（`switchTo` 不经 `fullCleanup`，只有关闭预览才 `disposeAll`）。
+3. 缓存仍持有该条目并对外分发**已销毁**的 Texture，靠 Three.js 重传兜底，Image 被 GC 后渲染空白。
+
+**两个易错细节**：
+- **不去重**：同一 URL 出现 N 次即 acquire N 次（多组件共享 skin 是常态），必须 release N 次才能归零。
+- **幂等**：释放器内置 once 标志——dispose 重入会把仍在使用中的共享纹理 refs 多减，
+  提前归零后被 LRU 淘汰，造成悬垂已释放纹理。
+
+**失败路径必查**：`loadTextures` 之后、句柄产出之前的任何异常（如 `buildYsmObject` 抛错）
+都要归还引用，否则引用永久泄漏。参照 `pack-model-adapter:265-267` 的失败路径范式。
+
 ---
 
 ## 8. 循环依赖破壁模式（注册表反向注入）

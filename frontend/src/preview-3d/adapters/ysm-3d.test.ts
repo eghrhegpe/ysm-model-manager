@@ -2,6 +2,7 @@
 // buildYsmScene：loader(path) → preloadModel → buildYsmObject 挂 ctx.scene →
 // ctx.menu.setAdapterItems 注入 model/截图/骨骼 三项 → dispose 清理。装配级测试。
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as THREE from "three";
 import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
 import type { BedrockGeometry } from "../decoder/geometry.ts";
 import type { PreviewMenuHandle } from "../menu/core.ts";
@@ -79,6 +80,9 @@ beforeEach(() => {
   mocks.preloadModel.mockResolvedValue({
     texArr: [],
     spec: { models: [{ bones: [], textureWidth: 64, textureHeight: 32 }] },
+    componentTexMap: new Map(),
+    // 审核 C1 新契约：preload 必须提供引用归还器（dispose 消费）
+    releaseTextures: vi.fn(),
   });
   document.body.innerHTML = "";
 });
@@ -681,5 +685,76 @@ describe("buildYsmScene 拾取/播放/调试/生命周期补全", () => {
     await expect(preview.screenshot?.()).resolves.toBeNull();
 
     preview.dispose();
+  });
+});
+
+// ===== 审核 C1 回归：纹理所有权归还（P0 缺陷，YSM + 女仆两条主路径）=====
+// 背景：loadTextures 内部对每个 URL 调 textureCache.acquire（refs+1），而 dispose 原先
+// 直接 t.dispose() 从不归还引用 → 缓存条目 refs 恒 ≥1，LRU 只淘汰 refs===0 条目 →
+// 淘汰永久失效、缓存越过上限单调增长，且池会继续分发已销毁的 Texture。
+describe("buildYsmScene 纹理引用归还（审核 C1 P0）", () => {
+  const fakeLoader = () => vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry));
+
+  function makePreloadWithTextures() {
+    const texA = new THREE.Texture();
+    const texB = new THREE.Texture();
+    const releaseTextures = vi.fn();
+    const preload = vi.fn(async () => ({
+      texArr: [texA, texB],
+      spec: { models: [{ bones: [], textureWidth: 64, textureHeight: 32 }] },
+      componentTexMap: new Map<string, (THREE.Texture | null)[]>(),
+      releaseTextures,
+    }));
+    return {
+      disposeA: vi.spyOn(texA, "dispose"),
+      disposeB: vi.spyOn(texB, "dispose"),
+      releaseTextures,
+      preload,
+    };
+  }
+
+  it("dispose → 归还引用而非 dispose 纹理（所有权归缓存池）", async () => {
+    const ctx = makeCtx();
+    const { disposeA, disposeB, releaseTextures, preload } = makePreloadWithTextures();
+    const preview = await buildYsmScene(ctx, "/m/a.ysm", { loader: fakeLoader(), preload });
+    preview.dispose();
+
+    expect(releaseTextures).toHaveBeenCalledTimes(1);
+    // 关键回归点：此前 dispose 直接 t.dispose()，留下 refs 恒 ≥1 的僵尸条目
+    expect(disposeA).not.toHaveBeenCalled();
+    expect(disposeB).not.toHaveBeenCalled();
+    expect(mocks.buildYsmObject().removeFromScene).toHaveBeenCalledWith(ctx.scene);
+  });
+
+  it("buildYsmObject 抛错 → 仍归还纹理引用（失败路径不泄漏）", async () => {
+    const ctx = makeCtx();
+    const { releaseTextures, preload } = makePreloadWithTextures();
+    mocks.buildYsmObject.mockImplementationOnce(() => {
+      throw new Error("build failed");
+    });
+
+    await expect(
+      buildYsmScene(ctx, "/m/broken.ysm", { loader: fakeLoader(), preload }),
+    ).rejects.toThrow(/build failed/);
+    // preload 已 acquire，句柄尚未产出 → 不归还即永久泄漏（对齐 pack-model-adapter:265）
+    expect(releaseTextures).toHaveBeenCalledTimes(1);
+    expect(ctx.scene.add).not.toHaveBeenCalled();
+  });
+
+  it("preload 未提供 releaseTextures → dispose 降级不抛（兼容旧注入方）", async () => {
+    const ctx = makeCtx();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const preload = vi.fn(async () => ({
+        texArr: [],
+        spec: { models: [{ bones: [], textureWidth: 64, textureHeight: 32 }] },
+        componentTexMap: new Map(),
+      }));
+      const preview = await buildYsmScene(ctx, "/m/legacy.ysm", { loader: fakeLoader(), preload });
+      expect(() => preview.dispose()).not.toThrow();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("releaseTextures"));
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

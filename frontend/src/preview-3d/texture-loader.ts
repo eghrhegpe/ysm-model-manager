@@ -58,3 +58,24 @@ export async function loadTextures(urls?: string[]): Promise<(THREE.Texture | nu
     console.warn("[3D] 纹理加载失败，模型将显示为 fallback 颜色");
   return texArr;
 }
+
+/**
+ * loadTextures 的**配对释放器**：把 acquire 加上的引用逐一归还缓存池（引用 -1）。
+ *
+ * 语义要点（审核 C1 定案，勿改成 dispose）：
+ * - 纹理**所有权归缓存池**，消费方只持引用。归零不 dispose——跨模型复用由缓存自行
+ *   管理，只有 refs===0 的条目才可被 LRU 淘汰（texture-cache.ts evictZeroRefIfNeeded）。
+ * - 直接调 `tex.dispose()` 会留下 refs 恒 ≥1 的僵尸条目：LRU 永久失效（缓存越过
+ *   maxEntries 单调增长），且缓存会继续对外分发已销毁的 Texture。
+ * - **不去重**：同一 URL 出现 N 次即 acquire N 次，必须 release N 次才能归零。
+ * - 幂等安全：加载失败被 invalidate 的条目已出池，release 为 no-op。
+ *
+ * 收编自 screenshot-render.ts finally 段与 model3d-loader preload 镜像逻辑（ADR-101
+ * 收敛重复模式）：所有 loadTextures 消费方一律走此函数归还引用。
+ */
+export function releaseTextureUrls(urls?: readonly (string | null | undefined)[]): void {
+  if (!urls?.length) return;
+  for (const url of urls) {
+    if (url) textureCache.release(url);
+  }
+}

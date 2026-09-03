@@ -9,7 +9,7 @@ import { FakeImage } from "../test-utils/fake-image.ts";
 const { fakeTextureCache } = vi.hoisted(() => ({
   fakeTextureCache: {
     acquire: (_url: string, make: (u: string) => import("three").Texture) => make(_url),
-    release: () => {},
+    release: vi.fn(),
     invalidate: vi.fn(),
     disposeAll: () => {},
   },
@@ -19,7 +19,7 @@ vi.mock("./texture-cache.ts", () => ({
   textureCache: fakeTextureCache,
 }));
 
-import { loadTextures } from "./texture-loader.ts";
+import { loadTextures, releaseTextureUrls } from "./texture-loader.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -71,6 +71,45 @@ describe("loadTextures", () => {
       const texArr = await loadTextures(["bad.png"]);
       expect(texArr[0]).toBeNull();
       expect(fakeTextureCache.invalidate).toHaveBeenCalledWith("bad.png");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+// 审核 C1：loadTextures 的配对释放器——引用归还语义（此前 YSM/女仆路径直接 dispose 纹理，
+// 留下 refs 恒 ≥1 的僵尸条目，LRU 淘汰永久失效）。
+describe("releaseTextureUrls（审核 C1 引用归还）", () => {
+  it("逐 URL 归还引用，空/假值跳过（与 acquire 的 null 占位对称）", () => {
+    releaseTextureUrls(["a.png", "", null, undefined, "b.png"]);
+    expect(fakeTextureCache.release).toHaveBeenCalledTimes(2);
+    expect(fakeTextureCache.release).toHaveBeenNthCalledWith(1, "a.png");
+    expect(fakeTextureCache.release).toHaveBeenNthCalledWith(2, "b.png");
+  });
+
+  it("重复 URL 按出现次数归还（acquire N 次须 release N 次才能归零）", () => {
+    // 多组件共享同一纹理是常态（arm 与 main 共享 skin）：去重会导致 refs 残留
+    releaseTextureUrls(["shared.png", "other.png", "shared.png"]);
+    expect(fakeTextureCache.release).toHaveBeenCalledTimes(3);
+    expect(
+      fakeTextureCache.release.mock.calls.filter((c) => c[0] === "shared.png"),
+    ).toHaveLength(2);
+  });
+
+  it("空清单 / undefined → 不调 release（幂等无副作用）", () => {
+    releaseTextureUrls([]);
+    releaseTextureUrls(undefined);
+    expect(fakeTextureCache.release).not.toHaveBeenCalled();
+  });
+
+  it("与 loadTextures 同清单配对 → 引用计数归零（泄漏回归哨兵）", async () => {
+    vi.stubGlobal("Image", FakeImage);
+    try {
+      const urls = ["a.png", "b.png", "a.png"]; // a.png 出现 2 次 = acquire 2 次
+      await loadTextures(urls);
+      releaseTextureUrls(urls);
+      const released = fakeTextureCache.release.mock.calls.map((c) => c[0]);
+      expect(released.sort()).toEqual(["a.png", "a.png", "b.png"]);
     } finally {
       vi.unstubAllGlobals();
     }

@@ -8,7 +8,7 @@ import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
 import { buildSpecFromGeometryJSON } from "../../preview-3d/spec-builder.ts";
-import { loadTextures } from "../../preview-3d/texture-loader.ts";
+import { loadTextures, releaseTextureUrls } from "../../preview-3d/texture-loader.ts";
 import { recordLoadTrace } from "../../preview-3d/load-trace.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 
@@ -110,12 +110,23 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
   }
 }
 
-/** 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标） */
+/**
+ * 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标）
+ *
+ * 返回的 `releaseTextures()` 是 loadTextures 的**配对释放器**，消费方（ysm-adapter）
+ * 在 dispose / 构建失败时必须调用一次——纹理所有权归缓存池，不得直接 tex.dispose()。
+ */
 export async function preloadModel(model: ModelLike): Promise<{
   texArr: (THREE.Texture | null)[];
   spec: Model3DSpec;
   /** ADR-114 perComponent：组件名→Texture 数组（3D 渲染用，每组件独立纹理） */
   componentTexMap: Map<string, (THREE.Texture | null)[]>;
+  /**
+   * 归还本次 acquire 的全部纹理引用（texArr + componentTexMap 的 URL 清单）。
+   * 幂等：重复调用无副作用——防止 dispose 重入把 refs 多减，导致仍在使用中的
+   * 共享纹理提前归零被 LRU 淘汰（悬垂已释放纹理）。
+   */
+  releaseTextures: () => void;
 }> {
   const tStart = performance.now();
   const tParseStart = performance.now();
@@ -138,12 +149,31 @@ export async function preloadModel(model: ModelLike): Promise<{
   // （长度 = 组件数，R1 契约校验专用），不可当 texArr 槽位清单：魔法酒狐等模型用它
   // 会把 6 张声明纹理截断成 3 张（面板「纹理 (3)」），且 arrow texSlot=6 越界品红。
   const urls = actualUrls;
-  const texArr = await loadTextures(urls);
+  const componentTexMap = new Map<string, (THREE.Texture | null)[]>();
+  // 组件纹理 URL 清单（与 componentTexMap 同序同键）：释放器按此归还引用
+  const componentTexUrls = new Map<string, string[]>();
+
+  // 释放器前置定义：纹理加载段任一步抛错时，catch 里也能归还已 acquire 的引用
+  //（否则 preloadModel 抛错 → 调用方拿不到 release 闭包 → 引用永久泄漏）。
+  let released = false;
+  const releaseTextures = (): void => {
+    if (released) return;
+    released = true;
+    releaseTextureUrls(urls);
+    for (const compUrls of componentTexUrls.values()) releaseTextureUrls(compUrls);
+  };
+
+  let texArr: (THREE.Texture | null)[];
+  try {
+    texArr = await loadTextures(urls);
+  } catch (e) {
+    releaseTextures();
+    throw e;
+  }
   // ADR-114 perComponent：每组件独立纹理对象，不再依赖全局 texArr 槽位顺序。
   // 数据源统一（spec 注入优先）：GetModel3DSpec 把 ComponentTextures 注入
   // spec.componentTextures（zip/7z/解压目录三路同源）；model.componentTextures
   // 保留兼容（旧数据链）。
-  const componentTexMap = new Map<string, (THREE.Texture | null)[]>();
   // 绑定类型自带 componentTextures（Record<string, string[]|null>|null），直读无需松断言
   const compTex = spec.componentTextures ?? model.componentTextures;
   // 契约哨兵（回归 936169b1 防再犯）：多组件 spec 缺 componentTextures = perComponent
@@ -155,9 +185,17 @@ export async function preloadModel(model: ModelLike): Promise<{
     );
   }
   if (compTex) {
-    for (const [compName, texBase64Arr] of Object.entries(compTex)) {
-      const compTexArr = await loadTextures(texBase64Arr ?? []);
-      componentTexMap.set(compName, compTexArr);
+    try {
+      for (const [compName, texBase64Arr] of Object.entries(compTex)) {
+        const compUrls = texBase64Arr ?? [];
+        const compTexArr = await loadTextures(compUrls);
+        componentTexMap.set(compName, compTexArr);
+        componentTexUrls.set(compName, compUrls);
+      }
+    } catch (e) {
+      // 组件纹理加载中断：主 texArr 已完成 acquire，一并归还后上抛
+      releaseTextures();
+      throw e;
     }
   }
   const order = spec.texArrOrder as string[] | undefined;
@@ -198,5 +236,6 @@ export async function preloadModel(model: ModelLike): Promise<{
       ok: true,
     });
   } catch { /* perf trace 失败不影响加载 */ }
-  return { texArr, spec, componentTexMap };
+
+  return { texArr, spec, componentTexMap, releaseTextures };
 }

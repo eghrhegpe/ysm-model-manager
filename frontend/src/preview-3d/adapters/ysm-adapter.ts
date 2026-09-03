@@ -41,12 +41,28 @@ import { createBreathController } from "../perception/breath.ts";
 import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
 import { recordLoadTrace } from "../load-trace.ts";
 
+/**
+ * preloadModel 产物契约（视图壳层数据转换：model → 纹理 + spec，含 WASM/Go 兜底）。
+ *
+ * `releaseTextures` 是纹理**引用归还器**：loadTextures 内部对每个 URL 调
+ * `textureCache.acquire`（refs+1），消费方必须在 dispose / 构建失败时归还，否则
+ * 引用计数永久泄漏（LRU 淘汰 refs===0 条目 → 缓存越过上限单调增长）。
+ * 标为可选仅为兼容未提供该字段的注入方（运行时降级为 no-op + 告警）。
+ */
+export interface YsmPreloadedModel {
+  texArr: (THREE.Texture | null)[];
+  spec: unknown;
+  componentTexMap: Map<string, (THREE.Texture | null)[]>;
+  /** 归还本次 acquire 的纹理引用（幂等，可重复调用） */
+  releaseTextures?: (() => void) | undefined;
+}
+
 /** 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 */
 export interface YsmAdapterOptions {
   /** path → model 加载器（由 skeleton 层注入：loadModelData(p, ctx)，含缓存/WASM/Go 兜底） */
   loader: (path: string) => Promise<BedrockGeometry | null>;
-  /** preloadModel 注入（视图壳层数据转换：model → { texArr, spec, componentTexMap }，含 WASM/Go 兜底） */
-  preload: (model: unknown) => Promise<{ texArr: (THREE.Texture | null)[]; spec: unknown; componentTexMap: Map<string, (THREE.Texture | null)[]> }>;
+  /** preloadModel 注入（视图壳层数据转换，契约见 YsmPreloadedModel） */
+  preload: (model: unknown) => Promise<YsmPreloadedModel>;
   /** 用户切换纹理时触发重建（旧 overlay 清理 + 按新 texIdx 重新挂载） */
   onTextureChange?: (texIdx: number) => void;
   /** core 关闭（ESC / 关闭按钮 / 切模型 cleanup）时回调：复位调用方状态 + 注销 android-back */
@@ -130,6 +146,8 @@ interface MdYsBuildCore {
   texArr: (THREE.Texture | null)[];
   spec: Spec3D;
   componentTexMap: Map<string, (THREE.Texture | null)[]>;
+  /** 纹理引用归还器（透传 preload 产物；dispose / 构建失败路径调用） */
+  releaseTextures?: (() => void) | undefined;
   obj: YsmObjectHandle;
 }
 
@@ -175,16 +193,25 @@ async function mdYsLoadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
 
   const texIdx = sc.opts.texIdx ?? 0;
   sc.tPreloadStart = performance.now();
-  const { texArr, spec, componentTexMap } = await sc.opts.preload(model);
+  const { texArr, spec, componentTexMap, releaseTextures } = await sc.opts.preload(model);
   sc.tPreloadEnd = performance.now();
 
   sc.tBuildStart = performance.now();
-  const obj: YsmObjectHandle = buildYsmObject(spec as Spec3D, texArr, componentTexMap, texIdx);
-  sc.tBuildEnd = performance.now();
-  sc.ctx.scene!.add(obj.rootGroup);
-  registerModelRoot(obj.rootGroup);
+  let obj: YsmObjectHandle;
+  try {
+    obj = buildYsmObject(spec as Spec3D, texArr, componentTexMap, texIdx);
+    sc.tBuildEnd = performance.now();
+    sc.ctx.scene!.add(obj.rootGroup);
+    registerModelRoot(obj.rootGroup);
+  } catch (e) {
+    // 失败路径释放（对齐 pack-model-adapter:265-267）：preload 已 acquire 全部纹理引用，
+    // 但构建抛错时 dispose 句柄尚未产生 → 不归还则引用永久泄漏。
+    sc.tBuildEnd = performance.now();
+    releaseTextures?.();
+    throw e;
+  }
 
-  return { model, texIdx, texArr, spec: spec as Spec3D, componentTexMap, obj };
+  return { model, texIdx, texArr, spec: spec as Spec3D, componentTexMap, releaseTextures, obj };
 }
 
 /** 阶段②：相机取景 + 骨骼拾取系统 + content 句柄 */
@@ -456,10 +483,13 @@ function mdYsMakeSceneHandle(
       bonePanelRef.current?.();
       unregisterModelRoot(obj.rootGroup);
       obj.removeFromScene(ctx.scene as THREE.Scene);
-      // 释放预加载纹理 GPU 资源（removeFromScene 的 disposeSceneMeshes 显式跳过纹理）
-      for (const t of core.texArr) t?.dispose();
-      // componentTexMap 可能缺失（无组件纹理路径，buildYsmObject 同款 instanceof Map fallback）——dispose 不抛
-      if (core.componentTexMap) for (const arr of core.componentTexMap.values()) for (const t of arr) t?.dispose();
+      // 归还预加载纹理引用（所有权归缓存池，不得 dispose——见 YsmPreloadedModel 契约注释）。
+      // removeFromScene 的 disposeSceneMeshes 显式跳过纹理，此处只归还引用：归零条目
+      // 仍留在池中供跨模型复用，超限时由 textureCache 的 LRU 淘汰并 dispose。
+      // 此前直接 tex.dispose() 留下 refs 恒 ≥1 的僵尸条目（LRU 永久失效 + 缓存分发
+      // 已销毁纹理），且与 pack-model-adapter / screenshot-render 的 release 范式相悖。
+      if (core.releaseTextures) core.releaseTextures();
+      else console.warn("[ysm-adapter] preload 未提供 releaseTextures，纹理引用将泄漏（检查注入方契约）");
       ctx.renderer!.domElement.removeEventListener("keydown", onFKeyDown);
       if (debugState.debugGroup) {
         disposeDebugGroup(debugState.debugGroup);

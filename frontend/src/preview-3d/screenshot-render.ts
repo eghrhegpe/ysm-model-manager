@@ -13,8 +13,7 @@ import { type Spec3D } from "./model3d.ts";
 import { screenshotFromRenderer } from "./screenshot.ts";
 import { type ScreenshotLights } from "./screenshot-lights.ts";
 import { buildSpecFromGeometryJSON } from "./spec-builder.ts";
-import { textureCache } from "./texture-cache.ts";
-import { loadTextures } from "./texture-loader.ts";
+import { loadTextures, releaseTextureUrls } from "./texture-loader.ts";
 import { buildYsmObject, type YsmObjectHandle } from "./ysm-object.ts";
 
 // ===== 3D 场景灯光样板（原 scene-lights.ts，唯一消费者是本文件，合并回）=====
@@ -177,10 +176,11 @@ export async function renderMultiAngle(
     // P1 修复（审核）：loadTextures 内部对每个 url 调 textureCache.acquire（refs+1），
     // 但 finally 从不 release → 引用计数永久泄漏，截图纹理永不淘汰。每次多角度截图
     // 累积泄漏所有 texUrls + componentTextures 的纹理引用。
-    for (const u of texUrls) textureCache.release(u);
+    // 收编：归引用一律走 releaseTextureUrls（与 model3d-loader 同一释放器，语义见其注释）。
+    releaseTextureUrls(texUrls);
     if (opts.componentTextures) {
       for (const urls of Object.values(opts.componentTextures)) {
-        for (const u of urls) textureCache.release(u);
+        releaseTextureUrls(urls);
       }
     }
     if (renderer) {

@@ -60,14 +60,14 @@ func (tm *TrashManager) MoveEx(src string) *MoveResult {
 	return res
 }
 
-// uniqueDest 冲突后缀循环：目标已存在时在扩展名前追加 (1)、(2)… 重试，
+// generateConflictFreeDest 冲突后缀循环：目标已存在时在扩展名前追加 (1)、(2)… 重试，
 // 返回首个不存在的目标路径。每次候选（含初始 dst）先经 guard 越权校验；
 // os.Lstat 非「不存在」错误（权限 EACCES 等）直接返回，避免静默跳过冲突检测。
 // 使用 Lstat 而非 Stat：避免跟随符号链接——目标位置的悬空符号链接（target 不存在）
 // 经 Stat 会返回 IsNotExist=true，误判为「路径空闲」导致 rename 覆盖悬空链接；
 // Lstat 检测链接本身存在，正确生成编号后缀路径（与 moveEx/Restore 的 Lstat 语义对齐）。
 // 收敛 moveEx / Restore 两份逐字重复的冲突后缀循环（索引 6.8b）。
-func uniqueDest(dst string, guard func(string) error) (string, error) {
+func generateConflictFreeDest(dst string, guard func(string) error) (string, error) {
 	if err := guard(dst); err != nil {
 		return "", err
 	}
@@ -130,8 +130,8 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	if !strings.HasPrefix(cleanDst, cleanRecycle+string(filepath.Separator)) && cleanDst != cleanRecycle {
 		return nil, fmt.Errorf("路径越权: %s 不在回收站目录下", dst)
 	}
-	// 冲突后缀循环（与 Restore 共用 uniqueDest，索引 6.8b）；guard 保持越权校验
-	dst, err = uniqueDest(dst, func(candidate string) error {
+	// 冲突后缀循环（与 Restore 共用 generateConflictFreeDest，索引 6.8b）；guard 保持越权校验
+	dst, err = generateConflictFreeDest(dst, func(candidate string) error {
 		cd := filepath.Clean(candidate)
 		if !strings.HasPrefix(cd, cleanRecycle+string(filepath.Separator)) && cd != cleanRecycle {
 			return fmt.Errorf("路径越权: %s 不在回收站目录下", candidate)
@@ -284,8 +284,8 @@ func (tm *TrashManager) Restore(src string) error {
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
 		return err
 	}
-	// 冲突后缀循环（与 moveEx 共用 uniqueDest，索引 6.8b）；guard 保持越权校验
-	dst, err = uniqueDest(dst, func(candidate string) error {
+	// 冲突后缀循环（与 moveEx 共用 generateConflictFreeDest，索引 6.8b）；guard 保持越权校验
+	dst, err = generateConflictFreeDest(dst, func(candidate string) error {
 		return paths.IsInside(rootDir, candidate)
 	})
 	if err != nil {

@@ -6,12 +6,12 @@ package app
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"sort"
 	"strings"
 
 	"ysm-model-manager/go/container"
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -140,11 +140,10 @@ func readPackEntry(e container.Entry) []byte {
 	if err != nil {
 		return nil
 	}
-	data, err := io.ReadAll(io.LimitReader(rc, maxPackEntrySize))
-	rc.Close()
-	if err != nil {
-		return nil
-	}
+	// 收编 fsutil.ReadLimitedEntry（锐评刀③）：原裸 LimitReader 缺 +1 探测——
+	// 恰 maxPackEntrySize 的条目被截断后 err==nil 静默继续（ADR-033 陷阱残留）；
+	// ReadLimitedEntry 读 limit+1 探截断，超限/读错统一返回 nil（本函数 nil 语义兼容）
+	data := fsutil.ReadLimitedEntry(rc, maxPackEntrySize)
 	return data
 }
 
@@ -170,10 +169,11 @@ func (a *App) ReadPackEntry(path, entry string) []byte {
 		if err != nil {
 			return nil
 		}
-		data, err := io.ReadAll(io.LimitReader(rc, maxPackEntrySize))
-		rc.Close()
-		if err != nil {
-			log.Printf("[packs] ReadPackEntry 读取失败 %s/%s: %v", path, entry, err)
+		// 收编 fsutil.ReadLimitedEntry（锐评刀③）：原裸 LimitReader 缺 +1 探测，
+		// 恰 maxPackEntrySize 的条目静默截断（ADR-033 陷阱）；超限/读错统一 nil
+		data := fsutil.ReadLimitedEntry(rc, maxPackEntrySize)
+		if data == nil {
+			log.Printf("[packs] ReadPackEntry 读取失败/超限 %s/%s", path, entry)
 			return nil
 		}
 		return data

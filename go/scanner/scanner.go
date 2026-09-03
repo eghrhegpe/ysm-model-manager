@@ -73,6 +73,18 @@ type scanFlight struct {
 	keyVersion uint64 // owner 启动时捕获的 per-key 版本
 }
 
+// joinResult joinInFlightWaiter 的结果（替代三态 bool 返回，Go 锐评刀②）：
+//   - hit=true：成功等到合法（版本未变）航班结果，直接用 entries
+//   - retry=true：等到但版本已变，调用方 goto retry 重来
+//   - 两者皆 false：本调用成为 owner，需自己真扫并把结果写入 fl.entries
+//
+// hit 与 retry 互斥。
+type joinResult struct {
+	entries []types.ModelEntry
+	hit     bool
+	retry   bool
+}
+
 const scanCacheTTL = 30 * time.Second
 
 // errorSink 扫描错误回调（ADR-082 续：GUI 下 stdout 不可见，log.Printf 等于静默——
@@ -301,9 +313,9 @@ retry:
 	// 置于 Rust 快路径之前：Windows（Rust handled=true）下并发请求同样并入航班去重
 	fl := &scanFlight{gen: gen, keyVersion: keyVersion}
 	fl.wg.Add(1)
-	if cloned, ok, retryNow := joinInFlightWaiter(dir, fl); ok {
-		return cloned, true
-	} else if retryNow {
+	if res := joinInFlightWaiter(dir, fl); res.hit {
+		return res.entries, true
+	} else if res.retry {
 		goto retry
 	}
 	// owner 身份：负责删除航班 + 放行等待方
@@ -372,14 +384,14 @@ func lookupScanCache(dir string) ([]types.ModelEntry, bool) {
 }
 
 // joinInFlightWaiter 尝试在 inFlight 表注册/并入航班。
-// 返回值三态：
-//   - (entries, true, _)：waiter 成功等到合法（版本未变）航班结果，直接返回
-//   - (_, false, true)：waiter 等到但版本已变，调用方 goto retry 重来
-//   - (_, false, false)：本调用成为 owner，需自己真扫并把结果写入 fl.entries
-func joinInFlightWaiter(dir string, fl *scanFlight) ([]types.ModelEntry, bool, bool) {
+// 返回 joinResult（替代原三态 bool 返回，语义不变）：
+//   - hit=true：waiter 成功等到合法（版本未变）航班结果，直接用 res.entries
+//   - retry=true：waiter 等到但版本已变，调用方 goto retry 重来
+//   - hit 与 retry 皆 false：本调用成为 owner，需自己真扫并把结果写入 fl.entries
+func joinInFlightWaiter(dir string, fl *scanFlight) joinResult {
 	prev, loaded := inFlight.LoadOrStore(dir, fl)
 	if !loaded {
-		return nil, false, false // owner
+		return joinResult{} // owner
 	}
 	other := prev.(*scanFlight)
 	flightJoins.Add(1)
@@ -389,9 +401,9 @@ func joinInFlightWaiter(dir string, fl *scanFlight) ([]types.ModelEntry, bool, b
 	// 与当前值恒等、守卫失效，会吞下 owner 失效前读到的旧扫描结果
 	kvNow, _ := keyVersions.LoadOrStore(dir, &atomic.Uint64{})
 	if cacheGen.Load() == other.gen && kvNow.(*atomic.Uint64).Load() == other.keyVersion {
-		return append([]types.ModelEntry{}, other.entries...), true, false
+		return joinResult{entries: append([]types.ModelEntry{}, other.entries...), hit: true}
 	}
-	return nil, false, true // retry
+	return joinResult{retry: true} // 版本已变，调用方 goto retry
 }
 
 // tryRustScan 尝试 Rust scanner 快路径，成功时把可缓存结果写入 scanCache

@@ -9,8 +9,8 @@ import { tr } from "./i18n/tr.ts";
 
 /** 菜单项声明：结构（label/icon/danger/divider）+ 行为标识（action）+ 节点级显隐守卫 */
 interface MenuItemDef {
-  /** 行为标识：context-menus.ts 查 handler 表绑定 onClick */
-  action?: string;
+  /** 行为标识：context-menus.ts 查 handler 表绑定 onClick；必须属于 MENU_ACTIONS（编译期约束） */
+  action?: MenuAction;
   /**
    * 静态文案或按 ctx 动态生成（如标题项）；divider 项省略。
    * 2026-XX 收紧：原 `string | ((ctx) => string)` 的 string 分支已无消费者
@@ -35,6 +35,27 @@ export interface MenuDef {
   type: CtxShowPayload["type"];
   items: MenuItemDef[];
 }
+
+/**
+ * action 联合唯一事实来源（P2 收窄）：HANDLERS 断言覆盖它，
+ * MenuItemDef.action 收窄为它 —— MENU_DEFS ⊂ MENU_ACTIONS ⊂ HANDLERS 三层由编译期钉死。
+ * 新增/改名 action 漏挂 handler 或拼错即 typecheck 报错，不再等到运行时 warn。
+ * 不导出（knip 死代码契约）：运行时消费者已收窄为 type-only（context-menu-handlers.ts L12），
+ * 仅 MenuAction 类型派生需要它留在模块作用域。
+ */
+const MENU_ACTIONS = [
+  "noop",
+  "instance.open-folder", "instance.export-list", "instance.clear",
+  "batch.rename", "batch.move", "batch.copy", "batch.recycle",
+  "batch.copy-paths", "batch.export-list",
+  "file.rename", "file.move", "file.copy", "file.push-to-pack",
+  "file.edit-tags", "file.recycle", "file.reveal", "file.copy-path",
+  "dir.rename", "dir.batch-rename", "dir.move", "dir.copy",
+  "dir.mkdir", "dir.recycle",
+] as const;
+
+/** 合法菜单 action 联合：MENU_DEFS 声明 / HANDLERS 注册双约束的公共类型 */
+export type MenuAction = (typeof MENU_ACTIONS)[number];
 
 /** 四类右键菜单的声明式规格（唯一事实来源） */
 export const MENU_DEFS: MenuDef[] = [

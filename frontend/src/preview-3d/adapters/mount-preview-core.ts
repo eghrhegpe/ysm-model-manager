@@ -336,6 +336,8 @@ export async function mount3D(
   let onDragPointerUp: (e: PointerEvent) => void = () => {};
   let onDragPointerMove: (e: PointerEvent) => void = () => {};
   let onResize: () => void = () => {};
+  // resize rAF 在途帧取消（input-and-animation 新增；fullCleanup 同步 cancel 防幽灵 setSize）
+  let cancelPendingResize: (() => void) | undefined = undefined;
 
   // 焦点陷阱 cleanup（每次 mount3D 新建，closeOverlay / fullCleanup 释放）
   let focusTrapCleanup: (() => void) | null = null;
@@ -552,6 +554,7 @@ export async function mount3D(
     onDragPointerUp = handlers.onDragPointerUp;
     onDragPointerMove = handlers.onDragPointerMove;
     onResize = handlers.onResize;
+    cancelPendingResize = handlers.cancelPendingResize;
 
     // ===== §4b rAF 渲染管线（全局唯一 loop，所有 session 共享同一 renderer）=====
     // 首个 session 启动 loop，后续 session 追加 perFrame 回调；cleanupPreview 停止
@@ -857,6 +860,7 @@ export async function mount3D(
       window.removeEventListener("pointerup", onDragPointerUp);
       window.removeEventListener("pointermove", onDragPointerMove);
       window.removeEventListener("resize", onResize);
+      cancelPendingResize?.(); // 取消已在途 resize rAF 帧（容器已拆，防幽灵 setSize）
       if (infra) {
         infra.renderer.domElement.removeEventListener("pointerdown", onDragPointerDown);
         if (session.onUnifiedPick)

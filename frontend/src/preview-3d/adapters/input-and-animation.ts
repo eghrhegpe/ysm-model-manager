@@ -47,6 +47,8 @@ export interface InputHandlers {
   onDragPointerUp: (e: PointerEvent) => void;
   onDragPointerMove: (e: PointerEvent) => void;
   onResize: () => void;
+  /** 取消已在途的 resize rAF 帧（cleanup 同步调用，防幽灵 setSize；范式同 installScrollSync） */
+  cancelPendingResize?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,6 +133,7 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
       onDragPointerUp: noop,
       onDragPointerMove: noop,
       onResize: () => {},
+      cancelPendingResize: () => {},
     };
   }
 
@@ -200,17 +203,44 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
   window.addEventListener("pointerup", onDragPointerUp);
   window.addEventListener("pointermove", onDragPointerMove);
 
-  // —— Resize ——
-  const onResize = (): void => {
+  // —— Resize（rAF 合并：范式同 utils/dom/virtual-scroll.ts installScrollSync）——
+  // 拖拽窗口边框的 resize 事件风暴每事件一次同步 layout 读（clientWidth/Height）+ setSize
+  // 是浪费；合并到 rAF 一帧至多一次。trailing 语义（cancel + 重排）：风暴期只执行末帧，
+  // 取最后尺寸。cleanup 侧经 cancelPendingResize 同步取消在途帧（防已卸载容器的幽灵 setSize；
+  // isDisposed 生产侧恒 false 不可作唯一兜底）。
+  let resizeRaf: number | null = null;
+  const applyResize = (): void => {
+    resizeRaf = null;
     if (opts.isDisposed.v) return;
     const cam = opts.camera;
     if (!cam || !rd) return;
-    cam.aspect = opts.viewContainer.clientWidth / Math.max(opts.viewContainer.clientHeight, 1);
+    const w = opts.viewContainer.clientWidth;
+    const h = Math.max(opts.viewContainer.clientHeight, 1);
+    cam.aspect = w / h;
     cam.updateProjectionMatrix();
-    rd.setSize(opts.viewContainer.clientWidth, opts.viewContainer.clientHeight);
-    opts.postProc?.setSize(opts.viewContainer.clientWidth, opts.viewContainer.clientHeight);
+    rd.setSize(w, h);
+    opts.postProc?.setSize(w, h);
+  };
+  const onResize = (): void => {
+    if (opts.isDisposed.v) return;
+    if (resizeRaf !== null) cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(applyResize);
+  };
+  const cancelPendingResize = (): void => {
+    if (resizeRaf !== null) {
+      cancelAnimationFrame(resizeRaf);
+      resizeRaf = null;
+    }
   };
   window.addEventListener("resize", onResize);
 
-  return { onKeyDown, onKeyUp, onDragPointerDown, onDragPointerUp, onDragPointerMove, onResize };
+  return {
+    onKeyDown,
+    onKeyUp,
+    onDragPointerDown,
+    onDragPointerUp,
+    onDragPointerMove,
+    onResize,
+    cancelPendingResize,
+  };
 }

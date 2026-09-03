@@ -46,6 +46,11 @@ function mkOptions(overrides: Partial<InputOptions> = {}): InputOptions {
   };
 }
 
+/** flush 一帧 rAF（onResize 已合并到 rAF，断言副作用前需等执行帧） */
+function flushRaf(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 describe("bindInputHandlers", () => {
   beforeEach(() => {
     // 清空每次迭代残留的监听器计数
@@ -336,11 +341,11 @@ describe("bindInputHandlers", () => {
     expect(() => handlers.onDragPointerMove(ev)).not.toThrow();
   });
 
-  it("onResize：更新 camera aspect / projectionMatrix / renderer 尺寸 / postProc 尺寸", () => {
+  it("onResize：rAF 帧内更新 camera aspect / projectionMatrix / renderer 尺寸 / postProc 尺寸", async () => {
     const opts = mkOptions();
     const container = opts.viewContainer;
-    Object.defineProperty(container, "clientWidth", { value: 800, writable: false });
-    Object.defineProperty(container, "clientHeight", { value: 600, writable: false });
+    Object.defineProperty(container, "clientWidth", { value: 800, configurable: true });
+    Object.defineProperty(container, "clientHeight", { value: 600, configurable: true });
 
     const setSizeSpy = vi.spyOn(opts.renderer!, "setSize");
     const postSizeSpy = vi.spyOn(opts.postProc!, "setSize");
@@ -348,6 +353,7 @@ describe("bindInputHandlers", () => {
     const handlers = bindInputHandlers(opts);
 
     handlers.onResize();
+    await flushRaf();
 
     expect(cam.aspect).toBe(4 / 3);
     expect(cam.projectionMatrix.elements).toBeDefined();
@@ -358,42 +364,133 @@ describe("bindInputHandlers", () => {
     postSizeSpy.mockRestore();
   });
 
-  it("onResize：isDisposed 为 true → 立即返回不做任何更新", () => {
+  it("onResize：isDisposed 为 true → 不排队，帧内无任何更新", async () => {
     const opts = mkOptions({ isDisposed: { v: true } });
     const setSizeSpy = vi.spyOn(opts.renderer!, "setSize");
     const handlers = bindInputHandlers(opts);
 
     handlers.onResize();
+    await flushRaf();
+    await flushRaf();
 
     expect(setSizeSpy).not.toHaveBeenCalled();
     setSizeSpy.mockRestore();
   });
 
-  it("onResize：camera 为空 → 立即返回", () => {
+  it("onResize：camera 为空 → 帧内早退，无 setSize", async () => {
     const opts = mkOptions({ camera: undefined });
     const setSizeSpy = vi.spyOn(opts.renderer!, "setSize");
     const handlers = bindInputHandlers(opts);
 
     handlers.onResize();
+    await flushRaf();
+    await flushRaf();
 
     expect(setSizeSpy).not.toHaveBeenCalled();
     setSizeSpy.mockRestore();
   });
 
-  it("onResize：container 高度为 0 → Math.max 防除零", () => {
+  it("onResize：container 高度为 0 → Math.max 防除零", async () => {
     const opts = mkOptions();
-    Object.defineProperty(opts.viewContainer, "clientWidth", { value: 800, writable: false });
-    Object.defineProperty(opts.viewContainer, "clientHeight", { value: 0, writable: false });
+    Object.defineProperty(opts.viewContainer, "clientWidth", { value: 800, configurable: true });
+    Object.defineProperty(opts.viewContainer, "clientHeight", { value: 0, configurable: true });
 
     const handlers = bindInputHandlers(opts);
-    expect(() => handlers.onResize()).not.toThrow();
+    handlers.onResize();
+    await flushRaf();
     expect(opts.camera!.aspect).toBe(800 / 1); // clientHeight 0 → 1
   });
 
-  it("部分配置：无 postProc 时 onResize 不崩溃", () => {
+  it("部分配置：无 postProc 时 onResize 帧内不崩溃", async () => {
     const opts = mkOptions({ postProc: null });
     const handlers = bindInputHandlers(opts);
-    expect(() => handlers.onResize()).not.toThrow();
+    handlers.onResize();
+    await flushRaf();
+  });
+});
+
+// ===================================================================
+// onResize rAF 合并（review：resize 风暴一帧至多一次 setSize；trailing 取末帧；
+// cleanup 经 cancelPendingResize 同步取消在途帧——范式同 installScrollSync）
+// ===================================================================
+describe("bindInputHandlers onResize rAF 合并", () => {
+  const rmResize = (handlers: import("./input-and-animation.ts").InputHandlers): void => {
+    window.removeEventListener("resize", handlers.onResize);
+  };
+
+  it("同帧多次 resize（风暴）→ 合并为仅一次 setSize", async () => {
+    const opts = mkOptions();
+    Object.defineProperty(opts.viewContainer, "clientWidth", { value: 800, configurable: true });
+    Object.defineProperty(opts.viewContainer, "clientHeight", { value: 600, configurable: true });
+    const setSizeSpy = vi.spyOn(opts.renderer!, "setSize");
+    const handlers = bindInputHandlers(opts);
+
+    for (let i = 0; i < 6; i++) window.dispatchEvent(new Event("resize"));
+    await flushRaf();
+    await flushRaf();
+
+    expect(setSizeSpy).toHaveBeenCalledTimes(1);
+    rmResize(handlers);
+    setSizeSpy.mockRestore();
+  });
+
+  it("trailing：合并窗口内以最后一次尺寸为准", async () => {
+    const opts = mkOptions();
+    Object.defineProperty(opts.viewContainer, "clientHeight", { value: 600, configurable: true });
+    const setSizeSpy = vi.spyOn(opts.renderer!, "setSize");
+    const handlers = bindInputHandlers(opts);
+
+    Object.defineProperty(opts.viewContainer, "clientWidth", { value: 800, configurable: true });
+    handlers.onResize();
+    Object.defineProperty(opts.viewContainer, "clientWidth", { value: 1280, configurable: true });
+    handlers.onResize();
+    await flushRaf();
+    await flushRaf();
+
+    expect(setSizeSpy).toHaveBeenCalledTimes(1);
+    expect(setSizeSpy).toHaveBeenCalledWith(1280, 600);
+    rmResize(handlers);
+    setSizeSpy.mockRestore();
+  });
+
+  it("cleanup：cancelPendingResize 取消在途帧 → 不再触发 setSize（防幽灵执行）", async () => {
+    const opts = mkOptions();
+    Object.defineProperty(opts.viewContainer, "clientWidth", { value: 800, configurable: true });
+    Object.defineProperty(opts.viewContainer, "clientHeight", { value: 600, configurable: true });
+    const setSizeSpy = vi.spyOn(opts.renderer!, "setSize");
+    const handlers = bindInputHandlers(opts);
+
+    handlers.onResize(); // rAF 已排队
+    handlers.cancelPendingResize?.(); // cleanup 同步取消
+    await flushRaf();
+    await flushRaf();
+
+    expect(setSizeSpy).not.toHaveBeenCalled();
+    // 解绑后新 resize 事件也不再排队执行
+    rmResize(handlers);
+    window.dispatchEvent(new Event("resize"));
+    await flushRaf();
+    expect(setSizeSpy).not.toHaveBeenCalled();
+    setSizeSpy.mockRestore();
+  });
+
+  it("多帧持续 resize → 每帧至多一次 setSize（跨帧不合并）", async () => {
+    const opts = mkOptions();
+    Object.defineProperty(opts.viewContainer, "clientWidth", { value: 800, configurable: true });
+    Object.defineProperty(opts.viewContainer, "clientHeight", { value: 600, configurable: true });
+    const setSizeSpy = vi.spyOn(opts.renderer!, "setSize");
+    const handlers = bindInputHandlers(opts);
+
+    window.dispatchEvent(new Event("resize"));
+    await flushRaf(); // 帧 1 执行
+    window.dispatchEvent(new Event("resize"));
+    await flushRaf(); // 帧 2 执行
+    window.dispatchEvent(new Event("resize"));
+    await flushRaf(); // 帧 3 执行
+
+    expect(setSizeSpy).toHaveBeenCalledTimes(3);
+    rmResize(handlers);
+    setSizeSpy.mockRestore();
   });
 });
 

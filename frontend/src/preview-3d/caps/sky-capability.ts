@@ -549,39 +549,33 @@ export class SkyCapability implements SceneCapability {
   /** 返回完整 params 浅拷贝（UI 面板 / 测试断言用，对齐其它 capability 口径） */
   getParams(): SkyParams { return { ...this.params }; }
 
-  // ── 昼夜循环动画（2026-08-20）──
-  // requestAnimationFrame 循环递增 timeOfDay，让用户预览全天光照变化。
+  // ── 昼夜循环动画（2026-08-20 引入；2026-09-03 迁入 SceneCapability.update(dt)）──
+  // 自建 rAF 循环已删除——此前与 mount-preview-core 全局唯一 rAF（L591 c.update?.(dt)）
+  // 双时钟并存，帧序 / document.hidden 暂停语义分裂；timeOfDay 推进改由核心帧循环驱动。
   // 速度：约 1 小时/秒（24 秒一圈），夜间会自然转暗。
-  private autoRotateId: number | null = null;
-  private autoRotateLastTs: number | null = null;
+  private autoRotateOn = false;
   private static readonly AUTO_ROTATE_HOURS_PER_SEC = 1;
 
-  /** 启动昼夜循环；已在跑则 no-op */
+  /** 启动昼夜循环；已开则 no-op（实际推进由 update(dt) 驱动） */
   startAutoRotate(): void {
-    if (this.autoRotateId !== null) return;
-    this.autoRotateLastTs = null;
-    const tick = (ts: number): void => {
-      if (this.autoRotateLastTs === null) this.autoRotateLastTs = ts;
-      const dt = (ts - this.autoRotateLastTs) / 1000; // 秒
-      this.autoRotateLastTs = ts;
-      const next = this.params.timeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC;
-      this.setTime(next);
-      this.autoRotateId = requestAnimationFrame(tick);
-    };
-    this.autoRotateId = requestAnimationFrame(tick);
+    this.autoRotateOn = true;
   }
 
-  /** 停止昼夜循环；未在跑则 no-op */
+  /** 停止昼夜循环；已停则 no-op */
   stopAutoRotate(): void {
-    if (this.autoRotateId === null) return;
-    cancelAnimationFrame(this.autoRotateId);
-    this.autoRotateId = null;
-    this.autoRotateLastTs = null;
+    this.autoRotateOn = false;
   }
 
   /** 当前是否正在昼夜循环 */
   isAutoRotating(): boolean {
-    return this.autoRotateId !== null;
+    return this.autoRotateOn;
+  }
+
+  /** SceneCapability.update(dt) 钩子（对齐 water-capability 用法）：dt 单位秒，
+   *  昼夜循环开启时按 1 小时/秒推进 timeOfDay；setTime 内部已取模 24。 */
+  update(dt: number): void {
+    if (!this.autoRotateOn) return;
+    this.setTime(this.params.timeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC);
   }
 
   /** 由 timeOfDay 推导太阳 elevation/azimuth（单一事实来源，避免与 setSun 双写冲突） */

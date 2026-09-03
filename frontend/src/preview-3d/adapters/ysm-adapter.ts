@@ -9,9 +9,10 @@
 //
 // YSM 特色保留：骨骼射线拾取（绑核心 renderer.domElement）、声明式根菜单专属项
 // （model/截图/骨骼 经 content.menuItems 由 mount 层统一 feed dock + 角色详情归口，ADR-076 v2 Phase 2、ADR-093）。
-// 已知降级（后续补）：调试模式（F 键 normal/pivot/bone 可视化）暂不接入 shared。
-// ⚠️ 已解除：F 键调试模式现已接入 shared 模式，经 rebuildDebug 复用旧 renderModel3D 的
-// 相同逻辑（pivot 线 + 骨骼连接 + Sprite 标签），与旧单例路径行为一致。
+// 调试模式（F 键 normal/pivot/bone 可视化）：渲染侧已接入 shared——rebuildDebug 复用旧
+// renderModel3D 的相同逻辑（pivot 线 + 骨骼连接 + Sprite 标签）。键盘接线 2026-09-03 修复：
+// 原挂 renderer.domElement（canvas 无 tabIndex/.focus() 保障 → keydown 永不触发，功能空转），
+// 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 MdYsMenuDebug.onFKeyDown 运输）。
 import * as THREE from "three";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { buildYsmObject, type YsmObjectHandle } from "../ysm-object.ts";
@@ -28,6 +29,7 @@ import type { Spec3D, BoneSelectInfo, BoneMaps } from "../model3d.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import type { BedrockGeometry } from "../decoder/geometry.ts";
 import type { PreviewScene, PreviewBuildCtx, PreviewAdapter } from "./mount-preview-core.ts";
+import { isEditableTarget } from "./input-and-animation.ts"; // 输入守卫复用（焦点在输入框不吞键）
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
@@ -425,6 +427,8 @@ function mdYsBuildMenuAndDebug(
   const onFKeyDown = (e: KeyboardEvent): void => {
     if (e.key !== "f" && e.key !== "F") return;
     if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+    // 焦点在输入框/滑块时切换调试模式会误吞打字——对齐 input-and-animation 键位守卫
+    if (isEditableTarget(e)) return;
     e.preventDefault();
     e.stopPropagation();
     const modes: Array<"normal" | "pivot" | "bone"> = ["normal", "pivot", "bone"];
@@ -433,7 +437,7 @@ function mdYsBuildMenuAndDebug(
     debugState.debugMode = nextMode;
     rebuildDebug(ctx.scene as THREE.Scene, obj.rootGroup, obj.boneGroupMap, spec, debugState);
   };
-  ctx.renderer!.domElement.addEventListener("keydown", onFKeyDown);
+  document.addEventListener("keydown", onFKeyDown); // 对齐 escH：canvas 不可聚焦，挂 document（2026-09-03）
 
   try {
     const allBones = spec.models?.flatMap((m) => m.bones ?? []) ?? [];
@@ -490,7 +494,7 @@ function mdYsMakeSceneHandle(
       // 已销毁纹理），且与 pack-model-adapter / screenshot-render 的 release 范式相悖。
       if (core.releaseTextures) core.releaseTextures();
       else console.warn("[ysm-adapter] preload 未提供 releaseTextures，纹理引用将泄漏（检查注入方契约）");
-      ctx.renderer!.domElement.removeEventListener("keydown", onFKeyDown);
+      document.removeEventListener("keydown", onFKeyDown); // 与挂载点配对（escH 同构）
       if (debugState.debugGroup) {
         disposeDebugGroup(debugState.debugGroup);
         debugState.debugGroup = null;

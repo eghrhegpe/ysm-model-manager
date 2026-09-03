@@ -735,22 +735,25 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
   });
 });
 
-// ============ 昼夜循环（happy-dom requestAnimationFrame）============
+// ============ 昼夜循环（SceneCapability.update(dt) 驱动；2026-09-03 起不再自建 rAF）============
 describe("SkyCapability — 昼夜循环 autoRotate", () => {
-  it("start/stop 切换与幂等；tick 推进 timeOfDay", async () => {
-    const cap = newCap();
+  it("start/stop 切换与幂等；update(dt) 推进 timeOfDay", () => {
+    const cap = newCap(); // DEFAULT_SKY_PARAMS.timeOfDay = 9
     expect(cap.isAutoRotating()).toBe(false);
+    cap.update(1); // 未启动 → no-op
+    expect(cap.getTimeOfDay()).toBe(9);
     cap.startAutoRotate();
     expect(cap.isAutoRotating()).toBe(true);
     cap.startAutoRotate(); // 幂等：不重复起循环
-    // happy-dom rAF ≈ 16ms/帧；1 小时/秒 → 100ms ≈ 0.1 小时
-    await new Promise((r) => setTimeout(r, 100));
-    expect(cap.getTimeOfDay()).toBeGreaterThan(9);
+    cap.update(1); // 1 秒 × 1 小时/秒
+    expect(cap.getTimeOfDay()).toBe(10);
+    cap.update(20); // 跨 24 点环绕：10 + 20 → 6
+    expect(cap.getTimeOfDay()).toBe(6);
     cap.stopAutoRotate();
     expect(cap.isAutoRotating()).toBe(false);
     const stopped = cap.getTimeOfDay();
-    await new Promise((r) => setTimeout(r, 50));
-    expect(cap.getTimeOfDay()).toBe(stopped); // 停止后不再推进
+    cap.update(5);
+    expect(cap.getTimeOfDay()).toBe(stopped); // 停止后 update 不再推进
   });
 
   it("stopAutoRotate 未启动时 no-op", () => {
@@ -759,15 +762,14 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
     expect(cap.isAutoRotating()).toBe(false);
   });
 
-  it("dispose 自动停止昼夜循环", async () => {
+  it("dispose 自动停止昼夜循环", () => {
     const cap = newCap();
     cap.startAutoRotate();
     expect(cap.isAutoRotating()).toBe(true);
     cap.dispose();
     expect(cap.isAutoRotating()).toBe(false);
-    await new Promise((r) => setTimeout(r, 40));
-    // dispose 后即使残留 rAF 也不推进（tick 内 setTime 仍会跑，但 stop 已解除链）
-    expect(cap.isAutoRotating()).toBe(false);
+    cap.update(1); // dispose 后 update 空转，timeOfDay 不再推进
+    expect(cap.getTimeOfDay()).toBe(DEFAULT_SKY_PARAMS.timeOfDay);
   });
 });
 

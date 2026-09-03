@@ -58,6 +58,16 @@ export interface MmdPanelHooks {
 // 原 60 字段扁平巨型接口按生命周期域拆分——每个域接口语义自洽，
 // 组合后行为与 `interface MdMmBuildCtx { ...60 字段... }` 完全等价。
 
+/** 失败路径统一释放注册表条目：stage 分配 GPU 资源后经 mdMmTrackAlloc 登记，
+ *  buildMmdScene finally 顺序遍历 free（每项独立 try/catch）。2026-09-03 起取代手工枚举，
+ *  杜绝新增资源字段忘 dispose 的静默泄漏。 */
+export interface MdMmAllocEntry {
+  /** 资源名（dbg 日志标识，如 mesh / mmd / pmxParser / ktx2Loader） */
+  name: string;
+  /** 释放动作（分配点登记时闭包捕获已分配对象，防字段被覆盖后漏释放） */
+  free: () => Promise<void> | void;
+}
+
 /** 输入/路径域：构建入口参数与解析出的模型字节/路径 */
 interface MdMmIoState {
   ctx: PreviewBuildCtx;
@@ -74,6 +84,8 @@ interface MdMmIoState {
   bytes: Uint8Array;
   modelBase: string;
   dirPath: string;
+  /** 失败释放注册表（2026-09-03；mmd-adapter buildMmdScene finally 统一遍历） */
+  alloc: MdMmAllocEntry[];
   blobUrls: string[];
   vmdPaths: string[];
   vpdPaths: string[];
@@ -161,6 +173,7 @@ export type MdMmStage1Ctx = Pick<
   MdMmBuildCtx,
   | "_traceFiles"
   | "_traceGpuMb"
+  | "alloc"
   | "blobUrlToHash"
   | "blobUrlToRel"
   | "blobUrls"
@@ -208,6 +221,7 @@ export type MdMmStage1bCtx = Pick<
 export type MdMmStage2Ctx = Pick<
   MdMmBuildCtx,
   | "_traceGpuMb"
+  | "alloc"
   | "ctx"
   | "effectivePath"
   | "effectivePort"
@@ -235,6 +249,7 @@ export type MdMmParsePmxCtx = Pick<
 
 export type MdMmParsePmdCtx = Pick<
   MdMmBuildCtx,
+  | "alloc"
   | "blobUrlToRel"
   | "decodedTexturesPromise"
   | "effectivePath"
@@ -251,6 +266,7 @@ export type MdMmParsePmdCtx = Pick<
 
 export type MdMmStage3Ctx = Pick<
   MdMmBuildCtx,
+  | "alloc"
   | "blobUrlToHash"
   | "blobUrls"
   | "buildSucceeded"

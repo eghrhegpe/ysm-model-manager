@@ -13,7 +13,7 @@ import { concurrentMap, isLikelyTga, TEXTURE_EXTS } from "./mmd-utils.ts";
 import { prepareMmdZipInput } from "./mmd-zip-overlay.ts";
 import { bytesToBase64 } from "../base64.ts";
 import { renderLoadingState } from "./preview-loading.ts";
-import { mmdDiag } from "./mmd-shared.ts";
+import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
 import type { MdMmDetectFormatCtx, MdMmStage1Ctx, MdMmStage1bCtx, MdMmStage2Ctx } from "./mmd-types.ts";
 
 export function mdMmDetectFormat(c: MdMmDetectFormatCtx): "pmx" | "pmd" {
@@ -74,6 +74,8 @@ export async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
   c.pmxParsePromise = null;
   if (c.usePmxWorker) {
     c.pmxParser = createPmxParser();
+    // 分配即登记失败释放（2026-09-03 注册表化；成功路径 parse 内已内联 dispose，此处兜底失败路径）
+    mdMmTrackAlloc(c, "pmxParser", () => c.pmxParser?.dispose?.());
     // worker parse 走 postMessage transfer——同步 detach 传入的 ArrayBuffer。必须给独立
     // 拷贝（slice），否则 c.bytes 的 buffer 被 detach 后，下方 573 行 Blob 构造拿到的
     // 是同源已 detach buffer（byteLength 0 → 异常或空模型 blob），zip 模式的 entries
@@ -309,6 +311,8 @@ export async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> 
       ktx2Loader: (c.ktx2Loader = new KTX2Loader().setTranscoderPath("/basis/").detectSupport(c.ctx.renderer)),
       fallbackLoader: new THREE.TextureLoader(c.manager),
     });
+    // KTX2 直读 loader 是 GPU 资源——分配即登记失败释放（2026-09-03 注册表化）
+    mdMmTrackAlloc(c, "ktx2Loader", () => c.ktx2Loader?.dispose());
     c.manager.addHandler(/\.(png|jpe?g|bmp|gif|webp)$/i, ktx2DirectLoader);
   }
 }

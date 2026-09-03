@@ -95,8 +95,9 @@ function codeActivatesAction(
   return false;
 }
 
-/** 事件目标是否为可编辑 / 可选择控件（输入框打字/滑块调整不被 3D 键位吞掉） */
-function isEditableTarget(e: KeyboardEvent): boolean {
+/** 事件目标是否为可编辑 / 可选择控件（输入框打字/滑块调整不被 3D 键位吞掉；
+ *  导出供其它适配器复用——ysm-adapter F 键调试切换同守卫） */
+export function isEditableTarget(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
   if (!t) return false;
   const tag = t.tagName;

@@ -8,7 +8,7 @@ import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
 import { registerModelRoot } from "../frustum-cull.ts";
 import { scheduleBackgroundEncoding } from "./mmd-ktx2-encoder.ts";
 import { DISPOSE_TEX_KEYS, matTexSlots } from "./mmd-utils.ts";
-import { mmdDiag } from "./mmd-shared.ts";
+import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
 import type { MdMmStage3Ctx } from "./mmd-types.ts";
 
 export async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
@@ -92,6 +92,8 @@ async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
         c.ktx2CacheLoader = new KTX2Loader()
           .setTranscoderPath("/basis/")
           .detectSupport(c.ctx.renderer);
+        // KTX2 缓存 loader 分配即登记失败释放（2026-09-03 注册表化）
+        mdMmTrackAlloc(c, "ktx2CacheLoader", () => c.ktx2CacheLoader?.dispose());
         const allMats: THREE.Material[] = Array.isArray(c.mesh.material)
           ? c.mesh.material
           : c.mesh.material

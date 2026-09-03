@@ -14,7 +14,8 @@ import (
 // ffiMu 串行化所有 FFI 调用。Rust ysm_scan/ysm_scan_manifest 线程安全性未经验证，
 // Go 侧加 Mutex 保证同一时刻只有一个 FFI 调用在飞行——扫描是重操作（IO bound），
 // 串行化开销可忽略，但能彻底避免数据竞争/panic 穿透 C 边界。
-// Windows（DLL）与 Linux/Darwin/Android（CGO）均通过此锁保护。
+// Windows（DLL LazyDLL）与 Linux/Darwin/Android（CGO 静态链接）均通过此锁保护。
+// 注意：ffiMu 仅保护 FFI 调用段（Lock→Call→append→defer free），不保护 load()（由 loadOnce sync.Once 保护）。
 var ffiMu sync.Mutex
 
 // parseResponse 将 Rust 扫描器返回的缓冲区字节解码为 ScanResponse：

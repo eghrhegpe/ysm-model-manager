@@ -8,31 +8,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(0);
-struct TempRoot(PathBuf);
-
-impl TempRoot {
-    fn new() -> Self {
-        let nonce = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        let stamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "ysm-wails-bridge-{}-{stamp}-{nonce}",
-            process::id()
-        ));
-        fs::create_dir_all(&path).unwrap();
-        Self(path)
-    }
-}
-
-impl Drop for TempRoot {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.0);
-    }
-}
+use rust_test_utils::TempRoot;
 
 fn registry() -> &'static str {
     r#"{"resourceTypes":[{"id":"ysm","extensions":[".ysm",".json"],"hashable":true}]}"#
@@ -40,7 +16,7 @@ fn registry() -> &'static str {
 
 #[test]
 fn response_preserves_wails_model_entry_contract() {
-    let root = TempRoot::new();
+    let root = TempRoot::test();
     fs::write(root.0.join("hero.ysm"), b"hero").unwrap();
     fs::write(root.0.join("animation.json"), b"{}").unwrap();
     let value = serde_json::to_value(scan_json(root.0.to_str().unwrap(), registry())).unwrap();
@@ -72,7 +48,7 @@ fn response_preserves_wails_model_entry_contract() {
 
 #[test]
 fn response_uses_parent_directory_name_for_ysm_json() {
-    let root = TempRoot::new();
+    let root = TempRoot::test();
     let model_dir = root.0.join("official-winefox");
     fs::create_dir_all(&model_dir).unwrap();
     fs::write(model_dir.join("ysm.json"), b"{}").unwrap();
@@ -119,7 +95,7 @@ fn missing_root_reports_scan_error_and_stays_uncacheable() {
 #[test]
 fn file_root_is_reported_not_a_directory() {
     // root 是文件而非目录：独立于「不可读」的错误分支（fs::metadata Ok 但 !is_dir）
-    let root = TempRoot::new();
+    let root = TempRoot::test();
     let file = root.0.join("plain-file.txt");
     fs::write(&file, b"x").unwrap();
     let value = serde_json::to_value(scan_json(file.to_str().unwrap(), registry())).unwrap();
@@ -130,7 +106,7 @@ fn file_root_is_reported_not_a_directory() {
 
 #[test]
 fn c_abi_buffer_can_be_released() {
-    let root = TempRoot::new();
+    let root = TempRoot::test();
     fs::write(root.0.join("hero.ysm"), b"hero").unwrap();
     let root_text = root.0.to_string_lossy();
     let mut buffer = YsmBuffer {
@@ -158,7 +134,7 @@ fn c_abi_buffer_can_be_released() {
 /// 同一棵树，两种发现方式，最终 entries 必须逐字段一致（路径/大小/扩展名/哈希/ModTime）。
 #[test]
 fn manifest_scan_matches_jwalk_scan() {
-    let root = TempRoot::new();
+    let root = TempRoot::test();
     fs::write(root.0.join("hero.ysm"), b"hero-content").unwrap();
     let model_dir = root.0.join("official-winefox");
     fs::create_dir_all(&model_dir).unwrap();
@@ -218,7 +194,7 @@ fn manifest_scan_matches_jwalk_scan() {
 /// manifest 含 policy 不支持的 ext → 被 scan_impl_manifest 丢弃，不产生条目（不 panic）。
 #[test]
 fn manifest_drops_unsupported_ext() {
-    let root = TempRoot::new();
+    let root = TempRoot::test();
     fs::write(root.0.join("note.txt"), b"x").unwrap();
     let note_path = root.0.join("note.txt").to_string_lossy().replace('\\', "/");
     let manifest = format!(
@@ -238,7 +214,7 @@ fn manifest_drops_unsupported_ext() {
 /// 无效 manifest JSON → fatal，不 panic（ABI 安全网）。用存在的 root 排除 not-readable 分支。
 #[test]
 fn invalid_manifest_is_fatal() {
-    let root = TempRoot::new();
+    let root = TempRoot::test();
     let value = serde_json::to_value(scan_json_manifest(
         &root.0.to_string_lossy(),
         registry(),
@@ -257,7 +233,7 @@ fn invalid_manifest_is_fatal() {
 /// 用测试锁定避免未来重构时误改动。
 #[test]
 fn manifest_path_leaves_rtype_empty() {
-    let root = TempRoot::new();
+    let root = TempRoot::test();
     fs::write(root.0.join("hero.ysm"), b"hero").unwrap();
     let hero_path = root.0.join("hero.ysm").to_string_lossy().replace('\\', "/");
     // manifest 中传入非空 type → scan_impl_manifest 信任调用方，ModelEntry.rtype = "ysm"

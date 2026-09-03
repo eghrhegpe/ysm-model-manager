@@ -1,5 +1,6 @@
 use super::*;
 use super::scan::{is_disable_suffix, is_model_json_name, strip_disable_suffix};
+use rust_test_utils::TempRoot;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -7,40 +8,6 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(0);
-
-struct TempRoot(PathBuf);
-
-impl TempRoot {
-    fn new(label: &str) -> Self {
-        let nonce = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "ysm-rust-core-{label}-{}-{timestamp}-{nonce}",
-            process::id()
-        ));
-        fs::create_dir_all(&path).unwrap();
-        Self(path)
-    }
-
-    fn path(&self) -> &Path {
-        &self.0
-    }
-}
-
-impl Drop for TempRoot {
-    fn drop(&mut self) {
-        // 清理失败仅 eprintln：测试环境中 temp 目录残留不影响后续测试（nonce 唯一），
-        // 但静默吞掉错误会让 CI 排查困难，故至少输出警告。
-        if fs::remove_dir_all(&self.0).is_err() {
-            eprintln!("[test] warn: failed to clean up TempRoot {:?}", self.0);
-        }
-    }
-}
 
 fn policy() -> ScanPolicy {
     ScanPolicy::from_registry_json(

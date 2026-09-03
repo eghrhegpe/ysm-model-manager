@@ -20,6 +20,10 @@ pub fn scan_fast(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
 /// discoverable and can be re-enabled after a restart. This is a **deliberate divergence**
 /// from Go `scanner.ScanEntries` (which always skips them) — see rustbridge.md contract table.
 ///
+/// **命名含 `_no_hash` 后缀**：本函数不补哈希（类似 `scan_fast`），调用方需自行调
+/// `hydrate_hashes` 后再使用 `entry.hash` 字段。若未来新增补哈希版本，此处改为 `_no_hash`
+/// 前缀而非函数体重构——避免调用方误以为 hash 已填。
+///
 /// **预留接口**：当前无生产消费方（rust-wails-bridge 的两个生产入口均走 `scan_fast` 或
 /// `scan_impl_manifest`，不下钻禁用目录）。本函数仅被 `tests.rs` 引用。若未来「新桌面壳列出
 /// 并再启用禁用模型」立项，此处可直接复用；在此之前视为孤儿代码，行为变更需经代码评审。

@@ -11,3 +11,4 @@ crate-type = ["rlib", "cdylib", "staticlib"]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ysm-model-manager-core = { path = "../rust-core" }
+rust-test-utils = { path = "../rust-test-utils" }

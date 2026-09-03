@@ -769,7 +769,7 @@ export const zhCN = {
   "sync.configureResourceTypeDir": "请先配置该资源类型目录",
   "sync.configureDir": "请先配置目录",
   "sync.noPacks": "没有找到整合包",
-  "sync.missingRtype": "sync:download:missing 缺少 rtype 参数",
+  "sync.missingRtype": "缺少资源类型参数",
   "sync.downloadDone": "📥 {name}: 导入 {ok} 成功, {fail} 失败",
   "sync.downloadAllDone": "📥 全部导入完成: {ok} 成功, {fail} 失败",
   "sync.disableN": "禁用 {n} 项",
@@ -955,7 +955,6 @@ export const zhCN = {
   "settings.mc.found": "✅ 找到 {n} 个",
 
   // ── 设置页 - 镜像源 ──
-  "settings.mirror.changed": "✅ 下载源已切换为 {mirror}",
   "settings.updateCheck.title": "版本检查间隔",
   "settings.updateCheck.option6h": "6 小时",
   "settings.updateCheck.option12h": "12 小时",
@@ -963,46 +962,6 @@ export const zhCN = {
   "settings.updateCheck.off": "关闭自动检查",
   "settings.updateCheck.desc": "启动时静默检查新版本的频次（默认 6 小时）",
   "settings.updateCheck.saved": "版本检查间隔已保存",
-  "settings.mirror.direct": "直连",
-
-  // ── 设置页 - 重新链接 ──
-  "settings.relink.needGameRoot": "请先设置游戏根目录",
-  "settings.relink.someFailed": "⚠️ {n} 个整合包重新链接失败",
-  "settings.relink.noneNeeded": "没有需要重新链接的文件",
-  "settings.relink.doneWithFail": "🔄 已重新链接 {total} 个文件（{failed} 个失败）",
-  "settings.relink.done": "🔄 已重新链接 {total} 个文件",
-  "settings.relink.error": "❌ {error}",
-
-  // ── 设置页 - 链接模式 ──
-  "settings.link.changed": "✅ 链接模式已切换至: {mode}",
-  "settings.linkModeChanged": "链接模式已切换至",
-  "settings.reapplyLinks": "重新应用链接模式",
-  "settings.reapplyDone": "重新应用完成",
-  "settings.reapplyFailed": "重新应用失败",
-  "settings.mirrorChanged": "镜像源已切换至",
-  "settings.storageUpdated": "文件存储路径已更新",
-  "settings.gameRootUpdated": "游戏根目录已更新",
-  "settings.noDirectory": "未选择目录",
-  "settings.autoSearching": "自动搜索中…",
-  "settings.autoSearchDone": "自动搜索完成",
-  "settings.mcNotFound": "未找到 Minecraft 路径",
-  "settings.mcMultipleFound": "检测到多个 Minecraft 路径",
-
-  // ── 设置页 - 3D 预览键位 ──
-  "settings.td.forward": "前移",
-  "settings.td.back": "后移",
-  "settings.td.left": "左移",
-  "settings.td.right": "右移",
-  "settings.td.up": "上升",
-  "settings.td.down": "下降",
-  "settings.td.space": "空格",
-  "settings.td.shiftRight": "Shift(右)",
-  "settings.td.ctrlRight": "Ctrl(右)",
-  "settings.td.altRight": "Alt(右)",
-  "settings.td.pressing": "按键…",
-  "settings.td.conflict": "⚠️ {key} 已被「{action}」占用",
-  "settings.td.bound": "✅ {action} → {key}",
-  "settings.td.resetKeys": "↩️ 已恢复默认键位",
 
   // ── 文件树 ──
   "tree.selectDirFailed": "选择仓库目录失败",
@@ -1063,7 +1022,7 @@ export const zhCN = {
   "preview.stats.materials": "材质",
   "preview.stats.textures": "纹理",
   "preview.stats.morphs": "表情",
-  "preview.stats.cubes": "立方体(Cubes)",
+  "preview.stats.cubes": "立方体 (Cubes)",
   "preview.pack.textures": "专属纹理",
   // MMD 详情卡（P2：PMX 文件解析口径，与渲染实测区分）
   "preview.stats.file": "📊 文件统计",

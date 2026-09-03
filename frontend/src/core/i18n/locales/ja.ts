@@ -765,7 +765,7 @@ export const ja: Record<string, string> = {
   "sync.configureResourceTypeDir": "リソースタイプのディレクトリを先に設定してください",
   "sync.configureDir": "ディレクトリを先に設定してください",
   "sync.noPacks": "統合パックが見つかりません",
-  "sync.missingRtype": "sync:download:missing rtype パラメータがありません",
+  "sync.missingRtype": "リソースタイプのパラメータがありません",
   "sync.downloadDone": "📥 {name}: 正常 {ok}、失敗 {fail}",
   "sync.downloadAllDone": "📥 全部インポート完了: 正常 {ok}、失敗 {fail}",
   "sync.disableN": "無効化 {n} 項",
@@ -951,7 +951,6 @@ export const ja: Record<string, string> = {
   "settings.mc.found": "✅ {n} 個見つかりました",
 
   // ── Settings - Mirror ──
-  "settings.mirror.changed": "✅ ダウンロードミラーを {mirror} に切り替えました",
   "settings.updateCheck.title": "更新確認の間隔",
   "settings.updateCheck.option6h": "6 時間",
   "settings.updateCheck.option12h": "12 時間",
@@ -959,46 +958,8 @@ export const ja: Record<string, string> = {
   "settings.updateCheck.off": "自動確認を無効化",
   "settings.updateCheck.desc": "起動時に新バージョンを静かに確認する頻度（既定 6 時間）",
   "settings.updateCheck.saved": "更新確認の間隔を保存しました",
-  "settings.mirror.direct": "直接接続",
 
-  // ── Settings - Relink ──
-  "settings.relink.needGameRoot": "まずゲームルートディレクトリを設定してください",
-  "settings.relink.someFailed": "⚠️ {n} 個の統合パックの再リンクに失敗しました",
-  "settings.relink.noneNeeded": "再リンクが必要なファイルはありません",
-  "settings.relink.doneWithFail": "🔄 {total} 個のファイルを再リンクしました（{failed} 個失敗）",
-  "settings.relink.done": "🔄 {total} 個のファイルを再リンクしました",
-  "settings.relink.error": "❌ {error}",
-
-  // ── Settings - Link Mode ──
-  "settings.link.changed": "✅ リンクモードを {mode} に切り替えました",
-  "settings.linkModeChanged": "リンクモードを切り替えました",
-  "settings.reapplyLinks": "リンクモードを再適用",
-  "settings.reapplyDone": "再適用が完了しました",
-  "settings.reapplyFailed": "再適用に失敗しました",
-  "settings.mirrorChanged": "ミラーを切り替えました",
-  "settings.storageUpdated": "ファイル保存パスを更新しました",
-  "settings.gameRootUpdated": "ゲームルートディレクトリを更新しました",
-  "settings.noDirectory": "ディレクトリが選択されていません",
-  "settings.autoSearching": "自動検索中…",
-  "settings.autoSearchDone": "自動検索が完了しました",
-  "settings.mcNotFound": "Minecraftのパスが見つかりません",
-  "settings.mcMultipleFound": "複数のMinecraftパスが検出されました",
-
-  // ── Settings - 3D Preview Keybindings ──
-  "settings.td.forward": "前進",
-  "settings.td.back": "後退",
-  "settings.td.left": "左",
-  "settings.td.right": "右",
-  "settings.td.up": "上",
-  "settings.td.down": "下",
-  "settings.td.space": "スペース",
-  "settings.td.shiftRight": "Shift（右）",
-  "settings.td.ctrlRight": "Ctrl（右）",
-  "settings.td.altRight": "Alt（右）",
-  "settings.td.pressing": "キーを押してください…",
-  "settings.td.conflict": "⚠️ {key} は既に「{action}」に割り当てられています",
-  "settings.td.bound": "✅ {action} → {key}",
-  "settings.td.resetKeys": "↩️ キーバインドをデフォルトに戻しました",
+  // ── Settings - Relink / Link Mode (dead keys removed) ──
 
   // ── File Tree ──
   "tree.selectDirFailed": "リポジトリディレクトリの選択に失敗しました",
@@ -1059,7 +1020,7 @@ export const ja: Record<string, string> = {
   "preview.stats.materials": "マテリアル",
   "preview.stats.textures": "テクスチャ",
   "preview.stats.morphs": "表情",
-  "preview.stats.cubes": "立方体(Cubes)",
+  "preview.stats.cubes": "キューブ (Cubes)",
   "preview.pack.textures": "专属纹理",
   // MMD 詳細カード（P2: PMX ファイル解析口径, 描画実測と区別）
   "preview.stats.file": "📊 ファイル統計",

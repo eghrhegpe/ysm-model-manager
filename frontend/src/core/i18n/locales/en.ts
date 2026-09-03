@@ -764,7 +764,7 @@ export const en: Record<string, string> = {
   "sync.configureResourceTypeDir": "Configure the resource-type directory first",
   "sync.configureDir": "Configure directories first",
   "sync.noPacks": "No modpacks found",
-  "sync.missingRtype": "sync:download:missing missing rtype param",
+  "sync.missingRtype": "Missing resource type parameter",
   "sync.downloadDone": "📥 {name}: imported {ok} ok, {fail} failed",
   "sync.downloadAllDone": "📥 Import complete: {ok} ok, {fail} failed",
   "sync.disableN": "Disabled {n} item(s)",
@@ -950,7 +950,6 @@ export const en: Record<string, string> = {
   "settings.mc.found": "✅ Found {n}",
 
   // ── Settings - Mirror ──
-  "settings.mirror.changed": "✅ Download mirror switched to {mirror}",
   "settings.updateCheck.title": "Update check interval",
   "settings.updateCheck.option6h": "6 hours",
   "settings.updateCheck.option12h": "12 hours",
@@ -958,46 +957,8 @@ export const en: Record<string, string> = {
   "settings.updateCheck.off": "Disable auto check",
   "settings.updateCheck.desc": "How often to silently check for updates on startup (default 6 hours)",
   "settings.updateCheck.saved": "Update check interval saved",
-  "settings.mirror.direct": "Direct",
 
-  // ── Settings - Relink ──
-  "settings.relink.needGameRoot": "Please set the game root directory first",
-  "settings.relink.someFailed": "⚠️ Relink failed for {n} modpacks",
-  "settings.relink.noneNeeded": "No files need relinking",
-  "settings.relink.doneWithFail": "🔄 Relinked {total} files ({failed} failed)",
-  "settings.relink.done": "🔄 Relinked {total} files",
-  "settings.relink.error": "❌ {error}",
-
-  // ── Settings - Link Mode ──
-  "settings.link.changed": "✅ Link mode switched to: {mode}",
-  "settings.linkModeChanged": "Link mode switched to",
-  "settings.reapplyLinks": "Reapply link mode",
-  "settings.reapplyDone": "Reapply completed",
-  "settings.reapplyFailed": "Reapply failed",
-  "settings.mirrorChanged": "Mirror switched to",
-  "settings.storageUpdated": "File storage path updated",
-  "settings.gameRootUpdated": "Game root directory updated",
-  "settings.noDirectory": "No directory selected",
-  "settings.autoSearching": "Auto searching…",
-  "settings.autoSearchDone": "Auto search complete",
-  "settings.mcNotFound": "Minecraft path not found",
-  "settings.mcMultipleFound": "Multiple Minecraft paths detected",
-
-  // ── Settings - 3D Preview Keybindings ──
-  "settings.td.forward": "Forward",
-  "settings.td.back": "Back",
-  "settings.td.left": "Left",
-  "settings.td.right": "Right",
-  "settings.td.up": "Up",
-  "settings.td.down": "Down",
-  "settings.td.space": "Space",
-  "settings.td.shiftRight": "Shift (Right)",
-  "settings.td.ctrlRight": "Ctrl (Right)",
-  "settings.td.altRight": "Alt (Right)",
-  "settings.td.pressing": "Press key…",
-  "settings.td.conflict": "⚠️ {key} is already bound to \"{action}\"",
-  "settings.td.bound": "✅ {action} → {key}",
-  "settings.td.resetKeys": "↩️ Keybindings restored to default",
+  // ── Settings - Relink / Link Mode (dead keys removed) ──
 
   // ── File Tree ──
   "tree.selectDirFailed": "Failed to select repository directory",

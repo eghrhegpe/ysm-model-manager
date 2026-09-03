@@ -116,7 +116,7 @@ async function handleSyncDownloadMissing(
     failed = true;
     skipReason = "config";
     bus.emit("toast:show", {
-      msg: "sync:download:missing 缺少 rtype 参数",
+      msg: t("sync.missingRtype"),
       duration: TOAST_MS.long,
       type: "error",
     });

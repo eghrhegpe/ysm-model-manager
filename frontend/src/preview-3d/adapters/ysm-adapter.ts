@@ -38,6 +38,7 @@ import { b64ToBytes } from "../base64.ts";
 import type { MmdPlayBridge } from "../../views/app-preview/mmd-controls.ts";
 import { ysmSemanticBoneMap } from "../semantic-bones.ts";
 import { createBreathController } from "../perception/breath.ts";
+import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
 import { recordLoadTrace } from "../load-trace.ts";
 
 /** 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 */
@@ -492,7 +493,10 @@ function mdYsMakeSceneHandle(
     onBonePick: (id: string) => ctx.menu.openPanel(id),
     update: (dt: number): void => {
       animPlayer?.apply(dt);
-      if (semanticBones && !animPlayer?.isAnimActive() && perceptionState.breath) {
+      // #9 全局暂停标志：动画激活时感知 controller 自查静默（breath 已挂标志），
+      // 取代原先散布的 `!animPlayer?.isAnimActive()` 守卫。
+      setPerceptionPaused(!!animPlayer?.isAnimActive());
+      if (semanticBones && perceptionState.breath) {
         breath?.apply(dt, semanticBones);
       }
     },

@@ -235,7 +235,7 @@ func marshalAuditJSON(v interface{}) ([]byte, error) {
 }
 
 // printRepoAuditResult 打印仓库审计结果
-func printRepoAuditResult(result repoaudit.Result) {
+func printRepoAuditResult(result repoaudit.DirAuditResult) {
 	fmt.Printf("🏥 仓库健康审计报告:\n")
 	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 

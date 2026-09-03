@@ -15,6 +15,7 @@
 
 import * as THREE from "three";
 import { getSemanticBone, type SemanticBoneMap, type SemanticBoneId } from "../semantic-bones.ts";
+import { isPerceptionPaused } from "./core.ts";
 
 /** 呼吸驱动的语义骨骼列表（躯干段）：顺序即优先级，先 chest 再 fallback spine/shoulders */
 const BREATH_BONES: SemanticBoneId[] = ["chest", "upperChest", "spine", "leftShoulder", "rightShoulder"];
@@ -69,6 +70,7 @@ export function createBreathController() {
    * @param map   当前预览会话的语义骨骼映射（previewScene.semanticBones）
    */
   function apply(dt: number, map: SemanticBoneMap): void {
+    if (isPerceptionPaused()) return; // 动画激活时感知静默（#9 全局暂停标志）
     warmup(map);
     if (!state) return;
     // 推进 cycle 时间

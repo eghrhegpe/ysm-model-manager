@@ -3,6 +3,11 @@
 // 历史：审计逻辑原在 go/cli（resource.go collectRepoHealth），GUI 侧如果自算一套
 // 会形成「前端算一遍、CLI 算一遍」的双轨（roadmap 方向 A 遗留）。本包把审计核心
 // 抽成独立层：cli 与 internal/app 绑定都调同一实现，后续审计口径只改这一处。
+//
+// 两层结构语义（命名即边界）：
+//   - DirAuditResult = 单目录审计结果（Audit() 返回），CLI repo-audit 命令序列化输出
+//   - HealthReport   = 完整体检：审计 + 去重（HealthReportFor() 返回），
+//     GUI 体检绑定（RepoHealthAudit）与 CLI health-report 命令共用同一载荷
 package repoaudit
 
 import (
@@ -60,8 +65,8 @@ const (
 	scoreFloor = 30
 )
 
-// Result 仓库审计结果（结构对齐原 go/cli repoAuditResult）
-type Result struct {
+// DirAuditResult 单目录审计结果（Audit() 返回；结构对齐原 go/cli repoAuditResult）
+type DirAuditResult struct {
 	Timestamp    string          `json:"timestamp"`
 	Directory    string          `json:"directory"`
 	Completeness Completeness    `json:"completeness"`
@@ -87,6 +92,8 @@ type CacheStatus struct {
 	HitRate    float64 `json:"hit_rate"`
 	Hits       int     `json:"hits"`
 	Misses     int     `json:"misses"`
+	// ShouldWarn 容量接近上限（texture_cache 阈值），体检页提示清理
+	ShouldWarn bool `json:"should_warn,omitempty"`
 }
 
 // ResourceSummary 资源统计
@@ -122,14 +129,14 @@ type HealthReport struct {
 // 这是 repo-audit 与 GUI 绑定 RepoHealthAudit 的唯一实现来源。
 // 目录不存在/不可用必须先报错——filepath.Walk 对不存在目录只回错误回调却返回 nil，
 // 会静默产出「空报告 = 假绿」（与 dedup.ErrSymlinkRoot 同族陷阱）。
-func Audit(dirPath string) (Result, error) {
+func Audit(dirPath string) (DirAuditResult, error) {
 	if st, err := os.Stat(dirPath); err != nil {
-		return Result{}, fmt.Errorf("审计目录不可用 %q: %w", dirPath, err)
+		return DirAuditResult{}, fmt.Errorf("审计目录不可用 %q: %w", dirPath, err)
 	} else if !st.IsDir() {
-		return Result{}, fmt.Errorf("审计目标不是目录: %s", dirPath)
+		return DirAuditResult{}, fmt.Errorf("审计目标不是目录: %s", dirPath)
 	}
 
-	result := Result{
+	result := DirAuditResult{
 		Timestamp:    time.Now().UTC().Format(time.RFC3339),
 		Directory:    dirPath,
 		Completeness: Completeness{},
@@ -232,6 +239,7 @@ func Audit(dirPath string) (Result, error) {
 	result.Cache.CacheDir = stats.Dir
 	result.Cache.CacheFiles = stats.FileCount
 	result.Cache.CacheSize = stats.TotalSize
+	result.Cache.ShouldWarn = stats.ShouldWarn
 
 	// 缓存命中率：缓存文件数 / 仓库总文件数（口径稳定，不依赖类型分类）
 	totalFiles := result.Resources.TotalFiles
@@ -286,7 +294,7 @@ func HealthReportFor(dirPath string) (HealthReport, error) {
 
 // calculateAuditScore 计算健康分数
 // 扣分有下限（scoreFloor），避免多问题叠加直接归零失去区分度
-func calculateAuditScore(result Result) int {
+func calculateAuditScore(result DirAuditResult) int {
 	score := 100
 
 	if result.Completeness.Percentage < 100 {
@@ -311,7 +319,7 @@ func calculateAuditScore(result Result) int {
 }
 
 // generateAuditWarnings 生成审计警告
-func generateAuditWarnings(result *Result) {
+func generateAuditWarnings(result *DirAuditResult) {
 	if result.Completeness.Percentage < warnCompletenessPct {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("模型完整性 %.1f%% 低于 %.0f%% 阈值", result.Completeness.Percentage, warnCompletenessPct))
@@ -323,6 +331,12 @@ func generateAuditWarnings(result *Result) {
 	if result.Resources.LargestSize > int64(warnLargeFileMB)*1024*1024 {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("存在超大文件 (%s)，可能影响加载性能", formatSize(result.Resources.LargestSize)))
+	}
+	// 容量「接近上限」预告警：ShouldWarn（>0.8 上限）且未达硬阈值时提示，
+	// 与下方「已达」警告错峰，避免 0.8GB~1GB 区间双弹。
+	if result.Cache.ShouldWarn && result.Cache.CacheSize <= int64(warnCacheSizeGB)*1024*1024*1024 {
+		result.Warnings = append(result.Warnings,
+			fmt.Sprintf("缓存大小接近上限 (%s)，建议定期清理", formatSize(result.Cache.CacheSize)))
 	}
 	if result.Cache.CacheSize > int64(warnCacheSizeGB)*1024*1024*1024 {
 		result.Warnings = append(result.Warnings,

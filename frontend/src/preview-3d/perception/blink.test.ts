@@ -1,9 +1,11 @@
 // @vitest-environment node
 // ===== 感知层：眨眼 测试（blink.ts）=====
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createBlinkController, type BlinkCallback } from "./blink.ts";
+import { setPerceptionPaused } from "./core.ts"; // #9 全局暂停标志
 
 describe("createBlinkController", () => {
+  beforeEach(() => setPerceptionPaused(false)); // 防测试间全局标志串扰
   function collect(cb: BlinkCallback): number[] {
     const traces: number[] = [];
     const wrap: BlinkCallback = (w) => traces.push(w);
@@ -63,6 +65,16 @@ describe("createBlinkController", () => {
     ctrl.dispose();
     ctrl.apply(1, (w) => traces.push(w));
     expect(traces).toHaveLength(0);
+  });
+
+  it("全局暂停标志下不触发（#9）", () => {
+    const traces: number[] = [];
+    const ctrl = createBlinkController({ minInterval: 0.001, maxInterval: 0.001, blinkDuration: 0.01 });
+    setPerceptionPaused(true);
+    for (let i = 0; i < 20; i++) ctrl.apply(0.016, (w) => traces.push(w));
+    setPerceptionPaused(false);
+    expect(traces).toHaveLength(0);
+    ctrl.dispose();
   });
 
   it("reset 清除状态（下次 apply 重新调度，不立即触发）", () => {

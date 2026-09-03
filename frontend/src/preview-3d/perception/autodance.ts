@@ -12,6 +12,7 @@
 
 import * as THREE from "three";
 import { getSemanticBone, type SemanticBoneMap, type SemanticBoneId } from "../semantic-bones.ts";
+import { isPerceptionPaused } from "./core.ts";
 
 /** 节拍 detector 接口（抽象，解耦具体实现） */
 export interface BeatDetectorLike {
@@ -109,7 +110,7 @@ export function createAutoDanceController(opts: AutoDanceOptions = {}) {
    * @param map 语义骨骼映射
    */
   function apply(dt: number, map: SemanticBoneMap): void {
-    if (disposed || !enabled) return;
+    if (disposed || !enabled || isPerceptionPaused()) return; // #9 全局暂停标志
     warmup(map);
     if (!state) return;
 

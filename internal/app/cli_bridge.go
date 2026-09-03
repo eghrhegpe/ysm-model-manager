@@ -28,6 +28,23 @@ func (a *App) isCommandAllowed(command string) bool {
 }
 
 // ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定）
+//
+// # GUI→CLI 参数链路（#5 短期文档注释，中期收敛为 ParamSpec 元数据）
+//
+//	frontend cli-bridge.executeCLI → buildArgsMap（Record<string,string|number|boolean>）
+//	→ Wails map[string]interface{}（JSON 序列化过桥，数值一律 float64）
+//	→ 本函数转 []string → os/exec 子进程 <exe> --cli <args> --json
+//	→ go/cli ParseCommandArgs 剥离全局参数（--files-root/--json）
+//	→ 各命令内部 flag.FlagSet 解析（go/cli/registry.go 注册）
+//
+// # 参数转换损耗点（新增命令参数必须同步核对）
+//
+//   - string: 空串丢弃——无法传显式空值（如需传空串语义，改走 ParamSpec 白名单）
+//   - float64: 0 丢弃——无法传 0（0 与「未传」同义，flag 层也无法区分）
+//   - bool: false 丢弃——无法传显式 false（仅 true 会产出 --flag）
+//   - 其他类型（nil / int / map / slice）：静默跳过 + stderr 告警，防参数丢失
+//   - filesRoot: 特殊键名 → --files-root（必填，缺省回退 GetYSMRepoRoot()）
+//   - Go map 遍历无序 → 参数顺序不确定；仅 flag 语义命令安全，位置参数命令不可走此桥
 func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 	start := time.Now()
 
@@ -61,16 +78,18 @@ func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 
 	cmdArgs = append(cmdArgs, command)
 
-	// 添加命令参数
+	// 添加命令参数（#5：转换损耗语义见函数头注释——空串/0/false 丢弃）
 	for k, v := range args {
 		if k == "filesRoot" {
 			continue
 		}
 		switch val := v.(type) {
+		// param: <key> → --<key> <val> (string, 空串丢弃)
 		case string:
 			if val != "" {
 				cmdArgs = append(cmdArgs, "--"+k, val)
 			}
+		// param: <key> → --<key> <val> (number, 0 丢弃；JSON 数值恒 float64，整数转 %d 防精度漂移)
 		case float64:
 			if val != 0 {
 				if val == float64(int64(val)) {
@@ -79,6 +98,7 @@ func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 					cmdArgs = append(cmdArgs, "--"+k, fmt.Sprintf("%g", val))
 				}
 			}
+		// param: <key> → --<key> (bool, false 丢弃——仅 true 产出开关)
 		case bool:
 			if val {
 				cmdArgs = append(cmdArgs, "--"+k)

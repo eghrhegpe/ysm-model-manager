@@ -42,6 +42,7 @@ import {
 import { createAutoDanceController } from "../perception/autodance.ts"; // 语义骨骼消费方：程序化生命力 L3
 import { createBlinkController } from "../perception/blink.ts"; // 语义 morph 消费方：程序化生命力 L1.5
 import { createBreathController } from "../perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
+import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
 import { createGazeController } from "../perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
 import { buildLipMorphIndices, createLipSyncController } from "../perception/lipsync.ts"; // 多 morph index 提取
 import { safeDispose } from "../safe-dispose.ts";
@@ -1361,6 +1362,9 @@ function mdMmStage6Result(
   const result: PreviewScene = {
     menuItems: items,
     update: (dt: number): void => {
+      // #9 全局暂停标志：动画激活（action 存在且未暂停）时感知 controller 全部静默，
+      // 取代原先散布在各 if 上的 `!c.action || c.action.paused` 守卫。
+      setPerceptionPaused(!!c.action && !c.action.paused);
       if (c.cameraMixer && c.cameraAction && !c.cameraAction.paused) {
         c.cameraMixer.update(dt);
         const cam = c.ctx.camera;
@@ -1375,9 +1379,10 @@ function mdMmStage6Result(
       if (!c.mesh.visible) return;
       c.mmd?.updateWithMixer(dt, c.mixer, { ik: true, grant: true });
       if (semanticBones) {
-        if ((!c.action || c.action.paused) && c.perceptionState.breath)
+        if (c.perceptionState.breath)
           breath.apply(dt, semanticBones);
         // camera 可选（self 模式 undefined）：缺失时 gaze 无法取观察点 → 跳过
+        // gaze 不挂全局暂停标志（注视相机属摄像机追踪，非动画优先级——保持动画中也跟随）
         if (c.perceptionState.gaze && c.ctx.camera)
           gaze.apply(dt, semanticBones, c.ctx.camera.position);
       }
@@ -1386,7 +1391,6 @@ function mdMmStage6Result(
         blinkEntry &&
         c.mesh.morphTargetDictionary &&
         c.mesh.morphTargetInfluences &&
-        (!c.action || c.action.paused) &&
         c.perceptionState.blink
       ) {
         const idx = c.mesh.morphTargetDictionary[blinkEntry.name];
@@ -1398,7 +1402,7 @@ function mdMmStage6Result(
           });
         }
       }
-      if (lipIndices && (!c.action || c.action.paused) && c.perceptionState.lipSync) {
+      if (lipIndices && c.perceptionState.lipSync) {
         lipSyncTime += dt;
         const breathPhase = Math.sin((lipSyncTime / 2.5) * Math.PI * 2);
         const openAmp = Math.max(0, breathPhase) * 0.4;
@@ -1418,9 +1422,9 @@ function mdMmStage6Result(
           if (idx !== undefined && influences) influences[idx] = weight;
         });
       }
-      const isIdle = !c.action || c.action.paused;
+      const isIdle = !(c.action && !c.action.paused);
       footIK.apply(dt, isIdle);
-      if (isIdle && c.perceptionState.autoDance) {
+      if (c.perceptionState.autoDance) {
         autoDance.apply(dt, semanticBones ?? {});
       }
     },

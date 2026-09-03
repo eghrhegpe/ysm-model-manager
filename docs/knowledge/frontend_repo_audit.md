@@ -699,6 +699,7 @@ auto_fields:
     - isModelMissing
     - isObj
     - isPathAvailable
+    - isPerceptionPaused
     - isPreviewFolderNode
     - isRecyclePath
     - isRenderableModel
@@ -1233,6 +1234,7 @@ auto_fields:
     - setMmdMaterialOpacity
     - setMmdMaterialVisible
     - setMolangScope
+    - setPerceptionPaused
     - setPerfPreset
     - setPrefer3D
     - setRenderMode

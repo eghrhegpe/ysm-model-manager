@@ -12,10 +12,10 @@ auto_fields:
     - Classify
     - Completeness
     - DedupSummary
+    - DirAuditResult
     - HealthReport
     - HealthReportFor
     - ResourceSummary
-    - Result
   use_when:
     - 仓库审计
     - 健康分数

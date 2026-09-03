@@ -181,9 +181,10 @@ func ListCacheFiles() ([]CacheEntry, error) {
 
 // CacheStats 缓存统计信息
 type CacheStats struct {
-	Dir       string
-	FileCount int
-	TotalSize int64
+	Dir        string
+	FileCount  int
+	TotalSize  int64
+	ShouldWarn bool // 容量接近上限（> 0.8 * maxCacheBytes）时置真，体检页提示清理
 }
 
 // GetCacheStats 获取缓存统计
@@ -215,6 +216,13 @@ func GetCacheStats() CacheStats {
 		stats.FileCount++
 		stats.TotalSize += info.Size()
 	}
+
+	// 容量告警：接近上限（> 0.8 * maxCacheBytes）即提示，早于淘汰阈值预警清理。
+	// 阈值经 pruneMu 快照（与 Prune 同范式），避免与 SetCacheLimits 并发写竞争。
+	pruneMu.Lock()
+	maxBytes := maxCacheBytes
+	pruneMu.Unlock()
+	stats.ShouldWarn = maxBytes > 0 && stats.TotalSize > maxBytes*4/5
 
 	return stats
 }

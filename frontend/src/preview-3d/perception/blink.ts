@@ -20,6 +20,8 @@
 //     vrm.expressionManager.setValue("blink", weight);
 //   });
 
+import { isPerceptionPaused } from "./core.ts";
+
 /** 眨眼 callback：被 controller 在眨眼周期内周期性调用，传入当前权重（0→1→0） */
 export type BlinkCallback = (weight: number) => void;
 
@@ -77,7 +79,7 @@ export function createBlinkController(opts: BlinkOptions = {}) {
    * @param onBlink 写入 morph weight 的 callback（格式特化）
    */
   function apply(dt: number, onBlink: BlinkCallback): void {
-    if (disposed || !onBlink) return;
+    if (disposed || !onBlink || isPerceptionPaused()) return; // #9 全局暂停标志：动画激活时感知静默
     if (!state) { scheduleNext(); return; }
 
     const now = performance.now();

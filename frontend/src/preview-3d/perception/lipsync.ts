@@ -21,6 +21,7 @@
 
 import { clamp01 } from "../../utils/core/clamp.ts";
 import { getSemanticMorph, type SemanticMorphMap, type SemanticMorphId } from "../semantic-morphs.ts";
+import { isPerceptionPaused } from "./core.ts";
 
 /** 单 morph 回调：消费方写入具体格式的 morph weight */
 export type LipSyncCallback = (weight: number) => void;
@@ -68,7 +69,7 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
    * @param onLipSync 写入 morph weight 的 callback
    */
   function apply(_dt: number, amplitude: number, onLipSync: LipSyncCallback): void {
-    if (disposed || !onLipSync || multiMorph) return;
+    if (disposed || !onLipSync || multiMorph || isPerceptionPaused()) return; // #9 全局暂停标志
 
     const raw = clamp01(amplitude);
     // 灵敏度阈值：低于 threshold 视为静音
@@ -91,7 +92,7 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
     amplitudes: Partial<Record<SemanticMorphId, number>>,
     onMultiLipSync: MultiLipSyncCallback,
   ): void {
-    if (disposed || !onMultiLipSync || !multiMorph) return;
+    if (disposed || !onMultiLipSync || !multiMorph || isPerceptionPaused()) return; // #9 全局暂停标志
 
     for (const id of ["lipOpen", "lipClose", "lipPucker", "lipSmile"] as SemanticMorphId[]) {
       const amp = amplitudes[id];

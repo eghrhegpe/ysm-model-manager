@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { resolve } from "path";
 import { wailsBindingsResolve } from "./vite-wails-bindings-resolve.ts";
 import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
+import { checkLocalesSync } from "./vite-locale-check.ts";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 
@@ -50,5 +51,5 @@ export default defineConfig({
       ],
     },
   },
-  plugins: [wailsBindingsResolve, wasmDataStubs()],
+  plugins: [wailsBindingsResolve, wasmDataStubs(), checkLocalesSync()],
 });

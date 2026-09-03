@@ -95,6 +95,10 @@ async function isCommandAllowed(command: string): Promise<boolean> {
  * @param command 命令名（必须在白名单中）
  * @param args 命令参数
  * @returns 统一 JSON 响应
+ *
+ * 参数链路：#5——本层 buildArgsMap → Wails map[string]interface{} → Go ExecuteCLI
+ * 转 os.Args → CLI flag.Parse。损耗语义（空串/0/false 被丢弃）由 Go 侧文档注释承载，
+ * 新增参数类型核对见 internal/app/cli_bridge.go 函数头。
  */
 export async function executeCLI(command: string, args: CLIArgs = {}): Promise<CLIResponse> {
   // 动态白名单校验（优先后端拉取，降级硬编码列表）

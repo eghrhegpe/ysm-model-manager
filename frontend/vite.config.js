@@ -3,6 +3,7 @@ import { fileURLToPath } from "url";
 import { resolve } from "path";
 import { wailsBindingsResolve } from "./vite-wails-bindings-resolve.ts";
 import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
+import { checkLocalesSync } from "./vite-locale-check.ts";
 
 // ADR-146：目录级路径别名（永久禁止 catch-all `@/*`）。
 // `#root` 为过渡措施——把越界读仓库根 JSON 的引用收口为 `#root/x.json`，
@@ -68,5 +69,5 @@ export default defineConfig({
       ],
     },
   },
-  plugins: [wailsBindingsResolve, wasmDataStubs()],
+  plugins: [wailsBindingsResolve, wasmDataStubs(), checkLocalesSync()],
 });

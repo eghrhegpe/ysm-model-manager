@@ -254,6 +254,7 @@ auto_fields:
     - isIdentityQuat
     - isLikelyTga
     - isPathAvailable
+    - isPerceptionPaused
     - isPreviewFolderNode
     - isRenderableModel
     - isSkyEnvironmentOn
@@ -473,6 +474,7 @@ auto_fields:
     - setFrustumCullEnabled
     - setMmdMaterialOpacity
     - setMmdMaterialVisible
+    - setPerceptionPaused
     - setPerfPreset
     - setStateValue
     - setVrmMaterialOpacity

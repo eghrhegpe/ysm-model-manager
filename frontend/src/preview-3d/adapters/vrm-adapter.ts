@@ -12,6 +12,7 @@ import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜�
 import { buildVrmBoneTree } from "./vrm-bone.ts";
 import { vrmSemanticBoneMap } from "../semantic-bones.ts";
 import { createBreathController } from "../perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
+import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
 import { createGazeController } from "../perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
 import { createBlinkController } from "../perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
@@ -456,13 +457,16 @@ function mdVrStage5BuildResult(
       if (!vrm.scene.visible) return;
       if (motionMixer) motionMixer.update(dt);
       vrm.update(dt);
+      // #9 全局暂停标志：动画激活时 breath/blink 自查静默，取代散布的 `!animActive` 守卫。
       const animActive = !!motion.motionAction && !motion.motionAction.paused;
+      setPerceptionPaused(animActive);
       if (semanticBones) {
-        if (!animActive && perceptionState.breath) breath.apply(dt, semanticBones);
+        if (perceptionState.breath) breath.apply(dt, semanticBones);
+        // gaze 不挂全局暂停标志（摄像机追踪，非动画优先级）——保留本层 !animActive 守卫
         if (!animActive && !useNativeLookAt && perceptionState.gaze) gaze!.apply(dt, semanticBones, ctx.camera!.position);
       }
       footIK.apply(dt, !animActive);
-      if (exprMgr && blinkExpressionNames.length > 0 && !animActive && perceptionState.blink) {
+      if (exprMgr && blinkExpressionNames.length > 0 && perceptionState.blink) {
         const mgr = exprMgr;
         blink.apply(dt, (weight: number) => {
           for (const name of blinkExpressionNames) {

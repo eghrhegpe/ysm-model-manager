@@ -22,6 +22,8 @@ export interface HealthReport {
     cache_files: number;
     cache_size: number;
     hit_rate: number;
+    /** 容量接近上限（texture_cache 0.8 阈值），体检页可高亮提示 */
+    should_warn?: boolean;
   };
   resources: {
     total_files: number;

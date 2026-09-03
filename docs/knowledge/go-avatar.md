@@ -12,7 +12,6 @@ auto_fields:
     - CacheAvatarsFromModel
     - CacheDir
     - DecodeYSMData
-    - DecodeYSMFiles
     - ExtractAvatarURI
     - FS
     - ReadCachedAvatar

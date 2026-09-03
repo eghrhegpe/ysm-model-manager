@@ -21,6 +21,7 @@ auto_fields:
     - HasTraversal
     - IsInside
     - IsInsideResolved
+    - RelInside
     - ResolveOrKeep
 quick_groups:
   - 文件操作与标签

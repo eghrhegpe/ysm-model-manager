@@ -19,7 +19,6 @@ auto_fields:
     - DecodeYSMData
     - decodeYsmFile
     - decodeYsmFileFromMemory
-    - DecodeYSMFiles
     - decodeYsmInWorker
     - decodeYsmInWorkerMemfs
     - ensureDir

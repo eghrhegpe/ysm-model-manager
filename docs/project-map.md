@@ -31,12 +31,12 @@
 | `litematic/` | Litematica 投影文件 (.litematic) 解析与预览数据 〔源码 10: bedrock.go block_colors.go block_ids.go block_ids_data.go nbt.go palette.go parser.go schematic.g… · 测试 8 · 子目录 1: gen/〕 |
 | `logs/` | 导入日志 〔源码 2: logs.go runtime.go · 测试 5〕 |
 | `packs/` | 资源包元数据读取（pack.mcmeta / 光影包 lang / 资源类型检测） 〔源码 2: classify.go mcmeta.go · 测试 7 · 子目录 1: testdata/〕 |
-| `paths/` | 路径安全 〔源码 1: safe.go · 测试 3〕 |
+| `paths/` | 路径安全 〔源码 1: safe.go · 测试 4〕 |
 | `recycle/` | 回收站管理 〔源码 2: recycle.go recycle_clean.go · 测试 12〕 |
 | `repoaudit/` | 仓库健康审计核心（GUI 绑定层与 CLI 共用，防双轨口径漂移） 〔源码 1: repoaudit.go · 测试 2〕 |
 | `rustbridge/` | Windows Rust 扫描 DLL 的嵌入、校验、加载与窄 ABI 适配层 〔源码 7: bridge_cgo.go bridge_windows.go common.go doc.go embedded_windows.go types.go types_windows.go · 测试 1 · 子目录 2: bin/ static-lib/〕 |
 | `scanner/` | 模型扫描 + 作者提取 + 仓库索引（ADR-003 P2 Logic Sinking） 〔源码 3: rust_backend.go rust_backend_stub.go scanner.go · 测试 11〕 |
-| `sync/` | 整合包同步 〔源码 9: conflict.go sync.go sync_cache.go sync_diff.go sync_dirlevel.go sync_discovery.go sync_hash.go sy… · 测试 18〕 |
+| `sync/` | 整合包同步 〔源码 9: conflict.go sync.go sync_cache.go sync_diff.go sync_dirlevel.go sync_discovery.go sync_hash.go sy… · 测试 19〕 |
 | `tags/` | 模型标签持久化存储 〔源码 1: tags.go · 测试 3〕 |
 | `texture_cache/` | 纹理缓存管理（KTX2/PNG 缓存，支持后台编码与快速命中） 〔源码 1: texture_cache.go · 测试 2〕 |
 | `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） 〔源码 3: spec-bones.go spec-cube.go spec.go · 测试 8〕 |

@@ -715,6 +715,10 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
+        "text": "frontend-src 锐评 G6 / P1 勘察报告（2026-09-03）",
+        "link": "/frontend-src-critique-g6p1-survey"
+      },
+      {
         "text": "frontend/src 架构锐评处置状态（2026-09-03）",
         "link": "/frontend-src-critique-status"
       },
@@ -733,6 +737,10 @@ export const autoSidebar = [
     "link": "/adr/",
     "collapsed": true,
     "items": [
+      {
+        "text": "ADR-174：browser parity 判定规则单一源 + 对账硬锁策略（锐评 S2 处置框架）",
+        "link": "/adr/ADR-174-browser-parity-single-source-reconciled"
+      },
       {
         "text": "ADR-173：GUI→CLI 参数桥 ParamSpec 白名单协议：区分未传与显式空值，消除 map 无序与参数损耗",
         "link": "/adr/ADR-173-gui-cli-paramspec-map"

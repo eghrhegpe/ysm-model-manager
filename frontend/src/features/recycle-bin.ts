@@ -214,13 +214,13 @@ function buildLoadRecycleBin(
       if (!entries.length) {
         if (shell.cleanupActions.current) { shell.cleanupActions.current(); shell.cleanupActions.current = null; }
         list.innerHTML = "";
-        if (count) count.textContent = "空";
+        if (count) count.textContent = _t("recycle.emptyState");
         return;
       }
       const reg = await loadResourceRegistry();
       if (guard.stale(gen)) return;
       const icon = (reg[getCurrentType()] && reg[getCurrentType()].icon) || "📦";
-      if (count) count.textContent = icon + " " + entries.length + " 个文件";
+      if (count) count.textContent = icon + " " + _t("recycle.fileCount", { n: entries.length });
       list.innerHTML = renderRecycleListHtml(entries, getCurrentType, esc, formatBytes, renderDisplayName, stagger, _t);
       if (shell.cleanupActions.current) shell.cleanupActions.current();
       shell.cleanupActions.current = setupRecycleActions(list, {

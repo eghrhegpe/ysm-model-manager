@@ -422,6 +422,8 @@ export const en: Record<string, string> = {
   "recycle.empty": "Empty Recycle Bin",
   "recycle.tab": "Recycle Bin",
   "recycle.cleared": "Cleared {n} files",
+  "recycle.emptyState": "Empty",
+  "recycle.fileCount": "{n} files",
   "recycle.emptyConfirm": "Permanently empty the recycle bin? This cannot be undone!",
   "recycle.emptyOk": "♻️ Empty",
   "recycle.deleteTitle": "Delete File",

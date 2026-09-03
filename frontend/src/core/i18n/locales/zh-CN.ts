@@ -427,6 +427,8 @@ export const zhCN = {
   "recycle.empty": "清空回收站",
   "recycle.tab": "回收站",
   "recycle.cleared": "已清空 {n} 个文件",
+  "recycle.emptyState": "空",
+  "recycle.fileCount": "{n} 个文件",
   "recycle.emptyConfirm": "确定永久清空回收站所有文件？此操作不可恢复！",
   "recycle.emptyOk": "♻️ 清空",
   "recycle.deleteTitle": "删除文件",

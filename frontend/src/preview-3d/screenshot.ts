@@ -44,8 +44,9 @@ export function screenshotFromRenderer(
 
     // 按需覆盖尺寸（仅当调用方显式传入，且与当前不同才需 setSize 以避免刷新 GL 状态）
     const currentSize = renderer.getSize(new THREE.Vector2());
-    if (opts.width !== undefined && (Math.abs(opts.width - currentSize.width) > 0.5)) {
-      renderer.setSize(opts.width, opts.height ?? opts.width, false);
+    const w = opts.width;
+    if (w !== undefined && Math.abs(w - currentSize.width) > 0.5) {
+      renderer.setSize(w, opts.height ?? w, false);
     }
 
     renderer.render(scene, camera);
@@ -57,6 +58,13 @@ export function screenshotFromRenderer(
     return dataUrl.split(",")[1] ?? null;
   } catch {
     // 异常（上下文丢失、GPU 出错、canvas 不可访问）→ 静默返回 null
+    // P2 修复（审核）：catch 不还原 preserveDrawingBuffer → renderer 永久留在
+    // preserve=true，影响后续帧性能。但 catch 无法读取 preserveBefore（在 try
+    // 局部）——改为无条件设回 false（screenshotFromRenderer 的调用方要么是
+    // 短生命周期 renderer（renderMultiAngle，dispose 后无所谓），要么是预览
+    // renderer（preserve 默认 false，截图后应还原 false））
+    (renderer as unknown as { setPreserveDrawingBuffer: (v: boolean) => void })
+      .setPreserveDrawingBuffer(false);
     return null;
   }
 }

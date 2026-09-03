@@ -13,6 +13,7 @@ import { type Spec3D } from "./model3d.ts";
 import { screenshotFromRenderer } from "./screenshot.ts";
 import { type ScreenshotLights } from "./screenshot-lights.ts";
 import { buildSpecFromGeometryJSON } from "./spec-builder.ts";
+import { textureCache } from "./texture-cache.ts";
 import { loadTextures } from "./texture-loader.ts";
 import { buildYsmObject, type YsmObjectHandle } from "./ysm-object.ts";
 
@@ -173,6 +174,15 @@ export async function renderMultiAngle(
     return null;
   } finally {
     // 统一清理：无论成功/失败/异常都必须释放 WebGL 资源，防上下文累积（陷阱 #8）
+    // P1 修复（审核）：loadTextures 内部对每个 url 调 textureCache.acquire（refs+1），
+    // 但 finally 从不 release → 引用计数永久泄漏，截图纹理永不淘汰。每次多角度截图
+    // 累积泄漏所有 texUrls + componentTextures 的纹理引用。
+    for (const u of texUrls) textureCache.release(u);
+    if (opts.componentTextures) {
+      for (const urls of Object.values(opts.componentTextures)) {
+        for (const u of urls) textureCache.release(u);
+      }
+    }
     if (renderer) {
       if (scene && ysmObject) ysmObject.removeFromScene(scene);
       renderer.dispose();

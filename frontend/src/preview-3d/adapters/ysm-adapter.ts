@@ -188,7 +188,7 @@ async function mdYsLoadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
 
 /** 阶段②：相机取景 + 骨骼拾取系统 + content 句柄 */
 function mdYsSetupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCameraBones {
-  const { ctx, opts } = sc;
+  const { ctx } = sc;
   const { obj, spec } = core;
 
   fitCameraToScene(obj.rootGroup, ctx.camera!, ctx.controls!);
@@ -349,7 +349,7 @@ function mdYsBuildMenuAndDebug(
   anim: MdYsPanelAnim,
 ): MdYsMenuDebug {
   const { ctx, opts } = sc;
-  const { model, texIdx, texArr, spec, obj } = core;
+  const { model, texArr, spec, obj } = core;
   const { content } = cam;
   const { bonePanelRef, boneTree, animBridge } = anim;
 

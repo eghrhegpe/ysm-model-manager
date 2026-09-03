@@ -247,9 +247,7 @@ describe("buildYsmScene dispose 清理行为", () => {
   it("dispose 时 bonePanel cleanup 被调用", async () => {
     const ctx = makeCtx();
     const loader = vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry));
-    let cleanupCalled = false;
     // 用真实 cleanupRef 追踪
-    const origBuildYsmObject = mocks.buildYsmObject;
     mocks.buildYsmObject.mockReturnValue({
       rootGroup,
       boneGroupMap,

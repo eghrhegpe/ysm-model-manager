@@ -423,6 +423,7 @@ auto_fields:
     - registerBoneRaycast
     - registerModelRoot
     - registerSchema
+    - releaseTextureUrls
     - renderAdapterPanelContent
     - renderCapControls
     - renderEnvLevel
@@ -561,6 +562,7 @@ auto_fields:
     - ysmMenuItems
     - YsmMenuItemsOpts
     - YsmObjectHandle
+    - YsmPreloadedModel
     - ysmSemanticBoneMap
     - zipFindEntry
 tests:

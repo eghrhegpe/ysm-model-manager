@@ -32,6 +32,7 @@ auto_fields:
     - loadTextures
     - makeShotAction
     - makeYsmAdapter
+    - releaseTextureUrls
     - renderMultiAngle
     - RenderMultiAngleOptions
     - saveScreenshot
@@ -46,6 +47,7 @@ auto_fields:
     - YsmAdapterOptions
     - ysmMenuItems
     - YsmMenuItemsOpts
+    - YsmPreloadedModel
   tests:
     - frontend/src/preview-3d/screenshot-render.test.ts
     - frontend/src/preview-3d/decoder/cache.test.ts

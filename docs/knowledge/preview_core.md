@@ -242,6 +242,7 @@ auto_fields:
     - YsmAdapterOptions
     - ysmMenuItems
     - YsmMenuItemsOpts
+    - YsmPreloadedModel
     - zipFindEntry
 tests:
   - frontend/src/preview-3d/adapters/mmd-adapter.test.ts

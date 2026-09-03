@@ -34,6 +34,7 @@ auto_fields:
     - YsmAnimPlayer
     - ysmMenuItems
     - YsmMenuItemsOpts
+    - YsmPreloadedModel
   tests:
     - frontend/src/preview-3d/ysm-animation-player.test.ts
     - frontend/src/utils/animation/animation-controller.test.ts

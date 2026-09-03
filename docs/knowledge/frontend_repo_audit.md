@@ -1090,6 +1090,7 @@ auto_fields:
     - registerSchema
     - registerSync
     - registerYsmModelSchema
+    - releaseTextureUrls
     - rememberModelPath
     - rememberTrigger
     - RenameFields
@@ -1506,6 +1507,7 @@ auto_fields:
     - YsmModuleConfig
     - YsmObjectHandle
     - YsmOpenOptions
+    - YsmPreloadedModel
     - YsmProperties
     - ysmSemanticBoneMap
     - ysmShotNodes

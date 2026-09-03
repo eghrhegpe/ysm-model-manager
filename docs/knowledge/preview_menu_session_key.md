@@ -54,6 +54,7 @@ auto_fields:
     - ysmModelStats
     - YsmModelStats
     - ysmModelTextureSlots
+    - YsmPreloadedModel
     - ysmShotNodes
   tests:
     - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts

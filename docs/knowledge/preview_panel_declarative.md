@@ -62,6 +62,7 @@ auto_fields:
     - ysmMenuItems
     - YsmMenuItemsOpts
     - YsmModel
+    - YsmPreloadedModel
     - ysmShotNodes
   tests:
     - frontend/src/preview-3d/menu/items.test.ts

@@ -18,6 +18,7 @@ auto_fields:
     - CacheValue
     - collectBlobUrls
     - loadTextures
+    - releaseTextureUrls
     - renderMultiAngle
     - RenderMultiAngleOptions
     - screenshotFromRenderer

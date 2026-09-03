@@ -169,6 +169,17 @@ export class GroundCapability implements SceneCapability {
   /** 重建路径：按 spec 建全新材质与纹理（旧的自建纹理释放，customTex 缓存不动） */
   private rebuildSurface(spec: GroundSurfaceSpec): void {
     const st = { ...spec.structural };
+
+    // 先释放旧材质与旧自建纹理——在创建新纹理之前 dispose，避免新旧纹理短暂并存
+    // 导致双倍 GPU 纹理内存峰值（程序化 CanvasTexture 虽小，但保持正确顺序更安全）
+    if (this.surfaceMat) {
+      this.surfaceMat.dispose();
+      if (this.surfaceTex && this.surfaceTex !== this.customTex) {
+        safeDispose(this.surfaceTex);
+      }
+      this.surfaceTex = null;
+    }
+
     let tex: THREE.Texture | null = null;
     if (st.mode === "texture") {
       tex = this.customTex ?? this.makeGeneratedTexture({ ...st, mode: "solid" }); // 无缓存先占位纯色
@@ -176,12 +187,6 @@ export class GroundCapability implements SceneCapability {
       tex = this.makeGeneratedTexture(st);
     } // solid/none：color 直出，无贴图
 
-    if (this.surfaceMat) {
-      if (this.surfaceTex && this.surfaceTex !== this.customTex) {
-        safeDispose(this.surfaceTex);
-      }
-      this.surfaceMat.dispose();
-    }
     this.surfaceTex = tex;
     this.surfaceMat = new THREE.MeshStandardMaterial();
     applyGroundSurfaceStructural(this.surfaceMat, st, tex);

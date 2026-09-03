@@ -134,8 +134,10 @@ struct ManifestEntry {
     ext: String,
     #[serde(rename = "Name")]
     name: String,
+    // subdir 不再通过此 ABI 输出（v1.13 flatten）；保留 ManifestEntry 字段仅用于
+    // Candidate 构建（scan_impl_manifest 内部消费），不传播到 CompatModelEntry。
     #[serde(rename = "subdir", default)]
-    subdir: String,
+    _subdir: String,
     // 对齐 Go `types.ModelEntry.Type`（`json:"type,omitempty"`）。注意：当前 rust-core
     // `scan_impl_manifest` 不填 rtype（见 scan.rs 注释），故 manifest 路径产出的 ModelEntry.rtype
     // 恒为空——桥序列化 `type` 也为空。字段保留以覆盖完整契约（code review P3）。
@@ -181,7 +183,7 @@ pub(crate) fn scan_json_manifest(
                 name: entry.name,
                 path: anchored,
                 ext: entry.ext,
-                subdir: entry.subdir,
+                subdir: entry._subdir,
                 rtype: entry.rtype,
             }
         })

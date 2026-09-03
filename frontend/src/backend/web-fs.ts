@@ -315,6 +315,7 @@ async function searchWebModels(
   const hasNumeric =
     minBones > 0 || maxBones > 0 || minCubes > 0 || maxCubes > 0 || minTex > 0 || maxTex > 0;
   // 无数值条件 → 快路径：关键词匹配即可（保持既有行为，不做批量解码）
+  //（降级行语义 = 与 Go 的有意差异，声明见 SearchModels binding D3 注释 / contract-b1 B1c）
   if (!hasNumeric) {
     return webDegradedMatches(matched);
   }
@@ -690,6 +691,10 @@ export const webFsBindings = {
     const bytes = base64ToBytes(base64Data);
     if (!bytes) return Promise.resolve("");
     return Promise.resolve(detectContainerType(bytes) || "");
+    // [ADR-174 附录 A] 与 Go 的实现策略差异：Go app_install_import.go:58 尾探针优先
+    // （覆盖至导入上限 500MB）再整包兜底；web 因 atob 内存约束全量解码（上限
+    // MAX_IMPORT_BYTES=100MB）。两侧各自「探测上限与导入上限同口径」——非漂移；
+    // ⚠️ web 导入上限抬升时必须同步抬此守卫（联动条款）。
   },
   // ADR-070 M1：蓝图/投影详情面板恢复（原 fail-fast 报「读取失败」）。
   // TS 平移 go/litematic/parser.go 三函数（ParseMeta/ParseSchematicSummary/ParseNbtStructure），
@@ -777,6 +782,10 @@ export const webFsBindings = {
   // 搜索：关键词 + 数值范围条件（min/max 骨骼/立方体/纹理，>0 才过滤；统计走
   // Web Worker 批量分析，Worker 不可用降级为仅关键词匹配并在 UI 提示）。
   // 签名与 Go appservice.go:19 对齐（8 具名参数）——Go 侧增/改参数时类型检查即报漂移
+  // [ADR-174 D3 差异声明] kw 快路径（无数值条件）返回降级行 = 与 Go 的有意差异：
+  // Go app_scan.go 恒 AnalyzeBedrockModel + BoneCount==0 排除 + Name 主键稳定排序；
+  // web 不分析/不排除/不排序（扫描序）。契约锁定：contract-b1 B1c；UI 提示：
+  // consumeWebSearchDegraded。此语义禁静默改动——先改 contract 再改实现。
   SearchModels: (
     filesRoot: string,
     keyword: string,

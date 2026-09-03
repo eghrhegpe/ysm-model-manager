@@ -71,6 +71,37 @@ describe("契约 B1 — SearchModels 关键词口径对齐 Go app_scan.go:124", 
   });
 });
 
+// ===== 契约 B1c — SearchModels kw 快路径降级语义 = web 契约（ADR-174 D3 有意差异显式锁）=====
+// 差异声明（与 Go 的有意差异，ADR-174 D3 三类全满足：web 环境硬约束驱动 / binding 注释 + 本测试
+// 双处显式声明 / UI 经 consumeWebSearchDegraded 提示而非红错）：
+//   Go   app_scan.go SearchModels 对候选**恒**跑 AnalyzeBedrockModel，BoneCount==0（不可分析）即排除，
+//        结果填真实 stats 且按 Name 主键稳定排序——即使无数值过滤条件也如此。
+//   web  无数值条件 → kw 快路径不做内容分析：不可分析条目也命中，行形状=降级
+//        （boneCount/cubeCount/texWidth/texHeight 全 0 + hasError:false），保持扫描序、不做 Name 排序。
+// 本 describe 把「降级即 web 契约」显式锁死，防未来把差异当 bug 修、或把降级误当正确语义对齐 Go。
+describe("契约 B1c — SearchModels kw 快路径降级 = web 契约（vs Go 恒分析 + BoneCount==0 排除）", () => {
+  it("1 字节无效 stub（Go 侧 AnalyzeBedrockModel 必失败 → 排除）在 kw 快路径仍命中，行形状=降级全 0 + hasError:false", async () => {
+    await importOne("stub.ysm"); // importOne 只写入 1 字节 "Y"，无任何可分析内容
+    const hit = (await browserAdapter.SearchModels("/web/ysm", "stub", 0, 0, 0, 0, 0, 0)) as Array<{
+      name: string;
+      boneCount: number;
+      cubeCount: number;
+      texWidth: number;
+      texHeight: number;
+      hasError: boolean;
+    }>;
+    expect(hit).toHaveLength(1);
+    expect(hit[0]).toMatchObject({
+      name: "stub.ysm",
+      boneCount: 0, // 降级行数值全 0：Go 此处会填真实 stats
+      cubeCount: 0,
+      texWidth: 0,
+      texHeight: 0,
+      hasError: false, // 不标错：web 契约 = 降级提示（consumeWebSearchDegraded），不是红错
+    });
+  });
+});
+
 describe("契约 B1 — SetModelTags 规范化对齐 Go tags.go:120 (trimTag+去重+排序)", () => {
   it("应 trim/去重/排序（Go: set[trimTag(t)] + sort.Strings），web 已对齐", async () => {
     const p = await importOne("狐狸.ysm");

@@ -188,11 +188,12 @@ describe("buildYsmScene（shared 装配）", () => {
     expect(mocks.registerBoneRaycast).toHaveBeenCalled();
   });
 
-  it("makeYsmAdapter：build 用传入 path（switchTo 换模型语义，闭包 path 仅初始值）", async () => {
+  it("makeYsmAdapter：build 用传入 path（switchTo 换模型语义，无闭包初始 path）", async () => {
     const loader = vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry));
-    const adapter = makeYsmAdapter("/m/a.ysm", { loader, preload: mocks.preloadModel });
+    const adapter = makeYsmAdapter({ loader, preload: mocks.preloadModel });
     expect(adapter.id).toBe("ysm");
-    // switchTo 语义：core 调 build(ctx, newPath) 重建内容层——必须加载 newPath 而非闭包旧 path
+    // switchTo 语义：core 调 build(ctx, newPath) 重建内容层——必须加载本次传入的 newPath，
+    // makeYsmAdapter 不持有任何初始 path（死参数已清理），无从 fallback 旧模型
     await expect(
       adapter.build(makeCtx() as unknown as PreviewBuildCtx, "/m/b.ysm"),
     ).resolves.toBeTruthy();

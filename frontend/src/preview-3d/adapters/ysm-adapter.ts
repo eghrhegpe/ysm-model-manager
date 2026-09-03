@@ -531,14 +531,14 @@ export async function buildYsmScene(
   return mdYsMakeSceneHandle(sc, core, cam, anim, menu);
 }
 
-/** 工厂：构造统一 PreviewAdapter（shared 模式） */
-export function makeYsmAdapter(path: string, opts: YsmAdapterOptions): PreviewAdapter {
+/** 工厂：构造统一 PreviewAdapter（shared 模式）。path 一律由 build 在 build/switchTo 时传入 */
+export function makeYsmAdapter(opts: YsmAdapterOptions): PreviewAdapter {
   return {
     id: RESOURCE_TYPES.YSM,
     // shared 模式（§5.7）：核心提供 renderer/scene/camera/controls/rAF，适配器只注入内容
     onClose: opts.onClose,
-    // 必须用 build 传入的 path（switchTo(newPath) 重建内容层的换模型入口），
-    // 闭包 path 仅是首次挂载的初始值——否则 switchTo 对 YSM 加载同一旧模型（假切换）。
+    // switchTo(newPath) 是换模型入口——必须加载本次 build 传入的 buildPath，
+    // 不用任何闭包缓存的旧 path（否则 switchTo 对 YSM 加载同一旧模型，假切换）。
     build(ctx: PreviewBuildCtx, buildPath: string): Promise<PreviewScene> {
       return buildYsmScene(ctx, buildPath, opts);
     },

@@ -57,7 +57,7 @@ async function createMaid3D(
   };
   cleanupPreview();
   await mount3D(
-    makeYsmAdapter(path, {
+    makeYsmAdapter({
       mode: "generic",
       texIdx,
       loader: opts.loader,
@@ -72,7 +72,7 @@ async function createMaid3D(
         // 注册 "ysm-model"——model 面板 schemaId 是唯一通道（无 fallback），不注册则静默空白。
         registerModelSchema: registerYsmModelSchema,
       },
-    } as Parameters<typeof makeYsmAdapter>[1]),
+    } as Parameters<typeof makeYsmAdapter>[0]),
     path,
     withPreviewExtras({ siblings: opts.siblings }),
   );

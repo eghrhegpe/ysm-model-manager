@@ -58,7 +58,7 @@ export async function createYsm3D(
   };
   cleanupPreview();
   await mount3D(
-    makeYsmAdapter(path, {
+    makeYsmAdapter({
       texIdx,
       loader: opts.loader,
       preload: (model) => preloadModel(model as ModelLike),

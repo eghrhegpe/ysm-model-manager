@@ -4,12 +4,12 @@
 // view 解析，三个文件之间从无一条断言互相咬合（各自只与 JSON 单向对账）。
 // 本测试在归一前钉住「三文件派生必须互相一致」的不变量，归一后再跑防行为分叉。
 import { describe, it, expect } from "vitest";
-import { ALL_RESOURCE_TYPES, RESOURCE_TYPES } from "./types.ts";
+import { ALL_RESOURCE_TYPES, RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "./types.ts";
 import { RESOURCE_EXTS, ALL_EXTS } from "./extensions.ts";
 import resourceTypesJson from "#root/resource_types.json" with { type: "json" };
 
 const jsonTypes = (
-  resourceTypesJson as { resourceTypes: Array<{ id: string; extensions?: string[] }> }
+  resourceTypesJson as { resourceTypes: Array<{ id: string; name?: string; extensions?: string[] }> }
 ).resourceTypes;
 
 describe("跨文件一致性：types.ts ↔ extensions.ts ↔ JSON", () => {
@@ -28,6 +28,13 @@ describe("跨文件一致性：types.ts ↔ extensions.ts ↔ JSON", () => {
       new Set(jsonTypes.flatMap((t) => (t.extensions || []).map((e) => e.toLowerCase()))),
     ).sort();
     expect([...ALL_EXTS].sort()).toEqual(jsonAll);
+  });
+
+  it("RESOURCE_TYPE_LABELS 与 JSON name 字段对账（新增类型自动同步）", () => {
+    const jsonNames = Object.fromEntries(
+      jsonTypes.filter(t => t.name).map(t => [t.id, t.name!]),
+    );
+    expect(RESOURCE_TYPE_LABELS).toEqual(jsonNames);
   });
 
   it("RESOURCE_TYPES 标签值全部为真实类型 id（不指向幽灵类型）", () => {

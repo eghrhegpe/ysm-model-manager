@@ -51,11 +51,20 @@ describe("RESOURCE_TYPE_LABELS 显示标签", () => {
     }
   });
 
-  it("关键 ID 的中文名正确", () => {
+  it("关键 ID 的中文名正确（派生自 resource_types.json name 字段）", () => {
     expect(RESOURCE_TYPE_LABELS["ysm"]).toBe("YSM 模型");
     expect(RESOURCE_TYPE_LABELS["resourcepack"]).toBe("资源包");
     expect(RESOURCE_TYPE_LABELS["shaderpack"]).toBe("光影包");
     expect(RESOURCE_TYPE_LABELS["EntityPlayer"]).toBe("角色模型");
+  });
+
+  it("与 resource_types.json name 字段完全一致（无漂移）", () => {
+    const jsonNames = Object.fromEntries(
+      resourceTypesJson.resourceTypes
+        .filter(t => t.name)
+        .map(t => [t.id, t.name!]),
+    );
+    expect(RESOURCE_TYPE_LABELS).toEqual(jsonNames);
   });
 });
 

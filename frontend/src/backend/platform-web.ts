@@ -33,8 +33,26 @@ export function resolvePlatformMode(): PlatformMode {
 export const ANDROID_UNAVAILABLE: ReadonlySet<string> = new Set([
   "RevealInExplorer",
   "OpenFolder",
+  "OpenInBrowser",
   "RestartApplication",
   "ListVersionInstances",
+  "GetMinecraftPaths",
+  "ValidateMinecraftDir",
+  // Wails 窗口注入（Android 单窗口无此操作）
+  "SetMainWindow",
+  "SetApp",
+  // 广场多窗口（Android 暂不支持）
+  "NavigatePlazaWindow",
+  "ClosePlazaWindow",
+  "PlazaGoBack",
+  "PlazaGoForward",
+  "PlazaReload",
+  "PlazaZoomIn",
+  "PlazaZoomOut",
+  "PlazaZoomReset",
+  // 文件选择器（Android 有独立实现）
+  "SelectDirectory",
+  "SelectImportFile",
 ]);
 
 /**

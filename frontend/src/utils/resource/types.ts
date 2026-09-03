@@ -1,7 +1,12 @@
 // ===== 资源类型常量（类型化版 — ADR-014 P2）=====
-// RESOURCE_TYPES / RESOURCE_TYPE_LABELS 保留手写：JSON 无「标签→ID」映射，且短标签
-// （如 "模型"/"MMD"）≠ JSON 的 name 全名（"YSM 模型"/"MMD 角色模型"），短标签参与 Go 端
-// ScanModelEntriesWithLabel 扫描匹配，语义由前端契约决定，不能从 JSON 派生。
+// RESOURCE_TYPES（短标签→ID）保留手写：短标签（如 "MMD"）≠ JSON 的 name 全名
+// （如 "MMD 角色模型"），且短标签参与 Go 端 ScanModelEntriesWithLabel 扫描匹配，
+// 语义由前端契约决定，不能从 JSON 派生。
+//
+// RESOURCE_TYPE_LABELS（ID→中文名）现已从 resource_types.json 的 name 字段派生。
+// 新增资源类型只需改 JSON，中文全名自动同步，无需手动维护双表。
+// maid-model 的中文全名为 "车万女仆模型"（JSON name 字段）；如需短标签 "车万女仆"，
+// 走 short-label.ts 的 i18n 短标签体系（t("rtype.maid")）。
 // ALL_RESOURCE_TYPES 等派生表统一消费 schema.ts 的 allResourceTypes（T2 单点解析）。
 import { allResourceTypes } from "./schema.ts";
 
@@ -24,24 +29,10 @@ export const RESOURCE_TYPES: Record<string, string> = {
   FBX: "fbx",
 };
 
-/** 资源类型显示标签（内部 ID → 中文名） */
-export const RESOURCE_TYPE_LABELS: Record<string, string> = {
-  ysm: "YSM 模型",
-  EntityPlayer: "角色模型",
-  SceneModel: "场景模型",
-  CustomAnim: "自定义动画",
-  CustomMorph: "自定义表情",
-  StageAnim: "舞台动画",
-  "mmd-shader": "MMD 着色器",
-  DefaultAnim: "默认动画",
-  DefaultMorph: "默认表情",
-  resourcepack: "资源包",
-  shaderpack: "光影包",
-  blueprint: "蓝图",
-  litematic: "投影",
-  "maid-model": "车万女仆",
-  "fbx": "FBX 模型/动画",
-};
+/** 资源类型显示标签（内部 ID → 中文全名，派生自 resource_types.json name 字段） */
+export const RESOURCE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  allResourceTypes.filter(t => t.name).map(t => [t.id, t.name!]),
+);
 
 /** 全部资源类型 ID 列表（从 resource_types.json id 派生，单一事实来源） */
 export const ALL_RESOURCE_TYPES: string[] = allResourceTypes

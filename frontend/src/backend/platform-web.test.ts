@@ -61,10 +61,19 @@ describe("resolvePlatformMode — 三态判定", () => {
 });
 
 describe("canBinding — 能力矩阵（对齐 ADR-176 capabilities 矩阵范式）", () => {
-  it("Android 黑名单四项不可用，其余 Go binding 全量可达", () => {
+  it("Android 黑名单不可用，其余 Go binding 全量可达", () => {
     vi.stubGlobal("window", { wails: { requestStoragePermission: () => {} } });
+    // 原始四项
     for (const b of ["RevealInExplorer", "OpenFolder", "RestartApplication", "ListVersionInstances"]) {
       expect(canBinding(b)).toBe(false);
+    }
+    // 扩展项（PR 中新增）
+    for (const b of ["OpenInBrowser", "GetMinecraftPaths", "ValidateMinecraftDir",
+      "SelectDirectory", "SelectImportFile",
+      "NavigatePlazaWindow", "ClosePlazaWindow", "PlazaGoBack", "PlazaGoForward",
+      "PlazaReload", "PlazaZoomIn", "PlazaZoomOut", "PlazaZoomReset",
+      "SetMainWindow", "SetApp"]) {
+      expect(canBinding(b), `${b} 应为 false`).toBe(false);
     }
     expect(canBinding("EnqueueDownloads")).toBe(true);
     expect(canBinding("ReadFileBytes")).toBe(true);
@@ -82,12 +91,27 @@ describe("canBinding — 能力矩阵（对齐 ADR-176 capabilities 矩阵范式
     expect(canBinding("RevealInExplorer")).toBe(true);
   });
 
-  it("ANDROID_UNAVAILABLE 仅含桌面专属四项（黑名单单一事实源自 platform-web 导出）", () => {
+  it("ANDROID_UNAVAILABLE 含所有桌面专属 binding（黑名单单一事实源自 platform-web 导出）", () => {
     expect([...ANDROID_UNAVAILABLE].sort()).toEqual([
+      "ClosePlazaWindow",
+      "GetMinecraftPaths",
       "ListVersionInstances",
+      "NavigatePlazaWindow",
       "OpenFolder",
+      "OpenInBrowser",
+      "PlazaGoBack",
+      "PlazaGoForward",
+      "PlazaReload",
+      "PlazaZoomIn",
+      "PlazaZoomOut",
+      "PlazaZoomReset",
       "RestartApplication",
       "RevealInExplorer",
+      "SelectDirectory",
+      "SelectImportFile",
+      "SetApp",
+      "SetMainWindow",
+      "ValidateMinecraftDir",
     ]);
   });
 });

@@ -6,8 +6,8 @@
 // ListPackModels → "[]"；ReadPackEntry → ""。共享读取装配来自 web-fs-read.ts 叶子。
 
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
-import { extractZip } from "./extract.ts";
-import { findZipEntry, parsePackMetaJson, parseShaderpackLang, packPngToThumbnail } from "./pack-meta.ts";
+import { extractZip } from "../parsers/extract.ts";
+import { findZipEntry, parsePackMetaJson, parseShaderpackLang, packPngToThumbnail } from "../parsers/pack-meta.ts";
 import { readWebFile, readWebZipEntries } from "./web-fs-read.ts";
 
 /**

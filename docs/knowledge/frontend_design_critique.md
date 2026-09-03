@@ -9,13 +9,12 @@ source_files:
   - frontend/src/views/app-content/index.ts
   - frontend/src/views/app-content/init-pages.ts
   - frontend/src/views/app-content/diagnostics/dedup.ts
-  - frontend/src/services/registry.ts
   - frontend/src/preview-3d/perception/gaze.ts
   - frontend/src/preview-3d/perception/autodance.ts
   - frontend/src/preview-3d/safe-dispose.ts
   - frontend/src/preview-3d/adapters/scene-registry.ts
   - frontend/src/preview-3d/menu/roles.ts
-  - frontend/src/utils/dom/dialogs/modal.ts
+  - frontend/src/features/dialogs/modal.ts
   - frontend/src/ui/ui-components-styles.ts
   - frontend/src/views/app-content/settings/path-cards.ts
   - frontend/src/views/app-content/settings/theme.ts
@@ -115,9 +114,8 @@ tests:
   - frontend/src/preview-3d/perception/gaze.test.ts
   - frontend/src/preview-3d/render-budget.test.ts
   - frontend/src/preview-3d/safe-dispose.test.ts
-  - frontend/src/services/registry.test.ts
   - frontend/src/test-utils/index.test.ts
-  - frontend/src/utils/dom/dialogs/modal.test.ts
+  - frontend/src/features/dialogs/modal.test.ts
   - frontend/src/services/resource-registry.test.ts
   - frontend/src/views/app-content/settings/theme.test.ts
   - frontend/src/views/app-nav/index.test.ts

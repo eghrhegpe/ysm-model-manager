@@ -11,7 +11,7 @@
 //   3. listAllFilePaths(dir)      → dir 为虚拟目录 → 返回 zip 所有 entry 路径
 
 import { b64ToBytes, bytesToBase64 } from "../base64.ts";
-import { extractZip } from "../../backend/extract.ts";
+import { extractZip } from "../../parsers/extract.ts";
 import type { MmdDataPort } from "./mmd-adapter.ts";
 
 /** ZIP 解析产物（传给 overlay 的配置） */

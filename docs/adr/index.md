@@ -17,26 +17,26 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 3 |
-| [✅ 已采纳](#已采纳) | 163 |
+| [🔄 部分采纳](#部分采纳) | 2 |
+| [✅ 已采纳](#已采纳) | 164 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（3）
+### 🔄 部分采纳（2）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-171](./ADR-171-preview3d-oversize-adjudication.md) | preview3d 超大文件裁决式复核：FBXLoader 官方化 / 巨型单体维持 | 🔄 部分采纳 |
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（163）
+### ✅ 已采纳（164）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-171](./ADR-171-preview3d-oversize-adjudication.md) | preview3d 超大文件裁决式复核：FBXLoader 官方化 / 巨型单体维持 | ✅ 已采纳 |
 | [ADR-170](./ADR-170-frontend-backend-parsers-dialogs-features.md) | frontend 分层:backend 桥层收窄+解析簇下沉 parsers,dialogs 升格 features(二段式) | ✅ 已采纳 |
 | [ADR-169](./ADR-169-menu-core-previewmenuctx-node-types-type.md) | menu/core 类型叶下沉：PreviewMenuCtx 归位 node-types 断子模块纯 type 环 | ✅ 已采纳 |
 | [ADR-168](./ADR-168-capability-preview-state.md) | capability 环倒置：preview-state 查询器注入断组合根运行时边 | ✅ 已采纳 |
@@ -212,7 +212,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-171 | preview3d 超大文件裁决式复核：FBXLoader 官方化 / 巨型单体维持 | 🔄 部分采纳 | 2026-09-03 |
+| ADR-171 | preview3d 超大文件裁决式复核：FBXLoader 官方化 / 巨型单体维持 | ✅ 已采纳 | 2026-09-03 |
 | ADR-170 | frontend 分层:backend 桥层收窄+解析簇下沉 parsers,dialogs 升格 features(二段式) | ✅ 已采纳 | 2026-09-03 |
 | ADR-169 | menu/core 类型叶下沉：PreviewMenuCtx 归位 node-types 断子模块纯 type 环 | ✅ 已采纳 | 2026-09-03 |
 | ADR-168 | capability 环倒置：preview-state 查询器注入断组合根运行时边 | ✅ 已采纳 | 2026-09-03 |

@@ -1,8 +1,8 @@
 // ===== context-menu-file-handlers.ts — file 类右键菜单 handler（从 context-menu-handlers.ts 拆出，ADR-040 P1）=====
 import { getApp } from "../backend/app.ts";
-import { modalConfirm, modalSelect } from "../utils/dom/dialogs/modal.ts";
-import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
-import { modalTagEditor } from "../utils/dom/dialogs/tag-editor.ts";
+import { modalConfirm, modalSelect } from "../features/dialogs/modal.ts";
+import { showRenameDialog } from "../features/dialogs/rename.ts";
+import { modalTagEditor } from "../features/dialogs/tag-editor.ts";
 import { tr } from "./i18n/tr.ts";
 import { refreshUI, toast, toastError, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";

@@ -4,8 +4,8 @@ name: 重命名弹窗 rename
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/utils/dom/dialogs/rename.ts
-  - frontend/src/utils/dom/dialogs/rename-format.ts
+  - frontend/src/features/dialogs/rename.ts
+  - frontend/src/features/dialogs/rename-format.ts
 auto_fields:
   symbols_with_lines:
     - buildModelName
@@ -16,8 +16,8 @@ auto_fields:
     - showRenameDialog
     - validateRenameFields
   tests:
-    - frontend/src/utils/dom/dialogs/rename-format.test.ts
-    - frontend/src/utils/dom/dialogs/rename.test.ts
+    - frontend/src/features/dialogs/rename-format.test.ts
+    - frontend/src/features/dialogs/rename.test.ts
   quick_groups:
     - UI 交互与弹窗
   quick_intents:
@@ -37,11 +37,11 @@ auto_fields:
     - rename
     - 读取头部
   invariant_anchors:
-    - frontend/src/utils/dom/dialogs/rename-format.ts|buildRenameName
-    - frontend/src/utils/dom/dialogs/rename-format.ts|validateRenameFields
+    - frontend/src/features/dialogs/rename-format.ts|buildRenameName
+    - frontend/src/features/dialogs/rename-format.ts|validateRenameFields
 tests:
-  - frontend/src/utils/dom/dialogs/rename-format.test.ts
-  - frontend/src/utils/dom/dialogs/rename.test.ts
+  - frontend/src/features/dialogs/rename-format.test.ts
+  - frontend/src/features/dialogs/rename.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
@@ -62,8 +62,8 @@ use_when:
   - rename
   - 读取头部
 invariant_anchors:
-  - frontend/src/utils/dom/dialogs/rename-format.ts|buildRenameName
-  - frontend/src/utils/dom/dialogs/rename-format.ts|validateRenameFields
+  - frontend/src/features/dialogs/rename-format.ts|buildRenameName
+  - frontend/src/features/dialogs/rename-format.ts|validateRenameFields
 status: active
 ---
 

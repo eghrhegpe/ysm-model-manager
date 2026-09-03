@@ -1,7 +1,7 @@
 // ===== 整合包操作：导出清单 / 清空目录（类型化版 — ADR-014 P3）=====
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { bus } from "../../bus.ts";
-import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
+import { modalConfirm } from "../../features/dialogs/modal.ts";
 import { getApp } from "../../backend/app.ts";
 import { requireMcRoot } from "./require-mcroot.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";

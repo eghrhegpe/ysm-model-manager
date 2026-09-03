@@ -4,8 +4,8 @@ name: 批量重命名 batch-rename
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/utils/dom/dialogs/batch-rename.ts
-  - frontend/src/utils/dom/dialogs/batch-rename-util.ts
+  - frontend/src/features/dialogs/batch-rename.ts
+  - frontend/src/features/dialogs/batch-rename-util.ts
 auto_fields:
   symbols_with_lines:
     - applyReplaceToName
@@ -14,7 +14,7 @@ auto_fields:
     - ReplaceResult
     - showBatchRenameDialog
   tests:
-    - frontend/src/utils/dom/dialogs/batch-rename.test.ts
+    - frontend/src/features/dialogs/batch-rename.test.ts
   quick_groups:
     - UI 交互与弹窗
   quick_intents:
@@ -35,10 +35,10 @@ auto_fields:
     - 预设
     - batch-rename
   invariant_anchors:
-    - frontend/src/utils/dom/dialogs/batch-rename.ts|showBatchRenameDialog
-    - frontend/src/utils/dom/dialogs/batch-rename-util.ts|rebuildParsedName
+    - frontend/src/features/dialogs/batch-rename.ts|showBatchRenameDialog
+    - frontend/src/features/dialogs/batch-rename-util.ts|rebuildParsedName
 tests:
-  - frontend/src/utils/dom/dialogs/batch-rename.test.ts
+  - frontend/src/features/dialogs/batch-rename.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
@@ -60,8 +60,8 @@ use_when:
   - 预设
   - batch-rename
 invariant_anchors:
-  - frontend/src/utils/dom/dialogs/batch-rename.ts|showBatchRenameDialog
-  - frontend/src/utils/dom/dialogs/batch-rename-util.ts|rebuildParsedName
+  - frontend/src/features/dialogs/batch-rename.ts|showBatchRenameDialog
+  - frontend/src/features/dialogs/batch-rename-util.ts|rebuildParsedName
 status: active
 ---
 
@@ -85,7 +85,7 @@ status: active
 - 导出：`showBatchRenameDialog(dir: string, entries: BatchEntry[], onApply: (changes: BatchRenameChange[]) => Promise<void>): Promise<void>`、`interface BatchRenameChange`（oldPath/oldName/newName）
 - 派发 bus：`toast:show`（正则无效警告、无变更提示、onApply 失败告警）
 - 监听 bus：无
-- 依赖：`parseModelName`（utils/dom/display.ts）、`stagger`（utils/animation/stagger.ts）、`esc`（utils/dom/html.ts）、`registerDlg` / `closeDlg`（utils/dom/dialogs/modal.ts）、`RESOURCE_TYPES`（utils/resource/types.ts）
+- 依赖：`parseModelName`（utils/dom/display.ts）、`stagger`（utils/animation/stagger.ts）、`esc`（utils/dom/html.ts）、`registerDlg` / `closeDlg`（features/dialogs/modal.ts）、`RESOURCE_TYPES`（utils/resource/types.ts）
 - 调用方：`app-tree/bus-handlers.ts` 的 `dir:batch-rename`（目录右键，先 `ScanModelEntries` 取条目）与 `batch:rename`（Ctrl/Shift 多选，由路径拼条目）；两者的 onApply 均逐个 `RenameFile` 后 `reload` + `stats:refresh` 并汇总成功/失败
 
 ## 与其他子系统关系

@@ -10,7 +10,7 @@ import { makeLitematicAdapter } from "../../preview-3d/adapters/litematic-adapte
 import { getApp } from "../../backend/app.ts";
 import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
 import { RESOURCE_TYPES, VOXEL_RPC_BY_EXT, extOf } from "../../utils/resource/types.ts";
-import type { VoxelData } from "../../backend/voxel-parse.ts";
+import type { VoxelData } from "../../parsers/voxel-parse.ts";
 
 /** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */
 const CONTAINER_VOXEL_EXTS = ".nbt,.litematic,.schematic";

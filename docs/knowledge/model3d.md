@@ -180,7 +180,6 @@ auto_fields:
     - fbxBonesToBoneNodes
     - FbxDataPort
     - FbxGeometryData
-    - FBXLoader
     - FbxMaterialData
     - FbxMeshData
     - FbxParser
@@ -252,6 +251,7 @@ auto_fields:
     - InputOptions
     - invalidateMaxFpsCache
     - invalidatePreview
+    - isEditableTarget
     - isFrustumCullEnabled
     - isIdentityQuat
     - isLikelyTga
@@ -313,6 +313,7 @@ auto_fields:
     - MAX_KTX2_PIXELS
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
+    - MdMmAllocEntry
     - MdMmBuildCtx
     - mdMmDetectFormat
     - MdMmDetectFormatCtx
@@ -334,6 +335,7 @@ auto_fields:
     - MdMmStage6bCtx
     - MdMmStage6Ctx
     - mdMmStage6Result
+    - mdMmTrackAlloc
     - MenuControlDef
     - MenuControlKind
     - MenuGraph

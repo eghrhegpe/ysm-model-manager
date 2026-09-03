@@ -4,8 +4,8 @@ name: 高级筛选 adv-filter
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/utils/dom/dialogs/adv-filter.ts
-  - frontend/src/utils/dom/dialogs/adv-filter-util.ts
+  - frontend/src/features/dialogs/adv-filter.ts
+  - frontend/src/features/dialogs/adv-filter-util.ts
 auto_fields:
   symbols_with_lines:
     - AdvFilterResult
@@ -14,8 +14,8 @@ auto_fields:
     - parseFilterNumber
     - validateAdvFilter
   tests:
-    - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
-    - frontend/src/utils/dom/dialogs/adv-filter.test.ts
+    - frontend/src/features/dialogs/adv-filter-util.test.ts
+    - frontend/src/features/dialogs/adv-filter.test.ts
   quick_groups:
     - UI 交互与弹窗
   quick_intents:
@@ -36,11 +36,11 @@ auto_fields:
     - 按标签筛选
     - 条件过滤
   invariant_anchors:
-    - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
-    - frontend/src/utils/dom/dialogs/adv-filter-util.ts|validateAdvFilter
+    - frontend/src/features/dialogs/adv-filter.ts|modalAdvFilter
+    - frontend/src/features/dialogs/adv-filter-util.ts|validateAdvFilter
 tests:
-  - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
-  - frontend/src/utils/dom/dialogs/adv-filter.test.ts
+  - frontend/src/features/dialogs/adv-filter-util.test.ts
+  - frontend/src/features/dialogs/adv-filter.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
@@ -62,8 +62,8 @@ use_when:
   - 按标签筛选
   - 条件过滤
 invariant_anchors:
-  - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
-  - frontend/src/utils/dom/dialogs/adv-filter-util.ts|validateAdvFilter
+  - frontend/src/features/dialogs/adv-filter.ts|modalAdvFilter
+  - frontend/src/features/dialogs/adv-filter-util.ts|validateAdvFilter
 status: active
 ---
 

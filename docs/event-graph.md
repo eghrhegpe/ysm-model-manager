@@ -426,6 +426,10 @@
 | cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 224 |
 | cmReBindRowClick | `frontend/src/features/community/events.ts` | 276 |
 | cmReBindRowClick | `frontend/src/features/community/events.ts` | 313 |
+| dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename.ts` | 95 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 387 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 401 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 420 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 39 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 57 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 76 |
@@ -447,10 +451,6 @@
 | mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 447 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 38 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 158 |
-| dgBrApplyReplace | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |
-| dgBrBindApplyClick | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 387 |
-| dgBrBindApplyClick | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 401 |
-| dgBrBindApplyClick | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 420 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 34 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 45 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 57 |

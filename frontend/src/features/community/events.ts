@@ -3,7 +3,7 @@
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
+import { modalConfirm } from "../dialogs/modal.ts";
 import { buildModelRow, filterModels, isModelMissing, type WorkshopModel } from "./render.ts";
 import { createVirtualList, type VirtualList } from "./virtual-list.ts";
 import { createDownloadQueue, type DownloadQueue } from "./download-queue.ts";

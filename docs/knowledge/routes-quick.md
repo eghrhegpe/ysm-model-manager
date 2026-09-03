@@ -135,31 +135,31 @@
 | 纯函数 | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | 错误提示、友好错误、friendlyError | [错误处理 errors](./utils-errors.md) | 所有异常路径必须经 friendlyError 转中文提示，禁止裸抛原始错误到 UI | - |
 | 错误消息提取、Worker 错误、catch | [安全错误消息提取 utils](./safe_error_msg.md) | Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖 | - |
-| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | tr() 依赖 t() 缺失返回 key 本身——两函数强耦合 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | tr() 依赖 t() 缺失返回 key 本身——两函数强耦合 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 调试日志、dbg、调试开关 | [常量与调试 constants/debug](./utils-misc.md) | 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码 | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
 | 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底 | - |
 | 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
-| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
 | 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
-| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
 | 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 外部进程启动、跨平台 HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | - | - |
-| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 新组件注册、import 组件、startup reveal | [组件入口 app-modules](./app-modules.md) | - | - |
 | 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | - | ADR-109 |
 | 页面初始化流程、订阅桶 / 会话状态 | [主内容页 app-content](./app-content.md) | - | - |
 | 页面状态管理、当前页、page store | [页面状态管理 page-store.ts](./page-store.md) | page-store 只管理当前页标识（只读 getter），不协调页面挂载 / 卸载，那是 app-content 的职责 | - |
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
-| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource | - |
 | 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:change / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
@@ -269,6 +269,12 @@
 | 预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) | - | - |
 | renderMultiAngle / AngleShot | [截图与导出 export](./utils-export.md) | - | - |
 
+## 🎯 业务对话框
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 批量重命名实现 / 标签编辑器定位 / 高级筛选弹窗 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features_dialogs.md) | features/dialogs 是业务 UI,勿被调回 utils/dom(分类事故复发) | - |
+
 ## 🎯 审计与质量门禁
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -278,6 +284,12 @@
 | 前端设计评审 / 锐评 | [前端设计锐评](./frontend_design_critique.md) | 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（rgba(124,131,255) 全仓 19 处待收编） | - |
 | 页面生命周期审查（整 DOM 重建） | [前端设计锐评](./frontend_design_critique.md) | - | - |
 | 主题系统审查（token 失守） | [前端设计锐评](./frontend_design_critique.md) | 页面切换必须 tab-panel 常驻 + active 切换，禁止整 DOM innerHTML 重建 | - |
+
+## 🎯 解析与数据
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 找 YSM 头部解析 / NBT 解析 / 体素解析 / zip 解包 / 颜色映射 | [解析簇 parsers/ 自 backend 迁出](./frontend_parsers.md) | parsers/ 依赖 backend/web-common（跨簇单向,ADR-170 已知残留,待二段归位） | - |
 
 ## 🎯 重构与技术债评估
 
@@ -718,7 +730,6 @@
 | initRecycleBin 不返回清理函数 | - | 监听泄漏；必须在 app-content 切换页时调用返回的清理函数 |
 | 各自创建 renderer | - | 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享 |
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
-| services/registry.ts 是 Service 注册表（register/get/unregister/clear）≠ resource_types.json 资源类型定义；混淆两者会在场景误改 register 而非 JSON | `新增类型` | - |
 | loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回  时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试 | `"{}"` | - |
 | services/registry.get 用 Map.has() 判定，falsy 值  如实返回（P3 修复）；误判走 null 分支会导致功能静默失效 | `不存在` | - |
 | MMD 子类型 instanceDir 必须精确为 （含子级），漏写一级右键打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定 | `打开文件夹` | - |

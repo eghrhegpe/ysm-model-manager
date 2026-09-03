@@ -8,9 +8,9 @@
 // 来自 web-fs-read.ts 叶子——断对 web-fs.ts 主文件的循环依赖。
 
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
-import { extractZip } from "./extract.ts";
-import { findZipEntry } from "./pack-meta.ts";
-import { type VoxelData } from "./voxel-parse.ts";
+import { extractZip } from "../parsers/extract.ts";
+import { findZipEntry } from "../parsers/pack-meta.ts";
+import { type VoxelData } from "../parsers/voxel-parse.ts";
 import { readWebFile, readWebZipEntries, voxelFromBase64 } from "./web-fs-read.ts";
 
 /** 镜像 Go parseContainerExts：逗号分隔扩展名白名单（无点前缀自动补；空 → 放行全部） */

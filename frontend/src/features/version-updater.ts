@@ -3,7 +3,7 @@ import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
 import { esc } from "../utils/dom/html.ts";
-import { modalConfirm, modalProgress, fmtMB } from "../utils/dom/dialogs/modal.ts";
+import { modalConfirm, modalProgress, fmtMB } from "./dialogs/modal.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { safeGet, safeSet } from "../utils/dom/storage.ts";
 import { isViewerMode } from "../utils/dom/android-bridge.ts";

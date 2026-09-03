@@ -20,7 +20,7 @@ const { mocks } = vi.hoisted(() => {
   return { mocks };
 });
 
-vi.mock("../utils/dom/dialogs/modal.ts", () => ({
+vi.mock("../features/dialogs/modal.ts", () => ({
   modalConfirm: mocks.modalConfirm,
 }));
 

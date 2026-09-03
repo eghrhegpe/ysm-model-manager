@@ -39,7 +39,7 @@ import { selectState, selectSingle } from "./data.ts";
 import { rememberModelPath } from "../app-content/init-pages.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { getApp } from "../../backend/app.ts";
-import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
+import { modalConfirm } from "../../features/dialogs/modal.ts";
 import { can } from "../../utils/dom/capabilities.ts";
 import { bindTreeDnD } from "../../features/import-dnd.ts";
 

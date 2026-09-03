@@ -22,12 +22,12 @@ const FRONTEND = path.join(ROOT, 'frontend', 'src');
 
 const files = [
   // backend — 纯逻辑（NBT 解析/zip 提取/IDB 日志/web worker 编排）
-  'backend/extract.test.ts',
-  'backend/nbt-parse.test.ts',
-  'backend/voxel-parse.test.ts',
+  'parsers/extract.test.ts',
+  'parsers/nbt-parse.test.ts',
+  'parsers/voxel-parse.test.ts',
   'backend/web-stats.test.ts',
   'backend/web-store.logs.test.ts',
-  'backend/coi-sw.test.ts',
+  'workers/coi-sw.test.ts',
   // core — 纯逻辑
   'core/context-menus.test.ts',
   'core/handlers/instance-ops.test.ts',

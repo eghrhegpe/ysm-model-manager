@@ -9,7 +9,7 @@ import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { getApp } from "../../backend/app.ts";
 import { pickDirectory } from "../../utils/dom/directory-picker.ts";
-import { modalPicker, modalSelect } from "../../utils/dom/dialogs/modal.ts";
+import { modalPicker, modalSelect } from "../../features/dialogs/modal.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { safeGet } from "../../utils/dom/storage.ts";
 import { esc } from "../../utils/dom/html.ts";

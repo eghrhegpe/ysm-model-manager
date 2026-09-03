@@ -16,7 +16,7 @@ import { multiModelSelectNode } from "../menu/multi-model.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { renderLoadingState } from "./preview-loading.ts";
-import type { VoxelData } from "../../backend/voxel-parse.ts";
+import type { VoxelData } from "../../parsers/voxel-parse.ts";
 
 // 提取魔法数值常量（体素尺寸 / 默认色 / chunk 维 / 截断上限）
 const CHUNK_SIZE = 32; // 空间分块维：每 chunk 持一个 InstancedMesh，32³ ≈ 32k 方块上限

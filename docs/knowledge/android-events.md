@@ -9,7 +9,7 @@ auto_fields:
   symbols_with_lines:
     - registerAndroidEvents
   tests:
-    - frontend/src/utils/dom/dialogs/modal.test.ts
+    - frontend/src/features/dialogs/modal.test.ts
   quick_groups:
     - 后端桥接与数据存储
   quick_intents:
@@ -31,7 +31,7 @@ auto_fields:
   invariant_anchors:
     - frontend/src/core/handlers/android-events.ts|registerAndroidEvents
 tests:
-  - frontend/src/utils/dom/dialogs/modal.test.ts
+  - frontend/src/features/dialogs/modal.test.ts
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

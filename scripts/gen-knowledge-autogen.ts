@@ -118,10 +118,13 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
     return [...lines.slice(0, end), ...block, ...lines.slice(end)].join('\n');
   }
   // 有现有 auto_fields 块 → 替换
+  // 边界规则与 parseAutoFields 对齐：块内空行跳过（历史卡存在「符号+空行交替」格式，
+  // 见 frontend_repo_audit.md 前车之鉴），只有遇到下一个顶层键（顶格行）才结束块。
   let end = idx + 1;
   while (end < lines.length) {
     const line = lines[end]!;
-    if (/^\S/.test(line) || line.trim() === '') break;
+    if (line.trim() === '') { end++; continue; }
+    if (/^\S/.test(line)) break;
     end++;
   }
   const block: string[] = ['auto_fields:'];

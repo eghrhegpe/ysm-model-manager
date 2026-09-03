@@ -111,6 +111,7 @@ auto_fields:
     - InputHandlers
     - InputOptions
     - invalidatePreview
+    - isEditableTarget
     - isLikelyTga
     - Ktx2EncodeRequest
     - Ktx2EncodeResponse
@@ -140,6 +141,7 @@ auto_fields:
     - MatTexSlots
     - MAX_KTX2_PIXELS
     - MAX_MODELS
+    - MdMmAllocEntry
     - MdMmBuildCtx
     - mdMmDetectFormat
     - MdMmDetectFormatCtx
@@ -161,6 +163,7 @@ auto_fields:
     - MdMmStage6bCtx
     - MdMmStage6Ctx
     - mdMmStage6Result
+    - mdMmTrackAlloc
     - MenuGraph
     - MenuGraphNode
     - MmdAdapterDeps

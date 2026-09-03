@@ -1,5 +1,13 @@
 {
-  "_comment": "前端分层反向边基线（R3 core→上层 / R4 features→views）。仅允许减少，不允许增加。更新: node scripts/check-layering.mjs --update",
-  "generatedAt": "2026-08-21",
-  "entries": []
+  "_comment": "前端分层反向边基线（R3 core→上层 / R4 features→views）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update",
+  "generatedAt": "2026-09-03",
+  "entries": [
+    "core/context-menu-file-handlers.ts:features/dialogs/modal.ts",
+    "core/context-menu-file-handlers.ts:features/dialogs/rename.ts",
+    "core/context-menu-file-handlers.ts:features/dialogs/tag-editor.ts",
+    "core/context-menu-handlers.ts:features/dialogs/modal.ts",
+    "core/context-menu-shared.ts:features/dialogs/modal.ts",
+    "core/handlers/android-events.ts:features/dialogs/modal.ts",
+    "core/handlers/instance-ops.ts:features/dialogs/modal.ts"
+  ]
 }

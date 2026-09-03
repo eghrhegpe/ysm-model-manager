@@ -53,13 +53,13 @@ const {
   isViewerModeMock: vi.fn(() => false),
 }));
 
-vi.mock("../utils/dom/dialogs/modal.ts", () => ({
+vi.mock("../features/dialogs/modal.ts", () => ({
   modalPrompt: modalPromptMock,
   modalConfirm: modalConfirmMock,
   modalSelect: modalSelectMock,
 }));
-vi.mock("../utils/dom/dialogs/rename.ts", () => ({ showRenameDialog: showRenameDialogMock }));
-vi.mock("../utils/dom/dialogs/tag-editor.ts", () => ({ modalTagEditor: modalTagEditorMock }));
+vi.mock("../features/dialogs/rename.ts", () => ({ showRenameDialog: showRenameDialogMock }));
+vi.mock("../features/dialogs/tag-editor.ts", () => ({ modalTagEditor: modalTagEditorMock }));
 // handler 统一走 getApp()（ADR-012）：mock getApp 返回 bindings mock 对象
 vi.mock("../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({

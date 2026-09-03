@@ -6,7 +6,7 @@ category: go
 source_files:
   - tests/parity/go-ts-zipentry.json
   - frontend/src/utils/resource/types.ts
-  - frontend/src/backend/voxel-colors.ts
+  - frontend/src/parsers/voxel-colors.ts
   - go/types/extensions.go
   - go/litematic/block_colors.go
   - go/litematic/block_ids.go
@@ -14,7 +14,7 @@ tests:
   - go/types/parity_zipentry_test.go
   - go/litematic/parity_voxel_test.go
   - frontend/src/backend/zipentry.parity.test.ts
-  - frontend/src/backend/voxel-colors.parity.test.ts
+  - frontend/src/parsers/voxel-colors.parity.test.ts
 auto_fields:
   symbols_with_lines:
     - ALL_RESOURCE_TYPES
@@ -120,13 +120,13 @@ invariant_anchors:
 ## 对外 API / 入口
 
 - Go：`go/types/parity_zipentry_test.go::TestParity_MatchZipEntry`、`go/litematic/parity_voxel_test.go::TestParity_VoxelColorMap/VoxelBlockVariant/VoxelColorKeyCoverage`
-- TS：`frontend/src/backend/zipentry.parity.test.ts`、`frontend/src/backend/voxel-colors.parity.test.ts`
-- Fixture：`tests/parity/go-ts-zipentry.json`；共享数据源 `frontend/src/backend/voxel-colors-data.json`
+- TS：`frontend/src/backend/zipentry.parity.test.ts`、`frontend/src/parsers/voxel-colors.parity.test.ts`
+- Fixture：`tests/parity/go-ts-zipentry.json`；共享数据源 `frontend/src/parsers/voxel-colors-data.json`
 
 ## 与其他子系统关系
 
 - 上游事实源：`resource_types.json`（zipEntries 指纹）、`go/litematic/blocks_1_12.json`（方块表）。
-- 对拍对象：`frontend/src/utils/resource/types.ts:376 matchZipEntryTS`、`frontend/src/backend/voxel-colors.ts`、`go/types/extensions.go:257 MatchZipEntry`、`go/litematic/block_colors.go`/`block_ids.go`。
+- 对拍对象：`frontend/src/utils/resource/types.ts:376 matchZipEntryTS`、`frontend/src/parsers/voxel-colors.ts`、`go/types/extensions.go:257 MatchZipEntry`、`go/litematic/block_colors.go`/`block_ids.go`。
 - 更新口径（ADR-154 §2.5）：Go 行为变更（有意）→ 两端重跑、同一批 fixture 期望值同步更新并带 diff 审查；生成物变更 → golden 测试即过期检测器。
 
 ## 实施进度

@@ -3,7 +3,7 @@ import { TOAST_MS } from "./utils/dom/toast-ms.ts";
 import { bus } from "./bus.ts";
 import { Window } from "./backend/runtime.ts";
 import { registerErrorDiary } from "./core/error-diary.ts";
-import { registerCoiServiceWorker } from "./backend/coi-sw.ts";
+import { registerCoiServiceWorker } from "./workers/coi-sw.ts";
 import { prefetchStatsWorker } from "./backend/browser-adapter.ts";
 import { initI18n } from "./core/i18n/locale.ts";
 import { friendlyError } from "./utils/dom/errors.ts";

@@ -5,7 +5,7 @@ import { friendlyError } from "../utils/dom/errors.ts";
 import { t } from "./i18n/t.ts";
 import { tr } from "./i18n/tr.ts";
 import { getApp } from "../backend/app.ts";
-import { modalConfirm } from "../utils/dom/dialogs/modal.ts";
+import { modalConfirm } from "../features/dialogs/modal.ts";
 // P1 修复（ADR-040）：file/dir handler 已拆出，此处合并
 import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";

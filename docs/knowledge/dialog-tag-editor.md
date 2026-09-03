@@ -4,8 +4,8 @@ name: 标签编辑器 tag-editor
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/utils/dom/dialogs/tag-editor.ts
-  - frontend/src/utils/dom/dialogs/tag-set.ts
+  - frontend/src/features/dialogs/tag-editor.ts
+  - frontend/src/features/dialogs/tag-set.ts
 auto_fields:
   symbols_with_lines:
     - addTagToSet
@@ -13,7 +13,7 @@ auto_fields:
     - modalTagEditor
     - TagSetResult
   tests:
-    - frontend/src/utils/dom/dialogs/tag-editor.test.ts
+    - frontend/src/features/dialogs/tag-editor.test.ts
   quick_groups:
     - UI 交互与弹窗
   quick_intents:
@@ -33,10 +33,10 @@ auto_fields:
     - 标签弹窗
     - 分类标记
   invariant_anchors:
-    - frontend/src/utils/dom/dialogs/tag-editor.ts|modalTagEditor
-    - frontend/src/utils/dom/dialogs/tag-set.ts|addTagToSet
+    - frontend/src/features/dialogs/tag-editor.ts|modalTagEditor
+    - frontend/src/features/dialogs/tag-set.ts|addTagToSet
 tests:
-  - frontend/src/utils/dom/dialogs/tag-editor.test.ts
+  - frontend/src/features/dialogs/tag-editor.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
@@ -57,8 +57,8 @@ use_when:
   - 标签弹窗
   - 分类标记
 invariant_anchors:
-  - frontend/src/utils/dom/dialogs/tag-editor.ts|modalTagEditor
-  - frontend/src/utils/dom/dialogs/tag-set.ts|addTagToSet
+  - frontend/src/features/dialogs/tag-editor.ts|modalTagEditor
+  - frontend/src/features/dialogs/tag-set.ts|addTagToSet
 status: active
 ---
 

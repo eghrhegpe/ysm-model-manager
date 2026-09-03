@@ -2,7 +2,7 @@
 // 前端 voxel-colors-data.json 是「由 Go 源一次性生成」的生成物，但 go/litematic/gen
 // 只生成 block_ids_data.go，voxel-colors-data.json 无复跑生成器——生成物会过期。
 // 本测试把 data.json 当作双端共享契约：Go 侧用源码表逐键验证 data.json 的值
-// （TS 侧 frontend/src/backend/voxel-colors.parity.test.ts 读同一 data.json 断言
+// （TS 侧 frontend/src/parsers/voxel-colors.parity.test.ts 读同一 data.json 断言
 // mapColor/resolveBlockName 输出）。Go 改 blockColorMap/blockVariantNames 而
 // data.json 未重新生成 → 本测试红（生成物过期检测器）。
 //
@@ -31,7 +31,7 @@ func repoRootFromLitematicPkg(t *testing.T) string {
 		t.Fatalf("Getwd: %v", err)
 	}
 	for d := dir; ; d = filepath.Dir(d) {
-		if _, err := os.Stat(filepath.Join(d, "frontend", "src", "backend", "voxel-colors-data.json")); err == nil {
+		if _, err := os.Stat(filepath.Join(d, "frontend", "src", "parsers", "voxel-colors-data.json")); err == nil {
 			return d
 		}
 		if filepath.Dir(d) == d {
@@ -45,7 +45,7 @@ func repoRootFromLitematicPkg(t *testing.T) string {
 func loadVoxelDataFixture(t *testing.T) *voxelDataFixture {
 	t.Helper()
 	root := repoRootFromLitematicPkg(t)
-	raw, err := os.ReadFile(filepath.Join(root, "frontend", "src", "backend", "voxel-colors-data.json"))
+	raw, err := os.ReadFile(filepath.Join(root, "frontend", "src", "parsers", "voxel-colors-data.json"))
 	if err != nil {
 		t.Fatalf("读取 voxel-colors-data.json: %v", err)
 	}

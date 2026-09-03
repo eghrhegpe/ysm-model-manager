@@ -25,7 +25,7 @@ vi.mock("../backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("../utils/dom/dialogs/modal.ts", () => ({
+vi.mock("../features/dialogs/modal.ts", () => ({
   esc: (s: unknown): string => String(s),
   modalConfirm: mocks.modalConfirm,
   modalProgress: mocks.modalProgress,

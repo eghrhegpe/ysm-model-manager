@@ -8,7 +8,7 @@ category: core
 source_files:
   - frontend/src/backend/app.ts
   - frontend/src/backend/platform.ts
-  - frontend/src/backend/extract.ts
+  - frontend/src/parsers/extract.ts
   - frontend/src/backend/browser-adapter.ts
 auto_fields:
   symbols_with_lines:

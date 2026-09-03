@@ -68,12 +68,12 @@ vi.mock("./loader.ts", () => ({
   loadEntries: loadEntriesMock,
 }));
 
-vi.mock("../../utils/dom/dialogs/modal.ts", () => ({
+vi.mock("../../features/dialogs/modal.ts", () => ({
   modalPrompt: modalPromptMock,
   modalConfirm: modalConfirmMock,
 }));
 
-vi.mock("../../utils/dom/dialogs/batch-rename.ts", () => ({
+vi.mock("../../features/dialogs/batch-rename.ts", () => ({
   showBatchRenameDialog: showBatchRenameDialogMock,
 }));
 

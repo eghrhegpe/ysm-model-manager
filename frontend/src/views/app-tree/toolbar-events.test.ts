@@ -52,7 +52,7 @@ vi.mock("../../backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("../../utils/dom/dialogs/adv-filter.ts", () => ({
+vi.mock("../../features/dialogs/adv-filter.ts", () => ({
   modalAdvFilter: modalAdvFilterMock,
 }));
 

@@ -4,7 +4,7 @@ name: 弹窗基座 modal
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/utils/dom/dialogs/modal.ts
+  - frontend/src/features/dialogs/modal.ts
 auto_fields:
   symbols_with_lines:
     - __resetModalStateForTest
@@ -28,7 +28,7 @@ auto_fields:
     - trapFocus
     - VIEW_TESTIDS
   tests:
-    - frontend/src/utils/dom/dialogs/modal.test.ts
+    - frontend/src/features/dialogs/modal.test.ts
   use_when:
     - 弹窗
     - 对话框
@@ -47,16 +47,16 @@ auto_fields:
     - prompt
     - confirm
   invariant_anchors:
-    - frontend/src/utils/dom/dialogs/modal.ts|trapFocus
-    - frontend/src/utils/dom/dialogs/modal.ts|closeDlg
-    - frontend/src/utils/dom/dialogs/modal.ts|registerDlg
-    - frontend/src/utils/dom/dialogs/modal.ts|modalConfirm
-    - frontend/src/utils/dom/dialogs/modal.ts|modalPicker
-    - frontend/src/utils/dom/dialogs/modal.ts|trapFocus
-    - frontend/src/utils/dom/dialogs/modal.ts|closeDlg
-    - frontend/src/utils/dom/dialogs/modal.ts|registerDlg
-    - frontend/src/utils/dom/dialogs/modal.ts|modalConfirm
-    - frontend/src/utils/dom/dialogs/modal.ts|modalPicker
+    - frontend/src/features/dialogs/modal.ts|trapFocus
+    - frontend/src/features/dialogs/modal.ts|closeDlg
+    - frontend/src/features/dialogs/modal.ts|registerDlg
+    - frontend/src/features/dialogs/modal.ts|modalConfirm
+    - frontend/src/features/dialogs/modal.ts|modalPicker
+    - frontend/src/features/dialogs/modal.ts|trapFocus
+    - frontend/src/features/dialogs/modal.ts|closeDlg
+    - frontend/src/features/dialogs/modal.ts|registerDlg
+    - frontend/src/features/dialogs/modal.ts|modalConfirm
+    - frontend/src/features/dialogs/modal.ts|modalPicker
   quick_groups:
     - UI 交互与弹窗
   quick_intents:
@@ -76,7 +76,7 @@ auto_fields:
     - closeDlg 经 WeakSet(_closingOverlays) 防重复触发，同一弹窗再次调用会静默跳过
     - 测试中必须 afterEach 调用 __resetModalStateForTest() 清槽位，否则跨用例残留状态污染
 tests:
-  - frontend/src/utils/dom/dialogs/modal.test.ts
+  - frontend/src/features/dialogs/modal.test.ts
 use_when:
   - 弹窗
   - 对话框
@@ -87,11 +87,11 @@ use_when:
   - prompt
   - confirm
 invariant_anchors:
-  - frontend/src/utils/dom/dialogs/modal.ts|trapFocus
-  - frontend/src/utils/dom/dialogs/modal.ts|closeDlg
-  - frontend/src/utils/dom/dialogs/modal.ts|registerDlg
-  - frontend/src/utils/dom/dialogs/modal.ts|modalConfirm
-  - frontend/src/utils/dom/dialogs/modal.ts|modalPicker
+  - frontend/src/features/dialogs/modal.ts|trapFocus
+  - frontend/src/features/dialogs/modal.ts|closeDlg
+  - frontend/src/features/dialogs/modal.ts|registerDlg
+  - frontend/src/features/dialogs/modal.ts|modalConfirm
+  - frontend/src/features/dialogs/modal.ts|modalPicker
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

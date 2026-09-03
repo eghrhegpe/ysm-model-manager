@@ -7,9 +7,9 @@
 
 import { idbGet, idbKeys } from "./idb.ts";
 import { parseWebPath, parseWebDirPath, arrayBufferToBase64, base64ToBytes, WEB_ROOT } from "./web-common.ts";
-import { extractZip } from "./extract.ts";
+import { extractZip } from "../parsers/extract.ts";
 import { dirKey } from "./web-fs-shared.ts";
-import { decodeVoxelNbt, type VoxelData } from "./voxel-parse.ts";
+import { decodeVoxelNbt, type VoxelData } from "../parsers/voxel-parse.ts";
 
 // ===== §5 文件读取 =====
 /** 读文件（/web/<type>/<rest> → IDB → base64；wasm.ts 解码链零改动复用）

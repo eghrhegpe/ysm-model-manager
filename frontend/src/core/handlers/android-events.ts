@@ -11,7 +11,7 @@ import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { Events } from "../../backend/runtime.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { closeActiveDialog } from "../../utils/dom/dialogs/modal.ts";
+import { closeActiveDialog } from "../../features/dialogs/modal.ts";
 import { emitAndroidBack } from "../../utils/dom/android-bridge.ts";
 
 /** 注册 Android 系统事件消费，push 取消订阅函数到 unsubs */

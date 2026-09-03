@@ -39,10 +39,10 @@ import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
 import { getExts } from "../utils/resource/extensions.ts";
 import { base64ToBytes, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
 // R2 导入增强：detectContainerType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
-import { detectContainerType } from "./extract.ts";
+import { detectContainerType } from "../parsers/extract.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
-import { parseNbtRoot, litematicMetaView, nbtStructureView, schematicSummaryView } from "./nbt-parse.ts";
-import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "./voxel-parse.ts";
+import { parseNbtRoot, litematicMetaView, nbtStructureView, schematicSummaryView } from "../parsers/nbt-parse.ts";
+import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "../parsers/voxel-parse.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
 // 预填、rename.ts:92 重命名 tips、detail.ts:58-62 详情 stats/license、loader.ts:140 作者兜底）
@@ -51,7 +51,7 @@ import {
   extractYsmSummaryFromBytes,
   emptyYsmHeader,
   emptyYsmSummary,
-} from "./ysm-header.ts";
+} from "../parsers/ysm-header.ts";
 // ADR-071 #6：SearchModels 数值条件的统计来源 —— Web Worker 批量统计
 // （Worker 内独立加载 WASM + open IndexedDB，主线程零解析负载；不可用/失败降级）
 import { batchStatsWebModels, type WebModelStats } from "./web-stats.ts";

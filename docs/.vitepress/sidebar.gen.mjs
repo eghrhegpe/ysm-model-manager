@@ -730,6 +730,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-171：preview3d 超大文件裁决式复核：FBXLoader 官方化 / 巨型单体维持",
+        "link": "/adr/ADR-171-preview3d-oversize-adjudication"
+      },
+      {
+        "text": "ADR-170：frontend 分层:backend 桥层收窄+解析簇下沉 parsers,dialogs 升格 features(二段式)",
+        "link": "/adr/ADR-170-frontend-backend-parsers-dialogs-features"
+      },
+      {
         "text": "ADR-169：menu/core 类型叶下沉：PreviewMenuCtx 归位 node-types 断子模块纯 type 环",
         "link": "/adr/ADR-169-menu-core-previewmenuctx-node-types-type"
       },
@@ -1464,6 +1472,10 @@ export const autoSidebar = [
             "link": "/knowledge/event-graph-guard"
           },
           {
+            "text": "解析簇 parsers/ 自 backend 迁出",
+            "link": "/knowledge/frontend_parsers"
+          },
+          {
             "text": "前端测试基建审计",
             "link": "/knowledge/frontend_test_audit"
           },
@@ -1774,6 +1786,10 @@ export const autoSidebar = [
           {
             "text": "3D 预览悬浮 FAB 控制层",
             "link": "/knowledge/dom-fab"
+          },
+          {
+            "text": "业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)",
+            "link": "/knowledge/features_dialogs"
           },
           {
             "text": "前端设计锐评",

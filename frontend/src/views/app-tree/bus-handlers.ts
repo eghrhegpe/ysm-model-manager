@@ -8,8 +8,8 @@ import { loadEntries } from "./loader.ts";
 import { getApp } from "../../backend/app.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import type { AppTree } from "./index.ts";
-import { modalPrompt, modalConfirm } from "../../utils/dom/dialogs/modal.ts";
-import { showBatchRenameDialog } from "../../utils/dom/dialogs/batch-rename.ts";
+import { modalPrompt, modalConfirm } from "../../features/dialogs/modal.ts";
+import { showBatchRenameDialog } from "../../features/dialogs/batch-rename.ts";
 import { selectState } from "./data.ts";
 import { can } from "../../utils/dom/capabilities.ts";
 

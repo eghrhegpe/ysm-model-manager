@@ -4,7 +4,7 @@
 // （file/dir 动态 import handlers 的 resolveDstDir 会成环，迁入本叶子模块后破环）。
 // 依赖：bus / modalPrompt / getApp / RESOURCE_TYPES——均不引 handlers，本文件不在环内。
 import { bus, type ToastPayload } from "../bus.ts";
-import { modalPrompt } from "../utils/dom/dialogs/modal.ts";
+import { modalPrompt } from "../features/dialogs/modal.ts";
 import { getApp } from "../backend/app.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";

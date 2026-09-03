@@ -43,7 +43,7 @@ const m = vi.hoisted(() => ({
 const loaded = vi.hoisted(() => ({ views: [] as string[] }));
 
 vi.mock("./core/error-diary.ts", () => ({ registerErrorDiary: m.registerErrorDiary }));
-vi.mock("./backend/coi-sw.ts", () => ({ registerCoiServiceWorker: m.registerCoiServiceWorker }));
+vi.mock("./workers/coi-sw.ts", () => ({ registerCoiServiceWorker: m.registerCoiServiceWorker }));
 vi.mock("./backend/browser-adapter.ts", () => ({ prefetchStatsWorker: m.prefetchStatsWorker }));
 vi.mock("./core/i18n/locale.ts", () => ({ initI18n: m.initI18n }));
 vi.mock("./features/version-updater.ts", () => ({ checkUpdateSilent: m.checkUpdateSilent }));

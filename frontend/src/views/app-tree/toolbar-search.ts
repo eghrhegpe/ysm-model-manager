@@ -4,7 +4,7 @@ import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { bus } from "../../bus.ts";
 import { getExts } from "../../utils/resource/extensions.ts";
-import { modalAdvFilter, type AdvFilterValue } from "../../utils/dom/dialogs/adv-filter.ts";
+import { modalAdvFilter, type AdvFilterValue } from "../../features/dialogs/adv-filter.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { importWebFiles } from "../../backend/browser-adapter.ts";

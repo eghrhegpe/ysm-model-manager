@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { zipSync, strToU8 } from "fflate";
 import { b64ToBytes, bytesToBase64 } from "../base64.ts";
-import { extractZip } from "../../backend/extract.ts";
+import { extractZip } from "../../parsers/extract.ts";
 import {
   resolveMmdZipConfig,
   makeZipOverlayPort,

@@ -16,7 +16,7 @@ import {
 import { dirKey, fileKey } from "./web-fs-shared.ts";
 import { MAX_IMPORT_BYTES } from "./web-common.ts";
 import { __setStatsRunnerForTest } from "./web-stats.ts";
-import { emptyYsmHeader, emptyYsmSummary } from "./ysm-header.ts";
+import { emptyYsmHeader, emptyYsmSummary } from "../parsers/ysm-header.ts";
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
 
 // ── NBT 解析/视图 mock（web-fs 只做装配，解析层不在此验证）──
@@ -27,14 +27,14 @@ const nbtp = vi.hoisted(() => ({
   nbtStructureView: vi.fn(),
   schematicSummaryView: vi.fn(),
 }));
-vi.mock("./nbt-parse.ts", () => nbtp);
+vi.mock("../parsers/nbt-parse.ts", () => nbtp);
 const vox = vi.hoisted(() => ({
   decodeVoxelNbt: vi.fn(),
   nbtVoxelView: vi.fn(),
   litematicVoxelView: vi.fn(),
   schematicVoxelView: vi.fn(),
 }));
-vi.mock("./voxel-parse.ts", () => vox);
+vi.mock("../parsers/voxel-parse.ts", () => vox);
 
 // ── IDB 内存 store（test-setup 全局共享）──
 const idb = (globalThis as unknown as {

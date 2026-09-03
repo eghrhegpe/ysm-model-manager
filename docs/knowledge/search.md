@@ -8,8 +8,8 @@ source_files:
   - frontend/src/views/app-tree/toolbar-events.ts
   - frontend/src/views/app-tree/index.ts
   - frontend/src/views/app-tree/render.ts
-  - frontend/src/utils/dom/dialogs/adv-filter.ts
-  - frontend/src/utils/dom/dialogs/adv-filter-util.ts
+  - frontend/src/features/dialogs/adv-filter.ts
+  - frontend/src/features/dialogs/adv-filter-util.ts
   - frontend/src/backend/web-stats.ts
 auto_fields:
   symbols_with_lines:
@@ -51,13 +51,13 @@ auto_fields:
   invariant_anchors:
     - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
     - frontend/src/views/app-tree/toolbar-search.ts|advFilterIntersectPaths
-    - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
+    - frontend/src/features/dialogs/adv-filter.ts|modalAdvFilter
     - frontend/src/backend/web-stats.ts|consumeWebSearchDegraded
   tests:
     - frontend/src/views/app-tree/toolbar-search.test.ts
     - frontend/src/views/app-tree/toolbar-events.test.ts
-    - frontend/src/utils/dom/dialogs/adv-filter.test.ts
-    - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
+    - frontend/src/features/dialogs/adv-filter.test.ts
+    - frontend/src/features/dialogs/adv-filter-util.test.ts
   quick_groups:
     - 模型扫描与仓库管理
   quick_intents:
@@ -79,13 +79,13 @@ auto_fields:
 invariant_anchors:
   - frontend/src/views/app-tree/toolbar-search.ts|openAdvFilterDialog
   - frontend/src/views/app-tree/toolbar-search.ts|advFilterIntersectPaths
-  - frontend/src/utils/dom/dialogs/adv-filter.ts|modalAdvFilter
+  - frontend/src/features/dialogs/adv-filter.ts|modalAdvFilter
   - frontend/src/backend/web-stats.ts|consumeWebSearchDegraded
 tests:
   - frontend/src/views/app-tree/toolbar-search.test.ts
   - frontend/src/views/app-tree/toolbar-events.test.ts
-  - frontend/src/utils/dom/dialogs/adv-filter.test.ts
-  - frontend/src/utils/dom/dialogs/adv-filter-util.test.ts
+  - frontend/src/features/dialogs/adv-filter.test.ts
+  - frontend/src/features/dialogs/adv-filter-util.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

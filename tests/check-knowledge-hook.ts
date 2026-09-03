@@ -57,7 +57,7 @@ check('--quiet 仅吐 card stem', () => {
     [
       path.join(ROOT, 'scripts', 'check-knowledge-drift.ts'),
       '--affected', '--quiet',
-      'frontend/src/services/registry.ts', 'go/avatar/resource.go',
+      'frontend/src/services/resource-registry.ts', 'go/avatar/resource.go',
     ],
     { encoding: 'utf8' },
   );

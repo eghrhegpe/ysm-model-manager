@@ -6,7 +6,7 @@
 // web-fs-read.ts 叶子——断对 web-fs.ts 主文件的循环依赖。
 
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
-import { extractZip } from "./extract.ts";
+import { extractZip } from "../parsers/extract.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "../preview-3d/decoder/geometry.ts";
 import { parseYsmJsonDirect } from "../preview-3d/decoder/parse-ysm-json.ts";

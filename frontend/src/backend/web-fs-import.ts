@@ -15,7 +15,7 @@ import { idbGet, idbSet, idbDel } from "./idb.ts";
 import { MAX_IMPORT_BYTES } from "./web-common.ts";
 // R2 导入增强：ZIP 解压（extractZip 解出文件；文件名以 fflateKey 入库——
 // 前端无 GBK 码表，非 UTF-8 中文名降级透传 fflateKey，数据访问不受影响）
-import { extractZip } from "./extract.ts";
+import { extractZip } from "../parsers/extract.ts";
 import { dirKey, fileKey, mainFileRank, MAIN_FILE_RANK_TYPE } from "./web-fs-shared.ts";
 
 /**

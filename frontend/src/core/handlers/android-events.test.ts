@@ -31,7 +31,7 @@ vi.mock("@wailsio/runtime", () => ({
   Window: { Show: vi.fn(), Hide: vi.fn(), SetTitle: vi.fn(), OpenDevTools: vi.fn(), Reload: vi.fn() },
 }));
 
-vi.mock("../../utils/dom/dialogs/modal.ts", () => ({
+vi.mock("../../features/dialogs/modal.ts", () => ({
   closeActiveDialog: vi.fn().mockReturnValue(false),
 }));
 
@@ -39,7 +39,7 @@ vi.mock("../../utils/dom/android-bridge.ts", () => ({
   emitAndroidBack: vi.fn().mockReturnValue(false),
 }));
 
-import { closeActiveDialog } from "../../utils/dom/dialogs/modal.ts";
+import { closeActiveDialog } from "../../features/dialogs/modal.ts";
 
 let cleanups: Array<() => void> = [];
 

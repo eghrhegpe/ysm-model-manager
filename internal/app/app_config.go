@@ -4,6 +4,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -325,6 +326,12 @@ func (a *App) DoUpdate(url string, expectedHash string) string {
 	}
 	defer os.Remove(exePath)
 	if err := updater.InstallUpdate(exePath); err != nil {
+		// ErrExitRequested = 更新 exe 已就绪、helper 子进程已在侧等待：
+		// os.Exit 从 updater 库函数收口到应用层（库内退出会跳过 defer/锁），
+		// 此处退出即完成 exe 替换；前端应在此之前已展示提示
+		if errors.Is(err, updater.ErrExitRequested) {
+			os.Exit(0)
+		}
 		return "安装失败: " + err.Error()
 	}
 	return "success"

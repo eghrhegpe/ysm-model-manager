@@ -1,4 +1,4 @@
-// ===== updater 关键函数补测（Check 0% / InstallUpdate 36.1% / CleanupOldVersion 54.5% / copyFile 0%）=====
+// ===== updater 关键函数补测（Check 0% / InstallUpdate 36.1% / CleanupOldVersion 54.5% / fsutil.CopyFile 0%（updater 裸实现已删））=====
 package updater
 
 import (
@@ -12,6 +12,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // ---- Check（0% 覆盖）----
@@ -133,7 +135,7 @@ func TestCleanupOldVersion_OldFileExists(t *testing.T) {
 	CleanupOldVersion()
 }
 
-// ---- copyFile（0% 覆盖）----
+// ---- 更新 exe 复制（收敛至 fsutil.CopyFile，updater 侧删除裸实现后此处直接测收敛点）----
 
 func TestCopyFile_Success(t *testing.T) {
 	dir := t.TempDir()
@@ -142,7 +144,7 @@ func TestCopyFile_Success(t *testing.T) {
 	if err := os.WriteFile(src, []byte("copy me"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := copyFile(src, dst); err != nil {
+	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 失败: %v", err)
 	}
 	data, err := os.ReadFile(dst)
@@ -153,7 +155,7 @@ func TestCopyFile_Success(t *testing.T) {
 
 func TestCopyFile_SrcNotFound(t *testing.T) {
 	dir := t.TempDir()
-	err := copyFile(filepath.Join(dir, "nope.txt"), filepath.Join(dir, "dst.txt"))
+	err := fsutil.CopyFile(filepath.Join(dir, "nope.txt"), filepath.Join(dir, "dst.txt"))
 	if err == nil {
 		t.Fatal("源文件不存在应报错")
 	}
@@ -166,7 +168,7 @@ func TestCopyFile_EmptyFile(t *testing.T) {
 	if err := os.WriteFile(src, []byte{}, 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := copyFile(src, dst); err != nil {
+	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 空文件失败: %v", err)
 	}
 	data, err := os.ReadFile(dst)
@@ -186,7 +188,7 @@ func TestCopyFile_LargeFile(t *testing.T) {
 	if err := os.WriteFile(src, content, 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := copyFile(src, dst); err != nil {
+	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 大文件失败: %v", err)
 	}
 	data, err := os.ReadFile(dst)

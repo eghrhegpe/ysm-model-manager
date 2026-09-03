@@ -19,6 +19,9 @@ import (
 	"time"
 
 	"golang.org/x/mod/semver"
+
+	"ysm-model-manager/go/executil"
+	"ysm-model-manager/go/fsutil"
 )
 
 // repoOwner/repoName GitHub 仓库定位（测试可覆盖为本地镜像/自定义仓库，
@@ -56,6 +59,9 @@ var (
 	ErrDownloadIncomplete = errors.New("更新包下载不完整")
 	// ErrHashMismatch 更新包 SHA256 校验失败
 	ErrHashMismatch = errors.New("SHA256 校验失败")
+	// ErrExitRequested 更新已就绪、主进程应退出以完成 exe 替换（helper 子进程在侧等待）。
+	// 库函数不再直接 os.Exit（锐评 #1：defer/锁需正常走完），改由调用方收口退出。
+	ErrExitRequested = errors.New("更新安装完成，进程即将退出")
 )
 
 // maxDownloadSize 更新包下载大小上限（500MB）
@@ -233,7 +239,8 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 		return &UpdateInfo{Current: current, Latest: latestTag}, nil
 	}
 
-	if latestTag != "" && latestAssetURL == "" {
+	// latestTag 已在 L214 早退保证非空，此处只需判 asset URL 空
+	if latestAssetURL == "" {
 		// 有新版本但无本平台安装包（如仅发布其他平台）→ 视为不可更新
 		return &UpdateInfo{Current: current, Latest: latestTag}, nil
 	}
@@ -538,7 +545,7 @@ func InstallUpdate(exePath string) error {
 		return fmt.Errorf("创建临时目录失败: %w", err)
 	}
 	newPath := filepath.Join(tmpDir, "YSM-Model-Manager.exe")
-	if err := copyFile(exePath, newPath); err != nil {
+	if err := fsutil.CopyFile(exePath, newPath); err != nil {
 		os.RemoveAll(tmpDir)
 		return fmt.Errorf("准备新 exe 失败: %w", err)
 	}
@@ -552,6 +559,9 @@ func InstallUpdate(exePath string) error {
 	pid := strconv.Itoa(os.Getpid())
 	cmd := exec.Command(helperPath, newPath, exe, pid)
 	cmd.Dir = tmpDir
+	// helper 是自更新进程，不得闪黑框控制台——executil.HideWindow 全平台收敛点
+	// （Windows 实装 SW_HIDE，其他平台空操作；updater 是唯一生产 exec.Command 调用点）
+	executil.HideWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		os.RemoveAll(tmpDir)
 		return fmt.Errorf("启动更新助手失败: %w", err)
@@ -562,28 +572,14 @@ func InstallUpdate(exePath string) error {
 		log.Printf("[updater] 清理临时文件失败: %v", err)
 	}
 
-	// 主进程退出（Wails 前端应在此之前显示提示）
-	os.Exit(0)
-	return nil
+	// 主进程退出收口（锐评 #1）：库函数不直接 os.Exit——defer（updateLock.Unlock 等）
+	// 必须正常走完，退出由调用方据 ErrExitRequested 在应用层执行（helper 已在子进程
+	// 侧等待，主进程退出即完成 exe 替换）。Wails 前端应在此之前显示提示。
+	return ErrExitRequested
 }
 
-// copyFile 复制文件（更新 exe 直装场景：下载临时文件 → 临时目录新路径）
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	if _, err := io.Copy(out, in); err != nil {
-		return err
-	}
-	return out.Close()
-}
+// 更新 exe 复制已收敛至 fsutil.CopyFile（ADR-044 策略 A：同目录 tmp+rename 原子落地，
+// 防磁盘满留半截 exe；此处旧有裸 os.Create+io.Copy 实现已删除，见 recycle.go 同款收敛）
 
 // ===== semver 比较 =====
 

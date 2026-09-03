@@ -1,6 +1,6 @@
 // ===== 诊断页初始化（为 _initDiagnostics 减负） =====
 // ADR-040 按职责切文件：日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（conflicts.ts）已拆出；
-// 本文件保留 initDiagnostics 编排壳，并 re-export startDedup 保持外部 import 路径（./diagnostics/init.ts）不变
+// 本文件保留 initDiagnostics 编排壳，并 re-export createDedupSession 保持外部 import 路径（./diagnostics/init.ts）不变
 import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { bus } from "../../../bus.ts";
@@ -13,8 +13,8 @@ import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
 import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 import { runHealthAudit } from "./health.ts";
 
-// 对外 API 兼容：startDedup 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
-export { startDedup, getDedupConfig, resetDedupConfig } from "./dedup.ts";
+// 对外 API 兼容：createDedupSession 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
+export { createDedupSession } from "./dedup.ts";
 
 function dgInCopyTextFallback(text: string): void {
   const ta = document.createElement("textarea");

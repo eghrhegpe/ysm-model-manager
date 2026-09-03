@@ -1,5 +1,7 @@
-// ===== 诊断页：去重扫描（startDedup） =====
+// ===== 诊断页：去重扫描（createDedupSession 会话工厂） =====
 // ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（本文件）/ 冲突扫描（conflicts.ts）
+// 去全局化：原模块级可变全局 _dedupBusy / diagExecBusy / dedupConfig 收敛为会话闭包状态，
+// 每会话独立（可 reset、可隔离单测），消除跨调用共享状态的竞态面。
 import { t } from "../../../core/i18n/t.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../backend/app.ts";
@@ -9,21 +11,10 @@ import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { fileIcon } from "../../../utils/icon/icon.ts";
 import type { EscFn } from "./logs.ts";
 
-// P2-4 修复（重入守卫）：startDedup 重入标志——去重扫描大量 await（逐目录
-// FindDuplicateFiles），快速连点会并发扫描同一 list 互相覆盖 innerHTML 且重复进
-// 移入回收站流程；busy 命中直接返回（与 scanConflicts / dedup-exec 同一范式）
-let _dedupBusy = false;
-
-// P3 修复（子代理审计，重入守卫）：dedup-exec 并发标志——执行期间大量 MoveToRecycle
-// await，重复点击会并行循环对同一批路径二次删除（误统计）；busy 命中直接返回
-let diagExecBusy = false;
-
-// ===== 全局配置状态（供 initDedupConfig 和 startDedup 共享） =====
-// 默认值冻结为唯一权威源；dedupConfig 为可编辑副本；reset 从默认值展开。
-// 冻结默认值防误改、防引用漂移；getDedupConfig() 返回冻结快照防外部篡改。
+// 默认值冻结为唯一权威源；会话 config 为可编辑副本；reset 从默认值展开。
 // 注意：显式标宽 strategy/keepPolicy/priorityPath 为 string，避免 Object.freeze
 // 泛型保留字面量类型（"deep_hash"）导致 select.value(string) 赋值失败。
-interface DedupConfigShape {
+export interface DedupConfigShape {
   strategy: string;
   keepPolicy: string;
   priorityPath: string;
@@ -34,38 +25,8 @@ const DEDUP_DEFAULTS: Readonly<DedupConfigShape> = Object.freeze({
   keepPolicy: "oldest",
   priorityPath: "",
 });
-const dedupConfig: DedupConfigShape = { ...DEDUP_DEFAULTS };
 
-export function resetDedupConfig(): void {
-  Object.assign(dedupConfig, DEDUP_DEFAULTS);
-}
-
-// ===== 类型提级（包级非导出，原 executeDedupScan 内匿名接口） =====
-interface ScanTarget {
-  id: string;
-  icon: string;
-  label: string;
-  dir: string;
-}
-
-interface ScanFile {
-  path: string;
-  name: string;
-  size: number;
-  modTime?: string;
-}
-
-interface ScanGroup {
-  files: ScanFile[];
-}
-
-interface ScanGroupResult {
-  icon: string;
-  label: string;
-  groups: ScanGroup[];
-}
-
-// ===== getDefaultKeepIdx 子函数：闭包 toTimestamp 升格 =====
+// ===== getDefaultKeepIdx 子函数：闭包 toTimestamp 升格（纯函数） =====
 function toTimestamp(modTime?: string | number): number {
   if (modTime === undefined || modTime === null || modTime === "") return Number.MAX_SAFE_INTEGER;
   const ts = typeof modTime === "number" ? modTime : Date.parse(modTime);
@@ -124,7 +85,7 @@ function reduceLargestIdx(
  * - "path": 保留指定路径前缀匹配的文件
  * - 其他/默认: 保留最大文件（size 最大）
  */
-function getDefaultKeepIdx(
+export function getDefaultKeepIdx(
   files: { path: string; size: number; modTime?: string | number }[],
   policy: string,
   priorityPath: string,
@@ -143,91 +104,38 @@ function getDefaultKeepIdx(
   }
 }
 
-// ===== initDedupConfig 子函数 =====
-function renderConfigHtml(list: HTMLElement): void {
-  list.innerHTML = `
-    <div class="diag-dedup-config">
-      <div class="diag-config-item">
-        <label for="dedup-strategy">🔍 ${t("diagnostics.dedupStrategy")}:</label>
-        <select id="dedup-strategy" class="diag-config-select">
-          <option value="deep_hash"${dedupConfig.strategy === "deep_hash" ? " selected" : ""}>${t("diagnostics.strategyDeepHash")} (SHA256)</option>
-          <option value="quick_hash"${dedupConfig.strategy === "quick_hash" ? " selected" : ""}>${t("diagnostics.strategyQuickHash")} (MD5)</option>
-          <option value="name_size"${dedupConfig.strategy === "name_size" ? " selected" : ""}>${t("diagnostics.strategyNameSize")} (${t("diagnostics.fastest")})</option>
-        </select>
-      </div>
-      <div class="diag-config-item">
-        <label for="keep-policy">💾 ${t("diagnostics.keepPolicy")}:</label>
-        <select id="keep-policy" class="diag-config-select">
-          <option value="oldest"${dedupConfig.keepPolicy === "oldest" ? " selected" : ""}>${t("diagnostics.keepOldest")}</option>
-          <option value="newest"${dedupConfig.keepPolicy === "newest" ? " selected" : ""}>${t("diagnostics.keepNewest")}</option>
-          <option value="path"${dedupConfig.keepPolicy === "path" ? " selected" : ""}>${t("diagnostics.keepByPath")}</option>
-        </select>
-      </div>
-      <div class="diag-config-item" id="priority-path-item" style="${dedupConfig.keepPolicy === "path" ? "" : "display:none"}">
-        <label for="priority-path">📁 ${t("diagnostics.priorityPath")}:</label>
-        <input type="text" id="priority-path" class="diag-config-input" placeholder="/path/to/priority" value="">
-      </div>
-    </div>
-  `;
+// ===== 类型提级 =====
+interface ScanTarget {
+  id: string;
+  icon: string;
+  label: string;
+  dir: string;
 }
 
-function bindStrategyChange(list: HTMLElement): void {
-  list.querySelector("#dedup-strategy")?.addEventListener("change", (e) => {
-    dedupConfig.strategy = (e.target as HTMLSelectElement).value;
-  });
+interface ScanFile {
+  path: string;
+  name: string;
+  size: number;
+  modTime?: string;
 }
 
-function bindKeepPolicyChange(list: HTMLElement): void {
-  list.querySelector("#keep-policy")?.addEventListener("change", (e) => {
-    dedupConfig.keepPolicy = (e.target as HTMLSelectElement).value;
-    const pathItem = list.querySelector("#priority-path-item") as HTMLElement;
-    if (pathItem) {
-      pathItem.style.display = dedupConfig.keepPolicy === "path" ? "" : "none";
-    }
-  });
+interface ScanGroup {
+  files: ScanFile[];
 }
 
-function bindPriorityPathInput(list: HTMLElement): void {
-  list.querySelector("#priority-path")?.addEventListener("input", (e) => {
-    dedupConfig.priorityPath = (e.target as HTMLInputElement).value;
-  });
+interface ScanGroupResult {
+  icon: string;
+  label: string;
+  groups: ScanGroup[];
 }
 
-function buildConfigPanel(list: HTMLElement): void {
-  renderConfigHtml(list);
-  bindStrategyChange(list);
-  bindKeepPolicyChange(list);
-  bindPriorityPathInput(list);
-}
-
-/**
- * 初始化去重配置面板（标签页打开时调用，配置实时保存）
- * @param list 配置面板容器（dedup-config-panel，独立于 result-list——
- *             扫描结果不覆盖面板，控件扫描后仍可改；code_review P3）
- */
-export function initDedupConfig(list: HTMLElement): void {
-  buildConfigPanel(list);
-}
-
-/**
- * 获取当前去重配置（供外部调用）——返回冻结快照，防调用方篡改或跨调用污染。
- */
-export function getDedupConfig(): Readonly<{ strategy: string; keepPolicy: string; priorityPath: string }> {
-  return Object.freeze({
-    strategy: dedupConfig.strategy,
-    keepPolicy: dedupConfig.keepPolicy,
-    priorityPath: dedupConfig.priorityPath,
-  });
-}
-
-// ===== startDedup / executeDedupScan 子函数 =====
 import type { Group as DedupGroup } from "../../../../bindings/ysm-model-manager/go/dedup/models.ts";
 type GetRepoRootFn = (rtype: string) => Promise<string>;
 type FindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
 type MoveToRecycleFn = (path: string) => Promise<void>;
 type DedupRegType = Awaited<ReturnType<typeof loadResourceRegistry>>;
 
-// ② targets收集(rtype单目录/全类型遍历)
+// ② targets收集(rtype单目录/全类型遍历)（依赖注入，无会话状态）
 async function collectTargets(
   rtype: string | undefined,
   reg: DedupRegType,
@@ -258,6 +166,7 @@ async function scanEachDirectory(
   list: HTMLElement,
   esc: EscFn,
   FindDuplicateFiles: FindDuplicateFilesFn,
+  getConfig: () => Readonly<DedupConfigShape>,
 ): Promise<{ allResults: ScanGroupResult[]; earlyExit: boolean }> {
   const allResults: ScanGroupResult[] = [];
   for (let i = 0; i < targets.length; i++) {
@@ -272,8 +181,7 @@ async function scanEachDirectory(
       }) +
       "</div>";
     await new Promise((r) => setTimeout(r, 10));
-    const dedupConfig = getDedupConfig();
-    const configStr = JSON.stringify(dedupConfig);
+    const configStr = JSON.stringify(getConfig());
     const groups = await FindDuplicateFiles(target.dir, configStr);
     if (!groups) {
       list.innerHTML =
@@ -323,10 +231,11 @@ ${isDefault ? '<span class="diag-dedup-recommend">' + t("diagnostics.recommended
   return html;
 }
 
-// ④ 分组结果 allResults 汇总渲染（group HTML + 默认保留索引）
+// ④ 分组结果 allResults 汇总渲染（group HTML + 默认保留索引）——config 注入取代模块全局
 function renderResultsHtml(
   allResults: ScanGroupResult[],
   esc: EscFn,
+  config: Readonly<DedupConfigShape>,
 ): string {
   const totalGroups = allResults.reduce((s, r) => s + r.groups.length, 0);
   const totalDups = allResults.reduce(
@@ -349,7 +258,7 @@ ${rtResult.icon} ${rtResult.label}
 
     for (const group of rtResult.groups) {
       const files = group.files || [];
-      const defaultIdx = getDefaultKeepIdx(files, dedupConfig.keepPolicy, dedupConfig.priorityPath);
+      const defaultIdx = getDefaultKeepIdx(files, config.keepPolicy, config.priorityPath);
       const totalSize = files.reduce((s, e) => s + e.size, 0);
       const gi = groupIndex++;
 
@@ -394,199 +303,232 @@ function bindCancelButton(list: HTMLElement): void {
   });
 }
 
-// ⑤ exec 按钮：逐组 MoveToRecycle + success/fail 统计 + treeReload
-async function runExecDelete(
-  list: HTMLElement,
-  allResults: ScanGroupResult[],
-  MoveToRecycle: MoveToRecycleFn,
-  esc: EscFn,
-): Promise<void> {
-  if (diagExecBusy) return;
-  diagExecBusy = true;
-  let del = 0,
-    fail = 0,
-    gi2 = 0;
-  try {
-    for (const rtResult of allResults) {
-      for (const group of rtResult.groups) {
-        const files = group.files || [];
-        const selEl = list.querySelector(
-          'input[name="dedup-keep-' + gi2 + '"]:checked',
-        ) as HTMLInputElement | null;
-        const selected = selEl ? parseInt(selEl.value, 10) : 0;
-        if (selected === -1) {
-          gi2++;
-          continue;
-        }
-        for (let fi = 0; fi < files.length; fi++) {
-          if (fi === selected) continue;
-          try {
-            await MoveToRecycle(files[fi].path);
-            del++;
-          } catch {
-            fail++;
-          }
-        }
-        gi2++;
-      }
-    }
-    if (del > 0) {
-      bus.emit("stats:refresh");
-      bus.emit("tree:reload");
-    }
-    list.innerHTML =
-      '<div class="stat-row diag-msg ' +
-      (fail > 0 ? "diag-msg-warn" : "diag-msg-success") +
-      '">✅ ' +
-      t("diagnostics.dedupDone", { del, fail }) +
-      "</div>";
-  } catch (err) {
-    list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-error">' +
-      t("diagnostics.dedupFailed") +
-      ": " +
-      esc(String(err)) +
-      "</div>";
-  } finally {
-    diagExecBusy = false;
-  }
-}
-
-// ⑤ exec 按钮绑定壳
-function bindExecButton(
-  list: HTMLElement,
-  allResults: ScanGroupResult[],
-  MoveToRecycle: MoveToRecycleFn,
-  esc: EscFn,
-): void {
-  list
-    .querySelector("#diag-dedup-exec")
-    ?.addEventListener("click", async () => {
-      await runExecDelete(list, allResults, MoveToRecycle, esc);
-    });
-}
-
-// ②→③→④→⑤ executeDedupScan 核心协调壳（原内嵌闭包升格）
-async function executeScanCore(
-  list: HTMLElement,
-  esc: EscFn,
-  rtype: string | undefined,
-  reg: DedupRegType,
-  typeIcon: string,
-  typeLabel: string,
-  GetRepoRoot: GetRepoRootFn,
-  FindDuplicateFiles: FindDuplicateFilesFn,
-  MoveToRecycle: MoveToRecycleFn,
-): Promise<void> {
-  // ② targets 收集
-  const targets = await collectTargets(rtype, reg, typeIcon, typeLabel, GetRepoRoot);
-  if (!targets.length) {
-    list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-error">' + t("diagnostics.configResourceDir") + "</div>";
-    return;
-  }
-
-  // ③ 逐目录扫描
-  const { allResults, earlyExit } = await scanEachDirectory(
-    targets,
-    list,
-    esc,
-    FindDuplicateFiles,
-  );
-  if (earlyExit) return;
-
-  const totalGroups = allResults.reduce((s, r) => s + r.groups.length, 0);
-  if (!totalGroups) {
-    list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-success" style="justify-content:center">✅ ' +
-      t("diagnostics.noDups") +
-      "</div>";
-    return;
-  }
-
-  // ④ 渲染结果 HTML + 绑定预览/取消
-  list.innerHTML = renderResultsHtml(allResults, esc);
-  bindPreviewClicks(list);
-  bindCancelButton(list);
-
-  // ⑤ exec 按钮绑定
-  bindExecButton(list, allResults, MoveToRecycle, esc);
-}
-
-// 原 executeDedupScan 闭包升格 + 外层 try-catch（异常路径渲染）
-async function executeScan(
-  list: HTMLElement,
-  esc: EscFn,
-  rtype: string | undefined,
-  reg: DedupRegType,
-  typeIcon: string,
-  typeLabel: string,
-  GetRepoRoot: GetRepoRootFn,
-  FindDuplicateFiles: FindDuplicateFilesFn,
-  MoveToRecycle: MoveToRecycleFn,
-): Promise<void> {
-  try {
-    await executeScanCore(
-      list,
-      esc,
-      rtype,
-      reg,
-      typeIcon,
-      typeLabel,
-      GetRepoRoot,
-      FindDuplicateFiles,
-      MoveToRecycle,
-    );
-  } catch (err) {
-    list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-error">' +
-      t("diagnostics.dedupFailed") +
-      ": " +
-      esc(String(err)) +
-      "</div>";
-  }
+export interface DedupSession {
+  initConfig(list: HTMLElement): void;
+  start(list: HTMLElement, esc: EscFn, rtype?: string): Promise<void>;
+  getConfig(): Readonly<DedupConfigShape>;
+  resetConfig(): void;
 }
 
 /**
- * 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。
- * 之前调用方传 { getElementById: () => list } 包装对象，startDedup 内部查
- * "diag-dedup-list"——模板中并无此 id，靠包装对象兜底才不崩，报错无法定位。
+ * 去重扫描会话。所有可变状态（busy 重入守卫 / exec 重入守卫 / 配置）收进闭包：
+ * - 每会话独立，会话间无共享状态，可直接实例化隔离单测
+ * - getConfig() 返回冻结快照防外部篡改；resetConfig() 从默认值展开
  */
-export async function startDedup(
-  list: HTMLElement,
-  esc: EscFn,
-  rtype?: string,
-): Promise<void> {
-  // ① 重入守卫：busy 命中直接返回；整段包 try/finally，_dedupBusy 仅在此单点复位
-  if (_dedupBusy) return;
-  _dedupBusy = true;
-  try {
-    // ① loadResourceRegistry（early return err）
-    let reg: DedupRegType | null = null;
-    let typeLabel = "";
-    let typeIcon = "📦";
+export function createDedupSession(): DedupSession {
+  const state = {
+    busy: false, // startDedup 重入守卫：大量 await，快速连点并发扫描会互相覆盖并重复移入回收站
+    execBusy: false, // exec 重入守卫：执行期间大量 MoveToRecycle await，重复点击并行二次删除
+    config: { ...DEDUP_DEFAULTS } as DedupConfigShape,
+  };
+
+  function getConfig(): Readonly<DedupConfigShape> {
+    return Object.freeze({
+      strategy: state.config.strategy,
+      keepPolicy: state.config.keepPolicy,
+      priorityPath: state.config.priorityPath,
+    });
+  }
+
+  function resetConfig(): void {
+    Object.assign(state.config, DEDUP_DEFAULTS);
+  }
+
+  // ===== 配置面板（可编辑副本 state.config） =====
+  function renderConfigHtml(list: HTMLElement): void {
+    list.innerHTML = `
+    <div class="diag-dedup-config">
+      <div class="diag-config-item">
+        <label for="dedup-strategy">🔍 ${t("diagnostics.dedupStrategy")}:</label>
+        <select id="dedup-strategy" class="diag-config-select">
+          <option value="deep_hash"${state.config.strategy === "deep_hash" ? " selected" : ""}>${t("diagnostics.strategyDeepHash")} (SHA256)</option>
+          <option value="quick_hash"${state.config.strategy === "quick_hash" ? " selected" : ""}>${t("diagnostics.strategyQuickHash")} (MD5)</option>
+          <option value="name_size"${state.config.strategy === "name_size" ? " selected" : ""}>${t("diagnostics.strategyNameSize")} (${t("diagnostics.fastest")})</option>
+        </select>
+      </div>
+      <div class="diag-config-item">
+        <label for="keep-policy">💾 ${t("diagnostics.keepPolicy")}:</label>
+        <select id="keep-policy" class="diag-config-select">
+          <option value="oldest"${state.config.keepPolicy === "oldest" ? " selected" : ""}>${t("diagnostics.keepOldest")}</option>
+          <option value="newest"${state.config.keepPolicy === "newest" ? " selected" : ""}>${t("diagnostics.keepNewest")}</option>
+          <option value="path"${state.config.keepPolicy === "path" ? " selected" : ""}>${t("diagnostics.keepByPath")}</option>
+        </select>
+      </div>
+      <div class="diag-config-item" id="priority-path-item" style="${state.config.keepPolicy === "path" ? "" : "display:none"}">
+        <label for="priority-path">📁 ${t("diagnostics.priorityPath")}:</label>
+        <input type="text" id="priority-path" class="diag-config-input" placeholder="/path/to/priority" value="">
+      </div>
+    </div>
+  `;
+  }
+
+  function bindStrategyChange(list: HTMLElement): void {
+    list.querySelector("#dedup-strategy")?.addEventListener("change", (e) => {
+      state.config.strategy = (e.target as HTMLSelectElement).value;
+    });
+  }
+
+  function bindKeepPolicyChange(list: HTMLElement): void {
+    list.querySelector("#keep-policy")?.addEventListener("change", (e) => {
+      state.config.keepPolicy = (e.target as HTMLSelectElement).value;
+      const pathItem = list.querySelector("#priority-path-item") as HTMLElement;
+      if (pathItem) {
+        pathItem.style.display = state.config.keepPolicy === "path" ? "" : "none";
+      }
+    });
+  }
+
+  function bindPriorityPathInput(list: HTMLElement): void {
+    list.querySelector("#priority-path")?.addEventListener("input", (e) => {
+      state.config.priorityPath = (e.target as HTMLInputElement).value;
+    });
+  }
+
+  function buildConfigPanel(list: HTMLElement): void {
+    renderConfigHtml(list);
+    bindStrategyChange(list);
+    bindKeepPolicyChange(list);
+    bindPriorityPathInput(list);
+  }
+
+  function initConfig(list: HTMLElement): void {
+    buildConfigPanel(list);
+  }
+
+  // ⑤ exec 按钮：逐组 MoveToRecycle + success/fail 统计 + treeReload
+  async function runExecDelete(
+    list: HTMLElement,
+    allResults: ScanGroupResult[],
+    MoveToRecycle: MoveToRecycleFn,
+    esc: EscFn,
+  ): Promise<void> {
+    if (state.execBusy) return;
+    state.execBusy = true;
+    let del = 0,
+      fail = 0,
+      gi2 = 0;
     try {
-      reg = await loadResourceRegistry();
-      const entry = rtype ? reg[rtype] : undefined;
-      const entryName = entry && typeof entry.name === "string" ? entry.name : "";
-      const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
-      typeLabel = rtype ? entryName || rtype : t("diagnostics.all");
-      typeIcon = rtype ? entryIcon || "📦" : "📦";
+      for (const rtResult of allResults) {
+        for (const group of rtResult.groups) {
+          const files = group.files || [];
+          const selEl = list.querySelector(
+            'input[name="dedup-keep-' + gi2 + '"]:checked',
+          ) as HTMLInputElement | null;
+          const selected = selEl ? parseInt(selEl.value, 10) : 0;
+          if (selected === -1) {
+            gi2++;
+            continue;
+          }
+          for (let fi = 0; fi < files.length; fi++) {
+            if (fi === selected) continue;
+            try {
+              await MoveToRecycle(files[fi].path);
+              del++;
+            } catch {
+              fail++;
+            }
+          }
+          gi2++;
+        }
+      }
+      if (del > 0) {
+        bus.emit("stats:refresh");
+        bus.emit("tree:reload");
+      }
       list.innerHTML =
-        '<div class="stat-row diag-stat diag-stat-muted">' +
-        t("diagnostics.scanHash", { icon: esc(typeIcon), label: esc(typeLabel) }) +
+        '<div class="stat-row diag-msg ' +
+        (fail > 0 ? "diag-msg-warn" : "diag-msg-success") +
+        '">✅ ' +
+        t("diagnostics.dedupDone", { del, fail }) +
         "</div>";
-    } catch (e) {
+    } catch (err) {
       list.innerHTML =
-        '<div class="stat-row diag-stat diag-stat-muted">❌ ' +
-        esc(friendlyError(e, t("diagnostics.loadResourceTypesFailed"))) +
+        '<div class="stat-row diag-msg diag-msg-error">' +
+        t("diagnostics.dedupFailed") +
+        ": " +
+        esc(String(err)) +
+        "</div>";
+    } finally {
+      state.execBusy = false;
+    }
+  }
+
+  // ⑤ exec 按钮绑定壳
+  function bindExecButton(
+    list: HTMLElement,
+    allResults: ScanGroupResult[],
+    MoveToRecycle: MoveToRecycleFn,
+    esc: EscFn,
+  ): void {
+    list
+      .querySelector("#diag-dedup-exec")
+      ?.addEventListener("click", async () => {
+        await runExecDelete(list, allResults, MoveToRecycle, esc);
+      });
+  }
+
+  // ②→③→④→⑤ executeDedupScan 核心协调壳
+  async function executeScanCore(
+    list: HTMLElement,
+    esc: EscFn,
+    rtype: string | undefined,
+    reg: DedupRegType,
+    typeIcon: string,
+    typeLabel: string,
+    GetRepoRoot: GetRepoRootFn,
+    FindDuplicateFiles: FindDuplicateFilesFn,
+    MoveToRecycle: MoveToRecycleFn,
+  ): Promise<void> {
+    // ② targets 收集
+    const targets = await collectTargets(rtype, reg, typeIcon, typeLabel, GetRepoRoot);
+    if (!targets.length) {
+      list.innerHTML =
+        '<div class="stat-row diag-msg diag-msg-error">' + t("diagnostics.configResourceDir") + "</div>";
+      return;
+    }
+
+    // ③ 逐目录扫描
+    const { allResults, earlyExit } = await scanEachDirectory(
+      targets,
+      list,
+      esc,
+      FindDuplicateFiles,
+      getConfig,
+    );
+    if (earlyExit) return;
+
+    const totalGroups = allResults.reduce((s, r) => s + r.groups.length, 0);
+    if (!totalGroups) {
+      list.innerHTML =
+        '<div class="stat-row diag-msg diag-msg-success" style="justify-content:center">✅ ' +
+        t("diagnostics.noDups") +
         "</div>";
       return;
     }
 
+    // ④ 渲染结果 HTML + 绑定预览/取消
+    list.innerHTML = renderResultsHtml(allResults, esc, getConfig());
+    bindPreviewClicks(list);
+    bindCancelButton(list);
+
+    // ⑤ exec 按钮绑定
+    bindExecButton(list, allResults, MoveToRecycle, esc);
+  }
+
+  // 编排壳 + 外层 try-catch（异常路径渲染）
+  async function executeScan(
+    list: HTMLElement,
+    esc: EscFn,
+    rtype: string | undefined,
+    reg: DedupRegType,
+    typeIcon: string,
+    typeLabel: string,
+    GetRepoRoot: GetRepoRootFn,
+    FindDuplicateFiles: FindDuplicateFilesFn,
+    MoveToRecycle: MoveToRecycleFn,
+  ): Promise<void> {
     try {
-      const { FindDuplicateFiles, GetRepoRoot, MoveToRecycle } = await getApp();
-      await executeScan(
+      await executeScanCore(
         list,
         esc,
         rtype,
@@ -597,13 +539,74 @@ export async function startDedup(
         FindDuplicateFiles,
         MoveToRecycle,
       );
-    } catch (e) {
+    } catch (err) {
       list.innerHTML =
-        '<div class="stat-row diag-stat diag-stat-muted">❌ ' +
-        esc(friendlyError(e, t("diagnostics.loadDedupConfigFailed"))) +
+        '<div class="stat-row diag-msg diag-msg-error">' +
+        t("diagnostics.dedupFailed") +
+        ": " +
+        esc(String(err)) +
         "</div>";
     }
-  } finally {
-    _dedupBusy = false;
   }
+
+  /**
+   * 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。
+   */
+  async function start(
+    list: HTMLElement,
+    esc: EscFn,
+    rtype?: string,
+  ): Promise<void> {
+    // ① 重入守卫：busy 命中直接返回；整段包 try/finally，busy 仅在此单点复位
+    if (state.busy) return;
+    state.busy = true;
+    try {
+      // ① loadResourceRegistry（early return err）
+      let reg: DedupRegType | null = null;
+      let typeLabel = "";
+      let typeIcon = "📦";
+      try {
+        reg = await loadResourceRegistry();
+        const entry = rtype ? reg[rtype] : undefined;
+        const entryName = entry && typeof entry.name === "string" ? entry.name : "";
+        const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
+        typeLabel = rtype ? entryName || rtype : t("diagnostics.all");
+        typeIcon = rtype ? entryIcon || "📦" : "📦";
+        list.innerHTML =
+          '<div class="stat-row diag-stat diag-stat-muted">' +
+          t("diagnostics.scanHash", { icon: esc(typeIcon), label: esc(typeLabel) }) +
+          "</div>";
+      } catch (e) {
+        list.innerHTML =
+          '<div class="stat-row diag-stat diag-stat-muted">❌ ' +
+          esc(friendlyError(e, t("diagnostics.loadResourceTypesFailed"))) +
+          "</div>";
+        return;
+      }
+
+      try {
+        const { FindDuplicateFiles, GetRepoRoot, MoveToRecycle } = await getApp();
+        await executeScan(
+          list,
+          esc,
+          rtype,
+          reg,
+          typeIcon,
+          typeLabel,
+          GetRepoRoot,
+          FindDuplicateFiles,
+          MoveToRecycle,
+        );
+      } catch (e) {
+        list.innerHTML =
+          '<div class="stat-row diag-stat diag-stat-muted">❌ ' +
+          esc(friendlyError(e, t("diagnostics.loadDedupConfigFailed"))) +
+          "</div>";
+      }
+    } finally {
+      state.busy = false;
+    }
+  }
+
+  return { initConfig, start, getConfig, resetConfig };
 }

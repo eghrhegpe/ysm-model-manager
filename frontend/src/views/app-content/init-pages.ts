@@ -5,7 +5,7 @@ import { initDiagnostics } from "./diagnostics/init.ts";
 import { initSettings } from "./settings/init.ts";
 import { initRecycleBin } from "../../features/recycle-bin.ts";
 import { loadOldestModel } from "../../features/oldest-models.ts";
-import { startDedup, initDedupConfig } from "./diagnostics/dedup.ts";
+import { createDedupSession } from "./diagnostics/dedup.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { safeGet } from "../../utils/dom/storage.ts";
 import { esc } from "../../utils/dom/html.ts";
@@ -229,6 +229,8 @@ async function initRecycleTab(host: AppContentHost, container: HTMLElement): Pro
  * P3 修复：配置面板独立容器，扫描结果只写 result-list，不被 innerHTML 覆盖销毁。
  */
 async function initDedupTab(_host: AppContentHost, container: HTMLElement): Promise<(() => void) | null> {
+  // 每宿主一个去重会话：busy/exec 重入守卫与去重配置收进会话闭包，跨 tab 开关/类型切换复用同一配置
+  const dedup = createDedupSession();
   let dedupType = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
   container.innerHTML =
     '<div style="display:flex;flex-direction:column;height:100%">' +
@@ -240,11 +242,11 @@ async function initDedupTab(_host: AppContentHost, container: HTMLElement): Prom
     '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
     "</div>";
   const panel = container.querySelector("#dedup-config-panel") as HTMLElement | null;
-  if (panel) initDedupConfig(panel);
+  if (panel) dedup.initConfig(panel);
   const doDedup = (): void => {
     const listEl = container.querySelector("#dedup-result-list");
     if (listEl)
-      startDedup(
+      dedup.start(
         listEl as HTMLElement,
         (s: unknown) => esc(String(s || "")),
         dedupType,

@@ -8,7 +8,7 @@
 //  - scanConflicts：无游戏目录 / 无实例 / 冲突渲染 / 无冲突 / 扫描失败
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "../../../test-utils/index.ts";
-import { initDiagnostics, startDedup, getDedupConfig, resetDedupConfig } from "./init.ts";
+import { initDiagnostics, createDedupSession } from "./init.ts";
 
 const { busEmit, busOn, getApp, loadResourceRegistry, can, isViewerMode } = vi.hoisted(() => ({
   busEmit: vi.fn(),
@@ -248,7 +248,8 @@ describe("initDiagnostics — 日志面板", () => {
   });
 });
 
-describe("startDedup", () => {
+describe("startDedup（会话工厂 createDedupSession）", () => {
+  const dedup = createDedupSession();
   const groupJson = [
     {
       files: [
@@ -269,7 +270,7 @@ describe("startDedup", () => {
       MoveToRecycle: moveFn,
     });
     const list = document.createElement("div");
-    await startDedup(list, esc, "ysm");
+    await dedup.start(list, esc, "ysm");
     await waitFor(() => list.querySelector(".diag-dedup-group"));
     expect(list.textContent).toContain("组 1");
     // 默认保留策略 oldest → 保留最早修改的文件（b, modTime 1000 → index 1）
@@ -293,7 +294,7 @@ describe("startDedup", () => {
     const repoRoot = vi.fn(() => "/repo");
     mockApp({ GetRepoRoot: repoRoot });
     const list = document.createElement("div");
-    await startDedup(list, esc, "all");
+    await dedup.start(list, esc, "all");
     expect(repoRoot).toHaveBeenCalledWith("ysm");
     expect(repoRoot).toHaveBeenCalledWith("mmd");
     await waitFor(() => list.textContent!.includes("没有重复文件"));
@@ -302,20 +303,20 @@ describe("startDedup", () => {
   it("无目录 → 请先配置资源目录", async () => {
     mockApp({ GetRepoRoot: vi.fn(() => "") });
     const list = document.createElement("div");
-    await startDedup(list, esc, "ysm");
+    await dedup.start(list, esc, "ysm");
     expect(list.textContent).toContain("请先配置资源目录");
   });
 
   it("无重复 → 没有重复文件", async () => {
     const list = document.createElement("div");
-    await startDedup(list, esc, "ysm");
+    await dedup.start(list, esc, "ysm");
     await waitFor(() => list.textContent!.includes("没有重复文件"));
   });
 
   it("取消按钮 → 已取消去重", async () => {
     mockApp({ FindDuplicateFiles: vi.fn(() => groupJson) });
     const list = document.createElement("div");
-    await startDedup(list, esc, "ysm");
+    await dedup.start(list, esc, "ysm");
     await waitFor(() => list.querySelector("#diag-dedup-cancel"));
     (list.querySelector("#diag-dedup-cancel") as HTMLElement).click();
     expect(list.textContent).toContain("已取消去重");
@@ -326,14 +327,14 @@ describe("startDedup", () => {
       FindDuplicateFiles: vi.fn(() => Promise.reject(new Error("磁盘错误"))),
     });
     const list = document.createElement("div");
-    await startDedup(list, esc, "ysm");
+    await dedup.start(list, esc, "ysm");
     await waitFor(() => list.textContent!.includes("去重失败"));
   });
 
   it("文件名点击 → bus model:select", async () => {
     mockApp({ FindDuplicateFiles: vi.fn(() => groupJson) });
     const list = document.createElement("div");
-    await startDedup(list, esc, "ysm");
+    await dedup.start(list, esc, "ysm");
     await waitFor(() => list.querySelector("[data-path]"));
     (list.querySelector("[data-path]") as HTMLElement).click();
     // 第一个 data-path 是组内第一个文件
@@ -349,14 +350,14 @@ describe("startDedup", () => {
     mockApp({ FindDuplicateFiles: vi.fn(() => groupJson) });
     const list = document.createElement("div");
     // 同步双调用：首次在首个 await 前已置 _dedupBusy=true，第二次必命中守卫早退
-    const p1 = startDedup(list, esc, "ysm");
-    const p2 = startDedup(list, esc, "ysm");
+    const p1 = dedup.start(list, esc, "ysm");
+    const p2 = dedup.start(list, esc, "ysm");
     await Promise.all([p1, p2]);
     expect(loadResourceRegistry).toHaveBeenCalledTimes(1);
     expect(getApp).toHaveBeenCalledTimes(1);
     // 守卫已复位，后续可正常再次扫描
     const list2 = document.createElement("div");
-    await startDedup(list2, esc, "ysm");
+    await dedup.start(list2, esc, "ysm");
     expect(loadResourceRegistry).toHaveBeenCalledTimes(2);
   });
 });
@@ -438,9 +439,10 @@ describe("scanConflicts（diag-scan-conflict 按钮）", () => {
   });
 });
 
-describe("dedup config（getDedupConfig / resetDedupConfig）", () => {
-  it("getDedupConfig 返回冻结快照，调用方篡改不影响内部状态", () => {
-    const cfg = getDedupConfig();
+describe("dedup config（getConfig / resetConfig）", () => {
+  const dedup = createDedupSession();
+  it("getConfig 返回冻结快照，调用方篡改不影响内部状态", () => {
+    const cfg = dedup.getConfig();
     expect(cfg.strategy).toBe("deep_hash");
     expect(cfg.keepPolicy).toBe("oldest");
     expect(cfg.priorityPath).toBe("");
@@ -452,22 +454,22 @@ describe("dedup config（getDedupConfig / resetDedupConfig）", () => {
     }).toThrow(TypeError);
 
     // 内部状态不受影响
-    expect(getDedupConfig().strategy).toBe("deep_hash");
+    expect(dedup.getConfig().strategy).toBe("deep_hash");
   });
 
-  it("多次调用 getDedupConfig 返回不同对象引用（快照独立）", () => {
-    const cfg1 = getDedupConfig();
-    const cfg2 = getDedupConfig();
+  it("多次调用 getConfig 返回不同对象引用（快照独立）", () => {
+    const cfg1 = dedup.getConfig();
+    const cfg2 = dedup.getConfig();
     expect(cfg1).not.toBe(cfg2);
     expect(cfg1.strategy).toBe(cfg2.strategy);
   });
 
-  it("resetDedupConfig 幂等：默认状态下 reset 不改变配置", () => {
-    expect(getDedupConfig().strategy).toBe("deep_hash");
-    resetDedupConfig();
-    expect(getDedupConfig().strategy).toBe("deep_hash");
-    expect(getDedupConfig().keepPolicy).toBe("oldest");
-    expect(getDedupConfig().priorityPath).toBe("");
+  it("resetConfig 幂等：默认状态下 reset 不改变配置", () => {
+    expect(dedup.getConfig().strategy).toBe("deep_hash");
+    dedup.resetConfig();
+    expect(dedup.getConfig().strategy).toBe("deep_hash");
+    expect(dedup.getConfig().keepPolicy).toBe("oldest");
+    expect(dedup.getConfig().priorityPath).toBe("");
   });
 });
 

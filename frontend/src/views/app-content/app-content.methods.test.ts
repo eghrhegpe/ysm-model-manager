@@ -8,6 +8,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { formatBytes } from "../../utils/dom/format.ts";
 import { esc } from "../../utils/dom/html.ts";
 
+// 去重会话工厂 mock 走hoisted：init-pages 在模块内部创建会话，测试需捕获其方法做断言
+const { dedupStartMock, dedupInitConfigMock } = vi.hoisted(() => ({
+  dedupStartMock: vi.fn(),
+  dedupInitConfigMock: vi.fn(),
+}));
+
 vi.mock("@wailsio/runtime", () => ({
   Events: { On: vi.fn().mockReturnValue(() => {}) },
   Window: { Show: vi.fn(), Hide: vi.fn(), SetTitle: vi.fn(), OpenDevTools: vi.fn(), Reload: vi.fn() },
@@ -37,12 +43,16 @@ vi.mock("../../core/handlers/global.ts", () => ({
 }));
 vi.mock("./diagnostics/init.ts", () => ({
   initDiagnostics: vi.fn(),
-  startDedup: vi.fn(),
 }));
-// init-pages 直接从 dedup.ts import startDedup/initDedupConfig（init.ts 仅 re-export 兼容壳）
+// init-pages 直接 import createDedupSession（init.ts 仅 re-export 兼容壳）；
+// initConfig/start 各返回会话级 mock —— createDedupSession 每宿主一个会话实例
 vi.mock("./diagnostics/dedup.ts", () => ({
-  startDedup: vi.fn(),
-  initDedupConfig: vi.fn(),
+  createDedupSession: () => ({
+    initConfig: dedupInitConfigMock,
+    start: dedupStartMock,
+    getConfig: vi.fn(() => ({ strategy: "deep_hash", keepPolicy: "oldest", priorityPath: "" })),
+    resetConfig: vi.fn(),
+  }),
 }));
 vi.mock("../../features/recycle-bin.ts", () => ({ initRecycleBin: vi.fn() }));
 vi.mock("../../features/oldest-models.ts", () => ({
@@ -64,7 +74,6 @@ import { bus } from "../../bus.ts";
 import { initRecycleBin } from "../../features/recycle-bin.ts";
 import { loadOldestModel } from "../../features/oldest-models.ts";
 // 断言跟随实现的真实消费路径（init-pages 直接 import dedup.ts；init.ts 仅兼容壳）
-import { startDedup } from "./diagnostics/dedup.ts";
 import { PAGE_REGISTRY } from "./page-registry.ts";
 import { loadCommunityData } from "./community-data.ts";
 import { tryFetchModels } from "../../features/community/data.ts";
@@ -225,12 +234,12 @@ describe("_bindTabs — 仓库 tab 懒初始化", () => {  it("点击 recycle ta
     await waitFor(() => el.shadowRoot.getElementById("dedup-start-btn") !== null);
     const startBtn = el.shadowRoot.getElementById("dedup-start-btn") as HTMLElement;
     startBtn!.click();
-    await waitFor(() => vi.mocked(startDedup).mock.calls.length >= 1);
-    expect(startDedup).toHaveBeenCalledTimes(1);
+    await waitFor(() => dedupStartMock.mock.calls.length >= 1);
+    expect(dedupStartMock).toHaveBeenCalledTimes(1);
     bus.emit("repo:rtype-changed", "mmd"); // 全局类型切换 → 自动重复
     // 原 sleep(20)：等 rtype 订阅再次触发 startDedup——改条件轮询
-    await waitFor(() => vi.mocked(startDedup).mock.calls.length >= 2);
-    expect(startDedup).toHaveBeenCalledTimes(2);
+    await waitFor(() => dedupStartMock.mock.calls.length >= 2);
+    expect(dedupStartMock).toHaveBeenCalledTimes(2);
     unmountElement(el);
   });
 });

@@ -190,6 +190,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-test-utils"
+version = "0.1.0"
+
+[[package]]
 name = "serde"
 version = "1.0.229"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -271,6 +275,7 @@ name = "ysm-model-manager-core"
 version = "0.1.0"
 dependencies = [
  "jwalk",
+ "rust-test-utils",
  "serde",
  "serde_json",
  "sha2",

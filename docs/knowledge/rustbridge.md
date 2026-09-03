@@ -14,9 +14,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - Scan
-    - ScanError
     - ScanManifest
-    - ScanResponse
   tests:
     - rust-core/src/tests.rs
     - go/rustbridge/parse_test.go

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 153 张知识卡
+> 总计: 154 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -112,7 +112,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（42 张）
+## go（43 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -157,6 +157,7 @@
 | 🍃 go-version | 版本号 go/version | leaf | — | 版本, version, ldflags |
 | 🏗 go-watcher | 文件监听 go/watcher | architecture | io-bound | 监听, 文件变化, 刷新, watcher |
 | 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture | io-bound | YSM, 解析, 摘要, ysm 文件, 元数据 |
+| 🏗 go_design_critique | Go 后端设计锐评 | architecture | — | Go 后端评审, Go 锐评, Go 可读性审查, Go 命名审查, Wails 绑定审查, 隐式协议审查 |
 | 🏗 go_ts_golden | Go-TS 解析层 golden 对拍（ADR-154 双端互锁） | architecture | — | 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移, 新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性, voxel-colors-data.json 生成物是否过期（Go 表变更未同步前端）, 双端互锁契约 fixture 的更新口径 |
 | 🏗 rustbridge | Rust 桥 rustbridge | architecture | io-bound, concurrent | Rust 扫描器, rust_backend, 桥 DLL, Wails 后端迁移 Rust |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 调用后端, getApp, 方法签名, app.ts 绑定 |
@@ -201,6 +202,7 @@
 - **go-version**（版本号 go/version）：`go/version/` 只有一件事：持有应用版本号。默认 `"dev"`，发版构建时通过 `-ldflags -X` 注入正式版本，供界面展示与自动更新的版本比较。
 - **go-watcher**（文件监听 go/watcher）：`go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。
 - **go-ysm-parser**（YSM 解析 go/ysm）：`go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。
+- **go_design_critique**（Go 后端设计锐评）：2026-09-03 三路子代理并发只读锐评（IO/扫描域 / 二进制解析域 / Wails 绑定与应用域），主模型对每份报告最强断言逐条实地抽查背书，**无幻觉指控**（3 处过激指控已被主模型仲裁修正，见「仲裁修正」）。安全防御层行业级…
 - **go_ts_golden**（Go-TS 解析层 golden 对拍（ADR-154 双端互锁））：网页版（无 Go 壳）把整层 Go 解析逻辑平移成 TS 影子层（ADR-049 web 豁免 + ADR-070/066/082「TS 镜像 Go」），双实现漂移是永久负债。ADR-154 以共享 fixture（`tests/parit…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 

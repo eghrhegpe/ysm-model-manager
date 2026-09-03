@@ -15,6 +15,7 @@ auto_fields:
     - _getWasmBinaryMt
     - classifyWasmError
     - collectOutputFiles
+    - DecodeYSMData
     - decodeYsmFile
     - decodeYsmFileFromMemory
     - DecodeYSMFiles

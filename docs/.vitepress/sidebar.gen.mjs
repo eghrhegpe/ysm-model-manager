@@ -726,6 +726,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-164：Node+WASM 解码桥单实现收敛（avatar × wasm_decoder 双胞胎）",
+        "link": "/adr/ADR-164-node-wasm-avat"
+      },
+      {
         "text": "ADR-163：主内容页 tab-panel 常驻化：替代整 DOM 重建",
         "link": "/adr/ADR-163-content-page-tab-panel-persistent"
       },
@@ -1500,6 +1504,10 @@ export const autoSidebar = [
           {
             "text": "FBX CLI 处理管线 fbx-cli-pipeline",
             "link": "/knowledge/fbx-cli-pipeline"
+          },
+          {
+            "text": "Go 后端设计锐评",
+            "link": "/knowledge/go_design_critique"
           },
           {
             "text": "Go-TS 解析层 golden 对拍（ADR-154 双端互锁）",

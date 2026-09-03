@@ -16,9 +16,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - Scan
-    - ScanError
     - ScanManifest
-    - ScanResponse
   tests:
     - tests/test_rust_bridge_tags.ts
   quick_groups:

@@ -71,9 +71,7 @@ auto_fields:
     - App.ValidateMinecraftDir
     - AppDataRoot
     - DefaultRepoRoot
-    - FS
     - NewApp
-    - Write
   tests:
     - internal/app/app_config_test.go
   quick_groups:

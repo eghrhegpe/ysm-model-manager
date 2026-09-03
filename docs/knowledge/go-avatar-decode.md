@@ -7,6 +7,7 @@ source_files:
   - go/avatar/avatar_decode.go
 auto_fields:
   symbols_with_lines:
+    - DecodeYSMData
     - DecodeYSMFiles
     - FS
     - SetNodeJS

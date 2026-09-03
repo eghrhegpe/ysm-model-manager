@@ -135,7 +135,6 @@ describe("loadRecycleBin 渲染", () => {
     await flush();
     await flush();
 
-    const list = root.getElementById("recy-list")!;
     expect(mocks.friendlyError).toHaveBeenCalled();
     expect(root.getElementById("recy-count")!.textContent).toBe("加载失败");
   });

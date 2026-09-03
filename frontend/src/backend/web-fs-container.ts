@@ -13,9 +13,6 @@ import { findZipEntry } from "./pack-meta.ts";
 import { type VoxelData } from "./voxel-parse.ts";
 import { readWebFile, readWebZipEntries, voxelFromBase64 } from "./web-fs-read.ts";
 
-/** 容器内条目扩展名白名单（对齐 litematic-3d.ts CONTAINER_VOXEL_EXTS） */
-const CONTAINER_VOXEL_EXTS = new Set([".nbt", ".litematic", ".schematic"]);
-
 /** 镜像 Go parseContainerExts：逗号分隔扩展名白名单（无点前缀自动补；空 → 放行全部） */
 function webParseContainerExts(exts: string): Set<string> {
   const out = new Set<string>();
@@ -61,7 +58,7 @@ export async function listWebContainerEntries(path: string, exts: string): Promi
 export async function readWebVoxelInContainer(
   path: string,
   entry: string,
-  ext: string,
+  _ext: string,
   view: (root: Record<string, unknown>, maxBlocks: number) => VoxelData | null,
 ): Promise<VoxelData | null> {
   try {

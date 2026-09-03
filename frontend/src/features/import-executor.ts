@@ -12,7 +12,6 @@ import { currentRepoType } from "./repo-rtype.ts";
 import { groupCollected, isImportableFile, fileToBase64, buildFolderItems } from "./dnd-shared.ts";
 import type { CollectedEntry } from "./dnd-shared.ts";
 import { isFileExistsError, friendlyError } from "../utils/dom/errors.ts";
-import { dbg } from "../utils/debug/debug.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { swallowError } from "../utils/core/async.ts";
 

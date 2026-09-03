@@ -47,7 +47,7 @@ const compFoldNs = bench("compileMolang（同 6 样本，若不做折叠全走�
   for (const s of FOLDABLE) compileMolang(s);
 }, N);
 
-const compDynNs = bench("compileMolang（4 动态样本，折叠救不了）", () => {
+bench("compileMolang（4 动态样本，折叠救不了）", () => {
   for (const s of DYNAMIC) compileMolang(s);
 }, N);
 

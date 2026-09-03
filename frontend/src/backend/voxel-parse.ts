@@ -635,7 +635,7 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
 }
 
 /** 整型强校验（对齐 Go `.(int32)` 断言：非整型 number 判无效返回 null） */
-function toIntStrict(v: unknown, label: string): number | null {
+function toIntStrict(v: unknown, _label: string): number | null {
   if (typeof v !== "number" || !Number.isInteger(v)) return null;
   return v;
 }

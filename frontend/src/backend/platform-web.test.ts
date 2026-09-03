@@ -3,7 +3,7 @@
 // resolvePlatformMode 三态判定 + CAPABILITY_MATRIX 能力矩阵——收敛原
 // capabilities.ts 内部「desktop 恒 true / web 查 adapter has / Android 查黑名单」
 // 的三路散装逻辑。平台信号源：Tier 0 入口声明 > Tier 1 构建模式 > Android 桥探测。
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { declaredMock, entryModeMock } = vi.hoisted(() => ({
   declaredMock: vi.fn<() => "go" | "browser" | undefined>(() => undefined),

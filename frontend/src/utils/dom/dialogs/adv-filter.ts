@@ -121,7 +121,6 @@ function bindAdvFilterEvents(
   const kwInput = box.querySelector("#afv-kw") as HTMLInputElement;
   kwInput.focus();
 
-  const tagInput = box.querySelector("#afv-tag") as HTMLInputElement;
   const tagHint = box.querySelector("#afv-tag-hint") as HTMLElement;
 
   // 异步加载已有标签提示

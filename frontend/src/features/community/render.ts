@@ -115,7 +115,7 @@ export interface ModelRowCtx {
 
 /** 构建单行模型行（虚拟列表 renderItem 用） */
 export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
-  const { dlPrefix, localMap, selectedSet, esc } = ctx;
+  const { dlPrefix, localMap, selectedSet } = ctx;
   const exists = !isModelMissing(m, localMap);
   const row = document.createElement("div");
   row.dataset.name = m.name;

@@ -4,7 +4,6 @@
 // 已控制/已隔离不 reload；标记带时间戳+次数上限——窗口内不重试、超窗口可重试、达上限放弃。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isCrossOriginIsolated, registerCoiServiceWorker } from "./coi-sw.ts";
-import { isWebPlatform } from "./platform-web.ts";
 
 const { isWebPlatformMock } = vi.hoisted(() => ({
   isWebPlatformMock: vi.fn(() => true),

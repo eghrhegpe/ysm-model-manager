@@ -27,8 +27,7 @@
 // │  §15 导入分组            → web-fs-import.ts                                   │
 // │  §16 binding 装配        → 下文    webFsBindings（Top 6 注册表驱动）           │
 // └──────────────────────────────────────────────────────────────────────────────┘
-import { idbGet, idbSet, idbKeys, idbDel, idbGetAll, idbTx, type IdbOp } from "./idb.ts";
-import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+import { idbGet, idbKeys, idbDel, idbGetAll, idbTx, type IdbOp } from "./idb.ts";
 import { t } from "../core/i18n/t.ts";
 import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
 // 复用 dnd-shared 的导入白名单（.json 仅放行 ysm.json，其余须 ALL_EXTS 成员），
@@ -43,9 +42,6 @@ import { base64ToBytes, parseWebPath, parseWebDirPath, webDirType, isWebPath, WE
 import { detectZipType } from "./extract.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
 import { parseNbtRoot, litematicMetaView, nbtStructureView, schematicSummaryView } from "./nbt-parse.ts";
-// ADR-070 M2：蓝图/投影 voxel 读取（TS 平移 go/litematic/voxel.go；parseNbtRootExact 提供
-// LongArray 精确 64 位——BlockStates 打包位解码必需，number 归一会丢低 10 位）
-import { parseNbtRootExact } from "./nbt-parse.ts";
 import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "./voxel-parse.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
@@ -61,7 +57,7 @@ import {
 import { batchStatsWebModels, type WebModelStats } from "./web-stats.ts";
 // 拆分子模块（ADR-040 职责切分延续）
 import { dirKey, fileKey, mainFileRank, MAIN_FILE_RANK_NONE, MAIN_FILE_RANK_TYPE } from "./web-fs-shared.ts";
-import { getFsaAuthState, reauthorizeFsaRoot, rescanFsaRoot, selectLocalRepo } from "./web-fs-auth.ts";
+import { getFsaAuthState, selectLocalRepo } from "./web-fs-auth.ts";
 // 共享读取装配 + 路径反解（web-fs-read.ts 叶子，断 container/pack/bedrock ↔ 主文件 循环）
 import {
   readWebFile,

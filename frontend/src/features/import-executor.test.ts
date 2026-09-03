@@ -5,7 +5,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "../bus.ts";
 import { getApp, type AppBindings } from "../backend/app.ts";
 import { executeCollected, directImport, importFolder, importWebFilesWithToast } from "./import-executor.ts";
-import { t } from "../core/i18n/t.ts";
 
 const mocks = vi.hoisted(() => ({
   ImportModelFile: vi.fn().mockResolvedValue(undefined),

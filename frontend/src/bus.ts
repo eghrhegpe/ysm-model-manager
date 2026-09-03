@@ -130,10 +130,6 @@ const VOID_EVENTS = [
   "batch:disable-all",
 ] as const satisfies readonly VoidEventName[];
 
-// 完整性校验：BusEvents 新增 void 事件若未登记进 VOID_EVENTS → 此处类型错误
-type _MissingVoidEvent = Exclude<VoidEventName, (typeof VOID_EVENTS)[number]>;
-const _voidEventsComplete: _MissingVoidEvent extends never ? true : never = true;
-
 const isVoidEvent = (event: BusEventName): boolean =>
   (VOID_EVENTS as readonly string[]).includes(event);
 

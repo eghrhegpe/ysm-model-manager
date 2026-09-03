@@ -258,7 +258,7 @@ describe("modalPrompt — 输入框键盘交互", () => {
   });
 
   it("Enter 空输入 → 错误提示且不关闭", async () => {
-    const promise = modalPrompt({ title: "命名" });
+    modalPrompt({ title: "命名" });
     const input = document.querySelector("#mp-input") as HTMLInputElement;
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
     const errEl = document.querySelector("#mp-err") as HTMLElement;
@@ -351,7 +351,7 @@ describe("trapFocus — 焦点陷阱", () => {
   });
 
   it("cleanup 后移除监听器（不再拦截 Tab）", () => {
-    const { overlay, btn1, btn2 } = makeOverlay();
+    const { overlay, btn1 } = makeOverlay();
     const cleanup = trapFocus(overlay);
     cleanup();
     btn1.focus();
@@ -459,7 +459,7 @@ describe("modalPrompt — 输入框", () => {
   });
 
   it("空输入时确定按钮不关闭弹窗（显示错误提示）", async () => {
-    const promise = modalPrompt({ title: "命名" });
+    modalPrompt({ title: "命名" });
     const okBtn = document.querySelector("#mp-ok") as HTMLElement;
     okBtn.click();
     // promise 不应被 resolve（空输入拦截）

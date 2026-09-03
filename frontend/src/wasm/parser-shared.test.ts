@@ -25,7 +25,6 @@ function makeFS(initial: Record<string, string> = {}): FSLike & { dump(): string
     }
   }
   const parent = (p: string): string => p.split("/").slice(0, -1).join("/") || "/";
-  const name = (p: string): string => p.split("/").pop() || "";
   return {
     readdir(d) {
       if (!dirs.has(d)) throw new Error("ENOENT " + d);

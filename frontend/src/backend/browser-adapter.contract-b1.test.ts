@@ -26,7 +26,6 @@ const idbMock = (globalThis as unknown as {
 import {
   browserAdapter,
   importWebFiles,
-  WEB_ROOT,
 } from "./browser-adapter.ts";
 // 派生化数据源：从 resource_types.json 派生测试期望，禁止手写快照
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };

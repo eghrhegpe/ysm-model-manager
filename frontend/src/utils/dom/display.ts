@@ -127,7 +127,7 @@ function escRegex(s: string): string {
  * @param raw 原始文件名
  * @param opts 选项对象或模板字符串（兼容旧调用，当前未使用）
  */
-export function renderDisplayName(raw: string, opts?: unknown): string {
+export function renderDisplayName(raw: string, _opts?: unknown): string {
   const p = parseModelName(raw);
   if (p.isBanned) return esc(p.raw);
 

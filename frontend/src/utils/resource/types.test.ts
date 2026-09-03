@@ -178,7 +178,7 @@ describe("GROUP_META 分组元数据", () => {
   });
 
   it("每个分组 name/icon 非空（从注册表 groupLabel/groupIcon 派生）", () => {
-    for (const [gid, meta] of Object.entries(GROUP_META)) {
+    for (const [_gid, meta] of Object.entries(GROUP_META)) {
       expect(meta.name).toBeTruthy();
       expect(meta.icon).toBeTruthy();
     }

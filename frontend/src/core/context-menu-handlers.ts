@@ -2,19 +2,16 @@
 // file/dir handler 已拆至 context-menu-file-handlers.ts / context-menu-dir-handlers.ts
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
-import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { t } from "./i18n/t.ts";
 import { tr } from "./i18n/tr.ts";
 import { getApp } from "../backend/app.ts";
-import { modalConfirm, modalSelect } from "../utils/dom/dialogs/modal.ts";
-import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
-import { modalTagEditor } from "../utils/dom/dialogs/tag-editor.ts";
+import { modalConfirm } from "../utils/dom/dialogs/modal.ts";
 // P1 修复（ADR-040）：file/dir handler 已拆出，此处合并
 import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 // 共享原语（toast/refreshUI/isUnsafeFolderName/resolveDstDir）下沉至
 // context-menu-shared.ts，破除 handlers ↔ {file,dir}-handlers 循环依赖
-import { refreshUI, toast, toastError, toastEmptyRtype, isUnsafeFolderName, resolveDstDir } from "./context-menu-shared.ts";
+import { refreshUI, toast, toastError, toastEmptyRtype, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
 import { downloadTextFile } from "../utils/dom/download-text.ts";

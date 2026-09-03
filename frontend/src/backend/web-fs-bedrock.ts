@@ -10,7 +10,7 @@ import { extractZip } from "./extract.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "../preview-3d/decoder/geometry.ts";
 import { parseYsmJsonDirect } from "../preview-3d/decoder/parse-ysm-json.ts";
-import { readWebFile, readWebZipEntries, listWebModelDirFiles } from "./web-fs-read.ts";
+import { readWebFile, listWebModelDirFiles } from "./web-fs-read.ts";
 
 function imageMimeOfPath(p: string): string {
   return /\.jpe?g$/i.test(p) ? "image/jpeg" : "image/png";

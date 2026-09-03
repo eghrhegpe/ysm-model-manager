@@ -91,7 +91,7 @@ async function addWebImportLog(
   });
 }
 async function addWebOpLog(
-  op: string, modelName: string, sourcePath: string, targetDir: string, fileSize: number, status: string, errMsg: string,
+  op: string, modelName: string, _sourcePath: string, _targetDir: string, _fileSize: number, _status: string, errMsg: string,
 ): Promise<void> {
   // 操作日志归入运行时环（webRuntimeLogs），与导入日志环（webImportLogs）分离，
   // 否则 GetRuntimeLogs 恒空、ClearRuntimeLogs 形同虚设（原实现误写入导入环）

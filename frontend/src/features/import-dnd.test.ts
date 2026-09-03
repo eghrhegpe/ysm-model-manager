@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus, type ToastPayload } from "../bus.ts";
 import { handleTreeDrop, bindTreeDnD } from "./import-dnd.ts";
-import { fireDrop, fireDrag } from "../test-utils/events.ts";
+import { fireDrop } from "../test-utils/events.ts";
 import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
 
 vi.mock("../backend/app.ts", () => ({

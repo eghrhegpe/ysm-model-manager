@@ -366,7 +366,7 @@ function dgBrBindModeSwitch(shell: DgBrShell): void {
   });
 }
 
-function dgBrBindCancelAndOutside(shell: DgBrShell, thisEl: HTMLElement, closeFn: () => void): void {
+function dgBrBindCancelAndOutside(_shell: DgBrShell, thisEl: HTMLElement, closeFn: () => void): void {
   // 取消按钮 → 关闭；遮罩点击关闭在此统一管理（与 createDialog 等价）
   thisEl.querySelector("#br-cancel")?.addEventListener("click", closeFn);
   thisEl.addEventListener("click", (e: MouseEvent): void => {
@@ -408,7 +408,6 @@ function dgBrBindApplyClick(
     const btn = thisEl.querySelector("#br-apply") as HTMLButtonElement;
     btn.textContent = "⏳ " + t("dialog.executing");
     btn.disabled = true;
-    const applyEl = shell.overlay;
     try {
       await onApply(
         changed.map((it) => ({

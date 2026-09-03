@@ -33,7 +33,7 @@ describe("tr(key, fallback) — i18n 缺失键兜底", () => {
 
   it("键存在 + 带插值参数时透传 t(key, params)", () => {
     // tr 三参签名：key, fallback, params——透传 t(key, params) 插值 {n}
-    tMock.mockImplementation((key: string, params?: Record<string, string | number>) =>
+    tMock.mockImplementation((_key: string, params?: Record<string, string | number>) =>
       `已复制 ${params?.n} 个路径`,
     );
     expect(tr("ctx.copyPathsOk", "Copied {n} paths", { n: 3 })).toBe("已复制 3 个路径");

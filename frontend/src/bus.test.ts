@@ -22,7 +22,7 @@ afterEach(() => {
   unsubs.splice(0).forEach((fn) => fn());
 });
 
-function track<T>(unsub: () => void): void {
+function track(unsub: () => void): void {
   unsubs.push(unsub);
 }
 

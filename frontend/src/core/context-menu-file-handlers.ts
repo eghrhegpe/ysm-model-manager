@@ -1,5 +1,4 @@
 // ===== context-menu-file-handlers.ts — file 类右键菜单 handler（从 context-menu-handlers.ts 拆出，ADR-040 P1）=====
-import { bus } from "../bus.ts";
 import { getApp } from "../backend/app.ts";
 import { modalConfirm, modalSelect } from "../utils/dom/dialogs/modal.ts";
 import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";

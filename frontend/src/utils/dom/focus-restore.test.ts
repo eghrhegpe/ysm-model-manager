@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 // ===== focus-restore.ts 焦点记忆 / 恢复 / 跨 Shadow 焦点陷阱 测试 =====
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   rememberTrigger,
   returnFocus,

@@ -6,7 +6,6 @@ import {
   detectZipType,
   parseZipCentralDir,
   extractZip,
-  type ZipType,
 } from "./extract.ts";
 
 // --- ZIP 构造工具 ---

@@ -376,7 +376,7 @@ describe("idb IDB 事务路径", () => {
     // 第二个 put 触发 writeError → tx.onerror/onabort → idbTx reject。
     // 真实 IDB 事务 abort 会回滚整个事务（全有或全无由 IDB 语义保证）；
     // fake 仅锁「reject 不吞错」行为（fake 不模拟 abort 回滚，故不断言 store 残留）。
-    const fake = makeFakeIDBWithTx({ writeError: new Error("QuotaExceededError") });
+    makeFakeIDBWithTx({ writeError: new Error("QuotaExceededError") }); // 副作用：注入带 writeError 的 fake indexedDB
     await expect(
       idbTx("files", [
         { kind: "put", key: "dir:new:", value: { name: "new" } },

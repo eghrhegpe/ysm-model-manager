@@ -15,7 +15,7 @@ const idbMock = (globalThis as unknown as {
     _store: Map<string, unknown>;
   };
 }).__YSM_TEST_IDB__;
-import { browserAdapter, importWebFiles, WEB_ROOT } from "./browser-adapter.ts";
+import { browserAdapter, importWebFiles } from "./browser-adapter.ts";
 
 // idb 层内存实现（与既有测试同形）
 

@@ -4,7 +4,7 @@ import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
 import { getApp } from "../../backend/app.ts";
 import { requireMcRoot } from "./require-mcroot.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { t } from "../../core/i18n/t.ts";
 import { toastEmptyRtype, toastError } from "../context-menu-shared.ts";
 
@@ -17,7 +17,6 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         const {
           ListVersionInstances,
           ListFileNames,
-          GetRepoRoot,
         } = await getApp();
         const mcRoot = await requireMcRoot();
         if (!mcRoot) return;

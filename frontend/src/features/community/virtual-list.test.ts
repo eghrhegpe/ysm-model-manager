@@ -30,7 +30,7 @@ function makeScroll(scrollTop: number, clientHeight: number) {
   return { scrollEl, listEl };
 }
 
-function setup(scrollTop: number, clientHeight: number, rows: string[]) {
+function setup(scrollTop: number, clientHeight: number, _rows: string[]) {
   const { scrollEl, listEl } = makeScroll(scrollTop, clientHeight);
   const vlist = createVirtualList<string>({
     scrollEl,

@@ -15,7 +15,9 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - DIR_HANDLERS
+    - DirCtx
     - FILE_HANDLERS
+    - FileCtx
     - getMenuDef
     - HANDLERS
     - isUnsafeFolderName
@@ -60,6 +62,7 @@ auto_fields:
     - 禁止 view 层手写菜单项
   pitfalls:
     - 「view 层」内联菜单结构 → 必须声明进 menu-defs.ts
+    - file/dir handler 各用 FileCtx/DirCtx（Omit 掉对立字段）；dir handler 读 ctx.path→编译报错（P2-1 表级窄化）
 tests:
   - frontend/src/core/context-menus.test.ts
   - frontend/src/core/handlers/instance-ops.test.ts

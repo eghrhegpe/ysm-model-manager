@@ -9,14 +9,8 @@ source_files:
   - frontend/src/services/resource-registry.ts
 auto_fields:
   symbols_with_lines:
-    - clear
-    - get
-    - has
     - loadResourceRegistry
-    - register
     - ResourceTypeEntry
-    - ServiceName
-    - unregister
   tests:
     - frontend/src/services/registry.test.ts
     - frontend/src/services/resource-registry.test.ts

@@ -245,7 +245,6 @@ auto_fields:
     - cleanupVoxel3D
     - cleanupVrm3D
     - cleanupYsm3D
-    - clear
     - clearAllCache
     - clearAllCommunityCache
     - clearControls
@@ -545,7 +544,6 @@ auto_fields:
     - FSLike
     - generateSurfacePixels
     - GenGuard
-    - get
     - getAllByTestId
     - getAllowedCLICommands
     - getAndroidBridge
@@ -624,7 +622,6 @@ auto_fields:
     - handleInstanceDrop
     - HANDLERS
     - handleTreeDrop
-    - has
     - hasActivePreview
     - hasBoneRotation
     - hasSceneStats
@@ -1099,7 +1096,6 @@ auto_fields:
     - ReflectorParams
     - refreshAdoptedStyleSheets
     - refreshUI
-    - register
     - registerAndroidBackHandler
     - registerAndroidEvents
     - registerBoneRaycast
@@ -1256,7 +1252,6 @@ auto_fields:
     - SemanticMorphEntry
     - SemanticMorphId
     - SemanticMorphMap
-    - ServiceName
     - setActive3DClose
     - setBoneNodeVisible
     - setBoneVisible
@@ -1441,7 +1436,6 @@ auto_fields:
     - unloadModel
     - unmountElement
     - unpackBlockStates
-    - unregister
     - unregisterControl
     - unregisterDevtools
     - unregisterModelRoot

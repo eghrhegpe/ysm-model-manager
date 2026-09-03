@@ -730,6 +730,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-169：menu/core 类型叶下沉：PreviewMenuCtx 归位 node-types 断子模块纯 type 环",
+        "link": "/adr/ADR-169-menu-core-previewmenuctx-node-types-type"
+      },
+      {
         "text": "ADR-168：capability 环倒置：preview-state 查询器注入断组合根运行时边",
         "link": "/adr/ADR-168-capability-preview-state"
       },

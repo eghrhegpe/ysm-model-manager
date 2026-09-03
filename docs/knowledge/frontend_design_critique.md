@@ -30,7 +30,6 @@ auto_fields:
     - AutoDanceOptions
     - BeatDetectorLike
     - bindPathClick
-    - clear
     - closeActiveDialog
     - closeDlg
     - createAdaptiveRenderBudget
@@ -47,13 +46,11 @@ auto_fields:
     - fillRoles
     - fmtMB
     - frRoleRowStyle
-    - get
     - getDefaultKeepIdx
     - getFrameIntervalMs
     - getLastModelPath
     - getMaxFps
     - getMaxPixelRatio
-    - has
     - initAdvancedGrid
     - initDiagnosticsPage
     - initGithubPage
@@ -87,7 +84,6 @@ auto_fields:
     - motionDetailView
     - PREVIEW_FRAME_INTERVAL_MS
     - previewPixelRatio
-    - register
     - registerDlg
     - rememberModelPath
     - ResolveModeBridge
@@ -97,7 +93,6 @@ auto_fields:
     - sampleAdaptivePixelRatio
     - saveCfg
     - sceneRegistry
-    - ServiceName
     - shouldRenderAtFps
     - shouldRenderPreviewFrame
     - showFbxPreview
@@ -109,7 +104,6 @@ auto_fields:
     - trapFocus
     - uiComponentsCss
     - uiComponentsStyleSheet
-    - unregister
     - VIEW_TESTIDS
     - WorkerBridge
     - WorkerErrorStrategy

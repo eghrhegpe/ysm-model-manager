@@ -23,13 +23,13 @@
 | G3 | 3D 菜单手写 fill* 飞地 | ✅ 闭环 | `bf1459a4` fill* 三函数删除（生产零调用）+ `72573102` renderCustom 构造点审计门（3 豁免白名单锁死） |
 | G4 | 渲染链路多通道衰退 | ✅ 闭环 | `383d7c1f` G3 后 fillers 仅 roles 独苗，四路互斥分派注释收敛 + health.test fillers roles-only 白名单守卫 |
 | G5 | community 回收站过滤前端复刻 Go | ✅ 闭环 | `39114d99` utils/recycle-path.ts hasRecycleSegment 单一实现（双复刻删并）；口径修正：真对齐对象是 sync.hasRecycleSegment 非 IsRecycleDir |
-| G6 | 3D overlay light DOM（全站 Shadow DOM 不一致） | ⏳ 排期(勘察完) | 勘察(2026-09-03)：全站 UI 均 shadow 组件（app-content/nav/preview/sidebar/tree/toast/context-menu 全 attachShadow），唯独 `#ysm-overlay-3d` 挂 body light DOM + createSlideMenu 菜单 light DOM（mount-preview-core.ts:351-374 自认）。**确证非小切片**：菜单吃全局 app.css 类（light DOM 天然继承）→ 迁 shadow root 须先盘点并重挂全部依赖样式；`app-tree/index.ts:296` document.getElementById(PREVIEW_OVERLAY_ID)、测试 scope() 优先 shadowRoot 查询语义、e2e 真实选择器穿透均受影响。单独立项，前置=菜单全局类依赖清单 |
+| G6 | 3D overlay light DOM（全站 Shadow DOM 不一致） | ⏳ 排期(勘察完) | 勘察报告 `frontend-src-critique-g6p1-survey.md`：overlay 链 28 类 token 样式全部集中于 2 个可 adoptedStyleSheets 模块 + render.ts 链内注入块 + 5 无规则语义锚点（内联样式随节点进 shadow 自动生效）——**样式层障碍已排除**；真实障碍收敛为测试选择器（app-tree:296 getElementById / scope() 优先 shadowRoot / e2e 穿透）与样式注入目标迁移。可独立立项 |
 
 ## 风格（4 项）
 
 | 项 | 条目 | 状态 | 处置 |
 |---|---|---|---|
-| P1 | 137 处 style.cssText 内联样式 | ⏳ 排期(勘察完) | 勘察(2026-09-03)：范式实为「类驱动集中 CSS」（ui-components-styles.ts 系自动生成自 MikuMikuAR，禁手编）；聚类在 preview-3d/menu（cap-controls 38 / roles 18 / render 17 / env 14）+ vrm-bone-ui 7 + skeleton-fill-panel 6。render.ts/roles.ts 属 node-render 核心测试路径、且大量 cssText 为动态插值（width:pct/颜色）本不可静态化。切片前置=先统计静态/动态占比与全局类覆盖，再定搬迁批次 |
+| P1 | 137 处 style.cssText 内联样式 | ⏳ 排期(盘点完) | 勘察报告 `frontend-src-critique-g6p1-survey.md`：实测 139 处中**静态 134（96.4%）、动态仅 5**（cap-controls×3/vrm-bone-ui/skeleton-fill-panel，滑块类插值豁免）——先前"大量动态不可静态化"推断被数据推翻；**范式有链内实证**（render.ts:20 已实践 cssText→类 + `<style>` 注入）。建议批次：menu 区静态 95 处（cap-controls 35/roles 18/env 14/switch 7/core 5…） |
 | P2 | fallback 硬编码中文散布（181 处） | 🟡 评估留档 | 查证：三语 key 集一致（locales-consistency 测试）+ LocaleKey 编译守卫，fallback 仅在动态 key 拼错时触发（设计双保险非缺陷）；触发即三语皆缺，改英文仅换受众，181 处搬迁 ROI 负——不动，语义注释已说明 |
 | P3 | legacyTestId 永久背负 e2e 兼容映射 | ✅ 设限 | `node-types.ts:148` 定义处标 @deprecated + 淘汰期限 2027-06-30 + 迁移条件（e2e 改选节点 id/panelTestId 派生选择器）+ 过渡期禁新增；届期删字段并移除 core.ts:111,228 / roles.ts:89 映射输出 |
 | P4 | mock bridge `as AppBindings` 类型断言 | 🟡 评估留档 | 查证：Proxy 壳将破坏 app.test.ts 2 处 toBe(mockApp) 身份断言 + stub 会引爆 E2E mock「缺失方法静默跳过」依赖；现值 P3 已挡空对象、缺失方法调用已抛 TypeError——低价值高扰动，暂缓 |

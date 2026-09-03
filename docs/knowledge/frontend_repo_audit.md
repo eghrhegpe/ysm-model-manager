@@ -366,6 +366,7 @@ auto_fields:
     - decodeYsmViaWasm
     - DedupConfigShape
     - dedupeCreators
+    - DedupFileLike
     - DedupSession
     - DEFAULT_COMMUNITY_URL
     - DEFAULT_ENV_PARAMS

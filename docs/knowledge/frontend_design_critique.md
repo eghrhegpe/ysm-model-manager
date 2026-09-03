@@ -45,7 +45,6 @@ auto_fields:
     - fillRoles
     - fmtMB
     - frRoleRowStyle
-    - getDefaultKeepIdx
     - getFrameIntervalMs
     - getLastModelPath
     - getMaxFps

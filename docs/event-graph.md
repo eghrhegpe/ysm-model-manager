@@ -222,7 +222,7 @@
 |------|------|----|
 | handleContainerClick | `frontend/src/features/oldest-models.ts` | 57 |
 | onRecycleListClick | `frontend/src/features/recycle-bin.ts` | 186 |
-| bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 293 |
+| bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 217 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 273 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 156 |
@@ -328,7 +328,7 @@
 | handleInstanceDrop | `frontend/src/features/pack-dnd.ts` | 159 |
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 110 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 170 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 363 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 142 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
@@ -615,7 +615,7 @@
 | handleInstanceDrop | `frontend/src/features/pack-dnd.ts` | 160 |
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 111 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 171 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 436 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 364 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 311 |
 
 **订阅方（on）：**

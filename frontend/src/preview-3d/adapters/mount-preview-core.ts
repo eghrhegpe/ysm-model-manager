@@ -10,17 +10,18 @@
 // 使三套渲染器最终可经注册表统一派发（P3-E）。
 //
 // ┌─ 快速跳转 ───────────────────────────────────────────────────────────────────┐
-// │  §1  常量 + 状态变量      → L100   DRAG_ROTATE_SENSITIVITY / TIP_AUTO_DISMISS_MS │
-// │  §2  公开 API             → L108   invalidatePreview / cleanupPreview         │
-// │  §3  switchPreview        → L123   会话内切换模型（复用外壳）                   │
-// │  §4  mount3D 入口         → L133   主挂载函数（~700 行）                       │
-// │    └─ 基础设施创建        → L266   scene/camera/renderer/OrbitControls         │
-// │    └─ UI 装配             → L176   overlay/侧栏/loading/菜单                    │
-// │    └─ 输入绑定            → L302   WASD 键盘 + 拖拽自转                       │
-// │    └─ rAF 渲染管线        → L358   animate loop + postprocess composer        │
-// │    └─ 生命周期管理        → L445   cooperate/switchTo/代际守卫               │
-// │    └─ 通知 + 释放         → L572   toast + fullCleanup                       │
-// │  §5  私有工具             → L741   safeDispose                              │
+// │  §1  常量 + 状态变量      → L176   TIP_AUTO_DISMISS_MS / PER_FRAME_WARN_*        │
+// │  §2  公开 API             → L206   invalidatePreview / cleanupPreview / switch  │
+// │  §3  switchPreview        → L245   会话内切换模型（复用外壳）                   │
+// │  §4  mount3D 入口         → L285   主挂载函数（~650 行；§5 拆分后为编排器形态）    │
+// │    └─ 头部装配            → L285   session 收敛体 + 闭包变量 + camBridge/menuCtx │
+// │    └─ 基础设施锁定        → L474   buildSharedInfra + sc/cam/rd 局部锁定          │
+// │    └─ 会话终结            → L489   finishSession / closeOverlay（幂等单出口）     │
+// │    └─ 输入绑定 §4a        → L533   bindInputHandlers（input-and-animation.ts）   │
+// │    └─ rAF 渲染管线 §4b    → L559   animate loop + postprocess composer          │
+// │    └─ switchCtx 构造      → L652   switchToSession 参数胶水（switch-preview.ts） │
+// │    └─ 生命周期管理 §4c    → L796   fullCleanup / escH 替换 / _handles.push        │
+// │  MpSessionState           → L951   会话级可变状态收敛体（接口定义）              │
 // └──────────────────────────────────────────────────────────────────────────────┘
 
 import * as THREE from "three";

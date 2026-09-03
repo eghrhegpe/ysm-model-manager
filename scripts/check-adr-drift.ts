@@ -172,16 +172,22 @@ function codeAsserts() {
     results.push({ name: 'r12 P1 并发抑制守卫', ok: false, detail: `读取失败: ${(e as Error).message}` });
   }
 
-  // 6. r10/r11 纹理+MMD 生命周期防倒退：mmd-adapter 必含 uncacheRoot + 全纹理槽释放
-  //    mmd-adapter 走自有释放路径（TEX_SLOTS 含 emissiveMap + tex.dispose() 遍历），不调通用 disposeMaterial
+  // 6. r10/r11 纹理+MMD 生命周期防倒退：mmd 释放路径必含 uncacheRoot + 全纹理槽释放
+  //    mmd 走自有释放路径（TEX_SLOTS 含 emissiveMap + tex.dispose() 遍历），不调通用 disposeMaterial
   const mmdAdapterPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-adapter.ts');
   const mmdUtilsPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-utils.ts');
+  const mmdResultPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-build-result.ts');
+  const mmdSharedPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-shared.ts');
   try {
     const textA = fs.existsSync(mmdAdapterPath) ? fs.readFileSync(mmdAdapterPath, 'utf-8') : '';
     const textU = fs.existsSync(mmdUtilsPath) ? fs.readFileSync(mmdUtilsPath, 'utf-8') : '';
-    // r10/r11 释放逻辑已拆分至 mmd-utils.ts（DISPOSE_TEX_KEYS 含 emissiveMap 等槽位），
-    // 合并两文件扫描，守卫语义不变：uncacheRoot + 全纹理槽释放 + blobUrl 撤销 必须共存
-    const text = textA + '\n' + textU;
+    // ADR-167 拆分后释放主体：mmd-build-result.ts（Stage6 Dispose 区：uncacheRoot L154 /
+    // revokeObjectURL L167）+ mmd-shared.ts（disposeMmdMesh 遍历 DISPOSE_TEX_KEYS 释放槽位）；
+    // mmd-utils.ts 持 DISPOSE_TEX_KEYS 定义。合并四文件扫描，守卫语义不变：
+    // uncacheRoot + 全纹理槽释放 + blobUrl 撤销 必须共存
+    const textR = fs.existsSync(mmdResultPath) ? fs.readFileSync(mmdResultPath, 'utf-8') : '';
+    const textS = fs.existsSync(mmdSharedPath) ? fs.readFileSync(mmdSharedPath, 'utf-8') : '';
+    const text = textA + '\n' + textU + '\n' + textR + '\n' + textS;
     const hasUncacheRoot = /uncacheRoot\s*\(/.test(text);
     // 全槽释放：emissiveMap 槽位存在 + 实际 dispose 调用（safeDispose 包装或裸 tex/mat.dispose——
     // 2026-09 起释放统一走 safeDispose 包装，正则须同收两种形态防误报）+ blobUrl 撤销
@@ -194,8 +200,8 @@ function codeAsserts() {
       name: 'r10/r11 MMD 生命周期',
       ok,
       detail: ok
-        ? 'mmd-adapter.ts 含 uncacheRoot + 全纹理槽释放（r10/r11 已修，防倒退）'
-        : `mmd-adapter.ts 缺失关键释放（uncacheRoot=${hasUncacheRoot}, 全槽dispose=${hasFullSlotDispose}）`,
+        ? 'mmd 释放链含 uncacheRoot + 全纹理槽释放 + blobUrl 撤销（r10/r11 已修，防倒退；ADR-167 后扫描 mmd-adapter/mmd-utils/mmd-build-result）'
+        : `mmd 释放链缺失关键释放（uncacheRoot=${hasUncacheRoot}, 全槽dispose=${hasFullSlotDispose}）`,
     });
   } catch (e) {
     results.push({ name: 'r10/r11 MMD 生命周期', ok: false, detail: `读取失败: ${(e as Error).message}` });

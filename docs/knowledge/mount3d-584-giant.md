@@ -51,10 +51,28 @@ use_when:
 perf:
   - gpu-bound
 status: active
-last_verified: 2026-08-27
+last_verified: 2026-09-03
 ---
 
 # mount3D 巨函数现状（2026-08-27 已部分拆分）
+
+## 2026-09-03 复核（外部评审 C1 项：mount-preview-core 979 行巨型文件）
+
+mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆分收缩）。`mount3D` 本体 L285-936 ≈ **652 行**。
+
+**§5 二次拆分已落地**：8-27 记录的 5 个包级 `mp*` 子函数已全部外移为独立文件并去 `mp` 前缀——
+`shared-infra.ts`（buildSharedInfra/syncShadowLights）/ `wasd-camera.ts`（applyWasdCameraMotion）/
+`unified-pick.ts`（makeUnifiedPickHandler）/ `unload-model.ts`（unloadModel）/ `input-and-animation.ts`
+（bindInputHandlers）/ `switch-preview.ts`（switchToSession）。`safeDispose` 已外置 `preview-3d/safe-dispose.ts`。
+文件头 L938-944 §5 注释为实证（本卡正文旧行号/旧 mp* 描述以复核节为准）。
+
+**结构性判定：维持「不拆」**（评审再次点名）。与 mmd-adapter（ADR-167 已拆 9 文件）的本质差异：
+- mmd-adapter 拆前 stage 已顶层化（MdMmBuildCtx 六域接口 + Pick 收窄）→ **有真缝**，沿缝搬移零逻辑改动；
+- mount-preview-core 的实体逻辑已全部外置为模块级函数，剩余 ~650 行是**闭包接线编排器**
+  （6 个内嵌闭包 finishSession/closeOverlay/fullCleanup/unloadSessionModel/escH/animate + session/
+  switchCtx/camBridge 接口胶水），段落共享 15+ 闭包变量，**无 stage 缝**——强行外移 = 15-20 参数
+  ctx 参数化，行数不降、类型面暴增、高风险。残余候选（仅真有缝才做）：fullCleanup（827-890）
+  拆 `mpFullCleanup(ctx)`，P3 ROI 低。文件头快速跳转表已按当前布局校准（原 L100-L741 全漂移）。
 
 ## 概览
 

@@ -201,7 +201,7 @@ export const HANDLERS = {
       const ok2 = await modalConfirm({
         title: tr("ctx.recycleTitle", "Recycle Selected"),
         icon: "♻️",
-        message: tr("ctx.recycleConfirm", "Move {n} selected files to recycle bin?", { n: ctx.count || 0 }),
+        message: tr("ctx.recycleConfirm", "Move {n} selected files to recycle bin?", { n: ctx.paths.length }),
         okText: tr("ctx.recycleOkText", "♻️ Recycle"),
         danger: true,
       });

@@ -23,5 +23,16 @@ export function tr(
   params?: Record<string, string | number>,
 ): string {
   const v = t(key as LocaleKey, params);
-  return v === key ? fallback : v;
+  if (v === key) {
+    // fallback 须做与 t() 相同的 {name} 插值，否则显示裸 {pack}/{folder}/{n}（P2 修复）
+    let text = fallback;
+    if (params) {
+      for (const [k, val] of Object.entries(params)) {
+        const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        text = text.replace(new RegExp(`\\{${escaped}\\}`, "g"), () => String(val));
+      }
+    }
+    return text;
+  }
+  return v;
 }

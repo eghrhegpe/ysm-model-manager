@@ -9,7 +9,7 @@
 | 项 | 条目 | 状态 | 处置 |
 |---|---|---|---|
 | S1 | dock 可见性走专有布尔（visibleWhen 双轨） | ✅ 闭环 | `1635fcd4` 删三布尔、状态层扩 ui.mode/env.skyGroundCap、dock 与内容级同一 visibleWhen 求值器 |
-| S2 | browser-adapter 整层 TS 复刻 Go 扫描/判定 | ⏳ 排期(ADR 已立) | `ADR-174` 已立：类型归属单一源**查证已成立**（Go registry=内嵌 resource_types.json / TS 直读，双端零手写）；真双实现区=格式平移层，以共享 fixtures 对账硬锁（D2）+ 差异分类声明制（D3）+ contract-b1 唯一哨兵（D4）。首轮四函数漂移审计见 ADR 附录 A：SearchModels kw 降级语义/排序未锁为契约、DetectContainerType 上限联动、ExtractYsmSummary Size 口径、voxel TS↔Go 缺 fixture——收口定义=D5 全落地 |
+| S2 | browser-adapter 整层 TS 复刻 Go 扫描/判定 | ⏳ 排期(ADR 已立) | `ADR-174` 已立：类型归属单一源**查证已成立**（Go registry=内嵌 resource_types.json / TS 直读，双端零手写）；真双实现区=格式平移层，以共享 fixtures 对账硬锁（D2）+ 差异分类声明制（D3）+ contract-b1 唯一哨兵（D4）。首轮四函数漂移审计见 ADR 附录 A：SearchModels kw 降级语义/排序未锁为契约、DetectContainerType 上限联动、ExtractYsmSummary Size 口径、voxel TS↔Go 缺 fixture——收口定义=D5 全落地；`0406fbf4` 已锁 B1c（kw 快路径降级语义 = web 契约，Go 差异显式声明）+ web-fs.ts D3/附录 A 三处注释（降级不排除不排序 / 容器探测上限联动）；剩 fixtures 基建（双端语料 + 镜像对账测试，须 go/ 并行静默后动） |
 | S3 | 树搜索/排序/筛选在前端本地做 | ✅ 闭环 | 查证：SearchModels 是磁盘级数值范围搜索（adv-filter 消费），树内 search/排序作用在 Go 已交付内存 entries 属 UI 交互——下沉 RPC 不成立；AGENTS.md:22 红线加豁免注脚（输入端归 Go / 展示端豁免）+ render.ts 代码锚点 |
 | S4 | preview-3d 反向 import views（层级倒置） | ✅ 闭环 | `edceb408` 6 纯类型迁 content-bridges.ts，preview-3d → views import 清零 |
 | S5 | dock 渲染硬编码组专属捷径 | ✅ 闭环 | `f70bbf3f` PreviewMenuGroupDef.directToPanel 静态声明，renderPreviewDock 删 if (g.id==="model")，motion 动态特例显式标注 |
@@ -38,6 +38,6 @@
 
 - 已闭环 9 项：严重 4/5（S1/S3/S4/S5）+ 一般 5/6（G1-G5）+ 风格 P3 设限——剩 S2（严重）/ G6（一般）/ P1（风格）排期
 - 严重项 S2：ADR-174 已立（判定规则单一源查证成立 + 对账硬锁策略 + 首轮四函数漂移审计），剩对账 fixtures 基建排期（收口定义见 ADR D5）
-- 待处置：S2 对账 fixtures 基建（ADR-174 D5 收口定义）/ G6 / P1（排期）、P2 / P4（评估留档，不铺开）；P3 仅剩「届期清退」动作挂在 2027-06-30
+- 待处置：S2 fixtures 基建（B1c 已锁降级语义，ADR-174 D5 剩双端语料+镜像测试）/ G6 / P1（排期）、P2 / P4（评估留档，不铺开）；P3 仅剩「届期清退」动作挂在 2027-06-30
 - 状态卡纠错（2026-09-03）：此前汇总误计「一般 6/6 / 共 10 项闭环」——G6（overlay light DOM）实为 ⏳ 排期且 git 无闭环提交，此处修正为 一般 5/6 + 共 9 项闭环
 - 兄弟基线遗留：browser-adapter.contract-b2.test.ts:227,241 缺 desc（HEAD 即红，非本锐评引入），push 需兄弟收口或逃生阀

@@ -102,6 +102,10 @@ fn scan_impl(root: &Path, policy: &ScanPolicy, include_banned_dirs: bool) -> Sca
 }
 
 #[derive(Debug, Clone)]
+#[doc(hidden)]
+/// Candidate 是 scan_impl / scan_impl_manifest 的内部中间结构。
+/// 仅限 rust-wails-bridge 跨 crate 直接构造（ManifestEntry 反序列化后填入），
+/// 外部使用者不应依赖此类型——未来重构时如有变更不视为 ABI 破坏。
 pub struct Candidate {
     pub name: String,
     pub path: PathBuf,

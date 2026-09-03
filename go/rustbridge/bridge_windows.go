@@ -77,8 +77,11 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 		return ScanResponse{}, errors.New("Rust scanner manifest is empty")
 	}
 	if scanManifestProc == nil {
-		// 旧 DLL 不含 ysm_scan_manifest —— 回退到 Scan（jwalk），保证向后兼容
-		return Scan(root, registryJSON)
+		// 旧 DLL 不含 ysm_scan_manifest 符号——这是构建期错误，不应在生产环境出现。
+		// 生产构建（build/windows/Taskfile.yml build:rust-bridge）会同步编译新 DLL，
+		// 若此处触发说明 embed 的 DLL 与当前 Go 代码版本不一致，需重新构建。
+		return ScanResponse{}, errors.New(
+			"Rust scanner DLL missing ysm_scan_manifest symbol: rebuild with task build:rust-bridge")
 	}
 
 	// R32 P3-1：FFI 调用序列化，防 Rust 侧非线程安全导致数据竞争/panic。
@@ -136,7 +139,7 @@ func load() error {
 			loadErr = fmt.Errorf("load Rust scanner entry point: %w", err)
 			return
 		}
-		// scanManifestProc 找不到不致命：旧 DLL 不含该符号，ScanManifest 自动回退 Scan
+		// scanManifestProc 找不到不致命：已由上一步显式返回错误，此处仅为防御性注释。
 		if scanManifestProc.Find() != nil {
 			scanManifestProc = nil
 		}

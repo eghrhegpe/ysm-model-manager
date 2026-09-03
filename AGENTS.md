@@ -20,6 +20,11 @@
 ### 职责归属——前端 vs Go（回归红线，不可违反）
 - 类型判定唯一事实源 = `resource_types.json` + Go（`internal/app/`）；前端只读不判（tab / preview / 3d / resourcepack 归类一律由 Go 扫描结果 + 该 JSON 派生）。
 - 筛选 / 去重 / 聚合归 Go；前端消费 Go 的已筛已归类结果，不本地重算。
+  - **豁免注脚（S3 收口 2026-09-03）**：树内即时过滤属 UI 交互层——app-tree 等对 Go 已交付的
+    **内存全量 entries** 做 search 子串过滤 / 排序 / 展开折叠，数据集归属已由 Go 筛定、前端不重算
+    「哪个文件该出现在哪」的归属语义，仅展示层即时收窄（每次击键本地响应，下沉磁盘 RPC 荒谬）。
+    磁盘级归属筛选与高级搜索（关键词 + 骨骼/立方体/纹理范围，`SearchModels`，adv-filter 消费）仍归 Go，
+    前端不得自行扫描磁盘或重算归属。界线：**输入端（磁盘 → 列表）归 Go，展示端（列表 → 视图）豁免**。
 - 跨类型切换走 `switchExternal`（同源替换走 `switchTo`）。
 - 数据经 Wails 桥（`window.go`）消费；绑定统一 `npm run generate:bindings -ts`（无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
 

@@ -81,6 +81,10 @@ function annotateDirNodes(node: TreeNode): void {
 }
 
 // ——— 树构建（与原版一致） ———
+// [S3 收口] 树内即时过滤豁免（AGENTS.md 红线注脚 2026-09-03）：本函数与 flattenVisible 的
+// search 子串过滤 / 三模式排序作用在 Go 已交付的内存全量 entries 上（数据集归属已由 Go 筛定），
+// 属 UI 交互层展示端豁免——不重算「哪个文件该出现在哪」的归属语义；磁盘级搜索归 Go SearchModels
+// （关键词 + 骨骼/立方体/纹理范围，adv-filter 消费），前端不得自行扫盘。界线：输入端归 Go，展示端豁免。
 export function buildTree(
   entries: TreeEntry[],
   sortMode: string,

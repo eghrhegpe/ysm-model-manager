@@ -323,6 +323,16 @@ export class WaterCapability implements SceneCapability {
           normalMap?: THREE.Texture | null;
         };
         if (asStandard?.normalMap) safeDispose(asStandard.normalMap);
+        // MeshPhysicalMaterial transmission 特性会在内部创建 transmissionRenderTarget，
+        // 必须在 material.dispose() 之前显式释放其 texture 和 render target。
+        const asPhysical = mat as THREE.MeshPhysicalMaterial & {
+          transmissionRenderTarget?: THREE.WebGLRenderTarget | null;
+        };
+        const trt = asPhysical?.transmissionRenderTarget;
+        if (trt) {
+          trt.texture.dispose();
+          trt.dispose();
+        }
         mat.dispose();
       }
     }

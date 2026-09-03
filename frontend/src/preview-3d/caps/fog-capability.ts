@@ -104,7 +104,8 @@ export class FogCapability implements SceneCapability {
   private applyFog(): void {
     const f = this.createFog();
     this.currentFog = f;
-    this.scene.fog = f;
+    // 禁用时还原构造前 scene.fog（与 dispose() 行为一致），而非置 null
+    this.scene.fog = f ?? this.prevFog;
   }
 
   /* -------- SceneCapability 接口 -------- */

@@ -531,13 +531,31 @@ export class LightCapability implements SceneCapability {
   private disposeCone(): void {
     if (this.coneGroup) {
       if (this.coneGroup.parent) this.coneGroup.parent.remove(this.coneGroup);
+      // 两 plane 共享同一 geometry+material（buildConeGroup），traverse 会重复 dispose
+      // 同一实例——P1 double-dispose。用 Set 按 uuid 去重，每个唯一实例只 dispose 一次。
+      const seenGeo = new Set<string>();
+      const seenMat = new Set<string>();
       this.coneGroup.traverse((obj) => {
         const m = obj as THREE.Mesh;
-        safeDispose(m.geometry);
+        const geo = m.geometry;
+        if (geo) {
+          const id = geo.uuid;
+          if (!seenGeo.has(id)) {
+            seenGeo.add(id);
+            safeDispose(geo);
+          }
+        }
         const mat = (m as unknown as { material?: THREE.Material | THREE.Material[] }).material;
         if (mat) {
-          if (Array.isArray(mat)) mat.forEach((mt) => tryDisposeMat(mt));
-          else tryDisposeMat(mat);
+          const mats = Array.isArray(mat) ? mat : [mat];
+          for (const mt of mats) {
+            if (!mt) continue;
+            const id = mt.uuid;
+            if (!seenMat.has(id)) {
+              seenMat.add(id);
+              tryDisposeMat(mt);
+            }
+          }
         }
       });
       this.coneGroup = null;
@@ -757,9 +775,16 @@ export class LightCapability implements SceneCapability {
       keyEnabled: this.params.key.enabled,
       fillEnabled: this.params.fill.enabled,
       rimEnabled: this.params.rim.enabled,
-      ambientIntensity: this.params.ambient.intensity,
-      spotlightEnabled: this.params.spotlight.enabled,
-      volumetricEnabled: this.params.volumetric.enabled,
+      // 方向灯全量持久化（azimuth/elevation/color/intensity），跨会话不丢方向/强度/颜色
+      key: { ...this.params.key },
+      fill: { ...this.params.fill },
+      rim: { ...this.params.rim },
+      // ambient color 也持久化（旧实现只存 intensity）
+      ambient: { ...this.params.ambient },
+      // spotlight 全量参数持久化（旧实现只存 enabled 布尔）
+      spotlight: { ...this.params.spotlight },
+      // volumetric 全量参数持久化（旧实现只存 enabled 布尔）
+      volumetric: { ...this.params.volumetric },
       volumetricEngine: this.volumetricEngine,
       currentPreset: this.currentPreset,
       manualPreset: this.manualPreset,
@@ -767,6 +792,18 @@ export class LightCapability implements SceneCapability {
   }
 
   /** 从 localStorage 恢复状态 */
+  /** 恢复方向灯全量字段（key/fill/rim），逐字段 typeof 校验后写入。 */
+  private restoreDir(which: "key" | "fill" | "rim", saved: unknown): void {
+    if (!saved || typeof saved !== "object") return;
+    const s = saved as Record<string, unknown>;
+    const dst = this.params[which];
+    if (typeof s.enabled === "boolean") dst.enabled = s.enabled;
+    if (typeof s.color === "number") dst.color = s.color;
+    if (typeof s.intensity === "number") dst.intensity = s.intensity;
+    if (typeof s.azimuth === "number") dst.azimuth = s.azimuth;
+    if (typeof s.elevation === "number") dst.elevation = s.elevation;
+  }
+
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
@@ -787,6 +824,36 @@ export class LightCapability implements SceneCapability {
     if (typeof state.rimEnabled === "boolean") this.params.rim.enabled = state.rimEnabled;
     if (typeof state.spotlightEnabled === "boolean") this.params.spotlight.enabled = state.spotlightEnabled;
     if (typeof state.volumetricEnabled === "boolean") this.params.volumetric.enabled = state.volumetricEnabled;
+    // ②.b 全量参数恢复（旧实现只存布尔/单一字段，跨会话丢方向/颜色/强度/锥角等）。
+    //     字段名与 params 对象一致；逐字段 typeof 校验后写入，非法值跳过。
+    //     不在此调 apply()：保持现有行为，依赖外部统一 apply。
+    this.restoreDir("key", state.key);
+    this.restoreDir("fill", state.fill);
+    this.restoreDir("rim", state.rim);
+    if (state.ambient && typeof state.ambient === "object") {
+      const amb = state.ambient as Record<string, unknown>;
+      if (typeof amb.intensity === "number") this.params.ambient.intensity = amb.intensity;
+      if (typeof amb.color === "number") this.params.ambient.color = amb.color;
+    }
+    if (state.spotlight && typeof state.spotlight === "object") {
+      const sp = state.spotlight as Record<string, unknown>;
+      if (typeof sp.enabled === "boolean") this.params.spotlight.enabled = sp.enabled;
+      if (typeof sp.color === "number") this.params.spotlight.color = sp.color;
+      if (typeof sp.intensity === "number") this.params.spotlight.intensity = sp.intensity;
+      if (typeof sp.angle === "number") this.params.spotlight.angle = sp.angle;
+      if (typeof sp.penumbra === "number") this.params.spotlight.penumbra = sp.penumbra;
+      if (typeof sp.distance === "number") this.params.spotlight.distance = sp.distance;
+      if (typeof sp.decay === "number") this.params.spotlight.decay = sp.decay;
+    }
+    if (state.volumetric && typeof state.volumetric === "object") {
+      const vm = state.volumetric as Record<string, unknown>;
+      if (typeof vm.enabled === "boolean") this.params.volumetric.enabled = vm.enabled;
+      if (typeof vm.opacity === "number") this.params.volumetric.opacity = vm.opacity;
+      if (typeof vm.fogPower === "number") this.params.volumetric.fogPower = vm.fogPower;
+      if (typeof vm.edgeFade === "number") this.params.volumetric.edgeFade = vm.edgeFade;
+      if (typeof vm.baseStrength === "number") this.params.volumetric.baseStrength = vm.baseStrength;
+      if (typeof vm.tipStrength === "number") this.params.volumetric.tipStrength = vm.tipStrength;
+    }
     // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步（setPreset 的判定基于覆盖前的预设值）
     this.syncConeMount();
     // ④ 引擎最后恢复：仅 "postprocess" 走 setVolumetricEngine——其「postprocess ⇒

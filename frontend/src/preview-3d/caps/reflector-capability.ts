@@ -197,8 +197,19 @@ export class ReflectorCapability implements SceneCapability {
     if (!this.reflector) return;
     if (this.reflector.parent) this.reflector.parent.remove(this.reflector);
     this.reflector.geometry.dispose();
-    // Reflector 内部通过 WebGLRenderTarget 缓存，需显式释放（.dispose() 已处理 rt）
-    this.reflector.dispose?.();
+    // Reflector 内部通过 WebGLRenderTarget 缓存，需显式释放。
+    // 不用可选链静默跳过：若 dispose 缺失（three 升级/Reflector 实现变更），显式告警并手动释放 render target。
+    if (this.reflector.dispose) {
+      this.reflector.dispose();
+    } else {
+      console.warn("[reflector-cap] Reflector.dispose 缺失，手动释放 render target（检查 three 升级）");
+      const r = this.reflector as Reflector & { getRenderTarget?: () => THREE.WebGLRenderTarget | null };
+      const rt = r.getRenderTarget?.();
+      if (rt) {
+        rt.texture.dispose();
+        rt.dispose();
+      }
+    }
     this.reflector = null;
   }
 

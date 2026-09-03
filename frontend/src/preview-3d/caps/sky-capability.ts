@@ -334,6 +334,8 @@ export class SkyCapability implements SceneCapability {
   private toneApplied = false;
   private prevToneMapping: THREE.ToneMapping;
   private prevExposure: number;
+  /** 构造前 scene.environment 的快照——dispose 时还原，detach 不触碰（用户可能再启用） */
+  private prevEnvironment: THREE.Texture | THREE.CubeTexture | null;
   /** 引用计数：多个 SkyCapability 共享同一 renderer 时，
    *  tone mapping 只在第一个 attach 时设置，只在最后一个 dispose 时恢复 */
   private static toneRefCount = new Map<THREE.WebGLRenderer, number>();
@@ -361,6 +363,7 @@ export class SkyCapability implements SceneCapability {
     this.enabled = opts.enabled ?? true;
     this.prevToneMapping = this.renderer.toneMapping;
     this.prevExposure = this.renderer.toneMappingExposure;
+    this.prevEnvironment = this.scene.environment;
     // Sky 是 Mesh + ShaderMaterial，纯数据对象，构造函数不依赖 WebGL
     this.sky = this.createSky();
     this.envSky = this.createSky();
@@ -415,10 +418,12 @@ export class SkyCapability implements SceneCapability {
         SkyCapability.prevExposureMap.set(this.renderer, this.renderer.toneMappingExposure);
       }
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = this.params.exposure;
       SkyCapability.toneRefCount.set(this.renderer, cnt + 1);
       this.toneApplied = true;
     }
+    // exposure 每次都刷：apply→detach→apply 往返时 toneApplied 已为 true，
+    // 但 exposure 可能已被外部改过，必须重新写入。
+    this.renderer.toneMappingExposure = this.params.exposure;
     if (this.params.environment) this.regenerateEnvironment();
     else this.clearEnvironment();
     // 更新 god rays 和 sunset tint
@@ -897,6 +902,25 @@ export class SkyCapability implements SceneCapability {
     this.clearEnvironment();
     if (this.godRays?.parent) this.godRays.parent.remove(this.godRays);
     if (this.sunsetTintMesh?.parent) this.sunsetTintMesh.parent.remove(this.sunsetTintMesh);
+    // 回滚 tone mapping：setEnabled(false) 时天空消失但 renderer 仍 ACESFilmic 的问题。
+    // 引用计数仲裁多 session 共享 renderer，只在最后一个贡献过的 session 退出时还原。
+    this.releaseTone();
+  }
+
+  /** 回滚本实例对共享 tone 状态的贡献（幂等：toneApplied=false 后再调无副作用） */
+  private releaseTone(): void {
+    if (!this.toneApplied) return;
+    const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
+    if (cnt <= 1) {
+      this.renderer.toneMapping = SkyCapability.prevToneMap.get(this.renderer) ?? this.prevToneMapping;
+      this.renderer.toneMappingExposure = SkyCapability.prevExposureMap.get(this.renderer) ?? this.prevExposure;
+      SkyCapability.toneRefCount.delete(this.renderer);
+      SkyCapability.prevToneMap.delete(this.renderer);
+      SkyCapability.prevExposureMap.delete(this.renderer);
+    } else {
+      SkyCapability.toneRefCount.set(this.renderer, cnt - 1);
+    }
+    this.toneApplied = false;
   }
 
   dispose(): void {
@@ -906,22 +930,9 @@ export class SkyCapability implements SceneCapability {
       this.renderTarget.dispose();
       this.renderTarget = null;
     }
-    // 引用计数仲裁：只在最后一个贡献过的 session 退出时恢复原始 tone mapping。
-    // 本实例从未 apply 贡献过（enabled:false / loadState 恢复后未启用）→ 不得动共享
-    // 状态——否则会误删仍存活 session 的 prevToneMap/prevExposureMap 并提前还原 tone。
-    if (this.toneApplied) {
-      const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
-      if (cnt <= 1) {
-        this.renderer.toneMapping = SkyCapability.prevToneMap.get(this.renderer) ?? this.prevToneMapping;
-        this.renderer.toneMappingExposure = SkyCapability.prevExposureMap.get(this.renderer) ?? this.prevExposure;
-        SkyCapability.toneRefCount.delete(this.renderer);
-        SkyCapability.prevToneMap.delete(this.renderer);
-        SkyCapability.prevExposureMap.delete(this.renderer);
-      } else {
-        SkyCapability.toneRefCount.set(this.renderer, cnt - 1);
-      }
-      this.toneApplied = false;
-    }
+    // tone mapping 已由 detach()→releaseTone() 回滚，此处不再重复处理。
+    // dispose 还原 scene.environment 到构造前状态（detach 仅 clearEnvironment 不还原 prev）。
+    this.scene.environment = this.prevEnvironment;
     this.sky.geometry.dispose();
     (this.sky.material as THREE.Material).dispose();
     this.envSky.geometry.dispose();

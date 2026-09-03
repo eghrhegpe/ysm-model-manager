@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"syscall"
 	"testing"
 
@@ -48,11 +49,15 @@ func TestSyncToggleStatus_RecycleSubtreeSkipped(t *testing.T) {
 	}
 }
 
-// TestIsFileLocked_Errno33 新增 ERROR_LOCK_VIOLATION(33) 判定分支：
-// errno 33 应判定锁定，无关 errno 不误判。
+// TestIsFileLocked_Errno33 ERROR_LOCK_VIOLATION(33) 判定分支平台化
+// （锐评 #6 后 errno 按 GOOS 分支：33 仅 Windows 命中；Unix 33=EDOM 不得误判）
 func TestIsFileLocked_Errno33(t *testing.T) {
-	if !isFileLocked(fmt.Errorf("wrap: %w", syscall.Errno(33))) {
-		t.Error("errno 33 (ERROR_LOCK_VIOLATION) 应判定为文件锁定")
+	if runtime.GOOS == "windows" {
+		if !isFileLocked(fmt.Errorf("wrap: %w", syscall.Errno(33))) {
+			t.Error("Windows errno 33 (ERROR_LOCK_VIOLATION) 应判定为文件锁定")
+		}
+	} else if isFileLocked(fmt.Errorf("wrap: %w", syscall.Errno(33))) {
+		t.Error("Unix errno 33 (EDOM) 不应判定为文件锁定")
 	}
 	if isFileLocked(fmt.Errorf("wrap: %w", syscall.Errno(2))) {
 		t.Error("errno 2 (ENOENT) 不应判定为文件锁定")

@@ -764,15 +764,8 @@ func linkErr(src, dst string, err error) error {
 	if errnoIs(err, 13, 5) || errnoIs(err, 1, 5) {
 		return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "权限不足，无法创建硬链接", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
 	}
-	// 文本兜底（非 errno 包装的异常错误）——注意避免过宽子串："different" 会误伤无关错误，只匹配跨设备特征短语；
-	// 仅兜底非 errno 包装的文本错误，errno 判定统一走 fsutil.IsCrossDeviceErr（含 Windows 错误码 17）
-	errStr := strings.ToLower(err.Error())
-	if strings.Contains(errStr, "cross-device") || strings.Contains(errStr, "different device") || strings.Contains(errStr, "not same device") {
-		return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "仓库与游戏目录在不同分区，不支持硬链接", Suggestion: "请在设置中切换为复制模式"}
-	}
-	if strings.Contains(errStr, "access is denied") || strings.Contains(errStr, "permission") {
-		return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "权限不足，无法创建硬链接", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
-	}
+	// errno 未命中的异常错误直落通用提示（文本兜底已删——陷阱 #11 禁止文本匹配错误分类；
+	// errors.Is 可链式穿透 LinkError/PathError，errno 判定已覆盖主路径）
 	return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "硬链接失败", Suggestion: "请在设置中切换为复制模式"}
 }
 
@@ -782,11 +775,7 @@ func symlinkErr(src, dst string, err error) error {
 	if errnoIs(err, 1, 1314) || errnoIs(err, 13, 5) {
 		return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "创建符号链接需要管理员权限", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
 	}
-	// 文本兜底（非 errno 包装的异常错误）
-	errStr := strings.ToLower(err.Error())
-	if strings.Contains(errStr, "access is denied") || strings.Contains(errStr, "privilege") || strings.Contains(errStr, "permission") {
-		return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "创建符号链接需要管理员权限", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
-	}
+	// 文本兜底已删（陷阱 #11），errno 未命中直落通用提示
 	return types.AppError{Code: types.ErrLinkFailed, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "符号链接失败", Suggestion: "请在设置中切换为复制模式"}
 }
 

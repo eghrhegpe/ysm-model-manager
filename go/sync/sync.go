@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"syscall"
@@ -540,36 +541,19 @@ func hasRecycleSegment(p string) bool {
 	return false
 }
 
-// isFileLocked 判断错误是否因为文件被其他进程锁定
+// isFileLocked 判断错误是否因为文件被其他进程锁定。
+// 错误码按 GOOS 分支（对齐 installer.errnoIs 范式）：Windows 与 Unix 的 errno 数值空间
+// 虽同为小整数但同一数值语义不同（16 = ERROR_CURRENT_DIRECTORY / EBUSY；32/33 在 Unix
+// 是 EPIPE/EDOM）——跨平台混判必然误判（锐评 #6）。errors.Is 链式穿透
+// os.LinkError/os.PathError 包装，无需文本兜底（陷阱 #11：禁止文本匹配错误分类）。
 func isFileLocked(err error) bool {
 	if err == nil {
 		return false
 	}
-	// errno 优先：Windows ERROR_SHARING_VIOLATION(32) / ERROR_LOCK_VIOLATION(33) /
-	// Unix EBUSY(16)——两端错误码空间互不重叠，rename 不会命中对方语义，跨平台无副作用
-	if errors.Is(err, syscall.Errno(32)) || errors.Is(err, syscall.Errno(33)) || errors.Is(err, syscall.Errno(16)) {
-		return true
+	if runtime.GOOS == "windows" {
+		// ERROR_SHARING_VIOLATION(32) / ERROR_LOCK_VIOLATION(33)
+		return errors.Is(err, syscall.Errno(32)) || errors.Is(err, syscall.Errno(33))
 	}
-	// 兜底：检查嵌套错误的消息内容（Windows 上 os.Rename 可能返回 LinkError/PathError）
-	getMsg := func(e error) string {
-		if e == nil {
-			return ""
-		}
-		return strings.ToLower(e.Error())
-	}
-
-	// 取最内层错误消息（解包 LinkError/PathError）
-	msg := getMsg(err)
-	if linkErr, ok := err.(*os.LinkError); ok {
-		msg = getMsg(linkErr.Err)
-	}
-	if pathErr, ok := err.(*os.PathError); ok {
-		msg = getMsg(pathErr.Err)
-	}
-
-	// 文本兜底：避免过宽子串（"access" 会误伤 "accessibility" 等无关错误），
-	// 只匹配 Windows 锁定典型文案 "access is denied"
-	return strings.Contains(msg, "sharing") ||
-		strings.Contains(msg, "access is denied") ||
-		strings.Contains(msg, "used by another process")
+	// Unix EBUSY(16)
+	return errors.Is(err, syscall.Errno(16))
 }

@@ -325,13 +325,14 @@ func TestLinkErr_Errno(t *testing.T) {
 	}
 }
 
-// TestLinkErr_TextFallback 非 errno 包装的错误走文本兜底
+// TestLinkErr_TextFallback 文本兜底已删（陷阱 #11）：非 errno 包装的文本错误不再
+// 分类，一律落通用提示——验证不误分类（errno 判定由 TestLinkErr_Errno 覆盖）
 func TestLinkErr_TextFallback(t *testing.T) {
-	if e := linkErr("/a", "/b", fmt.Errorf("cross-device link not permitted")); !strings.Contains(e.Error(), "不同分区") {
-		t.Errorf("文本兜底应识别 cross-device, got %v", e)
+	if e := linkErr("/a", "/b", fmt.Errorf("cross-device link not permitted")); !strings.Contains(e.Error(), "硬链接失败") {
+		t.Errorf("文本错误不应分类为不同分区, got %v", e)
 	}
-	if e := linkErr("/a", "/b", fmt.Errorf("permission denied")); !strings.Contains(e.Error(), "权限不足") {
-		t.Errorf("文本兜底应识别 permission, got %v", e)
+	if e := linkErr("/a", "/b", fmt.Errorf("permission denied")); !strings.Contains(e.Error(), "硬链接失败") {
+		t.Errorf("文本错误不应分类为权限不足, got %v", e)
 	}
 	if e := linkErr("/a", "/b", fmt.Errorf("unexpected error")); !strings.Contains(e.Error(), "硬链接失败") {
 		t.Errorf("未知错误应回退通用提示, got %v", e)

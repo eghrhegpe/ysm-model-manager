@@ -419,16 +419,17 @@ func TestSymlinkOrCopyLocked_RenameFail(t *testing.T) {
 
 // ====== symlinkErr 分类 ======
 
-// TestSymlinkErr_TextFallback 非 errno 包装的文本错误走文本兜底
+// TestSymlinkErr_TextFallback 文本兜底已删（陷阱 #11）：非 errno 包装的文本错误
+// 不再分类，一律落通用提示——验证不误分类（errno 判定由 TestSymlinkErr_Errno 覆盖）
 func TestSymlinkErr_TextFallback(t *testing.T) {
-	if e := symlinkErr("/a", "/b", fmt.Errorf("access is denied")); !strings.Contains(e.Error(), "管理员权限") {
-		t.Errorf("文本兜底应识别 access, got %v", e)
+	if e := symlinkErr("/a", "/b", fmt.Errorf("access is denied")); !strings.Contains(e.Error(), "符号链接失败") {
+		t.Errorf("文本错误不应分类为管理员权限, got %v", e)
 	}
-	if e := symlinkErr("/a", "/b", fmt.Errorf("privilege not held")); !strings.Contains(e.Error(), "管理员权限") {
-		t.Errorf("文本兜底应识别 privilege, got %v", e)
+	if e := symlinkErr("/a", "/b", fmt.Errorf("privilege not held")); !strings.Contains(e.Error(), "符号链接失败") {
+		t.Errorf("文本错误不应分类为管理员权限, got %v", e)
 	}
-	if e := symlinkErr("/a", "/b", fmt.Errorf("permission required")); !strings.Contains(e.Error(), "管理员权限") {
-		t.Errorf("文本兜底应识别 permission, got %v", e)
+	if e := symlinkErr("/a", "/b", fmt.Errorf("permission required")); !strings.Contains(e.Error(), "符号链接失败") {
+		t.Errorf("文本错误不应分类为管理员权限, got %v", e)
 	}
 }
 

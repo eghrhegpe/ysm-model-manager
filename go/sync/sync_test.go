@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"syscall"
@@ -736,22 +737,38 @@ func TestSyncResourcesDirLevel_AllExtra(t *testing.T) {
 	}
 }
 
-// TestIsFileLocked errno 判定优先，文本匹配兜底，无关错误与 nil 不应误判
+// TestIsFileLocked 错误码按平台分支判定（锐评 #6 后：32/33 仅 Windows、
+// 16 仅 Unix——两端数值语义不同，混判会误伤；文本兜底已删，陷阱 #11 合规）
 func TestIsFileLocked(t *testing.T) {
-	if !isFileLocked(syscall.Errno(32)) {
-		t.Error("Errno(32) 应判定为锁定（Windows ERROR_SHARING_VIOLATION）")
+	if runtime.GOOS == "windows" {
+		if !isFileLocked(syscall.Errno(32)) {
+			t.Error("Windows Errno(32) 应判定为锁定（ERROR_SHARING_VIOLATION）")
+		}
+		if !isFileLocked(syscall.Errno(33)) {
+			t.Error("Windows Errno(33) 应判定为锁定（ERROR_LOCK_VIOLATION）")
+		}
+		// 16 = ERROR_CURRENT_DIRECTORY，非 EBUSY——不得误判为锁定
+		if isFileLocked(syscall.Errno(16)) {
+			t.Error("Windows Errno(16)（ERROR_CURRENT_DIRECTORY）不应判定为锁定")
+		}
+	} else {
+		if !isFileLocked(syscall.Errno(16)) {
+			t.Error("Unix Errno(16) 应判定为锁定（EBUSY）")
+		}
+		// 32 = EPIPE / 33 = EDOM，非锁定语义——不得误判
+		if isFileLocked(syscall.Errno(32)) {
+			t.Error("Unix Errno(32)（EPIPE）不应判定为锁定")
+		}
+		if isFileLocked(syscall.Errno(33)) {
+			t.Error("Unix Errno(33)（EDOM）不应判定为锁定")
+		}
 	}
-	if !isFileLocked(syscall.Errno(33)) {
-		t.Error("Errno(33) 应判定为锁定（Windows ERROR_LOCK_VIOLATION）")
+	// 文本兜底已删除：纯文本错误一律不判为锁定（errno 可链式穿透 LinkError/PathError 包装）
+	if isFileLocked(fmt.Errorf("sharing violation")) {
+		t.Error("文本错误不应判定为锁定（文本兜底已删）")
 	}
-	if isFileLocked(fmt.Errorf("accessibility check failed")) {
-		t.Error("含 access 子串的无关错误不应判定为锁定（errno 优先口径）")
-	}
-	if !isFileLocked(fmt.Errorf("sharing violation")) {
-		t.Error("文本匹配兜底应识别 sharing violation")
-	}
-	if !isFileLocked(fmt.Errorf("Access is denied")) {
-		t.Error("文本匹配兜底应识别 access 错误")
+	if isFileLocked(fmt.Errorf("Access is denied")) {
+		t.Error("文本错误不应判定为锁定（文本兜底已删）")
 	}
 	if isFileLocked(fmt.Errorf("no such file")) {
 		t.Error("无关错误不应判定为锁定")

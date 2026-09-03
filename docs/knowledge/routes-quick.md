@@ -61,7 +61,7 @@
 | android:back 返回键、弹窗退出 | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | Android 系统事件必须经 android-events 的 registerAndroidEvents 单点注册，禁止各组件各自注册 | - |
 | Android/Linux/macOS Rust 桥 | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径 | - |
 | API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
-| bridge_windows/bridge_android/bridge_linux | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
+| bridge_windows/bridge_cgo | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend_web.md) | - | - |
 | closeActiveDialog、registerAndroidEvents | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
 | compile-android-rust/compile-rust-static | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
@@ -298,6 +298,25 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 测试覆盖缺口定位 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
+
+## 🎯 Go 后端评审与重构
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| Go 后端设计评审 / 锐评 | [Go 后端设计锐评](./go_design_critique.md) | 能显式化的不要靠注释说明，能拆分的不要堆在一个函数里（probeNbtDepth 四层闭包 / resolveBedrockGeometryFallback 四层策略 / buildSubModels 7 参数） | - |
+
+## 🎯 Wails 绑定治理
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 找出难懂的 Go 函数 | [Go 后端设计锐评](./go_design_critique.md) | 命名要向行为诚实：DetectZipType 实际处理 7z 应叫 DetectContainerType；叫 fallback 的实际是 4 层策略链 | - |
+
+## 🎯 可读性与命名治理
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 隐式协议显式化 | [Go 后端设计锐评](./go_design_critique.md) | - | - |
+| Wails 绑定瘦身 / 清理 Deprecated 绑定 | [Go 后端设计锐评](./go_design_critique.md) | 全仓 6 处手写 LimitReader+1 探测应统一收编 fsutil.ReadLimitedEntry，撤回 ADR-044 的例外说明 | - |
 
 ## 🎯 契约对拍
 
@@ -538,6 +557,11 @@
 | 资源归类一律由 Go 扫描 + resource_types.json 派生，前端只读不重算 | - | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
+| 隐式协议（epoch 代际 / *Locked 变体 / \x00 缓存键 / 三态 bool 返回）靠注释续命，编译器零保护——新增字段/分支时静默爆炸 | - | - |
+| 同一 Node+WASM 解码桥在 go/avatar 与 internal/app 各有一份逐字复刻，跨包是伪理由——internal/app 本就 import go/avatar | `无法共享` | - |
+| 注册表循环内 compSize 推进只看 local header，大压缩条目后的条目不在扫描范围（DetectZipType 设计取舍，勿误以为遍历完整） | - | - |
+| Deprecated Wails 绑定保留只为兼容旧绑定面，前端 0 消费但每次 generate:bindings 重新生成到 TS 声明，误调风险 + 绑定面膨胀 | - | - |
+| 警惕把这类有意的语义不对称「规范化」成对称——会消耗 GitHub API 配额 | `校验和不重试、截断可重试` | - |
 | "golden 必须双端互锁：Go 测试 + TS 测试读同一份 fixture，只做 web 单侧对拍是死快照，防不住 Go 侧漂移（ADR-154 §2.2 硬性要求）" | - | - |
 | "matchZipEntryTS 是注册表顺序首命中、忽略 priority；Go MatchZipEntry 同构，但容器级 detectZipType 走 priority desc 裁决——两者不可直接对拍（ADR-154 §2.4）" | - | - |
 | "TS 测试读仓库根 fixture 不得用 import 语句（ADR-146 R4 冻结基线会 FAIL），须用 readFileSync + process.cwd() 向上定位" | - | - |

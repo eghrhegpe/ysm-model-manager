@@ -1,8 +1,8 @@
 {
-  "generated": "2026-09-02T08:50:16.505Z",
+  "generated": "2026-09-03T03:40:51.822Z",
   "scope": "./go/**/*.go",
   "language": "go",
-  "duplicates": 439,
+  "duplicates": 438,
   "clones": [
     "go/avatar/avatar_extra_test.go#go/avatar/avatar_extra_test.go",
     "go/avatar/avatar_extra_test.go#go/avatar/avatar_node_test.go",
@@ -106,9 +106,8 @@
     "go/recycle/recycle_moveex_test.go#go/recycle/recycle_restore_extra_test.go",
     "go/recycle/recycle_restore_extra_test.go#go/recycle/recycle_restore_extra_test.go",
     "go/recycle/recycle_restore_extra_test.go#go/recycle/recycle_test.go",
-    "go/rustbridge/bridge_android.go#go/rustbridge/bridge_android.go",
-    "go/rustbridge/bridge_android.go#go/rustbridge/bridge_darwin.go",
-    "go/rustbridge/bridge_darwin.go#go/rustbridge/bridge_linux.go",
+    "go/rustbridge/bridge_cgo.go#go/rustbridge/bridge_cgo.go",
+    "go/rustbridge/bridge_cgo.go#go/rustbridge/bridge_windows.go",
     "go/rustbridge/bridge_windows.go#go/rustbridge/bridge_windows.go",
     "go/scanner/scanner_extra_test.go#go/scanner/scanner_hotspots_extra_test.go",
     "go/scanner/scanner_hotspots_extra_test.go#go/scanner/scanner_hotspots_extra_test.go",

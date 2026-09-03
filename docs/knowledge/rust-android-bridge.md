@@ -4,10 +4,9 @@ name: Rust Scanner Bridge 全平台支持
 tier: architecture
 category: core
 source_files:
-  - go/rustbridge/bridge_android.go
-  - go/rustbridge/bridge_linux.go
-  - go/rustbridge/bridge_darwin.go
-  - go/rustbridge/types.go
+  - go/rustbridge/bridge_cgo.go
+  - go/rustbridge/bridge_windows.go
+  - go/rustbridge/common.go
   - go/scanner/rust_backend.go
   - scripts/compile-android-rust.ts
   - scripts/compile-rust-static.ts
@@ -40,7 +39,7 @@ auto_fields:
     - rust_backend
     - CGO
   invariant_anchors:
-    - go/rustbridge/bridge_android.go|Scan
+    - go/rustbridge/bridge_cgo.go|Scan
 tests:
   - tests/test_rust_bridge_tags.ts
 quick_groups:
@@ -62,22 +61,25 @@ use_when:
   - rust_backend
   - CGO
 invariant_anchors:
-  - go/rustbridge/bridge_android.go|Scan
+  - go/rustbridge/bridge_cgo.go|Scan
 status: active
 ---
 
 # Rust Scanner Bridge 全平台支持
 
-在原有 Windows DLL embed 基础上，新增 Android/Linux/macOS 的 CGO 静态链接支持。
+L2 合并（2026-09-03，ADR-139 §2 已落地）：`bridge_{darwin,linux,android}.go` 三份 CGO 文件
+去注释后逐字相同（含 C 前导块），合并为单一 `bridge_cgo.go`（`//go:build (darwin || linux || android) && rust_backend`）。
+`bridge_windows.go` 单列（syscall/DLL，无 cgo，实现真实不同）。
 
 ## 架构设计
 
-| 平台 | 方案 | 触发条件 |
+| 平台 | 文件 | 触发条件 |
 |------|------|---------|
-| Windows | DLL embed + 动态加载 | windows && rust_backend |
-| Android | CGO 静态链接 | android && rust_backend |
-| Linux | CGO 静态链接 | linux && rust_backend |
-| macOS | CGO 静态链接 | darwin && rust_backend |
+| Windows | `bridge_windows.go` | `windows && rust_backend` |
+| Linux/macOS/Android | `bridge_cgo.go` | `(darwin || linux || android) && rust_backend` |
+
+> **GOOS=android 隐含 linux**：Go 的 GOOS=android 同时满足 `linux` 约束，单文件构造上
+> 消除 android 撞车风险，无需 `!android` 守卫（ADR-139 §1.4）。
 
 ## 编译流程
 
@@ -86,8 +88,7 @@ status: active
 
 ## 平台陷阱（2026-08-25 全平台排查实录）
 
-- **本地 `go build ./go/...` 只验 Windows**：非 Windows 桥文件不参与本机编译，tag/类型错误全部漏网。防线 = `tests/test_rust_bridge_tags.mjs`（tag 与文件名平台一致 + 同包 tag 判重 + Entries 兜底类型一致）；全链接验证仍需 CI / WSL / 真机。
-- **build tag 必须与文件名平台一致**：`bridge_darwin.go` 曾误写 `linux && rust_backend` → Linux 构建 redeclared、macOS 无实现。
+- **本地 `go build ./go/...` 只验 Windows**：非 Windows 桥文件不参与本机编译，tag/类型错误全部漏网。防线 = `tests/test_rust_bridge_tags.ts`（tag 与文件名平台一致 + 同包 tag 判重 + Entries 兜底类型一致）；全链接验证仍需 CI / WSL / 真机。
 - **Entries 兜底类型**：所有桥统一 `[]types.ModelEntry{}`（对齐 types.ScanResponse.Entries），禁 `[]interface{}{}`（非 Windows 必编译错）。
 - **链接器差异**：macOS ld64 不支持 `-l:`，Linux/macOS 统一传完整归档路径 `-extldflags="-L&lt;dir&gt; &lt;dir&gt;/lib….a"`；Android NDK lld 支持 `-l:`。
 - **tags 别漏 rust_backend**：android-build.mjs 曾只在 extldflags 判 rustBackend 而 go build tags 未加 → Rust 白编、静默走 Go stub。

@@ -5,13 +5,7 @@ tier: architecture
 category: go
 source_files:
   - go/rustbridge/bridge_windows.go
-  - go/rustbridge/bridge_android.go
-  - go/rustbridge/bridge_darwin.go
-  - go/rustbridge/bridge_linux.go
-  - go/rustbridge/doc.go
-  - go/rustbridge/embedded_windows.go
-  - go/rustbridge/types_windows.go
-  - go/rustbridge/types.go
+  - go/rustbridge/bridge_cgo.go
   - go/rustbridge/common.go
   - rust-core/src/model.rs
   - rust-core/src/policy.rs
@@ -31,7 +25,7 @@ auto_fields:
   quick_intents:
     - Rust 扫描器、rust_backend
     - 桥 DLL、Wails 后端迁移 Rust
-    - bridge_windows/bridge_android/bridge_linux
+    - bridge_windows/bridge_cgo
   quick_risk_lines:
     - Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载
   pitfalls:
@@ -55,7 +49,7 @@ quick_groups:
 quick_intents:
   - Rust 扫描器、rust_backend
   - 桥 DLL、Wails 后端迁移 Rust
-  - bridge_windows/bridge_android/bridge_linux
+  - bridge_windows/bridge_cgo
 quick_risk_lines:
   - Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载
 pitfalls:
@@ -81,13 +75,11 @@ status: active
 
 ## 范围与构建
 
-- **包**：`go/rustbridge/`——**4 平台独立实现**（每文件带 `rust_backend` build tag）：
-  - `bridge_windows.go`（126 行）— Windows FFI 桥接（syscall.LazyDLL，`//go:build windows && rust_backend`）
-  - `bridge_android.go`（107 行）— Android FFI 桥接（CGO extern，`//go:build android && rust_backend`）
-  - `bridge_linux.go`（104 行）— Linux FFI 桥接（CGO extern，`//go:build linux && !android && rust_backend`）
-  - `bridge_darwin.go`（101 行）— macOS FFI 桥接（CGO extern，`//go:build darwin && rust_backend`）
+- **包**：`go/rustbridge/`——**2 份平台独立实现**（每文件带 `rust_backend` build tag）：
+  - `bridge_windows.go`（~137 行）— Windows FFI 桥接（syscall.LazyDLL，`//go:build windows && rust_backend`）
+  - `bridge_cgo.go`（~110 行）— Linux/macOS/Android FFI 桥接（CGO extern，`//go:build (darwin || linux || android) && rust_backend`；GOOS=android 隐含 linux，单文件构造上消除 android 撞车，无需 `!android` 守卫，见 ADR-139）
   - `embedded_windows.go`（69 行）— Windows 内嵌 Rust 库释放（SHA256 版本化缓存 + 原子 rename，`//go:build windows && rust_backend`）
-  - `common.go`（33 行）— 公共解码（parseResponse，`//go:build rust_backend`）
+  - `common.go`（~40 行）— 公共解码（parseResponse + ffiMu，`//go:build rust_backend`）
   - `types.go`（17 行）— 类型定义（ScanResponse/ScanEntry，`//go:build rust_backend`）
   - `types_windows.go`（9 行）— Windows 特定类型（nativeBuffer，`//go:build windows && rust_backend`）
   - `doc.go`（3 行）— 包文档（无 build tag）

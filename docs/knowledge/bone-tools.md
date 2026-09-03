@@ -15,6 +15,7 @@ auto_fields:
     - BoneDetail
     - BoneListItem
     - BoneNode
+    - boneRowActiveBg
     - BoneTree
     - buildBoneTree
     - buildVrmBoneNodes

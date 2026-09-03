@@ -10,6 +10,7 @@ auto_fields:
     - createResolveModeBridge
     - createWorkerBridge
     - CreateWorkerBridgeOpts
+    - createWorkerParser
     - ResolveModeBridge
     - ResolveModeResponse
     - WorkerBridge

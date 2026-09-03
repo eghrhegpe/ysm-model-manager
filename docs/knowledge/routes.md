@@ -21,7 +21,7 @@
 | 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）、评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct、想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | `internal/app` 是 Wails 绑定层（`package app`），`App` 是 god-object，持有若干子组件 |
 | 主内容区、页面切换、nav:change、仓库页、全局 handler | [主内容页 app-content](./app-content.md) | `app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工… |
 | 组件入口、模块装配、启动流程、主题初始化、服务注册、检查更新 | [组件入口 app-modules](./app-modules.md) ⚠️歧义（另见 version-updater.md） | `app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组… |
-| 预览、模型预览、3D 预览、Litematic、WASM 解码 | [预览面板 app-preview](./app-preview.md) ⚠️歧义（另见 go-threejs.md、preview_core.md） | `app-preview` 是仓库页右侧的预览面板组件（Shadow DOM），按 `model:select` 事件驱动。负责 YSM 模型的详情 / 2D 骨骼 / 3D 预览、Litematic 蓝图 3D 预览、资源包与光影包信息展… |
+| 预览、模型预览、3D 预览、Litematic、WASM 解码 | [预览面板 app-preview](./app-preview.md) ⚠️歧义（另见 go-threejs.md） | `app-preview` 是仓库页右侧的预览面板组件（Shadow DOM），按 `model:select` 事件驱动。负责 YSM 模型的详情 / 2D 骨骼 / 3D 预览、Litematic 蓝图 3D 预览、资源包与光影包信息展… |
 | 侧边栏、整合包列表、版本卡片、推送、拉取、同步状态卡片 | [侧边栏 app-sidebar](./app-sidebar.md) ⚠️歧义（另见 sync-manager.md等） | `app-sidebar` 是仓库页左栏的整合包列表组件（Shadow DOM），展示当前资源类型下各整合包（Minecraft 版本实例）的同步状态卡片，支持选中联动、勾选批量推送/拉取、一键安装缺失资源。它遵循标准组件拆分规范（inde… |
 | 整合包同步、同步状态、推送资源、拉取资源、待推送、可拉取、已禁用、实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) ⚠️歧义（另见 sync-manager.md） | `app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本… |
 | 树形、资源列表、tree、节点、树、目录树 | [资源树 app-tree](./app-tree.md) | `app-tree` 是 YSM 核心的资源目录树组件，使用 Web Components 实现，支持展开/折叠、右键菜单、文件图标显示。 |
@@ -48,7 +48,8 @@
 | 可拓展点、扩展入口、硬编码、重复实现、插件化 | [可拓展点发掘索引（extensibility inventory）](./extensibility-index.md) ⚠️歧义（另见 drift-scan.md） | — |
 | 新增资源类型、新增文件格式、新增网页桥接、新增同步逻辑、残留手改清单、拓展点探索 | [拓展点 / 扩展入口 探索报告（Round 2）](./extensibility-round2.md) | — |
 | FBX、CLI、命令行、转换、glTF、GLB、fbx2gltf、assimp | [FBX CLI 处理管线 fbx-cli-pipeline](./fbx-cli-pipeline.md) ⚠️歧义（另见 cli_quality_audit.md） | **CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**： |
-| 代码审核、代码审查、审计、前端质量、技术债、重构排期、XSS、innerHTML | [前端 TS 整包审计](./frontend_repo_audit.md) ⚠️歧义（另见 cli_quality_audit.md、frontend_test_audit.md等） | 2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全… |
+| 设计评审、前端设计、锐评、主题系统、3D 性能审查、生命周期审查、技术债 | [前端设计锐评](./frontend_design_critique.md) ⚠️歧义（另见 frontend_repo_audit.md） | 2026-09-03 三子代理并发只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。… |
+| 代码审核、代码审查、审计、前端质量、技术债、重构排期、XSS、innerHTML | [前端 TS 整包审计](./frontend_repo_audit.md) ⚠️歧义（另见 cli_quality_audit.md、frontend_test_audit.md、frontend_design_critique.md等） | 2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全… |
 | 代码审核、测试基建、契约测试、e2e、flaky、假绿、覆盖盲区 | [前端测试基建审计](./frontend_test_audit.md) ⚠️歧义（另见 cli_quality_audit.md、frontend_repo_audit.md、pre_push_gate.md等） | 2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.mjs` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（… |
 | 全局事件、拖拽导入、拖拽提示、同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) ⚠️歧义（另见 import-queue.md） | `core/handlers/global.ts` 是全应用唯一的 core 全局 handler 注册入口（致命陷阱 #2 的解法）：app-content 的 `connectedCallback` 调一次 `registerGloba… |
 | 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移、新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性、voxel-colors-data.json 生成物是否过期（Go 表变更未同步前端）、双端互锁契约 fixture 的更新口径 | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go_ts_golden.md) | 网页版（无 Go 壳）把整层 Go 解析逻辑平移成 TS 影子层（ADR-049 web 豁免 + ADR-070/066/082「TS 镜像 Go」），双实现漂移是永久负债。ADR-154 以共享 fixture（`tests/parit… |
@@ -73,7 +74,7 @@
 | 扫描、扫描条目、文件树、哈希、缓存、作者提取、ScanEntries、索引生成 | [扫描核心 go/scanner](./go-scanner.md) ⚠️歧义（另见 go-avatar.md） | `go/scanner/` 包实现仓库文件扫描、哈希计算、缓存失效、作者提取、索引生成（ADR-003 P2 下沉，薄壳 `internal/app/app_scan.go` 仅保留依赖 App 的方法）。 |
 | 整合包、同步、硬链接、缺失、多余 | [整合包同步 go/sync](./go-sync.md) ⚠️歧义（另见 go-instance.md） | `go/sync/` 包负责模型库（全局仓库）与 Minecraft 整合包实例之间的同步：发现实例（原版 / PrismLauncher 布局）、按 SHA256 哈希对比出缺失/多余/禁用文件、按文件名或文件夹对比资源包差异、检测目标文… |
 | 标签、tag、分类、tag-editor | [标签系统 go/tags](./go-tags.md) ⚠️歧义（另见 dialog-tag-editor.md等） | `go/tags/` 包提供模型标签的线程安全持久化存储，是前端 tag-editor 弹窗的后端。标签存放在配置目录的 `tags.json`，以文件绝对路径为 key、标签列表为 value，与模型文件本身解耦（移动/链接模型不污染文件… |
-| 3D 预览、骨骼、three.js、spec、顶点、UV、四元数、模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) ⚠️歧义（另见 app-preview.md、preview_core.md） | `go/threejs/` 包根据 YSMViewer 的 `ThreeJsPayloadBuilder.cs` 移植，把已解析的 `types.BedrockModel` 转换为 Three.js 可直接消费的 JSON spec：顶点、… |
+| 3D 预览、骨骼、three.js、spec、顶点、UV、四元数、模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) ⚠️歧义（另见 app-preview.md） | `go/threejs/` 包根据 YSMViewer 的 `ThreeJsPayloadBuilder.cs` 移植，把已解析的 `types.BedrockModel` 转换为 Three.js 可直接消费的 JSON spec：顶点、… |
 | 共享类型、AppConfig、配置、注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) ⚠️歧义（另见 resource-registry.md、utils-extensions.md） | `go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_regist… |
 | 自动更新、版本升级、updater | [自动更新 go/updater](./go-updater.md) ⚠️歧义（另见 version-updater.md） | `go/updater/` 包负责 YSM 应用的自动更新机制。 |
 | 监听、文件变化、刷新、watcher | [文件监听 go/watcher](./go-watcher.md) | `go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。 |
@@ -91,7 +92,6 @@
 | pointerdown、pointermove、pointerup、触屏、拖拽、旋转 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) ⚠️歧义（另见 import-queue.md） | ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `… |
 | 推送门禁、质量门禁、域级检查、门禁阻断、go build、vite build、契约测试、Promise.all | [推送前门禁 pre-push-gate](./pre_push_gate.md) ⚠️歧义（另见 frontend_test_audit.md） | `.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器，681 行）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（… |
 | pre-commit、钩子、文档同步、自动 stage、并发隔离 | [提交前钩子 pre-commit](./pre-commit-hook.md) | `.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0… |
-| 3D 预览、统一预览外壳、程序化天空 / sky / 背景 / scene.background、PreviewAdapter 适配器、全模型预览（YSM / VRM / MMD / Litematic）、mount3D | [统一 3D 预览核心 preview-core](./preview_core.md) ⚠️歧义（另见 app-preview.md、go-threejs.md） | ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚手架（旧实现各内联 ~250 行同构），成为所有富格式 3D 预览的**单一事实来源外壳**。内容差异经 `PreviewAdapter.bui… |
 | schema 注册、per-scene、多模型同框、schema 键冲突、activeComponent、组件选择、YSM maid 同台、sessionId | [preview-menu-session-key](./preview_menu_session_key.md) | 3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台 |
 | 3D 控制器、MMD 播放、截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | > ⚠️ **重要前提（ADR-076 v2 Phase 2 重构后）**：相机操作已收编进**核心声明式根菜单**（⚙️ 按钮 → `mountPreviewRootMenu` 的 `camera` 项），底部导航弹窗已删除。现存的 `m… |
 | 预览设置、显示控制、骨骼名称、帧率、截图灯光 | [预览面板设置与显示控制](./preview-settings.md) | > **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖… |

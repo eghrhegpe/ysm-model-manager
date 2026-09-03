@@ -695,6 +695,10 @@ export const autoSidebar = [
         "link": "/android-dev"
       },
       {
+        "text": "架构演进摘要",
+        "link": "/architecture-evolution-summary"
+      },
+      {
         "text": "CLI 命令参考",
         "link": "/cli-commands"
       },
@@ -721,6 +725,10 @@ export const autoSidebar = [
     "link": "/adr/",
     "collapsed": true,
     "items": [
+      {
+        "text": "ADR-163：主内容页 tab-panel 常驻化：替代整 DOM 重建",
+        "link": "/adr/ADR-163-content-page-tab-panel-persistent"
+      },
       {
         "text": "ADR-162：知识卡符号锚点去行号（行号减噪）",
         "link": "/adr/ADR-162-knowledge-card-symbol-anchor-strip-linenum"
@@ -1724,6 +1732,10 @@ export const autoSidebar = [
             "link": "/knowledge/dom-fab"
           },
           {
+            "text": "前端设计锐评",
+            "link": "/knowledge/frontend_design_critique"
+          },
+          {
             "text": "前端命名章程（黑话治理）",
             "link": "/knowledge/frontend_naming"
           },
@@ -1866,10 +1878,6 @@ export const autoSidebar = [
           {
             "text": "3D 感知系统 perception",
             "link": "/knowledge/perception"
-          },
-          {
-            "text": "统一 3D 预览核心 preview-core",
-            "link": "/knowledge/preview_core"
           },
           {
             "text": "联邦渲染能力 (Render Federation)",
@@ -2034,6 +2042,16 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
+          }
+        ]
+      },
+      {
+        "text": "其他",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "统一 3D 预览核心 preview-core",
+            "link": "/knowledge/preview_core"
           }
         ]
       }

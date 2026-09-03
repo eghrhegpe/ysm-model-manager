@@ -25,6 +25,7 @@ auto_fields:
     - applyGroundSurfaceStructural
     - applyPerfPreset
     - applyRotationIfNonIdentity
+    - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - assembleBoneSelectInfo
     - attenuateAmbientForSky
@@ -50,6 +51,7 @@ auto_fields:
     - BoneListItem
     - BoneMaps
     - BoneNode
+    - boneRowActiveBg
     - BoneSelectInfo
     - BonesPanelItemOpts
     - BoneTree
@@ -77,6 +79,7 @@ auto_fields:
     - buildSettingsControls
     - buildSettingsSchema
     - buildShadowSchema
+    - buildSharedInfra
     - buildSpecFromGeometryJSON
     - buildSpecFromModel
     - buildStatsPanel
@@ -127,6 +130,7 @@ auto_fields:
     - createResolveModeBridge
     - createWorkerBridge
     - CreateWorkerBridgeOpts
+    - createWorkerParser
     - createYsmAnimPlayer
     - CUBE_EPS
     - Cube2D
@@ -201,6 +205,7 @@ auto_fields:
     - formatCapSliderValue
     - frameCameraSide
     - FrameSideOptions
+    - frRoleRowStyle
     - generateSurfacePixels
     - getBoneDetail
     - getBoneList
@@ -289,6 +294,7 @@ auto_fields:
     - makeMenuCtx
     - makeMmdAdapter
     - makePackAdapter
+    - makeUnifiedPickHandler
     - makeVrmAdapter
     - makeYsmAdapter
     - makeYsmModelSchemaId
@@ -340,13 +346,6 @@ auto_fields:
     - mount3D
     - Mount3DOptions
     - mountPreviewRootMenu
-    - mpApplyWasdCameraMotion
-    - mpBuildSharedInfra
-    - mpMakeUnifiedPickHandler
-    - MpSharedInfra
-    - MpUnloadCtx
-    - mpUnloadModel
-    - MpWasdReuse
     - MultiLipSyncCallback
     - multiModelSelectNode
     - MultiModelSelectOpts
@@ -481,6 +480,7 @@ auto_fields:
     - SHADOW_PRESETS
     - ShadowCapability
     - ShadowParams
+    - SharedInfra
     - shouldRenderAtFps
     - shouldRenderPreviewFrame
     - showLoadFailure
@@ -506,6 +506,8 @@ auto_fields:
     - surfaceSpecKey
     - SwitchContext
     - switchPreview
+    - switchTabCssText
+    - switchTabHighlightBg
     - switchToSession
     - syncLightTargetFromContent
     - TdKeyAction
@@ -526,6 +528,8 @@ auto_fields:
     - toggleMmdMaterialVisible
     - toScreenshotLights
     - toStatePath
+    - UnloadCtx
+    - unloadModel
     - unregisterModelRoot
     - unregisterSchema
     - Vec3
@@ -541,6 +545,7 @@ auto_fields:
     - VrmModelInfoCtx
     - VrmPanelHooks
     - vrmSemanticBoneMap
+    - WasdReuse
     - WaterCapability
     - WaterMode
     - WaterParams

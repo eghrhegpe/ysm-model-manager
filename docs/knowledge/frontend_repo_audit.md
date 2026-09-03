@@ -82,6 +82,7 @@ auto_fields:
     - applyRotationIfNonIdentity
     - applyTheme
     - applyUIPrefs
+    - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - appSidebarStyle
     - AppSyncManager
@@ -140,6 +141,7 @@ auto_fields:
     - BoneListItem
     - BoneMaps
     - BoneNode
+    - boneRowActiveBg
     - BoneSelectInfo
     - BonesPanelItemOpts
     - BoneTransform
@@ -183,6 +185,7 @@ auto_fields:
     - buildSettingsControls
     - buildSettingsSchema
     - buildShadowSchema
+    - buildSharedInfra
     - buildSiteHtml
     - BuildSiteHtmlCtx
     - buildSpecFromGeometryJSON
@@ -332,6 +335,7 @@ auto_fields:
     - createVrm3D
     - createWorkerBridge
     - CreateWorkerBridgeOpts
+    - createWorkerParser
     - createWorkshopRefs
     - createYsm3D
     - createYsmAnimPlayer
@@ -525,6 +529,7 @@ auto_fields:
     - frameCameraSide
     - FrameSideOptions
     - friendlyError
+    - frRoleRowStyle
     - FsaAuthState
     - FSLike
     - generateSurfacePixels
@@ -800,6 +805,7 @@ auto_fields:
     - makeMmdDataPort
     - makePackAdapter
     - makeShotAction
+    - makeUnifiedPickHandler
     - makeVrmAdapter
     - makeYsmAdapter
     - makeYsmModelSchemaId
@@ -897,13 +903,6 @@ auto_fields:
     - mountCustomElement
     - mountPreviewRootMenu
     - moveItem
-    - mpApplyWasdCameraMotion
-    - mpBuildSharedInfra
-    - mpMakeUnifiedPickHandler
-    - MpSharedInfra
-    - MpUnloadCtx
-    - mpUnloadModel
-    - MpWasdReuse
     - MultiLipSyncCallback
     - multiModelSelectNode
     - MultiModelSelectOpts
@@ -1247,6 +1246,7 @@ auto_fields:
     - SHADOW_PRESETS
     - ShadowCapability
     - ShadowParams
+    - SharedInfra
     - shortLabelOf
     - shotButtonNodes
     - shouldEnterForm
@@ -1343,6 +1343,8 @@ auto_fields:
     - swallowError
     - SwitchContext
     - switchPreview
+    - switchTabCssText
+    - switchTabHighlightBg
     - switchToSession
     - syncDirRowHTML
     - SyncItem
@@ -1398,6 +1400,8 @@ auto_fields:
     - uiComponentsCss
     - uiComponentsStyleSheet
     - uid
+    - UnloadCtx
+    - unloadModel
     - unmountElement
     - unpackBlockStates
     - unregister
@@ -1441,6 +1445,7 @@ auto_fields:
     - waitForElementToBeRemoved
     - waitForFrame
     - warnedKeys
+    - WasdReuse
     - WasmModuleLike
     - WaterCapability
     - WaterMode

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **159** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **160** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 155 |
+| [✅ 已采纳](#已采纳) | 156 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -32,10 +32,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（155）
+### ✅ 已采纳（156）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-163](./ADR-163-content-page-tab-panel-persistent.md) | 主内容页 tab-panel 常驻化：替代整 DOM 重建 | ✅ 已采纳 |
 | [ADR-162](./ADR-162-knowledge-card-symbol-anchor-strip-linenum.md) | 知识卡符号锚点去行号（行号减噪） | ✅ 已采纳 |
 | [ADR-161](./ADR-161-render-vocabulary-charter.md) | 渲染会话词汇章程:spec 契约单一镜像 + 尺度词消歧(组件/模型/内容层/条目)+ built 黑话退役 | ✅ 已采纳 |
 | [ADR-160](./ADR-160-subentity-component-spec-projection.md) | 子实体统一为组件视图:GetModel3DSpec spec.models 唯一源 + 详情统计 = spec 投影(maid L0 清单退役) | ✅ 已采纳 |
@@ -203,6 +204,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-163 | 主内容页 tab-panel 常驻化：替代整 DOM 重建 | ✅ 已采纳 | 2026-09-03 |
 | ADR-162 | 知识卡符号锚点去行号（行号减噪） | ✅ 已采纳 | 2026-09-02 |
 | ADR-161 | 渲染会话词汇章程:spec 契约单一镜像 + 尺度词消歧(组件/模型/内容层/条目)+ built 黑话退役 | ✅ 已采纳 | 2026-09-02 |
 | ADR-160 | 子实体统一为组件视图:GetModel3DSpec spec.models 唯一源 + 详情统计 = spec 投影(maid L0 清单退役) | ✅ 已采纳 | 2026-09-02 |

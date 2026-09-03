@@ -240,7 +240,7 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/views/app-content/index.ts` | 108 |
-| `frontend/src/views/app-content/index.ts` | 180 |
+| `frontend/src/views/app-content/index.ts` | 211 |
 | `frontend/src/views/app-content/site/events.ts` | 201 |
 | `frontend/src/views/app-nav/index.ts` | 34 |
 | `frontend/src/views/app-nav/index.ts` | 175 |
@@ -466,7 +466,7 @@
 | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
 | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 88 |
 | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 354 |
-| `frontend/src/views/app-content/index.ts` | 171 |
+| `frontend/src/views/app-content/index.ts` | 202 |
 | `frontend/src/views/app-content/init-pages.ts` | 168 |
 | `frontend/src/views/app-content/init-pages.ts` | 281 |
 | `frontend/src/views/app-content/settings/init.ts` | 48 |

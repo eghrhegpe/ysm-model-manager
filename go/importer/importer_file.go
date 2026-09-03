@@ -147,31 +147,27 @@ func WriteFileAtomic(destPath string, data []byte) error {
 // 由调用方决定报错/降级——ADR-082 续：识别不出就是识别不出，不假装 YSM）。
 // DetectByEntries 归属（ADR-144）：识别逻辑随识别大脑下沉 packs。
 func DetectContainerType(data []byte) string {
-	var entries []string
+	var (
+		r   container.Reader
+		err error
+	)
 	if len(data) >= 4 && bytes.HasPrefix(data, sevenZipSig) {
-		r, err := container.Open7zBytes(data, int64(len(data)))
-		if err != nil {
-			return ""
-		}
-		defer r.Close()
-		for _, e := range r.Entries() {
-			entries = append(entries, e.Name())
-		}
+		r, err = container.Open7zBytes(data, int64(len(data)))
 	} else {
-		idx := 0
-		for idx+30 <= len(data) {
-			if !bytes.HasPrefix(data[idx:idx+4], zipLocalHeaderSig) {
-				break
-			}
-			nameLen := int(le16(data[idx+26:]))
-			extraLen := int(le16(data[idx+28:]))
-			if idx+30+nameLen > len(data) {
-				break
-			}
-			entries = append(entries, string(data[idx+30:idx+30+nameLen]))
-			compSize := int(le32(data[idx+18:]))
-			idx += 30 + nameLen + extraLen + compSize
-		}
+		// 锐评 #16：不手写 local-header 游走解析 zip（脆弱——zip64 / data
+		// descriptor / 加密等特性会错位漏条目），统一 container.OpenZipBytes
+		// （zip.NewReader 走 central directory，与 7z 分支同一 Reader 契约）。
+		// 坏/截断 zip → err → ""，与旧实现「无 local header 即 break」口径
+		// 等价：识别不出就是识别不出。
+		r, err = container.OpenZipBytes(data, int64(len(data)))
+	}
+	if err != nil {
+		return ""
+	}
+	defer r.Close()
+	var entries []string
+	for _, e := range r.Entries() {
+		entries = append(entries, e.Name())
 	}
 	if len(entries) == 0 {
 		return ""

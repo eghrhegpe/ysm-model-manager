@@ -172,6 +172,19 @@ func classifyByLocationStrict(path string, ext string, isContainer bool, reg *ty
 		return ""
 	}
 	ancestors := ancestorDirs(dir)
+	// 容器条目共享一次打开（锐评 #4）：location 消歧对同目录多个候选类型连续
+	// detector 判定时，同一容器不得被 Open/Entries N 次——与 classifyByFingerprint
+	// 的共享打开对齐。provider 惰性：目录全不命中时零 Open 成本（非容器判定
+	// 永不触发 provider）。
+	var opened bool
+	var shared []container.Entry
+	entriesFor := func() []container.Entry {
+		if !opened {
+			opened = true
+			shared = openContainerEntries(path)
+		}
+		return shared
+	}
 	// 深度优先：外层祖先深→浅，内层遍历类型
 	for _, anc := range ancestors {
 		ancNorm := filepath.ToSlash(strings.ToLower(anc))
@@ -195,7 +208,7 @@ func classifyByLocationStrict(path string, ext string, isContainer bool, reg *ty
 			if !hasExtIn(ext, rt.EffectiveExtensions()) {
 				continue
 			}
-			if detectorPassesInternal(path, ext, isContainer, rt) {
+			if detectorPassesEntries(path, ext, isContainer, rt, entriesFor) {
 				return rt.ID
 			}
 		}
@@ -244,18 +257,34 @@ func classifyByFingerprint(path string, ext string, isContainer bool, reg *types
 // detectorPassesInternal detector 判定（packs.detectorPasses 的收敛版）：
 // ysm → IsYsmFile；mcmeta/shader → 容器 + zipEntries 匹配；zipentry → 容器指纹
 // 或非容器扩展名认同；extension/空 → 扩展名认同。
+// 容器条目每次判定独立 Open（单次判定场景；location strict 多候选共享见
+// detectorPassesEntries——锐评 #4）。
 func detectorPassesInternal(path string, ext string, isContainer bool, rt *types.ResourceType) bool {
+	return detectorPassesEntries(path, ext, isContainer, rt, func() []container.Entry {
+		return openContainerEntries(path)
+	})
+}
+
+// detectorPassesEntries 带容器条目 provider 的 detector 判定核心：
+// entries 惰性取条目（调用方决定共享策略——location strict 对同目录多候选类型
+// 连续判定时传「once」provider，容器只 Open/Entries 一次，对齐
+// classifyByFingerprint 的共享打开；单次判定传直开 provider）。非容器分支
+// 永不触发 provider（mcmeta/shader 早退、zipentry 走扩展名、ysm 走 IsYsmFile）。
+func detectorPassesEntries(path string, ext string, isContainer bool, rt *types.ResourceType, entries func() []container.Entry) bool {
 	switch strings.ToLower(rt.Detector) {
 	case "ysm":
+		if isContainer {
+			return matchYsmEntriesGO(entries())
+		}
 		return IsYsmFile(path)
 	case "mcmeta", "shader":
 		if !isContainer {
 			return false
 		}
-		return countZipEntryMatchesGO(openContainerEntries(path), rt) > 0
+		return countZipEntryMatchesGO(entries(), rt) > 0
 	case "zipentry":
 		if isContainer {
-			return countZipEntryMatchesGO(openContainerEntries(path), rt) > 0
+			return countZipEntryMatchesGO(entries(), rt) > 0
 		}
 		return hasExtIn(ext, rt.EffectiveExtensions())
 	case "", "extension":

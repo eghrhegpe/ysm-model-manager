@@ -96,26 +96,21 @@ func TestImportFromBase64_JsonWhitelist(t *testing.T) {
 }
 
 func TestDetectContainerType(t *testing.T) {
-	// 构造最小 ZIP local file header（PK\x03\x04 + 文件名）
-	buildZip := func(name string) []byte {
-		hdr := make([]byte, 30)
-		hdr[0], hdr[1], hdr[2], hdr[3] = 0x50, 0x4B, 0x03, 0x04
-		hdr[26] = byte(len(name))
-		return append(hdr, []byte(name)...)
-	}
-	if got := DetectContainerType(buildZip("pack.mcmeta")); got != "resourcepack" {
+	// 标准 ZIP fixture（buildZipStd 见 importer_reverse_test.go：zip.NewWriter 写
+	// 完整 central directory——DetectContainerType 已收敛 zip.NewReader，锐评 #16）
+	if got := DetectContainerType(buildZipStd(zipEntry{"pack.mcmeta", nil})); got != "resourcepack" {
 		t.Fatalf("pack.mcmeta 应识别为 resourcepack: %s", got)
 	}
-	if got := DetectContainerType(buildZip("shaders/foo.fsh")); got != "shaderpack" {
+	if got := DetectContainerType(buildZipStd(zipEntry{"shaders/foo.fsh", nil})); got != "shaderpack" {
 		t.Fatalf("shaders/ 应识别为 shaderpack: %s", got)
 	}
-	if got := DetectContainerType(buildZip("models/thing/body.json")); got != "ysm" {
+	if got := DetectContainerType(buildZipStd(zipEntry{"models/thing/body.json", nil})); got != "ysm" {
 		t.Fatalf("models/ 应识别为 ysm: %s", got)
 	}
-	if got := DetectContainerType(buildZip("assets/my_pack/maid_model.json")); got != "maid-model" {
+	if got := DetectContainerType(buildZipStd(zipEntry{"assets/my_pack/maid_model.json", nil})); got != "maid-model" {
 		t.Fatalf("assets/.../maid_model.json 应识别为 maid-model: %s", got)
 	}
-	if got := DetectContainerType(buildZip("assets/my_pack/chair_model.json")); got != "maid-model" {
+	if got := DetectContainerType(buildZipStd(zipEntry{"assets/my_pack/chair_model.json", nil})); got != "maid-model" {
 		t.Fatalf("assets/.../chair_model.json 应识别为 maid-model: %s", got)
 	}
 	if got := DetectContainerType([]byte("notzip")); got != "" {

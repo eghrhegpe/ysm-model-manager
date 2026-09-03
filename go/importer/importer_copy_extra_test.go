@@ -1,7 +1,9 @@
 // ===== go/importer 复制链错误分支补充单测 =====
-// 覆盖 importer.go 中 copyDirContents / copyDir / copyFile 的失败分支：
-// 源不可读（ReadDir/Open 失败）、目标路径被目录/文件占位（MkdirAll/Create/Symlink 失败）、
+// 覆盖 importer.go 中 copyDir / copyFile 的失败分支：
+// 目标路径被目录/文件占位（MkdirAll/Create/Symlink 失败）、
 // 子目录递归错误上抛、复制源为目录时 io.Copy 失败与半截文件清理。
+// copyDirContents 已于锐评 #11 删除（生产零调用，语义归 fsutil.CopyDirRecursive；
+// 其错误分支测试随之移除——fsutil 自身已有 CopyDirRecursive 错误路径覆盖）。
 // 需要 Windows 共享锁触发的分支见 importer_copy_lock_windows_test.go。
 package importer
 
@@ -10,97 +12,6 @@ import (
 	"path/filepath"
 	"testing"
 )
-
-// ===== copyDirContents =====
-
-func TestCopyDirContents_ReadDirError(t *testing.T) {
-	base := t.TempDir()
-	srcFile := filepath.Join(base, "afile")
-	_ = os.WriteFile(srcFile, []byte("x"), 0644)
-	if err := copyDirContents(srcFile, filepath.Join(base, "out")); err == nil {
-		t.Fatal("源为文件时 ReadDir 应失败")
-	}
-}
-
-func TestCopyDirContents_MkdirAllError(t *testing.T) {
-	// 源子目录在目标侧被文件占位 → MkdirAll 失败
-	base := t.TempDir()
-	src := filepath.Join(base, "src")
-	_ = os.MkdirAll(filepath.Join(src, "d"), 0755)
-	_ = os.WriteFile(filepath.Join(src, "a.txt"), []byte("a"), 0644)
-	dst := filepath.Join(base, "out")
-	_ = os.MkdirAll(dst, 0755)
-	_ = os.WriteFile(filepath.Join(dst, "d"), []byte("blocker"), 0644)
-	if err := copyDirContents(src, dst); err == nil {
-		t.Fatal("dst/d 被文件占位时 MkdirAll 应失败")
-	}
-}
-
-func TestCopyDirContents_RecursionError(t *testing.T) {
-	// 子目录递归中 copyFile 失败（dst/d/f 被目录占位 → os.Create 失败）→ 递归错误上抛
-	base := t.TempDir()
-	src := filepath.Join(base, "src")
-	_ = os.MkdirAll(filepath.Join(src, "d"), 0755)
-	_ = os.WriteFile(filepath.Join(src, "a.txt"), []byte("a"), 0644)
-	_ = os.WriteFile(filepath.Join(src, "d", "f"), []byte("f"), 0644)
-	dst := filepath.Join(base, "out")
-	_ = os.MkdirAll(filepath.Join(dst, "d", "f"), 0755)
-	if err := copyDirContents(src, dst); err == nil {
-		t.Fatal("递归复制应失败")
-	}
-	// 顶层文件应已复制（递归失败前的部分成果）
-	if _, err := os.Stat(filepath.Join(dst, "a.txt")); err != nil {
-		t.Fatalf("递归失败前复制的文件应存在: %v", err)
-	}
-}
-
-func TestCopyDirContents_CopyFileError(t *testing.T) {
-	// 顶层文件在目标侧被目录占位 → copyFile 的 os.Create 失败
-	base := t.TempDir()
-	src := filepath.Join(base, "src")
-	_ = os.MkdirAll(src, 0755)
-	_ = os.WriteFile(filepath.Join(src, "f"), []byte("f"), 0644)
-	dst := filepath.Join(base, "out")
-	_ = os.MkdirAll(dst, 0755)
-	_ = os.MkdirAll(filepath.Join(dst, "f"), 0755)
-	if err := copyDirContents(src, dst); err == nil {
-		t.Fatal("copyFile 应失败")
-	}
-}
-
-func TestCopyDirContents_SymlinkDirCollision(t *testing.T) {
-	// 目录链接在目标侧被文件占位 → os.Symlink 失败（EEXIST）
-	base := t.TempDir()
-	src := filepath.Join(base, "src")
-	_ = os.MkdirAll(filepath.Join(src, "sub"), 0755)
-	_ = os.WriteFile(filepath.Join(src, "sub", "real.txt"), []byte("r"), 0644)
-	if err := os.Symlink(filepath.Join(src, "sub"), filepath.Join(src, "dir-link")); err != nil {
-		t.Skipf("环境不支持创建符号链接: %v", err)
-	}
-	dst := filepath.Join(base, "out")
-	_ = os.MkdirAll(dst, 0755)
-	_ = os.WriteFile(filepath.Join(dst, "dir-link"), []byte("blocker"), 0644)
-	if err := copyDirContents(src, dst); err == nil {
-		t.Fatal("链接目标被占位时 os.Symlink 应失败")
-	}
-}
-
-func TestCopyDirContents_SymlinkFileCollision(t *testing.T) {
-	// 文件链接在目标侧被目录占位 → os.Symlink 失败
-	base := t.TempDir()
-	src := filepath.Join(base, "src")
-	_ = os.MkdirAll(src, 0755)
-	_ = os.WriteFile(filepath.Join(src, "file.txt"), []byte("f"), 0644)
-	if err := os.Symlink(filepath.Join(src, "file.txt"), filepath.Join(src, "file-link")); err != nil {
-		t.Skipf("环境不支持创建符号链接: %v", err)
-	}
-	dst := filepath.Join(base, "out")
-	_ = os.MkdirAll(dst, 0755)
-	_ = os.MkdirAll(filepath.Join(dst, "file-link"), 0755)
-	if err := copyDirContents(src, dst); err == nil {
-		t.Fatal("链接目标被占位时 os.Symlink 应失败")
-	}
-}
 
 // ===== copyDir =====
 

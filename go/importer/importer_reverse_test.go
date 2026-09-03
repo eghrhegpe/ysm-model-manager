@@ -6,6 +6,8 @@
 package importer
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"os"
@@ -187,7 +189,7 @@ func TestSimpleCopyImporter_Import_DirEmptySubdir(t *testing.T) {
 	}
 }
 
-// ===== copyDirRecursive / copyDirContents 错误与回滚 =====
+// ===== copyDirRecursive 错误与回滚 =====
 
 func TestCopyDirRecursive_OverwriteExisting(t *testing.T) {
 	src := t.TempDir()
@@ -255,27 +257,6 @@ func TestCopyDirRecursive_Errors(t *testing.T) {
 				t.Fatalf("copyDirRecursive(%q, %q) 应报错", tc.src, tc.dst)
 			}
 		})
-	}
-}
-
-func TestCopyDirContents_EmptySubdir(t *testing.T) {
-	src := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(src, "emptydir"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("aaa"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	dst := filepath.Join(t.TempDir(), "out")
-	if err := copyDirContents(src, dst); err != nil {
-		t.Fatalf("copyDirContents 失败: %v", err)
-	}
-	info, err := os.Stat(filepath.Join(dst, "emptydir"))
-	if err != nil || !info.IsDir() {
-		t.Fatalf("空子目录应保留: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dst, "a.txt")); err != nil {
-		t.Fatalf("文件缺失: %v", err)
 	}
 }
 
@@ -585,12 +566,10 @@ func TestImportFromBase64_MkdirFailed(t *testing.T) {
 // 类型路由：rootFn 收到正确的 rtype（ZIP 内容检测优先，扩展名回退）
 func TestImportFromBase64_RtypeRouting(t *testing.T) {
 	root := t.TempDir()
-	// 构造 ZIP 内含 pack.mcmeta 的 local file header
+	// 标准 ZIP fixture（buildZipStd：zip.NewWriter 完整 central directory，
+	// 对齐 DetectContainerType 的 zip.NewReader 收敛——锐评 #16）
 	buildZip := func(entryName string) []byte {
-		hdr := make([]byte, 30)
-		hdr[0], hdr[1], hdr[2], hdr[3] = 0x50, 0x4B, 0x03, 0x04
-		hdr[26] = byte(len(entryName))
-		return append(hdr, []byte(entryName)...)
+		return buildZipStd(zipEntry{entryName, nil})
 	}
 	got := map[string]int{}
 	rootFn := func(rtype string) string {
@@ -687,7 +666,7 @@ func TestWriteFileAtomic_ErrorCodes(t *testing.T) {
 	})
 }
 
-// ===== 符号链接复制（copyDir / copyDirContents / 两个 Importer 的目录导入共用）=====
+// ===== 符号链接复制（copyDir / 两个 Importer 的目录导入共用）=====
 
 // makeSymlinkFixture 创建含文件链接与目录链接的源目录；环境不支持 symlink 时返回 false
 func makeSymlinkFixture(t *testing.T, src string) bool {
@@ -747,23 +726,6 @@ func TestCopyDir_Symlink(t *testing.T) {
 	}
 }
 
-func TestCopyDirContents_Symlink(t *testing.T) {
-	src := t.TempDir()
-	if !makeSymlinkFixture(t, src) {
-		t.Skip("环境不支持创建符号链接，跳过")
-	}
-	dst := filepath.Join(t.TempDir(), "out")
-	// copyDirContents 的契约：目标目录由调用方创建（copyDirRecursive 传入已存在的 tmpDir）
-	if err := os.MkdirAll(dst, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := copyDirContents(src, dst); err != nil {
-		t.Fatalf("copyDirContents 失败: %v", err)
-	}
-	assertSymlinkCopied(t, filepath.Join(dst, "file-link"), filepath.Join(src, "file.txt"))
-	assertSymlinkCopied(t, filepath.Join(dst, "dir-link"), filepath.Join(src, "sub"))
-}
-
 func TestSimpleCopyImporter_Import_DirSymlink(t *testing.T) {
 	src := t.TempDir()
 	if !makeSymlinkFixture(t, src) {
@@ -795,29 +757,28 @@ func TestDirectoryCopyImporter_Import_Symlink(t *testing.T) {
 
 // ===== DetectContainerType 边界 =====
 
+// zipEntry 构造测试 zip 的条目
+type zipEntry struct {
+	name string
+	comp []byte
+}
+
+// buildZipStd 构造标准 ZIP（zip.NewWriter 写完整 local header + central directory）：
+// DetectContainerType 已收敛到 container.OpenZipBytes / zip.NewReader（锐评 #16），
+// 旧手写 local-header-only 字节流不再可解析，测试 fixture 同步标准库构造。
+// entries 顺序即写入顺序。
+func buildZipStd(entries ...zipEntry) []byte {
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
+	for _, e := range entries {
+		f, _ := w.Create(e.name)
+		_, _ = f.Write(e.comp)
+	}
+	_ = w.Close()
+	return buf.Bytes()
+}
+
 func TestDetectContainerType_More(t *testing.T) {
-	type zipEntry struct {
-		name string
-		comp []byte
-	}
-	// 构造多 entry ZIP：每个 entry = 30 字节 local header + 文件名 + 压缩数据
-	buildZip := func(entries ...zipEntry) []byte {
-		var buf []byte
-		for _, e := range entries {
-			hdr := make([]byte, 30)
-			hdr[0], hdr[1], hdr[2], hdr[3] = 0x50, 0x4B, 0x03, 0x04
-			hdr[26] = byte(len(e.name))
-			n := len(e.comp)
-			hdr[18] = byte(n)
-			hdr[19] = byte(n >> 8)
-			hdr[20] = byte(n >> 16)
-			hdr[21] = byte(n >> 24)
-			buf = append(buf, hdr...)
-			buf = append(buf, []byte(e.name)...)
-			buf = append(buf, e.comp...)
-		}
-		return buf
-	}
 	plain := zipEntry{"random.txt", []byte("abcd")}
 
 	tests := []struct {
@@ -825,11 +786,11 @@ func TestDetectContainerType_More(t *testing.T) {
 		data []byte
 		want string
 	}{
-		{"shaders 精确匹配", buildZip(zipEntry{"shaders", nil}), "shaderpack"},
-		{"ysm.json 后缀匹配", buildZip(zipEntry{"foo/ysm.json", nil}), "ysm"},
-		{"大小写不敏感", buildZip(zipEntry{"Pack.McMeta", nil}), "resourcepack"},
-		{"多 entry 跳过压缩数据后识别", buildZip(plain, zipEntry{"shaders/x.fsh", nil}), "shaderpack"},
-		{"首 entry 无特征多 entry 无特征 → 空", buildZip(plain, zipEntry{"data.bin", nil}), ""},
+		{"shaders 精确匹配", buildZipStd(zipEntry{"shaders", nil}), "shaderpack"},
+		{"ysm.json 后缀匹配", buildZipStd(zipEntry{"foo/ysm.json", nil}), "ysm"},
+		{"大小写不敏感", buildZipStd(zipEntry{"Pack.McMeta", nil}), "resourcepack"},
+		{"多 entry 跳过压缩数据后识别", buildZipStd(plain, zipEntry{"shaders/x.fsh", nil}), "shaderpack"},
+		{"首 entry 无特征多 entry 无特征 → 空", buildZipStd(plain, zipEntry{"data.bin", nil}), ""},
 		{"截断 header", []byte{0x50, 0x4B, 0x03}, ""},
 		{"文件名超长截断", append([]byte{0x50, 0x4B, 0x03, 0x04}, make([]byte, 26)...), ""},
 		{"非 ZIP 开头", []byte("PK\x00\x00"), ""},

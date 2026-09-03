@@ -5,7 +5,9 @@ package tags
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -50,7 +52,9 @@ func (s *Store) load() error {
 	// 后续所有 Get/Set 静默视为「已加载空数据」，损坏被永久掩盖（且 SetTags 会覆盖损坏文件）。
 	data, err := os.ReadFile(s.path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		// 锐评 #17：os.IsNotExist 不能穿透包装错误；errors.Is + fs.ErrNotExist
+		// 是 Go 1.13+ 标准（PathError 内外层均可命中）。
+		if errors.Is(err, fs.ErrNotExist) {
 			s.data = make(map[string][]string) // 首次使用，无文件
 			return nil
 		}

@@ -51,21 +51,9 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/init-workshop.ts` | 147 |
+| `frontend/src/views/app-content/init-workshop.ts` | 144 |
 
 ### `batch:disable-all`
-
-**发射方：**
-| 文件 | 行 |
-|------|----|
-| `frontend/src/views/app-tree/toolbar-events.ts` | 214 |
-
-**订阅方（on）：**
-| 文件 | 行 |
-|------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 30 |
-
-### `batch:enable-all`
 
 **发射方：**
 | 文件 | 行 |
@@ -75,26 +63,38 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 29 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 25 |
+
+### `batch:enable-all`
+
+**发射方：**
+| 文件 | 行 |
+|------|----|
+| `frontend/src/views/app-tree/toolbar-events.ts` | 212 |
+
+**订阅方（on）：**
+| 文件 | 行 |
+|------|----|
+| `frontend/src/views/app-tree/bus-handlers.ts` | 24 |
 
 ### `batch:rename`
 
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 183 |
+| `frontend/src/core/context-menu-handlers.ts` | 180 |
 
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 35 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 30 |
 
 ### `community:clearCache`
 
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/features/community/download-queue.ts` | 108 |
+| `frontend/src/features/community/download-queue.ts` | 107 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -126,7 +126,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 34 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 29 |
 
 ### `dir:mkdir`
 
@@ -138,7 +138,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 32 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 27 |
 
 ### `dir:recycle`
 
@@ -150,7 +150,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 33 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 28 |
 
 ### `dir:rename`
 
@@ -162,26 +162,26 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 31 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 26 |
 
 ### `instance:clear`
 
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 176 |
+| `frontend/src/core/context-menu-handlers.ts` | 173 |
 
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/handlers/instance-ops.ts` | 98 |
+| `frontend/src/core/handlers/instance-ops.ts` | 97 |
 
 ### `instance:export-list`
 
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-handlers.ts` | 166 |
+| `frontend/src/core/context-menu-handlers.ts` | 163 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -199,7 +199,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/index.ts` | 114 |
+| `frontend/src/views/app-content/index.ts` | 105 |
 | `frontend/src/views/app-nav/index.ts` | 165 |
 
 ### `menu:show`
@@ -239,19 +239,19 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/index.ts` | 108 |
-| `frontend/src/views/app-content/index.ts` | 211 |
+| `frontend/src/views/app-content/index.ts` | 99 |
+| `frontend/src/views/app-content/index.ts` | 202 |
 | `frontend/src/views/app-content/site/events.ts` | 201 |
 | `frontend/src/views/app-nav/index.ts` | 34 |
 | `frontend/src/views/app-nav/index.ts` | 175 |
 | `frontend/src/views/app-sidebar/events.ts` | 250 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 117 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
 
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
 | `frontend/src/core/page-store.ts` | 63 |
-| `frontend/src/views/app-content/index.ts` | 99 |
+| `frontend/src/views/app-content/index.ts` | 90 |
 | `frontend/src/views/app-nav/index.ts` | 151 |
 
 ### `package:selected`
@@ -297,7 +297,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/index.ts` | 106 |
+| `frontend/src/views/app-content/index.ts` | 97 |
 
 ### `repo:subdir-changed`
 
@@ -318,13 +318,13 @@
 |------|----|
 | `frontend/src/core/context-menu-shared.ts` | 20 |
 | `frontend/src/core/handlers/android-events.ts` | 66 |
-| `frontend/src/core/handlers/instance-ops.ts` | 150 |
+| `frontend/src/core/handlers/instance-ops.ts` | 149 |
 | `frontend/src/core/handlers/sync.ts` | 86 |
 | `frontend/src/core/handlers/sync.ts` | 215 |
 | `frontend/src/features/community/download-queue-store.ts` | 258 |
-| `frontend/src/features/community/download-queue.ts` | 115 |
-| `frontend/src/features/import-executor.ts` | 34 |
-| `frontend/src/features/import-executor.ts` | 187 |
+| `frontend/src/features/community/download-queue.ts` | 114 |
+| `frontend/src/features/import-executor.ts` | 33 |
+| `frontend/src/features/import-executor.ts` | 186 |
 | `frontend/src/features/pack-dnd.ts` | 159 |
 | `frontend/src/features/recycle-bin.ts` | 110 |
 | `frontend/src/features/recycle-bin.ts` | 170 |
@@ -336,9 +336,9 @@
 | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
 | `frontend/src/views/app-sidebar/launcher-detect.ts` | 139 |
 | `frontend/src/views/app-sync-manager/index.ts` | 220 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 59 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 93 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 162 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 54 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 88 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 157 |
 | `frontend/src/views/app-tree/events.ts` | 99 |
 | `frontend/src/views/app-tree/events.ts` | 380 |
 
@@ -379,7 +379,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 308 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 303 |
 | `frontend/src/views/app-tree/events.ts` | 97 |
 | `frontend/src/views/app-tree/events.ts` | 474 |
 
@@ -393,21 +393,21 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/app-modules.ts` | 68 |
-| `frontend/src/app-modules.ts` | 78 |
-| `frontend/src/app-modules.ts` | 88 |
-| `frontend/src/app-modules.ts` | 119 |
+| `frontend/src/app-modules.ts` | 67 |
+| `frontend/src/app-modules.ts` | 77 |
+| `frontend/src/app-modules.ts` | 87 |
+| `frontend/src/app-modules.ts` | 118 |
 | `frontend/src/core/context-menu-shared.ts` | 25 |
 | `frontend/src/core/context-menu-shared.ts` | 68 |
 | `frontend/src/core/context-menu-shared.ts` | 78 |
 | `frontend/src/core/handlers/android-events.ts` | 25 |
 | `frontend/src/core/handlers/android-events.ts` | 42 |
-| `frontend/src/core/handlers/instance-ops.ts` | 36 |
-| `frontend/src/core/handlers/instance-ops.ts` | 75 |
-| `frontend/src/core/handlers/instance-ops.ts` | 85 |
-| `frontend/src/core/handlers/instance-ops.ts` | 125 |
-| `frontend/src/core/handlers/instance-ops.ts` | 141 |
-| `frontend/src/core/handlers/instance-ops.ts` | 151 |
+| `frontend/src/core/handlers/instance-ops.ts` | 35 |
+| `frontend/src/core/handlers/instance-ops.ts` | 74 |
+| `frontend/src/core/handlers/instance-ops.ts` | 84 |
+| `frontend/src/core/handlers/instance-ops.ts` | 124 |
+| `frontend/src/core/handlers/instance-ops.ts` | 140 |
+| `frontend/src/core/handlers/instance-ops.ts` | 150 |
 | `frontend/src/core/handlers/require-mcroot.ts` | 18 |
 | `frontend/src/core/handlers/sync.ts` | 41 |
 | `frontend/src/core/handlers/sync.ts` | 87 |
@@ -419,8 +419,8 @@
 | `frontend/src/core/handlers/sync.ts` | 223 |
 | `frontend/src/core/handlers/sync.ts` | 248 |
 | `frontend/src/features/community/download-queue-store.ts` | 247 |
-| `frontend/src/features/community/download-queue.ts` | 273 |
-| `frontend/src/features/community/download-queue.ts` | 299 |
+| `frontend/src/features/community/download-queue.ts` | 272 |
+| `frontend/src/features/community/download-queue.ts` | 298 |
 | `frontend/src/features/community/events.ts` | 141 |
 | `frontend/src/features/community/events.ts` | 153 |
 | `frontend/src/features/community/events.ts` | 222 |
@@ -432,9 +432,9 @@
 | `frontend/src/features/import-dnd.ts` | 86 |
 | `frontend/src/features/import-dnd.ts` | 102 |
 | `frontend/src/features/import-dnd.ts` | 188 |
-| `frontend/src/features/import-executor.ts` | 29 |
-| `frontend/src/features/import-executor.ts` | 178 |
-| `frontend/src/features/import-executor.ts` | 191 |
+| `frontend/src/features/import-executor.ts` | 28 |
+| `frontend/src/features/import-executor.ts` | 177 |
+| `frontend/src/features/import-executor.ts` | 190 |
 | `frontend/src/features/pack-dnd.ts` | 38 |
 | `frontend/src/features/recycle-bin.ts` | 244 |
 | `frontend/src/features/version-updater.ts` | 149 |
@@ -444,19 +444,19 @@
 | `frontend/src/features/version-updater.ts` | 216 |
 | `frontend/src/features/version-updater.ts` | 250 |
 | `frontend/src/features/version-updater.ts` | 260 |
-| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 461 |
+| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 458 |
 | `frontend/src/preview-3d/adapters/preview-loading.ts` | 38 |
 | `frontend/src/preview-3d/adapters/switch-preview.ts` | 153 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 387 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 401 |
-| `frontend/src/utils/dom/dialogs/batch-rename.ts` | 421 |
+| `frontend/src/utils/dom/dialogs/batch-rename.ts` | 420 |
 | `frontend/src/utils/dom/directory-picker.ts` | 34 |
 | `frontend/src/utils/dom/directory-picker.ts` | 45 |
 | `frontend/src/utils/dom/directory-picker.ts` | 57 |
 | `frontend/src/utils/module-loader.ts` | 17 |
-| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 40 |
-| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 186 |
+| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 36 |
+| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 182 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 41 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 52 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 58 |
@@ -466,7 +466,7 @@
 | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
 | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 88 |
 | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 354 |
-| `frontend/src/views/app-content/index.ts` | 202 |
+| `frontend/src/views/app-content/index.ts` | 193 |
 | `frontend/src/views/app-content/init-pages.ts` | 168 |
 | `frontend/src/views/app-content/init-pages.ts` | 281 |
 | `frontend/src/views/app-content/settings/init.ts` | 48 |
@@ -493,26 +493,26 @@
 | `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
 | `frontend/src/views/app-content/settings/ui-prefs.ts` | 167 |
 | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
-| `frontend/src/views/app-content/site/drag.ts` | 44 |
-| `frontend/src/views/app-content/site/drag.ts` | 81 |
-| `frontend/src/views/app-content/site/drag.ts` | 104 |
-| `frontend/src/views/app-content/site/drag.ts` | 113 |
-| `frontend/src/views/app-content/site/edit.ts` | 115 |
-| `frontend/src/views/app-content/site/edit.ts` | 143 |
-| `frontend/src/views/app-content/site/edit.ts` | 150 |
-| `frontend/src/views/app-content/site/edit.ts` | 226 |
-| `frontend/src/views/app-content/site/edit.ts` | 233 |
-| `frontend/src/views/app-content/site/edit.ts` | 248 |
+| `frontend/src/views/app-content/site/drag.ts` | 43 |
+| `frontend/src/views/app-content/site/drag.ts` | 80 |
+| `frontend/src/views/app-content/site/drag.ts` | 103 |
+| `frontend/src/views/app-content/site/drag.ts` | 112 |
+| `frontend/src/views/app-content/site/edit.ts` | 114 |
+| `frontend/src/views/app-content/site/edit.ts` | 142 |
+| `frontend/src/views/app-content/site/edit.ts` | 149 |
+| `frontend/src/views/app-content/site/edit.ts` | 225 |
+| `frontend/src/views/app-content/site/edit.ts` | 232 |
+| `frontend/src/views/app-content/site/edit.ts` | 247 |
 | `frontend/src/views/app-content/site/events.ts` | 146 |
 | `frontend/src/views/app-content/site/events.ts` | 271 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 134 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 144 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 150 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 162 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 173 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 179 |
-| `frontend/src/views/app-content/workshop-tabs.ts` | 91 |
-| `frontend/src/views/app-content/workshop-tabs.ts` | 139 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 133 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 143 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 149 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 161 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 172 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 178 |
+| `frontend/src/views/app-content/workshop-tabs.ts` | 89 |
+| `frontend/src/views/app-content/workshop-tabs.ts` | 137 |
 | `frontend/src/views/app-nav/index.ts` | 114 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 286 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 352 |
@@ -520,7 +520,7 @@
 | `frontend/src/views/app-preview/index.ts` | 286 |
 | `frontend/src/views/app-preview/preview-library.ts` | 98 |
 | `frontend/src/views/app-preview/preview-library.ts` | 130 |
-| `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
+| `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |
 | `frontend/src/views/app-sidebar/events.ts` | 120 |
 | `frontend/src/views/app-sidebar/index.ts` | 140 |
 | `frontend/src/views/app-sidebar/index.ts` | 255 |
@@ -539,24 +539,24 @@
 | `frontend/src/views/app-sync-manager/index.ts` | 151 |
 | `frontend/src/views/app-sync-manager/network.ts` | 47 |
 | `frontend/src/views/app-sync-manager/network.ts` | 55 |
-| `frontend/src/views/app-sync-manager/store.ts` | 35 |
-| `frontend/src/views/app-sync-manager/store.ts` | 81 |
+| `frontend/src/views/app-sync-manager/store.ts` | 34 |
+| `frontend/src/views/app-sync-manager/store.ts` | 80 |
 | `frontend/src/views/app-toast/index.ts` | 133 |
 | `frontend/src/views/app-toast/index.ts` | 152 |
 | `frontend/src/views/app-toast/index.ts` | 161 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 60 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 95 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 166 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 172 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 189 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 202 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 221 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 256 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 268 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 276 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 311 |
-| `frontend/src/views/app-tree/bus-handlers.ts` | 317 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 55 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 90 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 116 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 161 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 167 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 184 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 197 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 216 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 251 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 263 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 271 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 312 |
 | `frontend/src/views/app-tree/events.ts` | 70 |
 | `frontend/src/views/app-tree/events.ts` | 78 |
 | `frontend/src/views/app-tree/events.ts` | 103 |
@@ -577,13 +577,13 @@
 | `frontend/src/views/app-tree/index.ts` | 442 |
 | `frontend/src/views/app-tree/loader.ts` | 31 |
 | `frontend/src/views/app-tree/loader.ts` | 55 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 44 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 55 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 162 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 313 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 331 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 337 |
-| `frontend/src/views/app-tree/toolbar-events.ts` | 348 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 43 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 54 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 161 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 312 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 330 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 336 |
+| `frontend/src/views/app-tree/toolbar-events.ts` | 347 |
 | `frontend/src/views/app-tree/toolbar-search.ts` | 143 |
 | `frontend/src/views/app-tree/toolbar-search.ts` | 162 |
 | `frontend/src/views/app-tree/toolbar-search.ts` | 192 |
@@ -609,9 +609,9 @@
 | `frontend/src/core/handlers/sync.ts` | 130 |
 | `frontend/src/core/handlers/sync.ts` | 255 |
 | `frontend/src/features/community/download-queue-store.ts` | 257 |
-| `frontend/src/features/community/download-queue.ts` | 114 |
-| `frontend/src/features/import-executor.ts` | 35 |
-| `frontend/src/features/import-executor.ts` | 186 |
+| `frontend/src/features/community/download-queue.ts` | 113 |
+| `frontend/src/features/import-executor.ts` | 34 |
+| `frontend/src/features/import-executor.ts` | 185 |
 | `frontend/src/features/pack-dnd.ts` | 160 |
 | `frontend/src/features/recycle-bin.ts` | 111 |
 | `frontend/src/features/recycle-bin.ts` | 171 |
@@ -621,14 +621,14 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-tree/bus-handlers.ts` | 36 |
+| `frontend/src/views/app-tree/bus-handlers.ts` | 31 |
 
 ### `tree:set-search`
 
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/index.ts` | 110 |
+| `frontend/src/views/app-content/index.ts` | 101 |
 
 **订阅方（on）：**
 | 文件 | 行 |

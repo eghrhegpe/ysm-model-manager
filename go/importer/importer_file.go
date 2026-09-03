@@ -163,13 +163,13 @@ func DetectZipType(data []byte) string {
 			if !bytes.HasPrefix(data[idx:idx+4], zipLocalHeaderSig) {
 				break
 			}
-			nameLen := int(data[idx+26]) | int(data[idx+27])<<8
-			extraLen := int(data[idx+28]) | int(data[idx+29])<<8
+			nameLen := int(le16(data[idx+26:]))
+			extraLen := int(le16(data[idx+28:]))
 			if idx+30+nameLen > len(data) {
 				break
 			}
 			entries = append(entries, string(data[idx+30:idx+30+nameLen]))
-			compSize := int(data[idx+18]) | int(data[idx+19])<<8 | int(data[idx+20])<<16 | int(data[idx+21])<<24
+			compSize := int(le32(data[idx+18:]))
 			idx += 30 + nameLen + extraLen + compSize
 		}
 	}

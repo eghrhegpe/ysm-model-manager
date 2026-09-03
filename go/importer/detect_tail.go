@@ -111,7 +111,7 @@ func DetectZipTypeFromBase64Tail(b64 string) (string, bool) {
 	return id, true
 }
 
-// le16/le32 小端读取（与 importer_file.go 逐位移位口径一致，独立小函数避免类型噪声）
+// le16/le32 小端读取：importer 包统一入口（DetectZipType 与尾部探针共用，避免逐位移位漂移）
 func le16(b []byte) uint16 { return uint16(b[0]) | uint16(b[1])<<8 }
 func le32(b []byte) uint32 {
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24

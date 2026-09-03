@@ -96,9 +96,11 @@ async function isCommandAllowed(command: string): Promise<boolean> {
  * @param args 命令参数
  * @returns 统一 JSON 响应
  *
- * 参数链路：#5——本层 buildArgsMap → Wails map[string]interface{} → Go ExecuteCLI
- * 转 os.Args → CLI flag.Parse。损耗语义（空串/0/false 被丢弃）由 Go 侧文档注释承载，
- * 新增参数类型核对见 internal/app/cli_bridge.go 函数头。
+ * 参数链路：本层 buildArgsMap（仅滤 undefined/null）→ Wails map[string]interface{} →
+ * Go ExecuteCLI 转 os.Args → CLI flag.Parse。参数序列化规则（声明序/显式空值/未知键）
+ * 的单一事实源 = go/cli 注册表 ParamSpec（ADR-173），见 go/cli/registry.go 与
+ * internal/app/cli_bridge.go buildCLIArgs——本层不承载损耗语义，空串/0/false 一律
+ * 原样过桥，是否产出由 Go 侧按规格决定（AllowEmpty=false 时丢弃=与 flag 默认一致）。
  */
 export async function executeCLI(command: string, args: CLIArgs = {}): Promise<CLIResponse> {
   // 动态白名单校验（优先后端拉取，降级硬编码列表）

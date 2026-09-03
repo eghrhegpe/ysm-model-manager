@@ -85,7 +85,7 @@ GUI→CLI 参数链路（frontend buildArgsMap → Wails map → ExecuteCLI → 
 | A2 桥接按规格序列化 | ✅ 落地 | `internal/app/cli_bridge.go`：`buildCLIArgs`（纯函数可单测）——有规格按声明序输出 + AllowEmpty=true 时显式空值（`--key=` / `--key 0` / `--key=false`）；无规格走 legacy 降级；规格外键/类型不符 → 告警 + 尾部追加不丢参 |
 | A1→A2 装配通道 | ✅ 落地 | `main.go` `cliSpecsToDTO` 字段级薄转换（internal/app 零依赖 go/cli）；`SetAllowedCommandSpecs` 独立 once 注入（旧装配/测试只注入名单 → 自动 legacy） |
 | A4 第一波登记 | ✅ 落地 | 5 个有参数高频命令：search（8 参）/ analyze（model）/ list（limit,format）/ single-bench（6 参）/ gui-flow（model,verbose）；**全部 AllowEmpty=false**（与旧行为逐位等价，空值仍丢） |
-| A3 前端能力自描述 | ⏳ 下一波 | `GetAllowedCLICommands` 仍返回纯名列表（前端零破坏）；扩展为「名称+规格」需同步前端 cli-bridge.ts 消费与 web 静态表 |
+| A3 前端能力自描述 | ✅ 收敛为注释消除 | 2026-09-03 评估后**不做运行时规格透传**（ADR-173 附注）：A2 已 Go 侧兜底全部运行时收益 + `getAllowedCLICommands()` 零生产消费 + 透传需 5 文件纯适配。`GetAllowedCLICommands` 维持纯名列表；cli-bridge.ts 参数链路注释已指向 go/cli 注册表单一事实源 |
 
 ## 核心职责
 

@@ -46,6 +46,13 @@ frontend cli-bridge.executeCLI → buildArgsMap (Record<string,string|number|boo
 
 **A3. 前端能力自描述**：`GetAllowedCLICommands` 扩展为返回「名称 + ParamSpec」，前端 cli-bridge 以此做唯一入口校验与参数组装（web 降级列表同源生成），删除跨层注释契约。
 
+> **范围调整（2026-09-03，A4 第一波落地后评估）**：A3 收敛为**仅注释契约消除，不做运行时规格透传**。
+> 依据：A2 已在 Go 侧兜底全部运行时收益（规格外键告警、显式空值、声明序输出），前端不消费规格亦然；
+> `getAllowedCLICommands()` 零生产消费；ADR 自身 Consequences 已声明「TS 层拿不到编译期规格（可接受）」；
+> 透传需连锁适配 web-cli.ts/cli-bridge.test.ts/mock-data/browser-adapter 约 5 文件，纯契约成本零运行时增益。
+> `GetAllowedCLICommands` 维持纯名列表返回（桌面动态 / web 静态均不破坏）；跨层注释契约的消除
+> 已在 cli-bridge.ts 完成（参数链路注释指向 go/cli 注册表单一事实源）。
+
 **A4. 渐进接线**：先登记现有前端白名单命令的规格并核对行为等价，再逐步放开 `AllowEmpty` 与位置参数命令。
 
 理由：参数知识收敛到注册表单一事实源；改动集中在桥接序列化层，不动各命令实现，可渐进落地、随时回退；与既有多数纯 flag 命令行为兼容。

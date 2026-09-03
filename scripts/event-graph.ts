@@ -184,11 +184,120 @@ function extractArgs(src: string, openParen: number) {
   return null; // 括号不平衡（跨模板拼接等），交由编译期兜底
 }
 
+/**
+ * 反向跳转字符串起始引号（转义感知）：i 指向某引号（" / ' / `），向前找配对。
+ * 模板串嵌套（${...`...`...}）会逐层收敛：跳停在内层开引号后，主循环遇下一引号再跳，最终达最外层。
+ */
+function findOpenQuote(text: string, i: number): number {
+  const q = text[i]!;
+  for (let j = i - 1; j >= 0; j--) {
+    if (text[j] !== q) continue;
+    let bs = 0;
+    for (let k = j - 1; k >= 0 && text[k] === '\\'; k--) bs++;
+    if (bs % 2 === 0) return j;
+  }
+  return 0;
+}
+
+/**
+ * 判定候选函数体开括号 { 的头部是否具名，返回最近具名宿主函数名；匿名 → null（由调用方继续外扩）。
+ * 从 braceIdx 向前括号配对回卷（成对闭合块/解构参数穿越不停，仅在深度 0 语句边界或宿主函数体开处停），
+ * 在片段内按「距体括号由近及远」识别：
+ *   C. 方法/函数头（最近）：尾参列表 `name(…): RetType`——剥离尾返回类型（含引导 `:`，遇箭头 `=` 即停）后
+ *      尾部 `)` 配平找其开 `(` 前的名字（参数内的调用括号被配对吸收，run(x = foo()) 仍取 run）。
+ *   B. 箭头赋值（次近）：`const|let|var name = (…) =>`（限定声明形式，避免 el.onclick = 误取名）。
+ *   A. function 声明（兜底）：`function name(`（export/async 前缀任意，取片段内最后一处）。
+ * 匿名形态（回调/匿名箭头）逐级落空 → null 外扩；控制流块头（if/for/while/switch/catch/with）黑名单排除——
+ * 否则 `if (isViewerMode()) {` 会被当方法头误取名 if（实证：toast 发射点全被归 if/catch）。
+ */
+const CTRL_FLOW_KW = /^(if|for|while|switch|catch|with)$/;
+function fnHeaderName(text: string, braceIdx: number): string | null {
+  // 回卷到「候选函数头语句」的左边界（括号配对感知）：
+  //   - `}` depth++（进入闭合块区，成对穿越不停——块内 ; 与解构参数 } 不截断 seg）；
+  //   - `{` depth>0 时配平 depth--；depth==0 的开块 = 宿主函数体开，其名字在更左 → 停；
+  //   - `;` 仅 depth==0（顶层语句边界）停。
+  let depth = 0;
+  let i = braceIdx - 1;
+  for (; i >= 0; i--) {
+    const c = text[i]!;
+    if (c === '}') { depth++; continue; }
+    if (c === '{') { if (depth > 0) depth--; else break; continue; }
+    if (c === ';' && depth === 0) break;
+    if (c === '"' || c === "'" || c === '`') { i = findOpenQuote(text, i); continue; }
+  }
+  const seg = text.slice(i + 1, braceIdx);
+
+  // C. 尾部方法头：先剥尾返回类型段（类型字符 + 引导冒号），停在参数闭括号 )
+  let tail = seg.length - 1;
+  while (tail >= 0 && /\s/.test(seg[tail]!)) tail--;
+  const TYPE_TAIL = /[A-Za-z0-9_$.<>[\],\s>:]/; // 返回类型允许字符（含引导 `:`；`=` 属箭头 => 特征，遇即停）
+  while (tail >= 0 && seg[tail] !== '=' && TYPE_TAIL.test(seg[tail]!)) tail--;
+  if (tail >= 0 && seg[tail] === ')') {
+    let d = 0;
+    for (let j = tail; j >= 0; j--) {
+      const ch = seg[j]!;
+      if (ch === ')') d++;
+      else if (ch === '(') { d--; if (d === 0) { const nm = seg.slice(0, j).match(/([A-Za-z_$][\w$]*)\s*$/); if (nm && !CTRL_FLOW_KW.test(nm[1]!)) return nm[1]!; break; } }
+    }
+  }
+
+  // B. 声明箭头赋值：const name = (…) => / const name = x => / = async (…) =>
+  //    （从 => 回卷：配平参数列表/回卷单参标识符后，前须为 const|let|var 声明——
+  //    属性赋值 el.onclick = 或订阅表达式 const unsub = bus.on(…) => 不命中，落空继续外扩）
+  const arrowAt = seg.lastIndexOf('=>');
+  if (arrowAt !== -1) {
+    let j = arrowAt - 1;
+    while (j >= 0 && /\s/.test(seg[j]!)) j--;
+    if (seg[j] === ')') {
+      let d = 0;
+      for (; j >= 0; j--) {
+        const ch = seg[j]!;
+        if (ch === ')') d++;
+        else if (ch === '(') { d--; if (d === 0) break; }
+      }
+    } else if (j >= 0 && /[A-Za-z_$]/.test(seg[j]!)) {
+      while (j >= 0 && /[A-Za-z0-9_$]/.test(seg[j]!)) j--;
+    }
+    const nm = seg.slice(0, j).match(/(?:^|[^A-Za-z0-9_$])(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?$/);
+    if (nm) return nm[1]!;
+  }
+
+  // A. function 声明兜底（取片段内最后一处具名声明）
+  let m: RegExpExecArray | null;
+  const fnRe = /function\s+([A-Za-z_$][\w$]*)\s*\(/g;
+  let fnName: string | null = null;
+  while ((m = fnRe.exec(seg)) !== null) fnName = m[1]!;
+  return fnName; // null → 匿名（回调/IIFE 等），调用方继续向外层找
+}
+
+/**
+ * 定位调用点所属宿主函数（行号反查的字符级等价物）。
+ * 从 callIdx 反向括号配对：`}` +1 / `{` -1；depth 归 0 处的 `{` 即「包围调用点的最内层
+ * 未闭合开括号」= 函数体（或匿名闭包层）起点——具名则返回，匿名则继续外扩。
+ * 完整闭合的嵌套块/嵌套具名函数（其 } 与 { 已配对抵消）不会误判为宿主。
+ * 调用点在模块顶层 / HTML 内联等无宿主场景 → null（渲染层标 (顶层)）。
+ */
+function findEnclosingFn(text: string, callIdx: number): string | null {
+  let depth = 0;
+  for (let i = callIdx - 1; i >= 0; i--) {
+    const c = text[i]!;
+    if (c === '}') { depth++; continue; }
+    if (c === '{') {
+      if (depth > 0) { depth--; continue; }
+      const name = fnHeaderName(text, i);
+      if (name) return name;
+      continue; // 匿名闭包层：不消耗深度，继续外扩至最近具名宿主
+    }
+    if (c === '"' || c === "'" || c === '`') { i = findOpenQuote(text, i); continue; }
+  }
+  return null;
+}
+
 function scanFiles(files: string[], includeHtml: boolean, contract: any, arityIssues: any[]) {
   const eventMap = new Map();
-  function add(event: string, method: string, file: string, line: number) {
+  function add(event: string, method: string, file: string, line: number, fn: string | null) {
     if (!eventMap.has(event)) eventMap.set(event, { emit: [], on: [], once: [], off: [] });
-    eventMap.get(event)[method].push({ file, line });
+    eventMap.get(event)[method].push({ file, line, fn });
   }
   /** 顶层非空段计数 */
   const argcOf = (args: string[]) => args.map((s) => s.trim()).filter(Boolean).length;
@@ -204,7 +313,8 @@ function scanFiles(files: string[], includeHtml: boolean, contract: any, arityIs
       const nameM = (args[0] ?? '').trim().match(/^["'`]([^"'`]*)["'`]$/);
       if (!nameM) continue; // 非字面量事件名不记录（与旧版单行正则行为一致）
       const line = text.slice(0, m.index).split('\n').length;
-      add(nameM[1]!, method, rel, line);
+      const fn = findEnclosingFn(text, m.index) ?? '(顶层)';
+      add(nameM[1]!, method, rel, line, fn);
       // emit 实参契约（仅 bus 接收者；自定义 emitter 不误伤）
       if (receiver === 'bus' && method === 'emit') {
         const event = nameM[1];
@@ -308,10 +418,10 @@ function renderMarkdown(eventMap: Map<string, any>, anomalies: any) {
     const d = eventMap.get(ev);
     out.push(`### \`${ev}\``);
     out.push('');
-    if (d.emit.length) { out.push("**发射方：**"); out.push("| 文件 | 行 |"); out.push("|------|----|"); for (const e of d.emit) out.push(`| \`${e.file}\` | ${e.line} |`); out.push(""); }
-    if (d.on.length) { out.push("**订阅方（on）：**"); out.push("| 文件 | 行 |"); out.push("|------|----|"); for (const e of d.on) out.push(`| \`${e.file}\` | ${e.line} |`); out.push(""); }
-    if (d.once.length) { out.push("**一次性订阅（once）：**"); out.push("| 文件 | 行 |"); out.push("|------|----|"); for (const e of d.once) out.push(`| \`${e.file}\` | ${e.line} |`); out.push(""); }
-    if (d.off.length) { out.push("**退订方：**"); out.push("| 文件 | 行 |"); out.push("|------|----|"); for (const e of d.off) out.push(`| \`${e.file}\` | ${e.line} |`); out.push(""); }
+    if (d.emit.length) { out.push("**发射方：**"); out.push("| 函数 | 文件 | 行 |"); out.push("|------|------|----|"); for (const e of d.emit) out.push(`| ${e.fn} | \`${e.file}\` | ${e.line} |`); out.push(""); }
+    if (d.on.length) { out.push("**订阅方（on）：**"); out.push("| 函数 | 文件 | 行 |"); out.push("|------|------|----|"); for (const e of d.on) out.push(`| ${e.fn} | \`${e.file}\` | ${e.line} |`); out.push(""); }
+    if (d.once.length) { out.push("**一次性订阅（once）：**"); out.push("| 函数 | 文件 | 行 |"); out.push("|------|------|----|"); for (const e of d.once) out.push(`| ${e.fn} | \`${e.file}\` | ${e.line} |`); out.push(""); }
+    if (d.off.length) { out.push("**退订方：**"); out.push("| 函数 | 文件 | 行 |"); out.push("|------|------|----|"); for (const e of d.off) out.push(`| ${e.fn} | \`${e.file}\` | ${e.line} |`); out.push(""); }
   }
   return out.join('\n');
 }
@@ -322,10 +432,10 @@ function renderJSON(eventMap: Map<string, any>, anomalies: any) {
   for (const ev of events) {
     const d = eventMap.get(ev);
     data[ev] = {
-      emit: d.emit.map((e: any) => `${e.file}:${e.line}`),
-      on: d.on.map((e: any) => `${e.file}:${e.line}`),
-      once: d.once.map((e: any) => `${e.file}:${e.line}`),
-      off: d.off.map((e: any) => `${e.file}:${e.line}`),
+      emit: d.emit.map((e: any) => ({ file: e.file, line: e.line, fn: e.fn })),
+      on: d.on.map((e: any) => ({ file: e.file, line: e.line, fn: e.fn })),
+      once: d.once.map((e: any) => ({ file: e.file, line: e.line, fn: e.fn })),
+      off: d.off.map((e: any) => ({ file: e.file, line: e.line, fn: e.fn })),
     };
   }
   return JSON.stringify({

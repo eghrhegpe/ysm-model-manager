@@ -147,6 +147,44 @@ console.log('[2] VOID_EVENTS 漂移检测');
     'VOID_EVENTS 漏登记 → voidDrift 且 strict 阻断');
 }
 
+// ── 2b. 调用点所属函数（fn）提取 ─────────────────────────
+// 2026-09-03 增强：调用详情表/JSON 记录带所属函数名（事件图定位可读性）。
+// 覆盖：function 声明 / 方法简写 / 箭头赋值 / 匿名回调向上取最近具名宿主 /
+//       嵌套具名函数防误报 / 模块顶层 / 字符串内花括号免疫。
+console.log('[2b] fn 所属函数提取');
+{
+  const { json } = runOnFixture({
+    'src/bus.ts': BUS_TS,
+    'src/views/fn.ts': [
+      `import { bus } from "../bus.ts";`,
+      `function topLevel() { bus.emit("b:typed", { x: "a" }); }`,
+      `const obj = { method(): void { bus.on("a:void-event", () => {}); } };`,
+      `function ctrl() {`,
+      `  if (isViewerMode()) { bus.emit("a:void-event"); }`, // 控制流块头不得误取名 if
+      `  try { pump(); } catch (e) { bus.emit("a:void-event"); }`, // catch 块头不得误取名 catch
+      `}`,
+      `async function hdl({ a, b }: SyncPayload, cb: () => void): Promise<void> {`, // 解构参数 } 不截断回卷
+      `  if (flag.busy) { bus.emit("a:void-event"); }`,
+      `}`,
+      `function outer() {`,
+      `  const inner = () => { bus.emit("a:void-event"); };`,
+      `  function nested() { noop(); } bus.emit("b:typed", { x: "n" });`,
+      `}`,
+      `const s = "} { 假括号"; // 字符串花括号不得干扰`,
+      `bus.on("b:typed", (p) => {}); // 模块顶层订阅`,
+    ].join('\n'),
+  });
+  const ev = json?.events ?? {};
+  const fnOf = (recs) => recs?.[0]?.fn;
+  ok(fnOf(ev['b:typed']?.emit) === 'topLevel', `function 声明内 emit → fn=topLevel（实为 ${fnOf(ev['b:typed']?.emit)}）`);
+  ok(fnOf(ev['a:void-event']?.on) === 'method', `方法简写内 on → fn=method（实为 ${fnOf(ev['a:void-event']?.on)}）`);
+  ok((ev['a:void-event']?.emit ?? []).some((r) => r.fn === 'inner'), '箭头赋值内 emit → fn=inner');
+  ok((ev['b:typed']?.emit ?? []).some((r) => r.fn === 'outer'), '嵌套具名函数不误报（应归 outer 而非 nested）');
+  ok((ev['a:void-event']?.emit ?? []).filter((r) => r.fn === 'ctrl').length === 2, 'if/catch 控制流块内调用归外层 ctrl 而非 if/catch 关键字');
+  ok((ev['a:void-event']?.emit ?? []).some((r) => r.fn === 'hdl'), '解构参数跨行函数头内调用归 hdl（解构 } 不截断回卷）');
+  ok((ev['b:typed']?.on ?? []).some((r) => r.fn === '(顶层)'), '模块顶层调用 → fn=(顶层)');
+}
+
 // ── 3. 真实仓库零硬错误 ──────────────────────────────────
 console.log('[3] 真实仓库');
 {

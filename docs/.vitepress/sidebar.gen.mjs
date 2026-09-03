@@ -1389,6 +1389,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "C1 GPU 资源生命周期专项审核报告",
+        "link": "/audit/audit-c1-gpu-lifecycle-2026-09-03"
+      },
+      {
         "text": "R14 — 全量测试覆盖率审计报告",
         "link": "/audit/audit-r14-coverage-2026-08-18"
       },
@@ -1760,6 +1764,10 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_naming"
           },
           {
+            "text": "前端 TS 整包审计",
+            "link": "/knowledge/frontend_repo_audit"
+          },
+          {
             "text": "多模型选择菜单原语 multiModelSelectNode",
             "link": "/knowledge/multi_model_select"
           },
@@ -2062,16 +2070,6 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
-          }
-        ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "前端 TS 整包审计",
-            "link": "/knowledge/frontend_repo_audit"
           }
         ]
       }

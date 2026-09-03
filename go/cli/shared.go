@@ -175,6 +175,7 @@ type outputBuffer struct {
 }
 
 func (b *outputBuffer) readFrom(r *os.File) {
+	defer r.Close() // 读端退出即关闭，防止每次 --json 捕获泄漏一个 fd（评审 #2）
 	buf := make([]byte, 4096)
 	for {
 		n, err := r.Read(buf)

@@ -175,7 +175,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	if needsWrite {
 		a.saveConfig(cfg)
 		if cfg.McRoot != "" {
-			println("[startup] 配置文件已创建/更新, mcRoot:", cfg.McRoot)
+			log.Printf("[startup] 配置文件已创建/更新, mcRoot: %s", cfg.McRoot)
 		}
 	}
 

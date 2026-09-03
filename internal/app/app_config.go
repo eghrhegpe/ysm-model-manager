@@ -86,13 +86,13 @@ func migrateLegacyConfig() {
 			continue
 		}
 		if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
-			println("[migrate] 迁移目录创建失败:", err.Error())
+			log.Printf("[migrate] 迁移目录创建失败: %v", err)
 			return
 		}
 		// 原子写入（ADR-109 §4，与 saveConfig 同口径）：裸 os.WriteFile 中途崩溃会留下
 		// 截断 JSON，上方「新位置已存在即跳过」守卫会让损坏配置永久阻断重迁移
 		if err := fsutil.WriteFileAtomic(newPath, data); err != nil {
-			println("[migrate] 迁移写盘失败:", err.Error())
+			log.Printf("[migrate] 迁移写盘失败: %v", err)
 			return
 		}
 		_ = os.Remove(p) // 迁移成功，清理旧文件
@@ -106,7 +106,7 @@ func (a *App) loadAppConfig() {
 	if err != nil {
 		// 配置文件不存在属正常（首次启动），其余错误值得记录
 		if !os.IsNotExist(err) {
-			println("[loadAppConfig] 读取配置失败:", err.Error())
+			log.Printf("[loadAppConfig] 读取配置失败: %v", err)
 		}
 		return
 	}
@@ -114,7 +114,7 @@ func (a *App) loadAppConfig() {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		// JSON 损坏时原实现静默 return——configCache 保留零值且
 		// configLoaded=true，后续 LoadAppConfig 返回空配置且永不再读取（用户配置"丢失"无报错）
-		println("[loadAppConfig] 配置解析失败:", err.Error(), "——使用默认配置")
+		log.Printf("[loadAppConfig] 配置解析失败: %v ——使用默认配置", err)
 		// 不设 configLoaded，让下次 LoadAppConfig 重试（保留原文件供人工修复）
 		return
 	}

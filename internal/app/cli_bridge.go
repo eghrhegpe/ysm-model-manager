@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -22,8 +24,9 @@ func (a *App) SetAllowedCommands(cmds []string) {
 	})
 }
 
-// isCommandAllowed 检查命令是否在注入的可用列表中
-func (a *App) isCommandAllowed(command string) bool {
+// isCommandExposedToFrontend 检查命令是否在前端可见白名单内（区别于 go/cli 的
+// IsCommandAllowed=注册表存在；本方法是 main.go 注入的安全白名单，评审 #12 改名防撞名异义）
+func (a *App) isCommandExposedToFrontend(command string) bool {
 	return a.allowedCommandSet[command]
 }
 
@@ -49,7 +52,7 @@ func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 	start := time.Now()
 
 	// 1. 检查命令是否在可用列表中
-	if !a.isCommandAllowed(command) {
+	if !a.isCommandExposedToFrontend(command) {
 		elapsed := float64(time.Since(start).Milliseconds())
 		resp, err := makeJsonResponse("not_supported", command, nil, map[string]string{
 			"code":    "platform_not_supported",
@@ -168,6 +171,10 @@ func (a *App) GetAllowedCLICommands() string {
 	return string(result)
 }
 
+// cliCommandTimeout CLI 子进程挂死兜底：正常命令远低于此，仅防 GUI 永久等待
+// （评审 #3：原 exec.Command 无超时，子进程挂死则 GUI 桥永久阻塞）
+const cliCommandTimeout = 5 * time.Minute
+
 // executeCLICommand 执行 CLI 命令
 // 通过 os/exec 调用自身二进制的 CLI 模式，避免循环依赖
 // 返回 stdout 内容和错误（含退出码）
@@ -178,9 +185,11 @@ func executeCLICommand(args []string) (string, error) {
 		return "", fmt.Errorf("获取可执行文件路径失败: %w", err)
 	}
 
-	// 构建命令：<exe> --cli <args...>
+	// 构建命令：<exe> --cli <args...>（CommandContext 带超时，子进程挂死即终止）
 	cliArgs := append([]string{"--cli"}, args...)
-	cmd := exec.Command(exePath, cliArgs...)
+	ctx, cancel := context.WithTimeout(context.Background(), cliCommandTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, exePath, cliArgs...)
 
 	// 捕获 stdout 和 stderr
 	var stdoutBuf, stderrBuf strings.Builder
@@ -189,6 +198,9 @@ func executeCLICommand(args []string) (string, error) {
 
 	err = cmd.Run()
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return stdoutBuf.String(), fmt.Errorf("命令执行超时（超过 %s 被终止）", cliCommandTimeout)
+		}
 		// 如果有 stderr，将其附加到错误信息
 		if stderr := stderrBuf.String(); stderr != "" {
 			return stdoutBuf.String(), fmt.Errorf("%s: %s", err.Error(), strings.TrimSpace(stderr))
@@ -199,9 +211,10 @@ func executeCLICommand(args []string) (string, error) {
 	return stdoutBuf.String(), nil
 }
 
-// getExitCode 从错误中提取退出码（如果是 ExitError）
+// getExitCode 从错误中提取退出码（errors.As 可穿透 %w 包装层，评审 #3）
 func getExitCode(err error) int {
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		return exitErr.ExitCode()
 	}
 	return -1

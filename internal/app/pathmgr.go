@@ -7,6 +7,8 @@
 
 package app
 
+import "log"
+
 // pathManager 定义平台路径获取接口
 type pathManager interface {
 	// AppDataRoot 返回应用配置根目录（不含 "YSM-Model-Manager" 子目录）
@@ -30,7 +32,7 @@ func appDataRoot() string {
 	}
 	dir, err := pathMgr.AppDataRoot()
 	if err != nil || dir == "" {
-		println("[pathmgr] AppDataRoot 失败:", err, "——配置/日志落点不可用")
+		log.Printf("[pathmgr] AppDataRoot 失败: %v ——配置/日志落点不可用", err)
 		return ""
 	}
 	return dir

@@ -22,6 +22,9 @@ type guiFlowResult struct {
 	Duration    time.Duration
 	Success     bool
 	Description string
+	// FirstModel 机器可读的首个可分析模型路径——曾塞进 Description 由下游反解析
+	// 「首个模型:」文案 token（评审 #9：改个 emoji 就断），结构化直传
+	FirstModel string
 }
 
 // runGUIFlow 模拟 GUI 完整加载流程
@@ -50,18 +53,13 @@ func runGUIFlow(ctx *CmdContext) error {
 	// ============ Phase 2: 模型扫描 ============
 	results = append(results, runPhaseModelScan(ctx.App, filesRoot))
 
-	// 如果指定了模型，使用它；否则用扫描到的第一个
+	// 如果指定了模型，使用它；否则用扫描阶段的结构化 FirstModel
+	// （评审 #9：不再从 Description 文案反解析「首个模型:」token——人类可读
+	// 输出不是内部 API）
 	targetModel := *modelPath
 	if targetModel == "" && len(results) > 0 {
 		if lastResult := results[len(results)-1]; lastResult.Success {
-			// 从描述中提取第一个模型
-			if idx := strings.Index(lastResult.Description, "首个模型:"); idx != -1 {
-				targetModel = strings.TrimSpace(lastResult.Description[idx+len("首个模型:"):])
-				// 取到换行前
-				if nlIdx := strings.Index(targetModel, "\n"); nlIdx != -1 {
-					targetModel = targetModel[:nlIdx]
-				}
-			}
+			targetModel = lastResult.FirstModel
 		}
 	}
 
@@ -201,9 +199,10 @@ func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	ysmCount := byType["ysm"]
 	yamlCount := byType["yml"] // 派生（注册表无 .yml 类型时为 0——不硬编码常量）
 	return guiFlowResult{
-		Stage:    "② 模型扫描",
-		Duration: elapsed,
-		Success:  true,
+		Stage:      "② 模型扫描",
+		Duration:   elapsed,
+		Success:    true,
+		FirstModel: firstModel,
 		Description: fmt.Sprintf(
 			"✅ 发现 %d 个模型 (%.0f models/sec)\n   类型分布: %s [YAML: %d, YSM: %d]\n   首个模型: %s",
 			len(entries),

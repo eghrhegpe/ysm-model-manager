@@ -932,7 +932,7 @@ func printOptimizationHints(stages []singleBenchStage) {
 		fmt.Printf("   🔴 瓶颈: %s\n", stages[bottleneckIdx].Name)
 		fmt.Println("   建议:")
 		fmt.Println("   - 检查模型文件是否过大（>5MB 需优化）")
-		fmt.Println("   - 考虑使用更快的解析器（YSM/JSON 用 sonic；PMX 考虑预解析缓存）")
+		fmt.Println("   - 解析耗时占比高时，评估更快的 JSON/PMX 解析实现（不指定具体第三方库，防带货文案过期）")
 		fmt.Println("   - 模型数据是否可以精简")
 	case "③ 数据验证":
 		fmt.Println("   🟡 注意: 数据验证")

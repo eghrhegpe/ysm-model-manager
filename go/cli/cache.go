@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -92,12 +93,12 @@ var cacheVerifyExts = map[string]bool{
 
 // scanCacheVerify 遍历目录，对每个贴图计算哈希并检查缓存命中。
 func scanCacheVerify(modelDir string) (texInfos []cacheVerifyTexInfo, walkErrors []string, err error) {
-	err = filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(modelDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			walkErrors = append(walkErrors, fmt.Sprintf("%s: %v", path, err))
 			return nil
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 
@@ -106,6 +107,11 @@ func scanCacheVerify(modelDir string) (texInfos []cacheVerifyTexInfo, walkErrors
 			return nil
 		}
 
+		info, ierr := d.Info()
+		if ierr != nil {
+			walkErrors = append(walkErrors, fmt.Sprintf("%s: %v", path, ierr))
+			return nil
+		}
 		size := info.Size()
 
 		hash, err := texture_cache.TextureHash(path)
@@ -383,27 +389,38 @@ func runCacheDiag(ctx *CmdContext) error {
 	}
 
 	fmt.Printf("\n🔐 2. 哈希计算测试\n")
-	testFile := filepath.Join(os.TempDir(), "ysm_cache_test.txt")
-	testContent := []byte("YSM Cache Diagnostic Test Content")
-	if err := os.WriteFile(testFile, testContent, fsutil.FilePerms); err != nil {
+	// 固定 tmp 文件名有并发/符号链接风险（同机两个诊断进程共享 ysm_cache_test.txt），
+	// 改 CreateTemp 每次独占（评审 #14）
+	tmpFile, err := os.CreateTemp("", "ysm_cache_diag_*.txt")
+	if err != nil {
 		fmt.Printf("   ❌ 无法创建测试文件: %v\n", err)
 	} else {
-		hash, err := texture_cache.TextureHash(testFile)
-		if err != nil {
-			fmt.Printf("   ❌ 哈希计算失败: %v\n", err)
+		testFile := tmpFile.Name()
+		defer os.Remove(testFile) // 中途分支早退也清理
+		if _, werr := tmpFile.Write([]byte("YSM Cache Diagnostic Test Content")); werr != nil {
+			tmpFile.Close()
+			fmt.Printf("   ❌ 无法写入测试文件: %v\n", werr)
 		} else {
-			fmt.Printf("   ✅ 哈希计算成功\n")
-			fmt.Printf("      输入: %s\n", testFile)
-			fmt.Printf("      哈希: %s\n", hash)
-
-			hash2, _ := texture_cache.TextureHash(testFile)
-			if hash == hash2 {
-				fmt.Printf("      ✅ 哈希一致性验证通过\n")
+			tmpFile.Close()
+			hash, herr := texture_cache.TextureHash(testFile)
+			if herr != nil {
+				fmt.Printf("   ❌ 哈希计算失败: %v\n", herr)
 			} else {
-				fmt.Printf("      ❌ 哈希不一致！\n")
+				fmt.Printf("   ✅ 哈希计算成功\n")
+				fmt.Printf("      输入: %s\n", testFile)
+				fmt.Printf("      哈希: %s\n", hash)
+
+				// 二次哈希错误也参与判定（原 _ = 吞错后仍比较，出错时比较无意义）
+				hash2, herr2 := texture_cache.TextureHash(testFile)
+				if herr2 != nil {
+					fmt.Printf("   ❌ 二次哈希计算失败: %v\n", herr2)
+				} else if hash == hash2 {
+					fmt.Printf("      ✅ 哈希一致性验证通过\n")
+				} else {
+					fmt.Printf("      ❌ 哈希不一致！\n")
+				}
 			}
 		}
-		os.Remove(testFile)
 	}
 
 	fmt.Printf("\n💾 3. 缓存读写测试\n")
@@ -432,7 +449,11 @@ func runCacheDiag(ctx *CmdContext) error {
 			}
 		}
 
-		texture_cache.ClearCache()
+		// 只删本次诊断写入的测试条目——曾误调 ClearCache() 全量清空目录，
+		// 用户跑一次 cache-diag 即丢失全部已编码 KTX2 缓存（评审 P0 #1，回归红线）
+		if rmErr := os.Remove(texture_cache.CachePath(testHash)); rmErr != nil && !os.IsNotExist(rmErr) {
+			fmt.Printf("   ⚠️  清理测试缓存条目失败: %v\n", rmErr)
+		}
 	}
 
 	fmt.Printf("\n📊 4. 当前缓存状态\n")

@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -86,6 +89,52 @@ func avgDuration(durations []time.Duration) time.Duration {
 	return total / time.Duration(len(durations))
 }
 
+// durationMinMax 返回时长集合的最小与最大（空集合返回 0,0）
+func durationMinMax(durations []time.Duration) (min, max time.Duration) {
+	if len(durations) == 0 {
+		return 0, 0
+	}
+	min, max = durations[0], durations[0]
+	for _, d := range durations[1:] {
+		if d < min {
+			min = d
+		}
+		if d > max {
+			max = d
+		}
+	}
+	return min, max
+}
+
+// summarizeBench 从文件级平均耗时/吞吐聚合 SingleRead 汇总
+// AvgMs/Throughput 取各文件均值，MinMs/MaxMs 取文件级最值（诊断基准口径）
+func summarizeBench(avgMs, thrpt []float64) benchSummary {
+	if len(avgMs) == 0 {
+		return benchSummary{}
+	}
+	var sumMs, sumThrpt float64
+	minMs, maxMs := avgMs[0], avgMs[0]
+	for i, ms := range avgMs {
+		sumMs += ms
+		if ms < minMs {
+			minMs = ms
+		}
+		if ms > maxMs {
+			maxMs = ms
+		}
+		if i < len(thrpt) {
+			sumThrpt += thrpt[i]
+		}
+	}
+	n := float64(len(avgMs))
+	return benchSummary{
+		AvgMs:      sumMs / n,
+		MinMs:      minMs,
+		MaxMs:      maxMs,
+		Throughput: sumThrpt / n,
+	}
+}
+
 // runFileBench 测试大文件读取性能（支持 JSON 输出和基准对比）
 func runFileBench(ctx *CmdContext) error {
 	fs := newCmdFlagSet("file-bench")
@@ -108,14 +157,18 @@ func runFileBench(ctx *CmdContext) error {
 	if *filePath != "" {
 		files = append(files, *filePath)
 	} else if *testDir != "" {
-		filepath.Walk(*testDir, func(path string, info os.FileInfo, err error) error {
+		filepath.WalkDir(*testDir, func(path string, d iofs.DirEntry, err error) error {
 			if err != nil {
 				walkErrCount++
 				return nil
 			}
-			if !info.IsDir() {
-				size := info.Size()
-				if size > 1*1024*1024 {
+			if !d.IsDir() {
+				info, ierr := d.Info()
+				if ierr != nil {
+					walkErrCount++
+					return nil
+				}
+				if info.Size() > 1*1024*1024 {
 					files = append(files, path)
 				}
 			}
@@ -163,6 +216,9 @@ func runFileBench(ctx *CmdContext) error {
 	fmt.Printf("\n   总大小: %s\n\n", formatSize(totalSize))
 
 	fmt.Println("📊 单文件读取测试:")
+	// 收集每文件平均耗时/吞吐，供 SingleRead 汇总归档（评审 #8：测量曾做但不写 JSON）
+	fileAvgMs := make([]float64, 0, len(fileInfos))
+	fileThrpt := make([]float64, 0, len(fileInfos))
 	for _, fi := range fileInfos {
 		name := filepath.Base(fi.path)
 		readTimes := make([]time.Duration, *iterations)
@@ -175,12 +231,21 @@ func runFileBench(ctx *CmdContext) error {
 		}
 
 		avgTime := avgDuration(readTimes)
-		throughput := float64(fi.size) / avgTime.Seconds() / (1024 * 1024)
+		throughput := 0.0
+		if avgTime > 0 {
+			throughput = float64(fi.size) / avgTime.Seconds() / (1024 * 1024)
+		}
+		fileAvgMs = append(fileAvgMs, float64(avgTime)/float64(time.Millisecond))
+		fileThrpt = append(fileThrpt, throughput)
 
 		fmt.Printf("   %s (%s):\n", name, formatSize(fi.size))
 		fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgTime, throughput)
 	}
 
+	// 批量读取汇总（文件数 >1 时才测量，零值表示未测）
+	var avgBatch time.Duration
+	var minBatch, maxBatch time.Duration
+	var batchThroughput float64
 	if len(fileInfos) > 1 {
 		fmt.Println("\n📊 批量读取测试 (模拟 ReadFileBytesBatch):")
 		paths := make([]string, len(fileInfos))
@@ -196,15 +261,18 @@ func runFileBench(ctx *CmdContext) error {
 			_ = results
 		}
 
-		avgBatch := avgDuration(batchTimes)
-		batchThroughput := float64(totalSize) / avgBatch.Seconds() / (1024 * 1024)
+		avgBatch = avgDuration(batchTimes)
+		minBatch, maxBatch = durationMinMax(batchTimes)
+		if avgBatch > 0 {
+			batchThroughput = float64(totalSize) / avgBatch.Seconds() / (1024 * 1024)
+		}
 		fmt.Printf("   %d 个文件, 总大小 %s:\n", len(fileInfos), formatSize(totalSize))
 		fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgBatch, batchThroughput)
 	}
 
 	benchItems := make([]fileBenchItem, len(fileInfos))
 	for i, f := range fileInfos {
-		benchItems[i] = fileBenchItem{Path: f.path, Size: f.size}
+		benchItems[i] = fileBenchItem{Path: f.path, Size: f.size, AvgMs: fileAvgMs[i]}
 	}
 
 	fmt.Println("\n📊 IPC 传输开销测量:")
@@ -213,61 +281,85 @@ func runFileBench(ctx *CmdContext) error {
 	fmt.Printf("   Base64 膨胀:  %s (+%.0f%%)\n", formatSize(overheadEstimate.Base64Size), overheadEstimate.InflationRatio*100)
 	fmt.Printf("   序列化开销:   ~%s\n", durationFormat(overheadEstimate.SerDescOverheadMs))
 
+	// 基准结果无条件组装：--output 落盘与 --compare 真对比共用（评审 #8 补全归档）
+	result := fileBenchResult{
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		Files:       make([]fileBenchFile, len(benchItems)),
+		SingleRead:  summarizeBench(fileAvgMs, fileThrpt),
+		IPCOverhead: overheadEstimate,
+	}
+	if len(fileInfos) > 1 {
+		result.BatchRead = benchSummary{
+			AvgMs:      float64(avgBatch) / float64(time.Millisecond),
+			MinMs:      float64(minBatch) / float64(time.Millisecond),
+			MaxMs:      float64(maxBatch) / float64(time.Millisecond),
+			Throughput: batchThroughput,
+		}
+	}
+	for i, f := range benchItems {
+		result.Files[i] = fileBenchFile{Path: f.Path, Size: f.Size, AvgMs: f.AvgMs, ThroughputMBps: fileThrpt[i]}
+	}
+
 	if *output != "" {
-		result := fileBenchResult{
-			Timestamp:   time.Now().UTC().Format(time.RFC3339),
-			Files:       make([]fileBenchFile, len(benchItems)),
-			IPCOverhead: overheadEstimate,
+		// 序列化失败显式上报（原实现静默吞——吞吐 Inf/异常值会使 JSON 静默不落盘）
+		jsonBytes, merr := json.MarshalIndent(result, "", "  ")
+		if merr != nil {
+			return newRuntimeErrf("序列化基准 JSON 失败: %v", merr)
 		}
-		for i, f := range benchItems {
-			result.Files[i] = fileBenchFile{Path: f.Path, Size: f.Size}
+		if err := os.WriteFile(*output, jsonBytes, fsutil.FilePerms); err != nil {
+			return newRuntimeErrf("保存基准 JSON 失败: %v", err)
 		}
-		if jsonBytes, err := json.MarshalIndent(result, "", "  "); err == nil {
-			if err := os.WriteFile(*output, jsonBytes, fsutil.FilePerms); err != nil {
-				return newRuntimeErrf("保存基准 JSON 失败: %v", err)
-			}
-			fmt.Printf("\n💾 基准已保存到: %s\n", *output)
-		}
+		fmt.Printf("\n💾 基准已保存到: %s\n", *output)
 	}
 
 	if *compare != "" {
 		fmt.Println("\n📈 基准对比:")
-		compareResult := loadAndCompareBenchmark(*compare, benchItems)
+		compareResult := loadAndCompareBenchmark(*compare, result)
 		fmt.Println(compareResult)
 	}
 
 	return nil
 }
 
-// calculateIPCOverhead 实际测量 IPC 开销
+// calculateIPCOverhead 实际测量 IPC 开销（评审 #8：原实现忽略 files 只测 files[0]、
+// serdeSpeedMBps=100 拍脑袋常量、测得的总时长还丢弃——现实测 Base64+JSON 序列化）
 func calculateIPCOverhead(a AppService, files []fileBenchItem, iterations int) ipcEstimate {
 	if len(files) == 0 {
 		return ipcEstimate{}
 	}
 
-	var totalSingle time.Duration
-	for i := 0; i < iterations; i++ {
-		start := time.Now()
-		_ = a.ReadFileBytes(files[0].Path)
-		totalSingle += time.Since(start)
+	original := a.ReadFileBytes(files[0].Path)
+	originalSize := int64(len(original))
+	if originalSize == 0 {
+		return ipcEstimate{}
 	}
 
-	originalSize := files[0].Size
-	base64Size := int64(float64(originalSize) * 1.33)
-
-	serdeSpeedMBps := 100.0
-	serdeTimeMs := float64(originalSize) / (1024 * 1024) / serdeSpeedMBps * 1000
+	// 实测序列化：base64 编码 + JSON 包装（走 Wails 桥的真实载荷形态）
+	var serdeTotal time.Duration
+	var payload []byte
+	for i := 0; i < iterations; i++ {
+		start := time.Now()
+		payload, _ = json.Marshal(map[string]string{"data": base64.StdEncoding.EncodeToString(original)})
+		serdeTotal += time.Since(start)
+	}
+	serdeTimeMs := float64(serdeTotal) / float64(time.Millisecond) / float64(iterations)
+	base64Size := int64(len(payload))
+	inflation := 0.0
+	if originalSize > 0 {
+		inflation = float64(base64Size)/float64(originalSize) - 1
+	}
 
 	return ipcEstimate{
 		OriginalSize:      originalSize,
 		Base64Size:        base64Size,
-		InflationRatio:    0.33,
+		InflationRatio:    inflation,
 		SerDescOverheadMs: serdeTimeMs,
 	}
 }
 
-// loadAndCompareBenchmark 加载并对比基准
-func loadAndCompareBenchmark(baselinePath string, currentFiles []fileBenchItem) string {
+// loadAndCompareBenchmark 加载基准并对比 SingleRead/BatchRead/IPC 数值
+// （评审 #8：原实现只回显时间戳与文件数，无真对比）
+func loadAndCompareBenchmark(baselinePath string, current fileBenchResult) string {
 	data, err := os.ReadFile(baselinePath)
 	if err != nil {
 		return fmt.Sprintf("❌ 无法读取基准文件: %v", err)
@@ -278,8 +370,36 @@ func loadAndCompareBenchmark(baselinePath string, currentFiles []fileBenchItem) 
 		return fmt.Sprintf("❌ 基准文件格式错误: %v", err)
 	}
 
-	return fmt.Sprintf("📊 对比基准 (%s):\n   迭代次数: %d\n   文件数: %d",
-		baseline.Timestamp, len(baseline.Files), len(currentFiles))
+	var b strings.Builder
+	fmt.Fprintf(&b, "📊 对比基准 (%s)\n   文件数: 基准 %d | 本次 %d\n", baseline.Timestamp, len(baseline.Files), len(current.Files))
+
+	// 基准文件由旧版本生成（SingleRead 恒零）时给出提示而非误导性对比
+	if baseline.SingleRead.AvgMs == 0 && baseline.BatchRead.AvgMs == 0 {
+		fmt.Fprintf(&b, "   ⚠️  基准文件不含测量数据（旧版空壳 JSON），请重新 --output 生成后再对比\n")
+		return b.String()
+	}
+
+	compareLine := func(label string, base, cur benchSummary) {
+		if base.AvgMs == 0 && cur.AvgMs == 0 {
+			return // 双方均未测量（如单文件无 BatchRead），跳过
+		}
+		if base.AvgMs == 0 || cur.AvgMs == 0 {
+			fmt.Fprintf(&b, "   %s: 基准 avg=%.2fms 吞吐=%.1fMB/s | 本次 avg=%.2fms 吞吐=%.1fMB/s (一侧未测，跳过变化率)\n",
+				label, base.AvgMs, base.Throughput, cur.AvgMs, cur.Throughput)
+			return
+		}
+		delta := (cur.AvgMs - base.AvgMs) / base.AvgMs * 100
+		fmt.Fprintf(&b, "   %s: avg %.2f → %.2f ms (%+.1f%%) | 吞吐 %.1f → %.1f MB/s\n",
+			label, base.AvgMs, cur.AvgMs, delta, base.Throughput, cur.Throughput)
+	}
+	compareLine("单读", baseline.SingleRead, current.SingleRead)
+	compareLine("批读", baseline.BatchRead, current.BatchRead)
+
+	if baseline.IPCOverhead.OriginalSize > 0 {
+		fmt.Fprintf(&b, "   IPC: 基准 Base64 膨胀 %.0f%% | 本次 %.0f%%\n",
+			baseline.IPCOverhead.InflationRatio*100, current.IPCOverhead.InflationRatio*100)
+	}
+	return b.String()
 }
 
 // scanDirResult 目录扫描结果
@@ -425,13 +545,8 @@ func runScanDir(ctx *CmdContext) error {
 	for ext, count := range extCount {
 		stats = append(stats, extStat{ext, count, extSize[ext]})
 	}
-	for i := 0; i < len(stats); i++ {
-		for j := i + 1; j < len(stats); j++ {
-			if stats[j].size > stats[i].size {
-				stats[i], stats[j] = stats[j], stats[i]
-			}
-		}
-	}
+	// 按大小降序（sort.Slice 替代手写选择排序，评审 #7）
+	sort.Slice(stats, func(i, j int) bool { return stats[i].size > stats[j].size })
 
 	fmt.Printf("   %-10s %-8s %s\n", "扩展名", "数量", "总大小")
 	fmt.Println("   " + strings.Repeat("-", 50))
@@ -454,11 +569,15 @@ func runScanDir(ctx *CmdContext) error {
 	if *detail && totalFiles > 0 {
 		fmt.Printf("\n📝 文件详情 (前 20 个):\n")
 		count := 0
-		filepath.Walk(*dirPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || count >= 20 {
+		filepath.WalkDir(*dirPath, func(path string, d iofs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || count >= 20 {
 				return nil
 			}
 			relPath := strings.TrimPrefix(path, *dirPath)
+			info, ierr := d.Info()
+			if ierr != nil {
+				return nil
+			}
 			fmt.Printf("   %s (%s)\n", relPath, formatSize(info.Size()))
 			count++
 			return nil
@@ -554,14 +673,8 @@ func collectTexInfos(textureFiles []string) []texInfo {
 		texInfos = append(texInfos, texInfo{path: tf, size: info.Size(), ext: ext})
 	}
 
-	// 按大小降序排序（选择排序，贴图数量通常不大）
-	for i := 0; i < len(texInfos); i++ {
-		for j := i + 1; j < len(texInfos); j++ {
-			if texInfos[j].size > texInfos[i].size {
-				texInfos[i], texInfos[j] = texInfos[j], texInfos[i]
-			}
-		}
-	}
+	// 按大小降序（sort.Slice 替代手写 O(n²) 选择排序——千张贴图即百万次比较，评审 #7）
+	sort.Slice(texInfos, func(i, j int) bool { return texInfos[i].size > texInfos[j].size })
 
 	return texInfos
 }

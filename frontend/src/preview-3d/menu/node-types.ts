@@ -145,7 +145,10 @@ export interface PreviewMenuNode {
 
   /** 危险操作（如删除/卸载），渲染红色文字 */
   danger?: boolean;
-  /** 兼容既有 e2e 选择器的 legacy data-testid（如 preview-close-3d / env-menu-btn / ysm-roles-entry），渲染为 id 属性 */
+  /** @deprecated e2e 兼容映射（如 preview-close-3d / env-menu-btn / ysm-roles-entry），渲染为元素 id / dataset.panelTestId。
+   *   [P3 淘汰期限] 2027-06-30——此前 e2e（frontend/e2e/*.spec.ts）须全部改选稳定锚点（节点 id / panelTestId 派生选择器）；
+   *   到期即删字段，render 层（menu/core.ts:111,228 / roles.ts:89）同步移除 id/panelTestId 映射输出，由 render 审计测试锁定。
+   *   ⚠️ 过渡期内禁止新增 legacyTestId（新 e2e 一律用派生选择器），只允许既有条目随迁移删除 */
   legacyTestId?: string;
   /** material-row 类型：行内组合控件——eye 显隐 toggle（[doc:adr-126-p5] 审计 #3 组合行增强） */
   eye?: { get: () => boolean; set: (v: boolean) => void };

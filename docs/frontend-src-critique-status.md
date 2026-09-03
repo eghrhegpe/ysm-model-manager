@@ -31,12 +31,13 @@
 |---|---|---|---|
 | P1 | 137 处 style.cssText 内联样式 | ⏳ 排期 | 集中样式模块（ui-components-styles.ts 范式），机械搬迁面大 |
 | P2 | fallback 硬编码中文散布（181 处） | 🟡 评估留档 | 查证：三语 key 集一致（locales-consistency 测试）+ LocaleKey 编译守卫，fallback 仅在动态 key 拼错时触发（设计双保险非缺陷）；触发即三语皆缺，改英文仅换受众，181 处搬迁 ROI 负——不动，语义注释已说明 |
-| P3 | legacyTestId 永久背负 e2e 兼容映射 | ⏳ 排期 | 应设淘汰期限 |
+| P3 | legacyTestId 永久背负 e2e 兼容映射 | ✅ 设限 | `node-types.ts:148` 定义处标 @deprecated + 淘汰期限 2027-06-30 + 迁移条件（e2e 改选节点 id/panelTestId 派生选择器）+ 过渡期禁新增；届期删字段并移除 core.ts:111,228 / roles.ts:89 映射输出 |
 | P4 | mock bridge `as AppBindings` 类型断言 | 🟡 评估留档 | 查证：Proxy 壳将破坏 app.test.ts 2 处 toBe(mockApp) 身份断言 + stub 会引爆 E2E mock「缺失方法静默跳过」依赖；现值 P3 已挡空对象、缺失方法调用已抛 TypeError——低价值高扰动，暂缓 |
 
 ## 汇总
 
-- 已闭环 10 项：严重 4/5（S1/S3/S4/S5）+ 一般 6/6（G1-G6）——仅剩 S2（严重）排期
-- 严重项仅剩 S2（parity 复刻）排期——web-fs.ts 整层 TS 平移 Go，建议立 ADR：判定规则抽单一源（JSON/生成物驱动），TS 只做 I/O
-- 待处置：S2 / G6 / P1 / P3（排期）、P2 / P4（评估留档，不铺开）
+- 已闭环 9 项：严重 4/5（S1/S3/S4/S5）+ 一般 5/6（G1-G5）+ 风格 P3 设限——剩 S2（严重）/ G6（一般）/ P1（风格）排期
+- 严重项仅剩 S2（parity 复刻）排期——web-fs.ts 整层 TS 平移 Go，建议立 ADR：判定规则抽单一源（JSON/生成物驱动），TS 只做 I/O；已有 contract-b1「代码侦探」对账范式（SearchModels 等簇已锁）
+- 待处置：S2 / G6 / P1（排期）、P2 / P4（评估留档，不铺开）；P3 仅剩「届期清退」动作挂在 2027-06-30
+- 状态卡纠错（2026-09-03）：此前汇总误计「一般 6/6 / 共 10 项闭环」——G6（overlay light DOM）实为 ⏳ 排期且 git 无闭环提交，此处修正为 一般 5/6 + 共 9 项闭环
 - 兄弟基线遗留：browser-adapter.contract-b2.test.ts:227,241 缺 desc（HEAD 即红，非本锐评引入），push 需兄弟收口或逃生阀

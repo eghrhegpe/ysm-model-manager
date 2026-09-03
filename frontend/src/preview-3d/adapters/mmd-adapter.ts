@@ -332,6 +332,7 @@ type MdMmStage2Ctx = Pick<
   | "ctx"
   | "effectivePath"
   | "effectivePort"
+  | "ktx2Loader"
   | "manager"
   | "mmd"
   | "tBuildEnd"
@@ -772,7 +773,7 @@ async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> {
           return null;
         }
       },
-      ktx2Loader: new KTX2Loader().setTranscoderPath("/basis/").detectSupport(c.ctx.renderer),
+      ktx2Loader: (c.ktx2Loader = new KTX2Loader().setTranscoderPath("/basis/").detectSupport(c.ctx.renderer)),
       fallbackLoader: new THREE.TextureLoader(c.manager),
     });
     c.manager.addHandler(/\.(png|jpe?g|bmp|gif|webp)$/i, ktx2DirectLoader);

@@ -64,28 +64,6 @@ auto_fields:
     - SyncResourcesDirLevelScan
     - SyncResourcesWithConfig
     - SyncToggleStatus
-  quick_groups:
-    - 模型扫描与仓库管理
-  quick_intents:
-    - 整合包同步、推送 / 拉取
-    - sync_diff / sync_hash / sync_push / sync_relink
-    - 冲突处理 conflict.go
-  quick_risk_lines:
-    - 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑
-  pitfalls:
-    - app 层手写同步 → 与 go/sync 判定不一致、冲突未处理；必须经 go/sync
-    - 同步不做 hash 校验 → 文件变更未检测；必须经 sync_hash 校验
-  use_when:
-    - 整合包
-    - 同步
-    - 硬链接
-    - 缺失
-    - 多余
-  perf:
-    - io-bound
-  invariant_anchors:
-    - go/sync/sync.go|fsutil.IsRecycleDir
-    - go/sync/sync_relink.go|installer.CopyFile
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

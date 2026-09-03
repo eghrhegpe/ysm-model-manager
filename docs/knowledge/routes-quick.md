@@ -59,9 +59,14 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 调后端、app.ts 绑定、getApp | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
+| 跨平台路径处理、pathmgr | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
+| 平台分支差异：WASM decoder / 进程重启 / Node.js sidecar 禁用、build-tag 双文件隔离 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | 桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
+| 日志环持久化、社区/工坊数据 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | zip entry 路径必须经 sanitizeZipEntryPath 清洗（防 .. 穿越） | ADR-177 |
 | 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend_web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
+| 网页模式切换、browser-adapter 桥接 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | fail-fast：未实现 binding 必须抛 WebUnsupportedError，禁止 undefined 穿透 | ADR-177 |
 | Android 存储授权、目录选择器 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | Android 存储授权必须走 android-bridge 的 SAF 授权流程，禁止直接请求 MANAGE_EXTERNAL_STORAGE | - |
+| Android 平台守卫、RevealInExplorer/OpenFolder 降级、文件浏览失败处理 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | android:back 返回键、弹窗退出 | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | Android 系统事件必须经 android-events 的 registerAndroidEvents 单点注册，禁止各组件各自注册 | - |
 | Android/Linux/macOS Rust 桥 | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径 | - |
 | API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
@@ -69,14 +74,18 @@
 | browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend_web.md) | - | - |
 | closeActiveDialog、registerAndroidEvents | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
 | compile-android-rust/compile-rust-static | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
+| FSA 授权、本地仓库挂载 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 内存降级 OOM 保护：隐私模式无界写入会撑爆堆 | ADR-177 |
 | GetAppVersion / ScanModelEntries / SearchModels | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
 | IndexedDB / IDB / 浏览器后端 | [网页版后端 backend-web](./backend_web.md) | - | - |
-| IndexedDB、网页版存储 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 事务必须接线 complete/error/abort 三事件 | ADR-177 |
+| IndexedDB、网页版存储、idbGet/idbSet/idbDel CRUD | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 事务必须接线 complete/error/abort 三事件 | ADR-177 |
 | MANAGE_EXTERNAL_STORAGE、SAF、权限 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | - | - |
 | NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend_web.md) | - | - |
 | Rust 扫描器、rust_backend | [Rust 桥 rustbridge](./rustbridge.md) | Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载 | - |
 | rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
+| SAF 废弃、MANAGE_EXTERNAL_STORAGE 权限模型、前端黑名单同步（ANDROID_UNAVAILABLE） | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | ScreenLocked、NetworkChanged、permissionGranted | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
+| watcher 监听跳过、fsnotify 平台限制 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
+| zip 导入、模型扫描、Stats Worker 统计 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | browserAdapter Proxy 的 then 陷阱：返回 undefined 避免被误判为 thenable | ADR-177 |
 
 ## 🎯 模型扫描与仓库管理
 
@@ -135,31 +144,31 @@
 | 纯函数 | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | 错误提示、友好错误、friendlyError | [错误处理 errors](./utils-errors.md) | 所有异常路径必须经 friendlyError 转中文提示，禁止裸抛原始错误到 UI | - |
 | 错误消息提取、Worker 错误、catch | [安全错误消息提取 utils](./safe_error_msg.md) | Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖 | - |
-| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | tr() 依赖 t() 缺失返回 key 本身——两函数强耦合 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | tr() 依赖 t() 缺失返回 key 本身——两函数强耦合 | ADR-124 |
 | 调试日志、dbg、调试开关 | [常量与调试 constants/debug](./utils-misc.md) | 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码 | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
 | 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底 | - |
 | 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
-| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124 |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
 | 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
-| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124 |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
 | 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 外部进程启动、跨平台 HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | - | - |
-| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124 |
 | 新组件注册、import 组件、startup reveal | [组件入口 app-modules](./app-modules.md) | - | - |
 | 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | - | ADR-109 |
 | 页面初始化流程、订阅桶 / 会话状态 | [主内容页 app-content](./app-content.md) | - | - |
 | 页面状态管理、当前页、page store | [页面状态管理 page-store.ts](./page-store.md) | page-store 只管理当前页标识（只读 getter），不协调页面挂载 / 卸载，那是 app-content 的职责 | - |
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
-| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
+| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource | - |
 | 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:change / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
@@ -563,11 +572,16 @@
 | FSA 授权恢复：restoreFsaRootHandle 只 queryPermission，禁止 requestPermission（启动期无手势会被拦截） | - | - |
 | zip 导入双阶段分组：先粗分组再主文件目录收敛，若跳过会导致路径混乱/组名歧义 | - | - |
 | 内存 Map 驱逐 FIFO 近似 LRU：命中当前 key 时移到队尾，但未访问的旧 key 仍在内存中 | - | - |
+| 隐私模式下 IndexedDB 受限，必须自动降级到内存 Map（有限制：200 条/64MB FIFO） | - | - |
+| idbKeys 前缀扫描边界：prefix+'\uffff' 语义是，不能写错范围否则漏键 | `以 prefix 开头的最大可能字符串` | - |
+| 日志环写入 fire-and-forget：不 await，不阻塞主流程；若需要一致性需改架构 | - | - |
+| 3D/预览 binding 缺失：网页版 ReadFileBytesBatch、GetPackInfo、FindPreviewImage 等可能未实现，依赖 'Foo' in browserAdapter 探测 | - | - |
 | 前端手写分类 | - | 与 Go classify 判定不一致、last-wins 裁决丢失；必须交 Go 分类 |
 | 新增资源类型未更新 priority | - | 冲突时优先级错乱；必须经 classify.go 的 priority 表 |
 | 各组件各自发下载请求 | - | 并发冲突、进度丢失；必须经 download-queue 排队 |
 | 镜像源未走 gh-links | - | 下载慢、镜像不可用；必须经 gh-links 的 CDN 分流 |
 | 内联菜单结构 | `view 层` | 必须声明进 menu-defs.ts |
+| file/dir handler 各用 FileCtx/DirCtx（Omit 掉对立字段）；dir handler 读 ctx.path→编译报错（P2-1 表级窄化） | - | - |
 | swallowError 吞掉业务异常 | - | 静默失败、无法排查；必须用于"预期内可忽略"的错误 |
 | fireAndForget 无 error 兜底 | - | 异常丢失；必须挂 onerror 回调或全局 error 监听 |
 | 手写 adv-filter 弹窗 DOM | - | 与全局弹窗样式 / 焦点陷阱不一致；必须复用 modal.ts 的 registerDlg |
@@ -611,6 +625,14 @@
 | "golden 必须双端互锁：Go 测试 + TS 测试读同一份 fixture，只做 web 单侧对拍是死快照，防不住 Go 侧漂移（ADR-154 §2.2 硬性要求）" | - | - |
 | "matchZipEntryTS 是注册表顺序首命中、忽略 priority；Go MatchZipEntry 同构，但容器级 detectZipType 走 priority desc 裁决——两者不可直接对拍（ADR-154 §2.4）" | - | - |
 | "TS 测试读仓库根 fixture 不得用 import 语句（ADR-146 R4 冻结基线会 FAIL），须用 readFileSync + process.cwd() 向上定位" | - | - |
+| 陷阱：Android 上 xdg-open/exec 链静默失败会掩盖问题 | `静默成功` | 必须返回含「请手动」提示的明确错误 |
+| 陷阱：watcher 守卫缺失时，fw.Add 逐目录失败后 loop 空转 = running=true 假活；Android 必须直接跳过 | `假活` | - |
+| 陷阱：把 RevealInExplorer/OpenFolder 等绑定全部 false | `一刀切` | 应仅在 ANDROID_UNAVAILABLE 黑名单内才禁 |
+| 陷阱：误引入 SAF/URI 桥 | `content:// URI` | SAF 已弃用，禁止复活 |
+| 陷阱：平台差异大的逻辑用 runtime.GOOS 分支 | `build-tag 混用` | 应用 build-tag 双文件保证编译期隔离 |
+| 陷阱：Android 沙盒私有目录与公共仓库根混用 | `路径管理混乱` | androidPathManager 严格分离 |
+| 陷阱：Go 新增桌面专属拒绝项未同步 platform-web.ts | `前端/后端黑名单不同步` | 三谓词测试 platform-parity.test.ts 会爆 |
+| 陷阱：Android 上调用 os.Executable + exec.Command | `重启假设` | Activity 生命周期不兼容，显式拒绝 |
 | 手写头像路径拼接 | - | 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验 |
 | 头像缓存不失效 | - | 换头像后仍显示旧图；必须经缓存失效策略 |
 | CLI 手写搜索 | - | 与 GUI 搜索结果不一致、参数不统一；必须复用 go/cli 的 SearchModels |

@@ -27,27 +27,6 @@ auto_fields:
     - ParseSchematicSummary
     - ResolveBlockName
     - ResolveBlockZH
-  quick_groups:
-    - 3D 预览与模型追加
-  quick_intents:
-    - 投影、litematic、schematic、nbt、蓝图
-    - palette / voxel / bedrock 转换
-  quick_risk_lines:
-    - Litematic 蓝图必须走 go/litematic 的 parser/schematic/structure 三层解析，禁止前端手写 Litematic 解析
-  pitfalls:
-    - 前端手写 Litematic 解析 → 与 Go 解析结果不一致、palette 映射错误；必须交 Go 解析
-    - 未走 bedrock.go 做基岩版转换 → voxel 位置偏移；必须经 bedrock.go 转换
-  use_when:
-    - 投影
-    - litematic
-    - schematic
-    - nbt
-    - 蓝图
-    - 体素
-    - 方块
-  invariant_anchors:
-    - go/litematic/nbt.go|extractBits
-    - go/litematic/voxel.go|maxRegionAxis
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

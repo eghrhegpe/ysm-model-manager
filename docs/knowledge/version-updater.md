@@ -12,30 +12,6 @@ auto_fields:
     - UpdateInfo
   tests:
     - frontend/src/features/version-updater.test.ts
-  quick_groups:
-    - 跨组件通信与页面
-  quick_intents:
-    - 更新检查、升级、新版本
-    - 静默检查、canCheck、markChecked
-    - updater
-  quick_risk_lines:
-    - 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API
-  pitfalls:
-    - 高频轮询 GitHub API → 触发限流、浪费带宽；必须经 canCheck 节流
-    - check 未 markChecked → 重启后重复检查；必须在检查完成后 markChecked 记录时间戳
-  use_when:
-    - 更新
-    - 升级
-    - 检查更新
-    - 新版本
-    - 静默检查
-    - updater
-    - 版本
-  perf:
-    - io-bound
-  invariant_anchors:
-    - frontend/src/features/version-updater.ts|canCheck
-    - frontend/src/features/version-updater.ts|markChecked
 tests:
   - frontend/src/features/version-updater.test.ts
 quick_groups:

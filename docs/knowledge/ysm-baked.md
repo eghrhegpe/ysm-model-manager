@@ -16,15 +16,6 @@ auto_fields:
     - parseBedrockGeometryFromJSON
   tests:
     - frontend/src/preview-3d/decoder/geometry.test.ts
-  use_when:
-    - 烘焙
-    - 几何反推
-    - pivot
-    - 骨骼错位
-    - 模型错位
-    - UV 对不上
-    - 贴图错位
-    - RawYsmModel
 pitfalls:
   - 预览错 ≠ 文件坏：cube 的 origin/size/uv 是反推猜测，模组直读烘焙数据所以游戏内正常；骨骼姿态差异先怀疑反推误判
   - 复杂嵌套旋转 / 极近重合顶点 / 非标准几何体：反推可能误判 pivot 或 rotation → 关联部件错位甚至方块崩溃，这是上游已知限制，不要在几何反推端打补丁硬修

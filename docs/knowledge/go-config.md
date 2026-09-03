@@ -10,18 +10,6 @@ auto_fields:
     - Get
     - Provider
     - Set
-  quick_groups:
-    - 配置与注册表
-  quick_intents:
-    - AppConfig、配置加载、配置文件
-    - go/config
-  quick_risk_lines:
-    - 配置必须走 go/config 的 LoadAppConfig 单点加载，禁止在多处各自读配置文件
-  pitfalls:
-    - 多处读配置 → 值不同步、重启后部分组件用旧配置；必须经 LoadAppConfig
-    - 配置项未加默认值 → 缺失时 panic；必须为所有配置项设默认值
-  use_when:
-    - 改配置注入/阈值逻辑，或消费包读阈值时
 quick_groups:
   - 配置与注册表
 quick_intents:

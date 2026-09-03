@@ -18,21 +18,6 @@ auto_fields:
     - PreviewHandle
     - PreviewScene
     - switchPreview
-  quick_groups:
-    - 3D 预览与模型追加
-  quick_intents:
-    - mount3D 并发竞态、模块级单例守卫
-    - _singletonOverlay / _singletonScene / _singletonRenderer
-  quick_risk_lines:
-    - ✅ _gen 代际守卫已落地（L164 声明 / L271 自增 / L681·L706·L862 三处守卫），历史竞态已消除
-  pitfalls:
-    - ❌ 已闭环：_gen 代际守卫 + finishSession 幂等 = 多并发安全
-    - ⚠️ 残留：7 个单例全局仍手动清零，若未来引入 async 创建需重新评估
-  use_when:
-    - mount3D 并发竞态（已闭环）
-    - 评审模块级单例守卫（历史）
-  perf:
-    - concurrent
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

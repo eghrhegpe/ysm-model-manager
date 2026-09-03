@@ -9,24 +9,6 @@ auto_fields:
   symbols_with_lines:
     - extractAnimGroupsAndConfigs
     - YsmProperties
-  quick_groups:
-    - 3D 预览与模型追加
-  quick_intents:
-    - 动画分组、配置菜单、ysm.json
-    - extra_animation、summarize
-  quick_risk_lines:
-    - YSM 动画分组与配置菜单必须经 extractAnimGroupsAndConfigs 从 ysm.json properties 提取
-  pitfalls:
-    - 手写 JSON 路径 → 与 Go appendAnimGroupsAndConfigs 语义不一致；必须经 extractAnimGroupsAndConfigs
-    - 加密模型 properties 不可读 → 动画分组丢失；必须经 WASM 解码后读取
-  use_when:
-    - 动画分组
-    - 配置菜单
-    - ysm.json
-    - extra_animation
-    - summarize
-  invariant_anchors:
-    - frontend/src/utils/format/ysm-anim-config.ts|extractAnimGroupsAndConfigs
 tests: []
 quick_groups:
   - 3D 预览与模型追加

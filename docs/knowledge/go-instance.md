@@ -11,28 +11,6 @@ auto_fields:
     - InvalidateSyncItemsCache
     - RegisterInvalidationHook
     - ResourceTypeInfo
-  quick_groups:
-    - 模型扫描与仓库管理
-  quick_intents:
-    - 整合包实例、版本实例、VersionInstance
-    - 同步项、BuildSyncItems、资源同步
-  quick_risk_lines:
-    - 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑
-  pitfalls:
-    - app 层手写同步 → 与 go/instance 判定不一致；必须经 SyncResources
-    - BuildSyncItems 未去重 → 重复同步同一资源；必须在 BuildSyncItems 里做去重
-  use_when:
-    - 整合包
-    - 实例
-    - 版本实例
-    - VersionInstance
-    - 同步项
-    - BuildSyncItems
-    - 资源同步
-  perf:
-    - io-bound
-  invariant_anchors:
-    - go/instance/instance.go|ysmsync.SyncResources
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

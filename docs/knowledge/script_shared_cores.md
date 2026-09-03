@@ -16,15 +16,6 @@ auto_fields:
     - getChangedLines
     - git
     - parseRenameStatus
-  use_when:
-    - 覆盖率门禁
-    - diff-coverage
-    - 循环依赖
-    - 共享核
-    - _lib
-    - check-circular
-    - findCycles
-    - 脚本去重
 use_when:
   - 覆盖率门禁
   - diff-coverage

@@ -39,24 +39,6 @@ auto_fields:
     - toStatePath
   tests:
     - frontend/src/preview-3d/state/preview-state.test.ts
-  quick_groups:
-    - 3D 预览与模型追加
-  quick_intents:
-    - 3D 预览面板跨 cap 设置项
-    - 预览面板状态改了不生效 / 重开面板值不对
-    - P4 子步（A→B→D→C）状态通道复用
-    - 新增 KNOWN_PATHS 路径
-  quick_risk_lines:
-    - 预览状态必须走 preview-state.ts 的 KNOWN_PATHS 注册，binding 只填已落地项，未落地键编译期报错
-  pitfalls:
-    - 直接改 preview-state 里的未注册键 → 切页 / 换模后状态回滚；必须经 KNOWN_PATHS 注册
-    - 把状态放 sceneRegistry / SlideMenu / 节点字段而非 previewState → 状态无法在 cap 切换时保留；状态通道需集中
-  use_when:
-    - 新增 3D 预览面板跨 cap 设置项
-    - 排查预览面板状态改了不生效 / 重开面板值不对
-    - 排查条件显隐控件不出现
-    - P4 子步（A→B→D→C）状态通道复用参考
-    - 评估"某状态是否应进 previewState vs 留在 sceneRegistry/SlideMenu/节点字段"
 tests:
   - frontend/src/preview-3d/state/preview-state.test.ts
 quick_groups:

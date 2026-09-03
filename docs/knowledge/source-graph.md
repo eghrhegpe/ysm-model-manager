@@ -26,15 +26,6 @@ auto_fields:
     - topDeclsAny
     - tsTopDecls
     - walkSourceFiles
-  use_when:
-    - 符号提取
-    - 导出符号
-    - 顶层声明
-    - api-break
-    - audit-split
-    - rollback-impact
-    - bloat-history
-    - 依赖图
 use_when:
   - 符号提取
   - 导出符号

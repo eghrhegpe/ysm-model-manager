@@ -72,14 +72,6 @@ auto_fields:
     - App.SyncResources
     - Error
     - ReadFileMeta
-  use_when:
-    - string-JSON
-    - JSON.parse 断言
-    - 绑定 struct 化
-    - 铲债清单
-    - 错误通道统一
-    - ADR-143
-    - 绑定返回 string
 use_when:
   - string-JSON
   - JSON.parse 断言

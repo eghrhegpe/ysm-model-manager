@@ -12,13 +12,6 @@ auto_fields:
     - WriteZipFile
   tests:
     - go/internal/testutil/testutil_test.go
-  use_when:
-    - 跨包复用测试 helper
-    - 创建测试文件
-    - 构造内存 ZIP
-  invariant_anchors:
-    - go/internal/testutil/testutil.go|CreateTestFile
-    - go/internal/testutil/testutil.go|MakeZipBytes
 tests:
   - go/internal/testutil/testutil_test.go
 use_when:

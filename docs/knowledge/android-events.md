@@ -10,26 +10,6 @@ auto_fields:
     - registerAndroidEvents
   tests:
     - frontend/src/features/dialogs/modal.test.ts
-  quick_groups:
-    - 后端桥接与数据存储
-  quick_intents:
-    - android:back 返回键、弹窗退出
-    - ScreenLocked、NetworkChanged、permissionGranted
-    - closeActiveDialog、registerAndroidEvents
-  quick_risk_lines:
-    - Android 系统事件必须经 android-events 的 registerAndroidEvents 单点注册，禁止各组件各自注册
-  pitfalls:
-    - 各组件各自注册 → 重复监听、返回键冲突；必须经 registerAndroidEvents
-    - 返回键未消费 → 直接退出应用；必须在有弹窗时 consume back 事件
-  use_when:
-    - android:back
-    - 返回键
-    - 弹窗
-    - 系统事件
-    - ScreenLocked
-    - NetworkChanged
-  invariant_anchors:
-    - frontend/src/core/handlers/android-events.ts|registerAndroidEvents
 tests:
   - frontend/src/features/dialogs/modal.test.ts
 quick_groups:

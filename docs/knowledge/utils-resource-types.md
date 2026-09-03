@@ -48,26 +48,6 @@ auto_fields:
     - useCurrentResourceType
     - VOXEL_RPC_BY_EXT
     - ZipEntryMatch
-  quick_groups:
-    - 配置与注册表
-  quick_intents:
-    - 资源类型、RESOURCE_TYPES、类型标签
-    - 存储子目录、storageSubDir、LoadResourceTypes、注册表加载
-  quick_risk_lines:
-    - 资源类型注册表必须经 LoadResourceTypes 加载，前端禁止手写类型映射
-  pitfalls:
-    - 手写类型映射 → 与注册表不一致、分类错乱；必须经 LoadResourceTypes
-    - 新增资源类型未注册 → 前端无法识别；必须在 resource_types.json 中注册
-  use_when:
-    - 资源类型
-    - RESOURCE_TYPES
-    - 类型标签
-    - 存储子目录
-    - storageSubDir
-    - LoadResourceTypes
-    - 注册表加载
-  invariant_anchors:
-    - frontend/src/services/resource-registry.ts|_registry
 quick_groups:
   - 配置与注册表
 quick_intents:

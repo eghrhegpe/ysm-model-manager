@@ -69,29 +69,6 @@ auto_fields:
     - uiComponentsStyleSheet
     - unregisterControl
     - withLoadingIndicator
-  quick_groups:
-    - UI 交互与弹窗
-  quick_intents:
-    - UI 组件库、卡片组件、折叠面板
-    - 加载动画、滑块、行组件、预设 chip
-    - createCard / createSlideMenu / createLoading
-  quick_risk_lines:
-    - UI 组件必须走 ui-components 的 helper 函数，禁止手写重复 DOM 结构
-  pitfalls:
-    - 手写重复 DOM → 样式不一致、缺可访问性；必须经 ui-components
-    - ui-components 内自定义元素 → 与全仓 Web Components 规范冲突；ui-components 只做 helper 函数
-  use_when:
-    - UI 组件
-    - 卡片组件
-    - 折叠面板
-    - 加载动画
-    - 滑块
-    - 行组件
-    - 预设
-    - 图标
-  invariant_anchors:
-    - frontend/src/ui/control-registry.ts|registerControl
-    - frontend/src/ui/control-registry.ts|getControl
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

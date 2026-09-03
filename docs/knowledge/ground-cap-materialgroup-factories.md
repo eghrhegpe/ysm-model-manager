@@ -12,19 +12,6 @@ auto_fields:
     - DEFAULT_GROUND_PARAMS
     - GroundCapability
     - GroundParams
-  quick_groups:
-    - 3D 预览与模型追加
-  quick_intents:
-    - 拆 buildGroundMaterialGroup 长函数
-    - 评审 ground-capability.ts 菜单构建
-  quick_risk_lines:
-    - 地面材质菜单必须经 groundSliderDef/groundColorDef/groundButtonDef 工厂构建，禁止手写控件结构
-  pitfalls:
-    - 手写控件结构 → 与工厂输出不一致、菜单构建重复；必须经工厂函数
-    - 新增地面模式未走工厂 → 菜单缺控件；必须在工厂中注册
-  use_when:
-    - 拆 buildGroundMaterialGroup 长函数
-    - 评审 ground-capability.ts 菜单构建
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

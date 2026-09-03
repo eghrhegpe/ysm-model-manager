@@ -85,27 +85,10 @@ auto_fields:
     - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
     - frontend/src/preview-3d/caps/shadow-capability.test.ts
     - frontend/src/preview-3d/caps/sky-capability.test.ts
-  use_when:
-    - 联邦渲染
-    - shared renderer
-    - rAF 复用
-    - 多 3D 场景
-  quick_groups:
-    - 3D 预览与模型追加
-  quick_intents:
-    - 渲染联邦、shared renderer、rAF 复用
-    - 多 3D 场景共存
-  quick_risk_lines:
-    - 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer
-  pitfalls:
-    - 各自创建 renderer → 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享
-    - rAF 未统一节流 → 帧率不统一；必须经 federation 的 rAF 调度
   related_adrs:
     - ADR-073-federal-render-caps
     - ADR-084-personal-lighting
     - ADR-097-scene-capability-registry
-  perf:
-    - gpu-bound
 tests:
   - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
   - frontend/src/preview-3d/caps/environment-capability.test.ts

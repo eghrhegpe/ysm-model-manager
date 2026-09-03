@@ -14,27 +14,6 @@ auto_fields:
     - TagSetResult
   tests:
     - frontend/src/features/dialogs/tag-editor.test.ts
-  quick_groups:
-    - UI 交互与弹窗
-  quick_intents:
-    - 打标签、编辑标签、tag-editor
-    - 分类标记、全库标签建议
-    - modalTagEditor
-  quick_risk_lines:
-    - tag-editor 弹窗必须复用 modal.ts 的 Promise API，标签写回走 go/tags Store 的原子替换
-  pitfalls:
-    - 手写 tag-editor 弹窗 → 弹窗样式 / 焦点陷阱与全局不一致；必须复用 modal.ts
-    - 标签写回用直写 tags.json → 并发写破坏文件；必须经 go/tags Store 的 tmp+os.Rename 原子替换
-  use_when:
-    - 标签
-    - 打标签
-    - 编辑标签
-    - tag
-    - 标签弹窗
-    - 分类标记
-  invariant_anchors:
-    - frontend/src/features/dialogs/tag-editor.ts|modalTagEditor
-    - frontend/src/features/dialogs/tag-set.ts|addTagToSet
 tests:
   - frontend/src/features/dialogs/tag-editor.test.ts
 quick_groups:

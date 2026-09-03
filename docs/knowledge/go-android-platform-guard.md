@@ -72,48 +72,13 @@ auto_fields:
     - NewApp
   tests:
     - internal/app/app_config_test.go
-  quick_groups:
-    - 后端桥接与数据存储
-  quick_intents:
-    - Android 平台守卫、RevealInExplorer 降级
-    - 跨平台路径处理、pathmgr
-    - 平台分支、WASM decoder 平台差异
-    - 文件浏览/打开文件夹失败处理
-    - 进程重启不可用、Node.js 侧边车禁用
-    - watcher 监听跳过、fsnotify 平台限制
-    - SAF 废弃、MANAGE_EXTERNAL_STORAGE 权限模型
-    - 前端能力黑名单同步（ANDROID_UNAVAILABLE）
-    - build-tag 双文件平台隔离
-  pitfalls:
-    - 「静默成功」陷阱：Android 上 xdg-open/exec 链静默失败会掩盖问题 → 必须返回含「请手动」提示的明确错误
-    - 「假活」陷阱：watcher 守卫缺失时，fw.Add 逐目录失败后 loop 空转 = running=true 假活；Android 必须直接跳过
-    - 「一刀切」陷阱：把 RevealInExplorer/OpenFolder 等绑定全部 false → 应仅在 ANDROID_UNAVAILABLE 黑名单内才禁
-    - 「content:// URI」陷阱：误引入 SAF/URI 桥 → SAF 已弃用，禁止复活
-    - 「build-tag 混用」陷阱：平台差异大的逻辑用 runtime.GOOS 分支 → 应用 build-tag 双文件保证编译期隔离
-    - 「路径管理混乱」陷阱：Android 沙盒私有目录与公共仓库根混用 → androidPathManager 严格分离
-    - 「前端/后端黑名单不同步」陷阱：Go 新增桌面专属拒绝项未同步 platform-web.ts → 三谓词测试 platform-parity.test.ts 会爆
-    - 「重启假设」陷阱：Android 上调用 os.Executable + exec.Command → Activity 生命周期不兼容，显式拒绝
-  use_when:
-    - Android
-    - 平台守卫
-    - RevealInExplorer
-    - OpenFolder
-    - RestartApplication
-    - xdg-open
-    - 重启
-    - Node.js
-    - SAF
-    - MANAGE_EXTERNAL_STORAGE
-    - watcher 守卫
-    - fsnotify
-    - build-tag
-    - pathmgr
 quick_intents:
-  - Android 平台守卫、RevealInExplorer/OpenFolder 降级
+  - Android 平台守卫、RevealInExplorer/OpenFolder 降级、文件浏览失败处理
   - 跨平台路径处理、pathmgr
-  - 平台分支、WASM decoder 平台差异
+  - 平台分支差异：WASM decoder / 进程重启 / Node.js sidecar 禁用、build-tag 双文件隔离
   - watcher 监听跳过、fsnotify 平台限制
-  - SAF 废弃、前端能力黑名单同步（ANDROID_UNAVAILABLE）
+  - SAF 废弃、MANAGE_EXTERNAL_STORAGE 权限模型、前端黑名单同步（ANDROID_UNAVAILABLE）
+
 pitfalls:
   - 「静默成功」陷阱：Android 上 xdg-open/exec 链静默失败会掩盖问题 → 必须返回含「请手动」提示的明确错误
   - 「假活」陷阱：watcher 守卫缺失时，fw.Add 逐目录失败后 loop 空转 = running=true 假活；Android 必须直接跳过
@@ -124,17 +89,21 @@ pitfalls:
   - 「前端/后端黑名单不同步」陷阱：Go 新增桌面专属拒绝项未同步 platform-web.ts → 三谓词测试 platform-parity.test.ts 会爆
   - 「重启假设」陷阱：Android 上调用 os.Executable + exec.Command → Activity 生命周期不兼容，显式拒绝
 use_when:
-  - Android
-  - 平台守卫
-  - RevealInExplorer
-  - OpenFolder
-  - xdg-open
-  - SAF
+  - Android、平台守卫
+  - RevealInExplorer / OpenFolder / xdg-open
+  - SAF / MANAGE_EXTERNAL_STORAGE
   - build-tag
   - pathmgr
+  - RestartApplication / 重启
+  - Node.js
+  - watcher 守卫 / fsnotify
+
 tests:
   - internal/app/app_config_test.go
+quick_groups:
+  - 后端桥接与数据存储
 status: active
+
 ---
 # Android 平台守卫（Go 侧）
 

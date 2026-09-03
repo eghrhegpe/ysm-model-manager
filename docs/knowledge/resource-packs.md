@@ -11,14 +11,6 @@ auto_fields:
     - VIEW_TESTIDS
   tests:
     - frontend/src/views/app-preview/detail.test.ts
-  invariant_anchors:
-    - frontend/src/views/app-preview/detail.ts|showResourcePack
-    - frontend/src/views/app-preview/detail.ts|showShaderpack
-  use_when:
-    - 资源包
-    - 光影包
-    - resourcepack
-    - shaderpack
 affected: false
 tests:
   - frontend/src/views/app-preview/detail.test.ts

@@ -31,15 +31,6 @@ auto_fields:
     - splitBlockEntries
     - splitTopLevelCommas
     - tokenize
-  use_when:
-    - 缺失 import
-    - auto-import
-    - 导出符号
-    - tokenize
-    - 词法
-    - 缺失导入
-    - goimports
-    - 大脚本拆分
 use_when:
   - 缺失 import
   - auto-import

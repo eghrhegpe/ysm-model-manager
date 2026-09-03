@@ -10,25 +10,6 @@ auto_fields:
     - fmtDate
     - formatBytes
     - sizeColor
-  quick_groups:
-    - 跨组件通信与页面
-  quick_intents:
-    - 文件大小、字节格式化、KB MB
-    - 日期格式化、友好日期、文件大小颜色
-  quick_risk_lines:
-    - 文件大小 / 日期必须走 format.ts 的格式化函数，禁止手写格式化
-  pitfalls:
-    - 手写格式化 → 单位不一致、时区错乱；必须经 format.ts
-    - 日期未走友好日期 → 用户看不懂时间戳；必须经 friendlyDate
-  use_when:
-    - 文件大小
-    - 字节格式化
-    - KB MB
-    - 日期格式化
-    - 友好日期
-    - 文件大小颜色
-  invariant_anchors:
-    - frontend/src/utils/dom/format.ts|Number.isFinite
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

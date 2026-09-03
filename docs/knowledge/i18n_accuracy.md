@@ -22,14 +22,6 @@ auto_fields:
   tests:
     - frontend/src/core/i18n/locales-consistency.test.ts
     - tests/test_i18n_key_naming.ts
-  use_when:
-    - 翻译准确度
-    - 键名与值语义错位
-    - i18n 翻译扫描
-    - en 丢 Count
-    - Opacity 误译
-    - 术语统一
-    - 翻译名实不符
 tests:
   - frontend/src/core/i18n/locales-consistency.test.ts
   - tests/test_i18n_key_naming.ts

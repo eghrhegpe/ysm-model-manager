@@ -20,21 +20,6 @@ auto_fields:
     - PreviewHandle
     - PreviewScene
     - switchPreview
-  quick_groups:
-    - 3D 预览与模型追加
-  quick_intents:
-    - 拆 mount3D 巨函数
-    - 评审 mount-preview-core.ts
-  quick_risk_lines:
-    - mount3D 仍 ~600 行（已拆出 mp* 子函数，但本体仍超 100 行红线）；继续往里加新逻辑需评审
-  pitfalls:
-    - mount3D 本体仍 ~600 行 → 每加逻辑都会进一步膨胀；新逻辑应先拆为 mp* 包级函数再调用
-    - safeDispose 未复用 → 重复写释放逻辑、资源泄漏；必须经 safeDispose 原语
-  use_when:
-    - 拆 mount3D 巨函数
-    - 评审 mount-preview-core.ts
-  perf:
-    - gpu-bound
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

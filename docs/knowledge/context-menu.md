@@ -40,29 +40,6 @@ auto_fields:
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-toast/index.test.ts
     - frontend/src/views/context-menu/index.test.ts
-  use_when:
-    - 右键菜单
-    - 右键
-    - 上下文菜单
-    - ctx:show
-    - menu:show
-    - 批量操作
-    - 移入回收站
-  invariant_anchors:
-    - frontend/src/core/context-menus.ts|registerContextMenus
-    - frontend/src/core/menu-defs.ts|MENU_DEFS
-    - frontend/src/core/menu-defs.ts|getMenuDef
-  quick_groups:
-    - UI 交互与弹窗
-  quick_intents:
-    - 右键菜单、添加菜单项
-    - 菜单行为执行、ctx:show
-  quick_risk_lines:
-    - 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 core/context-menus.ts
-    - 禁止 view 层手写菜单项
-  pitfalls:
-    - 「view 层」内联菜单结构 → 必须声明进 menu-defs.ts
-    - file/dir handler 各用 FileCtx/DirCtx（Omit 掉对立字段）；dir handler 读 ctx.path→编译报错（P2-1 表级窄化）
 tests:
   - frontend/src/core/context-menus.test.ts
   - frontend/src/core/handlers/instance-ops.test.ts
@@ -92,6 +69,8 @@ quick_risk_lines:
   - 禁止 view 层手写菜单项
 pitfalls:
   - 「view 层」内联菜单结构 → 必须声明进 menu-defs.ts
+  - file/dir handler 各用 FileCtx/DirCtx（Omit 掉对立字段）；dir handler 读 ctx.path→编译报错（P2-1 表级窄化）
+
 status: active
 ---
 

@@ -67,25 +67,6 @@ auto_fields:
     - WebComponentBase
     - YSW_FAB_CSS
     - YSW_TOOLTIP_CSS
-  quick_groups:
-    - 跨组件通信与页面
-  quick_intents:
-    - DOM 工具、esc 转义、搜索高亮、XSS
-    - toast-ms / focus-restore
-  quick_risk_lines:
-    - HTML 内容注入必须走 esc() 转义，禁止直接 innerHTML 拼接用户输入
-  pitfalls:
-    - 直拼 innerHTML → XSS 注入；必须经 esc() 转义
-    - toast 时长内联魔法数字 → 与全应用不一致；必须用 toast-ms 的语义常量
-  use_when:
-    - esc
-    - HTML 转义
-    - innerHTML
-    - 搜索高亮
-    - mark
-    - XSS
-  invariant_anchors:
-    - frontend/src/utils/dom/html.ts|export function esc
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

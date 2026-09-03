@@ -24,27 +24,6 @@ auto_fields:
     - SimpleCopyImporter.Import
     - SimpleCopyImporter.Type
     - WriteFileAtomic
-  quick_groups:
-    - 文件操作与标签
-  quick_intents:
-    - 导入、导入策略、导入队列
-    - importer、DetectContainerType
-    - fsutil.WriteFileAtomic
-  quick_risk_lines:
-    - 导入必须走 go/importer，落地用 fsutil.WriteFileAtomic 原子替换，禁止直写目标文件
-  pitfalls:
-    - 直写目标文件 → 中断留下半文件；必须经 WriteFileAtomic 的 tmp+rename
-    - 未走 DetectContainerType → 误判 zip 类型、解压错误；必须先 DetectContainerType 分流
-  use_when:
-    - 导入
-    - 策略
-    - 导入队列
-    - importer
-  perf:
-    - io-bound
-  invariant_anchors:
-    - go/importer/importer_file.go|fsutil.WriteFileAtomic
-    - go/importer/importer_file.go|DetectContainerType
 quick_groups:
   - 文件操作与标签
 quick_intents:

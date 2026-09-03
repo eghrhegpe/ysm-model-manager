@@ -14,27 +14,6 @@ auto_fields:
     - RESOURCE_EXTS
   tests:
     - frontend/src/utils/resource/extensions.test.ts
-  quick_groups:
-    - 配置与注册表
-  quick_intents:
-    - 扩展名、支持的文件类型、拖拽过滤
-    - RESOURCE_EXTS/ALL_EXTS、导入过滤、扩展名归属
-  quick_risk_lines:
-    - 扩展名判定必须走 extensions.ts 的 isSupportedExt，拖拽导入场景禁止等待异步注册表
-  pitfalls:
-    - 拖拽导入等待异步注册表 → 导入按钮短暂不可用；必须用 RESOURCE_EXTS 静态表
-    - 静态表未与 resource_types.json 对齐 → 三端不一致；必须由契约测试守护
-  use_when:
-    - 扩展名
-    - 支持的文件类型
-    - 拖拽过滤
-    - RESOURCE_EXTS
-    - ALL_EXTS
-    - 导入过滤
-    - 扩展名归属
-  invariant_anchors:
-    - frontend/src/utils/resource/extensions.ts|RESOURCE_EXTS
-    - frontend/src/utils/resource/extensions.ts|isSupportedExt
 tests:
   - frontend/src/utils/resource/extensions.test.ts
 quick_groups:

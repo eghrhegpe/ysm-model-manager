@@ -46,15 +46,6 @@ auto_fields:
     - RunCLI
     - String
     - TimingInfo
-  use_when:
-    - FBX
-    - CLI
-    - 命令行
-    - 转换
-    - glTF
-    - GLB
-    - fbx2gltf
-    - assimp
 use_when:
   - FBX
   - CLI

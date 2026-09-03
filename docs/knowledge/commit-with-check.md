@@ -21,13 +21,6 @@ auto_fields:
     - parsePorcelain
     - PorcelainEntry
     - StageInput
-  use_when:
-    - commit-with-check
-    - 自动提交
-    - 并发提交
-    - 临时索引
-    - 白名单提交
-    - 门禁后自动 commit
 use_when:
   - commit-with-check
   - 自动提交

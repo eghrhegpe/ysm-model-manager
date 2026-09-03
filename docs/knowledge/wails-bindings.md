@@ -83,6 +83,7 @@ auto_fields:
     - App.LoadGitHubRepos
     - App.LoadResourceTypes
     - App.LoadWorkshopCreators
+    - App.MergeCommunityCreatorsFromJSON
     - App.MergeWorkshopCreatorsFromJSON
     - App.MoveModelFile
     - App.OpenFolder
@@ -137,29 +138,6 @@ auto_fields:
     - NewApp
     - NewDownloadQueue
     - ReadFileMeta
-  quick_groups:
-    - 后端桥接与数据存储
-  quick_intents:
-    - API 总览、Binding 有哪些方法、App 方法签名
-    - GetAppVersion / ScanModelEntries / SearchModels
-    - 调后端、app.ts 绑定、getApp
-  quick_risk_lines:
-    - 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go
-  pitfalls:
-    - 直调 window.go 方法 → Wails 启动时序不确定、方法未就绪时调用失败；必须经 getApp() 代理
-    - 在 web 模式直调 wails binding → window.go 不存在；必须走 backend-web 的 browser-adapter
-  use_when:
-    - API
-    - Binding
-    - 调用后端
-    - getApp
-    - 方法签名
-    - app.ts 绑定
-  invariant_anchors:
-    - internal/app/app.go|func (a *App) GetAppVersion
-    - internal/app/app_scan.go|func (a *App) ScanModelEntries
-    - internal/app/app_scan.go|func (a *App) SearchModels
-    - internal/app/app_install_import.go|InstallModelTo
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

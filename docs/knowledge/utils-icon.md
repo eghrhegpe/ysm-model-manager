@@ -9,25 +9,6 @@ auto_fields:
   symbols_with_lines:
     - fileIcon
     - isYsmName
-  quick_groups:
-    - 跨组件通信与页面
-  quick_intents:
-    - 图标、emoji、文件图标、fileIcon
-    - isYsmName
-  quick_risk_lines:
-    - 文件图标必须走 icon.ts 的 fileIcon，禁止手写文件名→图标映射
-  pitfalls:
-    - 手写文件名→图标映射 → 与 fileIcon 不一致、新类型缺图标；必须经 fileIcon
-    - isYsmName 判定不准确 → 图标错位；必须经 isYsmName 的统一判定
-  use_when:
-    - 图标
-    - emoji
-    - 文件图标
-    - fileIcon
-    - 判断 YSM 文件
-  invariant_anchors:
-    - frontend/src/utils/icon/icon.ts|fileIcon
-    - frontend/src/utils/icon/icon.ts|isYsmName
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

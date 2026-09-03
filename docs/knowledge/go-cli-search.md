@@ -12,29 +12,6 @@ auto_fields:
     - RunCLI
   tests:
     - go/cli/cli_test.go
-  quick_groups:
-    - 模型扫描与仓库管理
-  quick_intents:
-    - CLI 搜索、命令行搜索、search 命令
-    - 关键词搜索、数值范围搜索
-    - runSearch
-  quick_risk_lines:
-    - CLI 搜索必须复用 go/cli 的 SearchModels 后端，禁止 CLI 层手写搜索逻辑
-  pitfalls:
-    - CLI 手写搜索 → 与 GUI 搜索结果不一致、参数不统一；必须复用 go/cli 的 SearchModels
-    - runSearch 未传范围参数 → 数值筛选失效；必须完整传 6 个范围参数
-  use_when:
-    - CLI 搜索
-    - 命令行搜索
-    - search 命令
-    - 关键词搜索
-    - 数值范围搜索
-    - 模型搜索
-    - go run search
-    - runSearch
-  invariant_anchors:
-    - go/cli/model.go|runSearch
-    - go/cli/model.go|printSearchTable
 tests:
   - go/cli/cli_test.go
 quick_groups:

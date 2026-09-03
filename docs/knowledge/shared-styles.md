@@ -11,27 +11,6 @@ auto_fields:
     - btnBaseCSS
     - focusVisibleCSS
     - treeCSS
-  quick_groups:
-    - 跨组件通信与页面
-  quick_intents:
-    - 共享样式、btn-base、focus-visible
-    - tree 样式、Shadow DOM 样式、CSS 变量
-  quick_risk_lines:
-    - 按钮样式必须走 btnBaseCSS 统一体系，禁止手写按钮 CSS
-  pitfalls:
-    - 手写按钮 CSS → 与 btn-base 不一致、主题切换失效；必须经 btnBaseCSS
-    - 颜色 / 间距 / 字号不消费 CSS 变量 → 主题切换后样式残留；必须用 var(--*) 变量
-  use_when:
-    - 共享样式
-    - 按钮样式
-    - btn-base
-    - focus-visible
-    - tree 样式
-    - Shadow DOM 样式
-    - CSS 变量
-  invariant_anchors:
-    - frontend/src/utils/dom/css.ts|btnBaseCSS
-    - frontend/src/views/app-tree/app-tree-styles.ts|treeCSS
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

@@ -8,14 +8,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - Detect
-  quick_groups:
-    - 配置与注册表
-  quick_intents:
-    - 启动器检测、HMCL / PCL / Minecraft 识别
-    - 实例目录解析、运行目录推导
-    - DetectLauncherInstances
-  use_when:
-    - 改启动器发现/实例目录解析逻辑时
 quick_groups:
   - 配置与注册表
 quick_intents:

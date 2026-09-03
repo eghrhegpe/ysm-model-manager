@@ -48,28 +48,6 @@ auto_fields:
   tests:
     - go/packs/classify_test.go
     - go/packs/model_file_test.go
-  quick_groups:
-    - 模型扫描与仓库管理
-  quick_intents:
-    - 整合包分类、路由、location 路由
-    - zipentry 指纹、蓝图 / 投影 / vrm / pmx
-    - last-wins / priority 裁决
-  quick_risk_lines:
-    - 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑
-  pitfalls:
-    - 前端手写分类 → 与 Go classify 判定不一致、last-wins 裁决丢失；必须交 Go 分类
-    - 新增资源类型未更新 priority → 冲突时优先级错乱；必须经 classify.go 的 priority 表
-  use_when:
-    - 整合包分类
-    - 路由
-    - zipentry 指纹
-    - 蓝图
-    - 回归
-    - last-wins
-  invariant_anchors:
-    - go/packs/classify.go|ClassifyResource
-    - go/packs/classify.go|DetectByEntries
-    - go/types/resource.go|validateRegistrySchema
 tests:
   - go/packs/classify_test.go
   - go/packs/model_file_test.go

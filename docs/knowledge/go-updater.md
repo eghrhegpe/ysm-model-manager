@@ -22,25 +22,6 @@ auto_fields:
     - ReleaseAsset
     - UpdateInfo
     - Write
-  quick_groups:
-    - 配置与注册表
-  quick_intents:
-    - 检查更新、更新下载、update
-    - version-updater
-  quick_risk_lines:
-    - 更新检查必须走 go/updater，前端禁止手写更新下载逻辑
-  pitfalls:
-    - 手写更新下载 → 与 go/updater 的增量 / 全量策略不一致；必须经 go/updater
-    - 更新未完成前继续操作 → 半更新状态、启动失败；必须等更新完成再操作
-  use_when:
-    - 自动更新
-    - 版本升级
-    - updater
-  perf:
-    - io-bound
-  invariant_anchors:
-    - go/updater/updater.go|fetchExpectedHash
-    - go/updater/updater.go|StatusCode
 quick_groups:
   - 配置与注册表
 quick_intents:

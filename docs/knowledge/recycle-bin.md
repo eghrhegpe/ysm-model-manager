@@ -12,29 +12,6 @@ auto_fields:
     - VIEW_TESTIDS
   tests:
     - frontend/src/features/recycle-bin.integration.test.ts
-  quick_groups:
-    - 文件操作与标签
-  quick_intents:
-    - 回收站、恢复文件、清空回收站
-    - 软删除、recycle、还原
-    - initRecycleBin / GetRepoRoot / createLoadGuard
-  quick_risk_lines:
-    - 删除必须走 .recycle 软删除（go/recycle 实现），前端禁止直接 os.Remove
-  pitfalls:
-    - 前端直调 os.Remove → 无法恢复、跳过 ADR-038 合并规则；必须经 go/recycle
-    - initRecycleBin 不返回清理函数 → 监听泄漏；必须在 app-content 切换页时调用返回的清理函数
-  use_when:
-    - 回收站
-    - 恢复文件
-    - 清空回收站
-    - 软删除
-    - recycle
-    - 还原
-  perf:
-    - io-bound
-  invariant_anchors:
-    - frontend/src/features/recycle-bin.ts|GetRepoRoot
-    - frontend/src/utils/async/load-guard.ts|createLoadGuard
 tests:
   - frontend/src/features/recycle-bin.integration.test.ts
 quick_groups:

@@ -17,16 +17,6 @@ auto_fields:
     - packTextureLabel
   reference_files:
     - PrismarineJS/prismarine-viewer viewer/lib/models.js (getSectionGeometry)  # 仅只读参考，不引入其渲染器
-  use_when:
-    - MC 方块模型 AO / 平滑光照
-    - biome tint / 草叶水配色 / 4 类 tint
-    - pack-model-adapter 材质升级后续（ADR-080）
-    - 顶点色遮蔽权重
-  perf:
-    - cpu-bound
-  invariant_anchors:
-    - frontend/src/preview-3d/adapters/pack-model-adapter.ts|tintCategoryForPath
-    - frontend/src/preview-3d/mc-tints.ts|getTintColorSync
 reference_files:
   - PrismarineJS/prismarine-viewer viewer/lib/models.js (getSectionGeometry)  # 仅只读参考，不引入其渲染器
 use_when:

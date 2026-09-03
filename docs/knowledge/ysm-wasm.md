@@ -39,38 +39,6 @@ auto_fields:
     - writeHeapBytes
     - YsmDecodedFile
     - YsmModuleConfig
-  quick_groups:
-    - 3D 预览与模型追加
-  quick_intents:
-    - WASM 解析器、YSMParser、ysm 解码
-    - 加密模型、wasm 加载、Emscripten
-    - MEMFS / node 解码 / callMain
-  quick_risk_lines:
-    - YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析
-  pitfalls:
-    - 手写 YSM 字节流解析 → 与 YSMParser WASM 输出不一致；必须经 ysm-wasm
-    - wasmBinary 未释放 → 内存泄漏；必须复用 wasm 实例并释放
-    - Worker 内静态 import WASM 数据模块 → 另一变体成 1.5MB 死重；必须动态 import
-    - vite worker.format 未设 es → iife 强制 inlineDynamicImports，动态 import 构建直接失败
-  use_when:
-    - WASM
-    - YSMParser
-    - ysm 解码
-    - wasm 加载
-    - MEMFS
-    - callMain
-    - stats.worker
-    - 按需加载
-    - crossOriginIsolated
-    - worker.format
-    - pthread
-  invariant_anchors:
-    - go/avatar/avatar_decode.go|DecodeYSMFiles
-    - go/avatar/avatar_decode.go|SetNodeJS
-    - internal/app/wasm_decoder.go|decodeYSMViaNodeJS
-  perf:
-    - cpu-bound
-    - single-thread
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -86,14 +54,15 @@ pitfalls:
   - vite worker.format 未设 es → iife 强制 inlineDynamicImports，动态 import 构建直接失败
 
 use_when:
-  - WASM
-  - YSMParser
+  - WASM / YSMParser
   - ysm 解码
-  - wasm 加载
+  - wasm 加载、按需加载
   - MEMFS
   - callMain
-  - 按需加载
   - crossOriginIsolated
+  - stats.worker / worker.format
+  - pthread
+
 invariant_anchors:
   - go/avatar/avatar_decode.go|DecodeYSMFiles
   - go/avatar/avatar_decode.go|SetNodeJS

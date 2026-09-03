@@ -1,12 +1,12 @@
 use super::*;
-use super::scan::{is_disable_suffix, is_model_json_name, strip_disable_suffix};
+use super::scan::{is_disable_suffix, is_model_json_name, strip_disable_suffix, system_time_to_unix_ms};
 use rust_test_utils::TempRoot;
 use std::{
     fs,
     path::{Path, PathBuf},
     process,
     sync::atomic::{AtomicU64, Ordering},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 fn policy() -> ScanPolicy {
@@ -194,6 +194,14 @@ fn parity_json<'a>(doc: &'a serde_json::Value, key: &str) -> Vec<(&'a str, &'a s
             (a, b)
         })
         .collect()
+}
+
+#[test]
+fn system_time_before_epoch_returns_negative() {
+    // epoch 前 mtime 应返回负值：当前生产文件均晚于 epoch，但契约应锁定边界行为。
+    let before_epoch = UNIX_EPOCH - Duration::from_secs(1);
+    let ms = system_time_to_unix_ms(before_epoch);
+    assert_eq!(ms, -1000, "epoch 前 1 秒应返回 -1000ms");
 }
 
 #[test]

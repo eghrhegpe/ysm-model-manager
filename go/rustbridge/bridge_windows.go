@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"sort"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -109,7 +110,15 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 	defer freeProc.Call(uintptr(unsafe.Pointer(output.ptr)), output.len, output.cap) //nolint:errcheck
 
 	data := append([]byte(nil), unsafe.Slice(output.ptr, int(output.len))...)
-	return parseResponse(data, true)
+	response, err := parseResponse(data, true)
+	if err != nil {
+		return response, err
+	}
+	// manifest 路径 entries 按 path 排序，与 scan_json（eager）路径对称。
+	sort.Slice(response.Entries, func(i, j int) bool {
+		return response.Entries[i].Path < response.Entries[j].Path
+	})
+	return response, nil
 }
 
 func load() error {

@@ -110,11 +110,15 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 	}
 	defer C.ysm_buffer_free((*C.uchar)(output.ptr), C.size_t(output.len), C.size_t(output.cap)) //nolint:errcheck
 	data := append([]byte(nil), unsafe.Slice((*byte)(unsafe.Pointer(output.ptr)), int(output.len))...)
+	response, err := parseResponse(data, true)
+	if err != nil {
+		return response, err
+	}
 	// manifest 路径 entries 按 path 排序，与 scan_json（eager）路径对称——保证输出稳定、
 	// 避免依赖 Go 传入顺序；生产调用图不经此路径（ScanEntriesWithHit 缓存命中时不进本函数），
 	// 但测试和预留接口需行为一致。
 	sort.Slice(response.Entries, func(i, j int) bool {
 		return response.Entries[i].Path < response.Entries[j].Path
 	})
-	return parseResponse(data, true)
+	return response, nil
 }

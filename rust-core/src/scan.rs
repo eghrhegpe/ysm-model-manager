@@ -189,7 +189,12 @@ fn resolve_metadata(candidate: Candidate) -> Result<ModelEntry, ScanError> {
     })
 }
 
-fn system_time_to_unix_ms(time: std::time::SystemTime) -> i64 {
+/// 将 SystemTime 转换为 Unix 毫秒（i64）。
+///
+/// 早于 UNIX_EPOCH 的时间返回负值（如 1970 年前的文件 mtime）；晚于 epoch 的返回正值。
+/// `i64::try_from` + `unwrap_or(i64::MAX)` 防止 millis 溢出（理论上需 292 年才溢出，
+/// 但 defensive coding：大文件系统的 mod_time 不会异常，此处保险为主）。
+pub(crate) fn system_time_to_unix_ms(time: std::time::SystemTime) -> i64 {
     match time.duration_since(UNIX_EPOCH) {
         Ok(duration) => i64::try_from(duration.as_millis()).unwrap_or(i64::MAX),
         Err(err) => -i64::try_from(err.duration().as_millis()).unwrap_or(i64::MAX),

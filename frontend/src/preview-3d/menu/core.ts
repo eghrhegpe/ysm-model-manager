@@ -135,7 +135,10 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   return row;
 }
 
-/** buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更） */
+/** buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更）
+ *  - schemaBuilders：core 注册面板（lighting/shadow/postproc/settings/camera/environment），内容 = 状态层 schema
+ *  - fillers：**roles-only**（G3 删 fill* 后唯一残留——加载角色内容组件；新面板禁添，health.test 白名单守卫）
+ *  - runners：动作入口（close 等） */
 export interface PreviewMenuRouters {
   schemaBuilders: Record<string, (menu?: SlideMenuHandle) => PreviewMenuNode[]>;
   fillers: Record<string, (list: HTMLElement, menu?: SlideMenuHandle) => void>;
@@ -143,10 +146,11 @@ export interface PreviewMenuRouters {
 }
 
 /**
- * [子函数 4/9] 构建 core 面板路由表（schema 声明式 → fillers 过程式 → runners 动作式，三级衰退链）。
+ * [子函数 4/9] 构建 core 面板路由表（schemaBuilders 声明式 + fillers roles-only + runners 动作）。
  *   roles 面板需要 setAdapterItems 回写 dock——handle 尚未构造时经 shell 延迟读取。
  *   导出供 preview-menu-health.test.ts 复用（ADR-128 落地前哨：真正执行每个常驻面板渲染器，
  *   捕捉「菜单没迁移就断渲染」），与 check-menu-health.mjs（正则静态扫表）互补。
+ *   [G4 收口] G3 删 fill* 后 fillers 仅剩 roles 一项（内容组件，声明式化属 ADR-126 P4 后续）；
  */
 export function buildPreviewMenuRouters(
   ctx: PreviewMenuCtx,
@@ -199,7 +203,11 @@ export function buildPreviewMenuRouters(
   return routers;
 }
 
-/** [子函数 5/9] 单面板渲染（原 renderPanel 闭包升格）：schema → children 声明式 → renderCustom → action → fillers 五级衰退 + try-catch 错误边界 */
+/** [子函数 5/9] 单面板渲染：四路互斥分派 + try-catch 错误边界。
+ *  命中路径（if-else 互斥，每面板唯一）：① schemaBuilders（core 注册面板）② renderAdapterPanelContent
+ *  （adapter 面板，内部 schema-registry → children → renderCustom 三通道衰退）③ node.action（动作节点）
+ *  ④ fillers（仅 roles）。[G4 收口] G3 删 fill* 旧轨后外层无「逐级衰退」——除 adapter 面板内部三通道外，
+ *  面板不再可能走多条路径；schema 面板内容统一 renderMenu（renderCustomDirect，2026-09 双轨归一）。 */
 export function renderPreviewPanel(
   list: HTMLElement,
   node: PreviewMenuNode,
@@ -245,6 +253,7 @@ export function renderPreviewPanel(
     } else if (node.action) {
       node.action(actionCtx);
     } else {
+      // roles-only：core 注册面板中唯一内容组件（fillRoles），G3 后不再接受新 filler（health.test 白名单守卫）
       routers.fillers[node.id]?.(list, menu);
     }
   } catch (err) {

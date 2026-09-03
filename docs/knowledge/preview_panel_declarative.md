@@ -106,11 +106,15 @@ ADR-125 把**设置面板**的控件统一到 `MenuControlDef[]`（B 层单渲�
 
 ### renderPreviewPanel children 分支（preview-menu/core.ts）
 
-`renderPreviewPanel` 的渲染通道五级衰退：
+`renderPreviewPanel` 的面板渲染分派([G4 收口] 外层为四路 **if-else 互斥分派**,每面板唯一命中——非逐级衰退;真正「衰退」只剩 adapter 面板内部三通道):
 
 ```
-schemaBuilders（声明式 schema）→ children（声明式节点，P4-B 新增）→ renderCustom（命令式逃生舱）→ action（动作）→ fillers（过程式映射）
+① schemaBuilders（core 注册面板，内容统一走 renderMenu + renderCustomDirect）
+② renderAdapterPanelContent（adapter 面板：schema-registry → children → renderCustom 三通道）
+③ node.action（动作节点）→ ④ fillers（roles-only）
 ```
+
+[G4 收口] G3 删 fill* 旧轨后 `fillers` 仅剩 roles 一项（加载角色内容组件，声明式化属 ADR-126 P4 后续），health.test.ts 白名单守卫锁死——新增面板一律走 schemaBuilders / schema-registry / children 声明式通道。
 
 schemaBuilders 分支 2026-09 归一：内容统一走 `renderMenu(list, nodes, { ..., renderCustomDirect: true })`——`controls` kind（cap 控件组）与 `renderCustom`（custom 直接填充）都由 renderMenu 渲染，原 `renderPreviewSchemaContent` 已删。
 
@@ -142,7 +146,7 @@ MMD 与 YSM 截图面板同构（6 角度按钮 + 截图副作用），共享 `S
 - builder 吃状态层快照（与 P4-D visibleWhen 同构）——面板内容随状态响应
 - `PreviewMenuNode.schemaId?: string`：面板节点声明注册 key（缺省回退 node.id），renderPreviewPanel 优先查 registry
 - 重复注册**覆盖**旧 builder（多模型同框活跃模型换菜单语义，与 setAdapterItems 一致）
-- 渲染通道三级衰退：`schemaBuilders → schema-registry(schemaId) → children → renderCustom → action → fillers`
+- 渲染分派（[G4 收口]）：schema 面板内容经 `schemaBuilders → renderMenu(renderCustomDirect)`；adapter 面板经 `schema-registry(schemaId) → children → renderCustom` 三通道衰退；fillers 仅 roles（白名单守卫）
 
 ### select 分支（renderMenu，[doc:adr-126-p5-c] 交互控件受控化）
 

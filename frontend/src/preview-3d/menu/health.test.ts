@@ -102,6 +102,36 @@ describe("常驻 dock 面板渲染冒烟", () => {
   });
 });
 
+describe("fillers 通道收敛守卫（G4：roles-only 白名单）", () => {
+  // G3 删 fill* 旧轨后 buildPreviewMenuRouters.fillers 仅剩 roles 一项（加载角色内容组件，
+  // 需 makeRow/makePanelView/actionCtx 等渲染依赖注入，声明式化属 ADR-126 P4 后续）。
+  // 若后人再往 fillers 添条目 → 命令式渲染双轨回潮，本断言即红；
+  // 新增面板一律走 schemaBuilders（core）/ schema-registry / children（adapter）声明式通道。
+  it("fillers 键集合恒等于 ['roles']", () => {
+    const routers: PreviewMenuRouters = buildPreviewMenuRouters(
+      makeCtx(),
+      () => {},
+      mockMenu(),
+      { toast: vi.fn(), closeAllOverlays: vi.fn() },
+      { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4],
+    );
+    expect(Object.keys(routers.fillers).sort()).toEqual(["roles"]);
+  });
+
+  it("自检：fillers 新增条目会被守卫抓到（证明门禁非摆设）", () => {
+    // 模拟回潮：直接构造含第二 filler 的 routers 形状，守卫断言逻辑应能区分
+    const routers: PreviewMenuRouters = buildPreviewMenuRouters(
+      makeCtx(),
+      () => {},
+      mockMenu(),
+      { toast: vi.fn(), closeAllOverlays: vi.fn() },
+      { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4],
+    ) as PreviewMenuRouters & { fillers: Record<string, never> };
+    const regressed = { ...routers.fillers, "new-filler": (): void => {} };
+    expect(Object.keys(regressed).sort()).not.toEqual(["roles"]);
+  });
+});
+
 describe("运行时注册 schema 渲染冒烟（registerSchema 路径）", () => {
   beforeEach(() => resetSchemas());
   afterEach(() => resetSchemas());

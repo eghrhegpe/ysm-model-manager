@@ -207,6 +207,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - 页面级临时缓存（`_workshopCache` / `_githubCache`）与 `_workshopTimer` 定时器在 `disconnectedCallback` 清空
 - 站点搜索带词链接必须**真传**到底层打开调用：`ctx.openUrl(url)` → `openSite(host, site, mode, url)` 的 `url` 不得丢弃
 - 浏览模式收敛为**单源 ref**：`browseMode` 存为 `BrowseModeRef{ v }`，经 `ctx.browseMode` 贯穿到 `renderSiteView` 高亮与 `openUrl`→`openSite`，`setBrowseMode` 只改 `.v` + localStorage → 一处 set、处处一致，无值拷贝 stale
+- **community-data.ts 写回路径（2026-09-03 复核修正）**：`tryAutoMergeCommunity` 的「前端一次合并 + 单次 `SaveWorkshopCreators` 整体保存」规避的是**前端逐站循环调 `SaveWorkshopCreatorsBySite` N 次的跨调用部分提交**——BySite 自身（Go `internal/app/app_workshop.go`）是单次 Load→过滤→原子写的完整事务。代价是合并/去重派生逻辑（`mergeLocalAuthorsInto`/`dedupeCreators`/type 分号段比较）落在 TS 侧，触及 AGENTS.md「Go 派生结果只读」红线；长治方案 = 下沉 Go 新增「多站点合并替换」单次原子 binding，须开 ADR 后动（注释内已标注）
 
 ## 相关
 

@@ -7,6 +7,7 @@ source_files:
   - frontend/src/views/app-content/diagnostics/init.ts
   - frontend/src/views/app-content/diagnostics/logs.ts
   - frontend/src/views/app-content/diagnostics/dedup.ts
+  - frontend/src/views/app-content/diagnostics/dedup-policy.ts
   - frontend/src/views/app-content/diagnostics/health.ts
   - frontend/src/views/app-content/diagnostics/conflicts.ts
   - frontend/src/views/app-content/diagnostics/perf.ts
@@ -17,6 +18,7 @@ auto_fields:
     - bindPerfCopyHandlers
     - createDedupSession
     - DedupConfigShape
+    - DedupFileLike
     - DedupSession
     - EscFn
     - formatSize
@@ -109,7 +111,8 @@ status: active
 
 - `init.ts` — 诊断页 `initDiagnostics`；去重会话 `createDedupSession`（由 `init-pages.ts` 持有会话实例，`session.start` 派发 `model:select` / `stats:refresh` / `tree:reload`）
 - `health.ts` — 仓库体检面板：调 Go 端 `RepoHealthAudit`（go/repoaudit 同源，GUI/CLI 消双轨），渲染分数环/完整性/缓存/资源/去重/警告
-- `dedup.ts` — 去重检测（读 `services/resource-registry.ts` 资源类型注册表 + Go 绑定）；`createDedupSession()` 会话工厂把 busy/exec 重入守卫与去重配置收进闭包，经 `init.ts` re-export 接线
+- `dedup.ts` — 去重检测（读 `services/resource-registry.ts` 资源类型注册表 + Go 绑定）；`createDedupSession()` 会话工厂把 busy/exec 重入守卫与去重配置收进闭包，经 `init.ts` re-export 接线。keep 保留策略纯函数于 2026-09-03 抽至 `dedup-policy.ts`（策略决策零 DOM/会话依赖，渲染默认保留索引与 exec 删除共用同一决策源，防规则漂移）
+- `dedup-policy.ts` — keep 保留策略纯函数层（`getDefaultKeepIdx` + reduce 家族 + `DedupFileLike`），自 `dedup.ts` 抽出（2026-09-03，ADR-040 拆分线延续）；零 mock 单测聚焦策略分支
 - `conflicts.ts` — 冲突列表渲染（依赖 `logs.ts` 的操作日志数据）
 - `logs.ts` — 操作日志渲染：`OP_META` 七种中文标签+图标，状态图标优先读 `Level`（error→❌ / warn→⚠️ / debug→🔍 / fatal→💀 / info→✅），无 Level 按 `Status` 兜底；消费 Go `logs` 包（见知识卡 `go_logs`）
 - `perf.ts` / `perf-cli.ts` / `perf-trace.ts` — 性能面板：CLI 基准（`services/cli-bridge`）+ 加载轨迹（`preview-3d/load-trace.ts`）
@@ -132,6 +135,7 @@ status: active
 - 去重会话 `session.start` 派发的 `model:select` / `stats:refresh` / `tree:reload` 必须齐全，否则去重后界面不刷新
 - 性能轨迹读取 `preview-3d` 的 `getLoadTraces` 为只读快照，不写回
 - 冲突列表顺序与 `logs.ts` 的 `Operation` 分组一致（`OP_META` 标签为单一事实源）
+- exec 读用户选中态按组容器查 `input[type="radio"]:checked`（2026-09-03）：组容器按渲染平铺序与 `allResults.groups` 一一对应，替代按 `name="dedup-keep-<gi>"` 全局拼串——组间插入其它控件不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖；keep-all 值为 `-1` 的 radio 同属组内
 
 ## 相关
 

@@ -1,5 +1,6 @@
 // ===== 诊断页：去重扫描（createDedupSession 会话工厂） =====
 // ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（本文件）/ 冲突扫描（conflicts.ts）
+// keep 保留策略纯函数已抽至 dedup-policy.ts（2026-09-03）：策略决策零 DOM/会话依赖，独立成层。 
 // 去全局化：原模块级可变全局 _dedupBusy / diagExecBusy / dedupConfig 收敛为会话闭包状态，
 // 每会话独立（可 reset、可隔离单测），消除跨调用共享状态的竞态面。
 import { t } from "../../../core/i18n/t.ts";
@@ -10,6 +11,7 @@ import { friendlyError } from "../../../utils/dom/errors.ts";
 import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { fileIcon } from "../../../utils/icon/icon.ts";
 import type { EscFn } from "./logs.ts";
+import { getDefaultKeepIdx } from "./dedup-policy.ts";
 
 // 默认值冻结为唯一权威源；会话 config 为可编辑副本；reset 从默认值展开。
 // 注意：显式标宽 strategy/keepPolicy/priorityPath 为 string，避免 Object.freeze
@@ -25,84 +27,6 @@ const DEDUP_DEFAULTS: Readonly<DedupConfigShape> = Object.freeze({
   keepPolicy: "oldest",
   priorityPath: "",
 });
-
-// ===== getDefaultKeepIdx 子函数：闭包 toTimestamp 升格（纯函数） =====
-function toTimestamp(modTime?: string | number): number {
-  if (modTime === undefined || modTime === null || modTime === "") return Number.MAX_SAFE_INTEGER;
-  const ts = typeof modTime === "number" ? modTime : Date.parse(modTime);
-  return isNaN(ts) ? Number.MAX_SAFE_INTEGER : ts;
-}
-
-function reduceOldestIdx(
-  files: { path: string; size: number; modTime?: string | number }[],
-): number {
-  return files.reduce(
-    (best, e, i, arr) =>
-      toTimestamp(e.modTime) < toTimestamp(arr[best].modTime) ? i : best,
-    0,
-  );
-}
-
-function reduceNewestIdx(
-  files: { path: string; size: number; modTime?: string | number }[],
-): number {
-  return files.reduce(
-    (best, e, i, arr) =>
-      toTimestamp(e.modTime) > toTimestamp(arr[best].modTime) ? i : best,
-    0,
-  );
-}
-
-function reducePathIdx(
-  files: { path: string; size: number; modTime?: string | number }[],
-  priorityPath: string,
-): number {
-  if (priorityPath) {
-    const idx = files.findIndex((f) =>
-      f.path.toLowerCase().startsWith(priorityPath.toLowerCase()),
-    );
-    if (idx >= 0) return idx;
-  }
-  return files.reduce(
-    (best, e, i, arr) => (e.size > arr[best].size ? i : best),
-    0,
-  );
-}
-
-function reduceLargestIdx(
-  files: { path: string; size: number; modTime?: string | number }[],
-): number {
-  return files.reduce(
-    (best, e, i, arr) => (e.size > arr[best].size ? i : best),
-    0,
-  );
-}
-
-/**
- * 根据保留策略决定默认保留的文件索引
- * - "oldest": 保留最早修改的文件
- * - "newest": 保留最新修改的文件
- * - "path": 保留指定路径前缀匹配的文件
- * - 其他/默认: 保留最大文件（size 最大）
- */
-export function getDefaultKeepIdx(
-  files: { path: string; size: number; modTime?: string | number }[],
-  policy: string,
-  priorityPath: string,
-): number {
-  if (files.length === 0) return 0;
-
-  switch (policy) {
-    case "oldest":
-      return reduceOldestIdx(files);
-    case "newest":
-      return reduceNewestIdx(files);
-    case "path":
-      return reducePathIdx(files, priorityPath);
-    default:
-      return reduceLargestIdx(files);
-  }
-}
 
 // ===== 类型提级 =====
 interface ScanTarget {
@@ -405,30 +329,34 @@ export function createDedupSession(): DedupSession {
     if (state.execBusy) return;
     state.execBusy = true;
     let del = 0,
-      fail = 0,
-      gi2 = 0;
+      fail = 0;
+    // 组容器按渲染平铺序与 allResults 的 groups 一一对应（渲染 groupIndex 递增 = 同序）。
+    // 逐组在容器内查 :checked，替代按 name="dedup-keep-<gi>" 的全局拼串查询——
+    // 组间插入其它控件也不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖。
+    const groupEls = Array.from(
+      list.querySelectorAll<HTMLElement>(".diag-dedup-group"),
+    );
+    let gi = 0;
     try {
       for (const rtResult of allResults) {
         for (const group of rtResult.groups) {
           const files = group.files || [];
-          const selEl = list.querySelector(
-            'input[name="dedup-keep-' + gi2 + '"]:checked',
-          ) as HTMLInputElement | null;
+          const selEl = groupEls[gi]?.querySelector<HTMLInputElement>(
+            'input[type="radio"]:checked',
+          );
           const selected = selEl ? parseInt(selEl.value, 10) : 0;
-          if (selected === -1) {
-            gi2++;
-            continue;
-          }
-          for (let fi = 0; fi < files.length; fi++) {
-            if (fi === selected) continue;
-            try {
-              await MoveToRecycle(files[fi].path);
-              del++;
-            } catch {
-              fail++;
+          if (selected !== -1) {
+            for (let fi = 0; fi < files.length; fi++) {
+              if (fi === selected) continue;
+              try {
+                await MoveToRecycle(files[fi].path);
+                del++;
+              } catch {
+                fail++;
+              }
             }
           }
-          gi2++;
+          gi++;
         }
       }
       if (del > 0) {

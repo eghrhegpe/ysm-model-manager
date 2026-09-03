@@ -4,7 +4,8 @@
 // 会话工厂特性：每测试新开会话，状态互不串扰。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "../../../test-utils/index.ts";
-import { createDedupSession, getDefaultKeepIdx } from "./dedup.ts";
+import { createDedupSession } from "./dedup.ts";
+import { getDefaultKeepIdx } from "./dedup-policy.ts";
 
 const { busEmit, getApp, loadResourceRegistry } = vi.hoisted(() => ({
   busEmit: vi.fn(),
@@ -135,5 +136,47 @@ describe("getDefaultKeepIdx — keep 策略分支", () => {
   });
   it("空数组 → 0", () => {
     expect(getDefaultKeepIdx([], "oldest", "")).toBe(0);
+  });
+});
+
+describe("createDedupSession — exec 多组 DOM 读态（组级 :checked，非 name 拼串）", () => {
+  it("两组成员各自按组读选中，keep-all 组整组跳过不删", async () => {
+    const moveFn = vi.fn(async () => {});
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => [
+        {
+          files: [
+            { path: "/a/1.ysm", name: "1.ysm", size: 100, modTime: 1000 },
+            { path: "/b/2.ysm", name: "2.ysm", size: 200, modTime: 2000 },
+          ],
+        },
+        {
+          files: [
+            { path: "/c/3.ysm", name: "3.ysm", size: 300, modTime: 3000 },
+            { path: "/d/4.ysm", name: "4.ysm", size: 400, modTime: 4000 },
+          ],
+        },
+      ]),
+      MoveToRecycle: moveFn,
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "ysm");
+    await waitFor(() => list.querySelector("#diag-dedup-exec"));
+
+    // 两组容器按渲染序对齐 allResults；组 2 用户改选 keep-all（-1）
+    const groups = list.querySelectorAll<HTMLElement>(".diag-dedup-group");
+    expect(groups.length).toBe(2);
+    const keepAll2 = groups[1]!.querySelector<HTMLInputElement>(
+      'input[type="radio"][value="-1"]',
+    )!;
+    keepAll2.checked = true;
+
+    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    await waitFor(() => list.textContent!.includes("去重完成"));
+    // 组 1 默认 oldest → 保留 1.ysm、删 2.ysm；组 2 keep-all → 3/4.ysm 均不删
+    expect(moveFn).toHaveBeenCalledTimes(1);
+    expect(moveFn).toHaveBeenCalledWith("/b/2.ysm");
   });
 });

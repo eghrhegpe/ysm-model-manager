@@ -191,10 +191,15 @@ async function tryAutoMergeCommunity(creators: LocalCreator[]): Promise<void> {
     try {
       const { LoadWorkshopCreators, SaveWorkshopCreators } =
         await getApp();
-      // 数据安全（审核 2026-08-16）：原逐站点循环调 SaveWorkshopCreatorsBySite
-      // （每次 load 全部→过滤当前站点→save 全部），中途失败会部分提交——
-      // 前站点已保存、后站点未保存，覆盖层混合新旧数据。改为前端一次合并 +
-      // 单次整体保存（localStorage setItem / 文件原子写 = 原子，无部分提交）。
+      // 写回路径说明（2026-09-03 复核修正）：
+      // 风险实为「前端逐站点循环调 SaveWorkshopCreatorsBySite N 次」的跨调用部分提交——
+      // 第 k 次成功、第 k+1 次失败时前 k 个站点已落盘。BySite 自身（Go 侧 app_workshop.go）
+      // 是单次 Load→过滤→SaveWorkshopCreators 的原子写，无内部部分提交。
+      // 2026-08-16 审核为规避跨调用部分提交，选择「前端一次合并 + 单次整体保存」（原子）。
+      // 代价：合并/去重派生逻辑落在 TS 侧（mergeLocalAuthorsInto/dedupeCreators），
+      // 触及 AGENTS.md「Go 派生结果只读」红线。长治方案：下沉 Go——新增单次原子
+      // 「多站点合并替换」binding（内部一次 Load→按 type 分号段过滤各 site→去重追加→
+      // WriteFileAtomic），前端只传社区拉取结果、不重算。此项跨 Go 层，须开 ADR 后动。
       const all = (await LoadWorkshopCreators()) || [];
       // 按站点分组（type 分号段），对齐原 SaveWorkshopCreatorsBySite 语义
       const siteMap: Record<string, LocalCreator[]> = {};

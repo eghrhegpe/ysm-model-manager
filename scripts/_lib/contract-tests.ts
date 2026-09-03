@@ -39,6 +39,7 @@ export function collectContractTests() {
 export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // —— docs ——
   'check-knowledge-drift-affected.ts': ['docs'],
+  'check-knowledge-fm-delimiter.ts': ['docs'],
   'check-knowledge-hook.ts': ['docs'],
   'check-knowledge-perf-tags.ts': ['docs'],
   'test_check_readme_index.ts': ['docs', 'tests'],

@@ -920,7 +920,8 @@ export async function mount3D(
     }
     for (const b of session.allContent) safeDispose(b);
     session.allContent.length = 0;
-    session.content?.dispose();
+    // 不单独调 session.content?.dispose()——content 已在 allContent 中，
+    // safeDispose 循环已 dispose 它；再调一次是 double-dispose（code review #2 修复）
     // P2 守卫（对齐旧 skeleton close3D 语义）：加载期间被 ESC/切模型/invalidate
     // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，
     // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。

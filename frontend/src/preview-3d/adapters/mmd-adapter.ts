@@ -1601,15 +1601,17 @@ export async function buildMmdScene(
     if (!c.buildSucceeded) {
       // 失败路径 = 成功路径的 dispose 逆向（P1 修复，兄弟会话审核发现）
       // stage3 之后抛错时 mesh/geometry/texture 已分配，不 dispose 会泄漏 GPU 资源
-      try {
-        if (c.mesh) await disposeMmdMesh(c.mesh, mmdDiag, c.port, "dispose-fail");
-        c.mmd?.dispose();
-        c.pmxParser?.dispose?.();
-        c.ktx2Loader?.dispose();
-        c.ktx2CacheLoader?.dispose();
-      } catch (e) {
-        dbg("mmd", { op: "dispose-fail-path", err: safeErrorMessage(e) });
-      }
+      // 每个 dispose 独立 try/catch——单个 dispose 抛错不跳过其余（code review #1 修复）
+      try { if (c.mesh) await disposeMmdMesh(c.mesh, mmdDiag, c.port, "dispose-fail"); }
+      catch (e) { dbg("mmd", { op: "dispose-fail-path", err: safeErrorMessage(e) }); }
+      try { c.mmd?.dispose(); }
+      catch (e) { dbg("mmd", { op: "dispose-fail-path", err: safeErrorMessage(e) }); }
+      try { c.pmxParser?.dispose?.(); }
+      catch (e) { dbg("mmd", { op: "dispose-fail-path", err: safeErrorMessage(e) }); }
+      try { c.ktx2Loader?.dispose(); }
+      catch (e) { dbg("mmd", { op: "dispose-fail-path", err: safeErrorMessage(e) }); }
+      try { c.ktx2CacheLoader?.dispose(); }
+      catch (e) { dbg("mmd", { op: "dispose-fail-path", err: safeErrorMessage(e) }); }
       c.stopLongTaskWatch();
       for (const url of c.blobUrls) URL.revokeObjectURL(url);
     }

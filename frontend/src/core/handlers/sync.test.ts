@@ -4,6 +4,7 @@
 // mock 基线来自 e2e/mock-data.ts（共享单源：改 Go 数据只改一处，防双源漂移）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 import { MOCK_DATA } from "../../../e2e/mock-data.ts";
 
 const { mocks } = vi.hoisted(() => {
@@ -195,7 +196,12 @@ describe("registerSync — sync:download:missing", () => {
 
     expect(mocks.GetRepoRoot).not.toHaveBeenCalled();
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
-    expect(toasts.some((t) => t.type === "error")).toBe(true);
+    // i18n 合规（P2 修复）：toast 文案必须走 t("sync.missingRtype")，
+    // 不得硬编码、不得向用户暴露内部事件名 "sync:download:missing"
+    const errToast = toasts.find((t) => t.type === "error")!;
+    expect(errToast).toBeTruthy();
+    expect(errToast.msg).toBe(t("sync.missingRtype"));
+    expect(errToast.msg).not.toContain("sync:download:missing");
     expect(doneEvents.length).toBe(1);
     expect(doneEvents[0].skipped).toBe(true);
   });

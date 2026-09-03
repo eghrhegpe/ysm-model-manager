@@ -48,7 +48,7 @@ describe("loadTextures", () => {
 
   it("部分失败 → null 占位且索引不压缩（后续组件贴纹理不错位）", async () => {
     class PartialImage extends FakeImage {
-      _failUrls = ["b.png"];
+      override _failUrls = ["b.png"];
     }
     vi.stubGlobal("Image", PartialImage);
     try {
@@ -64,7 +64,7 @@ describe("loadTextures", () => {
 
   it("失败纹理 → invalidate 触发（缓存池清理失败项）", async () => {
     class FailImage extends FakeImage {
-      _failUrls = ["bad.png"];
+      override _failUrls = ["bad.png"];
     }
     vi.stubGlobal("Image", FailImage);
     try {

@@ -29,7 +29,7 @@ export interface FbxParseResponse {
 
 /** 纹理文件名捕获 handler（继承 Loader 满足基类成员要求，FBXLoader.loadTexture 会调用） */
 class TextureNameProxyLoader extends THREE.Loader {
-  load(url: string, onLoad?: (tex: THREE.Texture) => void): THREE.Texture {
+  override load(url: string, onLoad?: (tex: THREE.Texture) => void): THREE.Texture {
     const tex = new THREE.Texture();
     // 内嵌纹理（data:/blob: URI）已在场景内、主线程无需磁盘读取——取 basename 会得到
     // base64 载荷的垃圾片段，texUrlMap 按它查磁盘必失败 → 内嵌纹理 ASCII FBX 静默丢纹理

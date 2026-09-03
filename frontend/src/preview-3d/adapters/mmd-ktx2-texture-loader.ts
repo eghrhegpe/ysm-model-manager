@@ -81,7 +81,7 @@ export class Ktx2TextureLoader extends THREE.Loader {
    * 保证 three-mmd 的 loadTextureResource（`texture = loader.load(...)` 返回值即材质 map）
    * 拿到的始终是有数据的对象，避免"空占位被材质引用 → 纹理丢失"。
    */
-  load(
+  override load(
     url: string,
     onLoad?: (texture: THREE.Texture) => void,
     onProgress?: (event: ProgressEvent) => void,

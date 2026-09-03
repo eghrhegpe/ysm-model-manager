@@ -4,7 +4,7 @@ import { MMDLoader } from "@moeru/three-mmd";
 import type { VpdObject } from "@moeru/three-mmd";
 import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import type { MaterialControlBridge, MmdBottomNavCtx, MmdPlayBridge } from "../../views/app-preview/mmd-controls.ts";
+import type { MaterialControlBridge, MmdBottomNavCtx, MmdPlayBridge } from "./content-bridges.ts";
 import type { BoneTree } from "../bone-tools.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { PmxBuildResult, PmxParser } from "./mmd-pmx-parser.ts";

@@ -22,7 +22,7 @@ import { buildBoneTree, type BoneNode, type BoneTree } from "../bone-tools.ts";
 import { rebuildDebug } from "../debug-render.ts";
 import { disposeDebugGroup } from "../cleanup-helper.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
-import type { YsmContentHandle, YsmControlsContext } from "../../views/app-preview/ysm-controls.ts";
+import type { YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { makeYsmModelSchemaId, unregisterSchema, YSM_MODEL_SCHEMA_ID } from "./schema-registry.ts";
 import type { Spec3D, BoneSelectInfo, BoneMaps } from "../model3d.ts";
@@ -37,7 +37,7 @@ import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player
 import { parseBedrockAnimationJSON, ysmAnimClipLabels, type AnimationClip } from "../../utils/animation/animation.ts";
 import { parseAnimationControllerJSON, type AnimationController } from "../../utils/animation/animation-controller.ts";
 import { b64ToBytes } from "../base64.ts";
-import type { MmdPlayBridge } from "../../views/app-preview/mmd-controls.ts";
+import type { MmdPlayBridge } from "./content-bridges.ts";
 import { ysmSemanticBoneMap } from "../semantic-bones.ts";
 import { createBreathController } from "../perception/breath.ts";
 import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志

@@ -1,7 +1,7 @@
 // ===== mmd-build-menu.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
 import * as THREE from "three";
-import type { MmdBottomNavCtx } from "../../views/app-preview/mmd-controls.ts";
+import type { MmdBottomNavCtx } from "./content-bridges.ts";
 import { buildBoneTree } from "../bone-tools.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { mmdBonesToBoneNodes } from "../mmd-bones.ts";

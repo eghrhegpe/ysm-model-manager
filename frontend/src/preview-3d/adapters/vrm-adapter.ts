@@ -54,7 +54,7 @@ import {
   setVrmMaterialVisible,
   setVrmMaterialOpacity,
 } from "../vrm-materials.ts";
-import type { MmdPlayBridge } from "../../views/app-preview/mmd-controls.ts";
+import type { MmdPlayBridge } from "./content-bridges.ts";
 
 /** 把 THREE.Texture / HTMLImageElement 转 dataURL（meta 卡缩略图） */
 function imageToDataURL(img: unknown): string {

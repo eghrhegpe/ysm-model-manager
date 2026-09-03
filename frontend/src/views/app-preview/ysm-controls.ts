@@ -9,52 +9,18 @@ import * as THREE from "three";
 import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
-import type { Spec3D, BoneSelectInfo } from "../../preview-3d/model3d.ts";
-import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import type { CameraControlBridge } from "../../preview-3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
+// [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
+// import 供本文件函数签名本地绑定；export type 原位转发保公共面（views 域测试零改动）
+import type {
+  YsmModel,
+  YsmContentHandle,
+  YsmControlsContext,
+} from "../../preview-3d/adapters/content-bridges.ts";
+export type { YsmModel, YsmContentHandle, YsmControlsContext };
 import { registerSchema, unregisterSchema, makeYsmModelSchemaId, YSM_MODEL_SCHEMA_ID } from "../../preview-3d/adapters/schema-registry.ts";
 import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
-
-/** 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） */
-export type YsmModel = BedrockGeometry & {
-  textures?: string[] | null;
-  _modelPath?: string;
-  textureNames?: string[];
-  boneCount?: number;
-  bones?: unknown[];
-};
-
-/** YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） */
-export interface YsmContentHandle {
-  showModelGroup(i: number): void;
-  getModelGroupCount(): number;
-  setBoneVisible(name: string, visible: boolean): void;
-  toggleBone(name: string): void;
-  getBoneList(modelIdx?: number): Array<{ id: string; name: string; parentId?: string | null }>;
-  /** 骨骼拾取回调（由控件层设置，适配器转发到 raycast state） */
-  onBoneSelect: ((info: BoneSelectInfo) => void) | null;
-  /** 骨骼详情框（fill3DPanel 写入） */
-  _boneDetailEl: HTMLElement | null;
-}
-
-/** 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 */
-export interface YsmControlsContext {
-  model: YsmModel;
-  /** 当前纹理下标（纹理选择器初始值） */
-  texIdx: number;
-  /** preloadModel 返回的纹理数组（可能含 null——缺失纹理占位，fill3DPanel 内断言） */
-  texArr: (THREE.Texture | null)[];
-  spec: Spec3D;
-  /** YSM 内容层句柄（模型组/骨骼显隐/拾取回调） */
-  handle: YsmContentHandle;
-  /** shared 模式下核心的相机控制桥（Phase 2 后相机归核心根菜单 camera 项，本字段保留兼容） */
-  cameraControls?: CameraControlBridge;
-  /** 用户切换纹理时触发重建（旧 overlay 清理 + 按新 texIdx 重新挂载） */
-  onTextureChange?: (texIdx: number) => void;
-  /** 截取当前 3D 渲染画面（PNG base64，无 data: 前缀）—— ADR-052 P3 通用化 */
-  screenshot?(): Promise<string | null>;
-}
 
 /**
  * [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。

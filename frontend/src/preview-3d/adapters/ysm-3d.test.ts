@@ -7,7 +7,7 @@ import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
 import type { BedrockGeometry } from "../decoder/geometry.ts";
 import type { PreviewMenuHandle } from "../menu/core.ts";
 import type { BoneTree } from "../bone-tools.ts";
-import type { YsmModel, YsmContentHandle } from "../../views/app-preview/ysm-controls.ts";
+import type { YsmModel, YsmContentHandle } from "./content-bridges.ts";
 import type { Spec3D } from "../model3d.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";

@@ -1,36 +1,25 @@
 // ===== MMD 菜单面板填充（ADR-076 v2 Phase 2：底部导航收编进声明式根菜单）=====
 // 旧 buildMmdBottomNav / mkNavBtn / slide-menu 弹窗已删除——mmd 专属面板（模型信息+
 // 表情 / 材质 / 播放）由 mmd-adapter 经 ctx.menu.setAdapterItems 注入 ⚙️ 根菜单。
-// 切换模型归 core 根菜单 roles 项（角色面板内嵌加载入口）；相机归 core camera 项（sharedOnly）。
+// 切换模型归 core 根菜单 roles 项（角色面板内嵌加载入口）；相机归 core camera 项
+// （self 模式由 visibleWhen: s["ui.mode"]!=="self" 谓词隐藏，[doc:adr-126-p4-d]）。
 // 材质面板 buildMaterialControls 保留复用（纯渲染层，状态经 bridge 下沉 mmd-materials.ts，ADR-072）。
 
-import * as THREE from "three";
-import type { MMD } from "@moeru/three-mmd";
 import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import { cardContainer, addFieldRow } from "../../ui/ui-helpers.ts";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
-import {
-  type MmdMaterialDetail,
-  type MmdMaterialListItem,
-} from "../../preview-3d/mmd-materials.ts";
 import type { CameraControlBridge } from "../../preview-3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
-
-export interface MmdBottomNavCtx {
-  mmd: MMD;
-  mesh: THREE.SkinnedMesh;
-  modelName: string;
-  /** 当前模型完整路径（切换区「当前」高亮判断；Phase 2 后切换归 core switch 项，本字段保留兼容） */
-  modelPath?: string;
-  /** shared 模式下核心的相机控制桥（Phase 2 后相机归 core camera 项，本字段保留兼容） */
-  cameraControls?: CameraControlBridge;
-  /** 切换到另一模型（复用核心外壳重建内容层；Phase 2 后归 core switch 项，本字段保留兼容） */
-  switchTo?(path: string): Promise<void>;
-  /** [doc:adr-132] zip 内全部 pmx/pmd 候选虚拟路径（多候选时 model 面板显示切换 select）；非 zip = 空/缺省 */
-  zipModelCandidates?: string[];
-}
+// [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
+// import 供本文件函数签名本地绑定；export type 原位转发保公共面（views 域测试零改动）
+import type {
+  MmdBottomNavCtx,
+  MmdPlayBridge,
+  MaterialControlBridge,
+} from "../../preview-3d/adapters/content-bridges.ts";
+export type { MmdBottomNavCtx, MmdPlayBridge, MaterialControlBridge };
 
 /** MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） */
 export function fillMmdModelPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void {
@@ -82,19 +71,6 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
     },
   );
   return nodes;
-}
-
-/** MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） */
-export interface MmdPlayBridge {
-  clips: Array<{ label: string }>;
-  isPlaying(): boolean;
-  toggle(): void;
-  currentIndex(): number;
-  select(index: number): void;
-  /** 自动解析的 CustomAnim 路径（null = 仓库根不可用） */
-  animDir: string | null;
-  /** 请求重新加载动作（刷新 CustomAnim 目录扫描结果） */
-  requestReload?: () => void;
 }
 
 /**
@@ -166,18 +142,6 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
     });
   }
   return nodes;
-}
-
-/** 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） */
-export interface MaterialControlBridge {
-  /** 材质清单（index 与 mesh.material 对齐） */
-  list(): MmdMaterialListItem[];
-  /** 材质详情（当前可见/透明） */
-  getDetail(index: number): MmdMaterialDetail | null;
-  /** 设置显隐（Material.visible） */
-  setVisible(index: number, visible: boolean): void;
-  /** 设置透明度（0-1，联动 transparent） */
-  setOpacity(index: number, opacity: number): void;
 }
 
 /**

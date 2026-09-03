@@ -828,6 +828,7 @@ auto_fields:
     - MAX_PIXEL_RATIO_KEY
     - MAX_TAG_LENGTH
     - MENU_DEFS
+    - MenuAction
     - MenuControlDef
     - MenuControlKind
     - MenuCtx

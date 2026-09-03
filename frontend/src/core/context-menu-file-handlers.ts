@@ -9,8 +9,8 @@ import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
 import type { MenuCtx } from "./context-menu-handlers.ts";
 
-/** file 类 handler 子表 */
-export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
+/** file 类 handler 子表（精确 key 推断，供 HANDLERS satisfies 覆盖断言） */
+export const FILE_HANDLERS = {
   "file.rename": async (ctx) => {
     try {
       const fileName = (ctx.path || "").split(/[/\\]/).pop() || "";
@@ -149,4 +149,4 @@ export const FILE_HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       ok ? undefined : "error",
     );
   },
-};
+} satisfies Record<string, (ctx: MenuCtx) => void>;

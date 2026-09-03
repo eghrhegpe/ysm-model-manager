@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } 
 import { bus } from "../bus.ts";
 import type { MenuItem, CtxShowPayload, ToastPayload } from "../bus";
 import { registerContextMenus } from "./context-menus.ts";
-import { MENU_DEFS, getMenuDef } from "./menu-defs.ts";
+import { MENU_DEFS, getMenuDef, type MenuAction } from "./menu-defs.ts";
 import { HANDLERS } from "./context-menu-handlers.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 
@@ -910,7 +910,9 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
     const def = MENU_DEFS.find((d) => d.type === PROBE_DEF_TYPE);
     if (!def) throw new Error("missing batch def");
     def.items.push({
-      action: PROBE_ACTION,
+      // 探针 action 不属于 MENU_ACTIONS：显式越界（as MenuAction）注入运行时探针，
+      // 与下方 HANDLERS`as Record<string, unknown>` 逃生舱同一模式，测完 pop 清理。
+      action: PROBE_ACTION as MenuAction,
       label: () => "probe",
       icon: "🧪",
       ...(visibleWhen ? { visibleWhen } : {}),

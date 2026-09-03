@@ -9,6 +9,8 @@ import { modalConfirm } from "../utils/dom/dialogs/modal.ts";
 // P1 修复（ADR-040）：file/dir handler 已拆出，此处合并
 import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
+// P2 收窄：HANDLERS 断言覆盖 MENU_ACTIONS（type-only，无运行时循环依赖）
+import type { MenuAction } from "./menu-defs.ts";
 // 共享原语（toast/refreshUI/isUnsafeFolderName/resolveDstDir）下沉至
 // context-menu-shared.ts，破除 handlers ↔ {file,dir}-handlers 循环依赖
 import { refreshUI, toast, toastError, toastEmptyRtype, resolveDstDir } from "./context-menu-shared.ts";
@@ -132,8 +134,8 @@ const recycleBusy = makeBusy();
 
 export type MenuCtx = import("../bus.ts").CtxShowPayload & { paths: string[] };
 
-/** 行为 handler 表（instance + batch + merge file/dir） */
-export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
+/** 行为 handler 表（instance + batch + merge file/dir）；satisfies 断言覆盖 MENU_ACTIONS，漏挂拼错即编译错误 */
+export const HANDLERS = {
   noop: () => {},
   ...FILE_HANDLERS,
   ...DIR_HANDLERS,
@@ -250,4 +252,4 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     downloadTextFile(names, `model-list-${new Date().toISOString().slice(0, 10)}.txt`);
     toast(tr("ctx.exportListOk", "✅ Exported {n} file names", { n: ctx.paths.length }), TOAST_MS.success);
   },
-};
+} satisfies Record<MenuAction, (ctx: MenuCtx) => void>;

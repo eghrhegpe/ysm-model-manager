@@ -20,6 +20,7 @@ auto_fields:
     - HANDLERS
     - isUnsafeFolderName
     - MENU_DEFS
+    - MenuAction
     - MenuCtx
     - MenuDef
     - refreshUI

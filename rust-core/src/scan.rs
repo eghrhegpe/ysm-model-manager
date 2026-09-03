@@ -19,6 +19,10 @@ pub fn scan_fast(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
 /// (both are ADR-038 D3.7 disable suffixes) so disabled directory-based models remain
 /// discoverable and can be re-enabled after a restart. This is a **deliberate divergence**
 /// from Go `scanner.ScanEntries` (which always skips them) — see rustbridge.md contract table.
+///
+/// **预留接口**：当前无生产消费方（rust-wails-bridge 的两个生产入口均走 `scan_fast` 或
+/// `scan_impl_manifest`，不下钻禁用目录）。本函数仅被 `tests.rs` 引用。若未来「新桌面壳列出
+/// 并再启用禁用模型」立项，此处可直接复用；在此之前视为孤儿代码，行为变更需经代码评审。
 pub fn scan_index(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
     scan_impl(root.as_ref(), policy, true)
 }
@@ -119,13 +123,13 @@ pub struct Candidate {
 /// Candidates whose ext is not supported by `policy` are dropped (caller must filter, but we
 /// guard here too so a stale manifest cannot inject unsupported entries).
 ///
-/// NOTE: `Candidate.rtype` is **not** derived here (unlike `scan_impl`, which calls
-/// `policy.rtype_for_ext`). The manifest path trusts the caller-supplied `type` field and only
-/// falls back to an empty string when absent. This is intentional — the legacy bridge
-/// (`response.rs`) flattens `subdir`/`type` out of the serialized output, so the rtype drift
-/// between the two paths is currently invisible across the ABI. If a future caller needs
-/// `ModelEntry.rtype` populated from the manifest path, derive it here via `policy.rtype_for_ext`
-/// (code review P3).
+/// NOTE: `Candidate.rtype` is **not derived here** — it is trusted from the caller-supplied
+/// `Candidate.rtype` field. Unlike `scan_impl` (which calls `policy.rtype_for_ext`), the manifest
+/// path assumes the Go scanner has already resolved the correct type. This is intentional: the
+/// legacy bridge (`response.rs`) flattens `subdir`/`type` out of the serialized output, so the
+/// rtype drift between the two paths is currently invisible across the ABI. If a future caller
+/// needs `ModelEntry.rtype` populated from the manifest path, derive it here via
+/// `policy.rtype_for_ext` (code review P3).
 ///
 /// The `.json` allowlist is also enforced here (mirroring `scan_impl` L57) so a stale manifest
 /// cannot inject e.g. `animation.json` as an independent entry — `supports_ext` alone permits
@@ -191,6 +195,11 @@ fn system_time_to_unix_ms(time: std::time::SystemTime) -> i64 {
     }
 }
 
+/// 剥离禁用后缀（`.ban` / `.disabled`，大小写不敏感）。
+///
+/// **顺序无关**：`.ban` 和 `.disabled` 互不为后缀（`.disabled` 不以 `.ban` 结尾，反之亦然），
+/// 因此先判哪个都不影响最终剥离结果。此处 `.ban` 优先仅是实现选择，与 Go 端常量序
+/// （`.disabled` 在前）不同但等价——parity fixture 锁定了两端输出逐字一致。
 pub(crate) fn strip_disable_suffix(name: &str) -> &str {
     let lower = name.to_ascii_lowercase();
     if lower.ends_with(".ban") {

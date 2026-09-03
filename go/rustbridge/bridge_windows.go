@@ -16,10 +16,10 @@ var (
 	loadErr  error
 	scanProc *syscall.LazyProc
 	// scanManifestProc 是 ADR-120 新增的 manifest 扫描入口（Go 预枚举清单跳过 jwalk）。
-	// 旧 scanProc (ysm_scan_json) 保留作回退，ABI 不破坏。
+	// 旧 scanProc (ysm_scan) 保留作回退，ABI 不破坏。
 	scanManifestProc *syscall.LazyProc
 	freeProc         *syscall.LazyProc
-	// R32 P3-1：FFI 调用序列化。Rust 侧 ysm_scan_json/ysm_scan_manifest
+	// R32 P3-1：FFI 调用序列化。Rust 侧 ysm_scan/ysm_scan_manifest
 	// 线程安全性未知，Go 侧加 Mutex 串行化 FFI 调用（扫描本身是重操作，性能影响可忽略）。
 	ffiMu sync.Mutex
 )
@@ -57,6 +57,8 @@ func Scan(root string, registryJSON []byte) (ScanResponse, error) {
 	}
 	defer freeProc.Call(uintptr(unsafe.Pointer(output.ptr)), output.len, output.cap) //nolint:errcheck
 
+	// append 先于 defer 执行：拷贝 Rust 侧分配的缓冲区到 Go 堆，defer 在函数返回时释放。
+	// 若 defer 先于 append 执行则 freeProc 会释放尚未被拷贝的内存——此处顺序必须保证。
 	data := append([]byte(nil), unsafe.Slice(output.ptr, int(output.len))...)
 	return parseResponse(data, false)
 }
@@ -118,7 +120,7 @@ func load() error {
 			return
 		}
 		dll := syscall.NewLazyDLL(path)
-		scanProc = dll.NewProc("ysm_scan_json")
+		scanProc = dll.NewProc("ysm_scan")
 		scanManifestProc = dll.NewProc("ysm_scan_manifest")
 		freeProc = dll.NewProc("ysm_buffer_free")
 		if err := scanProc.Find(); err != nil {

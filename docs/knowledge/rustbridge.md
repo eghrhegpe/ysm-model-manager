@@ -114,15 +114,15 @@ status: active
 
 > 背景：跨栈共享已扫描状态（ADR-120）**能力**已落地——新增 Rust 导出符号 `ysm_scan_manifest`。
 > 该符号在生产调用图中当前为**死代码**（见 ADR-120 §3 修正说明）：`ScanEntriesWithHit` 缓存未命中才回源 Rust，进入前已 `scanCache.Delete(dir)`，故 `scanEntriesWithRust` 的 manifest 分支不可达；实际「Go 缓存命中 Rust 不走路」由 `ScanEntriesWithHit` 直接 return 实现，不经 Rust。符号作为预留接口保留。
-> 原 `ysm_scan_json` 命名歧义已确认，基础符号重命名（`ysm_scan`）留待下个 release 周期。
+> 基础符号 `ysm_scan_json` → `ysm_scan` 重命名**已落地**（本次 PR）。
 
-- **现状歧义（已记录，待重命名）**：`ysm_scan_json`（`bridge_windows.go` `dll.NewProc("ysm_scan_json")` ↔ `rust-wails-bridge/src/abi.rs` `#[no_mangle] pub unsafe extern "C" fn ysm_scan_json`）——它是**应用级通用扫描入口**（扫整棵树、所有 rtype：PMX/PMD/VMD/YSMParser 全套），**与 `.ysm` 扩展名无专属绑定**。
-- **误读风险**：`ysm_` 前缀与「`.ysm` 文件类型」视觉撞车 + `_json` 把「返回 JSON」实现细节焊死进名字 → 易被误解为「扫 `.ysm` 资源的专用接口」。实际语义是「YSM-Model-Manager 这个**应用**的通用扫描、输出 JSON」。
+- **现状**：`ysm_scan`（`bridge_windows.go` `dll.NewProc("ysm_scan")` ↔ `rust-wails-bridge/src/abi.rs` `#[no_mangle] pub unsafe extern "C" fn ysm_scan`）——它是**应用级通用扫描入口**（扫整棵树、所有 rtype：PMX/PMD/VMD/YSMParser 全套），**与 `.ysm` 扩展名无专属绑定**。
+- **误读风险**：`ysm_` 前缀与「`.ysm` 文件类型」视觉撞车——旧名 `_json` 后缀把「返回 JSON」实现细节焊死进名字。实际语义是「YSM-Model-Manager 这个**应用**的通用扫描」。
 - **ADR-120 落地事实**：
   - 新增 `ysm_scan_manifest`（接收 Go 预枚举清单 JSON、跳过 jwalk）—— `abi.rs` `#[no_mangle] pub unsafe extern "C" fn ysm_scan_manifest`，`scan_impl_manifest` 复用 `resolve_metadata` + `hydrate_hashes`
   - Go 侧 `rustbridge.ScanManifest(root, registryJSON, manifestJSON)`（`bridge_windows.go`）：旧 DLL 不含该符号时 `scanManifestProc=nil` 自动回退 `Scan`（jwalk），ABI 不破坏
-  - `ysm_scan_json` 仍保留作回退（Rust `pub use` + Go `NewProc` 均保留）
-  - 基础符号 `ysm_scan_json` → `ysm_scan` 的重命名**未执行**（留待下个 release，避免本次改动面过大）
+  - `ysm_scan_json` 保留作回退（Rust `pub use` 别名 + Go `NewProc`）→ **已删除**：重命名完成后 Go 侧直接 `NewProc("ysm_scan")`，不再有别名回退。
+  - 基础符号 `ysm_scan_json` → `ysm_scan` 的重命名**已执行**。
 - **约束**：新增 Rust 导出符号一律遵循 `ysm_<动作>` / `ysm_<动作>_<输入形态>` 形态，禁止把文件类型/序列化格式焊进名字。
 
 ## 与 Go scanner 的契约对齐（红线）
@@ -139,7 +139,7 @@ Rust 扫描路径必须与 Go scanner 单点口径一致（code review 反复核
 
 > **隔离后缀序分歧（无语义差异）**：Go 常量序 `.disabled`→`.ban`，Rust `.ban` 优先；两后缀互不为后缀，剥离结果逐字一致。
 
-> **未接线实验路径（非被依赖契约）**：目录级 `.ban`/`.disabled` 下钻仅存在于 Rust `scan_index`，且**无生产消费方**——rust-wails-bridge 两个生产入口（`ysm_scan_json`→`scan_fast` / `ysm_scan_manifest`→Go 预枚举）都不下钻禁用目录，`scan_index` 只被 `tests.rs` 引用。生产路径遵 Go 口径恒跳禁用目录。若未来「新桌面壳列出并再启用禁用模型」立项，应在**发现权单点**定归属：发现权留 Go（manifest 路径本来就是 Go 扫）则删孤儿 `scan_index` 在 Go 实现，勿双源共存。
+> **未接线实验路径（非被依赖契约）**：目录级 `.ban`/`.disabled` 下钻仅存在于 Rust `scan_index`，且**无生产消费方**——rust-wails-bridge 两个生产入口（`ysm_scan`→`scan_fast` / `ysm_scan_manifest`→Go 预枚举）都不下钻禁用目录，`scan_index` 只被 `tests.rs` 引用。生产路径遵 Go 口径恒跳禁用目录。若未来「新桌面壳列出并再启用禁用模型」立项，应在**发现权单点**定归属：发现权留 Go（manifest 路径本来就是 Go 扫）则删孤儿 `scan_index` 在 Go 实现，勿双源共存。
 
 - **CI 覆盖**（`.github/workflows/test.yml`）：cargo test（rust-core + rust-wails-bridge）+ 构建桥 DLL + `go test -tags rust_backend`——rust_backend 路径不再零覆盖
 - **测试**：`rust-core/src/tests.rs` 的 `scan_preserves_go_filter_contract` 锁条目门禁（main/info.json 不入条目 + rtype 传播）

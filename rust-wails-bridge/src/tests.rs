@@ -139,7 +139,7 @@ fn c_abi_buffer_can_be_released() {
         cap: 0,
     };
     let status = unsafe {
-        ysm_scan_json(
+        ysm_scan(
             root_text.as_ptr(),
             root_text.len(),
             registry().as_ptr(),
@@ -154,7 +154,7 @@ fn c_abi_buffer_can_be_released() {
     unsafe { ysm_buffer_free(buffer.ptr, buffer.len, buffer.cap) };
 }
 
-/// ADR-120 核心契约：manifest 路径（Go 预枚举）产出 == jwalk 路径（ysm_scan_json）产出。
+/// ADR-120 核心契约：manifest 路径（Go 预枚举）产出 == jwalk 路径（ysm_scan）产出。
 /// 同一棵树，两种发现方式，最终 entries 必须逐字段一致（路径/大小/扩展名/哈希/ModTime）。
 #[test]
 fn manifest_scan_matches_jwalk_scan() {

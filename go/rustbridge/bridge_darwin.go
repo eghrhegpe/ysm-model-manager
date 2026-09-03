@@ -21,7 +21,7 @@ typedef struct {
   uintptr_t cap;
 } YsmBuffer;
 
-extern int32_t ysm_scan_json(const uint8_t* root_ptr, uintptr_t root_len,
+extern int32_t ysm_scan(const uint8_t* root_ptr, uintptr_t root_len,
                              const uint8_t* registry_ptr, uintptr_t registry_len,
                              YsmBuffer* out);
 extern int32_t ysm_scan_manifest(const uint8_t* root_ptr, uintptr_t root_len,
@@ -48,7 +48,7 @@ func Scan(root string, registryJSON []byte) (ScanResponse, error) {
 	}
 	registryPtr := unsafe.SliceData(registryJSON)
 	var output nativeBuffer
-	status := C.ysm_scan_json(
+	status := C.ysm_scan(
 		(*C.uchar)(unsafe.Pointer(rootPtr)), C.size_t(len(root)),
 		(*C.uchar)(unsafe.Pointer(registryPtr)), C.size_t(len(registryJSON)),
 		(*C.struct_YsmBuffer)(unsafe.Pointer(&output)),

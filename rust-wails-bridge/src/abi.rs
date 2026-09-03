@@ -46,7 +46,7 @@ fn encode_response(response: ScanResponse) -> YsmBuffer {
 /// Non-empty input pointers must reference their declared readable byte ranges. `out` must point
 /// to writable storage for one [`YsmBuffer`].
 #[no_mangle]
-pub unsafe extern "C" fn ysm_scan_json(
+pub unsafe extern "C" fn ysm_scan(
     root_ptr: *const u8,
     root_len: usize,
     registry_ptr: *const u8,
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn ysm_scan_manifest(
     0
 }
 
-/// Release a buffer returned by [`ysm_scan_json`].
+/// Release a buffer returned by [`ysm_scan`].
 ///
 /// # Safety
 /// The parts must be unchanged and released exactly once.

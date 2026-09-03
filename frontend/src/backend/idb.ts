@@ -163,9 +163,14 @@ export async function idbGet<T>(store: Store, key: string): Promise<T | undefine
   const db = await getIdb();
   if (!db) return memoryStore.get(store)?.get(key) as T | undefined;
   return new Promise<T | undefined>((resolve, reject) => {
-    const req = db.transaction(store, "readonly").objectStore(store).get(key);
+    const tx = db.transaction(store, "readonly");
+    const req = tx.objectStore(store).get(key);
     req.onsuccess = () => resolve(req.result as T | undefined);
     req.onerror = () => reject(req.error);
+    // 事务级监听——与写入路径（idbSet/idbDel）三件套对齐
+    // 多标签页版本变更 + get 在途时 tx abort 但 req.onerror 不一定触发 → Promise 永不 settle
+    tx.onerror = () => reject(tx.error ?? new Error("IDB read tx error"));
+    tx.onabort = () => reject(tx.error ?? new Error("IDB read tx abort"));
   });
 }
 
@@ -217,7 +222,8 @@ export async function idbKeys(store: Store, prefix: string): Promise<string[]> {
     return [...m.keys()].filter((k) => k.startsWith(prefix)).sort();
   }
   return new Promise<string[]>((resolve, reject) => {
-    const os = db.transaction(store, "readonly").objectStore(store);
+    const tx = db.transaction(store, "readonly");
+    const os = tx.objectStore(store);
     // 空 prefix（=全库）不走区间，避免空上下界退化；无 IDBKeyRange（node 测试）降级全量
     const useRange = prefix !== "" && typeof IDBKeyRange !== "undefined";
     const req = useRange
@@ -235,6 +241,9 @@ export async function idbKeys(store: Store, prefix: string): Promise<string[]> {
       }
     };
     req.onerror = () => reject(req.error);
+    // 事务级监听——与写入路径三件套对齐（cursor 中途 tx abort → Promise 永不 settle）
+    tx.onerror = () => reject(tx.error ?? new Error("IDB read tx error"));
+    tx.onabort = () => reject(tx.error ?? new Error("IDB read tx abort"));
   });
 }
 
@@ -253,7 +262,8 @@ export async function idbGetAll(store: Store, prefix: string): Promise<Array<[st
       .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   }
   return new Promise<Array<[string, unknown]>>((resolve, reject) => {
-    const os = db.transaction(store, "readonly").objectStore(store);
+    const tx = db.transaction(store, "readonly");
+    const os = tx.objectStore(store);
     const useRange = prefix !== "" && typeof IDBKeyRange !== "undefined";
     const req = useRange
       ? os.openCursor(IDBKeyRange.bound(prefix, prefix + "\uffff", false, false))
@@ -270,6 +280,9 @@ export async function idbGetAll(store: Store, prefix: string): Promise<Array<[st
       }
     };
     req.onerror = () => reject(req.error);
+    // 事务级监听——与写入路径三件套对齐
+    tx.onerror = () => reject(tx.error ?? new Error("IDB read tx error"));
+    tx.onabort = () => reject(tx.error ?? new Error("IDB read tx abort"));
   });
 }
 

@@ -107,7 +107,7 @@ export function createBeatDetector(opts: BeatDetectorOptions = {}) {
    * @param energy 当前帧低频能量（已归一化 0..1）
    * @param dt     帧间隔（秒）
    */
-  function update(energy: number, dt: number): void {
+  function update(energy: number, _dt: number): void {
     const normalized = clamp01(energy);
     state.currentEnergy = normalized;
 

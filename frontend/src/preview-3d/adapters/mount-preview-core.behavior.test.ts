@@ -375,7 +375,6 @@ import {
   hasActivePreview,
   _resetSingletons,
   type PreviewAdapter,
-  type Mount3DOptions,
 } from "./mount-preview-core.ts";
 
 // ──────────────────────────────────────────────────────────────────────
@@ -772,7 +771,7 @@ describe("ESC 关闭后再次 mount（canvas 重新挂载回归）", () => {
     doc.addEventListener = vi.fn((ev: string, h: any) => {
       if (ev === "keydown") keyHandlers.push(h);
     });
-    doc.removeEventListener = vi.fn((ev: string, h: any) => {
+    doc.removeEventListener = vi.fn((_ev: string, h: any) => {
       const i = keyHandlers.indexOf(h);
       if (i >= 0) keyHandlers.splice(i, 1);
     });

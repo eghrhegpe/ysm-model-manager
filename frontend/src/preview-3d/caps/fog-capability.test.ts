@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== FogCapability 测试（preview-3d/caps/fog-capability.ts）=====
 // 覆盖：构造默认值、模式切换、线性近远距、指数密度、启用禁用、预设、持久化、getMenuControls。
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   FogCapability,

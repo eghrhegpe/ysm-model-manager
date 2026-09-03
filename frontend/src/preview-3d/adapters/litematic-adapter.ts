@@ -352,7 +352,6 @@ function mdLiRegisterSliceSchema(
 
 function mdLiRecordPerfTrace(path: string, tStart: number, data: VoxelData): void {
   try {
-    const blockCount = data.groups?.reduce((s, g) => s + (g.positions?.length ?? 0), 0) ?? 0;
     recordLoadTrace({
       ts: Date.now(),
       format: "litematic",

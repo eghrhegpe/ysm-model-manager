@@ -35,9 +35,6 @@ export function screenshotFromRenderer(
   if (!domEl) return null;
   if (domEl.width <= 0 || domEl.height <= 0) return null;
 
-  const width = opts.width ?? renderer.getSize(new THREE.Vector2()).width;
-  const height = opts.height ?? renderer.getSize(new THREE.Vector2()).height;
-
   try {
     // 切换 preserveDrawingBuffer 确保渲染帧在 toDataURL 时可见
     const preserveBefore = (renderer as unknown as { getPreserveDrawingBuffer?: () => boolean })

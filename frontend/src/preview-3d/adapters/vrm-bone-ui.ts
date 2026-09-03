@@ -6,8 +6,6 @@
 // 不再依赖 extraControls(topBar) 或 extraPanel 机制。
 
 import * as THREE from "three";
-import type { VRM } from "@pixiv/three-vrm";
-import { buildVrmBoneTree } from "./vrm-bone.ts";
 import {
   listBonesWithDepth,
   getBoneDetail,
@@ -66,7 +64,6 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
     }
 
     // 详情容器：插在选中行下方，点击其他行时移到新位置
-    let detailEl: HTMLDivElement | null = null;
 
     const renderList = (): void => {
       if (!tree) return;
@@ -177,13 +174,4 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
       tree = null;
     };
   };
-}
-
-/**
- * 构造 VRM 骨骼面板渲染器（extraPanel 呑约）。
- * 用法：vrm-adapter 的 buildVrmScene 把本函数的返回值挂到 PreviewScene.extraPanel。
- * 内部 lazy 构建骨骼树（VRM 加载完成后才有 humanoid），拾取联动挂载在 viewContainer click。
- */
-function makeVrmBonePanelRenderer(vrm: VRM): RenderVrmBonePanel {
-  return makeBonePanelRenderer(buildVrmBoneTree(vrm));
 }

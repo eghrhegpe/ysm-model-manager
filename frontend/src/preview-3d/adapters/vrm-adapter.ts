@@ -8,7 +8,6 @@ import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm";
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip, type VRMAnimation } from "@pixiv/three-vrm-animation";
 import type { VRM0Meta } from "@pixiv/three-vrm-core";
-import { t } from "../../core/i18n/t.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { buildVrmBoneTree } from "./vrm-bone.ts";
 import { vrmSemanticBoneMap } from "../semantic-bones.ts";

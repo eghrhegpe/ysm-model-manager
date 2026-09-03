@@ -5,11 +5,7 @@
 
 import * as THREE from "three";
 import type {
-  PmxParseRequest,
   PmxParseResponse,
-  PmxVertexData,
-  PmxFaceData,
-  PmxMaterialData,
   PmxBoneData,
 } from "./mmd-pmx-parser.worker.ts";
 import { createWorkerParser } from "./worker-bridge.ts";

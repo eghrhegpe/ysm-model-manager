@@ -35,7 +35,6 @@ import {
   returnFocus,
   trapFocusAcrossShadow,
 } from "../../utils/dom/focus-restore.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import {
@@ -78,8 +77,8 @@ import {
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import { makeUnifiedPickHandler } from "./unified-pick.ts";
-import { type UnloadCtx, unloadModel } from "./unload-model.ts";
-import { type WasdReuse, applyWasdCameraMotion } from "./wasd-camera.ts";
+import { unloadModel } from "./unload-model.ts";
+import { applyWasdCameraMotion } from "./wasd-camera.ts";
 
 /** 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） */
 export interface PreviewBuildCtx {
@@ -178,7 +177,6 @@ export interface PreviewHandle {
 // 相机控制常量（buildCameraControls 已拆至 camera-controls.ts，本文件保留自身仍使用的部分：
 // DRAG_ROTATE_SENSITIVITY 拖拽旋转 / TIP_AUTO_DISMISS_MS 提示自动消失）
 // camSpeed 默认值已由 keymap.ts loadTdCamSpeed()（默认 20）提供，会话初始化时读取偏好。
-const DRAG_ROTATE_SENSITIVITY = 0.003; // 自身旋转模式拖拽灵敏度（rad/px）
 const TIP_AUTO_DISMISS_MS = 6000;
 /** perFrame 回调单次执行超过该阈值（ms）即告警（仅测回调段，非整帧） */
 const PER_FRAME_WARN_MS = 50;
@@ -292,7 +290,6 @@ export async function mount3D(
   // 焦点记忆：记下当前 activeElement 作为关闭时 returnFocus 的目标
   // （FAB 按钮的 onclick 触发 mount3D → activeElement 即触发按钮）
   rememberTrigger();
-  const cooperate = opts.cooperate === true;
   // 复用单例外壳（renderer/canvas/overlay/scene 存活），首次 mount3D 创建，后续复用。
   // cooperate=true 时多个模型叠加在同一 scene；cooperate=false 时先清除旧模型再加载新模型。
   installUiComponentsStyles();
@@ -525,7 +522,6 @@ export async function mount3D(
     const rd = infra.renderer;
     const ctr = infra.controls;
     const ot = infra.orbitTarget;
-    const groundCap = infra.groundCap;
     const lightCap = infra.lightCap;
     const postProc = infra.postProc;
     // 偏好同步：自由模式（orbitMode=false）关闭 OrbitControls 自身旋转，

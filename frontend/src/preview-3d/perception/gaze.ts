@@ -21,10 +21,6 @@ const GAZE_BONES: SemanticBoneId[] = ["head", "leftEye", "rightEye"];
 /** 眼球语义骨骼（帧循环遍历用，避免每帧造临时数组） */
 const EYE_IDS: SemanticBoneId[] = ["leftEye", "rightEye"];
 
-/** 注视灵敏度：head 最大角度偏移（弧度），eyes 次之 */
-const GAZE_HEAD_MAX_RAD = 0.15; // ~8.6°，自然范围
-const GAZE_EYE_MAX_RAD = 0.08;  // ~4.6°，眼球微动
-
 /** 平滑因子：每帧向目标旋转插值（lerp t，越大越跟得急） */
 const GAZE_SMOOTH = 0.08;
 
@@ -37,7 +33,6 @@ interface GazeSnap {
 
 export function createGazeController() {
   let snaps: Map<string, GazeSnap> | null = null;
-  let prevCamPos: THREE.Vector3 | null = null;
 
   // 帧内 scratch 对象（闭包级预分配，对齐 R1-P1-1：每帧零分配）。
   // 闭包级而非模块级：多模型同框时各 controller 实例互不污染。
@@ -106,20 +101,16 @@ export function createGazeController() {
       _eyeTarget.premultiply(snap.restRot);
       entry.object.quaternion.slerp(_eyeTarget, GAZE_SMOOTH);
     }
-
-    prevCamPos = camPos;
   }
 
   function reset(): void {
     snaps = null;
-    prevCamPos = null;
   }
 
   /** 销毁：释放 Three.js 对象引用（quaternion/position 快照），防止模型移除后内存泄漏 */
   function dispose(): void {
     snaps?.clear();
     snaps = null;
-    prevCamPos = null;
   }
 
   return { apply, reset, dispose };

@@ -3,7 +3,7 @@
 // 覆盖：buildBoneTree 层级构建 / listBonesWithDepth 深度缩进 / getBonePath /
 // getBonePosition / getBoneDetail / setBoneNodeVisible + toggleBoneVisible。
 // （拾取不在此层：ysm 走 bone-raycast、mmd 走 pickMmdBone，见 bone-tools.ts 审核注记）
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import {
   buildBoneTree,

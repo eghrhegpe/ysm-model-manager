@@ -7,6 +7,7 @@
 
 import * as THREE from "three";
 import { safeDispose } from "../safe-dispose.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import {
   type SceneCapability,
   type MenuControlDef,
@@ -27,7 +28,6 @@ import {
   type GroundSurfaceSpec,
   type GroundSurfaceStructuralSpec,
 } from "./ground-surface-spec.ts";
-import { dbg } from "../../utils/debug/debug.ts";
 
 /** 程序化表面纹理边长（plain/grid/checker 共用；512² 够细且重建成本低） */
 const SURFACE_TEX_SIZE = 512;
@@ -235,7 +235,7 @@ export class GroundCapability implements SceneCapability {
   }
 
   /** 文件选择器（对齐 environment-capability customHdr 口径：不持久化二进制） */
-  private openTexturePicker(): void {
+  openTexturePicker(): void {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
@@ -243,7 +243,8 @@ export class GroundCapability implements SceneCapability {
       const file = input.files?.[0];
       if (!file) return;
       const url = URL.createObjectURL(file);
-      new THREE.TextureLoader().loadAsync(url)
+      new THREE.TextureLoader()
+        .loadAsync(url)
         .then((tex) => this.acceptLoadedTexture(tex, file.name))
         .catch(() => dbg("ground-tex-load-fail", { name: file.name }))
         .finally(() => URL.revokeObjectURL(url));

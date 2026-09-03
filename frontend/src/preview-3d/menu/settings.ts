@@ -76,7 +76,7 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
 }
 
 /** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 */
-export function buildSettingsSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
+export function buildSettingsSchema(_ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
   return [
     bsBuildSectionTitle("settings-perf-header", "preview.settingsPerf", "性能"),
     // 性能档位：一键套用低/中/高（数据表驱动）；切档后 menu.refresh() 刷新兄弟控件显示

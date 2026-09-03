@@ -1,8 +1,7 @@
 // @vitest-environment node
 // ===== 感知层：呼吸 测试（breath.ts）=====
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { buildBoneTree } from "../bone-tools.ts";
 import { createBreathController } from "./breath.ts";
 import { type SemanticBoneMap } from "../semantic-bones.ts";
 

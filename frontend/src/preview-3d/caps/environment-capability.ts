@@ -72,9 +72,6 @@ export const ENV_PRESETS: Record<Exclude<EnvPresetId, "custom">, EnvPreset> = {
     hazeLayers: 2, defaultIntensity: 1.1,
   },
 };
-/** preset=custom 时 select 里展示的 label（不进 ENV_PRESETS，无程序化 canvas 参数） */
-const CUSTOM_PRESET_LABEL = "自定义 HDR";
-
 /**
  * 预设快捷联动表：选某预设时，除切 environment.preset 外，一并联动 sky/fog/env 参数，
  * 让「日落」「夜景」等预设呈现完整氛围，而非只换一张 envMap。

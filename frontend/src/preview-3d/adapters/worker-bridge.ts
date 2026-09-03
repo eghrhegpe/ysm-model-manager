@@ -41,7 +41,7 @@ export interface WorkerBridge<Req extends { id: number }, Resp, Ok> {
   clearPending: () => void;
 }
 
-export type CreateWorkerBridgeOpts<Req extends { id: number }, Resp, Ok> = {
+export type CreateWorkerBridgeOpts<Resp, Ok> = {
   workers: Worker[];
   getId: (resp: Resp) => number;
   timeoutMs: number;
@@ -63,7 +63,7 @@ export type CreateWorkerBridgeOpts<Req extends { id: number }, Resp, Ok> = {
 );
 
 export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
-  opts: CreateWorkerBridgeOpts<Req, Resp, Ok>,
+  opts: CreateWorkerBridgeOpts<Resp, Ok>,
 ): WorkerBridge<Req, Resp, Ok> {
   const { workers, getId, timeoutMs, timeoutMsg, settle } = opts;
   // union 分支专属字段经 in-narrowing 读取（解构会 TS2339——属性不在所有分支存在）

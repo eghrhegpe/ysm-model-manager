@@ -12,7 +12,6 @@
 
 import * as THREE from "three";
 import { getSemanticBone, type SemanticBoneMap, type SemanticBoneId } from "../semantic-bones.ts";
-import { createBeatDetector } from "./beat-detector.ts";
 
 /** 节拍 detector 接口（抽象，解耦具体实现） */
 export interface BeatDetectorLike {
@@ -121,8 +120,6 @@ export function createAutoDanceController(opts: AutoDanceOptions = {}) {
 
     // 节拍相位来源：外部 detector 或内部计时
     const beatPhase = beatDetector ? beatDetector.getPhase() : (internalTime / beatPeriod) % 1;
-    // 是否踩点（外部 detector 提供）
-    const isBeat = beatDetector ? beatDetector.isBeat() : false;
 
     // 呼吸相位（0..1 循环，4 拍周期）
     const breathPhase = beatDetector

@@ -78,17 +78,6 @@ function installDomMocks(): void {
   });
 }
 
-/**
- * 等待所有微任务和定时器完成
- * 使用 fake timers 精确推进时间，避免嵌套 setTimeout
- */
-async function flushAsyncTasks(): Promise<void> {
-  // 推进微任务队列
-  await vi.advanceTimersByTimeAsync(0);
-  // 再推进一小段时间确保所有嵌套定时器完成
-  await vi.advanceTimersByTimeAsync(10);
-}
-
 describe("encodeAndCacheTexture", () => {
   beforeEach(() => {
     resetEncoderState();

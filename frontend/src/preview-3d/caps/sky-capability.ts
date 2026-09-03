@@ -225,7 +225,7 @@ function skcBuildTime(cap: SkyCapability): MenuControlDef[] {
   ];
 }
 
-function skcBuildSun(cap: SkyCapability): MenuControlDef[] {
+function skcBuildSun(_cap: SkyCapability): MenuControlDef[] {
   return [];
 }
 

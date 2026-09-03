@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { solveIK, extractIKChainFromTree } from "./ik-solver.ts";
-import type { IKChain, IKResult } from "./ik-solver.ts";
+import type { IKChain } from "./ik-solver.ts";
 import type { BoneTree } from "./bone-tools.ts";
 
 /** 构建测试骨骼链：root → joint1 → joint2 → endEffector，均为独立 Object3D */
@@ -313,7 +313,7 @@ describe("solveIK 极向量约束", () => {
     // j1 的 IK 旋转后 chainDir（=R_z(θ)·(1,0,0)）指向角 θ = atan2(1,2) - π/8，
     // poleTarget 沿该方向构造 → dot 钳制为 1 → angle 0 → 早退，仅 IK 旋转生效
     const theta = Math.atan2(1, 2) - Math.PI / 8;
-    const result = solveIK(chain, new THREE.Vector3(3, 1, 0), {
+    solveIK(chain, new THREE.Vector3(3, 1, 0), {
       iterations: 1,
       poleTarget: new THREE.Vector3(1 + 2 * Math.cos(theta), 2 * Math.sin(theta), 0),
       poleWeight: 1,

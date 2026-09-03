@@ -2,7 +2,6 @@
 // ===== 感知层：注视追踪 测试（gaze.ts）=====
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { buildBoneTree } from "../bone-tools.ts";
 import { createGazeController } from "./gaze.ts";
 import { type SemanticBoneMap } from "../semantic-bones.ts";
 

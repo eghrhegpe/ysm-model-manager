@@ -5,7 +5,7 @@
 // ADR-052 P3: 坐标口径收敛——骨骼位置计算统一为此模块导出工具。
 
 import type { Cube2D, MeshData, Vec3 } from "./spec-builder.ts";
-import { eulerToQuaternion, isIdentityQuat, hasBoneRotation } from "./quaternion.ts";
+import { eulerToQuaternion } from "./quaternion.ts";
 import { CUBE_EPS } from "./model3d-spec.ts";
 
 /**

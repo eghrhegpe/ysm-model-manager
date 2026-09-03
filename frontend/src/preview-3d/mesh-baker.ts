@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import type { MeshFragment } from "./face-split.ts";
-import type { SpecMeshGroup3D } from "./model3d.ts";
 
 const _position = new THREE.Vector3();
 const _normal = new THREE.Vector3();

@@ -4,7 +4,7 @@
 // createFbxParser 镜像 mmd-pmx-parser.ts：Worker 降级守卫 + 30s 超时 + transferable。
 
 import * as THREE from "three";
-import type { FbxParseRequest, FbxParseResponse } from "./fbx-parser.worker.ts";
+import type { FbxParseResponse } from "./fbx-parser.worker.ts";
 import { createWorkerParser } from "./worker-bridge.ts";
 import type {
   FbxSceneData,

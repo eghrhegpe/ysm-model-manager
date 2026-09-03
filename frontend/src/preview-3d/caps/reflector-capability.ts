@@ -129,7 +129,6 @@ export class ReflectorCapability implements SceneCapability {
   readonly descKey = "preview.reflectorDesc";
 
   private scene: THREE.Scene;
-  private renderer: THREE.WebGLRenderer;
   private params: ReflectorParams;
   private enabled: boolean;
 
@@ -142,7 +141,6 @@ export class ReflectorCapability implements SceneCapability {
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
-    this.renderer = opts.renderer;
     this.params = { ...DEFAULT_REFLECTOR_PARAMS, ...(opts.params ?? {}) };
     this.enabled = opts.enabled ?? this.params.enabled;
   }

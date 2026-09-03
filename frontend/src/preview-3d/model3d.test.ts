@@ -1,7 +1,7 @@
 // ===== 3D 操作偏好加载测试（model3d 纯函数层）=====
 // 覆盖：键位/速度/旋转模式 localStorage 解析与回退、compKey 口径
 //  + buildSceneMesh：骨骼层级构建（组件组/父挂载/坐标/缩放口径）
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Spec3D } from "./model3d.ts";
 
 // three stub：buildSceneMesh 全链（Group/Scene/Camera/Renderer/灯光/网格/材质/Raycaster）

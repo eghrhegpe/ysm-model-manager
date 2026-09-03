@@ -112,7 +112,7 @@ export class RenderModeCapability implements SceneCapability {
   /** 单属性应用：见 applyOverrides 三态注释。 */
   private applyProp<T>(
     key: keyof RenderModeOverrides,
-    mat: THREE.MeshBasicMaterial,
+    _mat: THREE.MeshBasicMaterial,
     orig: MaterialSnapshot | undefined,
     set: (v: T) => void,
   ): void {

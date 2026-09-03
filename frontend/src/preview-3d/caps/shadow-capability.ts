@@ -252,14 +252,6 @@ export class ShadowCapability implements SceneCapability {
       });
     }
   }
-  private snapshotSpotLight(s: THREE.SpotLight): void {
-    this.spotSnap = {
-      castShadow: s.castShadow,
-      mapSize: { x: s.shadow.mapSize.x, y: s.shadow.mapSize.y },
-      bias: s.shadow.bias,
-      normalBias: s.shadow.normalBias,
-    };
-  }
   private snapshotSceneMeshes(root: THREE.Scene): void {
     this.meshSnaps.clear();
     root.traverse((obj) => {

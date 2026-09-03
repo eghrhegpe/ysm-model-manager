@@ -19,9 +19,7 @@ import {
   evaluateClip,
   executeTimeline,
   type AnimationClip,
-  type BoneChannels,
   type BoneHierarchyNode,
-  type Vec3,
 } from "../utils/animation/animation.ts";
 import {
   AnimationControllerRuntime,
@@ -227,7 +225,7 @@ function mdApSetController(
   state.controllerVariables = {};
   state.controllerRuntime = new AnimationControllerRuntime(
     controller,
-    (animationName: string, blendTime: number) => {
+    (animationName: string, _blendTime: number) => {
       const idx = ctx.clipNameToIdx.get(animationName);
       if (idx !== undefined && idx !== state.currentIdx) {
         state.currentIdx = idx;

@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== LightCapability 测试 =====
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   LightCapability,

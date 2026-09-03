@@ -387,7 +387,7 @@ describe("buildMmdScene 主路径", () => {
   it("假 TGA（头部类型非法）→ 跳过不注册，TGALoader 不会收到它", async () => {
     vi.spyOn(URL, "createObjectURL")
       .mockImplementation(() => "blob:mock-url");
-    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     // 假 TGA：18 字节头部 + 第 3 字节（索引 2）图像类型 = 100（非法，合法仅 1/2/3/9/10/11）
     const fakeTga = new Uint8Array(18);
     fakeTga[2] = 100;
@@ -414,7 +414,7 @@ describe("buildMmdScene 主路径", () => {
   it("Windows 反斜杠路径形态 → 分隔符统一后纹理键仍命中", async () => {
     vi.spyOn(URL, "createObjectURL")
       .mockImplementation(() => "blob:mock-url");
-    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa(p)));
     hoisted.listPathsMock.mockResolvedValue([
       "C:\\mmd\\ziyan\\textures\\ziyan_head.png",
@@ -436,7 +436,7 @@ describe("buildMmdScene 主路径", () => {
   it("同目录 VMD → 自动播放 + 播放面板（经菜单项渲染）", async () => {
     vi.spyOn(URL, "createObjectURL")
       .mockImplementation(() => "blob:mock-url");
-    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa(p)));
     hoisted.listPathsMock.mockResolvedValue([
       "/mmd/miku/miku.pmx",
@@ -523,7 +523,7 @@ describe("buildMmdScene 主路径", () => {
   it("多个 VMD → select 切换动作，坏文件跳过其余照常", async () => {
     vi.spyOn(URL, "createObjectURL")
       .mockImplementation(() => "blob:mock-url");
-    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     hoisted.readBytesMock.mockImplementation((p: string) => Promise.resolve(btoa(p)));
     hoisted.listPathsMock.mockResolvedValue([
       "/mmd/miku/miku.pmx",
@@ -556,7 +556,7 @@ describe("buildMmdScene 主路径", () => {
   it("无 VMD → 播放按钮仍注册（空态引导选择动作库）", async () => {
     vi.spyOn(URL, "createObjectURL")
       .mockImplementation(() => "blob:mock-url");
-    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     hoisted.readBytesMock.mockResolvedValue(btoa("PMX"));
     hoisted.listPathsMock.mockResolvedValue([
       "/mmd/miku/miku.pmx",

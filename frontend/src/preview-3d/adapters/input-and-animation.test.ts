@@ -164,7 +164,6 @@ describe("bindInputHandlers", () => {
 
   it("onKeyDown：焦点在 INPUT 文本框 → 不记录键位、不阻止默认（打字不受 3D 键位吞掉）", () => {
     const opts = mkOptions();
-    const handlers = bindInputHandlers(opts);
     const input = document.createElement("input");
     document.body.appendChild(input);
     const ev = new KeyboardEvent("keydown", {
@@ -180,7 +179,6 @@ describe("bindInputHandlers", () => {
 
   it("onKeyDown：焦点在 contentEditable → 不记录键位", () => {
     const opts = mkOptions();
-    const handlers = bindInputHandlers(opts);
     const editable = document.createElement("div");
     editable.contentEditable = "true";
     document.body.appendChild(editable);

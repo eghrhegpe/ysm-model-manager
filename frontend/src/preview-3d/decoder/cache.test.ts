@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 预览缓存测试（cache.ts，模块级状态用 vi.resetModules 隔离）=====
 // 覆盖：cacheGet/cacheSet、同 key 覆盖不误 evict、FIFO 淘汰、evict 回调
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 
 type CacheModule = typeof import("./cache.ts");
 

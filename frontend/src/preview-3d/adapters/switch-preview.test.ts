@@ -458,7 +458,7 @@ describe("switchToSession 代际/中止守卫丢弃新内容层", () => {
 
 describe("switchToSession 内容层历史与基线维护", () => {
   it("非 keep 切换：allContent 中非 active 的孤儿条目被 safeDispose（GPU 孤儿泄漏防护）", async () => {
-    const { ctx, state, mockAdapter } = makeMockCtx();
+    const { ctx, state } = makeMockCtx();
     const orphanDispose = vi.fn();
     const activeDispose = vi.fn();
     const orphan = { dispose: orphanDispose } as unknown as PreviewScene;
@@ -475,7 +475,7 @@ describe("switchToSession 内容层历史与基线维护", () => {
   });
 
   it("keep=true 追加：allContent 保留历史并 push 新 content", async () => {
-    const { ctx, state, mockAdapter } = makeMockCtx();
+    const { ctx, state } = makeMockCtx();
     const oldDispose = vi.fn();
     state.content = { dispose: oldDispose } as unknown as PreviewScene;
     ctx.allContent.push(state.content);
@@ -488,7 +488,7 @@ describe("switchToSession 内容层历史与基线维护", () => {
   });
 
   it("updateSwitchBaseline：切换后基线排除本次新增量（幽灵网格累积防护）", async () => {
-    const { ctx, state, mockScene, mockAdapter } = makeMockCtx();
+    const { ctx, state, mockScene } = makeMockCtx();
     const mesh = new THREE.Mesh();
     mockScene.add(mesh);
     state.sceneBaseline = new Set([mesh]); // 基线：mesh 是装饰
@@ -590,7 +590,7 @@ describe("switchToSession 场景注册与视图同步（scene=null 退化 + caps
 
 describe("switchToSession 清理与排开边界", () => {
   it("非 keep 切换：不在基线内的旧内容层对象被移出 scene（快照 delta 清理）", async () => {
-    const { ctx, state, mockScene, mockAdapter } = makeMockCtx();
+    const { ctx, state, mockScene } = makeMockCtx();
     const baselineMesh = new THREE.Mesh(); // 装饰基线
     const staleMesh = new THREE.Mesh();     // 上次切换的内容层残留
     mockScene.add(baselineMesh, staleMesh);

@@ -44,7 +44,6 @@ describe("常驻 dock 面板解析契约", () => {
       { toast: vi.fn(), closeAllOverlays: vi.fn() },
       { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4],
     );
-    const snapshot = previewSnapshot();
     for (const node of CORE_MENU_ITEMS) {
       if (node.kind !== "panel") continue;
       const hasChannel =

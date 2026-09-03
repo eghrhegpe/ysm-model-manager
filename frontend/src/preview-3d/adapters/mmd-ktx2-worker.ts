@@ -2,7 +2,7 @@
 // 将 WASM basis_encoder 的同步编码挪到 Worker 线程，避免 4096² 大纹理
 // 单次 ~10s 的同步编码阻塞主进程（首次加载卡死问题）。
 // 主线程 encodeToKTX2 → postMessage(RGBA + 尺寸) → 本 Worker 编码 → 回传 KTX2 ArrayBuffer。
-import { encodeToKTX2Basis, TextureTooLargeError } from "./mmd-ktx2-basis.ts";
+import { encodeToKTX2Basis } from "./mmd-ktx2-basis.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 
 /** 主线程 → Worker 的请求 */

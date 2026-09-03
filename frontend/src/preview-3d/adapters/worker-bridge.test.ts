@@ -54,7 +54,7 @@ interface BridgeResp extends FakeResp {
   error?: string;
 }
 
-function makeRejectBridge(workers: FakeWorker[], overrides?: Partial<CreateWorkerBridgeOpts<FakeReq, FakeResp, FakeResp>>): WorkerBridge<FakeReq, FakeResp, FakeResp> {
+function makeRejectBridge(workers: FakeWorker[], overrides?: Partial<CreateWorkerBridgeOpts<FakeResp, FakeResp>>): WorkerBridge<FakeReq, FakeResp, FakeResp> {
   const bridge = createWorkerBridge<FakeReq, FakeResp, FakeResp>({
     workers: workers as unknown as Worker[],
     getId: respId,
@@ -63,7 +63,7 @@ function makeRejectBridge(workers: FakeWorker[], overrides?: Partial<CreateWorke
     settle: (resp: FakeResp, { resolve }: { resolve: (v: FakeResp) => void }) => resolve(resp),
     onWorkerError: "terminatePool",
     ...overrides,
-  } as unknown as CreateWorkerBridgeOpts<FakeReq, FakeResp, FakeResp>);
+  } as unknown as CreateWorkerBridgeOpts<FakeResp, FakeResp>);
   // 真实场景：worker.onmessage = (e) => bridge.handleMessage(e.data)
   for (const w of workers) {
     w.onmessage = (e) => bridge.handleMessage(e.data as unknown as BridgeResp);
@@ -71,7 +71,7 @@ function makeRejectBridge(workers: FakeWorker[], overrides?: Partial<CreateWorke
   return bridge;
 }
 
-function makeResolveBridge(workers: FakeWorker[], overrides?: Partial<CreateWorkerBridgeOpts<FakeReq, FakeResp, BridgeResp>>): WorkerBridge<FakeReq, FakeResp, BridgeResp> {
+function makeResolveBridge(workers: FakeWorker[], overrides?: Partial<CreateWorkerBridgeOpts<FakeResp, BridgeResp>>): WorkerBridge<FakeReq, FakeResp, BridgeResp> {
   const bridge = createWorkerBridge<FakeReq, FakeResp, BridgeResp>({
     workers: workers as unknown as Worker[],
     getId: respId,
@@ -81,7 +81,7 @@ function makeResolveBridge(workers: FakeWorker[], overrides?: Partial<CreateWork
     onWorkerError: "resolveAllError",
     makeErrorResponse: (id: number, msg: string) => ({ id, ok: false, error: msg }),
     ...overrides,
-  } as unknown as CreateWorkerBridgeOpts<FakeReq, FakeResp, BridgeResp>);
+  } as unknown as CreateWorkerBridgeOpts<FakeResp, BridgeResp>);
   for (const w of workers) {
     w.onmessage = (e) => bridge.handleMessage(e.data as unknown as BridgeResp);
   }
@@ -391,7 +391,7 @@ describe("createResolveModeBridge", () => {
 
     const bridge = createResolveModeBridge("./some-worker.ts", 100, "超时");
     const buf = new ArrayBuffer(16);
-    const p = bridge.request(buf);
+    bridge.request(buf);
 
     expect(fakeWorker.postMessage).toHaveBeenCalledTimes(1);
     const [msg, transfer] = fakeWorker.postMessage.mock.calls[0];

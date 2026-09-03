@@ -2,7 +2,7 @@
 // 覆盖：fitCameraToScene（单根节点）+ fitCameraToRoots（多根节点并集），
 // 验证：包围盒计算正确、相机距离公式、空 Box fallback。
 // three 用真实实现（Box3/Vector3/OrbitControls），无 WebGL 依赖。
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { fitCameraToScene, fitCameraToRoots, frameCameraSide } from "./camera-setup.ts";

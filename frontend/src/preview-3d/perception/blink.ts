@@ -81,7 +81,6 @@ export function createBlinkController(opts: BlinkOptions = {}) {
     if (!state) { scheduleNext(); return; }
 
     const now = performance.now();
-    const elapsed = (now - state.lastTick) / 1000;
     state.lastTick = now;
 
     if (state.blinkRemaining > 0) {

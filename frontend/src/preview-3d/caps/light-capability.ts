@@ -372,7 +372,6 @@ export class LightCapability implements SceneCapability {
   readonly descKey = "preview.lightingDesc";
 
   private scene: THREE.Scene;
-  private renderer: THREE.WebGLRenderer;
   private caps?: SceneCapabilityLookup;
   private params: LightParams;
   private enabled: boolean;
@@ -392,7 +391,6 @@ export class LightCapability implements SceneCapability {
   private coneUniforms: VolumetricConeUniforms | null = null;
   private coneMaterial: THREE.ShaderMaterial | null = null;
   private coneHeight = 0;
-  private coneRadius = 0;
 
   // 体积光锥引擎（预留：后续支持 postprocess 模式）
   private volumetricEngine: "cone" | "postprocess" = "cone";
@@ -413,7 +411,6 @@ export class LightCapability implements SceneCapability {
     caps?: SceneCapabilityLookup;
   }) {
     this.scene = opts.scene;
-    this.renderer = opts.renderer;
     this.caps = opts.caps;
     this.params = deepMergeLightParams(DEFAULT_LIGHT_PARAMS, opts.params ?? {});
     this.enabled = opts.enabled ?? true;
@@ -525,7 +522,6 @@ export class LightCapability implements SceneCapability {
     const baseRadius = height * Math.tan(halfAngle) * (1.0 + sp.penumbra * 0.5);
 
     this.coneHeight = height;
-    this.coneRadius = baseRadius;
 
     const mat = this.createVolumetricMaterial(height, baseRadius);
     this.updateConeUniforms();

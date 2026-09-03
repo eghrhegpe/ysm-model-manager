@@ -200,9 +200,8 @@ describe("renderEnvLevel", () => {
     const ctx = makeCtx({ getCap: (id) => (id === "water" ? (fakeWaterCap as unknown as SceneCapability) : null) });
     const subList = document.createElement("div");
     let lastView: { title: string; render: (l: HTMLElement) => void } | null = null;
-    let lastTitle = "";
     const nav = (v: { title: string; render: (l: HTMLElement) => void }): void => {
-      lastView = v; lastTitle = v.title; v.render(subList);
+      lastView = v; v.render(subList);
     };
     const menu = {
       ...makeMenu(),

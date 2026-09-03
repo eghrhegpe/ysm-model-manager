@@ -6,7 +6,7 @@
 // 依赖：bone-tools.BoneTree + semantic-bones.ts 语义骨骼映射
 import * as THREE from "three";
 import { solveIK, extractIKChainFromTree, type IKChain } from "./ik-solver.ts";
-import type { BoneTree, BoneNode } from "./bone-tools.ts";
+import type { BoneTree } from "./bone-tools.ts";
 import type { SemanticBoneMap } from "./semantic-bones.ts";
 
 /** 足部 IK 控制器 */

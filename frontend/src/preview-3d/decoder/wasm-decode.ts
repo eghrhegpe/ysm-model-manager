@@ -448,7 +448,6 @@ function mdWsParseYsmMetaFromFiles(files: DecodedFile[]): {
     for (const au of json.metadata.authors) {
       if (!au.name) continue;
       const avatarPath = au.avatar || "";
-      const avatarKey = avatarPath.split(/[/\\]/).pop()?.replace(/\.\w+$/, "") || "";
       authors.push({
         name: au.name,
         role: au.role || "",

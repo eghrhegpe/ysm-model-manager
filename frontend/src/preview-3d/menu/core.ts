@@ -25,7 +25,6 @@ import {
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import { ensureFabStyles } from "../../utils/dom/fab.ts";
 import { tr } from "../../core/i18n/tr.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
@@ -356,7 +355,7 @@ function renderPreviewDock(
   makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView,
   makeGroupViewFn: (g: PreviewMenuGroupDef, items: PreviewMenuNode[]) => SlideMenuView,
   actionCtx: PreviewActionMenuCtx,
-  hideMenu: () => void,
+  _hideMenu: () => void,
   adapterItemsRef: { v: PreviewMenuNode[] },
 ): void {
   dock.innerHTML = "";
@@ -413,7 +412,7 @@ function renderPreviewDock(
 function bindPreviewTapToggle(
   viewEl: HTMLElement,
   popup: HTMLElement,
-  showMenu: (view: SlideMenuView) => void,
+  _showMenu: (view: SlideMenuView) => void,
   hideMenu: (opts?: { restoreFocus?: boolean }) => void,
 ): () => void {
   const tapAbort = new AbortController();

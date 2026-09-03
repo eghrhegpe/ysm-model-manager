@@ -17,7 +17,6 @@ import {
 import { MMDAmmoPlugin } from "@moeru/three-mmd-physics-ammo"; // 官方 Ammo.js 物理后端（PhysicsService 实装，非自研 cannon）
 import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { safeGet } from "../../utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
 import { formatLongTask, startMainThreadWatch } from "../../utils/main-thread-watch.ts";
@@ -698,7 +697,7 @@ async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> {
   c.tParseEnd = 0;
   c.tBuildEnd = 0;
   c.mmd = null;
-  c.manager.onProgress = (url: string, loaded: number, total: number): void => {
+  c.manager.onProgress = (_url: string, loaded: number, total: number): void => {
     const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
     const bar = c.ctx.loadingEl.querySelector<HTMLElement>("#ysm-mmd-progress");
     if (bar) bar.style.width = `${Math.max(5, pct)}%`;

@@ -189,7 +189,6 @@ function buildCubeMeshDataJS(
     ? [origin[0] - inflate, origin[1] - inflate, origin[2] - inflate]
     : origin;
   const geoSize = inflate ? [sx + 2 * inflate, sy + 2 * inflate, sz + 2 * inflate] : size;
-  const [gsx, gsy, gsz] = geoSize;
   const cubeOrigin = [
     geoOrigin[0] - bonePivot[0],
     geoOrigin[1] - bonePivot[1],
@@ -245,7 +244,6 @@ function parseUVJS(
   // 标准 box UV 映射
   const fw = sx / texW;
   const fh = sz / texH;
-  const fv = (sy + sz) / texH;
   const v0 = v;
   const v1 = v + sz / texH;
   const v2 = v + (sz + sy) / texH;

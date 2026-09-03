@@ -287,7 +287,7 @@ function pushSwitchHistory(ctx: SwitchContext, keep: boolean, next: PreviewScene
  * count 虚高（误触 MAX_MODELS 拦截）+ visibleRoots 含已移除的 detached root
  * （取景幽灵）。keep 多模型后非 keep 切换的残留由下次 mount 的 reset 兜底。
  */
-function unregisterSwitchPrevious(ctx: SwitchContext, keep: boolean): void {
+function unregisterSwitchPrevious(_ctx: SwitchContext, keep: boolean): void {
   if (!keep) {
     const prevId = sceneRegistry.getActiveId();
     if (prevId) sceneRegistry.unregister(prevId);

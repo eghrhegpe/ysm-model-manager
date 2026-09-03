@@ -534,8 +534,6 @@ describe("mountPreviewRootMenu", () => {
     }));
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
-    const tabs = overlay.querySelectorAll<HTMLElement>('[data-testid="preview-switch-tab"]');
-    const ysmTab = Array.from(tabs).find((t) => t.dataset.rtype === "ysm") as HTMLElement;
     // 开 YSM 模型默认就高亮 YSM（你反馈的核心痛点）
     expect(switchTabHighlightBg(true)).toContain("var(--accent)");
     handle.dispose();

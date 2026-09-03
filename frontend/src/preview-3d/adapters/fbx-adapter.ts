@@ -223,7 +223,7 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
   }
   const tLoadEnd = performance.now();
   // 加载剖析
-  const { meshCount, texCount } = countFbxStats(group);
+  const { texCount } = countFbxStats(group);
   recordLoadTrace({
     ts: Date.now(),
     format: "fbx",

@@ -85,7 +85,7 @@ describe("SceneRegistry 可见性 & 相机取景", () => {
   it("setVisible 联动 entry + 每个 root.visible，visibleRoots 仅含可见", () => {
     const rootA = new THREE.Object3D();
     const rootB = new THREE.Object3D();
-    const a = makeEntry("a.glb", [rootA]);
+    makeEntry("a.glb", [rootA]); // 注册 rootA（副作用）→ 默认 visible，供 visibleRoots 断言
     const b = makeEntry("b.glb", [rootB]);
 
     sceneRegistry.setVisible(b, false);
@@ -117,7 +117,6 @@ describe("SceneRegistry dispatch 换菜单", () => {
     sceneRegistry.setMenuSink(sink);
     const itemsA: PreviewMenuNode[] = [{ id: "ax" }] as any;
     const a = makeEntry("a.glb", [new THREE.Object3D()], { menuItems: itemsA });
-    const b = makeEntry("b.glb", [new THREE.Object3D()], { menuItems: [{ id: "by" }] as any });
 
     sceneRegistry.setActive(a);
     expect(sceneRegistry.getActiveId()).toBe(a);

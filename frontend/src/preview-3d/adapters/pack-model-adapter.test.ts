@@ -2,7 +2,7 @@
 // 覆盖：buildPackScene 主路径、tint 渲染、错误路径、GPU 释放。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
-import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 
 const hoisted = vi.hoisted(() => ({
   parseMock: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock("../screenshot.ts", () => ({
 }));
 vi.mock("../texture-cache.ts", () => ({
   textureCache: {
-    acquire: vi.fn((u: string, f: (u: string) => THREE.Texture) => {
+    acquire: vi.fn((u: string, _f: (u: string) => THREE.Texture) => {
       const img = new Image(); img.src = u;
       return new THREE.Texture(img);
     }),
@@ -390,7 +390,6 @@ describe("camera framing", () => {
     const deps = makeDeps();
     const ctx = makeCtx();
     const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip");
-    const originalFar = (ctx.camera as THREE.PerspectiveCamera).far;
     // 手动改变相机位置
     (ctx.camera as THREE.PerspectiveCamera).position.set(100, 100, 100);
     // resetCamera 应恢复 framing

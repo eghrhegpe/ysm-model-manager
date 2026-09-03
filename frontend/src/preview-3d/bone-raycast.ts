@@ -173,7 +173,7 @@ export function registerBoneRaycast(
     }
   };
 
-  const onPointerClick = (e: MouseEvent): void => {
+  const onPointerClick = (_e: MouseEvent): void => {
     if (!state.hoveredBone || !state.onBoneSelectCallback) return;
     const info = assembleBoneSelectInfo(
       state.hoveredBone, boneGroupMap, nameMap, parentMap, childrenMap, state.hoveredMesh,

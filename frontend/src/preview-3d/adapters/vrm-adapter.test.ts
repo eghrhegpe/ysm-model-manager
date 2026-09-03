@@ -332,7 +332,7 @@ describe("VRMA 动作加载", () => {
     // VRMA 路径返回 vrmAnimations（非 vrm），供 createVRMAnimationClip 消费
     // 注意：VRMA loader.parse 用空路径 ""，通过调用顺序区分（第1次=主模型，第2次=VRMA）
     let parseCallCount = 0;
-    hoisted.parseMock.mockImplementation((buffer, path) => {
+    hoisted.parseMock.mockImplementation((_buffer, _path) => {
       parseCallCount++;
       if (parseCallCount > 1) {
         return { userData: { vrmAnimations: [{ name: "test" }] } };
@@ -340,7 +340,7 @@ describe("VRMA 动作加载", () => {
       return { userData: { vrm } };
     });
 
-    const { ctx, scene } = makeCtx();
+    const { ctx } = makeCtx();
     const port = makePort();
     const content = await buildVrmScene(
       ctx,
@@ -376,7 +376,7 @@ describe("VRMA 动作加载", () => {
       "/vrm/bad.vrma",
     ]);
     // 解析损坏 VRMA → parse 抛错，被 try/catch 吞
-    hoisted.parseMock.mockImplementation((buffer, path) => {
+    hoisted.parseMock.mockImplementation((_buffer, path) => {
       if (path.endsWith("bad.vrma")) throw new Error("corrupt");
       return { userData: { vrm } };
     });
@@ -472,7 +472,7 @@ describe("VRMA 多动作切换", () => {
   it("多个 .vrma → 可选切换，select(i) 切换当前 action", async () => {
     const vrm = makeFakeVrm();
     // parseMock 根据路径区分主模型和 VRMA
-    hoisted.parseMock.mockImplementation((buffer: unknown, path: string) => {
+    hoisted.parseMock.mockImplementation((_buffer: unknown, _path: string) => {
       // VRMA 解析时 path 为空字符串 ""（见源码 loader.parse(buf, "", ...)）
       // 通过调用次数区分：第1次=主模型，第2+次=VRMA
       const callCount = hoisted.parseMock.mock.calls.length;
@@ -511,7 +511,7 @@ describe("VRMA 多动作切换", () => {
     expect(playItem?.dockGroup).toBe("motion");
 
     // 通过 panels.playNodes 验证 play bridge（[doc:adr-126-p5-收尾] play 面板声明式化）
-    const playNodes = vi.fn((bridge: unknown) => [
+    const playNodes = vi.fn((_bridge: unknown) => [
       { id: "stub-play", kind: "toggle" as const, labelKey: "x", fallback: "播放", control: { get: () => false, set: () => {} } },
     ]);
     const panelsWithPlay = makePanels();
@@ -519,7 +519,7 @@ describe("VRMA 多动作切换", () => {
 
     // 重置 parseMock 计数，重新构建以注入 playNodes
     hoisted.parseMock.mockClear();
-    hoisted.parseMock.mockImplementation((buffer: unknown, path: string) => {
+    hoisted.parseMock.mockImplementation((_buffer: unknown, _path: string) => {
       const callCount = hoisted.parseMock.mock.calls.length;
       if (callCount > 1) {
         return { userData: { vrmAnimations: [{ name: "anim" }] } };
@@ -1106,7 +1106,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
 
   it("play 桥：toggle 翻转播放态 + select 切换 clip（同 index / 越界早退）", async () => {
     const vrm = makeFakeVrm();
-    hoisted.parseMock.mockImplementation((buffer: unknown, path: string) => {
+    hoisted.parseMock.mockImplementation((_buffer: unknown, path: string) => {
       void path;
       if (hoisted.parseMock.mock.calls.length > 1) {
         return { userData: { vrmAnimations: [{ name: "a" }] } };

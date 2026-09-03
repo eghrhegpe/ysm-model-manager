@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { renderCapControls } from "../menu/core.ts";
 

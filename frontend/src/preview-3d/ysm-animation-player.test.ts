@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
-import { createYsmAnimPlayer, type YsmAnimPlayer } from "./ysm-animation-player.ts";
+import { createYsmAnimPlayer } from "./ysm-animation-player.ts";
 import type { AnimationClip } from "../utils/animation/animation.ts";
 import type { BoneHierarchyNode } from "../utils/animation/animation.ts";
 import { compileMolang } from "../utils/animation/molang.ts";

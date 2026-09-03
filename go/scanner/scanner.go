@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -57,14 +58,45 @@ var walkCount atomic.Int64
 // flightJoins 并入在途航班的等待方计数（诊断/测试用）
 var flightJoins atomic.Int64
 
-// walkStartHook 走盘开始钩子（仅测试注入：制造确定性在途重叠；生产恒 nil）。
-// ⚠️ 禁止生产调用——测试钩子，生产路径不得读写。
-var walkStartHook func()
-
-// rustScanHook 仅测试注入：覆盖 Rust 扫描快路径结果，制造 tryRustScan 的 handled 分支；
+// walkStartHookFn 走盘开始钩子（仅测试注入：制造确定性在途重叠；生产恒 nil）。
+// rustScanHookFn 仅测试注入：覆盖 Rust 扫描快路径结果，制造 tryRustScan 的 handled 分支；
 // 生产恒 nil（Rust 后端仅在 -tags rust_backend 下编译，普通单测走 stub 返回 handled=false）。
-// ⚠️ 禁止生产调用——测试钩子，生产路径不得读写。
-var rustScanHook func(dir string) ([]types.ModelEntry, bool, bool)
+// 2026-09 外部锐评 #15：旧实现是裸包级变量、无任何并发防护——与同文件 errorSink 特意
+// 上 RWMutex（R31 修复）的严谨度不成比例。现经 hookMu 读写（Set* 注入 / get* 快照读取，
+// 与 SetErrorSink 同款范式）；测试注入走 Set 接口，禁止生产调用。
+var (
+	hookMu          sync.RWMutex
+	walkStartHookFn func()
+	rustScanHookFn  func(dir string) ([]types.ModelEntry, bool, bool)
+)
+
+// SetWalkStartHook 注入/清除走盘开始钩子（仅测试；传 nil 清除）。
+func SetWalkStartHook(fn func()) {
+	hookMu.Lock()
+	walkStartHookFn = fn
+	hookMu.Unlock()
+}
+
+// getWalkStartHook 快照读取走盘钩子（生产路径恒 nil）。
+func getWalkStartHook() func() {
+	hookMu.RLock()
+	defer hookMu.RUnlock()
+	return walkStartHookFn
+}
+
+// SetRustScanHook 注入/清除 Rust 扫描钩子（仅测试；传 nil 清除）。
+func SetRustScanHook(fn func(dir string) ([]types.ModelEntry, bool, bool)) {
+	hookMu.Lock()
+	rustScanHookFn = fn
+	hookMu.Unlock()
+}
+
+// getRustScanHook 快照读取 Rust 扫描钩子（生产路径恒 nil）。
+func getRustScanHook() func(dir string) ([]types.ModelEntry, bool, bool) {
+	hookMu.RLock()
+	defer hookMu.RUnlock()
+	return rustScanHookFn
+}
 
 type scanFlight struct {
 	wg         sync.WaitGroup
@@ -102,10 +134,15 @@ var (
 // 窗口与 scanCacheTTL 对齐（30s）：重扫前该错误已入面板，去重不影响可查性。
 const scanErrorDedupWindow = 30 * time.Second
 
-// dedupMu + dedupSeen 记录 msg → 上次上报时间
+// dedupCleanEvery 每次全量清理间隔（按写入次数）：错误路径本身低频，
+// 摊还避免每次上报都锁内 O(n) 遍历 dedupSeen（锐评 P2-2）。
+const dedupCleanEvery = 128
+
+// dedupMu + dedupSeen 记录 msg → 上次上报时间；dedupWrites 写入计数（摊还清理用）
 var (
-	dedupMu   sync.Mutex
-	dedupSeen = map[string]time.Time{}
+	dedupMu     sync.Mutex
+	dedupSeen   = map[string]time.Time{}
+	dedupWrites int
 )
 
 // SetErrorSink 注入扫描错误回调（薄壳 internal/app 启动时调用，如 AddOpLog 包装）
@@ -128,10 +165,14 @@ func emitScanError(format string, args ...any) {
 		return // 窗口内同错误已上报过，去重
 	}
 	dedupSeen[msg] = now
-	// 顺手清理过期条目（窗口外不会再匹配，防止长期运行会话内存缓慢增长）
-	for k, t := range dedupSeen {
-		if now.Sub(t) >= scanErrorDedupWindow {
-			delete(dedupSeen, k)
+	dedupWrites++
+	// 摊还清理过期条目：每 dedupCleanEvery 次写入才全量扫一遍（锐评 P2-2）。
+	// 过期条目在窗口外不会再匹配命中，晚清无碍去重正确性，只影响 map 占用。
+	if dedupWrites%dedupCleanEvery == 0 {
+		for k, t := range dedupSeen {
+			if now.Sub(t) >= scanErrorDedupWindow {
+				delete(dedupSeen, k)
+			}
 		}
 	}
 	dedupMu.Unlock()
@@ -312,6 +353,11 @@ retry:
 	// owner，后续调用方并入航班等待，取克隆结果且 hit=true（薄壳不重复记扫描日志）。
 	// 置于 Rust 快路径之前：Windows（Rust handled=true）下并发请求同样并入航班去重
 	fl := &scanFlight{gen: gen, keyVersion: keyVersion}
+	// owner 候选航班：wg.Add 须在 LoadOrStore 之前（waiter 可能在 Load 后立刻 Wait——
+	// 计数先于暴露，Wait 才不会空跑）。waiter 路径（join 返回 hit/retry）下本 fl 被
+	// 整体弃用：wg 计数 1 无人 Done 亦无害（从不 Wait 它，垃圾回收即可）——结构使然，
+	// 2026-09 外部锐评 #10 已评估为「惯用法 + 已收敛产物」，不改为 singleflight.Group
+	// （自建表支持 waiter 按启动时版本失效守卫，标准库 Group 无此语义）。
 	fl.wg.Add(1)
 	if res := joinInFlightWaiter(dir, fl); res.hit {
 		return res.entries, true
@@ -330,8 +376,8 @@ retry:
 	}
 
 	walkCount.Add(1)
-	if walkStartHook != nil {
-		walkStartHook()
+	if h := getWalkStartHook(); h != nil {
+		h()
 	}
 	entries := []types.ModelEntry{}
 	// 根目录级 walk 失败标记——目录不存在/无权限时 WalkDir
@@ -341,7 +387,7 @@ retry:
 	// R31 P2-1：接收 WalkDir 返回 error——根 lstat 失败时 WalkDir 不调 callback
 	// 直接返回 error，旧实现忽略该返回值导致 walkFailed 恒 false，空结果照常缓存。
 	if werr := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true)
+		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true)
 		if rootFailed {
 			walkFailed = true
 			return nil
@@ -356,6 +402,10 @@ retry:
 	}); werr != nil {
 		walkFailed = true
 	}
+	// SHA256 并行哈希回填（2026-09 外部锐评 #5）：旧实现哈希在 WalkDir 回调内串行
+	// 全量读盘（大库冷扫逐文件同步 IO）；walk 期间 deferHash 跳过计算，收集完条目后
+	// 按 worker 池并行回填——条目序/错误口径不变（见 hashEntriesParallel）。
+	hashEntriesParallel(entries)
 	// 克隆 slice 后 Store，避免 sync.Map.Load 读到 WalkDir 中途
 	// append 的部分写入（单线程 Wails 场景安全，但并发扫描无 race）
 	stored := append([]types.ModelEntry(nil), entries...)
@@ -414,8 +464,8 @@ func tryRustScan(dir string, gen, keyVersion uint64, startTime time.Time, fl *sc
 	// 无法触达 Rust handled 分支，故用钩子制造该路径）。
 	var rustEntries []types.ModelEntry
 	var cacheable, handled bool
-	if rustScanHook != nil {
-		rustEntries, cacheable, handled = rustScanHook(dir)
+	if hook := getRustScanHook(); hook != nil {
+		rustEntries, cacheable, handled = hook(dir)
 	} else {
 		rustEntries, cacheable, handled = scanEntriesWithRust(dir)
 	}
@@ -441,7 +491,9 @@ func tryRustScan(dir string, gen, keyVersion uint64, startTime time.Time, fl *sc
 // 本函数是原 WalkDir 闭包内近 80 行逻辑的提纯升格，输入纯参数、无副作用（除错误回调和哈希）。
 // wantMeta=false（作者提取等只看文件名的场景）时跳过 d.Info() 与哈希计算——
 // 纯目录枚举，Size/ModTime/Hash 恒零值。
-func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMeta bool) (entry *types.ModelEntry, walkRet error, rootFailed bool) {
+// deferHash=true（ScanEntries 走盘用）：哈希推迟到 walk 后由 hashEntriesParallel 并行
+// 回填（2026-09 外部锐评 #5），本函数只留 Size/ModTime；其余调用方传 false 保持内联。
+func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMeta, deferHash bool) (entry *types.ModelEntry, walkRet error, rootFailed bool) {
 	if err != nil {
 		// 统一走错误回调（GUI 下 stdout 不可见，薄壳注入后进环形日志面板 ADR-082）
 		emitScanError("[scanner] walk error: %s: %v", p, err)
@@ -504,7 +556,7 @@ func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMet
 		// 计算 SHA256 供同步系统使用（GetInstanceStatus 依赖哈希匹配）
 		// 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢）
 		// 蓝图文件（.nbt/.schematic/.litematic）通常较小，计入哈希以支持同步对比
-		if types.ShouldHashExt(originalExt) {
+		if types.ShouldHashExt(originalExt) && !deferHash {
 			e.Hash = ComputeFileHash(p)
 			// 哈希失败留痕——静默置空会让同步把该文件当「无哈希」跳过（用户不知为何不同步）
 			if e.Hash == "" {
@@ -544,6 +596,49 @@ func ComputeFileHash(path string) string {
 	return hash
 }
 
+// hashEntriesParallel 并行计算 entries 的 SHA256 并按下标回填（2026-09 外部锐评 #5：
+// 旧实现哈希在 WalkDir 回调内串行全量读盘，大库冷扫被逐文件同步 IO 拖慢）。
+// 语义与旧内联路径逐字节一致：仅 ShouldHashExt 条目参与、超 MaxImportSize 由
+// ComputeFileHash 内部跳过、空哈希补 emitScanError（同旧回调内口径）；worker 数 =
+// min(runtime.NumCPU, 待哈希数)，条目顺序不变（按下标回填）。
+func hashEntriesParallel(entries []types.ModelEntry) {
+	var jobs []int
+	for i := range entries {
+		if types.ShouldHashExt(entries[i].Ext) {
+			jobs = append(jobs, i)
+		}
+	}
+	if len(jobs) == 0 {
+		return
+	}
+	n := runtime.NumCPU()
+	if n > len(jobs) {
+		n = len(jobs)
+	}
+	if n < 1 {
+		n = 1
+	}
+	var wg sync.WaitGroup
+	ch := make(chan int, len(jobs))
+	for w := 0; w < n; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range ch {
+				entries[i].Hash = ComputeFileHash(entries[i].Path)
+				if entries[i].Hash == "" {
+					emitScanError("[scanner] 哈希计算失败/跳过 %s（读错误或超 %d 字节上限）", entries[i].Path, types.MaxImportSize)
+				}
+			}
+		}()
+	}
+	for _, j := range jobs {
+		ch <- j
+	}
+	close(ch)
+	wg.Wait()
+}
+
 // ========== 作者提取 ==========
 
 // ScanEntriesLite 轻量目录遍历（作者提取专用）：与 ScanEntries 同一套过滤口径
@@ -560,7 +655,7 @@ func ScanEntriesLite(dir string) []types.ModelEntry {
 	}
 	entries := []types.ModelEntry{}
 	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		entry, walkRet, _ := processScanDirEntry(p, d, err, dir, false)
+		entry, walkRet, _ := processScanDirEntry(p, d, err, dir, false, false)
 		if walkRet != nil {
 			return walkRet
 		}

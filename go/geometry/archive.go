@@ -225,6 +225,18 @@ func (b *l0BasenameIndex) build() (geo, png map[string][]l0NamedEntry) {
 // 10000 条对正常 YSM 包绰绰有余（典型包 <500 条），超限即停止并标记不完整。
 const maxClassifyEntries = 10000
 
+// maxMaterializeEntries / maxMaterializeBytes 物化循环的条目/累计字节双封顶
+// （2026-09 外部锐评 #3：classifyFileInventory 有 maxClassifyEntries 防「数十万
+// 微小条目占数 GB 内存」，但 collectPngEntries/collectGeoAnimEntries/collectMergedFiles/
+// collectAnimJSONs 把每条 PNG/geo 物化进内存且只受单条 50MB 限制——恶意归档塞
+// 10 万条 100KB PNG 即可绕过那条防线达到同样效果）。正常 YSM 包条目 <500、
+// 纹理累计 <100MB，5000 条 / 512MB 上限绰绰有余；超限截断并留日志（畸形输入
+// 防御，合法包不触发）。截断仅作用于当次物化集合，不影响既有收集结构。
+const (
+	maxMaterializeEntries = 5000
+	maxMaterializeBytes   = 512 << 20
+)
+
 func classifyFileInventory(entries []container.Entry) *types.FileInventory {
 	inv := &types.FileInventory{}
 	matched := 0
@@ -484,6 +496,10 @@ func collectAnimJSONs(entries []container.Entry, maidNs string) []string {
 		buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
 		if len(buf) > 10 {
 			animJSONs = append(animJSONs, string(buf))
+			if len(animJSONs) >= maxMaterializeEntries {
+				log.Printf("[geometry] collectAnimJSONs 达到物化条目封顶 %d, 截断", maxMaterializeEntries)
+				break
+			}
 		}
 	}
 	return animJSONs
@@ -511,6 +527,10 @@ func collectGeoAnimEntries(entries []container.Entry, maidNs string) ([]geoEntry
 		}
 		buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
 		geoFiles = append(geoFiles, geoEntry{name: e.Name(), data: buf})
+		if len(geoFiles) >= maxMaterializeEntries {
+			log.Printf("[geometry] collectGeoAnimEntries 达到物化条目封顶 %d, 截断", maxMaterializeEntries)
+			break
+		}
 	}
 	return geoFiles, animJSONs
 }
@@ -528,6 +548,7 @@ func collectAnimEntriesOnly(entries []container.Entry, maidNs string) []string {
 func collectPngEntries(entries []container.Entry, maidNs string) ([][]byte, []string) {
 	var pngs [][]byte
 	var pngNames []string
+	var totalBytes int64
 	for _, e := range entries {
 		low := strings.ToLower(e.Name())
 		if !((strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !e.IsDir() && !strings.Contains(low, "avatar/") && !strings.Contains(low, "gui/")) {
@@ -551,6 +572,13 @@ func collectPngEntries(entries []container.Entry, maidNs string) ([][]byte, []st
 		name = trimTexExt(name)
 		pngNames = append(pngNames, name)
 		pngs = append(pngs, pngData)
+		totalBytes += int64(len(pngData))
+		// 条目/累计字节双封顶（2026-09 外部锐评 #3）：恶意归档塞数十万条微小 PNG
+		// 可绕过 classifyFileInventory 的条目防线占数 GB 内存——超限截断 + 日志
+		if len(pngs) >= maxMaterializeEntries || totalBytes >= maxMaterializeBytes {
+			log.Printf("[geometry] collectPngEntries 达到物化封顶 (entries=%d bytes=%d), 截断", len(pngs), totalBytes)
+			break
+		}
 	}
 	return pngs, pngNames
 }
@@ -839,7 +867,10 @@ func l0ResolveTexture(item maidManifestItem, maidNs, nsBase, logPrefix string,
 // 数组：两段 Open→Read→append 对称代码原在主循环内联各写一份，现在合并。
 // 行为逐字节保持原循环：Open 失败静默跳、buf 为空跳、ARM 模型被 IsArmModelName
 // 排除、纹理 pngNames 取 LastIndex("/") 后缀、texNameByItem 小写——一处不动。
-func applyL0ManifestItem(res *l0Resolved, i int, maidNs string,
+// 例外（2026-09 外部锐评 #18）：Open 失败补日志——manifest 条目存在但读不了属
+// 真 I/O 故障，静默吞掉会让损坏包难排障；条目缺席（entryByPath miss）仍静默
+// （清单路径缺失是正常可预期的落空，逐作者 log 会刷屏）。
+func applyL0ManifestItem(res *l0Resolved, i int, maidNs, logPrefix string,
 	entryByPath map[string]container.Entry, modelAbs, texAbs string) {
 	if modelAbs != "" {
 		if e, ok := entryByPath[modelAbs]; ok {
@@ -850,6 +881,8 @@ func applyL0ManifestItem(res *l0Resolved, i int, maidNs string,
 					res.modelOrder = append(res.modelOrder, modelAbs[len(maidNs):])
 					res.resolvedPathByItem[i] = modelAbs
 				}
+			} else {
+				log.Printf("%s L0 模型条目 Open 失败 %s: %v", logPrefix, modelAbs, err)
 			}
 		}
 	}
@@ -868,6 +901,8 @@ func applyL0ManifestItem(res *l0Resolved, i int, maidNs string,
 					res.texOrder = append(res.texOrder, strings.ToLower(filepath.Base(texAbs)))
 					res.texNameByItem[i] = strings.ToLower(tn)
 				}
+			} else {
+				log.Printf("%s L0 纹理条目 Open 失败 %s: %v", logPrefix, texAbs, err)
 			}
 		}
 	}
@@ -903,7 +938,7 @@ func resolveL0(entries []container.Entry, maidNs string, manifest []maidManifest
 	for i, item := range manifest {
 		modelAbs := l0ResolveModel(item, maidNs, nsBase, logPrefix, entryByPath, bIdx)
 		texAbs := l0ResolveTexture(item, maidNs, nsBase, logPrefix, entryByPath, bIdx, modelAbs)
-		applyL0ManifestItem(&res, i, maidNs, entryByPath, modelAbs, texAbs)
+		applyL0ManifestItem(&res, i, maidNs, logPrefix, entryByPath, modelAbs, texAbs)
 	}
 
 	// 只有清单至少命中了 1 个模型才用 L0 覆盖（空命中视为清单与 zip 内容脱节，回退 L1）。
@@ -930,6 +965,7 @@ func resolveL0(entries []container.Entry, maidNs string, manifest []maidManifest
 //     陷阱：原 io.ReadAll(io.LimitReader) 无 +1 探测，恰好 50MB 被截断后静默下发）。
 //   - IsArmModelName 检查发生在 Open+Read 之后（保持原序，勿"顺手优化"成先判断再读）。
 func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []geoEntry, animJSONs []string, pngs [][]byte, pngNames []string) {
+	var totalBytes int64
 	for _, e := range entries {
 		low := strings.ToLower(e.Name())
 		if strings.HasSuffix(low, ".json") && !e.IsDir() {
@@ -949,6 +985,10 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 				buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
 				if len(buf) > 10 {
 					animJSONs = append(animJSONs, string(buf))
+					if len(animJSONs) >= maxMaterializeEntries {
+						log.Printf("[geometry] collectMergedFiles 动画达到物化条目封顶 %d, 截断", maxMaterializeEntries)
+						break
+					}
 				}
 				continue
 			}
@@ -961,6 +1001,11 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 				continue // 排除第一人称手臂模型 arm.json（与 main 手臂重叠 → 双手臂）
 			}
 			geoFiles = append(geoFiles, geoEntry{name: e.Name(), data: buf})
+			totalBytes += int64(len(buf))
+			if len(geoFiles) >= maxMaterializeEntries || totalBytes >= maxMaterializeBytes {
+				log.Printf("[geometry] collectMergedFiles geo 达到物化封顶 (entries=%d bytes=%d), 截断", len(geoFiles), totalBytes)
+				break
+			}
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !e.IsDir() && !strings.Contains(low, "avatar/") && !strings.Contains(low, "gui/") {
 			// maid-model 命名空间过滤：只收集首个 namespace 的纹理
@@ -978,6 +1023,11 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 				name := baseName(e.Name())
 				pngNames = append(pngNames, trimTexExt(name))
 				pngs = append(pngs, pngData)
+				totalBytes += int64(len(pngData))
+				if len(pngs) >= maxMaterializeEntries || totalBytes >= maxMaterializeBytes {
+					log.Printf("[geometry] collectMergedFiles 纹理达到物化封顶 (entries=%d bytes=%d), 截断", len(pngs), totalBytes)
+					break
+				}
 			}
 		}
 	}

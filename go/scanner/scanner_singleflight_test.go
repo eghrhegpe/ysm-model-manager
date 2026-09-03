@@ -52,14 +52,14 @@ func TestScanEntriesWithHit_ConcurrentSameDir_SingleWalk(t *testing.T) {
 	// 钩子制造确定性重叠：owner 进入 walk 后阻塞，等待方全部挂在在途航班上再放行
 	ownerStarted := make(chan struct{}, 1)
 	release := make(chan struct{})
-	walkStartHook = func() {
+	SetWalkStartHook(func() {
 		select {
 		case ownerStarted <- struct{}{}:
 		default:
 		}
 		<-release
-	}
-	defer func() { walkStartHook = nil }()
+	})
+	defer SetWalkStartHook(nil)
 
 	const n = 6
 	var wg sync.WaitGroup
@@ -149,14 +149,14 @@ func TestScanEntriesWithHit_WaitersGetClone(t *testing.T) {
 
 	ownerStarted := make(chan struct{}, 1)
 	release := make(chan struct{})
-	walkStartHook = func() {
+	SetWalkStartHook(func() {
 		select {
 		case ownerStarted <- struct{}{}:
 		default:
 		}
 		<-release
-	}
-	defer func() { walkStartHook = nil }()
+	})
+	defer SetWalkStartHook(nil)
 
 	var wg sync.WaitGroup
 	var ownerEntries, waiterEntries []types.ModelEntry
@@ -198,14 +198,14 @@ func TestScanEntriesWithHit_WaiterInvalidatedDuringFlight_Rescans(t *testing.T) 
 
 	ownerStarted := make(chan struct{}, 1)
 	release := make(chan struct{})
-	walkStartHook = func() {
+	SetWalkStartHook(func() {
 		select {
 		case ownerStarted <- struct{}{}:
 		default:
 		}
 		<-release
-	}
-	defer func() { walkStartHook = nil }()
+	})
+	defer SetWalkStartHook(nil)
 
 	var wg sync.WaitGroup
 	hits := make([]bool, 2)

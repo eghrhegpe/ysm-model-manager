@@ -221,7 +221,7 @@ export function getDedupConfig(): Readonly<{ strategy: string; keepPolicy: strin
 }
 
 // ===== startDedup / executeDedupScan 子函数 =====
-import type { Group as DedupGroup, FileEntry as DedupFileEntry } from "../../../../bindings/ysm-model-manager/go/dedup/models.ts";
+import type { Group as DedupGroup } from "../../../../bindings/ysm-model-manager/go/dedup/models.ts";
 type GetRepoRootFn = (rtype: string) => Promise<string>;
 type FindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
 type MoveToRecycleFn = (path: string) => Promise<void>;

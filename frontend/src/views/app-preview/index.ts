@@ -116,7 +116,7 @@ const PREVIEW_INVALIDATE: Array<() => void> = [
 ];
 
 // 注册缓存淘汰回调：释放 blob URL（Set 去重：重复 URL 只 revoke 一次，revoke 幂等无害）
-cacheSetEvictHandler((key, val) => {
+cacheSetEvictHandler((_key, val) => {
   if (!val) return;
   const urls = collectBlobUrls(val);
   for (const u of urls) {

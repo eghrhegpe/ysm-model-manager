@@ -5,7 +5,7 @@
 //  - 游戏目录自动检测：单路径 / 无路径 / 多路径选择器（选择/取消）
 //  - 链接模式切换 → SetLinkMode + 自动 relink；relink 无 mcRoot warn / 有实例成功
 //  - 高级面板展开、主题卡片点击、镜像源切换、发布页跳转
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "../../../test-utils/index.ts";
 import { initSettings } from "./init.ts";
 import { t } from "../../../core/i18n/t.ts";

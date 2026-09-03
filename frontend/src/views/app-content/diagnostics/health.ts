@@ -52,11 +52,6 @@ export async function runHealthAudit(
   }
 }
 
-/** 后端错误形态：Go 绑定失败返回 {error: string}（与其他绑定契约一致） */
-function isBackendError(e: unknown): e is Error & { message: string } {
-  return typeof e === "object" && e !== null && "message" in e;
-}
-
 /** 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 */
 export function renderHealthReport(r: HealthReport, esc: EscFn): string {
   const score = Math.max(0, Math.min(100, r.score));

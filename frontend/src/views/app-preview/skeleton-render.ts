@@ -11,7 +11,6 @@ import { renderMultiAngle } from "../../preview-3d/screenshot-render.ts";
 import { toScreenshotLights } from "../../preview-3d/screenshot-lights.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
 import { t } from "../../core/i18n/t.ts";
-import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 // P1 修复（ADR-040）：fill3DPanel 已拆至 skeleton-fill-panel.ts，此处 re-export 兼容
@@ -109,7 +108,7 @@ export async function buildStatsCard(
   model: BedrockGeometry & { _authors?: Array<{ avatarUrl?: string | null; name?: string; role?: string; bilibili?: string }>; _modelPath?: string },
   modelPath: string,
   _decodedBy: string,
-  ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
+  _ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
 ): Promise<void> {
   const card = document.createElement("div");
   card.className = "pv-card";

@@ -4,22 +4,14 @@
 // 切换模型归 core 根菜单 roles 项（角色面板内嵌加载入口）；相机归 core camera 项（sharedOnly）。
 // 材质面板 buildMaterialControls 保留复用（纯渲染层，状态经 bridge 下沉 mmd-materials.ts，ADR-072）。
 
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import * as THREE from "three";
 import type { MMD } from "@moeru/three-mmd";
 import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import { cardContainer, addFieldRow } from "../../ui/ui-helpers.ts";
-import { bus } from "../../bus.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { saveScreenshot } from "./skeleton-render.ts";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
 import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import {
-  listMmdMaterials,
-  getMmdMaterialDetail,
-  setMmdMaterialVisible,
-  setMmdMaterialOpacity,
   type MmdMaterialDetail,
   type MmdMaterialListItem,
 } from "../../preview-3d/mmd-materials.ts";

@@ -5,7 +5,7 @@ import { renderModel2D } from "./model2d/model2d.ts";
 
 /** 全窗放大预览（独立函数，不依赖组件实例） */
 export async function openFullPreview(
-  canvas: HTMLCanvasElement,
+  _canvas: HTMLCanvasElement,
   model: BedrockGeometry,
   textureImg: HTMLImageElement | null,
   labelsOn: boolean,

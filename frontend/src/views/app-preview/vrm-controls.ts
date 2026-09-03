@@ -1,15 +1,9 @@
 // ===== VRM 3D 菜单面板填充（ADR-076 v2 Phase 2：对齐 ysm-controls.ts 模式）=====
 // VRM 专属面板（材质）集中于此，由 vrm-adapter 经 ctx.menu.setAdapterItems 注入 ⚙️ 根菜单。
-import * as THREE from "three";
 import {
-  listVrmMaterials,
-  getVrmMaterialDetail,
-  setVrmMaterialVisible,
-  setVrmMaterialOpacity,
   type VrmMaterialListItem,
   type VrmMaterialDetail,
 } from "../../preview-3d/vrm-materials.ts";
-import { t } from "../../core/i18n/t.ts";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import type { VrmModelInfoCtx } from "../../preview-3d/adapters/vrm-adapter.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";

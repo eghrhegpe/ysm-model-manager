@@ -1,7 +1,7 @@
 // ===== 站点视图拖拽 JSON 导入组件测试（G-1 — ADR-035 / Design.md §19.1）=====
 // 真实绑定 bindDragEvents：验证 JSON 识别分支（创作者/站点/非法）+ dragenter 计数。
 // getApp 三个绑定 mock；bus/toast 用真实总线事件流断言。
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "../../../bus.ts";
 
 // mock bindings（阻断 Wails runtime 加载链）

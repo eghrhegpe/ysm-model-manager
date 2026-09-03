@@ -40,8 +40,6 @@ export function createWorkshopRefs(): WorkshopRefs {
  */
 export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void {
   const root = host._root;
-  const searchResults = root.getElementById("ws-search-results") as HTMLElement | null;
-  const creatorView = root.getElementById("ws-creator-view") as HTMLElement | null;
 
   // 本地扫描作者的后台补充：首屏渲染不依赖磁盘扫描（曾阻塞 tab 栏秒级~分钟级），
   // 扫描完成后再合并进 allCreatorsRef 并重渲染当前站点视图。

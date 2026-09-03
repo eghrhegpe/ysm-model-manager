@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { initTheme } from "./theme.ts";
 
 const { safeGet, safeSet, getApp, applyTheme } = vi.hoisted(() => ({

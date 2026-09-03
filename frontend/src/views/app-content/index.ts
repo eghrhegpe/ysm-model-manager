@@ -17,7 +17,6 @@ const appContentStyle: CSSStyleSheet = (() => {
   return sheet;
 })();
 export { appContentStyle };
-import { getApp } from "../../backend/app.ts";
 import { swallowError } from "../../utils/core/async.ts";
 import { registerGlobalHandlers } from "../../core/handlers/global.ts";
 // 副作用导入：注册 <app-preview> 组件
@@ -32,14 +31,6 @@ import {
   initSettingsPage,
 } from "./init-pages.ts";
 import { resetAvatarConfigLoaded } from "./init-workshop.ts";
-import {
-  repositoryHTML,
-  instancesHTML,
-  settingsHTML,
-  diagnosticsHTML,
-  workshopHTML,
-  githubHTML,
-} from "./tpl.ts";
 
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
@@ -220,7 +211,7 @@ class AppContent extends WebComponentBase {
    * 绑定 tab 按钮切换。按钮选择器与内容卡前缀解耦（样式类可复用，语义前缀独立）：
    *   _bindTabs(".repo-tab", "ins", ["versions"]) —— 按钮用 repo-tab 样式类，内容卡 id 为 ins-tab-versions
    */
-  _bindTabs(tabSelector: string, prefix: string, ids: string[]): void {
+  _bindTabs(_tabSelector: string, _prefix: string, _ids: string[]): void {
     initRepositoryPage(this);
     // 注意：这里需要调用真实的 bindTabs，但为了测试兼容，我们保留方法签名
     // 实际逻辑在 init-pages.ts 中

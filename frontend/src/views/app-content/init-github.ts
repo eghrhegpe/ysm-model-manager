@@ -1,14 +1,12 @@
 // ===== GitHub 页初始化（为 app-content/index.ts 减负，ADR-040）=====
 import { getApp } from "../../backend/app.ts";
 import { swallowError } from "../../utils/core/async.ts";
-import { safeGet } from "../../utils/dom/storage.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { countMissing, renderRepoHeaderHTML } from "../../features/community/render.ts";
 import { bindRepoEvents } from "../../features/community/events.ts";
 import { tryFetchModels } from "../../features/community/data.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
 import { esc as escUtil } from "../../utils/dom/html.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";
@@ -147,7 +145,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
       });
     }
     let fetchDone = false;
-    const result = await tryFetchModels(repo, (mirror || "") as "" | "jsdelivr" | "githubapi", (pct, label) => {
+    const result = await tryFetchModels(repo, (mirror || "") as "" | "jsdelivr" | "githubapi", (_pct, label) => {
       if (fetchDone || ctx.getCurrentRepo() !== repo) return;
       if (resultsBody) {
         resultsBody.innerHTML =

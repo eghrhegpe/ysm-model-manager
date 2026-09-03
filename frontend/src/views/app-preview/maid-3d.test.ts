@@ -10,7 +10,7 @@ const { analyzeMock, specMock, mountMock, cleanupMock, makeAdapterMock, loadMode
   specMock: vi.fn(),
   mountMock: vi.fn().mockResolvedValue(undefined),
   cleanupMock: vi.fn(),
-  makeAdapterMock: vi.fn((_path: unknown, _opts: unknown) => ({})),
+  makeAdapterMock: vi.fn((_opts: unknown) => ({})),
   loadModelDataMock: vi.fn(),
   preloadMock: vi.fn(),
   androidBackMock: vi.fn(() => () => {}),
@@ -193,7 +193,7 @@ describe("showMaidPreview 车万女仆详情", () => {
     expect(makeAdapterMock).toHaveBeenCalled();
     expect(cleanupMock).toHaveBeenCalled();
     expect(mountMock).toHaveBeenCalled();
-    const adapterOpts = (makeAdapterMock.mock.calls[0]?.[1] ?? {}) as Record<string, unknown>;
+    const adapterOpts = (makeAdapterMock.mock.calls[0]?.[0] ?? {}) as Record<string, unknown>;
     // 整包加载语义：adapter 不再携带单 entry 选择参数
     expect(adapterOpts).not.toHaveProperty("subModelIdx");
     expect(adapterOpts).not.toHaveProperty("subPath");

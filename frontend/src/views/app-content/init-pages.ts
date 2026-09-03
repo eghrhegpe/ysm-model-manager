@@ -125,7 +125,7 @@ function bindTabs(
   const activate = async (targetBtn: HTMLElement): Promise<void> => {
     const tab = targetBtn.dataset.tab || "";
     // 切换按钮态
-    tabs.forEach((t, i) => {
+    tabs.forEach((t, _i) => {
       const isActive = t === targetBtn;
       t.classList.toggle("active", isActive);
       t.setAttribute("aria-selected", String(isActive));
@@ -228,7 +228,7 @@ async function initRecycleTab(host: AppContentHost, container: HTMLElement): Pro
  * 返回组件卸载时需执行的清理函数（bus 订阅取消）。
  * P3 修复：配置面板独立容器，扫描结果只写 result-list，不被 innerHTML 覆盖销毁。
  */
-async function initDedupTab(host: AppContentHost, container: HTMLElement): Promise<(() => void) | null> {
+async function initDedupTab(_host: AppContentHost, container: HTMLElement): Promise<(() => void) | null> {
   let dedupType = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
   container.innerHTML =
     '<div style="display:flex;flex-direction:column;height:100%">' +
@@ -264,7 +264,7 @@ async function initDedupTab(host: AppContentHost, container: HTMLElement): Promi
 /**
  * 初始化「最近/最旧模型」tab，返回清理函数
  */
-async function initOldestTab(host: AppContentHost, container: HTMLElement): Promise<(() => void) | null> {
+async function initOldestTab(_host: AppContentHost, container: HTMLElement): Promise<(() => void) | null> {
   const oldestCleanup = await loadOldestModel(container, (s) => esc(s));
   return oldestCleanup;
 }

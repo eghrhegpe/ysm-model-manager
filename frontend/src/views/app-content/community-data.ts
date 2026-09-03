@@ -1,7 +1,7 @@
 // ===== 创意工坊纯数据层 =====
 import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { withCached, invalidateCache, type CachePolicy } from "../../utils/cache/with-cached.ts";
+import { withCached, invalidateCache } from "../../utils/cache/with-cached.ts";
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import type { WorkshopSite, WorkshopCreator } from "../../../bindings/ysm-model-manager/go/types/models.ts";

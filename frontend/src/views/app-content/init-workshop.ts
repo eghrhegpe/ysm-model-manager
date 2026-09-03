@@ -7,20 +7,17 @@
 // - features/community/show-repo-models.ts: 仓库模型显示（与 init-github.ts 共享）
 
 import { bus } from "../../bus.ts";
-import { getApp } from "../../backend/app.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { safeGet } from "../../utils/dom/storage.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { Events } from "../../backend/runtime.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { fillSearch } from "./community-data.ts";
-import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./site-view.ts";
+import { renderSiteView, type RenderSiteViewCtx } from "./site-view.ts";
 import { showRepoModels } from "../../features/community/show-repo-models.ts";
 import { loadBrowseMode, saveBrowseMode, createBrowseModeRef, type BrowseMode } from "./workshop-browse-mode.ts";
 import { initWorkshopTabs, setShowSiteView, createWorkshopRefs } from "./workshop-tabs.ts";
 import { openSite, bindSiteEvents } from "./workshop-site-opener.ts";
-import type { LocalCreator } from "./community-data.ts";
 import { extractAvatars } from "./workshop-avatar.ts";
-import { t } from "../../core/i18n/t.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import type { RepoCacheEntry } from "./state.ts";

@@ -36,10 +36,6 @@ function callArgs(mock: unknown, index: number): unknown[] {
   const calls = (mock as { mock: { calls: unknown[][] } }).mock.calls;
   return calls[index] ?? [];
 }
-function lastCallArgs(mock: unknown): unknown[] {
-  const calls = (mock as { mock: { calls: unknown[][] } }).mock.calls;
-  return calls[calls.length - 1] ?? [];
-}
 
 /** 组装 initGithubPage 需要的假 host（gh-grid / gh-results-body / gh-source-info） */
 function makeHost() {

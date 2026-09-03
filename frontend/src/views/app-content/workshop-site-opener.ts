@@ -3,7 +3,6 @@ import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { getApp } from "../../backend/app.ts";
 import { swallowError } from "../../utils/core/async.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
-import { safeSet } from "../../utils/dom/storage.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
@@ -50,7 +49,7 @@ export function openSite(
  */
 function openEmbedded(
   host: AppContentHost,
-  site: WorkshopSite,
+  _site: WorkshopSite,
   url: string,
 ): void {
   const root = host._root;

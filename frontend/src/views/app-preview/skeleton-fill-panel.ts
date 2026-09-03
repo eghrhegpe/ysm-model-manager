@@ -159,26 +159,18 @@ function fillPanelComponent(
   statsBox.appendChild(sec("📐 模型统计", false));
   let bones = 0;
   let cubes = 0;
-  // 声明尺寸（spec 中的纹理声明值，区别于实际加载位图尺寸）——变量名与语义对齐
-  let declW: number | string = "?";
-  let declH: number | string = "?";
   if (rawIdx < 0) {
     for (const m of spec.models || []) {
       const mm = m as { bones?: Array<{ _cubeCount?: number }>; textureWidth?: number; textureHeight?: number };
       bones += mm.bones?.length || 0;
       for (const b of mm.bones || []) cubes += b._cubeCount || 0;
     }
-    const m0 = spec.models?.[0] as { textureWidth?: number; textureHeight?: number } | undefined;
-    declW = m0?.textureWidth ?? "?";
-    declH = m0?.textureHeight ?? "?";
   } else {
     const mm = spec.models?.[rawIdx] as
       | { bones?: Array<{ _cubeCount?: number }>; textureWidth?: number; textureHeight?: number }
       | undefined;
     bones = mm?.bones?.length || 0;
     for (const b of mm?.bones || []) cubes += b._cubeCount || 0;
-    declW = mm?.textureWidth ?? "?";
-    declH = mm?.textureHeight ?? "?";
   }
   statsBox.appendChild(iRow("骨骼", bones + " 根"));
   statsBox.appendChild(iRow("立方体", cubes + " 个"));

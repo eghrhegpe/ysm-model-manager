@@ -12,7 +12,6 @@ import {
   mmdShotNodes,
   playNodes,
   type MmdBottomNavCtx,
-  type MaterialControlBridge,
 } from "./mmd-controls.ts";
 import {
   listMmdMaterials,
@@ -94,17 +93,6 @@ function makeCtxWithName(name: string): { ctx: MmdBottomNavCtx } {
       modelPath: `/mmd/${name}/${name}`,
     } as MmdBottomNavCtx,
   };
-}
-
-/** 创建非空 morph 的 mesh */
-function makeMultiMorphMesh(): THREE.SkinnedMesh {
-  const rawMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    [new THREE.MeshBasicMaterial(), new THREE.MeshBasicMaterial()],
-  );
-  rawMesh.morphTargetDictionary = { "高兴": 0, "悲伤": 1, "愤怒": 2, "惊吓": 3 };
-  rawMesh.morphTargetInfluences = [0, 0, 0, 0];
-  return rawMesh as unknown as THREE.SkinnedMesh;
 }
 
 beforeEach(() => {

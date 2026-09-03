@@ -4,16 +4,13 @@ import { getPrefer3D, setPrefer3D, type PreviewRoot, type YsmDecoder, type Previ
 import { loadModelData, fillAuthorsAsync } from "./loader.ts";
 import { renderModel2D } from "./model2d/model2d.ts";
 import { openFullPreview } from "./zoom.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { safeSet } from "../../utils/dom/storage.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { bus } from "../../bus.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
 import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
 import { t } from "../../core/i18n/t.ts";
-import { sec, iRow } from "./skeleton-utils.ts";
 import {
   setup2DCanvas, buildToggleRow, buildStatsCard, buildBoneExportRow,
 } from "./skeleton-render.ts";
@@ -41,18 +38,6 @@ export function closeActive3DOverlay(): void {
 /** 设置当前活跃的 3D 全屏 overlay 关闭函数（maid/通用 Bedrock 模型复用此机制）。 */
 export function setActive3DClose(fn: (() => void) | null): void {
   _active3DClose = fn;
-}
-
-/** 连点/多菜单触发时忽略并发（防重复保存文件） */
-function makeShotGuard(shotBtn: HTMLElement): {
-  saving: boolean; setSaving: (v: boolean) => void; setIcon: (icon: string) => void;
-} {
-  let _saving = false;
-  const setIcon = (icon: string): void => {
-    const ic = shotBtn.querySelector<HTMLElement>(".preview-ic");
-    if (ic) ic.textContent = icon;
-  };
-  return { get saving() { return _saving; }, setSaving: (v: boolean) => { _saving = v; }, setIcon };
 }
 
 /** 加载模型 2D 骨骼线条图（+ 可选统计卡容器：传入则统计卡渲染到该容器，骨架区只留图） */
@@ -85,7 +70,7 @@ export async function loadModel2D(
     container.innerHTML = "";
     const { canvas, textureImg } = await setup2DCanvas(container, model);
     if (!container.isConnected) return;
-    const { eyeBtn, eyeHint, getLabelsOn, setLabelsOn } = buildToggleRow(container);
+    const { eyeBtn, getLabelsOn, setLabelsOn } = buildToggleRow(container);
     const zoomBtn = document.createElement("button");
     zoomBtn.className = "pv-btn";
     zoomBtn.innerHTML = "🔍 " + t("preview.zoom");

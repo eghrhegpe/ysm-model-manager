@@ -57,7 +57,7 @@ vi.mock("./mmd-siblings.ts", () => ({
 }));
 
 import { showModelDetail, showResourcePack, showSimplePreview, showShaderpack, detailGen } from "./detail.ts";
-import { waitFor, sleep } from "../../test-utils/index.ts";
+import { sleep } from "../../test-utils/index.ts";
 import { showVrmMeta, showMmdPreview } from "./detail-3d.ts";
 
 function makeCtx(): PreviewCtx {

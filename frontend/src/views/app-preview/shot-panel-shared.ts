@@ -6,7 +6,6 @@
 //   - YSM：screenshot 是 ctx 可选字段（undefined = 走 renderMultiAngle fallback，面板常驻）
 // 本共享层兼容两者：screenshotFn 允许 null | undefined，saveScreenshot 第四参语义一致。
 
-import { t } from "../../core/i18n/t.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";

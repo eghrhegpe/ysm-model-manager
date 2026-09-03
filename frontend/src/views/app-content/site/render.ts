@@ -1,6 +1,6 @@
 // ===== 站点视图 HTML 构建（纯函数，从 site-view.ts 拆出）=====
 import { stagger } from "../../../utils/animation/stagger.ts";
-import { getSiteIcon, getTagIconFromRole } from "../../../utils/icon/workshop-icons.ts";
+import { getTagIconFromRole } from "../../../utils/icon/workshop-icons.ts";
 import {
   getTagFromRole,
   loadFavs,

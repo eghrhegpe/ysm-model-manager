@@ -267,7 +267,7 @@ function drawView(
   scale: number,
   ox: number,
   oy: number,
-  textureImg: HTMLImageElement | null,
+  _textureImg: HTMLImageElement | null,
   highlightBone: string | null,
   showLabels: boolean,
   cosA: number,
@@ -331,8 +331,8 @@ function drawView(
 function drawMiniView(
   ctx: CanvasRenderingContext2D,
   model: BedrockModel,
-  scale: number,
-  textureImg: HTMLImageElement | null,
+  _scale: number,
+  _textureImg: HTMLImageElement | null,
   cosA: number,
   sinA: number,
 ): void {
@@ -354,8 +354,8 @@ function drawMiniView(
   let maxZ = -Infinity;
   for (const bone of model.bones || []) {
     for (const c of bone.cubes || []) {
-      const [ox, oy, oz] = cubeVec(c.origin);
-      const [sx, sy, sz] = cubeVec(c.size);
+      const [ox, oz] = cubeVec(c.origin);
+      const [sx, sz] = cubeVec(c.size);
       if (ox < minX) minX = ox;
       if (ox + sx > maxX) maxX = ox + sx;
       if (oz < minZ) minZ = oz;
@@ -370,8 +370,8 @@ function drawMiniView(
 
   for (const bone of model.bones || []) {
     for (const c of bone.cubes || []) {
-      const [x, y, z] = cubeVec(c.origin);
-      const [sx, sy, sz] = cubeVec(c.size);
+      const [x, z] = cubeVec(c.origin);
+      const [sx, sz] = cubeVec(c.size);
       // 俯视图也用旋转坐标
       const rx = x * cosA - z * sinA;
       const rz = x * sinA + z * cosA;

@@ -123,7 +123,6 @@ function toStatsCardModel(
   info: MaidModelInfo,
   componentCounts: ComponentCount[],
 ): StatsCardModel {
-  const texCount = info?.textures?.length ?? 0;
   return {
     boneCount: info?.boneCount ?? 0,
     cubeCount: info?.cubeCount ?? 0,

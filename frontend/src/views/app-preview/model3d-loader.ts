@@ -188,9 +188,11 @@ export async function preloadModel(model: ModelLike): Promise<{
     try {
       for (const [compName, texBase64Arr] of Object.entries(compTex)) {
         const compUrls = texBase64Arr ?? [];
+        // 先记录再 load——loadTextures 内部 acquire 是同步的，
+        // 若 acquire 抛错，catch 的 releaseTextures() 仍能释放已 acquire 的 URL（code review #1/#4/#5 修复）
+        componentTexUrls.set(compName, compUrls);
         const compTexArr = await loadTextures(compUrls);
         componentTexMap.set(compName, compTexArr);
-        componentTexUrls.set(compName, compUrls);
       }
     } catch (e) {
       // 组件纹理加载中断：主 texArr 已完成 acquire，一并归还后上抛

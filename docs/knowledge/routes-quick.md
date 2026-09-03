@@ -218,7 +218,7 @@
 | ERROR_NOT_SAME_DEVICE | [模型安装 go/installer](./go-installer.md) | - | - |
 | fsutil.WriteFileAtomic | [导入策略 go/importer](./go-importer.md) | - | - |
 | import log、历史 | [导入日志 go/logs](./go-logs.md) | - | - |
-| importer、DetectZipType | [导入策略 go/importer](./go-importer.md) | - | - |
+| importer、DetectContainerType | [导入策略 go/importer](./go-importer.md) | - | - |
 | initRecycleBin / GetRepoRoot / createLoadGuard | [回收站界面 recycle-bin](./recycle-bin.md) | - | - |
 | IsInside / IsInsideResolved | [路径安全 go/paths](./go-paths.md) | - | - |
 | LinkMode（copy / hardlink / symlink） | [模型安装 go/installer](./go-installer.md) | - | - |
@@ -587,7 +587,7 @@
 | 直接 unzip | - | 7z 未支持、纹理提取缺路径安全；必须经 go/geometry |
 | 未走 ysm_parser.go | - | .ysm 解析不一致；必须经 go/ysm 兜底 |
 | 直写目标文件 | - | 中断留下半文件；必须经 WriteFileAtomic 的 tmp+rename |
-| 未走 DetectZipType | - | 误判 zip 类型、解压错误；必须先 DetectZipType 分流 |
+| 未走 DetectContainerType | - | 误判 zip 类型、解压错误；必须先 DetectContainerType 分流 |
 | 手写落地逻辑 | - | LinkMode 不一致、ERROR_NOT_SAME_DEVICE 未处理；必须经 go/installer |
 | 落地不原子替换 | - | 中断留下半文件；必须经 installer 的原子替换 |
 | app 层手写同步 | - | 与 go/instance 判定不一致；必须经 SyncResources |

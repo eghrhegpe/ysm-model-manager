@@ -15,7 +15,7 @@ auto_fields:
     - AppBindings
     - arrayBufferToBase64
     - browserAdapter
-    - detectZipType
+    - detectContainerType
     - ExtractResult
     - extractZip
     - getAndroidBridge

@@ -376,7 +376,7 @@ auto_fields:
     - deriveTestIds
     - describeVersionRange
     - detailGen
-    - detectZipType
+    - detectContainerType
     - devLog
     - diagnosticsHTML
     - DIR_HANDLERS

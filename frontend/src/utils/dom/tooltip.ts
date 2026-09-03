@@ -38,6 +38,11 @@ interface TooltipState {
 const st: TooltipState = { el: null, target: null, timer: null };
 
 let _observer: MutationObserver | null = null;
+/** 模块级单例 scroll 监听（设计上常驻，与 _observer 同哲学）：
+ *  原实现每个 attachTooltip 各挂一个 document 捕获监听，而 fab.ts / promoteTitle
+ *  等多数调用方不接收 cleanup 返回值 → 监听随按钮/菜单重建永久累积（无声泄漏）。
+ *  收敛为单例后 document 级监听恒为 1，且不依赖调用方记得清理。 */
+let _scrollHandler: (() => void) | null = null;
 
 function ensureTooltipEl(): HTMLDivElement {
   if (!st.el || !st.el.isConnected) {
@@ -56,6 +61,18 @@ function ensureObserver(): void {
     if (st.target && !st.target.isConnected) hide();
   });
   _observer.observe(document.body, { childList: true, subtree: true });
+}
+
+/** 页面滚动时提示会飘离锚点，捕获阶段统一隐藏（原生 title 同行为）。
+ *  幂等注册：首个 attachTooltip 即挂上，此后所有实例共享此监听。 */
+function ensureScrollHandler(): void {
+  if (_scrollHandler || typeof document === "undefined") return;
+  _scrollHandler = () => {
+    // 统一取消 pending timer + 隐藏当前 tooltip（hide 内含 cancelTimer）。
+    // 单例 target 全局唯一：滚动时无论 tooltip 归谁，清掉必是用户预期。
+    if (st.timer !== null || st.target) hide();
+  };
+  document.addEventListener("scroll", _scrollHandler, true);
 }
 
 function cancelTimer(): void {
@@ -130,15 +147,14 @@ export function attachTooltip(
   el.addEventListener("mouseenter", onEnter);
   el.addEventListener("mouseleave", onLeave);
   el.addEventListener("blur", onLeave);
-  // 页面滚动时提示会飘离锚点，捕获阶段统一隐藏（原生 title 同行为）
-  document.addEventListener("scroll", onLeave, true);
+  // scroll 隐藏为模块级单例监听（ensureScrollHandler），不再按实例挂 document 捕获监听
+  ensureScrollHandler();
   return () => {
     cancelTimer();
     if (st.target === el) hide();
     el.removeEventListener("mouseenter", onEnter);
     el.removeEventListener("mouseleave", onLeave);
     el.removeEventListener("blur", onLeave);
-    document.removeEventListener("scroll", onLeave, true);
   };
 }
 

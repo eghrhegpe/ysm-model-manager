@@ -213,6 +213,41 @@ describe("attachTooltip — cleanup 与兜底", () => {
     await Promise.resolve();
     expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
   });
+
+  it("显示中页面滚动 → 模块级单例监听统一隐藏", async () => {
+    const { attachTooltip } = await freshTooltip();
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+    attachTooltip(btn, "提示", { delayMs: 0 });
+    btn.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+    expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
+    document.dispatchEvent(new Event("scroll"));
+    expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
+  });
+
+  it("延迟触发前页面滚动 → pending timer 被取消，不显示", async () => {
+    const { attachTooltip } = await freshTooltip();
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+    attachTooltip(btn, "提示", { delayMs: 100 });
+    btn.dispatchEvent(new Event("mouseenter"));
+    document.dispatchEvent(new Event("scroll"));
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
+  });
+
+  it("cleanup 后滚动不再有副作用（单例监听常驻但空操作）", async () => {
+    const { attachTooltip } = await freshTooltip();
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+    const off = attachTooltip(btn, "提示", { delayMs: 0 });
+    btn.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+    off();
+    document.dispatchEvent(new Event("scroll"));
+    expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
+  });
 });
 
 describe("promoteTitle — 原生 title 升级为自定义 tooltip", () => {

@@ -142,6 +142,10 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     this._render();
 
     this._preloadTypeRegistry();
+    // 跨生命周期防累积（对齐 app-tree:107 的 connected 重置范式）：disconnect→connect
+    // 循环若不重置，unsubs 会线性挂旧闭包引用（bus off 幂等暂不炸，但每次循环留尸体，
+    // 正是 double-dispose 事故的同族温床）。disconnectedCallback 已同步换新数组，双保险。
+    this.unsubs = [];
     this.unsubs.push(
       bus.on("model:select", async ({ path, isDir, rtype }) => {
         this._previewGuard.invalidate(); // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
@@ -182,8 +186,11 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     // —— 若上一实例 _typeReg 曾因 LoadResourceTypes 迟到而冻结为 {}，重挂载后自愈
     this._previewGuard.invalidate();
     // 快照遍历：unsub 内部可能 splice 自身（如 close3D 的 P3 修复），
-    // 用 slice() 防止 forEach 遍历中移除元素导致跳项
-    this.unsubs.slice().forEach((fn) => fn());
+    // 先换新数组再遍历快照——遍历中 fn 抛错也不会留下跨生命周期累积的尸体引用
+    //（旧数组随本次调用结束即被 GC，connectedCallback 的重置为第二道保险）
+    const unsubs = this.unsubs;
+    this.unsubs = [];
+    unsubs.forEach((fn) => fn());
     // 清理体素 3D（WebGL renderer + rAF 循环）：防切页后 GPU 资源残留
     PREVIEW_CLEANUP.forEach((fn) => fn());
   }
@@ -244,7 +251,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       dbg.className = "pv-debug";
       dbg.textContent = msg;
       el.appendChild(dbg);
-    } catch (_) {}
+    } catch (_) {
+      /* appendDebug 仅调试辅助：容器失效/跨 shadow 非法节点等失败静默，不影响预览主流程 */
+    }
   }
 
   private async _preloadTypeRegistry(): Promise<void> {

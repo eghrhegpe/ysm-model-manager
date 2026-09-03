@@ -86,7 +86,9 @@ export function wipeDir(FS: FSLike, dir: string): void {
         FS.unlink(f);
       }
     }
-  } catch (_) {}
+  } catch (_) {
+    /* 尽力而为清理：FS 只读/条目已被删等抛错静默，wipeDir 语义即"能清多少清多少" */
+  }
 }
 
 export function ensureDir(FS: FSLike, dir: string): void {
@@ -95,7 +97,9 @@ export function ensureDir(FS: FSLike, dir: string): void {
     cur += "/" + p;
     try {
       FS.mkdir(cur);
-    } catch (_) {}
+    } catch (_) {
+      /* 目录已存在（mkdir 抛 EEXIST）属正常路径：逐级 ensure，存在即跳过 */
+    }
   }
 }
 

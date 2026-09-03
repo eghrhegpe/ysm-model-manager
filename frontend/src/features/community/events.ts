@@ -37,6 +37,8 @@ interface CmReState {
   disposed: boolean;
   currentFilter: string;
   currentFiltered: WorkshopModel[];
+  /** onAllDone 回跳定时器引用：cmReCleanup 集中 clear（对齐 cmPgClearTimers 集中清理范式） */
+  doneTimer: ReturnType<typeof setTimeout> | null;
 }
 
 interface CmReCtx {
@@ -321,6 +323,11 @@ function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
 async function cmReCleanup(ctx: CmReCtx): Promise<void> {
   const { state, virtualList, queue, selectedSet, listeners } = ctx;
   state.disposed = true;
+  // 集中清理：onAllDone 回跳 timer 不再等 200ms 空跑（disposed 短路是兜底不是清理）
+  if (state.doneTimer) {
+    clearTimeout(state.doneTimer);
+    state.doneTimer = null;
+  }
   // 成对移除 cmReListen 登记的监听（替代 cloneNode hack：不重建 DOM、不清外部
   // 监听、release 可预测——cloneNode 会丢弃元素引用与状态，逐个替换是暴力清监听反模式）
   for (const { el, type, handler } of listeners) el.removeEventListener(type, handler);
@@ -339,14 +346,24 @@ async function cmReCleanup(ctx: CmReCtx): Promise<void> {
  */
 export function bindRepoEvents(sr: HTMLElement, ctx: RepoEventsContext): RepoEventsHandle {
   const { esc, models, dlPrefix, repo, source, showRepoModels, backToSite, localMap } = ctx;
-  const state: CmReState = { showAll: false, disposed: false, currentFilter: "", currentFiltered: [] };
+  const state: CmReState = { showAll: false, disposed: false, currentFilter: "", currentFiltered: [], doneTimer: null };
   const selectedSet = new Set<string>();
   const reCtxShell: { ctx: CmReCtx | null } = { ctx: null };
 
   const queue = createDownloadQueue({
     sr, esc, getLocalMap: () => localMap,
     onFileSuccess: (name) => { selectedSet.delete(name); if (reCtxShell.ctx) cmReUpdateSelectedUI(reCtxShell.ctx); },
-    onAllDone: () => { selectedSet.clear(); setTimeout(() => { if (state.disposed) return; showRepoModels(); }, 200); },
+    onAllDone: () => {
+      selectedSet.clear();
+      // 先清旧 timer 再 set：连发完成不堆积（200ms 内新一轮完成时旧回跳作废，
+      // 与 cleanup 集中 clear 双保险——纯靠 disposed 短路是风格债，已修）
+      if (state.doneTimer) clearTimeout(state.doneTimer);
+      state.doneTimer = setTimeout(() => {
+        state.doneTimer = null;
+        if (state.disposed) return;
+        showRepoModels();
+      }, 200);
+    },
   });
 
   const listEl = sr.querySelector("#gh-repo-list") as HTMLElement | null;

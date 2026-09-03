@@ -204,8 +204,18 @@ describe("patchGlueHeapExport（主线程 / Worker 共用胶水 patch）", () =>
     expect(out).toContain("function updateMemoryViews(){...}");
   });
 
-  it("无调用点 → 原样返回", () => {
-    expect(patchGlueHeapExport("var x=1;")).toBe("var x=1;");
+  it("无调用点 → 抛错（patch 未命中不得静默空转，fail-fast 前移到 install 时刻）", () => {
+    expect(() => patchGlueHeapExport("var x=1;")).toThrow(/未命中 updateMemoryViews/);
+  });
+
+  it("调用点写法随胶水版本变更（如调用处无前导分号 / 调用改名）→ 抛错而非空转", () => {
+    // Emscripten 可能把调用写成缩进调用 `  updateMemoryViews();`（前导空白非分号）
+    expect(() => patchGlueHeapExport("function u(){}\n  updateMemoryViews();\n")).toThrow(
+      /未命中 updateMemoryViews/,
+    );
+    expect(() => patchGlueHeapExport("function u(){}\n;refreshMemoryViews();\n")).toThrow(
+      /未命中 updateMemoryViews/,
+    );
   });
 });
 
@@ -335,7 +345,9 @@ describe("installYsmModule（注入点 + 间接 eval + MODULARIZE 工厂组装�
     };
     // 模仿 auto-generated 胶水：indirect eval 后把工厂挂到 host
     //（真实胶水在 eval 时 `var YSMParserModule = ...` → 全局作用域）
-    const glue = "/* glue */";
+    // 含真实调用点形态（base64 解码实证 `...;updateMemoryViews();Module["HEAPU8"]=...`），
+    // Module 为胶水内部 var（真实 glue：`var Module=moduleArg`），patch 注入点因此可解析
+    const glue = "var Module = {}; var HEAPU8 = new Uint8Array(0);\nfunction updateMemoryViews(){}\n;updateMemoryViews();";
     // 手动模拟 installYsmModule 依赖的全局工厂（patchGlueHeapExport 不改变这一行为）
     host.YSMParserModule = fakeFactory;
     const result = await installYsmModule(host, glue, moduleCfg);
@@ -345,7 +357,11 @@ describe("installYsmModule（注入点 + 间接 eval + MODULARIZE 工厂组装�
 
   it("factory 缺失（eval 后 host.YSMParserModule 未定义）→ 抛错", async () => {
     await expect(
-      installYsmModule({} as Record<string, unknown>, "/* glue */", moduleCfg),
+      installYsmModule(
+        {} as Record<string, unknown>,
+        "var Module = {}; var HEAPU8 = new Uint8Array(0);\nfunction updateMemoryViews(){}\n;updateMemoryViews();",
+        moduleCfg,
+      ),
     ).rejects.toThrow("YSMParserModule 未定义");
   });
 });

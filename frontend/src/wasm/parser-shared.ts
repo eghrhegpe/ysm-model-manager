@@ -143,10 +143,19 @@ export function writeHeapBytes(
  * 用 ";updateMemoryViews()" 避免误改函数定义；replaceAll 确保所有调用点都被 patch。
  */
 export function patchGlueHeapExport(glueCode: string): string {
-  return glueCode.replaceAll(
+  const patched = glueCode.replaceAll(
     ";updateMemoryViews()",
     ';updateMemoryViews();Module["HEAPU8"]=HEAPU8',
   );
+  // 命中断言（review：patch 命中点写法随 Emscripten 胶水版本可能变更）——未注入任何
+  // HEAPU8 导出即抛错，把「静默失效→writeHeapBytes 才炸」前移到 install 时刻 fail-fast。
+  // 当前生产胶水必含调用点（否则既有链路已失效），断言恒真，零回归。
+  if (!patched.includes('Module["HEAPU8"]=HEAPU8')) {
+    throw new Error(
+      "patchGlueHeapExport: 胶水未命中 updateMemoryViews 调用点（Emscripten 胶水版本变更？）",
+    );
+  }
+  return patched;
 }
 
 /**

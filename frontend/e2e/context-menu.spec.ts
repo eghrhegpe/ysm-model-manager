@@ -6,7 +6,7 @@
 // 文案定位说明（P3-8 子代理审计）：本文件断言「Copy File Path」等文案来自
 // en.ts 的 menu.copyFilePath，调整文案需同步本 spec（文案定位较脆弱）。
 import { test, expect } from "./fixture.ts";
-import { gotoApp, waitForTreeCount, getTreeFileBox, rightClickTree } from "./helpers.ts";
+import { gotoApp, waitForTreeCount, rightClickTree } from "./helpers.ts";
 
 /** 轮询等待 tree-file 在嵌套 Shadow DOM 中出现（复用 helpers 的 waitForTreeCount） */
 async function waitForTreeFile(page: import("@playwright/test").Page, timeout = 8000): Promise<boolean> {

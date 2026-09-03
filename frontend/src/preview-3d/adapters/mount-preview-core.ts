@@ -44,7 +44,7 @@ import {
   restoreModelGroupsVisible,
 } from "../frustum-cull.ts";
 import type { TdKeyAction } from "../keymap.ts";
-import { mountPreviewRootMenu, type PreviewMenuHandle } from "../menu/core.ts";
+import { mountPreviewRootMenu, type PreviewMenuCtx, type PreviewMenuHandle } from "../menu/core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { mergeStatsMenuItems } from "../menu/stats.ts";
 import { type BoneMaps, type BoneSelectInfo, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
@@ -127,9 +127,9 @@ export interface PreviewScene {
   showModelGroup?(i: number): void;
   onBoneSelect?(info: BoneSelectInfo): void;
   /** 语义骨骼映射（语义骨骼层消费方读取；无 = 该格式不接入语义层，消费方降级） */
-  semanticBones?: SemanticBoneMap;
+  semanticBones?: SemanticBoneMap | undefined;
   /** 应用 VPD 姿势（MMD 专属；无 = 该格式不支持） */
-  applyPose?(index: number): void;
+  applyPose?: ((index: number) => void) | undefined;
   /** 截取当前 3D 渲染画面；PNG base64，无 data: 前缀—— ADR-052 P3 通用化 */
   screenshot?(): Promise<string | null>;
   /** 同台追加模式：true 表示不替换 scene，改为将模型 add 到已有场景（多模型同框） */
@@ -156,21 +156,21 @@ export interface PreviewAdapter {
   mode?: "shared" | "self";
   build(ctx: PreviewBuildCtx, path: string): Promise<PreviewScene>;
   /** core 关闭（ESC / 关闭按钮 / 切模型 cleanup）时回调：供适配器复位调用方状态、注销平台返回键等 */
-  onClose?(): void;
+  onClose?: (() => void) | undefined;
 }
 
 /** 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） */
 export interface PreviewHandle {
   cleanup(): void;
-  resetCamera?(): void;
-  setRotationMode?(orbit: boolean): void;
-  setSpeed?(n: number): void;
-  showModelGroup?(i: number): void;
-  onBoneSelect?(info: BoneSelectInfo): void;
+  resetCamera?: (() => void) | undefined;
+  setRotationMode?: ((orbit: boolean) => void) | undefined;
+  setSpeed?: ((n: number) => void) | undefined;
+  showModelGroup?: ((i: number) => void) | undefined;
+  onBoneSelect?: ((info: BoneSelectInfo) => void) | undefined;
   /** 当前会话内切换到另一模型：复用外壳（renderer/rAF/controls/灯光）重建内容层（ADR-066 §5.6） */
   switchTo?(path: string, options?: { keepInScene?: boolean }): Promise<void>;
   /** 截取当前 3D 渲染画面（PNG base64，无 data: 前缀）—— ADR-052 P3 通用化 */
-  screenshot?(): Promise<string | null>;
+  screenshot?: (() => Promise<string | null>) | undefined;
 }
 
 // ===== §1 常量 + 状态变量 =====
@@ -414,7 +414,7 @@ export async function mount3D(
   // 声明式根菜单（⚙️）：core 在 overlay 内自建（预览全屏盖住 app 外壳，主程序 nav.settings 够不着），
   // 全部控件以 CORE_MENU_ITEMS + 适配器注入项表驱动渲染（preview-menu/defs.ts），
   // 测试遍历真实菜单数组断言（preview-menu/items.test.ts），选择器稳定可遍历（ADR-076 v2）。
-  const menuHandle = mountPreviewRootMenu(overlay, {
+  const menuCtx: PreviewMenuCtx = {
     selfMode,
     getCap: (id: string) => sceneCapabilityRegistry.getById(id) ?? null,
     getCamBridge: () => camBridge,
@@ -422,10 +422,6 @@ export async function mount3D(
     getCurrentPath: () => session.currentPath,
     getCurrentRtype: () => (opts.rtype && opts.rtype.trim() ? opts.rtype : adapter.id),
     getCurrentSubtype: () => opts.subtype ?? "",
-    getModelsByType: opts.getModelsByType
-      ? (t: string, s?: string) => opts.getModelsByType!(t, s)
-      : undefined,
-    getTypeTabs: opts.getTypeTabs ? () => opts.getTypeTabs!() : undefined,
     getViewContainer: () => viewContainer,
     close: () => {
       if (session.cleanupFn) session.cleanupFn();
@@ -443,16 +439,6 @@ export async function mount3D(
       }
       return undefined;
     },
-    switchExternal: opts.switchExternal
-      ? (p: string, s?: string[], options?: { keepInScene?: boolean }): void => {
-          const r = opts.switchExternal!(p, s, options) as Promise<void> | void;
-          if (r && typeof r.catch === "function") {
-            void r.catch((err: unknown) =>
-              logWarn("preview-menu", `switchExternal 切换失败: ${String(err)}`),
-            );
-          }
-        }
-      : undefined,
     unloadModel: unloadSessionModel,
     toast: (msg: string): void => {
       bus.emit("toast:show", { msg, duration: TOAST_MS.normal });
@@ -460,7 +446,21 @@ export async function mount3D(
     closeAllOverlays: (): void => {
       menuHandle.dispose();
     },
-  });
+  };
+  // getModelsByType / getTypeTabs / switchExternal 是 PreviewMenuCtx 可选键（menu/core.ts，
+  // 非本域）——exactOptional 收紧后仅真实存在时赋值，避免显式 undefined 流入
+  if (opts.getModelsByType) menuCtx.getModelsByType = (t, s) => opts.getModelsByType!(t, s);
+  if (opts.getTypeTabs) menuCtx.getTypeTabs = () => opts.getTypeTabs!();
+  if (opts.switchExternal)
+    menuCtx.switchExternal = (p: string, s?: string[], options?: { keepInScene?: boolean }): void => {
+      const r = opts.switchExternal!(p, s, options) as Promise<void> | void;
+      if (r && typeof r.catch === "function") {
+        void r.catch((err: unknown) =>
+          logWarn("preview-menu", `switchExternal 切换失败: ${String(err)}`),
+        );
+      }
+    };
+  const menuHandle = mountPreviewRootMenu(overlay, menuCtx);
   // ADR-093 T5：注册表菜单 sink（selectModel 时按活跃模型换菜单项）
   sceneRegistry.setMenuSink({ setAdapterItems: (items) => menuHandle.setAdapterItems(items) });
 
@@ -732,27 +732,27 @@ export async function mount3D(
 
     const i = infra; // self 模式 infra=null，跳过 sceneBaseline；shared 模式恒非空
     if (i) session.sceneBaseline = new Set(i.scene.children);
-    session.content = await adapter.build(
-      {
-        scene: i?.scene,
-        camera: i?.camera,
-        controls: i?.controls,
-        renderer: i?.renderer,
-        cameraControls: selfMode ? undefined : camBridge,
-        sessionId,
-        viewContainer,
-        loadingEl,
-        overlay,
-        menu: menuHandle,
-        // 延迟闭包：build 时 _handle 尚未赋值，菜单点击（build 之后）时已就绪；
-        // 无活跃会话时 no-op（与 switchPreview 同口径）
-        switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> => {
-          const active = _handles[_handles.length - 1];
-          return active?.handle.switchTo?.(p, options) ?? Promise.resolve();
-        },
+    const buildCtx: PreviewBuildCtx = {
+      viewContainer,
+      loadingEl,
+      overlay,
+      menu: menuHandle,
+      // 延迟闭包：build 时 _handle 尚未赋值，菜单点击（build 之后）时已就绪；
+      // 无活跃会话时 no-op（与 switchPreview 同口径）
+      switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> => {
+        const active = _handles[_handles.length - 1];
+        return active?.handle.switchTo?.(p, options) ?? Promise.resolve();
       },
-      path,
-    );
+    };
+    // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
+    // exactOptional 收紧后仅真实存在时赋值（shared 模式有值，self 模式缺省）
+    if (i?.scene !== undefined) buildCtx.scene = i.scene;
+    if (i?.camera !== undefined) buildCtx.camera = i.camera;
+    if (i?.controls !== undefined) buildCtx.controls = i.controls;
+    if (i?.renderer !== undefined) buildCtx.renderer = i.renderer;
+    if (!selfMode && camBridge) buildCtx.cameraControls = camBridge;
+    if (sessionId !== undefined) buildCtx.sessionId = sessionId;
+    session.content = await adapter.build(buildCtx, path);
     if (session.aborted.v || myGen !== _gen) {
       // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
       // 避免外壳资源泄漏；内容层 GPU 资源经 fullCleanup 一并释放。

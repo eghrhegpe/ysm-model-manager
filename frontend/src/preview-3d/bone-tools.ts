@@ -16,7 +16,7 @@ export interface BoneNode {
   /** 父骨骼 id（无 = 根） */
   parentId: string | null;
   /** 可选 3D 节点：拾取/显隐/坐标操作需要；纯列表/路径/详情场景可缺省 */
-  object?: THREE.Object3D;
+  object?: THREE.Object3D | undefined;
 }
 
 /** 骨骼树：id 索引 + 子映射 + 根集合 + object 反查（buildBoneTree 产物） */
@@ -33,7 +33,7 @@ export interface BoneTree {
  * 输入契约足够宽：仅要求 { id, name, parentId? }——YSM 扁平 bones、
  * VRM humanoid 提取结果均可直接喂入。
  */
-export function buildBoneTree(bones: Array<{ id: string; name: string; parentId?: string | null; object?: THREE.Object3D }>): BoneTree {
+export function buildBoneTree(bones: Array<{ id: string; name: string; parentId?: string | null; object?: THREE.Object3D | undefined }>): BoneTree {
   const byId = new Map<string, BoneNode>();
   const childrenMap = new Map<string, string[]>();
   const roots: string[] = [];

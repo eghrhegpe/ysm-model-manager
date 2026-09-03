@@ -60,7 +60,13 @@ function makeFakeRenderer(overrides: { toneMapping?: THREE.ToneMapping; toneMapp
 function newCap(opts: { enabled?: boolean; params?: Partial<import("./sky-capability.ts").SkyParams> } = {}) {
   const scene = new THREE.Scene();
   const renderer = makeFakeRenderer();
-  return new SkyCapability({ scene, renderer, params: opts.params, enabled: opts.enabled });
+  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
+  return new SkyCapability({
+    scene,
+    renderer,
+    ...(opts.params !== undefined ? { params: opts.params } : {}),
+    ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
+  });
 }
 
 describe("SkyCapability — 构造与默认值", () => {

@@ -351,8 +351,8 @@ describe("solveIK 极向量约束", () => {
 // ---------------------------------------------------------------------------
 
 /** 手工构建 BoneTree（extractIKChainFromTree 只消费 byId / node.parentId / node.object） */
-function makeTree(bones: Array<{ id: string; parentId: string | null; object?: THREE.Object3D }>): BoneTree {
-  const byId = new Map<string, { id: string; name: string; parentId: string | null; object?: THREE.Object3D }>();
+function makeTree(bones: Array<{ id: string; parentId: string | null; object?: THREE.Object3D | undefined }>): BoneTree {
+  const byId = new Map<string, { id: string; name: string; parentId: string | null; object?: THREE.Object3D | undefined }>();
   for (const b of bones) byId.set(b.id, { id: b.id, name: b.id, parentId: b.parentId, object: b.object });
   return { byId, childrenMap: new Map(), roots: [], objectToId: new Map() } as unknown as BoneTree;
 }

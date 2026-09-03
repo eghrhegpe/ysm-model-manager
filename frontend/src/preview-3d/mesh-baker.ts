@@ -59,7 +59,8 @@ function bakeBatch(batch: readonly MeshFragment[]): MeshFragment {
     md: {
       id: `${first.boneId}_baked_${first.texIdx ?? 0}_${batch[0]!.mode}`,
       boneId: first.boneId,
-      texIdx: first.texIdx,
+      // texIdx 为 SpecMeshGroup3D 可选键（model3d，非本域）——仅真实存在时附带
+      ...(first.texIdx !== undefined ? { texIdx: first.texIdx } : {}),
       localPosition: [0, 0, 0],
       localRotation: [0, 0, 0, 1],
       positions,

@@ -355,18 +355,19 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
   });
 
   it("自动聚合：仅收 settingsOrder 声明项，升序且抹平 group", () => {
-    const mk = (id: string, order: number): MenuControlDef => ({
+    const mk = (id: string, order: number | undefined): MenuControlDef => ({
       id,
       kind: "toggle",
       labelKey: id,
       fallback: id,
       group: "preview.someGroup",
-      settingsOrder: order,
+      // 仅在声明顺序时附带（order undefined → 缺省未被 collectSettingsCapControls 收编）
+      ...(order !== undefined ? { settingsOrder: order } : {}),
       getValue: () => false,
       setValue: vi.fn(),
     });
     const cap = makeFakeCap("fakecap", {
-      controls: [mk("c-30", 30), mk("c-10", 10), { ...mk("c-hidden", 0), settingsOrder: undefined }],
+      controls: [mk("c-30", 30), mk("c-10", 10), mk("c-hidden", undefined)],
     });
     mountCaps(cap);
 

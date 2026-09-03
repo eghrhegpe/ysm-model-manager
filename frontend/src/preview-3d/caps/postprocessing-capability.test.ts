@@ -45,7 +45,14 @@ function newCap(opts: { enabled?: boolean; params?: Partial<import("./postproces
   const scene = new THREE.Scene();
   const renderer = makeFakeRenderer();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-  return new PostprocessingCapability({ scene, renderer, camera, params: opts.params, enabled: opts.enabled });
+  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
+  return new PostprocessingCapability({
+    scene,
+    renderer,
+    camera,
+    ...(opts.params !== undefined ? { params: opts.params } : {}),
+    ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
+  });
 }
 
 describe("PostprocessingCapability — 构造与默认值", () => {
@@ -573,7 +580,13 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-    const cap = new PostprocessingCapability({ scene, renderer, camera, params: opts.params, enabled: opts.enabled });
+    const cap = new PostprocessingCapability({
+      scene,
+      renderer,
+      camera,
+      ...(opts.params !== undefined ? { params: opts.params } : {}),
+      ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
+    });
     if (opts.reflectorCap !== undefined) cap.setReflectorCap(opts.reflectorCap);
     return { cap, scene, renderer, camera };
   }

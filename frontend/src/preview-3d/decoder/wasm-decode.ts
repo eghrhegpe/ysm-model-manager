@@ -779,12 +779,16 @@ async function mdWsHandleWasmDecode(
   const result: DecodedYsm = {
     texture: texUrl,
     geometry: finalGeo,
-    geometryRaw: processCtx.firstGeometryRawRef.current ?? undefined,
+    // geometryRaw / animGroups / configMenus 为 DecodedYsm 可选键（utils，非本域）——
+    // 仅真实存在时附带，避免显式 undefined 流入
+    ...(processCtx.firstGeometryRawRef.current != null
+      ? { geometryRaw: processCtx.firstGeometryRawRef.current }
+      : {}),
     animations,
     avatars: texAccum.avatars,
     authors: finalAuthors,
-    animGroups: meta.animGroups,
-    configMenus: meta.configMenus,
+    ...(meta.animGroups !== undefined ? { animGroups: meta.animGroups } : {}),
+    ...(meta.configMenus !== undefined ? { configMenus: meta.configMenus } : {}),
   };
   cacheSet(modelPath, { ...result, _decodedBy: "🧠 WASM 内置解码" });
   swallowError(getApp().then(({ CacheModelAvatars }) => CacheModelAvatars(modelPath)));

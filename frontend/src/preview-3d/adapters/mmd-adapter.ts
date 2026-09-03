@@ -91,20 +91,18 @@ export interface MmdDataPort {
   readFileBytes(path: string): Promise<string | null>;
   readFileBytesBatch(paths: string[]): Promise<Record<string, string | null>>;
   /** 批量读取 + SHA256 hash（一次 RPC 返回数据和哈希，替代前端算 hash） */
-  readFileBytesBatchWithMeta?(
-    paths: string[],
-  ): Promise<Record<string, { data: string | null; hash: string } | null>>;
+  readFileBytesBatchWithMeta?: ((paths: string[]) => Promise<Record<string, { data: string | null; hash: string } | null>>) | undefined;
   listAllFilePaths(dir: string): Promise<string[] | null>;
   addOpLog(op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void>;
   /** 读取纹理文件并检查 KTX2 缓存，返回 { format, data, hash }（已废弃，保留兼容） */
-  getCachedTexture?(path: string): Promise<{ format: string; data: string; hash: string } | null>;
+  getCachedTexture?: ((path: string) => Promise<{ format: string; data: string; hash: string } | null>) | undefined;
   /** KTX2 缓存按 hash 直取（壳层注入 GetCachedTextureByHash；缺失/桥不可用 → null） */
-  getCachedTextureByHash?(hash: string): Promise<string | null>;
+  getCachedTextureByHash?: ((hash: string) => Promise<string | null>) | undefined;
   /** 批量查缓存命中（壳层注入 HasCachedTextures；返回 hash → 是否命中） */
-  hasCachedTextures?(hashes: string[]): Promise<Record<string, boolean>>;
+  hasCachedTextures?: ((hashes: string[]) => Promise<Record<string, boolean>>) | undefined;
   /** 保存 KTX2 编码结果到 Go 侧缓存（壳层注入 SaveCachedTexture；缺失 = 无持久化通道，
    *  后台编码仍执行但本次不落盘——替代已废弃 getCachedTexture 作为编码 gate 的语义） */
-  saveCachedTexture?(hash: string, ktx2B64: string): Promise<void>;
+  saveCachedTexture?: ((hash: string, ktx2B64: string) => Promise<void>) | undefined;
 }
 
 /** 环形日志面板诊断（AGENTS.md：排查卡顿往环形日志塞日志而非死盯 console）；失败静默不阻断 */
@@ -186,7 +184,7 @@ interface MdMmIoState {
   ctx: PreviewBuildCtx;
   path: string;
   port: MmdDataPort;
-  panels?: MmdPanelHooks;
+  panels?: MmdPanelHooks | undefined;
   origPath: string;
   effectivePort: MmdDataPort;
   effectivePath: string;
@@ -1231,8 +1229,8 @@ function mdMmStage5Menu(c: MdMmStage5Ctx): {
     mesh: c.mesh,
     modelName: c.origPath.split(/[/\\]/).pop() || "",
     modelPath: c.origPath,
-    cameraControls: c.ctx.cameraControls,
-    switchTo: c.ctx.switchTo,
+    ...(c.ctx.cameraControls ? { cameraControls: c.ctx.cameraControls } : {}),
+    ...(c.ctx.switchTo ? { switchTo: c.ctx.switchTo } : {}),
     // [doc:adr-132] zip 多 pmx 候选（模型面板切换 select 用）
     zipModelCandidates: c.zipModelCandidates,
   };
@@ -1666,7 +1664,7 @@ export interface MmdMenuItemsOpts {
     cleanupRef: { current: (() => void) | null };
   } | null;
   /** 面板填充回调（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
-  panels?: MmdPanelHooks;
+  panels?: MmdPanelHooks | undefined;
   /** 感知层状态（adapter build 创建，面板 UI 双向绑定） */
   perception?: {
     state: PerceptionState;
@@ -1725,7 +1723,15 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       dockGroup: "motion", // 底栏 💃 动作组（表情是动作系统的资产）
       // [doc:adr-126-p5-收尾] morph 面板声明式化：children = morphNodes 纯数据节点
       // （toggle kind，照 perceptionNodes 样板）。fillMorphPanel 逃生舱删除。
-      children: morphNodes(o.navCtx.mesh),
+      // 仅取 morph 相关子集（SkinnedMesh 的 morphTarget* 为可选项——真实存在才附带）
+      children: morphNodes({
+        ...(o.navCtx.mesh.morphTargetDictionary !== undefined
+          ? { morphTargetDictionary: o.navCtx.mesh.morphTargetDictionary }
+          : {}),
+        ...(o.navCtx.mesh.morphTargetInfluences !== undefined
+          ? { morphTargetInfluences: o.navCtx.mesh.morphTargetInfluences }
+          : {}),
+      }),
     },
     {
       id: "material",

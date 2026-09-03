@@ -215,7 +215,7 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
                   const grp = partitionCapControlsByGroup(cap, csub, previewSnapshot()).find((x) => x.key === key);
                   if (!grp) return;
                   // 剥掉 group 字段，避免 renderCapControls 再包一层同名 section
-                  const flat = grp.ctrls.map((c) => ({ ...c, group: undefined }));
+                  const flat = grp.ctrls.map(({ group: _grp, ...rest }) => rest);
                   renderCapControls(gsub, flat, previewSnapshot());
                 },
               });

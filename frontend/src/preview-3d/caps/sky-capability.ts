@@ -358,7 +358,7 @@ export class SkyCapability implements SceneCapability {
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
-    this.caps = opts.caps;
+    if (opts.caps !== undefined) this.caps = opts.caps;
     this.params = { ...DEFAULT_SKY_PARAMS, ...(opts.params ?? {}) };
     this.enabled = opts.enabled ?? true;
     this.prevToneMapping = this.renderer.toneMapping;

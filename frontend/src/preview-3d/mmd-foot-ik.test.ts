@@ -114,7 +114,7 @@ describe("createFootIKController 降级路径（dummy controller）", () => {
   it("语义条目缺 id（entry.id = undefined）→ getSemanticBoneId 返回 null → dummy", () => {
     const { tree } = makeRig();
     const controller = createFootIKController(tree, {
-      leftUpperLeg: {} as SemanticBoneMap["leftUpperLeg"],
+      leftUpperLeg: {} as NonNullable<SemanticBoneMap["leftUpperLeg"]>,
       leftFoot: { id: "legL_foot" },
     });
     controller.apply(0.016, true);

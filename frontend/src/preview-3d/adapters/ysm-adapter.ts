@@ -163,7 +163,7 @@ interface MdYsMenuDebug {
   debugState: { debugMode: "normal" | "pivot" | "bone"; debugGroup: THREE.Group | null };
   onFKeyDown: (e: KeyboardEvent) => void;
   /** 状态层订阅退订函数（registerModelSchema 返回）；dispose 调用防订阅泄漏（审计 #1） */
-  unsubscribeState?: () => void;
+  unsubscribeState?: (() => void) | undefined;
 }
 
 /** 阶段①：头部数据加载 + buildYsmObject 挂场景 */
@@ -320,7 +320,7 @@ async function mdYsBuildBonePanelAndAnim(
           if (group) boneByName.set(sbi.name, group);
         }
         const hierarchy: import("../../utils/animation/animation.ts").BoneHierarchyNode[] =
-          sb.map((b) => ({ name: b.name, parent: b.parentId ?? undefined }));
+          sb.map((b) => ({ name: b.name, ...(b.parentId ? { parent: b.parentId } : {}) }));
         const labels = allClips.map((c) => c.label);
         const clips = allClips.map((c) => c.clip);
         animPlayer = createYsmAnimPlayer(boneByName, clips, hierarchy, labels);
@@ -359,8 +359,10 @@ function mdYsBuildMenuAndDebug(
     texArr,
     spec,
     handle: content,
-    cameraControls: ctx.cameraControls,
-    onTextureChange: opts.onTextureChange,
+    // cameraControls / onTextureChange 为 YsmControlsContext 可选键（views，非本域）——
+    // exactOptional 收紧后仅在真实存在时附带，避免显式 undefined 流入
+    ...(ctx.cameraControls ? { cameraControls: ctx.cameraControls } : {}),
+    ...(opts.onTextureChange ? { onTextureChange: opts.onTextureChange } : {}),
     screenshot: () =>
       Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene!, ctx.camera!)),
   };
@@ -555,7 +557,7 @@ export interface YsmMenuItemsOpts {
   controlsCtx: YsmControlsContext;
   /** 当前 3D 会话稳定 id（mount 层生成）——model 面板 schemaId 用 per-scene key 的依据；
    *  缺省（测试/旧调用）→ 退化旧全局键 YSM_MODEL_SCHEMA_ID（兼容） */
-  sessionId?: string;
+  sessionId?: string | undefined;
   /** 骨骼面板依赖（render 闭包 + 清理引用） */
   bonePanel: {
     /** 已构建骨骼树（buildBoneTree 产物） */
@@ -577,7 +579,7 @@ export interface YsmMenuItemsOpts {
     playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
     // 注：registerModelSchema 只在 YsmAdapterOptions（makeYsmAdapter opts）消费——
     // ysmMenuItems 不读它，不在此重复声明（防两接口分化，P5-A review P3）
-  };
+  } | undefined;
   /** YSM 动画桥（ADR-100）；null/缺省（无 .animation.json）→ 不注入 play 项 */
   play?: MmdPlayBridge | null | undefined;
   /** 感知层状态（adapter build 创建，面板 UI 双向绑定） */

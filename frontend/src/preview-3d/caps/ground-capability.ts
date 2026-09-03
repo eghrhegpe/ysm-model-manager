@@ -505,7 +505,7 @@ function groundButtonDef(
     labelKey,
     fallback,
     group: MAT_GROUP,
-    button,
+    ...(button !== undefined ? { button } : {}),
     getValue: () => null,
     setValue: () => {},
     ...(visible ? { visible } : {}),

@@ -132,8 +132,8 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
 export function buildLipMorphIndices(
   semanticMorphs: SemanticMorphMap,
   morphTargetDictionary: Record<string, number | undefined>,
-): { open?: number; close?: number; pucker?: number; smile?: number } {
-  const result: { open?: number; close?: number; pucker?: number; smile?: number } = {};
+): { open?: number | undefined; close?: number | undefined; pucker?: number | undefined; smile?: number | undefined } {
+  const result: { open?: number | undefined; close?: number | undefined; pucker?: number | undefined; smile?: number | undefined } = {};
   const openEntry = getSemanticMorph(semanticMorphs, "lipOpen");
   if (openEntry?.name && morphTargetDictionary[openEntry.name] !== undefined) {
     result.open = morphTargetDictionary[openEntry.name];

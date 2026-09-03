@@ -47,7 +47,7 @@ describe("buildOrderedTexKeys 无声明序（加密模型）按尺寸降序", ()
     const keys = buildOrderedTexKeys({
       texKeys: ["arrow", "texture"],
       areaOf: (k) => (k === "texture" ? 512 * 512 : 64 * 64),
-      ysmTexOrder: undefined,
+      
       ysmDefaultTex: null,
       matchTexKey: match,
     });
@@ -58,7 +58,7 @@ describe("buildOrderedTexKeys 无声明序（加密模型）按尺寸降序", ()
     const keys = buildOrderedTexKeys({
       texKeys: ["a", "b"],
       areaOf: () => 256 * 256,
-      ysmTexOrder: undefined,
+      
       ysmDefaultTex: null,
       matchTexKey: match,
     });
@@ -124,7 +124,7 @@ describe("buildOrderedTexKeys 无声明序（加密模型）按尺寸降序", ()
     const keys = buildOrderedTexKeys({
       texKeys: ["arrow", "texture"],
       areaOf: () => 0,
-      ysmTexOrder: undefined,
+      
       ysmDefaultTex: null,
       matchTexKey: match,
     });

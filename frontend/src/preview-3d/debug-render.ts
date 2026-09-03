@@ -83,7 +83,7 @@ export function rebuildDebug(
   // 获取骨骼世界坐标（仅主组件 spec.models[0]，与 renderModel3D 原文口径一致）
   const boneWorldPositions = new Map<
     string,
-    { pos: THREE.Vector3; name: string; parentId?: string }
+    { pos: THREE.Vector3; name: string; parentId?: string | undefined }
   >();
   for (const bd of spec.models?.[0]?.bones || []) {
     const bg = boneGroupMap.get(bd.id);

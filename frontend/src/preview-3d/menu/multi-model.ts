@@ -58,7 +58,8 @@ export function multiModelSelectNode(opts: MultiModelSelectOpts): PreviewMenuNod
         return id;
       },
       // [doc:adr-132] 切档后重渲染当前面板（YSM 组件 select 语义；MMD/资源包不传则保持默认）
-      refreshOnChange,
+      // refreshOnChange 为 PreviewControlSpec 可选键（node-types，非本域）——仅真实存在时附带
+      ...(refreshOnChange !== undefined ? { refreshOnChange } : {}),
     },
   };
 }

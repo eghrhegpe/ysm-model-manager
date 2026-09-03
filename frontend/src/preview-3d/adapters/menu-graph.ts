@@ -32,16 +32,16 @@ export interface RepresentativeSnapshot {
 export interface MenuGraphNode {
   id: string;
   kind: PreviewMenuNodeKind;
-  dockGroup?: string;
-  schemaId?: string;
+  dockGroup?: string | undefined;
+  schemaId?: string | undefined;
   /** 兼容既有 e2e 选择器的 legacy data-testid */
-  legacyTestId?: string;
+  legacyTestId?: string | undefined;
   /** 含 renderCustom 逃生舱（骨骼面板 / litematic 切片等真·复杂内容，图不强行走通） */
   escapeHatch: boolean;
   /** action 节点（runners / node.action），不进导航路径 */
   nonNav: boolean;
   /** 过程式下钻（fillers），内部结构不可静态走通 */
-  procedural?: boolean;
+  procedural?: boolean | undefined;
   /**
    * 节点级：在 ≥1 档代表性快照下可见（无 visibleWhen 守卫 → 恒 true）。
    * 面板级（buildPanelNode）：恒 true——面板挂载是命令式（如 ysm-model 需模型已加载），

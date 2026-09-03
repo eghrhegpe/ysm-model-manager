@@ -110,10 +110,15 @@ function convertBone(b: PmxObject["bones"][number]): PmxBoneData {
     rotation: [0, 0, 0, 1],
     flag: b.flag,
     hasIK: (b.flag & 32) !== 0, // Bone.Flag.IsIkEnabled
-    ikTarget: b.ik?.target,
-    ikIteration: b.ik?.iteration,
-    ikRotationConstraint: b.ik?.rotationConstraint,
-    ikLinks: b.ik?.links.map((l) => ({ boneIndex: l.target, hasLimitation: !!l.limitation })),
+    // IK 字段仅在 b.ik 存在时附带（exactOptional 收紧后避免显式 undefined 流入可选键）
+    ...(b.ik
+      ? {
+          ikTarget: b.ik.target,
+          ikIteration: b.ik.iteration,
+          ikRotationConstraint: b.ik.rotationConstraint,
+          ikLinks: b.ik.links.map((l) => ({ boneIndex: l.target, hasLimitation: !!l.limitation })),
+        }
+      : {}),
   };
 }
 

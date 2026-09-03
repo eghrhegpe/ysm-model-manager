@@ -75,7 +75,7 @@ const TEX_SLOTS = ["map", "normalMap", "specularMap", "alphaMap", "emissiveMap"]
 function buildMaterial(mat: FbxMaterialData): THREE.Material {
   let material: THREE.Material;
   const base = {
-    name: mat.name,
+    ...(mat.name !== undefined ? { name: mat.name } : {}),
     color: new THREE.Color(mat.color[0], mat.color[1], mat.color[2]),
     emissive: new THREE.Color(mat.emissive[0], mat.emissive[1], mat.emissive[2]),
     transparent: mat.transparent ?? false,

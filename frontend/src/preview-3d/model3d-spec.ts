@@ -13,10 +13,10 @@ export interface SpecCube {
   size?: number[];
   pivot?: number[];
   rotation?: number[];
-  uv?: number[];
-  faceUV?: string;
-  inflate?: number; // Blockbench 膨胀（正=外扩，负=收缩），几何 origin-i、size+2i，UV 用原始尺寸
-  mirror?: boolean; // Blockbench 镜像（UV 水平翻转，几何不翻转）
+  uv?: number[] | undefined;
+  faceUV?: string | undefined;
+  inflate?: number | undefined; // Blockbench 膨胀（正=外扩，负=收缩），几何 origin-i、size+2i，UV 用原始尺寸
+  mirror?: boolean | undefined; // Blockbench 镜像（UV 水平翻转，几何不翻转）
 }
 
 /** 骨骼 */

@@ -26,7 +26,13 @@ function newCap(opts: { enabled?: boolean; params?: Partial<import("./reflector-
     toneMapping: THREE.ACESFilmicToneMapping,
     toneMappingExposure: 1,
   } as unknown as THREE.WebGLRenderer;
-  return new ReflectorCapability({ scene, renderer, params: opts.params, enabled: opts.enabled });
+  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
+  return new ReflectorCapability({
+    scene,
+    renderer,
+    ...(opts.params !== undefined ? { params: opts.params } : {}),
+    ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
+  });
 }
 
 describe("ReflectorCapability — 构造与默认值", () => {

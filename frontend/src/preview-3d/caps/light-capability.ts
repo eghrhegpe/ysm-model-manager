@@ -411,7 +411,7 @@ export class LightCapability implements SceneCapability {
     caps?: SceneCapabilityLookup;
   }) {
     this.scene = opts.scene;
-    this.caps = opts.caps;
+    if (opts.caps !== undefined) this.caps = opts.caps;
     this.params = deepMergeLightParams(DEFAULT_LIGHT_PARAMS, opts.params ?? {});
     this.enabled = opts.enabled ?? true;
     this.target = opts.target ?? new THREE.Vector3(0, 0, 0);

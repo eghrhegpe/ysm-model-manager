@@ -120,15 +120,15 @@ afterEach(() => {
 /** 带材质 + 纹理 + 骨骼层级的 PMX fixture（材质/骨骼构建分支用） */
 function pmxWithMaterials(): PmxParseResponse {
   const base = syntheticPmx();
-  return {
-    ...base,
-    textures: ["tex/face.png"],
-    // 半透明 + 双面 + 纹理引用 / 不透明单面 + 无纹理（仅 builder 消费的字段）
-    materials: [
-      { name: "服", diffuse: [0.5, 0.2, 0.1, 0.5], flags: 0x01, textureIndex: 0 },
-      { name: "肌", diffuse: [1, 1, 1, 1], flags: 0, textureIndex: -1 },
-    ] as unknown as PmxParseResponse["materials"],
-  };
+  // 直接覆盖字段而非对象 spread（exactOptional 收紧后 spread 会把基座可选字段物化为
+  // `T | undefined`，与 PmxParseResponse 可选键不匹配）——语义等价，保留 header 缺省态
+  base.textures = ["tex/face.png"];
+  // 半透明 + 双面 + 纹理引用 / 不透明单面 + 无纹理（仅 builder 消费的字段）
+  base.materials = [
+    { name: "服", diffuse: [0.5, 0.2, 0.1, 0.5], flags: 0x01, textureIndex: 0 },
+    { name: "肌", diffuse: [1, 1, 1, 1], flags: 0, textureIndex: -1 },
+  ] as unknown as NonNullable<PmxParseResponse["materials"]>;
+  return base;
 }
 
 describe("createPmxParser（Worker 可用路径）", () => {

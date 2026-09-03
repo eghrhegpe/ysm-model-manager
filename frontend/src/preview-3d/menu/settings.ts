@@ -164,7 +164,8 @@ export function collectSettingsCapControls(): MenuControlDef[] {
     }
   }
   out.sort((a, b) => (a.settingsOrder ?? 0) - (b.settingsOrder ?? 0));
-  return out.map((c) => ({ ...c, group: undefined }));
+  // 抹平 group：剥掉 group 字段（exactOptional 收紧后不能赋 undefined，直接省略更贴合意图）
+  return out.map(({ group: _grp, ...rest }) => rest);
 }
 
 /** 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM */

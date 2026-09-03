@@ -108,11 +108,12 @@ function newCap(opts: {
 } = {}) {
   const scene = new THREE.Scene();
   const renderer = makeFakeRenderer();
+  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
   return new EnvironmentCapability({
     scene,
     renderer,
-    params: opts.params as import("./environment-capability.ts").EnvironmentParams | undefined,
-    enabled: opts.enabled,
+    ...(opts.params !== undefined ? { params: opts.params as import("./environment-capability.ts").EnvironmentParams } : {}),
+    ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
   });
 }
 

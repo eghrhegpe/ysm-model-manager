@@ -9,7 +9,7 @@ const mk = (
     id?: string;
     labelKey?: string;
     fallback?: string;
-    group?: string;
+    group?: string | undefined;
     slider?: NonNullable<MenuControlDef["slider"]>;
     select?: NonNullable<MenuControlDef["select"]>;
     button?: NonNullable<MenuControlDef["button"]>;
@@ -22,11 +22,12 @@ const mk = (
   kind,
   labelKey: opts.labelKey ?? "preview.test.label",
   fallback: opts.fallback ?? `test-${kind}`,
-  group: opts.group,
-  slider: opts.slider,
-  select: opts.select,
-  button: opts.button,
-  thumb: opts.thumb,
+  // 可选槽位仅真实存在时附带（exactOptional 收紧后避免显式 undefined 流入 MenuControlDef）
+  ...(opts.group !== undefined ? { group: opts.group } : {}),
+  ...(opts.slider !== undefined ? { slider: opts.slider } : {}),
+  ...(opts.select !== undefined ? { select: opts.select } : {}),
+  ...(opts.button !== undefined ? { button: opts.button } : {}),
+  ...(opts.thumb !== undefined ? { thumb: opts.thumb } : {}),
   getValue: opts.getValue ?? (() => (kind === "toggle" ? true : kind === "image" ? "http://x/y.png" : kind === "color" ? 0xff0000 : kind === "timeline" ? 12 : kind === "preset-thumb" ? "" : 0.5)),
   setValue: opts.setValue ?? (() => {}),
 });

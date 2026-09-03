@@ -75,7 +75,7 @@ export interface SemanticBoneEntry {
   /** 格式内骨骼 id（VRM: humanoid bone name；MMD: pmx 索引字符串） */
   id: string;
   /** 3D 节点（改变换用；理论可缺省，实际两格式均有） */
-  object?: THREE.Object3D;
+  object?: THREE.Object3D | undefined;
 }
 
 /** 语义骨骼映射表（Partial：匹配不到的语义缺省，消费方宽容降级） */

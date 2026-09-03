@@ -113,8 +113,13 @@ export async function switchToSession(
   // [ADR-159] 容器元数据继承：unregister 前捕获前一活跃 entry 的 displayName/components，
   // 同容器（资源包）会话内切换透传给新 entry（keep=false 时旧 entry 即将被注销，必须先取）。
   const prevEntry = sceneRegistry.get(sceneRegistry.getActiveId() ?? "");
+  // 仅保留实际存在的元数据键（displayName/components 为可选，exactOptional 收紧后避免
+  // 显式 undefined 流入下游可选键参数）
   const containerMeta = prevEntry
-    ? { displayName: prevEntry.displayName, components: prevEntry.components }
+    ? {
+        ...(prevEntry.displayName !== undefined ? { displayName: prevEntry.displayName } : {}),
+        ...(prevEntry.components !== undefined ? { components: prevEntry.components } : {}),
+      }
     : undefined;
   pushSwitchHistory(ctx, keep, next);
   unregisterSwitchPrevious(ctx, keep);
@@ -193,27 +198,27 @@ async function buildSwitchContent(
   keep: boolean,
 ): Promise<PreviewScene | null> {
   try {
-    return await ctx.adapter.build(
-      {
-        scene: ctx.scene,
-        camera: ctx.camera,
-        controls: ctx.controls,
-        renderer: ctx.renderer,
-        cameraControls: ctx.selfMode ? undefined : ctx.camBridge,
-        viewContainer: ctx.viewContainer,
-        loadingEl: ctx.loadingEl,
-        overlay: ctx.overlay,
-        menu: ctx.menuHandle,
-        // [审核修复] 延迟闭包（与 mount3D 初次 build 注入同款）：switch 重建后的 menuItems
-        // select 节点（pack 多模型选择 ADR-132）onSelect 仍能触发后续切换——此前传 undefined
-        // 导致每次会话内 pack select 只能生效一次，重建后第二次点击静默 no-op；
-        // 无活跃会话时 no-op（与 switchPreview 同口径）。
-        switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> =>
-          ctx.getHandle()?.switchTo?.(p, options) ?? Promise.resolve(),
-        sessionId: ctx.sessionId,
-      },
-      newPath,
-    );
+    const buildCtx: PreviewBuildCtx = {
+      viewContainer: ctx.viewContainer,
+      loadingEl: ctx.loadingEl,
+      overlay: ctx.overlay,
+      menu: ctx.menuHandle,
+      // [审核修复] 延迟闭包（与 mount3D 初次 build 注入同款）：switch 重建后的 menuItems
+      // select 节点（pack 多模型选择 ADR-132）onSelect 仍能触发后续切换——此前传 undefined
+      // 导致每次会话内 pack select 只能生效一次，重建后第二次点击静默 no-op；
+      // 无活跃会话时 no-op（与 switchPreview 同口径）。
+      switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> =>
+        ctx.getHandle()?.switchTo?.(p, options) ?? Promise.resolve(),
+    };
+    // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
+    // exactOptional 收紧后仅真实存在时赋值（shared 模式有值，self 模式缺省）
+    if (ctx.scene !== undefined) buildCtx.scene = ctx.scene;
+    if (ctx.camera !== undefined) buildCtx.camera = ctx.camera;
+    if (ctx.controls !== undefined) buildCtx.controls = ctx.controls;
+    if (ctx.renderer !== undefined) buildCtx.renderer = ctx.renderer;
+    if (!ctx.selfMode && ctx.camBridge) buildCtx.cameraControls = ctx.camBridge;
+    if (ctx.sessionId !== undefined) buildCtx.sessionId = ctx.sessionId;
+    return await ctx.adapter.build(buildCtx, newPath);
   } catch (e) {
     recoverSwitchFailure(ctx, keep, e);
     return null;

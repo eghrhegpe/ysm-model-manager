@@ -78,11 +78,11 @@ export function addMeshToBoneGroup(
   // 模拟上游全亮渲染；非 glow 保持 MeshBasicMaterial 不变（无光照开销）。
   const mat = glow
     ? new THREE.MeshStandardMaterial({
-        map: mt ?? undefined,
+        // map/emissiveMap 为 MaterialParameters 可选键（3rd-party）——仅 mt 存在时附带
+        ...(mt ? { map: mt, emissiveMap: mt } : {}),
         color: mt ? 0xffffff : FALLBACK_COLOR_GRAY,
         emissive: new THREE.Color(0xffffff),
         emissiveIntensity: 1.0,
-        emissiveMap: mt ?? undefined,
         ...MATERIAL_OPTS,
         transparent: alphaMode === "blend",
         alphaTest: alphaMode === "cutout" ? 0.1 : 0,

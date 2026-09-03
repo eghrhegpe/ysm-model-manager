@@ -28,7 +28,7 @@ export interface FbxGeometryData {
 
 export interface FbxMaterialData {
   type: string;
-  name?: string;
+  name?: string | undefined;
   color: number[];
   specular?: number[];
   shininess?: number;
@@ -58,7 +58,7 @@ export interface FbxMeshData {
   geometry: FbxGeometryData;
   materials: FbxMaterialData[];
   hasSkeleton: boolean;
-  skeleton?: FbxSkeletonData;
+  skeleton?: FbxSkeletonData | undefined;
 }
 
 /** 场景节点（非骨骼：Group 或 Mesh；parent = nodes 下标，-1 = 根） */
@@ -72,7 +72,7 @@ interface FbxNodeData {
     scale: number[];
   };
   /** isMesh=true 时的网格数据 */
-  mesh?: FbxMeshData;
+  mesh?: FbxMeshData | undefined;
 }
 
 interface FbxClipData {

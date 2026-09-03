@@ -11,7 +11,12 @@ import {
 
 function newCap(opts: { enabled?: boolean; params?: Partial<import("./fog-capability.ts").FogParams> } = {}) {
   const scene = new THREE.Scene();
-  return new FogCapability({ scene, params: opts.params, enabled: opts.enabled });
+  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
+  return new FogCapability({
+    scene,
+    ...(opts.params !== undefined ? { params: opts.params } : {}),
+    ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
+  });
 }
 
 describe("FogCapability — 构造与默认值", () => {

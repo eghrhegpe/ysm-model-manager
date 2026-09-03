@@ -88,9 +88,9 @@ function imageToDataURL(img: unknown): string {
 export interface VrmMetaInfo {
   name: string;
   authors: string[];
-  version?: string;
-  license?: string;
-  contact?: string;
+  version?: string | undefined;
+  license?: string | undefined;
+  contact?: string | undefined;
   thumbnail?: string; // dataURL，空串表示无缩略图
   metaVersion: "0" | "1";
   /** VRM0 授权约束徽章（Vrm0Restrictions），VRM1 无此字段 */
@@ -99,10 +99,10 @@ export interface VrmMetaInfo {
     commercial: boolean;
     sexual: boolean;
     violent: boolean;
-    reference?: string;
+    reference?: string | undefined;
   };
   /** 场景统计（ADR-131 P2：复用本次 GLTF parse 顺带采集，零额外成本） */
-  stats?: SceneStats;
+  stats?: SceneStats | undefined;
 }
 
 /** 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null */
@@ -341,7 +341,7 @@ function mdVrBuildPerception(vrm: VRM, ctx: PreviewBuildCtx, boneTree: BoneTree,
   const breath = createBreathController();
   const useNativeLookAt = !!vrm.lookAt;
   const gaze: ReturnType<typeof createGazeController> | null = useNativeLookAt ? null : createGazeController();
-  if (useNativeLookAt) vrm.lookAt!.target = ctx.camera;
+  if (useNativeLookAt && ctx.camera) vrm.lookAt!.target = ctx.camera;
   const exprMgr = vrm.expressionManager;
   const blinkExpressionNames = exprMgr
     ? (["blink", "blinkLeft", "blinkRight"] as const).filter((n) => exprMgr.getExpression(n) !== null)
@@ -553,7 +553,7 @@ export interface VrmMenuItemsOpts {
   /** VRM 动作桥（@pixiv/three-vrm-animation 播放）；null/缺省（无同目录 .vrma）→ 不注入 play 项 */
   play?: MmdPlayBridge | null;
   /** 面板填充回调（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
-  panels?: VrmPanelHooks;
+  panels?: VrmPanelHooks | undefined;
   /** 感知层状态（adapter build 创建，面板 UI 双向绑定） */
   perception?: {
     state: PerceptionState;

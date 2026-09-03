@@ -28,7 +28,13 @@ export function getBoneList(spec: Spec3D, modelIdx = 0): BoneInfoLite[] {
   for (const mi of indices) {
     for (const b of models[mi]?.bones || []) {
       const bone = b as SpecBone3D;
-      out.push({ id: bone.id, name: bone.name, parentId: bone.parentId, groupId: compKey(mi, bone.id) });
+      out.push({
+        id: bone.id,
+        name: bone.name,
+        // parentId 为可选项——仅真实存在时附带，避免显式 undefined 流入 BoneInfoLite
+        ...(bone.parentId !== undefined ? { parentId: bone.parentId } : {}),
+        groupId: compKey(mi, bone.id),
+      });
     }
   }
   return out;

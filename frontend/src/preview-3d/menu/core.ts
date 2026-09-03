@@ -322,7 +322,9 @@ function dockGroupItemsFor(
 
 /**
  * [子函数 8/9] 底部 dock 渲染（原 renderDock 闭包升格）。
- *   两大捷径分支：🧍 model 直达 roles；💃 motion 有活跃角色则直达详情的动作 section。
+ *   直达语义（[S5 收口] 数据驱动）：组定义 `directToPanel` 静态声明 → 点击直达该面板节点
+ *   （model 组 → roles），新增静态直达组零改本函数；
+ *   💃 motion 是唯一动态直达特例（活跃角色 → 动作详情），保留下方显式分支。
  *   通用分支：组内仅 1 个 panel 项 → 直达面板；否则进组根视图。
  */
 function renderPreviewDock(
@@ -355,15 +357,18 @@ function renderPreviewDock(
       `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${tr(g.labelKey, g.fallback)}</span>`;
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();
-      const rolesDef = allItems.find((d) => d.id === "roles" && d.kind === "panel");
-      // 🧍 模型组：直达 roles 角色列表（新手第一跳）
-      if (g.id === "model") {
-        if (rolesDef) {
-          showMenu(makePanelViewFn(rolesDef));
+      // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）。
+      // 数据驱动——新增「组点击直达某面板」零改本函数；声明指向不存在的面板时回落通用逻辑
+      if (g.directToPanel) {
+        const direct = allItems.find((d) => d.id === g.directToPanel && d.kind === "panel");
+        if (direct) {
+          showMenu(makePanelViewFn(direct));
           return;
         }
       }
-      // 💃 动作组：有活跃角色+技能 → 直达动作详情（骨骼/播放/感知）；否则角色列表（onSelectRole → motionDetailView）
+      // 💃 动作组动态直达特例（全库唯一非声明——目标依赖 sceneRegistry 活跃角色 + 详情工厂，
+      // 静态 directToPanel 无法表达；声明式化属 ADR-126 P4 候选）：
+      // 有活跃角色+技能 → 直达动作详情（骨骼/播放/感知）；否则角色列表（onSelectRole → motionDetailView）
       if (g.id === "motion") {
         const activeId = sceneRegistry.getActiveId();
         const active = activeId ? sceneRegistry.getAll().find((x) => x.id === activeId) : undefined;

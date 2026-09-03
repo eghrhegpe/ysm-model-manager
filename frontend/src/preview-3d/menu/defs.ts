@@ -27,12 +27,16 @@ export interface PreviewMenuGroupDef {
   labelKey: string;
   /** i18n 缺失时的回退文案 */
   fallback: string;
+  /** [S5 收口] 静态直达面板声明：点击 dock 按钮首跳该 panel 节点 id（渲染函数数据驱动，
+   *  新增「静态直达」组零改 core.ts）；缺省走通用逻辑（单 panel 直达 / 组根视图）。
+   *  动态直达（如 motion 依赖活跃角色详情）无法静态声明，见 core.ts 唯一特例标注。 */
+  directToPanel?: string;
 }
 
 export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
   // dock 按钮文案与落地面板语义对齐（2026-08-28）：🧍 组点击直达 roles 面板（加载角色），
   // 原 fallback「模型」与落地标题「加载角色」错位——改「角色」按钮即面板，用户无转译歧义
-  { id: "model", icon: "🧍", labelKey: "preview.groupModel", fallback: "角色" },
+  { id: "model", icon: "🧍", labelKey: "preview.groupModel", fallback: "角色", directToPanel: "roles" },
   { id: "motion", icon: "💃", labelKey: "preview.groupMotion", fallback: "动作" },
   // 环境独立成组（2026-08-19 拆组）：体量 > 全部场景设置（sky/ground/env/fog/reflector），
   // 且地面/水面系统后续会持续膨胀，单独 root 按钮避免场景组挤爆

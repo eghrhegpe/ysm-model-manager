@@ -297,6 +297,46 @@ func TestSyncAllSerialized(t *testing.T) {
 	}
 }
 
+// TestCreateSubdirTriggersSync 回归（锐评 #5）：Start 后新建子目录，fsnotify 非递归
+// 不会自动监听新目录——子目录内文件变更必须能触发同步（修复前漏报，本测试会超时失败）。
+func TestCreateSubdirTriggersSync(t *testing.T) {
+	repoDir := t.TempDir()
+	mcDir := setupMinecraftRoot(t)
+
+	var callCount atomic.Int32
+	scanFn := func(dir string) []types.ModelEntry {
+		callCount.Add(1)
+		return nil
+	}
+
+	w := New(repoDir, mcDir, scanFn)
+	if err := w.Start(); err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+	defer w.Stop()
+	time.Sleep(500 * time.Millisecond)
+
+	// 级联创建两层新目录（mkdir -p 场景：事件到达时目录树已就位，须递归补监听）
+	sub := filepath.Join(repoDir, "nested")
+	if err := os.MkdirAll(filepath.Join(sub, "deep"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	// 给 loop 补监听新目录留传播时间（Create 事件 → watchNewDir WalkDir Add）
+	time.Sleep(300 * time.Millisecond)
+
+	// 基线归零：目录创建本身已触发过一次同步，归零确保断言只统计子目录内变更那一次
+	callCount.Store(0)
+	// 多文件间隔写入，规避「写入落在补监听完成前」的窗口（任一命中即通过）
+	for i := 0; i < 3; i++ {
+		f := filepath.Join(sub, "deep", "child"+string(rune('0'+i))+".ysm")
+		if err := os.WriteFile(f, []byte("x"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(150 * time.Millisecond)
+	}
+	waitForCall(t, &callCount, 3*time.Second)
+}
+
 // TestStopWaitsForSync Stop 必须等待 in-flight 同步完成，避免退出后仍有后台写盘
 func TestStopWaitsForSync(t *testing.T) {
 	repoDir := t.TempDir()

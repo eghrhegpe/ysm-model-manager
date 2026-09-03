@@ -192,7 +192,7 @@ func (w *Watcher) loop() {
 		w.mu.Unlock()
 		return
 	}
-	evs, errs, done := w.w.Events, w.w.Errors, w.done
+	evs, errs, done, fw := w.w.Events, w.w.Errors, w.done, w.w
 	w.mu.Unlock()
 	for {
 		select {
@@ -203,6 +203,12 @@ func (w *Watcher) loop() {
 			// 过滤噪声事件（临时/锁/下载中文件），不触发同步
 			if isNoiseEvent(ev.Name) {
 				continue
+			}
+			// 新建目录不自动继承监听（fsnotify 非递归）：收到 Create 目录事件后补
+			// 监听新目录树（锐评 #5），否则新建子目录内部变更全部漏报——Windows 的
+			// ReadDirectoryChangesW 同样只报父目录内容变化、不给子目录句柄，同需补 Add。
+			if ev.Op&fsnotify.Create != 0 {
+				watchNewDir(fw, ev.Name)
 			}
 			// 任何文件系统变化（Create/Rename/Remove/Write）都触发防抖同步
 			// 这同时覆盖了：禁用（创建 .ban）、启用（删除/重命名 .ban）、新增模型等所有场景
@@ -219,6 +225,33 @@ func (w *Watcher) loop() {
 			return
 		}
 	}
+}
+
+// watchNewDir 为新建目录补监听（fsnotify 非递归，新目录须显式 Add 才能收到内部变更）。
+// 递归 WalkDir 覆盖 mkdir -p 级联场景：Create 事件到达时目录树可能已就位（批量解压），
+// 只 Add 事件路径会漏掉其中已存在的子目录；.recycle 段跳过与 Start 的初始注册口径一致。
+// 失败一律容忍（目录瞬移/已监听/Stop 竞态关闭均 log 后继续）：同步语义不依赖单次事件
+// 完备——后续其它事件触发 syncAll 时会扫描实际状态差异兜底。
+func watchNewDir(fw *fsnotify.Watcher, root string) {
+	if fi, err := os.Stat(root); err != nil || !fi.IsDir() {
+		return
+	}
+	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			log.Printf("[watcher] 新目录遍历失败 %s: %v", p, err)
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		if fsutil.IsRecycleDir(d.Name()) {
+			return filepath.SkipDir
+		}
+		if err := fw.Add(p); err != nil {
+			log.Printf("[watcher] 添加新目录监听失败 %s: %v", p, err)
+		}
+		return nil
+	})
 }
 
 // isNoiseEvent 判断是否为噪声事件（临时/锁/下载中文件），不触发同步

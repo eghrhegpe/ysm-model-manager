@@ -197,7 +197,7 @@ status: active
 
 ## 对外 API / 入口
 
-- `LoadRegistry() *ResourceTypeRegistry` — 单例加载注册表，解析优先级：显式路径（`SetRegistryPath`）→ exe 同级/上级 `resource_types.json` → 编译期嵌入基线 `bundledRegistryJSON`（根包注入）→ 测试/未注入回退读仓库根 `resource_types.json`
+- `LoadRegistry() *ResourceTypeRegistry` — 单例加载注册表，解析优先级：显式路径（`SetRegistryPath`，仅测试/显式覆盖）→ 编译期嵌入基线 `bundledRegistryJSON`（生产：根包 `embed.go` 注入；测试进程：各包 `main_test.go` 经 `SetBundledRegistryJSON` 注入同一仓库根文件）。**无 exe 同级/上级扫描、无 CWD 相对回退**（Go 评审 #11 删除，11bfca3b；旧部署模型已废弃，CWD/旁路文件会静默遮蔽单源）
 - `RegistryType(id string) *ResourceType` — 按 id 查类型，无匹配返回 nil
 - `SetRegistryPath(path string)` — 仅测试用，重置单例
 - 扩展名/目录查询：`AllExts()`、`IsSupportedExt(ext)`、`ExtBelongsTo(ext)`、`SupportedExtsForType(rtype)`、`StorageSubDir(rtype)`、`SubDirMap(rtype)`、`SubDirAll()`、`AllSubDirs()`、`FindInstDir(versionDir, subDir, rtype)`（标准子目录不存在/存在但无该类型文件时仅对 `scanInstance=true` 的类型（目前仅 blueprint）按扩展名兜底扫描；**blueprint 兜底只认 `Sable-Schematics` 白名单（2026-08-27 收紧）**，其余类型一律返回标准路径，禁止越界扫兄弟目录）——**整合包侧资源子目录解析的唯一入口（ADR-064 锚定）**：展示（`BuildSyncItems`）、状态对比（`CompareGlobalInstanceHashes`）、单/全量推拉（`findInstanceDir`/`SyncResources` binding）、安装（`InstallResourceToInstance`）、重链接（`RelinkAllInstanceResources`）、打开文件夹（`OpenInstanceFolder`）均走它，禁止 `filepath.Join(versionDir, subDir)` 直拼（历史直拼曾致 Sable-Schematics 场景展示/操作口径不一致报"不在目标目录内"）；`mods` 目录检测（`HasYSMMod`）无兜底语义除外

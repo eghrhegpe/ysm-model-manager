@@ -15,7 +15,7 @@ const appPreviewStyle: CSSStyleSheet = (() => {
   sheet.replaceSync(previewCSS);
   return sheet;
 })();
-import { RESOURCE_TYPES, isYsmWasmPreview, extOf } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPES, isYsmWasmPreview, extOf, resolvePreviewKey } from "../../utils/resource/types.ts";
 import { modelDetailHTML } from "./tpl.ts";
 import {
   cacheGet,
@@ -291,7 +291,10 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       showSimplePreview(this, path, { icon: "❓", label: t("preview.unrecognizedType") });
       return;
     }
-    const handler = PREVIEW_HANDLERS[rtype];
+    // ADR-111 变体收口（C2 #1 修复）：先按 variants preview key 查复合 key，再回退 rtype 自身。
+    // 与 opener 侧 resolvePreviewKey 同源消费 resource_types.json，show 侧不再手写扩展名分支。
+    const previewKey = resolvePreviewKey(path, rtype);
+    const handler = PREVIEW_HANDLERS[`${rtype}:${previewKey}`] ?? PREVIEW_HANDLERS[rtype];
     if (handler) {
       handler(this, path, this._typeMeta(rtype));
     } else {

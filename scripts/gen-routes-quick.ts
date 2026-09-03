@@ -76,11 +76,14 @@ function render(cards: Array<{ file: string; name: string; groups: string[]; int
   for (const c of cards) {
     const gLen = c.groups.length;
     const iLen = c.intents.length;
-    if (iLen > gLen) {
-      console.warn(`⚠️  ${c.file}: ${iLen} 条意图 > ${gLen} 个分组，多余 ${iLen - gLen} 条并入最后分组「${c.groups[gLen - 1]}」`);
+    // 降噪（2026-09-03）：单分组多意图（占全库 90/97 张）属正常形态，不再鸣笛；
+    // 仅「分组≥2 且意图>分组」（疑似漏写分组名）或「分组>意图」（悬空分组）才 WARN，
+    // 让真正的配对异常可见。输出逻辑不变，生成物字节级一致 → CI/doctor 零漂移。
+    if (gLen >= 2 && iLen > gLen) {
+      console.warn(`⚠️  ${c.file}: ${iLen} 条意图 > ${gLen} 个分组，疑似漏写分组名，多余 ${iLen - gLen} 条并入最后分组「${c.groups[gLen - 1]}」`);
     } else if (gLen > iLen) {
       const extra = c.groups.slice(iLen);
-      console.warn(`⚠️  ${c.file}: ${gLen} 个分组 > ${iLen} 条意图，多余分组不输出: ${extra.join('、')}`);
+      console.warn(`⚠️  ${c.file}: ${gLen} 个分组 > ${iLen} 条意图，多余分组不输出（悬空分组）: ${extra.join('、')}`);
     }
     for (let i = 0; i < iLen; i++) {
       rows.push({

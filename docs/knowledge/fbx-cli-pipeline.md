@@ -16,6 +16,7 @@ auto_fields:
     - CatResource
     - CliCommand
     - CmdContext
+    - CommandSpec
     - DispatchCommand
     - ErrParam
     - ErrParam.Error
@@ -30,6 +31,7 @@ auto_fields:
     - ExitSuccess
     - GetAllCommands
     - GetAllowedCommands
+    - GetAllowedCommandSpecs
     - GetCommand
     - IsCommandAllowed
     - JsonError
@@ -39,6 +41,11 @@ auto_fields:
     - NewJsonError
     - NewJsonNotSupported
     - NewJsonSuccess
+    - ParamBool
+    - ParamNumber
+    - ParamSpec
+    - ParamString
+    - ParamType
     - ParseCommandArgs
     - PrintError
     - RegisterCommand

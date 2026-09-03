@@ -32,6 +32,7 @@ auto_fields:
     - matchTypeByExt
     - matchZipEntryTS
     - NO_3D_TYPES
+    - previewCandidateExtsOf
     - PreviewTab
     - resolveDefaultPreviewKey
     - resolvePreviewKey

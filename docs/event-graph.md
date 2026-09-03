@@ -232,7 +232,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 150 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 148 |
 
 ### `nav:changed`
 

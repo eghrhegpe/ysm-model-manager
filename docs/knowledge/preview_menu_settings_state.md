@@ -38,6 +38,7 @@ auto_fields:
     - restoreState
     - SceneCapability
     - SceneCapabilityLookup
+    - setPreviewUiMode
     - setSceneCapabilityLookup
     - setStateValue
     - subscribeSettings

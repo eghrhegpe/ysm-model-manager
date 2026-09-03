@@ -59,6 +59,7 @@ auto_fields:
     - NestedPatternsFor
     - NO_3D_TYPES
     - NormalizeResourceName
+    - previewCandidateExtsOf
     - PreviewTab
     - resolveBlockName
     - ResolveBlockName

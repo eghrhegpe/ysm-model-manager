@@ -730,6 +730,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-173：GUI→CLI 参数桥 ParamSpec 白名单协议：区分未传与显式空值，消除 map 无序与参数损耗",
+        "link": "/adr/ADR-173-gui-cli-paramspec-map"
+      },
+      {
         "text": "ADR-172：社区创作者增量合并下沉 Go——新增 MergeCommunityCreatorsFromJSON 单次原子并入 binding",
         "link": "/adr/ADR-172-merge-community-creators-go"
       },
@@ -1533,6 +1537,10 @@ export const autoSidebar = [
         "text": "go",
         "collapsed": true,
         "items": [
+          {
+            "text": "GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态",
+            "link": "/knowledge/adr173_gui_cli_paramspec"
+          },
           {
             "text": "App↔子组件对象级环打破范式（回调注入）",
             "link": "/knowledge/app_cycle_injection"

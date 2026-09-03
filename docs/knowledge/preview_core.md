@@ -136,6 +136,7 @@ auto_fields:
     - makeYsmModelSchemaId
     - makeZipOverlayPort
     - MaterialBridgeLike
+    - MaterialControlBridge
     - materialNodes
     - matTexSlots
     - MatTexSlots
@@ -167,11 +168,13 @@ auto_fields:
     - MenuGraph
     - MenuGraphNode
     - MmdAdapterDeps
+    - MmdBottomNavCtx
     - MmdDataPort
     - mmdDiag
     - mmdMenuItems
     - MmdMenuItemsOpts
     - MmdPanelHooks
+    - MmdPlayBridge
     - MmdZipConfig
     - mockMenuHandle
     - MODEL_SKY_PRESETS
@@ -266,8 +269,11 @@ auto_fields:
     - WorkerErrorStrategy
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
+    - YsmContentHandle
+    - YsmControlsContext
     - ysmMenuItems
     - YsmMenuItemsOpts
+    - YsmModel
     - YsmPreloadedModel
     - zipFindEntry
 tests:
@@ -339,7 +345,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 - **会话收尾不变量（2026-08-30 修复，audit-r16 #4）**：关闭走 `cleanupFn ? fullCleanup : closeOverlay`（互斥二选一），两条路径的**收尾动作必须经** **`finishSession()`** **单一出口**（幂等，`session.finished` 守卫）：摘 `_handles` → `adapter.onClose?.()` → 释放焦点陷阱 + `returnFocus()`。原因：ESC 早期中断先走 `closeOverlay`（置 `aborted`），build 随后 resolve 时中止守卫会**再次进入** `fullCleanup`，不幂等则 `onClose` 重复触发（调用方 `skeleton.ts` 靠它注销 android-back 与复位 `_is3D`）。配套两条：① `cleanupPreview()` 须**快照遍历** `[..._handles]`——callee 会在遍历中摘除自身，边遍历边删会跳元素（cooperate 多会话只清一半）；② abort 分支须在 `fullCleanup()` **之前**把 `session.content` 补登记进 `allContent`（正常登记点在 build 成功之后），否则刚 build 完的内容层不被 dispose（GPU 泄漏）。**已统一（audit-r16 #5 收尾）**：原 `cleanup-3d.ts` 的 `runFullCleanup`（从未被接线的僵尸实现）已删除，其「监听解绑 + `sceneCapabilityRegistry.saveAll()/dispose()` + `textureCache.disposeAll()` + `clearModelRoots()`」补进本地 `fullCleanup`（单一事实来源）；`finishSession()` 单一出口不变量保持不变。
 
-- `buildCameraControls(topBar, bridge)` — 通用相机控件（旋转模式/速度/重置），已收进根菜单 `camera` 项（sharedOnly）
+- `buildCameraControls(topBar, bridge)` — 通用相机控件（旋转模式/速度/重置），已收进根菜单 `camera` 项（self 模式由 `visibleWhen: s["ui.mode"]!=="self"` 谓词隐藏，[2026-09-03 S1] 取代旧 sharedOnly/hideInSelfMode）
 
 - `mountPreviewRootMenu(overlay, ctx)` → `PreviewMenuHandle`（`dispose`/`setAdapterItems`/`openPanel`/`refreshDock`）+ `PREVIEW_MENU_GROUPS` + `CORE_MENU_ITEMS`（`preview-menu/defs.ts` / `preview-menu/core.ts`）— **ADR-076 v3 声明式根菜单**（顶栏砍掉，⚙️ 按钮 + 弹出菜单，项表驱动；core 项 roles/environment/camera/lighting/shadow/postproc；**适配器项经** **`PreviewBuildCtx.menu.setAdapterItems`** **注入**；legacyTestId `ysm-close-3d`/`env-menu-btn`/`ysm-roles-entry` + 适配器项 `ysm-model-entry`/`mmd-model-entry` 等保留兼容 e2e）
 
@@ -433,7 +439,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
   - **dock 🧍 模型组统一为 roles 入口（2026-08-22，commit e8d6f5aa）**：删掉 `renderDock` 模型组基于 `sceneRegistry` 是否为空的 if/else 分流补丁——生产恒非空使其成死分支，且造成加载模型后 🧍 显示旧组根菜单（与 FAB 直进 roles 不一致）。🧍 永远快捷直达 roles 面板；单模型实例工具（模型信息/截图/骨骼/材料）保留 `dockGroup:"model"`，下沉至角色详情（`roleDetailView` 按该字段过滤）可达。litematic 蓝图切片同步从 `ctx.menu.setAdapterItems`（dock 平铺 sink）搬家到 `buildLitematicScene` 返回值 `menuItems: sliceItems`（角色详情 sink），使蓝图注册进 `sceneRegistry` 的 entry 携带切片、可在其详情内显示与卸载。测试契约见 `preview-menu.test.ts` / `preview-menu/items.test.ts`。
 
-  - **声明式类型层 + 通用渲染器（方案 A，2026-08-25，commits 8005f64e / 62f82445）**：从 MikuMikuAR `menu-node-types.ts` 移植 `PreviewMenuNode` 声明式节点类型（`preview-menu/node-types.ts`，纯类型叶零运行时）——含 `folder` 递归（`children`）/ `visibleWhen` 守卫 / `renderCustom` 逃生舱 / `action` 回调 / `dockGroup`·`sharedOnly`·`requiresEnvironment`（ysm 特有字段）；契约测试 `preview-menu/node-types.test.ts`（6 例）。配套通用递归渲染器 `renderMenu(container, nodes, deps)`（preview-menu/render.ts，core.ts re-export）：folder→可折叠 section（testid=`node.id` / `-body`，兼容既有 e2e）、panel/action→行（复用 makeRow/navigate/run）、divider/sectionTitle→轻量行。`roleDetailView` 模型/动作两 section 改为 `PreviewMenuNode` 声明树驱动，删除命令式 `renderRoleSection`。**迁移路径**：新菜单项优先写 `PreviewMenuNode`（可嵌套、可守卫），存量 flat 项经 `renderCustom` 逃生舱过渡；`PreviewMenuItemDef.render`→`renderCustom`、`run`→`action`（closePopup 必选→可选，包装兜底）。预览菜单从「壳声明式 + 肉命令式」走向「全声明式」。**2026-09 归一（controls 通道）**：`PreviewMenuNode` 新增 `controls` kind（`MenuControlDef[] | 惰性函数`），cap 控件原生进声明式节点树，渲染委托 `renderCapControls`（唯一控件渲染器）；`PreviewMenuItemDef` 死类型已删；schema 面板路径经 `renderMenu` + `renderCustomDirect: true` 渲染（custom 直接填充），`renderPreviewSchemaContent` 已删除收编。
+  - **声明式类型层 + 通用渲染器（方案 A，2026-08-25，commits 8005f64e / 62f82445）**：从 MikuMikuAR `menu-node-types.ts` 移植 `PreviewMenuNode` 声明式节点类型（`preview-menu/node-types.ts`，纯类型叶零运行时）——含 `folder` 递归（`children`）/ `visibleWhen` 守卫 / `renderCustom` 逃生舱 / `action` 回调 / `dockGroup`·`sharedOnly`·`requiresEnvironment`（ysm 特有字段，**2026-09-03 S1 起 sharedOnly/hideInSelfMode/requiresEnvironment 已删**——可见性统一 `visibleWhen` 谓词，dock 与内容级同求值器，见 preview_state.md）；契约测试 `preview-menu/node-types.test.ts`（6 例）。配套通用递归渲染器 `renderMenu(container, nodes, deps)`（preview-menu/render.ts，core.ts re-export）：folder→可折叠 section（testid=`node.id` / `-body`，兼容既有 e2e）、panel/action→行（复用 makeRow/navigate/run）、divider/sectionTitle→轻量行。`roleDetailView` 模型/动作两 section 改为 `PreviewMenuNode` 声明树驱动，删除命令式 `renderRoleSection`。**迁移路径**：新菜单项优先写 `PreviewMenuNode`（可嵌套、可守卫），存量 flat 项经 `renderCustom` 逃生舱过渡；`PreviewMenuItemDef.render`→`renderCustom`、`run`→`action`（closePopup 必选→可选，包装兜底）。预览菜单从「壳声明式 + 肉命令式」走向「全声明式」。**2026-09 归一（controls 通道）**：`PreviewMenuNode` 新增 `controls` kind（`MenuControlDef[] | 惰性函数`），cap 控件原生进声明式节点树，渲染委托 `renderCapControls`（唯一控件渲染器）；`PreviewMenuItemDef` 死类型已删；schema 面板路径经 `renderMenu` + `renderCustomDirect: true` 渲染（custom 直接填充），`renderPreviewSchemaContent` 已删除收编。
 
   - **公共映射 previewItemToNode（方案 A 第 3 步，commit 86208061，已删**）：曾是 `PreviewMenuItemDef`→`PreviewMenuNode` 单向映射。方案 A 收尾（commit e0aab996）统一整条链路为 `PreviewMenuNode`，`previewItemToNode` 和逆向 `nodeToDef` 一并删除——往返转换是有损的（`children`/`visibleWhen`/`control` 被静默丢弃，`action` 的 ctx 被打成 no-op 桩）。
 
@@ -441,7 +447,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
   - **dock 🧍 = 角色列表入口（第 5 步，commit 659e6308，实测反馈修正）**：dock 🧍 点击**恒进 roles 角色列表**（加载/切换模型入口），**不再**因活跃角色有 menuItems 而直达详情——用户实测「点模型按钮跳 ysm 模型介绍而非切换模型」反直觉（B 的「🧍 1 跳直达详情」UX 决策反噬），切换模型被迫绕二级；列表点角色名同样 1 跳进详情且切换不绕路。💃 动作组保持直达详情（聚焦动作 section）。fillRoles 点角色名进详情本就不传 onSwitchRole（slide-menu ← back 返回列表）。
 
-  - **camera self 模式守卫（commit 7cb10aec）**：`PreviewMenuNode` 加 `hideInSelfMode?: boolean`（self 模式隐藏），camera 项置 true——self 模式相机由适配器自驱（如 MMD 相机动画每帧覆盖），camBridge 控件（旋转/速度/重置）操作核心 controls 被覆盖呈现「无效空面板」，隐藏最诚实。renderDock 过滤链加 `.filter(d => !(d.hideInSelfMode && ctx.selfMode))`。self 模式 scene 组仍显（lighting/shadow/postproc 保留）。
+  - **camera self 模式守卫（commit 7cb10aec）**：`PreviewMenuNode` 加 `hideInSelfMode?: boolean`（self 模式隐藏），camera 项置 true——self 模式相机由适配器自驱（如 MMD 相机动画每帧覆盖），camBridge 控件（旋转/速度/重置）操作核心 controls 被覆盖呈现「无效空面板」，隐藏最诚实。renderDock 过滤链加 `.filter(d => !(d.hideInSelfMode && ctx.selfMode))`。self 模式 scene 组仍显（lighting/shadow/postproc 保留）。**2026-09-03 S1 取代**：`hideInSelfMode` 字段删，camera 项改 `visibleWhen: (s) => s["ui.mode"] !== "self"`（状态层 `ui.mode` 由 mount 入口同步），dock 过滤链并入通用谓词求值器。
 
   - **roleBaseName 剥扩展名（commit 1fcf6427）**：详情/列表/工具面板标题统一去扩展名（`lastIndexOf(".")` 剥最后一段 .ext，保留带点版本号如 1.2）——`a.ysm→a`、`foo.json→foo`、`bar.zip→bar`、`[vup]xxx.zip→[vup]xxx`。用户实测 `ysm.json` 当标题反直觉：entry.path 指向包内入口文件时 basename 暴露无意义技术文件名。roleBaseName 已导出供测试。
 

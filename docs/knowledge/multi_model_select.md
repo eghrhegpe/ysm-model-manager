@@ -32,8 +32,6 @@ auto_fields:
     - cleanupVoxel3D
     - createLitematic3D
     - Error
-    - fillMmdModelPanel
-    - fillMmdShotPanel
     - LITEMATIC_SLICE_SCHEMA_ID
     - LitematicAdapterDeps
     - LitematicBuildOpts

@@ -49,9 +49,6 @@ auto_fields:
     - drawView
     - fill3DPanel
     - fillAuthorsAsync
-    - fillMmdModelPanel
-    - fillMmdShotPanel
-    - fillYsmShotPanel
     - GenGuard
     - getPrefer3D
     - getRegisteredRoutes

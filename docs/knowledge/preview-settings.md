@@ -67,6 +67,7 @@ auto_fields:
     - sec
     - setActive3DClose
     - setPrefer3D
+    - setPreviewUiMode
     - setSceneCapabilityLookup
     - setStateValue
     - setup2DCanvas

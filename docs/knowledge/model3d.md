@@ -305,6 +305,7 @@ auto_fields:
     - matchSemanticBone
     - matchSemanticMorph
     - MaterialBridgeLike
+    - MaterialControlBridge
     - materialNodes
     - matTexSlots
     - MatTexSlots
@@ -349,6 +350,7 @@ auto_fields:
     - MmdAdapterDeps
     - MmdBonePickResult
     - mmdBonesToBoneNodes
+    - MmdBottomNavCtx
     - MmdDataDeserializer
     - MmdDataPort
     - mmdDiag
@@ -357,6 +359,7 @@ auto_fields:
     - mmdMenuItems
     - MmdMenuItemsOpts
     - MmdPanelHooks
+    - MmdPlayBridge
     - mmdSemanticBoneMap
     - mmdSemanticMorphMap
     - MmdZipConfig
@@ -503,6 +506,7 @@ auto_fields:
     - setMmdMaterialVisible
     - setPerceptionPaused
     - setPerfPreset
+    - setPreviewUiMode
     - setSceneCapabilityLookup
     - setStateValue
     - setVrmMaterialOpacity
@@ -585,8 +589,11 @@ auto_fields:
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmAnimPlayer
+    - YsmContentHandle
+    - YsmControlsContext
     - ysmMenuItems
     - YsmMenuItemsOpts
+    - YsmModel
     - YsmObjectHandle
     - YsmPreloadedModel
     - ysmSemanticBoneMap

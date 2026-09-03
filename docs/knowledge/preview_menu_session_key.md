@@ -20,7 +20,6 @@ auto_fields:
     - CameraControlBridge
     - cleanupPreview
     - fill3DPanel
-    - fillYsmShotPanel
     - getSchema
     - hasActivePreview
     - hasSchema

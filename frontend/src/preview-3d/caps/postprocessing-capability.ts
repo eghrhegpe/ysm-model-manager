@@ -76,13 +76,31 @@ export interface PostprocessingParams {
   reflectorDisableWhenSSR: boolean;
 }
 
-const THREE_TONE_MAPPING: Record<PostprocessingParams["toneMapping"], THREE.ToneMapping> = {
-  none: THREE.NoToneMapping,
-  linear: THREE.LinearToneMapping,
-  reinhard: THREE.ReinhardToneMapping,
-  aces: THREE.ACESFilmicToneMapping,
-  cineon: THREE.CineonToneMapping,
-};
+/**
+ * tone mapping 档位 → THREE 枚举值的静态键表（仅字符串，供运行时校验）。
+ * 注意：不要在模块级求值 THREE 枚举（如 LinearToneMapping）——verbatimModuleSyntax 下
+ * 未用值导入不再被擦除，全量 mock three 的测试（如 screenshot-render.test）会在收集期
+ * 因 mock 缺枚举导出而炸。枚举取值统一走下方惰性函数 toneMappingValue()。
+ */
+const TONE_MAPPING_KEYS = ["none", "linear", "reinhard", "aces", "cineon"] as const;
+
+/** 惰性求值 THREE 枚举：调用期才触碰 THREE.ToneMapping（规避测试 mock 缺枚举导出的收集期崩溃） */
+function toneMappingValue(key: PostprocessingParams["toneMapping"]): THREE.ToneMapping {
+  switch (key) {
+    case "none":
+      return THREE.NoToneMapping;
+    case "linear":
+      return THREE.LinearToneMapping;
+    case "reinhard":
+      return THREE.ReinhardToneMapping;
+    case "aces":
+      return THREE.ACESFilmicToneMapping;
+    case "cineon":
+      return THREE.CineonToneMapping;
+    default:
+      return THREE.NoToneMapping;
+  }
+}
 
 export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
   enabled: false,
@@ -558,7 +576,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /* -------- 参数应用 -------- */
 
   private applyToneMapping(): void {
-    this.renderer.toneMapping = THREE_TONE_MAPPING[this.params.toneMapping];
+    this.renderer.toneMapping = toneMappingValue(this.params.toneMapping);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMappingExposure = this.params.exposure;
   }
@@ -842,7 +860,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (typeof state.ssaoRadius === "number") this.params.ssaoRadius = state.ssaoRadius;
     if (typeof state.ssaoMinDist === "number") this.params.ssaoMinDist = state.ssaoMinDist;
     if (typeof state.ssaoMaxDist === "number") this.params.ssaoMaxDist = state.ssaoMaxDist;
-    if (typeof state.toneMapping === "string" && (THREE_TONE_MAPPING as Record<string, number>)[state.toneMapping] !== undefined) {
+    if (typeof state.toneMapping === "string" && (TONE_MAPPING_KEYS as readonly string[]).includes(state.toneMapping)) {
       this.params.toneMapping = state.toneMapping as PostprocessingParams["toneMapping"];
     }
     if (typeof state.exposure === "number") this.params.exposure = state.exposure;

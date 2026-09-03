@@ -717,6 +717,10 @@ export const autoSidebar = [
       {
         "text": "YSM 知识库全量体检报告",
         "link": "/knowledge-audit-20260705"
+      },
+      {
+        "text": "YSM 前后端统一 & 架构问题研究与修复方案",
+        "link": "/sharp-review-fix-plan"
       }
     ]
   },
@@ -1888,6 +1892,10 @@ export const autoSidebar = [
             "link": "/knowledge/perception"
           },
           {
+            "text": "统一 3D 预览核心 preview-core",
+            "link": "/knowledge/preview_core"
+          },
+          {
             "text": "联邦渲染能力 (Render Federation)",
             "link": "/knowledge/render-federation"
           },
@@ -2050,16 +2058,6 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
-          }
-        ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "统一 3D 预览核心 preview-core",
-            "link": "/knowledge/preview_core"
           }
         ]
       }

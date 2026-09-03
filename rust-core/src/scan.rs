@@ -27,7 +27,7 @@ pub fn scan_fast(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
 /// **预留接口**：当前无生产消费方（rust-wails-bridge 的两个生产入口均走 `scan_fast` 或
 /// `scan_impl_manifest`，不下钻禁用目录）。本函数仅被 `tests.rs` 引用。若未来「新桌面壳列出
 /// 并再启用禁用模型」立项，此处可直接复用；在此之前视为孤儿代码，行为变更需经代码评审。
-pub fn scan_index_no_hash(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
+pub(crate) fn scan_index_no_hash(root: impl AsRef<Path>, policy: &ScanPolicy) -> ScanReport {
     scan_impl(root.as_ref(), policy, true)
 }
 
@@ -179,6 +179,10 @@ pub fn scan_impl_manifest(mut candidates: Vec<Candidate>, policy: &ScanPolicy) -
             Err(err) => errors.push(err),
         }
     }
+    // scan_impl_manifest 内部 par_iter 并行 resolve_metadata，entries/errors 各自独立 sort 后
+    // 返回；调用方（response.rs scan_json_manifest）可能对 errors 再次 sort（因 hydrate_hashes
+    // 通过 par_iter_mut 追加新 error 到 report.errors，破坏原有序性）。两处排序各自有意义，
+    // 不冗余：scan_impl_manifest 保 entries 稳定序，response.rs 保 errors 最终序。
     entries.sort_by(|a, b| a.path.cmp(&b.path));
     errors.sort_by(|a, b| a.path.cmp(&b.path));
     ScanReport { entries, errors }

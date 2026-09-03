@@ -107,8 +107,8 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 	if status != 0 {
 		return ScanResponse{}, fmt.Errorf("Rust scanner manifest ABI status %d: %w", status, callErr)
 	}
-	if output.ptr == nil || output.len == 0 || output.len > uintptr(^uint(0)>>1) {
-		return ScanResponse{}, errors.New("Rust scanner returned an invalid buffer")
+	if err := validateOutput(output); err != nil {
+		return ScanResponse{}, err
 	}
 	defer freeProc.Call(uintptr(unsafe.Pointer(output.ptr)), output.len, output.cap) //nolint:errcheck
 
@@ -117,7 +117,9 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 	if err != nil {
 		return response, err
 	}
-	// manifest 路径 entries 按 path 排序，与 scan_json（eager）路径对称。
+	// manifest 路径 entries 按 path 排序——生产调用图不经此路径（ScanEntriesWithHit 缓存命中
+	// 时不进本函数），但测试契约要求输出稳定有序；同时 par_iter 在 hydrate_hashes 后重排
+	// errors，此处 sort entries 对称以保证整体确定性。
 	sort.Slice(response.Entries, func(i, j int) bool {
 		return response.Entries[i].Path < response.Entries[j].Path
 	})

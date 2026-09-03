@@ -105,8 +105,8 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 	if status != 0 {
 		return ScanResponse{}, fmt.Errorf("Rust scanner manifest ABI status %d", status)
 	}
-	if output.ptr == nil || output.len == 0 || output.len > uintptr(^uint(0)>>1) {
-		return ScanResponse{}, errors.New("Rust scanner returned an invalid buffer")
+	if err := validateOutput(output); err != nil {
+		return ScanResponse{}, err
 	}
 	defer C.ysm_buffer_free((*C.uchar)(output.ptr), C.size_t(output.len), C.size_t(output.cap)) //nolint:errcheck
 	data := append([]byte(nil), unsafe.Slice((*byte)(unsafe.Pointer(output.ptr)), int(output.len))...)
@@ -114,9 +114,9 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 	if err != nil {
 		return response, err
 	}
-	// manifest 路径 entries 按 path 排序，与 scan_json（eager）路径对称——保证输出稳定、
-	// 避免依赖 Go 传入顺序；生产调用图不经此路径（ScanEntriesWithHit 缓存命中时不进本函数），
-	// 但测试和预留接口需行为一致。
+	// manifest 路径 entries 按 path 排序——生产调用图不经此路径（ScanEntriesWithHit 缓存命中
+	// 时不进本函数），但测试契约要求输出稳定有序；par_iter hydrate_hashes 后 errors 重排，
+	// 此处 sort entries 对称以保证整体确定性。
 	sort.Slice(response.Entries, func(i, j int) bool {
 		return response.Entries[i].Path < response.Entries[j].Path
 	})

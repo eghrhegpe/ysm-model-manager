@@ -15,17 +15,18 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - bindPerfCopyHandlers
+    - createDedupSession
+    - DedupConfigShape
+    - DedupSession
     - EscFn
     - formatSize
-    - getDedupConfig
-    - initDedupConfig
+    - getDefaultKeepIdx
     - initDiagnostics
     - initPerfPanel
     - loadDiagnosticsLogs
     - loadRuntimeLogs
     - renderHealthReport
     - renderLoadTraceSection
-    - resetDedupConfig
     - runGuiFlow
     - runHealthAudit
     - runPerfLog
@@ -33,7 +34,6 @@ auto_fields:
     - scanConflicts
     - scanSyncConflicts
     - sectionHeader
-    - startDedup
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts
@@ -45,7 +45,7 @@ auto_fields:
   quick_intents:
     - 诊断页、仓库体检、冲突 / 去重
     - 日志查看、性能分析
-    - initDiagnostics、startDedup
+    - initDiagnostics、createDedupSession
     - oldest 资历排行
   quick_risk_lines:
     - 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup
@@ -64,7 +64,7 @@ auto_fields:
     - gpu-bound
     - concurrent
   invariant_anchors:
-    - frontend/src/views/app-content/diagnostics/init.ts|startDedup
+    - frontend/src/views/app-content/diagnostics/init.ts|createDedupSession
 tests:
   - frontend/src/views/app-content/diagnostics/conflicts.test.ts
   - frontend/src/views/app-content/diagnostics/health.test.ts
@@ -76,7 +76,7 @@ quick_groups:
 quick_intents:
   - 诊断页、仓库体检、冲突 / 去重
   - 日志查看、性能分析
-  - initDiagnostics、startDedup
+  - initDiagnostics、createDedupSession
   - oldest 资历排行
 quick_risk_lines:
   - 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup
@@ -95,7 +95,7 @@ perf:
   - gpu-bound
   - concurrent
 invariant_anchors:
-  - frontend/src/views/app-content/diagnostics/init.ts|startDedup
+  - frontend/src/views/app-content/diagnostics/init.ts|createDedupSession
 status: active
 ---
 
@@ -107,9 +107,9 @@ status: active
 
 ## 核心职责
 
-- `init.ts` — 诊断页 `initDiagnostics` 与 `startDedup` 去重流程（派发 `model:select` / `stats:refresh` / `tree:reload`）
+- `init.ts` — 诊断页 `initDiagnostics`；去重会话 `createDedupSession`（由 `init-pages.ts` 持有会话实例，`session.start` 派发 `model:select` / `stats:refresh` / `tree:reload`）
 - `health.ts` — 仓库体检面板：调 Go 端 `RepoHealthAudit`（go/repoaudit 同源，GUI/CLI 消双轨），渲染分数环/完整性/缓存/资源/去重/警告
-- `dedup.ts` — 去重检测（读 `utils/resource/registry.ts` 注册表 + Go 绑定），`startDedup` 经 `init.ts` 接线
+- `dedup.ts` — 去重检测（读 `utils/resource/registry.ts` 注册表 + Go 绑定）；`createDedupSession()` 会话工厂把 busy/exec 重入守卫与去重配置收进闭包，经 `init.ts` re-export 接线
 - `conflicts.ts` — 冲突列表渲染（依赖 `logs.ts` 的操作日志数据）
 - `logs.ts` — 操作日志渲染：`OP_META` 七种中文标签+图标，状态图标优先读 `Level`（error→❌ / warn→⚠️ / debug→🔍 / fatal→💀 / info→✅），无 Level 按 `Status` 兜底；消费 Go `logs` 包（见知识卡 `go_logs`）
 - `perf.ts` / `perf-cli.ts` / `perf-trace.ts` — 性能面板：CLI 基准（`services/cli-bridge`）+ 加载轨迹（`preview-3d/load-trace.ts`）
@@ -129,7 +129,7 @@ status: active
 
 ## 不变量
 
-- `startDedup` 派发的 `model:select` / `stats:refresh` / `tree:reload` 必须齐全，否则去重后界面不刷新
+- 去重会话 `session.start` 派发的 `model:select` / `stats:refresh` / `tree:reload` 必须齐全，否则去重后界面不刷新
 - 性能轨迹读取 `preview-3d` 的 `getLoadTraces` 为只读快照，不写回
 - 冲突列表顺序与 `logs.ts` 的 `Operation` 分组一致（`OP_META` 标签为单一事实源）
 

@@ -309,6 +309,7 @@ auto_fields:
     - createBreathController
     - createBrowseModeRef
     - createCrCard
+    - createDedupSession
     - createDownloadQueue
     - createFbx3D
     - createFbxParser
@@ -360,6 +361,8 @@ auto_fields:
     - decodeYsmInWorker
     - decodeYsmInWorkerMemfs
     - decodeYsmViaWasm
+    - DedupConfigShape
+    - DedupSession
     - DEFAULT_COMMUNITY_URL
     - DEFAULT_ENV_PARAMS
     - DEFAULT_FOG_PARAMS
@@ -551,7 +554,7 @@ auto_fields:
     - getControlCount
     - getCreatorIdentity
     - getCustomAnimPath
-    - getDedupConfig
+    - getDefaultKeepIdx
     - getExt
     - getExts
     - getFrameIntervalMs
@@ -641,7 +644,6 @@ auto_fields:
     - importWebFilesWithToast
     - initAdvancedGrid
     - initControl
-    - initDedupConfig
     - initDiagnostics
     - initDiagnosticsPage
     - initGithubPage
@@ -1125,7 +1127,6 @@ auto_fields:
     - rescanFsaRoot
     - resetActiveComponent
     - resetAvatarConfigLoaded
-    - resetDedupConfig
     - resetDynamicCommandsCache
     - resetEncoderState
     - resetSceneInfra
@@ -1306,7 +1307,6 @@ auto_fields:
     - splitMeshByFaceAlpha
     - SpotlightParams
     - stagger
-    - startDedup
     - startMainThreadWatch
     - STATE
     - STATS_BATCH_LIMIT
@@ -1562,15 +1562,15 @@ status: snapshot
 | 目录 | 分 | 规模 | 一句话结论 |
 |------|----|------|-----------|
 | preview-3d/adapters | 4.2 | 11.0k | PreviewAdapter 统一接口+端口注入；MdMmBuildCtx 已域拆 6 接口+逐 stage Pick 收窄（tier1/2 落地），tier3 Builder 化待办 |
-| preview-3d 其余 | 4.2 | 12.8k | caps 注册表+感知层解耦优秀；model2d.ts 650 行待拆 |
+| preview-3d 其余 | 4.2 | 12.8k | caps 注册表+感知层解耦优秀；model2d 已拆目录（main 203 + draw 390 + hit-zones 113） |
 | backend | 4.5 | 10.1k | ZIP bomb 三重防护、idb FIFO 双上限；web-fs 三函数可抽 idbRekeyGroup |
 | core | 4.0 | 4.0k | menu-defs 声明式唯一事实源；DOM 渗透 core 层是主要问题 |
-| views/app-content | 3.4 | 9.3k | 全仓最低分：perf-cli.ts God Object + dedup.ts 模块级全局竞态隐患 |
+| views/app-content | 3.4 | 9.3k | 全仓最低分：perf-cli.ts God Object；dedup 竞态已消（2026-09-03 会话工厂化） |
 | views/app-tree | 4.0 | 3.1k | data/loader/render 分层干净 |
 | views/app-preview | 4.0 | 6.1k | 三套代际守卫严谨；makeScenePort 与 mmd-3d 重复应抽公共 port |
 | views 其余(nav/sidebar/sync-mgr/toast/context-menu) | 4~5 | 3.0k | app-toast 满分；共性=innerHTML 静态值 esc 口径不一 |
 | utils(除 3d) | 4.0 | 6.3k | esc()/hl() 管线精良；含唯一运行时 bug（short-label.ts） |
-| ui | 4.0 | 2.9k | ui-rows.ts 822 行接近红线 |
+| ui | 4.0 | 2.9k | ui-rows.ts 803 行接近红线 |
 | features | 4.0 | 3.8k | import-executor/download-queue 三层防御严谨；version-updater 无 AbortController（**by-design**：CheckUpdate 是 Go 绑定非 fetch，AbortSignal 无法取消 RPC，手动超时走 Promise.race+setTimeout 即正确范式，无需补 AbortController） |
 | services / wasm / test-utils | 5.0 | 1.3k | 满分区：registry 极简、WASM malloc/free 配对规范 |
 | workers | 4.0 | 0.4k | stats-core 纯函数与 Go 同口径 |
@@ -1585,9 +1585,9 @@ status: snapshot
 ## 架构债 TOP5
 
 1. 🔄 mmd-adapter.ts `MdMmBuildCtx` 域拆分(tier1)+stage Pick 收窄(tier2)已完成（L184-269，字段 60→55，`!` 非空断言清零）；tier3 **Builder 化仍待办**——构造点 `const c = {} as MdMmBuildCtx`（L1141）仍为单体可变上下文全闭包共享，运行时未结构化
-2. app-content/perf-cli.ts 534L God Object（趋势图+single-bench+诊断面板三合一）
-3. app-content/dedup.ts 596L 模块级全局 `_dedupBusy/_dedupStrategy` 竞态隐患
-4. model2d.ts 650L（拆 core/render/hit 三件）、ui-rows.ts 822L（按 row 类型拆）
+2. app-content/perf-cli.ts 535L God Object（趋势图+single-bench+诊断面板三合一）
+3. ~~app-content/dedup.ts 模块级全局竞态~~ ✅ **已消**（2026-09-03 `ed0e76b3`）：`_dedupBusy`/`diagExecBusy`（无 `_dedupStrategy`，卡原文笔误）与 `dedupConfig` 收敛进 `createDedupSession()` 会话工厂，各宿主独立隔离；dedup.ts 612L；补 exec 重入/面板绑定/keep 策略分支测试
+4. ~~model2d.ts 650L（拆 core/render/hit 三件）~~ ✅ **已拆**（2026-09 复核）：model2d 现为目录——main 203 + draw 390 + hit-zones 113；ui-rows.ts 803L（按 row 类型拆，仍在排队）
 5. detail-3d.ts 多个 300-350L show 函数
 
 ## 共性抽象机会（横向收敛）
@@ -1618,11 +1618,11 @@ status: snapshot
 
 ## i18n 缺口（硬编码中文未走 t()）
 
-core/handlers/sync.ts:87、utils/dom/dialogs/adv-filter-util.ts:38-53、features/recycle-bin.ts:124-127。
+core/handlers/sync.ts:87、utils/dom/dialogs/adv-filter-util.ts:38-53、~~features/recycle-bin.ts:124-127~~（✅ 2026-09-03 `3863385f`：实为 L217「空」/ L223「个文件」，已改 `_t("recycle.emptyState")`/`_t("recycle.fileCount",{n})`，三语言包 + public/locales JSON 同步）。
 
 ## 测试缺口
 
-perception 6 控制器无独立测试；caps dispose 未测；dedup/conflicts 无单测；model2d/parse-java-model/stats-core 边界未覆盖。
+~~perception 6 控制器无独立测试~~ ✅ 已有独立 .test.ts（autodance/blink/breath/core/gaze/lipsync + beat-detector）；~~conflicts 无单测~~ ✅ 已有 `conflicts.test.ts`(429L)；~~dedup 无单测~~ ✅ 已有 `init.test.ts` startDedup 用例 + 新增 `dedup.test.ts`（exec 重入/面板绑定/策略分支）；caps 各 capability 均有 .test.ts（**dispose 生命周期接线仍建议专项核查**）；~~model2d 边界未覆盖~~ ✅ 已有 `model2d.test.ts`(276L)；parse-java-model/stats-core 边界仍未覆盖（待核）。
 
 ## 不变量
 

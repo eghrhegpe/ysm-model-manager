@@ -1,609 +1,282 @@
-***
-
-kind: preview\_core
+---
+kind: preview_core
 name: 统一 3D 预览核心 preview-core
 tier: architecture
 adr:
-
-- ADR-125
-  category: rendering
-  source\_files:
-
-- frontend/src/preview-3d/adapters/
-
-- frontend/src/preview-3d/bone-tools.ts
-
-- frontend/src/preview-3d/caps/sky-capability.ts
-
-- frontend/src/preview-3d/caps/ground-capability.ts
-
-- internal/app/container\_entries.go
-
-- go/litematic/voxel.go
-
-- frontend/src/backend/web-fs.ts
-  auto\_fields:
-  symbols\_with\_lines:
-
-  - \_\_setEncodeImplForTest
-
-  - \_clearPmxStatsCache
-
-  - \_resetSingletons
-
-  - App.GetVoxelDataInContainer
-
-  - App.ListContainerEntries
-
-  - applyWasdCameraMotion
-
-  - applyWorkerDecodedTextures
-
-  - BasisEncoderLike
-
-  - BasisModuleLike
-
-  - bindInputHandlers
-
-  - BoneDetail
-
-  - BoneListItem
-
-  - BoneNode
-
-  - boneRowActiveBg
-
-  - BonesPanelItemOpts
-
-  - BoneTree
-
-  - buildBoneTree
-
-  - buildCameraControls
-
-  - buildFbxScene
-
-  - buildFbxSceneFromData
-
-  - buildLitematicScene
-
-  - buildMmdScene
-
-  - BuildNbtVoxelData
-
-  - BuildNbtVoxelDataFromRoot
-
-  - buildPackScene
-
-  - buildPmxScene
-
-  - BuildSchematicVoxelData
-
-  - BuildSchematicVoxelDataFromRoot
-
-  - buildSharedInfra
-
-  - BuildVoxelData
-
-  - BuildVoxelDataFromRoot
-
-  - buildVrmBoneNodes
-
-  - buildVrmBoneTree
-
-  - buildVrmScene
-
-  - buildYsmScene
-
-  - CameraControlBridge
-
-  - cancelPendingEncodings
-
-  - captureTextureName
-
-  - cleanupPreview
-
-  - clearSceneCaps
-
-  - closeUnusedDecodedBitmaps
-
-  - collectAllWebEntries
-
-  - collectMenuGraph
-
-  - CollectMenuGraphOpts
-
-  - collectNodePredicates
-
-  - concurrentMap
-
-  - createFbxParser
-
-  - createPmxParser
-
-  - createResolveModeBridge
-
-  - createWorkerBridge
-
-  - CreateWorkerBridgeOpts
-
-  - createWorkerParser
-
-  - DecodedTexture
-
-  - DEFAULT\_GROUND\_PARAMS
-
-  - DEFAULT\_SKY\_PARAMS
-
-  - DISPOSE\_TEX\_KEYS
-
-  - disposeTextureDecoder
-
-  - encodeAndCacheTexture
-
-  - encodeToKTX2Basis
-
-  - Error
-
-  - estimateTexGpuBytes
-
-  - FBX\_TARGET\_MAX\_DIM
-
-  - FbxAdapterDeps
-
-  - FbxDataPort
-
-  - FbxGeometryData
-
-  - FbxMaterialData
-
-  - FbxMeshData
-
-  - FbxParser
-
-  - FbxParseRequest
-
-  - FbxParseResponse
-
-  - FbxScaleInfo
-
-  - FbxSceneBuilderConfig
-
-  - FbxSceneData
-
-  - fbxSceneToData
-
-  - FbxSkeletonData
-
-  - filterAnimFiles
-
-  - findAncestorBoneId
-
-  - getBoneDetail
-
-  - getBonePath
-
-  - getBonePosition
-
-  - getCustomAnimPath
-
-  - getFsaAuthState
-
-  - getSceneCaps
-
-  - getSchema
-
-  - getTextureDecoder
-
-  - GroundCapability
-
-  - GroundParams
-
-  - hasActivePreview
-
-  - hasSchema
-
-  - importWebFiles
-
-  - injectSkySunScalePatch
-
-  - InputHandlers
-
-  - InputOptions
-
-  - invalidatePreview
-
-  - isLikelyTga
-
-  - Ktx2EncodeRequest
-
-  - Ktx2EncodeResponse
-
-  - Ktx2TextureLoader
-
-  - Ktx2TextureLoaderDeps
-
-  - listBonesWithDepth
-
-  - listSchemas
-
-  - LITEMATIC\_SLICE\_SCHEMA\_ID
-
-  - LitematicAdapterDeps
-
-  - LitematicBuildOpts
-
-  - LoadingProgressMode
-
-  - makeBonePanelRenderer
-
-  - makeBonesPanelItem
-
-  - makeFbxAdapter
-
-  - makeLitematicAdapter
-
-  - makeMenuCtx
-
-  - makeMmdAdapter
-
-  - makePackAdapter
-
-  - makeUnifiedPickHandler
-
-  - makeVrmAdapter
-
-  - makeYsmAdapter
-
-  - makeYsmModelSchemaId
-
-  - makeZipOverlayPort
-
-  - MaterialBridgeLike
-
-  - materialNodes
-
-  - matTexSlots
-
-  - MatTexSlots
-
-  - MAX\_KTX2\_PIXELS
-
-  - MAX\_MODELS
-
-  - MenuGraph
-
-  - MenuGraphNode
-
-  - MmdAdapterDeps
-
-  - MmdDataPort
-
-  - mmdMenuItems
-
-  - MmdMenuItemsOpts
-
-  - MmdPanelHooks
-
-  - MmdZipConfig
-
-  - mockMenuHandle
-
-  - MODEL\_SKY\_PRESETS
-
-  - ModelEntry
-
-  - MorphMeshLike
-
-  - morphNodes
-
-  - mount3D
-
-  - Mount3DOptions
-
-  - normalizeFbxScale
-
-  - OpenGzRootFromBytes
-
-  - PackAdapterOpts
-
-  - PackDeps
-
-  - packTextureLabel
-
-  - PerceptionCapability
-
-  - perceptionNodes
-
-  - PerceptionState
-
-  - pickBone
-
-  - PmxBoneData
-
-  - PmxBuilderConfig
-
-  - PmxBuildResult
-
-  - PmxDisplayFrameData
-
-  - PmxFaceData
-
-  - PmxFileStats
-
-  - PmxJointData
-
-  - PmxMaterialData
-
-  - PmxMorphData
-
-  - pmxObjectToResponse
-
-  - PmxParser
-
-  - PmxParseRequest
-
-  - PmxParseResponse
-
-  - PmxRigidBodyData
-
-  - PmxVertexData
-
-  - PostprocessingLike
-
-  - prepareMmdZipInput
-
-  - PreviewAdapter
-
-  - PreviewBuildCtx
-
-  - PreviewHandle
-
-  - PreviewScene
-
-  - readPmxStats
-
-  - readVrmMeta
-
-  - readWebFile
-
-  - reauthorizeFsaRoot
-
-  - registerSchema
-
-  - renderLoadingState
-
-  - RenderVrmBonePanel
-
-  - RepresentativeSnapshot
-
-  - rescanFsaRoot
-
-  - resetEncoderState
-
-  - resetSceneInfra
-
-  - resetSchemas
-
-  - resolveMmdZipConfig
-
-  - ResolveModeBridge
-
-  - ResolveModeResponse
-
-  - scanAllWebModels
-
-  - scanWebModels
-
-  - sceneRegistry
-
-  - scheduleBackgroundEncoding
-
-  - SchemaBuilder
-
-  - selectLocalRepo
-
-  - setBoneNodeVisible
-
-  - SharedInfra
-
-  - showLoadFailure
-
-  - SkyCapability
-
-  - SkyModelType
-
-  - SkyParams
-
-  - SwitchContext
-
-  - switchPreview
-
-  - switchToSession
-
-  - syncLightTargetFromContent
-
-  - TexDecodeConfig
-
-  - TexDecodeRequest
-
-  - TexDecodeResponse
-
-  - TEXTURE\_EXTS
-
-  - TextureDecoder
-
-  - TextureTooLargeError
-
-  - toggleBoneVisible
-
-  - typeFromWebDir
-
-  - UnloadCtx
-
-  - unloadModel
-
-  - unregisterSchema
-
-  - VrmAdapterDeps
-
-  - VrmBonePanelCtx
-
-  - VrmDataPort
-
-  - vrmMenuItems
-
-  - VrmMenuItemsOpts
-
-  - VrmMetaInfo
-
-  - VrmModelInfoCtx
-
-  - VrmPanelHooks
-
-  - WasdReuse
-
-  - webFsBindings
-
-  - WorkerBridge
-
-  - WorkerErrorStrategy
-
-  - YSM\_MODEL\_SCHEMA\_ID
-
-  - YsmAdapterOptions
-
-  - ysmMenuItems
-
-  - YsmMenuItemsOpts
-
-  - zipFindEntry
-    tests:
-
+  - ADR-125
+category: rendering
+source_files:
+  - frontend/src/preview-3d/adapters/
+  - frontend/src/preview-3d/bone-tools.ts
+  - frontend/src/preview-3d/caps/sky-capability.ts
+  - frontend/src/preview-3d/caps/ground-capability.ts
+  - internal/app/container_entries.go
+  - go/litematic/voxel.go
+  - frontend/src/backend/web-fs.ts
+auto_fields:
+  symbols_with_lines:
+    - __setEncodeImplForTest
+    - _clearPmxStatsCache
+    - _resetSingletons
+    - App.GetVoxelDataInContainer
+    - App.ListContainerEntries
+    - applyWasdCameraMotion
+    - applyWorkerDecodedTextures
+    - BasisEncoderLike
+    - BasisModuleLike
+    - bindInputHandlers
+    - BoneDetail
+    - BoneListItem
+    - BoneNode
+    - boneRowActiveBg
+    - BonesPanelItemOpts
+    - BoneTree
+    - buildBoneTree
+    - buildCameraControls
+    - buildFbxScene
+    - buildFbxSceneFromData
+    - buildLitematicScene
+    - buildMmdScene
+    - BuildNbtVoxelData
+    - BuildNbtVoxelDataFromRoot
+    - buildPackScene
+    - buildPmxScene
+    - BuildSchematicVoxelData
+    - BuildSchematicVoxelDataFromRoot
+    - buildSharedInfra
+    - BuildVoxelData
+    - BuildVoxelDataFromRoot
+    - buildVrmBoneNodes
+    - buildVrmBoneTree
+    - buildVrmScene
+    - buildYsmScene
+    - CameraControlBridge
+    - cancelPendingEncodings
+    - captureTextureName
+    - cleanupPreview
+    - clearSceneCaps
+    - closeUnusedDecodedBitmaps
+    - collectAllWebEntries
+    - collectMenuGraph
+    - CollectMenuGraphOpts
+    - collectNodePredicates
+    - concurrentMap
+    - createFbxParser
+    - createPmxParser
+    - createResolveModeBridge
+    - createWorkerBridge
+    - CreateWorkerBridgeOpts
+    - createWorkerParser
+    - DecodedTexture
+    - DEFAULT_GROUND_PARAMS
+    - DEFAULT_SKY_PARAMS
+    - DISPOSE_TEX_KEYS
+    - disposeTextureDecoder
+    - encodeAndCacheTexture
+    - encodeToKTX2Basis
+    - Error
+    - estimateTexGpuBytes
+    - FBX_TARGET_MAX_DIM
+    - FbxAdapterDeps
+    - FbxDataPort
+    - FbxGeometryData
+    - FbxMaterialData
+    - FbxMeshData
+    - FbxParser
+    - FbxParseRequest
+    - FbxParseResponse
+    - FbxScaleInfo
+    - FbxSceneBuilderConfig
+    - FbxSceneData
+    - fbxSceneToData
+    - FbxSkeletonData
+    - filterAnimFiles
+    - findAncestorBoneId
+    - getBoneDetail
+    - getBonePath
+    - getBonePosition
+    - getCustomAnimPath
+    - getFsaAuthState
+    - getSceneCaps
+    - getSchema
+    - getTextureDecoder
+    - GroundCapability
+    - GroundParams
+    - hasActivePreview
+    - hasSchema
+    - importWebFiles
+    - injectSkySunScalePatch
+    - InputHandlers
+    - InputOptions
+    - invalidatePreview
+    - isLikelyTga
+    - Ktx2EncodeRequest
+    - Ktx2EncodeResponse
+    - Ktx2TextureLoader
+    - Ktx2TextureLoaderDeps
+    - listBonesWithDepth
+    - listSchemas
+    - LITEMATIC_SLICE_SCHEMA_ID
+    - LitematicAdapterDeps
+    - LitematicBuildOpts
+    - LoadingProgressMode
+    - makeBonePanelRenderer
+    - makeBonesPanelItem
+    - makeFbxAdapter
+    - makeLitematicAdapter
+    - makeMenuCtx
+    - makeMmdAdapter
+    - makePackAdapter
+    - makeUnifiedPickHandler
+    - makeVrmAdapter
+    - makeYsmAdapter
+    - makeYsmModelSchemaId
+    - makeZipOverlayPort
+    - MaterialBridgeLike
+    - materialNodes
+    - matTexSlots
+    - MatTexSlots
+    - MAX_KTX2_PIXELS
+    - MAX_MODELS
+    - MenuGraph
+    - MenuGraphNode
+    - MmdAdapterDeps
+    - MmdDataPort
+    - mmdMenuItems
+    - MmdMenuItemsOpts
+    - MmdPanelHooks
+    - MmdZipConfig
+    - mockMenuHandle
+    - MODEL_SKY_PRESETS
+    - ModelEntry
+    - MorphMeshLike
+    - morphNodes
+    - mount3D
+    - Mount3DOptions
+    - normalizeFbxScale
+    - OpenGzRootFromBytes
+    - PackAdapterOpts
+    - PackDeps
+    - packTextureLabel
+    - PerceptionCapability
+    - perceptionNodes
+    - PerceptionState
+    - pickBone
+    - PmxBoneData
+    - PmxBuilderConfig
+    - PmxBuildResult
+    - PmxDisplayFrameData
+    - PmxFaceData
+    - PmxFileStats
+    - PmxJointData
+    - PmxMaterialData
+    - PmxMorphData
+    - pmxObjectToResponse
+    - PmxParser
+    - PmxParseRequest
+    - PmxParseResponse
+    - PmxRigidBodyData
+    - PmxVertexData
+    - PostprocessingLike
+    - prepareMmdZipInput
+    - PreviewAdapter
+    - PreviewBuildCtx
+    - PreviewHandle
+    - PreviewScene
+    - readPmxStats
+    - readVrmMeta
+    - readWebFile
+    - reauthorizeFsaRoot
+    - registerSchema
+    - renderLoadingState
+    - RenderVrmBonePanel
+    - RepresentativeSnapshot
+    - rescanFsaRoot
+    - resetEncoderState
+    - resetSceneInfra
+    - resetSchemas
+    - resolveMmdZipConfig
+    - ResolveModeBridge
+    - ResolveModeResponse
+    - scanAllWebModels
+    - scanWebModels
+    - sceneRegistry
+    - scheduleBackgroundEncoding
+    - SchemaBuilder
+    - selectLocalRepo
+    - setBoneNodeVisible
+    - SharedInfra
+    - showLoadFailure
+    - SkyCapability
+    - SkyModelType
+    - SkyParams
+    - SwitchContext
+    - switchPreview
+    - switchToSession
+    - syncLightTargetFromContent
+    - TexDecodeConfig
+    - TexDecodeRequest
+    - TexDecodeResponse
+    - TEXTURE_EXTS
+    - TextureDecoder
+    - TextureTooLargeError
+    - toggleBoneVisible
+    - typeFromWebDir
+    - UnloadCtx
+    - unloadModel
+    - unregisterSchema
+    - VrmAdapterDeps
+    - VrmBonePanelCtx
+    - VrmDataPort
+    - vrmMenuItems
+    - VrmMenuItemsOpts
+    - VrmMetaInfo
+    - VrmModelInfoCtx
+    - VrmPanelHooks
+    - WasdReuse
+    - webFsBindings
+    - WorkerBridge
+    - WorkerErrorStrategy
+    - YSM_MODEL_SCHEMA_ID
+    - YsmAdapterOptions
+    - ysmMenuItems
+    - YsmMenuItemsOpts
+    - zipFindEntry
+tests:
   - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
-
   - frontend/src/preview-3d/adapters/ysm-3d.test.ts
-
   - frontend/src/views/app-preview/litematic-3d.test.ts
-    use\_when:
-
+use_when:
   - 3D 预览
-
   - 统一预览外壳
-
   - 程序化天空 / sky / 背景 / scene.background
-
   - PreviewAdapter 适配器
-
   - 全模型预览（YSM / VRM / MMD / Litematic）
-
   - mount3D
-    perf:
-
+perf:
   - gpu-bound
-    invariant\_anchors:
-
+invariant_anchors:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
-
-  - frontend/src/preview-3d/adapters/shared-infra.ts|\_singletonScene.background
-
+  - frontend/src/preview-3d/adapters/shared-infra.ts|_singletonScene.background
   - frontend/src/preview-3d/caps/sky-capability.ts|SkyCapability
-
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|PreviewAdapter
-    quick\_groups:
-
+quick_groups:
   - 3D 预览与模型追加
-    quick\_intents:
-
+quick_intents:
   - 追加模型、同台加载、多模型同框
-
   - 模型切换、会话内替换
-
   - 3D 预览菜单、根菜单、dock 按钮
-
   - VRM 动画播放、VRMA
-    quick\_risk\_lines:
-
+quick_risk_lines:
   - 跨类型必须走 switchExternal，禁止直接调 adapter.build
-
   - switchTo 仅同类型；跨类型用 switchExternal
-
   - 适配器项经 setAdapterItems 注入，禁止内联
-
   - 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update()
-    pitfalls:
-
+pitfalls:
   - 「frontend/src/preview-3d/menu/core.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
-
   - 「skeleton.ts」异步回调写入已卸载 DOM → 每个 await 后检查 container.isConnected
-
   - 「vrm.humanoid.update()」手动调用导致 T-pose 回归 → 只用 vrm.update(dt)
-    tests:
-
-- frontend/src/preview-3d/adapters/mmd-adapter.test.ts
-
-- frontend/src/preview-3d/adapters/ysm-3d.test.ts
-
-- frontend/src/views/app-preview/litematic-3d.test.ts
-  use\_when:
-
-- 3D 预览
-
-- 统一预览外壳
-
-- 程序化天空 / sky / 背景 / scene.background
-
-- PreviewAdapter 适配器
-
-- 全模型预览（YSM / VRM / MMD / Litematic）
-
-- mount3D
-  perf:
-
-- gpu-bound
-  invariant\_anchors:
-
-- frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
-
-- frontend/src/preview-3d/adapters/shared-infra.ts|\_singletonScene.background
-
-- frontend/src/preview-3d/caps/sky-capability.ts|SkyCapability
-
-- frontend/src/preview-3d/adapters/mount-preview-core.ts|PreviewAdapter
-  quick\_groups:
-
-- 3D 预览与模型追加
-  quick\_intents:
-
-- 追加模型、同台加载、多模型同框
-
-- 模型切换、会话内替换
-
-- 3D 预览菜单、根菜单、dock 按钮
-
-- VRM 动画播放、VRMA
-  quick\_risk\_lines:
-
-- 跨类型必须走 switchExternal，禁止直接调 adapter.build
-
-- switchTo 仅同类型；跨类型用 switchExternal
-
-- 适配器项经 setAdapterItems 注入，禁止内联
-
-- 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update()
-
-- 勿统一六格式 build 签名或抽容器工厂：渲染层 PreviewAdapter.build(ctx, path) 已统一；寻址层（1:1 vs 1:N、JS loader vs Go RPC、壳层枚举 vs 外部选择）差异是真实业务差异，强行统一要么升维 build 契约动 core 产生全格式回归，要么工厂膨胀 5 回调服务 \~43 行公共代码（ADR-148 §5 评估结论）
-  pitfalls:
-
-- 「frontend/src/preview-3d/menu/core.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
-
-- 「skeleton.ts」异步回调写入已卸载 DOM → 每个 await 后检查 container.isConnected
-
-- 「vrm.humanoid.update()」手动调用导致 T-pose 回归 → 只用 vrm.update(dt)
-  status: active
-
-***
-
+---
 # 统一 3D 预览核心 preview-core
 
 ## 概览
@@ -650,7 +323,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
   **P3 资源包模型清单（2026-08-29）**：Go **新增** `ListPackModelsDetail` 绑定（不破坏 `ListPackModels` 4 处消费者）：`models[{path,cubes}] + total`，cubes 数 JSON `elements`，封顶 `packModelDetailCap=200` 防大包；`generate:bindings -ts` 重生 + web-fs 镜像 `listWebPackModelsDetail` 同构。`showResourcePack` 加「🧊 模型清单 (N)」区（每行 path+cubes，超限显示 total，`esc()` 防 XSS），点击单模型 `createPack3D(path, { startEntry })` 直达 pack-model-adapter 3D（适配器吃 entry path，zip 当虚拟文件夹）。
 
-  **ADR-132 遗留 1 蓝图/litematic zip 容器多 nbt（2026-08-29）**：Go **新增** `ListContainerEntries(path, exts)`（容器内条目枚举，`container.Open` → `Entries()` → 扩展名白名单过滤 → 升序 JSON 数组）与 `GetVoxelDataInContainer(path, entry, ext)`（容器内 gzip NBT 条目读取 → 解耦后的「root→voxel」管线 → 与 `Get*VoxelData` 同形状 JSON，`containerEntrySafe` 守卫防穿越）。**voxel 解耦**：`go/litematic/voxel.go` 三个 `Build*VoxelData` 拆「路径→root」（`openGzRoot`）+「root→voxel」（`Build*VoxelDataFromRoot`），容器内读取复用后者（`OpenGzRootFromBytes` 导出入口），裸文件路径行为零回归。**前端**：`litematic-3d.ts` `createLitematic3D` 对 `.zip` 先 `ListContainerEntries` 枚举（`.nbt,.litematic,.schematic` 白名单）→ 装配 adapter（`containerPath`+`modelEntries`+`entryExt`）→ 初始 entry = 首项，容器内 voxelCall 走 `GetVoxelDataInContainer`（修复原「zip 被当 gzip 打开」坏预览）；**ext 逐条派生（2026-08-30 审核修复）**：voxelCall 按 entry 路径派生自身 ext（`entryExtOf(entryPath)`，命中 VOXEL\_RPC\_BY\_EXT 才用；未知扩展名回退首项捕获值）——mixed-format 容器（`a.nbt` + `x.schematic`）切换各走自身 builder，不再沿用首项 ext 误派发；`litematic-adapter.ts` `buildLitematicScene` 注入 `multiModelSelectNode`（ADR-132 原语，候选 = modelEntries，activeId = 当前 entry，onSelect = `ctx.switchTo`）；空容器/单 entry 退化无 select（裸路径零回归）。**web 镜像**：`web-fs.ts` `listWebContainerEntries` + `readWebVoxelInContainer`（extractZip → findZipEntry → `decodeVoxelNbt` → voxelView）。
+  **ADR-132 遗留 1 蓝图/litematic zip 容器多 nbt（2026-08-29）**：Go **新增** `ListContainerEntries(path, exts)`（容器内条目枚举，`container.Open` → `Entries()` → 扩展名白名单过滤 → 升序 JSON 数组）与 `GetVoxelDataInContainer(path, entry, ext)`（容器内 gzip NBT 条目读取 → 解耦后的「root→voxel」管线 → 与 `Get*VoxelData` 同形状 JSON，`containerEntrySafe` 守卫防穿越）。**voxel 解耦**：`go/litematic/voxel.go` 三个 `Build*VoxelData` 拆「路径→root」（`openGzRoot`）+「root→voxel」（`Build*VoxelDataFromRoot`），容器内读取复用后者（`OpenGzRootFromBytes` 导出入口），裸文件路径行为零回归。**前端**：`litematic-3d.ts` `createLitematic3D` 对 `.zip` 先 `ListContainerEntries` 枚举（`.nbt,.litematic,.schematic` 白名单）→ 装配 adapter（`containerPath`+`modelEntries`+`entryExt`）→ 初始 entry = 首项，容器内 voxelCall 走 `GetVoxelDataInContainer`（修复原「zip 被当 gzip 打开」坏预览）；**ext 逐条派生（2026-08-30 审核修复）**：voxelCall 按 entry 路径派生自身 ext（`entryExtOf(entryPath)`，命中 VOXEL_RPC_BY_EXT 才用；未知扩展名回退首项捕获值）——mixed-format 容器（`a.nbt` + `x.schematic`）切换各走自身 builder，不再沿用首项 ext 误派发；`litematic-adapter.ts` `buildLitematicScene` 注入 `multiModelSelectNode`（ADR-132 原语，候选 = modelEntries，activeId = 当前 entry，onSelect = `ctx.switchTo`）；空容器/单 entry 退化无 select（裸路径零回归）。**web 镜像**：`web-fs.ts` `listWebContainerEntries` + `readWebVoxelInContainer`（extractZip → findZipEntry → `decodeVoxelNbt` → voxelView）。
 
   **2026-08-19 下钻箭头**：组根视图（多 panel 列表）中，`kind === "panel"` 的行右侧显示 `>` 装饰性箭头（`data-testid="row-chevron"`），提示该行可点击进入下级面板。action 型行无箭头。渲染见 `makeRow(def, { chevron: def.kind === "panel" })`。
 
@@ -676,7 +349,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 
 ## 渲染会话词汇（ADR-161 章程）
 
-> **状态**：✅ 已实施 + 扩大范围清理（2026-09）。`mount-preview-core.ts` 内部 `built`→`content`/`allContent`/`getContent` 已落地，`unloadRole`→`unloadModel`（unload-role.ts→unload-model.ts）、loader 出口锚定 `Model3DSpec` 已落地；**2026-09 扩大扫描发现** **`built`** **黑话已扩散到内容适配器层与测试层并已清理**（commit 694083d8：mmd/vrm/fbx/litematic/mount 测试层 built→content、litematic si→sizeInfo/built→meshSet、fbx-parser built→nodeObjects、perf-cli dgPc 前缀展开）。词表即现状，检索按新词；清理详情与待办存量见 [frontend\_naming](./frontend_naming.md)（前端命名章程）。代码内「角色」已不再指代会话实例。
+> **状态**：✅ 已实施 + 扩大范围清理（2026-09）。`mount-preview-core.ts` 内部 `built`→`content`/`allContent`/`getContent` 已落地，`unloadRole`→`unloadModel`（unload-role.ts→unload-model.ts）、loader 出口锚定 `Model3DSpec` 已落地；**2026-09 扩大扫描发现** **`built`** **黑话已扩散到内容适配器层与测试层并已清理**（commit 694083d8：mmd/vrm/fbx/litematic/mount 测试层 built→content、litematic si→sizeInfo/built→meshSet、fbx-parser built→nodeObjects、perf-cli dgPc 前缀展开）。词表即现状，检索按新词；清理详情与待办存量见 [frontend_naming](./frontend_naming.md)（前端命名章程）。代码内「角色」已不再指代会话实例。
 
 ### 四级尺度词（渲染会话域唯一口径）
 
@@ -685,7 +358,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 | **组件 component**      | spec.models\[i] = 一个包/文件内的一个 geo 内容             | Go `ModelGroup`（JSON 契约名保留）；绑定类（`bindings/.../go/threejs/models.ts`）   |
 | **模型 model**          | 一个资源（zip/文件/目录），用户视角的「一个模型」                     | 资源 path、详情卡标题                                                          |
 | **内容层 scene content** | 会话中一个格式实例（一个 PreviewScene，ADR-093 可多模型同框）       | `mount-preview-core.ts` `content`/`allContent`/`getContent`（原 built 系） |
-| **注册条目 entry**        | sceneRegistry 中一个已注册模型实例（MAX\_MODELS=8，ADR-159） | `scene-registry.ts` `ModelEntry`                                       |
+| **注册条目 entry**        | sceneRegistry 中一个已注册模型实例（MAX_MODELS=8，ADR-159） | `scene-registry.ts` `ModelEntry`                                       |
 
 数据流追索路径：**资源 path → model →** **`spec.models[i]`（组件，跨层唯一锚）→ 内容层（整模型挂进 ctx.scene）→ registry entry（会话实例）**。禁止以「model group」指代组件、「角色」指代会话实例。
 

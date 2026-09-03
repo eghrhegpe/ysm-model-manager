@@ -233,18 +233,21 @@ function codeAsserts() {
     results.push({ name: 'r14 P1 updater 重复声明修复', ok: false, detail: `读取失败: ${(e as Error).message}` });
   }
 
-  // 9. ADR-029 WASM glue patch 防倒退：wasm_decoder.go 必须注入 HEAPU8（防 _getGlueCode bug 倒退）
-  const wasmDecoderPath = path.join(ROOT, 'internal/app/wasm_decoder.go');
+  // 9. ADR-029 WASM glue patch 防倒退：glue 生成处必须注入 HEAPU8（防 _getGlueCode bug 倒退）。
+  // ADR-164 后脚本/子进程/护栏收敛到 go/avatar（wasm_decoder.go 仅剩薄封装），断言跟随实现唯一副本。
+  const glueImplPaths = ['go/avatar/avatar_decode.go', 'internal/app/wasm_decoder.go'];
   try {
-    const text = fs.existsSync(wasmDecoderPath) ? fs.readFileSync(wasmDecoderPath, 'utf-8') : '';
-    const hasHeapPatch = /HEAPU8/.test(text) && /ReplaceAll/.test(text);
-    const ok = hasHeapPatch;
+    const ok = glueImplPaths.some((p) => {
+      const fp = path.join(ROOT, p);
+      const text = fs.existsSync(fp) ? fs.readFileSync(fp, 'utf-8') : '';
+      return /HEAPU8/.test(text) && /ReplaceAll/.test(text);
+    });
     results.push({
       name: 'ADR-029 WASM glue HEAPU8 注入',
       ok,
       detail: ok
-        ? 'wasm_decoder.go 含 HEAPU8 注入 patch（ADR-029 bug 已修，防倒退）'
-        : 'wasm_decoder.go 缺失 HEAPU8 注入（ADR-029 _getGlueCode bug 倒退风险）',
+        ? 'go/avatar/avatar_decode.go 含 HEAPU8 注入 patch（ADR-029 bug 已修，防倒退；ADR-164 收敛后实现唯一副本）'
+        : 'go/avatar/avatar_decode.go 缺失 HEAPU8 注入（ADR-029 _getGlueCode bug 倒退风险）',
     });
   } catch (e) {
     results.push({ name: 'ADR-029 WASM glue HEAPU8 注入', ok: false, detail: `读取失败: ${(e as Error).message}` });

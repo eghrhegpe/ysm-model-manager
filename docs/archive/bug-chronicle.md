@@ -1867,3 +1867,28 @@ model2d 5 处 `const [ox,oy,oz] = c.origin` 裸解构——畸形数据解构 un
 - **「加载一次、长期持有」的内存快照是配置回退的温床**——多次保存之间要重读最新值，或保存后回写内存
 - 修复配置类缺陷时检查**所有写路径**是否更新内存态（主题/链接模式/路径各入口），单点修复会留旁路
 
+---
+
+## 27. 路径限定提交 + pre-commit gen → `git status` MM 暂存残留（2026-08-31 实战复现）
+
+### 症状
+
+- `git commit -- <paths>`（--only 路径限定提交）后，`git status` 恒显示 MM（暂存区+工作树双改）
+- `git diff HEAD` 为空——无真实未提交改动，但 MM 常驻
+- 高推理 AI 误判工作区脏，空转多轮试图「修复」
+
+### 根因
+
+`.githooks/pre-commit` 的 GEN_CMDS 生成物同步会 gen + stage 本次生成的 docs 生成物，但路径限定提交（`--only` 语义）从 HEAD 派生 temp index，**不消费钩子 stage 的这些文件** → 生成物留在暂存区成为索引残留。对照实验（2026-08-31）：无 pre-commit 钩子 + 路径限定提交 → status 干净、提交 1 文件；有钩子（gen+stage）+ 路径限定提交 → 提交含钩子 stage 的生成物**且 MM 残留复现**。残留确为钩子引入的真实现象（非理论臆测）。
+
+### 修复
+
+- `.githooks/post-commit` 自动清残留：遍历有暂存差异的文件，仅当「工作树 == HEAD（无真实未提交改动）」时 `git restore --staged` 清掉；真实改动（工作树 != HEAD，含并行会话半成品）保持诚实显示不动。逃生阀 `YSM_SKIP_POSTCLEAN=1`
+- **陷阱**：`git commit -- <path>`（--only）不记录索引中的 mode 变更（`git update-index --chmod=+x` 后路径限定提交 HEAD 仍 100644 → 永久 mode 残留，且 post-commit 守卫把 mode 差异当真实改动跳过）；钩子脚本的 mode 修正需**全量提交**（无 paths）落索引 mode
+
+### 教训
+
+- **识别口诀：MM 但 `git diff HEAD` 为空 = 索引残留，post-commit 钩子自清，勿空转排查**
+- 路径限定提交与「钩子 stage 生成物」语义天然冲突——依赖钩子 stage 的流程要配对清理钩子
+- 高推理 AI 看到「status 脏但 diff HEAD 空」应先怀疑索引残留，而非工作区真实改动
+

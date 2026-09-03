@@ -12,6 +12,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
 )
 
@@ -48,12 +49,12 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 			} else {
 				// 多层物理路径：用 InstallDirRel 保留仓库层级结构
 				// 例如 missing=globalDir/vendor/character/modelA → targetDir/vendor/character/modelA
-				rel, relErr := filepath.Rel(globalDir, missing)
+				rel, relErr := paths.RelInside(globalDir, missing)
 				// code review P3：rel == "."（missing == globalDir——目录根本身是模型文件夹）
 				// 也回退 InstallDir（InstallDirRel 的 rel=="." 拒绝会静默推送失败——与旧
-				// 行为一致：basename 落位）
-				if relErr != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-					// 越界回退到 InstallDir 原语义（basename 落位）
+				// 行为一致：basename 落位）；relErr 覆盖 Rel 失败与 ".." 越界（收敛 #19）
+				if relErr != nil || rel == "." {
+					// 越界/等值回退到 InstallDir 原语义（basename 落位）
 					err = installer.InstallDirLocked(missing, targetDir, globalDir, linkMode, rtype)
 				} else {
 					err = installer.InstallDirRelLocked(missing, targetDir, filepath.ToSlash(rel), globalDir, linkMode, rtype)
@@ -339,13 +340,10 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 // mapSrcToGlobal P3 修复（子代理审计）：原用 strings.Replace(src, targetDir, globalDir, 1)
 // 子串替换——非路径语义且大小写敏感（Windows 下 targetDir 与 src 前缀大小写不一致时 Replace
 // 不命中 → dstDir=Dir(src) → copyFile(src, src) 静默截断源文件；或兄弟目录前缀误匹配写错目录）。
-// 改用 filepath.Rel 精确映射：src 必须在 targetDir 下，rel 以 ".." 开头显式报错防逃逸。
+// 改用 paths.RelInside 精确映射：src 必须在 targetDir 下，越界显式报错防逃逸。
 func mapSrcToGlobal(src, targetDir, globalDir string) (string, error) {
-	rel, err := filepath.Rel(targetDir, src)
+	rel, err := paths.RelInside(targetDir, src)
 	if err != nil {
-		return "", err
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("路径 %s 不在目标目录 %s 内", src, targetDir)
 	}
 	return filepath.Join(globalDir, rel), nil

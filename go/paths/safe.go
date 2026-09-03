@@ -105,6 +105,25 @@ func IsInside(baseDir, path string) error {
 	return nil
 }
 
+// RelInside 返回 path 相对 baseDir 的相对路径，path 必须在 baseDir 内（含等值）。
+// IsInside 的 rel 变体：IsInside 只回答「是否安全」，映射类调用（把路径翻译到 baseDir
+// 对应位置，如 sync_push 的 src→globalDir 映射）还需要相对路径本身——原 sync_push
+// 5 处手写 filepath.Rel + ".." 前缀判定（越界规则与 IsInside 重复且细节漂移，锐评 #19），
+// 收敛到本函数统一判据。
+// 语义与 IsInside 完全一致：拒绝空路径/空基准/NUL/.. 越界（错误同族 ErrPathEscalation，
+// errors.Is 可分类）；等值（path==baseDir）合法，返回 "."。大小写不敏感前缀复核同样生效
+// （Windows 路径语义），两侧同源路径不受影响。
+func RelInside(baseDir, path string) (string, error) {
+	if err := IsInside(baseDir, path); err != nil {
+		return "", err
+	}
+	// IsInside 已用 Abs(Clean) 归一验证通过；此处同归一后 Rel——同卷同盘，Rel 不再失败
+	//（跨卷在 IsInside 内已报 ErrRelFailed 提前返回）。err 仍透传不吞。
+	absBase, _ := filepath.Abs(filepath.Clean(baseDir))
+	absPath, _ := filepath.Abs(filepath.Clean(path))
+	return filepath.Rel(absBase, absPath)
+}
+
 // IsInsideResolved 解析符号链接后再判定 path 是否在 baseDir 下（BUG-1 修复）。
 // 与纯词法 IsInside 的差异：当 baseDir 或 path 含指向外部的 symlink 段时，
 // 真实落点越出 baseDir —— 会被本函数按 ErrNotInside 拒绝，而 IsInside 会误判安全。

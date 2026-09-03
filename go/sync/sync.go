@@ -290,24 +290,28 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			return nil
 		}
 
-		// 先试哈希匹配，再用多级路径匹配，最后 fallback 到纯文件名
+		// 匹配顺序：relKey（路径对应）→ 哈希（内容对应）→ 纯文件名兜底。
+		// 锐评 #7：原实现每个实例文件先全量 SHA256——>500MB 的 computeHash 可达秒级，
+		// 大整合包 × 800ms 防抖触发下持 InstallLock 逐文件哈希会饿死安装操作。绝大多数
+		// 实例文件与仓库目录树同构，relKey 命中即免哈希；哈希仅作 relKey miss（实例文件
+		// 被改名/移动，relKey 与仓库脱钩）时的内容关联兜底——改名场景原语义完整保留。
 		// 哈希计算持锁是有意设计（R27 P3-1 确认）：SyncToggleStatus 修改文件系统
 		// （rename 加/去 .disabled 后缀），必须持锁防止与安装并发。把哈希移到锁外
 		// 会引入 TOCTOU（哈希算完后文件被改）。>500MB 文件 computeHash 返回空，
-		// 自动跳过哈希走 relKey 匹配。
+		// 自动跳过哈希走纯文件名兜底。
 		var shouldBeBanned bool
 		var matched bool
-		hash := computeHash(p)
-		if hash != "" {
-			shouldBeBanned, matched = repoHash[hash]
+		pLower := strings.ToLower(p)
+		if strings.HasPrefix(pLower, customDirClean) {
+			// relKey 匹配（带文件夹限定）
+			rel := strings.TrimPrefix(pLower, customDirClean)
+			rel = types.StripDisableSuffix(rel)
+			shouldBeBanned, matched = repoName[rel]
 		}
 		if !matched {
-			// 用 relative path 匹配（带文件夹限定）
-			pLower := strings.ToLower(p)
-			if strings.HasPrefix(pLower, customDirClean) {
-				rel := strings.TrimPrefix(pLower, customDirClean)
-				rel = types.StripDisableSuffix(rel)
-				shouldBeBanned, matched = repoName[rel]
+			hash := computeHash(p)
+			if hash != "" {
+				shouldBeBanned, matched = repoHash[hash]
 			}
 		}
 		if !matched {

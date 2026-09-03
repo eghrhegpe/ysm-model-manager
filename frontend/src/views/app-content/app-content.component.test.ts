@@ -80,14 +80,19 @@ describe("app-content 生命周期配对", () => {
     unmountElement(el);
   });
 
-  it("disconnected → 订阅清理（nav:change 不再重写 detached DOM）", async () => {
+  it("disconnected → 订阅清理 + 面板 DOM 释放（ADR-163：nav:change 不重挂 detached 面板）", async () => {
     const el = mountCustomElement("app-content");
     await sleep(150);
-    const before = el.shadowRoot?.innerHTML || "";
+    // 挂载时已渲染 .page 面板（ADR-163 单面板挂载）
+    expect(el.shadowRoot?.querySelector(".page")).not.toBeNull();
+    // disconnectedCallback 同步做两件事：
+    //  ① clearPanels() 清空面板 DOM（防组件销毁后面板残留泄漏，ADR-163）；
+    //  ② subs.cleanupAll() 退订 nav:changed → 后续 emit 不再重挂面板。
     unmountElement(el);
+    expect(el.shadowRoot?.querySelector(".page")).toBeNull(); // ① 面板已随 disconnect 释放
     bus.emit("nav:changed", { page: "settings" });
     await sleep(200);
-    expect(el.shadowRoot?.innerHTML).toBe(before); // 订阅已随 disconnectedCallback 清理
+    expect(el.shadowRoot?.querySelector(".page")).toBeNull(); // ② 订阅已清，不会再重挂
   });
 
   it("启动恢复 → nav_page=settings 时 mount 直接渲染设置页（resolveInitialPage 白名单）", async () => {

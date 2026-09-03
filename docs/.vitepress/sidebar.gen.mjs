@@ -715,6 +715,10 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
+        "text": "frontend/src 架构锐评处置状态（2026-09-03）",
+        "link": "/frontend-src-critique-status"
+      },
+      {
         "text": "YSM 知识库全量体检报告",
         "link": "/knowledge-audit-20260705"
       },

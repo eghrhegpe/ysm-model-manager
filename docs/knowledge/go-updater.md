@@ -14,6 +14,7 @@ auto_fields:
     - DownloadWithProgress
     - ErrDownloadIncomplete
     - ErrDownloadTooBig
+    - ErrExitRequested
     - ErrHashMismatch
     - ErrInvalidPackage
     - ErrNotWindows

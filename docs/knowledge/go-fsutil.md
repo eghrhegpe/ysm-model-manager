@@ -31,6 +31,7 @@ auto_fields:
     - ErrTempCreateFailed
     - ErrWriteFailed
     - FilePerms
+    - FileSize
     - FormatSize
     - IsCrossDeviceErr
     - IsHardLink

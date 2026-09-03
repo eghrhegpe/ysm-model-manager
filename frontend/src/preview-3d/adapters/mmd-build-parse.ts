@@ -97,8 +97,6 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     c.tParseStart = performance.now();
     try {
       c.mmd = await loader.loadAsync(c.effectivePath);
-      // 分配即登记失败释放（2026-09-03 注册表化；闭包读 c.mmd 终值，与旧 finally 语义一致）
-      mdMmTrackAlloc(c, "mmd", () => c.mmd?.dispose());
     } catch (e) {
       // blob 回收由 buildMmdScene 主入口 finally 统一兜底（此处再收会双回收）
       await mmdDiag(c.effectivePort, "parse", c.effectivePath, "fail", safeErrorMessage(e));
@@ -119,7 +117,12 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     }
     c.mesh = c.mmd.mesh;
     // 分配即登记失败释放（2026-09-03 注册表化；值捕获防后续覆盖漏释放）
+    // mesh 先于 mmd 注册——dispose 按 push 顺序执行，mesh→mmd 与旧 finally 块一致，
+    // 也与 worker 路径（L57 mesh → L75 mmd）对齐（code review P2 修复）
     mdMmTrackAlloc(c, "mesh", () => disposeMmdMesh(c.mmd!.mesh, mmdDiag, c.effectivePort, "dispose-fail"));
+    // mmd 在 mesh 之后注册——dispose 按 push 顺序执行，mesh→mmd 与旧 finally 块一致，
+    // 也与 worker 路径（L57 mesh → L75 mmd）对齐（code review P2 修复）
+    mdMmTrackAlloc(c, "mmd", () => c.mmd?.dispose());
     c.pmxParser?.dispose();
   }
   if (c.decodedTexturesPromise) {

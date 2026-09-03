@@ -19,6 +19,9 @@ afterEach(() => {
   vi.useRealTimers();
   document.getElementById("ysw-tooltip-styles")?.remove();
   document.querySelectorAll(".ysw-tooltip").forEach((n) => n.remove());
+  // freshTooltip() 调 vi.resetModules() 产生新模块实例，但旧实例的
+  // 模块级单例 scroll capture listener 不会被移除——跨测试累积（P3 修复）
+  vi.resetModules();
 });
 
 describe("ensureTooltipStyles — 全局样式幂等注入", () => {

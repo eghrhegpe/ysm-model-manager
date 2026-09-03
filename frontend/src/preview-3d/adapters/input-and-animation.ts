@@ -216,11 +216,11 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
     const cam = opts.camera;
     if (!cam || !rd) return;
     const w = opts.viewContainer.clientWidth;
-    const h = Math.max(opts.viewContainer.clientHeight, 1);
-    cam.aspect = w / h;
+    const rawH = opts.viewContainer.clientHeight;
+    cam.aspect = w / Math.max(rawH, 1);
     cam.updateProjectionMatrix();
-    rd.setSize(w, h);
-    opts.postProc?.setSize(w, h);
+    rd.setSize(w, rawH);
+    opts.postProc?.setSize(w, rawH);
   };
   const onResize = (): void => {
     if (opts.isDisposed.v) return;

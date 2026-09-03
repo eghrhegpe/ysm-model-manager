@@ -32,6 +32,7 @@ auto_fields:
     - PreviewStatePath
     - resetActiveComponent
     - resetSettingsListeners
+    - setSceneCapabilityLookup
     - setStateValue
     - subscribeSettings
     - toStatePath

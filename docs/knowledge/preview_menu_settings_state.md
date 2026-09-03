@@ -38,6 +38,7 @@ auto_fields:
     - restoreState
     - SceneCapability
     - SceneCapabilityLookup
+    - setSceneCapabilityLookup
     - setStateValue
     - subscribeSettings
     - toStatePath

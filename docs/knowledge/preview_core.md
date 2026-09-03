@@ -72,6 +72,7 @@ auto_fields:
     - DEFAULT_GROUND_PARAMS
     - DEFAULT_SKY_PARAMS
     - DISPOSE_TEX_KEYS
+    - disposeMmdMesh
     - disposeTextureDecoder
     - encodeAndCacheTexture
     - encodeToKTX2Basis
@@ -139,10 +140,32 @@ auto_fields:
     - MatTexSlots
     - MAX_KTX2_PIXELS
     - MAX_MODELS
+    - MdMmBuildCtx
+    - mdMmDetectFormat
+    - MdMmDetectFormatCtx
+    - MdMmParsePmdCtx
+    - mdMmParsePmdStage
+    - MdMmParsePmxCtx
+    - mdMmParsePmxStage
+    - MdMmStage1bCtx
+    - MdMmStage1Ctx
+    - mdMmStage1Input
+    - MdMmStage2Ctx
+    - mdMmStage2LoadingManager
+    - MdMmStage3Ctx
+    - mdMmStage3SceneMesh
+    - mdMmStage4Anim
+    - MdMmStage4Ctx
+    - MdMmStage5Ctx
+    - mdMmStage5Menu
+    - MdMmStage6bCtx
+    - MdMmStage6Ctx
+    - mdMmStage6Result
     - MenuGraph
     - MenuGraphNode
     - MmdAdapterDeps
     - MmdDataPort
+    - mmdDiag
     - mmdMenuItems
     - MmdMenuItemsOpts
     - MmdPanelHooks

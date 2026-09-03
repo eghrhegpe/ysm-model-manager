@@ -366,6 +366,7 @@ auto_fields:
     - decodeYsmInWorkerMemfs
     - decodeYsmViaWasm
     - DedupConfigShape
+    - dedupeCreators
     - DedupSession
     - DEFAULT_COMMUNITY_URL
     - DEFAULT_ENV_PARAMS
@@ -396,6 +397,7 @@ auto_fields:
     - disposeDebugGroup
     - disposeEnvSubscriptions
     - disposeMaterial
+    - disposeMmdMesh
     - disposeSceneMeshes
     - disposeTextureDecoder
     - DOWNLOAD_CONFIRM_BYTES
@@ -838,6 +840,27 @@ auto_fields:
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
     - MAX_TAG_LENGTH
+    - MdMmBuildCtx
+    - mdMmDetectFormat
+    - MdMmDetectFormatCtx
+    - MdMmParsePmdCtx
+    - mdMmParsePmdStage
+    - MdMmParsePmxCtx
+    - mdMmParsePmxStage
+    - MdMmStage1bCtx
+    - MdMmStage1Ctx
+    - mdMmStage1Input
+    - MdMmStage2Ctx
+    - mdMmStage2LoadingManager
+    - MdMmStage3Ctx
+    - mdMmStage3SceneMesh
+    - mdMmStage4Anim
+    - MdMmStage4Ctx
+    - MdMmStage5Ctx
+    - mdMmStage5Menu
+    - MdMmStage6bCtx
+    - MdMmStage6Ctx
+    - mdMmStage6Result
     - MENU_DEFS
     - MenuAction
     - MenuControlDef
@@ -863,6 +886,7 @@ auto_fields:
     - MmdBottomNavCtx
     - MmdDataDeserializer
     - MmdDataPort
+    - mmdDiag
     - MmdMaterialDetail
     - MmdMaterialListItem
     - mmdMenuItems
@@ -1248,6 +1272,7 @@ auto_fields:
     - setPerfPreset
     - setPrefer3D
     - setRenderMode
+    - setSceneCapabilityLookup
     - setShowSiteView
     - setStateValue
     - SettingsCfg

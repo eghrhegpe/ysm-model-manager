@@ -46,6 +46,7 @@ auto_fields:
     - contentUtilCSS
     - createWorkshopRefs
     - creditsHTML
+    - dedupeCreators
     - DEFAULT_COMMUNITY_URL
     - diagnosticsHTML
     - extractAvatars

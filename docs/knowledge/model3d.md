@@ -157,6 +157,7 @@ auto_fields:
     - disposeDebugGroup
     - disposeEnvSubscriptions
     - disposeMaterial
+    - disposeMmdMesh
     - disposeSceneMeshes
     - disposeTextureDecoder
     - drawEnvEquirect
@@ -312,6 +313,27 @@ auto_fields:
     - MAX_KTX2_PIXELS
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
+    - MdMmBuildCtx
+    - mdMmDetectFormat
+    - MdMmDetectFormatCtx
+    - MdMmParsePmdCtx
+    - mdMmParsePmdStage
+    - MdMmParsePmxCtx
+    - mdMmParsePmxStage
+    - MdMmStage1bCtx
+    - MdMmStage1Ctx
+    - mdMmStage1Input
+    - MdMmStage2Ctx
+    - mdMmStage2LoadingManager
+    - MdMmStage3Ctx
+    - mdMmStage3SceneMesh
+    - mdMmStage4Anim
+    - MdMmStage4Ctx
+    - MdMmStage5Ctx
+    - mdMmStage5Menu
+    - MdMmStage6bCtx
+    - MdMmStage6Ctx
+    - mdMmStage6Result
     - MenuControlDef
     - MenuControlKind
     - MenuGraph
@@ -327,6 +349,7 @@ auto_fields:
     - mmdBonesToBoneNodes
     - MmdDataDeserializer
     - MmdDataPort
+    - mmdDiag
     - MmdMaterialDetail
     - MmdMaterialListItem
     - mmdMenuItems
@@ -478,6 +501,7 @@ auto_fields:
     - setMmdMaterialVisible
     - setPerceptionPaused
     - setPerfPreset
+    - setSceneCapabilityLookup
     - setStateValue
     - setVrmMaterialOpacity
     - setVrmMaterialVisible

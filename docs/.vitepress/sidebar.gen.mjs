@@ -730,6 +730,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-168：capability 环倒置：preview-state 查询器注入断组合根运行时边",
+        "link": "/adr/ADR-168-capability-preview-state"
+      },
+      {
+        "text": "ADR-167：MMD 适配器 stage 管线拆分",
+        "link": "/adr/ADR-167-mmd-stage"
+      },
+      {
         "text": "ADR-166：前端 services 层收敛：registry 搬迁 / recycle-bin / dedup 会话工厂 / path-cards",
         "link": "/adr/ADR-166-frontend-services-convergence"
       },
@@ -2032,10 +2040,6 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
-          },
-          {
-            "text": "perf 契约测试临时卡",
-            "link": "/knowledge/zzz-perf-contract-tmp"
           }
         ]
       },

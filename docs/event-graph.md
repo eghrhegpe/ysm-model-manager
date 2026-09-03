@@ -208,7 +208,7 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/core/context-menus.ts` | 87 |
-| `frontend/src/features/community/events.ts` | 196 |
+| `frontend/src/features/community/events.ts` | 198 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -232,7 +232,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-preview/index.ts` | 146 |
+| `frontend/src/views/app-preview/index.ts` | 150 |
 
 ### `nav:changed`
 
@@ -421,11 +421,11 @@
 | `frontend/src/features/community/download-queue-store.ts` | 247 |
 | `frontend/src/features/community/download-queue.ts` | 272 |
 | `frontend/src/features/community/download-queue.ts` | 298 |
-| `frontend/src/features/community/events.ts` | 141 |
-| `frontend/src/features/community/events.ts` | 153 |
-| `frontend/src/features/community/events.ts` | 222 |
-| `frontend/src/features/community/events.ts` | 274 |
-| `frontend/src/features/community/events.ts` | 311 |
+| `frontend/src/features/community/events.ts` | 143 |
+| `frontend/src/features/community/events.ts` | 155 |
+| `frontend/src/features/community/events.ts` | 224 |
+| `frontend/src/features/community/events.ts` | 276 |
+| `frontend/src/features/community/events.ts` | 313 |
 | `frontend/src/features/import-dnd.ts` | 39 |
 | `frontend/src/features/import-dnd.ts` | 57 |
 | `frontend/src/features/import-dnd.ts` | 76 |
@@ -444,7 +444,7 @@
 | `frontend/src/features/version-updater.ts` | 216 |
 | `frontend/src/features/version-updater.ts` | 250 |
 | `frontend/src/features/version-updater.ts` | 260 |
-| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 444 |
+| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 446 |
 | `frontend/src/preview-3d/adapters/preview-loading.ts` | 38 |
 | `frontend/src/preview-3d/adapters/switch-preview.ts` | 158 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |
@@ -516,8 +516,8 @@
 | `frontend/src/views/app-nav/index.ts` | 114 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 286 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 352 |
-| `frontend/src/views/app-preview/index.ts` | 264 |
-| `frontend/src/views/app-preview/index.ts` | 286 |
+| `frontend/src/views/app-preview/index.ts` | 273 |
+| `frontend/src/views/app-preview/index.ts` | 295 |
 | `frontend/src/views/app-preview/preview-library.ts` | 98 |
 | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |

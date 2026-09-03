@@ -29,7 +29,6 @@ auto_fields:
     - isContainerExt
     - isSupportedExt
     - isYsmWasmPreview
-    - loadResourceRegistry
     - matchTypeByExt
     - matchZipEntryTS
     - NO_3D_TYPES
@@ -43,7 +42,6 @@ auto_fields:
     - RESOURCE_TYPE_LABELS
     - RESOURCE_TYPES
     - ResourceType
-    - ResourceTypeEntry
     - ResourceTypeVariant
     - shortLabelOf
     - typeIconOf
@@ -69,7 +67,7 @@ auto_fields:
     - LoadResourceTypes
     - 注册表加载
   invariant_anchors:
-    - frontend/src/utils/resource/registry.ts|_registry
+    - frontend/src/services/resource-registry.ts|_registry
 quick_groups:
   - 配置与注册表
 quick_intents:
@@ -90,7 +88,7 @@ use_when:
   - LoadResourceTypes
   - 注册表加载
 invariant_anchors:
-  - frontend/src/utils/resource/registry.ts|_registry
+  - frontend/src/services/resource-registry.ts|_registry
 status: active
 ---
 

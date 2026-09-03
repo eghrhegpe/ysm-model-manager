@@ -1,10 +1,12 @@
 ---
+
 kind: frontend_repo_audit
 name: 前端 TS 整包审计
 tier: architecture
 category: ui
 affected: false            # 整包审计快照卡：source_files 只服务覆盖率统计，不随单次文件变更提示复核
 source_files:
+
   - frontend/src/
 auto_fields:
   symbols_with_lines:
@@ -82,6 +84,7 @@ auto_fields:
     - applyRotationIfNonIdentity
     - applyTheme
     - applyUIPrefs
+    - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - appSidebarStyle
@@ -319,6 +322,7 @@ auto_fields:
     - createIcon
     - createIconBox
     - createIconButton
+    - createLazyModule
     - createLeadingBtn
     - createLipSyncController
     - createListenerSet
@@ -672,6 +676,7 @@ auto_fields:
     - installScrollSync
     - installSlideMenuStyles
     - installUiComponentsStyles
+    - installYsmModule
     - instanceCardHeaderHTML
     - instancesHTML
     - invalidateCache
@@ -729,6 +734,7 @@ auto_fields:
     - Ktx2TextureLoaderDeps
     - LangCode
     - LAST_TYPE_KEY
+    - LazyModule
     - lerp
     - lerpArray
     - LIGHT_PRESETS
@@ -1497,6 +1503,7 @@ auto_fields:
     - ysmModelStats
     - YsmModelStats
     - ysmModelTextureSlots
+    - YsmModuleConfig
     - YsmObjectHandle
     - YsmOpenOptions
     - YsmProperties
@@ -1511,76 +1518,3098 @@ auto_fields:
     - ZipEntryMeta
     - zipFindEntry
     - ZipType
-  use_when:
-    - 代码审核
-    - 代码审查
-    - 审计
-    - 前端质量
-    - 技术债
-    - 重构排期
-    - XSS
-    - innerHTML
+
+    - __getTriggerForTest
+
+    - __resetDBForTest
+
+    - __resetModalStateForTest
+
+    - __resetWebLogStateForTest
+
+    - __setEncodeImplForTest
+
+    - __setStatsRunnerForTest
+
+    - __TEST__resetDiary
+
+    - _clearPmxStatsCache
+
+    - _getGlueCode
+
+    - _getGlueCodeMt
+
+    - _getWasmBinary
+
+    - _getWasmBinaryMt
+
+    - _lastSelectedType
+
+    - _resetSingletons
+
+    - Abortable
+
+    - aboutHTML
+
+    - actionBtnHTML
+
+    - AdaptiveRenderBudget
+
+    - addActionRow
+
+    - addCardTitle
+
+    - addClearRow
+
+    - addCollapsible
+
+    - addColorSliderRow
+
+    - addDangerRow
+
+    - addDisabledRow
+
+    - addDisposableListener
+
+    - addEmptyRow
+
+    - addFieldRow
+
+    - addInfoCard
+
+    - addInfoGrid
+
+    - addInlineToggleRow
+
+    - addMeshToBoneGroup
+
+    - addModeRow
+
+    - addModeSlider
+
+    - addOpLog
+
+    - addPresetChip
+
+    - addSectionTitle
+
+    - addSliderRow
+
+    - addTagToSet
+
+    - addToggleRow
+
+    - addVector3SliderRow
+
+    - addWatchDirRow
+
+    - AdvFilterResult
+
+    - AdvFilterValue
+
+    - ALL_EXTS
+
+    - ALL_RESOURCE_TYPES
+
+    - ALLOWED_CLI_COMMANDS
+
+    - allResourceTypes
+
+    - ALPHA_F_HOLE
+
+    - ALPHA_F_TRANSLUCENT
+
+    - ALPHA_F_VISIBLE
+
+    - AlphaIndex
+
+    - AmbientLightParams
+
+    - AMBIGUOUS_EXTS
+
+    - ANDROID_UNAVAILABLE
+
+    - AngleShot
+
+    - animateNumber
+
+    - AnimationClip
+
+    - AnimationController
+
+    - AnimationControllerRuntime
+
+    - AppBindings
+
+    - AppContentHost
+
+    - AppContentState
+
+    - appContentStyle
+
+    - appendLitematicPreview
+
+    - appendMmdPreview
+
+    - applyFilter
+
+    - applyGroundSurfaceAppearance
+
+    - applyGroundSurfaceStructural
+
+    - applyPerfPreset
+
+    - applyReplaceToName
+
+    - applyRotationIfNonIdentity
+
+    - applyTheme
+
+    - applyUIPrefs
+
+    - applyWasdCameraMotion
+
+    - applyWorkerDecodedTextures
+
+    - appSidebarStyle
+
+    - AppSyncManager
+
+    - AppTree
+
+    - appTreeStyle
+
+    - ARIA_ATTR
+
+    - arrayBufferToBase64
+
+    - asArray
+
+    - asNumber
+
+    - assembleBoneSelectInfo
+
+    - asString
+
+    - attachTooltip
+
+    - attenuateAmbientForSky
+
+    - AuthorInfo
+
+    - AutoDanceOptions
+
+    - b64ToBytes
+
+    - bakeMeshFragments
+
+    - base64ToBytes
+
+    - BasisEncoderLike
+
+    - BasisModuleLike
+
+    - BatchRenameChange
+
+    - batchStatsWebModels
+
+    - BeatDetectorLike
+
+    - BeatDetectorOptions
+
+    - BedrockBone
+
+    - BedrockCube
+
+    - BedrockGeometry
+
+    - BedrockModel
+
+    - BedrockSubModel
+
+    - bindBrowseEvents
+
+    - bindBusEvents
+
+    - bindCardEvents
+
+    - bindDragEvents
+
+    - bindEditEvents
+
+    - bindEvents
+
+    - bindFooter
+
+    - bindInputHandlers
+
+    - bindPackCardDnD
+
+    - bindPathClick
+
+    - bindPerfCopyHandlers
+
+    - bindRepoEvents
+
+    - bindSiteEvents
+
+    - bindToolbarEvents
+
+    - bindTreeDnD
+
+    - bindTreeEvents
+
+    - bitsPerEntry
+
+    - BlinkCallback
+
+    - BlinkOptions
+
+    - BoneChannels
+
+    - BoneData
+
+    - BoneDetail
+
+    - BoneEntry
+
+    - BoneGroupMap
+
+    - BoneHierarchyNode
+
+    - BoneInfoLite
+
+    - BoneListItem
+
+    - BoneMaps
+
+    - BoneNode
+
+    - boneRowActiveBg
+
+    - BoneSelectInfo
+
+    - BonesPanelItemOpts
+
+    - BoneTransform
+
+    - BoneTree
+
+    - BrowseMode
+
+    - BrowseModeRef
+
+    - browserAdapter
+
+    - btnBaseCSS
+
+    - buildArgsMap
+
+    - buildBoneExportRow
+
+    - buildBoneHierarchy
+
+    - buildBoneNamesText
+
+    - buildBoneTree
+
+    - buildCameraControls
+
+    - buildCameraSchema
+
+    - buildCrossCuttingControls
+
+    - buildCubeMeshData
+
+    - buildDepthMap
+
+    - buildDownloadTasks
+
+    - buildEnvSchema
+
+    - buildFbxScene
+
+    - buildFbxSceneFromData
+
+    - buildFolderItems
+
+    - buildGroundSurfaceSpec
+
+    - buildLightingSchema
+
+    - buildLipMorphIndices
+
+    - buildLitematicScene
+
+    - buildMmdScene
+
+    - buildModelGroup
+
+    - buildModelName
+
+    - BuildModelNameOptions
+
+    - buildModelRow
+
+    - buildOrderedTexKeys
+
+    - buildPackScene
+
+    - buildPmxScene
+
+    - buildPostprocessingSchema
+
+    - buildPresetChipGroup
+
+    - buildPreviewMenuRouters
+
+    - buildRenameName
+
+    - buildSceneMesh
+
+    - buildSettingsControls
+
+    - buildSettingsSchema
+
+    - buildShadowSchema
+
+    - buildSharedInfra
+
+    - buildSiteHtml
+
+    - BuildSiteHtmlCtx
+
+    - buildSpecFromGeometryJSON
+
+    - buildSpecFromModel
+
+    - buildStatsCard
+
+    - buildStatsPanel
+
+    - buildToggleRow
+
+    - buildTree
+
+    - buildVrmBoneNodes
+
+    - buildVrmBoneTree
+
+    - buildVrmScene
+
+    - buildYsmModelSchema
+
+    - buildYsmObject
+
+    - buildYsmScene
+
+    - bus
+
+    - Bus
+
+    - BusEventName
+
+    - BusEvents
+
+    - bytesToArrayBuffer
+
+    - bytesToBase64
+
+    - cacheGet
+
+    - CachePolicy
+
+    - cacheSet
+
+    - cacheSetEvictHandler
+
+    - CacheValue
+
+    - calcBoneHitZones
+
+    - calcVisibleRange
+
+    - CameraControlBridge
+
+    - can
+
+    - canBinding
+
+    - cancelDownloads
+
+    - cancelPendingEncodings
+
+    - canWebAction
+
+    - captureTextureName
+
+    - cardContainer
+
+    - cardRefreshers
+
+    - cfg
+
+    - checkUpdateSilent
+
+    - clamp
+
+    - clamp01
+
+    - clampInt
+
+    - clampPct
+
+    - classifyDownloadSize
+
+    - classifyWasmError
+
+    - cleanupEmpty3D
+
+    - CleanupFn
+
+    - cleanupLitematic3D
+
+    - cleanupMaid3D
+
+    - cleanupMmd3D
+
+    - cleanupPack3D
+
+    - cleanupPreview
+
+    - cleanupScene3D
+
+    - cleanupVirtualScroll
+
+    - cleanupVoxel3D
+
+    - cleanupVrm3D
+
+    - cleanupYsm3D
+
+    - clear
+
+    - clearAllCache
+
+    - clearAllCommunityCache
+
+    - clearControls
+
+    - clearLoadTraces
+
+    - clearModelRoots
+
+    - clearSceneCaps
+
+    - clearTrigger
+
+    - CLI_ALLOWLIST
+
+    - CLIAllowlistCommand
+
+    - cliAnalyze
+
+    - CLIArgs
+
+    - cliCacheStatus
+
+    - cliList
+
+    - CLIResponse
+
+    - cliSearch
+
+    - closeActive3DOverlay
+
+    - closeActiveDialog
+
+    - closeDlg
+
+    - closeUnusedDecodedBitmaps
+
+    - COLLAPSIBLE
+
+    - collectAllWebEntries
+
+    - collectBlobUrls
+
+    - collectDropFiles
+
+    - CollectedEntry
+
+    - CollectedFile
+
+    - collectFiles
+
+    - collectMenuGraph
+
+    - CollectMenuGraphOpts
+
+    - collectNodePredicates
+
+    - collectOutputFiles
+
+    - collectPreviewLeafNodes
+
+    - collectPreviewNodeIds
+
+    - collectSceneStats
+
+    - collectSettingsCapControls
+
+    - collectVisiblePredicates
+
+    - CommunityData
+
+    - compileMolang
+
+    - compKey
+
+    - componentCountsFromSpec
+
+    - computeBoneLocalPos
+
+    - concurrentMap
+
+    - ConsoleLogger
+
+    - consumeWebSearchDegraded
+
+    - containerHTML
+
+    - contentCreatorCSS
+
+    - contentCSS
+
+    - contentDiagCSS
+
+    - contentLayoutCSS
+
+    - contentRepoCSS
+
+    - contentStgCSS
+
+    - contentUtilCSS
+
+    - ControllerState
+
+    - ControllerTransition
+
+    - ControlOptions
+
+    - ControlUpdater
+
+    - copyText
+
+    - CORE_MENU_ITEMS
+
+    - countMissing
+
+    - CrCardCtx
+
+    - createAdaptiveRenderBudget
+
+    - createAutoDanceController
+
+    - createBeatDetector
+
+    - createBlinkController
+
+    - createBreathController
+
+    - createBrowseModeRef
+
+    - createCrCard
+
+    - createDedupSession
+
+    - createDownloadQueue
+
+    - createFbx3D
+
+    - createFbxParser
+
+    - createFootIKController
+
+    - createGazeController
+
+    - createHeaderToggle
+
+    - createIcon
+
+    - createIconBox
+
+    - createIconButton
+
+    - createLeadingBtn
+
+    - createLipSyncController
+
+    - createListenerSet
+
+    - createLitematic3D
+
+    - createLoadGuard
+
+    - createMmd3D
+
+    - createPack3D
+
+    - createPmxParser
+
+    - createProgressGuard
+
+    - createResolveModeBridge
+
+    - createScene3D
+
+    - createSlideMenu
+
+    - createTrailingBtn
+
+    - createVirtualList
+
+    - createVrm3D
+
+    - createWorkerBridge
+
+    - CreateWorkerBridgeOpts
+
+    - createWorkerParser
+
+    - createWorkshopRefs
+
+    - createYsm3D
+
+    - createYsmAnimPlayer
+
+    - CreatorIdentity
+
+    - CreatorIdentityInput
+
+    - creditsHTML
+
+    - CtxShowPayload
+
+    - CUBE_EPS
+
+    - Cube2D
+
+    - cubeVec
+
+    - cullModelGroups
+
+    - currentRepoType
+
+    - dbg
+
+    - debounce
+
+    - DebouncedTimer
+
+    - DecodedStats
+
+    - DecodedTexture
+
+    - DecodedYsm
+
+    - decodeVoxelNbt
+
+    - decodeYsmFile
+
+    - decodeYsmFileFromMemory
+
+    - decodeYsmInWorker
+
+    - decodeYsmInWorkerMemfs
+
+    - decodeYsmViaWasm
+
+    - DedupConfigShape
+
+    - DedupSession
+
+    - DEFAULT_COMMUNITY_URL
+
+    - DEFAULT_ENV_PARAMS
+
+    - DEFAULT_FOG_PARAMS
+
+    - DEFAULT_GROUND_PARAMS
+
+    - DEFAULT_GROUND_SURFACE_PARAMS
+
+    - DEFAULT_LIGHT_PARAMS
+
+    - DEFAULT_POSTPROC_PARAMS
+
+    - DEFAULT_REFLECTOR_PARAMS
+
+    - DEFAULT_SHADOW_PARAMS
+
+    - DEFAULT_SKY_PARAMS
+
+    - DEFAULT_TD_KEYMAP
+
+    - DEFAULT_WATER_PARAMS
+
+    - delay
+
+    - deriveTestIds
+
+    - describeVersionRange
+
+    - detailGen
+
+    - detectContainerType
+
+    - devLog
+
+    - diagnosticsHTML
+
+    - DIR_HANDLERS
+
+    - directImport
+
+    - DirectionalLightParams
+
+    - dirKey
+
+    - Disposable
+
+    - DISPOSE_TEX_KEYS
+
+    - disposeDebugGroup
+
+    - disposeEnvSubscriptions
+
+    - disposeMaterial
+
+    - disposeSceneMeshes
+
+    - disposeTextureDecoder
+
+    - DOWNLOAD_CONFIRM_BYTES
+
+    - DOWNLOAD_REJECT_BYTES
+
+    - DownloadCandidate
+
+    - DownloadQueue
+
+    - DownloadSizeDecision
+
+    - DownloadState
+
+    - DownloadTask
+
+    - downloadTextFile
+
+    - DragSliderController
+
+    - DragSliderOptions
+
+    - drawEnvEquirect
+
+    - drawMiniView
+
+    - drawView
+
+    - Easings
+
+    - emitAndroidBack
+
+    - emptyHTML
+
+    - emptyYsmHeader
+
+    - emptyYsmSummary
+
+    - en
+
+    - encodeAndCacheTexture
+
+    - encodeToKTX2Basis
+
+    - Endianness
+
+    - enqueueDownloads
+
+    - ensureDir
+
+    - ensureFabStyles
+
+    - ensureTooltipStyles
+
+    - ENV_PRESET_BY_MODEL
+
+    - ENV_PRESET_LINKAGE
+
+    - ENV_PRESETS
+
+    - EnvironmentCapability
+
+    - EnvironmentParams
+
+    - EnvPreset
+
+    - EnvPresetId
+
+    - EnvPresetLinkage
+
+    - esc
+
+    - EscFn
+
+    - estimateTexGpuBytes
+
+    - eulerToQuaternion
+
+    - evaluateClip
+
+    - evaluateKeyframes
+
+    - Events
+
+    - EventSelf
+
+    - executeCLI
+
+    - executeCollected
+
+    - executeTimeline
+
+    - expectContainsAtLeast
+
+    - expectNotContains
+
+    - extBelongsTo
+
+    - extOf
+
+    - extractAnimGroupsAndConfigs
+
+    - extractAvatars
+
+    - extractBits
+
+    - extractIds
+
+    - extractIKChainFromTree
+
+    - ExtractResult
+
+    - extractYsmSummaryFromBytes
+
+    - extractZip
+
+    - FakeImage
+
+    - FBX_TARGET_MAX_DIM
+
+    - FbxAdapterDeps
+
+    - fbxBonesToBoneNodes
+
+    - FbxDataPort
+
+    - FbxGeometryData
+
+    - FBXLoader
+
+    - FbxMaterialData
+
+    - FbxMeshData
+
+    - FbxParser
+
+    - FbxParseRequest
+
+    - FbxParseResponse
+
+    - FbxScaleInfo
+
+    - FbxSceneBuilderConfig
+
+    - FbxSceneData
+
+    - fbxSceneToData
+
+    - FbxSkeletonData
+
+    - fetchCommunityCreators
+
+    - fetchCommunitySites
+
+    - FetchModelsResult
+
+    - FieldRestorer
+
+    - FILE_HANDLERS
+
+    - fileIcon
+
+    - fileKey
+
+    - fileRowCommon
+
+    - fileRowHTML
+
+    - fileToBase64
+
+    - fill3DPanel
+
+    - fillAuthorsAsync
+
+    - fillMmdModelPanel
+
+    - fillMmdShotPanel
+
+    - fillRoles
+
+    - fillSearch
+
+    - fillSwitch
+
+    - fillYsmShotPanel
+
+    - filterAnimFiles
+
+    - filterModels
+
+    - findAncestorBoneId
+
+    - findBones
+
+    - findControllerForAnimation
+
+    - findTabbableAcrossShadow
+
+    - findZipEntry
+
+    - fireAndForget
+
+    - fireBlur
+
+    - fireClick
+
+    - fireDrag
+
+    - fireDrop
+
+    - fireEvent
+
+    - fireFocus
+
+    - fireInput
+
+    - fireKeyDown
+
+    - fitCameraToRoots
+
+    - fitCameraToScene
+
+    - flagsForAlpha
+
+    - FLASH_DURATION_MS
+
+    - flashBtn
+
+    - FlashOptions
+
+    - flattenVisible
+
+    - flushPromises
+
+    - fmtDate
+
+    - fmtMB
+
+    - focusVisibleCSS
+
+    - FOG_PRESETS
+
+    - FogCapability
+
+    - FogMode
+
+    - FogParams
+
+    - FolderGroup
+
+    - folderRowCommon
+
+    - folderRowHTML
+
+    - foldMolangConstant
+
+    - footerHTML
+
+    - FootIKController
+
+    - forceRefreshCommunityMerge
+
+    - forceRefreshCommunitySites
+
+    - forceRefreshScanAuthors
+
+    - formatBytes
+
+    - formatCapSliderValue
+
+    - formatLongTask
+
+    - formatSize
+
+    - frameCameraSide
+
+    - FrameSideOptions
+
+    - friendlyError
+
+    - frRoleRowStyle
+
+    - FsaAuthState
+
+    - FSLike
+
+    - generateSurfacePixels
+
+    - GenGuard
+
+    - get
+
+    - getAllByTestId
+
+    - getAllowedCLICommands
+
+    - getAndroidBridge
+
+    - getApp
+
+    - getBoneDetail
+
+    - getBoneList
+
+    - getBonePath
+
+    - getBonePosition
+
+    - getBundle
+
+    - getByTestId
+
+    - getCacheTtlMs
+
+    - getCompound
+
+    - getControl
+
+    - getControlCount
+
+    - getCreatorIdentity
+
+    - getCustomAnimPath
+
+    - getDefaultKeepIdx
+
+    - getExt
+
+    - getExts
+
+    - getFrameIntervalMs
+
+    - getFsaAuthState
+
+    - getLang
+
+    - getLastModelPath
+
+    - getLoadTraces
+
+    - getMaxFps
+
+    - getMaxPixelRatio
+
+    - getMenuDef
+
+    - getMeshBoneId
+
+    - getMmdMaterialDetail
+
+    - getModelRootCount
+
+    - getPerfPreset
+
+    - getPrefer3D
+
+    - getPreviewableTypeTabs
+
+    - getRegisteredRoutes
+
+    - getRenderMode
+
+    - getSceneCaps
+
+    - getSchema
+
+    - getSemanticBone
+
+    - getSemanticMorph
+
+    - getSiteIcon
+
+    - getState
+
+    - getStateSnapshot
+
+    - getStateValue
+
+    - getStatsPoolSize
+
+    - getTagFromRole
+
+    - getTagIconFromRole
+
+    - getTextureAlphaInfo
+
+    - getTextureAlphaMode
+
+    - getTextureDecoder
+
+    - getTintColorSync
+
+    - getVrmMaterialDetail
+
+    - getVsMode
+
+    - getVsRows
+
+    - GH_DOCS
+
+    - GH_RELEASES
+
+    - GH_REPO
+
+    - githubHTML
+
+    - GithubPageCtx
+
+    - GroundCapability
+
+    - GroundMaterialParams
+
+    - GroundParams
+
+    - GroundSurfaceAppearanceSpec
+
+    - GroundSurfaceMode
+
+    - groundSurfaceNeedsRebuild
+
+    - GroundSurfaceSpec
+
+    - GroundSurfaceStructuralSpec
+
+    - GROUP_META
+
+    - GROUP_OF
+
+    - GROUP_TYPE_OPTIONS
+
+    - groupCollected
+
+    - groupLabelOf
+
+    - groupMmdVariants
+
+    - groupSites
+
+    - groupStorageRootOf
+
+    - GroupTypeOption
+
+    - handleInstanceDrop
+
+    - HANDLERS
+
+    - handleTreeDrop
+
+    - has
+
+    - hasActivePreview
+
+    - hasBoneRotation
+
+    - hasSceneStats
+
+    - hasSchema
+
+    - headerHTML
+
+    - HeaderToggleConfig
+
+    - HealthReport
+
+    - HitZone
+
+    - hl
+
+    - IconButtonOpts
+
+    - ICONS
+
+    - idbDel
+
+    - idbGet
+
+    - idbGetAll
+
+    - idbKeys
+
+    - IdbOp
+
+    - idbSet
+
+    - idbTx
+
+    - IKChain
+
+    - IKConfig
+
+    - IKResult
+
+    - ImportFile
+
+    - importFolder
+
+    - importWebFiles
+
+    - importWebFilesWithToast
+
+    - initAdvancedGrid
+
+    - initControl
+
+    - initDiagnostics
+
+    - initDiagnosticsPage
+
+    - initGithubPage
+
+    - initI18n
+
+    - initInstancesPage
+
+    - initKeymap
+
+    - initMcDetect
+
+    - initPerfPanel
+
+    - initPreviewResize
+
+    - initRecycleBin
+
+    - initRepositoryPage
+
+    - initSettings
+
+    - initSettingsPage
+
+    - initTheme
+
+    - initUiPrefs
+
+    - initVersionUpdater
+
+    - initWorkerPrefs
+
+    - initWorkshopPage
+
+    - initWorkshopTabs
+
+    - initYSMParser
+
+    - initYsmParserInWorker
+
+    - initYsmParserInWorkerMt
+
+    - injectSkySunScalePatch
+
+    - InputHandlers
+
+    - InputOptions
+
+    - installScrollSync
+
+    - installSlideMenuStyles
+
+    - installUiComponentsStyles
+
+    - instanceCardHeaderHTML
+
+    - instancesHTML
+
+    - invalidateCache
+
+    - invalidateEmptyPreview
+
+    - invalidateLitematicPreview
+
+    - invalidateMaidPreview
+
+    - invalidateMaxFpsCache
+
+    - invalidateMmdPreview
+
+    - invalidatePackPreview
+
+    - invalidatePreview
+
+    - invalidateScenePreview
+
+    - invalidateVrmPreview
+
+    - invalidateYsmPreview
+
+    - iRow
+
+    - isActiveStatus
+
+    - isBusy
+
+    - isContainerExt
+
+    - isCrossOriginIsolated
+
+    - isEditableTarget
+
+    - isFaved
+
+    - isFileExistsError
+
+    - isFrustumCullEnabled
+
+    - isIdentityQuat
+
+    - isImportableFile
+
+    - isInputBlocked
+
+    - isLikelyTga
+
+    - isModelMissing
+
+    - isObj
+
+    - isPathAvailable
+
+    - isPerceptionPaused
+
+    - isPreviewFolderNode
+
+    - isRecyclePath
+
+    - isRenderableModel
+
+    - isSkyEnvironmentOn
+
+    - isSupportedExt
+
+    - isSupportedFile
+
+    - isUnsafeFolderName
+
+    - isViewerMode
+
+    - isViewerPlatform
+
+    - isWebEntryMode
+
+    - isWebPath
+
+    - isWebPlatform
+
+    - isYsmName
+
+    - isYsmWasmPreview
+
+    - itemHTML
+
+    - ja
+
+    - JavaModelFace
+
+    - JavaModelResult
+
+    - jpgBytes
+
+    - Keyframe
+
+    - KNOWN_PATHS
+
+    - Ktx2EncodeRequest
+
+    - Ktx2EncodeResponse
+
+    - Ktx2TextureLoader
+
+    - Ktx2TextureLoaderDeps
+
+    - LangCode
+
+    - LAST_TYPE_KEY
+
+    - lerp
+
+    - lerpArray
+
+    - LIGHT_PRESETS
+
+    - LightCapability
+
+    - lightDirToPosition
+
+    - LightParams
+
+    - LipSyncCallback
+
+    - LipSyncOptions
+
+    - listBonesWithDepth
+
+    - listContainerHTML
+
+    - listFileRowHTML
+
+    - listFolderRowHTML
+
+    - listMmdMaterials
+
+    - listSchemas
+
+    - listVrmMaterials
+
+    - listWebContainerEntries
+
+    - listWebModelDirFiles
+
+    - listWebPackModels
+
+    - listWebPackModelsDetail
+
+    - LITEMATIC_SLICE_SCHEMA_ID
+
+    - LitematicAdapterDeps
+
+    - LitematicBuildOpts
+
+    - litematicMetaView
+
+    - litematicVoxelView
+
+    - loadAuthors
+
+    - loadBrowseMode
+
+    - loadCommunityData
+
+    - loadData
+
+    - loadDiagnosticsLogs
+
+    - loadEntries
+
+    - loadFavs
+
+    - LoadGuard
+
+    - LoadingGuard
+
+    - loadingHTML
+
+    - LoadingProgressMode
+
+    - loadInstances
+
+    - loadLocalAuthors
+
+    - loadLocale
+
+    - loadMcTints
+
+    - loadModel2D
+
+    - loadModelData
+
+    - LoadModelOpts
+
+    - loadOldestModel
+
+    - loadResourceRegistry
+
+    - loadRuntimeLogs
+
+    - loadTdCamSpeed
+
+    - loadTdKeymap
+
+    - loadTdRotMode
+
+    - loadTextures
+
+    - LoadTrace
+
+    - LoadTraceAssets
+
+    - LoadTraceStage
+
+    - LoadTraceTexture
+
+    - loadTypeConfig
+
+    - loadView
+
+    - LocalAuthorLike
+
+    - LocalCreator
+
+    - LocalCreatorLike
+
+    - LocaleKey
+
+    - LocaleParams
+
+    - logError
+
+    - logWarn
+
+    - LongTaskInfo
+
+    - MaidOpenOptions
+
+    - MAIN_FILE_RANK_JSON
+
+    - MAIN_FILE_RANK_NONE
+
+    - MAIN_FILE_RANK_TYPE
+
+    - MAIN_FILE_RANK_YSM
+
+    - mainFileRank
+
+    - makeBonePanelRenderer
+
+    - makeBonesPanelItem
+
+    - makeFbxAdapter
+
+    - makeLazyLoader
+
+    - makeLitematicAdapter
+
+    - makeMenuCtx
+
+    - makeMmdAdapter
+
+    - makeMmdDataPort
+
+    - makePackAdapter
+
+    - makeShotAction
+
+    - makeUnifiedPickHandler
+
+    - makeVrmAdapter
+
+    - makeYsmAdapter
+
+    - makeYsmModelSchemaId
+
+    - makeZipOverlayPort
+
+    - mapColor
+
+    - matchSemanticBone
+
+    - matchSemanticMorph
+
+    - matchTypeByExt
+
+    - matchZipEntryTS
+
+    - MaterialBridgeLike
+
+    - MaterialControlBridge
+
+    - materialNodes
+
+    - matTexSlots
+
+    - MatTexSlots
+
+    - MAX_FPS_DEFAULT
+
+    - MAX_FPS_KEY
+
+    - MAX_IMPORT_BYTES
+
+    - MAX_KTX2_PIXELS
+
+    - MAX_MODELS
+
+    - MAX_PIXEL_RATIO_KEY
+
+    - MAX_TAG_LENGTH
+
+    - MENU_DEFS
+
+    - MenuAction
+
+    - MenuControlDef
+
+    - MenuControlKind
+
+    - MenuCtx
+
+    - MenuDef
+
+    - MenuDefLike
+
+    - MenuGraph
+
+    - MenuGraphNode
+
+    - MenuItem
+
+    - mergeCommunityCreators
+
+    - mergeCommunitySites
+
+    - mergeCubes
+
+    - mergeLocalAuthorsInto
+
+    - mergeStatsMenuItems
+
+    - MeshData
+
+    - MeshFragment
+
+    - MMD_SEMANTIC_CANDIDATES
+
+    - MMD_SEMANTIC_MORPH_CANDIDATES
+
+    - MmdAdapterDeps
+
+    - MmdBonePickResult
+
+    - mmdBonesToBoneNodes
+
+    - MmdBottomNavCtx
+
+    - MmdDataDeserializer
+
+    - MmdDataPort
+
+    - MmdMaterialDetail
+
+    - MmdMaterialListItem
+
+    - mmdMenuItems
+
+    - MmdMenuItemsOpts
+
+    - mmdModelInfoNodes
+
+    - MmdPanelHooks
+
+    - MmdPlayBridge
+
+    - mmdSemanticBoneMap
+
+    - mmdSemanticMorphMap
+
+    - mmdShotNodes
+
+    - MmdVariantGroups
+
+    - MmdZipConfig
+
+    - mockMenuHandle
+
+    - modalAdvFilter
+
+    - modalConfirm
+
+    - ModalConfirmOptions
+
+    - modalPicker
+
+    - ModalPickerItem
+
+    - ModalPickerOptions
+
+    - ModalPickerResult
+
+    - modalProgress
+
+    - ModalProgressHandle
+
+    - ModalProgressOptions
+
+    - modalPrompt
+
+    - ModalPromptOptions
+
+    - modalSelect
+
+    - ModalSelectOptions
+
+    - modalTagEditor
+
+    - MODEL_SKY_PRESETS
+
+    - Model2DOptions
+
+    - modelDetailHTML
+
+    - ModelDetailMeta
+
+    - modelDetailView
+
+    - ModelEntry
+
+    - modelEntryFor
+
+    - ModelGroup
+
+    - ModelLike
+
+    - ModelNameFields
+
+    - ModelRowCtx
+
+    - ModelSelectPayload
+
+    - ModelStatsResult
+
+    - Molang
+
+    - MolangAxes
+
+    - MolangFn
+
+    - MorphMeshLike
+
+    - morphNodes
+
+    - motionDetailView
+
+    - mount3D
+
+    - Mount3DOptions
+
+    - mountCustomElement
+
+    - mountPreviewRootMenu
+
+    - moveItem
+
+    - MultiLipSyncCallback
+
+    - multiModelSelectNode
+
+    - MultiModelSelectOpts
+
+    - navCSS
+
+    - NavPagePayload
+
+    - nbtStructureView
+
+    - nbtVoxelView
+
+    - NetworkSelf
+
+    - NO_3D_TYPES
+
+    - normalizeFbxScale
+
+    - normalizeTheme
+
+    - notify
+
+    - onStatsProgress
+
+    - openAdvFilterDialog
+
+    - openDB
+
+    - openEmpty3DFullscreen
+
+    - openFullPreview
+
+    - openModel3DFullscreen
+
+    - OpenModel3DOptions
+
+    - openSite
+
+    - OrderedTexInput
+
+    - PackAdapterOpts
+
+    - PackDeps
+
+    - PackDndBusy
+
+    - PackDndInstance
+
+    - PackEntryReader
+
+    - PackMeta
+
+    - packPngToThumbnail
+
+    - packTextureLabel
+
+    - PAGE_REGISTRY
+
+    - PAGE_WHITELIST
+
+    - PageDefinition
+
+    - PageName
+
+    - PageStore
+
+    - PanelHandle
+
+    - parseAnimationControllerJSON
+
+    - parseBedrockAnimationJSON
+
+    - parseBedrockGeometryFromJSON
+
+    - parseCLIResponse
+
+    - parseDescTags
+
+    - ParsedModelName
+
+    - parseFilterNumber
+
+    - parseHealthReport
+
+    - parseJavaModel
+
+    - parseModelName
+
+    - parseNbtRoot
+
+    - parseNbtRootExact
+
+    - parsePackMetaJson
+
+    - parseShaderpackLang
+
+    - parseWebDirPath
+
+    - parseWebModelDir
+
+    - parseWebModelPath
+
+    - parseWebPath
+
+    - parseYsmHeaderFromBytes
+
+    - parseYsmJsonDirect
+
+    - parseZipCentralDir
+
+    - patchGlueHeapExport
+
+    - PerceptionCapability
+
+    - perceptionNodes
+
+    - PerceptionState
+
+    - PERF_PRESET_DEFAULT
+
+    - PERF_PRESET_KEY
+
+    - PERF_PRESETS
+
+    - PerfLevel
+
+    - performSingleOp
+
+    - persistState
+
+    - pickBone
+
+    - pickDirectory
+
+    - pickMmdBone
+
+    - pickWebFilesAndImport
+
+    - PlatformMode
+
+    - playNodes
+
+    - PmxBoneData
+
+    - PmxBuilderConfig
+
+    - PmxBuildResult
+
+    - PmxDisplayFrameData
+
+    - PmxFaceData
+
+    - PmxFileStats
+
+    - PmxJointData
+
+    - PmxMaterialData
+
+    - PmxMorphData
+
+    - PmxObject
+
+    - pmxObjectToResponse
+
+    - PmxParser
+
+    - PmxParseRequest
+
+    - PmxParseResponse
+
+    - PmxReader
+
+    - PmxRigidBodyData
+
+    - PmxVertexData
+
+    - pngBytes
+
+    - popInputBlock
+
+    - POSTPROC_PRESETS
+
+    - PostprocessingCapability
+
+    - PostprocessingLike
+
+    - PostprocessingParams
+
+    - prefetchStatsWorker
+
+    - preloadModel
+
+    - prepareMmdZipInput
+
+    - PresetChipItem
+
+    - PREVIEW_FRAME_INTERVAL_MS
+
+    - PREVIEW_MENU_GROUPS
+
+    - PREVIEW_OVERLAY_ID
+
+    - PreviewActionMenuCtx
+
+    - PreviewAdapter
+
+    - PreviewBuildCtx
+
+    - PreviewControlSpec
+
+    - previewCSS
+
+    - PreviewCtx
+
+    - PreviewDebugger
+
+    - PreviewHandle
+
+    - PreviewImageLoader
+
+    - PreviewMenuCtx
+
+    - PreviewMenuGroupDef
+
+    - PreviewMenuGroupId
+
+    - PreviewMenuHandle
+
+    - PreviewMenuNode
+
+    - PreviewMenuNodeKind
+
+    - PreviewMenuRouters
+
+    - previewPixelRatio
+
+    - PreviewRoot
+
+    - PreviewScene
+
+    - previewSnapshot
+
+    - PreviewSnapshot
+
+    - PreviewStatePath
+
+    - PreviewTab
+
+    - ProgressGuard
+
+    - ProgressGuardHooks
+
+    - promoteTitle
+
+    - promoteTitleIfPresent
+
+    - pushInputBlock
+
+    - queryAllByTestId
+
+    - queryByTestId
+
+    - QueryContainer
+
+    - QueueController
+
+    - QueueControllerOptions
+
+    - QueueError
+
+    - readDeclaredBackend
+
+    - readFileBytes
+
+    - readPackMetaJson
+
+    - readPmxStats
+
+    - readShaderpackLangJson
+
+    - readVarInt
+
+    - readVoxelJson
+
+    - readVrmMeta
+
+    - readWebFile
+
+    - readWebPackEntry
+
+    - readWebVoxelInContainer
+
+    - readWebZipEntries
+
+    - reauthorizeFsaRoot
+
+    - rebuildDebug
+
+    - rebuildParsedName
+
+    - recordLoadTrace
+
+    - RecycleHost
+
+    - recycleHTML
+
+    - ReflectionMode
+
+    - REFLECTOR_PRESETS
+
+    - ReflectorCapability
+
+    - ReflectorParams
+
+    - refreshAdoptedStyleSheets
+
+    - refreshUI
+
+    - register
+
+    - registerAndroidBackHandler
+
+    - registerAndroidEvents
+
+    - registerBoneRaycast
+
+    - registerCoiServiceWorker
+
+    - registerContextMenus
+
+    - registerControl
+
+    - registerDlg
+
+    - registerErrorDiary
+
+    - registerGlobalHandlers
+
+    - registerInstanceOps
+
+    - registerModelRoot
+
+    - registerPageStore
+
+    - registerReRoute
+
+    - registerSchema
+
+    - registerSync
+
+    - registerYsmModelSchema
+
+    - rememberModelPath
+
+    - rememberTrigger
+
+    - RenameFields
+
+    - render
+
+    - renderAdapterPanelContent
+
+    - renderCapControls
+
+    - renderCardsHTML
+
+    - renderComponent
+
+    - renderDisplayName
+
+    - renderEnvLevel
+
+    - renderFormattedText
+
+    - renderHealthReport
+
+    - renderLoadingState
+
+    - renderLoadTraceSection
+
+    - renderMenu
+
+    - RenderMode
+
+    - RenderModeCapability
+
+    - renderModel2D
+
+    - renderModelList
+
+    - renderModelName
+
+    - renderModelNameWithHighlight
+
+    - renderMultiAngle
+
+    - RenderMultiAngleOptions
+
+    - RenderOptions
+
+    - renderPreviewPanel
+
+    - renderRepoHeaderHTML
+
+    - RenderResult
+
+    - renderSiteView
+
+    - RenderSiteViewCtx
+
+    - renderTree
+
+    - renderVersionCards
+
+    - RenderVrmBonePanel
+
+    - ReplaceResult
+
+    - RepoAuthorLike
+
+    - RepoCacheEntry
+
+    - RepoEventsContext
+
+    - RepoEventsHandle
+
+    - repositoryHTML
+
+    - RepresentativeSnapshot
+
+    - requireMcRoot
+
+    - rescanFsaRoot
+
+    - resetActiveComponent
+
+    - resetAvatarConfigLoaded
+
+    - resetDynamicCommandsCache
+
+    - resetEncoderState
+
+    - resetSceneInfra
+
+    - resetSchemas
+
+    - resetSelectedEmit
+
+    - resetSettingsListeners
+
+    - resetSettingsStore
+
+    - resolveAndroidRepoDir
+
+    - resolveBlockName
+
+    - resolveDefaultPreviewKey
+
+    - resolveDstDir
+
+    - resolveFbxSiblings
+
+    - resolveInitialPage
+
+    - resolveMmdSiblings
+
+    - resolveMmdZipConfig
+
+    - ResolveModeBridge
+
+    - ResolveModeResponse
+
+    - resolveMorphSiblings
+
+    - resolvePlatformMode
+
+    - resolvePreviewKey
+
+    - resolvePreviewKeyByExt
+
+    - resolvePreviewKeyToRtype
+
+    - resolveSceneSiblings
+
+    - resolveSemanticBones
+
+    - resolveSemanticMorphs
+
+    - resolveSiblingsByType
+
+    - resolveStageSiblings
+
+    - resolveTypeSafe
+
+    - resolveWasmFactory
+
+    - resolveWebMode
+
+    - RESOURCE_EXTS
+
+    - RESOURCE_TYPE_LABELS
+
+    - RESOURCE_TYPES
+
+    - ResourceType
+
+    - ResourceTypeEntry
+
+    - ResourceTypeVariant
+
+    - restoreFields
+
+    - restoreModelGroupsVisible
+
+    - restoreState
+
+    - resume
+
+    - returnFocus
+
+    - revealMainWindow
+
+    - ROLE
+
+    - roleBaseName
+
+    - ROW_H_GRID
+
+    - ROW_H_LIST
+
+    - runGuiFlow
+
+    - runHealthAudit
+
+    - runLauncherDetect
+
+    - runMcSearch
+
+    - runPerfLog
+
+    - runSingleBench
+
+    - safeDispose
+
+    - safeErrorMessage
+
+    - safeGet
+
+    - safeRemove
+
+    - safeSet
+
+    - safeStr
+
+    - safeUrl
+
+    - sampleAdaptivePixelRatio
+
+    - sanitizePage
+
+    - saveBrowseMode
+
+    - saveCfg
+
+    - saveScreenshot
+
+    - scanAllWebModels
+
+    - scanConflicts
+
+    - scanModelsByType
+
+    - scanSyncConflicts
+
+    - scanWebModels
+
+    - SceneCapability
+
+    - SceneCapabilityFactory
+
+    - SceneCapabilityLookup
+
+    - sceneCapabilityRegistry
+
+    - SceneCapabilityRegistry
+
+    - sceneRegistry
+
+    - SceneStats
+
+    - scheduleBackgroundEncoding
+
+    - SchemaBuilder
+
+    - schematicSummaryView
+
+    - schematicVoxelView
+
+    - screenshotFromRenderer
+
+    - ScreenshotLights
+
+    - ScreenshotOpts
+
+    - sec
+
+    - sectionHeader
+
+    - selectLocalRepo
+
+    - selectSingle
+
+    - selectState
+
+    - SEMANTIC_BONE_IDS
+
+    - SEMANTIC_MORPH_IDS
+
+    - SemanticBoneEntry
+
+    - SemanticBoneId
+
+    - SemanticBoneMap
+
+    - SemanticMorphEntry
+
+    - SemanticMorphId
+
+    - SemanticMorphMap
+
+    - ServiceName
+
+    - setActive3DClose
+
+    - setBoneNodeVisible
+
+    - setBoneVisible
+
+    - setBusy
+
+    - setControlRegistry
+
+    - setFrustumCullEnabled
+
+    - setLang
+
+    - setLastSelectedType
+
+    - setMmdMaterialOpacity
+
+    - setMmdMaterialVisible
+
+    - setMolangScope
+
+    - setPerceptionPaused
+
+    - setPerfPreset
+
+    - setPrefer3D
+
+    - setRenderMode
+
+    - setShowSiteView
+
+    - setStateValue
+
+    - SettingsCfg
+
+    - settingsHTML
+
+    - setup2DCanvas
+
+    - setVrmMaterialOpacity
+
+    - setVrmMaterialVisible
+
+    - setVsRows
+
+    - SHADOW_PRESETS
+
+    - ShadowCapability
+
+    - ShadowParams
+
+    - SharedInfra
+
+    - shortLabelOf
+
+    - shotButtonNodes
+
+    - shouldEnterForm
+
+    - shouldRenderAtFps
+
+    - shouldRenderPreviewFrame
+
+    - showBatchRenameDialog
+
+    - showFbxPreview
+
+    - showLitematic
+
+    - showLoadFailure
+
+    - showMaidPreview
+
+    - showMmdPreview
+
+    - showModelDetail
+
+    - showModelGroup
+
+    - showMorphPreview
+
+    - showProgress
+
+    - showRenameDialog
+
+    - showRepoModels
+
+    - showResourcePack
+
+    - showScenePreview
+
+    - showShaderpack
+
+    - showSimplePreview
+
+    - showStagePreview
+
+    - showVrmMeta
+
+    - sidebarCSS
+
+    - SidebarInstance
+
+    - SITE_GROUP_ORDER
+
+    - SiteViewState
+
+    - sizeColor
+
+    - SkyCapability
+
+    - SkyModelType
+
+    - SkyParams
+
+    - sleep
+
+    - slideMenuCss
+
+    - SlideMenuHandle
+
+    - slideMenuStyleSheet
+
+    - SlideMenuView
+
+    - SLIDER_BAR_CLASS
+
+    - SLIDER_QUARTER_LARGE_STEP
+
+    - SLIDER_QUARTER_SMALL_STEP
+
+    - slideRow
+
+    - SlideRowExtra
+
+    - sliderRow
+
+    - sniffTexSize
+
+    - solveIK
+
+    - Spec3D
+
+    - SpecBone
+
+    - SpecBone3D
+
+    - SpecBuildResult
+
+    - SpecCube
+
+    - SpecMeshData
+
+    - SpecMeshGroup3D
+
+    - SpecModelInput
+
+    - spinnerHTML
+
+    - splitMeshByFaceAlpha
+
+    - SpotlightParams
+
+    - stagger
+
+    - startMainThreadWatch
+
+    - STATE
+
+    - STATS_BATCH_LIMIT
+
+    - STATS_PANEL_ID
+
+    - statsCardHTML
+
+    - StatsCardModel
+
+    - StatsFileInput
+
+    - statsFromDecodedFiles
+
+    - statsFromJsonBytes
+
+    - StatsRelReader
+
+    - StatsWorkerError
+
+    - StatsWorkerProgress
+
+    - StatsWorkerRequest
+
+    - StatsWorkerResponse
+
+    - StatsWorkerResult
+
+    - STATUS_COLOR
+
+    - STATUS_ICON
+
+    - statusColorOf
+
+    - statusIconOf
+
+    - statusTabHTML
+
+    - Store
+
+    - stripBanSuffix
+
+    - stripDisableSuffix
+
+    - stripPathSegments
+
+    - stripYsgpTextHeader
+
+    - SubModel
+
+    - subscribe
+
+    - subscribeSettings
+
+    - SubscriptionBucket
+
+    - summarizeDecoded
+
+    - SummaryAnimGroup
+
+    - SummaryAuthor
+
+    - summaryCardHTML
+
+    - SummaryConfigMenu
+
+    - SUPPORTED_LANGS
+
+    - surfaceSpecKey
+
+    - swallowError
+
+    - SwitchContext
+
+    - switchPreview
+
+    - switchTabCssText
+
+    - switchTabHighlightBg
+
+    - switchToSession
+
+    - syncDirRowHTML
+
+    - SyncItem
+
+    - syncLightTargetFromContent
+
+    - SyncManagerSelf
+
+    - SyncRenderSelf
+
+    - SyncStoreSelf
+
+    - t
+
+    - tabStatus
+
+    - TagSetResult
+
+    - TdKeyAction
+
+    - terminateStatsWorker
+
+    - TexDecodeConfig
+
+    - TexDecodeRequest
+
+    - TexDecodeResponse
+
+    - TEXTURE_EXTS
+
+    - TextureAlphaInfo
+
+    - TextureAlphaMode
+
+    - textureCache
+
+    - TextureCacheImpl
+
+    - TextureDecoder
+
+    - textureRepeat
+
+    - TextureTooLargeError
+
+    - TILE_WORLD_SIZE
+
+    - TimelineEvent
+
+    - toast
+
+    - TOAST_MS
+
+    - toastEmptyRtype
+
+    - toastError
+
+    - ToastPayload
+
+    - ToastType
+
+    - toggleBone
+
+    - toggleBoneVisible
+
+    - toggleFav
+
+    - toggleMmdMaterialVisible
+
+    - toggleRow
+
+    - toggleSelect
+
+    - TooltipOptions
+
+    - toScreenshotLights
+
+    - toStatePath
+
+    - tr
+
+    - TrailingAction
+
+    - trapFocus
+
+    - trapFocusAcrossShadow
+
+    - treeCSS
+
+    - TreeEntry
+
+    - TreeNode
+
+    - TreeRow
+
+    - tryFetchModels
+
+    - typeFromWebDir
+
+    - typeIconOf
+
+    - u8ToBase64
+
+    - uiComponentsCss
+
+    - uiComponentsStyleSheet
+
+    - uid
+
+    - UnloadCtx
+
+    - unloadModel
+
+    - unmountElement
+
+    - unpackBlockStates
+
+    - unregister
+
+    - unregisterControl
+
+    - unregisterDevtools
+
+    - unregisterModelRoot
+
+    - unregisterSchema
+
+    - UpdateInfo
+
+    - updateSelectCount
+
+    - updateStat
+
+    - useCurrentResourceType
+
+    - validateAdvFilter
+
+    - validateRenameFields
+
+    - Vec3
+
+    - VIEW_TESTIDS
+
+    - VIEWER_PURE_ACTIONS
+
+    - VIEWER_WEB_ACTION_BINDINGS
+
+    - VirtualList
+
+    - VirtualListOpts
+
+    - VolumetricParams
+
+    - VOXEL_RPC_BY_EXT
+
+    - VoxelData
+
+    - voxelFromBase64
+
+    - VoxelGroup
+
+    - VrmAdapterDeps
+
+    - VrmBonePanelCtx
+
+    - VrmDataPort
+
+    - VrmMaterialControlBridge
+
+    - VrmMaterialDetail
+
+    - VrmMaterialListItem
+
+    - vrmMenuItems
+
+    - VrmMenuItemsOpts
+
+    - VrmMetaInfo
+
+    - VrmModelInfoCtx
+
+    - vrmModelInfoNodes
+
+    - VrmPanelHooks
+
+    - vrmSemanticBoneMap
+
+    - vrmShotNodes
+
+    - WailsAndroidBridge
+
+    - waitFor
+
+    - waitForElementToBeRemoved
+
+    - waitForFrame
+
+    - warnedKeys
+
+    - WasdReuse
+
+    - WasmModuleLike
+
+    - WaterCapability
+
+    - WaterMode
+
+    - WaterParams
+
+    - WEB_ROOT
+
+    - webAnalyzeBedrockModel
+
+    - webAnalyzeBedrockModelEntry
+
+    - webCliBindings
+
+    - webCommonBindings
+
+    - webCommunityBindings
+
+    - WebComponentBase
+
+    - webDirType
+
+    - webExtractPreviewTexture
+
+    - webFindPreviewImage
+
+    - webFsBindings
+
+    - WebModelStats
+
+    - WebModelStatsWithPath
+
+    - webStoreBindings
+
+    - WebUnsupportedError
+
+    - Window
+
+    - wipeDir
+
+    - WireframeCapability
+
+    - withCached
+
+    - withLoadingIndicator
+
+    - withPreviewExtras
+
+    - WorkerBridge
+
+    - WorkerErrorStrategy
+
+    - workshopHTML
+
+    - WorkshopModel
+
+    - WorkshopRefs
+
+    - WorkshopSite
+
+    - writeHeapBytes
+
+    - YSM_MODEL_SCHEMA_ID
+
+    - YsmAdapterOptions
+
+    - ysmAnimClipLabels
+
+    - YsmAnimPlayer
+
+    - YsmContentHandle
+
+    - YsmControlsContext
+
+    - YsmDecodedFile
+
+    - YsmDecoder
+
+    - YSMHeader
+
+    - YsmHeaderShape
+
+    - ysmMenuItems
+
+    - YsmMenuItemsOpts
+
+    - YsmModel
+
+    - ysmModelStats
+
+    - YsmModelStats
+
+    - ysmModelTextureSlots
+
+    - YsmObjectHandle
+
+    - YsmOpenOptions
+
+    - YsmProperties
+
+    - ysmSemanticBoneMap
+
+    - ysmShotNodes
+
+    - YsmSummary
+
+    - YsmSummaryShape
+
+    - YSW_FAB_CSS
+
+    - YSW_TOOLTIP_CSS
+
+    - zhCN
+
+    - ZipEntryMatch
+
+    - ZipEntryMeta
+
+    - zipFindEntry
+
+    - ZipType
 use_when:
+
   - 代码审核
+
   - 代码审查
+
   - 审计
+
   - 前端质量
+
   - 技术债
+
   - 重构排期
+
   - XSS
+
   - innerHTML
 pitfalls:
+
   - 修改 innerHTML 注入前必须 esc()；静态注册表值（app-nav gid/label）同样要走 esc()，不可因"来源可控"跳过
+
   - 骨骼名/用户路径等外部数据写入 DOM 走 textContent/createTextNode，不要 esc() 后拼进 innerHTML
+
   - 模块级 let 可变全局（_dedupBusy / _dedupStrategy）必须有 reset 路径或注释豁免理由，否则并发测试会串扰
+
   - catch 静默仅允许在 binding 装配层；其余层至少 warn 留痕
+
   - Wails 桥只经 getApp()/bindings，禁止业务模块直 import @wailsio/runtime
+
   - 资源归类一律由 Go 扫描 + resource_types.json 派生，前端只读不重算
 quick_groups:
+
   - 审计与质量门禁
+
   - 重构与技术债评估
+
   - XSS 与 DOM 安全
+
   - Worker/桥接架构审计
+
   - 测试覆盖缺口盘点
 quick_intents:
+
   - 前端代码审计 / 质量评审 / 技术债评估
+
   - XSS 风险排查 / innerHTML 注入点核查
+
   - 重构前影响面评估 / 拆分方案参考
+
   - 审核红线 / 治理规范符合性
+
   - 测试覆盖缺口定位
 status: snapshot
+
 ---
 
 # 前端 TS 整包审计
 
 ## 概览
 
-2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全一致、binding-check 188/188、check-redlines 仅 Warn 级、typecheck 全绿。总规模 ~66k LOC（源码），加权总分 **4.1/5**。与 Go 侧 `cli_quality_audit`（八轮沉淀）对应的前端版。
+2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全一致、binding-check 188/188、check-redlines 仅 Warn 级、typecheck 全绿。总规模 \~66k LOC（源码），加权总分 **4.1/5**。与 Go 侧 `cli_quality_audit`（八轮沉淀）对应的前端版。
 
 ## 分目录评分
 
-| 目录 | 分 | 规模 | 一句话结论 |
-|------|----|------|-----------|
-| preview-3d/adapters | 4.2 | 11.0k | PreviewAdapter 统一接口+端口注入；MdMmBuildCtx 已域拆 6 接口+逐 stage Pick 收窄（tier1/2 落地），tier3 Builder 化待办 |
-| preview-3d 其余 | 4.2 | 12.8k | caps 注册表+感知层解耦优秀；model2d 已拆目录（main 203 + draw 390 + hit-zones 113） |
-| backend | 4.5 | 10.1k | ZIP bomb 三重防护、idb FIFO 双上限；web-fs 三函数可抽 idbRekeyGroup |
-| core | 4.0 | 4.0k | menu-defs 声明式唯一事实源；DOM 渗透 core 层是主要问题 |
-| views/app-content | 3.4 | 9.3k | 全仓最低分：perf-cli.ts God Object；dedup 竞态已消（2026-09-03 会话工厂化） |
-| views/app-tree | 4.0 | 3.1k | data/loader/render 分层干净 |
-| views/app-preview | 4.0 | 6.1k | 三套代际守卫严谨；makeScenePort 与 mmd-3d 重复应抽公共 port |
-| views 其余(nav/sidebar/sync-mgr/toast/context-menu) | 4~5 | 3.0k | app-toast 满分；共性=innerHTML 静态值 esc 口径不一 |
-| utils(除 3d) | 4.0 | 6.3k | esc()/hl() 管线精良；含唯一运行时 bug（short-label.ts） |
-| ui | 4.0 | 2.9k | ui-rows.ts 803 行接近红线 |
-| features | 4.0 | 3.8k | import-executor/download-queue 三层防御严谨；version-updater 无 AbortController（**by-design**：CheckUpdate 是 Go 绑定非 fetch，AbortSignal 无法取消 RPC，手动超时走 Promise.race+setTimeout 即正确范式，无需补 AbortController） |
-| services / wasm / test-utils | 5.0 | 1.3k | 满分区：registry 极简、WASM malloc/free 配对规范 |
-| workers | 4.0 | 0.4k | stats-core 纯函数与 Go 同口径 |
-| web-spike | 3.0 | 0.08k | ADR-049 Phase 0 spike，正式实现已落地，**废弃候选**；废弃评估结论（2026-08-26）：解码逻辑 `summarizeDecoded` 已收敛至 `utils/format/summarize.ts`（60b46e3b），但独立页 `web-spike/main.ts` 仍经 `web.html` → `vite.web.config` `spike` 入口编译进 `dist-web/web.html`，作轻量网页解码冒烟/演示页仍有用；**保留**，仅当网页版演示面被判定冗余时才删 |
+| 目录                                                | 分    | 规模    | 一句话结论                                                                                                                                                                                                                                                              |
+| ------------------------------------------------- | ---- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| preview-3d/adapters                               | 4.2  | 11.0k | PreviewAdapter 统一接口+端口注入；MdMmBuildCtx 已域拆 6 接口+逐 stage Pick 收窄（tier1/2 落地），tier3 Builder 化待办                                                                                                                                                                       |
+| preview-3d 其余                                     | 4.2  | 12.8k | caps 注册表+感知层解耦优秀；model2d 已拆目录（main 203 + draw 390 + hit-zones 113）                                                                                                                                                                                                 |
+| backend                                           | 4.5  | 10.1k | ZIP bomb 三重防护、idb FIFO 双上限；web-fs 三函数可抽 idbRekeyGroup                                                                                                                                                                                                              |
+| core                                              | 4.0  | 4.0k  | menu-defs 声明式唯一事实源；DOM 渗透 core 层是主要问题                                                                                                                                                                                                                              |
+| views/app-content                                 | 3.4  | 9.3k  | 全仓最低分：perf-cli.ts God Object；dedup 竞态已消（2026-09-03 会话工厂化）                                                                                                                                                                                                          |
+| views/app-tree                                    | 4.0  | 3.1k  | data/loader/render 分层干净                                                                                                                                                                                                                                            |
+| views/app-preview                                 | 4.0  | 6.1k  | 三套代际守卫严谨；makeScenePort 与 mmd-3d 重复应抽公共 port                                                                                                                                                                                                                        |
+| views 其余(nav/sidebar/sync-mgr/toast/context-menu) | 4\~5 | 3.0k  | app-toast 满分；共性=innerHTML 静态值 esc 口径不一                                                                                                                                                                                                                             |
+| utils(除 3d)                                       | 4.0  | 6.3k  | esc()/hl() 管线精良；含唯一运行时 bug（short-label.ts）                                                                                                                                                                                                                         |
+| ui                                                | 4.0  | 2.9k  | ui-rows.ts 803 行接近红线                                                                                                                                                                                                                                               |
+| features                                          | 4.0  | 3.8k  | import-executor/download-queue 三层防御严谨；version-updater 无 AbortController（**by-design**：CheckUpdate 是 Go 绑定非 fetch，AbortSignal 无法取消 RPC，手动超时走 Promise.race+setTimeout 即正确范式，无需补 AbortController）                                                                     |
+| services / wasm / test-utils                      | 5.0  | 1.3k  | 满分区：registry 极简、WASM malloc/free 配对规范                                                                                                                                                                                                                              |
+| workers                                           | 4.0  | 0.4k  | stats-core 纯函数与 Go 同口径                                                                                                                                                                                                                                             |
+| web-spike                                         | 3.0  | 0.08k | ADR-049 Phase 0 spike，正式实现已落地，**废弃候选**；废弃评估结论（2026-08-26）：解码逻辑 `summarizeDecoded` 已收敛至 `utils/format/summarize.ts`（60b46e3b），但独立页 `web-spike/main.ts` 仍经 `web.html` → `vite.web.config` `spike` 入口编译进 `dist-web/web.html`，作轻量网页解码冒烟/演示页仍有用；**保留**，仅当网页版演示面被判定冗余时才删 |
 
 ## 真 bug / 高优先级
 
-1. ~~**`utils/resource/short-label.ts:21-22`**：引用 `RESOURCE_TYPES.MOD_MODEL` / `VANILLA_ASSETS`，但 types.ts 中不存在 → computed key 成字面量 `"undefined"` 死代码。~~ ✅ **已修复**（2026-08-28）：`short-label.ts` 改用 `SHORT_LABEL_MAP`（L11-21）集中映射 + `shortLabelOf(rtype)`（L24-25）回退 `RESOURCE_TYPE_LABELS` → 原始 id 兜底，不再依赖 `MOD_MODEL`/`VANILLA_ASSETS` 常量。
+1. **~~`utils/resource/short-label.ts:21-22`~~**~~：引用~~ ~~`RESOURCE_TYPES.MOD_MODEL`~~ ~~/~~ ~~`VANILLA_ASSETS`，但 types.ts 中不存在 → computed key 成字面量~~ ~~`"undefined"`~~ ~~死代码。~~ ✅ **已修复**（2026-08-28）：`short-label.ts` 改用 `SHORT_LABEL_MAP`（L11-21）集中映射 + `shortLabelOf(rtype)`（L24-25）回退 `RESOURCE_TYPE_LABELS` → 原始 id 兜底，不再依赖 `MOD_MODEL`/`VANILLA_ASSETS` 常量。
 2. **`preview-3d/perception/autodance.ts:157`**：`targetRot.multiply(restQuat)` 乘序疑似反了（期望 `restQuat * offset`），可能是静默 bug，需可视化验证。
-3. ~~**`preview-3d/adapters/vrm-bone-ui.ts:107`**：`field()` 内 k/v 未 `esc()`（骨骼名来自模型文件，理论 XSS）。~~ ✅ **已修复** 2026-08-26 `2fbfe5ce`：`field()` 改 `textContent`/`createTextNode` 注入，骨骼名/路径中 `<>&` 不再当 HTML 解析（同批 skeleton `iRow` 经 `da664cf2` 同法收口，见 app-preview.md 不变量）。
+3. **~~`preview-3d/adapters/vrm-bone-ui.ts:107`~~**~~：`field()`~~ ~~内 k/v 未~~ ~~`esc()`（骨骼名来自模型文件，理论 XSS）。~~ ✅ **已修复** 2026-08-26 `2fbfe5ce`：`field()` 改 `textContent`/`createTextNode` 注入，骨骼名/路径中 `<>&` 不再当 HTML 解析（同批 skeleton `iRow` 经 `da664cf2` 同法收口，见 app-preview\.md 不变量）。
 
 ## 架构债 TOP5
 
@@ -1593,27 +4622,34 @@ status: snapshot
 ## 共性抽象机会（横向收敛）
 
 - Worker 桥收敛 → **Step 1+2 已完成**：pmx/fbx 逐字同码（永远 resolve ok:false 编码）已抽 `createResolveModeBridge`(`preview-3d/adapters/worker-bridge.ts`，`createWorkerBridge` 薄封装) 收编，各自 −53 行、59 测试全绿；**ktx2 已收编**进通用 `createWorkerBridge`（reject-mode+池 round-robin+崩溃终止整池，外层信号量/降级/`__setEncodeImplForTest` 业务层保留），22 测试全绿；三桥统一、消除重复内核，净省有限（通用工厂为新增）但架构收敛；texture-decoder 为 1:N 批量聚合，基数不匹配 1:1 签名，**明确排除**防假统一
+
 - generation 守卫 → 审计「三套实现各异」**被高估**：共享 `LoadGuard`(`utils/async/load-guard.ts` 的 `createLoadGuard`) 已存在，recycle-bin+oldest-models 共用；app-preview/app-sidebar/app-sync-manager 实为同一 `++counter` idiom（非各异）；仅 perf-cli(`DgPcGenGuard`)/app-tree(`atBeGenGuard`) 是真异实现，迁移到 LoadGuard 待办（非从零抽 `GenerationGuard`）
+
 - 公共 port → **已落地**：`mmd-data-port.ts` 的 `makeMmdDataPort(scope)` 已是 mmd-3d(:7/:23) 与 scene-3d(:11/:28) 共用公共 port；绑定由 Wails 生成 app.ts 全量类型化，`as unknown as Record` 绕类型已根除
+
 - idbRekeyGroup → **已落地**：`web-fs.ts` 的 `rekeyWebModelGroup` 已是两阶段「写新→删旧」事务原语，`renameWebDir`(:473)/`moveOrCopyWebModel`(:637) 已委托；仅 `renameWebFile` 单文件粒度仍内联（不同粒度，非同构）
+
 - sidebar 等事件+超时兜底 → 已裁决**暂不**抽 `withEventTimeout`：全仓仅 sidebar 一处消费（已局部扁平化为 asbPushOne/asbWaitBusQuiet）；触发条件=出现第二个消费方时再抽进 core/bus
+
 - 事件清理三种模式共存（removeEventListener / cloneNode replaceWith hack / addDisposableListener）→ 收敛到显式 removeEventListener
 
 ## 治理红线复核结论（check-redlines 11 条 Warn 判定）
 
-| 项 | 判定 |
-|----|------|
-| R5 perf-cli/perf-trace 硬编码颜色 | 豁免（诊断面板） |
-| R7 with-cached DEFAULT_NS="ysm" | 合理（缓存命名空间≠资源类型） |
-| R7 load-trace format 联合类型 / ysm-adapter format:"ysm" | 合理（trace 格式标识≠资源归类） |
-| R8 conflicts.ts:401 | 安全（rowsHtml 已全 esc()） |
-| R8 oldest-models.ts:296/301/304 | 安全（拼接均为 t() i18n 常量，无用户数据） |
-| W1 fbx-parser.worker.ts:38 `[\\/]` | 误报（有意双分隔符正则） |
+| 项                                                    | 判定                         |
+| ---------------------------------------------------- | -------------------------- |
+| R5 perf-cli/perf-trace 硬编码颜色                         | 豁免（诊断面板）                   |
+| R7 with-cached DEFAULT\_NS="ysm"                     | 合理（缓存命名空间≠资源类型）            |
+| R7 load-trace format 联合类型 / ysm-adapter format:"ysm" | 合理（trace 格式标识≠资源归类）        |
+| R8 conflicts.ts:401                                  | 安全（rowsHtml 已全 esc()）      |
+| R8 oldest-models.ts:296/301/304                      | 安全（拼接均为 t() i18n 常量，无用户数据） |
+| W1 fbx-parser.worker.ts:38 `[\\/]`                   | 误报（有意双分隔符正则）               |
 
 ## 本仓专项合规面
 
-- **ADR-116**：RESOURCE_TYPES 无旁路定义，前端不重算归类，全合规。
-- **Wails 桥**：全部经 getApp()/bindings，零 window.go 直调；`@wailsio/runtime`（Events/Window）直依赖已全量迁移到 `backend/runtime.ts` 桥（ADR-049 Phase 1 收尾：桌面走真 runtime、网页版走 no-op 桩），零业务模块直 import（2026-08-26 收口，原 android-events 越层点已消除）。
+- **ADR-116**：RESOURCE\_TYPES 无旁路定义，前端不重算归类，全合规。
+
+- **Wails 桥**：全部经 getApp()/bindings，零 window\.go 直调；`@wailsio/runtime`（Events/Window）直依赖已全量迁移到 `backend/runtime.ts` 桥（ADR-049 Phase 1 收尾：桌面走真 runtime、网页版走 no-op 桩），零业务模块直 import（2026-08-26 收口，原 android-events 越层点已消除）。
+
 - **core 层 DOM 渗透**（清单已收口，共 2 项）：① `context-menu-handlers` clipboard/execCommand —— DOM 直触，**保留观察**（非债、与 i18n 无关）；② `locale.ts:116` `document.documentElement.lang` —— 经核属 **i18n 核心职责**（见 i18n.md:37 同步 `<html lang>`），**by-design 非债、不下沉**；core/i18n 内仅此一处 DOM 直触，渗透清单已闭环。
 
 ## i18n 缺口（硬编码中文未走 t()）
@@ -1627,10 +4663,14 @@ core/handlers/sync.ts:87、utils/dom/dialogs/adv-filter-util.ts:38-53、~~featur
 ## 不变量
 
 - 凡进 innerHTML 的变量一律 esc()——含静态注册表值（app-nav gid/label、sidebar data-sync-type 当前未包，低危但口径应统一）。
+
 - 模块级 let 可变全局需有 reset 路径或注释豁免理由。
+
 - catch 后静默仅允许在 binding 装配层；其余层至少 warn 留痕。
 
 ## 相关
 
-- [cli_quality_audit](cli_quality_audit.md)：Go 侧对应审计卡
-- [3d-patterns](3d-patterns.md)、[backend_web](backend_web.md)
+- [cli\_quality\_audit](cli_quality_audit.md)：Go 侧对应审计卡
+
+- [3d-patterns](3d-patterns.md)、[backend\_web](backend_web.md)
+

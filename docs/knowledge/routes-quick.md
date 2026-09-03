@@ -274,9 +274,34 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 3D 性能与内存预算审查 | [前端设计锐评](./frontend_design_critique.md) | 帧循环内禁止 new 对象分配，prealloc 复用是 3D 性能铁律（perception 是唯一站规则外的子系统） | - |
+| 前端代码审计 / 质量评审 / 技术债评估 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
 | 前端设计评审 / 锐评 | [前端设计锐评](./frontend_design_critique.md) | 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（rgba(124,131,255) 全仓 19 处待收编） | - |
 | 页面生命周期审查（整 DOM 重建） | [前端设计锐评](./frontend_design_critique.md) | - | - |
 | 主题系统审查（token 失守） | [前端设计锐评](./frontend_design_critique.md) | 页面切换必须 tab-panel 常驻 + active 切换，禁止整 DOM innerHTML 重建 | - |
+
+## 🎯 重构与技术债评估
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| XSS 风险排查 / innerHTML 注入点核查 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
+
+## 🎯 XSS 与 DOM 安全
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 重构前影响面评估 / 拆分方案参考 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
+
+## 🎯 Worker/桥接架构审计
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 审核红线 / 治理规范符合性 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
+
+## 🎯 测试覆盖缺口盘点
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 测试覆盖缺口定位 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
 
 ## 🎯 Go 后端评审与重构
 
@@ -558,6 +583,12 @@
 | safeDispose 静默吞错会让 dispose 抛错零信号——至少 console.warn 留痕 | - | - |
 | 帧循环内禁止 new THREE.Quaternion/Euler/Vector3——prealloc 闭包 scratch 复用（mount-preview-core 的 R1-P1-1 模式） | - | - |
 | 性能预算不要用冒充（MAX_MODELS=8 是计数不是预算）——要查 draw call/三角面/纹理字节 | `数量上限` | - |
+| 修改 innerHTML 注入前必须 esc()；静态注册表值（app-nav gid/label）同样要走 esc()，不可因"来源可控"跳过 | - | - |
+| 骨骼名/用户路径等外部数据写入 DOM 走 textContent/createTextNode，不要 esc() 后拼进 innerHTML | - | - |
+| 模块级 let 可变全局（_dedupBusy / _dedupStrategy）必须有 reset 路径或注释豁免理由，否则并发测试会串扰 | - | - |
+| catch 静默仅允许在 binding 装配层；其余层至少 warn 留痕 | - | - |
+| Wails 桥只经 getApp()/bindings，禁止业务模块直 import @wailsio/runtime | - | - |
+| 资源归类一律由 Go 扫描 + resource_types.json 派生，前端只读不重算 | - | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
 | 隐式协议（epoch 代际 / *Locked 变体 / \x00 缓存键 / 三态 bool 返回）靠注释续命，编译器零保护——新增字段/分支时静默爆炸 | - | - |

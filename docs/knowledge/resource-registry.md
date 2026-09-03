@@ -6,7 +6,7 @@ category: config
 source_files:
   - resource_types.json
   - frontend/src/services/registry.ts
-  - frontend/src/utils/resource/registry.ts
+  - frontend/src/services/resource-registry.ts
 auto_fields:
   symbols_with_lines:
     - clear
@@ -19,7 +19,7 @@ auto_fields:
     - unregister
   tests:
     - frontend/src/services/registry.test.ts
-    - frontend/src/utils/resource/registry.test.ts
+    - frontend/src/services/resource-registry.test.ts
   use_when:
     - 资源类型
     - 注册表
@@ -37,7 +37,7 @@ auto_fields:
     - resource_types.json 是唯一事实来源；前端只读不判、禁本地重算
 tests:
   - frontend/src/services/registry.test.ts
-  - frontend/src/utils/resource/registry.test.ts
+  - frontend/src/services/resource-registry.test.ts
 use_when:
   - 资源类型
   - 注册表
@@ -78,12 +78,12 @@ status: active
 - `register(name, service)` — 注册服务（`ServiceName` 联合类型收窄 + 泛型，拼错编译期拦截）
 - `get(name)` / `has(name)` — 获取 / 检查服务是否存在（`get` 用 `Map.has()` 判定，falsy 值 `0/""/false/null` 如实返回，P3 修复）
 - `unregister(name)` / `clear()` — 注销单个 / 清空全部
-- `loadResourceRegistry()`（`utils/resource/registry.ts`）— 加载资源类型注册表；**空结果/异常不缓存**（Go 失败返回 `"{}"` 时不会写入 `_registry`，下次调用可重试，P2 修复）；失败路径 `console.warn` 告警（P3 修复，对齐 Go 端损坏回退告警）
+- `loadResourceRegistry()`（`services/resource-registry.ts`）— 加载资源类型注册表；**空结果/异常不缓存**（Go 失败返回 `"{}"` 时不会写入 `_registry`，下次调用可重试，P2 修复）；失败路径 `console.warn` 告警（P3 修复，对齐 Go 端损坏回退告警）
 
 ## 与其他子系统关系
 
 - `go/types/`: Go 端注册表加载
-- `frontend/src/utils/resource/registry.ts`: 前端资源类型注册表加载（Go `LoadResourceTypes` binding）
+- `frontend/src/services/resource-registry.ts`: 前端资源类型注册表加载（Go `LoadResourceTypes` binding）
 - `frontend/src/utils/resource/types.ts`: 前端类型工具；`schema.ts` 为前端唯一 ResourceType 接口 + 单一 JSON 解析点（`types.ts`/`extensions.ts` 同源消费，T2 收敛）
 
 ## 不变量

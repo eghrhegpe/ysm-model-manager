@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 154 张知识卡
+> 总计: 155 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -238,7 +238,7 @@
 - **preview_core**（统一 3D 预览核心 preview-core）：ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚手架（旧实现各内联 \~250 行同构），成为所有富格式 3D 预览的**单一事实来源外壳**。内容差异经 `PreviewAdapter.bu…
 - **scene_capability_registry**（场景能力注册表 scene-capability-registry）：ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Ground / Environment / Fog / Shadow / Reflector / Light / Postprocessing）由统一注册表**创…
 
-## ui（32 张）
+## ui（33 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -266,6 +266,7 @@
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, FAB 3D 预览入口, overlay, ADR-057 |
 | 🏗 frontend_design_critique | 前端设计锐评 | architecture | — | 设计评审, 前端设计, 锐评, 主题系统, 3D 性能审查, 生命周期审查, 技术债 |
 | 🍃 frontend_naming | 前端命名章程（黑话治理） | leaf | — | 黑话, 命名, 缩写, 重命名, 可读性, 匈牙利前缀, 单字母变量, 动词名词化 |
+| 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
 | 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | gpu-bound | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
 | 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, sessionId |
 | 🍃 preview_menu_settings_state | 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125） | leaf | — | 新增 3D 预览设置项, 新增 cap 想让某个开关出现在设置面板, 排查设置项改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, ADR-125 三块落地状态核对 |
@@ -299,6 +300,7 @@
 - **dom-fab**（3D 预览悬浮 FAB 控制层）：3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu…
 - **frontend_design_critique**（前端设计锐评）：2026-09-03 三子代理并发只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。…
 - **frontend_naming**（前端命名章程（黑话治理））：2026-09 ADR-161「渲染会话词汇章程」实施时扩大扫描 `frontend/src` 404 个生产 TS 文件，发现命名黑话远超章程六类，按模式统计：
+- **frontend_repo_audit**（前端 TS 整包审计）：2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全…
 - **multi_model_select**（多模型选择菜单原语 multiModelSelectNode）：跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的
 - **preview_menu_session_key**（preview-menu-session-key）：3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台
 - **preview_menu_settings_state**（3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125））：ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已落地，**S2「状态单向流」只落了 bind 回写，未落统一状态源**——横切设置项各自有独立读写通道，声明式 Schema 的 `control.bi…

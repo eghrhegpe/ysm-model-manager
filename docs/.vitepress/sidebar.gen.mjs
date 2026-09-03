@@ -730,6 +730,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-165：preview-3d 公共入口以真模块收敛视图层深导入",
+        "link": "/adr/ADR-165-preview3d-public-entry"
+      },
+      {
         "text": "ADR-164：Node+WASM 解码桥单实现收敛（avatar × wasm_decoder 双胞胎）",
         "link": "/adr/ADR-164-node-wasm-avat"
       },
@@ -1391,6 +1395,10 @@ export const autoSidebar = [
       {
         "text": "R34 审核：8 个小规模包（texture_cache / repoaudit / launcher / logs / watcher / tags / packs / instance）",
         "link": "/audit/audit-r34-go-small-packages-2026-08-31"
+      },
+      {
+        "text": "YSM model manager 文件布局梳理 · 修复趋势 · 审核计划",
+        "link": "/audit/audit-review-plan-2026-09-03"
       }
     ]
   },

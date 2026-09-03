@@ -1,37 +1,18 @@
 package app
 
 import (
-	"bytes"
-	"context"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
-	"time"
 
 	"ysm-model-manager/go/avatar"
-	"ysm-model-manager/go/executil"
-	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"
 )
-
-// ysmNodeDecodeTimeout 子进程解码超时上限（对齐 go/avatar decodeTimeout 模式：
-// WASM 死循环/Node 卡死时防永久挂起冻结 UI 线程）。
-const ysmNodeDecodeTimeout = 60 * time.Second
-
-// ysmDecodeMaxInput 子进程解码输入 .ysm 上限（>200MB 拒绝，防超大输入拖垮子进程/内存膨胀）。
-const ysmDecodeMaxInput = 200 << 20
-
-// ysmDecodeMaxOutput 子进程解码输出（FILES_JSON 行）上限（防恶意模型输出膨胀）。
-const ysmDecodeMaxOutput = 200 << 20
 
 // nodeJSPath 查找 node.js 可执行文件
 var nodeJSPath = findNodeJS()
@@ -75,151 +56,20 @@ type decodedYSMExtra struct {
 	Data []byte
 }
 
-// limitedBuffer 流式输出护栏：写满 max 后丢弃超限部分并置 exceeded，保持内存有界
-// （防解压炸弹在 Node/WASM 内膨胀到数百 MB~GB 级峰值内存）。
-type limitedBuffer struct {
-	buf      bytes.Buffer
-	max      int
-	exceeded bool
-}
-
-func (l *limitedBuffer) Write(p []byte) (int, error) {
-	if l.buf.Len()+len(p) > l.max {
-		l.exceeded = true
-		return len(p), nil // 丢弃超限部分，保持内存有界
-	}
-	return l.buf.Write(p)
-}
-
 // runYSMNodeJSDecode 用 Node.js + WASM 解码 .ysm，返回解出的全部文件（Path/Data）。
 // decodeYSMViaNodeJS（合并单组件）与 decodeYSMComponentsViaNodeJS（多组件）共用此解码。
+// ADR-164 收敛：实现下沉 go/avatar.DecodeYSMData（脚本/子进程/护栏全仓唯一副本），
+// 本函数仅做类型适配——超时/输入/输出护栏语义由 avatar 统一承接。
 func runYSMNodeJSDecode(ysmData []byte) []decodedYSMExtra {
-	if nodeJSPath == "" {
+	files := avatar.DecodeYSMData(ysmData)
+	if len(files) == 0 {
 		return nil
 	}
-	// 输入大小护栏：超大/畸形 .ysm 直接拒绝，不进入子进程（防内存膨胀/拖垮）
-	if len(ysmData) > ysmDecodeMaxInput {
-		fmt.Fprintf(os.Stderr, "[ysm-node] 输入 .ysm 过大: %d bytes (上限 %d)\n", len(ysmData), ysmDecodeMaxInput)
-		return nil
+	out := make([]decodedYSMExtra, len(files))
+	for i, f := range files {
+		out[i] = decodedYSMExtra{Path: f.Path, Data: f.Data}
 	}
-
-	// 读取内嵌的胶水代码和 WASM 二进制
-	glueRaw := getGlueCode()
-	wasmBin := getWasmBinary()
-	if len(glueRaw) == 0 || len(wasmBin) == 0 {
-		return nil
-	}
-
-	// Patch 胶水代码暴露 HEAPU8
-	gluePatched := strings.ReplaceAll(glueRaw,
-		";updateMemoryViews()",
-		`;updateMemoryViews();Module["HEAPU8"]=HEAPU8`)
-
-	tmpDir, err := os.MkdirTemp("", "ysm-node-*")
-	if err != nil {
-		return nil
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// 写入 WASM 和胶水代码
-	glueFile := filepath.Join(tmpDir, "YSMParser_patched.js")
-	if err := os.WriteFile(glueFile, []byte(gluePatched), fsutil.FilePerms); err != nil {
-		return nil
-	}
-
-	// 构建解码脚本：通过 FS 写文件 + callMain（绕开 _malloc 导出问题）
-	ysmB64 := base64.StdEncoding.EncodeToString(ysmData)
-	wasmB64 := base64.StdEncoding.EncodeToString(wasmBin)
-	script := fmt.Sprintf(`const YSMParser = require(%q);
-const wb64=%q;const wb=Uint8Array.from(atob(wb64),c=>c.charCodeAt(0));
-const yb64=%q;const yr=atob(yb64);const ys=new Uint8Array(yr.length);
-for(let i=0;i<yr.length;i++)ys[i]=yr.charCodeAt(i);
-async function main(){
-  const mod=await YSMParser({wasmBinary:wb.buffer,noInitialRun:true});
-  const FS=mod.FS;
-  try{FS.mkdir('/input')}catch(e){}
-  try{FS.mkdir('/output')}catch(e){}
-  FS.writeFile('/input/model.ysm',ys);
-  try{mod.callMain(['-i','/input','-o','/output'])}catch(e){
-    if(!(e&&e.name==='ExitStatus'))throw e}
-  function cl(dir){
-    const r=[];const es=FS.readdir(dir).filter(f=>f!=='.'&&f!=='..');
-    for(const e of es){const p=dir+'/'+e;
-      if(FS.isDir(FS.stat(p).mode)){r.push(...cl(p))}
-      else{r.push({path:p,data:Array.from(FS.readFile(p))})}}
-    return r}
-  console.log('FILES_JSON:'+JSON.stringify(cl('/output')));
-  process.exit(0);
-}
-main().catch(e=>{console.error(e);process.exit(1)});
-`, glueFile, wasmB64, ysmB64)
-
-	scriptPath := filepath.Join(tmpDir, "decode.cjs")
-	if err := os.WriteFile(scriptPath, []byte(script), fsutil.FilePerms); err != nil {
-		return nil
-	}
-
-	// 执行（子进程加超时护栏，对齐 go/avatar decodeTimeout 模式）
-	ctx, cancel := context.WithTimeout(context.Background(), ysmNodeDecodeTimeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, nodeJSPath, scriptPath)
-	executil.HideWindow(cmd)
-	cmd.Dir = tmpDir
-	// 输出护栏：stdout 流式截断（防解压炸弹在 Node/WASM 内膨胀到数百 MB~GB 级峰值内存），
-	// stderr 同样受限缓冲（8MB 封顶），仅用于失败诊断
-	outLimited := &limitedBuffer{max: ysmDecodeMaxOutput}
-	errLimited := &limitedBuffer{max: 8 << 20} // stderr 仅诊断用，8MB 封顶
-	cmd.Stdout = outLimited
-	cmd.Stderr = errLimited
-	err = cmd.Run()
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			fmt.Fprintf(os.Stderr, "[ysm-node] 解码超时 %v\n", ysmNodeDecodeTimeout)
-			return nil
-		}
-		if errLimited.exceeded {
-			fmt.Fprintln(os.Stderr, "[ysm-node] 解码失败(stderr 超限):", errLimited.buf.String()[:512])
-		} else {
-			fmt.Fprintln(os.Stderr, "[ysm-node] 解码失败:", errLimited.buf.String())
-		}
-		return nil
-	}
-	if outLimited.exceeded {
-		fmt.Fprintf(os.Stderr, "[ysm-node] 解码输出过大 (上限 %d)\n", ysmDecodeMaxOutput)
-		return nil
-	}
-	output := outLimited.buf.Bytes()
-
-	// 解析输出：找 FILES_JSON: 标记行
-	outStr := string(bytes.TrimSpace(output))
-	idx := strings.Index(outStr, "FILES_JSON:")
-	if idx < 0 {
-		fmt.Fprintln(os.Stderr, "[ysm-node] 未找到输出标记")
-		return nil
-	}
-	jsonStr := outStr[idx+len("FILES_JSON:"):]
-
-	var rawFiles []struct {
-		Path string `json:"path"`
-		Data []int  `json:"data"`
-	}
-	if err := json.Unmarshal([]byte(jsonStr), &rawFiles); err != nil {
-		snippet := outStr
-		if len(snippet) > 200 {
-			snippet = snippet[:200]
-		}
-		fmt.Fprintf(os.Stderr, "[ysm-node] JSON 解析失败: %v\n输出前200字节: %s\nstderr: %s\n", err, snippet, errLimited.buf.String())
-		return nil
-	}
-	files := make([]decodedYSMExtra, 0, len(rawFiles))
-	for _, rf := range rawFiles {
-		data := make([]byte, len(rf.Data))
-		for i, v := range rf.Data {
-			data[i] = byte(v)
-		}
-		files = append(files, decodedYSMExtra{Path: rf.Path, Data: data})
-	}
-	return files
+	return out
 }
 
 // decodeYSMViaNodeJS 用 Node.js + WASM 解码 .ysm 并合并为单 BedrockModel（单组件模式）。

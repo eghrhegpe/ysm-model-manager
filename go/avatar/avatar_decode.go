@@ -1,8 +1,9 @@
 // Package avatar 创作者头像提取与缓存，不依赖 Wails runtime。
 //
 // 本文件（avatar_decode.go）：Node.js + WASM 解码桥——SetNodeJS 注入 Node/WASM 资源、
-// DecodeYSMFiles 子进程解码、limitedBuffer 输出护栏与 toBytes 字节转换。拆分自原
-// avatar.go（ADR-040 文件行数治理）。
+// DecodeYSMData 统一解码实现（ADR-164：收敛 internal/app wasm_decoder.go 逐字复刻双胞胎，
+// 全仓唯一副本）、DecodeYSMFiles 兼容薄封装、limitedBuffer 输出护栏与 toBytes 字节转换。
+// 拆分自原 avatar.go（ADR-040 文件行数治理）。
 package avatar
 
 import (
@@ -25,6 +26,11 @@ import (
 
 // WASM 解码子进程超时上限
 const decodeTimeout = 60 * time.Second
+
+// decodeMaxInput 子进程解码输入 .ysm 上限（>200MB 拒绝，防超大输入拖垮子进程/内存膨胀；
+// ADR-164 统一补齐——原 avatar 无输入护栏，对齐 internal/app ysmDecodeMaxInput 口径；
+// avatar 调用方 readLimitedModel 50MB 限读，此护栏为 app 共用路径兜底）。
+const decodeMaxInput = 200 << 20
 
 // decodeMaxOutput 解码子进程 stdout 上限（防恶意模型输出膨胀拖垮内存；对齐 internal/app ysmDecodeMaxOutput 口径）
 const decodeMaxOutput = 200 << 20
@@ -71,13 +77,24 @@ func (l *limitedBuffer) Write(p []byte) (int, error) {
 	return l.buf.Write(p)
 }
 
-// DecodeYSMFiles 底层解码，返回完整文件列表。
-func DecodeYSMFiles(ysmData []byte) []struct {
-	Path string `json:"path"`
-	Data []int  `json:"data"`
-} {
+// ysmDecodedFile DecodeYSMData 返回的单个解码文件（Path 已剥 /output/ 前缀）。
+type ysmDecodedFile struct {
+	Path string
+	Data []byte
+}
+
+// DecodeYSMData 底层解码 .ysm，返回完整文件列表（Path 剥 /output/ 前缀，Data 为原始字节）。
+// ADR-164 统一实现：go/avatar 与 internal/app 双胞胎桥收敛后全仓唯一副本
+// （internal/app runYSMNodeJSDecode 变薄封装调本函数）。
+// 返回 nil 表示解码不可用/失败（未注入、输入超限、超时、输出超限、标记缺失、JSON 解析失败）。
+func DecodeYSMData(ysmData []byte) []ysmDecodedFile {
 	nodePath, glueFn, wasmFn := getEnv()
 	if nodePath == "" || glueFn == nil || wasmFn == nil {
+		return nil
+	}
+	// 输入大小护栏：超大/畸形 .ysm 直接拒绝，不进入子进程（防内存膨胀/拖垮）
+	if len(ysmData) > decodeMaxInput {
+		log.Printf("[avatar] 输入 .ysm 过大: %d bytes (上限 %d)\n", len(ysmData), decodeMaxInput)
 		return nil
 	}
 	glueRaw := glueFn()
@@ -173,14 +190,44 @@ main().catch(e=>{console.error(e);process.exit(1)});
 		return nil
 	}
 	jsonStr := outStr[idx+len("FILES_JSON:"):]
-	var files []struct {
+	// 中间形态走 []int：Node 脚本输出数字数组（Array.from(FS.readFile)），
+	// json 对 []byte 字段的数组解码语义不透明，[]int → toBytes 显式转换
+	var rawFiles []struct {
 		Path string `json:"path"`
 		Data []int  `json:"data"`
 	}
-	if err := json.Unmarshal([]byte(jsonStr), &files); err != nil {
+	if err := json.Unmarshal([]byte(jsonStr), &rawFiles); err != nil {
 		return nil
 	}
+	files := make([]ysmDecodedFile, len(rawFiles))
+	for i, rf := range rawFiles {
+		files[i] = ysmDecodedFile{Path: rf.Path, Data: toBytes(rf.Data)}
+	}
 	return files
+}
+
+// DecodeYSMFiles 兼容薄封装（ADR-164）：调统一实现 DecodeYSMData 后转 []int——
+// 历史签名返回 JSON 数组形态（前端绑定面遗留），avatar_extract.go:37/384 两处消费方
+// 依赖此形态，保持不变；新代码应直接用 DecodeYSMData 的 []byte 直通形态。
+func DecodeYSMFiles(ysmData []byte) []struct {
+	Path string `json:"path"`
+	Data []int  `json:"data"`
+} {
+	files := DecodeYSMData(ysmData)
+	if len(files) == 0 {
+		return nil
+	}
+	out := make([]struct {
+		Path string `json:"path"`
+		Data []int  `json:"data"`
+	}, len(files))
+	for i, f := range files {
+		out[i] = struct {
+			Path string `json:"path"`
+			Data []int  `json:"data"`
+		}{Path: f.Path, Data: toInts(f.Data)}
+	}
+	return out
 }
 
 func toBytes(data []int) []byte {
@@ -189,4 +236,14 @@ func toBytes(data []int) []byte {
 		b[i] = byte(v)
 	}
 	return b
+}
+
+// toInts 兼容薄封装的 []byte → []int 转换（DecodeYSMFiles 历史 []int 形态）。
+// []byte 是内部统一形态（DecodeYSMData），仅老签名出口需要转回。
+func toInts(data []byte) []int {
+	out := make([]int, len(data))
+	for i, v := range data {
+		out[i] = int(v)
+	}
+	return out
 }

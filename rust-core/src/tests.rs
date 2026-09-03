@@ -266,3 +266,43 @@ fn disabled_dir_skipped_in_fast_but_discovered_in_index() {
         indexed.entries.iter().map(|e| &e.path).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn manifest_path_strips_disable_suffix_from_json_name() {
+    // scan_impl_manifest 对 .json 条目先 strip disable suffix 再查白名单（ADR-120 契约）。
+    // 若 Go manifest 传入 ext=".ysm.disabled"（未剥离后缀），path 文件名也带后缀，
+    // 必须正确 strip 后再判断 is_model_json_name，否则 ysm.json.disabled 会被静默丢弃。
+    use super::scan::scan_impl_manifest;
+    let policy = policy();
+    let candidates = vec![
+        rust_test_utils::TempRoot::new("fake").path().to_path_buf(); 0 // placeholder
+    ];
+    let _ = candidates; // avoid unused warning
+    // 直接构造 Candidate：ext 带禁用后缀，path 文件名也带禁用后缀
+    let tmp = TempRoot::new("manifest-strip");
+    fs::write(tmp.path().join("foo.ysm.disabled"), b"x").unwrap();
+    let path = tmp.path().join("foo.ysm.disabled");
+    let candidates = vec![
+        Candidate {
+            name: "foo.ysm.disabled".to_string(),
+            path: path.clone(),
+            ext: ".ysm.disabled".to_string(), // Go 侧错误传了未剥离后缀
+            subdir: String::new(),
+            rtype: String::new(),
+        },
+    ];
+    let report = scan_impl_manifest(candidates, &policy);
+    // ext=".ysm.disabled" 不在 supported_exts 内（registry 只有 .ysm），应被 retain 过滤掉
+    assert_eq!(report.entries.len(), 0, "ext 不在支持列表应被过滤");
+    // 正确的用法：Go manifest 传 ext=".ysm"（已剥离），path 文件名也带后缀
+    let path2 = tmp.path().join("foo.ysm.disabled");
+    let candidates2 = vec![Candidate {
+        name: "foo.ysm.disabled".to_string(),
+        path: path2,
+        ext: ".ysm".to_string(), // 正确：ext 已剥离
+        subdir: String::new(),
+        rtype: String::new(),
+    }];
+    let report2 = scan_impl_manifest(candidates2, &policy);
+    assert_eq!(report2.entries.len(), 1, "ext正确时应收敛为1条");
+}

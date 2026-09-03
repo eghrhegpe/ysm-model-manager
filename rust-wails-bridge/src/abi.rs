@@ -66,9 +66,12 @@ pub unsafe extern "C" fn ysm_scan(
         Ok(Err(error)) => ScanResponse::fatal(error),
         Err(_) => ScanResponse::fatal("Rust scanner panicked"),
     };
-    // encode_response 也包 catch_unwind：serde_json::to_vec 理论上不应 panic，但一旦失败
-    //（如递归结构、特化类型）外层 no_mangle 函数必须不被 unwind 穿透到 C 侧——否则 Go
-    // 收到未定义行为（DLL panic 越过 FFI 边界是 UB）。
+    // encode_response 外层 catch_unwind 是**必须存在的安全网**：
+    // DLL panic 越过 FFI 边界是 UB（Go/C 侧未定义行为），一旦 serialize 意外 panic，
+    // 外层 catch_unwind 确保我们返回 fatal error 而非崩溃。
+    // serde_json::to_vec 对当前 ScanResponse 结构几乎不可能 panic（无递归、无非序列化类型），
+    // 但编译期约束（serde derive）无法阻止未来新增字段时引入 panic 路径——此保护防御的是
+    // "未来有人往 ScanResponse 加非 Serialize 字段"的误操作，而非当前代码风险。
     let encoded = std::panic::catch_unwind(AssertUnwindSafe(|| encode_response(response)));
     let buffer = match encoded {
         Ok(buf) => buf,

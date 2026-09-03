@@ -14,8 +14,9 @@ pub fn hydrate_hashes(entries: &mut [ModelEntry], policy: &ScanPolicy) -> Vec<Sc
             if !policy.should_hash_ext(&entry.ext) {
                 return None;
             }
-            // size < 0 守卫：与 Go scanner 语义对齐（Go i64 大小写负值表示异常），
-            // Rust 端 fs::metadata.len() 返回 u64 永不负，故此处实际永不触发，仅作契约锁。
+            // size < 0 守卫：防御 Go/manifest 侧传入的异常负 size（当前所有内部路径永不负，
+            // 但契约上应保留——若未来手动构造 ModelEntry 时填了负 size，此处跳过哈希而非 panic）。
+            // entry.size as u64 转换对负值会 wrap（i64::MAX+1），外层 >max_hash_bytes 检查兜底。
             if entry.size < 0 || entry.size as u64 > policy.max_hash_bytes {
                 entry.hash.clear();
                 return Some(ScanError {

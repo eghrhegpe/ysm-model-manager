@@ -21,7 +21,7 @@ async function openModal(
 ): Promise<void> {
   const ok = await page.evaluate(
     async ({ kind: k, opts: o }) => {
-      const mod = await import("../src/utils/dom/dialogs/modal.ts");
+      const mod = await import("../src/features/dialogs/modal.ts");
       const w = window as DlgWindow;
       w._dlgPromise =
         k === "confirm" ? mod.modalConfirm(o) : mod.modalPrompt(o);

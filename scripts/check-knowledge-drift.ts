@@ -126,7 +126,16 @@ function checkKnowledgeMeta(cards: any[]) {
     // docs/knowledge/ 下但未被 gen 脚本索引，check-knowledge-drift 也不检测——属于「漂移检查盲区」。
     if (!/^\uFEFF?---\r?\n/.test(text)) {
       if (!KNOWLEDGE_NON_CARDS.has(cf)) {
-        errors.push(`幽灵卡 ${cf} 无 YAML frontmatter（旧格式残留或误放文件）——须补 frontmatter 或移入 KNOWLEDGE_NON_CARDS`);
+        // 分隔符显式诊断：*** / ~~~ 等非 --- 开头 = 疑似「整卡 Markdown 重排事故」——frontmatter 被当正文
+        // 序列化（---→*** 水平线改写、\_ 转义、列表空行平铺 + 嵌套错乱），会绕过 parseFrontmatter 的 ^---
+        // 匹配令 gen 静默跳过、索引漏登。历史两次受害：frontend_repo_audit.md（bd86a916 修复）、
+        // context-menu.md（cabb0e8b 回滚）。给可操作指引（定位重排提交回滚），区别于泛化「旧格式残留」。
+        const head = (text.replace(/^\uFEFF/, '').split(/\r?\n/, 1)[0] || '').trim();
+        errors.push(
+          head === '***' || head === '~~~'
+            ? `知识卡 ${cf} frontmatter 分隔符异常「${head}」——疑似整卡 Markdown 重排事故（frontmatter 被当正文序列化：---→***、\\_ 转义、列表平铺嵌套错乱；历史两次：frontend_repo_audit / context-menu）——须 git log 定位重排提交回滚该卡，或重组 frontmatter 为 --- 开头`
+            : `幽灵卡 ${cf} 无 YAML frontmatter（首行 ${JSON.stringify(head.slice(0, 40))}；旧格式残留或误放文件）——须补 frontmatter 或移入 KNOWLEDGE_NON_CARDS`
+        );
       }
       continue;
     }

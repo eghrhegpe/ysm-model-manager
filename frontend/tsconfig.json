@@ -17,6 +17,8 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
     "exactOptionalPropertyTypes": true,

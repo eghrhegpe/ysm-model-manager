@@ -1,5 +1,5 @@
 // ===== go/avatar Node 管线补测 =====
-// DecodeYSMFiles 依赖真实 Node.js + WASM 解码。这里用「假 YSMParser 胶水模块」替换
+// DecodeYSMData 依赖真实 Node.js + WASM 解码。这里用「假 YSMParser 胶水模块」替换
 // getGlueCode 注入的胶水：由真实 node 执行生成的 decode 脚本时返回静态文件树，
 // 从而端到端验证 子进程管线/输出解析/超时与错误分支，无需真实 WASM 解码。
 package avatar
@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -100,7 +99,7 @@ module.exports = function () {
 	return fmt.Sprintf(tmpl, strings.Join(parts, ","), callMainBody)
 }
 
-// writeYSM 写一个内容任意的 .ysm 文件（假胶水下 DecodeYSMFiles 不校验内容）。
+// writeYSM 写一个内容任意的 .ysm 文件（假胶水下 DecodeYSMData 不校验内容）。
 func writeYSM(t *testing.T, content string) string {
 	t.Helper()
 	p := filepath.Join(t.TempDir(), "model.ysm")
@@ -110,49 +109,40 @@ func writeYSM(t *testing.T, content string) string {
 	return p
 }
 
-// jsonBytes 把 JSON 文本转成字符码数组（与 DecodeYSMFiles 产物 Data 字段比对）。
-func jsonBytes(s string) []int {
-	out := make([]int, len(s))
-	for i := 0; i < len(s); i++ {
-		out[i] = int(s[i])
-	}
-	return out
-}
-
-func TestDecodeYSMFiles_SetupGuards(t *testing.T) {
+func TestDecodeYSMData_SetupGuards(t *testing.T) {
 	oldNode, oldGlue, oldWasm := getEnv()
 	defer func() { SetNodeJS(oldNode, oldGlue, oldWasm) }()
 
 	// node 路径未设置 → nil
 	SetNodeJS("", nil, nil)
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("node 未设置应返回 nil, 得到 %v", got)
 	}
 	// 胶水函数未设置 → nil
 	SetNodeJS("node", nil, func() []byte { return []byte{1} })
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("胶水未设置应返回 nil, 得到 %v", got)
 	}
 	// wasm 函数未设置 → nil
 	SetNodeJS("node", func() string { return "g" }, nil)
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("wasm 未设置应返回 nil, 得到 %v", got)
 	}
 	// 空胶水 → nil
 	SetNodeJS("node", func() string { return "" }, func() []byte { return []byte{1} })
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("空胶水应返回 nil, 得到 %v", got)
 	}
 	// 空 wasm → nil
 	SetNodeJS("node", func() string { return "g" }, func() []byte { return nil })
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("空 wasm 应返回 nil, 得到 %v", got)
 	}
 }
 
-// TestDecodeYSMFiles_Pipeline 端到端：真实 node 执行生成的 decode 脚本，假胶水返回
+// TestDecodeYSMData_Pipeline 端到端：真实 node 执行生成的 decode 脚本，假胶水返回
 // 静态文件树，验证 stdout FILES_JSON 输出解析为文件列表（路径 + 数据）。
-func TestDecodeYSMFiles_Pipeline(t *testing.T) {
+func TestDecodeYSMData_Pipeline(t *testing.T) {
 	requireNode(t)
 	ysmJSON := `{"metadata":{"authors":[{"name":"测试用户","avatar":"avatar/face.png"}]}}`
 	glue := fakeGlueModule([][2]string{
@@ -161,7 +151,7 @@ func TestDecodeYSMFiles_Pipeline(t *testing.T) {
 	}, "function () {}")
 	withFakeNode(t, glue, []byte{1, 2, 3})
 
-	files := DecodeYSMFiles([]byte("fake-ysm-bytes"))
+	files := DecodeYSMData([]byte("fake-ysm-bytes"))
 	if files == nil {
 		t.Fatal("假胶水管线应解码出文件列表, 得到 nil")
 	}
@@ -171,65 +161,65 @@ func TestDecodeYSMFiles_Pipeline(t *testing.T) {
 	if files[0].Path != "ysm.json" {
 		t.Errorf("首个文件应为 ysm.json, 得到 %q", files[0].Path)
 	}
-	if !reflect.DeepEqual(files[0].Data, jsonBytes(ysmJSON)) {
-		t.Errorf("ysm.json 数据解析错误: %v", files[0].Data)
+	if string(files[0].Data) != ysmJSON {
+		t.Errorf("ysm.json 数据解析错误: %q", files[0].Data)
 	}
 	if files[1].Path != "avatar/face.png" {
 		t.Errorf("第二个文件应为 avatar/face.png, 得到 %q", files[1].Path)
 	}
-	if !reflect.DeepEqual(files[1].Data, jsonBytes("fake-png-data")) {
-		t.Errorf("avatar 数据解析错误: %v", files[1].Data)
+	if string(files[1].Data) != "fake-png-data" {
+		t.Errorf("avatar 数据解析错误: %q", files[1].Data)
 	}
 }
 
-// TestDecodeYSMFiles_CallMainThrow callMain 抛错 → 子进程失败分支 → nil（stderr 诊断）。
-func TestDecodeYSMFiles_CallMainThrow(t *testing.T) {
+// TestDecodeYSMData_CallMainThrow callMain 抛错 → 子进程失败分支 → nil（stderr 诊断）。
+func TestDecodeYSMData_CallMainThrow(t *testing.T) {
 	requireNode(t)
 	glue := fakeGlueModule([][2]string{
 		{"/output/ysm.json", `{"metadata":{}}`},
 	}, `function () { throw {name: 'MyErr', message: 'boom'}; }`)
 	withFakeNode(t, glue, []byte{1})
 
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("callMain 抛错应返回 nil, 得到 %v", got)
 	}
 }
 
-// TestDecodeYSMFiles_NoMarker 假 node 输出不含 FILES_JSON: 标记 → nil。
-func TestDecodeYSMFiles_NoMarker(t *testing.T) {
+// TestDecodeYSMData_NoMarker 假 node 输出不含 FILES_JSON: 标记 → nil。
+func TestDecodeYSMData_NoMarker(t *testing.T) {
 	withFakeNodeCmd(t, "@echo off\r\necho HELLO_NO_MARKER\r\n")
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("无 FILES_JSON 标记应返回 nil, 得到 %v", got)
 	}
 }
 
-// TestDecodeYSMFiles_BadJSON 假 node 输出 FILES_JSON: 后跟非法 JSON → nil。
-func TestDecodeYSMFiles_BadJSON(t *testing.T) {
+// TestDecodeYSMData_BadJSON 假 node 输出 FILES_JSON: 后跟非法 JSON → nil。
+func TestDecodeYSMData_BadJSON(t *testing.T) {
 	withFakeNodeCmd(t, "@echo off\r\necho FILES_JSON:not-json\r\n")
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("非法 JSON 应返回 nil, 得到 %v", got)
 	}
 }
 
-// TestDecodeYSMFiles_ExitError 假 node 退出码 1 + stderr 诊断 → nil。
-func TestDecodeYSMFiles_ExitError(t *testing.T) {
+// TestDecodeYSMData_ExitError 假 node 退出码 1 + stderr 诊断 → nil。
+func TestDecodeYSMData_ExitError(t *testing.T) {
 	withFakeNodeCmd(t, "@echo off\r\necho boom 1>&2\r\nexit /b 1\r\n")
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("子进程失败应返回 nil, 得到 %v", got)
 	}
 }
 
-// TestDecodeYSMFiles_StderrTooLarge 覆盖「解码失败 + stderr 超 8MB」分支（errLimited.exceeded）：
+// TestDecodeYSMData_StderrTooLarge 覆盖「解码失败 + stderr 超 8MB」分支（errLimited.exceeded）：
 // 假胶水在 require 阶段向 stderr 倾倒 >8MB 数据（单次大写入），随后 callMain 抛错退出码 1。
 // 修复前该分支 `buf.String()[:512]` 在 buf<512 时越界 panic；修复后应返回 nil 且不 panic。
-func TestDecodeYSMFiles_StderrTooLarge(t *testing.T) {
+func TestDecodeYSMData_StderrTooLarge(t *testing.T) {
 	requireNode(t)
 	big := strings.Repeat("x", 9<<20)
 	glue := "process.stderr.write(" + strconv.Quote(big) + ");\n" +
 		`module.exports = function () { throw new Error('boom'); };`
 	withFakeNode(t, glue, []byte{1})
 
-	if got := DecodeYSMFiles([]byte("x")); got != nil {
+	if got := DecodeYSMData([]byte("x")); got != nil {
 		t.Fatalf("stderr 超限 + 解码失败应返回 nil, 得到 %v", got)
 	}
 }
@@ -372,36 +362,61 @@ func TestExtractAvatarURI_FromYSM_NotYSMJSON(t *testing.T) {
 	}
 }
 
-// TestModelAuthorNames_FromYSM .ysm 解码产物中提取作者名（含空名过滤）。
-func TestModelAuthorNames_FromYSM(t *testing.T) {
+// TestCacheAvatarsFromModel_YSM_EmptyNamesNoOp 回归（原 TestModelAuthorNames 语义
+// 迁至缓存路径验证）：作者含空名时不得产出 ".png"/"_.png" 垃圾缓存；未声明
+// avatar 字段的作者匹配失败不缓存；声明头像的正常作者照常缓存。
+func TestCacheAvatarsFromModel_YSM_EmptyNamesNoOp(t *testing.T) {
 	requireNode(t)
-	ysmJSON := `{"metadata":{"authors":[{"name":"测试用户"},{"name":"用户B"},{"name":""}]}}`
+	old := CacheDir
+	cacheDir := t.TempDir()
+	CacheDir = func() string { return cacheDir }
+	defer func() { CacheDir = old }()
+
+	ysmJSON := `{"metadata":{"authors":[{"name":"测试用户","avatar":"avatar/face.png"},{"name":"用户B"},{"name":""}]}}`
 	glue := fakeGlueModule([][2]string{
 		{"/output/ysm.json", ysmJSON},
 		{"/output/avatar/face.png", "fake-png-data"},
 	}, "function () {}")
 	withFakeNode(t, glue, []byte{1})
 
-	got := modelAuthorNames(writeYSM(t, "fake-ysm"))
-	if !reflect.DeepEqual(got, []string{"测试用户", "用户B"}) {
-		t.Fatalf(".ysm 作者名解析错误（应过滤空名）, 得到 %v", got)
+	CacheAvatarsFromModel(writeYSM(t, "fake-ysm"))
+	if _, err := os.Stat(filepath.Join(cacheDir, "测试用户.png")); err != nil {
+		t.Fatalf("声明头像的作者应被缓存, 测试用户.png 缺失: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(cacheDir, "用户B.png")); err == nil {
+		t.Fatal("未声明 avatar 字段的作者不得缓存（作者匹配需 avatar 字段）")
+	}
+	ents, _ := os.ReadDir(cacheDir)
+	for _, e := range ents {
+		if e.Name() == ".png" || e.Name() == "_.png" {
+			t.Fatalf("空作者名不应产生缓存文件: %s", e.Name())
+		}
 	}
 }
 
-// TestModelAuthorNames_FromYSM_WrongOrder 回归：文件顺序中 notysm.json 先于 ysm.json
-// 时，后缀误匹配缺陷会把 notysm.json 当元数据（作者名错误）；修复后只认真实 ysm.json。
-func TestModelAuthorNames_FromYSM_WrongOrder(t *testing.T) {
+// TestCacheAvatarsFromModel_YSM_NotYSMJSON 回归（原 TestModelAuthorNames_WrongOrder
+// 语义迁至缓存路径验证）：notysm.json 先于 ysm.json 时不得被当作元数据——
+// 只缓存真实 ysm.json 声明作者的头像，notysm.json 的 用户X 不产出缓存。
+func TestCacheAvatarsFromModel_YSM_NotYSMJSON(t *testing.T) {
 	requireNode(t)
+	old := CacheDir
+	cacheDir := t.TempDir()
+	CacheDir = func() string { return cacheDir }
+	defer func() { CacheDir = old }()
+
 	glue := fakeGlueModule([][2]string{
-		{"/output/notysm.json", `{"metadata":{"authors":[{"name":"用户X"}]}}`},
-		{"/output/ysm.json", `{"metadata":{"authors":[{"name":"测试用户"}]}}`},
+		{"/output/notysm.json", `{"metadata":{"authors":[{"name":"用户X","avatar":"avatar/face.png"}]}}`},
+		{"/output/ysm.json", `{"metadata":{"authors":[{"name":"测试用户","avatar":"avatar/face.png"}]}}`},
 		{"/output/avatar/face.png", "fake-png-data"},
 	}, "function () {}")
 	withFakeNode(t, glue, []byte{1})
 
-	got := modelAuthorNames(writeYSM(t, "fake-ysm"))
-	if !reflect.DeepEqual(got, []string{"测试用户"}) {
-		t.Fatalf("notysm.json 不得作为元数据, 应解析出 [测试用户], 得到 %v", got)
+	CacheAvatarsFromModel(writeYSM(t, "fake-ysm"))
+	if _, err := os.Stat(filepath.Join(cacheDir, "测试用户.png")); err != nil {
+		t.Fatalf("真实 ysm.json 作者应被缓存, 测试用户.png 缺失: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(cacheDir, "用户X.png")); err == nil {
+		t.Fatal("notysm.json 不得作为元数据产生缓存")
 	}
 }
 

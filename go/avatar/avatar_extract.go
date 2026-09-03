@@ -2,14 +2,16 @@
 //
 // 本文件（avatar_extract.go）：头像提取编排——从模型文件（.ysm/.zip/.json）
 // 提取作者头像（ExtractAvatarURI）、批量缓存（CacheAvatarsFromJSON/CacheAvatarsFromModel）、
-// 作者名清单（modelAuthorNames）与模型受限读取（readLimitedModel）。拆分自原 avatar.go
+// 与模型受限读取（readLimitedModel）。拆分自原 avatar.go
 // （ADR-040 文件行数治理）。
 package avatar
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -29,53 +31,40 @@ func extractAvatarFromYSM(modelPath, safeName string) string {
 	ysmData, err := readLimitedModel(modelPath)
 	if err != nil {
 		// 缓存 miss 静默，但真 IO 错误（权限/磁盘）补日志便于排障
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			log.Printf("[avatar] 读取 .ysm 模型失败 %s: %v", modelPath, err)
 		}
 		return ""
 	}
-	files := DecodeYSMFiles(ysmData)
+	files := DecodeYSMData(ysmData)
 	if len(files) == 0 {
 		return ""
 	}
 
 	authors := parseYSMJSONAuthors(files)
 	if len(authors) > 0 {
-		if avatar := matchAvatarByAuthor(files, authors, safeName); avatar != "" {
-			return avatar
-		}
-	} else {
-		// 降级：取 avatar/ 目录第一张
-		if avatar := extractFallbackAvatarFromDir(files, safeName); avatar != "" {
-			return avatar
-		}
+		// 作者声明优先：按 avatar 字段匹配（命中即 SaveAvatarData 落盘）。
+		// 2026-09 外部锐评 #13：旧实现的 :55「无 authors 或匹配失败后再无条件
+		// 二次 match」为纯冗余——authors 为空时该调用恒空（内部遍历空 authors），
+		// authors 非空时与首调完全重复；删除后行为不变。
+		return matchAvatarByAuthor(files, authors, safeName)
 	}
-
-	// 无 authors 或 author 匹配失败时，也尝试按作者名匹配
-	if avatar := matchAvatarByAuthor(files, authors, safeName); avatar != "" {
-		return avatar
-	}
-
-	return ""
-}
-
-// ysmFile DecodeYSMFiles 返回的文件条目（具名别名，便于 helper 传参）。
-type ysmFile = struct {
-	Path string `json:"path"`
-	Data []int  `json:"data"`
+	// 降级：取 avatar/ 目录第一张（仅 authors 为空时可达，与上分支互斥）
+	return extractFallbackAvatarFromDir(files, safeName)
 }
 
 // parseYSMJSONAuthors 从 YSM 文件列表中找 ysm.json 并解析 authors。
-func parseYSMJSONAuthors(files []ysmFile) []authorEntry {
+// 消费 DecodeYSMData 的 []byte 直通形态（2026-09 外部锐评 #2：旧 []int 中间
+// 形态每字节膨胀 8× 且需 toBytes 转回，纯为历史签名买单）。
+func parseYSMJSONAuthors(files []ysmDecodedFile) []authorEntry {
 	for _, f := range files {
 		if isYSMJSONPath(f.Path) {
-			data := toBytes(f.Data)
 			var root struct {
 				Meta struct {
 					Authors []authorEntry `json:"authors"`
 				} `json:"metadata"`
 			}
-			if json.Unmarshal(data, &root) == nil {
+			if json.Unmarshal(f.Data, &root) == nil {
 				return root.Meta.Authors
 			}
 			break
@@ -85,7 +74,7 @@ func parseYSMJSONAuthors(files []ysmFile) []authorEntry {
 }
 
 // extractFallbackAvatarFromDir 降级路径：取 avatar/ 目录第一张图片。
-func extractFallbackAvatarFromDir(files []ysmFile, safeName string) string {
+func extractFallbackAvatarFromDir(files []ysmDecodedFile, safeName string) string {
 	// 扩展名口径与 avatarCandidates 对齐：.png/.jpg/.jpeg 均认（原漏 .jpeg
 	// 使 avatar/face.jpeg 声明的头像在不走作者匹配的降级路径下被跳过）
 	for _, f := range files {
@@ -100,13 +89,13 @@ func extractFallbackAvatarFromDir(files []ysmFile, safeName string) string {
 		if strings.HasSuffix(low, ".jpg") || strings.HasSuffix(low, ".jpeg") {
 			mime = "image/jpeg"
 		}
-		return SaveAvatarData(safeName, toBytes(f.Data), mime)
+		return SaveAvatarData(safeName, f.Data, mime)
 	}
 	return ""
 }
 
 // matchAvatarByAuthor 按作者名匹配 avatar 字段，找到对应图片文件后保存。
-func matchAvatarByAuthor(files []ysmFile, authors []authorEntry, safeName string) string {
+func matchAvatarByAuthor(files []ysmDecodedFile, authors []authorEntry, safeName string) string {
 	for _, f := range files {
 		for _, au := range authors {
 			if SafeName(au.Name) == safeName && au.Avatar != "" {
@@ -127,7 +116,7 @@ func matchAvatarByAuthor(files []ysmFile, authors []authorEntry, safeName string
 					if strings.HasSuffix(fp, ".jpg") || strings.HasSuffix(fp, ".jpeg") {
 						mime = "image/jpeg"
 					}
-					return SaveAvatarData(safeName, toBytes(f.Data), mime)
+					return SaveAvatarData(safeName, f.Data, mime)
 				}
 			}
 		}
@@ -139,7 +128,7 @@ func matchAvatarByAuthor(files []ysmFile, authors []authorEntry, safeName string
 func extractAvatarFromArchive(modelPath, safeName, ext string) string {
 	data, err := readLimitedModel(modelPath)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			log.Printf("[avatar] 读取 %s 模型失败 %s: %v", ext, modelPath, err)
 		}
 		return ""
@@ -167,7 +156,7 @@ func extractAvatarFromJSON(modelPath, safeName string) string {
 	data, err := readLimitedModel(modelPath)
 	if err != nil {
 		// 真 IO 错误补日志（IsNotExist 静默）
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			log.Printf("[avatar] 读取 .json 模型失败 %s: %v", modelPath, err)
 		}
 		return ""
@@ -234,7 +223,7 @@ func CacheAvatarsFromJSON(modelPath string) {
 	data, err := readLimitedModel(modelPath)
 	if err != nil {
 		// 真 IO 错误补日志（IsNotExist 静默）
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			log.Printf("[avatar] CacheAvatarsFromJSON 读取失败 %s: %v", modelPath, err)
 		}
 		return
@@ -297,99 +286,124 @@ func CacheAvatarsFromJSON(modelPath string) {
 // CacheAvatarsFromModel 从 .ysm/.zip/.7z/.json 模型缓存所有作者头像。
 // 覆盖 CacheAvatarsFromJSON 仅处理解压目录（.json）的局限，使创作者视图头像
 // 对压缩包/二进制模型（.ysm/.zip/.7z）同样生效。
+// 单遍实现（2026-09 外部锐评 #1）：旧实现先 modelAuthorNames 全量读/解码一次拿
+// 作者名，再对每个作者各调 ExtractAvatarURI → 各自再整读/再解码（.ysm N 作者 =
+// N+1 次 50MB 级整读 + N+1 次 Node/WASM spawn）。现按格式各只做一次读取/解码/
+// 开容器，复用同一份文件列表在内存内逐作者匹配落盘。
 func CacheAvatarsFromModel(modelPath string) {
 	ext := strings.ToLower(filepath.Ext(modelPath))
 	switch ext {
 	case ".json":
 		CacheAvatarsFromJSON(modelPath)
-	case ".ysm", ".zip", ".7z":
-		names := modelAuthorNames(modelPath)
-		cacheDir := CacheDir()
-		if cacheDir == "" {
-			return // 平台数据根缺失：no-op
-		}
-		// MkdirAll 错误不再忽略（同上方 CacheAvatarsFromModel）
-		if err := os.MkdirAll(cacheDir, fsutil.DirPerms); err != nil {
-			log.Printf("[avatar] 创建缓存目录失败: %v", err)
-			return
-		}
-		for _, name := range names {
-			safe := SafeName(name)
-			cachedPath := filepath.Join(cacheDir, safe+".png")
-			if _, err := os.Stat(cachedPath); err == nil {
-				continue // 已缓存，跳过
-			}
-			// ExtractAvatarURI 命中即写缓存，未命中返回 ""（不影响其他作者）
-			_ = ExtractAvatarURI(modelPath, safe)
-		}
+	case ".ysm":
+		cacheYSMavatars(modelPath)
+	case ".zip", ".7z":
+		cacheContainerAvatars(modelPath, ext)
 	}
 }
 
-// modelAuthorNames 读取模型内 ysm.json 的作者名列表（支持 .ysm/.zip/.7z/.json）。
-func modelAuthorNames(modelPath string) []string {
-	ext := strings.ToLower(filepath.Ext(modelPath))
-	var raw []byte
-	switch ext {
-	case ".json":
-		data, err := readLimitedModel(modelPath)
-		if err != nil {
-			// 真 IO 错误补日志（IsNotExist 静默）
-			if !os.IsNotExist(err) {
-				log.Printf("[avatar] modelAuthorNames 读取 .json 失败 %s: %v", modelPath, err)
-			}
-			return nil
-		}
-		raw = data
-	case ".zip":
-		data, err := readLimitedModel(modelPath)
-		if err != nil {
-			// 真 IO 错误补日志（IsNotExist 静默）
-			if !os.IsNotExist(err) {
-				log.Printf("[avatar] modelAuthorNames 读取 .zip 失败 %s: %v", modelPath, err)
-			}
-			return nil
-		}
-		zr, err := container.OpenZipBytes(data, int64(len(data)))
-		if err != nil {
-			log.Printf("[avatar] modelAuthorNames zip 解析失败 %s: %v", modelPath, err)
-			return nil
-		}
-		defer zr.Close()
-		raw = ReadFileFromContainer(zr, "ysm.json")
-	case ".7z":
-		data, err := readLimitedModel(modelPath)
-		if err != nil {
-			// 真 IO 错误补日志（IsNotExist 静默）
-			if !os.IsNotExist(err) {
-				log.Printf("[avatar] modelAuthorNames 读取 .7z 失败 %s: %v", modelPath, err)
-			}
-			return nil
-		}
-		r, err := container.Open7zBytes(data, int64(len(data)))
-		if err != nil {
-			log.Printf("[avatar] modelAuthorNames 7z 解析失败 %s: %v", modelPath, err)
-			return nil
-		}
-		defer r.Close()
-		raw = ReadFileFromContainer(r, "ysm.json")
-	case ".ysm":
-		data, err := readLimitedModel(modelPath)
-		if err != nil {
-			// 真 IO 错误补日志（IsNotExist 静默）
-			if !os.IsNotExist(err) {
-				log.Printf("[avatar] modelAuthorNames 读取 %s 失败 %s: %v", ext, modelPath, err)
-			}
-			return nil
-		}
-		files := DecodeYSMFiles(data)
-		for _, f := range files {
-			if isYSMJSONPath(f.Path) {
-				raw = toBytes(f.Data)
-				break
-			}
-		}
+// avatarCacheDir 平台数据根校验 + 缓存目录创建（缓存路径共享 guard）。
+// 返回 false 表示 no-op（数据根缺失 / 创建失败，均已留日志）。
+func avatarCacheDir() (string, bool) {
+	cacheDir := CacheDir()
+	if cacheDir == "" {
+		return "", false // 平台数据根缺失：no-op
 	}
-	if raw == nil {
+	if err := os.MkdirAll(cacheDir, fsutil.DirPerms); err != nil {
+		log.Printf("[avatar] 创建缓存目录失败: %v", err)
+		return "", false
+	}
+	return cacheDir, true
+}
+
+// avatarCached 该作者头像是否已落盘缓存。
+func avatarCached(cacheDir, safe string) bool {
+	_, err := os.Stat(filepath.Join(cacheDir, safe+".png"))
+	return err == nil
+}
+
+// cacheYSMavatars .ysm 单遍缓存：一次受限整读 + 一次 WASM 解码，遍历作者落盘。
+// 语义与旧实现（modelAuthorNames → 每作者 ExtractAvatarURI）等价：authors 非空时
+// 仅缓存「声明 avatar 且解码产物中可解析到文件」的作者头像（.ysm 分支无
+// avatar/ 目录降级——authors 为空时旧实现本就无作者名可遍历，不会缓存任何内容）。
+func cacheYSMavatars(modelPath string) {
+	cacheDir, ok := avatarCacheDir()
+	if !ok {
+		return
+	}
+	data, err := readLimitedModel(modelPath)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			log.Printf("[avatar] 读取 .ysm 模型失败 %s: %v", modelPath, err)
+		}
+		return
+	}
+	files := DecodeYSMData(data)
+	if len(files) == 0 {
+		return
+	}
+	authors := parseYSMJSONAuthors(files)
+	if len(authors) == 0 {
+		return // 无 ysm.json/无 authors：与旧实现空作者名列表等价，无缓存动作
+	}
+	for _, au := range authors {
+		if au.Name == "" {
+			continue
+		}
+		safe := SafeName(au.Name)
+		if avatarCached(cacheDir, safe) {
+			continue // 已缓存，跳过
+		}
+		// 命中即写缓存，未命中返回 ""（不影响其他作者）——匹配逻辑与
+		// extractAvatarFromYSM 单作者路径共用，不重复解码
+		_ = matchAvatarByAuthor(files, authors, safe)
+	}
+}
+
+// cacheContainerAvatars .zip/.7z 单遍缓存：一次受限整读 + 一次开容器，逐作者复用
+// 已打开的容器提取（不再每作者重开容器/重读文件）。
+// 语义与旧实现等价：作者声明 avatar 可解析则缓存之；否则降级取容器内 avatar/
+// 目录第一张图（extractAvatarFromContainer 同口径——容器分支的降级在 authors
+// 非空且该作者匹配失败时同样生效，与 .ysm 分支行为不同，这里保持一致）。
+func cacheContainerAvatars(modelPath, ext string) {
+	cacheDir, ok := avatarCacheDir()
+	if !ok {
+		return
+	}
+	data, err := readLimitedModel(modelPath)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			log.Printf("[avatar] 读取 %s 模型失败 %s: %v", ext, modelPath, err)
+		}
+		return
+	}
+	var r container.Reader
+	switch ext {
+	case ".zip":
+		r, err = container.OpenZipBytes(data, int64(len(data)))
+	case ".7z":
+		r, err = container.Open7zBytes(data, int64(len(data)))
+	}
+	if err != nil {
+		log.Printf("[avatar] %s 解析失败 %s: %v", ext, modelPath, err)
+		return
+	}
+	defer r.Close()
+
+	for _, name := range containerAuthorNames(r) {
+		safe := SafeName(name)
+		if avatarCached(cacheDir, safe) {
+			continue // 已缓存，跳过
+		}
+		// 单作者容器提取（作者匹配 → 降级首图，内部 SaveAvatarData 落盘）
+		_ = extractAvatarFromContainer(r, safe)
+	}
+}
+
+// containerAuthorNames 从已打开容器读 ysm.json 的作者名（空名过滤）。
+func containerAuthorNames(r container.Reader) []string {
+	ysmData := ReadFileFromContainer(r, "ysm.json")
+	if ysmData == nil {
 		return nil
 	}
 	var root struct {
@@ -399,8 +413,8 @@ func modelAuthorNames(modelPath string) []string {
 			} `json:"authors"`
 		} `json:"metadata"`
 	}
-	if json.Unmarshal(raw, &root) != nil {
-		log.Printf("[avatar] modelAuthorNames 解析 ysm.json 失败 %s", modelPath)
+	if json.Unmarshal(ysmData, &root) != nil {
+		log.Printf("[avatar] 容器 ysm.json 作者解析失败")
 		return nil
 	}
 	names := make([]string, 0, len(root.Meta.Authors))

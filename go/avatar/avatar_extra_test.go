@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"ysm-model-manager/go/container"
 )
 
 func TestReadFileFromZip_NoMatch(t *testing.T) {
@@ -633,88 +635,47 @@ func TestCacheAvatarsFromModel_ZipAlreadyCached(t *testing.T) {
 	}
 }
 
-// ===== modelAuthorNames 补测 =====
+// ===== containerAuthorNames 补测 =====
+// 2026-09 外部锐评 #1 重构：modelAuthorNames 退役（其 .json 分支在生产路径本就
+// 死代码——CacheAvatarsFromModel 对 .json 直接路由 CacheAvatarsFromJSON，作者名
+// 过滤由后者覆盖）；容器作者名解析收敛至 containerAuthorNames(Reader)。
+// 坏 zip / 缺失文件 / 未知扩展名等打开期失败由 cacheContainerAvatars 提前拦截
+// 返回（CacheAvatarsFromModel 路由测试已覆盖 missing.* 确定性 no-op）。
 
-func TestModelAuthorNames(t *testing.T) {
-	dir := t.TempDir()
-
-	// .json 正常 + 空名过滤
-	okPath := filepath.Join(dir, "ok.json")
-	if err := os.WriteFile(okPath, []byte(`{"metadata":{"authors":[{"name":"A"},{"name":"B"},{"name":""}]}}`), 0644); err != nil {
+func TestContainerAuthorNames(t *testing.T) {
+	// 正常 + 空名过滤
+	data := makeZip(t, map[string]string{
+		"ysm.json": `{"metadata":{"authors":[{"name":"用户A"},{"name":"用户B"},{"name":""}]}}`,
+	})
+	r, err := container.OpenZipBytes(data, int64(len(data)))
+	if err != nil {
 		t.Fatal(err)
 	}
-	if got := modelAuthorNames(okPath); !reflect.DeepEqual(got, []string{"A", "B"}) {
-		t.Errorf(".json 作者名应过滤空名, 得到 %v", got)
+	defer r.Close()
+	if got := containerAuthorNames(r); !reflect.DeepEqual(got, []string{"用户A", "用户B"}) {
+		t.Errorf("容器作者名应过滤空名, 得到 %v", got)
 	}
 
-	// .json 坏 JSON → nil
-	badPath := filepath.Join(dir, "bad.json")
-	if err := os.WriteFile(badPath, []byte("not-json"), 0644); err != nil {
+	// 无 ysm.json → nil
+	data2 := makeZip(t, map[string]string{"readme.txt": "x"})
+	r2, err := container.OpenZipBytes(data2, int64(len(data2)))
+	if err != nil {
 		t.Fatal(err)
 	}
-	if got := modelAuthorNames(badPath); got != nil {
+	defer r2.Close()
+	if got := containerAuthorNames(r2); got != nil {
+		t.Errorf("无 ysm.json 应返回 nil, 得到 %v", got)
+	}
+
+	// 坏 JSON → nil
+	data3 := makeZip(t, map[string]string{"ysm.json": "not-json"})
+	r3, err := container.OpenZipBytes(data3, int64(len(data3)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r3.Close()
+	if got := containerAuthorNames(r3); got != nil {
 		t.Errorf("坏 JSON 应返回 nil, 得到 %v", got)
-	}
-
-	// .json 不存在 → nil
-	if got := modelAuthorNames(filepath.Join(dir, "missing.json")); got != nil {
-		t.Errorf("不存在的 .json 应返回 nil, 得到 %v", got)
-	}
-
-	// .json 目录占位（非 IsNotExist 读错误）→ nil
-	dirAsFile := filepath.Join(dir, "dir.json")
-	if err := os.MkdirAll(dirAsFile, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if got := modelAuthorNames(dirAsFile); got != nil {
-		t.Errorf("目录占位 .json 应返回 nil, 得到 %v", got)
-	}
-
-	// .zip 正常
-	okZip := filepath.Join(dir, "ok.zip")
-	zipData := makeZip(t, map[string]string{"ysm.json": `{"metadata":{"authors":[{"name":"用户A"},{"name":"用户B"}]}}`})
-	if err := os.WriteFile(okZip, zipData, 0644); err != nil {
-		t.Fatal(err)
-	}
-	if got := modelAuthorNames(okZip); !reflect.DeepEqual(got, []string{"用户A", "用户B"}) {
-		t.Errorf(".zip 作者名解析错误, 得到 %v", got)
-	}
-
-	// .zip 无 ysm.json → nil
-	noMetaZip := filepath.Join(dir, "nometa.zip")
-	if err := os.WriteFile(noMetaZip, makeZip(t, map[string]string{"readme.txt": "x"}), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if got := modelAuthorNames(noMetaZip); got != nil {
-		t.Errorf("无 ysm.json 的 zip 应返回 nil, 得到 %v", got)
-	}
-
-	// .zip 坏文件 → nil
-	badZip := filepath.Join(dir, "bad.zip")
-	if err := os.WriteFile(badZip, []byte("notzip"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if got := modelAuthorNames(badZip); got != nil {
-		t.Errorf("坏 zip 应返回 nil, 得到 %v", got)
-	}
-
-	// .zip 不存在 → nil
-	if got := modelAuthorNames(filepath.Join(dir, "missing.zip")); got != nil {
-		t.Errorf("不存在的 .zip 应返回 nil, 得到 %v", got)
-	}
-
-	// .ysm 不存在 → nil
-	if got := modelAuthorNames(filepath.Join(dir, "missing.ysm")); got != nil {
-		t.Errorf("不存在的 .ysm 应返回 nil, 得到 %v", got)
-	}
-
-	// 未知扩展名 → nil
-	txtPath := filepath.Join(dir, "m.txt")
-	if err := os.WriteFile(txtPath, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if got := modelAuthorNames(txtPath); got != nil {
-		t.Errorf("未知扩展名应返回 nil, 得到 %v", got)
 	}
 }
 

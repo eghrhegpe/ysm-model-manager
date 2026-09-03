@@ -2,7 +2,10 @@
 //
 // 本文件（avatar_decode.go）：Node.js + WASM 解码桥——SetNodeJS 注入 Node/WASM 资源、
 // DecodeYSMData 统一解码实现（ADR-164：收敛 internal/app wasm_decoder.go 逐字复刻双胞胎，
-// 全仓唯一副本）、DecodeYSMFiles 兼容薄封装、limitedBuffer 输出护栏与 toBytes 字节转换。
+// 全仓唯一副本）、limitedBuffer 输出护栏与 toBytes 字节转换。
+// 2026-09 外部锐评 #2：旧 DecodeYSMFiles/toInts 的 []int 中间形态（每字节膨胀 8×）
+// 已随消费方迁移 []byte 直通形态退役，仅保留 DecodeYSMData + toBytes（Node JSON 数组
+// 解码内部转换仍需要）。
 // 拆分自原 avatar.go（ADR-040 文件行数治理）。
 package avatar
 
@@ -53,7 +56,7 @@ func SetNodeJS(nodePath string, glueFn func() string, wasmFn func() []byte) {
 	env.mu.Unlock()
 }
 
-// getEnv 读取当前注入环境（线程安全快照，DecodeYSMFiles 一次性取用）。
+// getEnv 读取当前注入环境（线程安全快照，DecodeYSMData 一次性取用）。
 func getEnv() (string, func() string, func() []byte) {
 	env.mu.Lock()
 	defer env.mu.Unlock()
@@ -206,29 +209,10 @@ main().catch(e=>{console.error(e);process.exit(1)});
 	return files
 }
 
-// DecodeYSMFiles 兼容薄封装（ADR-164）：调统一实现 DecodeYSMData 后转 []int——
-// 历史签名返回 JSON 数组形态（前端绑定面遗留），avatar_extract.go:37/384 两处消费方
-// 依赖此形态，保持不变；新代码应直接用 DecodeYSMData 的 []byte 直通形态。
-func DecodeYSMFiles(ysmData []byte) []struct {
-	Path string `json:"path"`
-	Data []int  `json:"data"`
-} {
-	files := DecodeYSMData(ysmData)
-	if len(files) == 0 {
-		return nil
-	}
-	out := make([]struct {
-		Path string `json:"path"`
-		Data []int  `json:"data"`
-	}, len(files))
-	for i, f := range files {
-		out[i] = struct {
-			Path string `json:"path"`
-			Data []int  `json:"data"`
-		}{Path: f.Path, Data: toInts(f.Data)}
-	}
-	return out
-}
+// DecodeYSMData 的 []byte 直通形态是唯一内部形态（ADR-164 注释原话：
+// 「新代码应直接用 DecodeYSMData」）。旧 []int 形态包装 DecodeYSMFiles 与
+// toInts 已于 2026-09 外部锐评 #2 落地时退役（消费方 avatar_extract.go 全部
+// 迁直通形态，无 []byte → []int → []byte 双重全量拷贝与 8× 内存膨胀）。
 
 func toBytes(data []int) []byte {
 	b := make([]byte, len(data))
@@ -236,14 +220,4 @@ func toBytes(data []int) []byte {
 		b[i] = byte(v)
 	}
 	return b
-}
-
-// toInts 兼容薄封装的 []byte → []int 转换（DecodeYSMFiles 历史 []int 形态）。
-// []byte 是内部统一形态（DecodeYSMData），仅老签名出口需要转回。
-func toInts(data []byte) []int {
-	out := make([]int, len(data))
-	for i, v := range data {
-		out[i] = int(v)
-	}
-	return out
 }

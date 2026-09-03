@@ -82,7 +82,8 @@ function spyEvents() {
   const toasts: Array<{ msg: string; type: string }> = [];
   // P1 修复（code_review）：doneEvents 元素类型补 skipped——原 { token?: string }
   // 缺该字段，新断言 d.skipped 在 tsc --noEmit（strict）下 TS2339 报错
-  const doneEvents: Array<{ token?: string; skipped?: boolean }> = [];
+  // exactOptional：token 从总线载荷解构可 undefined，与 bus.ts 事件类型对齐
+  const doneEvents: Array<{ token?: string | undefined; skipped?: boolean }> = [];
   const refreshEvents: string[] = [];
   const reloadEvents: string[] = [];
   cleanups.push(

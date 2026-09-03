@@ -94,7 +94,7 @@ export interface BusEvents {
   "repo:search-creator": string;
   "sync:toggle:status": void;
   "sync:download:missing": { instanceName?: string; rtype: string; token?: string };
-  "sync:download:done": { token?: string; instanceName?: string; skipped?: boolean; skipReason?: "busy" | "config" | "error" };
+  "sync:download:done": { token?: string | undefined; instanceName?: string | undefined; skipped?: boolean; skipReason?: "busy" | "config" | "error" | undefined };
   // 实例 / 导入
   // rtype 必填（P0 修复后收紧契约）：消费方（instance-ops）已有 !rtype 显式失败
   // 守卫，发射点编译期强制提供非空 rtype，堵漏「漏传 → 导出/清空全部类型」回归。

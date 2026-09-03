@@ -19,6 +19,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
+    "exactOptionalPropertyTypes": true,
     "useDefineForClassFields": true,
     "allowImportingTsExtensions": true,
     "types": ["vite/client"],

@@ -43,6 +43,7 @@ auto_fields:
     - Disposable
     - fillRoles
     - fmtMB
+    - frRoleRowStyle
     - get
     - getDedupConfig
     - getFrameIntervalMs
@@ -206,7 +207,11 @@ quick_risk_lines:
 - 样式一律走主题 token；硬编码品牌色（#7c83ff / rgba(124,131,255)）是待收编存量。
 - 页面切换常驻 + active 切换，禁止整 DOM 重建。
 - 帧循环内 prealloc 复用，禁止 new 对象分配（perception 需对齐 R1-P1-1）。
-- 动刀进度以本卡修订为准（ADR 只记决策不记进度）；三刀排序：① perception 帧内 prealloc（零风险，立即帧率收益）→ ② accent 收编 var(--accent)（低风险，主题复活）→ ③ _render → tab-panel 常驻（中高风险，架构级，需 ADR 前置）。
+## 动刀进度（实施记录，2026-09-03 起）
+
+- ✅ **刀① perception 帧内 prealloc**：`perception/gaze.ts`、`perception/autodance.ts` 闭包级 scratch（Quaternion/Euler/Vector3 复用），每帧 0 分配；EYE_IDS / 左右臂 Set 提常量。45 感知测试全绿。
+- ✅ **刀② accent 收编 var(--accent)**：8 文件 15 处 `rgba(124,131,255)` → `color-mix(in srgb,var(--accent) X%,transparent)`；`#7c83ff` → `var(--accent)`；canvas 2D（model2d-draw.ts）加 `accentRgba()` 运行时解析（fillStyle 不解析 CSS 变量）；`variables.css --mmd-morph-active-bg` 改派生。roles/switch/vrm-bone-ui 样式串提纯函数（happy-dom 不认 color-mix()，测试直断字符串）。全量 5171 测试 + typecheck + vite build 全绿。
+- ⏳ **刀③ _render → tab-panel 常驻**：ADR-163 已立项（`docs/adr/ADR-163-content-page-tab-panel-persistent.md`），待实施。
 
 ## 相关
 

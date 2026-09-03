@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { CORE_MENU_ITEMS } from "./defs.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import { mountPreviewRootMenu, roleBaseName, type PreviewMenuCtx } from "./core.ts";
+import { frRoleRowStyle } from "./roles.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
 import type { PreviewScene } from "../adapters/mount-preview-core.ts";
 import { registerSchema, unregisterSchema } from "../adapters/schema-registry.ts";
@@ -65,8 +66,11 @@ describe("角色面板（roles）", () => {
     expect(bRow).not.toBeNull();
     expect((aRow!.querySelector('[data-testid="preview-role-focus"]') as HTMLElement).textContent).toBe("○");
     expect((bRow!.querySelector('[data-testid="preview-role-focus"]') as HTMLElement).textContent).toBe("●");
-    // jsdom 会把 style.cssText 规范化（rgba 内加空格），断言前缀即可
-    expect(bRow!.getAttribute("style")).toContain("rgba(124");
+    // 行高亮走主题 token 派生（刀②收编：原断言 rgba(124...) 硬编码紫）。
+    // 断言走纯函数 frRoleRowStyle——happy-dom 的 CSS 解析器不认 color-mix()，
+    // cssText 里该声明被丢弃，DOM 级断言读回 transparent 与真实浏览器（WebView2）不一致。
+    expect(frRoleRowStyle(true)).toContain("var(--accent)");
+    expect(frRoleRowStyle(false)).not.toContain("background");
     handle.dispose();
   });
 

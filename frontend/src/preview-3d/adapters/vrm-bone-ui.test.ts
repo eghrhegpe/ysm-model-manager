@@ -3,7 +3,7 @@
 // 拾取联动（click viewContainer → pickBone → 高亮 + 详情）。用 fake VRM + DOM。
 import { describe, it, expect, vi } from "vitest";
 import * as THREE from "three";
-import { makeBonePanelRenderer } from "./vrm-bone-ui.ts";
+import { boneRowActiveBg, makeBonePanelRenderer } from "./vrm-bone-ui.ts";
 import { buildVrmBoneTree } from "./vrm-bone.ts";
 import type { VRM } from "@pixiv/three-vrm";
 
@@ -87,9 +87,11 @@ describe("makeBonePanelRenderer", () => {
     try {
       const spineRow = panel.querySelector<HTMLElement>("div[data-bone-id='spine']")!;
       spineRow.click();
-      // 高亮：renderList 重建行后，新 spine 行 style.background 含 rgba
+      // 高亮：renderList 重建行后，新 spine 行激活（背景走 --accent 派生——刀②收编；
+      // happy-dom 不认 color-mix() 会丢 DOM background，断言走纯函数 + data-active 钩子）
       const spineRowAfter = panel.querySelector<HTMLElement>("div[data-bone-id='spine']")!;
-      expect(spineRowAfter.style.background).toContain("rgba");
+      expect(boneRowActiveBg()).toContain("var(--accent)");
+      expect(spineRowAfter.dataset.active).toBe("1");
       // 详情块：插在选中行下方（.bone-detail-inline），含路径/父/子
       const detail = panel.querySelector<HTMLElement>(".bone-detail-inline")!;
       expect(detail).toBeTruthy();
@@ -122,9 +124,10 @@ describe("makeBonePanelRenderer", () => {
       ]);
       viewContainer.dispatchEvent(new MouseEvent("click"));
       spy.mockRestore();
-      // 高亮 head 行
+      // 高亮 head 行（--accent 派生 + data-active 钩子，刀②收编）
       const headRow = panel.querySelector<HTMLElement>("div[data-bone-id='head']")!;
-      expect(headRow.style.background).toContain("rgba");
+      expect(boneRowActiveBg()).toContain("var(--accent)");
+      expect(headRow.dataset.active).toBe("1");
     } finally {
       done();
       cleanup();

@@ -70,8 +70,8 @@ export async function showVrmMeta(
       // 与 YSM 模型面板的 Go AnalyzeBedrockModel 口径区分，避免双口径困惑——审核建议 ②）
       const s = meta.stats;
       const statsRow = s && (s.meshCount > 0 || s.boneCount > 0)
-        ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(124,131,255,0.08);font-size:var(--fs-xs);color:var(--muted)">
-            <span style="color:#7c83ff">📊 ${t("preview.stats.panel")}</span>
+        ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
+            <span style="color:var(--accent)">📊 ${t("preview.stats.panel")}</span>
             <span>🦴 ${t("preview.stats.bones")}: <b>${s.boneCount}</b></span>
             <span>🧩 ${t("preview.stats.meshes")}: <b>${s.meshCount}</b></span>
             <span>🔺 ${t("preview.stats.triangles")}: <b>${s.triangleCount.toLocaleString()}</b></span>
@@ -152,8 +152,8 @@ export async function showMmdPreview(
         const host = ctx.root.querySelector<HTMLElement>("#mmd-stats-row");
         if (!host) return;
         // 口径标注（审核建议 ②）：PMX 文件解析 vs 3D 渲染实测 vs YSM Go 口径三方区分
-        host.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(124,131,255,0.08);font-size:var(--fs-xs);color:var(--muted)">
-          <span style="color:#7c83ff">📊 ${t("preview.stats.file")}</span>
+        host.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
+          <span style="color:var(--accent)">📊 ${t("preview.stats.file")}</span>
           <span>🔺 ${t("preview.stats.vertices")}: <b>${stats.vertices.toLocaleString()}</b></span>
           <span>◻️ ${t("preview.stats.faces")}: <b>${stats.faces.toLocaleString()}</b></span>
           <span>🦴 ${t("preview.stats.bones")}: <b>${stats.bones}</b></span>
@@ -207,10 +207,10 @@ export async function showScenePreview(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center">
-      <span style="background:rgba(124,131,255,0.2);color:#7c83ff;padding:1px 6px;border-radius:4px;font-weight:500">SceneModel</span>
+      <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:4px;font-weight:500">SceneModel</span>
       <span>${t("preview.sceneModelLabel")}</span>
     </div>
-    <button class="preview-fab" id="btn-scene-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}" style="background:linear-gradient(135deg,#7c83ff 0%,#4a55d6 100%)"><span class="preview-ic">🏗️</span></button>
+    <button class="preview-fab" id="btn-scene-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}" style="background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 65%,#000) 100%)"><span class="preview-ic">🏗️</span></button>
   </div>
 </div>`;
   const fab = ctx.root.querySelector<HTMLElement>("#btn-scene-3d");

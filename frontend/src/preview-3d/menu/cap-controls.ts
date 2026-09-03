@@ -417,7 +417,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
     const isActive = opt.value === activeVal;
     if (isActive) {
       btn.style.borderColor = "var(--accent,#7c83ff)";
-      btn.style.background = "rgba(124,131,255,0.15)";
+      btn.style.background = "color-mix(in srgb,var(--accent) 15%,transparent)";
     }
     const img = document.createElement("img");
     const dataUrl = opt.getThumb();

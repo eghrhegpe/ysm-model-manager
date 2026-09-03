@@ -206,6 +206,17 @@ function frRenderRoles(
   }
 }
 
+/**
+ * 角色行 cssText（刀②收编：激活高亮从硬编码 rgba(124,131,255) 改为 --accent 派生）。
+ * 纯函数便于测试直断字符串——happy-dom 的 CSS 解析器不认 color-mix()，DOM 级断言会丢声明。
+ */
+export function frRoleRowStyle(isActive: boolean): string {
+  return (
+    "display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px" +
+    (isActive ? ";background:color-mix(in srgb,var(--accent) 25%,transparent)" : "")
+  );
+}
+
 function frBuildRoleRow(
   e: ModelEntry,
   isActive: boolean,
@@ -217,9 +228,7 @@ function frBuildRoleRow(
   const row = document.createElement("div");
   row.dataset.testid = "preview-role-row";
   row.dataset.roleId = e.id;
-  row.style.cssText =
-    "display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px" +
-    (isActive ? ";background:rgba(124,131,255,0.25)" : "");
+  row.style.cssText = frRoleRowStyle(isActive);
   const radio = frBuildFocusRadio(e, isActive, deps.setAdapterItems, reRender);
   const name = frBuildRoleName(e);
   row.onclick = (): void => {
@@ -242,7 +251,7 @@ function frBuildFocusRadio(
   attachTooltip(radio, () => tr("preview.roleFocus", "设为焦点"));
   radio.style.cssText =
     "width:18px;height:18px;flex-shrink:0;background:transparent;border:none;cursor:pointer;font-size:14px;line-height:1" +
-    (isActive ? ";color:#7c83ff" : ";color:rgba(255,255,255,0.5)");
+    (isActive ? ";color:var(--accent)" : ";color:rgba(255,255,255,0.5)");
   radio.onclick = (ev): void => {
     ev.stopPropagation();
     sceneRegistry.setActive(e.id);
@@ -376,7 +385,7 @@ function renderComponentsSection(
     row.dataset.componentPath = p;
     row.style.cssText =
       "display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px" +
-      (isCur ? ";background:rgba(124,131,255,0.25)" : "");
+      (isCur ? ";background:color-mix(in srgb,var(--accent) 25%,transparent)" : "");
     const mark = document.createElement("span");
     mark.style.cssText = "width:14px;flex-shrink:0;text-align:center";
     mark.textContent = isCur ? "✓" : "🧩";

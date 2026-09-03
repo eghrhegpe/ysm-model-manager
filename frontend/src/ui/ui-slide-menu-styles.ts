@@ -101,7 +101,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
 }
 
 .slide-back:active {
-  background: rgba(124, 131, 255, 0.3);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .slide-title {
@@ -143,7 +143,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   background: rgba(255, 255, 255, 0.08);
 }
 .menu-wrapper.slide-menu .slide-item:active {
-  background: rgba(124, 131, 255, 0.28);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 .menu-wrapper.slide-menu .collapsible-header {
   border-color: var(--uih-slide-divider);

@@ -66,6 +66,10 @@ const DANCE_BONES: Array<{ id: SemanticBoneId; xAmp: number; yAmp: number; zAmp:
   { id: "rightLowerArm", xAmp: 0, yAmp: 0, zAmp: 0, rxAmp: 0.1, ryAmp: 0, rzAmp: -0.05 },
 ];
 
+/** 左右臂骨骼集合（帧循环半拍错位判定用，避免每帧重复字符串比较） */
+const LEFT_ARM_IDS = new Set<SemanticBoneId>(["leftUpperArm", "leftLowerArm", "leftShoulder"]);
+const RIGHT_ARM_IDS = new Set<SemanticBoneId>(["rightUpperArm", "rightLowerArm", "rightShoulder"]);
+
 export function createAutoDanceController(opts: AutoDanceOptions = {}) {
   const bpm = opts.bpm ?? DEFAULT_BPM;
   const intensity = opts.intensity ?? DEFAULT_INTENSITY;
@@ -79,6 +83,12 @@ export function createAutoDanceController(opts: AutoDanceOptions = {}) {
   let disposed = false;
   // 内部计时（无外部 detector 时使用）
   let internalTime = 0;
+
+  // 帧内 scratch 对象（闭包级预分配，对齐 R1-P1-1：每帧零分配）。
+  // 闭包级而非模块级：多模型同框时各 controller 实例互不污染。
+  const _targetRot = new THREE.Quaternion();
+  const _offset = new THREE.Quaternion();
+  const _euler = new THREE.Euler(0, 0, 0, "XYZ");
 
   function warmup(map: SemanticBoneMap): void {
     if (state) return;
@@ -131,11 +141,7 @@ export function createAutoDanceController(opts: AutoDanceOptions = {}) {
       if (!entry?.object || !snap) continue;
 
       // 左右臂半拍错位（打破对称）
-      const armOffset = (id === "leftUpperArm" || id === "leftLowerArm" || id === "leftShoulder")
-        ? 0
-        : (id === "rightUpperArm" || id === "rightLowerArm" || id === "rightShoulder")
-          ? 0.5
-          : 0;
+      const armOffset = LEFT_ARM_IDS.has(id) ? 0 : RIGHT_ARM_IDS.has(id) ? 0.5 : 0;
 
       // 主律动：正弦摇摆
       const main = Math.sin(beatPhase * Math.PI * 2 + armOffset * Math.PI);
@@ -144,13 +150,12 @@ export function createAutoDanceController(opts: AutoDanceOptions = {}) {
       const combined = (main + micro) * effectiveIntensity;
 
       // 应用旋转（在 resting 基础上叠加）
-      const targetRot = new THREE.Quaternion()
-        .setFromEuler(new THREE.Euler(
-          rxAmp ? combined * rxAmp : 0,
-          ryAmp ? combined * ryAmp : 0,
-          rzAmp ? combined * rzAmp : 0,
-          "XYZ",
-        ));
+      _targetRot.setFromEuler(_euler.set(
+        rxAmp ? combined * rxAmp : 0,
+        ryAmp ? combined * ryAmp : 0,
+        rzAmp ? combined * rzAmp : 0,
+        "XYZ",
+      ));
 
       // 平滑 slerp 到目标
       const restQuat = snap.rot;
@@ -158,9 +163,9 @@ export function createAutoDanceController(opts: AutoDanceOptions = {}) {
       // 原 targetRot.multiply(restQuat) = dance*rest——摇摆作用于父空间轴，
       // 静止姿态非恒等时骨骼局部轴被带偏（实测局部Y混入X分量、夹角差 21°）。
       // 正确 rest*dance：先摇摆（局部轴）再叠静止姿态；restQuat 是 warmup 快照，
-      // 不能就地改 → clone。
-      const offset = restQuat.clone().multiply(targetRot);
-      entry.object.quaternion.slerp(offset, 0.15);
+      // 不能就地改 → 写入 scratch _offset（slerp 目标参数只读，复用安全）。
+      _offset.copy(restQuat).multiply(_targetRot);
+      entry.object.quaternion.slerp(_offset, 0.15);
 
       // 应用平移（仅 hips/spine 有 X 位移）
       if (xAmp || yAmp || zAmp) {

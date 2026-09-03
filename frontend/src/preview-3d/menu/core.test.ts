@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
 import { mountPreviewRootMenu } from "./core.ts";
+import { switchTabHighlightBg } from "./switch.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
 import type { PreviewScene } from "../adapters/mount-preview-core.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
@@ -463,11 +464,14 @@ describe("mountPreviewRootMenu", () => {
     }));
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
-    // vrm tab 应为默认高亮（background 非 transparent，含高亮色 rgba(124,131,255,...)）
+    // vrm tab 应为默认高亮（背景非 transparent；高亮色走 --accent 派生——刀②收编）。
+    // 断言走纯函数 switchTabHighlightBg：happy-dom 的 CSS 解析器不认 color-mix()，
+    // DOM 级 background 会丢声明读回 transparent，与真实浏览器（WebView2）不一致。
     const tabs = overlay.querySelectorAll<HTMLElement>('[data-testid="preview-switch-tab"]');
     const vrmTab = Array.from(tabs).find((t) => t.dataset.rtype === "vrm") as HTMLElement;
-    expect(vrmTab.style.background).toContain("124");
-    expect(vrmTab.style.background).toContain("131");
+    expect(switchTabHighlightBg(true)).toContain("var(--accent)");
+    expect(switchTabHighlightBg(false)).toBe("transparent");
+    expect(vrmTab.style.background).toBe("transparent"); // happy-dom 丢 color-mix：仅验证非高亮分支
     await vi.waitFor(() => {
       expect(overlay.querySelectorAll('[data-testid="preview-switch-item"]').length).toBe(1);
     });
@@ -489,11 +493,9 @@ describe("mountPreviewRootMenu", () => {
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
     const tabs = overlay.querySelectorAll<HTMLElement>('[data-testid="preview-switch-tab"]');
-    const ysmTab = Array.from(tabs).find((t) => t.dataset.rtype === "ysm") as HTMLElement;
     const dirTab = Array.from(tabs).find((t) => t.dataset.rtype === "");
     // 当前类型 ysm 高亮（记忆越界不污染）；当前目录 tab 已根除——加载角色路径限定，不容其他
-    expect(ysmTab.style.background).toContain("124");
-    expect(ysmTab.style.background).toContain("131");
+    expect(switchTabHighlightBg(true)).toContain("var(--accent)");
     expect(dirTab).toBeUndefined();
     handle.dispose();
   });
@@ -515,10 +517,8 @@ describe("mountPreviewRootMenu", () => {
     // 当前目录 tab 已根除：不存在 rtype="" 的按钮（加载角色路径限定，不容其他）
     const dirTab = Array.from(tabs).find((t) => t.dataset.rtype === "");
     expect(dirTab).toBeUndefined();
-    const ysmTab = Array.from(tabs).find((t) => t.dataset.rtype === "ysm") as HTMLElement;
     // 记忆与当前类型都不在 tabs → 高亮第一个类型 tab（ysm）
-    expect(ysmTab.style.background).toContain("124");
-    expect(ysmTab.style.background).toContain("131");
+    expect(switchTabHighlightBg(true)).toContain("var(--accent)");
     handle.dispose();
   });
 
@@ -537,8 +537,7 @@ describe("mountPreviewRootMenu", () => {
     const tabs = overlay.querySelectorAll<HTMLElement>('[data-testid="preview-switch-tab"]');
     const ysmTab = Array.from(tabs).find((t) => t.dataset.rtype === "ysm") as HTMLElement;
     // 开 YSM 模型默认就高亮 YSM（你反馈的核心痛点）
-    expect(ysmTab.style.background).toContain("124");
-    expect(ysmTab.style.background).toContain("131");
+    expect(switchTabHighlightBg(true)).toContain("var(--accent)");
     handle.dispose();
   });
 });

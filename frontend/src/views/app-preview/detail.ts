@@ -204,7 +204,7 @@ async function renderPackModelList(
   <div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.modelList", { n: total })}</div>
   ${models.map((m) => {
     const name = m.path.split("/").pop() || m.path;
-    return `<div class="pack-model-item" data-entry="${esc(m.path)}" style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer;border-left:3px solid rgba(124,131,255,0.5)">
+    return `<div class="pack-model-item" data-entry="${esc(m.path)}" style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer;border-left:3px solid color-mix(in srgb,var(--accent) 50%,transparent)">
       <span>🧊</span>
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</span>
       <span style="color:var(--muted);font-size:10px;margin-left:auto;flex-shrink:0">${t("preview.modelCubes", { cubes: m.cubes })}</span>

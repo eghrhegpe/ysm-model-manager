@@ -37,6 +37,14 @@ export type RenderVrmBonePanel = (panel: HTMLElement, ctx: VrmBonePanelCtx) => (
  * 布局：单列 slide-item 行（与材质/截图面板同构），点击行原地展开详情块。
  * 不再用双栏 grid——那与根菜单 SlideMenu 单列导航风格冲突。
  */
+/**
+ * 骨骼行高亮背景（刀②收编：硬编码 rgba(124,131,255) → --accent 派生）。
+ * 纯函数便于测试直断字符串——happy-dom 的 CSS 解析器不认 color-mix()，DOM 级 background 会丢声明。
+ */
+export function boneRowActiveBg(): string {
+  return "color-mix(in srgb,var(--accent) 25%,transparent)";
+}
+
 export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel {
   return (panel: HTMLElement, ctx: VrmBonePanelCtx): (() => void) => {
     let activeId: string | null = null; // 拾取联动高亮项
@@ -69,8 +77,9 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
         const row = document.createElement("div");
         row.className = "slide-item";
         row.dataset.boneId = item.id;
+        row.dataset.active = activeId === item.id ? "1" : "0"; // 测试钩子（happy-dom 丢 color-mix 时仍可断言高亮）
         row.style.cssText = `display:flex;align-items:center;gap:6px;padding-left:${item.depth * 12 + 6}px;cursor:pointer;min-height:28px;border-radius:4px`;
-        if (activeId === item.id) row.style.background = "rgba(124,131,255,0.25)";
+        if (activeId === item.id) row.style.background = boneRowActiveBg();
 
         // 显隐勾选框
         const cb = document.createElement("input");

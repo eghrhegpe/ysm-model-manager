@@ -18,6 +18,9 @@ import { getSemanticBone, type SemanticBoneMap, type SemanticBoneId } from "../s
 /** 注视驱动的语义骨骼：head 为主，eyes 为辅 */
 const GAZE_BONES: SemanticBoneId[] = ["head", "leftEye", "rightEye"];
 
+/** 眼球语义骨骼（帧循环遍历用，避免每帧造临时数组） */
+const EYE_IDS: SemanticBoneId[] = ["leftEye", "rightEye"];
+
 /** 注视灵敏度：head 最大角度偏移（弧度），eyes 次之 */
 const GAZE_HEAD_MAX_RAD = 0.15; // ~8.6°，自然范围
 const GAZE_EYE_MAX_RAD = 0.08;  // ~4.6°，眼球微动
@@ -35,6 +38,14 @@ interface GazeSnap {
 export function createGazeController() {
   let snaps: Map<string, GazeSnap> | null = null;
   let prevCamPos: THREE.Vector3 | null = null;
+
+  // 帧内 scratch 对象（闭包级预分配，对齐 R1-P1-1：每帧零分配）。
+  // 闭包级而非模块级：多模型同框时各 controller 实例互不污染。
+  const _dirToCam = new THREE.Vector3();
+  const _targetQuat = new THREE.Quaternion();
+  const _offset = new THREE.Quaternion();
+  const _eyeTarget = new THREE.Quaternion();
+  const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 
   function warmup(map: SemanticBoneMap): void {
     if (snaps) return;
@@ -68,36 +79,32 @@ export function createGazeController() {
     headObj.getWorldPosition(headSnap.worldPos);
 
     // 计算相机相对方向（head → cam）
-    const dirToCam = new THREE.Vector3()
-      .subVectors(camPos, headSnap.worldPos)
-      .normalize();
+    _dirToCam.subVectors(camPos, headSnap.worldPos).normalize();
 
     // 水平角（Yaw）：dir 在 XZ 平面投影与 Z 轴的夹角
-    const yaw = Math.atan2(dirToCam.x, dirToCam.z);
+    const yaw = Math.atan2(_dirToCam.x, _dirToCam.z);
     // 垂直角（Pitch）：dir 与 XZ 平面的夹角
-    const pitch = Math.asin(Math.max(-1, Math.min(1, dirToCam.y)));
+    const pitch = Math.asin(Math.max(-1, Math.min(1, _dirToCam.y)));
 
     // head 目标旋转：pitch 绕 X 轴，yaw 绕 Y 轴（叠加）
-    const targetQuat = new THREE.Quaternion()
-      .setFromEuler(new THREE.Euler(pitch, yaw, 0, "YXZ"));
+    _targetQuat.setFromEuler(_euler.set(pitch, yaw, 0, "YXZ"));
 
     // 应用到 head：在 restRot 基础上叠加 targetQuat
     // （headObj 已在上面 getSemanticBone("head") 查得并守卫非空——复用，避免重复查找）
-    const offset = new THREE.Quaternion().copy(targetQuat).multiply(headSnap.restRot);
-    headObj.quaternion.slerp(offset, GAZE_SMOOTH);
+    _offset.copy(_targetQuat).multiply(headSnap.restRot);
+    headObj.quaternion.slerp(_offset, GAZE_SMOOTH);
 
     // eyes：基于 head-local 坐标系微动（让眼珠跟着头转，同时在 head 上再微偏）
-    for (const eyeId of ["leftEye", "rightEye"] as SemanticBoneId[]) {
+    for (const eyeId of EYE_IDS) {
       const snap = snaps.get(eyeId);
       const entry = getSemanticBone(map, eyeId);
       if (!snap || !entry?.object) continue;
       // eye 朝向：水平方向镜像（左眼向左看 = negative local X，右眼向右看 = positive local X）
       const sign = eyeId === "leftEye" ? -1 : 1;
-      const eyeTarget = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(0, sign * pitch * 0.3, sign * yaw * 0.5, "YXZ"),
-      );
-      const eyeOffset = eyeTarget.premultiply(snap.restRot);
-      entry.object.quaternion.slerp(eyeOffset, GAZE_SMOOTH);
+      // _eyeTarget 先存目标、再原地 premultiply 兼作 eyeOffset（slerp 目标参数只读，复用安全）
+      _eyeTarget.setFromEuler(_euler.set(0, sign * pitch * 0.3, sign * yaw * 0.5, "YXZ"));
+      _eyeTarget.premultiply(snap.restRot);
+      entry.object.quaternion.slerp(_eyeTarget, GAZE_SMOOTH);
     }
 
     prevCamPos = camPos;

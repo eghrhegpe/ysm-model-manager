@@ -12,6 +12,36 @@ export function cubeVec(v: number[] | undefined): [number, number, number] {
   return v && v.length >= 3 ? [v[0], v[1], v[2]] : [0, 0, 0];
 }
 
+/** 默认 accent 回退（主题变量缺失/非 hex 时；与 --accent 同源色相） */
+const FALLBACK_ACCENT_RGB: [number, number, number] = [124, 131, 255];
+
+/**
+ * 解析当前主题 --accent 为 rgba 字符串（canvas 2D fillStyle/strokeStyle 不解析 CSS 变量）。
+ * 每次调用实时读取（不缓存）：绘制为低频操作（重绘时调用，非每帧），且避免主题切换后脏值。
+ * 兼容 #rgb / #rrggbb；解析失败回退默认 accent。
+ */
+function accentRgba(alpha: number): string {
+  let rgb: [number, number, number] = FALLBACK_ACCENT_RGB;
+  try {
+    const raw = getComputedStyle(document.documentElement)
+      .getPropertyValue("--accent")
+      .trim();
+    const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
+    if (m) {
+      let hex = m[1];
+      if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+      rgb = [
+        parseInt(hex.slice(0, 2), 16),
+        parseInt(hex.slice(2, 4), 16),
+        parseInt(hex.slice(4, 6), 16),
+      ];
+    }
+  } catch {
+    /* 非 DOM 环境（如 happy-dom 无样式表）走默认回退 */
+  }
+  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+}
+
 function mdDvDrawRect(
   ctx: CanvasRenderingContext2D,
   isHighlight: boolean,
@@ -23,7 +53,7 @@ function mdDvDrawRect(
 ): void {
   const fill = isHighlight
     ? "rgba(255,180,50,0.25)"
-    : "rgba(124,131,255,0.45)";
+    : accentRgba(0.45);
   const stroke = isHighlight
     ? "rgba(255,220,100,1)"
     : "rgba(205,214,244,0.85)";
@@ -347,7 +377,7 @@ function drawMiniView(
       const rz = x * sinA + z * cosA;
       const drawX = ox2 + rx * s;
       const drawY = oy2 - (rz + sz) * s;
-      ctx.fillStyle = "rgba(124,131,255,0.45)";
+      ctx.fillStyle = accentRgba(0.45);
       ctx.fillRect(drawX, drawY, sx * s, sz * s);
       ctx.strokeStyle = "rgba(205,214,244,0.7)";
       ctx.lineWidth = 0.5;

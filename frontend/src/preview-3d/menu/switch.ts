@@ -36,6 +36,22 @@ function switchNormPath(s: string): string {
   return s.replace(/\\/g, "/").toLowerCase();
 }
 
+/**
+ * 类型 tab 高亮背景（刀②收编：硬编码 rgba(124,131,255) → --accent 派生）。
+ * 纯函数便于测试直断字符串——happy-dom 的 CSS 解析器不认 color-mix()，DOM 级断言会丢声明。
+ */
+export function switchTabHighlightBg(active: boolean): string {
+  return active ? "color-mix(in srgb,var(--accent) 35%,transparent)" : "transparent";
+}
+
+/** 类型 tab 按钮 cssText（激活 tab 额外叠加高亮背景 + 白字） */
+export function switchTabCssText(active: boolean): string {
+  return (
+    "font-size:12px;padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;color:rgba(255,255,255,0.7);background:transparent" +
+    (active ? ";background:color-mix(in srgb,var(--accent) 35%,transparent);color:#fff" : "")
+  );
+}
+
 /** [子函数 1/6] 解析默认高亮 tab：手动记忆 → 当前模型类型 → 首项；兜底 ""（siblings） */
 function resolveSwitchActiveTab(rtypes: string[], curRtype: string): string {
   const remembered = safeGet(PREVIEW_LAST_RTYPE_KEY);
@@ -60,7 +76,7 @@ function buildSwitchTabBar(
   const highlightTab = (key: string): void => {
     for (const tb of Array.from(tabBar.children)) {
       (tb as HTMLElement).style.background =
-        (tb as HTMLElement).dataset.rtype === key ? "rgba(124,131,255,0.35)" : "transparent";
+        switchTabHighlightBg((tb as HTMLElement).dataset.rtype === key);
     }
   };
   for (const r of rtypes) {
@@ -68,9 +84,7 @@ function buildSwitchTabBar(
     b.dataset.testid = "preview-switch-tab";
     b.dataset.rtype = r;
     b.textContent = switchTabLabelOf(r);
-    b.style.cssText =
-      "font-size:12px;padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;color:rgba(255,255,255,0.7);background:transparent" +
-      (r === initialActive ? ";background:rgba(124,131,255,0.35);color:#fff" : "");
+    b.style.cssText = switchTabCssText(r === initialActive);
     b.onclick = (): void => {
       // 持久化选中类型（「当前目录」空串不持久化——临时视图）
       if (r !== "") safeSet(PREVIEW_LAST_RTYPE_KEY, r);
@@ -135,7 +149,7 @@ function renderSwitchCandidateRow(
   row.dataset.testid = "preview-switch-item";
   row.style.cssText =
     "display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px" +
-    (isCur ? ";background:rgba(124,131,255,0.25)" : "");
+    (isCur ? ";background:color-mix(in srgb,var(--accent) 25%,transparent)" : "");
   const ic = document.createElement("span");
   ic.textContent = isCur ? "✓" : "📦";
   ic.style.cssText = "font-size:15px;width:18px;text-align:center";

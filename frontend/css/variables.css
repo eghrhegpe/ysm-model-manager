@@ -56,7 +56,9 @@
   --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
   /* R5 治理：原硬编码 UI 颜色上提到主题变量（颜色即数据/算法色豁免见 check-redlines.mjs） */
   --uih-slide-divider: rgba(255, 255, 255, 0.1);
-  --mmd-morph-active-bg: rgba(124, 131, 255, 0.25);
+  /* 2026-09-03 刀②收编：原 rgba(124,131,255,0.25) 硬编码紫 → color-mix 派生自 --accent，
+     使 mmd 形态高亮随主题切换（原值为死 token 无消费方，保留派生值防未来消费踩坑） */
+  --mmd-morph-active-bg: color-mix(in srgb, var(--accent) 25%, transparent);
   --clr-ch-r: #f66;
   --clr-ch-g: #6f6;
   --clr-ch-b: #66f;

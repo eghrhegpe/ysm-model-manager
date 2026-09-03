@@ -8,6 +8,7 @@ adr:
 category: go
 source_files:
   - go/container/container.go
+  - go/container/encoding.go
 auto_fields:
   symbols_with_lines:
     - Close

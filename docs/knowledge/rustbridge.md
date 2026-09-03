@@ -7,6 +7,10 @@ source_files:
   - go/rustbridge/bridge_windows.go
   - go/rustbridge/bridge_cgo.go
   - go/rustbridge/common.go
+  - go/rustbridge/doc.go
+  - go/rustbridge/embedded_windows.go
+  - go/rustbridge/types.go
+  - go/rustbridge/types_windows.go
   - rust-core/src/model.rs
   - rust-core/src/policy.rs
   - rust-core/src/scan.rs
@@ -14,7 +18,9 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - Scan
+    - ScanError
     - ScanManifest
+    - ScanResponse
   tests:
     - rust-core/src/tests.rs
     - go/rustbridge/parse_test.go

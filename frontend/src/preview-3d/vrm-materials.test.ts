@@ -70,12 +70,12 @@ describe("setVrmMaterialOpacity", () => {
     expect(mats[0].transparent).toBe(true);
   });
 
-  it("transparent 不回退：0.5 → 1 后 transparent 仍 true", () => {
+  it("transparent 回退：0.5 → 1 后 transparent 恢复 false", () => {
     const mats = makeMaterials();
     setVrmMaterialOpacity(mats, 0, 0.5);
     setVrmMaterialOpacity(mats, 0, 1);
     expect(mats[0].opacity).toBe(1);
-    expect(mats[0].transparent).toBe(true);
+    expect(mats[0].transparent).toBe(false);
   });
 
   it("越界 no-op（其余材质不受影响）", () => {

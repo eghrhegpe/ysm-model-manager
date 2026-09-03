@@ -53,7 +53,8 @@ export function setVrmMaterialOpacity(
   const mat = materials[index];
   if (!mat) return;
   mat.opacity = Math.max(0, Math.min(1, opacity));
-  if (mat.opacity < 1) mat.transparent = true;
+  // opacity 恢复 ≥1 时须重置 transparent=false，否则材质仍按透明渲染（多一次 blend pass + 渲染顺序变化）
+  mat.transparent = mat.opacity < 1;
   // MToon（ShaderMaterial 子类）透明变更需重编译着色器
   (mat as THREE.ShaderMaterial | THREE.Material).needsUpdate = true;
 }

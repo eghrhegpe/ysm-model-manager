@@ -64,7 +64,8 @@ export function setMmdMaterialOpacity(
   const mat = materials[index];
   if (!mat) return;
   mat.opacity = Math.max(0, Math.min(1, opacity));
-  if (mat.opacity < 1) mat.transparent = true;
+  // opacity 恢复 ≥1 时须重置 transparent=false，否则材质仍按透明渲染（多一次 blend pass + 渲染顺序变化）
+  mat.transparent = mat.opacity < 1;
 }
 
 /** 材质详情：name/可见/透明/高光/光泽（越界返回 null） */

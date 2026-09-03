@@ -1,11 +1,12 @@
 // ===== 环境菜单声明式 Schema 测试（对齐 MikuMikuAR getSkySchema() 范式）=====
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderEnvLevel, buildEnvSchema } from "./env.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import type { PreviewMenuCtx } from "./core.ts";
 import type { CameraControlBridge } from "../adapters/camera-controls.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
+import { setSceneCapabilityLookup } from "../state/preview-state.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
@@ -58,6 +59,11 @@ describe("renderEnvLevel", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     
+  });
+
+  // [ADR-168] 探针用例会注入 state 层查询器，用后即复（防泄漏到后续用例）
+  afterEach(() => {
+    setSceneCapabilityLookup(null);
   });
 
   it("无 menu 句柄时走平铺路径（renderCapControls）", () => {
@@ -255,8 +261,12 @@ describe("renderEnvLevel", () => {
       ],
       apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
     };
-    // 注册到 registry，让 previewSnapshot() 经 env.waterMode binding 拿到 mode（状态层上浮）
+    // 注册到 registry + [ADR-168] 注入 state 层查询器，让 previewSnapshot() 经
+    // env.waterMode binding 拿到 mode（状态层上浮——state 层 cap 查询现走注入点）
     vi.spyOn(sceneCapabilityRegistry, "getById").mockImplementation((id: string) => (id === "water" ? (fakeWaterCap as unknown as SceneCapability) : undefined));
+    setSceneCapabilityLookup({
+      getById: (id: string) => (id === "water" ? (fakeWaterCap as unknown as SceneCapability) : undefined),
+    });
     const ctx = makeCtx({ getCap: (id) => (id === "water" ? (fakeWaterCap as unknown as SceneCapability) : null) });
     const subList = document.createElement("div");
     let lastView: { title: string; render: (l: HTMLElement) => void } | null = null;

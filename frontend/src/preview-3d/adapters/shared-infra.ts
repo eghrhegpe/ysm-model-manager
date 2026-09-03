@@ -18,6 +18,8 @@ import type { WaterCapability } from "../caps/water-capability.ts";
 import type { PreviewMenuHandle } from "../menu/core.ts";
 import { previewPixelRatio } from "../render-budget.ts";
 import { applyPerfPreset, getPerfPreset } from "../state/perf-presets.ts";
+// [ADR-168] 状态层 cap 查询器注入：组合根 createAll 后注入 registry，断 preview-state→registry 运行时环
+import { setSceneCapabilityLookup } from "../state/preview-state.ts";
 import type { PreviewAdapter } from "./mount-preview-core.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
 
@@ -110,6 +112,8 @@ export function buildSharedInfra(
   }
   // 程序化能力（ADR-073 L1 + 统一注册表）：由 registry 统一创建并持久化
   const caps = sceneCapabilityRegistry.createAll({ scene, renderer, camera });
+  // [ADR-168] 状态层查询器注入（registry 单例长命，instances 由 createAll/dispose 管理——行为与状态层直持同一引用等价）
+  setSceneCapabilityLookup(sceneCapabilityRegistry);
   _sceneCaps = caps;
   const skyCap = (sceneCapabilityRegistry.getById("sky") as SkyCapability) ?? null;
   const groundCap = (sceneCapabilityRegistry.getById("ground") as GroundCapability) ?? null;

@@ -31,6 +31,7 @@ import type { PreviewMenuCtx } from "../menu/core.ts";
 import { renderMenu } from "../menu/render.ts";
 import { collectVisiblePredicates } from "../menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import { setSceneCapabilityLookup } from "./preview-state.ts";
 import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "../render-budget.ts";
 
@@ -92,7 +93,9 @@ function makeFakeCap(
 }
 
 /**
- * 把 fake cap 注入注册表读口（spy 而非 createAll）。
+ * 把 fake cap 注入双路读口：
+ * ① registry spy（menu/settings.ts 的 getAll/getById 链——collectSettingsCapControls 等）
+ * ② setSceneCapabilityLookup（[ADR-168] 状态层 cap 查询注入点，替代原直接 import registry）
  *
  * 不用 `registry.add + createAll` 的原因：preview-menu/settings.ts 的 import 链
  * 已把真实 cap 工厂注册到全局单例，createAll 会在 happy-dom 下逐个构造失败
@@ -103,6 +106,9 @@ function mountCaps(...caps: SceneCapability[]): void {
   vi.spyOn(sceneCapabilityRegistry, "getById").mockImplementation((id: string) =>
     caps.find((c) => c.id === id),
   );
+  setSceneCapabilityLookup({
+    getById: (id: string) => caps.find((c) => c.id === id),
+  });
 }
 
 beforeEach(() => {
@@ -112,6 +118,7 @@ beforeEach(() => {
 
 afterEach(() => {
   resetSettingsListeners();
+  setSceneCapabilityLookup(null);
   vi.restoreAllMocks();
 });
 

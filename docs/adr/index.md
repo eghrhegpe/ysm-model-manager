@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **164** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **165** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 160 |
+| [✅ 已采纳](#已采纳) | 161 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -32,10 +32,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（160）
+### ✅ 已采纳（161）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-168](./ADR-168-capability-preview-state.md) | capability 环倒置：preview-state 查询器注入断组合根运行时边 | ✅ 已采纳 |
 | [ADR-167](./ADR-167-mmd-stage.md) | MMD 适配器 stage 管线拆分 | ✅ 已采纳 |
 | [ADR-166](./ADR-166-frontend-services-convergence.md) | 前端 services 层收敛：registry 搬迁 / recycle-bin / dedup 会话工厂 / path-cards | ✅ 已采纳 |
 | [ADR-165](./ADR-165-preview3d-public-entry.md) | preview-3d 公共入口以真模块收敛视图层深导入 | ✅ 已采纳 |
@@ -208,6 +209,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-168 | capability 环倒置：preview-state 查询器注入断组合根运行时边 | ✅ 已采纳 | 2026-09-03 |
 | ADR-167 | MMD 适配器 stage 管线拆分 | ✅ 已采纳 | 2026-09-03 |
 | ADR-166 | 前端 services 层收敛：registry 搬迁 / recycle-bin / dedup 会话工厂 / path-cards | ✅ 已采纳 | 2026-09-03 |
 | ADR-165 | preview-3d 公共入口以真模块收敛视图层深导入 | ✅ 已采纳 | 2026-09-03 |

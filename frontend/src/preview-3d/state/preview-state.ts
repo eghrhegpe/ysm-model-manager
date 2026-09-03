@@ -29,8 +29,9 @@
 
 // [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters 平铺的 preview-menu-node-types.ts，
 // state 反向 import adapters → 类型归位 state，adapters 反过来前向 import state，方向正）
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
+// [ADR-168] 状态层不 import 组合根单例（scene-capability-registry）——cap 查询走注入点
+// setSceneCapabilityLookup（shared-infra createAll 后注入），断 preview-state→registry 运行时环。
+import type { SceneCapability, SceneCapabilityLookup } from "../caps/scene-capability.ts";
 import { isFrustumCullEnabled, setFrustumCullEnabled } from "../frustum-cull.ts";
 import {
   getMaxFps,
@@ -103,6 +104,19 @@ interface PreviewStatePathBinding {
 
 // ── cap 惰性解析（禁止在 schema 构建期捕获 cap 实例）──
 
+/** [ADR-168] cap 查询器注入点：组合根（shared-infra buildSharedInfra）createAll 后注入
+ *  registry 单例。状态层不 import 组合根（断 preview-state→registry 运行时环，与
+ *  menu/core.ts getCap 透传范式同构）。空查询器 → capById undefined →
+ *  binding available false——与「cap 缺席」同语义，行为等价。 */
+let _capLookup: SceneCapabilityLookup | null = null;
+export function setSceneCapabilityLookup(lookup: SceneCapabilityLookup | null): void {
+  _capLookup = lookup;
+}
+
+function capById(id: string): SceneCapability | undefined {
+  return _capLookup?.getById(id) ?? undefined;
+}
+
 /** [doc:adr-126-p5-b] 当前选中组件（会话态内存值）：-1 = All，其余 = 组件下标 */
 let _activeComponent = -1;
 
@@ -119,7 +133,7 @@ interface ToggleCap {
 }
 
 function toggleCap(id: string): ToggleCap | undefined {
-  const cap: SceneCapability | undefined = sceneCapabilityRegistry.getById(id);
+  const cap: SceneCapability | undefined = capById(id);
   if (!cap) return undefined;
   if (!hasMethod<ToggleCap>(cap, "isEnabled") || !hasMethod<ToggleCap>(cap, "setEnabled")) {
     return undefined;
@@ -134,7 +148,7 @@ interface EnvToggleCap {
 }
 
 function envToggleCap(id: string): EnvToggleCap | undefined {
-  const cap: SceneCapability | undefined = sceneCapabilityRegistry.getById(id);
+  const cap: SceneCapability | undefined = capById(id);
   if (!cap) return undefined;
   if (
     !hasMethod<EnvToggleCap>(cap, "isEnvironmentEnabled") ||
@@ -151,7 +165,7 @@ interface WaterModeCap {
   setWaterMode(v: string): void;
 }
 function waterCap(): WaterModeCap | undefined {
-  const cap: SceneCapability | undefined = sceneCapabilityRegistry.getById("water");
+  const cap: SceneCapability | undefined = capById("water");
   if (!cap) return undefined;
   if (!hasMethod<WaterModeCap>(cap, "getWaterMode") || !hasMethod<WaterModeCap>(cap, "setWaterMode")) {
     return undefined;
@@ -165,7 +179,7 @@ interface GroundMatCap {
   setMatSource(v: string): void;
 }
 function groundMatCap(): GroundMatCap | undefined {
-  const cap: SceneCapability | undefined = sceneCapabilityRegistry.getById("ground");
+  const cap: SceneCapability | undefined = capById("ground");
   if (!cap) return undefined;
   if (!hasMethod<GroundMatCap>(cap, "getMatSource") || !hasMethod<GroundMatCap>(cap, "setMatSource")) {
     return undefined;

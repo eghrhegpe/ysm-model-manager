@@ -6,7 +6,9 @@
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
 
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import type { PreviewSnapshot } from "../state/preview-state.ts";
+// [ADR-168 二期] PreviewSnapshot 类型下沉 preview-paths.ts 零依赖叶子——本行改指叶子后
+// scene-capability 不再 import preview-state（原「scene-capability ⇄ preview-state」纯 type 环消）。
+import type { PreviewSnapshot } from "../state/preview-paths.ts";
 
 /* ============ 菜单控件定义 ============ */
 

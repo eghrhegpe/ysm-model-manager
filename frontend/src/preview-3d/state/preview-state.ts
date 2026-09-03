@@ -7,7 +7,8 @@
 // 升格要点（与 ADR-126 §2.1「7 域类型全声明，binding 只填已落地项」校准对齐）：
 //   - 模块名 / 类型名 / 快照函数名升格：SettingsPath→(并入 PreviewStatePath) /
 //     SETTINGS_PATHS→KNOWN_PATHS / settingsSnapshot→previewSnapshot
-//   - `PreviewStatePath`（本文件定义，ADR-129 第一刀归位自 adapters）作为路径类型契约：
+//   - `PreviewStatePath`（ADR-129 第一刀归位自 adapters，ADR-168 二期下沉至
+//     preview-paths.ts 契约叶子；本文件 re-export 保公共面）作为路径类型契约：
 //     七域（env/render/light/ui/perception/motion/model）类型层全声明；
 //     本文件 binding 层只填**已落地的 6 项**（render.*/env.* 横切设置）。
 //   - 业务状态（角色/动作/面板导航）由 sceneRegistry / SlideMenuHandle / 节点字段
@@ -43,44 +44,15 @@ import {
 } from "../render-budget.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
 
-/**
- * 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。
- *
- * 2026-09 收紧：`PreviewStatePath` 类型 = 本集合（类型契约即运行时实现）。
- * 原「7 域模板字面量宽类型」让未落地键（如 ui.mode / env.sky）在类型层合法、
- * 运行时却恒 undefined——谓词读它们静默假死。现未落地键在编译期即报错：
- * 新增路径必须「扩 KNOWN_PATHS + 填 binding」两步走，缺一步编译不过。
- */
-export const KNOWN_PATHS = [
-  "render.frustumCull",
-  "render.maxFps",
-  "render.maxPixelRatio",
-  "render.bloom",
-  "render.wireframe",
-  "env.pmrem",
-  // [doc:adr-126-p5-c] 探针：cap 内部状态上浮至状态层快照，供 cap 控件
-  // visibleWhen(s) 谓词消费（替代 cap 内 visible? 闭包），打通 B 轨。
-  "env.waterMode",
-  "env.groundMatSource",
-  // [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
-  // 会话态不落盘；面板侧 subscribe 变更 → 调 showModelGroup 副作用（views 层装配）。
-  "ui.activeComponent",
-] as const;
-
-/**
- * 状态路径：已落地路径的联合（类型契约 = 运行时实现）。
- * 写未落地键（如 `ui.mode` / `env.sky`）编译报错——把「谓词读黑洞键静默假死」
- * 挡在编译期。新路径两步走：扩 KNOWN_PATHS + 填 bindings。
- */
-export type PreviewStatePath = typeof KNOWN_PATHS[number];
-
-/**
- * 状态层快照：`visibleWhen: (s: PreviewSnapshot) => boolean` 纯函数谓词吃的快照形状。
- * 由本文件 `previewSnapshot()` 产出（Record<PreviewStatePath, unknown>）。
- * 键位 = KNOWN_PATHS（全部有真实来源，无黑洞键）。
- * [doc:adr-126-p4-d] 与 AGENTS.md「3d菜单只允许 visibleWhen: (s) => boolean」对齐。
- */
-export type PreviewSnapshot = Record<PreviewStatePath, unknown>;
+// [ADR-168 二期] KNOWN_PATHS / PreviewStatePath / PreviewSnapshot 已下沉零依赖叶子
+// preview-paths.ts（断 caps/scene-capability ⇄ preview-state 纯 type 环）：
+// 本文件 import KNOWN_PATHS 供 bindings 注册 / previewSnapshot() 遍历，并 re-export
+// 三件套保既有公共面——外部消费者（menu/caps/adapters）的 import 语句零改动。
+// （re-export 拆值/类型两行：gen-knowledge-autogen 的 reRe 正则不识别花括号内 `type X`。）
+import { KNOWN_PATHS } from "./preview-paths.ts";
+import type { PreviewStatePath, PreviewSnapshot } from "./preview-paths.ts";
+export { KNOWN_PATHS } from "./preview-paths.ts";
+export type { PreviewStatePath, PreviewSnapshot } from "./preview-paths.ts";
 
 /**
  * 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。

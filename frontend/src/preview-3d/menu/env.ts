@@ -41,7 +41,7 @@ const PRESET_ORDER = [
 /** 环境面板空态提示行（两分支共用） */
 function appendEnvEmpty(list: HTMLElement): void {
   const r = document.createElement("div");
-  r.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+  r.className = "ev-empty-note";
   r.textContent = tr("preview.noEnvironment", "进入 3D 后再打开环境面板");
   list.appendChild(r);
 }
@@ -103,6 +103,42 @@ function applyPreset(ctx: PreviewMenuCtx, presetId: Exclude<EnvPresetId, "custom
   menu?.refresh();
 }
 
+// P1 批次4：环境面板内联 cssText → 集中类（ev- 前缀本文件私有，ensureEnvStyles
+// 幂等注入——renderEnvLevel 唯一入口调用，覆盖预设栏/摘要行/分区入口全部渲染路径）
+let _envStylesInjected = false;
+function ensureEnvStyles(): void {
+  if (_envStylesInjected) return;
+  const style = document.createElement("style");
+  style.textContent = `
+/* 环境面板集中样式（P1 批次4：cssText→类）。双源镜像待共享模块化：
+   ev-empty-note == roles .fr-empty-note、ev-range == cap-controls .cc-range、
+   ev-label-grow == cap-controls .cc-label-grow（同值多源）。 */
+.slide-item.ev-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+.slide-item.ev-group-entry { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; }
+.slide-label.ev-label-grow { flex: 1; font-size: 13px; }
+.ev-empty-note { padding: 8px 10px; color: rgba(255,255,255,0.5); font-size: 12px; }
+.ev-preset-bar {
+  display: flex; gap: 4px; padding: 6px 10px; flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.ev-preset-btn {
+  flex: 1; min-width: 48px; padding: 4px 6px; border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; background: transparent; color: rgba(255,255,255,0.85); cursor: pointer;
+  font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.ev-preset-icon { font-size: 14px; }
+.ev-slider-host { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.ev-slider-meta { display: flex; justify-content: space-between; font-size: 13px; color: rgba(255,255,255,0.85); }
+.ev-range { width: 100%; cursor: pointer; accent-color: var(--accent,#7c83ff); }
+.ev-chevron {
+  margin-left: auto; font-size: 18px; font-weight: 700; opacity: 0.5;
+  user-select: none; padding: 0 4px; pointer-events: none;
+}
+`;
+  document.head.appendChild(style);
+  _envStylesInjected = true;
+}
+
 /** 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector）
  *  独立面板排除项：light → lighting；shadow → shadow；postprocessing → postproc；避免同一能力控件双面板重复。
  *
@@ -114,6 +150,7 @@ function applyPreset(ctx: PreviewMenuCtx, presetId: Exclude<EnvPresetId, "custom
  *  - › 点击 → menu.navigate(subView)，subView 渲染该 cap 的完整 getMenuControls()
  *  - 无 menu 句柄（旧调用路径）→ 回退到平铺渲染，保持向后兼容 */
 export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: SlideMenuHandle): void {
+  ensureEnvStyles();
   if (!menu) {
     const caps = orderedCaps(resolveCaps(ctx));
     if (caps.length === 0) { appendEnvEmpty(list); return; }
@@ -129,12 +166,12 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
   rebuildEnvSubs(caps, menu); // 重建订阅：进入环境面板即刷新最新参数（含上一次会话遗留的 menu 引用清理）
   if (caps.length === 0) { appendEnvEmpty(list); return; }
   const pb = document.createElement("div");
-  pb.style.cssText = "display:flex;gap:4px;padding:6px 10px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.08)";
+  pb.className = "ev-preset-bar";
   PRESET_ORDER.forEach((p) => {
     const btn = document.createElement("button");
     btn.dataset.testid = "env-preset-"+p.id;
-    btn.style.cssText = "flex:1;min-width:48px;padding:4px 6px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:transparent;color:rgba(255,255,255,0.85);cursor:pointer;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px";
-    const ic = document.createElement("span"); ic.textContent = p.icon; ic.style.cssText = "font-size:14px";
+    btn.className = "ev-preset-btn";
+    const ic = document.createElement("span"); ic.textContent = p.icon; ic.className = "ev-preset-icon";
     const lb = document.createElement("span"); lb.textContent = tr(p.labelKey, p.id);
     btn.append(ic, lb);
     btn.onclick = (e: MouseEvent) => { e.stopPropagation(); applyPreset(ctx, p.id as Exclude<EnvPresetId, "custom">, menu); };
@@ -149,27 +186,29 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
     const primary = ctrls[pi];
     const hasSub = ctrls.length > 1;
     const row = document.createElement("div");
-    row.className = "slide-item";
+    row.className = "slide-item ev-row";
     row.dataset.testid = "cap-row-"+cap.id;
-    row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px" + (hasSub ? ";cursor:pointer" : "");
+    // 动态豁免（P1）：hasSub 可点态 cursor 留内联属性——env.test.ts:122 断言 style.cursor，
+    // 抽类无法被该 DOM 级断言读回（同 render.ts body.display 豁免范式）。
+    row.style.cursor = hasSub ? "pointer" : "";
     if (primary.kind === "toggle") {
-      const lb = document.createElement("span"); lb.className = "slide-label"; lb.textContent = tr(primary.labelKey, primary.fallback); lb.style.cssText = "flex:1;font-size:13px";
+      const lb = document.createElement("span"); lb.className = "slide-label ev-label-grow"; lb.textContent = tr(primary.labelKey, primary.fallback);
       const tg = createHeaderToggle({ value: primary.getValue() as boolean, onChange: (v: boolean) => primary.setValue(v), bind: (): boolean => primary.getValue() as boolean });
       tg.addEventListener("click", (e: MouseEvent) => e.stopPropagation());
       row.append(lb, tg);
     } else if (primary.kind === "slider") {
-      const hd = document.createElement("div"); hd.style.cssText = "display:flex;flex-direction:column;gap:2px;flex:1;min-width:0";
-      const nr = document.createElement("div"); nr.style.cssText = "display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.85)";
+      const hd = document.createElement("div"); hd.className = "ev-slider-host";
+      const nr = document.createElement("div"); nr.className = "ev-slider-meta";
       const nm = document.createElement("span"); nm.className = "slide-label"; nm.textContent = tr(primary.labelKey, primary.fallback);
       const vl = document.createElement("span"); const nv = primary.getValue() as number;
       vl.textContent = formatCapSliderValue(primary, nv);
       nr.append(nm, vl);
-      const sl = document.createElement("input"); sl.type = "range"; sl.min = String(primary.slider?.min??0); sl.max = String(primary.slider?.max??1); sl.step = String(primary.slider?.step??0.01); sl.value = String(nv); sl.style.cssText = "width:100%;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+      const sl = document.createElement("input"); sl.type = "range"; sl.min = String(primary.slider?.min??0); sl.max = String(primary.slider?.max??1); sl.step = String(primary.slider?.step??0.01); sl.value = String(nv); sl.className = "ev-range";
       sl.oninput = (): void => { const v = Number(sl.value); primary.setValue(v); vl.textContent = formatCapSliderValue(primary, v); };
       ["click","mousedown","touchstart"].forEach((ev) => sl.addEventListener(ev, (e: Event) => e.stopPropagation()));
       hd.append(nr, sl); row.appendChild(hd);
     } else {
-      const lb = document.createElement("span"); lb.className = "slide-label"; lb.textContent = tr(cap.labelKey, cap.id); lb.style.cssText = "flex:1;font-size:13px"; row.appendChild(lb);
+      const lb = document.createElement("span"); lb.className = "slide-label ev-label-grow"; lb.textContent = tr(cap.labelKey, cap.id); row.appendChild(lb);
     }
     if (hasSub) {
       row.onclick = (): void => {
@@ -192,16 +231,14 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
           for (const g of groups) {
             const key = g.key; // 记录分组键，控件层 render 时按 key 重新取该组（每次重算）
             const entry = document.createElement("div");
-            entry.className = "slide-item";
+            entry.className = "slide-item ev-group-entry";
             entry.dataset.testid = "cap-group-entry-" + (g.key ?? "base");
-            entry.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer";
             const lb = document.createElement("span");
-            lb.className = "slide-label";
+            lb.className = "slide-label ev-label-grow";
             lb.textContent = g.label;
-            lb.style.cssText = "flex:1;font-size:13px";
             const ch = document.createElement("span");
             ch.textContent = "›";
-            ch.style.cssText = "margin-left:auto;font-size:18px;font-weight:700;opacity:0.5;user-select:none;padding:0 4px;pointer-events:none";
+            ch.className = "ev-chevron";
             entry.append(lb, ch);
             entry.onclick = (): void => {
               menu.navigate({
@@ -225,7 +262,7 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
         };
         menu.navigate({ title: tr(cap.labelKey, cap.id), render: renderSub });
       };
-      const ch = document.createElement("span"); ch.textContent = "›"; ch.dataset.testid = "row-chevron"; ch.style.cssText = "margin-left:auto;font-size:18px;font-weight:700;opacity:0.5;user-select:none;padding:0 4px;pointer-events:none"; row.appendChild(ch);
+      const ch = document.createElement("span"); ch.textContent = "›"; ch.dataset.testid = "row-chevron"; ch.className = "ev-chevron"; row.appendChild(ch);
     }
     list.appendChild(row);
   }

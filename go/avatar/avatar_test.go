@@ -109,13 +109,6 @@ func TestCacheAvatarsFromJSON(t *testing.T) {
 	}
 }
 
-func TestToBytes(t *testing.T) {
-	result := toBytes([]int{72, 73, 74})
-	if string(result) != "HIJ" {
-		t.Fatalf("got %q, want %q", string(result), "HIJ")
-	}
-}
-
 // ====== ExtractAvatarURI ======
 
 func TestExtractAvatarURI_FromZip(t *testing.T) {

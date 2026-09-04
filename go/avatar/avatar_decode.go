@@ -2,10 +2,9 @@
 //
 // 本文件（avatar_decode.go）：Node.js + WASM 解码桥——SetNodeJS 注入 Node/WASM 资源、
 // DecodeYSMData 统一解码实现（ADR-164：收敛 internal/app wasm_decoder.go 逐字复刻双胞胎，
-// 全仓唯一副本）、limitedBuffer 输出护栏与 toBytes 字节转换。
-// 2026-09 外部锐评 #2：旧 DecodeYSMFiles/toInts 的 []int 中间形态（每字节膨胀 8×）
-// 已随消费方迁移 []byte 直通形态退役，仅保留 DecodeYSMData + toBytes（Node JSON 数组
-// 解码内部转换仍需要）。
+// 全仓唯一副本）、limitedBuffer 输出护栏。
+// 2026-09 base64 直通重构：Node 脚本输出 Buffer.from(...).toString('base64')，
+// Go 侧 base64.Decode 零中间膨胀（旧 Array.from 数字数组每字节 8× 内存膨胀 + toBytes 循环）。
 // 拆分自原 avatar.go（ADR-040 文件行数治理）。
 package avatar
 
@@ -139,7 +138,7 @@ async function main(){
     const r=[];const es=FS.readdir(dir).filter(f=>f!=='.'&&f!=='..');
     for(const e of es){const p=dir+'/'+e;
       if(FS.isDir(FS.stat(p).mode)){r.push(...cl(p))}
-      else{r.push({path:p.substring(8),data:Array.from(FS.readFile(p))})}}
+      else{r.push({path:p.substring(8),data:Buffer.from(FS.readFile(p)).toString('base64')})}}
     return r}
   console.log('FILES_JSON:'+JSON.stringify(cl('/output')));
   process.exit(0);
@@ -193,31 +192,29 @@ main().catch(e=>{console.error(e);process.exit(1)});
 		return nil
 	}
 	jsonStr := outStr[idx+len("FILES_JSON:"):]
-	// 中间形态走 []int：Node 脚本输出数字数组（Array.from(FS.readFile)），
-	// json 对 []byte 字段的数组解码语义不透明，[]int → toBytes 显式转换
+	// Node 脚本输出 base64 字符串（Buffer.from(...).toString('base64')），
+	// Go 侧直接 base64.Decode → 零中间膨胀（旧 []int 每字节 8× 内存膨胀）
 	var rawFiles []struct {
 		Path string `json:"path"`
-		Data []int  `json:"data"`
+		Data string `json:"data"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &rawFiles); err != nil {
 		return nil
 	}
 	files := make([]ysmDecodedFile, len(rawFiles))
 	for i, rf := range rawFiles {
-		files[i] = ysmDecodedFile{Path: rf.Path, Data: toBytes(rf.Data)}
+		decoded, err := base64.StdEncoding.DecodeString(rf.Data)
+		if err != nil {
+			log.Printf("[avatar] base64 解码失败 (path=%s): %v", rf.Path, err)
+			return nil
+		}
+		files[i] = ysmDecodedFile{Path: rf.Path, Data: decoded}
 	}
 	return files
 }
 
 // DecodeYSMData 的 []byte 直通形态是唯一内部形态（ADR-164 注释原话：
 // 「新代码应直接用 DecodeYSMData」）。旧 []int 形态包装 DecodeYSMFiles 与
-// toInts 已于 2026-09 外部锐评 #2 落地时退役（消费方 avatar_extract.go 全部
-// 迁直通形态，无 []byte → []int → []byte 双重全量拷贝与 8× 内存膨胀）。
-
-func toBytes(data []int) []byte {
-	b := make([]byte, len(data))
-	for i, v := range data {
-		b[i] = byte(v)
-	}
-	return b
-}
+// toInts 已于 2026-09 外部锐评 #2 落地时退役。2026-09 base64 直通重构：
+// Node 脚本输出 Buffer.from(...).toString('base64')，Go 侧 base64.Decode
+// 零中间膨胀（旧 Array.from 数字数组每字节 8× 内存膨胀 + toBytes 循环）。

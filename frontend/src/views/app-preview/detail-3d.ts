@@ -87,11 +87,11 @@ export async function showVrmMeta(
     ${thumb}
     <div><strong>${renderFormattedText(meta.name || basename)}</strong></div>
     ${authors ? `<div style="color:var(--muted)">👤 ${esc(authors)}</div>` : ""}
-    ${meta.version ? `<div style="color:var(--muted);font-size:var(--fs-xs)">版本: ${esc(meta.version)}</div>` : ""}
+    ${meta.version ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${t("preview.versionLabel")}: ${esc(meta.version)}</div>` : ""}
     ${meta.contact ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📮 ${esc(meta.contact)}</div>` : ""}
     ${meta.license ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📜 ${esc(meta.license)}</div>` : ""}
     ${refBadge}
-    ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge("商用", r.commercial, "💰")}${badge("用户", r.allowedUser === "everyone", "👥")}${badge("性", r.sexual, "🔞")}${badge("暴力", r.violent, "⚔️")}</div>` : ""}
+    ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial, "💰")}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", "👥")}${badge(t("preview.sexual"), r.sexual, "🔞")}${badge(t("preview.violent"), r.violent, "⚔️")}</div>` : ""}
     ${statsRow}
     <button class="preview-fab" id="btn-vrm-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>
   </div>
@@ -176,7 +176,7 @@ export async function showFbxPreview(
 ): Promise<void> {
   detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
   const icon = opts?.icon || "🦴";
-  const label = opts?.label || "FBX 模型/动画";
+  const label = opts?.label || t("preview.fbxModel");
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
@@ -285,7 +285,7 @@ export async function showMorphPreview(ctx: PreviewCtx, path: string): Promise<v
     fab.onclick = (): void => {
       // P2: morph:apply 零订阅，删发射；保留 toast 反馈
       bus.emit("toast:show", {
-        msg: `😊 已发送应用请求：${basename}`,
+        msg: t("preview.morphApplySent", { name: basename }),
         duration: TOAST_MS.success,
         type: "info",
       });
@@ -361,7 +361,7 @@ export async function showStagePreview(ctx: PreviewCtx, path: string): Promise<v
     fab.onclick = (): void => {
       // P2: stage:load 零订阅，删发射；保留 toast 反馈
       bus.emit("toast:show", {
-        msg: `🎤 已发送舞台加载请求：${basename}`,
+        msg: t("preview.stageLoadSent", { name: basename }),
         duration: TOAST_MS.success,
         type: "info",
       });

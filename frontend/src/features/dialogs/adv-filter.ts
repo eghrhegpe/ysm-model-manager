@@ -175,6 +175,9 @@ export function modalAdvFilter(
     const v = opts.value || {};
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
+    overlay.tabIndex = 0;
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
     overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) closeDlg(overlay, resolve, null);
     };

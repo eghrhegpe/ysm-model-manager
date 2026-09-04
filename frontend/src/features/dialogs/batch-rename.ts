@@ -234,6 +234,8 @@ function dgBrBuildOverlay(
   const el = document.createElement("div");
   el.tabIndex = 0;
   el.className = "dlg-overlay";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
   // 遮罩背景不再内联硬编码：由 .dlg-overlay CSS 类统一提供（#4 / R5 样式令牌红线）
   let shell: DgBrShell;
   const closeFn = (): void => dgBrClose(shell);

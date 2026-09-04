@@ -5,7 +5,7 @@ import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";
-import { closeDlg, registerDlg } from "./modal.ts";
+import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
 import { addTagToSet } from "./tag-set.ts";
 
 interface DgTeShell {
@@ -93,6 +93,9 @@ function ensureTeStyles(): void {
 function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => void): DgTeShell {
   const overlay = document.createElement("div");
   overlay.className = "dlg-overlay";
+  overlay.tabIndex = 0;
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
 
   ensureTeStyles(); // P1 批次12:cssText 抽类注入(幂等)
   const box = document.createElement("div");
@@ -152,6 +155,8 @@ function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => 
   });
 
   registerDlg(overlay, () => closeDlg(overlay, resolve, null));
+  trapFocus(overlay);
+  overlay.focus();
 
   return shell;
 }

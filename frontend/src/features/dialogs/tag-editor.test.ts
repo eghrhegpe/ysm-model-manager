@@ -22,6 +22,7 @@ vi.mock("./modal.ts", () => ({
   closeDlg: closeDlgMock,
   registerDlg: registerDlgMock,
   esc: (s: unknown): string => String(s),
+  trapFocus: vi.fn(),
 }));
 
 vi.mock("../../backend/app.ts", () => ({

@@ -44,7 +44,7 @@ const BREATH_AMP_ROTX = 0.001; // 胸椎微前倾（弧度）
 /** 每帧呼吸 controller 状态（private，不在接口暴露） */
 interface BreathState {
   /** 骨骼 id → restPos/restRot 快照（仅已命中的骨骼） */
-  resting: Map<string, { pos: THREE.Vector3; rot: THREE.Quaternion }>;
+  resting: Map<string, { pos: THREE.Vector3; rot: THREE.Euler }>;
   /** 当前 cycle 时间（秒），由 update 驱动累加 */
   t: number;
   /** 上一次 update 的 timestamp（用于 dt 归一化） */
@@ -64,7 +64,7 @@ export function createBreathController() {
       if (!e?.object) continue;
       s.resting.set(id, {
         pos: e.object.position.clone(),
-        rot: e.object.quaternion.clone(),
+        rot: e.object.rotation.clone(),
       });
     }
     state = s;

@@ -4,6 +4,7 @@ import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { modalConfirm } from "../../features/dialogs/modal.ts";
+import { copyText } from "../../utils/dom/clipboard.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { toastEmptyRtype, toastError } from "../context-menu-shared.ts";
@@ -78,7 +79,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         }
 
         const text = allLines.join("\n");
-        await navigator.clipboard.writeText(text);
+        await copyText(text);
         bus.emit("toast:show", {
           msg: t("inst.exportListCopied", { n: totalFiles }),
           duration: TOAST_MS.normal,

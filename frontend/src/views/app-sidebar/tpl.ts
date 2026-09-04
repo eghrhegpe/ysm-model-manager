@@ -159,6 +159,6 @@ export function instanceCardHeaderHTML(
         : "");
   return `<div class="instance-card-header">
 <div class="card-name-row"><span class="name">${esc(name)}</span></div>
-<div class="card-status-row"><input type="checkbox" class="chk" data-testid="sidebar-check" data-idx="${idx}"><span class="pkg-icon" aria-hidden="true">📦</span><span class="instance-card-pkg-count">${chips}</span></div>
+<div class="card-status-row"><input type="checkbox" class="chk" data-testid="sidebar-check" data-idx="${idx}" aria-label="${esc(name)}"><span class="pkg-icon" aria-hidden="true">📦</span><span class="instance-card-pkg-count">${chips}</span></div>
 </div>`;
 }

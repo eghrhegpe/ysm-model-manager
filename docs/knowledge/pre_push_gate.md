@@ -68,7 +68,7 @@ invariant_anchors:
 
 ### 域级检查（Go ∥ 前端，Promise.all 并行）
 
-**Go 域**（plan.go）：updater helper 前置构建（go:embed 依赖）→ `go build ./go/...` → `go test -race ./go/... ./internal/app/ -count=1 -timeout 60s` → `go vet` → gofmt 只读检出 → `binding-check`
+**Go 域**（plan.go）：updater helper 前置构建（go:embed 依赖）→ `go build ./go/...` → `go test -race ./go/... ./internal/app/ -timeout 60s`（默认吃官方 test cache，源码未变 → (cached) 秒回；`YSM_FRESH_GO_TEST=1` 强制 `-count=1` 新鲜跑，2026-09-04 恢复缓存）→ `go vet` → gofmt 只读检出 → `binding-check`
 
 **前端域**（plan.frontend）：`check-layering`（R1/R2 零容忍 + R3/R4 基线）→ `check-path-hygiene`（ADR-146：反桶/深度/上跳/跨边界冻结/双写一致性）→ `check-menu-health`（ADR-085：菜单表 id/labelKey/i18n/dockGroup/kind/render·run 完备）→ `check-ctx-menu-i18n`（tr() key 必须存在于 zh-CN 基准包）→ npm 三件套并行（`vite build` ∥ `tsc --noEmit`）→ `vitest run --maxWorkers 8` 串行在后
 
@@ -115,7 +115,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - `scripts/commit-with-check.ts`：走 `--files --dry-run` 模式按 staged 文件裁剪门禁；commit 成功后自己打印横幅（`--no-banner` 抑制）
 - `scripts/_lib/gate-config.ts`：工具清单单一配置层
 - `scripts/_lib/domain-classify.ts`：`planFromFiles` / `groupByDomain` / `domainSummaryText`
-- `scripts/_lib/contract-tests.ts`：契约测试并行执行器
+- `scripts/_lib/contract-tests.ts`：契约测试并行执行器（双层防线防 Windows spawn 饱和 flaky：spawn 层「进程未启动」重试 + 整文件层**有界并发 8 worker 池 + 失败串行复跑 1 次**——真回归复跑必二次失败不掩盖，负载瞬态复跑转绿，2026-09-04 加固）
 - `scripts/_lib/proc.ts`：`procRun`（超时/错误分类契约；数组参数直走 CreateProcess 避 cmd.exe 8191 限制）
 - `scripts/_lib/log-push.ts`：结果日志
 - `scripts/gen-doc-next-steps.ts`：PASS 后后台刷新待补地图

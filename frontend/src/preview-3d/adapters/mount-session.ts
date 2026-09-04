@@ -63,7 +63,7 @@ export interface MpSessionState {
 }
 
 /** 输入事件 handler 集合（bindInputHandlers 返回；cleanup 按当前引用解绑） */
-export interface MountHandlers {
+interface MountHandlers {
   onKeyDown: (e: KeyboardEvent) => void;
   onKeyUp: (e: KeyboardEvent) => void;
   onDragPointerDown: (e: PointerEvent) => void;
@@ -114,7 +114,7 @@ export interface MountCtx {
  * 必须单一出口：ESC 早期中断会先走 closeOverlay，build 随后 resolve 时中止守卫
  * 又会进入 runFullCleanup，两条路径都会调到这里——不幂等则 onClose 会重复触发。
  */
-export function finishSession(ctx: MountCtx): void {
+function finishSession(ctx: MountCtx): void {
   const session = ctx.session;
   if (session.finished) return;
   session.finished = true;

@@ -4,23 +4,37 @@ import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { renderModel2D } from "./model2d/model2d.ts";
 
 /** 全窗放大预览（独立函数，不依赖组件实例） */
+/** 全屏放大预览样式(P1 批次10:cssText 抽类;overlay 挂 document.body light DOM,head 注入适用) */
+const zoomCss = `
+.zoom-overlay { position:fixed; inset:0; z-index:var(--z-fullscreen); background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; flex-direction:column; }
+.zoom-canvas { max-width:90vw; max-height:80vh; border-radius:8px; background:rgba(0,0,0,.2); touch-action:none; }
+.zoom-hint { font-size:11px; color:var(--muted); margin-top:6px; }
+`;
+let _zoomStylesInjected = false;
+function ensureZoomStyles(): void {
+  if (_zoomStylesInjected) return;
+  _zoomStylesInjected = true;
+  const el = document.createElement("style");
+  el.textContent = zoomCss;
+  document.head.appendChild(el);
+}
+
 export async function openFullPreview(
   _canvas: HTMLCanvasElement,
   model: BedrockGeometry,
   textureImg: HTMLImageElement | null,
   labelsOn: boolean,
 ): Promise<void> {
+  ensureZoomStyles(); // P1 批次10:cssText 抽类注入(幂等)
   const overlay = document.createElement("div");
-  overlay.style.cssText =
-    "position:fixed;inset:0;z-index:var(--z-fullscreen);background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;flex-direction:column";
+  overlay.className = "zoom-overlay";
   const bigCanvas = document.createElement("canvas");
   bigCanvas.width = 600;
   bigCanvas.height = 600;
-  bigCanvas.style.cssText =
-    "max-width:90vw;max-height:80vh;border-radius:8px;background:rgba(0,0,0,.2);touch-action:none";
+  bigCanvas.className = "zoom-canvas";
   overlay.appendChild(bigCanvas);
   const hint = document.createElement("div");
-  hint.style.cssText = "font-size:11px;color:var(--muted);margin-top:6px";
+  hint.className = "zoom-hint";
   hint.textContent = "🖱️ 拖拽旋转 · 滚轮缩放 · ESC 关闭";
   overlay.appendChild(hint);
   let zoom = 1,

@@ -78,4 +78,8 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 @media (max-width:480px){ .preview-fab{width:52px;height:52px;right:10px;bottom:10px;font-size:24px} }
 /* 触控热区 44px（Apple HIG） */
 @media (pointer:coarse){ .preview-fab{min-width:44px;min-height:44px} }
+
+/* === P1 批次10:loadModel2D 加载占位盒 / detail 统计容器(shadow 内元素,规则须在 adopted 样式表) === */
+.sk-loading-box { margin-bottom:8px; opacity:0.6; }
+.dp-stats { margin-top:10px; }
 `;

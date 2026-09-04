@@ -51,7 +51,7 @@ export async function loadModel2D(
   if (!content) return;
   content.innerHTML = "";
   const container = document.createElement("div");
-  container.style.cssText = "margin-bottom:8px;opacity:0.6";
+  container.className = "sk-loading-box"; // 规则在 css.ts previewCSS(shadow adopted);加载完成运行时 opacity=1 内联覆盖类
   container.innerHTML = `<div class="pv-loading-title">🏗️ ${t("preview.loadingStructure")}</div><div class="pv-loading-bar"></div>`;
   content.appendChild(container);
   try {

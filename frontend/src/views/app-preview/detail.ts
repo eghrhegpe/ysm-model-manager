@@ -123,7 +123,7 @@ export async function showModelDetail(
     // 详情卡统计容器（方案 A：统计卡彩色分区 + 头像作者挂详情卡底部，骨骼 tab 只留图）
     const statsDiv = document.createElement("div");
     statsDiv.id = "preview-stats";
-    statsDiv.style.cssText = "margin-top:10px";
+    statsDiv.className = "dp-stats"; // 规则在 css.ts previewCSS(shadow adopted)
     detailDiv?.appendChild(statsDiv);
 
     // 加载 2D 模型预览（骨架 tab 只留骨骼线条图；统计卡经 statsContainer 挂详情卡）

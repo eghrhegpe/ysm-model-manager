@@ -32,6 +32,7 @@ export function fbxBonesToBoneNodes(group: THREE.Object3D): BoneNode[] {
 
   // bone → 索引反查（父链推导用；FBX 多根骨骼，parent 非骨骼时 parentId=null）
   const idx = new Map<THREE.Bone, number>();
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   bones.forEach((b, i) => idx.set(b, i));
 
   return bones.map((b, i) => ({

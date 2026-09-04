@@ -578,6 +578,7 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
         safeSet("ysm-ws-active-tag", fs.activeTag);
         searchResults
           .querySelectorAll(".cr-tag-filter-btn")
+          // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
           .forEach((b) => b.classList.toggle("active", b === btn));
         eeApplyFilters(searchResults, searchInput, fs);
       },

@@ -83,6 +83,7 @@ export function subscribe(fn: (s: DownloadState) => void): () => void {
 
 /** 广播 STATE 变更（UI 控制器 enqueue 失败回滚等场景也经此通知） */
 export function notify(): void {
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   listeners.forEach((fn) => fn(STATE));
 }
 
@@ -196,6 +197,7 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   STATE._lastDoneSeq = 0;
   notify();
 
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   tasks.forEach((t) => (t.saveDir = t.saveDir || ""));
   // 网页版（ADR-123 P1）：下载与导入统一走 IndexedDB 入库——逐个 fetch(url) 转 File
   // 复用 browser-adapter.importWebFiles 落库（与拖拽导入同一条 IDB/刷新/反馈链路）。

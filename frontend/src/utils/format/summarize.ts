@@ -78,10 +78,13 @@ function renderTips(text?: string): string {
 /** 清洗纯文本（名称/ID 类字段，去除 § 和控制字符） */
 function cleanText(text: unknown): string {
   if (typeof text !== "string") return "";
-  return text
-    .replace(/§[0-9a-fk-or]/gi, "")
-    .replace(/[\x00-\x1f\x7f]/g, "")
-    .trim();
+  return (
+    text
+      .replace(/§[0-9a-fk-or]/gi, "")
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: 故意匹配控制字符做清洗
+      .replace(/[\x00-\x1f\x7f]/g, "")
+      .trim()
+  );
 }
 
 /** 安全链接：仅放行 http/https，拦截 javascript:/data: 等危险 scheme（导出供统计卡作者链接复用） */

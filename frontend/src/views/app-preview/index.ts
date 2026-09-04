@@ -176,6 +176,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         closeActive3DOverlay();
         // P2 修复（code_review）：任意新选择作废在途渲染——防跨类型污染
         // （litematic A 迟到写进 B 的 #preview-detail）
+        // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
         PREVIEW_INVALIDATE.forEach((fn) => fn());
         try {
           if (isDir) {
@@ -203,8 +204,10 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     //（旧数组随本次调用结束即被 GC，connectedCallback 的重置为第二道保险）
     const unsubs = this.unsubs;
     this.unsubs = [];
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     unsubs.forEach((fn) => fn());
     // 清理体素 3D（WebGL renderer + rAF 循环）：防切页后 GPU 资源残留
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     PREVIEW_CLEANUP.forEach((fn) => fn());
   }
 

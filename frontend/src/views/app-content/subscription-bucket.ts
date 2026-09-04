@@ -45,6 +45,7 @@ export class SubscriptionBucket {
       this.navUnsub = null;
     }
     if (this.globalUnsubs.length) {
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       this.globalUnsubs.forEach((fn) => fn());
       this.globalUnsubs = [];
     }

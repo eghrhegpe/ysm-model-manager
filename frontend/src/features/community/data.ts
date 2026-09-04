@@ -263,6 +263,7 @@ export async function tryFetchModels(
   // 用 Promise.any 取第一个成功的结果
   try {
     const result = await Promise.any([p1, p2, p3]);
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     state.controllers.forEach((c) => c.abort());
     if (onProgress) onProgress(100, "✅ 加载完成");
     // 过滤回收站条目：.recycle 段下的"已删/待清理"文件不进下载列表（防下载剥段平铺根 + 语义上本就不该下载）

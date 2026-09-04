@@ -159,6 +159,7 @@ function createBus(): Bus {
   // 闭包签名保留泛型（Bus["on"]/Bus["off"]）——内部 push/indexOf 时转内部存储类型
   // (payload: unknown) => void（listeners 的存储类型）。
   const on: Bus["on"] = (event, fn) => {
+    // biome-ignore lint/suspicious/noAssignInExpressions: 事件监听懒初始化惯用法（||= 补默认数组）
     ((listeners[event] as Array<(payload: unknown) => void>) ||= []).push(
       fn as (payload: unknown) => void,
     );
@@ -210,6 +211,7 @@ function createBus(): Bus {
 }
 
 /** 默认实例（组件直接使用） */
+// biome-ignore lint/suspicious/noAssignInExpressions: 单例惰性初始化惯用法（||= 兜底实例）
 const bus: Bus = _busInstance || (_busInstance = createBus());
 
 export { bus };

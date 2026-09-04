@@ -18,6 +18,7 @@ export function applyUIPrefs(): void {
 
   // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-* 和 --space-*
   // 先清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   ["--fs-base", "--fs-xs", "--fs-sm", "--fs-md", "--fs-lg", "--fs-tiny", "--fs-xl"].forEach((v) =>
     document.documentElement.style.removeProperty(v),
   );
@@ -90,21 +91,26 @@ export function initUiPrefs(root: ShadowRoot): void {
 
   // 初始化 UI 控件值
   root.getElementById("set-font-size") &&
+    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
     ((root.getElementById("set-font-size") as HTMLSelectElement).value =
       safeGet("ui-font-size") || "normal");
   root.getElementById("set-display-font") &&
+    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
     ((root.getElementById("set-display-font") as HTMLSelectElement).value =
       safeGet("ui-display-font") || "kaiti");
   root.getElementById("set-card-density") &&
+    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
     ((root.getElementById("set-card-density") as HTMLSelectElement).value =
       safeGet("ui-card-density") || "compact");
   root.getElementById("set-animations") &&
+    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
     ((root.getElementById("set-animations") as HTMLInputElement).checked =
       safeGet("ui-animations") !== "off");
   // 启动默认页面：显示「实际生效」的值——有显式配置用配置，否则回退
   // resolveInitialPage 的默认结果（仓库页）。旧写法 || "instances" 会显示
   // 一个从未生效的死默认值，与真实启动页不符（死设置遗留 bug）。
   root.getElementById("set-default-page") &&
+    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
     ((root.getElementById("set-default-page") as HTMLSelectElement).value =
       safeGet("ui-default-page") || "repository");
 

@@ -442,6 +442,7 @@ export class GroundCapability implements SceneCapability {
     if (this.surface.parent) this.surface.parent.remove(this.surface);
     this.grid.geometry.dispose();
     const mat = this.grid.material;
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
     else mat.dispose();
     // 表面层：材质 + 当前挂载纹理 + 自定义贴图缓存全部释放

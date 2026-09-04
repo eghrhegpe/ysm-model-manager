@@ -175,6 +175,7 @@ function serializeGeometry(geo: THREE.BufferGeometry): FbxGeometryData {
 function serializeSkeleton(mesh: THREE.SkinnedMesh): FbxSkeletonData {
   const skeleton = mesh.skeleton;
   const indexOf = new Map<THREE.Object3D, number>();
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   skeleton.bones.forEach((b, i) => indexOf.set(b, i));
   return {
     bones: skeleton.bones.map((b) => ({

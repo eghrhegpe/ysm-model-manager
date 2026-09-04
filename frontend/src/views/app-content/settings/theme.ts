@@ -30,6 +30,7 @@ export function initThemeSection(root: ShadowRoot): void {
     themePicker.querySelectorAll(".theme-card").forEach((card) => {
       card.classList.toggle("active", (card as HTMLElement).dataset.theme === savedTheme);
       card.addEventListener("click", () => {
+        // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
         themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
         card.classList.add("active");
         const themeName = (card as HTMLElement).dataset.theme || "";
@@ -79,6 +80,7 @@ export function initThemeSection(root: ShadowRoot): void {
         safeSet("theme", "system");
         // 更新卡片选中态
         if (themePicker)
+          // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
           themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       } else if (mode === "time") {
         // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
@@ -86,6 +88,7 @@ export function initThemeSection(root: ShadowRoot): void {
         const themeName = applyTimeTheme();
         safeSet("theme", themeName);
         if (themePicker)
+          // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
           themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       }
       // "off" 时不改变当前主题，等用户手动点卡片

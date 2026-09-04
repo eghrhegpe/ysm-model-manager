@@ -161,6 +161,7 @@ function buildMesh(
 ): THREE.Mesh | THREE.SkinnedMesh {
   const geometry = buildGeometry(meshData.geometry);
   const materials = meshData.materials.map((m) => buildMaterial(m));
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   materials.forEach((m) => applyTexture(m, texUrlMap));
   const material: THREE.Material | THREE.Material[] =
     materials.length === 1 ? materials[0] : materials;

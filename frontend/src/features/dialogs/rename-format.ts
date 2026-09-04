@@ -62,6 +62,7 @@ export function buildRenameName(f: RenameFields, ext: string): string {
 }
 
 /** Windows 文件名非法字符（含控制字符） */
+// biome-ignore lint/suspicious/noControlCharactersInRegex: 故意匹配控制字符做清洗/校验
 const ILLEGAL_CHARS = /[<>:"\\|?*/\u0000-\u001f]/;
 
 /**

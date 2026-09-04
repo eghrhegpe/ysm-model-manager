@@ -218,6 +218,7 @@ export function createLazyModule<T>(): LazyModule<T> {
 
   function settle(ok: boolean): void {
     loading = false;
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     waiters.forEach((r) => r(ok));
     waiters = [];
   }
@@ -262,6 +263,8 @@ export async function installYsmModule(
 ): Promise<WasmModuleLike> {
   const patchedGlue = patchGlueHeapExport(glueCode);
   host.Module = moduleCfg;
+  // biome-ignore lint/security/noGlobalEval: 可信链间接 eval 胶水，(0, eval) 间接调用惯用法
+  // biome-ignore lint/complexity/noCommaOperator: (0, eval) 间接调用惯用法
   (0, eval)(patchedGlue);
   const factory = host.YSMParserModule as
     | ((module: unknown) => unknown | Promise<unknown>)

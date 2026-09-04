@@ -198,7 +198,9 @@ function dgBrRenderPreview(el: HTMLElement | null, items: BatchItem[]): void {
   if (selectAll) {
     selectAll.addEventListener("change", (): void => {
       const checked = selectAll.checked;
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       items.forEach((it) => (it.selected = checked));
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       el.querySelectorAll(".br-file-cb").forEach(
         (cb) => ((cb as HTMLInputElement).checked = checked),
       );
@@ -213,6 +215,7 @@ function dgBrClose(shell: DgBrShell): void {
   if (shell.closed) return;
   shell.closed = true;
   const timers = shell.brTimers;
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   if (timers) timers.forEach((t) => t && clearTimeout(t));
   const res = shell.pendingResolve;
   shell.pendingResolve = null;

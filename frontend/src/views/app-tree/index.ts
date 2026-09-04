@@ -201,6 +201,7 @@ export class AppTree extends WebComponentBase {
     }
   }
   disconnectedCallback(): void {
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     this._unsubs?.forEach((fn) => fn?.());
     if (this._keydownHandler) {
       document.removeEventListener("keydown", this._keydownHandler);

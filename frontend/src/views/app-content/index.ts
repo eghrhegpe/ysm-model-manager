@@ -168,6 +168,7 @@ class AppContent extends WebComponentBase {
       }),
     );
     this._render();
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     registerGlobalHandlers().forEach((fn) => this.subs.addGlobal(fn));
   }
 

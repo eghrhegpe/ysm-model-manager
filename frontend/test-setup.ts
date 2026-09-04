@@ -165,6 +165,7 @@ vi.mock("molangjs", () => {
         (_, fn) => `Math.${fn}(`,
       );
       try {
+        // biome-ignore lint/security/noGlobalEval: 测试 Molang 解析 mock，sanitize 白名单受限 eval
         const result = eval(sanitized);
         return typeof result === "number" ? result : 0;
       } catch {

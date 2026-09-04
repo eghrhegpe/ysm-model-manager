@@ -89,6 +89,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
       // 点击仓库
       grid.querySelectorAll(".gh-repo-card").forEach((card) => {
         card.addEventListener("click", () => {
+          // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
           grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
           card.classList.add("active");
           const repo = (card as HTMLElement).dataset.repo || "";

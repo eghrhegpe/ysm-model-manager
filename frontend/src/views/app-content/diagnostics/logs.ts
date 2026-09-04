@@ -125,6 +125,7 @@ function dgLsBuildDiagMsg(l: ImportLogLike, esc: EscFn): string {
   const dir = l.TargetDir || l.SourcePath ? "<br>📂 " + esc(l.TargetDir || l.SourcePath) : "";
   const raw = l.ErrorMsg || "";
   const cleanErr = esc(raw)
+    // biome-ignore lint/suspicious/noMisleadingCharacterClass: 匹配日志状态 emoji 前缀，变音选择符为边角
     .replace(/^[❌✅⚠️⏭️]\s*/, "")
     .replace(/\s+(问题描述|操作|源路径|目标路径|解决建议)[：:]?/g, "<br>$1：");
   const modelDisplay = renderDisplayName(l.ModelName || "");

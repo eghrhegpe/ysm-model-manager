@@ -177,6 +177,7 @@ function dgTeLoadData(shell: DgTeShell, modelPath: string): void {
       shell.errEl.textContent = "⚠️ " + t("dialog.tagsLoadFailed") + ": " + friendlyError(e);
     } finally {
       shell.loading = false;
+      // biome-ignore lint/correctness/noUnsafeFinally: shell 已销毁时提前返回，跳过按钮恢复（有意守卫）
       if (shell.disposed) return;
       shell.inputEl.disabled = false;
       if (addBtn) addBtn.disabled = false;

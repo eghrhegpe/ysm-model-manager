@@ -83,6 +83,7 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
       host._setCurrentSite(site);
       safeSet("ysm-ws-last-tab", site.id);
       // tab 切换高亮
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       root.querySelectorAll(".repo-tab").forEach((t) => t.classList.remove("active"));
       root.querySelector(`[data-tab="${siteType}"]`)?.classList.add("active");
       _showSiteView(host._currentSite);

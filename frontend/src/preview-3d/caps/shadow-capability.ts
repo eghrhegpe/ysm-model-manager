@@ -311,6 +311,7 @@ export class ShadowCapability implements SceneCapability {
 
     const { dirs, spots } = this.collectLights();
     this.snapshotDirLights(dirs);
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     dirs.forEach((l) => this.applyDirLightShadow(l));
     const spotSnaps: Array<[THREE.SpotLight, LightShadowSnapshot]> = [];
     for (const sp of spots) {

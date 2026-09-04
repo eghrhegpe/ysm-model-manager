@@ -312,6 +312,7 @@ export async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> 
           return null;
         }
       },
+      // biome-ignore lint/suspicious/noAssignInExpressions: ktx2Loader 惰性初始化 + 写回缓存
       ktx2Loader: (c.ktx2Loader = new KTX2Loader()
         .setTranscoderPath("/basis/")
         .detectSupport(c.ctx.renderer)),

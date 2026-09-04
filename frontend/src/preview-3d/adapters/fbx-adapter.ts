@@ -304,6 +304,7 @@ export async function buildFbxScene(
             skinned.skeleton.dispose();
           }
           const mat = mesh.material;
+          // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
           if (Array.isArray(mat)) mat.forEach((m) => disposeMaterial(m));
           else if (mat) disposeMaterial(mat as THREE.Material);
         });

@@ -18,11 +18,13 @@ export function disposeDebugGroup(debugGroup: THREE.Group | null): void {
     if ((obj as THREE.Mesh).isMesh) {
       (obj as THREE.Mesh).geometry?.dispose();
       const m = (obj as THREE.Mesh).material;
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       if (Array.isArray(m)) m.forEach((x) => disposeMaterial(x));
       else disposeMaterial(m);
     } else if ((obj as THREE.Line).isLine) {
       (obj as THREE.Line).geometry?.dispose();
       const lm = (obj as THREE.Line).material;
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       if (Array.isArray(lm)) lm.forEach((x) => x.dispose());
       else lm?.dispose();
     } else if ((obj as THREE.Sprite).isSprite) {
@@ -47,6 +49,7 @@ export function disposeSceneMeshes(
     if (mesh.isMesh) {
       mesh.geometry?.dispose();
       if (Array.isArray(mesh.material))
+        // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
         mesh.material.forEach((m) => disposeMaterial(m, disposeTextures));
       else disposeMaterial(mesh.material, disposeTextures);
     }

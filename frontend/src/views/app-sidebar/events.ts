@@ -55,6 +55,7 @@ function bindCardClickHandler(root: ShadowRoot, st: CardBindState): (e: MouseEve
     // 高亮当前选中的版本
     root
       .querySelectorAll(".instance-card-header")
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       .forEach((h) => h.classList.remove("active", "ripple"));
     // 涟漪效果：记录点击坐标，触发涟漪动画
     const rect = hdr.getBoundingClientRect();
@@ -134,6 +135,7 @@ function bindCardContextHandler(_root: ShadowRoot, st: CardBindState): (e: Mouse
 
 export function bindCardEvents(root: ShadowRoot, instances: SidebarInstance[]): () => void {
   // 先清掉旧的右键容器（防止重复）
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   root.querySelectorAll(".instance-card-context-menu").forEach((el) => el.remove());
 
   const list = root.getElementById("sidebar-instance-list");

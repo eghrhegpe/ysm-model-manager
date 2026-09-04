@@ -282,6 +282,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
       });
       return;
     }
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     tasks.forEach((t) => (t.saveDir = filesRoot));
 
     const btn = cmDqDlBtn(ctx);

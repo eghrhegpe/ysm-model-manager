@@ -140,6 +140,7 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
 
   // 返回聚合清理函数：调用各块 cleanup（storage 等），供外层切页时统一调用
   return () => {
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     unsubs.forEach((fn) => fn());
   };
 }

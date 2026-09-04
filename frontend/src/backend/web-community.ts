@@ -61,6 +61,7 @@ function upsertCreators(
 ): { existing: WorkshopCreator[]; added: number; updated: number } {
   const existing = loadWebCreators();
   const existMap = new Map<string, number>();
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   existing.forEach((c, i) => existMap.set(c.name, i));
   let added = 0;
   let updated = 0;

@@ -158,6 +158,7 @@ export const GROUP_TYPE_OPTIONS: Record<string, GroupTypeOption[]> = (() => {
     if (!t.id || !GROUP_OF[t.id]) continue;
     const g = GROUP_OF[t.id];
     const label = RESOURCE_TYPE_LABELS[t.id] || GROUP_META[g]?.name || t.id;
+    // biome-ignore lint/suspicious/noAssignInExpressions: 懒初始化 + 链式 push 惯用
     (result[g] ||= []).push({ rtype: t.id, label, subdir: "" });
   }
   return result;

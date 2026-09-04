@@ -51,10 +51,11 @@ function scanFile(filePath: string): Violation[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    let match;
+    let match: RegExpExecArray | null;
     // 重置 lastIndex（正则复用时需要）
     BYPASS_REGEX.lastIndex = 0;
 
+    // biome-ignore lint/suspicious/noAssignInExpressions: 正则 exec 循环惯用法（配 lastIndex 重置）
     while ((match = BYPASS_REGEX.exec(line)) !== null) {
       violations.push({
         file: filePath,

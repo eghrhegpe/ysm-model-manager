@@ -121,6 +121,7 @@ export class AppSyncManager extends WebComponentBase {
 
   disconnectedCallback(): void {
     if (this._unsubs) {
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       this._unsubs.forEach((fn) => fn());
       this._unsubs = [];
     }
@@ -135,6 +136,7 @@ export class AppSyncManager extends WebComponentBase {
     if (listEl) listEl.innerHTML = loadingHTML();
 
     if (this._unsubs) {
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       this._unsubs.forEach((fn) => fn());
       this._unsubs = [];
     }

@@ -288,6 +288,7 @@ export function renderEnvLevel(
         primary.setValue(v);
         vl.textContent = formatCapSliderValue(primary, v);
       };
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       ["click", "mousedown", "touchstart"].forEach((ev) =>
         sl.addEventListener(ev, (e: Event) => e.stopPropagation()),
       );

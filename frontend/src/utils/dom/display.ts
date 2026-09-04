@@ -145,6 +145,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
       "g",
     );
     let m: RegExpExecArray | null;
+    // biome-ignore lint/suspicious/noAssignInExpressions: 正则 exec 循环惯用法
     while ((m = re.exec(name)) !== null) {
       matches.push({
         idx: m.index,
@@ -164,6 +165,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
     // `-` 通配 `[-_.]` 三态分隔符（escRegex 已转义其余字符）
     const re4 = new RegExp(escRegex(p.date).replace(/-/g, "[-_.]"), "g");
     let m4: RegExpExecArray | null;
+    // biome-ignore lint/suspicious/noAssignInExpressions: 正则 exec 循环惯用法
     while ((m4 = re4.exec(name)) !== null) {
       // P3 修复：剔除与既有括号段（[ ]/【 】/《 》）区间重叠的日期命中——
       // `【2023】角色.ysm` 中 date(2023) 与 work(【2023】) 区间重叠，反向替换后
@@ -234,6 +236,7 @@ export function renderModelNameWithHighlight(
   let m: RegExpExecArray | null;
   const markRe = /<mark>(.*?)<\/mark>/g;
   let last = 0;
+  // biome-ignore lint/suspicious/noAssignInExpressions: 正则 exec 循环惯用法
   while ((m = markRe.exec(rest)) !== null) {
     safe += esc(rest.slice(last, m.index)) + "<mark>" + esc(m[1]) + "</mark>";
     last = m.index + m[0].length;

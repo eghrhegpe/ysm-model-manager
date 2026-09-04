@@ -480,6 +480,7 @@ func jsonEntryPass(e container.Entry, maidNs string) bool {
 // 避免动画收集逻辑重复（ADR-140 L3）。
 func collectAnimJSONs(entries []container.Entry, maidNs string) []string {
 	var animJSONs []string
+	var totalBytes int64
 	for _, e := range entries {
 		if !jsonEntryPass(e, maidNs) {
 			continue
@@ -496,8 +497,12 @@ func collectAnimJSONs(entries []container.Entry, maidNs string) []string {
 		buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
 		if len(buf) > 10 {
 			animJSONs = append(animJSONs, string(buf))
-			if len(animJSONs) >= maxMaterializeEntries {
-				log.Printf("[geometry] collectAnimJSONs 达到物化条目封顶 %d, 截断", maxMaterializeEntries)
+			totalBytes += int64(len(buf))
+			// 条目/累计字节双封顶（code review P2 安全修复）：
+			// 恶意归档塞 5000 个 ~50MB 动画 JSON → ~250GB 物化到内存，
+			// 绕过 512MB 字节封顶——与 collectPngEntries 同构双封顶
+			if len(animJSONs) >= maxMaterializeEntries || totalBytes >= maxMaterializeBytes {
+				log.Printf("[geometry] collectAnimJSONs 达到物化封顶 (entries=%d bytes=%d), 截断", len(animJSONs), totalBytes)
 				break
 			}
 		}
@@ -512,6 +517,7 @@ func collectAnimJSONs(entries []container.Entry, maidNs string) []string {
 func collectGeoAnimEntries(entries []container.Entry, maidNs string) ([]geoEntry, []string) {
 	animJSONs := collectAnimJSONs(entries, maidNs)
 	var geoFiles []geoEntry
+	var geoBytes int64
 	for _, e := range entries {
 		if !jsonEntryPass(e, maidNs) {
 			continue
@@ -527,8 +533,10 @@ func collectGeoAnimEntries(entries []container.Entry, maidNs string) ([]geoEntry
 		}
 		buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
 		geoFiles = append(geoFiles, geoEntry{name: e.Name(), data: buf})
-		if len(geoFiles) >= maxMaterializeEntries {
-			log.Printf("[geometry] collectGeoAnimEntries 达到物化条目封顶 %d, 截断", maxMaterializeEntries)
+		geoBytes += int64(len(buf))
+		// 条目/累计字节双封顶（code review P2 安全修复）：与 collectPngEntries 同构
+		if len(geoFiles) >= maxMaterializeEntries || geoBytes >= maxMaterializeBytes {
+			log.Printf("[geometry] collectGeoAnimEntries 达到物化封顶 (entries=%d bytes=%d), 截断", len(geoFiles), geoBytes)
 			break
 		}
 	}
@@ -966,6 +974,7 @@ func resolveL0(entries []container.Entry, maidNs string, manifest []maidManifest
 //   - IsArmModelName 检查发生在 Open+Read 之后（保持原序，勿"顺手优化"成先判断再读）。
 func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []geoEntry, animJSONs []string, pngs [][]byte, pngNames []string) {
 	var totalBytes int64
+	var animBytes int64
 	for _, e := range entries {
 		low := strings.ToLower(e.Name())
 		if strings.HasSuffix(low, ".json") && !e.IsDir() {
@@ -985,8 +994,10 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 				buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
 				if len(buf) > 10 {
 					animJSONs = append(animJSONs, string(buf))
-					if len(animJSONs) >= maxMaterializeEntries {
-						log.Printf("[geometry] collectMergedFiles 动画达到物化条目封顶 %d, 截断", maxMaterializeEntries)
+					animBytes += int64(len(buf))
+					// 条目/累计字节双封顶（code review P2 安全修复）：与 collectPngEntries 同构
+					if len(animJSONs) >= maxMaterializeEntries || animBytes >= maxMaterializeBytes {
+						log.Printf("[geometry] collectMergedFiles 动画达到物化封顶 (entries=%d bytes=%d), 截断", len(animJSONs), animBytes)
 						break
 					}
 				}

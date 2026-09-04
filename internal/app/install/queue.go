@@ -41,6 +41,9 @@ func NewDownloadQueue(downloadFn func(ctx context.Context, url, saveDir string) 
 
 // Enqueue 入队一批下载任务（URL 仅允许 https，防 SSRF / 本地文件读取）。
 func (q *DownloadQueue) Enqueue(tasks []types.DownloadTask) error {
+	if q == nil {
+		return nil
+	}
 	if len(tasks) == 0 {
 		return nil
 	}
@@ -71,6 +74,9 @@ func (q *DownloadQueue) Enqueue(tasks []types.DownloadTask) error {
 
 // Cancel 取消在途队列并清空待处理任务。
 func (q *DownloadQueue) Cancel() {
+	if q == nil {
+		return
+	}
 	q.mu.Lock()
 	q.cancelled = true
 	// 递增代际：使在途 process goroutine 退出时不再复位 running / 发 done，
@@ -92,6 +98,9 @@ func (q *DownloadQueue) Cancel() {
 
 // Status 返回队列结构化状态（ADR-145：types.QueueStatusInfo 为跨包 DTO，JSON 契约不变）。
 func (q *DownloadQueue) Status() types.QueueStatusInfo {
+	if q == nil {
+		return types.QueueStatusInfo{}
+	}
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	return types.QueueStatusInfo{Remaining: len(q.tasks), Running: q.running}

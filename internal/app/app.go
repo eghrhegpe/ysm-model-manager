@@ -39,9 +39,6 @@ func requireMcRoot(cfg types.AppConfig) error {
 }
 
 type App struct {
-	// linkMode 私有：须经 SetLinkMode/getLinkMode 访问（linkModeMu 保护）。
-	// 公有字段会被包外直写绕过锁；配置加载/保存点仍可在锁内直写。
-	linkMode string
 	// appCtx 应用生命周期 context：NewApp 创建、ServiceShutdown cancel。
 	// 供不经下载队列的直下入口（DownloadFromGitHub 等）作取消源——
 	// 原硬编码 context.Background() 导致退出/撤销无法中断在途 HTTP 请求。
@@ -58,7 +55,6 @@ type App struct {
 	configCache        types.AppConfig
 	configLoaded       bool
 	configMu           sync.RWMutex
-	linkModeMu         sync.RWMutex
 	watcherMu          sync.Mutex
 	app                *application.App
 	mainWindow         *application.WebviewWindow
@@ -104,11 +100,17 @@ func NewApp() *App {
 	}
 	// 回调注入：打破 DownloadQueue ↔ App 循环（ADR-002 P1）
 	// emitFn 闭包延迟解析 a.app（SetApp 在应用启动时注入）
-	a.install = install.NewManager(install.NewDownloadQueue(
-		a.downloadFileWithQueue,
-		func(name string, args ...interface{}) { a.app.Event.Emit(name, args...) },
-		a.AddOpLog,
-	))
+	a.install = install.NewManager(
+		install.NewDownloadQueue(
+			a.downloadFileWithQueue,
+			func(name string, args ...interface{}) { a.app.Event.Emit(name, args...) },
+			a.AddOpLog,
+		),
+		install.ConfigDeps{
+			LoadAppConfig: a.LoadAppConfig,
+			SaveAppConfig: a.saveConfig,
+		},
+	)
 	// ADR-134：容器类型指纹缓存组件（原 app_scan.go 包级全局抽离），
 	// 默认探测指向 packs.DetectResourceType，组装点显式注入（依赖可见）
 	a.containerCache = newContainerTypeCache(defaultDetectFn)

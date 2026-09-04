@@ -83,7 +83,8 @@ func WriteModelFolder(filesRoot, subpath, folderName string, files []types.Impor
 // writeModelFolderFiles 顺序写文件夹内全部文件（独立函数便于失败回滚）
 func writeModelFolderFiles(dstRoot string, files []types.ImportFileItem) error {
 	for _, f := range files {
-		// 受限解码：预检 + 复检（与 importer_file.go:60 同口径，防恶意 base64 解码后膨胀撑爆内存）
+		// 受限解码：预检 + 复检（口径与 importer_file.go 不同——此处 50MB previewReadLimit 防解压后目录
+		// 单文件膨胀，importer_file 500MB MaxImportSize 防原始压缩包膨胀；防恶意 base64 解码撑爆内存）
 		data, err := fsutil.DecodeBase64Limited(f.Base64, previewReadLimit())
 		if err != nil {
 			return fmt.Errorf("base64 解码失败: %s", f.RelPath)

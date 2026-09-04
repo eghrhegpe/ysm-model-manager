@@ -63,8 +63,8 @@ func getEnv() (string, func() string, func() []byte) {
 }
 
 // limitedBuffer 流式输出护栏：写满 max 后丢弃超限部分并置 exceeded，保持内存有界
-// （与 internal/app wasm_decoder.go 同款，跨包无法共享故本地复制最小实现；
-// 防解压炸弹在 Node/WASM 内膨胀到数百 MB~GB 级峰值内存）。
+// （ADR-164 后全仓单例——internal/app wasm_decoder.go 已变薄封装调 DecodeYSMData，
+// 本实现是唯一副本；防解压炸弹在 Node/WASM 内膨胀到数百 MB~GB 级峰值内存）。
 type limitedBuffer struct {
 	buf      bytes.Buffer
 	max      int

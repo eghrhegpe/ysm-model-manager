@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 159 张知识卡
+> 总计: 161 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -124,7 +124,7 @@
 | 🏗 drift-scan | drift-scan（双轨漂移检测） | architecture | — | 漂移检测, 双轨, 重复实现, 口径漂移, 常量硬编码, 错误链断裂, 资源泄漏, 定时器泄漏 |
 | 🏗 fbx-cli-pipeline | FBX CLI 处理管线 fbx-cli-pipeline | architecture | — | FBX, CLI, 命令行, 转换, glTF, GLB, fbx2gltf, assimp |
 | 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android、平台守卫, RevealInExplorer / OpenFolder / xdg-open, SAF / MANAGE_EXTERNAL_STORAGE, build-tag, pathmgr, RestartApplication / 重启, Node.js, watcher 守卫 / fsnotify |
-| 🍃 go-avatar-decode | Go 头像提取：纯函数 vs Node+WASM 解码分界 | leaf | io-bound, single-thread | 改头像提取 / DecodeYSMFiles / ExtractAvatarURI 逻辑或补 avatar 测试时 |
+| 🍃 go-avatar-decode | Go 头像提取：纯函数 vs Node+WASM 解码分界 | leaf | io-bound, single-thread | 改头像提取 / DecodeYSMData / ExtractAvatarURI 逻辑或补 avatar 测试时 |
 | 🏗 go-avatar | 头像 go/avatar | architecture | io-bound | 头像, 作者, 创作者, avatar, 缓存, 头像缩略图 |
 | 🏗 go-cli-search | CLI 搜索命令 search | architecture | — | CLI 搜索, 命令行搜索, search 命令, 关键词搜索, 数值范围搜索, 模型搜索, go run search, runSearch |
 | 🍃 go-conc | 通用泛型并发工具 go/conc | leaf | — | 并发, 并行, worker 池, 批量并发, 输入序收集 |
@@ -171,7 +171,7 @@
 - **doctor_gate_overlap**（质量闸门双调度器重叠审计）：2026-08-14 摸排结论：推送测试链路本身不臃肿，但质量闸门体系存在**双调度器 + 双重实现**，约 250 行重复逻辑，已出现参数漂移。
 - **fbx-cli-pipeline**（FBX CLI 处理管线 fbx-cli-pipeline）：**CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**：
 - **go-android-platform-guard**（Android 平台守卫（Go 侧））：ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的桌面能力**显式拒绝/降级，避免 `xdg-open`/`exec` 链静默失败（错误分类反模式——失败要可见）。结合既有的 build-tag 平台双文件（`…
-- **go-avatar-decode**（Go 头像提取：纯函数 vs Node+WASM 解码分界）：`go/avatar` 提取作者头像有**两条路**：纯 Go 函数链（零 IO、零 WASM）与 `DecodeYSMFiles`（Node.js + WASM glue 子进程解码 .ysm）。**包头「不依赖 Wails runtim…
+- **go-avatar-decode**（Go 头像提取：纯函数 vs Node+WASM 解码分界）：`go/avatar` 提取作者头像有**两条路**：纯 Go 函数链（零 IO、零 WASM）与 `DecodeYSMData`（Node.js + WASM glue 子进程解码 .ysm）。**包头「不依赖 Wails runtime…
 - **go-avatar**（头像 go/avatar）：`go/avatar/` 包负责创作者头像的提取与缓存：从模型文件（.ysm 二进制 / .zip / 解压目录 .json）的 `metadata.authors[].avatar` 声明中取出头像图片，缓存到**平台配置根 `os.Us…
 - **go-cli-search**（CLI 搜索命令 search）：`go/cli/model.go` 的 `search` 命令是 YSM CLI 模式的模型搜索入口，注册为 `RegisterCommandC("search", CatModel, "搜索模型（支持关键词过滤）", runSearch)…
 - **go-conc**（通用泛型并发工具 go/conc）：`go/conc` 提供唯一泛型并行入口 `Parallel[T,R]`，收敛 `internal/app` 三处手写 worker 池（`app_scan.go:runConcurrentAnalyze` / `app_model.go:…
@@ -236,7 +236,7 @@
 - **mount-preview-module-singleton-race**（mount3D 并发竞态（已闭环 — _gen 代际守卫））：**已闭环**。`mount-preview-core.ts:164` 声明模块级 `let _gen = 0`，`mount3D` 入口（L271）`const myGen = ++_gen` 捕获本次挂载的代数。此后三处 `await`…
 - **mount3d-584-giant**（mount3D 巨函数现状（2026-08-27 已部分拆分））：`mount3D`（mount-preview-core.ts:263-866）**604 行**，仍超 100 行红线。文件总量 **1202 行**，已拆出 5 个包级 `mp*` 子函数（`mpUnloadRole` L926-964…
 
-## ui（34 张）
+## ui（35 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -266,6 +266,7 @@
 | 🏗 frontend_design_critique | 前端设计锐评 | architecture | — | 设计评审, 前端设计, 锐评, 主题系统, 3D 性能审查, 生命周期审查, 技术债 |
 | 🍃 frontend_naming | 前端命名章程（黑话治理） | leaf | — | 黑话, 命名, 缩写, 重命名, 可读性, 匈牙利前缀, 单字母变量, 动词名词化 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
+| 🍃 module_global_state | 模块级全局状态治理 | leaf | — | 模块级全局状态, 全局 Map 泛滥, reset 测试钩子, 单例收敛 |
 | 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | gpu-bound | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
 | 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, sessionId |
 | 🍃 preview_menu_settings_state | 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125） | leaf | — | 新增 3D 预览设置项, 新增 cap 想让某个开关出现在设置面板, 排查设置项改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, ADR-125 三块落地状态核对 |
@@ -301,6 +302,7 @@
 - **frontend_design_critique**（前端设计锐评）：2026-09-03 三子代理并发只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。…
 - **frontend_naming**（前端命名章程（黑话治理））：2026-09 ADR-161「渲染会话词汇章程」实施时扩大扫描 `frontend/src` 404 个生产 TS 文件，发现命名黑话远超章程六类，按模式统计：
 - **frontend_repo_audit**（前端 TS 整包审计）：2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全…
+- **module_global_state**（模块级全局状态治理）：2026-09-04 锐评续刀 + ADR-178 期间对「模块级全局状态」的系统评估：modal 单例槽位试点收敛成功（`ModalSlotState`），locale/web-store 查证后**停止推广**（无净收益）。本卡沉淀判断…
 - **multi_model_select**（多模型选择菜单原语 multiModelSelectNode）：跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的
 - **preview_menu_session_key**（preview-menu-session-key）：3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台
 - **preview_menu_settings_state**（3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125））：ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已落地，**S2「状态单向流」只落了 bind 回写，未落统一状态源**——横切设置项各自有独立读写通道，声明式 Schema 的 `control.bi…
@@ -312,7 +314,7 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/ui/ui-slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（m…
 - **ui_components**（UI 组件库 ui-components）：`frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 …
 
-## utils（26 张）
+## utils（27 张）
 
 *工具函数（display、fmt、dom、animation）*
 
@@ -329,6 +331,7 @@
 | 🏗 safe_error_msg | 安全错误消息提取 utils | architecture | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
 | 🏗 script_shared_cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重 |
 | 🏗 source-graph | 源码符号提取共享层 source-graph.ts | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图 |
+| 🏗 test_tax_reduction | 测试税减负三刀方法论 | architecture | — | 测试税, 测试文件过大, mock 复印机, 双胞胎测试, 墓碑测试, stubBlobUrls, 夹具沉淀 |
 | 🏗 utils-array | 数组工具 moveItem | architecture | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
 | 🍃 utils-display | 文件名显示 display | leaf | — | 文件名显示, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮 |
 | 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
@@ -357,6 +360,7 @@
 - **pre_push_gate**（推送前门禁 pre-push-gate）：`.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器，681 行）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（…
 - **safe_error_msg**（安全错误消息提取 utils）：`frontend/src/utils/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `friendlyErr…
 - **script_shared_cores**（scripts 共享核演进（diff-coverage-core + cycles））：`scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复：
+- **test_tax_reduction**（测试税减负三刀方法论）：测试税 ≠ 测试太多，而是「mock 复印机」与「双胞胎测试」这两种结构病。
 - **utils-array**（数组工具 moveItem）：纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。
 - **utils-display**（文件名显示 display）：模型文件名解析 + 美化显示管线。YSM 社区文件名遵循 `[作者]【作品】角色 日期.ext` 命名约定，本模块把它解析为结构化字段，并在原文件名上原位着色（作者/作品/日期各自样式），是 UI 侧文件名展示的唯一入口。
 - **utils-dom**（DOM 工具 dom）：HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / 恢复（a11y）。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（8…

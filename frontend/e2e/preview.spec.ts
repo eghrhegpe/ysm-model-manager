@@ -294,7 +294,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     // 错误路径覆盖：mock 中 ExtractYsmSummary / ExtractYSMHeader 是 undefined
     // → showModelDetail 的 Promise.allSettled 得 fulfilled value=undefined
     // → summary=null, header=null → hasRealSummary=false
-    // → decodeYsmViaWasm → GetWasmBinary undefined → dec=null
+    // → decodeYsmViaWasm → mock 无 WASM 绑定 → dec=null
     // → showSummary=null → throw new Error(t("preview.cannotParse"))
     // → catch（detail.ts:134-140）→ #preview-detail 写入：
     //   `${t("preview.unknownError")} ${t("preview.parseFailed")}: ${esc(friendlyError(err))}`

@@ -249,7 +249,7 @@ func copyDirRecursiveWalk(src, dstDir string, opts CopyDirOptions) error {
 		}
 		if !opts.Overwrite {
 			// Lstat 而非 Stat：目标位置是悬空符号链接时 Stat 返回 NotExist，
-			// 守卫被绕过 → CopyFile 的 rename 静默顶掉链接（对齐 recycle.uniqueDest 口径）
+			// 守卫被绕过 → CopyFile 的 rename 静默顶掉链接（对齐 recycle.generateConflictFreeDest 口径）
 			if _, err := os.Lstat(target); err == nil {
 				return fmt.Errorf("目标已存在: %s", target)
 			}

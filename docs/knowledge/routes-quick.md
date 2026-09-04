@@ -795,7 +795,7 @@
 | 各自创建 renderer | - | 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享 |
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
 | loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回  时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试 | `"{}"` | - |
-| services/registry.get 用 Map.has() 判定，falsy 值  如实返回（P3 修复）；误判走 null 分支会导致功能静默失效 | `不存在` | - |
+| ⚠️ 历史：原  服务注册表的 `get` 用 `Map.has()` 判定 falsy 值——该文件已删，本 pitfall 仅存史 | `services/registry.ts` | - |
 | MMD 子类型 instanceDir 必须精确为 （含子级），漏写一级右键打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定 | `打开文件夹` | - |
 | 硬编码 Windows 路径 | - | Android/Linux 启动失败；必须经平台桥的编译脚本 |
 | CGO 未静态链接 | - | Android 缺少依赖库；必须经 compile-rust-static 静态编译 |

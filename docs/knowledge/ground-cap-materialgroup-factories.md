@@ -33,7 +33,7 @@ status: active
 
 ## 概览
 
-`ground-capability.ts` `buildGroundMaterialGroup` 约 55 行（T2 工厂化后从 133 行降至 <60 行），构建「表面材质」菜单组 14 个控件。已按建议抽 `groundSliderDef`/`groundColorDef`/`groundButtonDef` 工厂，消除重复结构。2026-08-28 拓展：新增 `stripes`/`diamond`/`marble` 三种程序化表面模式；select 列表、副色 color2、density、angle 三项控件。
+`ground-capability.ts` `buildGroundMaterialGroup` 148 行（L541-688；T2 工厂化曾从 133 行降至 ~55 行，2026-08-28 拓展后回升至 148 行），构建「表面材质」菜单组 14 个控件。已按建议抽 `groundSliderDef`/`groundColorDef`/`groundButtonDef` 工厂，消除重复结构。2026-08-28 拓展：新增 `stripes`/`diamond`/`marble` 三种程序化表面模式；select 列表、副色 color2、density、angle 三项控件。
 
 ## 核心职责
 
@@ -49,7 +49,7 @@ status: active
 
 - 上游：`GroundCapability.getMenuControls()` 聚合 `buildGroundMain`/`buildGroundMaterialGroup` 两组（1 + 14 = 15 控件；水面已拆为独立 WaterCapability，其 `buildWaterGroup` 在 water-capability.ts 内）。
 - 下游：`renderCapControls`（preview-menu/cap-controls.ts）消费 `MenuControlDef[]` 渲染声明式菜单。
-- 横向：`buildGroundMain` ~12 行、`buildGroundMaterialGroup` ~55 行——组长尾均 <100 行。
+- 横向：`buildGroundMain` 12 行（L464-475）、`buildGroundMaterialGroup` 148 行（L541-688）——material group 超 100 行红线（工厂化降行后，2026-08-28 拓展控件回升）。
 
 ## 不变量
 
@@ -59,7 +59,7 @@ status: active
 
 ## 历史问题清单（2026-08-27 ts-package-review）— 已完成修复
 
-1. ~~133 行超 100 行红线~~：抽出 3 个工厂后，主函数从 133 行降至 ~55 行。
+1. ~~133 行超 100 行红线~~：抽出 3 个工厂后，主函数曾从 133 行降至 ~55 行；**2026-08-28 拓展后回升至 148 行**（新增 stripes/diamond/marble 模式 + color2/density/angle 控件），重新超红线。
 2. ~~重复结构~~：7 slider（后扩至 9）→ `groundSliderDef` 工厂 1 处；2 color（后扩至 3）→ `groundColorDef` 工厂。
 3. ~~`as unknown as` 窄化~~：保留现状（私有字段访问用类型断言集中一处），无需扩大 public API 面。
 

@@ -55,7 +55,7 @@ status: active
 ## 核心职责
 
 - `app-modules.ts` —
-  - 服务注册：`register("loadInstances", ...)`（app-sidebar/loader）与 `register("loadEntries", ...)`（app-tree/loader）写入 `services/registry.ts`
+  - loader 直连：`loadInstances`（app-sidebar/loader）与 `loadEntries`（app-tree/loader）由各自 `loader.ts` 导出、组件直接 import（原 `services/registry.ts` 服务注册表已删，见 `frontend/AGENTS.md` §目录结构）
   - 静态导入轻量组件：`context-menu.ts` / `app-toast.ts`（失败直接报错，不 try/catch 以免静默吞错）
   - 动态导入重组件：`app-nav` / `app-tree` / `app-sidebar` / `app-content` / `app-sync-manager`（字面量路径确保 Vite 构建解析，`.catch` 输出 `console.warn` 告警不阻塞）——其中 `app-nav` 通过启动 IIFE（`await initI18n()` 后 `await import`）延迟加载，避免首帧渲染时 i18n bundle 尚未就绪导致 `[i18n]` 缺失 key 警告；`app-resource-manager` 已于 2026-08-24 删除
   - 右键菜单注册：`registerContextMenus()` 由 `core/handlers/global.ts` 经 `registerGlobalHandlers` 单次调用（app-modules.ts 不直接调用）
@@ -74,7 +74,7 @@ status: active
 ## 与其他子系统关系
 
 - 装配的全部组件：见知识卡 `app_nav`、`app_toast`、`context_menu`、`app_tree`、`app_sidebar`、`app_content`、`app_resource_manager`、`app_sync_manager`
-- 服务注册表：`frontend/src/services/registry.ts`（见知识卡 `resource_registry`），`loadInstances` / `loadEntries` 可被测试替换
+- 数据加载服务直连：`loadInstances` / `loadEntries` 由 `views/app-sidebar/loader.ts` / `views/app-tree/loader.ts` 直接 import，测试经 `vi.mock("./loader.ts")` 替换（原注册表机制已删，见 `frontend/AGENTS.md` §目录结构）
 - 主题切换与设置页联动：设置页改主题后经 localStorage `theme` + `window.applyTheme` 生效
 - 静默更新走 `features/version-updater.ts`（Go 端 `go/updater`）
 
@@ -89,6 +89,5 @@ status: active
 ## 相关
 
 - `frontend/index.html` — 以 module script 引入本文件
-- `frontend/src/services/registry.ts` — 服务注册表
 - `frontend/src/features/version-updater.ts` — 更新检查
 - 知识卡：`app_content`、`context_menu`、`resource_registry`、`event_bus`

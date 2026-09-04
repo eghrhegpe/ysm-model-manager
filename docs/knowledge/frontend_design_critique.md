@@ -172,7 +172,7 @@ invariant_anchors:
 
 | 视角 | 分 | 主炮 |
 |------|----|------|
-| 架构 | 4.0 | `app-content/index.ts` 7个死代码转发壳（L274-302）、`app-sidebar` `_checkedSets` 模块级泄漏（L37）、`app-nav` `_focusRepoSearch` 轮询耦合（L328-342） |
+| 架构 | 4.0 | `app-content/index.ts` 7个死代码转发壳（L274-302）、`app-sidebar` `_checkedSets` 模块级泄漏（L37）、`app-nav` `_focusRepoSearch` 轮询耦合（L328-342）。⚠️ 前两项已在 §仲裁修正/实证锚点中撤回或降级：死代码转发壳系测试桩保留（L231 仲裁）、`_checkedSets` 系设计意图（L230/L184 撤回）；`_focusRepoSearch` 轮询耦合属实 |
 | UI/UX | 3.7 | 所有弹窗缺 `role="dialog"`（modal.ts:134）、adv-filter label 未 for 关联（L57）、batch-rename checkbox 无 aria-label（L185）、`--uih-accent-dim` 硬编码遗漏（ui-components-styles.ts:14） |
 | 3D/性能 | 3.4 | WASM 解码无单模型超时（ysm-worker-loader.ts:198）、`pickModelByObject` 每帧 O(roots) 遍历（scene-registry.ts:215）、Blob URL 成功路径永不 revoke（ysm-worker-loader.ts:118）、render-budget 缺 GPU 计量（render-budget.ts:60） |
 

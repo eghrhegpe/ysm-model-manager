@@ -6,8 +6,8 @@
 
 ```bash
 go build ./...              # 整仓 Go（go/ + 根 internal/app + 根 cli.go；gate 主体）必跑
-node scripts/doctor.mjs --docs  # 只改文档时用（秒级）
-node scripts/doctor.mjs         # 发版前全量闸门
+node scripts/doctor.ts --docs  # 只改文档时用（秒级）
+node scripts/doctor.ts         # 发版前全量闸门
 ```
 
 - 改 Go 代码 → **必须** `go build ./...` 通过（`./...` 才能编译到仓库根 `internal/app` 绑定入口与根 `cli.go`；`go build ./go/...` 只覆盖 `go/` 子树，会漏主体）
@@ -27,6 +27,11 @@ node scripts/doctor.mjs         # 发版前全量闸门
 | `version` `logs` `tags` | 版本、日志、标签 |
 | `types` | 跨包共享类型定义 |
 | `litematic` | MCEdit Lite 图格式支持 |
+| `config` `container` | 应用配置、容器（数据访问层） |
+| `launcher` | 启动器/外部进程拉起 |
+| `repoaudit` | 仓库审计（`doctor` 依赖） |
+| `rustbridge` | Rust 桥接（Android/桌面侧见知识卡 `rustbridge` / `rust-android-bridge`） |
+| `texture_cache` | 纹理缓存（cache-status / cache-verify / cache-clear 走此包） |
 | `internal/app` | Wails 应用入口与绑定注册（**在仓库根 `internal/app`，非 `go/internal/app`**；由根 `go.mod` 编译，见§构建/验证） |
 | `cli` | CLI 命令（脱离 GUI 的模型管理/诊断/缓存操作） |
 | `executil` | 外部进程执行辅助（隐藏窗口等） |

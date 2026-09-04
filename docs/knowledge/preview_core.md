@@ -340,7 +340,7 @@ pitfalls:
 
 ## 核心职责
 
-- **外壳装配**（`mount3D`）：cleanup 旧会话 → `sceneCapabilityRegistry.createAll()` 创建 8 个能力（天空/地面/环境/雾/阴影/反射/后处理/灯光）→ `adapter.build(ctx, path)` 挂内容层 → 相机取景 → 注册 rAF 循环 + ESC handler + 菜单 + 输入监听 + focus trap
+- **外壳装配**（`mount3D`）：cleanup 旧会话 → `sceneCapabilityRegistry.createAll()` 创建 10 个能力（天空/地面/水面/环境/雾/阴影/反射/后处理/灯光/渲染模式）→ `adapter.build(ctx, path)` 挂内容层 → 相机取景 → 注册 rAF 循环 + ESC handler + 菜单 + 输入监听 + focus trap
 - **会话切换**：`switchPreview(path)` 复用外壳重建内容层（`switchPreview({ keepInScene: true })` 同台追加多模型，上限 8）；跨类型 / 关旧开新走 `openModel3DFullscreen`
 - **生命周期清理**：
   - `runFullCleanup(ctx)`：**完整关闭**语义——拆 overlay + 解绑输入监听 + 拆菜单 + 停 rAF + 清内容层 GPU + 清场景能力 + `textureCache.disposeAll` + `clearSingletons` + `finishSession`。ESC / abort / 正常退出走这里
@@ -375,7 +375,7 @@ pitfalls:
 ## 相关
 
 - `frontend/src/preview-3d/adapters/` — 全部适配器 + 外壳
-- `frontend/src/preview-3d/caps/` — 8 个场景能力
+- `frontend/src/preview-3d/caps/` — 10 个场景能力
 - `frontend/src/views/app-preview/skeleton.ts` — 2D 骨骼渲染 + 单例 3D overlay 钩子
 - `frontend/src/views/app-preview/preview-library.ts` — 3D 全屏路由
 - 知识卡：`app_preview`、`model3d`、`3d_patterns`、`pointer_events`

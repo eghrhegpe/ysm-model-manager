@@ -124,7 +124,7 @@
 | 截图、导出 PNG、多角度截图、预览缓存淘汰、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 export.md等） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。… |
 | 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS、ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) ⚠️歧义（另见 go-types.md） | 前端扩展名 → 资源类型映射的集中定义。拖拽导入等场景需要同步判断扩展名（无法等待异步注册表加载），故提供这份静态默认表；事实来源仍是 `resource_types.json`，三端一致性由契约测试守护。 |
 | 调试日志、dbg、调试开关、环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | 前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。 |
-| 资源类型、RESOURCE_TYPES、类型标签、存储子目录、storageSubDir、LoadResourceTypes、注册表加载 | [资源类型工具 resource-types](./utils-resource-types.md) ⚠️歧义（另见 resource-registry.md） | 前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/registry.t… |
+| 资源类型、RESOURCE_TYPES、类型标签、存储子目录、storageSubDir、LoadResourceTypes、注册表加载 | [资源类型工具 resource-types](./utils-resource-types.md) ⚠️歧义（另见 resource-registry.md） | 前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/resource-r… |
 | 模型详情、摘要卡片、summaryCardHTML、预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) | 把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。 |
 | 更新、升级、检查更新、新版本、静默检查、updater、版本 | [版本更新 version-updater](./version-updater.md) ⚠️歧义（另见 app-modules.md、go-updater.md） | `version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda… |
 | vitest、测试环境、node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | — |

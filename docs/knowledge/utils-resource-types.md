@@ -77,7 +77,7 @@ status: active
 
 ## 概览
 
-前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/registry.ts`；本卡讲 `utils/` 下的两套工具 —— 静态常量表（同步、直接 import）与轻量注册表加载器（异步、走 Wails binding）。
+前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/resource-registry.ts`（资源类型注册表加载器）；本卡讲 `utils/` 下的两套工具 —— 静态常量表（同步、直接 import）与异步加载器（走 Wails binding）。⚠️ 曾存在的 `services/registry.ts` 服务注册表已于 2026-09 删除，与本卡无关。
 
 ## 核心职责
 
@@ -104,7 +104,7 @@ status: active
   - `isContainerExt(pathOrExt)` — 压缩容器扩展名判定（`.zip`/`.7z`；容器可包裹任意类型，类型判定仍以 Go 内容检测为准）
   - 内部实现（非导出）：`RESOURCE_CAPS`（派生能力表）/`resolveTypeByExt`（反查）——外部统一走 `resolveTypeSafe`/`matchTypeByExt` 等安全入口（2026-08-16 去 export 收敛，消除死代码告警）
 
-`registry.ts`（异步加载器，知识卡旧文「resource-registry.ts」文件名漂移，实际为 `registry.ts`）：
+`services/resource-registry.ts`（异步加载器）：
 - `loadResourceRegistry(): Promise<Record<string, ResourceTypeEntry>>` — 经 `getApp().LoadResourceTypes()` 加载，模块级 `_registry` 缓存；**仅当拿到非空 `resourceTypes` 数组才写缓存**（P2 修复：Go 端错误路径返回 `"{}"` 时原实现会缓存空注册表、整会话降级；现失败/空结果返回 `{}` 不缓存，Go 桥瞬断后下次调用重试）
 - `ResourceTypeEntry` 接口：`extends ResourceType`（`schema.ts` 唯一完整前端视图：id/name/icon/group/groupLabel/groupIcon/extensions/storageSubDir/configField/instanceDir/preview/detector/variants/zipEntries）+ `[key: string]: unknown` 索引签名（容忍 Go 端未来新增字段，消费者读未知字段需自行 `typeof` 收窄；T2 收敛自原 `{id, storageSubDir?, name?}` 手写子集）
 - 有 vitest 覆盖（registry.test.ts：成功缓存/失败不缓存/空结果不缓存/重复调用仅一次 Go 调用，P2 补测）
@@ -125,7 +125,7 @@ status: active
 
 ## 相关
 
-- [resource_registry](./resource-registry.md) — 单一事实源 + services/registry.ts
+- [resource_registry](./resource-registry.md) — 单一事实源 + `services/resource-registry.ts` 加载器
 - [utils_extensions](./utils-extensions.md) — 扩展名映射
 - [utils_icon](./utils-icon.md) — 文件图标（容器扩展名统一 📦，见 ADR-067 漂移修复）
 - [wails_bridge](./wails-bridge.md) — getApp() 桥接

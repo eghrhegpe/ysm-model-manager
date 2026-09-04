@@ -31,7 +31,7 @@ quick_risk_lines:
   - resource_types.json 是唯一事实来源；前端只读不判、禁本地重算
 pitfalls:
   - loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回 `"{}"` 时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试
-  - services/registry.get 用 Map.has() 判定，falsy 值 `0/""/false/null` 如实返回（P3 修复）；误判「不存在」走 null 分支会导致功能静默失效
+  - ⚠️ 历史：原 `services/registry.ts` 服务注册表的 `get` 用 `Map.has()` 判定 falsy 值——该文件已删，本 pitfall 仅存史
   - MMD 子类型 instanceDir 必须精确为 `3d-skin/<子名>`（含子级），漏写一级右键「打开文件夹」打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定
 status: active
 ---
@@ -50,10 +50,8 @@ status: active
 
 ## 对外 API / 入口
 
-- `register(name, service)` — 注册服务（`ServiceName` 联合类型收窄 + 泛型，拼错编译期拦截）
-- `get(name)` / `has(name)` — 获取 / 检查服务是否存在（`get` 用 `Map.has()` 判定，falsy 值 `0/""/false/null` 如实返回，P3 修复）
-- `unregister(name)` / `clear()` — 注销单个 / 清空全部
 - `loadResourceRegistry()`（`services/resource-registry.ts`）— 加载资源类型注册表；**空结果/异常不缓存**（Go 失败返回 `"{}"` 时不会写入 `_registry`，下次调用可重试，P2 修复）；失败路径 `console.warn` 告警（P3 修复，对齐 Go 端损坏回退告警）
+- ⚠️ 历史：原 `services/registry.ts` **服务注册表**曾提供 `register/get/has/unregister/clear`（`ServiceName` 联合收窄 + `Map.has()` falsy 判定），2026-09 已删除——勿再引用
 
 ## 与其他子系统关系
 

@@ -136,7 +136,7 @@ export class SceneCapabilityRegistry {
 export const sceneCapabilityRegistry = new SceneCapabilityRegistry();
 
 // ============ 内置能力注册 ============
-// 注意顺序：菜单渲染按注册顺序列出控件（天→地→环境→雾→阴影→反光→后处理→灯光），
+// 注意顺序：菜单渲染按注册顺序列出控件（天→地→水面→环境→雾→阴影→反光→后处理→灯光→渲染模式），
 // 与用户"先环境后灯光"的心智一致。
 sceneCapabilityRegistry.add((ctx) => new SkyCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new GroundCapability(ctx));

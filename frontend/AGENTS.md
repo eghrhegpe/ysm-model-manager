@@ -21,7 +21,7 @@ frontend/src/
 ├── backend/app.ts         # Wails 绑定桥（getApp() 唯一入口）
 ├── core/                  # 基础设施：bus / i18n / page-store / context-menus
 ├── features/              # 业务功能模块（import-queue / recycle-bin / community）
-├── services/registry.ts   # 服务注册表（register / get）
+├── services/               # 服务层：resource-registry.ts（资源类型加载）/ cli-bridge.ts
 ├── test-utils/            # 测试工具（ADR-035）
 ├── utils/                 # 工具函数（dom / debug / format / icon / resource / 3d / animation）
 ├── views/app-xxx/         # Web Component 视图组件（按职责独立文件）
@@ -30,7 +30,7 @@ frontend/src/
 
 - **新组件放 `views/app-xxx/`**，一个文件放一个可独立工作的功能，不按行数机械切割
 - **新业务模块放 `features/`**；工具函数放 `utils/`
-- 新服务先在 `app-modules.ts` 注册实例，再在 `services/registry.ts` 的 `ServiceName` 联合里登记名字；`registry` 只收"有替换价值"的依赖（数据加载 / 全局配置 / bus），渲染和纯函数直接 import
+- 服务注册表 `services/registry.ts` 已于 2026-09 删除；`loadInstances`（app-sidebar）/ `loadEntries`（app-tree）由各自 `loader.ts` 直接提供，测试经 `vi.mock("./loader.ts")` 替换；数据加载服务（如 `services/resource-registry.ts`）直接 import 消费
 
 ## Wails 桥接
 

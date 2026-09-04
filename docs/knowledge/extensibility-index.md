@@ -228,8 +228,8 @@ invariant_anchors:
 ### 4.4 `features/version-updater.ts` — ⑤缺配置项
 - `CHECK_INTERVAL=6h`、`CHECK_TIMEOUT=30s`、Windows-only 判定硬编码 → 检查频次/超时进设置项 + 平台能力表（中）。
 
-### 4.5 `services/registry.ts` `ServiceName` — ④未充分利用抽象
-- `ServiceName` 闭联合仅 2 个服务，Map 类型 `unknown` → 泛型服务名到类型映射表（低，保持简单反是优势）。
+### 4.5 `services/registry.ts` `ServiceName` — ④未充分利用抽象 ⚠️（服务注册表 2026-09 已删，本条失效）
+- [已失效] `ServiceName` 闭联合仅 2 个服务，Map 类型 `unknown` → 泛型服务名到类型映射表（低，保持简单反是优势）。
 
 ### 4.6 `utils/animation/animation.ts` BONE_CHANNELS — ①②
 - 通道名 `["rotation","position","scale"]` 字面量重复 4 次 → `const BONE_CHANNELS` 单点（中）。

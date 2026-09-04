@@ -99,7 +99,7 @@ invariant_anchors:
 | 4.2 `errMsg.includes("FILE_EXISTS")` 字符串匹配 | **存活** | `features/import-executor.ts` + `import-queue-events.ts` 未见改为 `AppError.Code` 消费。 |
 | 4.3 `oldest-models` + `recycle-bin` 各自实现 `useCurrentResourceType` 模式 | **存活** | 未见抽离的 `useCurrentResourceType()`；两文件仍各实现。 |
 | 4.4 `version-updater.ts` `CHECK_INTERVAL=6h`/`CHECK_TIMEOUT=30s` | **存活** | 硬编码阈值仍在。 |
-| 4.5 `services/registry.ts` 仅 2 服务 | **存活** | 仍为 2 服务名；未泛型化。 |
+| 4.5 `services/registry.ts` 仅 2 服务 | **已失效（2026-09 删除）** | `services/registry.ts` 服务注册表已随架构锐评删除；loadInstances/loadEntries 改由各 loader.ts 直连。 |
 | 4.6 `animation.ts` 通道名字面量重复 4 次 | **部分** | `animation.ts` 已抽 `const BONE_CHANNELS` 单点；但多处是否改调用 `BONE_CHANNELS` 未逐一验证（索引所指 4 处可能仍未替换）。Molang 求值正则链未见可注入化。 |
 | 4.7 `display.ts` parseModelName/renderDisplayName 括号风格 | **部分** | `display.ts` 注释「parseModelName / renderDisplayName 共用，新增/调整括号风格只改本表」——共享表已存在，但具体括号风格是否注册表化（vs 硬编码表）仍待核。 |
 | 4.8 `modal.ts` 5+ modal 脚手架重复 | **存活** | 未见 `createDialog` 工厂。 |

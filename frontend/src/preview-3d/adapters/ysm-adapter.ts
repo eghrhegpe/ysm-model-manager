@@ -44,7 +44,14 @@ import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player
 import { buildYsmObject, type YsmObjectHandle } from "../ysm-object.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { MmdPlayBridge, YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type {
+  CameraControlScene,
+  GroupedScene,
+  PreviewAdapter,
+  PreviewBuildCtx,
+  ScreenshotScene,
+  UpdateableScene,
+} from "./mount-preview-core.ts";
 import {
   type PerceptionCapability,
   type PerceptionState,
@@ -522,7 +529,7 @@ function mdYsMakeSceneHandle(
   cam: MdYsCameraBones,
   anim: MdYsPanelAnim,
   menu: MdYsMenuDebug,
-): PreviewScene {
+): UpdateableScene & CameraControlScene & GroupedScene & ScreenshotScene {
   const { ctx } = sc;
   const { obj } = core;
   const { initCamPos, initCamTarget, rayCleanup, boneMaps } = cam;
@@ -600,7 +607,7 @@ export async function buildYsmScene(
   ctx: PreviewBuildCtx,
   path: string,
   opts: YsmAdapterOptions,
-): Promise<PreviewScene> {
+): Promise<UpdateableScene & CameraControlScene & GroupedScene & ScreenshotScene> {
   if (!ctx.scene || !ctx.camera || !ctx.controls || !ctx.renderer) {
     throw new Error("YSM shared 模式需要核心提供 scene/camera/controls/renderer");
   }

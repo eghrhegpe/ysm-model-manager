@@ -24,7 +24,12 @@ import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜�
 import { buildFbxSceneFromData, createFbxParser } from "./fbx-parser.ts";
 import type { FbxSceneData } from "./fbx-scene-to-data.ts";
 import { concurrentMap } from "./mmd-utils.ts"; // 有界并发映射（对齐 ADR-101 后端 goroutine 池设计）
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type {
+  PreviewAdapter,
+  PreviewBuildCtx,
+  ScreenshotScene,
+  UpdateableScene,
+} from "./mount-preview-core.ts";
 
 /** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface FbxDataPort {
@@ -171,7 +176,7 @@ export async function buildFbxScene(
   ctx: PreviewBuildCtx,
   path: string,
   port: FbxDataPort,
-): Promise<PreviewScene> {
+): Promise<UpdateableScene & ScreenshotScene> {
   // 纹理 blob URL 收集：dispose 时统一 revoke，防止每次预览累积泄漏（审核 P3）
   let texBlobUrls: string[] = [];
   // 1) 取字节 → ArrayBuffer + blob URL（Wails 读不了本地盘，必须经 Go RPC 取字节再包 URL）

@@ -28,7 +28,13 @@ import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截�
 import { vrmSemanticBoneMap } from "../semantic-bones.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { materialNodes } from "./material-controls.ts";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type {
+  PreviewAdapter,
+  PreviewBuildCtx,
+  ScreenshotScene,
+  SemanticScene,
+  UpdateableScene,
+} from "./mount-preview-core.ts";
 import {
   type PerceptionCapability,
   type PerceptionState,
@@ -509,7 +515,7 @@ function mdVrStage5BuildResult(
   motion: MdVrMotionState,
   perception: MdVrPerceptionState,
   menuItems: PreviewMenuNode[],
-): PreviewScene {
+): UpdateableScene & ScreenshotScene & SemanticScene {
   const { vrm } = parseRes;
   const { semanticBones, bonePanelRef } = boneAssy;
   const { motionClips, motionMixer } = motion;
@@ -622,7 +628,7 @@ export async function buildVrmScene(
   readFn: (p: string) => Promise<string | null>,
   panels?: VrmPanelHooks,
   listAllFilePaths?: (dir: string) => Promise<string[] | null>,
-): Promise<PreviewScene> {
+): Promise<UpdateableScene & ScreenshotScene & SemanticScene> {
   const parseRes = await mdVrStage1ReadParse(ctx, path, port, readFn);
   const { vrm } = parseRes;
   const motion = await mdVrLoadVrmaAnims(vrm, path, readFn, listAllFilePaths);

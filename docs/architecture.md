@@ -510,14 +510,16 @@ mount3D(adapter, path, opts?)
 
 ### 7.2 适配器矩阵（6 种格式）
 
-| 适配器 | 文件 | 底层库 | 特殊能力 |
-|--------|------|--------|----------|
-| YSM | `ysm-adapter.ts`（475 行） | Go `GetModel3DSpec` binding | 骨骼组树 + cube mesh + 感知层（呼吸/注视） |
-| VRM | `vrm-adapter.ts`（585 行） | `@pixiv/three-vrm` + `GLTFLoader` | SpringBone / lookAt / 表情 / VRMA 动画 / 感知层（呼吸/眨眼/注视） |
-| MMD | `mmd-adapter.ts`（1242 行） | `@moeru/three-mmd` + `MMDAmmoPlugin` | PMX 物理（Ammo.js）/ VMD 动画 / VPD 姿势 / KTX2 纹理 / 感知层全开 |
-| Litematic | `litematic-adapter.ts`（401 行） | 自研 voxel mesh | 分层控制 / 方块统计 |
-| FBX | `fbx-adapter.ts`（173 行） | `FBXLoader` | 静态模型预览 |
-| 资源包模型 | `pack-model-adapter.ts`（246 行） | `TextureLoader` | MC 资源包内模型预览 |
+> ADR-178 能力接口（2026-09-04 全量迁移）：每个适配器的返回类型 = 能力接口组合（`BaseScene` 为硬契约基座，`PreviewScene` 兼容别名保留作 adapter.build 契约）。
+
+| 适配器 | 文件 | 底层库 | 特殊能力 | ADR-178 能力组合 |
+|--------|------|--------|----------|------------------|
+| YSM | `ysm-adapter.ts` | Go `GetModel3DSpec` binding | 骨骼组树 + cube mesh + 感知层（呼吸/注视） | `Updateable & CameraControl & Grouped & Screenshot` |
+| VRM | `vrm-adapter.ts` | `@pixiv/three-vrm` + `GLTFLoader` | SpringBone / lookAt / 表情 / VRMA 动画 / 感知层（呼吸/眨眼/注视） | `Updateable & Screenshot & Semantic` |
+| MMD | `mmd-adapter.ts` | `@moeru/three-mmd` + `MMDAmmoPlugin` | PMX 物理（Ammo.js）/ VMD 动画 / VPD 姿势 / KTX2 纹理 / 感知层全开 | `Updateable & Screenshot & Semantic`（applyPose 条件扩展） |
+| Litematic | `litematic-adapter.ts` | 自研 voxel mesh | 分层控制 / 方块统计 | `Screenshot` |
+| FBX | `fbx-adapter.ts` | `FBXLoader` | 静态模型预览 | `Updateable & Screenshot` |
+| 资源包模型 | `pack-model-adapter.ts` | `TextureLoader` | MC 资源包内模型预览 | `CameraControl & Screenshot` |
 
 ### 7.3 场景能力注册表（ADR-073）
 

@@ -17,7 +17,12 @@ import { isRenderableModel, type JavaModelResult, parseJavaModel } from "../pars
 import { safeDispose } from "../safe-dispose.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
 import { textureCache } from "../texture-cache.ts";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type {
+  CameraControlScene,
+  PreviewAdapter,
+  PreviewBuildCtx,
+  ScreenshotScene,
+} from "./mount-preview-core.ts";
 
 /** Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） */
 export interface PackDeps {
@@ -256,7 +261,7 @@ async function buildPackScene(
   deps: PackDeps,
   zipPath: string, // 容器路径（.zip 文件路径）
   opts?: PackAdapterOpts,
-): Promise<PreviewScene> {
+): Promise<CameraControlScene & ScreenshotScene> {
   if (!ctx.scene || !ctx.camera || !ctx.controls || !ctx.renderer) {
     throw new Error("pack-model shared 模式需要核心提供 scene/camera/controls/renderer");
   }

@@ -22,15 +22,14 @@ import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { installUiComponentsStyles, uiComponentsStyleSheet } from "../../ui/ui-components-styles.ts";
-import { slideMenuStyleSheet } from "../../ui/ui-slide-menu-styles.ts";
-import { setOverlayStyleTarget, overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
-import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
-import { logWarn, logError } from "../../utils/core/log.ts";
 import {
-  rememberTrigger,
-  trapFocusAcrossShadow,
-} from "../../utils/dom/focus-restore.ts";
+  installUiComponentsStyles,
+  uiComponentsStyleSheet,
+} from "../../ui/ui-components-styles.ts";
+import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
+import { slideMenuStyleSheet } from "../../ui/ui-slide-menu-styles.ts";
+import { logError, logWarn } from "../../utils/core/log.ts";
+import { rememberTrigger, trapFocusAcrossShadow } from "../../utils/dom/focus-restore.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { TdKeyAction } from "../keymap.ts";
@@ -38,6 +37,11 @@ import { mountPreviewRootMenu, type PreviewMenuCtx, type PreviewMenuHandle } fro
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { mergeStatsMenuItems } from "../menu/stats.ts";
 import { type BoneMaps, type BoneSelectInfo, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
+import {
+  onOverlayStyleTargetReset,
+  overlayStyleRoot,
+  setOverlayStyleTarget,
+} from "../overlay-style-bridge.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { collectSceneStats } from "../scene-stats.ts";
 import type { SemanticBoneMap } from "../semantic-bones.ts";
@@ -46,9 +50,9 @@ import type { InputOptions } from "./input-and-animation.ts";
 import { bindInputHandlers } from "./input-and-animation.ts";
 // 2026 锐评整改：mount3D 生命周期闭包 → mount-session.ts；rAF 循环 → render-loop.ts
 import {
+  closeOverlay,
   type MountCtx,
   type MpSessionState,
-  closeOverlay,
   runFullCleanup,
   unloadSessionModel,
 } from "./mount-session.ts";
@@ -62,11 +66,7 @@ import {
 import { sceneRegistry } from "./scene-registry.ts";
 // §5 拆分：场景单例/基础设施装配 → shared-infra.ts；
 // 统一拾取器 → unified-pick.ts
-import {
-  type SharedInfra,
-  buildSharedInfra,
-  resetSceneInfra,
-} from "./shared-infra.ts";
+import { buildSharedInfra, resetSceneInfra, type SharedInfra } from "./shared-infra.ts";
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import { makeUnifiedPickHandler } from "./unified-pick.ts";
@@ -181,7 +181,9 @@ const mpcCss = `
 .mpc-tip { padding:5px 12px; background:#1b1c24; border-bottom:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.7); font-size:11px; text-align:center; flex-shrink:0; }
 `;
 let _mpcStylesInjected = false;
-onOverlayStyleTargetReset(() => { _mpcStylesInjected = false; });
+onOverlayStyleTargetReset(() => {
+  _mpcStylesInjected = false;
+});
 function ensureMpcStyles(): void {
   if (_mpcStylesInjected) return;
   _mpcStylesInjected = true;
@@ -390,7 +392,7 @@ export async function mount3D(
   let body = _singletonBody;
   // ADR-175 M1：overlay = shadow host（挂 document.body 保留 id/class/aria，app-tree
   // getElementById 守卫零改动）；全部内容（tip/body/viewContainer/菜单链）迁入 shadowRoot。
-  // attachShadow 缺失（behavior.test fake document 等环境）降级 light DOM——root 即 overlay 本体，
+  // attachShadow 缺失（无 shadow DOM 的宿主/测试环境）降级 light DOM——root 即 overlay 本体，
   // 样式注入走 head 兜底，与迁移前行为一致。
   // 复用路径（单例存活）从 host 取回既有 shadowRoot，不走重建分支。
   let root: HTMLElement | ShadowRoot;
@@ -405,7 +407,8 @@ export async function mount3D(
     overlay.setAttribute("aria-modal", "true");
     overlay.setAttribute("aria-label", t("preview.title3d"));
     document.body.appendChild(overlay);
-    const shadow = typeof overlay.attachShadow === "function" ? overlay.attachShadow({ mode: "open" }) : null;
+    const shadow =
+      typeof overlay.attachShadow === "function" ? overlay.attachShadow({ mode: "open" }) : null;
     root = shadow ?? overlay;
     if (shadow) {
       // 共享样式模块走 adoptedStyleSheets（与全站 shadow 组件同形态；head 注入由
@@ -523,7 +526,11 @@ export async function mount3D(
   if (opts.getModelsByType) menuCtx.getModelsByType = (t, s) => opts.getModelsByType!(t, s);
   if (opts.getTypeTabs) menuCtx.getTypeTabs = () => opts.getTypeTabs!();
   if (opts.switchExternal)
-    menuCtx.switchExternal = (p: string, s?: string[], options?: { keepInScene?: boolean }): void => {
+    menuCtx.switchExternal = (
+      p: string,
+      s?: string[],
+      options?: { keepInScene?: boolean },
+    ): void => {
       const r = opts.switchExternal!(p, s, options) as Promise<void> | void;
       if (r && typeof r.catch === "function") {
         void r.catch((err: unknown) =>

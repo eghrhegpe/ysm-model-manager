@@ -41,7 +41,7 @@
 node scripts/commit-with-check.ts -m "<msg>" # 一键验证+提交（按 staged 文件自动裁剪门禁；--fast 跳 vitest / --docs 仅文档 / --check 只验不交）
 node scripts/commit-with-check.ts -m "<msg>" --files <paths...>   # 白名单直取，无需先 git add，防止并行会话手改的 docs 文件并卷进提交；
 git commit -m "<type>: <简短描述>" -- <自己的文件...> # 因并行会话而导致门禁失败时,调用 git commit（含 `--only` 路径限定完成提交。先 git status --short 确认只含自己的文件。
-git push --verbose 2>&1 | Select-Object -Last 50   # 在完成大型任务后，统一推送，检查兄弟会话的改动是否良好。
+git push --verbose 2>&1 | Select-Object -Last 50   # 作为重型门禁，不建议自行推送，如果要推送，需承担起整个项目的维护，如果门禁有反馈信息，推送者需全数查看异常情况如何处理，不分你我。
 gh run view  #推送后,使用gh 盯GitHub ci，视情况决定修复或报告。
 
 # 怕文件未保存？

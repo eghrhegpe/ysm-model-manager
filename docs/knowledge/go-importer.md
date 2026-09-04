@@ -103,6 +103,11 @@ status: active
 - **R30 修复链（2026-08-31）**：
   - P2-1 `copyDirContents` symlink 路径穿越防护：`os.Readlink` 拿到 target 后直接 `os.Symlink`，绝对路径或含 `..` 的相对路径会指向仓库外。修复：解析 target 为绝对路径，判定是否在源目录树内，越界则拒绝。
   - code_review P1-2 symlink 基目录修正：相对 target 必须解析为相对于符号链接自身目录（`filepath.Dir(srcPath)`），而非 `src`（`copyDirContents` 的当前递归目录）——OS 也是这样解析的。`filepath.Abs` 错误必须传播（fail-closed），不能 `_` 吞掉（旧实现 fail-open）。
+  - **迁移注记（2026-09-04）**：`copyDirContents` 已随锐评 #11 退役删除（死代码，生产路径本就只走 `fsutil.CopyDirRecursive`）；上述 symlink 穿越防护与基目录修正语义由 `fsutil.CopyDirRecursive` 承担（`RejectSymlink=false` 保真复制链接、越界拒绝、错误 fail-closed），覆盖测试已迁至 fsutil 包与 importer 生产路径用例。
+
+## go-run 内嵌工具治理（2026-09-04，锐评 #12 处置）
+
+- `scripts/compare-maid-packs.ts` 已退役删除：该脚本以 `go run` 内嵌执行 `_tools/{listzip,maidparse}.go` 做单女仆 vs 多合一包结构比对，但 `_tools/` 从未入库、脚本自始不可运行。其能力等价物已在库内——`go/container.OpenZipBytes`/`Open7zBytes`（容器条目遍历）+ `go/geometry.ParseFromZip`（archive.go，真实解析入口）。后续研究 maid 包结构请走 Go 单测或主程序 `--cli`，勿再以 `go run <散落 .go>` 形态内嵌脚本。
 
 ## 相关
 

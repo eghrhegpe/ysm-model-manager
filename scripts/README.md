@@ -69,7 +69,6 @@
 | `check-android-unavailable.ts` | `node scripts/check-android-unavailable.ts` / `--json` | ANDROID_UNAVAILABLE 黑名单完整性检测：从 platform-web.ts 读黑名单、bindings/app.ts 提取 binding 名，报告未覆盖的 desktop-only binding（防 Android 漏登黑名单崩 UI/空 UI） |
 | `compile-android-rust.ts` | `node scripts/compile-android-rust.ts` / `--arch amd64|all` | 编 Rust scanner bridge 为 Android staticlib（.a）供 Go CGO 链接（android-build 前置单步） |
 | `compile-rust-static.ts` | `node scripts/compile-rust-static.ts` / `--target <triple>` | 编 Rust scanner bridge 为 staticlib 供 Go CGO 静态链接（Linux 构建链，build/linux/Taskfile.yml 调用） |
-| `compare-maid-packs.ts` | `node scripts/compare-maid-packs.ts` | 实战比对：单女仆 zip vs 多合一女仆包（L0 清单 vs L1 枚举差异；⚠️ 依赖 `_tools/` 暂缺失，当前不可运行） |
 | `analyze-knowledge-refs.ts` | `node scripts/analyze-knowledge-refs.ts` / `--json` / `--no-write` | 知识卡引用深度与耦合分析（一次性诊断）：卡→源码 / 卡→卡 / 分类膨胀度 / 引用孤岛，产出 docs/review/knowledge-ref-analysis.* |
 | `drift-scan.ts` | `node scripts/drift-scan.ts` / `--json` | 双轨漂移自动侦察兵：Go 硬编码常量 / 内联切片 / 路径归一化 / 错误链断裂 / 资源泄漏 / 重复实现 + 前端同逻辑异实现 |
 | `translucency-probe.ts` | `node scripts/translucency-probe.ts <模型目录...>` | 面级透明分类增益探针（ADR-118 转正度量工具）：量化 mesh 级 vs 面级透明误路由面积比，为引入面级透明路径提供数据依据 |

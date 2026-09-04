@@ -89,7 +89,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 |------|------|
 | `doctor` | 全量闸门（`--docs` 文档轻量版） |
 | `commit-with-check` | 验证 + 提交一体，按 staged 文件裁剪门禁 |
-| `check-biome` | biome 增量闸门：`node scripts/check-biome.ts`（查相对 main 变更文件）；`--write` 自动修复；勿在 frontend/ 外裸跑 `npx biome`（配置在 `frontend/biome.json`） |
+| `check-biome` | biome 增量闸门：`node scripts/check-biome.ts`（仅查相对 main 的变更文件，M 状态请裸跑 biome 或等 pre-commit --files）；`--write` 自动修复；勿在 frontend/ 外裸跑 `npx biome`（配置在 `frontend/biome.json`） |
 | `audit-split` / `rollback-impact` | 拆分 / revert 影响面分析（函数去向、红线、断链调用方） |
 | `api-break` | 两 ref 破坏性变更检测（合分支 / 发版前） |
 | `bug-search` | Bug 历史搜索 |

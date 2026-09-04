@@ -54,17 +54,18 @@ export function fireInput(el: Element, value: string): Event {
 /** 模拟拖拽 drop：构造 DragEvent 并注入 dataTransfer（happy-dom 忽略 DragEvent init 参数，需 defineProperty） */
 export function fireDrop(el: EventTarget, dataTransfer?: Record<string, unknown>): DragEvent {
   const dt = (dataTransfer ?? {}) as unknown as DataTransfer;
-  const ev = new DragEvent(
-    "drop",
-    { bubbles: true, cancelable: true, dataTransfer: dt },
-  );
+  const ev = new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dt });
   Object.defineProperty(ev, "dataTransfer", { value: dt, configurable: true });
   el.dispatchEvent(ev);
   return ev;
 }
 
 /** 模拟任意类型拖拽事件（dragstart/dragover/dragleave…），与 fireDrop 同款 dataTransfer 注入 */
-export function fireDrag(el: EventTarget, type: string, dataTransfer?: Record<string, unknown>): DragEvent {
+export function fireDrag(
+  el: EventTarget,
+  type: string,
+  dataTransfer?: Record<string, unknown>,
+): DragEvent {
   const dt = (dataTransfer ?? {}) as unknown as DataTransfer;
   const ev = new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt });
   Object.defineProperty(ev, "dataTransfer", { value: dt, configurable: true });

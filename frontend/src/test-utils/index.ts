@@ -1,10 +1,10 @@
 // ===== 测试公共工具（test-utils/index）=====
 // 入口导出：查询 / 事件 / 渲染 / 等待
 export {
-  queryByTestId,
+  getAllByTestId,
   getByTestId,
   queryAllByTestId,
-  getAllByTestId,
+  queryByTestId,
 } from "./query-by-testid.ts";
 
 // fireEvent / fireClick 等 + renderComponent 不经 barrel：
@@ -17,9 +17,9 @@ export {
  * 依赖 vitest expect，仅测试上下文使用。
  */
 export {
+  deriveTestIds,
   expectContainsAtLeast,
   expectNotContains,
-  deriveTestIds,
   extractIds,
 } from "./self-healing.ts";
 
@@ -69,10 +69,7 @@ export function flushPromises(): Promise<void> {
  * @param fn 条件函数，返回 truthy 即通过
  * @param timeout 超时毫秒
  */
-export async function waitFor(
-  fn: () => unknown,
-  timeout = 5000,
-): Promise<void> {
+export async function waitFor(fn: () => unknown, timeout = 5000): Promise<void> {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     // P2 修复：记录首个异常，超时 reject 时带上原始错误——原实现 catch 静默吞错，
@@ -82,11 +79,21 @@ export async function waitFor(
       try {
         if (fn()) resolve();
         else if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else reject(new Error(`waitFor timed out after ${timeout}ms${firstErr ? `; first error: ${String((firstErr as Error)?.message ?? firstErr)}` : ""}`));
+        else
+          reject(
+            new Error(
+              `waitFor timed out after ${timeout}ms${firstErr ? `; first error: ${String((firstErr as Error)?.message ?? firstErr)}` : ""}`,
+            ),
+          );
       } catch (e) {
         if (firstErr === null) firstErr = e;
         if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else reject(new Error(`waitFor condition threw after ${timeout}ms: ${String((e as Error)?.message ?? e)}`));
+        else
+          reject(
+            new Error(
+              `waitFor condition threw after ${timeout}ms: ${String((e as Error)?.message ?? e)}`,
+            ),
+          );
       }
     };
     tick();

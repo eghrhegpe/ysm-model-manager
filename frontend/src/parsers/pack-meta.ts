@@ -20,7 +20,10 @@ const MAX_LANG_SIZE = 1 << 20;
  * zip 内路径大小写不敏感：PACK.MCMETA / Lang/En_US.Lang 均可命中）。
  * fflate unzipSync 的 key 保留原始大小写，此处只做匹配、用原 key 取数据。
  */
-export function findZipEntry(entries: Record<string, Uint8Array>, lowName: string): Uint8Array | null {
+export function findZipEntry(
+  entries: Record<string, Uint8Array>,
+  lowName: string,
+): Uint8Array | null {
   for (const key of Object.keys(entries)) {
     if (key.toLowerCase() === lowName) return entries[key];
   }
@@ -98,12 +101,14 @@ export function parsePackMetaJson(bytes: Uint8Array): Record<string, unknown> | 
   } catch {
     return null;
   }
-  const pack = parsed && typeof parsed === "object" && !Array.isArray(parsed)
-    ? (parsed as { pack?: unknown }).pack
-    : undefined;
-  const p = pack && typeof pack === "object" && !Array.isArray(pack)
-    ? (pack as Record<string, unknown>)
-    : {};
+  const pack =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as { pack?: unknown }).pack
+      : undefined;
+  const p =
+    pack && typeof pack === "object" && !Array.isArray(pack)
+      ? (pack as Record<string, unknown>)
+      : {};
   // pack_format 对齐 Go int：存在但非整数 → 整体解析失败（Go json.Unmarshal int 字段报错）
   if ("pack_format" in p && !Number.isInteger(p.pack_format as number)) return null;
   const result: Record<string, unknown> = {

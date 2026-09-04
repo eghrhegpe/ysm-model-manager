@@ -14,16 +14,9 @@ export type MenuDefLike = { id: string; dockGroup?: string };
  * @param required 必需 id 列表
  * @param label   断言标识（失败时输出）
  */
-export function expectContainsAtLeast(
-  actual: string[],
-  required: string[],
-  label: string,
-): void {
+export function expectContainsAtLeast(actual: string[], required: string[], label: string): void {
   const missing = required.filter((r) => !actual.includes(r));
-  expect(
-    missing,
-    `${label} 缺必需项: ${missing.join(", ")}; 实际=${actual.join(",")}`,
-  ).toEqual([]);
+  expect(missing, `${label} 缺必需项: ${missing.join(", ")}; 实际=${actual.join(",")}`).toEqual([]);
 }
 
 /**
@@ -33,11 +26,7 @@ export function expectContainsAtLeast(
  * @param forbidden 不应出现的 id 列表
  * @param label    断言标识
  */
-export function expectNotContains(
-  actual: string[],
-  forbidden: string[],
-  label: string,
-): void {
+export function expectNotContains(actual: string[], forbidden: string[], label: string): void {
   const present = actual.filter((a) => forbidden.includes(a));
   expect(present, `${label} 应不含: ${present.join(", ")}`).toEqual([]);
 }

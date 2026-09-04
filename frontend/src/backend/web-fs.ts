@@ -27,62 +27,92 @@
 // │  §15 导入分组            → web-fs-import.ts                                   │
 // │  §16 binding 装配        → 下文    webFsBindings（Top 6 注册表驱动）           │
 // └──────────────────────────────────────────────────────────────────────────────┘
-import { idbGet, idbKeys, idbDel, idbGetAll, idbTx, type IdbOp } from "./idb.ts";
-import { t } from "../core/i18n/t.ts";
-import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
+
 // 复用 dnd-shared 的导入白名单（.json 仅放行 ysm.json，其余须 ALL_EXTS 成员），
 // 避免 browser-adapter 另起一套扩展名校验导致漂移
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
-// rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
-import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
-// rtype 扩展名白名单（resource_types.json 派生，单一事实源；ScanModelEntriesFiltered 过滤用）
-import { getExts } from "../utils/resource/extensions.ts";
-import { base64ToBytes, parseWebPath, parseWebDirPath, webDirType, isWebPath, WEB_ROOT, MAX_IMPORT_BYTES } from "./web-common.ts";
+import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
+import { t } from "../core/i18n/t.ts";
 // R2 导入增强：detectContainerType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
 import { detectContainerType } from "../parsers/extract.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
-import { parseNbtRoot, litematicMetaView, nbtStructureView, schematicSummaryView } from "../parsers/nbt-parse.ts";
+import {
+  litematicMetaView,
+  nbtStructureView,
+  parseNbtRoot,
+  schematicSummaryView,
+} from "../parsers/nbt-parse.ts";
 import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "../parsers/voxel-parse.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
 // 预填、rename.ts:92 重命名 tips、detail.ts:58-62 详情 stats/license、loader.ts:140 作者兜底）
 import {
-  parseYsmHeaderFromBytes,
-  extractYsmSummaryFromBytes,
   emptyYsmHeader,
   emptyYsmSummary,
+  extractYsmSummaryFromBytes,
+  parseYsmHeaderFromBytes,
 } from "../parsers/ysm-header.ts";
-// ADR-071 #6：SearchModels 数值条件的统计来源 —— Web Worker 批量统计
-// （Worker 内独立加载 WASM + open IndexedDB，主线程零解析负载；不可用/失败降级）
-import { batchStatsWebModels, type WebModelStats } from "./web-stats.ts";
-// 拆分子模块（ADR-040 职责切分延续）
-import { dirKey, fileKey, mainFileRank, MAIN_FILE_RANK_NONE, MAIN_FILE_RANK_TYPE } from "./web-fs-shared.ts";
-import { getFsaAuthState, selectLocalRepo } from "./web-fs-auth.ts";
-// 共享读取装配 + 路径反解（web-fs-read.ts 叶子，断 container/pack/bedrock ↔ 主文件 循环）
+// rtype 扩展名白名单（resource_types.json 派生，单一事实源；ScanModelEntriesFiltered 过滤用）
+import { getExts } from "../utils/resource/extensions.ts";
+// rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
+import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
+import { type IdbOp, idbDel, idbGet, idbGetAll, idbKeys, idbTx } from "./idb.ts";
 import {
-  readWebFile,
-  readVoxelJson,
-  parseWebModelPath,
-  parseWebModelDir,
-  listWebModelDirFiles,
-} from "./web-fs-read.ts";
+  base64ToBytes,
+  isWebPath,
+  MAX_IMPORT_BYTES,
+  parseWebDirPath,
+  parseWebPath,
+  WEB_ROOT,
+  webDirType,
+} from "./web-common.ts";
+import { getFsaAuthState, selectLocalRepo } from "./web-fs-auth.ts";
+// #5 Bedrock 预览 fallback 链
+import {
+  webAnalyzeBedrockModel,
+  webAnalyzeBedrockModelEntry,
+  webExtractPreviewTexture,
+  webFindPreviewImage,
+} from "./web-fs-bedrock.ts";
 // §6.5 容器内条目枚举 + 体素（ADR-132 遗留 1）
 import { listWebContainerEntries, readWebVoxelInContainer } from "./web-fs-container.ts";
 // §7 pack/shaderpack meta 读取
 import {
-  readPackMetaJson,
-  readShaderpackLangJson,
   listWebPackModels,
   listWebPackModelsDetail,
+  readPackMetaJson,
+  readShaderpackLangJson,
   readWebPackEntry,
 } from "./web-fs-pack.ts";
-// #5 Bedrock 预览 fallback 链
-import { webFindPreviewImage, webExtractPreviewTexture, webAnalyzeBedrockModel, webAnalyzeBedrockModelEntry } from "./web-fs-bedrock.ts";
+// 共享读取装配 + 路径反解（web-fs-read.ts 叶子，断 container/pack/bedrock ↔ 主文件 循环）
+import {
+  listWebModelDirFiles,
+  parseWebModelDir,
+  parseWebModelPath,
+  readVoxelJson,
+  readWebFile,
+} from "./web-fs-read.ts";
+// 拆分子模块（ADR-040 职责切分延续）
+import {
+  dirKey,
+  fileKey,
+  MAIN_FILE_RANK_NONE,
+  MAIN_FILE_RANK_TYPE,
+  mainFileRank,
+} from "./web-fs-shared.ts";
+// ADR-071 #6：SearchModels 数值条件的统计来源 —— Web Worker 批量统计
+// （Worker 内独立加载 WASM + open IndexedDB，主线程零解析负载；不可用/失败降级）
+import { batchStatsWebModels, type WebModelStats } from "./web-stats.ts";
 
+export {
+  getFsaAuthState,
+  reauthorizeFsaRoot,
+  rescanFsaRoot,
+  selectLocalRepo,
+} from "./web-fs-auth.ts";
 // 公共 API 原路径透出（browser-adapter / web-store / web-community 消费面零改动）：
 // importWebFiles 主文件不再直接消费（FSA 入库走 web-fs-auth），仅门面转出
 export { importWebFiles } from "./web-fs-import.ts";
-export { getFsaAuthState, reauthorizeFsaRoot, rescanFsaRoot, selectLocalRepo } from "./web-fs-auth.ts";
 // readWebFile 移入 web-fs-read.ts 后经此透出，web-community 消费面不变
 export { readWebFile } from "./web-fs-read.ts";
 
@@ -136,7 +166,10 @@ async function scanWebModelGroups(type: string, root: string): Promise<ModelEntr
     const rel = fk.slice(filePrefix.length);
     let bestGroup = "";
     for (const name of sortedGroups) {
-      if (rel.startsWith(`${name}/`)) { bestGroup = name; break; }
+      if (rel.startsWith(`${name}/`)) {
+        bestGroup = name;
+        break;
+      }
     }
     if (!bestGroup) continue; // 孤儿文件（无对应 dir key）
     const fileRel = rel.slice(bestGroup.length + 1);
@@ -244,7 +277,9 @@ async function readNbtMetaJson(
 
 // ===== §9 列表（递归列出 /web 目录全部文件路径）=====
 /** 扫描全部资源类型的模型（供标签聚合 / 子目录映射等全库操作） */
-export async function scanAllWebModels(): Promise<Array<{ type: string; name: string; path: string }>> {
+export async function scanAllWebModels(): Promise<
+  Array<{ type: string; name: string; path: string }>
+> {
   const rts = (resourceTypesJson as { resourceTypes?: Array<{ id: string }> }).resourceTypes ?? [];
   const out: Array<{ type: string; name: string; path: string }> = [];
   for (const r of rts) {
@@ -369,8 +404,10 @@ function assertValidRenameName(newName: string, kind: "目录" | "文件"): void
   const kindLabel = kind === "目录" ? t("webFs.kindDir") : t("webFs.kindFile");
   const n = (newName || "").trim();
   if (!n) throw new Error(t("webFs.renameEmptyName", { kind: kindLabel }));
-  if (INVALID_NAME_CHARS.test(n)) throw new Error(t("webFs.renameInvalidChars", { kind: kindLabel }));
-  if (n === "." || n === "..") throw new Error(t("webFs.renameInvalidPathSegment", { kind: kindLabel }));
+  if (INVALID_NAME_CHARS.test(n))
+    throw new Error(t("webFs.renameInvalidChars", { kind: kindLabel }));
+  if (n === "." || n === "..")
+    throw new Error(t("webFs.renameInvalidPathSegment", { kind: kindLabel }));
 }
 
 // ===== §12 删除模型组 =====
@@ -436,7 +473,9 @@ async function renameWebFile(oldPath: string, newName: string): Promise<void> {
   if (newKey === oldKey) return;
   // 目标已存在：对齐桌面「目标已存在」拒绝，防静默覆盖目标文件内容
   if ((await idbGet("files", newKey)) !== undefined) {
-    throw new Error(t("webFs.renameTargetExists", { path: `${WEB_ROOT}/${type}/${name}/${finalName}` }));
+    throw new Error(
+      t("webFs.renameTargetExists", { path: `${WEB_ROOT}/${type}/${name}/${finalName}` }),
+    );
   }
   // 旧文件必须存在（对齐桌面 RenameFile 源不存在报错，拒绝静默 no-op）
   // 单次读取兼作「存在校验 + rekey 取值」，消除同 key 双读
@@ -494,7 +533,12 @@ function webMoveTargetName(dstName: string, srcName: string): string {
  * 单个 store 内全有或全无（IDB 单事务仅限单 store；跨 files/config 仍两段，符合
  * IDB 能力上限）。原实现逐 key idbSet/idbDel 各开事务，中途崩溃会留新旧 key 并存。
  */
-async function rekeyWebModelGroup(type: string, oldName: string, newName: string, move: boolean): Promise<void> {
+async function rekeyWebModelGroup(
+  type: string,
+  oldName: string,
+  newName: string,
+  move: boolean,
+): Promise<void> {
   const writtenNew: string[] = [];
   const rollbackNew = async (): Promise<void> => {
     for (const k of writtenNew.reverse()) {
@@ -514,7 +558,11 @@ async function rekeyWebModelGroup(type: string, oldName: string, newName: string
     const cfgOps: IdbOp[] = [];
     const dv = await idbGet("files", dirKey(type, oldName));
     if (dv !== undefined) {
-      fileOps.push({ kind: "put", key: dirKey(type, newName), value: { ...(dv as Record<string, unknown>), name: newName } });
+      fileOps.push({
+        kind: "put",
+        key: dirKey(type, newName),
+        value: { ...(dv as Record<string, unknown>), name: newName },
+      });
       writtenNew.push(dirKey(type, newName));
     }
     const oldPrefix = `file:${type}/${oldName}/`;
@@ -545,9 +593,7 @@ async function rekeyWebModelGroup(type: string, oldName: string, newName: string
     if (cfgOps.length) await idbTx("config", cfgOps);
     // 阶段二：全部新 key 写入成功 → 删旧 key（move 时），同样按 store 单事务
     if (move) {
-      const delFileOps: IdbOp[] = [
-        { kind: "del", key: dirKey(type, oldName) },
-      ];
+      const delFileOps: IdbOp[] = [{ kind: "del", key: dirKey(type, oldName) }];
       for (const k of fks) delFileOps.push({ kind: "del", key: k });
       await idbTx("files", delFileOps);
       // 阶段二 config 删：两个 prefix 的删合并为单事务（与阶段一 cfgOps 对齐），
@@ -610,7 +656,9 @@ async function moveOrCopyWebModel(src: string, dstDir: string, move: boolean): P
 async function getWebSubDirMap(): Promise<Record<string, string>> {
   // 对齐 go/types/extensions.go SubDirAll：返回 rt.InstanceDir（整合包实例版本目录子目录），
   // 非 storageSubDir（仓库存储子目录）——B1 契约测试暴露的字段错用
-  const rts = (resourceTypesJson as { resourceTypes?: Array<{ id: string; instanceDir?: string }> }).resourceTypes ?? [];
+  const rts =
+    (resourceTypesJson as { resourceTypes?: Array<{ id: string; instanceDir?: string }> })
+      .resourceTypes ?? [];
   const map: Record<string, string> = {};
   for (const r of rts) map[r.id] = r.instanceDir ?? "";
   return map;
@@ -642,7 +690,12 @@ export const webFsBindings = {
   // rtype 空/未知（getExts 返回空）→ 退化不过滤（对齐 Go：白名单为空时不过滤）。
   // 已知差异（契约测试锁定）：Go 对 .zip/.7z 容器打开内容指纹核验（containerCache，
   // 内容非本 rtype 则剔除）；web 暂不验真，仅按扩展名白名单保留容器条目。
-  ScanModelEntriesFiltered: async (dir: string, rtype: string, _subtype: string, _label: string) => {
+  ScanModelEntriesFiltered: async (
+    dir: string,
+    rtype: string,
+    _subtype: string,
+    _label: string,
+  ) => {
     const entries = await scanWebModels(dir);
     const exts = getExts(rtype);
     if (exts.length === 0) return entries;
@@ -654,14 +707,22 @@ export const webFsBindings = {
   ReadFileBytesBatch: async (paths: string[] | null) => {
     if (!paths) return null;
     const out: Record<string, string | null> = {};
-    await Promise.all(paths.map(async (p) => { out[p] = await readWebFile(p); }));
+    await Promise.all(
+      paths.map(async (p) => {
+        out[p] = await readWebFile(p);
+      }),
+    );
     return out;
   },
   ReadFileBytesBatchWithMeta: async (paths: string[] | null) => {
     if (!paths) return null;
     const out: Record<string, { data: string | null; hash: string }> = {};
     // hash 暂置空：网页版不为纹理缓存做 SHA256 批量预算，MMD 贴图加载不受影响
-    await Promise.all(paths.map(async (p) => { out[p] = { data: await readWebFile(p), hash: "" }; }));
+    await Promise.all(
+      paths.map(async (p) => {
+        out[p] = { data: await readWebFile(p), hash: "" };
+      }),
+    );
     return out;
   },
   // CheckFileExists：IDB 虚拟库路径是否存在（file: 或 dir: key，对齐 Go os.Stat 语义）
@@ -715,7 +776,11 @@ export const webFsBindings = {
       path,
       entry,
       ext,
-      ext === ".nbt" ? nbtVoxelView : ext === ".schematic" ? schematicVoxelView : litematicVoxelView,
+      ext === ".nbt"
+        ? nbtVoxelView
+        : ext === ".schematic"
+          ? schematicVoxelView
+          : litematicVoxelView,
     ),
   // DetectResourceType：扩展名判定（resolveTypeSafe，歧义 .zip/.7z 返回 null）→
   // 歧义容器读内容指纹（detectContainerType）。ADR-066 web 识别层对齐 Go：
@@ -775,7 +840,8 @@ export const webFsBindings = {
   FindPreviewImage: (path: string) => webFindPreviewImage(path),
   ExtractPreviewTexture: (path: string) => webExtractPreviewTexture(path),
   AnalyzeBedrockModel: (path: string) => webAnalyzeBedrockModel(path),
-  AnalyzeBedrockModelEntry: (path: string, subPath: string) => webAnalyzeBedrockModelEntry(path, subPath),
+  AnalyzeBedrockModelEntry: (path: string, subPath: string) =>
+    webAnalyzeBedrockModelEntry(path, subPath),
   // rtype 含 / 时替换为 _，避免 /web/a/b 破坏 readWebFile 三段解析
   GetRepoRoot: (rtype: string) => Promise.resolve(`${WEB_ROOT}/${rtype.replace(/\//g, "_")}`),
   GetDefaultRepoRoot: () => Promise.resolve(WEB_ROOT),
@@ -795,17 +861,7 @@ export const webFsBindings = {
     maxCubes = 0,
     minTex = 0,
     maxTex = 0,
-  ) =>
-    searchWebModels(
-      filesRoot,
-      keyword,
-      minBones,
-      maxBones,
-      minCubes,
-      maxCubes,
-      minTex,
-      maxTex,
-    ),
+  ) => searchWebModels(filesRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex),
   // ADR-111 统一删除入口（web 侧）：接收 rtype 参数但 web 模式按模型粒度删除
   DeleteResourcePack: async (path: string, _rtype: string) => {
     if (!isWebPath(path)) {

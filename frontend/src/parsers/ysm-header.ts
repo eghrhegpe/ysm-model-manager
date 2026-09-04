@@ -14,8 +14,8 @@
 // 失败不 reject：头部返回全空 YSMHeader，摘要返回最小空 YsmSummary（对齐 Go internal/app
 // app_model.go:41-65 的单返回值签名：错误被吞、返回最小结构，消费方容错）。
 
-import { extractZip } from "./extract.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { extractZip } from "./extract.ts";
 
 // --- 魔数 / 常量（对齐 header.go:13 ysgpMagic 与 summary.go 各分支）---
 const YSGP_MAGIC = "YSGP";
@@ -64,7 +64,13 @@ export interface YsmSummaryShape {
   spec: number;
   format: string;
   size: number;
-  stats: { textures: number; models: number; animations: number; texWidth: number; texHeight: number };
+  stats: {
+    textures: number;
+    models: number;
+    animations: number;
+    texWidth: number;
+    texHeight: number;
+  };
   animGroups?: Array<{ id: string; name: string; items: string[] }>;
   configMenus?: Array<{ id: string; name: string; controls: string[] }>;
   preview: { hasGui: boolean; defaultTexture?: string; heightScale?: number; widthScale?: number };
@@ -134,12 +140,18 @@ function mergeHeaderFields(h: YsmHeaderShape, rich: YsmHeaderShape): void {
 /** YSGP 魔数检测（支持 BOM，对齐 summary.go:651 isYSGP） */
 function isYSGPBytes(bytes: Uint8Array): boolean {
   let offset = 0;
-  if (bytes.length >= 3 && bytes[0] === UTF8_BOM_0 && bytes[1] === UTF8_BOM_1 && bytes[2] === UTF8_BOM_2) {
+  if (
+    bytes.length >= 3 &&
+    bytes[0] === UTF8_BOM_0 &&
+    bytes[1] === UTF8_BOM_1 &&
+    bytes[2] === UTF8_BOM_2
+  ) {
     offset = 3;
   }
   if (bytes.length < offset + 4) return false;
   return (
-    String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]) === YSGP_MAGIC
+    String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]) ===
+    YSGP_MAGIC
   );
 }
 
@@ -147,13 +159,19 @@ function isYSGPBytes(bytes: Uint8Array): boolean {
 function hasTextHeaderBytes(input: Uint8Array): boolean {
   if (input.length < 16) return false;
   let data = input;
-  if (data[0] === UTF8_BOM_0 && data[1] === UTF8_BOM_1 && data[2] === UTF8_BOM_2) data = data.subarray(3);
+  if (data[0] === UTF8_BOM_0 && data[1] === UTF8_BOM_1 && data[2] === UTF8_BOM_2)
+    data = data.subarray(3);
   let start = 0;
   if (data.length >= 4 && String.fromCharCode(data[0], data[1], data[2], data[3]) === YSGP_MAGIC) {
     start = 4;
   }
   const rest = utf8Decode(data.subarray(start, start + 512)).toLowerCase();
-  return rest.includes("--- [") || rest.includes("<name>") || rest.includes("<free>") || rest.includes("metadata");
+  return (
+    rest.includes("--- [") ||
+    rest.includes("<name>") ||
+    rest.includes("<free>") ||
+    rest.includes("metadata")
+  );
 }
 
 /** scanHeader：逐行扫描文本头部（1:1 平移 header.go:46-169，含注释前缀清理 → tips） */
@@ -470,7 +488,11 @@ function parseYsmJsonRoot(data: Uint8Array): Record<string, unknown> {
 }
 
 /** metadata/properties 提取（zip 与裸 json 分支共用；truncateTips 对齐 zip 分支 200 截断） */
-function fillSummaryFromRoot(root: Record<string, unknown>, out: YsmSummaryShape, truncateTips: boolean): void {
+function fillSummaryFromRoot(
+  root: Record<string, unknown>,
+  out: YsmSummaryShape,
+  truncateTips: boolean,
+): void {
   const metadata = asRecord(root["metadata"]);
   if (!metadata) return;
   if (typeof metadata["name"] === "string") out.name = metadata["name"];
@@ -507,17 +529,31 @@ function fillSummaryFromRoot(root: Record<string, unknown>, out: YsmSummaryShape
 }
 
 /** properties → preview（对齐 summary.go:330-337） */
-function fillPreviewFromProperties(properties: Record<string, unknown>, out: YsmSummaryShape): void {
+function fillPreviewFromProperties(
+  properties: Record<string, unknown>,
+  out: YsmSummaryShape,
+): void {
   const preview: YsmSummaryShape["preview"] = { hasGui: false };
-  if (typeof properties["default_texture"] === "string") preview.defaultTexture = properties["default_texture"];
-  if (typeof properties["height_scale"] === "number") preview.heightScale = properties["height_scale"];
+  if (typeof properties["default_texture"] === "string")
+    preview.defaultTexture = properties["default_texture"];
+  if (typeof properties["height_scale"] === "number")
+    preview.heightScale = properties["height_scale"];
   if (typeof properties["width_scale"] === "number") preview.widthScale = properties["width_scale"];
   out.preview = preview;
 }
 
 /** files.player 统计 + 几何体路径收集（TS 平移 summary.go:473-548 extractFileStats） */
-function extractFileStats(filesRaw: unknown): { stats: YsmSummaryShape["stats"]; geoFiles: string[] } {
-  const stats: YsmSummaryShape["stats"] = { textures: 0, models: 0, animations: 0, texWidth: 0, texHeight: 0 };
+function extractFileStats(filesRaw: unknown): {
+  stats: YsmSummaryShape["stats"];
+  geoFiles: string[];
+} {
+  const stats: YsmSummaryShape["stats"] = {
+    textures: 0,
+    models: 0,
+    animations: 0,
+    texWidth: 0,
+    texHeight: 0,
+  };
   const geoFiles: string[] = [];
   const files = asRecord(filesRaw);
   if (!files) return { stats, geoFiles };
@@ -531,7 +567,8 @@ function extractFileStats(filesRaw: unknown): { stats: YsmSummaryShape["stats"];
   // animation（对象或数组）
   const anim = player["animation"];
   if (Array.isArray(anim)) stats.animations = anim.length;
-  else if (typeof anim === "object" && anim !== null) stats.animations = Object.keys(anim as object).length;
+  else if (typeof anim === "object" && anim !== null)
+    stats.animations = Object.keys(anim as object).length;
 
   // model — 同时收集路径（{path} 数组 / 对象 / 字符串数组 / 单字符串，对齐 Go 四种形态）
   const model = player["model"];
@@ -557,7 +594,13 @@ function extractFileStats(filesRaw: unknown): { stats: YsmSummaryShape["stats"];
 
 /** 无 ysm.json 的 ZIP 降级扫描（TS 平移 summary.go:230-268：几何 JSON / 动画 / 贴图计数） */
 function scanZipFallback(entries: Record<string, Uint8Array>): YsmSummaryShape["stats"] {
-  const stats: YsmSummaryShape["stats"] = { textures: 0, models: 0, animations: 0, texWidth: 0, texHeight: 0 };
+  const stats: YsmSummaryShape["stats"] = {
+    textures: 0,
+    models: 0,
+    animations: 0,
+    texWidth: 0,
+    texHeight: 0,
+  };
   for (const key of Object.keys(entries)) {
     const low = key.toLowerCase();
     if (low.endsWith(".json")) {
@@ -593,7 +636,9 @@ function extractTexSizeFromGeometryJson(data: Uint8Array): { w: number; h: numbe
     const desc = asRecord(asRecord(geom[0])?.["description"]);
     if (!desc) return { w: 0, h: 0 };
     const w = clampTexDim(typeof desc["texture_width"] === "number" ? desc["texture_width"] : NaN);
-    const h = clampTexDim(typeof desc["texture_height"] === "number" ? desc["texture_height"] : NaN);
+    const h = clampTexDim(
+      typeof desc["texture_height"] === "number" ? desc["texture_height"] : NaN,
+    );
     return { w, h };
   } catch {
     return { w: 0, h: 0 };
@@ -609,7 +654,10 @@ function clampTexDim(v: number): number {
 }
 
 /** 动画分组 + 配置菜单（TS 平移 summary.go:376-452 appendAnimGroupsAndConfigs） */
-function appendAnimGroupsAndConfigs(properties: Record<string, unknown>, out: YsmSummaryShape): void {
+function appendAnimGroupsAndConfigs(
+  properties: Record<string, unknown>,
+  out: YsmSummaryShape,
+): void {
   const classify = properties["extra_animation_classify"];
   if (Array.isArray(classify)) {
     for (const g of classify) {
@@ -627,7 +675,11 @@ function appendAnimGroupsAndConfigs(properties: Record<string, unknown>, out: Ys
       const displayItems = extractDisplayValues(extraAnim);
       if (displayItems.length === 0) continue; // 全是内部引用（#开头）时跳过整组
       out.animGroups = out.animGroups || [];
-      out.animGroups.push({ id: typeof gg["id"] === "string" ? gg["id"] : "", name, items: displayItems });
+      out.animGroups.push({
+        id: typeof gg["id"] === "string" ? gg["id"] : "",
+        name,
+        items: displayItems,
+      });
     }
   }
 
@@ -710,7 +762,9 @@ function utf8Decode(bytes: Uint8Array): string {
 }
 
 function asRecord(v: unknown): Record<string, unknown> | undefined {
-  return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+  return typeof v === "object" && v !== null && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : undefined;
 }
 
 /** 对齐 Go int：number 取整，非数字 → 0 */

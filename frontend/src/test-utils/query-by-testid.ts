@@ -27,37 +27,25 @@ function assertValidTestId(testid: string): void {
   }
 }
 
-export function queryByTestId(
-  container: QueryContainer,
-  testid: string,
-): Element | null {
+export function queryByTestId(container: QueryContainer, testid: string): Element | null {
   assertValidTestId(testid);
   // 精确匹配（单个元素，如 data-testid="nav-item"）
   return scope(container).querySelector(`[data-testid="${testid}"]`);
 }
 
-export function getByTestId(
-  container: QueryContainer,
-  testid: string,
-): Element {
+export function getByTestId(container: QueryContainer, testid: string): Element {
   const el = queryByTestId(container, testid);
   if (!el) throw new Error(`Unable to find an element by testid: "${testid}"`);
   return el;
 }
 
-export function getAllByTestId(
-  container: QueryContainer,
-  testid: string,
-): Element[] {
+export function getAllByTestId(container: QueryContainer, testid: string): Element[] {
   const els = queryAllByTestId(container, testid);
   if (els.length === 0) throw new Error(`Unable to find an element by testid: "${testid}"`);
   return els;
 }
 
-export function queryAllByTestId(
-  container: QueryContainer,
-  testid: string,
-): Element[] {
+export function queryAllByTestId(container: QueryContainer, testid: string): Element[] {
   assertValidTestId(testid);
   // P2 修复：前缀匹配限定「精确 testid 或 testid + '-' + 纯数字序号」——
   // 裸 `^=` 会把兄弟角色也扫进来（tree-dir 匹配到 tree-dir-toggle，row-tpl.ts:43-44），
@@ -65,9 +53,7 @@ export function queryAllByTestId(
   // 仅保留 testid 精确匹配，或 `X-<数字>` 编号实例（tree-file-1/2 约定，Design.md §19.1）
   const prefix = `${testid}-`;
   const els = Array.from(
-    scope(container).querySelectorAll(
-      `[data-testid="${testid}"], [data-testid^="${testid}-"]`,
-    ),
+    scope(container).querySelectorAll(`[data-testid="${testid}"], [data-testid^="${testid}-"]`),
   );
   return els.filter((el) => {
     const id = el.getAttribute("data-testid") ?? "";

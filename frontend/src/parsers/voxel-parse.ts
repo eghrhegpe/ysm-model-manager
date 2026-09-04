@@ -7,10 +7,11 @@
 // 消费方 litematic-adapter.ts:11-17 的字段名正是 color/positions（positions 非 blocks）。
 // 位解码口径（对齐 nbt.go:299-327 extractBits）：Litematica 小端位序——方块索引从
 // 每个 long 的 LSB 开始连续排列，可跨 64 位容器边界。
-import { mapColor, resolveBlockName } from "./voxel-colors.ts";
+
 import { base64ToBytes } from "../backend/web-common.ts";
-import { parseNbtRootExact } from "./nbt-parse.ts";
 import { asArray, asNumber, getCompound, isObj } from "../utils/core/nbt-guards.ts";
+import { parseNbtRootExact } from "./nbt-parse.ts";
+import { mapColor, resolveBlockName } from "./voxel-colors.ts";
 
 /** 对齐 voxel.go:30 voxelBlock（各格式统一中间表示；坐标已过 int16 守卫） */
 interface VoxelBlock {
@@ -58,7 +59,10 @@ const MAX_SCHEMATIC_BLOCKS = 512_000_000;
 // ===== 位解码（对齐 nbt.go extractBits / bitsPerEntry + voxel.go readVarInt）=====
 
 /** 对齐 voxel.go:531-549 readVarInt：返回 {value, offset}（shift≥64 截断防溢出 wrap） */
-export function readVarInt(data: ArrayLike<number>, offset: number): { value: number; offset: number } {
+export function readVarInt(
+  data: ArrayLike<number>,
+  offset: number,
+): { value: number; offset: number } {
   let result = 0;
   let shift = 0;
   while (offset < data.length) {
@@ -109,7 +113,11 @@ export function bitsPerEntry(paletteSize: number): number {
  * 输入为精确 64 位 LongArray（parseNbtRootExact 产物；number 归一有精度损失，
  * 见 nbt-parse.ts NbtReader.longsExact）。越界位 → 0（air），与 Go extractBits 一致。
  */
-export function unpackBlockStates(longs: bigint[], bitsPerBlock: number, expectedCount: number): number[] {
+export function unpackBlockStates(
+  longs: bigint[],
+  bitsPerBlock: number,
+  expectedCount: number,
+): number[] {
   const out: number[] = new Array(expectedCount);
   for (let i = 0; i < expectedCount; i++) {
     out[i] = extractBits(longs, i * bitsPerBlock, bitsPerBlock);
@@ -150,9 +158,12 @@ function groupVoxelStream(
 
 // 对齐 voxel.go:494-498 neighborOffsets：6 个相邻方向偏移（表面检测）
 const NEIGHBOR_OFFSETS: Array<[number, number, number]> = [
-  [1, 0, 0], [-1, 0, 0],
-  [0, 1, 0], [0, -1, 0],
-  [0, 0, 1], [0, 0, -1],
+  [1, 0, 0],
+  [-1, 0, 0],
+  [0, 1, 0],
+  [0, -1, 0],
+  [0, 0, 1],
+  [0, 0, -1],
 ];
 
 /** 对齐 voxel.go:502-529 filterSurfaceOnly：剔除被 6 邻居完全包围的不可见方块 */
@@ -225,7 +236,14 @@ function indexToCoord(
   out.x = (i - 1) % width;
   out.y = Math.floor((i - 1) / (width * length));
   out.z = Math.floor((i - 1) / width) % length;
-  if (out.x < INT16_MIN || out.x > INT16_MAX || out.y < INT16_MIN || out.y > INT16_MAX || out.z < INT16_MIN || out.z > INT16_MAX) {
+  if (
+    out.x < INT16_MIN ||
+    out.x > INT16_MAX ||
+    out.y < INT16_MIN ||
+    out.y > INT16_MAX ||
+    out.z < INT16_MIN ||
+    out.z > INT16_MAX
+  ) {
     return null;
   }
   return out;
@@ -251,7 +269,10 @@ function asByteArray(v: unknown): number[] | undefined {
  *       { info: null, err } = 数据损坏（调用方记录首错）；
  *       { info }            = 有效 region。
  */
-function buildRegionInfo(region: Record<string, unknown>): { info: RegionInfo | null; err: string | null } {
+function buildRegionInfo(region: Record<string, unknown>): {
+  info: RegionInfo | null;
+  err: string | null;
+} {
   const paletteList = asArray(region["BlockStatePalette"]);
   if (!paletteList || paletteList.length <= 1) return { info: null, err: null };
 
@@ -302,22 +323,35 @@ function buildRegionInfo(region: Record<string, unknown>): { info: RegionInfo | 
     return { info: null, err: `region Size 超出合理范围: ${sx}×${sy}×${sz}` };
   }
   if (
-    ox < MIN_COORD || ox + sx - 1 > MAX_COORD ||
-    oy < MIN_COORD || oy + sy - 1 > MAX_COORD ||
-    oz < MIN_COORD || oz + sz - 1 > MAX_COORD
+    ox < MIN_COORD ||
+    ox + sx - 1 > MAX_COORD ||
+    oy < MIN_COORD ||
+    oy + sy - 1 > MAX_COORD ||
+    oz < MIN_COORD ||
+    oz + sz - 1 > MAX_COORD
   ) {
-    return { info: null, err: `region 坐标超出 int16 表示范围: origin=(${ox},${oy},${oz}) size=${sx}×${sy}×${sz}` };
+    return {
+      info: null,
+      err: `region 坐标超出 int16 表示范围: origin=(${ox},${oy},${oz}) size=${sx}×${sy}×${sz}`,
+    };
   }
   const total = sx * sy * sz;
   const capacity = Math.floor((longs.length * 64) / bpe);
   if (total > capacity) {
-    return { info: null, err: `region BlockStates 容量不足: size=${total} 需 ${total} 位，实际 ${longs.length} 位` };
+    return {
+      info: null,
+      err: `region BlockStates 容量不足: size=${total} 需 ${total} 位，实际 ${longs.length} 位`,
+    };
   }
 
   return {
     info: {
-      originX: ox, originY: oy, originZ: oz,
-      sizeX: sx, sizeY: sy, sizeZ: sz,
+      originX: ox,
+      originY: oy,
+      originZ: oz,
+      sizeX: sx,
+      sizeY: sy,
+      sizeZ: sz,
       palette,
       longs,
       bpe,
@@ -331,7 +365,10 @@ function buildRegionInfo(region: Record<string, unknown>): { info: RegionInfo | 
  * 无 Regions → 仅返回 Size（maxBlocks: 0、groups: null，对齐 Go 快捷返回）；
  * 所有 region 数据损坏 → null（→ "{}"）。
  */
-export function litematicVoxelView(root: Record<string, unknown>, maxBlocks: number): VoxelData | null {
+export function litematicVoxelView(
+  root: Record<string, unknown>,
+  maxBlocks: number,
+): VoxelData | null {
   const encSize: number[] = [0, 0, 0];
   const metadata = getCompound(root, "Metadata");
   if (metadata) {
@@ -437,14 +474,22 @@ export function nbtVoxelView(root: Record<string, unknown>, maxBlocks: number): 
       if (!posList || stateTag === undefined || posList.length !== 3) continue;
       // 对齐 voxel.go:346-354：state 须为整型且落在 palette 内、颜色非空（air → 跳过）
       if (typeof stateTag !== "number" || !Number.isInteger(stateTag)) continue;
-      if (stateTag < 0 || stateTag >= paletteColors.length || paletteColors[stateTag] === "") continue;
+      if (stateTag < 0 || stateTag >= paletteColors.length || paletteColors[stateTag] === "")
+        continue;
       const px = asNumber(posList[0]);
       const py = asNumber(posList[1]);
       const pz = asNumber(posList[2]);
       // 对齐 voxel.go:356-370：pos 元素须为整型（int32 口径），越界 int16 丢弃
       if (px === undefined || py === undefined || pz === undefined) continue;
       if (!Number.isInteger(px) || !Number.isInteger(py) || !Number.isInteger(pz)) continue;
-      if (px < INT16_MIN || px > INT16_MAX || py < INT16_MIN || py > INT16_MAX || pz < INT16_MIN || pz > INT16_MAX) {
+      if (
+        px < INT16_MIN ||
+        px > INT16_MAX ||
+        py < INT16_MIN ||
+        py > INT16_MAX ||
+        pz < INT16_MIN ||
+        pz > INT16_MAX
+      ) {
         continue;
       }
       return { color: paletteColors[stateTag], x: px, y: py, z: pz };
@@ -474,7 +519,12 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
     palette: string[];
     blocks: unknown[];
   }
-  let gMinX = 0, gMinY = 0, gMinZ = 0, gMaxX = 0, gMaxY = 0, gMaxZ = 0;
+  let gMinX = 0,
+    gMinY = 0,
+    gMinZ = 0,
+    gMaxX = 0,
+    gMaxY = 0,
+    gMaxZ = 0;
   let hasBounds = false;
   const infos: SubInfo[] = [];
 
@@ -490,8 +540,12 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
     const maxY = asNumber(lb["max_y"]) ?? 0;
     const maxZ = asNumber(lb["max_z"]) ?? 0;
     if (!hasBounds) {
-      gMinX = minX; gMinY = minY; gMinZ = minZ;
-      gMaxX = maxX; gMaxY = maxY; gMaxZ = maxZ;
+      gMinX = minX;
+      gMinY = minY;
+      gMinZ = minZ;
+      gMaxX = maxX;
+      gMaxY = maxY;
+      gMaxZ = maxZ;
       hasBounds = true;
     } else {
       if (minX < gMinX) gMinX = minX;
@@ -511,7 +565,8 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
   const size = [gMaxX - gMinX + 1, gMaxY - gMinY + 1, gMaxZ - gMinZ + 1];
   // 对齐 MAX_REGION_AXIS 守卫：基岩版包围盒维度也须合理
   if (size[0] <= 0 || size[1] <= 0 || size[2] <= 0) return null;
-  if (size[0] > MAX_REGION_AXIS || size[1] > MAX_REGION_AXIS || size[2] > MAX_REGION_AXIS) return null;
+  if (size[0] > MAX_REGION_AXIS || size[1] > MAX_REGION_AXIS || size[2] > MAX_REGION_AXIS)
+    return null;
 
   let si = 0;
   let bi = 0;
@@ -524,7 +579,8 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
         if (!isObj(elem)) continue;
         const pid = asNumber(elem["palette_id"]);
         // 空气判定按 palette 条目实际颜色（mapColor 对 air 系返回 ""），非 `pid == 0`
-        if (pid === undefined || pid < 0 || pid >= info.palette.length || info.palette[pid] === "") continue;
+        if (pid === undefined || pid < 0 || pid >= info.palette.length || info.palette[pid] === "")
+          continue;
         const lp = getCompound(elem, "local_pos");
         if (!lp) continue;
         const lx = asNumber(lp["x"]);
@@ -535,7 +591,14 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
         const gx = info.originX + lx - gMinX;
         const gy = info.originY + ly - gMinY;
         const gz = info.originZ + lz - gMinZ;
-        if (gx < INT16_MIN || gx > INT16_MAX || gy < INT16_MIN || gy > INT16_MAX || gz < INT16_MIN || gz > INT16_MAX) {
+        if (
+          gx < INT16_MIN ||
+          gx > INT16_MAX ||
+          gy < INT16_MIN ||
+          gy > INT16_MAX ||
+          gz < INT16_MIN ||
+          gz > INT16_MAX
+        ) {
           continue;
         }
         return { color: info.palette[pid], x: gx, y: gy, z: gz };
@@ -558,7 +621,10 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
  * v2：BlockData varint + Palette 映射；v1：Blocks byte array（有 Palette 查表，
  * 无 Palette 用 Data + ResolveBlockName 数字 ID 解析）。
  */
-export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: number): VoxelData | null {
+export function schematicVoxelView(
+  root: Record<string, unknown>,
+  maxBlocks: number,
+): VoxelData | null {
   const width = asNumber(root["Width"]);
   const height = asNumber(root["Height"]);
   const length = asNumber(root["Length"]);
@@ -566,7 +632,8 @@ export function schematicVoxelView(root: Record<string, unknown>, maxBlocks: num
   // 对齐 Go voxel.go:556-564：维度上限（int32 可达 2^31-1，乘积可溢出——Go 用 int64 钳制）
   // 网页版用 JavaScript Number（双精度浮点，安全整数 2^53-1），512M 远小于安全范围，
   // 只需总块数守卫即可防溢出（不额外加 per-axis 上限，避免与 Go 功能分叉——2048×1×1 等长条 schematic 应放行）
-  if (!Number.isInteger(width) || !Number.isInteger(height) || !Number.isInteger(length)) return null;
+  if (!Number.isInteger(width) || !Number.isInteger(height) || !Number.isInteger(length))
+    return null;
   if (width <= 0 || height <= 0 || length <= 0) return null;
   const total = width * height * length;
   if (total > MAX_SCHEMATIC_BLOCKS) return null;

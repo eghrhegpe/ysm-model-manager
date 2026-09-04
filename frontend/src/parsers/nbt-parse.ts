@@ -47,23 +47,36 @@ const MAX_NBT_BYTES = 100 << 20;
 function gzipIsizedUpperBound(bytes: Uint8Array): number | null {
   if (bytes.length < 8) return null; // gzip footer 至少 8 字节（4 ISIZE + 4 CRC32）
   const off = bytes.length - 4;
-  return (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0;
+  return (
+    (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0
+  );
 }
 
 /** 标签类型的最小 payload 字节数（定长类型返回固定值，变长类型返回 0 表示无法预估） */
 function minPayloadBytes(tagType: number): number {
   switch (tagType) {
-    case TAG_BYTE: return 1;
-    case TAG_SHORT: return 2;
-    case TAG_INT: return 4;
-    case TAG_LONG: return 8;
-    case TAG_FLOAT: return 4;
-    case TAG_DOUBLE: return 8;
-    case TAG_BYTE_ARRAY: return 4; // int32 长度头
-    case TAG_STRING: return 2; // uint16 长度头
-    case TAG_INT_ARRAY: return 4;
-    case TAG_LONG_ARRAY: return 4;
-    default: return 0; // compound/list 变长，无法预估
+    case TAG_BYTE:
+      return 1;
+    case TAG_SHORT:
+      return 2;
+    case TAG_INT:
+      return 4;
+    case TAG_LONG:
+      return 8;
+    case TAG_FLOAT:
+      return 4;
+    case TAG_DOUBLE:
+      return 8;
+    case TAG_BYTE_ARRAY:
+      return 4; // int32 长度头
+    case TAG_STRING:
+      return 2; // uint16 长度头
+    case TAG_INT_ARRAY:
+      return 4;
+    case TAG_LONG_ARRAY:
+      return 4;
+    default:
+      return 0; // compound/list 变长，无法预估
   }
 }
 
@@ -107,13 +120,13 @@ class NbtReader {
   /** i32 大端有符号 */
   i32(): number {
     const b = this.take(4);
-    return ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) | 0;
+    return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3] | 0;
   }
 
   /** i64 大端有符号 → JS number（双精度可无损表示 < 2^53；meta 场景的时间戳/坐标足够） */
   i64(): number {
     const b = this.take(8);
-    const hi = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) | 0;
+    const hi = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3] | 0;
     const lo = ((b[4] << 24) | (b[5] << 16) | (b[6] << 8) | b[7]) >>> 0;
     return hi * 0x100000000 + lo;
   }
@@ -152,7 +165,9 @@ class NbtReader {
     const remaining = this.data.length - this.off;
     const elemMin = minPayloadBytes(elemType);
     if (elemMin > 0 && n > remaining / elemMin) {
-      throw new Error(`nbt list 长度异常: 声明 ${n} 元素（最小 ${elemMin}B/个），剩余 ${remaining} 字节`);
+      throw new Error(
+        `nbt list 长度异常: 声明 ${n} 元素（最小 ${elemMin}B/个），剩余 ${remaining} 字节`,
+      );
     }
     if (elemMin === 0 && n > remaining) {
       throw new Error(`nbt list 长度异常: 声明 ${n} 元素，剩余 ${remaining} 字节`);
@@ -175,18 +190,20 @@ class NbtReader {
 
   private readIntArray(): number[] {
     const n = this.i32();
-    if (n < 0 || n > Math.floor((this.data.length - this.off) / 4)) throw new Error("nbt intArray 长度异常");
+    if (n < 0 || n > Math.floor((this.data.length - this.off) / 4))
+      throw new Error("nbt intArray 长度异常");
     const b = this.take(n * 4);
     const out: number[] = new Array(n);
     for (let i = 0; i < n; i++) {
-      out[i] = ((b[i * 4] << 24) | (b[i * 4 + 1] << 16) | (b[i * 4 + 2] << 8) | b[i * 4 + 3]) | 0;
+      out[i] = (b[i * 4] << 24) | (b[i * 4 + 1] << 16) | (b[i * 4 + 2] << 8) | b[i * 4 + 3] | 0;
     }
     return out;
   }
 
   private readLongArray(): unknown[] {
     const n = this.i32();
-    if (n < 0 || n > Math.floor((this.data.length - this.off) / 8)) throw new Error("nbt longArray 长度异常");
+    if (n < 0 || n > Math.floor((this.data.length - this.off) / 8))
+      throw new Error("nbt longArray 长度异常");
     const b = this.take(n * 8);
     if (this.longsExact) {
       const out: bigint[] = new Array(n);
@@ -199,8 +216,9 @@ class NbtReader {
     }
     const out: number[] = new Array(n);
     for (let i = 0; i < n; i++) {
-      const hi = ((b[i * 8] << 24) | (b[i * 8 + 1] << 16) | (b[i * 8 + 2] << 8) | b[i * 8 + 3]) | 0;
-      const lo = ((b[i * 8 + 4] << 24) | (b[i * 8 + 5] << 16) | (b[i * 8 + 6] << 8) | b[i * 8 + 7]) >>> 0;
+      const hi = (b[i * 8] << 24) | (b[i * 8 + 1] << 16) | (b[i * 8 + 2] << 8) | b[i * 8 + 3] | 0;
+      const lo =
+        ((b[i * 8 + 4] << 24) | (b[i * 8 + 5] << 16) | (b[i * 8 + 6] << 8) | b[i * 8 + 7]) >>> 0;
       out[i] = hi * 0x100000000 + lo;
     }
     return out;
@@ -378,13 +396,30 @@ function paletteEntryStats(paletteList: unknown[]): Array<{ name: string; count:
  * 每个 sub_level：local_bounds（min/max x/y/z）推导全局包围盒、blocks 求和、
  * blocks.palette_id 引用 block_palette.Name 统计、entities/block_entities 求和。
  */
-function bedrockStructureView(root: Record<string, unknown>, subLevels: unknown[]): Record<string, unknown> | null {
+function bedrockStructureView(
+  root: Record<string, unknown>,
+  subLevels: unknown[],
+): Record<string, unknown> | null {
   const out: Record<string, unknown> = {};
   const dv = asNumber(root["DataVersion"]);
   if (dv !== undefined) out["dataVersion"] = dv;
 
-  const bounds: Record<string, number> = { min_x: 0, min_y: 0, min_z: 0, max_x: 0, max_y: 0, max_z: 0 };
-  const isMax: Record<string, boolean> = { min_x: false, min_y: false, min_z: false, max_x: true, max_y: true, max_z: true };
+  const bounds: Record<string, number> = {
+    min_x: 0,
+    min_y: 0,
+    min_z: 0,
+    max_x: 0,
+    max_y: 0,
+    max_z: 0,
+  };
+  const isMax: Record<string, boolean> = {
+    min_x: false,
+    min_y: false,
+    min_z: false,
+    max_x: true,
+    max_y: true,
+    max_z: true,
+  };
   let hasBounds = false;
   let blockCount = 0;
   let entityCount = 0;
@@ -430,7 +465,11 @@ function bedrockStructureView(root: Record<string, unknown>, subLevels: unknown[
 
   // 对齐 parseBedrockStructure:399-418：仅在非零/存在时写入
   if (hasBounds) {
-    out["size"] = [bounds.max_x - bounds.min_x + 1, bounds.max_y - bounds.min_y + 1, bounds.max_z - bounds.min_z + 1];
+    out["size"] = [
+      bounds.max_x - bounds.min_x + 1,
+      bounds.max_y - bounds.min_y + 1,
+      bounds.max_z - bounds.min_z + 1,
+    ];
   }
   if (blockCount > 0) out["blockCount"] = blockCount;
   if (entityCount > 0) out["entityCount"] = entityCount;
@@ -452,7 +491,9 @@ function bedrockStructureView(root: Record<string, unknown>, subLevels: unknown[
  * v1 的 ID→方块名统计分支（paletteCompound==nil && blocks!=nil）需要 Minecraft 方块 ID 表，
  * 属 M2 范围，M1 跳过（paletteStats 缺省，前端渲染「无方块数据」占位）。
  */
-export function schematicSummaryView(root: Record<string, unknown>): Record<string, unknown> | null {
+export function schematicSummaryView(
+  root: Record<string, unknown>,
+): Record<string, unknown> | null {
   const out: Record<string, unknown> = {};
   const version = asNumber(root["Version"]);
   if (version !== undefined) out["version"] = version;
@@ -463,7 +504,8 @@ export function schematicSummaryView(root: Record<string, unknown>): Record<stri
   const width = asNumber(root["Width"]);
   const height = asNumber(root["Height"]);
   const length = asNumber(root["Length"]);
-  if (width !== undefined && height !== undefined && length !== undefined) out["size"] = [width, height, length];
+  if (width !== undefined && height !== undefined && length !== undefined)
+    out["size"] = [width, height, length];
 
   // 对齐 ParseSchematicSummary:195-203：Metadata compound 的 Author/Name
   const metadata = getCompound(root, "Metadata");

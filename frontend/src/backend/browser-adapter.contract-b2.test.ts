@@ -224,7 +224,7 @@ describe("B2 契约：MergeCommunityCreatorsFromJSON（ADR-172 段并入）", ()
   });
 
   it("幂等短路：同索引再并 → [0,0]，覆盖层不重写", async () => {
-    await browserAdapter.SaveWorkshopCreators([{ name: "A", type: "bilibili" }]);
+    await browserAdapter.SaveWorkshopCreators([{ name: "A", desc: "", type: "bilibili" }]);
     const payload = JSON.stringify([
       { name: "A", type: "bilibili;afdian" },
       { name: "B", type: "github" },
@@ -237,7 +237,7 @@ describe("B2 契约：MergeCommunityCreatorsFromJSON（ADR-172 段并入）", ()
   });
 
   it("空输入 / 全非法条目 → reject 不落盘", async () => {
-    const before = [{ name: "旧", type: "x" }];
+    const before = [{ name: "旧", desc: "", type: "x" }];
     await browserAdapter.SaveWorkshopCreators(before);
     await expect(browserAdapter.MergeCommunityCreatorsFromJSON("[]")).rejects.toThrow();
     await expect(

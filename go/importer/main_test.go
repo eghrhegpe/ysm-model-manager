@@ -1,24 +1,13 @@
 package importer
 
 import (
-	"log"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/internal/testutil"
 )
 
-// TestMain 测试进程启动前将仓库根 resource_types.json 注入为 types 包编译期
-// 嵌入基线，与 go/cli、go/packs、go/scanner、go/installer、internal/app 的
-// main_test.go 同构。本包测试经本包函数消费 types.LoadRegistry()（扩展名/类型
-// 判定）；commit 11bfca3b 删除 go/types 的 CWD 相对回退后（生产走 root embed
-// 注入、测试须显式注入），本包曾缺注入导致注册表空表、判定全线失效——此处补齐。
+// TestMain 注入仓库根 resource_types.json 为 types 包测试基线
+// （统一实现见 testutil.InjectRootRegistry；commit 11bfca3b 删 CWD 回退后测试须显式注入）。
 func TestMain(m *testing.M) {
-	if data, err := os.ReadFile(filepath.Join("..", "..", "resource_types.json")); err == nil {
-		types.SetBundledRegistryJSON(data)
-	} else {
-		log.Printf("[importer_test] 注入测试基线失败: %v（LoadRegistry 相关测试将失去基线）", err)
-	}
-	os.Exit(m.Run())
+	testutil.InjectRootRegistry(m)
 }

@@ -644,11 +644,7 @@ func TestPushSingleResource_JsonExt(t *testing.T) {
 // TestSyncToggleStatus_NilScanFn 对 nil scanFn 应返回错误而非 panic
 // （原 repoEntries = scanFn(filesRoot) 调 nil 函数值会 panic——已补 nil 守卫）
 func TestSyncToggleStatus_NilScanFn(t *testing.T) {
-	base := t.TempDir()
-	repoDir := filepath.Join(base, "repo")
-	customDir := filepath.Join(base, "custom")
-	_ = os.MkdirAll(repoDir, 0755)
-	_ = os.MkdirAll(customDir, 0755)
+	_, repoDir, customDir := newToggleEnv(t)
 	var panicked bool
 	var err error
 	var disable, enable int
@@ -674,11 +670,7 @@ func TestSyncToggleStatus_NilScanFn(t *testing.T) {
 // TestSyncToggleStatus_EnableTargetExistsSkipped 启用分支：.ban 文件需启用但同名非 .ban
 // 已存在 → 跳过（防 Rename 覆盖丢数据），enableCount=0，不报错
 func TestSyncToggleStatus_EnableTargetExistsSkipped(t *testing.T) {
-	base := t.TempDir()
-	repoDir := filepath.Join(base, "repo")
-	customDir := filepath.Join(base, "custom")
-	_ = os.MkdirAll(repoDir, 0755)
-	_ = os.MkdirAll(customDir, 0755)
+	_, repoDir, customDir := newToggleEnv(t)
 
 	// repo: model_a 正常（非 .ban）→ custom 的 model_a.ysm.ban 应启用，
 	// 但 custom 同时已有 model_a.ysm（非 .ban，可能是旧版本）→ 跳过防覆盖

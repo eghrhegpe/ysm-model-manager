@@ -4,10 +4,27 @@ package testutil
 import (
 	"archive/zip"
 	"bytes"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
+
+// InjectRootRegistry 读取仓库根 resource_types.json 注入为 types 包测试基线。
+// 供各包 main_test.go 的 TestMain 调用——commit 11bfca3b 删除 go/types 的 CWD
+// 相对回退后（生产走 root embed 注入、测试须显式注入），9+ 个包各自复制同构
+// TestMain 造成 jscpd 重复债务，收敛为本 helper（各包 TestMain 仅剩薄壳）。
+// 失败仅告警不阻断（LoadRegistry 相关测试将失去基线，由该包测试自身兜底暴露）。
+func InjectRootRegistry(m *testing.M) {
+	if data, err := os.ReadFile(filepath.Join("..", "..", "resource_types.json")); err == nil {
+		types.SetBundledRegistryJSON(data)
+	} else {
+		log.Printf("[testutil] 注入测试基线失败: %v（LoadRegistry 相关测试将失去基线）", err)
+	}
+	os.Exit(m.Run())
+}
 
 // CreateTestFile 在 dir 下创建 name 文件（自动建父目录），返回完整路径。
 // 统一 3 个包各自实现的同名 helper（dedup/fsutil/recycle）。

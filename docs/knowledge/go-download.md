@@ -91,7 +91,7 @@ status: active
 
 ## 与其他子系统关系
 
-- `internal/app/app_download.go`：`downloadFileWithQueue` 用 `ResolveSavePath` 解析路径、按 Mirror 策略排序三个源、逐源调 `File`/`FromGitHubAPI`，任一成功即返回；进度经 `emitDownloadProgress` 转发 `download:progress` Wails 事件。**队列契约 DTO（`DownloadTask`/`QueueStatusInfo`）已下沉 `go/types`（ADR-145：跨包契约，供 go/cli AppService 接口引用；JSON tag 原样保留 → bindings 零漂移）**
+- `internal/app/app_download.go`：`downloadFileWithQueue` 用 `ResolveSavePath` 解析路径、按 Mirror 策略排序三个源、逐源调 `File`/`FromGitHubAPI`，任一成功即返回；进度经 `emitDownloadProgress` 转发 `download:progress` Wails 事件。**队列契约 DTO（`DownloadTask`/`QueueStatusInfo`）已下沉 `go/types`（ADR-145：跨包契约，供 go/cli AppService 接口引用；JSON tag 原样保留 → bindings 零漂移）**；`DownloadFromGitHub` 直下入口复用 `downloadFileWithQueue`，ctx 用 **App 级 `appCtx`**（NewApp 创建、`ServiceShutdown` 时 `appCancel`）——非队列任务，取消不随 `CancelQueue`，只随应用退出
 - 前端通过 Wails EventsOn 接收进度事件（`download-queue.ts`）
 
 ## 不变量

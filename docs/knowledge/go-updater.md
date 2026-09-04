@@ -80,6 +80,7 @@ status: active
 - **R30 修复链（2026-08-31）**：
   - P2-3 SHA256 强制校验：`Check` 在哈希不可得时返回 `Available: false`，阻断无完整性校验的更新下载。旧实现「hash 缺失仍可下载」契约已废弃——攻击者只需阻断 SHA256SUMS 获取即可绕过完整性校验。`downloadOnce` 顶部 `expectedHash == ""` 时 fail-fast 返回 `ErrHashMismatch`，避免浪费带宽。
   - code_review P1-1 契约一致：`CheckWithClient` 在 `fetchExpectedHash` 失败或无 `latestSHASumsURL` 时返回 `Available: false`，与 `downloadOnce` 的空哈希拒绝契约一致。旧注释「hash 缺失仍可下载」已更新。
+- **helper（`cmd/updater`）等待主进程退出的语义演进**：v1 轮询用 `p.Signal(os.Kill)` 探测存活——Windows 上 Signal(os.Kill) **真的会终止目标进程**，误杀仍在运行的主进程（807c81a5 删轮询改固定 sleep 2s）；现改为 `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` + `GetExitCodeProcess` 轮询（只查询不干预：STILL_ACTIVE=259 仍在运行；OpenProcess 报 `ERROR_INVALID_PARAMETER` 视为已退出，`ERROR_ACCESS_DENIED` 不误判继续等）→ 退出后短等 500ms 让 PE 文件锁回收 → `replaceExeWithRetry` 对共享冲突（`ERROR_SHARING_VIOLATION`/`ERROR_LOCK_VIOLATION`）200ms 退避重试最多 10s。**铁律：探测进程存活绝不能用发信号的方式（Windows Signal(os.Kill) 即杀进程）**
 
 ## 相关
 

@@ -291,8 +291,14 @@ type PruneResult struct {
 // Prune 淘汰纹理缓存：先清超龄（TTL），再按容量从最旧删到上限内。
 // 可被 repoaudit / CLI / 应用启动按需调用；WriteCached 写路径也会限频自动触发。
 func Prune() (PruneResult, error) {
+	return pruneDir(CacheDir())
+}
+
+// pruneDir 淘汰指定目录的纹理缓存（Prune 的目录参数化实现）。
+// 供 maybePrune 后台 goroutine 使用目录快照（测试 restore CacheDir 后不扫错目录、
+// 不污染真实缓存——后台淘汰对触发时目录的语义快照，而非运行时动态读）。
+func pruneDir(dir string) (PruneResult, error) {
 	var res PruneResult
-	dir := CacheDir()
 	if dir == "" {
 		return res, nil // 平台配置根不可用：no-op
 	}
@@ -408,9 +414,13 @@ func maybePrune() {
 	if !pruneInFlight.CompareAndSwap(false, true) {
 		return // 已有淘汰在跑：跳过本轮（限频下轮写再触发）
 	}
+	// 目录快照：fork 前捕获 CacheDir()。后台 goroutine 可能晚于调用方完成，
+	// 若运行时动态读 CacheDir()，测试 restore 全局后会把真实用户缓存目录当靶子
+	// 扫描/淘汰（TestSaveCachedTexture TempDir 清理竞态 + 真实缓存污染双重风险）。
+	dir := CacheDir()
 	go func() {
 		defer pruneInFlight.Store(false)
-		if _, err := Prune(); err != nil {
+		if _, err := pruneDir(dir); err != nil {
 			log.Printf("texture_cache: 写后淘汰失败: %v", err)
 		}
 	}()

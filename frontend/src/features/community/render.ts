@@ -124,8 +124,7 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
 
   // 列1: 复选框(缺失时) + 名称
   const nameWrap = document.createElement("div");
-  nameWrap.style.cssText =
-    "display:flex;align-items:center;gap:6px;min-width:0";
+  nameWrap.className = "gh-name-wrap"; // 规则在 content-diag.ts contentDiagCSS(shadow adopted)
   if (!exists) {
     const cb = document.createElement("input");
     cb.type = "checkbox";

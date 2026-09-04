@@ -303,4 +303,7 @@ export const contentDiagCSS: string = `
 .diag-sync-resolve { margin-top:16px; padding:12px; background:var(--diag-stat-bg, var(--surf)); border-radius:8px; }
 .diag-dedup-config { padding:8px 12px; }
 .diag-warn { color:var(--status-warning, #e6b800); font-weight:600; }
+
+/* P1 批次12:工坊行名称容器(community/render.ts nameWrap,gh-row 列1 内部 flex 容器) */
+.gh-name-wrap { display:flex; align-items:center; gap:6px; min-width:0; }
 `;

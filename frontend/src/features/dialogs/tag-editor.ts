@@ -80,6 +80,19 @@ function dgTeAddTag(shell: DgTeShell, raw: string): void {
   shell.inputEl.value = "";
 }
 
+/** 标签编辑弹窗补充布局(P1 批次12:cssText 抽类;box 挂 body light DOM,head 注入适用;dlg-box/pad 规则在全局 components.css) */
+const teCss = `
+.te-box { gap:10px; width:380px; max-height:80vh; display:flex; flex-direction:column; }
+`;
+let _teStylesInjected = false;
+function ensureTeStyles(): void {
+  if (_teStylesInjected) return;
+  _teStylesInjected = true;
+  const el = document.createElement("style");
+  el.textContent = teCss;
+  document.head.appendChild(el);
+}
+
 function dgTeBuildShell(
   modelPath: string,
   resolve: (value: string[] | null) => void,
@@ -87,10 +100,9 @@ function dgTeBuildShell(
   const overlay = document.createElement("div");
   overlay.className = "dlg-overlay";
 
+  ensureTeStyles(); // P1 批次12:cssText 抽类注入(幂等)
   const box = document.createElement("div");
-  box.className = "dlg-box dlg-pad";
-  box.style.cssText =
-    "gap:10px;width:380px;max-height:80vh;display:flex;flex-direction:column";
+  box.className = "dlg-box dlg-pad te-box"; // 语义类保留,补充布局在 .te-box
 
   box.innerHTML = `
     <div class="dlg-title" style="margin:0">🏷️ ${t("dialog.editTags")}</div>

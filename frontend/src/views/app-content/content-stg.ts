@@ -113,4 +113,7 @@ export const contentStgCSS: string = `
 .stg-tab:hover { color:var(--txt);background:var(--hover); }
 .stg-tab.active { color:var(--accent);background:var(--surf);border-color:var(--bd) var(--bd) var(--accent) var(--bd);border-bottom-color:var(--accent);margin-bottom:-1px;font-weight:600; }
 @keyframes stgTabIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+/* P1 批次12:3D 键位设置行(keymap.ts tdRenderKeymap row,#td-keymap-grid 内 flex 行) */
+.stg-km-row { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:var(--fs-sm); }
 `;

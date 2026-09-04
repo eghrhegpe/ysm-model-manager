@@ -67,8 +67,7 @@ function tdRenderKeymap(root: ShadowRoot): void {
   grid.innerHTML = "";
   TD_ACTIONS.forEach(({ key, label }) => {
     const row = document.createElement("div");
-    row.style.cssText =
-      "display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:var(--fs-sm)";
+    row.className = "stg-km-row"; // 规则在 content-stg.ts contentStgCSS(shadow adopted)
     const name = document.createElement("span");
     name.textContent = label;
     name.style.color = "var(--muted)";

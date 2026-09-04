@@ -311,7 +311,30 @@ export function flattenVisible(
   return atFvFlattenLevel(node, dirPath, state);
 }
 
-// ——— 仅渲染可见行的 HTML，用 padding 撑出滚动高度 ———
+// ——— 仅渲染可见行：vs-wrap + 行节点复用（code review #5）———
+// 原实现每个滚动 rAF 帧字符串拼接 slice 后 container.innerHTML = ... 整体重解析、
+// 销毁重建全部可见行 DOM（持续 GC + reparse）。现改为：
+//   ① 行节点按 row 对象缓存（WeakMap——renderTree 每次扁平化产生新 row 对象，
+//      旧条目随数组 GC 自动回收，无手工失效负担）；滚动只改变可见窗口，
+//      缓存节点跨帧复用，仅增删首尾行。
+//   ② vs-wrap 容器持久复用，仅改 padding 与 replaceChildren 行片段（对齐
+//      community/virtual-list.ts 范式）。
+// 安全性：树事件全为容器级委托（closest 查询），行节点无独立监听器；选中态
+// （rowCls/aria-selected）来自数据渲染，与 row 对象一一对应，复用不串行。
+const rowElCache = new WeakMap<object, HTMLElement>();
+
+/** 取行 DOM 节点（缓存未命中时由 row.html 解析一次） */
+function rowElOf(row: TreeRow): HTMLElement {
+  let el = rowElCache.get(row);
+  if (!el) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = row.html;
+    el = tpl.content.firstElementChild as HTMLElement;
+    rowElCache.set(row, el);
+  }
+  return el;
+}
+
 function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): void {
   const total = rows.length;
   // 首次渲染时容器可能还没布局（clientHeight=0），全量渲染
@@ -319,22 +342,22 @@ function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): voi
     container.clientHeight > 0
       ? calcVisibleRange(container, total, rowH)
       : { startIdx: 0, endIdx: total };
-  const slice = rows.slice(range.startIdx, range.endIdx);
 
-  let buf = "";
-  for (let i = 0; i < slice.length; i++) {
-    buf += slice[i].html;
+  // vs-wrap 复用（首次或被外层清空时重建）
+  let wrap = container.firstElementChild;
+  if (!wrap || wrap.className !== "vs-wrap") {
+    container.replaceChildren();
+    wrap = document.createElement("div");
+    wrap.className = "vs-wrap";
+    container.appendChild(wrap);
   }
-  const topPad = range.startIdx * rowH;
-  const bottomPad = (total - range.endIdx) * rowH;
-  container.innerHTML =
-    '<div class="vs-wrap" style="padding-top:' +
-    topPad +
-    "px;padding-bottom:" +
-    bottomPad +
-    'px">' +
-    buf +
-    "</div>";
+  const frag = document.createDocumentFragment();
+  for (let i = range.startIdx; i < range.endIdx; i++) {
+    frag.appendChild(rowElOf(rows[i]));
+  }
+  wrap.replaceChildren(frag);
+  (wrap as HTMLElement).style.paddingTop = range.startIdx * rowH + "px";
+  (wrap as HTMLElement).style.paddingBottom = (total - range.endIdx) * rowH + "px";
 }
 
 // ——— 虚拟滚动实例状态（原 4 个 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/

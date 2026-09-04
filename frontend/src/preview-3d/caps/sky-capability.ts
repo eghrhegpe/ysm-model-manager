@@ -15,96 +15,24 @@
 // - God Rays（体积光束，ADR-107）：日出日落时从太阳方向向下投射的半透明光束。
 
 import * as THREE from "three";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { Sky } from "three/addons/objects/Sky.js";
+import type { SkyModelType, SkyParams } from "./sky-state.ts";
+// 状态/序列化轴（SkyParams / 默认值 / 模型预设）已下沉 sky-state.ts；此处透传导出，
+// 保持既有调用方（sky-capability.test.ts 等）的 import 路径不破坏。
+import { DEFAULT_SKY_PARAMS, MODEL_SKY_PRESETS } from "./sky-state.ts";
+
+export type { SkyModelType, SkyParams };
+export { DEFAULT_SKY_PARAMS, MODEL_SKY_PRESETS };
+
+import { ENV_PRESETS } from "./environment-capability.ts";
 import {
-  type SceneCapability,
-  type SceneCapabilityLookup,
   type MenuControlDef,
   persistState,
-  restoreState,
   restoreFields,
+  restoreState,
+  type SceneCapability,
+  type SceneCapabilityLookup,
 } from "./scene-capability.ts";
-import { ENV_PRESETS } from "./environment-capability.ts";
-
-export interface SkyParams {
-  /** 太阳高度角（度，0=地平线，90=天顶） */
-  elevation: number;
-  /** 太阳方位角（度） */
-  azimuth: number;
-  turbidity: number;
-  rayleigh: number;
-  mieCoefficient: number;
-  mieDirectionalG: number;
-  /** 云量 0=晴空；默认 0（预览偏好干净天空） */
-  cloudCoverage: number;
-  /** 天空盒缩放（半边长须 > 相机 maxDistance；预览核心=5000 → 12000） */
-  scale: number;
-  /** 是否联动 IBL 环境贴图（scene.environment）。默认 true（2026-08-16 目视验证通过） */
-  environment: boolean;
-  /** 时间-of-day（小时 0-24），太阳方位/高度的单一事实来源；默认 9（上午，观感较佳） */
-  timeOfDay: number;
-  /** ACES 曝光（天空正确显色所需，同时影响模型观感） */
-  exposure: number;
-  /**
-   * §4 解耦：Preetham 模型中天空底色 Lin 被 `vSunE × 太阳强度` 强耦合，
-   * 正午 vSunE≈1000 会把整个天空散射炸白。此参数把 `vSunE` 缩放为 `vSunE × sunIntensityScale`，
-   * 让天空色（蓝/橙/紫渐变）与太阳绝对亮度解耦。合理范围 0.5~1.0，默认 0.75。
-   */
-  sunIntensityScale: number;
-  /**
-   * §4 解耦：Preetham 太阳盘本身是 `vSunE × 19000` 的白光炸弹，经过 Bloom 会染白屏幕。
-   * 此参数把 19000 缩放为 `19000 × sunDiscScale`，保留辨识度但压到不炸屏。
-   * 合理范围 0.2~1.0，默认 0.5。
-   */
-  sunDiscScale: number;
-}
-
-export const DEFAULT_SKY_PARAMS: SkyParams = {
-  elevation: 10,
-  azimuth: 180,
-  // §3 曝光治理：turbidity 10→7.5（雾霾天→通透蓝天）；rayleigh 2→2.5（蓝调更明显）
-  // 前值 v1.14：turbidity=10 正午表现偏牛奶白，配合高曝光整片发白
-  turbidity: 7.5,
-  rayleigh: 2.5,
-  mieCoefficient: 0.005,
-  mieDirectionalG: 0.8,
-  cloudCoverage: 0,
-  scale: 12000,
-  environment: true,
-  timeOfDay: 9,
-  exposure: 0.5,
-  // §4 解耦：默认 0.75 / 0.5，正午蓝天从 1000² 压到 750²（削 44%），太阳盘砍半
-  sunIntensityScale: 0.75,
-  sunDiscScale: 0.5,
-};
-
-/** 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） */
-export type SkyModelType = typeof RESOURCE_TYPES.YSM | "vrm" | "mmd" | "litematic" | "default";
-
-/**
- * 按模型类别的散射/曝光预设（ADR-073 #3）。
- * 不同模型材质特性不同：VRM 为 PBR 角色、MMD 常带 toon/emissive 易过曝、
- * YSM/Litematic 为方块哑光。预设仅调散射与曝光，不改太阳位置（由 timeOfDay 控制）。
- * 数值为初始合理值，观感待目视微调。
- */
-export const MODEL_SKY_PRESETS: Record<string, Partial<SkyParams>> = {
-  // §3 曝光治理：各预设 turbidity 按原比例整体下调，rayleigh 同步上调，
-  // 让正午 Preetham 天空从"牛奶白"回归"通透蓝天"，同时保持预设间原有的差异梯度。
-  // §4 解耦：全部预设统一携带 sunIntensityScale / sunDiscScale（0.75/0.5 默认），
-  // 后续目视验证后可按模型微调。
-  default: { turbidity: 7.5, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5, sunIntensityScale: 0.75, sunDiscScale: 0.5 },
-  // VRM PBR 角色：原 turbidity=7 已偏低，再微调至 6；rayleigh 轻微上浮，蓝天当背景更衬肤色
-  vrm: { turbidity: 6, rayleigh: 2.3, mieCoefficient: 0.004, mieDirectionalG: 0.85, exposure: 0.55, sunIntensityScale: 0.78, sunDiscScale: 0.55 },
-  // MMD Toon：原 9→7.5（去雾霾感）；rayleigh 1.8→2.3（补回蓝色层次）；sunDiscScale 稍低（Toon 背景易白）
-  mmd: { turbidity: 7.5, rayleigh: 2.3, mieCoefficient: 0.006, mieDirectionalG: 0.8, exposure: 0.55, sunIntensityScale: 0.72, sunDiscScale: 0.45 },
-  // MMD 场景：原 14 极雾霾→10 正常云絮天；rayleigh 翻倍从 1.2→2.0，避免背景死白
-  "mmd-scene": { turbidity: 10, rayleigh: 2.0, mieCoefficient: 0.008, mieDirectionalG: 0.75, exposure: 0.55, sunIntensityScale: 0.7, sunDiscScale: 0.45 },
-  // YSM 方块：原 11→8.5；哑光方块需要更强的蓝白对比
-  ysm: { turbidity: 8.5, rayleigh: 2.6, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.6, sunIntensityScale: 0.75, sunDiscScale: 0.5 },
-  // Litematic 体素：同 default，10→7.5
-  litematic: { turbidity: 7.5, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5, sunIntensityScale: 0.75, sunDiscScale: 0.5 },
-};
 
 /**
  * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
@@ -150,7 +78,8 @@ export function injectSkySunScalePatch(
   const hasDecl = /uniform\s+float\s+sunIntensityScale\s*;/.test(mat.fragmentShader);
   if (!hasDecl) {
     const before = mat.fragmentShader;
-    const uniformDeclInjection = "\nuniform float sunIntensityScale;\nuniform float sunDiscScale;\n";
+    const uniformDeclInjection =
+      "\nuniform float sunIntensityScale;\nuniform float sunDiscScale;\n";
     mat.fragmentShader = mat.fragmentShader.replace(
       /(uniform\s+float\s+showSunDisc\s*;\s*\n\s*uniform\s+float\s+time\s*;)/,
       "$1" + uniformDeclInjection,
@@ -501,8 +430,9 @@ export class SkyCapability implements SceneCapability {
     else this.clearEnvironment();
     // [doc:adr-126-p5] 双间接光协调：环境光开关变化同步 light 的 ambient 衰减（防 ×0.5 过期）——
     // 经构造注入的查询器（组合根 createAll 传入），不 import registry（防模块环）
-    (this.caps?.getById("light") as { refreshAmbientFromSky?: () => void } | null | undefined)
-      ?.refreshAmbientFromSky?.();
+    (
+      this.caps?.getById("light") as { refreshAmbientFromSky?: () => void } | null | undefined
+    )?.refreshAmbientFromSky?.();
   }
 
   /** 按模型类别套用散射/曝光预设（ADR-073 #3）；modelType 取 adapter.id（ysm/vrm/mmd/litematic） */
@@ -543,11 +473,17 @@ export class SkyCapability implements SceneCapability {
   }
 
   /** 获取解耦尺度当前值（用于 UI getter / 测试断言） */
-  getSunIntensityScale(): number { return this.params.sunIntensityScale; }
-  getSunDiscScale(): number { return this.params.sunDiscScale; }
+  getSunIntensityScale(): number {
+    return this.params.sunIntensityScale;
+  }
+  getSunDiscScale(): number {
+    return this.params.sunDiscScale;
+  }
 
   /** 返回完整 params 浅拷贝（UI 面板 / 测试断言用，对齐其它 capability 口径） */
-  getParams(): SkyParams { return { ...this.params }; }
+  getParams(): SkyParams {
+    return { ...this.params };
+  }
 
   // ── 昼夜循环动画（2026-08-20 引入；2026-09-03 迁入 SceneCapability.update(dt)）──
   // 自建 rAF 循环已删除——此前与 mount-preview-core 全局唯一 rAF（L591 c.update?.(dt)）
@@ -837,10 +773,19 @@ export class SkyCapability implements SceneCapability {
     }
 
     // 同步 sunset tint mesh 的挂载状态
-    if (intensity > 0 && this.godRaysEnabled && this.sunsetTintMesh && !this.sunsetTintMesh.parent) {
+    if (
+      intensity > 0 &&
+      this.godRaysEnabled &&
+      this.sunsetTintMesh &&
+      !this.sunsetTintMesh.parent
+    ) {
       this.scene.add(this.sunsetTintMesh);
       this.sunsetTintMesh.visible = true;
-    } else if (this.sunsetTintMesh && (intensity === 0 || !this.godRaysEnabled) && this.sunsetTintMesh.parent) {
+    } else if (
+      this.sunsetTintMesh &&
+      (intensity === 0 || !this.godRaysEnabled) &&
+      this.sunsetTintMesh.parent
+    ) {
       this.sunsetTintMesh.parent.remove(this.sunsetTintMesh);
       this.sunsetTintMesh.visible = false;
     }
@@ -860,7 +805,13 @@ export class SkyCapability implements SceneCapability {
 
   /** 返回菜单控件定义（框架自动渲染） */
   getMenuControls(): MenuControlDef[] {
-    return [...skcBuildTime(this), ...skcBuildSun(this), ...skcBuildScattering(this), ...skcBuildAutoRotate(this), ...skcBuildAtmosphereFX(this)];
+    return [
+      ...skcBuildTime(this),
+      ...skcBuildSun(this),
+      ...skcBuildScattering(this),
+      ...skcBuildAutoRotate(this),
+      ...skcBuildAtmosphereFX(this),
+    ];
   }
 
   /** 保存状态到 localStorage */
@@ -880,14 +831,42 @@ export class SkyCapability implements SceneCapability {
   /** 从 localStorage 恢复状态（字段恢复走 restoreFields，消除与 ground/water 同构的 typeof 样板） */
   loadState(): void {
     restoreFields(restoreState(this.id), {
-      enabled: { boolean: (v) => { this.enabled = v; } },
-      timeOfDay: { number: (v) => { this.params.timeOfDay = v; } },
-      cloudCoverage: { number: (v) => { this.params.cloudCoverage = v; } },
-      environment: { boolean: (v) => { this.params.environment = v; } },
-      godRaysEnabled: { boolean: (v) => { this.godRaysEnabled = v; } },
+      enabled: {
+        boolean: (v) => {
+          this.enabled = v;
+        },
+      },
+      timeOfDay: {
+        number: (v) => {
+          this.params.timeOfDay = v;
+        },
+      },
+      cloudCoverage: {
+        number: (v) => {
+          this.params.cloudCoverage = v;
+        },
+      },
+      environment: {
+        boolean: (v) => {
+          this.params.environment = v;
+        },
+      },
+      godRaysEnabled: {
+        boolean: (v) => {
+          this.godRaysEnabled = v;
+        },
+      },
       // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
-      sunIntensityScale: { number: (v) => { this.params.sunIntensityScale = v; } },
-      sunDiscScale: { number: (v) => { this.params.sunDiscScale = v; } },
+      sunIntensityScale: {
+        number: (v) => {
+          this.params.sunIntensityScale = v;
+        },
+      },
+      sunDiscScale: {
+        number: (v) => {
+          this.params.sunDiscScale = v;
+        },
+      },
     });
   }
 
@@ -906,8 +885,10 @@ export class SkyCapability implements SceneCapability {
     if (!this.toneApplied) return;
     const cnt = SkyCapability.toneRefCount.get(this.renderer) ?? 0;
     if (cnt <= 1) {
-      this.renderer.toneMapping = SkyCapability.prevToneMap.get(this.renderer) ?? this.prevToneMapping;
-      this.renderer.toneMappingExposure = SkyCapability.prevExposureMap.get(this.renderer) ?? this.prevExposure;
+      this.renderer.toneMapping =
+        SkyCapability.prevToneMap.get(this.renderer) ?? this.prevToneMapping;
+      this.renderer.toneMappingExposure =
+        SkyCapability.prevExposureMap.get(this.renderer) ?? this.prevExposure;
       SkyCapability.toneRefCount.delete(this.renderer);
       SkyCapability.prevToneMap.delete(this.renderer);
       SkyCapability.prevExposureMap.delete(this.renderer);

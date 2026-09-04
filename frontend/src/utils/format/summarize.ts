@@ -1,9 +1,10 @@
 // ===== YSM 模型摘要工具函数（类型化版 — ADR-014 P2）=====
-import { parseModelName } from "../dom/display.ts";
-import { renderFormattedText } from "./mc-format.ts";
-import { esc } from "../dom/html.ts";
+
 import { t } from "../../core/i18n/t.ts";
 import type { YsmDecodedFile } from "../../wasm/ysm-parser.ts";
+import { parseModelName } from "../dom/display.ts";
+import { esc } from "../dom/html.ts";
+import { renderFormattedText } from "./mc-format.ts";
 
 // ── Go 结构体轻量类型（覆盖用到的字段，事实来源 go/ysm + go/types）──
 
@@ -234,9 +235,7 @@ export function summaryCardHTML(
     : "";
 
   // 解码器徽标（从 header 或 enriched 来源获取 decodedBy，挂标题行右侧）
-  const badgeHtml = decodedBy
-    ? `<span class="ysm-badge">${esc(decodedBy)}</span>`
-    : "";
+  const badgeHtml = decodedBy ? `<span class="ysm-badge">${esc(decodedBy)}</span>` : "";
 
   return `<div class="content" id="preview-content">
 <h3>${esc(name)}${freeBadge}${badgeHtml}</h3>

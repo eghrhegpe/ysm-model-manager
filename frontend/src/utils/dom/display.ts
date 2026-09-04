@@ -62,7 +62,8 @@ export function parseModelName(raw: string): ParsedModelName {
   const name = stripBanSuffix(raw);
   const extMatch = name.match(/\.(\w+)$/);
   const aMatch = name.match(/\[\[([^\]]+?)\]\]/) || name.match(bracketRe(BRACKET_STYLES[0]));
-  const wMatch = name.match(bracketRe(BRACKET_STYLES[1])) || name.match(bracketRe(BRACKET_STYLES[2]));
+  const wMatch =
+    name.match(bracketRe(BRACKET_STYLES[1])) || name.match(bracketRe(BRACKET_STYLES[2]));
   // P3 修复（子代理审计）：① 日期提取先剥括号段——`[作者]【2023】角色2024.ysm`
   // 原 dMatch 命中括号内 2023（静默取错日期）；② 修正则贪婪——`角色20230.ysm`
   // 原 `[-_.]?(\d{1,2})?` 把后随 0 当月份产出 `2023-0` 畸形日期
@@ -84,7 +85,7 @@ export function parseModelName(raw: string): ParsedModelName {
   const work = (wMatch ? wMatch[1] : "").trim();
   // P3 修复（code review）：月份取值合并两分支（dMatch[2]=带分隔符、dMatch[3]=无分隔符
   // YYYYMM），且仅当月份 ∈ 01-12 才拼接——`20230` 尾随 0 不是合法月份 → 只取年份
-  const rawMonth = dMatch ? (dMatch[2] || dMatch[3] || "") : "";
+  const rawMonth = dMatch ? dMatch[2] || dMatch[3] || "" : "";
   const monthNum = rawMonth ? parseInt(rawMonth, 10) : 0;
   const date = dMatch
     ? rawMonth && monthNum >= 1 && monthNum <= 12
@@ -99,7 +100,7 @@ export function parseModelName(raw: string): ParsedModelName {
     if (wi >= 0) rest = rest.slice(0, wi) + rest.slice(wi + wMatch[0].length);
   }
   rest = rest.replace(/^\[\]/, "").replace(/^【】/, "").replace(/^\s+/, "");
-  rest = rest.replace(/\d{4}[-_.]?\d{0,2}/g, "").replace(/[\(（]\s*[\)）]/g, "");
+  rest = rest.replace(/\d{4}[-_.]?\d{0,2}/g, "").replace(/[(（]\s*[)）]/g, "");
   const chara = rest
     .replace(/[-_]{2,}/g, " ")
     .replace(/^[-_\s]+|[-_\s]+$/g, "")
@@ -132,14 +133,17 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
   if (p.isBanned) return esc(p.raw);
 
   // 在原文件名上着色，保留原有顺序，不重新排列
-  let name = raw.replace(/\.\w+$/, "");
+  const name = raw.replace(/\.\w+$/, "");
 
   // 先找到所有匹配位置，按文件中的原始顺序排序
   const matches: NameMark[] = [];
 
   // 匹配括号段（注册表驱动，索引 4.7）：[作者]/【作品】/《作品》共用 BRACKET_STYLES
   for (const style of BRACKET_STYLES) {
-    const re = new RegExp(escRegex(style.open) + "([^" + escRegex(style.close) + "]+?)" + escRegex(style.close), "g");
+    const re = new RegExp(
+      escRegex(style.open) + "([^" + escRegex(style.close) + "]+?)" + escRegex(style.close),
+      "g",
+    );
     let m: RegExpExecArray | null;
     while ((m = re.exec(name)) !== null) {
       matches.push({
@@ -196,7 +200,10 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
 }
 
 /** renderModelName = renderDisplayName 别名，options.showExt 支持 */
-export function renderModelName(raw: string, options: { tpl?: unknown; showExt?: boolean } = {}): string {
+export function renderModelName(
+  raw: string,
+  options: { tpl?: unknown; showExt?: boolean } = {},
+): string {
   const p = parseModelName(raw);
   return (
     renderDisplayName(raw, options.tpl) +
@@ -205,7 +212,11 @@ export function renderModelName(raw: string, options: { tpl?: unknown; showExt?:
 }
 
 /** 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM */
-export function renderModelNameWithHighlight(raw: string, keyword?: string, options: { tpl?: unknown; showExt?: boolean } = {}): string {
+export function renderModelNameWithHighlight(
+  raw: string,
+  keyword?: string,
+  options: { tpl?: unknown; showExt?: boolean } = {},
+): string {
   const p = parseModelName(raw);
   // 对纯文本（不含扩展名）做高亮
   const plain = raw.replace(/\.\w+$/, "");
@@ -219,7 +230,7 @@ export function renderModelNameWithHighlight(raw: string, keyword?: string, opti
   // 且绕过 renderDisplayName 的 esc 契约，是 display 管线唯一未转义输出口。
   // 策略：拆出 <mark>…</mark> 段，内容 esc 后重组。
   let safe = "";
-  let rest = highlighted;
+  const rest = highlighted;
   let m: RegExpExecArray | null;
   const markRe = /<mark>(.*?)<\/mark>/g;
   let last = 0;

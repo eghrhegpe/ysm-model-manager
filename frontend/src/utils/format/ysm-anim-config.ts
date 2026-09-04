@@ -31,16 +31,16 @@ const asStr = (v: unknown): string => (typeof v === "string" ? v : "");
  * 从 ysm.json properties 提取动画分组与配置菜单。
  * 返回空数组表示无可用信息（调用方据此跳过渲染）。
  */
-export function extractAnimGroupsAndConfigs(
-  p?: YsmProperties | null,
-): { animGroups: SummaryAnimGroup[]; configMenus: SummaryConfigMenu[] } {
+export function extractAnimGroupsAndConfigs(p?: YsmProperties | null): {
+  animGroups: SummaryAnimGroup[];
+  configMenus: SummaryConfigMenu[];
+} {
   const animGroups: SummaryAnimGroup[] = [];
   const configMenus: SummaryConfigMenu[] = [];
   if (!p) return { animGroups, configMenus };
 
   const extraAnim = p.extra_animation ?? {};
-  const hasOwn = (o: unknown): o is Record<string, unknown> =>
-    !!o && typeof o === "object";
+  const hasOwn = (o: unknown): o is Record<string, unknown> => !!o && typeof o === "object";
 
   // 1) 分类组：extra_animation_classify
   for (const g of p.extra_animation_classify ?? []) {

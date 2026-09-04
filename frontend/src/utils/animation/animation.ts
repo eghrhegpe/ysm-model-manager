@@ -4,8 +4,8 @@
  * 编译失败零占位降级），求值时机在 evaluateKeyframes（anim_time = 求值时间 t）。
  */
 
-import { compileMolang, type MolangFn } from "./molang.ts";
 import { logWarn } from "../core/log.ts";
+import { compileMolang, type MolangFn } from "./molang.ts";
 
 // ── 类型定义 ────────────────────────────────────────
 
@@ -107,13 +107,10 @@ export function foldMolangConstant(str: unknown): number | null {
     return m[1] === "-" ? -num : num;
   }
   // 模式2: "NUM + q.* 0" 或 "NUM - q.* 0"
-  m = str.match(
-    /^([+-]?\d+(?:\.\d+)?)\s*[+-]\s*(?:q\.|t\.|query\.|temp\.|math\.)\w+\s*\*\s*0$/,
-  );
+  m = str.match(/^([+-]?\d+(?:\.\d+)?)\s*[+-]\s*(?:q\.|t\.|query\.|temp\.|math\.)\w+\s*\*\s*0$/);
   if (m) return Number(m[1]);
   // 模式3: "q.* 0" → 0
-  if (/^(?:q\.|t\.|query\.|temp\.|math\.)\w+\s*\*\s*0$/.test(str.trim()))
-    return 0;
+  if (/^(?:q\.|t\.|query\.|temp\.|math\.)\w+\s*\*\s*0$/.test(str.trim())) return 0;
   return null;
 }
 
@@ -175,7 +172,13 @@ function extractKeyframe(kv: unknown): {
   if (Array.isArray(kv)) {
     const val = parseKeyValue(kv);
     if (!val) return null;
-    return { post: val.vec, pre: val.vec, lerp: "linear", postMolang: val.molang, preMolang: val.molang };
+    return {
+      post: val.vec,
+      pre: val.vec,
+      lerp: "linear",
+      postMolang: val.molang,
+      preMolang: val.molang,
+    };
   }
   if (typeof kv === "object") {
     const obj = kv as RawKeyframeObject;
@@ -186,19 +189,27 @@ function extractKeyframe(kv: unknown): {
     if (!post) return null;
     // lerp_mode 合法值 linear/step/catmullrom；非 step/catmullrom 一律按 linear
     const lerp: "linear" | "step" | "catmullrom" =
-      obj.lerp_mode === "step"
-        ? "step"
-        : obj.lerp_mode === "catmullrom"
-          ? "catmullrom"
-          : "linear";
+      obj.lerp_mode === "step" ? "step" : obj.lerp_mode === "catmullrom" ? "catmullrom" : "linear";
     const preVal = pre ?? post;
-    return { post: post.vec, pre: preVal.vec, lerp, postMolang: post.molang, preMolang: preVal.molang };
+    return {
+      post: post.vec,
+      pre: preVal.vec,
+      lerp,
+      postMolang: post.molang,
+      preMolang: preVal.molang,
+    };
   }
   // L4：标量字符串（Molang/可折叠常量）改道 parseKeyValue（旧口径落入 Number() 被整帧丢弃）
   if (typeof kv === "string") {
     const val = parseKeyValue(kv);
     if (!val) return null;
-    return { post: val.vec, pre: val.vec, lerp: "linear", postMolang: val.molang, preMolang: val.molang };
+    return {
+      post: val.vec,
+      pre: val.vec,
+      lerp: "linear",
+      postMolang: val.molang,
+      preMolang: val.molang,
+    };
   }
   // 单数值
   const n = Number(kv);
@@ -258,26 +269,28 @@ function parseChannel(channelData: unknown): Keyframe[] {
   // 查不到对应 key 而整帧静默丢失；改为 entries 配对，时间值直接携带原始 raw。
   // 重复数值时间（"0" 与 "0.0"）去重保留排序后首个，与原「仅规范键生效」契约一致。
   const seen = new Set<number>();
-  return Object.entries(channelData as Record<string, unknown>)
-    .map(([k, raw]) => [Number(k), raw] as const)
-    // P2 修复（审核，NaN/Infinity 守卫）：原仅 !isNaN——Infinity 时间键通过后
-    // 排序/插值区间异常（dt=Infinity → frac=0 恒等）；统一 Number.isFinite
-    .filter(([t]) => Number.isFinite(t))
-    .sort(([a], [b]) => a - b)
-    .filter(([t]) => {
-      if (seen.has(t)) return false;
-      seen.add(t);
-      return true;
-    })
-    .map(([t, raw]) => {
-      const kf = extractKeyframe(raw);
-      if (!kf) return null;
-      const out: Keyframe = { time: t, post: kf.post, pre: kf.pre, lerp: kf.lerp };
-      if (kf.postMolang) out.postMolang = kf.postMolang;
-      if (kf.preMolang) out.preMolang = kf.preMolang;
-      return out;
-    })
-    .filter((k): k is Keyframe => Boolean(k));
+  return (
+    Object.entries(channelData as Record<string, unknown>)
+      .map(([k, raw]) => [Number(k), raw] as const)
+      // P2 修复（审核，NaN/Infinity 守卫）：原仅 !isNaN——Infinity 时间键通过后
+      // 排序/插值区间异常（dt=Infinity → frac=0 恒等）；统一 Number.isFinite
+      .filter(([t]) => Number.isFinite(t))
+      .sort(([a], [b]) => a - b)
+      .filter(([t]) => {
+        if (seen.has(t)) return false;
+        seen.add(t);
+        return true;
+      })
+      .map(([t, raw]) => {
+        const kf = extractKeyframe(raw);
+        if (!kf) return null;
+        const out: Keyframe = { time: t, post: kf.post, pre: kf.pre, lerp: kf.lerp };
+        if (kf.postMolang) out.postMolang = kf.postMolang;
+        if (kf.preMolang) out.preMolang = kf.preMolang;
+        return out;
+      })
+      .filter((k): k is Keyframe => Boolean(k))
+  );
 }
 
 /** 检测 channel 原始数据中是否含 Molang 表达式（字符串值） */
@@ -287,16 +300,14 @@ function hasMolangInChannelData(data: unknown): boolean {
     // 直接字符串: "q.life_time * 10"
     if (typeof val === "string") return true;
     // 数组: ["q.life_time * 10", 0, 0]
-    if (Array.isArray(val) && val.some((v) => typeof v === "string"))
-      return true;
+    if (Array.isArray(val) && val.some((v) => typeof v === "string")) return true;
     // 对象: { post: [...], pre: [...], lerp_mode: "linear" }
     if (typeof val === "object" && val !== null) {
       const obj = val as RawKeyframeObject;
       for (const key of ["post", "pre"] as const) {
         const v = obj[key];
         if (typeof v === "string") return true;
-        if (Array.isArray(v) && v.some((x) => typeof x === "string"))
-          return true;
+        if (Array.isArray(v) && v.some((x) => typeof x === "string")) return true;
       }
     }
   }
@@ -344,9 +355,12 @@ function parseAndValidateAnimRoot(jsonStr: string): {
  */
 function buildAnimClipSkeleton(
   name: string,
-  animObj: RawAnimEntry
+  animObj: RawAnimEntry,
 ): { clip: AnimationClip; bones: Record<string, unknown> | null; hasTimeline: boolean } | null {
-  const bones = animObj.bones && typeof animObj.bones === "object" ? (animObj.bones as Record<string, unknown>) : null;
+  const bones =
+    animObj.bones && typeof animObj.bones === "object"
+      ? (animObj.bones as Record<string, unknown>)
+      : null;
   const hasTimeline = !!animObj.timeline && typeof animObj.timeline === "object";
   if (!bones && !hasTimeline) return null;
 
@@ -364,10 +378,7 @@ function buildAnimClipSkeleton(
  * [子函数 3/5] 解析单 Clip 的全部 Bone 通道：写入 clip.bones，必要时标记 clip.hasMolang。
  * 旋转通道出口统一换算（度→弧度 + X/Y 取负），下游全弧度域。
  */
-function parseClipBones(
-  clip: AnimationClip,
-  bones: Record<string, unknown> | null
-): void {
+function parseClipBones(clip: AnimationClip, bones: Record<string, unknown> | null): void {
   if (!bones) return;
   for (const [boneName, boneData] of Object.entries(bones)) {
     if (!boneData || typeof boneData !== "object") continue;
@@ -401,11 +412,7 @@ function parseClipBones(
  * [子函数 4/5] 解析 timeline 事件：时间戳 → Molang 表达式收集 → 编译 → 排序。
  * 发现任一合法事件时写入 clip.timeline 并标记 clip.hasMolang。
  */
-function parseClipTimeline(
-  clip: AnimationClip,
-  hasTimeline: boolean,
-  animObj: RawAnimEntry
-): void {
+function parseClipTimeline(clip: AnimationClip, hasTimeline: boolean, animObj: RawAnimEntry): void {
   if (!hasTimeline || !animObj.timeline) return;
   const timeline = animObj.timeline as Record<string, unknown>;
   const events: TimelineEvent[] = [];
@@ -516,11 +523,7 @@ function resolveFramePost(kf: Keyframe, t: number): Vec3 {
   const fns = kf.postMolang;
   const base = kf.post || [0, 0, 0];
   if (!fns) return base;
-  return [
-    fns[0] ? fns[0](t) : base[0],
-    fns[1] ? fns[1](t) : base[1],
-    fns[2] ? fns[2](t) : base[2],
-  ];
+  return [fns[0] ? fns[0](t) : base[0], fns[1] ? fns[1](t) : base[1], fns[2] ? fns[2](t) : base[2]];
 }
 
 /**
@@ -598,7 +601,6 @@ export function evaluateKeyframes(keyframes: Keyframe[], t: number): Vec3 | null
     ap[2] + (bp[2] - ap[2]) * frac,
   ];
 }
-
 
 function findKeyframeLowerIndex(keyframes: Keyframe[], t: number): number {
   let lo = 0;

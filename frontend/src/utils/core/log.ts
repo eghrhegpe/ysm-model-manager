@@ -11,30 +11,30 @@ let _sink: LogSink | null = null;
 
 /** 注入/清除透写 sink（error-diary 注册时安装；传 null 恢复纯 console） */
 export function setLogSink(sink: LogSink | null): void {
-    _sink = sink;
+  _sink = sink;
 }
 
 /** 统一告警日志。tag 用于按模块聚合排查；err 可为任意错误值。 */
 export function logWarn(tag: string, msg: string, err?: unknown): void {
-    // 无 err 时不追加空参数槽（code review #11：err ?? "" 会让控制台多一个空槽）
-    if (err === undefined) {
-        // eslint-disable-next-line no-console
-        console.warn(`[${tag}] ${msg}`);
-    } else {
-        // eslint-disable-next-line no-console
-        console.warn(`[${tag}] ${msg}`, err);
-    }
-    _sink?.("warn", tag, msg, err);
+  // 无 err 时不追加空参数槽（code review #11：err ?? "" 会让控制台多一个空槽）
+  if (err === undefined) {
+    // eslint-disable-next-line no-console
+    console.warn(`[${tag}] ${msg}`);
+  } else {
+    // eslint-disable-next-line no-console
+    console.warn(`[${tag}] ${msg}`, err);
+  }
+  _sink?.("warn", tag, msg, err);
 }
 
 /** 统一错误日志。 */
 export function logError(tag: string, msg: string, err?: unknown): void {
-    if (err === undefined) {
-        // eslint-disable-next-line no-console
-        console.error(`[${tag}] ${msg}`);
-    } else {
-        // eslint-disable-next-line no-console
-        console.error(`[${tag}] ${msg}`, err);
-    }
-    _sink?.("error", tag, msg, err);
+  if (err === undefined) {
+    // eslint-disable-next-line no-console
+    console.error(`[${tag}] ${msg}`);
+  } else {
+    // eslint-disable-next-line no-console
+    console.error(`[${tag}] ${msg}`, err);
+  }
+  _sink?.("error", tag, msg, err);
 }

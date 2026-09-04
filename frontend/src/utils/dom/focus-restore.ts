@@ -13,7 +13,7 @@
 /** 可聚焦元素选择器（与 dialog-modal.ts trapFocus 同源，排除 disabled 与 tabindex=-1） */
 const TABBABLE_SEL =
   "button:not([disabled]),input:not([disabled]),select:not([disabled])," +
-  "textarea:not([disabled]),[tabindex]:not([tabindex=\"-1\"]),a[href],summary";
+  'textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),a[href],summary';
 
 // ────────────────────────────────────────────────────────────────────
 // 焦点记忆 / 恢复
@@ -130,9 +130,10 @@ export function findTabbableAcrossShadow(root: Element | ShadowRoot | Document):
     });
     // 用 children 遍历后代元素（避开 querySelectorAll("*") 在 happy-dom 下对
     // shadow host 的反复递归陷阱——见 docstring）
-    const children = node instanceof Element
-      ? Array.from(node.children)
-      : Array.from(node.querySelectorAll<HTMLElement>("*"));
+    const children =
+      node instanceof Element
+        ? Array.from(node.children)
+        : Array.from(node.querySelectorAll<HTMLElement>("*"));
     children.forEach((el) => {
       if (el.shadowRoot) visit(el.shadowRoot);
     });

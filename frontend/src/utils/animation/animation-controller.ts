@@ -113,16 +113,17 @@ export function parseAnimationControllerJSON(jsonStr: string): {
             const unconditional = condExpr.trim() === "";
             const condition = compileMolang(condExpr);
             if (!unconditional && !condition) {
-              errors.push(`[${controllerName}.${stateName}] 转换条件编译失败: ${target} → ${condExpr}`);
+              errors.push(
+                `[${controllerName}.${stateName}] 转换条件编译失败: ${target} → ${condExpr}`,
+              );
             }
             transitions.push({ target, condition, raw: condExpr, unconditional });
           }
         }
       }
 
-      const blendTransition = typeof stateObj.blend_transition === "number"
-        ? stateObj.blend_transition
-        : 0.2; // 默认 0.2s
+      const blendTransition =
+        typeof stateObj.blend_transition === "number" ? stateObj.blend_transition : 0.2; // 默认 0.2s
 
       states.set(stateName, {
         name: stateName,

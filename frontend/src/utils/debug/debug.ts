@@ -54,8 +54,6 @@ export function dbg(tag: string, ...args: unknown[]): void {
   }
 }
 
-
-
 /** 任意值 → 可读字符串（200 字符截断；供单测导出的纯函数） */
 export function safeStr(v: unknown): string {
   try {

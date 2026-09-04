@@ -3,6 +3,7 @@
 // （ADR-123 P3：叶子模块持有 Tier 2 原语，判定链单向化 android-bridge → platform-web
 // → platform）；本文件保持 re-export，既有消费方（loader/directory-picker 等）导入路径不变。
 export { getAndroidBridge, type WailsAndroidBridge } from "../../backend/platform.ts";
+
 import { isViewerPlatform } from "../../backend/platform-web.ts";
 
 /**

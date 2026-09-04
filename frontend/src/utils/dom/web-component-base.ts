@@ -5,6 +5,4 @@
 // - node 测试：空类（import 不炸；注册守卫 typeof customElements 已跳过 define）
 // 类型上恒为 typeof HTMLElement（保留 attachShadow/classList 等成员提示）。
 export const WebComponentBase: typeof HTMLElement =
-  typeof HTMLElement !== "undefined"
-    ? HTMLElement
-    : (class {} as unknown as typeof HTMLElement);
+  typeof HTMLElement !== "undefined" ? HTMLElement : (class {} as unknown as typeof HTMLElement);

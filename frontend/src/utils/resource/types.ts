@@ -31,7 +31,7 @@ export const RESOURCE_TYPES: Record<string, string> = {
 
 /** 资源类型显示标签（内部 ID → 中文全名，派生自 resource_types.json name 字段） */
 export const RESOURCE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
-  allResourceTypes.filter(t => t.name).map(t => [t.id, t.name!]),
+  allResourceTypes.filter((t) => t.name).map((t) => [t.id, t.name!]),
 );
 
 /** 全部资源类型 ID 列表（从 resource_types.json id 派生，单一事实来源） */
@@ -72,9 +72,7 @@ export function previewCandidateExtsOf(rtype: string, previewKey?: string): stri
   if (variants.length > 0) {
     if (!previewKey) return [];
     return Array.from(
-      new Set(
-        variants.filter((v) => v.preview === previewKey).map((v) => v.ext.toLowerCase()),
-      ),
+      new Set(variants.filter((v) => v.preview === previewKey).map((v) => v.ext.toLowerCase())),
     );
   }
   return (entry?.extensions ?? [])
@@ -89,9 +87,7 @@ export function previewCandidateExtsOf(rtype: string, previewKey?: string): stri
  * 未命中时回退 previewKey 自身（兼容已是资源类型 ID 的场景）。
  */
 export function resolvePreviewKeyToRtype(previewKey: string): string {
-  const entry = allResourceTypes.find((t) =>
-    t.variants?.some((v) => v.preview === previewKey),
-  );
+  const entry = allResourceTypes.find((t) => t.variants?.some((v) => v.preview === previewKey));
   return entry?.id ?? previewKey;
 }
 
@@ -193,8 +189,8 @@ export function extOf(path: string): string {
 /** 单一资源类型的能力视图（派生自 resource_types.json + 短标签映射） */
 interface ResourceCap {
   id: string;
-  name: string;    // JSON 全名（如 "YSM 模型"）
-  label: string;   // 短标签（如 "模型"，参与 Go 扫描匹配）
+  name: string; // JSON 全名（如 "YSM 模型"）
+  label: string; // 短标签（如 "模型"，参与 Go 扫描匹配）
   icon: string;
   extensions: string[]; // 小写、含点，如 [".ysm",".zip",".json"]
   preview: string; // "3d" | "thumbnail" | "none" ...
@@ -220,7 +216,9 @@ for (const t of allResourceTypes) {
  * 单一事实来源：新增类型只需改 JSON，测试/逻辑自动跟随，无需手改豁免列表。
  */
 export const NO_3D_TYPES: ReadonlySet<string> = new Set(
-  Object.values(RESOURCE_CAPS).filter((cap) => cap.preview !== "3d").map((cap) => cap.id),
+  Object.values(RESOURCE_CAPS)
+    .filter((cap) => cap.preview !== "3d")
+    .map((cap) => cap.id),
 );
 
 /**

@@ -6,27 +6,27 @@
  * @returns 防抖后的函数，带有 cancel() 方法取消 pending 调用
  */
 export function debounce<A extends unknown[]>(
-    fn: (...args: A) => void,
-    ms: number
+  fn: (...args: A) => void,
+  ms: number,
 ): {
-    (...args: A): void;
-    cancel(): void;
+  (...args: A): void;
+  cancel(): void;
 } {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const debounced = (...args: A): void => {
-        if (timer !== null) {
-            clearTimeout(timer);
-        }
-        timer = setTimeout(() => {
-            timer = null;
-            fn(...args);
-        }, ms);
-    };
-    debounced.cancel = (): void => {
-        if (timer !== null) {
-            clearTimeout(timer);
-            timer = null;
-        }
-    };
-    return debounced;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const debounced = (...args: A): void => {
+    if (timer !== null) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(() => {
+      timer = null;
+      fn(...args);
+    }, ms);
+  };
+  debounced.cancel = (): void => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  return debounced;
 }

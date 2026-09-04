@@ -1,7 +1,8 @@
 // ===== 文件名 → 图标（类型化版 — ADR-014 P2）=====
-import { RESOURCE_TYPES, typeIconOf } from "../resource/types.ts";
-import { RESOURCE_EXTS } from "../resource/extensions.ts";
+
 import { stripDisableSuffix } from "../dom/display.ts";
+import { RESOURCE_EXTS } from "../resource/extensions.ts";
+import { RESOURCE_TYPES, typeIconOf } from "../resource/types.ts";
 
 function getExt(name: string): string {
   // P3 修复（子代理审计）：null/undefined 入参守卫——app-tree/render.ts:182,186 的
@@ -9,7 +10,11 @@ function getExt(name: string): string {
   // 2026-08-24：先剥禁用后缀（.disabled/.ban）——禁用态文件仍是原名命名的真类型
   // 文件，`xxx.zip.disabled` 若直接取末段得 `.disabled` 落 🧊 兜底；剥后缀后
   // `xxx.zip` → `zip` → 📦（对齐 Go scanner 的禁用后缀恢复 + display.ts 口径）
-  return (stripDisableSuffix(name ?? "").split(".").pop() || "").toLowerCase();
+  return (
+    stripDisableSuffix(name ?? "")
+      .split(".")
+      .pop() || ""
+  ).toLowerCase();
 }
 
 /** 注册表扩展名 → 图标（由 RESOURCE_EXTS 遍历 + JSON icon 派生生成，单一事实来源） */

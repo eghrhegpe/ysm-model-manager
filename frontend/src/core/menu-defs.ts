@@ -45,13 +45,29 @@ export interface MenuDef {
  */
 const MENU_ACTIONS = [
   "noop",
-  "instance.open-folder", "instance.export-list", "instance.clear",
-  "batch.rename", "batch.move", "batch.copy", "batch.recycle",
-  "batch.copy-paths", "batch.export-list",
-  "file.rename", "file.move", "file.copy", "file.push-to-pack",
-  "file.edit-tags", "file.recycle", "file.reveal", "file.copy-path",
-  "dir.rename", "dir.batch-rename", "dir.move", "dir.copy",
-  "dir.mkdir", "dir.recycle",
+  "instance.open-folder",
+  "instance.export-list",
+  "instance.clear",
+  "batch.rename",
+  "batch.move",
+  "batch.copy",
+  "batch.recycle",
+  "batch.copy-paths",
+  "batch.export-list",
+  "file.rename",
+  "file.move",
+  "file.copy",
+  "file.push-to-pack",
+  "file.edit-tags",
+  "file.recycle",
+  "file.reveal",
+  "file.copy-path",
+  "dir.rename",
+  "dir.batch-rename",
+  "dir.move",
+  "dir.copy",
+  "dir.mkdir",
+  "dir.recycle",
 ] as const;
 
 /** 合法菜单 action 联合：MENU_DEFS 声明 / HANDLERS 注册双约束的公共类型 */
@@ -64,13 +80,20 @@ export const MENU_DEFS: MenuDef[] = [
     items: [
       {
         action: "noop",
-        label: (ctx) =>
-          `📦 ${ctx.instanceName || ""}${ctx.rtype ? ` (${ctx.rtype})` : ""}`,
+        label: (ctx) => `📦 ${ctx.instanceName || ""}${ctx.rtype ? ` (${ctx.rtype})` : ""}`,
       },
       { divider: true },
-      { action: "instance.open-folder", label: () => tr("menu.openFolder", "Open Folder"), icon: "📂" },
+      {
+        action: "instance.open-folder",
+        label: () => tr("menu.openFolder", "Open Folder"),
+        icon: "📂",
+      },
       { divider: true },
-      { action: "instance.export-list", label: () => tr("menu.copyModelList", "Copy Model List"), icon: "📄" },
+      {
+        action: "instance.export-list",
+        label: () => tr("menu.copyModelList", "Copy Model List"),
+        icon: "📄",
+      },
       { divider: true },
       {
         action: "instance.clear",
@@ -85,7 +108,8 @@ export const MENU_DEFS: MenuDef[] = [
     items: [
       {
         action: "noop",
-        label: (ctx) => tr("menu.batchSelected", "Selected {count} files", { count: ctx.count || 0 }),
+        label: (ctx) =>
+          tr("menu.batchSelected", "Selected {count} files", { count: ctx.count || 0 }),
       },
       { divider: true },
       { action: "batch.rename", label: () => tr("menu.batchRename", "Batch Rename"), icon: "✂️" },
@@ -100,7 +124,11 @@ export const MENU_DEFS: MenuDef[] = [
       },
       { divider: true },
       { action: "batch.copy-paths", label: () => tr("menu.copyPaths", "Copy Paths"), icon: "📋" },
-      { action: "batch.export-list", label: () => tr("menu.exportList", "Export List"), icon: "📄" },
+      {
+        action: "batch.export-list",
+        label: () => tr("menu.exportList", "Export List"),
+        icon: "📄",
+      },
     ],
   },
   {
@@ -109,7 +137,11 @@ export const MENU_DEFS: MenuDef[] = [
       { action: "file.rename", label: () => tr("menu.rename", "Rename"), icon: "✂️" },
       { action: "file.move", label: () => tr("menu.moveTo", "Move To"), icon: "📂" },
       { action: "file.copy", label: () => tr("menu.copyTo", "Copy To"), icon: "📋" },
-      { action: "file.push-to-pack", label: () => tr("menu.pushToPack", "Push to Pack"), icon: "📦" },
+      {
+        action: "file.push-to-pack",
+        label: () => tr("menu.pushToPack", "Push to Pack"),
+        icon: "📦",
+      },
       { divider: true },
       { action: "file.edit-tags", label: () => tr("menu.editTags", "Edit Tags"), icon: "🏷️" },
       { divider: true },
@@ -119,16 +151,28 @@ export const MENU_DEFS: MenuDef[] = [
         icon: "♻️",
         danger: true,
       },
-      { action: "file.reveal", label: () => tr("menu.openFileLocation", "Open File Location"), icon: "📂" },
+      {
+        action: "file.reveal",
+        label: () => tr("menu.openFileLocation", "Open File Location"),
+        icon: "📂",
+      },
       { divider: true },
-      { action: "file.copy-path", label: () => tr("menu.copyFilePath", "Copy File Path"), icon: "📋" },
+      {
+        action: "file.copy-path",
+        label: () => tr("menu.copyFilePath", "Copy File Path"),
+        icon: "📋",
+      },
     ],
   },
   {
     type: "dir",
     items: [
       { action: "dir.rename", label: () => tr("menu.rename", "Rename"), icon: "✂️" },
-      { action: "dir.batch-rename", label: () => tr("menu.batchRename", "Batch Rename"), icon: "📝" },
+      {
+        action: "dir.batch-rename",
+        label: () => tr("menu.batchRename", "Batch Rename"),
+        icon: "📝",
+      },
       { divider: true },
       { action: "dir.move", label: () => tr("menu.moveTo", "Move To"), icon: "📂" },
       { action: "dir.copy", label: () => tr("menu.copyTo", "Copy To"), icon: "📋" },

@@ -27,7 +27,10 @@ export function asArray(v: unknown): unknown[] | undefined {
 }
 
 /** getCompound 口径：键值存在且为对象则返回该 compound，否则 undefined。 */
-export function getCompound(o: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
+export function getCompound(
+  o: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> | undefined {
   const v = o[key];
   return isObj(v) ? v : undefined;
 }

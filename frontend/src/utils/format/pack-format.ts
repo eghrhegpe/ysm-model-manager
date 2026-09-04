@@ -127,9 +127,7 @@ export function describeVersionRange(meta: PackMeta): { format: string; version:
   // binding 层（internal/app/resource_bindings.go）恒输出 []int{Min, Max}：
   // min_format 取首元素（Min），max_format 取末元素（Max），避免双值数组丢 Max
   if (meta.min_format != null && meta.max_format != null) {
-    const minRaw = Array.isArray(meta.min_format)
-      ? meta.min_format[0]
-      : meta.min_format;
+    const minRaw = Array.isArray(meta.min_format) ? meta.min_format[0] : meta.min_format;
     const maxRaw = Array.isArray(meta.max_format)
       ? meta.max_format[meta.max_format.length - 1]
       : meta.max_format;

@@ -30,11 +30,7 @@ export function sniffTexSize(arr: Uint8Array): { w: number; h: number } | null {
   if (arr[0] === JPEG_MARKER && arr[1] === 0xd8) {
     for (let i = 2; i < Math.min(arr.length - 8, JPEG_HEADER_SCAN_LIMIT); i++) {
       const m = arr[i + 1];
-      if (
-        arr[i] === JPEG_MARKER &&
-        (m & 0xf0) === JPEG_SOF_MASK &&
-        !JPEG_SOF_EXCLUDE.includes(m)
-      ) {
+      if (arr[i] === JPEG_MARKER && (m & 0xf0) === JPEG_SOF_MASK && !JPEG_SOF_EXCLUDE.includes(m)) {
         const h = (arr[i + 5] << 8) | arr[i + 6];
         const w = (arr[i + 7] << 8) | arr[i + 8];
         return w > 0 && h > 0 ? { w, h } : null;

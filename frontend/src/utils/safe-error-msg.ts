@@ -19,7 +19,11 @@
 export function safeErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (err == null) return "unknown error";
-  if (typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string") {
+  if (
+    typeof err === "object" &&
+    "message" in err &&
+    typeof (err as { message: unknown }).message === "string"
+  ) {
     return (err as { message: string }).message;
   }
   return String(err);

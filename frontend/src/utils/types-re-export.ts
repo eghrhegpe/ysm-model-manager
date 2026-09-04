@@ -5,9 +5,9 @@
 // 本垫层把 bindings 路径收口为单一事实来源：生成路径变化只需改此处，
 // 消费方一律 `import type { ... } from "../../../utils/types-re-export.ts"`。
 export type {
-  WorkshopSite,
-  WorkshopPresetSearch,
   AppConfig,
-  VersionInstance,
   ModelEntry,
+  VersionInstance,
+  WorkshopPresetSearch,
+  WorkshopSite,
 } from "../../bindings/ysm-model-manager/go/types/models.ts";

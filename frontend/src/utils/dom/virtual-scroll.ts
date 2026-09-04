@@ -33,10 +33,7 @@ export function calcVisibleRange(
  * @param renderVisible - 重渲回调
  * @returns cleanup（同步取消已排队 rAF，防清理后幽灵渲染）
  */
-export function installScrollSync(
-  scrollEl: HTMLElement,
-  renderVisible: () => void,
-): () => void {
+export function installScrollSync(scrollEl: HTMLElement, renderVisible: () => void): () => void {
   let rafId: number | null = null;
   const handler = (): void => {
     if (rafId) cancelAnimationFrame(rafId);

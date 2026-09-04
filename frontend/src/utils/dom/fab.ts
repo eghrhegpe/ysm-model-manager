@@ -2,8 +2,12 @@
 // 用途：替代 skeleton.ts 内联 style.cssText 控制栏，集中治理样式 + 双端响应式。
 // 挂载点：3D overlay 挂 document.body（light DOM），全局 CSS 经 ensureFabStyles 注入 head 一次。
 // 触发 FAB 在预览面板 Shadow DOM 内（.preview-fab 见 css.ts，因 Shadow DOM 隔离需本地样式）。
+
+import {
+  onOverlayStyleTargetReset,
+  overlayStyleRoot,
+} from "../../preview-3d/overlay-style-bridge.ts";
 import { attachTooltip } from "./tooltip.ts";
-import { overlayStyleRoot, onOverlayStyleTargetReset } from "../../preview-3d/overlay-style-bridge.ts";
 
 export const YSW_FAB_CSS = `
 /* ===== 3D 全屏 overlay 根容器（#ysm-overlay-3d，light DOM） ===== */
@@ -73,7 +77,9 @@ export const YSW_FAB_CSS = `
 `;
 
 let _fabInjected = false;
-onOverlayStyleTargetReset(() => { _fabInjected = false; }); // ADR-175 M1:目标切换重注入
+onOverlayStyleTargetReset(() => {
+  _fabInjected = false;
+}); // ADR-175 M1:目标切换重注入
 /** 幂等注入 overlay 全局样式（ADR-175 M1：目标经桥——overlay shadow root，无 overlay 时 head 兜底） */
 export function ensureFabStyles(): void {
   if (_fabInjected) return;

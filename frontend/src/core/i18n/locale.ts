@@ -139,9 +139,7 @@ export async function initI18n(): Promise<void> {
   const saved = safeGet(STORAGE_KEY) as LangCode | null;
   const detected = detectSystemLang();
   _currentLang =
-    saved && SUPPORTED_LANGS.some((l) => l.code === saved)
-      ? saved
-      : detected ?? "zh-CN";
+    saved && SUPPORTED_LANGS.some((l) => l.code === saved) ? saved : (detected ?? "zh-CN");
 
   applyHtmlLang(_currentLang);
   await loadLocale(_currentLang);

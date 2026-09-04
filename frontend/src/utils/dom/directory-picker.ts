@@ -5,12 +5,13 @@
 //   → 改为「授权检查 → 自动定位公共仓库目录」（查看器模式：固定路径
 //   /storage/emulated/0/YSM-Model-Manager，授权 MANAGE_EXTERNAL_STORAGE 后 Go os.*
 //   直读，用户把模型放入该目录即可使用，无需选择器）。
-import { TOAST_MS } from ".//toast-ms.ts";
+
 import { getApp } from "../../backend/app.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { getAndroidBridge, isViewerMode } from "./android-bridge.ts";
+import { TOAST_MS } from ".//toast-ms.ts";
 
 /**
  * Android 共享仓库目录解析（双端桥接：授权引导 + 定位公共目录）。

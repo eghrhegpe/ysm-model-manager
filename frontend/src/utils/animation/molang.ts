@@ -20,12 +20,14 @@ export type MolangFn = (animTime: number) => number;
 // 单例解析器（cache_enabled 默认 true，跨 clip 复用表达式缓存）
 // molangjs src/molang.js 是 IIFE 自执行模块，TypeScript 类型定义不完整（无 new 签名），
 // 用 as unknown as 绕过——运行时确认可正常 new 实例化。
-const parser = new (Molang as unknown as new () => {
-  parse(expr: string, variables: Record<string, number>): number;
-  resetVariables(): void;
-  variables: Record<string, number>;
-  variableHandler: ((key: string, variables: object) => number) | null;
-})();
+const parser = new (
+  Molang as unknown as new () => {
+    parse(expr: string, variables: Record<string, number>): number;
+    resetVariables(): void;
+    variables: Record<string, number>;
+    variableHandler: ((key: string, variables: object) => number) | null;
+  }
+)();
 
 // 每播放器持久变量作用域（控制器 v.* 跨帧持久化，ADR-100 L4 语义：v. 每实体持久、
 // temp. 每帧重置）。默认 null = 无作用域，行为与原先一致（每次求值 reset、v.* 不持久）。

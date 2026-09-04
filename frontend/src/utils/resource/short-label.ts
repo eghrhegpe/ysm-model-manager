@@ -5,14 +5,14 @@
 // 未命中回退全名（兜底覆盖 maid-model 等新类型，无需改本文件）。
 
 import { t } from "../../core/i18n/t.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "./types.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "./types.ts";
 
 /** 资源类型短标签映射（仅需 i18n 化的 4 类；YSM/MMD 为通用英文缩写） */
 const SHORT_LABEL_MAP: Record<string, string> = {
   [RESOURCE_TYPES.YSM]: "YSM",
   [RESOURCE_TYPES.MMD]: "MMD",
   // ADR-111：VRM 已合并进 EntityPlayer 的 variants，短标签用字面量 "vrm"
-  "vrm": "VRM",
+  vrm: "VRM",
   [RESOURCE_TYPES.PACK]: t("rtype.pack"),
   [RESOURCE_TYPES.SHADER]: t("rtype.shader"),
   [RESOURCE_TYPES.BLUEPRINT]: t("rtype.blueprint"),

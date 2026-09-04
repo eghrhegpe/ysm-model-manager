@@ -8,5 +8,4 @@
  * @param max - 最大延迟毫秒数（默认 300ms）
  * @returns 延迟毫秒数
  */
-export const stagger = (index: number, step = 30, max = 300): number =>
-  Math.min(index * step, max);
+export const stagger = (index: number, step = 30, max = 300): number => Math.min(index * step, max);

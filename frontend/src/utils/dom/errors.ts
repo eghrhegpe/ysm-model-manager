@@ -3,7 +3,8 @@
 //
 // ADR-051 决策：删除正则兜底表，只消费结构化 AppError.Code。
 
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
+import { type LocaleKey, t } from "../../core/i18n/t.ts";
+
 // CODE_KEYS 覆盖所有有明确分类语义的 Code；未列出的 Code（IO_ERROR/MKDIR_FAILED/
 // WRITE_FAILED/FILE_EMPTY/FILE_TOO_LARGE/LINK_FAILED）语义靠 Reason 中文透传，
 // 不在此武断归类（各 Code 的 Reason/Suggestion 比通用分类更具体，映射会误导用户）。
@@ -58,10 +59,7 @@ export function friendlyError(err: unknown, fallback?: string): string {
   }
 
   // 非 AppError（如纯字符串/JS Error）：含中文直接透传，否则 fallback
-  const msg =
-    typeof err === "string"
-      ? err
-      : String((err as { message?: unknown }).message || err);
+  const msg = typeof err === "string" ? err : String((err as { message?: unknown }).message || err);
   if (/[\u4e00-\u9fff]/.test(msg)) return stripPathSegments(msg);
   return `${fb}: ${stripPathSegments(msg)}`;
 }
@@ -72,10 +70,7 @@ export function friendlyError(err: unknown, fallback?: string): string {
 // P3 修复（审核）：导出供 error-diary 复用（写日记同样不应持久化完整内部路径）
 export function stripPathSegments(msg: string): string {
   // 路径可含空格：剥到下一个字段标记（操作/目标路径/解决建议）为止
-  return msg.replace(
-    /\s+(?:源路径|目标路径)：.*?(?=\s+(?:操作|目标路径|解决建议)：|$)/g,
-    "",
-  );
+  return msg.replace(/\s+(?:源路径|目标路径)：.*?(?=\s+(?:操作|目标路径|解决建议)：|$)/g, "");
 }
 
 /**
@@ -88,13 +83,6 @@ export function stripPathSegments(msg: string): string {
 export function isFileExistsError(err: unknown): boolean {
   const code = extractAppErrorCode(err);
   if (code === "FILE_EXISTS" || code === "ALREADY_EXISTS") return true;
-  const msg =
-    typeof err === "string"
-      ? err
-      : String((err as { message?: unknown }).message || err);
-  return (
-    msg.includes("FILE_EXISTS") ||
-    msg.includes("目标已存在") ||
-    msg.includes("文件已存在")
-  );
+  const msg = typeof err === "string" ? err : String((err as { message?: unknown }).message || err);
+  return msg.includes("FILE_EXISTS") || msg.includes("目标已存在") || msg.includes("文件已存在");
 }

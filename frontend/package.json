@@ -44,6 +44,7 @@
     "@moeru/three-mmd-physics-ammo": "^0.1.1",
     "@pixiv/three-vrm": "^3.5.5",
     "@pixiv/three-vrm-animation": "^3.5.5",
+    "@pixiv/three-vrm-core": "^3.5.5",
     "@wailsio/runtime": "^3.0.0-alpha.97",
     "fflate": "~0.8.2",
     "three": "^0.185.1"

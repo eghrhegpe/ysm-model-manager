@@ -20,6 +20,9 @@ importers:
       '@pixiv/three-vrm-animation':
         specifier: ^3.5.5
         version: 3.5.5(three@0.185.1)
+      '@pixiv/three-vrm-core':
+        specifier: ^3.5.5
+        version: 3.5.5(three@0.185.1)
       '@wailsio/runtime':
         specifier: ^3.0.0-alpha.97
         version: 3.0.0-beta.16

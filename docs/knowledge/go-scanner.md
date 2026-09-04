@@ -117,7 +117,11 @@ status: active
   - P2-2 InvalidatePath 祖先脏读：`InvalidatePath("/a/b")` 时 `/a` 的版本不会递增，父缓存 30s TTL 命中返回陈旧数据。修复：同时递增所有祖先 key 的版本 + 删除祖先缓存条目 + 恢复 descendant keyVersion 递增（code_review P1-1）。
   - P2-3 errorSink data race：裸变量 SetErrorSink 无锁写、emitScanError 无锁读。修复：改 RWMutex 保护（code_review 修正：atomic.Pointer 泛型语法在测试中有类型匹配问题）。
   - code_review P1-2 Windows 盘符根路径无限循环：ancestor walk 在 `C:\` 上 filepath.Dir 不变，旧循环无 `parent==prev` 守卫会无限循环。修复：加 prev 守卫 + `parent==Separator` 提前 break。
+- **ADR-176 决策与落地（2026-09-04）**：
+  - **维持进程单例（决策）**：`scanCache/cacheGen/keyVersions/inFlight` 是进程固有唯一态，**不做 struct 化**；`InstallLock` 为跨 installer/sync/conflict/app 的串行契约，保持。理由：struct 化只换句柄、单例语义不变，样板与跨调用破裂风险不成比例。
+  - **测试注入收敛（实施）**：`SetWalkStartHook`/`SetRustScanHook` 降为**未导出** `setWalkStartHook`/`setRustScanHook`（仅同包测试 seam），生产/绑定 API 不再暴露可写函数指针。`dedup.computeHash` / `fileops.renameForMove` 仍为包级注入——与「维持单例」决策一致，不强改字段注入。
+  - **构建门禁（实施）**：Go 验证改 `go build ./...`（覆盖仓库根 `internal/app` 绑定入口与根 `cli.go`，`./go/...` 会漏主体）。
 
 ## 相关
 
-- ADR-003（逻辑下沉）、ADR-038（ysm.json 白名单统一 D2）
+- ADR-003（逻辑下沉）、ADR-038（ysm.json 白名单统一 D2）、ADR-176（维持单例与测试注入收敛）

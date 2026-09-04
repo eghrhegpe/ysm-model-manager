@@ -88,7 +88,9 @@ func runConfigMirror(ctx *CmdContext) error {
 	return nil
 }
 
-// runConfigLinkMode 查看或设置链接模式
+// runConfigLinkMode config link-mode 子命令：flag 自声明（生成器按入口函数体提取
+// 选项元数据），校验+设置逻辑共享 runSetLinkMode（与顶层 link-mode 同构，历史
+// 为逐字复制，已收敛为单一实现）
 func runConfigLinkMode(ctx *CmdContext) error {
 	fs := newCmdFlagSet("config link-mode")
 	mode := fs.String("mode", "", "链接模式: symlink|hardlink|copy（不填则查看当前模式）")
@@ -96,31 +98,5 @@ func runConfigLinkMode(ctx *CmdContext) error {
 	if err != nil {
 		return err
 	}
-
-	// 无 --mode：查看当前
-	if *mode == "" {
-		current := ctx.App.GetLinkMode()
-		fmt.Printf("🔗 当前链接模式: %s\n", current)
-		fmt.Println("   可选: symlink | hardlink | copy")
-		return nil
-	}
-
-	// 有 --mode：设置
-	validModes := []string{"symlink", "hardlink", "copy"}
-	modeValid := false
-	for _, v := range validModes {
-		if v == *mode {
-			modeValid = true
-			break
-		}
-	}
-	if !modeValid {
-		return newParamErrf("config link-mode: 无效模式 %q，可选: %s", *mode, strings.Join(validModes, "|"))
-	}
-
-	if err := ctx.App.SetLinkMode(*mode); err != nil {
-		return newRuntimeErrf("设置链接模式失败: %w", err)
-	}
-	fmt.Printf("✅ 链接模式已设置为: %s\n", *mode)
-	return nil
+	return runSetLinkMode(ctx, *mode, "config link-mode")
 }

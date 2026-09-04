@@ -23,13 +23,20 @@ func init() {
 func runCacheStatus(ctx *CmdContext) error {
 
 	stats := texture_cache.GetCacheStats()
-	files, _ := texture_cache.ListCacheFiles()
+	files, listErr := texture_cache.ListCacheFiles()
 
 	fmt.Printf("💾 纹理缓存状态\n")
 	fmt.Printf("   缓存目录: %s\n", stats.Dir)
 
 	if stats.Dir == "" {
 		fmt.Printf("   ⚠️  缓存目录不可用（平台配置根路径为空）\n")
+		return nil
+	}
+
+	// ListCacheFiles 失败（目录扫描错误）：stats 已是零值兜底，此处明示而非静默
+	// 以空列表继续（原 `files, _ :=` 吞错会让下方 "最近缓存" 区显示为空且无解释）
+	if listErr != nil {
+		fmt.Printf("   ⚠️  缓存目录扫描失败: %v\n", listErr)
 		return nil
 	}
 

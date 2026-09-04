@@ -252,5 +252,7 @@ func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) 
 	if !strings.HasPrefix(rawURL, "https://") {
 		return "", fmt.Errorf("不支持的 URL scheme: %s（仅支持 https）", rawURL)
 	}
-	return a.downloadFileWithQueue(context.Background(), rawURL, saveDir)
+	// 用应用级 ctx（原 context.Background() 不可取消）：ServiceShutdown 时 appCancel 触发，
+	// 在途 HTTP 请求随之中断（download.File 走 http.NewRequestWithContext + ctx.Done 检查）
+	return a.downloadFileWithQueue(a.appCtx, rawURL, saveDir)
 }

@@ -1,8 +1,8 @@
 // ysm-updater-helper — Windows 自更新助手
 //
 // 工作流程：
-//  1. 等待主进程退出（通过轮询进程列表或等待参数指定的 PID）
-//  2. 复制新的 exe 到目标位置（替换旧的）
+//  1. 等待主进程退出（OpenProcess 轮询 PID，只查询不干预）
+//  2. 复制新的 exe 到目标位置（替换旧的，失败带退避重试）
 //  3. 启动新主程序
 //  4. 自我清理（删除临时文件）
 //
@@ -32,21 +32,29 @@ func main() {
 	targetPath := os.Args[2]
 	pidStr := os.Args[3]
 
-	// pid 仅用于校验参数合法性（等待改为固定 sleep，轮询逻辑 807c81a5 已删）
-	_, err := strconv.Atoi(pidStr)
+	// pid 用于等待主进程退出（见 waitMainExit：OpenProcess 只查询不干预）
+	pid64, err := strconv.ParseUint(pidStr, 10, 32)
 	if err != nil {
 		log.Fatalf("无效的 PID: %s", pidStr)
 	}
 
-	// 1. 等待主进程退出（最多等待 30 秒）
-	// 注意：Windows 不支持 Signal(0) 检测存活，也不应对目标进程发 Signal(os.Kill)
-	// （那会直接杀死仍在运行的主进程）。用 os.FindProcess + 定期轮询检查线程数/句柄
-	// 变化不可行，改为固定等待：主进程 os.Exit(0) 后系统回收 PE 文件锁需 ~500ms，
-	// 直接 sleep 足够（与下方 500ms 合并）。
-	time.Sleep(2 * time.Second)
+	// 1. 等待主进程退出（最多 30 秒，轮询间隔 200ms）
+	// 历史：旧实现用 Signal(os.Kill) 探测存活会误杀主进程（807c81a5），
+	// 改为固定 sleep 2s（对慢盘/杀软锁回收时间不保证足够，替换可能失败）。
+	// 现改为 OpenProcess+GetExitCodeProcess 轮询（只查询不干预，见 wait_windows.go），
+	// 主进程退出后再补短等待确保 PE 文件锁回收。
+	if err := waitMainExit(uint32(pid64), 30*time.Second); err != nil {
+		log.Fatalf("等待主进程退出失败: %v", err)
+	}
+	// 主进程退出后系统回收 PE 文件锁需短暂时间（~500ms 级），短等待避免
+	// replaceExe 的 rename 被共享冲突拦截（慢盘/杀软场景由下方重试兜底）
+	time.Sleep(500 * time.Millisecond)
 
 	// 2. 复制新 exe 到目标位置（原子替换：同目录临时文件 + .old 备份 + 失败回滚）
-	if err := replaceExe(newPath, targetPath); err != nil {
+	// 慢盘/杀软可能在主进程退出后仍短暂占用 PE 文件——rename 报共享冲突时
+	// 200ms 退避重试，最多 10s（比固定 sleep 更稳：正常场景一次成功，异常场景
+	// 等到锁真正释放而非拍脑袋 2s）
+	if err := replaceExeWithRetry(newPath, targetPath, 10*time.Second); err != nil {
 		log.Fatalf("替换文件失败 %s → %s: %v", newPath, targetPath, err)
 	}
 
@@ -65,6 +73,23 @@ func main() {
 	os.RemoveAll(tmpDir)
 
 	os.Exit(0)
+}
+
+// replaceExeWithRetry 带退避重试的 replaceExe：目标文件被占用（共享冲突）
+// 时重试，直到成功或超时。仅重试「文件占用」类瞬时错误——目标不存在/权限
+// 等永久错误立即返回，不空耗退避窗口。错误归类见 isRetryableReplaceErr。
+func replaceExeWithRetry(newPath, targetPath string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		err := replaceExe(newPath, targetPath)
+		if err == nil {
+			return nil
+		}
+		if !isRetryableReplaceErr(err) || time.Now().After(deadline) {
+			return err
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }
 
 // copyFile 复制文件（保留原始文件在出错时不变）

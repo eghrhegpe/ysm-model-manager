@@ -45,7 +45,7 @@ func runInstall(ctx *CmdContext) error {
 	return nil
 }
 
-// runLinkMode 查看或设置链接模式
+// runLinkMode 查看或设置链接模式（顶层命令；config link-mode 复用 runSetLinkMode）
 func runLinkMode(ctx *CmdContext) error {
 	fs := newCmdFlagSet("link-mode")
 	mode := fs.String("mode", "", "链接模式: symlink|hardlink|copy（不填则查看当前模式）")
@@ -53,9 +53,14 @@ func runLinkMode(ctx *CmdContext) error {
 	if err != nil {
 		return err
 	}
+	return runSetLinkMode(ctx, *mode, "link-mode")
+}
 
+// runSetLinkMode 链接模式查看/设置共享实现（顶层 link-mode 与 config link-mode
+// 共用校验+输出逻辑，消除原先两处逐字重复；cmdName 仅用于错误消息前缀）。
+func runSetLinkMode(ctx *CmdContext, mode, cmdName string) error {
 	// 无 --mode：查看当前
-	if *mode == "" {
+	if mode == "" {
 		current := ctx.App.GetLinkMode()
 		fmt.Printf("🔗 当前链接模式: %s\n", current)
 		fmt.Println("   可选: symlink | hardlink | copy")
@@ -66,18 +71,18 @@ func runLinkMode(ctx *CmdContext) error {
 	validModes := []string{"symlink", "hardlink", "copy"}
 	modeValid := false
 	for _, v := range validModes {
-		if v == *mode {
+		if v == mode {
 			modeValid = true
 			break
 		}
 	}
 	if !modeValid {
-		return newParamErrf("link-mode: 无效模式 %q，可选: %s", *mode, strings.Join(validModes, "|"))
+		return newParamErrf("%s: 无效模式 %q，可选: %s", cmdName, mode, strings.Join(validModes, "|"))
 	}
 
-	if err := ctx.App.SetLinkMode(*mode); err != nil {
+	if err := ctx.App.SetLinkMode(mode); err != nil {
 		return newRuntimeErrf("设置链接模式失败: %w", err)
 	}
-	fmt.Printf("✅ 链接模式已设置为: %s\n", *mode)
+	fmt.Printf("✅ 链接模式已设置为: %s\n", mode)
 	return nil
 }

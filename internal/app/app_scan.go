@@ -5,6 +5,7 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -351,7 +352,13 @@ func (a *App) ScanLocalAuthors(rtype string) []types.WorkshopCreator {
 		if rtype != "" && rt.ID != rtype {
 			continue
 		}
-		roots[rt.ID], _ = a.GetRepoRoot(rt.ID)
+		root, rErr := a.GetRepoRoot(rt.ID)
+		if rErr != nil {
+			// 尽力而为：单类型根不可用仅跳过该类型，不炸全量作者扫描；落日志供诊断
+			log.Printf("[authors] 获取 %s 仓库根失败: %v", rt.ID, rErr)
+			continue
+		}
+		roots[rt.ID] = root
 	}
 	return scanner.ScanLocalAuthors(roots)
 }

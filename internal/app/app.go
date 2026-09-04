@@ -40,7 +40,12 @@ func requireMcRoot(cfg types.AppConfig) error {
 type App struct {
 	// linkMode 私有：须经 SetLinkMode/getLinkMode 访问（linkModeMu 保护）。
 	// 公有字段会被包外直写绕过锁（Go 评审 #5）；配置加载/保存点仍可在锁内直写。
-	linkMode           string
+	linkMode string
+	// appCtx 应用生命周期 context：NewApp 创建、ServiceShutdown cancel。
+	// 供不经下载队列的直下入口（DownloadFromGitHub 等）作取消源——
+	// 原硬编码 context.Background() 导致退出/撤销无法中断在途 HTTP 请求。
+	appCtx             context.Context
+	appCancel          context.CancelFunc
 	logger             *logs.Logger
 	runtimeLogs        *logs.RuntimeBuffer
 	watcher            *watcher.Watcher
@@ -79,7 +84,10 @@ type App struct {
 func (a *App) ysmRoot() string { dir, _ := a.GetRepoRoot("ysm"); return dir }
 
 func NewApp() *App {
+	appCtx, appCancel := context.WithCancel(context.Background())
 	a := &App{
+		appCtx:      appCtx,
+		appCancel:   appCancel,
 		logger:      logs.NewLogger(configDir()),
 		runtimeLogs: logs.NewRuntimeBuffer(logs.DefaultRuntimeCap),
 	}
@@ -238,6 +246,10 @@ func (a *App) ServiceShutdown() error {
 		a.watcher.Stop()
 	}
 	a.watcherMu.Unlock()
+	// 取消应用级 context：中断不经队列的直下下载（DownloadFromGitHub 等）
+	if a.appCancel != nil {
+		a.appCancel()
+	}
 	// 关闭广场反向代理（ADR-050）——currentPlazaTarget 与导航/关闭并发读写，须持 plazaWinMu
 	a.plazaWinMu.Lock()
 	plazaTarget := a.currentPlazaTarget

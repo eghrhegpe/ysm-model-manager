@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -317,11 +318,15 @@ func runBenchmark(ctx *CmdContext) error {
 
 	fmt.Println("📊 Benchmark 1: 模型扫描")
 	scanTimes := make([]time.Duration, *iterations)
+	var sampleEntry types.ModelEntry // 末次扫描的首条目：作为 Benchmark 3 的真实关键词来源
 	for i := 0; i < *iterations; i++ {
 		start := time.Now()
 		entries := ctx.App.ScanModelEntries(ctx.FilesRoot)
 		scanTimes[i] = time.Since(start)
 		fmt.Printf("   迭代 %d: %v (发现 %d 个模型)\n", i+1, scanTimes[i], len(entries))
+		if len(entries) > 0 {
+			sampleEntry = entries[0]
+		}
 	}
 	printBenchmarkResults("扫描", scanTimes)
 
@@ -336,14 +341,26 @@ func runBenchmark(ctx *CmdContext) error {
 	printBenchmarkResults("搜索", searchTimes)
 
 	fmt.Println("\n📊 Benchmark 3: 关键词搜索")
-	keywordTimes := make([]time.Duration, *iterations)
-	for i := 0; i < *iterations; i++ {
-		start := time.Now()
-		results := ctx.App.SearchModels(ctx.FilesRoot, "model", 0, 0, 0, 0, 0, 0)
-		keywordTimes[i] = time.Since(start)
-		fmt.Printf("   迭代 %d: %v (找到 %d 个结果)\n", i+1, keywordTimes[i], len(results))
+	if sampleEntry.Name == "" {
+		fmt.Println("   (仓库为空，跳过关键词搜索基准)")
+	} else {
+		// 用真实模型名主干作关键词（原硬编码 "model"：仓库无该词命中时结果恒 0，
+		// 计时失去意义）。取扫描首条目文件名去扩展名——SearchModels 按小写子串
+		// 匹配 Name/Path，必能命中且复现扫描路径的真实过滤开销
+		keyword := strings.TrimSuffix(filepath.Base(sampleEntry.Name), filepath.Ext(sampleEntry.Name))
+		if keyword == "" {
+			keyword = filepath.Base(sampleEntry.Name)
+		}
+		fmt.Printf("   关键词: %q\n", keyword)
+		keywordTimes := make([]time.Duration, *iterations)
+		for i := 0; i < *iterations; i++ {
+			start := time.Now()
+			results := ctx.App.SearchModels(ctx.FilesRoot, keyword, 0, 0, 0, 0, 0, 0)
+			keywordTimes[i] = time.Since(start)
+			fmt.Printf("   迭代 %d: %v (找到 %d 个结果)\n", i+1, keywordTimes[i], len(results))
+		}
+		printBenchmarkResults("关键词搜索", keywordTimes)
 	}
-	printBenchmarkResults("关键词搜索", keywordTimes)
 
 	entries := ctx.App.ScanModelEntries(ctx.FilesRoot)
 	if len(entries) > 0 {

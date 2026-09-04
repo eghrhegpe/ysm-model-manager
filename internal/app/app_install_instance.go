@@ -199,7 +199,12 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 
 	// 统一走 GetInstanceStatus：rtype 限定实例侧扫描子目录
 	if repoDir == "" {
-		repoDir, _ = a.GetRepoRoot(rtype)
+		var gErr error
+		repoDir, gErr = a.GetRepoRoot(rtype)
+		if gErr != nil {
+			// 尽力而为：单类型根解析失败不炸整个列表，但需落日志供诊断页回溯
+			log.Printf("[instance-status] 获取 %s 仓库根失败: %v", rtype, gErr)
+		}
 	}
 	if repoDir == "" {
 		return []types.InstanceStatus{}
@@ -558,7 +563,13 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 	// 收集各资源类型的仓库根目录（同步基准：subDirGrouping 类型用 group 根，与仓库树对齐）
 	roots := map[string]string{}
 	for _, rt := range registry.ResourceTypes {
-		roots[rt.ID], _ = a.filesRootForSync(rt.ID)
+		r, fErr := a.filesRootForSync(rt.ID)
+		if fErr != nil {
+			// 尽力而为：缺根的类型不参与同步项构建，落日志供诊断
+			log.Printf("[sync-items] 获取 %s 同步根失败: %v", rt.ID, fErr)
+			continue
+		}
+		roots[rt.ID] = r
 	}
 
 	items := instance.BuildSyncItems(targetIns, registry.ResourceTypes, roots, subtype)

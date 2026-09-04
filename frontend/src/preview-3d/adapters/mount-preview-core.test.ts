@@ -1,10 +1,21 @@
-// ===== 统一 3D 预览核心（mount3D）装配测试 =====
+// ===== 统一 3D 预览核心（mount3D）装配 + 行为测试（2026 锐评整改：双胞胎合体）=====
+//
+// 历史：mount-preview-core 曾有 .test.ts（happy-dom 装配）+ .behavior.test.ts（node
+// 环境手搓 200 行假 DOM）双胞胎，同一模块 1504 行测试 / 817 行源码，mock 各写一套，
+// 「测试在测试它自己的 mock」。本次合体：
+//   1. 统一 happy-dom 真实 DOM —— 删除手搓 document/window/rAF/getContext 假环境
+//   2. mock 面积收敛为「真链 + 外墙桩」：three(WebGLRenderer/OrbitControls)、caps
+//      注册表、菜单壳、输入绑定、焦点陷阱、视锥裁剪为桩；sceneRegistry / bus /
+//      switch-preview / i18n / storage 等走真实实现（happy-dom 下全链可跑）
+//   3. 墓碑测试（describe「模块级单例 _handle 竞态」三个 BUG: 用例）删除——其断言
+//      的是旧单 _handle 时代的错误行为，现代码已 _handles 数组化 + myGen 代际守卫，
+//      语义被 finishSession 幂等 / 代际守卫 / switchPreview no-op 用例覆盖
+//
 // 覆盖：mount3D 主路径（shared 基础设施复用 + build 注入 + 注册表登记 + 菜单注入 +
 // perFrame 接线）、rAF 循环（WASD 相机运动 / 能力更新 / 统一渲染出口）、
 // ESC 关闭（fullCleanup 生命周期）、build 失败降级、build 中途 abort（代际守卫）、
-// unloadModel（注册表卸载）、统一多模型拾取器、cleanupPreview/_resetSingletons。
-// WebGLRenderer/OrbitControls 为 fake（happy-dom 无 WebGL）；caps registry/菜单壳/input
-// 桩掉外壳依赖，scene/camera/Vector3/Box3 用 three 真实实现（纯 JS 无 GL 依赖）。
+// unloadModel（注册表卸载）、统一多模型拾取器、外壳单例复用、self 模式/配置缺失降级、
+// ESC 后再次 mount 的 canvas 重挂载回归、cleanupPreview/_resetSingletons。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
@@ -64,7 +75,7 @@ vi.mock("three/addons/controls/OrbitControls.js", async () => {
   return { OrbitControls: FakeOrbitControls as unknown as typeof import("three/addons/controls/OrbitControls.js").OrbitControls };
 });
 
-// ---- caps registry：全能力桩（id → 桩，含 render/postProc 接口）----
+// ---- caps registry：全能力桩（id → 桩，含 render/postProc 接口；water 需在表内，shared-infra 查询）----
 function makeCap(id: string): Record<string, unknown> {
   return {
     id,
@@ -157,7 +168,26 @@ function makeContent(): PreviewScene {
   };
 }
 
-/** rAF → setTimeout 兜底（happy-dom rAF 不可用时保持确定性节拍） */
+/** 构造最小 PreviewAdapter；build 捕获 buildCtx 供用例断言派生字段 */
+function makeAdapter(opts: {
+  scene?: Partial<PreviewScene>;
+  content?: PreviewScene;
+  capture?: (ctx: PreviewBuildCtx) => void;
+} = {}): PreviewAdapter & { build: ReturnType<typeof vi.fn> } {
+  const build = vi.fn(async (ctx: PreviewBuildCtx, _path: string) => {
+    opts.capture?.(ctx);
+    return opts.content ?? opts.scene
+      ? ({ dispose: vi.fn(), update: vi.fn(), ...opts.scene } as PreviewScene)
+      : makeContent();
+  });
+  return { id: "vrm", build, onClose: vi.fn() };
+}
+
+/** 从最近一次 mount3D 捕获的 buildCtx 读取字段 */
+function lastBuildCtx(build: ReturnType<typeof vi.fn>): PreviewBuildCtx {
+  return build.mock.calls[0][0] as PreviewBuildCtx;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   _resetSingletons();
@@ -174,6 +204,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanupPreview();
+  // build 失败路径不注册 handle，cleanupPreview 清不到它创建的 overlay——
+  // 强制摘除残留 overlay，防跨用例 DOM 串扰（真实行为：失败 UI 由用户关闭）
+  document.getElementById("ysm-overlay-3d")?.remove();
   _resetSingletons();
   sceneRegistry.reset();
   vi.restoreAllMocks();
@@ -189,7 +222,7 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     };
     await mount3D(adapter, "/m/a.vrm", { rtype: "vrm", siblings: ["/m/b.vrm"] });
 
-       expect(adapter.build).toHaveBeenCalledTimes(1);
+    expect(adapter.build).toHaveBeenCalledTimes(1);
     const buildCtx = (adapter.build as ReturnType<typeof vi.fn>).mock.calls[0][0] as PreviewBuildCtx;
     expect(buildCtx.scene).toBeDefined();
     expect(buildCtx.camera).toBeDefined();
@@ -213,6 +246,12 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     expect(typeof camBridge.getSpeed).toBe("function");
 
     expect(hasActivePreview()).toBe(true);
+  });
+
+  it("hasActivePreview 初始为 false；invalidatePreview 无活跃会话时不抛错", () => {
+    expect(hasActivePreview()).toBe(false);
+    expect(() => invalidatePreview()).not.toThrow();
+    expect(hasActivePreview()).toBe(false);
   });
 
   it("switchPreview 转发到活跃会话；无会话时 no-op", async () => {
@@ -245,6 +284,21 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     expect(hasActivePreview()).toBe(false);
   });
 
+  it("build 失败：console.error + onClose 不被调用 + 不注册会话", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const adapter: PreviewAdapter = {
+      id: "vrm",
+      onClose: vi.fn(),
+      build: vi.fn(async () => { throw new Error("parse boom"); }),
+    };
+    await mount3D(adapter, "/m/bad.vrm");
+    expect(errSpy).toHaveBeenCalled();
+    expect(hasActivePreview()).toBe(false);
+    expect(sceneRegistry.count()).toBe(0);
+    // build 失败路径只走 unsafe 清理，不触发 onClose（会话从未注册，无关闭语义）
+    expect(adapter.onClose).not.toHaveBeenCalled();
+  });
+
   it("build 期间被 invalidate：已产出的内容层仍须 dispose，不留 GPU 资源", async () => {
     const content = makeContent();
     let resolveBuild!: (b: PreviewScene) => void;
@@ -260,18 +314,6 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     expect(adapter.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("build 失败 → console.error + showLoadFailure 降级，不注册会话", async () => {
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const adapter: PreviewAdapter = {
-      id: "vrm",
-      build: vi.fn(async () => { throw new Error("parse boom"); }),
-    };
-    await mount3D(adapter, "/m/bad.vrm");
-    expect(errSpy).toHaveBeenCalled();
-    expect(hasActivePreview()).toBe(false);
-    expect(sceneRegistry.count()).toBe(0);
-  });
-
   it("build 期间 invalidatePreview（代际失效）→ 会话不注册不泄漏", async () => {
     const content = makeContent();
     let resolveBuild!: (v: PreviewScene) => void;
@@ -283,8 +325,6 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     invalidatePreview(); // 加载期间用户切换
     resolveBuild(content);
     await p;
-    // 代际守卫：会话未注册（⚠️ fullCleanup 不含 allContent 尚未 push 的 content →
-    // 刚建好的内容层 dispose 未被调用，疑似源码 bug，见 ESC 用例注释）
     expect(hasActivePreview()).toBe(false);
     expect(sceneRegistry.count()).toBe(0);
     cleanupPreview();
@@ -305,6 +345,24 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(hasActivePreview()).toBe(false);
     cleanupPreview();
+  });
+
+  it("快速连续 mount 两次：第一次代际失效走 fullCleanup，第二个会话保持活跃", async () => {
+    const firstContent = makeContent();
+    let resolveFirst!: (b: PreviewScene) => void;
+    const firstAdapter: PreviewAdapter = {
+      id: "vrm",
+      build: vi.fn(() => new Promise<PreviewScene>((res) => { resolveFirst = res; })),
+    };
+    const firstPromise = mount3D(firstAdapter, "/first.ysm");
+    // 第二个 mount 完成：++_gen 使第一次 await 后的 myGen !== _gen
+    await mount3D({ id: "vrm", build: vi.fn(async () => makeContent()) }, "/second.ysm");
+    // 释放第一个 build → 代际守卫命中 → fullCleanup 分支（_handles 数组：不误杀第二个会话）
+    resolveFirst(firstContent);
+    await firstPromise;
+    expect(hasActivePreview()).toBe(true);
+    cleanupPreview();
+    expect(hasActivePreview()).toBe(false);
   });
 
   it("菜单回调接线：switchExternal/toast/closeAllOverlays/getModelsByType/camBridge.reset/switchTo", async () => {
@@ -348,13 +406,117 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
 
     // switchTo → 会话内切换（第二次 build + setPerFrame 新旧交接 + 注册表更新）
     await (mo.switchTo as (p: string) => Promise<void>)("/m/b.vrm");
-    expect((adapter.build as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(2);
-    expect(((adapter.build as ReturnType<typeof vi.fn>).mock.calls[1] as unknown[])[1]).toBe("/m/b.vrm");
+    expect(adapter.build).toHaveBeenCalledTimes(2);
+    expect((adapter.build as ReturnType<typeof vi.fn>).mock.calls[1][1]).toBe("/m/b.vrm");
     expect(sceneRegistry.count()).toBe(1); // 旧 m1 注销、新 m2 登记
     expect(h.menuHandle!.setAdapterItems).toHaveBeenCalled();
     // shadowCap/environmentCap 消费切换新增量
     expect(capsById.get("shadow")!.applyMeshCasts).toHaveBeenCalled();
     expect(capsById.get("environment")!.syncMeshIntensity).toHaveBeenCalled();
+  });
+});
+
+// 外壳单例复用（viewContainer 随外壳初始化只建一次；回归：多次 mount3D 曾反复 new 空容器）
+describe("外壳单例复用", () => {
+  /** 当前 overlay 内的 view-container 数量（overlay 为 shadow host；降级 light DOM 时查 host 本体） */
+  function viewContainerCount(): number {
+    const overlay = document.getElementById("ysm-overlay-3d");
+    if (!overlay) return 0;
+    const root = (overlay.shadowRoot as unknown as HTMLElement) ?? overlay;
+    return root.querySelectorAll(".preview-view-container").length;
+  }
+
+  it("连续两次 mount3D（同台复用外壳）只创建一个 view-container", async () => {
+    await mount3D({ id: "vrm", build: vi.fn(async () => makeContent()) }, "/a.ysm");
+    await mount3D({ id: "vrm", build: vi.fn(async () => makeContent()) }, "/b.ysm");
+    expect(viewContainerCount()).toBe(1);
+    cleanupPreview();
+  });
+
+  it("cleanupPreview 后重新 mount：重建外壳（重新创建唯一 view-container）", async () => {
+    await mount3D({ id: "vrm", build: vi.fn(async () => makeContent()) }, "/a.ysm");
+    cleanupPreview();
+    expect(document.getElementById("ysm-overlay-3d")).toBeNull();
+    await mount3D({ id: "vrm", build: vi.fn(async () => makeContent()) }, "/b.ysm");
+    expect(viewContainerCount()).toBe(1);
+    cleanupPreview();
+  });
+});
+
+// 生命周期事件顺序：cleanupPreview 幂等 / 重复卸载
+describe("cleanupPreview 幂等 / 重复卸载", () => {
+  it("无活跃会话时 cleanupPreview 应 no-op 且不抛错", () => {
+    expect(() => cleanupPreview()).not.toThrow();
+    expect(hasActivePreview()).toBe(false);
+  });
+
+  it("重复调用 cleanupPreview 两次不抛错（第二次应 no-op）", async () => {
+    await mount3D(makeAdapter(), "/model.ysm");
+    expect(hasActivePreview()).toBe(true);
+    expect(() => cleanupPreview()).not.toThrow();
+    expect(hasActivePreview()).toBe(false);
+    expect(() => cleanupPreview()).not.toThrow();
+    expect(hasActivePreview()).toBe(false);
+  });
+
+  it("cleanup 后再 mount 应重新开始（句柄重建）", async () => {
+    await mount3D(makeAdapter(), "/a.ysm");
+    cleanupPreview();
+    await mount3D(makeAdapter(), "/b.ysm");
+    expect(hasActivePreview()).toBe(true);
+  });
+});
+
+// 部分配置缺失时的降级（self 模式 / 最小 content / 缺回调 / 缺 opts）
+describe("部分配置缺失时的降级行为", () => {
+  it("adapter.mode='self'：核心不创建 scene/camera/renderer，build ctx 内均为 undefined", async () => {
+    let capturedCtx: PreviewBuildCtx | null = null;
+    const adapter: PreviewAdapter = {
+      id: "self-adapter",
+      mode: "self",
+      build: async (ctx: PreviewBuildCtx) => {
+        capturedCtx = ctx;
+        return { dispose: vi.fn(), update: vi.fn() };
+      },
+      onClose: vi.fn(),
+    };
+    await mount3D(adapter, "/self.ysm");
+    expect(hasActivePreview()).toBe(true);
+    expect(capturedCtx).not.toBe(null);
+    expect(capturedCtx!.scene).toBeUndefined();
+    expect(capturedCtx!.camera).toBeUndefined();
+    expect(capturedCtx!.renderer).toBeUndefined();
+    expect(capturedCtx!.controls).toBeUndefined();
+    expect(capturedCtx!.cameraControls).toBeUndefined();
+    expect(capturedCtx!.viewContainer).toBeDefined();
+    expect(capturedCtx!.overlay).toBeDefined();
+    expect(capturedCtx!.menu).toBeDefined();
+    cleanupPreview();
+  });
+
+  it("adapter.build 返回的 PreviewScene 只有 dispose（无 update 等）：不抛错", async () => {
+    // 契约：能力可选，缺字段 = 功能降级而非崩溃（no 空实现补数）
+    await mount3D({ id: "vrm", build: vi.fn(async () => ({ dispose: vi.fn() })) }, "/minimal.ysm");
+    expect(hasActivePreview()).toBe(true);
+    cleanupPreview();
+  });
+
+  it("adapter.onClose 缺失：cleanup 时安全降级不抛错", async () => {
+    const adapter = makeAdapter();
+    delete (adapter as unknown as { onClose?: unknown }).onClose;
+    await mount3D(adapter, "/no-callback.ysm");
+    expect(() => cleanupPreview()).not.toThrow();
+  });
+
+  it("opts.siblings / switchExternal / getModelsByType / getTypeTabs 全部缺失：菜单仍创建，对应字段 undefined", async () => {
+    await mount3D(makeAdapter(), "/a.ysm");
+    expect(hasActivePreview()).toBe(true);
+    const mo = h.menuOpts as Record<string, unknown>;
+    expect(mo.getSiblings).toBeDefined();
+    expect(() => (mo.getSiblings as () => string[])()).not.toThrow();
+    expect((mo.getSiblings as () => string[])()).toEqual([]); // 向后兼容缺省
+    expect(mo.switchExternal).toBeUndefined();
+    cleanupPreview();
   });
 });
 
@@ -377,7 +539,7 @@ describe("rAF 渲染管线（WASD / perFrame / 能力 / 统一渲染出口）", 
     await new Promise((r) => setTimeout(r, 80)); // 跑几帧
 
     for (const cap of capsById.values()) {
-      expect((cap.update as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+      expect(cap.update as ReturnType<typeof vi.fn>).toHaveBeenCalled();
     }
     expect(content.update).toHaveBeenCalled(); // perFrame 驱动内容层
     expect(renderer.render).toHaveBeenCalled(); // postProc.render false → rd.render 兜底
@@ -436,6 +598,40 @@ describe("unloadModel（注册表卸载模型）", () => {
     expect(h.menuHandle!.setAdapterItems).toHaveBeenCalled();
     expect(h.menuHandle!.refreshDock).toHaveBeenCalled();
   });
+
+  it("卸载当前活跃角色，全新活跃角色无专属项 → 显式清空 dock 适配器项（不残留已卸载菜单）", async () => {
+    await mount3D({ id: "vrm", build: vi.fn(async () => makeContent()) }, "/model.ysm");
+    const id = sceneRegistry.register({
+      path: "/model.ysm",
+      rtype: "vrm",
+      roots: [],
+      content: { dispose: vi.fn() } as unknown as PreviewScene,
+      menuItems: null, // 卸载的是注册表里 M1 会话自身；先手动注销让其余为空或去重
+    });
+    // 预置第二个角色（menuItems null）模拟 cooperate 双角色 —— 卸载后它成为新活跃
+    const id2 = sceneRegistry.register({
+      path: "/second.ysm",
+      rtype: "vrm",
+      roots: [],
+      content: { dispose: vi.fn() } as unknown as PreviewScene,
+      menuItems: null,
+    });
+    // 预置完成后卸载第一个：新活跃无专属项 → 应显式清空 dock 适配器项（P2 修复）
+    (h.menuOpts!.unloadModel as (id: string) => void)(id);
+    expect(sceneRegistry.getActiveId()).toBe(id2);
+    expect(h.menuHandle!.setAdapterItems).toHaveBeenCalledWith([]);
+    cleanupPreview();
+  });
+
+  it("卸载最后一个角色：内容层 dispose + dock 适配器项清空（无残留菜单）", async () => {
+    await mount3D({ id: "vrm", build: vi.fn(async () => makeContent()) }, "/only.ysm");
+    const id = sceneRegistry.getActiveId()!; // mount3D 注册的唯一会话（m1）
+    (h.menuOpts!.unloadModel as (id: string) => void)(id);
+    // 卸载后注册表清空 → 新活跃不存在 → unloadModel 走 else 分支清空 dock 适配器项
+    expect(sceneRegistry.getActiveId()).toBeNull();
+    expect(h.menuHandle!.setAdapterItems).toHaveBeenCalledWith([]);
+    cleanupPreview();
+  });
 });
 
 describe("统一多模型拾取器（count>=2 激活）", () => {
@@ -460,7 +656,6 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
     await mount3D(adapter, "/m/a.vrm");
     const buildCtx = (adapter.build as ReturnType<typeof vi.fn>).mock.calls[0][0] as PreviewBuildCtx;
     const scene = buildCtx.scene!;
-    // happy-dom viewContainer clientWidth=0 → 相机 aspect 退化（射线全空）→ 模拟有尺寸视口
     const cam = buildCtx.camera as THREE.PerspectiveCamera;
     cam.aspect = 1;
     cam.updateProjectionMatrix();
@@ -534,12 +729,8 @@ describe("公开 API", () => {
   });
 });
 
-// ──────────────────────────────────────────────────────────────────────
-// describe: finishSession 幂等契约
-// closeOverlay（ESC 早期路径）与 fullCleanup（post-build 路径）都会调
-// finishSession。源码注释明确：「不幂等则 onClose 会重复触发」。
-// 本组验证：两条路径交错进入时，adapter.onClose 仅被调用一次。
-// ──────────────────────────────────────────────────────────────────────
+// finishSession 幂等契约：closeOverlay（ESC 早期路径）与 fullCleanup（post-build 路径）
+// 都会调 finishSession。源码注释明确：「不幂等则 onClose 会重复触发」。
 describe("finishSession 幂等契约", () => {
   it("build 期间 ESC（closeOverlay）后 build resolve 进 fullCleanup：onClose 只调一次", async () => {
     let resolveBuild!: (v: PreviewScene) => void;
@@ -576,20 +767,14 @@ describe("finishSession 幂等契约", () => {
     const adapter: PreviewAdapter = { id: "vrm", onClose, build: vi.fn(async () => makeContent()) };
     await mount3D(adapter, "/m/a.vrm");
     cleanupPreview();
-    // cleanupPreview 遍历 _handles 调 handle.cleanup（= fullCleanup）→ finishSession
-    // 之后再调 cleanupPreview 应 no-op（_handles 已空）
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(() => cleanupPreview()).not.toThrow();
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
-// ──────────────────────────────────────────────────────────────────────
-// describe: switchExternal vs switchTo 路由契约
-// fix 历史反复出现「同源误走 switchExternal」「跨源误走 switchTo」。
-// 正确路由：同类型走 switchTo（会话内复用外壳），跨类型走 switchExternal
-// （关当前会话 + 开目标）。本组验证菜单 ctx 的路由接线。
-// ──────────────────────────────────────────────────────────────────────
+// switchExternal vs switchTo 路由契约：同类型走 switchTo（会话内复用外壳），
+// 跨类型走 switchExternal（关当前会话 + 开目标）。
 describe("switchExternal vs switchTo 路由契约", () => {
   it("switchTo 走会话内切换（复用外壳，调 adapter.build 第二次）", async () => {
     const content1 = makeContent();
@@ -601,9 +786,7 @@ describe("switchExternal vs switchTo 路由契约", () => {
     await mount3D(adapter, "/m/a.vrm", { rtype: "vrm" });
     // switchTo = 会话内切换：复用外壳，重建内容层
     await (h.menuOpts!.switchTo as (p: string) => Promise<void>)("/m/b.vrm");
-    // adapter.build 被调用两次（首次 mount + 会话内 switchTo）
     expect(adapter.build).toHaveBeenCalledTimes(2);
-    // 第二次 build 的 path 是新路径
     expect((adapter.build as ReturnType<typeof vi.fn>).mock.calls[1][1]).toBe("/m/b.vrm");
     // 注册表仍为 1（旧 m1 注销、新 m2 登记——switchTo 不创建新会话）
     expect(sceneRegistry.count()).toBe(1);
@@ -614,7 +797,6 @@ describe("switchExternal vs switchTo 路由契约", () => {
     const switchExternal = vi.fn(async () => {});
     const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => makeContent()) };
     await mount3D(adapter, "/m/a.vrm", { rtype: "vrm", switchExternal });
-    // switchExternal = 跨类型跳转：调 opts.switchExternal 回调（app 层 openModel3DFullscreen 注入）
     (h.menuOpts!.switchExternal as (p: string) => void)("/m/b.mmd");
     expect(switchExternal).toHaveBeenCalledWith("/m/b.mmd", undefined, undefined);
     cleanupPreview();
@@ -635,12 +817,7 @@ describe("switchExternal vs switchTo 路由契约", () => {
   });
 });
 
-// ──────────────────────────────────────────────────────────────────────
-// describe: switchToSession 并发抑制（inFlight）契约
-// fix 历史 r12 P1：连续点击触发重复 build，sceneRegistry 短暂不一致。
-// beginSwitch 置 inFlight=true，switchToSession 结束时 inFlight=false。
-// inFlight 期间再次调 switchTo 应被静默丢弃（beginSwitch 返回 false）。
-// ──────────────────────────────────────────────────────────────────────
+// switchToSession 并发抑制（inFlight）契约：连续点击触发重复 build 被静默丢弃
 describe("switchToSession 并发抑制（inFlight）契约", () => {
   it("切换进行中再次 switchTo：第二次被静默丢弃（adapter.build 不被第三次调用）", async () => {
     let resolveBuild1!: (v: PreviewScene) => void;
@@ -685,6 +862,42 @@ describe("switchToSession 并发抑制（inFlight）契约", () => {
     await (h.menuOpts!.switchTo as (p: string) => Promise<void>)("/m/good.vrm");
 
     expect(buildMock).toHaveBeenCalledTimes(3); // 首次 mount + 失败的 switchTo + 成功的 switchTo
+    cleanupPreview();
+  });
+});
+
+// ESC 关闭后再次 mount 的 canvas 重新挂载回归（用户报告：第一次进 3D 预览正常，
+// 第二次进 3D 预览空白/无反应。根因：fullCleanup 移除 viewContainer（含 canvas）但
+// 保留 _singletonRenderer；再次 mount3D 复用 renderer 时未把 canvas 重新挂载到新
+// viewContainer —— shared-infra buildSharedInfra 已含 parentNode 校验重挂载）
+describe("ESC 关闭后再次 mount（canvas 重新挂载回归）", () => {
+  it("fullCleanup 后再次 mount3D：renderer canvas 被重新挂载到新 viewContainer", async () => {
+    // 首次 mount：捕获 renderer.domElement（happy-dom 真实 canvas 元素）
+    const first = makeAdapter();
+    await mount3D(first, "/a.nbt");
+    const domEl = lastBuildCtx(first.build).renderer!.domElement;
+    expect(domEl).toBeDefined();
+    // 首次已挂载到 viewContainer（buildSharedInfra appendChild）
+    const firstParent = domEl.parentNode as HTMLElement | null;
+    expect(firstParent).not.toBeNull();
+    expect(firstParent!.className).toContain("preview-view-container");
+
+    // ESC 关闭 → fullCleanup：移除 viewContainer（含 canvas），canvas 脱离文档树
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    // canvas 的 parentNode 仍是已被摘除的 viewContainer 本身（非 null），
+    // 判定脱离标准是 isConnected=false（真实 DOM 语义）
+    expect(domEl.isConnected).toBe(false);
+
+    // 第二次 mount（用户再次进入 3D 预览）：canvas 必须重新挂载到新 viewContainer
+    // （shared-infra：domElement.parentNode !== viewContainer → appendChild 重挂）
+    const second = makeAdapter();
+    await mount3D(second, "/b.nbt");
+    const secondDom = lastBuildCtx(second.build).renderer!.domElement;
+    expect(secondDom).toBe(domEl); // 复用同一 renderer 单例（fullCleanup 保留 renderer）
+    expect(domEl.isConnected).toBe(true);
+    const reParent = domEl.parentNode as HTMLElement | null;
+    expect(reParent).not.toBeNull();
+    expect(reParent!.className).toContain("preview-view-container");
     cleanupPreview();
   });
 });

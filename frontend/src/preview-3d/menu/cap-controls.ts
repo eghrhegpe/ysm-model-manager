@@ -14,6 +14,69 @@ const tr = (key: string, fallback: string): string => {
   return v === key ? fallback : v;
 };
 
+let _capStylesInjected = false;
+/** P1 抽类迁移(2026-09):cap-controls 控件样式集中注入(幂等,renderCapControls 入口调用,
+ *  覆盖 env.ts 直调 ×3 与 render.ts:543 委托的全部路径,不依赖 renderMenu 曾运行)。
+ *  .cap-section-header/.cap-section-arrow 与 render.ts ensureMenuStyles 同值镜像(双源,
+ *  共享样式模块化时合并);cc-* 为本模块控件独有类(双类锚定压过 .slide-label/.setting-select)。 */
+function ensureCapStyles(): void {
+  if (_capStylesInjected) return;
+  const style = document.createElement("style");
+  style.textContent = `
+.cap-section {
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.cap-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  min-height: 32px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cap-section-arrow {
+  font-size: 10px;
+  display: inline-block;
+}
+.cc-row { display:flex;align-items:center;gap:8px;padding:6px 10px; }
+.cc-row-col { display:flex;flex-direction:column;gap:4px;padding:6px 10px; }
+.cc-row-plain { padding:6px 10px; }
+.cc-divider { height:1px;background:rgba(255,255,255,0.12);margin:4px 10px; }
+.cc-labelbox { flex:1;display:flex;align-items:center;gap:8px;min-width:0; }
+.slide-label.cc-label-xs { font-size:12px; }
+.slide-label.cc-label-grow { flex:1;font-size:13px; }
+.slide-label.cc-label-body { font-size:13px;color:rgba(255,255,255,0.85); }
+.slide-label.cc-label-dim { font-size:13px;color:rgba(255,255,255,0.7); }
+.cc-head { display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.7); }
+.cc-head-strong { display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.85); }
+.cc-hint { font-size:12px;color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.cc-hint-45 { max-width:45%; }
+.cc-range { width:100%;cursor:pointer;accent-color:var(--accent,#7c83ff); }
+.setting-select.cc-select { font-size:11px;padding:2px 4px; }
+.cc-img-block { width:100%;border-radius:6px;border:1px solid rgba(255,255,255,0.12);display:block; }
+.cc-canvas-fill { width:100%;height:100%;display:block; }
+.cc-canvas-auto { width:100%;height:auto;border-radius:6px;border:1px solid rgba(255,255,255,0.12);display:block; }
+.cc-picker { width:28px;height:20px;padding:0;border:1px solid rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;background:transparent; }
+.cc-band { position:relative;width:100%;border-radius:6px;overflow:hidden;cursor:pointer;touch-action:none; }
+.cc-marker { position:absolute;width:10px;height:10px;border-radius:50%;background:#fff4c2;border:1px solid rgba(0,0,0,0.3);box-shadow:0 0 6px rgba(255,244,194,0.8);transform:translate(-50%,-50%);pointer-events:none;transition:left 0.1s,top 0.1s; }
+.cc-grid { display:flex;gap:6px;flex-wrap:wrap; }
+.cc-thumb-btn { display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:2px solid rgba(255,255,255,0.12);border-radius:6px;cursor:pointer;padding:2px; }
+.cc-thumb-btn-active { border-color:var(--accent,#7c83ff);background:color-mix(in srgb,var(--accent) 15%,transparent); }
+.cc-thumb-img { object-fit:cover;display:block;border-radius:4px; }
+.cc-span-cap { font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px; }
+.cc-btn { padding:4px 10px;font-size:11px;border-radius:6px;cursor:pointer; }
+.cc-btn-primary { border:0;background:var(--accent,#7c83ff);color:#fff; }
+.cc-btn-ghost { border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85); }
+`;
+  document.head.appendChild(style);
+  _capStylesInjected = true;
+}
+
 /** 分组折叠的 section 壳：header 点击切换展开/收起 */
 interface CapSectionShell {
   section: HTMLElement;
@@ -33,19 +96,16 @@ function ensureCapSection(
   // 新分组：创建 section + header
   const section = document.createElement("div");
   section.className = "cap-section";
-  section.style.cssText = "border-top:1px solid rgba(255,255,255,0.08)";
   const header = document.createElement("div");
   header.className = "cap-section-header";
-  header.style.cssText = "display:flex;align-items:center;gap:6px;padding:8px 10px;min-height:32px;cursor:pointer;user-select:none;font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.5px";
   const arrow = document.createElement("span");
   arrow.textContent = "▾";
-  arrow.style.cssText = "font-size:10px;display:inline-block";
+  arrow.className = "cap-section-arrow";
   const title = document.createElement("span");
   title.textContent = tr(group, group);
   header.append(arrow, title);
   const body = document.createElement("div");
-  body.className = "cap-section-body";
-  body.style.cssText = "display:block";
+  body.className = "cap-section-body"; // display:block 为 div 默认值,冗余 cssText 已删(P1)
   let collapsed = false;
   header.onclick = (): void => {
     collapsed = !collapsed;
@@ -64,24 +124,22 @@ function ensureCapSection(
 function renderCapDivider(parent: HTMLElement, c: MenuControlDef): void {
   const hr = document.createElement("div");
   hr.dataset.testid = "cap-" + c.id;
-  hr.style.cssText = "height:1px;background:rgba(255,255,255,0.12);margin:4px 10px";
+  hr.className = "cc-divider";
   parent.appendChild(hr);
 }
 
 /** toggle：label + hint + 滑动开关 */
 function renderCapToggle(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
   const labelBox = document.createElement("div");
-  labelBox.style.cssText = "flex:1;display:flex;align-items:center;gap:8px;min-width:0";
+  labelBox.className = "cc-labelbox";
   const label = document.createElement("span");
-  label.className = "slide-label";
+  label.className = "slide-label cc-label-xs";
   label.textContent = tr(c.labelKey, c.fallback);
-  label.style.cssText = "font-size:12px";
   const hint = document.createElement("span");
-  hint.style.cssText = "font-size:12px;color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+  hint.className = "cc-hint";
   hint.textContent = c.hintKey ? tr(c.hintKey, "") : "";
   labelBox.append(label, hint);
   const toggle = createHeaderToggle({
@@ -109,11 +167,10 @@ export function formatCapSliderValue(c: MenuControlDef, v: number): string {
 /** slider：label + 当前值 + range 拖动 */
 function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row-col";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "display:flex;flex-direction:column;gap:4px;padding:6px 10px";
   const head = document.createElement("div");
-  head.style.cssText = "display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.7)";
+  head.className = "cc-head";
   const name = document.createElement("span");
   name.className = "slide-label";
   name.textContent = tr(c.labelKey, c.fallback);
@@ -127,7 +184,7 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
   slider.max = String(c.slider?.max ?? 1);
   slider.step = String(c.slider?.step ?? 0.01);
   slider.value = String(numVal);
-  slider.style.cssText = "width:100%;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+  slider.className = "cc-range";
   slider.oninput = (): void => {
     const v = Number(slider.value);
     c.setValue(v);
@@ -145,16 +202,13 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
 /** select：label + 下拉选择 */
 function renderCapSelect(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
   const label = document.createElement("span");
-  label.className = "slide-label";
+  label.className = "slide-label cc-label-grow";
   label.textContent = tr(c.labelKey, c.fallback);
-  label.style.cssText = "flex:1;font-size:13px";
   const sel = document.createElement("select");
-  sel.className = "setting-select";
-  sel.style.cssText = "font-size:11px;padding:2px 4px";
+  sel.className = "setting-select cc-select";
   for (const opt of c.select ?? []) {
     const o = document.createElement("option");
     o.value = opt.value;
@@ -170,23 +224,17 @@ function renderCapSelect(parent: HTMLElement, c: MenuControlDef): void {
 /** button：label + 按钮（primary/ghost）+ 动态 hint；点击动作异步禁用防重复触发，stopPropagation 护栏在虚拟层不适用 */
 function renderCapButton(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
   const label = document.createElement("span");
-  label.className = "slide-label";
+  label.className = "slide-label cc-label-grow";
   label.textContent = tr(c.labelKey, c.fallback);
-  label.style.cssText = "flex:1;font-size:13px";
   const btn = document.createElement("button");
   const variant = c.button?.variant ?? "ghost";
-  const accent = "var(--accent,#7c83ff)";
-  btn.style.cssText =
-    variant === "primary"
-      ? `padding:4px 10px;font-size:11px;border:0;border-radius:6px;cursor:pointer;background:${accent};color:#fff;`
-      : `padding:4px 10px;font-size:11px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;background:transparent;color:rgba(255,255,255,0.85);`;
+  btn.className = variant === "primary" ? "cc-btn cc-btn-primary" : "cc-btn cc-btn-ghost";
   btn.textContent = c.button?.textKey ? tr(c.button.textKey, c.fallback) : c.fallback;
   const hint = document.createElement("span");
-  hint.style.cssText = "font-size:12px;color:rgba(255,255,255,0.5);max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+  hint.className = "cc-hint cc-hint-45";
   const syncHint = (): void => {
     const v = c.button?.getHint ? c.button.getHint() : "";
     hint.textContent = v ?? (c.button?.hintKey ? tr(c.button.hintKey, "") : "");
@@ -218,13 +266,12 @@ function renderCapImage(parent: HTMLElement, c: MenuControlDef): void {
   const url = c.getValue() as string | null;
   if (!url) return; // 无内容时跳过（不占位）
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row-plain";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "padding:6px 10px";
   const img = document.createElement("img");
   img.src = url;
   img.alt = tr(c.labelKey, c.fallback);
-  img.style.cssText = "width:100%;border-radius:6px;border:1px solid rgba(255,255,255,0.12);display:block";
+  img.className = "cc-img-block";
   row.appendChild(img);
   parent.appendChild(row);
 }
@@ -232,13 +279,11 @@ function renderCapImage(parent: HTMLElement, c: MenuControlDef): void {
 /** color：label + 颜色选择器（number 0xRRGGBB ↔ "#rrggbb"） */
 function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
   const label = document.createElement("span");
-  label.className = "slide-label";
+  label.className = "slide-label cc-label-grow";
   label.textContent = tr(c.labelKey, c.fallback);
-  label.style.cssText = "flex:1;font-size:13px";
   const hex = c.getValue() as number;
   const toHexStr = (v: number): string => {
     const s = (v >>> 0).toString(16).padStart(6, "0").slice(-6);
@@ -247,7 +292,7 @@ function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
   const picker = document.createElement("input");
   picker.type = "color";
   picker.value = toHexStr(hex);
-  picker.style.cssText = "width:28px;height:20px;padding:0;border:1px solid rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;background:transparent";
+  picker.className = "cc-picker";
   picker.oninput = (): void => {
     const h = picker.value; // "#rrggbb"
     c.setValue(parseInt(h.slice(1), 16));
@@ -259,13 +304,12 @@ function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
 /** timeline：昼夜色带 + 太阳位置标记 + 可拖动调 timeOfDay（pointer events 支持触屏） */
 function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row-col";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "display:flex;flex-direction:column;gap:4px;padding:6px 10px";
 
   // 顶部：当前时间数字 + 标签
   const head = document.createElement("div");
-  head.style.cssText = "display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.85)";
+  head.className = "cc-head-strong";
   const name = document.createElement("span");
   name.className = "slide-label";
   name.textContent = tr(c.labelKey, c.fallback);
@@ -279,11 +323,12 @@ function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
   // 昼夜色带（0h 夜 → 6h 晨 → 12h 午 → 18h 暮 → 24h 夜）
   const bandH = 28;
   const band = document.createElement("div");
-  band.style.cssText = `position:relative;width:100%;height:${bandH}px;border-radius:6px;overflow:hidden;cursor:pointer;touch-action:none`;
+  band.className = "cc-band";
+  band.style.height = bandH + "px"; // 动态插值拆出(P1):静态走 cc-band 类,height 运行时赋值
   const canvas = document.createElement("canvas");
   canvas.width = 240;
   canvas.height = bandH;
-  canvas.style.cssText = "width:100%;height:100%;display:block";
+  canvas.className = "cc-canvas-fill";
   const cctx = canvas.getContext("2d");
   if (cctx) {
     // 简化昼夜渐变：黑→蓝→浅蓝→橙→深蓝→黑
@@ -302,7 +347,7 @@ function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
 
   // 太阳位置标记（顶部圆点，y 由 elevation 决定）
   const marker = document.createElement("div");
-  marker.style.cssText = "position:absolute;width:10px;height:10px;border-radius:50%;background:#fff4c2;border:1px solid rgba(0,0,0,0.3);box-shadow:0 0 6px rgba(255,244,194,0.8);transform:translate(-50%,-50%);pointer-events:none;transition:left 0.1s,top 0.1s";
+  marker.className = "cc-marker";
 
   const updateMarker = (hour: number): void => {
     const h = ((hour % 24) + 24) % 24;
@@ -353,21 +398,19 @@ function renderCapHistogram(parent: HTMLElement, c: MenuControlDef): void {
   const raw = c.getValue();
   const data = Array.isArray(raw) ? (raw as number[]) : [];
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row-col";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "display:flex;flex-direction:column;gap:4px;padding:6px 10px";
 
   const label = document.createElement("span");
-  label.className = "slide-label";
+  label.className = "slide-label cc-label-body";
   label.textContent = tr(c.labelKey, c.fallback);
-  label.style.cssText = "font-size:13px;color:rgba(255,255,255,0.85)";
   row.appendChild(label);
 
   const canvas = document.createElement("canvas");
   const W = 240, H = 48;
   canvas.width = W;
   canvas.height = H;
-  canvas.style.cssText = "width:100%;height:auto;border-radius:6px;border:1px solid rgba(255,255,255,0.12);display:block";
+  canvas.className = "cc-canvas-auto";
   const hctx = canvas.getContext("2d");
   if (hctx) {
     // 清背景
@@ -399,38 +442,34 @@ function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
   const thumb = c.thumb;
   if (!thumb) return;
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = "slide-item cc-row-col";
   row.dataset.testid = "cap-" + c.id;
-  row.style.cssText = "display:flex;flex-direction:column;gap:4px;padding:6px 10px";
   const label = document.createElement("span");
-  label.className = "slide-label";
+  label.className = "slide-label cc-label-dim";
   label.textContent = tr(c.labelKey, c.fallback);
-  label.style.cssText = "font-size:13px;color:rgba(255,255,255,0.7)";
   row.appendChild(label);
   const grid = document.createElement("div");
-  grid.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
+  grid.className = "cc-grid";
   const activeVal = thumb.activeValue();
   for (const opt of thumb.options) {
     const btn = document.createElement("button");
-    btn.style.cssText =
-      "display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:2px solid rgba(255,255,255,0.12);border-radius:6px;cursor:pointer;padding:2px";
+    btn.className = "cc-thumb-btn";
     const isActive = opt.value === activeVal;
-    if (isActive) {
-      btn.style.borderColor = "var(--accent,#7c83ff)";
-      btn.style.background = "color-mix(in srgb,var(--accent) 15%,transparent)";
-    }
+    if (isActive) btn.classList.add("cc-thumb-btn-active");
     const img = document.createElement("img");
     const dataUrl = opt.getThumb();
     img.src = dataUrl ?? "";
     img.alt = opt.label;
-    img.style.cssText = `width:${thumb.size}px;height:${Math.max(1, Math.floor(thumb.size / 2))}px;object-fit:cover;display:block;border-radius:4px`;
+    img.className = "cc-thumb-img"; // 尺寸动态(P1 豁免)拆内联:width/height 运行时赋值
+    img.style.width = thumb.size + "px";
+    img.style.height = Math.max(1, Math.floor(thumb.size / 2)) + "px";
     if (!dataUrl) {
       // placeholder
       img.style.background = "rgba(255,255,255,0.08)";
       img.style.minWidth = `${thumb.size}px`;
     }
     const span = document.createElement("span");
-    span.style.cssText = "font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px";
+    span.className = "cc-span-cap";
     span.textContent = opt.label;
     btn.append(img, span);
     btn.onclick = (e: MouseEvent): void => {
@@ -463,6 +502,7 @@ export function renderCapControls(
   controls: MenuControlDef[],
   snapshot?: PreviewSnapshot,
 ): void {
+  ensureCapStyles();
   // 分组折叠 sectionMap 贯穿全循环：同一 group 的控件归入同一可折叠 section，header 点击切换展开/收起。
   // kind 分派：divider 无 group 挂顶层作组间分隔；其余控件挂 (target ?? list)（有 group 挂 body，无 group 挂顶层）。签名不可动，本函数只做纯分派。
   const sectionMap = new Map<string, CapSectionShell>();

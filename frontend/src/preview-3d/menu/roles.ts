@@ -35,6 +35,54 @@ export function roleBaseName(e: ModelEntry): string {
   return dot > 0 ? base.slice(0, dot) : base;
 }
 
+// P1 批次3：角色面板内联 cssText → 集中类（fr- 前缀本文件私有，ensureRolesStyles
+// 幂等注入——modelDetailView/motionDetailView/fillRoles 三个入口各调一次，覆盖全部渲染路径）
+let _rolesStylesInjected = false;
+function ensureRolesStyles(): void {
+  if (_rolesStylesInjected) return;
+  const style = document.createElement("style");
+  style.textContent = `
+/* 角色面板集中样式（P1 批次3：cssText→类）。高亮单一源 .fr-row-active：角色 active 与
+   组件当前行共用，派生 --accent（刀② 收编后禁回硬编码 rgba）。 */
+.fr-role-row, .fr-comp-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.fr-role-row { padding: 6px 8px; font-size: 13px; }
+.fr-comp-row { padding: 6px 10px; font-size: 12px; }
+.fr-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.fr-empty-note { padding: 8px 10px; color: rgba(255,255,255,0.5); font-size: 12px; }
+.fr-error-note { padding: 8px 10px; color: #ff7b7b; font-size: 12px; }
+.fr-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 6px 10px; }
+.fr-scroll-box { max-height: 220px; overflow-y: auto; }
+.fr-name-ellipsis { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-focus-btn {
+  width: 18px; height: 18px; flex-shrink: 0; background: transparent; border: none;
+  cursor: pointer; font-size: 14px; line-height: 1; color: rgba(255,255,255,0.5);
+}
+.fr-row-active .fr-focus-btn { color: var(--accent); }
+.fr-tools-btn {
+  width: 22px; height: 22px; flex-shrink: 0; background: rgba(255,255,255,0.08);
+  border: none; border-radius: 4px; cursor: pointer; font-size: 13px; line-height: 1;
+}
+.fr-comp-add-btn {
+  width: 20px; height: 20px; flex-shrink: 0; background: rgba(255,255,255,0.08);
+  border: none; border-radius: 4px; cursor: pointer; font-size: 11px; line-height: 1;
+}
+.fr-unload-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
+  cursor: pointer; font-size: 13px; color: #ff7b7b;
+}
+.fr-section-title { padding: 6px 10px 2px; color: rgba(255,255,255,0.5); font-size: 11px; }
+.fr-comp-mark { width: 14px; flex-shrink: 0; text-align: center; }
+`;
+  document.head.appendChild(style);
+  _rolesStylesInjected = true;
+}
+
 // ── 模型详情（🧍 模型 dock 入口）──
 // 模型信息面板本体直渲（统计/纹理）+ 工具行（截图/材质）——纯模型上下文，无动作项
 export function modelDetailView(
@@ -48,6 +96,7 @@ export function modelDetailView(
     switchTo: (path: string, options?: { keepInScene?: boolean }) => Promise<void> | void;
   },
 ): SlideMenuView {
+  ensureRolesStyles();
   const panelDeps = {
     makeRow: deps.makeRow,
     makePanelView: deps.makePanelView,
@@ -71,7 +120,7 @@ export function modelDetailView(
         if (modelItems.length === 0) {
           if (!hadComponents) {
             const empty = document.createElement("div");
-            empty.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+            empty.className = "fr-empty-note";
             empty.textContent = tr("preview.roleNoDetail", "（该角色无可查看项）");
             l.appendChild(empty);
           }
@@ -95,13 +144,13 @@ export function modelDetailView(
             if (handled) {
               l.appendChild(infoHost);
               const sep = document.createElement("div");
-              sep.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
+              sep.className = "fr-divider";
               l.appendChild(sep);
             }
           } catch (err) {
             console.error("[preview-menu] 模型信息面板渲染失败", primary.id, err);
             const errRow = document.createElement("div");
-            errRow.style.cssText = "padding:8px 10px;color:#ff7b7b;font-size:12px";
+            errRow.className = "fr-error-note";
             errRow.textContent = `${tr("preview.renderFail", "Panel render failed")}: ${safeErrorMessage(err)}`;
             l.appendChild(errRow);
           }
@@ -138,6 +187,7 @@ export function motionDetailView(
     actionCtx: PreviewActionMenuCtx;
   },
 ): SlideMenuView {
+  ensureRolesStyles();
   const motionItems = (e.menuItems ?? []).filter((d) => d.kind === "panel" && d.dockGroup === "motion");
   return {
     title: roleBaseName(e),
@@ -145,7 +195,7 @@ export function motionDetailView(
       l.innerHTML = "";
       if (motionItems.length === 0) {
         const empty = document.createElement("div");
-        empty.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+        empty.className = "fr-empty-note";
         empty.textContent = tr("preview.roleNoMotion", "（该角色无可播放动作）");
         l.appendChild(empty);
         return;
@@ -173,13 +223,13 @@ interface FrToolsDeps {
 function frBuildRolesBox(): HTMLDivElement {
   const rolesBox = document.createElement("div");
   rolesBox.dataset.testid = "preview-roles-list";
-  rolesBox.style.cssText = "max-height:220px;overflow-y:auto";
+  rolesBox.className = "fr-scroll-box";
   return rolesBox;
 }
 
 function frAppendSeparator(list: HTMLElement): void {
   const sep = document.createElement("div");
-  sep.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
+  sep.className = "fr-divider";
   list.appendChild(sep);
 }
 
@@ -195,7 +245,7 @@ function frRenderRoles(
   if (entries.length === 0) {
     const empty = document.createElement("div");
     empty.dataset.testid = "preview-roles-empty";
-    empty.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+    empty.className = "fr-empty-note";
     empty.textContent = tr("preview.noRoles", "（无已加载角色）");
     rolesBox.appendChild(empty);
     return;
@@ -206,15 +256,12 @@ function frRenderRoles(
   }
 }
 
-/**
- * 角色行 cssText（刀②收编：激活高亮从硬编码 rgba(124,131,255) 改为 --accent 派生）。
- * 纯函数便于测试直断字符串——happy-dom 的 CSS 解析器不认 color-mix()，DOM 级断言会丢声明。
- */
-export function frRoleRowStyle(isActive: boolean): string {
-  return (
-    "display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px" +
-    (isActive ? ";background:color-mix(in srgb,var(--accent) 25%,transparent)" : "")
-  );
+/** 角色行类 token（P1 批次3：cssText → 类后原样式串缝转为类 token 缝；样式本体在
+ *  ensureRolesStyles 注入的 .fr-role-row/.fr-row-active，见 roles.ts 顶部样式块）。
+ *  纯函数便于测试直断——happy-dom 计算样式读 color-mix() 丢声明（与 WebView2 不一致），
+ *  测试断「类 token + 注入样式表原文」两级（roles.test.ts）。 */
+export function frRoleRowClass(isActive: boolean): string {
+  return "fr-role-row" + (isActive ? " fr-row-active" : "");
 }
 
 function frBuildRoleRow(
@@ -228,7 +275,7 @@ function frBuildRoleRow(
   const row = document.createElement("div");
   row.dataset.testid = "preview-role-row";
   row.dataset.roleId = e.id;
-  row.style.cssText = frRoleRowStyle(isActive);
+  row.className = frRoleRowClass(isActive);
   const radio = frBuildFocusRadio(e, isActive, deps.setAdapterItems, reRender);
   const name = frBuildRoleName(e);
   row.onclick = (): void => {
@@ -249,9 +296,7 @@ function frBuildFocusRadio(
   radio.dataset.testid = "preview-role-focus";
   radio.textContent = isActive ? "●" : "○";
   attachTooltip(radio, () => tr("preview.roleFocus", "设为焦点"));
-  radio.style.cssText =
-    "width:18px;height:18px;flex-shrink:0;background:transparent;border:none;cursor:pointer;font-size:14px;line-height:1" +
-    (isActive ? ";color:var(--accent)" : ";color:rgba(255,255,255,0.5)");
+  radio.className = "fr-focus-btn";
   radio.onclick = (ev): void => {
     ev.stopPropagation();
     sceneRegistry.setActive(e.id);
@@ -268,7 +313,7 @@ function frBuildRoleName(e: ModelEntry): HTMLSpanElement {
   name.dataset.testid = "preview-role-name";
   name.textContent = roleBaseName(e);
   attachTooltip(name, e.path);
-  name.style.cssText = "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+  name.className = "fr-name-ellipsis";
   return name;
 }
 
@@ -277,8 +322,7 @@ function frBuildRoleToolsBtn(e: ModelEntry, toolsDeps: FrToolsDeps, menu: SlideM
   tools.dataset.testid = "preview-role-tools";
   tools.textContent = "⚙";
   attachTooltip(tools, () => tr("preview.roleTools", "模型工具"));
-  tools.style.cssText =
-    "width:22px;height:22px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;border-radius:4px;cursor:pointer;font-size:13px;line-height:1";
+  tools.className = "fr-tools-btn";
   tools.onclick = (ev): void => {
     ev.stopPropagation();
     menu.navigate(frBuildToolsView(e, toolsDeps));
@@ -297,8 +341,7 @@ function frBuildToolsView(e: ModelEntry, deps: FrToolsDeps): SlideMenuView {
       const unload = document.createElement("div");
       unload.dataset.testid = "preview-role-unload";
       unload.textContent = "🗑 " + tr("preview.unloadModel", "卸载模型");
-      unload.style.cssText =
-        "display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#ff7b7b";
+      unload.className = "fr-unload-row";
       unload.onclick = (): void => {
         deps.unloadModel(e.id);
         deps.closePopup();
@@ -318,6 +361,7 @@ export function fillRoles(
   setAdapterItems: (items: PreviewMenuNode[]) => void,
   onSelectRole: (e: ModelEntry) => SlideMenuView,
 ): void {
+  ensureRolesStyles();
   const actionCtx: PreviewActionMenuCtx = {
     toast: ctx.toast,
     closeAllOverlays: ctx.closeAllOverlays,
@@ -371,26 +415,24 @@ function renderComponentsSection(
   const title = document.createElement("div");
   title.dataset.testid = "preview-components-title";
   title.textContent = `${tr("preview.component", "组件")}（${components.length}）`;
-  title.style.cssText = "padding:6px 10px 2px;color:rgba(255,255,255,0.5);font-size:11px";
+  title.className = "fr-section-title";
   container.appendChild(title);
 
   const box = document.createElement("div");
   box.dataset.testid = "preview-components-list";
-  box.style.cssText = "max-height:220px;overflow-y:auto";
+  box.className = "fr-scroll-box";
   const curNorm = (entry.path ?? "").replace(/\\/g, "/").toLowerCase();
   for (const p of components) {
     const isCur = p.replace(/\\/g, "/").toLowerCase() === curNorm;
     const row = document.createElement("div");
     row.dataset.testid = "preview-component-row";
     row.dataset.componentPath = p;
-    row.style.cssText =
-      "display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px" +
-      (isCur ? ";background:color-mix(in srgb,var(--accent) 25%,transparent)" : "");
+    row.className = "fr-comp-row" + (isCur ? " fr-row-active" : "");
     const mark = document.createElement("span");
-    mark.style.cssText = "width:14px;flex-shrink:0;text-align:center";
+    mark.className = "fr-comp-mark";
     mark.textContent = isCur ? "✓" : "🧩";
     const name = document.createElement("span");
-    name.style.cssText = "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+    name.className = "fr-name-ellipsis";
     name.textContent = p.split(/[/\\]/).pop() || p;
     attachTooltip(name, p);
     row.append(mark, name);
@@ -399,8 +441,7 @@ function renderComponentsSection(
       append.dataset.testid = "preview-component-append";
       append.textContent = "➕";
       attachTooltip(append, () => tr("preview.appendModel", "追加到场景"));
-      append.style.cssText =
-        "width:20px;height:20px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;border-radius:4px;cursor:pointer;font-size:11px;line-height:1";
+      append.className = "fr-comp-add-btn";
       append.onclick = (ev): void => {
         ev.stopPropagation();
         runSwitch(p, true);

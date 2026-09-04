@@ -95,7 +95,7 @@ export const zhCN = {
   "dialog.reading": "读取中…",
   "dialog.readFailed": "读取失败，文件可能不是有效 YSM",
   "dialog.authorCharaRequired": "作者、角色名不能为空",
-  "dialog.fileNameIllegal": "文件名不能包含 < > : \" / \\ | ? * 等字符",
+  "dialog.fileNameIllegal": '文件名不能包含 < > : " / \\ | ? * 等字符',
   "dialog.fileNameTooLong": "文件名过长，请精简",
   "dialog.cancelEsc": "取消 (Esc)",
   "dialog.ok": "确定",
@@ -148,7 +148,8 @@ export const zhCN = {
   "settings.basic": "基础设置",
   "settings.appearance": "界面与体验",
   "settings.parser": "解析",
-  "settings.parserDesc": "3D 模型解析引擎设置。两种格式默认走主线程解析（稳定基线）；开启 worker 后解析移入 Web Worker，异常时自动回退主线程，也可随时在此手动关闭。",
+  "settings.parserDesc":
+    "3D 模型解析引擎设置。两种格式默认走主线程解析（稳定基线）；开启 worker 后解析移入 Web Worker，异常时自动回退主线程，也可随时在此手动关闭。",
   "settings.about": "关于",
   "settings.credits": "鸣谢",
   "settings.language": "语言",
@@ -178,7 +179,8 @@ export const zhCN = {
   "settings.storage.expand": "展开",
   "settings.storage.desc": "所有资源文件统一存放于此，按类型分子目录",
   "settings.webRepo.title": "网页版文件来源",
-  "settings.webRepo.desc": "网页版无本地文件系统，授权一个本地目录后，其下 .ysm 模型会导入到内置模型库（IndexedDB）作为文件来源。",
+  "settings.webRepo.desc":
+    "网页版无本地文件系统，授权一个本地目录后，其下 .ysm 模型会导入到内置模型库（IndexedDB）作为文件来源。",
   "settings.webRepo.authorize": "授权本地仓库目录",
   // 设置页动作 toast（app-content/settings）
   "settings.mirror.switched": "✅ 下载源已切换为 {name}",
@@ -262,7 +264,8 @@ export const zhCN = {
   "settings.defaultPageHint": "启动程序时自动打开的页面。",
   "settings.preview3d.title": "3D 预览操作",
   "settings.preview3d.camSpeed": "相机移动速度",
-  "settings.preview3d.camSpeedHint": "自由相机（自身模式）下 WASD 移动的快慢，与 3D 预览内滑块同步。",
+  "settings.preview3d.camSpeedHint":
+    "自由相机（自身模式）下 WASD 移动的快慢，与 3D 预览内滑块同步。",
   "settings.preview3d.rotMode": "默认旋转模式",
   "settings.preview3d.orbit": "环绕模型",
   "settings.preview3d.free": "自由相机",
@@ -272,11 +275,14 @@ export const zhCN = {
   "settings.preview3d.resetKeys": "恢复默认键位",
   "settings.preview3d.workerCheck": "启用 worker",
   "settings.preview3d.fbxWorker": "FBX worker 解析",
-  "settings.preview3d.fbxWorkerHint": "开启后 FBX 解析走 Web Worker，异常时自动回退主线程；关闭则始终主线程解析（默认）。",
+  "settings.preview3d.fbxWorkerHint":
+    "开启后 FBX 解析走 Web Worker，异常时自动回退主线程；关闭则始终主线程解析（默认）。",
   "settings.preview3d.frustumCull": "视锥裁剪",
-  "settings.preview3d.frustumCullHint": "多模型同框时按视锥剔除镜头外模型（省渲染性能）；剔除失误误藏模型时可关闭，关闭后所有模型始终可见。",
+  "settings.preview3d.frustumCullHint":
+    "多模型同框时按视锥剔除镜头外模型（省渲染性能）；剔除失误误藏模型时可关闭，关闭后所有模型始终可见。",
   "settings.preview3d.mmdWorker": "MMD PMX worker 解析",
-  "settings.preview3d.mmdWorkerHint": "开启后 PMX 二进制解析走 Worker（实验态）；关闭则走官方 MMDLoader 完整加载（默认）。",
+  "settings.preview3d.mmdWorkerHint":
+    "开启后 PMX 二进制解析走 Worker（实验态）；关闭则走官方 MMDLoader 完整加载（默认）。",
 
   // ── 导入页 ──
   "import.mmdSubdir": "MMD 用途子目录",
@@ -291,7 +297,7 @@ export const zhCN = {
   "import.queue": "队列",
   "import.imported": "已导入",
   "import.dropHint": "拖拽模型文件 … 或文件夹到此处，或点击选择文件",
-    "import.dropHint2": "放开以导入模型",
+  "import.dropHint2": "放开以导入模型",
   "import.supportedFiles": "支持",
   "import.files": "文件",
   "import.noModelDetected": "⛔ 未检测到模型文件",
@@ -312,7 +318,8 @@ export const zhCN = {
   "import.previewTempFailed": "预览临时文件保存失败：{err}",
   "import.headerReadFailed": "无法读取头部信息",
   "import.readDropFailed": "读取拖入文件失败",
-  "import.ysmJsonHint": "ysm.json 是模型清单，请拖入整个模型文件夹（含 geometry/动画/纹理，将整组导入）",
+  "import.ysmJsonHint":
+    "ysm.json 是模型清单，请拖入整个模型文件夹（含 geometry/动画/纹理，将整组导入）",
   "import.emptyFolder": "文件夹内没有可读取的文件",
   "import.emptyFile": "文件为空，已跳过",
   "import.alreadyExists": "已存在，请重命名文件夹后再导入",
@@ -445,7 +452,8 @@ export const zhCN = {
   "about.openReleases": "打开 GitHub Releases",
   "about.features": "这是什么？",
   "about.appName": "YSM 模型管理器",
-  "about.intro": "是一款面向 Minecraft YSM 模组的模型管理工具，帮你像 Steam 创意工坊一样管理你的模型收藏。",
+  "about.intro":
+    "是一款面向 Minecraft YSM 模组的模型管理工具，帮你像 Steam 创意工坊一样管理你的模型收藏。",
   "about.f1": "拖拽导入 .ysm / .zip 模型文件",
   "about.f2": "按作者、角色、作品智能归类",
   "about.f3": "2D/3D 模型预览，不必进游戏确认",
@@ -496,8 +504,10 @@ export const zhCN = {
   "credits.parseDesc": "跨平台 YSM 二进制格式解码能力（WASM 内嵌）",
   "credits.repo": "仓库管理",
   "credits.repoDesc": "硬链接安装、回收站、按实例管理的设计理念来源",
-  "credits.zuogeren1Contribute": "贡献了 PrismLauncher 实例布局支持、大实例数性能优化、社区索引及创意工坊多项修复",
-  "credits.jiangkaslanaContribute": "贡献了 Rust 扫描器热路径下沉与批量 YSM 渲染（PR #13）、跨渲染路径组件纹理对齐（PR #16）",
+  "credits.zuogeren1Contribute":
+    "贡献了 PrismLauncher 实例布局支持、大实例数性能优化、社区索引及创意工坊多项修复",
+  "credits.jiangkaslanaContribute":
+    "贡献了 Rust 扫描器热路径下沉与批量 YSM 渲染（PR #13）、跨渲染路径组件纹理对齐（PR #16）",
   "credits.special": "特别鸣谢",
 
   // ── 主内容区 ──
@@ -533,7 +543,8 @@ export const zhCN = {
   "content.errLoad": "❌ 加载失败",
   "content.btnFailed": "❌ 失败",
   "content.backArrow": "← 返回",
-  "content.toastRepoTimeout": "⏱️ {repo} 链接超时（raw.githubusercontent.com 可能被屏蔽），已在浏览器中打开仓库",
+  "content.toastRepoTimeout":
+    "⏱️ {repo} 链接超时（raw.githubusercontent.com 可能被屏蔽），已在浏览器中打开仓库",
   "content.toastRepoNoIndex": "📦 {repo} 没有 index.json，已在浏览器中打开仓库",
   "content.dragJsonOnly": "❌ 请拖拽 .json 文件",
   "content.dropZoneHint": "拖拽 JSON 文件到此处，导入创作者/站点配置",
@@ -711,7 +722,8 @@ export const zhCN = {
   "syncManager.scanRootsTitle": "同步目录",
   "syncManager.scanGlobal": "仓库基准：{dir}",
   "syncManager.scanInstance": "实例扫描：{dir}",
-  "syncManager.scanDirWide": "⚠️ {label} 仓库基准目录 {dir} 疑似过宽（含 mods/config/schematics 等子目录），同步可能混入其他资源；建议将专属根指向专门的 {subDir} 子目录",
+  "syncManager.scanDirWide":
+    "⚠️ {label} 仓库基准目录 {dir} 疑似过宽（含 mods/config/schematics 等子目录），同步可能混入其他资源；建议将专属根指向专门的 {subDir} 子目录",
   // P0 修复：右键菜单 rtype 守卫 toast（i18n 合规）
   "ctx.emptyRtype": "❌ 整合包缺少类型信息，右键操作已禁用",
   "ctx.missingPath": "❌ 整合包目录未找到",
@@ -787,7 +799,8 @@ export const zhCN = {
   "inst.exportListCopied": "📋 已复制 {n} 个文件清单到剪贴板",
   "inst.nothingToClear": "该整合包没有可清空的资源文件",
   "inst.clearTitle": "清空整合包",
-  "inst.clearMessage": "清空 {name}\n扫描到 {n} 个资源文件将被清空（走回收站，可恢复）。\n类型：{type}\n未入库的文件保留不动。确定继续吗？",
+  "inst.clearMessage":
+    "清空 {name}\n扫描到 {n} 个资源文件将被清空（走回收站，可恢复）。\n类型：{type}\n未入库的文件保留不动。确定继续吗？",
   "inst.clearOk": "🗑️ 清空",
   "inst.cancelled": "已取消",
   "inst.cleared": "🗑️ {name}: 已清空 {n} 个文件（移入回收站）",
@@ -862,7 +875,8 @@ export const zhCN = {
   "diagnostics.conflictTypeContent": "内容修改冲突",
   "diagnostics.conflictTypeBoth": "双端新增冲突",
   "diagnostics.healthTitle": "仓库健康审计",
-  "diagnostics.healthHint": "静态健康审计：完整性、缓存、资源、去重（不含加载耗时；与 CLI health-report 同源）",
+  "diagnostics.healthHint":
+    "静态健康审计：完整性、缓存、资源、去重（不含加载耗时；与 CLI health-report 同源）",
   "diagnostics.healthRun": "开始体检",
   "diagnostics.healthScanning": "正在体检仓库…",
   "diagnostics.healthParseFailed": "体检结果解析失败",
@@ -884,8 +898,10 @@ export const zhCN = {
   // ── 创作者频道 ──
   "community.fromLocal": "来自本地仓库",
   "community.downloadQueue.remain": "剩余 {n}",
-  "community.downloadQueue.webDlFailed": "⚠️ {imported} 个已入模型库，{fallback} 个走浏览器直链保存，{failed} 个失败",
-  "community.downloadQueue.webDlFallback": "✅ {imported} 个已入模型库，{fallback} 个走浏览器直链保存",
+  "community.downloadQueue.webDlFailed":
+    "⚠️ {imported} 个已入模型库，{fallback} 个走浏览器直链保存，{failed} 个失败",
+  "community.downloadQueue.webDlFallback":
+    "✅ {imported} 个已入模型库，{fallback} 个走浏览器直链保存",
   "community.downloadQueue.webDlOk": "✅ {imported} 个模型已导入浏览器模型库",
   "gh.leftHead": "仓库",
   "gh.sourceInfo": "仓库",
@@ -951,7 +967,8 @@ export const zhCN = {
   "settings.mc.pickerDesc": "扫描到多个游戏目录，请选择要使用的：",
   "settings.mc.pickerCancel": "取消",
   "settings.mc.scanScope": "🔍 扫描范围",
-  "settings.mc.scanScopeDesc": "C 盘 ~ Z 盘 · 根目录 .minecraft / 各启动器目录<br>ProgramFiles · Games · 用户配置目录 · EXE 同目录",
+  "settings.mc.scanScopeDesc":
+    "C 盘 ~ Z 盘 · 根目录 .minecraft / 各启动器目录<br>ProgramFiles · Games · 用户配置目录 · EXE 同目录",
   "settings.mc.notFound": "未找到已存在的游戏目录",
   "settings.mc.notFoundHint": "💡 如果装了启动器但没扫到，可能是非常规路径，请手动选择",
   "settings.mc.found": "✅ 找到 {n} 个",
@@ -1107,18 +1124,17 @@ export const zhCN = {
   "preview.resetView": "重置视角",
   "preview.cameraRotation": "摄像机旋转",
   "preview.cameraSpeed": "摄像机速度",
-  
 
-   "preview.spotlight": "顶光",
-   "preview.keyIntensity": "主光强度",
-   "preview.ambientIntensity": "环境光强度",
-   "preview.volumetric": "体积光",
-   "preview.volumetricCone": "体积光锥",
-   "preview.coneAngle": "锥角",
-   "preview.lightPreset": "灯光预设",
-   "preview.volumetricEngine": "锥引擎",
-   "preview.lighting": "灯光",
-   "preview.cameraView": "摄像机视图",
+  "preview.spotlight": "顶光",
+  "preview.keyIntensity": "主光强度",
+  "preview.ambientIntensity": "环境光强度",
+  "preview.volumetric": "体积光",
+  "preview.volumetricCone": "体积光锥",
+  "preview.coneAngle": "锥角",
+  "preview.lightPreset": "灯光预设",
+  "preview.volumetricEngine": "锥引擎",
+  "preview.lighting": "灯光",
+  "preview.cameraView": "摄像机视图",
   "preview.environment": "环境",
   "preview.environmentDesc": "环境贴图：程序化天空/工作室等预设光照或自定义 HDR",
   "preview.envPreset": "环境预设",
@@ -1226,7 +1242,8 @@ export const zhCN = {
   "preview.shadow": "阴影",
   "preview.shadowType": "阴影类型",
   "preview.shadowMapSize": "阴影精度",
-  "preview.shadowMapSizeDesc": "越高越清晰，GPU 开销越大（512 省电 / 1024 均衡 / 2048 精细 / 4096 电影级）",
+  "preview.shadowMapSizeDesc":
+    "越高越清晰，GPU 开销越大（512 省电 / 1024 均衡 / 2048 精细 / 4096 电影级）",
   "preview.shadowRange": "阴影范围",
   "preview.shadowDesc": "阴影：复用灯光面板的方向灯/聚光灯投射，开关后实时生效",
   "preview.shadowEnabled": "启用阴影",
@@ -1244,7 +1261,7 @@ export const zhCN = {
   "preview.groundGroupWater": "水面",
   "preview.waterFilmDensity": "水膜浓度",
   "preview.groundWaterColor": "水色",
-  
+
   "preview.groundNormalStrength": "法线强度",
   "preview.groundGroupMaterial": "表面材质",
   "preview.groundMatSource": "表面材质",
@@ -1367,7 +1384,6 @@ export const zhCN = {
   "preview.sceneModel": "场景",
   "preview.stageAnim": "舞台",
 
-
   // ── 性能诊断（perf-cli）──
   "perf.copyRaw": "复制原始输出到剪贴板",
   "perf.copy": "复制",
@@ -1443,8 +1459,8 @@ export const zhCN = {
   "tree.repoConfigTitle": "配置仓库目录",
   "tree.repoNotSet": "📁 未设置",
   "tree.authorsEmpty": "暂无作者",
-  "tree.treeLoadFailed": "<div class=\"empty\"><div class=\"big\">⚠️</div>加载失败</div>",
-  "tree.scanning": "<div class=\"empty\"><div class=\"big\">⏳</div><div>扫描中...</div></div>",
+  "tree.treeLoadFailed": '<div class="empty"><div class="big">⚠️</div>加载失败</div>',
+  "tree.scanning": '<div class="empty"><div class="big">⏳</div><div>扫描中...</div></div>',
   "tree.dropHint": "拖入模型文件快速导入",
   "tree.fileList": "模型文件列表",
 
@@ -1493,7 +1509,7 @@ export const zhCN = {
   "app.managerSuffix": "管理器",
 
   // ── 导入队列 ──
-        // ── 下载页 ──
+  // ── 下载页 ──
   "downloads.readAuthor": "读取作者",
   "downloads.today": "当天",
   "downloads.fileCount": "{n} 个文件",

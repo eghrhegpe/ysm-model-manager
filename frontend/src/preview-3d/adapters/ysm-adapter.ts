@@ -278,9 +278,7 @@ function mdYsSetupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCam
 }
 
 /** 子辅助：磁盘扫描 .animation.json / .animation_controllers.json（阶段③内提纯） */
-async function mdYsScanAnimFiles(
-  sc: MdYsSceneCtx,
-): Promise<{
+async function mdYsScanAnimFiles(sc: MdYsSceneCtx): Promise<{
   clips: Array<{ label: string; clip: AnimationClip }>;
   controllers: AnimationController[];
 }> {

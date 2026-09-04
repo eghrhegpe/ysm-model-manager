@@ -90,7 +90,7 @@ export const en: Record<string, string> = {
   "dialog.reading": "Reading…",
   "dialog.readFailed": "Read failed, file may not be a valid YSM",
   "dialog.authorCharaRequired": "Author and character name cannot be empty",
-  "dialog.fileNameIllegal": "File name cannot contain < > : \" / \\ | ? * or similar characters",
+  "dialog.fileNameIllegal": 'File name cannot contain < > : " / \\ | ? * or similar characters',
   "dialog.fileNameTooLong": "File name too long, please shorten it",
   "dialog.cancelEsc": "Cancel (Esc)",
   "dialog.ok": "OK",
@@ -143,7 +143,8 @@ export const en: Record<string, string> = {
   "settings.basic": "General",
   "settings.appearance": "Appearance & Experience",
   "settings.parser": "Parsing",
-  "settings.parserDesc": "3D model parsing engine settings. Both formats parse on the main thread by default (stable baseline); when enabled, parsing moves into a Web Worker with automatic fallback to the main thread on errors, and you can disable it manually here anytime.",
+  "settings.parserDesc":
+    "3D model parsing engine settings. Both formats parse on the main thread by default (stable baseline); when enabled, parsing moves into a Web Worker with automatic fallback to the main thread on errors, and you can disable it manually here anytime.",
   "settings.about": "About",
   "settings.credits": "Credits",
   "settings.language": "Language",
@@ -158,7 +159,8 @@ export const en: Record<string, string> = {
   "settings.links.reapply": "Reapply",
   "settings.links.copy": "Copy",
   "settings.links.copyHint": "Each modpack uses its own disk space; most compatible",
-  "settings.links.hardlinkHint": "✅ Recommended: saves disk space, supports toggling models live\n📌 Requires same partition as the game",
+  "settings.links.hardlinkHint":
+    "✅ Recommended: saves disk space, supports toggling models live\n📌 Requires same partition as the game",
   "settings.links.symlinkHint": "❌ Not recommended: files hang when permissions are insufficient",
   "settings.links.hardlink": "Hard Link",
   "settings.links.symlink": "Symbolic Link",
@@ -167,13 +169,16 @@ export const en: Record<string, string> = {
   "settings.mirror.jsdelivrOption": "jsDelivr CDN (faster in China)",
   "settings.mirror.directHint": "Download directly from GitHub; may be slow on some networks",
   "settings.mirror.jsdelivrHint": "Faster in China, ~12h cache",
-  "settings.mirror.githubapiHint": "60 unauthenticated requests/hour, good for occasional downloads",
+  "settings.mirror.githubapiHint":
+    "60 unauthenticated requests/hour, good for occasional downloads",
   "settings.path.customHint": "Independent path per type (blank uses the unified storage path)",
   "settings.storage.title": "File Storage Path",
   "settings.storage.expand": "Expand",
-  "settings.storage.desc": "All resource files are stored here, organized into subdirectories by type",
+  "settings.storage.desc":
+    "All resource files are stored here, organized into subdirectories by type",
   "settings.webRepo.title": "Web File Source",
-  "settings.webRepo.desc": "Web mode has no local filesystem. Authorize a local folder and its .ysm models are imported into the built-in model library (IndexedDB) as the file source.",
+  "settings.webRepo.desc":
+    "Web mode has no local filesystem. Authorize a local folder and its .ysm models are imported into the built-in model library (IndexedDB) as the file source.",
   "settings.webRepo.authorize": "Authorize local repo folder",
   // settings page action toasts (app-content/settings)
   "settings.mirror.switched": "✅ Download source switched to {name}",
@@ -187,7 +192,7 @@ export const en: Record<string, string> = {
   "settings.relinkDonePartial": "🔄 Relinked {total} files ({failed} failed)",
   "settings.linkModeSwitched": "✅ Link mode switched to: {val}",
   "settings.keymap.pressKey": "Press key…",
-  "settings.keymap.conflict": "⚠️ {key} is already used by \"{label}\"",
+  "settings.keymap.conflict": '⚠️ {key} is already used by "{label}"',
   "settings.keymap.bound": "✅ {label} → {key}",
   "settings.keymap.resetDone": "↩️ Default keys restored",
   "settings.keymap.keySpace": "Space",
@@ -210,11 +215,13 @@ export const en: Record<string, string> = {
   "settings.worker.fbxOff": "✅ FBX worker disabled",
   "settings.worker.mmdOn": "✅ MMD PMX worker enabled",
   "settings.worker.mmdOff": "✅ MMD PMX worker disabled",
-  "settings.webRepo.unsupported": "This browser does not support the File System Access API; cannot authorize a local folder",
+  "settings.webRepo.unsupported":
+    "This browser does not support the File System Access API; cannot authorize a local folder",
   "settings.webRepo.scanning": "Scanning .ysm models and importing…",
-  "settings.webRepo.done": "Authorized \"{dir}\": {imported} imported, {failed} failed",
+  "settings.webRepo.done": 'Authorized "{dir}": {imported} imported, {failed} failed',
   "settings.webRepo.restored": "Local repo restored: {imported} models up to date",
-  "settings.webRepo.revoked": "Previous authorization expired. Please re-authorize the folder to sync.",
+  "settings.webRepo.revoked":
+    "Previous authorization expired. Please re-authorize the folder to sync.",
 
   // ── Settings - Appearance ──
   "settings.theme.title": "Theme & Appearance",
@@ -249,7 +256,8 @@ export const en: Record<string, string> = {
   "settings.animation.title": "Behavior & Animation",
   "settings.animation.enable": "Animations",
   "settings.animation.enableCheck": "Enable transition animations",
-  "settings.animation.hint": "When off, only layout transitions are kept, hover and fade animations are removed — good for low-end devices.",
+  "settings.animation.hint":
+    "When off, only layout transitions are kept, hover and fade animations are removed — good for low-end devices.",
   "settings.defaultPage": "Default Start Page",
   "settings.defaultPage.instances": "Modpacks",
   "settings.defaultPage.workshop": "Creator Channel",
@@ -257,21 +265,27 @@ export const en: Record<string, string> = {
   "settings.defaultPageHint": "Page opened automatically on startup.",
   "settings.preview3d.title": "3D Preview Controls",
   "settings.preview3d.camSpeed": "Camera Move Speed",
-  "settings.preview3d.camSpeedHint": "WASD movement speed in free camera mode; synced with the in-preview slider.",
+  "settings.preview3d.camSpeedHint":
+    "WASD movement speed in free camera mode; synced with the in-preview slider.",
   "settings.preview3d.rotMode": "Default Rotation Mode",
   "settings.preview3d.orbit": "Orbit Model",
   "settings.preview3d.free": "Free Camera",
-  "settings.preview3d.rotModeHint": "Default camera mode when 3D preview opens; can be switched in-preview.",
+  "settings.preview3d.rotModeHint":
+    "Default camera mode when 3D preview opens; can be switched in-preview.",
   "settings.preview3d.keymap": "Key Bindings (click then press a key to rebind)",
-  "settings.preview3d.keymapHint": "Arrow keys always work as a fallback; changes apply immediately to the next 3D preview.",
+  "settings.preview3d.keymapHint":
+    "Arrow keys always work as a fallback; changes apply immediately to the next 3D preview.",
   "settings.preview3d.resetKeys": "Reset Key Bindings",
   "settings.preview3d.workerCheck": "Enable worker",
   "settings.preview3d.fbxWorker": "FBX Worker Parsing",
-  "settings.preview3d.fbxWorkerHint": "When enabled, FBX parsing runs in a Web Worker with automatic fallback to the main thread; when disabled, parsing always stays on the main thread (default).",
+  "settings.preview3d.fbxWorkerHint":
+    "When enabled, FBX parsing runs in a Web Worker with automatic fallback to the main thread; when disabled, parsing always stays on the main thread (default).",
   "settings.preview3d.frustumCull": "Frustum culling",
-  "settings.preview3d.frustumCullHint": "Culls off-screen model groups by frustum when multiple models share the view (saves rendering). Turn off if culling wrongly hides models; all models stay visible when off.",
+  "settings.preview3d.frustumCullHint":
+    "Culls off-screen model groups by frustum when multiple models share the view (saves rendering). Turn off if culling wrongly hides models; all models stay visible when off.",
   "settings.preview3d.mmdWorker": "MMD PMX Worker Parsing",
-  "settings.preview3d.mmdWorkerHint": "When enabled, PMX binary parsing runs in a Worker (experimental); when disabled, uses the full official MMDLoader (default).",
+  "settings.preview3d.mmdWorkerHint":
+    "When enabled, PMX binary parsing runs in a Worker (experimental); when disabled, uses the full official MMDLoader (default).",
 
   // ── Import Page ──
   "import.mmdSubdir": "MMD Purpose Subdir",
@@ -286,7 +300,7 @@ export const en: Record<string, string> = {
   "import.queue": "Queue",
   "import.imported": "Imported",
   "import.dropHint": "Drag model files … or folders here, or click to select files",
-    "import.dropHint2": "Release to import models",
+  "import.dropHint2": "Release to import models",
   "import.supportedFiles": "Supported",
   "import.files": "files",
   "import.noModelDetected": "⛔ No model files detected",
@@ -294,7 +308,8 @@ export const en: Record<string, string> = {
   "import.busyImporting": "Import in progress, please wait…",
   "import.fileTooLarge": "Exceeds 100 MB, please place it directly in the repository folder",
   "import.processError": "Import processing error, please retry",
-  "import.contextRouteUnavailable": "Page context routing unavailable, fell back to content inference",
+  "import.contextRouteUnavailable":
+    "Page context routing unavailable, fell back to content inference",
   "import.readFailed": "Failed to read file",
   "import.unsupportedFormat": "Unsupported format. Only",
   "import.addedToQueue": "Added to queue: {n} files",
@@ -307,7 +322,8 @@ export const en: Record<string, string> = {
   "import.previewTempFailed": "Preview temp file save failed: {err}",
   "import.headerReadFailed": "Unable to read header info",
   "import.readDropFailed": "Failed to read dropped file",
-  "import.ysmJsonHint": "ysm.json is the model manifest. Please drag the entire model folder (including geometry/animations/textures) to import as a group",
+  "import.ysmJsonHint":
+    "ysm.json is the model manifest. Please drag the entire model folder (including geometry/animations/textures) to import as a group",
   "import.emptyFolder": "Folder contains no readable files",
   "import.emptyFile": "File is empty, skipped",
   "import.alreadyExists": "Already exists, please rename the folder before importing",
@@ -440,7 +456,8 @@ export const en: Record<string, string> = {
   "about.openReleases": "Open GitHub Releases",
   "about.features": "What Is This?",
   "about.appName": "YSM Model Manager",
-  "about.intro": "is a model management tool for the Minecraft YSM mod, letting you manage your model collection like a Steam Workshop.",
+  "about.intro":
+    "is a model management tool for the Minecraft YSM mod, letting you manage your model collection like a Steam Workshop.",
   "about.f1": "Drag & drop import .ysm / .zip model files",
   "about.f2": "Smart sorting by author, character, and work",
   "about.f3": "2D/3D model preview without launching the game",
@@ -484,15 +501,20 @@ export const en: Record<string, string> = {
   // ── Credits ──
   "credits.inspiration": "Inspiration",
   "credits.download": "Download & Updates",
-  "credits.downloadDesc": "L4D2 MOD manager that inspired the download queue and update detection design",
+  "credits.downloadDesc":
+    "L4D2 MOD manager that inspired the download queue and update detection design",
   "credits.render3d": "3D Rendering",
-  "credits.render3dDesc": "Reference for bone hierarchy, UV mapping, and BufferGeometry construction",
+  "credits.render3dDesc":
+    "Reference for bone hierarchy, UV mapping, and BufferGeometry construction",
   "credits.parse": "YSM Parsing",
   "credits.parseDesc": "Cross-platform YSM binary format decoding (embedded WASM)",
   "credits.repo": "Repository Management",
-  "credits.repoDesc": "Source of the hard-link install, recycle bin, and per-instance management ideas",
-  "credits.zuogeren1Contribute": "Contributed PrismLauncher instance layout support, large-instance performance, community index, and several workshop fixes",
-  "credits.jiangkaslanaContribute": "Contributed Rust scanner hot-path offload & batch YSM rendering (PR #13), and cross-render-path component texture alignment (PR #16)",
+  "credits.repoDesc":
+    "Source of the hard-link install, recycle bin, and per-instance management ideas",
+  "credits.zuogeren1Contribute":
+    "Contributed PrismLauncher instance layout support, large-instance performance, community index, and several workshop fixes",
+  "credits.jiangkaslanaContribute":
+    "Contributed Rust scanner hot-path offload & batch YSM rendering (PR #13), and cross-render-path component texture alignment (PR #16)",
   "credits.special": "Special Thanks",
 
   // ── Main Content Area ──
@@ -515,8 +537,10 @@ export const en: Record<string, string> = {
   "content.browseRepo": "📦 Browse",
   "content.loaded": "✅ Loaded",
   "content.errNoIndex": "❌ No index.json<br>",
-  "content.errNoIndexDesc": "This repository has no workshop index yet, please download using your browser.<br>",
-  "content.errNoIndexHint": "(This repository needs an index.json file to call the API to download files)",
+  "content.errNoIndexDesc":
+    "This repository has no workshop index yet, please download using your browser.<br>",
+  "content.errNoIndexHint":
+    "(This repository needs an index.json file to call the API to download files)",
   "content.btnNoIndex": "❌ No Index",
   "content.errOffline": "🌐 No network connection, please check and retry",
   "content.btnOffline": "🌐 Offline",
@@ -528,7 +552,8 @@ export const en: Record<string, string> = {
   "content.errLoad": "❌ Failed to load",
   "content.btnFailed": "❌ Failed",
   "content.backArrow": "← Back",
-  "content.toastRepoTimeout": "⏱️ {repo} connection timed out (raw.githubusercontent.com may be blocked), opened the repository in your browser",
+  "content.toastRepoTimeout":
+    "⏱️ {repo} connection timed out (raw.githubusercontent.com may be blocked), opened the repository in your browser",
   "content.toastRepoNoIndex": "📦 {repo} has no index.json, opened the repository in your browser",
   "content.dragJsonOnly": "❌ Please drag a .json file",
   "content.dropZoneHint": "Drag a JSON file here to import creator/site config",
@@ -578,7 +603,8 @@ export const en: Record<string, string> = {
   "content.scanScopeLine1": "Drive C ~ Z · root .minecraft / launcher directories<br>",
   "content.scanScopeLine2": "ProgramFiles · Games · user config directories · EXE directory",
   "content.noMcDirFound": "No existing game directory found",
-  "content.noMcDirHint": "💡 If a launcher is installed but not found, it may be in a non-standard path, please select manually",
+  "content.noMcDirHint":
+    "💡 If a launcher is installed but not found, it may be in a non-standard path, please select manually",
   "content.foundCount": "✅ Found {n}",
 
   // ── Workshop ──
@@ -629,10 +655,12 @@ export const en: Record<string, string> = {
   "workshop.updateConfig": "🌐 Update Config",
   "workshop.newCreatorName": "New Creator",
   "workshop.newCreatorDesc": "Description",
-  "workshop.exportWebUnsupported": "Exporting site config is not supported on web, use the desktop app",
+  "workshop.exportWebUnsupported":
+    "Exporting site config is not supported on web, use the desktop app",
   "workshop.action.exported": "📤 Site exported: {path}",
   "workshop.exportFailed": "Export failed",
-  "workshop.importWebUnsupported": "Importing site config is not supported on web, use the desktop app",
+  "workshop.importWebUnsupported":
+    "Importing site config is not supported on web, use the desktop app",
   "workshop.action.imported": "✅ Imported {n} sites",
   "workshop.communityIndexLoading": "⏳ Community index: {source}…",
   "workshop.siteIndexLoading": "⏳ Site index: {source}…",
@@ -706,7 +734,8 @@ export const en: Record<string, string> = {
   "syncManager.scanRootsTitle": "Sync directories",
   "syncManager.scanGlobal": "Repo base: {dir}",
   "syncManager.scanInstance": "Instance scan: {dir}",
-  "syncManager.scanDirWide": "⚠️ {label} repo base dir {dir} looks too broad (contains mods/config/schematics subdirs); sync may mix in other resources — point the type root to a dedicated {subDir} subdir",
+  "syncManager.scanDirWide":
+    "⚠️ {label} repo base dir {dir} looks too broad (contains mods/config/schematics subdirs); sync may mix in other resources — point the type root to a dedicated {subDir} subdir",
   // P0 fix: context menu rtype guard toast (i18n compliance)
   "ctx.emptyRtype": "❌ Pack missing type info, right-click ops disabled",
   "ctx.missingPath": "❌ Pack directory not found",
@@ -733,7 +762,8 @@ export const en: Record<string, string> = {
   "ctx.recycleOkText": "♻️ Recycle",
   "ctx.recycleFailN": "❌ Failed to recycle {fail} files: {err}",
   "ctx.recycleOkN": "✅ Moved {n} files to recycle bin",
-  "ctx.renameYsmJson": "ysm.json is the model directory manifest — right-click its folder and choose 'Rename' (group operation)",
+  "ctx.renameYsmJson":
+    "ysm.json is the model directory manifest — right-click its folder and choose 'Rename' (group operation)",
   "ctx.renameFail": "Rename failed",
   "ctx.fileMoveOk": "✅ Moved to {folder}",
   "ctx.fileCopyOk": "✅ Copied to {folder}",
@@ -782,7 +812,8 @@ export const en: Record<string, string> = {
   "inst.exportListCopied": "📋 Copied {n} file names to clipboard",
   "inst.nothingToClear": "Nothing to clear in this modpack",
   "inst.clearTitle": "Clear modpack",
-  "inst.clearMessage": "Clear {name}\n{n} resource files found will be cleared (to recycle bin, recoverable).\nType: {type}\nFiles not in the repo are left untouched. Continue?",
+  "inst.clearMessage":
+    "Clear {name}\n{n} resource files found will be cleared (to recycle bin, recoverable).\nType: {type}\nFiles not in the repo are left untouched. Continue?",
   "inst.clearOk": "🗑️ Clear",
   "inst.cancelled": "Cancelled",
   "inst.cleared": "🗑️ {name}: cleared {n} files (moved to recycle bin)",
@@ -812,7 +843,8 @@ export const en: Record<string, string> = {
   "diagnostics.configResourceDir": "Please configure the resource directory first",
   "diagnostics.configGameDir": "Please configure the game directory first",
   "diagnostics.noDups": "No duplicate files",
-  "diagnostics.dupSummary": "Found {groups} groups of duplicate files ({dups} extra copies total), keep one per group:",
+  "diagnostics.dupSummary":
+    "Found {groups} groups of duplicate files ({dups} extra copies total), keep one per group:",
   "diagnostics.dupSummaryHint": "Unselected files will be moved to the recycle bin",
   "diagnostics.fileCount": "{n} files",
   "diagnostics.group": "Group {n}",
@@ -857,7 +889,8 @@ export const en: Record<string, string> = {
   "diagnostics.conflictTypeContent": "Content Modified",
   "diagnostics.conflictTypeBoth": "Added in Both",
   "diagnostics.healthTitle": "Repo Health Audit",
-  "diagnostics.healthHint": "Static health audit: completeness, cache, resources, dedup (no load-time measurement; same source as CLI health-report)",
+  "diagnostics.healthHint":
+    "Static health audit: completeness, cache, resources, dedup (no load-time measurement; same source as CLI health-report)",
   "diagnostics.healthRun": "Start Check",
   "diagnostics.healthScanning": "Checking repo health…",
   "diagnostics.healthParseFailed": "Failed to parse health report",
@@ -879,8 +912,10 @@ export const en: Record<string, string> = {
   // ── Creators Channel ──
   "community.fromLocal": "From local repository",
   "community.downloadQueue.remain": "{n} remaining",
-  "community.downloadQueue.webDlFailed": "⚠️ {imported} saved to model library, {fallback} saved via browser direct link, {failed} failed",
-  "community.downloadQueue.webDlFallback": "✅ {imported} saved to model library, {fallback} saved via browser direct link",
+  "community.downloadQueue.webDlFailed":
+    "⚠️ {imported} saved to model library, {fallback} saved via browser direct link, {failed} failed",
+  "community.downloadQueue.webDlFallback":
+    "✅ {imported} saved to model library, {fallback} saved via browser direct link",
   "community.downloadQueue.webDlOk": "✅ {imported} models imported into the browser model library",
   "gh.leftHead": "Repository",
   "gh.sourceInfo": "Repository",
@@ -930,7 +965,8 @@ export const en: Record<string, string> = {
   "settings.path.customized": "Customized",
   "settings.path.default": "↩️ Default",
   "settings.path.clickToChange": "Click to change path",
-  "settings.path.needStoragePermission": "All files access is required to read the model library — opening grant screen…",
+  "settings.path.needStoragePermission":
+    "All files access is required to read the model library — opening grant screen…",
   "settings.path.autoRepoRoot": "✅ Model library located at shared directory: ",
   "settings.saveSuccess": "Saved successfully",
   "settings.saveFailed": "Save failed",
@@ -946,9 +982,11 @@ export const en: Record<string, string> = {
   "settings.mc.pickerDesc": "Multiple game directories detected. Please select one:",
   "settings.mc.pickerCancel": "Cancel",
   "settings.mc.scanScope": "🔍 Scan Scope",
-  "settings.mc.scanScopeDesc": "Drives C–Z · Root .minecraft / launcher directories<br>ProgramFiles · Games · User config directories · Same dir as EXE",
+  "settings.mc.scanScopeDesc":
+    "Drives C–Z · Root .minecraft / launcher directories<br>ProgramFiles · Games · User config directories · Same dir as EXE",
   "settings.mc.notFound": "No existing game directory found",
-  "settings.mc.notFoundHint": "💡 If a launcher is installed but not found, it may be in a non-standard path. Please select manually",
+  "settings.mc.notFoundHint":
+    "💡 If a launcher is installed but not found, it may be in a non-standard path. Please select manually",
   "settings.mc.found": "✅ Found {n}",
 
   // ── Settings - Mirror ──
@@ -957,7 +995,8 @@ export const en: Record<string, string> = {
   "settings.updateCheck.option12h": "12 hours",
   "settings.updateCheck.option24h": "24 hours",
   "settings.updateCheck.off": "Disable auto check",
-  "settings.updateCheck.desc": "How often to silently check for updates on startup (default 6 hours)",
+  "settings.updateCheck.desc":
+    "How often to silently check for updates on startup (default 6 hours)",
   "settings.updateCheck.saved": "Update check interval saved",
 
   // ── Settings - Relink / Link Mode (dead keys removed) ──
@@ -1039,7 +1078,8 @@ export const en: Record<string, string> = {
   "preview.roleModelSection": "Model",
   "preview.roleMotionSection": "Motion",
   "preview.appendModel": "Append to scene",
-  "preview.cooperateCrossType": "Same-scene append only supports the same type; switched to a new model ({from} → {to})",
+  "preview.cooperateCrossType":
+    "Same-scene append only supports the same type; switched to a new model ({from} → {to})",
   "preview.library": "Library",
   "preview.libraryLoading": "Loading library…",
   "preview.libraryEmpty": "(empty library)",
@@ -1104,18 +1144,17 @@ export const en: Record<string, string> = {
   "preview.resetView": "Reset View",
   "preview.cameraRotation": "Camera Rotation",
   "preview.cameraSpeed": "Camera Speed",
-  
 
-   "preview.spotlight": "Spotlight",
-   "preview.keyIntensity": "Key Light",
-   "preview.ambientIntensity": "Ambient",
-   "preview.volumetric": "Volumetric",
-   "preview.volumetricCone": "Volumetric Cone",
-   "preview.coneAngle": "Cone Angle",
-   "preview.lightPreset": "Light Preset",
-   "preview.volumetricEngine": "Volumetric Engine",
-   "preview.lighting": "Lighting",
-   "preview.cameraView": "Camera View",
+  "preview.spotlight": "Spotlight",
+  "preview.keyIntensity": "Key Light",
+  "preview.ambientIntensity": "Ambient",
+  "preview.volumetric": "Volumetric",
+  "preview.volumetricCone": "Volumetric Cone",
+  "preview.coneAngle": "Cone Angle",
+  "preview.lightPreset": "Light Preset",
+  "preview.volumetricEngine": "Volumetric Engine",
+  "preview.lighting": "Lighting",
+  "preview.cameraView": "Camera View",
   "preview.environment": "Environment",
   "preview.environmentDesc": "Environment map: procedural sky/studio presets or custom HDR",
   "preview.envPreset": "Environment Preset",
@@ -1130,7 +1169,8 @@ export const en: Record<string, string> = {
   "preview.envClearHdrHint": "Falls back to the Studio preset",
   "preview.envDivider": "──",
   "preview.envUseAsBackground": "Use as background",
-  "preview.envUseAsBackgroundHint": "Show the current environment map as the scene background when enabled; restores previous background when disabled",
+  "preview.envUseAsBackgroundHint":
+    "Show the current environment map as the scene background when enabled; restores previous background when disabled",
   "preview.envGroupPreset": "Preset",
   "preview.envGroupCustomHdr": "Custom HDR",
   "preview.envGroupBackground": "Background & Intensity",
@@ -1174,7 +1214,8 @@ export const en: Record<string, string> = {
   "preview.settingsMaxPixelRatio": "Max Render Resolution",
   "preview.settingsBloom": "Bloom",
   "preview.settingsPmrem": "PMREM Environment",
-  "preview.settingsNote": "Resolution cap takes effect after re-entering 3D preview; other toggles apply instantly.",
+  "preview.settingsNote":
+    "Resolution cap takes effect after re-entering 3D preview; other toggles apply instantly.",
   "preview.postprocessing": "Post-processing",
   "preview.postprocessingDesc": "Bloom / SSAO / Tone mapping / Exposure",
   "preview.toneMapping": "Tone Mapping",
@@ -1223,25 +1264,31 @@ export const en: Record<string, string> = {
   "preview.shadow": "Shadow",
   "preview.shadowType": "Shadow Type",
   "preview.shadowMapSize": "Shadow Map Size",
-  "preview.shadowMapSizeDesc": "Higher is sharper, more GPU (512 battery-saver / 1024 balanced / 2048 fine / 4096 cinematic)",
+  "preview.shadowMapSizeDesc":
+    "Higher is sharper, more GPU (512 battery-saver / 1024 balanced / 2048 fine / 4096 cinematic)",
   "preview.shadowRange": "Shadow Range",
-  "preview.shadowDesc": "Shadow: reuses the Lighting panel's directional/spot lights, live update on toggle",
+  "preview.shadowDesc":
+    "Shadow: reuses the Lighting panel's directional/spot lights, live update on toggle",
   "preview.shadowEnabled": "Enable Shadows",
-  "preview.shadowEnabledHint": "Renders a shadow map each frame; higher GPU cost. Turn off on low-end devices.",
+  "preview.shadowEnabledHint":
+    "Renders a shadow map each frame; higher GPU cost. Turn off on low-end devices.",
   "preview.shadowSoft": "Soft Shadows",
   "preview.shadowBias": "Shadow Bias",
-  "preview.shadowBiasDesc": "Fixes shadow Peter Panning (self-shadow moiré); typically between -0.001 and 0.",
+  "preview.shadowBiasDesc":
+    "Fixes shadow Peter Panning (self-shadow moiré); typically between -0.001 and 0.",
   "preview.shadowNormalBias": "Normal Bias",
-  "preview.shadowNormalBiasDesc": "Offset shadows along normals to eliminate acne and jagged edges at grazing angles.",
+  "preview.shadowNormalBiasDesc":
+    "Offset shadows along normals to eliminate acne and jagged edges at grazing angles.",
   "preview.shadowCameraSize": "Directional Shadow Frustum",
-  "preview.shadowCameraSizeDesc": "Side length of the directional light orthographic shadow camera; larger = wider coverage, less detail.",
+  "preview.shadowCameraSizeDesc":
+    "Side length of the directional light orthographic shadow camera; larger = wider coverage, less detail.",
   "preview.noShadowCap": "Enter the 3D preview before opening the shadow panel",
   "preview.ground": "Ground",
   "preview.groundDesc": "Grid helper reference plane",
   "preview.groundGroupWater": "Water Surface",
   "preview.waterFilmDensity": "Film Density",
   "preview.groundWaterColor": "Water Color",
-  
+
   "preview.groundNormalStrength": "Normal Strength",
   "preview.groundGroupMaterial": "Surface Material",
   "preview.groundMatSource": "Surface Material",
@@ -1256,7 +1303,8 @@ export const en: Record<string, string> = {
   "preview.groundMatRoughness": "Roughness",
   "preview.groundMatMetalness": "Metalness",
   "preview.water": "Water",
-  "preview.waterDesc": "Procedural water surface: film/pool modes with animated ripples and reflection",
+  "preview.waterDesc":
+    "Procedural water surface: film/pool modes with animated ripples and reflection",
   "preview.waterGroup": "Water",
   "preview.waterGroupForm": "Form",
   "preview.waterGroupLook": "Appearance",
@@ -1412,7 +1460,8 @@ export const en: Record<string, string> = {
   "tree.indexGenerated": "✅ index.json generated",
   "tree.tagQueryFail": "❌ Tag query failed: {msg}",
   "tree.needRepoDir": "Configure a repository directory first",
-  "tree.webStatsDegraded": "⚠️ Web stats engine unavailable; bone/cube numeric conditions ignored (keyword-only matching)",
+  "tree.webStatsDegraded":
+    "⚠️ Web stats engine unavailable; bone/cube numeric conditions ignored (keyword-only matching)",
   "tree.statsBadgePreparing": "🧵×{n} preparing stats…",
   "tree.statsBadgeDegraded": "⚠️ Worker degraded · numeric conditions ignored",
   "tree.filterFound": "🔍 Found {n} matches",
@@ -1439,8 +1488,8 @@ export const en: Record<string, string> = {
   "tree.repoConfigTitle": "Configure repository directory",
   "tree.repoNotSet": "📁 Not set",
   "tree.authorsEmpty": "No authors",
-  "tree.treeLoadFailed": "<div class=\"empty\"><div class=\"big\">⚠️</div>Load failed</div>",
-  "tree.scanning": "<div class=\"empty\"><div class=\"big\">⏳</div><div>Scanning...</div></div>",
+  "tree.treeLoadFailed": '<div class="empty"><div class="big">⚠️</div>Load failed</div>',
+  "tree.scanning": '<div class="empty"><div class="big">⏳</div><div>Scanning...</div></div>',
   "tree.dropHint": "Drop model files here to import",
   "tree.fileList": "Model file list",
 
@@ -1489,7 +1538,7 @@ export const en: Record<string, string> = {
   "app.managerSuffix": "Manager",
 
   // ── Import queue ──
-        // ── Downloads page ──
+  // ── Downloads page ──
   "downloads.readAuthor": "Read Author",
   "downloads.today": "Today",
   "downloads.fileCount": "{n} files",
@@ -1506,14 +1555,16 @@ export const en: Record<string, string> = {
   // ── Web file system ──
   "webFs.kindDir": "directory",
   "webFs.kindFile": "file",
-  "webFs.fsaUnsupported": "SelectLocalRepo: File System Access API is not supported in this environment",
+  "webFs.fsaUnsupported":
+    "SelectLocalRepo: File System Access API is not supported in this environment",
   "webFs.renameEmptyName": "Rename failed: {kind} name is empty",
   "webFs.renameInvalidChars": "Rename failed: {kind} name contains invalid characters",
   "webFs.renameInvalidPathSegment": "Rename failed: {kind} name contains an invalid path segment",
   "webFs.renameInvalidPath": "Rename failed: invalid path: {path}",
   "webFs.renameTargetExists": "Rename failed: target already exists: {path}",
   "webFs.renameModelMissing": "Rename failed: model not found: {path}",
-  "webFs.renameYsmJsonForbidden": "ysm.json is the model folder manifest; rename the containing folder instead (group operation)",
+  "webFs.renameYsmJsonForbidden":
+    "ysm.json is the model folder manifest; rename the containing folder instead (group operation)",
   "webFs.deleteInvalidPath": "Delete failed: invalid path: {path}",
   "webFs.moveInvalidSrc": "Move/Copy failed: invalid source path: {path}",
   "webFs.moveInvalidDstDir": "Move/Copy failed: invalid destination directory: {path}",

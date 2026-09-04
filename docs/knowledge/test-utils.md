@@ -7,6 +7,7 @@ source_files:
   - frontend/src/test-utils/
 auto_fields:
   symbols_with_lines:
+    - BlobUrlStubs
     - deriveTestIds
     - expectContainsAtLeast
     - expectNotContains
@@ -34,6 +35,7 @@ auto_fields:
     - RenderOptions
     - RenderResult
     - sleep
+    - stubBlobUrls
     - unmountElement
     - waitFor
     - waitForElementToBeRemoved

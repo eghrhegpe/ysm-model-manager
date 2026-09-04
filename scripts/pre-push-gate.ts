@@ -389,8 +389,17 @@ async function main() {
 
     const t1 = Date.now();
     // 对齐 doctor 全量：go test 同时跑 ./internal/app/（2026-08-14 修复漏测）
-    const goTest = await shAsync('go test -race ./go/... ./internal/app/ -count=1 -timeout 60s');
-    record('go test', goTest.rc === 0, { time: Date.now() - t1, tail: goTest.rc ? goTest.out.trim().split('\n').slice(-4).join('\n') : '' });
+    // 2026-09-04 恢复 test cache：-count=1 系 .mjs→.ts 机械迁移（2685e53a）照抄的旧参数，
+    // 无防假绿动机。源码/测试未变时重复跑（重推失败重试 / 连续 doctor）→ (cached) 秒回，
+    // go test 37.4s → <1s。逃生阀：YSM_FRESH_GO_TEST=1 强制新鲜（发版前 / 怀疑测试读
+    // 仓库外可变状态致缓存假绿时，doctor 输出 [WARN]skip 场景可配合使用）。
+    const freshGoTest = process.env.YSM_FRESH_GO_TEST === '1';
+    const goTest = await shAsync(`go test -race ./go/... ./internal/app/ ${freshGoTest ? '-count=1 ' : ''}-timeout 60s`);
+    record('go test', goTest.rc === 0, {
+      time: Date.now() - t1,
+      tail: goTest.rc ? goTest.out.trim().split('\n').slice(-4).join('\n') : '',
+      note: freshGoTest ? 'YSM_FRESH_GO_TEST=1 强制新鲜跑' : '',
+    });
 
     const tV = Date.now();
     const goVet = await shAsync('go vet ./go/... ./internal/app/...');

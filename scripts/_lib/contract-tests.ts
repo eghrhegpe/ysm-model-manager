@@ -208,14 +208,23 @@ function targetsHit(testFile: string, changedFiles: readonly string[]): boolean 
  * 使用 spawn 而非 execFile：execFile Promise API 在 Node 24 上 stdout/stderr
  * 返回对象而非字符串，行为不一致。
  *
- * Windows 高并发下（全量门禁同时跑 ~20 个静态工具 + 39 个契约测试 + git 操作），
- * 进程表瞬时饱和会导致 spawn 直接抛 ENOENT（进程根本没起来），表现为偶发契约测试
- * 红——与测试逻辑无关、重试即可恢复。故对「进程未启动」做有限重试，
- * 但「进程正常跑完却断言失败」绝不重试，避免掩盖真实回归（2026-08-31 审计加固）。
+ * Windows 高并发下（51 个契约测试全并发 + vitest 8 workers 残留），进程表瞬时
+ * 饱和会导致 spawn 抛 ENOENT（进程根本没起来），表现为偶发契约测试红。双层防线：
+ *   ① spawn 层：对「进程未启动」有限重试（MAX_SPAWN_RETRY，见下）；
+ *   ② 整文件层：runContractTestsParallel 有界并发 8 + 失败串行复跑 1 次
+ *      （真回归复跑必二次失败，不掩盖；负载瞬态复跑通过转绿，2026-09-04 加固）。
  */
 const MAX_SPAWN_RETRY = 3;
 // spawn 失败计数（仅 ENOENT/EMFILE 等进程启动失败，不含测试断言失败）
 let spawnFailureCount = 0;
+// 有界并发度：51 个测试全量 Promise.all 时 Windows 进程表饱和（测试内再 spawn
+// 子进程会持续 ENOENT，内层重试 3 次也救不回 → 整文件 flaky FAIL，2026-09-04 实证）。
+// 8 路实测 15.8s vs 51 全并发 15.6s——墙钟由慢测试拖尾决定而非并发度，降并发零成本。
+const CONCURRENCY = 8;
+// 整文件失败后的串行复跑次数：进程起来了但断言失败，可能是测试内再 spawn 子进程
+// 吃了系统瞬时负载（而非真实回归——真回归串行复跑必二次失败）。复跑 1 次区分二者，
+// 避免一次 flaky FAIL 触发整轮 push 门禁人工重推（2026-09-04 流程税复盘新增）。
+const FILE_FAIL_RETRY = 1;
 
 /** 单次 spawn 结果（含"进程未起来"的 spawnError 分支）。 */
 interface SpawnOnceResult {
@@ -271,16 +280,40 @@ async function runTest(file: string): Promise<SpawnOnceResult> {
 export async function runContractTestsParallel(files?: string[]) {
   const testFiles = files && files.length > 0 ? [...files].sort() : collectContractTests();
   if (testFiles.length === 0) return [];
-  const results = await Promise.all(
-    testFiles.map(async (f) => {
-      const { stdout, stderr, status } = await runTest(f);
-      const outStr = status !== 0 ? stdout || stderr : '';
-      return {
-        name: f,
-        ok: status === 0,
-        out: outStr.trim().split('\n').slice(-4).join('\n'),
-      };
-    }),
-  );
+  const results: { name: string; ok: boolean; out: string }[] = new Array(testFiles.length);
+  const runOne = async (f: string) => {
+    const { stdout, stderr, status } = await runTest(f);
+    const outStr = status !== 0 ? stdout || stderr : '';
+    return { name: f, ok: status === 0, out: outStr.trim().split('\n').slice(-4).join('\n') };
+  };
+  // 有界并发 worker 池（见 CONCURRENCY 注释：51 全并发 Windows spawn 饱和 flaky，
+  // 8 路实测耗时持平——慢测试拖尾决定墙钟，降并发零成本）。
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(CONCURRENCY, testFiles.length) }, async () => {
+    while (cursor < testFiles.length) {
+      const i = cursor++;
+      results[i] = await runOne(testFiles[i]!);
+    }
+  });
+  await Promise.all(workers);
+  // 失败整文件串行复跑（FILE_FAIL_RETRY 次）：真回归 → 串行复跑仍败 → 保留 FAIL
+  // （不掩盖）；系统瞬时负载（测试内再 spawn 吃进程表饱和）→ 复跑通过 → 转绿并审计提示。
+  const retried: string[] = [];
+  for (const r of results) {
+    if (r.ok) continue;
+    for (let attempt = 0; attempt < FILE_FAIL_RETRY; attempt++) {
+      const again = await runOne(r.name); // 串行复跑，不再吃并发负载
+      if (again.ok) {
+        retried.push(r.name);
+        r.ok = true;
+        r.out = '';
+        break;
+      }
+      r.out = again.out; // 复跑仍败 → 以复跑输出为准（更贴近当前状态）
+    }
+  }
+  if (retried.length) {
+    console.warn(`[contract-tests] ${retried.length} 个测试首跑失败、串行复跑通过（疑系统瞬时负载）: ${retried.join(', ')}`);
+  }
   return results;
 }

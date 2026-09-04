@@ -1286,6 +1286,10 @@ export const autoSidebar = [
             "link": "/knowledge/go-ysm-parser"
           },
           {
+            "text": "install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）",
+            "link": "/knowledge/install_domain_split"
+          },
+          {
             "text": "Rust 桥 rustbridge",
             "link": "/knowledge/rustbridge"
           },

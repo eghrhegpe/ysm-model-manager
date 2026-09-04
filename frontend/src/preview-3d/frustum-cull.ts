@@ -43,7 +43,9 @@ export function cullModelGroups(camera: THREE.Camera): void {
   if (modelRoots.length === 0) return;
   if (modelRoots.length === 1) {
     const obj = modelRoots[0];
-    obj.visible = Boolean((obj as THREE.Mesh).isMesh || obj.children.length > 0);
+    const v = Boolean((obj as THREE.Mesh).isMesh || obj.children.length > 0);
+    // 值未变不写（code review #9：每帧给 visible 赋同值触发无谓的脏检查）
+    if (obj.visible !== v) obj.visible = v;
     return;
   }
   _projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);

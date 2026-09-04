@@ -133,6 +133,9 @@ function finishSession(ctx: MountCtx): void {
 /** 早期关闭（build 尚未成功，cleanupFn 未赋值时的 ESC 出口） */
 export function closeOverlay(ctx: MountCtx): void {
   ctx.session.aborted.v = true;
+  // 终止标志置位（code review #7：原恒 false 死标志，switch-preview 三处守卫
+  // 只靠 aborted/gen 撑着——本字段既已存在就让它真实生效）
+  ctx.session.isDisposed.v = true;
   document.removeEventListener("keydown", ctx.session.escH);
   // 早期路径（cleanupFn 尚未赋值）：清理 tip 定时器 + 菜单，再拆 overlay
   if (ctx.session.tipTimeoutId) {
@@ -152,6 +155,8 @@ export function closeOverlay(ctx: MountCtx): void {
  */
 export function runFullCleanup(ctx: MountCtx): void {
   const session = ctx.session;
+  // 终止标志置位（code review #7，同 closeOverlay）
+  session.isDisposed.v = true;
   // ① ESC 监听器（escH 经 switchTo 可能已被替换，移除当前引用）
   document.removeEventListener("keydown", session.escH);
   // ② 提示条定时器

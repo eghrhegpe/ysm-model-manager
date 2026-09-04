@@ -16,15 +16,21 @@
  *   3. gen 前 dirty + gen 又改 → 仍不进（并行文件优先保护）
  *   4. 新增文件（?? 未跟踪）→ 不在 dirty 清单时进（gen 新建产物）
  *   5. 路径归一化（正斜杠 / 前缀匹配）
+ *   6. resolvePorcelain 来源（2026-09-04 时机修复）：第三参文件优先 / fallback 现采 /
+ *      gen 前干净产物正常入 stage / gen 前 dirty 半成品排除（场景 H-K）
  *
  * 用法：node tests/test_gen_stage.ts
  * 退出码：0 通过 / 1 失败
  */
 import assert from 'node:assert';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import {
   parsePorcelain,
   computeStageList,
+  resolvePorcelain,
   type PorcelainEntry,
 } from '../scripts/_lib/gen-stage.ts';
 
@@ -136,6 +142,72 @@ check('场景F: 路径分隔符归一化', () => {
 check('场景G: 无快照变化 → 空 stage', () => {
   const stage = computeStageList({ dirtyEntries: [], snapChanged: [] });
   assert.deepEqual([...stage], []);
+});
+
+// ── 3. resolvePorcelain：gen 前 porcelain 来源（2026-09-04 时机修复） ──
+// 缺陷背景：CLI 原在 gen 循环后现采 porcelain，gen 刚改写的产物必然 dirty →
+// computeStageList 按「并行 dirty」排除 → 跟踪型生成物（event-graph.md 等）永不被
+// stage（实证：event-graph.md 行号漂移版 8a03beaa 后滞留工作区）。
+// 修复：pre-commit 与 snap 同刻采集 gen 前 porcelain，经第三参传入；本函数优先读文件。
+
+// 场景 H：第三参文件存在 → 读文件内容（不现采）
+check('场景H: gen 前 porcelain 文件存在 → 优先读文件', () => {
+  const tmp = path.join(os.tmpdir(), `ysm_gen_porc_test_${Date.now()}.txt`);
+  fs.writeFileSync(tmp, ' M docs/event-graph.md\n M docs/knowledge/parallel.md\n');
+  try {
+    const out = resolvePorcelain(tmp);
+    assert.ok(out !== null, '应返回文件内容');
+    assert.ok(out!.includes('docs/event-graph.md'), '应含 gen 前 dirty 文件');
+    assert.ok(!out!.includes('git status 失败'), '不应走 fallback 现采');
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
+});
+
+// 场景 I：第三参为空/不存在 → fallback 现采（返回非 null 文本，git 可用环境下）
+check('场景I: 无 porcelain 文件 → fallback 现采', () => {
+  const out = resolvePorcelain('/nonexistent/ysm_porc.txt');
+  assert.ok(out !== null, 'git 可用时 fallback 应返回 porcelain 文本');
+});
+
+// 场景 J：porcelain 来源判定闭环——gen 前干净的跟踪产物不被当 dirty 排除
+// （computeStageList 语义：dirty 仅来自 gen 前 porcelain；gen 后改写的产物必然
+// 不在 gen 前 porcelain → 不被排除 → 进 stage）
+check('场景J: gen 前干净 + gen 后改写 → 进 stage（时机修复闭环）', () => {
+  const tmp = path.join(os.tmpdir(), `ysm_gen_porc_test_${Date.now()}.txt`);
+  fs.writeFileSync(tmp, ''); // gen 前无任何 dirty：event-graph.md 干净
+  try {
+    const porcelain = resolvePorcelain(tmp)!;
+    const dirty = parsePorcelain(porcelain);
+    const snapChanged = ['docs/event-graph.md']; // gen 改写（snap 前干净）
+    const stage = computeStageList({
+      dirtyEntries: dirty,
+      snapChanged,
+      snapBeforePaths: new Set(['docs/event-graph.md']),
+    });
+    assert.deepEqual([...stage], ['docs/event-graph.md'], 'gen 产物应正常入 stage');
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
+});
+
+// 场景 K：gen 前已 dirty（并行半成品）→ 即使 gen 改写也不进（并发隔离保留）
+check('场景K: gen 前 dirty 的并行半成品 → 永不进 stage', () => {
+  const tmp = path.join(os.tmpdir(), `ysm_gen_porc_test_${Date.now()}.txt`);
+  fs.writeFileSync(tmp, ' M docs/knowledge/parallel.md\n'); // gen 前他人手改
+  try {
+    const porcelain = resolvePorcelain(tmp)!;
+    const dirty = parsePorcelain(porcelain);
+    const snapChanged = ['docs/knowledge/parallel.md', 'docs/knowledge/index.md'];
+    const stage = computeStageList({
+      dirtyEntries: dirty,
+      snapChanged,
+      snapBeforePaths: new Set(['docs/knowledge/parallel.md', 'docs/knowledge/index.md']),
+    });
+    assert.deepEqual([...stage], ['docs/knowledge/index.md'], 'parallel.md 不应进 stage');
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
 });
 
 if (fails.length) {

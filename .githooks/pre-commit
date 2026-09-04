@@ -44,6 +44,10 @@ cd "$ROOT"
 # gen 目标配置在 scripts/_lib/gen-config.ts（单一事实源），新增目标改此处即可。
 GEN_SNAP="/tmp/ysm_gen_snap_before_$$.txt"
 GEN_SNAP_AFTER="/tmp/ysm_gen_snap_after_$$.txt"
+# 2026-09-04：gen 前 porcelain（与 snap 同刻采集）——并发隔离的 dirty 判定必须
+# 用「gen 前已 dirty」（并行半成品），不能用「gen 后 dirty」：gen 刚改写的产物必然
+# dirty，gen 后现采会把自身产物全排（实证 event-graph.md 行号漂移版滞留 8a03beaa 后）。
+GEN_PORCELAIN="/tmp/ysm_gen_porcelain_$$.txt"
 snap_docs() {
   # 跨平台优先 node（Windows Git Bash 下 find -printf 偶发不可靠，会令 GEN_SNAP 缺失
   # 进而跌入兜底 git add -u docs/ 吞他人半成品）；find 仅作 GNU 快路径
@@ -62,8 +66,10 @@ snap_docs() {
   # GNU 平台 find 快路径（失败静默，交由下方兜底分支处理）
   find docs/ frontend/public/locales/ completions/ -type f -printf '%T@ %s %p\n' 2>/dev/null | sort > "$1" || true
 }
-trap 'rm -f "$GEN_SNAP" "$GEN_SNAP_AFTER"' EXIT
+trap 'rm -f "$GEN_SNAP" "$GEN_SNAP_AFTER" "$GEN_PORCELAIN"' EXIT
 snap_docs "$GEN_SNAP"
+# gen 前 porcelain 快照（同刻采集；供 gen-stage 判定「gen 前已 dirty」的并行半成品）
+git -c core.quotepath=false status --porcelain > "$GEN_PORCELAIN" 2>/dev/null || true
 echo "[pre-commit] 文档自动同步..."
 # ADR-151 项 6：gen 清单收敛到 scripts/_lib/gen-cmds.ts 单一事实源（TS 侧 import / sh 侧逐行消费），
 # 取代内联 15 个清单——避免与 commit-with-check 内联清单漂移（原漂移 4 个命令）。
@@ -84,8 +90,8 @@ done
 #   存在性区分：gen 前存在=并行新建排除，不存在=gen 新建保留）。补全型 gen 产物正常入库。
 ADD_FAIL=""
 if [ -f "$GEN_SNAP" ]; then
-  # 生成物 stage 清单：快照变化 − 并行 dirty（替代原 find/diff/awk 脆弱管道）
-  node scripts/_lib/gen-stage.ts "$GEN_SNAP" > /tmp/ysm_gen_to_stage.txt 2>/dev/null
+  # 生成物 stage 清单：快照变化 − 并行 dirty（gen 前 porcelain，替代原 find/diff/awk 脆弱管道）
+  node scripts/_lib/gen-stage.ts "$GEN_SNAP" "$GEN_PORCELAIN" > /tmp/ysm_gen_to_stage.txt 2>/dev/null
 while IFS= read -r p; do
     [ -z "$p" ] && continue
     [ -f "$p" ] || continue

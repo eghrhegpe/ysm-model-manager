@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 /**
  * gen-stage.ts — 生成物 stage 清单判定（并发卷带修复，ADR-151 续）。
  *
@@ -23,8 +24,8 @@
  *   node scripts/_lib/gen-stage.ts /tmp/ysm_gen_snap_before_$$.txt
  *   # stdout: 应 stage 的文件路径（每行一个，正斜杠）
  */
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
 
 /** git status --porcelain 单条目。 */
 export interface PorcelainEntry {
@@ -38,7 +39,7 @@ export interface PorcelainEntry {
 
 /** 归一化路径：反斜杠 → 正斜杠，去前导 ./。 */
 export function normPath(p: string): string {
-  return p.replace(/\\/g, '/').replace(/^\.\//, '');
+  return p.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
 /**
@@ -49,19 +50,19 @@ export function normPath(p: string): string {
  */
 export function parsePorcelain(out: string): PorcelainEntry[] {
   const entries: PorcelainEntry[] = [];
-  for (const rawLine of out.split('\n')) {
-    const line = rawLine.replace(/\r$/, '');
+  for (const rawLine of out.split("\n")) {
+    const line = rawLine.replace(/\r$/, "");
     if (!line.trim()) continue;
     // 前 2 字符 = X/Y 状态码；其余为路径（可能含空格）
-    const x = line[0] ?? ' ';
-    const y = line[1] ?? ' ';
+    const x = line[0] ?? " ";
+    const y = line[1] ?? " ";
     let rest = line.slice(3);
     // 重命名：`old -> new`
-    const arrow = rest.indexOf(' -> ');
+    const arrow = rest.indexOf(" -> ");
     if (arrow !== -1) rest = rest.slice(arrow + 4);
     // 引号剥离（quoted paths）
     if (rest.startsWith('"') && rest.endsWith('"')) {
-      rest = rest.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      rest = rest.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\");
     }
     entries.push({ path: normPath(rest), x, y });
   }
@@ -92,11 +93,14 @@ export function computeStageList(input: StageInput): string[] {
   // snapBeforePaths 缺省保护：before 为空 Set 时，
   // L107 `if (!before.has(p))` 恒 true → 所有 ?? 都 stage（fail-open）。
   // 调用方必须传入 snapBeforePaths，否则按 fail-closed 返回空清单。
-  if (!snapBeforePaths && snapChanged.some((raw) => {
-    const d = dirtyMap.get(normPath(raw));
-    return d && d.x === '?' && d.y === '?';
-  })) {
-    console.error('[gen-stage] snapBeforePaths 缺省且有 ?? 文件，fail-closed 输出空清单');
+  if (
+    !snapBeforePaths &&
+    snapChanged.some((raw) => {
+      const d = dirtyMap.get(normPath(raw));
+      return d && d.x === "?" && d.y === "?";
+    })
+  ) {
+    console.error("[gen-stage] snapBeforePaths 缺省且有 ?? 文件，fail-closed 输出空清单");
     return [];
   }
   const stage = new Set<string>();
@@ -108,7 +112,7 @@ export function computeStageList(input: StageInput): string[] {
       continue;
     }
     // `??` 未跟踪：gen 前不存在 → gen 本次新建，保留；存在 → 并行新建，排除
-    if (dirty.x === '?' && dirty.y === '?') {
+    if (dirty.x === "?" && dirty.y === "?") {
       if (!before.has(p)) stage.add(p);
     }
     // 其他 dirty（跟踪文件改动）→ 一律排除
@@ -119,7 +123,7 @@ export function computeStageList(input: StageInput): string[] {
 // ── CLI：sh 侧消费（pre-commit 调用）──
 // node scripts/_lib/gen-stage.ts <snap_before> [snap_after]
 // 自身重遍历快照 → 计算变化 → 取 porcelain → 输出 stage 清单
-import { SNAP_DIRS } from './gen-config.ts';
+import { SNAP_DIRS } from "./gen-config.ts";
 
 const SNAP_BASES = SNAP_DIRS;
 
@@ -135,7 +139,9 @@ function snapshot(): Map<string, { mtime: number; size: number }> {
           try {
             const s = fs.statSync(p);
             out.set(normPath(p), { mtime: s.mtimeMs, size: s.size });
-          } catch { /* 读不到跳过 */ }
+          } catch {
+            /* 读不到跳过 */
+          }
         }
       }
     };
@@ -147,11 +153,11 @@ function snapshot(): Map<string, { mtime: number; size: number }> {
 function readSnap(file: string): Map<string, { mtime: number; size: number }> {
   const map = new Map<string, { mtime: number; size: number }>();
   if (!file || !fs.existsSync(file)) return map;
-  for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+  for (const line of fs.readFileSync(file, "utf8").split("\n")) {
     const l = line.trim();
     if (!l) continue;
     // 快照行格式：`<mtime> <size> <path>`（node 版 mtimeMs 小数、find 版秒级）；取前两列数值 + 末列路径
-    const sp = l.lastIndexOf(' ');
+    const sp = l.lastIndexOf(" ");
     if (sp === -1) continue;
     const parts = l.slice(0, sp).trim().split(/\s+/);
     if (parts.length < 2) continue;
@@ -163,10 +169,50 @@ function readSnap(file: string): Map<string, { mtime: number; size: number }> {
   return map;
 }
 
+/**
+ * 解析 dirty 清单来源（2026-09-04 修复：采集时机前移）。
+ *
+ * 并发隔离要排除的是「gen 前已 dirty」的并行半成品，而非「gen 后 dirty」——
+ * gen 刚改写的产物必然 dirty，若在 gen 后现采 porcelain（旧实现），会把自身产物
+ * 全部按「并行 dirty」排除（实证：event-graph.md 行号漂移版 8a03beaa 后滞留
+ * 工作区，pre-commit 永远 stage 不进去——snapChanged 含它、porcelain 也含它，
+ * computeStageList 按 dirty 排除）。
+ *
+ * 正确语义：porcelain 必须在 gen 循环启动前采集（pre-commit 与 snap 同刻存文件，
+ * 经第三参数传入）。本函数优先读 gen 前 porcelain 文件；无第三参（旧调用方/单测）
+ * 时 fallback 现采——语义退化回旧缺陷，仅作兼容。
+ *
+ * @param porcelainFile gen 前 porcelain 文件路径（第三参数）；空/不存在 → fallback 现采
+ * @returns porcelain 文本；git 调用失败返回 null（调用方 fail-closed）
+ */
+export function resolvePorcelain(porcelainFile: string): string | null {
+  if (porcelainFile && fs.existsSync(porcelainFile)) {
+    try {
+      return fs.readFileSync(porcelainFile, "utf8");
+    } catch {
+      return null;
+    }
+  }
+  try {
+    return execFileSync("git", ["-c", "core.quotepath=false", "status", "--porcelain"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    }) as string;
+  } catch (e) {
+    // fail-closed：git status 失败时输出空 stage 清单，
+    // 让 pre-commit 回退到保守策略（不 stage 任何生成物）。
+    // 旧实现 porcelain='' → dirty 空 → 全量 stage（fail-open，并发隔离失效）
+    console.error(`[gen-stage] git status 失败，fail-closed 输出空清单: ${(e as Error).message}`);
+    return null;
+  }
+}
+
 // 直接运行时走 CLI（sh 侧）
-const isCli = process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('_lib/gen-stage.ts');
+const isCli = process.argv[1] && process.argv[1].replace(/\\/g, "/").endsWith("_lib/gen-stage.ts");
 if (isCli) {
-  const snapBeforeFile = process.argv[2] ?? '';
+  const snapBeforeFile = process.argv[2] ?? "";
+  // 第三参 = gen 前 porcelain 文件（pre-commit 与 snap 同刻采集；无则 fallback 现采）
+  const porcelainBeforeFile = process.argv[3] ?? "";
   const before = readSnap(snapBeforeFile);
   const cur = snapshot();
   // snapChanged = 新增或 mtime/size 变化的文件（gen 删文件场景不 stage，删除由 git 自身跟踪）
@@ -175,20 +221,8 @@ if (isCli) {
     const b = before.get(p);
     if (!b || b.mtime !== s.mtime || b.size !== s.size) snapChanged.push(p);
   }
-  // dirty 清单：git status --porcelain（cwd=仓库根，pre-commit 已在 ROOT）
-  let porcelain = '';
-  try {
-    porcelain = require('node:child_process').execFileSync(
-      'git', ['-c', 'core.quotepath=false', 'status', '--porcelain'],
-      { cwd: process.cwd(), encoding: 'utf8' },
-    ) as string;
-  } catch (e) {
-    // fail-closed：git status 失败时输出空 stage 清单，
-    // 让 pre-commit 回退到保守策略（不 stage 任何生成物）。
-    // 旧实现 porcelain='' → dirty 空 → 全量 stage（fail-open，并发隔离失效）
-    console.error(`[gen-stage] git status 失败，fail-closed 输出空清单: ${(e as Error).message}`);
-    process.exit(0); // 顶层模块作用域不可 return；CLI 模式空输出 = 空 stage 清单（fail-closed 意图不变）
-  }
+  const porcelain = resolvePorcelain(porcelainBeforeFile);
+  if (porcelain === null) process.exit(0); // fail-closed：空输出 = 空 stage 清单
   const dirty = parsePorcelain(porcelain);
   const stage = computeStageList({
     dirtyEntries: dirty,

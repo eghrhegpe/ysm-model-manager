@@ -29,7 +29,7 @@
 
 | 项 | 条目 | 状态 | 处置 |
 |---|---|---|---|
-| P1 | 137 处 style.cssText 内联样式 | ⏳ 排期(盘点完) | 勘察报告 `frontend-src-critique-g6p1-survey.md`：实测 139 处中**静态 134（96.4%）、动态仅 5**（cap-controls×3/vrm-bone-ui/skeleton-fill-panel，滑块类插值豁免）——先前"大量动态不可静态化"推断被数据推翻；**范式有链内实证**（render.ts:20 已实践 cssText→类 + `<style>` 注入）。建议批次：menu 区静态 95 处（cap-controls 35/roles 18/env 14/switch 7/core 5…） |
+| P1 | 137 处 style.cssText 内联样式 | 🚧 迁移中 | 勘察报告 `frontend-src-critique-g6p1-survey.md`：实测 139 处中**静态 134（96.4%）、动态仅 5**（cap-controls×3/vrm-bone-ui/skeleton-fill-panel，滑块类插值豁免）——先前"大量动态不可静态化"推断被数据推翻；**范式有链内实证**（render.ts:20 已实践 cssText→类 + `<style>` 注入）。**首批 render.ts 15/16 闭环**（`8d6a2a8b`，2026-09-04）：13 新类（rm-control-row/rm-control-row-lg + 4 label 变体 + toggle/range/num/eye/op 控件类）扩入 ensureMenuStyles 样式块，**双类锚定**（.slide-item/.slide-label 在前）压过 ui 单类规则防注入顺序依赖；body display 折叠态动态豁免留内联（node-render 断言 style.display 切换）加注释。剩 124 处：cap-controls 35/roles 18/env 14/switch 7/core 5…，按文件批次续迁 |
 | P2 | fallback 硬编码中文散布（181 处） | 🟡 评估留档 | 查证：三语 key 集一致（locales-consistency 测试）+ LocaleKey 编译守卫，fallback 仅在动态 key 拼错时触发（设计双保险非缺陷）；触发即三语皆缺，改英文仅换受众，181 处搬迁 ROI 负——不动，语义注释已说明 |
 | P3 | legacyTestId 永久背负 e2e 兼容映射 | ✅ 设限 | `node-types.ts:148` 定义处标 @deprecated + 淘汰期限 2027-06-30 + 迁移条件（e2e 改选节点 id/panelTestId 派生选择器）+ 过渡期禁新增；届期删字段并移除 core.ts:111,228 / roles.ts:89 映射输出 |
 | P4 | mock bridge `as AppBindings` 类型断言 | 🟡 评估留档 | 查证：Proxy 壳将破坏 app.test.ts 2 处 toBe(mockApp) 身份断言 + stub 会引爆 E2E mock「缺失方法静默跳过」依赖；现值 P3 已挡空对象、缺失方法调用已抛 TypeError——低价值高扰动，暂缓 |
@@ -38,6 +38,6 @@
 
 - 已闭环 9 项：严重 4/5（S1/S3/S4/S5）+ 一般 5/6（G1-G5）+ 风格 P3 设限——剩 S2（严重）/ G6（一般）/ P1（风格）排期
 - 严重项 S2：ADR-174 已立（判定规则单一源查证成立 + 对账硬锁策略 + 首轮四函数漂移审计），剩对账 fixtures 基建排期（收口定义见 ADR D5）
-- 待处置：S2 fixtures 基建（B1c 已锁降级语义，ADR-174 D5 剩双端语料+镜像测试）/ G6 / P1（排期）、P2 / P4（评估留档，不铺开）；P3 仅剩「届期清退」动作挂在 2027-06-30
+- 待处置：S2 fixtures 基建（B1c 已锁降级语义，ADR-174 D5 剩双端语料+镜像测试）/ G6（可立项）/ P1（迁移中：render.ts 首批已闭环，剩 124 处按批次续）、P2 / P4（评估留档，不铺开）；P3 仅剩「届期清退」动作挂在 2027-06-30
 - 状态卡纠错（2026-09-03）：此前汇总误计「一般 6/6 / 共 10 项闭环」——G6（overlay light DOM）实为 ⏳ 排期且 git 无闭环提交，此处修正为 一般 5/6 + 共 9 项闭环
 - 兄弟基线遗留：browser-adapter.contract-b2.test.ts:227,241 缺 desc（HEAD 即红，非本锐评引入），push 需兄弟收口或逃生阀

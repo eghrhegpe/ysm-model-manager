@@ -374,8 +374,10 @@ describe("LightCapability — 持久化", () => {
     expect(p.volumetric.enabled).toBe(false);
     expect(cap2.getVolumetricEngine()).toBe("cone");
     // 锥组不因引擎恢复被挂载（spotlight 开启但 volumetric 关闭 → 无光锥；
-    // cap2 从未构建锥组，coneGroup 为 undefined 即「未挂载」）
-    expect((cap2 as unknown as { coneGroup?: THREE.Object3D | null }).coneGroup?.parent).toBeUndefined();
+    // cap2 从未构建锥组，场景中不应出现锥组——code review P2 修复：
+    // 原断言检查 coneGroup 字段，重构后该字段已删，可选链恒 undefined 成空洞断言）
+    const capScene = (cap2 as unknown as { scene: THREE.Scene }).scene;
+    expect(capScene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
   it("saveState/loadState 往返：volumetric=true + cone 引擎 + spotlight 开启 → 锥组重建并挂载（复核 P1 回归）", () => {

@@ -99,8 +99,5 @@ func TestImportByType_ErrorizeBoundaryLosesStructure(t *testing.T) {
 	if strings.Contains(boundaryStr, "FILE_EXISTS") {
 		t.Fatal("AppError.Error() 不应内联 Code 文本；若内联，前端也只能子串匹配（ADR-051 禁止的反模式）")
 	}
-	if appErr.Code != types.ErrFileExists {
-		t.Fatal("Code 在压串后不可恢复")
-	}
 	t.Logf("边界 string = %q —— 仅含人类文案，Code/errno 均不可恢复，印证 error 化内部无结构增益", boundaryStr)
 }

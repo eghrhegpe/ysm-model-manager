@@ -76,10 +76,20 @@ const jsonMode = args.includes('--json');
 // 注意：Biome 2.x 无 --json reporter，故绝不下传 --json 给 biome
 // --files <paths...>：显式文件列表（pre-commit 用），路径剥 frontend/ 前缀对齐 cwd（frontend/）。
 // 接受相对库根（frontend/src/…）或相对 frontend（src/…）两种写法。
+// 收集到下一个 - 开头参数为止——--files 之后出现 --json/--strict 等标志时不误当文件名
+// （code review P2 修复）；--files 存在但列表为空 → 报错而非静默回退 --changed
 const filesIdx = args.indexOf('--files');
-const explicitFiles = filesIdx >= 0
-  ? args.slice(filesIdx + 1).map((f) => f.replace(/\\/g, '/').replace(/^frontend\//, ''))
-  : [];
+const explicitFiles: string[] = [];
+if (filesIdx >= 0) {
+  for (let i = filesIdx + 1; i < args.length; i++) {
+    if (args[i].startsWith('-')) break;
+    explicitFiles.push(args[i].replace(/\\/g, '/').replace(/^frontend\//, ''));
+  }
+  if (explicitFiles.length === 0) {
+    console.error('[check-biome] --files 后未提供任何文件路径');
+    process.exit(1);
+  }
+}
 const cmd = explicitFiles.length > 0
   ? writeMode ? ['check', '--write', ...explicitFiles] : ['check', ...explicitFiles]
   : writeMode ? ['check', '--write', '--changed'] : ['check', '--changed'];
@@ -108,8 +118,10 @@ function parseSummary(text: string) {
 }
 
 const { status, out } = runBiome();
-// 0 变更文件时 biome 退出 1 且报 "No files were processed" → 视为「无文件可查=通过」
-const noFiles = /No files were processed|Checked 0 files/.test(out);
+// 0 变更文件时 biome 退出 1 且报 "No files were processed" → 视为「无文件可查=通过」。
+// 仅在 --changed 模式放宽；--files 显式模式下列表路径不存在（拼错/已删）同样输出该文案，
+// 若放宽则「声称检查了 N 个文件、实际一个没查」静默绿灯（code review P2 修复）
+const noFiles = explicitFiles.length === 0 && /No files were processed|Checked 0 files/.test(out);
 const ok = noFiles ? true : status === 0;
 
 if (jsonMode) {

@@ -212,7 +212,7 @@ describe("applyRotationIfNonIdentity", () => {
   // 覆盖 quaternion.ts 行 114-117 的 `??` 兜底：稀疏数组缺尾元素时补 0/1
   it("稀疏数组（缺 w）→ 触发 ?? 兜底而非写入 undefined", () => {
     const { obj, calls } = spyObj();
-    applyRotationIfNonIdentity(obj, [0.1, 0.2, 0.3] as unknown as number[]);
+    applyRotationIfNonIdentity(obj, [0.1, 0.2, 0.3]);
     expect(calls).toEqual([[0.1, 0.2, 0.3, 1]]);
   });
 

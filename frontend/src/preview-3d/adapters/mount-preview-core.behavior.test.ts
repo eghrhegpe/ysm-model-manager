@@ -448,7 +448,7 @@ describe("外壳单例复用（viewContainer 随外壳初始化只建一次）",
     await mount3D(syncAdapter() as PreviewAdapter, "/a.ysm");
     await mount3D(syncAdapter() as PreviewAdapter, "/b.ysm");
     const viewContainers = createdElements.filter(
-      (e) => e._tag === "div" && e.className === "preview-view-container",
+      (e) => e._tag === "div" && e.className?.includes("preview-view-container"), // P1 批次9:锚点类+布局类双类
     );
     expect(viewContainers.length).toBe(1);
     cleanupPreview();
@@ -462,7 +462,7 @@ describe("外壳单例复用（viewContainer 随外壳初始化只建一次）",
     createdElements.length = 0;
     await mount3D(syncAdapter() as PreviewAdapter, "/b.ysm");
     const viewContainers = createdElements.filter(
-      (e) => e._tag === "div" && e.className === "preview-view-container",
+      (e) => e._tag === "div" && e.className?.includes("preview-view-container"), // P1 批次9:锚点类+布局类双类
     );
     expect(viewContainers.length).toBe(1);
     cleanupPreview();

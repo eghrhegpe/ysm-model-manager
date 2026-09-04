@@ -28,9 +28,24 @@ const MIN_CAM_SPEED = 2;
 const MAX_CAM_SPEED = 200;
 
 /** 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 */
+const camCss = `
+.cam-label { font-size:11px; color:rgba(255,255,255,0.5); }
+.cam-slider { width:80px; margin:0 4px; cursor:pointer; accent-color:var(--accent,#7c83ff); }
+.cam-val { font-size:11px; color:rgba(255,255,255,0.6); min-width:20px; }
+`;
+let _camStylesInjected = false;
+function ensureCamStyles(): void {
+  if (_camStylesInjected) return;
+  _camStylesInjected = true;
+  const el = document.createElement("style");
+  el.textContent = camCss;
+  document.head.appendChild(el);
+}
+
 export function buildCameraControls(list: HTMLElement, bridge: CameraControlBridge): void {
+  ensureCamStyles(); // P1 批次9:cssText 抽类注入(幂等;list 挂根菜单 camera 面板,head 注入适用)
   const rotLabel = document.createElement("span");
-  rotLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
+  rotLabel.className = "cam-label";
   rotLabel.textContent = t("preview.cameraRotation") + ":";
   list.appendChild(rotLabel);
 
@@ -56,7 +71,7 @@ export function buildCameraControls(list: HTMLElement, bridge: CameraControlBrid
   list.appendChild(rotSel);
 
   const spdLabel = document.createElement("span");
-  spdLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
+  spdLabel.className = "cam-label";
   spdLabel.textContent = t("preview.cameraSpeed") + ":";
   list.appendChild(spdLabel);
 
@@ -65,11 +80,11 @@ export function buildCameraControls(list: HTMLElement, bridge: CameraControlBrid
   spdSlider.min = String(MIN_CAM_SPEED);
   spdSlider.max = String(MAX_CAM_SPEED);
   spdSlider.value = String(bridge.getSpeed());
-  spdSlider.style.cssText = "width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+  spdSlider.className = "cam-slider";
   list.appendChild(spdSlider);
 
   const spdVal = document.createElement("span");
-  spdVal.style.cssText = "font-size:11px;color:rgba(255,255,255,0.6);min-width:20px";
+  spdVal.className = "cam-val";
   spdVal.textContent = String(bridge.getSpeed());
   list.appendChild(spdVal);
 

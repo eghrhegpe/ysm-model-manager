@@ -178,6 +178,23 @@ export interface PreviewHandle {
 // 相机控制常量（buildCameraControls 已拆至 camera-controls.ts，本文件保留自身仍使用的部分：
 // DRAG_ROTATE_SENSITIVITY 拖拽旋转 / TIP_AUTO_DISMISS_MS 提示自动消失）
 // camSpeed 默认值已由 keymap.ts loadTdCamSpeed()（默认 20）提供，会话初始化时读取偏好。
+// §1.5 P1 批次9:overlay 链静态 cssText 抽类集中注入(mount3D 内 ensureMpcStyles 幂等调用)
+const mpcCss = `
+.mpc-overlay { position:fixed; inset:0; z-index:var(--z-fullscreen); background:#11111b; display:flex; flex-direction:column; }
+.mpc-body { flex:1; display:flex; position:relative; overflow:hidden; }
+.preview-view-container.mpc-view { flex:1; position:relative; overflow:hidden; }
+.mpc-loading { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:14px; gap:12px; z-index:10; }
+.mpc-tip { padding:5px 12px; background:#1b1c24; border-bottom:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.7); font-size:11px; text-align:center; flex-shrink:0; }
+`;
+let _mpcStylesInjected = false;
+function ensureMpcStyles(): void {
+  if (_mpcStylesInjected) return;
+  _mpcStylesInjected = true;
+  const el = document.createElement("style");
+  el.textContent = mpcCss;
+  document.head.appendChild(el);
+}
+
 const TIP_AUTO_DISMISS_MS = 6000;
 /** perFrame 回调单次执行超过该阈值（ms）即告警（仅测回调段，非整帧） */
 const PER_FRAME_WARN_MS = 50;
@@ -294,6 +311,7 @@ export async function mount3D(
   // 复用单例外壳（renderer/canvas/overlay/scene 存活），首次 mount3D 创建，后续复用。
   // cooperate=true 时多个模型叠加在同一 scene；cooperate=false 时先清除旧模型再加载新模型。
   installUiComponentsStyles();
+  ensureMpcStyles(); // P1 批次9:overlay 链 cssText 抽类注入(幂等)
   const myGen = ++_gen;
   const selfMode = adapter.mode === "self";
   // [Bug A] per-mount 会话稳定 id：每次 mount3D 自增（含 switchTo 重建？否——switchTo 走
@@ -349,8 +367,7 @@ export async function mount3D(
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.id = PREVIEW_OVERLAY_ID;
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:var(--z-fullscreen);background:#11111b;display:flex;flex-direction:column";
+    overlay.className = "mpc-overlay";
     // 无障碍：3D 全屏预览是模态体验——告诉屏幕阅读器这是对话框、独占焦点、名称用
     // 已有 preview.title3d i18n key（与 FAB aria-label 同源，3 语言包已同步）
     overlay.setAttribute("role", "dialog");
@@ -358,7 +375,7 @@ export async function mount3D(
     overlay.setAttribute("aria-label", t("preview.title3d"));
     document.body.appendChild(overlay);
     body = document.createElement("div");
-    body.style.cssText = "flex:1;display:flex;position:relative;overflow:hidden";
+    body.className = "mpc-body";
     overlay.appendChild(body);
     _singletonOverlay = overlay;
     _singletonBody = body;
@@ -407,8 +424,7 @@ export async function mount3D(
   // 容器导致同台后多出空白分屏）
   if (!_singletonViewContainer) {
     const c = document.createElement("div");
-    c.className = "preview-view-container";
-    c.style.cssText = "flex:1;position:relative;overflow:hidden";
+    c.className = "preview-view-container mpc-view"; // 语义锚点类保留,布局样式入 .mpc-view(双类防将来锚点规则覆盖)
     body!.appendChild(c);
     _singletonViewContainer = c;
   }
@@ -468,8 +484,7 @@ export async function mount3D(
   sceneRegistry.setMenuSink({ setAdapterItems: (items) => menuHandle.setAdapterItems(items) });
 
   const loadingEl = document.createElement("div");
-  loadingEl.style.cssText =
-    "position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:14px;gap:12px;z-index:10";
+  loadingEl.className = "mpc-loading";
   viewContainer.appendChild(loadingEl);
 
   // ===== §4 基础设施创建（scene/camera/renderer/OrbitControls/灯光/resize）=====
@@ -635,8 +650,7 @@ export async function mount3D(
 
   // 操作提示条（自动消失，两种模式通用）
   const tip = document.createElement("div");
-  tip.style.cssText =
-    "padding:5px 12px;background:#1b1c24;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-size:11px;text-align:center;flex-shrink:0";
+  tip.className = "mpc-tip";
   tip.textContent = "WASD 移动 · 空格/Shift 上下 · 拖动旋转 · 滚轮缩放 · ESC 关闭";
   overlay.insertBefore(tip, body);
   // 保存 timeoutId 供 cleanup 时 clearTimeout（收敛进 session.tipTimeoutId）

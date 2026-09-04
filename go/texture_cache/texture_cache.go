@@ -335,7 +335,10 @@ func Prune() (PruneResult, error) {
 		kept := files[:0]
 		for _, f := range files {
 			if f.mod.Before(cutoff) && remove(f.path) {
-				res.FreedBytes += f.size
+				// .tmp 崩溃残留不是缓存条目，不计 FreedBytes（F-12 统计口径修复）
+				if !strings.HasSuffix(f.path, ".tmp") {
+					res.FreedBytes += f.size
+				}
 				continue
 			}
 			kept = append(kept, f)

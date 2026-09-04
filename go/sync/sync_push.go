@@ -116,8 +116,8 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 		if types.IsDirLevelSync(rtype) {
 			// 相对 targetDir 映射到 globalDir，保留子目录层级（EntityPlayer/角色A →
 			// mmd/EntityPlayer/角色A）；越界无法映射时回退文件名（旧行为）
-			rel, relErr := filepath.Rel(targetDir, src)
-			if relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			rel, relErr := paths.RelInside(targetDir, src)
+			if relErr != nil {
 				rel = filepath.Base(src)
 			}
 			dstPath := filepath.Join(globalDir, rel)
@@ -206,8 +206,8 @@ func PullSingleResource(globalDir, targetDir, srcPath string) error {
 	// 一致；旧行为退化为 basename 会把越界目录错误落到 globalDir 根（丢子类层级 + 同名覆盖）。
 	fi, stErr := os.Stat(srcPath)
 	if stErr == nil && fi.IsDir() {
-		rel, relErr := filepath.Rel(targetDir, srcPath)
-		if relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		rel, relErr := paths.RelInside(targetDir, srcPath)
+		if relErr != nil {
 			return fmt.Errorf("路径 %s 不在目标目录 %s 内", srcPath, targetDir)
 		}
 		dstDir := filepath.Join(globalDir, rel)
@@ -302,8 +302,8 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 			}
 			continue
 		}
-		rel, err := filepath.Rel(customDir, e.Path)
-		if err != nil || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || rel == ".." {
+		rel, err := paths.RelInside(customDir, e.Path)
+		if err != nil {
 			// P0 修复：防路径穿越——e.Path 不在 customDir 下时，丢弃 err 会生成 "..\\leaked\\m.ysm"
 			// 并 MkdirAll 到 customDir 外部。显式拒绝越界条目。
 			if logger != nil {

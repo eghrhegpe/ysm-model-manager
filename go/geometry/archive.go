@@ -532,6 +532,9 @@ func collectGeoAnimEntries(entries []container.Entry, maidNs string) ([]geoEntry
 			continue
 		}
 		buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
+		if len(buf) == 0 {
+			continue // nil/空 buf 不占物化槽位（F-3 防御）
+		}
 		geoFiles = append(geoFiles, geoEntry{name: e.Name(), data: buf})
 		geoBytes += int64(len(buf))
 		// 条目/累计字节双封顶（code review P2 安全修复）：与 collectPngEntries 同构
@@ -1008,6 +1011,9 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 				continue
 			}
 			buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
+			if len(buf) == 0 {
+				continue // nil/空 buf 不占物化槽位（F-4 防御）
+			}
 			if IsArmModelName(e.Name()) {
 				continue // 排除第一人称手臂模型 arm.json（与 main 手臂重叠 → 双手臂）
 			}

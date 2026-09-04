@@ -6,6 +6,7 @@
 package conc
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
 )
@@ -41,9 +42,18 @@ func Parallel[T, R any](items []T, fn func(i int, item T) (R, bool)) []R {
 		go func() {
 			defer wg.Done()
 			for idx := range taskCh {
-				r, keep := fn(idx, items[idx])
-				results[idx] = r
-				ok[idx] = keep
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							// fn panic 不崩整个批次：标记该位 ok=false，其余 worker 继续
+							ok[idx] = false
+							fmt.Printf("[conc] Parallel worker panic at idx=%d: %v\n", idx, r)
+						}
+					}()
+					r, keep := fn(idx, items[idx])
+					results[idx] = r
+					ok[idx] = keep
+				}()
 			}
 		}()
 	}

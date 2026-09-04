@@ -103,7 +103,7 @@ export function assertionViolations(
 }
 
 function main() {
-  const files = collectScripts(); // 含 hooks/（git 钩子辅助脚本同样在 README 有登记表）
+  const files = collectScripts({ includeNonTs: true }); // 含 hooks/ + scripts/ 下 .sh/.ps1（构建/发布脚本同样要登记）
   const readme = fs.readFileSync(path.join(SCRIPTS_DIR, 'README.md'), 'utf8');
 
   const missing = missingFromReadme(files, readme);

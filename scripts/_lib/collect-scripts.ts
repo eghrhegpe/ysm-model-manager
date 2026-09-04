@@ -25,11 +25,13 @@ export const SCRIPTS_DIR = path.join(ROOT, 'scripts');
  * @param {object} [opts]
  *   - skipHooks {boolean}  排除 hooks/ 子目录（hygiene 口径：git 钩子协议参数不适用
  *                          parse-args positional 等检查）；默认 false（含 hooks，proc/readme 口径）
+ *   - includeNonTs {boolean} 额外收集 scripts/ 下的 .sh/.ps1 构建/发布脚本（readme-index 对账口径，
+ *                          补 collectScripts 只见 .ts 的法外死角；默认 false 不动其余三卫的 .ts 语义）
  *   - dir {string}         起始目录，默认 SCRIPTS_DIR（测试可注入临时目录）
  * @returns {string[]} 相对起始目录的 posix 路径，排序后返回
  */
-export function collectScripts(opts: { skipHooks?: boolean; dir?: string } = {}): string[] {
-  const { skipHooks = false, dir = SCRIPTS_DIR } = opts;
+export function collectScripts(opts: { skipHooks?: boolean; includeNonTs?: boolean; dir?: string } = {}): string[] {
+  const { skipHooks = false, includeNonTs = false, dir = SCRIPTS_DIR } = opts;
   const out: string[] = [];
   const visit = (d: string) => {
     let entries;
@@ -45,10 +47,11 @@ export function collectScripts(opts: { skipHooks?: boolean; dir?: string } = {})
         if (entry.name.startsWith('_') || (skipHooks && entry.name === 'hooks')) continue;
         visit(abs);
       } else if (
-        // 2026-09 顶层 .mjs→.ts 迁移完成：仅收 .ts（.mjs 已全量断除）
-        entry.name.endsWith('.ts') &&
+        // 2026-09 顶层 .mjs→.ts 迁移完成：仅收 .ts（.mjs 已全量断除）；
+        // includeNonTs 时另收 scripts/ 下的 .sh/.ps1 构建发布脚本（对账 readme-index 口径）
         !entry.name.startsWith('_') &&
-        !/\.test\.ts$/.test(entry.name)
+        ((entry.name.endsWith('.ts') && !/\.test\.ts$/.test(entry.name)) ||
+          (includeNonTs && (entry.name.endsWith('.sh') || entry.name.endsWith('.ps1'))))
       ) {
         out.push(path.relative(dir, abs).replace(/\\/g, '/'));
       }

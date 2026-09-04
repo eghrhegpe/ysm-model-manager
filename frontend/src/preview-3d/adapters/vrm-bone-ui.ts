@@ -43,18 +43,38 @@ export function boneRowActiveBg(): string {
   return "color-mix(in srgb,var(--accent) 25%,transparent)";
 }
 
+/** 骨骼面板样式(P1 批次8:cssText 抽类集中注入;panel 容器由框架传入非本模块私有,增量声明走属性级赋值豁免) */
+const vbuCss = `
+.slide-sublabel.vbu-empty { padding:8px 10px; color:rgba(128,128,128,0.85); font-size:12px; }
+.slide-item.vbu-bone-row { display:flex; align-items:center; gap:6px; cursor:pointer; min-height:28px; border-radius:4px; }
+.vbu-cb { flex-shrink:0; cursor:pointer; accent-color:var(--accent,#7c83ff); }
+.slide-label.vbu-bone-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vbu-detail { padding:6px 10px; background:rgba(255,255,255,0.04); border-radius:4px; margin:2px 4px 4px; font-size:10px; color:rgba(255,255,255,0.7); border-left:2px solid var(--accent,#7c83ff); }
+.vbu-field { margin-bottom:3px; }
+`;
+let _vbuStylesInjected = false;
+function ensureVbuStyles(): void {
+  if (_vbuStylesInjected) return;
+  _vbuStylesInjected = true;
+  const el = document.createElement("style");
+  el.textContent = vbuCss;
+  document.head.appendChild(el);
+}
+
 export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel {
   return (panel: HTMLElement, ctx: VrmBonePanelCtx): (() => void) => {
     let activeId: string | null = null; // 拾取联动高亮项
     let disposed = false;
 
+    ensureVbuStyles(); // 幂等注入(renderer 重入安全)
     panel.innerHTML = "";
-    panel.style.cssText += ";padding:4px;font-size:11px";
+    // 面板容器由框架传入(cssText += 重入会累积重复声明,改属性级赋值幂等)
+    panel.style.padding = "4px";
+    panel.style.fontSize = "11px";
 
     if (!tree || tree.roots.length === 0) {
       const empty = document.createElement("div");
-      empty.className = "slide-sublabel";
-      empty.style.cssText = "padding:8px 10px;color:rgba(128,128,128,0.85);font-size:12px";
+      empty.className = "slide-sublabel vbu-empty"; // 双类锚定压 ui .slide-sublabel(亮色无 padding)
       empty.textContent = t("preview.bone.empty");
       panel.appendChild(empty);
       return (): void => {
@@ -75,14 +95,15 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
         row.className = "slide-item";
         row.dataset.boneId = item.id;
         row.dataset.active = activeId === item.id ? "1" : "0"; // 测试钩子（happy-dom 丢 color-mix 时仍可断言高亮）
-        row.style.cssText = `display:flex;align-items:center;gap:6px;padding-left:${item.depth * 12 + 6}px;cursor:pointer;min-height:28px;border-radius:4px`;
+        // 静态布局在 .slide-item.vbu-bone-row 类;padding-left 按 depth 动态(属性级,测试断言 style.paddingLeft)
+        row.style.paddingLeft = `${item.depth * 12 + 6}px`;
         if (activeId === item.id) row.style.background = boneRowActiveBg();
 
         // 显隐勾选框
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.checked = true;
-        cb.style.cssText = "flex-shrink:0;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+        cb.className = "vbu-cb";
         cb.onchange = (): void => {
           if (!tree) return;
           const node = tree.byId.get(item.id);
@@ -92,9 +113,8 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
         cb.onclick = (e): void => e.stopPropagation();
 
         const label = document.createElement("span");
-        label.className = "slide-label";
+        label.className = "slide-label vbu-bone-label"; // 双类补 overflow/ellipsis(ui .slide-label 无 overflow)
         label.textContent = item.name;
-        label.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
 
         row.append(cb, label);
 
@@ -115,8 +135,7 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
 
     const renderDetail = (): HTMLDivElement => {
       const d = document.createElement("div");
-      d.className = "bone-detail-inline";
-      d.style.cssText = "padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:4px;margin:2px 4px 4px;font-size:10px;color:rgba(255,255,255,0.7);border-left:2px solid var(--accent,#7c83ff)";
+      d.className = "bone-detail-inline vbu-detail"; // 保留语义锚点类(测试 querySelector .bone-detail-inline),样式入 .vbu-detail
 
       if (!tree || !activeId) {
         d.innerHTML = `<div style="color:rgba(255,255,255,0.4)">${t("preview.hint.clickBone")}</div>`;
@@ -127,7 +146,7 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
 
       const field = (k: string, v: string): void => {
         const r = document.createElement("div");
-        r.style.cssText = "margin-bottom:3px";
+        r.className = "vbu-field";
         const span = document.createElement("span");
         span.style.color = "rgba(255,255,255,0.4)";
         span.textContent = k;

@@ -234,6 +234,7 @@ auto_fields:
     - resolveMmdZipConfig
     - ResolveModeBridge
     - ResolveModeResponse
+    - runFailedMountCleanup
     - runFullCleanup
     - scanAllWebModels
     - scanWebModels
@@ -327,8 +328,58 @@ pitfalls:
 ---
 
 # 统一 3D 预览核心 preview-core
-> **架构事实已迁移至 **[architecture.md#71-统一预览核心adr-066](../architecture.md#71-统一预览核心adr-066)。
+
+> **架构事实已迁移至 **[architecture.md#71-统一预览核心adr-066)](../architecture.md#71-统一预览核心adr-066)。
 > 本卡仅保留 frontmatter 机器字段（symbols/tests/quick_risk_lines），架构描述以 architecture.md 为准。
+
+---
+
+## 概览
+
+`frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / OrbitControls / rAF 循环 / 灯光 / 场景能力注册表。内容差异经 `PreviewAdapter.build(ctx, path)` 挂进同一 `ctx.scene`，外壳不感知内容格式（YSM/VRM/MMD/Litematic/FBX/maid 统一走 `mount3D(adapter, path, opts?)`）。
+
+## 核心职责
+
+- **外壳装配**（`mount3D`）：cleanup 旧会话 → `sceneCapabilityRegistry.createAll()` 创建 8 个能力（天空/地面/环境/雾/阴影/反射/后处理/灯光）→ `adapter.build(ctx, path)` 挂内容层 → 相机取景 → 注册 rAF 循环 + ESC handler + 菜单 + 输入监听 + focus trap
+- **会话切换**：`switchPreview(path)` 复用外壳重建内容层（`switchPreview({ keepInScene: true })` 同台追加多模型，上限 8）；跨类型 / 关旧开新走 `openModel3DFullscreen`
+- **生命周期清理**：
+  - `runFullCleanup(ctx)`：**完整关闭**语义——拆 overlay + 解绑输入监听 + 拆菜单 + 停 rAF + 清内容层 GPU + 清场景能力 + `textureCache.disposeAll` + `clearSingletons` + `finishSession`。ESC / abort / 正常退出走这里
+  - `runFailedMountCleanup(ctx)`：**build 失败路径**——保留 overlay（上展示 `showLoadFailure` 错误提示），不清场景能力/纹理缓存（可能被其他活跃会话共享）——只解绑输入监听 + 拆菜单 + 清 tip 定时器 + `removePerFrame` + `stopIfIdle`。catch 段调用（escH 由调用方先移除）
+  - `closeOverlay(ctx)`：**早期关闭**（build 尚未成功，cleanupFn 未赋值的 ESC 出口）——aborted/disposed 置位 + 拆 escH + 拆菜单 + 拆 overlay + `finishSession`
+- **多模型管理**：`sceneRegistry` 存每模型 `roots/visible/content/boneMaps/menuItems`；`fitCameraToRoots(visibleRoots())` 相机框可见模型；统一拾取器（`count >= 2` 激活）沿父链反查归属
+
+## 对外 API / 入口
+
+- `mount3D(adapter, path, opts?)` — 挂载入口，返回 `Promise<PreviewHandle>`（`cleanup`/`switchTo`/`resetCamera`/`setSpeed` 等）
+- `runFullCleanup(ctx)` / `runFailedMountCleanup(ctx)` / `closeOverlay(ctx)` — 三个清理出口（详见核心职责）
+- `cleanupPreview()` — 旧会话清理（`mount3D` 入口先调）
+- `switchPreview(path, opts?)` — 会话内切换
+- `hasActivePreview()` — 活跃会话判定
+- 契约接口：`PreviewBuildCtx`（外壳句柄 + menu 通道）、`PreviewScene`（内容层，ADR-178 拆为 `BaseScene` + 能力接口组合）、`PreviewAdapter`（`id`/`mode`/`build`/`onClose`）
+
+## 与其他子系统关系
+
+- **adapter 矩阵**（`preview-3d/adapters/*.ts`）：6 格式（YSM/VRM/MMD/Litematic/FBX/maid），统一 `PreviewAdapter` 契约，`withPreviewExtras()` 注入 `switchExternal` / `getModelsByType` / `getTypeTabs`
+- **skeleton 2D 层**（`views/app-preview/skeleton.ts`）：`loadModel2D` 渲染骨骼线框图，2D→3D 升级走 `_toggle3D` → `createYsm3D`；`_active3DClose` 模块级单例钩子（全局同时只允许一个活跃 overlay）；`_prevAbort` 管理 2D 拖拽 window 监听（AbortController，非手动产消）
+- **preview-library 路由**（`views/app-preview/preview-library.ts`）：`openModel3DFullscreen(path, { cooperate? })` 类型探测 → 注册表反向注入派发 opener；`scanModelsByType` 懒加载类型 tab 候选；`registerReRoute` / `getRegisteredRoutes` 破循环
+- **Go 绑定**：`GetModel3DSpec`（spec 数据）、`DetectResourceType`（类型探测）、`FindPreviewImage`/`ExtractPreviewTexture`（预览纹理）、`SaveCachedTexture`（KTX2 缓存落盘）
+
+## 不变量
+
+- **外壳单例**：renderer/scene/camera/controls/rAF 循环全局唯一，`clearSingletons()` 只在 `runFullCleanup` 完整关闭时调用——`runFailedMountCleanup` / `switchTo` 不动单例
+- **escH 可变引用**：switchTo 后旧 handler 被替换，cleanup 必须按**当前引用** remove；移除顺序必须先 save 旧引用再替换，否则移新函数（从未注册）旧函数仍残留
+- **能力注册表 `saveAll/dispose` 只在 `runFullCleanup`**——build 失败路径不清（可能共享）；`evictZeroRefIfNeeded` 只淘汰 `refs===0` 条目，已 dispose 纹理禁止再次 dispose（LRU 失效）
+- **会话清理分工**：abort/gen 打断走 `runFullCleanup`（已登记 allContent → 需补登记 content 防 GPU 泄漏）；build 抛错走 `runFailedMountCleanup` + 调用方清 scene 差量 + escH
+- **focus trap**：`finishSession` 释放焦点陷阱 + `returnFocus()` 归还触发元素焦点，幂等（二次进入 return）
+
+## 相关
+
+- `frontend/src/preview-3d/adapters/` — 全部适配器 + 外壳
+- `frontend/src/preview-3d/caps/` — 8 个场景能力
+- `frontend/src/views/app-preview/skeleton.ts` — 2D 骨骼渲染 + 单例 3D overlay 钩子
+- `frontend/src/views/app-preview/preview-library.ts` — 3D 全屏路由
+- 知识卡：`app_preview`、`model3d`、`3d_patterns`、`pointer_events`
+- ADR-066（统一预览核心）、ADR-178（能力接口拆分）、ADR-093（多模型同框）、ADR-073（能力注册表）
 
 ---
 

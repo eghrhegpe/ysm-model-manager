@@ -221,6 +221,7 @@ auto_fields:
     - getFrameIntervalMs
     - getLightMenuControls
     - getLoadTraces
+    - getMaterialDetailBase
     - getMaxFps
     - getMaxPixelRatio
     - getMeshBoneId
@@ -258,7 +259,6 @@ auto_fields:
     - InputOptions
     - invalidateMaxFpsCache
     - invalidatePreview
-    - isEditableTarget
     - isFrustumCullEnabled
     - isIdentityQuat
     - isLikelyTga
@@ -281,6 +281,7 @@ auto_fields:
     - LipSyncCallback
     - LipSyncOptions
     - listBonesWithDepth
+    - listMaterials
     - listMmdMaterials
     - listSchemas
     - listVrmMaterials
@@ -314,7 +315,9 @@ auto_fields:
     - matchSemanticMorph
     - MaterialBridgeLike
     - MaterialControlBridge
+    - MaterialNameFn
     - materialNodes
+    - MaterialOpacityChangedFn
     - matTexSlots
     - MatTexSlots
     - MAX_FPS_DEFAULT
@@ -494,6 +497,7 @@ auto_fields:
     - restoreModelGroupsVisible
     - restoreState
     - roleBaseName
+    - runFailedMountCleanup
     - runFullCleanup
     - safeDispose
     - sampleAdaptivePixelRatio
@@ -522,6 +526,8 @@ auto_fields:
     - setBoneNodeVisible
     - setBoneVisible
     - setFrustumCullEnabled
+    - setMaterialOpacity
+    - setMaterialVisible
     - setMmdMaterialOpacity
     - setMmdMaterialVisible
     - setOverlayStyleTarget
@@ -537,6 +543,8 @@ auto_fields:
     - ShadowCapability
     - ShadowParams
     - SharedInfra
+    - SharedMaterialDetail
+    - SharedMaterialListItem
     - shouldRenderAtFps
     - shouldRenderPreviewFrame
     - showLoadFailure
@@ -583,6 +591,7 @@ auto_fields:
     - TILE_WORLD_SIZE
     - toggleBone
     - toggleBoneVisible
+    - toggleMaterialVisible
     - toggleMmdMaterialVisible
     - TONE_MAPPING_KEYS
     - toScreenshotLights
@@ -673,8 +682,57 @@ perf:
 ---
 
 # 3D 预览渲染 model3d
+
 > **架构事实已迁移至 **[architecture.md#4-ysm-模型解析与渲染threejs-ysmparser-wasm](../architecture.md#4-ysm-模型解析与渲染threejs-ysmparser-wasm)。
 > 本卡仅保留 frontmatter 机器字段（symbols/tests/quick_risk_lines），架构描述以 architecture.md 为准。
+
+---
+
+## 概览
+
+`frontend/src/preview-3d/` + `frontend/src/views/app-preview/model3d-loader.ts` 构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲染层**——将 Go 端 spec 或 WASM 解码产物（BedrockGeometry）转成 Three.js 场景图，供 `mount-preview-core` 外壳挂载渲染。本层只管"数据→Three 对象"，不管会话外壳/菜单/rAF（归 preview-core）。
+
+## 核心职责
+
+- **模型加载与解码**（`model3d-loader.ts`）：`preloadModel(path)` → 缓存 → Go `GetModel3DSpec` → 失败兜 WASM `decodeYsmViaWasm` → 输出 `BedrockGeometry`（bones/cubes/materials/textures）；`textureCache` 引用计数池跨模型复用（同 URL 只 upload 一次 GPU）
+- **几何/骨骼/立方体**（`geometry.ts`/`cube-mesh.ts`/`mesh-builder.ts`/`bone-tools.ts`/`model-group-builder.ts`）：BedrockGeometry → Three.js Mesh（按骨骼组拆分、按面 alpha 分 split、perComponent 纹理 slot 绑定）；`BoneTree` 跨格式抽象；`semantic-bones.ts` 23 个语义骨骼 id（VRM/MMD/YSM 三格式统一，宽容缺省）
+- **材质与纹理**（`texture-loader.ts`/`texture-cache.ts`/`texture-alpha.ts`/`mc-tints.ts`）：`loadTextures` 并行 acquire + 50ms 轮询 complete（P2 修复加 15s 超时兜底，悬挂 URL 不再永久 pending）；KTX2 压缩管线（WASM BasisEncoder → base64 → Go `SaveCachedTexture` 缓存）
+- **渲染循环与性能**（`render-budget.ts`/`frustum-cull.ts`/`scene-stats.ts`/`screenshot.ts`/`screenshot-render.ts`）：perFrame 回调驱动 `update(dt)`（动画/感知/物理）；自适应像素比 / 帧率上限；视锥裁剪（mesh 级 `frustumCulled=false`，骨骼旋转时扁平部件误判已修）；离屏多角度截图（front/45/side/back45）
+- **2D 预览**（`views/app-preview/model2d/model2d.ts`）：平铺/网格 2D 缩略图（Canvas 2D 正交投影）
+
+## 对外 API / 入口
+
+- `preloadModel(path)` — 加载 + 缓存 spec（`model3d-loader.ts`）
+- `loadTextures(urls)` / `releaseTextureUrls(urls)` — 纹理加载 + 引用归还（配对使用，禁止 dispose）
+- `buildYsmObject(geo)` / `buildYsmScene(ctx)` — YSM 适配器内容层
+- `renderMultiAngle(path, urls, opts)` — 离屏多角度渲染
+- `screenshotFromRenderer(renderer, scene, camera, opts)` — 纯函数截图
+- `SceneCapability` 接口族（`BaseScene` + `UpdateableScene`/`ScreenshotScene`/`CameraControlScene`/`GroupedScene`/`SemanticScene`/`PoseScene`）— ADR-178 能力拆分，adapter.build 返回能力组合
+
+## 与其他子系统关系
+
+- **mount-preview-core**（`preview-3d/adapters/`）：本层提供 `PreviewAdapter.build` 产出内容层 + perFrame 回调；外壳负责挂载/菜单/rAF/清理
+- **Go 绑定**：`GetModel3DSpec`（spec 数据源，单一事实）、`GetVoxelData*`（体素/存档）、`DetectResourceType`（类型探测）、`SaveCachedTexture`（KTX2 缓存）
+- **WASM 解码**（`decoder/wasm-decode.ts`）：Go 不可用时的 BedrockGeometry 兜底
+- **skeleton 2D 层**（`views/app-preview/skeleton.ts`）：先走 2D 骨骼线框图，用户点 3D 按钮升级→`createYsm3D` 走本层
+- **预览缓存**（`utils/preview-cache.ts`）：LRU 20 条 spec 缓存；`texture-cache.ts` 纹理引用计数池；KTX2 缓存走 Go 端落盘
+
+## 不变量
+
+- **几何口径唯一事实源 = Go `GetModel3DSpec`**：前端 `model3d-spec.ts` 的 JS 兜底仅用于 parity 测试/Go 不可用时兜底，禁止私改几何计算口径（pivot X 取反等已在 Go 端实现）
+- **纹理所有权归缓存池**：`loadTextures` acquire → 用完 `releaseTextureUrls`（引用 -1），禁止 `tex.dispose()`——LRU 失效三重后果（见 `3d-patterns.md` §7.1）
+- **dispose 必须完整遍历子对象**：`geometry?.dispose()` / `material?.dispose()` / `texture?.dispose()`；`Object3D.remove()` 不释放 WebGL 资源
+- **mesh 级 `frustumCulled = false`**：骨骼旋转时扁平部件（脸部）会误判不可见
+- **perComponent 纹理索引分类与绑定索引同一空间**：组件分支恒用局部槽 0，非组件回退全局 `texIdx`/`resolvedTexIdx`
+- **大文件解码 peak ~3-4× 文件大小**：base64 → Uint8Array → WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存（100MB 阈值是网页版唯一防线）
+
+## 相关
+
+- `frontend/src/preview-3d/` — 全部 3D 渲染工具
+- `frontend/src/views/app-preview/model3d-loader.ts` — 模型加载入口
+- `frontend/src/views/app-preview/skeleton.ts` — 2D 预览 + 3D 升级
+- 知识卡：`preview_core`、`3d_patterns`、`export`
+- ADR-129（3D 渲染层升格）、ADR-178（能力接口拆分）、ADR-101（纹理缓存 + release 模式）、ADR-136（纹理加载器归位）
 
 ---
 

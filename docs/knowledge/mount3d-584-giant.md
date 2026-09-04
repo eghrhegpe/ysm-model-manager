@@ -10,16 +10,23 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - _resetSingletons
+    - BaseScene
+    - CameraControlScene
     - cleanupPreview
+    - GroupedScene
     - hasActivePreview
     - invalidatePreview
     - mount3D
     - Mount3DOptions
+    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle
     - PreviewScene
+    - ScreenshotScene
+    - SemanticScene
     - switchPreview
+    - UpdateableScene
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

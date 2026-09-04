@@ -15,11 +15,14 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - _resetSingletons
+    - BaseScene
     - buildYsmModelSchema
     - buildYsmScene
+    - CameraControlScene
     - cleanupPreview
     - fill3DPanel
     - getSchema
+    - GroupedScene
     - hasActivePreview
     - hasSchema
     - invalidatePreview
@@ -29,6 +32,7 @@ auto_fields:
     - mount3D
     - Mount3DOptions
     - PanelHandle
+    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle
@@ -37,11 +41,14 @@ auto_fields:
     - registerYsmModelSchema
     - resetSchemas
     - SchemaBuilder
+    - ScreenshotScene
+    - SemanticScene
     - SwitchContext
     - switchPreview
     - switchToSession
     - syncLightTargetFromContent
     - unregisterSchema
+    - UpdateableScene
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmControlsContext

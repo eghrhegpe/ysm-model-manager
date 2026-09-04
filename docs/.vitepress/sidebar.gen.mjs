@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-179：internal/app 垂直切分子包（拆解扁平巨型包与 App god-object）",
+        "link": "/adr/ADR-179-internal-app-app-god-object"
+      },
+      {
         "text": "ADR-178：PreviewScene 能力分层接口",
         "link": "/adr/ADR-178-previewscene-capability-interfaces"
       },

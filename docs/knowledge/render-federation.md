@@ -19,6 +19,8 @@ auto_fields:
   symbols_with_lines:
     - _resetSingletons
     - attenuateAmbientForSky
+    - BaseScene
+    - CameraControlScene
     - cleanupPreview
     - DEFAULT_ENV_PARAMS
     - DEFAULT_FOG_PARAMS
@@ -41,6 +43,7 @@ auto_fields:
     - FogParams
     - GroundCapability
     - GroundParams
+    - GroupedScene
     - hasActivePreview
     - injectSkySunScalePatch
     - invalidatePreview
@@ -50,6 +53,7 @@ auto_fields:
     - MODEL_SKY_PRESETS
     - mount3D
     - Mount3DOptions
+    - PoseScene
     - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingParams
@@ -61,6 +65,8 @@ auto_fields:
     - SceneCapabilityFactory
     - sceneCapabilityRegistry
     - SceneCapabilityRegistry
+    - ScreenshotScene
+    - SemanticScene
     - SHADOW_PRESETS
     - ShadowCapability
     - ShadowParams
@@ -68,6 +74,7 @@ auto_fields:
     - SkyModelType
     - SkyParams
     - switchPreview
+    - UpdateableScene
   tests:
     - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
     - frontend/src/preview-3d/caps/environment-capability.test.ts

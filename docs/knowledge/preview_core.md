@@ -23,6 +23,7 @@ auto_fields:
     - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
+    - BaseScene
     - BasisEncoderLike
     - BasisModuleLike
     - bindInputHandlers
@@ -52,6 +53,7 @@ auto_fields:
     - buildVrmScene
     - buildYsmScene
     - CameraControlBridge
+    - CameraControlScene
     - cancelPendingEncodings
     - captureTextureName
     - cleanupPreview
@@ -104,6 +106,7 @@ auto_fields:
     - getTextureDecoder
     - GroundCapability
     - GroundParams
+    - GroupedScene
     - hasActivePreview
     - hasSchema
     - importWebFiles
@@ -209,6 +212,7 @@ auto_fields:
     - PmxParseResponse
     - PmxRigidBodyData
     - PmxVertexData
+    - PoseScene
     - PostprocessingLike
     - prepareMmdZipInput
     - PreviewAdapter
@@ -237,6 +241,8 @@ auto_fields:
     - sceneRegistry
     - scheduleBackgroundEncoding
     - SchemaBuilder
+    - ScreenshotScene
+    - SemanticScene
     - setBoneNodeVisible
     - SharedInfra
     - showLoadFailure
@@ -262,6 +268,7 @@ auto_fields:
     - unloadModel
     - unloadSessionModel
     - unregisterSchema
+    - UpdateableScene
     - VrmAdapterDeps
     - VrmBonePanelCtx
     - VrmDataPort

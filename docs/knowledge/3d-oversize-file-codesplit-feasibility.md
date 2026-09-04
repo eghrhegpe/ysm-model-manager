@@ -17,11 +17,14 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - _resetSingletons
+    - BaseScene
     - buildMmdScene
+    - CameraControlScene
     - cleanupPreview
     - DEFAULT_GROUND_PARAMS
     - GroundCapability
     - GroundParams
+    - GroupedScene
     - hasActivePreview
     - invalidatePreview
     - makeMmdAdapter
@@ -32,11 +35,15 @@ auto_fields:
     - MmdPanelHooks
     - mount3D
     - Mount3DOptions
+    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle
     - PreviewScene
+    - ScreenshotScene
+    - SemanticScene
     - switchPreview
+    - UpdateableScene
 created: 2026-08-27
 status: snapshot
 ---

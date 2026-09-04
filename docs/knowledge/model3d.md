@@ -33,6 +33,7 @@ auto_fields:
     - AutoDanceOptions
     - b64ToBytes
     - bakeMeshFragments
+    - BaseScene
     - BasisEncoderLike
     - BasisModuleLike
     - BeatDetectorLike
@@ -96,6 +97,7 @@ auto_fields:
     - cacheSetEvictHandler
     - CacheValue
     - CameraControlBridge
+    - CameraControlScene
     - cancelPendingEncodings
     - captureTextureName
     - cleanupPreview
@@ -243,6 +245,7 @@ auto_fields:
     - groundSurfaceNeedsRebuild
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
+    - GroupedScene
     - hasActivePreview
     - hasBoneRotation
     - hasSceneStats
@@ -425,6 +428,7 @@ auto_fields:
     - PmxReader
     - PmxRigidBodyData
     - PmxVertexData
+    - PoseScene
     - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingLike
@@ -505,6 +509,7 @@ auto_fields:
     - screenshotFromRenderer
     - ScreenshotLights
     - ScreenshotOpts
+    - ScreenshotScene
     - SEMANTIC_BONE_IDS
     - SEMANTIC_MORPH_IDS
     - SemanticBoneEntry
@@ -513,6 +518,7 @@ auto_fields:
     - SemanticMorphEntry
     - SemanticMorphId
     - SemanticMorphMap
+    - SemanticScene
     - setBoneNodeVisible
     - setBoneVisible
     - setFrustumCullEnabled
@@ -586,6 +592,7 @@ auto_fields:
     - unloadSessionModel
     - unregisterModelRoot
     - unregisterSchema
+    - UpdateableScene
     - Vec3
     - VolumetricCone
     - VolumetricParams

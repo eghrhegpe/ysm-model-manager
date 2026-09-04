@@ -46,7 +46,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| eventArr | `frontend/src/features/community/download-queue-store.ts` | 382 |
+| eventArr | `frontend/src/features/community/download-queue-store.ts` | 384 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -106,7 +106,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 121 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 122 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 294 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 318 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 329 |
@@ -227,7 +227,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 349 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 156 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 250 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 407 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 408 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -240,11 +240,11 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 155 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 261 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 262 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 197 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 40 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 197 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 241 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 243 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 112 |
 
 **订阅方（on）：**
@@ -259,8 +259,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 76 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 227 |
+| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 77 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 229 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -284,7 +284,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 189 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 487 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 186 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 188 |
 
 ### `repo:search-creator`
 
@@ -309,7 +309,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 209 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 211 |
 
 ### `stats:refresh`
 
@@ -321,7 +321,7 @@
 | registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 144 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 79 |
 | runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 203 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 261 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 263 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 38 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 197 |
@@ -331,11 +331,11 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 94 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 376 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 377 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 355 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 84 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
-| _doRender | `frontend/src/views/app-sync-manager/index.ts` | 231 |
+| _doRender | `frontend/src/views/app-sync-manager/index.ts` | 233 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 82 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 117 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 184 |
@@ -346,7 +346,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 479 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 166 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 168 |
 
 ### `sync:download:done`
 
@@ -416,18 +416,18 @@
 | runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 196 |
 | handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 211 |
 | handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 229 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 250 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 252 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 278 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 304 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 305 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 144 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 156 |
 | cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 225 |
 | cmReBindRowClick | `frontend/src/features/community/events.ts` | 275 |
 | cmReBindRowClick | `frontend/src/features/community/events.ts` | 309 |
 | dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename.ts` | 101 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 425 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 439 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 458 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 428 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 442 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 461 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 47 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 65 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 84 |
@@ -446,7 +446,7 @@
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 250 |
-| mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 518 |
+| mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 569 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 35 |
@@ -458,13 +458,13 @@
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 40 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 51 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 57 |
-| dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 75 |
-| dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 87 |
-| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 102 |
-| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 110 |
+| dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 76 |
+| dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 88 |
+| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 103 |
+| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 84 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 365 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 252 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 253 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 164 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 287 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 52 |
@@ -481,15 +481,15 @@
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 95 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 297 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 303 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 323 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 329 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 351 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 377 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 117 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 128 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 139 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 151 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 161 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 324 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 330 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 352 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 378 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 123 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 134 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 145 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 167 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 85 |
@@ -509,17 +509,17 @@
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 142 |
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 153 |
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 159 |
-| initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 94 |
-| initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 143 |
+| initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 95 |
+| initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 144 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 132 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 287 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 363 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 288 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 312 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 291 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 315 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 114 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 148 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 114 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 115 |
 | beginSync | `frontend/src/views/app-sidebar/index.ts` | 142 |
 | runPush | `frontend/src/views/app-sidebar/index.ts` | 267 |
 | runPush | `frontend/src/views/app-sidebar/index.ts` | 273 |
@@ -534,7 +534,7 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 136 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 158 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 143 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 159 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 161 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 47 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 55 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 34 |
@@ -569,10 +569,10 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 474 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 484 |
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 196 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 335 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 343 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 455 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 462 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 336 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 344 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 456 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 463 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 44 |
@@ -606,7 +606,7 @@
 | registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 66 |
 | handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 123 |
 | handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 236 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 260 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 262 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 39 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 196 |

@@ -13,12 +13,15 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - _resetSingletons
+    - BaseScene
     - buildModelGroup
+    - CameraControlScene
     - cleanupPreview
     - closeActive3DOverlay
     - disposeDebugGroup
     - disposeSceneMeshes
     - getRegisteredRoutes
+    - GroupedScene
     - hasActivePreview
     - invalidatePreview
     - loadModel2D
@@ -26,6 +29,7 @@ auto_fields:
     - Mount3DOptions
     - openModel3DFullscreen
     - OpenModel3DOptions
+    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle
@@ -33,8 +37,11 @@ auto_fields:
     - rebuildDebug
     - registerReRoute
     - scanModelsByType
+    - ScreenshotScene
+    - SemanticScene
     - setActive3DClose
     - switchPreview
+    - UpdateableScene
     - withPreviewExtras
   tests:
     - frontend/src/preview-3d/adapters/mount-preview-core.behavior.test.ts

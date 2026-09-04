@@ -22,7 +22,7 @@ const appTreeStyle: CSSStyleSheet = (() => {
 
 export { appTreeStyle };
 
-import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
+import { isPreviewOverlayActive } from "../../ui/overlay-active.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
@@ -332,7 +332,8 @@ export class AppTree extends WebComponentBase {
   private async _onKeydown(e: KeyboardEvent): Promise<void> {
     // 3D 全屏会话激活时让路：Ctrl+F 会把用户踢去树面板搜索框、Delete 会误删选中
     // 模型、方向键与 3D 相机平移冲突——3D 打开期间树面板不接管任何全局按键。
-    if (document.getElementById(PREVIEW_OVERLAY_ID)) return;
+    // 契约收编（ADR-175 M1）：统一走 ui/overlay-active 权威查询，不裸查 DOM。
+    if (isPreviewOverlayActive()) return;
     const target = e.target as HTMLElement | null;
     if (this._onKeyFind(e)) return;
     if (await this._onKeyDelete(e, target)) return;

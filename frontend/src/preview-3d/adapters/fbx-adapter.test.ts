@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import { buildFbxScene, FBX_TARGET_MAX_DIM, normalizeFbxScale } from "./fbx-adapter.ts";
+import { stubBlobUrls } from "../../test-utils/blob-urls.ts";
 
 const hoisted = vi.hoisted(() => {
   const loadImpl = vi.fn();
@@ -288,8 +289,7 @@ describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
 
   it("worker 解析成功 → texUrlMap（原样/小写双试）+ buildFbxSceneFromData 重建 + diag ok", async () => {
     localStorage.setItem("fbx-worker", "1");
-    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:tex-url");
-    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const { revokeURL } = stubBlobUrls(() => "blob:tex-url");
     // 原样大小写 miss → 小写重试命中（磁盘文件名大小写不一致场景）
     hoisted.readBytesMock.mockImplementation((p: string) => {
       if (p === "/repo/fbx/a.fbx") return Promise.resolve(btoa("FBX"));
@@ -338,8 +338,7 @@ describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
 
   it("worker 解析失败（ok:false）→ 降级主线程 blob 路径（FBXLoader）", async () => {
     localStorage.setItem("fbx-worker", "1");
-    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:fbx-url");
-    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const { revokeURL } = stubBlobUrls(() => "blob:fbx-url");
     hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
     hoisted.fbxParserImpl = () => ({
       parse: () => Promise.resolve({ ok: false, error: "bad header" }),
@@ -359,8 +358,7 @@ describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
 
   it("worker parse 抛错 → diag fail + 异常穿透", async () => {
     localStorage.setItem("fbx-worker", "1");
-    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:fbx-url");
-    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    stubBlobUrls(() => "blob:fbx-url");
     hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
     hoisted.fbxParserImpl = () => ({
       parse: () => Promise.reject(new Error("worker crash")),
@@ -386,8 +384,7 @@ describe("fbx-adapter 主线程降级与边界", () => {
   });
 
   it("FBXLoader load onError → 拒绝并携带 Error（diag fail）", async () => {
-    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:fbx-url");
-    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    stubBlobUrls(() => "blob:fbx-url");
     hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
     hoisted.setLoadError(new Error("fbx parse fail"));
     const ctx = makeCtx();
@@ -397,8 +394,7 @@ describe("fbx-adapter 主线程降级与边界", () => {
   });
 
   it("renderer 缺失 → screenshot 归一 null（不抛）", async () => {
-    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:fbx-url");
-    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    stubBlobUrls(() => "blob:fbx-url");
     hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
     const ctx = makeCtx();
     const content = await buildFbxScene(ctx, "/repo/fbx/e.fbx", { readFileBytes: hoisted.readBytesMock });
@@ -408,8 +404,7 @@ describe("fbx-adapter 主线程降级与边界", () => {
 
   it("纹理原样大小写命中 → 不做小写重试", async () => {
     localStorage.setItem("fbx-worker", "1");
-    vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:tex-url");
-    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    stubBlobUrls(() => "blob:tex-url");
     hoisted.readBytesMock.mockImplementation((p: string) => {
       if (p === "/repo/fbx/f.fbx") return Promise.resolve(btoa("FBX"));
       if (p === "/repo/fbx/Tex.PNG") return Promise.resolve(btoa("PNG"));

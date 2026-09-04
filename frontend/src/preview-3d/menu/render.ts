@@ -46,6 +46,99 @@ function ensureMenuStyles(): void {
   background: rgba(255,255,255,0.1);
   margin: 6px 10px;
 }
+/* ===== P1 抽类迁移（render.ts 控件行，2026-09）：原内联 style.cssText 逐字搬迁 =====
+ * 双类锚定（.slide-item / .slide-label 在前）压过 ui 模块单类规则，避免注入顺序依赖；
+ * 控件无基类的用 rm- 单类（前缀唯一，无撞名）。toggle 的 apply() 运行时色/位移仍走内联（动态豁免）。 */
+.slide-item.rm-control-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+}
+.slide-item.rm-control-row-lg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+.slide-label.rm-label-sm {
+  font-size: 12px;
+}
+.slide-label.rm-control-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+}
+.slide-label.rm-control-label-strong {
+  flex: 1;
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+}
+.slide-label.rm-slider-label-fixed {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+}
+.slide-label.rm-label-ellipsis {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+}
+.rm-toggle-track {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+}
+.rm-toggle-knob {
+  position: absolute;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.2s;
+}
+.rm-range {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  accent-color: var(--accent, #7c83ff);
+}
+.rm-range-num {
+  flex: 0 0 auto;
+  width: 52px;
+  font-size: 11px;
+  padding: 1px 3px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(0,0,0,0.3);
+  color: rgba(255,255,255,0.8);
+  text-align: center;
+}
+.rm-eye {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+}
+.rm-op {
+  flex: 0 0 auto;
+  width: 72px;
+  cursor: pointer;
+  accent-color: var(--accent, #7c83ff);
+}
 `;
   document.head.appendChild(style);
   _menuStylesInjected = true;
@@ -127,6 +220,8 @@ function rmAppendFolder(
   header.append(arrow, title);
   const body = document.createElement("div");
   body.dataset.testid = node.id + "-body";
+  // 动态豁免（P1）：折叠状态读写均依赖内联 display（node-render 测试断言
+  // body.style.display 初值 + 点击切换），抽类无法承载运行时状态，保留内联。
   body.style.cssText = "display:" + (collapsed ? "none" : "block");
   header.addEventListener("click", (ev: MouseEvent): void => {
     ev.stopPropagation();
@@ -183,7 +278,7 @@ function rmAppendButton(container: HTMLElement, node: PreviewMenuNode, actionCtx
 /** [子函数 4/6] row：动态列表行（纹理/材质/bone 等） */
 function rmAppendDynamicRow(container: HTMLElement, node: PreviewMenuNode, actionCtx: PreviewActionMenuCtx): void {
   const { row, lb } = rmMakeRowBase(node);
-  lb.style.cssText = "font-size:12px";
+  lb.classList.add("rm-label-sm");
   lb.textContent = rmLabel(node, node.value || node.id);
   if (node.value && typeof node.value === "string") {
     const meta = document.createElement("span");
@@ -216,11 +311,9 @@ function rmAppendSelect(
   const spec = node.control;
   if (!spec?.options?.length) return;
   const wrap = document.createElement("div");
-  wrap.className = "slide-item";
-  wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 10px";
+  wrap.className = "slide-item rm-control-row";
   const lb = document.createElement("span");
-  lb.className = "slide-label";
-  lb.style.cssText = "flex:1;min-width:0;font-size:12px;color:rgba(255,255,255,0.7)";
+  lb.className = "slide-label rm-control-label";
   lb.textContent = rmLabel(node);
   wrap.appendChild(lb);
   const sel = document.createElement("select");
@@ -263,18 +356,16 @@ function rmAppendSelect(
 function rmAppendToggle(container: HTMLElement, node: PreviewMenuNode): void {
   const spec = node.control;
   const wrap = document.createElement("div");
-  wrap.className = "slide-item";
-  wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
+  wrap.className = "slide-item rm-control-row-lg";
   wrap.dataset.testid = "preview-" + node.id;
   const lb = document.createElement("span");
-  lb.className = "slide-label";
-  lb.style.cssText = "flex:1;font-size:12px;color:rgba(255,255,255,0.85)";
+  lb.className = "slide-label rm-control-label-strong";
   lb.textContent = rmLabel(node);
   wrap.appendChild(lb);
   const btn = document.createElement("button");
-  btn.style.cssText = "width:36px;height:20px;border-radius:10px;border:none;cursor:pointer;position:relative;transition:background .2s";
+  btn.className = "rm-toggle-track";
   const knob = document.createElement("span");
-  knob.style.cssText = "position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s";
+  knob.className = "rm-toggle-knob";
   const apply = (v: boolean): void => {
     btn.style.background = v ? "var(--accent,#7c83ff)" : "rgba(255,255,255,0.2)";
     knob.style.left = v ? "18px" : "2px";
@@ -296,8 +387,7 @@ function rmAppendToggle(container: HTMLElement, node: PreviewMenuNode): void {
 function rmAppendSlider(container: HTMLElement, node: PreviewMenuNode): void {
   const spec = node.control;
   const wrap = document.createElement("div");
-  wrap.className = "slide-item";
-  wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 10px";
+  wrap.className = "slide-item rm-control-row";
   wrap.dataset.testid = "preview-" + node.id;
   const min = spec?.min ?? 0;
   const max = spec?.max ?? 100;
@@ -308,7 +398,7 @@ function rmAppendSlider(container: HTMLElement, node: PreviewMenuNode): void {
   range.step = String(spec?.step ?? 1);
   const initial = Number(spec?.get?.(undefined) ?? min);
   range.value = String(initial);
-  range.style.cssText = "flex:1;min-width:0;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+  range.className = "rm-range";
   let num: HTMLInputElement | null = null;
   if (spec?.numeric) {
     num = document.createElement("input");
@@ -317,7 +407,7 @@ function rmAppendSlider(container: HTMLElement, node: PreviewMenuNode): void {
     num.max = range.max;
     num.step = range.step;
     num.value = String(initial);
-    num.style.cssText = "flex:0 0 auto;width:52px;font-size:11px;padding:1px 3px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);text-align:center";
+    num.className = "rm-range-num";
   }
   const commit = (v: number): void => {
     spec?.set?.(v);
@@ -339,8 +429,7 @@ function rmAppendSlider(container: HTMLElement, node: PreviewMenuNode): void {
   }
   if (node.labelKey) {
     const lb = document.createElement("span");
-    lb.className = "slide-label";
-    lb.style.cssText = "flex:0 0 auto;font-size:12px;color:rgba(255,255,255,0.7)";
+    lb.className = "slide-label rm-slider-label-fixed";
     lb.textContent = rmLabel(node);
     wrap.appendChild(lb);
   }
@@ -354,15 +443,14 @@ function rmAppendSlider(container: HTMLElement, node: PreviewMenuNode): void {
  *  buildMaterialControls 语义：点击翻转显隐、滑条改透明度） */
 function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): void {
   const wrap = document.createElement("div");
-  wrap.className = "slide-item";
-  wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 10px";
+  wrap.className = "slide-item rm-control-row";
   wrap.dataset.testid = "preview-" + node.id;
   // 整行可点翻转显隐（对齐旧 buildMaterialControls 的 role/tabIndex/row.onclick——249bc6d0 review P3）
   wrap.setAttribute("role", "button");
   wrap.tabIndex = 0;
   const eye = document.createElement("button");
   eye.type = "button";
-  eye.style.cssText = "flex:0 0 auto;background:none;border:none;cursor:pointer;font-size:14px;padding:0;line-height:1";
+  eye.className = "rm-eye";
   const eyeApply = (v: boolean): void => {
     eye.textContent = v ? "👁" : "🚫";
     eye.title = v ? tr("preview.eyeHide", "Hide") : tr("preview.eyeShow", "Show");
@@ -380,8 +468,7 @@ function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): voi
   wrap.onclick = (): void => toggleEye();
   wrap.appendChild(eye);
   const lb = document.createElement("span");
-  lb.className = "slide-label";
-  lb.style.cssText = "flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12px;color:rgba(255,255,255,0.85)";
+  lb.className = "slide-label rm-label-ellipsis";
   lb.textContent = rmLabel(node);
   wrap.appendChild(lb);
   const op = document.createElement("input");
@@ -389,7 +476,7 @@ function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): voi
   op.min = "0";
   op.max = "100";
   op.value = String(node.opacity?.get() ?? 100);
-  op.style.cssText = "flex:0 0 auto;width:72px;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+  op.className = "rm-op";
   op.oninput = (): void => {
     node.opacity?.set(Number(op.value));
   };

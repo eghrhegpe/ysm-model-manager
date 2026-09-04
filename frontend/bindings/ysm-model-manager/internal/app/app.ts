@@ -1129,6 +1129,7 @@ export function ScanModelEntriesWithLabel(dir: string, label: string): $Cancella
  * ========== 高级搜索 ==========
  * SearchModels 扫描模型条目后按关键词、骨骼数、立方体数、纹理尺寸范围过滤。
  * 并发优化：关键词预过滤后，用 goroutine 池并行 AnalyzeBedrockModel（I/O + CPU 混合型）。
+ * 参数固定 8 个，新增过滤维度走 types.SearchFilters struct（技术债，后续 ADR 封装）。
  */
 export function SearchModels(filesRoot: string, keyword: string, minBones: number, maxBones: number, minCubes: number, maxCubes: number, minTex: number, maxTex: number): $CancellablePromise<types$0.SearchResult[] | null> {
     return $Call.ByID(652244789, filesRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex);
@@ -1250,6 +1251,7 @@ export function ToggleEnable(path: string): $CancellablePromise<boolean> {
 /**
  * ========== 启用/禁用 ==========
  * ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效）
+ * Deprecated: 仅桌面 UI 零消费，多根场景请用 ToggleEnable。保留为 CLI / browser-adapter 契约入口。
  */
 export function ToggleModelEnable(path: string): $CancellablePromise<boolean> {
     return $Call.ByID(3300558263, path);

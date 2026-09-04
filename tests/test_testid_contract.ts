@@ -51,7 +51,7 @@ const seen = new Set(); // 真实源码钩子字面量（仅非测试源码）
     const m = c.match(/export\s+const\s+VIEW_TESTIDS\s*:\s*readonly\s+string\[\]\s*=\s*\[([\s\S]*?)\]/);
     if (m) {
       const rel = path.relative(FE, p).replace(/\\/g, '/');
-      for (const idm of m[1].matchAll(/'([a-z0-9-]+)'/g)) {
+      for (const idm of m[1].matchAll(/['"]([a-z0-9-]+)['"]/g)) {
         const id = idm[1];
         if (!(id in REGISTRY)) REGISTRY[id] = rel;
       }

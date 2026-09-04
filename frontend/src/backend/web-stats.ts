@@ -26,8 +26,13 @@ const POOL_MAX = 8;
 let workers: Worker[] = [];
 let requestSeq = 0;
 
+/** 单 chunk 结果：ok=true 携带结果；ok=false 携带是否可重试（瞬态 error 可换 worker 重试，超时/死循环不可） */
+type StatsChunkResult =
+  | { ok: true; results: Array<WebModelStatsWithPath> }
+  | { ok: false; retryable: boolean };
+
 /** 在途请求表（requestId → settle）：terminate 杀池时全部降级 settle，防 Promise.all 永久挂起 */
-const inflight = new Map<number, (v: Array<WebModelStatsWithPath> | null) => void>();
+const inflight = new Map<number, (v: StatsChunkResult) => void>();
 
 /** 降级标记：最近一次批量统计是否降级（一次消费，toolbar-search 读取后复位） */
 let degradedFlag = false;
@@ -70,9 +75,24 @@ export function terminateStatsWorker(): void {
     }
   }
   workers = [];
-  // 在途请求全部降级 settle（防 Promise.all 永久挂起）
-  for (const [, settle] of inflight) settle(null);
+  // 在途请求全部降级 settle（防 Promise.all 永久挂起；超时/主动取消不可重试）
+  for (const [, settle] of inflight) settle({ ok: false, retryable: false });
   inflight.clear();
+}
+
+/**
+ * 终止单个 Worker（瞬态 error / WASM trap 逃逸时用）并从池中移除。
+ * 与 terminateStatsWorker 的区别：不杀整池——每 Worker 独立 WASM 实例（stats.worker.ts
+ * 注释），单 worker 故障不应传染其他 worker；其余 worker 在途请求不受影响。
+ */
+function terminateWorker(w: Worker): void {
+  try {
+    w.terminate();
+  } catch {
+    /* 已终止 */
+  }
+  const i = workers.indexOf(w);
+  if (i >= 0) workers.splice(i, 1);
 }
 
 function markDegraded(): void {
@@ -125,13 +145,10 @@ export function prefetchStatsWorker(): void {
 
 /**
  * 单 chunk 统计（一个 worker 一个在途任务；requestId 隔离旧消息/并发批）。
- * 超时杀整个池（任一 worker 挂起可能同批传染）→ 整批降级；返回 null = 该 chunk 降级。
+ * 超时杀整个池（任一 worker 挂起可能同批传染）→ 整批降级；
+ * 瞬态 error（WASM 初始化失败/trap 逃逸）只终止出错 worker → 调用方换 worker 重试。
  */
-function statsOneChunk(
-  w: Worker,
-  requestId: number,
-  paths: string[],
-): Promise<Array<WebModelStatsWithPath> | null> {
+function statsOneChunk(w: Worker, requestId: number, paths: string[]): Promise<StatsChunkResult> {
   return new Promise((resolve) => {
     inflight.set(requestId, resolve);
     const timer = setTimeout(() => {
@@ -139,10 +156,10 @@ function statsOneChunk(
       terminateStatsWorker();
       markDegraded();
       inflight.delete(requestId);
-      resolve(null);
+      resolve({ ok: false, retryable: false });
     }, STATS_CHUNK_TIMEOUT_MS);
 
-    const settle = (v: Array<WebModelStatsWithPath> | null): void => {
+    const settle = (v: StatsChunkResult): void => {
       clearTimeout(timer);
       inflight.delete(requestId);
       resolve(v);
@@ -152,21 +169,20 @@ function statsOneChunk(
       const data = ev.data as StatsWorkerResponse;
       if (!data || data.requestId !== requestId) return; // 旧批/进度消息忽略
       if (data.type === "result") {
-        settle(data.results);
+        settle({ ok: true, results: data.results });
       } else if (data.type === "error") {
-        // Worker 内 WASM 初始化失败等 → 终止并降级
-        terminateStatsWorker();
-        markDegraded();
-        settle(null);
+        // Worker 内 WASM 初始化失败等 → 终止出错 worker（瞬态可重试），不杀整池；
+        // 不置降级标记——重试成功后该批仍完整（降级由 batchStatsWebModels 最终 failed 决定）
+        terminateWorker(w);
+        settle({ ok: false, retryable: true });
       }
       // progress：当前无 UI 消费，忽略
     };
 
     w.onerror = (): void => {
-      // 运行时错误（WASM trap 逃逸等）→ 终止 + 降级，防在途请求永久挂起
-      terminateStatsWorker();
-      markDegraded();
-      settle(null);
+      // 运行时错误（WASM trap 逃逸等）→ 终止出错 worker（瞬态可重试），防在途请求永久挂起
+      terminateWorker(w);
+      settle({ ok: false, retryable: true });
     };
 
     w.postMessage({ type: "stats", paths, requestId } satisfies StatsWorkerRequest);
@@ -206,16 +222,28 @@ export async function batchStatsWebModels(paths: string[]): Promise<WebModelStat
   let failed = false;
 
   const runWorkerQueue = async (w: Worker): Promise<void> => {
+    let currentW = w;
+    let retried = false;
     while (!failed) {
       const ci = nextChunk++;
       if (ci >= chunks.length) return;
-      const res = await statsOneChunk(w, ++requestSeq, chunks[ci].slice);
-      if (res === null) {
-        failed = true; // 该片降级 → 整体降级（在途其他片 settle 后统一判）
+      let res = await statsOneChunk(currentW, ++requestSeq, chunks[ci].slice);
+      // 瞬态 error（可重试）→ 换 worker 重试 1 次（该 worker 已被 terminateWorker 移除，
+      // getWorkerPool 会懒建新 worker 补池）；超时（不可重试）直接整体降级
+      if (!res.ok && res.retryable && !retried) {
+        retried = true;
+        const retryW = getWorkerPool()?.[0];
+        if (retryW) {
+          currentW = retryW;
+          res = await statsOneChunk(currentW, ++requestSeq, chunks[ci].slice);
+        }
+      }
+      if (!res.ok) {
+        failed = true; // 重试仍失败（或不可重试）→ 该片降级 → 整体降级（在途其他片 settle 后统一判）
         results[ci] = null;
         return;
       }
-      results[ci] = res;
+      results[ci] = res.results;
       progressDone += chunks[ci].slice.length;
       statsProgressCb?.(Math.min(progressDone, paths.length), paths.length);
     }

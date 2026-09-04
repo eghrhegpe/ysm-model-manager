@@ -248,25 +248,79 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(consumeWebSearchDegraded()).toBe(false);
   });
 
-  it("Worker error 响应（WASM 初始化失败）→ 终止整池 + 整批降级", async () => {
+  it("Worker error 响应（瞬态）→ 只终止出错 worker，换 worker 重试成功 → 不降级", async () => {
     vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 2 });
-    const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm", "/web/ysm/c.ysm"]);
-    const w = FakeWorker.instances[0];
-    w.onmessage?.({ data: { type: "error", requestId: w.posted[0].requestId, message: "wasm init failed" } });
-    await expect(p).resolves.toBeNull();
-    expect(consumeWebSearchDegraded()).toBe(true);
-    for (const inst of FakeWorker.instances) expect(inst.terminated).toBe(true);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]);
+    const w0 = FakeWorker.instances[0];
+    // w0 报 WASM 初始化失败（瞬态）→ 只 terminate w0，不杀池
+    w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
+    // 重试：getWorkerPool 池空懒建新 worker w1
+    await flushMicrotasks();
+    const w1 = FakeWorker.instances[1];
+    expect(w0.terminated).toBe(true); // 出错 worker 被终止
+    expect(w1).toBeTruthy();
+    expect(w1.terminated).toBe(false); // 新 worker 存活
+    w1.onmessage?.({
+      data: {
+        type: "result",
+        requestId: w1.posted[0].requestId,
+        results: [mkResult("/web/ysm/a.ysm", 3), mkResult("/web/ysm/b.ysm", 4)],
+      },
+    });
+    const res = await p;
+    expect(res?.[0]?.boneCount).toBe(3);
+    expect(res?.[1]?.boneCount).toBe(4);
+    expect(consumeWebSearchDegraded()).toBe(false); // 重试成功 → 不降级
   });
 
-  it("Worker onerror（WASM trap 逃逸）→ 终止整池 + 降级", async () => {
+  it("Worker error 响应 → 重试仍失败 → 整批降级", async () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
-    FakeWorker.instances[0].onerror?.(new Error("trap escaped"));
+    const w0 = FakeWorker.instances[0];
+    w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
+    await flushMicrotasks();
+    const w1 = FakeWorker.instances[1];
+    // 新 worker 也报错 → 重试耗尽 → 降级
+    w1.onmessage?.({ data: { type: "error", requestId: w1.posted[0].requestId, message: "wasm init failed again" } });
     await expect(p).resolves.toBeNull();
     expect(consumeWebSearchDegraded()).toBe(true);
-    expect(FakeWorker.instances[0].terminated).toBe(true);
+  });
+
+  it("Worker onerror（瞬态）→ 换 worker 重试成功 → 不降级", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    const w0 = FakeWorker.instances[0];
+    w0.onerror?.(new Error("trap escaped"));
+    await flushMicrotasks();
+    const w1 = FakeWorker.instances[1];
+    expect(w0.terminated).toBe(true);
+    expect(w1.terminated).toBe(false);
+    w1.onmessage?.({
+      data: {
+        type: "result",
+        requestId: w1.posted[0].requestId,
+        results: [mkResult("/web/ysm/a.ysm", 7)],
+      },
+    });
+    const res = await p;
+    expect(res?.[0]?.boneCount).toBe(7);
+    expect(consumeWebSearchDegraded()).toBe(false);
+  });
+
+  it("Worker onerror → 重试仍失败 → 整批降级", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    const w0 = FakeWorker.instances[0];
+    w0.onerror?.(new Error("trap escaped"));
+    await flushMicrotasks();
+    const w1 = FakeWorker.instances[1];
+    w1.onerror?.(new Error("trap again"));
+    await expect(p).resolves.toBeNull();
+    expect(consumeWebSearchDegraded()).toBe(true);
   });
 
   it("单批超时（60s 无回包）→ 杀池防僵尸 + 降级", async () => {

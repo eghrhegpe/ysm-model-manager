@@ -5,8 +5,8 @@
 // 走 browserAdapter（browser-adapter.ts），桌面/Android 走 Wails 原逻辑——
 // 业务调用零改动。
 
-import { isWebPlatform } from "./platform-web.ts";
 import { browserAdapter } from "./browser-adapter.ts";
+import { isWebPlatform } from "./platform-web.ts";
 import type { AppBindings } from "./types.ts";
 
 export type { AppBindings };

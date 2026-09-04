@@ -4,10 +4,11 @@
 import { bus, type CtxShowPayload, type MenuItem } from "../bus.ts";
 import { isViewerMode } from "../utils/dom/android-bridge.ts";
 import { canWebAction } from "../utils/dom/capabilities.ts";
-import { getMenuDef } from "./menu-defs";
 // P1 修复（ADR-040）：handler 表已拆至 context-menu-handlers.ts；此处仅消费 HANDLERS，
 // 不再 re-export 其余共享符号（无外部消费者，消除死代码）
 import { HANDLERS } from "./context-menu-handlers.ts";
+import { getMenuDef } from "./menu-defs";
+
 type MenuCtx = import("./context-menu-handlers.ts").MenuCtx;
 
 // 查看器模式（Android/网页版 ADR-049）下仍可用的右键菜单动作判定全部收敛至
@@ -19,7 +20,10 @@ type MenuCtx = import("./context-menu-handlers.ts").MenuCtx;
  * 若直接炸穿会拖垮整条菜单渲染。此处异常兜底为「不可见 + console.warn」，
  * 单条谓词 bug 不应让整份菜单消失（ADR-021 B 层 P1 扩展护栏）。
  */
-function isItemVisible(item: { action?: string; visibleWhen?: (ctx: MenuCtx) => boolean }, ctx: MenuCtx): boolean {
+function isItemVisible(
+  item: { action?: string; visibleWhen?: (ctx: MenuCtx) => boolean },
+  ctx: MenuCtx,
+): boolean {
   if (!item.visibleWhen) return true;
   try {
     return item.visibleWhen(ctx);

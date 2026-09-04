@@ -6,7 +6,7 @@
 //
 // 判定语义：t() 缺失键返回 key 本身（t.ts:21）——「v === key」即命中兜底。
 // 该判定是单一事实来源，与 t() 缺失键行为强耦合，t() 行为变化需同步 tr()。
-import { t, type LocaleKey } from "./t.ts";
+import { type LocaleKey, t } from "./t.ts";
 
 /**
  * i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。

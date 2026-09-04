@@ -62,7 +62,7 @@ export function buildRenameName(f: RenameFields, ext: string): string {
 }
 
 /** Windows 文件名非法字符（含控制字符） */
-const ILLEGAL_CHARS = /[<>:"\\|?*\/\u0000-\u001f]/;
+const ILLEGAL_CHARS = /[<>:"\\|?*/\u0000-\u001f]/;
 
 /**
  * 校验重命名字段，返回错误文案；合法返回 null。
@@ -71,10 +71,8 @@ const ILLEGAL_CHARS = /[<>:"\\|?*\/\u0000-\u001f]/;
 export function validateRenameFields(f: RenameFields, ext: string): string | null {
   if (!f.author || !f.chara) return "⚠️ 作者、角色名不能为空";
   const allFields = [f.author, f.work, f.chara, f.variant, f.date].filter(Boolean);
-  if (allFields.some((x) => ILLEGAL_CHARS.test(x)))
-    return "⚠️ " + t("dialog.fileNameIllegal");
+  if (allFields.some((x) => ILLEGAL_CHARS.test(x))) return "⚠️ " + t("dialog.fileNameIllegal");
   const newName = buildRenameName(f, ext);
-  if (newName.length > 255)
-    return "⚠️ " + t("dialog.fileNameTooLong");
+  if (newName.length > 255) return "⚠️ " + t("dialog.fileNameTooLong");
   return null;
 }

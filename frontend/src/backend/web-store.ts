@@ -2,10 +2,11 @@
 // 配置（localStorage）、导入日志环、运行时日志环、标签、启用开关（ban）。
 // 文件系统类操作见 web-fs.ts；社区数据持久化见 web-community.ts。
 // browser-adapter.ts 从本文件 import 组装 webImpls。
-import { idbGet, idbSet, idbDel } from "./idb.ts";
-import { scanAllWebModels } from "./web-fs.ts";
-import { safeGet, safeSet } from "../utils/dom/storage.ts";
+
 import { swallowError } from "../utils/core/async.ts";
+import { safeGet, safeSet } from "../utils/dom/storage.ts";
+import { idbDel, idbGet, idbSet } from "./idb.ts";
+import { scanAllWebModels } from "./web-fs.ts";
 
 // --- 配置（localStorage，缺省返回 {} 让主应用可启动）---
 const CFG_KEY = "ysm:config";
@@ -67,7 +68,11 @@ async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void
 
 /** 追加日志：先 hydrate（合并上会话旧日志，防 fresh 会话先写后读覆盖丢失），
  *  截断后写回 IDB（fire-and-forget：swallowError 记录失败；隐私模式/写失败静默降级为纯内存） */
-async function pushWebLog(ring: Array<Record<string, unknown>>, cap: number, entry: Record<string, unknown>): Promise<void> {
+async function pushWebLog(
+  ring: Array<Record<string, unknown>>,
+  cap: number,
+  entry: Record<string, unknown>,
+): Promise<void> {
   await hydrateWebLog(ring);
   ring.push(entry);
   if (ring.length > cap) ring.splice(0, ring.length - cap); // 仅保留最近 cap 条（环形截断）
@@ -83,15 +88,32 @@ async function getWebRuntimeLogs(): Promise<unknown> {
   return webRuntimeLogs.slice();
 }
 async function addWebImportLog(
-  modelName: string, sourcePath: string, targetDir: string, fileSize: number, status: string, errMsg: string,
+  modelName: string,
+  sourcePath: string,
+  targetDir: string,
+  fileSize: number,
+  status: string,
+  errMsg: string,
 ): Promise<void> {
   await pushWebLog(webImportLogs, importLogCap(), {
-    ModelName: modelName, SourcePath: sourcePath, TargetDir: targetDir,
-    FileSize: fileSize, Status: status, ErrorMsg: errMsg, Timestamp: Date.now(), Operation: "import",
+    ModelName: modelName,
+    SourcePath: sourcePath,
+    TargetDir: targetDir,
+    FileSize: fileSize,
+    Status: status,
+    ErrorMsg: errMsg,
+    Timestamp: Date.now(),
+    Operation: "import",
   });
 }
 async function addWebOpLog(
-  op: string, modelName: string, _sourcePath: string, _targetDir: string, _fileSize: number, _status: string, errMsg: string,
+  op: string,
+  modelName: string,
+  _sourcePath: string,
+  _targetDir: string,
+  _fileSize: number,
+  _status: string,
+  errMsg: string,
 ): Promise<void> {
   // 操作日志归入运行时环（webRuntimeLogs），与导入日志环（webImportLogs）分离，
   // 否则 GetRuntimeLogs 恒空、ClearRuntimeLogs 形同虚设（原实现误写入导入环）
@@ -190,7 +212,13 @@ async function toggleWebEnable(path: string): Promise<boolean> {
 // 标签/启用开关）。
 export const webStoreBindings = {
   LoadAppConfig: () => Promise.resolve(loadWebConfig()),
-  SaveAppConfig: (filesRoot: string, rpRoot: string, mcRoot: string, linkMode: string, theme: string) => {
+  SaveAppConfig: (
+    filesRoot: string,
+    rpRoot: string,
+    mcRoot: string,
+    linkMode: string,
+    theme: string,
+  ) => {
     // 字段名对齐 AppConfig（消费方读 resourcepackRoot，非 rpRoot）；spread 旧配置避免
     // 整体覆盖丢失 ysmRoot/shaderpackRoot 等；空串保留旧值（对齐桌面 orDefault 语义）
     const prev = loadWebConfig();
@@ -218,10 +246,23 @@ export const webStoreBindings = {
   // 网页版内存日志环（替代 Go ImportLog / runtimeLogs，消除诊断页 fail-fast 红错）
   GetImportLogs: () => getWebImportLogs(),
   GetRuntimeLogs: () => getWebRuntimeLogs(),
-  AddImportLog: (modelName: string, sourcePath: string, targetDir: string, fileSize: number, status: string, errMsg: string) =>
-    addWebImportLog(modelName, sourcePath, targetDir, fileSize, status, errMsg),
-  AddOpLog: (op: string, modelName: string, sourcePath: string, targetDir: string, fileSize: number, status: string, errMsg: string) =>
-    addWebOpLog(op, modelName, sourcePath, targetDir, fileSize, status, errMsg),
+  AddImportLog: (
+    modelName: string,
+    sourcePath: string,
+    targetDir: string,
+    fileSize: number,
+    status: string,
+    errMsg: string,
+  ) => addWebImportLog(modelName, sourcePath, targetDir, fileSize, status, errMsg),
+  AddOpLog: (
+    op: string,
+    modelName: string,
+    sourcePath: string,
+    targetDir: string,
+    fileSize: number,
+    status: string,
+    errMsg: string,
+  ) => addWebOpLog(op, modelName, sourcePath, targetDir, fileSize, status, errMsg),
   // 日志环清空（环状态封装在本文件）
   ClearImportLogs: () => {
     clearWebImportLogs();

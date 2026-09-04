@@ -1,11 +1,12 @@
 // ===== 模型标签编辑弹窗（类型化版 — ADR-014 P3 dialogs）=====
 // 读取/写入模型标签，支持输入新标签和选择已有标签
-import { esc } from "../../utils/dom/html.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { closeDlg, registerDlg } from "./modal.ts";
+
 import { getApp } from "../../backend/app.ts";
-import { addTagToSet } from "./tag-set.ts";
 import { t } from "../../core/i18n/t.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { closeDlg, registerDlg } from "./modal.ts";
+import { addTagToSet } from "./tag-set.ts";
 
 interface DgTeShell {
   overlay: HTMLDivElement;
@@ -48,11 +49,7 @@ function dgTeRenderSuggestions(shell: DgTeShell, allTags: string[]): void {
     ? unused
         .map(
           (tag) =>
-            '<button class="te-sug-btn" data-tag="' +
-            esc(tag) +
-            '">+' +
-            esc(tag) +
-            "</button>",
+            '<button class="te-sug-btn" data-tag="' + esc(tag) + '">+' + esc(tag) + "</button>",
         )
         .join("")
     : '<span style="color:var(--muted)">' + t("dialog.noOtherTags") + "</span>";
@@ -93,10 +90,7 @@ function ensureTeStyles(): void {
   document.head.appendChild(el);
 }
 
-function dgTeBuildShell(
-  modelPath: string,
-  resolve: (value: string[] | null) => void,
-): DgTeShell {
+function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => void): DgTeShell {
   const overlay = document.createElement("div");
   overlay.className = "dlg-overlay";
 
@@ -180,8 +174,7 @@ function dgTeLoadData(shell: DgTeShell, modelPath: string): void {
       dgTeRenderSuggestions(shell, allTags);
     } catch (e) {
       shell.loadFailed = true;
-      shell.errEl.textContent =
-        "⚠️ " + t("dialog.tagsLoadFailed") + ": " + friendlyError(e);
+      shell.errEl.textContent = "⚠️ " + t("dialog.tagsLoadFailed") + ": " + friendlyError(e);
     } finally {
       shell.loading = false;
       if (shell.disposed) return;
@@ -202,26 +195,23 @@ function dgTeBindEvents(shell: DgTeShell, modelPath: string): void {
   (shell.box.querySelector("#te-add") as HTMLElement).onclick = (): void =>
     dgTeAddTag(shell, shell.inputEl.value);
 
-  (shell.box.querySelector("#te-cancel") as HTMLElement).onclick = (): void =>
-    shell.close(null);
+  (shell.box.querySelector("#te-cancel") as HTMLElement).onclick = (): void => shell.close(null);
 
-  (shell.box.querySelector("#te-save") as HTMLElement).onclick =
-    async (): Promise<void> => {
-      if (shell.loadFailed) {
-        shell.errEl.textContent = "⚠️ " + t("dialog.tagsLoadRetry");
-        return;
-      }
-      try {
-        const App = await getApp();
-        if (shell.disposed) return;
-        await App.SetModelTags(modelPath, shell.tags);
-        if (shell.disposed) return;
-        shell.close(shell.tags);
-      } catch (e) {
-        shell.errEl.textContent =
-          "⚠️ " + t("dialog.tagsSaveFailed") + ": " + friendlyError(e);
-      }
-    };
+  (shell.box.querySelector("#te-save") as HTMLElement).onclick = async (): Promise<void> => {
+    if (shell.loadFailed) {
+      shell.errEl.textContent = "⚠️ " + t("dialog.tagsLoadRetry");
+      return;
+    }
+    try {
+      const App = await getApp();
+      if (shell.disposed) return;
+      await App.SetModelTags(modelPath, shell.tags);
+      if (shell.disposed) return;
+      shell.close(shell.tags);
+    } catch (e) {
+      shell.errEl.textContent = "⚠️ " + t("dialog.tagsSaveFailed") + ": " + friendlyError(e);
+    }
+  };
 }
 
 /**

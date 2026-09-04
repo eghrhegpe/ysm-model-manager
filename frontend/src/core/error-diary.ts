@@ -1,10 +1,10 @@
 // ===== UI 报错落日记：toast:show(type=error|warn) → 日记系统（go/logs）=====
 // error/warn toast 自动写入 ImportLog（op="ui"），诊断页可回溯
 
-import { bus, type ToastPayload } from "../bus.ts";
 import { getApp } from "../backend/app.ts";
-import { stripPathSegments } from "../utils/dom/errors.ts";
+import { bus, type ToastPayload } from "../bus.ts";
 import { setLogSink } from "../utils/core/log.ts";
+import { stripPathSegments } from "../utils/dom/errors.ts";
 
 let _registered = false;
 let _unsubToast: (() => void) | undefined;

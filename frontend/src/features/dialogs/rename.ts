@@ -1,12 +1,13 @@
 // ===== 模型重命名对话框（类型化版 — ADR-014 P3 dialogs）=====
 // 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
+
+import { getApp } from "../../backend/app.ts";
+import { t } from "../../core/i18n/t.ts";
 import { parseModelName } from "../../utils/dom/display.ts";
 import { esc } from "../../utils/dom/html.ts";
-import { closeDlg, registerDlg } from "./modal.ts";
-import { getApp } from "../../backend/app.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { buildRenameName, validateRenameFields, type RenameFields } from "./rename-format.ts";
-import { t } from "../../core/i18n/t.ts";
+import { closeDlg, registerDlg } from "./modal.ts";
+import { buildRenameName, type RenameFields, validateRenameFields } from "./rename-format.ts";
 
 type DgRnCloseFn = (v: string | null) => void;
 type DgRnReadFn = () => RenameFields;
@@ -26,11 +27,7 @@ function dgRnCreateOverlay(
   };
   overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
     if (e.key === "Escape") close(null);
-    else if (
-      e.key === "Enter" &&
-      !(e.target instanceof HTMLButtonElement) &&
-      !e.isComposing
-    ) {
+    else if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement) && !e.isComposing) {
       e.preventDefault();
       (box.querySelector("#rn-ok") as HTMLElement | null)?.click();
     }
@@ -76,49 +73,48 @@ function dgRnBindReadHeaderBtn(
   box: HTMLDivElement,
   update: DgRnUpdateFn,
 ): void {
-  (box.querySelector("#rn-from-header") as HTMLElement).onclick =
-    async (): Promise<void> => {
-      if (!filePath) {
+  (box.querySelector("#rn-from-header") as HTMLElement).onclick = async (): Promise<void> => {
+    if (!filePath) {
+      const tipsEl = box.querySelector("#rn-tips") as HTMLElement;
+      tipsEl.textContent = "⚠️ " + t("dialog.notImported");
+      tipsEl.style.display = "block";
+      return;
+    }
+    try {
+      const btn = box.querySelector("#rn-from-header") as HTMLButtonElement;
+      btn.textContent = "⏳ " + t("dialog.reading");
+      btn.disabled = true;
+      const App = await getApp();
+      const header = await App.ExtractYSMHeader(filePath);
+      if (!overlay.isConnected) return;
+      if (header?.isYsm) {
+        const authorEl = box.querySelector("#rn-author") as HTMLInputElement;
         const tipsEl = box.querySelector("#rn-tips") as HTMLElement;
-        tipsEl.textContent = "⚠️ " + t("dialog.notImported");
-        tipsEl.style.display = "block";
-        return;
-      }
-      try {
-        const btn = box.querySelector("#rn-from-header") as HTMLButtonElement;
-        btn.textContent = "⏳ " + t("dialog.reading");
-        btn.disabled = true;
-        const App = await getApp();
-        const header = await App.ExtractYSMHeader(filePath);
-        if (!overlay.isConnected) return;
-        if (header?.isYsm) {
-          const authorEl = box.querySelector("#rn-author") as HTMLInputElement;
-          const tipsEl = box.querySelector("#rn-tips") as HTMLElement;
-          if (header.authorName && !authorEl.value.trim()) {
-            authorEl.value = header.authorName;
-          }
-          if (header.tips) {
-            tipsEl.textContent = "📝 " + header.tips;
-            tipsEl.style.display = "block";
-          } else {
-            tipsEl.style.display = "none";
-          }
-          update();
+        if (header.authorName && !authorEl.value.trim()) {
+          authorEl.value = header.authorName;
         }
-      } catch (_) {
-        const tipsEl = box.querySelector("#rn-tips") as HTMLElement | null;
-        if (tipsEl) {
-          tipsEl.textContent = "⚠️ " + t("dialog.readFailed");
+        if (header.tips) {
+          tipsEl.textContent = "📝 " + header.tips;
           tipsEl.style.display = "block";
+        } else {
+          tipsEl.style.display = "none";
         }
-      } finally {
-        const btn = box.querySelector("#rn-from-header") as HTMLButtonElement | null;
-        if (btn) {
-          btn.textContent = "📖 " + t("dialog.readHeader");
-          btn.disabled = false;
-        }
+        update();
       }
-    };
+    } catch (_) {
+      const tipsEl = box.querySelector("#rn-tips") as HTMLElement | null;
+      if (tipsEl) {
+        tipsEl.textContent = "⚠️ " + t("dialog.readFailed");
+        tipsEl.style.display = "block";
+      }
+    } finally {
+      const btn = box.querySelector("#rn-from-header") as HTMLButtonElement | null;
+      if (btn) {
+        btn.textContent = "📖 " + t("dialog.readHeader");
+        btn.disabled = false;
+      }
+    }
+  };
 }
 
 function dgRnReadFields(box: HTMLDivElement): RenameFields {
@@ -131,17 +127,13 @@ function dgRnReadFields(box: HTMLDivElement): RenameFields {
   };
 }
 
-function dgRnMakeExtCtx(
-  currentName: string,
-): { disableTail: string; getExt: DgRnGetExtFn } {
+function dgRnMakeExtCtx(currentName: string): { disableTail: string; getExt: DgRnGetExtFn } {
   const disableMatch = currentName.match(/\.(disabled|ban)$/i);
   const isBanned = !!disableMatch;
   const disableTail = isBanned ? disableMatch![0] : "";
   const getExt: DgRnGetExtFn = () => {
     const clean = currentName.replace(/\.(disabled|ban)$/i, "");
-    const ext = clean.includes(".")
-      ? clean.split(".").pop() || ""
-      : "";
+    const ext = clean.includes(".") ? clean.split(".").pop() || "" : "";
     return ext || RESOURCE_TYPES.YSM;
   };
   return { disableTail, getExt };
@@ -157,20 +149,15 @@ function dgRnUpdatePreview(
     buildRenameName(readFn(), getExt()) + disableTail;
 }
 
-function dgRnBindFieldInputs(
-  box: HTMLDivElement,
-  update: DgRnUpdateFn,
-): void {
-  ["rn-author", "rn-work", "rn-chara", "rn-variant", "rn-date"].forEach(
-    (id) => {
-      const el = box.querySelector("#" + id) as HTMLInputElement | null;
-      el?.addEventListener("input", update);
-      el?.addEventListener("input", (): void => {
-        const errEl = box.querySelector("#rn-err") as HTMLElement | null;
-        if (errEl) errEl.textContent = "";
-      });
-    },
-  );
+function dgRnBindFieldInputs(box: HTMLDivElement, update: DgRnUpdateFn): void {
+  ["rn-author", "rn-work", "rn-chara", "rn-variant", "rn-date"].forEach((id) => {
+    const el = box.querySelector("#" + id) as HTMLInputElement | null;
+    el?.addEventListener("input", update);
+    el?.addEventListener("input", (): void => {
+      const errEl = box.querySelector("#rn-err") as HTMLElement | null;
+      if (errEl) errEl.textContent = "";
+    });
+  });
 }
 
 function dgRnBindOkCancel(
@@ -180,8 +167,7 @@ function dgRnBindOkCancel(
   getExt: DgRnGetExtFn,
   disableTail: string,
 ): void {
-  (box.querySelector("#rn-cancel") as HTMLElement).onclick = (): void =>
-    close(null);
+  (box.querySelector("#rn-cancel") as HTMLElement).onclick = (): void => close(null);
   (box.querySelector("#rn-ok") as HTMLElement).onclick = async (): Promise<void> => {
     const f = readFn();
     const ext = getExt();
@@ -222,8 +208,7 @@ export async function showRenameDialog(
 
     const { disableTail, getExt } = dgRnMakeExtCtx(currentName);
     const readFn: DgRnReadFn = () => dgRnReadFields(box);
-    const update: DgRnUpdateFn = () =>
-      dgRnUpdatePreview(box, readFn, getExt, disableTail);
+    const update: DgRnUpdateFn = () => dgRnUpdatePreview(box, readFn, getExt, disableTail);
 
     dgRnBindReadHeaderBtn(filePath, overlay, box, update);
     dgRnBindFieldInputs(box, update);

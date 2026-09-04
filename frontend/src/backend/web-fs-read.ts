@@ -5,11 +5,17 @@
 // 只做「读 IDB → base64 → 字节 → 解码 → 视图」装配，不触碰文件系统/IDB key 规约之外
 // 的语义（key 规约见 web-fs-shared.ts）。
 
-import { idbGet, idbKeys } from "./idb.ts";
-import { parseWebPath, parseWebDirPath, arrayBufferToBase64, base64ToBytes, WEB_ROOT } from "./web-common.ts";
 import { extractZip } from "../parsers/extract.ts";
-import { dirKey } from "./web-fs-shared.ts";
 import { decodeVoxelNbt, type VoxelData } from "../parsers/voxel-parse.ts";
+import { idbGet, idbKeys } from "./idb.ts";
+import {
+  arrayBufferToBase64,
+  base64ToBytes,
+  parseWebDirPath,
+  parseWebPath,
+  WEB_ROOT,
+} from "./web-common.ts";
+import { dirKey } from "./web-fs-shared.ts";
 
 // ===== §5 文件读取 =====
 /** 读文件（/web/<type>/<rest> → IDB → base64；wasm.ts 解码链零改动复用）
@@ -40,7 +46,9 @@ export function voxelFromBase64(
 
 /** zip 容器读取装配：readWebFile → base64 → extractZip（失败返回 null，调用方转 "[]"）。
  *  listWebContainerEntries / listWebPackModels 共用前缀，消除重复（jscpd）。 */
-export async function readWebZipEntries(path: string): Promise<ReturnType<typeof extractZip>["entries"] | null> {
+export async function readWebZipEntries(
+  path: string,
+): Promise<ReturnType<typeof extractZip>["entries"] | null> {
   const b64 = await readWebFile(path);
   if (!b64) return null;
   const bytes = base64ToBytes(b64);
@@ -79,7 +87,9 @@ export async function readVoxelJson(
  * 精确路径（scanWebModels/listWebModelDirFiles 产物）段前缀探测一次命中；
  * 模糊输入回退全库 dir: 前缀反查。
  */
-export async function parseWebModelPath(p: string): Promise<{ type: string; name: string; rel: string } | null> {
+export async function parseWebModelPath(
+  p: string,
+): Promise<{ type: string; name: string; rel: string } | null> {
   const pm = parseWebPath(p);
   if (!pm) return null;
   const { type, rest } = pm;

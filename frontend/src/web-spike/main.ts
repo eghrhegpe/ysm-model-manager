@@ -1,11 +1,12 @@
 // ===== YSM Web 解码 Spike（ADR-049 Phase 0）=====
 // 验证：base64 内嵌 YSMParser WASM 在无 Wails 壳的纯浏览器中解码 .ysm
 // （decodeYsmFileFromMemory 内存解析路径，零 binding 依赖）。
-import { initYSMParser, decodeYsmFileFromMemory } from "../wasm/ysm-parser.ts";
+
 import { initI18n } from "../core/i18n/locale.ts";
 import { t } from "../core/i18n/t.ts";
 import { summarizeDecoded } from "../utils/format/summarize.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+import { decodeYsmFileFromMemory, initYSMParser } from "../wasm/ysm-parser.ts";
 
 // 本页是独立入口（web.html），不经主 UI 的启动链——需自行加载语言包，
 // 否则 t() 拿到空 bundle 会回落显示裸 key

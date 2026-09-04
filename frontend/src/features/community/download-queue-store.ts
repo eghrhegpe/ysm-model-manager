@@ -12,12 +12,13 @@
 // 类型/STATE/Go 调用/后端事件注册全部内聚于此；
 // download-queue-progress.ts 承接 99% 卡进度守卫状态机；
 // download-queue.ts 保留 createDownloadQueue UI 控制器并对外 re-export（消费者零改动）。
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { dbg } from "../../utils/debug/debug.ts";
+
 import { getApp } from "../../backend/app.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { Events } from "../../backend/runtime.ts";
+import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 
 // ============================================================
@@ -123,7 +124,12 @@ export async function resume(): Promise<void> {
       running = Boolean(result[1]);
     } else if (result && typeof result === "object") {
       // Wails 某些版本返回 {Remaining, Running} 大写字段
-      const r = result as { Remaining?: number; remaining?: number; Running?: boolean; running?: boolean };
+      const r = result as {
+        Remaining?: number;
+        remaining?: number;
+        Running?: boolean;
+        running?: boolean;
+      };
       remaining = r.Remaining ?? r.remaining ?? 0;
       running = r.Running ?? r.running ?? false;
     } else if (typeof result === "number") {
@@ -211,10 +217,7 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
         STATE.currentFile = task.name;
         notify();
         let handled = false;
-        if (
-          /^https?:\/\//i.test(task.url || "") &&
-          (task.size || 0) <= WEB_DOWNLOAD_IDB_LIMIT
-        ) {
+        if (/^https?:\/\//i.test(task.url || "") && (task.size || 0) <= WEB_DOWNLOAD_IDB_LIMIT) {
           const ctrl = new AbortController();
           const timer = setTimeout(() => ctrl.abort(), WEB_DOWNLOAD_FETCH_TIMEOUT_MS);
           try {
@@ -369,8 +372,7 @@ if (!_registered) {
           _avatarChain = _avatarChain
             .then(async () => {
               try {
-                const { CachedCreatorAvatar, DebugExtractCreatorAvatar } =
-                  await getApp();
+                const { CachedCreatorAvatar, DebugExtractCreatorAvatar } = await getApp();
                 let dataUri = await CachedCreatorAvatar(author);
                 if (!dataUri) {
                   await DebugExtractCreatorAvatar(author);
@@ -405,10 +407,7 @@ if (!_registered) {
     // Content-Length=-1 哨兵（负数）与 total=0 在 render 的 MB 分支语义等价，归一不改变行为。
     STATE.progress = {
       dl: typeof dl === "number" && Number.isFinite(dl) && dl >= 0 ? dl : 0,
-      total:
-        typeof total === "number" && Number.isFinite(total) && total >= 0
-          ? total
-          : 0,
+      total: typeof total === "number" && Number.isFinite(total) && total >= 0 ? total : 0,
     };
     notify();
   });

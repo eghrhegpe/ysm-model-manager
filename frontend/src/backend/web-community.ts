@@ -3,22 +3,28 @@
 // 本地作者扫描与仓库索引生成。文件系统访问（scanWebModels/readWebFile/
 // collectAllWebEntries/typeFromWebDir）复用 web-fs.ts；browser-adapter.ts 从本文件
 // import 组装 webImpls。
-import type { WorkshopCreator, WorkshopSite, WorkshopPresetSearch, AuthorInfo } from "../../bindings/ysm-model-manager/go/types/models.ts";
+
 // 社区/工坊默认数据源（bundled JSON，build 期内联；与 resource_types.json 同源范式）
 import creatorsJson from "../../../creators.json" with { type: "json" };
-import workshopGithubJson from "../../../workshop-github.json" with { type: "json" };
 import workshopSitesJson from "../../../workshop_sites.json" with { type: "json" };
-// 网页版头像提取复用前端 YSM 解包能力（替代 Go ExtractAvatarURI，ADR-049 缺口补齐）
-import { decodeYsmFile } from "../wasm/ysm-parser.ts";
-import { safeErrorMessage } from "../utils/safe-error-msg.ts";
-import { hasRecycleSegment } from "../utils/recycle-path.ts";
-import { scanWebModels, readWebFile, collectAllWebEntries, typeFromWebDir } from "./web-fs.ts";
-import { WEB_ROOT, arrayBufferToBase64, base64ToBytes } from "./web-common.ts";
-import { safeGet, safeSet, safeRemove } from "../utils/dom/storage.ts";
-import { stripDisableSuffix } from "../utils/dom/display.ts";
+import workshopGithubJson from "../../../workshop-github.json" with { type: "json" };
+import type {
+  AuthorInfo,
+  WorkshopCreator,
+  WorkshopPresetSearch,
+  WorkshopSite,
+} from "../../bindings/ysm-model-manager/go/types/models.ts";
 // i18n：错误消息统一走 t()（与 web-fs.ts 全量 t("webFs.*") 一致，避免硬编码中文
 // 漏掉 en/ja 三语言同步——friendlyError 对含中文消息直接透传，硬编码会在英文/日文用户侧裸显）
 import { t } from "../core/i18n/t.ts";
+import { stripDisableSuffix } from "../utils/dom/display.ts";
+import { safeGet, safeRemove, safeSet } from "../utils/dom/storage.ts";
+import { hasRecycleSegment } from "../utils/recycle-path.ts";
+import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+// 网页版头像提取复用前端 YSM 解包能力（替代 Go ExtractAvatarURI，ADR-049 缺口补齐）
+import { decodeYsmFile } from "../wasm/ysm-parser.ts";
+import { arrayBufferToBase64, base64ToBytes, WEB_ROOT } from "./web-common.ts";
+import { collectAllWebEntries, readWebFile, scanWebModels, typeFromWebDir } from "./web-fs.ts";
 
 // --- 社区/工坊数据（ADR-049 桥接增强 Batch 2）---
 // 网页版无 Go 侧磁盘配置文件：bundled JSON 作默认，localStorage 作用户覆盖层
@@ -37,7 +43,10 @@ let mergeSeq: Promise<unknown> = Promise.resolve();
  */
 function enqueueMerge(runMerge: () => Promise<[number, number]>): Promise<[number, number]> {
   const result = mergeSeq.then(runMerge);
-  mergeSeq = result.then(() => undefined, () => undefined);
+  mergeSeq = result.then(
+    () => undefined,
+    () => undefined,
+  );
   return result;
 }
 
@@ -128,7 +137,6 @@ function loadWebGitHubRepos(): WorkshopCreator[] {
   return cloneJson(workshopGithubJson as unknown as WorkshopCreator[]);
 }
 
-
 // --- 网页版创作者头像批量提取（替代 Go BatchExtractCreatorAvatars）---
 // 复用已桥的 ScanModelEntries + ReadFileBytes + 前端 ysm-parser 解包，从 IndexedDB 模型库
 // 真实提取头像（ADR-049 能力门控缺口补齐）。单模型失败不中断、返回可能为空 map。
@@ -176,7 +184,10 @@ async function batchExtractCreatorAvatars(): Promise<Record<string, string>> {
           if (!low.startsWith("avatar/") && !low.includes("/avatar/")) continue;
           const mime = low.endsWith(".png") ? "image/png" : "image/jpeg";
           result[author] = `data:${mime};base64,${arrayBufferToBase64(
-            f.data.buffer.slice(f.data.byteOffset, f.data.byteOffset + f.data.byteLength) as ArrayBuffer,
+            f.data.buffer.slice(
+              f.data.byteOffset,
+              f.data.byteOffset + f.data.byteLength,
+            ) as ArrayBuffer,
           )}`;
           saveAvatarCache(author, result[author]);
           break;
@@ -256,9 +267,10 @@ async function scanWebLocalAuthors(): Promise<WorkshopCreator[]> {
 
 /** GenerateRepoIndex 网页版：扫描虚拟根生成 index.json 内容（路径相对 repoPath，正斜杠） */
 async function generateWebRepoIndex(repoPath: string): Promise<string> {
-  const entries = repoPath && repoPath.startsWith(WEB_ROOT)
-    ? await scanWebModels(repoPath)
-    : await collectAllWebEntries();
+  const entries =
+    repoPath && repoPath.startsWith(WEB_ROOT)
+      ? await scanWebModels(repoPath)
+      : await collectAllWebEntries();
   // 过滤 .recycle 段：回收站目录下的"已删/待清理"条目不进 index（对齐 Go 桌面 scanner 的回收站跳过）
   const list = entries
     .map((e) => {
@@ -336,18 +348,25 @@ export const webCommunityBindings = {
     try {
       imported = JSON.parse(jsonContent) as WorkshopCreator[];
     } catch (e) {
-      return Promise.reject(new Error(t("webCommunity.importJsonParseFailed", { err: safeErrorMessage(e) })));
+      return Promise.reject(
+        new Error(t("webCommunity.importJsonParseFailed", { err: safeErrorMessage(e) })),
+      );
     }
     const MIN_IMPORT = 20;
     if (!Array.isArray(imported) || imported.length < MIN_IMPORT) {
-      return Promise.reject(new Error(t("webCommunity.importTooFew", { count: imported.length, min: MIN_IMPORT })));
+      return Promise.reject(
+        new Error(t("webCommunity.importTooFew", { count: imported.length, min: MIN_IMPORT })),
+      );
     }
     // 逐字段校验：cr.name 必须是非空字符串，非法元素跳过（防 __proto__ 注入 / 畸形数据污染）
-    imported = imported.filter((cr): cr is WorkshopCreator =>
-      cr != null && typeof cr === "object" && typeof cr.name === "string" && cr.name.length > 0
+    imported = imported.filter(
+      (cr): cr is WorkshopCreator =>
+        cr != null && typeof cr === "object" && typeof cr.name === "string" && cr.name.length > 0,
     );
     if (imported.length < MIN_IMPORT) {
-      return Promise.reject(new Error(t("webCommunity.importTooFew", { count: imported.length, min: MIN_IMPORT })));
+      return Promise.reject(
+        new Error(t("webCommunity.importTooFew", { count: imported.length, min: MIN_IMPORT })),
+      );
     }
     // 串行化读-改-写（enqueueMerge + upsertCreators 公共骨架，jscpd 自克隆收敛）：
     // type 覆盖语义（非并入，与 ADR-172 增量并入刻意区分）
@@ -374,14 +393,17 @@ export const webCommunityBindings = {
     try {
       imported = JSON.parse(communityJSON) as WorkshopCreator[];
     } catch (e) {
-      return Promise.reject(new Error(t("webCommunity.importJsonParseFailed", { err: safeErrorMessage(e) })));
+      return Promise.reject(
+        new Error(t("webCommunity.importJsonParseFailed", { err: safeErrorMessage(e) })),
+      );
     }
     // 逐字段净化：name 必须非空字符串（对齐 Go 净化口径，防畸形数据污染覆盖层）
     if (!Array.isArray(imported)) {
       return Promise.reject(new Error(t("webCommunity.communityEmpty")));
     }
-    imported = imported.filter((cr): cr is WorkshopCreator =>
-      cr != null && typeof cr === "object" && typeof cr.name === "string" && cr.name.length > 0
+    imported = imported.filter(
+      (cr): cr is WorkshopCreator =>
+        cr != null && typeof cr === "object" && typeof cr.name === "string" && cr.name.length > 0,
     );
     if (imported.length === 0) {
       return Promise.reject(new Error(t("webCommunity.communityEmpty")));

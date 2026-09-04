@@ -19,8 +19,14 @@ function getFileFromEntry(entry: FileSystemFileEntry): Promise<File> {
       reject(new Error("getFileFromEntry timeout"));
     }, FILE_ENTRY_TIMEOUT);
     entry.file(
-      (f) => { clearTimeout(timer); resolve(f); },
-      (e) => { clearTimeout(timer); reject(e); },
+      (f) => {
+        clearTimeout(timer);
+        resolve(f);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
     );
   });
 }

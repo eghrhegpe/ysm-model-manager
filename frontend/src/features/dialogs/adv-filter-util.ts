@@ -31,25 +31,13 @@ export function parseFilterNumber(raw: string): number | null {
  * 纯函数层不引入 t()——返回稳定 key，由 UI 层（adv-filter.ts）翻译展示。
  */
 export function validateAdvFilter(data: AdvFilterValue): LocaleKey | null {
-  if (
-    data.minBones != null &&
-    data.maxBones != null &&
-    data.minBones > data.maxBones
-  ) {
+  if (data.minBones != null && data.maxBones != null && data.minBones > data.maxBones) {
     return "advFilter.validation.minGtMaxBones";
   }
-  if (
-    data.minCubes != null &&
-    data.maxCubes != null &&
-    data.minCubes > data.maxCubes
-  ) {
+  if (data.minCubes != null && data.maxCubes != null && data.minCubes > data.maxCubes) {
     return "advFilter.minGtMaxCubes";
   }
-  if (
-    data.minTex != null &&
-    data.maxTex != null &&
-    data.minTex > data.maxTex
-  ) {
+  if (data.minTex != null && data.maxTex != null && data.minTex > data.maxTex) {
     return "advFilter.minGtMaxTex";
   }
   return null;

@@ -4,7 +4,7 @@
 // 职责：进度条渲染 + 小文件 300ms 强制 100% / 大文件 2s 转菊花 / file-done 强制复位 /
 // 3s completeTimer 收口互斥（与队列结束双路收口防重复）。
 import { t } from "../../core/i18n/t.ts";
-import { isActiveStatus, STATE, type DownloadState } from "./download-queue-store.ts";
+import { type DownloadState, isActiveStatus, STATE } from "./download-queue-store.ts";
 
 /** 进度条元素的自定义属性（点动画） */
 type PctEl = HTMLElement & {
@@ -121,9 +121,7 @@ function cmPgApplyLock(
     }
     ctx._stuckTimer = setTimeout(() => {
       const pctEl2 = qs?.querySelector(".gh-progress-pct") as PctEl | null;
-      const fillEl2 = qs?.querySelector(
-        ".gh-progress-fill",
-      ) as HTMLElement | null;
+      const fillEl2 = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
       if (pctEl2) pctEl2.textContent = "100%";
       if (fillEl2) {
         fillEl2.style.transition = "width .3s";
@@ -147,9 +145,7 @@ function cmPgApplyLock(
     if (lockPctEl) lockPctEl.textContent = outLabel;
     ctx._stuckTimer = setTimeout(() => {
       const pctEl = qs?.querySelector(".gh-progress-pct") as PctEl | null;
-      const fillEl = qs?.querySelector(
-        ".gh-progress-fill",
-      ) as HTMLElement | null;
+      const fillEl = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
       if (pctEl && pctEl.textContent !== "100%") {
         pctEl.textContent = "⏳";
         pctEl.style.fontSize = "9px";
@@ -184,9 +180,7 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
   const { pct, label } = cmPgApplyLock(ctx, qs, rawPct, rawLabel, isTiny, total);
 
   const pctEl = qs.querySelector(".gh-progress-pct") as PctEl | null;
-  const fillEl = qs.querySelector(
-    ".gh-progress-fill",
-  ) as HTMLElement | null;
+  const fillEl = qs.querySelector(".gh-progress-fill") as HTMLElement | null;
   if (pctEl && !ctx._stuckLocked) pctEl.textContent = label;
   if (fillEl) {
     fillEl.style.transition = pct === 100 ? "width 0s" : "width .2s";
@@ -215,10 +209,7 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
   }
 }
 
-function cmPgForceFileDone(
-  ctx: CmPgCtx,
-  done: { status: string; errMsg: string },
-): void {
+function cmPgForceFileDone(ctx: CmPgCtx, done: { status: string; errMsg: string }): void {
   if (done.status === "ok") {
     const { pctEl, fillEl } = cmPgResetProgressUI(ctx);
     if (pctEl && (ctx._stuckLocked || pctEl.textContent === "99%")) {

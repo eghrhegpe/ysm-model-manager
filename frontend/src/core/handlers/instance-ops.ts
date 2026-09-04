@@ -1,12 +1,13 @@
 // ===== 整合包操作：导出清单 / 清空目录（类型化版 — ADR-014 P3）=====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { bus } from "../../bus.ts";
-import { modalConfirm } from "../../features/dialogs/modal.ts";
+
 import { getApp } from "../../backend/app.ts";
-import { requireMcRoot } from "./require-mcroot.ts";
-import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
+import { modalConfirm } from "../../features/dialogs/modal.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { toastEmptyRtype, toastError } from "../context-menu-shared.ts";
+import { requireMcRoot } from "./require-mcroot.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
 export function registerInstanceOps(unsubs: Array<() => void>): void {
@@ -14,10 +15,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on("instance:export-list", async ({ name: insName, rtype }) => {
       try {
-        const {
-          ListVersionInstances,
-          ListFileNames,
-        } = await getApp();
+        const { ListVersionInstances, ListFileNames } = await getApp();
         const mcRoot = await requireMcRoot();
         if (!mcRoot) return;
 
@@ -52,7 +50,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         }
         // rtype 指定但未命中映射时，dirs 为空 → totalFiles===0 → 「没有资源文件」info toast
 
-        let allLines: string[] = [`📦 ${insName}`];
+        const allLines: string[] = [`📦 ${insName}`];
         let totalFiles = 0;
         for (let i = 0; i < dirs.length; i++) {
           try {
@@ -96,10 +94,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on("instance:clear", async ({ name: insName, rtype }) => {
       try {
-        const {
-          CountInstanceResources,
-          ClearInstanceResources,
-        } = await getApp();
+        const { CountInstanceResources, ClearInstanceResources } = await getApp();
         const mcRoot = await requireMcRoot();
         if (!mcRoot) return;
 

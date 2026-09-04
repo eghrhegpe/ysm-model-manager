@@ -11,12 +11,13 @@
 //   无主文件 → 明确 failed 提示，而非假成功入库）
 // - .zip 视为模型主文件（与 .ysm 同属 ZIP 容器，WASM 解码器直接处理），不拒绝
 // - 超出 100MB 跳过（对齐 import-dnd oversize 过滤）
-import { idbGet, idbSet, idbDel } from "./idb.ts";
-import { MAX_IMPORT_BYTES } from "./web-common.ts";
+
 // R2 导入增强：ZIP 解压（extractZip 解出文件；文件名以 fflateKey 入库——
 // 前端无 GBK 码表，非 UTF-8 中文名降级透传 fflateKey，数据访问不受影响）
 import { extractZip } from "../parsers/extract.ts";
-import { dirKey, fileKey, mainFileRank, MAIN_FILE_RANK_TYPE } from "./web-fs-shared.ts";
+import { idbDel, idbGet, idbSet } from "./idb.ts";
+import { MAX_IMPORT_BYTES } from "./web-common.ts";
+import { dirKey, fileKey, MAIN_FILE_RANK_TYPE, mainFileRank } from "./web-fs-shared.ts";
 
 /**
  * 检测 ZIP entries 是否共享公共顶层目录。
@@ -40,7 +41,7 @@ function findCommonTopDir(metas: Array<{ fflateKey: string }>): string | null {
  */
 function sanitizeZipEntryPath(name: string): string | null {
   // 拆分路径段，过滤 `.` 和 `..`（`..` 为路径穿越攻击，必须拒绝）
-  const parts = name.split(/[\/\\]/);
+  const parts = name.split(/[/\\]/);
   const safe: string[] = [];
   for (const p of parts) {
     if (p === ".." || p === "") continue; // 跳过空段和父目录引用
@@ -76,10 +77,12 @@ async function expandZipFiles(files: File[]): Promise<File[]> {
       }
       // 安全审计：先用 sanitizeZipEntryPath 清洗路径，再判断公共前缀
       // 避免恶意 zip 的 `..` 段干扰 findCommonTopDir（CodeReview 第五轮发现）
-      const sanitizedMetas = metas.map((m) => {
-        // 文件名以 fflateKey 原值入库（前端无 GBK 码表，非 UTF-8 中文名降级透传）
-        return { fflateKey: sanitizeZipEntryPath(m.fflateKey) ?? "", _meta: m };
-      }).filter((m) => m.fflateKey !== "");
+      const sanitizedMetas = metas
+        .map((m) => {
+          // 文件名以 fflateKey 原值入库（前端无 GBK 码表，非 UTF-8 中文名降级透传）
+          return { fflateKey: sanitizeZipEntryPath(m.fflateKey) ?? "", _meta: m };
+        })
+        .filter((m) => m.fflateKey !== "");
       // 检测 zip 内是否有公共顶层目录（如 "狐狸/ysm.json" → 公共前缀 "狐狸/"）
       // 扁平 zip（"ysm.json" + "models/main.json"）无公共前缀 → 用 zipStem 防碎片化
       const topLevelDir = findCommonTopDir(sanitizedMetas);
@@ -96,11 +99,16 @@ async function expandZipFiles(files: File[]): Promise<File[]> {
         const wf = new File([raw.slice()], sanitized.split("/").pop() || sanitized, {
           type: "application/octet-stream",
         });
-        Object.defineProperty(wf, "webkitRelativePath", { value: prefix ? `${prefix}/${sanitized}` : sanitized });
+        Object.defineProperty(wf, "webkitRelativePath", {
+          value: prefix ? `${prefix}/${sanitized}` : sanitized,
+        });
         expanded.push(wf);
       }
       // 解压空/无有效文件，或解压后无主文件（资源包/光影包 zip）→ 保留原 zip 整体当主文件
-      if (expanded.length === 0 || !expanded.some((wf) => mainFileRank(wf.name) >= MAIN_FILE_RANK_TYPE)) {
+      if (
+        expanded.length === 0 ||
+        !expanded.some((wf) => mainFileRank(wf.name) >= MAIN_FILE_RANK_TYPE)
+      ) {
         out.push(f);
       } else {
         out.push(...expanded);
@@ -108,7 +116,9 @@ async function expandZipFiles(files: File[]): Promise<File[]> {
       // GBK 中文名降级提示：gpf 未设时 fflateKey 为 Latin-1 乱码，
       // 前端无 GBK 码表无法解码真名——仅提示，用户端用 modelPath 不影响预览
       if (metas.length > 0 && metas.some((m) => !m.gpfUtf8)) {
-        console.warn("[web] ZIP 含非 UTF-8 文件名（可能为 GBK），解压后文件名以 fflateKey 原值入库（中文可能乱码）");
+        console.warn(
+          "[web] ZIP 含非 UTF-8 文件名（可能为 GBK），解压后文件名以 fflateKey 原值入库（中文可能乱码）",
+        );
       }
     } catch {
       out.push(f); // 解压失败 → 降级为整体入库，不阻断

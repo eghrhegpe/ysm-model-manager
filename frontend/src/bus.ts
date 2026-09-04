@@ -94,7 +94,12 @@ export interface BusEvents {
   "repo:search-creator": string;
   "sync:toggle:status": void;
   "sync:download:missing": { instanceName?: string; rtype: string; token?: string };
-  "sync:download:done": { token?: string | undefined; instanceName?: string | undefined; skipped?: boolean; skipReason?: "busy" | "config" | "error" | undefined };
+  "sync:download:done": {
+    token?: string | undefined;
+    instanceName?: string | undefined;
+    skipped?: boolean;
+    skipReason?: "busy" | "config" | "error" | undefined;
+  };
   // 实例 / 导入
   // rtype 必填（P0 修复后收紧契约）：消费方（instance-ops）已有 !rtype 显式失败
   // 守卫，发射点编译期强制提供非空 rtype，堵漏「漏传 → 导出/清空全部类型」回归。
@@ -136,7 +141,10 @@ const isVoidEvent = (event: BusEventName): boolean =>
 export interface Bus {
   on<K extends BusEventName>(event: K, fn: (payload: BusEvents[K]) => void): () => void;
   off<K extends BusEventName>(event: K, fn: (payload: BusEvents[K]) => void): void;
-  emit<K extends BusEventName>(event: K, ...args: BusEvents[K] extends void ? [] : [BusEvents[K]]): void;
+  emit<K extends BusEventName>(
+    event: K,
+    ...args: BusEvents[K] extends void ? [] : [BusEvents[K]]
+  ): void;
   once<K extends BusEventName>(event: K, fn: (payload: BusEvents[K]) => void): () => void;
 }
 
@@ -151,7 +159,9 @@ function createBus(): Bus {
   // 闭包签名保留泛型（Bus["on"]/Bus["off"]）——内部 push/indexOf 时转内部存储类型
   // (payload: unknown) => void（listeners 的存储类型）。
   const on: Bus["on"] = (event, fn) => {
-    ((listeners[event] as Array<(payload: unknown) => void>) ||= []).push(fn as (payload: unknown) => void);
+    ((listeners[event] as Array<(payload: unknown) => void>) ||= []).push(
+      fn as (payload: unknown) => void,
+    );
     return () => off(event, fn);
   };
   const off: Bus["off"] = (event, fn) => {

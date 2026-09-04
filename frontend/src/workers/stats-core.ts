@@ -25,7 +25,13 @@ export interface ModelStatsResult {
   hasError: boolean;
 }
 
-const EMPTY_ERROR: ModelStatsResult = { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true };
+const EMPTY_ERROR: ModelStatsResult = {
+  boneCount: 0,
+  cubeCount: 0,
+  texWidth: 0,
+  texHeight: 0,
+  hasError: true,
+};
 
 /**
  * 宽松 geometry 解析：标准 `minecraft:geometry` 数组（parseBedrockGeometryFromJSON）
@@ -46,8 +52,18 @@ function parseAnyGeometry(
   }
   try {
     const obj = JSON.parse(jsonStr) as {
-      minecraft?: { geometry?: Array<{ bones?: unknown[]; description?: { texture_width?: number; texture_height?: number } }> };
-      geometry?: { model?: { bones?: unknown[]; description?: { texture_width?: number; texture_height?: number } } };
+      minecraft?: {
+        geometry?: Array<{
+          bones?: unknown[];
+          description?: { texture_width?: number; texture_height?: number };
+        }>;
+      };
+      geometry?: {
+        model?: {
+          bones?: unknown[];
+          description?: { texture_width?: number; texture_height?: number };
+        };
+      };
       bones?: unknown[];
       description?: { texture_width?: number; texture_height?: number };
     };
@@ -151,14 +167,17 @@ export async function statsFromJsonBytes(
     let texH = 0;
     const processed = new Set<string>();
     const filePathOf = (v: unknown): string =>
-      typeof v === "string" ? v : (v as { path?: string; name?: string })?.path || (v as { name?: string })?.name || "";
+      typeof v === "string"
+        ? v
+        : (v as { path?: string; name?: string })?.path || (v as { name?: string })?.name || "";
 
     for (const mf of modelFiles) {
       const name = filePathOf(mf);
       if (!name || processed.has(name)) continue;
       processed.add(name);
       // 路径归一化：补 models/ 前缀，失败回退原始路径（对齐 wasm.ts JSON 分支）
-      const prefixed = name.startsWith("models/") || name.startsWith("models\\") ? name : "models/" + name;
+      const prefixed =
+        name.startsWith("models/") || name.startsWith("models\\") ? name : "models/" + name;
       const raw = (await readRel(prefixed)) ?? (await readRel(name));
       if (!raw) continue;
       const parsed = parseAnyGeometry(new TextDecoder("utf-8").decode(raw));
@@ -173,7 +192,8 @@ export async function statsFromJsonBytes(
       const name = filePathOf(tf);
       if (!name || texProcessed.has(name)) continue;
       texProcessed.add(name);
-      const prefixed = name.startsWith("textures/") || name.startsWith("textures\\") ? name : "textures/" + name;
+      const prefixed =
+        name.startsWith("textures/") || name.startsWith("textures\\") ? name : "textures/" + name;
       const raw = (await readRel(prefixed)) ?? (await readRel(name));
       if (!raw) continue;
       const s = sniffTexSize(raw);

@@ -3,12 +3,13 @@
 // dir-handlers 共用，破除 `handlers ↔ {file,dir}-handlers` 循环依赖
 // （file/dir 动态 import handlers 的 resolveDstDir 会成环，迁入本叶子模块后破环）。
 // 依赖：bus / modalPrompt / getApp / RESOURCE_TYPES——均不引 handlers，本文件不在环内。
+
+import { getApp } from "../backend/app.ts";
 import { bus, type ToastPayload } from "../bus.ts";
 import { modalPrompt } from "../features/dialogs/modal.ts";
-import { getApp } from "../backend/app.ts";
-import { RESOURCE_TYPES } from "../utils/resource/types.ts";
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
+import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { t } from "./i18n/t.ts";
 import { tr } from "./i18n/tr.ts";
 
@@ -21,7 +22,11 @@ export function refreshUI(): void {
 }
 
 /** 显示 toast 通知 */
-export function toast(msg: string, duration: number = TOAST_MS.normal, type: ToastType = "success"): void {
+export function toast(
+  msg: string,
+  duration: number = TOAST_MS.normal,
+  type: ToastType = "success",
+): void {
   bus.emit("toast:show", { msg, duration, type });
 }
 
@@ -30,7 +35,11 @@ export function toast(msg: string, duration: number = TOAST_MS.normal, type: Toa
  *  @param fallback  friendlyError 未匹配时的回退文案（仅错误无中文时生效）
  *  @param prefix    操作名前缀（如 "统计失败"），拼在 friendlyError 前：`❌ ${prefix}: ${msg}` */
 export function toastError(err: unknown, fallback?: string, prefix?: string): void {
-  toast(prefix ? `❌ ${prefix}: ${friendlyError(err, fallback)}` : `❌ ${friendlyError(err, fallback)}`, TOAST_MS.long, "error");
+  toast(
+    prefix ? `❌ ${prefix}: ${friendlyError(err, fallback)}` : `❌ ${friendlyError(err, fallback)}`,
+    TOAST_MS.long,
+    "error",
+  );
 }
 
 /** rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） */
@@ -51,12 +60,15 @@ export function isUnsafeFolderName(folder: string): boolean {
  * 用户取消或校验失败时返回 null（已 toast 告知）。
  * @param rtype 资源类型 ID（如 "ysm"/"EntityPlayer"），为空时回退 YSM。
  */
-export async function resolveDstDir(opts: {
-  title: string;
-  icon: string;
-  okText: string;
-  emptyMsg: string;
-}, rtype?: string): Promise<{ folder: string; dstDir: string } | null> {
+export async function resolveDstDir(
+  opts: {
+    title: string;
+    icon: string;
+    okText: string;
+    emptyMsg: string;
+  },
+  rtype?: string,
+): Promise<{ folder: string; dstDir: string } | null> {
   const folder = await modalPrompt({
     title: opts.title,
     icon: opts.icon,

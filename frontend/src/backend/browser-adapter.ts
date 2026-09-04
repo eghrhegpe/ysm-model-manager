@@ -10,30 +10,42 @@
 // web-community.ts（社区/头像/作者），此处从新文件 import 组装 webImpls，
 // 并保留 browserAdapter Proxy 导出（知识卡 backend-idb invariant_anchor）。
 import type { AppBindings } from "./types.ts";
+
 // 共享原语 re-export（保持对外 API 导出名/签名不变）
-export { WebUnsupportedError, WEB_ROOT, MAX_IMPORT_BYTES, arrayBufferToBase64 } from "./web-common.ts";
+export {
+  arrayBufferToBase64,
+  MAX_IMPORT_BYTES,
+  WEB_ROOT,
+  WebUnsupportedError,
+} from "./web-common.ts";
 // 文件系统类实现（web-fs.ts）；importWebFiles/selectLocalRepo 同时对外 re-export
-export { importWebFiles, selectLocalRepo } from "./web-fs.ts";
 // R2 FSA 持久化原语对外暴露（含授权状态查询，供 settings UI 启动引导）
-export { getFsaAuthState, reauthorizeFsaRoot, rescanFsaRoot } from "./web-fs.ts";
+export {
+  getFsaAuthState,
+  importWebFiles,
+  reauthorizeFsaRoot,
+  rescanFsaRoot,
+  selectLocalRepo,
+} from "./web-fs.ts";
 // ADR-071 #6：SearchModels 数值统计 Worker 编排（降级标记/测试注入/取消）。
 // 经 browserAdapter 链 re-export：保证消费方（toolbar-search / 测试）与 web-fs 内
 // searchWebModels 拿到同一模块实例（vitest mock 图会拆出独立实例，直接 import 会断降级标记）。
 export {
-  consumeWebSearchDegraded,
   __setStatsRunnerForTest,
-  terminateStatsWorker,
-  onStatsProgress,
+  consumeWebSearchDegraded,
   getStatsPoolSize,
+  onStatsProgress,
   prefetchStatsWorker,
+  terminateStatsWorker,
 } from "./web-stats.ts";
+
+import { webCliBindings } from "./web-cli.ts";
 // 注册表驱动装配（Top 6）：各职责模块自注册 binding 片段（web-common/web-fs/
 // web-store/web-community），本文件只做 spread 装配 + 类型对账 + Proxy 门控。
 import { WebUnsupportedError, webCommonBindings } from "./web-common.ts";
+import { webCommunityBindings } from "./web-community.ts";
 import { webFsBindings } from "./web-fs.ts";
 import { webStoreBindings } from "./web-store.ts";
-import { webCommunityBindings } from "./web-community.ts";
-import { webCliBindings } from "./web-cli.ts";
 
 // 注册表驱动装配：由五个职责模块自注册的 binding 片段合并而成。
 // 不加 Record<string, ...> 注解：让 typeof webImpls 保留字面量键（供下方类型级对账校验），
@@ -75,7 +87,7 @@ export const browserAdapter = new Proxy({} as Record<string, unknown>, {
     // 交由 target 原型链的正常实现（Reflect.get 沿原型找函数）
     if (PROTOTYPE_MEMBERS.has(name)) return Reflect.get(_target, prop);
     // 仅自有键命中（与下方 has trap 的 hasOwnProperty 口径对称，避免沿原型链误命中）
-    if (Object.prototype.hasOwnProperty.call(webImpls, name)) return webImpls[name as keyof typeof webImpls];
+    if (Object.hasOwn(webImpls, name)) return webImpls[name as keyof typeof webImpls];
     return makeFailFast(name);
   },
   // Phase 3 能力门控探测：`'Foo' in browserAdapter` 应反映是否真实现
@@ -86,7 +98,7 @@ export const browserAdapter = new Proxy({} as Record<string, unknown>, {
     // 与 get trap 的 PROTOTYPE_MEMBERS 豁免对称：门控契约只看自有实现
     if (PROTOTYPE_MEMBERS.has(name)) return false;
     // 仅自有键（webImpls 上的实现）；未实现 binding → false → 能力门控隐藏对应 UI（fail-fast 兜底）
-    return Object.prototype.hasOwnProperty.call(webImpls, name);
+    return Object.hasOwn(webImpls, name);
   },
 }) as unknown as AppBindings;
 

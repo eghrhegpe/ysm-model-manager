@@ -1,22 +1,17 @@
 // ===== 创意工坊数据加载（类型化版 — ADR-014 P3 features）=====
 // tryFetchModels + 进度条
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+
 import { esc } from "../../utils/dom/html.ts";
 import { hasRecycleSegment } from "../../utils/recycle-path.ts";
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 
 /**
  * 创建进度条 UI（插入到 searchResults 容器）
  */
-export function showProgress(
-  searchResults: HTMLElement,
-  pct: number,
-  label?: string,
-): void {
+export function showProgress(searchResults: HTMLElement, pct: number, label?: string): void {
   // P3 修复（审核发现）：pct 无钳制会输出 width:"NaN%"/"150%"/"-5%"——
   // 数值守卫范式（AGENTS §3.4 ②）拦截非有限值并钳制到 [0,100]
-  const clamped = Number.isFinite(pct)
-    ? Math.min(100, Math.max(0, Math.round(pct)))
-    : 0;
+  const clamped = Number.isFinite(pct) ? Math.min(100, Math.max(0, Math.round(pct))) : 0;
   // P3 修复（审核发现）：label 未经转义直接拼入 innerHTML——当前调用方
   // 全部使用硬编码字符串（无 XSS 风险），但函数是 export 的公共 API，
   // 未来若传入用户可控数据即构成 XSS；统一转义（硬编码字符串转义无副作用）
@@ -67,10 +62,7 @@ interface FetchRaceState {
  * 构造三个镜像源 attempts 数组，并按 mirror 策略调整请求顺序
  * （仅影响最先被展示的顺序，并发竞速时无实质区别）
  */
-function buildFetchModelsAttempts(
-  repo: string,
-  mirror: MirrorStrategy,
-): FetchAttempt[] {
+function buildFetchModelsAttempts(repo: string, mirror: MirrorStrategy): FetchAttempt[] {
   const attempts: FetchAttempt[] = [
     {
       name: "raw",
@@ -107,7 +99,7 @@ async function fetchModelsOne(
   if (state.succeeded) throw new Error("already succeeded");
   const ctrl = new AbortController();
   state.controllers.push(ctrl);
-  const tmr = setTimeout(function (): void {
+  const tmr = setTimeout((): void => {
     ctrl.abort();
   }, timeoutMs);
   try {
@@ -119,7 +111,7 @@ async function fetchModelsOne(
       // （P2 修复：原实现任一源 404 即 abort 全部）
       if (resp.status === 404 && attempt.name === "raw") {
         state.earlyExitReason = "NoIndex";
-        state.controllers.forEach(function (c): void {
+        state.controllers.forEach((c): void => {
           // P4：abort 在规范中不抛错，此处 try/catch 仅为防御（无需上报）
           try {
             c.abort();
@@ -136,14 +128,11 @@ async function fetchModelsOne(
         encoding?: string;
         content?: string;
       };
-      if (data.encoding !== "base64" || data.content == null)
-        throw new Error("no content");
+      if (data.encoding !== "base64" || data.content == null) throw new Error("no content");
       // P2 修复（审核发现）：GitHub API base64 可能含 \r\n 换行——原只去 \n，
       // \r 残留令 atob 抛错 → 误判 AllFailed；统一去 [\r\n\s]
       const binary = atob(data.content.replace(/[\r\n\s]/g, ""));
-      const bytes = Uint8Array.from(binary, function (c): number {
-        return c.charCodeAt(0);
-      });
+      const bytes = Uint8Array.from(binary, (c): number => c.charCodeAt(0));
       models = JSON.parse(new TextDecoder().decode(bytes));
     } else {
       models = await resp.json();
@@ -167,8 +156,8 @@ function fetchModelsWaitForReady(
   getReady: () => boolean,
   state: FetchRaceState,
 ): Promise<{ _earlyExit: boolean }> {
-  return new Promise(function (resolve): void {
-    const check = function (): void {
+  return new Promise((resolve): void => {
+    const check = (): void => {
       // 已有成功结果也算提前退出：p2/p3 不再发出（P2 修复）
       if (state.earlyExitReason || state.succeeded) {
         resolve({ _earlyExit: true });
@@ -188,17 +177,12 @@ function fetchModelsWaitForReady(
  * 全部源失败的根因诊断（404→NoIndex / 403→RateLimited / 网络→NetworkOffline，
  * 否则 AllFailed）；提前退出原因优先透传
  */
-function classifyFetchModelsError(
-  aggErr: unknown,
-  earlyExitReason: string | null,
-): never {
+function classifyFetchModelsError(aggErr: unknown, earlyExitReason: string | null): never {
   if (earlyExitReason) throw new Error(earlyExitReason);
   // 全部失败 — 诊断根因
   const reasons = (aggErr as { errors?: Array<{ message?: string }> }).errors
-    ? (aggErr as { errors: Array<{ message?: string }> }).errors.map(
-        function (e): string {
-          return safeErrorMessage(e);
-        },
+    ? (aggErr as { errors: Array<{ message?: string }> }).errors.map((e): string =>
+        safeErrorMessage(e),
       )
     : [safeErrorMessage(aggErr)];
 
@@ -257,20 +241,20 @@ export async function tryFetchModels(
   // 延迟 2 秒启动第二个，延迟 4 秒启动第三个（但若已提前退出则跳过）
   let p2Ready = false;
   let p3Ready = false;
-  setTimeout(function (): void {
+  setTimeout((): void => {
     p2Ready = true;
   }, 2000);
-  setTimeout(function (): void {
+  setTimeout((): void => {
     p3Ready = true;
   }, 4000);
 
-  const p2 = fetchModelsWaitForReady(() => p2Ready, state).then(function (r) {
+  const p2 = fetchModelsWaitForReady(() => p2Ready, state).then((r) => {
     if (r._earlyExit) throw new Error(state.earlyExitReason || "early exit");
     if (onProgress) onProgress(30, "⏳ 发出第二个请求…");
     return fetchModelsOne(sorted[1], state, TIMEOUT);
   });
 
-  const p3 = fetchModelsWaitForReady(() => p3Ready, state).then(function (r) {
+  const p3 = fetchModelsWaitForReady(() => p3Ready, state).then((r) => {
     if (r._earlyExit) throw new Error(state.earlyExitReason || "early exit");
     if (onProgress) onProgress(50, "⏳ 发出第三个请求…");
     return fetchModelsOne(sorted[2], state, TIMEOUT);

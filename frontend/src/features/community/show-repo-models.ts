@@ -1,13 +1,14 @@
 // ===== 仓库模型显示（共享逻辑，供 init-workshop.ts 和 init-github.ts 复用）=====
+
+import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { getApp } from "../../backend/app.ts";
 import { dbg } from "../../utils/debug/debug.ts";
+import { stripDisableSuffix } from "../../utils/dom/display.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { currentRepoType } from "../repo-rtype.ts";
-import { countMissing, renderRepoHeaderHTML } from "./render.ts";
 import { bindRepoEvents } from "./events.ts";
 import type { WorkshopModel } from "./render.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { stripDisableSuffix } from "../../utils/dom/display.ts";
+import { countMissing, renderRepoHeaderHTML } from "./render.ts";
 
 /**
  * 显示 GitHub 仓库模型列表（比对本地已有文件）
@@ -51,7 +52,11 @@ export async function showRepoModels(
     const filesRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot(effectiveRtype) : "";
     if (filesRoot) {
       if (AppM.ClearScanCache) await AppM.ClearScanCache();
-      const entries = (await AppM.ScanModelEntriesWithLabel(filesRoot, RESOURCE_TYPE_LABELS[effectiveRtype] ?? effectiveRtype)) || [];
+      const entries =
+        (await AppM.ScanModelEntriesWithLabel(
+          filesRoot,
+          RESOURCE_TYPE_LABELS[effectiveRtype] ?? effectiveRtype,
+        )) || [];
       entries.forEach((e) => {
         const n = stripDisableSuffix(e.Name || "");
         localMap.set(n, e.Hash || "");
@@ -65,8 +70,7 @@ export async function showRepoModels(
 
   // 下载 URL 统一用 raw 前缀：Go 端 downloadFileWithQueue 按 LoadAppConfig().Mirror
   // 重排 raw/jsd/api 顺序（jsdelivr 直通会令 ResolveSavePath 解析失败、回退失效、子目录被扁平化）
-  const dlPrefix =
-    "https://raw.githubusercontent.com/" + repo + "/main/";
+  const dlPrefix = "https://raw.githubusercontent.com/" + repo + "/main/";
 
   const sourceLabel =
     (source === "raw"
@@ -112,7 +116,19 @@ export async function showRepoModels(
     dlPrefix,
     repo,
     source,
-    showRepoModels: () => showRepoModels(esc, repoEventsCleanup, setRepoEventsCleanup, currentSite, setCurrentSite, repo, models, source, searchResults, effectiveRtype),
+    showRepoModels: () =>
+      showRepoModels(
+        esc,
+        repoEventsCleanup,
+        setRepoEventsCleanup,
+        currentSite,
+        setCurrentSite,
+        repo,
+        models,
+        source,
+        searchResults,
+        effectiveRtype,
+      ),
     backToSite: () => {
       if (currentSite) {
         setCurrentSite(currentSite); // 触发重新渲染

@@ -5,12 +5,15 @@
 // 共享读取装配与路径反解（readWebFile / readWebZipEntries / listWebModelDirFiles）来自
 // web-fs-read.ts 叶子——断对 web-fs.ts 主文件的循环依赖。
 
-import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { extractZip } from "../parsers/extract.ts";
-import { safeErrorMessage } from "../utils/safe-error-msg.ts";
-import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "../preview-3d/decoder/geometry.ts";
+import {
+  type BedrockGeometry,
+  parseBedrockGeometryFromJSON,
+} from "../preview-3d/decoder/geometry.ts";
 import { parseYsmJsonDirect } from "../preview-3d/decoder/parse-ysm-json.ts";
-import { readWebFile, listWebModelDirFiles } from "./web-fs-read.ts";
+import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
+import { listWebModelDirFiles, readWebFile } from "./web-fs-read.ts";
 
 function imageMimeOfPath(p: string): string {
   return /\.jpe?g$/i.test(p) ? "image/jpeg" : "image/png";
@@ -81,11 +84,16 @@ async function mergeBedrockFromManifest(
     const raw = typeof mf === "string" ? mf : (mf as { path?: string })?.path || "";
     if (!raw || processed.has(raw)) continue;
     processed.add(raw);
-    const rel = raw.startsWith("models/") || raw.startsWith("models\\")
-      ? raw
-      : "models/" + raw;
+    const rel = raw.startsWith("models/") || raw.startsWith("models\\") ? raw : "models/" + raw;
     // 兼容 manifest 里只写 baseName（如 "main"）而磁盘上是 main.json / main.geo.json
-    const candidates = [rel, raw, rel + ".json", rel + ".geo.json", raw + ".json", raw + ".geo.json"];
+    const candidates = [
+      rel,
+      raw,
+      rel + ".json",
+      rel + ".geo.json",
+      raw + ".json",
+      raw + ".geo.json",
+    ];
     let bytes: Uint8Array | null = null;
     for (const c of candidates) {
       bytes = await readFile(c);
@@ -108,9 +116,8 @@ async function mergeBedrockFromManifest(
   for (const tf of meta.texFiles || []) {
     const raw = typeof tf === "string" ? tf : (tf as { uv?: string })?.uv || "";
     if (!raw) continue;
-    const rel = raw.startsWith("textures/") || raw.startsWith("textures\\")
-      ? raw
-      : "textures/" + raw;
+    const rel =
+      raw.startsWith("textures/") || raw.startsWith("textures\\") ? raw : "textures/" + raw;
     const candidates = [rel, raw, rel + ".png", rel + ".jpg", raw + ".png", raw + ".jpg"];
     let bytes: Uint8Array | null = null;
     for (const c of candidates) {
@@ -119,7 +126,12 @@ async function mergeBedrockFromManifest(
     }
     if (!bytes) continue;
     textures.push(imageDataUri(bytes, imageMimeOfPath(raw)));
-    textureNames.push(raw.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "");
+    textureNames.push(
+      raw
+        .split(/[/\\]/)
+        .pop()
+        ?.replace(/\.[^.]+$/, "") || "",
+    );
   }
 
   return {
@@ -141,13 +153,7 @@ export async function webFindPreviewImage(modelPath: string): Promise<string> {
   const files = await listWebModelDirFiles(dir);
   if (!files.length) return "";
   const base = modelPath.slice(slash + 1).replace(/\.[^.]+$/, "") || "";
-  const candidates = [
-    `${base}.png`,
-    `${base}.jpg`,
-    "preview.png",
-    "cover.png",
-    "thumbnail.png",
-  ];
+  const candidates = [`${base}.png`, `${base}.jpg`, "preview.png", "cover.png", "thumbnail.png"];
   for (const c of candidates) {
     const low = c.toLowerCase();
     const hit = files.find((p) => p.split(/[/\\]/).pop()?.toLowerCase() === low);
@@ -160,7 +166,9 @@ export async function webFindPreviewImage(modelPath: string): Promise<string> {
 }
 
 /** 从 zip entries 中取首个 PNG（偏好 textures/ 目录，再回退任意根层 PNG） */
-function firstPngFromEntries(entries: Record<string, Uint8Array>): { key: string; data: Uint8Array } | null {
+function firstPngFromEntries(
+  entries: Record<string, Uint8Array>,
+): { key: string; data: Uint8Array } | null {
   const keys = Object.keys(entries);
   const tex = keys.find((k) => /^textures\//i.test(k) && /\.png$/i.test(k));
   const any = keys.find((k) => /\.png$/i.test(k));
@@ -206,21 +214,29 @@ function findGeometryEntryKey(entries: Record<string, Uint8Array>): string | nul
     const data = entries[key].subarray(0, maxProbe);
     try {
       if (new TextDecoder().decode(data).includes('"minecraft:geometry"')) return key;
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   return null;
 }
 
 /** 收集 zip entries 里的全部纹理 data URI + 文件名（按 key 排序，对齐“同序”消费） */
-function collectTexturesFromEntries(entries: Record<string, Uint8Array>): { textures: string[]; textureNames: string[] } {
-  const keys = Object.keys(entries).filter((k) => /\.png$/i.test(k)).sort((a, b) => a.localeCompare(b));
+function collectTexturesFromEntries(entries: Record<string, Uint8Array>): {
+  textures: string[];
+  textureNames: string[];
+} {
+  const keys = Object.keys(entries)
+    .filter((k) => /\.png$/i.test(k))
+    .sort((a, b) => a.localeCompare(b));
   const textures: string[] = [];
   const textureNames: string[] = [];
   for (const k of keys) {
     textures.push(imageDataUri(entries[k], imageMimeOfPath(k)));
-    textureNames.push(k.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ?? "");
+    textureNames.push(
+      k
+        .split(/[/\\]/)
+        .pop()
+        ?.replace(/\.[^.]+$/, "") ?? "",
+    );
   }
   return { textures, textureNames };
 }
@@ -266,7 +282,9 @@ export async function webAnalyzeBedrockModel(modelPath: string): Promise<Record<
       const ysmBytes = findEntryByRel(entries, "ysm.json");
       const manifestMeta = ysmBytes ? parseYsmManifestMeta(ysmBytes) : null;
       if (manifestMeta) {
-        geo = await mergeBedrockFromManifest(manifestMeta, async (rel) => findEntryByRel(entries, rel));
+        geo = await mergeBedrockFromManifest(manifestMeta, async (rel) =>
+          findEntryByRel(entries, rel),
+        );
         if (geo) {
           textures = geo.textures || [];
           textureNames = geo.textureNames || [];
@@ -311,11 +329,12 @@ export async function webAnalyzeBedrockModel(modelPath: string): Promise<Record<
             const text = new TextDecoder().decode(fbytes.subarray(0, 1 << 20));
             if (text.includes('"minecraft:geometry"')) {
               const parsed = parseBedrockGeometryFromJSON(text);
-              if (parsed?.bones?.length) { geo = parsed; break; }
+              if (parsed?.bones?.length) {
+                geo = parsed;
+                break;
+              }
             }
-          } catch {
-            continue;
-          }
+          } catch {}
         }
       }
       if (textures.length === 0) {
@@ -324,7 +343,12 @@ export async function webAnalyzeBedrockModel(modelPath: string): Promise<Record<
           const uri = await readImageDataUri(p);
           if (uri) {
             textures.push(uri);
-            textureNames.push(p.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ?? "");
+            textureNames.push(
+              p
+                .split(/[/\\]/)
+                .pop()
+                ?.replace(/\.[^.]+$/, "") ?? "",
+            );
           }
         }
       }
@@ -357,13 +381,23 @@ export async function webAnalyzeBedrockModelEntry(
   try {
     const { entries } = extractZip(bytes);
     const sp = subPath.toLowerCase().replace(/\\/g, "/");
-    const hitKey = Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/") === sp)
-      ?? Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/").endsWith("/" + sp))
-      ?? Object.keys(entries).find((k) => {
-          const base = k.split(/[/\\]/).pop()?.toLowerCase() ?? "";
-          const want = sp.split("/").pop() ?? "";
-          return base === want || base.replace(/\.geo\.json$/, "").replace(/\.json$/, "") === want.replace(/\.geo\.json$/, "").replace(/\.json$/, "");
-        });
+    const hitKey =
+      Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/") === sp) ??
+      Object.keys(entries).find((k) =>
+        k
+          .toLowerCase()
+          .replace(/\\/g, "/")
+          .endsWith("/" + sp),
+      ) ??
+      Object.keys(entries).find((k) => {
+        const base = k.split(/[/\\]/).pop()?.toLowerCase() ?? "";
+        const want = sp.split("/").pop() ?? "";
+        return (
+          base === want ||
+          base.replace(/\.geo\.json$/, "").replace(/\.json$/, "") ===
+            want.replace(/\.geo\.json$/, "").replace(/\.json$/, "")
+        );
+      });
     if (!hitKey || !/\.json$/i.test(hitKey)) return {};
     const geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[hitKey]));
     if (!geo?.bones?.length) return {};

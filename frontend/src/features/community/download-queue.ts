@@ -4,38 +4,39 @@
 // · download-queue-progress.ts：99% 卡进度防骗状态机（陷阱 #6 锁定/菊花/completeTimer 收口互斥）
 // · 本文件：createDownloadQueue UI 控制器 + 对外 re-export（测试 / events.ts / download-tasks.ts
 //   均从本文件取符号，契约零改动）
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
+import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { currentRepoType } from "../repo-rtype.ts";
-import { renderDisplayName } from "../../utils/dom/display.ts";
-import { getApp } from "../../backend/app.ts";
 import { swallowError } from "../../utils/core/async.ts";
+import { renderDisplayName } from "../../utils/dom/display.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { currentRepoType } from "../repo-rtype.ts";
+import { createProgressGuard, type ProgressGuard } from "./download-queue-progress.ts";
 import {
-  STATE,
-  notify,
-  subscribe,
-  resume,
-  isActiveStatus,
-  enqueueDownloads,
   cancelDownloads,
   type DownloadState,
   type DownloadTask,
+  enqueueDownloads,
+  isActiveStatus,
+  notify,
   type QueueError,
+  resume,
+  STATE,
+  subscribe,
 } from "./download-queue-store.ts";
-import { createProgressGuard, type ProgressGuard } from "./download-queue-progress.ts";
 
+export type { DownloadState, DownloadTask, QueueError } from "./download-queue-store.ts";
 // ── 对外 re-export（保持消费者从本文件导入的既有契约）──
 export {
-  subscribe,
-  getStateSnapshot,
-  getState, // @deprecated — 内部委托给 getStateSnapshot
-  resume,
-  enqueueDownloads,
   cancelDownloads,
+  enqueueDownloads,
+  getState, // @deprecated — 内部委托给 getStateSnapshot
+  getStateSnapshot,
+  resume,
+  subscribe,
 } from "./download-queue-store.ts";
-export type { DownloadTask, DownloadState, QueueError } from "./download-queue-store.ts";
 
 // ============================================================
 //  createDownloadQueue — UI 层（订阅 STATE → 渲染 DOM）
@@ -100,12 +101,11 @@ function cmDqCleanupProgressUI(ctx: CmDqCtx, errorSummary?: string): void {
   if (btn) btn.disabled = false;
   try {
     swallowError(
-      getApp()
-        .then((App) => {
-          if (App.ClearScanCache) App.ClearScanCache();
-          // 解除 features → views 反向依赖：经 bus 事件解耦，订阅在 views 层注册（ADR-039 范式）
-          bus.emit("community:clearCache");
-        }),
+      getApp().then((App) => {
+        if (App.ClearScanCache) App.ClearScanCache();
+        // 解除 features → views 反向依赖：经 bus 事件解耦，订阅在 views 层注册（ADR-039 范式）
+        bus.emit("community:clearCache");
+      }),
     );
   } catch (_) {
     /* 清除缓存失败不影响清理 */
@@ -133,7 +133,9 @@ function cmDqHandleFileStart(ctx: CmDqCtx, s: DownloadState): void {
           t("community.downloadQueue.remain", { n: remain }) +
           "</span>"
         : "") +
-      '<button class="btn-base sm gh-cancel-queue" title="' + t("common.cancel") + '">✕</button>' +
+      '<button class="btn-base sm gh-cancel-queue" title="' +
+      t("common.cancel") +
+      '">✕</button>' +
       "</div>" +
       '<div class="gh-progress-bar-wrap"><div class="gh-progress-fill"></div></div>';
     qs.querySelector(".gh-cancel-queue")?.addEventListener("click", async () => {
@@ -148,11 +150,14 @@ function cmDqHandleFileStart(ctx: CmDqCtx, s: DownloadState): void {
   }
 }
 
-function cmDqHandleFileDone(ctx: CmDqCtx, done: {
-  name: string;
-  status: string;
-  errMsg: string;
-}): void {
+function cmDqHandleFileDone(
+  ctx: CmDqCtx,
+  done: {
+    name: string;
+    status: string;
+    errMsg: string;
+  },
+): void {
   ctx.progressGuard.forceFileDone(done);
   if (done.status === "ok") {
     if (done.name) ctx.getLocalMap().set(done.name, "");
@@ -163,9 +168,7 @@ function cmDqHandleFileDone(ctx: CmDqCtx, done: {
 }
 
 function cmDqUncheckByName(ctx: CmDqCtx, name: string): void {
-  const cb = ctx.sr.querySelector(
-    '.gh-sel[data-name="' + escapeAttrValue(name) + '"]',
-  );
+  const cb = ctx.sr.querySelector('.gh-sel[data-name="' + escapeAttrValue(name) + '"]');
   if (cb) (cb as HTMLInputElement).checked = false;
   if (ctx.onFileSuccess) ctx.onFileSuccess(name);
 }
@@ -197,7 +200,10 @@ function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
         : "");
   }
   if (cancelled) {
-    cmDqCleanupProgressUI(ctx, summary || '<span class="gh-queue-cancel">⏹ ' + t("downloadQueue.cancelled") + "</span>");
+    cmDqCleanupProgressUI(
+      ctx,
+      summary || '<span class="gh-queue-cancel">⏹ ' + t("downloadQueue.cancelled") + "</span>",
+    );
   } else {
     cmDqCleanupProgressUI(ctx, summary || undefined);
   }
@@ -296,7 +302,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
     STATE.status = "idle";
     notify();
     bus.emit("toast:show", {
-      msg: `❌ ${t("workshop.enqueueFailed")}: ` + (safeErrorMessage(e)),
+      msg: `❌ ${t("workshop.enqueueFailed")}: ` + safeErrorMessage(e),
       duration: TOAST_MS.verbose,
       type: "error",
     });

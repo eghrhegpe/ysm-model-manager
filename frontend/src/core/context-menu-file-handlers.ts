@@ -3,11 +3,11 @@ import { getApp } from "../backend/app.ts";
 import { modalConfirm, modalSelect } from "../features/dialogs/modal.ts";
 import { showRenameDialog } from "../features/dialogs/rename.ts";
 import { modalTagEditor } from "../features/dialogs/tag-editor.ts";
-import { tr } from "./i18n/tr.ts";
-import { refreshUI, toast, toastError, resolveDstDir } from "./context-menu-shared.ts";
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
+import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import type { FileCtx } from "./context-menu-handlers.ts";
+import { refreshUI, resolveDstDir, toast, toastError } from "./context-menu-shared.ts";
+import { tr } from "./i18n/tr.ts";
 
 /** file 类 handler 子表（精确 key 推断，供 HANDLERS satisfies 覆盖断言） */
 export const FILE_HANDLERS = {
@@ -15,7 +15,11 @@ export const FILE_HANDLERS = {
     try {
       const fileName = (ctx.path || "").split(/[/\\]/).pop() || "";
       if (fileName.toLowerCase() === "ysm.json") {
-        toast(tr("ctx.renameYsmJson", "ysm.json is the model directory manifest — right-click its folder and choose 'Rename'"),
+        toast(
+          tr(
+            "ctx.renameYsmJson",
+            "ysm.json is the model directory manifest — right-click its folder and choose 'Rename'",
+          ),
           4000,
           "warn",
         );
@@ -32,12 +36,15 @@ export const FILE_HANDLERS = {
   },
   "file.move": async (ctx) => {
     try {
-      const resolved = await resolveDstDir({
-        title: tr("ctx.moveDialogTitle", "Move to Folder"),
-        icon: "📂",
-        okText: tr("ctx.moveDialogOk", "Move"),
-        emptyMsg: tr("ctx.emptyMoveRoot", "❌ Configure a storage path first"),
-      }, ctx.rtype);
+      const resolved = await resolveDstDir(
+        {
+          title: tr("ctx.moveDialogTitle", "Move to Folder"),
+          icon: "📂",
+          okText: tr("ctx.moveDialogOk", "Move"),
+          emptyMsg: tr("ctx.emptyMoveRoot", "❌ Configure a storage path first"),
+        },
+        ctx.rtype,
+      );
       if (!resolved) return;
       const { folder, dstDir } = resolved;
       const { MoveModelFile } = await getApp();
@@ -50,12 +57,15 @@ export const FILE_HANDLERS = {
   },
   "file.copy": async (ctx) => {
     try {
-      const resolved = await resolveDstDir({
-        title: tr("ctx.copyDialogTitle", "Copy to Folder"),
-        icon: "📋",
-        okText: tr("ctx.copyDialogOk", "Copy"),
-        emptyMsg: tr("ctx.emptyCopyRoot", "❌ Configure a repository directory first"),
-      }, ctx.rtype);
+      const resolved = await resolveDstDir(
+        {
+          title: tr("ctx.copyDialogTitle", "Copy to Folder"),
+          icon: "📋",
+          okText: tr("ctx.copyDialogOk", "Copy"),
+          emptyMsg: tr("ctx.emptyCopyRoot", "❌ Configure a repository directory first"),
+        },
+        ctx.rtype,
+      );
       if (!resolved) return;
       const { folder, dstDir } = resolved;
       const { CopyModelFile } = await getApp();
@@ -72,7 +82,11 @@ export const FILE_HANDLERS = {
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       if (!mcRoot) {
-        toast(tr("ctx.pushNoMcRoot", "Configure the game directory first"), TOAST_MS.success, "warn");
+        toast(
+          tr("ctx.pushNoMcRoot", "Configure the game directory first"),
+          TOAST_MS.success,
+          "warn",
+        );
         return;
       }
       const instances = (await ListVersionInstances(mcRoot)) ?? [];
@@ -103,7 +117,8 @@ export const FILE_HANDLERS = {
   "file.edit-tags": async (ctx) => {
     try {
       const result = await modalTagEditor(ctx.path || "");
-      if (result) toast(tr("ctx.tagsSaved", "🏷️ Saved {n} tags", { n: result.length }), TOAST_MS.success);
+      if (result)
+        toast(tr("ctx.tagsSaved", "🏷️ Saved {n} tags", { n: result.length }), TOAST_MS.success);
     } catch (e) {
       toastError(e, tr("ctx.tagsFail", "Failed to edit tags"));
     }
@@ -144,7 +159,9 @@ export const FILE_HANDLERS = {
     // 与 batch.copy-paths 同一实现——不再手写 navigator/textarea 双路径
     const ok = await copyText(ctx.path || "");
     toast(
-      ok ? tr("ctx.copyPathOk", "✅ Path copied to clipboard") : tr("ctx.copyPathFail", "❌ Copy failed, please copy the path manually"),
+      ok
+        ? tr("ctx.copyPathOk", "✅ Path copied to clipboard")
+        : tr("ctx.copyPathFail", "❌ Copy failed, please copy the path manually"),
       ok ? TOAST_MS.success : TOAST_MS.normal,
       ok ? undefined : "error",
     );

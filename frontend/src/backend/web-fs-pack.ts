@@ -5,9 +5,14 @@
 // 失败契约对齐 Go binding：ReadPackMeta → "{}"；ReadShaderpackLang → {"name":"","entries":{}}
 // ListPackModels → "[]"；ReadPackEntry → ""。共享读取装配来自 web-fs-read.ts 叶子。
 
-import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { extractZip } from "../parsers/extract.ts";
-import { findZipEntry, parsePackMetaJson, parseShaderpackLang, packPngToThumbnail } from "../parsers/pack-meta.ts";
+import {
+  findZipEntry,
+  packPngToThumbnail,
+  parsePackMetaJson,
+  parseShaderpackLang,
+} from "../parsers/pack-meta.ts";
+import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { readWebFile, readWebZipEntries } from "./web-fs-read.ts";
 
 /**
@@ -41,7 +46,9 @@ export async function readPackMetaJson(path: string): Promise<Record<string, unk
  * 字节 → extractZip → 找 lang/en_US.lang（大小写不敏感，1MB 限额）→ key=value 解析 →
  * {name, entries}。任何一步失败 → {name:"",entries:{}}（对齐 Go binding 契约）。
  */
-export async function readShaderpackLangJson(path: string): Promise<{ name: string; entries: Record<string, string> }> {
+export async function readShaderpackLangJson(
+  path: string,
+): Promise<{ name: string; entries: Record<string, string> }> {
   try {
     const b64 = await readWebFile(path);
     if (!b64) return { name: "", entries: {} };
@@ -50,7 +57,10 @@ export async function readShaderpackLangJson(path: string): Promise<{ name: stri
     const { entries } = extractZip(bytes);
     const lang = findZipEntry(entries, "lang/en_us.lang");
     if (!lang) return { name: "", entries: {} };
-    const parsed = JSON.parse(parseShaderpackLang(lang)) as { name: string; entries: Record<string, string> };
+    const parsed = JSON.parse(parseShaderpackLang(lang)) as {
+      name: string;
+      entries: Record<string, string>;
+    };
     return parsed;
   } catch {
     return { name: "", entries: {} };
@@ -83,7 +93,9 @@ function webPackModelEntryMatch(name: string): boolean {
  * 返回 {models:[{path,cubes}],total:N}，cubes = JSON elements 数组长度，
  * 封顶前 200 条（防大包），total 全量。失败返回空结构（详情卡清单区降级）。
  */
-export async function listWebPackModelsDetail(path: string): Promise<{ models: Array<{ path: string; cubes: number }>; total: number }> {
+export async function listWebPackModelsDetail(
+  path: string,
+): Promise<{ models: Array<{ path: string; cubes: number }>; total: number }> {
   const empty = () => ({ models: [], total: 0 });
   try {
     const b64 = await readWebFile(path);
@@ -91,7 +103,9 @@ export async function listWebPackModelsDetail(path: string): Promise<{ models: A
     const bytes = base64ToBytes(b64);
     if (!bytes) return empty();
     const { entries } = extractZip(bytes);
-    const keys = Object.keys(entries).filter((k) => webPackModelEntryMatch(k)).sort();
+    const keys = Object.keys(entries)
+      .filter((k) => webPackModelEntryMatch(k))
+      .sort();
     const total = keys.length;
     const capped = keys.slice(0, 200);
     const models = capped.map((k) => {
@@ -100,7 +114,9 @@ export async function listWebPackModelsDetail(path: string): Promise<{ models: A
       try {
         const parsed = JSON.parse(new TextDecoder().decode(bytes)) as { elements?: unknown[] };
         cubes = Array.isArray(parsed.elements) ? parsed.elements.length : 0;
-      } catch { /* 单条目 JSON 异常 → cubes 0（对齐 Go packModelElementsCount） */ }
+      } catch {
+        /* 单条目 JSON 异常 → cubes 0（对齐 Go packModelElementsCount） */
+      }
       return { path: k, cubes };
     });
     return { models, total };

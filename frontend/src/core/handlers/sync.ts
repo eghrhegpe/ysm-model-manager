@@ -1,12 +1,13 @@
 // ===== 同步相关：导入缺失 / 同步启用状态（类型化版 — ADR-014 P3）=====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { bus } from "../../bus.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { dbg } from "../../utils/debug/debug.ts";
+
 import { getApp } from "../../backend/app.ts";
-import { requireMcRoot } from "./require-mcroot.ts";
+import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
+import { dbg } from "../../utils/debug/debug.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { requireMcRoot } from "./require-mcroot.ts";
 
 /** sync:download:missing 事件载荷（镜像 bus.ts BusEvents 契约） */
 interface SyncDownloadPayload {
@@ -46,9 +47,7 @@ async function runDownloadMissing(
     return false;
   }
 
-  const targets = instanceName
-    ? instances.filter((i) => i.Name === instanceName)
-    : instances;
+  const targets = instanceName ? instances.filter((i) => i.Name === instanceName) : instances;
   const allStatuses = await GetResourceInstanceStatus(rtype, mcRoot, filesRoot);
   let totalOk = 0;
   let totalFail = 0;
@@ -76,13 +75,7 @@ async function runDownloadMissing(
     // P3（审核发现）：不静默吞错——缓存失效失败会让新导入最长 30s 不出现
     dbg("sync", "InvalidateScanCache 失败:", e);
   }
-  dbg(
-    "sync",
-    "同步完成, 发出 stats:refresh, 成功:",
-    totalOk,
-    "失败:",
-    totalFail,
-  );
+  dbg("sync", "同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
   bus.emit("stats:refresh");
   bus.emit("toast:show", {
     msg: instanceName
@@ -146,12 +139,7 @@ async function handleSyncDownloadMissing(
 /** 同步启用/禁用状态到所有整合包（核心逻辑），失败明细经 friendlyError 显式化 */
 async function runSyncToggleStatus(): Promise<void> {
   dbg("sync", "toggle-status");
-  const {
-    ListVersionInstances,
-    SyncModelToggleStatus,
-    AddImportLog,
-    GetRepoRoot,
-  } = await getApp();
+  const { ListVersionInstances, SyncModelToggleStatus, AddImportLog, GetRepoRoot } = await getApp();
   // 语义边界（硬编码排查确认）：sync:toggle:status 是模型 .ban/.disabled 启禁同步，
   // 由 app-tree 的启禁操作触发——前端已统一走 ToggleEnable（无 rtype 纯路径判定，
   // 根集合 FilesRoot/McRoot/CustomRoots/ysmRoot，内部复用 fileops 的 .disabled
@@ -233,14 +221,7 @@ async function handleSyncToggleStatus(flag: SyncBusyFlag): Promise<void> {
   } catch (err) {
     try {
       const { AddImportLog } = await getApp();
-      await AddImportLog(
-        "sync-status",
-        "同步失败",
-        "",
-        0,
-        "failed",
-        String(err),
-      );
+      await AddImportLog("sync-status", "同步失败", "", 0, "failed", String(err));
     } catch (logErr) {
       // 日志写入失败不阻断反馈（bus.emit 自带兜底），但不静默吞错
       dbg("sync", "AddImportLog(sync-status 失败) 写入失败:", logErr);
@@ -264,13 +245,7 @@ export function registerSync(unsubs: Array<() => void>): void {
   const downloadFlag: SyncBusyFlag = { busy: false };
   const toggleFlag: SyncBusyFlag = { busy: false };
   // 导入仓库模型到整合包
-  unsubs.push(
-    bus.on("sync:download:missing", (p) =>
-      handleSyncDownloadMissing(downloadFlag, p),
-    ),
-  );
+  unsubs.push(bus.on("sync:download:missing", (p) => handleSyncDownloadMissing(downloadFlag, p)));
   // 同步启用/禁用状态到所有整合包
-  unsubs.push(
-    bus.on("sync:toggle:status", () => handleSyncToggleStatus(toggleFlag)),
-  );
+  unsubs.push(bus.on("sync:toggle:status", () => handleSyncToggleStatus(toggleFlag)));
 }

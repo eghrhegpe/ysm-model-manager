@@ -12,8 +12,9 @@
 // 是否可用」的判定；各功能的 web 降级动作（下载入库、导入、toast 早退）留在原地，
 // 仅消费统一谓词。resolveWebMode() 薄谓词保留于 platform.ts 供存量调用；本模块
 // 暴露 isWebPlatform() 作为 web-only 语义的统一入口，19 处按需渐进迁移。
-import { readDeclaredBackend, isWebEntryMode, getAndroidBridge } from "./platform.ts";
+
 import { browserAdapter } from "./browser-adapter.ts";
+import { getAndroidBridge, isWebEntryMode, readDeclaredBackend } from "./platform.ts";
 
 export type PlatformMode = "desktop" | "web" | "android";
 

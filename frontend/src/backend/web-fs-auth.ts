@@ -3,12 +3,13 @@
 // 用 File System Access API 让用户手动授权本地目录，递归扫主文件写入 IndexedDB，
 // 作为模型库「文件来源」（ADR-049 能力门控缺口补齐）。
 // 复用 web-fs-import 的 importWebFiles（File → IDB 落库），不重复造 IDB 写入逻辑。
-import { idbGet, idbSet } from "./idb.ts";
+
 import { t } from "../core/i18n/t.ts";
-import { WebUnsupportedError } from "./web-common.ts";
 import { currentRepoType } from "../features/repo-rtype.ts";
-import { mainFileRank, MAIN_FILE_RANK_NONE } from "./web-fs-shared.ts";
+import { idbGet, idbSet } from "./idb.ts";
+import { WebUnsupportedError } from "./web-common.ts";
 import { importWebFiles } from "./web-fs-import.ts";
+import { MAIN_FILE_RANK_NONE, mainFileRank } from "./web-fs-shared.ts";
 
 interface _FsaDirHandle {
   name: string;
@@ -98,14 +99,21 @@ export async function reauthorizeFsaRoot(): Promise<boolean> {
 }
 
 /** 启动自愈：恢复持久化句柄并重扫入库（R2 数据互通，参照 MikuMikuAR ScanModelDir） */
-export async function rescanFsaRoot(): Promise<{ ok: boolean; imported: number; failed: number; dir: string }> {
+export async function rescanFsaRoot(): Promise<{
+  ok: boolean;
+  imported: number;
+  failed: number;
+  dir: string;
+}> {
   const h = await restoreFsaRootHandle();
   if (!h) return { ok: false, imported: 0, failed: 0, dir: "" };
   return scanFsaHandle(h);
 }
 
 /** 扫描 FSA 目录句柄 → importWebFiles 落库（selectLocalRepo / rescanFsaRoot 共用） */
-async function scanFsaHandle(handle: unknown): Promise<{ ok: boolean; imported: number; failed: number; dir: string }> {
+async function scanFsaHandle(
+  handle: unknown,
+): Promise<{ ok: boolean; imported: number; failed: number; dir: string }> {
   const files: File[] = [];
   await _collectModelFiles(handle as _FsaDirHandle, files);
   const { imported, failed } = await importWebFiles(files, currentRepoType());
@@ -113,10 +121,7 @@ async function scanFsaHandle(handle: unknown): Promise<{ ok: boolean; imported: 
 }
 
 /** 递归遍历目录句柄，收集所有主文件的 File 句柄 */
-async function _collectModelFiles(
-  dir: _FsaDirHandle,
-  out: File[],
-): Promise<void> {
+async function _collectModelFiles(dir: _FsaDirHandle, out: File[]): Promise<void> {
   for await (const entry of dir.values()) {
     if (entry.kind === "directory") {
       await _collectModelFiles(entry as unknown as _FsaDirHandle, out);
@@ -137,13 +142,20 @@ async function _collectModelFiles(
  * 文件选择取消一致；friendlyError 不识别 AbortError，若抛错会显示英文原文错误）。
  * 返回 { ok, imported, failed, dir }，dir 为授权目录名（供 UI 展示状态）。
  */
-export async function selectLocalRepo(): Promise<{ ok: boolean; imported: number; failed: number; dir: string }> {
+export async function selectLocalRepo(): Promise<{
+  ok: boolean;
+  imported: number;
+  failed: number;
+  dir: string;
+}> {
   if (typeof (window as { showDirectoryPicker?: unknown }).showDirectoryPicker !== "function") {
     throw new WebUnsupportedError(t("webFs.fsaUnsupported"));
   }
   let handle: FileSystemDirectoryHandle;
   try {
-    handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
+    handle = await (
+      window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }
+    ).showDirectoryPicker();
   } catch (err) {
     // 用户取消选择框：浏览器抛 AbortError（DOMException name=AbortError）。静默返回
     // 「无操作」，不向 UI 抛错——取消不是失败，也不该显示 friendlyError 的英文原文

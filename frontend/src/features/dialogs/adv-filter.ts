@@ -4,15 +4,12 @@
 // 样式：.afv-inp 已提取到 frontend/css/components.css（避免重复注入 <style>）
 // 后端约束：当前 Go SearchModels 只支持 (minBones, maxBones, minCubes, maxCubes, minTex, maxTex) 6 个范围 + 1 个关键字；
 //   不支持文件大小、排序（避免展示无效控件）
-import { esc } from "../../utils/dom/html.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
+
 import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
-import {
-  parseFilterNumber,
-  validateAdvFilter,
-  type AdvFilterValue,
-} from "./adv-filter-util.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
+import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
 
 export type { AdvFilterValue } from "./adv-filter-util.ts";
 
@@ -43,12 +40,8 @@ function advFilterCollect(
     maxCubes: parseFilterNumber(
       (box.querySelector("#afv-maxCubes") as HTMLInputElement)?.value ?? "",
     ),
-    minTex: parseFilterNumber(
-      (box.querySelector("#afv-minTex") as HTMLInputElement)?.value ?? "",
-    ),
-    maxTex: parseFilterNumber(
-      (box.querySelector("#afv-maxTex") as HTMLInputElement)?.value ?? "",
-    ),
+    minTex: parseFilterNumber((box.querySelector("#afv-minTex") as HTMLInputElement)?.value ?? ""),
+    maxTex: parseFilterNumber((box.querySelector("#afv-maxTex") as HTMLInputElement)?.value ?? ""),
     tag: tagInput.value.trim(),
   };
 }
@@ -143,11 +136,9 @@ function bindAdvFilterEvents(
 
   const errEl = box.querySelector("#afv-err") as HTMLElement;
 
-  const close = (result: AdvFilterResult): void =>
-    closeDlg(overlay, resolve, result);
+  const close = (result: AdvFilterResult): void => closeDlg(overlay, resolve, result);
 
-  (box.querySelector("#afv-cancel") as HTMLElement).onclick = (): void =>
-    close(null);
+  (box.querySelector("#afv-cancel") as HTMLElement).onclick = (): void => close(null);
   (box.querySelector("#afv-clear") as HTMLElement).onclick = (): void =>
     closeDlg(overlay, resolve, { cleared: true });
   (box.querySelector("#afv-ok") as HTMLElement).onclick = (): void => {
@@ -177,7 +168,9 @@ function bindAdvFilterEvents(
   });
 }
 
-export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): Promise<AdvFilterResult> {
+export function modalAdvFilter(
+  opts: { value?: Partial<AdvFilterValue> } = {},
+): Promise<AdvFilterResult> {
   return new Promise((resolve) => {
     const v = opts.value || {};
     const overlay = document.createElement("div");
@@ -202,11 +195,6 @@ export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): 
 
     const kwInput = box.querySelector("#afv-kw") as HTMLInputElement;
     const tagInput = box.querySelector("#afv-tag") as HTMLInputElement;
-    bindAdvFilterEvents(
-      overlay,
-      box,
-      resolve,
-      () => advFilterCollect(box, kwInput, tagInput),
-    );
+    bindAdvFilterEvents(overlay, box, resolve, () => advFilterCollect(box, kwInput, tagInput));
   });
 }

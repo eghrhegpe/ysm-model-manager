@@ -2,12 +2,10 @@
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
 import { collectFiles } from "./dnd-collector.ts";
 
-const getExt = (name: string): string =>
-  "." + (name.split(".").pop() || "").toLowerCase();
+const getExt = (name: string): string => "." + (name.split(".").pop() || "").toLowerCase();
 
 /** 扩展名是否在支持列表 */
-export const isSupportedFile = (name: string): boolean =>
-  ALL_EXTS.includes(getExt(name));
+export const isSupportedFile = (name: string): boolean => ALL_EXTS.includes(getExt(name));
 
 /** 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单
  *  包内 geometry/animation/语言 json（main.json / *.animation.json / zh_cn.json 等）不得单独导入
@@ -109,9 +107,7 @@ export const buildFolderItems = async (
   const items: Array<{ RelPath: string; Base64: string }> = [];
   let skipped = 0;
   for (const c of files) {
-    const rel = c.relPath.startsWith(dir + "/")
-      ? c.relPath.slice(dir.length + 1)
-      : c.relPath;
+    const rel = c.relPath.startsWith(dir + "/") ? c.relPath.slice(dir.length + 1) : c.relPath;
     try {
       const b64 = await fileToBase64(c.file);
       if (!b64) continue; // 0 字节文件：base64 为空，跳过（与 importFolder 旧行为一致）
@@ -132,10 +128,7 @@ const fileKey = (f: File): string => f.name + ":" + f.size + ":" + f.lastModifie
 export const isEditableTarget = (el: EventTarget | null): boolean => {
   const node = el as HTMLElement | null;
   return Boolean(
-    node &&
-      (node.tagName === "INPUT" ||
-        node.tagName === "TEXTAREA" ||
-        node.isContentEditable),
+    node && (node.tagName === "INPUT" || node.tagName === "TEXTAREA" || node.isContentEditable),
   );
 };
 

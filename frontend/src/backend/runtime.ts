@@ -3,8 +3,8 @@
 // 网页版（无 Wails 壳）走 no-op 桩——MikuMikuAR ADR-176 教训：Events/Window
 // 在纯浏览器无原生后端，须 no-op 兜底，否则 OpenDevTools 等会抛 / 行为漂移。
 import { Events as WailsEvents, Window as WailsWindow } from "@wailsio/runtime";
-import { isWebPlatform } from "./platform-web.ts";
 import { dbg } from "../utils/debug/debug.ts";
+import { isWebPlatform } from "./platform-web.ts";
 
 const isWeb = isWebPlatform();
 
@@ -39,17 +39,20 @@ const webEvents: RuntimeEvents = {
 // thenable 探测陷阱：await Window 会访问 .then——若返回 async 函数会被误判为
 // thenable，await 调它后 onFulfilled 永不被调 → 永久挂起。返回 undefined 让
 // Window 不是 thenable（与 browser-adapter.ts:75 对称）。
-const webWindow: typeof WailsWindow = new Proxy({}, {
-  get(_target, prop) {
-    // thenable 探测陷阱（见上）——返回 undefined 让 await Window 不挂起
-    if (prop === "then") return undefined;
-    // symbol（如 Symbol.toStringTag）不拦截，返回 undefined 走默认行为
-    if (typeof prop === "symbol") return undefined;
-    return async () => {
-      dbg("runtime-bridge", "web no-op Window method");
-    };
+const webWindow: typeof WailsWindow = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      // thenable 探测陷阱（见上）——返回 undefined 让 await Window 不挂起
+      if (prop === "then") return undefined;
+      // symbol（如 Symbol.toStringTag）不拦截，返回 undefined 走默认行为
+      if (typeof prop === "symbol") return undefined;
+      return async () => {
+        dbg("runtime-bridge", "web no-op Window method");
+      };
+    },
   },
-}) as unknown as typeof WailsWindow;
+) as unknown as typeof WailsWindow;
 
 // Events 出口：webEvents 只实现 RuntimeEvents（6 方法），真值还有 Types/WailsEvent
 // 复杂导出；经 unknown 桥接避免把桩接口充成完整模块命名空间的类型造假。
@@ -57,6 +60,4 @@ export const Events: typeof WailsEvents = isWeb
   ? (webEvents as unknown as typeof WailsEvents)
   : WailsEvents;
 
-export const Window: typeof WailsWindow = isWeb
-  ? webWindow
-  : WailsWindow;
+export const Window: typeof WailsWindow = isWeb ? webWindow : WailsWindow;

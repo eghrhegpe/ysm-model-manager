@@ -7,12 +7,13 @@
 //       后者在 wails v3.0.0-alpha2.105 仅达 Go 侧、永不到达 WebView（详见审核报告 P1-1）。
 // 桌面端无 Java 层，这些事件永不触发，注册无害。
 // 生命周期：由 registerGlobalHandlers 聚合，unsubs 随 app-content 卸载清理（非顶层豁免）。
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
 import { Events } from "../../backend/runtime.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { closeActiveDialog } from "../../features/dialogs/modal.ts";
 import { emitAndroidBack } from "../../utils/dom/android-bridge.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 
 /** 注册 Android 系统事件消费，push 取消订阅函数到 unsubs */
 export function registerAndroidEvents(unsubs: Array<() => void>): void {

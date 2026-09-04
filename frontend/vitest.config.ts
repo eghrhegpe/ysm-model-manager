@@ -5,6 +5,10 @@ import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
 // 保持别名单一事实源（tsconfig.paths ↔ vite.config.js 双写校验不受影响）。
 import viteConfig from "./vite.config.js";
 
+// coverage 运行检测：--coverage 是 CLI flag（不进 env），只能从 argv 判定。
+// 用于 testTimeout 的条件放宽——见 test.testTimeout 处的根因说明。
+const isCoverage = process.argv.includes("--coverage");
+
 // 测试环境分流约定（瓶颈治理，参照 MikuMikuAR ADR-255）：
 // isolate=true 下 happy-dom 是每文件重建（~1.2s/文件），环境累加曾是墙钟大头。
 // 纯逻辑测试（不触碰 window/document 等 DOM 全局）首行标注
@@ -21,9 +25,21 @@ export default defineConfig({
     environment: "happy-dom",
     isolate: true,
     setupFiles: ["./test-setup.ts"],
+    // [治本] 覆盖率长期显示 0.7% 的真因：istanbul 插桩使 transform/import 慢约一个
+    // 数量级（全量实测 transform 304s / import 506s，无 coverage 仅 ~73s/135s），
+    // 首次 import 较重的用例击穿默认 5s testTimeout → 测试失败 → vitest 中断报告
+    // 生成，coverage/ 里只剩上一次残缺产物被当成当前指标。修复后实测
+    // 92.33%/78.93%/91.79%/94.57%（见 thresholds）。
+    // 只在 coverage 模式放宽至 30s；非 coverage 保持 5s，真死锁仍能快速失败。
+    testTimeout: isCoverage ? 30000 : 5000,
     coverage: {
-      // istanbul 用代码插桩收集覆盖率，不依赖 v8 inspector protocol；
-      // v8 provider 在 Windows + vitest 4.x + ESM 组合下完全失效（391/404 文件 0 hits）。
+      // istanbul 用代码插桩收集覆盖率，不依赖 v8 inspector protocol。
+      // 勘误（2026-09-04）：此处原记「v8 provider 在 Windows + vitest 4.x + ESM 组合下
+      // 完全失效（391/404 文件 0 hits）」——复测确认**并非 provider 失效**，而是插桩
+      // 拖慢 import 击穿 5s testTimeout，测试失败导致报告根本没生成，于是任何 provider
+      // 看到的都是同一份残缺残留（换 istanbul 后依旧 0.7%，正因如此）。真正修复见
+      // test.testTimeout。保留 provider: istanbul 选择本身（不依赖 inspector protocol
+      // 在 Windows 上确实更稳），但失效归因已更正，勿再据此论断 v8 不可用。
       provider: "istanbul",
       // clean:false — 绕过 WorkBuddy safe-delete 在 Windows 上对 coverage/ 目录的
       // 路径格式拦截（genie-trash 要求 C:\ 绝对路径，收到的却是 /c/...）。
@@ -69,13 +85,15 @@ export default defineConfig({
         "src/test-utils/**",
       ],
       thresholds: {
-        // 2026-08-18 校准：降低阈值以豁免高成本/低收益的 DOM 依赖模块
-        // （android-bridge/skeleton-utils/theme）及 Web Worker（stats.worker.ts 无法在 happy-dom 跑）。
-        // 基准取自实测 71.81/64.27/69.78/71.81 - 2pt。
-        statements: 68,
-        branches: 52,
-        functions: 64,
-        lines: 71,
+        // 2026-09-04 重新校准：原基准「实测 71.81/64.27/69.78/71.81 - 2pt」取自覆盖率
+        // 采集被超时击穿时期的残缺数据，长期严重偏低——真实值高出约 20pt，阈值形同
+        // 虚设、失去回归防线意义。修复 testTimeout 后实测（全量 --coverage，329 文件
+        // 全绿）92.33/78.93/91.79/94.57，按项目「实测 - 2pt」惯例重设，使其成为真正
+        // 的覆盖率回退告警线。
+        statements: 90,
+        branches: 76,
+        functions: 89,
+        lines: 92,
       },
     },
   },

@@ -82,6 +82,14 @@ jobs:
         shell: pwsh
         run: node scripts/binding-check.ts
 
+      - name: 安装 wails3 CLI（bindings 重生成依赖；此前缺失致本步必挂 → main CI 长期红）
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+          $goBin = "$(go env GOPATH)/bin"
+          Add-Content -Path $env:GITHUB_PATH -Value $goBin
+          & "$goBin/wails3.exe" version
+
       - name: 绑定产物保鲜（重新生成必须零 diff）
         shell: pwsh
         run: |

@@ -53,6 +53,8 @@ auto_fields:
     - StepStat
     - StepSync
     - StripBOM
+    - TruncateLimit
+    - TruncateWidth
     - UTF8BOM
     - WalkAllDirs
     - WalkAllFiles

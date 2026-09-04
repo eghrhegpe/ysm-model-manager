@@ -378,7 +378,7 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 	}
 	summary.Spec = root.Spec
 	populateMetadata(root, &summary, fallbackName)
-	summary.Tips = truncate(summary.Tips, 200) // ZIP 分支 Tips 限 200（裸 JSON 分支不截）
+	summary.Tips = fsutil.TruncateLimit(summary.Tips, 200) // ZIP 分支 Tips 限 200（裸 JSON 分支不截）
 	populateProperties(root, &summary)
 	stats, geoPaths := extractFileStats(root.Files)
 	if root.Properties != nil {
@@ -654,15 +654,6 @@ func extractControlTypes(raw json.RawMessage) []string {
 		types = append(types, t)
 	}
 	return types
-}
-
-// 截断字符串（按 rune 计，避免中文字符被字节截断产生乱码）
-func truncate(s string, max int) string {
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	return string(runes[:max]) + "..."
 }
 
 // isYSGP 检测文件是否是 YSGP（YSM V2）二进制格式（支持带 BOM 的变体）

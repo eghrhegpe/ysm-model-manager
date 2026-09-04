@@ -8,44 +8,6 @@ import (
 	"testing"
 )
 
-// ====== truncate ======
-
-func TestTruncate_Short(t *testing.T) {
-	got := truncate("hello", 10)
-	if got != "hello" {
-		t.Errorf("truncate('hello', 10) = %q, want 'hello'", got)
-	}
-}
-
-func TestTruncate_Exact(t *testing.T) {
-	got := truncate("hello", 5)
-	if got != "hello" {
-		t.Errorf("truncate('hello', 5) = %q, want 'hello'", got)
-	}
-}
-
-func TestTruncate_Long(t *testing.T) {
-	got := truncate("hello world", 5)
-	want := "hello..."
-	if got != want {
-		t.Errorf("truncate('hello world', 5) = %q, want %q", got, want)
-	}
-}
-
-func TestTruncate_Empty(t *testing.T) {
-	got := truncate("", 5)
-	if got != "" {
-		t.Errorf("truncate('', 5) = %q, want ''", got)
-	}
-}
-
-func TestTruncate_ZeroMax(t *testing.T) {
-	got := truncate("hello", 0)
-	if got != "..." {
-		t.Errorf("truncate('hello', 0) = %q, want '...'", got)
-	}
-}
-
 // ====== extractKeys ======
 
 func TestExtractKeys_Object(t *testing.T) {

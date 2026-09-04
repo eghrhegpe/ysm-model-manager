@@ -329,19 +329,8 @@ func runResourceTypes(ctx *CmdContext) error {
 	fmt.Println(strings.Repeat("-", 120))
 	for _, rt := range entries {
 		fmt.Printf("%-16s %-5s %-5s %-9s %-18s %-16s %s\n",
-			rt.ID, truncate(rt.Group, 5), truncate(rt.Preview, 5), truncate(rt.Detector, 9),
-			truncate(rt.InstanceDir, 18), truncate(rt.StorageSubDir, 16), strings.Join(rt.Extensions, ","))
+			rt.ID, fsutil.TruncateWidth(rt.Group, 5), fsutil.TruncateWidth(rt.Preview, 5), fsutil.TruncateWidth(rt.Detector, 9),
+			fsutil.TruncateWidth(rt.InstanceDir, 18), fsutil.TruncateWidth(rt.StorageSubDir, 16), strings.Join(rt.Extensions, ","))
 	}
 	return nil
-}
-
-// truncate 截断字符串到指定显示宽（按 rune 计数，超长加省略号），避免表格列挤压。
-// 不能按字节切片——CJK 组名/预览名是常态（如 "模型" 6 字节 2 rune），字节截断会
-// 把 rune 切半输出非法 UTF-8。
-func truncate(s string, width int) string {
-	r := []rune(s)
-	if len(r) <= width {
-		return s
-	}
-	return string(r[:width-1]) + "…"
 }

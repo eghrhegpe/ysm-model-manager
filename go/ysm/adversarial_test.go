@@ -457,26 +457,10 @@ func TestExtractTexSize_OverflowCoords(t *testing.T) {
 const mathMaxInt32 = 2147483647
 
 // ---------------------------------------------------------------------------
-// summary.go 脆弱点：超长 tips（truncate）、超长 author role/name
+// summary.go 脆弱点：超长 tips（TruncateLimit）、超长 author role/name
 // ---------------------------------------------------------------------------
 
-func TestTruncate_LongString(t *testing.T) {
-	s := string(bytes.Repeat([]byte("中"), 300))
-	got := truncate(s, 100)
-	// truncate 按 rune 截断："中"是单 rune，截到 100 个中 + "..."
-	if utf8.RuneCountInString(got) != 103 {
-		t.Errorf("truncate 300 中 = %d runes, want 103", utf8.RuneCountInString(got))
-	}
-}
-
-func TestTruncate_ShortString(t *testing.T) {
-	got := truncate("abc", 10)
-	if got != "abc" {
-		t.Errorf("短字符串不应追加 ...: %q", got)
-	}
-}
-
-// 构造超长 tips（>200 rune）—— zip 分支会 truncate 到 200
+// 构造超长 tips（>200 rune）—— zip 分支会经 fsutil.TruncateLimit 截到 200
 func TestExtractYsmSummary_ZipLongTips(t *testing.T) {
 	tips := string(bytes.Repeat([]byte("长"), 500))
 	payload := fmt.Sprintf(`{
@@ -490,7 +474,7 @@ func TestExtractYsmSummary_ZipLongTips(t *testing.T) {
 		t.Fatalf("超长 tips 应容错: %v", err)
 	}
 	if utf8.RuneCountInString(sum.Tips) > 203 { // 200 + "..."
-		t.Errorf("Tips rune 长度 = %d，应 ≤ 203（truncate 上限）", utf8.RuneCountInString(sum.Tips))
+		t.Errorf("Tips rune 长度 = %d，应 ≤ 203（TruncateLimit 上限）", utf8.RuneCountInString(sum.Tips))
 	}
 }
 

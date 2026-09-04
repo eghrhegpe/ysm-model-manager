@@ -2086,28 +2086,6 @@ func TestConfigLinkMode_InvalidMode_Errors(t *testing.T) {
 
 // ===== resource-types 注册表读取能力 =====
 
-// TestTruncate_RuneAware 验证 truncate 不切断多字节 UTF-8（CJK 组名/预览名是常态）：
-// 按字节切片会把 2-3 字节 rune 切半，输出非法 UTF-8（mojibake）。
-// code review P3：truncate 须按 rune 计数。
-func TestTruncate_RuneAware(t *testing.T) {
-	cases := []struct {
-		in    string
-		width int
-		want  string
-	}{
-		{"模型", 5, "模型"},       // 6 字节但 2 rune，宽 5 不截断（rune 计数）
-		{"模型管理器", 4, "模型管…"},  // 5 rune 超宽 4 → 取 3 rune + 省略号
-		{"abc", 5, "abc"},     // ASCII 不超宽
-		{"abcdef", 4, "abc…"}, // ASCII 超宽
-		{"", 3, ""},
-	}
-	for _, c := range cases {
-		if got := truncate(c.in, c.width); got != c.want {
-			t.Errorf("truncate(%q, %d) = %q, 期望 %q", c.in, c.width, got, c.want)
-		}
-	}
-}
-
 // pointRegistryToRepoRoot 把 types 注册表路径指向仓库根 resource_types.json（单一事实来源），
 // 结束后恢复默认（"resource_types.json"），避免污染后续测试。
 func pointRegistryToRepoRoot(t *testing.T) {

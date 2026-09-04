@@ -244,7 +244,7 @@ function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): vo
   ctx.setPerFrame(null);
   if (keep) {
     // 同台模式：旧 content 未 dispose（清除段跳过），此处补释放
-    try { ctx.getContent()?.dispose(); } catch (_) {}
+    safeDispose(ctx.getContent());
   }
   const prevId = sceneRegistry.getActiveId();
   if (prevId) sceneRegistry.unregister(prevId);

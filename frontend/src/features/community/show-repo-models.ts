@@ -57,8 +57,9 @@ export async function showRepoModels(
         localMap.set(n, e.Hash || "");
       });
     }
-  } catch (_) {
-    // 加载失败不影响列表显示
+  } catch (e) {
+    // 加载失败不影响列表显示，但本地哈希对比会静默失效（「已安装」判断降级）——留痕
+    console.warn("[community] 本地扫描失败，已安装对比降级:", e);
   }
   if (_currentRepo !== repo) return; // 已切换仓库，丢弃过期结果
 

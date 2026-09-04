@@ -135,7 +135,10 @@ const _devtoolsKeydown = (e: KeyboardEvent) => {
     e.preventDefault();
     try {
       Window.OpenDevTools();
-    } catch (_) {}
+    } catch (e) {
+      // 仅开发/调试环境；失败留痕不中断（如 Wails 桥未就绪）
+      console.warn("[app-modules] OpenDevTools 失败:", e);
+    }
   }
 };
 if (_devMode && typeof document !== "undefined") {

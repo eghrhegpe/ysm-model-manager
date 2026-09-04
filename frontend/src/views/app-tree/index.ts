@@ -227,7 +227,9 @@ export class AppTree extends WebComponentBase {
       } else {
         this._entries = [];
       }
-    } catch (_) {
+    } catch (e) {
+      // 目录加载失败降级为空树——用户侧「空目录」与「加载失败」不可区分，留痕供排查
+      console.warn("[app-tree] entries 加载失败:", e);
       this._entries = [];
     }
   }
@@ -425,8 +427,9 @@ export class AppTree extends WebComponentBase {
       try {
         const App = await getApp();
         if (App.ClearScanCache) await App.ClearScanCache();
-      } catch (_) {
-        /* 清缓存失败不影响删除结果，_load 仍会执行 */
+      } catch (e) {
+        /* 清缓存失败不影响删除结果，_load 仍会执行；留痕防缓存幽灵无人知晓 */
+        console.warn("[app-tree] ClearScanCache 失败:", e);
       }
       await this._load();
       if (gen !== this._gen) return; // P2-1 root 切换/新加载已发起 → 丢弃过期渲染

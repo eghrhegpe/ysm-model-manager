@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // setupTestDirs 创建临时测试目录并返回 (localDir, remoteDir, cleanup)
@@ -368,7 +370,9 @@ func TestCollectFileEntries(t *testing.T) {
 	}
 }
 
-func TestComputeFileHash(t *testing.T) {
+// TestSHA256File 验证 fsutil.SHA256File（conflict 曾私有 computeFileHash 薄封装，
+// 收编直连后本测试改测底层原语：确定性 + 内容区分）
+func TestSHA256File(t *testing.T) {
 	dir, err := os.MkdirTemp("", "hash-test-*")
 	if err != nil {
 		t.Fatal(err)
@@ -377,7 +381,7 @@ func TestComputeFileHash(t *testing.T) {
 
 	writeFile(t, dir, "test.txt", "hello world", time.Now())
 
-	hash1, err := computeFileHash(filepath.Join(dir, "test.txt"))
+	hash1, err := fsutil.SHA256File(filepath.Join(dir, "test.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,7 +391,7 @@ func TestComputeFileHash(t *testing.T) {
 
 	// 相同内容应产生相同哈希
 	writeFile(t, dir, "test2.txt", "hello world", time.Now())
-	hash2, err := computeFileHash(filepath.Join(dir, "test2.txt"))
+	hash2, err := fsutil.SHA256File(filepath.Join(dir, "test2.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -397,7 +401,7 @@ func TestComputeFileHash(t *testing.T) {
 
 	// 不同内容应产生不同哈希
 	writeFile(t, dir, "test3.txt", "different content", time.Now())
-	hash3, err := computeFileHash(filepath.Join(dir, "test3.txt"))
+	hash3, err := fsutil.SHA256File(filepath.Join(dir, "test3.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}

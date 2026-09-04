@@ -271,7 +271,7 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 		}
 		relPath = filepath.ToSlash(relPath)
 
-		hash, hashErr := computeFileHash(path)
+		hash, hashErr := fsutil.SHA256File(path)
 		if hashErr != nil {
 			// 哈希失败但仍记录条目（Hash 字段为空），不中断流程。
 			// DetectConflicts 靠 per-entry Hash=="" 识别哈希失败的条目
@@ -296,14 +296,9 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 	return entries, walkErr
 }
 
-// computeFileHash 计算文件 SHA256 哈希
-func computeFileHash(path string) (string, error) {
-	hash, err := fsutil.SHA256File(path)
-	if err != nil {
-		return "", err
-	}
-	return hash, nil
-}
+// computeFileHash 曾为 fsutil.SHA256File 的无价值薄封装（同名近义双轨），
+// 已删除、调用点直连 fsutil.SHA256File——错误上抛语义不变（DetectConflicts
+// 依赖 per-entry Hash=="" 标记 HashFailed），无大文件上限（冲突检测走全量哈希）。
 
 // suggestStrategy 根据修改时间建议解决策略
 func suggestStrategy(localTime, remoteTime time.Time) ResolutionStrategy {

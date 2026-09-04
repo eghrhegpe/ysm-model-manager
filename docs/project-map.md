@@ -23,7 +23,7 @@
 | `fileops/` | 文件操作 + 预览提取 + 包信息（ADR-003 P3 下沉） 〔源码 4: fileops.go fileops_enable.go fileops_preview.go folder_import.go · 测试 11〕 |
 | `fsutil/` | 目录遍历工具（WalkDir 集中管理） 〔源码 11: b64.go bom.go copy.go crossdevice_other.go crossdevice_windows.go format.go hardlink_other.go har… · 测试 11〕 |
 | `geometry/` | Bedrock Geometry JSON 解析（ZIP/7z 提取，防炸弹限制） 〔源码 3: archive.go parse.go ysm_parser.go · 测试 17 · 子目录 1: testdata/〕 |
-| `importer/` | 资源导入策略接口与内置实现 〔源码 3: detect_tail.go importer.go importer_file.go · 测试 9〕 |
+| `importer/` | 资源导入策略接口与内置实现 〔源码 3: detect_tail.go importer.go importer_file.go · 测试 10〕 |
 | `installer/` | 模型安装 〔源码 1: installer.go · 测试 5〕 |
 | `instance/` | 整合包实例同步状态组装（ADR-003 补充下沉） 〔源码 1: instance.go · 测试 3〕 |
 | `internal/` | Go 内部工具（testutil 测试工具） 〔子目录 1: testutil/〕 |
@@ -67,7 +67,7 @@
 | `backend/` | 后端适配层：Wails 绑定入口（app.ts）+ 平台判定（platform.ts）+ 浏览器适配（browser-adapter.ts）+ IndexedDB 模型库（idb.ts） 〔源码 21 · 测试 18〕 |
 | `core/` | 基础设施（buttons / global-handlers / theme / context-menus） 〔源码 8: context-menu-dir-handlers.ts context-menu-file-handlers.ts context-menu-handlers.ts context-menu-… · 测试 3 · 子目录 2: handlers/ i18n/〕 |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） 〔源码 9: dnd-collector.ts dnd-shared.ts import-dnd.ts import-executor.ts oldest-models.ts pack-dnd.ts recy… · 测试 9 · 子目录 2: community/ dialogs/〕 |
-| `parsers/` | 前端解析簇（ADR-170 下沉）：YSM 头/NBT/资源包元数据/体素颜色/纹理提取 〔源码 6: extract.ts nbt-parse.ts pack-meta.ts voxel-colors.ts voxel-parse.ts ysm-header.ts · 测试 8〕 |
+| `parsers/` | 前端解析簇（ADR-170 下沉）：YSM 头/NBT/资源包元数据/体素颜色/纹理提取 〔源码 6: extract.ts nbt-parse.ts pack-meta.ts voxel-colors.ts voxel-parse.ts ysm-header.ts · 测试 9〕 |
 | `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 44 · 测试 37 · 子目录 7: adapters/ caps/ decoder/ menu/ perception/ state/ vendor/〕 |
 | `services/` | 服务注册（registry.ts） 〔源码 2: cli-bridge.ts resource-registry.ts · 测试 2〕 |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） 〔源码 8: blob-urls.ts events.ts fake-image.ts index.ts query-by-testid.ts render.ts self-healing.ts tex-by… · 测试 4〕 |

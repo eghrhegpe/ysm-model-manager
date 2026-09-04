@@ -5,6 +5,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/windows"
@@ -23,10 +24,13 @@ func isRetryableReplaceErr(err error) bool {
 	if err == nil {
 		return false
 	}
-	var errno windows.Errno
+	// errors.As 用 syscall.Errno（os 包 os.Rename/os.Open/os.Create 包装的就是
+	// syscall.Errno；windows.Errno 是同构的不同命名类型，As 永不匹配 → 重试死代码）；
+	// 常量对照用 windows.ERROR_*（标准库 syscall 不导出，数值 32/33 两包一致）
+	var errno syscall.Errno
 	if errors.As(err, &errno) {
-		switch errno {
-		case windows.ERROR_SHARING_VIOLATION, windows.ERROR_LOCK_VIOLATION:
+		switch uintptr(errno) {
+		case uintptr(windows.ERROR_SHARING_VIOLATION), uintptr(windows.ERROR_LOCK_VIOLATION):
 			return true
 		}
 	}

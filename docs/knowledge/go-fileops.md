@@ -80,7 +80,7 @@ status: active
 | 无任何支持文件 | 拒绝入仓（防杂物文件夹） |
 | 单个 `RelPath` 绝对/含 `..`，或 Join 后逃出 `dstRoot` | 拒绝（逐条校验 + `filepath.Rel` 复查） |
 
-「支持文件」判定 `isSupportedEntryFile`：扩展名在 `types.IsSupportedExt` 白名单，且 `.json` 仅放行 `ysm.json`（`types.IsYsmEntryJSON`，与 scanner 白名单对齐）。包内资源（`main.json`/`*.animation.json`/`textures/*.png`）**不计入支持文件但照常随组写入**。前端 `dnd-shared.groupCollected` 的分组判定与此对齐。
+「支持文件」判定 `isSupportedEntryFile`：先 `types.StripDisableSuffix` 剥离禁用后缀（`m.ysm` → `m.ysm.disabled`、`ysm.json` → `ysm.json.disabled` 仍按原扩展名识别），扩展名在 `types.IsSupportedExt` 白名单，且 `.json` 仅放行 `ysm.json`（`types.IsYsmEntryJSON`，与 scanner 白名单对齐）——剥离后 base 与扩展名检查同口径，禁用文件不被误判为附属。包内资源（`main.json`/`*.animation.json`/`textures/*.png`）**不计入支持文件但照常随组写入**。前端 `dnd-shared.groupCollected` 的分组判定与此对齐。
 
 ## 目录感知契约（ADR-038 D3.1/D3.6/D3.7）
 

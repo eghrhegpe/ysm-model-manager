@@ -44,6 +44,7 @@ import { runContractTestsParallel, selectContractTests } from './_lib/contract-t
 import { logPush } from './_lib/log-push.ts';
 import { shq } from './_lib/proc.ts';
 import { ALL_STATIC_TOOLS, DOC_STATIC_TOOLS, DOC_EXTRA_SCRIPTS, FRONTEND_STATIC_TOOLS, GO_STATIC_TOOLS } from './_lib/gate-config.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 
 const B = { OK: '[OK]', FAIL: '[FAIL]', FIX: '[FIX]', SKIP: '[SKIP]' };
@@ -145,13 +146,18 @@ function parseStdin() {
 }
 
 async function main() {
-  const dryRun = process.argv.includes('--dry-run');
-  const noBanner = process.argv.includes('--no-banner');
-  const allMode = process.argv.includes('--all');
-  const docsMode = process.argv.includes('--docs');
-  const filesIdx = process.argv.indexOf('--files');
-  const filesMode = filesIdx !== -1;
-  const argBase = dryRun ? 3 : 2;
+  // 统一参数解析（位置参数收集在 _：git 钩子 <remote-name> <remote-url>、--gate 的 ref）
+  const args = parseArgs(process.argv.slice(2), {
+    bools: ['dry-run', 'no-banner', 'all', 'docs', 'json'],
+    strings: ['files'],
+  });
+  if (args.unknown.length) console.warn(`[pre-push-gate] 忽略未知参数: ${args.unknown.join(', ')}`);
+  const dryRun = args['dry-run'] as boolean;
+  const noBanner = args['no-banner'] as boolean;
+  const allMode = args.all as boolean;
+  const docsMode = args.docs as boolean;
+  const filesRaw = (args.files as string) ?? '';
+  const filesMode = filesRaw.length > 0;
 
   console.log('========== YSM 本地质量门禁 ==========');
 
@@ -188,7 +194,6 @@ async function main() {
     console.log('');
   } else if (filesMode) {
     // —— 文件驱动模式（commit-with-check 调用）：按 staged files 真按域裁剪 ——
-    const filesRaw = process.argv[filesIdx + 1] || '';
     files = filesRaw ? filesRaw.split('\n').filter(Boolean) : [];
     if (!files.length) {
       console.log('用法: node scripts/pre-push-gate.ts --files "<file1>\\n<file2>..." [--dry-run]');
@@ -202,8 +207,8 @@ async function main() {
     console.log('');
   } else {
     // —— 推送门禁模式（默认）：stdin 驱动 ——
-    const remoteName = process.argv[argBase];
-    const remoteUrl = process.argv[argBase + 1];
+    const remoteName = args._[0] as string | undefined;
+    const remoteUrl = args._[1] as string | undefined;
 
     if (!remoteName) {
       console.log('用法: node scripts/pre-push-gate.ts [--dry-run] <remote-name> <remote-url>');

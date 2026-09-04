@@ -28,20 +28,25 @@ import path from 'node:path';
 import { ROOT } from './_lib/scan-files.ts';
 import { parseFrontmatter, parseSourceFiles, parseAdrHeader } from './_lib/frontmatter.ts';
 import { stripBom, hasFrontmatterDelimiter, getUntrackedCards, missingRequiredCardFields } from './_lib/knowledge-common.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
 const KC_DIR = path.join(ROOT, 'docs/knowledge');
 const ARCH_DOCS = ['docs/archive/architecture.md', 'docs/archive/3D/3D-RENDERING-PLAN.md', 'docs/archive/3D/3d-rendering-report.md'];
 const BASELINE_FILE = path.join(ROOT, 'scripts/baseline/doc-drift-baseline.json');
 
-const JSON_OUT = process.argv.includes('--json');
-const FIX_MODE = process.argv.includes('--fix');
-
-// 文件驱动模式（commit-with-check / push 门禁传入）：仅校验本次变更的知识卡，
-// 避免并行会话留在 docs/knowledge/ 下的未跟踪草稿卡（如 commit-with-check.md）阻断本次提交。
+const args = parseArgs(process.argv.slice(2), {
+  bools: ['json', 'fix'],
+  strings: ['files'],
+  defaults: { json: false, fix: false, files: '' },
+});
+if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(', ')}`);
+const JSON_OUT = args.json as boolean;
+const FIX_MODE = args.fix as boolean;
+// 文件驱动模式（commit-check / push 门禁传入）：--files 为换行分隔的仓库相对路径，
+// 仅校验本次变更的知识卡，避免并行会话留在 docs/knowledge/ 下的未跟踪草稿卡（如 commit-with-check.md）阻断本次提交。
 // 与 check-redlines --files 同款裁剪；无 --files 时退化为全量扫描（向后兼容 doctor --all）。
-const FILES_IDX = process.argv.indexOf('--files');
-const FILES_RAW = FILES_IDX !== -1 ? (process.argv[FILES_IDX + 1] || '') : '';
+const FILES_RAW = (args.files as string) ?? '';
 const FILES_SET: Set<string> | null = FILES_RAW
   ? new Set(FILES_RAW.split('\n').map((p) => p.trim()).filter(Boolean).map((p) => path.basename(p)))
   : null;

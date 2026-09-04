@@ -45,6 +45,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot } from './_lib/scan-files.ts';
 import { run } from './_lib/proc.ts';
+import { parseArgs } from './_lib/parse-args.ts';
+
+// 统一参数解析：--files 为多值布尔标记（文件路径经位置参数 _ 收集），--write/--json 为布尔。
+const args = parseArgs(process.argv.slice(2), { bools: ['write', 'json', 'files'] });
+if (args.unknown.length) console.warn(`[check-biome] 忽略未知参数: ${args.unknown.join(', ')}`);
+const writeMode = args.write as boolean;
+const jsonMode = args.json as boolean;
+// --files <paths...>：布尔标记 + 后续位置参数收集（--files 后直到下一个 - 旗标），
+// 路径剥 frontend/ 前缀对齐 cwd（frontend/）；--files 存在但列表为空 → 报错（不静默回退 --changed）。
+const explicitFiles: string[] = args._.map((p) => p.replace(/\\/g, '/').replace(/^frontend\//, ''));
 
 const ROOT = getRoot();
 const isWin = process.platform === 'win32';
@@ -59,7 +69,7 @@ const biomeCandidates = [
 const biomeBin = biomeCandidates.find((p) => fs.existsSync(p));
 
 if (!biomeBin) {
-  if (process.argv.includes('--json')) {
+  if (jsonMode) {
     process.stdout.write(JSON.stringify({
       _summary: { ok: false, errors: -1, note: 'biome 未安装（node_modules 缺失）——请 npm ci 后重推' },
     }));
@@ -69,27 +79,12 @@ if (!biomeBin) {
   process.exit(1);
 }
 
-const args = process.argv.slice(2);
-const writeMode = args.includes('--write');
-const jsonMode = args.includes('--json');
 // --strict 在 push 门禁里语义同默认（--changed 阻塞），此处仅占位保留可读性
 // 注意：Biome 2.x 无 --json reporter，故绝不下传 --json 给 biome
-// --files <paths...>：显式文件列表（pre-commit 用），路径剥 frontend/ 前缀对齐 cwd（frontend/）。
-// 接受相对库根（frontend/src/…）或相对 frontend（src/…）两种写法。
-// 收集到下一个 - 开头参数为止——--files 之后出现 --json/--strict 等标志时不误当文件名
-// （code review P2 修复）；--files 存在但列表为空 → 报错而非静默回退 --changed
-const filesIdx = args.indexOf('--files');
-const explicitFiles: string[] = [];
-if (filesIdx >= 0) {
-  for (let i = filesIdx + 1; i < args.length; i++) {
-    const a = args[i]!;
-    if (a.startsWith('-')) break;
-    explicitFiles.push(a.replace(/\\/g, '/').replace(/^frontend\//, ''));
-  }
-  if (explicitFiles.length === 0) {
-    console.error('[check-biome] --files 后未提供任何文件路径');
-    process.exit(1);
-  }
+// --files 为布尔标记 + 位置参数收集（顶部解析）：--files 存在但列表为空 → 报错而非静默回退 --changed
+if (args.files && explicitFiles.length === 0) {
+  console.error('[check-biome] --files 后未提供任何文件路径');
+  process.exit(1);
 }
 const cmd = explicitFiles.length > 0
   ? writeMode ? ['check', '--write', ...explicitFiles] : ['check', ...explicitFiles]

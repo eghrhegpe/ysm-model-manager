@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot } from './_lib/scan-files.ts';
 import { run } from './_lib/proc.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const ROOT = getRoot();
 const RUST_DIR = path.join(ROOT, 'rust-wails-bridge');
@@ -37,16 +38,21 @@ function fail(msg: string) {
   process.exit(1);
 }
 
-// ---- 参数解析 ----
-const argv = process.argv.slice(2);
-if (argv.includes('--help')) {
+// ---- 参数解析（统一走 _lib/parse-args）----
+const args = parseArgs(process.argv.slice(2), {
+  bools: ['help'],
+  strings: ['arch'],
+  defaults: { arch: 'arm64' },
+});
+if (args.help) {
   console.log(`用法:
   node scripts/compile-android-rust.ts               arm64（真机）
   node scripts/compile-android-rust.ts --arch amd64  x86_64（模拟器）
   node scripts/compile-android-rust.ts --arch all    fat APK（两者）`);
   process.exit(0);
 }
-const archArg = argv.find(a => a.startsWith('--arch='))?.split('=')[1] ?? (argv.indexOf('--arch') >= 0 ? argv[argv.indexOf('--arch') + 1] : undefined) ?? 'arm64';
+if (args.unknown.length) console.warn(`[compile-android-rust] 忽略未知参数: ${args.unknown.join(', ')}`);
+const archArg = args.arch as string;
 if (!(archArg in ARCHES) && archArg !== 'all') fail(`未知架构: ${archArg}（可选 arm64/amd64/all）`);
 const arches = archArg === 'all' ? Object.keys(ARCHES) : [archArg];
 

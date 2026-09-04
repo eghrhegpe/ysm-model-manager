@@ -24,15 +24,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot, toPosix, relPosix } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const ROOT = getRoot();
 const DEFAULT_INPUT = path.join(ROOT, 'frontend/e2e-coverage/coverage.json');
 
-const args = process.argv.slice(2);
-const jsonMode = args.includes('--json');
-const allMode = args.includes('--all');
-const inputIdx = args.indexOf('--input');
-const inputPath = inputIdx !== -1 ? args[inputIdx + 1]! : DEFAULT_INPUT;
+const args = parseArgs(process.argv.slice(2), {
+  bools: ['json', 'all'],
+  strings: ['input'],
+  defaults: { input: DEFAULT_INPUT },
+});
+if (args.unknown.length) console.warn(`[e2e-coverage] 忽略未知参数: ${args.unknown.join(', ')}`);
+const jsonMode = args.json as boolean;
+const allMode = args.all as boolean;
+const inputPath = args.input as string;
 
 if (!fs.existsSync(inputPath)) {
   console.error(`[e2e-coverage] 未找到采集产物 ${inputPath}`);

@@ -17,6 +17,17 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT, toPosix } from './_lib/scan-files.ts';
 import { checkStale } from './_lib/stale-baseline.ts';
+import { parseArgs } from './_lib/parse-args.ts';
+
+/**
+ * 顶层统一参数解析（check-redlines 亦被 import 供契约测试，parseArgs 纯函数无副作用）。
+ * 未知 flag 仅 warn 不阻断，保留原惰性行为（未知参数曾被静默忽略）。
+ */
+const args = parseArgs(process.argv.slice(2), {
+  bools: ['json', 'audit', 'baseline', 'update-baseline'],
+  strings: ['files'],
+});
+if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(', ')}`);
 
 /**
  * 文件行缓存（性能审计 2026-09）：hasContext/inBlockComment 每次调用都整读文件，
@@ -425,9 +436,8 @@ export function redlineFilterKeysByChangedFiles(keys: string[], changedSet: Set<
 
 /** 解析 --files <换行分隔文件列表>（与 pre-push-gate --files 同约定）；缺省返回 null。 */
 function resolveChangedSet() {
-  const idx = process.argv.indexOf('--files');
-  if (idx === -1) return null;
-  const raw = process.argv[idx + 1] || '';
+  const raw = (args.files as string) ?? '';
+  if (!raw) return null;
   const files = raw.split('\n').map((f) => toPosix(f)).filter(Boolean);
   return files.length ? new Set(files) : null;
 }
@@ -468,7 +478,7 @@ function runBaseline(results: any[]) {
       note: '[扫描不可用] ripgrep 缺失或执行失败，红线扫描未完整执行——拒绝放行（fail-closed）',
       current: allKeys, newViolations: allKeys, advisoryViolations: [] };
   }
-  const update = process.argv.includes('--update-baseline');
+  const update = args['update-baseline'] as boolean;
   if (update) {
     // 守卫：扫描不可用（rg 缺失）已在上层 fail-closed 阻断；此处直接写入，不拦新增项。
     // 移除「只许减少」守卫：AI 友好，避免因新增项拒绝写入导致 AI 绕 10K token 元认知。
@@ -582,10 +592,9 @@ function outputAudit() {
 // 不执行脚本主逻辑；直接 node 运行本文件时 process.argv[1] === 本文件。 ----
 const isMain = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (isMain) {
-  const args = process.argv.slice(2);
-  const jsonMode = args.includes('--json');
-  const auditMode = args.includes('--audit');
-  const baselineMode = args.includes('--baseline') || args.includes('--update-baseline');
+  const jsonMode = args.json as boolean;
+  const auditMode = args.audit as boolean;
+  const baselineMode = (args.baseline as boolean) || (args['update-baseline'] as boolean);
   if (auditMode) {
     outputAudit();
     process.exit(0);

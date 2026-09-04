@@ -17,10 +17,14 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
-const JSON_MODE = process.argv.includes('--json');
-const DOCS_MODE = process.argv.includes('--docs');
-const GATE_MODE = process.argv.includes('--gate');
+// 统一参数解析：--check/--strict 为兼容旧参数声明为 bool（保持被静默忽略的既有行为，不落入 unknown）
+const args = parseArgs(process.argv.slice(2), { bools: ['json', 'docs', 'gate', 'check', 'strict'] });
+if (args.unknown.length) console.warn(`[doctor] 忽略未知参数: ${args.unknown.join(', ')}`);
+const JSON_MODE = args.json as boolean;
+const DOCS_MODE = args.docs as boolean;
+const GATE_MODE = args.gate as boolean;
 
 // 顶层兜底：spawnSync 异常（ENOENT/git 缺失等）避免裸栈追踪
 process.on('uncaughtException', (e) => {
@@ -53,9 +57,8 @@ if (GATE_MODE) {
     console.log('[--gate] YSM_SKIP_GATE=1, 跳过');
     process.exit(0);
   }
-  // 解析 ref → oid
-  const refArgIdx = process.argv.indexOf('--gate') + 1;
-  const refArg = process.argv[refArgIdx];
+  // 解析 ref → oid（--gate 后为位置参数，parseArgs 收集到 _[0]）
+  const refArg = args._[0] as string | undefined;
   const baseRef = refArg || 'HEAD';
   const oidR = spawnSync('git', ['rev-parse', '--verify', baseRef], { cwd: ROOT, encoding: 'utf8' });
   if (oidR.status !== 0) {

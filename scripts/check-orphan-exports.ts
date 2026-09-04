@@ -34,12 +34,17 @@
  */
 import fs from 'node:fs';
 import { SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
-const ARGS = new Set(process.argv.slice(2));
-const JSON_OUT = ARGS.has('--json');
-const STRICT = ARGS.has('--strict');
-const minIdx = [...ARGS].indexOf('--min-consumers');
-const MIN_CONSUMERS = minIdx >= 0 ? parseInt([...ARGS][minIdx + 1]!, 10) || 0 : 0;
+const args = parseArgs(process.argv.slice(2), {
+  bools: ['json', 'strict'],
+  strings: ['min-consumers'],
+  defaults: { 'min-consumers': '0' },
+});
+if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(', ')}`);
+const JSON_OUT = args.json as boolean;
+const STRICT = args.strict as boolean;
+const MIN_CONSUMERS = parseInt(args['min-consumers'] as string, 10) || 0;
 
 // ── 导出/导入解析 ─────────────────────────────────────
 

@@ -24,19 +24,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot, toPosix, relPosix } from './_lib/scan-files.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const ROOT = getRoot();
 const DEFAULT_INPUT = path.join(ROOT, 'frontend/coverage/coverage-final.json');
 
-const args = process.argv.slice(2);
-const jsonMode = args.includes('--json');
-const suggestMode = args.includes('--suggest');
-const topIdx = args.indexOf('--top');
-const topN = topIdx !== -1 ? parseInt(args[topIdx + 1]!, 10) : 15;
-const inputIdx = args.indexOf('--input');
-const inputPath = inputIdx !== -1 ? args[inputIdx + 1]! : DEFAULT_INPUT;
-const thIdx = args.indexOf('--threshold');
-const thresholdArg = thIdx !== -1 ? parseInt(args[thIdx + 1]!, 10) : NaN;
+const args = parseArgs(process.argv.slice(2), {
+  bools: ['json', 'suggest'],
+  strings: ['top', 'input', 'threshold'],
+  defaults: { top: '15', input: DEFAULT_INPUT },
+});
+if (args.unknown.length) console.warn(`[test-coverage] 忽略未知参数: ${args.unknown.join(', ')}`);
+const jsonMode = args.json as boolean;
+const suggestMode = args.suggest as boolean;
+const topN = args.top ? parseInt(args.top as string, 10) : 15;
+const inputPath = (args.input as string) ?? DEFAULT_INPUT;
+const thresholdArg = args.threshold ? parseInt(args.threshold as string, 10) : NaN;
 
 /** 语句覆盖率阈值：优先从 frontend/vitest.config.ts coverage.thresholds.statements
  *  提取（单一事实源，2026-08-04 校准为 45；vitest.config.ts:17-24 定义 thresholds——

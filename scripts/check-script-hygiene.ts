@@ -42,11 +42,14 @@ import path from 'node:path';
 import { ROOT } from './_lib/scan-files.ts';
 import { collectScripts } from './_lib/collect-scripts.ts';
 import { findOrphans } from './_lib/orphan-classify.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 
-const JSON_OUT = process.argv.includes('--json');
-const STRICT = process.argv.includes('--strict');
+const args = parseArgs(process.argv.slice(2), { bools: ['json', 'strict'] });
+if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(', ')}`);
+const JSON_OUT = args.json as boolean;
+const STRICT = args.strict as boolean;
 
 // ── 检查 1：退出码失效 ─────────────────────────────────
 
@@ -159,10 +162,12 @@ function checkHeader(file: string, text: string) {
 
 // ── 检查 5：positional 脚本须走 parse-args ──────────────
 
-const HANDWRITTEN_ARGV_RE = /process\.argv\.slice\(2\)|process\.argv\.includes\(|process\.argv\[2\]/;
-/** 位置参数消费特征：手写「跳过 -- 开头取裸参」find，或直接取 argv[2]/argv[0] 当值。 */
+const HANDWRITTEN_ARGV_RE = /process\.argv\.slice\(2\)|process\.argv\.includes\(|process\.argv\[2\]|new Set\(process\.argv\)/;
+/** 位置参数消费特征：手写「跳过 -- 开头取裸参」find、直接取 argv[2]/argv[0] 当值、
+ *  或 `.indexOf('--flag')` 手搓白名单（parseArgs 的 unknown 拦截本应接管）。
+ *  2026-09-04 收敛：10 个手写 argv 脚本已迁 parseArgs，故此处收紧为严格口径不再误拦。 */
 const HANDWRITTEN_POSITIONAL_RE =
-  /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]/;
+  /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]|\.indexOf\('--/;
 // 仅匹配真实 import 语句（行首锚定 + `import {…} from`），避免误把建议文案里的
 // 字符串 `...from './_lib/parse-args.ts'`（如 check-lib-adoption.ts 的 advice 字段）
 // 当成脚本真的 import 了 parseArgs 而误报「未消费 unknown」（2026-08-31 审计修复）。

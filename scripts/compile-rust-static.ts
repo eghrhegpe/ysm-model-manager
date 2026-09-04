@@ -19,15 +19,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getRoot } from './_lib/scan-files.ts';
 import { run } from './_lib/proc.ts';
+import { parseArgs } from './_lib/parse-args.ts';
 
 const ROOT = getRoot();
 const RUST_DIR = path.join(ROOT, 'rust-wails-bridge');
-const OUTPUT_DIR = process.argv.includes('--output')
-  ? process.argv[process.argv.indexOf('--output') + 1]!
-  : path.join(ROOT, 'go', 'rustbridge', 'static-lib');
-
-const targetArg = process.argv.find(a => a.startsWith('--target='))?.split('=')[1]
-  ?? (process.argv.indexOf('--target') >= 0 ? process.argv[process.argv.indexOf('--target') + 1] : undefined);
+const args = parseArgs(process.argv.slice(2), {
+  strings: ['output', 'target'],
+  defaults: { output: path.join(ROOT, 'go', 'rustbridge', 'static-lib'), target: null },
+});
+if (args.unknown.length) console.warn(`[compile-rust-static] 忽略未知参数: ${args.unknown.join(', ')}`);
+const OUTPUT_DIR = args.output as string;
+const targetArg = (args.target as string | null) ?? undefined;
 
 function fail(msg: string) {
   console.error(`[compile-rust-static] ${msg}`);

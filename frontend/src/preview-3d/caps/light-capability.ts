@@ -1,5 +1,12 @@
-// ===== LightCapability — 3D 预览个人灯光系统 =====
+// ===== LightCapability — 3D 预览个人灯光系统（ADR-177 编排器）=====
 // 递进第一步（ADR-081 L1）：聚光灯 + 体积光锥。后续可平滑升级 post-process 体积光管线。
+//
+// 职责拆分（ADR-177，2026-09-04）：
+//   - 灯光对象管理（key/fill/rim/ambient/spotlight + 阴影协作）保留本类（核心职责①）
+//   - 体积光锥体② → light-cone.ts（VolumetricCone）
+//   - 预设数据③ → light-presets.ts（经 export * 重导出，外部 import 零改动）
+//   - 菜单 UI 定义④ → light-controls.ts（getLightMenuControls）
+//   - 状态持久化⑤ 保留本类（触达大量私有字段，顺序语义敏感）
 //
 // 设计要点（对齐 SkyCapability / GroundCapability 的能力模式）：
 //   - 默认经典三点布光（key/fill/rim DirectionalLight）+ AmbientLight
@@ -11,338 +18,31 @@
 //   - target（对象中心）可动态更新，聚光灯 + 体积光锥随之重新定位
 
 import * as THREE from "three";
+import { VolumetricCone } from "./light-cone.ts";
+import { getLightMenuControls } from "./light-controls.ts";
 import {
-  type SceneCapability,
-  type SceneCapabilityLookup,
+  DEFAULT_LIGHT_PARAMS,
+  type DeepPartial,
+  type DirectionalLightParams,
+  deepMergeLightParams,
+  LIGHT_PRESETS,
+  type LightParams,
+  type SpotlightParams,
+  type VolumetricParams,
+} from "./light-presets.ts";
+import {
   type MenuControlDef,
   persistState,
   restoreState,
+  type SceneCapability,
+  type SceneCapabilityLookup,
 } from "./scene-capability.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { safeDispose } from "../safe-dispose.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+
+/** 本文件导出的全部参数类型 / 预设数据均来自 light-presets.ts，重导出以维持外部 import 零改动 */
+export * from "./light-presets.ts";
 
 /** 角度(度)→弧度；内联等价 THREE.MathUtils.degToRad，避免对 three 测试 mock 强依赖 MathUtils 导出 */
 const degToRad = (deg: number): number => (deg * Math.PI) / 180;
-
-/** 递归 Partial：允许任意深度只传子集字段 */
-type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
-
-/* ============ 参数类型 ============ */
-
-export interface DirectionalLightParams {
-  enabled: boolean;
-  color: number;
-  intensity: number;
-  /** 方位角（度，0=+X 东，90=+Z 南，180=-X 西，270=-Z 北；Y-up 坐标系） */
-  azimuth: number;
-  /** 仰角（度，0=水平，90=正上；负值=地面下） */
-  elevation: number;
-}
-
-export interface AmbientLightParams {
-  color: number;
-  intensity: number;
-}
-
-export interface SpotlightParams {
-  enabled: boolean;
-  color: number;
-  intensity: number;
-  /** 锥角半角（度，越大越宽） */
-  angle: number;
-  /** 半影（0=硬边，1=全软边） */
-  penumbra: number;
-  /** 衰减距离 */
-  distance: number;
-  /** 衰减指数（0=无衰减，2=经典物理衰减） */
-  decay: number;
-}
-
-export interface VolumetricParams {
-  enabled: boolean;
-  /** 最大透明度 */
-  opacity: number;
-  /** 空气散射幂次（越大衰减越陡，越集中底部） */
-  fogPower: number;
-  /** 边缘羽化（0=无，1=完全透明边缘） */
-  edgeFade: number;
-  /** 底部强度（光落在对象上） */
-  baseStrength: number;
-  /** 顶部强度（光源附近） */
-  tipStrength: number;
-}
-
-export interface LightParams {
-  key: DirectionalLightParams;
-  fill: DirectionalLightParams;
-  rim: DirectionalLightParams;
-  ambient: AmbientLightParams;
-  spotlight: SpotlightParams;
-  volumetric: VolumetricParams;
-}
-
-/* ============ 默认值与预设 ============ */
-
-const DEFAULT_KEY: DirectionalLightParams = {
-  enabled: true, color: 0xffffff, intensity: 1.2, azimuth: 30, elevation: 45,
-};
-const DEFAULT_FILL: DirectionalLightParams = {
-  enabled: true, color: 0xffffff, intensity: 0.4, azimuth: -30, elevation: 20,
-};
-const DEFAULT_RIM: DirectionalLightParams = {
-  enabled: true, color: 0xffffff, intensity: 0.3, azimuth: 180, elevation: 25,
-};
-const DEFAULT_AMBIENT: AmbientLightParams = { color: 0xffffff, intensity: 0.5 };
-const DEFAULT_SPOTLIGHT: SpotlightParams = {
-  enabled: false, color: 0xffffff, intensity: 2.0, angle: 25, penumbra: 0.3, distance: 30, decay: 1.5,
-};
-const DEFAULT_VOLUMETRIC: VolumetricParams = {
-  enabled: false, opacity: 0.45, fogPower: 1.5, edgeFade: 0.4, baseStrength: 0.9, tipStrength: 0.25,
-};
-
-export const DEFAULT_LIGHT_PARAMS: LightParams = {
-  key: { ...DEFAULT_KEY },
-  fill: { ...DEFAULT_FILL },
-  rim: { ...DEFAULT_RIM },
-  ambient: { ...DEFAULT_AMBIENT },
-  spotlight: { ...DEFAULT_SPOTLIGHT },
-  volumetric: { ...DEFAULT_VOLUMETRIC },
-};
-
-/** 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） */
-export const LIGHT_PRESETS: Record<string, Partial<LightParams>> = {
-  default: { spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false }, volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false } },
-  ysm: {
-    // 方块哑光，rim增强方块边缘识别
-    key: { ...DEFAULT_KEY, intensity: 1.3 },
-    fill: { ...DEFAULT_FILL, intensity: 0.5 },
-    rim: { ...DEFAULT_RIM, intensity: 0.45 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.8, angle: 30, penumbra: 0.4 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false, opacity: 0.4, fogPower: 1.2 },
-  },
-  vrm: {
-    // PBR 角色，rim 稍强勾勒轮廓
-    key: { ...DEFAULT_KEY, intensity: 1.0 },
-    fill: { ...DEFAULT_FILL, intensity: 0.5 },
-    rim: { ...DEFAULT_RIM, intensity: 0.6 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.5, angle: 28 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false },
-  },
-  mmd: {
-    // toon 材质易过曝，整体降 30%
-    key: { ...DEFAULT_KEY, intensity: 0.85 },
-    fill: { ...DEFAULT_FILL, intensity: 0.3 },
-    rim: { ...DEFAULT_RIM, intensity: 0.25 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.4 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false },
-  },
-  litematic: {
-    // 体素，均匀光照
-    key: { ...DEFAULT_KEY, intensity: 1.0, azimuth: 45, elevation: 60 },
-    fill: { ...DEFAULT_FILL, intensity: 0.4, azimuth: -45, elevation: 30 },
-    rim: { ...DEFAULT_RIM, intensity: 0.3, azimuth: 135, elevation: 30 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false },
-  },
-  "resourcepack": {
-    // MC 方块/物品，顶光稍柔（alias for pack-model 兼容 adapter.id）
-    key: { ...DEFAULT_KEY, intensity: 1.3 },
-    fill: { ...DEFAULT_FILL, intensity: 0.4 },
-    rim: { ...DEFAULT_RIM, intensity: 0.35 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.8, angle: 30 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false, opacity: 0.4 },
-  },
-  "mmd-scene": {
-    // 场景模型：光照更均匀，体积光锥启用营造氛围
-    key: { ...DEFAULT_KEY, intensity: 1.2 },
-    fill: { ...DEFAULT_FILL, intensity: 0.55 },
-    rim: { ...DEFAULT_RIM, intensity: 0.4 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.6, angle: 40, penumbra: 0.6 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false, opacity: 0.35, fogPower: 1.0 },
-  },
-};
-
-/* ============ 体积光锥 shader（两交叉 PlaneGeometry + Cone 遮罩） ============ */
-
-const VOLUMETRIC_CONE_VERT = `
-  varying float vY;
-  varying float vX;
-  varying float vZ;
-  void main() {
-    vY = position.y;
-    vX = position.x;
-    vZ = position.z;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const VOLUMETRIC_CONE_FRAG = `
-  precision highp float;
-  varying float vY;
-  varying float vX;
-  varying float vZ;
-  uniform vec3 uColor;
-  uniform float uMaxAlpha;
-  uniform float uFogPower;
-  uniform float uEdgeFade;
-  uniform float uHeight;
-  uniform float uBaseRadius;
-  uniform float uTipStrength;
-  uniform float uBaseStrength;
-
-  void main() {
-    // h = 0 底部（base），h = 1 顶部（tip）
-    float h = (vY + uHeight * 0.5) / uHeight;
-    // 当前高度处锥面半径：底部 uBaseRadius → 顶部 0
-    float rAtH = uBaseRadius * (1.0 - h);
-    float d = sqrt(vX * vX + vZ * vZ);
-    if (d > rAtH) discard;
-    if (rAtH < 0.0001) discard; // 锥顶退化为点，无内容可渲染
-
-    // 垂直强度：底部与顶部之间的插值
-    float vertIntensity = mix(uBaseStrength, uTipStrength, h);
-    // 空气散射（fog）：指数衰减从底部到顶部
-    float airFalloff = exp(-uFogPower * h);
-    // 径向羽化：中心 → 1.0，边缘 → (1 - edgeFade)
-    float rNorm = d / rAtH;
-    float radialFalloff = 1.0 - rNorm * uEdgeFade;
-
-    float alpha = uMaxAlpha * vertIntensity * airFalloff * radialFalloff;
-    if (alpha < 0.005) discard;
-    gl_FragColor = vec4(uColor * alpha, alpha);
-  }
-`;
-
-interface VolumetricConeUniforms {
-  uColor: { value: THREE.Color };
-  uMaxAlpha: { value: number };
-  uFogPower: { value: number };
-  uEdgeFade: { value: number };
-  uHeight: { value: number };
-  uBaseRadius: { value: number };
-  uTipStrength: { value: number };
-  uBaseStrength: { value: number };
-}
-
-/* ============ LightCapability ============ */
-
-function lcBuildMain(cap: LightCapability): MenuControlDef[] {
-  return [
-    {
-      id: "light-key",
-      kind: "toggle",
-      labelKey: "preview.keyLight",
-      fallback: "主灯",
-      getValue: () => cap.getParams().key.enabled,
-      setValue: (v) => cap.setParams({ key: { enabled: v as boolean } }),
-    },
-  ];
-}
-
-function lcBuildSpotlight(cap: LightCapability): MenuControlDef[] {
-  return [
-    {
-      id: "light-fill",
-      kind: "toggle",
-      labelKey: "preview.fillLight",
-      fallback: "补灯",
-      group: "preview.lightGroupParams",
-      getValue: () => cap.getParams().fill.enabled,
-      setValue: (v) => cap.setParams({ fill: { enabled: v as boolean } }),
-    },
-    {
-      id: "light-rim",
-      kind: "toggle",
-      labelKey: "preview.rimLight",
-      fallback: "轮廓灯",
-      group: "preview.lightGroupParams",
-      getValue: () => cap.getParams().rim.enabled,
-      setValue: (v) => cap.setParams({ rim: { enabled: v as boolean } }),
-    },
-    {
-      id: "light-ambient",
-      kind: "slider",
-      labelKey: "preview.ambientIntensity",
-      fallback: "环境光",
-      group: "preview.lightGroupParams",
-      slider: { min: 0, max: 2, step: 0.1 },
-      getValue: () => cap.getParams().ambient.intensity,
-      setValue: (v) => cap.setParams({ ambient: { intensity: v as number } }),
-    },
-    {
-      id: "light-spotlight",
-      kind: "toggle",
-      labelKey: "preview.spotlight",
-      fallback: "聚光灯",
-      group: "preview.lightGroupParams",
-      getValue: () => cap.getParams().spotlight.enabled,
-      setValue: (v) => cap.setSpotlight({ enabled: v as boolean }),
-    },
-  ];
-}
-
-function lcBuildVolumetric(cap: LightCapability): MenuControlDef[] {
-  return [
-    {
-      id: "light-volumetric",
-      kind: "toggle",
-      labelKey: "preview.volumetric",
-      fallback: "体积光",
-      group: "preview.lightGroupParams",
-      getValue: () => cap.getParams().volumetric.enabled,
-      setValue: (v) => cap.setVolumetric({ enabled: v as boolean }),
-    },
-    {
-      id: "light-engine",
-      kind: "select",
-      labelKey: "preview.volumetricEngine",
-      fallback: "锥引擎",
-      group: "preview.lightGroupParams",
-      select: [
-        { value: "cone", label: "锥形" },
-        { value: "postprocess", label: "后处理" },
-      ],
-      getValue: () => cap.getVolumetricEngine(),
-      setValue: (v) => cap.setVolumetricEngine(v as "cone" | "postprocess"),
-    },
-    {
-      id: "light-cone-angle",
-      kind: "slider",
-      labelKey: "preview.coneAngle",
-      fallback: "锥角",
-      group: "preview.lightGroupParams",
-      slider: { min: 10, max: 60, step: 1, unit: "°" },
-      getValue: () => cap.getParams().spotlight.angle,
-      setValue: (v) => cap.setSpotlight({ angle: v as number }),
-    },
-  ];
-}
-
-function lcBuildThreePoint(cap: LightCapability): MenuControlDef[] {
-  return [
-    {
-      id: "light-preset",
-      kind: "select",
-      labelKey: "preview.lightPreset",
-      fallback: "灯光预设",
-      group: "preview.lightGroupParams",
-      select: [
-        { value: "default", label: "默认" },
-        { value: RESOURCE_TYPES.YSM, label: "YSM方块" },
-        { value: "vrm", label: "VRM角色" },
-        { value: "mmd", label: "MMD角色" },
-        { value: "litematic", label: "体素" },
-        { value: "resourcepack", label: "MC块包" },
-      ],
-      getValue: () => cap.getCurrentPreset(),
-      setValue: (v) => cap.setPreset(v as string, { manual: true }),
-    },
-  ];
-}
 
 /** 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） */
 export function lightDirToPosition(p: DirectionalLightParams, radius: number): THREE.Vector3 {
@@ -376,7 +76,7 @@ export class LightCapability implements SceneCapability {
   private params: LightParams;
   private enabled: boolean;
   private target: THREE.Vector3; // 对象中心，聚光灯瞄准点
-  private targetHeight: number;  // 聚光灯位于对象上方的高度
+  private targetHeight: number; // 聚光灯位于对象上方的高度
 
   // 灯光对象
   private keyLight: THREE.DirectionalLight;
@@ -386,11 +86,8 @@ export class LightCapability implements SceneCapability {
   private spotlight: THREE.SpotLight;
   private spotlightTarget: THREE.Object3D; // 隐形目标，SpotLight 瞄准
 
-  // 体积光锥
-  private coneGroup: THREE.Group | null = null;
-  private coneUniforms: VolumetricConeUniforms | null = null;
-  private coneMaterial: THREE.ShaderMaterial | null = null;
-  private coneHeight = 0;
+  // 体积光锥（ADR-177：实现下沉 VolumetricCone，本类仅委派）
+  private cone: VolumetricCone;
 
   // 体积光锥引擎（预留：后续支持 postprocess 模式）
   private volumetricEngine: "cone" | "postprocess" = "cone";
@@ -420,7 +117,10 @@ export class LightCapability implements SceneCapability {
     this.keyLight = this.createDirectional(this.params.key);
     this.fillLight = this.createDirectional(this.params.fill);
     this.rimLight = this.createDirectional(this.params.rim);
-    this.ambientLight = new THREE.AmbientLight(this.params.ambient.color, this.params.ambient.intensity);
+    this.ambientLight = new THREE.AmbientLight(
+      this.params.ambient.color,
+      this.params.ambient.intensity,
+    );
 
     // 聚光灯：位于对象正上方，向下照射
     this.spotlight = new THREE.SpotLight(
@@ -431,18 +131,20 @@ export class LightCapability implements SceneCapability {
       this.params.spotlight.penumbra,
       this.params.spotlight.decay,
     );
-    this.spotlight.position.set(
-      this.target.x,
-      this.target.y + this.targetHeight,
-      this.target.z,
-    );
+    this.spotlight.position.set(this.target.x, this.target.y + this.targetHeight, this.target.z);
     this.spotlightTarget = new THREE.Object3D();
     this.spotlightTarget.name = "ysm-light-spot-target";
     this.spotlightTarget.position.copy(this.target);
     this.spotlight.target = this.spotlightTarget;
 
-    // 初始化体积光锥几何（参数化，enable 时挂载）
-    this.rebuildCone();
+    // 初始化体积光锥（ADR-177：委派 VolumetricCone；未同时启用则不产出锥组）
+    this.cone = new VolumetricCone(this.scene);
+    this.cone.rebuild(
+      this.targetHeight,
+      this.params.spotlight,
+      this.params.volumetric,
+      this.spotlight.position,
+    );
   }
 
   /* ----- 方向灯方向更新 ----- */
@@ -460,126 +162,13 @@ export class LightCapability implements SceneCapability {
     light.visible = p.enabled;
   }
 
-  /* ----- 体积光锥 ----- */
-
-  private createVolumetricMaterial(height: number, baseRadius: number): THREE.ShaderMaterial {
-    const sp = this.params.spotlight;
-    const vm = this.params.volumetric;
-
-    const uniforms: VolumetricConeUniforms = {
-      uColor: { value: new THREE.Color(sp.color) },
-      uMaxAlpha: { value: vm.opacity },
-      uFogPower: { value: vm.fogPower },
-      uEdgeFade: { value: vm.edgeFade },
-      uHeight: { value: height },
-      uBaseRadius: { value: baseRadius },
-      uTipStrength: { value: vm.tipStrength },
-      uBaseStrength: { value: vm.baseStrength },
-    };
-    this.coneUniforms = uniforms;
-
-    this.coneMaterial = new THREE.ShaderMaterial({
-      uniforms: uniforms as unknown as Record<string, THREE.IUniform<unknown>>,
-      vertexShader: VOLUMETRIC_CONE_VERT,
-      fragmentShader: VOLUMETRIC_CONE_FRAG,
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-    });
-    return this.coneMaterial;
-  }
-
-  private buildConeGroup(mat: THREE.ShaderMaterial, height: number, baseRadius: number): THREE.Group {
-    const halfWidth = baseRadius;
-    const geom = new THREE.PlaneGeometry(halfWidth * 2, height);
-
-    const plane1 = new THREE.Mesh(geom, mat);
-    const plane2 = new THREE.Mesh(geom, mat);
-    plane2.rotation.y = Math.PI / 2;
-
-    const group = new THREE.Group();
-    group.name = "ysm-light-volumetric-cone";
-    group.add(plane1);
-    group.add(plane2);
-
-    group.position.copy(this.spotlight.position);
-    group.position.y -= height / 2;
-    return group;
-  }
-
-  /** 根据当前参数重建体积光锥几何 + 材质 */
-  private rebuildCone(): void {
-    this.disposeCone();
-
-    const sp = this.params.spotlight;
-    const vm = this.params.volumetric;
-    if (!sp.enabled || !vm.enabled) return;
-
-    const height = this.targetHeight;
-    const halfAngle = degToRad(sp.angle);
-    const baseRadius = height * Math.tan(halfAngle) * (1.0 + sp.penumbra * 0.5);
-
-    this.coneHeight = height;
-
-    const mat = this.createVolumetricMaterial(height, baseRadius);
-    this.updateConeUniforms();
-    this.coneGroup = this.buildConeGroup(mat, height, baseRadius);
-  }
-
-  private disposeCone(): void {
-    if (this.coneGroup) {
-      if (this.coneGroup.parent) this.coneGroup.parent.remove(this.coneGroup);
-      // 两 plane 共享同一 geometry+material（buildConeGroup），traverse 会重复 dispose
-      // 同一实例——P1 double-dispose。用 Set 按 uuid 去重，每个唯一实例只 dispose 一次。
-      const seenGeo = new Set<string>();
-      const seenMat = new Set<string>();
-      this.coneGroup.traverse((obj) => {
-        const m = obj as THREE.Mesh;
-        const geo = m.geometry;
-        if (geo) {
-          const id = geo.uuid;
-          if (!seenGeo.has(id)) {
-            seenGeo.add(id);
-            safeDispose(geo);
-          }
-        }
-        const mat = (m as unknown as { material?: THREE.Material | THREE.Material[] }).material;
-        if (mat) {
-          const mats = Array.isArray(mat) ? mat : [mat];
-          for (const mt of mats) {
-            if (!mt) continue;
-            const id = mt.uuid;
-            if (!seenMat.has(id)) {
-              seenMat.add(id);
-              tryDisposeMat(mt);
-            }
-          }
-        }
-      });
-      this.coneGroup = null;
-      this.coneUniforms = null;
-      this.coneMaterial = null;
-    }
-  }
-
-  private updateConeUniforms(): void {
-    if (!this.coneUniforms || !this.coneMaterial) return;
-    const sp = this.params.spotlight;
-    const vm = this.params.volumetric;
-    this.coneUniforms.uColor.value.setHex(sp.color);
-    this.coneUniforms.uMaxAlpha.value = vm.opacity;
-    this.coneUniforms.uFogPower.value = vm.fogPower;
-    this.coneUniforms.uEdgeFade.value = vm.edgeFade;
-    this.coneUniforms.uTipStrength.value = vm.tipStrength;
-    this.coneUniforms.uBaseStrength.value = vm.baseStrength;
-  }
-
   /* ----- 公共 API ----- */
 
   apply(): void {
-    if (!this.enabled) { this.detach(); return; }
+    if (!this.enabled) {
+      this.detach();
+      return;
+    }
     if (!this.keyLight.parent) this.scene.add(this.keyLight);
     if (!this.fillLight.parent) this.scene.add(this.fillLight);
     if (!this.rimLight.parent) this.scene.add(this.rimLight);
@@ -591,8 +180,8 @@ export class LightCapability implements SceneCapability {
     if (!this.rimLight.target.parent) this.scene.add(this.rimLight.target);
     if (this.spotlightTarget && !this.spotlightTarget.parent) this.scene.add(this.spotlightTarget);
     if (!this.spotlight.parent) this.scene.add(this.spotlight);
-    if (this.params.volumetric.enabled && this.params.spotlight.enabled && this.coneGroup) {
-      if (!this.coneGroup.parent) this.scene.add(this.coneGroup);
+    if (this.params.volumetric.enabled && this.params.spotlight.enabled && this.cone.hasGroup()) {
+      if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
     }
   }
 
@@ -610,9 +199,8 @@ export class LightCapability implements SceneCapability {
     this.target.copy(v);
     this.spotlightTarget.position.copy(this.target);
     this.spotlight.position.set(this.target.x, this.target.y + this.targetHeight, this.target.z);
-    if (this.coneGroup) {
-      this.coneGroup.position.copy(this.spotlight.position);
-      this.coneGroup.position.y -= this.coneHeight / 2;
+    if (this.cone.hasGroup()) {
+      this.cone.syncPosition(this.spotlight.position);
     }
   }
 
@@ -635,20 +223,14 @@ export class LightCapability implements SceneCapability {
     // rebuildCone 会 dispose 旧锥组并换成全新实例（新实例默认脱离场景），故先记挂载态，
     // 重建后按原状态回挂 + 重新定位——否则挂载态下改高度会让体积光锥凭空消失。
     // 只恢复「重建前已挂载」的情形，不凭空新增挂载（未开启体积光时不应出现锥组）。
-    const wasMounted = Boolean(this.coneGroup?.parent);
-    this.rebuildCone();
-    if (wasMounted) this.attachCone();
-  }
-
-  /**
-   * 把当前锥组挂进场景并对齐聚光灯（幂等：已在场景中则只同步位置）。
-   * 供 rebuildCone 换新实例后的回挂使用——rebuildCone 只负责建，不负责挂载。
-   */
-  private attachCone(): void {
-    if (!this.coneGroup) return;
-    if (!this.coneGroup.parent) this.scene.add(this.coneGroup);
-    this.coneGroup.position.copy(this.spotlight.position);
-    this.coneGroup.position.y -= this.coneHeight / 2;
+    const wasMounted = this.cone.isMounted();
+    this.cone.rebuild(
+      this.targetHeight,
+      this.params.spotlight,
+      this.params.volumetric,
+      this.spotlight.position,
+    );
+    if (wasMounted && this.cone.hasGroup()) this.cone.attach(this.spotlight.position);
   }
 
   /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
@@ -662,24 +244,28 @@ export class LightCapability implements SceneCapability {
     this.currentPreset = modelType; // ADR-085 S2：记录真实预设名
     this.params = deepMergeLightParams(this.params, preset);
     this.syncLightsFromParams();
-    this.rebuildCone();
+    this.cone.rebuild(
+      this.targetHeight,
+      this.params.spotlight,
+      this.params.volumetric,
+      this.spotlight.position,
+    );
     this.syncConeMount();
   }
 
   /**
    * 锥组挂载态与当前 params 同步（setPreset / loadState 复用）。
    * 只在锥组已挂载时处理卸载与定位——挂载动作由 setSpotlight / setVolumetric /
-   * setVolumetricEngine 负责（本方法不重挂：外层守卫已保证 coneGroup.parent 非空，
+   * setVolumetricEngine 负责（本方法不重挂：外层守卫已保证 cone 已挂载，
    * 曾经的 else-if 重挂分支是死代码，已删）。
    */
   private syncConeMount(): void {
-    if (this.coneGroup && this.coneGroup.parent) {
+    if (this.cone.hasGroup() && this.cone.isMounted()) {
       // 启用状态关闭 → 卸载（锥组仍在场景中时）
       if (!this.params.volumetric.enabled || !this.params.spotlight.enabled) {
-        this.coneGroup.parent.remove(this.coneGroup);
+        this.cone.detach();
       }
-      this.coneGroup.position.copy(this.spotlight.position);
-      this.coneGroup.position.y -= this.coneHeight / 2;
+      this.cone.syncPosition(this.spotlight.position);
     }
   }
 
@@ -694,23 +280,28 @@ export class LightCapability implements SceneCapability {
     this.spotlight.penumbra = sp.penumbra;
     this.spotlight.decay = sp.decay;
     this.spotlight.visible = sp.enabled;
-    this.rebuildCone();
-    if (this.coneGroup && this.params.volumetric.enabled) {
-      if (!this.coneGroup.parent) this.scene.add(this.coneGroup);
-      this.coneGroup.position.copy(this.spotlight.position);
-      this.coneGroup.position.y -= this.coneHeight / 2;
+    this.cone.rebuild(
+      this.targetHeight,
+      this.params.spotlight,
+      this.params.volumetric,
+      this.spotlight.position,
+    );
+    if (this.cone.isMounted()) {
+      this.cone.syncPosition(this.spotlight.position);
+    } else if (this.params.volumetric.enabled) {
+      this.cone.attach(this.spotlight.position);
     }
   }
 
   /** 体积光锥参数更新（含 enable/disable 切换） */
   setVolumetric(p: Partial<VolumetricParams>): void {
     Object.assign(this.params.volumetric, p);
-    this.updateConeUniforms();
+    this.cone.updateUniforms(this.params.spotlight, this.params.volumetric);
     if (p.enabled !== undefined) {
-      if (this.params.volumetric.enabled && this.params.spotlight.enabled && this.coneGroup) {
-        if (!this.coneGroup.parent) this.scene.add(this.coneGroup);
+      if (this.params.volumetric.enabled && this.params.spotlight.enabled && this.cone.hasGroup()) {
+        if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
       } else {
-        if (this.coneGroup?.parent) this.coneGroup.parent.remove(this.coneGroup);
+        if (this.cone.isMounted()) this.cone.detach();
       }
     }
   }
@@ -721,17 +312,18 @@ export class LightCapability implements SceneCapability {
     // postprocess 模式暂不渲染体积光锥，同步关闭 volumetric.enabled 避免 toggle 状态矛盾
     if (engine === "postprocess") {
       this.params.volumetric.enabled = false;
-      if (this.coneGroup?.parent) {
-        this.coneGroup.parent.remove(this.coneGroup);
-      }
+      if (this.cone.isMounted()) this.cone.detach();
     } else if (engine === "cone" && this.params.spotlight.enabled) {
       // 切回 cone：重新启用 volumetric 并重建锥组
       this.params.volumetric.enabled = true;
-      this.rebuildCone();
-      if (this.coneGroup && !this.coneGroup.parent) {
-        this.scene.add(this.coneGroup);
-        this.coneGroup.position.copy(this.spotlight.position);
-        this.coneGroup.position.y -= this.coneHeight / 2;
+      this.cone.rebuild(
+        this.targetHeight,
+        this.params.spotlight,
+        this.params.volumetric,
+        this.spotlight.position,
+      );
+      if (this.cone.hasGroup() && !this.cone.isMounted()) {
+        this.cone.attach(this.spotlight.position);
       }
     }
   }
@@ -744,13 +336,16 @@ export class LightCapability implements SceneCapability {
   setParams(p: DeepPartial<LightParams>): void {
     this.params = deepMergeLightParams(this.params, p);
     this.syncLightsFromParams();
-    this.rebuildCone();
-    if (this.coneGroup && this.params.volumetric.enabled && this.params.spotlight.enabled) {
-      if (!this.coneGroup.parent) this.scene.add(this.coneGroup);
-      this.coneGroup.position.copy(this.spotlight.position);
-      this.coneGroup.position.y -= this.coneHeight / 2;
-    } else if (this.coneGroup?.parent) {
-      this.coneGroup.parent.remove(this.coneGroup);
+    this.cone.rebuild(
+      this.targetHeight,
+      this.params.spotlight,
+      this.params.volumetric,
+      this.spotlight.position,
+    );
+    if (this.cone.hasGroup() && this.params.volumetric.enabled && this.params.spotlight.enabled) {
+      if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
+    } else if (this.cone.isMounted()) {
+      this.cone.detach();
     }
   }
 
@@ -765,7 +360,7 @@ export class LightCapability implements SceneCapability {
 
   /** 返回菜单控件定义（框架自动渲染） */
   getMenuControls(): MenuControlDef[] {
-    return [...lcBuildMain(this), ...lcBuildSpotlight(this), ...lcBuildVolumetric(this), ...lcBuildThreePoint(this)];
+    return getLightMenuControls(this);
   }
 
   /** 保存状态到 localStorage */
@@ -808,7 +403,8 @@ export class LightCapability implements SceneCapability {
     const state = restoreState(this.id);
     if (!state) return;
     if (typeof state.enabled === "boolean") this.enabled = state.enabled;
-    if (typeof state.ambientIntensity === "number") this.params.ambient.intensity = state.ambientIntensity;
+    if (typeof state.ambientIntensity === "number")
+      this.params.ambient.intensity = state.ambientIntensity;
     // ① 预设先套用（内含 rebuildCone / 锥组挂载判定）。必须在灯开关恢复之前：
     //    deepMergeLightParams(this.params, preset) 以预设为准，后恢复的开关才会生效。
     if (typeof state.manualPreset === "string") {
@@ -822,8 +418,10 @@ export class LightCapability implements SceneCapability {
     if (typeof state.keyEnabled === "boolean") this.params.key.enabled = state.keyEnabled;
     if (typeof state.fillEnabled === "boolean") this.params.fill.enabled = state.fillEnabled;
     if (typeof state.rimEnabled === "boolean") this.params.rim.enabled = state.rimEnabled;
-    if (typeof state.spotlightEnabled === "boolean") this.params.spotlight.enabled = state.spotlightEnabled;
-    if (typeof state.volumetricEnabled === "boolean") this.params.volumetric.enabled = state.volumetricEnabled;
+    if (typeof state.spotlightEnabled === "boolean")
+      this.params.spotlight.enabled = state.spotlightEnabled;
+    if (typeof state.volumetricEnabled === "boolean")
+      this.params.volumetric.enabled = state.volumetricEnabled;
     // ②.b 全量参数恢复（旧实现只存布尔/单一字段，跨会话丢方向/颜色/强度/锥角等）。
     //     字段名与 params 对象一致；逐字段 typeof 校验后写入，非法值跳过。
     //     不在此调 apply()：保持现有行为，依赖外部统一 apply。
@@ -851,7 +449,8 @@ export class LightCapability implements SceneCapability {
       if (typeof vm.opacity === "number") this.params.volumetric.opacity = vm.opacity;
       if (typeof vm.fogPower === "number") this.params.volumetric.fogPower = vm.fogPower;
       if (typeof vm.edgeFade === "number") this.params.volumetric.edgeFade = vm.edgeFade;
-      if (typeof vm.baseStrength === "number") this.params.volumetric.baseStrength = vm.baseStrength;
+      if (typeof vm.baseStrength === "number")
+        this.params.volumetric.baseStrength = vm.baseStrength;
       if (typeof vm.tipStrength === "number") this.params.volumetric.tipStrength = vm.tipStrength;
     }
     // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步（setPreset 的判定基于覆盖前的预设值）
@@ -868,11 +467,14 @@ export class LightCapability implements SceneCapability {
     } else if (state.volumetricEngine === "cone") {
       this.volumetricEngine = "cone";
       if (this.params.volumetric.enabled && this.params.spotlight.enabled) {
-        this.rebuildCone();
-        if (this.coneGroup && !this.coneGroup.parent) {
-          this.scene.add(this.coneGroup);
-          this.coneGroup.position.copy(this.spotlight.position);
-          this.coneGroup.position.y -= this.coneHeight / 2;
+        this.cone.rebuild(
+          this.targetHeight,
+          this.params.spotlight,
+          this.params.volumetric,
+          this.spotlight.position,
+        );
+        if (this.cone.hasGroup() && !this.cone.isMounted()) {
+          this.cone.attach(this.spotlight.position);
         }
       }
     }
@@ -885,8 +487,9 @@ export class LightCapability implements SceneCapability {
    *  让位系数/公式走 attenuateAmbientForSky 单源 */
   refreshAmbientFromSky(): void {
     const skyEnvOn =
-      (this.caps?.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null | undefined)
-        ?.isEnvironmentEnabled?.() ?? false;
+      (
+        this.caps?.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null | undefined
+      )?.isEnvironmentEnabled?.() ?? false;
     this.ambientLight.color.setHex(this.params.ambient.color);
     this.ambientLight.intensity = attenuateAmbientForSky(this.params.ambient.intensity, skyEnvOn);
   }
@@ -903,20 +506,26 @@ export class LightCapability implements SceneCapability {
 
   private detach(): void {
     [
-      this.keyLight, this.fillLight, this.rimLight, this.ambientLight,
-      this.keyLight?.target ?? null, this.fillLight?.target ?? null, this.rimLight?.target ?? null,
-      this.spotlight, this.spotlightTarget,
+      this.keyLight,
+      this.fillLight,
+      this.rimLight,
+      this.ambientLight,
+      this.keyLight?.target ?? null,
+      this.fillLight?.target ?? null,
+      this.rimLight?.target ?? null,
+      this.spotlight,
+      this.spotlightTarget,
     ]
       .filter((o): o is THREE.Object3D => o !== null && o !== undefined)
       .forEach((o) => {
         if (o.parent) o.parent.remove(o);
       });
-    if (this.coneGroup?.parent) this.coneGroup.parent.remove(this.coneGroup);
+    this.cone.detach();
   }
 
   dispose(): void {
     this.detach();
-    this.disposeCone();
+    this.cone.dispose();
     this.keyLight.dispose();
     this.fillLight.dispose();
     this.rimLight.dispose();
@@ -925,45 +534,5 @@ export class LightCapability implements SceneCapability {
     // R1-P2-6：spotlightTarget 是隐形 Object3D（无几何/材质），detach 已从场景移除；
     // 显式置空引用，防止后续误用
     this.spotlightTarget = null as unknown as THREE.Object3D;
-  }
-}
-
-/* ============ 工具函数 ============ */
-
-function deepMergeLightParams(base: LightParams, override: DeepPartial<LightParams>): LightParams {
-  const mergeDir = (a: DirectionalLightParams, b?: Partial<DirectionalLightParams>): DirectionalLightParams =>
-    ({ ...a, ...b } as DirectionalLightParams);
-  const mergeAmb = (a: AmbientLightParams, b?: Partial<AmbientLightParams>): AmbientLightParams =>
-    ({ ...a, ...b } as AmbientLightParams);
-  const mergeSpot = (a: SpotlightParams, b?: Partial<SpotlightParams>): SpotlightParams =>
-    ({ ...a, ...b } as SpotlightParams);
-  const mergeVol = (a: VolumetricParams, b?: Partial<VolumetricParams>): VolumetricParams =>
-    ({ ...a, ...b } as VolumetricParams);
-
-  return {
-    key: mergeDir(base.key, override.key),
-    fill: mergeDir(base.fill, override.fill),
-    rim: mergeDir(base.rim, override.rim),
-    ambient: mergeAmb(base.ambient, override.ambient),
-    spotlight: mergeSpot(base.spotlight, override.spotlight),
-    volumetric: mergeVol(base.volumetric, override.volumetric),
-  };
-}
-
-/** 材质上所有可能持有贴图的属性 key */
-const ALL_TEX_KEYS = ["map", "emissiveMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap", "lightMap", "alphaMap", "envMap"] as const;
-
-function tryDisposeMat(m: THREE.Material): void {
-  try {
-    for (const key of ALL_TEX_KEYS) {
-      const tex = (m as unknown as Record<string, unknown | THREE.Texture | null>)[key];
-      if (tex && typeof (tex as THREE.Texture).dispose === "function") {
-        safeDispose(tex as THREE.Texture);
-      }
-    }
-    m.dispose();
-  } catch (e) {
-    // 不再静默吞掉：材质释放失败是 GPU 泄漏的高危信号，留痕便于排查
-    dbg("light-cap", { op: "tryDisposeMat-fail", type: m.type, uuid: m.uuid, err: safeErrorMessage(e) });
   }
 }

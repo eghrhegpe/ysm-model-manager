@@ -85,6 +85,7 @@
 | YSM、解析、摘要、ysm 文件、元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | `go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。 |
 | 翻译、多语言、i18n、t()、语言切换、lang:changed | [国际化 i18n 模块](./i18n.md) | `i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化… |
 | 导入、导入队列、拖拽导入、文件夹导入、覆盖导入、import、拖拽 | [全局导入执行 import-executor](./import-queue.md) ⚠️歧义（另见 go-importer.md、global-handlers.md、pointer-events.md等） | **2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex… |
+| internal/app 再切分或迁移 App god-object 字段/方法时、评估某子域「迁出 internal/app 包」的收益与成本、复述 ADR-179 实际收敛边界 | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install_domain_split.md) | ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /… |
 | 模型统计、骨骼数、立方体数、纹理尺寸、SearchModels、数值筛选、Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) ⚠️歧义（另见 dialog-adv-filter.md、search.md等） | `frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo… |
 | 2D 预览、骨骼图、Canvas 渲染、前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。 |
 | 3D 渲染层、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底 | [3D 预览渲染 model3d](./model3d.md) | — |

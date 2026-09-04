@@ -65,7 +65,17 @@ install 域实际收编结果：
 - ✅ `queue`（P0，下载队列，纯逻辑零耦合）
 - ✅ `linkMode`（P1，状态 + 持久化经 ConfigDeps 闭包单向注入）
 - ✅ `launcher`（P1，纯函数转发）
-- ⏸ `import` / `recycle` / `instance`：跨界重域（同时碰 config / scan / bindings），单独立项，不在本次机械切分范围
+
+### 复合域不切分子包（2026-09-04 实测补充）
+
+`import` / `recycle` / `instance` 经三轮依赖面勘察（import.go 全文 → 跨域方法定位 → 私有 helper 调用方网络），判定**不迁 install 子包**，走文件级治理 + 知识卡记录：
+
+1. **接口版 god-object**：迁移需 `AppDeps` 接口含 10+ 方法（LoadAppConfig/GetRepoRoot/DetectResourceType/ScanModelEntries×2/ClearScanCache/ListVersionInstances/filesRootForSync/saveConfig/logger…），等于把 god-object 换帽子，App 委托 + 组合链 + 私有转发仍占原文件 60% 以上，并不变薄。
+2. **连带拉扯 files 域**：`importModelFolderAs` 宿主在 `app_files.go`（files 域），被 files 域绑定 + install 组合链三方共用，强迁污染边界或制造私有转发伪切分。
+3. **测试迁移面大**：import/pack/coverage 等测试直接调私有 helper（如 `importModelFileWithSubpath`、`pushRepoPathToInstance`），迁移须改造测试。
+4. **切分收益的耦合度门槛**：queue/linkMode/launcher 是「低耦合纯域」（依赖注入回调 + DTO 即可运转），切出收益为正；import/recycle/instance 是「高内聚复合域」（与 files/scan/bindings 共享 config/cache/logger 状态），切分收益为负。**收益来自切纯域，不在硬切复合域。**
+
+此类判据已沉淀知识卡 `install_domain_split`，后续 scan/config/bindings/bridge 域切分前先过该门槛。
 
 ## 4. 数据溯源
 

@@ -5,6 +5,7 @@
 // Phase 3 收编：骨骼面板渲染器现在通过 vrmMenuItems 的 panel render 回调挂入根菜单，
 // 不再依赖 extraControls(topBar) 或 extraPanel 机制。
 
+import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import * as THREE from "three";
 import {
   listBonesWithDepth,
@@ -53,12 +54,13 @@ const vbuCss = `
 .vbu-field { margin-bottom:3px; }
 `;
 let _vbuStylesInjected = false;
+onOverlayStyleTargetReset(() => { _vbuStylesInjected = false; }); // ADR-175 M1:目标切换重注入
 function ensureVbuStyles(): void {
   if (_vbuStylesInjected) return;
   _vbuStylesInjected = true;
   const el = document.createElement("style");
   el.textContent = vbuCss;
-  document.head.appendChild(el);
+  overlayStyleRoot().appendChild(el);
 }
 
 export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel {
@@ -92,7 +94,7 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
       const items = listBonesWithDepth(tree);
       for (const item of items) {
         const row = document.createElement("div");
-        row.className = "slide-item";
+        row.className = "slide-item vbu-bone-row";
         row.dataset.boneId = item.id;
         row.dataset.active = activeId === item.id ? "1" : "0"; // 测试钩子（happy-dom 丢 color-mix 时仍可断言高亮）
         // 静态布局在 .slide-item.vbu-bone-row 类;padding-left 按 depth 动态(属性级,测试断言 style.paddingLeft)

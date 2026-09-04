@@ -4,6 +4,7 @@
 // 「当前目录」tab 已移除（记忆/当前类型生效后可少一个 tab）；
 // rtypes 为空（无注册路由）时仍走 siblings 列表兜底，不空白。
 
+import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import { RESOURCE_TYPE_LABELS, resolveTypeSafe, getPreviewableTypeTabs } from "../../utils/resource/types.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import { swallowError } from "../../utils/core/async.ts";
@@ -20,6 +21,7 @@ const tr = (key: string, fallback: string): string => {
 // P1 批次5：模型切换面板内联 cssText → 集中类（sw- 前缀本文件私有，ensureSwitchStyles
 // 幂等注入——fillSwitch 唯一入口调用覆盖 tabBar/候选行/空态全部渲染路径）
 let _swStylesInjected = false;
+onOverlayStyleTargetReset(() => { _swStylesInjected = false; }); // ADR-175 M1:目标切换重注入
 function ensureSwitchStyles(): void {
   if (_swStylesInjected) return;
   const style = document.createElement("style");
@@ -34,7 +36,7 @@ function ensureSwitchStyles(): void {
   cursor:pointer;color:rgba(255,255,255,0.7);background:transparent;
 }
 .sw-tab-active { background:${switchTabHighlightBg(true)}; color:#fff; }
-.sw-row { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px; }
+.ysm-preview-menu-row.sw-row { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px; }
 .sw-row-cur { background:color-mix(in srgb,var(--accent) 25%,transparent); }
 .sw-row-icon { font-size:15px;width:18px;text-align:center; }
 .sw-append-btn {
@@ -44,7 +46,7 @@ function ensureSwitchStyles(): void {
 .sw-empty-note { padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px; }
 .sw-scroll-body { max-height:240px;overflow-y:auto; }
 `;
-  document.head.appendChild(style);
+  overlayStyleRoot().appendChild(style);
   _swStylesInjected = true;
 }
 

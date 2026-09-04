@@ -24,7 +24,6 @@ const {
   preloadModel,
   createYsm3D,
   cleanupYsm3D,
-  invalidateYsmPreview,
 } = vi.hoisted(() => ({
   getPrefer3D: vi.fn(() => false),
   setPrefer3D: vi.fn(),
@@ -40,7 +39,6 @@ const {
   preloadModel: vi.fn(),
   createYsm3D: vi.fn(),
   cleanupYsm3D: vi.fn(),
-  invalidateYsmPreview: vi.fn(),
 }));
 
 vi.mock("./utils.ts", () => ({ getPrefer3D, setPrefer3D }));
@@ -61,7 +59,7 @@ vi.mock("./model3d-loader.ts", () => ({ preloadModel }));
 // §5.7 shared 化：3D 打开收敛到 ysm-3d（path 驱动），骨架层测试 mock 编排层——
 // shared 外壳（挂 scene/导航/raycast）集成由 ysm-3d.test.ts（three stub）覆盖
 // ADR-072 根治：ysm-3d 薄包装已归位 views/app-preview（视图壳注入层），mock 路径同目录
-vi.mock("./ysm-3d.ts", () => ({ createYsm3D, cleanupYsm3D, invalidateYsmPreview }));
+vi.mock("./ysm-3d.ts", () => ({ createYsm3D, cleanupYsm3D }));
 
 import { loadModel2D } from "./skeleton.ts";
 import { fill3DPanel } from "./skeleton-render.ts";

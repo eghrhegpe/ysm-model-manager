@@ -5,18 +5,19 @@
 // §5.7 shared 化：YSM 适配器改 path 驱动（build(ctx, path) 内经 loadModelData
 // 加载 model），与 vrm/litematic 同构——core 的 switchTo(path) 对 ysm 生效，
 // 3D 内模型切换无需重建整个会话。
-import { mount3D, cleanupPreview, invalidatePreview } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makeYsmAdapter } from "../../preview-3d/adapters/ysm-adapter.ts";
+
 import { getApp } from "../../backend/app.ts";
+import { cleanupPreview, mount3D } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { makeYsmAdapter } from "../../preview-3d/adapters/ysm-adapter.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import { preloadModel, type ModelLike } from "./model3d-loader.ts";
-import { loadModelData } from "./loader.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
-import { playNodes } from "./mmd-controls.ts";
-import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { loadModelData } from "./loader.ts";
+import { playNodes } from "./mmd-controls.ts";
+import { type ModelLike, preloadModel } from "./model3d-loader.ts";
+import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { readFileBytes } from "./view-shell.ts";
+import { registerYsmModelSchema, ysmShotNodes } from "./ysm-controls.ts";
 
 /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM 同款 ListAllFilePaths 注入） */
 async function listAllFilePaths(dir: string): Promise<string[] | null> {
@@ -47,11 +48,7 @@ export interface YsmOpenOptions {
  * 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。
  * texIdx 支持多纹理切换重建：适配器经 onTextureChange 回调本层，cleanup 旧会话后按新 texIdx 重挂。
  */
-export async function createYsm3D(
-  path: string,
-  texIdx = 0,
-  opts: YsmOpenOptions,
-): Promise<void> {
+export async function createYsm3D(path: string, texIdx = 0, opts: YsmOpenOptions): Promise<void> {
   const rebuild = (idx: number): void => {
     cleanupPreview();
     void createYsm3D(path, idx, opts);
@@ -85,9 +82,4 @@ export async function createYsm3D(
 /** 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） */
 export function cleanupYsm3D(): void {
   cleanupPreview();
-}
-
-/** 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） */
-export function invalidateYsmPreview(): void {
-  invalidatePreview();
 }

@@ -1,27 +1,26 @@
 // ===== 创意工坊模型列表渲染（类型化版 — ADR-014 P3 features）=====
 // DOM API，非字符串拼接
 import { t } from "../../core/i18n/t.ts";
+import { stagger } from "../../utils/animation/stagger.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { formatBytes } from "../../utils/dom/format.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 export const VIEW_TESTIDS: readonly string[] = [
-  'gh-back',
-  'gh-srch',
-  'gh-toggle',
-  'gh-select-all',
-  'gh-dl-selected',
-  'gh-list',
-  'gh-row',
-  'gh-cb',
-  'gh-name',
-  'gh-dl',
-  'gh-search-bili',
+  "gh-back",
+  "gh-srch",
+  "gh-toggle",
+  "gh-select-all",
+  "gh-dl-selected",
+  "gh-list",
+  "gh-row",
+  "gh-cb",
+  "gh-name",
+  "gh-dl",
+  "gh-search-bili",
 ];
-
 
 /** 工坊模型条目（index.json 结构） */
 export interface WorkshopModel {
@@ -48,20 +47,14 @@ export function isModelMissing(
 ): boolean {
   if (!m) return true;
   return m.hash
-    ? !(
-        Array.from(localMap.values()).some((h) => h && h === m.hash) ||
-        localMap.has(m.name)
-      )
+    ? !(Array.from(localMap.values()).some((h) => h && h === m.hash) || localMap.has(m.name))
     : !localMap.has(m.name);
 }
 
 /**
  * 计算缺失数量
  */
-export function countMissing(
-  models: WorkshopModel[],
-  localMap: Map<string, string>,
-): number {
+export function countMissing(models: WorkshopModel[], localMap: Map<string, string>): number {
   return models.filter((m) => isModelMissing(m, localMap)).length;
 }
 
@@ -76,9 +69,7 @@ export function filterModels(
   localMap: Map<string, string>,
 ): WorkshopModel[] {
   const kw = q.trim().toLowerCase();
-  let filtered = kw
-    ? models.filter((m) => m.name.toLowerCase().includes(kw))
-    : models;
+  let filtered = kw ? models.filter((m) => m.name.toLowerCase().includes(kw)) : models;
   if (!showAll) {
     filtered = filtered.filter((m) => isModelMissing(m, localMap));
   }
@@ -91,11 +82,7 @@ export function filterModels(
  * @param action data-action 值
  * @param title 提示文本
  */
-function createIconBtn(
-  iconHTML: string,
-  action: string,
-  title?: string,
-): HTMLButtonElement {
+function createIconBtn(iconHTML: string, action: string, title?: string): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.className = "gh-icon-btn";
   btn.dataset.action = action;
@@ -149,11 +136,7 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
   // P4（审核发现）：`m.size || 0` 属 truthiness 数值判断，按数值守卫范式用 ?? 0
   sizeSpan.textContent = formatBytes(m.size ?? 0);
   metaCell.appendChild(sizeSpan);
-  const searchBtn = createIconBtn(
-    ICONS.SEARCH,
-    "search-bili",
-    t("workshop.bilibiliSearch"),
-  );
+  const searchBtn = createIconBtn(ICONS.SEARCH, "search-bili", t("workshop.bilibiliSearch"));
   searchBtn.dataset.testid = "gh-search-bili";
   metaCell.appendChild(searchBtn);
   row.appendChild(metaCell);
@@ -173,7 +156,9 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
     dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");
     dlBtn.dataset.name = m.name;
     // P3（审核复核）：同 download-tasks.ts 的有限数守卫——-1（Content-Length=-1 哨兵）不得透传
-    dlBtn.dataset.size = String(typeof m.size === "number" && Number.isFinite(m.size) && m.size > 0 ? m.size : 0);
+    dlBtn.dataset.size = String(
+      typeof m.size === "number" && Number.isFinite(m.size) && m.size > 0 ? m.size : 0,
+    );
     actionsCell.appendChild(dlBtn);
   }
   row.appendChild(actionsCell);
@@ -223,15 +208,13 @@ const GROUP_LABELS: Record<string, { icon: string; label: string }> = {
   browse: { icon: "👁️", label: t("workshop.platformBrowse") },
 };
 
-/** 站点分组展示顺序（renderCardsHTML 使用） */
-export const SITE_GROUP_ORDER = ["search", "repo", "browse"] as const;
+/** 站点分组展示顺序（renderCardsHTML 使用；内部常量，不对外暴露） */
+const SITE_GROUP_ORDER = ["search", "repo", "browse"] as const;
 
 /**
  * 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。
  */
-export function groupSites(
-  sites: WorkshopSite[],
-): Record<string, WorkshopSite[]> {
+export function groupSites(sites: WorkshopSite[]): Record<string, WorkshopSite[]> {
   const groups: Record<string, WorkshopSite[]> = {};
   sites.forEach((s) => {
     const g = s.group || "browse";
@@ -246,10 +229,7 @@ export function groupSites(
  * @param sites 站点数组
  * @param esc HTML 转义
  */
-export function renderCardsHTML(
-  sites: WorkshopSite[],
-  esc: (s: string) => string,
-): string {
+export function renderCardsHTML(sites: WorkshopSite[], esc: (s: string) => string): string {
   const groups = groupSites(sites);
 
   let html = "";
@@ -259,12 +239,7 @@ export function renderCardsHTML(
     const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
     // P3（审核发现）：未知分组回退 label/icon 未经 esc 直接拼入 HTML——已知分组是
     // i18n 常量安全，未知分组若含 <script> 即注入；统一转义（已知分组 esc 无副作用）
-    html +=
-      '<div class="gh-section-title">' +
-      esc(info.icon) +
-      " " +
-      esc(info.label) +
-      "</div>";
+    html += '<div class="gh-section-title">' + esc(info.icon) + " " + esc(info.label) + "</div>";
     groups[g].forEach((s) => {
       html +=
         '<div class="gh-card" style="animation-delay:' +
@@ -283,7 +258,9 @@ export function renderCardsHTML(
         esc(s.desc || "") +
         "</div>" +
         "</div>" +
-        '<div class="gh-card-external" title="' + t("workshop.openExternal") + '">↗</div>' +
+        '<div class="gh-card-external" title="' +
+        t("workshop.openExternal") +
+        '">↗</div>' +
         "</div>";
       cardIdx++;
     });
@@ -306,15 +283,15 @@ export function renderRepoHeaderHTML(params: {
     '<div class="gh-header">' +
     // 行1: 返回 | 模型计数徽章
     '<div class="gh-header-top">' +
-    '<button class="btn-base sm gh-back-repo" data-testid="gh-back">← ' + t("common.back") + '</button>' +
+    '<button class="btn-base sm gh-back-repo" data-testid="gh-back">← ' +
+    t("common.back") +
+    "</button>" +
     '<span class="gh-section-fill"></span>' +
     '<span class="gh-model-badge gh-model-badge-total">' +
     t("gh.modelCount", { n: modelsLength }) +
     "</span>" +
     (missingCount > 0
-      ? '<span class="gh-model-badge gh-model-badge-missing">⬇️ ' +
-        missingCount +
-        "</span>"
+      ? '<span class="gh-model-badge gh-model-badge-missing">⬇️ ' + missingCount + "</span>"
       : "") +
     "</div>" +
     // 行2: 仓库名（独占）+ 来源
@@ -329,14 +306,22 @@ export function renderRepoHeaderHTML(params: {
     "</div>" +
     // 行3: 搜索
     '<div class="gh-search-wrap">' +
-    '<input id="gh-repo-srch" class="gh-search" type="text" data-testid="gh-srch" placeholder="🔍 ' + t("gh.searchPlaceholder") + '">' +
+    '<input id="gh-repo-srch" class="gh-search" type="text" data-testid="gh-srch" placeholder="🔍 ' +
+    t("gh.searchPlaceholder") +
+    '">' +
     "</div>" +
     // 行4: 操作按钮
     '<div class="gh-header-actions">' +
-    '<label class="btn-base sm gh-select-all" data-testid="gh-select-all"><input type="checkbox"> ☐ ' + t("common.selectAll") + '</label>' +
-    '<button class="btn-base sm gh-toggle-missing" data-testid="gh-toggle">📁 ' + t("gh.showMissingOnly") + '</button>' +
+    '<label class="btn-base sm gh-select-all" data-testid="gh-select-all"><input type="checkbox"> ☐ ' +
+    t("common.selectAll") +
+    "</label>" +
+    '<button class="btn-base sm gh-toggle-missing" data-testid="gh-toggle">📁 ' +
+    t("gh.showMissingOnly") +
+    "</button>" +
     '<span class="gh-section-fill"></span>' +
-    '<button class="btn-base sm gh-dl-selected" data-testid="gh-dl-selected" disabled>⬇️ ' + t("gh.downloadSelected", { n: 0 }) + '</button>' +
+    '<button class="btn-base sm gh-dl-selected" data-testid="gh-dl-selected" disabled>⬇️ ' +
+    t("gh.downloadSelected", { n: 0 }) +
+    "</button>" +
     "</div>" +
     '<div id="gh-queue-status" class="gh-queue-status"></div>' +
     '<div id="gh-repo-list" data-testid="gh-list"></div>' +

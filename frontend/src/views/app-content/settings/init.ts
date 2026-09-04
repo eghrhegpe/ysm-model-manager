@@ -16,7 +16,7 @@ import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { GH_RELEASES } from "../../../utils/gh-links.ts";
 import { bindPathClick, saveCfg, initAdvancedGrid, initMcDetect } from "./path-cards.ts";
-import { initTheme } from "./theme.ts";
+import { initThemeSection } from "./theme.ts";
 import { initUiPrefs } from "./ui-prefs.ts";
 import { initWorkerPrefs } from "./worker-prefs.ts";
 import { initKeymap } from "./keymap.ts";
@@ -372,7 +372,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   refreshAdvanced();
   initMcDetect(root);
-  initTheme(root);
+  initThemeSection(root);
 
   stgBindMirrorSelect(root, cfg, toastError);
   stgBindUpdateInterval(root, cfg, toastError);

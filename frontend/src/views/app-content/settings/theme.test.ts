@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { initTheme } from "./theme.ts";
+import { initThemeSection } from "./theme.ts";
 
 const { safeGet, safeSet, getApp, applyTheme } = vi.hoisted(() => ({
   safeGet: vi.fn((_key: string) => ""),
@@ -66,22 +66,22 @@ beforeEach(() => {
   getApp.mockResolvedValue({ SaveAppConfig: vi.fn() });
 });
 
-describe("initTheme", () => {
+describe("initThemeSection", () => {
   it("applies saved theme on init (no auto)", () => {
     const { root } = makeRoot("warm");
-    initTheme(root);
+    initThemeSection(root);
     expect(applyTheme).toHaveBeenCalledWith("warm");
   });
 
   it("defaults to cyber when no saved theme", () => {
     const { root } = makeRoot("");
-    initTheme(root);
+    initThemeSection(root);
     expect(applyTheme).toHaveBeenCalledWith("cyber");
   });
 
   it("card click applies theme + saves + disables auto", () => {
     const { root, card2 } = makeRoot("cyber");
-    initTheme(root);
+    initThemeSection(root);
     applyTheme.mockClear();
     card2.click();
     expect(applyTheme).toHaveBeenCalledWith("warm");
@@ -91,13 +91,13 @@ describe("initTheme", () => {
 
   it("auto=system applies system theme", () => {
     const { root } = makeRoot("cyber", "system");
-    initTheme(root);
+    initThemeSection(root);
     expect(applyTheme).toHaveBeenCalledWith("system");
   });
 
   it("auto=time applies time-based theme (warm or cyber)", () => {
     const { root } = makeRoot("cyber", "time");
-    initTheme(root);
+    initThemeSection(root);
     const hour = new Date().getHours();
     const expected = hour >= 6 && hour < 18 ? "warm" : "cyber";
     expect(applyTheme).toHaveBeenCalledWith(expected);
@@ -105,7 +105,7 @@ describe("initTheme", () => {
 
   it("auto select change to system applies system", () => {
     const { root, autoSelect } = makeRoot("cyber", "off");
-    initTheme(root);
+    initThemeSection(root);
     applyTheme.mockClear();
     autoSelect.value = "system";
     autoSelect.dispatchEvent(new Event("change"));
@@ -115,7 +115,7 @@ describe("initTheme", () => {
 
   it("auto select change to time applies time theme", () => {
     const { root, autoSelect } = makeRoot("cyber", "off");
-    initTheme(root);
+    initThemeSection(root);
     applyTheme.mockClear();
     autoSelect.value = "time";
     autoSelect.dispatchEvent(new Event("change"));
@@ -129,7 +129,7 @@ describe("initTheme", () => {
       getElementById: () => null,
     } as unknown as ShadowRoot;
     safeGet.mockReturnValue("");
-    initTheme(root);
+    initThemeSection(root);
     expect(applyTheme).toHaveBeenCalledWith("cyber");
   });
 });

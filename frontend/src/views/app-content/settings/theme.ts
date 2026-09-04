@@ -21,7 +21,7 @@ function applyTimeTheme(): string {
 }
 
 /** 初始化主题段：主题卡片点击切换 + 自动切换下拉框 */
-export function initTheme(root: ShadowRoot): void {
+export function initThemeSection(root: ShadowRoot): void {
   // 主题卡片：直接点击切换
   const savedTheme = safeGet("theme") || "cyber";
   const themePicker = root.getElementById("theme-picker");

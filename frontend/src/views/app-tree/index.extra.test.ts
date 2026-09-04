@@ -388,30 +388,63 @@ describe("app-tree index 入口生命周期（补位）", () => {
     consoleSpy.mockRestore();
   });
 
-  it("挂载期间 root 已在途切换（pendingRoot）→ 补加载最新 root", async () => {
+  it("未连接 setAttribute → 单次加载最新 root（快照差量，不再冗余双加载）", async () => {
     const el = document.createElement("app-tree") as unknown as AppTree;
-    // ADR-111：VRM 已合并进 EntityPlayer 的 variants，用 "resourcepack" 测试 pendingRoot
-    el.setAttribute("root", "resourcepack"); // 未连接 → attributeChangedCallback 只置 pending
+    // ADR-111：VRM 已合并进 EntityPlayer 的 variants，用 "resourcepack" 测 root 预置
+    el.setAttribute("root", "resourcepack"); // 未连接：attributeChanged 同步 _rootAttr + ++_gen
     document.body.appendChild(el);
     await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
-    expect(loader.mock.calls.map((c) => c[0])).toEqual(["resourcepack", "resourcepack"]);
-    expect(bindings.ClearScanCache).toHaveBeenCalledTimes(1);
+    // 单次加载（旧实现：预连接 setAttribute 置 _pendingRoot → connected 末尾补载 = 双加载）
+    expect(loader.mock.calls.map((c) => c[0])).toEqual(["resourcepack"]);
+    expect(bindings.ClearScanCache).not.toHaveBeenCalled();
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
     expectSingleRow(el, "v1");
   });
 
-  it("pendingRoot 补加载失败 → 错误日志但首代渲染保留", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("cache boom"));
+  it("挂载期间 root 在途切换 → 丢弃首代渲染、补载最新 root（无错配帧）", async () => {
+    const d = deferred<{ filesRoot: string; entries?: TreeEntry[] }>();
+    loaderImpl = (rtype) =>
+      rtype === RESOURCE_TYPES.MMD
+        ? d.promise // 首代 MMD 加载挂起（connected 在途）
+        : Promise.resolve({ filesRoot: "/repo", entries: entriesByType[rtype] ?? [] });
     const el = document.createElement("app-tree") as unknown as AppTree;
-    // ADR-111：VRM 已合并进 EntityPlayer 的 variants，用 "resourcepack" 测试 pendingRoot
-    el.setAttribute("root", "resourcepack");
+    el.setAttribute("root", RESOURCE_TYPES.MMD);
     document.body.appendChild(el);
+    await sleep0(); // connected 已发起 MMD 加载并 await（挂起中）
+    // ADR-111：用 PACK 作第二类型测在途切换
+    el.setAttribute("root", RESOURCE_TYPES.PACK); // 在途切换：attributeChanged ++_gen 作废首代
+    d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] }); // 首代恢复 → gen 不匹配
     await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
-    expect(consoleSpy).toHaveBeenCalledWith("[Tree pendingRoot Error]", expect.anything());
-    expect(loader).toHaveBeenCalledTimes(1); // 补加载被失败中断
+    expect(loader.mock.calls.map((c) => c[0])).toEqual([RESOURCE_TYPES.MMD, RESOURCE_TYPES.PACK]);
+    expect(bindings.ClearScanCache).toHaveBeenCalledTimes(1);
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
-    expectSingleRow(el, "v1");
+    expectSingleRow(el, "v1"); // 最终渲染最新 root（PACK/resourcepack）
+  });
+
+  it("挂载期间 root 在途切换且补载失败 → 错误日志 + 节流 toast + 兜底渲染首代数据", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const d = deferred<{ filesRoot: string; entries?: TreeEntry[] }>();
+    loaderImpl = (rtype) =>
+      rtype === RESOURCE_TYPES.MMD
+        ? d.promise
+        : Promise.resolve({ filesRoot: "/repo", entries: entriesByType[rtype] ?? [] });
+    const el = document.createElement("app-tree") as unknown as AppTree;
+    el.setAttribute("root", RESOURCE_TYPES.MMD);
+    document.body.appendChild(el);
+    await sleep0(); // MMD 加载挂起
+    (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("cache boom"));
+    el.setAttribute("root", RESOURCE_TYPES.PACK); // 在途切换 → 补载
+    d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] });
+    await waitFor(() =>
+      consoleSpy.mock.calls.some((c) => c[0] === "[Tree pendingRoot Error]"),
+    );
+    expect(loader).toHaveBeenCalledTimes(1); // 补载被 ClearScanCache 失败中断，未再 _load
+    // 首代渲染已被 gen 作废（无错配帧），_entries 为首代数据 → 兜底渲染避免空白树
+    await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
+    expectSingleRow(el, "m1");
+    expect(
+      (emitSpy.mock.calls as Array<[string, unknown]>).some(([ev]) => ev === "toast:show"),
+    ).toBe(true);
     consoleSpy.mockRestore();
   });
 

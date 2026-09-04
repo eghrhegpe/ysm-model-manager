@@ -60,6 +60,21 @@ import { selectSingle, selectState } from "./data.ts";
 // 原 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/_vsResizeObserver 已收敛至
 // render.ts vsStates WeakMap（getVsRows/getVsMode 访问）；_treeAuthors 为死字段（无读取方）随删。
 
+// 挂载/补载失败 toast 节流（对齐 loader.ts 同款模式）：innerHTML 重建（类型切换）可高频
+// 触发挂载失败，5s 内只提示一次防刷屏。
+let _lastMountErrorToastAt = 0;
+const MOUNT_ERROR_TOAST_MIN_GAP = 5000;
+function toastThrottled(e: unknown, fallback: string): void {
+  const now = Date.now();
+  if (now - _lastMountErrorToastAt < MOUNT_ERROR_TOAST_MIN_GAP) return;
+  _lastMountErrorToastAt = now;
+  bus.emit("toast:show", {
+    msg: `❌ ${friendlyError(e, fallback)}`,
+    duration: TOAST_MS.long,
+    type: "error",
+  });
+}
+
 export class AppTree extends WebComponentBase {
   _root: ShadowRoot;
   _entries: TreeEntry[] = [];
@@ -84,8 +99,6 @@ export class AppTree extends WebComponentBase {
   private _ready = false;
   /** root 属性切换代际计数：快速切换时丢弃过期加载的渲染 */
   _gen = 0;
-  /** P2 修复（审核）：挂载期间 root 变更标记——_ready 前不吞掉变更，connected 补加载 */
-  private _pendingRoot = false;
 
   /** 响应式属性：root（资源类型根，Design.md §15 契约）+ subdir（ADR-094 子类型子目录） */
   static get observedAttributes(): string[] {
@@ -101,7 +114,11 @@ export class AppTree extends WebComponentBase {
   async connectedCallback(): Promise<void> {
     this._rootAttr = this.getAttribute("root") || "";
     this._subdirAttr = this.getAttribute("subdir") || "";
-    // P3 修复：挂载代际捕获——二次挂载时若 root 在途被切换（attributeChangedCallback 已 ++_gen），
+    // 挂载入口快照：与补载判定共用——root/subdir 在途切换 = 当前属性 ≠ 入口快照。
+    // 同步段内不可能有 attributeChanged（JS 单线程），此值即「挂载开始时的事实」。
+    const initRoot = this._rootAttr;
+    const initSubdir = this._subdirAttr;
+    // 挂载代际捕获：二次挂载时若 root 在途被切换（attributeChangedCallback 已 ++_gen），
     // 丢弃本代过期 _load 的渲染，防旧类型数据覆盖新树（绑定逻辑不受影响，容器不变）
     const gen = ++this._gen;
 
@@ -145,29 +162,39 @@ export class AppTree extends WebComponentBase {
       this._loadAuthorsAsync();
 
       await this._load();
-      // P3：挂载期间 root 已切换（attributeChangedCallback 在途 ++_gen）→ 丢弃本代渲染
+      // 挂载期间 root 在途切换（attributeChangedCallback 已 ++_gen）→ 丢弃本代渲染
       //（不 return：事件绑定/订阅与渲染解耦，容器不变，后续逻辑照常执行）
       if (gen === this._gen) this._renderTree();
-      // P2 修复（审核，挂载时序）：_ready 前 root 被切换时 attributeChangedCallback
-      // 只置 pending 标记不启动加载——此处补加载最新 root，防「树停在 spinner」
-      if (this._pendingRoot) {
-        this._pendingRoot = false;
-        const gen2 = ++this._gen;
-        try {
-          const App = await getApp();
-          if (App.ClearScanCache) await App.ClearScanCache(); // P2-3：root 切换清扫描缓存
-          await this._load();
-          if (gen2 === this._gen) this._renderTree();
-        } catch (e) {
-          console.error("[Tree pendingRoot Error]", e);
-        }
+      // 时序收敛（审计 c）：root/subdir 在挂载期间切换 → 快照差量触发补载最新值，
+      // 取代原 _pendingRoot 事后纠错（原实现 attributeChanged 未 ready 分支不 ++_gen，
+      // 首代渲染不被丢弃 → 需 pendingRoot 补载纠错 + 未连接 setAttribute 冗余双加载）。
+      // 首代 _load 已用最新 _rootAttr 完成 → 渲染无错配；仅快照差时补载一次。
+      if (this._rootAttr !== initRoot || this._subdirAttr !== initSubdir) {
+        await this._reloadAfterMountSwitch();
       }
     } catch (e) {
       console.error("[Tree Init Error]", e);
       const tree = this._root?.getElementById("tree");
       if (tree) tree.innerHTML = t("tree.treeLoadFailed");
+      toastThrottled(e, t("tree.treeLoadFailed"));
     } finally {
       this._ready = true;
+    }
+  }
+
+  /** 挂载期间 root/subdir 切换后的补载：清扫描缓存 → 重载最新值 → 守卫渲染；失败节流 toast + 兜底渲染 */
+  private async _reloadAfterMountSwitch(): Promise<void> {
+    const gen2 = ++this._gen;
+    try {
+      const App = await getApp();
+      if (App.ClearScanCache) await App.ClearScanCache(); // root 切换清扫描缓存
+      await this._load();
+      if (gen2 === this._gen) this._renderTree();
+    } catch (e) {
+      console.error("[Tree pendingRoot Error]", e);
+      // 补载失败：_entries 保留首代数据 → 兜底渲染避免空白树（gen 未被再次作废时）
+      if (gen2 === this._gen && this._entries.length) this._renderTree();
+      toastThrottled(e, t("tree.treeLoadFailed"));
     }
   }
 
@@ -177,7 +204,9 @@ export class AppTree extends WebComponentBase {
     if (name === "root") this._rootAttr = newVal || "";
     if (name === "subdir") this._subdirAttr = newVal || "";
     if (!this._ready || !this.isConnected) {
-      this._pendingRoot = true;
+      // 挂载未完成：递增代际作废在途首代 _load 的迟到渲染（否则首代渲染「新 rootAttr +
+      // 旧 entries」错配帧上屏）；connected 末尾用入口快照差量补载，无冗余双加载。
+      ++this._gen;
       return;
     }
     const gen = ++this._gen;

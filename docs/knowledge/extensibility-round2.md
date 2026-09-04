@@ -31,6 +31,9 @@ affected: false
 status: active
 supersedes: extensibility-index
 last_verified: 2026-08-27
+invariant_anchors:
+  - go/types/extensions.go|ShouldHashExt
+  - go/types/resource.go|ResourceType
 ---
 
 # 拓展点 / 扩展入口 探索报告（Round 2）

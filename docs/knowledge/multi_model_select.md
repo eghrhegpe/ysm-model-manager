@@ -81,6 +81,10 @@ use_when:
   - 多 entry
   - ADR-132
 status: active
+invariant_anchors:
+  - frontend/src/preview-3d/menu/multi-model.ts|multiModelSelectNode
+  - frontend/src/views/app-preview/mmd-controls.ts|MmdBottomNavCtx
+  - frontend/src/preview-3d/adapters/pack-model-adapter.ts|buildPackScene
 ---
 
 # 多模型选择菜单原语 multiModelSelectNode

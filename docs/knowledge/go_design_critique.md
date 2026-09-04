@@ -121,7 +121,7 @@ quick_risk_lines:
 invariant_anchors:
   - go/importer/detect_tail.go|le16
   - go/litematic/nbt.go|probeNbtDepth
-  - internal/app/app_download.go|processForEpoch
+  - internal/app/app_download.go|downloadFileWithQueue
   - go/instance/instance.go|buildSyncItemsKey
 ---
 

@@ -38,6 +38,9 @@ pitfalls:
   - 改 Promise.all 并行结构漏写 () → 域级检查静默不跑（8/17 起 13 项失效实证）
   - push 被拒直接 --no-verify → 绕过不留审计；应修 FAIL 项或 git pull 整合
 status: active
+invariant_anchors:
+  - scripts/pre-push-gate.ts|ALL_STATIC_TOOLS
+  - scripts/_lib/gate-config.ts|ALL_STATIC_TOOLS
 ---
 
 # 推送前门禁 pre-push-gate

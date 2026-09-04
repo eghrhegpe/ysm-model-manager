@@ -44,6 +44,9 @@ use_when:
   - 贴图错位
   - RawYsmModel
 status: active
+invariant_anchors:
+  - frontend/src/preview-3d/decoder/wasm-decode.ts|BedrockGeometry
+  - frontend/src/preview-3d/decoder/geometry.ts|BedrockBone
 ---
 # YSM 烘焙与几何反推
 

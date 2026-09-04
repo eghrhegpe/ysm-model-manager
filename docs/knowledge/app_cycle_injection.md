@@ -39,6 +39,9 @@ use_when:
   - 评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct
   - 想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零
 status: active
+invariant_anchors:
+  - internal/app/app_download.go|CancelQueue
+  - internal/app/app.go|DownloadFromGitHub
 ---
 
 # App↔子组件对象级环打破范式（回调注入）

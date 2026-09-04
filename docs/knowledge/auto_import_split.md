@@ -53,6 +53,10 @@ quick_intents:
   - "CI/门禁：strict 模式阻断有缺失的推送"
   - "排查拆分后 parity 是否对齐"
 status: active
+invariant_anchors:
+  - scripts/auto-import.ts|applyFixes
+  - scripts/auto-import-lexer.ts|GLOBALS
+  - scripts/auto-import-symbols.ts|collectMethods
 ---
 
 # auto-import 拆分与缺失 import 检测

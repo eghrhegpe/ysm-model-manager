@@ -74,6 +74,8 @@ quick_intents:
   - "CLI 模式 FBX 处理流程"
   - "排查 FBX 转换失败原因"
 status: active
+invariant_anchors:
+  - go/cli/appservice.go|AppService
 ---
 # FBX CLI 处理管线 fbx-cli-pipeline
 

@@ -1597,6 +1597,8 @@ quick_intents:
   - 测试覆盖缺口定位
 status: snapshot
 
+invariant_anchors:
+  - frontend/src/backend/idb.ts|__resetDBForTest
 ---
 
 # 前端 TS 整包审计

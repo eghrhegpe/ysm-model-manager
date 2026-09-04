@@ -30,6 +30,8 @@ pitfalls:
   - 脚本无 CI 挂载（情报型）→ 漏检不阻断提交；重要修复应在 commit 后主动跑一次确认归零
 status: archived
 affected: false
+invariant_anchors:
+  - scripts/drift-scan.ts|walkFiles
 ---
 
 # drift-scan（双轨漂移检测）

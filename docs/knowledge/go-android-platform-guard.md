@@ -104,6 +104,10 @@ quick_groups:
   - 后端桥接与数据存储
 status: active
 
+invariant_anchors:
+  - internal/app/app_files.go|CopyModelFile
+  - internal/app/app_scan.go|CheckFileExists
+  - internal/app/app_config.go|CheckUpdate
 ---
 # Android 平台守卫（Go 侧）
 

@@ -75,6 +75,10 @@ related_adrs:
 perf:
   - cpu-bound
 status: active
+invariant_anchors:
+  - frontend/src/preview-3d/ysm-animation-player.ts|AnimationClip
+  - frontend/src/preview-3d/adapters/ysm-adapter.ts|AnimationClip
+  - frontend/src/utils/animation/molang.ts|compileMolang
 ---
 
 # YSM (Bedrock) 动画管线

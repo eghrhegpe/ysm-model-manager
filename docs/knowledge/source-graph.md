@@ -48,6 +48,8 @@ quick_intents:
   - "扫描源码依赖图 → scanSourceGraph"
   - "提取符号 → gen-knowledge-symbols"
 status: active
+invariant_anchors:
+  - scripts/_lib/source-graph.ts|countLines
 ---
 # 源码符号提取共享层 source-graph.ts
 

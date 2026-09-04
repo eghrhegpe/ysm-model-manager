@@ -25,6 +25,8 @@ quick_intents:
   - "对账拓展点落地状态"
 status: superseded
 last_verified: 2026-09-01
+invariant_anchors:
+  - go/types/extensions.go|ShouldHashExt
 ---
 
 <!-- 本文件为一次性发掘成果，由 AtomCode 于 2026-08-15 派发 6 个 explore 子代理汇总而成。非自动生成；如需更新请新增批次。 -->

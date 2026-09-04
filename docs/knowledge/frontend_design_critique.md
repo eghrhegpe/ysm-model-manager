@@ -149,6 +149,10 @@ quick_risk_lines:
   - 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（存量纯 rgba(124,131,255)/#7c83ff 已全收编；现存 #7c83ff 均为 var(--accent,#7c83ff) fallback 兜底，合规）
   - 页面切换必须 tab-panel 常驻 + active 切换，禁止整 DOM innerHTML 重建
   - 帧循环内禁止 new 对象分配，prealloc 复用是 3D 性能铁律（perception 是唯一站规则外的子系统）
+invariant_anchors:
+  - frontend/src/views/app-content/index.ts|appContentStyle
+  - frontend/src/views/app-content/init-pages.ts|createDedupSession
+  - frontend/src/views/app-content/diagnostics/dedup.ts|createDedupSession
 ---
 
 # 前端设计锐评

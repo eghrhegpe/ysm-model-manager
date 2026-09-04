@@ -42,6 +42,10 @@ quick_intents:
   - 并发隔离提交（多 AI 会话共享 checkout）
   - 排查门禁失败原因（看 FAIL 块）
 status: active
+invariant_anchors:
+  - scripts/commit-with-check.ts|commitWithTempIndex
+  - scripts/_lib/commit-temp-index.ts|CommitTempIndexOptions
+  - scripts/_lib/gen-cmds.ts|GEN_CMDS
 ---
 
 # 提交脚本 commit-with-check

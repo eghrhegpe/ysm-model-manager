@@ -90,6 +90,9 @@ quick_intents:
   - "json.Marshal 吞错全仓扫描"
 status: archived
 affected: false
+invariant_anchors:
+  - internal/app/cli_bridge.go|ExecuteCLI
+  - frontend/src/services/cli-bridge.ts|ALLOWED_CLI_COMMANDS
 ---
 # CLI 质量摸排 Checklist
 

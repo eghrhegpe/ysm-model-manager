@@ -44,6 +44,8 @@ quick_intents:
   - "排查 e2e flaky / 假绿 / 残留 waitForTimeout"
   - "补测高交互路径（sync-manager/recycle-bin/import-queue/community）"
   - "治理测试耦合私有字段（孤儿守卫）"
+invariant_anchors:
+  - tests/test_bus_contract.ts|runOnFixture
 ---
 
 # 前端测试基建审计

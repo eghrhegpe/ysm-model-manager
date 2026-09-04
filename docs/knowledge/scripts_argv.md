@@ -31,6 +31,8 @@ quick_intents:
   - "修复脚本卫生 WARN"
   - "编写新脚本 → 直接 import parseArgs"
 status: active
+invariant_anchors:
+  - scripts/_lib/parse-args.ts|parseArgs
 ---
 
 # 脚本 argv 规范与已知豁免 parse-args.ts

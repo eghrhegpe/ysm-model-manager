@@ -92,6 +92,10 @@ use_when:
   - YSM maid 同台
   - sessionId
 status: active
+invariant_anchors:
+  - frontend/src/preview-3d/adapters/schema-registry.ts|getSchema
+  - frontend/src/views/app-preview/ysm-controls.ts|buildYsmModelSchema
+  - frontend/src/preview-3d/adapters/ysm-adapter.ts|buildYsmModelSchema
 ---
 
 # preview-menu-session-key

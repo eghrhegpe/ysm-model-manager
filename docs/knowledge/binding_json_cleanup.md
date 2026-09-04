@@ -92,6 +92,10 @@ quick_intents:
   - "前端 JSON.parse + as 断言清理 → 改 try/catch"
   - "铲债进度追踪 → 按 P0/P1/P2 档位核状态"
 status: active
+invariant_anchors:
+  - internal/app/resource_bindings.go|DeleteResourcePack
+  - internal/app/app_sync.go|DetectConflicts
+  - internal/app/app_install_instance.go|ClearInstanceResources
 ---
 
 # string-JSON 绑定铲债清单

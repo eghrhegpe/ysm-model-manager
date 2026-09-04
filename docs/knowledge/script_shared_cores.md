@@ -38,6 +38,9 @@ quick_intents:
   - "变更行提取"
   - "建议区块拼装"
 status: active
+invariant_anchors:
+  - scripts/_lib/diff-coverage-core.ts|addLinesFromDiff
+  - scripts/_lib/cycles.ts|findCycles
 ---
 # scripts 共享核演进（diff-coverage-core + cycles）
 

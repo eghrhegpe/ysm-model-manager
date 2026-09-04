@@ -33,6 +33,8 @@ quick_intents:
   - 查看重复对的详细位置（行号 + 片段）
   - 判定「新增重复对」是真实新增还是文件搬迁/拆分
 status: active
+invariant_anchors:
+  - scripts/jscpd-go.ts|JSCPD
 ---
 
 # Go 端 jscpd 重复检测脚本

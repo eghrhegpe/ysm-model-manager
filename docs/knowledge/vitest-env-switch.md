@@ -26,6 +26,8 @@ use_when:
   - 测试切换
 affected: false
 status: active
+invariant_anchors:
+  - frontend/vitest.config.ts|happy-dom
 ---
 
 # Vitest 环境切换规则

@@ -3,19 +3,13 @@
 // 不处理数据加载、不绑事件、不调用 Go 桥接。
 // 依赖 DAG：index → renderer ← events（events 点击触发 render）
 
-import { shortLabelOf } from "../../utils/resource/short-label.ts";
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
-import {
-  containerHTML,
-  statusTabHTML,
-  emptyHTML,
-  itemHTML,
-  syncDirRowHTML,
-} from "./tpl.ts";
-import type { SyncItem } from "./tpl.ts";
-import { applyFilter, tabStatus } from "./store.ts";
+import { shortLabelOf } from "../../utils/resource/short-label.ts";
 import type { SyncManagerSelf } from "./index.ts";
+import { applyFilter, tabStatus } from "./store.ts";
+import type { SyncItem } from "./tpl.ts";
+import { containerHTML, emptyHTML, itemHTML, statusTabHTML, syncDirRowHTML } from "./tpl.ts";
 
 export type SyncRenderSelf = SyncManagerSelf;
 
@@ -49,7 +43,12 @@ export async function render(self: SyncRenderSelf): Promise<void> {
   const typeCounts: Record<string, TypeCounts> = {};
   for (const tc of self._typeConfig) {
     typeCounts[tc.id] = {
-      synced: 0, missing: 0, disabled: 0, optional: 0, legacy: 0, total: 0,
+      synced: 0,
+      missing: 0,
+      disabled: 0,
+      optional: 0,
+      legacy: 0,
+      total: 0,
     };
   }
   let globalCounts: TypeCounts;
@@ -60,7 +59,10 @@ export async function render(self: SyncRenderSelf): Promise<void> {
     const countNode = (item: SyncItem): void => {
       const c = typeCounts[item.type];
       const st = tabStatus(item);
-      if (c) { (c as unknown as Record<string, number>)[st]++; c.total++; }
+      if (c) {
+        (c as unknown as Record<string, number>)[st]++;
+        c.total++;
+      }
       (globalCounts as unknown as Record<string, number>)[st]++;
       item.children?.forEach(countNode);
     };
@@ -69,10 +71,14 @@ export async function render(self: SyncRenderSelf): Promise<void> {
 
   // — 状态筛选标签 —
   const curCounts: TypeCounts = self._selectedType
-    ? (typeCounts[self._selectedType] || globalCounts)
+    ? typeCounts[self._selectedType] || globalCounts
     : globalCounts;
   const statusDefs: Array<[string, string, number]> = [
-    ["all", "📊 " + t("syncManager.status.all"), self._selectedType ? curCounts.total || 0 : self._allItems.length],
+    [
+      "all",
+      "📊 " + t("syncManager.status.all"),
+      self._selectedType ? curCounts.total || 0 : self._allItems.length,
+    ],
     ["synced", "✅ " + t("syncManager.status.synced"), curCounts.synced || 0],
     ["missing", "⬇️ " + t("syncManager.status.missing"), curCounts.missing || 0],
     ["disabled", "⛔ " + t("syncManager.status.disabled"), curCounts.disabled || 0],
@@ -96,9 +102,7 @@ export async function render(self: SyncRenderSelf): Promise<void> {
     esc(curLabel) +
     "</span>" +
     statusDefs
-      .map(([id, label, count]) =>
-        statusTabHTML(id, label, count, self._statusFilter === id),
-      )
+      .map(([id, label, count]) => statusTabHTML(id, label, count, self._statusFilter === id))
       .join("");
 
   // — 摘要栏（实际扫描目录可见性）—
@@ -113,7 +117,8 @@ export async function render(self: SyncRenderSelf): Promise<void> {
 function renderScanDirs(self: SyncRenderSelf): void {
   const summaryEl = self.querySelector(".sm-summary");
   if (!summaryEl) return;
-  const dirs = self._selectedType && self._scanDirs ? self._scanDirs[self._selectedType] : undefined;
+  const dirs =
+    self._selectedType && self._scanDirs ? self._scanDirs[self._selectedType] : undefined;
   if (!dirs || (!dirs.global && !dirs.instance)) {
     summaryEl.innerHTML = "";
     return;

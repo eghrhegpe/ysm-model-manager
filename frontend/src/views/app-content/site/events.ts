@@ -1,22 +1,23 @@
 // ===== 站点视图浏览态事件绑定（从 site-view.ts 拆出，ADR-034 方向①）=====
+
+import { getApp } from "../../../backend/app.ts";
+import type { bus } from "../../../bus.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { dbg } from "../../../utils/debug/debug.ts";
+import { getSiteIcon, getTagIconFromRole } from "../../../utils/icon/workshop-icons.ts";
+import type { LocalCreatorLike } from "../site-view.ts";
+import type { BrowseMode, BrowseModeRef } from "../workshop-browse-mode.ts";
 import {
+  type CreatorIdentityInput,
   getCreatorIdentity,
   getTagFromRole,
-  parseDescTags,
-  loadFavs,
   isFaved,
+  loadFavs,
+  parseDescTags,
   toggleFav,
-  type CreatorIdentityInput,
 } from "../workshop-data.ts";
-import { getSiteIcon, getTagIconFromRole } from "../../../utils/icon/workshop-icons.ts";
-import { createCrCard, type CrCardCtx } from "./render.ts";
-import { getApp } from "../../../backend/app.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { type BrowseMode, type BrowseModeRef } from "../workshop-browse-mode.ts";
-import type { SiteViewState, CleanupFn } from "./types.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
-import type { bus } from "../../../bus.ts";
+import { type CrCardCtx, createCrCard } from "./render.ts";
+import type { CleanupFn, SiteViewState } from "./types.ts";
 
 // storage 监听器模块私有变量（防泄漏，bindBrowseEvents 返回的 cleanup 会清）
 let _storageSyncFn: ((e: StorageEvent) => void) | null = null;
@@ -49,7 +50,7 @@ function cmCrBuildDetailHtml(
         esc(cr.name) +
         '" onerror="this.outerHTML=\'' +
         detailFallbackDiv.replace(/"/g, "&quot;") +
-        '\'">'
+        "'\">"
       : detailFallbackDiv) +
     "</div>" +
     '<div class="cr-detail-fill">' +
@@ -98,9 +99,7 @@ function cmCrBuildDetailHtml(
     "</span>" +
     "</div>" +
     '<div class="cr-detail-desc">' +
-    descTags
-      .map((tag) => '<span class="cr-desc-tag">#' + esc(tag) + "</span>")
-      .join("") +
+    descTags.map((tag) => '<span class="cr-desc-tag">#' + esc(tag) + "</span>").join("") +
     (!descTags.length ? esc(cr.desc) : "") +
     "</div>" +
     '<div class="cr-detail-row cr-local-card">' +
@@ -191,10 +190,7 @@ function cmCrCreateDetailOverlay(
 // cmBb* 包级函数：bindBrowseEvents 子函数（本地视图绑定）
 // ============================================================
 
-function cmBbBindEmptyLocalBtn(
-  searchResults: HTMLElement,
-  busRef: typeof bus,
-): void {
+function cmBbBindEmptyLocalBtn(searchResults: HTMLElement, busRef: typeof bus): void {
   const emptyLocalBtn = searchResults.querySelector("[data-local-empty]");
   if (emptyLocalBtn) {
     emptyLocalBtn.addEventListener("click", () => {
@@ -249,10 +245,7 @@ function cmBbBindModeToggle(
   });
 }
 
-function cmBbBindStarBtns(
-  searchResults: HTMLElement,
-  busRef: typeof bus,
-): void {
+function cmBbBindStarBtns(searchResults: HTMLElement, busRef: typeof bus): void {
   searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -296,10 +289,7 @@ function cmBbBindSearchBtns(
   });
 }
 
-function cmBbBindLocalBadges(
-  searchResults: HTMLElement,
-  busRef: typeof bus,
-): void {
+function cmBbBindLocalBadges(searchResults: HTMLElement, busRef: typeof bus): void {
   searchResults.querySelectorAll(".cr-card-local-jump").forEach((el) => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -309,10 +299,7 @@ function cmBbBindLocalBadges(
   });
 }
 
-function cmBbBindDebugAvatar(
-  searchResults: HTMLElement,
-  getDisposed: () => boolean,
-): void {
+function cmBbBindDebugAvatar(searchResults: HTMLElement, getDisposed: () => boolean): void {
   searchResults.querySelectorAll("[data-debug-avatar]").forEach((img) => {
     img.addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -432,9 +419,7 @@ function cmSeSyncOverlayState(
   authorCountMap: Record<string, number>,
 ): void {
   const root = searchResults.getRootNode() as Document | ShadowRoot;
-  const openOverlay = root.querySelector(
-    ".cr-detail-overlay",
-  ) as HTMLDivElement | null;
+  const openOverlay = root.querySelector(".cr-detail-overlay") as HTMLDivElement | null;
   if (!openOverlay) return;
   // 占位：已打开浮层的跨标签刷新（当前由本地子事件直接处理，保留分派槽）
   void esc;
@@ -494,16 +479,31 @@ function cmSeMakeSyncFn(
  */
 export function bindBrowseEvents(state: SiteViewState, refreshView: () => void): CleanupFn {
   const {
-    esc, searchResults, allCreators, wsEditModeRef, avatarCache,
-    site, creators, authorCountMap,
-    fillSearch, openUrl, bus: busRef, ctx,
+    esc,
+    searchResults,
+    allCreators,
+    wsEditModeRef,
+    avatarCache,
+    site,
+    creators,
+    authorCountMap,
+    fillSearch,
+    openUrl,
+    bus: busRef,
+    ctx,
   } = state;
 
   let disposed = false;
   const getDisposed = () => disposed;
 
   const cardCtx: CrCardCtx = {
-    esc, isFaved, authorCountMap, avatarCache, creators, allCreators, site,
+    esc,
+    isFaved,
+    authorCountMap,
+    avatarCache,
+    creators,
+    allCreators,
+    site,
   };
 
   cmBbBindEmptyLocalBtn(searchResults, busRef);
@@ -515,8 +515,15 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
   cmBbBindLocalBadges(searchResults, busRef);
   cmBbBindDebugAvatar(searchResults, getDisposed);
   cmBbBindCardClicks(
-    searchResults, creators, esc, avatarCache, authorCountMap,
-    site, openUrl, fillSearch, busRef,
+    searchResults,
+    creators,
+    esc,
+    avatarCache,
+    authorCountMap,
+    site,
+    openUrl,
+    fillSearch,
+    busRef,
   );
   cmBbBindKeyboardNav(searchResults);
 
@@ -524,8 +531,15 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
     window.removeEventListener("storage", _storageSyncFn);
   }
   _storageSyncFn = cmSeMakeSyncFn(
-    searchResults, esc, avatarCache, authorCountMap,
-    creators, wsEditModeRef, cardCtx, ctx, refreshView,
+    searchResults,
+    esc,
+    avatarCache,
+    authorCountMap,
+    creators,
+    wsEditModeRef,
+    cardCtx,
+    ctx,
+    refreshView,
   );
   window.addEventListener("storage", _storageSyncFn);
 

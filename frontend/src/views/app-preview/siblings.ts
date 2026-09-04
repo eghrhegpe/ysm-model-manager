@@ -4,10 +4,10 @@
 // 不该被 preview-3d/adapters 反向 import —— 那会与 adapter → controls 形成循环依赖环）。
 import { getApp } from "../../backend/app.ts";
 import {
-  RESOURCE_TYPES,
-  RESOURCE_TYPE_LABELS,
   extOf,
   previewCandidateExtsOf,
+  RESOURCE_TYPE_LABELS,
+  RESOURCE_TYPES,
 } from "../../utils/resource/types.ts";
 
 /**

@@ -1,16 +1,16 @@
 // ===== GitHub 页初始化（为 app-content/index.ts 减负，ADR-040）=====
 import { getApp } from "../../backend/app.ts";
+import { t } from "../../core/i18n/t.ts";
+import { tryFetchModels } from "../../features/community/data.ts";
+import { bindRepoEvents } from "../../features/community/events.ts";
+import type { WorkshopModel } from "../../features/community/render.ts";
+import { countMissing, renderRepoHeaderHTML } from "../../features/community/render.ts";
+import { stagger } from "../../utils/animation/stagger.ts";
 import { swallowError } from "../../utils/core/async.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
-import { countMissing, renderRepoHeaderHTML } from "../../features/community/render.ts";
-import { bindRepoEvents } from "../../features/community/events.ts";
-import { tryFetchModels } from "../../features/community/data.ts";
-import { t } from "../../core/i18n/t.ts";
-import { esc as escUtil } from "../../utils/dom/html.ts";
-import type { WorkshopModel } from "../../features/community/render.ts";
 import { stripBanSuffix } from "../../utils/dom/display.ts";
+import { esc as escUtil } from "../../utils/dom/html.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { AppContentHost } from "./init-workshop.ts";
 import type { RepoCacheEntry } from "./state.ts";
 
@@ -49,14 +49,15 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
   const sourceInfo = ctx.sourceInfo;
   if (grid) {
     grid.innerHTML =
-      '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' + t("downloads.loading") + "</div>";
+      '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
+      t("downloads.loading") +
+      "</div>";
   }
   try {
     const App = await getApp();
     const repos = await App.LoadGitHubRepos();
     const ghCreators = repos || [];
-    if (sourceInfo)
-      sourceInfo.textContent = t("downloads.repoCountDesc", { n: ghCreators.length });
+    if (sourceInfo) sourceInfo.textContent = t("downloads.repoCountDesc", { n: ghCreators.length });
     if (!ghCreators.length) {
       if (grid) {
         grid.innerHTML =
@@ -70,7 +71,9 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
       grid.innerHTML = ghCreators
         .map(
           (cr, idx) =>
-            '<div class="gh-card gh-repo-card" style="animation-delay:' + stagger(idx, 30, 300) + 'ms" data-repo="' +
+            '<div class="gh-card gh-repo-card" style="animation-delay:' +
+            stagger(idx, 30, 300) +
+            'ms" data-repo="' +
             escUtil(cr.name) +
             '">' +
             '<div class="gh-card-body">' +
@@ -86,9 +89,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
       // 点击仓库
       grid.querySelectorAll(".gh-repo-card").forEach((card) => {
         card.addEventListener("click", () => {
-          grid
-            .querySelectorAll(".gh-card")
-            .forEach((c) => c.classList.remove("active"));
+          grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
           card.classList.add("active");
           const repo = (card as HTMLElement).dataset.repo || "";
           ctx.showRepo(repo);
@@ -131,29 +132,34 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   }
   let mirror = "";
   try {
-    const { LoadAppConfig, ScanModelEntriesWithLabel, GetRepoRoot } =
-      await getApp();
+    const { LoadAppConfig, ScanModelEntriesWithLabel, GetRepoRoot } = await getApp();
     const cfg = await LoadAppConfig();
     mirror = cfg.mirror || "";
     const filesRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     const localMap = new Map<string, string>();
     if (filesRoot) {
-      const entries = (await ScanModelEntriesWithLabel(filesRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
+      const entries =
+        (await ScanModelEntriesWithLabel(filesRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) ||
+        [];
       entries.forEach((e) => {
         const n = stripBanSuffix(e.Name || "");
         localMap.set(n, e.Hash || "");
       });
     }
     let fetchDone = false;
-    const result = await tryFetchModels(repo, (mirror || "") as "" | "jsdelivr" | "githubapi", (_pct, label) => {
-      if (fetchDone || ctx.getCurrentRepo() !== repo) return;
-      if (resultsBody) {
-        resultsBody.innerHTML =
-          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
-          (label || t("common.loading")) +
-          "</div>";
-      }
-    });
+    const result = await tryFetchModels(
+      repo,
+      (mirror || "") as "" | "jsdelivr" | "githubapi",
+      (_pct, label) => {
+        if (fetchDone || ctx.getCurrentRepo() !== repo) return;
+        if (resultsBody) {
+          resultsBody.innerHTML =
+            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
+            (label || t("common.loading")) +
+            "</div>";
+        }
+      },
+    );
     fetchDone = true;
     if (result && result.models) {
       repoModelCache.set(repo, {
@@ -200,9 +206,9 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   const openBtn = resultsBody?.querySelector("#gh-open-repo, #gh-open-repo-dl");
   if (openBtn)
     openBtn.addEventListener("click", () => {
-      swallowError(getApp().then(({ OpenInBrowser }) =>
-        OpenInBrowser("https://github.com/" + repo),
-      ));
+      swallowError(
+        getApp().then(({ OpenInBrowser }) => OpenInBrowser("https://github.com/" + repo)),
+      );
     });
 }
 
@@ -220,8 +226,7 @@ async function githubRenderModels(
   try {
     const resultsBody = ctx.resultsBody;
     // 同上：下载 URL 统一 raw，镜像优先级由 Go 端 mirror 配置统一重排
-    const dlPrefix =
-      "https://raw.githubusercontent.com/" + repo + "/main/";
+    const dlPrefix = "https://raw.githubusercontent.com/" + repo + "/main/";
     const sourceLabel =
       source === "raw"
         ? '<span class="link-badge link-badge-raw">raw</span>'

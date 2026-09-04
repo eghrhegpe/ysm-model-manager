@@ -4,11 +4,11 @@
 // 清理/作废不设独立派发：mount-preview-core 的共享 cleanupPreview/invalidatePreview
 // 由 index.ts 经 vrm/mmd 等 cleanup 派发全量覆盖 _handles，FBX 复用同一单例即可。
 
-import { mount3D, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makeFbxAdapter, type FbxDataPort } from "../../preview-3d/adapters/fbx-adapter.ts";
-import { withPreviewExtras, registerReRoute } from "./preview-library.ts";
+import { type FbxDataPort, makeFbxAdapter } from "../../preview-3d/adapters/fbx-adapter.ts";
+import { type Mount3DOptions, mount3D } from "../../preview-3d/adapters/mount-preview-core.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { readFileBytes, addOpLog } from "./view-shell.ts";
+import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
+import { addOpLog, readFileBytes } from "./view-shell.ts";
 
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中 FBX 时派发到此）
 registerReRoute(RESOURCE_TYPES.FBX, (path) => createFbx3D(path));

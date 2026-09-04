@@ -11,13 +11,26 @@
 // opts.siblings（同目录兄弟，mount 时一次性过滤），点击即 switchTo 复用外壳重建，
 // 全程轻量获取文件——不再全量扫描各仓库、不再按扩展名分类贴标签。
 
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { t } from "../../core/i18n/t.ts";
 import { getApp } from "../../backend/app.ts";
-import { RESOURCE_TYPE_LABELS, resolvePreviewKey, resolvePreviewKeyByExt, resolvePreviewKeyToRtype, getPreviewableTypeTabs, extOf, resolveDefaultPreviewKey, isContainerExt } from "../../utils/resource/types.ts";
+import { t } from "../../core/i18n/t.ts";
 import type { Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { switchPreview, hasActivePreview, cleanupPreview } from "../../preview-3d/adapters/mount-preview-core.ts";
+import {
+  cleanupPreview,
+  hasActivePreview,
+  switchPreview,
+} from "../../preview-3d/adapters/mount-preview-core.ts";
 import { sceneRegistry } from "../../preview-3d/adapters/scene-registry.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import {
+  extOf,
+  getPreviewableTypeTabs,
+  isContainerExt,
+  RESOURCE_TYPE_LABELS,
+  resolveDefaultPreviewKey,
+  resolvePreviewKey,
+  resolvePreviewKeyByExt,
+  resolvePreviewKeyToRtype,
+} from "../../utils/resource/types.ts";
 
 /** 跨类型换角色注册表：各 createXxx3D 模块加载时注册，路由侧不反向 import 包装器（破循环） */
 const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};
@@ -59,7 +72,10 @@ export interface OpenModel3DOptions {
  *
  * cooperate=true 且有活跃会话时：改走同台追加（keepInScene），不清理旧场景。
  */
-export async function openModel3DFullscreen(path: string, options?: OpenModel3DOptions): Promise<void> {
+export async function openModel3DFullscreen(
+  path: string,
+  options?: OpenModel3DOptions,
+): Promise<void> {
   if (!path) return;
   const siblings = options?.siblings;
   // 方案 A：cooperate=false 且有活跃会话时，先清理旧的活跃全屏层（释放旧内容层 +
@@ -114,7 +130,9 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
   //    （EntityPlayer→mmd，与快捷 FAB 硬编码 createMmd3D 行为对齐）
   const opener =
     _openers[routeKey] ??
-    (routeKey === "" || routeKey === "other" ? _openers[resolvePreviewKeyByExt(path)] : undefined) ??
+    (routeKey === "" || routeKey === "other"
+      ? _openers[resolvePreviewKeyByExt(path)]
+      : undefined) ??
     (isContainerExt(extOf(path)) ? _openers[resolveDefaultPreviewKey(rtype)] : undefined);
   if (opener) {
     if (!cooperate && hasActivePreview()) {
@@ -127,12 +145,26 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
   // 失败诊断（2026-08-28 加固）：toast + 环形日志都带探测现场，不再是无因「暂不支持」
   const ext = extOf(path) || "(无扩展名)";
   const reason = `探测类型=${rtype || "(空)"} 路由key=${routeKey || "(空)"} 扩展名=${ext}`;
-  bus.emit("toast:show", { msg: `3D 预览暂不支持该类型（${reason}）`, duration: TOAST_MS.normal, type: "warn" });
+  bus.emit("toast:show", {
+    msg: `3D 预览暂不支持该类型（${reason}）`,
+    duration: TOAST_MS.normal,
+    type: "warn",
+  });
   // 环形日志面板留痕（AGENTS.md：排查往环形日志塞日志而非死盯 console）；失败静默不阻断
   try {
     const { AddOpLog } = await getApp();
-    await AddOpLog?.("preview-3d-route", path.split(/[/\\]/).pop() || path, path, "", 0, "fail", reason);
-  } catch { /* 日志失败不阻断 */ }
+    await AddOpLog?.(
+      "preview-3d-route",
+      path.split(/[/\\]/).pop() || path,
+      path,
+      "",
+      0,
+      "fail",
+      reason,
+    );
+  } catch {
+    /* 日志失败不阻断 */
+  }
 }
 
 interface PreviewExtras extends Mount3DOptions {
@@ -161,7 +193,9 @@ export async function scanModelsByType(rtype: string, subtype = ""): Promise<str
     const root = await GetRepoRoot(realRtype);
     if (!root) return [];
     const label = RESOURCE_TYPE_LABELS[realRtype] || realRtype;
-    const raw = (await ScanModelEntriesFiltered(root, realRtype, subtype, label)) as Array<{ Path?: string }>;
+    const raw = (await ScanModelEntriesFiltered(root, realRtype, subtype, label)) as Array<{
+      Path?: string;
+    }>;
     return (raw || []).map((e) => e.Path).filter((p): p is string => !!p);
   } catch {
     return [];
@@ -174,7 +208,10 @@ export function withPreviewExtras<T extends Mount3DOptions>(opts: T): T & Previe
     // keepInScene → cooperate（openModel3DFullscreen 有活跃会话时走 switchPreview
     // 主门按类型路由同台追加，ADR-093 T4）：跨类型 ➕ 复用此入口，不再直接不给
     switchExternal: (p: string, s?: string[], options?: { keepInScene?: boolean }) =>
-      openModel3DFullscreen(p, { ...(s != null ? { siblings: s } : {}), cooperate: options?.keepInScene === true }),
+      openModel3DFullscreen(p, {
+        ...(s != null ? { siblings: s } : {}),
+        cooperate: options?.keepInScene === true,
+      }),
     getModelsByType: scanModelsByType,
     // ADR-111 收口：类型 tab 统一从 resource_types.json 派生（getPreviewableTypeTabs），
     // 不再由 opener 注册副作用（Object.keys(_openers)）派生——后者混用 preview key 与
@@ -186,4 +223,3 @@ export function withPreviewExtras<T extends Mount3DOptions>(opts: T): T & Previe
 /** 打开空场景 3D 全屏预览（无需 path）——供无选中模型时 FAB 降级入口。
  *  注意：不在此 re-export（empty-3d import 本模块的 withPreviewExtras，re-export 会构成
  *  循环依赖，违反本模块叶子不变量——调用方（app-nav）直接 import ./empty-3d.ts）。 */
-

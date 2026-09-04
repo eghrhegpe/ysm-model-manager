@@ -1,20 +1,17 @@
 // ===== 树渲染层（虚拟滚动版）=====
 import { t } from "../../core/i18n/t.ts";
-import { hl } from "../../utils/dom/html.ts";
-import { formatBytes, fmtDate } from "../../utils/dom/format.ts";
-import { fileIcon, isYsmName } from "../../utils/icon/icon.ts";
-import { emptyHTML } from "./tpl.ts";
-import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
-import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
-import { renderDisplayName } from "../../utils/dom/display.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { animateNumber } from "../../utils/animation/animate.ts";
+import { renderDisplayName } from "../../utils/dom/display.ts";
+import { fmtDate, formatBytes } from "../../utils/dom/format.ts";
+import { hl } from "../../utils/dom/html.ts";
+import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { calcVisibleRange, installScrollSync } from "../../utils/dom/virtual-scroll.ts";
+import { fileIcon, isYsmName } from "../../utils/icon/icon.ts";
 import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
-import {
-  calcVisibleRange,
-  installScrollSync,
-} from "../../utils/dom/virtual-scroll.ts";
+import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
+import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
+import { emptyHTML } from "./tpl.ts";
 
 /** 树行高（虚拟滚动定高窗口，grid/list 两档；自 app-tree 原 virtual-scroll.ts 迁入） */
 export const ROW_H_GRID = 28;
@@ -170,11 +167,7 @@ function atFvMatchSearch(full: string, state: AtFvState): boolean {
   return full.toLowerCase().includes(state.query);
 }
 
-function atFvMakeFileRow(
-  e: TreeEntry,
-  full: string,
-  state: AtFvState,
-): TreeRow | null {
+function atFvMakeFileRow(e: TreeEntry, full: string, state: AtFvState): TreeRow | null {
   if (!atFvMatchSearch(full, state)) return null;
   const nmHtml = state.hasSearch ? hl(e.name, state.search.trim()) : renderDisplayName(e.name);
   const dateStr = e.modTime ? fmtDate(e.modTime) : "";
@@ -185,16 +178,7 @@ function atFvMakeFileRow(
   const html =
     state.mode === "list"
       ? listFileRowHTML(e, nmHtml, fileIcon(e.name), nmCls, state.indent, selCls, ariaLevel)
-      : fileRowHTML(
-          e,
-          nmHtml,
-          fileIcon(e.name),
-          dateStr,
-          nmCls,
-          state.indent,
-          selCls,
-          ariaLevel,
-        );
+      : fileRowHTML(e, nmHtml, fileIcon(e.name), dateStr, nmCls, state.indent, selCls, ariaLevel);
   return {
     id: ++_rowIdCounter,
     type: "file",
@@ -251,11 +235,7 @@ function atFvMakeFolderRow(
   };
 }
 
-function atFvRecurseDir(
-  sub: TreeNode,
-  full: string,
-  state: AtFvState,
-): TreeRow[] {
+function atFvRecurseDir(sub: TreeNode, full: string, state: AtFvState): TreeRow[] {
   const childState: AtFvState = {
     ...state,
     depth: state.depth + 1,
@@ -264,11 +244,7 @@ function atFvRecurseDir(
   return atFvFlattenLevel(sub, full, childState);
 }
 
-function atFvFlattenLevel(
-  node: TreeNode,
-  dirPath: string,
-  state: AtFvState,
-): TreeRow[] {
+function atFvFlattenLevel(node: TreeNode, dirPath: string, state: AtFvState): TreeRow[] {
   const rows: TreeRow[] = [];
   const keys = atFvSortKeys(node, state.sort);
   keys.forEach((k) => {
@@ -480,7 +456,10 @@ export function renderTree(
 }
 
 // 元素 → 在途统计动画句柄（连续搜索/过滤重渲染时取消旧动画与旧定时器，防堆积）
-const statAnim = new WeakMap<HTMLElement, { cancel: () => void; timer: ReturnType<typeof setTimeout> }>();
+const statAnim = new WeakMap<
+  HTMLElement,
+  { cancel: () => void; timer: ReturnType<typeof setTimeout> }
+>();
 
 // ——— 选中计数用（兼容旧接口） ———
 export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {

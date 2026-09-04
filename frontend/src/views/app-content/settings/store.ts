@@ -3,6 +3,7 @@
 // app-content 会重渲染设置页并再次执行 initSettings——因此所有共享状态必须经
 // resetSettingsStore 重置，避免上次残留（旧 DOM 的刷新闭包/卡死的 busy 标志）污染本次。
 import type { AppBindings } from "../../../backend/app.ts";
+
 // toastError 已收敛至 core/context-menu-shared.ts（instance-ops / settings 等多处 catch 共用，
 // 2026-09 去重专项；本文件原本地实现删除，re-export 保持 settings/ 内部导入路径不变）
 export { toastError } from "../../../core/context-menu-shared.ts";

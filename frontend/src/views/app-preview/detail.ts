@@ -3,31 +3,29 @@
 // ADR-072 D3：3D 入口（showVrmMeta/showMmdPreview）已拆至 detail-3d.ts，
 // 本文件保留 2D 详情（showModelDetail/showResourcePack/showSimplePreview/showShaderpack）；
 // detailGen 导出供 detail-3d.ts 共享（跨文件快速切换时在途请求互相作废）。
-import { summaryCardHTML, type YsmSummary } from "../../utils/format/summarize.ts";
-import { renderFormattedText } from "../../utils/format/mc-format.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
+
 import { getApp } from "../../backend/app.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import type { PreviewCtx } from "./utils.ts";
-import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { loadModel2D } from "./skeleton.ts";
-import { describeVersionRange } from "../../utils/format/pack-format.ts";
 import { t } from "../../core/i18n/t.ts";
-import { createPack3D } from "./pack-3d.ts";
-import { GenGuard } from "./gen-guard.ts";
 import { cacheGet } from "../../preview-3d/decoder/cache.ts";
+import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
+import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { describeVersionRange } from "../../utils/format/pack-format.ts";
+import { summaryCardHTML, type YsmSummary } from "../../utils/format/summarize.ts";
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { GenGuard } from "./gen-guard.ts";
+import { createPack3D } from "./pack-3d.ts";
+import { loadModel2D } from "./skeleton.ts";
+import type { PreviewCtx } from "./utils.ts";
 
 /** 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） */
 export const detailGen = new GenGuard();
 
 /** 显示模型详情（YSM 模型） */
-export async function showModelDetail(
-  ctx: PreviewCtx,
-  path: string,
-): Promise<void> {
+export async function showModelDetail(ctx: PreviewCtx, path: string): Promise<void> {
   const gen = detailGen.next();
   const savedTab = safeGet("ysm_previewTab") || "detail";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -61,12 +59,8 @@ export async function showModelDetail(
   if (detailGen.stale(gen)) return; // 用户已切换到其他预览
 
   try {
-    const { ExtractYsmSummary, ExtractYSMHeader } =
-      await getApp();
-    const results = await Promise.allSettled([
-      ExtractYsmSummary(path),
-      ExtractYSMHeader(path),
-    ]);
+    const { ExtractYsmSummary, ExtractYSMHeader } = await getApp();
+    const results = await Promise.allSettled([ExtractYsmSummary(path), ExtractYSMHeader(path)]);
     if (detailGen.stale(gen)) return; // 解析期间用户已切换
     const summary = results[0].status === "fulfilled" ? results[0].value : null;
     const header = results[1].status === "fulfilled" ? results[1].value : null;
@@ -128,8 +122,8 @@ export async function showModelDetail(
 
     // 加载 2D 模型预览（骨架 tab 只留骨骼线条图；统计卡经 statsContainer 挂详情卡）
     // 进详情本身即触发 loadModel2D 异步解码，统计卡数据（骨骼/立方体/纹理/头像）无需额外请求
-    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv).catch(
-      (e) => console.warn("[preview] loadModel2D:", e),
+    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv).catch((e) =>
+      console.warn("[preview] loadModel2D:", e),
     );
   } catch (err) {
     if (detailGen.stale(gen)) return;
@@ -141,10 +135,7 @@ export async function showModelDetail(
 }
 
 /** 显示资源包信息（pack.mcmeta + pack.png + 模型清单） */
-export async function showResourcePack(
-  ctx: PreviewCtx,
-  path: string,
-): Promise<void> {
+export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<void> {
   const gen = detailGen.next();
   try {
     const App = await getApp();
@@ -172,7 +163,9 @@ export async function showResourcePack(
     const fab = ctx.root.querySelector("#btn-pack-model-3d") as HTMLButtonElement;
     if (fab) {
       promoteTitleIfPresent(fab);
-      fab.onclick = (): void => { createPack3D(path).catch((e) => console.warn("[preview] pack3D:", e)); };
+      fab.onclick = (): void => {
+        createPack3D(path).catch((e) => console.warn("[preview] pack3D:", e));
+      };
     }
     // 模型清单区（异步取数，失败/无模型静默隐藏；详情卡降级约定）
     void renderPackModelList(ctx, gen, App, path);
@@ -197,19 +190,22 @@ async function renderPackModelList(
     if (!host) return;
     if (models.length === 0) return; // 无模型 → 不渲染清单区（仅 FAB 3D 入口）
     const total = detail?.total ?? models.length;
-    const overflow = total > models.length
-      ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${t("preview.modelListOverflow", { n: models.length })}</div>`
-      : "";
+    const overflow =
+      total > models.length
+        ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${t("preview.modelListOverflow", { n: models.length })}</div>`
+        : "";
     host.innerHTML = `<div style="border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px">
   <div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.modelList", { n: total })}</div>
-  ${models.map((m) => {
-    const name = m.path.split("/").pop() || m.path;
-    return `<div class="pack-model-item" data-entry="${esc(m.path)}" style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer;border-left:3px solid color-mix(in srgb,var(--accent) 50%,transparent)">
+  ${models
+    .map((m) => {
+      const name = m.path.split("/").pop() || m.path;
+      return `<div class="pack-model-item" data-entry="${esc(m.path)}" style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer;border-left:3px solid color-mix(in srgb,var(--accent) 50%,transparent)">
       <span>🧊</span>
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</span>
       <span style="color:var(--muted);font-size:10px;margin-left:auto;flex-shrink:0">${t("preview.modelCubes", { cubes: m.cubes })}</span>
     </div>`;
-  }).join("")}
+    })
+    .join("")}
   ${overflow}
   <style>.pack-model-item:hover{background:rgba(255,255,255,0.05)}</style>
 </div>`;
@@ -218,10 +214,14 @@ async function renderPackModelList(
       el.onclick = (): void => {
         const entry = el.dataset.entry || "";
         if (!entry) return;
-        createPack3D(path, { startEntry: entry }).catch((e) => console.warn("[preview] pack3D:", e));
+        createPack3D(path, { startEntry: entry }).catch((e) =>
+          console.warn("[preview] pack3D:", e),
+        );
       };
     });
-  } catch { /* 清单读取失败静默：基础卡不受影响（详情卡降级约定） */ }
+  } catch {
+    /* 清单读取失败静默：基础卡不受影响（详情卡降级约定） */
+  }
 }
 
 /** 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 */

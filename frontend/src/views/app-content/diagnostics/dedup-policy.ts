@@ -17,35 +17,28 @@ function toTimestamp(modTime?: string | number): number {
 
 function reduceOldestIdx(files: DedupFileLike[]): number {
   return files.reduce(
-    (best, e, i, arr) =>
-      toTimestamp(e.modTime) < toTimestamp(arr[best].modTime) ? i : best,
+    (best, e, i, arr) => (toTimestamp(e.modTime) < toTimestamp(arr[best].modTime) ? i : best),
     0,
   );
 }
 
 function reduceNewestIdx(files: DedupFileLike[]): number {
   return files.reduce(
-    (best, e, i, arr) =>
-      toTimestamp(e.modTime) > toTimestamp(arr[best].modTime) ? i : best,
+    (best, e, i, arr) => (toTimestamp(e.modTime) > toTimestamp(arr[best].modTime) ? i : best),
     0,
   );
 }
 
 function reducePathIdx(files: DedupFileLike[], priorityPath: string): number {
   if (priorityPath) {
-    const idx = files.findIndex((f) =>
-      f.path.toLowerCase().startsWith(priorityPath.toLowerCase()),
-    );
+    const idx = files.findIndex((f) => f.path.toLowerCase().startsWith(priorityPath.toLowerCase()));
     if (idx >= 0) return idx;
   }
   return reduceLargestIdx(files);
 }
 
 function reduceLargestIdx(files: DedupFileLike[]): number {
-  return files.reduce(
-    (best, e, i, arr) => (e.size > arr[best].size ? i : best),
-    0,
-  );
+  return files.reduce((best, e, i, arr) => (e.size > arr[best].size ? i : best), 0);
 }
 
 /**

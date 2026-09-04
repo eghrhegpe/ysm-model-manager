@@ -19,5 +19,5 @@ export let _lastSelectedType =
 export function setLastSelectedType(type: string): void {
   _lastSelectedType = type;
   safeSet(GLOBAL_RTYPE_KEY, type); // 统一写全局（nav 下拉下次初始化读到一致值）
-  safeSet(LAST_TYPE_KEY, type);    // 旧键同步（防历史读取者）
+  safeSet(LAST_TYPE_KEY, type); // 旧键同步（防历史读取者）
 }

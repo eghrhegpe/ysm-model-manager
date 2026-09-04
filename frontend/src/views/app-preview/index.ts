@@ -1,9 +1,11 @@
 // ===== <app-preview> 入口 =====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
 import { bus } from "../../bus.ts";
-import { previewCSS } from "./css.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
+import { previewCSS } from "./css.ts";
+
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
 // 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
 // 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
@@ -15,40 +17,49 @@ const appPreviewStyle: CSSStyleSheet = (() => {
   sheet.replaceSync(previewCSS);
   return sheet;
 })();
-import { RESOURCE_TYPES, isYsmWasmPreview, extOf, resolvePreviewKey } from "../../utils/resource/types.ts";
-import { modelDetailHTML } from "./tpl.ts";
+
+import { getApp } from "../../backend/app.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
+import { t } from "../../core/i18n/t.ts";
 import {
   cacheGet,
   cacheSet,
   cacheSetEvictHandler,
   collectBlobUrls,
 } from "../../preview-3d/decoder/cache.ts";
-import { getApp } from "../../backend/app.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
-import { t } from "../../core/i18n/t.ts";
-import type { PreviewCtx } from "./utils.ts";
-import type { DecodedYsm } from "../../preview-3d/decoder/utils.ts";
-import { GenGuard } from "./gen-guard.ts";
-import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { showModelDetail, showResourcePack, showShaderpack, showSimplePreview } from "./detail.ts";
-import { showVrmMeta, showMmdPreview, showScenePreview, showMorphPreview, showStagePreview, showFbxPreview } from "./detail-3d.ts";
-import { showLitematic, cleanupLitematic3D, invalidateLitematicPreview } from "./litematic-meta.ts";
-import { cleanupVrm3D, invalidateVrmPreview } from "./vrm-3d.ts";
-import { cleanupMmd3D, invalidateMmdPreview } from "./mmd-3d.ts";
-import { cleanupScene3D, invalidateScenePreview } from "./scene-3d.ts";
-import { cleanupPack3D, invalidatePackPreview } from "./pack-3d.ts";
-import { cleanupEmpty3D, invalidateEmptyPreview } from "./empty-3d.ts";
-import { cleanupMaid3D, invalidateMaidPreview, showMaidPreview } from "./maid-3d.ts";
-import { closeActive3DOverlay } from "./skeleton.ts";
-import { esc } from "../../utils/dom/html.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
+import type { DecodedYsm } from "../../preview-3d/decoder/utils.ts";
+import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
+import { esc } from "../../utils/dom/html.ts";
+import {
+  extOf,
+  isYsmWasmPreview,
+  RESOURCE_TYPES,
+  resolvePreviewKey,
+} from "../../utils/resource/types.ts";
+import { showModelDetail, showResourcePack, showShaderpack, showSimplePreview } from "./detail.ts";
+import {
+  showFbxPreview,
+  showMmdPreview,
+  showMorphPreview,
+  showScenePreview,
+  showStagePreview,
+  showVrmMeta,
+} from "./detail-3d.ts";
+import { cleanupEmpty3D, invalidateEmptyPreview } from "./empty-3d.ts";
+import { GenGuard } from "./gen-guard.ts";
+import { cleanupLitematic3D, invalidateLitematicPreview, showLitematic } from "./litematic-meta.ts";
+import { cleanupMaid3D, invalidateMaidPreview, showMaidPreview } from "./maid-3d.ts";
+import { cleanupMmd3D, invalidateMmdPreview } from "./mmd-3d.ts";
+import { cleanupPack3D, invalidatePackPreview } from "./pack-3d.ts";
+import { cleanupScene3D, invalidateScenePreview } from "./scene-3d.ts";
+import { closeActive3DOverlay } from "./skeleton.ts";
+import { modelDetailHTML } from "./tpl.ts";
+import type { PreviewCtx } from "./utils.ts";
+import { cleanupVrm3D, invalidateVrmPreview } from "./vrm-3d.ts";
 
 /** 预览 show 函数签名：ctx + path + 类型元信息（icon/label） */
-type PreviewShowFn = (
-  ctx: PreviewCtx,
-  path: string,
-  meta: { icon: string; label: string },
-) => void;
+type PreviewShowFn = (ctx: PreviewCtx, path: string, meta: { icon: string; label: string }) => void;
 
 /**
  * 类型 → show 派发映射表（ADR-072 D2：把 index.ts 手写 if 链替换为注册表驱动查表）。
@@ -73,15 +84,15 @@ const PREVIEW_HANDLERS: Record<string, PreviewShowFn> = {
   [`${RESOURCE_TYPES.MMD}:vrm`]: (ctx, path, meta) => showVrmMeta(ctx, path, meta),
   [RESOURCE_TYPES.MMD]: (ctx, path, meta) => showMmdPreview(ctx, path, meta),
   // MMD 独立顶级类型（后端 DetectResourceType 路径消歧命中时直接路由）
-  "SceneModel": (ctx, path) => showScenePreview(ctx, path),
-  "CustomMorph": (ctx, path) => showMorphPreview(ctx, path),
-  "StageAnim": (ctx, path) => showStagePreview(ctx, path),
-  "CustomAnim": (ctx, path, meta) => showSimplePreview(ctx, path, meta),
-  "DefaultAnim": (ctx, path, meta) => showSimplePreview(ctx, path, meta),
-  "DefaultMorph": (ctx, path, meta) => showSimplePreview(ctx, path, meta),
+  SceneModel: (ctx, path) => showScenePreview(ctx, path),
+  CustomMorph: (ctx, path) => showMorphPreview(ctx, path),
+  StageAnim: (ctx, path) => showStagePreview(ctx, path),
+  CustomAnim: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
+  DefaultAnim: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
+  DefaultMorph: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
   "mmd-shader": (ctx, path, meta) => showSimplePreview(ctx, path, meta),
   // FBX 独立预览（ADR-112：模型 + 内嵌动画，物理落 CustomAnim 目录）
-  "fbx": (ctx, path, meta) => showFbxPreview(ctx, path, meta),
+  fbx: (ctx, path, meta) => showFbxPreview(ctx, path, meta),
 };
 
 /**
@@ -154,7 +165,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         if (!isDir && path) {
           void import("../app-content/init-pages.ts")
             .then(({ rememberModelPath }) => rememberModelPath(path))
-            .catch(() => { /* rememberModelPath 失败不影响预览 */ });
+            .catch(() => {
+              /* rememberModelPath 失败不影响预览 */
+            });
         }
         // P2 修复（审核）：切换模型前关闭活跃的 3D 全屏 overlay（挂 body、不随 shadow
         // DOM 重建消失）。后台 model:select（导入队列/回收站自动选择）触发时不清旧层会
@@ -173,7 +186,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         } catch (e) {
           console.error("[preview] 加载失败:", e);
           this.root.innerHTML =
-            '<div class="content"><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">' + t("preview.loadFailed") + '</div></div></div>';
+            '<div class="content"><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">' +
+            t("preview.loadFailed") +
+            "</div></div></div>";
         }
       }),
     );
@@ -220,8 +235,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       // WASM 完全失败 → 不缓存空条目，直接走 Go 兜底（兜底结果由下方 cacheSet 落缓存）
     }
     try {
-      const { FindPreviewImage, ExtractPreviewTexture } =
-        await getApp();
+      const { FindPreviewImage, ExtractPreviewTexture } = await getApp();
       const loose = await FindPreviewImage(modelPath);
       if (loose) {
         cacheSet(modelPath, { texture: loose, _decodedBy: "" });
@@ -243,8 +257,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   /** 在预览区追加调试小字 */
   appendDebug(container: HTMLElement | null, msg: string): void {
     try {
-      const el =
-        container || this.root.getElementById("preview-content") || this.root;
+      const el = container || this.root.getElementById("preview-content") || this.root;
       const dbg = document.createElement("div");
       dbg.className = "pv-debug";
       dbg.textContent = msg;
@@ -260,7 +273,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       const reg = await LoadResourceTypes();
       this._typeCache = reg?.resourceTypes || [];
       this._typeReg = null; // 强制下次 _typeMeta 按新 _typeCache 重建；防 LoadResourceTypes 迟到时 _typeReg 永久冻结为 {}
-    } catch (e) { console.warn("[preview] LoadResourceTypes:", e); }
+    } catch (e) {
+      console.warn("[preview] LoadResourceTypes:", e);
+    }
   }
 
   private async _showModelDetail(path: string, rtypeHint?: string): Promise<void> {
@@ -284,7 +299,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       try {
         const { DetectResourceType } = await getApp();
         rtype = (await DetectResourceType(path)) || "";
-      } catch (e) { console.warn("[preview] DetectResourceType:", e); }
+      } catch (e) {
+        console.warn("[preview] DetectResourceType:", e);
+      }
     }
     // 过期守卫：await 期间用户已点其他文件，丢弃本次分流
     if (this._previewGuard.stale(gen)) return;
@@ -347,7 +364,6 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
       this.root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">${t("preview.packReadFailed")}</div></div></div>`;
     }
   }
-
 }
 // 注册组件（防 HMR/重复 import 时重复 define）
 if (typeof customElements !== "undefined" && !customElements.get("app-preview")) {

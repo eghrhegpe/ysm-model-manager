@@ -2,15 +2,12 @@
 // 事件：menu:show, menu:hide
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
 import { bus, type MenuItem } from "../../bus.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 import { esc } from "../../utils/dom/html.ts";
+import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
-export const VIEW_TESTIDS: readonly string[] = [
-  'ctx-item',
-];
-
+export const VIEW_TESTIDS: readonly string[] = ["ctx-item"];
 
 class ContextMenu extends WebComponentBase {
   _unsub: (() => void) | undefined;

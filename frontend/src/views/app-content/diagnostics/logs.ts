@@ -1,9 +1,10 @@
 // ===== 诊断页：日志加载（操作日志 + 运行时日志） =====
 // ADR-040 按职责切文件：原 init.ts（797 行）拆分——日志加载（本文件）/ 去重（dedup.ts）/ 冲突扫描（conflicts.ts）
-import { t, type LocaleKey } from "../../../core/i18n/t.ts";
+
 import { getApp } from "../../../backend/app.ts";
-import { renderDisplayName } from "../../../utils/dom/display.ts";
+import { type LocaleKey, t } from "../../../core/i18n/t.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
+import { renderDisplayName } from "../../../utils/dom/display.ts";
 
 /** 转义函数签名（单一事实源 = utils/dom/html.ts 的 esc；调用方以 (s) => esc(String(s || "")) 包装适配） */
 export type EscFn = (s: unknown) => string;
@@ -78,11 +79,14 @@ function dgLsFilterDiagLogs(logs: ImportLogLike[], root: ShadowRoot): ImportLogL
     (root.getElementById("diag-log-search") as HTMLInputElement | null)?.value
       ?.trim()
       .toLowerCase() || "";
-  return logs.slice(-500).reverse().filter((l) => {
-    if (filter !== "all" && l.Status !== filter) return false;
-    if (search && !(l.ModelName || "").toLowerCase().includes(search)) return false;
-    return true;
-  });
+  return logs
+    .slice(-500)
+    .reverse()
+    .filter((l) => {
+      if (filter !== "all" && l.Status !== filter) return false;
+      if (search && !(l.ModelName || "").toLowerCase().includes(search)) return false;
+      return true;
+    });
 }
 
 function dgLsGroupByOp(filtered: ImportLogLike[]): Map<string, ImportLogLike[]> {
@@ -166,11 +170,7 @@ interface RuntimeLogLike {
   Timestamp?: string | number;
 }
 
-function dgLsRenderRuntimeRows(
-  logs: RuntimeLogLike[],
-  esc: EscFn,
-  copyLogTitle: string,
-): string {
+function dgLsRenderRuntimeRows(logs: RuntimeLogLike[], esc: EscFn, copyLogTitle: string): string {
   return logs
     .slice(-300)
     .reverse()

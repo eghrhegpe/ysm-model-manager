@@ -1,13 +1,12 @@
 // ===== skeleton-fill-panel.ts — fill3DPanel（从 skeleton-render.ts 拆出，ADR-040 P1）=====
 // 填充 3D 信息面板：统计 + 纹理 + 模型选择 + 骨骼列表 + 详情框
 import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
-import type { BoneSelectInfo } from "../../preview-3d/model3d.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import type { Spec3D } from "../../preview-3d/model3d.ts";
-import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
+import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
+import type { BoneSelectInfo, Spec3D } from "../../preview-3d/model3d.ts";
 import type { PreviewSnapshot } from "../../preview-3d/state/preview-state.ts";
+import { esc } from "../../utils/dom/html.ts";
 
 /** fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） */
 export interface PanelHandle {
@@ -147,7 +146,8 @@ function texRow(
     // 专属纹理无单独加载位图句柄 → 只给声明尺寸，避免「专属」看不出大小
     right.textContent = "专属 · 声明 " + declT;
   } else {
-    const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })?.userData;
+    const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })
+      ?.userData;
     const w = typeof ud?.imgWidth === "number" ? ud.imgWidth : null;
     const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
     const size = w !== null && h !== null ? w + "×" + h : "?";
@@ -183,7 +183,11 @@ function fillPanelComponent(
   let cubes = 0;
   if (rawIdx < 0) {
     for (const m of spec.models || []) {
-      const mm = m as { bones?: Array<{ _cubeCount?: number }>; textureWidth?: number; textureHeight?: number };
+      const mm = m as {
+        bones?: Array<{ _cubeCount?: number }>;
+        textureWidth?: number;
+        textureHeight?: number;
+      };
       bones += mm.bones?.length || 0;
       for (const b of mm.bones || []) cubes += b._cubeCount || 0;
     }
@@ -200,7 +204,13 @@ function fillPanelComponent(
   // ── 纹理（只显示当前组件的绑定） ──
   const eff = rawIdx < 0 ? 0 : rawIdx;
   const mg = spec.models?.[eff] as
-    | { name?: string; id?: string; textureWidth?: number; textureHeight?: number; meshGroups?: Array<{ texIdx?: number }> }
+    | {
+        name?: string;
+        id?: string;
+        textureWidth?: number;
+        textureHeight?: number;
+        meshGroups?: Array<{ texIdx?: number }>;
+      }
     | undefined;
   const compName = mg?.name || mg?.id || "main";
   // 当前组件声明尺寸（组件专属/全局共享都可引用；专属组件是独立 model，此字段即其声明）
@@ -224,7 +234,9 @@ function fillPanelComponent(
     secEl.dataset.testid = "tex-section";
     texBox.appendChild(secEl);
     ex.forEach((_uri, k) => {
-      texBox.appendChild(texRow(compName + (ex.length > 1 ? " #" + (k + 1) : ""), k, null, { ex: true, decl }));
+      texBox.appendChild(
+        texRow(compName + (ex.length > 1 ? " #" + (k + 1) : ""), k, null, { ex: true, decl }),
+      );
     });
     return;
   }
@@ -245,14 +257,24 @@ function fillPanelComponent(
   texBox.appendChild(secEl);
   for (const s of slots) {
     const tex = texArr[s];
-    const name = model.textureNames?.[s] || model.textures?.[s]?.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "纹理 " + (s + 1);
+    const name =
+      model.textureNames?.[s] ||
+      model.textures?.[s]
+        ?.split(/[/\\]/)
+        .pop()
+        ?.replace(/\.[^.]+$/, "") ||
+      "纹理 " + (s + 1);
     const cat = model.textureCategories?.[s] || "";
     texBox.appendChild(texRow(name, s, tex ?? null, { cat, decl }));
   }
 }
 
 /** 模型选择器选项装配（多组件才显示；防御 spec.models 与 getModelGroupCount 偶发不一致） */
-function buildModelSelector(modelSel: HTMLSelectElement, _model3d: PanelHandle, spec: Spec3D): void {
+function buildModelSelector(
+  modelSel: HTMLSelectElement,
+  _model3d: PanelHandle,
+  spec: Spec3D,
+): void {
   const mgCount = _model3d.getModelGroupCount();
   if (mgCount <= 1) return;
   modelSel.style.display = "";
@@ -267,7 +289,8 @@ function buildModelSelector(modelSel: HTMLSelectElement, _model3d: PanelHandle, 
     const mgItem = (spec.models?.[i] ?? {}) as { name?: string; id?: string; bones?: unknown[] };
     const opt = document.createElement("option");
     opt.value = String(i);
-    opt.textContent = (mgItem.name || mgItem.id || "model") + " (" + (mgItem.bones?.length || 0) + ")";
+    opt.textContent =
+      (mgItem.name || mgItem.id || "model") + " (" + (mgItem.bones?.length || 0) + ")";
     modelSel.appendChild(opt);
   }
 }
@@ -309,11 +332,7 @@ export function ysmModelStats(spec: Spec3D, rawIdx: number): YsmModelStats {
 }
 
 /** 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） */
-export function ysmModelTextureSlots(
-  spec: Spec3D,
-  rawIdx: number,
-  texCount: number,
-): number[] {
+export function ysmModelTextureSlots(spec: Spec3D, rawIdx: number, texCount: number): number[] {
   const eff = rawIdx < 0 ? 0 : rawIdx;
   const mg = spec.models?.[eff] as { meshGroups?: Array<{ texIdx?: number }> } | undefined;
   const slots: number[] = [];
@@ -349,7 +368,9 @@ export function buildYsmModelSchema(
   // 会话态真源 = 闭包（per-scene）；缺省（旧调用/测试）回退快照读 ui.activeComponent（兼容）
   const rawIdxRaw =
     sessionActiveComponent?.get() ??
-    (typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1);
+    (typeof snapshot["ui.activeComponent"] === "number"
+      ? (snapshot["ui.activeComponent"] as number)
+      : -1);
   const mgCount = ctx.spec.models?.length ?? 0;
   // clamp：组件数变化后的陈旧下标（≥ mgCount）视为 -1（All）——防 stats 聚合越界 + select 无匹配项
   const rawIdx = rawIdxRaw >= mgCount ? -1 : rawIdxRaw;
@@ -383,7 +404,9 @@ export function buildYsmModelSchema(
       activeId: (): string =>
         String(
           sessionActiveComponent?.get() ??
-            (typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1),
+            (typeof snapshot["ui.activeComponent"] === "number"
+              ? (snapshot["ui.activeComponent"] as number)
+              : -1),
         ),
       onSelect: (id: string): void => {
         sessionActiveComponent?.set(Number.isFinite(Number(id)) ? Number(id) : -1);
@@ -394,8 +417,20 @@ export function buildYsmModelSchema(
 
   // 统计
   nodes.push(
-    { id: "ysm-stats-bones", kind: "field", labelKey: "preview.section.bones", fallback: "骨骼", value: `${bones} 根` },
-    { id: "ysm-stats-cubes", kind: "field", labelKey: "preview.cubesLabel", fallback: "立方体", value: `${cubes} 个` },
+    {
+      id: "ysm-stats-bones",
+      kind: "field",
+      labelKey: "preview.section.bones",
+      fallback: "骨骼",
+      value: `${bones} 根`,
+    },
+    {
+      id: "ysm-stats-cubes",
+      kind: "field",
+      labelKey: "preview.cubesLabel",
+      fallback: "立方体",
+      value: `${cubes} 个`,
+    },
   );
 
   // 纹理行（当前组件绑定）
@@ -423,11 +458,16 @@ export function buildYsmModelSchema(
   } else {
     for (const s of slots) {
       const tex = ctx.texArr[s];
-      const name = ctx.model.textureNames?.[s]
-        || ctx.model.textures?.[s]?.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "")
-        || `纹理 ${s + 1}`;
+      const name =
+        ctx.model.textureNames?.[s] ||
+        ctx.model.textures?.[s]
+          ?.split(/[/\\]/)
+          .pop()
+          ?.replace(/\.[^.]+$/, "") ||
+        `纹理 ${s + 1}`;
       const cat = ctx.model.textureCategories?.[s] || "";
-      const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })?.userData;
+      const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })
+        ?.userData;
       const w = typeof ud?.imgWidth === "number" ? ud.imgWidth : null;
       const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
       const size = w !== null && h !== null ? `${w}×${h}` : "?";

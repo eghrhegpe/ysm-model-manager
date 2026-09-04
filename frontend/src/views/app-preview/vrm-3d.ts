@@ -3,13 +3,19 @@
 // 本文件仅作兼容薄包装，保留 createVrm3D / cleanupVrm3D / invalidateVrmPreview
 // 公开符号，index.ts 与既有测试无需改动。
 
-import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makeVrmAdapter, type VrmPanelHooks } from "../../preview-3d/adapters/vrm-adapter.ts";
 import { getApp } from "../../backend/app.ts";
-import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
+import {
+  cleanupPreview,
+  invalidatePreview,
+  type Mount3DOptions,
+  mount3D,
+  type PreviewAdapter,
+} from "../../preview-3d/adapters/mount-preview-core.ts";
+import { makeVrmAdapter, type VrmPanelHooks } from "../../preview-3d/adapters/vrm-adapter.ts";
 import { playNodes } from "./mmd-controls.ts";
-import { withPreviewExtras, registerReRoute } from "./preview-library.ts";
+import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { readFileBytes } from "./view-shell.ts";
+import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.vrm→"vrm"）
 registerReRoute("vrm", (path) => createVrm3D(path));
@@ -21,7 +27,12 @@ async function listAllFilePaths(dir: string): Promise<string[] | null> {
 }
 
 /** ADR-072 诊断端口：环形日志面板写入（当前 no-op，后续通过 bus 或 port 注入） */
-async function addOpLog(_op: string, _msg: string, _status: "ok" | "fail" | "warn", _err?: string): Promise<void> {
+async function addOpLog(
+  _op: string,
+  _msg: string,
+  _status: "ok" | "fail" | "warn",
+  _err?: string,
+): Promise<void> {
   // TODO: 接入真实环形日志面板
 }
 

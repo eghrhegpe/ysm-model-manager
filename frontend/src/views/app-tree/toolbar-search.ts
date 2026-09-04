@@ -1,18 +1,23 @@
 // ===== toolbar-search.ts — 工具栏搜索/筛选/导入逻辑（从 toolbar-events.ts 拆出，ADR-040 P1）=====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { t } from "../../core/i18n/t.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { bus } from "../../bus.ts";
-import { getExts } from "../../utils/resource/extensions.ts";
-import { modalAdvFilter, type AdvFilterValue } from "../../features/dialogs/adv-filter.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
-import { importWebFiles } from "../../backend/browser-adapter.ts";
+
+import { getApp } from "../../backend/app.ts";
 // 网页版数值条件降级标记消费（web-stats.ts 经 browserAdapter 链 re-export——与
 // searchWebModels 同一模块实例；Worker 批量统计不可用时置位，此处 toast 提示）
-import { consumeWebSearchDegraded, onStatsProgress, getStatsPoolSize } from "../../backend/browser-adapter.ts";
+import {
+  consumeWebSearchDegraded,
+  getStatsPoolSize,
+  importWebFiles,
+  onStatsProgress,
+} from "../../backend/browser-adapter.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
+import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
+import { type AdvFilterValue, modalAdvFilter } from "../../features/dialogs/adv-filter.ts";
+import { dbg } from "../../utils/debug/debug.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { getExts } from "../../utils/resource/extensions.ts";
 import type { AppTree } from "./index.ts";
-import { getApp } from "../../backend/app.ts";
 
 // P1 批次11:统计角标样式(cssText 抽类;挂 document.body light DOM,head 注入适用)
 const tsCss = `

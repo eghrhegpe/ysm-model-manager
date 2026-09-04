@@ -3,8 +3,8 @@
 // 消除幽灵路径（AGENTS.md §致命陷阱 #13）+ 便于逐块抽到独立文件。
 import type { bus } from "../../../bus.ts";
 import type { WorkshopSite } from "../../../utils/types-re-export.ts";
+import type { LocalCreatorLike, RenderSiteViewCtx, RepoAuthorLike } from "../site-view.ts";
 import type { BrowseMode } from "../workshop-browse-mode.ts";
-import type { LocalCreatorLike, RepoAuthorLike, RenderSiteViewCtx } from "../site-view.ts";
 
 /**
  * SiteViewState —— renderSiteView 内部闭包共享变量的显式收拢。

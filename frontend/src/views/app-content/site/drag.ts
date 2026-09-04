@@ -1,10 +1,11 @@
 // ===== 站点视图拖拽 JSON 导入（从 site-view.ts 拆出，ADR-034 方向①）=====
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { t } from "../../../core/i18n/t.ts";
+
 import { getApp } from "../../../backend/app.ts";
+import { t } from "../../../core/i18n/t.ts";
+import { friendlyError } from "../../../utils/dom/errors.ts";
 import type { WorkshopSite } from "../../../utils/types-re-export.ts";
 import type { LocalCreatorLike } from "../site-view.ts";
-import type { SiteViewState, CleanupFn } from "./types.ts";
+import type { CleanupFn, SiteViewState } from "./types.ts";
 
 /**
  * 绑定拖拽 JSON 导入事件：创作者 JSON / 站点 JSON 识别 + 合并。
@@ -51,7 +52,9 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
       const resetLabel = (): void => {
         dropZone.innerHTML =
           '<span class="cr-drop-icon">📥</span>' +
-          '<span class="cr-drop-text">' + t("content.dropZoneHint") + "</span>";
+          '<span class="cr-drop-text">' +
+          t("content.dropZoneHint") +
+          "</span>";
       };
 
       try {
@@ -69,9 +72,11 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
           const result = await MergeWorkshopCreatorsFromJSON(text);
           let added: number, updated: number;
           if (Array.isArray(result)) {
-            added = result[0]; updated = result[1];
+            added = result[0];
+            updated = result[1];
           } else {
-            added = result; updated = 0;
+            added = result;
+            updated = 0;
           }
           // 刷新内存中的 allCreators
           const fresh = (await LoadWorkshopCreators()) || [];
@@ -87,7 +92,8 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
           dropZone.textContent = t("content.mergingSites");
           const { SaveWorkshopSites } = await getApp();
           const existMap = new Map(allSites.map((s) => [s.id, s]));
-          let added = 0, updated = 0;
+          let added = 0,
+            updated = 0;
           data.forEach((s) => {
             const sid = String(s.id);
             if (existMap.has(sid)) {

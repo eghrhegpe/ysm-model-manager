@@ -1,11 +1,13 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
 import { t } from "../../core/i18n/t.ts";
+import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { safeGet } from "../../utils/dom/storage.ts";
-import { treeCSS } from "./app-tree-styles.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
+import { treeCSS } from "./app-tree-styles.ts";
+
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
 // 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
 // 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
@@ -17,33 +19,42 @@ const appTreeStyle: CSSStyleSheet = (() => {
   sheet.replaceSync(treeCSS);
   return sheet;
 })();
+
 export { appTreeStyle };
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+
 import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
-import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
-import { renderTree, updateStat, getRenderMode, cleanupVirtualScroll, getVsRows, getVsMode, type RenderMode, ROW_H_GRID, ROW_H_LIST } from "./render.ts";
-import { bindTreeEvents, updateSelectCount } from "./events.ts";
-import { bindToolbarEvents } from "./toolbar-events.ts";
-import { loadEntries, type TreeEntry } from "./loader.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
+import { bindTreeEvents, updateSelectCount } from "./events.ts";
+import { loadEntries, type TreeEntry } from "./loader.ts";
+import {
+  cleanupVirtualScroll,
+  getRenderMode,
+  getVsMode,
+  getVsRows,
+  type RenderMode,
+  ROW_H_GRID,
+  ROW_H_LIST,
+  renderTree,
+  updateStat,
+} from "./render.ts";
+import { bindToolbarEvents } from "./toolbar-events.ts";
+import { footerHTML, headerHTML, spinnerHTML } from "./tpl.ts";
 
 // ADR-133 阶段 B/C+：本文件内钩子的稳定 testid 声明（G-1 单一事实源，与钩子同处）。
 // 树容器 id="tree" 供 handler/CSS 锚定，testid 取 'tree-root'——落入契约孤儿扫描的
 // 'tree-' 前缀白名单，从而同受 must-have 与孤儿双校验守护（裸 'tree' 只受前者）。
-export const VIEW_TESTIDS: readonly string[] = [
-  'tree-root',
-];
-import { loadAuthors, type AuthorInfo } from "./authors.ts";
-import { bus } from "../../bus.ts";
-import { selectState, selectSingle } from "./data.ts";
-import { rememberModelPath } from "../app-content/init-pages.ts";
-import { dbg } from "../../utils/debug/debug.ts";
+export const VIEW_TESTIDS: readonly string[] = ["tree-root"];
+
 import { getApp } from "../../backend/app.ts";
+import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../features/dialogs/modal.ts";
-import { can } from "../../utils/dom/capabilities.ts";
 import { bindTreeDnD } from "../../features/import-dnd.ts";
-
-
+import { dbg } from "../../utils/debug/debug.ts";
+import { can } from "../../utils/dom/capabilities.ts";
+import { rememberModelPath } from "../app-content/init-pages.ts";
+import { type AuthorInfo, loadAuthors } from "./authors.ts";
+import { selectSingle, selectState } from "./data.ts";
 
 // —— 全局扩展（已随 WeakMap 改造移除）——
 // 原 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/_vsResizeObserver 已收敛至
@@ -95,11 +106,10 @@ export class AppTree extends WebComponentBase {
     const gen = ++this._gen;
 
     try {
-      Object.assign(
-        this._dirOpen,
-        JSON.parse(safeGet("at_dirs") || "{}"),
-      );
-    } catch (e) { console.warn("[app-tree] parse at_dirs:", e); }
+      Object.assign(this._dirOpen, JSON.parse(safeGet("at_dirs") || "{}"));
+    } catch (e) {
+      console.warn("[app-tree] parse at_dirs:", e);
+    }
 
     try {
       this._renderLayout();
@@ -152,13 +162,10 @@ export class AppTree extends WebComponentBase {
           console.error("[Tree pendingRoot Error]", e);
         }
       }
-
     } catch (e) {
       console.error("[Tree Init Error]", e);
       const tree = this._root?.getElementById("tree");
-      if (tree)
-        tree.innerHTML =
-          t("tree.treeLoadFailed");
+      if (tree) tree.innerHTML = t("tree.treeLoadFailed");
     } finally {
       this._ready = true;
     }
@@ -237,7 +244,9 @@ export class AppTree extends WebComponentBase {
   _renderLayout(): void {
     this._root.innerHTML =
       headerHTML() +
-      '<div class="list" id="tree" data-testid="tree-root" role="tree" aria-label="' + t("tree.fileList") + '">' +
+      '<div class="list" id="tree" data-testid="tree-root" role="tree" aria-label="' +
+      t("tree.fileList") +
+      '">' +
       spinnerHTML() +
       "</div>" +
       '<div class="tree-drop-hint" id="tree-drop-hint"><span class="dot"></span><span id="tree-drop-text"></span></div>' +
@@ -251,7 +260,7 @@ export class AppTree extends WebComponentBase {
     const c = this._root.getElementById("tree");
     // 清理旧的虚拟滚动监听（cleanupVirtualScroll：断开 cleanup/resizeObserver + 复位状态）
     if (c) cleanupVirtualScroll(c);
-    let filtered: TreeEntry[] = Array.isArray(this._entries) ? this._entries : [];
+    const filtered: TreeEntry[] = Array.isArray(this._entries) ? this._entries : [];
     // [DBG] 诊断：_renderTree 入参（entries 数 / filterPaths 大小）
     dbg(
       "_renderTree",
@@ -278,9 +287,7 @@ export class AppTree extends WebComponentBase {
     // 仓库路径显示在按钮上
     const repoBtn = this._root.getElementById("btn-repo");
     if (repoBtn)
-      repoBtn.textContent = this._filesRoot
-        ? `📁 ${this._filesRoot}`
-        : t("tree.repoNotSet");
+      repoBtn.textContent = this._filesRoot ? `📁 ${this._filesRoot}` : t("tree.repoNotSet");
     // 注意：_authors 仅作组件字段保留（曾写 _root._treeAuthors 伪字段，死写无读取方已删）
   }
 
@@ -321,7 +328,8 @@ export class AppTree extends WebComponentBase {
       !target ||
       target.tagName === "INPUT" ||
       target.tagName === "TEXTAREA"
-    ) return false;
+    )
+      return false;
     const paths = [...(selectState?.keys || [])];
     if (!paths.length) {
       bus.emit("toast:show", {
@@ -340,13 +348,15 @@ export class AppTree extends WebComponentBase {
       return true;
     }
     e.preventDefault();
-    if (!(await modalConfirm({
-      title: t("tree.batchDeleteTitle"),
-      icon: "🗑️",
-      message: t("tree.batchDeleteConfirm", { n: paths.length }),
-      okText: t("tree.deleteOk"),
-      danger: true,
-    })))
+    if (
+      !(await modalConfirm({
+        title: t("tree.batchDeleteTitle"),
+        icon: "🗑️",
+        message: t("tree.batchDeleteConfirm", { n: paths.length }),
+        okText: t("tree.deleteOk"),
+        danger: true,
+      }))
+    )
       return true;
     const rtype = this._rootAttr || RESOURCE_TYPES.YSM;
     this._deleteSelected(paths, rtype);
@@ -356,20 +366,26 @@ export class AppTree extends WebComponentBase {
   private _onKeyArrowNav(e: KeyboardEvent, target: HTMLElement | null): void {
     if (
       (e.key !== "ArrowDown" && e.key !== "ArrowUp") ||
-      e.ctrlKey || e.metaKey || e.altKey ||
-      target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" ||
-      !target || !this._root.contains(target)
-    ) return;
+      e.ctrlKey ||
+      e.metaKey ||
+      e.altKey ||
+      target?.tagName === "INPUT" ||
+      target?.tagName === "TEXTAREA" ||
+      !target ||
+      !this._root.contains(target)
+    )
+      return;
     const container = this._root.getElementById("tree");
     if (!container) return;
-    const fileRows = getVsRows(container).filter(r => r.type === "file");
+    const fileRows = getVsRows(container).filter((r) => r.type === "file");
     if (!fileRows.length) return;
     e.preventDefault();
 
-    const currentIdx = fileRows.findIndex(r => r.key === selectState.lastKey);
-    const nextIdx = e.key === "ArrowDown"
-      ? Math.min(currentIdx + 1, fileRows.length - 1)
-      : Math.max(currentIdx - 1, 0);
+    const currentIdx = fileRows.findIndex((r) => r.key === selectState.lastKey);
+    const nextIdx =
+      e.key === "ArrowDown"
+        ? Math.min(currentIdx + 1, fileRows.length - 1)
+        : Math.max(currentIdx - 1, 0);
     const nextKey = fileRows[nextIdx].key;
     selectSingle(nextKey);
 
@@ -392,11 +408,14 @@ export class AppTree extends WebComponentBase {
     rememberModelPath(nextKey);
 
     const allRows = getVsRows(container);
-    const rowIdx = allRows.findIndex(r => r.key === nextKey);
+    const rowIdx = allRows.findIndex((r) => r.key === nextKey);
     if (rowIdx >= 0) {
       const rowH = getVsMode(container) === "list" ? ROW_H_LIST : ROW_H_GRID;
       const targetScroll = rowIdx * rowH;
-      if (targetScroll < container.scrollTop || targetScroll + rowH > container.scrollTop + container.clientHeight) {
+      if (
+        targetScroll < container.scrollTop ||
+        targetScroll + rowH > container.scrollTop + container.clientHeight
+      ) {
         container.scrollTop = targetScroll;
       }
     }
@@ -409,8 +428,7 @@ export class AppTree extends WebComponentBase {
     try {
       let ok = 0,
         fail = 0;
-      const { DeleteResourcePack } =
-        await getApp();
+      const { DeleteResourcePack } = await getApp();
       for (const p of paths) {
         try {
           await DeleteResourcePack(p, rtype);

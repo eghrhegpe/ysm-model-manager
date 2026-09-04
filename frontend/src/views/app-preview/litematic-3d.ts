@@ -5,12 +5,21 @@
 // ADR-132 遗留 1：.zip 蓝图/投影容器先 ListContainerEntries 枚举 → 装配容器内多模型
 // adapter（containerPath + modelEntries + 容器内 voxelCall），修复「zip 被当 gzip 打开」坏预览。
 
-import { mount3D, cleanupPreview, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makeLitematicAdapter } from "../../preview-3d/adapters/litematic-adapter.ts";
 import { getApp } from "../../backend/app.ts";
-import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
-import { RESOURCE_TYPES, VOXEL_RPC_BY_EXT, extOf, isContainerExt } from "../../utils/resource/types.ts";
 import type { VoxelData } from "../../parsers/voxel-parse.ts";
+import { makeLitematicAdapter } from "../../preview-3d/adapters/litematic-adapter.ts";
+import {
+  cleanupPreview,
+  type Mount3DOptions,
+  mount3D,
+} from "../../preview-3d/adapters/mount-preview-core.ts";
+import {
+  extOf,
+  isContainerExt,
+  RESOURCE_TYPES,
+  VOXEL_RPC_BY_EXT,
+} from "../../utils/resource/types.ts";
+import { openModel3DFullscreen, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 /** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */
 const CONTAINER_VOXEL_EXTS = ".nbt,.litematic,.schematic";
@@ -43,11 +52,17 @@ function makeVoxelCall(voxelFn: string): (path: string) => Promise<VoxelData | n
     let fn: (p: string) => Promise<VoxelData | null>;
     if (voxelFn === "GetNbtVoxelData") {
       // Go 绑定返回 LitematicVoxelData（生成类型），与前端 VoxelData 结构同源（null 差异）
-      fn = ((p: string) => App.GetNbtVoxelData(p)) as unknown as (p: string) => Promise<VoxelData | null>;
+      fn = ((p: string) => App.GetNbtVoxelData(p)) as unknown as (
+        p: string,
+      ) => Promise<VoxelData | null>;
     } else if (voxelFn === "GetSchematicVoxelData") {
-      fn = ((p: string) => App.GetSchematicVoxelData(p)) as unknown as (p: string) => Promise<VoxelData | null>;
+      fn = ((p: string) => App.GetSchematicVoxelData(p)) as unknown as (
+        p: string,
+      ) => Promise<VoxelData | null>;
     } else if (voxelFn === "" || voxelFn === "GetLitematicVoxelData") {
-      fn = ((p: string) => App.GetLitematicVoxelData(p)) as unknown as (p: string) => Promise<VoxelData | null>;
+      fn = ((p: string) => App.GetLitematicVoxelData(p)) as unknown as (
+        p: string,
+      ) => Promise<VoxelData | null>;
     } else {
       throw new Error(`未识别的 voxel RPC 名: ${voxelFn}`);
     }
@@ -60,10 +75,17 @@ function makeVoxelCall(voxelFn: string): (path: string) => Promise<VoxelData | n
  *  容器（a.nbt + x.schematic 混排，均在白名单）切换时派发各自 builder，而非沿用首条目 ext
  *  （审核修复 P1：旧实现捕获 entries[0] 的 ext 一次，第二格式必走错 builder）；未知扩展名
  *  回退捕获的默认 ext（单格式容器保持原语义，default → BuildVoxelDataFromRoot）。 */
-function makeContainerVoxelCall(containerPath: string, fallbackExt: string): (entryPath: string) => Promise<VoxelData | null> {
+function makeContainerVoxelCall(
+  containerPath: string,
+  fallbackExt: string,
+): (entryPath: string) => Promise<VoxelData | null> {
   return async (entryPath: string): Promise<VoxelData | null> => {
     const App = await getApp();
-    return (await App.GetVoxelDataInContainer(containerPath, entryPath, entryExtOf(entryPath) || fallbackExt)) as unknown as VoxelData | null;
+    return (await App.GetVoxelDataInContainer(
+      containerPath,
+      entryPath,
+      entryExtOf(entryPath) || fallbackExt,
+    )) as unknown as VoxelData | null;
   };
 }
 
@@ -79,7 +101,11 @@ async function listContainerEntries(containerPath: string): Promise<string[]> {
 }
 
 /** 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 */
-export async function createLitematic3D(path: string, voxelFn: string, opts?: Mount3DOptions): Promise<void> {
+export async function createLitematic3D(
+  path: string,
+  voxelFn: string,
+  opts?: Mount3DOptions,
+): Promise<void> {
   const extraOpts = withPreviewExtras(opts ?? {});
   // ADR-132 遗留 1：zip/7z 容器 → 先枚举容器内体素条目，装配容器内多模型 adapter
   if (isContainerPath(path)) {

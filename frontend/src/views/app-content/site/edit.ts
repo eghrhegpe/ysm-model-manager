@@ -1,13 +1,14 @@
 // ===== 站点视图编辑模式事件（从 site-view.ts 拆出，ADR-034 方向①）=====
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { t } from "../../../core/i18n/t.ts";
+
 import { getApp } from "../../../backend/app.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { moveItem } from "../../../utils/array.ts";
+import { friendlyError } from "../../../utils/dom/errors.ts";
 import { safeSet } from "../../../utils/dom/storage.ts";
 import type { WorkshopPresetSearch } from "../../../utils/types-re-export.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
-import type { SiteViewState, CleanupFn } from "./types.ts";
 import * as m from "../community-data.ts";
+import type { LocalCreatorLike } from "../site-view.ts";
+import type { CleanupFn, SiteViewState } from "./types.ts";
 
 interface DragStateShell {
   srcIdx: number;
@@ -24,9 +25,7 @@ function eeSyncAllEditInputs(
   site: SiteViewState["site"],
 ): void {
   searchResults
-    .querySelectorAll(
-      ".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]",
-    )
+    .querySelectorAll(".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]")
     .forEach((inp) => {
       const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
       const fld = (inp as HTMLElement).dataset.fld || "";
@@ -42,9 +41,7 @@ function eeSyncAllEditInputs(
       }
     });
   searchResults
-    .querySelectorAll(
-      ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
-    )
+    .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
     .forEach((inp) => {
       const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
       if (site.presetSearches && site.presetSearches[idx]) {
@@ -53,10 +50,7 @@ function eeSyncAllEditInputs(
     });
 }
 
-function eeClearDragState(
-  searchResults: HTMLElement,
-  ds: DragStateShell,
-): void {
+function eeClearDragState(searchResults: HTMLElement, ds: DragStateShell): void {
   ds.srcIdx = -1;
   ds.presetSrcIdx = -1;
   searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
@@ -74,9 +68,7 @@ function eeApplyFilters(
   let visible = 0;
   cards.forEach((card) => {
     const name = ((card as HTMLElement).dataset.name || "").toLowerCase();
-    const desc = (
-      card.querySelector(".cr-card-desc")?.textContent || ""
-    ).toLowerCase();
+    const desc = (card.querySelector(".cr-card-desc")?.textContent || "").toLowerCase();
     const cardTag = ((card as HTMLElement).dataset.tag || "").toLowerCase();
     const matchName = !kw || name.includes(kw) || desc.includes(kw);
     const matchTag = !fs.activeTag || fs.activeTag === cardTag;
@@ -87,28 +79,30 @@ function eeApplyFilters(
   if (countEl) countEl.textContent = "(" + visible + "/" + cards.length + ")";
 }
 
-function eeBindToolbarBtns(
-  state: SiteViewState,
-  refreshView: () => void,
-  sig: AbortSignal,
-): void {
+function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
   const { searchResults, wsEditModeRef, site, creators, allSites, bus: busRef } = state;
 
-  searchResults.querySelector(".cr-edit-btn")?.addEventListener("click", () => {
-    wsEditModeRef.v = true;
-    refreshView();
-  }, { signal: sig });
+  searchResults.querySelector(".cr-edit-btn")?.addEventListener(
+    "click",
+    () => {
+      wsEditModeRef.v = true;
+      refreshView();
+    },
+    { signal: sig },
+  );
 
-  searchResults
-    .querySelector(".cr-cancel-btn")
-    ?.addEventListener("click", () => {
+  searchResults.querySelector(".cr-cancel-btn")?.addEventListener(
+    "click",
+    () => {
       wsEditModeRef.v = false;
       refreshView();
-    }, { signal: sig });
+    },
+    { signal: sig },
+  );
 
-  searchResults
-    .querySelector(".cr-save-btn")
-    ?.addEventListener("click", async () => {
+  searchResults.querySelector(".cr-save-btn")?.addEventListener(
+    "click",
+    async () => {
       try {
         if (!site || !site.id) {
           busRef.emit("toast:show", {
@@ -122,9 +116,7 @@ function eeBindToolbarBtns(
           const { SaveWorkshopPresetsBySite } = await getApp();
           const newPresets: WorkshopPresetSearch[] = [];
           searchResults
-            .querySelectorAll(
-              ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
-            )
+            .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
             .forEach((inp) => {
               const val = (inp as HTMLInputElement).value.trim();
               if (val) newPresets.push({ label: val } as WorkshopPresetSearch);
@@ -152,19 +144,17 @@ function eeBindToolbarBtns(
           type: "error",
         });
       }
-    }, { signal: sig });
+    },
+    { signal: sig },
+  );
 }
 
-function eeBindFetchBtn(
-  state: SiteViewState,
-  refreshView: () => void,
-  sig: AbortSignal,
-): void {
+function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
   const { searchResults, allCreators, allSites, bus: busRef } = state;
 
-  searchResults
-    .querySelector(".cr-fetch-btn")
-    ?.addEventListener("click", async () => {
+  searchResults.querySelector(".cr-fetch-btn")?.addEventListener(
+    "click",
+    async () => {
       const btn = searchResults.querySelector(".cr-fetch-btn") as HTMLButtonElement;
       btn.textContent = "⏳";
       btn.disabled = true;
@@ -173,12 +163,8 @@ function eeBindFetchBtn(
         const results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),
           m.fetchCommunitySites(),
-          App.LoadGitHubRepos().catch(function () {
-            return [];
-          }),
-          App.LoadResourceTypes().catch(function () {
-            return null;
-          }),
+          App.LoadGitHubRepos().catch(() => []),
+          App.LoadResourceTypes().catch(() => null),
         ]);
         const community = results[0],
           sitesData = results[1],
@@ -196,17 +182,13 @@ function eeBindFetchBtn(
           let added = 0,
             updated = 0;
           // 落盘失败自然冒泡到外层 catch 走 toast 错误提示
-          const [ga, gu] = await App.MergeCommunityCreatorsFromJSON(
-            JSON.stringify(community),
-          );
+          const [ga, gu] = await App.MergeCommunityCreatorsFromJSON(JSON.stringify(community));
           added = ga;
           updated = gu;
           if (added || updated) {
             // UI 即时并入（仅内存展示，不驱动写回；输入与 Go 同源，结果等价）
             m.mergeCommunityCreators(allCreators, community);
-            logs.push(
-              t("workshop.logCreators", { added, updated }),
-            );
+            logs.push(t("workshop.logCreators", { added, updated }));
             changed = true;
           }
         }
@@ -228,7 +210,9 @@ function eeBindFetchBtn(
           if (reg && Array.isArray(reg.resourceTypes)) {
             resourceTypes = reg.resourceTypes;
           }
-        } catch (e) { console.warn("[site-edit] parse resourceTypes:", e); }
+        } catch (e) {
+          console.warn("[site-edit] parse resourceTypes:", e);
+        }
         if (resourceTypes.length) {
           logs.push(t("workshop.logTypes", { n: resourceTypes.length }));
           changed = true;
@@ -250,13 +234,14 @@ function eeBindFetchBtn(
         }
       } catch (e) {
         const err = e as Error;
-        const errMsg = err.message === "NetworkOffline"
-          ? t("workshop.networkOffline")
-          : err.message === "NoIndex"
-            ? t("workshop.indexMissing")
-            : err.message === "RateLimited"
-              ? t("workshop.rateLimited")
-              : "🌐 " + friendlyError(e, t("workshop.fetchFailed"));
+        const errMsg =
+          err.message === "NetworkOffline"
+            ? t("workshop.networkOffline")
+            : err.message === "NoIndex"
+              ? t("workshop.indexMissing")
+              : err.message === "RateLimited"
+                ? t("workshop.rateLimited")
+                : "🌐 " + friendlyError(e, t("workshop.fetchFailed"));
         busRef.emit("toast:show", {
           msg: errMsg,
           duration: 5000,
@@ -266,58 +251,68 @@ function eeBindFetchBtn(
         btn.textContent = t("workshop.updateConfig");
         btn.disabled = false;
       }
-    }, { signal: sig });
+    },
+    { signal: sig },
+  );
 }
 
-function eeBindCreatorsEdit(
-  state: SiteViewState,
-  refreshView: () => void,
-  sig: AbortSignal,
-): void {
+function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
   const { searchResults, creators, allCreators, site } = state;
 
   searchResults
     .querySelectorAll(".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]")
     .forEach((inp) => {
-      inp.addEventListener("input", () => {
-        const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
-        const fld = (inp as HTMLElement).dataset.fld || "";
-        if (creators[idx]) {
-          if (inp.tagName === "SELECT") {
-            creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)
-              .map((o) => o.value)
-              .filter(Boolean)
-              .join(";");
-          } else {
-            creators[idx][fld] = (inp as HTMLInputElement).value.trim();
+      inp.addEventListener(
+        "input",
+        () => {
+          const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
+          const fld = (inp as HTMLElement).dataset.fld || "";
+          if (creators[idx]) {
+            if (inp.tagName === "SELECT") {
+              creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)
+                .map((o) => o.value)
+                .filter(Boolean)
+                .join(";");
+            } else {
+              creators[idx][fld] = (inp as HTMLInputElement).value.trim();
+            }
           }
-        }
-      }, { signal: sig });
+        },
+        { signal: sig },
+      );
     });
 
   searchResults.querySelectorAll(".cr-del").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      eeSyncAllEditInputs(searchResults, creators, site);
-      const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
-      if (creators[idx]) {
-        const realIdx = allCreators.indexOf(creators[idx]);
-        if (realIdx >= 0) allCreators.splice(realIdx, 1);
-        refreshView();
-      }
-    }, { signal: sig });
+    btn.addEventListener(
+      "click",
+      () => {
+        eeSyncAllEditInputs(searchResults, creators, site);
+        const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
+        if (creators[idx]) {
+          const realIdx = allCreators.indexOf(creators[idx]);
+          if (realIdx >= 0) allCreators.splice(realIdx, 1);
+          refreshView();
+        }
+      },
+      { signal: sig },
+    );
   });
 
-  searchResults.querySelector(".cr-add")?.addEventListener("click", () => {
-    eeSyncAllEditInputs(searchResults, creators, site);
-    creators.push({
-      name: t("workshop.newCreatorName"),
-      desc: t("workshop.newCreatorDesc"),
-      type: site.id,
-      tag: "",
-    } as LocalCreatorLike);
-    allCreators.push(creators[creators.length - 1]);
-    refreshView();
-  }, { signal: sig });
+  searchResults.querySelector(".cr-add")?.addEventListener(
+    "click",
+    () => {
+      eeSyncAllEditInputs(searchResults, creators, site);
+      creators.push({
+        name: t("workshop.newCreatorName"),
+        desc: t("workshop.newCreatorDesc"),
+        type: site.id,
+        tag: "",
+      } as LocalCreatorLike);
+      allCreators.push(creators[creators.length - 1]);
+      refreshView();
+    },
+    { signal: sig },
+  );
 }
 
 function eeBindCreatorsDrag(
@@ -328,31 +323,47 @@ function eeBindCreatorsDrag(
 ): void {
   const { searchResults, creators, allCreators, site } = state;
 
-  searchResults
-    .querySelectorAll(".cr-edit-card:not([data-edit='preset'])")
-    .forEach((card) => {
-      const handle = card.querySelector(".cr-drag-handle");
-      if (!handle) return;
-      handle.addEventListener("pointerdown", () => {
+  searchResults.querySelectorAll(".cr-edit-card:not([data-edit='preset'])").forEach((card) => {
+    const handle = card.querySelector(".cr-drag-handle");
+    if (!handle) return;
+    handle.addEventListener(
+      "pointerdown",
+      () => {
         (card as HTMLElement).draggable = true;
-      }, { signal: sig });
-      card.addEventListener("dragstart", (e: Event) => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragstart",
+      (e: Event) => {
         const de = e as DragEvent;
         (card as HTMLElement).draggable = false;
         ds.srcIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         card.classList.add("cr-dragging");
         de.dataTransfer!.effectAllowed = "move";
         de.dataTransfer!.setData("text/plain", "");
-      }, { signal: sig });
-      card.addEventListener("dragend", () => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragend",
+      () => {
         (card as HTMLElement).draggable = false;
         eeClearDragState(searchResults, ds);
-      }, { signal: sig });
-      card.addEventListener("dragover", (e: Event) => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragover",
+      (e: Event) => {
         e.preventDefault();
         (e as DragEvent).dataTransfer!.dropEffect = "move";
-      }, { signal: sig });
-      card.addEventListener("dragenter", (e) => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragenter",
+      (e) => {
         e.preventDefault();
         card.classList.add("cr-drag-target");
         if (ds.srcIdx >= 0) {
@@ -363,11 +374,19 @@ function eeBindCreatorsDrag(
             card.classList.add("cr-drag-after");
           }
         }
-      }, { signal: sig });
-      card.addEventListener("dragleave", () => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragleave",
+      () => {
         card.classList.remove("cr-drag-target", "cr-drag-before", "cr-drag-after");
-      }, { signal: sig });
-      card.addEventListener("drop", (e) => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "drop",
+      (e) => {
         e.preventDefault();
         card.classList.remove("cr-drag-target");
         const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
@@ -383,59 +402,71 @@ function eeBindCreatorsDrag(
         moveItem(allCreators, realSrc, realTgt);
         ds.srcIdx = -1;
         refreshView();
-      }, { signal: sig });
-    });
+      },
+      { signal: sig },
+    );
+  });
 }
 
-function eeBindPresetsEdit(
-  state: SiteViewState,
-  refreshView: () => void,
-  sig: AbortSignal,
-): void {
+function eeBindPresetsEdit(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
   const { searchResults, site, creators } = state;
 
   searchResults.querySelectorAll(".cr-del-preset").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      eeSyncAllEditInputs(searchResults, creators, site);
-      const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
-      if (site.presetSearches && site.presetSearches[idx]) {
-        site.presetSearches.splice(idx, 1);
-        refreshView();
-      }
-    }, { signal: sig });
+    btn.addEventListener(
+      "click",
+      () => {
+        eeSyncAllEditInputs(searchResults, creators, site);
+        const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
+        if (site.presetSearches && site.presetSearches[idx]) {
+          site.presetSearches.splice(idx, 1);
+          refreshView();
+        }
+      },
+      { signal: sig },
+    );
   });
 
   searchResults.querySelectorAll(".cr-order-up").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      eeSyncAllEditInputs(searchResults, creators, site);
-      const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
-      if (site.presetSearches && idx > 0) {
-        const arr = site.presetSearches;
-        [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
-        refreshView();
-      }
-    }, { signal: sig });
+    btn.addEventListener(
+      "click",
+      () => {
+        eeSyncAllEditInputs(searchResults, creators, site);
+        const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
+        if (site.presetSearches && idx > 0) {
+          const arr = site.presetSearches;
+          [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+          refreshView();
+        }
+      },
+      { signal: sig },
+    );
   });
   searchResults.querySelectorAll(".cr-order-down").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      eeSyncAllEditInputs(searchResults, creators, site);
-      const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
-      if (site.presetSearches && idx < site.presetSearches.length - 1) {
-        const arr = site.presetSearches;
-        [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
-        refreshView();
-      }
-    }, { signal: sig });
+    btn.addEventListener(
+      "click",
+      () => {
+        eeSyncAllEditInputs(searchResults, creators, site);
+        const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
+        if (site.presetSearches && idx < site.presetSearches.length - 1) {
+          const arr = site.presetSearches;
+          [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+          refreshView();
+        }
+      },
+      { signal: sig },
+    );
   });
 
-  searchResults
-    .querySelector(".cr-add-preset")
-    ?.addEventListener("click", () => {
+  searchResults.querySelector(".cr-add-preset")?.addEventListener(
+    "click",
+    () => {
       eeSyncAllEditInputs(searchResults, creators, site);
       if (!site.presetSearches) site.presetSearches = [];
       site.presetSearches.push({ label: "", q: "" });
       refreshView();
-    }, { signal: sig });
+    },
+    { signal: sig },
+  );
 }
 
 function eeBindPresetsDrag(
@@ -446,31 +477,47 @@ function eeBindPresetsDrag(
 ): void {
   const { searchResults, site, creators } = state;
 
-  searchResults
-    .querySelectorAll(".cr-edit-card[data-edit='preset']")
-    .forEach((card) => {
-      const handle = card.querySelector(".cr-drag-handle");
-      if (!handle) return;
-      handle.addEventListener("pointerdown", () => {
+  searchResults.querySelectorAll(".cr-edit-card[data-edit='preset']").forEach((card) => {
+    const handle = card.querySelector(".cr-drag-handle");
+    if (!handle) return;
+    handle.addEventListener(
+      "pointerdown",
+      () => {
         (card as HTMLElement).draggable = true;
-      }, { signal: sig });
-      card.addEventListener("dragstart", (e: Event) => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragstart",
+      (e: Event) => {
         const de = e as DragEvent;
         (card as HTMLElement).draggable = false;
         ds.presetSrcIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         card.classList.add("cr-dragging");
         de.dataTransfer!.effectAllowed = "move";
         de.dataTransfer!.setData("text/plain", "");
-      }, { signal: sig });
-      card.addEventListener("dragend", () => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragend",
+      () => {
         (card as HTMLElement).draggable = false;
         eeClearDragState(searchResults, ds);
-      }, { signal: sig });
-      card.addEventListener("dragover", (e: Event) => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragover",
+      (e: Event) => {
         e.preventDefault();
         (e as DragEvent).dataTransfer!.dropEffect = "move";
-      }, { signal: sig });
-      card.addEventListener("dragenter", (e) => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragenter",
+      (e) => {
         e.preventDefault();
         card.classList.add("cr-drag-target");
         if (ds.presetSrcIdx >= 0) {
@@ -481,52 +528,61 @@ function eeBindPresetsDrag(
             card.classList.add("cr-drag-after");
           }
         }
-      }, { signal: sig });
-      card.addEventListener("dragleave", () => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "dragleave",
+      () => {
         card.classList.remove("cr-drag-target", "cr-drag-before", "cr-drag-after");
-      }, { signal: sig });
-      card.addEventListener("drop", (e) => {
+      },
+      { signal: sig },
+    );
+    card.addEventListener(
+      "drop",
+      (e) => {
         e.preventDefault();
         card.classList.remove("cr-drag-target");
         const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
-        if (
-          ds.presetSrcIdx < 0 ||
-          ds.presetSrcIdx === targetIdx ||
-          !site.presetSearches
-        )
-          return;
+        if (ds.presetSrcIdx < 0 || ds.presetSrcIdx === targetIdx || !site.presetSearches) return;
         eeSyncAllEditInputs(searchResults, creators, site);
         moveItem(site.presetSearches, ds.presetSrcIdx, targetIdx);
         ds.presetSrcIdx = -1;
         refreshView();
-      }, { signal: sig });
-    });
+      },
+      { signal: sig },
+    );
+  });
 }
 
-function eeBindGithubFilter(
-  state: SiteViewState,
-  fs: FilterStateShell,
-  sig: AbortSignal,
-): void {
+function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: AbortSignal): void {
   const { searchResults } = state;
 
   const searchInput = searchResults.querySelector("#ws-cr-search") as HTMLInputElement | null;
   if (searchInput) {
-    searchInput.addEventListener("input", () => {
-      safeSet("ysm-ws-search-kw", searchInput.value);
-      eeApplyFilters(searchResults, searchInput, fs);
-    }, { signal: sig });
+    searchInput.addEventListener(
+      "input",
+      () => {
+        safeSet("ysm-ws-search-kw", searchInput.value);
+        eeApplyFilters(searchResults, searchInput, fs);
+      },
+      { signal: sig },
+    );
   }
 
   searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      fs.activeTag = (btn as HTMLElement).dataset.tag || "";
-      safeSet("ysm-ws-active-tag", fs.activeTag);
-      searchResults
-        .querySelectorAll(".cr-tag-filter-btn")
-        .forEach((b) => b.classList.toggle("active", b === btn));
-      eeApplyFilters(searchResults, searchInput, fs);
-    }, { signal: sig });
+    btn.addEventListener(
+      "click",
+      () => {
+        fs.activeTag = (btn as HTMLElement).dataset.tag || "";
+        safeSet("ysm-ws-active-tag", fs.activeTag);
+        searchResults
+          .querySelectorAll(".cr-tag-filter-btn")
+          .forEach((b) => b.classList.toggle("active", b === btn));
+        eeApplyFilters(searchResults, searchInput, fs);
+      },
+      { signal: sig },
+    );
   });
 
   eeApplyFilters(searchResults, searchInput, fs);
@@ -538,9 +594,7 @@ function eeBindGithubFilter(
  * 拖拽排序属编辑模式强相关，一并迁此。
  */
 export function bindEditEvents(state: SiteViewState, refreshView: () => void): CleanupFn {
-  const {
-    esc: _esc,
-  } = state;
+  const { esc: _esc } = state;
   void _esc;
 
   const ds: DragStateShell = { srcIdx: -1, presetSrcIdx: -1 };

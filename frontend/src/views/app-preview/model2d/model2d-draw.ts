@@ -23,13 +23,15 @@ const FALLBACK_ACCENT_RGB: [number, number, number] = [124, 131, 255];
 function accentRgba(alpha: number): string {
   let rgb: [number, number, number] = FALLBACK_ACCENT_RGB;
   try {
-    const raw = getComputedStyle(document.documentElement)
-      .getPropertyValue("--accent")
-      .trim();
+    const raw = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
     const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
     if (m) {
       let hex = m[1];
-      if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+      if (hex.length === 3)
+        hex = hex
+          .split("")
+          .map((c) => c + c)
+          .join("");
       rgb = [
         parseInt(hex.slice(0, 2), 16),
         parseInt(hex.slice(2, 4), 16),
@@ -51,12 +53,8 @@ function mdDvDrawRect(
     | { mode: "centered"; screenX: number; screenY: number; rzRad: number }
     | { mode: "plain"; drawX: number; drawY: number; doubleStroke?: boolean },
 ): void {
-  const fill = isHighlight
-    ? "rgba(255,180,50,0.25)"
-    : accentRgba(0.45);
-  const stroke = isHighlight
-    ? "rgba(255,220,100,1)"
-    : "rgba(205,214,244,0.85)";
+  const fill = isHighlight ? "rgba(255,180,50,0.25)" : accentRgba(0.45);
+  const stroke = isHighlight ? "rgba(255,220,100,1)" : "rgba(205,214,244,0.85)";
   const lw = isHighlight ? 1.5 : 1;
 
   if (pos.mode === "centered") {
@@ -82,12 +80,19 @@ function mdDvDrawRect(
 }
 
 function mdDvApplyBoneAnim(
-  x: number, y: number, z: number,
-  sx: number, sy: number, sz: number,
+  x: number,
+  y: number,
+  z: number,
+  sx: number,
+  sy: number,
+  sz: number,
   pivot: number[],
   btx: BoneTransform | undefined,
-  cosA: number, sinA: number,
-  ox: number, oy: number, scale: number,
+  cosA: number,
+  sinA: number,
+  ox: number,
+  oy: number,
+  scale: number,
 ): { ok: boolean; screenX: number; screenY: number; drawW: number; drawH: number; rzRad: number } {
   let cx = x + sx / 2;
   let cy = y + sy / 2;
@@ -130,12 +135,19 @@ function mdDvApplyBoneAnim(
 }
 
 function mdDvApplyCubeRot(
-  x: number, y: number, z: number,
-  sx: number, sy: number, sz: number,
+  x: number,
+  y: number,
+  z: number,
+  sx: number,
+  sy: number,
+  sz: number,
   pivot: number[],
   cubeRot: number[],
-  cosA: number, sinA: number,
-  ox: number, oy: number, scale: number,
+  cosA: number,
+  sinA: number,
+  ox: number,
+  oy: number,
+  scale: number,
 ): { ok: boolean; screenX: number; screenY: number; drawW: number; drawH: number; rzRad: number } {
   const rxRad = (cubeRot[0] * Math.PI) / 180;
   const rzRad = (cubeRot[2] * Math.PI) / 180;
@@ -145,7 +157,7 @@ function mdDvApplyCubeRot(
 
   let cx = x + sx / 2;
   let cy = y + sy / 2;
-  let cz = z + sz / 2;
+  const cz = z + sz / 2;
 
   if (rxRad !== 0) {
     const dyy = cy - pivot[1];
@@ -171,10 +183,13 @@ function mdDvApplyCubeRot(
 }
 
 function mdDvProjectCorner(
-  cx: number, cy: number, cz: number,
+  cx: number,
+  cy: number,
+  cz: number,
   pivot: number[],
   btx: BoneTransform | undefined,
-  cosA: number, sinA: number,
+  cosA: number,
+  sinA: number,
   isFront: boolean,
 ): { px2: number; py2: number } {
   let _cx = cx;
@@ -210,9 +225,11 @@ function mdDvDrawLabels(
   ctx: CanvasRenderingContext2D,
   model: BedrockModel,
   scale: number,
-  ox: number, oy: number,
+  ox: number,
+  oy: number,
   highlightBone: string | null,
-  cosA: number, sinA: number,
+  cosA: number,
+  sinA: number,
   boneTransforms: Map<string, BoneTransform> | null,
   isFront: boolean,
 ): void {
@@ -253,8 +270,7 @@ function mdDvDrawLabels(
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     const tw = ctx.measureText(txt).width;
     ctx.fillRect(cx2 - tw / 2 - 2, cy2 - 5, tw + 4, 10);
-    ctx.fillStyle =
-      bone.name === highlightBone ? "#ffd460" : "rgba(205,214,244,0.9)";
+    ctx.fillStyle = bone.name === highlightBone ? "#ffd460" : "rgba(205,214,244,0.9)";
     ctx.fillText(txt, cx2, cy2);
   }
   ctx.restore();
@@ -290,17 +306,37 @@ function drawView(
         const r = mdDvApplyBoneAnim(x, y, z, sx, sy, sz, pivot, btx, cosA, sinA, ox, oy, scale);
         if (!r.ok) continue;
         mdDvDrawRect(ctx, isHighlight, r.drawW, r.drawH, {
-          mode: "centered", screenX: r.screenX, screenY: r.screenY, rzRad: r.rzRad,
+          mode: "centered",
+          screenX: r.screenX,
+          screenY: r.screenY,
+          rzRad: r.rzRad,
         });
       } else {
         const cubeRot = c.rotation || [0, 0, 0];
         const hasRotation = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
         if (hasRotation) {
           const pivot2 = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
-          const r = mdDvApplyCubeRot(x, y, z, sx, sy, sz, pivot2, cubeRot, cosA, sinA, ox, oy, scale);
+          const r = mdDvApplyCubeRot(
+            x,
+            y,
+            z,
+            sx,
+            sy,
+            sz,
+            pivot2,
+            cubeRot,
+            cosA,
+            sinA,
+            ox,
+            oy,
+            scale,
+          );
           if (!r.ok) continue;
           mdDvDrawRect(ctx, isHighlight, r.drawW, r.drawH, {
-            mode: "centered", screenX: r.screenX, screenY: r.screenY, rzRad: r.rzRad,
+            mode: "centered",
+            screenX: r.screenX,
+            screenY: r.screenY,
+            rzRad: r.rzRad,
           });
         } else {
           const rx = x * cosA - z * sinA;
@@ -315,7 +351,10 @@ function drawView(
           const drawH = ph * scale;
           if (drawW < 0.5 || drawH < 0.5) continue;
           mdDvDrawRect(ctx, isHighlight, drawW, drawH, {
-            mode: "plain", drawX, drawY, doubleStroke: true,
+            mode: "plain",
+            drawX,
+            drawY,
+            doubleStroke: true,
           });
         }
       }
@@ -387,4 +426,4 @@ function drawMiniView(
 }
 
 // 导出给 model2d.ts 主入口与测试（calcBoneHitZones 在 model2d-hit-zones.ts）
-export { drawView, drawMiniView };
+export { drawMiniView, drawView };

@@ -1,13 +1,13 @@
-import { renderFormattedText } from "../../utils/format/mc-format.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { extOf, VOXEL_RPC_BY_EXT } from "../../utils/resource/types.ts";
 import { getApp } from "../../backend/app.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import type { PreviewRoot } from "./utils.ts";
-import { createLitematic3D, cleanupVoxel3D } from "./litematic-3d.ts";
 import { t } from "../../core/i18n/t.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { extOf, VOXEL_RPC_BY_EXT } from "../../utils/resource/types.ts";
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { GenGuard } from "./gen-guard.ts";
+import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
+import type { PreviewRoot } from "./utils.ts";
 
 function fmtTime(ms: number): string {
   if (!ms || ms <= 0) return "未知";
@@ -36,25 +36,61 @@ function shortName(name: string): string {
 
 function blockColorHTML(name: string): string {
   const map: Record<string, string> = {
-    stone: "#7F7F7F", dirt: "#9B6B3D", grass_block: "#7C9E4C", sand: "#DFD3A8",
-    gravel: "#807F7D", cobblestone: "#6F6F6F", sandstone: "#D8CCA5",
-    oak_planks: "#BA8E4A", spruce_planks: "#735C3C", birch_planks: "#D9CB9E",
-    oak_log: "#8E7B56", spruce_log: "#4A3928", oak_leaves: "#4C8E2E",
-    water: "#3F76E4", lava: "#CF5300", glass: "#BFD9EF", bricks: "#9E5E44",
-    obsidian: "#1A1024", bedrock: "#404040", coal_ore: "#6B6B6B",
-    iron_ore: "#C6A28B", gold_ore: "#D0AA37", diamond_ore: "#6FE0DF",
-    redstone_ore: "#B52B24", lapis_ore: "#254D9E", emerald_ore: "#2DB74B",
-    netherrack: "#6F3236", glowstone: "#C4B168", soul_sand: "#453326",
-    end_stone: "#D9D7A2", purpur_block: "#A87DA8", prismarine: "#64A396",
-    coal_block: "#343434", iron_block: "#D8D8D8", gold_block: "#F9E14B",
-    diamond_block: "#5DE5E5", netherite_block: "#44342B", deepslate: "#4F4E52",
-    tuff: "#5F645A", blackstone: "#2D2C33", basalt: "#484A4C",
-    white_concrete: "#D0D5D9", orange_concrete: "#DF6200",
-    light_blue_concrete: "#2A93CD", yellow_concrete: "#F1B021",
-    lime_concrete: "#60B91C", pink_concrete: "#D47489", gray_concrete: "#3E4147",
-    light_gray_concrete: "#828282", cyan_concrete: "#157788",
-    purple_concrete: "#7B2EAE", blue_concrete: "#2D3291",
-    brown_concrete: "#5F453B", green_concrete: "#4B572B", red_concrete: "#932922",
+    stone: "#7F7F7F",
+    dirt: "#9B6B3D",
+    grass_block: "#7C9E4C",
+    sand: "#DFD3A8",
+    gravel: "#807F7D",
+    cobblestone: "#6F6F6F",
+    sandstone: "#D8CCA5",
+    oak_planks: "#BA8E4A",
+    spruce_planks: "#735C3C",
+    birch_planks: "#D9CB9E",
+    oak_log: "#8E7B56",
+    spruce_log: "#4A3928",
+    oak_leaves: "#4C8E2E",
+    water: "#3F76E4",
+    lava: "#CF5300",
+    glass: "#BFD9EF",
+    bricks: "#9E5E44",
+    obsidian: "#1A1024",
+    bedrock: "#404040",
+    coal_ore: "#6B6B6B",
+    iron_ore: "#C6A28B",
+    gold_ore: "#D0AA37",
+    diamond_ore: "#6FE0DF",
+    redstone_ore: "#B52B24",
+    lapis_ore: "#254D9E",
+    emerald_ore: "#2DB74B",
+    netherrack: "#6F3236",
+    glowstone: "#C4B168",
+    soul_sand: "#453326",
+    end_stone: "#D9D7A2",
+    purpur_block: "#A87DA8",
+    prismarine: "#64A396",
+    coal_block: "#343434",
+    iron_block: "#D8D8D8",
+    gold_block: "#F9E14B",
+    diamond_block: "#5DE5E5",
+    netherite_block: "#44342B",
+    deepslate: "#4F4E52",
+    tuff: "#5F645A",
+    blackstone: "#2D2C33",
+    basalt: "#484A4C",
+    white_concrete: "#D0D5D9",
+    orange_concrete: "#DF6200",
+    light_blue_concrete: "#2A93CD",
+    yellow_concrete: "#F1B021",
+    lime_concrete: "#60B91C",
+    pink_concrete: "#D47489",
+    gray_concrete: "#3E4147",
+    light_gray_concrete: "#828282",
+    cyan_concrete: "#157788",
+    purple_concrete: "#7B2EAE",
+    blue_concrete: "#2D3291",
+    brown_concrete: "#5F453B",
+    green_concrete: "#4B572B",
+    red_concrete: "#932922",
     black_concrete: "#0F1117",
   };
   if (map[name]) return map[name];
@@ -70,7 +106,8 @@ interface BlockStat {
 }
 
 function renderBlockList(stats: BlockStat[] | undefined): string {
-  if (!stats || !stats.length) return `<div style="color:var(--muted);font-size:var(--fs-sm)">${t("preview.noBlockData")}</div>`;
+  if (!stats || !stats.length)
+    return `<div style="color:var(--muted);font-size:var(--fs-sm)">${t("preview.noBlockData")}</div>`;
   let total = 0;
   for (const s of stats) total += s.count;
   const rows = stats
@@ -121,7 +158,8 @@ async function parseLitematicMeta(ext: string, path: string): Promise<LitematicM
   } else {
     const raw = await ReadLitematicMeta(path);
     meta = raw as unknown as LitematicMeta;
-    if (!meta || (!meta.name && !meta.author && meta.totalBlocks === undefined)) throw new Error("无法解析");
+    if (!meta || (!meta.name && !meta.author && meta.totalBlocks === undefined))
+      throw new Error("无法解析");
   }
   return meta;
 }
@@ -184,10 +222,7 @@ function renderLitematicMaterial(ctx: PreviewRoot, meta: LitematicMeta): void {
 }
 
 /** 显示投影文件详情面板（tab 布局） */
-export async function showLitematic(
-  ctx: PreviewRoot,
-  path: string,
-): Promise<void> {
+export async function showLitematic(ctx: PreviewRoot, path: string): Promise<void> {
   const gen = litematicGuard.next();
   const basename = path.split(/[/\\]/).pop() || "";
   const savedTab = safeGet("lt_previewTab") || "detail";

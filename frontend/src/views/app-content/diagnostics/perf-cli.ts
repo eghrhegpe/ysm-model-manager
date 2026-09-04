@@ -2,23 +2,22 @@
 // 数据来源：Go CLI 命令文本输出，通过 executeCLI 白名单调用后解析渲染。
 // 纯前端逻辑，零 Go 改动；与 perf-trace.ts（load-trace store 消费层）职责隔离。
 
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { executeCLI } from "../../../services/cli-bridge.ts";
-import type { CLIArgs } from "../../../services/cli-bridge.ts";
 import { isWebPlatform } from "../../../backend/platform-web.ts";
 import { bus } from "../../../bus.ts";
-import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
+import { t } from "../../../core/i18n/t.ts";
+import type { CLIArgs } from "../../../services/cli-bridge.ts";
+import { executeCLI } from "../../../services/cli-bridge.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
-import type { EscFn } from "./logs.ts";
+import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
+import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { safeErrorMessage } from "../../../utils/safe-error-msg.ts";
+import type { EscFn } from "./logs.ts";
 
 // 代际守卫：single-bench/gui-flow/perf-log 三个命令各自可并发/快速连点，旧响应后到会覆盖
 // 新响应（对齐 logs.ts 的 diagLoadSeq 做法）——入口捕获 gen，await 后写 DOM 前比对丢弃陈旧
 let perfSingleSeq = 0;
 let perfGuiSeq = 0;
 let perfHistSeq = 0;
-
 
 /** 运行中占位 */
 function busyHTML(): string {
@@ -36,10 +35,7 @@ export function sectionHeader(icon: string, label: string, rawText?: string): st
     rawText !== undefined
       ? `<button type="button" data-perf-copy class="btn-base perf-copy-btn" style="margin-left:auto;padding:2px 8px;font-size:var(--fs-xs);line-height:1.4" title="${t("perf.copyRaw")}">📋 ${t("perf.copy")}</button>`
       : "";
-  const wrapper =
-    rawText !== undefined
-      ? ` data-perf-raw="${encodeURIComponent(rawText)}"`
-      : "";
+  const wrapper = rawText !== undefined ? ` data-perf-raw="${encodeURIComponent(rawText)}"` : "";
   return `<div class="perf-section" style="margin-top:10px;font-size:var(--fs-sm);font-weight:600;color:var(--txt);display:flex;align-items:center;gap:6px"${wrapper}>
 <span>${icon}</span><span>${label}</span>${copyBtn}</div>`;
 }
@@ -145,7 +141,12 @@ function renderPerfTrendSection(esc: EscFn): string {
   for (const p of pts) for (const v of Object.values(p.stages)) if (v > maxMs) maxMs = v;
   if (maxMs <= 0) maxMs = 1;
 
-  const W = 560, H = 150, padL = 30, padR = 10, padT = 10, padB = 20;
+  const W = 560,
+    H = 150,
+    padL = 30,
+    padR = 10,
+    padT = 10,
+    padB = 20;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
   const n = pts.length;
@@ -221,7 +222,9 @@ function setErrorCatch(out: HTMLElement, e: unknown, esc: EscFn): void {
   out.innerHTML = errorHTML(`${t("diagnostics.perfFail")}: ${safeErrorMessage(e)}`, esc);
 }
 
-function respHasOutput(resp: CLIResp): resp is CLIResp & { status: "success"; data: { output: string } } {
+function respHasOutput(
+  resp: CLIResp,
+): resp is CLIResp & { status: "success"; data: { output: string } } {
   return resp.status === "success" && !!resp.data?.output;
 }
 
@@ -239,10 +242,9 @@ type SingleBenchParams = CLIArgs & {
 };
 
 function singleBenchGetParams(root: ShadowRoot): SingleBenchParams {
-  const model = (root.getElementById("diag-perf-model") as HTMLInputElement | null)
-    ?.value.trim() ?? "";
-  const iterRaw =
-    (root.getElementById("diag-perf-iter") as HTMLInputElement | null)?.value ?? "3";
+  const model =
+    (root.getElementById("diag-perf-model") as HTMLInputElement | null)?.value.trim() ?? "";
+  const iterRaw = (root.getElementById("diag-perf-iter") as HTMLInputElement | null)?.value ?? "3";
   const iterations = Math.max(1, parseInt(iterRaw, 10) || 3);
   return { model, iterations };
 }
@@ -260,7 +262,9 @@ function singleBenchValidateAndRender(
   return params;
 }
 
-function singleBenchParseStages(output: string): { stages: SingleBenchStage[]; total: number } | null {
+function singleBenchParseStages(
+  output: string,
+): { stages: SingleBenchStage[]; total: number } | null {
   const lines = output.split("\n");
   const stageRe = /^\s+(.+?)\s+(\d+(?:\.\d+)?)ms(?:\s+(.*))?$/;
   const totalRe = /⏱️\s*总耗时.*?([\d.]+)ms/;
@@ -315,7 +319,14 @@ function singleBenchRenderBars(
 }
 
 export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = makeGenGuard({ get current() { return perfSingleSeq; }, set current(v) { perfSingleSeq = v; } });
+  const { stale } = makeGenGuard({
+    get current() {
+      return perfSingleSeq;
+    },
+    set current(v) {
+      perfSingleSeq = v;
+    },
+  });
   const out = getOutBox(root, "diag-perf-single");
   if (!out) return;
   const params = singleBenchValidateAndRender(root, out, esc);
@@ -430,7 +441,14 @@ function guiFlowRenderStages(
 }
 
 export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = makeGenGuard({ get current() { return perfGuiSeq; }, set current(v) { perfGuiSeq = v; } });
+  const { stale } = makeGenGuard({
+    get current() {
+      return perfGuiSeq;
+    },
+    set current(v) {
+      perfGuiSeq = v;
+    },
+  });
   const out = getOutBox(root, "diag-perf-gui-out");
   if (!out) return;
   if (guiFlowWebModeCheck()) return;
@@ -511,7 +529,14 @@ function perfLogRenderCards(entries: PerfLogEntry[], rawOutput: string, esc: Esc
 }
 
 export async function runPerfLog(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = makeGenGuard({ get current() { return perfHistSeq; }, set current(v) { perfHistSeq = v; } });
+  const { stale } = makeGenGuard({
+    get current() {
+      return perfHistSeq;
+    },
+    set current(v) {
+      perfHistSeq = v;
+    },
+  });
   const out = getOutBox(root, "diag-perf-hist");
   if (!out) return;
   setBusy(out);

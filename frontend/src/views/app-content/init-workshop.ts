@@ -6,21 +6,26 @@
 // - workshop-avatar.ts: 创作者头像提取
 // - features/community/show-repo-models.ts: 仓库模型显示（与 init-github.ts 共享）
 
-import { bus } from "../../bus.ts";
-import { safeGet } from "../../utils/dom/storage.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { Events } from "../../backend/runtime.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { fillSearch } from "./community-data.ts";
-import { renderSiteView, type RenderSiteViewCtx } from "./site-view.ts";
-import { showRepoModels } from "../../features/community/show-repo-models.ts";
-import { loadBrowseMode, saveBrowseMode, createBrowseModeRef, type BrowseMode } from "./workshop-browse-mode.ts";
-import { initWorkshopTabs, setShowSiteView, createWorkshopRefs } from "./workshop-tabs.ts";
-import { openSite, bindSiteEvents } from "./workshop-site-opener.ts";
-import { extractAvatars } from "./workshop-avatar.ts";
-import type { WorkshopModel } from "../../features/community/render.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { Events } from "../../backend/runtime.ts";
+import { bus } from "../../bus.ts";
+import type { WorkshopModel } from "../../features/community/render.ts";
+import { showRepoModels } from "../../features/community/show-repo-models.ts";
+import { dbg } from "../../utils/debug/debug.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { safeGet } from "../../utils/dom/storage.ts";
+import { fillSearch } from "./community-data.ts";
+import { type RenderSiteViewCtx, renderSiteView } from "./site-view.ts";
 import type { RepoCacheEntry } from "./state.ts";
+import { extractAvatars } from "./workshop-avatar.ts";
+import {
+  type BrowseMode,
+  createBrowseModeRef,
+  loadBrowseMode,
+  saveBrowseMode,
+} from "./workshop-browse-mode.ts";
+import { bindSiteEvents, openSite } from "./workshop-site-opener.ts";
+import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./workshop-tabs.ts";
 
 /**
  * 创建创意工坊页的共享 ref 对象——单一入口，tabs / showSiteView / edit 等全部从此处取。
@@ -57,7 +62,7 @@ export function initWorkshopPage(host: AppContentHost): void {
   extractAvatars(host);
 
   // 配置加载完成后重新提取
-  if (!(_avatarConfigLoadedRegistered)) {
+  if (!_avatarConfigLoadedRegistered) {
     _avatarConfigLoadedRegistered = true;
     _avatarConfigLoadedUnsub = Events.On("config-loaded", () => {
       dbg("avatar", "配置已加载，重新提取头像");
@@ -104,7 +109,7 @@ export function initWorkshopPage(host: AppContentHost): void {
           repo,
           models as WorkshopModel[],
           source,
-          searchResults!
+          searchResults!,
         );
       },
       fillSearch,

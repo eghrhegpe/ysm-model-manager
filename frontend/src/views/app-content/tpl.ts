@@ -1,23 +1,23 @@
 // ===== app-content 页面模板 =====
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+
 import { t } from "../../core/i18n/t.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 // ADR-133 阶段 C+：e2e 定位通道收敛——原用 #id 定位的元素改配同名 data-testid
 // （id 保留给 handler / CSS 锚点，testid 独占测试通道，二者同名以消除认知负担）。
 export const VIEW_TESTIDS: readonly string[] = [
-  'content-tab',
-  'diag-log',
-  'diag-log-list',
-  'diag-runtime',
-  'ins-content',
-  'ws-tabs',
-  'ws-search-view',
-  'ws-search-results',
+  "content-tab",
+  "diag-log",
+  "diag-log-list",
+  "diag-runtime",
+  "ins-content",
+  "ws-tabs",
+  "ws-search-view",
+  "ws-search-results",
 ];
-
 
 // P1 修复（ADR-040）：settingsHTML 已拆至 tpl-settings.ts，此处 re-export 兼容
 export { settingsHTML } from "./tpl-settings.ts";
@@ -40,14 +40,18 @@ export function repositoryHTML(): string {
     '<div class="repo-wrap">' +
     // 第一栏：操作
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-testid="content-tab" data-tab="tree">📁 ' + t("repo.tab.tree") + '</button>' +
+    '<button class="repo-tab active" data-testid="content-tab" data-tab="tree">📁 ' +
+    t("repo.tab.tree") +
+    "</button>" +
     viewerExtras +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;min-width:0">' +
     '<div class="tab-body" id="repo-tab-tree" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     // 默认 YSM 文件树（预览在外层共享）
-    '<app-tree root="' + RESOURCE_TYPES.YSM + '" style="flex:1;min-width:0"></app-tree>' +
+    '<app-tree root="' +
+    RESOURCE_TYPES.YSM +
+    '" style="flex:1;min-width:0"></app-tree>' +
     "</div>" +
     '<div class="tab-body" id="repo-tab-recycle" style="display:none;flex:1;overflow-y:auto"></div>' +
     '<div class="tab-body" id="repo-tab-dedup" style="display:none;flex:1;overflow-y:auto;padding:12px"></div>' +
@@ -64,7 +68,9 @@ export function instancesHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="versions">🎮 ' + t("instances.tab.versions") + '</button>' +
+    '<button class="repo-tab active" data-tab="versions">🎮 ' +
+    t("instances.tab.versions") +
+    "</button>" +
     "</div>" +
     '<div class="tab-body" id="ins-tab-versions">' +
     '<div class="repo-layout">' +
@@ -72,7 +78,9 @@ export function instancesHTML(): string {
     '<div class="ins-content" id="ins-content" data-testid="ins-content" style="display:flex;flex-direction:column;overflow:hidden">' +
     '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px">' +
     '<div style="font-size:24px">👈</div>' +
-    "<div>" + t("instances.emptyHint") + "</div>" +
+    "<div>" +
+    t("instances.emptyHint") +
+    "</div>" +
     "</div>" +
     "</div>" +
     "</div>" +
@@ -188,27 +196,36 @@ export function githubHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="github">🐙 ' + t("workshop.title") + '</button>' +
+    '<button class="repo-tab active" data-tab="github">🐙 ' +
+    t("workshop.title") +
+    "</button>" +
     "</div>" +
     '<div class="tab-body" id="gh-tab-repos">' +
     '<div class="gh-page" id="gh-page">' +
     '<div class="gh-left" id="gh-left">' +
     '<div class="gh-left-head">' +
-    '<span class="gh-left-head-label">' + t("gh.leftHead") + '</span>' +
+    '<span class="gh-left-head-label">' +
+    t("gh.leftHead") +
+    "</span>" +
     '<span class="gh-left-head-spacer"></span>' +
     "</div>" +
     '<div class="gh-grid" id="gh-grid">' +
-    '<div class="gh-loading-placeholder">⏳ ' + t("common.loading") + '</div>' +
+    '<div class="gh-loading-placeholder">⏳ ' +
+    t("common.loading") +
+    "</div>" +
     "</div>" +
     '<div class="gh-left-foot">' +
-    t("gh.sourceInfo") + ': <span id="gh-source-info">-</span>' +
+    t("gh.sourceInfo") +
+    ': <span id="gh-source-info">-</span>' +
     "</div>" +
     "</div>" +
     '<div class="gh-right" id="gh-right">' +
     '<div class="gh-right-inner" id="gh-right-inner">' +
     '<div id="gh-results">' +
     '<div id="gh-results-body">' +
-    '<div class="gh-initial-hint">' + t("gh.initialHint") + "</div>" +
+    '<div class="gh-initial-hint">' +
+    t("gh.initialHint") +
+    "</div>" +
     "</div></div></div></div></div>" +
     "</div>" +
     "</div>"
@@ -220,12 +237,22 @@ export function workshopHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs" id="ws-tabs" data-testid="ws-tabs">' +
-    '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ ' + t("common.loading") + '</span>' +
+    '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ ' +
+    t("common.loading") +
+    "</span>" +
     "</div>" +
     // 站点配置导入/导出工具栏（index.ts ws-export-btn / ws-import-btn 绑定）
     '<div style="display:flex;gap:6px;padding:4px 12px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
-    '<button class="btn-base sm" id="ws-export-btn" title="' + t("workshop.exportSiteTitle") + '">📤 ' + t("workshop.exportSite") + '</button>' +
-    '<button class="btn-base sm" id="ws-import-btn" title="' + t("workshop.importSiteTitle") + '">📥 ' + t("workshop.importSite") + '</button>' +
+    '<button class="btn-base sm" id="ws-export-btn" title="' +
+    t("workshop.exportSiteTitle") +
+    '">📤 ' +
+    t("workshop.exportSite") +
+    "</button>" +
+    '<button class="btn-base sm" id="ws-import-btn" title="' +
+    t("workshop.importSiteTitle") +
+    '">📥 ' +
+    t("workshop.importSite") +
+    "</button>" +
     "</div>" +
     '<div class="tab-body" id="cr-tab-creators">' +
     '<div class="cr-page" id="ws-page">' +
@@ -233,12 +260,16 @@ export function workshopHTML(): string {
     '<div class="cr-right-inner" id="ws-right-inner">' +
     '<div id="ws-search-view" data-testid="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     '<div id="ws-search-results" data-testid="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
-    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">' + t("common.loading") + '</div>' +
+    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">' +
+    t("common.loading") +
+    "</div>" +
     "</div>" +
     "</div>" +
     '<div id="ws-creator-view" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">' +
     '<div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
-    '<span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 ' + t("workshop.activeCreators") + '</span>' +
+    '<span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 ' +
+    t("workshop.activeCreators") +
+    "</span>" +
     '<span style="font-size:9px;color:var(--muted);margin-left:auto">creators/</span>' +
     "</div>" +
     '<div class="ws-creators-list" id="ws-cr-list"></div>' +
@@ -247,10 +278,16 @@ export function workshopHTML(): string {
     "</div>" +
     '<div id="ws-browser" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg)">' +
     '<div class="ws-browser-bar">' +
-    '<button class="btn-base sm ws-back" id="ws-back">← ' + t("common.back") + '</button>' +
+    '<button class="btn-base sm ws-back" id="ws-back">← ' +
+    t("common.back") +
+    "</button>" +
     '<span class="ws-url" id="ws-url"></span>' +
-    '<button class="btn-base sm ws-btn-txt" id="ws-win-open" title="' + t("workshop.openWindow") + '">🖥️</button>' +
-    '<button class="btn-base sm ws-open-btn" id="ws-open">↗ ' + t("workshop.openBrowser") + '</button>' +
+    '<button class="btn-base sm ws-btn-txt" id="ws-win-open" title="' +
+    t("workshop.openWindow") +
+    '">🖥️</button>' +
+    '<button class="btn-base sm ws-open-btn" id="ws-open">↗ ' +
+    t("workshop.openBrowser") +
+    "</button>" +
     "</div>" +
     // [ADR-077] allow-same-origin 必需：缺此标记时 iframe origin 被强制为 null（opaque origin），
     // 登录站 SPA（如模之屋 aplaybox）的 fetch/XHR 会被浏览器 CORS 拦截白屏；
@@ -258,8 +295,12 @@ export function workshopHTML(): string {
     '<iframe id="ws-iframe" style="flex:1;border:none;background:var(--bg)" sandbox="allow-scripts allow-forms allow-popups allow-same-origin"></iframe>' +
     '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">' +
     '<div style="font-size:32px">🚫</div>' +
-    "<div>" + t("workshop.noEmbed") + "</div>" +
-    '<button class="btn-base accent" id="ws-open-fallback">↗ ' + t("workshop.openExternal") + '</button>' +
+    "<div>" +
+    t("workshop.noEmbed") +
+    "</div>" +
+    '<button class="btn-base accent" id="ws-open-fallback">↗ ' +
+    t("workshop.openExternal") +
+    "</button>" +
     "</div>" +
     "</div>" +
     "</div>" +

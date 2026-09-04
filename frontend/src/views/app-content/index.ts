@@ -1,10 +1,12 @@
 // ===== <app-content> 入口（ADR-040：≤400 行红线）=====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
 import { bus } from "../../bus.ts";
 import { resolveInitialPage } from "../../core/page-store.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 import { contentCSS } from "./content-css.ts";
+
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
 // 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
 // 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
@@ -16,28 +18,29 @@ const appContentStyle: CSSStyleSheet = (() => {
   sheet.replaceSync(contentCSS);
   return sheet;
 })();
+
 export { appContentStyle };
-import { swallowError } from "../../utils/core/async.ts";
+
 import { registerGlobalHandlers } from "../../core/handlers/global.ts";
+import { swallowError } from "../../utils/core/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "../app-preview/index.ts";
-import { initPreviewResize } from "./init-preview.ts";
+import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { t } from "../../core/i18n/t.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
 import {
   initDiagnosticsPage,
+  initGithubPage,
   initInstancesPage,
   initRepositoryPage,
-  initWorkshopPage,
-  initGithubPage,
   initSettingsPage,
+  initWorkshopPage,
 } from "./init-pages.ts";
+import { initPreviewResize } from "./init-preview.ts";
 import { resetAvatarConfigLoaded } from "./init-workshop.ts";
-
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { t } from "../../core/i18n/t.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { PAGE_REGISTRY } from "./page-registry.ts";
 import { AppContentState, type RepoCacheEntry } from "./state.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
-import { PAGE_REGISTRY } from "./page-registry.ts";
 
 class AppContent extends WebComponentBase {
   /** 状态容器（15 字段 + 9 setter 抽出，index.ts 瘦身为协调器） */
@@ -47,32 +50,82 @@ class AppContent extends WebComponentBase {
 
   // ===== 兼容外部调用方（init-workshop / init-github / init-preview）的委托访问器 =====
   // 这些 getter/setter 保持 AppContentHost 接口不变，内部委托给 state/subs。
-  get _root(): ShadowRoot { return this.state.root; }
-  get _current(): string { return this.state.current; }
-  set _current(v: string) { this.state.current = v; }
-  get _globalUnsubs(): Array<() => void> { return this.subs.globalUnsubs; }
-  get _repoEventsCleanup(): (() => Promise<void>) | null { return this.state.repoEventsCleanup; }
-  get _unsubs(): Array<() => void> { return this.subs.pageUnsubs; }
-  get _resizeMove(): ((e: PointerEvent) => void) | null { return this.state.resizeMove; }
-  get _resizeUp(): ((e: PointerEvent) => void) | null { return this.state.resizeUp; }
-  get _insListenerReg(): boolean { return this.state.insListenerReg; }
-  set _insListenerReg(v: boolean) { this.state.setInsListenerReg(v); }
-  get _avatarRefreshRegistered(): boolean { return this.state.avatarRefreshRegistered; }
-  get _currentSite(): WorkshopSite | null { return this.state.currentSite; }
-  get _avatarCache(): Record<string, string> { return this.state.avatarCache; }
-  get _workshopCache(): Map<string, RepoCacheEntry> | null { return this.state.workshopCache; }
-  get _githubCache(): Map<string, RepoCacheEntry> | null { return this.state.githubCache; }
-  get _workshopTimer(): ReturnType<typeof setTimeout> | null { return this.state.workshopTimer; }
+  get _root(): ShadowRoot {
+    return this.state.root;
+  }
+  get _current(): string {
+    return this.state.current;
+  }
+  set _current(v: string) {
+    this.state.current = v;
+  }
+  get _globalUnsubs(): Array<() => void> {
+    return this.subs.globalUnsubs;
+  }
+  get _repoEventsCleanup(): (() => Promise<void>) | null {
+    return this.state.repoEventsCleanup;
+  }
+  get _unsubs(): Array<() => void> {
+    return this.subs.pageUnsubs;
+  }
+  get _resizeMove(): ((e: PointerEvent) => void) | null {
+    return this.state.resizeMove;
+  }
+  get _resizeUp(): ((e: PointerEvent) => void) | null {
+    return this.state.resizeUp;
+  }
+  get _insListenerReg(): boolean {
+    return this.state.insListenerReg;
+  }
+  set _insListenerReg(v: boolean) {
+    this.state.setInsListenerReg(v);
+  }
+  get _avatarRefreshRegistered(): boolean {
+    return this.state.avatarRefreshRegistered;
+  }
+  get _currentSite(): WorkshopSite | null {
+    return this.state.currentSite;
+  }
+  get _avatarCache(): Record<string, string> {
+    return this.state.avatarCache;
+  }
+  get _workshopCache(): Map<string, RepoCacheEntry> | null {
+    return this.state.workshopCache;
+  }
+  get _githubCache(): Map<string, RepoCacheEntry> | null {
+    return this.state.githubCache;
+  }
+  get _workshopTimer(): ReturnType<typeof setTimeout> | null {
+    return this.state.workshopTimer;
+  }
 
-  _setResizeMove(fn: ((e: PointerEvent) => void) | null): void { this.state.setResizeMove(fn); }
-  _setResizeUp(fn: ((e: PointerEvent) => void) | null): void { this.state.setResizeUp(fn); }
-  _setCurrentSite(site: WorkshopSite | null): void { this.state.setCurrentSite(site); }
-  _setAvatarCache(cache: Record<string, string>): void { this.state.setAvatarCache(cache); }
-  _setWorkshopCache(cache: Map<string, RepoCacheEntry> | null): void { this.state.setWorkshopCache(cache); }
-  _setGithubCache(cache: Map<string, RepoCacheEntry> | null): void { this.state.setGithubCache(cache); }
-  _setWorkshopTimer(timer: ReturnType<typeof setTimeout> | null): void { this.state.setWorkshopTimer(timer); }
-  _setAvatarRefreshRegistered(v: boolean): void { this.state.setAvatarRefreshRegistered(v); }
-  _setRepoEventsCleanup(fn: (() => Promise<void>) | null): void { this.state.setRepoEventsCleanup(fn); }
+  _setResizeMove(fn: ((e: PointerEvent) => void) | null): void {
+    this.state.setResizeMove(fn);
+  }
+  _setResizeUp(fn: ((e: PointerEvent) => void) | null): void {
+    this.state.setResizeUp(fn);
+  }
+  _setCurrentSite(site: WorkshopSite | null): void {
+    this.state.setCurrentSite(site);
+  }
+  _setAvatarCache(cache: Record<string, string>): void {
+    this.state.setAvatarCache(cache);
+  }
+  _setWorkshopCache(cache: Map<string, RepoCacheEntry> | null): void {
+    this.state.setWorkshopCache(cache);
+  }
+  _setGithubCache(cache: Map<string, RepoCacheEntry> | null): void {
+    this.state.setGithubCache(cache);
+  }
+  _setWorkshopTimer(timer: ReturnType<typeof setTimeout> | null): void {
+    this.state.setWorkshopTimer(timer);
+  }
+  _setAvatarRefreshRegistered(v: boolean): void {
+    this.state.setAvatarRefreshRegistered(v);
+  }
+  _setRepoEventsCleanup(fn: (() => Promise<void>) | null): void {
+    this.state.setRepoEventsCleanup(fn);
+  }
 
   constructor() {
     super();
@@ -87,27 +140,33 @@ class AppContent extends WebComponentBase {
   }
 
   connectedCallback(): void {
-    this.subs.setNavUnsub(bus.on("nav:changed", ({ page }) => {
-      this.state.current = page;
-      // 不再每次 nav:changed 清扫描缓存：30s 缓存由导入/同步/下载等实际数据变更处
-      // 显式清除（sync.ts / download-queue.ts），避免重复扫盘 + 刷屏扫描日志
-      this._render();
-    }));
+    this.subs.setNavUnsub(
+      bus.on("nav:changed", ({ page }) => {
+        this.state.current = page;
+        // 不再每次 nav:changed 清扫描缓存：30s 缓存由导入/同步/下载等实际数据变更处
+        // 显式清除（sync.ts / download-queue.ts），避免重复扫盘 + 刷屏扫描日志
+        this._render();
+      }),
+    );
     // 创作者详情浮层→搜索本地模型
-    this.subs.addGlobal(bus.on("repo:search-creator", (name) => {
-      // 先切到仓库页面（_render 同步创建 <app-tree>，其 connectedCallback 注册 tree:set-search 监听）
-      bus.emit("nav:changed", { page: "repository" });
-      // 渲染完成后发射搜索事件——app-tree 已挂载，bus 监听就绪
-      bus.emit("tree:set-search", name);
-    }));
+    this.subs.addGlobal(
+      bus.on("repo:search-creator", (name) => {
+        // 先切到仓库页面（_render 同步创建 <app-tree>，其 connectedCallback 注册 tree:set-search 监听）
+        bus.emit("nav:changed", { page: "repository" });
+        // 渲染完成后发射搜索事件——app-tree 已挂载，bus 监听就绪
+        bus.emit("tree:set-search", name);
+      }),
+    );
     // 语言热切换（ADR-045 增强）：全量重建（ADR-163 常驻化下语言切换低频，重建可接受；
     // 面板缓存的页面 t() 已按旧语言渲染，必须清缓存让下次访问按新语言重建）
-    this.subs.addGlobal(bus.on("lang:changed", () => {
-      this.subs.cleanupPage();
-      this.state.setInsListenerReg(false);
-      this.state.clearPanels();
-      this._render();
-    }));
+    this.subs.addGlobal(
+      bus.on("lang:changed", () => {
+        this.subs.cleanupPage();
+        this.state.setInsListenerReg(false);
+        this.state.clearPanels();
+        this._render();
+      }),
+    );
     this._render();
     registerGlobalHandlers().forEach((fn) => this.subs.addGlobal(fn));
   }

@@ -22,7 +22,7 @@ export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
     const reg = await LoadResourceTypes();
     if (gen !== self._gen) return;
     // 只取前端需要的字段子集
-    self._typeConfig = (reg?.resourceTypes || []).map(r => ({
+    self._typeConfig = (reg?.resourceTypes || []).map((r) => ({
       id: r.id,
       name: r.name,
       icon: r.icon,
@@ -47,7 +47,11 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
   const gen = self._gen;
   try {
     const { GetInstanceSyncStatus } = await getApp();
-    const items = await GetInstanceSyncStatus(self._instance, self._subtype || "", self._selectedType || "");
+    const items = await GetInstanceSyncStatus(
+      self._instance,
+      self._subtype || "",
+      self._selectedType || "",
+    );
     if (gen !== self._gen) return;
     // Go 生成类型 children 可 null → 前端 SyncItem 用 undefined（结构同源，仅空值形态差异）
     self._allItems = (items || []).map((it) => ({
@@ -67,7 +71,13 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
           ...(dirs?.warningCode !== undefined ? { warningCode: dirs.warningCode } : {}),
           // Go map 生成类型（可 undefined 索引）→ 前端窄类型（label/dir/subDir 可选）
           ...(dirs?.warningParams
-            ? { warningParams: { label: dirs.warningParams.label ?? "", dir: dirs.warningParams.dir ?? "", subDir: dirs.warningParams.subDir ?? "" } }
+            ? {
+                warningParams: {
+                  label: dirs.warningParams.label ?? "",
+                  dir: dirs.warningParams.dir ?? "",
+                  subDir: dirs.warningParams.subDir ?? "",
+                },
+              }
             : {}),
         };
       } catch {

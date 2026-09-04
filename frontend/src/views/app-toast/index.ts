@@ -1,22 +1,21 @@
 // ===== <app-toast> — Toast 通知系统（类型化版 — ADR-014 P3 components）=====
 // 用法：bus.emit('toast:show', { msg, undo?, duration?, type? })
 import { bus } from "../../bus.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 // 别名导入：show() 内局部变量 `t` 是 toast 元素，直接用 `t` 会被遮蔽
 import { t as tr } from "../../core/i18n/t.ts";
+import { esc } from "../../utils/dom/html.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 export const VIEW_TESTIDS: readonly string[] = [
-  'toast',
+  "toast",
   // 阶段 C+：撤销/关闭按钮原仅有样式 class，e2e 用 .undo-btn/.close-btn 定位，
   // CSS 重构改类名即静默失效；补稳定钩子并保留 class 供样式与 onclick 绑定。
-  'toast-undo',
-  'toast-close',
+  "toast-undo",
+  "toast-close",
 ];
-
 
 /** toast 元素（含关闭定时器） */
 type ToastEl = HTMLElement & {
@@ -24,11 +23,11 @@ type ToastEl = HTMLElement & {
 };
 
 // ── 魔法数值收敛 ──────────────────────────────────
-const MAX_TOASTS = 5;        // 同时显示上限，超出同步移除最早的
+const MAX_TOASTS = 5; // 同时显示上限，超出同步移除最早的
 const DEFAULT_DURATION = TOAST_MS.verbose; // 默认展示时长 ms
-const SLIDE_OUT_MS = 200;    // 退出动画时长 ms（与 CSS slideOut 同步）
-const OK_TOAST_MS = TOAST_MS.success;    // 成功反馈 toast 展示时长 ms
-const ERR_TOAST_MS = TOAST_MS.normal;   // 失败反馈 toast 展示时长 ms
+const SLIDE_OUT_MS = 200; // 退出动画时长 ms（与 CSS slideOut 同步）
+const OK_TOAST_MS = TOAST_MS.success; // 成功反馈 toast 展示时长 ms
+const ERR_TOAST_MS = TOAST_MS.normal; // 失败反馈 toast 展示时长 ms
 
 class AppToast extends WebComponentBase {
   _unsub: (() => void) | undefined;

@@ -2,15 +2,15 @@
 // loadTextures 已随 ADR-136 第四刀归位 preview-3d/texture-loader.ts
 // ADR-161 §2.1：spec 契约单一镜像——本地 unknown 袋 ModelSpec 退役，
 // 出口类型锚定 Go 绑定 Model3DSpec（字段含 texArrOrder/componentTextures/_cubeCount，不再静默丢）。
-import * as THREE from "three";
+import type * as THREE from "three";
+import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 import { getApp } from "../../backend/app.ts";
-import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
+import { recordLoadTrace } from "../../preview-3d/load-trace.ts";
 import { buildSpecFromGeometryJSON } from "../../preview-3d/spec-builder.ts";
 import { loadTextures, releaseTextureUrls } from "../../preview-3d/texture-loader.ts";
-import { recordLoadTrace } from "../../preview-3d/load-trace.ts";
-import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
+import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {
@@ -101,7 +101,9 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
       const specStr = JSON.stringify(spec);
       // 兜底结果写 spec 缓存：否则每次预览都重新 WASM 解码（时间翻倍）
       cacheSpec(model._modelPath!, specStr);
-      console.warn("[3D] GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）");
+      console.warn(
+        "[3D] GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）",
+      );
       return spec;
     }
   } catch (e) {
@@ -133,14 +135,22 @@ export async function preloadModel(model: ModelLike): Promise<{
   const spec = await fetchSpec(model);
   const tParseEnd = performance.now();
   // 实际纹理清单（URL + 名）；多组件走数组，单组件走单一 texture
-  const actualUrls = model.textures && model.textures.length > 0
-    ? model.textures
-    : (model.texture ? [model.texture] : []);
+  const actualUrls =
+    model.textures && model.textures.length > 0
+      ? model.textures
+      : model.texture
+        ? [model.texture]
+        : [];
   // name 索引：优先显式 textureNames；缺失时从 URL 基名派生（R1 契约比对用）
-  const actualNames = (model as { textureNames?: string[] }).textureNames
-    ?? actualUrls.map((u) =>
+  const actualNames =
+    (model as { textureNames?: string[] }).textureNames ??
+    actualUrls.map((u) =>
       typeof u === "string"
-        ? (u.split("/").pop()?.replace(/\.\w+$/, "").toLowerCase() ?? "")
+        ? (u
+            .split("/")
+            .pop()
+            ?.replace(/\.\w+$/, "")
+            .toLowerCase() ?? "")
         : "",
     );
   // texArr 必须以全量纹理清单 actualUrls 为槽位（cube texSlot 即其下标）——
@@ -206,9 +216,17 @@ export async function preloadModel(model: ModelLike): Promise<{
   // 每个期望名必须存在于 texArr 实际清单 actualNames——缺失（未加载/越界）才 warn 不阻断。
   // 不再逐一按索引比对（共享槽位下组件序 ≠ texArr 序，会误报）。WASM 路径 texArrOrder nil 跳过。
   if (order?.length && actualNames.length) {
-    const present = new Set(actualNames.map((n) => String(n ?? "").trim().toLowerCase()));
+    const present = new Set(
+      actualNames.map((n) =>
+        String(n ?? "")
+          .trim()
+          .toLowerCase(),
+      ),
+    );
     for (const expRaw of order) {
-      const exp = String(expRaw ?? "").trim().toLowerCase();
+      const exp = String(expRaw ?? "")
+        .trim()
+        .toLowerCase();
       if (!exp) continue; // 空值跳过：未命名纹理（P2）
       if (!present.has(exp)) {
         console.warn(
@@ -237,7 +255,9 @@ export async function preloadModel(model: ModelLike): Promise<{
       },
       ok: true,
     });
-  } catch { /* perf trace 失败不影响加载 */ }
+  } catch {
+    /* perf trace 失败不影响加载 */
+  }
 
   return { texArr, spec, componentTexMap, releaseTextures };
 }

@@ -1,12 +1,13 @@
 // ===== sidebar 数据加载层 =====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
+import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { SidebarInstance } from "./data.ts";
-import { getApp } from "../../backend/app.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
 
 /** Go 端实例同步状态（绑定类型局部视图，字段以 Go struct 为准） */
 interface InstanceStatusView {
@@ -34,7 +35,10 @@ const _inflight = new Map<string, Promise<SidebarInstance[]>>();
  *  @param opts.force 变异后刷新（sync 拉取/导入/启停完成）传 true，跳过在途去重——
  *  去重只服务「读并发」（多组件同时触发 reload），若变异完成的刷新并入变异前发起的
  *  在途请求，会拿到变更前的旧实例列表（缺/多余的状态卡住到下次触发）。 */
-export function loadInstances(rtype: string, opts?: { force?: boolean }): Promise<SidebarInstance[]> {
+export function loadInstances(
+  rtype: string,
+  opts?: { force?: boolean },
+): Promise<SidebarInstance[]> {
   const key = rtype || RESOURCE_TYPES.YSM;
   if (!opts?.force) {
     const running = _inflight.get(key);
@@ -49,12 +53,8 @@ export function loadInstances(rtype: string, opts?: { force?: boolean }): Promis
 
 async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> {
   try {
-    const {
-      LoadAppConfig,
-      ListVersionInstances,
-      GetResourceInstanceStatus,
-      GetRepoRoot,
-    } = await getApp();
+    const { LoadAppConfig, ListVersionInstances, GetResourceInstanceStatus, GetRepoRoot } =
+      await getApp();
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || "";
 
@@ -66,11 +66,7 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
 
     // 只按当前资源类型查询同步状态（rtypeActual 已在入口归一）
     const filesRoot = await GetRepoRoot(rtypeActual);
-    const statusList = await GetResourceInstanceStatus(
-      rtypeActual,
-      mcRoot,
-      filesRoot,
-    );
+    const statusList = await GetResourceInstanceStatus(rtypeActual, mcRoot, filesRoot);
     const statusMap: Record<string, InstanceStatusView> = {};
     (statusList || []).forEach((s) => {
       statusMap[s.Name] = s as InstanceStatusView;
@@ -101,12 +97,7 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
         dir: ins.VersionDir || "",
         exists: ins.Exists,
         hasMod: Boolean(st.HasMod),
-        status:
-          flatMissing.length > 0
-            ? "missing"
-            : flatExtra.length > 0
-              ? "extra"
-              : "complete",
+        status: flatMissing.length > 0 ? "missing" : flatExtra.length > 0 ? "extra" : "complete",
         synced: syncedTotal,
         missing: flatMissing.length,
         extra: flatExtra.length,
@@ -150,7 +141,8 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
   } catch (err) {
     // 失败不静默：显示空整合包列表会误导用户以为没装实例
     bus.emit("toast:show", {
-      msg: "❌ " + t("sidebar.loadFailed") + ": " + friendlyError(err, t("sidebar.loadFailedDetail")),
+      msg:
+        "❌ " + t("sidebar.loadFailed") + ": " + friendlyError(err, t("sidebar.loadFailedDetail")),
       duration: TOAST_MS.long,
       type: "error",
     });
@@ -164,10 +156,7 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
  *   - missingGroups/extraGroups: string[] 聚合后的代表路径（父文件夹路径）
  *   - variantMap: { [folderPath]: string[] } 文件夹下的变体文件路径列表
  */
-export function groupMmdVariants(
-  missingList: string[],
-  extraList: string[],
-): MmdVariantGroups {
+export function groupMmdVariants(missingList: string[], extraList: string[]): MmdVariantGroups {
   const variantMap: Record<string, { items: string[]; count: number }> = {};
   const collect = (paths: string[]): void => {
     paths.forEach((fp) => {

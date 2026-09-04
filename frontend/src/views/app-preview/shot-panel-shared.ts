@@ -7,10 +7,10 @@
 // 本共享层兼容两者：screenshotFn 允许 null | undefined，saveScreenshot 第四参语义一致。
 
 import { bus } from "../../bus.ts";
+import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
-import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 
 /** 截图六角度键（current/front/45/side/back45/all）——fillXxxShotPanel 与 shotButtonNodes 共用，防两处漂移。
  *  仅本模块内消费（knip：导出但无外部 import = 死导出，勿再 export） */

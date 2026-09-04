@@ -1,13 +1,17 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
-import { buildSiteHtml } from "./site/render.ts";
-import { bindBrowseEvents } from "./site/events.ts";
-import { bindEditEvents } from "./site/edit.ts";
-import { bindDragEvents } from "./site/drag.ts";
-import type { SiteViewState, CleanupFn } from "./site/types.ts";
+
+import type {
+  WorkshopCreator,
+  WorkshopSite,
+} from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "../../bus.ts";
-import type { BrowseMode, BrowseModeRef } from "./workshop-browse-mode.ts";
-import type { WorkshopSite, WorkshopCreator } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
+import { bindDragEvents } from "./site/drag.ts";
+import { bindEditEvents } from "./site/edit.ts";
+import { bindBrowseEvents } from "./site/events.ts";
+import { buildSiteHtml } from "./site/render.ts";
+import type { CleanupFn, SiteViewState } from "./site/types.ts";
+import type { BrowseMode, BrowseModeRef } from "./workshop-browse-mode.ts";
 
 /** 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） */
 export type RepoAuthorLike = string | { Name?: string; Count?: number };
@@ -71,9 +75,7 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
   searchResults.innerHTML = "";
   creatorView.style.display = "none";
 
-  const creators = allCreators.filter(
-    (cr) => cr.type && cr.type.split(";").includes(site.id),
-  );
+  const creators = allCreators.filter((cr) => cr.type && cr.type.split(";").includes(site.id));
 
   // 作者模型计数查找表
   const authorCountMap: Record<string, number> = {};
@@ -86,13 +88,21 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
   }
 
   // 按仓库模型数降序排列（高产创作者优先）
-  creators.sort(
-    (a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0),
-  );
+  creators.sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
 
   // 构建 HTML（纯函数，实现在 site-view-render.ts）
   const html = buildSiteHtml({
-    esc, site, creators, allSites, wsEditModeRef, repoAuthors, authorCountMap, avatarCache, browseMode, activeTag, searchKw,
+    esc,
+    site,
+    creators,
+    allSites,
+    wsEditModeRef,
+    repoAuthors,
+    authorCountMap,
+    avatarCache,
+    browseMode,
+    activeTag,
+    searchKw,
     viewerMode: isViewerMode(),
   });
   searchResults.innerHTML = html;
@@ -104,10 +114,24 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
     ctx.reRender();
   };
   const state: SiteViewState = {
-    esc, searchResults, creatorView, allSites, allCreators, repoAuthors,
-    wsEditModeRef, fillSearch, openUrl, setBrowseMode: ctx.setBrowseMode,
-    avatarCache, site, creators, authorCountMap, bus, ctx,
-    activeTag, searchKw,
+    esc,
+    searchResults,
+    creatorView,
+    allSites,
+    allCreators,
+    repoAuthors,
+    wsEditModeRef,
+    fillSearch,
+    openUrl,
+    setBrowseMode: ctx.setBrowseMode,
+    avatarCache,
+    site,
+    creators,
+    authorCountMap,
+    bus,
+    ctx,
+    activeTag,
+    searchKw,
   };
   const unsubs: CleanupFn[] = [];
   unsubs.push(bindBrowseEvents(state, refreshView));

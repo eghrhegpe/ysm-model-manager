@@ -1,29 +1,35 @@
 // ===== <app-nav> — 左侧导航菜单（类型化版 — ADR-014 P3 components）=====
 // 事件：nav:changed — 切换页面
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { bus, type PageName } from "../../bus.ts";
-import { resolveInitialPage, sanitizePage } from "../../core/page-store.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
+
 import { getApp } from "../../backend/app.ts";
+import { bus, type PageName } from "../../bus.ts";
+import { type LocaleKey, t } from "../../core/i18n/t.ts";
+import { resolveInitialPage, sanitizePage } from "../../core/page-store.ts";
 import { can } from "../../utils/dom/capabilities.ts";
-import { RESOURCE_TYPES, GROUP_META, GROUP_OF, GROUP_TYPE_OPTIONS, type GroupTypeOption } from "../../utils/resource/types.ts";
 import { esc } from "../../utils/dom/html.ts";
+import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 import { shortLabelOf } from "../../utils/resource/short-label.ts";
+import {
+  GROUP_META,
+  GROUP_OF,
+  GROUP_TYPE_OPTIONS,
+  type GroupTypeOption,
+  RESOURCE_TYPES,
+} from "../../utils/resource/types.ts";
 import { navCSS } from "./tpl.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 export const VIEW_TESTIDS: readonly string[] = [
-  'nav-item',
-  'nav-toggle',
-  'nav-repo-sel',
-  'nav-group-select',
-  'nav-subtype-select',
-  'nav-viewer-fab',
+  "nav-item",
+  "nav-toggle",
+  "nav-repo-sel",
+  "nav-group-select",
+  "nav-subtype-select",
+  "nav-viewer-fab",
 ];
-
 
 function anBindNavItems(shadowRoot: ShadowRoot, focusRepoSearch: () => void): void {
   const navItems = Array.from(shadowRoot.querySelectorAll<HTMLElement>(".nav-item"));
@@ -41,9 +47,10 @@ function anBindNavItems(shadowRoot: ShadowRoot, focusRepoSearch: () => void): vo
       const idx = navItems.indexOf(el);
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        const next = e.key === "ArrowDown"
-          ? (idx + 1) % navItems.length
-          : (idx - 1 + navItems.length) % navItems.length;
+        const next =
+          e.key === "ArrowDown"
+            ? (idx + 1) % navItems.length
+            : (idx - 1 + navItems.length) % navItems.length;
         navItems[next].focus();
       } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -79,7 +86,10 @@ function anBindDualSelects(shadowRoot: ShadowRoot): void {
     const fillSubtypes = (group: string): void => {
       const opts = buildSubtypeOptions(group);
       subtypeSel.innerHTML = opts
-        .map((o, i) => `<option value="${i}" data-rtype="${esc(o.rtype)}" data-subdir="${esc(o.subdir)}">${esc(o.label)}</option>`)
+        .map(
+          (o, i) =>
+            `<option value="${i}" data-rtype="${esc(o.rtype)}" data-subdir="${esc(o.subdir)}">${esc(o.label)}</option>`,
+        )
         .join("");
       const savedRtype = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
       const savedSubdir = safeGet("repo_subdir") || "";
@@ -91,16 +101,24 @@ function anBindDualSelects(shadowRoot: ShadowRoot): void {
       const opts = buildSubtypeOptions(groupSel.value);
       const sel = opts[Number(subtypeSel.value)] || opts[0];
       if (!sel) return;
-      try { safeSet("repo_rtype", sel.rtype); safeSet("repo_subdir", sel.subdir); } catch { /* 非关键路径 */ }
+      try {
+        safeSet("repo_rtype", sel.rtype);
+        safeSet("repo_subdir", sel.subdir);
+      } catch {
+        /* 非关键路径 */
+      }
       bus.emit("repo:rtype-changed", sel.rtype);
       bus.emit("repo:subdir-changed", sel.subdir);
     };
-    groupSel.addEventListener("change", () => { fillSubtypes(groupSel.value); apply(); });
+    groupSel.addEventListener("change", () => {
+      fillSubtypes(groupSel.value);
+      apply();
+    });
     subtypeSel.addEventListener("change", apply);
 
     const savedRtype = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
     const savedGroup = GROUP_OF[savedRtype] || groups[0]?.gid || "";
-    groupSel.value = groups.some((g) => g.gid === savedGroup) ? savedGroup : (groups[0]?.gid || "");
+    groupSel.value = groups.some((g) => g.gid === savedGroup) ? savedGroup : groups[0]?.gid || "";
     fillSubtypes(groupSel.value);
   }
 }
@@ -111,7 +129,11 @@ function anBindViewerFab(shadowRoot: ShadowRoot, viewerFabClick: () => Promise<v
     const handler = (): void => {
       void viewerFabClick().catch((e) => {
         console.error("[app-nav] 打开 3D 失败:", e);
-        bus.emit("toast:show", { msg: "❌ 打开 3D 失败", duration: TOAST_MS.normal, type: "error" });
+        bus.emit("toast:show", {
+          msg: "❌ 打开 3D 失败",
+          duration: TOAST_MS.normal,
+          type: "error",
+        });
       });
     };
     fab.addEventListener("click", handler);

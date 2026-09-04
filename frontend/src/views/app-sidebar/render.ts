@@ -1,14 +1,12 @@
 // ===== sidebar 渲染层 =====
-import { instanceCardHeaderHTML } from "./tpl.ts";
-import type { SidebarInstance } from "./data.ts";
+
 import { t } from "../../core/i18n/t.ts";
 import { currentRepoType } from "../../features/repo-rtype.ts";
+import type { SidebarInstance } from "./data.ts";
+import { instanceCardHeaderHTML } from "./tpl.ts";
 
 // 渲染所有整合包卡片到容器
-export function renderVersionCards(
-  container: HTMLElement,
-  instances: SidebarInstance[],
-): void {
+export function renderVersionCards(container: HTMLElement, instances: SidebarInstance[]): void {
   container.innerHTML = "";
   if (!instances.length) {
     // 空态就地配 mcRoot：自动搜索覆盖标准布局，HMCL/PCL 检测覆盖分离实例目录

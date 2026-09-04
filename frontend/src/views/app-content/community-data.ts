@@ -1,10 +1,14 @@
 // ===== 创意工坊纯数据层 =====
-import { t } from "../../core/i18n/t.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { withCached, invalidateCache } from "../../utils/cache/with-cached.ts";
+
+import type {
+  WorkshopCreator,
+  WorkshopSite,
+} from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
-import type { WorkshopSite, WorkshopCreator } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { t } from "../../core/i18n/t.ts";
+import { invalidateCache, withCached } from "../../utils/cache/with-cached.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 
 /** 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） */
 export interface LocalCreator extends WorkshopCreator {
@@ -104,7 +108,9 @@ export async function loadCommunityData(): Promise<CommunityData> {
       App.LoadWorkshopCreators(),
       // 作者列表：Go 侧轻量遍历（ScanEntriesLite），只看文件名不算哈希；
       // withCached 30s 短 TTL——重复工坊加载不重走全库枚举（与 authors.ts 共享同 key）
-      withCached(SCAN_LITE_AUTHORS_KEY, SCAN_LITE_AUTHORS_TTL_MS, () => App.ListModelAuthors()).catch(() => []),
+      withCached(SCAN_LITE_AUTHORS_KEY, SCAN_LITE_AUTHORS_TTL_MS, () =>
+        App.ListModelAuthors(),
+      ).catch(() => []),
     ]);
     sites = results[0] || [];
     creators = results[1] || [];
@@ -120,7 +126,9 @@ export async function loadCommunityData(): Promise<CommunityData> {
 
   // 自动拉取社区索引（静默，后台执行）——R3-P0 后网页版已桥接
   // 自动并入（网络拉取失败静默；ADR-172 下沉 Go：binding 内部原子并入 + 备份）
-  tryAutoMergeCommunity().catch((e) => { dbg("tryAutoMergeCommunity failed", e); });
+  tryAutoMergeCommunity().catch((e) => {
+    dbg("tryAutoMergeCommunity failed", e);
+  });
 
   return {
     sites: sites || [],
@@ -182,9 +190,14 @@ export function mergeLocalAuthorsInto(
 
 /** 后台静默拉取社区索引并并入本地（withCached 6h TTL） */
 async function tryAutoMergeCommunity(): Promise<void> {
-  const community = await withCached(COMMUNITY_MERGE_KEY, COMMUNITY_MERGE_TTL_MS, async () => {
-    return fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
-  }, "STALE");
+  const community = await withCached(
+    COMMUNITY_MERGE_KEY,
+    COMMUNITY_MERGE_TTL_MS,
+    async () => {
+      return fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
+    },
+    "STALE",
+  );
   if (!community.length) return;
   try {
     const { MergeCommunityCreatorsFromJSON } = await getApp();
@@ -196,7 +209,9 @@ async function tryAutoMergeCommunity(): Promise<void> {
     // 原子性：Go 一次 Load→并入→写，无「逐站循环调 SaveWorkshopCreatorsBySite N 次」
     // 的跨调用部分提交窗口（2026-08-16 审核规避对象，见 ADR-172 §2 差异表）。
     await MergeCommunityCreatorsFromJSON(JSON.stringify(community));
-  } catch (e) { dbg("MergeCommunityCreatorsFromJSON failed", e); }
+  } catch (e) {
+    dbg("MergeCommunityCreatorsFromJSON failed", e);
+  }
 }
 
 /**
@@ -219,10 +234,7 @@ async function fetchWithFallback<T>(
   dbgTag = "community",
 ): Promise<T[]> {
   // 防御：attempts 可能不足 3 项（本地 URL 场景），重排后滤掉缺失项，避免 undefined.url
-  const order =
-    mirror === "jsdelivr" ? [1, 0, 2]
-      : mirror === "githubapi" ? [2, 0, 1]
-        : null;
+  const order = mirror === "jsdelivr" ? [1, 0, 2] : mirror === "githubapi" ? [2, 0, 1] : null;
   const sorted = order
     ? order.map((i) => attempts[i]).filter((a): a is (typeof attempts)[number] => !!a)
     : attempts;

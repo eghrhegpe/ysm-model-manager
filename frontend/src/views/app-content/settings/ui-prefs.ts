@@ -18,15 +18,9 @@ export function applyUIPrefs(): void {
 
   // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-* 和 --space-*
   // 先清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）
-  [
-    "--fs-base",
-    "--fs-xs",
-    "--fs-sm",
-    "--fs-md",
-    "--fs-lg",
-    "--fs-tiny",
-    "--fs-xl",
-  ].forEach((v) => document.documentElement.style.removeProperty(v));
+  ["--fs-base", "--fs-xs", "--fs-sm", "--fs-md", "--fs-lg", "--fs-tiny", "--fs-xl"].forEach((v) =>
+    document.documentElement.style.removeProperty(v),
+  );
   // 小=-1px, 标准=0px, 大=+2px
   const scaleMap: Record<string, string> = { small: "-1px", normal: "0px", large: "2px" };
   document.documentElement.style.setProperty("--fs-scale", scaleMap[fontSize] || "0px");

@@ -1,17 +1,18 @@
 // ===== 诊断页初始化（为 _initDiagnostics 减负） =====
 // ADR-040 按职责切文件：日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（conflicts.ts）已拆出；
 // 本文件保留 initDiagnostics 编排壳，并 re-export createDedupSession 保持外部 import 路径（./diagnostics/init.ts）不变
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { bus } from "../../../bus.ts";
+
 import { getApp } from "../../../backend/app.ts";
-import { can } from "../../../utils/dom/capabilities.ts";
+import { bus } from "../../../bus.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { isViewerMode } from "../../../utils/dom/android-bridge.ts";
+import { can } from "../../../utils/dom/capabilities.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
-import { loadDiagnosticsLogs, loadRuntimeLogs, type EscFn } from "./logs.ts";
+import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
-import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 import { runHealthAudit } from "./health.ts";
+import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
+import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 
 // 对外 API 兼容：createDedupSession 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
 export { createDedupSession } from "./dedup.ts";
@@ -28,14 +29,12 @@ function dgInCopyTextFallback(text: string): void {
 }
 
 function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
-  root
-    .getElementById("diag-refresh")
-    ?.addEventListener("click", () => {
-      const active = root.querySelector(".diag-btn[data-diag].active") as HTMLElement | null;
-      const name = active?.dataset.diag;
-      if (name === "runtime") loadRuntimeLogs(root, esc);
-      else loadDiagnosticsLogs(root, esc);
-    });
+  root.getElementById("diag-refresh")?.addEventListener("click", () => {
+    const active = root.querySelector(".diag-btn[data-diag].active") as HTMLElement | null;
+    const name = active?.dataset.diag;
+    if (name === "runtime") loadRuntimeLogs(root, esc);
+    else loadDiagnosticsLogs(root, esc);
+  });
   root.getElementById("diag-clear")?.addEventListener("click", async () => {
     if (!can("ClearImportLogs")) {
       bus.emit("toast:show", {
@@ -131,12 +130,10 @@ function dgInBindScanBtns(root: ShadowRoot, esc: EscFn): void {
   root
     .getElementById("diag-scan-conflict")
     ?.addEventListener("click", () => scanConflicts(root, esc));
-  root
-    .getElementById("diag-scan-sync-conflict")
-    ?.addEventListener("click", () => {
-      const list = root.getElementById("diag-sync-conflict-list") as HTMLElement | null;
-      if (list) scanSyncConflicts(list, esc);
-    });
+  root.getElementById("diag-scan-sync-conflict")?.addEventListener("click", () => {
+    const list = root.getElementById("diag-sync-conflict-list") as HTMLElement | null;
+    if (list) scanSyncConflicts(list, esc);
+  });
   root.getElementById("diag-scan-health")?.addEventListener("click", async () => {
     const list = root.getElementById("diag-health-list") as HTMLElement | null;
     if (!list) return;
@@ -162,9 +159,20 @@ function dgInBindTabSwitcher(root: ShadowRoot, esc: EscFn): void {
       if (conflictPanel) conflictPanel.style.display = name === "conflict" ? "" : "none";
       if (perfPanel) perfPanel.style.display = name === "perf" ? "" : "none";
       if (healthPanel) healthPanel.style.display = name === "health" ? "" : "none";
-      if (syncConflictPanel) syncConflictPanel.style.display = name === "sync-conflict" ? "" : "none";
+      if (syncConflictPanel)
+        syncConflictPanel.style.display = name === "sync-conflict" ? "" : "none";
       const activePanel =
-        name === "log" ? logPanel : name === "runtime" ? runtimePanel : name === "conflict" ? conflictPanel : name === "perf" ? perfPanel : name === "health" ? healthPanel : syncConflictPanel;
+        name === "log"
+          ? logPanel
+          : name === "runtime"
+            ? runtimePanel
+            : name === "conflict"
+              ? conflictPanel
+              : name === "perf"
+                ? perfPanel
+                : name === "health"
+                  ? healthPanel
+                  : syncConflictPanel;
       if (activePanel) {
         activePanel.style.animation = "none";
         void activePanel.offsetHeight;
@@ -180,9 +188,7 @@ function dgInBindTabSwitcher(root: ShadowRoot, esc: EscFn): void {
 function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {
   root.querySelectorAll(".diag-log-fbtn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      root
-        .querySelectorAll(".diag-log-fbtn")
-        .forEach((b) => b.classList.remove("active"));
+      root.querySelectorAll(".diag-log-fbtn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       loadDiagnosticsLogs(root, esc);
     });
@@ -203,7 +209,9 @@ function dgInBindLogSearch(root: ShadowRoot, esc: EscFn): void {
 /** 查看器/网页版：隐藏依赖 Go 本地能力或 CLI 的诊断面板，避免“可见但不可用” */
 function dgInHideDesktopOnly(root: ShadowRoot): void {
   if (!isViewerMode()) return;
-  for (const btn of root.querySelectorAll<HTMLElement>('[data-diag="conflict"], [data-diag="health"], [data-diag="sync-conflict"]')) {
+  for (const btn of root.querySelectorAll<HTMLElement>(
+    '[data-diag="conflict"], [data-diag="health"], [data-diag="sync-conflict"]',
+  )) {
     btn.style.display = "none";
   }
   for (const id of [

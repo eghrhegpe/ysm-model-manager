@@ -5,14 +5,14 @@
 //   （HMCL/PCL 分离实例目录是自动搜索盲区，此入口免手填路径）
 // 原 settings 版按钮与 MutationObserver 注入逻辑已随搬家移除，功能收敛到实例页空态。
 
+import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { getApp } from "../../backend/app.ts";
-import { pickDirectory } from "../../utils/dom/directory-picker.ts";
 import { modalPicker, modalSelect } from "../../features/dialogs/modal.ts";
+import { pickDirectory } from "../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { safeGet } from "../../utils/dom/storage.ts";
 import { esc } from "../../utils/dom/html.ts";
+import { safeGet } from "../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 
 interface LauncherInstance {
@@ -34,13 +34,17 @@ interface LauncherSelection {
 let _busy = false;
 
 const toastError = (error: unknown): void => {
-  bus.emit("toast:show", { msg: "❌ " + friendlyError(error), duration: TOAST_MS.verbose, type: "error" });
+  bus.emit("toast:show", {
+    msg: "❌ " + friendlyError(error),
+    duration: TOAST_MS.verbose,
+    type: "error",
+  });
 };
 
 /** 保存 mcRoot（其余配置项沿用当前值原样回写；theme 取全局主题缺省 dark）；
  *  app 可传已取好的绑定引用（调用方顺手 LoadAppConfig 时免二次动态 import） */
 async function saveMcRoot(mcRoot: string, app?: Awaited<ReturnType<typeof getApp>>): Promise<void> {
-  const App = app ?? await getApp();
+  const App = app ?? (await getApp());
   const latest = await App.LoadAppConfig();
   await App.SaveAppConfig(
     latest.filesRoot || "",
@@ -59,7 +63,11 @@ export async function runMcSearch(): Promise<void> {
     const App = await getApp();
     const paths = await App.GetMinecraftPaths();
     if (!paths?.length) {
-      bus.emit("toast:show", { msg: t("settings.mc.noFound"), duration: TOAST_MS.normal, type: "warn" });
+      bus.emit("toast:show", {
+        msg: t("settings.mc.noFound"),
+        duration: TOAST_MS.normal,
+        type: "warn",
+      });
       return;
     }
     let selected: string | null = paths[0];
@@ -87,7 +95,9 @@ export async function runMcSearch(): Promise<void> {
 }
 
 /** 🎮 HMCL / PCL 实例选择器：复用统一弹窗脚手架 modalPicker（单例/焦点陷阱/Esc/退场动画） */
-function showLauncherInstancePicker(instances: LauncherInstance[]): Promise<LauncherSelection | null> {
+function showLauncherInstancePicker(
+  instances: LauncherInstance[],
+): Promise<LauncherSelection | null> {
   return modalPicker({
     title: "🎮 HMCL / PCL",
     icon: "",
@@ -97,7 +107,11 @@ function showLauncherInstancePicker(instances: LauncherInstance[]): Promise<Laun
       label: `${it.launcher} · ${it.name}`,
       meta: it.gameVersion,
       sub: t("launcher.picker.game") + ": " + it.gameDir,
-      hint: t("launcher.picker.ysm") + ": " + it.customDir + (it.exists ? "" : " · " + t("launcher.picker.pending")),
+      hint:
+        t("launcher.picker.ysm") +
+        ": " +
+        it.customDir +
+        (it.exists ? "" : " · " + t("launcher.picker.pending")),
       hintColor: it.exists ? "var(--status-success,#a6e3a1)" : "",
     })),
     footerHTML: `<label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:11px"><input data-launcher-default name="useAsYsmRoot" type="checkbox" checked> ${esc(t("launcher.picker.useAsYsmRoot"))}</label>`,
@@ -119,7 +133,11 @@ export async function runLauncherDetect(): Promise<void> {
     const App = await getApp();
     const instances = await App.DetectLauncherInstances(launcherDir);
     if (!instances?.length) {
-      bus.emit("toast:show", { msg: t("launcher.detect.noInstances"), duration: TOAST_MS.normal, type: "warn" });
+      bus.emit("toast:show", {
+        msg: t("launcher.detect.noInstances"),
+        duration: TOAST_MS.normal,
+        type: "warn",
+      });
       return;
     }
     const selection = await showLauncherInstancePicker(instances);
@@ -138,7 +156,10 @@ export async function runLauncherDetect(): Promise<void> {
     }
     bus.emit("stats:refresh"); // sidebar 防抖重载实例列表
     bus.emit("toast:show", {
-      msg: t("launcher.detect.success", { launcher: selection.instance.launcher, version: selection.instance.gameVersion }),
+      msg: t("launcher.detect.success", {
+        launcher: selection.instance.launcher,
+        version: selection.instance.gameVersion,
+      }),
       duration: TOAST_MS.normal,
       type: "success",
     });

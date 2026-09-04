@@ -1,6 +1,7 @@
 // ===== preview HTML 模板 =====
-import { esc } from "../../utils/dom/html.ts";
+
 import { t } from "../../core/i18n/t.ts";
+import { esc } from "../../utils/dom/html.ts";
 import { extOf } from "../../utils/resource/types.ts";
 
 /** 模型统计元数据（modelDetailHTML 入参） */
@@ -86,10 +87,7 @@ export interface StatsCardModel {
 }
 
 /** 模型统计卡片 */
-export function statsCardHTML(
-  model: StatsCardModel,
-  modelPath: string,
-): string {
+export function statsCardHTML(model: StatsCardModel, modelPath: string): string {
   // 派生显示格式：extOf 统一扩展名口径（G1 收口——原正则/endsWith 手写漂移点；
   // 语义保持：.7z 无独立格式归「其他」，zip 容器单列）
   const ext = extOf(modelPath);
@@ -166,12 +164,19 @@ export function statsCardHTML(
   return `
 <div class="pv-card-section pv-section-blue">
   <div class="pv-card-section-label">🔗 ${t("preview.modelStructure")}</div>
-  ${componentCounts.length > 0
-    ? componentCounts.map((c) => `<div class="pv-card-row" style="font-size:var(--fs-xs)"><span class="pv-stat-label" style="min-width:72px">${esc(c.name)}</span><span class="pv-card-val">${c.bones}</span> 骨骼 · <span class="pv-card-val">${c.cubes}</span> 立方体</div>`).join("")
-    : `<div class="pv-card-row">
+  ${
+    componentCounts.length > 0
+      ? componentCounts
+          .map(
+            (c) =>
+              `<div class="pv-card-row" style="font-size:var(--fs-xs)"><span class="pv-stat-label" style="min-width:72px">${esc(c.name)}</span><span class="pv-card-val">${c.bones}</span> 骨骼 · <span class="pv-card-val">${c.cubes}</span> 立方体</div>`,
+          )
+          .join("")
+      : `<div class="pv-card-row">
     <span class="pv-stat-label">${t("preview.label.boneCount")}</span><span class="pv-card-val">${model.boneCount}</span> ${t("preview.unit")}<br>
     <span class="pv-stat-label">${t("preview.cubesLabel")}</span><span class="pv-card-val">${model.cubeCount}</span> ${t("preview.unit")}
-  </div>`}
+  </div>`
+  }
 </div>
 ${subBlock}
 <div class="pv-card-section pv-section-green">

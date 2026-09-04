@@ -5,16 +5,14 @@
 // （self 模式由 visibleWhen: s["ui.mode"]!=="self" 谓词隐藏，[doc:adr-126-p4-d]）。
 // 材质面板 buildMaterialControls 保留复用（纯渲染层，状态经 bridge 下沉 mmd-materials.ts，ADR-072）。
 
-import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
-import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
-import { shotButtonNodes } from "./shot-panel-shared.ts";
 // [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
 // import 供本文件函数签名本地绑定；导出面收敛（knip）：CameraControlBridge /
 // MaterialControlBridge 消费方直连 adapters 单源，此处不再原位转发
-import type {
-  MmdBottomNavCtx,
-  MmdPlayBridge,
-} from "../../preview-3d/adapters/content-bridges.ts";
+import type { MmdBottomNavCtx, MmdPlayBridge } from "../../preview-3d/adapters/content-bridges.ts";
+import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
+import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
+import { shotButtonNodes } from "./shot-panel-shared.ts";
+
 export type { MmdBottomNavCtx, MmdPlayBridge };
 
 /**
@@ -44,7 +42,13 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
   });
   if (select) nodes.push(select);
   nodes.push(
-    { id: "mmd-model-name", kind: "field", labelKey: "preview.nameLabel", fallback: "名称", value: ctx.modelName },
+    {
+      id: "mmd-model-name",
+      kind: "field",
+      labelKey: "preview.nameLabel",
+      fallback: "名称",
+      value: ctx.modelName,
+    },
     {
       id: "mmd-model-overview",
       kind: "field",
@@ -71,7 +75,13 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
     const nodes: PreviewMenuNode[] = [
       // [doc:adr-126-p5] play-empty 提示文本必须进 value（rmAppendField 渲染 value，不读
       // fallback——9a65f796 review P2：此前塞 fallback 导致空态引导完全丢失）
-      { id: "play-empty", kind: "field" as const, labelKey: "preview.playEmpty", fallback: hint, value: hint },
+      {
+        id: "play-empty",
+        kind: "field" as const,
+        labelKey: "preview.playEmpty",
+        fallback: hint,
+        value: hint,
+      },
     ];
     if (bridge.requestReload) {
       nodes.push({
@@ -139,7 +149,15 @@ export function mmdShotNodes(
 ): PreviewMenuNode[] {
   if (!screenshotFn) return [];
   return shotButtonNodes(
-    { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], texture: "", ...(ctx.modelPath !== undefined ? { _modelPath: ctx.modelPath } : {}) },
+    {
+      boneCount: 0,
+      cubeCount: 0,
+      texWidth: 0,
+      texHeight: 0,
+      bones: [],
+      texture: "",
+      ...(ctx.modelPath !== undefined ? { _modelPath: ctx.modelPath } : {}),
+    },
     screenshotFn,
   ).map((n) => ({ ...n, id: `mmd-${n.id}` }));
 }

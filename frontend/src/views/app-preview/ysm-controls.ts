@@ -5,14 +5,21 @@
 // 控件全部表驱动渲染，测试遍历 CORE_MENU_ITEMS + 适配器真实注入项断言结构
 // （preview-menu/items.test.ts，对齐 MikuMikuAR 声明式菜单测试范式）。
 
-import * as THREE from "three";
-import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
-import { shotButtonNodes } from "./shot-panel-shared.ts";
+import type * as THREE from "three";
 // 导出面收敛（knip）：CameraControlBridge/YsmModel/YsmContentHandle 消费方直连
 // adapters 单源（content-bridges/camera-controls），此处不再原位转发
 import type { YsmControlsContext } from "../../preview-3d/adapters/content-bridges.ts";
+import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
+import { shotButtonNodes } from "./shot-panel-shared.ts";
+
 export type { YsmControlsContext };
-import { registerSchema, unregisterSchema, makeYsmModelSchemaId, YSM_MODEL_SCHEMA_ID } from "../../preview-3d/adapters/schema-registry.ts";
+
+import {
+  makeYsmModelSchemaId,
+  registerSchema,
+  unregisterSchema,
+  YSM_MODEL_SCHEMA_ID,
+} from "../../preview-3d/adapters/schema-registry.ts";
 import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
 
 /**
@@ -64,6 +71,3 @@ export function registerYsmModelSchema(ctx: YsmControlsContext, sessionId?: stri
     unregisterSchema(schemaId);
   };
 }
-
-
-

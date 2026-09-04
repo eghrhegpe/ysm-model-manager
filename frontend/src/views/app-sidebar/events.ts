@@ -1,13 +1,14 @@
 // ===== sidebar 事件层 =====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { toastEmptyRtype } from "../../core/context-menu-shared.ts";
-import { animateNumber } from "../../utils/animation/animate.ts";
-import { currentRepoType } from "../../features/repo-rtype.ts";
-import type { SidebarInstance } from "./data.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+
 import { getApp } from "../../backend/app.ts";
+import { bus } from "../../bus.ts";
+import { toastEmptyRtype } from "../../core/context-menu-shared.ts";
+import { t } from "../../core/i18n/t.ts";
+import { currentRepoType } from "../../features/repo-rtype.ts";
+import { animateNumber } from "../../utils/animation/animate.ts";
+import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import type { SidebarInstance } from "./data.ts";
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";
 
 // 绑定每个卡片展开/折叠
@@ -33,10 +34,7 @@ const bindStates = new WeakMap<ShadowRoot, CardBindState>();
 /** 构建卡片点击处理器闭包（心跳式：高亮 + 涟漪 + 去重状态机 + 空 rtype 拦截）。
  * 引用 root（高亮/涟漪作用于完整列表与头部）与 st（读写最新实例与绑定态）。
  * P1/P2/P2-1 修复注释随闭包迁移，见原 bindCardEvents。 */
-function bindCardClickHandler(
-  root: ShadowRoot,
-  st: CardBindState,
-): (e: MouseEvent) => void {
+function bindCardClickHandler(root: ShadowRoot, st: CardBindState): (e: MouseEvent) => void {
   return (e: MouseEvent): void => {
     const target = e.target as HTMLElement | null;
     if (!target) return;
@@ -60,8 +58,8 @@ function bindCardClickHandler(
       .forEach((h) => h.classList.remove("active", "ripple"));
     // 涟漪效果：记录点击坐标，触发涟漪动画
     const rect = hdr.getBoundingClientRect();
-    hdr.style.setProperty("--ripple-x", ((e.clientX - rect.left) / rect.width * 100) + "%");
-    hdr.style.setProperty("--ripple-y", ((e.clientY - rect.top) / rect.height * 100) + "%");
+    hdr.style.setProperty("--ripple-x", ((e.clientX - rect.left) / rect.width) * 100 + "%");
+    hdr.style.setProperty("--ripple-y", ((e.clientY - rect.top) / rect.height) * 100 + "%");
     hdr.classList.add("active", "ripple");
     setTimeout(() => hdr.classList.remove("ripple"), 500);
     // 发送选中事件
@@ -82,8 +80,7 @@ function bindCardClickHandler(
       // reload 后再次 emit package:selected，app-content 反复重建 <app-sync-manager>
       // （丢用户状态/闪烁回归）。
       // 点击允许 fallback 到 YSM（预览/选择无害），与右键拒绝 fallback 形成对称设计
-      _lastEmittedPkg =
-        (st.instances[0]?.rtype || currentRepoType()) + ":" + pkg.name;
+      _lastEmittedPkg = (st.instances[0]?.rtype || currentRepoType()) + ":" + pkg.name;
       safeSet("sb_selectedName_" + (pkg.rtype || currentRepoType()), pkg.name);
     }
   };
@@ -91,10 +88,7 @@ function bindCardClickHandler(
 
 /** 构建卡片右键处理器闭包（ctx:show 菜单弹出，rtype/path 缺失拦截）。
  * 仅消费 st（最新实例数据）；root 保留作签名对称，右键路径不直接触 root。 */
-function bindCardContextHandler(
-  _root: ShadowRoot,
-  st: CardBindState,
-): (e: MouseEvent) => void {
+function bindCardContextHandler(_root: ShadowRoot, st: CardBindState): (e: MouseEvent) => void {
   return (e: MouseEvent): void => {
     const target = e.target as HTMLElement | null;
     if (!target) return;
@@ -117,7 +111,11 @@ function bindCardContextHandler(
     }
     const path = pkg.dir || "";
     if (!path) {
-      bus.emit("toast:show", { msg: t("ctx.missingPath"), duration: TOAST_MS.normal, type: "error" });
+      bus.emit("toast:show", {
+        msg: t("ctx.missingPath"),
+        duration: TOAST_MS.normal,
+        type: "error",
+      });
       return;
     }
     bus.emit("ctx:show", {
@@ -134,10 +132,7 @@ function bindCardContextHandler(
   };
 }
 
-export function bindCardEvents(
-  root: ShadowRoot,
-  instances: SidebarInstance[],
-): () => void {
+export function bindCardEvents(root: ShadowRoot, instances: SidebarInstance[]): () => void {
   // 先清掉旧的右键容器（防止重复）
   root.querySelectorAll(".instance-card-context-menu").forEach((el) => el.remove());
 
@@ -200,10 +195,7 @@ export function resetSelectedEmit(): void {
   _lastEmittedPkg = null;
 }
 
-function restoreSelectedCard(
-  root: ShadowRoot,
-  instances: SidebarInstance[],
-): void {
+function restoreSelectedCard(root: ShadowRoot, instances: SidebarInstance[]): void {
   try {
     const rtypeKey = instances[0]?.rtype || currentRepoType();
     const savedName = safeGet("sb_selectedName_" + rtypeKey);
@@ -235,14 +227,13 @@ function restoreSelectedCard(
         bus.emit("package:selected", pkg);
       }
     });
-  } catch (e) { console.warn("[sidebar] restoreSelectedCard:", e); }
+  } catch (e) {
+    console.warn("[sidebar] restoreSelectedCard:", e);
+  }
 }
 
 // 绑定底部按钮 + 路径显示
-export function bindFooter(
-  root: ShadowRoot,
-  instances: SidebarInstance[],
-): void {
+export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void {
   const btn = root.getElementById("btn-mc");
   if (btn) {
     // 点击跳转到设置页的游戏根目录配置（合并重复入口）
@@ -251,8 +242,7 @@ export function bindFooter(
     };
     (async () => {
       try {
-        const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } =
-          await getApp();
+        const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } = await getApp();
         const cfg = await LoadAppConfig();
         if (cfg.mcRoot) {
           btn.textContent = `🎮 ${cfg.mcRoot}`;

@@ -17,7 +17,13 @@ export async function readFileBytes(path: string): Promise<string | null> {
 }
 
 /** 环形日志面板诊断（AddOpLog 注入；失败静默不阻断加载）。scope = 运行时环打标（如 "fbx-preview"） */
-export async function addOpLog(scope: string, op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void> {
+export async function addOpLog(
+  scope: string,
+  op: string,
+  msg: string,
+  status: "ok" | "fail" | "warn",
+  err?: string,
+): Promise<void> {
   try {
     const App = await getApp();
     await App.AddOpLog(scope, op, msg, "", 0, status, err || "");

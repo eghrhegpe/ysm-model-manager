@@ -1,14 +1,15 @@
 // ===== 创意工坊站点打开器 =====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
+import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { getApp } from "../../backend/app.ts";
-import { swallowError } from "../../utils/core/async.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { bus } from "../../bus.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import type { BrowseMode } from "./workshop-browse-mode.ts";
+import { swallowError } from "../../utils/core/async.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { AppContentHost } from "./init-workshop.ts";
+import type { BrowseMode } from "./workshop-browse-mode.ts";
 
 /** 内嵌浏览加载超时（15s 未完成加载 → 提示此站点不允许内嵌浏览） */
 const WS_EMBED_TIMEOUT_MS = 15000;
@@ -33,25 +34,17 @@ export function openSite(
     if (isWebPlatform()) {
       swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(url)));
     } else {
-      swallowError(getApp().then(({ NavigatePlazaWindow }) =>
-        NavigatePlazaWindow(url, true),
-      ));
+      swallowError(getApp().then(({ NavigatePlazaWindow }) => NavigatePlazaWindow(url, true)));
     }
   } else {
-    swallowError(getApp().then(({ OpenInBrowser }) =>
-      OpenInBrowser(url),
-    ));
+    swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(url)));
   }
 }
 
 /**
  * 内嵌浏览：直连官网（仅 openSite 的 embed 分支调用，模块私有）
  */
-function openEmbedded(
-  host: AppContentHost,
-  _site: WorkshopSite,
-  url: string,
-): void {
+function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): void {
   const root = host._root;
   const browserEl = root.getElementById("ws-browser") as HTMLElement | null;
   const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
@@ -81,9 +74,7 @@ function openEmbedded(
 /**
  * 绑定站点打开相关事件
  */
-export function bindSiteEvents(
-  host: AppContentHost,
-): void {
+export function bindSiteEvents(host: AppContentHost): void {
   const root = host._root;
 
   // 返回按钮
@@ -99,15 +90,11 @@ export function bindSiteEvents(
   const openCurrent = (): void => {
     const cs = host._currentSite;
     if (cs) {
-      swallowError(getApp().then(({ OpenInBrowser }) =>
-        OpenInBrowser(cs.url),
-      ));
+      swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
     }
   };
   root.getElementById("ws-open")?.addEventListener("click", openCurrent);
-  root
-    .getElementById("ws-open-fallback")
-    ?.addEventListener("click", openCurrent);
+  root.getElementById("ws-open-fallback")?.addEventListener("click", openCurrent);
 
   // 🖥️ 窗口模式：在预热 WebView2 窗口中直连打开（ADR-050）
   root.getElementById("ws-win-open")?.addEventListener("click", () => {
@@ -117,71 +104,65 @@ export function bindSiteEvents(
       if (isWebPlatform()) {
         swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
       } else {
-        swallowError(getApp().then(({ NavigatePlazaWindow }) =>
-          NavigatePlazaWindow(cs.url, true),
-        ));
+        swallowError(getApp().then(({ NavigatePlazaWindow }) => NavigatePlazaWindow(cs.url, true)));
       }
     }
   });
 
   // 站点导出/导入
-  root
-    .getElementById("ws-export-btn")
-    ?.addEventListener("click", async () => {
-      // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
-      if (isWebPlatform()) {
-        bus.emit("toast:show", {
-          msg: t("workshop.exportWebUnsupported"),
-          duration: TOAST_MS.normal,
-          type: "warn",
-        });
-        return;
-      }
-      try {
-        const { ExportWorkshopSitesJSONFile } = await getApp();
-        const path = await ExportWorkshopSitesJSONFile();
-        bus.emit("toast:show", {
-          msg: t("workshop.action.exported", { path }),
-          duration: TOAST_MS.success,
-          type: "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e, t("workshop.exportFailed")),
-          duration: TOAST_MS.verbose,
-          type: "error",
-        });
-      }
-    });
-  root
-    .getElementById("ws-import-btn")
-    ?.addEventListener("click", async () => {
-      // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
-      if (isWebPlatform()) {
-        bus.emit("toast:show", {
-          msg: t("workshop.importWebUnsupported"),
-          duration: TOAST_MS.normal,
-          type: "warn",
-        });
-        return;
-      }
-      try {
-        const { ValidateWorkshopSites } = await getApp();
-        const n = await ValidateWorkshopSites();
-        // TODO: 重新加载创作者列表
-        bus.emit("toast:show", {
-          msg: t("workshop.action.imported", { n }),
-          duration: TOAST_MS.success,
-          type: "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e, t("content.importFailed")),
-          duration: TOAST_MS.verbose,
-          type: "error",
-        });
-      }
-    });
+  root.getElementById("ws-export-btn")?.addEventListener("click", async () => {
+    // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
+    if (isWebPlatform()) {
+      bus.emit("toast:show", {
+        msg: t("workshop.exportWebUnsupported"),
+        duration: TOAST_MS.normal,
+        type: "warn",
+      });
+      return;
+    }
+    try {
+      const { ExportWorkshopSitesJSONFile } = await getApp();
+      const path = await ExportWorkshopSitesJSONFile();
+      bus.emit("toast:show", {
+        msg: t("workshop.action.exported", { path }),
+        duration: TOAST_MS.success,
+        type: "success",
+      });
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "❌ " + friendlyError(e, t("workshop.exportFailed")),
+        duration: TOAST_MS.verbose,
+        type: "error",
+      });
+    }
+  });
+  root.getElementById("ws-import-btn")?.addEventListener("click", async () => {
+    // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
+    if (isWebPlatform()) {
+      bus.emit("toast:show", {
+        msg: t("workshop.importWebUnsupported"),
+        duration: TOAST_MS.normal,
+        type: "warn",
+      });
+      return;
+    }
+    try {
+      const { ValidateWorkshopSites } = await getApp();
+      const n = await ValidateWorkshopSites();
+      // TODO: 重新加载创作者列表
+      bus.emit("toast:show", {
+        msg: t("workshop.action.imported", { n }),
+        duration: TOAST_MS.success,
+        type: "success",
+      });
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "❌ " + friendlyError(e, t("content.importFailed")),
+        duration: TOAST_MS.verbose,
+        type: "error",
+      });
+    }
+  });
 }
 
 // 模块级变量（用于闭包捕获）

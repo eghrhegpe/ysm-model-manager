@@ -18,9 +18,10 @@ const AUTHORS_CACHE_TTL_MS = 30 * 1000; // 30 秒
  */
 export async function loadAuthors(): Promise<AuthorInfo[]> {
   try {
-    const { ListModelAuthors } =
-      await getApp();
-    return (await withCached(AUTHORS_CACHE_KEY, AUTHORS_CACHE_TTL_MS, () => ListModelAuthors())) || [];
+    const { ListModelAuthors } = await getApp();
+    return (
+      (await withCached(AUTHORS_CACHE_KEY, AUTHORS_CACHE_TTL_MS, () => ListModelAuthors())) || []
+    );
   } catch {
     return [];
   }

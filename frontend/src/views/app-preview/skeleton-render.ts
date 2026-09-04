@@ -1,18 +1,20 @@
 // ===== 骨骼渲染逻辑 =====
 // 纯 DOM 创建/HTML 生成函数，不含事件绑定
-import { safeGet } from "../../utils/dom/storage.ts";
-import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { safeUrl } from "../../utils/format/summarize.ts";
-import { getApp } from "../../backend/app.ts";
-import { statsCardHTML } from "./tpl.ts";
-import { buildBoneNamesText } from "./bone-names.ts";
-import { renderMultiAngle } from "../../preview-3d/screenshot-render.ts";
-import { toScreenshotLights } from "../../preview-3d/screenshot-lights.ts";
-import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { t } from "../../core/i18n/t.ts";
-import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
+
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
+import { getApp } from "../../backend/app.ts";
+import { t } from "../../core/i18n/t.ts";
+import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
+import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
+import { toScreenshotLights } from "../../preview-3d/screenshot-lights.ts";
+import { renderMultiAngle } from "../../preview-3d/screenshot-render.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { safeGet } from "../../utils/dom/storage.ts";
+import { safeUrl } from "../../utils/format/summarize.ts";
+import { buildBoneNamesText } from "./bone-names.ts";
+import { statsCardHTML } from "./tpl.ts";
+import type { PreviewDebugger, PreviewRoot, YsmDecoder } from "./utils.ts";
+
 // P1 修复（ADR-040）：fill3DPanel 已拆至 skeleton-fill-panel.ts，此处 re-export 兼容
 export { fill3DPanel } from "./skeleton-fill-panel.ts";
 
@@ -34,7 +36,10 @@ export async function setup2DCanvas(
     textureImg = new Image();
     await new Promise((r) => {
       textureImg!.onload = r;
-      textureImg!.onerror = () => { textureImg = null; r(null); };
+      textureImg!.onerror = () => {
+        textureImg = null;
+        r(null);
+      };
       textureImg!.src = model.texture as string;
     });
   }
@@ -44,9 +49,7 @@ export async function setup2DCanvas(
 /**
  * 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加）
  */
-export function buildToggleRow(
-  container: HTMLElement,
-): {
+export function buildToggleRow(container: HTMLElement): {
   toggleRow: HTMLElement;
   eyeBtn: HTMLButtonElement;
   eyeHint: HTMLSpanElement;
@@ -59,7 +62,9 @@ export function buildToggleRow(
   eyeBtn.className = "pv-btn";
   const savedState = safeGet("ysm_showBoneLabels") !== "false";
   let _labelsOn = savedState;
-  eyeBtn.innerHTML = _labelsOn ? `👁 ${t("preview.field.boneNames")}` : `👁‍🗨 ${t("preview.field.boneNames")}`;
+  eyeBtn.innerHTML = _labelsOn
+    ? `👁 ${t("preview.field.boneNames")}`
+    : `👁‍🗨 ${t("preview.field.boneNames")}`;
   eyeBtn.title = "切换骨骼名称显示";
   const eyeHint = document.createElement("span");
   eyeHint.className = "pv-hint";
@@ -75,7 +80,9 @@ export function buildToggleRow(
     getLabelsOn: () => _labelsOn,
     setLabelsOn: (v: boolean) => {
       _labelsOn = v;
-      eyeBtn.innerHTML = _labelsOn ? `👁 ${t("preview.field.boneNames")}` : `👁‍🗨 ${t("preview.field.boneNames")}`;
+      eyeBtn.innerHTML = _labelsOn
+        ? `👁 ${t("preview.field.boneNames")}`
+        : `👁‍🗨 ${t("preview.field.boneNames")}`;
       eyeHint.textContent = _labelsOn ? t("preview.on") : t("preview.off");
     },
   };
@@ -105,7 +112,15 @@ export function componentCountsFromSpec(
  */
 export async function buildStatsCard(
   container: HTMLElement,
-  model: BedrockGeometry & { _authors?: Array<{ avatarUrl?: string | null; name?: string; role?: string; bilibili?: string }>; _modelPath?: string },
+  model: BedrockGeometry & {
+    _authors?: Array<{
+      avatarUrl?: string | null;
+      name?: string;
+      role?: string;
+      bilibili?: string;
+    }>;
+    _modelPath?: string;
+  },
   modelPath: string,
   _decodedBy: string,
   _ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
@@ -128,18 +143,30 @@ export async function buildStatsCard(
   // 构造对齐3D面板的模型数据（逐组件 bone/cube + 声明纹理尺寸）
   const enrichedModel = {
     ...model,
-    boneCount: componentCounts.length > 0 ? componentCounts.reduce((s, c) => s + c.bones, 0) : model.boneCount,
-    cubeCount: componentCounts.length > 0 ? componentCounts.reduce((s, c) => s + c.cubes, 0) : model.cubeCount,
+    boneCount:
+      componentCounts.length > 0
+        ? componentCounts.reduce((s, c) => s + c.bones, 0)
+        : model.boneCount,
+    cubeCount:
+      componentCounts.length > 0
+        ? componentCounts.reduce((s, c) => s + c.cubes, 0)
+        : model.cubeCount,
     texWidth: texW,
     texHeight: texH,
     componentCounts,
   };
   card.innerHTML = statsCardHTML(enrichedModel, modelPath);
-  const authors: Array<{ avatarUrl?: string | null; name?: string; role?: string; bilibili?: string }> =
-    model._authors || [];
+  const authors: Array<{
+    avatarUrl?: string | null;
+    name?: string;
+    role?: string;
+    bilibili?: string;
+  }> = model._authors || [];
   if (authors.length > 0) {
     const authorHtml =
-      '<div class="pv-card-section-label" style="margin-top:6px">👥 ' + t("preview.authors") + '</div>' +
+      '<div class="pv-card-section-label" style="margin-top:6px">👥 ' +
+      t("preview.authors") +
+      "</div>" +
       authors
         .map(
           (au) => `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
@@ -174,7 +201,10 @@ export async function buildStatsCard(
  */
 export function buildBoneExportRow(
   container: HTMLElement,
-  model: BedrockGeometry & { boneCount?: number; bones?: Array<{ id: string; name: string; parentId?: string }> },
+  model: BedrockGeometry & {
+    boneCount?: number;
+    bones?: Array<{ id: string; name: string; parentId?: string }>;
+  },
   modelPath: string,
 ): void {
   const boneRow = document.createElement("div");
@@ -217,7 +247,11 @@ export async function saveScreenshot(
 ): Promise<void> {
   const { SaveScreenshotFile } = await getApp();
   const p = (model._modelPath || "screenshot").replace(/\\/g, "/");
-  const base = p.split("/").pop()?.replace(/\.\w+$/, "") || "";
+  const base =
+    p
+      .split("/")
+      .pop()
+      ?.replace(/\.\w+$/, "") || "";
   if (key === "current") {
     let b64: string | null;
     if (screenshotFn) {
@@ -235,7 +269,8 @@ export async function saveScreenshot(
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
     await SaveScreenshotFile(base + "_" + ts + ".png", b64);
   } else if (key === "all") {
-    for (const k of ["front", "45", "side", "back45"]) await saveScreenshot(model, k, setShotState, screenshotFn);
+    for (const k of ["front", "45", "side", "back45"])
+      await saveScreenshot(model, k, setShotState, screenshotFn);
   } else {
     // 按请求视角渲染对应帧（renderFrame 内 renderMultiAngle 返回 front/45/side/back45
     // 并按 key 匹配 name——审查 P1：误用 renderFrontFrame 会让 45/side/back45 全部
@@ -249,11 +284,16 @@ export async function saveScreenshot(
 }
 
 /** 无活跃渲染器时复用 renderMultiAngle 渲染指定视角帧（front/45/side/back45/all 共用；key 传 "front" 等） */
-async function renderFrame(model: BedrockGeometry & { textures?: string[] | null; componentTextures?: Record<string, string[]>; _modelPath?: string }, key: string): Promise<string | null> {
+async function renderFrame(
+  model: BedrockGeometry & {
+    textures?: string[] | null;
+    componentTextures?: Record<string, string[]>;
+    _modelPath?: string;
+  },
+  key: string,
+): Promise<string | null> {
   const texUrls =
-    model.textures && model.textures.length > 1
-      ? model.textures
-      : [model.texture || ""];
+    model.textures && model.textures.length > 1 ? model.textures : [model.texture || ""];
   const lights = toScreenshotLights();
   const results = await renderMultiAngle(model._modelPath || "", texUrls, {
     size: 512,

@@ -1,17 +1,18 @@
 // ===== app-tree bus 事件处理 =====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { t } from "../../core/i18n/t.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
-import { bus } from "../../bus.ts";
-import { loadEntries } from "./loader.ts";
+
 import { getApp } from "../../backend/app.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import type { AppTree } from "./index.ts";
-import { modalPrompt, modalConfirm } from "../../features/dialogs/modal.ts";
+import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 import { showBatchRenameDialog } from "../../features/dialogs/batch-rename.ts";
-import { selectState } from "./data.ts";
+import { modalConfirm, modalPrompt } from "../../features/dialogs/modal.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { can } from "../../utils/dom/capabilities.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { selectState } from "./data.ts";
+import type { AppTree } from "./index.ts";
+import { loadEntries } from "./loader.ts";
 
 function atBeGenGuard(vm: AppTree, gen: number): boolean {
   return gen !== vm._gen;
@@ -22,12 +23,36 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
 
   cleanups.push(bus.on("batch:enable-all", () => atBeHandleBatchEnableAll(vm)));
   cleanups.push(bus.on("batch:disable-all", () => atBeHandleBatchDisableAll(vm)));
-  cleanups.push(bus.on("dir:rename", ({ dir }) => { void atBeHandleDirRename(vm, dir); }));
-  cleanups.push(bus.on("dir:mkdir", ({ dir }) => { void atBeHandleDirMkdir(vm, dir); }));
-  cleanups.push(bus.on("dir:recycle", ({ dir }) => { void atBeHandleDirRecycle(vm, dir); }));
-  cleanups.push(bus.on("dir:batch-rename", ({ dir }) => { void atBeHandleDirBatchRename(vm, dir); }));
-  cleanups.push(bus.on("batch:rename", ({ paths }) => { void atBeHandleBatchRename(vm, paths); }));
-  cleanups.push(bus.on("tree:reload", () => { void atBeHandleTreeReload(vm); }));
+  cleanups.push(
+    bus.on("dir:rename", ({ dir }) => {
+      void atBeHandleDirRename(vm, dir);
+    }),
+  );
+  cleanups.push(
+    bus.on("dir:mkdir", ({ dir }) => {
+      void atBeHandleDirMkdir(vm, dir);
+    }),
+  );
+  cleanups.push(
+    bus.on("dir:recycle", ({ dir }) => {
+      void atBeHandleDirRecycle(vm, dir);
+    }),
+  );
+  cleanups.push(
+    bus.on("dir:batch-rename", ({ dir }) => {
+      void atBeHandleDirBatchRename(vm, dir);
+    }),
+  );
+  cleanups.push(
+    bus.on("batch:rename", ({ paths }) => {
+      void atBeHandleBatchRename(vm, paths);
+    }),
+  );
+  cleanups.push(
+    bus.on("tree:reload", () => {
+      void atBeHandleTreeReload(vm);
+    }),
+  );
 
   return cleanups;
 }
@@ -36,8 +61,12 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
  * 批量重命名回调体（dir:batch-rename 与 batch:rename 共用，消除 32 行跨事件重复）：
  * 逐条调用 RenameFile，计数 ok/fail，清空选择态，reload + 统计刷新 + toast。
  */
-async function runBatchRename(vm: AppTree, renames: Array<{ oldPath?: string | undefined; newName: string }>): Promise<void> {
-  let ok = 0, fail = 0;
+async function runBatchRename(
+  vm: AppTree,
+  renames: Array<{ oldPath?: string | undefined; newName: string }>,
+): Promise<void> {
+  let ok = 0,
+    fail = 0;
   const { RenameFile } = await getApp();
   for (const r of renames) {
     try {
@@ -107,9 +136,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
     const { CreateDir, GetRepoRoot } = await getApp();
     const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
-    const absDir = filesRoot
-      ? filesRoot + "/" + dir + "/" + name.trim()
-      : dir + "/" + name.trim();
+    const absDir = filesRoot ? filesRoot + "/" + dir + "/" + name.trim() : dir + "/" + name.trim();
     await CreateDir(absDir);
     await reload(vm);
   } catch (e) {
@@ -229,14 +256,16 @@ async function reload(vm: AppTree): Promise<void> {
   try {
     const App = await getApp();
     if (App.ClearScanCache) await App.ClearScanCache();
-    import("../../views/app-content/community-data.ts").then(m => m.clearAllCommunityCache()).catch((e) => console.warn("[app-tree] clearAllCommunityCache:", e));
-  } catch (e) { console.warn("[app-tree] ClearScanCache:", e); }
+    import("../../views/app-content/community-data.ts")
+      .then((m) => m.clearAllCommunityCache())
+      .catch((e) => console.warn("[app-tree] clearAllCommunityCache:", e));
+  } catch (e) {
+    console.warn("[app-tree] ClearScanCache:", e);
+  }
   const gen = vm._gen;
   try {
     const rtype = vm._rootAttr || "";
-    const r = vm._subdirAttr
-      ? await loadEntries(rtype, vm._subdirAttr)
-      : await loadEntries(rtype);
+    const r = vm._subdirAttr ? await loadEntries(rtype, vm._subdirAttr) : await loadEntries(rtype);
     if (atBeGenGuard(vm, gen)) return;
     if (r) {
       vm._filesRoot = r.filesRoot;
@@ -248,7 +277,11 @@ async function reload(vm: AppTree): Promise<void> {
     if (atBeGenGuard(vm, gen)) return;
     console.warn("[bus] reload 失败:", err);
     vm._entries = [];
-    bus.emit("toast:show", { msg: "❌ " + friendlyError(err, t("tree.reloadFailed")), duration: TOAST_MS.long, type: "error" });
+    bus.emit("toast:show", {
+      msg: "❌ " + friendlyError(err, t("tree.reloadFailed")),
+      duration: TOAST_MS.long,
+      type: "error",
+    });
   }
   if (atBeGenGuard(vm, gen)) return;
   vm._renderTree();
@@ -287,7 +320,8 @@ async function runBatchToggle(
           (!prefix || e.path === prefix || e.path.startsWith(prefix + "/")),
       )
       .map((e) => e.fullPath);
-    let ok = 0, fail = 0;
+    let ok = 0,
+      fail = 0;
     for (const fullPath of snapshot) {
       try {
         await ToggleEnable(fullPath);

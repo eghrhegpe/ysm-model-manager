@@ -1,12 +1,14 @@
 // ===== <app-sidebar> 入口 =====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
 import { bus } from "../../bus.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
-import { RESOURCE_TYPE_LABELS, ALL_RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { currentRepoType } from "../../features/repo-rtype.ts";
+import { dbg } from "../../utils/debug/debug.ts";
+import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
+import { ALL_RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { sidebarCSS } from "./sidebar-css.ts";
+
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
 // 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
 // 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
@@ -18,16 +20,18 @@ const appSidebarStyle: CSSStyleSheet = (() => {
   sheet.replaceSync(sidebarCSS);
   return sheet;
 })();
+
 export { appSidebarStyle };
-import { headerHTML, footerHTML, listContainerHTML } from "./tpl.ts";
-import { renderVersionCards } from "./render.ts";
-import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
-import { bindPackCardDnD } from "../../features/pack-dnd.ts";
-import { loadInstances } from "./loader.ts";
-import type { SidebarInstance } from "./data.ts";
+
 import { getApp } from "../../backend/app.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { t } from "../../core/i18n/t.ts";
+import { bindPackCardDnD } from "../../features/pack-dnd.ts";
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import type { SidebarInstance } from "./data.ts";
+import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
+import { loadInstances } from "./loader.ts";
+import { renderVersionCards } from "./render.ts";
+import { footerHTML, headerHTML, listContainerHTML } from "./tpl.ts";
 
 // 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰
 const _checkedSets = new Map<string, Set<string>>();
@@ -109,8 +113,7 @@ function getSelected(root: ShadowRoot, instances: SidebarInstance[]): string[] {
   root.querySelectorAll(".chk:checked").forEach((c) => {
     const input = c as HTMLInputElement;
     const idx = parseInt(input.dataset.idx || "", 10);
-    if (!isNaN(idx) && instances[idx])
-      sel.push(instances[idx].name);
+    if (!isNaN(idx) && instances[idx]) sel.push(instances[idx].name);
   });
   return sel;
 }
@@ -136,7 +139,11 @@ function beginSync(
   if (!item) return null;
   const selected = getSelected(root, instances);
   if (!selected.length) {
-    bus.emit("toast:show", { msg: t("sidebar.selectPackFirst", { verb }), duration: TOAST_MS.success, type: "info" });
+    bus.emit("toast:show", {
+      msg: t("sidebar.selectPackFirst", { verb }),
+      duration: TOAST_MS.success,
+      type: "info",
+    });
     return null;
   }
   if (syncInProgress.val) return null;
@@ -147,11 +154,7 @@ function beginSync(
   return selected;
 }
 
-function bindToggleMenu(
-  btn: HTMLButtonElement,
-  menu: HTMLElement,
-  onToggle: () => void,
-): void {
+function bindToggleMenu(btn: HTMLButtonElement, menu: HTMLElement, onToggle: () => void): void {
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
     const wasOpen = menu.style.display === "block";
@@ -171,9 +174,19 @@ function handlePushMenuClick(
   getInstances: () => SidebarInstance[],
   syncInProgress: { val: boolean },
 ): void {
-  const selected = beginSync(e, t("sidebar.verbPush"), root, getInstances(), syncInProgress, () => closeAllMenus(pushMenu, pullMenu), pushBtn);
+  const selected = beginSync(
+    e,
+    t("sidebar.verbPush"),
+    root,
+    getInstances(),
+    syncInProgress,
+    () => closeAllMenus(pushMenu, pullMenu),
+    pushBtn,
+  );
   if (!selected) return;
-  const types = resolveTypes((e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all");
+  const types = resolveTypes(
+    (e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all",
+  );
   void runPush(selected, types, pushBtn, syncInProgress);
 }
 
@@ -251,12 +264,23 @@ async function runPush(
       const parts: string[] = [];
       if (skipped > 0) parts.push(t("sidebar.packSkipped", { n: skipped }));
       if (timedOut > 0) parts.push(t("sidebar.packTimedOut", { n: timedOut }));
-      bus.emit("toast:show", { msg: t("sidebar.pushDone", { detail: parts.join("，") }), duration: TOAST_MS.normal, type: "warn" });
+      bus.emit("toast:show", {
+        msg: t("sidebar.pushDone", { detail: parts.join("，") }),
+        duration: TOAST_MS.normal,
+        type: "warn",
+      });
     } else {
-      bus.emit("toast:show", { msg: t("sidebar.pushDoneAll", { n: selected.length }), duration: TOAST_MS.info });
+      bus.emit("toast:show", {
+        msg: t("sidebar.pushDoneAll", { n: selected.length }),
+        duration: TOAST_MS.info,
+      });
     }
   } catch (err) {
-    bus.emit("toast:show", { msg: t("sidebar.pushFailed", { msg: safeErrorMessage(err) }), duration: TOAST_MS.normal, type: "error" });
+    bus.emit("toast:show", {
+      msg: t("sidebar.pushFailed", { msg: safeErrorMessage(err) }),
+      duration: TOAST_MS.normal,
+      type: "error",
+    });
   } finally {
     pushBtn.textContent = "⬆️ " + t("sidebar.pushSelected") + " ▾";
     pushBtn.disabled = false;
@@ -274,9 +298,19 @@ function handlePullMenuClick(
   getInstances: () => SidebarInstance[],
   syncInProgress: { val: boolean },
 ): void {
-  const selected = beginSync(e, t("sidebar.verbPull"), root, getInstances(), syncInProgress, () => closeAllMenus(pushMenu, pullMenu), pullBtn);
+  const selected = beginSync(
+    e,
+    t("sidebar.verbPull"),
+    root,
+    getInstances(),
+    syncInProgress,
+    () => closeAllMenus(pushMenu, pullMenu),
+    pullBtn,
+  );
   if (!selected) return;
-  const types = resolveTypes((e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all");
+  const types = resolveTypes(
+    (e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all",
+  );
   void runPull(selected, types, pullBtn, syncInProgress);
 }
 
@@ -301,16 +335,31 @@ async function runPull(
       }
     }
     if (failed > 0) {
-      bus.emit("toast:show", { msg: t("sidebar.pullDone", { pulled: totalPulled, failed }), duration: TOAST_MS.normal, type: "warn" });
+      bus.emit("toast:show", {
+        msg: t("sidebar.pullDone", { pulled: totalPulled, failed }),
+        duration: TOAST_MS.normal,
+        type: "warn",
+      });
     } else if (totalPulled > 0) {
-      bus.emit("toast:show", { msg: t("sidebar.pullDoneAll", { n: totalPulled }), duration: TOAST_MS.info });
+      bus.emit("toast:show", {
+        msg: t("sidebar.pullDoneAll", { n: totalPulled }),
+        duration: TOAST_MS.info,
+      });
     } else {
-      bus.emit("toast:show", { msg: t("sidebar.pullNothing"), duration: TOAST_MS.info, type: "info" });
+      bus.emit("toast:show", {
+        msg: t("sidebar.pullNothing"),
+        duration: TOAST_MS.info,
+        type: "info",
+      });
     }
     bus.emit("stats:refresh");
     bus.emit("tree:reload");
   } catch (err) {
-    bus.emit("toast:show", { msg: t("sidebar.pullFailed", { msg: safeErrorMessage(err) }), duration: TOAST_MS.normal, type: "error" });
+    bus.emit("toast:show", {
+      msg: t("sidebar.pullFailed", { msg: safeErrorMessage(err) }),
+      duration: TOAST_MS.normal,
+      type: "error",
+    });
   } finally {
     pullBtn.textContent = "⬇️ " + t("sidebar.pullSelected") + " ▾";
     pullBtn.disabled = false;
@@ -347,8 +396,26 @@ function bindSyncSelected(
   setDocClickHandler(() => closeAll());
   document.addEventListener("click", getDocClickHandler()!);
 
-  pushMenu.addEventListener("click", (e) => handlePushMenuClick(e, pushBtn, pushMenu, pullMenu, root, getInstances, { get val() { return getSyncInProgress(); }, set val(v) { setSyncInProgress(v); } }));
-  pullMenu.addEventListener("click", (e) => handlePullMenuClick(e, pullBtn, pushMenu, pullMenu, root, getInstances, { get val() { return getSyncInProgress(); }, set val(v) { setSyncInProgress(v); } }));
+  pushMenu.addEventListener("click", (e) =>
+    handlePushMenuClick(e, pushBtn, pushMenu, pullMenu, root, getInstances, {
+      get val() {
+        return getSyncInProgress();
+      },
+      set val(v) {
+        setSyncInProgress(v);
+      },
+    }),
+  );
+  pullMenu.addEventListener("click", (e) =>
+    handlePullMenuClick(e, pullBtn, pushMenu, pullMenu, root, getInstances, {
+      get val() {
+        return getSyncInProgress();
+      },
+      set val(v) {
+        setSyncInProgress(v);
+      },
+    }),
+  );
 }
 
 // ---------- AppSidebar 类 ----------
@@ -390,7 +457,10 @@ class AppSidebar extends WebComponentBase {
       // 更新导入按钮文字
       const btn = this._root.querySelector(".sidebar-import-all");
       if (btn) {
-        btn.textContent = "⬇️ " + t("sidebar.installAll") + (RESOURCE_TYPE_LABELS[this._rtype] || t("format.resources"));
+        btn.textContent =
+          "⬇️ " +
+          t("sidebar.installAll") +
+          (RESOURCE_TYPE_LABELS[this._rtype] || t("format.resources"));
       }
     }
   }
@@ -440,16 +510,27 @@ class AppSidebar extends WebComponentBase {
       this._root,
       () => this._instances,
       () => this._cardCleanup,
-      (fn) => { this._cardCleanup = fn; },
+      (fn) => {
+        this._cardCleanup = fn;
+      },
       () => this._docClickHandler,
-      (fn) => { this._docClickHandler = fn; },
+      (fn) => {
+        this._docClickHandler = fn;
+      },
       () => this._syncInProgress,
-      (v) => { this._syncInProgress = v; },
+      (v) => {
+        this._syncInProgress = v;
+      },
     );
   }
 
   private _renderCards(): void {
-    const { cardCleanup } = renderCards(this._root, this._rtype, this._instances, this._cardCleanup);
+    const { cardCleanup } = renderCards(
+      this._root,
+      this._rtype,
+      this._instances,
+      this._cardCleanup,
+    );
     this._cardCleanup = cardCleanup;
   }
 

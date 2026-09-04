@@ -4,7 +4,7 @@
 // 热区计算 → model2d-hit-zones.ts（calcBoneHitZones + HitZone）
 
 import type { BoneTransform } from "../../../utils/animation/animation.ts";
-import { cubeVec, drawView, drawMiniView } from "./model2d-draw.ts";
+import { cubeVec, drawMiniView, drawView } from "./model2d-draw.ts";
 import { calcBoneHitZones } from "./model2d-hit-zones.ts";
 
 // re-export：测试与既有消费方从 ./model2d.ts 取 calcBoneHitZones，保持 import 面不变
@@ -117,31 +117,10 @@ export function renderModel2D(
   const cy = H / 2 + (minY + rangeY / 2) * scale;
 
   // 计算骨骼屏幕坐标热区，供鼠标拾取
-  const boneHitZones = calcBoneHitZones(
-    model,
-    scale,
-    cx,
-    cy,
-    true,
-    cosA,
-    sinA,
-    boneTransforms,
-  );
+  const boneHitZones = calcBoneHitZones(model, scale, cx, cy, true, cosA, sinA, boneTransforms);
 
   // 绘制
-  drawView(
-    ctx,
-    model,
-    scale,
-    cx,
-    cy,
-    textureImg,
-    null,
-    showLabels,
-    cosA,
-    sinA,
-    boneTransforms,
-  );
+  drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels, cosA, sinA, boneTransforms);
   drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
 
   // ---- 鼠标交互高亮 ----
@@ -176,19 +155,7 @@ export function renderModel2D(
     if (_highlightBone) {
       _highlightBone = null;
       ctx.clearRect(0, 0, W, H);
-      drawView(
-        ctx,
-        model,
-        scale,
-        cx,
-        cy,
-        textureImg,
-        null,
-        showLabels,
-        cosA,
-        sinA,
-        boneTransforms,
-      );
+      drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels, cosA, sinA, boneTransforms);
       drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
     }
   };

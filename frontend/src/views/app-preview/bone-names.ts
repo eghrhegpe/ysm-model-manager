@@ -20,9 +20,7 @@ export function buildBoneNamesText(
   const lines: string[] = [`模型: ${modelPath}`, `骨骼总数: ${boneCount}`];
   for (const b of bones) {
     const cs = b.cubes || [];
-    lines.push(
-      `${b.name}${cs.length ? ` (${cs.length} 方)` : " (结构骨骼,无方)"}`,
-    );
+    lines.push(`${b.name}${cs.length ? ` (${cs.length} 方)` : " (结构骨骼,无方)"}`);
   }
   return lines;
 }

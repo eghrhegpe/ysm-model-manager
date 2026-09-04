@@ -1,21 +1,31 @@
 // ===== 2D 骨骼渲染层 =====
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
-import { getPrefer3D, setPrefer3D, type PreviewRoot, type YsmDecoder, type PreviewDebugger } from "./utils.ts";
-import { loadModelData, fillAuthorsAsync } from "./loader.ts";
-import { renderModel2D } from "./model2d/model2d.ts";
-import { openFullPreview } from "./zoom.ts";
-import { safeSet } from "../../utils/dom/storage.ts";
+
+import { t } from "../../core/i18n/t.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
+import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
 import { esc } from "../../utils/dom/html.ts";
+import { safeSet } from "../../utils/dom/storage.ts";
 import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
-import { t } from "../../core/i18n/t.ts";
-import {
-  setup2DCanvas, buildToggleRow, buildStatsCard, buildBoneExportRow,
-} from "./skeleton-render.ts";
-import { createYsm3D, cleanupYsm3D } from "./ysm-3d.ts";
 import { GenGuard } from "./gen-guard.ts";
+import { fillAuthorsAsync, loadModelData } from "./loader.ts";
+import { renderModel2D } from "./model2d/model2d.ts";
+import {
+  buildBoneExportRow,
+  buildStatsCard,
+  buildToggleRow,
+  setup2DCanvas,
+} from "./skeleton-render.ts";
+import {
+  getPrefer3D,
+  type PreviewDebugger,
+  type PreviewRoot,
+  setPrefer3D,
+  type YsmDecoder,
+} from "./utils.ts";
+import { cleanupYsm3D, createYsm3D } from "./ysm-3d.ts";
+import { openFullPreview } from "./zoom.ts";
 
 // 2D 拖拽的 window 监听器使用 AbortController 管理，避免模块级单例竞态（审核 P3）
 let _prevAbort: AbortController | null = null;
@@ -75,32 +85,82 @@ export async function loadModel2D(
     zoomBtn.className = "pv-btn";
     zoomBtn.innerHTML = "🔍 " + t("preview.zoom");
     zoomBtn.title = "全窗口查看模型";
-    zoomBtn.onclick = (): void => { openFullPreview(canvas, model, textureImg, getLabelsOn()); };
+    zoomBtn.onclick = (): void => {
+      openFullPreview(canvas, model, textureImg, getLabelsOn());
+    };
     container.querySelector<HTMLElement>(".pv-toggle-row")!.appendChild(zoomBtn);
-    let _zoom = 1, _rotation = 0;
+    let _zoom = 1,
+      _rotation = 0;
     const model2d = model as Parameters<typeof renderModel2D>[1];
     const doRender = (): void => {
-      try { renderModel2D(canvas, model2d, textureImg, { showLabels: getLabelsOn(), zoom: _zoom, rotation: _rotation }); }
-      catch (e) { console.warn("[preview] 2D 渲染跳过:", e); }
+      try {
+        renderModel2D(canvas, model2d, textureImg, {
+          showLabels: getLabelsOn(),
+          zoom: _zoom,
+          rotation: _rotation,
+        });
+      } catch (e) {
+        console.warn("[preview] 2D 渲染跳过:", e);
+      }
     };
     doRender();
-    eyeBtn.onclick = (): void => { const next = !getLabelsOn(); setLabelsOn(next); safeSet("ysm_showBoneLabels", String(next)); doRender(); };
+    eyeBtn.onclick = (): void => {
+      const next = !getLabelsOn();
+      setLabelsOn(next);
+      safeSet("ysm_showBoneLabels", String(next));
+      doRender();
+    };
     canvas.classList.add("pv-grab");
     canvas.title = "左键全窗放大 · 滚轮缩放 · 左右拖拽旋转";
-    let _dragging = false, _dragged = false, _lastX = 0;
-    canvas.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; _dragging = true; _dragged = false; _lastX = e.clientX; canvas.setPointerCapture(e.pointerId); });
+    let _dragging = false,
+      _dragged = false,
+      _lastX = 0;
+    canvas.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      _dragging = true;
+      _dragged = false;
+      _lastX = e.clientX;
+      canvas.setPointerCapture(e.pointerId);
+    });
     // 取消上一轮的 window 监听器（AbortController 一次性清除所有，无竞态风险）
     _prevAbort?.abort();
     const ac = new AbortController();
     _prevAbort = ac;
     const opts = { signal: ac.signal };
-    const onWindowMove = (e: PointerEvent): void => { if (!_dragging) return; const dx = e.clientX - _lastX; if (Math.abs(dx) > 3) _dragged = true; _lastX = e.clientX; _rotation = (_rotation + dx * 0.5) % 360; doRender(); };
-    const onWindowUp = (e: PointerEvent): void => { _dragging = false; if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId); };
+    const onWindowMove = (e: PointerEvent): void => {
+      if (!_dragging) return;
+      const dx = e.clientX - _lastX;
+      if (Math.abs(dx) > 3) _dragged = true;
+      _lastX = e.clientX;
+      _rotation = (_rotation + dx * 0.5) % 360;
+      doRender();
+    };
+    const onWindowUp = (e: PointerEvent): void => {
+      _dragging = false;
+      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    };
     window.addEventListener("pointermove", onWindowMove, opts);
     window.addEventListener("pointerup", onWindowUp, opts);
-    ctx.unsubs?.push(() => { ac.abort(); if (_prevAbort === ac) _prevAbort = null; });
-    canvas.addEventListener("click", (e) => { if (_dragged) { e.stopPropagation(); return; } openFullPreview(canvas, model, textureImg, getLabelsOn()); });
-    canvas.addEventListener("wheel", (e) => { e.preventDefault(); _zoom = Math.max(0.2, Math.min(10, _zoom * Math.exp(-e.deltaY * 0.002))); doRender(); }, { passive: false });
+    ctx.unsubs?.push(() => {
+      ac.abort();
+      if (_prevAbort === ac) _prevAbort = null;
+    });
+    canvas.addEventListener("click", (e) => {
+      if (_dragged) {
+        e.stopPropagation();
+        return;
+      }
+      openFullPreview(canvas, model, textureImg, getLabelsOn());
+    });
+    canvas.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        _zoom = Math.max(0.2, Math.min(10, _zoom * Math.exp(-e.deltaY * 0.002)));
+        doRender();
+      },
+      { passive: false },
+    );
     // 作者/头像延迟补全（首帧已渲染，await 不阻塞用户看到模型）
     if (model) await fillAuthorsAsync(modelPath, model);
     // 统计卡（彩色分区 + 头像作者）渲染目标：详情卡传入 statsContainer 时挂详情卡
@@ -110,12 +170,23 @@ export async function loadModel2D(
     } else {
       await buildStatsCard(container, model, modelPath, _decodedBy, ctx);
     }
-    buildBoneExportRow(container, model as BedrockGeometry & { boneCount?: number; bones?: Array<{ id: string; name: string; parentId?: string }> }, modelPath);
-    let _is3D = false, _prefer3D = getPrefer3D(), _loading3D = false;
+    buildBoneExportRow(
+      container,
+      model as BedrockGeometry & {
+        boneCount?: number;
+        bones?: Array<{ id: string; name: string; parentId?: string }>;
+      },
+      modelPath,
+    );
+    let _is3D = false,
+      _prefer3D = getPrefer3D(),
+      _loading3D = false;
     const model3dGuard = new GenGuard();
     const _toggle3D = async (): Promise<void> => {
       if (_loading3D) return;
-      _is3D = !_is3D; _prefer3D = _is3D; setPrefer3D(_prefer3D);
+      _is3D = !_is3D;
+      _prefer3D = _is3D;
+      setPrefer3D(_prefer3D);
       if (!_is3D) return;
       _loading3D = true;
       const gen = model3dGuard.next();
@@ -178,8 +249,12 @@ export async function loadModel2D(
     const btn3d = ctx.root.getElementById("btn-3d-preview");
     if (btn3d) {
       promoteTitleIfPresent(btn3d);
-      btn3d.onclick = (): void => { _toggle3D(); };
+      btn3d.onclick = (): void => {
+        _toggle3D();
+      };
     }
     if (_prefer3D) requestAnimationFrame(() => btn3d?.click());
-  } catch (e) { container.innerHTML = `<div class="pv-error-title" style="color:#ff6b6b">🏗️ ${t("preview.skeletonStructure")}</div><div class="pv-error-body">⚠️ ${t("preview.parseFailed")}: ${esc(safeErrorMessage(e))}</div>`; }
+  } catch (e) {
+    container.innerHTML = `<div class="pv-error-title" style="color:#ff6b6b">🏗️ ${t("preview.skeletonStructure")}</div><div class="pv-error-body">⚠️ ${t("preview.parseFailed")}: ${esc(safeErrorMessage(e))}</div>`;
+  }
 }

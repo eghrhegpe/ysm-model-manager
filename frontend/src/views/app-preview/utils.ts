@@ -13,7 +13,9 @@ export interface PreviewRoot {
 
 /** WASM 解码能力（loader/skeleton 消费） */
 export interface YsmDecoder {
-  decodeYsmViaWasm(path: string): Promise<import("../../preview-3d/decoder/utils.ts").DecodedYsm | null>;
+  decodeYsmViaWasm(
+    path: string,
+  ): Promise<import("../../preview-3d/decoder/utils.ts").DecodedYsm | null>;
 }
 
 /** 调试输出能力（loader/skeleton 消费） */

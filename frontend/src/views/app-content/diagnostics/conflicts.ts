@@ -1,15 +1,16 @@
 // ===== 诊断页：冲突扫描（scanConflicts） =====
 // ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（本文件）
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { bus } from "../../../bus.ts";
+
 import { getApp } from "../../../backend/app.ts";
-import { renderDisplayName } from "../../../utils/dom/display.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../../utils/resource/types.ts";
 import { isWebPlatform } from "../../../backend/platform-web.ts";
+import { bus } from "../../../bus.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
-import type { EscFn } from "./logs.ts";
+import { renderDisplayName } from "../../../utils/dom/display.ts";
+import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../../utils/resource/types.ts";
 import type { AppConfig, VersionInstance } from "../../../utils/types-re-export.ts";
+import type { EscFn } from "./logs.ts";
 
 // P3 修复（子代理审计，重入守卫）：scanConflicts 并发标志——快速 3 连点会并发扫描
 // 同一 list 互相覆盖（结果写 innerHTML 竞争）；busy 命中直接返回
@@ -76,7 +77,9 @@ async function dgCfLoadCfgAndInstances(): Promise<{
       mcRoot: "",
       instances: [],
       errorHtml:
-        '<div class="stat-row diag-msg diag-msg-error">' + t("diagnostics.configGameDir") + "</div>",
+        '<div class="stat-row diag-msg diag-msg-error">' +
+        t("diagnostics.configGameDir") +
+        "</div>",
     };
   }
   const instances = (await ListVersionInstances(mcRoot)) || [];
@@ -92,12 +95,16 @@ async function dgCfLoadCfgAndInstances(): Promise<{
   return { cfg, mcRoot, instances, errorHtml: null };
 }
 
-async function dgCfCollectInstanceFiles(instances: VersionInstance[]): Promise<Record<string, DgCfInstanceFile[]>> {
+async function dgCfCollectInstanceFiles(
+  instances: VersionInstance[],
+): Promise<Record<string, DgCfInstanceFile[]>> {
   const { ScanModelEntriesWithLabel } = await getApp();
   const instanceFiles: Record<string, DgCfInstanceFile[]> = {};
   for (const ins of instances) {
     if (!ins.Exists) continue;
-    const entries = (await ScanModelEntriesWithLabel(ins.CustomDir, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
+    const entries =
+      (await ScanModelEntriesWithLabel(ins.CustomDir, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) ||
+      [];
     instanceFiles[ins.Name] = entries.map((e) => ({
       name: e.Name.replace(/\.(disabled|ban)$/i, ""),
     }));
@@ -120,12 +127,13 @@ function dgCfBuildNameConflictMap(
     .sort((a, b) => b[1].length - a[1].length);
 }
 
-function dgCfRenderConflictList(
-  conflicts: [string, string[]][],
-  esc: EscFn,
-): string {
+function dgCfRenderConflictList(conflicts: [string, string[]][], esc: EscFn): string {
   if (!conflicts.length) {
-    return '<div class="stat-row diag-msg diag-msg-success">✅ ' + t("diagnostics.noNameConflict") + "</div>";
+    return (
+      '<div class="stat-row diag-msg diag-msg-success">✅ ' +
+      t("diagnostics.noNameConflict") +
+      "</div>"
+    );
   }
   let html = `<div class="stat-row diag-msg diag-msg-error" style="animation:conflictRowIn .3s ease">⚠️ ${t("diagnostics.conflictsFound", { n: conflicts.length })}</div>`;
   conflicts.slice(0, 50).forEach(([name, insNames], i) => {
@@ -202,7 +210,9 @@ async function dgCfLoadSyncContext(): Promise<{
       mcRoot: "",
       availableInstances: [],
       errorHtml:
-        '<div class="stat-row diag-msg diag-msg-error">' + t("diagnostics.configGameDir") + "</div>",
+        '<div class="stat-row diag-msg diag-msg-error">' +
+        t("diagnostics.configGameDir") +
+        "</div>",
     };
   }
   const instances = (await ListVersionInstances(mcRoot)) || [];
@@ -224,13 +234,17 @@ async function dgCfRunSyncDetection(
   const result = await DetectConflicts(rtype, instanceName);
   if (!result) {
     list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-error">❌ ' + t("diagnostics.conflictDetectionFailed") + "</div>";
+      '<div class="stat-row diag-msg diag-msg-error">❌ ' +
+      t("diagnostics.conflictDetectionFailed") +
+      "</div>";
     return;
   }
   const conflicts = result.conflicts || [];
   if (conflicts.length === 0) {
     list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-success">✅ ' + t("diagnostics.noSyncConflict") + "</div>";
+      '<div class="stat-row diag-msg diag-msg-success">✅ ' +
+      t("diagnostics.noSyncConflict") +
+      "</div>";
     return;
   }
   renderSyncConflictsResult(list, esc, conflicts, rtype, instanceName);
@@ -258,8 +272,7 @@ export async function scanSyncConflicts(
     }
     await dgCfRunSyncDetection(list, esc, rtype, instanceName);
   } catch (err) {
-    list.innerHTML =
-      `<div class="stat-row diag-msg diag-msg-error">${t("diagnostics.scanFailed")}: ${esc(String(err))}</div>`;
+    list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">${t("diagnostics.scanFailed")}: ${esc(String(err))}</div>`;
   } finally {
     diagSyncBusy = false;
   }
@@ -274,10 +287,16 @@ function dgCfBuildConfigPanelHtml(
   esc: EscFn,
 ): string {
   const instanceOptions = instances
-    .map((ins) => `<option value="${esc(ins)}"${ins === selectedInstance ? " selected" : ""}>${esc(ins)}</option>`)
+    .map(
+      (ins) =>
+        `<option value="${esc(ins)}"${ins === selectedInstance ? " selected" : ""}>${esc(ins)}</option>`,
+    )
     .join("");
   const rtypeOptions = Object.entries(RESOURCE_TYPE_LABELS)
-    .map(([id, label]) => `<option value="${esc(id)}"${id === selectedRtype ? " selected" : ""}>${esc(label)}</option>`)
+    .map(
+      ([id, label]) =>
+        `<option value="${esc(id)}"${id === selectedRtype ? " selected" : ""}>${esc(label)}</option>`,
+    )
     .join("");
   return `
       <div class="diag-sync-config">
@@ -314,17 +333,18 @@ function dgCfBindConfigPanelEvents(
   });
 }
 
-function renderSyncConfigPanel(
-  list: HTMLElement,
-  esc: EscFn,
-  instances: string[],
-): void {
+function renderSyncConfigPanel(list: HTMLElement, esc: EscFn, instances: string[]): void {
   const rtypeOptions = Object.entries(RESOURCE_TYPE_LABELS);
   const state = {
     selectedInstance: instances[0] || "",
     selectedRtype: rtypeOptions[0]?.[0] || "",
   };
-  list.innerHTML = dgCfBuildConfigPanelHtml(instances, state.selectedInstance, state.selectedRtype, esc);
+  list.innerHTML = dgCfBuildConfigPanelHtml(
+    instances,
+    state.selectedInstance,
+    state.selectedRtype,
+    esc,
+  );
   dgCfBindConfigPanelEvents(list, esc, state);
 }
 
@@ -338,9 +358,10 @@ function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): s
     manual: t("diagnostics.resolveManual"),
   };
   conflicts.forEach((c, i) => {
-    const conflictTypeLabel = c.type === "content_modified"
-      ? t("diagnostics.conflictTypeContent")
-      : t("diagnostics.conflictTypeBoth");
+    const conflictTypeLabel =
+      c.type === "content_modified"
+        ? t("diagnostics.conflictTypeContent")
+        : t("diagnostics.conflictTypeBoth");
     const suggestedLabel = strategyLabels[c.suggestedStrategy] ?? t("diagnostics.resolveManual");
     const delay = stagger(i, 30, 600);
     html += `<div class="conflict-row" style="animation-delay:${delay}ms">
@@ -386,8 +407,10 @@ async function dgCfExecuteResolve(
       return;
     }
     let resultMsg = `✅ ${t("diagnostics.resolvedCount", { n: result.resolved || 0 })}`;
-    if (result.failed > 0) resultMsg += ` | ❌ ${t("diagnostics.failedCount", { n: result.failed })}`;
-    if (result.manual > 0) resultMsg += ` | ⚠️ ${t("diagnostics.manualCount", { n: result.manual })}`;
+    if (result.failed > 0)
+      resultMsg += ` | ❌ ${t("diagnostics.failedCount", { n: result.failed })}`;
+    if (result.manual > 0)
+      resultMsg += ` | ⚠️ ${t("diagnostics.manualCount", { n: result.manual })}`;
     list.innerHTML += `<div class="stat-row diag-msg diag-msg-success" style="margin-top:12px">${resultMsg}</div>`;
     setTimeout(() => scanSyncConflicts(list, esc, rtype, instanceName), 1500);
   } catch (err) {

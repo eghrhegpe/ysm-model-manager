@@ -2,12 +2,13 @@
 // ADR-040 按职责切文件：体检 / 去重（dedup.ts）/ 冲突扫描（conflicts.ts）并列。
 // 数据源：Go 端 RepoHealthAuditAll（go/repoaudit 全仓库审计，GUI/CLI 同源消双轨）——
 // 前端不再自算健康分，只做展示。
-import { t } from "../../../core/i18n/t.ts";
+
 import { getApp } from "../../../backend/app.ts";
+import { t } from "../../../core/i18n/t.ts";
+import { currentRepoType } from "../../../features/repo-rtype.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { formatBytes } from "../../../utils/dom/format.ts";
-import { currentRepoType } from "../../../features/repo-rtype.ts";
-import { parseHealthReport, type HealthReport } from "../../../utils/health-report.ts";
+import { type HealthReport, parseHealthReport } from "../../../utils/health-report.ts";
 import type { EscFn } from "./logs.ts";
 
 // 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML
@@ -20,15 +21,14 @@ let _healthBusy = false;
  * @param list 结果容器（#diag-health-list）
  * @param esc HTML 转义函数
  */
-export async function runHealthAudit(
-  list: HTMLElement,
-  esc: EscFn,
-): Promise<void> {
+export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<void> {
   if (_healthBusy) return;
   _healthBusy = true;
   try {
     list.innerHTML =
-      '<div class="stat-row diag-stat diag-stat-muted">⏳ ' + t("diagnostics.healthScanning") + "</div>";
+      '<div class="stat-row diag-stat diag-stat-muted">⏳ ' +
+      t("diagnostics.healthScanning") +
+      "</div>";
 
     const { RepoHealthAudit, GetRepoRoot } = await getApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
@@ -45,8 +45,7 @@ export async function runHealthAudit(
   } catch (e) {
     // Go error 通道（路径校验等业务错误）或调用失败：统一展示
     const msg = friendlyError(e, t("diagnostics.healthFailed"));
-    list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-error">❌ ' + esc(msg) + "</div>";
+    list.innerHTML = '<div class="stat-row diag-msg diag-msg-error">❌ ' + esc(msg) + "</div>";
   } finally {
     _healthBusy = false;
   }
@@ -57,7 +56,11 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
   const score = Math.max(0, Math.min(100, r.score));
   const color = score >= 80 ? "var(--free)" : score >= 60 ? "var(--tag-amber)" : "var(--paid)";
   const label =
-    score >= 80 ? t("diagnostics.healthGood") : score >= 60 ? t("diagnostics.healthOk") : t("diagnostics.healthBad");
+    score >= 80
+      ? t("diagnostics.healthGood")
+      : score >= 60
+        ? t("diagnostics.healthOk")
+        : t("diagnostics.healthBad");
 
   const warnings = (r.warnings ?? [])
     .map((w) => '<div class="stat-row diag-warn">⚠️ ' + esc(w) + "</div>")
@@ -83,17 +86,54 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     "</div>" +
     "</div></div>" +
     '<div class="stat-row" style="justify-content:space-around;padding:8px 12px;border-top:1px solid var(--bd)">' +
-    '<span>📋 ' + t("diagnostics.healthComplete") + " <b>" + formatPct(r.completeness.percentage, esc) + "</b></span>" +
-    '<span>💾 ' + t("diagnostics.healthCache") + " <b>" + esc(r.cache.cache_files) + "</b></span>" +
-    '<span>🗑️ ' + t("diagnostics.healthDedup") + " <b>" + esc(r.dedup.groups) + "</b></span>" +
-    '<span>📦 ' + t("diagnostics.healthFiles") + " <b>" + esc(r.resources.total_files) + "</b></span>" +
+    "<span>📋 " +
+    t("diagnostics.healthComplete") +
+    " <b>" +
+    formatPct(r.completeness.percentage, esc) +
+    "</b></span>" +
+    "<span>💾 " +
+    t("diagnostics.healthCache") +
+    " <b>" +
+    esc(r.cache.cache_files) +
+    "</b></span>" +
+    "<span>🗑️ " +
+    t("diagnostics.healthDedup") +
+    " <b>" +
+    esc(r.dedup.groups) +
+    "</b></span>" +
+    "<span>📦 " +
+    t("diagnostics.healthFiles") +
+    " <b>" +
+    esc(r.resources.total_files) +
+    "</b></span>" +
     "</div>" +
     '<div class="stat-row" style="flex-direction:column;align-items:stretch;gap:2px;padding:8px 12px;border-top:1px solid var(--bd);font-size:var(--fs-sm);color:var(--muted)">' +
-    '<div>✅ ' + t("diagnostics.healthValid") + ": " + esc(r.completeness.valid) + " · ❌ " + t("diagnostics.healthInvalid") + ": " + esc(r.completeness.invalid) + "</div>" +
-    '<div>💾 ' + t("diagnostics.healthCacheSize") + ": " + esc(formatSize(r.cache.cache_size)) + (r.cache.hit_rate > 0 ? " · " + t("diagnostics.healthHitRate") + ": " + Math.round(r.cache.hit_rate) + "%" : "") + "</div>" +
-    '<div>🗑️ ' + t("diagnostics.healthReclaim") + ": " + esc(formatSize(r.dedup.reclaim_bytes)) + "</div>" +
+    "<div>✅ " +
+    t("diagnostics.healthValid") +
+    ": " +
+    esc(r.completeness.valid) +
+    " · ❌ " +
+    t("diagnostics.healthInvalid") +
+    ": " +
+    esc(r.completeness.invalid) +
     "</div>" +
-    (warnings ? '<div style="padding:6px 12px;border-top:1px solid var(--bd)">' + warnings + "</div>" : "") +
+    "<div>💾 " +
+    t("diagnostics.healthCacheSize") +
+    ": " +
+    esc(formatSize(r.cache.cache_size)) +
+    (r.cache.hit_rate > 0
+      ? " · " + t("diagnostics.healthHitRate") + ": " + Math.round(r.cache.hit_rate) + "%"
+      : "") +
+    "</div>" +
+    "<div>🗑️ " +
+    t("diagnostics.healthReclaim") +
+    ": " +
+    esc(formatSize(r.dedup.reclaim_bytes)) +
+    "</div>" +
+    "</div>" +
+    (warnings
+      ? '<div style="padding:6px 12px;border-top:1px solid var(--bd)">' + warnings + "</div>"
+      : "") +
     '<div class="stat-row diag-stat diag-stat-muted" style="padding:6px 12px">⚙️ ' +
     t("diagnostics.healthSource") +
     "</div>"

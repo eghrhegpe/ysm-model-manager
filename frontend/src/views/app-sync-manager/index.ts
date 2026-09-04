@@ -5,22 +5,19 @@
 // 依赖 DAG：index → store / renderer / events / network / state（leaf modules 间无循环，
 // events 的 LAST_TYPE_KEY 等共享状态走 state.ts，不再反向依赖 index）
 
-import { t } from "../../core/i18n/t.ts";
+import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { getApp } from "../../backend/app.ts";
 import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import {
-  containerHTML,
-  loadingHTML,
-} from "./tpl.ts";
-import { loadTypeConfig, loadData } from "./store.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { loadData, loadTypeConfig } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
+import { containerHTML, loadingHTML } from "./tpl.ts";
 
 /** 合并四子模块（store / renderer / events / network）对组件实例的接口需求，
  * 一统江湖，消除各处 `as any` 桥接。各子模块可改从此导入。 */
@@ -43,16 +40,26 @@ export interface SyncManagerSelf {
   _filesRoots: Record<string, string>;
   /** 各资源类型实际同步目录对（GetSyncScanDirs 结果：global=仓库基准, instance=实例扫描；
    *  warningCode=结构化告警码（scan_dir_wide），warningParams=告警参数，显示文案由 i18n 组装） */
-  _scanDirs: Record<string, { global: string; instance: string; warningCode?: string; warningParams?: { label: string; dir: string; subDir: string } }>;
+  _scanDirs: Record<
+    string,
+    {
+      global: string;
+      instance: string;
+      warningCode?: string;
+      warningParams?: { label: string; dir: string; subDir: string };
+    }
+  >;
   isConnected?: boolean;
   innerHTML: string;
   querySelector(sel: string): HTMLElement | null;
   querySelectorAll(sel: string): NodeList;
 }
-import { render } from "./renderer.ts";
+
 import { bindEvents } from "./events.ts";
 import { performSingleOp } from "./network.ts";
+import { render } from "./renderer.ts";
 import { _lastSelectedType, setLastSelectedType } from "./state.ts";
+
 // P3 修复（子代理审计）：共享状态（LAST_TYPE_KEY / _lastSelectedType / setLastSelectedType）
 // 已下沉至 state.ts，打破 index ↔ events 循环依赖
 // 2026-08-18：sm-tabs 移除后类型完全由全局 nav 下拉驱动——订阅 repo:rtype-changed 跟随，
@@ -96,7 +103,7 @@ export class AppSyncManager extends WebComponentBase {
     this._selectedType = _lastSelectedType || this._defaultType;
     if (!this._instance) {
       this.innerHTML =
-        '<div style="padding:12px;color:var(--err)">⚠️ ' + t("sync.noInstance") + '</div>';
+        '<div style="padding:12px;color:var(--err)">⚠️ ' + t("sync.noInstance") + "</div>";
       return;
     }
     this._init();
@@ -145,10 +152,15 @@ export class AppSyncManager extends WebComponentBase {
       console.error("[sync-manager] _render 出错:", e);
       this.innerHTML +=
         '<div style="padding:12px;color:var(--err)">' +
-        t("sync.renderFailed") + ": " +
+        t("sync.renderFailed") +
+        ": " +
         esc(safeErrorMessage(e)) +
         "</div>";
-      bus.emit("toast:show", { msg: "❌ " + friendlyError(e, t("sync.renderFailed")), duration: TOAST_MS.long, type: "error" });
+      bus.emit("toast:show", {
+        msg: "❌ " + friendlyError(e, t("sync.renderFailed")),
+        duration: TOAST_MS.long,
+        type: "error",
+      });
     }
 
     const unsub = bus.on("stats:refresh", () => {
@@ -210,7 +222,6 @@ export class AppSyncManager extends WebComponentBase {
         });
     });
     this._unsubs.push(unsubSubdir);
-
   }
 
   /** 渲染 + 事件绑定的统一入口（供 _init 和 stats:refresh 复用） */
@@ -224,11 +235,12 @@ export class AppSyncManager extends WebComponentBase {
       .then(() => {
         bindEvents(self, {
           doRender: () => this._doRender(),
-          doPerformOp: (op, path) => performSingleOp(self, op, path, {
-            doLoadData,
-            doRender: () => this._doRender(),
-            doEmitStats,
-          }),
+          doPerformOp: (op, path) =>
+            performSingleOp(self, op, path, {
+              doLoadData,
+              doRender: () => this._doRender(),
+              doEmitStats,
+            }),
         });
       })
       .catch((e) => console.error("[sync-manager] render 失败:", e));

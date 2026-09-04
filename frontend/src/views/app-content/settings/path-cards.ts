@@ -1,17 +1,18 @@
 // ===== 设置页：路径卡片 / 高级面板 / 游戏目录检测（ADR-040 拆分自 init.ts）=====
 // 原 initSettings 巨型闭包中的路径相关逻辑整体迁出：共享状态（cfg/cardRefreshers/
 // busy/toastError）统一走 store.ts 模块级，root/refreshAdvanced 显式参数传递。
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { bus } from "../../../bus.ts";
+
 import { getApp } from "../../../backend/app.ts";
+import { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
-import { esc } from "../../../utils/dom/html.ts";
-import { safeGet } from "../../../utils/dom/storage.ts";
+import type { ResourceTypeEntry } from "../../../services/resource-registry.ts";
 import { pickDirectory } from "../../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
-import type { ResourceTypeEntry } from "../../../services/resource-registry.ts";
+import { esc } from "../../../utils/dom/html.ts";
+import { safeGet } from "../../../utils/dom/storage.ts";
+import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { groupStorageRootOf } from "../../../utils/resource/types.ts";
-import { cfg, cardRefreshers, isBusy, setBusy, toastError } from "./store.ts";
+import { cardRefreshers, cfg, isBusy, setBusy, toastError } from "./store.ts";
 
 /** HTML 转义（高级面板路径/路径选择器/扫描提示共用） */
 /** 路径选择模态/扫描气泡样式(P1 批次11:cssText 抽类;overlay 提升到 host 父级/body light DOM,head 注入适用) */
@@ -108,7 +109,7 @@ export function bindPathClick(
 
 /** 多路径选择器：弹出路径列表让用户挑选（返回 null 表示取消） */
 function showPathPicker(root: ShadowRoot, paths: string[]): Promise<string | null> {
-  return new Promise(function (resolve) {
+  return new Promise((resolve) => {
     ensurePcStyles(); // P1 批次11:cssText 抽类注入(幂等;overlay 提升 light DOM)
     const overlay = document.createElement("div");
     overlay.className = "pc-modal-overlay";
@@ -125,11 +126,17 @@ function showPathPicker(root: ShadowRoot, paths: string[]): Promise<string | nul
         "</div>";
     }
     box.innerHTML =
-      "<div style='font-weight:600;font-size:13px;margin-bottom:8px'>" + t("content.pickMcDirTitle") + "</div>" +
-      "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:12px'>" + t("content.pickMcDirDesc") + "</div>" +
+      "<div style='font-weight:600;font-size:13px;margin-bottom:8px'>" +
+      t("content.pickMcDirTitle") +
+      "</div>" +
+      "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:12px'>" +
+      t("content.pickMcDirDesc") +
+      "</div>" +
       listHtml +
       "<div style='margin-top:12px;text-align:right'>" +
-      "<button class='mc-pick-cancel' style='padding:4px 12px;border-radius:4px;border:1px solid var(--bd,#444);background:transparent;color:var(--txt,#cdd6f4);cursor:pointer;font-size:var(--fs-sm,11px);font-family:inherit'>" + t("common.cancel") + "</button>" +
+      "<button class='mc-pick-cancel' style='padding:4px 12px;border-radius:4px;border:1px solid var(--bd,#444);background:transparent;color:var(--txt,#cdd6f4);cursor:pointer;font-size:var(--fs-sm,11px);font-family:inherit'>" +
+      t("common.cancel") +
+      "</button>" +
       "</div>";
     overlay.appendChild(box);
     (root.getRootNode() === document
@@ -137,28 +144,22 @@ function showPathPicker(root: ShadowRoot, paths: string[]): Promise<string | nul
       : root.host?.parentElement || document.body
     ).appendChild(overlay);
 
-    box.querySelectorAll(".mc-pick-item").forEach(function (el) {
-      el.addEventListener("click", function () {
+    box.querySelectorAll(".mc-pick-item").forEach((el) => {
+      el.addEventListener("click", () => {
         const idx = parseInt((el as HTMLElement).dataset.idx || "0", 10);
         overlay.remove();
         resolve(paths[idx] || null);
       });
     });
-    box
-      .querySelector(".mc-pick-cancel")
-      ?.addEventListener("click", function () {
-        overlay.remove();
-        resolve(null);
-      });
+    box.querySelector(".mc-pick-cancel")?.addEventListener("click", () => {
+      overlay.remove();
+      resolve(null);
+    });
   });
 }
 
 /** 扫描提示气泡：hover 时显示扫描到的所有路径 + 搜索范围 */
-function showScanTooltip(
-  root: ShadowRoot,
-  anchor: HTMLElement,
-  paths: string[],
-): HTMLElement {
+function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[]): HTMLElement {
   const rect = anchor.getBoundingClientRect();
   const tip = document.createElement("div");
   tip.id = "mc-scan-tooltip";
@@ -168,7 +169,9 @@ function showScanTooltip(
 
   // 搜索范围
   let html =
-    "<div style='font-weight:600;margin-bottom:4px'>" + t("content.scanScope") + "</div>" +
+    "<div style='font-weight:600;margin-bottom:4px'>" +
+    t("content.scanScope") +
+    "</div>" +
     "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:8px;padding-left:4px'>" +
     t("content.scanScopeLine1") +
     t("content.scanScopeLine2") +
@@ -178,8 +181,12 @@ function showScanTooltip(
   // 搜索结果
   if (!paths.length) {
     html +=
-      "<div style='color:var(--muted,#888);padding:4px 0'>" + t("content.noMcDirFound") + "</div>" +
-      "<div style='font-size:10px;color:var(--muted,#888);padding-top:2px'>" + t("content.noMcDirHint") + "</div>";
+      "<div style='color:var(--muted,#888);padding:4px 0'>" +
+      t("content.noMcDirFound") +
+      "</div>" +
+      "<div style='font-size:10px;color:var(--muted,#888);padding-top:2px'>" +
+      t("content.noMcDirHint") +
+      "</div>";
   } else {
     html +=
       "<div style='font-weight:600;margin-bottom:4px'>" +
@@ -226,7 +233,8 @@ export function initAdvancedGrid(
 
   // cfg 动态索引辅助（cfgKey 来自配置字段，类型收窄为字符串索引）
   const cfgAny = cfg as unknown as Record<string, unknown>;
-  const cfgStr = (key: string): string => (typeof cfgAny[key] === "string" ? (cfgAny[key] as string) : "");
+  const cfgStr = (key: string): string =>
+    typeof cfgAny[key] === "string" ? (cfgAny[key] as string) : "";
 
   const refreshAdvanced = async (): Promise<void> => {
     const grid = root.getElementById("set-advanced-grid");
@@ -242,7 +250,7 @@ export function initAdvancedGrid(
       const isOverridden = !!overridePath;
       html +=
         '<div class="stg-card' +
-        (isOverridden ? ' stg-card-overridden' : '') +
+        (isOverridden ? " stg-card-overridden" : "") +
         '">' +
         '<div class="stg-card-hdr">' +
         "<span>" +
@@ -251,18 +259,22 @@ export function initAdvancedGrid(
         at.name +
         "</span>" +
         (isOverridden
-          ? '<span class="stg-custom-badge">' + t("settings.path.customized") + '</span>'
+          ? '<span class="stg-custom-badge">' + t("settings.path.customized") + "</span>"
           : "") +
         (isOverridden
           ? '<button class="btn-base sm stg-adv-reset" data-rtype="' +
             at.rtype +
-            '" style="font-size:var(--fs-btn-tool);padding:2px 6px">↩️ ' + t("settings.path.default") + '</button>'
+            '" style="font-size:var(--fs-btn-tool);padding:2px 6px">↩️ ' +
+            t("settings.path.default") +
+            "</button>"
           : "") +
         "</div>" +
         '<div class="stg-card-body">' +
         '<div class="stg-path-picker" data-rtype="' +
         at.rtype +
-        '" title="' + t("settings.path.clickToChange") + '">' +
+        '" title="' +
+        t("settings.path.clickToChange") +
+        '">' +
         escHtml(currentPath) +
         "</div>" +
         "</div></div>";
@@ -277,8 +289,7 @@ export function initAdvancedGrid(
           // 平台分支：桌面 Wails Dialog / Android 授权检查+路径输入（ADR-046 P2）
           const dir = await pickDirectory();
           if (!dir) return;
-          const { SetResourceRoot } =
-            await getApp();
+          const { SetResourceRoot } = await getApp();
           await SetResourceRoot(rtype, dir);
           const found = advancedTypes.find((a) => a.rtype === rtype);
           if (found && found.cfgKey) cfgAny[found.cfgKey] = dir;
@@ -303,8 +314,7 @@ export function initAdvancedGrid(
         e.stopPropagation();
         const rtype = (btn as HTMLElement).dataset.rtype || "";
         try {
-          const { ResetResourceRoot } =
-            await getApp();
+          const { ResetResourceRoot } = await getApp();
           await ResetResourceRoot(rtype);
           const found = advancedTypes.find((a) => a.rtype === rtype);
           if (found && found.cfgKey) cfgAny[found.cfgKey] = "";

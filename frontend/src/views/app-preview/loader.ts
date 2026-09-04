@@ -1,11 +1,12 @@
 // ===== 模型数据加载（唯一入口）=====
 // 供给 skeleton.ts 使用（ADR-136 第四刀后截图走 preview-3d/screenshot-render.ts）
-import { cacheGet, cacheSet } from "../../preview-3d/decoder/cache.ts";
-import { extOf } from "../../utils/resource/types.ts";
+
 import { getApp } from "../../backend/app.ts";
-import { parseBedrockAnimationJSON, type AnimationClip } from "../../utils/animation/animation.ts";
-import type { YsmDecoder, PreviewDebugger } from "./utils.ts";
+import { cacheGet, cacheSet } from "../../preview-3d/decoder/cache.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
+import { type AnimationClip, parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
+import { extOf } from "../../utils/resource/types.ts";
+import type { PreviewDebugger, YsmDecoder } from "./utils.ts";
 
 /** loadModelData 选项（Bedrock 通用模型加载控制） */
 export interface LoadModelOpts {
@@ -52,14 +53,7 @@ export async function loadModelData(
 
   // ③ 非 YSM/ZIP/JSON 或 WASM 失败/空骨骼 → 走 Go 兜底
   if (!model?.bones?.length) {
-    const go = await loadModelViaGo(
-      ctx,
-      modelPath,
-      opts,
-      model,
-      wasmAuthors,
-      wasmAvatars,
-    );
+    const go = await loadModelViaGo(ctx, modelPath, opts, model, wasmAuthors, wasmAvatars);
     model = go.model;
     decodedBy = go.decodedBy;
   }
@@ -179,7 +173,7 @@ async function loadModelViaGo(
   }
 
   if (model && model.bones && model.bones.length) {
-    let goClips: unknown[] = [];
+    const goClips: unknown[] = [];
     if (model.animations?.length) {
       for (const jsonStr of model.animations as string[]) {
         const { clips } = parseBedrockAnimationJSON(jsonStr);
@@ -229,10 +223,7 @@ async function loadModelViaGo(
  * 异步补全作者/头像信息（不阻塞首帧渲染）
  * 在几何渲染完成后调用，后台补齐作者名 + 头像 URL
  */
-export async function fillAuthorsAsync(
-  modelPath: string,
-  model: BedrockGeometry,
-): Promise<void> {
+export async function fillAuthorsAsync(modelPath: string, model: BedrockGeometry): Promise<void> {
   if (!model) return;
   // 确保 _authors 数组存在（loadModelData 可能未初始化）
   if (!model._authors) model._authors = [];

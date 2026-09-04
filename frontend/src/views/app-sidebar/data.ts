@@ -12,7 +12,11 @@ export interface SidebarInstance {
   extra: number;
   disabled: number;
   rtype: string;
-  variantGroups: { missingGroups: string[]; extraGroups: string[]; variantMap: Record<string, { items: string[]; count: number }> } | null;
+  variantGroups: {
+    missingGroups: string[];
+    extraGroups: string[];
+    variantMap: Record<string, { items: string[]; count: number }>;
+  } | null;
   _missingPaths: string[];
   _extraPaths: string[];
   /** loader 生成 { synced, disabled }；fallback 模拟数据为 { synced, missing, extra }——宽松化以兼容两者 */

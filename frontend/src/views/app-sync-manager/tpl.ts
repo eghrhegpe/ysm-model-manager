@@ -1,17 +1,14 @@
 // ===== app-sync-manager 模板 =====
-import { renderFormattedText } from "../../utils/format/mc-format.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { formatBytes } from "../../utils/dom/format.ts";
+
 import { t } from "../../core/i18n/t.ts";
+import { stagger } from "../../utils/animation/stagger.ts";
+import { formatBytes } from "../../utils/dom/format.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { renderFormattedText } from "../../utils/format/mc-format.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
-export const VIEW_TESTIDS: readonly string[] = [
-  'sm-push',
-  'sm-pull',
-];
-
+export const VIEW_TESTIDS: readonly string[] = ["sm-push", "sm-pull"];
 
 /** 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） */
 export interface SyncItem {
@@ -54,13 +51,25 @@ export const statusColorOf = (status: string): string => STATUS_COLOR[status] ??
 /** 状态操作按钮（missing/diverged→push；optional→pull；legacy→pullHere；其余无） */
 export function actionBtnHTML(status: string): string {
   if (status === "missing" || status === "diverged") {
-    return '<button class="sm-item-btn" data-testid="sm-push" data-action="push" style="border:1px solid var(--accent);color:var(--accent)">' + t("syncManager.push") + '</button>';
+    return (
+      '<button class="sm-item-btn" data-testid="sm-push" data-action="push" style="border:1px solid var(--accent);color:var(--accent)">' +
+      t("syncManager.push") +
+      "</button>"
+    );
   }
   if (status === "optional") {
-    return '<button class="sm-item-btn" data-testid="sm-pull" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">' + t("syncManager.pull") + '</button>';
+    return (
+      '<button class="sm-item-btn" data-testid="sm-pull" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">' +
+      t("syncManager.pull") +
+      "</button>"
+    );
   }
   if (status === "legacy") {
-    return '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--muted);font-size:var(--fs-tiny)">' + t("syncManager.pullHere") + '</button>';
+    return (
+      '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--muted);font-size:var(--fs-tiny)">' +
+      t("syncManager.pullHere") +
+      "</button>"
+    );
   }
   return "";
 }
@@ -154,12 +163,7 @@ export function containerHTML(): string {
  * @param count - 数量
  * @param active - 是否选中
  */
-export function statusTabHTML(
-  id: string,
-  label: string,
-  count: number,
-  active: boolean,
-): string {
+export function statusTabHTML(id: string, label: string, count: number, active: boolean): string {
   const cls = active ? " active" : "";
   const showCount = count > 0 ? " (" + count + ")" : "";
   return (
@@ -249,5 +253,3 @@ export function loadingHTML(): string {
     "</div>"
   );
 }
-
-

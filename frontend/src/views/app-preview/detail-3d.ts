@@ -3,27 +3,27 @@
 // （showModelDetail/showResourcePack/showShaderpack）分离；共享代际 detailGen 从
 // detail.ts 导出复用，保证跨文件快速切换时在途请求互相作废。
 
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { getApp } from "../../backend/app.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { renderFormattedText } from "../../utils/format/mc-format.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { readVrmMeta } from "../../preview-3d/adapters/vrm-adapter.ts";
+import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 import { readPmxStats } from "../../preview-3d/adapters/mmd-detail-stats.ts";
-import { createVrm3D } from "./vrm-3d.ts";
-import { createMmd3D } from "./mmd-3d.ts";
+import { readVrmMeta } from "../../preview-3d/adapters/vrm-adapter.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
+import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { detailGen } from "./detail.ts";
 import { createFbx3D } from "./fbx-3d.ts";
 import { resolveFbxSiblings } from "./fbx-siblings.ts";
-import { createScene3D } from "./scene-3d.ts";
+import { createMmd3D } from "./mmd-3d.ts";
 import { resolveMmdSiblings } from "./mmd-siblings.ts";
-import { resolveSceneSiblings, resolveMorphSiblings } from "./siblings.ts";
+import { createScene3D } from "./scene-3d.ts";
+import { resolveMorphSiblings, resolveSceneSiblings } from "./siblings.ts";
 import { resolveStageSiblings } from "./stage-siblings.ts";
-import { detailGen } from "./detail.ts";
-import { t } from "../../core/i18n/t.ts";
-import { bus } from "../../bus.ts";
 import type { PreviewCtx } from "./utils.ts";
+import { createVrm3D } from "./vrm-3d.ts";
 
 /** 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） */
 export async function showVrmMeta(
@@ -69,8 +69,9 @@ export async function showVrmMeta(
       // ADR-131 P2：readVrmMeta 顺带采集的渲染期统计（traverse 口径；标注「渲染实测」
       // 与 YSM 模型面板的 Go AnalyzeBedrockModel 口径区分，避免双口径困惑——审核建议 ②）
       const s = meta.stats;
-      const statsRow = s && (s.meshCount > 0 || s.boneCount > 0)
-        ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
+      const statsRow =
+        s && (s.meshCount > 0 || s.boneCount > 0)
+          ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
             <span style="color:var(--accent)">📊 ${t("preview.stats.panel")}</span>
             <span>🦴 ${t("preview.stats.bones")}: <b>${s.boneCount}</b></span>
             <span>🧩 ${t("preview.stats.meshes")}: <b>${s.meshCount}</b></span>
@@ -79,7 +80,7 @@ export async function showVrmMeta(
             <span>🖼️ ${t("preview.stats.textures")}: <b>${s.textureCount}</b></span>
             <span>😊 ${t("preview.stats.morphs")}: <b>${s.morphCount}</b></span>
           </div>`
-        : "";
+          : "";
       ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
@@ -160,7 +161,9 @@ export async function showMmdPreview(
           <span>🎨 ${t("preview.stats.materials")}: <b>${stats.materials}</b></span>
           <span>😊 ${t("preview.stats.morphs")}: <b>${stats.morphs}</b></span>
         </div>`;
-      } catch { /* 统计读取失败静默：基础卡不受影响（详情卡降级约定） */ }
+      } catch {
+        /* 统计读取失败静默：基础卡不受影响（详情卡降级约定） */
+      }
     })();
   }
 }
@@ -196,10 +199,7 @@ export async function showFbxPreview(
 }
 
 /** 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） */
-export async function showScenePreview(
-  ctx: PreviewCtx,
-  path: string,
-): Promise<void> {
+export async function showScenePreview(ctx: PreviewCtx, path: string): Promise<void> {
   detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -226,10 +226,7 @@ export async function showScenePreview(
 }
 
 /** 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） */
-export async function showMorphPreview(
-  ctx: PreviewCtx,
-  path: string,
-): Promise<void> {
+export async function showMorphPreview(ctx: PreviewCtx, path: string): Promise<void> {
   detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -250,17 +247,19 @@ export async function showMorphPreview(
     const siblings = await resolveMorphSiblings();
     const container = ctx.root.querySelector<HTMLElement>("#morph-siblings");
     if (container && siblings.length > 0) {
-      const items = siblings.map((p) => {
-        const name = p.split(/[/\\]/).pop() || p;
-        const active = p === path;
-        // 高亮/hover 走注入的 .morph-item 样式（内联 style 表达不了 :hover；
-        // 旧写法「;font-weight:600}hover:background:...」缺分号 + hover: 前缀非法，
-        // 连 font-weight 一起被并成一条声明整体丢弃）
-        return `<div class="morph-item${active ? " active" : ""}" data-path="${esc(p)}">
+      const items = siblings
+        .map((p) => {
+          const name = p.split(/[/\\]/).pop() || p;
+          const active = p === path;
+          // 高亮/hover 走注入的 .morph-item 样式（内联 style 表达不了 :hover；
+          // 旧写法「;font-weight:600}hover:background:...」缺分号 + hover: 前缀非法，
+          // 连 font-weight 一起被并成一条声明整体丢弃）
+          return `<div class="morph-item${active ? " active" : ""}" data-path="${esc(p)}">
           <span style="font-size:10px;color:var(--muted)">◉</span>
           <span>${esc(name)}</span>
         </div>`;
-      }).join("");
+        })
+        .join("");
       container.innerHTML = `<style>
   .morph-item{padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px}
   .morph-item:hover{background:rgba(255,255,255,0.05)}
@@ -276,7 +275,9 @@ export async function showMorphPreview(
     } else if (container) {
       container.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:4px">${t("preview.noOtherMorph")}</div>`;
     }
-  } catch { /* 兄弟列表加载失败不阻断 */ }
+  } catch {
+    /* 兄弟列表加载失败不阻断 */
+  }
   // 应用 FAB
   const fab = ctx.root.querySelector<HTMLElement>("#btn-morph-apply");
   if (fab) {
@@ -293,10 +294,7 @@ export async function showMorphPreview(
 }
 
 /** 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） */
-export async function showStagePreview(
-  ctx: PreviewCtx,
-  path: string,
-): Promise<void> {
+export async function showStagePreview(ctx: PreviewCtx, path: string): Promise<void> {
   detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -322,17 +320,28 @@ export async function showStagePreview(
         const vmdCount = contents.filter((c) => c.kind === "vmd").length;
         const audioCount = contents.filter((c) => c.kind === "audio").length;
         const configCount = contents.filter((c) => c.kind === "config").length;
-        container.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:6px">📊 ${t("preview.stageContents", { vmd: vmdCount, audio: audioCount, config: configCount })}</div>` +
-          contents.map((c) => {
-            const name = c.path.split(/[/\\]/).pop() || c.path;
-            const icon = c.kind === "vmd" ? "🎬" : c.kind === "audio" ? "🎵" : c.kind === "config" ? "⚙️" : "📄";
-            const color = c.kind === "vmd" ? "#ffa050" : c.kind === "audio" ? "#80c0ff" : "#c0c0c0";
-            return `<div class="stage-item" data-path="${esc(c.path)}" style="padding:3px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px;border-left:3px solid ${color}">
+        container.innerHTML =
+          `<div style="color:var(--muted);font-size:11px;margin-bottom:6px">📊 ${t("preview.stageContents", { vmd: vmdCount, audio: audioCount, config: configCount })}</div>` +
+          contents
+            .map((c) => {
+              const name = c.path.split(/[/\\]/).pop() || c.path;
+              const icon =
+                c.kind === "vmd"
+                  ? "🎬"
+                  : c.kind === "audio"
+                    ? "🎵"
+                    : c.kind === "config"
+                      ? "⚙️"
+                      : "📄";
+              const color =
+                c.kind === "vmd" ? "#ffa050" : c.kind === "audio" ? "#80c0ff" : "#c0c0c0";
+              return `<div class="stage-item" data-path="${esc(c.path)}" style="padding:3px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px;border-left:3px solid ${color}">
               <span>${icon}</span>
               <span>${esc(name)}</span>
               <span style="color:var(--muted);font-size:10px;margin-left:auto">${c.kind}</span>
             </div>`;
-          }).join("");
+            })
+            .join("");
         // 点击舞台项切换
         container.querySelectorAll<HTMLElement>(".stage-item").forEach((el) => {
           el.onclick = () => {
@@ -342,7 +351,9 @@ export async function showStagePreview(
         });
       }
     }
-  } catch { /* 舞台内容加载失败不阻断 */ }
+  } catch {
+    /* 舞台内容加载失败不阻断 */
+  }
   // 加载舞台 FAB
   const fab = ctx.root.querySelector<HTMLElement>("#btn-stage-load");
   if (fab) {

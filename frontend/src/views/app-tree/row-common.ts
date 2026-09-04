@@ -3,8 +3,8 @@
 // 抽自 jscpd 报的 36 行跨文件重复：p/fp/checked/ban/typeIcon/pad 计算一字不差，
 // 文件夹行 8 个局部变量（fi/nc/lk/ar/ac/ckCls/dispName/pad）完全一致。
 import { renderDisplayName } from "../../utils/dom/display.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { esc } from "../../utils/dom/html.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { TreeEntry } from "./loader.ts";
 
 /** 文件行公共计算：path 转义、开关状态、禁用 class、类型图标、缩进 */

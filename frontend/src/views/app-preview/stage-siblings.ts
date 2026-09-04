@@ -10,10 +10,12 @@
 import { getApp } from "../../backend/app.ts";
 
 /** 扫描 StageAnim 目录下所有资源文件（VMD + 音频 + config）；失败返回 [] */
-export async function resolveStageSiblings(): Promise<Array<{
-  path: string;
-  kind: "vmd" | "audio" | "config" | "other";
-}>> {
+export async function resolveStageSiblings(): Promise<
+  Array<{
+    path: string;
+    kind: "vmd" | "audio" | "config" | "other";
+  }>
+> {
   try {
     const App = await getApp();
     const stageRoot = await App.GetRepoRoot("StageAnim");

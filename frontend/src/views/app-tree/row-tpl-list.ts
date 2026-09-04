@@ -1,6 +1,7 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
-import { esc } from "../../utils/dom/html.ts";
+
 import { formatBytes, sizeColor } from "../../utils/dom/format.ts";
+import { esc } from "../../utils/dom/html.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 
@@ -35,7 +36,13 @@ export function listFolderRowHTML(
   ariaLevel = 1,
 ): string {
   const { fi, nc, lk, ar, ac, ckCls, dispName, pad } = folderRowCommon(
-    k, full, isOpen, isLocked, hasEnabled, hasDisabled, indent,
+    k,
+    full,
+    isOpen,
+    isLocked,
+    hasEnabled,
+    hasDisabled,
+    indent,
   );
   return `<div class="fh-list${lk}" role="treeitem" aria-level="${ariaLevel}" aria-expanded="${isOpen}" data-dir="${esc(full)}"${pad}>
 <span class="ck${ckCls}" data-dir="${esc(full)}"></span>

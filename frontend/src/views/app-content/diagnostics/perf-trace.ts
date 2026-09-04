@@ -28,10 +28,11 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
   // 取最近一条（最新的加载）
   const latest = traces[traces.length - 1];
   const totalMs = latest.stages.reduce((s, st) => s + st.ms, 0);
-  const maxMs = Math.max(...latest.stages.map(s => s.ms), 1);
+  const maxMs = Math.max(...latest.stages.map((s) => s.ms), 1);
 
   // 甘特图 SVG（横向条状）
-  const W = 560, padR = 10;
+  const W = 560,
+    padR = 10;
   const plotW = W - 72 - padR;
   const rowH = 18;
   const padL = 72;
@@ -50,29 +51,59 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
   // 资产清单
   const a = latest.assets || {};
   const assetRows = [
-    a.bones ? `<span class="perf-asset-item">🦴 ${t("diagnostics.metric.assetsBones")}: ${a.bones}</span>` : "",
-    a.cubes ? `<span class="perf-asset-item">🧊 ${t("diagnostics.assetsCubes")}: ${a.cubes}</span>` : "",
-    a.materials ? `<span class="perf-asset-item">🎨 ${t("diagnostics.assetsMats")}: ${a.materials}</span>` : "",
-    a.textures ? `<span class="perf-asset-item">🖼 ${t("diagnostics.assetsTex")}: ${a.textures}</span>` : "",
-    a.morphs ? `<span class="perf-asset-item">😀 ${t("diagnostics.assetsMorphs")}: ${a.morphs}</span>` : "",
-    a.animations ? `<span class="perf-asset-item">🎬 ${t("diagnostics.assetsAnims")}: ${a.animations}</span>` : "",
-    a.pmxWorker !== undefined ? `<span class="perf-asset-item ${a.pmxWorker ? "perf-badge-ok" : "perf-badge-warn"}">${a.pmxWorker ? "⚡" : "🔄"} ${t("diagnostics.assetsPmxWorker")}: ${a.pmxWorker ? "ON" : "OFF"}</span>` : "",
-    a.ktx2Hits !== undefined ? `<span class="perf-asset-item">${t("diagnostics.assetsKtx2")}: ${a.ktx2Hits}/${a.ktx2Total ?? a.ktx2Hits}</span>` : "",
-    latest.gpuMb ? `<span class="perf-asset-item">💾 ${t("diagnostics.assetsGpu")}: ~${latest.gpuMb}MB</span>` : "",
-  ].filter(Boolean).join("");
+    a.bones
+      ? `<span class="perf-asset-item">🦴 ${t("diagnostics.metric.assetsBones")}: ${a.bones}</span>`
+      : "",
+    a.cubes
+      ? `<span class="perf-asset-item">🧊 ${t("diagnostics.assetsCubes")}: ${a.cubes}</span>`
+      : "",
+    a.materials
+      ? `<span class="perf-asset-item">🎨 ${t("diagnostics.assetsMats")}: ${a.materials}</span>`
+      : "",
+    a.textures
+      ? `<span class="perf-asset-item">🖼 ${t("diagnostics.assetsTex")}: ${a.textures}</span>`
+      : "",
+    a.morphs
+      ? `<span class="perf-asset-item">😀 ${t("diagnostics.assetsMorphs")}: ${a.morphs}</span>`
+      : "",
+    a.animations
+      ? `<span class="perf-asset-item">🎬 ${t("diagnostics.assetsAnims")}: ${a.animations}</span>`
+      : "",
+    a.pmxWorker !== undefined
+      ? `<span class="perf-asset-item ${a.pmxWorker ? "perf-badge-ok" : "perf-badge-warn"}">${a.pmxWorker ? "⚡" : "🔄"} ${t("diagnostics.assetsPmxWorker")}: ${a.pmxWorker ? "ON" : "OFF"}</span>`
+      : "",
+    a.ktx2Hits !== undefined
+      ? `<span class="perf-asset-item">${t("diagnostics.assetsKtx2")}: ${a.ktx2Hits}/${a.ktx2Total ?? a.ktx2Hits}</span>`
+      : "",
+    latest.gpuMb
+      ? `<span class="perf-asset-item">💾 ${t("diagnostics.assetsGpu")}: ~${latest.gpuMb}MB</span>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("");
 
   // 纹理详情列表
   let texDetailHtml = "";
   if (latest.textureDetails?.length) {
-    const rows = latest.textureDetails.slice(0, 10).map(t => {
-      const badge = t.cached ? `<span class="perf-ktx2-badge">KTX2</span>` : "";
-      return `<div class="perf-tex-row">${badge}<span class="perf-tex-name">${esc(t.path)}</span><span class="perf-tex-size">${esc(t.size ?? "")}</span></div>`;
-    }).join("");
-    const more = latest.textureDetails.length > 10 ? `<div class="perf-tex-more">${t("diagnostics.loadTraceMore", { n: latest.textureDetails.length - 10 })}</div>` : "";
+    const rows = latest.textureDetails
+      .slice(0, 10)
+      .map((t) => {
+        const badge = t.cached ? `<span class="perf-ktx2-badge">KTX2</span>` : "";
+        return `<div class="perf-tex-row">${badge}<span class="perf-tex-name">${esc(t.path)}</span><span class="perf-tex-size">${esc(t.size ?? "")}</span></div>`;
+      })
+      .join("");
+    const more =
+      latest.textureDetails.length > 10
+        ? `<div class="perf-tex-more">${t("diagnostics.loadTraceMore", { n: latest.textureDetails.length - 10 })}</div>`
+        : "";
     texDetailHtml = `<div class="perf-tex-section">${t("diagnostics.loadTraceTexDetail")}:<br>${rows}${more}</div>`;
   }
 
-  const fmtTs = new Date(latest.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const fmtTs = new Date(latest.ts).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
   container.innerHTML =
     sectionHeader("🔍", t("diagnostics.loadTraceTitle")) +
     `<div class="perf-trace-meta" style="padding:6px 2px;font-size:var(--fs-xs);color:var(--muted)">${esc(latest.path)} · ${fmtTs} · ${latest.format.toUpperCase()}</div>` +

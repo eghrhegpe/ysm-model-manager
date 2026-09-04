@@ -1,17 +1,18 @@
 // ===== 诊断页：去重扫描（createDedupSession 会话工厂） =====
 // ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（本文件）/ 冲突扫描（conflicts.ts）
-// keep 保留策略纯函数已抽至 dedup-policy.ts（2026-09-03）：策略决策零 DOM/会话依赖，独立成层。 
+// keep 保留策略纯函数已抽至 dedup-policy.ts（2026-09-03）：策略决策零 DOM/会话依赖，独立成层。
 // 去全局化：原模块级可变全局 _dedupBusy / diagExecBusy / dedupConfig 收敛为会话闭包状态，
 // 每会话独立（可 reset、可隔离单测），消除跨调用共享状态的竞态面。
-import { t } from "../../../core/i18n/t.ts";
-import { bus } from "../../../bus.ts";
+
 import { getApp } from "../../../backend/app.ts";
+import { bus } from "../../../bus.ts";
+import { t } from "../../../core/i18n/t.ts";
 import { loadResourceRegistry } from "../../../services/resource-registry.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
 import { renderDisplayName } from "../../../utils/dom/display.ts";
+import { friendlyError } from "../../../utils/dom/errors.ts";
 import { fileIcon } from "../../../utils/icon/icon.ts";
-import type { EscFn } from "./logs.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
+import type { EscFn } from "./logs.ts";
 
 // 默认值冻结为唯一权威源；会话 config 为可编辑副本；reset 从默认值展开。
 // 注意：显式标宽 strategy/keepPolicy/priorityPath 为 string，避免 Object.freeze
@@ -54,6 +55,7 @@ interface ScanGroupResult {
 }
 
 import type { Group as DedupGroup } from "../../../../bindings/ysm-model-manager/go/dedup/models.ts";
+
 type GetRepoRootFn = (rtype: string) => Promise<string>;
 type FindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
 type MoveToRecycleFn = (path: string) => Promise<void>;
@@ -115,9 +117,18 @@ async function scanEachDirectory(
       return { allResults, earlyExit: true };
     }
     if (groups.length)
-      allResults.push({ icon: target.icon, label: target.label, groups: groups.map(g => ({
-        files: (g.files || []).map(f => ({ path: f.path, name: f.name, size: f.size, ...(f.modTime ? { modTime: new Date(f.modTime).toISOString() } : {}) }))
-      })) });
+      allResults.push({
+        icon: target.icon,
+        label: target.label,
+        groups: groups.map((g) => ({
+          files: (g.files || []).map((f) => ({
+            path: f.path,
+            name: f.name,
+            size: f.size,
+            ...(f.modTime ? { modTime: new Date(f.modTime).toISOString() } : {}),
+          })),
+        })),
+      });
   }
   return { allResults, earlyExit: false };
 }
@@ -133,13 +144,8 @@ function renderGroupFilesHtml(
   files.forEach((e, fi) => {
     const checked = fi === defaultIdx ? " checked" : "";
     const isDefault = fi === defaultIdx;
-    const dateStr = e.modTime
-      ? new Date(e.modTime).toLocaleDateString()
-      : "";
-    const lastSep = Math.max(
-      e.path.lastIndexOf("/"),
-      e.path.lastIndexOf("\\"),
-    );
+    const dateStr = e.modTime ? new Date(e.modTime).toLocaleDateString() : "";
+    const lastSep = Math.max(e.path.lastIndexOf("/"), e.path.lastIndexOf("\\"));
     const dir = lastSep >= 0 ? e.path.substring(0, lastSep) : "";
     html += `<label class="diag-dedup-file${isDefault ? " diag-dedup-file-default" : ""}">
 <input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} class="diag-dedup-radio">
@@ -333,9 +339,7 @@ export function createDedupSession(): DedupSession {
     // 组容器按渲染平铺序与 allResults 的 groups 一一对应（渲染 groupIndex 递增 = 同序）。
     // 逐组在容器内查 :checked，替代按 name="dedup-keep-<gi>" 的全局拼串查询——
     // 组间插入其它控件也不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖。
-    const groupEls = Array.from(
-      list.querySelectorAll<HTMLElement>(".diag-dedup-group"),
-    );
+    const groupEls = Array.from(list.querySelectorAll<HTMLElement>(".diag-dedup-group"));
     let gi = 0;
     try {
       for (const rtResult of allResults) {
@@ -388,11 +392,9 @@ export function createDedupSession(): DedupSession {
     MoveToRecycle: MoveToRecycleFn,
     esc: EscFn,
   ): void {
-    list
-      .querySelector("#diag-dedup-exec")
-      ?.addEventListener("click", async () => {
-        await runExecDelete(list, allResults, MoveToRecycle, esc);
-      });
+    list.querySelector("#diag-dedup-exec")?.addEventListener("click", async () => {
+      await runExecDelete(list, allResults, MoveToRecycle, esc);
+    });
   }
 
   // ②→③→④→⑤ executeDedupScan 核心协调壳
@@ -411,7 +413,9 @@ export function createDedupSession(): DedupSession {
     const targets = await collectTargets(rtype, reg, typeIcon, typeLabel, GetRepoRoot);
     if (!targets.length) {
       list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">' + t("diagnostics.configResourceDir") + "</div>";
+        '<div class="stat-row diag-msg diag-msg-error">' +
+        t("diagnostics.configResourceDir") +
+        "</div>";
       return;
     }
 
@@ -480,11 +484,7 @@ export function createDedupSession(): DedupSession {
   /**
    * 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。
    */
-  async function start(
-    list: HTMLElement,
-    esc: EscFn,
-    rtype?: string,
-  ): Promise<void> {
+  async function start(list: HTMLElement, esc: EscFn, rtype?: string): Promise<void> {
     // ① 重入守卫：busy 命中直接返回；整段包 try/finally，busy 仅在此单点复位
     if (state.busy) return;
     state.busy = true;

@@ -3,22 +3,22 @@
 // 每项定义：html（模板函数）+ init（页面初始化函数）。
 
 import {
-  repositoryHTML,
-  instancesHTML,
-  settingsHTML,
-  diagnosticsHTML,
-  workshopHTML,
-  githubHTML,
-} from "./tpl.ts";
-import {
-  initRepositoryPage,
+  initDiagnosticsPage,
+  initGithubPage,
   initInstancesPage,
+  initRepositoryPage,
   initSettingsPage,
   initWorkshopPage,
-  initGithubPage,
-  initDiagnosticsPage,
 } from "./init-pages.ts";
 import type { AppContentHost } from "./init-workshop.ts";
+import {
+  diagnosticsHTML,
+  githubHTML,
+  instancesHTML,
+  repositoryHTML,
+  settingsHTML,
+  workshopHTML,
+} from "./tpl.ts";
 
 export interface PageDefinition {
   html: () => string;
@@ -28,11 +28,11 @@ export interface PageDefinition {
 }
 
 export const PAGE_REGISTRY: Record<string, PageDefinition> = {
-  repository:   { html: repositoryHTML,  init: initRepositoryPage },
-  instances:    { html: instancesHTML,   init: initInstancesPage },
-  workshop:     { html: workshopHTML,    init: initWorkshopPage },
-  github:       { html: githubHTML,      init: initGithubPage },
-  diagnostics:  { html: diagnosticsHTML, init: initDiagnosticsPage },
-  oldest:       { html: diagnosticsHTML, init: initDiagnosticsPage }, // 复用诊断页
-  settings:     { html: settingsHTML,    init: initSettingsPage },
+  repository: { html: repositoryHTML, init: initRepositoryPage },
+  instances: { html: instancesHTML, init: initInstancesPage },
+  workshop: { html: workshopHTML, init: initWorkshopPage },
+  github: { html: githubHTML, init: initGithubPage },
+  diagnostics: { html: diagnosticsHTML, init: initDiagnosticsPage },
+  oldest: { html: diagnosticsHTML, init: initDiagnosticsPage }, // 复用诊断页
+  settings: { html: settingsHTML, init: initSettingsPage },
 };

@@ -1,8 +1,9 @@
 // ===== 创意工坊数据/配置/工具 =====
 // 依赖 workshop-icons.js 的 SVG 图标
-import { ICONS } from "../../utils/icon/workshop-icons.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+
 import { t } from "../../core/i18n/t.ts";
+import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { ICONS } from "../../utils/icon/workshop-icons.ts";
 
 const STORAGE_KEY = "ysm-fav-creators";
 
@@ -39,11 +40,9 @@ export function getCreatorIdentity(cr: CreatorIdentityInput): CreatorIdentity {
   // fallback: detect from old tag field（与 role 分支对齐，五种身份均可识别）
   if (tag === "official")
     return { label: t("workshop.roleOfficial"), icon: ICONS.OFFICIAL, tag: "official" };
-  if (tag === "vup")
-    return { label: t("workshop.roleVup"), icon: ICONS.VUP, tag: "vup" };
+  if (tag === "vup") return { label: t("workshop.roleVup"), icon: ICONS.VUP, tag: "vup" };
   if (tag === "oc") return { label: t("workshop.roleOc"), icon: ICONS.OC, tag: "oc" };
-  if (tag === "repo")
-    return { label: t("workshop.roleRepo"), icon: ICONS.REPO, tag: "repo" };
+  if (tag === "repo") return { label: t("workshop.roleRepo"), icon: ICONS.REPO, tag: "repo" };
   return { label: t("workshop.roleCreator"), icon: ICONS.CREATOR, tag: "creator" };
 }
 

@@ -1,25 +1,26 @@
 // ===== 工具栏事件绑定 =====
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { t } from "../../core/i18n/t.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { currentRepoType } from "../../features/repo-rtype.ts";
-import { bus } from "../../bus.ts";
-import { flashBtn } from "../../utils/dom/feedback.ts";
-import { spinnerHTML } from "./tpl.ts";
-import { selectState } from "./data.ts";
-import { updateSelectCount } from "./events.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { setRenderMode, getVsRows, type RenderMode } from "./render.ts";
+
 import { getApp } from "../../backend/app.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
+import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
+import { currentRepoType } from "../../features/repo-rtype.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
-import { getExts } from "../../utils/resource/extensions.ts";
 import { resolveAndroidRepoDir } from "../../utils/dom/directory-picker.ts";
-import type { AppTree } from "./index.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { flashBtn } from "../../utils/dom/feedback.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { getExts } from "../../utils/resource/extensions.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { AuthorInfo } from "./authors.ts";
+import { selectState } from "./data.ts";
+import { updateSelectCount } from "./events.ts";
+import type { AppTree } from "./index.ts";
+import { getVsRows, type RenderMode, setRenderMode } from "./render.ts";
 // P1 修复（ADR-040）：搜索/筛选/导入逻辑已拆至 toolbar-search.ts
 import { openAdvFilterDialog, pickWebFilesAndImport } from "./toolbar-search.ts";
+import { spinnerHTML } from "./tpl.ts";
 
 type $Id = (id: string) => HTMLElement | null;
 
@@ -58,16 +59,11 @@ async function atTlShowConfirm(
   });
 }
 
-function fillAuthorMenu(
-  menuAuthors: HTMLElement,
-  vm: AppTree,
-  $: $Id,
-): void {
+function fillAuthorMenu(menuAuthors: HTMLElement, vm: AppTree, $: $Id): void {
   if (menuAuthors.children.length) return;
   const authors: Array<AuthorInfo | string> = vm._authors || [];
   if (!authors.length) {
-    menuAuthors.innerHTML =
-      `<div style="padding:4px 10px;font-size:10px;color:var(--muted)">${t("tree.authorsEmpty")}</div>`;
+    menuAuthors.innerHTML = `<div style="padding:4px 10px;font-size:10px;color:var(--muted)">${t("tree.authorsEmpty")}</div>`;
     return;
   }
   authors.forEach((a) => {
@@ -166,17 +162,12 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
     });
   });
   $("af-clear")?.addEventListener("click", () => {
-    [
-      "af-minBones",
-      "af-maxBones",
-      "af-minCubes",
-      "af-maxCubes",
-      "af-minTex",
-      "af-maxTex",
-    ].forEach((id) => {
-      const el = $(id) as HTMLInputElement | null;
-      if (el) el.value = "";
-    });
+    ["af-minBones", "af-maxBones", "af-minCubes", "af-maxCubes", "af-minTex", "af-maxTex"].forEach(
+      (id) => {
+        const el = $(id) as HTMLInputElement | null;
+        if (el) el.value = "";
+      },
+    );
     const srchEl = $("srch") as HTMLInputElement | null;
     if (srchEl) {
       srchEl.value = "";
@@ -193,12 +184,8 @@ function atTlBindAuthorMenu(ctx: AtTlCtx): void {
   if (!menuAuthors) return;
   const ddWrap = menuAuthors.closest(".dd-wrap");
   if (!ddWrap) return;
-  ddWrap.addEventListener("pointerenter", () =>
-    fillAuthorMenu(menuAuthors, vm, $),
-  );
-  ddWrap.addEventListener("click", () =>
-    fillAuthorMenu(menuAuthors, vm, $),
-  );
+  ddWrap.addEventListener("pointerenter", () => fillAuthorMenu(menuAuthors, vm, $));
+  ddWrap.addEventListener("click", () => fillAuthorMenu(menuAuthors, vm, $));
 }
 
 function atTlBindBatchMenu(ctx: AtTlCtx): void {
@@ -219,7 +206,11 @@ async function atTlHandleImportFile(ctx: AtTlCtx): Promise<void> {
   const { vm } = ctx;
   const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
   if (isViewerMode()) {
-    await pickWebFilesAndImport(rtype, () => vm._load(), () => vm._renderTree());
+    await pickWebFilesAndImport(
+      rtype,
+      () => vm._load(),
+      () => vm._renderTree(),
+    );
     return;
   }
   const { SelectImportFile, ImportByType } = await getApp();
@@ -262,13 +253,7 @@ async function atTlHandleImportDir(ctx: AtTlCtx): Promise<void> {
     return;
   }
   const { SelectDirectory, ImportByType } = await getApp();
-  await atTlShowConfirm(
-    vm,
-    () => SelectDirectory(),
-    ImportByType,
-    rtype,
-    t("tree.importDirOk"),
-  );
+  await atTlShowConfirm(vm, () => SelectDirectory(), ImportByType, rtype, t("tree.importDirOk"));
 }
 
 function atTlBindMoreMenu(ctx: AtTlCtx): void {

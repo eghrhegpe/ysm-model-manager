@@ -6,11 +6,16 @@
 // 首个 entry 作为初始 path。适配器 build(ctx, entryPath) 走 switchTo 语义，
 // 由 core switch 面板驱动，不再自建 ◀/▶ 按钮。
 
-import { mount3D, cleanupPreview, invalidatePreview, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makePackAdapter } from "../../preview-3d/adapters/pack-model-adapter.ts";
 import { getApp } from "../../backend/app.ts";
-import { withPreviewExtras, registerReRoute } from "./preview-library.ts";
+import {
+  cleanupPreview,
+  invalidatePreview,
+  type Mount3DOptions,
+  mount3D,
+} from "../../preview-3d/adapters/mount-preview-core.ts";
+import { makePackAdapter } from "../../preview-3d/adapters/pack-model-adapter.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中资源包时派发到此）
 registerReRoute(RESOURCE_TYPES.PACK, (path) => createPack3D(path));
@@ -30,7 +35,10 @@ function makePackDeps() {
 }
 
 /** 打开资源包模型 3D 预览（ADR-084 L2：zip 当文件夹，entries 作 siblings） */
-export async function createPack3D(path: string, opts?: Mount3DOptions & { startEntry?: string }): Promise<void> {
+export async function createPack3D(
+  path: string,
+  opts?: Mount3DOptions & { startEntry?: string },
+): Promise<void> {
   let App: Awaited<ReturnType<typeof getApp>> | null = null;
   try {
     App = await getApp();
@@ -39,10 +47,13 @@ export async function createPack3D(path: string, opts?: Mount3DOptions & { start
   }
   // 类型化直调；仅「绑定缺失」回退空数组（审查 P3：真实 ListPackModels 错误仍传播，
   // 调用方有 .catch("[preview] pack3D:") 记录；不能 catch-all 吞掉导致无预览无诊断）
-  let arr: string[] | null = App && typeof App.ListPackModels === "function" ? await App.ListPackModels(path) : [];
+  const arr: string[] | null =
+    App && typeof App.ListPackModels === "function" ? await App.ListPackModels(path) : [];
   // 与 Go/web 的大小写不敏感清单（packModelEntryMatch / webPackModelEntryMatch）一致：
   // Block/Item 大写目录的包也能被筛中，否则详情页点模型行静默无响应
-  const entries = (arr ?? []).filter((e) => e.toLowerCase().includes("/block/") || e.toLowerCase().includes("/item/"));
+  const entries = (arr ?? []).filter(
+    (e) => e.toLowerCase().includes("/block/") || e.toLowerCase().includes("/item/"),
+  );
   if (entries.length === 0) return;
 
   // 指定初始 entry（详情页模型清单点击直达；ADR-131 P3），否则首个 entry
@@ -51,8 +62,17 @@ export async function createPack3D(path: string, opts?: Mount3DOptions & { start
   // [ADR-159] 容器语义：包 = 实体（displayName = zip 名剥扩展名），包内模型 = 组件
   // （components = 全部 entry）。角色面板据 components 平铺组件区（点名切换 / ➕追加），
   // 不再需要 ADR-131/132 时代的 packModelsByType 候选源补丁（已退役）。
-  const displayName = path.split(/[/\\]/).pop()?.replace(/\.zip$/i, "") || path;
-  const extras = withPreviewExtras({ siblings: entries, displayName, components: entries, ...mountOpts });
+  const displayName =
+    path
+      .split(/[/\\]/)
+      .pop()
+      ?.replace(/\.zip$/i, "") || path;
+  const extras = withPreviewExtras({
+    siblings: entries,
+    displayName,
+    components: entries,
+    ...mountOpts,
+  });
   await mount3D(
     makePackAdapter(makePackDeps(), path, { modelEntries: entries }),
     initialEntry,

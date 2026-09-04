@@ -1,5 +1,5 @@
 // ===== tpl-settings-about.ts — 设置页 About/Credits 标签页模板（从 tpl-settings.ts 拆出，ADR-040 P1）=====
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
+import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import { GH_DOCS, GH_RELEASES, GH_REPO } from "../../utils/gh-links.ts";
 
 /** About 标签页（版本/特性/技术栈/链接/快速上手） */
@@ -139,14 +139,16 @@ export function creditsHTML(): string {
 <div class="section-title stg-title stg-sub-title">🙏 ${t("credits.special")}</div>
 
 <div style="display:flex;gap:12px">
-  ${CONTRIBUTORS.map(c => `
+  ${CONTRIBUTORS.map(
+    (c) => `
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
     <div style="font-size:13px;font-weight:600;margin-bottom:4px">👤 ${c.name}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
       ${t(c.descKey)}<br>
       <a href="https://github.com/${c.github}" target="_blank" style="color:var(--accent)">@${c.github}</a>
     </div>
-  </div>`).join("")}
+  </div>`,
+  ).join("")}
 </div>
 
 </div>

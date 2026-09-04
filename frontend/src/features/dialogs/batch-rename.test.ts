@@ -376,4 +376,12 @@ describe("showBatchRenameDialog — 应用失败与单例收尾", () => {
     const cnt = document.getElementById("br-changed") as HTMLElement;
     expect(cnt?.textContent).toBe("1");
   });
+
+  it("每行 checkbox 具备 aria-label（文件名，WCAG A 级）", async () => {
+    const { dlg } = await open([{ Name: "modelA.ysm" }, { Name: "modelB.ysm" }]);
+    const cbs = dlg.querySelectorAll(".br-file-cb") as NodeListOf<HTMLInputElement>;
+    expect(cbs.length).toBe(2);
+    expect(cbs[0].getAttribute("aria-label")).toBe("modelA.ysm");
+    expect(cbs[1].getAttribute("aria-label")).toBe("modelB.ysm");
+  });
 });

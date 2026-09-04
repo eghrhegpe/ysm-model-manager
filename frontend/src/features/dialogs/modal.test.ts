@@ -158,6 +158,14 @@ describe("modalConfirm — 确认框", () => {
     await expect(promise).resolves.toBe(false);
   });
 
+  it("overlay 具备对话框语义（role=dialog + aria-modal，WCAG A 级）", () => {
+    modalConfirm({ title: "确认?", message: "继续?" });
+    const overlay = document.querySelector(".dlg-overlay") as HTMLElement;
+    expect(overlay.getAttribute("role")).toBe("dialog");
+    expect(overlay.getAttribute("aria-modal")).toBe("true");
+    closeActiveDlg();
+  });
+
   it("Enter 键确认返回 true（P3 修复：文案声明 (Enter) 但原实现只有 Esc）", async () => {
     const promise = modalConfirm({ title: "确认?", message: "继续?" });
     const box = document.querySelector(".dlg-box") as HTMLElement;

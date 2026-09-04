@@ -135,6 +135,9 @@ function buildOverlay<T>(
   overlay.tabIndex = tabIndex;
   overlay.className = "dlg-overlay";
   overlay.dataset.testid = "dlg-overlay";
+  // WCAG 2.1 A 级：对话框语义（全仓弹窗唯一基座，业务弹窗统一继承）
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
   const close = (value: T): void => closeDlg(overlay, resolve, value);
   overlay.onclick = (e: MouseEvent): void => {
     if (e.target === overlay && closable) close(cancelValue);

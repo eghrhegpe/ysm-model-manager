@@ -182,7 +182,7 @@ function dgBrRenderPreview(el: HTMLElement | null, items: BatchItem[]): void {
       .map(
         (it, i) =>
           `<div class="br-row" style="animation-delay:${stagger(i, 15, 300)}ms">
-  <input type="checkbox" class="br-file-cb br-cb" data-ci="${i}" ${it.selected ? "checked" : ""}>
+  <input type="checkbox" class="br-file-cb br-cb" data-ci="${i}" aria-label="${esc(it.Name)}" ${it.selected ? "checked" : ""}>
   ${
     it.selected && it.changed
       ? `<span class="br-name br-name-old" title="${esc(it.Name)}">${esc(it.Name)}</span>

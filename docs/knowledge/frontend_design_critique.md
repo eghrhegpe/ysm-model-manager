@@ -9,18 +9,25 @@ source_files:
   - frontend/src/views/app-content/index.ts
   - frontend/src/views/app-content/init-pages.ts
   - frontend/src/views/app-content/diagnostics/dedup.ts
+  - frontend/src/views/app-content/state.ts
+  - frontend/src/views/app-sidebar/index.ts
+  - frontend/src/views/app-nav/index.ts
   - frontend/src/preview-3d/perception/gaze.ts
   - frontend/src/preview-3d/perception/autodance.ts
   - frontend/src/preview-3d/safe-dispose.ts
   - frontend/src/preview-3d/adapters/scene-registry.ts
   - frontend/src/preview-3d/menu/roles.ts
   - frontend/src/features/dialogs/modal.ts
+  - frontend/src/features/dialogs/adv-filter.ts
+  - frontend/src/features/dialogs/batch-rename.ts
   - frontend/src/ui/ui-components-styles.ts
   - frontend/src/views/app-content/settings/path-cards.ts
   - frontend/src/views/app-content/settings/theme.ts
   - frontend/src/views/app-preview/detail-3d.ts
   - frontend/src/preview-3d/adapters/worker-bridge.ts
   - frontend/src/preview-3d/render-budget.ts
+  - frontend/src/wasm/ysm-worker-loader.ts
+  - frontend/src/backend/web-stats.ts
 auto_fields:
   symbols_with_lines:
     - __resetModalStateForTest
@@ -157,48 +164,53 @@ invariant_anchors:
 
 ## 概览
 
-2026-09-03 三子代理并发只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。本卡为**设计视角增量批评快照**，不重复审计卡结论。
+2026-09-05 三子代理串行只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。本卡为**设计视角增量批评快照**，不重复审计卡结论。
 
-加权总分 **≈3.4/5**：架构 3.7 / UIUX 3.2 / 3D性能 3.4。一句话：工程化治理行业级（红线零违、bus 类型化、门禁齐备），但「跑起来的设计」欠三本账——主题 token 失守、生命周期全量重建、性能预算靠信仰。
+加权总分 **≈3.6/5**：架构 4.0 / UIUX 3.7 / 3D性能 3.4。一句话：工程化治理行业级（红线零违、bus 类型化、门禁齐备），ADR-163 单面板挂载与 perception prealloc 已落地，但可访问性债务集中、模块级状态泄漏、性能预算仍靠信仰。
 
 ## 三路评分
 
 | 视角 | 分 | 主炮 |
 |------|----|------|
-| 架构 | 3.7 | 切页整 DOM 重建（index.ts:147）、dedup 全局锁无 reset（dedup.ts:15,19）、services/registry 仅 2 服务空转（registry.ts:11） |
-| UI/UX | 3.2 | 硬编码 accent 绕开 --accent（全仓 19 处 rgba(124,131,255)）、深色 fallback 当主题系统、--uih-* 第二套色卡、modalConfirm Enter 不确认、FOCUSABLE_SEL 死选择器、中文标点未走 i18n |
-| 3D/性能 | 3.4 | perception 每帧 new 对象 GC 血雨、safeDispose 静默吞错、MAX_MODELS=8 数字幻觉、WorkerBridge reject-mode 终止整池、adaptive budget 单轴、100MB 防线未校准 |
+| 架构 | 4.0 | `app-content/index.ts` 7个死代码转发壳（L274-302）、`app-sidebar` `_checkedSets` 模块级泄漏（L37）、`app-nav` `_focusRepoSearch` 轮询耦合（L328-342） |
+| UI/UX | 3.7 | 所有弹窗缺 `role="dialog"`（modal.ts:134）、adv-filter label 未 for 关联（L57）、batch-rename checkbox 无 aria-label（L185）、`--uih-accent-dim` 硬编码遗漏（ui-components-styles.ts:14） |
+| 3D/性能 | 3.4 | WASM 解码无单模型超时（ysm-worker-loader.ts:198）、`pickModelByObject` 每帧 O(roots) 遍历（scene-registry.ts:215）、Blob URL 成功路径永不 revoke（ysm-worker-loader.ts:118）、render-budget 缺 GPU 计量（render-budget.ts:60） |
 
-## 实证锚点（主模型抽查背书，2026-09-03）
+## 实证锚点（主模型抽查背书，2026-09-05）
 
 | 指控 | 验证结果 |
 |------|----------|
-| index.ts:147 每次切页 innerHTML 整段重建 | ✅ 属实；lang:changed（index.ts:114-116）也整页重建，问题面比报告更大 |
-| gaze.ts:71-97 / autodance.ts:147-148 每帧 new Quaternion/Euler | ✅ 属实（perception 下 grep 19 处分配） |
-| 硬编码 rgba(124,131,255) 绕开 --accent | ✅ 属实，全仓 19 处，波及 fab.ts / model2d-draw.ts / ui-slide-menu-styles.ts |
-| scene-registry.ts:218 MAX_MODELS=8 无资源预算 | ✅ 属实 |
-| safe-dispose.ts:11-16 吞错无留痕、不递归 | ✅ 属实 |
-| modal.ts:25 FOCUSABLE_SEL 含死选择器裸 tabindex | ✅ 属实，纯冗余 |
-| init-pages.ts:45-50 手工 &quot; 拼接 | ⚠️ 属实但严重度降级：attribute 上下文只有 `"` 能逃逸，非 XSS 漏洞；违反「凡进 innerHTML 必 esc()」不变量，属口径违规 |
+| `app-content/index.ts:274-302` 7个死代码转发壳 | ✅ 属实；`_bindTabs`/`_initDiagnostics`/`_initInstances`/`_initRepository`/`_initWorkshop`/`_initGithub`/`_initSettings` 仅转发 `init-pages.ts`，实际调用走 `PAGE_REGISTRY` |
+| `app-sidebar/index.ts:37` `_checkedSets` 模块级泄漏 | ⚠️ 撤回：设计意图非 bug——`sync.test.ts:131-140`「重新挂载 → 恢复已勾选状态」明确依赖跨 disconnectedCallback 保留，按 rtype 隔离 |
+| `app-nav/index.ts:328-342` `_focusRepoSearch` 轮询耦合 | ✅ 属实；setTimeout 循环 20 次等待 `app-tree` 挂载，依赖查询链 `appContent?.shadowRoot?.querySelector("app-tree")?.shadowRoot?.getElementById("srch")` |
+| `modal.ts:134-146` overlay 缺 `role="dialog"` | ✅ 属实；`buildOverlay` 仅设 `className`/`tabIndex`，未设 `role`/`aria-modal` |
+| `adv-filter.ts:57` label 无 for 关联 | ✅ 属实；`<label style="display:block">` 无 `for` 属性，对应 `input#afv-kw` 无关联 |
+| `batch-rename.ts:185` checkbox 无 aria-label | ✅ 属实；批量条目 checkbox 仅 `class="br-file-cb"` + `data-ci`，无 `aria-label` |
+| `scene-registry.ts:215-223` `pickModelByObject` 线性遍历 | ✅ 属实；每次 raycast 双重循环遍历所有 root，应建 WeakMap 缓存 |
+| `ysm-worker-loader.ts:198-233` WASM 解码无单模型超时 | ✅ 属实；`decodeYsmInWorker` 直接 ccall，无 watchdog |
+| `render-budget.ts:60-63` 缺 GPU 资源计量 | ✅ 属实；仅 pixelRatio 自适应 + MAX_MODELS=8 计数上限，无 draw call/三角面/纹理字节预算 |
 
 ## 共识问题榜（交集 = 高置信，按 ROI 排序）
 
-1. **主题系统半身不遂**：--uih-* 第二套色卡 + 19 处裸 accent + 深色 fallback 当主题系统用。6 个主题只切换 ~30% 元素色。翻身仗 = 让 6 个主题真正覆盖 6 种色。
-2. **生命周期 = 全量销毁重建**：切页/切语言整 DOM 重建；dedup busy 锁无 reset → tab 再进永久卡死（审计快照点名 4 个月未修）；3D dispose 靠适配器各自擦屁股非递归链路。三处同源：状态生命周期无统一收敛原语。
-3. **性能预算缺位**：MAX_MODELS=8 是计数不是预算；pixelRatio 0.75 是预算地板再无退路；100MB 防线文档自认未校准。perception 每帧 ~15 次分配 × 8 模型 = 7200 次/秒 GC 抖动是第一个现形处。
-4. **弹窗键盘一致性**：modalConfirm Enter 不确认、FOCUSABLE_SEL 死选择器，prompt/confirm 行为分裂。
+1. **可访问性债务集中爆发**（UIUX 2.5/5）：modal overlay 缺 `role="dialog"` / `aria-modal`、adv-filter label 未 for 关联、batch-rename checkbox 无 aria-label。一刀切：modal.ts buildOverlay 加 ROLE_ATTR，业务弹窗统一继承。
+2. **模块级状态泄漏**（架构 3.5/5）：`app-sidebar` `_checkedSets` Map 无 reset、`init-pages.ts:314` `_lastModelPath` 模块级无 reset。一刀切：disconnectedCallback 兜底清理，或改实例级。
+3. **性能预算仍靠信仰**（3D 2.5/5）：`render-budget.ts` MAX_MODELS=8 是计数非预算、`scene-registry.ts` 拾取每帧线性遍历。一刀切：读 `renderer.info.render` 统计 draw calls，建 WeakMap 缓存拾取。
+4. **WASM 解码无单模型超时**（3D 3.5/5）：`ysm-worker-loader.ts` 畸形文件可阻塞 60s 才降级。一刀切：`stats.worker.ts` 层加 `Promise.race` 软超时（5s），超时返回 `ERROR_STATS` 而非杀池。
 
 ## 仲裁修正（主模型对子代理报告的裁定）
 
-1. 架构修 `_render` 的报告正确，靶心扩到「三处全重建」：nav:changed / lang:changed / repo:search-creator 都走 `_render()`。常驻 tab-panel 一次收编三条路径。
-2. XSS 指控降级为「口径违规」：不构成注入，但违反仓内不变量，随 esc() 统一口径顺手修，不单独立项。
-3. UIUX 与 3D 病根同源：内联 style 字符串是主题失守与 XSS 口径违规的共同载体——抽 token + 走 CSS 类，一刀切三处。
+1. 架构子代理「死代码转发壳」指控属实，但删除需同步清理 `AppContentHost` 接口声明，避免接口漂移。
+2. UIUX 子代理「modalPicker 无显式键盘处理器」指控降级：浏览器原生 Enter→click 行为在 button 上可靠，与 prompt/confirm 的 input 场景不同，不构成行为分裂。
+3. 3D 子代理「Blob URL 成功路径永不 revoke」属实，但 pthread worker 单例常驻页面生命周期，泄漏速率极低（每页面生命周期 1 次），优先级降为 P2。
 
 ## 不变量（锐评快照结论，非既有红线）
 
 - 样式一律走主题 token；硬编码品牌色（#7c83ff / rgba(124,131,255)）纯硬编码已全收编（2026-09-03 刀②）；现存 #7c83ff 均为 `var(--accent,#7c83ff)` fallback 兜底（变量未定义时才有值，合规）。
 - 页面切换常驻 + active 切换，禁止整 DOM 重建。
 - 帧循环内 prealloc 复用，禁止 new 对象分配（perception 需对齐 R1-P1-1）。
+- 弹窗 overlay 必须设 `role="dialog"` + `aria-modal="true"`（WCAG 2.1 A 级）。
+- 模块级 let 可变全局必须有 reset 路径或注释豁免理由。
+
 ## 动刀进度（实施记录，2026-09-03 起）
 
 - ✅ **刀① perception 帧内 prealloc**：`perception/gaze.ts`、`perception/autodance.ts` 闭包级 scratch（Quaternion/Euler/Vector3 复用），每帧 0 分配；EYE_IDS / 左右臂 Set 提常量。45 感知测试全绿。
@@ -210,6 +222,12 @@ invariant_anchors:
   - ⚠️ 与 ADR-163 的差异：ADR 写的是「tab-panel 常驻 + active 切换 + dedup 锁随页面实例化」，落地为「单面板挂载 + 缓存节点复用」，dedup 锁保持模块级（常驻后不再重复 init，锁问题自然消解）。ADR-163 决策方向仍成立，实施细节以本卡为准。
 - ✅ **刀④ web-spike 注入面转义**：`web-spike/main.ts` 的 `file.name` / 解码产物 `f.path` 原样拼入 `insertAdjacentHTML`（拖入 `<img onerror>` 文件名即注入）→ 统一 `esc()`。独立 spike 页无单测，改动极小。
 - ✅ **刀⑤ modal FOCUSABLE_SEL 死选择器**：`features/dialogs/modal.ts` 裸 `tabindex,`（无 `=` 匹配元素名而非属性，全仓无 `<tabindex>` 元素）移除；`trapFocus` 测试 4 例全绿，行为不变。
+- ✅ **刀⑥ 弹窗可访问性三件套（WCAG A 级）**（2026-09-05）：
+  - `features/dialogs/modal.ts` `buildOverlay` 设 `role="dialog"` + `aria-modal="true"`——全仓弹窗唯一基座，业务弹窗统一继承；
+  - `features/dialogs/batch-rename.ts:185` checkbox 加 `aria-label="${esc(it.Name)}"`——文件名经 esc() 转义防属性注入；
+  - `features/dialogs/adv-filter.ts` 5 个 label 加 `for` 关联主 input，3 个 max input 加 `aria-label`（双 input 无法 for 一对一）；
+  - 90 测试全绿 + vite build + typecheck + biome 全通过。
+- ⚠️ **仲裁撤回：`_checkedSets` 非"泄漏"**：子代理报 `app-sidebar/index.ts:37` `_checkedSets` 模块级 Map 无 reset 路径。主模型抽查 `app-sidebar.sync.test.ts:131-140`「重新挂载 → 恢复已勾选状态」测试明确依赖跨 disconnectedCallback 保留——**设计意图**（按 rtype 隔离 + 跨重新渲染保持勾选），非 bug。模块级状态保持不动。
 
 ## 相关
 

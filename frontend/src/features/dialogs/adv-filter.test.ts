@@ -89,6 +89,28 @@ describe("modalAdvFilter — 渲染与初始值", () => {
     const { tagHint } = await open();
     expect(tagHint.textContent).toBe("");
   });
+
+  it("label for 关联对应 input（WCAG A 级）", async () => {
+    const { overlay } = await open();
+    // keyword
+    const kwLabel = overlay.querySelector('label[for="afv-kw"]') as HTMLLabelElement;
+    expect(kwLabel).toBeTruthy();
+    expect(overlay.querySelector("#afv-kw")).toBeTruthy();
+    // tags
+    const tagLabel = overlay.querySelector('label[for="afv-tag"]') as HTMLLabelElement;
+    expect(tagLabel).toBeTruthy();
+    expect(overlay.querySelector("#afv-tag")).toBeTruthy();
+  });
+
+  it("max 输入框具备 aria-label（双 input 无法用 for 一对一）", async () => {
+    const { overlay } = await open();
+    const maxBones = overlay.querySelector("#afv-maxBones") as HTMLInputElement;
+    const maxCubes = overlay.querySelector("#afv-maxCubes") as HTMLInputElement;
+    const maxTex = overlay.querySelector("#afv-maxTex") as HTMLInputElement;
+    expect(maxBones.getAttribute("aria-label")).toBeTruthy();
+    expect(maxCubes.getAttribute("aria-label")).toBeTruthy();
+    expect(maxTex.getAttribute("aria-label")).toBeTruthy();
+  });
 });
 
 describe("modalAdvFilter — 关闭路径", () => {

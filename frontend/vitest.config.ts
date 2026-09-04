@@ -22,7 +22,9 @@ export default defineConfig({
     isolate: true,
     setupFiles: ["./test-setup.ts"],
     coverage: {
-      provider: "v8",
+      // istanbul 用代码插桩收集覆盖率，不依赖 v8 inspector protocol；
+      // v8 provider 在 Windows + vitest 4.x + ESM 组合下完全失效（391/404 文件 0 hits）。
+      provider: "istanbul",
       // clean:false — 绕过 WorkBuddy safe-delete 在 Windows 上对 coverage/ 目录的
       // 路径格式拦截（genie-trash 要求 C:\ 绝对路径，收到的却是 /c/...）。
       // 报告以覆盖写方式更新，旧文件无害。CI( Linux runner ) 不受影响。

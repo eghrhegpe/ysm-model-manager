@@ -40,16 +40,6 @@ export interface ModelEntry {
   onBonePick: ((boneId: string) => void) | null;
 }
 
-/** 沿父链判定 obj 是否为 root 的后代（含自身） */
-function isDescendant(obj: THREE.Object3D | null, root: THREE.Object3D): boolean {
-  let n: THREE.Object3D | null = obj;
-  while (n) {
-    if (n === root) return true;
-    n = n.parent;
-  }
-  return false;
-}
-
 type RegisterInput = {
   path: string;
   rtype: string;
@@ -110,6 +100,8 @@ class SceneRegistry {
   private seq = 0;
   private activeId: string | null = null;
   private menuSink: MenuItemsSink | null = null;
+  /** root → entry 索引：拾取时沿父链 O(depth) 查 Map，替代 O(entries×roots) 双重遍历 */
+  private objToEntry = new WeakMap<THREE.Object3D, ModelEntry>();
 
   /** 重置（会话开始/关闭时调用，清空全部模型记录） */
   reset(): void {
@@ -119,6 +111,7 @@ class SceneRegistry {
     this.seq = 0;
     this.activeId = null;
     this.menuSink = null;
+    this.objToEntry = new WeakMap();
   }
 
   /**
@@ -132,6 +125,8 @@ class SceneRegistry {
       // 须用新 input 刷新可变字段，否则取景幽灵 + 计数虚高（P2 审核修复）
       const old = this.entries.get(existing);
       if (old) {
+        // 清旧 root 索引再填新（roots 可能已变）
+        for (const r of old.roots) this.objToEntry.delete(r);
         old.content = input.content;
         old.roots = input.roots;
         old.boneMaps = input.boneMaps ?? null;
@@ -139,6 +134,7 @@ class SceneRegistry {
         old.onBonePick = input.onBonePick ?? null;
         if (input.displayName !== undefined) old.displayName = input.displayName;
         if (input.components !== undefined) old.components = input.components;
+        for (const r of input.roots) this.objToEntry.set(r, old);
       }
       this.activeId = existing;
       return existing;
@@ -146,6 +142,7 @@ class SceneRegistry {
     const id = `m${++this.seq}`;
     const entry = mdSrBuildEntryFromInput(id, input);
     mdSrIndexIntoMaps(this.entries, this.byAuthor, this.byName, entry);
+    for (const r of input.roots) this.objToEntry.set(r, entry);
     this.activeId = id;
     return id;
   }
@@ -155,6 +152,7 @@ class SceneRegistry {
     if (e) {
       this.byAuthor.delete(e.path);
       this.byName.delete(`${e.rtype}::${e.path}`);
+      for (const r of e.roots) this.objToEntry.delete(r);
     }
     this.entries.delete(id);
     if (this.activeId === id) {
@@ -209,15 +207,16 @@ class SceneRegistry {
   }
 
   /**
-   * 给定被射线击中的 Object3D，沿父链反查归属哪个已注册模型（root 包容）。
-   * 命中则返回该模型记录，否则 undefined。
+   * 给定被射线击中的 Object3D，沿父链查 WeakMap 索引归属哪个已注册模型。
+   * O(depth) 替代原 O(entries×roots) 双重遍历。兜底：Map 未命中返回 undefined。
    */
   pickModelByObject(obj: THREE.Object3D | null): ModelEntry | undefined {
     if (!obj) return undefined;
-    for (const e of this.entries.values()) {
-      for (const r of e.roots) {
-        if (isDescendant(obj, r)) return e;
-      }
+    let n: THREE.Object3D | null = obj;
+    while (n) {
+      const entry = this.objToEntry.get(n);
+      if (entry) return entry;
+      n = n.parent;
     }
     return undefined;
   }

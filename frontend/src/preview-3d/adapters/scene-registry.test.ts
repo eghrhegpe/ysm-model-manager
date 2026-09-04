@@ -158,6 +158,41 @@ describe("SceneRegistry pickModelByObject 父链反查", () => {
     expect(sceneRegistry.pickModelByObject(unrelated)).toBeUndefined();
     expect(sceneRegistry.pickModelByObject(null)).toBeUndefined();
   });
+
+  it("去重重载后旧 root 索引清除、新 root 索引生效（WeakMap 一致性）", () => {
+    const rootOld = new THREE.Object3D();
+    const childOld = new THREE.Object3D();
+    rootOld.add(childOld);
+    const id = makeEntry("a.glb", [rootOld]);
+
+    // 同 path 重载，roots 换成全新的
+    const rootNew = new THREE.Object3D();
+    const childNew = new THREE.Object3D();
+    rootNew.add(childNew);
+    sceneRegistry.register({
+      path: "a.glb",
+      rtype: "test",
+      roots: [rootNew],
+      content: { dispose: vi.fn() } as any,
+    });
+
+    // 旧 root/子节点不再归属任何模型
+    expect(sceneRegistry.pickModelByObject(rootOld)).toBeUndefined();
+    expect(sceneRegistry.pickModelByObject(childOld)).toBeUndefined();
+    // 新 root/子节点归属同一 id
+    expect(sceneRegistry.pickModelByObject(rootNew)?.id).toBe(id);
+    expect(sceneRegistry.pickModelByObject(childNew)?.id).toBe(id);
+  });
+
+  it("unregister 后 root 索引清除（拾取不再命中）", () => {
+    const root = new THREE.Object3D();
+    const child = new THREE.Object3D();
+    root.add(child);
+    const id = makeEntry("a.glb", [root]);
+    sceneRegistry.unregister(id);
+    expect(sceneRegistry.pickModelByObject(root)).toBeUndefined();
+    expect(sceneRegistry.pickModelByObject(child)).toBeUndefined();
+  });
 });
 
 describe("MAX_MODELS 常量", () => {

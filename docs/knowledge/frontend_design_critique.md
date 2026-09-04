@@ -186,7 +186,7 @@ invariant_anchors:
 | `modal.ts:134-146` overlay 缺 `role="dialog"` | ✅ 属实；`buildOverlay` 仅设 `className`/`tabIndex`，未设 `role`/`aria-modal` |
 | `adv-filter.ts:57` label 无 for 关联 | ✅ 属实；`<label style="display:block">` 无 `for` 属性，对应 `input#afv-kw` 无关联 |
 | `batch-rename.ts:185` checkbox 无 aria-label | ✅ 属实；批量条目 checkbox 仅 `class="br-file-cb"` + `data-ci`，无 `aria-label` |
-| `scene-registry.ts:215-223` `pickModelByObject` 线性遍历 | ✅ 属实；每次 raycast 双重循环遍历所有 root，应建 WeakMap 缓存 |
+| `scene-registry.ts:215-223` `pickModelByObject` 线性遍历 | ✅ 属实；已修（刀⑦）：WeakMap 索引 O(depth) 替代双重遍历 |
 | `ysm-worker-loader.ts:198-233` WASM 解码无单模型超时 | ✅ 属实；`decodeYsmInWorker` 直接 ccall，无 watchdog |
 | `render-budget.ts:60-63` 缺 GPU 资源计量 | ✅ 属实；仅 pixelRatio 自适应 + MAX_MODELS=8 计数上限，无 draw call/三角面/纹理字节预算 |
 
@@ -228,6 +228,8 @@ invariant_anchors:
   - `features/dialogs/adv-filter.ts` 5 个 label 加 `for` 关联主 input，3 个 max input 加 `aria-label`（双 input 无法 for 一对一）；
   - 90 测试全绿 + vite build + typecheck + biome 全通过。
 - ⚠️ **仲裁撤回：`_checkedSets` 非"泄漏"**：子代理报 `app-sidebar/index.ts:37` `_checkedSets` 模块级 Map 无 reset 路径。主模型抽查 `app-sidebar.sync.test.ts:131-140`「重新挂载 → 恢复已勾选状态」测试明确依赖跨 disconnectedCallback 保留——**设计意图**（按 rtype 隔离 + 跨重新渲染保持勾选），非 bug。模块级状态保持不动。
+- ⚠️ **仲裁撤回：死代码转发壳非"死代码"**：子代理报 `app-content/index.ts:274-302` 7 个转发方法无消费方。主模型抽查 `app-content.methods.test.ts` 大量引用（L102-104 接口声明、L111-114 mock 赋值、L200/247/403/652 多个 describe 块直接测试）——**测试消费方明确**，方法作为测试桩保留，不可删。
+- ✅ **刀⑦ pickModelByObject WeakMap 索引**（2026-09-05）：`preview-3d/adapters/scene-registry.ts` `register` 时在 root 上填 `WeakMap<Object3D, ModelEntry>`，`pickModelByObject` 从 O(entries×roots) 双重遍历改为 O(depth) 沿父链查 Map；`unregister`/`reset`/去重重载路径同步维护索引；删除 `isDescendant` 死函数。13 测试全绿 + vite build + typecheck + biome 全通过。
 
 ## 相关
 

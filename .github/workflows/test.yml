@@ -33,6 +33,9 @@ jobs:
           # go.mod is the authoritative toolchain requirement.
           go-version-file: go.mod
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -119,7 +122,7 @@ jobs:
       - name: 安装前端依赖
         working-directory: frontend
         shell: pwsh
-        run: npx --yes pnpm@10 install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 死代码基线门禁（check-deadcode-baseline，依赖 knip/jscpd → pnpm install 后跑）
         shell: pwsh
@@ -212,6 +215,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -226,7 +232,7 @@ jobs:
 
       - name: 安装前端依赖
         working-directory: frontend
-        run: npx --yes pnpm@10 install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 安装 Playwright Chromium
         working-directory: frontend

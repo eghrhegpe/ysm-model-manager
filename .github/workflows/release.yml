@@ -57,6 +57,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -83,7 +86,7 @@ jobs:
           fi
       - name: 安装前端依赖
         working-directory: frontend
-        run: npx --yes pnpm@10 install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: 打包（build-release.ps1 → build/release 裸 exe + SHA256SUMS）
         run: |
           & .\scripts\build-release.ps1 -Version "${{ needs.prepare.outputs.version }}" -SkipUpload
@@ -108,6 +111,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -147,7 +153,7 @@ jobs:
           fi
       - name: 安装前端依赖
         working-directory: frontend
-        run: npx --yes pnpm@10 install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: 打包（build-linux.sh → dist/ 二进制）
         run: |
           bash ./scripts/build-linux.sh "${{ needs.prepare.outputs.version }}"
@@ -169,6 +175,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -195,7 +204,7 @@ jobs:
           fi
       - name: 安装前端依赖
         working-directory: frontend
-        run: npx --yes pnpm@10 install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: 打包（build-darwin.sh → dist/ 二进制）
         run: |
           bash ./scripts/build-darwin.sh "${{ needs.prepare.outputs.version }}"
@@ -220,6 +229,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}

@@ -212,8 +212,8 @@ export interface PreviewHandle {
   onBoneSelect?: ((info: BoneSelectInfo) => void) | undefined;
   /** 当前会话内切换到另一模型：复用外壳（renderer/rAF/controls/灯光）重建内容层（ADR-066 §5.6） */
   switchTo?(path: string, options?: { keepInScene?: boolean }): Promise<void>;
-  /** 截取当前 3D 渲染画面（PNG base64，无 data: 前缀）—— ADR-052 P3 通用化 */
-  screenshot?: (() => Promise<string | null>) | undefined;
+  // 注：screenshot 不做 handle 透传（2026-09-04 消费方审计）——截图走 shotNodes 声明式
+  // 菜单节点（各 adapter build 内闭包直取 renderer），handle.screenshot 曾为只写不读死字段。
 }
 
 // ===== §1 常量 + 状态变量 =====
@@ -840,7 +840,7 @@ export async function mount3D(
       setSpeed: session.content.setSpeed,
       showModelGroup: session.content.showModelGroup,
       onBoneSelect: session.content.onBoneSelect,
-      screenshot: session.content.screenshot,
+      // 截图不做 handle 透传（消费方审计 2026-09-04）：shotNodes 菜单闭包直取，此处曾死透传
       // 当前会话内切换模型：复用外壳（renderer/rAF/controls/灯光）重建内容层（ADR-066 §5.6）
       // 支持 keepInScene 模式：true 时不移除旧模型，新模型追加到同一场景（多模型同台）
       switchTo: (newPath: string, options?: { keepInScene?: boolean }) =>

@@ -135,9 +135,8 @@ export async function switchToSession(
   ctx.setCurrentPath(newPath);
   syncSwitchView(ctx, next, beforeBuild, keep);
   updateSwitchBaseline(ctx, beforeBuild);
-
-  const handle = ctx.getHandle();
-  if (handle) handle.screenshot = next.screenshot;
+  // 注：screenshot 不做 handle 透传（消费方审计 2026-09-04）——原 `handle.screenshot = next.screenshot`
+  // 是死写入（截图走 shotNodes 菜单闭包，handle.screenshot 无读取方），已删除。
   // 注意：适配器控件（分层切片等）通过 ctx.menu.setAdapterItems 在 build 时注入根菜单，
   // 无需额外 extraControls/extraPanel 调用（ADR-076 v2 Phase 3 收编）。
   ctx.inFlight = false;

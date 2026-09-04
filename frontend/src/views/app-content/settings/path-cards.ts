@@ -14,6 +14,21 @@ import { groupStorageRootOf } from "../../../utils/resource/types.ts";
 import { cfg, cardRefreshers, isBusy, setBusy, toastError } from "./store.ts";
 
 /** HTML 转义（高级面板路径/路径选择器/扫描提示共用） */
+/** 路径选择模态/扫描气泡样式(P1 批次11:cssText 抽类;overlay 提升到 host 父级/body light DOM,head 注入适用) */
+const pcCss = `
+.pc-modal-overlay { position:fixed; z-index:var(--z-modal); inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; }
+.pc-modal-box { background:var(--surf,#2a2a3a); border:1px solid var(--bd,#444); border-radius:12px; padding:16px; max-width:500px; width:90%; max-height:70vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,.4); }
+.pc-scan-tip { position:fixed; z-index:var(--z-toast); background:var(--surf,#2a2a3a); border:1px solid var(--bd,#444); border-radius:8px; padding:10px 14px; font-size:var(--fs-sm,11px); color:var(--txt,#cdd6f4); box-shadow:0 4px 16px rgba(0,0,0,.3); max-width:420px; max-height:350px; overflow-y:auto; pointer-events:none; line-height:1.6; }
+`;
+let _pcStylesInjected = false;
+function ensurePcStyles(): void {
+  if (_pcStylesInjected) return;
+  _pcStylesInjected = true;
+  const el = document.createElement("style");
+  el.textContent = pcCss;
+  document.head.appendChild(el);
+}
+
 function escHtml(s: unknown): string {
   return esc(String(s ?? ""));
 }
@@ -94,12 +109,11 @@ export function bindPathClick(
 /** 多路径选择器：弹出路径列表让用户挑选（返回 null 表示取消） */
 function showPathPicker(root: ShadowRoot, paths: string[]): Promise<string | null> {
   return new Promise(function (resolve) {
+    ensurePcStyles(); // P1 批次11:cssText 抽类注入(幂等;overlay 提升 light DOM)
     const overlay = document.createElement("div");
-    overlay.style.cssText =
-      "position:fixed;z-index:var(--z-modal);inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
+    overlay.className = "pc-modal-overlay";
     const box = document.createElement("div");
-    box.style.cssText =
-      "background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:12px;padding:16px;max-width:500px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4)";
+    box.className = "pc-modal-box";
     let listHtml = "";
     for (let i = 0; i < paths.length; i++) {
       listHtml +=
@@ -148,8 +162,7 @@ function showScanTooltip(
   const rect = anchor.getBoundingClientRect();
   const tip = document.createElement("div");
   tip.id = "mc-scan-tooltip";
-  tip.style.cssText =
-    "position:fixed;z-index:var(--z-toast);background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:8px;padding:10px 14px;font-size:var(--fs-sm,11px);color:var(--txt,#cdd6f4);box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:420px;max-height:350px;overflow-y:auto;pointer-events:none;line-height:1.6";
+  tip.className = "pc-scan-tip"; // 规则在文件头 pcCss(head 注入);left/top 定位属性级保留
   tip.style.left = Math.max(4, rect.left) + "px";
   tip.style.top = rect.bottom + 4 + "px";
 

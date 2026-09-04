@@ -19,6 +19,19 @@ import { renderLoadingState } from "./preview-loading.ts";
 import type { VoxelData } from "../../parsers/voxel-parse.ts";
 
 // 提取魔法数值常量（体素尺寸 / 默认色 / chunk 维 / 截断上限）
+/** litematic 截断警告条样式(P1 批次11:cssText 抽类;插 ctx.overlay——3D 预览 overlay light DOM,head 注入适用) */
+const mdliCss = `
+.mdli-trunc-warn { padding:6px 12px; background:rgba(207,83,0,0.3); color:#ffa64d; font-size:12px; text-align:center; flex-shrink:0; }
+`;
+let _mdliStylesInjected = false;
+function ensureMdliStyles(): void {
+  if (_mdliStylesInjected) return;
+  _mdliStylesInjected = true;
+  const el = document.createElement("style");
+  el.textContent = mdliCss;
+  document.head.appendChild(el);
+}
+
 const CHUNK_SIZE = 32; // 空间分块维：每 chunk 持一个 InstancedMesh，32³ ≈ 32k 方块上限
 const DEFAULT_VOXEL_COLOR = "#7F7F7F"; // group 缺色时兜底色
 const FALLBACK_MAX_BLOCKS = 200000; // data.maxBlocks 缺席时的展示上限
@@ -365,8 +378,9 @@ function mdLiRecordPerfTrace(path: string, tStart: number, data: VoxelData): voi
 
 function mdLiShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
   if (!data.truncated) return;
+  ensureMdliStyles(); // P1 批次11:cssText 抽类注入(幂等)
   const w = document.createElement("div");
-  w.style.cssText = "padding:6px 12px;background:rgba(207,83,0,0.3);color:#ffa64d;font-size:12px;text-align:center;flex-shrink:0";
+  w.className = "mdli-trunc-warn";
   const max = data.maxBlocks || FALLBACK_MAX_BLOCKS;
   w.textContent = "⚠️ " + t("preview.blockLimit", { max: max.toLocaleString() });
   ctx.overlay.insertBefore(w, ctx.overlay.children[1]);

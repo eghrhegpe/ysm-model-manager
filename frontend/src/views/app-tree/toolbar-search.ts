@@ -14,6 +14,19 @@ import { consumeWebSearchDegraded, onStatsProgress, getStatsPoolSize } from "../
 import type { AppTree } from "./index.ts";
 import { getApp } from "../../backend/app.ts";
 
+// P1 批次11:统计角标样式(cssText 抽类;挂 document.body light DOM,head 注入适用)
+const tsCss = `
+.ts-badge { position:fixed; right:12px; bottom:12px; z-index:9999; padding:4px 10px; border-radius:8px; font-size:12px; font-family:monospace; background:rgba(0,0,0,.72); color:#7ee787; border:1px solid rgba(126,231,135,.4); pointer-events:none; user-select:none; }
+`;
+let _tsBadgeStylesInjected = false;
+function ensureTsBadgeStyles(): void {
+  if (_tsBadgeStylesInjected) return;
+  _tsBadgeStylesInjected = true;
+  const el = document.createElement("style");
+  el.textContent = tsCss;
+  document.head.appendChild(el);
+}
+
 type $Id = (id: string) => HTMLElement | null;
 
 // --- 多线程统计角标（网页版证明 off-main-thread：主线程 + stats Worker 并行）---
@@ -25,10 +38,8 @@ function showStatsBadge(html: string): void {
   if (!statsBadge) {
     statsBadge = document.createElement("div");
     statsBadge.id = "web-stats-badge";
-    statsBadge.style.cssText =
-      "position:fixed;right:12px;bottom:12px;z-index:9999;padding:4px 10px;border-radius:8px;" +
-      "font-size:12px;font-family:monospace;background:rgba(0,0,0,.72);color:#7ee787;" +
-      "border:1px solid rgba(126,231,135,.4);pointer-events:none;user-select:none";
+    ensureTsBadgeStyles(); // P1 批次11:cssText 抽类注入(幂等)
+    statsBadge.className = "ts-badge"; // 规则在文件头 tsCss;show/hide 的 style.display 属性级保留
     document.body.appendChild(statsBadge);
   }
   statsBadge.innerHTML = html;

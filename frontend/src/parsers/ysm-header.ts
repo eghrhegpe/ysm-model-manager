@@ -733,7 +733,11 @@ function extractDisplayValues(raw: unknown): string[] {
   const obj = asRecord(raw);
   if (!obj) return [];
   const result: string[] = [];
-  for (const v of Object.values(obj)) {
+  // 按键排序保证确定性（对齐 Go sort.Strings——Go map range 序随机曾致
+  // parity golden 对账 flaky，2026-09-04 双端同修；key 为中文显示名，
+  // UTF-16 码元序与 UTF-8 字节序对 BMP 一致）。
+  for (const k of Object.keys(obj).sort()) {
+    const v = obj[k];
     if (typeof v === "string" && v !== "" && !v.startsWith("#")) result.push(v);
   }
   return result;

@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 199 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 197 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -393,10 +393,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/app-modules.ts` | 60 |
-| (顶层) | `frontend/src/app-modules.ts` | 70 |
-| (顶层) | `frontend/src/app-modules.ts` | 80 |
-| (顶层) | `frontend/src/app-modules.ts` | 111 |
+| runStartupSteps | `frontend/src/app-modules.ts` | 65 |
+| (顶层) | `frontend/src/app-modules.ts` | 125 |
 | toast | `frontend/src/core/context-menu-shared.ts` | 25 |
 | resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 68 |
 | resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 78 |

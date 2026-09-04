@@ -27,7 +27,7 @@
 | 整合包同步、同步状态、推送资源、拉取资源、待推送、可拉取、已禁用、实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) ⚠️歧义（另见 sync-manager.md） | `app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本… |
 | 树形、资源列表、tree、节点、树、目录树 | [资源树 app-tree](./app-tree.md) | `app-tree` 是 YSM 核心的资源目录树组件，使用 Web Components 实现，支持展开/折叠、右键菜单、文件图标显示。 |
 | 缺失 import、auto-import、导出符号、tokenize、词法、缺失导入、goimports、大脚本拆分 | [auto-import 拆分与缺失 import 检测](./auto_import_split.md) ⚠️歧义（另见 source-graph.md） | `scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆… |
-| 网页版、浏览器模式、browser adapter、IndexedDB、跨域隔离 | [网页版后端 backend-web](./backend_web.md) ⚠️歧义（另见 backend-idb.md、wails-bridge.md等） | `frontend/src/backend/` 是 YSM 网页版（ADR-049 Web Edition）的后端抽象层。在桌面/Android 环境下走 Wails Go 绑定替代，网页版使用 `browser-adapter.ts` +… |
+| 网页版、浏览器模式、browser adapter、IndexedDB、跨域隔离 | [网页版后端 backend-web](./backend_web.md) ⚠️歧义（另见 backend-idb.md、wails-bridge.md等） | — |
 | IndexedDB、网页版、backend、模型库、browser adapter、web mode | [浏览器后端 IndexedDB 封装](./backend-idb.md) ⚠️歧义（另见 backend_web.md、wails-bridge.md等） | `backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id… |
 | string-JSON、JSON.parse 断言、绑定 struct 化、铲债清单、错误通道统一、ADR-143、绑定返回 string | [string-JSON 绑定铲债清单](./binding_json_cleanup.md) | ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struc… |
 | 整合包分类、路由、zipentry 指纹、蓝图、回归、last-wins | [分类路由与回归护栏](./classify-routing.md) ⚠️歧义（另见 go-litematic.md） | 整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需… |
@@ -43,7 +43,7 @@
 | 标签、打标签、编辑标签、tag、标签弹窗、分类标记 | [标签编辑器 tag-editor](./dialog-tag-editor.md) ⚠️歧义（另见 go-tags.md等） | `tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto… |
 | FAB、悬浮按钮、FAB 3D 预览入口、overlay、ADR-057 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | 3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu… |
 | 漂移检测、双轨、重复实现、口径漂移、常量硬编码、错误链断裂、资源泄漏、定时器泄漏 | [drift-scan（双轨漂移检测）](./drift-scan.md) ⚠️歧义（另见 extensibility-index.md） | — |
-| 事件、事件总线、通信、emit、跨组件通信、bus | [事件总线 bus.ts](./event-bus.md) | `bus.ts` 是 YSM 前端的唯一事件中枢，基于发布/订阅模式。所有跨组件、跨页面的异步通信都经过此总线，避免组件间直接耦合。 |
+| 事件、事件总线、通信、emit、跨组件通信、bus | [事件总线 bus.ts](./event-bus.md) | — |
 | 截图、导出 PNG、多角度截图、透明背景、预览缓存、blob URL、saveScreenshot、renderMultiAngle | [截图导出 export](./export.md) ⚠️歧义（另见 utils-export.md等） | > **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到… |
 | 拓展点对账、落地状态、ADR 闭环 | [可拓展点索引对账（vs HEAD @ d517113c…）](./extensibility-index-reconciliation.md) | — |
 | 可拓展点、扩展入口、硬编码、重复实现、插件化 | [可拓展点发掘索引（extensibility inventory）](./extensibility-index.md) ⚠️歧义（另见 drift-scan.md） | — |
@@ -87,16 +87,16 @@
 | 导入、导入队列、拖拽导入、文件夹导入、覆盖导入、import、拖拽 | [全局导入执行 import-executor](./import-queue.md) ⚠️歧义（另见 go-importer.md、global-handlers.md、pointer-events.md等） | **2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex… |
 | 模型统计、骨骼数、立方体数、纹理尺寸、SearchModels、数值筛选、Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) ⚠️歧义（另见 dialog-adv-filter.md、search.md等） | `frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo… |
 | 2D 预览、骨骼图、Canvas 渲染、前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。 |
-| 3D 渲染层、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底 | [3D 预览渲染 model3d](./model3d.md) | 前端 Three.js 3D 渲染层（`frontend/src/preview-3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/m… |
+| 3D 渲染层、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底 | [3D 预览渲染 model3d](./model3d.md) | — |
 | 多模型、模型选择、select、zip 多模型、多 entry、ADR-132 | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的 |
 | 资历最深、老模型、仓库评分、每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | `oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按… |
 | 性能优化、KTX2 编码、纹理缓存、主线程监控、内存泄漏 | [优化记录 optimization-log](./optimization_log.md) ⚠️歧义（另见 3d-patterns.md） | — |
-| 页面、当前页、状态管理、page store、currentPage | [页面状态管理 page-store.ts](./page-store.md) | `page-store.ts` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。核心职责是维护只读当前页状态与启动初始页解析——*… |
-| 自主动画、眨眼、节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | `preview-3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。 |
+| 页面、当前页、状态管理、page store、currentPage | [页面状态管理 page-store.ts](./page-store.md) | — |
+| 自主动画、眨眼、节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | — |
 | pointerdown、pointermove、pointerup、触屏、拖拽、旋转 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) ⚠️歧义（另见 import-queue.md） | ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `… |
 | 推送门禁、质量门禁、域级检查、门禁阻断、go build、vite build、契约测试、Promise.all | [推送前门禁 pre-push-gate](./pre_push_gate.md) ⚠️歧义（另见 frontend_test_audit.md） | `.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器，681 行）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（… |
 | pre-commit、钩子、文档同步、自动 stage、并发隔离 | [提交前钩子 pre-commit](./pre-commit-hook.md) | `.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0… |
-| 3D 预览、统一预览外壳、程序化天空 / sky / 背景 / scene.background、PreviewAdapter 适配器、全模型预览（YSM / VRM / MMD / Litematic）、mount3D | [统一 3D 预览核心 preview-core](./preview_core.md) ⚠️歧义（另见 app-preview.md、go-threejs.md） | ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚手架（旧实现各内联 \~250 行同构），成为所有富格式 3D 预览的**单一事实来源外壳**。内容差异经 `PreviewAdapter.bu… |
+| 3D 预览、统一预览外壳、程序化天空 / sky / 背景 / scene.background、PreviewAdapter 适配器、全模型预览（YSM / VRM / MMD / Litematic）、mount3D | [统一 3D 预览核心 preview-core](./preview_core.md) ⚠️歧义（另见 app-preview.md、go-threejs.md） | — |
 | schema 注册、per-scene、多模型同框、schema 键冲突、activeComponent、组件选择、YSM maid 同台、sessionId | [preview-menu-session-key](./preview_menu_session_key.md) | 3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台 |
 | 3D 控制器、MMD 播放、截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | > ⚠️ **重要前提（ADR-076 v2 Phase 2 重构后）**：相机操作已收编进**核心声明式根菜单**（⚙️ 按钮 → `mountPreviewRootMenu` 的 `camera` 项），底部导航弹窗已删除。现存的 `m… |
 | 预览设置、显示控制、骨骼名称、帧率、截图灯光 | [预览面板设置与显示控制](./preview-settings.md) | > **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖… |
@@ -107,7 +107,7 @@
 | Android、Linux、macOS、rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) ⚠️歧义（另见 android-bridge.md、rustbridge.md） | — |
 | Rust 扫描器、rust_backend、桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) ⚠️歧义（另见 rust-android-bridge.md） | — |
 | 错误消息、Worker 错误、catch、safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe_error_msg.md) | `frontend/src/utils/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `friendlyErr… |
-| 场景能力 / cap / registry / SceneCapability、3D 菜单控件声明式渲染（getMenuControls）、新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）、3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）、「光」指代消歧（light 是光源，fog/shadow/reflector 不是） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Ground / Environment / Fog / Shadow / Reflector / Light / Postprocessing）由统一注册表**创… |
+| 场景能力 / cap / registry / SceneCapability、3D 菜单控件声明式渲染（getMenuControls）、新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）、3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）、「光」指代消歧（light 是光源，fog/shadow/reflector 不是） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | — |
 | 覆盖率门禁、diff-coverage、循环依赖、共享核、_lib、check-circular、findCycles、脚本去重 | [scripts 共享核演进（diff-coverage-core + cycles）](./script_shared_cores.md) | `scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复： |
 | 脚本参数、argv、parseArgs、手写参数解析、positional、未知 flag、脚本卫生、hygiene | [脚本 argv 规范与已知豁免 parse-args.ts](./scripts_argv.md) | `scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30… |
 | jscpd、go 重复代码、复制粘贴检测、duplicate、重复对、增量门禁、新增重复、独立 baseline | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | `scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd… |
@@ -127,7 +127,7 @@
 | 更新、升级、检查更新、新版本、静默检查、updater、版本 | [版本更新 version-updater](./version-updater.md) ⚠️歧义（另见 app-modules.md、go-updater.md） | `version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda… |
 | vitest、测试环境、node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | — |
 | API、Binding、调用后端、getApp、方法签名、app.ts 绑定 | [Wails Binding API 总览 internal/app](./wails-bindings.md) ⚠️歧义（另见 wails-bridge.md等） | `internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(… |
-| Wails、桥接、getApp、Go 调用、Binding、window.go.main.App、网页版、browser adapter | [Wails 桥接 app.ts](./wails-bridge.md) ⚠️歧义（另见 wails-bindings.md、backend_web.md、backend-idb.md等） | `backend/app.ts` 是前端调用后端 Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。**ADR-049 平台双路由**：网页版（无 … |
+| Wails、桥接、getApp、Go 调用、Binding、window.go.main.App、网页版、browser adapter | [Wails 桥接 app.ts](./wails-bridge.md) ⚠️歧义（另见 wails-bindings.md、backend_web.md、backend-idb.md等） | — |
 | YSM 动画、基岩动画、molang、动画管线 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | — |
 | 烘焙、几何反推、pivot、骨骼错位、模型错位、UV 对不上、贴图错位、RawYsmModel | [YSM 烘焙与几何反推](./ysm-baked.md) | YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。… |
 | WASM / YSMParser、ysm 解码、wasm 加载、按需加载、MEMFS、callMain、crossOriginIsolated、stats.worker / worker.format、pthread | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64… |

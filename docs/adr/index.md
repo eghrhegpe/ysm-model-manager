@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **174** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **175** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,8 +18,8 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 170 |
-| [❌ 已取代](#已取代) | 2 |
+| [✅ 已采纳](#已采纳) | 167 |
+| [❌ 已取代](#已取代) | 6 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
@@ -32,7 +32,7 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（170）
+### ✅ 已采纳（167）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -74,9 +74,6 @@ permalink: /adr/
 | [ADR-142](./ADR-142-texture-cache-channel-unification.md) | 缓存三通道统一：texture-cache 内存池 + 磁盘压缩分层 | ✅ 已采纳 |
 | [ADR-141](./ADR-141-large-script-split-baseline.md) | 大脚本拆分基线 | ✅ 已采纳 |
 | [ADR-140](./ADR-140-go-dup-self-three-tier-variant-policy.md) | Go 重复代码治理：文件内自重复三层判定与变体层不强制合并 | ✅ 已采纳 |
-| [ADR-138](./ADR-138-preview-3d-to-src.md) | preview-3d 上提 src/preview-3d（去 features 中间层） | ✅ 已采纳 |
-| [ADR-137](./ADR-137-ysm-decoder-homecoming.md) | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ✅ 已采纳 |
-| [ADR-136](./ADR-136-screenshot-domain-homecoming.md) | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ✅ 已采纳 |
 | [ADR-135](./ADR-135-go-jscpd.md) | Go 端 jscpd 重复代码检测与增量门禁 | ✅ 已采纳 |
 | [ADR-134](./ADR-134-container-type-cache-component.md) | 将 containerTypeCache 包级全局收进组件（破隐藏耦合） | ✅ 已采纳 |
 | [ADR-133](./ADR-133-testid-contract-authenticity.md) | 契约测试真实性：从存在性门禁升级为消费性校验 | ✅ 已采纳 |
@@ -87,7 +84,6 @@ permalink: /adr/
 | [ADR-128](./ADR-128-menu-nav-graph-e2e-selectors.md) | 菜单导航图生成器与 e2e 选择器派生（声明式收口后的可验证性） | ✅ 已采纳 |
 | [ADR-127](./ADR-127-preview-perf-presets.md) | 性能档位薄壳版——数据表 + 通用套用器（低/中/高/自定义） | ✅ 已采纳 |
 | [ADR-126](./ADR-126-menu-schema-final-form.md) | 3D 预览菜单声明式 Schema 终态——状态层泛化 + 面板 schema 化 + 可见性谓词化 + dockGroup 解耦 | ✅ 已采纳 |
-| [ADR-125](./ADR-125-preview-menu-unified-state-single-renderer.md) | 3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则 | ✅ 已采纳 |
 | [ADR-124](./ADR-124-i18n-key-naming-three-segment.md) | i18n 键名三段式规范 | ✅ 已采纳 ⚠️ 被 [ADR-045] |
 | [ADR-123](./ADR-123-cross-environment-downgrade-strategy.md) | 跨环境降级策略统一 | ✅ 已采纳 |
 | [ADR-121](./ADR-121-shadow-dom.md) | Shadow DOM 样式隔离铁律 | ✅ 已采纳 |
@@ -102,6 +98,7 @@ permalink: /adr/
 | [ADR-112](./ADR-112-fbx-loader-preview-foundation.md) | FBX 格式接入与独立预览地基 | ✅ 已采纳 |
 | [ADR-111](./ADR-111-variants-decouple.md) | variants 解耦——类别—格式分层，角色模型合并 PMX/VRM | ✅ 已采纳 |
 | [ADR-110](./ADR-110-mod-registry.md) | mod 依赖下沉注册表，消除 Go 硬编码 | ✅ 已采纳 |
+| [ADR-109](./ADR-109-code-review-checklist.md) | 代码审查 Checklist | ✅ 已采纳 |
 | [ADR-108](./ADR-108-camera-framing-bounding-box.md) | 相机取景包围盒计算策略 | ✅ 已采纳 |
 | [ADR-107](./ADR-107-sky-godrays-volumetric.md) | 天空体积光束 god rays（日出/日落） | ✅ 已采纳 |
 | [ADR-106](./ADR-106-preview-env-menu-drill-visual.md) | 3D 预览环境菜单两级下钻与可视化控件扩展 | ✅ 已采纳 |
@@ -207,10 +204,14 @@ permalink: /adr/
 | [ADR-002](./ADR-002-project-health-assessment.md) | 项目全面评估与改进方向 | ✅ 已采纳 |
 | [ADR-001](./ADR-001-wails3-migration.md) | 升级至 Wails 3 | ✅ 已采纳 |
 
-### ❌ 已取代（2）
+### ❌ 已取代（6）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-138](./ADR-138-preview-3d-to-src.md) | preview-3d 上提 src/preview-3d（去 features 中间层） | ❌ 已取代 ⚠️ 被 [ADR-129] |
+| [ADR-137](./ADR-137-ysm-decoder-homecoming.md) | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
+| [ADR-136](./ADR-136-screenshot-domain-homecoming.md) | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
+| [ADR-125](./ADR-125-preview-menu-unified-state-single-renderer.md) | 3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则 | ❌ 已取代 ⚠️ 被 [ADR-126] |
 | [ADR-077](./ADR-077-bottom-nav-shell-convergence.md) | 底部导航通用外壳收敛（D1+D3 落地） | ❌ 已取代 ⚠️ 被 [ADR-076] |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | ❌ 已取代 |
 
@@ -257,9 +258,9 @@ permalink: /adr/
 | ADR-141 | 大脚本拆分基线 | ✅ 已采纳 | 2026-08-31 |
 | ADR-140 | Go 重复代码治理：文件内自重复三层判定与变体层不强制合并 | ✅ 已采纳 | 2026-08-31 |
 | ADR-139 | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 | 2026-08-31 |
-| ADR-138 | preview-3d 上提 src/preview-3d（去 features 中间层） | ✅ 已采纳 | 2026-08-31 |
-| ADR-137 | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ✅ 已采纳 | 2026-08-31 |
-| ADR-136 | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ✅ 已采纳 | 2026-08-31 |
+| ADR-138 | preview-3d 上提 src/preview-3d（去 features 中间层） | ❌ 已取代 ⚠️ 被 [ADR-129] | 2026-08-31 |
+| ADR-137 | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ❌ 已取代 ⚠️ 被 [ADR-129] | 2026-08-31 |
+| ADR-136 | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ❌ 已取代 ⚠️ 被 [ADR-129] | 2026-08-31 |
 | ADR-135 | Go 端 jscpd 重复代码检测与增量门禁 | ✅ 已采纳 | 2026-08-30 |
 | ADR-134 | 将 containerTypeCache 包级全局收进组件（破隐藏耦合） | ✅ 已采纳 | 2026-08-30 |
 | ADR-133 | 契约测试真实性：从存在性门禁升级为消费性校验 | ✅ 已采纳 | 2026-08-30 |
@@ -270,7 +271,7 @@ permalink: /adr/
 | ADR-128 | 菜单导航图生成器与 e2e 选择器派生（声明式收口后的可验证性） | ✅ 已采纳 | 2026-08-29 |
 | ADR-127 | 性能档位薄壳版——数据表 + 通用套用器（低/中/高/自定义） | ✅ 已采纳 | 2026-08-29 |
 | ADR-126 | 3D 预览菜单声明式 Schema 终态——状态层泛化 + 面板 schema 化 + 可见性谓词化 + dockGroup 解耦 | ✅ 已采纳 | 2026-08-28 |
-| ADR-125 | 3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则 | ✅ 已采纳 | 2026-08-28 |
+| ADR-125 | 3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则 | ❌ 已取代 ⚠️ 被 [ADR-126] | 2026-08-28 |
 | ADR-124 | i18n 键名三段式规范 | ✅ 已采纳 ⚠️ 被 [ADR-045] | 2026-08-28 |
 | ADR-123 | 跨环境降级策略统一 | ✅ 已采纳 | 2026-08-27 |
 | ADR-122 | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 | 2026-08-26 |
@@ -286,6 +287,7 @@ permalink: /adr/
 | ADR-112 | FBX 格式接入与独立预览地基 | ✅ 已采纳 | 2026-08-21 |
 | ADR-111 | variants 解耦——类别—格式分层，角色模型合并 PMX/VRM | ✅ 已采纳 | 2026-08-21 |
 | ADR-110 | mod 依赖下沉注册表，消除 Go 硬编码 | ✅ 已采纳 | 2026-08-21 |
+| ADR-109 | 代码审查 Checklist | ✅ 已采纳 | 2026-08-03 |
 | ADR-108 | 相机取景包围盒计算策略 | ✅ 已采纳 | 2026-08-20 |
 | ADR-107 | 天空体积光束 god rays（日出/日落） | ✅ 已采纳 | 2026-08-21 |
 | ADR-106 | 3D 预览环境菜单两级下钻与可视化控件扩展 | ✅ 已采纳 | 2026-08-20 |

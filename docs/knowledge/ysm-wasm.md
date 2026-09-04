@@ -63,7 +63,7 @@ use_when:
   - pthread
 
 invariant_anchors:
-  - go/avatar/avatar_decode.go|DecodeYSMFiles
+  - go/avatar/avatar_decode.go|DecodeYSMData
   - go/avatar/avatar_decode.go|SetNodeJS
   - internal/app/wasm_decoder.go|decodeYSMViaNodeJS
 perf:

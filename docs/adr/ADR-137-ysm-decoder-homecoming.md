@@ -1,6 +1,7 @@
 # ADR-137：YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀）
 
-- **状态**：已采纳（Accepted）
+- **状态**：❌ 已取代
+- **被取代**：[ADR-129] 取代（第五刀 YSM 解码归位已纳入 ADR-129 体系）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理

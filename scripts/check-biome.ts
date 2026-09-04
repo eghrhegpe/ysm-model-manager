@@ -82,8 +82,9 @@ const filesIdx = args.indexOf('--files');
 const explicitFiles: string[] = [];
 if (filesIdx >= 0) {
   for (let i = filesIdx + 1; i < args.length; i++) {
-    if (args[i].startsWith('-')) break;
-    explicitFiles.push(args[i].replace(/\\/g, '/').replace(/^frontend\//, ''));
+    const a = args[i]!;
+    if (a.startsWith('-')) break;
+    explicitFiles.push(a.replace(/\\/g, '/').replace(/^frontend\//, ''));
   }
   if (explicitFiles.length === 0) {
     console.error('[check-biome] --files 后未提供任何文件路径');

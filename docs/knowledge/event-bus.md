@@ -44,38 +44,11 @@ status: active
 ---
 
 # 事件总线 bus.ts
+> **架构事实已迁移至 **[architecture.md#64-事件总线与状态](../architecture.md#64-事件总线与状态)。
+> 本卡仅保留 frontmatter 机器字段（symbols/tests/quick_risk_lines），架构描述以 architecture.md 为准。
 
-## 概览
+---
 
-`bus.ts` 是 YSM 前端的唯一事件中枢，基于发布/订阅模式。所有跨组件、跨页面的异步通信都经过此总线，避免组件间直接耦合。
+## 符号索引
 
-## 核心职责
-
-- **统一通信通道**: 所有组件通过 `bus.emit()` 发送事件，`bus.on()` / `bus.off()` 监听
-- **事件命名规范**: 小写 kebab-case + 冒号分段（`domain:action`），如 `nav:changed`, `toast:show`, `tree:set-search`
-- **全局事件注册**: 全局事件必须注册在 `app-content/index.ts` 的 `_registerGlobalHandlers()` 中
-
-## 对外 API / 入口
-
-- `createBus` — 创建事件总线实例（**模块内私有，未导出**——全局仅 `bus` 单例；如需测试替身，`Design.md` 声称的 `setBus(mockBus)` 当前**不存在**，测试用真单例 + 手工清理）
-- `on` / `off` / `once` / `emit` — 订阅 / 退订 / 一次性 / 发布（`Bus` 接口）；`on` 返回取消订阅函数供 `_unsubs` 收集；**`once` 同样返回退订函数**（P2 修复：事件永不触发时调用方可主动移除 wrapper，防幽灵监听器——历史「once off 错对象」风险被设计缓解）
-- `BusEvents` — 事件名 → payload 类型映射（类型化总线，`BusEventName` 联合类型）；`window.bus` 挂载为 index.html 内联脚本兼容句柄（类型化 `declare global`，不违反零 `window.__*` 红线——红线正则只匹配 `window\.__`）
-
-## 与其他子系统关系
-
-- `app-modules.ts`: 各子模块入口，负责模块内部事件分发
-- `core/global-handlers.ts`: 全局事件处理器集合
-- Wails EventsOn: Go 后端 → 前端的 Bridge 事件也通过 bus 转发
-
-## 不变量
-
-- 全局事件只注册一次，不重复注册（见 AGENTS.md §三 陷阱 #3 #8）
-- 异步操作的 `finally` 中必须 emit 完成事件，不可放 `try` 末尾
-- 不通过 `window` 传递事件，统一走 bus
-- **`once` 只能用它返回的退订函数取消**（P3 观察：`bus.off(event, 原fn)` 按引用匹配不到 wrapper、静默 no-op、wrapper 永久驻留全局单例——「once off 错对象」残余路径；用返回 unsub 的调用方无碍）
-- `async` listener 的 promise rejection 不经 emit 捕获（P3 观察：emit 只 catch 同步抛错，调用方须内部 try/catch——全库 handler 已大多遵守）
-
-## 相关
-
-- `frontend/src/core/global-handlers.ts` — 全局事件处理
-- `frontend/src/app-modules.ts` — 子模块事件路由
+> 符号列表见 frontmatter `auto_fields.symbols_with_lines`。

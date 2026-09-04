@@ -25,6 +25,9 @@ if (UNKNOWN_FLAGS.length) {
 }
 const CHECK = argv.includes("--check");
 const RELEASES_DIR = path.join(ROOT, 'docs', 'releases');
+/** 归档目录：旧版本发版说明移入 archive/ 后仍视为已覆盖（2026-09-04 releases 瘦身）。
+ * 仅历史 tag 归档；当前版本必须留在 RELEASES_DIR 平铺（release 流程/索引依赖）。 */
+const RELEASES_ARCHIVE_DIR = path.join(RELEASES_DIR, 'archive');
 /** 豁免 tag：非正式发版（预发布/开源准备等临时标记），不要求发版说明。
  * v1.7.0-open-source-prep.20260617 为开源准备临时 tag，非正式版本（历史遗留）。 */
 const EXEMPT_TAGS = new Set(['v1.7.0-open-source-prep.20260617']);
@@ -141,9 +144,11 @@ function checkReleaseNotes() {
   const missing = tags.filter((t) => {
     if (EXEMPT_TAGS.has(t)) return false; // 预发布/临时 tag 豁免（非正式发版）
     // 兼容历史 compare 双文件模式（index.md：v1.0.2~v1.7.0 早期遗留）——
-    // `vX.md` 或 `vX-compare.md` 任一存在即算已覆盖
+    // `vX.md` 或 `vX-compare.md` 任一存在即算已覆盖；归档目录（archive/）同样视为已覆盖
     return !fs.existsSync(path.join(RELEASES_DIR, `${t}.md`))
-      && !fs.existsSync(path.join(RELEASES_DIR, `${t}-compare.md`));
+      && !fs.existsSync(path.join(RELEASES_DIR, `${t}-compare.md`))
+      && !fs.existsSync(path.join(RELEASES_ARCHIVE_DIR, `${t}.md`))
+      && !fs.existsSync(path.join(RELEASES_ARCHIVE_DIR, `${t}-compare.md`));
   });
   if (missing.length) {
     console.error(`❌ ${missing.length} 个版本缺发版说明（docs/releases/<tag>.md）——发版契约（docs/releases/index.md）要求每个正式 tag 有说明。`);

@@ -113,15 +113,16 @@ status: active
 2. **`_filterPaths`（精确路径交集）**：按 `fullPath` 精确匹配 Set，来自高级筛选弹窗的标签 ∩ 搜索条件交集
 
 渲染时，搜索态走 `hl(e.name, search)`（utils/dom/html.ts）高亮命中文字，非搜索态走 `renderDisplayName()`（治理红线 4.3）。
-- **MMD 子目录分组展示（ADR-096 P3）**：`loader.ts` 的 `loadEntries` 在加载 MMD 类型扫描结果时，若 `ModelEntry.subdir` 非空（如 `SceneModel`），拼接到 `relPath` 前缀，文件树自动按子目录分组（无需改 `render.ts` 建树逻辑）；网页版 `scanWebModels`（`backend/web-fs.ts`）同步从 `name` 字段提取 `subdir` 字段
+- **MMD 子目录分组展示（ADR-094/096 演进，2026-09-03 修正）**：当前为**扁平化架构**——各 MMD 类型（SceneModel/CustomAnim 等）是独立顶级类型，`resource_types.json` 的 `GROUP_TYPE_OPTIONS` 全部 `subdir: ""`，`app-nav` 双下拉永不写非空 subdir（`repo_subdir` 恒落空值，`loader.ts` 的 `targetType = subdir || rtype` 是防御性写法）。`subdir` 属性通道 + `repo:subdir-changed` 事件是 ADR-094「子目录选择」的半迁移残留——知识卡不再宣称 subdir 参与路径拼接；`loader.ts` 的 `loadEntries(rtype, subdir)` 在 subdir 非空时以 subdir 覆盖 rtype 查表（GetRepoRoot("SceneModel") 而非 "mmd" 拼接），组名分组效果由 Go 扫描根即子目录根达成。**修改提醒**：任何文件夹操作（bus-handlers dir:rename/mkdir/recycle/batch-rename、events 右键、index 键盘删除）统一用 `vm._rootAttr || RESOURCE_TYPES.YSM` 即当前视图真实类型（root 就是完整 rtype），不要自行拼接 subdir 路径。
 - `_initKeyboardShortcuts` / `_deleteSelected` — 键盘快捷键 / 批量删除
 - **3D 全屏快捷键门禁**：`_onKeydown` 开头调用 `isPreviewOverlayActive()`（`ui/overlay-active.ts`，ADR-175 M1 契约收编的权威查询——内部查 `document.getElementById("ysm-overlay-3d")`，常量见 `ui/ui-constants.ts`）——3D 全屏打开期间树面板不接管任何全局按键（Ctrl+F 不抢焦点、Delete 不误删选中模型、方向键不与 3D 相机平移冲突）；overlay 移除后快捷键恢复。禁止组件裸查 overlay DOM，统一走该查询函数
-- 子模块：`bus-handlers.ts`（事件处理）/ `events.ts`（委托）/ `virtual-scroll.ts`（虚拟滚动）/ `loader.ts`（数据加载抽象层）/ `authors.ts`（作者列表加载）/ `toolbar-events.ts`（工具栏 UI 绑定）
+- 子模块：`bus-handlers.ts`（事件处理）/ `events.ts`（委托）/ `render.ts`（含虚拟滚动，原独立 virtual-scroll.ts 已并入）/ `loader.ts`（数据加载抽象层）/ `authors.ts`（作者列表加载）/ `toolbar-events.ts`（工具栏 UI 绑定）
 
 ### 渲染性能要点（2026-08-24）
 
 - **搜索输入 debounce 150ms**（`toolbar-events.ts`）：`input` 事件里 `_search` 立即更新（后续其他渲染读取到最新值），仅 `_renderTree` 延迟合并——万级条目打字不再每字符全量 buildTree+渲染。测试用 `vi.useFakeTimers()` + `advanceTimersByTime` 推进。
 - **文件夹启禁用标记**（`render.ts` `annotateDirNodes` → `dirFlags` WeakMap）：文件夹行的 `hasEnabled/hasDisabled` 由 `dirFlags` 提供（ckCls：全启 `" on"`、混合 `" on partial"`、全禁空）。实现为**显式栈迭代后序**（2026-09 审计重写）：父目录 flags = 直接文件贡献 ∪ 各子目录已算好的 flags，每节点恰好访问一次，**O(n)** 且无递归——旧实现「外层 for 每目录 + 内层 stack 重扫整棵子树」最坏 O(n²)（深链 2000 级 115.9ms、每倍增 3-6×），且递归深度=树深，10000 级深链直接 `Maximum call stack size exceeded`（回归绊线：`render.test.ts` 深链用例 + 计时断言）。
+- **flattenVisible 显式栈迭代（2026-09 P2 修复）**：`flattenVisible` 原递归 `atFvFlattenLevel`（搜索态 `shouldOpen` 无条件 true 全展开 → 递归深度=树深，与 annotateDirNodes 同源栈溢出）。已改显式栈（Frame/idx 模式，同 annotateDirNodes 同款），深度优先前序保序、无递归。回归绊线：`render.test.ts`「10000 级深链 + 搜索命中」用例。
 - **方向键导航（P2 观察）**：`selectSingle` 后仍全量 `_renderTree`，但行 HTML 预缓存 + 可见区 slice<100，实际开销低，未优化。
 
 ## 响应式属性与代际守卫
@@ -161,7 +162,8 @@ status: active
 - 组件拆分遵循 app-xxx 规范（index/tpl/row-tpl/data/render/events）
 - 动态 import 链路带 `.catch` 兜底（如 ha-preview 解析模块加载失败以 toast 提示，见 events.ts）
 - **事件层 toast/弹窗文案全量 i18n（2026-08-31）**：`events.ts` / `bus-handlers.ts` / `toolbar-events.ts` / `toolbar-search.ts` / `index.ts` / `render.ts` 53 处裸中文收敛到 `tree.*` key（含复用 `ctx.busyWait`/`ctx.renameFail`/`ctx.fileRecycleTitle` 与既有 `tree.recycled`/`tree.dirEmpty`/`tree.noAuthor`/`tree.copied`/`tree.browserFailed`/`tree.inputNewFolder` 等）；新增 key 集中在 zh-CN.ts 的「文件树动作 toast/弹窗」注释段，改动 UI 文案只改三语言包即可
-- **选中态在数据变更链路（回收/重命名）成功后必须清空**（P2 修复：`selectState` 是模块级单例，bus-handlers 的 dir:recycle / batch:rename / dir:batch-rename 成功后清 keys+lastKey——原旧路径滞留会显示「已选 N 个文件」并对已不存在路径误删）
+- **选中态在数据变更链路（回收/重命名）成功后必须清空**（P2 修复：`selectState` 是模块级单例，bus-handlers 的 dir:recycle / batch:rename / dir:batch-rename 成功后清 keys+lastKey；2026-09 补漏 `events.ts` 内联重命名成功链——原漏清导致旧路径滞留显示「已选 N 个文件」并对已不存在路径误删）。全部链路：bus-handlers 三条 + events.ts 内联重命名 + index.ts _deleteSelected
+- **重命名 Escape 取消不得误保存（P1 修复 2026-09）**：`events.ts` rename keydown Escape 分支原直接 `_renderTree()`——聚焦的 `.rename-inp` 被 DOM 移除时 Chromium 同步派发 focusout（冒泡到 container）→ 走保存链，用户按 Esc 想放弃却把改动写盘。修复：Escape 先置 `inp.dataset.cancelRename="1"` + `value=""`（双保险），focusout 分支查标记跳过保存。回归测试在 `events.test.ts`（模拟真实 DOM 重建 + 手动派发 focusout 断言 RenameFile 不被调用）——原测试 mock `_renderTree` 不重建 DOM 故假绿，勿回退到裸 `_renderTree()`
 - **instance-actions 契约口径（2026-08-09 收敛）**：① 同步键口径 = Go `sync_push.go` `SyncCustomToRepo` 的去重规则（Hash 优先 + 原始 Name 兜底、复制保留相对路径）——前端**不**自行按 `.ban` 剥离裸名 Set 计数，`uploaded` 直接信任 Go 返回值（单一事实来源，防「📤 N」撒谎/漏同步）；② `AddImportLog` 调用源已迁移至 `core/handlers/sync.ts`（原 `instance-actions.ts` 模块已删除，知识卡保留此标注供追溯）；sourcePath=源、targetDir=目标，调用方不得装反/漏传
 
 ## 相关

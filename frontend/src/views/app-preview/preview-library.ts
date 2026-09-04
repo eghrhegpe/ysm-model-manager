@@ -78,6 +78,22 @@ export async function openModel3DFullscreen(
 ): Promise<void> {
   if (!path) return;
   const siblings = options?.siblings;
+  // P2 修复（审核）：getApp() 若后端不可用会 reject——原实现裸 await 在函数顶部，
+  // 依赖所有调用方自行 catch（app-nav FAB / switchExternal 包装有兜底，但 litematic-3d
+  // L150 裸调用无兜底 → unhandled rejection）。函数内自洽：失败 toast 后 return。
+  let DetectResourceType: ((p: string) => Promise<string>) | null = null;
+  try {
+    ({ DetectResourceType } = await getApp());
+  } catch (e) {
+    console.warn("[preview-3d] 后端不可用，无法打开 3D:", e);
+    const { bus } = await import("../../bus.ts");
+    bus.emit("toast:show", {
+      msg: t("preview.backendUnavailable"),
+      duration: TOAST_MS.normal,
+      type: "error",
+    });
+    return;
+  }
   // 方案 A：cooperate=false 且有活跃会话时，先清理旧的活跃全屏层（释放旧内容层 +
   // 复位注册表 + 复原单例），再建新模型——把本函数注释「cooperate=false 会先清理旧的
   // 活跃全屏层」从名义变实际；对 ysm/mmd/vrm/litematic 所有类型的「二次点击资源列表」
@@ -85,12 +101,11 @@ export async function openModel3DFullscreen(
   // 注意：清理须在 opener 解析成功之后执行（code review P2）——类型探测失败或
   // routeKey 未注册（非 3D 资源/后端暂不可用）时提前清理会销毁用户当前活跃 3D 会话，
   // 旧会话本应在此类失败导航下存活，只弹 toast。
-  const { DetectResourceType } = await getApp();
   // 发射点已分类（switchExternal 等透传 rtype）时优先用，避免歧义扩展名重复探测
   let rtype = options?.rtype || "";
   if (!rtype) {
     try {
-      rtype = (await DetectResourceType(path)) || "";
+      rtype = (await DetectResourceType?.(path)) || "";
     } catch {
       /* 类型探测失败 */
     }

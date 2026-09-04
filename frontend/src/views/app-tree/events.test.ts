@@ -635,6 +635,54 @@ describe("dblclick 重命名", () => {
     expect(h.vm._renderTree).toHaveBeenCalledOnce();
     expect(RenameFileMock).not.toHaveBeenCalled();
   });
+
+  it("Escape → 置取消标记 + 清空 value（真实浏览器 DOM 移除派发 focusout 也不误保存）", async () => {
+    // P1 回归（审核）：原实现 Esc 直接 _renderTree()，聚焦的 .rename-inp 被 DOM 移除时
+    // Chromium 同步派发 focusout → 落到容器监听器走保存链，用户按 Esc 想放弃却写盘。
+    // 修复：Esc 先置 dataset.cancelRename="1" + value 置空（双保险），随后无论是否触发
+    // focusout 都跳过保存。本用例模拟「Escape 后真实浏览器派发 focusout」的完整路径。
+    const h = makeHarness();
+    // mock _renderTree 模拟真实 DOM 重建：清空容器（等价 replaceChildren 移除 input）
+    (h.vm as unknown as { _renderTree: ReturnType<typeof vi.fn> })._renderTree = vi.fn(() => {
+      h.container.replaceChildren();
+    });
+    h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    const inp = document.createElement("input");
+    inp.className = "rename-inp";
+    inp.value = "改一半.ysm";
+    h.container.querySelector(".fl")!.appendChild(inp);
+    inp.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+    );
+    // Esc 后 input 已被置取消标记 + 清空（修复的核心行为）
+    expect(inp.dataset.cancelRename).toBe("1");
+    expect(inp.value).toBe("");
+    // 模拟真实浏览器：input 被 DOM 移除时同步派发 focusout（冒泡到 container）
+    inp.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    await flush();
+    expect(RenameFileMock).not.toHaveBeenCalled();
+  });
+
+  it("Enter → focusout 保存成功后清空 selectState（对齐 runBatchRename）", async () => {
+    // P2 回归（审核）：内联重命名成功链原本未清选中态，被重命名文件在选中集内时
+    // 旧路径残留 → 「已选 N 个文件」滞留 + 右键 batch 携带不存在路径。修复后对齐
+    // bus-handlers 三条链路：成功后 selectState.keys.clear() + lastKey = null。
+    const h = makeHarness();
+    h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    const inp = document.createElement("input");
+    inp.className = "rename-inp";
+    inp.value = "新名字.ysm";
+    h.container.querySelector(".fl")!.appendChild(inp);
+    selectState.keys.add("/repo/a.ysm");
+    selectState.lastKey = "/repo/a.ysm";
+    inp.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    await flush();
+    expect(RenameFileMock).toHaveBeenCalledWith("/repo/a.ysm", "新名字.ysm");
+    expect(selectState.keys.size).toBe(0);
+    expect(selectState.lastKey).toBeNull();
+  });
 });
 
 // ===== contextmenu =====

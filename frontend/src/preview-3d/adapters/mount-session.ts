@@ -148,6 +148,46 @@ export function closeOverlay(ctx: MountCtx): void {
 }
 
 /**
+ * build 失败路径轻量清理（mount-preview-core.ts catch 段调用）。
+ * 与 runFullCleanup 的区别：失败路径**保留 overlay**（其上是 showLoadFailure 的错误提示，
+ * 用户需能看到失败原因），不清场景能力/纹理缓存（可能被其他活跃会话共享）——
+ * 只解绑本会话已注册的输入监听 + 停 rAF + 拆菜单 + 清 tip 定时器，防止跨会话累积泄漏。
+ *
+ * 复刻 runFullCleanup 的 ②③⑦ + perFrame/rAF 收尾段；① escH 与 ⑥ content/scene
+ * 差量由调用方（catch 段）自行处理（顺序：先解绑监听再拆资源）。
+ */
+export function runFailedMountCleanup(ctx: MountCtx): void {
+  const session = ctx.session;
+  // 终止标志置位（同 runFullCleanup/closeOverlay）
+  session.isDisposed.v = true;
+  // ② 提示条定时器（成功路径由 timeout 自移除；失败时取消避免迟到移除）
+  if (session.tipTimeoutId) {
+    clearTimeout(session.tipTimeoutId);
+    session.tipTimeoutId = undefined;
+  }
+  // ③ 声明式根菜单（移除 dock/popup + 解绑 view click 监听）
+  ctx.menuHandle.dispose();
+  // ⑦ 输入监听解绑（bindInputHandlers 已注册于 build 前；漏解绑跨会话累积）
+  const h = ctx.handlers;
+  document.removeEventListener("keydown", h.onKeyDown);
+  document.removeEventListener("keyup", h.onKeyUp);
+  window.removeEventListener("pointerup", h.onDragPointerUp);
+  window.removeEventListener("pointermove", h.onDragPointerMove);
+  window.removeEventListener("resize", h.onResize);
+  h.cancelPendingResize?.();
+  const infra = ctx.getInfra();
+  if (infra) {
+    infra.renderer.domElement.removeEventListener("pointerdown", h.onDragPointerDown);
+    if (session.onUnifiedPick)
+      infra.renderer.domElement.removeEventListener("click", session.onUnifiedPick);
+  }
+  // perFrame/rAF 收尾：移除本 session 回调（失败时 content 未成功注册 perFrame，
+  // removePerFrame 为 no-op 安全）；若这是唯一活跃会话则停全局 rAF
+  if (session.perFrame) removePerFrame(session.perFrame);
+  stopIfIdle();
+}
+
+/**
  * 完整清理（原 mount3D 内嵌 fullCleanup，P0 修复：中止/退出路径完整拆除 DOM + 解绑监听，防泄漏）。
  * ① ESC 监听器（escH 可能已被 switchTo 替换，移除当前引用）→ ② 提示条定时器 →
  * ③ 声式根菜单 → ④ viewContainer → ⑤ overlay + 单例清零 → ⑥ 内容层 dispose + scene 差量

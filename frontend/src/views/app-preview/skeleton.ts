@@ -254,7 +254,15 @@ export async function loadModel2D(
         _toggle3D();
       };
     }
-    if (_prefer3D) requestAnimationFrame(() => btn3d?.click());
+    if (_prefer3D) {
+      // P1 修复（审核）：rAF 自动弹 3D 前须确认组件仍挂载——rAF 回调不随
+      // disconnectedCallback 取消，组件销毁后回调仍会触发，btn3d.click() 会经
+      // _toggle3D 启动 createYsm3D 把全屏 overlay 挂到已卸载 DOM（用户可见异常）。
+      requestAnimationFrame(() => {
+        if (!ctx.root.isConnected) return;
+        btn3d?.click();
+      });
+    }
   } catch (e) {
     container.innerHTML = `<div class="pv-error-title" style="color:#ff6b6b">🏗️ ${t("preview.skeletonStructure")}</div><div class="pv-error-body">⚠️ ${t("preview.parseFailed")}: ${esc(safeErrorMessage(e))}</div>`;
   }

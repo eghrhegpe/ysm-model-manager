@@ -451,3 +451,28 @@ describe("row-common 公共行计算", () => {
     expect(partial.ckCls).toBe(" on partial");
   });
 });
+
+describe("flattenVisible — 深链 + 搜索态栈溢出回归绊线（P2 修复）", () => {
+  // 原递归实现：搜索态 shouldOpen 无条件 true → 全目录展开 → 递归深度 = 树深，
+  // 10000 级深链直接 Maximum call stack size exceeded（annotateDirNodes 已改显式栈，
+  // flattenVisible 曾漏网）。现改显式栈迭代，深链 + 搜索应正常完成且行序保前序。
+  it(
+    "10000 级深链 + 搜索命中 → 不抛栈溢出，行序为深度优先前序",
+    () => {
+      const depth = 10000;
+      const path = Array.from({ length: depth }, (_, i) => `d${i}`).join("/") + "/f.ysm";
+      const root = buildTree([entry("f.ysm", path, 0, 0, "/repo/" + path)], "name", "", null);
+      expect(root).toBeDefined();
+      // 搜索命中 → 所有目录 shouldOpen=true → 全量展开（旧实现递归到栈溢出）
+      const rows = flattenVisible(root, "", "f.ysm", "name", {}, 0, "grid");
+      expect(rows.length).toBeGreaterThan(depth); // 每个目录行 + 叶子文件行
+      // 首行应为最深层目录的前序——校验行序保前序：第 1 行是最浅层目录
+      expect(rows[0]).toMatchObject({ type: "folder", key: "d0", depth: 0 });
+      // 末行为叶子文件（深度 = 树深）
+      const last = rows[rows.length - 1];
+      expect(last.type).toBe("file");
+      expect(last.key).toBe("/repo/" + path);
+    },
+    15000,
+  );
+});

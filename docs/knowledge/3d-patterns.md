@@ -324,6 +324,43 @@ Three.js 资源（几何体、材质、纹理、渲染器）需要成对 dispose
 
 ---
 
+## 7.2 build 失败路径 ≠ fullCleanup（2026-09 二次审核教训）
+
+### 问题
+`mount3D` 的 `adapter.build` 抛错 catch 段，若只移除 escH 而不解绑输入监听/拆菜单/停 rAF，
+跨会话反复失败挂载会逐次累积 document/window 监听器与菜单 DOM。但**不能直接套
+`runFullCleanup`**——它语义是「完整关闭」（拆 overlay + 清场景能力 + disposeAll 纹理缓存），
+而失败路径**有意保留 overlay**（上面要展示 `showLoadFailure` 错误提示），且场景能力/纹理缓存
+可能被其他活跃会话共享，全清会误伤。
+
+### 解决方案
+轻量失败清理函数 `runFailedMountCleanup(ctx)`（`mount-session.ts`，与 runFullCleanup 并列）：
+复刻其 ②③⑦ + perFrame/rAF 收尾段（tip 定时器、menuHandle.dispose、输入监听解绑、
+removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）、⑥ 由调用方自清、
+⑧⑨（场景能力/纹理缓存——可能共享）。escH 移除由调用方（catch 段）负责。
+
+### 原则速记
+- **区分「build 抛错失败路径」与「加载期打断路径」**：后者（abort/gen 守卫）已正确走
+  `runFullCleanup` 完整拆除；前者保留 overlay 展示错误，只做轻量解绑。
+- 装配顺序：输入监听/菜单/rAF 在 build **前**已注册（bindInputHandlers / mountPreviewRootMenu /
+  startGlobalRenderLoop），故 build 失败时它们必然已存在 → catch 必须逐一解绑。
+
+---
+
+## 7.3 审核疑点需亲自核实（二次审核防误报）
+
+2026-09 二次审核对首轮子代理报告的 6 个 3D 疑点逐一核实，**1/6 是误报**，教训：
+- 疑点「skeleton textureImg（ImageBitmap）未 close」→ **误报**：真实类型是
+  `HTMLImageElement`（skeleton-render.ts `new Image()`），无 `close()` API，浏览器自动 GC。
+  审核方看到变量名 `textureImg` 望文生义为 ImageBitmap，未查类型定义。
+- **核实方法**：报「资源泄漏/缺 close/dispose」类问题时，先查变量真实类型与构造处
+  （grep 构造 + 类型声明），再下结论——名称暗示 ≠ 实际类型。
+- 本次确认属实并修复：build 失败路径泄漏（→ 7.2 runFailedMountCleanup）、skeleton rAF
+  自动 3D 无 isConnected 守卫（组件销毁后仍弹全屏）、texture-loader 轮询无超时
+  （图片 URL 悬挂 → Promise.all 永久 pending，加 15s 超时兜底）。
+
+---
+
 ## 8. 循环依赖破壁模式（注册表反向注入）
 
 ### 问题

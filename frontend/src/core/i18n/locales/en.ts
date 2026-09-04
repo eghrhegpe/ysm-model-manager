@@ -1040,6 +1040,7 @@ export const en: Record<string, string> = {
   "preview.roleMotionSection": "Motion",
   "preview.appendModel": "Append to scene",
   "preview.cooperateCrossType": "Same-scene append only supports the same type; switched to a new model ({from} → {to})",
+  "preview.backendUnavailable": "Backend unavailable; cannot open 3D preview",
   "preview.library": "Library",
   "preview.libraryLoading": "Loading library…",
   "preview.libraryEmpty": "(empty library)",

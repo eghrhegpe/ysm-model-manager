@@ -75,6 +75,38 @@ describe("loadTextures", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("悬挂 URL（complete 永不置位）→ 超时兜底：invalidate + null（P2 修复回归）", async () => {
+    // 原实现：等待循环每 50ms setTimeout 无超时上限——图片 URL 悬挂（服务器不响应）
+    // 时 complete 恒 false，onload/onerror 永不触发 → Promise.all 永久 pending。
+    // 修复后加 15s 超时：到点置 loadError → invalidate + null 占位。
+    class HangingImage extends FakeImage {
+      override set src(_u: string) {
+        // 永不置 complete、永不触发回调——模拟悬挂 URL
+      }
+    }
+    vi.useFakeTimers();
+    vi.stubGlobal("Image", HangingImage);
+    try {
+      let settled = false;
+      const p = loadTextures(["hang.png"]).then((arr) => {
+        settled = true;
+        return arr;
+      });
+      // 推进 50ms 轮询若干次（未到超时不应 settle）
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(settled).toBe(false);
+      // 推进到超时（15s）→ 应 settle 且失败
+      await vi.advanceTimersByTimeAsync(15000);
+      const texArr = await p;
+      expect(settled).toBe(true);
+      expect(texArr[0]).toBeNull();
+      expect(fakeTextureCache.invalidate).toHaveBeenCalledWith("hang.png");
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
 });
 
 // 审核 C1：loadTextures 的配对释放器——引用归还语义（此前 YSM/女仆路径直接 dispose 纹理，

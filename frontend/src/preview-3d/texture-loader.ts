@@ -33,32 +33,51 @@ export async function loadTextures(urls?: string[]): Promise<(THREE.Texture | nu
     });
   });
   // 等待所有图片加载完成（确保 needsUpdate 已触发）
+  // P2 修复（审核）：原等待循环每 50ms setTimeout 无超时上限——图片 URL 悬挂（服务器
+  // 不响应）时 complete 恒 false，onload/onerror 永不触发 → Promise.all 永久 pending，
+  // 3D 预览卡在加载态。加超时：到点视为加载失败（置 loadError 触发 invalidate + null），
+  // 并清理定时器链防会话关闭后空转。
+  const IMG_WAIT_TIMEOUT_MS = 15000;
   await Promise.all(
-    texArr.map((tex, i) =>
-      tex && urls[i]
-        ? new Promise<void>((resolve) => {
-            const img = tex.image;
-            if (
-              img &&
-              typeof (img as HTMLImageElement).complete === "boolean" &&
-              (img as HTMLImageElement).complete
-            ) {
-              resolve();
-              return;
-            }
-            const check = (): void => {
-              if (
-                img &&
-                typeof (img as HTMLImageElement).complete === "boolean" &&
-                (img as HTMLImageElement).complete
-              )
-                resolve();
-              else setTimeout(check, 50);
-            };
-            check();
-          })
-        : Promise.resolve(),
-    ),
+    texArr.map((tex, i) => {
+      if (!tex || !urls[i]) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const img = tex.image;
+        if (
+          img &&
+          typeof (img as HTMLImageElement).complete === "boolean" &&
+          (img as HTMLImageElement).complete
+        ) {
+          resolve();
+          return;
+        }
+        let settled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+        const done = (timedOut: boolean): void => {
+          if (settled) return;
+          settled = true;
+          if (timer) clearTimeout(timer);
+          if (timeoutTimer) clearTimeout(timeoutTimer);
+          if (timedOut) tex.userData.loadError = true; // 超时视同加载失败（走下方 invalidate）
+          resolve();
+        };
+        const check = (): void => {
+          if (
+            img &&
+            typeof (img as HTMLImageElement).complete === "boolean" &&
+            (img as HTMLImageElement).complete
+          ) {
+            done(false);
+            return;
+          }
+          timer = setTimeout(check, 50);
+        };
+        timer = setTimeout(check, 50);
+        // 超时兜底：complete 永不置位（悬挂 URL）→ 终止等待链
+        timeoutTimer = setTimeout(() => done(true), IMG_WAIT_TIMEOUT_MS);
+      });
+    }),
   );
   for (let i = 0; i < texArr.length; i++) {
     if (texArr[i]?.userData.loadError) {

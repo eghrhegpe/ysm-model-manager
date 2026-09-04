@@ -351,6 +351,13 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
       ke.preventDefault();
       (target as HTMLInputElement).blur();
     } else if (ke.key === "Escape") {
+      // P1 修复（审核）：Esc 取消重命名不能直接 _renderTree()——聚焦的 .rename-inp 被
+      // DOM 移除时 Chromium 会同步派发 focusout（冒泡到 container）→ 走下方保存链，
+      // 用户按 Esc 想放弃修改实际却把改动写盘。先置取消标记：DOM 移除同步触发 focusout
+      // 时 input.dataset 仍可读（节点只是从文档断开，对象还在内存），focusout 分支据此跳过保存。
+      const inp = target as HTMLInputElement;
+      inp.dataset.cancelRename = "1";
+      inp.value = ""; // 双保险：即使标记丢失，空值也走下方"放弃重命名"分支
       vm._renderTree();
     }
   });
@@ -358,6 +365,11 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
     if (ctx.disposed) return;
     const target = e.target as HTMLElement | null;
     if (!target?.classList.contains("rename-inp")) return;
+    // P1 修复（审核）：Esc 取消标记——跳过保存链（见上方 Escape 分支注释）
+    if ((target as HTMLInputElement).dataset.cancelRename === "1") {
+      delete (target as HTMLInputElement).dataset.cancelRename;
+      return;
+    }
     const inp = target as HTMLInputElement;
     const newName = inp.value.trim();
     if (!newName) {
@@ -375,6 +387,12 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
     getApp()
       .then(({ RenameFile }) => RenameFile(path, newName))
       .then(async () => {
+        // P2 修复（审核）：内联重命名成功后清空选中态——对齐 bus-handlers 的
+        // dir:recycle / dir:batch-rename / batch:rename 三条链路。被重命名的文件若在
+        // 选中集内，旧路径残留会让底部「已选 N 个文件」滞留、右键 batch 菜单携带
+        // 已不存在的路径（误删风险）。
+        selectState.keys.clear();
+        selectState.lastKey = null;
         await vm._load();
         vm._renderTree();
         bus.emit("stats:refresh");

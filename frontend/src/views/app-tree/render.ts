@@ -161,6 +161,19 @@ interface AtFvState {
   indent: number;
 }
 
+// P2 修复（审核）：atFvFlattenLevel 原为递归（atFvRecurseDir 自调），搜索态 shouldOpen
+// 无条件为 true → 深链 + 搜索命中时递归深度 = 树深，10000 级深链直接 Maximum call stack
+// size exceeded（与 annotateDirNodes 同源问题，该函数已改显式栈，flattenVisible 漏网）。
+// 现改为显式栈迭代（Frame/idx 模式，与 annotateDirNodes 同款）：同层 frame 栈顶推进，
+// 遇展开目录时压入子层 frame——栈顶先出 = 深度优先前序，保原递归顺序且无递归。
+interface AtFvFrame {
+  node: TreeNode;
+  dirPath: string;
+  keys: string[];
+  idx: number;
+  state: AtFvState;
+}
+
 function atFvNormParams(search: string): { query: string; hasSearch: boolean } {
   const hasSearch = !!(search || "").trim();
   const query = (search || "").trim().toLowerCase();
@@ -254,35 +267,6 @@ function atFvMakeFolderRow(
   };
 }
 
-function atFvRecurseDir(sub: TreeNode, full: string, state: AtFvState): TreeRow[] {
-  const childState: AtFvState = {
-    ...state,
-    depth: state.depth + 1,
-    indent: (state.depth + 1) * 16 + 4,
-  };
-  return atFvFlattenLevel(sub, full, childState);
-}
-
-function atFvFlattenLevel(node: TreeNode, dirPath: string, state: AtFvState): TreeRow[] {
-  const rows: TreeRow[] = [];
-  const keys = atFvSortKeys(node, state.sort);
-  keys.forEach((k) => {
-    const v = node[k] as TreeNode;
-    const full = dirPath ? dirPath + "/" + k : k;
-    if (v._e) {
-      const fileRow = atFvMakeFileRow(v._e, full, state);
-      if (fileRow) rows.push(fileRow);
-    } else {
-      const { row, shouldOpen } = atFvMakeFolderRow(k, full, v, state);
-      rows.push(row);
-      if (shouldOpen) {
-        rows.push(...atFvRecurseDir(v, full, state));
-      }
-    }
-  });
-  return rows;
-}
-
 export function flattenVisible(
   node: TreeNode,
   dirPath: string,
@@ -293,7 +277,7 @@ export function flattenVisible(
   mode: RenderMode,
 ): TreeRow[] {
   const { query, hasSearch } = atFvNormParams(search);
-  const state: AtFvState = {
+  const rootState: AtFvState = {
     search,
     query,
     hasSearch,
@@ -303,7 +287,47 @@ export function flattenVisible(
     depth,
     indent: depth * 16 + 4,
   };
-  return atFvFlattenLevel(node, dirPath, state);
+  const rows: TreeRow[] = [];
+  // 显式栈迭代（Frame/idx 模式，与 annotateDirNodes 同款）：
+  // 原递归 atFvFlattenLevel 前序展开——文件夹行先推入，shouldOpen 时深度优先递归子级，
+  // 子级全部完成后再回到同级的下一 key。显式栈用「同层 frame 栈顶推进 + 子层 frame 压栈」
+  // 模拟：遇到展开目录时把子层 frame 压栈，栈顶先处理 = 深度优先前序，保序且无递归。
+  const stack: AtFvFrame[] = [];
+  const makeFrame = (n: TreeNode, dp: string, st: AtFvState): AtFvFrame => ({
+    node: n,
+    dirPath: dp,
+    keys: atFvSortKeys(n, st.sort),
+    idx: 0,
+    state: st,
+  });
+  stack.push(makeFrame(node, dirPath, rootState));
+  while (stack.length) {
+    const frame = stack[stack.length - 1];
+    if (frame.idx >= frame.keys.length) {
+      stack.pop();
+      continue;
+    }
+    const k = frame.keys[frame.idx++];
+    const v = frame.node[k] as TreeNode;
+    const full = frame.dirPath ? frame.dirPath + "/" + k : k;
+    if (v._e) {
+      const fileRow = atFvMakeFileRow(v._e, full, frame.state);
+      if (fileRow) rows.push(fileRow);
+    } else {
+      const { row, shouldOpen } = atFvMakeFolderRow(k, full, v, frame.state);
+      rows.push(row);
+      if (shouldOpen) {
+        const childState: AtFvState = {
+          ...frame.state,
+          depth: frame.state.depth + 1,
+          indent: (frame.state.depth + 1) * 16 + 4,
+        };
+        // 子层压栈：栈顶先出 → 子级深度优先完成后再回本层继续（保原递归顺序）
+        stack.push(makeFrame(v, full, childState));
+      }
+    }
+  }
+  return rows;
 }
 
 // ——— 仅渲染可见行：vs-wrap + 行节点复用（code review #5）———

@@ -53,6 +53,7 @@ import {
   closeOverlay,
   type MountCtx,
   type MpSessionState,
+  runFailedMountCleanup,
   runFullCleanup,
   unloadSessionModel,
 } from "./mount-session.ts";
@@ -851,8 +852,12 @@ export async function mount3D(
     // 失败路径清理（P1 修复，兄弟会话审核发现）
     // adapter.build 抛错时 session.content 为 null，session.content?.dispose() 是 no-op，
     // half-built mesh 留在 scene 中成为幽灵基线——下次 mount 把垃圾快照进 baseline。
-    // 此处不移除 overlay/DOM（fullCleanup 语义），只清场景中的半成品 + dispose 已注册 content。
+    // 此处不移除 overlay/DOM（fullCleanup 语义，overlay 上保留 showLoadFailure 错误提示），
+    // 只清场景中的半成品 + dispose 已注册 content + 解绑输入监听/停 rAF/拆菜单。
+    // 注意：escH 移除须在 runFailedMountCleanup 之前（它不清 escH，调用方负责）——
+    // 与 abort 打断路径（L762 runFullCleanup 内含 escH 移除）的清理分工不同。
     document.removeEventListener("keydown", session.escH);
+    runFailedMountCleanup(ctx);
     if (infra && session.sceneBaseline) {
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));

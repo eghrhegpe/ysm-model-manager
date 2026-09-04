@@ -136,7 +136,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 | `screenshot.ts` | 纯函数 `screenshotFromRenderer`：对任意活跃 renderer/scene/camera 截图（PNG/JPEG base64），临时开 `preserveDrawingBuffer`，空/异常静默返回 null |
 | `screenshot-render.ts` | 离屏多角度渲染器：`renderMultiAngle` 自建 WebGLRenderer（透明背景）+ 四角度循环 + 灯光/纹理/YSM 对象构建 + finally 释放 |
 | `screenshot-lights.ts` | `toScreenshotLights()` 从 `LightCapability` 读三点布光 + PMREM 环境光衰减，缺 cap 回退标准灯 |
-| `texture-loader.ts` | `loadTextures(urls)` 并行从 `textureCache` acquire，polling 等图片 complete，失败 invalidate 缓存 |
+| `texture-loader.ts` | `loadTextures(urls)` 并行从 `textureCache` acquire，polling 等图片 complete（P2 修复 2026-09：轮询加 15s 超时兜底，悬挂 URL 不再永久 pending；超时视同失败 invalidate），失败 invalidate 缓存 |
 | `texture-cache.ts` | 纹理缓存池：引用计数 + LRU 淘汰零引用条目（上限 200），`disposeAll` 由 `mount-preview-core fullCleanup` 统一释放 |
 | `decoder/cache.ts` | 模型预览数据持久缓存：模块级 Map，FIFO 上限 50，覆盖/淘汰走 `onEvict` 回调释放 blob URL（覆盖时新旧 blob URL 差集判定，防误 revoke） |
 | `skeleton-render.ts` | 截图保存入口：`saveScreenshot` 六角度分支 + 活跃渲染器 vs 离屏重建两条路径 |

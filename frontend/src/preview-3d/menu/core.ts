@@ -6,6 +6,7 @@
 //   - 组内多个项 → home 到组根视图（项列表），点击项 navigate 下钻面板
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
+import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx, PreviewMenuCtx } from "./node-types.ts";
 import { disposeEnvSubscriptions, buildEnvSchema } from "./env.ts";
@@ -57,6 +58,7 @@ export interface PreviewMenuHandle {
 // P1 批次6：core 装配层内联 cssText → 集中类（cm- 前缀本文件私有，ensureCoreStyles
 // 幂等注入——buildPreviewMenuShell + makePreviewMenuRow 双入口调用覆盖 popup/行/错误行）
 let _coreStylesInjected = false;
+onOverlayStyleTargetReset(() => { _coreStylesInjected = false; }); // ADR-175 M1:目标切换重注入
 function ensureCoreStyles(): void {
   if (_coreStylesInjected) return;
   const style = document.createElement("style");
@@ -69,7 +71,7 @@ function ensureCoreStyles(): void {
 .cm-row-chev { margin-left:auto;font-size:13px;font-weight:700;opacity:0.4;user-select:none; }
 .cm-error-note { padding:8px 10px;color:#ff7b7b;font-size:12px; }
 `;
-  document.head.appendChild(style);
+  overlayStyleRoot().appendChild(style);
   _coreStylesInjected = true;
 }
 
@@ -80,7 +82,7 @@ interface PreviewHandleShell {
 
 /** [子函数 1/9] 装配底部 dock + SlideMenu popup/menu 外壳，返回 show/hide 句柄 */
 function buildPreviewMenuShell(
-  overlay: HTMLElement,
+  overlay: HTMLElement | ShadowRoot,
   ctx: PreviewMenuCtx,
 ): {
   dock: HTMLElement;
@@ -472,7 +474,8 @@ function validateAdapterItemIds(items: PreviewMenuNode[]): void {
 // mountPreviewRootMenu — 主函数
 // ===================================================================
 
-export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx): PreviewMenuHandle {
+// ADR-175 M1：overlay 参数放宽为 HTMLElement | ShadowRoot——内容实体已迁入 host.shadowRoot
+export function mountPreviewRootMenu(overlay: HTMLElement | ShadowRoot, ctx: PreviewMenuCtx): PreviewMenuHandle {
   // [doc:adr-126-p4-d] 会话模式上浮状态层：dock 级 visibleWhen 谓词经 s["ui.mode"] 读取
   // （旧 hideInSelfMode 语义）。每次 mount 覆盖写，防会话/测试残留（dispose 不复位——
   // 下次 mount 必覆盖，间隙无谓词求值路径）

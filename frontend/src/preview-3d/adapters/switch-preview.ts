@@ -45,7 +45,8 @@ export interface SwitchContext {
   allContent: PreviewScene[];
   loadingEl: HTMLElement;
   viewContainer: HTMLElement;
-  overlay: HTMLElement;
+  /** ADR-175 M1：shadow 化后为 host.shadowRoot（或降级 host 本体） */
+  overlay: HTMLElement | ShadowRoot;
   menuHandle: PreviewMenuHandle;
   adapter: { build(ctx: PreviewBuildCtx, path: string): Promise<PreviewScene> };
   camBridge: CameraControlBridge | undefined;

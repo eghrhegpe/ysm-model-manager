@@ -19,7 +19,7 @@ import { renderLoadingState } from "./preview-loading.ts";
 import type { VoxelData } from "../../parsers/voxel-parse.ts";
 
 // 提取魔法数值常量（体素尺寸 / 默认色 / chunk 维 / 截断上限）
-/** litematic 截断警告条样式(P1 批次11:cssText 抽类;插 ctx.overlay——3D 预览 overlay light DOM,head 注入适用) */
+/** litematic 截断警告条样式(P1 批次11:cssText 抽类;插 ctx.overlay——ADR-175 M1 后为 overlay shadow root,ensureMdliStyles 经桥注入同域) */
 const mdliCss = `
 .mdli-trunc-warn { padding:6px 12px; background:rgba(207,83,0,0.3); color:#ffa64d; font-size:12px; text-align:center; flex-shrink:0; }
 `;

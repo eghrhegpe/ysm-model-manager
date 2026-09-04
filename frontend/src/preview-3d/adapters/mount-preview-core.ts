@@ -9,8 +9,7 @@
 // 本文件将其收敛为单一事实来源。适配器契约对齐 YSM 既有的 Model3DHandleX，
 // 使三套渲染器最终可经注册表统一派发（P3-E）。
 //
-// ┌─ 快速跳转 ───────────────────────────────────────────────────────────────────┐
-// │  §1  常量 + 状态变量      → L176   TIP_AUTO_DISMISS_MS / PER_FRAME_WARN_*        │
+// ┌─ 快速跳转 ───────────────────────────────────────────────────────────────────┐// │  §1  常量 + 状态变量      → L176   TIP_AUTO_DISMISS_MS / PER_FRAME_WARN_*        │
 // │  §2  公开 API             → L206   invalidatePreview / cleanupPreview / switch  │
 // │  §3  switchPreview        → L245   会话内切换模型（复用外壳）                   │
 // │  §4  mount3D 入口         → L285   主挂载函数（~650 行；§5 拆分后为编排器形态）    │
@@ -28,7 +27,9 @@ import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { installUiComponentsStyles } from "../../ui/ui-components-styles.ts";
+import { installUiComponentsStyles, uiComponentsStyleSheet } from "../../ui/ui-components-styles.ts";
+import { slideMenuStyleSheet } from "../../ui/ui-slide-menu-styles.ts";
+import { setOverlayStyleTarget, overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
 import { logWarn } from "../../utils/core/log.ts";
 import {
@@ -89,7 +90,8 @@ export interface PreviewBuildCtx {
   controls?: OrbitControls;
   viewContainer: HTMLElement;
   loadingEl: HTMLElement;
-  overlay: HTMLElement;
+  /** ADR-175 M1：overlay 内容实体所在作用域（shadowRoot；降级 light DOM 时为 host 本体） */
+  overlay: HTMLElement | ShadowRoot;
   /** shared 模式下核心创建的 renderer（适配器射线拾取 / 截图 / 内容挂载用；self 模式 undefined） */
   renderer?: THREE.WebGLRenderer;
   /** shared 模式下核心的相机控制桥（旋转/速度/重置，操作核心内部状态；self 模式 undefined） */
@@ -179,20 +181,24 @@ export interface PreviewHandle {
 // DRAG_ROTATE_SENSITIVITY 拖拽旋转 / TIP_AUTO_DISMISS_MS 提示自动消失）
 // camSpeed 默认值已由 keymap.ts loadTdCamSpeed()（默认 20）提供，会话初始化时读取偏好。
 // §1.5 P1 批次9:overlay 链静态 cssText 抽类集中注入(mount3D 内 ensureMpcStyles 幂等调用)
+// ADR-175 M1:overlay shadow host 化——内容迁入 shadowRoot 后 head 注入穿不透边界,
+// 首条规则改 `:host` 承载宿主自身布局(降级 light DOM 路径由 .mpc-overlay 选择器兜底);
+// 注入目标经 overlay-style-bridge 迁移(shadow root / 无 overlay 时 head 兜底)。
 const mpcCss = `
-.mpc-overlay { position:fixed; inset:0; z-index:var(--z-fullscreen); background:#11111b; display:flex; flex-direction:column; }
+:host, .mpc-overlay { position:fixed; inset:0; z-index:var(--z-fullscreen); background:#11111b; display:flex; flex-direction:column; }
 .mpc-body { flex:1; display:flex; position:relative; overflow:hidden; }
 .preview-view-container.mpc-view { flex:1; position:relative; overflow:hidden; }
 .mpc-loading { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:14px; gap:12px; z-index:10; }
 .mpc-tip { padding:5px 12px; background:#1b1c24; border-bottom:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.7); font-size:11px; text-align:center; flex-shrink:0; }
 `;
 let _mpcStylesInjected = false;
+onOverlayStyleTargetReset(() => { _mpcStylesInjected = false; });
 function ensureMpcStyles(): void {
   if (_mpcStylesInjected) return;
   _mpcStylesInjected = true;
   const el = document.createElement("style");
   el.textContent = mpcCss;
-  document.head.appendChild(el);
+  overlayStyleRoot().appendChild(el);
 }
 
 const TIP_AUTO_DISMISS_MS = 6000;
@@ -243,6 +249,9 @@ export function cleanupPreview(): void {
   _singletonOverlay = null;
   _singletonBody = null;
   _singletonViewContainer = null;
+  // ADR-175 M1：overlay 单例已拆除——注入目标还原 head 兜底并复位全部 ensure* 旗标
+  //（下次 mount3D 建新 shadow root 时会重注入）
+  setOverlayStyleTarget(null);
   resetSceneInfra();
 }
 
@@ -251,6 +260,7 @@ export function _resetSingletons(): void {
   _singletonOverlay = null;
   _singletonBody = null;
   _singletonViewContainer = null;
+  setOverlayStyleTarget(null); // ADR-175 M1：同 cleanupPreview——旗标复位防跨用例串目标
   resetSceneInfra();
   _globalAnimId = 0;
   _globalPerFrames.length = 0;
@@ -364,25 +374,50 @@ export async function mount3D(
   // 单例外壳：首次创建，后续 mount3D 复用同一 DOM（避免重建导致黑屏）
   let overlay = _singletonOverlay;
   let body = _singletonBody;
+  // ADR-175 M1：overlay = shadow host（挂 document.body 保留 id/class/aria，app-tree
+  // getElementById 守卫零改动）；全部内容（tip/body/viewContainer/菜单链）迁入 shadowRoot。
+  // attachShadow 缺失（behavior.test fake document 等环境）降级 light DOM——root 即 overlay 本体，
+  // 样式注入走 head 兜底，与迁移前行为一致。
+  // 复用路径（单例存活）从 host 取回既有 shadowRoot，不走重建分支。
+  let root: HTMLElement | ShadowRoot;
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.id = PREVIEW_OVERLAY_ID;
     overlay.className = "mpc-overlay";
     // 无障碍：3D 全屏预览是模态体验——告诉屏幕阅读器这是对话框、独占焦点、名称用
     // 已有 preview.title3d i18n key（与 FAB aria-label 同源，3 语言包已同步）
+    // D3：aria 挂 host（host 在 document 树，语义对屏幕阅读器可见）
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.setAttribute("aria-label", t("preview.title3d"));
     document.body.appendChild(overlay);
+    const shadow = typeof overlay.attachShadow === "function" ? overlay.attachShadow({ mode: "open" }) : null;
+    root = shadow ?? overlay;
+    if (shadow) {
+      // 共享样式模块走 adoptedStyleSheets（与全站 shadow 组件同形态；head 注入由
+      // installUiComponentsStyles 兜底路径承担，不冲突）。失败仅影响样式，不阻断挂载。
+      try {
+        shadow.adoptedStyleSheets = [uiComponentsStyleSheet, slideMenuStyleSheet].filter(
+          (s): s is CSSStyleSheet => s != null,
+        );
+      } catch (err) {
+        logWarn("preview-3d", `adoptedStyleSheets 安装失败（降级 head 注入）: ${String(err)}`);
+      }
+    }
+    // 注入目标切到本 shadow root（或降级的 overlay 本体）——全部 ensure* 旗标复位重注入
+    setOverlayStyleTarget(root);
+    ensureMpcStyles(); // 首建即注入 mpc 规则（:host 布局在 root 内生效）
     body = document.createElement("div");
     body.className = "mpc-body";
-    overlay.appendChild(body);
+    root.appendChild(body);
     _singletonOverlay = overlay;
     _singletonBody = body;
+  } else {
+    // 复用路径：从 host 取回既有 shadowRoot（降级环境无 shadowRoot → host 本体）
+    root = overlay.shadowRoot ?? overlay;
   }
-  // 焦点陷阱：3D overlay 整链当前为 light DOM（createSlideMenu 无 attachShadow），
-  // trapFocusAcrossShadow 的跨 shadow 下钻是防御性兜底——将来 overlay 内挂入带
-  // 可聚焦子树的 shadow 组件时 Tab 循环依然覆盖得到
+  // 焦点陷阱：ADR-175 M1 后 overlay 内容实体在 host.shadowRoot 内，
+  // trapFocusAcrossShadow 的跨 shadow 下钻从防御性兜底转正为实际路径（D3）
   if (!focusTrapCleanup) {
     focusTrapCleanup = trapFocusAcrossShadow(overlay);
   }
@@ -479,7 +514,7 @@ export async function mount3D(
         );
       }
     };
-  const menuHandle = mountPreviewRootMenu(overlay, menuCtx);
+  const menuHandle = mountPreviewRootMenu(root, menuCtx);
   // ADR-093 T5：注册表菜单 sink（selectModel 时按活跃模型换菜单项）
   sceneRegistry.setMenuSink({ setAdapterItems: (items) => menuHandle.setAdapterItems(items) });
 
@@ -652,7 +687,7 @@ export async function mount3D(
   const tip = document.createElement("div");
   tip.className = "mpc-tip";
   tip.textContent = "WASD 移动 · 空格/Shift 上下 · 拖动旋转 · 滚轮缩放 · ESC 关闭";
-  overlay.insertBefore(tip, body);
+  root.insertBefore(tip, body);
   // 保存 timeoutId 供 cleanup 时 clearTimeout（收敛进 session.tipTimeoutId）
   session.tipTimeoutId = setTimeout(() => {
     if (tip.parentNode) tip.remove();
@@ -753,7 +788,7 @@ export async function mount3D(
     const buildCtx: PreviewBuildCtx = {
       viewContainer,
       loadingEl,
-      overlay,
+      overlay: root, // ADR-175 M1：适配器内容插入目标 = root（shadow 内），非 host
       menu: menuHandle,
       // 延迟闭包：build 时 _handle 尚未赋值，菜单点击（build 之后）时已就绪；
       // 无活跃会话时 no-op（与 switchPreview 同口径）

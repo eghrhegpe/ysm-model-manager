@@ -6,6 +6,7 @@
 //  - visibleWhen → 条件守卫（返回 false 不渲染）
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
+import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { tr } from "../../core/i18n/tr.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
@@ -20,6 +21,7 @@ import { renderCapControls } from "./cap-controls.ts";
  * 把内联 style.cssText 抽成类，避免 renderMenu 分支里重复硬编码样式串。
  */
 let _menuStylesInjected = false;
+onOverlayStyleTargetReset(() => { _menuStylesInjected = false; }); // ADR-175 M1:目标切换重注入
 function ensureMenuStyles(): void {
   if (_menuStylesInjected) return;
   const style = document.createElement("style");
@@ -140,7 +142,7 @@ function ensureMenuStyles(): void {
   accent-color: var(--accent, #7c83ff);
 }
 `;
-  document.head.appendChild(style);
+  overlayStyleRoot().appendChild(style);
   _menuStylesInjected = true;
 }
 

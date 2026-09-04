@@ -347,10 +347,13 @@ function setSliceMode(nodes: PreviewMenuNode[], mode: string): void {
   m.control!.onChange!(mode);
 }
 
-/** 最近创建的 overlay（createLitematic3D append 到 body） */
-function lastOverlay(): HTMLElement {
+/** 最近创建的 overlay（createLitematic3D append 到 body）。
+ * ADR-175 M1：overlay 为 shadow host，内容实体在 shadowRoot——返回查询作用域
+ * （shadowRoot 优先；降级 light DOM 时即 host 本体），调用方 querySelector 语义不变。 */
+function lastOverlay(): HTMLElement | ShadowRoot {
   const kids = document.body.children;
-  return kids[kids.length - 1] as HTMLElement;
+  const host = kids[kids.length - 1] as HTMLElement;
+  return (host.shadowRoot ?? host) as HTMLElement | ShadowRoot;
 }
 
 function voxelFn(data: unknown): (p: string) => Promise<unknown> {
@@ -716,8 +719,10 @@ describe("appendLitematicPreview — 同台追加入口对称 mmd/vrm", () => {
 /** 直接移除 overlay（避免污染后续用例；内部状态由 afterEach cleanupVoxel3D 清理）。
  * 注意：不能靠「点第一个 button」关闭——ADR-076 v2 后第一个 button 是 ⚙️ 根菜单按钮，
  * close 收进菜单项，直接 removeChild 更稳。 */
-function unmountOverlay(overlay: HTMLElement): void {
-  if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+/** ADR-175 M1：lastOverlay() 返回查询作用域（shadowRoot 优先），清理仍作用于 host 本体 */
+function unmountOverlay(scope: HTMLElement | ShadowRoot): void {
+  const host = (scope as ShadowRoot).host ?? scope;
+  if (host.parentNode) host.parentNode.removeChild(host);
 }
 
 // ===== ADR-132 遗留 1：蓝图/litematic zip/7z 容器内多模型装配 =====

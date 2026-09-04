@@ -3,6 +3,7 @@
 // 挂载点：3D overlay 挂 document.body（light DOM），全局 CSS 经 ensureFabStyles 注入 head 一次。
 // 触发 FAB 在预览面板 Shadow DOM 内（.preview-fab 见 css.ts，因 Shadow DOM 隔离需本地样式）。
 import { attachTooltip } from "./tooltip.ts";
+import { overlayStyleRoot, onOverlayStyleTargetReset } from "../../preview-3d/overlay-style-bridge.ts";
 
 export const YSW_FAB_CSS = `
 /* ===== 3D 全屏 overlay 根容器（#ysm-overlay-3d，light DOM） ===== */
@@ -72,19 +73,23 @@ export const YSW_FAB_CSS = `
 `;
 
 let _fabInjected = false;
-/** 幂等注入 overlay 全局样式到 head（overlay 挂 body，light DOM 需全局 CSS 生效） */
+onOverlayStyleTargetReset(() => { _fabInjected = false; }); // ADR-175 M1:目标切换重注入
+/** 幂等注入 overlay 全局样式（ADR-175 M1：目标经桥——overlay shadow root，无 overlay 时 head 兜底） */
 export function ensureFabStyles(): void {
   if (_fabInjected) return;
   if (typeof document === "undefined") return;
-  const ex = document.getElementById("ysw-fab-styles");
-  if (ex) {
-    _fabInjected = true;
-    return;
+  // head 兜底路径保留 id 去重；shadow root 目标每次 overlay 重建都需重注入，不做 document 级去重
+  if (overlayStyleRoot() === document.head) {
+    const ex = document.getElementById("ysw-fab-styles");
+    if (ex) {
+      _fabInjected = true;
+      return;
+    }
   }
   const style = document.createElement("style");
   style.id = "ysw-fab-styles";
   style.textContent = YSW_FAB_CSS;
-  document.head.appendChild(style);
+  overlayStyleRoot().appendChild(style);
   _fabInjected = true;
 }
 

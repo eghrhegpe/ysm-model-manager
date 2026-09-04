@@ -5,6 +5,7 @@
 // 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载模型，
 // 少用但重要）；底部复用 fillSwitch 加载入口（siblings + 类型 tab）。
 
+import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
@@ -38,6 +39,7 @@ export function roleBaseName(e: ModelEntry): string {
 // P1 批次3：角色面板内联 cssText → 集中类（fr- 前缀本文件私有，ensureRolesStyles
 // 幂等注入——modelDetailView/motionDetailView/fillRoles 三个入口各调一次，覆盖全部渲染路径）
 let _rolesStylesInjected = false;
+onOverlayStyleTargetReset(() => { _rolesStylesInjected = false; }); // ADR-175 M1:目标切换重注入
 function ensureRolesStyles(): void {
   if (_rolesStylesInjected) return;
   const style = document.createElement("style");
@@ -79,7 +81,7 @@ function ensureRolesStyles(): void {
 .fr-section-title { padding: 6px 10px 2px; color: rgba(255,255,255,0.5); font-size: 11px; }
 .fr-comp-mark { width: 14px; flex-shrink: 0; text-align: center; }
 `;
-  document.head.appendChild(style);
+  overlayStyleRoot().appendChild(style);
   _rolesStylesInjected = true;
 }
 

@@ -1,4 +1,5 @@
 // ===== 环境菜单声明式 Schema（ADR-076 + ADR-106）=====
+import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import { sceneCapabilityRegistry } from '../caps/scene-capability-registry.ts';
 import type { SceneCapability, MenuControlDef } from '../caps/scene-capability.ts';
 import type { SkyCapability } from '../caps/sky-capability.ts';
@@ -106,6 +107,7 @@ function applyPreset(ctx: PreviewMenuCtx, presetId: Exclude<EnvPresetId, "custom
 // P1 批次4：环境面板内联 cssText → 集中类（ev- 前缀本文件私有，ensureEnvStyles
 // 幂等注入——renderEnvLevel 唯一入口调用，覆盖预设栏/摘要行/分区入口全部渲染路径）
 let _envStylesInjected = false;
+onOverlayStyleTargetReset(() => { _envStylesInjected = false; }); // ADR-175 M1:目标切换重注入
 function ensureEnvStyles(): void {
   if (_envStylesInjected) return;
   const style = document.createElement("style");
@@ -135,7 +137,7 @@ function ensureEnvStyles(): void {
   user-select: none; padding: 0 4px; pointer-events: none;
 }
 `;
-  document.head.appendChild(style);
+  overlayStyleRoot().appendChild(style);
   _envStylesInjected = true;
 }
 

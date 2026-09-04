@@ -1,6 +1,7 @@
 // preview-menu-cap-controls.ts — 能力控件通用渲染器（从 preview-menu.ts 拆出避免 env 循环依赖）。
 // 独立模块只依赖 ui-header-toggle / i18n / MenuControlDef 类型，供 preview-menu.ts 与
 // preview-menu-env.ts 共用。
+import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
 import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
@@ -15,6 +16,7 @@ const tr = (key: string, fallback: string): string => {
 };
 
 let _capStylesInjected = false;
+onOverlayStyleTargetReset(() => { _capStylesInjected = false; }); // ADR-175 M1:目标切换重注入
 /** P1 抽类迁移(2026-09):cap-controls 控件样式集中注入(幂等,renderCapControls 入口调用,
  *  覆盖 env.ts 直调 ×3 与 render.ts:543 委托的全部路径,不依赖 renderMenu 曾运行)。
  *  .cap-section-header/.cap-section-arrow 与 render.ts ensureMenuStyles 同值镜像(双源,
@@ -73,7 +75,7 @@ function ensureCapStyles(): void {
 .cc-btn-primary { border:0;background:var(--accent,#7c83ff);color:#fff; }
 .cc-btn-ghost { border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85); }
 `;
-  document.head.appendChild(style);
+  overlayStyleRoot().appendChild(style);
   _capStylesInjected = true;
 }
 

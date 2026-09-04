@@ -114,7 +114,6 @@ auto_fields:
     - InputHandlers
     - InputOptions
     - invalidatePreview
-    - isEditableTarget
     - isLikelyTga
     - Ktx2EncodeRequest
     - Ktx2EncodeResponse
@@ -320,6 +319,7 @@ quick_risk_lines:
   - switchTo 仅同类型；跨类型用 switchExternal
   - 适配器项经 setAdapterItems 注入，禁止内联
   - 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update()
+  - 截图入口走 shotNodes 菜单闭包，禁止往 PreviewHandle 透传 screenshot（2026-09-04 死透传已删）
 pitfalls:
   - 「frontend/src/preview-3d/menu/core.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
   - 「skeleton.ts」异步回调写入已卸载 DOM → 每个 await 后检查 container.isConnected

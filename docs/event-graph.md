@@ -174,7 +174,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 95 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 96 |
 
 ### `instance:export-list`
 
@@ -186,7 +186,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 16 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 17 |
 
 ### `lang:changed`
 
@@ -318,7 +318,7 @@
 |------|------|----|
 | refreshUI | `frontend/src/core/context-menu-shared.ts` | 21 |
 | registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 67 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 144 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 145 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 79 |
 | runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 203 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 263 |
@@ -400,12 +400,12 @@
 | resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 90 |
 | registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 26 |
 | registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 43 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 33 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 72 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 82 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 119 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 135 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 145 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 34 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 73 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 83 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 120 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 136 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 146 |
 | requireMcRoot | `frontend/src/core/handlers/require-mcroot.ts` | 19 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 42 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 80 |
@@ -425,9 +425,9 @@
 | cmReBindRowClick | `frontend/src/features/community/events.ts` | 276 |
 | cmReBindRowClick | `frontend/src/features/community/events.ts` | 310 |
 | dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename.ts` | 101 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 428 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 442 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 461 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 430 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 444 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 463 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 43 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 61 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 80 |

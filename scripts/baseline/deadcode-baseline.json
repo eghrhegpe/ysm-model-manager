@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-04T15:33:42.125Z",
+  "generated": "2026-09-04T19:07:12.980Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -21,10 +21,7 @@
     "src/preview-3d/adapters/mmd-pmx-parser.worker.ts|types|PmxParseRequest",
     "src/preview-3d/adapters/mmd-texture-decoder.ts|types|TexDecodeConfig",
     "src/preview-3d/adapters/mount-preview-core.ts|types|BaseScene",
-    "src/preview-3d/adapters/mount-preview-core.ts|types|CameraControlScene",
-    "src/preview-3d/adapters/mount-preview-core.ts|types|GroupedScene",
     "src/preview-3d/adapters/mount-preview-core.ts|types|PoseScene",
-    "src/preview-3d/adapters/vrm-adapter.ts|unlisted|@pixiv/three-vrm-core",
     "src/preview-3d/adapters/vrm-bone-ui.ts|types|VrmBonePanelCtx",
     "src/preview-3d/adapters/worker-bridge.ts|types|WorkerErrorStrategy",
     "src/preview-3d/adapters/ysm-adapter.ts|types|YsmPreloadedModel",
@@ -140,7 +137,6 @@
     "src/preview-3d/menu/core.test.ts#src/preview-3d/menu/core.test.ts",
     "src/preview-3d/menu/env.test.ts#src/preview-3d/menu/env.test.ts",
     "src/preview-3d/menu/items.test.ts#src/preview-3d/menu/items.test.ts",
-    "src/preview-3d/mmd-materials.ts#src/preview-3d/vrm-materials.ts",
     "src/preview-3d/model3d-spec.test.ts#src/preview-3d/model3d-spec.test.ts",
     "src/preview-3d/model3d.test.ts#src/views/app-preview/litematic-3d.test.ts",
     "src/preview-3d/perception/autodance.test.ts#src/preview-3d/perception/gaze.test.ts",
@@ -172,6 +168,7 @@
     "src/views/app-sync-manager/index.test.ts#src/views/app-sync-manager/index.test.ts",
     "src/views/app-tree/bus-handlers.ts#src/views/app-tree/bus-handlers.ts",
     "src/views/app-tree/events.test.ts#src/views/app-tree/events.test.ts",
+    "src/views/app-tree/index.extra.test.ts#src/views/app-tree/index.extra.test.ts",
     "src/views/app-tree/row-tpl-list.ts#src/views/app-tree/row-tpl.ts",
     "src/views/app-tree/toolbar-events.test.ts#src/views/app-tree/toolbar-events.test.ts",
     "src/wasm/ysm-parser.ts#src/wasm/ysm-worker-loader.ts"

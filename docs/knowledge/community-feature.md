@@ -50,7 +50,6 @@ auto_fields:
     - resume
     - showProgress
     - showRepoModels
-    - SITE_GROUP_ORDER
     - STATE
     - subscribe
     - tryFetchModels

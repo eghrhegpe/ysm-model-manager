@@ -46,7 +46,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| eventArr | `frontend/src/features/community/download-queue-store.ts` | 380 |
+| eventArr | `frontend/src/features/community/download-queue-store.ts` | 382 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -82,7 +82,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 189 |
+| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 205 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -114,7 +114,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerContextMenus | `frontend/src/core/context-menus.ts` | 86 |
+| registerContextMenus | `frontend/src/core/context-menus.ts` | 90 |
 
 ### `dir:batch-rename`
 
@@ -133,7 +133,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 50 |
+| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 56 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -145,7 +145,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 51 |
+| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 57 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -157,7 +157,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 11 |
+| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 12 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -169,24 +169,24 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 182 |
+| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 198 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 97 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 95 |
 
 ### `instance:export-list`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 172 |
+| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 188 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 15 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 16 |
 
 ### `lang:changed`
 
@@ -207,7 +207,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerContextMenus | `frontend/src/core/context-menus.ts` | 87 |
+| registerContextMenus | `frontend/src/core/context-menus.ts` | 91 |
 | cmReBindContextMenu | `frontend/src/features/community/events.ts` | 198 |
 
 **订阅方（on）：**
@@ -221,7 +221,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | handleContainerClick | `frontend/src/features/oldest-models.ts` | 57 |
-| onRecycleListClick | `frontend/src/features/recycle-bin.ts` | 186 |
+| onRecycleListClick | `frontend/src/features/recycle-bin.ts` | 187 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 217 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 273 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
@@ -316,18 +316,18 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| refreshUI | `frontend/src/core/context-menu-shared.ts` | 20 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 66 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 149 |
-| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 86 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 215 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 258 |
+| refreshUI | `frontend/src/core/context-menu-shared.ts` | 21 |
+| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 67 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 144 |
+| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 79 |
+| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 203 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 261 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 33 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 186 |
+| (顶层) | `frontend/src/features/import-executor.ts` | 38 |
+| (顶层) | `frontend/src/features/import-executor.ts` | 197 |
 | handleInstanceDrop | `frontend/src/features/pack-dnd.ts` | 159 |
-| setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 110 |
-| onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 170 |
+| setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 106 |
+| onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 171 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 363 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
@@ -353,8 +353,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 106 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 142 |
+| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 99 |
+| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 135 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -372,7 +372,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/core/handlers/sync.ts` | 268 |
+| registerSync | `frontend/src/core/handlers/sync.ts` | 248 |
 
 ### `sync:toggle:status`
 
@@ -386,7 +386,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/core/handlers/sync.ts` | 274 |
+| registerSync | `frontend/src/core/handlers/sync.ts` | 250 |
 
 ### `toast:show`
 
@@ -395,30 +395,30 @@
 |------|------|----|
 | runStartupSteps | `frontend/src/app-modules.ts` | 67 |
 | (顶层) | `frontend/src/app-modules.ts` | 125 |
-| toast | `frontend/src/core/context-menu-shared.ts` | 25 |
-| resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 68 |
-| resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 78 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 25 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 42 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 35 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 74 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 84 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 124 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 140 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 150 |
-| requireMcRoot | `frontend/src/core/handlers/require-mcroot.ts` | 18 |
-| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 41 |
-| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 87 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 118 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 135 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 165 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 174 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 208 |
-| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 223 |
-| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 248 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 247 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 272 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 298 |
+| toast | `frontend/src/core/context-menu-shared.ts` | 30 |
+| resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 80 |
+| resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 90 |
+| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 26 |
+| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 43 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 33 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 72 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 82 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 119 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 135 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 145 |
+| requireMcRoot | `frontend/src/core/handlers/require-mcroot.ts` | 19 |
+| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 42 |
+| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 80 |
+| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 111 |
+| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 128 |
+| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 153 |
+| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 162 |
+| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 196 |
+| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 211 |
+| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 229 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 250 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 278 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 304 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 143 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 155 |
 | cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 224 |
@@ -434,11 +434,11 @@
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 86 |
 | handleTreeDrop | `frontend/src/features/import-dnd.ts` | 102 |
 | bindTreeDnD | `frontend/src/features/import-dnd.ts` | 188 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 28 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 177 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 190 |
+| (顶层) | `frontend/src/features/import-executor.ts` | 33 |
+| (顶层) | `frontend/src/features/import-executor.ts` | 188 |
+| (顶层) | `frontend/src/features/import-executor.ts` | 201 |
 | (顶层) | `frontend/src/features/pack-dnd.ts` | 38 |
-| initRecycleBin | `frontend/src/features/recycle-bin.ts` | 244 |
+| initRecycleBin | `frontend/src/features/recycle-bin.ts` | 267 |
 | promptUpdate | `frontend/src/features/version-updater.ts` | 149 |
 | promptUpdate | `frontend/src/features/version-updater.ts` | 158 |
 | checkUpdateSilent | `frontend/src/features/version-updater.ts` | 184 |
@@ -446,7 +446,7 @@
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 216 |
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 250 |
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 260 |
-| mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 515 |
+| mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 518 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 38 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 34 |
@@ -602,17 +602,17 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| refreshUI | `frontend/src/core/context-menu-shared.ts` | 19 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 65 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 130 |
-| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 255 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 257 |
+| refreshUI | `frontend/src/core/context-menu-shared.ts` | 20 |
+| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 66 |
+| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 123 |
+| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 236 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 260 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 34 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 185 |
+| (顶层) | `frontend/src/features/import-executor.ts` | 39 |
+| (顶层) | `frontend/src/features/import-executor.ts` | 196 |
 | handleInstanceDrop | `frontend/src/features/pack-dnd.ts` | 160 |
-| setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 111 |
-| onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 171 |
+| setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 107 |
+| onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 172 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 364 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 311 |
 

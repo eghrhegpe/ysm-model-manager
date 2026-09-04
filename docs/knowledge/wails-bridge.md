@@ -13,26 +13,17 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AppBindings
-    - arrayBufferToBase64
     - browserAdapter
     - detectContainerType
     - ExtractResult
     - extractZip
     - getAndroidBridge
     - getApp
-    - getFsaAuthState
-    - importWebFiles
     - isWebEntryMode
-    - MAX_IMPORT_BYTES
     - parseZipCentralDir
     - readDeclaredBackend
-    - reauthorizeFsaRoot
-    - rescanFsaRoot
     - resolveWebMode
-    - selectLocalRepo
     - WailsAndroidBridge
-    - WEB_ROOT
-    - WebUnsupportedError
     - ZipEntryMeta
     - ZipType
   tests:

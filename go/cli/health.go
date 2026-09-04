@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/repoaudit"
 )
 
@@ -113,15 +114,15 @@ func printHealthReport(r healthReportJSON) {
 		r.Completeness.Checked, r.Completeness.Valid, r.Completeness.Invalid, r.Completeness.Percentage)
 
 	fmt.Printf("💾 缓存: %d 个文件 · %s%s\n",
-		r.Cache.CacheFiles, formatSize(r.Cache.CacheSize), cacheHitSuffix(r.Cache.HitRate))
+		r.Cache.CacheFiles, fsutil.FormatSize(r.Cache.CacheSize), cacheHitSuffix(r.Cache.HitRate))
 
-	fmt.Printf("📦 资源: %d 个文件 · %s · 类型分布 ", r.Resources.TotalFiles, formatSize(r.Resources.TotalSize))
+	fmt.Printf("📦 资源: %d 个文件 · %s · 类型分布 ", r.Resources.TotalFiles, fsutil.FormatSize(r.Resources.TotalSize))
 	for t, c := range r.Resources.ByType {
 		fmt.Printf("%s:%d ", t, c)
 	}
 	fmt.Println()
 
-	fmt.Printf("🗑️  去重: %d 组重复 · 多余 %d 个文件 · 可回收 %s\n", r.Dedup.Groups, r.Dedup.ExtraFiles, formatSize(r.Dedup.Reclaim))
+	fmt.Printf("🗑️  去重: %d 组重复 · 多余 %d 个文件 · 可回收 %s\n", r.Dedup.Groups, r.Dedup.ExtraFiles, fsutil.FormatSize(r.Dedup.Reclaim))
 
 	if r.Bench != nil {
 		fmt.Printf("⚡ 性能基线: %s · %.1fms · 瓶颈 %s\n", r.Bench.Model, r.Bench.TotalMs, r.Bench.Bottleneck)

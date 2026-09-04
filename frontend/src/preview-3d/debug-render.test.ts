@@ -11,7 +11,7 @@ import { rebuildDebug } from "./debug-render.ts";
 type DebugState = { debugGroup: THREE.Group | null; debugMode: "normal" | "pivot" | "bone" };
 
 /** 场景 + rootGroup + boneGroupMap（骨骼组挂 rootGroup 下，updateMatrixWorld 后取世界坐标） */
-function makeRig(positions: Record<string, [number, number, number]>) {
+function makeDebugScene(positions: Record<string, [number, number, number]>) {
   const scene = new THREE.Scene();
   const rootGroup = new THREE.Group();
   scene.add(rootGroup);
@@ -32,7 +32,7 @@ const SPEC_BONES = [
 
 describe("rebuildDebug — normal 模式", () => {
   it("debugMode=normal → 不创建 debugGroup，state 置 null", () => {
-    const { scene, rootGroup, boneGroupMap } = makeRig({ root: [0, 0, 0] });
+    const { scene, rootGroup, boneGroupMap } = makeDebugScene({ root: [0, 0, 0] });
     const state: DebugState = { debugGroup: null, debugMode: "normal" as const };
     rebuildDebug(scene, rootGroup, boneGroupMap, { models: [{ bones: SPEC_BONES }] }, state);
     expect(state.debugGroup).toBeNull();
@@ -40,7 +40,7 @@ describe("rebuildDebug — normal 模式", () => {
   });
 
   it("已有旧 debugGroup → dispose 旧组内容 + 从 scene 移除 + 不新建", () => {
-    const { scene, rootGroup, boneGroupMap } = makeRig({ root: [0, 0, 0] });
+    const { scene, rootGroup, boneGroupMap } = makeDebugScene({ root: [0, 0, 0] });
     const oldGeo = new THREE.BufferGeometry();
     const geoSpy = vi.spyOn(oldGeo, "dispose");
     const oldGroup = new THREE.Group();
@@ -59,7 +59,7 @@ describe("rebuildDebug — normal 模式", () => {
 
 describe("rebuildDebug — pivot 模式", () => {
   it("每骨骼 1 条 pivot 线（世界坐标 → y+4）+ 1 个标签 Sprite（尺寸/材质/纹理）", () => {
-    const { scene, rootGroup, boneGroupMap } = makeRig({
+    const { scene, rootGroup, boneGroupMap } = makeDebugScene({
       root: [1, 2, 3],
       head: [0, 5, 0],
     });
@@ -96,7 +96,7 @@ describe("rebuildDebug — pivot 模式", () => {
   });
 
   it("同名骨骼共享缓存纹理（_labelTexCache 命中，不重复建 CanvasTexture）", () => {
-    const { scene, rootGroup, boneGroupMap } = makeRig({ a: [0, 0, 0], b: [1, 0, 0] });
+    const { scene, rootGroup, boneGroupMap } = makeDebugScene({ a: [0, 0, 0], b: [1, 0, 0] });
     const spec = { models: [{ bones: [{ id: "a", name: "dup" }, { id: "b", name: "dup" }] }] };
     const state: DebugState = { debugGroup: null, debugMode: "pivot" as const };
     rebuildDebug(scene, rootGroup, boneGroupMap, spec, state);
@@ -110,7 +110,7 @@ describe("rebuildDebug — pivot 模式", () => {
   });
 
   it("boneGroupMap 缺该骨骼 → 跳过（无输出）", () => {
-    const { scene, rootGroup, boneGroupMap } = makeRig({});
+    const { scene, rootGroup, boneGroupMap } = makeDebugScene({});
     const state: DebugState = { debugGroup: null, debugMode: "pivot" as const };
     rebuildDebug(scene, rootGroup, boneGroupMap, { models: [{ bones: SPEC_BONES }] }, state);
     expect(state.debugGroup!.children).toHaveLength(0);
@@ -119,7 +119,7 @@ describe("rebuildDebug — pivot 模式", () => {
 
 describe("rebuildDebug — bone 模式", () => {
   it("有父骨骼 → 子→父连线；孤儿/父不在图 → 跳过", () => {
-    const { scene, rootGroup, boneGroupMap } = makeRig({
+    const { scene, rootGroup, boneGroupMap } = makeDebugScene({
       root: [0, 0, 0],
       head: [0, 2, 0],
       orphan: [1, 1, 1],
@@ -150,7 +150,7 @@ describe("rebuildDebug — bone 模式", () => {
   });
 
   it("只消费 spec.models[0]（与 renderModel3D 原口径一致），models[1] 骨骼不参与", () => {
-    const { scene, rootGroup, boneGroupMap } = makeRig({ root: [0, 0, 0], extra: [9, 9, 9] });
+    const { scene, rootGroup, boneGroupMap } = makeDebugScene({ root: [0, 0, 0], extra: [9, 9, 9] });
     const spec = {
       models: [
         { bones: [{ id: "root", name: "root" }] },
@@ -165,7 +165,7 @@ describe("rebuildDebug — bone 模式", () => {
 
 describe("rebuildDebug — 重建清理", () => {
   it("pivot→pivot 重建：旧 geometry/material/纹理 dispose + 纹理缓存清空 + scene 不累积", () => {
-    const { scene, rootGroup, boneGroupMap } = makeRig({ root: [0, 0, 0] });
+    const { scene, rootGroup, boneGroupMap } = makeDebugScene({ root: [0, 0, 0] });
     const state: DebugState = { debugGroup: null, debugMode: "pivot" as const };
     const spec = { models: [{ bones: SPEC_BONES }] };
     rebuildDebug(scene, rootGroup, boneGroupMap, spec, state);

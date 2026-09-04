@@ -41,7 +41,7 @@ function makeTree(bones: Array<{ id: string; parentId: string | null; object?: T
 }
 
 /** 双腿完整环境：树 + 语义映射 + 骨架引用 */
-function makeRig() {
+function makeMmdLegRig() {
   const left = makeLeg();
   const right = makeLeg();
   const tree = makeTree([
@@ -85,14 +85,14 @@ describe("createFootIKController 降级路径（dummy controller）", () => {
   });
 
   it("语义表为空（双腿缺省）→ dummy", () => {
-    const { tree } = makeRig();
+    const { tree } = makeMmdLegRig();
     const controller = createFootIKController(tree, {});
     controller.apply(0.016, true);
     expect(solveIKMock).not.toHaveBeenCalled();
   });
 
   it("语义 id 不在树中 → extract 失败（chain=null）→ dummy", () => {
-    const { tree } = makeRig();
+    const { tree } = makeMmdLegRig();
     const controller = createFootIKController(tree, {
       leftUpperLeg: { id: "legL_root" },
       leftFoot: { id: "notInTree" },
@@ -102,7 +102,7 @@ describe("createFootIKController 降级路径（dummy controller）", () => {
   });
 
   it("rootId === footId（链长 1）→ dummy", () => {
-    const { tree } = makeRig();
+    const { tree } = makeMmdLegRig();
     const controller = createFootIKController(tree, {
       leftUpperLeg: { id: "legL_foot" },
       leftFoot: { id: "legL_foot" },
@@ -112,7 +112,7 @@ describe("createFootIKController 降级路径（dummy controller）", () => {
   });
 
   it("语义条目缺 id（entry.id = undefined）→ getSemanticBoneId 返回 null → dummy", () => {
-    const { tree } = makeRig();
+    const { tree } = makeMmdLegRig();
     const controller = createFootIKController(tree, {
       leftUpperLeg: {} as NonNullable<SemanticBoneMap["leftUpperLeg"]>,
       leftFoot: { id: "legL_foot" },
@@ -124,7 +124,7 @@ describe("createFootIKController 降级路径（dummy controller）", () => {
 
 describe("createFootIKController 正常双腿", () => {
   it("待机态足部漂移 → 每腿调一次 solveIK，配置为锚地参数", () => {
-    const { tree, semanticBones, left, right } = makeRig();
+    const { tree, semanticBones, left, right } = makeMmdLegRig();
     const controller = createFootIKController(tree, semanticBones);
 
     // 模拟动画漂移：膝盖绕 X 轴弯曲，足部上抬离开锚地
@@ -159,7 +159,7 @@ describe("createFootIKController 正常双腿", () => {
   });
 
   it("apply 后足部向锚地高度靠拢", () => {
-    const { tree, semanticBones, left } = makeRig();
+    const { tree, semanticBones, left } = makeMmdLegRig();
     const controller = createFootIKController(tree, semanticBones);
     left.knee.rotation.x = 0.5;
     const before = footWorldY(left.foot);
@@ -172,7 +172,7 @@ describe("createFootIKController 正常双腿", () => {
   });
 
   it("isIdle=false → 早退：不调 solveIK、骨骼不动", () => {
-    const { tree, semanticBones, left } = makeRig();
+    const { tree, semanticBones, left } = makeMmdLegRig();
     const controller = createFootIKController(tree, semanticBones);
     left.knee.rotation.x = 0.5;
     const before = footWorldY(left.foot);
@@ -184,7 +184,7 @@ describe("createFootIKController 正常双腿", () => {
   });
 
   it("足部已贴地（|Δy| < 0.001）→ continue 跳过：不调 solveIK", () => {
-    const { tree, semanticBones } = makeRig();
+    const { tree, semanticBones } = makeMmdLegRig();
     const controller = createFootIKController(tree, semanticBones);
 
     controller.apply(0.016, true); // 初始足底 y=0 即锚地
@@ -193,7 +193,7 @@ describe("createFootIKController 正常双腿", () => {
   });
 
   it("dispose → 清空腿表：此后 apply 不再驱动 solveIK", () => {
-    const { tree, semanticBones, left } = makeRig();
+    const { tree, semanticBones, left } = makeMmdLegRig();
     const controller = createFootIKController(tree, semanticBones);
     left.knee.rotation.x = 0.5;
 

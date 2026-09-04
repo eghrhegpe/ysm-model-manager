@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 func init() {
@@ -71,7 +73,7 @@ func runScanModels(ctx *CmdContext) error {
 			break
 		}
 		name := truncateRunes(e.Name, 38)
-		fmt.Printf("  %-40s %s\n", name, formatSize(e.Size))
+		fmt.Printf("  %-40s %s\n", name, fsutil.FormatSize(e.Size))
 	}
 	return nil
 }

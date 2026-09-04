@@ -36,7 +36,7 @@ func New(root string) *TrashManager {
 		recycleDir:      filepath.Join(root, ".recycle"),
 		renameForMove:   os.Rename,
 		copyDirForMove:  copyDirRecursive,
-		copyFileForMove: copyFile,
+		copyFileForMove: fsutil.CopyFile,
 	}
 }
 
@@ -445,11 +445,4 @@ func (tm *TrashManager) Empty() (int, error) {
 
 func Move(src, filesRoot string) error {
 	return New(filesRoot).Move(src)
-}
-
-// copyFile 复制文件（跨分区兼容）
-// 已收敛至 fsutil.CopyFile（ADR-044 策略 A）：同目录 tmp+rename 原子落地 + Sync 落盘检查。
-// 注意：fsutil.CopyFile 的 tmp 创建在目标同目录，rename 同文件系统内执行，天然跨分区兼容。
-func copyFile(src, dst string) error {
-	return fsutil.CopyFile(src, dst)
 }

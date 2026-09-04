@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
 )
@@ -783,7 +784,7 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 		Name:     "① 文件读取",
 		Duration: readDuration,
 		Bytes:    int64(len(data)),
-		Notes:    fmt.Sprintf("✅ %s, %.0f MB/s", formatSize(int64(len(data))), float64(len(data))/readDuration.Seconds()/1024/1024),
+		Notes:    fmt.Sprintf("✅ %s, %.0f MB/s", fsutil.FormatSize(int64(len(data))), float64(len(data))/readDuration.Seconds()/1024/1024),
 	})
 
 	start = time.Now()
@@ -818,7 +819,7 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 		Name:     "④ 几何数据准备",
 		Duration: geoDuration,
 		Bytes:    geoSize,
-		Notes:    fmt.Sprintf("✅ %s", formatSize(geoSize)),
+		Notes:    fmt.Sprintf("✅ %s", fsutil.FormatSize(geoSize)),
 	})
 
 	texStart := time.Now()
@@ -829,7 +830,7 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 		Name:     "⑤ 纹理数据准备",
 		Duration: texDuration,
 		Bytes:    texSize,
-		Notes:    fmt.Sprintf("✅ %s", formatSize(texSize)),
+		Notes:    fmt.Sprintf("✅ %s", fsutil.FormatSize(texSize)),
 	})
 
 	ipcStart := time.Now()
@@ -842,23 +843,23 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 		Name:     "⑥ 序列化模拟",
 		Duration: ipcDuration,
 		Bytes:    ipcSize,
-		Notes:    fmt.Sprintf("📦 估算 %s（Wails binding 走 JSON 序列化；Base64 4/3 膨胀为历史假设，仅量级参考）", formatSize(ipcSize)),
+		Notes:    fmt.Sprintf("📦 估算 %s（Wails binding 走 JSON 序列化；Base64 4/3 膨胀为历史假设，仅量级参考）", fsutil.FormatSize(ipcSize)),
 	})
 
 	cacheStart := time.Now()
 	cacheNotes := "🔍 缓存目录不可用"
 	if hash, err := texture_cache.TextureHash(modelPath); err == nil {
 		if cached, ok, _ := texture_cache.ReadCached(hash); ok && cached != nil {
-			cacheNotes = fmt.Sprintf("✅ 缓存命中 (%s, %s)", formatSize(int64(len(cached))), hash[:12]+"...")
+			cacheNotes = fmt.Sprintf("✅ 缓存命中 (%s, %s)", fsutil.FormatSize(int64(len(cached))), hash[:12]+"...")
 		} else {
 			cacheStats := texture_cache.GetCacheStats()
 			cacheNotes = fmt.Sprintf("⚠️ 缓存未命中（总缓存: %d 个文件, %s）",
-				cacheStats.FileCount, formatSize(cacheStats.TotalSize))
+				cacheStats.FileCount, fsutil.FormatSize(cacheStats.TotalSize))
 		}
 	} else {
 		cacheStats := texture_cache.GetCacheStats()
 		cacheNotes = fmt.Sprintf("⚠️ 哈希计算失败（总缓存: %d 个文件, %s）",
-			cacheStats.FileCount, formatSize(cacheStats.TotalSize))
+			cacheStats.FileCount, fsutil.FormatSize(cacheStats.TotalSize))
 	}
 	cacheDuration := time.Since(cacheStart)
 
@@ -887,7 +888,7 @@ func printSingleModelStages(stages []singleBenchStage) {
 			fmt.Printf("   %-20s        %s\n", "", s.Notes)
 		}
 		if s.Bytes > 0 {
-			fmt.Printf("   %-20s        %s\n", "", "数据量: "+formatSize(s.Bytes))
+			fmt.Printf("   %-20s        %s\n", "", "数据量: "+fsutil.FormatSize(s.Bytes))
 		}
 	}
 

@@ -41,7 +41,7 @@ func runCacheStatus(ctx *CmdContext) error {
 	}
 
 	fmt.Printf("   文件数量: %d\n", stats.FileCount)
-	fmt.Printf("   总大小:   %s\n\n", formatSize(stats.TotalSize))
+	fmt.Printf("   总大小:   %s\n\n", fsutil.FormatSize(stats.TotalSize))
 
 	if stats.FileCount == 0 {
 		fmt.Println("📭 缓存为空")
@@ -64,14 +64,14 @@ func runCacheStatus(ctx *CmdContext) error {
 		if len(hashShort) > 16 {
 			hashShort = hashShort[:16]
 		}
-		fmt.Printf("   %-64s %s\n", hashShort, formatSize(f.Size))
+		fmt.Printf("   %-64s %s\n", hashShort, fsutil.FormatSize(f.Size))
 	}
 
 	fmt.Println()
 	fmt.Printf("📈 缓存效率估算:\n")
 	if stats.FileCount > 0 {
 		avgSize := stats.TotalSize / int64(stats.FileCount)
-		fmt.Printf("   平均大小: %s/文件\n", formatSize(avgSize))
+		fmt.Printf("   平均大小: %s/文件\n", fsutil.FormatSize(avgSize))
 		fmt.Printf("   预计可加速: 命中缓存后跳过 GPU 解码阶段\n")
 	}
 
@@ -176,7 +176,7 @@ func printCacheMisses(texInfos []cacheVerifyTexInfo, modelDir string) {
 			if ti.hash == "ERROR" {
 				status = "⚠️ "
 			}
-			fmt.Printf("   %s %s (%s)\n", status, relPath, formatSize(ti.size))
+			fmt.Printf("   %s %s (%s)\n", status, relPath, fsutil.FormatSize(ti.size))
 		}
 	}
 	fmt.Println()
@@ -206,8 +206,8 @@ func printCacheHitDetails(texInfos []cacheVerifyTexInfo, modelDir string) {
 		}
 		fmt.Printf("   ✅ %s\n", relPath)
 		fmt.Printf("      原始: %s → 缓存(KTX2): %s (压缩率: %.0f%%)\n",
-			formatSize(ti.size),
-			formatSize(ti.cacheSize),
+			fsutil.FormatSize(ti.size),
+			fsutil.FormatSize(ti.cacheSize),
 			compressionRatio)
 	}
 	fmt.Println()
@@ -233,7 +233,7 @@ func printCacheVerifySummary(hitCount, missCount int, hitSize int64, totalFiles 
 
 	if hitSize > 0 {
 		estimatedSavedMs := float64(hitSize) / (1024 * 1024) * 5
-		fmt.Printf("   ⚡ 估计节省: ~%.0fms (%s 贴图的解码+传输开销)\n", estimatedSavedMs, formatSize(hitSize))
+		fmt.Printf("   ⚡ 估计节省: ~%.0fms (%s 贴图的解码+传输开销)\n", estimatedSavedMs, fsutil.FormatSize(hitSize))
 	}
 }
 
@@ -288,7 +288,7 @@ func runCacheVerify(ctx *CmdContext) error {
 
 	fmt.Printf("📊 贴图统计:\n")
 	fmt.Printf("   贴图总数: %d\n", textureFiles)
-	fmt.Printf("   原始总大小: %s\n\n", formatSize(totalSize))
+	fmt.Printf("   原始总大小: %s\n\n", fsutil.FormatSize(totalSize))
 
 	if textureFiles == 0 {
 		fmt.Println("📭 没有找到贴图文件")
@@ -301,8 +301,8 @@ func runCacheVerify(ctx *CmdContext) error {
 	}
 
 	fmt.Printf("🎯 缓存命中:\n")
-	fmt.Printf("   ✅ 命中: %d 个 (%s)\n", hitCount, formatSize(hitSize))
-	fmt.Printf("   ❌ 未命中: %d 个 (%s)\n", missCount, formatSize(missSize))
+	fmt.Printf("   ✅ 命中: %d 个 (%s)\n", hitCount, fsutil.FormatSize(hitSize))
+	fmt.Printf("   ❌ 未命中: %d 个 (%s)\n", missCount, fsutil.FormatSize(missSize))
 	fmt.Printf("   📈 命中率: %.1f%%\n\n", hitRate)
 
 	printCacheMisses(texInfos, *modelDir)
@@ -330,7 +330,7 @@ func runCacheClear(ctx *CmdContext) error {
 	fmt.Printf("🗑️  清空纹理缓存\n")
 	fmt.Printf("   缓存目录: %s\n", stats.Dir)
 	fmt.Printf("   文件数量: %d\n", stats.FileCount)
-	fmt.Printf("   总大小:   %s\n\n", formatSize(stats.TotalSize))
+	fmt.Printf("   总大小:   %s\n\n", fsutil.FormatSize(stats.TotalSize))
 
 	if stats.FileCount == 0 {
 		fmt.Println("📭 缓存已经是空的")
@@ -466,7 +466,7 @@ func runCacheDiag(ctx *CmdContext) error {
 	fmt.Printf("\n📊 4. 当前缓存状态\n")
 	stats := texture_cache.GetCacheStats()
 	fmt.Printf("   文件数量: %d\n", stats.FileCount)
-	fmt.Printf("   总大小:   %s\n", formatSize(stats.TotalSize))
+	fmt.Printf("   总大小:   %s\n", fsutil.FormatSize(stats.TotalSize))
 
 	fmt.Printf("\n🎯 5. 关键说明\n")
 	fmt.Printf("   %s\n", strings.Repeat("-", 50))

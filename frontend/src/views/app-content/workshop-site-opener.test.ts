@@ -27,6 +27,7 @@ import { getApp } from "../../backend/app.ts";
 import { openSite, bindSiteEvents } from "./workshop-site-opener.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { AppContentHost } from "./init-workshop.ts";
+import { flushPromises } from "../../test-utils/index.ts";
 
 /** 组装 openEmbedded 分支需要的假 host（shadow DOM 节点直供） */
 function makeHost() {
@@ -46,11 +47,6 @@ function makeApp() {
   return { OpenInBrowser: vi.fn(), NavigatePlazaWindow: vi.fn() };
 }
 
-/** 冲刷 getApp().then 的微任务 */
-async function flush() {
-  await new Promise((r) => setTimeout(r, 0));
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
   const app = makeApp();
@@ -65,7 +61,7 @@ describe("openSite — 透传 targetUrl", () => {
     const app = makeApp();
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     openSite(makeHost().host, site, "external");
-    await flush();
+    await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledWith("https://github.com/");
   });
 
@@ -74,7 +70,7 @@ describe("openSite — 透传 targetUrl", () => {
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const target = "https://github.com/search?q=%E5%B0%8F%E7%BA%A2";
     openSite(makeHost().host, site, "external", target);
-    await flush();
+    await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledWith(target);
     expect(app.OpenInBrowser).not.toHaveBeenCalledWith(site.url);
   });
@@ -84,7 +80,7 @@ describe("openSite — 透传 targetUrl", () => {
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const target = "https://github.com/search?q=foo";
     openSite(makeHost().host, site, "window", target);
-    await flush();
+    await flushPromises();
     expect(app.NavigatePlazaWindow).toHaveBeenCalledWith(target, true);
   });
 
@@ -117,7 +113,7 @@ describe("openSite — 窗口模式平台分支与内嵌容器状态", () => {
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const target = "https://example.com/?q=1";
     openSite(makeHost().host, site, "window", target);
-    await flush();
+    await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledWith(target);
     expect(app.NavigatePlazaWindow).not.toHaveBeenCalled();
   });
@@ -217,7 +213,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     bindSiteEvents(b.host);
     b.btn("ws-open").click();
     b.btn("ws-open-fallback").click();
-    await flush();
+    await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledTimes(2);
     expect(app.OpenInBrowser).toHaveBeenCalledWith(site.url);
   });
@@ -230,7 +226,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     b.btn("ws-open").click();
     b.btn("ws-open-fallback").click();
     b.btn("ws-win-open").click();
-    await flush();
+    await flushPromises();
     expect(getApp).not.toHaveBeenCalled();
     expect(app.OpenInBrowser).not.toHaveBeenCalled();
     expect(app.NavigatePlazaWindow).not.toHaveBeenCalled();
@@ -243,7 +239,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     b.setCurrentSite(site);
     bindSiteEvents(b.host);
     b.btn("ws-win-open").click();
-    await flush();
+    await flushPromises();
     expect(app.NavigatePlazaWindow).toHaveBeenCalledWith(site.url, true);
     expect(app.OpenInBrowser).not.toHaveBeenCalled();
   });
@@ -256,7 +252,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     b.setCurrentSite(site);
     bindSiteEvents(b.host);
     b.btn("ws-win-open").click();
-    await flush();
+    await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledWith(site.url);
     expect(app.NavigatePlazaWindow).not.toHaveBeenCalled();
   });
@@ -280,7 +276,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     const b = makeBindHost();
     bindSiteEvents(b.host);
     b.btn("ws-export-btn").click();
-    await flush();
+    await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
       msg: "workshop.exportWebUnsupported",
       duration: TOAST_MS.normal,
@@ -298,7 +294,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     const b = makeBindHost();
     bindSiteEvents(b.host);
     b.btn("ws-export-btn").click();
-    await flush();
+    await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
       msg: "workshop.action.exported",
       duration: TOAST_MS.success,
@@ -315,7 +311,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     const b = makeBindHost();
     bindSiteEvents(b.host);
     b.btn("ws-export-btn").click();
-    await flush();
+    await flushPromises();
     expect(friendlyError).toHaveBeenCalledWith(expect.any(Error), "workshop.exportFailed");
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
       msg: "❌ disk boom|workshop.exportFailed",
@@ -329,7 +325,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     const b = makeBindHost();
     bindSiteEvents(b.host);
     b.btn("ws-import-btn").click();
-    await flush();
+    await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
       msg: "workshop.importWebUnsupported",
       duration: TOAST_MS.normal,
@@ -345,7 +341,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     const b = makeBindHost();
     bindSiteEvents(b.host);
     b.btn("ws-import-btn").click();
-    await flush();
+    await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
       msg: "workshop.action.imported",
       duration: TOAST_MS.success,
@@ -362,7 +358,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     const b = makeBindHost();
     bindSiteEvents(b.host);
     b.btn("ws-import-btn").click();
-    await flush();
+    await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
       msg: "❌ parse boom|content.importFailed",
       duration: TOAST_MS.verbose,

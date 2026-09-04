@@ -2,6 +2,7 @@
 // 覆盖：加载渲染、路径过滤、恢复/删除/清空、类型切换、事件委托、清理函数、异常路径
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../bus.ts";
+import { flushPromises } from "../test-utils/index.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -82,17 +83,13 @@ beforeEach(async () => {
   mocks.EmptyRecycleBin.mockResolvedValue(0);
   mocks.modalConfirm.mockResolvedValue(true);
   cleanup = initRecycleBin(host);
-  await flush();
+  await flushPromises();
 });
 
 afterEach(() => {
   cleanup?.();
   cleanups.splice(0).forEach((fn) => fn());
 });
-
-function flush(): Promise<void> {
-  return new Promise((r) => setTimeout(r, 0));
-}
 
 /** 按钮执行有 150ms leaving 动画延迟，需长等待 */
 function flushLong(): Promise<void> {
@@ -119,8 +116,8 @@ describe("loadRecycleBin 渲染", () => {
       entry("b.ysm", "/mc/sub/b.ysm"),
     ]);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     // 前端只把 root 透传给 Go，不再做路径前缀过滤——Go 返回几条就渲染几条
     expect(mocks.ListRecycleBin).toHaveBeenCalledWith("/mc");
@@ -132,8 +129,8 @@ describe("loadRecycleBin 渲染", () => {
   it("读取失败 → 错误渲染 + count 加载失败", async () => {
     mocks.ListRecycleBin.mockRejectedValue(new Error("io err"));
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.friendlyError).toHaveBeenCalled();
     expect(root.getElementById("recy-count")!.textContent).toBe("加载失败");
@@ -145,8 +142,8 @@ describe("loadRecycleBin 渲染", () => {
       { Name: "ghost.ysm", Path: "", Size: 100 },
     ]);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(root.querySelectorAll('[data-testid="recy-item"]')).toHaveLength(1);
     expect(root.querySelector('[data-path=""]')).toBeNull();
@@ -157,8 +154,8 @@ describe("loadRecycleBin 渲染", () => {
       { Name: "a.ysm", Path: "/mc/a.ysm", Size: Number.NaN },
     ]);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(root.querySelector('[data-testid="recy-item"]')!.textContent).toContain("?");
   });
@@ -166,8 +163,8 @@ describe("loadRecycleBin 渲染", () => {
   it("渲染剥离 .ban 后缀后再走 renderDisplayName", async () => {
     mocks.ListRecycleBin.mockResolvedValue([entry("a.ysm.ban", "/mc/a.ysm")]);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.renderDisplayName).toHaveBeenCalledWith("a.ysm");
     expect(root.querySelector('[data-testid="recy-item"]')!.textContent).toContain("a.ysm");
@@ -180,8 +177,8 @@ describe("恢复 / 删除 / 清空", () => {
     mocks.RestoreFromRecycle.mockResolvedValue(undefined);
     const toasts = spyToasts();
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const stats = vi.fn();
     const reload = vi.fn();
@@ -189,8 +186,8 @@ describe("恢复 / 删除 / 清空", () => {
 
     root.querySelector<HTMLButtonElement>('[data-testid="recy-restore"]')!.click();
     await flushLong();
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.RestoreFromRecycle).toHaveBeenCalledWith("/mc/a.ysm", "");
     expect(toasts.some((t) => t.type === "success" && t.msg.length > 0)).toBe(true);
@@ -203,13 +200,13 @@ describe("恢复 / 删除 / 清空", () => {
     mocks.RestoreFromRecycle.mockRejectedValue(new Error("locked"));
     const toasts = spyToasts();
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const btn = root.querySelector<HTMLButtonElement>('[data-testid="recy-restore"]')!;
     btn.click();
     await flushLong();
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.type === "error" && t.msg.includes("locked"))).toBe(true);
     // 错误路径必须复位：按钮重新可用 + 移除 leaving 动画类，否则条目永久卡在禁用/滑出态
@@ -222,13 +219,13 @@ describe("恢复 / 删除 / 清空", () => {
     mocks.DeleteFromRecycle.mockRejectedValue(new Error("权限不足"));
     const toasts = spyToasts();
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const btn = root.querySelector<HTMLButtonElement>('[data-testid="recy-del"]')!;
     btn.click();
     await flushLong();
-    await flush();
+    await flushPromises();
 
     expect(mocks.DeleteFromRecycle).toHaveBeenCalledWith("/mc/a.ysm");
     expect(toasts.some((t) => t.type === "error" && t.msg.includes("权限不足"))).toBe(true);
@@ -244,8 +241,8 @@ describe("恢复 / 删除 / 清空", () => {
     });
     mocks.RestoreFromRecycle.mockReturnValueOnce(slowRestore);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const btn = root.querySelector<HTMLButtonElement>('[data-testid="recy-restore"]')!;
     btn.click();
@@ -254,8 +251,8 @@ describe("恢复 / 删除 / 清空", () => {
     expect(mocks.RestoreFromRecycle).toHaveBeenCalledTimes(1);
 
     resolveRestore();
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
   });
 
   it("清空在途重复点击 → EmptyRecycleBin 只调用一次（_emptyBusy 守卫）", async () => {
@@ -267,35 +264,35 @@ describe("恢复 / 删除 / 清空", () => {
     mocks.modalConfirm.mockResolvedValue(true);
 
     root.getElementById("recy-empty")!.click();
-    await flush(); // 确认通过 → _emptyBusy=true，EmptyRecycleBin 挂起
+    await flushPromises(); // 确认通过 → _emptyBusy=true，EmptyRecycleBin 挂起
     root.getElementById("recy-empty")!.click(); // 第二次点击 → 守卫直接返回
-    await flush();
+    await flushPromises();
     expect(mocks.EmptyRecycleBin).toHaveBeenCalledTimes(1);
 
     resolveEmpty(2);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
   });
 
   it("删除按钮（确认）→ DeleteFromRecycle + toast；取消 → 不删除", async () => {
     mocks.ListRecycleBin.mockResolvedValue([entry("a.ysm", "/mc/a.ysm")]);
     const toasts = spyToasts();
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     // 取消
     mocks.modalConfirm.mockResolvedValueOnce(false);
     root.querySelector<HTMLButtonElement>('[data-testid="recy-del"]')!.click();
-    await flush();
+    await flushPromises();
     expect(mocks.DeleteFromRecycle).not.toHaveBeenCalled();
 
     // 确认
     mocks.modalConfirm.mockResolvedValueOnce(true);
     root.querySelector<HTMLButtonElement>('[data-testid="recy-del"]')!.click();
     await flushLong();
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(mocks.DeleteFromRecycle).toHaveBeenCalledWith("/mc/a.ysm");
     expect(toasts.some((t) => t.type === "success" && t.msg.length > 0)).toBe(true);
   });
@@ -308,8 +305,8 @@ describe("恢复 / 删除 / 清空", () => {
     const reload = vi.fn();
     cleanups.push(bus.on("stats:refresh", stats), bus.on("tree:reload", reload));
     root.getElementById("recy-empty")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.EmptyRecycleBin).toHaveBeenCalledWith("");
     expect(stats).toHaveBeenCalled();
@@ -320,7 +317,7 @@ describe("恢复 / 删除 / 清空", () => {
   it("清空取消 → 不调用 EmptyRecycleBin", async () => {
     mocks.modalConfirm.mockResolvedValue(false);
     root.getElementById("recy-empty")!.dispatchEvent(new Event("click"));
-    await flush();
+    await flushPromises();
     expect(mocks.EmptyRecycleBin).not.toHaveBeenCalled();
   });
 
@@ -329,8 +326,8 @@ describe("恢复 / 删除 / 清空", () => {
     mocks.modalConfirm.mockResolvedValue(true);
     const toasts = spyToasts();
     root.getElementById("recy-empty")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(toasts.some((t) => t.type === "error" && t.msg.includes("权限不足"))).toBe(true);
   });
 });
@@ -340,28 +337,28 @@ describe("类型切换 / 事件委托 / 清理", () => {
     const spy = vi.fn();
     cleanups.push(bus.on("tree:reload", spy));
     bus.emit("repo:rtype-changed", "resourcepack");
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(mocks.GetRepoRoot).toHaveBeenCalledWith("resourcepack");
   });
 
   it("同名类型不重复加载", async () => {
     const before = mocks.GetRepoRoot.mock.calls.length;
     bus.emit("repo:rtype-changed", "ysm");
-    await flush();
+    await flushPromises();
     expect(mocks.GetRepoRoot.mock.calls.length).toBe(before);
   });
 
   it("文件名点击（事件委托）→ model:select", async () => {
     mocks.ListRecycleBin.mockResolvedValue([entry("a.ysm", "/mc/a.ysm")]);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const sel = vi.fn();
     cleanups.push(bus.on("model:select", sel));
     root.querySelector<HTMLElement>('[data-path="/mc/a.ysm"]')!.click();
-    await flush();
+    await flushPromises();
     expect(sel).toHaveBeenCalledWith({ path: "/mc/a.ysm" });
   });
 
@@ -369,15 +366,15 @@ describe("类型切换 / 事件委托 / 清理", () => {
     const before = mocks.GetRepoRoot.mock.calls.length;
     cleanup();
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
+    await flushPromises();
     expect(mocks.GetRepoRoot.mock.calls.length).toBe(before);
   });
 
   it("点击恢复/删除按钮 → 不触发 model:select（事件委托跳过操作区）", async () => {
     mocks.ListRecycleBin.mockResolvedValue([entry("a.ysm", "/mc/a.ysm")]);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const sel = vi.fn();
     cleanups.push(bus.on("model:select", sel));
@@ -385,22 +382,22 @@ describe("类型切换 / 事件委托 / 清理", () => {
     root.querySelector<HTMLButtonElement>('[data-testid="recy-restore"]')!.click();
     root.querySelector<HTMLButtonElement>('[data-testid="recy-del"]')!.click();
     await flushLong();
-    await flush();
+    await flushPromises();
     expect(sel).not.toHaveBeenCalled();
   });
 
   it("清理函数清空列表并移除 empty 监听（条目按钮 handler 随之失效）", async () => {
     mocks.ListRecycleBin.mockResolvedValue([entry("a.ysm", "/mc/a.ysm")]);
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(root.querySelectorAll('[data-testid="recy-item"]')).toHaveLength(1);
 
     cleanup();
     expect(root.querySelectorAll('[data-testid="recy-item"]')).toHaveLength(0);
 
     root.getElementById("recy-empty")!.click();
-    await flush();
+    await flushPromises();
     expect(mocks.EmptyRecycleBin).not.toHaveBeenCalled();
   });
 
@@ -414,16 +411,16 @@ describe("类型切换 / 事件委托 / 清理", () => {
     mocks.ListRecycleBin.mockResolvedValueOnce([entry("fresh.ysm", "/mc/fresh.ysm")]); // 请求 B
 
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click")); // A 开始
-    await flush();
+    await flushPromises();
     root.getElementById("recy-refresh")!.dispatchEvent(new Event("click")); // B 开始
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const list = root.getElementById("recy-list")!;
     expect(list.innerHTML).toContain("fresh.ysm");
 
     resolveSlow([entry("stale.ysm", "/mc/stale.ysm")]); // A 迟到 → 应被 gen 比对丢弃
-    await flush();
+    await flushPromises();
     expect(list.innerHTML).toContain("fresh.ysm");
     expect(list.innerHTML).not.toContain("stale.ysm");
   });

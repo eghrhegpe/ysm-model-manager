@@ -336,17 +336,17 @@ func generateAuditWarnings(result *DirAuditResult) {
 	}
 	if result.Resources.LargestSize > int64(warnLargeFileMB)*1024*1024 {
 		result.Warnings = append(result.Warnings,
-			fmt.Sprintf("存在超大文件 (%s)，可能影响加载性能", formatSize(result.Resources.LargestSize)))
+			fmt.Sprintf("存在超大文件 (%s)，可能影响加载性能", fsutil.FormatSize(result.Resources.LargestSize)))
 	}
 	// 容量「接近上限」预告警：ShouldWarn（>0.8 上限）且未达硬阈值时提示，
 	// 与下方「已达」警告错峰，避免 0.8GB~1GB 区间双弹。
 	if result.Cache.ShouldWarn && result.Cache.CacheSize <= int64(warnCacheSizeGB)*1024*1024*1024 {
 		result.Warnings = append(result.Warnings,
-			fmt.Sprintf("缓存大小接近上限 (%s)，建议定期清理", formatSize(result.Cache.CacheSize)))
+			fmt.Sprintf("缓存大小接近上限 (%s)，建议定期清理", fsutil.FormatSize(result.Cache.CacheSize)))
 	}
 	if result.Cache.CacheSize > int64(warnCacheSizeGB)*1024*1024*1024 {
 		result.Warnings = append(result.Warnings,
-			fmt.Sprintf("缓存大小已达 %s，建议定期清理", formatSize(result.Cache.CacheSize)))
+			fmt.Sprintf("缓存大小已达 %s，建议定期清理", fsutil.FormatSize(result.Cache.CacheSize)))
 	}
 }
 
@@ -397,6 +397,3 @@ func Classify(ext string) string {
 	}
 	return id
 }
-
-// formatSize 人性化字节大小——委托至 fsutil.FormatSize（单一事实来源）。
-func formatSize(bytes int64) string { return fsutil.FormatSize(bytes) }

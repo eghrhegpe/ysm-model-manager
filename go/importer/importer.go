@@ -210,13 +210,6 @@ func copyDir(src, dst string) error {
 	})
 }
 
-// copyFile 复制单文件（工具函数）
-// 已收敛至 fsutil.CopyFile（ADR-044 策略 A）：tmp+rename 原子落地 + Sync + Chmod 0644，
-// 失败自动清理临时文件，不留半截目标（原直写 os.Create + 失败 os.Remove 降级为原子模式）。
-func copyFile(src, dst string) error {
-	return fsutil.CopyFile(src, dst)
-}
-
 // ===== 初始化注册 =====
 func init() {
 	Register(NewSimpleCopy("resourcepack"))

@@ -3,6 +3,7 @@
 // 覆盖：导出清单（成功/未找到整合包/子目录读取失败/无文件）、清空目录（统计失败/取消/成功）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
+import { flushPromises } from "../../test-utils/index.ts";
 
 // ---- mock 依赖 ----
 const { mocks } = vi.hoisted(() => {
@@ -56,10 +57,6 @@ afterEach(() => {
   cleanups.splice(0).forEach((fn) => fn());
 });
 
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 /** 注册被测 handler 并登记清理 */
 async function register(): Promise<void> {
   const { registerInstanceOps } = await import("./instance-ops.ts");
@@ -90,8 +87,8 @@ describe("registerInstanceOps — instance:export-list", () => {
     });
 
     bus.emit("instance:export-list", { name: "TestPack", rtype: "ysm" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.ListVersionInstances).toHaveBeenCalledWith("/mc");
     expect(mocks.GetSubDirMap).toHaveBeenCalled();
@@ -110,7 +107,7 @@ describe("registerInstanceOps — instance:export-list", () => {
     const { toasts } = spyEvents();
 
     bus.emit("instance:export-list", { name: "Ghost", rtype: "ysm" });
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg === "未找到整合包" && t.type === "error")).toBe(true);
     expect(mocks.ListFileNames).not.toHaveBeenCalled();
@@ -122,7 +119,7 @@ describe("registerInstanceOps — instance:export-list", () => {
     await register();
 
     bus.emit("instance:export-list", { name: "TestPack", rtype: "ysm" });
-    await flush();
+    await flushPromises();
 
     expect(mocks.ListVersionInstances).not.toHaveBeenCalled();
   });
@@ -139,8 +136,8 @@ describe("registerInstanceOps — instance:export-list", () => {
     });
 
     bus.emit("instance:export-list", { name: "TestPack", rtype: "ysm" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
@@ -152,7 +149,7 @@ describe("registerInstanceOps — instance:export-list", () => {
     const { toasts } = spyEvents();
 
     bus.emit("instance:export-list", { name: "TestPack", rtype: "ysm" });
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg === "该整合包没有资源文件" && t.type === "info")).toBe(true);
   });
@@ -162,7 +159,7 @@ describe("registerInstanceOps — instance:export-list", () => {
     const { toasts } = spyEvents();
 
     bus.emit("instance:export-list", { name: "TestPack", rtype: "" });
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg.includes("整合包缺少类型信息") && t.type === "error")).toBe(true);
     expect(mocks.ListVersionInstances).not.toHaveBeenCalled();
@@ -176,7 +173,7 @@ describe("registerInstanceOps — instance:clear", () => {
     const { toasts } = spyEvents();
 
     bus.emit("instance:clear", { name: "TestPack", rtype: "ysm" });
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg.includes("统计失败") && t.type === "error")).toBe(true);
     expect(mocks.modalConfirm).not.toHaveBeenCalled();
@@ -188,7 +185,7 @@ describe("registerInstanceOps — instance:clear", () => {
     const { toasts } = spyEvents();
 
     bus.emit("instance:clear", { name: "TestPack", rtype: "ysm" });
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg.includes("没有可清空") && t.type === "info")).toBe(true);
     expect(mocks.modalConfirm).not.toHaveBeenCalled();
@@ -200,7 +197,7 @@ describe("registerInstanceOps — instance:clear", () => {
     const { toasts } = spyEvents();
 
     bus.emit("instance:clear", { name: "TestPack", rtype: "ysm" });
-    await flush();
+    await flushPromises();
 
     expect(mocks.modalConfirm).toHaveBeenCalled();
     expect(mocks.ClearInstanceResources).not.toHaveBeenCalled();
@@ -213,8 +210,8 @@ describe("registerInstanceOps — instance:clear", () => {
     const { toasts, refreshEvents } = spyEvents();
 
     bus.emit("instance:clear", { name: "TestPack", rtype: "ysm" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.ClearInstanceResources).toHaveBeenCalledWith("TestPack", "ysm");
     expect(refreshEvents.length).toBeGreaterThan(0);
@@ -228,8 +225,8 @@ describe("registerInstanceOps — instance:clear", () => {
     const { toasts } = spyEvents();
 
     bus.emit("instance:clear", { name: "TestPack", rtype: "ysm" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg.includes("清空失败") && t.type === "error")).toBe(true);
   });
@@ -239,7 +236,7 @@ describe("registerInstanceOps — instance:clear", () => {
     const { toasts } = spyEvents();
 
     bus.emit("instance:clear", { name: "TestPack", rtype: "" });
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg.includes("整合包缺少类型信息") && t.type === "error")).toBe(true);
     expect(mocks.CountInstanceResources).not.toHaveBeenCalled();

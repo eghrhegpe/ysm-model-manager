@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
 )
 
@@ -541,7 +542,7 @@ func generateSnapshotSummary(bench *singleBenchJSON, cache *cacheStatsJSON, form
 	}
 	parts = append(parts, fmt.Sprintf("格式: %s", format))
 	if cache != nil {
-		parts = append(parts, fmt.Sprintf("缓存: %d 个文件 / %s", cache.FileCount, formatSize(cache.TotalSize)))
+		parts = append(parts, fmt.Sprintf("缓存: %d 个文件 / %s", cache.FileCount, fsutil.FormatSize(cache.TotalSize)))
 		if !cache.Healthy {
 			parts = append(parts, "缓存为空（首次加载）")
 		}

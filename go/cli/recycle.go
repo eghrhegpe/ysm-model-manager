@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"strings"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 func init() {
@@ -60,7 +62,7 @@ func runRecycleList(ctx *CmdContext) error {
 	fmt.Println(strings.Repeat("-", 80))
 	for _, e := range entries {
 		name := truncateRunes(e.Name, 35)
-		fmt.Printf("%-40s %-12s %s\n", name, formatSize(e.Size), e.Path)
+		fmt.Printf("%-40s %-12s %s\n", name, fsutil.FormatSize(e.Size), e.Path)
 	}
 	return nil
 }

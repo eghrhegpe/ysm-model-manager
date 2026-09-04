@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -364,7 +365,7 @@ func TestCopyFile(t *testing.T) {
 	}
 	// 目标父目录不存在 → MkdirAll 自动创建
 	dst := filepath.Join(t.TempDir(), "nested", "deep", "dst.txt")
-	if err := copyFile(src, dst); err != nil {
+	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 失败: %v", err)
 	}
 	data, err := os.ReadFile(dst)
@@ -406,8 +407,8 @@ func TestCopyFile_Errors(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := copyFile(tc.src, tc.dst); err == nil {
-				t.Fatalf("copyFile(%q, %q) 应报错", tc.src, tc.dst)
+			if err := fsutil.CopyFile(tc.src, tc.dst); err == nil {
+				t.Fatalf("fsutil.CopyFile(%q, %q) 应报错", tc.src, tc.dst)
 			}
 		})
 	}

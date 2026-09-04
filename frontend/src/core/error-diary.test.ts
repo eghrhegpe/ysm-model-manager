@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../bus.ts";
 import { registerErrorDiary, __TEST__resetDiary } from "./error-diary.ts";
+import { flushPromises } from "../test-utils/index.ts";
 
 const { addOpLogMock } = vi.hoisted(() => ({
   addOpLogMock: vi.fn().mockResolvedValue(undefined),
@@ -30,11 +31,6 @@ afterEach(() => {
   addOpLogMock.mockClear();
 });
 
-/** 等待微任务队列清空（logUiMsg 是 async 函数，await getApp() 需等微任务） */
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 describe("registerErrorDiary", () => {
   it("error toast → AddOpLog called with status=failed", async () => {
     registerErrorDiary();
@@ -43,7 +39,7 @@ describe("registerErrorDiary", () => {
       duration: 4000,
       type: "error",
     });
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
     const call = addOpLogMock.mock.calls[0];
     expect(call[0]).toBe("ui");               // op
@@ -62,7 +58,7 @@ describe("registerErrorDiary", () => {
       duration: 3000,
       type: "warn",
     });
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
     const call = addOpLogMock.mock.calls[0];
     expect(call[0]).toBe("ui");
@@ -81,8 +77,8 @@ describe("registerErrorDiary", () => {
     try {
       registerErrorDiary();
       bus.emit("toast:show", { msg: "❌ 会失败的日志", type: "error" });
-      await flush();
-      await flush();
+      await flushPromises();
+      await flushPromises();
       // AddOpLog 已被调用（尝试写入），且拒绝被 .catch 吞掉，无 unhandledrejection 逸出
       expect(addOpLogMock).toHaveBeenCalledTimes(1);
       expect(rejectionSpy).not.toHaveBeenCalled();
@@ -104,8 +100,8 @@ describe("registerErrorDiary", () => {
     try {
       registerErrorDiary();
       bus.emit("toast:show", { msg: "❌ getApp 失败", type: "error" });
-      await flush();
-      await flush();
+      await flushPromises();
+      await flushPromises();
       expect(addOpLogMock).not.toHaveBeenCalled();
       expect(rejectionSpy).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalled();
@@ -123,7 +119,7 @@ describe("registerErrorDiary", () => {
       duration: 2000,
       type: "success",
     });
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).not.toHaveBeenCalled();
   });
 
@@ -134,7 +130,7 @@ describe("registerErrorDiary", () => {
       duration: 2000,
       type: "info",
     });
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).not.toHaveBeenCalled();
   });
 
@@ -145,7 +141,7 @@ describe("registerErrorDiary", () => {
       duration: 4000,
       type: "error",
     });
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
     const call = addOpLogMock.mock.calls[0];
     expect(call[1]).toBe("权限不足，无法访问文件");
@@ -159,7 +155,7 @@ describe("registerErrorDiary", () => {
       error: new Error("脚本执行出错"),
     });
     window.dispatchEvent(errorEvent);
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
     expect(addOpLogMock).toHaveBeenCalledWith(
       "ui", "脚本执行出错", "", "", 0, "failed", "脚本执行出错",
@@ -181,7 +177,7 @@ describe("registerErrorDiary", () => {
         })
       : Object.assign(new Event("unhandledrejection"), { reason });
     window.dispatchEvent(rejectionEvent);
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
     expect(addOpLogMock).toHaveBeenCalledWith(
       "ui", "API 请求失败", "", "", 0, "failed", "API 请求失败",
@@ -193,7 +189,7 @@ describe("registerErrorDiary", () => {
     registerErrorDiary();
     registerErrorDiary();
     bus.emit("toast:show", { msg: "❌ 错误", duration: 3000, type: "error" });
-    await flush();
+    await flushPromises();
     // 只注册一次，所以只调用一次 AddOpLog
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
   });
@@ -201,9 +197,9 @@ describe("registerErrorDiary", () => {
   it("P2 去重：相同 (msg,status) 5s 窗口内只记一条", async () => {
     registerErrorDiary();
     bus.emit("toast:show", { msg: "❌ 网络抖动", duration: 3000, type: "error" });
-    await flush();
+    await flushPromises();
     bus.emit("toast:show", { msg: "❌ 网络抖动", duration: 3000, type: "error" });
-    await flush();
+    await flushPromises();
     // 相同消息+状态在窗口内被去重 → 只写一次（防错误风暴 N 次全文件重写）
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
   });
@@ -213,7 +209,7 @@ describe("registerErrorDiary", () => {
     bus.emit("toast:show", { msg: "❌ 错误A", duration: 3000, type: "error" });
     bus.emit("toast:show", { msg: "❌ 错误B", duration: 3000, type: "error" });
     bus.emit("toast:show", { msg: "⚠️ 错误A", duration: 3000, type: "warn" });
-    await flush();
+    await flushPromises();
     // 不同 msg 或不同 status 的 key 不同 → 均不被去重，共 3 条
     expect(addOpLogMock).toHaveBeenCalledTimes(3);
   });
@@ -225,7 +221,7 @@ describe("registerErrorDiary", () => {
       duration: 4000,
       type: "error",
     });
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
     const call = addOpLogMock.mock.calls[0];
     // 两条持久化字段（modelName=call[1]、errMsg=call[6]）均不包含内部路径段
@@ -241,7 +237,7 @@ describe("registerErrorDiary", () => {
     try {
       registerErrorDiary();
       bus.emit("toast:show", { msg: "❌ 网页版错误", duration: 3000, type: "error" });
-      await flush();
+      await flushPromises();
       // 早退删除后 web 也落日记（原测试断言"不调用"已过时）
       expect(addOpLogMock).toHaveBeenCalled();
     } finally {
@@ -256,7 +252,7 @@ describe("log sink 透写", () => {
     const { logError } = await import("../utils/core/log.ts");
     registerErrorDiary();
     logError("preview 3D", "加载失败", new Error("boom"));
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
     const call = addOpLogMock.mock.calls[0];
     expect(call[0]).toBe("ui");
@@ -270,7 +266,7 @@ describe("log sink 透写", () => {
     const { logWarn } = await import("../utils/core/log.ts");
     registerErrorDiary();
     logWarn("preview 3D", "handle.cleanup 失败");
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);
     expect(addOpLogMock.mock.calls[0][5]).toBe("warn");
   });
@@ -280,7 +276,7 @@ describe("log sink 透写", () => {
     registerErrorDiary();
     __TEST__resetDiary();
     logWarn("tag", "reset 后的消息");
-    await flush();
+    await flushPromises();
     expect(addOpLogMock).not.toHaveBeenCalled();
   });
 });

@@ -29,6 +29,7 @@ vi.mock("./litematic-3d.ts", () => ({
 
 import type { PreviewCtx } from "./utils.ts";
 import { showLitematic, invalidateLitematicPreview } from "./litematic-meta.ts";
+import { flushPromises } from "../../test-utils/index.ts";
 
 let root: ShadowRoot;
 let ctx: PreviewCtx;
@@ -67,14 +68,10 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-async function flush(): Promise<void> {
-  await new Promise((r) => setTimeout(r, 0));
-}
-
 describe("showLitematic", () => {
   it("litematic 路径 → 渲染详情 + 材料列表 + 预览图", async () => {
     await showLitematic(ctx, "/mc/a.litematic");
-    await flush();
+    await flushPromises();
 
     expect(mocks.ReadLitematicMeta).toHaveBeenCalledWith("/mc/a.litematic");
     const detail = root.getElementById("preview-detail")!.innerHTML;
@@ -95,14 +92,14 @@ describe("showLitematic", () => {
       { size: [1, 1, 1], blockCount: 1 },
     );
     await showLitematic(ctx, "/mc/a.nbt");
-    await flush();
+    await flushPromises();
     expect(mocks.ReadNbtStructure).toHaveBeenCalledWith("/mc/a.nbt");
     expect(root.getElementById("preview-detail")!.innerHTML).toContain("1");
 
     // 无 size/blockCount → 失败分支
     mocks.ReadNbtStructure.mockResolvedValue({ foo: 1 });
     await showLitematic(ctx, "/mc/b.nbt");
-    await flush();
+    await flushPromises();
     expect(root.getElementById("preview-detail")!.innerHTML).toContain("读取失败");
   });
 
@@ -111,7 +108,7 @@ describe("showLitematic", () => {
       { size: [2, 2, 2], blockCount: 8 },
     );
     await showLitematic(ctx, "/mc/c.schematic");
-    await flush();
+    await flushPromises();
     expect(mocks.ReadSchematic).toHaveBeenCalledWith("/mc/c.schematic");
     expect(root.getElementById("preview-detail")!.innerHTML).toContain("8");
   });
@@ -119,20 +116,20 @@ describe("showLitematic", () => {
   it("空材料 → 无方块数据占位", async () => {
     mocks.ReadLitematicMeta.mockResolvedValue({ name: "x", totalBlocks: 0 });
     await showLitematic(ctx, "/mc/a.litematic");
-    await flush();
+    await flushPromises();
     expect(root.getElementById("preview-material")!.innerHTML).toContain("无方块数据");
   });
 
   it("3D FAB → createLitematic3D（带对应 voxel 函数名）", async () => {
     mocks.createLitematic3D.mockResolvedValue(undefined);
     await showLitematic(ctx, "/mc/a.litematic");
-    await flush();
+    await flushPromises();
 
     const btn = root.getElementById("btn-lt-3d") as HTMLButtonElement;
     expect(btn.classList.contains("preview-fab")).toBe(true); // FAB 标配形态（对齐 VRM/MMD）
     btn.click();
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(mocks.createLitematic3D).toHaveBeenCalledWith(
       "/mc/a.litematic",
       "GetLitematicVoxelData",
@@ -143,19 +140,19 @@ describe("showLitematic", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     mocks.createLitematic3D.mockRejectedValue(new Error("voxel boom"));
     await showLitematic(ctx, "/mc/a.litematic");
-    await flush();
+    await flushPromises();
 
     const btn = root.getElementById("btn-lt-3d") as HTMLButtonElement;
     btn.click();
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
 
   it("Tab 切换更新 localStorage 与显示状态", async () => {
     await showLitematic(ctx, "/mc/a.litematic");
-    await flush();
+    await flushPromises();
 
     const materialBtn = root.querySelector('[data-tab="material"]') as HTMLElement;
     materialBtn.click();
@@ -170,11 +167,11 @@ describe("showLitematic", () => {
       () => new Promise<Record<string, unknown>>((r) => { resolveMeta = r; }),
     );
     const p = showLitematic(ctx, "/mc/a.litematic");
-    await flush(); // 让 getApp() resolve、ReadLitematicMeta 被调用并捕获 resolve 句柄
+    await flushPromises(); // 让 getApp() resolve、ReadLitematicMeta 被调用并捕获 resolve 句柄
     invalidateLitematicPreview(); // 模拟切换其他模型
     resolveMeta({ name: "迟到", totalBlocks: 1 });
     await p;
-    await flush();
+    await flushPromises();
 
     // detail 仍为占位（未被迟到结果覆盖）
     expect(root.getElementById("preview-detail")!.innerHTML).not.toContain("迟到");

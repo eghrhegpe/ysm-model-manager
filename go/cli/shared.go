@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-
-	"ysm-model-manager/go/fsutil"
 )
 
 // exitCode 退出码常量
@@ -134,9 +132,6 @@ func parseFlags(fs *flag.FlagSet, args []string) (filesRoot string, err error) {
 func isPowerOf2(n int) bool {
 	return n > 0 && (n&(n-1)) == 0
 }
-
-// formatSize 格式化文件大小——委托至 fsutil.FormatSize（单一事实来源）。
-func formatSize(bytes int64) string { return fsutil.FormatSize(bytes) }
 
 // ========== 输出捕获工具 ==========
 

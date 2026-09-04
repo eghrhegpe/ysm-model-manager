@@ -182,7 +182,7 @@ func runFileBench(ctx *CmdContext) error {
 	}
 
 	if len(files) == 0 {
-		fmt.Printf("📭 没有找到大于 %s 的文件\n", formatSize(cliLargeFileThreshold))
+		fmt.Printf("📭 没有找到大于 %s 的文件\n", fsutil.FormatSize(cliLargeFileThreshold))
 		return nil
 	}
 
@@ -210,10 +210,10 @@ func runFileBench(ctx *CmdContext) error {
 		if len(name) > 50 {
 			name = name[:47] + "..."
 		}
-		fmt.Printf("   [%d] %-50s %s\n", i+1, name, formatSize(fi.size))
+		fmt.Printf("   [%d] %-50s %s\n", i+1, name, fsutil.FormatSize(fi.size))
 		totalSize += fi.size
 	}
-	fmt.Printf("\n   总大小: %s\n\n", formatSize(totalSize))
+	fmt.Printf("\n   总大小: %s\n\n", fsutil.FormatSize(totalSize))
 
 	fmt.Println("📊 单文件读取测试:")
 	// 收集每文件平均耗时/吞吐，供 SingleRead 汇总归档（#8：测量曾做但不写 JSON）
@@ -238,7 +238,7 @@ func runFileBench(ctx *CmdContext) error {
 		fileAvgMs = append(fileAvgMs, float64(avgTime)/float64(time.Millisecond))
 		fileThrpt = append(fileThrpt, throughput)
 
-		fmt.Printf("   %s (%s):\n", name, formatSize(fi.size))
+		fmt.Printf("   %s (%s):\n", name, fsutil.FormatSize(fi.size))
 		fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgTime, throughput)
 	}
 
@@ -266,7 +266,7 @@ func runFileBench(ctx *CmdContext) error {
 		if avgBatch > 0 {
 			batchThroughput = float64(totalSize) / avgBatch.Seconds() / (1024 * 1024)
 		}
-		fmt.Printf("   %d 个文件, 总大小 %s:\n", len(fileInfos), formatSize(totalSize))
+		fmt.Printf("   %d 个文件, 总大小 %s:\n", len(fileInfos), fsutil.FormatSize(totalSize))
 		fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgBatch, batchThroughput)
 	}
 
@@ -277,8 +277,8 @@ func runFileBench(ctx *CmdContext) error {
 
 	fmt.Println("\n📊 IPC 传输开销测量:")
 	overheadEstimate := calculateIPCOverhead(ctx.App, benchItems, *iterations)
-	fmt.Printf("   原始大小:     %s\n", formatSize(totalSize))
-	fmt.Printf("   Base64 膨胀:  %s (+%.0f%%)\n", formatSize(overheadEstimate.Base64Size), overheadEstimate.InflationRatio*100)
+	fmt.Printf("   原始大小:     %s\n", fsutil.FormatSize(totalSize))
+	fmt.Printf("   Base64 膨胀:  %s (+%.0f%%)\n", fsutil.FormatSize(overheadEstimate.Base64Size), overheadEstimate.InflationRatio*100)
 	fmt.Printf("   序列化开销:   ~%s\n", durationFormat(overheadEstimate.SerDescOverheadMs))
 
 	// 基准结果无条件组装：--output 落盘与 --compare 真对比共用（#8 补全归档）
@@ -545,7 +545,7 @@ func runScanDir(ctx *CmdContext) error {
 	fmt.Printf("📊 目录统计:\n")
 	fmt.Printf("   目录数:   %d\n", totalDirs)
 	fmt.Printf("   文件数:   %d\n", totalFiles)
-	fmt.Printf("   总大小:   %s\n\n", formatSize(totalSize))
+	fmt.Printf("   总大小:   %s\n\n", fsutil.FormatSize(totalSize))
 
 	fmt.Println("📋 按扩展名分组:")
 	type extStat struct {
@@ -563,7 +563,7 @@ func runScanDir(ctx *CmdContext) error {
 	fmt.Printf("   %-10s %-8s %s\n", "扩展名", "数量", "总大小")
 	fmt.Println("   " + strings.Repeat("-", 50))
 	for _, s := range stats {
-		fmt.Printf("   %-10s %-8d %s\n", s.ext, s.count, formatSize(s.size))
+		fmt.Printf("   %-10s %-8d %s\n", s.ext, s.count, fsutil.FormatSize(s.size))
 	}
 
 	if len(largestFiles) > 0 {
@@ -574,7 +574,7 @@ func runScanDir(ctx *CmdContext) error {
 				break
 			}
 			relPath := strings.TrimPrefix(lf.path, *dirPath)
-			fmt.Printf("   [%d] %s (%s)\n", i+1, relPath, formatSize(lf.size))
+			fmt.Printf("   [%d] %s (%s)\n", i+1, relPath, fsutil.FormatSize(lf.size))
 		}
 	}
 
@@ -590,7 +590,7 @@ func runScanDir(ctx *CmdContext) error {
 			if ierr != nil {
 				return nil
 			}
-			fmt.Printf("   %s (%s)\n", relPath, formatSize(info.Size()))
+			fmt.Printf("   %s (%s)\n", relPath, fsutil.FormatSize(info.Size()))
 			count++
 			return nil
 		})
@@ -704,13 +704,13 @@ func printTextureDetails(textureFiles []string, modelDir string) {
 
 	fmt.Printf("   按格式:\n")
 	for ext, size := range extSizeMap {
-		fmt.Printf("     %s: %s\n", ext, formatSize(size))
+		fmt.Printf("     %s: %s\n", ext, fsutil.FormatSize(size))
 	}
 
 	fmt.Printf("\n   最大贴图 Top 10:\n")
 	for i := 0; i < min(10, len(texInfos)); i++ {
 		relPath := strings.TrimPrefix(texInfos[i].path, modelDir)
-		fmt.Printf("     [%d] %s (%s) %s\n", i+1, relPath, texInfos[i].ext, formatSize(texInfos[i].size))
+		fmt.Printf("     [%d] %s (%s) %s\n", i+1, relPath, texInfos[i].ext, fsutil.FormatSize(texInfos[i].size))
 	}
 
 	fmt.Printf("\n⚠️  性能预警:\n")
@@ -721,14 +721,14 @@ func printTextureDetails(textureFiles []string, modelDir string) {
 		}
 	}
 	if largeTextures > 0 {
-		fmt.Printf("   🔴 有 %d 个贴图大于 %s，建议压缩或转换为 KTX2\n", largeTextures, formatSize(cliTextureLargeWarning))
+		fmt.Printf("   🔴 有 %d 个贴图大于 %s，建议压缩或转换为 KTX2\n", largeTextures, fsutil.FormatSize(cliTextureLargeWarning))
 	} else {
 		fmt.Printf("   ✅ 无超大贴图\n")
 	}
 
 	tgaSize := extSizeMap[".tga"] + extSizeMap[".dds"]
 	if tgaSize > 0 {
-		fmt.Printf("   🟡 TGA/DDS 贴图占 %s，建议转换为 PNG 或 KTX2\n", formatSize(tgaSize))
+		fmt.Printf("   🟡 TGA/DDS 贴图占 %s，建议转换为 PNG 或 KTX2\n", fsutil.FormatSize(tgaSize))
 	}
 }
 
@@ -736,15 +736,15 @@ func printTextureDetails(textureFiles []string, modelDir string) {
 func printOverallAssessment(modelSize, textureSize int64) {
 	fmt.Printf("\n📈 总体评估:\n")
 	totalAssetsSize := modelSize + textureSize
-	fmt.Printf("   模型+贴图总大小: %s\n", formatSize(totalAssetsSize))
+	fmt.Printf("   模型+贴图总大小: %s\n", fsutil.FormatSize(totalAssetsSize))
 
 	if totalAssetsSize > cliPerformanceWarning {
-		fmt.Printf("   🔴 大于 %s，首次加载预计 > 10s\n", formatSize(cliPerformanceWarning))
+		fmt.Printf("   🔴 大于 %s，首次加载预计 > 10s\n", fsutil.FormatSize(cliPerformanceWarning))
 		fmt.Printf("   💡 建议: 使用 KTX2 压缩贴图，可减少 60-70%% 体积\n")
 	} else if totalAssetsSize > cliPerformanceCaution {
-		fmt.Printf("   🟡 %s-%s，首次加载可能 5-10s\n", formatSize(cliPerformanceCaution), formatSize(cliPerformanceWarning))
+		fmt.Printf("   🟡 %s-%s，首次加载可能 5-10s\n", fsutil.FormatSize(cliPerformanceCaution), fsutil.FormatSize(cliPerformanceWarning))
 	} else {
-		fmt.Printf("   🟢 小于 %s，加载性能应该可以接受\n", formatSize(cliPerformanceCaution))
+		fmt.Printf("   🟢 小于 %s，加载性能应该可以接受\n", fsutil.FormatSize(cliPerformanceCaution))
 	}
 }
 
@@ -782,11 +782,11 @@ func runAnalyzeMMD(ctx *CmdContext) error {
 	}
 
 	fmt.Printf("📊 资产统计:\n")
-	fmt.Printf("   PMX/PMD 模型:  %d 个 (%s)\n", len(scan.ModelFiles), formatSize(scan.ModelSize))
+	fmt.Printf("   PMX/PMD 模型:  %d 个 (%s)\n", len(scan.ModelFiles), fsutil.FormatSize(scan.ModelSize))
 	fmt.Printf("   VRM 模型:      %d 个\n", len(scan.VrmFiles))
 	fmt.Printf("   VMD 动画:      %d 个\n", len(scan.VmdFiles))
 	fmt.Printf("   VPD 物理:      %d 个\n", len(scan.VpdFiles))
-	fmt.Printf("   贴图文件:      %d 个 (%s)\n", len(scan.TextureFiles), formatSize(scan.TextureSize))
+	fmt.Printf("   贴图文件:      %d 个 (%s)\n", len(scan.TextureFiles), fsutil.FormatSize(scan.TextureSize))
 
 	if len(scan.TextureFiles) > 0 {
 		printTextureDetails(scan.TextureFiles, *modelDir)
@@ -800,7 +800,7 @@ func runAnalyzeMMD(ctx *CmdContext) error {
 				continue // 文件在扫描后被移除，跳过
 			}
 			relPath := strings.TrimPrefix(pf, *modelDir)
-			fmt.Printf("   [%d] %s (%s)\n", i+1, relPath, formatSize(info.Size()))
+			fmt.Printf("   [%d] %s (%s)\n", i+1, relPath, fsutil.FormatSize(info.Size()))
 		}
 	}
 

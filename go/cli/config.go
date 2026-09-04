@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
 )
 
@@ -68,7 +69,7 @@ func runConfigShow(ctx *CmdContext) error {
 	stats := texture_cache.GetCacheStats()
 	fmt.Printf("\n💾 纹理缓存:\n")
 	fmt.Printf("   目录: %s\n", stats.Dir)
-	fmt.Printf("   文件: %d 个, 总大小: %s\n", stats.FileCount, formatSize(stats.TotalSize))
+	fmt.Printf("   文件: %d 个, 总大小: %s\n", stats.FileCount, fsutil.FormatSize(stats.TotalSize))
 
 	fmt.Printf("\n💡 提示:\n")
 	fmt.Printf("   使用 'cache-status' 查看缓存详情\n")

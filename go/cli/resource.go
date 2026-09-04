@@ -159,7 +159,7 @@ func printResourceScanResult(result resourceScanResult) {
 	fmt.Printf("  目录: %s\n", result.Directory)
 	fmt.Printf("  文件总数: %d\n", result.TotalFiles)
 	fmt.Printf("  目录总数: %d\n", result.TotalDirs)
-	fmt.Printf("  总大小: %s\n\n", formatSize(result.TotalSize))
+	fmt.Printf("  总大小: %s\n\n", fsutil.FormatSize(result.TotalSize))
 
 	fmt.Printf("📦 资源分类:\n")
 	// 按 id 排序保证输出稳定
@@ -175,13 +175,13 @@ func printResourceScanResult(result resourceScanResult) {
 
 	fmt.Printf("📂 按扩展名统计:\n")
 	for ext, summary := range result.ByExtension {
-		fmt.Printf("  %-8s %5d 个  %s\n", ext, summary.Count, formatSize(summary.Size))
+		fmt.Printf("  %-8s %5d 个  %s\n", ext, summary.Count, fsutil.FormatSize(summary.Size))
 	}
 
 	if len(result.LargeFiles) > 0 {
-		fmt.Printf("\n💾 大文件 (>%s):\n", formatSize(cliScanLargeFileThreshold))
+		fmt.Printf("\n💾 大文件 (>%s):\n", fsutil.FormatSize(cliScanLargeFileThreshold))
 		for _, f := range result.LargeFiles {
-			fmt.Printf("  %s  %s\n", formatSize(f.Size), f.Path)
+			fmt.Printf("  %s  %s\n", fsutil.FormatSize(f.Size), f.Path)
 		}
 	}
 }
@@ -260,14 +260,14 @@ func printRepoAuditResult(result repoaudit.DirAuditResult) {
 	fmt.Printf("💾 缓存状态:\n")
 	fmt.Printf("  缓存目录: %s\n", result.Cache.CacheDir)
 	fmt.Printf("  缓存文件: %d\n", result.Cache.CacheFiles)
-	fmt.Printf("  缓存大小: %s\n\n", formatSize(result.Cache.CacheSize))
+	fmt.Printf("  缓存大小: %s\n\n", fsutil.FormatSize(result.Cache.CacheSize))
 
 	// 资源
 	fmt.Printf("📦 资源统计:\n")
 	fmt.Printf("  文件总数: %d\n", result.Resources.TotalFiles)
-	fmt.Printf("  总大小: %s\n", formatSize(result.Resources.TotalSize))
+	fmt.Printf("  总大小: %s\n", fsutil.FormatSize(result.Resources.TotalSize))
 	if result.Resources.LargestFile != "" {
-		fmt.Printf("  最大文件: %s (%s)\n", formatSize(result.Resources.LargestSize), result.Resources.LargestFile)
+		fmt.Printf("  最大文件: %s (%s)\n", fsutil.FormatSize(result.Resources.LargestSize), result.Resources.LargestFile)
 	}
 	fmt.Printf("  类型分布: ")
 	for t, c := range result.Resources.ByType {

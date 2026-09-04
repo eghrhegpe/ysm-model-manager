@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
@@ -262,7 +263,7 @@ func runPhaseModelAnalyze(a AppService, modelPath string) guiFlowResult {
 			"✅ 分析完成\n   文件: %s\n   骨骼: %d\n   纹理: %d\n   预估几何: %s",
 			filepath.Base(modelPath),
 			boneCount, texCount,
-			formatSize(geoSize),
+			fsutil.FormatSize(geoSize),
 		),
 	}
 }
@@ -323,9 +324,9 @@ func runPhaseDataPrep(a AppService, modelPath string) guiFlowResult {
 		Success:  true,
 		Description: fmt.Sprintf(
 			"📦 数据就绪\n   几何数据: %s\n   纹理数据: %s\n   IPC 估算: %s (Base64 后)\n   预计传输: %.0fms (假设 50MB/s)",
-			formatSize(geoSize),
-			formatSize(texSize),
-			formatSize(ipcSize),
+			fsutil.FormatSize(geoSize),
+			fsutil.FormatSize(texSize),
+			fsutil.FormatSize(ipcSize),
 			float64(ipcSize)/(50*1024*1024)*1000,
 		),
 	}

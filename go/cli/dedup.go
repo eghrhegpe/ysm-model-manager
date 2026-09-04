@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/dedup"
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/recycle"
 )
 
@@ -115,7 +116,7 @@ func runDedupScan(ctx *CmdContext) error {
 			return newRuntimeErrf("保存扫描结果失败: %w", err)
 		}
 		fmt.Printf("💾 扫描结果已保存到: %s（组 %d，多余 %d，可回收 %s）\n",
-			*output, result.Groups, result.ExtraFiles, formatSize(result.Reclaim))
+			*output, result.Groups, result.ExtraFiles, fsutil.FormatSize(result.Reclaim))
 		// --output 本意是「结果存文件别刷屏」：写盘后只打印摘要，不在 stdout 展开每组
 		return nil
 	}
@@ -126,9 +127,9 @@ func runDedupScan(ctx *CmdContext) error {
 	}
 
 	fmt.Printf("🔍 重复文件扫描: %s\n", scanDir)
-	fmt.Printf("   重复组: %d，多余文件: %d，可回收: %s\n\n", result.Groups, result.ExtraFiles, formatSize(result.Reclaim))
+	fmt.Printf("   重复组: %d，多余文件: %d，可回收: %s\n\n", result.Groups, result.ExtraFiles, fsutil.FormatSize(result.Reclaim))
 	for i, g := range groups {
-		fmt.Printf("  组 %d（SHA256 %s，单文件 %s，%d 个副本）:\n", i+1, shortHash(g.Hash), formatSize(g.Size), len(g.Files))
+		fmt.Printf("  组 %d（SHA256 %s，单文件 %s，%d 个副本）:\n", i+1, shortHash(g.Hash), fsutil.FormatSize(g.Size), len(g.Files))
 		for _, f := range g.Files {
 			fmt.Printf("    - %s\n", f.Path)
 		}

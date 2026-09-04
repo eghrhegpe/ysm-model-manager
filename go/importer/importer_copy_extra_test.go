@@ -1,5 +1,5 @@
 // ===== go/importer 复制链错误分支补充单测 =====
-// 覆盖 importer.go 中 copyDir / copyFile 的失败分支：
+// 覆盖 importer.go 中 copyDir 与 fsutil.CopyFile 的失败分支：
 // 目标路径被目录/文件占位（MkdirAll/Create/Symlink 失败）、
 // 子目录递归错误上抛、复制源为目录时 io.Copy 失败与半截文件清理。
 // copyDirContents 已于锐评 #11 删除（生产零调用，语义归 fsutil.CopyDirRecursive；
@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // ===== copyDir =====
@@ -55,7 +57,7 @@ func TestCopyFile_IOCopyErrorCleanup(t *testing.T) {
 	srcDir := filepath.Join(base, "srcdir")
 	_ = os.MkdirAll(srcDir, 0755)
 	dst := filepath.Join(base, "out", "f.txt")
-	if err := copyFile(srcDir, dst); err == nil {
+	if err := fsutil.CopyFile(srcDir, dst); err == nil {
 		t.Fatal("复制目录句柄应报错")
 	}
 	if _, err := os.Stat(dst); !os.IsNotExist(err) {

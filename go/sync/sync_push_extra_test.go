@@ -1,5 +1,5 @@
 // ===== go/sync 推送/拉取执行层错误分支补充单测 =====
-// 覆盖 sync_push.go 中 copyFile / copyDirRecursive / PullResources 的错误分支：
+// 覆盖 sync_push.go 中 copyDirRecursive / PullResources 与 fsutil.CopyFile 的错误分支：
 // 复制源不可读、目标路径被目录/文件占位（Create/Rename/MkdirAll 失败）、
 // 复制中途失败时对既有目标目录保留旧内容、符号链接不跟随复制。
 // 需要 Windows 共享锁触发的递归枚举失败回滚见 sync_push_lock_windows_test.go。
@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // ===== copyFile 错误分支 =====
@@ -34,7 +36,7 @@ func assertNoFsutilTmp(t *testing.T, dir string) {
 func TestCopyFile_OpenSrcError(t *testing.T) {
 	base := t.TempDir()
 	dst := filepath.Join(base, "out", "f.txt")
-	if err := copyFile(filepath.Join(base, "nope.txt"), dst); err == nil {
+	if err := fsutil.CopyFile(filepath.Join(base, "nope.txt"), dst); err == nil {
 		t.Fatal("源不存在应报错")
 	}
 	if _, err := os.Stat(dst); !os.IsNotExist(err) {
@@ -48,7 +50,7 @@ func TestCopyFile_MkdirAllError(t *testing.T) {
 	_ = os.WriteFile(blocker, []byte("x"), 0644)
 	src := filepath.Join(base, "src.txt")
 	_ = os.WriteFile(src, []byte("data"), 0644)
-	if err := copyFile(src, filepath.Join(blocker, "sub", "f.txt")); err == nil {
+	if err := fsutil.CopyFile(src, filepath.Join(blocker, "sub", "f.txt")); err == nil {
 		t.Fatal("目标父级为文件时应报错")
 	}
 }
@@ -64,7 +66,7 @@ func TestCopyFile_TmpNameRandomized(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = os.WriteFile(filepath.Join(dst+".copy-tmp", "guard"), []byte("g"), 0644)
-	if err := copyFile(src, dst); err != nil {
+	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("随机 tmp 名应规避占位冲突，实际报错: %v", err)
 	}
 	data, _ := os.ReadFile(dst)
@@ -84,7 +86,7 @@ func TestCopyFile_IOCopyError(t *testing.T) {
 	srcDir := filepath.Join(base, "srcdir")
 	_ = os.MkdirAll(srcDir, 0755)
 	dst := filepath.Join(base, "out", "f.txt")
-	if err := copyFile(srcDir, dst); err == nil {
+	if err := fsutil.CopyFile(srcDir, dst); err == nil {
 		t.Fatal("复制目录句柄应报错")
 	}
 	assertNoFsutilTmp(t, filepath.Join(base, "out"))
@@ -99,7 +101,7 @@ func TestCopyFile_RenameError(t *testing.T) {
 	if err := os.MkdirAll(dst, 0755); err != nil { // dst 已存在为目录
 		t.Fatal(err)
 	}
-	if err := copyFile(src, dst); err == nil {
+	if err := fsutil.CopyFile(src, dst); err == nil {
 		t.Fatal("目标为目录时应报错")
 	}
 	assertNoFsutilTmp(t, filepath.Join(base, "out"))

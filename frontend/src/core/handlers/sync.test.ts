@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { MOCK_DATA } from "../../../e2e/mock-data.ts";
+import { flushPromises } from "../../test-utils/index.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -65,10 +66,6 @@ afterEach(() => {
   cleanups.splice(0).forEach((fn) => fn());
 });
 
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 /** 注册被测 handler 并登记清理 */
 async function register(): Promise<void> {
   const { registerSync } = await import("./sync.ts");
@@ -101,8 +98,8 @@ describe("registerSync — sync:download:missing", () => {
     const { toasts, doneEvents, refreshEvents, reloadEvents } = spyEvents();
 
     bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "ysm", token: "t1" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.GetRepoRoot).toHaveBeenCalledWith("ysm");
     expect(mocks.InstallModelTo).toHaveBeenCalledWith(
@@ -121,8 +118,8 @@ describe("registerSync — sync:download:missing", () => {
     const { toasts } = spyEvents();
 
     bus.emit("sync:download:missing", { instanceName: "", rtype: "ysm", token: "t2" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     // 只有 PackA 有 Missing，PackB 跳过
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
@@ -135,8 +132,8 @@ describe("registerSync — sync:download:missing", () => {
     const { toasts, doneEvents, reloadEvents } = spyEvents();
 
     bus.emit("sync:download:missing", { instanceName: "", rtype: "ysm", token: "t3" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg === "请先配置该资源类型目录" && t.type === "warn")).toBe(true);
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
@@ -156,15 +153,15 @@ describe("registerSync — sync:download:missing", () => {
       () => new Promise<void>((r) => { resolveInstall = r; }),
     );
     bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "ysm", token: "t4" });
-    await flush();
+    await flushPromises();
 
     // 第二次触发（此时 busy=true）
     bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "ysm", token: "t5" });
-    await flush();
+    await flushPromises();
 
     resolveInstall();
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     // 只有第一次执行了安装
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
@@ -181,7 +178,7 @@ describe("registerSync — sync:download:missing", () => {
     const { doneEvents } = spyEvents();
 
     bus.emit("sync:download:missing", { instanceName: "", rtype: "ysm", token: "t6" });
-    await flush();
+    await flushPromises();
 
     expect(doneEvents.length).toBe(1);
   });
@@ -192,8 +189,8 @@ describe("registerSync — sync:download:missing", () => {
 
     // 故意违反契约（bus.ts 已声明 rtype 必填）：runtime 守卫应显式失败而非降级
     bus.emit("sync:download:missing", { instanceName: "PackA", token: "t8" } as unknown as { instanceName?: string; rtype: string; token?: string });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.GetRepoRoot).not.toHaveBeenCalled();
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
@@ -215,8 +212,8 @@ describe("registerSync — sync:download:missing", () => {
     ]);
 
     bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "pack", token: "t7" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.InstallResourceToInstance).toHaveBeenCalledWith(
       "pack",
@@ -233,8 +230,8 @@ describe("registerSync — sync:toggle:status", () => {
     const { toasts, refreshEvents } = spyEvents();
 
     bus.emit("sync:toggle:status");
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.SyncModelToggleStatus).toHaveBeenCalledTimes(2); // 两个实例
     expect(mocks.AddImportLog).toHaveBeenCalledWith(
@@ -255,7 +252,7 @@ describe("registerSync — sync:toggle:status", () => {
     const { toasts } = spyEvents();
 
     bus.emit("sync:toggle:status");
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg === "没有找到整合包" && t.type === "info")).toBe(true);
     expect(mocks.SyncModelToggleStatus).not.toHaveBeenCalled();
@@ -269,8 +266,8 @@ describe("registerSync — sync:toggle:status", () => {
     const { toasts } = spyEvents();
 
     bus.emit("sync:toggle:status");
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.AddImportLog).toHaveBeenCalledWith(
       "sync-status",
@@ -291,7 +288,7 @@ describe("registerSync — sync:toggle:status", () => {
     const { toasts } = spyEvents();
 
     bus.emit("sync:toggle:status");
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg === "请先配置目录" && t.type === "warn")).toBe(true);
   });
@@ -306,19 +303,19 @@ describe("registerSync — sync:toggle:status", () => {
       () => new Promise<void>((r) => { resolveToggle = r; }),
     );
     bus.emit("sync:toggle:status");
-    await flush();
+    await flushPromises();
 
     // 第二次触发（此时 busy=true）→ 应发提示 toast 而非静默 return
     // 挂起的是第一个实例的调用，循环阻塞中；记录当前调用数，第二次 emit 不应新增
     const callsBeforeSecond = mocks.SyncModelToggleStatus.mock.calls.length;
     bus.emit("sync:toggle:status");
-    await flush();
+    await flushPromises();
 
     expect(toasts.some((t) => t.msg === "同步进行中，已跳过本次" && t.type === "info")).toBe(true);
     expect(mocks.SyncModelToggleStatus.mock.calls.length).toBe(callsBeforeSecond);
 
     resolveToggle();
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
   });
 });

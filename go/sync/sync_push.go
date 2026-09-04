@@ -140,7 +140,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 					}
 					continue
 				}
-				if err := copyFile(src, dstPath); err != nil {
+				if err := fsutil.CopyFile(src, dstPath); err != nil {
 					failed++
 					if logger != nil {
 						logger(filepath.Base(src), src, dstPath, 0, "failed", "拉取失败: "+err.Error())
@@ -180,7 +180,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 			count++
 			continue
 		}
-		if err := copyFile(src, filepath.Join(dstDir, filepath.Base(src))); err != nil {
+		if err := fsutil.CopyFile(src, filepath.Join(dstDir, filepath.Base(src))); err != nil {
 			failed++
 			if logger != nil {
 				logger(filepath.Base(src), src, dstDir, 0, "failed", "拉取失败: "+err.Error())
@@ -222,7 +222,7 @@ func PullSingleResource(globalDir, targetDir, srcPath string) error {
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
 		return err
 	}
-	return copyFile(srcPath, filepath.Join(dstDir, filepath.Base(srcPath)))
+	return fsutil.CopyFile(srcPath, filepath.Join(dstDir, filepath.Base(srcPath)))
 }
 
 // PushSingleResource 推送单个资源到整合包：
@@ -339,7 +339,7 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 
 // mapSrcToGlobal P3 修复：原用 strings.Replace(src, targetDir, globalDir, 1)
 // 子串替换——非路径语义且大小写敏感（Windows 下 targetDir 与 src 前缀大小写不一致时 Replace
-// 不命中 → dstDir=Dir(src) → copyFile(src, src) 静默截断源文件；或兄弟目录前缀误匹配写错目录）。
+// 不命中 → dstDir=Dir(src) → fsutil.CopyFile(src, src) 静默截断源文件；或兄弟目录前缀误匹配写错目录）。
 // 改用 paths.RelInside 精确映射：src 必须在 targetDir 下，越界显式报错防逃逸。
 func mapSrcToGlobal(src, targetDir, globalDir string) (string, error) {
 	rel, err := paths.RelInside(targetDir, src)
@@ -347,14 +347,6 @@ func mapSrcToGlobal(src, targetDir, globalDir string) (string, error) {
 		return "", fmt.Errorf("路径 %s 不在目标目录 %s 内", src, targetDir)
 	}
 	return filepath.Join(globalDir, rel), nil
-}
-
-// copyFile 复制文件到目标路径（已收敛至 fsutil.CopyFile 的 tmp+rename 原子落地——
-// 原 os.Create+io.Copy 直写目标，拉取中断/磁盘满会留半截文件进仓库，被扫描成
-// 「截断哈希」进入同步匹配；fsutil 补 Sync 落盘检查 + Chmod 0644，与 installer/
-// fileops/recycle/importer 全部统一，ADR-044 策略 A）。
-func copyFile(src, dst string) error {
-	return fsutil.CopyFile(src, dst)
 }
 
 // copyDirRecursive 递归复制目录树到 dstDir（保留相对路径）：

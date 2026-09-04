@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/internal/app"
@@ -975,9 +976,9 @@ func TestFormatSize(t *testing.T) {
 		{1073741824, "1.0GB"},
 	}
 	for _, tt := range tests {
-		result := formatSize(tt.input)
+		result := fsutil.FormatSize(tt.input)
 		if result != tt.expected {
-			t.Errorf("formatSize(%d) = %s, want %s", tt.input, result, tt.expected)
+			t.Errorf("fsutil.FormatSize(%d) = %s, want %s", tt.input, result, tt.expected)
 		}
 	}
 }

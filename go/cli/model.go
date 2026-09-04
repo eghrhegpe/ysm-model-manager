@@ -195,7 +195,7 @@ func runList(ctx *CmdContext) error {
 		if len(name) > 38 {
 			name = name[:35] + "..."
 		}
-		size := formatSize(e.Size)
+		size := fsutil.FormatSize(e.Size)
 		modTime := time.UnixMilli(e.ModTime).Format("2006-01-02 15:04")
 		fmt.Printf("%-5d %-40s %-12s %-10s %s\n", i+1, name, e.Ext, size, modTime)
 	}
@@ -211,7 +211,7 @@ func runList(ctx *CmdContext) error {
 		for _, e := range entries {
 			totalSize += e.Size
 		}
-		fmt.Printf("   总大小:   %s\n", formatSize(totalSize))
+		fmt.Printf("   总大小:   %s\n", fsutil.FormatSize(totalSize))
 	}
 
 	return nil

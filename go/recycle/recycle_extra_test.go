@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/internal/testutil"
 )
 
@@ -57,7 +58,7 @@ func TestCopyFile_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 	dst := filepath.Join(dir, "sub", "dst.ysm")
-	if err := copyFile(src, dst); err != nil {
+	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 失败: %v", err)
 	}
 	readBack, err := os.ReadFile(dst)
@@ -70,7 +71,7 @@ func TestCopyFile_Success(t *testing.T) {
 }
 
 func TestCopyFile_SrcMissing(t *testing.T) {
-	err := copyFile("/nonexistent/path.ysm", "/tmp/dst.ysm")
+	err := fsutil.CopyFile("/nonexistent/path.ysm", "/tmp/dst.ysm")
 	if err == nil {
 		t.Fatal("源文件不存在应报错")
 	}
@@ -84,7 +85,7 @@ func TestCopyFile_DstDirCreate(t *testing.T) {
 	}
 	// 目标目录不存在，应自动创建
 	dst := filepath.Join(dir, "a", "b", "dst.ysm")
-	if err := copyFile(src, dst); err != nil {
+	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 自动创建目录失败: %v", err)
 	}
 	if _, err := os.Stat(dst); err != nil {

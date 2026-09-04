@@ -97,7 +97,7 @@ describe("getMeshBoneId", () => {
 });
 
 describe("assembleBoneSelectInfo", () => {
-  function makeRig(rotationY = 0) {
+  function makeRaycastRig(rotationY = 0) {
     const { nameMap, parentMap, childrenMap } = buildBoneHierarchy(makeSpec());
     const group = new THREE.Group();
     group.name = "head";
@@ -111,7 +111,7 @@ describe("assembleBoneSelectInfo", () => {
   }
 
   it("完整组装：name/path/parent/children/meshCount/local/world", () => {
-    const rig = makeRig();
+    const rig = makeRaycastRig();
     const info = assembleBoneSelectInfo(
       "head", rig.boneGroupMap, rig.nameMap, rig.parentMap, rig.childrenMap, null,
     );
@@ -125,7 +125,7 @@ describe("assembleBoneSelectInfo", () => {
   });
 
   it("非单位四元数 → localRot 输出四元数分量；单位四元数 → null", () => {
-    const rotated = makeRig(Math.PI / 2);
+    const rotated = makeRaycastRig(Math.PI / 2);
     const info = assembleBoneSelectInfo(
       "head", rotated.boneGroupMap, rotated.nameMap, rotated.parentMap, rotated.childrenMap, null,
     );
@@ -134,7 +134,7 @@ describe("assembleBoneSelectInfo", () => {
     expect(info.localRot![3]).toBeCloseTo(Math.SQRT1_2, 6);
     expect(info.localRot![0]).toBeCloseTo(0, 6);
 
-    const plain = makeRig();
+    const plain = makeRaycastRig();
     const info2 = assembleBoneSelectInfo(
       "head", plain.boneGroupMap, plain.nameMap, plain.parentMap, plain.childrenMap, null,
     );
@@ -142,7 +142,7 @@ describe("assembleBoneSelectInfo", () => {
   });
 
   it("hoveredMesh 为 Mesh → cubeRot / cubePos 取 mesh 局部变换", () => {
-    const rig = makeRig();
+    const rig = makeRaycastRig();
     const info = assembleBoneSelectInfo(
       "head", rig.boneGroupMap, rig.nameMap, rig.parentMap, rig.childrenMap, rig.mesh,
     );
@@ -151,7 +151,7 @@ describe("assembleBoneSelectInfo", () => {
   });
 
   it("hoveredMesh 非 Mesh（null）→ cube 数据为 null", () => {
-    const rig = makeRig();
+    const rig = makeRaycastRig();
     const info = assembleBoneSelectInfo(
       "head", rig.boneGroupMap, rig.nameMap, rig.parentMap, rig.childrenMap, null,
     );
@@ -160,7 +160,7 @@ describe("assembleBoneSelectInfo", () => {
   });
 
   it("boneGroupMap 缺骨骼 → 零变换兜底 + name 回退 boneId", () => {
-    const rig = makeRig();
+    const rig = makeRaycastRig();
     const info = assembleBoneSelectInfo(
       "missing", rig.boneGroupMap, rig.nameMap, rig.parentMap, rig.childrenMap, null,
     );

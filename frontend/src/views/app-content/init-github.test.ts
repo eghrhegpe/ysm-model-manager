@@ -7,7 +7,7 @@
 //    bindRepoEvents 委托 + cleanup 登记 / 同步抛错留痕不逸出（P3 回归）
 // mock 写法按知识卡 vitest-env-switch.md 模式 4（vi.hoisted + mock getApp）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { waitFor } from "../../test-utils/index.ts";
+import { flushPromises, waitFor } from "../../test-utils/index.ts";
 import { t } from "../../core/i18n/t.ts";
 
 const { getApp, bindRepoEvents, renderList, repoCleanup, tryFetchModels } = vi.hoisted(() => {
@@ -74,11 +74,6 @@ function gridOf(el: HTMLElement): HTMLElement {
 }
 function bodyOf(el: HTMLElement): HTMLElement {
   return el.querySelector("#gh-results-body") as HTMLElement;
-}
-
-/** 冲刷微任务（getApp().then / await 链） */
-async function flush() {
-  await new Promise((r) => setTimeout(r, 0));
 }
 
 let appObj: Record<string, ReturnType<typeof vi.fn>>;
@@ -347,8 +342,8 @@ describe("githubShowRepo — 竞态守卫", () => {
     expect((callArgs(bindRepoEvents, 0)[1] as { repo: string }).repo).toBe("o/r2");
 
     resolveR1({ models: [{ name: "late", path: "late" }], source: "raw" });
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     // 迟到响应：不触发新渲染，仅写缓存
     expect(bindRepoEvents).toHaveBeenCalledTimes(1);
     expect((raw._githubCache as Map<string, RepoCacheEntry>).has("o/r1")).toBe(true);
@@ -402,8 +397,8 @@ describe("githubRenderModels — 清理与异常", () => {
     initGithubPage(host);
     await waitFor(() => gridOf(el).querySelectorAll(".gh-repo-card").length === 1);
     gridOf(el).querySelectorAll<HTMLElement>(".gh-repo-card")[0]!.click();
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     // 无 unhandled rejection 即通过；表头已在绑定前写入
     expect(bodyOf(el).innerHTML).toContain("gh-header");
   });

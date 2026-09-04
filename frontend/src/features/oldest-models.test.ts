@@ -2,6 +2,7 @@
 // 覆盖：空仓库、未配置目录、正常渲染（评分/热力图/资历最深/推荐）、rtype 切换、清理函数、点击选模型
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../bus.ts";
+import { flushPromises } from "../test-utils/index.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -48,10 +49,6 @@ afterEach(() => {
   unsubModelSelect = null;
   localStorage.removeItem("repo_rtype");
 });
-
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
 
 /** 构造 RepoHealthAudit 合法返回（字段与 go/repoaudit.HealthReport 对齐；ADR-143 P1 后 typed） */
 function auditReport(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -116,7 +113,7 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
+    await flushPromises();
     expect(container.textContent).toContain("该类型仓库为空");
     cleanup();
   });
@@ -126,8 +123,8 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const html = container.innerHTML;
     expect(html).toContain("仓库评分");
@@ -158,8 +155,8 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const card = container.querySelector('[data-path="/repo/oldest.ysm"]') as HTMLElement | null;
     expect(card).not.toBeNull();
@@ -174,13 +171,13 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     // 切换类型
     bus.emit("repo:rtype-changed", "mmd");
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(mocks.ScanModelEntries).toHaveBeenCalledTimes(2);
     expect(mocks.GetRepoRoot).toHaveBeenLastCalledWith("mmd");
@@ -188,7 +185,7 @@ describe("loadOldestModel", () => {
     // 清理后再次切换不应再触发渲染
     const callsBefore = mocks.ScanModelEntries.mock.calls.length;
     bus.emit("repo:rtype-changed", "ysm");
-    await flush();
+    await flushPromises();
     expect(mocks.ScanModelEntries.mock.calls.length).toBe(callsBefore);
   });
 
@@ -197,8 +194,8 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(container.textContent).toContain("加载失败");
     expect(container.textContent).toContain("scan crashed");
     cleanup();
@@ -210,8 +207,8 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(container.textContent).toContain("加载失败");
     expect(container.textContent).toContain("root boom");
     cleanup();
@@ -222,15 +219,15 @@ describe("loadOldestModel", () => {
 
     // 挂起期间切换类型 → render#2 用新类型 root 走完整渲染
     bus.emit("repo:rtype-changed", "mmd");
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(mocks.GetRepoRoot).toHaveBeenLastCalledWith("mmd");
     expect(container.textContent).toContain("仓库评分");
 
     // 旧请求此刻才返回 → gen 已过期必须丢弃（不得再走 ScanModelEntries）
     resolveFirst("/stale-root");
     const cleanup = await loadPromise;
-    await flush();
+    await flushPromises();
 
     expect(mocks.ScanModelEntries).toHaveBeenCalledTimes(1);
     expect(container.textContent).not.toContain("/stale-root");
@@ -241,13 +238,13 @@ describe("loadOldestModel", () => {
     const { rejectFirst, container, loadPromise } = await setupPendingRoot();
 
     bus.emit("repo:rtype-changed", "mmd");
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(container.textContent).toContain("仓库评分"); // render#2 已渲染
 
     rejectFirst(new Error("stale boom"));
     const cleanup = await loadPromise;
-    await flush();
+    await flushPromises();
 
     // 过期错误被 gen 守卫丢弃，不得覆盖新内容
     expect(container.textContent).toContain("仓库评分");
@@ -267,8 +264,8 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const html = container.innerHTML;
     // 分数/徽章直接来自 Go 审计报告（score=45, dedup.groups=1）
@@ -283,8 +280,8 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(container.textContent).toContain("加载失败");
     expect(container.textContent).toContain("audit crashed");
     cleanup();
@@ -295,8 +292,8 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
     expect(container.textContent).toContain("加载失败");
     expect(container.textContent).toContain("审计目录不可用");
     cleanup();
@@ -311,8 +308,8 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     expect(container.querySelectorAll(".model-card-sm").length).toBe(0);
     expect(container.querySelectorAll(".oldest-cards-row").length).toBe(0);
@@ -325,12 +322,12 @@ describe("loadOldestModel", () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);
-    await flush();
-    await flush();
+    await flushPromises();
+    await flushPromises();
 
     const callsBefore = mocks.ScanModelEntries.mock.calls.length;
     bus.emit("repo:rtype-changed", "ysm"); // 当前即 ysm
-    await flush();
+    await flushPromises();
     expect(mocks.ScanModelEntries.mock.calls.length).toBe(callsBefore);
     cleanup();
   });

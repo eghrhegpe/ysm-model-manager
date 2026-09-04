@@ -14,7 +14,7 @@
 //   - MAX_ZIP_FILE_BYTES: 100MB（单文件上限，与 MAX_IMPORT_BYTES 对齐）
 
 import { unzipSync } from "fflate";
-import { matchZipEntryTS, RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { matchZipEntryTS, type RESOURCE_TYPES } from "../utils/resource/types.ts";
 
 // --- ZIP 格式常量 ---
 const EOCD_SIG = 0x06054b50; // End of Central Directory
@@ -55,7 +55,14 @@ export interface ExtractResult {
 
 /** detectContainerType 返回值 */
 // ADR-111：VRM 已合并进 EntityPlayer 的 variants，ZipType 不再含独立 VRM
-export type ZipType = typeof RESOURCE_TYPES.YSM | typeof RESOURCE_TYPES.PACK | typeof RESOURCE_TYPES.SHADER | typeof RESOURCE_TYPES.BLUEPRINT | typeof RESOURCE_TYPES.LITEMATIC | typeof RESOURCE_TYPES.MMD | null;
+export type ZipType =
+  | typeof RESOURCE_TYPES.YSM
+  | typeof RESOURCE_TYPES.PACK
+  | typeof RESOURCE_TYPES.SHADER
+  | typeof RESOURCE_TYPES.BLUEPRINT
+  | typeof RESOURCE_TYPES.LITEMATIC
+  | typeof RESOURCE_TYPES.MMD
+  | null;
 
 // --- 中央目录预解析（fflateKey 对齐，处理 gpf bit 11 / 中文文件名）---
 

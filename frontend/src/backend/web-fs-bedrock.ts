@@ -55,7 +55,7 @@ function parseYsmManifestMeta(bytes: Uint8Array): YsmManifestMeta | null {
     const decoded = parseYsmJsonDirect(json);
     if (!decoded?.geometry) return null;
     const meta = (decoded.geometry as { _ysmMeta?: YsmManifestMeta })._ysmMeta;
-    return meta && meta.modelFiles?.length ? meta : null;
+    return meta?.modelFiles?.length ? meta : null;
   } catch (err) {
     // 静默吞异常曾导致 ysm.json 结构不符时无任何线索（69ab1f03 code review）；
     // 此处留 warn 便于排查，null 语义不变（降级走单 geometry 路径）
@@ -84,15 +84,15 @@ async function mergeBedrockFromManifest(
     const raw = typeof mf === "string" ? mf : (mf as { path?: string })?.path || "";
     if (!raw || processed.has(raw)) continue;
     processed.add(raw);
-    const rel = raw.startsWith("models/") || raw.startsWith("models\\") ? raw : "models/" + raw;
+    const rel = raw.startsWith("models/") || raw.startsWith("models\\") ? raw : `models/${raw}`;
     // 兼容 manifest 里只写 baseName（如 "main"）而磁盘上是 main.json / main.geo.json
     const candidates = [
       rel,
       raw,
-      rel + ".json",
-      rel + ".geo.json",
-      raw + ".json",
-      raw + ".geo.json",
+      `${rel}.json`,
+      `${rel}.geo.json`,
+      `${raw}.json`,
+      `${raw}.geo.json`,
     ];
     let bytes: Uint8Array | null = null;
     for (const c of candidates) {
@@ -117,8 +117,8 @@ async function mergeBedrockFromManifest(
     const raw = typeof tf === "string" ? tf : (tf as { uv?: string })?.uv || "";
     if (!raw) continue;
     const rel =
-      raw.startsWith("textures/") || raw.startsWith("textures\\") ? raw : "textures/" + raw;
-    const candidates = [rel, raw, rel + ".png", rel + ".jpg", raw + ".png", raw + ".jpg"];
+      raw.startsWith("textures/") || raw.startsWith("textures\\") ? raw : `textures/${raw}`;
+    const candidates = [rel, raw, `${rel}.png`, `${rel}.jpg`, `${raw}.png`, `${raw}.jpg`];
     let bytes: Uint8Array | null = null;
     for (const c of candidates) {
       bytes = await readFile(c);
@@ -383,12 +383,7 @@ export async function webAnalyzeBedrockModelEntry(
     const sp = subPath.toLowerCase().replace(/\\/g, "/");
     const hitKey =
       Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/") === sp) ??
-      Object.keys(entries).find((k) =>
-        k
-          .toLowerCase()
-          .replace(/\\/g, "/")
-          .endsWith("/" + sp),
-      ) ??
+      Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/").endsWith(`/${sp}`)) ??
       Object.keys(entries).find((k) => {
         const base = k.split(/[/\\]/).pop()?.toLowerCase() ?? "";
         const want = sp.split("/").pop() ?? "";

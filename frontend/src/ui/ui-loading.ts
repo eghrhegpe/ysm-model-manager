@@ -8,21 +8,21 @@
 // @param text 加载文案（原 textKey 改为字面量，ysm 可后续接 i18n 自行替换）
 // @param fn   加载主体（自行 try/catch 差异化错误）
 export async function withLoadingIndicator<T>(text: string, fn: () => Promise<T>): Promise<T> {
-    const overlay = document.createElement('div');
-    overlay.className = 'loading-overlay';
-    const span = document.createElement('span');
-    span.className = 'loading-overlay-text';
-    span.textContent = text;
-    overlay.appendChild(span);
-    document.body.appendChild(overlay);
-    // 强制 reflow 以触发过渡动画
-    void overlay.offsetWidth;
-    overlay.classList.add('visible');
-    try {
-        return await fn();
-    } finally {
-        overlay.classList.remove('visible');
-        // 等淡出过渡结束再移除
-        setTimeout(() => overlay.remove(), 200);
-    }
+  const overlay = document.createElement("div");
+  overlay.className = "loading-overlay";
+  const span = document.createElement("span");
+  span.className = "loading-overlay-text";
+  span.textContent = text;
+  overlay.appendChild(span);
+  document.body.appendChild(overlay);
+  // 强制 reflow 以触发过渡动画
+  void overlay.offsetWidth;
+  overlay.classList.add("visible");
+  try {
+    return await fn();
+  } finally {
+    overlay.classList.remove("visible");
+    // 等淡出过渡结束再移除
+    setTimeout(() => overlay.remove(), 200);
+  }
 }

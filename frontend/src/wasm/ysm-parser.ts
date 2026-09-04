@@ -9,9 +9,9 @@ import {
   createLazyModule,
   ensureDir,
   installYsmModule,
+  type WasmModuleLike,
   wipeDir,
   writeHeapBytes,
-  type WasmModuleLike,
   type YsmDecodedFile,
 } from "./parser-shared.ts";
 
@@ -106,9 +106,7 @@ function _writeHeap(data: Uint8Array): number {
  * 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组）
  * 返回 [{path, data}]，失败返回 null
  */
-export async function decodeYsmFileFromMemory(
-  bytes: Uint8Array,
-): Promise<YsmDecodedFile[] | null> {
+export async function decodeYsmFileFromMemory(bytes: Uint8Array): Promise<YsmDecodedFile[] | null> {
   if (!mod.isInited()) {
     const ok = await initYSMParser();
     if (!ok) throw new Error("YSMParser WASM 未就绪");
@@ -156,9 +154,7 @@ export async function decodeYsmFileFromMemory(
  * 通过 callMain + MEMFS 解码 .ysm（回退路径）
  * 保留以兼容旧的 WASM 编译
  */
-export async function decodeYsmFile(
-  bytes: Uint8Array,
-): Promise<YsmDecodedFile[]> {
+export async function decodeYsmFile(bytes: Uint8Array): Promise<YsmDecodedFile[]> {
   if (!mod.isInited()) {
     const ok = await initYSMParser();
     if (!ok) throw new Error("YSMParser WASM 未就绪");
@@ -205,4 +201,3 @@ export async function decodeYsmFile(
   wipeDir(FS, "/input");
   return files;
 }
-

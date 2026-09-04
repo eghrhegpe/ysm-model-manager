@@ -4,23 +4,23 @@
 // 职责归属：前端只收集/分组/编排，类型判定与落点全在 Go 侧 binding；
 // 收集口径与仓库页拖拽共用 dnd-shared.collectDropFiles。
 
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { getApp } from "../backend/app.ts";
+import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
+import { isWebPlatform } from "../backend/platform-web.ts";
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
-import { getApp } from "../backend/app.ts";
-import { isWebPlatform } from "../backend/platform-web.ts";
-import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
-import { friendlyError } from "../utils/dom/errors.ts";
-import { dbg } from "../utils/debug/debug.ts";
-import { logError } from "../utils/core/log.ts";
 import { swallowError } from "../utils/core/async.ts";
+import { logError } from "../utils/core/log.ts";
+import { dbg } from "../utils/debug/debug.ts";
+import { friendlyError } from "../utils/dom/errors.ts";
+import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import {
-  collectDropFiles,
-  groupCollected,
-  isEditableTarget,
-  fileToBase64,
   buildFolderItems,
   type CollectedEntry,
+  collectDropFiles,
+  fileToBase64,
+  groupCollected,
+  isEditableTarget,
 } from "./dnd-shared.ts";
 
 /** drop 处理期间的 busy 守卫（由绑定闭包持有，每组件实例独立） */
@@ -34,7 +34,11 @@ export interface PackDndInstance {
   name: string;
 }
 
-const toast = (msg: string, type: "success" | "error" | "warn" | "info", duration: number = TOAST_MS.normal): void => {
+const toast = (
+  msg: string,
+  type: "success" | "error" | "warn" | "info",
+  duration: number = TOAST_MS.normal,
+): void => {
   bus.emit("toast:show", { msg, duration, type });
 };
 
@@ -151,9 +155,17 @@ export async function handleInstanceDrop(
     if (okUnits > 0 && failures.length === 0) {
       toast(`✅ 已导入仓库并推送到 ${instanceName}（${okUnits} 项）`, "success", TOAST_MS.success);
     } else if (okUnits > 0 && failures.length > 0) {
-      toast(`⚠️ 推送完成 ${okUnits} 项，${failures.length} 项失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`, "warn", TOAST_MS.verbose);
+      toast(
+        `⚠️ 推送完成 ${okUnits} 项，${failures.length} 项失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`,
+        "warn",
+        TOAST_MS.verbose,
+      );
     } else if (failures.length > 0) {
-      toast(`❌ 推送到 ${instanceName} 失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`, "error", TOAST_MS.verbose);
+      toast(
+        `❌ 推送到 ${instanceName} 失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`,
+        "error",
+        TOAST_MS.verbose,
+      );
     }
     if (attempted > 0) {
       bus.emit("stats:refresh");
@@ -180,7 +192,9 @@ export function bindPackCardDnD(
   let _dropBusy = false;
   const busy: PackDndBusy = {
     isBusy: () => _dropBusy,
-    setBusy: (v: boolean) => { _dropBusy = v; },
+    setBusy: (v: boolean) => {
+      _dropBusy = v;
+    },
   };
   let _lastCard: Element | null = null;
 

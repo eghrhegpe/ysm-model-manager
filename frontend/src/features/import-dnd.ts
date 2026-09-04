@@ -2,19 +2,24 @@
 // 从 document 级 registerDnD 收敛为 <app-tree> 容器内绑定，去掉全局遮罩。
 // 收集器统一走 features/dnd-collector.ts，与导入页收集器一致。
 
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { getApp } from "../backend/app.ts";
+import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
+import { isWebPlatform } from "../backend/platform-web.ts";
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
-import { getApp } from "../backend/app.ts";
-import { isWebPlatform } from "../backend/platform-web.ts";
-import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
-import { ALL_EXTS } from "../utils/resource/extensions.ts";
-import { friendlyError } from "../utils/dom/errors.ts";
-import { dbg } from "../utils/debug/debug.ts";
 import { swallowError } from "../utils/core/async.ts";
 import { logError } from "../utils/core/log.ts";
+import { dbg } from "../utils/debug/debug.ts";
+import { friendlyError } from "../utils/dom/errors.ts";
+import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { ALL_EXTS } from "../utils/resource/extensions.ts";
+import {
+  type CollectedEntry,
+  collectDropFiles,
+  isEditableTarget,
+  isImportableFile,
+} from "./dnd-shared.ts";
 import { executeCollected, importWebFilesWithToast } from "./import-executor.ts";
-import { collectDropFiles, isEditableTarget, isImportableFile, type CollectedEntry } from "./dnd-shared.ts";
 
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
@@ -32,7 +37,10 @@ export async function handleTreeDrop(
   rtype = "",
 ): Promise<void> {
   e.preventDefault();
-  dbg("dnd", "handleTreeDrop called", { busy: isBusy(), targetTag: (e.target as HTMLElement)?.tagName });
+  dbg("dnd", "handleTreeDrop called", {
+    busy: isBusy(),
+    targetTag: (e.target as HTMLElement)?.tagName,
+  });
   if (isEditable(e.target)) return;
 
   if (isBusy()) {
@@ -91,8 +99,10 @@ export async function handleTreeDrop(
     }
     const collected = collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
     if (collected.length === 0) return; // 全被 oversize 滤除：超限提示已足够
-    const importableStr = (name: string) => isImportableFile(name) ? "Y" : "N";
-    logDrop(`drop: 收集 ${collected.length} 文件 [${collected.map((c) => `${c.file.name}(imp=${importableStr(c.file.name)})`).join(", ")}]`);
+    const importableStr = (name: string) => (isImportableFile(name) ? "Y" : "N");
+    logDrop(
+      `drop: 收集 ${collected.length} 文件 [${collected.map((c) => `${c.file.name}(imp=${importableStr(c.file.name)})`).join(", ")}]`,
+    );
 
     const total = collected.length;
     const r = await executeCollected(collected, rtype);
@@ -120,15 +130,22 @@ export async function handleTreeDrop(
  * 按值捕获会在切根后闭包残留旧类型 → 拖到 B 页落 A 根的静默错位；
  * drop 时惰性解析保证始终读最新树类型。
  */
-export function bindTreeDnD(container: HTMLElement, rtype: string | (() => string) = ""): () => void {
+export function bindTreeDnD(
+  container: HTMLElement,
+  rtype: string | (() => string) = "",
+): () => void {
   let _dropBusy = false;
   const isBusy = () => _dropBusy;
-  const setBusy = (v: boolean) => { _dropBusy = v; };
+  const setBusy = (v: boolean) => {
+    _dropBusy = v;
+  };
 
   // hint 与 #tree 同为 <app-tree> shadow root 的直接子节点：parentElement 对
   // shadow root 子节点返回 null（ShadowRoot 非 Element），必须从 getRootNode()
   // 查找，否则 hint 永远不显示（ADR-060 组件化回归）。
-  const hintEl = (container.getRootNode() as ParentNode).querySelector<HTMLElement>(".tree-drop-hint");
+  const hintEl = (container.getRootNode() as ParentNode).querySelector<HTMLElement>(
+    ".tree-drop-hint",
+  );
 
   // WebView2 在 Shadow DOM 内的 drop 事件存在已知限制（overflow:auto 容器吞 drop），
   // 因此在 document 层监听，通过 e.target 判断是否命中 app-tree 子树。
@@ -164,12 +181,24 @@ export function bindTreeDnD(container: HTMLElement, rtype: string | (() => strin
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     if (hintEl && !_dropBusy) hintEl.style.display = "flex";
-    dbg("dnd", "dragover OK", { types: [...(e.dataTransfer.types || [])], target: (e.target as HTMLElement)?.tagName, isEditable: isEditable(e.target) });
+    dbg("dnd", "dragover OK", {
+      types: [...(e.dataTransfer.types || [])],
+      target: (e.target as HTMLElement)?.tagName,
+      isEditable: isEditable(e.target),
+    });
   };
 
   const onDragLeave = (e: DragEvent): void => {
     if (!isInTree(e)) return;
-    if (!(e.currentTarget === e.relatedTarget || (e.relatedTarget as HTMLElement | null)?.closest?.(container.tagName === "APP-TREE" ? "app-tree" : ".list"))) return;
+    if (
+      !(
+        e.currentTarget === e.relatedTarget ||
+        (e.relatedTarget as HTMLElement | null)?.closest?.(
+          container.tagName === "APP-TREE" ? "app-tree" : ".list",
+        )
+      )
+    )
+      return;
     if (hintEl) hintEl.style.display = "none";
   };
 

@@ -35,9 +35,7 @@ export function createVirtualList<T>(opts: VirtualListOpts<T>): VirtualList<T> {
 
   /** 列表在滚动内容中的顶部偏移（列表上方有 header/队列状态等区块时） */
   const listTopOffset = (): number =>
-    listEl.getBoundingClientRect().top -
-    scrollEl.getBoundingClientRect().top +
-    scrollEl.scrollTop;
+    listEl.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop;
 
   const renderSlice = (): void => {
     const total = items.length;

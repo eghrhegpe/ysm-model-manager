@@ -1,14 +1,15 @@
 // ===== 批量重命名对话框（类型化版 — ADR-014 P3 dialogs 收官）=====
 // 复用 parseModelName 解析
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
 import { bus } from "../../bus.ts";
-import { parseModelName, type ParsedModelName } from "../../utils/dom/display.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
-import { registerDlg, closeDlg, trapFocus } from "./modal.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { rebuildParsedName, applyReplaceToName } from "./batch-rename-util.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
+import { stagger } from "../../utils/animation/stagger.ts";
+import { type ParsedModelName, parseModelName } from "../../utils/dom/display.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { applyReplaceToName, rebuildParsedName } from "./batch-rename-util.ts";
+import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {
@@ -82,7 +83,12 @@ function dgBrUpdateAll(items: BatchItem[]): void {
   });
 }
 
-function dgBrApplyReplace(items: BatchItem[], findText: string, replaceText: string, isRegex: boolean): void {
+function dgBrApplyReplace(
+  items: BatchItem[],
+  findText: string,
+  replaceText: string,
+  isRegex: boolean,
+): void {
   if (!findText) return;
   const cnt = document.getElementById("br-changed");
   if (cnt) delete cnt.dataset.regexErr;
@@ -143,11 +149,11 @@ function dgBrGenHTML(dir: string, items: BatchItem[]): string {
   </label>
   <button id="br-presets" class="dlg-btn-accent">📋 ${t("dialog.presets")}</button>
   <div id="br-presets-menu" class="dlg-presets-menu">
-    <div class="br-preset dlg-preset-chip" data-find="\(\d{4}-\d{2}\)" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveYear")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="-v\d+(?=\.)" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveVersion")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="(d{4}-d{2})" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveYear")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="-vd+(?=.)" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveVersion")}</div>
     <div class="br-preset dlg-preset-chip" data-find="【(.+?)】" data-replace="[$1]" data-regex="1">${t("dialog.presetBrackets")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="\[(.+?)\]【(.+?)】" data-replace="$1-$2" data-regex="1">📛 ${t("dialog.presetFlatten")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="\s+" data-replace="_" data-regex="1">🔗 ${t("dialog.presetSpaceUnderscore")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="[(.+?)]【(.+?)】" data-replace="$1-$2" data-regex="1">📛 ${t("dialog.presetFlatten")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="s+" data-replace="_" data-regex="1">🔗 ${t("dialog.presetSpaceUnderscore")}</div>
   </div>
 </div>
 <div id="br-preview" class="dlg-preview"></div>
@@ -213,7 +219,11 @@ function dgBrClose(shell: DgBrShell): void {
   closeDlg(shell.overlay, () => res?.(), undefined);
 }
 
-function dgBrBuildOverlay(dir: string, items: BatchItem[], pendingResolve: () => void): {
+function dgBrBuildOverlay(
+  dir: string,
+  items: BatchItem[],
+  pendingResolve: () => void,
+): {
   shell: DgBrShell;
   overlay: HTMLElement;
   closeFn: () => void;
@@ -305,12 +315,18 @@ function dgBrBindParseTab(shell: DgBrShell): void {
 }
 
 function dgBrBindReplaceTab(shell: DgBrShell): void {
-  const { items, findInput, replaceInput, regexCb, presetsBtn, presetsMenu, previewEl, brTimers } = shell;
+  const { items, findInput, replaceInput, regexCb, presetsBtn, presetsMenu, previewEl, brTimers } =
+    shell;
   let replaceTimer: ReturnType<typeof setTimeout> | null = null;
   const applyReplaceDebounced = (): void => {
     if (replaceTimer) clearTimeout(replaceTimer);
     replaceTimer = setTimeout(() => {
-      dgBrApplyReplace(items, findInput?.value || "", replaceInput?.value || "", regexCb?.checked || false);
+      dgBrApplyReplace(
+        items,
+        findInput?.value || "",
+        replaceInput?.value || "",
+        regexCb?.checked || false,
+      );
       dgBrRenderPreview(previewEl, items);
       dgBrUpdateCount(items);
     }, 200);
@@ -323,8 +339,7 @@ function dgBrBindReplaceTab(shell: DgBrShell): void {
   presetsBtn?.addEventListener("click", (): void => {
     const show = presetsMenu?.style.display !== "flex";
     if (presetsMenu) presetsMenu.style.display = show ? "flex" : "none";
-    presetsBtn.textContent =
-      "📋 " + (show ? t("dialog.collapse") : t("dialog.presets"));
+    presetsBtn.textContent = "📋 " + (show ? t("dialog.collapse") : t("dialog.presets"));
   });
   presetsMenu?.querySelectorAll(".br-preset").forEach((el) => {
     el.addEventListener("click", (): void => {
@@ -333,7 +348,12 @@ function dgBrBindReplaceTab(shell: DgBrShell): void {
       if (replaceInput) replaceInput.value = btn.dataset.replace || "";
       if (regexCb) regexCb.checked = btn.dataset.regex === "1";
       if (presetsMenu) presetsMenu.style.display = "none";
-      dgBrApplyReplace(items, findInput?.value || "", replaceInput?.value || "", regexCb?.checked || false);
+      dgBrApplyReplace(
+        items,
+        findInput?.value || "",
+        replaceInput?.value || "",
+        regexCb?.checked || false,
+      );
       dgBrRenderPreview(previewEl, items);
       dgBrUpdateCount(items);
     });
@@ -341,13 +361,27 @@ function dgBrBindReplaceTab(shell: DgBrShell): void {
 }
 
 function dgBrBindModeSwitch(shell: DgBrShell): void {
-  const { items, modeSelect, parseModeEl, replaceModeEl, findInput, replaceInput, regexCb, previewEl } = shell;
+  const {
+    items,
+    modeSelect,
+    parseModeEl,
+    replaceModeEl,
+    findInput,
+    replaceInput,
+    regexCb,
+    previewEl,
+  } = shell;
   modeSelect?.addEventListener("change", (): void => {
     const isReplace = modeSelect.value === "replace";
     if (parseModeEl) parseModeEl.style.display = isReplace ? "none" : "flex";
     if (replaceModeEl) replaceModeEl.style.display = isReplace ? "flex" : "none";
     if (isReplace) {
-      dgBrApplyReplace(items, findInput?.value || "", replaceInput?.value || "", regexCb?.checked || false);
+      dgBrApplyReplace(
+        items,
+        findInput?.value || "",
+        replaceInput?.value || "",
+        regexCb?.checked || false,
+      );
       dgBrRenderPreview(previewEl, items);
     } else {
       items.forEach((it) => {
@@ -366,7 +400,11 @@ function dgBrBindModeSwitch(shell: DgBrShell): void {
   });
 }
 
-function dgBrBindCancelAndOutside(_shell: DgBrShell, thisEl: HTMLElement, closeFn: () => void): void {
+function dgBrBindCancelAndOutside(
+  _shell: DgBrShell,
+  thisEl: HTMLElement,
+  closeFn: () => void,
+): void {
   // 取消按钮 → 关闭；遮罩点击关闭在此统一管理（与 createDialog 等价）
   thisEl.querySelector("#br-cancel")?.addEventListener("click", closeFn);
   thisEl.addEventListener("click", (e: MouseEvent): void => {
@@ -418,11 +456,7 @@ function dgBrBindApplyClick(
       );
     } catch (e) {
       bus.emit("toast:show", {
-        msg:
-          "❌ " +
-          t("dialog.batchRenameFailed") +
-          ": " +
-          friendlyError(e),
+        msg: "❌ " + t("dialog.batchRenameFailed") + ": " + friendlyError(e),
         duration: TOAST_MS.verbose,
         type: "error",
       });

@@ -2,27 +2,25 @@
 // 风格参照 rename.js 的卡片式弹窗，复用 CSS 变量
 // 用法: const name = await modalPrompt({ title, icon, value, placeholder })
 
-import { esc } from "../../utils/dom/html.ts";
 import { t } from "../../core/i18n/t.ts";
+import { esc } from "../../utils/dom/html.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 export const VIEW_TESTIDS: readonly string[] = [
-  'dlg-overlay',
-  'dlg-input',
-  'dlg-select',
-  'dlg-cancel',
-  'dlg-ok',
+  "dlg-overlay",
+  "dlg-input",
+  "dlg-select",
+  "dlg-cancel",
+  "dlg-ok",
 ];
-
-
 
 /** 关闭动画中标记（closeDlg 防重复触发）；WeakSet 随元素 GC 回收，不污染 HTMLElement 全局类型 */
 const _closingOverlays = new WeakSet<HTMLElement>();
 
 /** 可聚焦元素选择器 */
 const FOCUSABLE_SEL =
-  "button,input,select,textarea,tabindex,[tabindex]:not([tabindex=\"-1\"]),a[href],summary";
+  'button,input,select,textarea,tabindex,[tabindex]:not([tabindex="-1"]),a[href],summary';
 
 /**
  * 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面
@@ -92,11 +90,7 @@ export function __resetModalStateForTest(): void {
 }
 
 /** 弹窗 append 到 body 后调用，登记为当前活动弹窗 */
-export function registerDlg(
-  overlay: HTMLElement,
-  cancelClose: () => void,
-  closable = true,
-): void {
+export function registerDlg(overlay: HTMLElement, cancelClose: () => void, closable = true): void {
   if (_activeOverlay && _closeActive) _closeActive();
   _activeOverlay = overlay;
   _closeActive = cancelClose;
@@ -225,7 +219,11 @@ export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
   return new Promise((resolve) => {
     const { title, icon, value, placeholder, okText } = opts;
     const { box, close } = createDialog<string | null>({
-      title, icon, tabIndex: 0, cancelValue: null, resolve,
+      title,
+      icon,
+      tabIndex: 0,
+      cancelValue: null,
+      resolve,
       buildBox: promptBoxBuilder(title, icon, value, placeholder, okText),
     });
     const input = box.querySelector("#mp-input") as HTMLInputElement;
@@ -284,10 +282,7 @@ function selectBoxBuilder(
       "</div>" +
       '<select id="ms-select" data-testid="dlg-select" class="dlg-field">' +
       (items || [])
-        .map(
-          (item) =>
-            '<option value="' + esc(item) + '">' + esc(item) + "</option>",
-        )
+        .map((item) => '<option value="' + esc(item) + '">' + esc(item) + "</option>")
         .join("") +
       "</select>" +
       '<div class="dlg-footer dlg-footer-flush">' +
@@ -310,7 +305,12 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
   return new Promise((resolve) => {
     const { title, icon, items, okText } = opts;
     const { box, close } = createDialog<string | null>({
-      title, icon, width: "400px", tabIndex: -1, cancelValue: null, resolve,
+      title,
+      icon,
+      width: "400px",
+      tabIndex: -1,
+      cancelValue: null,
+      resolve,
       buildBox: selectBoxBuilder(title, icon, items, okText),
     });
     const select = box.querySelector("#ms-select") as HTMLSelectElement;
@@ -356,7 +356,6 @@ function confirmBoxBuilder(
   };
 }
 
-
 /**
  * 弹出确认对话框
  * @param opts 选项
@@ -366,7 +365,12 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
     const { title, icon, message, okText, danger, width, bodyHTML } = opts;
     const { box, close } = createDialog<boolean>({
-      title, icon, width, tabIndex: 0, cancelValue: false, resolve,
+      title,
+      icon,
+      width,
+      tabIndex: 0,
+      cancelValue: false,
+      resolve,
       buildBox: confirmBoxBuilder(title, icon, message, okText, danger, bodyHTML),
     });
     (box.querySelector("#mc-cancel") as HTMLElement).onclick = (): void => close(false);
@@ -398,6 +402,7 @@ export interface ModalProgressHandle {
 
 /** 格式化字节为 MB（实现下沉至 format/fmt-mb.ts；re-export 兼容既有消费方，可逐步移除） */
 import { fmtMB } from "../../utils/format/fmt-mb.ts";
+
 export { fmtMB };
 
 function buildProgressDoms(): {
@@ -480,7 +485,12 @@ export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
   const { title, icon, width, closable = true } = opts;
   const { pctEl, track, fill } = buildProgressDoms();
   const { close: settleClose } = createDialog<undefined>({
-    title, icon, width, tabIndex: 0, cancelValue: undefined, closable,
+    title,
+    icon,
+    width,
+    tabIndex: 0,
+    cancelValue: undefined,
+    closable,
     resolve: () => {},
     buildBox: progressBoxBuilder(title, icon, track, pctEl),
   });
@@ -525,7 +535,10 @@ export interface ModalPickerResult {
 }
 
 /** 收集 footer 自定义区带 name 的表单控件值（关闭时结算，DOM 移除前读取） */
-function collectFooter(box: HTMLElement): { checked: Record<string, boolean>; values: Record<string, string> } {
+function collectFooter(box: HTMLElement): {
+  checked: Record<string, boolean>;
+  values: Record<string, string>;
+} {
   const checked: Record<string, boolean> = {};
   const values: Record<string, string> = {};
   box.querySelectorAll<HTMLElement>("[name]").forEach((el) => {
@@ -551,9 +564,9 @@ function collectFooter(box: HTMLElement): { checked: Record<string, boolean>; va
 function safeHintColor(c?: string): string {
   if (!c) return "var(--muted,#888)";
   const t = c.trim();
-  if (/^#[\da-fA-F]{3,8}$/.test(t)) return t;              // #hex（3/4/6/8 位）
-  if (/^var\(\s*--[\w-]+\s*\)$/.test(t)) return t;         // var(--token)
-  if (/^[a-zA-Z][a-zA-Z\s-]*$/.test(t)) return t;          // 命名色（无 CSS 注入字符）
+  if (/^#[\da-fA-F]{3,8}$/.test(t)) return t; // #hex（3/4/6/8 位）
+  if (/^var\(\s*--[\w-]+\s*\)$/.test(t)) return t; // var(--token)
+  if (/^[a-zA-Z][a-zA-Z\s-]*$/.test(t)) return t; // 命名色（无 CSS 注入字符）
   return "var(--muted,#888)";
 }
 
@@ -596,13 +609,22 @@ export function modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult
   return new Promise((resolve) => {
     const { title, icon, width, subtitle, items, footerHTML, cancelText } = opts;
     const { box, close } = createDialog<ModalPickerResult | null>({
-      title, icon, width: width || "480px", tabIndex: 0, cancelValue: null, resolve,
+      title,
+      icon,
+      width: width || "480px",
+      tabIndex: 0,
+      cancelValue: null,
+      resolve,
       buildBox: pickerBoxBuilder(title, icon, subtitle, items, footerHTML, cancelText),
     });
     box.querySelectorAll<HTMLButtonElement>("[data-testid='pick-item']").forEach((row) => {
       row.addEventListener("click", () => {
         const footer = collectFooter(box);
-        close({ index: Number(row.dataset.idx || "0"), footerChecked: footer.checked, footerValues: footer.values });
+        close({
+          index: Number(row.dataset.idx || "0"),
+          footerChecked: footer.checked,
+          footerValues: footer.values,
+        });
       });
     });
     (box.querySelector("#pk-cancel") as HTMLElement).onclick = (): void => close(null);

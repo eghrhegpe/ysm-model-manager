@@ -1,15 +1,16 @@
 // ===== 版本更新检查（类型化版 — ADR-014 P3 features）=====
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
-import { bus } from "../bus.ts";
-import { t } from "../core/i18n/t.ts";
-import { esc } from "../utils/dom/html.ts";
-import { modalConfirm, modalProgress, fmtMB } from "./dialogs/modal.ts";
-import { friendlyError } from "../utils/dom/errors.ts";
-import { safeGet, safeSet } from "../utils/dom/storage.ts";
-import { isViewerMode } from "../utils/dom/android-bridge.ts";
+
 import { getApp } from "../backend/app.ts";
 import { Events, Window } from "../backend/runtime.ts";
+import { bus } from "../bus.ts";
+import { t } from "../core/i18n/t.ts";
 import { swallowError } from "../utils/core/async.ts";
+import { isViewerMode } from "../utils/dom/android-bridge.ts";
+import { friendlyError } from "../utils/dom/errors.ts";
+import { esc } from "../utils/dom/html.ts";
+import { safeGet, safeSet } from "../utils/dom/storage.ts";
+import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { fmtMB, modalConfirm, modalProgress } from "./dialogs/modal.ts";
 
 /** 更新信息（CheckUpdate 返回） */
 export interface UpdateInfo {
@@ -58,10 +59,7 @@ function markChecked(): void {
 }
 
 /** 下载并应用更新（公共逻辑） */
-async function doUpdate(
-  info: UpdateInfo,
-  statusEl: HTMLElement | null,
-): Promise<void> {
+async function doUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Promise<void> {
   if (statusEl) {
     statusEl.textContent = "⬇️ 下载+安装中...";
   }
@@ -114,10 +112,7 @@ async function doUpdate(
 }
 
 /** 弹出更新确认对话框（手动/静默共用） — 含格式化的更新日志区域 */
-async function promptUpdate(
-  info: UpdateInfo,
-  statusEl: HTMLElement | null,
-): Promise<void> {
+async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Promise<void> {
   // 转义 HTML 后保留换行（textContent 法），样式通过 CSS 变量适应主题
   const notesHTML = info.releaseNotes
     ? (() => {
@@ -208,64 +203,59 @@ export async function checkUpdateSilent(): Promise<void> {
  * 手动检查更新（设置页按钮）
  */
 export function initVersionUpdater(root: Document | ShadowRoot): void {
-  root
-    .getElementById("set-check-update")
-    ?.addEventListener("click", async (): Promise<void> => {
-      // ADR-047 平台守卫：查看器模式（Android/网页版）无更新链路，点击明确拒绝
-      if (isViewerMode()) {
+  root.getElementById("set-check-update")?.addEventListener("click", async (): Promise<void> => {
+    // ADR-047 平台守卫：查看器模式（Android/网页版）无更新链路，点击明确拒绝
+    if (isViewerMode()) {
+      bus.emit("toast:show", {
+        msg: t("update.windowsOnly"),
+        duration: TOAST_MS.normal,
+        type: "info",
+      });
+      return;
+    }
+    const btn = root.getElementById("set-check-update") as HTMLButtonElement;
+    // P3（审核发现）：重入守卫——编程式 .click()/异常事件流下 disabled 语义不可靠，
+    // 首行显式拦截避免双执行（真实用户连点已由 disabled 挡住，此处为防御补强）
+    if (btn.disabled) return;
+    btn.textContent = "⏳ 检查中...";
+    btn.disabled = true;
+    // P3（审核，资源）：超时计时器句柄——CheckUpdate 先返回时若不清理，计时器会
+    // 悬挂 30s 才空转（reject 已 settled 的 Promise 虽无害但属资源泄漏）；
+    // finally 统一 clearTimeout 回收（Timeout 挂起则 reject 后清掉是幂等 no-op）
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const { CheckUpdate } = await getApp();
+      // P2 修复（审核，超时护栏）：手动路径原无前端超时——CheckUpdate 网络请求挂起
+      // （Go 端 HTTP 卡死/代理黑洞）时 await 永不返回，按钮永久「检查中...」。
+      // Promise.race 30s 超时 reject → catch toast + finally 恢复按钮；
+      // 与静默路径（启动检查失败静默）语义对齐：手动路径必须给用户明确反馈
+      const info = (await Promise.race([
+        CheckUpdate(),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(t("update.timeout"))), CHECK_TIMEOUT);
+        }),
+      ])) as UpdateInfo | null;
+      markChecked();
+      if (!info?.available) {
         bus.emit("toast:show", {
-          msg: t("update.windowsOnly"),
+          // null（绑定契约允许）视为不可用；info?.current ?? "" 兜底避免空括号
+          msg: `✅ ${t("update.latest", { version: info?.current ?? "" })}`,
           duration: TOAST_MS.normal,
-          type: "info",
+          type: "success",
         });
         return;
       }
-      const btn = root.getElementById("set-check-update") as HTMLButtonElement;
-      // P3（审核发现）：重入守卫——编程式 .click()/异常事件流下 disabled 语义不可靠，
-      // 首行显式拦截避免双执行（真实用户连点已由 disabled 挡住，此处为防御补强）
-      if (btn.disabled) return;
-      btn.textContent = "⏳ 检查中...";
-      btn.disabled = true;
-      // P3（审核，资源）：超时计时器句柄——CheckUpdate 先返回时若不清理，计时器会
-      // 悬挂 30s 才空转（reject 已 settled 的 Promise 虽无害但属资源泄漏）；
-      // finally 统一 clearTimeout 回收（Timeout 挂起则 reject 后清掉是幂等 no-op）
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      try {
-        const { CheckUpdate } = await getApp();
-        // P2 修复（审核，超时护栏）：手动路径原无前端超时——CheckUpdate 网络请求挂起
-        // （Go 端 HTTP 卡死/代理黑洞）时 await 永不返回，按钮永久「检查中...」。
-        // Promise.race 30s 超时 reject → catch toast + finally 恢复按钮；
-        // 与静默路径（启动检查失败静默）语义对齐：手动路径必须给用户明确反馈
-        const info = (await Promise.race([
-          CheckUpdate(),
-          new Promise<never>((_, reject) => {
-            timeoutId = setTimeout(
-              () => reject(new Error(t("update.timeout"))),
-              CHECK_TIMEOUT,
-            );
-          }),
-        ])) as UpdateInfo | null;
-        markChecked();
-        if (!info?.available) {
-          bus.emit("toast:show", {
-            // null（绑定契约允许）视为不可用；info?.current ?? "" 兜底避免空括号
-            msg: `✅ ${t("update.latest", { version: info?.current ?? "" })}`,
-            duration: TOAST_MS.normal,
-            type: "success",
-          });
-          return;
-        }
-        await promptUpdate(info, btn);
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: `❌ ${friendlyError(e)}`,
-          duration: TOAST_MS.long,
-          type: "error",
-        });
-      } finally {
-        clearTimeout(timeoutId);
-        btn.textContent = "🔄 检查更新";
-        btn.disabled = false;
-      }
-    });
+      await promptUpdate(info, btn);
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: `❌ ${friendlyError(e)}`,
+        duration: TOAST_MS.long,
+        type: "error",
+      });
+    } finally {
+      clearTimeout(timeoutId);
+      btn.textContent = "🔄 检查更新";
+      btn.disabled = false;
+    }
+  });
 }

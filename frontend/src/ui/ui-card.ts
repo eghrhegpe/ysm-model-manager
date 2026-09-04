@@ -8,13 +8,13 @@
  * Returns dispose callback from callback if provided.
  */
 export function cardContainer(
-    container: HTMLElement,
-    fn: (c: HTMLElement) => (() => void) | void
+  container: HTMLElement,
+  fn: (c: HTMLElement) => (() => void) | void,
 ): (() => void) | void {
-    container.classList.remove('render-card');
-    const card = document.createElement('div');
-    card.className = 'lcard';
-    const dispose = fn(card);
-    container.appendChild(card);
-    return dispose;
+  container.classList.remove("render-card");
+  const card = document.createElement("div");
+  card.className = "lcard";
+  const dispose = fn(card);
+  container.appendChild(card);
+  return dispose;
 }

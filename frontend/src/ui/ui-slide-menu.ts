@@ -19,9 +19,9 @@
 //  - onShow() / onHide() 管理焦点记忆恢复 + 输入阻断栈（menu.openId →
 //    isInputBlocked()=true → input-and-animation 暂停相机 WASD/方向键）
 
+import { popInputBlock, pushInputBlock } from "../utils/dom/focus-restore.ts";
 import { installUiComponentsStyles } from "./ui-components-styles.ts";
 import { installSlideMenuStyles } from "./ui-slide-menu-styles.ts";
-import { pushInputBlock, popInputBlock } from "../utils/dom/focus-restore.ts";
 
 /** 单个菜单视图：标题 + 把内容渲染进给定的 list 容器。 */
 export interface SlideMenuView {
@@ -91,9 +91,13 @@ export function createSlideMenu(opts?: { title?: string; closeIcon?: string }): 
 
   return smBuildHandle(shell, stack, renderTop, handleBack, {
     getOnClose: () => onClose,
-    setOnClose: (fn) => { onClose = fn; },
+    setOnClose: (fn) => {
+      onClose = fn;
+    },
     getPrevFocus: () => _prevFocus,
-    setPrevFocus: (el) => { _prevFocus = el; },
+    setPrevFocus: (el) => {
+      _prevFocus = el;
+    },
     pushBlock: () => pushInputBlock(MENU_BLOCK_ID),
     popBlock: () => popInputBlock(MENU_BLOCK_ID),
   });
@@ -154,14 +158,14 @@ function smRenderTop(
   list: HTMLElement,
   title: HTMLSpanElement,
   backBtn: HTMLSpanElement,
-  opts?: { closeIcon?: string }
+  opts?: { closeIcon?: string },
 ): void {
   const top = stack[stack.length - 1];
   if (!top) return;
   list.innerHTML = "";
   title.textContent = top.title;
   const atRoot = stack.length <= 1;
-  backBtn.textContent = atRoot ? opts?.closeIcon ?? "✕" : "←";
+  backBtn.textContent = atRoot ? (opts?.closeIcon ?? "✕") : "←";
   backBtn.title = atRoot ? "关闭" : "返回";
   top.render(list);
 }
@@ -187,7 +191,9 @@ function smGetNavItems(list: HTMLElement): HTMLElement[] {
 
 /** roving tabindex：当前项 0，其余 -1；focus */
 function smFocusItem(items: HTMLElement[], idx: number): void {
-  items.forEach((el, i) => { el.tabIndex = i === idx ? 0 : -1; });
+  items.forEach((el, i) => {
+    el.tabIndex = i === idx ? 0 : -1;
+  });
   items[idx]?.focus();
 }
 
@@ -196,7 +202,7 @@ function smBindKeyboardNav(list: HTMLElement, handleBack: () => void): void {
   list.addEventListener("keydown", (e: KeyboardEvent): void => {
     const items = smGetNavItems(list);
     if (!items.length) return;
-    let idx = items.indexOf(document.activeElement as HTMLElement);
+    const idx = items.indexOf(document.activeElement as HTMLElement);
     const key = e.key;
     if (key === "ArrowDown") {
       e.preventDefault();
@@ -215,8 +221,8 @@ function smBindKeyboardNav(list: HTMLElement, handleBack: () => void): void {
       const target = items[idx >= 0 ? idx : 0];
       if (target) {
         // 触发项自身或其第一个交互子元素的 click（兼容 section header / row / toggle）
-        const clickable = target.querySelector<HTMLElement>("button, a[href], [role='button'], input")
-          ?? target;
+        const clickable =
+          target.querySelector<HTMLElement>("button, a[href], [role='button'], input") ?? target;
         clickable.click();
       }
     } else if (key === "Escape") {
@@ -229,7 +235,9 @@ function smBindKeyboardNav(list: HTMLElement, handleBack: () => void): void {
 /** 每次 smRenderTop 后：为 list 可见直接子节点设 roving tabindex（首项 0，其余 -1） */
 function smSetupNavItems(list: HTMLElement): void {
   const items = smGetNavItems(list);
-  items.forEach((el, i) => { el.tabIndex = i === 0 ? 0 : -1; });
+  items.forEach((el, i) => {
+    el.tabIndex = i === 0 ? 0 : -1;
+  });
 }
 
 // ── handle 构造 ──────────────────────────────────────────────────
@@ -248,13 +256,17 @@ function smBuildHandle(
   stack: SlideMenuView[],
   renderTop: () => void,
   handleBack: () => void,
-  deps: SmHandleDeps
+  deps: SmHandleDeps,
 ): SlideMenuHandle {
   return {
     root: shell.root,
     list: shell.list,
-    setTitle: (t: string): void => { shell.title.textContent = t; },
-    setOnClose: (fn: () => void): void => { deps.setOnClose(fn); },
+    setTitle: (t: string): void => {
+      shell.title.textContent = t;
+    },
+    setOnClose: (fn: () => void): void => {
+      deps.setOnClose(fn);
+    },
     home: (view: SlideMenuView): void => {
       stack.length = 0;
       stack.push(view);
@@ -265,11 +277,17 @@ function smBuildHandle(
       renderTop();
     },
     back: (): void => handleBack(),
-    refresh: (): void => { renderTop(); },
+    refresh: (): void => {
+      renderTop();
+    },
     isShowing: (view: SlideMenuView): boolean => stack[stack.length - 1] === view,
-    reset: (): void => { stack.length = 0; },
+    reset: (): void => {
+      stack.length = 0;
+    },
     isAtRoot: (): boolean => stack.length <= 1,
-    dispose: (): void => { shell.root.remove(); },
+    dispose: (): void => {
+      shell.root.remove();
+    },
 
     // ── a11y：焦点记忆 + 输入阻断 ──
     onShow: (): void => {
@@ -290,7 +308,11 @@ function smBuildHandle(
         const el = deps.getPrevFocus();
         deps.setPrevFocus(null);
         if (el && el.isConnected) {
-          try { el.focus(); } catch { /* 元素不可聚焦时静默 */ }
+          try {
+            el.focus();
+          } catch {
+            /* 元素不可聚焦时静默 */
+          }
         }
       }
     },

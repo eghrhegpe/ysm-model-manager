@@ -18,9 +18,9 @@ import {
   createLazyModule,
   ensureDir,
   installYsmModule,
+  type WasmModuleLike,
   wipeDir,
   writeHeapBytes,
-  type WasmModuleLike,
   type YsmDecodedFile,
   type YsmModuleConfig,
 } from "./parser-shared.ts";
@@ -69,7 +69,9 @@ async function loadBaseAssets(): Promise<ParserAssets> {
       };
     })();
     // 失败时清缓存，避免 rejected promise 永久驻留致 worker 不可恢复
-    baseAssetsPromise!.catch(() => { baseAssetsPromise = null; });
+    baseAssetsPromise!.catch(() => {
+      baseAssetsPromise = null;
+    });
   }
   return baseAssetsPromise;
 }
@@ -91,7 +93,9 @@ async function loadMtAssets(): Promise<ParserAssets> {
       };
     })();
     // 失败时清缓存，避免 rejected promise 永久驻留致 worker 不可恢复
-    mtAssetsPromise!.catch(() => { mtAssetsPromise = null; });
+    mtAssetsPromise!.catch(() => {
+      mtAssetsPromise = null;
+    });
   }
   return mtAssetsPromise;
 }

@@ -1,17 +1,18 @@
 // ===== 创意工坊事件绑定（类型化版 — ADR-014 P3 features）=====
 // 下载队列逻辑已拆到 download-queue.js，本文件只做事件绑定 + 协调。
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+
+import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { modalConfirm } from "../dialogs/modal.ts";
-import { buildModelRow, filterModels, isModelMissing, type WorkshopModel } from "./render.ts";
-import { createVirtualList, type VirtualList } from "./virtual-list.ts";
-import { createDownloadQueue, type DownloadQueue } from "./download-queue.ts";
-import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";
-import { ICONS } from "../../utils/icon/workshop-icons.ts";
 import { parseModelName } from "../../utils/dom/display.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { getApp } from "../../backend/app.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { ICONS } from "../../utils/icon/workshop-icons.ts";
+import { modalConfirm } from "../dialogs/modal.ts";
+import { createDownloadQueue, type DownloadQueue } from "./download-queue.ts";
+import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";
+import { buildModelRow, filterModels, isModelMissing, type WorkshopModel } from "./render.ts";
+import { createVirtualList, type VirtualList } from "./virtual-list.ts";
 
 /** bindRepoEvents 上下文 */
 export interface RepoEventsContext {
@@ -268,9 +269,7 @@ function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
         const target = e.target as HTMLElement;
         if (target.classList.contains("gh-sel")) return;
 
-        const dlBtn = target.closest(
-          '.gh-icon-btn[data-action="download"]',
-        ) as HTMLElement | null;
+        const dlBtn = target.closest('.gh-icon-btn[data-action="download"]') as HTMLElement | null;
         if (dlBtn) {
           if (queue.isDownloading()) {
             bus.emit("toast:show", {
@@ -292,15 +291,12 @@ function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
           e.stopPropagation();
           const row = searchBtn.closest("[data-name]");
           if (row) {
-            const { author } = parseModelName(
-              (row as HTMLElement).dataset.name || "",
-            );
+            const { author } = parseModelName((row as HTMLElement).dataset.name || "");
             if (author) {
               try {
                 const { OpenInBrowser } = await getApp();
                 OpenInBrowser(
-                  "https://search.bilibili.com/all?keyword=" +
-                    encodeURIComponent(author),
+                  "https://search.bilibili.com/all?keyword=" + encodeURIComponent(author),
                 );
               } catch (openErr) {
                 console.warn("[workshop] OpenInBrowser 失败:", openErr);
@@ -346,13 +342,24 @@ async function cmReCleanup(ctx: CmReCtx): Promise<void> {
  */
 export function bindRepoEvents(sr: HTMLElement, ctx: RepoEventsContext): RepoEventsHandle {
   const { esc, models, dlPrefix, repo, source, showRepoModels, backToSite, localMap } = ctx;
-  const state: CmReState = { showAll: false, disposed: false, currentFilter: "", currentFiltered: [], doneTimer: null };
+  const state: CmReState = {
+    showAll: false,
+    disposed: false,
+    currentFilter: "",
+    currentFiltered: [],
+    doneTimer: null,
+  };
   const selectedSet = new Set<string>();
   const reCtxShell: { ctx: CmReCtx | null } = { ctx: null };
 
   const queue = createDownloadQueue({
-    sr, esc, getLocalMap: () => localMap,
-    onFileSuccess: (name) => { selectedSet.delete(name); if (reCtxShell.ctx) cmReUpdateSelectedUI(reCtxShell.ctx); },
+    sr,
+    esc,
+    getLocalMap: () => localMap,
+    onFileSuccess: (name) => {
+      selectedSet.delete(name);
+      if (reCtxShell.ctx) cmReUpdateSelectedUI(reCtxShell.ctx);
+    },
     onAllDone: () => {
       selectedSet.clear();
       // 先清旧 timer 再 set：连发完成不堆积（200ms 内新一轮完成时旧回跳作废，
@@ -367,18 +374,48 @@ export function bindRepoEvents(sr: HTMLElement, ctx: RepoEventsContext): RepoEve
   });
 
   const listEl = sr.querySelector("#gh-repo-list") as HTMLElement | null;
-  const virtualList = listEl ? createVirtualList<WorkshopModel>({
-    scrollEl: sr, listEl, rowH: GH_ROW_H,
-    renderItem: (m) => buildModelRow(m, { dlPrefix, localMap, showAll: state.showAll, selectedSet, esc }),
-    renderEmpty: () => { const empty = document.createElement("div"); empty.className = "gh-empty"; return empty; },
-  }) : null;
+  const virtualList = listEl
+    ? createVirtualList<WorkshopModel>({
+        scrollEl: sr,
+        listEl,
+        rowH: GH_ROW_H,
+        renderItem: (m) =>
+          buildModelRow(m, { dlPrefix, localMap, showAll: state.showAll, selectedSet, esc }),
+        renderEmpty: () => {
+          const empty = document.createElement("div");
+          empty.className = "gh-empty";
+          return empty;
+        },
+      })
+    : null;
 
   const listeners: ListenerRef[] = [];
-  const reCtx: CmReCtx = { sr, esc, models, dlPrefix, repo, source, showRepoModels, backToSite, localMap, state, selectedSet, queue, virtualList, listeners };
+  const reCtx: CmReCtx = {
+    sr,
+    esc,
+    models,
+    dlPrefix,
+    repo,
+    source,
+    showRepoModels,
+    backToSite,
+    localMap,
+    state,
+    selectedSet,
+    queue,
+    virtualList,
+    listeners,
+  };
   reCtxShell.ctx = reCtx;
 
-  cmReBindBack(reCtx, listeners); cmReBindSearch(reCtx, listeners); cmReBindToggle(reCtx, listeners); cmReBindSelChecks(reCtx, listeners);
-  cmReBindDlSelected(reCtx, listeners); cmReBindSelAll(reCtx, listeners); cmReBindContextMenu(reCtx, listeners); cmReBindRowClick(reCtx, listeners);
+  cmReBindBack(reCtx, listeners);
+  cmReBindSearch(reCtx, listeners);
+  cmReBindToggle(reCtx, listeners);
+  cmReBindSelChecks(reCtx, listeners);
+  cmReBindDlSelected(reCtx, listeners);
+  cmReBindSelAll(reCtx, listeners);
+  cmReBindContextMenu(reCtx, listeners);
+  cmReBindRowClick(reCtx, listeners);
 
   const renderList = (f?: string): void => cmReRenderList(reCtx, f);
   const updateSelectedUI = (): void => cmReUpdateSelectedUI(reCtx);

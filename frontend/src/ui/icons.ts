@@ -8,17 +8,17 @@
 
 /** 创建一个图标元素（可能返回 null，调用方应走兜底层）。 */
 export function createIcon(icon: string): HTMLElement | null {
-    if (!icon) {
-        return null;
-    }
-    if (icon.includes(':')) {
-        // iconify 风格名：ysm 无 iconify 运行时，交还 null 触发文本兜底
-        return null;
-    }
-    const span = document.createElement('span');
-    span.className = 'cs-icon';
-    span.textContent = icon;
-    return span;
+  if (!icon) {
+    return null;
+  }
+  if (icon.includes(":")) {
+    // iconify 风格名：ysm 无 iconify 运行时，交还 null 触发文本兜底
+    return null;
+  }
+  const span = document.createElement("span");
+  span.className = "cs-icon";
+  span.textContent = icon;
+  return span;
 }
 
 /**
@@ -27,17 +27,17 @@ export function createIcon(icon: string): HTMLElement | null {
  * 从 ui-rows.createIconBox 上移，ui-advanced-rows / ui-slide-row 共用，消除 jscpd 重复。
  */
 export function createIconBox(icon: string | undefined, label: string, parent: HTMLElement): void {
-    if (!icon) return;
-    const iconBox = document.createElement('span');
-    iconBox.className = 'cs-icon';
-    const iconEl = createIcon(icon);
-    if (iconEl) {
-        iconBox.appendChild(iconEl);
-    } else {
-        const fb = document.createElement('span');
-        fb.className = 'cs-icon-fallback';
-        fb.textContent = label.charAt(0) || '?';
-        iconBox.appendChild(fb);
-    }
-    parent.appendChild(iconBox);
+  if (!icon) return;
+  const iconBox = document.createElement("span");
+  iconBox.className = "cs-icon";
+  const iconEl = createIcon(icon);
+  if (iconEl) {
+    iconBox.appendChild(iconEl);
+  } else {
+    const fb = document.createElement("span");
+    fb.className = "cs-icon-fallback";
+    fb.textContent = label.charAt(0) || "?";
+    iconBox.appendChild(fb);
+  }
+  parent.appendChild(iconBox);
 }

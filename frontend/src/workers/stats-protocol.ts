@@ -45,10 +45,7 @@ export interface StatsWorkerError {
   message: string;
 }
 
-export type StatsWorkerResponse =
-  | StatsWorkerProgress
-  | StatsWorkerResult
-  | StatsWorkerError;
+export type StatsWorkerResponse = StatsWorkerProgress | StatsWorkerResult | StatsWorkerError;
 
 /** 单批模型上限：防 Worker 内存爆（每个模型 WASM 解码 + 纹理驻留 HEAP，200 已含余量） */
 export const STATS_BATCH_LIMIT = 200;

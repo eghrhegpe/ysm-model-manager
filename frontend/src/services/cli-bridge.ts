@@ -87,7 +87,6 @@ async function isCommandAllowed(command: string): Promise<boolean> {
   return allowed.has(command);
 }
 
-
 // ===== 核心 API =====
 
 /**
@@ -168,11 +167,9 @@ export async function getAllowedCLICommands(): Promise<string[]> {
 // ===== 便捷方法 =====
 
 /** 搜索模型 */
-export function cliSearch(args: {
-  keyword?: string;
-  format?: string;
-  type?: string;
-} = {}): Promise<CLIResponse> {
+export function cliSearch(
+  args: { keyword?: string; format?: string; type?: string } = {},
+): Promise<CLIResponse> {
   return executeCLI("search", args);
 }
 

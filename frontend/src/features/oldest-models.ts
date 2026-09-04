@@ -2,15 +2,16 @@
 // 响应全局类型切换
 // 评分/去重/禁用统计：数据源统一为 Go RepoHealthAudit（与诊断页/CLI health-report
 // 同源），前端不再自算健康分——消灭「本地正则数 ban + Hash 分组算重复」的双轨口径。
+
+import { getApp } from "../backend/app.ts";
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
+import { createLoadGuard } from "../utils/async/load-guard.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
 import { formatBytes } from "../utils/dom/format.ts";
-import { getApp } from "../backend/app.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../utils/resource/types.ts";
-import { useCurrentResourceType } from "./repo-rtype.ts";
-import { createLoadGuard } from "../utils/async/load-guard.ts";
 import { parseHealthReport } from "../utils/health-report.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { useCurrentResourceType } from "./repo-rtype.ts";
 
 // ===== 展示阈值（与诊断页 health.ts 同口径：80/60 分档）=====
 const MS_PER_DAY = 86400000;
@@ -78,9 +79,12 @@ async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
           ? "var(--tag-amber)"
           : "var(--paid)",
     healthLabel:
-      score >= SCORE_HEALTH_GOOD ? t("oldest.health.good") : score >= SCORE_HEALTH_OK ? t("oldest.health.ok") : t("oldest.health.bad"),
-    healthTagClass:
-      score >= SCORE_HEALTH_GOOD ? "good" : score >= SCORE_HEALTH_OK ? "ok" : "bad",
+      score >= SCORE_HEALTH_GOOD
+        ? t("oldest.health.good")
+        : score >= SCORE_HEALTH_OK
+          ? t("oldest.health.ok")
+          : t("oldest.health.bad"),
+    healthTagClass: score >= SCORE_HEALTH_GOOD ? "good" : score >= SCORE_HEALTH_OK ? "ok" : "bad",
   };
 }
 
@@ -211,7 +215,9 @@ function renderDailyPicksHtml(
     );
   }
   if (!picks.length)
-    return '<div style="color:var(--muted);font-size:var(--fs-base)">' + t("oldest.noPicks") + '</div>';
+    return (
+      '<div style="color:var(--muted);font-size:var(--fs-base)">' + t("oldest.noPicks") + "</div>"
+    );
   return (
     '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
     picks.join("") +
@@ -221,12 +227,23 @@ function renderDailyPicksHtml(
 
 function buildOldestPageHtml(opts: OldestPageOpts): string {
   const { stats, oldestHtml, heatmapHtml, dailyHtml, formatBytes } = opts;
-  const { score, healthColor, healthLabel, healthTagClass, totalFiles, totalSize, banned, dupGroups } = stats;
+  const {
+    score,
+    healthColor,
+    healthLabel,
+    healthTagClass,
+    totalFiles,
+    totalSize,
+    banned,
+    dupGroups,
+  } = stats;
   return (
     '<div class="oldest-page">' +
     '<div class="oldest-stats-bar">' +
     '<div class="oldest-health-box">' +
-    '<div class="oldest-health-label">📊 ' + t("repo.score") + '</div>' +
+    '<div class="oldest-health-label">📊 ' +
+    t("repo.score") +
+    "</div>" +
     '<div class="oldest-health-ring" style="background:conic-gradient(' +
     healthColor +
     " " +
@@ -258,23 +275,32 @@ function buildOldestPageHtml(opts: OldestPageOpts): string {
     dupGroups +
     "</span></div></div>" +
     '<div class="oldest-section">' +
-    '<div class="oldest-section-title">🏆 ' + t("repo.tab.oldest") + '</div>' +
+    '<div class="oldest-section-title">🏆 ' +
+    t("repo.tab.oldest") +
+    "</div>" +
     '<div style="display:flex;justify-content:center">' +
     oldestHtml +
     "</div></div>" +
     '<div class="oldest-section">' +
-    '<div class="oldest-section-title-sm">📅 ' + t("oldest.monthly") + '</div>' +
+    '<div class="oldest-section-title-sm">📅 ' +
+    t("oldest.monthly") +
+    "</div>" +
     heatmapHtml +
     "</div>" +
     '<div class="oldest-section" style="text-align:center">' +
-    '<div class="oldest-section-title">🎲 ' + t("oldest.daily") + '</div>' +
+    '<div class="oldest-section-title">🎲 ' +
+    t("oldest.daily") +
+    "</div>" +
     '<div style="display:flex;justify-content:center">' +
     dailyHtml +
     "</div></div></div>"
   );
 }
 
-export async function loadOldestModel(container: HTMLElement, esc: (s: string) => string): Promise<() => void> {
+export async function loadOldestModel(
+  container: HTMLElement,
+  esc: (s: string) => string,
+): Promise<() => void> {
   if (!container) return () => {};
   const guard = createLoadGuard();
   const S = '<div style="padding:12px;';
@@ -285,27 +311,58 @@ export async function loadOldestModel(container: HTMLElement, esc: (s: string) =
       const { ScanModelEntriesWithLabel, GetRepoRoot } = await getApp();
       const filesRoot = await GetRepoRoot(getCurrentType());
       if (guard.stale(gen)) return;
-      if (!filesRoot) { container.innerHTML = `<div style="padding:12px;color:var(--status-error);font-size:var(--fs-base)">${t("oldest.configTypeDir")}</div>`; return; }
-      const entries: ModelEntry[] = (await ScanModelEntriesWithLabel(filesRoot, RESOURCE_TYPE_LABELS[getCurrentType()] ?? RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
+      if (!filesRoot) {
+        container.innerHTML = `<div style="padding:12px;color:var(--status-error);font-size:var(--fs-base)">${t("oldest.configTypeDir")}</div>`;
+        return;
+      }
+      const entries: ModelEntry[] =
+        (await ScanModelEntriesWithLabel(
+          filesRoot,
+          RESOURCE_TYPE_LABELS[getCurrentType()] ?? RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM],
+        )) || [];
       if (guard.stale(gen)) return;
-      if (!entries || !entries.length) { container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">${t("oldest.repoEmpty")}</div>`; return; }
+      if (!entries || !entries.length) {
+        container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">${t("oldest.repoEmpty")}</div>`;
+        return;
+      }
       const stats = await fetchRepoStats(filesRoot);
       if (guard.stale(gen)) return;
       const heatmapHtml = buildHeatmapHtml(entries, esc);
-      const sorted4 = [...entries].filter((e) => Number.isFinite(e.ModTime) && e.ModTime > 0).sort((a, b) => a.ModTime - b.ModTime).slice(0, OLDEST_CARD_COUNT);
+      const sorted4 = [...entries]
+        .filter((e) => Number.isFinite(e.ModTime) && e.ModTime > 0)
+        .sort((a, b) => a.ModTime - b.ModTime)
+        .slice(0, OLDEST_CARD_COUNT);
       const oldestHtml = renderOldestCardsHtml(sorted4, esc, renderDisplayName, formatBytes);
       const dailyHtml = renderDailyPicksHtml(entries, esc, renderDisplayName, formatBytes);
-      container.innerHTML = buildOldestPageHtml({ stats, oldestHtml, heatmapHtml, dailyHtml, formatBytes });
+      container.innerHTML = buildOldestPageHtml({
+        stats,
+        oldestHtml,
+        heatmapHtml,
+        dailyHtml,
+        formatBytes,
+      });
       container.removeEventListener("click", handleContainerClick);
       container.addEventListener("click", handleContainerClick);
     } catch (err) {
       if (guard.stale(gen)) return;
-      container.innerHTML = S + 'color:var(--status-error);font-size:var(--fs-base)">❌ ' + t("resource.loadFailed") + ": " + esc((err as Error).message || String(err)) + "</div>";
+      container.innerHTML =
+        S +
+        'color:var(--status-error);font-size:var(--fs-base)">❌ ' +
+        t("resource.loadFailed") +
+        ": " +
+        esc((err as Error).message || String(err)) +
+        "</div>";
     }
   }
-  const { get: getCurrentType, cleanup: cleanupRtype } = useCurrentResourceType(() => { render(); });
+  const { get: getCurrentType, cleanup: cleanupRtype } = useCurrentResourceType(() => {
+    render();
+  });
   await render();
-  return () => { container.removeEventListener("click", handleContainerClick); cleanupRtype(); guard.invalidate(); };
+  return () => {
+    container.removeEventListener("click", handleContainerClick);
+    cleanupRtype();
+    guard.invalidate();
+  };
 }
 
 function buildMonthHeatmap(entries: ModelEntry[]): number[] {

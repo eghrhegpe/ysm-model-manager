@@ -22,9 +22,7 @@ export function applyTheme(mode: string): void {
   if (!THEME_VALID.includes(mode)) mode = "system";
   document.body.classList.remove(...THEME_CLASSES);
   if (mode === "system") {
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     document.body.classList.add(prefersDark ? "theme-cyber" : "theme-warm");
   } else {
     document.body.classList.add("theme-" + mode);

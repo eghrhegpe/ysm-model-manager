@@ -60,6 +60,7 @@ func (a *App) ExportModelStructureJSON(modelPath string) string {
 // ========== 高级搜索 ==========
 // SearchModels 扫描模型条目后按关键词、骨骼数、立方体数、纹理尺寸范围过滤。
 // 并发优化：关键词预过滤后，用 goroutine 池并行 AnalyzeBedrockModel（I/O + CPU 混合型）。
+// 参数固定 8 个，新增过滤维度走 types.SearchFilters struct（技术债，后续 ADR 封装）。
 func (a *App) SearchModels(filesRoot string, keyword string, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
 	entries := a.ScanModelEntries(filesRoot)
 	if len(entries) == 0 {

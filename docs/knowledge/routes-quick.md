@@ -821,7 +821,7 @@
 | PullSingleResource 未完成前刷新侧边栏 | - | 半同步状态显示；必须等 store 状态收敛 |
 | getAllByTestId 前缀查询不会返回的兄弟 testid（如 tree-dir 不会命中 tree-dir-toggle）；误用精确查询会抛错，应先查前缀再 JS 过滤 | `后缀非数字` | - |
 | waitFor 超时/异常携带原始错误（P2 修复后）；旧实现静默吞错掩盖真实根因，迁移旧卡时注意不要写 | `捕获后重新 throw 通用消息` | - |
-| 参数不存在于 waitFor 签名，旧知识卡/口语中可能出现误导 | `interval?` | - |
+| " 参数不存在于 waitFor 签名，旧知识卡/口语中可能出现误导" | `interval?` | - |
 | 异步等待必须按选型：正等结果→waitFor，init 落定→排空调度轮次，负向窗口→保留真实 sleep | `三分法` | - |
 | 将 init 落定硬凑成 waitFor 条件会与组件内部实现耦合，条件易碎 | - | - |
 | 将负向定时器窗口换成短 sleep 会导致防抖真坏了也漏报 | - | - |

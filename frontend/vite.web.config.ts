@@ -3,12 +3,13 @@
 // 双入口：index.html（主 UI，Tier 1 MODE=web 判定走 browserAdapter）+ web.html（Spike 调试页）。
 // base 对齐 GitHub Pages 项目页子路径：文档站 /ysm-model-manager/ 根 + 网页版 /ysm-model-manager/app/。
 // 复用 vite-wails-bindings-resolve.ts 的 wails-bindings-resolve 插件（bindings 以 .ts 生成、.js 后缀 import）。
-import { defineConfig } from "vite";
-import { fileURLToPath } from "url";
+
 import { resolve } from "path";
+import { fileURLToPath } from "url";
+import { defineConfig } from "vite";
+import { checkLocalesSync } from "./vite-locale-check.ts";
 import { wailsBindingsResolve } from "./vite-wails-bindings-resolve.ts";
 import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
-import { checkLocalesSync } from "./vite-locale-check.ts";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 

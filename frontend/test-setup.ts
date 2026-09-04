@@ -6,8 +6,9 @@
 // 3. node 环境 localStorage 兜底 —— 纯逻辑测试标 @vitest-environment node 后无
 //    localStorage，测试内裸调（beforeEach clear / setItem）会炸；注入内存实现，
 //    happy-dom 环境自带 localStorage（in 判断跳过）。ADR-089 编写约定配套基建。
-import { vi } from "vitest";
+
 import { TextDecoder as NodeTextDecoder } from "node:util";
+import { vi } from "vitest";
 import { zhCN } from "./src/core/i18n/locales/zh-CN.ts";
 
 // 0.5 TextDecoder 兜底（happy-dom 不提供该全局；真实运行时 WebView2/浏览器原生具备）——
@@ -43,12 +44,14 @@ vi.hoisted(() => {
       idbDel: vi.fn(async (_s: string, k: string) => {
         store.delete(k);
       }),
-      idbTx: vi.fn(async (_s: string, ops: Array<{ kind: string; key: string; value?: unknown }>) => {
-        for (const op of ops) {
-          if (op.kind === "put") store.set(op.key, op.value);
-          else store.delete(op.key);
-        }
-      }),
+      idbTx: vi.fn(
+        async (_s: string, ops: Array<{ kind: string; key: string; value?: unknown }>) => {
+          for (const op of ops) {
+            if (op.kind === "put") store.set(op.key, op.value);
+            else store.delete(op.key);
+          }
+        },
+      ),
       _store: store,
     };
   }
@@ -56,9 +59,21 @@ vi.hoisted(() => {
 });
 vi.mock("./src/backend/idb.ts", () => {
   const m = (globalThis as Record<string, unknown>).__YSM_TEST_IDB__ as {
-    idbGet: unknown; idbSet: unknown; idbKeys: unknown; idbGetAll: unknown; idbDel: unknown; idbTx: unknown;
+    idbGet: unknown;
+    idbSet: unknown;
+    idbKeys: unknown;
+    idbGetAll: unknown;
+    idbDel: unknown;
+    idbTx: unknown;
   };
-  return { idbGet: m.idbGet, idbSet: m.idbSet, idbKeys: m.idbKeys, idbGetAll: m.idbGetAll, idbDel: m.idbDel, idbTx: m.idbTx };
+  return {
+    idbGet: m.idbGet,
+    idbSet: m.idbSet,
+    idbKeys: m.idbKeys,
+    idbGetAll: m.idbGetAll,
+    idbDel: m.idbDel,
+    idbTx: m.idbTx,
+  };
 });
 
 // 1. Wails runtime 全局阻断（测试环境无需真实 runtime；组件测试可省去各自 vi.mock）
@@ -74,12 +89,15 @@ vi.mock("@wailsio/runtime", () => ({
     Reload: () => {},
   },
   Call: () => Promise.resolve(),
-  CancellablePromise: class { cancel() {} },
+  CancellablePromise: class {
+    cancel() {}
+  },
 }));
 
 // 2. i18n t() 全局 mock —— 直接查表 zhCN，无需 fetch
 vi.mock("./src/core/i18n/t.ts", async () => {
-  const actual = await vi.importActual<typeof import("./src/core/i18n/t.ts")>("./src/core/i18n/t.ts");
+  const actual =
+    await vi.importActual<typeof import("./src/core/i18n/t.ts")>("./src/core/i18n/t.ts");
   return {
     ...actual,
     t: (key: string, params?: Record<string, string | number>): string => {
@@ -130,16 +148,22 @@ vi.mock("molangjs", () => {
       sanitized = sanitized.replace(/\b(query|q)\./g, "");
       // 替换变量引用（注意：key 含点号，需转义）
       for (const [key, val] of Object.entries(variables)) {
-        const escaped = key.replace(/\./g, '\\.');
+        const escaped = key.replace(/\./g, "\\.");
         const regex = new RegExp(`\\b${escaped}\\b`, "g");
         sanitized = sanitized.replace(regex, String(val));
       }
       // 替换 math. 函数调用（角度制：Bedrock 三角函数按度数，JS Math 按弧度）
       // 先做函数名替换，再做弧度转换包裹
-      sanitized = sanitized.replace(/math\.(sin|cos|tan)\(/g, 'MATH_TRIG(');
-      sanitized = sanitized.replace(/MATH_TRIG\(([^)]+)\)/g, (_, arg) => `Math.sin((${arg})*Math.PI/180)`);
+      sanitized = sanitized.replace(/math\.(sin|cos|tan)\(/g, "MATH_TRIG(");
+      sanitized = sanitized.replace(
+        /MATH_TRIG\(([^)]+)\)/g,
+        (_, arg) => `Math.sin((${arg})*Math.PI/180)`,
+      );
       // 其他 math. 函数
-      sanitized = sanitized.replace(/math\.(asin|acos|atan|sqrt|abs|min|max|floor|ceil|round)\(/g, (_, fn) => `Math.${fn}(`);
+      sanitized = sanitized.replace(
+        /math\.(asin|acos|atan|sqrt|abs|min|max|floor|ceil|round)\(/g,
+        (_, fn) => `Math.${fn}(`,
+      );
       try {
         const result = eval(sanitized);
         return typeof result === "number" ? result : 0;
@@ -174,13 +198,19 @@ vi.mock("three", async (importOriginal) => {
     render(): void {}
     dispose(): void {}
     setPointerCapture(): void {}
-    hasPointerCapture(): boolean { return false; }
+    hasPointerCapture(): boolean {
+      return false;
+    }
     releasePointerCapture(): void {}
-    getContext(): null { return null; }
+    getContext(): null {
+      return null;
+    }
   }
   class FakePMREMGenerator {
     constructor() {}
-    fromScene(): { texture: {} } { return { texture: {} }; }
+    fromScene(): { texture: {} } {
+      return { texture: {} };
+    }
     dispose(): void {}
   }
   return {

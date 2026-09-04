@@ -11,7 +11,7 @@
 // dataTransfer（只读属性，构造后为 null）→ onDragOver 的 types 检查失败、
 // onDrop 读到空 files 发 noSupportedFiles 误报。必须用 Object.defineProperty
 // 强制注入 dataTransfer（业界标准绕过只读属性的方案）。
-import { test, expect, type Page } from "./fixture.ts";
+import { expect, type Page, test } from "./fixture.ts";
 import { gotoApp } from "./helpers.ts";
 
 /** 等待 app-tree 的树容器已挂载（DnD 绑定在 connectedCallback 内同步完成） */
@@ -20,9 +20,7 @@ async function waitForTreeDnD(page: Page): Promise<void> {
     () => {
       const content = document.querySelector("app-content");
       const treeHost = content?.shadowRoot?.querySelector("app-tree");
-      return Boolean(
-        treeHost?.shadowRoot?.querySelector('[data-testid="tree-root"]'),
-      );
+      return Boolean(treeHost?.shadowRoot?.querySelector('[data-testid="tree-root"]'));
     },
     undefined,
     { timeout: 10000, polling: 200 },
@@ -93,9 +91,7 @@ test.describe("拖拽导入（DnD）", () => {
     expect(await isTreeDropHintVisible(page)).toBe(false);
     // 导入链路触发 → toast 反馈：directImport 成功 toast 含文件名
     // （原「任一 toast 可见」会被 index.html 欢迎 toast 假绿）
-    const toast = page
-      .locator('[data-testid="toast"]')
-      .filter({ hasText: "model-a.ysm" });
+    const toast = page.locator('[data-testid="toast"]').filter({ hasText: "model-a.ysm" });
     await expect(toast.first()).toBeVisible({ timeout: 5000 });
   });
 

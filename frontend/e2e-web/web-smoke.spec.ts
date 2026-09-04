@@ -8,7 +8,7 @@
 //
 // Chromium 陷阱（同 dnd.spec.ts）：new DragEvent({dataTransfer}) 构造器忽略
 // dataTransfer（只读）→ 必须 Object.defineProperty 强制注入。
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 /** 页面内构造 DataTransfer + File 并注入 drop 事件（defineProperty 强制注入） */
 async function dropFile(page: Page, fileName: string, content: string): Promise<void> {
@@ -142,7 +142,9 @@ test.describe("网页版主链路（ADR-049）", () => {
     await expect(page.locator("app-nav")).toHaveCount(1);
     await expect(page.locator("app-content")).toHaveCount(1);
     // 树渲染（repo 页默认 tree tab）——poll 等待组件挂载完成（locale=en-US）
-    await expect.poll(async () => allShadowText(page), { timeout: 8000 }).toContain("Model Repository");
+    await expect
+      .poll(async () => allShadowText(page), { timeout: 8000 })
+      .toContain("Model Repository");
     // /wails/runtime 零请求断言由 afterEach 统一执行（全程监听，见 beforeEach 注释）
   });
 
@@ -150,9 +152,11 @@ test.describe("网页版主链路（ADR-049）", () => {
     await dropFile(page, "网页e2e.ysm", "YSM-E2E-BYTES");
     await expect(page.locator("app-toast")).toContainText("导入", { timeout: 5000 });
     // 落库验证（dir + file 双记录）
-    await expect.poll(async () => idbKeys(page)).toMatchObject({
-      files: expect.arrayContaining(["dir:ysm/网页e2e:", "file:ysm/网页e2e/网页e2e.ysm"]),
-    });
+    await expect
+      .poll(async () => idbKeys(page))
+      .toMatchObject({
+        files: expect.arrayContaining(["dir:ysm/网页e2e:", "file:ysm/网页e2e/网页e2e.ysm"]),
+      });
     // 树刷新显示模型（tree:reload → ScanModelEntries 重扫）
     await expect.poll(async () => allShadowText(page), { timeout: 5000 }).toContain("网页e2e");
   });
@@ -162,13 +166,19 @@ test.describe("网页版主链路（ADR-049）", () => {
     // P2 修复（伪验证）：两次 drop 无等待会撞 _dropBusy（import-dnd.ts:127-133 busy
     // 短路），第二次仅首次导入落库 → 断言 1 条 key 恒通过，覆盖写坏了也测不出来。
     // 现在先等首次导入完成（dir 记录出现 + body 为 v1），再 drop v2。
-    await expect.poll(async () => idbKeys(page), { timeout: 8000 }).toMatchObject({
-      files: expect.arrayContaining(["dir:ysm/幂等:", "file:ysm/幂等/幂等.ysm"]),
-    });
-    await expect.poll(async () => idbFileBody(page, "file:ysm/幂等/幂等.ysm"), { timeout: 8000 }).toBe("v1");
+    await expect
+      .poll(async () => idbKeys(page), { timeout: 8000 })
+      .toMatchObject({
+        files: expect.arrayContaining(["dir:ysm/幂等:", "file:ysm/幂等/幂等.ysm"]),
+      });
+    await expect
+      .poll(async () => idbFileBody(page, "file:ysm/幂等/幂等.ysm"), { timeout: 8000 })
+      .toBe("v1");
     await dropFile(page, "幂等.ysm", "v2");
     // 等覆盖完成：body 真变为 v2（真实校验覆盖写逻辑）
-    await expect.poll(async () => idbFileBody(page, "file:ysm/幂等/幂等.ysm"), { timeout: 8000 }).toBe("v2");
+    await expect
+      .poll(async () => idbFileBody(page, "file:ysm/幂等/幂等.ysm"), { timeout: 8000 })
+      .toBe("v2");
     const keys = await idbKeys(page);
     const fileKeys = keys.files.filter((k) => k.startsWith("file:ysm/幂等/"));
     expect(fileKeys).toHaveLength(1);

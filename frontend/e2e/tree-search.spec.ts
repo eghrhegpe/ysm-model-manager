@@ -2,7 +2,7 @@
 // 验证文件树搜索框：输入关键词过滤列表、空结果状态。
 // 搜索框 data-testid="tree-srch" 在 app-content → app-tree 两层 Shadow DOM 内，用 page.evaluate 操作。
 // 树穿透查询复用 e2e/helpers.ts（子代理审核 P4：消除重复实现）。
-import { test, expect } from "./fixture.ts";
+import { expect, test } from "./fixture.ts";
 import { gotoApp, waitForTreeCount } from "./helpers.ts";
 
 /** 在搜索框输入关键词（触发 input 事件） */

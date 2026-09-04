@@ -4,7 +4,7 @@
 //   2. 点击切换面板（log → runtime）
 //   3. 日志空态（mock GetImportLogs=[] → No logs yet）
 // diagnostics 组件在 app-content shadowRoot 内渲染，用 evaluate 穿透。
-import { test, expect, type Page } from "./fixture.ts";
+import { expect, type Page, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
 
 /** 在 app-content shadowRoot 中统计 .diag-btn 数量 */
@@ -60,7 +60,9 @@ test.describe("诊断页", () => {
     // 点击「运行时」按钮
     await page.evaluate(() => {
       const content = document.querySelector("app-content")!;
-      const btn = content.shadowRoot!.querySelector('.diag-btn[data-diag="runtime"]') as HTMLElement | null;
+      const btn = content.shadowRoot!.querySelector(
+        '.diag-btn[data-diag="runtime"]',
+      ) as HTMLElement | null;
       btn?.click();
     });
     // 面板切换：log 面板隐藏、runtime 面板可见（原实现只断言按钮 active 类，
@@ -75,7 +77,8 @@ test.describe("诊断页", () => {
           '[data-testid="diag-runtime"]',
         ) as HTMLElement | null;
         return Boolean(
-          log && runtime &&
+          log &&
+            runtime &&
             getComputedStyle(log).display === "none" &&
             getComputedStyle(runtime).display !== "none",
         );

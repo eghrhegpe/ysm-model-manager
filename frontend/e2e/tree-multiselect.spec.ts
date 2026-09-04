@@ -2,8 +2,8 @@
 // 验证 app-tree 的多选交互：单击选中、Ctrl+Click 多选、Shift+Click 范围选择。
 // tree-file 在 app-content → app-tree 两层 Shadow DOM 内，用 page.evaluate 派发 MouseEvent。
 // 树穿透查询/点击复用 e2e/helpers.ts（子代理审核 P4：消除重复实现）。
-import { test, expect } from "./fixture.ts";
-import { waitForTreeCount, clickTreeFile, gotoApp } from "./helpers.ts";
+import { expect, test } from "./fixture.ts";
+import { clickTreeFile, gotoApp, waitForTreeCount } from "./helpers.ts";
 
 /** 读取底部选中计数（经 data-count 数据通道，与文案/locale 解耦） */
 async function getSelectedCount(page: import("@playwright/test").Page): Promise<number> {

@@ -5,11 +5,14 @@
 // 穿透查询/坐标获取复用 e2e/helpers.ts（消除内联重复实现）。
 // 文案定位说明（P3-8 子代理审计）：本文件断言「Copy File Path」等文案来自
 // en.ts 的 menu.copyFilePath，调整文案需同步本 spec（文案定位较脆弱）。
-import { test, expect } from "./fixture.ts";
-import { gotoApp, waitForTreeCount, rightClickTree } from "./helpers.ts";
+import { expect, test } from "./fixture.ts";
+import { gotoApp, rightClickTree, waitForTreeCount } from "./helpers.ts";
 
 /** 轮询等待 tree-file 在嵌套 Shadow DOM 中出现（复用 helpers 的 waitForTreeCount） */
-async function waitForTreeFile(page: import("@playwright/test").Page, timeout = 8000): Promise<boolean> {
+async function waitForTreeFile(
+  page: import("@playwright/test").Page,
+  timeout = 8000,
+): Promise<boolean> {
   return (await waitForTreeCount(page, "tree-file", timeout)) > 0;
 }
 
@@ -68,9 +71,7 @@ test.describe("右键菜单", () => {
 
     // 语义定位（ADR-133 阶段 C+）：按 data-action 匹配 action 标识，
     // 替代原 filter({hasText:"Copy File Path"}) —— 文案硬编码 en-US，改文案即静默失效
-    const copyItem = page.locator(
-      '[data-testid="ctx-item"][data-action="file.copy-path"]',
-    );
+    const copyItem = page.locator('[data-testid="ctx-item"][data-action="file.copy-path"]');
     // 硬断言替代原「count===0 就 skip」：那条兜底是「按 i18n 文案定位」时代的防御
     // （文案对不上就当环境问题跳过），而 data-action 定位后目标已确定——
     // file 菜单必含 copy-path（context-menus.test.ts 断言查看器模式亦保留），

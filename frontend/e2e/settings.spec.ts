@@ -1,7 +1,7 @@
 // ===== E2E 测试：设置页导航（ADR-037）=====
 // 验证导航到设置页和基本内容渲染。
 // 使用 data-testid 稳定钩子定位（Design.md §19.1）。
-import { test, expect } from "./fixture.ts";
+import { expect, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
 
 test.describe("设置页", () => {
@@ -52,9 +52,7 @@ test.describe("设置页", () => {
     await page.waitForFunction(
       () => {
         const content = document.querySelector("app-content");
-        return Boolean(
-          content?.shadowRoot?.querySelector('[data-testid="set-mc-path"]'),
-        );
+        return Boolean(content?.shadowRoot?.querySelector('[data-testid="set-mc-path"]'));
       },
       undefined,
       { timeout: 10000, polling: 200 },
@@ -62,16 +60,12 @@ test.describe("设置页", () => {
     // 成功 toast 语义定位（ADR-133 阶段 C+）：原 filter({hasText:"Path updated"})
     // 硬编码 en-US 文案，改文案/切 locale 即静默失效；改断言 data-toast-type
     // 语义属性 + 计数增量——既隔离页面加载期的其它 toast，又与文案完全解耦。
-    const successToasts = page.locator(
-      '[data-testid="toast"][data-toast-type="success"]',
-    );
+    const successToasts = page.locator('[data-testid="toast"][data-toast-type="success"]');
     const before = await successToasts.count();
     // 点击游戏根目录路径卡片（bindPathClick 绑定，桌面走 SelectDirectory）
     await page.evaluate(() => {
       const content = document.querySelector("app-content")!;
-      const el = content.shadowRoot!.querySelector(
-        '[data-testid="set-mc-path"]',
-      ) as HTMLElement;
+      const el = content.shadowRoot!.querySelector('[data-testid="set-mc-path"]') as HTMLElement;
       el.click();
     });
     // mock SelectDirectory 返回 /e2e/mc → saveCfg → SaveAppConfig → success toast
@@ -93,7 +87,9 @@ test.describe("设置页", () => {
     expect(text).not.toContain("Loading");
   });
 
-  test("设置页 stg-card / tab-body 样式在 shadow 内真实生效（computed style 断言）", async ({ page }) => {
+  test("设置页 stg-card / tab-body 样式在 shadow 内真实生效（computed style 断言）", async ({
+    page,
+  }) => {
     // 背景：2026-08-24 复盘——.stg-* / .tab-body 曾误置于全局 components.css <link>，
     // 被 app-content 的 Shadow DOM 边界阻断，computed style 全裸奔（CI 全绿但视觉失效）。
     // 纯 DOM 存在性断言抓不到此类回归，必须断言 computed style。

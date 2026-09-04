@@ -23,10 +23,7 @@ function forwardPageLogs(page: Page): void {
     // 同短语的真实错误——改双短语组合匹配（两个特征同时出现才算 Wails 环境提示，
     // 真实错误几乎不可能同时包含两者）。
     const text = msg.text();
-    if (
-      text.includes("Browser Environment Detected") &&
-      text.includes("Only UI previews")
-    ) {
+    if (text.includes("Browser Environment Detected") && text.includes("Only UI previews")) {
       return;
     }
     console.log(`[page:${level}] ${text}`);
@@ -94,5 +91,5 @@ test.afterEach(async ({ page }, testInfo) => {
   await dumpDlgState(page);
 });
 
-export { expect } from "@playwright/test";
 export type { Page } from "@playwright/test";
+export { expect } from "@playwright/test";

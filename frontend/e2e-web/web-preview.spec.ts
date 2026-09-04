@@ -26,15 +26,24 @@
 //   - app-content → app-tree 双层 shadow DOM，clickTreeFile helper 穿透派发 click。
 //   - app-preview 在 app-content shadowRoot 内（单层 shadow），previewContentText 穿透读取。
 //   - IndexedDB 直接读取验证落库（idbKeys 复用 web-smoke 范式）。
-import { test, expect, type Page } from "@playwright/test";
+
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { expect, type Page, test } from "@playwright/test";
 import { zipSync } from "fflate";
 
 /** 读取仓库已跟踪的 YSM fixture 目录，现场 zip 成 .ysm 文件字节 base64（CI 可复现）。 */
 function fixtureYsmBase64(): string {
-  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "tests", "fixtures", "ysm", "01_taisho_maid");
+  const root = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "..",
+    "tests",
+    "fixtures",
+    "ysm",
+    "01_taisho_maid",
+  );
   const files: Record<string, Uint8Array> = {};
   const walk = (dir: string, base: string): void => {
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -150,24 +159,21 @@ async function clearIdb(page: Page): Promise<void> {
  * 返回是否成功派发（行不存在则 false）。
  */
 async function clickTreeFile(page: Page, idx = 0): Promise<boolean> {
-  return page.evaluate(
-    (i) => {
-      const content = document.querySelector("app-content");
-      const tree = content?.shadowRoot?.querySelector("app-tree");
-      if (!tree?.shadowRoot) return false;
-      // 1. 展开第一个目录（tree-dir 行），让内部 tree-file 渲染
-      const dirs = tree.shadowRoot.querySelectorAll('[data-testid="tree-dir"]');
-      const dir = dirs[0] as HTMLElement | undefined;
-      if (dir) dir.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
-      // 2. 展开是同步重渲染（_renderTree），立即查 tree-file 行
-      const rows = tree.shadowRoot.querySelectorAll('[data-testid="tree-file"]');
-      const row = rows[i] as HTMLElement | undefined;
-      if (!row) return false;
-      row.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
-      return true;
-    },
-    idx,
-  );
+  return page.evaluate((i) => {
+    const content = document.querySelector("app-content");
+    const tree = content?.shadowRoot?.querySelector("app-tree");
+    if (!tree?.shadowRoot) return false;
+    // 1. 展开第一个目录（tree-dir 行），让内部 tree-file 渲染
+    const dirs = tree.shadowRoot.querySelectorAll('[data-testid="tree-dir"]');
+    const dir = dirs[0] as HTMLElement | undefined;
+    if (dir) dir.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
+    // 2. 展开是同步重渲染（_renderTree），立即查 tree-file 行
+    const rows = tree.shadowRoot.querySelectorAll('[data-testid="tree-file"]');
+    const row = rows[i] as HTMLElement | undefined;
+    if (!row) return false;
+    row.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
+    return true;
+  }, idx);
 }
 
 /**
@@ -278,7 +284,9 @@ async function find3DOverlay(page: Page): Promise<{ hasCanvas: boolean; tag: str
  * 用于断言 tab 切换（detail/skeleton data-tab 锚点）。
  * 返回所有 preview-tab 按钮的 { dataTab, isActive } 列表，或 null（组件未就绪）。
  */
-async function previewTabs(page: Page): Promise<Array<{ dataTab: string; isActive: boolean }> | null> {
+async function previewTabs(
+  page: Page,
+): Promise<Array<{ dataTab: string; isActive: boolean }> | null> {
   return page.evaluate(() => {
     const content = document.querySelector("app-content");
     const preview = content?.shadowRoot?.querySelector("app-preview");
@@ -320,22 +328,19 @@ async function previewTabVisibility(
  * 返回是否成功点击。
  */
 async function clickPreviewTab(page: Page, tabName: string): Promise<boolean> {
-  return page.evaluate(
-    (tab) => {
-      const content = document.querySelector("app-content");
-      const preview = content?.shadowRoot?.querySelector("app-preview");
-      if (!preview?.shadowRoot) return false;
-      const tabs = preview.shadowRoot.querySelectorAll(".pv-tab");
-      for (const btn of tabs) {
-        if ((btn as HTMLElement).dataset.tab === tab) {
-          (btn as HTMLElement).click();
-          return true;
-        }
+  return page.evaluate((tab) => {
+    const content = document.querySelector("app-content");
+    const preview = content?.shadowRoot?.querySelector("app-preview");
+    if (!preview?.shadowRoot) return false;
+    const tabs = preview.shadowRoot.querySelectorAll(".pv-tab");
+    for (const btn of tabs) {
+      if ((btn as HTMLElement).dataset.tab === tab) {
+        (btn as HTMLElement).click();
+        return true;
       }
-      return false;
-    },
-    tabName,
-  );
+    }
+    return false;
+  }, tabName);
 }
 
 test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
@@ -380,12 +385,11 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     // 1. 拖拽导入 .ysm 模型（复用 web-smoke 的 dropFile 范式）
     await dropFile(page, "预览测试.ysm", "YSM-PREVIEW-BYTES");
     // 等导入完成：toast 出现 + IndexedDB 落 dir:/file: 双记录
-    await expect.poll(async () => idbKeys(page), { timeout: 8000 }).toMatchObject({
-      files: expect.arrayContaining([
-        "dir:ysm/预览测试:",
-        "file:ysm/预览测试/预览测试.ysm",
-      ]),
-    });
+    await expect
+      .poll(async () => idbKeys(page), { timeout: 8000 })
+      .toMatchObject({
+        files: expect.arrayContaining(["dir:ysm/预览测试:", "file:ysm/预览测试/预览测试.ysm"]),
+      });
     // 树刷新显示模型名
     await expect.poll(async () => allShadowText(page), { timeout: 8000 }).toContain("预览测试");
 
@@ -395,9 +399,7 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     // 3. 硬断言预览区渲染了详情卡内容（#preview-content 出现且非空）
     //    YSM 模型走 showModelDetail → 渲染含 "Model Info" 标题 + detail/skeleton tab 的详情卡。
     //    硬冒烟：不断言 WebGL/canvas，只断言 DOM 文本渲染成功（不白屏）。
-    await expect
-      .poll(async () => previewContentText(page), { timeout: 10000 })
-      .not.toBeNull();
+    await expect.poll(async () => previewContentText(page), { timeout: 10000 }).not.toBeNull();
     const previewText = await previewContentText(page);
     expect(previewText, "预览区应渲染详情卡内容（非空）").toBeTruthy();
     // 详情卡含模型信息标题或解析占位（具体取决于 WASM 解码速度）
@@ -415,12 +417,11 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
   test("预览 tab 切换：detail/skeleton data-tab 锚点硬断言", async ({ page }) => {
     // 1. 导入 .ysm 并选中（复用用例 1 的导入→选中链路）
     await dropFixtureYsm(page, "标签测试.ysm"); // 用真实 YSM fixture，否则解析失败不会有 detail/skeleton tab
-    await expect.poll(async () => idbKeys(page), { timeout: 8000 }).toMatchObject({
-      files: expect.arrayContaining([
-        "dir:ysm/标签测试:",
-        "file:ysm/标签测试/标签测试.ysm",
-      ]),
-    });
+    await expect
+      .poll(async () => idbKeys(page), { timeout: 8000 })
+      .toMatchObject({
+        files: expect.arrayContaining(["dir:ysm/标签测试:", "file:ysm/标签测试/标签测试.ysm"]),
+      });
     await expect.poll(async () => allShadowText(page), { timeout: 8000 }).toContain("标签测试");
 
     // 2. 选中模型，等 app-preview 渲染详情卡（showModelDetail → tab-row + FAB）
@@ -469,20 +470,17 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
   test("3D 预览 FAB 无 GPU 兜底：WebGL 不可用时优雅 skip 不崩溃", async ({ page }) => {
     // 1. 导入 .ysm 模型
     await dropFile(page, "三维测试.ysm", "YSM-3D-PREVIEW-BYTES");
-    await expect.poll(async () => idbKeys(page), { timeout: 8000 }).toMatchObject({
-      files: expect.arrayContaining([
-        "dir:ysm/三维测试:",
-        "file:ysm/三维测试/三维测试.ysm",
-      ]),
-    });
+    await expect
+      .poll(async () => idbKeys(page), { timeout: 8000 })
+      .toMatchObject({
+        files: expect.arrayContaining(["dir:ysm/三维测试:", "file:ysm/三维测试/三维测试.ysm"]),
+      });
     await expect.poll(async () => allShadowText(page), { timeout: 8000 }).toContain("三维测试");
 
     // 2. 选中模型进入预览
     await expect.poll(async () => clickTreeFile(page, 0), { timeout: 8000 }).toBe(true);
     // 等 app-preview 渲染出详情卡（含 3D FAB 按钮）
-    await expect
-      .poll(async () => previewContentText(page), { timeout: 10000 })
-      .not.toBeNull();
+    await expect.poll(async () => previewContentText(page), { timeout: 10000 }).not.toBeNull();
 
     // 3. 探测 WebGL 能力（无 GPU 环境兜底判据）
     const gl = await webglCapability(page);
@@ -545,12 +543,11 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     // 1. 导入一个内容为纯文本的「损坏 .ysm」（非有效 YSM 二进制格式）
     //    WASM 解码会失败，ExtractYsmSummary/ExtractYSMHeader 也会返回空/抛错。
     await dropFile(page, "损坏模型.ysm", "这不是一个有效的 YSM 文件内容");
-    await expect.poll(async () => idbKeys(page), { timeout: 8000 }).toMatchObject({
-      files: expect.arrayContaining([
-        "dir:ysm/损坏模型:",
-        "file:ysm/损坏模型/损坏模型.ysm",
-      ]),
-    });
+    await expect
+      .poll(async () => idbKeys(page), { timeout: 8000 })
+      .toMatchObject({
+        files: expect.arrayContaining(["dir:ysm/损坏模型:", "file:ysm/损坏模型/损坏模型.ysm"]),
+      });
     await expect.poll(async () => allShadowText(page), { timeout: 8000 }).toContain("损坏模型");
 
     // 2. 选中损坏模型，触发预览
@@ -562,9 +559,7 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     //    b. showModelDetail 正常但 summary/header 为空 → throw cannotParse → 外层 catch
     //       → index.ts:147 渲染 ⚠️ "Load failed" 占位
     //    c. WASM 解码部分成功 → 渲染骨架但 "No geometry data found"
-    await expect
-      .poll(async () => previewContentText(page), { timeout: 10000 })
-      .not.toBeNull();
+    await expect.poll(async () => previewContentText(page), { timeout: 10000 }).not.toBeNull();
     const previewText = await previewContentText(page);
     expect(previewText, "预览区应渲染内容（错误占位或部分解析结果），不白屏").toBeTruthy();
 

@@ -1,6 +1,6 @@
-import type { Plugin } from "vite";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import type { Plugin } from "vite";
 
 const modules = new Map([
   ["ysm-wasm-data.js", "export function _getWasmBinary() { return new ArrayBuffer(0); }"],

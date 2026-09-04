@@ -2,7 +2,7 @@
 // 走真实 modal.ts 路径（vite dev 动态 import），断言基于 data-testid 稳定钩子：
 //   dlg-overlay（遮罩）/ dlg-input（输入框）/ dlg-select（下拉）/ dlg-ok / dlg-cancel
 // 覆盖 modalConfirm / modalPrompt 的 打开 → 确认 / 取消 / Esc 关闭 全链路。
-import { test, expect, type Page } from "./fixture.ts";
+import { expect, type Page, test } from "./fixture.ts";
 import { gotoApp } from "./helpers.ts";
 
 /** 页面上挂结果的位置（window 自定义字段，e2e 专用） */
@@ -23,8 +23,7 @@ async function openModal(
     async ({ kind: k, opts: o }) => {
       const mod = await import("../src/features/dialogs/modal.ts");
       const w = window as DlgWindow;
-      w._dlgPromise =
-        k === "confirm" ? mod.modalConfirm(o) : mod.modalPrompt(o);
+      w._dlgPromise = k === "confirm" ? mod.modalConfirm(o) : mod.modalPrompt(o);
       return true;
     },
     { kind, opts: { title: "E2E 遮罩测试", message: "确认要执行吗？", ...opts } },

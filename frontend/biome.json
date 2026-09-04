@@ -10,6 +10,7 @@
     "includes": [
       "**/*.ts",
       "**/*.tsx",
+      "!bindings",
       "!upstream",
       "!src/core/i18n/locales",
       "!dist",

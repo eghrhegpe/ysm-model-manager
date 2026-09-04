@@ -2,7 +2,7 @@
 // 验证 toast 通知的显示、关闭功能。
 // 走真实 bus.emit 路径（window.bus 由 bus.ts 暴露），非 CustomEvent 模拟。
 // 断言基于 data-testid 稳定钩子（Design.md §19.1）。
-import { test, expect } from "./fixture.ts";
+import { expect, test } from "./fixture.ts";
 import { gotoApp } from "./helpers.ts";
 
 test.describe("Toast 通知", () => {
@@ -21,9 +21,7 @@ test.describe("Toast 通知", () => {
 
     // 按消息文本定位自己的 toast（index.html 每次加载会弹欢迎 toast，
     // first()/last() 会命中它导致假红/假绿——filter 消除污染）
-    const toast = page
-      .locator('[data-testid="toast"]')
-      .filter({ hasText: "E2E 测试消息" });
+    const toast = page.locator('[data-testid="toast"]').filter({ hasText: "E2E 测试消息" });
     await expect(toast).toBeVisible({ timeout: 3000 });
     await expect(toast).toContainText("E2E 测试消息");
   });
@@ -32,9 +30,7 @@ test.describe("Toast 通知", () => {
     await page.evaluate(() => {
       window.bus?.emit("toast:show", { msg: "可关闭的 toast", duration: 5000 });
     });
-    const toast = page
-      .locator('[data-testid="toast"]')
-      .filter({ hasText: "可关闭的 toast" });
+    const toast = page.locator('[data-testid="toast"]').filter({ hasText: "可关闭的 toast" });
     await expect(toast).toBeVisible({ timeout: 3000 });
 
     // 点击关闭按钮
@@ -59,9 +55,7 @@ test.describe("Toast 通知", () => {
         },
       });
     });
-    const toast = page
-      .locator('[data-testid="toast"]')
-      .filter({ hasText: "可撤销" });
+    const toast = page.locator('[data-testid="toast"]').filter({ hasText: "可撤销" });
     await expect(toast).toBeVisible({ timeout: 3000 });
 
     // 点击撤销按钮（poll 等待异步回调，替代固定 300ms）
@@ -75,9 +69,7 @@ test.describe("Toast 通知", () => {
     await page.evaluate(() => {
       window.bus?.emit("toast:show", { msg: "错误消息", type: "error", duration: 3000 });
     });
-    const toast = page
-      .locator('[data-testid="toast"]')
-      .filter({ hasText: "错误消息" });
+    const toast = page.locator('[data-testid="toast"]').filter({ hasText: "错误消息" });
     await expect(toast).toBeVisible({ timeout: 3000 });
     // 验证 error class
     await expect(toast).toHaveClass(/error/);

@@ -16,12 +16,8 @@
 //     + #preview-detail + #preview-skeleton + .preview-fab#btn-3d-preview
 //   - showResourcePack（detail.ts:165-174）→ .preview-fab#btn-pack-model-3d
 //   - catch 分支（detail.ts:135-139）→ #preview-detail 写入 unknownError + parseFailed 文案
-import { test, expect, type Page } from "./fixture.ts";
-import {
-  gotoApp,
-  waitForTreeCount,
-  clickTreeFile,
-} from "./helpers.ts";
+import { expect, type Page, test } from "./fixture.ts";
+import { clickTreeFile, gotoApp, waitForTreeCount } from "./helpers.ts";
 
 // ===== app-preview shadowRoot 穿透查询函数（内联，不修改 helpers.ts）=====
 
@@ -30,22 +26,15 @@ import {
  * 穿透：app-content.shadowRoot → app-preview.shadowRoot → selector
  * @returns true 若在 timeout 内找到；false 若超时
  */
-async function waitForPreviewEl(
-  page: Page,
-  selector: string,
-  timeout = 8000,
-): Promise<boolean> {
+async function waitForPreviewEl(page: Page, selector: string, timeout = 8000): Promise<boolean> {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
-    const found = await page.evaluate(
-      (sel) => {
-        const content = document.querySelector("app-content");
-        const preview = content?.shadowRoot?.querySelector("app-preview");
-        if (!preview?.shadowRoot) return false;
-        return Boolean(preview.shadowRoot.querySelector(sel));
-      },
-      selector,
-    );
+    const found = await page.evaluate((sel) => {
+      const content = document.querySelector("app-content");
+      const preview = content?.shadowRoot?.querySelector("app-preview");
+      if (!preview?.shadowRoot) return false;
+      return Boolean(preview.shadowRoot.querySelector(sel));
+    }, selector);
     if (found) return true;
     await new Promise((r) => setTimeout(r, 200));
   }
@@ -56,27 +45,17 @@ async function waitForPreviewEl(
  * 在 app-preview shadowRoot 内获取元素文本（trim）。
  * 用于断言错误文案 / 占位提示是否出现。
  */
-async function getPreviewText(
-  page: Page,
-  selector: string,
-): Promise<string> {
-  return page.evaluate(
-    (sel) => {
-      const content = document.querySelector("app-content");
-      const preview = content?.shadowRoot?.querySelector("app-preview");
-      const el = preview?.shadowRoot?.querySelector(sel);
-      return (el?.textContent ?? "").trim();
-    },
-    selector,
-  );
+async function getPreviewText(page: Page, selector: string): Promise<string> {
+  return page.evaluate((sel) => {
+    const content = document.querySelector("app-content");
+    const preview = content?.shadowRoot?.querySelector("app-preview");
+    const el = preview?.shadowRoot?.querySelector(sel);
+    return (el?.textContent ?? "").trim();
+  }, selector);
 }
 
 /** 在 app-preview shadowRoot 内检查元素是否含指定 class（用于 tab active 断言） */
-async function previewHasClass(
-  page: Page,
-  selector: string,
-  className: string,
-): Promise<boolean> {
+async function previewHasClass(page: Page, selector: string, className: string): Promise<boolean> {
   return page.evaluate(
     ({ sel, cls }) => {
       const content = document.querySelector("app-content");
@@ -94,38 +73,26 @@ async function previewHasClass(
  * 优先检查 inline style（switchTab 直接设置 style.display），
  * 其次 getComputedStyle。用于断言 tab 面板可见性。
  */
-async function getPreviewDisplay(
-  page: Page,
-  selector: string,
-): Promise<string> {
-  return page.evaluate(
-    (sel) => {
-      const content = document.querySelector("app-content");
-      const preview = content?.shadowRoot?.querySelector("app-preview");
-      const el = preview?.shadowRoot?.querySelector(sel) as HTMLElement | null;
-      if (!el) return "not-found";
-      const inlineDisplay = el.style.display;
-      if (inlineDisplay) return inlineDisplay;
-      return getComputedStyle(el).display;
-    },
-    selector,
-  );
+async function getPreviewDisplay(page: Page, selector: string): Promise<string> {
+  return page.evaluate((sel) => {
+    const content = document.querySelector("app-content");
+    const preview = content?.shadowRoot?.querySelector("app-preview");
+    const el = preview?.shadowRoot?.querySelector(sel) as HTMLElement | null;
+    if (!el) return "not-found";
+    const inlineDisplay = el.style.display;
+    if (inlineDisplay) return inlineDisplay;
+    return getComputedStyle(el).display;
+  }, selector);
 }
 
 /** 在 app-preview shadowRoot 内点击元素（el.click()），用于 tab 切换 / FAB 点击 */
-async function clickPreviewEl(
-  page: Page,
-  selector: string,
-): Promise<void> {
-  await page.evaluate(
-    (sel) => {
-      const content = document.querySelector("app-content");
-      const preview = content?.shadowRoot?.querySelector("app-preview");
-      const el = preview?.shadowRoot?.querySelector(sel) as HTMLElement | null;
-      if (el) el.click();
-    },
-    selector,
-  );
+async function clickPreviewEl(page: Page, selector: string): Promise<void> {
+  await page.evaluate((sel) => {
+    const content = document.querySelector("app-content");
+    const preview = content?.shadowRoot?.querySelector("app-preview");
+    const el = preview?.shadowRoot?.querySelector(sel) as HTMLElement | null;
+    if (el) el.click();
+  }, selector);
 }
 
 /** 检测浏览器是否支持 WebGL（headless chromium 无 GPU 时可能返回 false） */
@@ -133,9 +100,7 @@ async function hasWebGL(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     try {
       const canvas = document.createElement("canvas");
-      const gl =
-        canvas.getContext("webgl") ||
-        canvas.getContext("experimental-webgl");
+      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
       return !!gl;
     } catch {
       return false;
@@ -150,7 +115,9 @@ test.describe("模型详情预览页（app-preview）", () => {
     await gotoApp(page);
   });
 
-  test("冒烟：选中模型后预览区渲染（preview-content + tab 按钮出现），不 skip", async ({ page }) => {
+  test("冒烟：选中模型后预览区渲染（preview-content + tab 按钮出现），不 skip", async ({
+    page,
+  }) => {
     // 硬冒烟：防 mock 链路回归被 skip 掩蔽。
     // 流程：点击 tree-file → app-tree emit model:select → app-preview 监听 →
     // _showModelDetail → DetectResourceType="ysm" → showModelDetail 渲染
@@ -173,11 +140,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     expect(contentFound).toBe(true);
 
     // 硬断言 2：tab 按钮出现——证明 showModelDetail 已执行（初始占位无 tab 按钮）
-    const tabFound = await waitForPreviewEl(
-      page,
-      '.pv-tab[data-tab="detail"]',
-      5000,
-    );
+    const tabFound = await waitForPreviewEl(page, '.pv-tab[data-tab="detail"]', 5000);
     expect(tabFound).toBe(true);
   });
 
@@ -198,19 +161,11 @@ test.describe("模型详情预览页（app-preview）", () => {
     await clickTreeFile(page, 0);
 
     // 等待 tab 按钮渲染
-    const tabFound = await waitForPreviewEl(
-      page,
-      '.pv-tab[data-tab="detail"]',
-      8000,
-    );
+    const tabFound = await waitForPreviewEl(page, '.pv-tab[data-tab="detail"]', 8000);
     expect(tabFound).toBe(true);
 
     // 初始状态：detail tab 应为 active（savedTab 默认 "detail"，detail.ts:38）
-    const detailActive = await previewHasClass(
-      page,
-      '.pv-tab[data-tab="detail"]',
-      "pv-tab-active",
-    );
+    const detailActive = await previewHasClass(page, '.pv-tab[data-tab="detail"]', "pv-tab-active");
     expect(detailActive).toBe(true);
 
     // 初始状态：skeleton tab 应为 inactive
@@ -232,11 +187,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     await clickPreviewEl(page, '.pv-tab[data-tab="skeleton"]');
 
     // 切换后：skeleton tab 应为 active
-    const skelActive = await previewHasClass(
-      page,
-      '.pv-tab[data-tab="skeleton"]',
-      "pv-tab-active",
-    );
+    const skelActive = await previewHasClass(page, '.pv-tab[data-tab="skeleton"]', "pv-tab-active");
     expect(skelActive).toBe(true);
 
     // 切换后：detail tab 应为 inactive
@@ -289,7 +240,9 @@ test.describe("模型详情预览页（app-preview）", () => {
     expect(fabFound).toBe(true);
   });
 
-  test("3D 预览 FAB 点击：若 WebGL 可用则 3D 挂载，若不可用则 skip（无 GPU 兜底）", async ({ page }) => {
+  test("3D 预览 FAB 点击：若 WebGL 可用则 3D 挂载，若不可用则 skip（无 GPU 兜底）", async ({
+    page,
+  }) => {
     // 无 GPU 兜底理由：playwright chromium headless 无 GPU，WebGL context 可能
     // 创建失败（getContext("webgl") 返回 null）。3D 渲染依赖 WebGL，无 GPU 时
     // mount3D 内部 catch 会显示错误占位而非崩溃——但测试无法断言「3D 挂载成功」
@@ -388,11 +341,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     ).toBe(true);
 
     // 硬断言：预览区不白屏（#preview-content 仍存在）
-    const contentStillThere = await waitForPreviewEl(
-      page,
-      "#preview-content",
-      3000,
-    );
+    const contentStillThere = await waitForPreviewEl(page, "#preview-content", 3000);
     expect(contentStillThere).toBe(true);
   });
 

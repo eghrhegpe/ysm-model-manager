@@ -53,9 +53,7 @@ export async function getTreeBox(
     ({ tid, i }) => {
       const content = document.querySelector("app-content")!;
       const tree = content.shadowRoot!.querySelector("app-tree")!;
-      const row = tree.shadowRoot!.querySelectorAll(
-        `[data-testid="${tid}"]`,
-      )[i] as HTMLElement;
+      const row = tree.shadowRoot!.querySelectorAll(`[data-testid="${tid}"]`)[i] as HTMLElement;
       const rect = row.getBoundingClientRect();
       return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
     },
@@ -64,20 +62,13 @@ export async function getTreeBox(
 }
 
 /** 对树行执行右键（取坐标 → right click），返回菜单是否可交互由调用方按 testid 断言 */
-export async function rightClickTree(
-  page: Page,
-  testid: string,
-  idx = 0,
-): Promise<void> {
+export async function rightClickTree(page: Page, testid: string, idx = 0): Promise<void> {
   const box = await getTreeBox(page, testid, idx);
   await page.mouse.click(box.x, box.y, { button: "right" });
 }
 
 /** 在 app-content → app-tree 双层 shadow DOM 内查询 tree 元素数量 */
-export function countInTree(
-  page: Page,
-  testid: string,
-): Promise<number> {
+export function countInTree(page: Page, testid: string): Promise<number> {
   return page.evaluate((tid) => {
     const content = document.querySelector("app-content");
     const tree = content?.shadowRoot?.querySelector("app-tree");
@@ -128,9 +119,6 @@ export async function clickTreeFile(
 }
 
 /** 获取指定 tree-file 行的中心坐标（右键菜单/点击用；语义别名，复用 getTreeBox） */
-export function getTreeFileBox(
-  page: Page,
-  idx = 0,
-): Promise<{ x: number; y: number }> {
+export function getTreeFileBox(page: Page, idx = 0): Promise<{ x: number; y: number }> {
   return getTreeBox(page, "tree-file", idx);
 }

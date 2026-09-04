@@ -1,7 +1,7 @@
 // ===== E2E 冒烟测试：同步管理器（ADR-037）=====
 // 验证同步管理器的基本功能。
 // 使用 data-testid 稳定钩子定位（Design.md §19.1）。
-import { test, expect } from "./fixture.ts";
+import { expect, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
 
 test.describe("同步管理器", () => {

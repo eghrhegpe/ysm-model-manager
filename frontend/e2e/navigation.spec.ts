@@ -1,7 +1,7 @@
 // ===== E2E 冒烟测试：导航切换（ADR-037）=====
 // 验证核心导航路径：点击 nav-item → 页面切换。
 // 断言基于 data-testid 稳定钩子（Design.md §19.1）。
-import { test, expect } from "./fixture.ts";
+import { expect, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
 
 test.describe("导航切换", () => {
@@ -32,9 +32,7 @@ test.describe("导航切换", () => {
       // P2 修复（子代理审计）：跳过 workshop 项——app-content/index.ts:214-216
       // 进入工坊页后 nav.style.display="none"（全宽浏览），后续 nth(i).click()
       // 目标不可见 → Playwright 等 15s 超时 → 测试确定性失败（retries:0 直接红）
-      const dataPage = await navItems
-        .nth(i)
-        .getAttribute("data-page");
+      const dataPage = await navItems.nth(i).getAttribute("data-page");
       if (dataPage === "workshop") continue;
       await navItems.nth(i).click();
       // 等待 nav-item 高亮切换（弱断言改实断言：点击后当前项应有 active 态）

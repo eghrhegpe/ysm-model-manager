@@ -9,11 +9,12 @@
 // 运行：cd frontend && npx playwright test coverage-breadth
 // （playwright.config.ts 默认 testDir ./e2e，本文件按文件名被扫描——日常 e2e 不跑它，
 //   仅按需执行；采集产物不入 git，.gitignore 已含 frontend/e2e-coverage/ 可选加）
-import { test, expect } from "./fixture.ts";
-import { gotoApp, navItem, waitForTreeCount, clickTreeFile } from "./helpers.ts";
+
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { expect, test } from "./fixture.ts";
+import { clickTreeFile, gotoApp, navItem, waitForTreeCount } from "./helpers.ts";
 
 const OUT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "e2e-coverage");
 const OUT_FILE = path.join(OUT_DIR, "coverage.json");
@@ -51,6 +52,8 @@ test.describe("E2E 覆盖广度采集（G-4）", () => {
     expect(coverage.length).toBeGreaterThan(0);
     if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
     fs.writeFileSync(OUT_FILE, JSON.stringify(coverage, null, 2));
-    console.log(`[e2e-coverage] 已采集 ${coverage.length} 个条目 → ${path.relative(process.cwd(), OUT_FILE)}`);
+    console.log(
+      `[e2e-coverage] 已采集 ${coverage.length} 个条目 → ${path.relative(process.cwd(), OUT_FILE)}`,
+    );
   });
 });

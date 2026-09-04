@@ -3,8 +3,8 @@
 // 断言基于 data-testid 稳定钩子（Design.md §19.1）。
 // 注意：tree-file/tree-dir 在 app-content → app-tree 两层 Shadow DOM 内，
 // 穿透查询复用 e2e/helpers.ts（子代理审核 P4：消除重复实现）。
-import { test, expect } from "./fixture.ts";
-import { countInTree, waitForTreeCount, gotoApp, getTreeBox } from "./helpers.ts";
+import { expect, test } from "./fixture.ts";
+import { countInTree, getTreeBox, gotoApp, waitForTreeCount } from "./helpers.ts";
 
 test.describe("文件树交互", () => {
   test.beforeEach(async ({ page }) => {
@@ -28,7 +28,9 @@ test.describe("文件树交互", () => {
     // 切换组 → 触发 fillSubtypes + apply → repo:rtype-changed → 文件树重建
     const changed = await page.evaluate(() => {
       const nav = document.querySelector("app-nav");
-      const g = nav?.shadowRoot?.querySelector('[data-testid="nav-group-select"]') as HTMLSelectElement | null;
+      const g = nav?.shadowRoot?.querySelector(
+        '[data-testid="nav-group-select"]',
+      ) as HTMLSelectElement | null;
       if (!g || g.options.length < 2) return false;
       g.selectedIndex = (g.selectedIndex + 1) % g.options.length;
       g.dispatchEvent(new Event("change", { bubbles: true }));
@@ -61,10 +63,7 @@ test.describe("文件树交互", () => {
     // 仍在，无论展开是否生效）。改为断言展开后子文件行出现/计数增加——
     // mock 含嵌套条目 subdir/subdir-model.ysm，展开后 tree-file 应多出子行。
     await expect
-      .poll(
-        async () => (await countInTree(page, "tree-file")) > before,
-        { timeout: 5000 },
-      )
+      .poll(async () => (await countInTree(page, "tree-file")) > before, { timeout: 5000 })
       .toBe(true);
   });
 

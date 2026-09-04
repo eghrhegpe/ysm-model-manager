@@ -28,20 +28,92 @@ export const MOCK_DATA = {
   AddImportLog: undefined,
   AddOpLog: undefined,
   ScanModelEntriesWithLabel: [
-    { Name: "model-a.ysm", Path: "/e2e/repo/model-a.ysm", Size: 1024, ModTime: 0, Ext: ".ysm", Hash: "", HasTags: false },
-    { Name: "model-b.ysm", Path: "/e2e/repo/model-b.ysm", Size: 2048, ModTime: 0, Ext: ".ysm", Hash: "", HasTags: false },
-    { Name: "subdir", Path: "/e2e/repo/subdir", Size: 0, ModTime: 0, Ext: "", Hash: "", HasTags: false },
+    {
+      Name: "model-a.ysm",
+      Path: "/e2e/repo/model-a.ysm",
+      Size: 1024,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
+    {
+      Name: "model-b.ysm",
+      Path: "/e2e/repo/model-b.ysm",
+      Size: 2048,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
+    {
+      Name: "subdir",
+      Path: "/e2e/repo/subdir",
+      Size: 0,
+      ModTime: 0,
+      Ext: "",
+      Hash: "",
+      HasTags: false,
+    },
     // 嵌套文件：其 Path 前缀段生成 subdir 目录节点 → tree-dir 真实渲染子行
     // （此前无嵌套条目 → tree-dir 恒 0，目录展开/折叠测试永远 skip，file-tree 审核 P1）
-    { Name: "subdir-model.ysm", Path: "/e2e/repo/subdir/subdir-model.ysm", Size: 512, ModTime: 0, Ext: ".ysm", Hash: "", HasTags: false },
+    {
+      Name: "subdir-model.ysm",
+      Path: "/e2e/repo/subdir/subdir-model.ysm",
+      Size: 512,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
     // 资源包类型条目（供 app-resource-manager 列表渲染）
-    { Name: "pack-a.zip", Path: "/e2e/repo/pack-a.zip", Size: 4096, ModTime: 0, Ext: ".zip", Hash: "", HasTags: false },
-    { Name: "pack-b.zip", Path: "/e2e/repo/pack-b.zip", Size: 8192, ModTime: 0, Ext: ".zip", Hash: "", HasTags: false },
+    {
+      Name: "pack-a.zip",
+      Path: "/e2e/repo/pack-a.zip",
+      Size: 4096,
+      ModTime: 0,
+      Ext: ".zip",
+      Hash: "",
+      HasTags: false,
+    },
+    {
+      Name: "pack-b.zip",
+      Path: "/e2e/repo/pack-b.zip",
+      Size: 8192,
+      ModTime: 0,
+      Ext: ".zip",
+      Hash: "",
+      HasTags: false,
+    },
   ],
   ScanModelEntriesFiltered: [
-    { Name: "model-a.ysm", Path: "/e2e/repo/model-a.ysm", Size: 1024, ModTime: 0, Ext: ".ysm", Hash: "", HasTags: false },
-    { Name: "model-b.ysm", Path: "/e2e/repo/model-b.ysm", Size: 2048, ModTime: 0, Ext: ".ysm", Hash: "", HasTags: false },
-    { Name: "subdir-model.ysm", Path: "/e2e/repo/subdir/subdir-model.ysm", Size: 512, ModTime: 0, Ext: ".ysm", Hash: "", HasTags: false },
+    {
+      Name: "model-a.ysm",
+      Path: "/e2e/repo/model-a.ysm",
+      Size: 1024,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
+    {
+      Name: "model-b.ysm",
+      Path: "/e2e/repo/model-b.ysm",
+      Size: 2048,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
+    {
+      Name: "subdir-model.ysm",
+      Path: "/e2e/repo/subdir/subdir-model.ysm",
+      Size: 512,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
   ],
   ListVersionInstances: [
     { Name: "1.20.1-Fabric", VersionDir: "/e2e/mc/1.20.1-Fabric" },
@@ -52,13 +124,42 @@ export const MOCK_DATA = {
     // 缺字段会让依赖排序/状态分支的 e2e 掩盖真实现问题（子代理审计 P2）。
     // Status 契约值域："complete" | "missing" | "extra"（models.ts 注释），
     // Files 契约：CustomFileInfo[] | null——"ok"/0 属漂移值，E2E 会命中生产不存在的状态
-    { Name: "1.20.1-Fabric", VersionDir: "/e2e/mc/1.20.1-Fabric", CustomDir: "", Status: "complete", Disabled: [], HasYSM: true, Files: [], Missing: [], Extra: [], Synced: 0, HasMod: false },
-    { Name: "1.21-NeoForge", VersionDir: "/e2e/mc/1.21-NeoForge", CustomDir: "", Status: "complete", Disabled: [], HasYSM: true, Files: [], Missing: [], Extra: [], Synced: 0, HasMod: false },
+    {
+      Name: "1.20.1-Fabric",
+      VersionDir: "/e2e/mc/1.20.1-Fabric",
+      CustomDir: "",
+      Status: "complete",
+      Disabled: [],
+      HasYSM: true,
+      Files: [],
+      Missing: [],
+      Extra: [],
+      Synced: 0,
+      HasMod: false,
+    },
+    {
+      Name: "1.21-NeoForge",
+      VersionDir: "/e2e/mc/1.21-NeoForge",
+      CustomDir: "",
+      Status: "complete",
+      Disabled: [],
+      HasYSM: true,
+      Files: [],
+      Missing: [],
+      Extra: [],
+      Synced: 0,
+      HasMod: false,
+    },
   ],
   LoadResourceTypes: JSON.stringify({
     resourceTypes: [
       { id: "ysm", name: "YSM 模型", icon: "💎" },
-      { id: "resourcepack", name: "资源包", icon: "🎨", actions: ["import", "toggle", "delete", "openFolder"] },
+      {
+        id: "resourcepack",
+        name: "资源包",
+        icon: "🎨",
+        actions: ["import", "toggle", "delete", "openFolder"],
+      },
     ],
   }),
   ToggleModelEnable: true,
@@ -281,6 +382,7 @@ export type MockKey = keyof MockData;
 // 无现成死代码工具覆盖，故在此显式断言 mock 键 ⊆ binding 导出。
 // tsc 报错后到 MOCK_DATA 里补/删键即可（未被 e2e 触达的函数补 undefined 最安全）。
 import type * as Bindings from "../bindings/ysm-model-manager/internal/app/app.ts";
+
 type BindingExportName = keyof typeof Bindings;
 type MissingMockKeys = Exclude<BindingExportName, MockKey>;
 const __mockBindingContract: [MissingMockKeys] extends [never] ? true : false = true;

@@ -4,7 +4,7 @@
 //   2. 默认选中第一个站点（B站）并显示其内容视图
 // 断言基于 data-testid 稳定钩子（ADR-133 阶段 C+：原走 #id，与契约通道脱节）——
 // workshop 组件在 app-content shadowRoot 内。
-import { test, expect, type Page } from "./fixture.ts";
+import { expect, type Page, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
 
 /** 在 app-content shadowRoot 中按 testid 查询元素文本 */
@@ -115,9 +115,7 @@ test.describe("创意工坊页", () => {
     // 卡片包含创作者名
     const cardTexts = await page.evaluate(() => {
       const content = document.querySelector("app-content")!;
-      const cards = Array.from(
-        content.shadowRoot!.querySelectorAll(".cr-creator-card"),
-      );
+      const cards = Array.from(content.shadowRoot!.querySelectorAll(".cr-creator-card"));
       return cards.map((c) => c.textContent ?? "");
     });
     expect(cardTexts.some((t) => t.includes("测试创作者A"))).toBe(true);

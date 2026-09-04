@@ -2,9 +2,10 @@
 // 验证 app-sidebar 的推送/拉取下拉菜单：按钮存在、点击展开、菜单项渲染。
 // 切页用 page.evaluate 原生 click（Playwright locator 点击 app-nav shadow 内元素不可靠）。
 // app-sidebar 在 app-content shadow root 内且有自身 shadow root——两层嵌套用 evaluate 穿透。
-import { test, expect } from "./fixture.ts";
-import { gotoApp } from "./helpers.ts";
+
 import { ALL_RESOURCE_TYPES } from "../src/utils/resource/types.ts";
+import { expect, test } from "./fixture.ts";
+import { gotoApp } from "./helpers.ts";
 
 /** 导航到整合包管理页（原生 click 触发 nav:change） */
 async function gotoInstances(page: import("@playwright/test").Page): Promise<void> {
@@ -39,7 +40,10 @@ async function gotoInstances(page: import("@playwright/test").Page): Promise<voi
 }
 
 /** 轮询等待 sidebar 渲染出 push/pull 按钮 */
-async function waitForSidebarButtons(page: import("@playwright/test").Page, timeout = 8000): Promise<{ push: number; pull: number }> {
+async function waitForSidebarButtons(
+  page: import("@playwright/test").Page,
+  timeout = 8000,
+): Promise<{ push: number; pull: number }> {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     const btns = await page.evaluate(() => {
@@ -73,7 +77,10 @@ async function clickSidebarButton(
 }
 
 /** 读取下拉菜单中的资源类型选项数量（menuTestid = sidebar-push-menu / sidebar-pull-menu） */
-async function getMenuItems(page: import("@playwright/test").Page, menuTestid: string): Promise<number> {
+async function getMenuItems(
+  page: import("@playwright/test").Page,
+  menuTestid: string,
+): Promise<number> {
   return page.evaluate((tid) => {
     const content = document.querySelector("app-content");
     const sidebar = content?.shadowRoot?.querySelector("app-sidebar");

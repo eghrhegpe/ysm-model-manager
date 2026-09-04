@@ -1,9 +1,9 @@
 import { defineConfig } from "vitest/config";
-import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
 // ADR-146：复用 vite.config.js 的 resolve.alias（含 `#root` 过渡别名）——
 // vitest 有独立 config 时不自动继承 vite.config，这里显式取 resolve 段，
 // 保持别名单一事实源（tsconfig.paths ↔ vite.config.js 双写校验不受影响）。
 import viteConfig from "./vite.config.js";
+import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
 
 // coverage 运行检测：--coverage 是 CLI flag（不进 env），只能从 argv 判定。
 // 用于 testTimeout 的条件放宽——见 test.testTimeout 处的根因说明。

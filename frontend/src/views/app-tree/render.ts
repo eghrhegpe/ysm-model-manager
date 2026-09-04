@@ -321,18 +321,20 @@ export function flattenVisible(
 //      community/virtual-list.ts 范式）。
 // 安全性：树事件全为容器级委托（closest 查询），行节点无独立监听器；选中态
 // （rowCls/aria-selected）来自数据渲染，与 row 对象一一对应，复用不串行。
-const rowElCache = new WeakMap<object, HTMLElement>();
+const rowTplCache = new WeakMap<object, HTMLTemplateElement>();
 
-/** 取行 DOM 节点（缓存未命中时由 row.html 解析一次） */
+/** 取行 DOM 节点（缓存未命中时由 row.html 解析一次；命中时 cloneNode） */
 function rowElOf(row: TreeRow): HTMLElement {
-  let el = rowElCache.get(row);
-  if (!el) {
-    const tpl = document.createElement("template");
+  let tpl = rowTplCache.get(row);
+  if (!tpl) {
+    tpl = document.createElement("template");
     tpl.innerHTML = row.html;
-    el = tpl.content.firstElementChild as HTMLElement;
-    rowElCache.set(row, el);
+    rowTplCache.set(row, tpl);
   }
-  return el;
+  const el = tpl.content.firstElementChild as HTMLElement | null;
+  if (!el) throw new Error("rowElOf: row.html produced no element for key " + row.key);
+  // cloneNode 防缓存模板节点被 appendChild 移动——每帧插入全新克隆
+  return el.cloneNode(true) as HTMLElement;
 }
 
 function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): void {

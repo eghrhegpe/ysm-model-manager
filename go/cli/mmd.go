@@ -337,6 +337,7 @@ func calculateIPCOverhead(a AppService, files []fileBenchItem, iterations int) i
 	// 实测序列化：base64 编码 + JSON 包装（走 Wails 桥的真实载荷形态）
 	var serdeTotal time.Duration
 	var payload []byte
+	completed := 0
 	for i := 0; i < iterations; i++ {
 		start := time.Now()
 		// 基准实测序列化载荷：map+base64 结构固定无法失败，但错误不吞——留痕后跳出，
@@ -348,8 +349,12 @@ func calculateIPCOverhead(a AppService, files []fileBenchItem, iterations int) i
 			break
 		}
 		serdeTotal += time.Since(start)
+		completed++
 	}
-	serdeTimeMs := float64(serdeTotal) / float64(time.Millisecond) / float64(iterations)
+	if completed == 0 {
+		return ipcEstimate{}
+	}
+	serdeTimeMs := float64(serdeTotal) / float64(time.Millisecond) / float64(completed)
 	base64Size := int64(len(payload))
 	inflation := 0.0
 	if originalSize > 0 {

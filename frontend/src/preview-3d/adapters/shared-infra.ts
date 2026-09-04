@@ -83,6 +83,8 @@ export function teardownSharedInfra(): void {
     r.domElement.remove();
     _singletonRenderer = null;
   }
+  // 重置 unload 钩子标志——下次 buildSharedInfra 可重新注册 beforeunload listener
+  _unloadHookInstalled = false;
 }
 
 /** 安装应用 unload 终局拆除钩子（首次 buildSharedInfra 调用；once 语义） */

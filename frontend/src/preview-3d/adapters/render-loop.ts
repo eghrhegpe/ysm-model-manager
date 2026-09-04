@@ -131,9 +131,12 @@ export function startGlobalRenderLoop(
     }
     // 视锥裁剪（设置开关：关 → 跳过并恢复可见性——剔除失误会误藏模型，可关闭）
     if (isFrustumCullEnabled()) {
-      // 有模型动画（perFrame 改写局部变换）→ 矩阵置脏，expandBox 强制刷新；
-      // 纯静态场景（无 perFrame）复用 render() 留下的新鲜矩阵，省一遍全子树递归
-      if (_globalPerFrames.length > 0) markCullMatricesDirty();
+      // 有模型动画（perFrame 改写局部变换）或 scene-cap update（水面/弹簧骨骼等
+      // 改写注册根子树变换）→ 矩阵置脏，expandBox 强制刷新；纯静态场景（无 perFrame
+      // 且无 cap update）复用 render() 留下的新鲜矩阵，省一遍全子树递归
+      const caps = getSceneCaps();
+      const hasCapUpdate = caps.length > 0 && caps.some((c) => typeof c.update === "function");
+      if (_globalPerFrames.length > 0 || hasCapUpdate) markCullMatricesDirty();
       cullModelGroups(cam);
     } else restoreModelGroupsVisible();
     // ADR-081 L2：后处理体积光管线

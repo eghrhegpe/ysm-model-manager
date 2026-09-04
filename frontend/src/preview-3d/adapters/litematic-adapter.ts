@@ -15,6 +15,7 @@ import { registerSchema, unregisterSchema } from "./schema-registry.ts";
 import { multiModelSelectNode } from "../menu/multi-model.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { safeDispose } from "../safe-dispose.ts";
+import { overlayStyleRoot } from "../overlay-style-bridge.ts";
 import { renderLoadingState } from "./preview-loading.ts";
 import type { VoxelData } from "../../parsers/voxel-parse.ts";
 
@@ -29,7 +30,7 @@ function ensureMdliStyles(): void {
   _mdliStylesInjected = true;
   const el = document.createElement("style");
   el.textContent = mdliCss;
-  document.head.appendChild(el);
+  overlayStyleRoot().appendChild(el);
 }
 
 const CHUNK_SIZE = 32; // 空间分块维：每 chunk 持一个 InstancedMesh，32³ ≈ 32k 方块上限

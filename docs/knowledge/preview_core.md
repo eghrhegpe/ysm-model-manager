@@ -56,6 +56,7 @@ auto_fields:
     - captureTextureName
     - cleanupPreview
     - clearSceneCaps
+    - closeOverlay
     - closeUnusedDecodedBitmaps
     - collectAllWebEntries
     - collectMenuGraph
@@ -183,6 +184,8 @@ auto_fields:
     - morphNodes
     - mount3D
     - Mount3DOptions
+    - MountCtx
+    - MpSessionState
     - normalizeFbxScale
     - OpenGzRootFromBytes
     - PackAdapterOpts
@@ -217,17 +220,21 @@ auto_fields:
     - readVrmMeta
     - readWebFile
     - reauthorizeFsaRoot
+    - registerPerFrame
     - registerSchema
+    - removePerFrame
     - renderLoadingState
     - RenderVrmBonePanel
     - RepresentativeSnapshot
     - rescanFsaRoot
     - resetEncoderState
+    - resetLoopState
     - resetSceneInfra
     - resetSchemas
     - resolveMmdZipConfig
     - ResolveModeBridge
     - ResolveModeResponse
+    - runFullCleanup
     - scanAllWebModels
     - scanWebModels
     - sceneRegistry
@@ -240,6 +247,8 @@ auto_fields:
     - SkyCapability
     - SkyModelType
     - SkyParams
+    - startGlobalRenderLoop
+    - stopIfIdle
     - SwitchContext
     - switchPreview
     - switchToSession
@@ -254,6 +263,7 @@ auto_fields:
     - typeFromWebDir
     - UnloadCtx
     - unloadModel
+    - unloadSessionModel
     - unregisterSchema
     - VrmAdapterDeps
     - VrmBonePanelCtx

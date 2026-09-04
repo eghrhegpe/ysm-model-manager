@@ -19,7 +19,6 @@ auto_fields:
     - BoneEntry
     - buildBoneExportRow
     - buildBoneNamesText
-    - buildDepthMap
     - buildStatsCard
     - buildToggleRow
     - buildYsmModelSchema
@@ -61,7 +60,6 @@ auto_fields:
     - invalidateScenePreview
     - invalidateVrmPreview
     - invalidateYsmPreview
-    - iRow
     - loadModel2D
     - loadModelData
     - LoadModelOpts
@@ -101,7 +99,6 @@ auto_fields:
     - resolveStageSiblings
     - saveScreenshot
     - scanModelsByType
-    - sec
     - setActive3DClose
     - setPrefer3D
     - setup2DCanvas

@@ -227,7 +227,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 156 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 253 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 389 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 391 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -448,9 +448,9 @@
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 216 |
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 250 |
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 260 |
-| mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 463 |
+| mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 515 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 38 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 158 |
+| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 159 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 34 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 45 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 57 |
@@ -571,10 +571,10 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 477 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 487 |
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 189 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 325 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 333 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 434 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 441 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 327 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 335 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 437 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 444 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 31 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 55 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 43 |

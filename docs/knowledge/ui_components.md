@@ -9,7 +9,6 @@ auto_fields:
   symbols_with_lines:
     - addActionRow
     - addCardTitle
-    - addClearRow
     - addCollapsible
     - addColorSliderRow
     - addDangerRow
@@ -26,9 +25,7 @@ auto_fields:
     - addSliderRow
     - addToggleRow
     - addVector3SliderRow
-    - addWatchDirRow
     - ARIA_ATTR
-    - buildPresetChipGroup
     - cardContainer
     - clearControls
     - COLLAPSIBLE
@@ -48,7 +45,6 @@ auto_fields:
     - initControl
     - installSlideMenuStyles
     - installUiComponentsStyles
-    - PresetChipItem
     - PREVIEW_OVERLAY_ID
     - registerControl
     - ROLE

@@ -102,6 +102,7 @@ auto_fields:
     - clearLoadTraces
     - clearModelRoots
     - clearSceneCaps
+    - closeOverlay
     - closeUnusedDecodedBitmaps
     - collectBlobUrls
     - collectMenuGraph
@@ -375,12 +376,17 @@ auto_fields:
     - motionDetailView
     - mount3D
     - Mount3DOptions
+    - MountCtx
     - mountPreviewRootMenu
+    - MpSessionState
     - MultiLipSyncCallback
     - multiModelSelectNode
     - MultiModelSelectOpts
     - normalizeFbxScale
+    - onOverlayStyleTargetReset
     - OrderedTexInput
+    - overlayStyleRoot
+    - OverlayStyleTarget
     - PackAdapterOpts
     - PackDeps
     - PackEntryReader
@@ -450,8 +456,10 @@ auto_fields:
     - ReflectorParams
     - registerBoneRaycast
     - registerModelRoot
+    - registerPerFrame
     - registerSchema
     - releaseTextureUrls
+    - removePerFrame
     - renderAdapterPanelContent
     - renderCapControls
     - renderEnvLevel
@@ -465,6 +473,7 @@ auto_fields:
     - RepresentativeSnapshot
     - resetActiveComponent
     - resetEncoderState
+    - resetLoopState
     - resetSceneInfra
     - resetSchemas
     - resetSettingsListeners
@@ -477,6 +486,7 @@ auto_fields:
     - restoreModelGroupsVisible
     - restoreState
     - roleBaseName
+    - runFullCleanup
     - safeDispose
     - sampleAdaptivePixelRatio
     - SceneCapability
@@ -504,6 +514,7 @@ auto_fields:
     - setFrustumCullEnabled
     - setMmdMaterialOpacity
     - setMmdMaterialVisible
+    - setOverlayStyleTarget
     - setPerceptionPaused
     - setPerfPreset
     - setPreviewUiMode
@@ -533,7 +544,9 @@ auto_fields:
     - SpecModelInput
     - splitMeshByFaceAlpha
     - SpotlightParams
+    - startGlobalRenderLoop
     - STATS_PANEL_ID
+    - stopIfIdle
     - stripYsgpTextHeader
     - SubModel
     - subscribeSettings
@@ -563,6 +576,7 @@ auto_fields:
     - toStatePath
     - UnloadCtx
     - unloadModel
+    - unloadSessionModel
     - unregisterModelRoot
     - unregisterSchema
     - Vec3

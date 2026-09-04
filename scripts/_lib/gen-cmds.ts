@@ -19,7 +19,6 @@ export const GEN_CMDS: string[] = [
   'event-graph.ts',
   'gen-knowledge-index.ts',
   'build-novel-index.ts',
-  'gen-project-map.ts',
   'gen-vitepress-sidebar.ts',
   'gen-knowledge-h1.ts',
   'gen-knowledge-symbols.ts',

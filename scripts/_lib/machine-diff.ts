@@ -16,7 +16,10 @@
  *
  * project-map.md 刻意排除出「生成物整文件」清单：其 GEN 区用途表是人工知识
  * （脚本从现文档读回复用，见 gen-project-map.ts loadUsageFromDoc），无条件收编
- * 会吞并行会话对用途表的手改。routes.md / routes-quick.md 相反：描述列源在卡片
+ * 会吞并行会话对用途表的手改。ADR-184 续（2026-09-05）：gen-project-map 已移出
+ * GEN_CMDS 自动刷新（价值以 --json 为主，表格自动刷只制造滞留噪音），按需手动跑；
+ * 故 project-map.md 不再进 snapChanged，其滞留路径随自动刷新一并消失。
+ * routes.md / routes-quick.md 相反：描述列源在卡片
  * frontmatter（gen-routes 读回），自身无人工维护区 → 全量重写可收编。
  *
  * 逃生阀：YSM_SKIP_GEN_STAGE=1（gen-stage.ts CLI 读取，恢复旧行为全排除）。

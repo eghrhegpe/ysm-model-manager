@@ -2,7 +2,8 @@
 
 > **自动生成**：目录结构由 `node scripts/gen-project-map.ts` 扫描磁盘生成；
 > 目录用途是人工知识，直接维护在本文档的表格里（脚本从本文件读回复用，无外部基线）。
-> 改目录结构后运行脚本刷新；`--check` 已接入 `doctor.ts` 防漂移。
+> 已移出 GEN_CMDS 自动刷新（ADR-184 续，2026-09-05）——本地图价值以 `--json` 结构化路径为主，
+> 表格层对 AI 无用，自动刷只会制造滞留噪音。需要时手动刷新；`--check` 仍接 `doctor.ts` 防漂移。
 > 🤖 **AI 代理优先** `node scripts/gen-project-map.ts --json` 取结构化路径（源码/测试/子目录区分，含文件清单），
 > 别按表格猜路径——平铺文件（如 `features/import-dnd.ts`）不是子目录。
 
@@ -40,7 +41,7 @@
 | `tags/` | 模型标签持久化存储 〔源码 1: tags.go · 测试 3〕 |
 | `texture_cache/` | 纹理缓存管理（KTX2/PNG 缓存，支持后台编码与快速命中） 〔源码 1: texture_cache.go · 测试 2〕 |
 | `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） 〔源码 3: spec-bones.go spec-cube.go spec.go · 测试 8〕 |
-| `types/` | 共享类型 + 注册表 〔源码 7: bedrock.go config.go extensions.go findinst.go location.go resource.go types.go · 测试 18 · 子目录 1: testdata/〕 |
+| `types/` | 共享类型 + 注册表 〔源码 8: bedrock.go config.go extensions.go findinst.go location.go resource.go texture.go types.go · 测试 18 · 子目录 1: testdata/〕 |
 | `updater/` | 自动更新 〔源码 3: updater.go updater_other.go updater_windows.go · 测试 8〕 |
 | `version/` | 版本号 〔源码 1: version.go · 测试 1〕 |
 | `watcher/` | 文件监听 〔源码 1: watcher.go · 测试 4〕 |
@@ -54,7 +55,7 @@
 
 | 包 | 用途 |
 |----|------|
-| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 41 · 测试 32 · 子目录 1: install/〕 |
+| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 42 · 测试 32 · 子目录 1: install/〕 |
 
 <!-- /GEN: internal-structure -->
 
@@ -71,7 +72,7 @@
 | `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 45 · 测试 38 · 子目录 7: adapters/ caps/ decoder/ menu/ perception/ state/ vendor/〕 |
 | `services/` | 服务注册（registry.ts） 〔源码 2: cli-bridge.ts resource-registry.ts · 测试 2〕 |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） 〔源码 8: blob-urls.ts events.ts fake-image.ts index.ts query-by-testid.ts render.ts self-healing.ts tex-by… · 测试 4〕 |
-| `ui/` | 🥉 ui-helpers 原生 DOM 组件库（自 MikuMikuAR 迁移：slide-row / rows / header-toggle / advanced-rows / collapsible / preset / card / loading + 自包含 CSS 模块 `ui-components-styles.ts`，经 `installUiComponentsStyles()` / `uiComponentsStyleSheet` 接入） 〔源码 16 · 测试 11〕 |
+| `ui/` | 🥉 ui-helpers 原生 DOM 组件库（自 MikuMikuAR 迁移：slide-row / rows / header-toggle / advanced-rows / collapsible / preset / card / loading + 自包含 CSS 模块 `ui-components-styles.ts`，经 `installUiComponentsStyles()` / `uiComponentsStyleSheet` 接入） 〔源码 17 · 测试 12〕 |
 | `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） 〔源码 10: array.ts gh-links.ts health-report.ts main-thread-watch.ts module-loader.ts recycle-path.ts safe-… · 测试 7 · 子目录 9: animation/ async/ cache/ core/ debug/ dom/ format/ icon/ resource/〕 |
 | `views/` | 页面级视图组件（app-content / app-tree / app-preview 等） 〔子目录 8: app-content/ app-nav/ app-preview/ app-sidebar/ app-sync-manager/ app-toast/ app-tree/ context-menu/〕 |
 | `wasm/` | WASM 生成数据（base64 豁免文件） 〔源码 9: parser-shared.ts ysm-glue-data-mt.js ysm-glue-data.js ysm-parser.ts ysm-wasm-data-mt.d.ts ysm-was… · 测试 2〕 |

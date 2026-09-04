@@ -55,7 +55,12 @@ function makeRepo(t: ReturnType<typeof describe>, opts: { hook?: string } = {}):
   if (opts.hook) {
     const hookDir = path.join(dir, 'hooks');
     fs.mkdirSync(hookDir, { recursive: true });
-    fs.writeFileSync(path.join(hookDir, 'pre-commit'), opts.hook, 'utf8');
+    const hookPath = path.join(hookDir, 'pre-commit');
+    fs.writeFileSync(hookPath, opts.hook, 'utf8');
+    // ubuntu(runs-on 含 pages-deploy 契约测试)下 git 执行钩子要求可执行位；
+    // writeFileSync 默认 644 → pre-commit 静默不执行(用例2/3/7 断言失败)。
+    // Windows 无 POSIX 权限位但 chmod 0o755 无害(实测不改变本地通过态)。
+    fs.chmodSync(hookPath, 0o755);
     git(['config', 'core.hooksPath', 'hooks'], dir);
   }
   return dir;

@@ -329,13 +329,21 @@ func (tm *TrashManager) Restore(src string) error {
 			logHalfCleanup(dst, "Restore", true) // 清理失败记录日志，与 moveEx 的清理分支对齐（原 _ 静默）
 			return err
 		}
-		return os.RemoveAll(src)
+		if err := os.RemoveAll(src); err != nil {
+			// 源删除失败：清理已落地的 dst 副本，恢复可重试状态（P3 修复，与 moveEx 对称）
+			return tm.rollbackAfterSourceRemoveFail(src, dst, err, true)
+		}
+		return nil
 	}
 	if err := tm.copyFileForMove(src, dst); err != nil {
 		logHalfCleanup(dst, "Restore", false) // 复制中断/失败时清理半截恢复文件，避免目标目录残留损坏文件（原 _ 静默）
 		return err
 	}
-	return os.Remove(src)
+	if err := os.Remove(src); err != nil {
+		// 源删除失败：清理已落地的 dst 副本（P3 修复，与 moveEx 对称）
+		return tm.rollbackAfterSourceRemoveFail(src, dst, err, false)
+	}
+	return nil
 }
 
 // logHalfCleanup 复制/移动中断时清理半截目标并记录日志（避免回收站残留损坏数据）。

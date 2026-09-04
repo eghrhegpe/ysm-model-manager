@@ -76,6 +76,9 @@ func ToggleModelEnable(root, path string) (bool, error) {
 			// 旧顺序先 Rename 文件名再 Rename 父目录，若第二步失败，
 			// 文件名已去后缀但父目录仍禁用，产生「半启用」不一致态。
 			fileNew := types.StripDisableSuffix(path)
+			// 存在性检查对照旧父目录下 fileNew——两段式 Rename（先父目录后文件）
+			// 会把旧父目录内的同名文件随父目录一起带到落点，检查旧路径恰好预判该冲突
+			//（TestToggleModelEnable_DirBanFileNewExists 锁定：误改检查路径致冲突漏检）
 			if _, err := os.Lstat(fileNew); err == nil {
 				return false, fmt.Errorf("目标已存在: %s", fileNew)
 			}

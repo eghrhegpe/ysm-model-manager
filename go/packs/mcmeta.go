@@ -80,7 +80,9 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 		defer r.Close()
 		for _, f := range r.File {
 			low := strings.ToLower(f.Name)
-			if low == "pack.mcmeta" {
+			// 任意层级段匹配（与检测层 MatchZipEntry 的 ADR-082 S1 口径一致）：
+			// zip 外层套一层目录的资源包（MyPack/pack.mcmeta）也能读到元数据
+			if low == "pack.mcmeta" || strings.HasSuffix(low, "/pack.mcmeta") {
 				rc, err := f.Open()
 				if err != nil {
 					continue
@@ -95,7 +97,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 					metaTooLarge = true // 超限（截断探测到 >1MB），文件存在但不可用
 				}
 			}
-			if low == "pack.png" {
+			if low == "pack.png" || strings.HasSuffix(low, "/pack.png") {
 				rc, err := f.Open()
 				if err != nil {
 					continue

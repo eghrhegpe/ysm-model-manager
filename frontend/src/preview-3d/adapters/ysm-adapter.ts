@@ -23,6 +23,7 @@ import {
   type AnimationController,
   parseAnimationControllerJSON,
 } from "../../utils/animation/animation-controller.ts";
+import { isEditableTarget } from "../../utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { b64ToBytes } from "../base64.ts";
 import { buildBoneHierarchy, registerBoneRaycast } from "../bone-raycast.ts";
@@ -43,7 +44,6 @@ import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player
 import { buildYsmObject, type YsmObjectHandle } from "../ysm-object.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { MmdPlayBridge, YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";
-import { isEditableTarget } from "./input-and-animation.ts"; // 输入守卫复用（焦点在输入框不吞键）
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import {
   type PerceptionCapability,
@@ -474,7 +474,7 @@ function mdYsBuildMenuAndDebug(
     if (e.key !== "f" && e.key !== "F") return;
     if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
     // 焦点在输入框/滑块时切换调试模式会误吞打字——对齐 input-and-animation 键位守卫
-    if (isEditableTarget(e)) return;
+    if (isEditableTarget(e.target)) return;
     e.preventDefault();
     e.stopPropagation();
     const modes: Array<"normal" | "pivot" | "bone"> = ["normal", "pivot", "bone"];

@@ -16,6 +16,7 @@
 //   不 preventDefault——3D 面板内文本框打字不再被吞（修复：w/a/s/d 无法输入）。
 
 import type * as THREE from "three";
+import { isEditableTarget } from "../../utils/dom/editable-target.ts";
 import { isInputBlocked } from "../../utils/dom/focus-restore.ts";
 import { loadTdKeymap, type TdKeyAction } from "../keymap.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
@@ -95,15 +96,6 @@ function codeActivatesAction(
   return false;
 }
 
-/** 事件目标是否为可编辑 / 可选择控件（输入框打字/滑块调整不被 3D 键位吞掉；
- *  导出供其它适配器复用——ysm-adapter F 键调试切换同守卫） */
-export function isEditableTarget(e: KeyboardEvent): boolean {
-  const t = e.target as HTMLElement | null;
-  if (!t) return false;
-  const tag = t.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable === true;
-}
-
 /** code 是否为修饰键（左/右 Shift/Ctrl/Alt）：修饰键不 preventDefault（只记录状态） */
 function isModifierCode(code: string): boolean {
   return MODIFIER_SIDE_PAIRS.some(([left, right]) => code === left || code === right);
@@ -141,7 +133,7 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
   const onKeyDown = (e: KeyboardEvent): void => {
     // 菜单/弹窗接管键盘时（pushInputBlock），暂停相机 WASD/方向键消费
     if (isInputBlocked()) return;
-    if (isEditableTarget(e)) return;
+    if (isEditableTarget(e.target)) return;
     const code = e.code;
     let hit = false;
     (Object.keys(keymap) as TdKeyAction[]).forEach((action) => {

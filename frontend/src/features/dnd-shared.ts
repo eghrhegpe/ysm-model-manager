@@ -124,14 +124,6 @@ export const buildFolderItems = async (
 
 const fileKey = (f: File): string => f.name + ":" + f.size + ":" + f.lastModified;
 
-/** drop 目标是否为可编辑元素（输入框内 drop 不应触发导入） */
-export const isEditableTarget = (el: EventTarget | null): boolean => {
-  const node = el as HTMLElement | null;
-  return Boolean(
-    node && (node.tagName === "INPUT" || node.tagName === "TEXTAREA" || node.isContentEditable),
-  );
-};
-
 /**
  * 从 drop 事件的 DataTransfer 收集文件（桌面端）：
  * 优先 dataTransfer.files（WebView2 可靠），再 items → webkitGetAsEntry 补充目录条目，

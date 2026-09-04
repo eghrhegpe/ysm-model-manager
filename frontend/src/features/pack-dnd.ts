@@ -12,6 +12,7 @@ import { t } from "../core/i18n/t.ts";
 import { swallowError } from "../utils/core/async.ts";
 import { logError } from "../utils/core/log.ts";
 import { dbg } from "../utils/debug/debug.ts";
+import { isEditableTarget } from "../utils/dom/editable-target.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import {
@@ -20,7 +21,6 @@ import {
   collectDropFiles,
   fileToBase64,
   groupCollected,
-  isEditableTarget,
 } from "./dnd-shared.ts";
 
 /** drop 处理期间的 busy 守卫（由绑定闭包持有，每组件实例独立） */

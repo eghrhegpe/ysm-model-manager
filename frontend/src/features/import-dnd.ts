@@ -10,15 +10,11 @@ import { t } from "../core/i18n/t.ts";
 import { swallowError } from "../utils/core/async.ts";
 import { logError } from "../utils/core/log.ts";
 import { dbg } from "../utils/debug/debug.ts";
+import { isEditableTarget } from "../utils/dom/editable-target.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
-import {
-  type CollectedEntry,
-  collectDropFiles,
-  isEditableTarget,
-  isImportableFile,
-} from "./dnd-shared.ts";
+import { type CollectedEntry, collectDropFiles, isImportableFile } from "./dnd-shared.ts";
 import { executeCollected, importWebFilesWithToast } from "./import-executor.ts";
 
 const DROP_EXTS_STR = ALL_EXTS.join(" ");

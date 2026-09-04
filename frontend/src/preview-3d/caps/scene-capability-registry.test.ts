@@ -50,11 +50,27 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     expect(registry.getById("sky")).toBeUndefined();
   });
 
-  it("createAll 后再 createAll → dispose 旧实例后重新创建", () => {
+  it("createAll 后再 createAll（同 ctx）→ 复用现有实例，不重建（code review #8）", () => {
+    const factory = vi.fn(() => makeFakeCap("sky"));
+    const cap = makeFakeCap("sky");
+    const disposeSpy = vi.spyOn(cap, "dispose");
+    const ctx = { scene: {}, renderer: {}, camera: {} } as unknown as CreateAllCtx;
+    registry.add(factory);
+    registry.add(() => cap);
+    const first = registry.createAll(ctx);
+    const second = registry.createAll(ctx);
+    expect(second).toEqual(first); // 同一批实例（createAll 返回副本数组）
+    expect(factory).toHaveBeenCalledTimes(1); // 不重跑工厂
+    expect(disposeSpy).not.toHaveBeenCalled(); // 不拆旧实例
+  });
+
+  it("createAll ctx 变化（换 scene/renderer/camera）→ dispose 旧实例后重建", () => {
     const factory = vi.fn(() => makeFakeCap("sky"));
     registry.add(factory);
-    registry.createAll({} as unknown as CreateAllCtx);
-    registry.createAll({} as unknown as CreateAllCtx);
+    const ctx1 = { scene: { a: 1 }, renderer: {}, camera: {} } as unknown as CreateAllCtx;
+    const ctx2 = { scene: { a: 2 }, renderer: {}, camera: {} } as unknown as CreateAllCtx;
+    registry.createAll(ctx1);
+    registry.createAll(ctx2);
     expect(factory).toHaveBeenCalledTimes(2);
   });
 

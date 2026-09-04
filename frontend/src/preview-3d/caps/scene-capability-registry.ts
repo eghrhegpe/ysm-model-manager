@@ -32,6 +32,16 @@ export type SceneCapabilityFactory = (ctx: {
 export class SceneCapabilityRegistry {
   private factories: SceneCapabilityFactory[] = [];
   private instances: SceneCapability[] = [];
+  // 上次 createAll 的宿主引用（code review #8）：三引用全等 → 实例仍挂在同一
+  // scene/renderer/camera 上，直接复用返回——修复「上一 session 未 fullCleanup
+  // （并发/异常路径）时旧 cap 被中途拆掉」与「dispose 后立刻原样重建」的浪费
+  // （sky/water/reflector 的 render target 反复建拆）。fullCleanup 路径先 dispose
+  // 清空 instances，故正常开关预览的「保存→恢复→重套预设」语义不受影响。
+  private lastCtx: {
+    scene: THREE.Scene;
+    renderer: THREE.WebGLRenderer;
+    camera: THREE.PerspectiveCamera;
+  } | null = null;
 
   /** 注册能力工厂 */
   add(factory: SceneCapabilityFactory): void {
@@ -44,7 +54,21 @@ export class SceneCapabilityRegistry {
     renderer: THREE.WebGLRenderer;
     camera: THREE.PerspectiveCamera;
   }): SceneCapability[] {
+    // 同宿主复用：instances 非空且 scene/renderer/camera 三引用全等 → 现有实例
+    // 仍有效，跳过 dispose→重建→apply 整套（apply 状态已就位，loadAll 由调用方
+    // 按需执行不影响正确性）
+    const last = this.lastCtx;
+    if (
+      this.instances.length > 0 &&
+      last &&
+      last.scene === ctx.scene &&
+      last.renderer === ctx.renderer &&
+      last.camera === ctx.camera
+    ) {
+      return [...this.instances];
+    }
     this.dispose(); // 清理旧实例
+    this.lastCtx = ctx;
     this.instances = [];
     for (const factory of this.factories) {
       try {
@@ -99,6 +123,7 @@ export class SceneCapabilityRegistry {
       }
     }
     this.instances = [];
+    this.lastCtx = null; // 复用记忆同步清空（dispose 后必须重建）
   }
 
   /** 获取工厂数量（测试用） */

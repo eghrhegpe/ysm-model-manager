@@ -48,13 +48,14 @@ status: active
 - drift `--affected` 秒级接入（ADR-087）：取本次 stage 文件查知识卡漂移，不自动 stage
 - 智能 stage：改源码自动 stage 同名 `.test.ts`（防误 stage）
 - gofmt 自动修复 staged go 文件（失败仅提示）
+- biome 自动修复 staged frontend TS/TSX（2026-09 接线，镜像 gofmt 范式）：只处理 `git diff --cached` 的 `frontend/*.ts/tsx`，跳过含未暂存编辑的文件（防混拼半成品），`check-biome.ts --write --files` 原地修复后重新 stage；失败仅提示不阻断（pre-push 只读校验兜底）。逃生阀 `YSM_SKIP_BIOME_FIX=1`。曾长期只有 pre-push 只读门禁、与 gofmt 不对称（头注释 "—write pre-commit 用" 空挂），2026-09 补齐
 
 ## 不变量
 
 - **禁止 `git add -u docs/` 兜底**：会吞他人未提交 docs 半成品，违反 P2-2。快照缺失宁可跳过也不吞（ADR-150）
 - gen 产物同步幂等：已同步时无 diff，`git add` 无副作用
 - 任何 gen 失败仅提示，不阻断 commit（阻断留给 pre-push）
-- 逃生阀：`YSM_SKIP_GEN=1 git commit` 或 `git commit --no-verify`
+- 逃生阀：`YSM_SKIP_GEN=1 git commit` 或 `git commit --no-verify`；`YSM_SKIP_BIOME_FIX=1` 跳过 biome 自动修复
 
 ## 与其他子系统关系
 

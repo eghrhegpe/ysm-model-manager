@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"ysm-model-manager/go/conc"
 	"ysm-model-manager/go/fileops"
@@ -412,39 +411,14 @@ func (a *App) CheckFileExists(path string) bool {
 // 放行根本身（rel==.，整仓扫描合法）；拒绝 .. 越权、盘符根、其他卷绝对路径。
 // 空串守卫：filepath.Clean("") → "."，会被 filepath.Rel 解析为 CWD——
 // 若 CWD 恰在配置根内则误判合法。源头拦截，保护全部调用方（defense-in-depth）。
-// resolvedRootCache root → EvalSymlinks 解析结果缓存（性能收敛）。
-// isPathInRootOrSelf 是扫描热路径（ScanModelEntries / ListFileNames 等逐文件调用），
-// root 来自 AppConfig 运行期极少变化，每次重算 EvalSymlinks 是主要重复开销。
-// saveConfig 时清空（roots 可能被用户改指向新目录/盘符）；path 侧每次实时解析，
-// 路径中途 symlink 的复核语义不受缓存影响。已知取舍：进程存活期内 root 自身被
-// 替换为指向外部的 symlink 时缓存可能滞后——该场景要求本地攻击者已可改配置目录，
-// 风险面与缓存前的 check-then-use TOCTOU 同级，可接受。
-var resolvedRootCache sync.Map // map[string]string
+// root 侧解析走 a.resolvedRoot（组件缓存，见 app_resolved_root_cache.go，
+// ADR-134 同构）：本函数是扫描热路径，root 运行期极少变化，每次重算
+// EvalSymlinks 是主要重复开销；saveConfig 后由组件 Clear 失效。
+// 详见 app_resolved_root_cache.go 顶部注释（缓存语义与 TOCTOU 取舍）。
 
-// resolvedRoot 取 root 的解析结果（带缓存）；解析失败（root 不存在）保留原路径，
-// 与 paths.resolveOrKeep 语义一致。
-func resolvedRoot(root string) string {
-	if v, ok := resolvedRootCache.Load(root); ok {
-		return v.(string)
-	}
-	resolved := paths.ResolveOrKeep(root)
-	v, _ := resolvedRootCache.LoadOrStore(root, resolved)
-	return v.(string)
-}
-
-// clearResolvedRootCache 配置变更（saveConfig）后失效全部根解析缓存。
-func clearResolvedRootCache() {
-	resolvedRootCache.Range(func(k, _ any) bool {
-		resolvedRootCache.Delete(k)
-		return true
-	})
-}
-
-func (a *App) isPathInRootOrSelf(path string) bool {
-	if path == "" {
-		return false
-	}
-	cfg := a.LoadAppConfig()
+// allScanRoots 返回所有扫描/移动校验使用的根列表（FilesRoot + McRoot + 6 专属根 + CustomRoots）。
+// isPathInRootOrSelf 与 findMoveRoot 共用此入口，避免根列表构造逻辑散落。
+func allScanRoots(cfg types.AppConfig) []string {
 	roots := []string{
 		cfg.FilesRoot,
 		cfg.McRoot,
@@ -455,13 +429,21 @@ func (a *App) isPathInRootOrSelf(path string) bool {
 		cfg.MmdRoot,
 		cfg.VrcRoot,
 	}
-	// CustomRoots（新机制）：所有已配置的类型专属根自动纳入，
-	// 新增类型/自定义根无需同步本函数（旧字段历史兼容保留）
 	if cfg.CustomRoots != nil {
-		for _, root := range cfg.CustomRoots {
-			roots = append(roots, root)
+		for _, r := range cfg.CustomRoots {
+			if r != "" {
+				roots = append(roots, r)
+			}
 		}
 	}
+	return roots
+}
+
+func (a *App) isPathInRootOrSelf(path string) bool {
+	if path == "" {
+		return false
+	}
+	roots := allScanRoots(a.LoadAppConfig())
 	clean := filepath.Clean(path)
 	for _, root := range roots {
 		if root == "" {
@@ -486,7 +468,7 @@ func (a *App) isPathInRootOrSelf(path string) bool {
 		// root 解析走缓存（resolvedRoot）：本函数是扫描热路径（ScanModelEntries 等逐文件
 		// 调用），root 来自 AppConfig 运行期极少变化，每次重算 EvalSymlinks 是主要重复
 		// 开销；path 侧（clean）仍实时解析，路径中途 symlink 的复核语义不变。
-		if _, err := os.Lstat(clean); err == nil && paths.IsInside(resolvedRoot(root), paths.ResolveOrKeep(clean)) != nil {
+		if _, err := os.Lstat(clean); err == nil && paths.IsInside(a.resolvedRoot(root), paths.ResolveOrKeep(clean)) != nil {
 			continue // 词法在内、真实存在，但解析后越出该根，试下一个根
 		}
 		return true

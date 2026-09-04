@@ -35,7 +35,7 @@ func TestBuildSyncItems_Basic(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(instDir, "extra.ysm"), []byte("x"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 	if len(items) == 0 {
 		t.Fatal("应产出同步状态项")
 	}
@@ -62,7 +62,7 @@ func TestBuildSyncItems_EmptyInputs(t *testing.T) {
 		t.Fatalf("无资源类型应返回空，实际 %d", len(items))
 	}
 	// 资源类型 root 为空 → 跳过该类型
-	if items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": ""}, ""); len(items) != 0 {
+	if items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": ""}, ""); len(items) != 0 {
 		t.Fatalf("root 为空应跳过，实际 %d", len(items))
 	}
 }
@@ -95,7 +95,7 @@ func TestBuildSyncItems_SyncedPackFolderExactlyOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	ins := &types.VersionInstance{VersionDir: base}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
 	count := 0
 	for _, it := range items {
 		if it.Name == "PackA" {
@@ -130,7 +130,7 @@ func TestBuildSyncItems_InstExtraFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	ins := &types.VersionInstance{VersionDir: base}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
 	// 应恰好 1 条：pack-user.zip（optional），notes.txt 被过滤
 	if len(items) != 1 {
 		t.Fatalf("实例标准目录应产出 1 条（pack-user.zip），实际 %d 条: %+v", len(items), items)
@@ -145,7 +145,7 @@ func TestBuildSyncItems_InstExtraFile(t *testing.T) {
 
 // TestBuildSyncItems_NilInstance 导出入口 nil 守卫（L27-29）——nil 不应 panic
 func TestBuildSyncItems_NilInstance(t *testing.T) {
-	if items := BuildSyncItems(nil, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": "/x"}, ""); items != nil {
+	if items := BuildSyncItems(nil, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": "/x"}, ""); items != nil {
 		t.Fatalf("nil instance 应返回 nil，实际 %v", items)
 	}
 }
@@ -153,7 +153,7 @@ func TestBuildSyncItems_NilInstance(t *testing.T) {
 // TestBuildSyncItems_UnknownTypeSkip SubDirMap 返回空 → 该类型直接跳过（L63-65）
 func TestBuildSyncItems_UnknownTypeSkip(t *testing.T) {
 	ins := &types.VersionInstance{Name: "t", VersionDir: t.TempDir()}
-	if items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "no-such-type", Icon: "x"}}, map[string]string{"no-such-type": "/x"}, ""); len(items) != 0 {
+	if items := BuildSyncItems(ins, []types.ResourceType{{ID: "no-such-type", Icon: "x"}}, map[string]string{"no-such-type": "/x"}, ""); len(items) != 0 {
 		t.Fatalf("未知类型无 InstanceDir 应跳过，实际 %d 条", len(items))
 	}
 }
@@ -191,7 +191,7 @@ func TestBuildSyncItems_IndependentTypes(t *testing.T) {
 
 	// 独立类型 EntityPlayer：应只包含 EntityPlayer 相关条目
 	items := BuildSyncItems(ins,
-		[]ResourceTypeInfo{{ID: "EntityPlayer", Icon: "🧍"}},
+		[]types.ResourceType{{ID: "EntityPlayer", Icon: "🧍"}},
 		map[string]string{"EntityPlayer": epGlobal}, "")
 
 	byName := map[string]types.ResourceSyncItem{}
@@ -218,7 +218,7 @@ func TestBuildSyncItems_IndependentTypes(t *testing.T) {
 	scanner.InvalidateCache()
 
 	items2 := BuildSyncItems(ins,
-		[]ResourceTypeInfo{{ID: "CustomAnim", Icon: "🎬"}},
+		[]types.ResourceType{{ID: "CustomAnim", Icon: "🎬"}},
 		map[string]string{"CustomAnim": epGlobal}, "")
 
 	for _, it := range items2 {
@@ -265,7 +265,7 @@ func TestBuildSyncItems_DisabledThreeBranches(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(instDir, "active.ysm"), []byte("x"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 	byName := map[string]types.ResourceSyncItem{}
 	for _, it := range items {
 		byName[it.Name] = it
@@ -311,7 +311,7 @@ func TestBuildSyncItems_ExtraHardLinkLegacy(t *testing.T) {
 		t.Skipf("无法创建硬链接（文件系统不支持）: %v", err)
 	}
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 	found := 0
 	for _, it := range items {
 		if it.Name == "legacy.ysm" && it.Status == types.SyncStatusLegacy {
@@ -345,7 +345,7 @@ func TestBuildSyncItems_YsmJSONEntryOnly(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalDir, "anim.json"), []byte("{}"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 	byName := map[string]types.ResourceSyncItem{}
 	for _, it := range items {
 		byName[it.Name] = it
@@ -374,7 +374,7 @@ func TestBuildSyncItems_SyncedFileNoDup(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("zip"), 0644)
 	_ = os.WriteFile(filepath.Join(instDir, "pack.zip"), []byte("zip"), 0644)
 	ins := &types.VersionInstance{VersionDir: base}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
 	count := 0
 	for _, it := range items {
 		if it.Name == "pack.zip" {
@@ -415,7 +415,7 @@ func TestBuildSyncItems_DirLevelChildren(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(instPack, "model_d.ysm"), []byte("d"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 找到 packA 条目
 	var packItem *types.ResourceSyncItem
@@ -488,7 +488,7 @@ func TestBuildSyncItems_DirLevelNoChildrenForMissing(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalPack, "model_x.ysm"), []byte("x"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 找到 packB 条目
 	var packItem *types.ResourceSyncItem
@@ -543,7 +543,7 @@ func TestBuildSyncItems_MissingDirRepoPreview(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(pack, "Eanes_45.png"), []byte("png"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "💎"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "💎"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 找到真模型夹条目（顶层，因它自身是模型夹含 .ysm → 收集为单元，非容器）
 	var packItem *types.ResourceSyncItem
@@ -608,7 +608,7 @@ func TestBuildSyncItems_NestedContainerDir(t *testing.T) {
 	}
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 顶层应只出现父夹容器（2 个子夹被收入其中，不再平铺在根）
 	if len(items) != 1 {
@@ -666,7 +666,7 @@ func TestBuildSyncItems_NestedContainer_PathDirection(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalContainer, "charB", "charB.ysm"), []byte("b"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "💎"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "💎"}}, map[string]string{"ysm": globalDir}, "")
 
 	// (a) optional 容器：status optional、Path 落实例根
 	var instC *types.ResourceSyncItem
@@ -758,7 +758,7 @@ func TestBuildSyncItems_NestedContainer_DeepHierarchy(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(deep, "model.ysm"), []byte("m"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 顶层：vendor（容器），其下 authors → character（模型文件夹叶子），逐步下钻
 	if len(items) != 1 {
@@ -798,7 +798,7 @@ func TestBuildSyncItems_NestedContainer_DeepHierarchy(t *testing.T) {
 // 命中缓存返回克隆（调用方修改不污染缓存）；InvalidateSyncItemsCache 清空后不再命中。
 func TestBuildSyncItems_ResultCacheHitReturnsCloneAndInvalidateClears(t *testing.T) {
 	ins := &types.VersionInstance{Name: "cache", VersionDir: t.TempDir()}
-	rtypes := []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}
+	rtypes := []types.ResourceType{{ID: "ysm", Icon: "📦"}}
 	roots := map[string]string{"ysm": t.TempDir()}
 	key := buildSyncItemsKey(ins, rtypes, roots, "")
 	syncItemsCache.Store(key, &syncItemsCacheEntry{
@@ -834,7 +834,7 @@ func TestBuildSyncItems_ScannerInvalidateClearsResultCache(t *testing.T) {
 	// 钩子注册已从隐式 init 改为显式调用（app 层启动时注册），测试自备同款前置
 	RegisterInvalidationHook()
 	ins := &types.VersionInstance{Name: "cache", VersionDir: t.TempDir()}
-	rtypes := []ResourceTypeInfo{{ID: "ysm", Icon: "📦"}}
+	rtypes := []types.ResourceType{{ID: "ysm", Icon: "📦"}}
 	roots := map[string]string{"ysm": t.TempDir()}
 	key := buildSyncItemsKey(ins, rtypes, roots, "")
 	syncItemsCache.Store(key, &syncItemsCacheEntry{

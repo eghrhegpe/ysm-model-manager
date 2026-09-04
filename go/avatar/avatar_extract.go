@@ -77,19 +77,16 @@ func parseYSMJSONAuthors(files []ysmDecodedFile) []authorEntry {
 func extractFallbackAvatarFromDir(files []ysmDecodedFile, safeName string) string {
 	// 扩展名口径与 avatarCandidates 对齐：.png/.jpg/.jpeg 均认（原漏 .jpeg
 	// 使 avatar/face.jpeg 声明的头像在不走作者匹配的降级路径下被跳过）
+	// 不含 .tga——浏览器不解码，头像 <img> 无法渲染。委托 types.IsRenderableTextureExt。
 	for _, f := range files {
 		low := strings.ToLower(f.Path)
-		if !strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg") && !strings.HasSuffix(low, ".jpeg") {
+		if !types.IsRenderableTextureExt(filepath.Ext(low)) {
 			continue
 		}
 		if !strings.HasPrefix(low, "avatar/") && !strings.Contains(low, "/avatar/") {
 			continue
 		}
-		mime := "image/png"
-		if strings.HasSuffix(low, ".jpg") || strings.HasSuffix(low, ".jpeg") {
-			mime = "image/jpeg"
-		}
-		return SaveAvatarData(safeName, f.Data, mime)
+		return SaveAvatarData(safeName, f.Data, types.TextureMIME(filepath.Ext(low)))
 	}
 	return ""
 }
@@ -112,11 +109,7 @@ func matchAvatarByAuthor(files []ysmDecodedFile, authors []authorEntry, safeName
 					}
 				}
 				if matched {
-					mime := "image/png"
-					if strings.HasSuffix(fp, ".jpg") || strings.HasSuffix(fp, ".jpeg") {
-						mime = "image/jpeg"
-					}
-					return SaveAvatarData(safeName, f.Data, mime)
+					return SaveAvatarData(safeName, f.Data, types.TextureMIME(filepath.Ext(fp)))
 				}
 			}
 		}
@@ -190,9 +183,9 @@ func extractAvatarFromJSON(modelPath, safeName string) string {
 				continue
 			}
 			if avatarData, _ := readLimitedAvatar(avatarPath); avatarData != nil {
-				mime := "image/png"
-				if strings.HasSuffix(strings.ToLower(c), ".jpg") {
-					mime = "image/jpeg"
+				mime := types.TextureMIME(filepath.Ext(c))
+				if mime == "" {
+					mime = "image/png" // 裸文件名等无扩展名场景兜底
 				}
 				return SaveAvatarData(safeName, avatarData, mime)
 			}
@@ -467,9 +460,9 @@ func extractAvatarFromContainer(r container.Reader, safeName string) string {
 			}
 			for _, c := range avatarCandidates(ap) {
 				if avatarData := ReadFileFromContainer(r, c); avatarData != nil {
-					mime := "image/png"
-					if strings.HasSuffix(strings.ToLower(c), ".jpg") || strings.HasSuffix(strings.ToLower(c), ".jpeg") {
-						mime = "image/jpeg"
+					mime := types.TextureMIME(filepath.Ext(c))
+					if mime == "" {
+						mime = "image/png" // 裸文件名等无扩展名场景兜底
 					}
 					return SaveAvatarData(safeName, avatarData, mime)
 				}
@@ -483,7 +476,7 @@ func extractAvatarFromContainer(r container.Reader, safeName string) string {
 			continue
 		}
 		low := strings.ToLower(e.Name())
-		if !strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg") && !strings.HasSuffix(low, ".jpeg") {
+		if !types.IsRenderableTextureExt(filepath.Ext(low)) {
 			continue
 		}
 		if !strings.HasPrefix(low, "avatar/") && !strings.Contains(low, "/avatar/") {
@@ -498,9 +491,9 @@ func extractAvatarFromContainer(r container.Reader, safeName string) string {
 		if rerr != nil || int64(len(avatarData)) > types.MaxReadLimit {
 			continue
 		}
-		mime := "image/png"
-		if strings.HasSuffix(low, ".jpg") || strings.HasSuffix(low, ".jpeg") {
-			mime = "image/jpeg"
+		mime := types.TextureMIME(filepath.Ext(low))
+		if mime == "" {
+			mime = "image/png" // 兜底
 		}
 		return SaveAvatarData(safeName, avatarData, mime)
 	}

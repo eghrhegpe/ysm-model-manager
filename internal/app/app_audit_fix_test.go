@@ -81,22 +81,22 @@ func TestResolvedRootCache(t *testing.T) {
 
 	// Windows Temp 目录可能经 8.3 短名/symlink，基准取 ResolveOrKeep 本身
 	wantRoot := paths.ResolveOrKeep(root)
-	if got := resolvedRoot(root); got != wantRoot {
+	if got := a.resolvedRoot(root); got != wantRoot {
 		t.Fatalf("已解析根应与 ResolveOrKeep 一致, got %q want %q", got, wantRoot)
 	}
-	if _, ok := resolvedRootCache.Load(root); !ok {
+	if _, ok := a.ensureResolvedRootCache().Load(root); !ok {
 		t.Fatal("resolvedRoot 结果应写入缓存")
 	}
 	// 直接改缓存值模拟陈旧条目，saveConfig 后应被清空
-	resolvedRootCache.Store(root, filepath.Join(base, "stale"))
+	a.ensureResolvedRootCache().Store(root, filepath.Join(base, "stale"))
 	if err := a.saveConfig(a.LoadAppConfig()); err != nil {
 		t.Fatalf("saveConfig: %v", err)
 	}
-	if _, ok := resolvedRootCache.Load(root); ok {
+	if _, ok := a.ensureResolvedRootCache().Load(root); ok {
 		t.Fatal("saveConfig 后 root 解析缓存应已失效")
 	}
 	// 失效后重新解析，恢复正确值
-	if got := resolvedRoot(root); got != wantRoot {
+	if got := a.resolvedRoot(root); got != wantRoot {
 		t.Fatalf("失效后应重新解析, got %q", got)
 	}
 	// 守卫功能不回归：根外仍拒绝（root 也经同一解析口径，避免 8.3 短名误判）

@@ -76,14 +76,9 @@ func modelBaseNoExt(p string) string {
 // textureDataURI 按文件扩展名派生 data URI MIME（.png→image/png、.jpg/.jpeg→image/jpeg）。
 // .tga 非 Web 图像格式，浏览器解码器不认 → 返回空串，调用方跳过 perComponent data-URI
 // 分支、落回全局 texArr 路径（避免产出 data:image/png;base64,<TGA 字节> 的坏 URI）。
+// MIME 派生委托 types.TextureMIME（单一事实源），避免各处硬编码 switch 漂移。
 func textureDataURI(path string, data []byte) string {
-	mime := ""
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".png":
-		mime = "image/png"
-	case ".jpg", ".jpeg":
-		mime = "image/jpeg"
-	}
+	mime := types.TextureMIME(filepath.Ext(path))
 	if mime == "" {
 		return ""
 	}
@@ -219,10 +214,12 @@ type texFile struct {
 	name string // 小写 basename（含扩展名，如 skin.png）
 }
 
-// collectTextureFiles 递归收集解压目录下的纹理文件（.png/.jpg/.tga），
+// collectTextureFiles 递归收集解压目录下的纹理文件（.png/.jpg/.jpeg/.tga），
 // 排除 gui/ 子目录（YSM 的 gui_background/封面等非模型贴图，曾污染全局 texArr
 // 导致 plane 等共享皮肤组件错绑——wine_fox 17_mini 根因，geometry/组件两消费方
 // 共用同一遍历避免两次 WalkDir 口径漂移）。返回按遍历序（深度优先稳定序）。
+// 扩展名口径委托 types.IsTextureExt（单一事实源），含 .jpeg——此前漏收导致
+// summary 计数与 avatar 提取认 .jpeg、但几何侧收集漏收的漂移。
 func collectTextureFiles(texDir string) []texFile {
 	var files []texFile
 	if d, err := os.Stat(texDir); err == nil && d.IsDir() {
@@ -236,8 +233,7 @@ func collectTextureFiles(texDir string) []texFile {
 				}
 				return nil
 			}
-			ext := strings.ToLower(filepath.Ext(d.Name()))
-			if ext == ".png" || ext == ".jpg" || ext == ".tga" {
+			if types.IsTextureExt(filepath.Ext(d.Name())) {
 				files = append(files, texFile{path: path, name: strings.ToLower(d.Name())})
 			}
 			return nil

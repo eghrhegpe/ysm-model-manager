@@ -274,7 +274,7 @@ func scanZipBasicStats(r zipEntriesReader) Stats {
 				animCount++
 			}
 		}
-		if strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg") || strings.HasSuffix(low, ".jpeg") {
+		if types.IsTextureExt(filepath.Ext(low)) {
 			texCount++
 		}
 	}

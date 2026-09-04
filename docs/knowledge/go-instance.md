@@ -10,7 +10,6 @@ auto_fields:
     - BuildSyncItems
     - InvalidateSyncItemsCache
     - RegisterInvalidationHook
-    - ResourceTypeInfo
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

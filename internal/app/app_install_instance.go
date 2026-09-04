@@ -3,7 +3,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -515,24 +514,10 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 		return nil, fmt.Errorf("未配置游戏根目录")
 	}
 
-	// 加载资源类型注册表
-	var registry struct {
-		ResourceTypes []instance.ResourceTypeInfo `json:"resourceTypes"`
-	}
-	if data := types.BundledRegistryJSON(); len(data) > 0 {
-		// json.Unmarshal 忽略 err——内嵌 resource_types.json 损坏时 registry 为空、
-		// 同步页静默显示空；显式 log + 回退 LoadRegistry，与 Go 其它路径行为一致
-		if uerr := json.Unmarshal(data, &registry); uerr != nil {
-			log.Printf("[app] resource_types.json 解析失败: %v, 回退嵌入基线", uerr)
-			if rt := types.LoadRegistry(); rt != nil {
-				registry.ResourceTypes = make([]instance.ResourceTypeInfo, 0, len(rt.ResourceTypes))
-				for _, r := range rt.ResourceTypes {
-					registry.ResourceTypes = append(registry.ResourceTypes, instance.ResourceTypeInfo{
-						ID: r.ID, Name: r.Name, Icon: r.Icon,
-					})
-				}
-			}
-		}
+	// 加载资源类型注册表（单一事实源：types.LoadRegistry，BuildSyncItems 直接消费 []types.ResourceType）
+	registry := types.LoadRegistry()
+	if registry == nil || len(registry.ResourceTypes) == 0 {
+		return nil, fmt.Errorf("资源类型注册表为空")
 	}
 
 	// rtype 路径限定：非空时只保留该类型，避免扫不存在的其他类型目录

@@ -42,22 +42,24 @@ type App struct {
 	// appCtx 应用生命周期 context：NewApp 创建、ServiceShutdown cancel。
 	// 供不经下载队列的直下入口（DownloadFromGitHub 等）作取消源——
 	// 原硬编码 context.Background() 导致退出/撤销无法中断在途 HTTP 请求。
-	appCtx             context.Context
-	appCancel          context.CancelFunc
-	logger             *logs.Logger
-	runtimeLogs        *logs.RuntimeBuffer
-	watcher            *watcher.Watcher
-	install            *install.Manager    // ADR-179：install 域 manager（下载队列等）
-	containerCache     *containerTypeCache // ADR-134：容器类型指纹缓存组件（原包级全局抽离）
-	containerCacheOnce sync.Once
-	tagsStore          *tags.Store
-	tagsStoreOnce      sync.Once
-	configCache        types.AppConfig
-	configLoaded       bool
-	configMu           sync.RWMutex
-	watcherMu          sync.Mutex
-	app                *application.App
-	mainWindow         *application.WebviewWindow
+	appCtx                context.Context
+	appCancel             context.CancelFunc
+	logger                *logs.Logger
+	runtimeLogs           *logs.RuntimeBuffer
+	watcher               *watcher.Watcher
+	install               *install.Manager    // ADR-179：install 域 manager（下载队列等）
+	containerCache        *containerTypeCache // ADR-134：容器类型指纹缓存组件（原包级全局抽离）
+	containerCacheOnce    sync.Once
+	resolvedRootCache     *resolvedRootCache // ADR-134 同构：root 解析缓存组件（原包级全局抽离）
+	resolvedRootCacheOnce sync.Once
+	tagsStore             *tags.Store
+	tagsStoreOnce         sync.Once
+	configCache           types.AppConfig
+	configLoaded          bool
+	configMu              sync.RWMutex
+	watcherMu             sync.Mutex
+	app                   *application.App
+	mainWindow            *application.WebviewWindow
 
 	// Plaza browser window (ADR-050)
 	plazaWin           *application.WebviewWindow

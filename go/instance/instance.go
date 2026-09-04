@@ -18,13 +18,6 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// ResourceTypeInfo 资源类型注册表条目（BuildSyncItems 需要的字段）
-type ResourceTypeInfo struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Icon string `json:"icon"`
-}
-
 // ===== 同步结果缓存（TTL 跟随 scanner.EffectiveCacheTTL，默认 30s）=====
 // 背景：仓库树复用 scanner 30s 缓存后已经“正常 30 秒后刷新”；但整合包 BuildSyncItems
 // 仍有 file-level SyncResources、maid-model 嵌套回退 Walk、实例侧 DiffFolderContents
@@ -61,7 +54,7 @@ func InvalidateSyncItemsCache() {
 // 目前只读 ins.Name / ins.VersionDir / subtype / filesRoots / rtypes。
 // 若未来函数体开始消费 ins.CustomDir、ins.Exists 等字段，必须同步加进 key，
 // 否则会静默命中旧同步结果缓存。
-func buildSyncItemsKey(ins *types.VersionInstance, rtypes []ResourceTypeInfo, filesRoots map[string]string, subtype string) string {
+func buildSyncItemsKey(ins *types.VersionInstance, rtypes []types.ResourceType, filesRoots map[string]string, subtype string) string {
 	var b strings.Builder
 	b.WriteString(ins.Name)
 	b.WriteByte(0)
@@ -192,7 +185,7 @@ func resolveItemMeta(
 // 把 appendOneItem 原先逐条拆包转发的 rtype/rIcon/globalDir/instDir/isDirLevelType
 // 五个类型内不变量收拢，签名从 11 参收敛到「接收者 + 条目路径 + meta」。
 type rtypeCtx struct {
-	rt         ResourceTypeInfo
+	rt         types.ResourceType
 	globalDir  string
 	instDir    string
 	isDirLevel bool
@@ -255,7 +248,7 @@ func (c *rtypeCtx) appendOneItem(typeItems *[]types.ResourceSyncItem, p string, 
 //
 // 原 BuildSyncItems L132-296 主循环内体（164 行）完整升格，rtypes 外循环只负责迭代类型。
 func processOneResourceType(
-	rt ResourceTypeInfo,
+	rt types.ResourceType,
 	insVersionDir string,
 	filesRoots map[string]string,
 ) []types.ResourceSyncItem {
@@ -312,7 +305,7 @@ func processOneResourceType(
 // BuildSyncItems 组装整合包内各资源类型的同步状态项（纯逻辑，root 由调用方注入）
 // subtype 指定子类型目录名（如 EntityPlayer/SceneModel），仅 MMD 分组类型有效；
 // 非空时路径限定到 subtype 子目录，避免扫全目录（清单式扫路径限定目录，与仓库侧同构）。
-func BuildSyncItems(ins *types.VersionInstance, rtypes []ResourceTypeInfo, filesRoots map[string]string, subtype string) []types.ResourceSyncItem {
+func BuildSyncItems(ins *types.VersionInstance, rtypes []types.ResourceType, filesRoots map[string]string, subtype string) []types.ResourceSyncItem {
 	// 导出入口自守卫（ADR-044② 防御范式）：唯一调用方保证非 nil，但导出函数必须防 panic
 	if ins == nil {
 		return nil

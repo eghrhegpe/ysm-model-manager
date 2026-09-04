@@ -94,25 +94,7 @@ func (a *App) GetPackInfo(dirPath string) types.PackInfo {
 // 遍历所有已配置根（FilesRoot + McRoot + 各类型专属根 + CustomRoots），
 // 返回第一个同时包含两者的根；全部不匹配返回空串（调用方 fail-closed 拒绝）。
 func (a *App) findMoveRoot(src, dstDir string) string {
-	cfg := a.LoadAppConfig()
-	roots := []string{
-		cfg.FilesRoot,
-		cfg.McRoot,
-		cfg.ResourcepackRoot,
-		cfg.ShaderpackRoot,
-		cfg.SchematicRoot,
-		cfg.LitematicRoot,
-		cfg.MmdRoot,
-		cfg.VrcRoot,
-	}
-	// CustomRoots 中的自定义根（如 MmdRoot 迁移后的 CustomRoots["EntityPlayer"]）
-	if cfg.CustomRoots != nil {
-		for _, r := range cfg.CustomRoots {
-			if r != "" {
-				roots = append(roots, r)
-			}
-		}
-	}
+	roots := allScanRoots(a.LoadAppConfig())
 	absSrc, err := filepath.Abs(src)
 	if err != nil {
 		return ""

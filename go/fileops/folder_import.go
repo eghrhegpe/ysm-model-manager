@@ -124,8 +124,11 @@ func writeModelFolderFiles(dstRoot string, files []types.ImportFileItem) error {
 // isSupportedEntryFile 判定文件是否可作为「支持文件」计数：
 // 扩展名在资源类型白名单，且 .json 仅放行 ysm.json（与 scanner 白名单对齐）。
 // 传入 rel 已 Clean。包内资源（main.json 等）返回 false——它们是跟随整组导入的附属，不单独计数。
+// 剥离 .disabled/.ban 禁用后缀（与 scanner.StripDisableSuffix 口径一致，types.StripDisableSuffix
+// 单一事实源）：用户重命名 m.ysm → m.ysm.disabled 后应仍识别为支持文件（bug 修复，
+// 原实现直接 filepath.Ext(rel) 会得到 .disabled 落白名单外，被误判为附属）。
 func isSupportedEntryFile(rel string) bool {
-	ext := strings.ToLower(filepath.Ext(rel))
+	ext := strings.ToLower(filepath.Ext(types.StripDisableSuffix(rel)))
 	if ext == ".json" {
 		return types.IsYsmEntryJSON(filepath.Base(rel))
 	}

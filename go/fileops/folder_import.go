@@ -128,9 +128,11 @@ func writeModelFolderFiles(dstRoot string, files []types.ImportFileItem) error {
 // 单一事实源）：用户重命名 m.ysm → m.ysm.disabled 后应仍识别为支持文件（bug 修复，
 // 原实现直接 filepath.Ext(rel) 会得到 .disabled 落白名单外，被误判为附属）。
 func isSupportedEntryFile(rel string) bool {
-	ext := strings.ToLower(filepath.Ext(types.StripDisableSuffix(rel)))
+	stripped := types.StripDisableSuffix(rel)
+	ext := strings.ToLower(filepath.Ext(stripped))
 	if ext == ".json" {
-		return types.IsYsmEntryJSON(filepath.Base(rel))
+		// 同样用剥离后的 base：ysm.json 改名 ysm.json.disabled 后仍识别为支持文件（与 .ysm.disabled 同口径）
+		return types.IsYsmEntryJSON(filepath.Base(stripped))
 	}
 	return types.IsSupportedExt(ext)
 }

@@ -92,7 +92,13 @@ func (a *App) ensureResolvedRootCache() *resolvedRootCache {
 // 是热路径（ScanModelEntries 等逐文件调用），root 侧每次实时解析开销大，
 // path 侧（clean）仍实时解析。
 func (a *App) resolvedRoot(root string) string {
-	return a.ensureResolvedRootCache().LoadOrStore(root, func() string {
+	c := a.ensureResolvedRootCache()
+	// 热路径先 Load 短路：命中不构造 valFn 闭包（避免每次调用堆分配），
+	// 未命中才走 LoadOrStore（计算 + 写回语义不变）——复刻旧 sync.Map.Load-first 模式
+	if v, ok := c.Load(root); ok {
+		return v
+	}
+	return c.LoadOrStore(root, func() string {
 		return paths.ResolveOrKeep(root)
 	})
 }

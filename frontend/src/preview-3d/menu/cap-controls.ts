@@ -105,7 +105,10 @@ function ensureCapSection(
   title.textContent = tr(group, group);
   header.append(arrow, title);
   const body = document.createElement("div");
-  body.className = "cap-section-body"; // display:block 为 div 默认值,冗余 cssText 已删(P1)
+  body.className = "cap-section-body";
+  // 动态豁免（P1 批次2 修正）：折叠态读写依赖内联 display（header 点击内联切 none/block，
+  // preview-menu.test.ts:115 断言 style.display），初始展开态也须内联置 block——render.ts body 同款豁免。
+  body.style.display = "block";
   let collapsed = false;
   header.onclick = (): void => {
     collapsed = !collapsed;

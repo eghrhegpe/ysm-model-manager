@@ -134,9 +134,9 @@ describe("renderCapControls", () => {
       mk("divider"),
       mk("toggle"),
     ]);
-    // 顶层 dividers（margin: 4px 10px 的 hr）
+    // 顶层 dividers（cc-divider 类——P1 批次2 cssText→类后内联 margin 探测不可用）
     const dividers = Array.from(list.children).filter(
-      (el) => (el as HTMLElement).style.margin === "4px 10px",
+      (el) => (el as HTMLElement).classList.contains("cc-divider"),
     );
     expect(dividers.length).toBe(1);
   });
@@ -151,7 +151,7 @@ describe("renderCapControls", () => {
     const body = list.querySelector(".cap-section-body") as HTMLElement;
     // body 内应包含一个 divider + 两个 slide-item
     const children = Array.from(body.children);
-    const divider = children.find((el) => (el as HTMLElement).style.margin === "4px 10px");
+    const divider = children.find((el) => (el as HTMLElement).classList.contains("cc-divider"));
     expect(divider).not.toBeUndefined();
     expect(body.querySelectorAll(".slide-item").length).toBe(2);
   });
@@ -283,7 +283,11 @@ describe("renderCapControls", () => {
       }),
     ]);
     const btn = list.querySelector("button") as HTMLButtonElement;
-    expect(btn.style.background).toContain("--accent");
+    // P1 批次2 cssText→类：primary 背景规则在注入样式表（.cc-btn-primary 含 var(--accent)），
+    // 断类归属 + 样式表原文两级（happy-dom 计算样式读 var(--accent) 背景不可靠）
+    expect(btn.classList.contains("cc-btn-primary")).toBe(true);
+    const btnSheet = [...document.querySelectorAll("style")].find((s) => s.textContent?.includes(".cc-btn-primary"));
+    expect(btnSheet?.textContent ?? "").toContain("var(--accent)");
   });
 
   it("button（disabled）：按钮禁用不执行 action", () => {
@@ -379,10 +383,11 @@ describe("renderCapControls", () => {
       }),
     ]);
     const items = list.querySelectorAll(".slide-item");
-    // band：slide-item 内部 position:relative 的 div（含 canvas）
+    // band：slide-item 内部 cc-band 类 div（含 canvas）——P1 批次2 cssText→类后
+    // position:relative 收进 .cc-band 规则，内联探测不可用
     const allDivs = items[0].querySelectorAll("div");
     const band = Array.from(allDivs).find(
-      (d) => d.style.position === "relative" && d.querySelector("canvas"),
+      (d) => d.classList.contains("cc-band") && d.querySelector("canvas"),
     ) as HTMLElement;
     expect(band).not.toBeNull();
     // mock getBoundingClientRect 返回固定值（band 内部 canvas 宽 240，但 band 元素宽由父级决定；这里返回 240 使计算简化）
@@ -477,10 +482,12 @@ describe("renderCapControls", () => {
     ]);
     const btns = list.querySelectorAll("button");
     expect(btns.length).toBe(2);
-    // 第二个（active）应该有 accent border
-    expect((btns[1] as HTMLElement).style.borderColor).toContain("accent");
-    // 第一个不应该有 accent border
-    expect((btns[0] as HTMLElement).style.borderColor).not.toContain("accent");
+    // 第二个（active）挂 cc-thumb-btn-active（border-color 派生 --accent——P1 批次2 类化，
+    // 内联 borderColor 探测不可用；规则在注入样式表 .cc-thumb-btn-active）
+    expect((btns[1] as HTMLElement).classList.contains("cc-thumb-btn-active")).toBe(true);
+    expect((btns[0] as HTMLElement).classList.contains("cc-thumb-btn-active")).toBe(false);
+    const thumbSheet = [...document.querySelectorAll("style")].find((s) => s.textContent?.includes(".cc-thumb-btn-active"));
+    expect(thumbSheet?.textContent ?? "").toContain("var(--accent)");
   });
 
   it("preset-thumb：点击调用 onSelect", () => {

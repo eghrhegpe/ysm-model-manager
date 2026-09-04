@@ -30,7 +30,6 @@ auto_fields:
     - componentCountsFromSpec
     - fill3DPanel
     - loadTextures
-    - makeShotAction
     - makeYsmAdapter
     - releaseTextureUrls
     - renderMultiAngle

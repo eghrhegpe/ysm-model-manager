@@ -40,7 +40,6 @@ auto_fields:
     - isPathAvailable
     - KNOWN_PATHS
     - loadModel2D
-    - makeShotAction
     - MAX_FPS_DEFAULT
     - MAX_FPS_KEY
     - MAX_PIXEL_RATIO_KEY

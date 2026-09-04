@@ -635,6 +635,7 @@
 | nbt-parse.ts parseNbtRootExact 与 parseNbtRoot 二选一:精确版(64 位 long)用于体素解码,标准版用于普通 NBT | - | - |
 | pack-meta.ts 依赖 resource_types.json 派生的 extensions,改类型配置须同步更新 pack 探测逻辑 | - | - |
 | extract.ts findZipEntry 使用中央目录搜索,超大 zip(>500MB)可能慢,web-fs 侧有 maxMaterializeBytes 512MB 封顶防护 | - | - |
+| voxel-colors.ts resolveBlockName 映射表来自 voxel-colors-data.json(63K),新增方块名须更新 JSON 而非硬编码 | - | - |
 | ADR-170 二段归位(web-* 族下沉)后,voxel-parse/pack-meta 对 web-common 的跨簇依赖应消除,当前是已知技术债 | - | - |
 | 修改 innerHTML 注入前必须 esc()；静态注册表值（app-nav gid/label）同样要走 esc()，不可因"来源可控"跳过 | - | - |
 | 骨骼名/用户路径等外部数据写入 DOM 走 textContent/createTextNode，不要 esc() 后拼进 innerHTML | - | - |

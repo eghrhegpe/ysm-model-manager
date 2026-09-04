@@ -18,14 +18,11 @@ auto_fields:
     - buildMmdScene
     - buildPreviewMenuRouters
     - buildYsmScene
-    - CameraControlBridge
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
     - isPreviewFolderNode
     - makeMmdAdapter
-    - makeShotAction
     - makeYsmAdapter
-    - MaterialControlBridge
     - MmdAdapterDeps
     - MmdBottomNavCtx
     - MmdDataPort
@@ -54,11 +51,9 @@ auto_fields:
     - roleBaseName
     - shotButtonNodes
     - YsmAdapterOptions
-    - YsmContentHandle
     - YsmControlsContext
     - ysmMenuItems
     - YsmMenuItemsOpts
-    - YsmModel
     - YsmPreloadedModel
     - ysmShotNodes
   tests:

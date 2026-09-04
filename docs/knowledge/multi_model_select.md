@@ -28,7 +28,6 @@ auto_fields:
     - BuildSchematicVoxelDataFromRoot
     - BuildVoxelData
     - BuildVoxelDataFromRoot
-    - CameraControlBridge
     - cleanupVoxel3D
     - createLitematic3D
     - Error
@@ -37,7 +36,6 @@ auto_fields:
     - LitematicBuildOpts
     - makeLitematicAdapter
     - makePackAdapter
-    - MaterialControlBridge
     - MmdBottomNavCtx
     - mmdModelInfoNodes
     - MmdPlayBridge

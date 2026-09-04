@@ -23,7 +23,6 @@ auto_fields:
     - buildToggleRow
     - buildYsmModelSchema
     - calcBoneHitZones
-    - CameraControlBridge
     - cleanupEmpty3D
     - cleanupLitematic3D
     - cleanupMaid3D
@@ -65,8 +64,6 @@ auto_fields:
     - LoadModelOpts
     - MaidOpenOptions
     - makeMmdDataPort
-    - makeShotAction
-    - MaterialControlBridge
     - MmdBottomNavCtx
     - mmdModelInfoNodes
     - MmdPlayBridge
@@ -121,10 +118,8 @@ auto_fields:
     - vrmModelInfoNodes
     - vrmShotNodes
     - withPreviewExtras
-    - YsmContentHandle
     - YsmControlsContext
     - YsmDecoder
-    - YsmModel
     - ysmModelStats
     - YsmModelStats
     - ysmModelTextureSlots

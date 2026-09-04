@@ -24,7 +24,6 @@ auto_fields:
     - hasSchema
     - listSchemas
     - makeYsmModelSchemaId
-    - MaterialControlBridge
     - MmdBottomNavCtx
     - mmdModelInfoNodes
     - MmdPlayBridge
@@ -47,9 +46,7 @@ auto_fields:
     - vrmModelInfoNodes
     - vrmShotNodes
     - YSM_MODEL_SCHEMA_ID
-    - YsmContentHandle
     - YsmControlsContext
-    - YsmModel
     - ysmShotNodes
   tests:
     - frontend/src/views/app-preview/mmd-controls.test.ts

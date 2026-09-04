@@ -10,8 +10,6 @@ source_files:
   - frontend/src/ui/ui-components-styles.ts
 auto_fields:
   symbols_with_lines:
-    - addFieldRow
-    - cardContainer
     - createSlideMenu
     - installSlideMenuStyles
     - installUiComponentsStyles

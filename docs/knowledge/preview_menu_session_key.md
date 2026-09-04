@@ -17,7 +17,6 @@ auto_fields:
     - _resetSingletons
     - buildYsmModelSchema
     - buildYsmScene
-    - CameraControlBridge
     - cleanupPreview
     - fill3DPanel
     - getSchema
@@ -45,11 +44,9 @@ auto_fields:
     - unregisterSchema
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
-    - YsmContentHandle
     - YsmControlsContext
     - ysmMenuItems
     - YsmMenuItemsOpts
-    - YsmModel
     - ysmModelStats
     - YsmModelStats
     - ysmModelTextureSlots

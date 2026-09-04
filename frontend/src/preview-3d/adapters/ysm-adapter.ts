@@ -49,6 +49,7 @@ import type {
   GroupedScene,
   PreviewAdapter,
   PreviewBuildCtx,
+  PreviewScene,
   ScreenshotScene,
   UpdateableScene,
 } from "./mount-preview-core.ts";

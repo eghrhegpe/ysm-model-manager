@@ -2,10 +2,16 @@
 // 内容层在 mmd-adapter.ts；本文件仅作兼容薄包装，保留 createMmd3D / cleanupMmd3D /
 // invalidateMmdPreview 公开符号，index.ts 分发对齐 vrm-3d.ts 模式。
 
-import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter, type Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makeMmdAdapter, type MmdPanelHooks } from "../../preview-3d/adapters/mmd-adapter.ts";
-import { makeMmdDataPort } from "./mmd-data-port.ts";
+import { type MmdPanelHooks, makeMmdAdapter } from "../../preview-3d/adapters/mmd-adapter.ts";
+import {
+  cleanupPreview,
+  invalidatePreview,
+  type Mount3DOptions,
+  mount3D,
+  type PreviewAdapter,
+} from "../../preview-3d/adapters/mount-preview-core.ts";
 import { mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
+import { makeMmdDataPort } from "./mmd-data-port.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.pmx/.pmd→"mmd"）

@@ -97,7 +97,9 @@ function getWorkerPool(): Worker[] | null {
   try {
     const n = poolSize();
     for (let i = 0; i < n; i++) {
-      workers.push(new Worker(new URL("../workers/stats.worker.ts", import.meta.url), { type: "module" }));
+      workers.push(
+        new Worker(new URL("../workers/stats.worker.ts", import.meta.url), { type: "module" }),
+      );
     }
     return workers;
   } catch {
@@ -112,7 +114,9 @@ function getWorkerPool(): Worker[] | null {
 export function prefetchStatsWorker(): void {
   if (typeof Worker === "undefined") return;
   try {
-    const w = new Worker(new URL("../workers/stats.worker.ts", import.meta.url), { type: "module" });
+    const w = new Worker(new URL("../workers/stats.worker.ts", import.meta.url), {
+      type: "module",
+    });
     w.terminate();
   } catch {
     // 不支持/被屏蔽 → 静默降级，首次搜索时正常下载
@@ -123,7 +127,11 @@ export function prefetchStatsWorker(): void {
  * 单 chunk 统计（一个 worker 一个在途任务；requestId 隔离旧消息/并发批）。
  * 超时杀整个池（任一 worker 挂起可能同批传染）→ 整批降级；返回 null = 该 chunk 降级。
  */
-function statsOneChunk(w: Worker, requestId: number, paths: string[]): Promise<Array<WebModelStatsWithPath> | null> {
+function statsOneChunk(
+  w: Worker,
+  requestId: number,
+  paths: string[],
+): Promise<Array<WebModelStatsWithPath> | null> {
   return new Promise((resolve) => {
     inflight.set(requestId, resolve);
     const timer = setTimeout(() => {

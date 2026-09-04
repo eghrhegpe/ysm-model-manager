@@ -40,7 +40,6 @@ auto_fields:
     - ROW_H_LIST
     - setRenderMode
     - setVsRows
-    - STATS_BATCH_LIMIT
     - terminateStatsWorker
     - TreeNode
     - TreeRow

@@ -4,16 +4,17 @@
 // - importFolder：文件夹整组导入（含 ysm.json 或普通文件夹，组内至少 1 个支持文件）
 // - inFlight 去重 + toast/stats/tree 广播
 // 与 go/importer + go/fileops.WriteModelFolder 后端对齐。
-import { bus } from "../bus.ts";
-import { t } from "../core/i18n/t.ts";
+
 import { getApp } from "../backend/app.ts";
 import { importWebFiles, MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
-import { currentRepoType } from "./repo-rtype.ts";
-import { groupCollected, fileToBase64, buildFolderItems } from "./dnd-shared.ts";
-import type { CollectedEntry } from "./dnd-shared.ts";
-import { isFileExistsError, friendlyError } from "../utils/dom/errors.ts";
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { bus } from "../bus.ts";
+import { t } from "../core/i18n/t.ts";
 import { swallowError } from "../utils/core/async.ts";
+import { friendlyError, isFileExistsError } from "../utils/dom/errors.ts";
+import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import type { CollectedEntry } from "./dnd-shared.ts";
+import { buildFolderItems, fileToBase64, groupCollected } from "./dnd-shared.ts";
+import { currentRepoType } from "./repo-rtype.ts";
 
 /** 带相对路径的 File（文件夹导入时标记 _relPath） */
 export type ImportFile = File & { _relPath?: string };
@@ -24,7 +25,11 @@ export type { CollectedEntry };
 /** per-file 在途集合：仅阻止同一文件并发/重复提交，不同文件可并行 */
 const _inFlight = new Set<string>();
 
-const toast = (msg: string, type: "success" | "error" | "warn" | "info", duration: number = TOAST_MS.normal): void => {
+const toast = (
+  msg: string,
+  type: "success" | "error" | "warn" | "info",
+  duration: number = TOAST_MS.normal,
+): void => {
   bus.emit("toast:show", { msg, duration, type });
 };
 
@@ -38,16 +43,17 @@ const refreshRepo = (): void => {
 export const directImport = async (file: File): Promise<void> => {
   // ysm.json 单文件 = 光杆清单（geometry/纹理全丢），引导拖整个文件夹
   if (file.name.toLowerCase() === "ysm.json") {
-    toast(t("import.ysmJsonHint"),
-      "warn",
-      4000,
-    );
+    toast(t("import.ysmJsonHint"), "warn", 4000);
     return;
   }
   // 桌面端单文件大小守卫（对齐 web 端 MAX_IMPORT_BYTES 过滤）：超大文件直接整文件
   // base64 进内存会撑爆内存峰值，前置拦截并提示，不进入在途集合
   if (file.size > MAX_IMPORT_BYTES) {
-    toast(`⚠️ ${file.name} 超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限，已跳过`, "warn", TOAST_MS.long);
+    toast(
+      `⚠️ ${file.name} 超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限，已跳过`,
+      "warn",
+      TOAST_MS.long,
+    );
     return;
   }
   // 键含 size+lastModified，防同名不同源文件误判在途
@@ -89,7 +95,10 @@ export const importFolder = async (
   // 第二个导入被 "busy" 拦截而实际并非同一文件夹。修复：key 追加首文件指纹
   // （name+size+lastModified），与 directImport 的 key 构造范式对齐，保证跨源唯一
   const firstFile = files.length > 0 ? files[0].file : null;
-  const dirKey = dir + ":" + (firstFile ? firstFile.name + ":" + firstFile.size + ":" + firstFile.lastModified : "");
+  const dirKey =
+    dir +
+    ":" +
+    (firstFile ? firstFile.name + ":" + firstFile.size + ":" + firstFile.lastModified : "");
   if (_inFlight.has(dirKey)) {
     // P2 修复（子代理审计）：同上——busy 命中静默 return 零反馈，改 toast
     toast(t("import.busyImporting"), "warn", TOAST_MS.success);
@@ -116,7 +125,9 @@ export const importFolder = async (
       await App.ImportModelFolderTo(folderName, subpath, rtype, items);
     } else {
       if (rtype) {
-        console.warn(`[import] ImportModelFolderTo 不可用（旧桥/Android 时序），降级为内容推断：rtype=${rtype}`);
+        console.warn(
+          `[import] ImportModelFolderTo 不可用（旧桥/Android 时序），降级为内容推断：rtype=${rtype}`,
+        );
         toast(t("import.contextRouteUnavailable"), "warn", TOAST_MS.verbose);
       }
       await App.ImportModelFolder(folderName, subpath, items);

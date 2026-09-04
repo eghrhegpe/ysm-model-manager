@@ -41,6 +41,57 @@ export function resetSceneInfra(): void {
   _singletonControls = null;
 }
 
+// ===== 终局拆除（code review #1）=====
+// 复用单例避免黑屏是合理取舍，但此前全应用没有任何最终拆除路径——WebGL context、
+// canvas、OrbitControls 监听器永久驻留。本函数在应用 unload 时走一次完整释放
+// （dispose 范式对齐 screenshot-render.ts finally 段），仅兜应用生命周期终点，
+// 不参与 session 级 cleanup（后者继续走 resetSceneInfra 保留 renderer 复用语义）。
+// 注意：纹理归 textureCache LRU 引用计数管，此处只释放 geometry/material，
+// 不碰 texture.dispose（防双重释放打穿引用计数）。
+
+/** unload 钩子是否已安装（惰性一次性，首次 buildSharedInfra 时注册） */
+let _unloadHookInstalled = false;
+
+/** 终局拆除：释放 caps → controls → scene 树 geometry/material → renderer + WebGL context。
+ *  幂等：单例为 null 时各段自动跳过，可安全重复调用。 */
+export function teardownSharedInfra(): void {
+  sceneCapabilityRegistry.dispose();
+  clearSceneCaps();
+  if (_singletonControls) {
+    _singletonControls.dispose();
+    _singletonControls = null;
+  }
+  if (_singletonScene) {
+    _singletonScene.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.geometry?.dispose();
+        const mat = mesh.material;
+        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+        else mat?.dispose();
+      }
+    });
+    _singletonScene.clear();
+    _singletonScene = null;
+  }
+  _singletonCamera = null;
+  if (_singletonRenderer) {
+    const r = _singletonRenderer;
+    r.dispose();
+    // dispose 后强制释放上下文，避免延迟到 GC（对齐 screenshot-render.ts P3 修复）
+    (r as unknown as { forceContextLoss?: () => void }).forceContextLoss?.();
+    r.domElement.remove();
+    _singletonRenderer = null;
+  }
+}
+
+/** 安装应用 unload 终局拆除钩子（首次 buildSharedInfra 调用；once 语义） */
+function installUnloadTeardown(): void {
+  if (_unloadHookInstalled) return;
+  _unloadHookInstalled = true;
+  window.addEventListener("beforeunload", () => teardownSharedInfra(), { once: true });
+}
+
 /** 清空程序化能力列表（fullCleanup 调用；saveAll/dispose 已由调用方先行执行） */
 export function clearSceneCaps(): void {
   _sceneCaps.length = 0;
@@ -77,6 +128,8 @@ export function buildSharedInfra(
   viewContainer: HTMLElement,
   menuHandle: PreviewMenuHandle,
 ): SharedInfra {
+  // 首次装配时安装应用 unload 终局拆除钩子（code review #1，惰性一次性）
+  installUnloadTeardown();
   // 复用单例 scene（多模型共享同一场景）
   if (!_singletonScene) {
     _singletonScene = new THREE.Scene();

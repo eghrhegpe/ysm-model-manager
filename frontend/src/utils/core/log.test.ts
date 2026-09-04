@@ -16,9 +16,9 @@ describe("logWarn / logError", () => {
     vi.restoreAllMocks();
   });
 
-  it("logWarn 输出 [tag] msg 格式（err 缺省为空串）", () => {
+  it("logWarn 输出 [tag] msg 格式（err 缺省不追加空参数槽，code review #11）", () => {
     logWarn("cat", "hello");
-    expect(warnSpy).toHaveBeenCalledWith("[cat] hello", "");
+    expect(warnSpy).toHaveBeenCalledWith("[cat] hello");
   });
 
   it("logWarn 携带 err 原样透传", () => {
@@ -37,9 +37,9 @@ describe("logWarn / logError", () => {
     expect(errorSpy).toHaveBeenCalledWith("[cat] fail", 42);
   });
 
-  it("logError 缺省 err 时空串", () => {
+  it("logError 缺省 err 时不追加空参数槽（code review #11）", () => {
     logError("cat", "x");
-    expect(errorSpy).toHaveBeenCalledWith("[cat] x", "");
+    expect(errorSpy).toHaveBeenCalledWith("[cat] x");
   });
 
   it("logWarn 与 logError 互不串台", () => {

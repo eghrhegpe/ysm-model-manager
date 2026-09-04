@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"ysm-model-manager/go/container"
@@ -602,7 +603,15 @@ func extractDisplayValues(raw json.RawMessage) []string {
 		return nil
 	}
 	var result []string
-	for _, v := range obj {
+	// map 遍历序随机 → items 输出序不定（parity golden 对账 flaky，2026-09-04 实证：
+	// -coverprofile 模式下偶发 got/want 数组序相反）。按键排序保证确定性输出。
+	keys := make([]string, 0, len(obj))
+	for k := range obj {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := obj[k]
 		// 尝试直接解析为字符串
 		var s string
 		if err := json.Unmarshal(v, &s); err == nil && s != "" {

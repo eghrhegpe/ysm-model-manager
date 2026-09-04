@@ -39,7 +39,9 @@ export interface DecodedTexture {
  */
 export interface TextureDecoder {
   /** 解码一批纹理（并行 Worker 池处理） */
-  decodeAll(tasks: Array<{ relPath: string; bytes: ArrayBuffer; mimeType: string }>): Promise<Map<string, DecodedTexture>>;
+  decodeAll(
+    tasks: Array<{ relPath: string; bytes: ArrayBuffer; mimeType: string }>,
+  ): Promise<Map<string, DecodedTexture>>;
   /** 释放 Worker 池 */
   dispose(): void;
 }
@@ -52,22 +54,24 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
   // 创建 Worker 池
   const workers: Worker[] = [];
   for (let i = 0; i < maxWorkers; i++) {
-    workers.push(new Worker(
-      new URL("./mmd-texture-decode.worker.ts", import.meta.url),
-      { type: "module" },
-    ));
+    workers.push(
+      new Worker(new URL("./mmd-texture-decode.worker.ts", import.meta.url), { type: "module" }),
+    );
   }
 
   // 任务分配器：round-robin 到 Worker
   let workerIdx = 0;
   let nextId = 0;
 
-  const pending = new Map<number, {
-    resolve: (r: TexDecodeResponse) => void;
-    timer: ReturnType<typeof setTimeout>;
-    /** 任务归属的 worker（崩溃时据此精确清算，P2-4） */
-    worker: Worker;
-  }>();
+  const pending = new Map<
+    number,
+    {
+      resolve: (r: TexDecodeResponse) => void;
+      timer: ReturnType<typeof setTimeout>;
+      /** 任务归属的 worker（崩溃时据此精确清算，P2-4） */
+      worker: Worker;
+    }
+  >();
 
   // Worker 消息处理
   for (const w of workers) {
@@ -92,7 +96,11 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
         entry.resolve({ id, ok: false, error: "Worker 崩溃", relPath: "", width: 0, height: 0 });
       }
       // 终止崩溃实例并重建替补
-      try { w.terminate(); } catch { /* 已崩溃 */ }
+      try {
+        w.terminate();
+      } catch {
+        /* 已崩溃 */
+      }
       const idx = workers.indexOf(w);
       if (idx !== -1) {
         try {
@@ -110,7 +118,9 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
     };
   }
 
-  function decodeAll(tasks: Array<{ relPath: string; bytes: ArrayBuffer; mimeType: string }>): Promise<Map<string, DecodedTexture>> {
+  function decodeAll(
+    tasks: Array<{ relPath: string; bytes: ArrayBuffer; mimeType: string }>,
+  ): Promise<Map<string, DecodedTexture>> {
     if (tasks.length === 0) return Promise.resolve(new Map());
 
     const results = new Map<string, DecodedTexture>();
@@ -234,14 +244,23 @@ export function applyWorkerDecodedTextures(
       : [];
 
   const texKeys = [
-    "map", "emissiveMap", "normalMap", "roughnessMap",
-    "metalnessMap", "aoMap", "lightMap", "alphaMap", "envMap",
-    "sphereMap", "toonMap", "displacementMap", "bumpMap",
+    "map",
+    "emissiveMap",
+    "normalMap",
+    "roughnessMap",
+    "metalnessMap",
+    "aoMap",
+    "lightMap",
+    "alphaMap",
+    "envMap",
+    "sphereMap",
+    "toonMap",
+    "displacementMap",
+    "bumpMap",
   ] as const;
 
   let replaced = 0;
   let total = 0;
-  let pendingCount = 0;
 
   for (const mat of allMats) {
     // Worker 路径：pendingTexture 标记，直接同步赋值
@@ -249,27 +268,14 @@ export function applyWorkerDecodedTextures(
       | { relPath: string; blobUrl: string }
       | undefined;
     if (pending) {
-      pendingCount++;
       // PMX路径与磁盘rel路径不匹配时的三级查找：
       // 1. 直接匹配 PMX 路径（PMX记录与磁盘路径一致时命中）
       // 2. basename 兜底（PMX 子目录差异时命中）
       // 3. blobUrl→rel 反向映射（PMX 存"face.png"但磁盘在"textures/face.png"时通过 blobUrl 溯源）
       const basename = pending.relPath.split("/").pop() ?? "";
       const resolvedRel = blobUrlToRel.get(pending.blobUrl) ?? "";
-      const decodedTex = decoded.get(pending.relPath)
-        ?? decoded.get(basename)
-        ?? decoded.get(resolvedRel);
-      if (!decodedTex && pending.blobUrl && decoded.size > 0) {
-        // 临时诊断：三级查找全部失败时 dump 实际 key 供排查
-        const sampleDecoded = [...decoded.keys()].slice(0, 5);
-        console.warn("[tex-match-debug]", {
-          pendingRelPath: pending.relPath,
-          basename,
-          resolvedRel,
-          decodedSampleKeys: sampleDecoded,
-          blobUrlPrefix: pending.blobUrl.slice(0, 40),
-        });
-      }
+      const decodedTex =
+        decoded.get(pending.relPath) ?? decoded.get(basename) ?? decoded.get(resolvedRel);
       if (decodedTex) {
         const newTex = new THREE.Texture(decodedTex.bitmap);
         newTex.colorSpace = THREE.SRGBColorSpace;
@@ -343,17 +349,6 @@ export function applyWorkerDecodedTextures(
 
   if (total > 0) {
     mesh.material = allMats.length > 1 ? allMats : allMats[0];
-  }
-
-  // 临时诊断：汇总 pendingTexture 匹配情况
-  if (pendingCount > 0 && replaced === 0) {
-    console.warn("[tex-match-debug] summary:", {
-      pendingCount,
-      replaced,
-      totalFallback: total,
-      decodedKeys: [...decoded.keys()],
-      allMatsCount: allMats.length,
-    });
   }
 
   return { replaced, total };

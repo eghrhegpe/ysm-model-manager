@@ -43,7 +43,11 @@ const m = vi.hoisted(() => ({
   failNav: { value: false },
 }));
 
-// 动态 import 执行标记：证明 loadView 的 importer 箭头确实被调用
+// 动态 import 执行标记：证明 loadView 的 importer 箭头确实被调用。
+// 注：视图 mock 的 push **不加代际过滤**（与 revealCalls 不同）：视图 import 是异步的，
+// coverage 慢环境下 app-content 等可能在 flush 之后才完成，代际过滤会把这批有效但
+// 迟到的 push 误杀（实测 app-nav 失败用例丢 app-content）。僵尸 IIFE 已由 boot() 内
+// prevUnregister 方案根除，此处无需二次防御。
 const loaded = vi.hoisted(() => ({ views: [] as string[] }));
 
 vi.mock("./core/error-diary.ts", () => ({ registerErrorDiary: m.registerErrorDiary }));
@@ -134,10 +138,15 @@ const flushMicro = async () => {
   for (let i = 0; i < 50; i++) await Promise.resolve();
 };
 
+// 上一轮 boot 装配出的模块实例的 unregisterDevtools 引用（见 boot() 内说明）：
+// 替代「boot 开头 await import 上一实例再清理」的旧写法——后者会求值/续跑上一轮
+// 缓存实例的顶层 async IIFE（僵尸 IIFE），其持有的 hoisted mock 随之被调用。
+let prevUnregister: (() => void) | undefined;
+
 /** resetModules 后重新求值 app-modules；先挂 bus toast 观察点再 import。
  *  视图 mock 每次重注册（见 mockViews），m.failNav 控制 app-nav 动态 import 是否失败。
  *  [治本] 真实 timer 登记仅在**真实计时器环境**（默认 flush）激活：spy 全局 setTimeout
- *  透传登记 app-modules 顶层 IIFE 的 setTimeout(2000) 预取句柄，import 完成立即
+ *  透传登记 app-modules 顶层 IIFE 的 setTimeout(2000) 预取句柄，flush 完成后
  *  mockRestore，afterEach 统一 clear 防跨用例竞态。fake timers 用例（microFlush）**不
  *  登记**：其 timer 是 fake 实现，advanceTimersByTimeAsync 已推进、useRealTimers 丢弃，
  *  且 spy×fake timers 的恢复链互相干扰（spyOn 保存/恢复的是 fake 实现，会把全局
@@ -148,13 +157,14 @@ async function boot(opts: { microFlush?: boolean } = {}) {
   // 上一用例 _devMode=true 注册的匿名 listener 会跨用例残留，当本用例
   // dispatchEvent(F12) 时触发旧 Window.OpenDevTools 闭包 → m.openDevTools
   // 被调用 → 「未启用」断言失败。每次 boot 前用 unregisterDevtools 清旧 listener。
-  // mockReveal 先于 try-import 注册：下方 try import 会求值上一缓存实例并重跑其
-  // 顶层 IIFE（若上一轮未完成），该 IIFE 的 reveal push 也须带代际以便过滤。
-  mockReveal();
-  try {
-    const prev = await import("./app-modules.ts");
-    prev.unregisterDevtools?.();
-  } catch { /* 首次 import 无残留 */ }
+  // [治本·僵尸 IIFE] 旧写法在此处 `await import("./app-modules.ts")` 取上一实例调
+  // unregisterDevtools()。该 import 会命中上一轮缓存实例并**续跑其顶层 async IIFE**
+  // （上一轮 flush 未跑完的部分），而该 IIFE 持有 hoisted mock（initTheme/applyUIPrefs
+  // 等，全局共享、无法按代际过滤）→ 当代断言计数被重复累加（coverage 慢环境下实测
+  // initTheme 被调 2~3 次、loaded.views 出现重复 app-tree）。代际过滤只对
+  // revealMainWindow 有效（其 mock 由 boot() 内 doMock 重建、可闭包携带 seq）。
+  // 改用上一轮保存的引用直接清理 listener：既不唤醒僵尸，又保住去污染效果。
+  prevUnregister?.();
   vi.resetModules();
   // [结构性竞态修复] mockReveal 与 mockViews 同为 doMock：resetModules 清 doMock
   // 注册表，故每次 boot 重注册；mockReveal 的 factory 每次重跑自增 bootSeq，
@@ -175,12 +185,19 @@ async function boot(opts: { microFlush?: boolean } = {}) {
         return h;
       }) as typeof setTimeout);
   }
+  let mod: (typeof import("./app-modules.ts")) | undefined;
   try {
-    await import("./app-modules.ts");
+    mod = await import("./app-modules.ts");
+    // [治本] timerSpy 窗口必须覆盖 flush 而非只包住 import：顶层 IIFE 的
+    // setTimeout(2000) 预取是在 IIFE 异步跑到尾部才注册的（import 同步求值返回时
+    // 尚未执行到该行），spy 若只包住 import，该 timer 逃脱 realTimerHandles 登记 →
+    // 2s 后跨用例触发 prefetchStatsWorker，污染下一个用例的「未触发」断言。
+    await (opts.microFlush ? flushMicro() : flush());
   } finally {
     timerSpy?.mockRestore();
   }
-  await (opts.microFlush ? flushMicro() : flush());
+  // 保存本轮实例的清理钩子，供下一轮 boot 开头调用（替代唤醒僵尸 IIFE 的 import）
+  prevUnregister = mod?.unregisterDevtools;
   return { toasts };
 }
 

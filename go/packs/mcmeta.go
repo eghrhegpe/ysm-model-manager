@@ -206,7 +206,8 @@ func ReadShaderpackLangParts(path string) (string, map[string]string) {
 			// 统一小写比较——原 `low == "lang/en_US.lang"` 永远不成立
 			// （low 已 ToLower，不可能含大写 US），属死代码；
 			// 与 ReadPackMeta 的 pack.mcmeta/pack.png 比较口径对齐
-			if low == "lang/en_us.lang" {
+			// 任意层级段匹配：套一层目录的光影包（MyPack/lang/en_us.lang）也能读到 lang
+			if low == "lang/en_us.lang" || strings.HasSuffix(low, "/lang/en_us.lang") {
 				rc, err := f.Open()
 				if err != nil {
 					continue

@@ -38,10 +38,7 @@ function reducePathIdx(files: DedupFileLike[], priorityPath: string): number {
     );
     if (idx >= 0) return idx;
   }
-  return files.reduce(
-    (best, e, i, arr) => (e.size > arr[best].size ? i : best),
-    0,
-  );
+  return reduceLargestIdx(files);
 }
 
 function reduceLargestIdx(files: DedupFileLike[]): number {

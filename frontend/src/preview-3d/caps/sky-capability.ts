@@ -58,17 +58,24 @@ export function injectSkySunScalePatch(
     sunDiscScale: DEFAULT_SKY_PARAMS.sunDiscScale,
   },
 ): void {
-  // 幂等守卫：检查 uniforms 里是否已经有注入标记字段
-  if (mat.uniforms.sunIntensityScale !== undefined && mat.uniforms.sunDiscScale !== undefined) {
-    // 已存在 → 只确保默认值同步到 uniforms（不改 shader，避免重编译）
+  // 分字段幂等守卫（审计①：原「双字段整体短路」有半残缺口——uniform 已注册但乘法
+  // 缺失时误判已注入 → 永不补全，静默半残）。现按字段各自校验：字段视为已注入
+  // 仅当「uniform 存在 且 shader 已含对应乘法」。半残状态（uniform 在、乘法缺）下次
+  // 调用自动补全乘法层；锚点彻底失配时 console.error 留痕（消除静默失效缝隙）。
+  const hasSunScaleUniform = mat.uniforms.sunIntensityScale !== undefined;
+  const hasDiscScaleUniform = mat.uniforms.sunDiscScale !== undefined;
+  const hasSunScaleUse = /vSunE\s*\*\s*sunIntensityScale/.test(mat.fragmentShader);
+  const hasDiscScaleUse = /19000\.0\s*\*\s*sunDiscScale/.test(mat.fragmentShader);
+  if (hasSunScaleUniform && hasDiscScaleUniform && hasSunScaleUse && hasDiscScaleUse) {
+    // 完全注入 → 只确保默认值同步到 uniforms（不改 shader，避免重编译）
     mat.uniforms.sunIntensityScale.value = defaults.sunIntensityScale;
     mat.uniforms.sunDiscScale.value = defaults.sunDiscScale;
     return;
   }
 
   // ① 追加 uniforms（对象层先注册，即使后续 shader 替换失败也不 crash 运行时）
-  mat.uniforms.sunIntensityScale = { value: defaults.sunIntensityScale };
-  mat.uniforms.sunDiscScale = { value: defaults.sunDiscScale };
+  if (!hasSunScaleUniform) mat.uniforms.sunIntensityScale = { value: defaults.sunIntensityScale };
+  if (!hasDiscScaleUniform) mat.uniforms.sunDiscScale = { value: defaults.sunDiscScale };
 
   // ② patch fragmentShader：按"声明必须先于使用"的 GLSL 顺序三层独立幂等替换。
   //    每一层都做 contains 判断，避免重复替换。如果声明层未匹配，就跳过使用层（防未声明编译报错）
@@ -96,7 +103,7 @@ export function injectSkySunScalePatch(
           mat.fragmentShader.slice(fallbackIdx);
         patched = true;
       } else {
-        console.warn(
+        console.error(
           "[sky-capability] injectSkySunScalePatch 无法注入声明，跳过 shader patch。",
           "请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
         );
@@ -107,25 +114,37 @@ export function injectSkySunScalePatch(
   }
 
   // 2b) 解耦点 ①：pow( vSunE * (  →  pow( (vSunE * sunIntensityScale) * (
-  const hasVSuScale = /vSunE\s*\*\s*sunIntensityScale/.test(mat.fragmentShader);
-  if (!hasVSuScale) {
+  if (!hasSunScaleUse) {
     const before = mat.fragmentShader;
     mat.fragmentShader = mat.fragmentShader.replace(
       "pow( vSunE * (",
       "pow( (vSunE * sunIntensityScale) * (",
     );
     if (mat.fragmentShader !== before) patched = true;
+    else {
+      // 本层需补但锚点失配（无论 uniform 已注册与否——半残修复同样可能被外部破坏
+      // 挡住）→ console.error 留痕，消除「静默半残」失效缝隙
+      console.error(
+        "[sky-capability] injectSkySunScalePatch 解耦点①（vSunE 缩放）替换失败：锚点失配。",
+        "请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+      );
+    }
   }
 
   // 2c) 解耦点 ②：19000.0 * Fex → 19000.0 * sunDiscScale * Fex
-  const hasDiscScale = /19000\.0\s*\*\s*sunDiscScale/.test(mat.fragmentShader);
-  if (!hasDiscScale) {
+  if (!hasDiscScaleUse) {
     const before = mat.fragmentShader;
     mat.fragmentShader = mat.fragmentShader.replace(
       "19000.0 * Fex",
       "19000.0 * sunDiscScale * Fex",
     );
     if (mat.fragmentShader !== before) patched = true;
+    else {
+      console.error(
+        "[sky-capability] injectSkySunScalePatch 解耦点②（太阳盘缩放）替换失败：锚点失配。",
+        "请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+      );
+    }
   }
 
   // ③ 有改动才触发重编译

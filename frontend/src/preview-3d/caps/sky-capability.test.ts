@@ -556,6 +556,51 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     expect(mat.uniforms.sunDiscScale.value).toBe(0.8);
   });
 
+  it("半残状态修复：uniform 已注册但 sunDiscScale 乘法缺失 → 二次调用补全乘法（不分字段整体早退）", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat);
+    // 模拟半残：乘法层被外部改动抹掉（回到无 sunDiscScale 的原始形态），但 uniform 仍注册
+    expect(mat.fragmentShader).toMatch(/19000\.0 \* sunDiscScale \* Fex/);
+    mat.fragmentShader = mat.fragmentShader.replace(
+      "19000.0 * sunDiscScale * Fex",
+      "19000.0 * Fex",
+    );
+    expect(mat.fragmentShader).not.toMatch(/19000\.0 \* sunDiscScale \* Fex/);
+    // 二次调用：分字段守卫检测到 sunDiscScale uniform 在但乘法缺失 → 补全乘法而非整体早退
+    injectSkySunScalePatch(mat);
+    expect(mat.fragmentShader).toMatch(/19000\.0 \* sunDiscScale \* Fex/);
+  });
+
+  it("半残状态修复：sunIntensityScale 乘法缺失 → 二次调用补全（同理分字段）", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat);
+    expect(mat.fragmentShader).toMatch(/vSunE \* sunIntensityScale/);
+    mat.fragmentShader = mat.fragmentShader.replace(
+      "pow( (vSunE * sunIntensityScale) * (",
+      "pow( vSunE * (",
+    );
+    expect(mat.fragmentShader).not.toMatch(/vSunE \* sunIntensityScale/);
+    injectSkySunScalePatch(mat);
+    expect(mat.fragmentShader).toMatch(/vSunE \* sunIntensityScale/);
+  });
+
+  it("乘法锚点彻底失配（文字被改）→ console.error 留痕不再静默，且不产生半残声明", () => {
+    const warnSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat);
+    // 彻底破坏两个乘法锚点（模拟 Three 未来重构表达式），uniform 保留在对象层
+    mat.fragmentShader = mat.fragmentShader
+      .replace("pow( (vSunE * sunIntensityScale) * (", "pow( vSunE_Lin * (")
+      .replace("19000.0 * sunDiscScale * Fex", "SUN_DISC_LUM * Fex");
+    injectSkySunScalePatch(mat);
+    // 锚点已彻底不在 → 无法补全 → console.error 留痕（审计①：消除静默失效缝隙）
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("sky-capability"), expect.any(String));
+    warnSpy.mockRestore();
+  });
+
   it("setter 更新值只改 uniforms.value，不重编译 shader（needsUpdate=false）", () => {
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
@@ -590,17 +635,17 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     expect(mat.version).toBe(versionBefore + 1); // patched → needsUpdate=true → version++
   });
 
-  it("两个锚点全部失配时告警并跳过 patch（不产生半残 shader）", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("两个锚点全部失配时 console.error 留痕并跳过 patch（不产生半残 shader）", () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
     mat.fragmentShader = "// totally different shader, no anchors at all";
     injectSkySunScalePatch(mat);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("sky-capability"), expect.any(String));
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining("sky-capability"), expect.any(String));
     // uniforms 已注册（对象层先注册防 crash），但 shader 未被改
     expect(mat.uniforms.sunIntensityScale).toBeDefined();
     expect(mat.fragmentShader).toBe("// totally different shader, no anchors at all");
-    warnSpy.mockRestore();
+    errSpy.mockRestore();
   });
 });
 

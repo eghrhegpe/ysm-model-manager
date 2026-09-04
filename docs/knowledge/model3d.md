@@ -206,7 +206,7 @@ auto_fields:
     - formatCapSliderValue
     - frameCameraSide
     - FrameSideOptions
-    - frRoleRowStyle
+    - frRoleRowClass
     - generateSurfacePixels
     - getBoneDetail
     - getBoneList

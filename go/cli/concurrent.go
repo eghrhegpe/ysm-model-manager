@@ -256,7 +256,7 @@ func benchSerialRead(files []string) time.Duration {
 	start := time.Now()
 
 	for _, f := range files {
-		_, _ = os.ReadFile(f)
+		_, _ = os.ReadFile(f) // 基准隔离（ADR-176 2.4 例）：只测读吞吐，故意吞内容/错误非生产丢失
 	}
 
 	return time.Since(start)
@@ -274,7 +274,7 @@ func benchParallelRead(files []string, workers int) time.Duration {
 		go func() {
 			defer wg.Done()
 			for f := range fileCh {
-				_, _ = os.ReadFile(f)
+				_, _ = os.ReadFile(f) // 基准隔离（ADR-176 2.4 例）：只测读吞吐，故意吞内容/错误非生产丢失
 			}
 		}()
 	}
@@ -834,7 +834,8 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 
 	ipcStart := time.Now()
 	ipcSize := (geoSize + texSize) * 4 / 3
-	_, _ = json.Marshal(model) // 模拟序列化开销
+	// 基准隔离（ADR-176 2.4 例）：故意吞错以只测序列化耗时，非生产数据丢失——模拟序列化开销
+	_, _ = json.Marshal(model)
 	ipcDuration := time.Since(ipcStart)
 
 	stages = append(stages, singleBenchStage{

@@ -18,13 +18,13 @@ import (
 )
 
 func resetRustScanHook() {
-	SetRustScanHook(nil)
+	setRustScanHook(nil)
 }
 
 func TestTryRustScan_NotHandled(t *testing.T) {
 	InvalidateCache()
 	defer resetRustScanHook()
-	SetRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
+	setRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
 		return nil, false, false
 	})
 	dir := t.TempDir()
@@ -43,7 +43,7 @@ func TestTryRustScan_HandledStoresCache(t *testing.T) {
 	defer resetRustScanHook()
 	dir := t.TempDir()
 	want := []types.ModelEntry{{Name: "a.ysm", Path: dir + "/a.ysm", Ext: ".ysm"}}
-	SetRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
+	setRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
 		return want, true, true
 	})
 	// 版本守卫通过：使用当前 cacheGen + 当前 keyVersion(0)
@@ -71,7 +71,7 @@ func TestTryRustScan_HandledVersionChangedSkipsCache(t *testing.T) {
 	defer resetRustScanHook()
 	dir := t.TempDir()
 	want := []types.ModelEntry{{Name: "a.ysm", Path: dir + "/a.ysm", Ext: ".ysm"}}
-	SetRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
+	setRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
 		return want, true, true
 	})
 	// 捕获启动时版本后，invalidate 使 cacheGen 变化 → 守卫失败
@@ -97,7 +97,7 @@ func TestTryRustScan_NotCacheableSkipsStore(t *testing.T) {
 	defer resetRustScanHook()
 	dir := t.TempDir()
 	want := []types.ModelEntry{{Name: "a.ysm", Path: dir + "/a.ysm", Ext: ".ysm"}}
-	SetRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
+	setRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
 		return want, false, true // cacheable=false
 	})
 	fl := &scanFlight{}

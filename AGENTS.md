@@ -31,7 +31,7 @@
 ### 改代码——TDD，改完即验
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。
 - 大改动（多文件/架构级）写adr，再动手，连环询问用户以确认需求。
-- 先写测试（TS/mjs/Go），再写实现；改完立刻 `go build ./go/...` 或 `cd frontend && npx vite build` + `npm run typecheck`，失败就修到绿。
+- 先写测试（TS/mjs/Go），再写实现；改完立刻 `go build ./...` 或 `cd frontend && npx vite build` + `npm run typecheck`，失败就修到绿。
 - 连续改同一文件时自下而上，避免行号漂移。
 - 排查卡顿/日志往**环形日志面板**塞，不盯 console。
 
@@ -55,7 +55,7 @@ git checkout -- <file>              # 精确恢复单文件（进入提交阶段
 git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区（进入提交阶段后请勿使用）
 ```
 
-- 验证按域裁剪：Go → `go build ./go/...`；前端 → build + typecheck；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
+- 验证按域裁剪：Go → `go build ./...`（`./...` 覆盖 `go/` + 根 `internal/app` 绑定入口 + 根 `cli.go`，`./go/...` 会漏主体）；前端 → build + typecheck；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
 - 临时回退用 `git commit` + `git reset --soft HEAD~1` 记录问题文件；不碰 `git stash/push/pop`（`list`/`show` 只读可用）。
 
 ## 钩子自动化（自动执行，你只需手动三件事）
@@ -123,7 +123,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 
 ```bash
 cd frontend && npx vite build                # 前端
-go build ./go/...                            # Go
+go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 cli.go）
 for f in tests/*.ts; do node "$f"; done     # 契约测试
 node scripts/doctor.ts --docs               # 只改文档时（秒级）
 node scripts/doctor.ts                      # 发版前全量

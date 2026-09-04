@@ -70,8 +70,9 @@ var (
 	rustScanHookFn  func(dir string) ([]types.ModelEntry, bool, bool)
 )
 
-// SetWalkStartHook 注入/清除走盘开始钩子（仅测试；传 nil 清除）。
-func SetWalkStartHook(fn func()) {
+// setWalkStartHook 注入/清除走盘开始钩子（仅同包测试 seam，包外不可见；传 nil 清除）。
+// ADR-176 2.2：改为未导出，生产/绑定 API 不再暴露可写函数指针。
+func setWalkStartHook(fn func()) {
 	hookMu.Lock()
 	walkStartHookFn = fn
 	hookMu.Unlock()
@@ -84,8 +85,9 @@ func getWalkStartHook() func() {
 	return walkStartHookFn
 }
 
-// SetRustScanHook 注入/清除 Rust 扫描钩子（仅测试；传 nil 清除）。
-func SetRustScanHook(fn func(dir string) ([]types.ModelEntry, bool, bool)) {
+// setRustScanHook 注入/清除 Rust 扫描钩子（仅同包测试 seam，包外不可见；传 nil 清除）。
+// ADR-176 2.2：改为未导出，生产/绑定 API 不再暴露可写函数指针。
+func setRustScanHook(fn func(dir string) ([]types.ModelEntry, bool, bool)) {
 	hookMu.Lock()
 	rustScanHookFn = fn
 	hookMu.Unlock()

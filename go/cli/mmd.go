@@ -339,7 +339,14 @@ func calculateIPCOverhead(a AppService, files []fileBenchItem, iterations int) i
 	var payload []byte
 	for i := 0; i < iterations; i++ {
 		start := time.Now()
-		payload, _ = json.Marshal(map[string]string{"data": base64.StdEncoding.EncodeToString(original)})
+		// 基准实测序列化载荷：map+base64 结构固定无法失败，但错误不吞——留痕后跳出，
+		// 避免 payload=nil 污染下方字节膨胀度量（ADR-176 2.4 非清理路径不含静默吞错）
+		serdeErr := error(nil)
+		payload, serdeErr = json.Marshal(map[string]string{"data": base64.StdEncoding.EncodeToString(original)})
+		if serdeErr != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  基准序列化失败: %v\n", serdeErr)
+			break
+		}
 		serdeTotal += time.Since(start)
 	}
 	serdeTimeMs := float64(serdeTotal) / float64(time.Millisecond) / float64(iterations)

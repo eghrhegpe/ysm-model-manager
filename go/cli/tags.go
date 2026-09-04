@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -206,6 +205,3 @@ func runTagsCount(ctx *CmdContext) error {
 	}
 	return nil
 }
-
-// 保留 json 导入（未来 --format json 下沉时用）
-var _ = json.Marshal

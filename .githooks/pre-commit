@@ -183,6 +183,17 @@ if [ "${YSM_SKIP_I18N_KEY:-0}" != "1" ]; then
   node scripts/i18n-key-naming.ts 2>&1 || echo "⚠️  i18n-key-naming 发现违规或执行失败（不阻断，pre-push 测试兜底）"
 fi
 
+# ── 语言包跨语言一致性检查（非阻断提示；ADR-045）──
+# 既有 i18n-check.ts（key parity / 占位符 / zh-CN 漏译 / SUPPORTED_LANGS 漂移）原只挂
+# pre-push --strict（gate-config.ts），开发期 drift 无即时反馈；此处 warning 模式（干净
+# 恒 exit 0，非阻断）把发现提前到 commit 当下。阻断仍由 pre-push --strict 兜底。
+# 逃生阀：YSM_SKIP_I18N_CHECK=1。
+if [ "${YSM_SKIP_I18N_CHECK:-0}" != "1" ]; then
+  echo ""
+  echo "[pre-commit] 语言包跨语言一致性检查（i18n-check, ADR-045）..."
+  node scripts/i18n-check.ts 2>&1 || echo "⚠️  i18n-check 发现漂移或执行失败（不阻断，pre-push --strict 兜底）"
+fi
+
 # ── gofmt 自动修复（staged go 文件；失败仅提示不阻断） ──
 # 修复必须发生在提交时：pre-push 内 commit --amend 是假成功（push 推的是钩子前快照 oid，
 # 钩子里 amend 只改本地 HEAD → 分叉，见 pre-push-gate.ts 已知坑 2026-08-12）。

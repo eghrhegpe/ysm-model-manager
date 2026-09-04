@@ -104,7 +104,7 @@ status: active
 - 弹窗内所有动态文本必须过 `esc`，禁止直拼未转义 HTML（modal.ts 从 html.ts import 并 re-export，无双源；`'` 也转义为 `&#39;`，比知识卡声明的 `& < > "` 更严格）
 - 弹窗只 resolve 不 reject：取消/关闭一律 resolve 取消值（null/false），调用方无需 catch
 - 弹窗 append 到 `document.body` 后必须立即 `registerDlg`，顺序不可颠倒
-- trapFocus 已导出（modal.ts trapFocus）供四个内置弹窗使用；P3 观察：`FOCUSABLE_SEL` 裸 `tabindex` 会匹配 `tabindex="-1"`（当前内置弹窗无 -1 后代，静态推导未证实触发）；modalConfirm 初始焦点在 overlay 而 Enter 不触发确认（UX 缺口）；modalSelect 的 `placeholder` 选项接口保留兼容但 builder 不消费（原 `void placeholder` 墓碑已清除）。单次使用的绑定微函数已内联回各 modalXxx，`dgMo*` 匈牙利前缀已清除（2026-09-01 utils 锐评整改）
+- trapFocus 已导出（modal.ts trapFocus）供四个内置弹窗使用；`FOCUSABLE_SEL` 裸 `tabindex`（无 `=`，匹配元素名而非属性，全仓无 `<tabindex>` 元素）已移除（2026-09-04 刀⑤，锐评续刀）；modalConfirm 初始焦点在 overlay 而 Enter 不触发确认（UX 缺口，`e.target instanceof HTMLButtonElement` 时跳过——按钮自带 click 语义）；modalSelect 的 `placeholder` 选项接口保留兼容但 builder 不消费（原 `void placeholder` 墓碑已清除）。单次使用的绑定微函数已内联回各 modalXxx，`dgMo*` 匈牙利前缀已清除（2026-09-01 utils 锐评整改）
 
 ## 相关
 

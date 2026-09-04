@@ -34,6 +34,10 @@ type ModelEntry struct {
 	// 用途子目录内时填子目录名（如 SceneModel/CustomAnim）；根下或其他类型恒为 ""。
 	// 前端据此按子目录分组展示，无需从 Path 推导。
 	SubDir string `json:"subdir,omitempty"`
+	// Banned 禁用态（文件级 .disabled/.ban 后缀或父目录级禁用，ADR-038 D3.7）。
+	// ScanModelEntriesFiltered 填充；前端树加载据此标记，替代逐文件
+	// IsFileBanned 桥调用（2000 模型 = 2000 次 IPC 的 N+1，code review #2）。
+	Banned bool `json:"banned,omitempty"`
 }
 
 // ImportFileItem 文件夹型模型整组导入的文件项（ADR-038 关联：解压目录整组导入）

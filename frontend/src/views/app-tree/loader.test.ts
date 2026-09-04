@@ -83,17 +83,14 @@ describe("loadEntries", () => {
     expect(r).toEqual({ filesRoot: MOCK_DATA.GetRepoRoot, entries: [] });
   });
 
-  it("后端已按类型过滤扩展名，前端直接消费结果并计算相对路径/禁用状态", async () => {
+  it("禁用态由 Go 扫描结果下发（e.banned），前端不再逐文件 IsFileBanned（N+1 消除）", async () => {
     // Path 前缀与共享基线 GetRepoRoot（/e2e/repo）一致，动态拼接防再次硬编码漂移
     const repo = MOCK_DATA.GetRepoRoot;
     mocks.ScanModelEntriesFiltered.mockResolvedValue([
       { Name: "a.ysm", Path: `${repo}/sub/a.ysm`, Size: 10, ModTime: 1 },
-      { Name: "b.ban", Path: `${repo}/sub/b.ban`, Size: 10, ModTime: 1 },
-      { Name: "d.ysm", Path: `${repo}/sub/d.ysm`, Size: 10, ModTime: 1 },
+      { Name: "b.ban", Path: `${repo}/sub/b.ban`, Size: 10, ModTime: 1, banned: true },
+      { Name: "d.ysm", Path: `${repo}/sub/d.ysm`, Size: 10, ModTime: 1, banned: true },
     ]);
-    mocks.IsFileBanned.mockImplementation((p: string) =>
-      Promise.resolve(p.endsWith("d.ysm")),
-    );
     const { loadEntries } = await import("./loader.ts");
     const r = await loadEntries("ysm");
 
@@ -106,16 +103,8 @@ describe("loadEntries", () => {
       banned: false,
     });
     expect(r.entries[2]).toMatchObject({ name: "d.ysm", path: "sub/d.ysm", banned: true });
-  });
-
-  it("banned 检查失败兜底为 false（不中断加载）", async () => {
-    mocks.ScanModelEntriesFiltered.mockResolvedValue([
-      { Name: "a.ysm", Path: `${MOCK_DATA.GetRepoRoot}/a.ysm`, Size: 0, ModTime: 0 },
-    ]);
-    mocks.IsFileBanned.mockRejectedValue(new Error("lock"));
-    const { loadEntries } = await import("./loader.ts");
-    const r = await loadEntries("ysm");
-    expect(r.entries[0].banned).toBe(false);
+    // N+1 回归守卫：前端不得再逐文件调 IsFileBanned
+    expect(mocks.IsFileBanned).not.toHaveBeenCalled();
   });
 
   it("仓库根路径带反斜杠时也能剥离前缀", async () => {

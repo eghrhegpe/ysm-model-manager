@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"ysm-model-manager/go/conc"
+	"ysm-model-manager/go/fileops"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/scanner"
@@ -297,6 +298,12 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 			filtered = append(filtered, e)
 		}
 		entries = filtered
+	}
+	// 禁用态随扫描一次性下发（code review #2：前端树加载原逐文件 IsFileBanned
+	// 桥调用，2000 模型 = 2000 次 IPC 的 N+1；归属原则——禁用判定归 Go，
+	// 前端只读。rtype 为空（不过滤路径）时同样填充，保证返回值自洽。
+	for i := range entries {
+		entries[i].Banned = fileops.IsFileBanned(entries[i].Path)
 	}
 	if !hit {
 		msg := fmt.Sprintf("扫描 %d 个文件", len(entries))

@@ -1050,6 +1050,42 @@ func TestScanModelEntriesFiltered_DisabledRetained(t *testing.T) {
 	}
 }
 
+func TestScanModelEntriesFiltered_BannedFieldFilled(t *testing.T) {
+	// 回归（code review #2）：禁用态随扫描一次性下发（ModelEntry.Banned），
+	// 替代前端逐文件 IsFileBanned 桥调用（2000 模型 = 2000 次 IPC 的 N+1）。
+	// 覆盖文件级（xxx.disabled）与目录级（.disabled 目录内文件）两种判定。
+	base := t.TempDir()
+	dir := filepath.Join(base, "scan_filter_dir_banned")
+	bannedDir := filepath.Join(dir, "banned-group.disabled")
+	if err := os.MkdirAll(bannedDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "ok.ysm"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "off.ysm.disabled"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bannedDir, "ingroup.ysm"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	a := scanApp(t, types.AppConfig{FilesRoot: base})
+	got := a.ScanModelEntriesFiltered(dir, "ysm", "", "YSM模型")
+	// 注：目录级 .disabled 整组在扫描阶段即被 scanner 排除，不进入结果——
+	// Banned 字段覆盖的是「进入结果但带禁用后缀」的文件级判定。
+	if len(got) != 2 {
+		t.Fatalf("应收 2 条（目录级禁用组已在扫描阶段排除），实际 %d 条: %+v", len(got), got)
+	}
+	for _, e := range got {
+		name := filepath.Base(e.Path)
+		want := name != "ok.ysm"
+		if e.Banned != want {
+			t.Errorf("条目 %s 的 Banned 应为 %v，实际 %v", name, want, e.Banned)
+		}
+	}
+}
+
 func TestScanModelEntriesFiltered_DisabledContainerNoCrossTabLeak(t *testing.T) {
 	// 回归（c08c62bc P3）：禁用容器（xxx.zip.disabled）此前跳过指纹核验，
 	// 内部 pack.mcmeta（resourcepack 指纹）的容器被泄漏进 EntityPlayer 等

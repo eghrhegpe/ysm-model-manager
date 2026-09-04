@@ -70,7 +70,7 @@ export async function loadEntries(
   subdir?: string,
 ): Promise<{ filesRoot: string; entries: TreeEntry[] }> {
   try {
-    const { GetRepoRoot, ScanModelEntriesFiltered, IsFileBanned } = await getApp();
+    const { GetRepoRoot, ScanModelEntriesFiltered } = await getApp();
     // 扁平化架构：subdir 作为实际类型 ID 覆盖 rtype
     const targetType = subdir || rtype;
     let filesRoot = await GetRepoRoot(targetType || "");
@@ -80,12 +80,10 @@ export async function loadEntries(
     const raw = await ScanModelEntriesFiltered(filesRoot, targetType, "", label);
     if (!raw || !raw.length) return { filesRoot, entries: [] };
 
-    // 并发检查禁用状态
-    const bannedResults = await Promise.all(
-      raw.map((e) => IsFileBanned(e.Path).catch(() => false)),
-    );
+    // 禁用态由 Go 扫描结果直接下发（e.Banned，ADR-038 D3.7 判定归 Go）——
+    // 原逐文件 IsFileBanned 桥调用为 N+1 IPC（2000 模型 = 2000 次，code review #2）。
 
-    const entries: TreeEntry[] = raw.map((e, i) => {
+    const entries: TreeEntry[] = raw.map((e) => {
       let relPath = e.Path;
       const normRoot = filesRoot ? filesRoot.replace(/\\/g, "/").replace(/\/+$/, "") : "";
       const normPath = e.Path.replace(/\\/g, "/");
@@ -98,7 +96,7 @@ export async function loadEntries(
         fullPath: e.Path,
         size: e.Size,
         modTime: e.ModTime,
-        banned: bannedResults[i] || false,
+        banned: e.banned || false,
         type: e.type || "",
       };
     });

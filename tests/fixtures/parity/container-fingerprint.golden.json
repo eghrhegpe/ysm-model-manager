@@ -1,0 +1,74 @@
+{
+  "$comment": "ADR-174 D5：DetectContainerType 双端 fixture 对账黄金语料。Go 主源 = go/importer/importer_file.go DetectContainerType（收条目名 → packs.DetectByEntries (priority desc, id asc) 裁决）；TS 平移 = frontend/src/parsers/extract.ts detectContainerType（LFLH 游走 → matchZipEntryTS，注册表同源）。语料 = zip 条目名清单（双端各自现造最小 zip，不提交二进制）；黄金值由 Go regen：YSM_PARITY_REGEN=1 go test ./go/importer -run TestContainerFingerprintParity。空串 = 无指纹（识别不出就是识别不出，不假装 YSM）。",
+  "cases": [
+    {
+      "id": "resourcepack-mcmeta",
+      "entries": [
+        "pack.mcmeta",
+        "assets/minecraft/textures/a.png"
+      ],
+      "golden": "resourcepack"
+    },
+    {
+      "id": "shaderpack-prefix",
+      "entries": [
+        "shaders/core.fsh",
+        "readme.txt"
+      ],
+      "golden": "shaderpack"
+    },
+    {
+      "id": "ysm-suffix-deep",
+      "entries": [
+        "some/deep/path/ysm.json",
+        "geo/x.json"
+      ],
+      "golden": "ysm"
+    },
+    {
+      "id": "ysm-prefix-models",
+      "entries": [
+        "models/entity.json",
+        "misc/data.txt"
+      ],
+      "golden": "ysm"
+    },
+    {
+      "id": "maid-model-suffix",
+      "entries": [
+        "maid_model.json"
+      ],
+      "golden": "maid-model"
+    },
+    {
+      "id": "pmx-priority-clash",
+      "$comment": ".pmx 同时命中 EntityPlayer 与 SceneModel → (priority desc, id asc) 裁决",
+      "entries": [
+        "char.pmx"
+      ],
+      "golden": "EntityPlayer"
+    },
+    {
+      "id": "no-fingerprint",
+      "entries": [
+        "readme.txt",
+        "data/unknown.bin"
+      ],
+      "golden": ""
+    },
+    {
+      "id": "uppercase-fold",
+      "$comment": "大小写折叠口径（Latin-1 折叠语义对账）",
+      "entries": [
+        "PACK.MCMETA"
+      ],
+      "golden": "resourcepack"
+    },
+    {
+      "id": "empty-zip",
+      "$comment": "零条目 zip → 无指纹",
+      "entries": [],
+      "golden": ""
+    }
+  ]
+}

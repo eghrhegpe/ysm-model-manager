@@ -81,5 +81,12 @@ contract-b1 扩 SearchModels 降级语义与排序断言 + DetectContainerType �
 
 ## 未决 / 后续
 
-- 对账 fixtures 基建（目录约定 + 黄金值管理）单独立项，落地后 S2 才可收口（见 D5）。
+- ~~对账 fixtures 基建（目录约定 + 黄金值管理）单独立项，落地后 S2 才可收口（见 D5）。~~
+  **已落地（2026-09-04）**：`tests/fixtures/parity/`（黄金语料 = Go 主源产出，regen 模式
+  `YSM_PARITY_REGEN=1`；语料声明式——条目名/JSON 内容清单，双端各自现造最小 fixture，不提交二进制）：
+  - `ysm-summary.golden.json` × `go/ysm/summary_parity_test.go` × `frontend/src/parsers/ysm-summary-parity.test.ts`（8 用例）
+  - `container-fingerprint.golden.json` × `go/importer/container_parity_test.go` × `frontend/src/parsers/container-fingerprint-parity.test.ts`（9 用例，含 pmx 优先级裁决/大小写折叠）
+  - 对账产出：修复首个真实漂移——Go `Links json:"links,omitempty"` 的 omitempty 对 struct 无效
+    → wire JSON 恒含 `"links":{}`，TS 补齐同形（ysm-header.ts emptyYsmSummary），桌面/网页 wire 一致
+  - D3 双端排除项：`size`（Go=os.Stat 随 zip 编码器变；web=纯字节流固定 0），$sizePolicy 声明于语料
 - 类型归属"零手写"静态守卫（扫双端 ext 字面量）可作可选加固，非本轮范围。

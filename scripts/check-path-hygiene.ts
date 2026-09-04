@@ -123,7 +123,11 @@ for (const { abs, rel } of files) {
       warns.push({ rule: 'R3', file: relPosix, detail: `上跳 ${c.upLevels} 级且目标仍在 src 内` });
     }
     // R4：越界（展开后落 src 外，含 #root 别名逃逸）或 == frontend/e2e/mock-data.ts（真实位置，ADR 内定入基线）
-    if (c.escapesSrc || c.isMockData) {
+    // ADR-174 D5 豁免：parity 对账测试消费黄金语料（tests/fixtures/parity/）——双端单一事实源
+    // 位于 Go 主源侧，frontend/src/parsers/*-parity.test.ts 跨界读取属契约设计，白名单豁免
+    // （冻结基线维持不变，仅豁免 tests/fixtures/parity/ 目标，不放松其他越界）。
+    const isParityGolden = /(^|[\\/])tests[\\/]fixtures[\\/]parity[\\/]/.test(c.targetAbs || spec);
+    if ((c.escapesSrc || c.isMockData) && !isParityGolden) {
       r4Count++;
     }
   }

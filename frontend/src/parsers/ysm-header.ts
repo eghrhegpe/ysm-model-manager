@@ -92,6 +92,9 @@ export function emptyYsmSummary(source: string, size = 0): YsmSummaryShape {
     spec: 0,
     stats: { textures: 0, models: 0, animations: 0, texWidth: 0, texHeight: 0 },
     preview: { hasGui: false },
+    // Go 侧 `Links json:"links,omitempty"` 的 omitempty 对 struct 无效 → wire JSON 恒含
+    // "links":{}（summary_parity_test 对账发现）。TS 补齐同形，桌面/网页 wire 一致。
+    links: {},
   };
 }
 

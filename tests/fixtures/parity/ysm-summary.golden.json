@@ -1,0 +1,269 @@
+{
+  "$comment": "ADR-174 D5：ExtractYsmSummary 双端 fixture 对账黄金语料。黄金值由 Go（主源侧 go/ysm/summary.go）产出——regen：YSM_PARITY_REGEN=1 go test ./go/ysm -run TestYsmSummaryParity。TS 消费方：frontend/src/parsers/ysm-summary-parity.test.ts（fflate 造同构语料，断言同黄金值）。任何一侧实现漂移即对账失败。",
+  "$sizePolicy": "D3 声明制差异：size 双端排除——Go=os.Stat 实际磁盘字节（随 zip 编码器/版本变），web=纯字节流无 stat 等价物（固定 0）。golden.size 恒为 0 占位，双端测试比对前均 delete size。",
+  "cases": [
+    {
+      "id": "zip-full-fields",
+      "$comment": "zip 内 ysm.json 全字段：metadata/stats/动画分组/配置菜单/纹理尺寸",
+      "kind": "zip",
+      "filename": "model.ysm",
+      "entries": {
+        "geo/main.json": "{\"minecraft:geometry\":[{\"description\":{\"texture_width\":128,\"texture_height\":64}}]}",
+        "tex/default.png": "png",
+        "ysm.json": "{\n  \"spec\": 2,\n  \"metadata\": {\n    \"name\": \"测试模型\",\n    \"tips\": \"安装提示\",\n    \"license\": {\"type\": \"MIT\"},\n    \"authors\": [{\"name\": \"作者A\", \"role\": \"模型师\", \"contact\": {\"bilibili\": \"BV123\"}}],\n    \"link\": {\"home\": \"https://example.com\", \"donate\": \"https://pay.example.com\"}\n  },\n  \"properties\": {\n    \"default_texture\": \"tex/default.png\",\n    \"height_scale\": 1.2,\n    \"width_scale\": 0.8,\n    \"extra_animation\": {\"#sit\": \"坐姿\", \"walk\": \"走路\", \"idle\": \"待机\"},\n    \"extra_animation_classify\": [{\"id\": \"sit\", \"name\": \"坐姿组\", \"extra_animation\": {\"walk\": \"走路\", \"idle\": \"待机\"}}],\n    \"extra_animation_buttons\": [{\"id\": \"btn1\", \"name\": \"表情菜单\", \"config_forms\": [{\"type\": \"slider\"}]}]\n  },\n  \"files\": {\n    \"player\": {\n      \"model\": [{\"path\": \"geo/main.json\"}],\n      \"texture\": [{\"path\": \"tex/default.png\"}]\n    }\n  }\n}"
+      },
+      "golden": {
+        "animGroups": [
+          {
+            "id": "sit",
+            "items": [
+              "走路",
+              "待机"
+            ],
+            "name": "坐姿组"
+          }
+        ],
+        "authors": [
+          {
+            "bilibili": "BV123",
+            "name": "作者A",
+            "roles": "模型师"
+          }
+        ],
+        "configMenus": [
+          {
+            "controls": [
+              "slider"
+            ],
+            "id": "btn1",
+            "name": "表情菜单"
+          }
+        ],
+        "format": "ysm",
+        "license": "MIT",
+        "links": {
+          "donate": "https://pay.example.com",
+          "home": "https://example.com"
+        },
+        "name": "测试模型",
+        "preview": {
+          "defaultTexture": "tex/default.png",
+          "hasGui": false,
+          "heightScale": 1.2,
+          "widthScale": 0.8
+        },
+        "schema": "ysm-summary/v1",
+        "source": "model.ysm",
+        "spec": 2,
+        "stats": {
+          "animations": 0,
+          "models": 1,
+          "texHeight": 64,
+          "texWidth": 128,
+          "textures": 1
+        },
+        "tips": "安装提示"
+      }
+    },
+    {
+      "id": "zip-tips-truncate",
+      "$comment": "zip 分支 tips 超 200 字符截断补 ...",
+      "kind": "zip",
+      "filename": "长介绍.ysm",
+      "entries": {
+        "ysm.json": "{\"spec\":2,\"metadata\":{\"name\":\"长介绍\",\"tips\":\"很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍\"}}"
+      },
+      "golden": {
+        "format": "ysm",
+        "links": {},
+        "name": "长介绍",
+        "preview": {
+          "hasGui": false
+        },
+        "schema": "ysm-summary/v1",
+        "source": "长介绍.ysm",
+        "spec": 2,
+        "stats": {
+          "animations": 0,
+          "models": 0,
+          "texHeight": 0,
+          "texWidth": 0,
+          "textures": 0
+        },
+        "tips": "很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍很长的介绍"
+      }
+    },
+    {
+      "id": "zip-fallback-no-ysm-json",
+      "$comment": "zip 无 ysm.json 降级扫描：按条目名计数几何/动画/纹理",
+      "kind": "zip",
+      "filename": "model.ysm",
+      "entries": {
+        "anim/walk_animation.json": "{\"animations\": {}}",
+        "geo/main.json": "{\"minecraft:geometry\": [\"geom1\"]}",
+        "tex/a.png": "png"
+      },
+      "golden": {
+        "format": "zip",
+        "links": {},
+        "name": "model",
+        "preview": {
+          "hasGui": false
+        },
+        "schema": "ysm-summary/v1",
+        "source": "model.ysm",
+        "spec": 0,
+        "stats": {
+          "animations": 1,
+          "models": 1,
+          "texHeight": 0,
+          "texWidth": 0,
+          "textures": 1
+        }
+      }
+    },
+    {
+      "id": "plain-json-full-fields",
+      "$comment": "裸 ysm.json（解压目录口径）：与 zip 分支同字段填充",
+      "kind": "plain-json",
+      "filename": "model.json",
+      "content": "{\n  \"spec\": 2,\n  \"metadata\": {\n    \"name\": \"测试模型\",\n    \"tips\": \"安装提示\",\n    \"license\": {\"type\": \"MIT\"},\n    \"authors\": [{\"name\": \"作者A\", \"role\": \"模型师\", \"contact\": {\"bilibili\": \"BV123\"}}],\n    \"link\": {\"home\": \"https://example.com\", \"donate\": \"https://pay.example.com\"}\n  },\n  \"properties\": {\n    \"default_texture\": \"tex/default.png\",\n    \"height_scale\": 1.2,\n    \"width_scale\": 0.8,\n    \"extra_animation\": {\"#sit\": \"坐姿\", \"walk\": \"走路\", \"idle\": \"待机\"},\n    \"extra_animation_classify\": [{\"id\": \"sit\", \"name\": \"坐姿组\", \"extra_animation\": {\"walk\": \"走路\", \"idle\": \"待机\"}}],\n    \"extra_animation_buttons\": [{\"id\": \"btn1\", \"name\": \"表情菜单\", \"config_forms\": [{\"type\": \"slider\"}]}]\n  },\n  \"files\": {\n    \"player\": {\n      \"model\": [{\"path\": \"geo/main.json\"}],\n      \"texture\": [{\"path\": \"tex/default.png\"}]\n    }\n  }\n}",
+      "golden": {
+        "animGroups": [
+          {
+            "id": "sit",
+            "items": [
+              "走路",
+              "待机"
+            ],
+            "name": "坐姿组"
+          }
+        ],
+        "authors": [
+          {
+            "bilibili": "BV123",
+            "name": "作者A",
+            "roles": "模型师"
+          }
+        ],
+        "configMenus": [
+          {
+            "controls": [
+              "slider"
+            ],
+            "id": "btn1",
+            "name": "表情菜单"
+          }
+        ],
+        "format": "ysm",
+        "license": "MIT",
+        "links": {
+          "donate": "https://pay.example.com",
+          "home": "https://example.com"
+        },
+        "name": "测试模型",
+        "preview": {
+          "defaultTexture": "tex/default.png",
+          "hasGui": false,
+          "heightScale": 1.2,
+          "widthScale": 0.8
+        },
+        "schema": "ysm-summary/v1",
+        "source": "model.json",
+        "spec": 2,
+        "stats": {
+          "animations": 0,
+          "models": 1,
+          "texHeight": 0,
+          "texWidth": 0,
+          "textures": 1
+        },
+        "tips": "安装提示"
+      }
+    },
+    {
+      "id": "ysgp-text-header",
+      "$comment": "YSGP V2 魔数 + 文本头部合并（name 取 \u003cname\u003e 标签）",
+      "kind": "raw",
+      "filename": "encrypted.ysm",
+      "content": "YSGP\n--- [Metadata]\n\u003cname\u003eMergedModel\u003c/name\u003e\n===",
+      "golden": {
+        "format": "ysm",
+        "links": {},
+        "name": "encrypted",
+        "preview": {
+          "hasGui": false
+        },
+        "schema": "ysm-summary/v1",
+        "source": "encrypted.ysm",
+        "spec": 2,
+        "stats": {
+          "animations": 0,
+          "models": 0,
+          "texHeight": 0,
+          "texWidth": 0,
+          "textures": 0
+        }
+      }
+    },
+    {
+      "id": "name-fallback-zip",
+      "$comment": "metadata.name 空时回退去扩展名文件名（zip 分支）",
+      "kind": "zip",
+      "filename": "no_name_model.ysm",
+      "entries": {
+        "geo/main.json": "{\"minecraft:geometry\": []}",
+        "ysm.json": "{\n  \"spec\": 2,\n  \"metadata\": {\n    \"tips\": \"没有名字的模型\",\n    \"license\": {\"type\": \"CC0\"},\n    \"authors\": [{\"name\": \"佚名\"}]\n  },\n  \"files\": {\n    \"player\": {\n      \"model\": [{\"path\": \"geo/main.json\"}],\n      \"texture\": [{\"path\": \"tex/default.png\"}]\n    }\n  }\n}"
+      },
+      "golden": {
+        "authors": [
+          {
+            "name": "佚名"
+          }
+        ],
+        "format": "ysm",
+        "license": "CC0",
+        "links": {},
+        "name": "no_name_model",
+        "preview": {
+          "hasGui": false
+        },
+        "schema": "ysm-summary/v1",
+        "source": "no_name_model.ysm",
+        "spec": 2,
+        "stats": {
+          "animations": 0,
+          "models": 1,
+          "texHeight": 0,
+          "texWidth": 0,
+          "textures": 1
+        },
+        "tips": "没有名字的模型"
+      }
+    },
+    {
+      "id": "plain-json-invalid",
+      "$comment": "裸 ysm.json 非法 JSON → 双端契约=报错（不比对消息文案）",
+      "kind": "plain-json",
+      "filename": "model.json",
+      "content": "{not valid json",
+      "expectError": true,
+      "golden": {
+        "error": true
+      }
+    },
+    {
+      "id": "zip-ysm-json-invalid",
+      "$comment": "zip 内 ysm.json 非法 JSON → 双端契约=报错",
+      "kind": "zip",
+      "filename": "model.ysm",
+      "entries": {
+        "ysm.json": "{not valid json"
+      },
+      "expectError": true,
+      "golden": {
+        "error": true
+      }
+    }
+  ]
+}

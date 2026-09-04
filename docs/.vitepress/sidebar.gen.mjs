@@ -729,6 +729,10 @@ export const autoSidebar = [
       {
         "text": "YSM 前后端统一 & 架构问题研究与修复方案",
         "link": "/sharp-review-fix-plan"
+      },
+      {
+        "text": "子代理代码审查 Prompt 模板(锐评 v2)",
+        "link": "/subagent-code-review-prompt"
       }
     ]
   },

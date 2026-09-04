@@ -525,7 +525,11 @@ describe("渲染失败兜底（render 抛错不崩）", () => {
       expect(popup.style.display).toBe("flex");
       expect(overlay.textContent).toContain("面板渲染失败");
       expect(overlay.textContent).toContain("boom");
-      expect(overlay.querySelector('[style*="#ff7b7b"]')).not.toBeNull();
+      // P1 批次6 cssText→类：红色错误行收 .cm-error-note（规则含 #ff7b7b），
+      // 内联 style 属性选择器探测不可用 → 类 + 样式表原文两级
+      expect(overlay.querySelector(".cm-error-note")).not.toBeNull();
+      const errSheet = [...document.querySelectorAll("style")].find((s) => s.textContent?.includes(".cm-error-note"));
+      expect(errSheet?.textContent ?? "").toContain("#ff7b7b");
       expect(errSpy).toHaveBeenCalled();
       expect(boom).toHaveBeenCalled();
       handle.dispose();

@@ -54,6 +54,25 @@ export interface PreviewMenuHandle {
 // mountPreviewRootMenu — 子函数（原 6 闭包升格 + 6 阶段拆 9 子）
 // ===================================================================
 
+// P1 批次6：core 装配层内联 cssText → 集中类（cm- 前缀本文件私有，ensureCoreStyles
+// 幂等注入——buildPreviewMenuShell + makePreviewMenuRow 双入口调用覆盖 popup/行/错误行）
+let _coreStylesInjected = false;
+function ensureCoreStyles(): void {
+  if (_coreStylesInjected) return;
+  const style = document.createElement("style");
+  style.textContent = `
+/* core 装配层集中样式（P1 批次6：cssText→类）。镜像待合并：cm-row == switch .sw-row、
+   cm-row-icon == switch .sw-row-icon、cm-error-note == roles .fr-error-note（同值多源）。 */
+.ysm-preview-menu.cm-popup { position:absolute;left:16px;bottom:84px;width:300px;max-height:70vh;z-index:25; }
+.ysm-preview-menu-row.cm-row { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px; }
+.cm-row-icon { font-size:15px;width:18px;text-align:center; }
+.cm-row-chev { margin-left:auto;font-size:13px;font-weight:700;opacity:0.4;user-select:none; }
+.cm-error-note { padding:8px 10px;color:#ff7b7b;font-size:12px; }
+`;
+  document.head.appendChild(style);
+  _coreStylesInjected = true;
+}
+
 /** mount 状态壳：handle 在 dock 按钮 onclick 之后才赋值，fillRoles 回调经此壳读取，避免闭包前向捕获 */
 interface PreviewHandleShell {
   handle: PreviewMenuHandle | null;
@@ -71,15 +90,15 @@ function buildPreviewMenuShell(
   hideMenu: () => void;
 } {
   ensureFabStyles();
+  ensureCoreStyles();
   const dock = document.createElement("div");
   dock.className = "preview-dock-nav";
   overlay.appendChild(dock);
 
   const popup = document.createElement("div");
-  popup.className = "ysm-preview-menu";
-  popup.style.cssText =
-    "position:absolute;left:16px;bottom:84px;width:300px;max-height:70vh;" +
-    "display:none;z-index:25";
+  popup.className = "ysm-preview-menu cm-popup";
+  // 动态豁免(P1)：显隐由 showMenu/hideMenu 内联切 flex/none（core/roles.test 断言 style.display），初始 none 也须内联
+  popup.style.display = "none";
   overlay.appendChild(popup);
 
   const menu = createSlideMenu({ title: "", closeIcon: "✕" });
@@ -106,15 +125,14 @@ function buildPreviewMenuShell(
 /** [子函数 2/9] 行工厂（原 makeRow 闭包升格）：可选 chevron 箭头导航提示 */
 function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean }): HTMLElement {
   const row = document.createElement("div");
-  row.className = "ysm-preview-menu-row";
+  ensureCoreStyles();
+  row.className = "ysm-preview-menu-row cm-row";
   row.dataset.testid = "preview-" + node.id;
   if (node.legacyTestId) row.id = node.legacyTestId;
-  row.style.cssText =
-    "display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px";
   if (node.danger) row.style.color = "#ff7b7b";
   const ic = document.createElement("span");
   ic.textContent = node.icon ?? "";
-  ic.style.cssText = "font-size:15px;width:18px;text-align:center";
+  ic.className = "cm-row-icon";
   const lb = document.createElement("span");
   lb.textContent = tr(node.labelKey ?? node.id, node.fallback ?? node.id);
   row.append(ic, lb);
@@ -122,8 +140,7 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
     const chev = document.createElement("span");
     chev.textContent = ">";
     chev.dataset.testid = "row-chevron";
-    chev.style.cssText =
-      "margin-left:auto;font-size:13px;font-weight:700;opacity:0.4;user-select:none";
+    chev.className = "cm-row-chev";
     row.append(chev);
   }
   row.onmouseenter = (): void => {
@@ -259,7 +276,7 @@ export function renderPreviewPanel(
   } catch (err) {
     console.error("[preview-menu] renderPanel FAILED", node.id, err);
     const errRow = document.createElement("div");
-    errRow.style.cssText = "padding:8px 10px;color:#ff7b7b;font-size:12px";
+    errRow.className = "cm-error-note";
     errRow.textContent = `${tr("preview.renderFail", "Panel render failed")}: ${safeErrorMessage(err)}`;
     list.appendChild(errRow);
   }

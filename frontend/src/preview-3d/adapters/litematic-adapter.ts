@@ -14,7 +14,12 @@ import { overlayStyleRoot } from "../overlay-style-bridge.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import type { PreviewSnapshot } from "../state/preview-state.ts";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import type {
+  PreviewAdapter,
+  PreviewBuildCtx,
+  PreviewScene,
+  ScreenshotScene,
+} from "./mount-preview-core.ts";
 import { renderLoadingState } from "./preview-loading.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
 import { registerSchema, unregisterSchema } from "./schema-registry.ts";
@@ -86,7 +91,7 @@ async function mdLiLoadAndParseData(
   voxelCall: (path: string) => Promise<VoxelData | null>,
 ): Promise<MdLiLoadResult> {
   const data = await voxelCall(path);
-  if (!data || !data.groups || !data.groups.length) {
+  if (!data?.groups?.length) {
     ctx.loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>${t("preview.voxelEmpty")}</div>`;
     return { ok: false, earlyResult: { dispose() {} } };
   }
@@ -103,16 +108,16 @@ function mdLiSetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): MdLiSize
   const centerY = sizeY / 2;
   const centerZ = sizeZ / 2;
   const maxDim = Math.max(sizeX, sizeY, sizeZ, 10);
-  ctx.camera!.position.set(centerX + maxDim * 1.5, centerY + maxDim, centerZ + maxDim * 1.5);
-  ctx.camera!.lookAt(centerX, centerY, centerZ);
-  ctx.controls!.target.set(centerX, centerY, centerZ);
+  ctx.camera?.position.set(centerX + maxDim * 1.5, centerY + maxDim, centerZ + maxDim * 1.5);
+  ctx.camera?.lookAt(centerX, centerY, centerZ);
+  ctx.controls?.target.set(centerX, centerY, centerZ);
   ctx.controls!.minDistance = 1;
   ctx.controls!.maxDistance = maxDim * 8;
-  ctx.controls!.update();
+  ctx.controls?.update();
   const gridSize = Math.ceil(maxDim / 10) * 10;
   const grid = new THREE.GridHelper(gridSize, Math.min(gridSize, 50), 0x6666aa, 0x444488);
   grid.position.set(centerX, 0, centerZ);
-  ctx.scene!.add(grid);
+  ctx.scene?.add(grid);
   return {
     sizeX,
     sizeY,
@@ -161,7 +166,7 @@ function mdLiBuildBlockMesh(
 ): LitematicMeshSet {
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
   const modelGroup = new THREE.Group();
-  ctx.scene!.add(modelGroup);
+  ctx.scene?.add(modelGroup);
   registerModelRoot(modelGroup);
   const instancedMeshes: Array<THREE.InstancedMesh> = [];
   const materials: Array<THREE.MeshLambertMaterial> = [];
@@ -169,7 +174,7 @@ function mdLiBuildBlockMesh(
   for (const group of data.groups ?? []) {
     const gMeshes: Array<{ mesh: THREE.InstancedMesh; ck: number }> = [];
     groupMeshes.push(gMeshes);
-    if (!group.positions || !group.positions.length) continue;
+    if (!group.positions?.length) continue;
     const chunkMap = new Map<number, number[][]>();
     for (let i = 0; i < group.positions.length; i++) {
       const p = group.positions[i];
@@ -226,7 +231,7 @@ function mdLiApplyLayer(
   const lo = shell.layerVal - 1;
   const hi = shell.layerVal2 > shell.layerVal ? shell.layerVal2 : shell.layerVal;
   for (let g = 0; g < (rawGroups ?? []).length; g++) {
-    const positions = rawGroups![g].positions;
+    const positions = rawGroups?.[g].positions;
     const meshes = groupMeshes[g] ?? [];
     for (const { mesh, ck } of meshes) {
       let count = 0;
@@ -429,18 +434,21 @@ function mdLiShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
   const w = document.createElement("div");
   w.className = "mdli-trunc-warn";
   const max = data.maxBlocks || FALLBACK_MAX_BLOCKS;
-  w.textContent = "⚠️ " + t("preview.blockLimit", { max: max.toLocaleString() });
+  w.textContent = `⚠️ ${t("preview.blockLimit", { max: max.toLocaleString() })}`;
   ctx.overlay.insertBefore(w, ctx.overlay.children[1]);
 }
 
 // ===== 阶段⑤：PreviewScene 句柄装配 =====
+// ADR-178 试点迁移（2026-09-04）：返回类型从 PreviewScene 收窄为 ScreenshotScene——
+// litematic 是纯静态渲染 + 截图能力，无 update/applyPose/camera 控制；结构类型下
+// ScreenshotScene 返回值可赋给 PreviewScene（其余字段可选），消费方零改动。
 
 function mdLiBuildResult(
   ctx: PreviewBuildCtx,
   meshSet: LitematicMeshSet,
   menuItems: PreviewMenuNode[],
   sliceKey: string,
-): PreviewScene {
+): ScreenshotScene {
   return {
     menuItems,
     dispose(): void {
@@ -451,8 +459,12 @@ function mdLiBuildResult(
       ctx.scene?.remove(meshSet.modelGroup);
       ctx.scene?.remove(meshSet.grid);
       unregisterModelRoot(meshSet.modelGroup);
-      meshSet.instancedMeshes.forEach((m) => safeDispose(m));
-      meshSet.materials.forEach((m) => safeDispose(m));
+      meshSet.instancedMeshes.forEach((m) => {
+        safeDispose(m);
+      });
+      meshSet.materials.forEach((m) => {
+        safeDispose(m);
+      });
       meshSet.boxGeo.dispose();
       safeDispose(meshSet.grid);
     },

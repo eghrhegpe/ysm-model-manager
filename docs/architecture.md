@@ -504,7 +504,7 @@ mount3D(adapter, path, opts?)
   └── requestAnimationFrame 循环 ← 每帧 update(dt) 驱动动态部分
 ```
 
-**契约接口**：`PreviewBuildCtx`（外壳句柄 + `menu: PreviewMenuHandle` 注册通道）、`PreviewScene`（`update`/`dispose`/`resetCamera`/`extraControls`…）、`PreviewAdapter`（`id`/`mode`/`build`/`onClose`）、`PreviewHandle`。
+**契约接口**：`PreviewBuildCtx`（外壳句柄 + `menu: PreviewMenuHandle` 注册通道）、`PreviewScene`（内容层契约，2026-09-04 ADR-178 拆为能力分层：`BaseScene`（dispose 硬契约 + 数据字段）+ `UpdateableScene`/`ScreenshotScene`/`CameraControlScene`/`GroupedScene`/`SemanticScene`/`PoseScene` 能力接口；`PreviewScene` 保留为兼容别名）、`PreviewAdapter`（`id`/`mode`/`build`/`onClose`）、`PreviewHandle`。
 
 **会话内切换**：`switchPreview(path)` 复用外壳重建内容层（ADR-066 §5.6）；`switchPreview(path, { keepInScene: true })` 同台追加多模型。
 

@@ -12,13 +12,13 @@ import { cancelPendingEncodings } from "./mmd-ktx2-encoder.ts";
 import { disposeMmdMesh, mmdDiag } from "./mmd-shared.ts";
 import type { MdMmStage6bCtx, MdMmStage6Ctx } from "./mmd-types.ts";
 import { applyVPDToMesh } from "./mmd-vpd-mesh.ts";
-import type { PreviewScene } from "./mount-preview-core.ts";
+import type { ScreenshotScene, SemanticScene, UpdateableScene } from "./mount-preview-core.ts";
 
 export function mdMmStage6Result(
   c: MdMmStage6Ctx,
   s5: ReturnType<typeof mdMmStage5Menu>,
   tStart: number,
-): PreviewScene {
+): UpdateableScene & ScreenshotScene & SemanticScene {
   const {
     semanticBones,
     semanticMorphs,
@@ -32,7 +32,12 @@ export function mdMmStage6Result(
     items,
   } = s5;
   let lipSyncTime = s5.lipSyncTime;
-  const result: PreviewScene = {
+  // ADR-178（2026-09-04）：result 类型 = 能力组合 + applyPose 可选扩展——
+  // applyPose 条件提供（无 VPD 时为 undefined）不进静态组合，作为扩展字段保留；
+  // 返回类型组合（无 applyPose）是 result 的父类型，窄赋宽合法。
+  const result: UpdateableScene &
+    ScreenshotScene &
+    SemanticScene & { applyPose?: ((index: number) => void) | undefined } = {
     menuItems: items,
     update: (dt: number): void => {
       // #9 全局暂停标志：动画激活（action 存在且未暂停）时感知 controller 全部静默，

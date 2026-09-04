@@ -108,22 +108,22 @@ export interface PreviewBuildCtx {
  * - 新增适配器：dispose 必须实现；其余按格式能力"有就实现、没有就不实现"，勿为凑
  *   字段数补空实现（空 update 是噪音，不是契约完整）。
  */
-export interface PreviewScene {
-  /** 每帧驱动（VRM SpringBone / 动画等）；无则仅静态渲染 */
-  update?(dt: number): void;
-  /** 释放内容层 GPU 资源（几何/材质/纹理/helper）——硬契约，cleanup 无条件调用 */
+/**
+ * 能力分层接口（ADR-178，2026-09-04）：把单接口 + 大量可选字段拆为
+ * 「BaseScene（硬契约）+ 能力接口」——adapter 用结构类型声明自己实现哪些能力，
+ * 消费方按需收窄，编译期表达「该格式支持什么」，替代 `?.` 特性探测的隐式约定。
+ *
+ * 设计原则（ADR-178 §2）：
+ * - dispose 是唯一硬契约；其余能力按「有就 implements、没有就不 implements」；
+ * - 数据字段（boneMaps/menuItems/keepInScene/onBonePick/semanticBones）留在 BaseScene——
+ *   它们是内容层元数据不是方法能力，消费方（scene-registry/菜单）对任意格式读取；
+ * - PreviewScene 保留为组合别名（= BaseScene + 全部可选能力字段的并集形态），
+ *   存量 adapter 返回类型标注渐进迁移，不一次性改 6 格式。
+ */
+
+/** 内容层硬契约：释放 GPU 资源（几何/材质/纹理/helper）——cleanup 无条件调用，缺失即泄漏 */
+export interface BaseScene {
   dispose(): void;
-  resetCamera?(): void;
-  setRotationMode?(orbit: boolean): void;
-  setSpeed?(n: number): void;
-  showModelGroup?(i: number): void;
-  onBoneSelect?(info: BoneSelectInfo): void;
-  /** 语义骨骼映射（语义骨骼层消费方读取；无 = 该格式不接入语义层，消费方降级） */
-  semanticBones?: SemanticBoneMap | undefined;
-  /** 应用 VPD 姿势（MMD 专属；无 = 该格式不支持） */
-  applyPose?: ((index: number) => void) | undefined;
-  /** 截取当前 3D 渲染画面；PNG base64，无 data: 前缀—— ADR-052 P3 通用化 */
-  screenshot?(): Promise<string | null>;
   /** 同台追加模式：true 表示不替换 scene，改为将模型 add 到已有场景（多模型同框） */
   keepInScene?: boolean;
   /** 骨骼映射（dispatch 拾取归属用，ADR-093 T5；未接入格式不返回） */
@@ -132,6 +132,57 @@ export interface PreviewScene {
   menuItems?: PreviewMenuNode[] | null;
   /** 多模型下由统一拾取器调用：点中该模型骨骼时打开其面板（ADR-093 T5） */
   onBonePick?: (boneId: string) => void;
+}
+
+/** 动态内容能力：每帧驱动（VRM SpringBone / 动画等）；无则仅静态渲染 */
+export interface UpdateableScene extends BaseScene {
+  update(dt: number): void;
+}
+
+/** 截图能力：截取当前 3D 渲染画面；PNG base64，无 data: 前缀（ADR-052 P3 通用化） */
+export interface ScreenshotScene extends BaseScene {
+  screenshot(): Promise<string | null>;
+}
+
+/** 相机控制能力（resetCamera / setRotationMode / setSpeed 按格式能力实现） */
+export interface CameraControlScene extends BaseScene {
+  resetCamera?(): void;
+  setRotationMode?(orbit: boolean): void;
+  setSpeed?(n: number): void;
+  /** 骨骼选中回调（骨骼面板联动；无 = 格式不接入骨骼选择） */
+  onBoneSelect?(info: BoneSelectInfo): void;
+}
+
+/** 模型分组能力：按组显隐（litematic 分层切片等） */
+export interface GroupedScene extends BaseScene {
+  showModelGroup?(i: number): void;
+}
+
+/** 语义骨骼能力：语义骨骼映射供语义层消费（无 = 该格式不接入语义层） */
+export interface SemanticScene extends BaseScene {
+  semanticBones?: SemanticBoneMap | undefined;
+}
+
+/** 姿势应用能力（VPD 姿势，MMD 专属；无 = 该格式不支持） */
+export interface PoseScene extends BaseScene {
+  applyPose?(index: number): void;
+}
+
+/**
+ * 内容场景契约（兼容别名，ADR-178 渐进迁移期保留）：
+ * = BaseScene + 全部可选能力。存量 adapter 返回类型仍可标 PreviewScene；
+ * 新 adapter 建议标具体组合（如 `UpdateableScene & ScreenshotScene`）。
+ */
+export interface PreviewScene extends BaseScene {
+  update?(dt: number): void;
+  resetCamera?(): void;
+  setRotationMode?(orbit: boolean): void;
+  setSpeed?(n: number): void;
+  showModelGroup?(i: number): void;
+  onBoneSelect?(info: BoneSelectInfo): void;
+  semanticBones?: SemanticBoneMap | undefined;
+  applyPose?: ((index: number) => void) | undefined;
+  screenshot?(): Promise<string | null>;
 }
 
 export interface PreviewAdapter {

@@ -2,25 +2,30 @@
 // ADR-040 按职责切文件：1063 行巨型 initSettings 拆分——路径卡片/高级面板/检测 → path-cards.ts，
 // 主题 → theme.ts，3D 键位 → keymap.ts，UI 偏好 → ui-prefs.ts，共享状态 → store.ts。
 // 本文件保留为编排壳：加载 cfg/registry → 调用各模块初始化 → 组装其余事件绑定骨架。
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { bus } from "../../../bus.ts";
+
 import { getApp } from "../../../backend/app.ts";
+import {
+  getFsaAuthState,
+  rescanFsaRoot,
+  selectLocalRepo,
+} from "../../../backend/browser-adapter.ts";
 import { isWebPlatform } from "../../../backend/platform-web.ts";
-import { loadResourceRegistry } from "../../../services/resource-registry.ts";
-import { safeGet } from "../../../utils/dom/storage.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { isViewerMode } from "../../../utils/dom/android-bridge.ts";
+import { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
-import { selectLocalRepo, getFsaAuthState, rescanFsaRoot } from "../../../backend/browser-adapter.ts";
-import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
+import { loadResourceRegistry } from "../../../services/resource-registry.ts";
+import { isViewerMode } from "../../../utils/dom/android-bridge.ts";
+import { friendlyError } from "../../../utils/dom/errors.ts";
+import { safeGet } from "../../../utils/dom/storage.ts";
+import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { GH_RELEASES } from "../../../utils/gh-links.ts";
-import { bindPathClick, saveCfg, initAdvancedGrid, initMcDetect } from "./path-cards.ts";
+import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
+import { initKeymap } from "./keymap.ts";
+import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
+import { cfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
 import { initThemeSection } from "./theme.ts";
 import { initUiPrefs } from "./ui-prefs.ts";
 import { initWorkerPrefs } from "./worker-prefs.ts";
-import { initKeymap } from "./keymap.ts";
-import { resetSettingsStore, cfg, isBusy, setBusy, toastError } from "./store.ts";
 
 // 高级面板折叠动画时长（ms）——与 CSS 过渡时长一致（魔法数值收敛）
 const ADV_COLLAPSE_MS = 200;
@@ -42,8 +47,7 @@ function stgBindMirrorSelect(
     mirrorSelect.addEventListener("change", async () => {
       const val = mirrorSelect.value;
       try {
-        const { SetDownloadMirror } =
-          await getApp();
+        const { SetDownloadMirror } = await getApp();
         await SetDownloadMirror(val);
         bus.emit("toast:show", {
           msg: t("settings.mirror.switched", {
@@ -75,7 +79,9 @@ function stgBindUpdateInterval(
 ): void {
   const updateCheckSelect = root.getElementById("set-update-check") as HTMLSelectElement | null;
   if (updateCheckSelect) {
-    updateCheckSelect.value = String(cfgLocal.updateCheckIntervalMs == null ? 21600000 : cfgLocal.updateCheckIntervalMs);
+    updateCheckSelect.value = String(
+      cfgLocal.updateCheckIntervalMs == null ? 21600000 : cfgLocal.updateCheckIntervalMs,
+    );
     updateCheckSelect.addEventListener("change", async () => {
       try {
         const { SaveThresholds } = await getApp();
@@ -117,15 +123,15 @@ function stgBindLinkMode(
     setBusyLocal(true);
     let failed = 0;
     try {
-      const {
-        LoadAppConfig,
-        ListVersionInstances,
-        RelinkAllInstanceResources,
-      } = await getApp();
+      const { LoadAppConfig, ListVersionInstances, RelinkAllInstanceResources } = await getApp();
       const cfg2 = await LoadAppConfig();
       const mcRoot = cfg2.mcRoot || "";
       if (!mcRoot) {
-        bus.emit("toast:show", { msg: t("settings.setGameRootFirst"), duration: TOAST_MS.info, type: "warn" });
+        bus.emit("toast:show", {
+          msg: t("settings.setGameRootFirst"),
+          duration: TOAST_MS.info,
+          type: "warn",
+        });
         return;
       }
       const instances = (await ListVersionInstances(mcRoot)) || [];
@@ -142,16 +148,18 @@ function stgBindLinkMode(
       bus.emit("stats:refresh");
       if (total === 0) {
         bus.emit("toast:show", {
-          msg: failed > 0 ? `⚠️ ${t("settings.relinkFailed", { failed })}` : t("settings.relinkNone"),
+          msg:
+            failed > 0 ? `⚠️ ${t("settings.relinkFailed", { failed })}` : t("settings.relinkNone"),
           duration: TOAST_MS.normal,
           type: failed > 0 ? "error" : "info",
         });
         return;
       }
       bus.emit("toast:show", {
-        msg: failed > 0
-          ? t("settings.relinkDonePartial", { total, failed })
-          : t("settings.relinkDone", { total }),
+        msg:
+          failed > 0
+            ? t("settings.relinkDonePartial", { total, failed })
+            : t("settings.relinkDone", { total }),
         duration: TOAST_MS.normal,
         type: "success",
       });
@@ -204,8 +212,7 @@ function stgBindLinkMode(
 
 async function stgBindShowVersion(root: ShadowRoot): Promise<void> {
   try {
-    const { CurrentVersion } =
-      await getApp();
+    const { CurrentVersion } = await getApp();
     const ver = await CurrentVersion();
     const el = root.getElementById("set-version");
     if (el) el.textContent = ver;
@@ -258,10 +265,7 @@ async function stgBindLangSwitch(
   }
 }
 
-function stgBindWebFsa(
-  root: ShadowRoot,
-  isWebPlatformFn: typeof isWebPlatform,
-): void {
+function stgBindWebFsa(root: ShadowRoot, isWebPlatformFn: typeof isWebPlatform): void {
   const webRepoBtn = root.getElementById("web-repo-auth-btn") as HTMLButtonElement | null;
   const webRepoStatus = root.getElementById("web-repo-auth-status");
   if (webRepoBtn && isWebPlatformFn()) {
@@ -273,7 +277,10 @@ function stgBindWebFsa(
         } else if (state === "granted") {
           const r = await rescanFsaRoot();
           if (webRepoStatus) {
-            webRepoStatus.textContent = t("settings.webRepo.restored").replace("{imported}", String(r.imported));
+            webRepoStatus.textContent = t("settings.webRepo.restored").replace(
+              "{imported}",
+              String(r.imported),
+            );
           }
           bus.emit("repo:rtype-changed", RESOURCE_TYPES.YSM);
         }
@@ -312,11 +319,7 @@ function stgBindWebFsa(
  * @param root - 组件 shadow root
  */
 export async function initSettings(root: ShadowRoot): Promise<void> {
-  const {
-    LoadAppConfig,
-    SaveAppConfig,
-    SetLinkMode,
-  } = await getApp();
+  const { LoadAppConfig, SaveAppConfig, SetLinkMode } = await getApp();
   void SaveAppConfig;
   void SetLinkMode;
   const cfgLoaded = await LoadAppConfig();
@@ -326,7 +329,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   const refreshAdvanced = initAdvancedGrid(root, reg);
 
   bindPathClick(
-    root, "set-mc-path",
+    root,
+    "set-mc-path",
     () => cfg.mcRoot || "",
     async (dir) => {
       await saveCfg({ mcRoot: dir });
@@ -335,7 +339,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   );
 
   bindPathClick(
-    root, "set-files-root",
+    root,
+    "set-files-root",
     () => cfg.filesRoot || "",
     async (dir) => {
       await saveCfg({ filesRoot: dir });
@@ -343,32 +348,30 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     refreshAdvanced,
   );
 
-  root
-    .getElementById("set-advanced-toggle")
-    ?.addEventListener("click", async () => {
-      const panel = root.getElementById("set-advanced-panel") as HTMLElement | null;
-      const btn = root.getElementById("set-advanced-toggle") as HTMLElement | null;
-      const card = root.getElementById("stg-files-card") as HTMLElement | null;
-      if (!panel || !btn || !card) return;
-      const isOpen = panel.classList.contains("adv-open");
-      if (isOpen) {
-        panel.classList.remove("adv-open");
-        panel.classList.add("adv-closing");
-        btn.textContent = t("settings.expand");
-        card.style.gridColumn = "";
-        setTimeout(() => {
-          panel.classList.remove("adv-closing");
-          panel.style.display = "none";
-        }, ADV_COLLAPSE_MS);
-      } else {
-        await refreshAdvanced();
-        panel.style.display = "block";
+  root.getElementById("set-advanced-toggle")?.addEventListener("click", async () => {
+    const panel = root.getElementById("set-advanced-panel") as HTMLElement | null;
+    const btn = root.getElementById("set-advanced-toggle") as HTMLElement | null;
+    const card = root.getElementById("stg-files-card") as HTMLElement | null;
+    if (!panel || !btn || !card) return;
+    const isOpen = panel.classList.contains("adv-open");
+    if (isOpen) {
+      panel.classList.remove("adv-open");
+      panel.classList.add("adv-closing");
+      btn.textContent = t("settings.expand");
+      card.style.gridColumn = "";
+      setTimeout(() => {
         panel.classList.remove("adv-closing");
-        panel.classList.add("adv-open");
-        btn.textContent = t("settings.collapse");
-        card.style.gridColumn = "1 / -1";
-      }
-    });
+        panel.style.display = "none";
+      }, ADV_COLLAPSE_MS);
+    } else {
+      await refreshAdvanced();
+      panel.style.display = "block";
+      panel.classList.remove("adv-closing");
+      panel.classList.add("adv-open");
+      btn.textContent = t("settings.collapse");
+      card.style.gridColumn = "1 / -1";
+    }
+  });
 
   refreshAdvanced();
   initMcDetect(root);

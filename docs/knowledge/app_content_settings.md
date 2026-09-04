@@ -21,7 +21,7 @@ auto_fields:
     - initKeymap
     - initMcDetect
     - initSettings
-    - initTheme
+    - initThemeSection
     - initUiPrefs
     - initWorkerPrefs
     - isBusy

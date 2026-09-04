@@ -2,10 +2,11 @@
 // ADR-044 策略 A：主题段读写统一走 utils/dom/storage.ts 的 safeGet/safeSet——
 // 隐私模式（存储禁用）下 localStorage 抛错会中断 initSettings、整页失效。
 // 原局部 themeGet/themeSet 收敛为共享工具（app-modules 启动链同源实现）。
-import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
+
 import { getApp } from "../../../backend/app.ts";
-import { cfg } from "./store.ts";
 import { applyTheme } from "../../../theme-core.ts";
+import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
+import { cfg } from "./store.ts";
 
 // 时间段主题边界（魔法数值收敛）：6:00–18:00 白天 warm，其余夜晚 cyber
 const DAY_START_HOUR = 6;
@@ -41,9 +42,18 @@ export function initThemeSection(root: ShadowRoot): void {
         void (async () => {
           try {
             const { SaveAppConfig } = await getApp();
-            await SaveAppConfig(cfg.filesRoot || "", cfg.resourcepackRoot || "", cfg.mcRoot || "", cfg.linkMode || "copy", themeName);
+            await SaveAppConfig(
+              cfg.filesRoot || "",
+              cfg.resourcepackRoot || "",
+              cfg.mcRoot || "",
+              cfg.linkMode || "copy",
+              themeName,
+            );
           } catch (e) {
-            console.warn("[settings] 主题保存到配置失败:", e); /* 保存失败不影响 UI 主题，但留痕便于排障 */
+            console.warn(
+              "[settings] 主题保存到配置失败:",
+              e,
+            ); /* 保存失败不影响 UI 主题，但留痕便于排障 */
           }
         })();
         // 关闭自动切换
@@ -68,13 +78,15 @@ export function initThemeSection(root: ShadowRoot): void {
         applyTheme("system");
         safeSet("theme", "system");
         // 更新卡片选中态
-        if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
+        if (themePicker)
+          themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       } else if (mode === "time") {
         // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
         // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
         const themeName = applyTimeTheme();
         safeSet("theme", themeName);
-        if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
+        if (themePicker)
+          themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       }
       // "off" 时不改变当前主题，等用户手动点卡片
     });

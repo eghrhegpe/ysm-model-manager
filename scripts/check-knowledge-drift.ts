@@ -37,22 +37,25 @@ import { PERF_TAGS, KNOWLEDGE_NON_CARDS, KNOWLEDGE_ORDER } from './_lib/knowledg
 import { parseArgs } from './_lib/parse-args.ts';
 import { stripBom, hasFrontmatterDelimiter, getUntrackedCards, missingRequiredCardFields } from './_lib/knowledge-common.ts';
 
-const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
-
 // 参数解析统一走 _lib/parse-args（positional 脚本契约：未知 flag 白名单拦截）
-const ARGS = parseArgs(process.argv.slice(2), { bools: ['json', 'verbose', 'quiet', 'affected'], strings: ['files'] });
+// --kc-dir：隔离模式，指向临时知识卡目录（契约测试用，避免临时卡污染 docs/knowledge/ 生成物）
+const ARGS = parseArgs(process.argv.slice(2), { bools: ['json', 'verbose', 'quiet', 'affected'], strings: ['files', 'kc-dir'] });
 if (ARGS.help) {
   console.log('用法: node scripts/check-knowledge-drift.ts [--json|--verbose|--affected <f>…|--quiet]');
   console.log('  --json      机读 JSON（doctor --docs 调用）');
   console.log('  --verbose   文本报告 + 未覆盖文件完整清单');
   console.log('  --affected <f>…  源码变更即列出受影响知识卡（配合 git diff --name-only）');
   console.log('  --quiet     仅 --affected 使用：只输出卡 stem，供钩子机读');
+  console.log('  --kc-dir <dir>  隔离模式：扫描指定目录而非 docs/knowledge/（契约测试打桩用）');
   process.exit(0);
 }
 if (ARGS.unknown.length) {
   console.error(`❌ 未知参数: ${ARGS.unknown.join(', ')}（--help 查看用法）`);
   process.exit(2);
 }
+// 知识卡目录：默认 docs/knowledge/；--kc-dir 覆盖为临时目录（隔离契约测试的临时卡，
+// 使其不被 gen-vitepress-sidebar / gen-knowledge-index 等生成器扫入 sidebar.gen.mjs 等产物）
+const KC_DIR = ARGS['kc-dir'] ? path.resolve(String(ARGS['kc-dir'])) : path.join(ROOT, 'docs', 'knowledge');
 const JSON_OUT = ARGS.json;
 const VERBOSE = ARGS.verbose;
 const AFFECTED_MODE = ARGS.affected;
@@ -578,7 +581,7 @@ function main() {
   // ADR-043 fail-closed：KC_DIR 缺失 = 扫描不完整，必须显式失败而非空结果假绿
   //（此前各 check 函数对缺失目录静默 return，errors 恒 0 → --check 假绿）
   if (!fs.existsSync(KC_DIR)) {
-    errors.push('docs/knowledge/ 目录不存在，扫描不完整');
+    errors.push(`知识卡目录不存在，扫描不完整: ${KC_DIR}`);
   }
   // 单遍遍历：readdir + read + parseFrontmatter 各一次，喂给全部检查器
   // 按 --files 裁剪（filesSet 存在时同时跳过未跟踪草稿，避免并行会话草稿卡阻断本次提交）

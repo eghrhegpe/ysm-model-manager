@@ -11,11 +11,12 @@
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 const ROOT = process.cwd();
 const SCRIPTS = path.join(ROOT, 'scripts');
-const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
+const KC_DIR = path.join(ROOT, 'docs', 'knowledge'); // 真实知识卡目录（仅供步骤 3 读 index.md，临时卡已隔离到 TMP_DIR）
 const NODE = process.execPath;
 const errors = [];
 
@@ -31,7 +32,12 @@ function ok(label, cond, detail = '') {
   else errors.push(`[${label}] ${detail}`);
 }
 
-const TMP_CARD = path.join(KC_DIR, 'zzz-perf-contract-tmp.md');
+// 隔离策略：临时卡写入系统临时目录（mkdtempSync），而非 docs/knowledge/。
+// 否则 gen-vitepress-sidebar / gen-knowledge-index 等生成器会 glob 到该卡，
+// 把它收进 sidebar.gen.mjs → 污染生成物、在 git 里反复出现。
+// 通过 check-knowledge-drift.ts --kc-dir 指向此临时目录实现隔离扫描。
+const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'ysm-perf-contract-'));
+const TMP_CARD = path.join(TMP_DIR, 'zzz-perf-contract-tmp.md');
 
 /** 生成临时测试卡 frontmatter（perf 行由调用方注入）。 */
 function writeTmpCard(perfBlock) {
@@ -65,7 +71,7 @@ let r;
 try {
   // 1. 词表内标签 → 放行
   writeTmpCard(['perf:', '  - cpu-bound', '  - concurrent']);
-  r = run('check-knowledge-drift.ts', '--json');
+  r = run('check-knowledge-drift.ts', '--json', '--kc-dir', TMP_DIR);
   const legalOut = r.stdout ? JSON.parse(r.stdout) : { errors: [] };
   ok(
     '词表内标签无 ERROR',
@@ -75,7 +81,7 @@ try {
 
   // 2. 词表外标签 → ERROR 提示词表
   writeTmpCard(['perf:', '  - warp-speed']);
-  r = run('check-knowledge-drift.ts', '--json');
+  r = run('check-knowledge-drift.ts', '--json', '--kc-dir', TMP_DIR);
   ok('非法标签退出码 1', r.status === 1, `status=${r.status}`);
   const badOut = r.stdout ? JSON.parse(r.stdout) : { errors: [] };
   ok(
@@ -84,7 +90,7 @@ try {
     `期望 ERROR 含卡名+perf+词表首项: ${badOut.errors.join('; ').slice(0, 300)}`
   );
 } finally {
-  if (fs.existsSync(TMP_CARD)) fs.unlinkSync(TMP_CARD);
+  if (fs.existsSync(TMP_DIR)) fs.rmSync(TMP_DIR, { recursive: true, force: true });
 }
 
 // 3. 索引渲染：性能画像汇总段 + 已知标注卡

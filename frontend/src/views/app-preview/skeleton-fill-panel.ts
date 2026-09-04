@@ -44,6 +44,7 @@ export function fill3DPanel(
   _model3d: PanelHandle,
   modelSel: HTMLSelectElement,
 ): () => void {
+  ensureSfpStyles();
   // 组件化统计 + 纹理（随 modelSel 切换；ADR-114 perComponent 专属/全局双向）
   const compTex = (spec as { componentTextures?: Record<string, string[]> }).componentTextures;
   const statsBox = mkTestDiv("model-stats");
@@ -77,12 +78,34 @@ export function fill3DPanel(
   };
 }
 
+// P1 批次7：skeleton-fill-panel 内联 cssText → 集中类（sfp- 前缀本文件私有，ensureSfpStyles
+// 幂等注入——fill3DPanel legacy 命令式入口调用；stat-section/stat-row 保持语义锚点类）
+let _sfpStylesInjected = false;
+function ensureSfpStyles(): void {
+  if (_sfpStylesInjected) return;
+  const style = document.createElement("style");
+  style.textContent = `
+/* skeleton-fill-panel 集中样式（P1 批次7：cssText→类）。sec 边框变体拆 .sfp-sec-bordered。 */
+.stat-section.sfp-sec {
+  font-weight: 600; color: rgba(255,255,255,0.9); font-size: 11px;
+  margin-top: 0; margin-bottom: 4px; border-top: none; padding-top: 0;
+}
+.stat-section.sfp-sec-bordered { margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px; }
+.sfp-irow { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.6); padding: 1px 0; }
+.sfp-trow { display: flex; justify-content: space-between; gap: 6px; align-items: center; font-size: 10px; color: rgba(255,255,255,0.7); padding: 1px 0; }
+.sfp-trow-left { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sfp-trow-right { flex-shrink: 0; color: rgba(255,255,255,0.5); }
+.sfp-cap { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.6); padding: 1px 0; margin-bottom: 2px; }
+`;
+  document.head.appendChild(style);
+  _sfpStylesInjected = true;
+}
+
 // ===== 内部辅助（从 skeleton-render.ts 复用）=====
 function sec(label: string, border = true): HTMLDivElement {
   const d = document.createElement("div");
-  d.className = "stat-section";
+  d.className = "stat-section sfp-sec" + (border ? " sfp-sec-bordered" : "");
   d.dataset.testid = "stat-section";
-  d.style.cssText = `font-weight:600;color:rgba(255,255,255,0.9);font-size:11px;margin-top:${border ? "12px" : "0"};margin-bottom:4px;border-top:${border ? "1px solid rgba(255,255,255,0.1)" : "none"};padding-top:${border ? "6px" : "0"}`;
   d.textContent = label;
   return d;
 }
@@ -90,7 +113,6 @@ function iRow(k: string, v: string): HTMLDivElement {
   const d = document.createElement("div");
   d.className = "stat-row";
   d.dataset.testid = "stat-" + k.toLowerCase();
-  d.style.cssText = "display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.6);padding:1px 0";
   // k/v 经 textContent 注入（innerHTML 拼接会把骨骼名/统计值中的
   // <>& 当 HTML 解析——注入/破版风险），span 样式保留（对齐 vrm-bone-ui field()）
   const kSpan = document.createElement("span");
@@ -113,13 +135,13 @@ function texRow(
 ): HTMLDivElement {
   const d = document.createElement("div");
   d.dataset.testid = "tex-row";
-  d.style.cssText = "display:flex;justify-content:space-between;gap:6px;align-items:center;font-size:10px;color:rgba(255,255,255,0.7);padding:1px 0";
+  d.className = "sfp-trow";
   const left = document.createElement("span");
-  left.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0";
+  left.className = "sfp-trow-left";
   left.textContent = name;
   d.appendChild(left);
   const right = document.createElement("span");
-  right.style.cssText = "flex-shrink:0;color:rgba(255,255,255,0.5)";
+  right.className = "sfp-trow-right";
   const declT = opt.decl ?? "?";
   if (opt.ex) {
     // 专属纹理无单独加载位图句柄 → 只给声明尺寸，避免「专属」看不出大小
@@ -191,7 +213,7 @@ function fillPanelComponent(
   // 当前组件绑定摘要行
   const cap = document.createElement("div");
   cap.dataset.testid = "tex-binding";
-  cap.style.cssText = "display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.6);padding:1px 0;margin-bottom:2px";
+  cap.className = "sfp-cap";
   texBox.appendChild(cap);
 
   // 组件专属纹理（componentTextures 命中 → 本地槽，不占全局切换）

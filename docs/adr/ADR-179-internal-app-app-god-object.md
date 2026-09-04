@@ -58,6 +58,15 @@
 
 **已知遗留**：委托方法在全部域搬迁完成后是否清理，由各域完成后视 Wails 绑定生成行为再定（见知识卡）。
 
+### 范围澄清（2026-09-04 实测补充）
+日志子域（`app_install_log.go` 的 `AddImportLog/AddOpLog/GetImportLogs/ClearImportLogs/GetRuntimeLogs/ClearRuntimeLogs`）经依赖面复核，操作的 `a.logger` / `a.runtimeLogs` 是 **App 级共享日志基础设施**（watcher、sync、download 等全包写入，非 install 域私有状态）。若迁 `install` 包，需 `Manager` 持有 logger 副本而 `App` 仍须保留该字段——属伪切分，且违背「单一事实源 / 不推倒重来」。故**日志不纳入 install 收编清单**，留 `App` 包作为共享能力。
+
+install 域实际收编结果：
+- ✅ `queue`（P0，下载队列，纯逻辑零耦合）
+- ✅ `linkMode`（P1，状态 + 持久化经 ConfigDeps 闭包单向注入）
+- ✅ `launcher`（P1，纯函数转发）
+- ⏸ `import` / `recycle` / `instance`：跨界重域（同时碰 config / scan / bindings），单独立项，不在本次机械切分范围
+
 ## 4. 数据溯源
 
 2026-09-04 Go 端审查（Explore 子代理实测 + 主模型抽查）：internal/app 文件清单 Glob（70+ .go）、`go/**/*_test.go` ~96 个、`log.Fatal|panic(` grep 生产代码 0 命中、`App` 结构体 app.go:40 起约 42 字段。评分 7.5/10，P1 即本 ADR 主题。

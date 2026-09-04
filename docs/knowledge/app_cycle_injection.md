@@ -22,9 +22,7 @@ auto_fields:
     - App.ServiceStartup
     - App.SetApp
     - App.SetMainWindow
-    - DownloadQueue
     - NewApp
-    - NewDownloadQueue
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

@@ -134,9 +134,7 @@ auto_fields:
     - App.ToggleModelEnable
     - App.ValidateMinecraftDir
     - App.ValidateWorkshopSites
-    - DownloadQueue
     - NewApp
-    - NewDownloadQueue
     - ReadFileMeta
 quick_groups:
   - 后端桥接与数据存储

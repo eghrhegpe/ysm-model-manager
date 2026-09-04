@@ -18,7 +18,6 @@ auto_fields:
     - Downloader.FromGitHubAPI
     - Downloader.FromGitHubAPIWithChecksum
     - Downloader.WithRetry
-    - DownloadQueue
     - ErrChecksumMismatch
     - ErrNonBinaryContentType
     - ErrPartialResponse
@@ -29,7 +28,6 @@ auto_fields:
     - HTTPStatusError
     - HTTPStatusError.Error
     - New
-    - NewDownloadQueue
     - NewWithClient
     - ProgressFn
     - ResolveSavePath

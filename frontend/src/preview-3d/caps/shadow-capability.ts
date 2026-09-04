@@ -18,44 +18,14 @@ import {
   restoreState,
 } from "./scene-capability.ts";
 import type { LightCapability } from "./light-capability.ts";
+// 状态/序列化轴（ShadowParams / 默认值 / 预设表 / 模型映射）已下沉 shadow-state.ts；
+// 此处透传导出，保持既有调用方（shadow-capability.test.ts 等）的 import 路径不破坏。
+import { DEFAULT_SHADOW_PARAMS, SHADOW_PRESETS, SHADOW_PRESET_BY_MODEL } from "./shadow-state.ts";
+import type { ShadowParams } from "./shadow-state.ts";
+export { DEFAULT_SHADOW_PARAMS, SHADOW_PRESETS };
+export type { ShadowParams };
 
-/* ============ 参数类型 ============ */
-
-export interface ShadowParams {
-  /** 阴影总开关（默认 false：性能优先） */
-  enabled: boolean;
-  /** 阴影类型：hard（BasicShadowMap 硬阴影）/ soft（PCFSoftShadowMap 软阴影） */
-  type: "hard" | "soft";
-  /** shadow map 分辨率（方向灯/聚光灯共用），越大越清晰 */
-  mapSize: number;
-  /** shadow acne 修复（负值，越大越抑制 acne 但易产生 Peter-Panning） */
-  bias: number;
-  /** 法线偏移（防止阴影缝合面漏光/漏阴） */
-  normalBias: number;
-  /** 方向灯 shadow camera（正交）视锥大小，± 值；越大覆盖范围越广但精度下降 */
-  cameraSize: number;
-}
-
-export const DEFAULT_SHADOW_PARAMS: ShadowParams = {
-  enabled: false,
-  type: "hard",
-  mapSize: 1024,
-  bias: -0.0005,
-  normalBias: 0.02,
-  cameraSize: 15,
-};
-
-/** 预设（setPreset 套用到不同模型类别） */
-export const SHADOW_PRESETS: Record<string, Partial<ShadowParams> | undefined> = {
-  default: { type: "hard" },
-  // v1.14: 启用 enabled:true；建筑类仍保持关闭以省 GPU
-  prop: { enabled: true, type: "soft", mapSize: 2048, cameraSize: 10 },
-  small: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 12 },
-  architecture: { enabled: false, type: "hard", mapSize: 1024, cameraSize: 40 },
-  scene: { enabled: false, type: "hard", mapSize: 1024, cameraSize: 30 },
-  character: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 15 },
-  creature: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 18 },
-};
+/* ============ 菜单控件 ============ */
 
 const MAP_SIZE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "512", label: "512（性能优先）" },
@@ -138,21 +108,6 @@ function shcBuildQuality(cap: ShadowCapability): MenuControlDef[] {
   ];
 }
 
-/** 预设与模型类别的映射（无则落回 default） */
-const PRESET_BY_MODEL: Record<string, keyof typeof SHADOW_PRESETS> = {
-  // 角色别名→character preset (soft shadow + 1024 res)
-  mmd: "character",
-  vrm: "character",
-  ysm: "character",
-  litematic: "character",
-  prop: "prop",
-  small: "small",
-  architecture: "architecture",
-  scene: "scene",
-  character: "character",
-  creature: "creature",
-};
-
 /* ============ 快照类型：dispose 还原灯与 mesh 的原 shadow 状态 ============ */
 
 interface LightShadowSnapshot {
@@ -233,7 +188,7 @@ export class ShadowCapability implements SceneCapability {
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
   setPreset(adapterId: string): void {
     if (this.isStateLoaded) return;
-    const presetKey = PRESET_BY_MODEL[adapterId] ?? "default";
+    const presetKey = SHADOW_PRESET_BY_MODEL[adapterId] ?? "default";
     const preset = SHADOW_PRESETS[presetKey] ?? SHADOW_PRESETS.default;
     if (!preset) return;
     Object.assign(this.params, preset);

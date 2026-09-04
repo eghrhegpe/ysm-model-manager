@@ -2,7 +2,10 @@
 /**
  * check-biome-lines.ts — Biome 行级增量闸(2026-09-04,A4 落地)。
  *
- * 为何存在(补 check-biome.ts 的结构性盲区):
+ * 依赖:node:fs / node:path / ./_lib/(git-hunks.ts、proc.ts、scan-files.ts);
+ *   外部:git、biome CLI(frontend/node_modules/.bin/biome)。
+ *
+ * 设计意图(为何存在,补 check-biome.ts 的结构性盲区):
  *   - check-biome.ts 默认走 `biome check --changed`,基准 = vcs.defaultBranch(main);
  *   - 本仓库「main 直提」工作流下,相对 main 的已提交差异恒空 → 该闸恒绿(实测 2026-09);
  *   - 基准换 origin/main 亦不可行:仓库 59 commits 未 push,存量 lint 债 885 条(299w+586i),
@@ -31,11 +34,30 @@
 import fs from "node:fs";
 import path from "node:path";
 import { addedLinesFromDiff } from "./_lib/git-hunks.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
 import { run } from "./_lib/proc.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
 const isWin = process.platform === "win32";
 const FRONTEND_DIR = path.join(ROOT, "frontend");
+
+// --json:CI/子代理结构化消费(human 输出静默;exit 语义不变:0 过 / 1 新增违规 / 2 判定失败)
+const args = parseArgs(process.argv.slice(2), { bools: ["json"] });
+const JSON_OUT = Boolean(args.json);
+const log = (m: string) => {
+  if (!JSON_OUT) console.log(m);
+};
+const logErr = (m: string) => {
+  if (!JSON_OUT) console.error(m);
+};
+const jsonExit = (code: number, payload: unknown): never => {
+  if (JSON_OUT) console.log(JSON.stringify(payload));
+  process.exit(code);
+};
+if (args.unknown.length > 0) {
+  logErr(`[check-biome-lines] 未知参数: ${args.unknown.join(", ")}`);
+  jsonExit(2, { _summary: { ok: false, error: `未知参数: ${args.unknown.join(", ")}` } });
+}
 
 /** staged frontend TS/TSX 文件(相对仓库根,如 frontend/src/views/a.ts)。 */
 function stagedFrontendFiles(): string[] {
@@ -48,8 +70,8 @@ function stagedFrontendFiles(): string[] {
     },
   );
   if (!r.ok) {
-    console.error(`[check-biome-lines] git diff --cached 失败: ${r.err}`);
-    process.exit(2);
+    logErr(`[check-biome-lines] git diff --cached 失败: ${r.err}`);
+    jsonExit(2, { _summary: { ok: false, error: `git diff --cached 失败: ${r.err}` } });
   }
   return r.out
     .split(/\r?\n/)
@@ -102,7 +124,9 @@ function parseBiomeDiags(jsonText: string): BiomeDiag[] {
   try {
     j = JSON.parse(jsonText) as typeof j;
   } catch (e) {
-    console.error(`[check-biome-lines] biome --reporter=json 输出解析失败(非 JSON?): ${String(e)}`);
+    const msg = `[check-biome-lines] biome --reporter=json 输出解析失败(非 JSON?): ${String(e)}`;
+    logErr(msg);
+    if (JSON_OUT) console.log(JSON.stringify({ _summary: { ok: false, error: msg } }));
     process.exit(2);
   }
   const out: BiomeDiag[] = [];
@@ -122,17 +146,17 @@ function parseBiomeDiags(jsonText: string): BiomeDiag[] {
 
 const staged = stagedFrontendFiles();
 if (staged.length === 0) {
-  console.log("[check-biome-lines] 无 staged frontend TS/TSX,行级闸跳过 ✅");
-  process.exit(0);
+  log("[check-biome-lines] 无 staged frontend TS/TSX,行级闸跳过 ✅");
+  jsonExit(0, { _summary: { ok: true, skipped: 0, reason: "no-staged" } });
 }
 
 const { clean, skipped } = filterClean(staged);
 for (const f of skipped) {
-  console.log(`  ⚠️ ${f} 含未暂存编辑,跳过行级闸(请手动 biome check 复查)`);
+  log(`  ⚠️ ${f} 含未暂存编辑,跳过行级闸(请手动 biome check 复查)`);
 }
 if (clean.length === 0) {
-  console.log("[check-biome-lines] 无干净 staged 文件,行级闸跳过 ✅");
-  process.exit(0);
+  log("[check-biome-lines] 无干净 staged 文件,行级闸跳过 ✅");
+  jsonExit(0, { _summary: { ok: true, skipped: skipped.length, reason: "no-clean" } });
 }
 
 const addedByFile = stagedAddedLines(clean);
@@ -145,7 +169,9 @@ const biomeBinCandidates = [
 ];
 const biomeBin = biomeBinCandidates.find((p) => fs.existsSync(p));
 if (!biomeBin) {
-  console.error("[check-biome-lines] biome 未安装(node_modules 缺失)——行级闸无法判定,显式拦截");
+  const msg = "[check-biome-lines] biome 未安装(node_modules 缺失)——行级闸无法判定,显式拦截";
+  logErr(msg);
+  if (JSON_OUT) console.log(JSON.stringify({ _summary: { ok: false, error: msg } }));
   process.exit(2);
 }
 const b = run(biomeBin, ["check", ...relFiles, "--reporter=json", "--diagnostic-level=warn"], {
@@ -166,6 +192,18 @@ for (const d of diags) {
 }
 
 if (addedViolations.length > 0) {
+  if (JSON_OUT) {
+    jsonExit(1, {
+      _summary: { ok: false, added: addedViolations.length },
+      violations: addedViolations.map((v) => ({
+        file: v.rel,
+        line: v.line,
+        severity: v.severity,
+        category: v.category,
+        message: v.message,
+      })),
+    });
+  }
   const byFile = new Map<string, BiomeDiag[]>();
   for (const v of addedViolations) {
     const list = byFile.get(v.rel) ?? [];
@@ -192,11 +230,12 @@ if (addedViolations.length > 0) {
 // 人类可读通过信息:顺带报告存量债规模(不阻断),让兄弟会话理解「为何没拦」。
 const totalWarn = diags.filter((d) => d.severity === "warning").length;
 const totalErr = diags.filter((d) => d.severity === "error").length;
-console.log(
+log(
   `[check-biome-lines] ✅ 本次提交无新增违规(staged ${clean.length} 文件;` +
     (totalErr + totalWarn > 0
-      ? `文件内存量债 ${totalErr + totalWarn} 处(非新增行,不拦)`
-      : "无违规"),
-  ")",
+      ? `文件内存量债 ${totalErr + totalWarn} 处(非新增行,不拦))`
+      : "无违规)"),
 );
-process.exit(0);
+jsonExit(0, {
+  _summary: { ok: true, staged: clean.length, skipped: skipped.length, violations: [] },
+});

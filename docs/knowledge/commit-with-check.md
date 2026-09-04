@@ -20,6 +20,7 @@ auto_fields:
     - normPath
     - parsePorcelain
     - PorcelainEntry
+    - resolvePorcelain
     - StageInput
 use_when:
   - commit-with-check

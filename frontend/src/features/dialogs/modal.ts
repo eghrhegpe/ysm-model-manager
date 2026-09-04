@@ -18,9 +18,9 @@ export const VIEW_TESTIDS: readonly string[] = [
 /** 关闭动画中标记（closeDlg 防重复触发）；WeakSet 随元素 GC 回收，不污染 HTMLElement 全局类型 */
 const _closingOverlays = new WeakSet<HTMLElement>();
 
-/** 可聚焦元素选择器 */
+/** 可聚焦元素选择器（裸 `tabindex` 无 = 匹配的是元素名 tabindex，全仓无此元素 → 死选择器，已移除；带值属性走 [tabindex] 分支） */
 const FOCUSABLE_SEL =
-  'button,input,select,textarea,tabindex,[tabindex]:not([tabindex="-1"]),a[href],summary';
+  'button,input,select,textarea,[tabindex]:not([tabindex="-1"]),a[href],summary';
 
 /**
  * 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面
@@ -332,7 +332,12 @@ export interface ModalConfirmOptions {
   okText?: string;
   danger?: boolean;
   width?: string;
-  /** 自定义 HTML 内容区（调用方负责转义；传入后替代 message 文本区，用于复杂布局弹窗） */
+  /**
+   * 自定义 HTML 内容区（传入后替代 message 文本区，用于复杂布局弹窗）。
+   * ⚠️ XSS 契约：本通道**不再转义**，调用方必须传入已完成 esc() 的内容——
+   * 任何用户可控数据（版本号/路径/文件名等）进 bodyHTML 前必须过 esc()。
+   * 存量调用方（version-updater.ts）已自律转义；新增调用方照此契约。
+   */
   bodyHTML?: string;
 }
 
@@ -519,7 +524,11 @@ export interface ModalPickerOptions {
   /** 标题下、列表上的说明文字 */
   subtitle?: string;
   items: ModalPickerItem[];
-  /** 列表下方自定义 HTML（调用方负责转义）；其中带 name 的表单控件值在关闭时聚合返回 */
+  /**
+   * 列表下方自定义 HTML；其中带 name 的表单控件值在关闭时聚合返回。
+   * ⚠️ XSS 契约：本通道**不再转义**，调用方必须传入已完成 esc() 的内容；
+   * 存量调用方（launcher-detect.ts）已自律转义，新增调用方照此契约。
+   */
   footerHTML?: string;
   cancelText?: string;
 }

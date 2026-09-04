@@ -146,7 +146,7 @@ quick_intents:
   - 3D 性能与内存预算审查
   - 页面生命周期审查（整 DOM 重建）
 quick_risk_lines:
-  - 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（rgba(124,131,255) 全仓 19 处待收编）
+  - 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（存量纯 rgba(124,131,255)/#7c83ff 已全收编；现存 #7c83ff 均为 var(--accent,#7c83ff) fallback 兜底，合规）
   - 页面切换必须 tab-panel 常驻 + active 切换，禁止整 DOM innerHTML 重建
   - 帧循环内禁止 new 对象分配，prealloc 复用是 3D 性能铁律（perception 是唯一站规则外的子系统）
 ---
@@ -194,7 +194,7 @@ quick_risk_lines:
 
 ## 不变量（锐评快照结论，非既有红线）
 
-- 样式一律走主题 token；硬编码品牌色（#7c83ff / rgba(124,131,255)）是待收编存量。
+- 样式一律走主题 token；硬编码品牌色（#7c83ff / rgba(124,131,255)）纯硬编码已全收编（2026-09-03 刀②）；现存 #7c83ff 均为 `var(--accent,#7c83ff)` fallback 兜底（变量未定义时才有值，合规）。
 - 页面切换常驻 + active 切换，禁止整 DOM 重建。
 - 帧循环内 prealloc 复用，禁止 new 对象分配（perception 需对齐 R1-P1-1）。
 ## 动刀进度（实施记录，2026-09-03 起）
@@ -206,6 +206,8 @@ quick_risk_lines:
   - **单面板挂载**：root 下同一时刻仅保留当前面板（其余从 DOM 分离、引用留缓存），root 内 id 天然唯一，页内 `host._root.getElementById` 无跨页冲突 → **无需页内查询作用域化**（省去 237 处 getElementById 改造）；
   - `lang:changed` 全量重建（低频可接受）；`disconnectedCallback` 清面板缓存防泄漏。
   - ⚠️ 与 ADR-163 的差异：ADR 写的是「tab-panel 常驻 + active 切换 + dedup 锁随页面实例化」，落地为「单面板挂载 + 缓存节点复用」，dedup 锁保持模块级（常驻后不再重复 init，锁问题自然消解）。ADR-163 决策方向仍成立，实施细节以本卡为准。
+- ✅ **刀④ web-spike 注入面转义**：`web-spike/main.ts` 的 `file.name` / 解码产物 `f.path` 原样拼入 `insertAdjacentHTML`（拖入 `<img onerror>` 文件名即注入）→ 统一 `esc()`。独立 spike 页无单测，改动极小。
+- ✅ **刀⑤ modal FOCUSABLE_SEL 死选择器**：`features/dialogs/modal.ts` 裸 `tabindex,`（无 `=` 匹配元素名而非属性，全仓无 `<tabindex>` 元素）移除；`trapFocus` 测试 4 例全绿，行为不变。
 
 ## 相关
 

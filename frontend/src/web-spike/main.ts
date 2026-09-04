@@ -4,6 +4,7 @@
 
 import { initI18n } from "../core/i18n/locale.ts";
 import { t } from "../core/i18n/t.ts";
+import { esc } from "../utils/dom/html.ts";
 import { summarizeDecoded } from "../utils/format/summarize.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 import { decodeYsmFileFromMemory, initYSMParser } from "../wasm/ysm-parser.ts";
@@ -42,7 +43,8 @@ fileInput.addEventListener("change", async () => {
 async function handle(file: File): Promise<void> {
   await i18nReady;
   out.innerHTML = "";
-  append(`📄 ${file.name}（${(file.size / 1024 / 1024).toFixed(2)} MB）`);
+  // 文件名/路径是用户可控或外部解码产物——凡进 innerHTML 必须过 esc()（治理不变量）
+  append(`📄 ${esc(file.name)}（${(file.size / 1024 / 1024).toFixed(2)} MB）`);
   try {
     append(t("web.wasmInit"));
     const ok = await initYSMParser();
@@ -67,7 +69,7 @@ async function handle(file: File): Promise<void> {
       <tr><td>${t("web.textureCount")}</td><td>${texCount}</td></tr></table>`);
     append("\n" + t("web.fileListTitle"));
     for (const f of files.slice(0, 40)) {
-      append(`  • ${f.path}（${f.data.byteLength} B）`);
+      append(`  • ${esc(f.path)}（${f.data.byteLength} B）`);
     }
     if (files.length > 40) append(`  … ${t("web.omitted", { n: files.length - 40 })}`);
   } catch (e) {

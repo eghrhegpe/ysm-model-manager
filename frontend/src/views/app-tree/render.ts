@@ -11,7 +11,7 @@ import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
 import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
-import { emptyHTML } from "./tpl.ts";
+import { emptyStateHTML } from "./tpl.ts";
 
 /** 树行高（虚拟滚动定高窗口，grid/list 两档；自 app-tree 原 virtual-scroll.ts 迁入） */
 export const ROW_H_GRID = 28;
@@ -417,14 +417,14 @@ export function renderTree(
   mode: RenderMode = "grid",
 ): void {
   if (!entries.length) {
-    container.innerHTML = emptyHTML("📁", t("tree.noModelFiles"));
+    container.innerHTML = emptyStateHTML("📁", t("tree.noModelFiles"));
     cleanupVirtualScroll(container);
     return;
   }
   const root = buildTree(entries, sort, search, filterPaths);
   const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
   if (!rows.length) {
-    container.innerHTML = emptyHTML("🔍", t("tree.noMatchFiles"));
+    container.innerHTML = emptyStateHTML("🔍", t("tree.noMatchFiles"));
     cleanupVirtualScroll(container);
     return;
   }

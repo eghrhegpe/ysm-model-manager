@@ -60,7 +60,7 @@ func waitMainExit(pid uint32, waitTimeout time.Duration) error {
 				return nil
 			}
 			if time.Now().After(deadline) {
-				return fmt.Errorf("等待主进程退出超时（%v），PID %d 状态未知: %v", waitTimeout, pid, err)
+				return fmt.Errorf("等待主进程退出超时（%v），PID %d 状态未知: %w", waitTimeout, pid, err)
 			}
 			time.Sleep(200 * time.Millisecond)
 			continue

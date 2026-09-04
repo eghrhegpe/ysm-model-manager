@@ -9,7 +9,7 @@ import { shortLabelOf } from "../../utils/resource/short-label.ts";
 import type { SyncManagerSelf } from "./index.ts";
 import { applyFilter, tabStatus } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
-import { containerHTML, emptyHTML, itemHTML, statusTabHTML, syncDirRowHTML } from "./tpl.ts";
+import { containerHTML, emptyHintHTML, itemHTML, statusTabHTML, syncDirRowHTML } from "./tpl.ts";
 
 export type SyncRenderSelf = SyncManagerSelf;
 
@@ -165,7 +165,7 @@ async function renderList(self: SyncRenderSelf, listEl: HTMLElement): Promise<vo
       self._statusFilter !== "all"
         ? t("syncManager.emptyFiltered", { status: statusLabels[self._statusFilter] || "" })
         : t("syncManager.emptyType");
-    listEl.innerHTML = emptyHTML(hint);
+    listEl.innerHTML = emptyHintHTML(hint);
     return;
   }
 

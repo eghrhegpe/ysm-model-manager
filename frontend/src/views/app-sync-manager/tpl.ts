@@ -227,10 +227,10 @@ export function itemHTML(item: SyncItem, index: number): string {
 }
 
 /**
- * 空状态 HTML
+ * 空状态 HTML（固定 📭 图标 + 提示文案）
  * @param msg 提示文案
  */
-export function emptyHTML(msg: string): string {
+export function emptyHintHTML(msg: string): string {
   return (
     '<div class="sm-empty" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base)">' +
     '<div style="font-size:20px">📭</div>' +

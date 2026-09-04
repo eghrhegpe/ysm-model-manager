@@ -64,7 +64,7 @@ export function footerHTML(): string {
 </div>`;
 }
 
-export function emptyHTML(icon: string, msg: string): string {
+export function emptyStateHTML(icon: string, msg: string): string {
   return `<div class="empty"><div class="big">${icon}</div>${msg}</div>`;
 }
 

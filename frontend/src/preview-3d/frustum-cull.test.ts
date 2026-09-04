@@ -10,6 +10,7 @@ import {
   isFrustumCullEnabled,
   setFrustumCullEnabled,
   restoreModelGroupsVisible,
+  markCullMatricesDirty,
 } from "./frustum-cull.ts";
 
 // Mock THREE 的 Frustum/Matrix4 以控制裁剪结果
@@ -105,6 +106,35 @@ describe("frustum-cull", () => {
     cam.lookAt(0, 0, 0);
     cullModelGroups(cam);
     expect(g.visible).toBe(true);
+  });
+
+  it("动静分治：静态帧跳过 updateWorldMatrix，置脏帧强制刷新（code review #4）", () => {
+    const g1 = makeGroup("a");
+    g1.position.set(0, 0, 0);
+    const g2 = makeGroup("b");
+    g2.position.set(10000, 10000, 10000);
+    const scene = new THREE.Scene();
+    scene.add(g1);
+    scene.add(g2);
+    registerModelRoot(g1);
+    registerModelRoot(g2);
+    const cam = makeCamera();
+    cam.position.set(0, 0, 5);
+    cam.lookAt(0, 0, 0);
+    // 首帧（注册置脏）→ 强制更新 + 裁剪，随后矩阵视为新鲜
+    cullModelGroups(cam);
+    expect(g1.visible).toBe(true);
+    expect(g2.visible).toBe(false);
+    // 静态帧：矩阵未变 → 不再强制 updateWorldMatrix
+    const uwSpy = vi.spyOn(g1, "updateWorldMatrix");
+    cullModelGroups(cam);
+    expect(uwSpy).not.toHaveBeenCalled();
+    expect(g1.visible).toBe(true);
+    // 有 perFrame 动画的帧（render-loop 置脏）→ 恢复强制刷新
+    markCullMatricesDirty();
+    cullModelGroups(cam);
+    expect(uwSpy).toHaveBeenCalled();
+    uwSpy.mockRestore();
   });
 
   it("single-model preview skips recursive group bounds and uses mesh culling", () => {

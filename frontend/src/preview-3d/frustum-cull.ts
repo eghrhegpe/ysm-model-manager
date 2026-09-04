@@ -14,9 +14,28 @@ const _vec = new THREE.Vector3();
 /** 需要裁剪的模型根节点列表（adapter 在 scene.add 时注册） */
 const modelRoots: THREE.Object3D[] = [];
 
+// ===== 矩阵新鲜度标记（code review #4：每帧双重全树矩阵更新）=====
+// expandBoxVisible 原每帧对每个根 updateWorldMatrix(true, true) 递归全子树，
+// 随后 render() 内部又 updateMatrixWorld 一遍——多模型同框时每帧两遍全场景遍历。
+// 动静分治：矩阵自上次 render 后未变（无 perFrame 动画）时跳过强制更新，直接
+// 复用 render() 留下的新鲜 matrixWorld。标记位何时置 dirty：
+//   ① registerModelRoot（新根的 matrixWorld 未渲染过，恒 stale）
+//   ② render-loop 每帧检测到 perFrame 回调（模型动画改写局部变换）
+// 何时视为 clean：cullModelGroups 走完多根路径后（紧随其后的 render() 会再刷一遍，
+// 此后到下一帧 cull 前若无 ①②，矩阵保持新鲜）。
+let _matricesDirty = true;
+
+/** 标记矩阵已失效（render-loop 有 perFrame 回调的帧调用；测试路径可直接调） */
+export function markCullMatricesDirty(): void {
+  _matricesDirty = true;
+}
+
 /** 注册模型根节点（adapter 调用） */
 export function registerModelRoot(obj: THREE.Object3D): void {
-  if (!modelRoots.includes(obj)) modelRoots.push(obj);
+  if (!modelRoots.includes(obj)) {
+    modelRoots.push(obj);
+    _matricesDirty = true; // 新根未渲染过，matrixWorld 恒 stale
+  }
 }
 
 /** 注销模型根节点（adapter dispose 时调用） */
@@ -70,15 +89,20 @@ export function cullModelGroups(camera: THREE.Camera): void {
     _box.getBoundingSphere(_sphere);
     obj.visible = _frustum.intersectsSphere(_sphere);
   }
+  // 本帧矩阵已刷新（紧随其后的 render() 再次 updateMatrixWorld，保持新鲜）；
+  // 下帧若无 ①注册/②perFrame 置脏，expandBoxVisible 可跳过强制更新
+  _matricesDirty = false;
 }
 
 /** 递归展开 bounding box，只计入 visible 子树（跳过隐藏的载具/投射物组件） */
 function expandBoxVisible(obj: THREE.Object3D, box: THREE.Box3): void {
   if (!obj.visible) return;
-  // 无条件更新世界矩阵：render loop 外的测试路径可能未 updateMatrixWorld，
-  // matrixWorldNeedsUpdate 守卫不可靠（new Group() 初始即 false）。对齐
-  // Box3.setFromObject 内部 updateWorldMatrix(true, true) 语义。
-  obj.updateWorldMatrix(true, true);
+  // 动静分治（code review #4）：仅矩阵置脏时强制 updateWorldMatrix(true, true)——
+  // 首帧/新注册根/有 perFrame 动画的帧必刷（对齐 Box3.setFromObject 内部语义）；
+  // 静态帧直接复用 render() 留下的新鲜 matrixWorld，省一遍全子树递归。
+  if (_matricesDirty) {
+    obj.updateWorldMatrix(true, true);
+  }
   const mesh = obj as THREE.Mesh;
   if (mesh.isMesh && mesh.geometry) {
     // geometry.boundingBox 默认 null，需显式计算（对齐 Box3.setFromObject 内部行为）
@@ -100,6 +124,7 @@ function expandBoxVisible(obj: THREE.Object3D, box: THREE.Box3): void {
 /** 清空所有注册（session 结束时调用） */
 export function clearModelRoots(): void {
   modelRoots.length = 0;
+  _matricesDirty = true; // 下次裁剪从保守态起步
 }
 
 // ===== 视锥裁剪开关（localStorage 持久化，设置面板可关）=====

@@ -10,6 +10,7 @@ import type { TdKeyAction } from "../keymap.ts";
 import {
   cullModelGroups,
   isFrustumCullEnabled,
+  markCullMatricesDirty,
   restoreModelGroupsVisible,
 } from "../frustum-cull.ts";
 import {
@@ -120,19 +121,21 @@ export function startGlobalRenderLoop(
       } catch (err) {
         logWarn("perFrame", `session 回调异常: ${String(err)}`);
       }
-      const pfMs = performance.now() - pfStart;
+      // 单次计时（code review #10：原 pfMs/pfNow 两次 now() 冗余）
       const pfNow = performance.now();
-      if (
-        pfMs > PER_FRAME_WARN_MS &&
-        pfNow - _lastPerFrameWarnTs > PER_FRAME_WARN_THROTTLE_MS
-      ) {
+      const pfMs = pfNow - pfStart;
+      if (pfMs > PER_FRAME_WARN_MS && pfNow - _lastPerFrameWarnTs > PER_FRAME_WARN_THROTTLE_MS) {
         _lastPerFrameWarnTs = pfNow;
         logWarn("perFrame", `阻塞 ${pfMs.toFixed(1)}ms (>${PER_FRAME_WARN_MS}ms 阈值)`);
       }
     }
     // 视锥裁剪（设置开关：关 → 跳过并恢复可见性——剔除失误会误藏模型，可关闭）
-    if (isFrustumCullEnabled()) cullModelGroups(cam);
-    else restoreModelGroupsVisible();
+    if (isFrustumCullEnabled()) {
+      // 有模型动画（perFrame 改写局部变换）→ 矩阵置脏，expandBox 强制刷新；
+      // 纯静态场景（无 perFrame）复用 render() 留下的新鲜矩阵，省一遍全子树递归
+      if (_globalPerFrames.length > 0) markCullMatricesDirty();
+      cullModelGroups(cam);
+    } else restoreModelGroupsVisible();
     // ADR-081 L2：后处理体积光管线
     const rendered = postProc ? postProc.render(dt, lightCap) : false;
     if (!rendered) infra.renderer.render(infra.scene, cam);

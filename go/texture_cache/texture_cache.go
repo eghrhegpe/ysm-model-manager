@@ -148,7 +148,7 @@ type cacheScanEntry struct {
 // scanCacheDir 扫描缓存目录：ReadDir 一次 + 逐文件 stat，过滤 .ktx2/.tmp。
 // 目录不存在返回 (nil, nil)（消费方按空目录语义处理）；stat 失败单条跳过并留日志。
 // ListCacheFiles / GetCacheStats / Prune 三处原各自 ReadDir+过滤+stat 的
-// 重复遍历收敛至此单一来源（外部锐评 2026-09：三份近亲遍历）。
+// 重复遍历收敛至此单一来源（三份近亲遍历）。
 func scanCacheDir(dir string) ([]cacheScanEntry, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -385,7 +385,7 @@ func Prune() (PruneResult, error) {
 
 // maybePrune 写路径限频触发：距上次扫描未达间隔则跳过，避免每次写都 O(n) 扫目录。
 // lastPrune 在锁内更新后于锁外执行 Prune，避免慢扫描阻塞并发写。
-// 异步分叉（2026-09 外部锐评 #7）：interval>0（生产限频配置）时后台执行，
+// 异步分叉：interval>0（生产限频配置）时后台执行，
 // 淘汰的 O(n) 目录扫描不阻塞 WriteCached 调用方 goroutine（若调用发生在 UI 绑定
 // 线程上，同步扫描上千文件的缓存目录会冻结界面）；interval<=0（测试/调试配置，
 // 每次写都触发）保持同步，便于测试直连断言。pruneInFlight 防后台重入：

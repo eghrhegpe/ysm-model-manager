@@ -105,7 +105,7 @@ func cloneSyncItems(items []types.ResourceSyncItem) []types.ResourceSyncItem {
 	return out
 }
 
-// fileSize 已收敛至 fsutil.FileSize（锐评 #17：instance/sync_dirlevel 同款样板统一委托）
+// fileSize 已收敛至 fsutil.FileSize（instance/sync_dirlevel 同款样板统一委托）
 
 // buildDirLevelChildren 为 dirLevelSync 类型的单个文件夹构建子文件条目列表。
 // 原 BuildSyncItems L168-200 buildChildrenForDir 闭包升格：仓库侧是权威源，
@@ -212,14 +212,14 @@ func (c *rtypeCtx) appendOneItem(typeItems *[]types.ResourceSyncItem, p string, 
 	var children []types.ResourceSyncItem
 	if c.isDirLevel && meta.isDirEntry {
 		instPath := p
-		// R34 P2-13：用分隔符守卫而非裸 HasPrefix，
+		// 用分隔符守卫而非裸 HasPrefix，
 		// 防全局根是另一全局根前缀（D:\repo\a vs D:\repo\abc）时算出错误实例侧路径。
 		if strings.HasPrefix(p, c.globalDir+string(filepath.Separator)) {
 			rel := strings.TrimPrefix(p, c.globalDir+string(filepath.Separator))
 			instPath = filepath.Join(c.instDir, rel)
 		}
 		children = buildDirLevelChildren(p, instPath, c.rt.ID, c.rt.Icon, c.globalDir)
-		// diverged 提升规则（code review P2）：仅当「原 status 就是 synced（未被
+		// diverged 提升规则：仅当「原 status 就是 synced（未被
 		// disabled/legacy 覆盖）+ 子项有非 synced 差异」才升；missing/optional 夹
 		// 保持自身状态，避免「整体缺失」误标成「部分差异」。
 		if len(children) > 0 && meta.defaultStatus == types.SyncStatusSynced && meta.status == meta.defaultStatus {

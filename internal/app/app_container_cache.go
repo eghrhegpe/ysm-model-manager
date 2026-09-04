@@ -74,7 +74,7 @@ func (c *containerTypeCache) Clear() {
 
 // ensureContainerCache 兜底：测试用 repoApp 不经 NewApp 构造时 containerCache 为 nil，
 // 调用前惰性初始化为默认探测，避免 ScanModelEntriesFiltered / ClearScanCache nil panic。
-// Once.Do 确保并发调用（watcher + Wails binding 同时抵达）只初始化一次（code review P3）。
+// Once.Do 确保并发调用（watcher + Wails binding 同时抵达）只初始化一次。
 func (a *App) ensureContainerCache() {
 	a.containerCacheOnce.Do(func() {
 		a.containerCache = newContainerTypeCache(defaultDetectFn)

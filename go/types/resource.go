@@ -384,7 +384,7 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 //     等同仓库根 resource_types.json；测试进程由各包 main_test.go 显式注入同一基线）。
 //
 // 注意：不再扫描 exe 同级/上级目录寻找 resource_types.json，亦无 CWD 相对回退
-// （Go 评审 #11：旧部署模型已废弃——zip 附带数据 JSON、updater 覆盖 exe 旁文件
+// 旧部署模型已废弃——zip 附带数据 JSON、updater 覆盖 exe 旁文件
 // 已于 2026-08 废弃（见 internal/app/bundled_data.go：纯 exe 发布），残留的 exe 旁
 // 快照或 CWD 下意外文件会静默遮蔽嵌入单源，导致「改了 root JSON 却不生效」。
 // 嵌入单源即权威，杜绝漂移。

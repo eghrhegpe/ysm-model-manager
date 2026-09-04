@@ -94,7 +94,7 @@ func readTexFromZip(path string) (int, int) {
 // readTexFrom7z 从 7z 读取纹理尺寸（真解压，遍历条目找 geometry JSON）。
 // 复用 bodgit/sevenzip（go/geometry/archive.go 已用于 PNG 提取），OpenReader 路径
 // 直开避免整读大 7z 进内存（原 64KB 文本扫描对压缩内容永不命中，静默返回 0,0——
-// 子代理审计 P3：真实 .7z 的纹理尺寸一直缺失）。
+// 真实 .7z 的纹理尺寸一直缺失）。
 func readTexFrom7z(path string) (int, int) {
 	// 与 readTexFromZip 同上限（50MB/条目，ADR-033 截断防线）
 	const maxTexJSON = types.MaxReadLimit
@@ -125,7 +125,7 @@ func readTexFrom7z(path string) (int, int) {
 	return 0, 0
 }
 
-// clampTexDim P3 修复（子代理审计）：float64→int 溢出钳制——畸形 JSON 如
+// clampTexDim 修复：float64→int 溢出钳制——畸形 JSON 如
 // texture_width:1e100（合法数字）int() 溢出为最小 int，巨大负数流入统计展示。
 // 钳到 [0, 65536]，与 go/geometry/parse.go:66-73 口径一致（合法贴图远小于此）。
 func clampTexDim(v float64) int {
@@ -160,7 +160,7 @@ func extractTexSizeFromGeometryBytes(data []byte) (w, h int) {
 // ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用）
 func ScanFiles(filesRoot string) []ModelEntry {
 	var entries []ModelEntry
-	// R29 P3-3：WalkDir 返回 error 显式记录（callback 总返回 nil，
+	// WalkDir 返回 error 显式记录（callback 总返回 nil，
 	// 故 WalkDir 的 error 只会是根目录打开失败等不可恢复错误）
 	if err := filepath.WalkDir(filesRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil {

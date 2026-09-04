@@ -108,7 +108,7 @@ func IsInside(baseDir, path string) error {
 // RelInside 返回 path 相对 baseDir 的相对路径，path 必须在 baseDir 内（含等值）。
 // IsInside 的 rel 变体：IsInside 只回答「是否安全」，映射类调用（把路径翻译到 baseDir
 // 对应位置，如 sync_push 的 src→globalDir 映射）还需要相对路径本身——原 sync_push
-// 5 处手写 filepath.Rel + ".." 前缀判定（越界规则与 IsInside 重复且细节漂移，锐评 #19），
+// 5 处手写 filepath.Rel + ".." 前缀判定（越界规则与 IsInside 重复且细节漂移），
 // 收敛到本函数统一判据。
 // 语义与 IsInside 完全一致：拒绝空路径/空基准/NUL/.. 越界（错误同族 ErrPathEscalation，
 // errors.Is 可分类）；等值（path==baseDir）合法，返回 "."。大小写不敏感前缀复核同样生效

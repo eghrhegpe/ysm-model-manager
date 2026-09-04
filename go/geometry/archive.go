@@ -220,16 +220,15 @@ func (b *l0BasenameIndex) build() (geo, png map[string][]l0NamedEntry) {
 // classifyFileInventory 识别 zip 内所有文件的归属（parseGlobalResources 轻量版：
 // 只识别不解析，Go 端承担文件识别能力，前端消费准确归属清单，不再事后按文件名猜）。
 // 纯新增能力，不改变既有收集（animJSONs/pngs 等数组内容不动，零 fallback 干扰）。
-// maxClassifyEntries classifyFileInventory 的条目数封顶（R29 P2-1）。
+// maxClassifyEntries classifyFileInventory 的条目数封顶。
 // 恶意归档塞入数十万微小条目可导致 FileInventory 占用数 GB 内存。
 // 10000 条对正常 YSM 包绰绰有余（典型包 <500 条），超限即停止并标记不完整。
 const maxClassifyEntries = 10000
 
 // maxMaterializeEntries / maxMaterializeBytes 物化循环的条目/累计字节双封顶
-// （2026-09 外部锐评 #3：classifyFileInventory 有 maxClassifyEntries 防「数十万
-// 微小条目占数 GB 内存」，但 collectPngEntries/collectGeoAnimEntries/collectMergedFiles/
-// collectAnimJSONs 把每条 PNG/geo 物化进内存且只受单条 50MB 限制——恶意归档塞
-// 10 万条 100KB PNG 即可绕过那条防线达到同样效果）。正常 YSM 包条目 <500、
+// 防恶意归档塞数十万微小条目占数 GB 内存（collectPngEntries/collectGeoAnimEntries/
+// collectMergedFiles/collectAnimJSONs 把每条 PNG/geo 物化进内存，需条目+字节双封顶）。
+// 正常 YSM 包条目 <500、
 // 纹理累计 <100MB，5000 条 / 512MB 上限绰绰有余；超限截断并留日志（畸形输入
 // 防御，合法包不触发）。截断仅作用于当次物化集合，不影响既有收集结构。
 const (
@@ -266,7 +265,7 @@ func classifyFileInventory(entries []container.Entry) *types.FileInventory {
 			inv.LegacyModels = append(inv.LegacyModels, e.Name())
 			appended = true
 		}
-		// R29 code_review P3-1：仅计 matched 条目，避免 10000 个 .bin 垃圾条目耗尽配额
+		// 仅计 matched 条目，避免 10000 个 .bin 垃圾条目耗尽配额
 		if appended {
 			matched++
 			if matched >= maxClassifyEntries {
@@ -280,8 +279,8 @@ func classifyFileInventory(entries []container.Entry) *types.FileInventory {
 }
 
 // legacyGeometryNames 旧格式几何文件基名（无 ysm.json 场景）。含 .geo 变体：
-// 与 IsMainModelName/IsArmModelName 同口径（code review P3：main.geo.json 等
-// 会被当 geometry 解析但此前漏分类）；package-level 避免 per-entry 重建分配（P3）。
+// 与 IsMainModelName/IsArmModelName 同口径（main.geo.json 等会被当 geometry 解析但此前漏分类）；
+// package-level 避免 per-entry 重建分配。
 var legacyGeometryNames = []string{"main", "main.geo", "arm", "arm.geo", "arrow", "info"}
 
 // isLegacyGeometryName 旧格式几何文件名约定（Modern YSM parseLegacyFormat 同口径：
@@ -306,7 +305,7 @@ func isLegacyGeometryName(lowPath string) bool {
 func parseLegacyMetadata(entries []container.Entry) *types.YsmMetadata {
 	for _, e := range entries {
 		// 只匹配根级 info.json（旧格式约定单个根文件）：嵌套/无关 *info.json
-		// （textures/skin_info.json、assets/<ns>/info.json 等）不参与（code review P2）
+		// （textures/skin_info.json、assets/<ns>/info.json 等）不参与
 		if e.IsDir() || !strings.EqualFold(e.Name(), "info.json") {
 			continue
 		}
@@ -339,8 +338,7 @@ func parseLegacyMetadata(entries []container.Entry) *types.YsmMetadata {
 		if m.Name != "" || m.Tips != "" || m.License != nil || len(m.Authors) > 0 {
 			return m
 		}
-		// 空占位（{}）不 return——继续找后续候选（code review P2：一个空 info.json
-		// 不得抑制同 archive 中其他有效候选；根级仅一个时最终落到循环末 return nil）
+		// 空占位（{}）不 return——继续找后续候选；一个空 info.json 不得抑制同 archive 中其他有效候选
 	}
 	return nil
 }
@@ -498,8 +496,7 @@ func collectAnimJSONs(entries []container.Entry, maidNs string) []string {
 		if len(buf) > 10 {
 			animJSONs = append(animJSONs, string(buf))
 			totalBytes += int64(len(buf))
-			// 条目/累计字节双封顶（code review P2 安全修复）：
-			// 恶意归档塞 5000 个 ~50MB 动画 JSON → ~250GB 物化到内存，
+			// 条目/累计字节双封顶：恶意归档塞 5000 个 ~50MB 动画 JSON → ~250GB 物化到内存，
 			// 绕过 512MB 字节封顶——与 collectPngEntries 同构双封顶
 			if len(animJSONs) >= maxMaterializeEntries || totalBytes >= maxMaterializeBytes {
 				log.Printf("[geometry] collectAnimJSONs 达到物化封顶 (entries=%d bytes=%d), 截断", len(animJSONs), totalBytes)
@@ -537,7 +534,7 @@ func collectGeoAnimEntries(entries []container.Entry, maidNs string) ([]geoEntry
 		}
 		geoFiles = append(geoFiles, geoEntry{name: e.Name(), data: buf})
 		geoBytes += int64(len(buf))
-		// 条目/累计字节双封顶（code review P2 安全修复）：与 collectPngEntries 同构
+		// 条目/累计字节双封顶：与 collectPngEntries 同构
 		if len(geoFiles) >= maxMaterializeEntries || geoBytes >= maxMaterializeBytes {
 			log.Printf("[geometry] collectGeoAnimEntries 达到物化封顶 (entries=%d bytes=%d), 截断", len(geoFiles), geoBytes)
 			break
@@ -584,8 +581,7 @@ func collectPngEntries(entries []container.Entry, maidNs string) ([][]byte, []st
 		pngNames = append(pngNames, name)
 		pngs = append(pngs, pngData)
 		totalBytes += int64(len(pngData))
-		// 条目/累计字节双封顶（2026-09 外部锐评 #3）：恶意归档塞数十万条微小 PNG
-		// 可绕过 classifyFileInventory 的条目防线占数 GB 内存——超限截断 + 日志
+		// 条目/累计字节双封顶：恶意归档塞数十万条微小 PNG 可绕过 classifyFileInventory 的条目防线占数 GB 内存——超限截断 + 日志
 		if len(pngs) >= maxMaterializeEntries || totalBytes >= maxMaterializeBytes {
 			log.Printf("[geometry] collectPngEntries 达到物化封顶 (entries=%d bytes=%d), 截断", len(pngs), totalBytes)
 			break
@@ -706,7 +702,7 @@ func pickBestMaidGroup(g maidGroupWrapper) []maidManifestItem {
 // selectBestMaidCandidate 从候选中选"清单最长者"（启发式：条目数最长 = 主包清单）。
 // 候选空时返回零值。
 func selectBestMaidCandidate(candidates []maidNsCandidate) maidNsCandidate {
-	// R29 P2-2：空切片保护，避免 candidates[0] panic
+	// 空切片保护，避免 candidates[0] panic
 	if len(candidates) == 0 {
 		return maidNsCandidate{}
 	}
@@ -878,9 +874,8 @@ func l0ResolveTexture(item maidManifestItem, maidNs, nsBase, logPrefix string,
 // 数组：两段 Open→Read→append 对称代码原在主循环内联各写一份，现在合并。
 // 行为逐字节保持原循环：Open 失败静默跳、buf 为空跳、ARM 模型被 IsArmModelName
 // 排除、纹理 pngNames 取 LastIndex("/") 后缀、texNameByItem 小写——一处不动。
-// 例外（2026-09 外部锐评 #18）：Open 失败补日志——manifest 条目存在但读不了属
-// 真 I/O 故障，静默吞掉会让损坏包难排障；条目缺席（entryByPath miss）仍静默
-// （清单路径缺失是正常可预期的落空，逐作者 log 会刷屏）。
+// 例外：Open 失败补日志——manifest 条目存在但读不了属真 I/O 故障，静默吞掉会让损坏包难排障；
+// 条目缺席（entryByPath miss）仍静默（清单路径缺失是正常可预期的落空，逐作者 log 会刷屏）。
 func applyL0ManifestItem(res *l0Resolved, i int, maidNs, logPrefix string,
 	entryByPath map[string]container.Entry, modelAbs, texAbs string) {
 	if modelAbs != "" {
@@ -998,7 +993,7 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 				if len(buf) > 10 {
 					animJSONs = append(animJSONs, string(buf))
 					animBytes += int64(len(buf))
-					// 条目/累计字节双封顶（code review P2 安全修复）：与 collectPngEntries 同构
+					// 条目/累计字节双封顶：与 collectPngEntries 同构
 					if len(animJSONs) >= maxMaterializeEntries || animBytes >= maxMaterializeBytes {
 						log.Printf("[geometry] collectMergedFiles 动画达到物化封顶 (entries=%d bytes=%d), 截断", len(animJSONs), animBytes)
 						break
@@ -1053,7 +1048,7 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 
 // sortByModelOrder 将 geoFiles 按声明序排序：main/player 模型先、投射物后，未声明项稳定落尾。
 // 查询键与 orderMap 键同口径（"\\"→"/" 归一化 + 小写化）：Windows 工具产出的条目名可能
-// 含反斜杠/混合大小写，未归一化会让声明序排序失效（code review P3）。
+// 含反斜杠/混合大小写，未归一化会让声明序排序失效。
 func sortByModelOrder(geoFiles []geoEntry, modelOrder []string) {
 	if len(modelOrder) == 0 {
 		return
@@ -1224,7 +1219,7 @@ func deriveModelTexOrder(md ysmArchiveData) (modelOrder, texOrder, texCategories
 //   - 每个 cube 记来源文件的 tex 尺寸（CubeTexW/H）；geo 级 TexWidth/Height 取最大。
 //   - texIdxMap：模型 basename → texOrder 槽位（声明纹理名命中优先，modelOrder 序号兜底钳制）。
 //     查询/构建键同口径（"\\"→"/" 归一化 + 小写化 + 去 .json/.geo.json 后缀），Windows
-//     混合大小写 zip 不归一化会让 texIdxMap 永不命中 → TexSlot 绑定失效（code review P3）。
+//     混合大小写 zip 不归一化会让 texIdxMap 永不命中 → TexSlot 绑定失效。
 func mergeGeoFiles(geoFiles []geoEntry, modelOrder, texOrder []string, projModels []projEntry) *types.BedrockModel {
 	// 建立模型文件→纹理索引映射
 	texIdxMap := make(map[string]int)
@@ -1433,7 +1428,7 @@ func parseModelFromEntries(entries []container.Entry, logTag string) (*types.Bed
 		buildSubModels(geo, maidManifest, resolvedPathByItem, texNameByItem, orderMap, geoFiles, pngs)
 	}
 	// 顺带返回过滤后的 geoFiles（L0/L1 口径、排 arm）：ParseFromZipEntry 复用同一趟解析
-	// 的 geoFiles 做 subPath 匹配，避免二次全量遍历（审核 P3）
+	// 的 geoFiles 做 subPath 匹配，避免二次全量遍历
 	if geo != nil && (ysmMeta.Name != "" || ysmMeta.Tips != "" || len(ysmMeta.Authors) > 0 || ysmMeta.License != nil || len(ysmMeta.Links) > 0) {
 		geo.Metadata = &ysmMeta
 	}
@@ -1799,7 +1794,7 @@ func parseModelFromArchive(data []byte, size int64, sevenZip bool) (*types.Bedro
 }
 
 // parseFromArchiveEntry 单角色按 subPath 解析统一实现（zip/7z）：open + parseModelFromEntries
-// 一趟拿 pngs + 过滤后 geoFiles（不再二次 collectArchiveFiles，审核 P3），再 matchGeoEntryBySubPath。
+// 一趟拿 pngs + 过滤后 geoFiles（不再二次 collectArchiveFiles），再 matchGeoEntryBySubPath。
 func parseFromArchiveEntry(data []byte, size int64, subPath string, sevenZip bool) (*types.BedrockModel, [][]byte) {
 	if subPath == "" {
 		return nil, nil

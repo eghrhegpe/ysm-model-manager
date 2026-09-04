@@ -112,7 +112,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 			dstBase := filepath.Dir(dstParent)
 			// 原子替换：先把旧目录挪走作备份，InstallDir 重建成功后再清理备份；
 			// 失败则回滚恢复，避免目录整体丢失（旧实现先 RemoveAll 后重建，失败即丢）
-			// 备份名带时间戳（R27 P2-4）：旧实现固定 ".relink-bak" + 无条件 RemoveAll，
+			// 备份名带时间戳（P2-4）：旧实现固定 ".relink-bak" + 无条件 RemoveAll，
 			// 上一次 relink 失败留有的备份目录会被本次删除——恢复点丢失。
 			// 时间戳版与 conflict.go 的 .bak-<ts> 口径对齐，避免备份覆盖。
 			backup := fmt.Sprintf("%s.relink-bak-%d", dstParent, time.Now().UnixNano())

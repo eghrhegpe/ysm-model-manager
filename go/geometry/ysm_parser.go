@@ -53,7 +53,7 @@ func texBasenameNoExt(path string) string {
 	if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
 		tn = tn[idx+1:]
 	}
-	// code review P2（conf 0.85→核实成立）：顺序必须先 ToLower 再 TrimSuffix——
+	// 顺序必须先 ToLower 再 TrimSuffix——
 	// 旧内联代码（archive.go 旧 L342/791）即此序；反序时大写扩展名（TEX.PNG）
 	// 去不掉，texOrder 去重与 texIdxMap 查找失配，texSlot 静默错绑
 	tn = trimTexExt(strings.ToLower(tn))
@@ -136,7 +136,7 @@ func parseProjModels(raw json.RawMessage) []projEntry {
 	} else if strings.HasPrefix(rawTrim, `{`) {
 		// 区分 dict {minecraft:xxx: {model,texture}} 与 single {model,texture}：
 		// 按首个 key 名判别（按首 value 判别会误判：dict 首条被当 single 只收一条、
-		// arrow 单对象落 dict 分支收零条——审核 P2）
+		// arrow 单对象落 dict 分支收零条）
 		dec := json.NewDecoder(bytes.NewReader(raw))
 		if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
 			firstKey, err := dec.Token()
@@ -256,7 +256,7 @@ func parseYsmArchive(entries []container.Entry, logPrefix string) *ysmArchiveDat
 
 		var ysm struct {
 			// RawMessage 而非严格类型：松散/畸形 metadata 段不得拖垮核心解析
-			// （code review P2：license 为字符串等会令整个 ysm.json unmarshal 失败）
+			// （license 为字符串等会令整个 ysm.json unmarshal 失败）
 			Metadata json.RawMessage `json:"metadata"`
 			Files    struct {
 				Player struct {

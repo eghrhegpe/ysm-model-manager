@@ -245,7 +245,7 @@ func repairBrokenParentChain(bones []BoneData, pivots map[string]vec3, boneByNam
 
 		bp, hasBp := pivots[bones[i].Name]
 		if !hasBp {
-			// code_review P2-4：缺 pivot 时保留原 LocalPosition，不重写为塌到原点
+			// 缺 pivot 时保留原 LocalPosition，不重写为塌到原点
 			log.Printf("[threejs] repairBrokenParentChain: bone %s 无 pivot，保留原 LocalPosition", bones[i].Name)
 			continue
 		}

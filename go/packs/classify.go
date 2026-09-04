@@ -172,7 +172,7 @@ func classifyByLocationStrict(path string, ext string, isContainer bool, reg *ty
 		return ""
 	}
 	ancestors := ancestorDirs(dir)
-	// 容器条目共享一次打开（锐评 #4）：location 消歧对同目录多个候选类型连续
+	// 容器条目共享一次打开：location 消歧对同目录多个候选类型连续
 	// detector 判定时，同一容器不得被 Open/Entries N 次——与 classifyByFingerprint
 	// 的共享打开对齐。provider 惰性：目录全不命中时零 Open 成本（非容器判定
 	// 永不触发 provider）。
@@ -258,7 +258,7 @@ func classifyByFingerprint(path string, ext string, isContainer bool, reg *types
 // ysm → IsYsmFile；mcmeta/shader → 容器 + zipEntries 匹配；zipentry → 容器指纹
 // 或非容器扩展名认同；extension/空 → 扩展名认同。
 // 容器条目每次判定独立 Open（单次判定场景；location strict 多候选共享见
-// detectorPassesEntries——锐评 #4）。
+// detectorPassesEntries）。
 func detectorPassesInternal(path string, ext string, isContainer bool, rt *types.ResourceType) bool {
 	return detectorPassesEntries(path, ext, isContainer, rt, func() []container.Entry {
 		return openContainerEntries(path)
@@ -381,7 +381,7 @@ func openContainerEntries(path string) []container.Entry {
 // 归属（ADR-144）：原住 types/extensions.go，zipentry 分支需开容器做指纹
 // （container.ZipMatchesEntries），随识别逻辑一并下沉本包。
 func IsTypeModelFile(name, rtype string) bool {
-	// filepath.Base 兼容裸名与完整路径调用（code review P1：4 个调用点已改传完整
+	// filepath.Base 兼容裸名与完整路径调用（4 个调用点已改传完整
 	// 路径——裸名精确判断（ysm.json 特判/ext）对完整路径失效会误判）；zip 分支
 	// 用原始 name 开文件（见下），不受 base 取 Base 影响
 	base := types.NormalizeResourceName(filepath.Base(name))

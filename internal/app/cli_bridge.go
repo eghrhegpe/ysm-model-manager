@@ -53,7 +53,7 @@ func (a *App) SetAllowedCommands(cmds []string) {
 }
 
 // isCommandExposedToFrontend 检查命令是否在前端可见白名单内（区别于 go/cli 的
-// IsCommandAllowed=注册表存在；本方法是 main.go 注入的安全白名单，评审 #12 改名防撞名异义）
+// IsCommandAllowed=注册表存在；本方法是 main.go 注入的安全白名单，改名防撞名异义）
 func (a *App) isCommandExposedToFrontend(command string) bool {
 	return a.allowedCommandSet[command]
 }
@@ -309,7 +309,7 @@ func (a *App) GetAllowedCLICommands() string {
 }
 
 // cliCommandTimeout CLI 子进程挂死兜底：正常命令远低于此，仅防 GUI 永久等待
-// （评审 #3：原 exec.Command 无超时，子进程挂死则 GUI 桥永久阻塞）
+// （原 exec.Command 无超时，子进程挂死则 GUI 桥永久阻塞）
 const cliCommandTimeout = 5 * time.Minute
 
 // executeCLICommand 执行 CLI 命令
@@ -348,7 +348,7 @@ func executeCLICommand(args []string) (string, error) {
 	return stdoutBuf.String(), nil
 }
 
-// getExitCode 从错误中提取退出码（errors.As 可穿透 %w 包装层，评审 #3）
+// getExitCode 从错误中提取退出码（errors.As 可穿透 %w 包装层）
 func getExitCode(err error) int {
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {

@@ -32,7 +32,7 @@ func ReadFileFromZip(zr *zip.Reader, target string) []byte {
 			log.Printf("[avatar] zip 条目打开失败 %s: %v", f.Name, err)
 			return nil
 		}
-		// R32 P2-1：循环内显式 Close，不依赖 defer（defer 要等函数返回才释放，
+		// 循环内显式 Close，不依赖 defer（defer 要等函数返回才释放，
 		// 多条目命中时累积未关闭句柄）。
 		data, err := io.ReadAll(io.LimitReader(rc, types.MaxReadLimit+1))
 		rc.Close()

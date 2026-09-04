@@ -39,7 +39,7 @@ func requireMcRoot(cfg types.AppConfig) error {
 
 type App struct {
 	// linkMode 私有：须经 SetLinkMode/getLinkMode 访问（linkModeMu 保护）。
-	// 公有字段会被包外直写绕过锁（Go 评审 #5）；配置加载/保存点仍可在锁内直写。
+	// 公有字段会被包外直写绕过锁；配置加载/保存点仍可在锁内直写。
 	linkMode string
 	// appCtx 应用生命周期 context：NewApp 创建、ServiceShutdown cancel。
 	// 供不经下载队列的直下入口（DownloadFromGitHub 等）作取消源——
@@ -203,7 +203,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 				rel := types.GroupStorageRoot(rt.ID)
 				if !seen[rel] {
 					seen[rel] = true
-					// P0 修复（子代理审计）：目录权限 0644 无执行位，目录不可进入——应为 0755
+					// 目录权限 0644 无执行位，目录不可进入——应为 0755
 					os.MkdirAll(filepath.Join(cfg.FilesRoot, rel), 0755)
 				}
 			}

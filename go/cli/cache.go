@@ -397,7 +397,7 @@ func runCacheDiag(ctx *CmdContext) error {
 
 	fmt.Printf("\n🔐 2. 哈希计算测试\n")
 	// 固定 tmp 文件名有并发/符号链接风险（同机两个诊断进程共享 ysm_cache_test.txt），
-	// 改 CreateTemp 每次独占（评审 #14）
+	// 改 CreateTemp 每次独占（#14）
 	tmpFile, err := os.CreateTemp("", "ysm_cache_diag_*.txt")
 	if err != nil {
 		fmt.Printf("   ❌ 无法创建测试文件: %v\n", err)
@@ -457,7 +457,7 @@ func runCacheDiag(ctx *CmdContext) error {
 		}
 
 		// 只删本次诊断写入的测试条目——曾误调 ClearCache() 全量清空目录，
-		// 用户跑一次 cache-diag 即丢失全部已编码 KTX2 缓存（评审 P0 #1，回归红线）
+		// 用户跑一次 cache-diag 即丢失全部已编码 KTX2 缓存（P0 #1，回归红线）
 		if rmErr := os.Remove(texture_cache.CachePath(testHash)); rmErr != nil && !os.IsNotExist(rmErr) {
 			fmt.Printf("   ⚠️  清理测试缓存条目失败: %v\n", rmErr)
 		}

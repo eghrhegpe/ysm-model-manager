@@ -895,7 +895,7 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) ([]types.BedrockModel, []s
 
 // looksLikeGeometry 判断字节流是否疑似裸几何元素（含 Bedrock geometry 特征键）。
 // 裸几何兜底只应包裹真正的几何 JSON——任意合法 JSON（如 {"files":{...}}）包裹后
-// 会被解析为「零骨骼空模型」，与「未找到几何」无法区分（子代理审计 P 级发现）
+// 会被解析为「零骨骼空模型」，与「未找到几何」无法区分
 func looksLikeGeometry(data []byte) bool {
 	var obj map[string]json.RawMessage
 	if err := json.Unmarshal(data, &obj); err != nil {

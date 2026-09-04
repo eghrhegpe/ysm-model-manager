@@ -20,7 +20,7 @@ var (
 	// 旧 scanProc (ysm_scan) 保留作回退，ABI 不破坏。
 	scanManifestProc *syscall.LazyProc
 	freeProc         *syscall.LazyProc
-	// R32 P3-1：FFI 调用序列化由 common.go 的 ffiMu 统一管理（四平台共享）。
+	// FFI 调用序列化由 common.go 的 ffiMu 统一管理（四平台共享）。
 )
 
 func Scan(root string, registryJSON []byte) (ScanResponse, error) {
@@ -31,7 +31,7 @@ func Scan(root string, registryJSON []byte) (ScanResponse, error) {
 		return ScanResponse{}, errors.New("Rust scanner registry is empty")
 	}
 
-	// R32 P3-1：FFI 调用序列化，防 Rust 侧非线程安全导致数据竞争/panic。
+	// FFI 调用序列化，防 Rust 侧非线程安全导致数据竞争/panic。
 	ffiMu.Lock()
 	defer ffiMu.Unlock()
 
@@ -84,7 +84,7 @@ func ScanManifest(root string, registryJSON, manifestJSON []byte) (ScanResponse,
 			"Rust scanner DLL missing ysm_scan_manifest symbol: rebuild with task build:rust-bridge")
 	}
 
-	// R32 P3-1：FFI 调用序列化，防 Rust 侧非线程安全导致数据竞争/panic。
+	// FFI 调用序列化，防 Rust 侧非线程安全导致数据竞争/panic。
 	ffiMu.Lock()
 	defer ffiMu.Unlock()
 

@@ -131,7 +131,7 @@ func replaceExe(newPath, targetPath string) error {
 	}
 	// 3) .new → target：与 2) 之间是唯一缺失窗口（微秒级）
 	if err := os.Rename(tmp, targetPath); err != nil {
-		// 回滚前先清理 .new 残留（子代理审核 P2：第 3 步失败时 tmp 可能仍在，
+		// 回滚前先清理 .new 残留（第 3 步失败时 tmp 可能仍在，
 		// CleanupOldVersion 只清 .old 不清 .new，残留会成为应用目录垃圾）
 		os.Remove(tmp)
 		if rbErr := os.Rename(backup, targetPath); rbErr != nil {

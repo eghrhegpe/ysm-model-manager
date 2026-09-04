@@ -291,11 +291,11 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		}
 
 		// 匹配顺序：relKey（路径对应）→ 哈希（内容对应）→ 纯文件名兜底。
-		// 锐评 #7：原实现每个实例文件先全量 SHA256——>500MB 的 computeHash 可达秒级，
+		// 原实现每个实例文件先全量 SHA256——>500MB 的 computeHash 可达秒级，
 		// 大整合包 × 800ms 防抖触发下持 InstallLock 逐文件哈希会饿死安装操作。绝大多数
 		// 实例文件与仓库目录树同构，relKey 命中即免哈希；哈希仅作 relKey miss（实例文件
 		// 被改名/移动，relKey 与仓库脱钩）时的内容关联兜底——改名场景原语义完整保留。
-		// 哈希计算持锁是有意设计（R27 P3-1 确认）：SyncToggleStatus 修改文件系统
+		// 哈希计算持锁是有意设计（P3-1 确认）：SyncToggleStatus 修改文件系统
 		// （rename 加/去 .disabled 后缀），必须持锁防止与安装并发。把哈希移到锁外
 		// 会引入 TOCTOU（哈希算完后文件被改）。>500MB 文件 computeHash 返回空，
 		// 自动跳过哈希走纯文件名兜底。
@@ -326,7 +326,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		if shouldBeBanned && !isCurrentlyBanned {
 			// 禁用统一收敛到 DisableSuffixes[0]（.disabled，新标准）。
 			// 历史 .ban 文件 toggle 启用→再禁用时也会变成 .disabled——
-			// 这是有意收敛（R27 P3-4 确认），非 bug。
+			// 这是有意收敛，非 bug。
 			newPath := p + types.DisableSuffixes[0]
 			if _, err := os.Stat(newPath); err == nil {
 				return nil // 目标已存在，跳过
@@ -435,7 +435,7 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 			return cached
 		}
 		rootFailed := false
-		partialFail := false // Walk 部分子树失败时设 true，失败结果不入缓存（R27 P3-2）
+		partialFail := false // Walk 部分子树失败时设 true，失败结果不入缓存
 		entries := make(map[string]DiffEntry)
 		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -469,7 +469,7 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 			return nil
 		})
 		// 完整 Walk 才入缓存：rootFailed 已短路，partialFail 时残缺 entries 不入缓存，
-		// 避免后续 30s 内调用方拿到不完整结果（R27 P3-2）
+		// 避免后续 30s 内调用方拿到不完整结果
 		if !rootFailed && !partialFail {
 			storeSyncScanCache(&syncResourcesScanCache, cacheKey, entries)
 		}
@@ -548,7 +548,7 @@ func hasRecycleSegment(p string) bool {
 // isFileLocked 判断错误是否因为文件被其他进程锁定。
 // 错误码按 GOOS 分支（对齐 installer.errnoIs 范式）：Windows 与 Unix 的 errno 数值空间
 // 虽同为小整数但同一数值语义不同（16 = ERROR_CURRENT_DIRECTORY / EBUSY；32/33 在 Unix
-// 是 EPIPE/EDOM）——跨平台混判必然误判（锐评 #6）。errors.Is 链式穿透
+// 是 EPIPE/EDOM）——跨平台混判必然误判。errors.Is 链式穿透
 // os.LinkError/os.PathError 包装，无需文本兜底（陷阱 #11：禁止文本匹配错误分类）。
 func isFileLocked(err error) bool {
 	if err == nil {

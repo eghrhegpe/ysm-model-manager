@@ -516,7 +516,7 @@ func (a *App) ValidateMinecraftDir(dir string) (string, string) {
 // ========== 配置迁移（ADR-095）==========
 
 // configFieldValue 显式映射注册表 ConfigField → AppConfig 字段值。
-// 替代反射读（Go 评审 #10）：case 分支由编译器校验字段存在，字段改名/删除即编译错误；
+// 替代反射读：case 分支由编译器校验字段存在，字段改名/删除即编译错误；
 // 注册表新增 ConfigField 但未登记映射时显式告警跳过，杜绝静默失效。
 func configFieldValue(cfg types.AppConfig, fieldName string) string {
 	switch fieldName {

@@ -214,7 +214,6 @@ main().catch(e=>{console.error(e);process.exit(1)});
 }
 
 // DecodeYSMData 的 []byte 直通形态是唯一内部形态（ADR-164 注释原话：
-// 「新代码应直接用 DecodeYSMData」）。旧 []int 形态包装 DecodeYSMFiles 与
-// toInts 已于 2026-09 外部锐评 #2 落地时退役。2026-09 base64 直通重构：
-// Node 脚本输出 Buffer.from(...).toString('base64')，Go 侧 base64.Decode
-// 零中间膨胀（旧 Array.from 数字数组每字节 8× 内存膨胀 + toBytes 循环）。
+// 「新代码应直接用 DecodeYSMData」）。旧 []int 形态（经 toInts 转换）已退役；
+// base64 直通重构：Node 脚本输出 Buffer.from(...).toString('base64')，Go 侧
+// base64.Decode 零中间膨胀（旧 Array.from 数字数组每字节 8× 内存膨胀 + toBytes 循环）。

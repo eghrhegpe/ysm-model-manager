@@ -300,7 +300,7 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 		}
 		entries = filtered
 	}
-	// 禁用态随扫描一次性下发（code review #2：前端树加载原逐文件 IsFileBanned
+	// 禁用态随扫描一次性下发（前端树加载原逐文件 IsFileBanned
 	// 桥调用，2000 模型 = 2000 次 IPC 的 N+1；归属原则——禁用判定归 Go，
 	// 前端只读。rtype 为空（不过滤路径）时同样填充，保证返回值自洽。
 	for i := range entries {
@@ -320,7 +320,7 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 func (a *App) ClearScanCache() {
 	a.ensureContainerCache() // 兜底：容器指纹缓存组件随扫描缓存一起失效
 	scanner.InvalidateCache()
-	a.containerCache.Clear() // code review P3：容器指纹随扫描缓存一起失效（下载/导入后）
+	a.containerCache.Clear() // 容器指纹随扫描缓存一起失效（下载/导入后）
 }
 
 // ListModelAuthors 统计 [作者] 前缀（轻量遍历：只看文件名，不读元数据不算哈希，
@@ -408,11 +408,11 @@ func (a *App) CheckFileExists(path string) bool {
 // 合法根 = FilesRoot（所有类型根的公共祖先）+ McRoot（整合包实例自定义目录，
 // community 诊断/GetInstanceStatus 扫描）+ 各类型专属覆写根。
 // 不能像 isPathInRoot 那样以 ysmRoot 为唯一基准——resourcepack 等兄弟类型根
-// 相对 ysmRoot 是 ../，会被误拒（code_review 修复）。
+// 相对 ysmRoot 是 ../，会被误拒。
 // 放行根本身（rel==.，整仓扫描合法）；拒绝 .. 越权、盘符根、其他卷绝对路径。
 // 空串守卫：filepath.Clean("") → "."，会被 filepath.Rel 解析为 CWD——
 // 若 CWD 恰在配置根内则误判合法。源头拦截，保护全部调用方（defense-in-depth）。
-// resolvedRootCache root → EvalSymlinks 解析结果缓存（audit P3 性能收敛）。
+// resolvedRootCache root → EvalSymlinks 解析结果缓存（性能收敛）。
 // isPathInRootOrSelf 是扫描热路径（ScanModelEntries / ListFileNames 等逐文件调用），
 // root 来自 AppConfig 运行期极少变化，每次重算 EvalSymlinks 是主要重复开销。
 // saveConfig 时清空（roots 可能被用户改指向新目录/盘符）；path 侧每次实时解析，
@@ -478,7 +478,7 @@ func (a *App) isPathInRootOrSelf(path string) bool {
 		if rel == ".." || strings.HasPrefix(rel, ".."+sep) {
 			continue // 越权到该根外，试下一个根
 		}
-		// 符号链接二次复核（audit P3）：词法 Rel 通过 ≠ 真实落点在根内——
+		// 符号链接二次复核：词法 Rel 通过 ≠ 真实落点在根内——
 		// 根内出现指向外部的 symlink 时纯词法判定可越权读根外文件。
 		// 仅对真实存在的路径复核：Lstat 失败（不存在/断链）无越权读取面，维持词法判定；
 		// 且 EvalSymlinks 对不存在路径失败会保留 8.3 短路径原样，与已解析的 root 前缀

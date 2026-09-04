@@ -154,7 +154,7 @@ func DetectContainerType(data []byte) string {
 	if len(data) >= 4 && bytes.HasPrefix(data, sevenZipSig) {
 		r, err = container.Open7zBytes(data, int64(len(data)))
 	} else {
-		// 锐评 #16：不手写 local-header 游走解析 zip（脆弱——zip64 / data
+		// 不手写 local-header 游走解析 zip（脆弱——zip64 / data
 		// descriptor / 加密等特性会错位漏条目），统一 container.OpenZipBytes
 		// （zip.NewReader 走 central directory，与 7z 分支同一 Reader 契约）。
 		// 坏/截断 zip → err → ""，与旧实现「无 local header 即 break」口径

@@ -71,7 +71,7 @@ type Stats struct {
 	TexHeight  int `json:"texHeight"`
 	// Truncated 标记 scanZipBasicStats 达到 maxScanZipEntries 封顶，
 	// 返回的 Stats 不完整。调用方应据此向用户披露「统计可能不全」。
-	// R29 code_review P3-2：旧实现静默截断，调用方无法区分完整 vs 截断。
+	// 旧实现静默截断，调用方无法区分完整 vs 截断。
 	Truncated bool `json:"truncated,omitempty"`
 }
 
@@ -233,7 +233,7 @@ func extractYsmRootFromZip(f container.Entry) (*ysmRoot, error) {
 // scanZipBasicStats 无 ysm.json 的 ZIP 降级扫描：按文件后缀 + JSON 内容特征
 // 统计 Models（含 minecraft:geometry 的 JSON）/ Animations（路径含 animation/
 // controller 且不是几何的）/ Textures（图片后缀）。
-// maxScanZipEntries scanZipBasicStats 的条目数封顶（R29 P3-1）。
+// maxScanZipEntries scanZipBasicStats 的条目数封顶。
 // 恶意 ZIP 塞入数万个微小 .json 条目可造成显著 CPU/IO 耗时。
 // 2000 条对正常 YSM 包绰绰有余（典型包 <300 条），超限即停止。
 const maxScanZipEntries = 2000
@@ -244,7 +244,7 @@ func scanZipBasicStats(r zipEntriesReader) Stats {
 	scanned := 0
 	truncated := false
 	for _, f := range r.Entries() {
-		// R29 code_review P3-2：先跳过 dir，scanned 仅计文件条目，
+		// 先跳过 dir，scanned 仅计文件条目，
 		// 避免大量 dir 条目耗尽配额
 		if f.IsDir() {
 			continue

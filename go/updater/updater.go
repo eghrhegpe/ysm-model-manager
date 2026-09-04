@@ -60,7 +60,7 @@ var (
 	// ErrHashMismatch 更新包 SHA256 校验失败
 	ErrHashMismatch = errors.New("SHA256 校验失败")
 	// ErrExitRequested 更新已就绪、主进程应退出以完成 exe 替换（helper 子进程在侧等待）。
-	// 库函数不再直接 os.Exit（锐评 #1：defer/锁需正常走完），改由调用方收口退出。
+	// 库函数不再直接 os.Exit（defer/锁需正常走完），改由调用方收口退出。
 	ErrExitRequested = errors.New("更新安装完成，进程即将退出")
 )
 
@@ -222,10 +222,8 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 	}
 
 	// 从 SHA256SUMS 中解析对应 zip 的 hash
-	// R30 P2-3 + code_review P1-1：哈希不可得时 Available=false，
-	// 阻断无完整性校验的更新下载。
-	// 旧实现「hash 缺失仍可下载」契约已废弃——攻击者只需阻断
-	// SHA256SUMS 获取即可绕过完整性校验。
+	// 哈希不可得时 Available=false，阻断无完整性校验的更新下载。
+	// 旧实现「hash 缺失仍可下载」契约已废弃——攻击者只需阻断 SHA256SUMS 获取即可绕过完整性校验。
 	if latestSHASumsURL != "" {
 		hash, err := fetchExpectedHash(latestSHASumsURL, assetPattern())
 		if err != nil {
@@ -267,8 +265,8 @@ func Download(assetURL string, expectedHash string) (string, error) {
 // 多源回退（用户反馈：直连 GitHub Release 20MB 包 7 分钟仅 17%）：
 // 直连 asset URL 失败/超时后，按 ghProxyPrefixes 依次拼代理前缀重试，任一成功即返回；
 // 全部失败时聚合各源错误返回（含源标识，便于用户判断是直连还是镜像问题）。
-// R30 P2-2 评估：多源回退的攻击面（代理被入侵替换 exe）已被 P2-3 SHA256 强制校验覆盖；
-// SSRF 到内网的风险已被 P2-1 CheckRedirect 守卫覆盖。无需额外域名白名单。
+// 多源回退的攻击面（代理被入侵替换 exe）已被 SHA256 强制校验覆盖；
+// SSRF 到内网的风险已被 CheckRedirect 守卫覆盖。无需额外域名白名单。
 func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(done, total int64)) (string, error) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
@@ -298,7 +296,7 @@ func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(
 
 // newDownloadClient 构建下载用 HTTP 客户端（每源独立 90s 超时：直连慢/卡时快速切镜像）。
 // ⚠️ 包级变量便于测试注入自定义 RoundTripper（仅测试注入，禁止生产调用），覆盖完整性校验等不可由真实网络触达的分支。
-// R30 P2-1：注入 CheckRedirect 守卫，与 go/download 包的 restrictedHTTPClient 同口径：
+// 注入 CheckRedirect 守卫，与 go/download 包的 restrictedHTTPClient 同口径：
 // 拒绝非 http/https scheme（防 file:///etc/passwd 等本地文件读取）+ 跳数上限 10（防重定向死循环）。
 var newDownloadClient = func() *http.Client {
 	c := &http.Client{Timeout: downloadTimeout}
@@ -322,9 +320,9 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 	}
 	req.Header.Set("User-Agent", "YSM-Model-Manager/")
 
-	// R30 P2-3 前置（2026-08-31）：哈希不可得时**下载前**即拒绝——
+	// 哈希不可得时**下载前**即拒绝——
 	// 空 hash 时换任何源结果相同，重试 ghProxy 纯属浪费；也不为已知
-	// 不可校验的包消耗下载流量（原实现下载完才拒绝，见 git 37044551 前逻辑）。
+	// 不可校验的包消耗下载流量（原实现下载完才拒绝）。
 	if expectedHash == "" {
 		return "", fmt.Errorf("%w：SHA256 哈希不可得，拒绝无完整性校验的更新包", ErrHashMismatch)
 	}
@@ -370,7 +368,7 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 	}
 	tmp := f.Name()
 
-	// R30 P2-4：临时文件 symlink 劫持防护。
+	// 临时文件 symlink 劫持防护。
 	// os.CreateTemp 在系统临时目录创建文件，若 TMPDIR 被设为攻击者可写路径，
 	// 或临时目录存在符号链接劫持，下载的 exe 可被替换。
 	// 创建后用 os.Lstat 校验：若发现是符号链接则拒绝（fail-closed）。
@@ -494,7 +492,7 @@ func InstallUpdate(exePath string) error {
 	}
 
 	// 装盘前预检：校验 PE 魔数 + PE 签名，防损坏/篡改包替换运行中 exe
-	// R30 P2-5：旧实现仅校验 2 字节 "MZ"，攻击者可在合法 MZ 后附带任意 payload。
+	// 旧实现仅校验 2 字节 "MZ"，攻击者可在合法 MZ 后附带任意 payload。
 	// 增强：读取 PE header 偏移（MZ + 0x3C 处的 4 字节 little-endian），
 	// 定位 PE 签名（"PE\0\0"），确认是完整 PE 文件。
 	f, err := os.Open(exePath)
@@ -572,7 +570,7 @@ func InstallUpdate(exePath string) error {
 		log.Printf("[updater] 清理临时文件失败: %v", err)
 	}
 
-	// 主进程退出收口（锐评 #1）：库函数不直接 os.Exit——defer（updateLock.Unlock 等）
+	// 主进程退出收口：库函数不直接 os.Exit——defer（updateLock.Unlock 等）
 	// 必须正常走完，退出由调用方据 ErrExitRequested 在应用层执行（helper 已在子进程
 	// 侧等待，主进程退出即完成 exe 替换）。Wails 前端应在此之前显示提示。
 	return ErrExitRequested

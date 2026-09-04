@@ -274,7 +274,7 @@ func relKeyDirLevel(root, path string, isDir bool) string {
 	if ext := filepath.Ext(rel); ext != "" {
 		rel = strings.TrimSuffix(rel, ext)
 	}
-	// code review P3：目录键加尾随 "/"——与兄弟平铺文件（同名剥扩展名）区分——
+	// 目录键加尾随 "/"——与兄弟平铺文件（同名剥扩展名）区分——
 	// 文件"嵌套1/动力臂.ysm"与目录"嵌套1/动力臂/"不再同键（map last-write-wins
 	// 曾让文件覆盖目录——模型包静默丢失）
 	if isDir {
@@ -392,7 +392,7 @@ func collectEntriesWalk(rootDir string, rtype string) map[string]string {
 			// 会吞掉子夹层级（如 嵌套1/ 内含平铺 .ysm + 01_taisho_maid/ + 嵌套2/ 深层）。
 			// 此时下钻保留各子夹层级，让 nestDirLevelTree 重建容器。
 			if containsModelSubfolderMemo(path, rtype, memo) {
-				// code review P3：容器下钻时也注册自身键（目录 marker）——与对侧同名
+				// 容器下钻时也注册自身键（目录 marker）——与对侧同名
 				// 叶子目录（仅平铺文件——pre-fix 安装）键一致，避免键集不相交产生
 				// 幻影 Missing+Extra（内容相同却显示分歧）
 				if key := relKeyDirLevel(rootDir, path, true); key != "" {
@@ -579,7 +579,7 @@ func diffFolderContentsCore(globalFiles, instanceFiles map[string]string) []File
 //   - 只扫描模型文件（通过 IsTypeModelFile 过滤）
 //   - 使用相对路径作为 key，保留层级信息
 //   - 返回全局侧文件清单（synced 条目含在结果中——前端子文件列表需全量展示；
-//     差异判定由调用方按 Status 区分——code review P3 注释对齐实现）
+//     差异判定由调用方按 Status 区分——注释对齐实现）
 func DiffFolderContents(globalFolder, instanceFolder, rtype string) []FileDiffEntry {
 	// 扫描全局文件夹内的模型文件
 	globalFiles := collectFolderFiles(globalFolder, rtype)

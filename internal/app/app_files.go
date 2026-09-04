@@ -188,7 +188,7 @@ const fallbackRepoType = "ysm"
 // 空串/未注册类型回退 inferFolderType 内容推断（兼容导入页等无上下文入口）。
 // 提醒非阻断：内容明确归属其他单一类型且与上下文不符时记一条 warn 日志，
 // 落盘仍按上下文执行——用户拖到哪页就落哪页的根。
-// 例外（审核 P3-4）：上下文为默认中性类型时让位内容推断、整条走 ImportModelFolder
+// 例外：上下文为默认中性类型时让位内容推断、整条走 ImportModelFolder
 // 旧路（含 ysm.json 入口优先级与兜底），最常用入口不静默改数据落点。
 func (a *App) ImportModelFolderTo(folderName, subpath, rtype string, files []types.ImportFileItem) error {
 	rtype = strings.TrimSpace(rtype)
@@ -237,7 +237,7 @@ func inferExplicitFolderType(files []types.ImportFileItem) string {
 
 // inferFolderType 从文件夹文件列表推断资源类型：
 // 两遍扫描：先扫 ysm.json 入口（YSM 解压目录唯一入口，优先级不依赖 items 顺序——
-// 前端收集顺序随 OS 枚举/拖拽序变化，审核 P3-1 修复顺序敏感性），
+// 前端收集顺序随 OS 枚举/拖拽序变化），
 // 再扫首个「支持文件」（扩展名命中注册表且非 ysm.json 附属）经 ExtBelongsTo 判定，
 // 单归属则用该类型；歧义/未知回退 ysm（保持向后兼容）。
 // 关键：MMD 文件夹（含 .pmx/.pmd）不再落到 ysm 根。

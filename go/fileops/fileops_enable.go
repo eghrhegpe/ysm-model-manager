@@ -72,7 +72,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 		}
 		if types.IsDisableSuffix(path) {
 			// 文件自身也带禁用后缀（旧状态残留）。
-			// R33 P3-1：先 Rename 父目录（决定性步骤），再 Rename 文件名。
+			// P3-1：先 Rename 父目录（决定性步骤），再 Rename 文件名。
 			// 旧顺序先 Rename 文件名再 Rename 父目录，若第二步失败，
 			// 文件名已去后缀但父目录仍禁用，产生「半启用」不一致态。
 			fileNew := types.StripDisableSuffix(path)

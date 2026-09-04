@@ -41,7 +41,7 @@ func materializeDLL() (string, error) {
 		return "", fmt.Errorf("create Rust scanner temporary file: %w", err)
 	}
 	tmpPath := tmp.Name()
-	// R32 P2-1 + code_review P2：临时文件权限。
+	// 临时文件权限。
 	// os.MkdirAll(dir, 0o700) 已限制目录本身为用户私有，
 	// 临时文件继承目录 ACL，其它用户不可读——这是 Windows 上
 	// 真正的隔离机制。os.Chmod 在 Windows 上只切换

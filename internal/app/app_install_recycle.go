@@ -15,7 +15,7 @@ import (
 )
 
 // ========== 回收站 ==========
-// R24 P3：recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批
+// recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批
 // 文件（实例目录 Rename/Remove、.recycle 内 Move）→ 统一纳入 InstallLock 互斥
 // （共享单锁闭环，与 ClearInstanceResources 同口径）。
 // ⚠️ 这些绑定不得在已持 InstallLock 的路径内被调用（非重入锁，会自死锁）。
@@ -54,7 +54,7 @@ func (a *App) findRecycleRoot(src string) string {
 		cfg.MmdRoot,
 		cfg.VrcRoot,
 	}
-	// CustomRoots 纳入根列表（迁移后废弃字段已清空，recycle 必须查新源——codereview 批次3 P2）
+	// CustomRoots 纳入根列表（迁移后废弃字段已清空，recycle 必须查新源）
 	if cfg.CustomRoots != nil {
 		for _, r := range cfg.CustomRoots {
 			roots = append(roots, r)
@@ -186,7 +186,7 @@ func (a *App) allRecycleRoots(cfg types.AppConfig) []string {
 		cfg.MmdRoot,
 		cfg.VrcRoot,
 	}
-	// CustomRoots 纳入根列表（迁移后废弃字段已清空，回收站须查新源——codereview 批次3 P2）
+	// CustomRoots 纳入根列表（迁移后废弃字段已清空，回收站须查新源）
 	if cfg.CustomRoots != nil {
 		for _, r := range cfg.CustomRoots {
 			roots = append(roots, r)

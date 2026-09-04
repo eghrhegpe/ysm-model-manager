@@ -74,7 +74,7 @@ var (
 
 // HTTPStatusError 携带 HTTP 状态码与 URL 的类型化错误，调用方用 errors.As 提取码值，
 // 替代 strings.Contains(err.Error(), "404") 等脆弱匹配。
-// URL 字段（R26 P4-1）：旧 Error() 只输出 `HTTP <code>`，调用方日志难以定位是哪个 URL 返回 4xx/5xx。
+// URL 字段：旧 Error() 只输出 `HTTP <code>`，调用方日志难以定位是哪个 URL 返回 4xx/5xx。
 type HTTPStatusError struct {
 	Code int
 	URL  string
@@ -122,10 +122,8 @@ const (
 	defaultRetryMaxAttempts = 3
 	// defaultRetryBackoff 显式开启重试且 Backoff 为 0 时的退避基数（指数增长）
 	defaultRetryBackoff = 500 * time.Millisecond
-	// maxRetryBackoff 指数退避封顶（R26 P3-1）：backoff<<(attempt-1) 在 attempt
-	// 较大时可能溢出（int64 左移超过 63 位）或退避过长（用户无感）。
-	// 封顶为 30s：默认 backoff=500ms 时 attempt=7 达到 32s，封顶截断；
-	// 调用方设 MaxAttempts=20 时 attempt=13 后恒等 30s，避免溢出。
+	// maxRetryBackoff 指数退避封顶：backoff<<(attempt-1) 在 attempt 较大时可能溢出（int64 左移超过 63 位）或退避过长（用户无感）。
+	// 封顶为 30s：默认 backoff=500ms 时 attempt=7 达到 32s，封顶截断；调用方设 MaxAttempts=20 时 attempt=13 后恒等 30s，避免溢出。
 	maxRetryBackoff = 30 * time.Second
 )
 
@@ -147,7 +145,7 @@ func (d *Downloader) WithRetry(maxAttempts int, backoff time.Duration) *Download
 // 不重试：ctx 取消/超时、4xx、安全 sentinel（partial 伪装/非二进制/scheme/重定向/校验和不符）。
 // 重试：服务端 5xx、底层网络错误（timeout/连接重置）、io 断流。
 //
-// 截断重试 vs 校验和不重试的语义不对称是有意设计（R26 P4-2 澄清）：
+// 截断重试 vs 校验和不重试的语义不对称是有意设计：
 //   - ErrTruncated（截断）属传输层问题——服务端声明 Content-Length 但实际字节数不足，
 //     可能是网络中断导致，重试同一 URL 可能下次完整。
 //   - ErrChecksumMismatch（校验和不符）属内容层问题——下载内容与期望 SHA256 不符，
@@ -226,7 +224,7 @@ func (d *Downloader) httpClient() *http.Client {
 	if d.client != nil {
 		return d.client
 	}
-	// 未缓存时即时构造并赋值到 d.client，后续调用复用同一实例（R26 P3-3）：
+	// 未缓存时即时构造并赋值到 d.client，后续调用复用同一实例：
 	// 旧实现每次 new 一个 http.Client，无连接池/keepalive 复用，并发下载场景性能差。
 	c := &http.Client{Timeout: d.timeout}
 	d.client = c
@@ -269,7 +267,7 @@ func (d *Downloader) prepareDownloadEnv(url, savePath string) (*http.Client, *sy
 		return nil, nil, fmt.Errorf("%w: %q（仅支持 http/https）", ErrUnsupportedScheme, url)
 	}
 	// 规范化锁键：filepath.Clean 消除尾分隔符/双斜杠/.. 等差异，
-	// 防止同一 savePath 因写法不同而拿到不同锁、互斥失效（R26 P3-2）。
+	// 防止同一 savePath 因写法不同而拿到不同锁、互斥失效。
 	lockKey := filepath.Clean(savePath)
 	mu, _ := fileLocks.LoadOrStore(lockKey, &sync.Mutex{})
 	m := mu.(*sync.Mutex)
@@ -453,7 +451,7 @@ func verifyDownloadedFile(
 func commitAtomicWrite(af *atomicFile, downloaded, usedTotal int64, onProgress ProgressFn) error {
 	if err := af.tmp.Sync(); err != nil {
 		// Sync 失败时显式 Close 释放句柄，避免依赖外层 cleanup 的 Close 顺序
-		// （R26 P2-2：旧实现直接 return，Windows 上句柄未释放会导致后续 Remove 失败、.part 残留）。
+		// 旧实现直接 return，Windows 上句柄未释放会导致后续 Remove 失败、.part 残留。
 		// Close 的错误被丢弃——Sync 已失败，Close 失败不影响错误分类。
 		_ = af.tmp.Close()
 		return fmt.Errorf("同步下载文件失败 %s: %w", af.tmpName, err)

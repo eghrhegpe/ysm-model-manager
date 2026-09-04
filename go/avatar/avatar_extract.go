@@ -44,7 +44,7 @@ func extractAvatarFromYSM(modelPath, safeName string) string {
 	authors := parseYSMJSONAuthors(files)
 	if len(authors) > 0 {
 		// 作者声明优先：按 avatar 字段匹配（命中即 SaveAvatarData 落盘）。
-		// 2026-09 外部锐评 #13：旧实现的 :55「无 authors 或匹配失败后再无条件
+		// 旧实现的 :55「无 authors 或匹配失败后再无条件
 		// 二次 match」为纯冗余——authors 为空时该调用恒空（内部遍历空 authors），
 		// authors 非空时与首调完全重复；删除后行为不变。
 		return matchAvatarByAuthor(files, authors, safeName)
@@ -54,7 +54,7 @@ func extractAvatarFromYSM(modelPath, safeName string) string {
 }
 
 // parseYSMJSONAuthors 从 YSM 文件列表中找 ysm.json 并解析 authors。
-// 消费 DecodeYSMData 的 []byte 直通形态（2026-09 外部锐评 #2：旧 []int 中间
+// 消费 DecodeYSMData 的 []byte 直通形态（旧 []int 中间
 // 形态每字节膨胀 8× 且需 toBytes 转回，纯为历史签名买单）。
 func parseYSMJSONAuthors(files []ysmDecodedFile) []authorEntry {
 	for _, f := range files {
@@ -286,7 +286,7 @@ func CacheAvatarsFromJSON(modelPath string) {
 // CacheAvatarsFromModel 从 .ysm/.zip/.7z/.json 模型缓存所有作者头像。
 // 覆盖 CacheAvatarsFromJSON 仅处理解压目录（.json）的局限，使创作者视图头像
 // 对压缩包/二进制模型（.ysm/.zip/.7z）同样生效。
-// 单遍实现（2026-09 外部锐评 #1）：旧实现先 modelAuthorNames 全量读/解码一次拿
+// 单遍实现：旧实现先 modelAuthorNames 全量读/解码一次拿
 // 作者名，再对每个作者各调 ExtractAvatarURI → 各自再整读/再解码（.ysm N 作者 =
 // N+1 次 50MB 级整读 + N+1 次 Node/WASM spawn）。现按格式各只做一次读取/解码/
 // 开容器，复用同一份文件列表在内存内逐作者匹配落盘。

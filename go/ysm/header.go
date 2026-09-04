@@ -166,7 +166,7 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 		}
 		h.Tips = strings.Join(preambleLines, "\n")
 	}
-	// R29 P3-2：检查 scanner.Err()，超长行（>64KB）时 log 标记
+	// 检查 scanner.Err()，超长行（>64KB）时 log 标记
 	if err := scanner.Err(); err != nil {
 		log.Printf("[ysm] scanHeader scanner error: %v", err)
 	}

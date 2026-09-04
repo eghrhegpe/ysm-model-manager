@@ -23,7 +23,7 @@ var InstallLock sync.Mutex
 // ErrPartialInstall 标记目录安装「部分成功」——目录已建、部分条目已落地，
 // 但个别条目（文件拷贝/子目录递归）失败。与致命错误（目录创建/读取失败）区分：
 // 致命错误触发整树回滚清理残渣；partial 错误保留已成功落地的兄弟文件，
-// 让用户看到「哪些装上了、哪些没装上」，重装时只补失败项（R26 P3）。
+// 让用户看到「哪些装上了、哪些没装上」，重装时只补失败项。
 var ErrPartialInstall = errors.New("部分安装失败")
 
 // cleanAbs 封装 filepath.Abs(filepath.Clean(path))
@@ -275,7 +275,7 @@ func resolveFinalDst(srcDir, dstDir, relInside string) (string, error) {
 	return filepath.Join(dstDir, filepath.Base(srcDir)), nil
 }
 
-// callInstallDirRecursiveWithRollback 调用 installDirRecursive，并在失败时按错误分级决策回滚（R26 P3）。
+// callInstallDirRecursiveWithRollback 调用 installDirRecursive，并在失败时按错误分级决策回滚。
 //
 // 错误分级与回滚策略：
 //   - ErrPartialInstall（条目级软失败）：**不**回滚。目录已建、部分条目已落地；
@@ -297,7 +297,7 @@ func callInstallDirRecursiveWithRollback(srcDir, finalDst, linkMode, rtype, file
 		log.Printf("[installer] 检查目标目录状态失败 %s: %v", finalDst, err)
 	}
 	if err := installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot); err != nil {
-		// 条目级软失败：保留已落地文件，不回滚（R26 P3）。
+		// 条目级软失败：保留已落地文件，不回滚。
 		// 旧实现无差别整树回滚，把已成功的兄弟文件一起删掉，MMD 多 texture 场景用户可感知。
 		if errors.Is(err, ErrPartialInstall) {
 			return err
@@ -331,7 +331,7 @@ func installDirAtLocked(srcDir, dstDir, relInside, filesRoot, linkMode, rtype st
 	}
 	// finalDst 落在 srcDir 内同样死递归（srcDir 与 dstDir
 	// 不同但嵌套时，如 dstDir 是 srcDir 的子目录）——在递归入口再守一道。
-	// 分工说明（R26 P4-3）：normalize 的 sameDir 守卫（L232）仅防 srcDir==dstDir
+	// normalize 的 sameDir 守卫（L232）仅防 srcDir==dstDir
 	// 完全相同；本守卫防 srcDir 是 finalDst 的祖先（嵌套）。两道守卫互补，
 	// 均不可省：sameDir 不防嵌套，本守卫不防完全相同（finalDst=dstDir/<basename>
 	// 严格是 dstDir 子路径，IsInside(srcDir, finalDst) 在 srcDir==dstDir 时
@@ -456,14 +456,14 @@ func installSingleDirEntry(entry os.DirEntry, srcDir, finalDst, linkMode, rtype,
 	if err := applyInstallFileByMode(srcFile, finalDst, linkMode); err != nil {
 		log.Printf("[installer] 安装文件 %s 失败: %v (继续)", srcFile, err)
 		// 条目级软失败用 ErrPartialInstall 包装标记，让父级 installDirRecursive
-		// 分级时正确识别为 partial（code_review P1-2 修正）。
+		// 分级时正确识别为 partial。
 		*errs = append(*errs, fmt.Errorf("%w: %s: %w", ErrPartialInstall, name, err))
 	}
 }
 
 // installDirRecursive 递归安装目录树
 //
-// 错误分级（R26 P3）：
+// 错误分级：
 //   - 致命错误（checkDstSymlinkSegments / MkdirAll / ReadDir 失败）：直接 return，
 //     上层 callInstallDirRecursiveWithRollback 据此触发整树回滚清理残渣。
 //   - 条目级软失败（单个文件拷贝失败、子目录递归部分失败）：收集到 errs，
@@ -498,9 +498,7 @@ func installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot string) er
 	if len(errs) > 0 {
 		// 分级 errs：fatal（非 ErrPartialInstall）直接返回，让上层触发整树回滚；
 		// 全都是 partial 时才包装为 ErrPartialInstall（保留已落地兄弟文件）。
-		// code_review P1-2 修正：旧实现统一包装为 ErrPartialInstall，
-		// 子目录 MkdirAll/ReadDir 失败被误分类为 partial，跳过整树回滚，
-		// 留下半截损坏目录树。
+		// 旧实现统一包装为 ErrPartialInstall，子目录 MkdirAll/ReadDir 失败被误分类为 partial，跳过整树回滚，留下半截损坏目录树。
 		var fatalErr error
 		allPartial := true
 		for _, e := range errs {
@@ -547,9 +545,8 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 }
 
 // InstallWithOverlay 带冲突检查的安装
-// 注意（R25 P4-1）：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有
-// .minecraft 守卫，源侧仅靠调用方约束）；前端已 0 消费（Deprecated 绑定，
-// 上层 InstallModelWithOverlay 仅兼容旧绑定面），待发版清理。
+// 注意：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有 .minecraft 守卫，源侧仅靠调用方约束）；
+// 前端已 0 消费（Deprecated 绑定，上层 InstallModelWithOverlay 仅兼容旧绑定面），待发版清理。
 func InstallWithOverlay(src, customDir string) (string, error) {
 	InstallLock.Lock()
 	defer InstallLock.Unlock()
@@ -720,9 +717,8 @@ func symlinkOrCopy(src, dstDir string) error {
 
 // sameSource 判断 dst 是否已是 src 的有效落地点（同一文件 / 指向 src 的链接）。
 // wantSymlink：hardlink 模式传 false（要求 dst 非符号链接）、symlink 模式传 true
-// （要求 dst 是符号链接）——P2 修复（子代理审计）：原实现只用 os.Stat+SameFile，
-// 对「dst 是指向 src 的 symlink」与「dst 是 src 的 hardlink」无法区分，hardlink 模式
-// 遇 symlink 静默放行不转换、symlink 模式遇 hardlink 也放行，linkMode 语义不落地。
+// （要求 dst 是符号链接）：原实现只用 os.Stat+SameFile，对「dst 是指向 src 的 symlink」与「dst 是 src 的 hardlink」无法区分，
+// hardlink 模式遇 symlink 静默放行不转换、symlink 模式遇 hardlink 也放行，linkMode 语义不落地。
 // 不存在、断链或内容不同的旧副本均返回 false 语义（err != nil 或 !same）
 func sameSource(src, dst string, wantSymlink bool) (bool, error) {
 	dstInfo, err := os.Lstat(dst)

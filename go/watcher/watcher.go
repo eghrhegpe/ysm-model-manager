@@ -205,7 +205,7 @@ func (w *Watcher) loop() {
 				continue
 			}
 			// 新建目录不自动继承监听（fsnotify 非递归）：收到 Create 目录事件后补
-			// 监听新目录树（锐评 #5），否则新建子目录内部变更全部漏报——Windows 的
+			// 监听新目录树，否则新建子目录内部变更全部漏报——Windows 的
 			// ReadDirectoryChangesW 同样只报父目录内容变化、不给子目录句柄，同需补 Add。
 			if ev.Op&fsnotify.Create != 0 {
 				watchNewDir(fw, ev.Name)
@@ -307,7 +307,7 @@ func (w *Watcher) syncAll() {
 		w.mu.Lock()
 		w.syncRunning = false
 		restart := w.running
-		// R34 P2-9：syncPending 续跑竞态修复。
+		// syncPending 续跑竞态修复。
 		// 原实现 pending := w.syncPending 与 w.syncPending = false 在同一锁内，
 		// 但 L259-262 的 syncPending=true 设置与 L271 syncRunning=false 复位
 		// 之间存在窗口——若 in-flight 实例的 defer 已越过 pending 读取点，

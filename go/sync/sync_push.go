@@ -50,7 +50,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 				// 多层物理路径：用 InstallDirRel 保留仓库层级结构
 				// 例如 missing=globalDir/vendor/character/modelA → targetDir/vendor/character/modelA
 				rel, relErr := paths.RelInside(globalDir, missing)
-				// code review P3：rel == "."（missing == globalDir——目录根本身是模型文件夹）
+				// rel == "."（missing == globalDir——目录根本身是模型文件夹）
 				// 也回退 InstallDir（InstallDirRel 的 rel=="." 拒绝会静默推送失败——与旧
 				// 行为一致：basename 落位）；relErr 覆盖 Rel 失败与 ".." 越界（收敛 #19）
 				if relErr != nil || rel == "." {
@@ -234,7 +234,7 @@ func PullSingleResource(globalDir, targetDir, srcPath string) error {
 // 由调用方保证 rtype 与 filePath 匹配。若 rtype 不匹配，InstallDir 内部会按
 // installDir/scanDir 推导目标路径，不会出错但可能路径不对——这是调用方责任。
 //
-// ⚠️ 毒舌审核 P0：原硬编码 ext == ".json" 会误判普通 readme.json 为 YSM 文件夹级安装。
+// ⚠️ 毒舌审核：原硬编码 ext == ".json" 会误判普通 readme.json 为 YSM 文件夹级安装。
 // 改为 IsYsmEntryJSON 精确匹配 ysm.json，避免非 YSM 场景的 .json 误触发。
 func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) error {
 	defer InvalidateSyncScanCaches() // 推送会改实例目录，清同步扫盘缓存防陈旧
@@ -290,7 +290,7 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 			}
 			continue
 		}
-		// 名称去重用 basename（保守策略，R27 P3-5 确认）：
+		// 名称去重用 basename（保守策略，P3-5 确认）：
 		// 同名不同子目录的文件也会被跳过——避免仓库内同名文件被覆盖。
 		// 不改为 relKey（相对路径）去重：relKey 会放宽去重，
 		// 让 a/model.ysm 与仓库已有 b/model.ysm 共存，用户侧看到两个同名模型易混淆。
@@ -337,7 +337,7 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 	return count, nil
 }
 
-// mapSrcToGlobal P3 修复（子代理审计）：原用 strings.Replace(src, targetDir, globalDir, 1)
+// mapSrcToGlobal P3 修复：原用 strings.Replace(src, targetDir, globalDir, 1)
 // 子串替换——非路径语义且大小写敏感（Windows 下 targetDir 与 src 前缀大小写不一致时 Replace
 // 不命中 → dstDir=Dir(src) → copyFile(src, src) 静默截断源文件；或兄弟目录前缀误匹配写错目录）。
 // 改用 paths.RelInside 精确映射：src 必须在 targetDir 下，越界显式报错防逃逸。

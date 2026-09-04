@@ -52,7 +52,7 @@ type FileConflict struct {
 	RemoteHash string `json:"remoteHash,omitempty"`
 	// SuggestedStrategy 建议的解决策略
 	SuggestedStrategy ResolutionStrategy `json:"suggestedStrategy"`
-	// HashFailed 标记哈希计算失败的条目（R27 code_review P2-1 修复）。
+	// HashFailed 标记哈希计算失败的条目。
 	// 此类条目本应人工审查，ResolveConflictsLocked 检测到 HashFailed 时
 	// 不覆盖 SuggestedStrategy，直接计入 manual 计数。
 	HashFailed bool `json:"hashFailed,omitempty"`
@@ -121,7 +121,7 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 			}
 			conflicts = append(conflicts, conflict)
 		} else if localInfo.Size == remoteInfo.Size && (localInfo.Hash == "" || remoteInfo.Hash == "") {
-			// 两端 size 相同但任一端 hash 失败（R27 P2-1）：
+			// 两端 size 相同但任一端 hash 失败：
 			// 旧实现在此情况静默跳过（hash 空时 L91 条件不满足），
 			// 导致哈希失败的真实冲突文件被漏报。
 			// 修复：标记 HashFailed=true + ResolveManual，让 ResolveConflictsLocked
@@ -169,7 +169,7 @@ func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDi
 		}
 		if err := fsutil.CopyFile(remotePath, localPath); err != nil {
 			// 恢复备份。恢复失败时返回带备份路径的复合错误，
-			// 让调用方知悉恢复点位置（R27 P2-2：旧实现 _ 吞掉恢复失败错误）。
+			// 让调用方知悉恢复点位置（旧实现 _ 吞掉恢复失败错误）。
 			if rerr := fsutil.CopyFile(backupPath, localPath); rerr != nil {
 				return fmt.Errorf("拷贝远端文件失败: %w; 恢复备份也失败（备份保留在 %s）: %v", err, backupPath, rerr)
 			}
@@ -205,14 +205,14 @@ func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrate
 // PushResources/PullResources → SyncResources 在 InstallLock 临界区内运行）。
 // ResolveConflict 自身不加锁，供本函数在持锁前提下调用。
 //
-// 锁契约是文档约束，不做运行时断言（R27 code_review P2-2/P2-3 修正）：
+// 锁契约是文档约束，不做运行时断言：
 // sync.Mutex 不暴露「是否已持锁」的查询，TryLock 在其他 goroutine 持锁时返回 false
 // → 不可靠；且生产环境 panic 不可接受。调用方须自行确保持锁。
 func ResolveConflictsLocked(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
 	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
 	for _, c := range conflicts {
 		// HashFailed 条目（hash 计算失败）不覆盖 SuggestedStrategy，
-		// 直接计入 manual（R27 code_review P2-1 修复）。
+		// 直接计入 manual。
 		if c.HashFailed {
 			manual++
 			continue
@@ -275,7 +275,7 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 		if hashErr != nil {
 			// 哈希失败但仍记录条目（Hash 字段为空），不中断流程。
 			// DetectConflicts 靠 per-entry Hash=="" 识别哈希失败的条目
-			// 并标记 HashFailed=true（R27 P2-1）。
+			// 并标记 HashFailed=true。
 			// walkErr 仅保留最后一个错误供调用方诊断，DetectConflicts 不消费它。
 			walkErr = hashErr
 		}

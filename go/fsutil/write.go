@@ -20,7 +20,7 @@ import (
 
 // 陷阱 #11：各阶段失败必须经 sentinel + errors.Is 判定，禁止文本匹配（strings.Contains
 // 错误消息）。调用方（如 go/importer 的 AppError 包装）可用 errors.Is 区分阶段并映射
-// 不同的错误码（如 MKDIR_FAILED），维持既有结构化错误契约（code_review）。
+// 不同的错误码（如 MKDIR_FAILED），维持既有结构化错误契约。
 var (
 	// ErrTempCreateFailed 标记「创建临时文件」阶段失败（目录只读/磁盘满/配额/NUL 路径）。
 	ErrTempCreateFailed = errors.New("创建临时文件失败")

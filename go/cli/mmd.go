@@ -216,7 +216,7 @@ func runFileBench(ctx *CmdContext) error {
 	fmt.Printf("\n   总大小: %s\n\n", formatSize(totalSize))
 
 	fmt.Println("📊 单文件读取测试:")
-	// 收集每文件平均耗时/吞吐，供 SingleRead 汇总归档（评审 #8：测量曾做但不写 JSON）
+	// 收集每文件平均耗时/吞吐，供 SingleRead 汇总归档（#8：测量曾做但不写 JSON）
 	fileAvgMs := make([]float64, 0, len(fileInfos))
 	fileThrpt := make([]float64, 0, len(fileInfos))
 	for _, fi := range fileInfos {
@@ -281,7 +281,7 @@ func runFileBench(ctx *CmdContext) error {
 	fmt.Printf("   Base64 膨胀:  %s (+%.0f%%)\n", formatSize(overheadEstimate.Base64Size), overheadEstimate.InflationRatio*100)
 	fmt.Printf("   序列化开销:   ~%s\n", durationFormat(overheadEstimate.SerDescOverheadMs))
 
-	// 基准结果无条件组装：--output 落盘与 --compare 真对比共用（评审 #8 补全归档）
+	// 基准结果无条件组装：--output 落盘与 --compare 真对比共用（#8 补全归档）
 	result := fileBenchResult{
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		Files:       make([]fileBenchFile, len(benchItems)),
@@ -321,7 +321,7 @@ func runFileBench(ctx *CmdContext) error {
 	return nil
 }
 
-// calculateIPCOverhead 实际测量 IPC 开销（评审 #8：原实现忽略 files 只测 files[0]、
+// calculateIPCOverhead 实际测量 IPC 开销（#8：原实现忽略 files 只测 files[0]、
 // serdeSpeedMBps=100 拍脑袋常量、测得的总时长还丢弃——现实测 Base64+JSON 序列化）
 func calculateIPCOverhead(a AppService, files []fileBenchItem, iterations int) ipcEstimate {
 	if len(files) == 0 {
@@ -365,7 +365,7 @@ func calculateIPCOverhead(a AppService, files []fileBenchItem, iterations int) i
 }
 
 // loadAndCompareBenchmark 加载基准并对比 SingleRead/BatchRead/IPC 数值
-// （评审 #8：原实现只回显时间戳与文件数，无真对比）
+// （#8：原实现只回显时间戳与文件数，无真对比）
 func loadAndCompareBenchmark(baselinePath string, current fileBenchResult) string {
 	data, err := os.ReadFile(baselinePath)
 	if err != nil {
@@ -552,7 +552,7 @@ func runScanDir(ctx *CmdContext) error {
 	for ext, count := range extCount {
 		stats = append(stats, extStat{ext, count, extSize[ext]})
 	}
-	// 按大小降序（sort.Slice 替代手写选择排序，评审 #7）
+	// 按大小降序（sort.Slice 替代手写选择排序，#7）
 	sort.Slice(stats, func(i, j int) bool { return stats[i].size > stats[j].size })
 
 	fmt.Printf("   %-10s %-8s %s\n", "扩展名", "数量", "总大小")
@@ -680,7 +680,7 @@ func collectTexInfos(textureFiles []string) []texInfo {
 		texInfos = append(texInfos, texInfo{path: tf, size: info.Size(), ext: ext})
 	}
 
-	// 按大小降序（sort.Slice 替代手写 O(n²) 选择排序——千张贴图即百万次比较，评审 #7）
+	// 按大小降序（sort.Slice 替代手写 O(n²) 选择排序——千张贴图即百万次比较，#7）
 	sort.Slice(texInfos, func(i, j int) bool { return texInfos[i].size > texInfos[j].size })
 
 	return texInfos

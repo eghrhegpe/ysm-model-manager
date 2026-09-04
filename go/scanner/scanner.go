@@ -29,7 +29,7 @@ var scanCache sync.Map
 // cacheGen 缓存代际：InvalidateCache（全量失效）递增。
 // 在途扫描 Store 前比对代际，若扫描期间缓存已被全量失效则丢弃本次结果，
 // 防止「刚失效又被旧扫描结果重新 Store」导致失效白做（P2 竞态修复）。
-// 用 atomic 保护：watcher 后台 goroutine 与 Wails 绑定线程并发读写，普通 uint64 存在数据竞争（code_review P3）。
+// 用 atomic 保护：watcher 后台 goroutine 与 Wails 绑定线程并发读写，普通 uint64 存在数据竞争。
 var cacheGen atomic.Uint64
 
 // keyVersions per-key 版本戳（P1 修复：InvalidatePath 只递增目标目录版本——
@@ -61,8 +61,7 @@ var flightJoins atomic.Int64
 // walkStartHookFn 走盘开始钩子（仅测试注入：制造确定性在途重叠；生产恒 nil）。
 // rustScanHookFn 仅测试注入：覆盖 Rust 扫描快路径结果，制造 tryRustScan 的 handled 分支；
 // 生产恒 nil（Rust 后端仅在 -tags rust_backend 下编译，普通单测走 stub 返回 handled=false）。
-// 2026-09 外部锐评 #15：旧实现是裸包级变量、无任何并发防护——与同文件 errorSink 特意
-// 上 RWMutex（R31 修复）的严谨度不成比例。现经 hookMu 读写（Set* 注入 / get* 快照读取，
+// 旧实现是裸包级变量、无任何并发防护——现经 hookMu 读写（Set* 注入 / get* 快照读取，
 // 与 SetErrorSink 同款范式）；测试注入走 Set 接口，禁止生产调用。
 var (
 	hookMu          sync.RWMutex
@@ -107,7 +106,7 @@ type scanFlight struct {
 	keyVersion uint64 // owner 启动时捕获的 per-key 版本
 }
 
-// joinResult joinInFlightWaiter 的结果（替代三态 bool 返回，Go 锐评刀②）：
+// joinResult joinInFlightWaiter 的结果（替代三态 bool 返回）：
 //   - hit=true：成功等到合法（版本未变）航班结果，直接用 entries
 //   - retry=true：等到但版本已变，调用方 goto retry 重来
 //   - 两者皆 false：本调用成为 owner，需自己真扫并把结果写入 fl.entries
@@ -123,7 +122,7 @@ const scanCacheTTL = 30 * time.Second
 
 // errorSink 扫描错误回调（ADR-082 续：GUI 下 stdout 不可见，log.Printf 等于静默——
 // 薄壳注入 AddOpLog 让 walk/文件信息/哈希错误进环形日志面板，用户可查）
-// R31 P2-3：旧实现是裸变量，SetErrorSink 无锁写、emitScanError 无锁读 → data race。
+// 旧实现是裸变量，SetErrorSink 无锁写、emitScanError 无锁读 → data race。
 // 改 RWMutex 保护（启动期单写、运行期只读，RWMutex 足够）。
 var (
 	errorSinkMu sync.RWMutex
@@ -137,7 +136,7 @@ var (
 const scanErrorDedupWindow = 30 * time.Second
 
 // dedupCleanEvery 每次全量清理间隔（按写入次数）：错误路径本身低频，
-// 摊还避免每次上报都锁内 O(n) 遍历 dedupSeen（锐评 P2-2）。
+// 摊还避免每次上报都锁内 O(n) 遍历 dedupSeen。
 const dedupCleanEvery = 128
 
 // dedupMu + dedupSeen 记录 msg → 上次上报时间；dedupWrites 写入计数（摊还清理用）
@@ -148,7 +147,7 @@ var (
 )
 
 // SetErrorSink 注入扫描错误回调（薄壳 internal/app 启动时调用，如 AddOpLog 包装）
-// R31 P2-3：RWMutex 写锁保护，消除 data race。
+// RWMutex 写锁保护，消除 data race。
 func SetErrorSink(fn func(msg string)) {
 	errorSinkMu.Lock()
 	errorSink = fn
@@ -168,7 +167,7 @@ func emitScanError(format string, args ...any) {
 	}
 	dedupSeen[msg] = now
 	dedupWrites++
-	// 摊还清理过期条目：每 dedupCleanEvery 次写入才全量扫一遍（锐评 P2-2）。
+	// 摊还清理过期条目：每 dedupCleanEvery 次写入才全量扫一遍。
 	// 过期条目在窗口外不会再匹配命中，晚清无碍去重正确性，只影响 map 占用。
 	if dedupWrites%dedupCleanEvery == 0 {
 		for k, t := range dedupSeen {
@@ -178,7 +177,7 @@ func emitScanError(format string, args ...any) {
 		}
 	}
 	dedupMu.Unlock()
-	// R31 P2-3：RWMutex 读锁保护，消除 data race。
+	// RWMutex 读锁保护，消除 data race。
 	errorSinkMu.RLock()
 	fn := errorSink
 	errorSinkMu.RUnlock()
@@ -267,12 +266,12 @@ func InvalidatePath(dir string) {
 		return
 	}
 	sep := string(filepath.Separator)
-	// R31 P2-2 + code_review P1-1/P1-2：祖先脏读修复。
+	// 祖先脏读修复。
 	// 旧实现仅递增 key 自身 + 子孙 key 版本，不递增祖先 key 版本。
 	// 若用户扫描 /a 后 InvalidatePath("/a/b")，/a 的缓存仍 30s TTL 命中，
 	// 但 /a 的扫描结果可能已包含 /a/b 子树的状态 → 父缓存脏读。
 	// 修复：同时递增所有祖先 key 的版本，确保父缓存也失效。
-	// code_review P1-2：Windows 盘符根路径（C:\\）上 filepath.Dir 不变，
+	// Windows 盘符根路径（C:\\）上 filepath.Dir 不变，
 	// 旧循环无 parent==prev 守卫会无限循环。加 prev 守卫。
 	ancestors := []string{key}
 	{
@@ -289,7 +288,7 @@ func InvalidatePath(dir string) {
 		kv, _ := keyVersions.LoadOrStore(anc, &atomic.Uint64{})
 		kv.(*atomic.Uint64).Add(1)
 	}
-	// code_review P1-1：恢复 descendant keyVersion 递增。
+	// 恢复 descendant keyVersion 递增。
 	// 旧实现 keyVersions.Range 递增所有子孙 key 版本，拦截在途 Store。
 	// 重写时丢失了这一臂，导致在途子目录扫描的陈旧结果被缓存。
 	keyVersions.Range(func(k, v interface{}) bool {
@@ -358,7 +357,7 @@ retry:
 	// owner 候选航班：wg.Add 须在 LoadOrStore 之前（waiter 可能在 Load 后立刻 Wait——
 	// 计数先于暴露，Wait 才不会空跑）。waiter 路径（join 返回 hit/retry）下本 fl 被
 	// 整体弃用：wg 计数 1 无人 Done 亦无害（从不 Wait 它，垃圾回收即可）——结构使然，
-	// 2026-09 外部锐评 #10 已评估为「惯用法 + 已收敛产物」，不改为 singleflight.Group
+	// 已评估为「惯用法 + 已收敛产物」，不改为 singleflight.Group
 	// （自建表支持 waiter 按启动时版本失效守卫，标准库 Group 无此语义）。
 	fl.wg.Add(1)
 	if res := joinInFlightWaiter(dir, fl); res.hit {
@@ -386,7 +385,7 @@ retry:
 	// 仅回调一次 err 后结束，原实现打印后返回空列表并照常 Store 进缓存 30s，
 	// 用户无法区分「目录真空」与「目录不可读」（失败结果被当成功缓存）
 	walkFailed := false
-	// R31 P2-1：接收 WalkDir 返回 error——根 lstat 失败时 WalkDir 不调 callback
+	// 接收 WalkDir 返回 error——根 lstat 失败时 WalkDir 不调 callback
 	// 直接返回 error，旧实现忽略该返回值导致 walkFailed 恒 false，空结果照常缓存。
 	if werr := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true)
@@ -404,7 +403,7 @@ retry:
 	}); werr != nil {
 		walkFailed = true
 	}
-	// SHA256 并行哈希回填（2026-09 外部锐评 #5）：旧实现哈希在 WalkDir 回调内串行
+	// SHA256 并行哈希回填：旧实现哈希在 WalkDir 回调内串行
 	// 全量读盘（大库冷扫逐文件同步 IO）；walk 期间 deferHash 跳过计算，收集完条目后
 	// 按 worker 池并行回填——条目序/错误口径不变（见 hashEntriesParallel）。
 	hashEntriesParallel(entries)
@@ -494,7 +493,7 @@ func tryRustScan(dir string, gen, keyVersion uint64, startTime time.Time, fl *sc
 // wantMeta=false（作者提取等只看文件名的场景）时跳过 d.Info() 与哈希计算——
 // 纯目录枚举，Size/ModTime/Hash 恒零值。
 // deferHash=true（ScanEntries 走盘用）：哈希推迟到 walk 后由 hashEntriesParallel 并行
-// 回填（2026-09 外部锐评 #5），本函数只留 Size/ModTime；其余调用方传 false 保持内联。
+// 回填，本函数只留 Size/ModTime；其余调用方传 false 保持内联。
 func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMeta, deferHash bool) (entry *types.ModelEntry, walkRet error, rootFailed bool) {
 	if err != nil {
 		// 统一走错误回调（GUI 下 stdout 不可见，薄壳注入后进环形日志面板 ADR-082）
@@ -598,8 +597,7 @@ func ComputeFileHash(path string) string {
 	return hash
 }
 
-// hashEntriesParallel 并行计算 entries 的 SHA256 并按下标回填（2026-09 外部锐评 #5：
-// 旧实现哈希在 WalkDir 回调内串行全量读盘，大库冷扫被逐文件同步 IO 拖慢）。
+// hashEntriesParallel 并行计算 entries 的 SHA256 并按下标回填（旧实现哈希在 WalkDir 回调内串行全量读盘，大库冷扫被逐文件同步 IO 拖慢）。
 // 语义与旧内联路径逐字节一致：仅 ShouldHashExt 条目参与、超 MaxImportSize 由
 // ComputeFileHash 内部跳过、空哈希补 emitScanError（同旧回调内口径）；worker 数 =
 // min(runtime.NumCPU, 待哈希数)，条目顺序不变（按下标回填）。

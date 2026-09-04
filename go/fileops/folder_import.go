@@ -132,7 +132,7 @@ func isSupportedEntryFile(rel string) bool {
 }
 
 // checkNoSymlinkInPath 从 base 逐组件向下 Lstat 校验 subpath 各段，任何一段为符号链接
-// 即拒绝——P2 修复（子代理审计）：repoRoot/sub 若为预置 symlink 指向仓库外，os.Stat
+// 即拒绝——P2 修复：repoRoot/sub 若为预置 symlink 指向仓库外，os.Stat
 // 对不存在的外部目标放行、MkdirAll 穿透 symlink 建到外部，WriteFileAtomic 遂写入
 // 仓库外。subpath 为空时直接放行（folderName 由调用方保证新目录，非 symlink）。
 func checkNoSymlinkInPath(base, subpath string) error {

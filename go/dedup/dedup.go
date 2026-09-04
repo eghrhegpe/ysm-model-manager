@@ -115,7 +115,7 @@ func collectFiles(dir string, skipRecycle bool) ([]fileInfo, error) {
 // workers = min(files, GOMAXPROCS)——小文件集自然 workers=1，与串行开销等价
 // （ADR-119 P4：不设阈值双路径，统一走本管道）。
 //
-// size 预分组（有意取舍，详见 go-dedup 知识卡「R27 P3-2」）：不同 size 的文件
+// size 预分组（有意取舍，详见 go-dedup 知识卡「读失败可见性不对称」）：不同 size 的文件
 // 不可能同 hash，唯一 size 的文件必不成组——跳过其哈希省一次 I/O，输出不变。
 // 代价：唯一 size 文件不被打开，若其本身读失败则不可见（同 size 文件读失败会
 // log-and-skip）——这是设计，不是 bug。
@@ -140,8 +140,8 @@ func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 		go func() {
 			defer wg.Done()
 			// recover 防 worker panic 死锁主 goroutine：无缓冲 jobs channel 发送阻塞中
-			// panic 会让 wg 永不 Done、close(jobs) 永不执行（详见 go-dedup 知识卡 R27 P3-1）；
-			// panic 槽位留零值（ok=false），调用方见 log-and-skip。
+			// panic 会让 wg 永不 Done、close(jobs) 永不执行（详见 go-dedup 知识卡
+			// 「worker panic 死锁」）；panic 槽位留零值（ok=false），调用方见 log-and-skip。
 			defer func() {
 				if r := recover(); r != nil {
 					log.Printf("[dedup] worker panic: %v", r)

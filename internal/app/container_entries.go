@@ -127,7 +127,7 @@ func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) (*t
 		if oerr != nil {
 			return nil, oerr
 		}
-		// 收编 fsutil.ReadLimitedEntry（锐评刀③口径）：原裸 LimitReader 缺 +1 探测——
+		// 收编 fsutil.ReadLimitedEntry：原裸 LimitReader 缺 +1 探测——
 		// 恰 maxContainerEntrySize 的条目被截断后 err==nil 静默继续（ADR-033 陷阱残留，
 		// 与 resourcepack_models 两处同 bug）；ReadLimitedEntry 读 limit+1 探截断，
 		// 超限/读错统一返回 nil（读错有日志留痕），此处显式报错而非继续用截断数据。

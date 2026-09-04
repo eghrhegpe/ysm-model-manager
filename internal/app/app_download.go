@@ -105,7 +105,7 @@ func (q *DownloadQueue) process() {
 // processForEpoch 按指定代际运行队列消费循环。
 // target > 0 时（重启路径），worker 启动即校验代际：若已被 CancelQueue/重入队取代
 // （q.epoch 已越过 target）则拒绝运行——防 restart-spawned goroutine 在 spawn 与首次
-// 取锁之间被新 EnqueueDownloads 启动的 worker 重复（code_review P2）。
+// 取锁之间被新 EnqueueDownloads 启动的 worker 重复。
 func (q *DownloadQueue) processForEpoch(target uint64) {
 	q.mu.Lock()
 	if target > 0 && q.epoch != target {
@@ -135,7 +135,7 @@ func (q *DownloadQueue) processForEpoch(target uint64) {
 			q.running = true
 			q.epoch++
 		}
-		// code_review P2：重启 worker 绑定到 spawn 时决定的代际——若 spawn 后
+		// 重启 worker 绑定到 spawn 时决定的代际——若 spawn 后
 		// CancelQueue+Enqueue 完成（epoch 再递增），本 goroutine 启动即拒绝运行，
 		// 避免与 EnqueueDownloads 启动的 worker 重复消费队列
 		newEpoch := q.epoch

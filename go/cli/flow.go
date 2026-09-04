@@ -26,7 +26,7 @@ type guiFlowResult struct {
 	Success     bool
 	Description string
 	// FirstModel 机器可读的首个可分析模型路径——曾塞进 Description 由下游反解析
-	// 「首个模型:」文案 token（评审 #9：改个 emoji 就断），结构化直传
+	// 「首个模型:」文案 token（改个 emoji 就断），结构化直传
 	FirstModel string
 }
 
@@ -57,7 +57,7 @@ func runGUIFlow(ctx *CmdContext) error {
 	results = append(results, runPhaseModelScan(ctx.App, filesRoot))
 
 	// 如果指定了模型，使用它；否则用扫描阶段的结构化 FirstModel
-	// （评审 #9：不再从 Description 文案反解析「首个模型:」token——人类可读
+	// （不再从 Description 文案反解析「首个模型:」token——人类可读
 	// 输出不是内部 API）
 	targetModel := *modelPath
 	if targetModel == "" && len(results) > 0 {
@@ -164,7 +164,7 @@ func classifyForScan(path, ext string, registry *types.ResourceTypeRegistry) str
 		}
 		return "other"
 	}
-	// code review P3：容器兜底诚实标 "container"——repoaudit.Classify(ext) 对共享
+	// 容器兜底诚实标 "container"——repoaudit.Classify(ext) 对共享
 	// 扩展名 .zip（14 类型声明）last-wins 归任意类型（与内容无关——误导分布）；
 	// Classify 也不返回 ""（miss 归 other）——死代码 `if id == ""` 一并删除
 	return "container"
@@ -196,7 +196,7 @@ func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	sort.Strings(parts)
 	dist := strings.Join(parts, ", ")
 
-	// code review P1：保留机器可读 token（YAML: n, YSM: n）——gui-flow-gate.mjs 的
+	// 保留机器可读 token（YAML: n, YSM: n）——gui-flow-gate.mjs 的
 	// hasModel 判定解析它（旧格式正则）；新"类型分布"格式（注册表 id 小写）不含
 	// YAML:/YSM: 大写 token，gate 会静默降级（fail-open 跳过 ③④⑤ 强验证）
 	ysmCount := byType["ysm"]

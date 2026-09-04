@@ -188,7 +188,7 @@ func MoveModelFile(root, src, dstDir string) error {
 	}
 	defer unlock()
 	// 空 root 即跳过整条边界校验（安全链单点开关）：生产调用方（绑定层/CLI）恒注入
-	// 仓库根，空 root 仅测试路径可达——此处留痕，防薄壳忘传后静默裸奔（锐评 #10）
+	// 仓库根，空 root 仅测试路径可达——此处留痕，防薄壳忘传后静默裸奔
 	if root == "" {
 		log.Printf("[fileops] MoveModelFile: root 为空，跳过仓库边界校验")
 	}
@@ -259,7 +259,7 @@ func MoveModelFile(root, src, dstDir string) error {
 	if _, err := os.Lstat(dst); err == nil {
 		return fmt.Errorf("目标已存在: %s", dst)
 	}
-	// R33 P3-3：MoveModelFile 非 EXDEV 路径直接 renameForMove(src, dst)
+	// P3-3：MoveModelFile 非 EXDEV 路径直接 renameForMove(src, dst)
 	// （= os.Rename），不检查 src 是否为 symlink；若仓库内混入 symlink 文件，
 	// Rename 仅移动链接本身、目标仍指仓库外，仓库内出现逃逸 symlink。
 	// copyFile 有 Lstat 拒 symlink 守卫，但仅 EXDEV 回退路径会走到。
@@ -272,7 +272,7 @@ func MoveModelFile(root, src, dstDir string) error {
 		// 禁用态是文件名重命名约定（ToggleModelEnable 把 path 重命名为
 		// path+".disabled"），后缀随文件/目录名自然携带，无需额外处理兄弟文件
 		if !fsutil.IsCrossDeviceErr(err) {
-			// R33 P3-2 + code_review P0/P1：仅当 dstDir 由本次 MkdirAll 新建时才清理，
+			// P3-2：仅当 dstDir 由本次 MkdirAll 新建时才清理，
 			// 避免删除预存在的目标目录及其内容（静默数据破坏）。
 			if created {
 				_ = os.RemoveAll(dstDir)
@@ -304,7 +304,7 @@ func MoveModelFile(root, src, dstDir string) error {
 // prepareModelDest 计算复制/移动的目标路径，并在 MkdirAll 前执行自嵌套检查。
 // 与 MoveModelFile / CopyModelFile 共用同一段「自嵌套检查 → 建目录 → 拼接 dst」逻辑
 // （jscpd 报告的文件内自重复，抽取为单一事实源以避免两处行为漂移；空 dstDir/src 由调用方前置校验）。
-// R33 code_review P0/P1：返回 created bool 标记 dstDir 是否由本次 MkdirAll 新建，
+// P3：返回 created bool 标记 dstDir 是否由本次 MkdirAll 新建，
 // 调用方据此决定失败时是否清理（避免删除预存在的目标目录及其内容）。
 func prepareModelDest(src, dstDir string) (dst string, created bool, err error) {
 	if err = checkNotSelfNested(src, dstDir); err != nil {
@@ -330,7 +330,7 @@ func CopyModelFile(root, src, dstDir string) error {
 	// 拒绝目录自嵌套复制——dstDir 位于 src 子树内时（先 MkdirAll 在 src 内创建
 	// dstDir，再 WalkDir 遍历到它）递归自嵌套无限膨胀直至 ENAMETOOLONG。
 	// 含 dstDir == src 等值情形（此时 dst=Join(src, Base(src)) 仍是 src 严格子目录，同样爆炸）。
-	// 放在 MkdirAll 之前执行：被拒复制不得在 src 内留下空 junk 目录（code_review）。
+	// 放在 MkdirAll 之前执行：被拒复制不得在 src 内留下空 junk 目录
 	// 空 root 留痕（见 MoveModelFile 同款守卫注释）
 	if root == "" {
 		log.Printf("[fileops] CopyModelFile: root 为空，跳过仓库边界校验")

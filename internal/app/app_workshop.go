@@ -172,7 +172,7 @@ func (a *App) SaveWorkshopCreators(list []types.WorkshopCreator) error {
 	return fsutil.WriteFileAtomic(creatorsPath(), data)
 }
 
-// inTypeSegments 判断 siteID 是否为 typeStr 的分号分隔精确段（R22 审核 P3-1）：
+// inTypeSegments 判断 siteID 是否为 typeStr 的分号分隔精确段：
 // 原裸 Contains(c.Type, siteID+";") 会把 "ba;c" 误配 siteID="a"（真子串误判），
 // 与 3.4③ 词边界范式一致——多站点 Type 为 "site1;site2" 分号分隔。
 func inTypeSegments(typeStr, siteID string) bool {
@@ -287,7 +287,7 @@ func (a *App) BackupWorkshopCreators() (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		// 全新用户无用户配置（数据走 bundled 兜底）：无数据可备份 ≠ 错误，
-		// 否则 Merge/Replace/Reset 首次使用全部中止（R22 审核 P2-1）。
+		// 否则 Merge/Replace/Reset 首次使用全部中止。
 		// 与 web 桥（web-community.ts 无备份步骤直接合并）行为对齐。
 		if os.IsNotExist(err) {
 			return "", nil
@@ -387,7 +387,7 @@ func mergeTypeSegments(target *types.WorkshopCreator, incoming string) bool {
 // MergeCommunityCreatorsFromJSON 把社区索引（增量）并入本地 creators 并单次原子写回。
 // ADR-172：社区增量合并下沉 Go——替代前端 tryAutoMergeCommunity / site edit 同步
 // 按钮的 TS 派生写回链（siteMap 分组 / kept 过滤 / dedupeCreators），解除 AGENTS.md
-// 「Go 派生结果只读」红线债务（锐评复核 2026-09-03 判定，见 ADR-172 §1）。
+// 「Go 派生结果只读」红线债务（见 ADR-172 §1）。
 //
 // 语义与 MergeWorkshopCreatorsFromJSON（手动全量导入，drag.ts 消费）刻意区分：
 //   - type 冲突：分号段并入（不丢站点），非覆盖；

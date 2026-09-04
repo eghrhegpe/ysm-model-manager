@@ -143,12 +143,12 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	}
 	// 优先瞬时移动（同分区原子操作，避免大模型文件全量复制）；
 	// 仅跨设备（EXDEV）回退复制后删；权限/占用等其他失败直接报错，
-	// 避免无谓全量复制，以及「副本已入站、源未删」的重试堆积（审核 P2）
+	// 避免无谓全量复制，以及「副本已入站、源未删」的重试堆积
 	if err := os.MkdirAll(filepath.Dir(dst), fsutil.DirPerms); err != nil {
 		return nil, err
 	}
 	if err := tm.renameForMove(src, dst); err == nil {
-		// rename 成功后事后校验：dst 仍落在 recycleDir 内（R26 P2-3）。
+		// rename 成功后事后校验：dst 仍落在 recycleDir 内（P2-3）。
 		// 防御文件系统 TOCTOU——rename 前父目录被换 symlink 可能让文件落到回收站之外。
 		// 虽 TrashManager 自身无共享内存状态，但文件系统 TOCTOU 面存在；
 		// 命中时尝试 os.Rename 回滚，回滚失败则报错让上层决策。
@@ -183,7 +183,7 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	return &MoveResult{Action: "recycled", Reason: ""}, nil
 }
 
-// rollbackAfterSourceRemoveFail 跨设备 move 源删除失败时的副本回滚（R26 P2-2）。
+// rollbackAfterSourceRemoveFail 跨设备 move 源删除失败时的副本回滚（P2-2）。
 // 源删除失败说明 move 未原子完成：清理已落地的 dst 副本（目录走 RemoveAll /
 // 文件走 Remove），恢复「源还在 + 副本已清理」可安全重试状态；回滚本身也失败则
 // 在复合错误中同时披露源与副本两路径，交上层决策。目录/文件两分支共用此helper，
@@ -306,7 +306,7 @@ func (tm *TrashManager) Restore(src string) error {
 		// 在原位置重建符号链接
 		if linkErr := os.Symlink(target, dst); linkErr != nil {
 			// 回滚：恢复回收站侧链接。回滚失败时 log 并在错误中追加信息，
-			// 让调用方知道回收站侧链接已永久丢失（R26 P3-3：旧实现 _ 静默吞掉）。
+			// 让调用方知道回收站侧链接已永久丢失（旧实现 _ 静默吞掉）。
 			if rbErr := os.Symlink(target, src); rbErr != nil {
 				log.Printf("[recycle] 回收站侧链接回滚失败 %s: %v（回收站条目已丢失）", src, rbErr)
 				return fmt.Errorf("恢复符号链接失败 %s -> %s: %w; 回收站侧链接回滚失败: %v", dst, target, linkErr, rbErr)
@@ -396,7 +396,7 @@ func (tm *TrashManager) Delete(src string) error {
 //
 // 守卫：RemoveAll 是破坏性最强的操作，却唯一未对 recycleDir 做 symlink 检查——
 // 若 .recycle 被替换为指向外部的 symlink，os.Stat 会跟随返回外部目录的 stat（非 NotExist），
-// os.RemoveAll 会跟随 symlink 删除外部目录树（R26 P2-1）。
+// os.RemoveAll 会跟随 symlink 删除外部目录树（P2-1）。
 // 修复：入口 Lstat(recycleDir)，命中 symlink 一律拒绝——正常 .recycle 是 MkdirAll
 // 创建的普通目录，不可能是 symlink；命中即说明被篡改。
 // 不用 IsInsideResolved：recycleDir 尚不存在时 EvalSymlinks 失败保留原路径，
@@ -431,7 +431,7 @@ func (tm *TrashManager) Empty() (int, error) {
 
 // ===== 向后兼容的包级函数 =====
 // 仅保留 Move（go/cli/dedup.go 调用）。MoveEx/Restore/Delete/Empty/List 包级
-// 变体已删除（R26 P4-1）：无生产调用方，且每次 New(filesRoot) 新建临时
+// 变体已删除（P4-1）：无生产调用方，且每次 New(filesRoot) 新建临时
 // TrashManager 绕过 InstallLock 绑定，构成未持锁逃逸口。调用方应直接使用
 // TrashManager 方法并确保持锁。
 

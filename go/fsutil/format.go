@@ -21,7 +21,7 @@ func FormatSize(bytes int64) string {
 }
 
 // FileSize 安全取文件大小（Stat 失败返回 0）。
-// 收敛点：instance/sync_dirlevel 曾各自实现同款 os.Stat 样板（锐评 #17），统一委托本函数。
+// 收敛点：instance/sync_dirlevel 曾各自实现同款 os.Stat 样板，统一委托本函数。
 func FileSize(path string) int64 {
 	fi, err := os.Stat(path)
 	if err != nil {

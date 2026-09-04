@@ -319,7 +319,7 @@ func getList(m map[string]any, key string) []any {
 			return list
 		}
 		// NBT List-of-Int 还原为 []int32 / []int64（如 structure 的 size），
-		// 统一转 []any——否则 getList 取不到、size 提取长期失效（R28 P3-2 守卫随之不可达）。
+		// 统一转 []any——否则 getList 取不到、size 提取长期失效。
 		if list, ok := v.([]int32); ok {
 			return toAnySlice(list)
 		}

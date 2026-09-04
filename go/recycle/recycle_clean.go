@@ -24,16 +24,16 @@ type CleanOpLogger func(name, src, dst string, size int64, status, msg string)
 // failed 回调，与 DeduplicateEntries 口径一致——清理数偏少可归因。
 func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogger) int {
 	if filesRoot == "" {
-		// 没有仓库根目录时不做处理（R24 P4-1：守卫前移，避免空根时白走一遍遍历）
+		// 没有仓库根目录时不做处理（守卫前移，避免空根时白走一遍遍历）
 		return 0
 	}
-	// 防御性守卫（R26 P3-2）：拒绝空 dir 与文件系统根目录，
+	// 防御性守卫：拒绝空 dir 与文件系统根目录，
 	// 防止误遍历/误删整个盘符根。dir 由 App 层薄壳注入（整合包实例目录），
 	// 允许在 filesRoot 外（如 mcRoot 下），故不加 IsInsideResolved 守卫。
 	if dir == "" {
 		return 0
 	}
-	// 拒绝文件系统根目录（R26 P3-2 + code_review P1-1 修正）：
+	// 拒绝文件系统根目录（P1-1 修正）：
 	// Windows 上 filepath.VolumeName("C:\\") 返回 "C:"（无尾随 \），
 	// 直接与 cleaned 比较会漏掉盘符根。正确比较：
 	// cleaned == "/"（Unix 根）或 cleaned == vol + "\\"（Windows 盘符根）。
@@ -132,7 +132,7 @@ func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogg
 
 // DeduplicateEntries 按 SHA256 哈希分组去重：每组显式按路径排序保留第一个，其余移入回收站
 //
-// 返回值语义（R26 P3-1 修复）：
+// 返回值语义（P3-1 修复）：
 //   - removed：成功移入回收站的条目数
 //   - kept：去重成功的组数（每组保留第一个，记 1）
 //
@@ -170,7 +170,7 @@ func DeduplicateEntries(entries []types.ModelEntry, recycleRoot string, logger C
 			removed++
 		}
 		// 组内 Move 全成功时才计 kept（去重完成，保留了一个）；
-		// 有失败时该组去重未完成，不计 kept（R26 P3-1：旧实现无条件 kept++，
+		// 有失败时该组去重未完成，不计 kept（旧实现无条件 kept++，
 		// 把移动失败滞留的文件也计为保留，上层无法区分「无重复」与「移动全失败」）。
 		if !groupFailed {
 			kept++

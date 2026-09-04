@@ -180,7 +180,7 @@ func parseOldFormat(data []byte) *types.BedrockModel {
 	formatVersion, _ := unquoteString(top["format_version"])
 
 	// 确定性选取 geometry.* 条目：Go map 迭代序随机，直接 for-range 首个命中会让
-	// 同一文件（多 geometry.* 键）在不同运行/进程选到不同模型（审核 P3）
+	// 同一文件（多 geometry.* 键）在不同运行/进程选到不同模型
 	var keys []string
 	for key := range top {
 		if strings.HasPrefix(key, "geometry.") {

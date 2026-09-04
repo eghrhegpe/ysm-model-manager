@@ -36,7 +36,7 @@ type ModelEntry struct {
 	SubDir string `json:"subdir,omitempty"`
 	// Banned 禁用态（文件级 .disabled/.ban 后缀或父目录级禁用，ADR-038 D3.7）。
 	// ScanModelEntriesFiltered 填充；前端树加载据此标记，替代逐文件
-	// IsFileBanned 桥调用（2000 模型 = 2000 次 IPC 的 N+1，code review #2）。
+	// IsFileBanned 桥调用（2000 模型 = 2000 次 IPC 的 N+1）。
 	Banned bool `json:"banned,omitempty"`
 }
 

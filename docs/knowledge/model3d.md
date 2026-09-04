@@ -540,7 +540,6 @@ auto_fields:
     - surfaceSpecKey
     - SwitchContext
     - switchPreview
-    - switchTabCssText
     - switchTabHighlightBg
     - switchToSession
     - syncLightTargetFromContent

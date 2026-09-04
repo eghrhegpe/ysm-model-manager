@@ -2088,10 +2088,6 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
-          },
-          {
-            "text": "perf 契约测试临时卡",
-            "link": "/knowledge/zzz-perf-contract-tmp"
           }
         ]
       },
@@ -2138,16 +2134,6 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
-          }
-        ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "zzz-fm-delimiter-tmp",
-            "link": "/knowledge/zzz-fm-delimiter-tmp"
           }
         ]
       }

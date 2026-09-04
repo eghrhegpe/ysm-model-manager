@@ -6,7 +6,6 @@ category: ui
 source_files:
   - frontend/src/ui/ui-slide-menu.ts
   - frontend/src/ui/ui-slide-menu-styles.ts
-  - frontend/src/ui/ui-helpers.ts
   - frontend/src/ui/ui-components-styles.ts
 auto_fields:
   symbols_with_lines:

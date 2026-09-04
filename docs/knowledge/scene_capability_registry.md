@@ -125,7 +125,7 @@ perf:
 invariant_anchors:
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|sceneCapabilityRegistry
   - frontend/src/preview-3d/caps/scene-capability.ts|SceneCapability
-  - frontend/src/preview-3d/adapters/mount-preview-core.ts|createAll
+  - frontend/src/preview-3d/adapters/shared-infra.ts|createAll
   - frontend/src/preview-3d/menu/env.ts|buildEnvSchema
   - frontend/src/preview-3d/menu/env.ts|renderEnvLevel
 status: active
@@ -141,8 +141,8 @@ ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Gr
 
 ## 核心职责
 
-- **能力工厂注册与实例化**：`add(factory)` 登记工厂；`createAll({ scene, renderer })` 先 `dispose()` 旧实例，再逐个工厂 try/catch 创建（单个能力抛错不阻断其余）
-- **统一生命周期**（mount-preview-core 驱动）：
+- **能力工厂注册与实例化**：`add(factory)` 登记工厂；`createAll({ scene, renderer, camera })` 在宿主未变（scene/renderer/camera 三引用全等且 instances 非空）时**直接复用现有实例**，否则先 `dispose()` 旧实例再逐个工厂 try/catch 创建（单个能力抛错不阻断其余）
+- **统一生命周期**（buildSharedInfra / shared-infra.ts 驱动，mount-preview-core 经其装配）：
   1. `createAll` → 2. `getById` 引用 → 3. `loadAll`（localStorage 恢复）→ 4. `setPreset(adapter.id)`（模型类别预设，已有持久化值不覆盖用户显式选择）→ 5. `apply()` 挂入场景 → 会话结束 `saveAll()` + `dispose()`
 - **声明式菜单**：每 cap 的 `getMenuControls()` 返回 `MenuControlDef[]`，`preview-menu` 的 `renderCapControls` 统一渲染十种控件（`toggle / slider / select / button / divider / image / color / timeline / histogram / preset-thumb`，全 kind 带 `cap-<id>` testid）。**菜单层不碰能力实现**——引擎/锥角/预设等参数操作全部由 cap 自报控件。2026-09 起 cap 控件可经 `PreviewMenuNode.controls`（声明式节点新 kind）原生进任意面板，settings/env 不再 `renderCustom` 套壳
 - **持久化**：`persistState` / `restoreState`（localStorage 前缀 `ysm-scene-cap-`，隐私模式安全降级静默）
@@ -155,7 +155,7 @@ ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Gr
 
 ## 与其他子系统关系
 
-- **mount-preview-core**：`createAll` 建实例 → `getById("sky"/"ground"/"light"/"fog"/"shadow"/"reflector"/"environment"/"postprocessing")` 引用 → 生命周期驱动；Shadow 额外调 `syncLights` / `applyMeshCasts`（与 Light 解耦，经 scene 遍历取光）
+- **shared-infra（buildSharedInfra）**：`createAll` 建/复用实例 → `getById("sky"/"ground"/"light"/"fog"/"shadow"/"reflector"/"environment"/"postprocessing")` 引用 → 生命周期驱动；Shadow 额外调 `syncLights` / `applyMeshCasts`（与 Light 解耦，经 scene 遍历取光）
 - **preview-menu / preview-menu/env**：环境面板由 `preview-menu/core.ts` 经 `buildEnvSchema`（声明式 schemaBuilder，内部调 `renderEnvLevel`）只收 **ENV_IDS 白名单**（sky/ground/environment/fog/reflector，`getAll().filter(ENV_IDS.has)`），`fillLighting` 查 `light`，阴影面板查 `shadow`——同一能力控件**不会双面板重复**
 - **mount-preview-core `fullCleanup`**：会话清理统一 `saveAll()` + `dispose()`，cap 自身 dispose 还原构造前状态（`scene.fog` / `renderer.shadowMap` / tone mapping 等）
 - **i18n**：cap 的 `labelKey`/`descKey` 需三语入库（`frontend/src/core/i18n/locales/`），缺键时 `tr()` 回退 fallback 中文

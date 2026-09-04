@@ -27,9 +27,46 @@ const WEB_CREATORS_KEY = "web:workshop-creators";
 const WEB_SITES_KEY = "web:workshop-sites";
 const WEB_GITHUB_KEY = "web:github-repos";
 
-// 模块级串行队列：MergeWorkshopCreatorsFromJSON 的读-改-写串行化，
-// 防 localStorage 无事务锁导致的并发 lost update。
+// 模块级串行队列：两类 creator 合并（手动导入 / ADR-172 社区增量）的读-改-写串行化，
+// 防 localStorage 无事务锁导致的并发 lost update（两类合并都写 WEB_CREATORS_KEY，须互斥）。
 let mergeSeq: Promise<unknown> = Promise.resolve();
+
+/**
+ * 串行队列尾（jscpd 自克隆收敛）：runMerge 入队 → 链回序列释放 token
+ * （无论成功/失败，都让下一次 merge 进队）。
+ */
+function enqueueMerge(runMerge: () => Promise<[number, number]>): Promise<[number, number]> {
+  const result = mergeSeq.then(runMerge);
+  mergeSeq = result.then(() => undefined, () => undefined);
+  return result;
+}
+
+/**
+ * 读-改-写骨架（jscpd 自克隆收敛）：existMap 建名索引 + 逐条 upsert。
+ * updateOne 决定命中时的合并语义（type 覆盖 / ADR-172 分号段并入），
+ * 返回是否计入 updated。返回 existing 供调用方做阈值校验/幂等短路/落盘。
+ */
+function upsertCreators(
+  imported: WorkshopCreator[],
+  updateOne: (e: WorkshopCreator, cr: WorkshopCreator) => boolean,
+): { existing: WorkshopCreator[]; added: number; updated: number } {
+  const existing = loadWebCreators();
+  const existMap = new Map<string, number>();
+  existing.forEach((c, i) => existMap.set(c.name, i));
+  let added = 0;
+  let updated = 0;
+  for (const cr of imported) {
+    const idx = existMap.get(cr.name);
+    if (idx === undefined) {
+      existing.push(cr);
+      existMap.set(cr.name, existing.length - 1);
+      added++;
+      continue;
+    }
+    if (updateOne(existing[idx]!, cr)) updated++;
+  }
+  return { existing, added, updated };
+}
 
 function cloneJson<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
@@ -312,38 +349,21 @@ export const webCommunityBindings = {
     if (imported.length < MIN_IMPORT) {
       return Promise.reject(new Error(t("webCommunity.importTooFew", { count: imported.length, min: MIN_IMPORT })));
     }
-    // 串行化读-改-写：localStorage 无事务锁，并发 merge 各自读到同一份 existing，
-    // 后写者覆盖先写者的 added 条目 → lost update。模块级 Promise 链串行排队。
-    const runMerge = (): Promise<[number, number]> => {
-      const existing = loadWebCreators();
-      const existMap = new Map<string, number>();
-      existing.forEach((c, i) => existMap.set(c.name, i));
-      let added = 0;
-      let updated = 0;
-      for (const cr of imported) {
-        const idx = existMap.get(cr.name);
-        if (idx !== undefined) {
-          const e = existing[idx]!;
-          if (cr.desc && !e.desc) e.desc = cr.desc;
-          if (cr.type) e.type = cr.type;
-          if (cr.role) e.role = cr.role;
-          updated++;
-        } else {
-          existing.push(cr);
-          existMap.set(cr.name, existing.length - 1);
-          added++;
-        }
-      }
+    // 串行化读-改-写（enqueueMerge + upsertCreators 公共骨架，jscpd 自克隆收敛）：
+    // type 覆盖语义（非并入，与 ADR-172 增量并入刻意区分）
+    return enqueueMerge(() => {
+      const { existing, added, updated } = upsertCreators(imported, (e, cr) => {
+        if (cr.desc && !e.desc) e.desc = cr.desc;
+        if (cr.type) e.type = cr.type;
+        if (cr.role) e.role = cr.role;
+        return true; // 命中即计 updated（原口径：不区分是否实际变更）
+      });
       if (existing.length < 100) {
         return Promise.reject(new Error(t("webCommunity.mergeTooFew", { count: existing.length })));
       }
       saveWebCreators(existing);
       return Promise.resolve([added, updated]);
-    };
-    const result = mergeSeq.then(runMerge);
-    // 链回序列：无论成功/失败，都释放 token 让下一次 merge 进队
-    mergeSeq = result.then(() => undefined, () => undefined);
-    return result;
+    });
   },
   // ADR-172：社区索引增量并入（web 桥）——语义镜像 Go MergeCommunityCreatorsFromJSON：
   // desc/role 空补 + type 分号段并入（非覆盖，不丢站点）+ 幂等短路（无变更不写覆盖层）。
@@ -366,23 +386,10 @@ export const webCommunityBindings = {
     if (imported.length === 0) {
       return Promise.reject(new Error(t("webCommunity.communityEmpty")));
     }
-    // 串行化读-改-写：localStorage 无事务锁，与 MergeWorkshopCreatorsFromJSON 共用
-    // mergeSeq 队列（两类合并都写 WEB_CREATORS_KEY，须互斥防 lost update）
-    const runMerge = (): Promise<[number, number]> => {
-      const existing = loadWebCreators();
-      const existMap = new Map<string, number>();
-      existing.forEach((c, i) => existMap.set(c.name, i));
-      let added = 0;
-      let updated = 0;
-      for (const cr of imported) {
-        const idx = existMap.get(cr.name);
-        if (idx === undefined) {
-          existing.push(cr);
-          existMap.set(cr.name, existing.length - 1);
-          added++;
-          continue;
-        }
-        const e = existing[idx]!;
+    // 串行化读-改-写（与 MergeWorkshopCreatorsFromJSON 共用 enqueueMerge 队列，
+    // 两类合并都写 WEB_CREATORS_KEY，须互斥防 lost update）
+    return enqueueMerge(() => {
+      const { existing, added, updated } = upsertCreators(imported, (e, cr) => {
         let changed = false;
         if (cr.desc && !e.desc) {
           e.desc = cr.desc;
@@ -405,18 +412,14 @@ export const webCommunityBindings = {
           e.role = cr.role;
           changed = true;
         }
-        if (changed) updated++;
-      }
+        return changed;
+      });
       // 幂等短路：本地已含社区全部条目 → 不写覆盖层（对齐 Go 无变更不落盘）
       if (added === 0 && updated === 0) {
         return Promise.resolve([0, 0]);
       }
       saveWebCreators(existing);
       return Promise.resolve([added, updated]);
-    };
-    const result = mergeSeq.then(runMerge);
-    // 链回序列：无论成功/失败，都释放 token 让下一次 merge 进队
-    mergeSeq = result.then(() => undefined, () => undefined);
-    return result;
+    });
   },
 } satisfies Record<string, (...args: never[]) => Promise<unknown>>;

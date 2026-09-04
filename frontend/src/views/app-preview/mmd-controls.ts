@@ -8,16 +8,14 @@
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";
-import type { CameraControlBridge } from "../../preview-3d/adapters/camera-controls.ts";
-export type { CameraControlBridge };
 // [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
-// import 供本文件函数签名本地绑定；export type 原位转发保公共面（views 域测试零改动）
+// import 供本文件函数签名本地绑定；导出面收敛（knip）：CameraControlBridge /
+// MaterialControlBridge 消费方直连 adapters 单源，此处不再原位转发
 import type {
   MmdBottomNavCtx,
   MmdPlayBridge,
-  MaterialControlBridge,
 } from "../../preview-3d/adapters/content-bridges.ts";
-export type { MmdBottomNavCtx, MmdPlayBridge, MaterialControlBridge };
+export type { MmdBottomNavCtx, MmdPlayBridge };
 
 /**
  * [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。

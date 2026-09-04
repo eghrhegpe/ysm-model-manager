@@ -144,10 +144,6 @@ vi.mock("../../ui/ui-components-styles.ts", () => ({
   installUiComponentsStyles: vi.fn(),
 }));
 
-vi.mock("../../ui/ui-helpers.ts", () => ({
-  createSlideMenu: vi.fn(() => ({ _tag: "slide-menu" })),
-}));
-
 vi.mock("../../ui/ui-header-toggle.ts", () => ({
   createHeaderToggle: vi.fn(() => ({ _tag: "toggle" })),
 }));

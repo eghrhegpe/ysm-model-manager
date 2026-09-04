@@ -30,7 +30,7 @@ const SHOT_LABELS = [
 type ShotModel = Parameters<typeof saveScreenshot>[0];
 
 /** 截图保存副作用：防连点 guard + toast 错误提示。fillXxxShotPanel（命令式）与 shotButtonNodes（声明式）共用 */
-export function makeShotAction(
+function makeShotAction(
   modelForSave: ShotModel,
   screenshotFn: (() => Promise<string | null>) | null | undefined,
 ): (key: string) => Promise<void> {

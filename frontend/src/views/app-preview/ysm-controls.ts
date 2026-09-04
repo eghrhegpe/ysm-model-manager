@@ -8,16 +8,10 @@
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";
-import type { CameraControlBridge } from "../../preview-3d/adapters/camera-controls.ts";
-export type { CameraControlBridge };
-// [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
-// import 供本文件函数签名本地绑定；export type 原位转发保公共面（views 域测试零改动）
-import type {
-  YsmModel,
-  YsmContentHandle,
-  YsmControlsContext,
-} from "../../preview-3d/adapters/content-bridges.ts";
-export type { YsmModel, YsmContentHandle, YsmControlsContext };
+// 导出面收敛（knip）：CameraControlBridge/YsmModel/YsmContentHandle 消费方直连
+// adapters 单源（content-bridges/camera-controls），此处不再原位转发
+import type { YsmControlsContext } from "../../preview-3d/adapters/content-bridges.ts";
+export type { YsmControlsContext };
 import { registerSchema, unregisterSchema, makeYsmModelSchemaId, YSM_MODEL_SCHEMA_ID } from "../../preview-3d/adapters/schema-registry.ts";
 import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
 

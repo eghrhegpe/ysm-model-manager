@@ -192,19 +192,19 @@ jobs:
       - name: 前端类型检查（ADR-014 门槛）
         working-directory: frontend
         shell: pwsh
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
       - name: 前端测试（Vitest）
         working-directory: frontend
         shell: pwsh
         run: |
-          npx vitest run --coverage | Out-String -Width 200
+          pnpm exec vitest run --coverage | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: 前端构建
         working-directory: frontend
         shell: pwsh
-        run: npx vite build
+        run: pnpm exec vite build
 
   # ── E2E（Playwright · vite dev 纯前端 + mock bridge，参照 MikuMikuAR 实证模式）──
   # 参数：全局 7 分钟总限 / 每用例 15s / 累计 5 次失败阻断（maxFailures=5）——ADR-037 接入参数。
@@ -236,15 +236,15 @@ jobs:
 
       - name: 安装 Playwright Chromium
         working-directory: frontend
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: E2E 类型检查（mock 契约守卫）
         working-directory: frontend
-        run: npx tsc -p tsconfig.e2e.json --noEmit
+        run: pnpm exec tsc -p tsconfig.e2e.json --noEmit
 
       - name: E2E 测试（7min 总限 / 15s 每项 / maxFailures=5）
         working-directory: frontend
-        run: npx playwright test --reporter=line
+        run: pnpm exec playwright test --reporter=line
 
       - name: 上传 E2E 报告（失败时保留现场）
         if: failure()
@@ -257,7 +257,7 @@ jobs:
       - name: E2E 覆盖广度采集（ADR-035 G-4，可选非门禁）
         working-directory: frontend
         run: |
-          npx playwright test --config playwright.coverage.config.ts
+          pnpm exec playwright test --config playwright.coverage.config.ts
           node ../scripts/e2e-coverage-report.ts --json
 
       - uses: actions/upload-artifact@v6

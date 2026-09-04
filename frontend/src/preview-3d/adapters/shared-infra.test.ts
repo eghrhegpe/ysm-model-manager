@@ -1,4 +1,4 @@
-// happy-dom 环境（仓库默认，jsdom 未安装）
+// 测试环境：仓库默认 happy-dom（vitest.config.ts 全局配置；jsdom 未安装，勿标 jsdom）
 // ===== shared-infra 终局拆除测试（code review #1）=====
 // 覆盖：teardownSharedInfra 冷态幂等（可安全重复调用）+ registry.dispose 联动 +
 // unload 钩子注册（buildSharedInfra 首次装配惰性安装，once 语义）。

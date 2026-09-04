@@ -27,8 +27,10 @@ auto_fields:
     - lerpArray
     - LoadingGuard
     - logError
+    - LogSink
     - logWarn
     - makeLazyLoader
+    - setLogSink
     - swallowError
     - waitForFrame
 quick_groups:

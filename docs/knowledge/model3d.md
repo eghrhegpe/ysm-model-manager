@@ -557,6 +557,7 @@ auto_fields:
     - switchToSession
     - syncLightTargetFromContent
     - TdKeyAction
+    - teardownSharedInfra
     - TexDecodeConfig
     - TexDecodeRequest
     - TexDecodeResponse

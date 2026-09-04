@@ -253,6 +253,7 @@ auto_fields:
     - switchPreview
     - switchToSession
     - syncLightTargetFromContent
+    - teardownSharedInfra
     - TexDecodeConfig
     - TexDecodeRequest
     - TexDecodeResponse

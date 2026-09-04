@@ -450,7 +450,7 @@
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 260 |
 | mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 515 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 38 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 159 |
+| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 34 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 45 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 57 |
@@ -596,7 +596,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerErrorDiary | `frontend/src/core/error-diary.ts` | 55 |
+| registerErrorDiary | `frontend/src/core/error-diary.ts` | 57 |
 | connectedCallback | `frontend/src/views/app-toast/index.ts` | 69 |
 
 ### `tree:reload`

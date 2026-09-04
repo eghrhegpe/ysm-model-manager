@@ -192,7 +192,25 @@ invariant_anchors:
 - ✅ **刀③ LimitReader+1 收编（修正原「6 处统一收编」断言）**：实地审计 22 处 LimitReader 后修正——`extractYsmRootFromZip`（ysm/summary.go:218 需区分超限/读错误两种文案）、`mcmeta.go`（metaTooLarge 标志区分）、`nbt.go:36`（错误上抛）、`avatar_zip.go:37/70`+`avatar_extract.go:482`（超限 vs 读错误日志区分）**语义均比 fsutil.ReadLimitedEntry 更细，强收编会退化错误处理，保留**；真正的高 ROI 点 = `internal/app/resourcepack_models.go:143/173` 两处裸 `LimitReader` **缺 +1 探测（ADR-033 陷阱残留：恰 64MB 条目静默截断继续用）且 nil 语义与 fsutil 兼容** → 收编 `fsutil.ReadLimitedEntry`，顺带修掉截断 bug。内部 app 测试全绿。**2026-09-03 复查补刀：`internal/app/container_entries.go` GetVoxelDataInContainer 同款裸 LimitReader+无 +1 探测漏网（初审 22 处清单未含）**——收编 `fsutil.ReadLimitedEntry`（超限/读错统一 nil → 显式报错「读取失败/超限」），补 `TestGetVoxelDataInContainer_OverLimit`（64MB+1 全零条目）；至此全仓裸 `io.LimitReader` 无 +1 探测残留清零（updater 对 HTTP body 的 LimitReader 属网络流限长语义，非 zip 条目，不在 ADR-033 范围）。
 - ✅ **刀④c resolveBedrockGeometryFallback 拆 4 个具名策略**：`go/ysm/extracted.go` 主函数变 4 行链式调用（fallbackParseDirect / fallbackParseWrapped / fallbackWalkDir / fallbackParseBare），每层策略独立具名——逐字节保留原行为（含 WalkDir 10 层/排除目录/probes 封顶/texSlot=0 口径）。ysm + internal/app + geometry + threejs 测试全绿。
 - ✅ **刀⑤ 绑定清理（发版批次落地）+ 刀④a DetectZipType → DetectContainerType**：删除 24 个 Deprecated 绑定（GetModelTexSizes/InstallModelWithOverlay/ImportModelFile{SkipCheck,Overwrite,To,OverwriteTo,ToMMD,OverwriteToMMD}/DeduplicateCustomDir/RelinkCustomDir/MoveToRecycleEx/ClearCustomDir/SavePreviewTempFile/SearchAllModels/GetGlobalCustomDir/ClearTextureCache/Export|ImportWorkshopSitesCSV/ReplaceWorkshopCreatorsFromJSON/SetVoxelMaxBlocks/ToggleResourcePack/IsResourcePackEnabled/SelectImportZip/GetWasmBinary）——替代入口逐一定位：回收站→MoveToRecycle、清理→ClearInstanceResources（逻辑下沉 go/recycle.RemoveRepoDuplicates 已有测试）、截图→SaveScreenshotFile、CSV→JSONFile/SaveWorkshopSites、导入→ImportModelFile/ImportFileAndPushToInstance、体素上限→配置默认值；5 个有 Go 测试消费的绑定（MoveToRecycleEx/ClearCustomDir/SavePreviewTempFile/Export|ImportWorkshopSitesCSV）测试随删除迁移/清理（MoveToRecycleEx 语义并入 MoveToRecycle、previewTemp 孤儿机制整体删除）；同步 e2e mock-data.ts 删 24 stale key、binding-check.ts 白名单清残留、`npm run generate:bindings` 重写绑定面（170 方法）。`DetectZipType→DetectContainerType`（含 importer.DetectContainerType/DetectContainerTypeFromBase64Tail + TS 平移 detectContainerType + web-fs 契约镜像）消除「ZIP 但处理 7z」命名误导，全仓无双轨。go build + go test ./go/... ./internal/app/... + binding-check（170:170 零 issues）+ 前端 typecheck/vite build/vitest 全绿。
-- ➖ **processForEpoch epoch → 状态机枚举（暂缓，需 ADR 级评估）**：并发核心 + 现有测试（Sequential/Error/Cancel/QueueStatus）**未覆盖 cancel-restart 竞态路径**、epoch 三处递增无专门并发测试兜底——按「先写测试再写实现」铁律，需先补竞态测试（withFakeNode 式注入 epoch 推进）再谈枚举化，独立立项。
+- ➖ **processForEpoch epoch → 状态机枚举（暂缓，独立立项 ADR-181）**：并发核心 + 现有测试（Sequential/Error/Cancel/QueueStatus）**未覆盖 cancel-restart 竞态路径**、epoch 三处递增无专门并发测试兜底——按「先写测试再写实现」铁律，需先补竞态测试（withFakeNode 式注入 epoch 推进）再谈枚举化。**2026-09-05 二轮锐评确认：守卫注释已讲清协议（queue.go:113-158），代码可读性可接受；暂缓合并 ToggleModelEnable（桌面零消费，ADR-182 标记技术债）**。
+
+## 动刀进度（实施记录，2026-09-05 二轮增量）
+
+### 视角A：IO/扫描/路径/探测（低风险重构）
+- ✅ **resolvedRootCache 组件化**（ADR-134 同构）：`internal/app/app_scan.go:422` 包级全局 `sync.Map` → `App.resolvedRootCache *resolvedRootCache` 字段（`app_resolved_root_cache.go` 新增），`saveConfig` 调 `c.Clear()`。`isPathInRootOrSelf` 改 `a.resolvedRoot(root)`。`app_audit_fix_test.go` 同步更新。零行为变化，全测全绿。
+- ✅ **根列表收敛 `allScanRoots()`**：`isPathInRootOrSelf` ↔ `findMoveRoot` 两处逐字重复的 16 行根列表构造 → 1 行调用 `allScanRoots(a.LoadAppConfig())`。recycle/toggle 系列根列表语义不同（ysmRoot vs FilesRoot/McRoot），未强行统一。
+- ✅ **isSupportedEntryFile 口径对齐**：`go/fileops/folder_import.go:127` 加 `types.StripDisableSuffix`，与 scanner.go:671 一致。`.ysm.disabled` 文件现在被识别为支持文件（bug 修复）。
+- ⚠️ **Toggle 三轨命名**（视角C 核实）：`ToggleModelEnable`（YSM 单根，桌面零消费）/ `ToggleEnable`（多根，桌面唯一入口）/ `SyncModelToggleStatus`（批量同步，整合包专用）。已给 `ToggleModelEnable` 加 `// Deprecated` 注释过渡（ADR-182 标记技术债，本轮不动）。
+
+### 视角B：二进制解析/渲染/缓存（中风险改动）
+- ✅ **纹理扩展名口径统一**：新增 `go/types/texture.go` 双层事实源——`SupportedTextureExts()`（收集用，含 .tga）+ `RenderableTextureExts()`（渲染用，不含 .tga 因浏览器不认）+ `TextureMIME(ext)` 返回 MIME 或空串。`extracted.go`/`summary.go`/`avatar_extract.go` 四文件替换硬编码。`.jpeg` 纹理现在被 collectTextureFiles 收集；顺手修了 `avatar_extract.go` L194 隐性 bug（.jpeg 文件之前错标 `image/png`）。
+- ✅ **ResourceTypeInfo 下沉 go/types**：删除 `go/instance.ResourceTypeInfo`（27 行），`BuildSyncItems` 入参改 `[]types.ResourceType`，`app_install_instance.go:520-533` 删除 13 行手动转换循环。净减 22 行。
+- ⚠️ **知识卡 drift**：`go-avatar-decode.md` / `go-avatar.md` / `ysm-wasm.md` / `go_design_critique.md` 同步更新 `DecodeYSMFiles`→`DecodeYSMData`（ADR-164 后已彻底退役，非薄封装保留）。
+
+### 视角C：Wails 绑定/应用层（高风险评估，不动代码）
+- ✅ **install_domain_split ADR-179 P1 落地核实**：queue（processForEpoch）已迁 `internal/app/install/queue.go`，快照未记录此迁移。install 子包零 `*App` 反向指针，ConfigDeps 闭包注入。
+- ➖ **SearchModels 8 参数封装**：前端真实消费仅 1 处（toolbar-search.ts:195），60+ 处改动面（含 40+ 测试）。标记技术债，补注释「参数固定 8 个，扩展走 types.SearchFilters struct」。
+- ➖ **resolvedRootCache 范式分裂纠正**：已随视角A 组件化落地，ADR-134 清零结论恢复一致。
 
 ## 相关
 

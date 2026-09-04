@@ -1,8 +1,8 @@
 {
-  "generated": "2026-09-03T03:40:51.822Z",
+  "generated": "2026-09-04T16:13:59.182Z",
   "scope": "./go/**/*.go",
   "language": "go",
-  "duplicates": 438,
+  "duplicates": 439,
   "clones": [
     "go/avatar/avatar_extra_test.go#go/avatar/avatar_extra_test.go",
     "go/avatar/avatar_extra_test.go#go/avatar/avatar_node_test.go",
@@ -12,7 +12,6 @@
     "go/avatar/avatar_test.go#go/avatar/avatar_test.go",
     "go/cli/cli_test.go#go/cli/cli_test.go",
     "go/cli/cli_test.go#go/sync/sync_dirlevel_scan_test.go",
-    "go/cli/config_cmd.go#go/cli/install.go",
     "go/cli/dedup.go#go/cli/resource.go",
     "go/cli/dedup_test.go#go/cli/dedup_test.go",
     "go/cli/fileops.go#go/cli/fileops.go",
@@ -59,7 +58,7 @@
     "go/geometry/archive_test.go#go/geometry/archive_testdata_test.go",
     "go/geometry/parse_test.go#go/geometry/parse_test.go",
     "go/geometry/ysm_parser.go#go/ysm/extracted.go",
-    "go/importer/importer_copy_extra_test.go#go/importer/importer_copy_lock_windows_test.go",
+    "go/importer/container_parity_test.go#go/ysm/summary_parity_test.go",
     "go/importer/importer_copy_extra_test.go#go/sync/sync_push_extra_test.go",
     "go/importer/importer_copy_lock_windows_test.go#go/sync/sync_push_lock_windows_test.go",
     "go/importer/importer_edge_test.go#go/importer/importer_edge_test.go",

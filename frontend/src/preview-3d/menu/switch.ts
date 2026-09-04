@@ -17,6 +17,37 @@ const tr = (key: string, fallback: string): string => {
   const v = t(key as LocaleKey);
   return v === key ? fallback : v;
 };
+// P1 批次5：模型切换面板内联 cssText → 集中类（sw- 前缀本文件私有，ensureSwitchStyles
+// 幂等注入——fillSwitch 唯一入口调用覆盖 tabBar/候选行/空态全部渲染路径）
+let _swStylesInjected = false;
+function ensureSwitchStyles(): void {
+  if (_swStylesInjected) return;
+  const style = document.createElement("style");
+  style.textContent = `
+/* 模型切换面板集中样式（P1 批次5：cssText→类）。.sw-tab-active 背景派生自
+   switchTabHighlightBg(true)（刀② 收编单一源，模板插值防二次漂移）；
+   sw-row-cur 与 roles .fr-row-active 同款 25% --accent 高亮（镜像待合并）；
+   sw-empty-note 与 roles .fr-empty-note / env .ev-empty-note 同值（镜像待合并）。 */
+.sw-tab-bar { display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.12);flex-wrap:wrap;flex-shrink:0; }
+.sw-tab {
+  font-size:12px;padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);
+  cursor:pointer;color:rgba(255,255,255,0.7);background:transparent;
+}
+.sw-tab-active { background:${switchTabHighlightBg(true)}; color:#fff; }
+.sw-row { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px; }
+.sw-row-cur { background:color-mix(in srgb,var(--accent) 25%,transparent); }
+.sw-row-icon { font-size:15px;width:18px;text-align:center; }
+.sw-append-btn {
+  width:22px;height:22px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;
+  border-radius:4px;cursor:pointer;font-size:12px;line-height:1;margin-left:auto;
+}
+.sw-empty-note { padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px; }
+.sw-scroll-body { max-height:240px;overflow-y:auto; }
+`;
+  document.head.appendChild(style);
+  _swStylesInjected = true;
+}
+
 
 /** 上次选中的类型 tab 持久化键（全局记忆，跨模型/跨会话）："" = 当前目录 */
 const PREVIEW_LAST_RTYPE_KEY = "ysm.preview.lastRtype";
@@ -37,19 +68,18 @@ function switchNormPath(s: string): string {
 }
 
 /**
- * 类型 tab 高亮背景（刀②收编：硬编码 rgba(124,131,255) → --accent 派生）。
- * 纯函数便于测试直断字符串——happy-dom 的 CSS 解析器不认 color-mix()，DOM 级断言会丢声明。
+ * 类型 tab 激活高亮背景（刀②收编：硬编码 rgba(124,131,255) → --accent 派生）。
+ * 单一源：ensureSwitchStyles 注入的 .sw-tab-active 规则背景由本函数模板插值派生，
+ * 测试直断本函数保证派生不回退硬编码（happy-dom 不认 color-mix()，DOM 计算丢声明，
+ * 激活态断言走类归属 + 样式表原文，见 core.test.ts）。
  */
 export function switchTabHighlightBg(active: boolean): string {
   return active ? "color-mix(in srgb,var(--accent) 35%,transparent)" : "transparent";
 }
 
-/** 类型 tab 按钮 cssText（激活 tab 额外叠加高亮背景 + 白字） */
-export function switchTabCssText(active: boolean): string {
-  return (
-    "font-size:12px;padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;color:rgba(255,255,255,0.7);background:transparent" +
-    (active ? ";background:color-mix(in srgb,var(--accent) 35%,transparent);color:#fff" : "")
-  );
+/** 类型 tab 类 token：激活叠加 .sw-tab-active（高亮规则见 ensureSwitchStyles 注入样式表） */
+function switchTabClass(active: boolean): string {
+  return "sw-tab" + (active ? " sw-tab-active" : "");
 }
 
 /** [子函数 1/6] 解析默认高亮 tab：手动记忆 → 当前模型类型 → 首项；兜底 ""（siblings） */
@@ -70,13 +100,11 @@ function buildSwitchTabBar(
   onSwitchTab: (key: string) => void,
 ): HTMLElement {
   const tabBar = document.createElement("div");
-  tabBar.style.cssText =
-    "display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.12);flex-wrap:wrap;flex-shrink:0";
+  tabBar.className = "sw-tab-bar";
   tabBar.dataset.testid = "preview-switch-tabs";
   const highlightTab = (key: string): void => {
     for (const tb of Array.from(tabBar.children)) {
-      (tb as HTMLElement).style.background =
-        switchTabHighlightBg((tb as HTMLElement).dataset.rtype === key);
+      (tb as HTMLElement).classList.toggle("sw-tab-active", (tb as HTMLElement).dataset.rtype === key);
     }
   };
   for (const r of rtypes) {
@@ -84,7 +112,7 @@ function buildSwitchTabBar(
     b.dataset.testid = "preview-switch-tab";
     b.dataset.rtype = r;
     b.textContent = switchTabLabelOf(r);
-    b.style.cssText = switchTabCssText(r === initialActive);
+    b.className = switchTabClass(r === initialActive);
     b.onclick = (): void => {
       // 持久化选中类型（「当前目录」空串不持久化——临时视图）
       if (r !== "") safeSet(PREVIEW_LAST_RTYPE_KEY, r);
@@ -145,14 +173,11 @@ function renderSwitchCandidateRow(
   const curType = ctx.getCurrentRtype?.() ?? "";
   const sameType = switchSameTypeOf(viaType, activeTab, candType, curType);
   const row = document.createElement("div");
-  row.className = "ysm-preview-menu-row";
+  row.className = "ysm-preview-menu-row sw-row" + (isCur ? " sw-row-cur" : "");
   row.dataset.testid = "preview-switch-item";
-  row.style.cssText =
-    "display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px" +
-    (isCur ? ";background:color-mix(in srgb,var(--accent) 25%,transparent)" : "");
   const ic = document.createElement("span");
   ic.textContent = isCur ? "✓" : "📦";
-  ic.style.cssText = "font-size:15px;width:18px;text-align:center";
+  ic.className = "sw-row-icon";
   const lb = document.createElement("span");
   lb.textContent = p.split(/[/\\]/).pop() || p;
   row.append(ic, lb);
@@ -161,8 +186,7 @@ function renderSwitchCandidateRow(
     append.dataset.testid = "preview-switch-append";
     append.textContent = "➕";
     attachTooltip(append, () => tr("preview.appendModel", "追加到场景"));
-    append.style.cssText =
-      "width:22px;height:22px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;border-radius:4px;cursor:pointer;font-size:12px;line-height:1;margin-left:auto";
+    append.className = "sw-append-btn";
     append.onclick = (ev): void => {
       ev.stopPropagation();
       applySwitchRowClick(p, sameType, ctx, true);
@@ -191,7 +215,7 @@ function runSwitchRenderRows(
     const shown = viaType ? paths.filter((p) => switchNormPath(p) !== curNorm) : paths;
     if (shown.length === 0) {
       const empty = document.createElement("div");
-      empty.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+      empty.className = "sw-empty-note";
       empty.textContent = viaType
         ? tr("preview.noTypeModel", "（该类型暂无模型）")
         : tr("preview.noOtherModel", "（无其他模型）");
@@ -230,6 +254,7 @@ function runSwitchRenderRows(
 // ===================================================================
 
 export function fillSwitch(list: HTMLElement, ctx: PreviewMenuCtx): void {
+  ensureSwitchStyles();
   const rtypes = ctx.getTypeTabs?.() ?? [];
   const curRtype = ctx.getCurrentRtype?.() ?? "";
   // 阶段 1：默认高亮 tab 解析（记忆 → 当前类型 → 首项）
@@ -242,7 +267,7 @@ export function fillSwitch(list: HTMLElement, ctx: PreviewMenuCtx): void {
   });
   // 阶段 3：列表容器 + 代际守卫 state
   const listBody = document.createElement("div");
-  listBody.style.cssText = "max-height:240px;overflow-y:auto";
+  listBody.className = "sw-scroll-body";
   const reqGen = { v: 0 };
   // 阶段 4：挂 DOM + 首调 renderRows
   list.append(tabBar, listBody);

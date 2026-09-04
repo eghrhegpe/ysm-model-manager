@@ -475,7 +475,11 @@ describe("mountPreviewRootMenu", () => {
     const vrmTab = Array.from(tabs).find((t) => t.dataset.rtype === "vrm") as HTMLElement;
     expect(switchTabHighlightBg(true)).toContain("var(--accent)");
     expect(switchTabHighlightBg(false)).toBe("transparent");
-    expect(vrmTab.style.background).toBe("transparent"); // happy-dom 丢 color-mix：仅验证非高亮分支
+    // P1 批次5 cssText→类：激活态走 .sw-tab-active 类（规则背景由 switchTabHighlightBg(true)
+    // 模板插值派生——happy-dom 丢 color-mix 的旧 DOM 读回不可用，断类归属替代）
+    expect(vrmTab.classList.contains("sw-tab-active")).toBe(true);
+    const ysmTab = Array.from(tabs).find((t) => t.dataset.rtype === "ysm") as HTMLElement;
+    expect(ysmTab.classList.contains("sw-tab-active")).toBe(false);
     await vi.waitFor(() => {
       expect(overlay.querySelectorAll('[data-testid="preview-switch-item"]').length).toBe(1);
     });

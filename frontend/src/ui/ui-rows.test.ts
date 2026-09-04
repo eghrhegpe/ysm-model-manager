@@ -12,7 +12,6 @@ import {
     addInfoCard,
     sliderRow,
     toggleRow,
-    addWatchDirRow,
     addActionRow,
     addDisabledRow,
     addInlineToggleRow,
@@ -532,38 +531,7 @@ describe("addInfoGrid / addInfoCard", () => {
     });
 });
 
-// ===================================================================
-// addWatchDirRow
-// ===================================================================
-describe("addWatchDirRow", () => {
-    it("基本渲染：生成 status + dirRow（input + button）", () => {
-        const container = mkContainer();
-        addWatchDirRow(container,
-            () => Promise.resolve(),
-            () => Promise.resolve(undefined),
-        );
-        const input = container.querySelector("input[type=text]") as HTMLInputElement;
-        expect(input).not.toBeNull();
-        expect(input.readOnly).toBe(true);
-        const btn = container.querySelector("button") as HTMLButtonElement;
-        expect(btn).not.toBeNull();
-        expect(btn.textContent).toBe("📁");
-    });
-
-    it("selectDir 返回路径时更新 input value", async () => {
-        const container = mkContainer();
-        addWatchDirRow(container,
-            () => Promise.resolve(),
-            () => Promise.resolve("/models"),
-        );
-        const input = container.querySelector("input[type=text]") as HTMLInputElement;
-        const btn = container.querySelector("button") as HTMLButtonElement;
-        btn.click();
-        // 等待 async
-        await Promise.resolve();
-        expect(input.value).toBe("/models");
-    });
-});
+// addWatchDirRow 已随死代码删除（G3 复查，2026-09-04）
 
 // ===================================================================
 // addActionRow

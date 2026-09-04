@@ -7,7 +7,6 @@ import { registerControl } from "./control-registry.ts";
 import type { ControlOptions } from "./ui-types.ts";
 import { slideRow } from "./ui-slide-row.ts";
 import { clamp01, clampPct } from "../utils/core/clamp.ts";
-import { swallowError } from "../utils/core/async.ts";
 import { DragSliderController } from "./ui-slider-controller.ts";
 import { SLIDER_QUARTER_LARGE_STEP, SLIDER_QUARTER_SMALL_STEP } from "./ui-constants.ts";
 // DOM 契约单源：role/class 由 dom-contract 提供，禁止手写字符串
@@ -639,69 +638,9 @@ export function toggleRow(
 }
 
 // ===================================================================
-// addWatchDirRow — 监听目录行（状态 + 只读输入框 + 选择按钮）
-// 替代 settings-filename.ts 中 ~40 行手写 DOM 孤岛代码
-// ===================================================================
-
-export function addWatchDirRow(
-    container: HTMLElement,
-    onRefreshStatus: (setStatusText: (text: string) => void) => Promise<void>,
-    onSelectDir: () => Promise<string | undefined>
-): void {
-    const statusEl = document.createElement('div');
-    statusEl.style.cssText = 'font-size:11px;color:var(--txt);padding:4px 14px;';
-    container.appendChild(statusEl);
-
-    const setStatusText = (text: string) => {
-        statusEl.textContent = text;
-    };
-
-    onRefreshStatus(setStatusText).catch(() => setStatusText('监听已停止'));
-
-    const dirRow = document.createElement('div');
-    dirRow.style.cssText = 'display:flex;gap:6px;padding:6px 14px;';
-
-    const dirInput = document.createElement('input');
-    dirInput.type = 'text';
-    dirInput.placeholder = '选择监听目录';
-    dirInput.readOnly = true;
-    dirInput.style.cssText =
-        'flex:1;background:color-mix(in srgb, var(--txt) 8%, transparent);border:1px solid var(--bd);border-radius:4px;color:var(--txt);padding:6px 8px;font-size:12px;';
-
-    const selectBtn = document.createElement('button');
-    selectBtn.type = 'button';
-    selectBtn.textContent = '📁';
-    selectBtn.className = 'mode-btn';
-    selectBtn.title = '选择监听目录';
-    selectBtn.setAttribute(ARIA_ATTR.label, '选择监听目录');
-    selectBtn.addEventListener('click', async () => {
-        const dir = await onSelectDir();
-        if (!dir) {
-            return;
-        }
-        dirInput.value = dir;
-        await onRefreshStatus(setStatusText);
-    });
-
-    // 回填初始目录
-    swallowError(
-        onRefreshStatus(async (text) => {
-            const prefix = '正在监听'.replace(/\s+$/, '');
-            const match = text.match(new RegExp(prefix + '\\s*(.+)'));
-            if (match) {
-                dirInput.value = match[1];
-            }
-        })
-    );
-
-    dirRow.appendChild(dirInput);
-    dirRow.appendChild(selectBtn);
-    container.appendChild(dirRow);
-}
-
-// ===================================================================
 // ADR-143 主题 6：收敛三个内联 DOM 孤岛
 // ===================================================================
+// 注：addWatchDirRow（监听目录行）已于 G3 复查确认生产零引用，删除（2026-09-04）。
 
 /** 创建一个可点击的动作按钮行（替代手写 cs-row + button）。
  * 复用 addModeRow 的 mode-btn 样式，确保 UI 一致性。 */

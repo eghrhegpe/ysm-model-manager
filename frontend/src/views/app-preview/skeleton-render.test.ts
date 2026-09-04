@@ -19,7 +19,6 @@ vi.mock("../../preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
 vi.mock("../../preview-3d/decoder/wasm-decode.ts", () => ({ decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)) }));
 
 import { setup2DCanvas, buildToggleRow, buildStatsCard, buildBoneExportRow, saveScreenshot } from "./skeleton-render.ts";
-import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
 
@@ -347,72 +346,5 @@ describe("saveScreenshot", () => {
   });
 });
 
-// ── skeleton-utils（审核盲区补建）───────────────────────────────
-describe("skeleton-utils", () => {
-  describe("sec", () => {
-    it("gap=true → 上边距 12px + 分隔线", () => {
-      const d = sec("分区");
-      expect(d.textContent).toBe("分区");
-      expect(d.style.marginTop).toBe("12px");
-      expect(d.style.borderBottomWidth).toBe("1px");
-    });
-
-    it("gap=false → 上边距 0（面板首个分区）", () => {
-      const d = sec("分区", false);
-      expect(d.style.marginTop).toBe("0px");
-    });
-  });
-
-  describe("iRow", () => {
-    it("标签 + 值两段渲染", () => {
-      const d = iRow("骨骼", "3 根");
-      expect(d.innerHTML).toContain("骨骼");
-      expect(d.innerHTML).toContain("3 根");
-    });
-  });
-
-  describe("buildDepthMap", () => {
-    it("根骨骼（无 parentId）深度 0", () => {
-      const m = buildDepthMap([{ id: "root", name: "根" }]);
-      expect(m["root"]).toBe(0);
-    });
-
-    it("嵌套链：子 = 父深度 + 1", () => {
-      const m = buildDepthMap([
-        { id: "a", name: "A" },
-        { id: "b", name: "B", parentId: "a" },
-        { id: "c", name: "C", parentId: "b" },
-      ]);
-      expect(m["a"]).toBe(0);
-      expect(m["b"]).toBe(1);
-      expect(m["c"]).toBe(2);
-    });
-
-    it("parentId 指向不存在的骨骼 → 悬空父按根（深度 0）计，自身深度 1", () => {
-      const m = buildDepthMap([{ id: "a", name: "A", parentId: "ghost" }]);
-      expect(m["a"]).toBe(1);
-    });
-
-    it("兄弟共享祖先：深度各自正确（memo 不串扰）", () => {
-      const m = buildDepthMap([
-        { id: "root", name: "根" },
-        { id: "b", name: "B", parentId: "root" },
-        { id: "c", name: "C", parentId: "root" },
-        { id: "d", name: "D", parentId: "b" },
-      ]);
-      expect(m["root"]).toBe(0);
-      expect(m["b"]).toBe(1);
-      expect(m["c"]).toBe(1);
-      expect(m["d"]).toBe(2);
-    });
-
-    it("parentId 成环（A→B→A）→ 不无限递归，正常返回 map", () => {
-      const m = buildDepthMap([
-        { id: "a", name: "A", parentId: "b" },
-        { id: "b", name: "B", parentId: "a" },
-      ]);
-      expect(typeof m["a"]).toBe("number");
-      expect(typeof m["b"]).toBe("number");
-    });
-  });
-});
+// skeleton-utils（sec/iRow/buildDepthMap）已于 G3 复查确认生产零引用，整文件删除（2026-09-04）。
+// 相关直测随死代码一并移除；面板 sec/iRow 的活体实现在 skeleton-fill-panel.ts（sfp- 类）。

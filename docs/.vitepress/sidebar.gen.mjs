@@ -738,6 +738,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-175：3D 预览 overlay 链 Shadow DOM 化（锐评 G6 处置框架）",
+        "link": "/adr/ADR-175-overlay-shadow-dom"
+      },
+      {
         "text": "ADR-174：browser parity 判定规则单一源 + 对账硬锁策略（锐评 S2 处置框架）",
         "link": "/adr/ADR-174-browser-parity-single-source-reconciled"
       },
@@ -2084,6 +2088,10 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
+          },
+          {
+            "text": "perf 契约测试临时卡",
+            "link": "/knowledge/zzz-perf-contract-tmp"
           }
         ]
       },
@@ -2130,6 +2138,16 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
+          }
+        ]
+      },
+      {
+        "text": "其他",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "zzz-fm-delimiter-tmp",
+            "link": "/knowledge/zzz-fm-delimiter-tmp"
           }
         ]
       }

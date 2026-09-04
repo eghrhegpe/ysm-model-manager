@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **171** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **172** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 167 |
+| [✅ 已采纳](#已采纳) | 168 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -32,10 +32,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（167）
+### ✅ 已采纳（168）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-175](./ADR-175-overlay-shadow-dom.md) | 3D 预览 overlay 链 Shadow DOM 化（锐评 G6 处置框架） | ✅ 已采纳 |
 | [ADR-174](./ADR-174-browser-parity-single-source-reconciled.md) | browser parity 判定规则单一源 + 对账硬锁策略（锐评 S2 处置框架） | ✅ 已采纳 |
 | [ADR-173](./ADR-173-gui-cli-paramspec-map.md) | GUI→CLI 参数桥 ParamSpec 白名单协议：区分未传与显式空值，消除 map 无序与参数损耗 | ✅ 已采纳 |
 | [ADR-172](./ADR-172-merge-community-creators-go.md) | 社区创作者增量合并下沉 Go——新增 MergeCommunityCreatorsFromJSON 单次原子并入 binding | ✅ 已采纳 |
@@ -215,6 +216,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-175 | 3D 预览 overlay 链 Shadow DOM 化（锐评 G6 处置框架） | ✅ 已采纳 | 2026-09-04 |
 | ADR-174 | browser parity 判定规则单一源 + 对账硬锁策略（锐评 S2 处置框架） | ✅ 已采纳 | 2026-09-03 |
 | ADR-173 | GUI→CLI 参数桥 ParamSpec 白名单协议：区分未传与显式空值，消除 map 无序与参数损耗 | ✅ 已采纳 | 2026-09-03 |
 | ADR-172 | 社区创作者增量合并下沉 Go——新增 MergeCommunityCreatorsFromJSON 单次原子并入 binding | ✅ 已采纳 | 2026-09-03 |

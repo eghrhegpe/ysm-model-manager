@@ -33,6 +33,7 @@ auto_fields:
     - hl
     - IconButtonOpts
     - installScrollSync
+    - isEditableTarget
     - isFileExistsError
     - isInputBlocked
     - isViewerMode

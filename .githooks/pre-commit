@@ -88,10 +88,15 @@ done
 # 修复：stage 判定下沉到 scripts/_lib/gen-stage.ts（单一事实源，契约测试守护）——
 #   stage = 快照变化 ∩ 非并行 dirty（git status --porcelain 排除；?? 未跟踪按 gen 前后
 #   存在性区分：gen 前存在=并行新建排除，不存在=gen 新建保留）。补全型 gen 产物正常入库。
+# ADR-184（2026-09-04）：滞留机器区自动收编——gen 刷出未搭车的纯机器区 diff（auto_fields/
+#   symbols 键行 + 缩进列表项）与生成物整文件，因 gen 前已 dirty 被上式排除而永久滞留；
+#   现由 gen-stage 追加机器区判定追回收编（stderr 输出 [gen-stage] 提示）。人工策展区
+#   （正文/use_when/pitfalls）dirty 仍排除，并发隔离不放松。逃生阀：YSM_SKIP_GEN_STAGE=1。
 ADD_FAIL=""
 if [ -f "$GEN_SNAP" ]; then
   # 生成物 stage 清单：快照变化 − 并行 dirty（gen 前 porcelain，替代原 find/diff/awk 脆弱管道）
-  node scripts/_lib/gen-stage.ts "$GEN_SNAP" "$GEN_PORCELAIN" > /tmp/ysm_gen_to_stage.txt 2>/dev/null
+  # stderr 保留（不吞）→ 滞留机器区收编提示与 fail-closed 告警可见（ADR-184）
+  node scripts/_lib/gen-stage.ts "$GEN_SNAP" "$GEN_PORCELAIN" > /tmp/ysm_gen_to_stage.txt
 while IFS= read -r p; do
     [ -z "$p" ] && continue
     [ -f "$p" ] || continue

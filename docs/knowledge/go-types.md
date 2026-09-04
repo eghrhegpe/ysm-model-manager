@@ -66,9 +66,11 @@ auto_fields:
     - IsDirLevelSync
     - IsDisableSuffix
     - IsNestedModelDir
+    - IsRenderableTextureExt
     - IsResourceAllowed
     - IsScanInstance
     - IsSupportedExt
+    - IsTextureExt
     - IsYsmEntryJSON
     - LauncherInstance
     - LevelDebug
@@ -106,6 +108,7 @@ auto_fields:
     - ParseDedupConfig
     - QueueStatusInfo
     - RegistryType
+    - RenderableTextureExts
     - ResourceSyncItem
     - ResourceSyncResult
     - ResourceType
@@ -129,6 +132,7 @@ auto_fields:
     - SubModel
     - SupportedExtsForSubtype
     - SupportedExtsForType
+    - SupportedTextureExts
     - SyncConfig
     - SyncResolveResult
     - SyncScanDirs
@@ -139,6 +143,7 @@ auto_fields:
     - SyncStatusMissing
     - SyncStatusOptional
     - SyncStatusSynced
+    - TextureMIME
     - TypeByLocation
     - Variant
     - VersionInstance

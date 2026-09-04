@@ -13,7 +13,7 @@ auto_fields:
     - AppSyncManager
     - bindEvents
     - containerHTML
-    - emptyHTML
+    - emptyHintHTML
     - EventSelf
     - itemHTML
     - LAST_TYPE_KEY

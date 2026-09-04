@@ -27,7 +27,7 @@ auto_fields:
     - bindEvents
     - bindFooter
     - containerHTML
-    - emptyHTML
+    - emptyHintHTML
     - EventSelf
     - groupMmdVariants
     - itemHTML

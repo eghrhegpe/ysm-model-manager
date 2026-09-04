@@ -286,6 +286,26 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-184：滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离",
+        "link": "/adr/ADR-184-diff-gen-stage-stage"
+      },
+      {
+        "text": "ADR-183：SearchModels 8 参数封装",
+        "link": "/adr/ADR-183-searchmodels-8"
+      },
+      {
+        "text": "ADR-182：ToggleModelEnable 合并到 ToggleEnable",
+        "link": "/adr/ADR-182-togglemodelenable-toggleenable"
+      },
+      {
+        "text": "ADR-181：processForEpoch 枚举化——竞态测试先行",
+        "link": "/adr/ADR-181-processforepoch"
+      },
+      {
+        "text": "ADR-180：preview-3d 材质工具层通用化收编（mmd/vrm materials 骨架合并）",
+        "link": "/adr/ADR-180-preview-materials-shared"
+      },
+      {
         "text": "ADR-179：internal/app 垂直切分子包（拆解扁平巨型包与 App god-object）",
         "link": "/adr/ADR-179-internal-app-app-god-object"
       },
@@ -1400,6 +1420,10 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_repo_audit"
           },
           {
+            "text": "模块级全局状态治理",
+            "link": "/knowledge/module_global_state"
+          },
+          {
             "text": "多模型选择菜单原语 multiModelSelectNode",
             "link": "/knowledge/multi_model_select"
           },
@@ -1596,6 +1620,10 @@ export const autoSidebar = [
           {
             "text": "源码符号提取共享层 source-graph.ts",
             "link": "/knowledge/source-graph"
+          },
+          {
+            "text": "测试税减负三刀方法论",
+            "link": "/knowledge/test_tax_reduction"
           },
           {
             "text": "数组工具 moveItem",

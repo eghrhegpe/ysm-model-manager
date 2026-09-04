@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **178** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **182** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,9 +18,9 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 170 |
+| [✅ 已采纳](#已采纳) | 171 |
 | [❌ 已取代](#已取代) | 6 |
-| [🧊 已废弃](#已废弃) | 0 |
+| [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
@@ -32,10 +32,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（170）
+### ✅ 已采纳（171）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-184](./ADR-184-diff-gen-stage-stage.md) | 滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离 | ✅ 已采纳 |
 | [ADR-180](./ADR-180-preview-materials-shared.md) | preview-3d 材质工具层通用化收编（mmd/vrm materials 骨架合并） | ✅ 已采纳 |
 | [ADR-179](./ADR-179-internal-app-app-god-object.md) | internal/app 垂直切分子包（拆解扁平巨型包与 App god-object） | ✅ 已采纳 |
 | [ADR-178](./ADR-178-previewscene-capability-interfaces.md) | PreviewScene 能力分层接口 | ✅ 已采纳 |
@@ -218,10 +219,22 @@ permalink: /adr/
 | [ADR-077](./ADR-077-bottom-nav-shell-convergence.md) | 底部导航通用外壳收敛（D1+D3 落地） | ❌ 已取代 ⚠️ 被 [ADR-076] |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | ❌ 已取代 |
 
+### 🧊 已废弃（3）
+
+| ADR | 标题 | 状态 |
+|-----|------|------|
+| [ADR-183](./ADR-183-searchmodels-8.md) | SearchModels 8 参数封装 | 🧊 已废弃 |
+| [ADR-182](./ADR-182-togglemodelenable-toggleenable.md) | ToggleModelEnable 合并到 ToggleEnable | 🧊 已废弃 |
+| [ADR-181](./ADR-181-processforepoch.md) | processForEpoch 枚举化——竞态测试先行 | 🧊 已废弃 |
+
 ## 登记表（新→旧）
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-184 | 滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离 | ✅ 已采纳 | 2026-09-05 |
+| ADR-183 | SearchModels 8 参数封装 | 🧊 已废弃 | 2026-09-05 |
+| ADR-182 | ToggleModelEnable 合并到 ToggleEnable | 🧊 已废弃 | 2026-09-05 |
+| ADR-181 | processForEpoch 枚举化——竞态测试先行 | 🧊 已废弃 | 2026-09-05 |
 | ADR-180 | preview-3d 材质工具层通用化收编（mmd/vrm materials 骨架合并） | ✅ 已采纳 | 2026-09-05 |
 | ADR-179 | internal/app 垂直切分子包（拆解扁平巨型包与 App god-object） | ✅ 已采纳 | 2026-09-04 |
 | ADR-178 | PreviewScene 能力分层接口 | ✅ 已采纳 | 2026-09-04 |

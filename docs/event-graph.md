@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 197 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 199 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -227,7 +227,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 349 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 156 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 250 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 408 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 438 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -340,7 +340,7 @@
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 117 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 184 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 100 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 380 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 398 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -381,7 +381,7 @@
 |------|------|----|
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 337 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 98 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 471 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 489 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -428,12 +428,12 @@
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 428 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 442 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 461 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 47 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 65 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 84 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 94 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 112 |
-| bindTreeDnD | `frontend/src/features/import-dnd.ts` | 217 |
+| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 43 |
+| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 61 |
+| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 80 |
+| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 90 |
+| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 108 |
+| bindTreeDnD | `frontend/src/features/import-dnd.ts` | 213 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 33 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 188 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 201 |
@@ -446,9 +446,9 @@
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/version-updater.ts` | 250 |
-| mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 570 |
+| mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 571 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
+| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 159 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 35 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 46 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 58 |
@@ -516,8 +516,9 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 363 |
 | _showModelDetail | `frontend/src/views/app-preview/index.ts` | 291 |
 | _showModelDetail | `frontend/src/views/app-preview/index.ts` | 315 |
-| openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 114 |
-| openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 148 |
+| openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 90 |
+| openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 129 |
+| openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 163 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 115 |
 | beginSync | `frontend/src/views/app-sidebar/index.ts` | 142 |
@@ -563,16 +564,17 @@
 | atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 181 |
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 197 |
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 204 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 383 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 423 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 431 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 474 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 484 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 196 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 336 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 344 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 456 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 463 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 401 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 441 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 449 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 492 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 502 |
+| toastThrottled | `frontend/src/views/app-tree/index.ts` | 71 |
+| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 225 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 366 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 374 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 486 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 493 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 44 |
@@ -631,4 +633,4 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 135 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 152 |

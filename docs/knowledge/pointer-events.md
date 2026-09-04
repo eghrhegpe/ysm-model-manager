@@ -30,7 +30,6 @@ auto_fields:
     - initSettings
     - InputHandlers
     - InputOptions
-    - isEditableTarget
     - loadModel2D
     - Model2DOptions
     - openFullPreview

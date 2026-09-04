@@ -50,7 +50,7 @@
 | 新增资源类型、新增文件格式、新增网页桥接、新增同步逻辑、残留手改清单、拓展点探索 | [拓展点 / 扩展入口 探索报告（Round 2）](./extensibility-round2.md) | — |
 | FBX、CLI、命令行、转换、glTF、GLB、fbx2gltf、assimp | [FBX CLI 处理管线 fbx-cli-pipeline](./fbx-cli-pipeline.md) ⚠️歧义（另见 cli_quality_audit.md） | **CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**： |
 | 批量重命名 / 标签编辑 / 高级筛选对话框、找对话框入口符号 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features_dialogs.md) | `frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座九对源+测试在此归位——… |
-| 设计评审、前端设计、锐评、主题系统、3D 性能审查、生命周期审查、技术债 | [前端设计锐评](./frontend_design_critique.md) ⚠️歧义（另见 frontend_repo_audit.md） | 2026-09-03 三子代理并发只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。… |
+| 设计评审、前端设计、锐评、主题系统、3D 性能审查、生命周期审查、技术债 | [前端设计锐评](./frontend_design_critique.md) ⚠️歧义（另见 frontend_repo_audit.md） | 2026-09-05 三子代理串行只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。… |
 | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射、voxel-parse / ysm-header / nbt-parse 定位 | [解析簇 parsers/ 自 backend 迁出](./frontend_parsers.md) | `frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel）、zip 解包、pack.mcmeta、方块颜色映射六类解析器。真叶子层——… |
 | 代码审核、代码审查、审计、前端质量、技术债、重构排期、XSS、innerHTML | [前端 TS 整包审计](./frontend_repo_audit.md) ⚠️歧义（另见 cli_quality_audit.md、frontend_test_audit.md、frontend_design_critique.md等） | 2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全… |
 | 代码审核、测试基建、契约测试、e2e、flaky、假绿、覆盖盲区 | [前端测试基建审计](./frontend_test_audit.md) ⚠️歧义（另见 cli_quality_audit.md、frontend_repo_audit.md、pre_push_gate.md等） | 2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.mjs` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（… |
@@ -88,7 +88,7 @@
 | internal/app 再切分或迁移 App god-object 字段/方法时、评估某子域「迁出 internal/app 包」的收益与成本、复述 ADR-179 实际收敛边界 | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install_domain_split.md) | ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /… |
 | 模型统计、骨骼数、立方体数、纹理尺寸、SearchModels、数值筛选、Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) ⚠️歧义（另见 dialog-adv-filter.md、search.md等） | `frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo… |
 | 2D 预览、骨骼图、Canvas 渲染、前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。 |
-| 3D 渲染层、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底 | [3D 预览渲染 model3d](./model3d.md) | — |
+| 3D 渲染层、Three.js、相机、骨骼渲染、自由相机、3D 截图、纹理加载、spec 兜底 | [3D 预览渲染 model3d](./model3d.md) | `frontend/src/preview-3d/` + `frontend/src/views/app-preview/model3d-loader.ts` 构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲… |
 | 多模型、模型选择、select、zip 多模型、多 entry、ADR-132 | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的 |
 | 资历最深、老模型、仓库评分、每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | `oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按… |
 | 性能优化、KTX2 编码、纹理缓存、主线程监控、内存泄漏 | [优化记录 optimization-log](./optimization_log.md) ⚠️歧义（另见 3d-patterns.md） | — |
@@ -97,7 +97,7 @@
 | pointerdown、pointermove、pointerup、触屏、拖拽、旋转 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) ⚠️歧义（另见 import-queue.md） | ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `… |
 | 推送门禁、质量门禁、域级检查、门禁阻断、go build、vite build、契约测试、Promise.all | [推送前门禁 pre-push-gate](./pre_push_gate.md) ⚠️歧义（另见 frontend_test_audit.md） | `.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器，681 行）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（… |
 | pre-commit、钩子、文档同步、自动 stage、并发隔离 | [提交前钩子 pre-commit](./pre-commit-hook.md) | `.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0… |
-| 3D 预览、统一预览外壳、程序化天空 / sky / 背景 / scene.background、PreviewAdapter 适配器、全模型预览（YSM / VRM / MMD / Litematic）、mount3D | [统一 3D 预览核心 preview-core](./preview_core.md) ⚠️歧义（另见 app-preview.md、go-threejs.md） | — |
+| 3D 预览、统一预览外壳、程序化天空 / sky / 背景 / scene.background、PreviewAdapter 适配器、全模型预览（YSM / VRM / MMD / Litematic）、mount3D | [统一 3D 预览核心 preview-core](./preview_core.md) ⚠️歧义（另见 app-preview.md、go-threejs.md） | `frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi… |
 | schema 注册、per-scene、多模型同框、schema 键冲突、activeComponent、组件选择、YSM maid 同台、sessionId | [preview-menu-session-key](./preview_menu_session_key.md) | 3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台 |
 | 3D 控制器、MMD 播放、截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | > ⚠️ **重要前提（ADR-076 v2 Phase 2 重构后）**：相机操作已收编进**核心声明式根菜单**（⚙️ 按钮 → `mountPreviewRootMenu` 的 `camera` 项），底部导航弹窗已删除。现存的 `m… |
 | 预览设置、显示控制、骨骼名称、帧率、截图灯光 | [预览面板设置与显示控制](./preview-settings.md) | > **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖… |
@@ -116,6 +116,7 @@
 | 搜索、筛选、三路交集、adv-filter、SearchModels、网页版降级 | [搜索筛选编排 search](./search.md) ⚠️歧义（另见 dialog-adv-filter.md、model-stats.md） | 搜索筛选的**跨层端到端编排层**：前端工具栏搜索输入 → 关键词 + 标签 + 数值三路交集 → 后端 Go 一次性过滤 → 白名单回填 `buildTree` 精确匹配。 |
 | 符号提取、导出符号、顶层声明、api-break、audit-split、rollback-impact、bloat-history、依赖图 | [源码符号提取共享层 source-graph.ts](./source-graph.md) ⚠️歧义（另见 auto_import_split.md） | — |
 | 整合包同步、推送、拉取、跨组件同步编排、缺包回拉、PullSingleResource、sync:download:missing | [整合包同步管理器 sync-manager](./sync-manager.md) ⚠️歧义（另见 app-sync-manager.md、app-sidebar.md等） | `app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**： |
+| 测试税、测试文件过大、mock 复印机、双胞胎测试、墓碑测试、stubBlobUrls、夹具沉淀 | [测试税减负三刀方法论](./test_tax_reduction.md) | 测试税 ≠ 测试太多，而是「mock 复印机」与「双胞胎测试」这两种结构病。 |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) ⚠️歧义（另见 frontend_test_audit.md） | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 sle… |
 | UI 组件、卡片组件、折叠面板、加载动画、滑块、行组件、预设、图标 | [UI 组件库 ui-components](./ui_components.md) ⚠️歧义（另见 dialog-batch-rename.md） | `frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 … |
 | 数组排序、拖拽排序、moveItem、列表 reorder | [数组工具 moveItem](./utils-array.md) | 纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。 |

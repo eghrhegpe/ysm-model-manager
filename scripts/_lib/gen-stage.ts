@@ -121,9 +121,10 @@ export function computeStageList(input: StageInput): string[] {
 }
 
 // ── CLI：sh 侧消费（pre-commit 调用）──
-// node scripts/_lib/gen-stage.ts <snap_before> [snap_after]
+// node scripts/_lib/gen-stage.ts <snap_before> [snap_after] [porcelain_before]
 // 自身重遍历快照 → 计算变化 → 取 porcelain → 输出 stage 清单
 import { SNAP_DIRS } from "./gen-config.ts";
+import { strandedStageList } from "./machine-diff.ts";
 
 const SNAP_BASES = SNAP_DIRS;
 
@@ -229,5 +230,18 @@ if (isCli) {
     snapChanged,
     snapBeforePaths: new Set(before.keys()),
   });
-  for (const p of stage) console.log(p);
+  // 滞留机器区收编（ADR-184）：gen 刷出未搭车的纯机器区 diff / 生成物整文件，
+  // 因 gen 前已 dirty 被 computeStageList 排除——此处按机器区判定追回收编。
+  // 人工策展区（正文/use_when/pitfalls 等）dirty 仍排除，并发隔离不放松。
+  const strandedDirty = dirty
+    .filter((d) => !(d.x === "?" && d.y === "?"))
+    .map((d) => d.path);
+  const stageSet = new Set(stage);
+  for (const p of strandedStageList(strandedDirty)) {
+    if (!stageSet.has(p)) {
+      stageSet.add(p);
+      console.error(`[gen-stage] 滞留机器区收编: ${p}`);
+    }
+  }
+  for (const p of stageSet) console.log(p);
 }

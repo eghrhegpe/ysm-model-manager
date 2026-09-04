@@ -29,7 +29,6 @@ auto_fields:
     - ImportFile
     - importFolder
     - importWebFilesWithToast
-    - isEditableTarget
     - isImportableFile
     - isSupportedFile
     - PackDndBusy

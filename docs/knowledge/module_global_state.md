@@ -8,6 +8,43 @@ source_files:
   - frontend/src/core/i18n/locale.ts
   - frontend/src/backend/web-store.ts
   - frontend/src/utils/cache/with-cached.ts
+auto_fields:
+  symbols_with_lines:
+    - __resetModalStateForTest
+    - __resetWebLogStateForTest
+    - CachePolicy
+    - clearAllCache
+    - closeActiveDialog
+    - closeDlg
+    - fmtMB
+    - getBundle
+    - getCacheTtlMs
+    - getLang
+    - initI18n
+    - invalidateCache
+    - LangCode
+    - loadLocale
+    - modalConfirm
+    - ModalConfirmOptions
+    - modalPicker
+    - ModalPickerItem
+    - ModalPickerOptions
+    - ModalPickerResult
+    - modalProgress
+    - ModalProgressHandle
+    - ModalProgressOptions
+    - modalPrompt
+    - ModalPromptOptions
+    - modalSelect
+    - ModalSelectOptions
+    - registerDlg
+    - setLang
+    - SUPPORTED_LANGS
+    - trapFocus
+    - VIEW_TESTIDS
+    - warnedKeys
+    - webStoreBindings
+    - withCached
 use_when:
   - 模块级全局状态
   - 全局 Map 泛滥

@@ -45,6 +45,7 @@ auto_fields:
     - initControl
     - installSlideMenuStyles
     - installUiComponentsStyles
+    - isPreviewOverlayActive
     - PREVIEW_OVERLAY_ID
     - registerControl
     - ROLE

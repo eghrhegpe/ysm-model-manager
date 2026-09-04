@@ -282,4 +282,23 @@ fi
 echo ""
 git diff --cached --stat 2>/dev/null | tail -10 || true
 
+# ── biome 行级增量闸（2026-09-04，A4）：拦「本次提交新增的违规行」，存量债不误伤 ──
+# 为什么这是本仓唯一 exit-1 阻断段（其余段含 --write 修复失败均仅提示）：
+#   - check-biome.ts 默认 --changed 基准 = vcs.defaultBranch(main)；main 直提工作流下
+#     相对 main 无「已提交 diff」→ 该闸恒绿（2026-09 实测，形同虚设）；
+#   - pre-push 若把基准换 origin/main：本仓 59 commits 未 push、存量 lint 债 885 条，
+#     Biome 是文件级增量 → 上线即全量红灯，阻塞全体 push。
+#   唯一精确出路 = 行级：以「staged diff 新增行 ∩ biome 违规行」判定，只拦本次引入的违规。
+#   完整推演见 scripts/check-biome-lines.ts 头注释。
+# 顺序说明：本段在 biome --write 自动修复段（上方）之后，查的是修复后重新 stage 的内容；
+#   可自动修的违规已被 --write 清掉，残留且位于新增行的才在此被拦。
+# 逃生阀：YSM_SKIP_BIOME_LINES=1
+if [ "${YSM_SKIP_BIOME_LINES:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
+  if ! node scripts/check-biome-lines.ts 2>&1; then
+    echo "[pre-commit] ❌ 本次提交新增 biome 违规，已阻断（见上）。存量债（非本次新增行）不受影响；"
+    echo "            修复后重新 git add 再提交，或 YSM_SKIP_BIOME_LINES=1 逃生（慎用，绕过不留审计）"
+    exit 1
+  fi
+fi
+
 exit 0

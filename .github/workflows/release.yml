@@ -60,8 +60,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - name: 缓存 Go 模块（含 wails3，命中免下载）
         uses: actions/cache@v5.1.0
         with:
@@ -83,7 +83,7 @@ jobs:
           fi
       - name: 安装前端依赖
         working-directory: frontend
-        run: npm ci
+        run: npx --yes pnpm@10 install --frozen-lockfile
       - name: 打包（build-release.ps1 → build/release 裸 exe + SHA256SUMS）
         run: |
           & .\scripts\build-release.ps1 -Version "${{ needs.prepare.outputs.version }}" -SkipUpload
@@ -111,8 +111,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - name: 缓存 Go 模块（含 wails3，命中免下载）
         uses: actions/cache@v5.1.0
         with:
@@ -147,7 +147,7 @@ jobs:
           fi
       - name: 安装前端依赖
         working-directory: frontend
-        run: npm ci
+        run: npx --yes pnpm@10 install --frozen-lockfile
       - name: 打包（build-linux.sh → dist/ 二进制）
         run: |
           bash ./scripts/build-linux.sh "${{ needs.prepare.outputs.version }}"
@@ -172,8 +172,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - name: 缓存 Go 模块（含 wails3，命中免下载）
         uses: actions/cache@v5.1.0
         with:
@@ -195,7 +195,7 @@ jobs:
           fi
       - name: 安装前端依赖
         working-directory: frontend
-        run: npm ci
+        run: npx --yes pnpm@10 install --frozen-lockfile
       - name: 打包（build-darwin.sh → dist/ 二进制）
         run: |
           bash ./scripts/build-darwin.sh "${{ needs.prepare.outputs.version }}"
@@ -223,8 +223,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - name: 缓存 Go 模块（含 wails3，命中免下载）
         uses: actions/cache@v5.1.0
         with:

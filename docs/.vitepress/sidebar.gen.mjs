@@ -738,6 +738,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-176：Go 端维持进程单例与 InstallLock,收敛测试注入,修文档/门禁漂移与吞错",
+        "link": "/adr/ADR-176-go-installlock"
+      },
+      {
         "text": "ADR-175：3D 预览 overlay 链 Shadow DOM 化（锐评 G6 处置框架）",
         "link": "/adr/ADR-175-overlay-shadow-dom"
       },

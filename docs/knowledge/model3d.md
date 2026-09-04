@@ -303,6 +303,7 @@ auto_fields:
     - makeYsmAdapter
     - makeYsmModelSchemaId
     - makeZipOverlayPort
+    - markCullMatricesDirty
     - matchSemanticBone
     - matchSemanticMorph
     - MaterialBridgeLike

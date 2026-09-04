@@ -19,8 +19,6 @@ auto_fields:
     - ScanEntriesWithHit
     - ScanLocalAuthors
     - SetErrorSink
-    - SetRustScanHook
-    - SetWalkStartHook
 use_when:
   - 扫描
   - 扫描条目

@@ -54,20 +54,21 @@ type hashResult struct {
 	ok   bool // 读失败为 false（log-and-skip，与串行一致）
 }
 
-// computeHash 可注入变量：默认委托 algo.ComputeHash（策略化哈希）；测试可替换以
-// 模拟读失败/计数（P3 并行读失败回归，与 texture_cache removeFile 同款手法）。
-// 注：49afd979 曾删除本注入点（哈希统一走 algo 接口）但未同步 dedup_parallel_test.go，
-// 导致测试包 undefined: computeHash 编译失败——恢复注入点并适配策略签名。
+// computeHash 可注入变量：默认委托 algo.ComputeHash（策略化哈希）；测试替换它模拟
+// 读失败/计数。删改须同步 dedup_parallel_test.go（详见 go-dedup 知识卡「computeHash」）。
 var computeHash = func(path string, algo HashAlgorithm) (string, error) {
 	return algo.ComputeHash(path)
 }
 
 // collectFiles 串行 WalkDir 收集有效文件，保留遍历顺序。
-// 收敛 FindDuplicateFiles 与 CountDuplicates 的共用遍历（原 walkHashedFiles，索引 6.8a）：
+// 收敛 FindDuplicateFiles 与 CountDuplicates 的共用遍历（原 walkHashedFiles）：
 //   - 跳过符号链接（根本身是符号链接时返回 ErrSymlinkRoot——静默返回「无重复」= 假绿，
-//     陷阱 #11：sentinel + errors.Is 判定，禁文本匹配）；
+//     sentinel + errors.Is 判定，禁文本匹配）；
 //   - 跳过目录（skipRecycle 时回收站目录 SkipDir，统一走 fsutil.IsRecycleDir）；
 //   - 跳过空文件（不同用途的空文件不是重复文件）。
+//
+// 遍历中子树访问失败仅 log-and-skip（知识卡「不变量」：与根 symlink 硬报错不对称，
+// 有意为之——留痕可诊断、不阻断扫描）。
 func collectFiles(dir string, skipRecycle bool) ([]fileInfo, error) {
 	var files []fileInfo
 	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
@@ -114,17 +115,10 @@ func collectFiles(dir string, skipRecycle bool) ([]fileInfo, error) {
 // workers = min(files, GOMAXPROCS)——小文件集自然 workers=1，与串行开销等价
 // （ADR-119 P4：不设阈值双路径，统一走本管道）。
 //
-// size 预分组（零语义损失）：不同 size 的文件不可能同 hash（SHA256 同 ⟹ 内容同 ⟹ size 同），
-// 唯一 size 的文件必不成组，跳过其哈希——消解大文件长尾（占死 worker 的大文件通常尺寸唯一），
-// 输出逐字节不变（唯一尺寸文件本就永不进 len>1 组）。
-// hashFilesParallel 的「读失败可见性不对称」（R27 P3-2 确认）：
-//   - 唯一 size 文件不进 job（有意跳过哈希），其读失败不可见、不记日志
-//   - 同 size 文件读失败会 log-and-skip
-//
-// 这是有意的取舍：唯一 size 文件本就不参与成组（无重复可能），
-// 跳过哈希省一次 I/O。代价是「唯一 size 但读失败」的文件静默归类为「唯一 size 跳过」。
-// 注意：唯一 size 文件**不被打开**（不进 job），其读失败自然不可见、不记日志——
-// 这是有意的（该文件本就不参与成组），与「读失败 log-and-skip」仅针对已入 job 文件。
+// size 预分组（有意取舍，详见 go-dedup 知识卡「R27 P3-2」）：不同 size 的文件
+// 不可能同 hash，唯一 size 的文件必不成组——跳过其哈希省一次 I/O，输出不变。
+// 代价：唯一 size 文件不被打开，若其本身读失败则不可见（同 size 文件读失败会
+// log-and-skip）——这是设计，不是 bug。
 func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 	n := len(files)
 	results := make([]hashResult, n)
@@ -145,10 +139,9 @@ func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			// recover 防止 worker panic 导致主 goroutine 死锁：
-			// 无缓冲 jobs channel 在 jobs <- f 处阻塞，worker panic 后
-			// wg 永不 Done、close(jobs) 永不执行（R27 P3-1）。
-			// panic 的槽位 results[idx] 留零值（ok=false），调用方见 log-and-skip。
+			// recover 防 worker panic 死锁主 goroutine：无缓冲 jobs channel 发送阻塞中
+			// panic 会让 wg 永不 Done、close(jobs) 永不执行（详见 go-dedup 知识卡 R27 P3-1）；
+			// panic 槽位留零值（ok=false），调用方见 log-and-skip。
 			defer func() {
 				if r := recover(); r != nil {
 					log.Printf("[dedup] worker panic: %v", r)
@@ -174,12 +167,11 @@ func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 	return results
 }
 
-// resolveScanRoot 入口校验公共段：TrimSpace → 空判 → Abs 化（相对路径下
-// FileEntry.Path 为相对路径，下游 recycle.Move 按 CWD 解析可能移到错误位置）。
-// Abs 失败（如 Windows 含 NUL 字节的路径）必须显式报错——静默退回入参形态会让
-// WalkDir→Lstat 失败被 log 吞掉并返回「无重复」= 假绿（与 ErrSymlinkRoot 同类的
-// 静默漏扫）。收敛 FindDuplicateFiles/CountDuplicates 重复入口（R21 审核 P3-3），
-// 错误消息与两函数原实现逐字一致。
+// resolveScanRoot 入口校验公共段（FindDuplicateFiles/CountDuplicates 共用）：
+// TrimSpace → 空判 → Abs 化。相对路径下 FileEntry.Path 为相对路径，下游
+// recycle.Move 按 CWD 解析可能移到错误位置；Abs 失败（如 Windows 含 NUL 字节）
+// 必须显式报错——静默退回入参形态会让 WalkDir→Lstat 失败被 log 吞掉并返回
+// 「无重复」= 假绿（与 ErrSymlinkRoot 同类的静默漏扫）。
 func resolveScanRoot(dir string) (string, error) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {

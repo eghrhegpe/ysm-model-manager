@@ -23,7 +23,7 @@
 | G3 | 3D 菜单手写 fill* 飞地 | ✅ 闭环 | `bf1459a4` fill* 三函数删除（生产零调用）+ `72573102` renderCustom 构造点审计门（3 豁免白名单锁死）；P1 收官时移交的死代码复查清单亦闭环（2026-09-04）：ui-preset.ts 整模块（buildPresetChipGroup/addClearRow，生产零引用仅测试直测）、ui-rows addWatchDirRow（3 处 cssText）、skeleton-utils.ts 整文件（sec/iRow/buildDepthMap，生产仅 skeleton-render.test 直测）全部删除 + 对应测试块移除，P1 cssText 账面归零 |
 | G4 | 渲染链路多通道衰退 | ✅ 闭环 | `383d7c1f` G3 后 fillers 仅 roles 独苗，四路互斥分派注释收敛 + health.test fillers roles-only 白名单守卫 |
 | G5 | community 回收站过滤前端复刻 Go | ✅ 闭环 | `39114d99` utils/recycle-path.ts hasRecycleSegment 单一实现（双复刻删并）；口径修正：真对齐对象是 sync.hasRecycleSegment 非 IsRecycleDir |
-| G6 | 3D overlay light DOM（全站 Shadow DOM 不一致） | 🚧 执行中（ADR-175 M1 ✅，M2/M3 待做） | 勘察报告 `frontend-src-critique-g6p1-survey.md`：overlay 链 28 类 token 样式全部集中于 2 个可 adoptedStyleSheets 模块 + render.ts 链内注入块 + 5 无规则语义锚点——样式层障碍已排除。**立项完成（ADR-175，2026-09-04）**：D1 overlay shadow host 化 / D2 菜单 shadow 化 + 注入目标迁移 / D3 aria+trapFocusAcrossShadow 转正 / D4 测试策略 / D5 分步 M1-M3。**M1 落地**：`#ysm-overlay-3d` 改 shadow host（id/class/aria 挂 host，app-tree:296 守卫零改动），内容全量迁入 shadowRoot；共享样式模块 adoptedStyleSheets 安装 + 新增 `overlay-style-bridge.ts`（8 个 ensure*Styles + ensureFabStyles 注入目标经桥迁移，目标切换自动复位旗标重注入；无 overlay 时 head 兜底，menu 族单测路径不变）；attachShadow 缺失环境（behavior.test fake doc）降级 light DOM 兼容；PreviewBuildCtx/SwitchContext.overlay 放宽 `HTMLElement \| ShadowRoot` 并传 root；litematic-3d.test lastOverlay() 返回 shadowRoot 作用域。验证：menu 全族+behavior+core+fab+litematic/adapters 594 测试绿 + 全量套件 5191 全绿 + vite build 绿。M2（createSlideMenu shadow 化收尾）/M3（e2e 穿透）待做 |
+| G6 | 3D overlay light DOM（全站 Shadow DOM 不一致） | ✅ 闭环（ADR-175，M1 落地 + D2 修订） | 立项（ADR-175，2026-09-04）→ **M1 落地（`d8dba486`）**：`#ysm-overlay-3d` 改 shadow host（id/class/aria 挂 host，app-tree:296 守卫零改动），tip/body/viewContainer/菜单链内容全量迁入 shadowRoot；共享样式模块 adoptedStyleSheets 安装 + 新增 `overlay-style-bridge.ts`（8 个 ensure*Styles + ensureFabStyles 注入目标经桥迁移，目标切换自动复位旗标重注入；无 overlay 时 head 兜底，menu 族单测路径不变）；attachShadow 缺失环境（behavior.test fake doc）降级 light DOM；PreviewBuildCtx/SwitchContext.overlay 放宽 `HTMLElement \| ShadowRoot` 并传 root；litematic-3d.test lastOverlay() 返回 shadowRoot 作用域。**D2 修订（2026-09-04）**：M1 后菜单 DOM 已整体居于 overlay shadow 树内、封装成立，createSlideMenu 与同层 🥉 元素工厂形态一致——再套第二层 shadow 成本 ~90 处测试双级穿透、无链外复用收益，**M2 取消**；将来链外独立消费再按 opts.shadow 开关立项。**M3 查证自然满足**：单元侧随 M1 落地（scope() 优先 shadowRoot）；e2e/preview.spec.ts 无 `#ysm-overlay-3d` 触达用例（全目录 0 处引用），无穿透改造对象。验证：全量套件 328 文件 5191 测试全绿 + vite build 绿。状态卡纠错历史：2026-09-03 曾误计闭环，此次为真实闭环 |
 
 ## 风格（4 项）
 
@@ -36,8 +36,8 @@
 
 ## 汇总
 
-- 已闭环 9 项：严重 4/5（S1/S3/S4/S5）+ 一般 5/6（G1-G5）+ 风格 P1/P3（P1 活代码清零 12 批次，剩 8 处全为死代码移交 G3/豁免/非批判）——剩 S2（严重）/ G6（一般）排期
+- 已闭环 11 项：严重 4/5（S1/S3/S4/S5）+ 一般 6/6（G1-G6）+ 风格 P1/P3（P1 活代码清零 12 批次 + 死代码复查删除）——剩 S2（严重）排期
 - 严重项 S2：ADR-174 已立（判定规则单一源查证成立 + 对账硬锁策略 + 首轮四函数漂移审计），剩对账 fixtures 基建排期（收口定义见 ADR D5）
-- 待处置：S2 fixtures 基建（B1c 已锁降级语义，ADR-174 D5 剩双端语料+镜像测试，go/ 并行静默后动）/ G6 执行 M1-M3（ADR-175 立项完成）、P2 / P4（评估留档，不铺开）；P1 cssText 账面归零（死代码复查清单已删除：skeleton-utils 2/ui-rows 3/ui-preset 1 + 对应测试；余 render 豁免 1 + 测试重置 1，均合规）；P3 仅剩「届期清退」动作挂在 2027-06-30
+- 待处置：S2 fixtures 基建（B1c 已锁降级语义，ADR-174 D5 剩双端语料+镜像测试，go/ 并行静默后动）；P2 / P4（评估留档，不铺开）；知识卡 ui_components.md 清理 ui-preset 行（等并行改动落定）；P1 cssText 账面归零（死代码已删 + render 豁免 1 + 测试重置 1，均合规）；P3 仅剩「届期清退」动作挂在 2027-06-30
 - 状态卡纠错（2026-09-03）：此前汇总误计「一般 6/6 / 共 10 项闭环」——G6（overlay light DOM）实为 ⏳ 排期且 git 无闭环提交，此处修正为 一般 5/6 + 共 9 项闭环
 - 兄弟基线遗留：browser-adapter.contract-b2.test.ts:227,241 缺 desc（HEAD 即红，非本锐评引入），push 需兄弟收口或逃生阀

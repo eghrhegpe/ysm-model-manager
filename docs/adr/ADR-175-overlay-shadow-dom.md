@@ -46,9 +46,19 @@ overlay 整链 28 个类 token 三类归属，**样式层迁移障碍远小于�
 id + class + aria 属性，挂 document.body 不动），overlay 全部内容（mpc-body / viewContainer / 菜单 /
 loading / tip / canvas 链）迁入 `host.shadowRoot`。`_singletonOverlay/_singletonBody` 单例语义不变。
 
-**D2 — slide 菜单 shadow 化**：createSlideMenu（ui-slide-menu.ts）attachShadow；菜单链内各
+**D2 — slide 菜单 shadow 化**（**已修订，2026-09-04**）：createSlideMenu（ui-slide-menu.ts）attachShadow；菜单链内各
 `ensure*Styles` 注入目标从 `document.head` 改为**宿主 shadow root**（或并入 adoptedStyleSheets）。
 样式注入目标参数化：ensure 函数接受 `(target: HTMLElement | ShadowRoot)` 或读宿主实例。
+
+> **修订（2026-09-04，M1 落地后）**：D2 原预设「菜单是 light DOM 兄弟节点，需自行 attachShadow」
+> 已被 M1 的实施结果超越——M1 将菜单 DOM 整体迁入 overlay 的 shadow 树，**封装已成立**：
+> 菜单不可见性由宿主 shadow 边界承担，createSlideMenu 与同层 🥉 组件（addFieldRow 等
+> ui-helpers 元素工厂）形态一致，本就无 attachShadow。再套第二层 shadow 的实测成本为
+> ~90 处测试查询改双级穿透（roles.test 46 + items.test 34 + litematic-3d 11 等），
+> 收益存疑（无链外复用场景，风险表第 4 行亦确认唯一消费 core.ts:104）。
+> **决定：createSlideMenu 保持元素工厂形态，M2 取消**；如将来出现链外独立消费场景，
+> 再按「`opts.shadow` 开关」立项。样式注入目标迁移（原 D2 后半段）已由 M1 经
+> overlay-style-bridge 完成，不受本修订影响。
 
 **D3 — aria/焦点归属**：role=dialog / aria-modal / aria-label 挂 **host**（document 层，语义可见）；
 trapFocusAcrossShadow 目标改为 host.shadowRoot（该 util 注释自证已具备跨 shadow 能力，防御性设计转正）。
@@ -60,15 +70,23 @@ e2e specs 的 overlay 真实选择器改 **shadow 穿透**形态（host id → s
 **D5 — 迁移分步执行（M1→M3），每步全量套件认证**：
 - **M1**：挂载点 shadow root 化（零视觉变更：mpc-overlay/mpc-body/mpc-* 类规则随 ensure 注入目标迁移；
   单例外壳 + app-tree 守卫 + aria 挂 host）。验证：overlay 单例复用测试 + 全量套件绿。
-- **M2**：slide 菜单 shadow 化（createSlideMenu attachShadow + 链内 ensure\* 注入目标迁移）。
-  验证：menu 全族 + 全量套件绿。
-- **M3**：测试/e2e 选择器适配（scope() 查询改传 host；e2e overlay 用例 shadow 穿透）。
-  验证：全量套件绿 + e2e overlay 穿透用例绿。
+  ✅ **已落地（2026-09-04）**：新增 overlay-style-bridge（8 个 ensure\*Styles + ensureFabStyles 注入目标
+  经桥迁移，无 overlay 时 head 兜底保 menu 族单测）；共享样式模块 adoptedStyleSheets 安装；
+  attachShadow 缺失环境降级 light DOM；PreviewBuildCtx/SwitchContext.overlay 放宽 `HTMLElement | ShadowRoot`。
+- **M2**：~~slide 菜单 shadow 化~~ **取消**（见 D2 修订，2026-09-04）。
+- **M3**：测试/e2e 选择器适配。单元侧已随 M1 落地（scope() 优先 shadowRoot + litematic-3d lastOverlay
+  返回 shadow 作用域）；e2e 侧查证 `e2e/preview.spec.ts` 无任何 `#ysm-overlay-3d` 触达用例
+  （全目录 0 处引用）——**无穿透改造对象，M3 自然满足**。
 
 ## 3. 收口定义（G6 闭环标准）
 
-M1-M3 全落地 + 全量套件 329 文件/5214 测试全绿 + e2e overlay 穿透用例绿 +
-「全站 UI 均 shadow 组件」成立（唯一不一致点消除）→ G6 闭环。
+~~M1-M3 全落地 + 全量套件 329 文件/5214 测试全绿 + e2e overlay 穿透用例绿 +
+「全站 UI 均 shadow 组件」成立（唯一不一致点消除）→ G6 闭环。~~
+
+**修订后收口（2026-09-04）**：M1 落地 + M2 取消（D2 修订）+ M3 单元侧随 M1 落地、e2e 侧无改造对象 +
+全量套件 328 文件/5191 测试全绿 + vite build 绿 → **G6 闭环**。注：「全站 UI 均 shadow 组件」
+按 M1 后事实重述为「overlay 全屏链内容实体居于 shadow 树内；🥉 组件层为元素工厂、被消费于
+shadow root，与全站形态一致」。
 
 ## 4. 风险与缓解
 

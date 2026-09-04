@@ -30,7 +30,6 @@ auto_fields:
     - AdaptiveRenderBudget
     - addActionRow
     - addCardTitle
-    - addClearRow
     - addCollapsible
     - addColorSliderRow
     - addDangerRow
@@ -51,7 +50,6 @@ auto_fields:
     - addTagToSet
     - addToggleRow
     - addVector3SliderRow
-    - addWatchDirRow
     - AdvFilterResult
     - AdvFilterValue
     - ALL_EXTS
@@ -75,7 +73,6 @@ auto_fields:
     - AppContentState
     - appContentStyle
     - appendLitematicPreview
-    - appendMmdPreview
     - applyFilter
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
@@ -162,7 +159,6 @@ auto_fields:
     - buildCameraSchema
     - buildCrossCuttingControls
     - buildCubeMeshData
-    - buildDepthMap
     - buildDownloadTasks
     - buildEnvSchema
     - buildFbxScene
@@ -181,7 +177,6 @@ auto_fields:
     - buildPackScene
     - buildPmxScene
     - buildPostprocessingSchema
-    - buildPresetChipGroup
     - buildPreviewMenuRouters
     - buildRenameName
     - buildSceneMesh
@@ -365,7 +360,6 @@ auto_fields:
     - decodeYsmInWorkerMemfs
     - decodeYsmViaWasm
     - DedupConfigShape
-    - dedupeCreators
     - DedupFileLike
     - DedupSession
     - DEFAULT_COMMUNITY_URL
@@ -415,7 +409,6 @@ auto_fields:
     - drawView
     - Easings
     - emitAndroidBack
-    - emptyHTML
     - emptyYsmHeader
     - emptyYsmSummary
     - en
@@ -486,12 +479,9 @@ auto_fields:
     - fileToBase64
     - fill3DPanel
     - fillAuthorsAsync
-    - fillMmdModelPanel
-    - fillMmdShotPanel
     - fillRoles
     - fillSearch
     - fillSwitch
-    - fillYsmShotPanel
     - filterAnimFiles
     - filterModels
     - findAncestorBoneId
@@ -539,7 +529,6 @@ auto_fields:
     - frameCameraSide
     - FrameSideOptions
     - friendlyError
-    - frRoleRowStyle
     - FsaAuthState
     - FSLike
     - generateSurfacePixels
@@ -690,8 +679,6 @@ auto_fields:
     - invalidatePreview
     - invalidateScenePreview
     - invalidateVrmPreview
-    - invalidateYsmPreview
-    - iRow
     - isActiveStatus
     - isBusy
     - isContainerExt
@@ -709,7 +696,6 @@ auto_fields:
     - isPathAvailable
     - isPerceptionPaused
     - isPreviewFolderNode
-    - isRecyclePath
     - isRenderableModel
     - isSkyEnvironmentOn
     - isSupportedExt
@@ -814,7 +800,6 @@ auto_fields:
     - makeMmdAdapter
     - makeMmdDataPort
     - makePackAdapter
-    - makeShotAction
     - makeUnifiedPickHandler
     - makeVrmAdapter
     - makeYsmAdapter
@@ -1036,7 +1021,6 @@ auto_fields:
     - prefetchStatsWorker
     - preloadModel
     - prepareMmdZipInput
-    - PresetChipItem
     - PREVIEW_FRAME_INTERVAL_MS
     - PREVIEW_MENU_GROUPS
     - PREVIEW_OVERLAY_ID
@@ -1241,7 +1225,6 @@ auto_fields:
     - screenshotFromRenderer
     - ScreenshotLights
     - ScreenshotOpts
-    - sec
     - sectionHeader
     - selectLocalRepo
     - selectSingle
@@ -1307,7 +1290,6 @@ auto_fields:
     - showVrmMeta
     - sidebarCSS
     - SidebarInstance
-    - SITE_GROUP_ORDER
     - SiteViewState
     - sizeColor
     - SkyCapability
@@ -1377,7 +1359,6 @@ auto_fields:
     - swallowError
     - SwitchContext
     - switchPreview
-    - switchTabCssText
     - switchTabHighlightBg
     - switchToSession
     - syncDirRowHTML

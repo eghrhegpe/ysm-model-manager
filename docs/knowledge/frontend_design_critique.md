@@ -44,7 +44,6 @@ auto_fields:
     - Disposable
     - fillRoles
     - fmtMB
-    - frRoleRowStyle
     - getFrameIntervalMs
     - getLastModelPath
     - getMaxFps
@@ -56,7 +55,6 @@ auto_fields:
     - initMcDetect
     - initRepositoryPage
     - initSettingsPage
-    - initTheme
     - initWorkshopPage
     - installUiComponentsStyles
     - invalidateMaxFpsCache

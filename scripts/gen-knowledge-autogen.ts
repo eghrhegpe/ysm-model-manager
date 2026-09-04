@@ -297,6 +297,7 @@ function main() {
   let updated = 0;
   let skippedNoSources = 0;
   let skippedFrozen = 0;
+  let frozenCleaned = 0;
   const drifts: Array<{ file: string; added: string[]; removed: string[]; moved: string[] }> = [];
 
   for (const cf of cards) {
@@ -311,13 +312,35 @@ function main() {
       continue;
     }
 
-    // 冻结快照豁免（2026-09-03）：frontmatter `affected: false` 卡是整包/整目录审计
-    // 快照（如 frontend_repo_audit / frontend_design_critique / go_design_critique），
-    // source_files 只服务覆盖率/存在性统计，不随单次文件变更提示复核。
-    // auto_fields 符号索引随源码增删整表重写是纯噪音——冻结：保留已有索引、正文不动。
-    // --check 同样豁免（否则 CI 会因陈旧索引误报漂移）；--full 也豁免（冻结优先于全量重写）。
+    // 冻结快照（affected: false）增量清理（2026-09-04 方案 A）：
+    // 整表豁免保留（新增符号不进卡，防提交噪音），但「已删符号残留」必须清理——
+    // 实证：b91f21fd 删 buildPresetChipGroup 等，frontend_repo_audit 索引残留数月无人知。
+    // --check 只报冻结卡的 removed 漂移（不报 added）；--full 同样只增量清理。
     if (getScalar(fm, 'affected') === 'false') {
-      skippedFrozen++;
+      const frozenParsed = parseAutoFields(fm);
+      const frozenExisting = frozenParsed?.['symbols_with_lines'] ?? [];
+      const frozenTarget = collectSymbolsWithLines(sources).map((s) => s.symbol);
+      // 源文件整体缺失 → 保守跳过，避免 source_files 失效被误判为「全部已删」清空索引
+      if (frozenTarget.length === 0) { skippedFrozen++; continue; }
+      const frozenRemoved = frozenExisting.filter((s) => !frozenTarget.includes(s));
+      if (frozenRemoved.length === 0) { skippedFrozen++; continue; } // 无残留 → 冻结原样
+      if (isCheck) { drifts.push({ file: cf, added: [], removed: frozenRemoved, moved: [] }); continue; }
+      const kept = frozenExisting.filter((s) => frozenTarget.includes(s));
+      const newFrozenFields: Record<string, string[]> = { symbols_with_lines: kept };
+      if (frozenParsed) {
+        for (const [k, v] of Object.entries(frozenParsed)) {
+          if (k !== 'symbols_with_lines') newFrozenFields[k] = v;
+        }
+      }
+      const newFm = withUpdatedAutoFields(fm, newFrozenFields);
+      if (newFm === null) continue;
+      const newText = text.replace(
+        /^---\r?\n[\s\S]*?\r?\n---/,
+        '---\n' + newFm + '\n---'
+      );
+      fs.writeFileSync(file, newText);
+      frozenCleaned++;
+      console.log(`🧹 ${cf} → 冻结快照增量清理 ${frozenRemoved.length} 个已删符号`);
       continue;
     }
 
@@ -385,18 +408,18 @@ function main() {
     if (wantJson) {
       console.log(JSON.stringify({ _summary: { ok: true, scanned: cards.length, skipped: skippedNoSources, frozen: skippedFrozen } }));
     } else {
-      console.log(`✅ 知识卡 auto_fields: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无 source_files ${skippedNoSources} 张，冻结快照 ${skippedFrozen} 张）`);
+      console.log(`✅ 知识卡 auto_fields: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无 source_files ${skippedNoSources} 张，冻结快照 ${skippedFrozen} 张，增量清理 ${frozenCleaned} 张）`);
     }
     process.exit(0);
   }
 
   if (wantJson) {
-    console.log(JSON.stringify({ _summary: { ok: true, updated, scanned: cards.length, frozen: skippedFrozen } }));
+    console.log(JSON.stringify({ _summary: { ok: true, updated, scanned: cards.length, frozen: skippedFrozen, frozenCleaned } }));
   } else {
     console.log(
-      updated === 0
+      updated === 0 && frozenCleaned === 0
         ? `✅ 知识卡 auto_fields: 已是最新，无需修改（扫描 ${cards.length} 张卡，冻结快照 ${skippedFrozen} 张豁免不刷）`
-        : `✅ 已更新 ${updated} 张卡的 auto_fields: 字段（冻结快照 ${skippedFrozen} 张豁免不刷）`
+        : `✅ 已更新 ${updated} 张卡的 auto_fields: 字段，增量清理冻结快照 ${frozenCleaned} 张（冻结快照 ${skippedFrozen} 张无残留豁免不刷）`
     );
   }
   process.exit(0);

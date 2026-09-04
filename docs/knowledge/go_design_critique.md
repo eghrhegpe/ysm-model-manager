@@ -35,9 +35,7 @@ auto_fields:
     - BuildVoxelDataFromRoot
     - ComputeFileHash
     - DecodeYSMData
-    - DecodeYSMFiles
     - DetectContainerTypeFromBase64Tail
-    - DownloadQueue
     - EffectiveCacheTTL
     - ErrChmodFailed
     - ErrCloseFailed
@@ -62,7 +60,6 @@ auto_fields:
     - Move
     - MoveResult
     - New
-    - NewDownloadQueue
     - OnCacheInvalidated
     - OpenGzRootFromBytes
     - ParseComponentsFrom7z
@@ -73,7 +70,6 @@ auto_fields:
     - ParseFromZipEntry
     - ReadLimitedEntry
     - RegisterInvalidationHook
-    - ResourceTypeInfo
     - ScanEntries
     - ScanEntriesLite
     - ScanEntriesWithHit

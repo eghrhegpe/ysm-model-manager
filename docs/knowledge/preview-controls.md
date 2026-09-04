@@ -95,7 +95,7 @@ status: active
 - **产出 `PreviewMenuNode[]`**：各 controls 文件导出命名空间节点函数（`mmdModelInfoNodes` / `playNodes` / `mmdShotNodes` 等），适配器组装后注入核心根菜单
 - **受控 schema 注册**：`registerYsmModelSchema` 注册 `buildYsmModelSchema` 到 per-scene 键 `ysm-model-{sessionId}`
 - **截图能力桥接**：向截图面板提供 `screenshotFn`（MMD/YSM 六角度，VRM 仅 current）
-- **材质 bridge**：`MaterialControlBridge` / `VrmMaterialControlBridge` 显隐/透明度，逻辑下沉到 `mmd-materials.ts` / `vrm-materials.ts`
+- **材质 bridge**：`MaterialControlBridge` / `VrmMaterialControlBridge` 显隐/透明度，逻辑下沉到 `mmd-materials.ts` / `vrm-materials.ts`（[ADR-180] 骨架收编 `materials-shared.ts`——list/setVisible/setOpacity/detail 骨架共享，格式差异参数化）
 - **模型切换**：zip 内多 pmx/pmd 候选 `multiModelSelectNode`，跨类型走 `switchExternal`
 
 ## 三控制器对比

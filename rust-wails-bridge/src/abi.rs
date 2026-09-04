@@ -2,6 +2,19 @@ use crate::response::{scan_json, scan_json_manifest, ScanResponse};
 use std::{panic::AssertUnwindSafe, ptr, slice, str};
 
 /// Owned byte buffer returned across the C ABI.
+///
+/// # Memory safety
+///
+/// `YsmBuffer` transfers ownership of a `Vec<u8>`'s allocation to the Go side
+/// via `mem::forget`. The Go side **must** call [`ysm_buffer_free`] exactly once
+/// to reclaim the memory.
+///
+/// There is no `Drop` impl: if Go crashes or forgets to call `ysm_buffer_free`,
+/// the allocation leaks. This is an explicit FFI contract trade-off — adding a
+/// fallback drop would require tracking ownership globally, which is not worth
+/// the complexity for a short-lived scan result.
+///
+/// `Clone` is intentionally not derived: accidental clone would cause double-free.
 #[repr(C)]
 pub struct YsmBuffer {
     pub ptr: *mut u8,
@@ -10,6 +23,8 @@ pub struct YsmBuffer {
 }
 
 impl YsmBuffer {
+    /// Transfer a `Vec<u8>`'s allocation into an ABI buffer. After this call the
+    /// `Vec` must not be touched again — its memory now belongs to the caller.
     fn from_vec(mut bytes: Vec<u8>) -> Self {
         let buffer = Self {
             ptr: bytes.as_mut_ptr(),

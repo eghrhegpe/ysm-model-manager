@@ -3,9 +3,7 @@ use crate::response::{scan_json, scan_json_manifest};
 use serde_json::Value;
 use std::{
     fs,
-    path::PathBuf,
-    process, ptr, slice,
-    sync::atomic::{AtomicU64, Ordering},
+    ptr, slice,
     time::{SystemTime, UNIX_EPOCH},
 };
 use rust_test_utils::TempRoot;
@@ -128,6 +126,48 @@ fn c_abi_buffer_can_be_released() {
     let value: Value = serde_json::from_slice(json).unwrap();
     assert_eq!(value["entries"].as_array().unwrap().len(), 1);
     unsafe { ysm_buffer_free(buffer.ptr, buffer.len, buffer.cap) };
+}
+
+/// null `out` 指针 → ysm_scan 返回 -1，不写内存（ABI 安全网）。
+#[test]
+fn null_out_pointer_returns_negative_without_writing() {
+    let root = TempRoot::test();
+    fs::write(root.0.join("hero.ysm"), b"hero").unwrap();
+    let root_text = root.0.to_string_lossy();
+    let status = unsafe {
+        ysm_scan(
+            root_text.as_ptr(),
+            root_text.len(),
+            registry().as_ptr(),
+            registry().len(),
+            ptr::null_mut(),
+        )
+    };
+    assert_eq!(status, -1, "null out 指针应返回 -1");
+}
+
+/// null `out` 指针 → ysm_scan_manifest 返回 -1，不写内存（ABI 安全网）。
+#[test]
+fn null_out_pointer_returns_negative_for_manifest() {
+    let root = TempRoot::test();
+    fs::write(root.0.join("hero.ysm"), b"hero").unwrap();
+    let root_text = root.0.to_string_lossy();
+    let manifest = format!(
+        r#"[{{"Path":"{}","Ext":".ysm","Name":"hero.ysm","subdir":"","type":"ysm"}}]"#,
+        root.0.join("hero.ysm").to_string_lossy().replace('\\', "/"),
+    );
+    let status = unsafe {
+        ysm_scan_manifest(
+            root_text.as_ptr(),
+            root_text.len(),
+            registry().as_ptr(),
+            registry().len(),
+            manifest.as_ptr(),
+            manifest.len(),
+            ptr::null_mut(),
+        )
+    };
+    assert_eq!(status, -1, "null out 指针应返回 -1（manifest）");
 }
 
 /// ADR-120 核心契约：manifest 路径（Go 预枚举）产出 == jwalk 路径（ysm_scan）产出。

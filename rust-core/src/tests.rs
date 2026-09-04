@@ -3,11 +3,22 @@ use super::scan::{is_disable_suffix, is_model_json_name, strip_disable_suffix, s
 use rust_test_utils::TempRoot;
 use std::{
     fs,
-    path::{Path, PathBuf},
-    process,
-    sync::atomic::{AtomicU64, Ordering},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    sync::OnceLock,
+    time::{Duration, UNIX_EPOCH},
 };
+
+/// 全局缓存 parity fixture（~40 行 JSON，三个测试各读一次 → 合并为一次加载）。
+fn parity_doc() -> &'static serde_json::Value {
+    static PARITY_DOC: OnceLock<serde_json::Value> = OnceLock::new();
+    PARITY_DOC.get_or_init(|| {
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../tests/parity/go-rust-predicates.json"
+        );
+        serde_json::from_str(&fs::read_to_string(fixture_path).unwrap())
+            .expect("parse parity fixture")
+    })
+}
 
 fn policy() -> ScanPolicy {
     ScanPolicy::from_registry_json(
@@ -178,10 +189,6 @@ fn rtype_first_declared_wins() {
 // 注：parity fixture 只锁三个纯谓词（strip_disable_suffix / is_ysm_entry_json / is_disable_suffix）。
 // scan_fast vs scan_eager 的 hash 行为差异（fast 不补 hash、eager 补）是设计意图，
 // 由 fast_scan_defers_hash_then_parallel_hydration_matches_sha256 单测锁——不在 parity 范围内。
-const PARITY_FIXTURE: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../tests/parity/go-rust-predicates.json"
-);
 
 fn parity_json<'a>(doc: &'a serde_json::Value, key: &str) -> Vec<(&'a str, &'a str)> {
     doc[key]
@@ -206,10 +213,8 @@ fn system_time_before_epoch_returns_negative() {
 
 #[test]
 fn parity_strip_disable_suffix() {
-    let doc: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string(PARITY_FIXTURE).unwrap())
-            .expect("parse parity fixture");
-    for (input, expected) in parity_json(&doc, "strip_disable_suffix") {
+    let doc = parity_doc();
+    for (input, expected) in parity_json(doc, "strip_disable_suffix") {
         assert_eq!(
             strip_disable_suffix(input),
             expected,
@@ -220,10 +225,8 @@ fn parity_strip_disable_suffix() {
 
 #[test]
 fn parity_is_model_json_name() {
-    let doc: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string(PARITY_FIXTURE).unwrap())
-            .expect("parse parity fixture");
-    for (input, want) in parity_json(&doc, "is_ysm_entry_json") {
+    let doc = parity_doc();
+    for (input, want) in parity_json(doc, "is_ysm_entry_json") {
         let expected = want == "true";
         assert_eq!(
             is_model_json_name(input),
@@ -235,10 +238,8 @@ fn parity_is_model_json_name() {
 
 #[test]
 fn parity_is_disable_suffix() {
-    let doc: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string(PARITY_FIXTURE).unwrap())
-            .expect("parse parity fixture");
-    for (input, want) in parity_json(&doc, "is_disable_suffix") {
+    let doc = parity_doc();
+    for (input, want) in parity_json(doc, "is_disable_suffix") {
         let expected = want == "true";
         assert_eq!(is_disable_suffix(input), expected, "is_disable_suffix({input:?})");
     }

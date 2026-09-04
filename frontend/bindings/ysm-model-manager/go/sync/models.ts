@@ -90,7 +90,7 @@ export interface FileConflict {
     "suggestedStrategy": ResolutionStrategy;
 
     /**
-     * HashFailed 标记哈希计算失败的条目（R27 code_review P2-1 修复）。
+     * HashFailed 标记哈希计算失败的条目。
      * 此类条目本应人工审查，ResolveConflictsLocked 检测到 HashFailed 时
      * 不覆盖 SuggestedStrategy，直接计入 manual 计数。
      */

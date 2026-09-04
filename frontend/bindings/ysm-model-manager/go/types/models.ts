@@ -282,7 +282,7 @@ export interface FileInventory {
     /**
      * Truncated 标记 classifyFileInventory 达到 maxClassifyEntries 封顶，
      * 返回的 inventory 不完整。调用方应据此向用户披露「清单可能不全」。
-     * R29 code_review P3-1：旧实现静默截断，调用方无法区分完整 vs 截断。
+     * 旧实现静默截断，调用方无法区分完整 vs 截断。
      */
     "truncated"?: boolean;
 }
@@ -567,7 +567,7 @@ export interface ModelEntry {
     /**
      * Banned 禁用态（文件级 .disabled/.ban 后缀或父目录级禁用，ADR-038 D3.7）。
      * ScanModelEntriesFiltered 填充；前端树加载据此标记，替代逐文件
-     * IsFileBanned 桥调用（2000 模型 = 2000 次 IPC 的 N+1，code review #2）。
+     * IsFileBanned 桥调用（2000 模型 = 2000 次 IPC 的 N+1）。
      */
     "banned"?: boolean;
 }

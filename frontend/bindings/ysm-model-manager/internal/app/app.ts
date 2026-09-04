@@ -111,6 +111,9 @@ export function CachedCreatorAvatar(authorName: string): $CancellablePromise<str
     return $Call.ByID(224206566, authorName);
 }
 
+/**
+ * CancelQueue 取消在途下载队列（委托至 install.Manager.Queue）。
+ */
 export function CancelQueue(): $CancellablePromise<void> {
     return $Call.ByID(1786226156);
 }
@@ -226,10 +229,6 @@ export function DetectContainerType(base64Data: string): $CancellablePromise<str
     return $Call.ByID(685628447, base64Data);
 }
 
-/**
- * DetectLauncherInstances inspects a user-selected HMCL/PCL directory and
- * returns the resolved YSM directory for each Minecraft instance.
- */
 export function DetectLauncherInstances(launcherDir: string): $CancellablePromise<types$0.LauncherInstance[] | null> {
     return $Call.ByID(2842612456, launcherDir);
 }
@@ -258,6 +257,9 @@ export function EmptyRecycleBin(src: string): $CancellablePromise<number> {
     return $Call.ByID(4211256250, src);
 }
 
+/**
+ * EnqueueDownloads 入队一批下载任务（委托至 install.Manager.Queue）。
+ */
 export function EnqueueDownloads(tasks: types$0.DownloadTask[] | null): $CancellablePromise<void> {
     return $Call.ByID(552244624, tasks);
 }
@@ -568,7 +570,7 @@ export function HasCachedTextures(hashes: string[] | null): $CancellablePromise<
 /**
  * ========== YSM 检测 ==========
  * HasYSMMod 检测实例 mods 目录是否包含 YSM 模组（整合包卡片 mod 徽标用）。
- * 注意（R23 P4-1）："ysm" 子串匹配刻意宽松（覆盖 Yes_Steve_Model/ysm 官方 jar 变体），
+ * 注意："ysm" 子串匹配刻意宽松（覆盖 Yes_Steve_Model/ysm 官方 jar 变体），
  * mods 目录语境下误判面小；若未来引入非 YSM 但含 ysm 子串的 mod，需收紧为段匹配。
  */
 export function HasYSMMod(modsDir: string): $CancellablePromise<boolean> {
@@ -622,7 +624,7 @@ export function ImportModelFolder(folderName: string, subpath: string, files: ty
  * 空串/未注册类型回退 inferFolderType 内容推断（兼容导入页等无上下文入口）。
  * 提醒非阻断：内容明确归属其他单一类型且与上下文不符时记一条 warn 日志，
  * 落盘仍按上下文执行——用户拖到哪页就落哪页的根。
- * 例外（审核 P3-4）：上下文为默认中性类型时让位内容推断、整条走 ImportModelFolder
+ * 例外：上下文为默认中性类型时让位内容推断、整条走 ImportModelFolder
  * 旧路（含 ysm.json 入口优先级与兜底），最常用入口不静默改数据落点。
  */
 export function ImportModelFolderTo(folderName: string, subpath: string, rtype: string, files: types$0.ImportFileItem[] | null): $CancellablePromise<void> {
@@ -748,7 +750,7 @@ export function LoadWorkshopCreators(): $CancellablePromise<types$0.WorkshopCrea
  * MergeCommunityCreatorsFromJSON 把社区索引（增量）并入本地 creators 并单次原子写回。
  * ADR-172：社区增量合并下沉 Go——替代前端 tryAutoMergeCommunity / site edit 同步
  * 按钮的 TS 派生写回链（siteMap 分组 / kept 过滤 / dedupeCreators），解除 AGENTS.md
- * 「Go 派生结果只读」红线债务（锐评复核 2026-09-03 判定，见 ADR-172 §1）。
+ * 「Go 派生结果只读」红线债务（见 ADR-172 §1）。
  * 
  * 语义与 MergeWorkshopCreatorsFromJSON（手动全量导入，drag.ts 消费）刻意区分：
  *   - type 冲突：分号段并入（不丢站点），非覆盖；
@@ -778,7 +780,7 @@ export function MoveModelFile(src: string, dstDir: string): $CancellablePromise<
 
 /**
  * ========== 回收站 ==========
- * R24 P3：recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批
+ * recycle 五个绑定（Move/Restore/Delete/Empty）与安装/同步并发操作同一批
  * 文件（实例目录 Rename/Remove、.recycle 内 Move）→ 统一纳入 InstallLock 互斥
  * （共享单锁闭环，与 ClearInstanceResources 同口径）。
  * ⚠️ 这些绑定不得在已持 InstallLock 的路径内被调用（非重入锁，会自死锁）。
@@ -873,6 +875,9 @@ export function PushSingleResourceToInstance(rtype: string, instanceName: string
     return $Call.ByID(3553253805, rtype, instanceName, filePath);
 }
 
+/**
+ * QueueStatus 返回下载队列状态（委托至 install.Manager.Queue）。
+ */
 export function QueueStatus(): $CancellablePromise<types$0.QueueStatusInfo> {
     return $Call.ByID(1350901616);
 }
@@ -1171,9 +1176,6 @@ export function SetDownloadMirror(mirror: string): $CancellablePromise<void> {
     return $Call.ByID(1760896254, mirror);
 }
 
-/**
- * ========== 链接模式 ==========
- */
 export function SetLinkMode(mode: string): $CancellablePromise<void> {
     return $Call.ByID(2002865150, mode);
 }

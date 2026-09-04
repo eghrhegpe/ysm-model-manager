@@ -64,7 +64,9 @@ test.describe("设置页", () => {
     const before = await successToasts.count();
     // 点击游戏根目录路径卡片（bindPathClick 绑定，桌面走 SelectDirectory）
     await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const el = content.shadowRoot!.querySelector('[data-testid="set-mc-path"]') as HTMLElement;
       el.click();
     });
@@ -78,7 +80,9 @@ test.describe("设置页", () => {
     // gotoApp 已发生，永不运行；真实变化断言是上方 toast 可见性（覆盖
     // pickDirectory→saveCfg→SaveAppConfig→toast 全链路）
     const text = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const el = content.shadowRoot!.querySelector('[data-testid="set-mc-path"]')!;
       return el.textContent ?? "";
     });
@@ -106,7 +110,9 @@ test.describe("设置页", () => {
     );
 
     const styles = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const sr = content.shadowRoot!;
       const card = sr.querySelector(".stg-card") as HTMLElement;
       const tabBody = sr.querySelector(".tab-body") as HTMLElement;

@@ -86,8 +86,11 @@ test.describe("文件树交互", () => {
       { timeout: 10000, polling: 200 },
     );
     const toggleCount = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const tree = content.shadowRoot!.querySelector("app-tree")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       return tree.shadowRoot!.querySelectorAll('[data-testid="tree-dir-toggle"]').length;
     });
     expect(toggleCount).toBeGreaterThan(0);

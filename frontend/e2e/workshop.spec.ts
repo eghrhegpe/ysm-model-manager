@@ -35,14 +35,18 @@ test.describe("创意工坊页", () => {
 
   test("创意工坊 → 站点 tab 动态渲染（mock 2 站点）", async ({ page }) => {
     const tabCount = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const tabs = content.shadowRoot!.querySelector('[data-testid="ws-tabs"]')!;
       return tabs.querySelectorAll("button").length;
     });
     expect(tabCount).toBeGreaterThanOrEqual(2);
     // 第一个 tab 应包含 B站 文案
     const firstTab = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const tabs = content.shadowRoot!.querySelector('[data-testid="ws-tabs"]')!;
       return tabs.querySelector("button")?.textContent ?? "";
     });
@@ -52,7 +56,9 @@ test.describe("创意工坊页", () => {
   test("创意工坊 → 默认选中第一个站点并显示内容视图", async ({ page }) => {
     // 默认选中第一个 tab（active class）
     const firstActive = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const tabs = content.shadowRoot!.querySelector('[data-testid="ws-tabs"]')!;
       const btn = tabs.querySelector("button");
       return btn ? btn.classList.contains("active") : false;
@@ -62,7 +68,9 @@ test.describe("创意工坊页", () => {
     const searchText = await shadowEl(page, "ws-search-view");
     expect(searchText).not.toBeNull();
     const loadingGone = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const results = content.shadowRoot!.querySelector('[data-testid="ws-search-results"]');
       return Boolean(results && results.querySelectorAll("input,button,a").length > 0);
     });
@@ -75,14 +83,18 @@ test.describe("创意工坊页", () => {
   test("创意工坊 → 点击 GitHub 站点 tab → 内容切换", async ({ page }) => {
     // 点击第二个 tab（GitHub）
     await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const tabs = content.shadowRoot!.querySelector('[data-testid="ws-tabs"]')!;
       const buttons = tabs.querySelectorAll("button");
       if (buttons.length > 1) buttons[1].click();
     });
     // 第二个 tab 变为 active
     const secondActive = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const tabs = content.shadowRoot!.querySelector('[data-testid="ws-tabs"]')!;
       const buttons = tabs.querySelectorAll("button");
       return buttons.length > 1 ? buttons[1].classList.contains("active") : false;
@@ -114,7 +126,9 @@ test.describe("创意工坊页", () => {
     );
     // 卡片包含创作者名
     const cardTexts = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const cards = Array.from(content.shadowRoot!.querySelectorAll(".cr-creator-card"));
       return cards.map((c) => c.textContent ?? "");
     });

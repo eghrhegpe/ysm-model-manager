@@ -47,7 +47,9 @@ test.describe("诊断页", () => {
     expect(count).toBeGreaterThanOrEqual(3);
     // 默认激活「日志」按钮
     const logActive = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const btn = content.shadowRoot!.querySelector('.diag-btn[data-diag="log"]');
       return btn?.classList.contains("active") ?? false;
     });
@@ -59,7 +61,9 @@ test.describe("诊断页", () => {
     expect(await panelVisible(page, "log")).toBe(true);
     // 点击「运行时」按钮
     await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const btn = content.shadowRoot!.querySelector(
         '.diag-btn[data-diag="runtime"]',
       ) as HTMLElement | null;
@@ -69,10 +73,13 @@ test.describe("诊断页", () => {
     // 未验证面板 display；且 panelVisible 曾查到按钮本身恒 true——已修）
     await page.waitForFunction(
       () => {
+        // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
         const content = document.querySelector("app-content")!;
+        // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
         const log = content.shadowRoot!.querySelector(
           '[data-testid="diag-log"]',
         ) as HTMLElement | null;
+        // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
         const runtime = content.shadowRoot!.querySelector(
           '[data-testid="diag-runtime"]',
         ) as HTMLElement | null;
@@ -91,7 +98,9 @@ test.describe("诊断页", () => {
   test("诊断页 → 日志空态提示（mock GetImportLogs=[]）", async ({ page }) => {
     // 日志区应显示「No logs yet」（mock 空数组 → 空态分支；locale=en-US）
     const listText = await page.evaluate(() => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const list = content.shadowRoot!.querySelector('[data-testid="diag-log-list"]');
       return list?.textContent ?? "";
     });

@@ -430,6 +430,7 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     await expect.poll(async () => previewTabs(page), { timeout: 10000 }).not.toBeNull();
 
     // 3. 硬断言：tab 按钮含 detail 和 skeleton 两个 data-tab 锚点
+    // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
     const tabs = (await previewTabs(page))!;
     expect(tabs.length, "应至少有 2 个 preview-tab 按钮").toBeGreaterThanOrEqual(2);
     const tabNames = tabs.map((t) => t.dataTab);
@@ -438,6 +439,7 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     );
 
     // 4. 硬断言：初始状态 detail tab 为 active（savedTab 默认 "detail"）
+    // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
     const detailTab = tabs.find((t) => t.dataTab === "detail")!;
     expect(detailTab.isActive, "初始状态 detail tab 应为 active").toBe(true);
 
@@ -445,6 +447,7 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     await expect.poll(async () => clickPreviewTab(page, "skeleton"), { timeout: 5000 }).toBe(true);
     // 等 switchTab 完成（display 切换是同步的，但 WASM 解析可能还在进行）
     await expect.poll(async () => previewTabVisibility(page), { timeout: 8000 }).not.toBeNull();
+    // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
     let visibility = (await previewTabVisibility(page))!;
     // skeleton tab 点击后：detail 面板隐藏（display:none）、skeleton 面板显示
     expect(visibility.detailDisplay, "点击 skeleton tab 后 detail 面板应隐藏").toBe("none");
@@ -454,6 +457,7 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     // 6. 点击 detail tab，断言面板 visibility 切回
     await expect.poll(async () => clickPreviewTab(page, "detail"), { timeout: 5000 }).toBe(true);
     await expect.poll(async () => previewTabVisibility(page), { timeout: 8000 }).not.toBeNull();
+    // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
     visibility = (await previewTabVisibility(page))!;
     expect(visibility.detailDisplay, "点击 detail tab 后 detail 面板应显示").toBe("");
     expect(visibility.skeletonDisplay, "点击 detail tab 后 skeleton 面板应隐藏").toBe("none");

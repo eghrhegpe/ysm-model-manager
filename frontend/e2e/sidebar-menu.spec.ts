@@ -16,7 +16,7 @@ async function gotoInstances(page: import("@playwright/test").Page): Promise<voi
     const deadline = Date.now() + 8000;
     while (Date.now() < deadline) {
       const content = document.querySelector("app-content") as { _current?: string } | null;
-      if (content && content._current) return;
+      if (content?._current) return;
       await new Promise((r) => setTimeout(r, 200));
     }
   });

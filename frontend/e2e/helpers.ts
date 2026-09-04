@@ -51,8 +51,11 @@ export async function getTreeBox(
 ): Promise<{ x: number; y: number }> {
   return page.evaluate(
     ({ tid, i }) => {
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const tree = content.shadowRoot!.querySelector("app-tree")!;
+      // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const row = tree.shadowRoot!.querySelectorAll(`[data-testid="${tid}"]`)[i] as HTMLElement;
       const rect = row.getBoundingClientRect();
       return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };

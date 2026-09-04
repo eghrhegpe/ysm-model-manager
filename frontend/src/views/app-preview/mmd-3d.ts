@@ -6,7 +6,7 @@ import { mount3D, cleanupPreview, invalidatePreview, type PreviewAdapter, type M
 import { makeMmdAdapter, type MmdPanelHooks } from "../../preview-3d/adapters/mmd-adapter.ts";
 import { makeMmdDataPort } from "./mmd-data-port.ts";
 import { mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
-import { registerReRoute, withPreviewExtras, openModel3DFullscreen } from "./preview-library.ts";
+import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.pmx/.pmd→"mmd"）
 registerReRoute("mmd", (path) => createMmd3D(path));
@@ -31,11 +31,6 @@ export async function createMmd3D(path: string, opts?: Mount3DOptions): Promise<
 /** 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 */
 export function cleanupMmd3D(): void {
   cleanupPreview();
-}
-
-/** 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） */
-export async function appendMmdPreview(path: string): Promise<void> {
-  await openModel3DFullscreen(path, { cooperate: true });
 }
 
 /** 任意新预览派发时调用，作废在途 MMD 加载 */

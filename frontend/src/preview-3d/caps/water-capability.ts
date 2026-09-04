@@ -7,18 +7,19 @@
 import * as THREE from "three";
 import { safeDispose } from "../safe-dispose.ts";
 import {
-  type SceneCapability,
+  createListenerSet,
   type MenuControlDef,
   persistState,
   restoreState,
-  createListenerSet,
+  type SceneCapability,
 } from "./scene-capability.ts";
+import type { WaterMode, WaterParams } from "./water-state.ts";
 // 状态/序列化轴（WaterParams / 默认值 / 呈现模式）已下沉 water-state.ts；此处透传导出，
 // 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
 import { DEFAULT_WATER_PARAMS, WATER_MODES } from "./water-state.ts";
-import type { WaterParams, WaterMode } from "./water-state.ts";
+
+export type { WaterMode, WaterParams };
 export { DEFAULT_WATER_PARAMS, WATER_MODES };
-export type { WaterParams, WaterMode };
 
 export class WaterCapability implements SceneCapability {
   readonly id = "water";
@@ -106,10 +107,7 @@ export class WaterCapability implements SceneCapability {
          uniform float uBaseOpacity;
          varying vec3 vWorldPos_wave;`,
       );
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "void main() {",
-        "void main() {\n",
-      );
+      shader.fragmentShader = shader.fragmentShader.replace("void main() {", "void main() {\n");
       // 在结尾赋值 opacity 前（Three r185 先由 #include <opaque_fragment> / 透明度分支赋值 diffuseColor.a）做一次覆盖
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <dithering_fragment>",
@@ -128,8 +126,10 @@ export class WaterCapability implements SceneCapability {
     mat.needsUpdate = true;
 
     const normalMap = this.generateNormalMap(256);
-    (mat as THREE.MeshPhysicalMaterial & { normalMap: THREE.DataTexture | null }).normalMap = normalMap;
-    (mat as THREE.MeshPhysicalMaterial & { normalScale: THREE.Vector2 }).normalScale = new THREE.Vector2(w.normalStrength, w.normalStrength);
+    (mat as THREE.MeshPhysicalMaterial & { normalMap: THREE.DataTexture | null }).normalMap =
+      normalMap;
+    (mat as THREE.MeshPhysicalMaterial & { normalScale: THREE.Vector2 }).normalScale =
+      new THREE.Vector2(w.normalStrength, w.normalStrength);
     mat.needsUpdate = true;
     return mat;
   }
@@ -183,7 +183,11 @@ export class WaterCapability implements SceneCapability {
     group.add(top);
 
     // 底平面（贴 y=0，用 poolWallColor 实色，放在水里防止外部透过去看到地下空洞）
-    const bottomMat = new THREE.MeshStandardMaterial({ color: w.poolWallColor, side: THREE.DoubleSide, roughness: 0.9 });
+    const bottomMat = new THREE.MeshStandardMaterial({
+      color: w.poolWallColor,
+      side: THREE.DoubleSide,
+      roughness: 0.9,
+    });
     const bottom = new THREE.Mesh(new THREE.PlaneGeometry(size, size), bottomMat);
     bottom.rotation.x = -Math.PI / 2;
     bottom.position.y = 0.0001; // 微抬，防与地面 z-fighting
@@ -221,27 +225,31 @@ export class WaterCapability implements SceneCapability {
     }> = [
       // 北壁（z=-half，面朝 +z 即池内观察者南视方向）
       {
-        name: "ysm-water-wall-n", axis: "ns",
+        name: "ysm-water-wall-n",
+        axis: "ns",
         pos: new THREE.Vector3(0, h / 2, -half),
         outerPos: new THREE.Vector3(0, h / 2, -half - w.poolWallThickness),
       },
       // 南壁（z=+half，面朝 -z）
       {
-        name: "ysm-water-wall-s", axis: "ns",
+        name: "ysm-water-wall-s",
+        axis: "ns",
         pos: new THREE.Vector3(0, h / 2, half),
         outerPos: new THREE.Vector3(0, h / 2, half + w.poolWallThickness),
         rotY: Math.PI,
       },
       // 东壁（x=+half，面朝 -x）—— Plane 需绕 y 转 -π/2
       {
-        name: "ysm-water-wall-e", axis: "ew",
+        name: "ysm-water-wall-e",
+        axis: "ew",
         pos: new THREE.Vector3(half, h / 2, 0),
         outerPos: new THREE.Vector3(half + w.poolWallThickness, h / 2, 0),
         rotY: -Math.PI / 2,
       },
       // 西壁（x=-half，面朝 +x）
       {
-        name: "ysm-water-wall-w", axis: "ew",
+        name: "ysm-water-wall-w",
+        axis: "ew",
         pos: new THREE.Vector3(-half, h / 2, 0),
         outerPos: new THREE.Vector3(-half - w.poolWallThickness, h / 2, 0),
         rotY: Math.PI / 2,
@@ -252,7 +260,12 @@ export class WaterCapability implements SceneCapability {
       // 每块 plane：宽 = (ns → size; ew → size)，高 = h（水池高度）
       const geoSizeW = pair.axis === "ns" ? size : size;
       const innerGeo = new THREE.PlaneGeometry(geoSizeW, h, 4, 4);
-      const outerGeo = new THREE.PlaneGeometry(geoSizeW, h + Math.max(0.02, w.poolWallThickness * 0.6), 4, 4); // 外壁略高，覆盖顶底接缝
+      const outerGeo = new THREE.PlaneGeometry(
+        geoSizeW,
+        h + Math.max(0.02, w.poolWallThickness * 0.6),
+        4,
+        4,
+      ); // 外壁略高，覆盖顶底接缝
       const inner = new THREE.Mesh(innerGeo, innerMat);
       inner.name = pair.name + "-inner";
       inner.position.copy(pair.pos);
@@ -303,9 +316,7 @@ export class WaterCapability implements SceneCapability {
     // 重建前记录旧容器是否已在场景内（apply 过），重建后需原样挂回
     const wasInScene = !initial && this.water.parent != null;
     if (!initial) this.disposeWater();
-    const container = this.params.mode === "pool"
-      ? this.createPoolGroup()
-      : this.createFilmMesh();
+    const container = this.params.mode === "pool" ? this.createPoolGroup() : this.createFilmMesh();
     // 初始化或模式切换后的可见性：由 syncWaterVisibility 统一裁决
     this.water = container;
     this.syncWaterVisibility();
@@ -354,7 +365,9 @@ export class WaterCapability implements SceneCapability {
     this.params.enabled = v;
     this.syncWaterVisibility();
   }
-  getWaterEnabled(): boolean { return this.params.enabled; }
+  getWaterEnabled(): boolean {
+    return this.params.enabled;
+  }
 
   setWaterMode(m: WaterMode): void {
     if (this.params.mode === m) return;
@@ -372,7 +385,9 @@ export class WaterCapability implements SceneCapability {
   private notify(): void {
     this.listenerSet.notify();
   }
-  getWaterMode(): WaterMode { return this.params.mode; }
+  getWaterMode(): WaterMode {
+    return this.params.mode;
+  }
 
   // ── 水面参数（film + pool 通用）──
   setWetness(v: number): void {
@@ -382,39 +397,56 @@ export class WaterCapability implements SceneCapability {
       const mat = top.material as THREE.MeshPhysicalMaterial;
       mat.opacity = this.params.waterOpacity * this.params.wetness;
       // 反射回 uniform：onBeforeCompile 注入的 uBaseOpacity 是 snapshot，material.opacity 变化同步
-      if ((mat as unknown as { userData: { shader?: THREE.WebGLProgramParametersWithUniforms } }).userData?.shader?.uniforms?.uBaseOpacity) {
-        (mat as unknown as { userData: { shader: { uniforms: { uBaseOpacity: { value: number } } } } }).userData.shader.uniforms.uBaseOpacity.value = mat.opacity;
+      if (
+        (mat as unknown as { userData: { shader?: THREE.WebGLProgramParametersWithUniforms } })
+          .userData?.shader?.uniforms?.uBaseOpacity
+      ) {
+        (
+          mat as unknown as {
+            userData: { shader: { uniforms: { uBaseOpacity: { value: number } } } };
+          }
+        ).userData.shader.uniforms.uBaseOpacity.value = mat.opacity;
       }
     }
     this.syncWaterVisibility();
   }
-  getWetness(): number { return this.params.wetness; }
+  getWetness(): number {
+    return this.params.wetness;
+  }
 
   setWaterColor(hex: number): void {
     this.params.waterColor = hex;
     // film：顶层 mesh；pool：顶 mesh + 四壁 inner mesh
-    const targets = this.params.mode === "film"
-      ? [this.water as THREE.Mesh]
-      : this.collectWaterMeshes().filter((m) => m.name === "ysm-water-top" || m.name.endsWith("-inner"));
+    const targets =
+      this.params.mode === "film"
+        ? [this.water as THREE.Mesh]
+        : this.collectWaterMeshes().filter(
+            (m) => m.name === "ysm-water-top" || m.name.endsWith("-inner"),
+          );
     for (const m of targets) {
       const mat = m.material as THREE.MeshPhysicalMaterial | THREE.MeshStandardMaterial;
       if ("color" in mat) mat.color.setHex(hex);
     }
   }
-  getWaterColor(): number { return this.params.waterColor; }
+  getWaterColor(): number {
+    return this.params.waterColor;
+  }
 
   setWaterOpacity(v: number): void {
     this.params.waterOpacity = Math.max(0, Math.min(1, v));
     const top = this.findTopWater();
     if (top) {
       const mat = top.material as THREE.MeshPhysicalMaterial;
-      const newOp = this.params.mode === "film"
-        ? this.params.waterOpacity * this.params.wetness
-        : this.params.waterOpacity;
+      const newOp =
+        this.params.mode === "film"
+          ? this.params.waterOpacity * this.params.wetness
+          : this.params.waterOpacity;
       mat.opacity = newOp;
     }
   }
-  getWaterOpacity(): number { return this.params.waterOpacity; }
+  getWaterOpacity(): number {
+    return this.params.waterOpacity;
+  }
 
   // ── 法线贴图强度（顶层水面）──
   setNormalStrength(v: number): void {
@@ -425,20 +457,26 @@ export class WaterCapability implements SceneCapability {
       mat.normalScale?.set(this.params.normalStrength, this.params.normalStrength);
     }
   }
-  getNormalStrength(): number { return this.params.normalStrength; }
+  getNormalStrength(): number {
+    return this.params.normalStrength;
+  }
 
   // ── 水池专属参数（pool 模式）──
   setPoolHeight(v: number): void {
     this.params.poolHeight = Math.max(0.01, v);
     if (this.params.mode === "pool") this.rebuildWaterContainer(false); // 几何高度需要重排
   }
-  getPoolHeight(): number { return this.params.poolHeight; }
+  getPoolHeight(): number {
+    return this.params.poolHeight;
+  }
 
   setPoolWallThickness(v: number): void {
     this.params.poolWallThickness = Math.max(0.01, v);
     if (this.params.mode === "pool") this.rebuildWaterContainer(false);
   }
-  getPoolWallThickness(): number { return this.params.poolWallThickness; }
+  getPoolWallThickness(): number {
+    return this.params.poolWallThickness;
+  }
 
   setPoolWallColor(hex: number): void {
     this.params.poolWallColor = hex;
@@ -451,7 +489,9 @@ export class WaterCapability implements SceneCapability {
       }
     }
   }
-  getPoolWallColor(): number { return this.params.poolWallColor; }
+  getPoolWallColor(): number {
+    return this.params.poolWallColor;
+  }
 
   setPoolRoundness(v: number): void {
     this.params.poolRoundness = Math.max(0, Math.min(0.5, v));
@@ -459,14 +499,25 @@ export class WaterCapability implements SceneCapability {
     const top = this.findTopWater();
     if (top) {
       const mat = top.material as THREE.MeshPhysicalMaterial;
-      const shader = (mat as unknown as { userData: { shader?: { uniforms: { uRoundness?: { value: number } } } } }).userData?.shader;
-      if (shader?.uniforms?.uRoundness) shader.uniforms.uRoundness.value = this.params.poolRoundness;
+      const shader = (
+        mat as unknown as {
+          userData: { shader?: { uniforms: { uRoundness?: { value: number } } } };
+        }
+      ).userData?.shader;
+      if (shader?.uniforms?.uRoundness)
+        shader.uniforms.uRoundness.value = this.params.poolRoundness;
     }
   }
-  getPoolRoundness(): number { return this.params.poolRoundness; }
+  getPoolRoundness(): number {
+    return this.params.poolRoundness;
+  }
 
-  setWaveSpeed(v: number): void { this.params.waveSpeed = Math.max(0, v); }
-  getWaveSpeed(): number { return this.params.waveSpeed; }
+  setWaveSpeed(v: number): void {
+    this.params.waveSpeed = Math.max(0, v);
+  }
+  getWaveSpeed(): number {
+    return this.params.waveSpeed;
+  }
   setClarity(v: number): void {
     this.params.clarity = Math.max(0, Math.min(1, v));
     // pool 顶 mesh + inner walls 已构建 → 需要改 material.transmission；否则下次 buildWaveWaterMaterial 时天然使用新值
@@ -477,13 +528,16 @@ export class WaterCapability implements SceneCapability {
       for (const m of targets) {
         const mat = m.material as THREE.MeshPhysicalMaterial;
         if ("transmission" in mat) {
-          mat.transmission = m.name === "ysm-water-top" ? this.params.clarity : this.params.clarity * 0.5;
+          mat.transmission =
+            m.name === "ysm-water-top" ? this.params.clarity : this.params.clarity * 0.5;
           mat.needsUpdate = true;
         }
       }
     }
   }
-  getClarity(): number { return this.params.clarity; }
+  getClarity(): number {
+    return this.params.clarity;
+  }
 
   // ── 程序化法线贴图生成 ──
   private generateNormalMap(size: number): THREE.DataTexture {
@@ -496,7 +550,8 @@ export class WaterCapability implements SceneCapability {
         const x = (u / size - 0.5) * sz * 2;
         const y = (v / size - 0.5) * sz * 2;
 
-        let dhdx = 0, dhdy = 0;
+        let dhdx = 0,
+          dhdy = 0;
 
         // Wave 1: dir=(1,0.3) normalized, freq=0.8, amp=0.08
         const d1 = new THREE.Vector2(1, 0.3).normalize();
@@ -529,10 +584,10 @@ export class WaterCapability implements SceneCapability {
 
         // 编码到 RGB
         const idx = (v * size + u) * 4;
-        data[idx] = Math.round((nnx * 0.5 + 0.5) * 255);       // R
-        data[idx + 1] = Math.round((nny * 0.5 + 0.5) * 255);   // G
-        data[idx + 2] = 255;                                     // B (朝上)
-        data[idx + 3] = 255;                                     // A
+        data[idx] = Math.round((nnx * 0.5 + 0.5) * 255); // R
+        data[idx + 1] = Math.round((nny * 0.5 + 0.5) * 255); // G
+        data[idx + 2] = 255; // B (朝上)
+        data[idx + 3] = 255; // A
       }
     }
 
@@ -616,10 +671,10 @@ export class WaterCapability implements SceneCapability {
 // ── 菜单控件工厂（水面专属）──
 // 按功能分区，使环境面板「水面 ›」下钻为 形态 / 外观 / 水池 / 波纹 四个子区，
 // 而非单折叠平铺全部控件；启用水面（enabled）无 group → 作为 cap 根行主控件，不进子区。
-const WATER_GROUP_FORM = "preview.waterGroupForm";   // 形态
-const WATER_GROUP_LOOK = "preview.waterGroupLook";   // 外观
-const WATER_GROUP_POOL = "preview.waterGroupPool";   // 水池
-const WATER_GROUP_WAVE = "preview.waterGroupWave";   // 波纹
+const WATER_GROUP_FORM = "preview.waterGroupForm"; // 形态
+const WATER_GROUP_LOOK = "preview.waterGroupLook"; // 外观
+const WATER_GROUP_POOL = "preview.waterGroupPool"; // 水池
+const WATER_GROUP_WAVE = "preview.waterGroupWave"; // 波纹
 
 function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
   const wSlider = (
@@ -632,17 +687,32 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
     setValue: (v: number) => void,
     visible?: () => boolean,
   ): MenuControlDef => ({
-    id, kind: "slider", labelKey, fallback, group, slider,
-    getValue, setValue: (v) => setValue(v as number),
+    id,
+    kind: "slider",
+    labelKey,
+    fallback,
+    group,
+    slider,
+    getValue,
+    setValue: (v) => setValue(v as number),
     ...(visible ? { visible } : {}),
   });
   const wColor = (
-    id: string, labelKey: string, fallback: string, group: string,
-    getValue: () => number, setValue: (v: number) => void,
+    id: string,
+    labelKey: string,
+    fallback: string,
+    group: string,
+    getValue: () => number,
+    setValue: (v: number) => void,
     visible?: () => boolean,
   ): MenuControlDef => ({
-    id, kind: "color", labelKey, fallback, group,
-    getValue, setValue: (v) => setValue(v as number),
+    id,
+    kind: "color",
+    labelKey,
+    fallback,
+    group,
+    getValue,
+    setValue: (v) => setValue(v as number),
     ...(visible ? { visible } : {}),
   });
   return [
@@ -670,56 +740,100 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       setValue: (v) => cap.setWaterMode(v as WaterMode),
     },
     wSlider(
-      "ground-wetness", "preview.waterFilmDensity", "水膜浓度", WATER_GROUP_LOOK,
+      "ground-wetness",
+      "preview.waterFilmDensity",
+      "水膜浓度",
+      WATER_GROUP_LOOK,
       { min: 0, max: 1, step: 0.05 },
-      () => cap.getWetness(), (v) => cap.setWetness(v),
+      () => cap.getWetness(),
+      (v) => cap.setWetness(v),
       () => cap.getWaterMode() === "film", // 仅薄膜模式：pool 下 wetness 不参与 opacity（见 buildWaveWaterMaterial）
     ),
     // ── 外观 ──
-    wColor("ground-water-color", "preview.groundWaterColor", "水色", WATER_GROUP_LOOK,
-      () => cap.getWaterColor(), (v) => cap.setWaterColor(v)),
-    wSlider(
-      "ground-water-opacity", "preview.groundWaterOpacity", "不透明度", WATER_GROUP_LOOK,
-      { min: 0, max: 1, step: 0.05 },
-      () => cap.getWaterOpacity(), (v) => cap.setWaterOpacity(v),
+    wColor(
+      "ground-water-color",
+      "preview.groundWaterColor",
+      "水色",
+      WATER_GROUP_LOOK,
+      () => cap.getWaterColor(),
+      (v) => cap.setWaterColor(v),
     ),
     wSlider(
-      "ground-normal-strength", "preview.groundNormalStrength", "法线强度", WATER_GROUP_LOOK,
+      "ground-water-opacity",
+      "preview.groundWaterOpacity",
+      "不透明度",
+      WATER_GROUP_LOOK,
       { min: 0, max: 1, step: 0.05 },
-      () => cap.getNormalStrength(), (v) => cap.setNormalStrength(v),
+      () => cap.getWaterOpacity(),
+      (v) => cap.setWaterOpacity(v),
     ),
     wSlider(
-      "ground-water-clarity", "preview.groundWaterClarity", "水体通透度", WATER_GROUP_LOOK,
+      "ground-normal-strength",
+      "preview.groundNormalStrength",
+      "法线强度",
+      WATER_GROUP_LOOK,
       { min: 0, max: 1, step: 0.05 },
-      () => cap.getClarity(), (v) => cap.setClarity(v),
+      () => cap.getNormalStrength(),
+      (v) => cap.setNormalStrength(v),
+    ),
+    wSlider(
+      "ground-water-clarity",
+      "preview.groundWaterClarity",
+      "水体通透度",
+      WATER_GROUP_LOOK,
+      { min: 0, max: 1, step: 0.05 },
+      () => cap.getClarity(),
+      (v) => cap.setClarity(v),
     ),
     // ── 水池（仅 pool 模式可见；film 下为死控件，故条件隐藏）──
     wSlider(
-      "ground-pool-height", "preview.groundPoolHeight", "水池高度", WATER_GROUP_POOL,
+      "ground-pool-height",
+      "preview.groundPoolHeight",
+      "水池高度",
+      WATER_GROUP_POOL,
       { min: 0.01, max: 5, step: 0.05, unit: "m" },
-      () => cap.getPoolHeight(), (v) => cap.setPoolHeight(v),
+      () => cap.getPoolHeight(),
+      (v) => cap.setPoolHeight(v),
       () => cap.getWaterMode() === "pool",
     ),
     wSlider(
-      "ground-pool-wall-thickness", "preview.groundPoolWallThickness", "池壁厚度", WATER_GROUP_POOL,
+      "ground-pool-wall-thickness",
+      "preview.groundPoolWallThickness",
+      "池壁厚度",
+      WATER_GROUP_POOL,
       { min: 0.01, max: 2, step: 0.01, unit: "m" },
-      () => cap.getPoolWallThickness(), (v) => cap.setPoolWallThickness(v),
+      () => cap.getPoolWallThickness(),
+      (v) => cap.setPoolWallThickness(v),
       () => cap.getWaterMode() === "pool",
     ),
-    wColor("ground-pool-wall-color", "preview.groundPoolWallColor", "池壁颜色", WATER_GROUP_POOL,
-      () => cap.getPoolWallColor(), (v) => cap.setPoolWallColor(v),
-      () => cap.getWaterMode() === "pool"),
+    wColor(
+      "ground-pool-wall-color",
+      "preview.groundPoolWallColor",
+      "池壁颜色",
+      WATER_GROUP_POOL,
+      () => cap.getPoolWallColor(),
+      (v) => cap.setPoolWallColor(v),
+      () => cap.getWaterMode() === "pool",
+    ),
     wSlider(
-      "ground-pool-roundness", "preview.groundPoolRoundness", "边缘圆角", WATER_GROUP_POOL,
+      "ground-pool-roundness",
+      "preview.groundPoolRoundness",
+      "边缘圆角",
+      WATER_GROUP_POOL,
       { min: 0, max: 0.5, step: 0.01 },
-      () => cap.getPoolRoundness(), (v) => cap.setPoolRoundness(v),
+      () => cap.getPoolRoundness(),
+      (v) => cap.setPoolRoundness(v),
       () => cap.getWaterMode() === "pool",
     ),
     // ── 波纹 ──
     wSlider(
-      "ground-wave-speed", "preview.groundWaveSpeed", "波速", WATER_GROUP_WAVE,
+      "ground-wave-speed",
+      "preview.groundWaveSpeed",
+      "波速",
+      WATER_GROUP_WAVE,
       { min: 0, max: 3, step: 0.05, unit: "x" },
-      () => cap.getWaveSpeed(), (v) => cap.setWaveSpeed(v),
+      () => cap.getWaveSpeed(),
+      (v) => cap.setWaveSpeed(v),
     ),
   ];
 }

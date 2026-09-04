@@ -393,7 +393,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runStartupSteps | `frontend/src/app-modules.ts` | 65 |
+| runStartupSteps | `frontend/src/app-modules.ts` | 67 |
 | (顶层) | `frontend/src/app-modules.ts` | 125 |
 | toast | `frontend/src/core/context-menu-shared.ts` | 25 |
 | resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 68 |

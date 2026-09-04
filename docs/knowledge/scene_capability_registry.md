@@ -81,6 +81,7 @@ auto_fields:
     - sceneCapabilityRegistry
     - SceneCapabilityRegistry
     - sceneRegistry
+    - SHADOW_PRESET_BY_MODEL
     - SHADOW_PRESETS
     - ShadowCapability
     - ShadowParams
@@ -91,8 +92,10 @@ auto_fields:
     - surfaceSpecKey
     - textureRepeat
     - TILE_WORLD_SIZE
+    - TONE_MAPPING_KEYS
     - VolumetricCone
     - VolumetricParams
+    - WATER_MODES
     - WaterCapability
     - WaterMode
     - WaterParams

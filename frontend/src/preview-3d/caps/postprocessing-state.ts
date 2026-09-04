@@ -97,10 +97,10 @@ export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
  */
 export const POSTPROC_PRESETS: Record<string, Partial<PostprocessingParams>> = {
   default: { ...DEFAULT_POSTPROC_PARAMS },
-  ysm:         { enabled: false }, // 方块/车万女仆：满亮材质 + 发光骨，默认关后处理避免爆亮
-  vrm:         { enabled: true },  // PBR 角色：开柔光
-  mmd:         { enabled: true },  // toon：开辉光
-  litematic:   { enabled: false }, // 体素：默认关
-  resourcepack:{ enabled: false }, // 资源包：默认关
+  ysm: { enabled: false }, // 方块/车万女仆：满亮材质 + 发光骨，默认关后处理避免爆亮
+  vrm: { enabled: true }, // PBR 角色：开柔光
+  mmd: { enabled: true }, // toon：开辉光
+  litematic: { enabled: false }, // 体素：默认关
+  resourcepack: { enabled: false }, // 资源包：默认关
   "mmd-scene": { enabled: false }, // 场景：默认关
 };

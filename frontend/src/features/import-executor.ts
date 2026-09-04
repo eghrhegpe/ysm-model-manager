@@ -9,7 +9,7 @@ import { t } from "../core/i18n/t.ts";
 import { getApp } from "../backend/app.ts";
 import { importWebFiles, MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
 import { currentRepoType } from "./repo-rtype.ts";
-import { groupCollected, isImportableFile, fileToBase64, buildFolderItems } from "./dnd-shared.ts";
+import { groupCollected, fileToBase64, buildFolderItems } from "./dnd-shared.ts";
 import type { CollectedEntry } from "./dnd-shared.ts";
 import { isFileExistsError, friendlyError } from "../utils/dom/errors.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
@@ -198,6 +198,3 @@ export const importWebFilesWithToast = async (
     onFinally?.();
   }
 };
-
-/** 是否可作为独立文件导入（供外部过滤，dnd-shared 透传） */
-export { isImportableFile };

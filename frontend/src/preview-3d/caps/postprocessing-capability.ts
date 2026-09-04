@@ -12,22 +12,16 @@
 //   - reflectionMode 三档：envmap-only (SSR off) / envmap+ssr (默认，SSR 叠上 envmap 反射当屏外 fallback) / ssr-only (SSR 无屏外补全)
 
 import * as THREE from "three";
-import { previewPixelRatio } from "../render-budget.ts";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 import { SSRPass } from "three/addons/postprocessing/SSRPass.js";
-import type { LightCapability } from "./light-capability.ts";
-import type { ReflectorCapability } from "./reflector-capability.ts";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import type { PostprocessingLike } from "../adapters/postprocessing.ts";
-import {
-  type SceneCapability,
-  type MenuControlDef,
-  persistState,
-  restoreState,
-} from "./scene-capability.ts";
+import { previewPixelRatio } from "../render-budget.ts";
+import type { LightCapability } from "./light-capability.ts";
+import type { PostprocessingParams, ReflectionMode } from "./postprocessing-state.ts";
 // 状态/序列化轴（PostprocessingParams / 默认值 / 光影包预设 / toneMapping 键表）已下沉
 // postprocessing-state.ts；此处透传导出，保持既有调用方（postprocessing-capability.test.ts、
 // cap-configs.test.ts 等）的 import 路径不破坏。THREE.ToneMapping 枚举求值仍在本文件
@@ -37,9 +31,16 @@ import {
   POSTPROC_PRESETS,
   TONE_MAPPING_KEYS,
 } from "./postprocessing-state.ts";
-import type { PostprocessingParams, ReflectionMode } from "./postprocessing-state.ts";
-export { DEFAULT_POSTPROC_PARAMS, POSTPROC_PRESETS };
+import type { ReflectorCapability } from "./reflector-capability.ts";
+import {
+  type MenuControlDef,
+  persistState,
+  restoreState,
+  type SceneCapability,
+} from "./scene-capability.ts";
+
 export type { PostprocessingParams, ReflectionMode };
+export { DEFAULT_POSTPROC_PARAMS, POSTPROC_PRESETS };
 
 /** 惰性求值 THREE 枚举：调用期才触碰 THREE.ToneMapping（规避测试 mock 缺枚举导出的收集期崩溃） */
 function toneMappingValue(key: PostprocessingParams["toneMapping"]): THREE.ToneMapping {
@@ -352,7 +353,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   private needComposer(lightCap: LightCapability | null): boolean {
     if (this.enabled) return true;
-    const useVolumetric = lightCap &&
+    const useVolumetric =
+      lightCap &&
       lightCap.getVolumetricEngine() === "postprocess" &&
       lightCap.getParams().volumetric.enabled;
     return !!useVolumetric;
@@ -384,7 +386,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.ssaoPass.kernelRadius = this.params.ssaoRadius;
     this.ssaoPass.minDistance = this.params.ssaoMinDist;
     this.ssaoPass.maxDistance = this.params.ssaoMaxDist;
-    this.ssaoPass.output = (SSAOPass as unknown as { OUTPUT: { Default: number } }).OUTPUT?.Default ?? 0;
+    this.ssaoPass.output =
+      (SSAOPass as unknown as { OUTPUT: { Default: number } }).OUTPUT?.Default ?? 0;
     const renderPassIndex = composer.passes.indexOf(this.renderPass!);
     composer.passes.splice(renderPassIndex + 1, 0, this.ssaoPass);
   }
@@ -554,7 +557,11 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (this.composer) {
       this.composer.setSize(width, height);
       if (this.bloomPass) this.bloomPass.resolution = new THREE.Vector2(width, height);
-      if (this.ssrPass) { this.ssrPass.width = width; this.ssrPass.height = height; this.ssrPass.setSize(width, height); }
+      if (this.ssrPass) {
+        this.ssrPass.width = width;
+        this.ssrPass.height = height;
+        this.ssrPass.setSize(width, height);
+      }
     }
   }
 
@@ -763,31 +770,45 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") { this.enabled = state.enabled; this.params.enabled = state.enabled; }
+    if (typeof state.enabled === "boolean") {
+      this.enabled = state.enabled;
+      this.params.enabled = state.enabled;
+    }
     if (typeof state.bloomStrength === "number") this.params.bloomStrength = state.bloomStrength;
     if (typeof state.bloomThreshold === "number") this.params.bloomThreshold = state.bloomThreshold;
     if (typeof state.bloomRadius === "number") this.params.bloomRadius = state.bloomRadius;
-    if (typeof state.bloomFollowVolumetric === "boolean") this.params.bloomFollowVolumetric = state.bloomFollowVolumetric;
+    if (typeof state.bloomFollowVolumetric === "boolean")
+      this.params.bloomFollowVolumetric = state.bloomFollowVolumetric;
     if (typeof state.bloomEnabled === "boolean") this.params.bloomEnabled = state.bloomEnabled;
     if (typeof state.ssaoEnabled === "boolean") this.params.ssaoEnabled = state.ssaoEnabled;
     if (typeof state.ssaoRadius === "number") this.params.ssaoRadius = state.ssaoRadius;
     if (typeof state.ssaoMinDist === "number") this.params.ssaoMinDist = state.ssaoMinDist;
     if (typeof state.ssaoMaxDist === "number") this.params.ssaoMaxDist = state.ssaoMaxDist;
-    if (typeof state.toneMapping === "string" && (TONE_MAPPING_KEYS as readonly string[]).includes(state.toneMapping)) {
+    if (
+      typeof state.toneMapping === "string" &&
+      (TONE_MAPPING_KEYS as readonly string[]).includes(state.toneMapping)
+    ) {
       this.params.toneMapping = state.toneMapping as PostprocessingParams["toneMapping"];
     }
     if (typeof state.exposure === "number") this.params.exposure = state.exposure;
-    if (typeof state.reflectionMode === "string" && (state.reflectionMode === "envmap-only" || state.reflectionMode === "envmap+ssr" || state.reflectionMode === "ssr-only")) {
+    if (
+      typeof state.reflectionMode === "string" &&
+      (state.reflectionMode === "envmap-only" ||
+        state.reflectionMode === "envmap+ssr" ||
+        state.reflectionMode === "ssr-only")
+    ) {
       this.params.reflectionMode = state.reflectionMode;
     }
     if (typeof state.ssrOpacity === "number") this.params.ssrOpacity = state.ssrOpacity;
     if (typeof state.ssrMaxDistance === "number") this.params.ssrMaxDistance = state.ssrMaxDistance;
     if (typeof state.ssrThickness === "number") this.params.ssrThickness = state.ssrThickness;
     if (typeof state.ssrBlur === "boolean") this.params.ssrBlur = state.ssrBlur;
-    if (typeof state.ssrDistanceAttenuation === "boolean") this.params.ssrDistanceAttenuation = state.ssrDistanceAttenuation;
+    if (typeof state.ssrDistanceAttenuation === "boolean")
+      this.params.ssrDistanceAttenuation = state.ssrDistanceAttenuation;
     if (typeof state.ssrFresnel === "boolean") this.params.ssrFresnel = state.ssrFresnel;
     if (typeof state.ssrBouncing === "boolean") this.params.ssrBouncing = state.ssrBouncing;
-    if (typeof state.reflectorDisableWhenSSR === "boolean") this.params.reflectorDisableWhenSSR = state.reflectorDisableWhenSSR;
+    if (typeof state.reflectorDisableWhenSSR === "boolean")
+      this.params.reflectorDisableWhenSSR = state.reflectorDisableWhenSSR;
     // 曝光归权：只有恢复出来 enabled=true 时才写入 renderer tone mapping / exposure
     if (this.enabled) this.applyToneMapping();
     this.applyReflectorSync();

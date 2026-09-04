@@ -526,6 +526,7 @@ auto_fields:
     - setStateValue
     - setVrmMaterialOpacity
     - setVrmMaterialVisible
+    - SHADOW_PRESET_BY_MODEL
     - SHADOW_PRESETS
     - ShadowCapability
     - ShadowParams
@@ -577,6 +578,7 @@ auto_fields:
     - toggleBone
     - toggleBoneVisible
     - toggleMmdMaterialVisible
+    - TONE_MAPPING_KEYS
     - toScreenshotLights
     - toStatePath
     - UnloadCtx
@@ -599,6 +601,7 @@ auto_fields:
     - VrmPanelHooks
     - vrmSemanticBoneMap
     - WasdReuse
+    - WATER_MODES
     - WaterCapability
     - WaterMode
     - WaterParams

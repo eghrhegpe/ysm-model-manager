@@ -10,39 +10,30 @@
 
 import * as THREE from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
-import {
-  type SceneCapability,
-  type MenuControlDef,
-  persistState,
-  restoreState,
-} from "./scene-capability.ts";
+import type {
+  EnvironmentParams,
+  EnvPreset,
+  EnvPresetId,
+  EnvPresetLinkage,
+} from "./environment-state.ts";
 // 状态/序列化轴（EnvPreset* / EnvironmentParams / 默认值 / 模型映射）已下沉
 // environment-state.ts；此处透传导出，保持既有调用方（environment-capability.test.ts、
 // preview-3d/menu/env.ts 等）的 import 路径不破坏。
 import {
-  ENV_PRESETS,
-  ENV_PRESET_LINKAGE,
-  ENV_PRESET_BY_MODEL,
   DEFAULT_ENV_PARAMS,
-} from "./environment-state.ts";
-import type {
-  EnvPreset,
-  EnvPresetId,
-  EnvPresetLinkage,
-  EnvironmentParams,
-} from "./environment-state.ts";
-export {
-  ENV_PRESETS,
-  ENV_PRESET_LINKAGE,
   ENV_PRESET_BY_MODEL,
-  DEFAULT_ENV_PARAMS,
-};
-export type {
-  EnvPreset,
-  EnvPresetId,
-  EnvPresetLinkage,
-  EnvironmentParams,
-};
+  ENV_PRESET_LINKAGE,
+  ENV_PRESETS,
+} from "./environment-state.ts";
+import {
+  type MenuControlDef,
+  persistState,
+  restoreState,
+  type SceneCapability,
+} from "./scene-capability.ts";
+
+export type { EnvironmentParams, EnvPreset, EnvPresetId, EnvPresetLinkage };
+export { DEFAULT_ENV_PARAMS, ENV_PRESET_BY_MODEL, ENV_PRESET_LINKAGE, ENV_PRESETS };
 
 /** 给 canvas 2D ctx 填充 equirectangular 环境贴图（程序化） */
 export function drawEnvEquirect(canvas: HTMLCanvasElement, p: EnvPreset): void {
@@ -68,9 +59,15 @@ export function drawEnvEquirect(canvas: HTMLCanvasElement, p: EnvPreset): void {
   const band = ctx.createLinearGradient(0, 0, W, 0);
   const midCol = new THREE.Color(p.horizon).lerp(new THREE.Color(p.zenith), 0.3);
   band.addColorStop(0, "rgba(255,255,255,0)");
-  band.addColorStop(0.3, `rgba(${midCol.r * 255 | 0},${midCol.g * 255 | 0},${midCol.b * 255 | 0},${0.06 + 0.04 * p.hazeLayers})`);
+  band.addColorStop(
+    0.3,
+    `rgba(${(midCol.r * 255) | 0},${(midCol.g * 255) | 0},${(midCol.b * 255) | 0},${0.06 + 0.04 * p.hazeLayers})`,
+  );
   band.addColorStop(0.5, "rgba(255,255,255,0)");
-  band.addColorStop(0.7, `rgba(${midCol.r * 255 | 0},${midCol.g * 255 | 0},${midCol.b * 255 | 0},${0.05 + 0.03 * p.hazeLayers})`);
+  band.addColorStop(
+    0.7,
+    `rgba(${(midCol.r * 255) | 0},${(midCol.g * 255) | 0},${(midCol.b * 255) | 0},${0.05 + 0.03 * p.hazeLayers})`,
+  );
   band.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = band;
   ctx.fillRect(0, 0, W, H);
@@ -195,7 +192,9 @@ function ecBuildBasic(cap: EnvironmentCapability): MenuControlDef[] {
         onSelect: (v) => cap.setPresetId(v as EnvPresetId),
       },
       getValue: () => "",
-      setValue: () => { /* 由 thumb.onSelect 处理 */ },
+      setValue: () => {
+        /* 由 thumb.onSelect 处理 */
+      },
     },
     {
       id: "env-use-as-background",
@@ -229,7 +228,9 @@ function ecBuildCustomHdr(cap: EnvironmentCapability): MenuControlDef[] {
       fallback: "HDR 预览",
       group: "preview.envGroupCustomHdr",
       getValue: () => cap.getCustomHdrThumbnail(),
-      setValue: () => { /* 只读 */ },
+      setValue: () => {
+        /* 只读 */
+      },
     },
     {
       id: "env-pick-hdr",
@@ -250,7 +251,9 @@ function ecBuildCustomHdr(cap: EnvironmentCapability): MenuControlDef[] {
         hintKey: "preview.envPickHdrHint",
       },
       getValue: () => "",
-      setValue: () => { /* ignore */ },
+      setValue: () => {
+        /* ignore */
+      },
     },
     {
       id: "env-clear-hdr",
@@ -267,7 +270,9 @@ function ecBuildCustomHdr(cap: EnvironmentCapability): MenuControlDef[] {
         getHint: () => (cap.hasCustomHdr() ? "已清空将回到工作室预设" : ""),
       },
       getValue: () => "",
-      setValue: () => { /* ignore */ },
+      setValue: () => {
+        /* ignore */
+      },
     },
   ];
 }
@@ -281,7 +286,9 @@ function ecBuildHistogram(cap: EnvironmentCapability): MenuControlDef[] {
       fallback: "亮度直方图",
       group: "preview.envGroupBackground",
       getValue: () => cap.getLuminanceHistogram(),
-      setValue: () => { /* 只读 */ },
+      setValue: () => {
+        /* 只读 */
+      },
     },
   ];
 }
@@ -427,7 +434,9 @@ export class EnvironmentCapability implements SceneCapability {
    */
   getCustomHdrThumbnail(thumbW = 128, thumbH = 64): string | null {
     if (!this.customHdrTex) return null;
-    const img = this.customHdrTex.image as { data: Uint16Array; width: number; height: number } | undefined;
+    const img = this.customHdrTex.image as
+      | { data: Uint16Array; width: number; height: number }
+      | undefined;
     if (!img || !img.data || !img.width || !img.height) return null;
 
     const srcW = img.width;
@@ -452,7 +461,10 @@ export class EnvironmentCapability implements SceneCapability {
       for (let tx = 0; tx < thumbW; tx++) {
         const x0 = Math.floor((tx * srcW) / thumbW);
         const x1 = Math.max(x0 + 1, Math.floor(((tx + 1) * srcW) / thumbW));
-        let r = 0, g = 0, b = 0, count = 0;
+        let r = 0,
+          g = 0,
+          b = 0,
+          count = 0;
         for (let yy = y0; yy < y1; yy++) {
           for (let xx = x0; xx < x1; xx++) {
             const si = (yy * srcW + xx) * 3;
@@ -462,13 +474,17 @@ export class EnvironmentCapability implements SceneCapability {
             count++;
           }
         }
-        if (count > 0) { r /= count; g /= count; b /= count; }
+        if (count > 0) {
+          r /= count;
+          g /= count;
+          b /= count;
+        }
         // Reinhard tonemap + sRGB 编码
         const encode = (v: number): number => {
           const mapped = v / (1 + v); // Reinhard
           const clamped = Math.max(0, Math.min(1, mapped));
           // sRGB 近似（gamma 2.2）
-          return Math.round(Math.pow(clamped, 1 / 2.2) * 255);
+          return Math.round(clamped ** (1 / 2.2) * 255);
         };
         const di = (ty * thumbW + tx) * 4;
         dst[di] = encode(r);
@@ -513,7 +529,8 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   private buildPresetEquirectTex(): THREE.Texture | null {
-    const preset = ENV_PRESETS[this.params.preset as Exclude<EnvPresetId, "custom">] ?? ENV_PRESETS.sky;
+    const preset =
+      ENV_PRESETS[this.params.preset as Exclude<EnvPresetId, "custom">] ?? ENV_PRESETS.sky;
     const W = this.params.resolution;
     const H = Math.floor(W / 2);
     const canvas = document.createElement("canvas");
@@ -533,8 +550,17 @@ export class EnvironmentCapability implements SceneCapability {
     if (this.customHdrTex) return this.customHdrTex;
     if (!this.customHdrWarnedMissing) {
       this.customHdrWarnedMissing = true;
-      const logger = (globalThis as unknown as { __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void }).__ysmRingLog;
-      if (logger) logger("env", "未加载 HDR 文件，已自动回退到「工作室」预设。请点击「选择 HDR 文件」加载 .hdr。", "warn");
+      const logger = (
+        globalThis as unknown as {
+          __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
+        }
+      ).__ysmRingLog;
+      if (logger)
+        logger(
+          "env",
+          "未加载 HDR 文件，已自动回退到「工作室」预设。请点击「选择 HDR 文件」加载 .hdr。",
+          "warn",
+        );
       else console.warn("[EnvironmentCapability] preset=custom 但无 HDR 缓存，回退 studio 预设");
     }
     this.params.preset = "studio";
@@ -593,7 +619,9 @@ export class EnvironmentCapability implements SceneCapability {
 
     // 优先用 customHdrTex（HalfFloatType DataTexture）
     if (this.customHdrTex) {
-      const img = this.customHdrTex.image as { data: Uint16Array; width: number; height: number } | undefined;
+      const img = this.customHdrTex.image as
+        | { data: Uint16Array; width: number; height: number }
+        | undefined;
       if (img && img.data && img.width && img.height) {
         const src = img.data;
         const total = img.width * img.height;
@@ -692,8 +720,13 @@ export class EnvironmentCapability implements SceneCapability {
   setPresetId(id: EnvPresetId): void {
     if (id === "custom" && !this.customHdrTex) {
       // preset=custom 但没缓存 → 不 build（没内容），提示用户点"选择 HDR"按钮，保持现有预设
-      const logger = (globalThis as unknown as { __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void }).__ysmRingLog;
-      if (logger) logger("env", "「自定义 HDR」需要先选择 .hdr 文件，请点击下方按钮选择 HDR 文件。", "warn");
+      const logger = (
+        globalThis as unknown as {
+          __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
+        }
+      ).__ysmRingLog;
+      if (logger)
+        logger("env", "「自定义 HDR」需要先选择 .hdr 文件，请点击下方按钮选择 HDR 文件。", "warn");
       return;
     }
     this.params.preset = id;
@@ -758,7 +791,10 @@ export class EnvironmentCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") { this.enabled = state.enabled; this.params.enabled = state.enabled; }
+    if (typeof state.enabled === "boolean") {
+      this.enabled = state.enabled;
+      this.params.enabled = state.enabled;
+    }
     if (typeof state.preset === "string") {
       const p = state.preset as EnvPresetId;
       // 只有 custom=custom 且已有缓存（不可能，因为存的时候不存 HDR，这里只做二次保险）时保留
@@ -767,9 +803,21 @@ export class EnvironmentCapability implements SceneCapability {
           // 持久化读回 custom 但没缓存 → 静默回退 studio + 告警一次
           if (!this.customHdrWarnedMissing) {
             this.customHdrWarnedMissing = true;
-            const logger = (globalThis as unknown as { __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void }).__ysmRingLog;
-            if (logger) logger("env", "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。", "warn");
-            else console.warn("[EnvironmentCapability] loadState 读回 preset=custom，但 custom HDR 无法跨会话持久化，回退 studio");
+            const logger = (
+              globalThis as unknown as {
+                __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
+              }
+            ).__ysmRingLog;
+            if (logger)
+              logger(
+                "env",
+                "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。",
+                "warn",
+              );
+            else
+              console.warn(
+                "[EnvironmentCapability] loadState 读回 preset=custom，但 custom HDR 无法跨会话持久化，回退 studio",
+              );
           }
           this.params.preset = "studio";
         } else {
@@ -781,7 +829,8 @@ export class EnvironmentCapability implements SceneCapability {
     }
     if (typeof state.intensity === "number") this.params.intensity = state.intensity;
     if (typeof state.resolution === "number") this.params.resolution = state.resolution;
-    if (typeof state.useAsBackground === "boolean") this.params.useAsBackground = state.useAsBackground;
+    if (typeof state.useAsBackground === "boolean")
+      this.params.useAsBackground = state.useAsBackground;
     this.buildEnvironment();
   }
 

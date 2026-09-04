@@ -11,19 +11,20 @@
 //   - 默认 enabled=false：阴影有显著 GPU 开销，用户明确开启
 
 import * as THREE from "three";
+import type { LightCapability } from "./light-capability.ts";
 import {
-  type SceneCapability,
   type MenuControlDef,
   persistState,
   restoreState,
+  type SceneCapability,
 } from "./scene-capability.ts";
-import type { LightCapability } from "./light-capability.ts";
+import type { ShadowParams } from "./shadow-state.ts";
 // 状态/序列化轴（ShadowParams / 默认值 / 预设表 / 模型映射）已下沉 shadow-state.ts；
 // 此处透传导出，保持既有调用方（shadow-capability.test.ts 等）的 import 路径不破坏。
-import { DEFAULT_SHADOW_PARAMS, SHADOW_PRESETS, SHADOW_PRESET_BY_MODEL } from "./shadow-state.ts";
-import type { ShadowParams } from "./shadow-state.ts";
-export { DEFAULT_SHADOW_PARAMS, SHADOW_PRESETS };
+import { DEFAULT_SHADOW_PARAMS, SHADOW_PRESET_BY_MODEL, SHADOW_PRESETS } from "./shadow-state.ts";
+
 export type { ShadowParams };
+export { DEFAULT_SHADOW_PARAMS, SHADOW_PRESETS };
 
 /* ============ 菜单控件 ============ */
 
@@ -224,8 +225,12 @@ export class ShadowCapability implements SceneCapability {
     l.shadow.normalBias = this.params.normalBias;
     const s = this.params.cameraSize;
     const cam = l.shadow.camera as THREE.OrthographicCamera;
-    cam.left = -s; cam.right = s; cam.top = s; cam.bottom = -s;
-    cam.near = 0.5; cam.far = 100;
+    cam.left = -s;
+    cam.right = s;
+    cam.top = s;
+    cam.bottom = -s;
+    cam.near = 0.5;
+    cam.far = 100;
     cam.updateProjectionMatrix();
     l.shadow.needsUpdate = true;
   }
@@ -237,7 +242,8 @@ export class ShadowCapability implements SceneCapability {
     s.shadow.bias = this.params.bias;
     s.shadow.normalBias = this.params.normalBias;
     const cam = s.shadow.camera as THREE.PerspectiveCamera;
-    cam.near = 0.5; cam.far = Math.max(s.distance, 50);
+    cam.near = 0.5;
+    cam.far = Math.max(s.distance, 50);
     cam.updateProjectionMatrix();
     s.shadow.needsUpdate = true;
   }
@@ -282,10 +288,16 @@ export class ShadowCapability implements SceneCapability {
     for (const l of this.legacyLights) {
       if ((l as unknown as THREE.DirectionalLight).isDirectionalLight) {
         const dl = l as THREE.DirectionalLight;
-        if (!seenDirs.has(dl)) { dirs.push(dl); seenDirs.add(dl); }
+        if (!seenDirs.has(dl)) {
+          dirs.push(dl);
+          seenDirs.add(dl);
+        }
       } else if ((l as unknown as THREE.SpotLight).isSpotLight) {
         const sp = l as THREE.SpotLight;
-        if (!seenSpots.has(sp)) { spots.push(sp); seenSpots.add(sp); }
+        if (!seenSpots.has(sp)) {
+          spots.push(sp);
+          seenSpots.add(sp);
+        }
       }
     }
     return { dirs, spots };
@@ -293,7 +305,8 @@ export class ShadowCapability implements SceneCapability {
 
   private applyShadows(): void {
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = this.params.type === "soft" ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
+    this.renderer.shadowMap.type =
+      this.params.type === "soft" ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
     this.renderer.shadowMap.needsUpdate = true;
 
     const { dirs, spots } = this.collectLights();
@@ -350,7 +363,8 @@ export class ShadowCapability implements SceneCapability {
       return;
     }
     // 单 spot：优先 _spotRef（legacy 单盏），其次 lightCap getter
-    const sp: THREE.SpotLight | null = this._spotRef ?? (this.lightCap ? this.lightCap.getSpotLight() : null);
+    const sp: THREE.SpotLight | null =
+      this._spotRef ?? (this.lightCap ? this.lightCap.getSpotLight() : null);
     if (sp && this.spotSnap) {
       sp.castShadow = this.spotSnap.castShadow;
       sp.shadow.mapSize.set(this.spotSnap.mapSize.x, this.spotSnap.mapSize.y);
@@ -478,7 +492,10 @@ export class ShadowCapability implements SceneCapability {
     const s = this.params.cameraSize;
     for (const l of dirs) {
       const cam = l.shadow.camera as THREE.OrthographicCamera;
-      cam.left = -s; cam.right = s; cam.top = s; cam.bottom = -s;
+      cam.left = -s;
+      cam.right = s;
+      cam.top = s;
+      cam.bottom = -s;
       cam.updateProjectionMatrix();
       l.shadow.needsUpdate = true;
     }
@@ -509,7 +526,10 @@ export class ShadowCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") { this.enabled = state.enabled; this.params.enabled = state.enabled; }
+    if (typeof state.enabled === "boolean") {
+      this.enabled = state.enabled;
+      this.params.enabled = state.enabled;
+    }
     if (typeof state.type === "string" && (state.type === "hard" || state.type === "soft")) {
       this.params.type = state.type;
     } else if (typeof state.soft === "boolean") {

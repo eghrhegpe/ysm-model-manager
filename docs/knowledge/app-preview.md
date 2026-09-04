@@ -12,7 +12,6 @@ auto_fields:
   symbols_with_lines:
     - addOpLog
     - appendLitematicPreview
-    - appendMmdPreview
     - BedrockBone
     - BedrockCube
     - BedrockModel

@@ -23,6 +23,7 @@ import (
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
+	"ysm-model-manager/internal/app/install"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -49,7 +50,7 @@ type App struct {
 	logger             *logs.Logger
 	runtimeLogs        *logs.RuntimeBuffer
 	watcher            *watcher.Watcher
-	queue              *DownloadQueue
+	install            *install.Manager    // ADR-179：install 域 manager（下载队列等）
 	containerCache     *containerTypeCache // ADR-134：容器类型指纹缓存组件（原包级全局抽离）
 	containerCacheOnce sync.Once
 	tagsStore          *tags.Store
@@ -103,11 +104,11 @@ func NewApp() *App {
 	}
 	// 回调注入：打破 DownloadQueue ↔ App 循环（ADR-002 P1）
 	// emitFn 闭包延迟解析 a.app（SetApp 在应用启动时注入）
-	a.queue = NewDownloadQueue(
+	a.install = install.NewManager(install.NewDownloadQueue(
 		a.downloadFileWithQueue,
 		func(name string, args ...interface{}) { a.app.Event.Emit(name, args...) },
 		a.AddOpLog,
-	)
+	))
 	// ADR-134：容器类型指纹缓存组件（原 app_scan.go 包级全局抽离），
 	// 默认探测指向 packs.DetectResourceType，组装点显式注入（依赖可见）
 	a.containerCache = newContainerTypeCache(defaultDetectFn)

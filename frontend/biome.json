@@ -11,7 +11,7 @@
       "**/*.ts",
       "**/*.tsx",
       "!upstream/**",
-      "!src/locales/**",
+      "!src/core/i18n/locales/**",
       "!dist/**",
       "!**/*.test.ts",
       "!**/*.test.tsx",

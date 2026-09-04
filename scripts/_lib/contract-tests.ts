@@ -87,6 +87,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   'test_deadcode_attrib.ts': ['tests'],
   'test_domain_classify.ts': ['tests'],
   'test_gen_stage.ts': ['tests'],
+  'test_gate_config.ts': ['tests'],
   'test_gate_iife_correctness.ts': ['tests'],
   'test_jscpd_pairs.ts': ['tests'],
   'test_knowledge_common.ts': ['tests'],
@@ -140,6 +141,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   'test_scripts_lib.ts': ['scripts/_lib/scan-files.ts', 'scripts/_lib/to-posix.ts', 'scripts/_lib/ripgrep.ts', 'scripts/_lib/rg-line.ts'],
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——
   'test_gate_iife_correctness.ts': ['scripts/pre-push-gate.ts'],
+  'test_gate_config.ts': ['scripts/_lib/gate-config.ts'],
   'test_check_readme_index.ts': ['scripts/check-readme-index.ts'],
   'test_sidebar_gen.ts': ['scripts/gen-vitepress-sidebar.ts'],
 };

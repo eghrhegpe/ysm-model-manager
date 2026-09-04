@@ -735,8 +735,8 @@ ysm-model-manager/
 │   ├── architecture.md          # 本文 (单一权威视图)
 │   ├── android-dev.md           # ★ Android 开发手册
 │   ├── adr/                     # ADR-001~049
-│   └── knowledge/               # 74 张知识卡 (自动生成索引)
-└── scripts/                     # 40+ 治理 .mjs
+│   └── knowledge/               # 163 张知识卡（自动生成索引）
+├── scripts/                     # 40+ 治理 .mjs
 ```
 
 ---
@@ -805,6 +805,15 @@ app-content/community/core.ts:35-36
 
 | 日期 | 变动 | 影响 |
 |------|------|------|
+| **2026-09-04** | **锐评 P1 活代码清零收官**（12 批次, `40a93848`） | `style.cssText` 全仓活代码清零（139→8 处死代码移交 G3/豁免）；P1+P3 风格项闭环 |
+| **2026-09-04** | **锐评 G6 立项完成**（`9302e8e8`, ADR-175） | 3D overlay 链 Shadow DOM 化立项：D1 overlay shadow host/D2 菜单 shadow 化+注入迁移/D3 aria+trapFocus 转正/D4 测试策略/D5 分步 M1-M3 |
+| **2026-09-03** | **锐评 S2 ADR 已立**（`4948f390`, ADR-174） | browser parity 判定单一源查证成立（Go registry=内嵌 JSON/TS 直读）；真双实现区=格式平移层，对账硬锁策略定 D2-D5；首轮四函数漂移审计完成 |
+| **2026-09-03** | **锐评 P0 分类治理 + frontend 分层**（ADR-170） | backend 桥层收窄（6 文件原地不动）+ 解析簇 → `src/parsers/` + dialogs 升格 → `src/features/dialogs/` + coi-sw → `src/workers/`；123 处 import 零触碰 |
+| **2026-09-03** | **锐评 preview3d 超大文件裁决**（ADR-171） | FBXLoader vendor → 官方 `three/addons/loaders`；caps 巨型文件维持不拆（行数不是依据，先查缝） |
+| **2026-09-03** | **锐评社区创作者合并下沉 Go**（ADR-172） | 新增 `MergeCommunityCreatorsFromJSON` binding：前端社区拉取结果直传 Go 原子并入，根除 TS 侧派生触碰「Go 派生结果只读」红线 |
+| **2026-09-03** | **锐评 CLI 参数桥 ParamSpec 白名单**（ADR-173） | GUI→CLI 四次格式转换（Record → Wails map → []string → flag.FlagSet）引入 unkeyed diff 与数值 float64 损耗；ParamSpec 白名单协议区分未传与显式空值 |
+| **2026-09-03** | **安全修复：动画分支字节封顶**（`16b3de11`） | `collectAnimJSONs/collectGeoAnimEntries/collectMergedFiles` 补累计字节封顶（maxMaterializeBytes 512MB）；此前仅条目数封顶（5000），恶意压缩包可塞 5000 个 ~50MB JSON 绕封顶 |
+| **2026-09-01** | **锐评 #12 退役 go-run + watcher 机制锚**（`b07f8418`） | 退役 `compare-maid-packs.ts`（依赖 `_tools/` 从未入库、自始不可运行）；知识卡同步：go-importer 留档治理结论 / go-watcher 机制锚修复（4 元组捕获 + fw 句柄） |
 | **2026-08-31** | **平台 shim 收敛 + Go 重复治理**（ADR-139 / ADR-140） | `rustbridge`/`scanner` 四 OS 平台 shim 合并（`rust_backend.go` 单文件）；Go 文件内自重复三层判定与变体层不强制合并 |
 | **2026-08-31** | **3D 子系统归位 src/preview-3d**（ADR-136 / ADR-137 / ADR-138） | 截图/离屏渲染、YSM 解码子系统归位 + `features/preview-3d` 中间层上提 `frontend/src/preview-3d/`（第五刀收尾） |
 | **2026-08-30** | **测试消费性校验 + 缓存组件化 + Go jscpd**（ADR-133 / ADR-134 / ADR-135） | 契约测试从存在性门禁升级为消费性校验；`containerTypeCache` 包级全局收进组件；Go 端 jscpd 重复检测增量门禁 |

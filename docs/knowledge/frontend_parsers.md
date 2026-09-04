@@ -63,6 +63,17 @@ quick_intents:
 quick_risk_lines:
   - parsers/ 依赖 backend/web-common（跨簇单向,ADR-170 已知残留,待二段归位）
   - parsers/ 是纯解析层,勿塞业务;web-fs 装配层在 backend/
+  - ysm-header.ts MAX_HEADER_LINES=200 与 Go header.go 对齐,改上限须双端同步
+  - voxel-parse.ts 位解码口径(Litematica 小端 LSB 起始)与 Go nbt.go:299-327 逐行一致,改前必读注释
+  - pack-meta.ts / voxel-colors.ts 下游消费方固定,改导出签名须 grep 全仓消费者
+pitfalls:
+  - ysm-header.ts extractYsmSummaryFromBytes 失败返回空 YsmSummary 而非 reject(对齐 Go app_model.go:41-65 吞错误语义),消费方不得 expect throw
+  - voxel-parse.ts decodeVoxelNbt 使用 bigint 处理 LongArray(>2^53 精度损失),勿替换为 number
+  - nbt-parse.ts parseNbtRootExact 与 parseNbtRoot 二选一:精确版(64 位 long)用于体素解码,标准版用于普通 NBT
+  - pack-meta.ts 依赖 resource_types.json 派生的 extensions,改类型配置须同步更新 pack 探测逻辑
+  - extract.ts findZipEntry 使用中央目录搜索,超大 zip(>500MB)可能慢,web-fs 侧有 maxMaterializeBytes 512MB 封顶防护
+  - voxel-colors.ts resolveBlockName 映射表来自 voxel-colors-data.json(63K),新增方块名须更新 JSON 而非硬编码
+  - ADR-170 二段归位(web-* 族下沉)后,voxel-parse/pack-meta 对 web-common 的跨簇依赖应消除,当前是已知技术债
 invariant_anchors:
   - frontend/src/parsers/voxel-parse.ts|decodeVoxelNbt
 ---

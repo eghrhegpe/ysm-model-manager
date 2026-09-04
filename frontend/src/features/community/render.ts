@@ -235,7 +235,7 @@ export function renderCardsHTML(sites: WorkshopSite[], esc: (s: string) => strin
   let html = "";
   let cardIdx = 0;
   SITE_GROUP_ORDER.forEach((g) => {
-    if (!groups[g] || !groups[g].length) return;
+    if (!groups[g]?.length) return;
     const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
     // P3（审核发现）：未知分组回退 label/icon 未经 esc 直接拼入 HTML——已知分组是
     // i18n 常量安全，未知分组若含 <script> 即注入；统一转义（已知分组 esc 无副作用）

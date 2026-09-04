@@ -115,6 +115,7 @@ export function createBeatDetector(opts: BeatDetectorOptions = {}) {
     state.energyHistory.push(normalized);
     state.energySum += normalized;
     if (state.energyHistory.length > historySize) {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       state.energySum -= state.energyHistory.shift()!;
     }
 

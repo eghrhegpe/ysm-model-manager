@@ -187,7 +187,7 @@ function attachRootBones(
 ): void {
   let rootAdded = false;
   for (let i = 0; i < bones.length; i++) {
-    if (pmxBones && pmxBones[i] && pmxBones[i].parentBoneIndex < 0) {
+    if (pmxBones?.[i] && pmxBones[i].parentBoneIndex < 0) {
       mesh.add(bones[i]);
       rootAdded = true;
     }

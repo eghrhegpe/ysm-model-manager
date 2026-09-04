@@ -241,6 +241,7 @@ export function buildFbxSceneFromData(
     obj.quaternion.fromArray(node.transform.quaternion);
     obj.scale.fromArray(node.transform.scale);
     if (node.parent >= 0 && node.parent < nodeObjects.length && nodeObjects[node.parent]) {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       nodeObjects[node.parent]!.add(obj);
     } else {
       group.add(obj);

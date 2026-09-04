@@ -74,8 +74,11 @@ export interface BusEvents {
   // 反馈
   "toast:show": ToastPayload;
   // 数据刷新
+  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "stats:refresh": void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "tree:reload": void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "community:clearCache": void; // features → views 解耦（download-queue 触发社区缓存失效）
   "tree:set-search": string; // tree 搜索关键字（app-tree 实证：srch.value = name）
   "avatar:refresh": { author: string; dataUri: string };
@@ -92,6 +95,7 @@ export interface BusEvents {
   "repo:rtype-changed": string;
   "repo:subdir-changed": string; // MMD 子目录选择（ADR-095 后续）：sync 页按 subdir 过滤
   "repo:search-creator": string;
+  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "sync:toggle:status": void;
   "sync:download:missing": { instanceName?: string; rtype: string; token?: string };
   "sync:download:done": {
@@ -107,7 +111,9 @@ export interface BusEvents {
   "instance:clear": { name: string; rtype: string };
   // 批量操作
   "batch:rename": { paths: string[] };
+  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "batch:enable-all": void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "batch:disable-all": void;
   // 目录
   "dir:rename": { dir: string };

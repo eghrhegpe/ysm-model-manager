@@ -75,6 +75,7 @@ export function mdMmStage6Result(
           // 局部 const 收窄替代 !：回调闭包内 TS 不保持 c.mesh.morphTargetInfluences 的收窄
           const influences = c.mesh.morphTargetInfluences;
           blink.apply(dt, (weight: number) => {
+            // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
             influences![idx] = weight;
           });
         }
@@ -107,6 +108,7 @@ export function mdMmStage6Result(
     },
     dispose: (): void => mdMmStage6Dispose(c, s5),
     screenshot: () =>
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       Promise.resolve(screenshotFromRenderer(c.ctx.renderer!, c.ctx.scene, c.ctx.camera)),
     semanticBones,
     applyPose:
@@ -117,8 +119,10 @@ export function mdMmStage6Result(
             try {
               // workerMode 已下沉：worker 构建路径等价于 c.workerResult 非空
               if (c.workerResult) {
+                // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
                 applyVPDToMesh(c.mesh!, pose.vpd);
               } else {
+                // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
                 applyVPD(c.mmd!, pose.vpd, { ik: true, grant: true });
               }
             } catch (e) {

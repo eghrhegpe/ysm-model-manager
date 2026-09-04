@@ -20,7 +20,7 @@ export interface OrderedTexInput {
 /** 计算 3D 渲染/纹理选择器用的有序纹理名列表 */
 export function buildOrderedTexKeys(input: OrderedTexInput): string[] {
   const { texKeys, areaOf, ysmTexOrder, ysmDefaultTex, matchTexKey } = input;
-  if (ysmTexOrder && ysmTexOrder.length) {
+  if (ysmTexOrder?.length) {
     let ordered: string[] = [];
     for (const t of ysmTexOrder) {
       const path =

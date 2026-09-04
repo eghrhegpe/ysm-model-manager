@@ -57,6 +57,7 @@ function mdMgFixOrphanBoneChain(
   for (const b of bones) boneNameSet.add(b.name);
   for (let i = 0; i < bones.length; i++) {
     if (bones[i].parentId === null) continue;
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     let ancestor = bones[i].parentId!;
     const visited = new Set<string>([bones[i].name]);
     while (true) {
@@ -160,6 +161,7 @@ function mdMgInitShellAndMaps(model: BedrockModel): {
  */
 function mdMgBuildBonesTree(model: BedrockModel, ctx: MdMgBonesCtx): void {
   for (const b of model.bones) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const bp = ctx.pivots.get(b.name)!;
     const parentPivot = b.parent !== "" ? (ctx.pivots.get(b.parent) ?? null) : null;
     const localPos = computeBoneLocalPos(bp, parentPivot);
@@ -291,7 +293,9 @@ function mdMgPostProcessAndTextures(
     if (ctx.bones[i].name === "RightArm" && ctx.bones[i].parentId === null) {
       for (let j = 0; j < ctx.bones.length; j++) {
         if (ctx.bones[j].name === "Arm" && ctx.bones[j].parentId !== null) {
+          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           const raPivot = ctx.pivots.get("RightArm")!;
+          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           const armPivot = ctx.pivots.get("Arm")!;
           ctx.bones[i].parentId = ctx.bones[j].name;
           ctx.bones[i].localPosition = computeBoneLocalPos(raPivot, armPivot);
@@ -302,7 +306,9 @@ function mdMgPostProcessAndTextures(
     if (ctx.bones[i].name === "LeftArm" && ctx.bones[i].parentId === null) {
       for (let j = 0; j < ctx.bones.length; j++) {
         if (ctx.bones[j].name === "Arm" && ctx.bones[j].parentId !== null) {
+          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           const laPivot = ctx.pivots.get("LeftArm")!;
+          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           const armPivot = ctx.pivots.get("Arm")!;
           ctx.bones[i].parentId = ctx.bones[j].name;
           ctx.bones[i].localPosition = computeBoneLocalPos(laPivot, armPivot);

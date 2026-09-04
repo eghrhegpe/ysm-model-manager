@@ -224,7 +224,7 @@ function frameCamera(ctx: PreviewBuildCtx, target: THREE.Object3D): void {
 
 /** 释放内容层 GPU 资源（复用：build 失败和 dispose 共用） */
 function disposeContent(state: PackState, scene: THREE.Scene): void {
-  if (state.group && state.group.parent) {
+  if (state.group?.parent) {
     scene.remove(state.group);
   }
   for (const d of state.disposables) {
@@ -267,10 +267,11 @@ async function buildPackScene(
   let model: JavaModelResult | null = null;
   try {
     model = await parseJavaModel(entryPath, async (e) => deps.readEntry(zipPath, e));
-  } catch (e) {
+  } catch {
     ctx.loadingEl.remove();
     throw new Error(`资源包内模型解析失败: ${entryPath}`);
   }
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   if (!isRenderableModel(model!)) {
     ctx.loadingEl.remove();
     throw new Error(`资源包内模型无完整纹理引用: ${entryPath}`);
@@ -287,13 +288,15 @@ async function buildPackScene(
   // 注意：core switchTo 已执行 content?.dispose()，但我们保留此处作为防御性清理（
   // 首次 build 时 state 为空 no-op，重建时确保无残留）。
   // 核心在 switchTo 内已移除 sceneBaseline 之外的子节点（line 724-727），此处只需释放 GPU 资源。
-  if (state.group && state.group.parent) {
+  if (state.group?.parent) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     ctx.scene!.remove(state.group);
   }
 
   let group: THREE.Group;
   let disposables: THREE.Object3D[];
   try {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     ({ group, disposables } = await buildModelGroup(deps, zipPath, model!, state.usedTextures));
   } catch (e) {
     // 失败路径：buildModelGroup 内部 textureFor 已 textureCache.acquire，
@@ -303,6 +306,7 @@ async function buildPackScene(
   }
   state.group = group;
   state.disposables = disposables;
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   ctx.scene!.add(group);
   frameCamera(ctx, group);
   ctx.loadingEl.remove();
@@ -325,12 +329,14 @@ async function buildPackScene(
   // [ADR-159] 统计附加行：立方体（Cubes）数——vanilla 资源包无「声明/加载纹理尺寸」概念，
   // 组件详情以 elementCount + 渲染实测统计为准。dockGroup:"stats" 由 mergeStatsMenuItems
   // 并入统一统计面板 children（所有格式共享面板，附加行通道通用）。
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   if (model!.elementCount > 0) {
     menuItems.push({
       id: "pack-cubes-field",
       kind: "field",
       labelKey: "preview.stats.cubes",
       fallback: "立方体(Cubes)",
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       value: model!.elementCount,
       dockGroup: "stats",
     });
@@ -341,6 +347,7 @@ async function buildPackScene(
   // 每行 = 展示短名（<ns>:<path>）+ 小字（引用面数 · zip 内完整 png 路径），镜像 YSM 纹理行范式。
   // 纯色模型（faces 全 texColor/无 texEntry）无纹理可示 → 整段不渲染（有 Cubes 已足够）。
   const texCounts = new Map<string, number>();
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   for (const f of model!.faces) {
     if (f.texEntry) texCounts.set(f.texEntry, (texCounts.get(f.texEntry) ?? 0) + 1);
   }
@@ -368,6 +375,7 @@ async function buildPackScene(
 
   return {
     menuItems,
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     dispose: () => disposeContent(state, ctx.scene!),
     resetCamera: () => {
       if (ctx.camera && state.group) {

@@ -292,7 +292,7 @@ export function initAdvancedGrid(
           const { SetResourceRoot } = await getApp();
           await SetResourceRoot(rtype, dir);
           const found = advancedTypes.find((a) => a.rtype === rtype);
-          if (found && found.cfgKey) cfgAny[found.cfgKey] = dir;
+          if (found?.cfgKey) cfgAny[found.cfgKey] = dir;
           refreshAdvanced();
           bus.emit("toast:show", {
             msg: t("settings.path.set"),
@@ -317,7 +317,7 @@ export function initAdvancedGrid(
           const { ResetResourceRoot } = await getApp();
           await ResetResourceRoot(rtype);
           const found = advancedTypes.find((a) => a.rtype === rtype);
-          if (found && found.cfgKey) cfgAny[found.cfgKey] = "";
+          if (found?.cfgKey) cfgAny[found.cfgKey] = "";
           refreshAdvanced();
           // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
           cardRefreshers.forEach((fn) => fn());

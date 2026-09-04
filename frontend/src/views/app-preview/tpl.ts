@@ -154,7 +154,9 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
     .filter((c) => (c.files?.length || 0) > 0)
     .map((c) => ({
       icon: c.icon,
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       label: `${c.label} ${c.files!.length}`,
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       title: c.files!.join("\n"),
     }));
   const invHtml =

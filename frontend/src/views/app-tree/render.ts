@@ -125,7 +125,7 @@ export function buildTree(
   });
   // 筛选 + 建树：search（trim 后按路径匹配）/ filterPaths（按 fullPath 取交集）
   sorted.forEach((e) => {
-    if (!e || !e.path) return;
+    if (!e?.path) return;
     const relPath = e.path;
     if (query && !relPath.toLowerCase().includes(query)) return;
     if (filterPaths && !filterPaths.has(e.fullPath || e.path)) return;
@@ -342,7 +342,7 @@ function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): voi
 
   // vs-wrap 复用（首次或被外层清空时重建）
   let wrap = container.firstElementChild;
-  if (!wrap || wrap.className !== "vs-wrap") {
+  if (wrap?.className !== "vs-wrap") {
     container.replaceChildren();
     wrap = document.createElement("div");
     wrap.className = "vs-wrap";
@@ -452,7 +452,7 @@ export function renderTree(
       const s2 = vsOf(container);
       const r = s2.rows;
       const m = s2.mode;
-      if (r && r.length) {
+      if (r?.length) {
         const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
         renderSlice(container, r, rh);
       }
@@ -465,7 +465,7 @@ export function renderTree(
       const s2 = vsOf(container);
       const r = s2.rows;
       const m = s2.mode;
-      if (r && r.length) {
+      if (r?.length) {
         const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
         renderSlice(container, r, rh);
       }

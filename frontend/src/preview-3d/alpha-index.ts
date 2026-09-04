@@ -39,6 +39,7 @@ export class AlphaIndex {
       for (let x = 0; x < width; x++) {
         const f = flagsForAlpha(rgba[(y * width + x) * 4 + 3] ?? 255);
         const cell = (Math.floor(y / TILE) + 1) * this.stride + (Math.floor(x / TILE) + 1);
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         this.grids.get(f)![cell]++;
       }
     }

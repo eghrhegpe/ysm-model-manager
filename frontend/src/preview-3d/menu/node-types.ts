@@ -124,6 +124,7 @@ export interface PreviewMenuNode {
   /** 静态显示值（field 类型用，无需控制绑定） */
   value?: string | number;
   /** 逃生舱：无法数据化的内容直接渲染；closePopup 可选（兼容 MikuMikuAR 单参用法） */
+  // biome-ignore lint/suspicious/noConfusingVoidType: renderCustom 返回 void 表「cleanup 或空」,改 undefined 连锁破坏 6+ 实现点(menu/env/settings/bones-panel-node),2026-09 裁决保留
   renderCustom?: (container: HTMLElement, closePopup?: () => void) => (() => void) | void;
   /** 条件守卫：吃状态层快照的纯函数，返回 false 时不渲染（如 self 模式隐藏 camera）——[doc:adr-126-p4-d] 升级为 (s: PreviewSnapshot) => boolean。
    *  2026-09 放宽为 Partial：谓词只读自己关心的键（键存在性仍编译期守卫——未落地键报错），调用方可传部分快照 */

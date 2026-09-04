@@ -65,7 +65,7 @@ export async function initYSMParser(): Promise<boolean> {
     const { _getGlueCode } = await import("./ysm-glue-data.js");
     const wasmBinary = _getWasmBinary() as ArrayBuffer | null;
     const glueCode = _getGlueCode() as string | null;
-    if (!wasmBinary || !wasmBinary.byteLength) throw new Error("wasmBinary 空");
+    if (!wasmBinary?.byteLength) throw new Error("wasmBinary 空");
     if (!glueCode) throw new Error("胶水代码空");
 
     // 注入 point：window.Module；间接 eval + MODULARIZE 工厂组装收敛于 installYsmModule
@@ -99,6 +99,7 @@ function _getHeap(): Uint8Array {
 
 /** 将 JS 数据写入 WASM 内存，返回指针（写入算法见 parser-shared.writeHeapBytes） */
 function _writeHeap(data: Uint8Array): number {
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   return writeHeapBytes(data, (len) => mod.get()!._malloc(len), _getHeap);
 }
 
@@ -112,6 +113,7 @@ export async function decodeYsmFileFromMemory(bytes: Uint8Array): Promise<YsmDec
     if (!ok) throw new Error("YSMParser WASM 未就绪");
   }
 
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const m = mod.get()!;
   const FS = m.FS;
   const ccall = m.ccall;
@@ -159,6 +161,7 @@ export async function decodeYsmFile(bytes: Uint8Array): Promise<YsmDecodedFile[]
     const ok = await initYSMParser();
     if (!ok) throw new Error("YSMParser WASM 未就绪");
   }
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const m = mod.get()!;
   const FS = m.FS;
   if (!FS) throw new Error("YSMParser FS 不可用");
@@ -178,6 +181,7 @@ export async function decodeYsmFile(bytes: Uint8Array): Promise<YsmDecodedFile[]
     }
 
     if (hasCallMain) {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       m.callMain!(["-i", "/input", "-o", "/output"]);
     }
   } catch (err) {

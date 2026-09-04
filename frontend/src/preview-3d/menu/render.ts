@@ -434,9 +434,11 @@ function rmAppendSlider(container: HTMLElement, node: PreviewMenuNode): void {
   };
   if (num) {
     num.onchange = (): void => {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const n = Number(num!.value);
       const v = Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : Number(range.value);
       range.value = String(v);
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       num!.value = String(v);
       commit(v);
     };

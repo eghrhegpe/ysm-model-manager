@@ -35,6 +35,7 @@ class AppToast extends WebComponentBase {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.shadowRoot!.innerHTML = `
       <style>
         :host {
@@ -96,6 +97,7 @@ class AppToast extends WebComponentBase {
     type = "",
     clickCallback?: () => void,
   ): void {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const c = this.shadowRoot!.getElementById("c") as HTMLElement;
     // 限制最多 MAX_TOASTS 个同时显示，超出直接同步移除最早的（_remove 含动画异步，会死循环）
     while (c.children.length >= MAX_TOASTS) {

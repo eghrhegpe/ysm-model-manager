@@ -279,6 +279,7 @@ export async function openAdvFilterDialog($: $Id, vm: AppTree): Promise<void> {
 
   let tagPaths: Set<string> | null = null;
   if (hasTag) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     tagPaths = await advFilterFetchTagPaths(rv.tag!);
   }
 

@@ -27,6 +27,7 @@ export function buildBoneHierarchy(spec: {
       parentMap.set(bd.id, bd.parentId || null);
       const parentId = bd.parentId || ROOT_PARENT_ID;
       if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       childrenMap.get(parentId)!.push(bd.id);
     }
   }
@@ -44,6 +45,7 @@ function getBonePath(
   const parts: string[] = [];
   let current: string | null | undefined = boneId;
   while (current && nameMap.has(current)) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     parts.unshift(nameMap.get(current)!);
     current = parentMap.get(current);
   }

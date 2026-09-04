@@ -106,7 +106,7 @@ interface BlockStat {
 }
 
 function renderBlockList(stats: BlockStat[] | undefined): string {
-  if (!stats || !stats.length)
+  if (!stats?.length)
     return `<div style="color:var(--muted);font-size:var(--fs-sm)">${t("preview.noBlockData")}</div>`;
   let total = 0;
   for (const s of stats) total += s.count;

@@ -42,6 +42,7 @@ class ContextMenu extends WebComponentBase {
   }
 
   render(): void {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.shadowRoot!.innerHTML = `
       <style>
         :host {
@@ -91,6 +92,7 @@ class ContextMenu extends WebComponentBase {
   }
 
   show(x: number, y: number, items: MenuItem[]): void {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const menu = this.shadowRoot!.getElementById("menu") as HTMLElement;
     // 防御：遗留 .js/内联调用方可能缺 items emit——直接 .map 会崩在 bus handler
     // 里（被 bus try/catch 吞成「menu:show 处理出错」，菜单无内容也不给位置）；
@@ -120,7 +122,7 @@ class ContextMenu extends WebComponentBase {
         e.stopPropagation();
         try {
           const idx = parseInt((el as HTMLElement).dataset.idx || "", 10);
-          if (items[idx] && items[idx].onClick) items[idx].onClick();
+          if (items[idx]?.onClick) items[idx].onClick();
         } finally {
           // 无论 onClick 是否抛异常都收菜单，防残留（异常另有全局兜底）
           this.hide();

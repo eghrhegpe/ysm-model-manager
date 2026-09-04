@@ -123,6 +123,7 @@ export function createHeaderToggle(config: HeaderToggleConfig): HTMLLabelElement
   } else if (config.onDisabledClick) {
     toggle.addEventListener("click", (e) => {
       e.stopPropagation();
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       config.onDisabledClick!();
     });
   }
@@ -131,6 +132,7 @@ export function createHeaderToggle(config: HeaderToggleConfig): HTMLLabelElement
   if (config.bind) {
     let cached = config.value;
     const update: HeaderToggleUpdater = (): void => {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const v = !!config.bind!();
       if (v === cached) {
         return;

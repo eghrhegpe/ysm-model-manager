@@ -97,6 +97,7 @@ async function blobUrlToImageData(blobUrl: string): Promise<{
   const canvas = document.createElement("canvas");
   canvas.width = img.width;
   canvas.height = img.height;
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(img, 0, 0);
   const imageData = ctx.getImageData(0, 0, img.width, img.height);

@@ -31,6 +31,7 @@ export function loadTdKeymap(): Record<TdKeyAction, string> {
       const parsed = JSON.parse(raw) as Partial<Record<TdKeyAction, string>>;
       const merged: Record<TdKeyAction, string> = { ...DEFAULT_TD_KEYMAP };
       (Object.keys(DEFAULT_TD_KEYMAP) as TdKeyAction[]).forEach((k) => {
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         if (typeof parsed[k] === "string" && parsed[k]!.length > 0) merged[k] = parsed[k]!;
       });
       return merged;

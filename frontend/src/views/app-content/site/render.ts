@@ -49,7 +49,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
   const idx = sorted.indexOf(cr);
   const pct = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
   const tierRank = pct < 0.1 ? "gold" : pct < 0.25 ? "silver" : "";
-  const hasAvatar = avatarCache && avatarCache[cr.name];
+  const hasAvatar = avatarCache?.[cr.name];
 
   const card = document.createElement("div");
   card.className = "gh-card cr-creator-card cr-creator-card--grid";
@@ -152,6 +152,7 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
     t("content.webSearchTerms") +
     "</span>" +
     '<span class="cr-section-sub">(' +
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     site.presetSearches!.length +
     ")</span>" +
     '<span class="cr-section-fill"></span>' +
@@ -180,6 +181,7 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
     "</button>" +
     "</div>" +
     '<div class="cr-preset-area">' +
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     site
       .presetSearches!.map(
         (ps, i) =>
@@ -427,7 +429,7 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
             '<option value="' +
             esc(s.id) +
             '"' +
-            (cr.type && cr.type.split(";").includes(s.id) ? " selected" : "") +
+            (cr.type?.split(";").includes(s.id) ? " selected" : "") +
             ">" +
             esc(s.label) +
             "</option>",
@@ -481,7 +483,7 @@ export function buildSiteHtml(ctx: BuildSiteHtmlCtx): string {
   parts.push('<div class="cr-scroll">');
 
   // 搜索词分区
-  if (ctx.site.presetSearches && ctx.site.presetSearches.length) {
+  if (ctx.site.presetSearches?.length) {
     parts.push(buildSiteSearchSection(ctx));
   }
 

@@ -346,7 +346,7 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
     if (ctx.disposed) return;
     const ke = e as KeyboardEvent;
     const target = ke.target as HTMLElement | null;
-    if (!target || !target.classList.contains("rename-inp")) return;
+    if (!target?.classList.contains("rename-inp")) return;
     if (ke.key === "Enter") {
       ke.preventDefault();
       (target as HTMLInputElement).blur();
@@ -357,7 +357,7 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
   container.addEventListener("focusout", (e: FocusEvent) => {
     if (ctx.disposed) return;
     const target = e.target as HTMLElement | null;
-    if (!target || !target.classList.contains("rename-inp")) return;
+    if (!target?.classList.contains("rename-inp")) return;
     const inp = target as HTMLInputElement;
     const newName = inp.value.trim();
     if (!newName) {

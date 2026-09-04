@@ -261,7 +261,7 @@ async function buildElementFaces(
   // 元素几何旋转（rotate + origin 补偿，prismarine 同款）
   let rotMat: number[][] | null = null;
   let rotShift: number[] | null = null;
-  if (el.rotation && el.rotation.axis && typeof el.rotation.angle === "number") {
+  if (el.rotation?.axis && typeof el.rotation.angle === "number") {
     rotMat = buildRotationMatrix(el.rotation.axis, el.rotation.angle);
     const o = el.rotation.origin ?? [8, 8, 8];
     const ro = matmul(rotMat, o);

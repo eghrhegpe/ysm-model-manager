@@ -530,6 +530,7 @@ export async function mount3D(
   if (!_singletonViewContainer) {
     const c = document.createElement("div");
     c.className = "preview-view-container mpc-view"; // 语义锚点类保留,布局样式入 .mpc-view(双类防将来锚点规则覆盖)
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     body!.appendChild(c);
     _singletonViewContainer = c;
   }
@@ -545,7 +546,7 @@ export async function mount3D(
     getCamBridge: () => camBridge,
     getSiblings: () => (opts.siblings ?? []).filter((p) => p !== session.currentPath),
     getCurrentPath: () => session.currentPath,
-    getCurrentRtype: () => (opts.rtype && opts.rtype.trim() ? opts.rtype : adapter.id),
+    getCurrentRtype: () => (opts.rtype?.trim() ? opts.rtype : adapter.id),
     getCurrentSubtype: () => opts.subtype ?? "",
     getViewContainer: () => viewContainer,
     close: () => {
@@ -574,7 +575,9 @@ export async function mount3D(
   };
   // getModelsByType / getTypeTabs / switchExternal 是 PreviewMenuCtx 可选键（menu/core.ts，
   // 非本域）——exactOptional 收紧后仅真实存在时赋值，避免显式 undefined 流入
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   if (opts.getModelsByType) menuCtx.getModelsByType = (t, s) => opts.getModelsByType!(t, s);
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   if (opts.getTypeTabs) menuCtx.getTypeTabs = () => opts.getTypeTabs!();
   if (opts.switchExternal)
     menuCtx.switchExternal = (
@@ -582,6 +585,7 @@ export async function mount3D(
       s?: string[],
       options?: { keepInScene?: boolean },
     ): void => {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const r = opts.switchExternal!(p, s, options) as Promise<void> | void;
       if (r && typeof r.catch === "function") {
         void r.catch((err: unknown) =>
@@ -696,7 +700,7 @@ export async function mount3D(
     setCurrentPath: (p) => {
       session.currentPath = p;
     },
-    getCurrentRtype: () => (opts.rtype && opts.rtype.trim() ? opts.rtype : adapter.id),
+    getCurrentRtype: () => (opts.rtype?.trim() ? opts.rtype : adapter.id),
     getCurrentSubtype: () => opts.subtype ?? "",
     getPerFrame: () => session.perFrame,
     setPerFrame: (f) => {
@@ -771,14 +775,16 @@ export async function mount3D(
       // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
       if (i.shadowCap && session.content) {
         const roots = session.sceneBaseline
-          ? i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+          ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+            i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
           : [];
         i.shadowCap.applyMeshCasts(roots);
       }
       // 首模型 mesh envMapIntensity 同步
       if (i.environmentCap && session.content) {
         const roots = session.sceneBaseline
-          ? i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+          ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+            i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
           : [];
         i.environmentCap.syncMeshIntensity(roots);
       }
@@ -791,7 +797,8 @@ export async function mount3D(
     if (session.content) {
       const added =
         infra && session.sceneBaseline
-          ? infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+          ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+            infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
           : [];
       // ADR-131 P1：post-build 采集场景统计，合并统计面板进菜单（「能渲染就能出统计」）
       const stats = collectSceneStats(added);
@@ -847,6 +854,7 @@ export async function mount3D(
     // 此处不移除 overlay/DOM（fullCleanup 语义），只清场景中的半成品 + dispose 已注册 content。
     document.removeEventListener("keydown", session.escH);
     if (infra && session.sceneBaseline) {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
       for (const c of stale) infra.scene.remove(c);
     }

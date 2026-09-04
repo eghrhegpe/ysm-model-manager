@@ -388,6 +388,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.ssaoPass.maxDistance = this.params.ssaoMaxDist;
     this.ssaoPass.output =
       (SSAOPass as unknown as { OUTPUT: { Default: number } }).OUTPUT?.Default ?? 0;
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const renderPassIndex = composer.passes.indexOf(this.renderPass!);
     composer.passes.splice(renderPassIndex + 1, 0, this.ssaoPass);
   }
@@ -403,6 +404,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       this.params.bloomRadius,
       this.params.bloomThreshold,
     );
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const outputPassIndex = composer.passes.indexOf(this.outputPass!);
     composer.passes.splice(outputPassIndex, 0, this.bloomPass);
 
@@ -425,6 +427,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       this.ssrPass.distanceAttenuation = this.params.ssrDistanceAttenuation;
       this.ssrPass.fresnel = this.params.ssrFresnel;
       if (this.params.reflectionMode === "ssr-only") this.ssrPass.opacity = 1;
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const bloomIndex = composer.passes.indexOf(this.bloomPass!);
       composer.passes.splice(bloomIndex + 1, 0, this.ssrPass);
     }
@@ -549,6 +552,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.syncBloomPass(lightCap);
     this.syncSSAOPass();
     this.syncSSRPass();
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.composer!.render(dt);
     return true;
   }

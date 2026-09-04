@@ -234,6 +234,7 @@ export async function prepareMmdZipInput(
 /** 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） */
 export function zipFindEntry(entries: Map<string, Uint8Array>, name: string): Uint8Array | null {
   const low = name.toLowerCase();
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   if (entries.has(low)) return entries.get(low)!;
   for (const [key, bytes] of entries) {
     const base = key.split("/").pop() || key;

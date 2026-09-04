@@ -378,7 +378,7 @@ export class ShadowCapability implements SceneCapability {
   private restoreMeshes(): void {
     for (const [m, snap] of this.meshSnaps.entries()) {
       const mesh = m as THREE.Mesh;
-      if (!mesh || !mesh.isMesh) continue;
+      if (!mesh?.isMesh) continue;
       mesh.castShadow = snap.castShadow;
       mesh.receiveShadow = snap.receiveShadow;
     }

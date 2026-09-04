@@ -40,7 +40,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
       dropZone.classList.remove("cr-drop-zone-active");
 
       const file = e.dataTransfer?.files?.[0];
-      if (!file || !file.name.endsWith(".json")) {
+      if (!file?.name.endsWith(".json")) {
         busRef.emit("toast:show", {
           msg: t("content.dragJsonOnly"),
           duration: 3000,

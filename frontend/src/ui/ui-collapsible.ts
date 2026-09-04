@@ -72,6 +72,7 @@ export function addCollapsible(
   if (config.headerToggle) {
     const toggle = createHeaderToggle({
       value: config.headerToggle.value,
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       onChange: (v) => config.headerToggle!.onChange(v),
       ...(config.headerToggle.bind != null ? { bind: config.headerToggle.bind } : {}),
     });
@@ -229,6 +230,7 @@ export function addPresetChip(
 
   // === 自更新支持 ===
   if (opts?.onUpdate) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const update = () => opts.onUpdate!(btn);
     // 用 label 做 id 后缀保证唯一性（预设 chip 的 label 通常不重复）
     registerControl(`preset-chip-update:${label}`, update);

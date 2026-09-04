@@ -83,7 +83,7 @@ async function dgCfLoadCfgAndInstances(): Promise<{
     };
   }
   const instances = (await ListVersionInstances(mcRoot)) || [];
-  if (!instances || !instances.length) {
+  if (!instances?.length) {
     return {
       cfg,
       mcRoot,

@@ -45,12 +45,13 @@ let _observer: MutationObserver | null = null;
 let _scrollHandler: (() => void) | null = null;
 
 function ensureTooltipEl(): HTMLDivElement {
-  if (!st.el || !st.el.isConnected) {
+  if (!st.el?.isConnected) {
     st.el = document.createElement("div");
     st.el.className = "ysw-tooltip";
     st.el.setAttribute("role", "tooltip");
     document.body.appendChild(st.el);
   }
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   return st.el!;
 }
 
@@ -87,6 +88,7 @@ const GAP = 6;
 
 /** 定位：目标上方水平居中，上方放不下翻到下方；水平夹在视口内 */
 function place(target: HTMLElement): void {
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const tip = st.el!;
   const r = target.getBoundingClientRect();
   const tw = tip.offsetWidth;

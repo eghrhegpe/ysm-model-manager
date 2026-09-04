@@ -83,6 +83,7 @@ async function fetchSpec(model: ModelLike): Promise<Model3DSpec> {
  *  Go binding 在网页版恒 "{}" 桩（ADR-049 P2-2 闭环）。 */
 async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec | null> {
   try {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const decoded = await decodeYsmViaWasm(model._modelPath!);
     if (!decoded?.geometryRaw) return null;
     if (isWebPlatform()) {
@@ -91,6 +92,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
       if (!specStr || specStr === "{}") return null;
       const spec = JSON.parse(specStr) as Model3DSpec;
       if (!spec.models?.length) return null;
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       cacheSpec(model._modelPath!, specStr);
       return spec;
     } else {
@@ -100,6 +102,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
       if (!spec) return null;
       const specStr = JSON.stringify(spec);
       // 兜底结果写 spec 缓存：否则每次预览都重新 WASM 解码（时间翻倍）
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       cacheSpec(model._modelPath!, specStr);
       console.warn(
         "[3D] GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）",

@@ -75,7 +75,7 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     } as unknown as Awaited<ReturnType<MMDLoader["loadAsync"]>>;
     // worker 假 mmd（dispose no-op）：分配即登记，与主线程 loader 路径对称
     mdMmTrackAlloc(c, "mmd", () => c.mmd?.dispose());
-    if (c.pmxParsedData?.bones && c.pmxParsedData.bones.some((b) => b.hasIK)) {
+    if (c.pmxParsedData?.bones?.some((b) => b.hasIK)) {
       await mmdDiag(
         c.effectivePort,
         "worker-limit",
@@ -122,6 +122,7 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     // mesh 先于 mmd 注册——dispose 按 push 顺序执行，mesh→mmd 与旧 finally 块一致，
     // 也与 worker 路径（L57 mesh → L75 mmd）对齐（code review P2 修复）
     mdMmTrackAlloc(c, "mesh", () =>
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       disposeMmdMesh(c.mmd!.mesh, mmdDiag, c.effectivePort, "dispose-fail"),
     );
     // mmd 在 mesh 之后注册——dispose 按 push 顺序执行，mesh→mmd 与旧 finally 块一致，

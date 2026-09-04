@@ -31,6 +31,7 @@ export const RESOURCE_TYPES: Record<string, string> = {
 
 /** 资源类型显示标签（内部 ID → 中文全名，派生自 resource_types.json name 字段） */
 export const RESOURCE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   allResourceTypes.filter((t) => t.name).map((t) => [t.id, t.name!]),
 );
 
@@ -247,7 +248,7 @@ export function getPreviewableTypeTabs(): PreviewTab[] {
   for (const t of allResourceTypes) {
     if (!t.id) continue;
     const cap = RESOURCE_CAPS[t.id];
-    if (!cap || cap.preview !== "3d") continue;
+    if (cap?.preview !== "3d") continue;
     const variants = t.variants?.map((v) => v.preview).filter((p): p is string => !!p) ?? [];
     const keys = variants.length > 0 ? Array.from(new Set(variants)) : [t.id];
     const label = RESOURCE_TYPE_LABELS[t.id] || t.id;

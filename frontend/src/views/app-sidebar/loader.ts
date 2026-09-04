@@ -62,7 +62,7 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
 
     // 获取整合包列表
     const rawInstances = await ListVersionInstances(mcRoot);
-    if (!rawInstances || !rawInstances.length) return [];
+    if (!rawInstances?.length) return [];
 
     // 只按当前资源类型查询同步状态（rtypeActual 已在入口归一）
     const filesRoot = await GetRepoRoot(rtypeActual);

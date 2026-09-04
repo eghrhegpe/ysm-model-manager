@@ -143,7 +143,7 @@ export function closeOverlay(ctx: MountCtx): void {
     ctx.session.tipTimeoutId = undefined;
   }
   ctx.menuHandle.dispose();
-  if (ctx.overlay && ctx.overlay.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
+  if (ctx.overlay?.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
   finishSession(ctx);
 }
 
@@ -170,12 +170,13 @@ export function runFullCleanup(ctx: MountCtx): void {
   if (ctx.viewContainer.parentNode) ctx.viewContainer.parentNode.removeChild(ctx.viewContainer);
   // ⑤ overlay 本体移除 + 清模块级单例：runFullCleanup 是「完整关闭」语义。
   // switchTo 的复用外壳走 switch-preview.ts（不经过此处），故移除 overlay 不影响模型内切换。
-  if (ctx.overlay && ctx.overlay.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
+  if (ctx.overlay?.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
   ctx.clearSingletons();
   // ⑥ 只清理内容层（dispose content + 移除 scene children），保留 renderer/canvas 存活
   //    避免销毁 WebGL context 导致黑屏窗口期
   const infra = ctx.getInfra();
   if (infra && session.sceneBaseline) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
     for (const c of stale) infra.scene.remove(c);
   }

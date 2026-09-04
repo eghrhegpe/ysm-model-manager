@@ -18,6 +18,7 @@ export function bakeMeshFragments(fragments: readonly MeshFragment[]): MeshFragm
 }
 
 function bakeBatch(batch: readonly MeshFragment[]): MeshFragment {
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const first = batch[0]!.md;
   const positions: number[] = [];
   const normals: number[] = [];
@@ -50,8 +51,10 @@ function bakeBatch(batch: readonly MeshFragment[]): MeshFragment {
   }
 
   return {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     mode: batch[0]!.mode,
     md: {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       id: `${first.boneId}_baked_${first.texIdx ?? 0}_${batch[0]!.mode}`,
       boneId: first.boneId,
       // texIdx 为 SpecMeshGroup3D 可选键（model3d，非本域）——仅真实存在时附带

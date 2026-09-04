@@ -284,7 +284,8 @@ function singleBenchParseStages(
   }
   const totalRes = lines.find((l) => totalRe.test(l));
   const total = totalRes
-    ? parseFloat(totalRes.match(totalRe)![1])
+    ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+      parseFloat(totalRes.match(totalRe)![1])
     : stages.reduce((s, x) => s + x.ms, 0);
 
   return stages.length ? { stages, total } : null;

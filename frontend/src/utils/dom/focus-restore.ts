@@ -163,13 +163,15 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     if (e.key !== "Tab") return;
     const tabbable = findTabbableAcrossShadow(overlay);
     if (tabbable.length === 0) return;
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const first = tabbable[0]!;
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const last = tabbable[tabbable.length - 1]!;
     // 深焦解析：document.activeElement 对 shadow 内聚焦元素做 retargeting，
     // 返回的是 host 而非内层元素——沿 shadowRoot.activeElement 下钻到真实聚焦元素，
     // 否则 tabbable.includes(active) 对 shadow 恒为 false，Tab 退化成 first/last 乒乓。
     let active: Element | null = document.activeElement as Element | null;
-    while (active && active.shadowRoot && active.shadowRoot.activeElement) {
+    while (active?.shadowRoot?.activeElement) {
       active = active.shadowRoot.activeElement;
     }
     // 焦点落在 tabbable 元素上（含 shadow 内，深焦解析后）才允许浏览器自然 Tab 循环；

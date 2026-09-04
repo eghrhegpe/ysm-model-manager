@@ -12,7 +12,7 @@ export interface DedupFileLike {
 function toTimestamp(modTime?: string | number): number {
   if (modTime === undefined || modTime === null || modTime === "") return Number.MAX_SAFE_INTEGER;
   const ts = typeof modTime === "number" ? modTime : Date.parse(modTime);
-  return isNaN(ts) ? Number.MAX_SAFE_INTEGER : ts;
+  return Number.isNaN(ts) ? Number.MAX_SAFE_INTEGER : ts;
 }
 
 function reduceOldestIdx(files: DedupFileLike[]): number {

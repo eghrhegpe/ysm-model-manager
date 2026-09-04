@@ -207,7 +207,7 @@ async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void>
     const absDir = filesRoot ? filesRoot + "/" + dir : dir;
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
     const entries = (await ScanModelEntriesFiltered(absDir, rtype, "", label)) || [];
-    if (!entries || !entries.length) {
+    if (!entries?.length) {
       bus.emit("toast:show", {
         msg: "📂 " + t("tree.dirEmpty"),
         duration: TOAST_MS.success,

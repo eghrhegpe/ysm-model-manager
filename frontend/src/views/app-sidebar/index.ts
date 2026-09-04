@@ -58,7 +58,7 @@ function bindSelectAll(root: ShadowRoot, rtype: string, instances: SidebarInstan
       const input = c as HTMLInputElement;
       input.checked = checked;
       const idx = parseInt(input.dataset.idx || "", 10);
-      if (!isNaN(idx) && instances[idx]) {
+      if (!Number.isNaN(idx) && instances[idx]) {
         if (checked) set.add(instances[idx].name);
         else set.delete(instances[idx].name);
       }
@@ -72,7 +72,7 @@ function restoreCheckboxes(root: ShadowRoot, rtype: string, instances: SidebarIn
   root.querySelectorAll(".chk").forEach((c) => {
     const input = c as HTMLInputElement;
     const idx = parseInt(input.dataset.idx || "", 10);
-    if (!isNaN(idx) && instances[idx]) {
+    if (!Number.isNaN(idx) && instances[idx]) {
       input.checked = set.has(instances[idx].name);
       input.addEventListener("change", () => {
         if (input.checked) set.add(instances[idx].name);
@@ -113,7 +113,7 @@ function getSelected(root: ShadowRoot, instances: SidebarInstance[]): string[] {
   root.querySelectorAll(".chk:checked").forEach((c) => {
     const input = c as HTMLInputElement;
     const idx = parseInt(input.dataset.idx || "", 10);
-    if (!isNaN(idx) && instances[idx]) sel.push(instances[idx].name);
+    if (!Number.isNaN(idx) && instances[idx]) sel.push(instances[idx].name);
   });
   return sel;
 }
@@ -394,6 +394,7 @@ function bindSyncSelected(
     document.removeEventListener("click", prevHandler);
   }
   setDocClickHandler(() => closeAll());
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   document.addEventListener("click", getDocClickHandler()!);
 
   pushMenu.addEventListener("click", (e) =>

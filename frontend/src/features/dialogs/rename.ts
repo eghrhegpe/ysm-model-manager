@@ -130,6 +130,7 @@ function dgRnReadFields(box: HTMLDivElement): RenameFields {
 function dgRnMakeExtCtx(currentName: string): { disableTail: string; getExt: DgRnGetExtFn } {
   const disableMatch = currentName.match(/\.(disabled|ban)$/i);
   const isBanned = !!disableMatch;
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const disableTail = isBanned ? disableMatch![0] : "";
   const getExt: DgRnGetExtFn = () => {
     const clean = currentName.replace(/\.(disabled|ban)$/i, "");

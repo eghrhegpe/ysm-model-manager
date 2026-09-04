@@ -55,7 +55,7 @@ export function loadMcTints(version = "1.21.4"): Promise<TintsFile> {
  */
 export function getTintColorSync(category: string, biome = "plains"): number {
   if (category === "dead_bush") return DEFAULT_TINTS.dead_bush;
-  if (cache && cache[category]) {
+  if (cache?.[category]) {
     const e = cache[category].data.find((x) => x.keys.includes(biome));
     if (e && e.color !== 0) return e.color; // 非零 = 真实固定色（water / 例外 biome）
   }

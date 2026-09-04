@@ -176,6 +176,7 @@ class AppNav extends WebComponentBase {
       // 与 page-store 同款模式对齐
       this._current = sanitizePage(page);
       safeSet("nav_page", this._current);
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       this.shadowRoot!.querySelectorAll(".nav-item").forEach((el) => {
         const isActive = (el as HTMLElement).dataset.page === this._current;
         el.classList.toggle("active", isActive);
@@ -233,6 +234,7 @@ class AppNav extends WebComponentBase {
       { id: "settings", icon: "⚙️", key: "nav.settings" },
     ];
 
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.shadowRoot!.innerHTML = `
       <style>${navCSS}</style>
       <div class="logo">
@@ -266,13 +268,17 @@ class AppNav extends WebComponentBase {
       <div class="version" id="nav-version">${t("common.loading")}</div>
     `;
 
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     anBindNavItems(this.shadowRoot!, () => this._focusRepoSearch());
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     anBindDualSelects(this.shadowRoot!);
 
     // 折叠/展开：整个「🧭 导航栏」行可点击（label + 箭头统一触发，扩大点击范围）
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const head = this.shadowRoot!.querySelector(".menu-head");
     head?.addEventListener("click", () => this.setCollapsed(!this._collapsed));
 
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     anBindViewerFab(this.shadowRoot!, () => this._viewerFabClick());
 
     // 异步加载版本号
@@ -281,12 +287,14 @@ class AppNav extends WebComponentBase {
         App.GetAppVersion().then((v) => {
           // P3-5（子代理审核）：版本加载是异步，disconnect 后不再写已卸载 DOM
           if (!this.isConnected) return;
+          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           const el = this.shadowRoot!.getElementById("nav-version");
           if (el) el.textContent = (v || "dev") + " \u2022 " + t("nav.preview");
         }),
       )
       .catch(() => {
         if (!this.isConnected) return;
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         const el = this.shadowRoot!.getElementById("nav-version");
         // P2 修复（审核）：兜底不再硬编码 "v1.0.0"（网页版 browserAdapter 已实现
         // GetAppVersion 返回 "web"，此处仅剩真失败兜底；硬编码版本与实际发版脱节会误导）

@@ -203,6 +203,7 @@ export function buildPreviewMenuRouters(
           hideMenu,
           makeRow,
           makePanelView,
+          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           m!,
           (items) => shell.handle?.setAdapterItems(items),
           // 🧍 模型 dock → 角色列表 → 点角色名 → 模型详情（组件导航置顶 + 统计/纹理 + 工具行）
@@ -210,6 +211,7 @@ export function buildPreviewMenuRouters(
             modelDetailView(e, {
               makeRow,
               makePanelView,
+              // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
               menu: m!,
               actionCtx,
               // 缺省参数契约：无 options 不透传 undefined（下游 mock/实现零噪音）
@@ -252,6 +254,7 @@ export function renderPreviewPanel(
     if (routers.schemaBuilders[node.id]) {
       // schema 面板内容统一走 renderMenu（renderCustomDirect：custom 直接填充面板，
       // 与 renderPreviewPanel 五级衰退的其余通道同源——2026-09 双轨归一，删 renderPreviewSchemaContent）
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       renderMenu(list, routers.schemaBuilders[node.id]!(menu), {
         makeRow: panelDeps.makeRow,
         makePanelView: panelDeps.makePanelView,
@@ -531,7 +534,7 @@ export function mountPreviewRootMenu(
   };
   const openPanel = (id: string): void => {
     const node = [...CORE_MENU_ITEMS, ...adapterItemsRef.v].find((d) => d.id === id);
-    if (!node || node.kind !== "panel") return;
+    if (node?.kind !== "panel") return;
     showMenu(makePanelViewFn(node));
   };
   refreshDock();

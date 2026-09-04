@@ -48,7 +48,7 @@ export function pickMmdBone(
   const wp = new THREE.Vector3();
   for (let i = 0; i < meshBones.length; i++) {
     const bone = meshBones[i];
-    if (!bone || !bone.visible) continue; // 隐藏骨骼不参与拾取
+    if (!bone?.visible) continue; // 隐藏骨骼不参与拾取
     bone.getWorldPosition(wp);
     const d = ray.distanceSqToPoint(wp);
     if (d <= maxSq && d < bestSq) {

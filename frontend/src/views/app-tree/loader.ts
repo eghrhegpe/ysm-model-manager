@@ -79,7 +79,7 @@ export async function loadEntries(
 
     const label = RESOURCE_TYPE_LABELS[targetType] || targetType;
     const raw = await ScanModelEntriesFiltered(filesRoot, targetType, "", label);
-    if (!raw || !raw.length) return { filesRoot, entries: [] };
+    if (!raw?.length) return { filesRoot, entries: [] };
 
     // 禁用态由 Go 扫描结果直接下发（e.Banned，ADR-038 D3.7 判定归 Go）——
     // 原逐文件 IsFileBanned 桥调用为 N+1 IPC（2000 模型 = 2000 次，code review #2）。

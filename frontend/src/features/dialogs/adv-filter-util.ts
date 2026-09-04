@@ -23,7 +23,7 @@ export function parseFilterNumber(raw: string): number | null {
   const v = (raw || "").trim();
   if (!v) return null;
   const n = parseInt(v, 10);
-  return isNaN(n) || n < 0 ? null : n;
+  return Number.isNaN(n) || n < 0 ? null : n;
 }
 
 /**

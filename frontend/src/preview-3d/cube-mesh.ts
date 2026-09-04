@@ -436,7 +436,7 @@ function parseFaceUV(
   const faceNames = ["east", "west", "up", "down", "south", "north"];
   for (let fi = 0; fi < faceNames.length; fi++) {
     const fd = faceData[faceNames[fi]];
-    if (!fd || !fd.uv || fd.uv.length < 2) continue;
+    if (!fd?.uv || fd.uv.length < 2) continue;
     const fu = fd.uv[0];
     const fv = fd.uv[1];
     let fw = 0,

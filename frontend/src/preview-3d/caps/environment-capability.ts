@@ -39,6 +39,7 @@ export { DEFAULT_ENV_PARAMS, ENV_PRESET_BY_MODEL, ENV_PRESET_LINKAGE, ENV_PRESET
 export function drawEnvEquirect(canvas: HTMLCanvasElement, p: EnvPreset): void {
   const W = canvas.width;
   const H = canvas.height;
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const ctx = canvas.getContext("2d")!;
   ctx.clearRect(0, 0, W, H);
 
@@ -437,7 +438,7 @@ export class EnvironmentCapability implements SceneCapability {
     const img = this.customHdrTex.image as
       | { data: Uint16Array; width: number; height: number }
       | undefined;
-    if (!img || !img.data || !img.width || !img.height) return null;
+    if (!img?.data || !img.width || !img.height) return null;
 
     const srcW = img.width;
     const srcH = img.height;
@@ -622,7 +623,7 @@ export class EnvironmentCapability implements SceneCapability {
       const img = this.customHdrTex.image as
         | { data: Uint16Array; width: number; height: number }
         | undefined;
-      if (img && img.data && img.width && img.height) {
+      if (img?.data && img.width && img.height) {
         const src = img.data;
         const total = img.width * img.height;
         // 降采样：每 ~4096 个像素取 1 个（大 HDR 2k+ 时性能考量）
@@ -647,7 +648,7 @@ export class EnvironmentCapability implements SceneCapability {
     // 程序化预设：从 backgroundSrcTex 的 canvas 读像素
     if (this.backgroundSrcTex) {
       const canvas = this.backgroundSrcTex.image as HTMLCanvasElement | undefined;
-      if (canvas && canvas.getContext) {
+      if (canvas?.getContext) {
         try {
           const ctx = canvas.getContext("2d");
           if (ctx) {

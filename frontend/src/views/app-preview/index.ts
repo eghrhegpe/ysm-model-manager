@@ -360,7 +360,7 @@ ${pack.imageBase64 ? `<div class="preview-thumb"><img src="${esc(pack.imageBase6
 <div class="model-detail-title" style="font-size:14px;font-weight:700">${esc(pack.name || "")}</div>
 ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}
 </div>`;
-    } catch (err) {
+    } catch {
       // P2 修复：catch 分支同样比对代际——A 目录 GetPackInfo 失败迟到时
       // 若用户已切到 B，不得把「无法读取整合包信息」覆盖到 B 的预览
       if (this._previewGuard.stale(gen)) return;

@@ -44,7 +44,7 @@ function eeSyncAllEditInputs(
     .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
     .forEach((inp) => {
       const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
-      if (site.presetSearches && site.presetSearches[idx]) {
+      if (site.presetSearches?.[idx]) {
         site.presetSearches[idx].label = (inp as HTMLInputElement).value.trim();
       }
     });
@@ -104,7 +104,7 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
     "click",
     async () => {
       try {
-        if (!site || !site.id) {
+        if (!site?.id) {
           busRef.emit("toast:show", {
             msg: t("workshop.siteInfoLost"),
             duration: 3000,
@@ -125,9 +125,7 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
           site.presetSearches = newPresets;
         }
         eeSyncAllEditInputs(searchResults, creators, site);
-        const siteCreators = creators.filter(
-          (cr) => cr.type && cr.type.split(";").includes(site.id),
-        );
+        const siteCreators = creators.filter((cr) => cr.type?.split(";").includes(site.id));
         const { SaveWorkshopCreatorsBySite } = await getApp();
         await SaveWorkshopCreatorsBySite(site.id, siteCreators);
         wsEditModeRef.v = false;
@@ -173,7 +171,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
         const logs: string[] = [];
         let changed = false;
 
-        if (community && community.length) {
+        if (community?.length) {
           // ADR-172：落盘并入下沉 Go（Load 磁盘最新全量 → desc/role 空补 + type 分号段
           // 并入 → 备份 → 单次 SaveWorkshopCreators 原子写），前端只传拉取结果、不重算。
           // 原「TS mergeCommunityCreators + SaveWorkshopCreators(allCreators) 整存」用 UI
@@ -192,7 +190,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
             changed = true;
           }
         }
-        if (sitesData && sitesData.length) {
+        if (sitesData?.length) {
           const r2 = m.mergeCommunitySites(allSites, sitesData);
           if (r2.added > 0) {
             await App.SaveWorkshopSites(allSites);
@@ -200,7 +198,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
             changed = true;
           }
         }
-        if (gitHubRepos && gitHubRepos.length) {
+        if (gitHubRepos?.length) {
           logs.push(t("workshop.logGithub", { n: gitHubRepos.length }));
           changed = true;
         }
@@ -340,7 +338,9 @@ function eeBindCreatorsDrag(
         (card as HTMLElement).draggable = false;
         ds.srcIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         card.classList.add("cr-dragging");
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         de.dataTransfer!.effectAllowed = "move";
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         de.dataTransfer!.setData("text/plain", "");
       },
       { signal: sig },
@@ -357,6 +357,7 @@ function eeBindCreatorsDrag(
       "dragover",
       (e: Event) => {
         e.preventDefault();
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         (e as DragEvent).dataTransfer!.dropEffect = "move";
       },
       { signal: sig },
@@ -417,7 +418,7 @@ function eeBindPresetsEdit(state: SiteViewState, refreshView: () => void, sig: A
       () => {
         eeSyncAllEditInputs(searchResults, creators, site);
         const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
-        if (site.presetSearches && site.presetSearches[idx]) {
+        if (site.presetSearches?.[idx]) {
           site.presetSearches.splice(idx, 1);
           refreshView();
         }
@@ -494,7 +495,9 @@ function eeBindPresetsDrag(
         (card as HTMLElement).draggable = false;
         ds.presetSrcIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         card.classList.add("cr-dragging");
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         de.dataTransfer!.effectAllowed = "move";
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         de.dataTransfer!.setData("text/plain", "");
       },
       { signal: sig },
@@ -511,6 +514,7 @@ function eeBindPresetsDrag(
       "dragover",
       (e: Event) => {
         e.preventDefault();
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         (e as DragEvent).dataTransfer!.dropEffect = "move";
       },
       { signal: sig },

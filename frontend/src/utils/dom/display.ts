@@ -171,6 +171,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
       // `【2023】角色.ysm` 中 date(2023) 与 work(【2023】) 区间重叠，反向替换后
       // 内部 token 泄漏到 UI（输出 `KEN%%】角色` 残渣）。日期在括号内时括号段已包含它。
       const overlaps = matches.some(
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         (m) => m4!.index < m.idx + m.len && m4!.index + m4![0].length > m.idx,
       );
       if (overlaps) continue;

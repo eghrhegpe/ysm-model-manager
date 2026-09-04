@@ -109,10 +109,12 @@ export function initWorkshopPage(host: AppContentHost): void {
           repo,
           models as WorkshopModel[],
           source,
+          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           searchResults!,
         );
       },
       fillSearch,
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       repoModelCache: repoModelCache!,
       openUrl,
       avatarCache: host._avatarCache,

@@ -111,7 +111,9 @@ function mdLiSetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): MdLiSize
   ctx.camera?.position.set(centerX + maxDim * 1.5, centerY + maxDim, centerZ + maxDim * 1.5);
   ctx.camera?.lookAt(centerX, centerY, centerZ);
   ctx.controls?.target.set(centerX, centerY, centerZ);
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   ctx.controls!.minDistance = 1;
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   ctx.controls!.maxDistance = maxDim * 8;
   ctx.controls?.update();
   const gridSize = Math.ceil(maxDim / 10) * 10;
@@ -469,6 +471,7 @@ function mdLiBuildResult(
       meshSet.boxGeo.dispose();
       safeDispose(meshSet.grid);
     },
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
   };
 }

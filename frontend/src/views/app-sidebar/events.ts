@@ -274,7 +274,7 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
 
   const statSync = root.getElementById("stat-sync");
   (async () => {
-    if (!instances || !instances.length) return;
+    if (!instances?.length) return;
     const total = instances.length;
     const syncedCount = instances.filter(
       (ins) => (ins.missing || 0) + (ins.extra || 0) === 0,

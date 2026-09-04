@@ -39,6 +39,7 @@ export function fbxBonesToBoneNodes(group: THREE.Object3D): BoneNode[] {
     id: String(i),
     name: b.name?.trim() || `bone-${i}`,
     parentId:
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       b.parent && idx.has(b.parent as THREE.Bone) ? String(idx.get(b.parent as THREE.Bone)!) : null,
     object: b,
   }));

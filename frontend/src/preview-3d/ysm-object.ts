@@ -89,6 +89,7 @@ export function buildYsmObject(
       // 非组件 → 全局 texArr[mesh.texIdx]（multiModel）/ texArr[resolvedTexIdx]（单模型）。
       // 19d9b2ad 曾改组件分支为 mesh.texIdx（全局槽位，WASM 路径 = 组件文件序 i）——
       // 对组件数组（通常长 1）越界 → null → blend 组件误判 batchable 被烘进不透明批次。
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const classifyArr = usesComponentTextures ? mappedComponentTextures! : texArr;
       let textureIndex: number;
       if (usesComponentTextures) textureIndex = 0;
@@ -118,6 +119,7 @@ export function buildYsmObject(
       // 绑定索引与分类同空间：组件分支传组件数组（mesh-builder 局部槽 0）；
       // 非组件传 [] + 全局 texArr——传 texArr 会被 arr === compTexArr 误判为组件数组，
       // 导致全局槽位 md.texIdx 恒失效（修复前非组件多组件全绑 texArr[0]）。
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const bindArr = usesComponentTextures ? mappedComponentTextures! : [];
       addMeshToBoneGroup(
         bg,

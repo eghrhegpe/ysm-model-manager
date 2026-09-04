@@ -97,7 +97,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
         });
       });
     }
-  } catch (e) {
+  } catch {
     if (grid) {
       grid.innerHTML =
         '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">' +
@@ -114,6 +114,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
 async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   ctx.setCurrentRepo(repo);
   const resultsBody = ctx.resultsBody;
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const repoModelCache = ctx._githubCache()!;
   if (resultsBody) {
     resultsBody.innerHTML =
@@ -162,7 +163,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
       },
     );
     fetchDone = true;
-    if (result && result.models) {
+    if (result?.models) {
       repoModelCache.set(repo, {
         models: result.models as WorkshopModel[],
         source: result.source,

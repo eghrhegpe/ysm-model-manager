@@ -152,7 +152,7 @@ function beginSwitch(ctx: SwitchContext, newPath: string, keep: boolean): boolea
   // r12 P1：并发切换抑制——已在切换中直接丢弃后续请求，避免重复 build 浪费 GPU + sceneRegistry 短暂不一致
   if (ctx.inFlight) return false;
   // P3-2：空路径守卫——空路径会触发 adapter.build(ctx, "") 加载未定义内容
-  if (!newPath || !newPath.trim()) return false;
+  if (!newPath?.trim()) return false;
   // ADR-093 T6：同台追加超量拦截（GPU/内存上限）——必须在 inFlight 置位前判，
   // 否则上限命中提前 return 会把 inFlight 卡死 true（后续所有切换被静默丢弃）
   //（code review P1：其他 early-return 路径都重置了，此守卫曾漏——r12 竞态抑制后成死锁）
@@ -176,6 +176,7 @@ function beginSwitch(ctx: SwitchContext, newPath: string, keep: boolean): boolea
 function clearSwitchContent(ctx: SwitchContext, keep: boolean): Set<THREE.Object3D> | null {
   // 非同台模式：移除旧内容层添加到共享 scene 的对象（快照 delta，防场景累积）
   if (!keep && ctx.scene && ctx.getSceneBaseline()) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const stale = ctx.scene.children.filter((c) => !ctx.getSceneBaseline()!.has(c));
     for (const c of stale) ctx.scene.remove(c);
   }

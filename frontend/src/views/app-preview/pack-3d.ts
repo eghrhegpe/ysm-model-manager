@@ -58,6 +58,7 @@ export async function createPack3D(
 
   // 指定初始 entry（详情页模型清单点击直达；ADR-131 P3），否则首个 entry
   const { startEntry, ...mountOpts } = opts ?? {};
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const initialEntry = startEntry && entries.includes(startEntry) ? startEntry : entries[0]!;
   // [ADR-159] 容器语义：包 = 实体（displayName = zip 名剥扩展名），包内模型 = 组件
   // （components = 全部 entry）。角色面板据 components 平铺组件区（点名切换 / ➕追加），

@@ -24,7 +24,7 @@ export function isViewerMode(): boolean {
  * emitAndroidBack()，从栈顶向下询问已注册处理器；返回 true 表示已消费
  * （如 3D overlay 打开时关层），否则透传上层。
  */
-type AndroidBackHandler = () => boolean | void;
+type AndroidBackHandler = () => boolean | undefined;
 const _androidBackHandlers: AndroidBackHandler[] = [];
 
 /** 注册安卓返回键处理器，返回取消函数（供调用方在自身销毁/关闭时注销）。 */

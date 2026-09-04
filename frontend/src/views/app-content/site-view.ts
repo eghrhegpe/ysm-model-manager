@@ -75,7 +75,7 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
   searchResults.innerHTML = "";
   creatorView.style.display = "none";
 
-  const creators = allCreators.filter((cr) => cr.type && cr.type.split(";").includes(site.id));
+  const creators = allCreators.filter((cr) => cr.type?.split(";").includes(site.id));
 
   // 作者模型计数查找表
   const authorCountMap: Record<string, number> = {};

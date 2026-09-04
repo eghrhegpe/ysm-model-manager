@@ -287,6 +287,7 @@ async function mdVrStage1ReadParse(
   const metaVersion = vrm.meta.metaVersion;
   if (metaVersion === "0") mdVrParseGlbVrm0(vrm, gltf);
   else mdVrParseGlbVrm1(vrm, gltf);
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   ctx.scene!.add(vrm.scene);
   registerModelRoot(vrm.scene);
   ctx.loadingEl.remove();
@@ -406,6 +407,7 @@ function mdVrBuildPerception(
   const gaze: ReturnType<typeof createGazeController> | null = useNativeLookAt
     ? null
     : createGazeController();
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   if (useNativeLookAt && ctx.camera) vrm.lookAt!.target = ctx.camera;
   const exprMgr = vrm.expressionManager;
   const blinkExpressionNames = exprMgr
@@ -454,6 +456,7 @@ function mdVrStage4MenuPanels(
     panels,
     modelInfo,
     modelPath: path,
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
     bonePanel: {
       tree: boneTree,
@@ -551,6 +554,7 @@ function mdVrStage5BuildResult(
         if (perceptionState.breath) breath.apply(dt, semanticBones);
         // gaze 不挂全局暂停标志（摄像机追踪，非动画优先级）——保留本层 !animActive 守卫
         if (!animActive && !useNativeLookAt && perceptionState.gaze)
+          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           gaze!.apply(dt, semanticBones, ctx.camera!.position);
       }
       footIK.apply(dt, !animActive);
@@ -576,6 +580,7 @@ function mdVrStage5BuildResult(
       footIK.dispose();
       motionMixer?.stopAllAction();
       motionMixer?.uncacheRoot(vrm.scene);
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       if (useNativeLookAt) vrm.lookAt!.target = null;
       let texCount = 0;
       vrm.scene.traverse((child: THREE.Object3D) => {
@@ -604,6 +609,7 @@ function mdVrStage5BuildResult(
       VRMUtils.deepDispose(vrm.scene);
       void vrmDiag(port, "gpu-release", path, "ok", `tex=${texCount}`);
     },
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
     semanticBones,
   };
@@ -777,6 +783,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "感知",
       kind: "panel",
       dockGroup: "motion",
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       children: perceptionNodes(o.perception!.state, o.perception!.caps),
     });
   }

@@ -229,7 +229,7 @@ export class AppTree extends WebComponentBase {
       const r = this._subdirAttr
         ? await loadEntries(rtype, this._subdirAttr)
         : await loadEntries(rtype);
-      if (r && r.entries) {
+      if (r?.entries) {
         this._filesRoot = r.filesRoot;
         this._entries = r.entries;
       } else {

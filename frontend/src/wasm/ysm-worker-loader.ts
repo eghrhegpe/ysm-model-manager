@@ -69,6 +69,7 @@ async function loadBaseAssets(): Promise<ParserAssets> {
       };
     })();
     // 失败时清缓存，避免 rejected promise 永久驻留致 worker 不可恢复
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     baseAssetsPromise!.catch(() => {
       baseAssetsPromise = null;
     });
@@ -93,6 +94,7 @@ async function loadMtAssets(): Promise<ParserAssets> {
       };
     })();
     // 失败时清缓存，避免 rejected promise 永久驻留致 worker 不可恢复
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     mtAssetsPromise!.catch(() => {
       mtAssetsPromise = null;
     });
@@ -133,7 +135,7 @@ async function initParserInWorker(
 ): Promise<boolean> {
   return mod.ensureInit(async () => {
     // 1. 资产校验（数据文件为自动生成的 base64 常量）
-    if (!wasmBinary || !wasmBinary.byteLength) throw new Error("wasmBinary 空");
+    if (!wasmBinary?.byteLength) throw new Error("wasmBinary 空");
     if (!glueCode) throw new Error("胶水代码空");
 
     // 2/3/4/5 组装注入点 + 间接 eval + MODULARIZE 工厂，收敛于 installYsmModule
@@ -183,6 +185,7 @@ function getHeap(): Uint8Array {
 
 /** 将 JS 数据写入 WASM 内存，返回指针（写入算法见 parser-shared.writeHeapBytes） */
 function writeHeap(data: Uint8Array): number {
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   return writeHeapBytes(data, (len) => mod.get()!._malloc(len), getHeap);
 }
 
@@ -197,6 +200,7 @@ export async function decodeYsmInWorker(bytes: Uint8Array): Promise<YsmDecodedFi
     // init 失败以 throw 表达（不返回 false），异常自然向上抛由调用方处理
     await initYsmParserInWorker();
   }
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const m = mod.get()!;
   const FS = m.FS;
   const ccall = m.ccall;
@@ -237,6 +241,7 @@ export async function decodeYsmInWorkerMemfs(bytes: Uint8Array): Promise<YsmDeco
     // init 失败以 throw 表达（不返回 false），异常自然向上抛由调用方处理
     await initYsmParserInWorker();
   }
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const m = mod.get()!;
   const FS = m.FS;
   if (!FS) throw new Error("YSMParser FS 不可用");
@@ -249,6 +254,7 @@ export async function decodeYsmInWorkerMemfs(bytes: Uint8Array): Promise<YsmDeco
     FS.writeFile("/input/model.ysm", bytes);
     const hasCallMain = typeof m.callMain === "function";
     if (hasCallMain) {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       m.callMain!(["-i", "/input", "-o", "/output"]);
     }
   } catch (err) {

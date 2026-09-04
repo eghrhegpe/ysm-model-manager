@@ -165,7 +165,7 @@ export function mergeLocalAuthorsInto(
 ): LocalCreator[] {
   const existingNames = new Set(creators.map((c) => c.name));
   for (const la of localAuthors || []) {
-    if (la && la.name && existingNames.has(la.name)) {
+    if (la?.name && existingNames.has(la.name)) {
       const found = creators.find((c) => c.name === la.name);
       // P4 修复：按分号分段比较 type，避免子串误判（"bilibili" 包含 "bili" 时丢类型）
       if (found && la.type) {
@@ -175,7 +175,7 @@ export function mergeLocalAuthorsInto(
         }
       }
       if (found) found._fromLocal = true;
-    } else if (la && la.name) {
+    } else if (la?.name) {
       creators.push({
         name: la.name,
         desc: la.desc || t("community.fromLocal"),

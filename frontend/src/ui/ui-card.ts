@@ -9,8 +9,8 @@
  */
 export function cardContainer(
   container: HTMLElement,
-  fn: (c: HTMLElement) => (() => void) | void,
-): (() => void) | void {
+  fn: (c: HTMLElement) => (() => void) | undefined,
+): (() => void) | undefined {
   container.classList.remove("render-card");
   const card = document.createElement("div");
   card.className = "lcard";

@@ -32,8 +32,8 @@ export async function showVrmMeta(
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
   const gen = detailGen.next();
-  const icon = (opts && opts.icon) || "🥽";
-  const label = (opts && opts.label) || t("preview.vrcAvatar");
+  const icon = opts?.icon || "🥽";
+  const label = opts?.label || t("preview.vrcAvatar");
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
@@ -121,8 +121,8 @@ export async function showMmdPreview(
 ): Promise<void> {
   detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
   const gen = detailGen.next();
-  const icon = (opts && opts.icon) || "🎭";
-  const label = (opts && opts.label) || t("preview.mmdSkin");
+  const icon = opts?.icon || "🎭";
+  const label = opts?.label || t("preview.mmdSkin");
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
@@ -175,8 +175,8 @@ export async function showFbxPreview(
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
   detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
-  const icon = (opts && opts.icon) || "🦴";
-  const label = (opts && opts.label) || "FBX 模型/动画";
+  const icon = opts?.icon || "🦴";
+  const label = opts?.label || "FBX 模型/动画";
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>

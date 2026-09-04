@@ -39,6 +39,7 @@ export function makeLazyLoader<T>(loader: () => Promise<T>): () => Promise<T> {
   let _resolved = false;
   return async () => {
     if (_resolved) {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       return _cached!;
     }
     if (!_loading) {

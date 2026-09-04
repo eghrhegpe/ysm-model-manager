@@ -185,7 +185,7 @@ function triggerAnchorDownload(url: string, name: string): void {
 export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   dbg("enqueue:start", tasks.length);
   if (isActiveStatus(STATE)) return;
-  if (!tasks || !tasks.length) return;
+  if (!tasks?.length) return;
 
   STATE.status = "downloading";
   STATE.total = tasks.length;

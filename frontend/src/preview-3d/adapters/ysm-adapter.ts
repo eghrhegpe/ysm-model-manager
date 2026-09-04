@@ -212,6 +212,7 @@ async function mdYsLoadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
   try {
     obj = buildYsmObject(spec as Spec3D, texArr, componentTexMap, texIdx);
     sc.tBuildEnd = performance.now();
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     sc.ctx.scene!.add(obj.rootGroup);
     registerModelRoot(obj.rootGroup);
   } catch (e) {
@@ -230,8 +231,11 @@ function mdYsSetupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCam
   const { ctx } = sc;
   const { obj, spec } = core;
 
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   fitCameraToScene(obj.rootGroup, ctx.camera!, ctx.controls!);
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const initCamPos = ctx.camera!.position.clone();
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const initCamTarget = ctx.controls!.target.clone();
 
   const rayState = makeRayState();
@@ -240,8 +244,11 @@ function mdYsSetupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCam
   const rayCleanup = multiMode
     ? () => {}
     : registerBoneRaycast(
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         ctx.renderer!,
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         ctx.camera!,
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         ctx.scene!,
         obj.boneGroupMap,
         nameMap,
@@ -302,6 +309,7 @@ async function mdYsScanAnimFiles(sc: MdYsSceneCtx): Promise<{
       const text = new TextDecoder("utf-8").decode(b64ToBytes(b64));
       const { clips } = parseBedrockAnimationJSON(text);
       if (clips.length > 0) {
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         const fileBase = animFile
           .split(/[/\\]/)
           .pop()!
@@ -425,6 +433,7 @@ function mdYsBuildMenuAndDebug(
     ...(ctx.cameraControls ? { cameraControls: ctx.cameraControls } : {}),
     ...(opts.onTextureChange ? { onTextureChange: opts.onTextureChange } : {}),
     screenshot: () =>
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene!, ctx.camera!)),
   };
   const perceptionState: PerceptionState = {
@@ -555,14 +564,18 @@ function mdYsMakeSceneHandle(
       // 不再需要全局 resetActiveComponent——模块级会话值已移除该消费点（跨预览泄漏根除）。
     },
     resetCamera(): void {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       ctx.camera!.position.copy(initCamPos);
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       ctx.controls!.target.copy(initCamTarget);
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       ctx.controls!.update();
     },
     setRotationMode: (orbit: boolean) => ctx.cameraControls?.setOrbit(orbit),
     setSpeed: (n: number) => ctx.cameraControls?.setSpeed(n),
     showModelGroup: (i: number) => obj.showModelGroup(i),
     screenshot: () =>
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene!, ctx.camera!)),
     boneMaps,
     menuItems,
@@ -741,6 +754,7 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "感知",
       kind: "panel",
       dockGroup: "motion",
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       children: perceptionNodes(o.perception!.state, o.perception!.caps),
     });
   }

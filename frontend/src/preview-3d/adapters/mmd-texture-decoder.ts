@@ -153,7 +153,9 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
               results.set(resp.relPath, {
                 relPath: resp.relPath,
                 bitmap: resp.bitmap,
+                // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
                 width: resp.width!,
+                // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
                 height: resp.height!,
                 refCount: 0,
               });

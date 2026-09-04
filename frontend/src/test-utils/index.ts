@@ -117,7 +117,7 @@ export async function waitForElementToBeRemoved(
     const tick = () => {
       try {
         const el = fn();
-        if (!el || !el.isConnected) resolve();
+        if (!el?.isConnected) resolve();
         else if (Date.now() - start < timeout) requestAnimationFrame(tick);
         else
           reject(

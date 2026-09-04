@@ -170,6 +170,7 @@ export class AnimationControllerRuntime {
     onStateChange?: (animationName: string, blendTime: number) => void,
   ) {
     this.controller = controller;
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.currentState = controller.states.get(controller.initialState)!;
     this.onStateChange = onStateChange;
   }
@@ -248,6 +249,7 @@ export class AnimationControllerRuntime {
 
   /** 重置到初始状态 */
   reset(): void {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.currentState = this.controller.states.get(this.controller.initialState)!;
     this.currentAnimIndex = 0;
     this.timeInState = 0;

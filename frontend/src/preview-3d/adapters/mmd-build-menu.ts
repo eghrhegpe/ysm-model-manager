@@ -41,6 +41,7 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
   items: PreviewMenuNode[];
 } {
   const navCtx: MmdBottomNavCtx = {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     mmd: c.mmd!,
     mesh: c.mesh,
     modelName: c.origPath.split(/[/\\]/).pop() || "",
@@ -69,6 +70,7 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
     navCtx,
     panels: c.panels,
     screenshot: () =>
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       Promise.resolve(screenshotFromRenderer(c.ctx.renderer!, c.ctx.scene, c.ctx.camera)),
     material: {
       list: () =>

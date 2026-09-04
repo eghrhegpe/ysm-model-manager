@@ -92,6 +92,7 @@ export function buildSceneMesh(spec: Spec3D): {
       // 的 self 环，不拦截 A↔B 互指）。Go spec.go 的 ParentID 直透不校验环，此处兜底：
       // self 边拒绝；A↔B 互指通过「已挂父的节点不再重复挂」的 visited 语义跳过环边。
       if (bd.parentId && bd.parentId !== bd.id && boneGroupMap.has(compKey(mi, bd.parentId))) {
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         const parent = boneGroupMap.get(compKey(mi, bd.parentId))!;
         // 若 parent 已是 g 的后代（环），跳过此边（g 保持挂在 modelGroups 或更早父上）
         let cursor: THREE.Object3D | null = parent;

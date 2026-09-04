@@ -73,6 +73,7 @@ function upsertCreators(
       added++;
       continue;
     }
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     if (updateOne(existing[idx]!, cr)) updated++;
   }
   return { existing, added, updated };
@@ -268,10 +269,9 @@ async function scanWebLocalAuthors(): Promise<WorkshopCreator[]> {
 
 /** GenerateRepoIndex 网页版：扫描虚拟根生成 index.json 内容（路径相对 repoPath，正斜杠） */
 async function generateWebRepoIndex(repoPath: string): Promise<string> {
-  const entries =
-    repoPath && repoPath.startsWith(WEB_ROOT)
-      ? await scanWebModels(repoPath)
-      : await collectAllWebEntries();
+  const entries = repoPath?.startsWith(WEB_ROOT)
+    ? await scanWebModels(repoPath)
+    : await collectAllWebEntries();
   // 过滤 .recycle 段：回收站目录下的"已删/待清理"条目不进 index（对齐 Go 桌面 scanner 的回收站跳过）
   const list = entries
     .map((e) => {

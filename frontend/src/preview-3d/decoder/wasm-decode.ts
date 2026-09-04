@@ -430,6 +430,7 @@ function mdWsParseYsmMetaFromFiles(files: DecodedFile[]): {
     return { meta: emptyMeta, hasYsmMeta: true };
   }
 
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const json = parsedJson!;
   const ysmTexOrder = json?.files?.player?.texture
     ? Array.isArray(json.files.player.texture)

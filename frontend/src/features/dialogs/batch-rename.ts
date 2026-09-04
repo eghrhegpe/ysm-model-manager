@@ -311,7 +311,7 @@ function dgBrBindParseTab(shell: DgBrShell): void {
     const cb = e.target as HTMLInputElement;
     if (cb.classList.contains("br-file-cb")) {
       const idx = parseInt(cb.dataset.ci || "", 10);
-      if (!isNaN(idx) && items[idx]) items[idx].selected = cb.checked;
+      if (!Number.isNaN(idx) && items[idx]) items[idx].selected = cb.checked;
       dgBrUpdateCount(items);
     }
   });

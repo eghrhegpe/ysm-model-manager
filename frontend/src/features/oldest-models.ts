@@ -321,7 +321,7 @@ export async function loadOldestModel(
           RESOURCE_TYPE_LABELS[getCurrentType()] ?? RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM],
         )) || [];
       if (guard.stale(gen)) return;
-      if (!entries || !entries.length) {
+      if (!entries?.length) {
         container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">${t("oldest.repoEmpty")}</div>`;
         return;
       }

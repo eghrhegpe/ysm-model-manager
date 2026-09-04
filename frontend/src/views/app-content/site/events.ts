@@ -43,7 +43,7 @@ function cmCrBuildDetailHtml(
     '<div class="cr-detail-box">' +
     '<div class="cr-detail-header">' +
     '<div class="cr-avatar-container cr-detail-avatar-container">' +
-    (avatarCache && avatarCache[cr.name]
+    (avatarCache?.[cr.name]
       ? '<img class="cr-avatar cr-detail-avatar-img" src="' +
         esc(avatarCache[cr.name]) +
         '" data-debug-avatar="' +

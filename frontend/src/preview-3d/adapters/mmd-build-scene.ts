@@ -128,6 +128,7 @@ async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
               const ktxUrl = URL.createObjectURL(ktxBlob);
               c.blobUrls.push(ktxUrl);
               return (
+                // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
                 c
                   .ktx2CacheLoader!.loadAsync(ktxUrl)
                   .then((compressedTex) => {

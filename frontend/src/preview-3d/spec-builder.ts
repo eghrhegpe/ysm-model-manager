@@ -157,7 +157,7 @@ function parseBedrockGeometry(data: string): BedrockModel | null {
   } catch {
     return null;
   }
-  if (!raw || !raw["minecraft:geometry"] || raw["minecraft:geometry"].length === 0) {
+  if (!raw?.["minecraft:geometry"] || raw["minecraft:geometry"].length === 0) {
     return null;
   }
   const g = raw["minecraft:geometry"][0];

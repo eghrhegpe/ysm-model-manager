@@ -95,7 +95,7 @@ export function foldMolangConstant(str: unknown): number | null {
   if (typeof str !== "string") return null;
   // 尝试直接解析为数字
   const direct = Number(str);
-  if (!isNaN(direct)) return direct;
+  if (!Number.isNaN(direct)) return direct;
   // 检查是否完全是纯数字（含负号、小数点）
   if (/^-?\d+(\.\d+)?$/.test(str.trim())) return Number(str.trim());
   // 模式1: "q.* 0 + NUM" 或 "q.* 0 - NUM"
@@ -726,6 +726,7 @@ export function evaluateClip(
     const tLocal = local.get(name) || {};
     const parentName = parentMap.get(name);
     if (parentName && result.has(parentName)) {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const pt = result.get(parentName)!;
       const combined: BoneTransform = {
         rotation: [0, 0, 0],

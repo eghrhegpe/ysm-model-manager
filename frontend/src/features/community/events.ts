@@ -195,6 +195,7 @@ function cmReBindContextMenu(ctx: CmReCtx, listeners: ListenerRef[]): void {
       const name = row.dataset.name || "";
       const m = models.find((x) => x.name === name);
       if (!m) return;
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const sizeStr = (m.size ?? 0) > 0 ? (m.size! / 1024).toFixed(0) + "KB" : "?KB";
       bus.emit("menu:show", {
         x: e.clientX,

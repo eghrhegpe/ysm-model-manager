@@ -241,6 +241,7 @@ function cmDqHandleEnded(ctx: CmDqCtx): void {
 
 function cmDqHandleStateChange(ctx: CmDqCtx, s: DownloadState): void {
   if (s._lastDoneSeq > ctx.prev.lastDoneSeq) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     cmDqHandleFileDone(ctx, s._lastDone!);
     ctx.prev.lastDoneSeq = s._lastDoneSeq;
   }

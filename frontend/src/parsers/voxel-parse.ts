@@ -678,6 +678,7 @@ export function schematicVoxelView(
     }
     // v1: raw Blocks byte array
     for (; i < total && i < (blocksBA?.length ?? 0); ) {
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const blockID = blocksBA![i];
       i++;
       if (blockID === 0) continue;

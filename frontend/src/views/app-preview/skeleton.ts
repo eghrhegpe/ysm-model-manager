@@ -88,6 +88,7 @@ export async function loadModel2D(
     zoomBtn.onclick = (): void => {
       openFullPreview(canvas, model, textureImg, getLabelsOn());
     };
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     container.querySelector<HTMLElement>(".pv-toggle-row")!.appendChild(zoomBtn);
     let _zoom = 1,
       _rotation = 0;

@@ -307,7 +307,7 @@ function smBuildHandle(
       if (opts?.restoreFocus !== false) {
         const el = deps.getPrevFocus();
         deps.setPrevFocus(null);
-        if (el && el.isConnected) {
+        if (el?.isConnected) {
           try {
             el.focus();
           } catch {

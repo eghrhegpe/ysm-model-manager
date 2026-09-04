@@ -172,7 +172,7 @@ async function loadModelViaGo(
     model._avatars = wasmAvatars;
   }
 
-  if (model && model.bones && model.bones.length) {
+  if (model?.bones?.length) {
     const goClips: unknown[] = [];
     if (model.animations?.length) {
       for (const jsonStr of model.animations as string[]) {

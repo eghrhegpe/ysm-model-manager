@@ -67,6 +67,7 @@ export function renderFormattedText(text: string): string {
         }
       };
       const closeFormats = (): void => {
+        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
         while (openFormats.length) html += openFormats.pop()!.close;
       };
 

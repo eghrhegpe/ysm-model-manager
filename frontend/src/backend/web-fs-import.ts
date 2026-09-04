@@ -380,6 +380,6 @@ function assignMainDir(f: File, mainDirs: Set<string>): string | null {
 /** 组内文件相对模型目录的路径：webkitRelativePath 去掉 stem 前缀（保留子目录层级）；无相对路径时用 basename */
 function relOf(f: File, stem: string): string {
   const rel = (f as File & { webkitRelativePath?: string }).webkitRelativePath;
-  if (rel && rel.startsWith(`${stem}/`)) return rel.slice(stem.length + 1);
+  if (rel?.startsWith(`${stem}/`)) return rel.slice(stem.length + 1);
   return f.name;
 }

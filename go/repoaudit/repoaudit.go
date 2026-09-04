@@ -172,6 +172,12 @@ func Audit(dirPath string) (DirAuditResult, error) {
 			return nil
 		}
 		if d.IsDir() {
+			// 排除回收站目录（code review P2 修复）：与 scanner/dedup/watcher/sync
+			// 口径一致——回收站文件不应计入 TotalFiles/Banned/LargestFile/命中率，
+			// 否则与 Dedup 维度（skipRecycle=true）报告内自相矛盾
+			if d.Name() == ".recycle" {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		info, ierr := d.Info()

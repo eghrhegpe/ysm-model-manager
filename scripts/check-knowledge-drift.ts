@@ -327,8 +327,11 @@ const QUICK_INTENTS_WARN = 5;
 const QUICK_INTENTS_ERROR = 8;
 
 function checkKnowledgeQuality(cards: any[]) {
-  for (const { cf, fm, tier } of cards) {
+  for (const { cf, fm } of cards) {
     if (!fm) continue;
+    // tier 从 frontmatter 取（code review P2 修复）：loadKnowledgeCards 返回的卡片
+    // 对象无 tier 字段，从 cards 解构 tier 恒 undefined → architecture 卡检查永不触发
+    const tier = getScalar(fm, 'tier');
     // use_when 上限
     const uw = getList(fm, 'use_when');
     if (uw.length > USE_WHEN_ERROR) {

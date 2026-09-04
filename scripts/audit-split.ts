@@ -68,15 +68,23 @@ function fileList(commit: string) {
 
 // ── 分类：被拆主文件 / 新子文件 / 被移文件 / 边角修改 ──
 
-/** 重命名检测：--find-renames 输出形如 `0\t0\tfrontend/src/{wails => backend}/app.ts`。 */
+/** 重命名检测：--find-renames 输出形如 `0\t0\tfrontend/src/{wails => backend}/app.ts`。
+ *  {a => b} 只含局部名——须拼回公共前缀/后缀得到完整路径，否则目录级 rename
+ *  丢失前缀被误分类 removed（code review P2 修复）。 */
 function detectRenames(commit: string) {
   const out = gitMaybe(['show', '--numstat', '--format=', '--find-renames', commit]) || '';
   const renames: { from: string; to: string }[] = [];
   for (const line of out.split('\n')) {
     const m = line.match(/^\d+\t\d+\t(.+)$/);
     if (!m) continue;
-    const rm = m[1]!.match(/\{(.+?) => (.+?)\}/);
-    if (rm) renames.push({ from: rm[1]!, to: rm[2]! });
+    const path = m[1]!;
+    const rm = path.match(/\{(.+?) => (.+?)\}/);
+    if (rm) {
+      // 拼回完整路径：prefix + {a => b} + suffix
+      const prefix = path.slice(0, path.indexOf('{'));
+      const suffix = path.slice(path.indexOf('}') + 1);
+      renames.push({ from: prefix + rm[1]! + suffix, to: prefix + rm[2]! + suffix });
+    }
   }
   return renames;
 }

@@ -132,6 +132,16 @@ if (paths.length === 0 && !checkOnly) {
   console.error('⚠️  仅检测到未暂存的 docs 改动。先 git add docs/ 再跑，或传 --files <paths> 白名单直取（--check 可只校验不提交）。');
   process.exit(1);
 }
+// 白名单路径来自 staged 清单（或 --files），但 commitWithTempIndex 按 paths 从
+// 工作区取内容入库（git add -- paths）——staged 后又继续编辑的文件会把未暂存 WIP
+// 内容静默提交（code review P2 修复）。检测分叉路径并警告，由用户决定是否继续。
+if (files.length === 0 && !docsMode && !checkOnly) {
+  const unstaged = git(['diff', '--name-only']).split('\n').map((s) => s.trim()).filter(Boolean);
+  const divergent = paths.filter((p) => unstaged.includes(p));
+  if (divergent.length > 0) {
+    console.warn(`⚠️  以下文件存在未暂存改动（提交将包含工作区内容而非暂存内容）:\n  ${divergent.join('\n  ')}\n  如需提交暂存版本，请先 git add 这些文件或取消未暂存改动。`);
+  }
+}
 
 const byDomain = groupByDomain(paths);
 const domainSummary = domainSummaryText(byDomain);

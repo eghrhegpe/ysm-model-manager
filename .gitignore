@@ -63,7 +63,7 @@ tests/python/__pycache__/
 .mimosa/
 .trae/
 .claude/
-
+.commandcode/
 # 个人 AI 工具配置（非项目配置，不入库）
 opencode.json
 reasonix.toml

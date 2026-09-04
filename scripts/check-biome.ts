@@ -18,22 +18,28 @@
  * 增量策略（镜像 gofmt 范式，避免对存量未 lint 代码误伤）：
  *   - 默认 / --strict：biome check --changed（仅查相对 main 的变更文件，阻断 lint/format 违规）
  *   - --write：biome check --write --changed（本地/CI 自动修复，非阻断）
+ *   - --files <paths...>：显式文件列表（pre-commit 接线，镜像 gofmt 只修 staged 文件）；
+ *     路径接受相对库根（frontend/src/…，自动剥 frontend/ 前缀对齐 cwd）或相对 frontend（src/…）。
+ *     与 --changed 互斥：存在 --files 时用显式列表，否则回退 --changed。
  *
- * 边界：biome check --changed 在「0 变更文件」时也退出 1（报 No files were processed），
+ * 边界：biome check 在「0 变更文件」时也退出 1（报 No files were processed / Checked 0 files），
  *   本脚本据此判定为「无文件可查=通过」，避免把空变更集误判成违规。
  *
  * 用法：
- *   node scripts/check-biome.ts            # 增量阻塞（push 门禁默认）
- *   node scripts/check-biome.ts --strict   # 同上（门禁占位，语义等价）
- *   node scripts/check-biome.ts --write    # 自动修复变更文件（pre-commit 用）
- *   node scripts/check-biome.ts --json     # 门禁注入（输出 _summary JSON）
+ *   node scripts/check-biome.ts                       # 增量阻塞（push 门禁默认）
+ *   node scripts/check-biome.ts --strict              # 同上（门禁占位，语义等价）
+ *   node scripts/check-biome.ts --write               # 自动修复相对 main 的变更文件（本地/CI）
+ *   node scripts/check-biome.ts --files frontend/src/a.ts src/b.ts          # 显式文件检查
+ *   node scripts/check-biome.ts --write --files frontend/src/a.ts src/b.ts  # 显式文件自动修复
+ *   node scripts/check-biome.ts --json                # 门禁注入（输出 _summary JSON）
  *
  * 依赖：frontend/node_modules/.bin/biome（Rust 解析器，不依赖项目 typescript 包）
  *
  * 退出码：0 = 通过 / 无变更文件；1 = 发现 lint/format 违规。
  *
  * 设计意图：给 pre-push 门禁提供 TS7 安全的增量 lint 闸——镜像 gofmt 范式，
- * 只查相对 main 的变更文件，避免对存量未 lint 代码误伤。
+ * 只查相对 main 的变更文件，避免对存量未 lint 代码误伤；pre-commit 侧用 --files
+ * 显式列出 staged 文件做自动修复（见 .githooks/pre-commit biome 段）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -68,7 +74,15 @@ const writeMode = args.includes('--write');
 const jsonMode = args.includes('--json');
 // --strict 在 push 门禁里语义同默认（--changed 阻塞），此处仅占位保留可读性
 // 注意：Biome 2.x 无 --json reporter，故绝不下传 --json 给 biome
-const cmd = writeMode ? ['check', '--write', '--changed'] : ['check', '--changed'];
+// --files <paths...>：显式文件列表（pre-commit 用），路径剥 frontend/ 前缀对齐 cwd（frontend/）。
+// 接受相对库根（frontend/src/…）或相对 frontend（src/…）两种写法。
+const filesIdx = args.indexOf('--files');
+const explicitFiles = filesIdx >= 0
+  ? args.slice(filesIdx + 1).map((f) => f.replace(/\\/g, '/').replace(/^frontend\//, ''))
+  : [];
+const cmd = explicitFiles.length > 0
+  ? writeMode ? ['check', '--write', ...explicitFiles] : ['check', ...explicitFiles]
+  : writeMode ? ['check', '--write', '--changed'] : ['check', '--changed'];
 
 /** 跑 biome，捕获退出码与合并输出（biome 诊断 stdout/stderr 分布不固定）
  * 必须用 shell:true——Windows 上 .cmd 脚本（biome.cmd）无法被直接 spawn

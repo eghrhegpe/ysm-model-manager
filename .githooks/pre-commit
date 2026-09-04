@@ -202,6 +202,44 @@ else
   echo "⚠️  gofmt 不可用（PATH 异常），跳过 go 格式化。"
 fi
 
+# ── biome 自动修复（staged frontend TS/TSX；失败仅提示不阻断）──
+# 2026-09 接线（镜像 gofmt 范式）：check-biome 头注释素有 "pre-commit 用" 的 --write，
+# 但此前只挂 pre-push 只读门禁，与 gofmt 不对称（TS 格式要 push 才被拦）。现补齐对称修复：
+#   - 只处理 staged 的 frontend TS/TSX（pathspec 限定，不扫工作区未 stage 文件）
+#   - 跳过含未暂存编辑的文件（同 gofmt 守卫，防混拼半成品）
+#   - biome --write 原地修复后重新 git add，让修复随本次 commit 入库
+#   - 失败仅提示不阻断（与 gofmt 一致；pre-push 只读校验兜底防 --no-verify 绕过）
+# 逃生阀：YSM_SKIP_BIOME_FIX=1
+if [ "${YSM_SKIP_BIOME_FIX:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
+  STAGED_TS="$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.tsx' 2>/dev/null | grep '^frontend/' || true)"
+  if [ -n "$STAGED_TS" ]; then
+    # 守卫：跳过含未暂存编辑的文件，收集干净列表（空文件路径；本仓路径无空格，同 gofmt xargs 前提）
+    CLEAN_TS=""
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      if git diff --quiet -- "$f"; then
+        CLEAN_TS="${CLEAN_TS:+$CLEAN_TS }$f"
+      else
+        echo "  ⚠️ $f 含未暂存编辑，跳过 biome 自动修复（请手动格式化后提交）"
+      fi
+    done <<EOF
+$STAGED_TS
+EOF
+    if [ -n "$CLEAN_TS" ]; then
+      echo "[pre-commit] biome 自动修复："
+      # shellcheck disable=SC2086（有意分词传文件列表）
+      if node scripts/check-biome.ts --write --files $CLEAN_TS 2>&1; then
+        # 修复后重新 stage（无 diff 文件 git add 无副作用）
+        # shellcheck disable=SC2086
+        git add -- $CLEAN_TS 2>/dev/null || true
+        echo "[pre-commit] ✅ frontend TS 格式已自动修复并 stage"
+      else
+        echo "  ⚠️ biome 自动修复失败或仍有残留违规（不阻断；请手动 node scripts/check-biome.ts --write 复查，pre-push 兜底）"
+      fi
+    fi
+  fi
+fi
+
 # ── 版本防御：意外文件 / 跨层夹带提示（非阻断；88daf2a2 $tmp 教训）──
 # 88daf2a2 把 8168 行覆盖率 profile 以字面量文件名 $tmp 入库，且夹带 R34 Go 修复。
 # 这里只做秒级提示，阻断留给 pre-push（--strict）：

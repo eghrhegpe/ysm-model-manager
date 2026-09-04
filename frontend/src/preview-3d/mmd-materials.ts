@@ -4,10 +4,19 @@
 //        经 materials.map((pmx, index) => new MMDToonMaterial(...)) 构建）。
 // 能力：列表 / 显隐（Material.visible）/ 透明（opacity + transparent 联动）/ 详情。
 // 纯逻辑零 DOM——UI 渲染不在本层（对齐 ADR-072）。
-// 协调边界：bone-tools.ts 是骨骼通用层（BoneNode 抽象跨格式）；材质各格式结构差异大
-// （YSM textures / VRM MToon / MMD pmx.materials），不做通用层，MMD 材质独立工具层。
+//
+// [ADR-180] 骨架收编 materials-shared.ts：setVisible/setOpacity/getDetail 字段提取
+// 骨架与 VRM 共用；list 保留本文件原逻辑——MMD 的 list 输入是 pmx 元数据
+// （{name}[]，非 THREE.Material[]），与 VRM 的 list 输入源本就不同，无共享价值。
+// 消费方 import 路径与导出名不变。
 
 import * as THREE from "three";
+import {
+  getMaterialDetailBase,
+  setMaterialOpacity,
+  setMaterialVisible,
+  toggleMaterialVisible,
+} from "./materials-shared.ts";
 
 /** 材质列表项（listMmdMaterials） */
 export interface MmdMaterialListItem {
@@ -38,8 +47,7 @@ export function setMmdMaterialVisible(
   index: number,
   visible: boolean,
 ): void {
-  const mat = materials[index];
-  if (mat) mat.visible = visible;
+  setMaterialVisible(materials, index, visible);
 }
 
 /** 材质显隐切换：返回切换后的可见状态（越界返回 false） */
@@ -47,23 +55,17 @@ export function toggleMmdMaterialVisible(
   materials: readonly THREE.Material[],
   index: number,
 ): boolean {
-  const mat = materials[index];
-  if (!mat) return false;
-  mat.visible = !mat.visible;
-  return mat.visible;
+  return toggleMaterialVisible(materials, index);
 }
 
-/** 材质透明度（0-1）：opacity 设置 + transparent 联动（opacity < 1 → transparent = true） */
+/** 材质透明度（0-1）：opacity 设置 + transparent 联动（opacity < 1 → transparent = true）。
+ *  MMD 无 needsUpdate 需求（MMDToonMaterial 非 ShaderMaterial 重编译场景），不传 onChanged。 */
 export function setMmdMaterialOpacity(
   materials: readonly THREE.Material[],
   index: number,
   opacity: number,
 ): void {
-  const mat = materials[index];
-  if (!mat) return;
-  mat.opacity = Math.max(0, Math.min(1, opacity));
-  // opacity 恢复 ≥1 时须重置 transparent=false，否则材质仍按透明渲染（多一次 blend pass + 渲染顺序变化）
-  mat.transparent = mat.opacity < 1;
+  setMaterialOpacity(materials, index, opacity);
 }
 
 /** 材质详情：name/可见/透明/高光/光泽（越界返回 null） */
@@ -72,7 +74,11 @@ export function getMmdMaterialDetail(
   materials: readonly THREE.Material[],
   index: number,
 ): MmdMaterialDetail | null {
-  if (index < 0 || index >= pmxMaterials.length) return null;
+  const base = getMaterialDetailBase(materials, index, (_m, i) => {
+    const pmx = pmxMaterials[i];
+    return pmx ? pmx.name : "";
+  });
+  if (!base) return null;
   const mat = materials[index];
   const specular =
     mat && "specular" in mat && (mat as { specular?: unknown }).specular instanceof THREE.Color
@@ -83,11 +89,7 @@ export function getMmdMaterialDetail(
       ? (mat as { shininess: number }).shininess
       : null;
   return {
-    index,
-    name: pmxMaterials[index].name,
-    visible: mat?.visible ?? true,
-    opacity: mat?.opacity ?? 1,
-    transparent: mat?.transparent ?? false,
+    ...base,
     specular,
     shininess,
   };

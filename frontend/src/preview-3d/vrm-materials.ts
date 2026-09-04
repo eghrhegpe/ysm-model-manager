@@ -4,8 +4,23 @@
 // 纯逻辑零 DOM——UI 渲染不在本层（对齐 ADR-072）。
 //
 // 收集方式：vrm.scene.traverse 取出所有 isMesh 的 material；MToon 无 pmx 层索引结构，
-// 直接按 scene 遍历顺序排列，与 vrm-materials.ts 的 list/getDetail/setVisible/setOpacity 一一对齐。
+// 直接按 scene 遍历顺序排列，与 mmd-materials.ts 的 list/getDetail/setVisible/setOpacity
+// 一一对齐。
+//
+// [ADR-180] 骨架收编 materials-shared.ts：list/setVisible/setOpacity/detail 字段提取
+// 全走共享骨架（VRM 输入即 THREE.Material[]，与共享层签名吻合）；本文件保留领域差异：
+//   - name 回退「材质 #N」（MToon 无命名层）
+//   - type 推断（mtoon/standard/basic/phong/unknown）
+//   - opacity 变更后 needsUpdate=true（MToon ShaderMaterial 重编译，onChanged 注入）
+// 消费方 import 路径与导出名不变。
+
 import type * as THREE from "three";
+import {
+  getMaterialDetailBase,
+  listMaterials,
+  setMaterialOpacity,
+  setMaterialVisible,
+} from "./materials-shared.ts";
 
 /** 材质列表项（listVrmMaterials） */
 export interface VrmMaterialListItem {
@@ -24,12 +39,23 @@ export interface VrmMaterialDetail {
   type: "mtoon" | "standard" | "basic" | "phong" | "unknown";
 }
 
+/** VRM 材质显示名：有 name 用之，无则回退「材质 #N」（共享 list 的 nameFn 参数） */
+const vrmName = (m: THREE.Material, i: number): string => m.name || `材质 #${i + 1}`;
+
+/** 推断材质类型：MToon 是自定义 ShaderMaterial，名称常含 MToon */
+function inferVrmType(mat: THREE.Material): VrmMaterialDetail["type"] {
+  const typeName = mat.type.toLowerCase();
+  const name = mat.name?.toLowerCase() || "";
+  if (name.includes("mtoon")) return "mtoon";
+  if (typeName.includes("standard")) return "standard";
+  if (typeName.includes("basic")) return "basic";
+  if (typeName.includes("phong")) return "phong";
+  return "unknown";
+}
+
 /** 材质列表：vrm.scene 遍历所有 Mesh.material（含数组材质）*/
 export function listVrmMaterials(materials: readonly THREE.Material[]): VrmMaterialListItem[] {
-  return materials.map((m, i) => ({
-    index: i,
-    name: m.name || `材质 #${i + 1}`,
-  }));
+  return listMaterials(materials, vrmName);
 }
 
 /** 材质显隐：Material.visible（MToon/标准/基础均支持）*/
@@ -38,23 +64,19 @@ export function setVrmMaterialVisible(
   index: number,
   visible: boolean,
 ): void {
-  const mat = materials[index];
-  if (mat) mat.visible = visible;
+  setMaterialVisible(materials, index, visible);
 }
 
-/** 材质透明度（0-1）：opacity 设置 + transparent 联动 */
+/** 材质透明度（0-1）：opacity 设置 + transparent 联动；
+ *  MToon（ShaderMaterial 子类）透明变更需 needsUpdate 重编译着色器（onChanged 注入） */
 export function setVrmMaterialOpacity(
   materials: readonly THREE.Material[],
   index: number,
   opacity: number,
 ): void {
-  const mat = materials[index];
-  if (!mat) return;
-  mat.opacity = Math.max(0, Math.min(1, opacity));
-  // opacity 恢复 ≥1 时须重置 transparent=false，否则材质仍按透明渲染（多一次 blend pass + 渲染顺序变化）
-  mat.transparent = mat.opacity < 1;
-  // MToon（ShaderMaterial 子类）透明变更需重编译着色器
-  (mat as THREE.ShaderMaterial | THREE.Material).needsUpdate = true;
+  setMaterialOpacity(materials, index, opacity, (mat) => {
+    mat.needsUpdate = true;
+  });
 }
 
 /** 材质详情：name/可见/透明/类型（越界返回 null）*/
@@ -62,27 +84,12 @@ export function getVrmMaterialDetail(
   materials: readonly THREE.Material[],
   index: number,
 ): VrmMaterialDetail | null {
-  if (index < 0 || index >= materials.length) return null;
+  const base = getMaterialDetailBase(materials, index, vrmName);
+  if (!base) return null;
   const mat = materials[index];
-  if (!mat) return null;
-  // 推断材质类型：MToon 是自定义 ShaderMaterial，名称常含 MToon
-  const typeName = mat.type.toLowerCase();
-  const name = mat.name?.toLowerCase() || "";
-  const type: VrmMaterialDetail["type"] = name.includes("mtoon")
-    ? "mtoon"
-    : typeName.includes("standard")
-      ? "standard"
-      : typeName.includes("basic")
-        ? "basic"
-        : typeName.includes("phong")
-          ? "phong"
-          : "unknown";
+  // mat 非空已由 base 保证（getMaterialDetailBase 越界/缺失返回 null）
   return {
-    index,
-    name: mat.name || `材质 #${index + 1}`,
-    visible: mat.visible ?? true,
-    opacity: mat.opacity ?? 1,
-    transparent: mat.transparent ?? false,
-    type,
+    ...base,
+    type: inferVrmType(mat as THREE.Material),
   };
 }

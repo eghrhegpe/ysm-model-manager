@@ -16,7 +16,7 @@ auto_fields:
     - bindTreeEvents
     - buildTree
     - cleanupVirtualScroll
-    - emptyHTML
+    - emptyStateHTML
     - fileRowCommon
     - fileRowHTML
     - flattenVisible
@@ -126,9 +126,9 @@ status: active
 
 ## 响应式属性与代际守卫
 
-- `observedAttributes` 仅声明 `root` 属性，`attributeChangedCallback` 响应 root 值变更，触发 `_load` → `_renderTree` 重新加载并渲染
-- 挂载时序保护：`_ready` 标志区分首次挂载与后续属性变更——`attributeChangedCallback` 在 `_ready=false` 时不启动加载，改为置 `_pendingRoot=true`，`connectedCallback` 的 `_load` 完成后检测并补加载最新 root（防「树停在 spinner」）
-- 代际守卫 `_gen`：`connectedCallback` 入口和 `attributeChangedCallback` 内均 `++_gen` 生成代际号；异步 `_load` 完成后用 `gen === this._gen` 校验，若期间 root 已切换则丢弃本次过期加载的渲染（防旧类型数据覆盖新类型树），是 app-tree 多资源类型快速切换的核心机制
+- `observedAttributes` 声明 `root`（资源类型根）+ `subdir`（ADR-094 子类型子目录）；`attributeChangedCallback` 响应属性变更触发 `_load` → `_renderTree` 重新加载并渲染
+- 挂载时序保护（2026-09 收敛，取代原 `_pendingRoot` 机制）：`connectedCallback` 入口捕获 `initRoot/initSubdir` 快照，`_ready` 标志区分首次挂载与后续属性变更——`attributeChangedCallback` 在挂载未完成（`!_ready || !isConnected`）时仅同步属性 + `++_gen` 作废在途首代渲染（不启动加载）；`connectedCallback` 的 `_load` 完成后按**快照差量**（当前属性 ≠ 入口快照）判定补载一次最新 root。收益：未连接 setAttribute 单次加载（旧实现双加载 + 冗余 ClearScanCache）、挂载期间切换无「新 rootAttr + 旧 entries」错配帧
+- 代际守卫 `_gen`：`connectedCallback` 入口和 `attributeChangedCallback` 内均 `++_gen` 生成代际号；异步 `_load` 完成后用 `gen === this._gen` 校验，若期间 root 已切换则丢弃本次过期加载的渲染（防旧类型数据覆盖新类型树），是 app-tree 多资源类型快速切换的核心机制；挂载/补载失败走 `toastThrottled`（5s 节流，对齐 loader.ts 模式）
 
 ## 工具栏功能（toolbar-events.ts）
 

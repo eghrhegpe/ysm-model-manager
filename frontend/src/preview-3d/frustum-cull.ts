@@ -107,15 +107,24 @@ export function clearModelRoots(): void {
 // 在设置面板开启。剔除失误（误藏模型/闪烁）时也可随时关闭恢复可见。
 const CULL_ENABLED_KEY = "ysm_3d_frustumCull";
 
+// 模块级缓存（code review：isFrustumCullEnabled 在 rAF 热路径每帧调用，
+// 每帧同步 localStorage 读是 anti-pattern——对齐 render-budget.ts getMaxFps 的
+// 缓存 + invalidate 范式；设置面板经 setFrustumCullEnabled 写入时自动失效）
+let _cullEnabledCache: boolean | null = null;
+
 /** 视锥裁剪开关是否启用（undefined → 默认关；safeGet 隐私模式安全） */
 export function isFrustumCullEnabled(): boolean {
+  if (_cullEnabledCache !== null) return _cullEnabledCache;
   const v = safeGet(CULL_ENABLED_KEY);
-  return v === null ? false : v !== "0";
+  const enabled = v === null ? false : v !== "0";
+  _cullEnabledCache = enabled;
+  return enabled;
 }
 
-/** 设置视锥裁剪开关（设置面板开关调用） */
+/** 设置视锥裁剪开关（设置面板开关调用；写入后失效热路径缓存） */
 export function setFrustumCullEnabled(enabled: boolean): void {
   safeSet(CULL_ENABLED_KEY, enabled ? "1" : "0");
+  _cullEnabledCache = enabled;
 }
 
 /** 关闭剔除时恢复所有注册模型根可见性（幂等） */

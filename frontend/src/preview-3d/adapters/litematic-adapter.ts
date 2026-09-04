@@ -231,8 +231,9 @@ function mdLiApplyLayer(
   const lo = shell.layerVal - 1;
   const hi = shell.layerVal2 > shell.layerVal ? shell.layerVal2 : shell.layerVal;
   for (let g = 0; g < (rawGroups ?? []).length; g++) {
-    const positions = rawGroups?.[g].positions;
+    const positions = rawGroups?.[g]?.positions;
     const meshes = groupMeshes[g] ?? [];
+    if (!positions) continue; // 无顶点数据（rawGroups null / 索引越界）→ 无体素可写
     for (const { mesh, ck } of meshes) {
       let count = 0;
       for (let i = 0; i < positions.length; i++) {

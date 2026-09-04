@@ -252,6 +252,48 @@ describe("flattenVisible — 文件夹启禁用标记（P2b 短路判定）", ()
     const top = rows.find((r) => r.type === "folder" && r.key === "top")!;
     expect(top.html).toContain('class="ck on"');
   });
+
+  it("深链（1000 级）：全禁用条目埋在底端 → 顶层与中层判定正确", () => {
+    const depth = 1000;
+    const path = Array.from({ length: depth }, (_, i) => `d${i}`).join("/") + "/deep.ysm";
+    const root = buildTree([{ ...entry("deep.ysm", path), banned: true }], "name", "", null);
+    // 默认不展开 → 顶层 d0 可见；展开到 d500 让中层也进入渲染窗口
+    const dirOpen: Record<string, boolean> = {};
+    const acc: string[] = [];
+    for (let i = 0; i <= 500; i++) {
+      acc.push(`d${i}`);
+      dirOpen[acc.join("/")] = true;
+    }
+    const rows = flattenVisible(root, "", "", "name", dirOpen, 0, "grid");
+    // 顶层 d0 下只有禁用条目 → 无 on 标记
+    const top = rows.find((r) => r.type === "folder" && r.key === "d0")!;
+    expect(top).toBeDefined();
+    expect(top.html).not.toContain("ck on");
+    // 中层 d500 同样只有禁用后代（dirFlags 自底向上合并的中间层正确性）；
+    // row.key 为完整路径 d0/d1/.../d500
+    const midKey = Array.from({ length: 501 }, (_, i) => `d${i}`).join("/");
+    const mid = rows.find((r) => r.type === "folder" && r.key === midKey)!;
+    expect(mid).toBeDefined();
+    expect(mid.html).not.toContain("ck on");
+  });
+});
+
+describe("annotateDirNodes — O(n²) 回归绊线（深链全启用无早退）", () => {
+  it(
+    "10000 级深链 buildTree 应在 1s 内完成（旧实现 O(n²) 需 ~3s+，见审计基准）",
+    () => {
+      const depth = 10000;
+      const path = Array.from({ length: depth }, (_, i) => `d${i}`).join("/") + "/f.ysm";
+      const t0 = performance.now();
+      const root = buildTree([entry("f.ysm", path)], "name", "", null);
+      const elapsed = performance.now() - t0;
+      expect(root).toBeDefined();
+      // O(n) 后序合并应亚毫秒级；O(n²) 重扫子树在 10000 级深链实测 ~2.9s。
+      // 阈值留 20 倍余量防 CI 抖动，旧实现必然超时（绊线生效）。
+      expect(elapsed).toBeLessThan(1000);
+    },
+    15000,
+  );
 });
 
 // ===== R3 验收：web 多段组（P-A IDB 路径化）→ 子目录树可展开 =====

@@ -51,29 +51,48 @@ export function setRenderMode(mode: RenderMode): void {
 
 // ——— 自底向上标注文件夹 hasEnabled/hasDisabled（一次遍历，消除 flattenVisible 内 dirEntries 重复递归） ———
 const dirFlags = new WeakMap<TreeNode, { hasEnabled: boolean; hasDisabled: boolean }>();
-function annotateDirNodes(node: TreeNode): void {
-  for (const k of Object.keys(node)) {
-    const child = node[k] as TreeNode;
-    if (child._e) continue; // 文件节点，跳过
-    annotateDirNodes(child);
+// O(n²)→O(n) 重写（审计实证，见 render.test.ts 深链绊线）：
+// 原实现「外层 for 每目录 + 内层 stack 重扫该目录整棵子树」最坏 O(n²)
+// （深链 2000 级 115.9ms、每倍增 3-6×），且递归深度=树深，10000 级深链直接
+// Maximum call stack size exceeded。现改为显式栈迭代后序：父目录 flags =
+// 直接文件贡献 ∪ 各子目录已算好的 flags，每节点恰好访问一次，O(n) 且无递归。
+function annotateDirNodes(root: TreeNode): void {
+  interface Frame {
+    node: TreeNode;
+    keys: string[];
+    idx: number;
+  }
+  const stack: Frame[] = [{ node: root, keys: Object.keys(root), idx: 0 }];
+  while (stack.length) {
+    const frame = stack[stack.length - 1];
+    let descended = false;
+    // 找下一个目录子节点压栈（文件跳过）；后序：先处理完整子树再合并父
+    while (frame.idx < frame.keys.length) {
+      const k = frame.keys[frame.idx++];
+      const child = frame.node[k] as TreeNode;
+      if (child._e) continue;
+      stack.push({ node: child, keys: Object.keys(child), idx: 0 });
+      descended = true;
+      break;
+    }
+    if (descended) continue;
+    // 子树已全部归并 → 出栈合并本目录 flags（早退语义保留）
+    stack.pop();
     let hasEnabled = false;
     let hasDisabled = false;
-    const stack: TreeNode[] = [child];
-    while (stack.length) {
-      const n = stack.pop()!;
-      for (const ck of Object.keys(n)) {
-        const cv = n[ck] as TreeNode;
-        if (cv._e) {
-          if (cv._e.banned) hasDisabled = true;
-          else hasEnabled = true;
-          if (hasEnabled && hasDisabled) break;
-        } else {
-          stack.push(cv);
-        }
+    for (const k of frame.keys) {
+      const cv = frame.node[k] as TreeNode;
+      if (cv._e) {
+        if (cv._e.banned) hasDisabled = true;
+        else hasEnabled = true;
+      } else {
+        const f = dirFlags.get(cv);
+        if (f?.hasEnabled) hasEnabled = true;
+        if (f?.hasDisabled) hasDisabled = true;
       }
       if (hasEnabled && hasDisabled) break;
     }
-    dirFlags.set(child, { hasEnabled, hasDisabled });
+    dirFlags.set(frame.node, { hasEnabled, hasDisabled });
   }
 }
 

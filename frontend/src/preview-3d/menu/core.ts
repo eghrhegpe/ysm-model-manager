@@ -6,40 +6,40 @@
 //   - 组内多个项 → home 到组根视图（项列表），点击项 navigate 下钻面板
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
-import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
-import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
-import type { PreviewMenuNode, PreviewActionMenuCtx, PreviewMenuCtx } from "./node-types.ts";
-import { disposeEnvSubscriptions, buildEnvSchema } from "./env.ts";
-import { renderCapControls } from "./cap-controls.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
+import { tr } from "../../core/i18n/tr.ts";
+import {
+  createSlideMenu,
+  type SlideMenuHandle,
+  type SlideMenuView,
+} from "../../ui/ui-slide-menu.ts";
+import { ensureFabStyles } from "../../utils/dom/fab.ts";
 import { pushInputBlock } from "../../utils/dom/focus-restore.ts";
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { sceneRegistry } from "../adapters/scene-registry.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
+import { previewSnapshot, setPreviewUiMode } from "../state/preview-state.ts";
+import { renderCapControls } from "./cap-controls.ts";
+import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
+import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
+import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import { renderAdapterPanelContent, renderMenu } from "./render.ts";
+import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
 import {
   buildCameraSchema,
   buildLightingSchema,
-  buildShadowSchema,
   buildPostprocessingSchema,
   buildSettingsSchema,
+  buildShadowSchema,
 } from "./settings.ts";
-import { ensureFabStyles } from "../../utils/dom/fab.ts";
-import { tr } from "../../core/i18n/tr.ts";
-import { sceneRegistry } from "../adapters/scene-registry.ts";
-import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
-import { renderAdapterPanelContent, renderMenu } from "./render.ts";
-import { previewSnapshot, setPreviewUiMode } from "../state/preview-state.ts";
-
-/** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
-export { roleBaseName };
-export { renderMenu } from "./render.ts";
 
 // [ADR-169] PreviewMenuCtx 已下沉 node-types.ts（类型叶）——断 core ⇄ env/roles/switch/settings
 // 纯 type 环（子模块原 type import 本文件 ctx，而本文件值 import 它们）。原位 re-export 保公共面，
 // 外部消费者（mount-preview-core / items.test 等）的 import 语句零改动。
 export type { PreviewMenuCtx } from "./node-types.ts";
-
+export { renderMenu } from "./render.ts";
+/** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 /** 通用控件渲染器：将 MenuControlDef[] 渲染为 DOM 行，替代手写 fill* 函数 */
-export { renderCapControls };
-
+export { renderCapControls, roleBaseName };
 
 /** 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（ADR-085 S3） */
 export interface PreviewMenuHandle {
@@ -58,7 +58,9 @@ export interface PreviewMenuHandle {
 // P1 批次6：core 装配层内联 cssText → 集中类（cm- 前缀本文件私有，ensureCoreStyles
 // 幂等注入——buildPreviewMenuShell + makePreviewMenuRow 双入口调用覆盖 popup/行/错误行）
 let _coreStylesInjected = false;
-onOverlayStyleTargetReset(() => { _coreStylesInjected = false; }); // ADR-175 M1:目标切换重注入
+onOverlayStyleTargetReset(() => {
+  _coreStylesInjected = false;
+}); // ADR-175 M1:目标切换重注入
 function ensureCoreStyles(): void {
   if (_coreStylesInjected) return;
   const style = document.createElement("style");
@@ -329,10 +331,7 @@ function previewMakeGroupView(
 /** dock 组内工具过滤链（共用：与 render.ts 内容级同一 visibleWhen 求值器——
  *  2026-09 双轨归一：sharedOnly/hideInSelfMode/requiresEnvironment 三布尔已删，
  *  dock 侧与内容级同吃状态层快照谓词，组内全被 visibleWhen 隐藏时 dock 按钮自动不渲染） */
-function dockGroupItemsFor(
-  g: PreviewMenuGroupDef,
-  allItems: PreviewMenuNode[],
-): PreviewMenuNode[] {
+function dockGroupItemsFor(g: PreviewMenuGroupDef, allItems: PreviewMenuNode[]): PreviewMenuNode[] {
   const snapshot = previewSnapshot();
   return allItems
     .filter((d) => d.dockGroup === g.id && d.kind !== "divider")
@@ -372,8 +371,7 @@ function renderPreviewDock(
     // 进去叫加载角色」的语义错位；机器可读 data-dock-group 供测试/诊断
     btn.dataset.dockGroup = g.id;
     btn.title = `dock: ${g.id} · ${groupItems.map((n) => n.id).join(" / ")}`;
-    btn.innerHTML =
-      `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${tr(g.labelKey, g.fallback)}</span>`;
+    btn.innerHTML = `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${tr(g.labelKey, g.fallback)}</span>`;
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();
       // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）。
@@ -392,7 +390,14 @@ function renderPreviewDock(
         const activeId = sceneRegistry.getActiveId();
         const active = activeId ? sceneRegistry.getAll().find((x) => x.id === activeId) : undefined;
         if (active?.menuItems) {
-          showMenu(motionDetailView(active, { makeRow: makeRowFn, makePanelView: makePanelViewFn, menu, actionCtx }));
+          showMenu(
+            motionDetailView(active, {
+              makeRow: makeRowFn,
+              makePanelView: makePanelViewFn,
+              menu,
+              actionCtx,
+            }),
+          );
           return;
         }
       }
@@ -457,14 +462,10 @@ function validateAdapterItemIds(items: PreviewMenuNode[]): void {
   const seen = new Set<string>();
   for (const it of items) {
     if (seen.has(it.id)) {
-      throw new Error(
-        `[preview-menu] setAdapterItems 重复 id: "${it.id}"（适配器项之间冲突）`,
-      );
+      throw new Error(`[preview-menu] setAdapterItems 重复 id: "${it.id}"（适配器项之间冲突）`);
     }
     if (CORE_MENU_ITEMS.some((c) => c.id === it.id)) {
-      throw new Error(
-        `[preview-menu] setAdapterItems id "${it.id}" 与 CORE_MENU_ITEMS 冲突`,
-      );
+      throw new Error(`[preview-menu] setAdapterItems id "${it.id}" 与 CORE_MENU_ITEMS 冲突`);
     }
     seen.add(it.id);
   }
@@ -475,7 +476,10 @@ function validateAdapterItemIds(items: PreviewMenuNode[]): void {
 // ===================================================================
 
 // ADR-175 M1：overlay 参数放宽为 HTMLElement | ShadowRoot——内容实体已迁入 host.shadowRoot
-export function mountPreviewRootMenu(overlay: HTMLElement | ShadowRoot, ctx: PreviewMenuCtx): PreviewMenuHandle {
+export function mountPreviewRootMenu(
+  overlay: HTMLElement | ShadowRoot,
+  ctx: PreviewMenuCtx,
+): PreviewMenuHandle {
   // [doc:adr-126-p4-d] 会话模式上浮状态层：dock 级 visibleWhen 谓词经 s["ui.mode"] 读取
   // （旧 hideInSelfMode 语义）。每次 mount 覆盖写，防会话/测试残留（dispose 不复位——
   // 下次 mount 必覆盖，间隙无谓词求值路径）
@@ -493,7 +497,10 @@ export function mountPreviewRootMenu(overlay: HTMLElement | ShadowRoot, ctx: Pre
   const routers = buildPreviewMenuRouters(ctx, hideMenu, menu, actionCtx, shell);
   // 阶段 4：面板/组视图工厂（引用 routers 做渲染）
   const renderPanelFn = (l: HTMLElement, n: PreviewMenuNode): void =>
-    renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx, { makeRow: makePreviewMenuRow, makePanelView: makePanelViewFn });
+    renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx, {
+      makeRow: makePreviewMenuRow,
+      makePanelView: makePanelViewFn,
+    });
   const makePanelViewFn = (n: PreviewMenuNode): SlideMenuView =>
     previewMakePanelView(n, renderPanelFn);
   const makeRowFn = makePreviewMenuRow;

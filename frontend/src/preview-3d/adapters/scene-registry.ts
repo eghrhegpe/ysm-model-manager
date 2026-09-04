@@ -7,10 +7,10 @@
 // （allContent 仍负责逐条 dispose，注册表与之并存，不重复释放。）
 //
 // root 捕获用「build 前后 scene.children 差量」法（适配器无关），详见 ADR-093 §2.2。
-import * as THREE from "three";
-import type { PreviewScene } from "./mount-preview-core.ts";
+import type * as THREE from "three";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { BoneMaps } from "../model3d.ts";
+import type { PreviewScene } from "./mount-preview-core.ts";
 
 /** 菜单句柄最小接口（解耦 preview-menu/core.ts 运行时依赖） */
 interface MenuItemsSink {
@@ -66,7 +66,7 @@ type RegisterInput = {
 function mdSrDedupByExplicitKey(
   byAuthor: Map<string, string>,
   byName: Map<string, string>,
-  input: RegisterInput
+  input: RegisterInput,
 ): string | null {
   const existingByPath = byAuthor.get(input.path);
   if (existingByPath) return existingByPath;
@@ -96,7 +96,7 @@ function mdSrIndexIntoMaps(
   entries: Map<string, ModelEntry>,
   byAuthor: Map<string, string>,
   byName: Map<string, string>,
-  entry: ModelEntry
+  entry: ModelEntry,
 ): void {
   entries.set(entry.id, entry);
   byAuthor.set(entry.path, entry.id);

@@ -2,7 +2,7 @@
 // 根据内容根节点的包围盒计算相机初始位置和目标点。
 // ysmview 风格：相机放在 Z- 侧（模型正面），距离 = 最大包围盒尺寸 * 1.5 + 2。
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 /** frameCameraSide 取景系数（fbx/vrm/pack 三适配器共用，对齐历史口径） */
 export interface FrameSideOptions {

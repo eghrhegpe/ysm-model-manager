@@ -6,7 +6,7 @@
 // 不新增 FBX 专属面板代码（ADR-074 扩展模式：新格式 = 一个骨骼适配 + 复用面板）。
 // 纯逻辑零 DOM（ADR-072 工具层纯净）；无 SkinnedMesh → 空数组（面板不注入 bones 项）。
 
-import * as THREE from "three";
+import type * as THREE from "three";
 import type { BoneNode } from "./bone-tools.ts";
 
 /** 遍历场景收拢全部 SkinnedMesh 的骨骼（去重由 THREE Skeleton 保证：同一 Bone 只属于一个骨架） */
@@ -37,7 +37,8 @@ export function fbxBonesToBoneNodes(group: THREE.Object3D): BoneNode[] {
   return bones.map((b, i) => ({
     id: String(i),
     name: b.name?.trim() || `bone-${i}`,
-    parentId: b.parent && idx.has(b.parent as THREE.Bone) ? String(idx.get(b.parent as THREE.Bone)!) : null,
+    parentId:
+      b.parent && idx.has(b.parent as THREE.Bone) ? String(idx.get(b.parent as THREE.Bone)!) : null,
     object: b,
   }));
 }

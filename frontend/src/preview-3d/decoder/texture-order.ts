@@ -27,13 +27,22 @@ export function buildOrderedTexKeys(input: OrderedTexInput): string[] {
         typeof t === "string"
           ? t
           : (t as { uv?: string; path?: string })?.uv || (t as { path?: string })?.path || "";
-      const tn = path.split("/").pop()?.replace(/\.\w+$/, "") || "";
+      const tn =
+        path
+          .split("/")
+          .pop()
+          ?.replace(/\.\w+$/, "") || "";
       const matched = matchTexKey(tn);
       if (matched) ordered.push(matched);
     }
     // default_texture 置首（与 Go 端 orderTexByYSM 一致）
     if (ysmDefaultTex) {
-      const defKey = matchTexKey(ysmDefaultTex.split("/").pop()?.replace(/\.\w+$/, "") || "");
+      const defKey = matchTexKey(
+        ysmDefaultTex
+          .split("/")
+          .pop()
+          ?.replace(/\.\w+$/, "") || "",
+      );
       if (defKey && ordered.includes(defKey) && ordered[0] !== defKey) {
         ordered = [defKey, ...ordered.filter((k) => k !== defKey)];
       }

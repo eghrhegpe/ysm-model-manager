@@ -13,35 +13,45 @@
 // renderModel3D 的相同逻辑（pivot 线 + 骨骼连接 + Sprite 标签）。键盘接线 2026-09-03 修复：
 // 原挂 renderer.domElement（canvas 无 tabIndex/.focus() 保障 → keydown 永不触发，功能空转），
 // 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 MdYsMenuDebug.onFKeyDown 运输）。
-import * as THREE from "three";
+import type * as THREE from "three";
+import {
+  type AnimationClip,
+  parseBedrockAnimationJSON,
+  ysmAnimClipLabels,
+} from "../../utils/animation/animation.ts";
+import {
+  type AnimationController,
+  parseAnimationControllerJSON,
+} from "../../utils/animation/animation-controller.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { buildYsmObject, type YsmObjectHandle } from "../ysm-object.ts";
-import { fitCameraToScene } from "../camera-setup.ts";
-import { buildBoneHierarchy, registerBoneRaycast } from "../bone-raycast.ts";
-import { buildBoneTree, type BoneNode, type BoneTree } from "../bone-tools.ts";
-import { rebuildDebug } from "../debug-render.ts";
-import { disposeDebugGroup } from "../cleanup-helper.ts";
-import { screenshotFromRenderer } from "../screenshot.ts";
-import type { YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { makeYsmModelSchemaId, unregisterSchema, YSM_MODEL_SCHEMA_ID } from "./schema-registry.ts";
-import type { Spec3D, BoneSelectInfo, BoneMaps } from "../model3d.ts";
-import { sceneRegistry } from "./scene-registry.ts";
-import type { BedrockGeometry } from "../decoder/geometry.ts";
-import type { PreviewScene, PreviewBuildCtx, PreviewAdapter } from "./mount-preview-core.ts";
-import { isEditableTarget } from "./input-and-animation.ts"; // 输入守卫复用（焦点在输入框不吞键）
-import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
-import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
-import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
-import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player.ts";
-import { parseBedrockAnimationJSON, ysmAnimClipLabels, type AnimationClip } from "../../utils/animation/animation.ts";
-import { parseAnimationControllerJSON, type AnimationController } from "../../utils/animation/animation-controller.ts";
 import { b64ToBytes } from "../base64.ts";
-import type { MmdPlayBridge } from "./content-bridges.ts";
-import { ysmSemanticBoneMap } from "../semantic-bones.ts";
+import { buildBoneHierarchy, registerBoneRaycast } from "../bone-raycast.ts";
+import { type BoneNode, type BoneTree, buildBoneTree } from "../bone-tools.ts";
+import { fitCameraToScene } from "../camera-setup.ts";
+import { disposeDebugGroup } from "../cleanup-helper.ts";
+import { rebuildDebug } from "../debug-render.ts";
+import type { BedrockGeometry } from "../decoder/geometry.ts";
+import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
+import { recordLoadTrace } from "../load-trace.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
+import type { BoneMaps, BoneSelectInfo, Spec3D } from "../model3d.ts";
 import { createBreathController } from "../perception/breath.ts";
 import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
-import { recordLoadTrace } from "../load-trace.ts";
+import { screenshotFromRenderer } from "../screenshot.ts";
+import { ysmSemanticBoneMap } from "../semantic-bones.ts";
+import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player.ts";
+import { buildYsmObject, type YsmObjectHandle } from "../ysm-object.ts";
+import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import type { MmdPlayBridge, YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";
+import { isEditableTarget } from "./input-and-animation.ts"; // 输入守卫复用（焦点在输入框不吞键）
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import {
+  type PerceptionCapability,
+  type PerceptionState,
+  perceptionNodes,
+} from "./perception-controls.ts";
+import { sceneRegistry } from "./scene-registry.ts";
+import { makeYsmModelSchemaId, unregisterSchema, YSM_MODEL_SCHEMA_ID } from "./schema-registry.ts";
 
 /**
  * preloadModel 产物契约（视图壳层数据转换：model → 纹理 + spec，含 WASM/Go 兜底）。
@@ -254,22 +264,38 @@ function mdYsSetupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCam
     content.onBoneSelect?.(info);
   };
 
-  return { initCamPos, initCamTarget, rayState, nameMap, parentMap, childrenMap, rayCleanup, boneMaps, content };
+  return {
+    initCamPos,
+    initCamTarget,
+    rayState,
+    nameMap,
+    parentMap,
+    childrenMap,
+    rayCleanup,
+    boneMaps,
+    content,
+  };
 }
 
 /** 子辅助：磁盘扫描 .animation.json / .animation_controllers.json（阶段③内提纯） */
 async function mdYsScanAnimFiles(
   sc: MdYsSceneCtx,
-): Promise<{ clips: Array<{ label: string; clip: AnimationClip }>; controllers: AnimationController[] }> {
+): Promise<{
+  clips: Array<{ label: string; clip: AnimationClip }>;
+  controllers: AnimationController[];
+}> {
   const { opts, path } = sc;
   const allClips: Array<{ label: string; clip: AnimationClip }> = [];
   const allControllers: AnimationController[] = [];
-  if (!opts.listAllFilePaths || !opts.readTextFile) return { clips: allClips, controllers: allControllers };
+  if (!opts.listAllFilePaths || !opts.readTextFile)
+    return { clips: allClips, controllers: allControllers };
 
   const dirPath = path.replace(/[^/\\]*$/, "").replace(/[/\\]$/, "");
   const files = (await opts.listAllFilePaths(dirPath)) || [];
   const animFiles = files.filter((f) => f.toLowerCase().endsWith(".animation.json"));
-  const controllerFiles = files.filter((f) => f.toLowerCase().endsWith(".animation_controllers.json"));
+  const controllerFiles = files.filter((f) =>
+    f.toLowerCase().endsWith(".animation_controllers.json"),
+  );
 
   for (const animFile of animFiles) {
     try {
@@ -278,13 +304,18 @@ async function mdYsScanAnimFiles(
       const text = new TextDecoder("utf-8").decode(b64ToBytes(b64));
       const { clips } = parseBedrockAnimationJSON(text);
       if (clips.length > 0) {
-        const fileBase = animFile.split(/[/\\]/).pop()!.replace(/\.animation\.json$/i, "");
+        const fileBase = animFile
+          .split(/[/\\]/)
+          .pop()!
+          .replace(/\.animation\.json$/i, "");
         const fileLabels = ysmAnimClipLabels(fileBase, clips);
         for (let ci = 0; ci < clips.length; ci++) {
           allClips.push({ label: fileLabels[ci], clip: clips[ci] });
         }
       }
-    } catch { /* 单个文件解析失败跳过 */ }
+    } catch {
+      /* 单个文件解析失败跳过 */
+    }
   }
 
   for (const ctrlFile of controllerFiles) {
@@ -294,7 +325,9 @@ async function mdYsScanAnimFiles(
       const text = new TextDecoder("utf-8").decode(b64ToBytes(b64));
       const { controllers } = parseAnimationControllerJSON(text);
       if (controllers.length > 0) allControllers.push(...controllers);
-    } catch { /* 单个控制器文件解析失败跳过 */ }
+    } catch {
+      /* 单个控制器文件解析失败跳过 */
+    }
   }
   return { clips: allClips, controllers: allControllers };
 }
@@ -348,8 +381,9 @@ async function mdYsBuildBonePanelAndAnim(
           const group = obj.boneGroupMap.get(sbi.id);
           if (group) boneByName.set(sbi.name, group);
         }
-        const hierarchy: import("../../utils/animation/animation.ts").BoneHierarchyNode[] =
-          sb.map((b) => ({ name: b.name, ...(b.parentId ? { parent: b.parentId } : {}) }));
+        const hierarchy: import("../../utils/animation/animation.ts").BoneHierarchyNode[] = sb.map(
+          (b) => ({ name: b.name, ...(b.parentId ? { parent: b.parentId } : {}) }),
+        );
         const labels = allClips.map((c) => c.label);
         const clips = allClips.map((c) => c.clip);
         animPlayer = createYsmAnimPlayer(boneByName, clips, hierarchy, labels);
@@ -395,7 +429,13 @@ function mdYsBuildMenuAndDebug(
     screenshot: () =>
       Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene!, ctx.camera!)),
   };
-  const perceptionState: PerceptionState = { breath: true, gaze: false, blink: false, lipSync: false, autoDance: false };
+  const perceptionState: PerceptionState = {
+    breath: true,
+    gaze: false,
+    blink: false,
+    lipSync: false,
+    autoDance: false,
+  };
   const perceptionCaps: PerceptionCapability[] = [
     { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
   ];
@@ -461,7 +501,9 @@ function mdYsBuildMenuAndDebug(
       },
       ok: true,
     });
-  } catch { /* perf trace 失败不影响渲染 */ }
+  } catch {
+    /* perf trace 失败不影响渲染 */
+  }
 
   return { controlsCtx, perceptionState, menuItems, debugState, onFKeyDown, unsubscribeState };
 }
@@ -492,7 +534,10 @@ function mdYsMakeSceneHandle(
       // 此前直接 tex.dispose() 留下 refs 恒 ≥1 的僵尸条目（LRU 永久失效 + 缓存分发
       // 已销毁纹理），且与 pack-model-adapter / screenshot-render 的 release 范式相悖。
       if (core.releaseTextures) core.releaseTextures();
-      else console.warn("[ysm-adapter] preload 未提供 releaseTextures，纹理引用将泄漏（检查注入方契约）");
+      else
+        console.warn(
+          "[ysm-adapter] preload 未提供 releaseTextures，纹理引用将泄漏（检查注入方契约）",
+        );
       document.removeEventListener("keydown", onFKeyDown); // 与挂载点配对（escH 同构）
       if (debugState.debugGroup) {
         disposeDebugGroup(debugState.debugGroup);
@@ -551,7 +596,9 @@ export async function buildYsmScene(
 
   const now = () => performance.now();
   const sc: MdYsSceneCtx = {
-    ctx, path, opts,
+    ctx,
+    path,
+    opts,
     sessionId: ctx.sessionId ?? "",
     tStart: now(),
     tLoadStart: now(),
@@ -606,16 +653,18 @@ export interface YsmMenuItemsOpts {
     cleanupRef: YsmBonePanelRef;
   };
   /** 面板声明式节点工厂（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
-  panels?: {
-    /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
-     *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
-    shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
-    /** [doc:adr-126-p5-收尾] play 面板声明式节点（复用 MMD playNodes：toggle 播放/暂停 +
-     *  select 动作 + 空态引导）；缺失 → children 空、面板不渲染 */
-    playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
-    // 注：registerModelSchema 只在 YsmAdapterOptions（makeYsmAdapter opts）消费——
-    // ysmMenuItems 不读它，不在此重复声明（防两接口分化，P5-A review P3）
-  } | undefined;
+  panels?:
+    | {
+        /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
+         *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
+        shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
+        /** [doc:adr-126-p5-收尾] play 面板声明式节点（复用 MMD playNodes：toggle 播放/暂停 +
+         *  select 动作 + 空态引导）；缺失 → children 空、面板不渲染 */
+        playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
+        // 注：registerModelSchema 只在 YsmAdapterOptions（makeYsmAdapter opts）消费——
+        // ysmMenuItems 不读它，不在此重复声明（防两接口分化，P5-A review P3）
+      }
+    | undefined;
   /** YSM 动画桥（ADR-100）；null/缺省（无 .animation.json）→ 不注入 play 项 */
   play?: MmdPlayBridge | null | undefined;
   /** 感知层状态（adapter build 创建，面板 UI 双向绑定） */

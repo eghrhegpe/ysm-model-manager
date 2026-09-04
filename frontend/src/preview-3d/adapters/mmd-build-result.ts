@@ -7,12 +7,12 @@ import { unregisterModelRoot } from "../frustum-cull.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { setPerceptionPaused } from "../perception/core.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
+import type { mdMmStage5Menu } from "./mmd-build-menu.ts";
 import { cancelPendingEncodings } from "./mmd-ktx2-encoder.ts";
+import { disposeMmdMesh, mmdDiag } from "./mmd-shared.ts";
+import type { MdMmStage6bCtx, MdMmStage6Ctx } from "./mmd-types.ts";
 import { applyVPDToMesh } from "./mmd-vpd-mesh.ts";
 import type { PreviewScene } from "./mount-preview-core.ts";
-import { disposeMmdMesh, mmdDiag } from "./mmd-shared.ts";
-import { mdMmStage5Menu } from "./mmd-build-menu.ts";
-import type { MdMmStage6Ctx, MdMmStage6bCtx } from "./mmd-types.ts";
 
 export function mdMmStage6Result(
   c: MdMmStage6Ctx,
@@ -52,8 +52,7 @@ export function mdMmStage6Result(
       if (!c.mesh.visible) return;
       c.mmd?.updateWithMixer(dt, c.mixer, { ik: true, grant: true });
       if (semanticBones) {
-        if (c.perceptionState.breath)
-          breath.apply(dt, semanticBones);
+        if (c.perceptionState.breath) breath.apply(dt, semanticBones);
         // camera 可选（self 模式 undefined）：缺失时 gaze 无法取观察点 → 跳过
         // gaze 不挂全局暂停标志（注视相机属摄像机追踪，非动画优先级——保持动画中也跟随）
         if (c.perceptionState.gaze && c.ctx.camera)
@@ -128,10 +127,7 @@ export function mdMmStage6Result(
 }
 
 // 6b-dispose：scene graph 拆解 → mixers → 感知释放 → 资源 dispose（自包含，仅消费 c + s5）
-function mdMmStage6Dispose(
-  c: MdMmStage6Ctx,
-  s5: ReturnType<typeof mdMmStage5Menu>,
-): void {
+function mdMmStage6Dispose(c: MdMmStage6Ctx, s5: ReturnType<typeof mdMmStage5Menu>): void {
   const { breath, gaze, blink, lipSync, autoDance, footIK } = s5;
   const renderer = c.ctx.renderer;
   if (renderer) {

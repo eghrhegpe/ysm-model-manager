@@ -4,10 +4,7 @@
 // P2 切片：重负载同步构建拆成 rAF 帧片段，避免长帧卡顿。
 
 import * as THREE from "three";
-import type {
-  PmxParseResponse,
-  PmxBoneData,
-} from "./mmd-pmx-parser.worker.ts";
+import type { PmxBoneData, PmxParseResponse } from "./mmd-pmx-parser.worker.ts";
 import { createWorkerParser } from "./worker-bridge.ts";
 
 // ===== rAF 切片工具 =====
@@ -129,8 +126,9 @@ export async function buildPmxScene(
       const texPath = parsed.textures[pmxMat.textureIndex];
       if (texPath) {
         const normalizedPath = texPath.toLowerCase().replace(/\\/g, "/");
-        const blobUrl = config.texUrlMap.get(normalizedPath)
-          ?? config.texUrlMap.get(normalizedPath.split("/").pop() ?? "");
+        const blobUrl =
+          config.texUrlMap.get(normalizedPath) ??
+          config.texUrlMap.get(normalizedPath.split("/").pop() ?? "");
         if (blobUrl) {
           mat.userData.pendingTexture = { relPath: normalizedPath, blobUrl };
         }

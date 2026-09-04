@@ -33,12 +33,23 @@ const ALL_MODULES: Array<{ id: keyof PerceptionState; labelKey: string; fallback
 
 /** 感知面板声明式节点（纯数据工厂零 DOM）：toggle kind 节点，
  *  control.get/set 闭包读写 adapter 内 perception state（非状态层路径，不走 bind） */
-export function perceptionNodes(state: PerceptionState, caps: PerceptionCapability[]): PreviewMenuNode[] {
+export function perceptionNodes(
+  state: PerceptionState,
+  caps: PerceptionCapability[],
+): PreviewMenuNode[] {
   // 按 ALL_MODULES 顺序排列（保证跨适配器顺序一致）
   const ordered = ALL_MODULES.filter((m) => caps.some((c) => c.id === m.id));
   if (ordered.length === 0) {
     // 空态提示（对齐旧 buildPerceptionControls 的 noPerception 行）
-    return [{ id: "perception-empty", kind: "field" as const, labelKey: "preview.noPerception", fallback: "无感知模块", value: "" }];
+    return [
+      {
+        id: "perception-empty",
+        kind: "field" as const,
+        labelKey: "preview.noPerception",
+        fallback: "无感知模块",
+        value: "",
+      },
+    ];
   }
   return ordered.map((mod) => ({
     id: `perception-${mod.id}`,

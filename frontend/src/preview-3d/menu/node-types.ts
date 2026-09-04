@@ -10,13 +10,13 @@
 // controls kind 是 cap 生态（MenuControlDef）进 node 树的原生通道——声明式节点
 // 可直接持有 MenuControlDef[]（或惰性函数），渲染委托 renderCapControls（唯一控件渲染器）。
 
+import type { CameraControlBridge } from "../adapters/camera-controls.ts";
+import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
 // [doc:adr-129-第一刀] PreviewStatePath / PreviewSnapshot 迁至 state/preview-state.ts（本位）；
 // 本文件前向 import state 的类型——方向正（菜单节点吃状态层快照），非反向依赖。
 // [ADR-169] PreviewMenuCtx 自 core.ts 下沉本文件（断 core ⇄ env/roles/switch/settings 纯 type 环——
 // 子模块原 type import core.ts 的 ctx，而 core 值 import 它们；ctx 归位类型叶后方向单一）。
-import type { PreviewStatePath, PreviewSnapshot } from "../state/preview-state.ts";
-import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
-import type { CameraControlBridge } from "../adapters/camera-controls.ts";
+import type { PreviewSnapshot, PreviewStatePath } from "../state/preview-state.ts";
 
 /** 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） */
 export interface PreviewActionMenuCtx {
@@ -48,7 +48,11 @@ export interface PreviewMenuCtx {
   switchTo: (path: string, options?: { keepInScene?: boolean }) => Promise<void> | void;
   /** 跨类型跳转（切换模型选中不同类型：关当前 + 开目标，由 app 层 openModel3DFullscreen 提供）。
    *  第二参透传 siblings，切换后新会话「当前目录」tab 有候选（P1-2） */
-  switchExternal?: (path: string, siblings?: string[], options?: { keepInScene?: boolean }) => Promise<void> | void;
+  switchExternal?: (
+    path: string,
+    siblings?: string[],
+    options?: { keepInScene?: boolean },
+  ) => Promise<void> | void;
   /** 卸载已加载角色（mount3D 注入：移除 roots + dispose + 注册表注销 + 相机重算） */
   unloadModel?: (id: string) => void;
   /** 动作节点真 ctx：mount3D 注入真实现，适配器动作可 toast/closeAllOverlays */

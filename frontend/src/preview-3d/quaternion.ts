@@ -12,10 +12,14 @@
  * ADR-042 §2.1 裁决：从 Rx×Ry×Rz（ADR-041 YSMViewer 口径）改为 Rz×Ry×Rx（Blockbench 活规范），
  * 修复三轴非零 cube 旋转顶点错位（主题正确、小部件错）。
  */
-export function eulerToQuaternion(rxDeg: number, ryDeg: number, rzDeg: number): [number, number, number, number] {
-  const rx = rxDeg * Math.PI / 180.0;
-  const ry = ryDeg * Math.PI / 180.0;
-  const rz = rzDeg * Math.PI / 180.0;
+export function eulerToQuaternion(
+  rxDeg: number,
+  ryDeg: number,
+  rzDeg: number,
+): [number, number, number, number] {
+  const rx = (rxDeg * Math.PI) / 180.0;
+  const ry = (ryDeg * Math.PI) / 180.0;
+  const rz = (rzDeg * Math.PI) / 180.0;
 
   const cosX = Math.cos(rx);
   const sinX = Math.sin(rx);
@@ -77,7 +81,9 @@ export function eulerToQuaternion(rxDeg: number, ryDeg: number, rzDeg: number): 
  */
 export function isIdentityQuat(q: [number, number, number, number]): boolean {
   const eps = 1e-9;
-  return Math.abs(q[0]) < eps && Math.abs(q[1]) < eps && Math.abs(q[2]) < eps && Math.abs(q[3] - 1) < eps;
+  return (
+    Math.abs(q[0]) < eps && Math.abs(q[1]) < eps && Math.abs(q[2]) < eps && Math.abs(q[3] - 1) < eps
+  );
 }
 
 // ===== hasBoneRotation — Go threejs/spec.go hasBoneRotation（L828-830）=====
@@ -103,18 +109,7 @@ export function applyRotationIfNonIdentity(
   obj: { quaternion: { set: (x: number, y: number, z: number, w: number) => void } },
   rot: number[] | undefined | null,
 ): void {
-  if (
-    rot &&
-    (rot[3] !== 1 ||
-      rot[0] !== 0 ||
-      rot[1] !== 0 ||
-      rot[2] !== 0)
-  ) {
-    obj.quaternion.set(
-      rot[0] ?? 0,
-      rot[1] ?? 0,
-      rot[2] ?? 0,
-      rot[3] ?? 1,
-    );
+  if (rot && (rot[3] !== 1 || rot[0] !== 0 || rot[1] !== 0 || rot[2] !== 0)) {
+    obj.quaternion.set(rot[0] ?? 0, rot[1] ?? 0, rot[2] ?? 0, rot[3] ?? 1);
   }
 }

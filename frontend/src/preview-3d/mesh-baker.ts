@@ -27,12 +27,7 @@ function bakeBatch(batch: readonly MeshFragment[]): MeshFragment {
 
   for (const { md } of batch) {
     const rotation = md.localRotation;
-    _rotation.set(
-      rotation?.[0] ?? 0,
-      rotation?.[1] ?? 0,
-      rotation?.[2] ?? 0,
-      rotation?.[3] ?? 1,
-    );
+    _rotation.set(rotation?.[0] ?? 0, rotation?.[1] ?? 0, rotation?.[2] ?? 0, rotation?.[3] ?? 1);
     const tx = md.localPosition?.[0] ?? 0;
     const ty = md.localPosition?.[1] ?? 0;
     const tz = md.localPosition?.[2] ?? 0;

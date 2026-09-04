@@ -20,7 +20,15 @@ export interface MorphMeshLike {
 export function morphNodes(ctx: MorphMeshLike): PreviewMenuNode[] {
   const names = Object.keys(ctx.morphTargetDictionary || {});
   if (names.length === 0) {
-    return [{ id: "morph-empty", kind: "field" as const, labelKey: "preview.noOtherMorph", fallback: "无表情", value: "" }];
+    return [
+      {
+        id: "morph-empty",
+        kind: "field" as const,
+        labelKey: "preview.noOtherMorph",
+        fallback: "无表情",
+        value: "",
+      },
+    ];
   }
   return names.map((name) => ({
     id: `morph-${name}`,
@@ -36,7 +44,7 @@ export function morphNodes(ctx: MorphMeshLike): PreviewMenuNode[] {
         const idx = ctx.morphTargetDictionary?.[name];
         // 缺 morphTargetInfluences（边界）→ 静默返回（对齐旧 fillMmdMorphPanel）
         if (idx === undefined || !ctx.morphTargetInfluences) return;
-        ctx.morphTargetInfluences[idx] = Boolean(v) ? 1 : 0;
+        ctx.morphTargetInfluences[idx] = v ? 1 : 0;
       },
     },
   }));

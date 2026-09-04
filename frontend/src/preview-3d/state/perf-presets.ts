@@ -10,7 +10,7 @@
 //  - custom = 不套用（保持用户手调）
 
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { KNOWN_PATHS, setStateValue } from "./preview-state.ts";
+import { type KNOWN_PATHS, setStateValue } from "./preview-state.ts";
 
 /** 性能档位：低 / 中 / 高 + 自定义（自定义不套用，保持用户手调） */
 export type PerfLevel = "low" | "medium" | "high" | "custom";
@@ -49,9 +49,7 @@ export const PERF_PRESETS: Record<
 /** 读取当前档位（无存档或未知值回默认） */
 export function getPerfPreset(): PerfLevel {
   const v = safeGet(PERF_PRESET_KEY);
-  return v === "low" || v === "medium" || v === "high" || v === "custom"
-    ? v
-    : PERF_PRESET_DEFAULT;
+  return v === "low" || v === "medium" || v === "high" || v === "custom" ? v : PERF_PRESET_DEFAULT;
 }
 
 /**

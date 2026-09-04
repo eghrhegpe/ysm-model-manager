@@ -2,12 +2,12 @@
 
 import { MMDLoader } from "@moeru/three-mmd";
 import { MMDAmmoPlugin } from "@moeru/three-mmd-physics-ammo";
-import * as THREE from "three";
+import type * as THREE from "three";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { buildPmxScene } from "./mmd-pmx-parser.ts";
-import { applyWorkerDecodedTextures, closeUnusedDecodedBitmaps } from "./mmd-texture-decoder.ts";
-import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 import { disposeMmdMesh, mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
+import type { DecodedTexture } from "./mmd-texture-decoder.ts";
+import { applyWorkerDecodedTextures, closeUnusedDecodedBitmaps } from "./mmd-texture-decoder.ts";
 import type { MdMmParsePmdCtx, MdMmParsePmxCtx } from "./mmd-types.ts";
 
 export async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
@@ -55,7 +55,9 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     // 失败释放注册表：worker mesh 分配即登记（值捕获，防后续覆盖漏释放；2026-09-03）
     const workerMesh = c.mesh;
     if (workerMesh) {
-      mdMmTrackAlloc(c, "mesh", () => disposeMmdMesh(workerMesh, mmdDiag, c.effectivePort, "dispose-fail"));
+      mdMmTrackAlloc(c, "mesh", () =>
+        disposeMmdMesh(workerMesh, mmdDiag, c.effectivePort, "dispose-fail"),
+      );
     }
     c.tParseStart = performance.now();
     c.tParseEnd = c.tParseStart;
@@ -119,7 +121,9 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     // 分配即登记失败释放（2026-09-03 注册表化；值捕获防后续覆盖漏释放）
     // mesh 先于 mmd 注册——dispose 按 push 顺序执行，mesh→mmd 与旧 finally 块一致，
     // 也与 worker 路径（L57 mesh → L75 mmd）对齐（code review P2 修复）
-    mdMmTrackAlloc(c, "mesh", () => disposeMmdMesh(c.mmd!.mesh, mmdDiag, c.effectivePort, "dispose-fail"));
+    mdMmTrackAlloc(c, "mesh", () =>
+      disposeMmdMesh(c.mmd!.mesh, mmdDiag, c.effectivePort, "dispose-fail"),
+    );
     // mmd 在 mesh 之后注册——dispose 按 push 顺序执行，mesh→mmd 与旧 finally 块一致，
     // 也与 worker 路径（L57 mesh → L75 mmd）对齐（code review P2 修复）
     mdMmTrackAlloc(c, "mmd", () => c.mmd?.dispose());

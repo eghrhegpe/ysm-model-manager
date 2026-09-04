@@ -11,7 +11,9 @@ export function getMaxPixelRatio(): number {
   const v = safeGet(MAX_PIXEL_RATIO_KEY);
   if (v === null) return PREVIEW_MAX_PIXEL_RATIO_DEFAULT;
   const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? Math.min(2, Math.max(0.5, n)) : PREVIEW_MAX_PIXEL_RATIO_DEFAULT;
+  return Number.isFinite(n) && n > 0
+    ? Math.min(2, Math.max(0.5, n))
+    : PREVIEW_MAX_PIXEL_RATIO_DEFAULT;
 }
 
 export const PREVIEW_FRAME_INTERVAL_MS = 1000 / 60;
@@ -60,10 +62,7 @@ export function previewPixelRatio(devicePixelRatio: number): number {
   return Math.min(devicePixelRatio, getMaxPixelRatio());
 }
 
-export function createAdaptiveRenderBudget(
-  pixelRatio: number,
-  now: number,
-): AdaptiveRenderBudget {
+export function createAdaptiveRenderBudget(pixelRatio: number, now: number): AdaptiveRenderBudget {
   return { pixelRatio, sampleStart: now, sampleFrames: 0 };
 }
 
@@ -87,11 +86,7 @@ export function sampleAdaptivePixelRatio(
   return budget.pixelRatio;
 }
 
-export function shouldRenderPreviewFrame(
-  now: number,
-  nextFrame: number,
-  hidden: boolean,
-): boolean {
+export function shouldRenderPreviewFrame(now: number, nextFrame: number, hidden: boolean): boolean {
   if (hidden) return false;
   return now >= nextFrame - 0.5;
 }

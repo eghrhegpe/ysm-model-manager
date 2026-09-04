@@ -10,21 +10,21 @@
 
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
-import { screenshotFromRenderer } from "../screenshot.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { recordLoadTrace } from "../load-trace.ts";
-import { disposeMaterial } from "../mesh.ts";
-import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
 import { safeGet } from "../../utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
+import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
+import { buildBoneTree } from "../bone-tools.ts";
+import { frameCameraSide } from "../camera-setup.ts";
+import { fbxBonesToBoneNodes } from "../fbx-bones.ts";
+import { recordLoadTrace } from "../load-trace.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
+import { disposeMaterial } from "../mesh.ts";
+import { screenshotFromRenderer } from "../screenshot.ts";
+import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { buildFbxSceneFromData, createFbxParser } from "./fbx-parser.ts";
 import type { FbxSceneData } from "./fbx-scene-to-data.ts";
-import { buildBoneTree } from "../bone-tools.ts";
-import { fbxBonesToBoneNodes } from "../fbx-bones.ts";
-import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { concurrentMap } from "./mmd-utils.ts"; // 有界并发映射（对齐 ADR-101 后端 goroutine 池设计）
-import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { frameCameraSide } from "../camera-setup.ts";
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 
 /** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface FbxDataPort {
@@ -102,7 +102,8 @@ async function loadFbxViaBlob(
 
 /** 加载剖析统计（mesh/纹理数；worker 与 blob 两路径共用） */
 function countFbxStats(group: THREE.Object3D): { meshCount: number; texCount: number } {
-  let meshCount = 0, texCount = 0;
+  let meshCount = 0,
+    texCount = 0;
   group.traverse((o) => {
     if ((o as THREE.Mesh).isMesh) {
       meshCount++;
@@ -151,7 +152,9 @@ async function buildFbxTexUrlMap(
         if (!b64) return;
         const bytes = bytesToArrayBuffer(b64ToBytes(b64));
         map.set(name, URL.createObjectURL(new Blob([bytes], { type: "image/png" })));
-      } catch { /* 单个纹理读取失败跳过，不阻断渲染 */ }
+      } catch {
+        /* 单个纹理读取失败跳过，不阻断渲染 */
+      }
     },
     CHUNK_SIZE,
   );
@@ -164,7 +167,11 @@ async function buildFbxTexUrlMap(
  * @param path  FBX 文件绝对路径（Wails 下经 Go RPC 取字节，浏览器读不了本地盘）
  * @param port  数据端口（readFileBytes / 可选诊断日志）
  */
-export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: FbxDataPort): Promise<PreviewScene> {
+export async function buildFbxScene(
+  ctx: PreviewBuildCtx,
+  path: string,
+  port: FbxDataPort,
+): Promise<PreviewScene> {
   // 纹理 blob URL 收集：dispose 时统一 revoke，防止每次预览累积泄漏（审核 P3）
   let texBlobUrls: string[] = [];
   // 1) 取字节 → ArrayBuffer + blob URL（Wails 读不了本地盘，必须经 Go RPC 取字节再包 URL）
@@ -174,9 +181,7 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
     throw new Error("FBX 字节读取失败（ReadFileBytes 返回空）");
   }
   const bytes = bytesToArrayBuffer(b64ToBytes(b64));
-  const blobUrl = URL.createObjectURL(
-    new Blob([bytes], { type: "application/octet-stream" }),
-  );
+  const blobUrl = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
 
   // 2) 加载：fbx-worker=1 走 worker —— 官方 FBXLoader（three/addons，零解析改动），
   //    场景经 fbxSceneToData 纯数据回主线程重建；未开启/worker 解析失败 → 降级主线程 blob 路径
@@ -194,7 +199,9 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
         // （发现1 P2：此前从不构建 → worker 路径纹理恒缺失，静默回归）
         const texUrlMap = await buildFbxTexUrlMap(resp.data, path, port);
         texBlobUrls = [...texUrlMap.values()];
-        group = buildFbxSceneFromData(resp.data, { texUrlMap }) as THREE.Group & { animations: THREE.AnimationClip[] };
+        group = buildFbxSceneFromData(resp.data, { texUrlMap }) as THREE.Group & {
+          animations: THREE.AnimationClip[];
+        };
         const { meshCount } = countFbxStats(group);
         await fbxDiag(
           port,
@@ -229,7 +236,13 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
     format: "fbx",
     path,
     stages: [{ name: "加载", ms: Math.round(tLoadEnd - tStart), status: "ok" }],
-    assets: { files: 1, textures: texCount, materials: texCount, animations: group.animations?.length ?? 0, fbxAnimations: group.animations?.length ?? 0 },
+    assets: {
+      files: 1,
+      textures: texCount,
+      materials: texCount,
+      animations: group.animations?.length ?? 0,
+      fbxAnimations: group.animations?.length ?? 0,
+    },
     ok: true,
   });
 

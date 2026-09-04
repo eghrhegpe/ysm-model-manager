@@ -5,16 +5,16 @@
 // Phase 3 收编：骨骼面板渲染器现在通过 vrmMenuItems 的 panel render 回调挂入根菜单，
 // 不再依赖 extraControls(topBar) 或 extraPanel 机制。
 
-import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import * as THREE from "three";
-import {
-  listBonesWithDepth,
-  getBoneDetail,
-  toggleBoneVisible,
-  pickBone,
-  type BoneTree,
-} from "../bone-tools.ts";
 import { t } from "../../core/i18n/t.ts";
+import {
+  type BoneTree,
+  getBoneDetail,
+  listBonesWithDepth,
+  pickBone,
+  toggleBoneVisible,
+} from "../bone-tools.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 
 /** 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） */
 export interface VrmBonePanelCtx {
@@ -54,7 +54,9 @@ const vbuCss = `
 .vbu-field { margin-bottom:3px; }
 `;
 let _vbuStylesInjected = false;
-onOverlayStyleTargetReset(() => { _vbuStylesInjected = false; }); // ADR-175 M1:目标切换重注入
+onOverlayStyleTargetReset(() => {
+  _vbuStylesInjected = false;
+}); // ADR-175 M1:目标切换重注入
 function ensureVbuStyles(): void {
   if (_vbuStylesInjected) return;
   _vbuStylesInjected = true;
@@ -160,13 +162,12 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
       field("路径", det.path);
       field(
         "坐标",
-        det.position ? `(${det.position.x.toFixed(2)}, ${det.position.y.toFixed(2)}, ${det.position.z.toFixed(2)})` : "—",
+        det.position
+          ? `(${det.position.x.toFixed(2)}, ${det.position.y.toFixed(2)}, ${det.position.z.toFixed(2)})`
+          : "—",
       );
       field("父骨骼", det.parent ? `${det.parent.name} (${det.parent.id})` : "—（根）");
-      field(
-        "子骨骼",
-        det.children.length ? det.children.map((c) => c.name).join("、") : "—",
-      );
+      field("子骨骼", det.children.length ? det.children.map((c) => c.name).join("、") : "—");
       return d;
     };
 

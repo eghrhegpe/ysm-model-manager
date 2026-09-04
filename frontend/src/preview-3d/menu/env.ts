@@ -1,18 +1,18 @@
 // ===== 环境菜单声明式 Schema（ADR-076 + ADR-106）=====
-import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
-import { sceneCapabilityRegistry } from '../caps/scene-capability-registry.ts';
-import type { SceneCapability, MenuControlDef } from '../caps/scene-capability.ts';
-import type { SkyCapability } from '../caps/sky-capability.ts';
-import type { FogCapability } from '../caps/fog-capability.ts';
-import type { EnvironmentCapability } from '../caps/environment-capability.ts';
-import { createHeaderToggle } from '../../ui/ui-header-toggle.ts';
-import type { SlideMenuHandle } from '../../ui/ui-slide-menu.ts';
-import { renderCapControls, formatCapSliderValue } from './cap-controls.ts';
-import type { PreviewMenuCtx } from "./node-types.ts"; // [ADR-169] ctx 归位类型叶，断 core ⇄ 本模块纯 type 环
-import { tr } from '../../core/i18n/tr.ts';
-import { previewSnapshot, type PreviewSnapshot } from '../state/preview-state.ts';
-import { ENV_PRESET_LINKAGE, type EnvPresetId } from '../caps/environment-capability.ts';
-import type { PreviewMenuNode } from './node-types.ts';
+
+import { tr } from "../../core/i18n/tr.ts";
+import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
+import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
+import type { EnvironmentCapability } from "../caps/environment-capability.ts";
+import { ENV_PRESET_LINKAGE, type EnvPresetId } from "../caps/environment-capability.ts";
+import type { FogCapability } from "../caps/fog-capability.ts";
+import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
+import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import type { SkyCapability } from "../caps/sky-capability.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
+import { type PreviewSnapshot, previewSnapshot } from "../state/preview-state.ts";
+import { formatCapSliderValue, renderCapControls } from "./cap-controls.ts";
+import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
 const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;
@@ -52,16 +52,21 @@ function resolveCaps(ctx: PreviewMenuCtx): SceneCapability[] {
     const fb: SceneCapability[] = [];
     const skyCap = ctx.getCap("sky");
     const groundCap = ctx.getCap("ground");
-    if (skyCap && "getMenuControls" in skyCap) fb.push(Object.assign({ id: "sky" }, skyCap) as SceneCapability);
-    if (groundCap && "getMenuControls" in groundCap) fb.push(Object.assign({ id: "ground" }, groundCap) as SceneCapability);
+    if (skyCap && "getMenuControls" in skyCap)
+      fb.push(Object.assign({ id: "sky" }, skyCap) as SceneCapability);
+    if (groundCap && "getMenuControls" in groundCap)
+      fb.push(Object.assign({ id: "ground" }, groundCap) as SceneCapability);
     const waterCapFb = ctx.getCap("water");
-    if (waterCapFb && "getMenuControls" in waterCapFb) fb.push(Object.assign({ id: "water" }, waterCapFb) as SceneCapability);
+    if (waterCapFb && "getMenuControls" in waterCapFb)
+      fb.push(Object.assign({ id: "water" }, waterCapFb) as SceneCapability);
     allCaps = fb;
   }
   return allCaps;
 }
 function orderedCaps(allCaps: SceneCapability[]): SceneCapability[] {
-  return ORDERED_IDS.map((id) => allCaps.find((c) => c.id === id)).filter((c): c is SceneCapability => Boolean(c));
+  return ORDERED_IDS.map((id) => allCaps.find((c) => c.id === id)).filter(
+    (c): c is SceneCapability => Boolean(c),
+  );
 }
 /** 按 group 字段把控件分组成「平级入口」：保序；base 组（无 group 的控件）用 cap 名作标题。
  * 用于环境子视图——带分区的 cap（ground 的 地面/水面/表面材质、reflector 的参数）进入后先列分区入口，
@@ -87,27 +92,58 @@ function partitionCapControlsByGroup(
     ctrls: cs,
   }));
 }
-function applyPreset(ctx: PreviewMenuCtx, presetId: Exclude<EnvPresetId, "custom">, menu?: SlideMenuHandle): void {
+function applyPreset(
+  ctx: PreviewMenuCtx,
+  presetId: Exclude<EnvPresetId, "custom">,
+  menu?: SlideMenuHandle,
+): void {
   const link = ENV_PRESET_LINKAGE[presetId];
   if (!link) return;
   if (link.sky) {
-    const skyCap = sceneCapabilityRegistry.getById("sky") as (SkyCapability & { setTime?(h: number): void; setCloudCoverage?(v: number, regen?: boolean): void }) | null;
-    if (skyCap) { skyCap.setTime?.(link.sky.time); skyCap.setCloudCoverage?.(link.sky.cloud, true); }
-    else { const fc = ctx.getCap("sky") as (SkyCapability & { setTime?(h: number): void; setCloudCoverage?(v: number, regen?: boolean): void }) | null; fc?.setTime?.(link.sky.time); fc?.setCloudCoverage?.(link.sky.cloud, true); }
+    const skyCap = sceneCapabilityRegistry.getById("sky") as
+      | (SkyCapability & {
+          setTime?(h: number): void;
+          setCloudCoverage?(v: number, regen?: boolean): void;
+        })
+      | null;
+    if (skyCap) {
+      skyCap.setTime?.(link.sky.time);
+      skyCap.setCloudCoverage?.(link.sky.cloud, true);
+    } else {
+      const fc = ctx.getCap("sky") as
+        | (SkyCapability & {
+            setTime?(h: number): void;
+            setCloudCoverage?(v: number, regen?: boolean): void;
+          })
+        | null;
+      fc?.setTime?.(link.sky.time);
+      fc?.setCloudCoverage?.(link.sky.cloud, true);
+    }
   }
   if (link.fog) {
     const fogCap = sceneCapabilityRegistry.getById("fog") as FogCapability | null;
-    if (fogCap) { fogCap.setEnabled(link.fog.enabled); if (link.fog.mode) fogCap.setMode(link.fog.mode); if (link.fog.density !== undefined) fogCap.setDensity(link.fog.density); if (link.fog.near !== undefined || link.fog.far !== undefined) fogCap.setLinearRange(link.fog.near, link.fog.far); }
+    if (fogCap) {
+      fogCap.setEnabled(link.fog.enabled);
+      if (link.fog.mode) fogCap.setMode(link.fog.mode);
+      if (link.fog.density !== undefined) fogCap.setDensity(link.fog.density);
+      if (link.fog.near !== undefined || link.fog.far !== undefined)
+        fogCap.setLinearRange(link.fog.near, link.fog.far);
+    }
   }
   const envCap = sceneCapabilityRegistry.getById("environment") as EnvironmentCapability | null;
-  if (envCap) { envCap.setPresetId(presetId); if (link.envIntensity !== undefined) envCap.setIntensity(link.envIntensity); }
+  if (envCap) {
+    envCap.setPresetId(presetId);
+    if (link.envIntensity !== undefined) envCap.setIntensity(link.envIntensity);
+  }
   menu?.refresh();
 }
 
 // P1 批次4：环境面板内联 cssText → 集中类（ev- 前缀本文件私有，ensureEnvStyles
 // 幂等注入——renderEnvLevel 唯一入口调用，覆盖预设栏/摘要行/分区入口全部渲染路径）
 let _envStylesInjected = false;
-onOverlayStyleTargetReset(() => { _envStylesInjected = false; }); // ADR-175 M1:目标切换重注入
+onOverlayStyleTargetReset(() => {
+  _envStylesInjected = false;
+}); // ADR-175 M1:目标切换重注入
 function ensureEnvStyles(): void {
   if (_envStylesInjected) return;
   const style = document.createElement("style");
@@ -151,14 +187,29 @@ function ensureEnvStyles(): void {
  *    · ground：仅一个 visible toggle、无数值 → 纯 toggle 行，无 ›
  *  - › 点击 → menu.navigate(subView)，subView 渲染该 cap 的完整 getMenuControls()
  *  - 无 menu 句柄（旧调用路径）→ 回退到平铺渲染，保持向后兼容 */
-export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: SlideMenuHandle): void {
+export function renderEnvLevel(
+  list: HTMLElement,
+  ctx: PreviewMenuCtx,
+  menu?: SlideMenuHandle,
+): void {
   ensureEnvStyles();
   if (!menu) {
     const caps = orderedCaps(resolveCaps(ctx));
-    if (caps.length === 0) { appendEnvEmpty(list); return; }
+    if (caps.length === 0) {
+      appendEnvEmpty(list);
+      return;
+    }
     const ctrls: MenuControlDef[] = [];
     caps.forEach((cap, idx) => {
-      if (idx > 0) ctrls.push({ id: "__divider_"+cap.id, kind: "divider" as const, labelKey: "", fallback: "", getValue: () => false, setValue: () => {} });
+      if (idx > 0)
+        ctrls.push({
+          id: "__divider_" + cap.id,
+          kind: "divider" as const,
+          labelKey: "",
+          fallback: "",
+          getValue: () => false,
+          setValue: () => {},
+        });
       ctrls.push(...cap.getMenuControls());
     });
     renderCapControls(list, ctrls, previewSnapshot());
@@ -166,17 +217,26 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
   }
   const caps = orderedCaps(resolveCaps(ctx));
   rebuildEnvSubs(caps, menu); // 重建订阅：进入环境面板即刷新最新参数（含上一次会话遗留的 menu 引用清理）
-  if (caps.length === 0) { appendEnvEmpty(list); return; }
+  if (caps.length === 0) {
+    appendEnvEmpty(list);
+    return;
+  }
   const pb = document.createElement("div");
   pb.className = "ev-preset-bar";
   PRESET_ORDER.forEach((p) => {
     const btn = document.createElement("button");
-    btn.dataset.testid = "env-preset-"+p.id;
+    btn.dataset.testid = "env-preset-" + p.id;
     btn.className = "ev-preset-btn";
-    const ic = document.createElement("span"); ic.textContent = p.icon; ic.className = "ev-preset-icon";
-    const lb = document.createElement("span"); lb.textContent = tr(p.labelKey, p.id);
+    const ic = document.createElement("span");
+    ic.textContent = p.icon;
+    ic.className = "ev-preset-icon";
+    const lb = document.createElement("span");
+    lb.textContent = tr(p.labelKey, p.id);
     btn.append(ic, lb);
-    btn.onclick = (e: MouseEvent) => { e.stopPropagation(); applyPreset(ctx, p.id as Exclude<EnvPresetId, "custom">, menu); };
+    btn.onclick = (e: MouseEvent) => {
+      e.stopPropagation();
+      applyPreset(ctx, p.id as Exclude<EnvPresetId, "custom">, menu);
+    };
     pb.appendChild(btn);
   });
   list.appendChild(pb);
@@ -189,28 +249,55 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
     const hasSub = ctrls.length > 1;
     const row = document.createElement("div");
     row.className = "slide-item ev-row";
-    row.dataset.testid = "cap-row-"+cap.id;
+    row.dataset.testid = "cap-row-" + cap.id;
     // 动态豁免（P1）：hasSub 可点态 cursor 留内联属性——env.test.ts:122 断言 style.cursor，
     // 抽类无法被该 DOM 级断言读回（同 render.ts body.display 豁免范式）。
     row.style.cursor = hasSub ? "pointer" : "";
     if (primary.kind === "toggle") {
-      const lb = document.createElement("span"); lb.className = "slide-label ev-label-grow"; lb.textContent = tr(primary.labelKey, primary.fallback);
-      const tg = createHeaderToggle({ value: primary.getValue() as boolean, onChange: (v: boolean) => primary.setValue(v), bind: (): boolean => primary.getValue() as boolean });
+      const lb = document.createElement("span");
+      lb.className = "slide-label ev-label-grow";
+      lb.textContent = tr(primary.labelKey, primary.fallback);
+      const tg = createHeaderToggle({
+        value: primary.getValue() as boolean,
+        onChange: (v: boolean) => primary.setValue(v),
+        bind: (): boolean => primary.getValue() as boolean,
+      });
       tg.addEventListener("click", (e: MouseEvent) => e.stopPropagation());
       row.append(lb, tg);
     } else if (primary.kind === "slider") {
-      const hd = document.createElement("div"); hd.className = "ev-slider-host";
-      const nr = document.createElement("div"); nr.className = "ev-slider-meta";
-      const nm = document.createElement("span"); nm.className = "slide-label"; nm.textContent = tr(primary.labelKey, primary.fallback);
-      const vl = document.createElement("span"); const nv = primary.getValue() as number;
+      const hd = document.createElement("div");
+      hd.className = "ev-slider-host";
+      const nr = document.createElement("div");
+      nr.className = "ev-slider-meta";
+      const nm = document.createElement("span");
+      nm.className = "slide-label";
+      nm.textContent = tr(primary.labelKey, primary.fallback);
+      const vl = document.createElement("span");
+      const nv = primary.getValue() as number;
       vl.textContent = formatCapSliderValue(primary, nv);
       nr.append(nm, vl);
-      const sl = document.createElement("input"); sl.type = "range"; sl.min = String(primary.slider?.min??0); sl.max = String(primary.slider?.max??1); sl.step = String(primary.slider?.step??0.01); sl.value = String(nv); sl.className = "ev-range";
-      sl.oninput = (): void => { const v = Number(sl.value); primary.setValue(v); vl.textContent = formatCapSliderValue(primary, v); };
-      ["click","mousedown","touchstart"].forEach((ev) => sl.addEventListener(ev, (e: Event) => e.stopPropagation()));
-      hd.append(nr, sl); row.appendChild(hd);
+      const sl = document.createElement("input");
+      sl.type = "range";
+      sl.min = String(primary.slider?.min ?? 0);
+      sl.max = String(primary.slider?.max ?? 1);
+      sl.step = String(primary.slider?.step ?? 0.01);
+      sl.value = String(nv);
+      sl.className = "ev-range";
+      sl.oninput = (): void => {
+        const v = Number(sl.value);
+        primary.setValue(v);
+        vl.textContent = formatCapSliderValue(primary, v);
+      };
+      ["click", "mousedown", "touchstart"].forEach((ev) =>
+        sl.addEventListener(ev, (e: Event) => e.stopPropagation()),
+      );
+      hd.append(nr, sl);
+      row.appendChild(hd);
     } else {
-      const lb = document.createElement("span"); lb.className = "slide-label ev-label-grow"; lb.textContent = tr(cap.labelKey, cap.id); row.appendChild(lb);
+      const lb = document.createElement("span");
+      lb.className = "slide-label ev-label-grow";
+      lb.textContent = tr(cap.labelKey, cap.id);
+      row.appendChild(lb);
     }
     if (hasSub) {
       row.onclick = (): void => {
@@ -221,7 +308,9 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
           const idx = all.findIndex((cc) => cc.kind !== "divider");
           const subCtrls = all.filter((_, i) => i !== idx);
           const snap = previewSnapshot();
-          const groups = partitionCapControlsByGroup(cap, subCtrls, snap).filter((g) => g.ctrls.length > 0);
+          const groups = partitionCapControlsByGroup(cap, subCtrls, snap).filter(
+            (g) => g.ctrls.length > 0,
+          );
           if (groups.length <= 1) {
             // 无分组（或仅剩单组）：保持原平铺下钻
             subList.replaceChildren();
@@ -251,7 +340,9 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
                   const cur = cap.getMenuControls();
                   const cidx = cur.findIndex((cc) => cc.kind !== "divider");
                   const csub = cur.filter((_, i) => i !== cidx);
-                  const grp = partitionCapControlsByGroup(cap, csub, previewSnapshot()).find((x) => x.key === key);
+                  const grp = partitionCapControlsByGroup(cap, csub, previewSnapshot()).find(
+                    (x) => x.key === key,
+                  );
                   if (!grp) return;
                   // 剥掉 group 字段，避免 renderCapControls 再包一层同名 section
                   const flat = grp.ctrls.map(({ group: _grp, ...rest }) => rest);
@@ -264,7 +355,11 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
         };
         menu.navigate({ title: tr(cap.labelKey, cap.id), render: renderSub });
       };
-      const ch = document.createElement("span"); ch.textContent = "›"; ch.dataset.testid = "row-chevron"; ch.className = "ev-chevron"; row.appendChild(ch);
+      const ch = document.createElement("span");
+      ch.textContent = "›";
+      ch.dataset.testid = "row-chevron";
+      ch.className = "ev-chevron";
+      row.appendChild(ch);
     }
     list.appendChild(row);
   }
@@ -276,14 +371,16 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
  *  schemaBuilders 路径 menu 必传（走两级菜单分支）；renderEnvLevel 平铺回退保留
  *  给 legacy 调用方（测试/旧路径）保留，暂不删。 */
 export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
-  return [{
-    id: "environment",
-    kind: "custom",
-    labelKey: "preview.environment",
-    fallback: "环境",
-    icon: "🌍",
-    renderCustom: (list: HTMLElement): void => {
-      renderEnvLevel(list, ctx, menu);
+  return [
+    {
+      id: "environment",
+      kind: "custom",
+      labelKey: "preview.environment",
+      fallback: "环境",
+      icon: "🌍",
+      renderCustom: (list: HTMLElement): void => {
+        renderEnvLevel(list, ctx, menu);
+      },
     },
-  }];
+  ];
 }

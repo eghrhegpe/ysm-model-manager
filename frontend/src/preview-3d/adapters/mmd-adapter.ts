@@ -7,17 +7,18 @@
 
 import { dbg } from "../../utils/debug/debug.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import { mdMmStage4Anim } from "./mmd-build-anim.ts";
 import { mdMmDetectFormat, mdMmStage1Input, mdMmStage2LoadingManager } from "./mmd-build-load.ts";
-import { mdMmStage3SceneMesh } from "./mmd-build-scene.ts";
+import { mdMmStage5Menu } from "./mmd-build-menu.ts";
 import { mdMmParsePmdStage, mdMmParsePmxStage } from "./mmd-build-parse.ts";
 import { mdMmStage6Result } from "./mmd-build-result.ts";
-import { mdMmStage4Anim } from "./mmd-build-anim.ts";
-import { mdMmStage5Menu } from "./mmd-build-menu.ts";
+import { mdMmStage3SceneMesh } from "./mmd-build-scene.ts";
 import type { MdMmBuildCtx, MmdAdapterDeps, MmdDataPort, MmdPanelHooks } from "./mmd-types.ts";
-// —— 公共面 re-export（ADR-167：消费者零改动：mmd-3d/scene-3d/test 均经此壳）——
-export type { MmdDataPort, MmdPanelHooks, MmdMenuItemsOpts, MmdAdapterDeps } from "./mmd-types.ts";
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+
 export { mmdMenuItems } from "./mmd-build-menu.ts";
+// —— 公共面 re-export（ADR-167：消费者零改动：mmd-3d/scene-3d/test 均经此壳）——
+export type { MmdAdapterDeps, MmdDataPort, MmdMenuItemsOpts, MmdPanelHooks } from "./mmd-types.ts";
 export async function buildMmdScene(
   ctx: PreviewBuildCtx,
   path: string,

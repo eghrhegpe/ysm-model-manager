@@ -28,6 +28,7 @@
 //   - bloom / pmrem / wireframe 走 cap 的 get/set 派生映射，本层不落盘；
 //     cap 存自己的域（cap.saveState），本层不重复存
 
+import { safeSet } from "../../utils/dom/storage.ts";
 // [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters 平铺的 preview-menu-node-types.ts，
 // state 反向 import adapters → 类型归位 state，adapters 反过来前向 import state，方向正）
 // [ADR-168] 状态层不 import 组合根单例（scene-capability-registry）——cap 查询走注入点
@@ -36,23 +37,22 @@ import type { SceneCapability, SceneCapabilityLookup } from "../caps/scene-capab
 import { isFrustumCullEnabled, setFrustumCullEnabled } from "../frustum-cull.ts";
 import {
   getMaxFps,
-  invalidateMaxFpsCache,
-  MAX_FPS_KEY,
-  MAX_FPS_DEFAULT,
   getMaxPixelRatio,
+  invalidateMaxFpsCache,
+  MAX_FPS_DEFAULT,
+  MAX_FPS_KEY,
   MAX_PIXEL_RATIO_KEY,
 } from "../render-budget.ts";
-import { safeSet } from "../../utils/dom/storage.ts";
-
+import type { PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 // [ADR-168 二期] KNOWN_PATHS / PreviewStatePath / PreviewSnapshot 已下沉零依赖叶子
 // preview-paths.ts（断 caps/scene-capability ⇄ preview-state 纯 type 环）：
 // 本文件 import KNOWN_PATHS 供 bindings 注册 / previewSnapshot() 遍历，并 re-export
 // 三件套保既有公共面——外部消费者（menu/caps/adapters）的 import 语句零改动。
 // （re-export 拆值/类型两行：gen-knowledge-autogen 的 reRe 正则不识别花括号内 `type X`。）
 import { KNOWN_PATHS } from "./preview-paths.ts";
-import type { PreviewStatePath, PreviewSnapshot } from "./preview-paths.ts";
+
+export type { PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 export { KNOWN_PATHS } from "./preview-paths.ts";
-export type { PreviewStatePath, PreviewSnapshot } from "./preview-paths.ts";
 
 /**
  * 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。
@@ -148,7 +148,10 @@ interface WaterModeCap {
 function waterCap(): WaterModeCap | undefined {
   const cap: SceneCapability | undefined = capById("water");
   if (!cap) return undefined;
-  if (!hasMethod<WaterModeCap>(cap, "getWaterMode") || !hasMethod<WaterModeCap>(cap, "setWaterMode")) {
+  if (
+    !hasMethod<WaterModeCap>(cap, "getWaterMode") ||
+    !hasMethod<WaterModeCap>(cap, "setWaterMode")
+  ) {
     return undefined;
   }
   return cap as unknown as WaterModeCap;
@@ -162,7 +165,10 @@ interface GroundMatCap {
 function groundMatCap(): GroundMatCap | undefined {
   const cap: SceneCapability | undefined = capById("ground");
   if (!cap) return undefined;
-  if (!hasMethod<GroundMatCap>(cap, "getMatSource") || !hasMethod<GroundMatCap>(cap, "setMatSource")) {
+  if (
+    !hasMethod<GroundMatCap>(cap, "getMatSource") ||
+    !hasMethod<GroundMatCap>(cap, "setMatSource")
+  ) {
     return undefined;
   }
   return cap as unknown as GroundMatCap;
@@ -171,7 +177,7 @@ function groundMatCap(): GroundMatCap | undefined {
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）
  *  类型用窄联合（`typeof KNOWN_PATHS[number]`）而非 `PreviewStatePath` 全集——
  *  保证"加新路径"必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住"调用方永不传未落地项" */
-const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
+const bindings: Record<(typeof KNOWN_PATHS)[number], PreviewStatePathBinding> = {
   // ── 横切项：无 cap 归属，本层直管持久化 ──
   "render.frustumCull": {
     get: () => isFrustumCullEnabled(),
@@ -216,7 +222,7 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
         setMasterEnabled?: (v: boolean) => void;
       };
       if (master.setMasterEnabled) {
-        master.setMasterEnabled(Boolean(v) ? (master.getParams?.()?.enabled ?? true) : false);
+        master.setMasterEnabled(v ? (master.getParams?.()?.enabled ?? true) : false);
       } else {
         cap.setEnabled(Boolean(v));
       }
@@ -283,7 +289,7 @@ export function resetActiveComponent(): void {
 
 // ── 订阅（供后续取代 05fe24b7 的手工 refresh 链路）──
 
-type PreviewStateListener = (changed: typeof KNOWN_PATHS[number]) => void;
+type PreviewStateListener = (changed: (typeof KNOWN_PATHS)[number]) => void;
 const listeners = new Set<PreviewStateListener>();
 
 /** 订阅横切设置变更；返回取消订阅函数 */
@@ -295,7 +301,7 @@ export function subscribeSettings(listener: PreviewStateListener): () => void {
 }
 
 /** 通知变更（离散操作调用；高频滑块拖动请传 `{ notify: false }` 给 setStateValue） */
-function notify(changed: typeof KNOWN_PATHS[number]): void {
+function notify(changed: (typeof KNOWN_PATHS)[number]): void {
   for (const l of [...listeners]) {
     try {
       l(changed);
@@ -308,7 +314,7 @@ function notify(changed: typeof KNOWN_PATHS[number]): void {
 // ── 对外 API ──
 
 /** 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） */
-export function getStateValue(path: typeof KNOWN_PATHS[number]): unknown {
+export function getStateValue(path: (typeof KNOWN_PATHS)[number]): unknown {
   return bindings[path].get();
 }
 
@@ -318,7 +324,7 @@ export function getStateValue(path: typeof KNOWN_PATHS[number]): unknown {
  *   避免每像素触发面板重算（沿用 SceneCapability.subscribe 的「仅离散操作通知」约定）。
  */
 export function setStateValue(
-  path: typeof KNOWN_PATHS[number],
+  path: (typeof KNOWN_PATHS)[number],
   value: unknown,
   opts?: { notify?: boolean },
 ): void {
@@ -333,7 +339,7 @@ export function setStateValue(
 }
 
 /** 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） */
-export function isPathAvailable(path: typeof KNOWN_PATHS[number]): boolean {
+export function isPathAvailable(path: (typeof KNOWN_PATHS)[number]): boolean {
   return bindings[path].available();
 }
 

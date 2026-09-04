@@ -15,10 +15,10 @@
 // - 输入框守卫：焦点在 INPUT/TEXTAREA/SELECT/contentEditable 时不记录键位、
 //   不 preventDefault——3D 面板内文本框打字不再被吞（修复：w/a/s/d 无法输入）。
 
-import * as THREE from "three";
-import type { PostprocessingLike } from "./postprocessing.ts";
-import { loadTdKeymap, type TdKeyAction } from "../keymap.ts";
+import type * as THREE from "three";
 import { isInputBlocked } from "../../utils/dom/focus-restore.ts";
+import { loadTdKeymap, type TdKeyAction } from "../keymap.ts";
+import type { PostprocessingLike } from "./postprocessing.ts";
 
 // ---------------------------------------------------------------------------
 // 类型
@@ -101,12 +101,7 @@ export function isEditableTarget(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
   if (!t) return false;
   const tag = t.tagName;
-  return (
-    tag === "INPUT" ||
-    tag === "TEXTAREA" ||
-    tag === "SELECT" ||
-    t.isContentEditable === true
-  );
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable === true;
 }
 
 /** code 是否为修饰键（左/右 Shift/Ctrl/Alt）：修饰键不 preventDefault（只记录状态） */
@@ -184,7 +179,8 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
   };
   const onDragPointerUp = (e: PointerEvent): void => {
     opts.mouseDown.v = false;
-    if (rd.domElement.hasPointerCapture(e.pointerId)) rd.domElement.releasePointerCapture(e.pointerId);
+    if (rd.domElement.hasPointerCapture(e.pointerId))
+      rd.domElement.releasePointerCapture(e.pointerId);
   };
   const onDragPointerMove = (e: PointerEvent): void => {
     if (opts.getOrbitMode() || !opts.mouseDown.v) return;

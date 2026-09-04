@@ -25,7 +25,11 @@ export function parseYsmJsonDirect(json: unknown): DecodedYsm | null {
     spec?: unknown;
     files?: { player?: { model?: unknown; texture?: unknown } };
     metadata?: { authors?: Array<{ name?: string; role?: string; avatar?: string }> };
-    properties?: { texture_width?: number; texture_height?: number; default_texture?: string | null };
+    properties?: {
+      texture_width?: number;
+      texture_height?: number;
+      default_texture?: string | null;
+    };
     minecraft?: { geometry?: unknown[] };
     geometry?: { model?: unknown };
   };
@@ -47,18 +51,26 @@ export function parseYsmJsonDirect(json: unknown): DecodedYsm | null {
     // R1 契约对齐（2026-08-10）：default_texture 置首（与 Go 端 orderTexByYSM / wasm.ts
     // orderedTexKeys 一致），防「声明序 ≠ 包内文件序」的模型 main 组件贴错纹理
     {
-      const defTex = typeof obj?.properties?.default_texture === "string"
-        ? obj.properties.default_texture.split("/").pop() ?? null
-        : null;
+      const defTex =
+        typeof obj?.properties?.default_texture === "string"
+          ? (obj.properties.default_texture.split("/").pop() ?? null)
+          : null;
       if (defTex) {
         const defBase = defTex.replace(/\.\w+$/, "").toLowerCase();
         const texBase = (t: unknown): string => {
-          const raw = typeof t === "string"
-            ? t
-            : t && typeof t === "object" && "uv" in t
-              ? String((t as { uv: unknown }).uv)
-              : "";
-          return raw.split("/").pop()?.replace(/\.\w+$/, "").toLowerCase() ?? "";
+          const raw =
+            typeof t === "string"
+              ? t
+              : t && typeof t === "object" && "uv" in t
+                ? String((t as { uv: unknown }).uv)
+                : "";
+          return (
+            raw
+              .split("/")
+              .pop()
+              ?.replace(/\.\w+$/, "")
+              .toLowerCase() ?? ""
+          );
         };
         const di = texFiles.findIndex((t) => texBase(t) === defBase);
         if (di > 0) {

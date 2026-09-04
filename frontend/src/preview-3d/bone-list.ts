@@ -1,7 +1,8 @@
 // ===== 3D 骨骼列表（从 model3d.ts 拆出，ADR-040 P1 第3轮）=====
 // 提供 spec 中骨骼的只读列表接口。
-import type { Spec3D, SpecBone3D } from "./model3d.ts";
+
 import { compKey } from "./mesh.ts";
+import type { Spec3D, SpecBone3D } from "./model3d.ts";
 
 /** getBoneList 返回的扁平骨骼信息 */
 export interface BoneInfoLite {

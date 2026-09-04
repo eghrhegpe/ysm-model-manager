@@ -5,9 +5,9 @@
 // 向上找最近的人类骨骼节点推导 parentId（rig 层级即真实父子关系）。
 // 纯数据提取：无 backend import、无 DOM、不渲染 UI。
 
-import * as THREE from "three";
 import type { VRM } from "@pixiv/three-vrm";
-import { buildBoneTree, type BoneNode, type BoneTree } from "../bone-tools.ts";
+import type * as THREE from "three";
+import { type BoneNode, type BoneTree, buildBoneTree } from "../bone-tools.ts";
 
 /** 标准 Humanoid bones 数量上限（VRMSpec 定义 52 个；防御守卫用） */
 const MAX_HUMANOID_BONES = 52;

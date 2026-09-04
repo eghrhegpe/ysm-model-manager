@@ -9,19 +9,15 @@
 // （数据来源见 mc-tints.ts / ADR-080 §5.4；tintindex 仅作"需染色"布尔，值非类别索引）。
 
 import * as THREE from "three";
-import {
-  parseJavaModel,
-  isRenderableModel,
-  type JavaModelResult,
-} from "../parse-java-model.ts";
-import { screenshotFromRenderer } from "../screenshot.ts";
-import { loadMcTints, getTintColorSync } from "../mc-tints.ts";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { multiModelSelectNode } from "../menu/multi-model.ts";
-import { textureCache } from "../texture-cache.ts";
-import { safeDispose } from "../safe-dispose.ts";
 import { frameCameraSide } from "../camera-setup.ts";
+import { getTintColorSync, loadMcTints } from "../mc-tints.ts";
+import { multiModelSelectNode } from "../menu/multi-model.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
+import { isRenderableModel, type JavaModelResult, parseJavaModel } from "../parse-java-model.ts";
+import { safeDispose } from "../safe-dispose.ts";
+import { screenshotFromRenderer } from "../screenshot.ts";
+import { textureCache } from "../texture-cache.ts";
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 
 /** Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） */
 export interface PackDeps {
@@ -63,7 +59,11 @@ interface PackState {
 }
 
 /** 工厂：适配器持 zipPath（容器路径）+ 可选多模型候选（ADR-132），buildPath 即 entry path（虚拟文件夹下的文件路径） */
-export function makePackAdapter(deps: PackDeps, zipPath: string, opts?: PackAdapterOpts): PreviewAdapter {
+export function makePackAdapter(
+  deps: PackDeps,
+  zipPath: string,
+  opts?: PackAdapterOpts,
+): PreviewAdapter {
   return {
     id: "resourcepack",
     build: (ctx, buildPath) => buildPackScene(ctx, buildPath, deps, zipPath, opts),
@@ -98,7 +98,9 @@ async function loadTexture(
     t.magFilter = THREE.NearestFilter;
     t.minFilter = THREE.NearestFilter;
     const img = t.image as HTMLImageElement;
-    img.onload = (): void => { t.needsUpdate = true; };
+    img.onload = (): void => {
+      t.needsUpdate = true;
+    };
     img.src = u;
     return t;
   });
@@ -119,23 +121,48 @@ async function textureFor(
     if (face.texEntry) {
       const tex = await loadTexture(deps, path, face.texEntry, usedTextures);
       if (tex) {
-        return { mat: new THREE.MeshStandardMaterial({ map: tex, color, roughness: 1.0, metalness: 0.0 }), key: `tint:${cat}:${face.texEntry}` };
+        return {
+          mat: new THREE.MeshStandardMaterial({ map: tex, color, roughness: 1.0, metalness: 0.0 }),
+          key: `tint:${cat}:${face.texEntry}`,
+        };
       }
     }
     // 无纹理/读取失败：纯色兜底；water 半透明（MC 语义），其余不透明
     const isWater = cat === "water";
-    return { mat: new THREE.MeshStandardMaterial({ color, transparent: isWater, opacity: isWater ? 0.9 : 1.0, roughness: 1.0, metalness: 0.0 }), key: `tint:${cat}:` };
+    return {
+      mat: new THREE.MeshStandardMaterial({
+        color,
+        transparent: isWater,
+        opacity: isWater ? 0.9 : 1.0,
+        roughness: 1.0,
+        metalness: 0.0,
+      }),
+      key: `tint:${cat}:`,
+    };
   }
   if (face.texColor) {
-    return { mat: new THREE.MeshStandardMaterial({ color: parseInt(face.texColor.slice(1), 16), roughness: 1.0, metalness: 0.0 }), key: `color:${face.texColor}` };
+    return {
+      mat: new THREE.MeshStandardMaterial({
+        color: parseInt(face.texColor.slice(1), 16),
+        roughness: 1.0,
+        metalness: 0.0,
+      }),
+      key: `color:${face.texColor}`,
+    };
   }
   if (face.texEntry) {
     const tex = await loadTexture(deps, path, face.texEntry, usedTextures);
     if (tex) {
-      return { mat: new THREE.MeshStandardMaterial({ map: tex, roughness: 1.0, metalness: 0.0 }), key: `tex:${face.texEntry}` };
+      return {
+        mat: new THREE.MeshStandardMaterial({ map: tex, roughness: 1.0, metalness: 0.0 }),
+        key: `tex:${face.texEntry}`,
+      };
     }
   }
-  return { mat: new THREE.MeshStandardMaterial({ color: NO_TEX_FALLBACK, roughness: 1.0, metalness: 0.0 }), key: "fallback" };
+  return {
+    mat: new THREE.MeshStandardMaterial({ color: NO_TEX_FALLBACK, roughness: 1.0, metalness: 0.0 }),
+    key: "fallback",
+  };
 }
 
 /** 构建单个模型的内容 group（面 → 合并 BufferGeometry + Material，按材质签名去重） */
@@ -151,7 +178,10 @@ async function buildModelGroup(
   // 按材质签名分组面：同材质的面合并为单一 BufferGeometry，减少 draw call
   // 原实现：每面独立 Mesh（100 面 = 100 draw call）→ 合并后：每材质 1 个 Mesh（通常 1-5 draw call）
   // 修复：用材质签名 key 分组（原实现按 Material 对象引用分组，每面新实例 → 永远不命中）
-  const matFaces = new Map<string, { mat: THREE.Material; faces: Array<typeof model.faces[number]> }>();
+  const matFaces = new Map<
+    string,
+    { mat: THREE.Material; faces: Array<(typeof model.faces)[number]> }
+  >();
   for (const f of model.faces) {
     const { mat, key } = await textureFor(deps, path, f, usedTextures);
     const existing = matFaces.get(key);
@@ -201,7 +231,11 @@ function disposeContent(state: PackState, scene: THREE.Scene): void {
     d.traverse((o) => {
       const mesh = o as THREE.Mesh;
       safeDispose(mesh.geometry);
-      const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+      const mats = Array.isArray(mesh.material)
+        ? mesh.material
+        : mesh.material
+          ? [mesh.material]
+          : [];
       for (const m of mats) {
         safeDispose(m);
       }
@@ -220,7 +254,7 @@ async function buildPackScene(
   ctx: PreviewBuildCtx,
   entryPath: string, // ADR-084 L2：zip 内模型路径（虚拟文件夹下的文件路径）
   deps: PackDeps,
-  zipPath: string,   // 容器路径（.zip 文件路径）
+  zipPath: string, // 容器路径（.zip 文件路径）
   opts?: PackAdapterOpts,
 ): Promise<PreviewScene> {
   if (!ctx.scene || !ctx.camera || !ctx.controls || !ctx.renderer) {
@@ -342,8 +376,7 @@ async function buildPackScene(
     },
     setRotationMode: (orbit: boolean) => ctx.cameraControls?.setOrbit(orbit),
     setSpeed: (n: number) => ctx.cameraControls?.setSpeed(n),
-    screenshot: () =>
-      Promise.resolve(screenshotFromRenderer(ctx.renderer, ctx.scene, ctx.camera)),
+    screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer, ctx.scene, ctx.camera)),
   };
 }
 

@@ -4,24 +4,27 @@
 // 旋转工具已进一步拆至 quaternion.ts（ADR-040 ≤400 行红线），此处 re-export 保兼容。
 // ADR-052 P3: 坐标口径收敛——骨骼位置计算统一为此模块导出工具。
 
-import type { Cube2D, MeshData, Vec3 } from "./spec-builder.ts";
-import { eulerToQuaternion } from "./quaternion.ts";
 import { CUBE_EPS } from "./model3d-spec.ts";
+import { eulerToQuaternion } from "./quaternion.ts";
+import type { Cube2D, MeshData, Vec3 } from "./spec-builder.ts";
 
 /**
  * 计算骨骼本地位置（对齐 YSMViewer/C# ConvertBones 口径）。
- * 
+ *
  * 公式：
  * - 有父骨骼：localPos = (parent.pivot.x - bone.pivot.x, bone.pivot.y - parent.pivot.y, bone.pivot.z - parent.pivot.z)
  * - 无父骨骼：localPos = (-bone.pivot.x, bone.pivot.y, bone.pivot.z)
- * 
+ *
  * X 轴翻转是 ysmview 口径的关键特征（trap #11 反复修的根源）。
- * 
+ *
  * @param bonePivot 骨骼自身 pivot
  * @param parentPivot 父骨骼 pivot（null 表示根骨骼）
  * @returns [x, y, z] 本地位置
  */
-export function computeBoneLocalPos(bonePivot: Vec3, parentPivot: Vec3 | null): [number, number, number] {
+export function computeBoneLocalPos(
+  bonePivot: Vec3,
+  parentPivot: Vec3 | null,
+): [number, number, number] {
   if (parentPivot) {
     return [parentPivot.x - bonePivot.x, bonePivot.y - parentPivot.y, bonePivot.z - parentPivot.z];
   }
@@ -29,7 +32,7 @@ export function computeBoneLocalPos(bonePivot: Vec3, parentPivot: Vec3 | null): 
 }
 
 // 旋转工具 re-export（spec-builder.ts / model-group-builder.ts 仍自本文件取，消费方零改动）
-export { eulerToQuaternion, isIdentityQuat, hasBoneRotation } from "./quaternion.ts";
+export { eulerToQuaternion, hasBoneRotation, isIdentityQuat } from "./quaternion.ts";
 
 /** 零厚度面修正值（避免 Three.js 渲染零面积面）——收敛于 model3d-spec.ts 的 CUBE_EPS 单点 */
 const THICKNESS_EPSILON = CUBE_EPS;
@@ -56,16 +59,45 @@ function assertFinite(vals: number[], label: string): boolean {
 const CUBE_EPSILON = CUBE_EPS;
 
 type FaceUV8 = [number, number, number, number, number, number, number, number];
-type FaceKey = 'east' | 'west' | 'up' | 'down' | 'south' | 'north';
-interface OriginSizeResult { ox: number; oy: number; oz: number; sx: number; sy: number; sz: number; }
-interface PivotVerticesResult { cp: [number, number, number]; lx: number; ly: number; lz: number; hx: number; hy: number; hz: number; }
+type FaceKey = "east" | "west" | "up" | "down" | "south" | "north";
+interface OriginSizeResult {
+  ox: number;
+  oy: number;
+  oz: number;
+  sx: number;
+  sy: number;
+  sz: number;
+}
+interface PivotVerticesResult {
+  cp: [number, number, number];
+  lx: number;
+  ly: number;
+  lz: number;
+  hx: number;
+  hy: number;
+  hz: number;
+}
 
 // ===== 子函数：origin/size 预处理 =====
 function mdCmPrepOriginSize(c: Cube2D, boneID: string, cubeIdx: number): OriginSizeResult | null {
-  if (!assertFinite(
-    [c.origin[0], c.origin[1], c.origin[2], c.size[0], c.size[1], c.size[2], c.pivot[0], c.pivot[1], c.pivot[2], c.inflate],
-    `非有限数值 bone=${boneID} cube=${cubeIdx}`,
-  )) return null;
+  if (
+    !assertFinite(
+      [
+        c.origin[0],
+        c.origin[1],
+        c.origin[2],
+        c.size[0],
+        c.size[1],
+        c.size[2],
+        c.pivot[0],
+        c.pivot[1],
+        c.pivot[2],
+        c.inflate,
+      ],
+      `非有限数值 bone=${boneID} cube=${cubeIdx}`,
+    )
+  )
+    return null;
 
   let ox = c.origin[0];
   let oy = c.origin[1];
@@ -84,10 +116,8 @@ function mdCmPrepOriginSize(c: Cube2D, boneID: string, cubeIdx: number): OriginS
     sy += 2 * c.inflate;
     sz += 2 * c.inflate;
   }
-  if (!assertFinite(
-    [ox, oy, oz, sx, sy, sz],
-    `inflate 运算溢出 bone=${boneID} cube=${cubeIdx}`,
-  )) return null;
+  if (!assertFinite([ox, oy, oz, sx, sy, sz], `inflate 运算溢出 bone=${boneID} cube=${cubeIdx}`))
+    return null;
   if (sx < THICKNESS_EPSILON) sx = THICKNESS_EPSILON;
   if (sy < THICKNESS_EPSILON) sy = THICKNESS_EPSILON;
   if (sz < THICKNESS_EPSILON) sz = THICKNESS_EPSILON;
@@ -97,7 +127,9 @@ function mdCmPrepOriginSize(c: Cube2D, boneID: string, cubeIdx: number): OriginS
 
 // ===== 子函数：pivot 处理 + 顶点派生 =====
 function mdCmPrepPivotAndVertices(
-  c: Cube2D, boneID: string, cubeIdx: number,
+  c: Cube2D,
+  boneID: string,
+  cubeIdx: number,
   os: OriginSizeResult,
 ): PivotVerticesResult | null {
   const { ox, oy, oz, sx, sy, sz } = os;
@@ -108,12 +140,13 @@ function mdCmPrepPivotAndVertices(
     cp = [ox + sx * 0.5, oy + sy * 0.5, oz + sz * 0.5];
   }
 
-  const fx = ox, fy = oy, fz = oz;
-  const tx = ox + sx, ty = fy + sy, tz = fz + sz;
-  if (!assertFinite(
-    [tx, ty, tz],
-    `顶点派生溢出 bone=${boneID} cube=${cubeIdx}`,
-  )) return null;
+  const fx = ox,
+    fy = oy,
+    fz = oz;
+  const tx = ox + sx,
+    ty = fy + sy,
+    tz = fz + sz;
+  if (!assertFinite([tx, ty, tz], `顶点派生溢出 bone=${boneID} cube=${cubeIdx}`)) return null;
 
   const cx = (fx + tx) * 0.5;
   const cy = (fy + ty) * 0.5;
@@ -122,9 +155,9 @@ function mdCmPrepPivotAndVertices(
   const hy2 = (ty - fy) * 0.5;
   const hz2 = (tz - fz) * 0.5;
 
-  let lx = cx - hx2 - cp[0];
-  let ly = cy - hy2 - cp[1];
-  let lz = cz - hz2 - cp[2];
+  const lx = cx - hx2 - cp[0];
+  const ly = cy - hy2 - cp[1];
+  const lz = cz - hz2 - cp[2];
   let hx = cx + hx2 - cp[0];
   let hy = cy + hy2 - cp[1];
   let hz = cz + hz2 - cp[2];
@@ -148,27 +181,27 @@ function mdCmBuildFace(
   let n: [number, number, number];
 
   switch (faceKey) {
-    case 'east':
+    case "east":
       v = [hx, hy, hz, hx, hy, lz, hx, ly, hz, hx, ly, lz];
       n = [1, 0, 0];
       break;
-    case 'west':
+    case "west":
       v = [lx, hy, lz, lx, hy, hz, lx, ly, lz, lx, ly, hz];
       n = [-1, 0, 0];
       break;
-    case 'up':
+    case "up":
       v = [lx, hy, lz, hx, hy, lz, lx, hy, hz, hx, hy, hz];
       n = [0, 1, 0];
       break;
-    case 'down':
+    case "down":
       v = [lx, ly, hz, hx, ly, hz, lx, ly, lz, hx, ly, lz];
       n = [0, -1, 0];
       break;
-    case 'south':
+    case "south":
       v = [lx, hy, hz, hx, hy, hz, lx, ly, hz, hx, ly, hz];
       n = [0, 0, 1];
       break;
-    case 'north':
+    case "north":
       v = [hx, hy, lz, lx, hy, lz, hx, ly, lz, lx, ly, lz];
       n = [0, 0, -1];
       break;
@@ -179,7 +212,16 @@ function mdCmBuildFace(
   for (let r = 0; r < 4; r++) {
     out.normals.push(n[0], n[1], n[2]);
   }
-  out.uvs.push(uvData[0], uvData[1], uvData[2], uvData[3], uvData[4], uvData[5], uvData[6], uvData[7]);
+  out.uvs.push(
+    uvData[0],
+    uvData[1],
+    uvData[2],
+    uvData[3],
+    uvData[4],
+    uvData[5],
+    uvData[6],
+    uvData[7],
+  );
   out.indices.push(bi, bi + 2, bi + 1, bi + 2, bi + 3, bi + 1);
 }
 
@@ -208,9 +250,12 @@ export function buildCubeMeshData(
   const { cp, lx, ly, lz, hx, hy, hz } = pv;
 
   const faceUVs: FaceUV8[] = [
-    [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
   ];
   const hasUV = parseUV(c, faceUVs, c.size[0], c.size[1], c.size[2], texW, texH);
   if (c.mirror) {
@@ -229,7 +274,7 @@ export function buildCubeMeshData(
   const uvs: number[] = [];
   const indices: number[] = [];
   const out = { positions, normals, uvs, indices };
-  const faceKeys: FaceKey[] = ['east', 'west', 'up', 'down', 'south', 'north'];
+  const faceKeys: FaceKey[] = ["east", "west", "up", "down", "south", "north"];
   const pts = { lx, ly, lz, hx, hy, hz };
 
   for (let fi = 0; fi < faceKeys.length; fi++) {
@@ -238,7 +283,11 @@ export function buildCubeMeshData(
   }
 
   const meshID = boneID + "_" + cubeIdx;
-  const localPos: [number, number, number] = [bonePivot.x + cp[0], cp[1] - bonePivot.y, cp[2] - bonePivot.z];
+  const localPos: [number, number, number] = [
+    bonePivot.x + cp[0],
+    cp[1] - bonePivot.y,
+    cp[2] - bonePivot.z,
+  ];
   const localRot = eulerToQuaternion(-c.rotation[0], -c.rotation[1], c.rotation[2]);
 
   return {
@@ -314,12 +363,18 @@ function parseUV(
 // ===== 内部辅助函数 =====
 
 function cubesOverlap(a: Cube2D, b: Cube2D): boolean {
-  return floatEqual(a.origin, b.origin, CUBE_EPSILON) &&
+  return (
+    floatEqual(a.origin, b.origin, CUBE_EPSILON) &&
     floatEqual(a.size, b.size, CUBE_EPSILON) &&
-    floatEqual(a.rotation, b.rotation, CUBE_EPSILON);
+    floatEqual(a.rotation, b.rotation, CUBE_EPSILON)
+  );
 }
 
-function floatEqual(a: [number, number, number], b: [number, number, number], eps: number): boolean {
+function floatEqual(
+  a: [number, number, number],
+  b: [number, number, number],
+  eps: number,
+): boolean {
   for (let i = 0; i < 3; i++) {
     let v = a[i] - b[i];
     if (v < 0) v = -v;
@@ -341,15 +396,17 @@ function expandBoxUV(
   if (texW <= 0 || texH <= 0) return false;
   const u = uv[0];
   const v = uv[1];
-  const x = sx, y = sy, z = sz;
+  const x = sx,
+    y = sy,
+    z = sz;
 
   const uvData: { fu: number; fv: number; fw: number; fh: number; f: number }[] = [
-    { fu: u, fv: v + z, fw: z, fh: y, f: 0 },             // East
-    { fu: u + z + x, fv: v + z, fw: z, fh: y, f: 1 },     // West
-    { fu: u + z + x, fv: v + z, fw: -x, fh: -z, f: 2 },   // Up
-    { fu: u + z + x + x, fv: v, fw: -x, fh: z, f: 3 },    // Down
+    { fu: u, fv: v + z, fw: z, fh: y, f: 0 }, // East
+    { fu: u + z + x, fv: v + z, fw: z, fh: y, f: 1 }, // West
+    { fu: u + z + x, fv: v + z, fw: -x, fh: -z, f: 2 }, // Up
+    { fu: u + z + x + x, fv: v, fw: -x, fh: z, f: 3 }, // Down
     { fu: u + z + z + x, fv: v + z, fw: x, fh: y, f: 4 }, // South
-    { fu: u + z, fv: v + z, fw: x, fh: y, f: 5 },         // North
+    { fu: u + z, fv: v + z, fw: x, fh: y, f: 5 }, // North
   ];
 
   for (const d of uvData) {
@@ -382,7 +439,8 @@ function parseFaceUV(
     if (!fd || !fd.uv || fd.uv.length < 2) continue;
     const fu = fd.uv[0];
     const fv = fd.uv[1];
-    let fw = 0, fh = 0;
+    let fw = 0,
+      fh = 0;
     if (fd.uv_size && fd.uv_size.length >= 2) {
       fw = fd.uv_size[0];
       fh = fd.uv_size[1];

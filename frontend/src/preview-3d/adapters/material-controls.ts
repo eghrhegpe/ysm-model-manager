@@ -18,7 +18,15 @@ export interface MaterialBridgeLike {
 export function materialNodes(bridge: MaterialBridgeLike): PreviewMenuNode[] {
   const items = bridge.list();
   if (items.length === 0) {
-    return [{ id: "mat-empty", kind: "field" as const, labelKey: "preview.noMaterial", fallback: "（无材质）", value: "" }];
+    return [
+      {
+        id: "mat-empty",
+        kind: "field" as const,
+        labelKey: "preview.noMaterial",
+        fallback: "（无材质）",
+        value: "",
+      },
+    ];
   }
   return items.map((it) => ({
     id: `mat-${it.index}`,

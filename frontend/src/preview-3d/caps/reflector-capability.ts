@@ -9,10 +9,10 @@
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import {
-  type SceneCapability,
   type MenuControlDef,
   persistState,
   restoreState,
+  type SceneCapability,
 } from "./scene-capability.ts";
 
 export interface ReflectorParams {
@@ -46,23 +46,38 @@ export const REFLECTOR_PRESETS: Record<string, Partial<ReflectorParams>> = {
   default: { ...DEFAULT_REFLECTOR_PARAMS },
   ysm: {
     // 方块：弱反射，避免镜面太强抢主体
-    opacity: 0.25, size: 200, resolution: 512, color: 0xf0f4fa,
+    opacity: 0.25,
+    size: 200,
+    resolution: 512,
+    color: 0xf0f4fa,
   },
   vrm: {
     // PBR 角色：中等反射 + 暖调
-    opacity: 0.5, size: 60, resolution: 1024, color: 0xf8efe2,
+    opacity: 0.5,
+    size: 60,
+    resolution: 1024,
+    color: 0xf8efe2,
   },
   mmd: {
     // toon：更弱，避免高光与反射冲突
-    opacity: 0.2, size: 80, resolution: 1024, color: 0xfafcff,
+    opacity: 0.2,
+    size: 80,
+    resolution: 1024,
+    color: 0xfafcff,
   },
   litematic: {
     // 体素：大平面 + 冷调
-    opacity: 0.25, size: 500, resolution: 512, color: 0xeaf1fb,
+    opacity: 0.25,
+    size: 500,
+    resolution: 512,
+    color: 0xeaf1fb,
   },
   resourcepack: {
     // MC 方块：同 YSM
-    opacity: 0.25, size: 200, resolution: 512, color: 0xf0f4fa,
+    opacity: 0.25,
+    size: 200,
+    resolution: 512,
+    color: 0xf0f4fa,
   },
 };
 
@@ -72,7 +87,8 @@ type ReflectorShaderDef = {
   vertexShader: string;
   fragmentShader: string;
 };
-const REFLECTOR_SHADER = (Reflector as typeof Reflector & { ReflectorShader: ReflectorShaderDef }).ReflectorShader;
+const REFLECTOR_SHADER = (Reflector as typeof Reflector & { ReflectorShader: ReflectorShaderDef })
+  .ReflectorShader;
 
 function rcBuildMain(cap: ReflectorCapability): MenuControlDef[] {
   return [
@@ -156,7 +172,9 @@ export class ReflectorCapability implements SceneCapability {
       .replace(alphaAnchor, "gl_FragColor = vec4( blendOverlay( base.rgb, color ), uOpacity );");
     const injectedOk = injectedFrag !== officialFrag && injectedFrag.includes("uOpacity");
     if (!injectedOk) {
-      console.warn("[reflector-cap] three ReflectorShader 锚点未匹配（three 升级？），opacity 注入失败，回退官方 shader");
+      console.warn(
+        "[reflector-cap] three ReflectorShader 锚点未匹配（three 升级？），opacity 注入失败，回退官方 shader",
+      );
       return false;
     }
     options.shader.fragmentShader = injectedFrag;
@@ -202,8 +220,12 @@ export class ReflectorCapability implements SceneCapability {
     if (this.reflector.dispose) {
       this.reflector.dispose();
     } else {
-      console.warn("[reflector-cap] Reflector.dispose 缺失，手动释放 render target（检查 three 升级）");
-      const r = this.reflector as Reflector & { getRenderTarget?: () => THREE.WebGLRenderTarget | null };
+      console.warn(
+        "[reflector-cap] Reflector.dispose 缺失，手动释放 render target（检查 three 升级）",
+      );
+      const r = this.reflector as Reflector & {
+        getRenderTarget?: () => THREE.WebGLRenderTarget | null;
+      };
       const rt = r.getRenderTarget?.();
       if (rt) {
         rt.texture.dispose();
@@ -290,7 +312,10 @@ export class ReflectorCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") { this.enabled = state.enabled; this.params.enabled = state.enabled; }
+    if (typeof state.enabled === "boolean") {
+      this.enabled = state.enabled;
+      this.params.enabled = state.enabled;
+    }
     if (typeof state.size === "number") this.params.size = state.size;
     if (typeof state.resolution === "number") this.params.resolution = state.resolution;
     if (typeof state.color === "number") this.params.color = state.color;

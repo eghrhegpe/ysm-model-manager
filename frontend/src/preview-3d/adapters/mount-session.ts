@@ -3,24 +3,24 @@
 // 提为接收 MountCtx 上下文的模块级函数（switch-preview.ts 的 SwitchContext 同款模式）。
 // 本文件仅承载「会话终结/清理/卸载」生命周期；菜单/rAF/外壳装配仍归 mount-preview-core。
 
+import { returnFocus } from "../../utils/dom/focus-restore.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { clearModelRoots } from "../frustum-cull.ts";
-import { returnFocus } from "../../utils/dom/focus-restore.ts";
+import type { PreviewMenuHandle } from "../menu/core.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { textureCache } from "../texture-cache.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
-import type { PreviewMenuHandle } from "../menu/core.ts";
-import { removePerFrame, stopIfIdle } from "./render-loop.ts";
-import { sceneRegistry } from "./scene-registry.ts";
 import type {
   Mount3DOptions,
   PreviewAdapter,
   PreviewHandle,
   PreviewScene,
 } from "./mount-preview-core.ts";
+import { removePerFrame, stopIfIdle } from "./render-loop.ts";
+import { sceneRegistry } from "./scene-registry.ts";
 import type { SharedInfra } from "./shared-infra.ts";
-import type { SwitchContext } from "./switch-preview.ts";
 import { clearSceneCaps } from "./shared-infra.ts";
+import type { SwitchContext } from "./switch-preview.ts";
 import { unloadModel } from "./unload-model.ts";
 
 /**

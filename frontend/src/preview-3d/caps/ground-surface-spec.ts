@@ -14,7 +14,16 @@ import type * as THREE from "three";
 /* ============ 类型 ============ */
 
 /** 地面表面模式（扁平枚举：来源 × 画布样式合一，避免双字段耦合守卫） */
-export type GroundSurfaceMode = "none" | "solid" | "plain" | "grid" | "checker" | "texture" | "stripes" | "diamond" | "marble";
+export type GroundSurfaceMode =
+  | "none"
+  | "solid"
+  | "plain"
+  | "grid"
+  | "checker"
+  | "texture"
+  | "stripes"
+  | "diamond"
+  | "marble";
 
 export interface GroundMaterialParams {
   /** 表面模式 */
@@ -89,7 +98,10 @@ function hexToTriple(hex: number): [number, number, number] {
   return [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255];
 }
 
-export function buildGroundSurfaceSpec(p: GroundMaterialParams, textureToken: string): GroundSurfaceSpec {
+export function buildGroundSurfaceSpec(
+  p: GroundMaterialParams,
+  textureToken: string,
+): GroundSurfaceSpec {
   return {
     structural: {
       mode: p.matSource,
@@ -118,18 +130,27 @@ export function surfaceSpecKey(s: GroundSurfaceSpec): string {
   const st = s.structural;
   return JSON.stringify([
     st.mode,
-    st.color[0], st.color[1], st.color[2],
-    st.lineColor[0], st.lineColor[1], st.lineColor[2],
+    st.color[0],
+    st.color[1],
+    st.color[2],
+    st.lineColor[0],
+    st.lineColor[1],
+    st.lineColor[2],
     st.gridSize,
     st.textureToken,
-    st.color2[0], st.color2[1], st.color2[2],
+    st.color2[0],
+    st.color2[1],
+    st.color2[2],
     st.density,
     st.angleRad,
   ]);
 }
 
 /** 结构性变化 → 需要重建材质与纹理；否则原地更新即可 */
-export function groundSurfaceNeedsRebuild(prev: GroundSurfaceSpec, next: GroundSurfaceSpec): boolean {
+export function groundSurfaceNeedsRebuild(
+  prev: GroundSurfaceSpec,
+  next: GroundSurfaceSpec,
+): boolean {
   return surfaceSpecKey(prev) !== surfaceSpecKey(next);
 }
 
@@ -151,13 +172,20 @@ function hash2(x: number, y: number): number {
   h = Math.imul(h, 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
 }
-function smoothStep(t: number): number { return t * t * (3 - 2 * t); }
+function smoothStep(t: number): number {
+  return t * t * (3 - 2 * t);
+}
 function valueNoise(x: number, y: number): number {
-  const xi = Math.floor(x), yi = Math.floor(y);
-  const xf = x - xi, yf = y - yi;
-  const a = hash2(xi, yi), b = hash2(xi + 1, yi);
-  const c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
-  const u = smoothStep(xf), v = smoothStep(yf);
+  const xi = Math.floor(x),
+    yi = Math.floor(y);
+  const xf = x - xi,
+    yf = y - yi;
+  const a = hash2(xi, yi),
+    b = hash2(xi + 1, yi);
+  const c = hash2(xi, yi + 1),
+    d = hash2(xi + 1, yi + 1);
+  const u = smoothStep(xf),
+    v = smoothStep(yf);
   return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v;
 }
 
@@ -169,7 +197,10 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
 
   if (st.mode === "solid" || st.mode === "none") {
     for (let i = 0; i < px.length; i += 4) {
-      px[i] = r; px[i + 1] = g; px[i + 2] = b; px[i + 3] = 255;
+      px[i] = r;
+      px[i + 1] = g;
+      px[i + 2] = b;
+      px[i + 3] = 255;
     }
     return px;
   }
@@ -197,17 +228,35 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
         if (st.mode === "stripes") {
           // 沿 x' 轴方向的周期条纹：每 (2/periodCount) 宽度一个周期，color / lineColor 交替
           const stripeWidth = 2 / Math.max(1, periodCount);
-          const band = Math.floor(((rx + 1) % stripeWidth + stripeWidth) % stripeWidth / (stripeWidth / 2));
-          if (band === 0) { pr = r; pg = g; pb = b; } else { pr = lr; pg = lg; pb = lb; }
+          const band = Math.floor(
+            ((((rx + 1) % stripeWidth) + stripeWidth) % stripeWidth) / (stripeWidth / 2),
+          );
+          if (band === 0) {
+            pr = r;
+            pg = g;
+            pb = b;
+          } else {
+            pr = lr;
+            pg = lg;
+            pb = lb;
+          }
         } else if (st.mode === "diamond") {
           // 菱形等距线：|rx| + |ry| = k * t；线宽 ~1 像素，周期 t = 2/periodCount
-          const pxLineWidth = 0.9 / sizePx * 2; // ~0.9 px 宽
+          const pxLineWidth = (0.9 / sizePx) * 2; // ~0.9 px 宽
           const d = Math.abs(rx) + Math.abs(ry);
           const t = 2 / Math.max(1, periodCount);
           const localD = ((d % t) + t) % t;
           // 只取「接近 0」的单边界：接近 t 实际是下一个周期的 0（相邻菱形重叠），避免双线
           const onLine = localD < pxLineWidth;
-          if (onLine) { pr = lr; pg = lg; pb = lb; } else { pr = r; pg = g; pb = b; }
+          if (onLine) {
+            pr = lr;
+            pg = lg;
+            pb = lb;
+          } else {
+            pr = r;
+            pg = g;
+            pb = b;
+          }
         } else {
           // marble：多层 valueNoise 叠加 + 沿旋转轴的正弦带，在 color 与 color2 间 lerp
           let n = 0;
@@ -223,7 +272,10 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
         }
 
         const i = (y * sizePx + x) * 4;
-        px[i] = pr; px[i + 1] = pg; px[i + 2] = pb; px[i + 3] = 255;
+        px[i] = pr;
+        px[i + 1] = pg;
+        px[i + 2] = pb;
+        px[i + 3] = 255;
       }
     }
     return px;
@@ -239,14 +291,21 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
       let pr: number, pg: number, pb: number;
       if (st.mode === "checker") {
         const even = (cx + cy) % 2 === 0;
-        pr = even ? r : lr; pg = even ? g : lg; pb = even ? b : lb;
+        pr = even ? r : lr;
+        pg = even ? g : lg;
+        pb = even ? b : lb;
       } else {
         // grid：cell 首行/首列像素为线
         const line = fx < 1 || fy < 1;
-        pr = line ? lr : r; pg = line ? lg : g; pb = line ? lb : b;
+        pr = line ? lr : r;
+        pg = line ? lg : g;
+        pb = line ? lb : b;
       }
       const i = (y * sizePx + x) * 4;
-      px[i] = pr; px[i + 1] = pg; px[i + 2] = pb; px[i + 3] = 255;
+      px[i] = pr;
+      px[i + 1] = pg;
+      px[i + 2] = pb;
+      px[i + 3] = 255;
     }
   }
   return px;

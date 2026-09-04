@@ -125,9 +125,7 @@ export function solveIK(chain: IKChain, target: THREE.Vector3, config: IKConfig 
           const clampedAngle = Math.max(minAng, Math.min(maxAng, angle)) * damping;
           if (Math.abs(clampedAngle) >= 1e-8) {
             // 将旋转轴转换为关节局部空间并应用旋转
-            joint.quaternion.premultiply(
-              quat.setFromAxisAngle(axis, clampedAngle),
-            );
+            joint.quaternion.premultiply(quat.setFromAxisAngle(axis, clampedAngle));
           }
         }
       }

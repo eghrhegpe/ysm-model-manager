@@ -1,12 +1,11 @@
 // ===== mmd-types.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
-import { MMDLoader } from "@moeru/three-mmd";
-import type { VpdObject } from "@moeru/three-mmd";
-import * as THREE from "three";
-import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import type { MaterialControlBridge, MmdBottomNavCtx, MmdPlayBridge } from "./content-bridges.ts";
+import type { MMDLoader, VpdObject } from "@moeru/three-mmd";
+import type * as THREE from "three";
+import type { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import type { BoneTree } from "../bone-tools.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
+import type { MaterialControlBridge, MmdBottomNavCtx, MmdPlayBridge } from "./content-bridges.ts";
 import type { PmxBuildResult, PmxParser } from "./mmd-pmx-parser.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
@@ -17,11 +16,15 @@ export interface MmdDataPort {
   readFileBytes(path: string): Promise<string | null>;
   readFileBytesBatch(paths: string[]): Promise<Record<string, string | null>>;
   /** 批量读取 + SHA256 hash（一次 RPC 返回数据和哈希，替代前端算 hash） */
-  readFileBytesBatchWithMeta?: ((paths: string[]) => Promise<Record<string, { data: string | null; hash: string } | null>>) | undefined;
+  readFileBytesBatchWithMeta?:
+    | ((paths: string[]) => Promise<Record<string, { data: string | null; hash: string } | null>>)
+    | undefined;
   listAllFilePaths(dir: string): Promise<string[] | null>;
   addOpLog(op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void>;
   /** 读取纹理文件并检查 KTX2 缓存，返回 { format, data, hash }（已废弃，保留兼容） */
-  getCachedTexture?: ((path: string) => Promise<{ format: string; data: string; hash: string } | null>) | undefined;
+  getCachedTexture?:
+    | ((path: string) => Promise<{ format: string; data: string; hash: string } | null>)
+    | undefined;
   /** KTX2 缓存按 hash 直取（壳层注入 GetCachedTextureByHash；缺失/桥不可用 → null） */
   getCachedTextureByHash?: ((hash: string) => Promise<string | null>) | undefined;
   /** 批量查缓存命中（壳层注入 HasCachedTextures；返回 hash → 是否命中） */

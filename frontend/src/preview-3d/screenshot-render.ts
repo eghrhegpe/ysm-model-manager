@@ -6,12 +6,10 @@
 import * as THREE from "three";
 
 import { getApp } from "../backend/app.ts";
-import {
-  lightDirToPosition,
-} from "./caps/light-capability.ts";
-import { type Spec3D } from "./model3d.ts";
+import { lightDirToPosition } from "./caps/light-capability.ts";
+import type { Spec3D } from "./model3d.ts";
 import { screenshotFromRenderer } from "./screenshot.ts";
-import { type ScreenshotLights } from "./screenshot-lights.ts";
+import type { ScreenshotLights } from "./screenshot-lights.ts";
 import { buildSpecFromGeometryJSON } from "./spec-builder.ts";
 import { loadTextures, releaseTextureUrls } from "./texture-loader.ts";
 import { buildYsmObject, type YsmObjectHandle } from "./ysm-object.ts";
@@ -58,9 +56,7 @@ export interface AngleShot {
 
 /** 前端 WASM 解码兜底注入类型（仅取 geometryRaw；不 import views 类型保边界）
  *  内部类型不导出（knip 零未引用导出） */
-interface DecodeYsmFn {
-  (modelPath: string): Promise<{ geometryRaw?: string | null } | null>;
-}
+type DecodeYsmFn = (modelPath: string) => Promise<{ geometryRaw?: string | null } | null>;
 
 export interface RenderMultiAngleOptions {
   size?: number;
@@ -142,7 +138,7 @@ export async function renderMultiAngle(
     if (!Number.isFinite(maxDim) || maxDim <= 0) return null;
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-    const dist = ((maxDim / (2 * Math.tan((45 * Math.PI) / 360)) / 0.85) * 1.2);
+    const dist = (maxDim / (2 * Math.tan((45 * Math.PI) / 360)) / 0.85) * 1.2;
 
     const angles: Array<{ name: string; theta: number }> = [
       { name: "front", theta: 0 },
@@ -160,7 +156,8 @@ export async function renderMultiAngle(
       );
       camera.lookAt(center);
       // ADR-052 P3：复用截图纯函数（preserveDrawingBuffer 已开启，toDataURL 安全）
-      const b64 = screenshotFromRenderer(renderer, scene, camera, { width: size, height: size }) || "";
+      const b64 =
+        screenshotFromRenderer(renderer, scene, camera, { width: size, height: size }) || "";
       // P3 修复：空 base64（GPU 异常）不入结果集，避免空内容写成 PNG 文件
       if (b64) {
         results.push({ name, base64: b64 });

@@ -1,14 +1,11 @@
 // ===== face-split — 按面（三角形 UV 区域）拆分网格的透明渲染路径（ADR-118 Phase B）=====
 // ModernYSM TranslucencyScanner 的前端对应物：mesh 级整图判定升级为面级，
 // blend 面隔离进透明批次，opaque/cutout 面继续烘合——根治「杂点/局部混合拖全模型」。
-import * as THREE from "three";
-import {
-  ALPHA_F_HOLE,
-  ALPHA_F_TRANSLUCENT,
-} from "./alpha-index.ts";
-import { getTextureAlphaInfo } from "./texture-alpha.ts";
-import type { TextureAlphaMode } from "./texture-alpha.ts";
+import type * as THREE from "three";
+import { ALPHA_F_HOLE, ALPHA_F_TRANSLUCENT } from "./alpha-index.ts";
 import type { SpecMeshGroup3D } from "./model3d.ts";
+import type { TextureAlphaMode } from "./texture-alpha.ts";
+import { getTextureAlphaInfo } from "./texture-alpha.ts";
 
 /** 网格碎片：同一 meshGroup 按 alpha 特征拆出的子几何 + 渲染路径 */
 export interface MeshFragment {
@@ -33,7 +30,10 @@ export function splitMeshByFaceAlpha(
   const buckets = new Map<TextureAlphaMode, number[]>();
   const triCount = Math.floor(md.indices.length / 3);
   for (let t = 0; t < triCount; t++) {
-    let u0 = Infinity, v0 = Infinity, u1 = -Infinity, v1 = -Infinity;
+    let u0 = Infinity,
+      v0 = Infinity,
+      u1 = -Infinity,
+      v1 = -Infinity;
     for (let k = 0; k < 3; k++) {
       const vi = (md.indices[t * 3 + k] ?? 0) * 2;
       const u = md.uvs[vi] ?? 0;
@@ -49,11 +49,8 @@ export function splitMeshByFaceAlpha(
       Math.ceil(u1 * info.width) - 1,
       Math.ceil(v1 * info.height) - 1,
     );
-    const mode: TextureAlphaMode = flags & ALPHA_F_TRANSLUCENT
-      ? "blend"
-      : flags & ALPHA_F_HOLE
-      ? "cutout"
-      : "opaque";
+    const mode: TextureAlphaMode =
+      flags & ALPHA_F_TRANSLUCENT ? "blend" : flags & ALPHA_F_HOLE ? "cutout" : "opaque";
     const list = buckets.get(mode);
     if (list) list.push(t);
     else buckets.set(mode, [t]);

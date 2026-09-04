@@ -7,7 +7,7 @@
  * 渲染器状态故留在 model3d.ts。
  */
 import * as THREE from "three";
-import { type Spec3D } from "./model3d.ts"; // 仅类型 import（编译后擦除，无运行时循环依赖）
+import type { Spec3D } from "./model3d.ts"; // 仅类型 import（编译后擦除，无运行时循环依赖）
 import { applyRotationIfNonIdentity } from "./quaternion.ts";
 import { safeDispose } from "./safe-dispose.ts";
 
@@ -77,11 +77,7 @@ export function buildSceneMesh(spec: Spec3D): {
       const g = new THREE.Group();
       g.name = bd.name;
       const pos = bd.localPosition || [0, 0, 0];
-      g.position.set(
-        pos[0] ?? 0,
-        pos[1] ?? 0,
-        pos[2] ?? 0,
-      );
+      g.position.set(pos[0] ?? 0, pos[1] ?? 0, pos[2] ?? 0);
       applyRotationIfNonIdentity(g, bd.localRotation);
       boneGroupMap.set(compKey(mi, bd.id), g);
       // 全局 key：main 组件优先（先到先得），供 hover/UI/动画（v1 单组件语义）

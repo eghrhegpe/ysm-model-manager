@@ -5,16 +5,20 @@ import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import { safeGet } from "../../utils/dom/storage.ts";
 import { formatLongTask, startMainThreadWatch } from "../../utils/main-thread-watch.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
+import { b64ToBytes, bytesToArrayBuffer, bytesToBase64 } from "../base64.ts";
 import { Ktx2TextureLoader } from "./mmd-ktx2-texture-loader.ts";
 import { createPmxParser } from "./mmd-pmx-parser.ts";
+import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
 import { getTextureDecoder } from "./mmd-texture-decoder.ts";
+import type {
+  MdMmDetectFormatCtx,
+  MdMmStage1bCtx,
+  MdMmStage1Ctx,
+  MdMmStage2Ctx,
+} from "./mmd-types.ts";
 import { concurrentMap, isLikelyTga, TEXTURE_EXTS } from "./mmd-utils.ts";
 import { prepareMmdZipInput } from "./mmd-zip-overlay.ts";
-import { bytesToBase64 } from "../base64.ts";
 import { renderLoadingState } from "./preview-loading.ts";
-import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
-import type { MdMmDetectFormatCtx, MdMmStage1Ctx, MdMmStage1bCtx, MdMmStage2Ctx } from "./mmd-types.ts";
 
 export function mdMmDetectFormat(c: MdMmDetectFormatCtx): "pmx" | "pmd" {
   const ext = c.modelBase.split(".").pop()?.toLowerCase();
@@ -308,7 +312,9 @@ export async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> 
           return null;
         }
       },
-      ktx2Loader: (c.ktx2Loader = new KTX2Loader().setTranscoderPath("/basis/").detectSupport(c.ctx.renderer)),
+      ktx2Loader: (c.ktx2Loader = new KTX2Loader()
+        .setTranscoderPath("/basis/")
+        .detectSupport(c.ctx.renderer)),
       fallbackLoader: new THREE.TextureLoader(c.manager),
     });
     // KTX2 直读 loader 是 GPU 资源——分配即登记失败释放（2026-09-03 注册表化）

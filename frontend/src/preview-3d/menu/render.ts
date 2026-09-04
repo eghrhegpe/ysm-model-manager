@@ -6,13 +6,18 @@
 //  - visibleWhen → 条件守卫（返回 false 不渲染）
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
-import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
-import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { tr } from "../../core/i18n/tr.ts";
-import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
-import { previewSnapshot, setStateValue, isPathAvailable, KNOWN_PATHS } from "../state/preview-state.ts";
+import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { getSchema } from "../adapters/schema-registry.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
+import {
+  isPathAvailable,
+  type KNOWN_PATHS,
+  previewSnapshot,
+  setStateValue,
+} from "../state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";
+import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 // i18n 取值统一走共享 tr()（core/i18n/tr.ts，支持缺失键兜底 + params 插值）
 
@@ -21,7 +26,9 @@ import { renderCapControls } from "./cap-controls.ts";
  * 把内联 style.cssText 抽成类，避免 renderMenu 分支里重复硬编码样式串。
  */
 let _menuStylesInjected = false;
-onOverlayStyleTargetReset(() => { _menuStylesInjected = false; }); // ADR-175 M1:目标切换重注入
+onOverlayStyleTargetReset(() => {
+  _menuStylesInjected = false;
+}); // ADR-175 M1:目标切换重注入
 function ensureMenuStyles(): void {
   if (_menuStylesInjected) return;
   const style = document.createElement("style");
@@ -169,7 +176,11 @@ interface RenderMenuDeps {
 
 /** 统一 label 取值：labelKey→tr(fallback)；无 labelKey 直接用 node.id */
 function rmLabel(node: PreviewMenuNode, valueOverride?: unknown): string {
-  if (node.labelKey) return tr(node.labelKey, node.fallback ?? (valueOverride !== undefined ? String(valueOverride) : node.id));
+  if (node.labelKey)
+    return tr(
+      node.labelKey,
+      node.fallback ?? (valueOverride !== undefined ? String(valueOverride) : node.id),
+    );
   return valueOverride !== undefined ? String(valueOverride) : node.id;
 }
 
@@ -186,11 +197,7 @@ function rmBindActionClick(
 }
 
 /** [模式⑥·提纯 2/2] 叶节点 click：panel navigate / action 执行，共用 stopPropagation */
-function rmBindLeafClick(
-  row: HTMLElement,
-  node: PreviewMenuNode,
-  deps: RenderMenuDeps,
-): void {
+function rmBindLeafClick(row: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
   row.onclick = (ev: MouseEvent): void => {
     ev.stopPropagation();
     if (node.kind === "panel") {
@@ -202,11 +209,7 @@ function rmBindLeafClick(
 }
 
 /** [子函数 1/6] folder：可折叠 section，递归 renderMenu 渲染 children */
-function rmAppendFolder(
-  container: HTMLElement,
-  node: PreviewMenuNode,
-  deps: RenderMenuDeps,
-): void {
+function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
   const children = node.children ?? [];
   if (children.length === 0) return;
   const section = document.createElement("div");
@@ -270,7 +273,11 @@ function rmMakeRowBase(node: PreviewMenuNode): { row: HTMLDivElement; lb: HTMLSp
 }
 
 /** [子函数 3/6] button：操作按钮行 */
-function rmAppendButton(container: HTMLElement, node: PreviewMenuNode, actionCtx: PreviewActionMenuCtx): void {
+function rmAppendButton(
+  container: HTMLElement,
+  node: PreviewMenuNode,
+  actionCtx: PreviewActionMenuCtx,
+): void {
   const { row, lb } = rmMakeRowBase(node);
   lb.textContent = rmLabel(node);
   rmBindActionClick(row, node.action, actionCtx);
@@ -278,7 +285,11 @@ function rmAppendButton(container: HTMLElement, node: PreviewMenuNode, actionCtx
 }
 
 /** [子函数 4/6] row：动态列表行（纹理/材质/bone 等） */
-function rmAppendDynamicRow(container: HTMLElement, node: PreviewMenuNode, actionCtx: PreviewActionMenuCtx): void {
+function rmAppendDynamicRow(
+  container: HTMLElement,
+  node: PreviewMenuNode,
+  actionCtx: PreviewActionMenuCtx,
+): void {
   const { row, lb } = rmMakeRowBase(node);
   lb.classList.add("rm-label-sm");
   lb.textContent = rmLabel(node, node.value || node.id);
@@ -298,7 +309,8 @@ function rmSelectCurrent(
   spec: { bind?: string; get?: (v?: unknown) => unknown },
   snapshot: Record<string, unknown>,
 ): string {
-  if (spec.bind) return spec.get ? String(spec.get(snapshot[spec.bind])) : String(snapshot[spec.bind]);
+  if (spec.bind)
+    return spec.get ? String(spec.get(snapshot[spec.bind])) : String(snapshot[spec.bind]);
   return spec.get ? String(spec.get(undefined)) : "";
 }
 
@@ -339,7 +351,7 @@ function rmAppendSelect(
       // 收窄断言（非 as never）：spec.bind 是 PreviewStatePath 全集，isPathAvailable/
       // setStateValue 只接受已落地的 KNOWN_PATHS 子集——守卫在前保证安全，同时保留
       // 窄类型检查（KNOWN_PATHS 与 PreviewStatePath 漂移时编译期报错）
-      const path = spec.bind as typeof KNOWN_PATHS[number];
+      const path = spec.bind as (typeof KNOWN_PATHS)[number];
       if (!isPathAvailable(path)) return;
       setStateValue(path, v);
     }
@@ -375,7 +387,7 @@ function rmAppendToggle(container: HTMLElement, node: PreviewMenuNode): void {
   apply(Boolean(spec?.get?.(undefined)));
   btn.appendChild(knob);
   btn.onclick = (): void => {
-    const next = !Boolean(spec?.get?.(undefined));
+    const next = !spec?.get?.(undefined);
     spec?.set?.(next);
     apply(next);
   };
@@ -516,7 +528,11 @@ function rmAppendLeaf(container: HTMLElement, node: PreviewMenuNode, deps: Rende
 // renderMenu — 主函数（分派器，≤25 行）
 // ===================================================================
 
-export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], deps: RenderMenuDeps): void {
+export function renderMenu(
+  container: HTMLElement,
+  nodes: PreviewMenuNode[],
+  deps: RenderMenuDeps,
+): void {
   ensureMenuStyles();
   // [doc:adr-126-p4-d] visibleWhen 吃状态层快照（previewSnapshot()）——AGENTS.md 硬约束
   const snapshot = previewSnapshot();
@@ -597,7 +613,9 @@ export function renderAdapterPanelContent(
     // [doc:adr-126-p5-收口] renderCustom 是末段逃生舱。若声明了 schemaId 走到这里
     // 说明注册缺失，console.warn 提示（防静默 fallback 掩盖）
     if (node.schemaId && !getSchema(node.schemaId)) {
-      console.warn(`[preview-menu] "${node.id}" 声明 schemaId="${node.schemaId}" 但未注册——走 renderCustom 逃生舱`);
+      console.warn(
+        `[preview-menu] "${node.id}" 声明 schemaId="${node.schemaId}" 但未注册——走 renderCustom 逃生舱`,
+      );
     }
     node.renderCustom(list, deps.hideMenu);
     return true;

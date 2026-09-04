@@ -10,16 +10,16 @@
 //   - 不建 renderer/scene/camera/controls，不跑 rAF，不做输入/射线/调试接线
 //     （这些属外壳层，由调用方决定：renderModel3D 自建壳 / 统一核心 shared 模式）
 
-import * as THREE from "three";
-import { buildSceneMesh, compKey } from "./mesh.ts";
-import { addMeshToBoneGroup } from "./mesh-builder.ts";
-import { bakeMeshFragments } from "./mesh-baker.ts";
-import { getTextureAlphaMode } from "./texture-alpha.ts";
-import { splitMeshByFaceAlpha, type MeshFragment } from "./face-split.ts";
-import { disposeSceneMeshes } from "./cleanup-helper.ts";
+import type * as THREE from "three";
 import { getBoneList } from "./bone-list.ts";
-import { setBoneVisible, toggleBone, showModelGroup } from "./bone-visibility.ts";
+import { setBoneVisible, showModelGroup, toggleBone } from "./bone-visibility.ts";
+import { disposeSceneMeshes } from "./cleanup-helper.ts";
+import { type MeshFragment, splitMeshByFaceAlpha } from "./face-split.ts";
+import { buildSceneMesh, compKey } from "./mesh.ts";
+import { bakeMeshFragments } from "./mesh-baker.ts";
+import { addMeshToBoneGroup } from "./mesh-builder.ts";
 import type { Spec3D } from "./model3d.ts";
+import { getTextureAlphaMode } from "./texture-alpha.ts";
 
 /** YSM 内容场景句柄：挂进任意 scene 后的内容层操作与释放 */
 export interface YsmObjectHandle {
@@ -56,12 +56,11 @@ export function buildYsmObject(
   >(),
   texIdx = 0,
 ): YsmObjectHandle {
-  const componentTexMap = componentTexMapOrTexIdx instanceof Map
-    ? componentTexMapOrTexIdx
-    : new Map<string, (THREE.Texture | null)[]>();
-  const resolvedTexIdx = componentTexMapOrTexIdx instanceof Map
-    ? texIdx
-    : componentTexMapOrTexIdx;
+  const componentTexMap =
+    componentTexMapOrTexIdx instanceof Map
+      ? componentTexMapOrTexIdx
+      : new Map<string, (THREE.Texture | null)[]>();
+  const resolvedTexIdx = componentTexMapOrTexIdx instanceof Map ? texIdx : componentTexMapOrTexIdx;
   const { boneGroupMap, rootGroup, modelGroups } = buildSceneMesh(spec);
   const multiModel = (spec.models?.length ?? 1) > 1;
 
@@ -69,8 +68,8 @@ export function buildYsmObject(
   // Go 侧 spec-bones.go isGlowBone 已在 BoneData.Glow 标记，此处建反查表供
   // addMeshToBoneGroup 按 md.boneId 取 glow，据此切 MeshStandardMaterial + emissive。
   const glowByBoneId = new Map<string, boolean>();
-  for (const m of (spec.models || [])) {
-    for (const b of (m.bones ?? [])) {
+  for (const m of spec.models || []) {
+    for (const b of m.bones ?? []) {
       if (b.glow) glowByBoneId.set(b.id, true);
     }
   }
@@ -120,7 +119,16 @@ export function buildYsmObject(
       // 非组件传 [] + 全局 texArr——传 texArr 会被 arr === compTexArr 误判为组件数组，
       // 导致全局槽位 md.texIdx 恒失效（修复前非组件多组件全绑 texArr[0]）。
       const bindArr = usesComponentTextures ? mappedComponentTextures! : [];
-      addMeshToBoneGroup(bg, md, bindArr, resolvedTexIdx, multiModel, texArr, mode, glowByBoneId.get(md.boneId) ?? false);
+      addMeshToBoneGroup(
+        bg,
+        md,
+        bindArr,
+        resolvedTexIdx,
+        multiModel,
+        texArr,
+        mode,
+        glowByBoneId.get(md.boneId) ?? false,
+      );
     }
   }
 

@@ -107,7 +107,7 @@ async function blobUrlToImageData(blobUrl: string): Promise<{
 // 核心实现已抽取到 mmd-ktx2-basis.ts（主线程与 Worker 共用，无 DOM 依赖）。
 // 本文件保留编码调度/并发/缓存逻辑，并在此处导出兼容符号。
 
-import { encodeToKTX2Basis, TextureTooLargeError, MAX_KTX2_PIXELS } from "./mmd-ktx2-basis.ts";
+import { encodeToKTX2Basis, MAX_KTX2_PIXELS, TextureTooLargeError } from "./mmd-ktx2-basis.ts";
 // type-only import：不产生运行时 import（worker 文件含 self.onmessage，主线程不能执行它）
 import type { Ktx2EncodeResponse } from "./mmd-ktx2-worker.ts";
 import { createWorkerBridge, type WorkerBridge } from "./worker-bridge.ts";
@@ -174,7 +174,11 @@ function getKtx2WorkerPool(): Worker[] | null {
  * Worker 不可用（测试/受限环境）时降级同步编码。
  * 测试注入点 __setEncodeImplForTest 会整体替换此函数，故测试不触碰 Worker。
  */
-async function encodeToKTX2(img: { data: Uint8Array; width: number; height: number }): Promise<ArrayBuffer> {
+async function encodeToKTX2(img: {
+  data: Uint8Array;
+  width: number;
+  height: number;
+}): Promise<ArrayBuffer> {
   // 超大纹理直接跳过（主线程先拦，语义清晰；worker 内 encodeToKTX2Basis 也有双保险）
   if (img.width * img.height > MAX_KTX2_PIXELS) {
     throw new TextureTooLargeError(img.width, img.height);
@@ -191,7 +195,8 @@ async function encodeToKTX2(img: { data: Uint8Array; width: number; height: numb
 }
 
 /** 测试注入点：替换编码实现（默认走本地 WASM） */
-let encodeImpl: (img: { data: Uint8Array; width: number; height: number }) => Promise<ArrayBuffer> = encodeToKTX2;
+let encodeImpl: (img: { data: Uint8Array; width: number; height: number }) => Promise<ArrayBuffer> =
+  encodeToKTX2;
 
 /** 测试用：注入编码实现（默认走本地 WASM） */
 export function __setEncodeImplForTest(fn: typeof encodeImpl): void {
@@ -222,7 +227,12 @@ export async function encodeAndCacheTexture(
     const ktx2B64 = bytesToBase64(ktx2Bytes);
     // 保存到 Go 侧缓存
     if (port.addOpLog) {
-      void port.addOpLog("ktx2-encode", hash, "ok", `bytes=${ktx2Bytes.length} original=${imageData.width}x${imageData.height}`);
+      void port.addOpLog(
+        "ktx2-encode",
+        hash,
+        "ok",
+        `bytes=${ktx2Bytes.length} original=${imageData.width}x${imageData.height}`,
+      );
     }
     // 通过 port 保存缓存（ADR-072：适配器 0 backend import——壳层注入 SaveCachedTexture）。
     // 仅「持久化通道缺失」跳过落盘仍算编码成功（审查 P3：缺通道若走 catch→false，
@@ -237,7 +247,12 @@ export async function encodeAndCacheTexture(
     if (port.addOpLog) {
       const msg = safeErrorMessage(e);
       // 超大纹理跳过：非错误，记 warn（避免误报失败刷屏）
-      void port.addOpLog("ktx2-encode", hash, e instanceof TextureTooLargeError ? "warn" : "fail", msg);
+      void port.addOpLog(
+        "ktx2-encode",
+        hash,
+        e instanceof TextureTooLargeError ? "warn" : "fail",
+        msg,
+      );
     }
     return false;
   } finally {
@@ -273,14 +288,16 @@ export function scheduleBackgroundEncoding(
       inProgressHashes.add(hash);
 
       // 每个纹理编码是独立的 Promise，通过 acquire 控制并发
-      encodeAndCacheTexture(hash, blobUrl, port).then((ok) => {
-        inProgressHashes.delete(hash);
-        if (ok) {
-          // 编码成功已在 encodeAndCacheTexture 中记录
-        }
-      }).catch(() => {
-        inProgressHashes.delete(hash);
-      });
+      encodeAndCacheTexture(hash, blobUrl, port)
+        .then((ok) => {
+          inProgressHashes.delete(hash);
+          if (ok) {
+            // 编码成功已在 encodeAndCacheTexture 中记录
+          }
+        })
+        .catch(() => {
+          inProgressHashes.delete(hash);
+        });
     }
   });
 }

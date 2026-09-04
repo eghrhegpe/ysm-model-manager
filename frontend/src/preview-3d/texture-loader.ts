@@ -38,9 +38,21 @@ export async function loadTextures(urls?: string[]): Promise<(THREE.Texture | nu
       tex && urls[i]
         ? new Promise<void>((resolve) => {
             const img = tex.image;
-            if (img && typeof (img as HTMLImageElement).complete === "boolean" && (img as HTMLImageElement).complete) { resolve(); return; }
+            if (
+              img &&
+              typeof (img as HTMLImageElement).complete === "boolean" &&
+              (img as HTMLImageElement).complete
+            ) {
+              resolve();
+              return;
+            }
             const check = (): void => {
-              if (img && typeof (img as HTMLImageElement).complete === "boolean" && (img as HTMLImageElement).complete) resolve();
+              if (
+                img &&
+                typeof (img as HTMLImageElement).complete === "boolean" &&
+                (img as HTMLImageElement).complete
+              )
+                resolve();
               else setTimeout(check, 50);
             };
             check();

@@ -11,7 +11,7 @@
 //   autoDance.apply(dt, semanticBones);
 
 import * as THREE from "three";
-import { getSemanticBone, type SemanticBoneMap, type SemanticBoneId } from "../semantic-bones.ts";
+import { getSemanticBone, type SemanticBoneId, type SemanticBoneMap } from "../semantic-bones.ts";
 import { isPerceptionPaused } from "./core.ts";
 
 /** 节拍 detector 接口（抽象，解耦具体实现） */
@@ -47,7 +47,15 @@ interface DanceState {
 }
 
 /** 驱动的语义骨骼及振幅系数 */
-const DANCE_BONES: Array<{ id: SemanticBoneId; xAmp: number; yAmp: number; zAmp: number; rxAmp: number; ryAmp: number; rzAmp: number }> = [
+const DANCE_BONES: Array<{
+  id: SemanticBoneId;
+  xAmp: number;
+  yAmp: number;
+  zAmp: number;
+  rxAmp: number;
+  ryAmp: number;
+  rzAmp: number;
+}> = [
   // 臀部/重心：左右摇摆（X 平移）+ 轻微扭转（Y 旋转）
   { id: "hips", xAmp: 0.03, yAmp: 0, zAmp: 0, rxAmp: 0, ryAmp: 0.08, rzAmp: 0 },
   // 脊柱：跟随 hips 微动
@@ -148,12 +156,14 @@ export function createAutoDanceController(opts: AutoDanceOptions = {}) {
       const combined = (main + micro) * effectiveIntensity;
 
       // 应用旋转（在 resting 基础上叠加）
-      _targetRot.setFromEuler(_euler.set(
-        rxAmp ? combined * rxAmp : 0,
-        ryAmp ? combined * ryAmp : 0,
-        rzAmp ? combined * rzAmp : 0,
-        "XYZ",
-      ));
+      _targetRot.setFromEuler(
+        _euler.set(
+          rxAmp ? combined * rxAmp : 0,
+          ryAmp ? combined * ryAmp : 0,
+          rzAmp ? combined * rzAmp : 0,
+          "XYZ",
+        ),
+      );
 
       // 平滑 slerp 到目标
       const restQuat = snap.rot;

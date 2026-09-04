@@ -12,8 +12,7 @@ export interface CacheValue {
   geometry?: object | null;
   animations?: unknown[];
   authors?: Array<
-    | string
-    | { name?: string; role?: string; avatarUrl?: string | null; avatarPath?: string }
+    string | { name?: string; role?: string; avatarUrl?: string | null; avatarPath?: string }
   >;
   avatars?: Record<string, string>;
   _decodedBy?: string;

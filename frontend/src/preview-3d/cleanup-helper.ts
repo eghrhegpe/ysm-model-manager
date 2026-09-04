@@ -1,7 +1,7 @@
 // ===== 3D 渲染器资源清理（从 model3d.ts 拆出，ADR-040 P1 第2轮）=====
 // disposeDebugGroup / disposeSceneMeshes / disposeRenderer —— handle.cleanup 中的
 // Three.js 资源释放逻辑已迁移至此，避免 renderModel3D 闭包膨胀。
-import * as THREE from "three";
+import type * as THREE from "three";
 import { disposeMaterial } from "./mesh.ts";
 
 /** 类型联合：Mesh / Line / Sprite，用于遍历 debugGroup */

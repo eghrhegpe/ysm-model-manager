@@ -10,8 +10,8 @@
 // i18n：child field 行的 labelKey 走「preview.stats.<metric>」三段式（ADR-124），
 // 三个语言包同步补键；visibleWhen 不依赖状态层快照（统计是 build 后闭包值）。
 
-import type { PreviewMenuNode } from "./node-types.ts";
 import type { SceneStats } from "../scene-stats.ts";
+import type { PreviewMenuNode } from "./node-types.ts";
 
 /** 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） */
 export const STATS_PANEL_ID = "stats-panel";
@@ -22,8 +22,17 @@ export function hasSceneStats(s: SceneStats): boolean {
 }
 
 /** 构造统计面板节点：panel + field 行（骨骼/网格/三角面/材质/纹理/表情）+ 可选适配器附加行 [ADR-159] */
-export function buildStatsPanel(stats: SceneStats, extraFields?: PreviewMenuNode[]): PreviewMenuNode {
-  const field = (id: string, labelKey: string, fallback: string, value: number, visible = true): PreviewMenuNode => ({
+export function buildStatsPanel(
+  stats: SceneStats,
+  extraFields?: PreviewMenuNode[],
+): PreviewMenuNode {
+  const field = (
+    id: string,
+    labelKey: string,
+    fallback: string,
+    value: number,
+    visible = true,
+  ): PreviewMenuNode => ({
     id,
     kind: "field",
     labelKey,
@@ -50,7 +59,13 @@ export function buildStatsPanel(stats: SceneStats, extraFields?: PreviewMenuNode
       field("stat-meshes", "preview.stats.meshes", "网格", stats.meshCount),
       field("stat-triangles", "preview.stats.triangles", "三角面", stats.triangleCount),
       field("stat-materials", "preview.stats.materials", "材质", stats.materialCount),
-      field("stat-textures", "preview.stats.textures", "纹理", stats.textureCount, stats.textureCount > 0),
+      field(
+        "stat-textures",
+        "preview.stats.textures",
+        "纹理",
+        stats.textureCount,
+        stats.textureCount > 0,
+      ),
       field("stat-morphs", "preview.stats.morphs", "表情", stats.morphCount, stats.morphCount > 0),
       // [ADR-159] 适配器统计附加行（dockGroup:"stats"，由 mergeStatsMenuItems 抽出透传）
       ...(extraFields ?? []),

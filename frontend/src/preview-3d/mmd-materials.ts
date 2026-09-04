@@ -28,9 +28,7 @@ export interface MmdMaterialDetail {
 }
 
 /** 材质列表：pmx.materials name + 索引（索引与 mesh.material 对齐） */
-export function listMmdMaterials(
-  pmxMaterials: readonly { name: string }[],
-): MmdMaterialListItem[] {
+export function listMmdMaterials(pmxMaterials: readonly { name: string }[]): MmdMaterialListItem[] {
   return pmxMaterials.map((m, i) => ({ index: i, name: m.name }));
 }
 

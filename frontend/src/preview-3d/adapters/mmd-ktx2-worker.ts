@@ -2,8 +2,9 @@
 // 将 WASM basis_encoder 的同步编码挪到 Worker 线程，避免 4096² 大纹理
 // 单次 ~10s 的同步编码阻塞主进程（首次加载卡死问题）。
 // 主线程 encodeToKTX2 → postMessage(RGBA + 尺寸) → 本 Worker 编码 → 回传 KTX2 ArrayBuffer。
-import { encodeToKTX2Basis } from "./mmd-ktx2-basis.ts";
+
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { encodeToKTX2Basis } from "./mmd-ktx2-basis.ts";
 
 /** 主线程 → Worker 的请求 */
 export interface Ktx2EncodeRequest {
@@ -36,6 +37,3 @@ self.onmessage = async (e: MessageEvent<Ktx2EncodeRequest>) => {
     (self as unknown as Worker).postMessage(resp);
   }
 };
-
-// 类型守卫：让 TS 知道这是 worker 上下文（vite worker chunk 约定）
-export {};

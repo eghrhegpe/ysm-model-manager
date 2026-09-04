@@ -4,12 +4,16 @@
 // 「当前目录」tab 已移除（记忆/当前类型生效后可少一个 tab）；
 // rtypes 为空（无注册路由）时仍走 siblings 列表兜底，不空白。
 
-import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
-import { RESOURCE_TYPE_LABELS, resolveTypeSafe, getPreviewableTypeTabs } from "../../utils/resource/types.ts";
-import { attachTooltip } from "../../utils/dom/tooltip.ts";
+import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import { swallowError } from "../../utils/core/async.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
+import { attachTooltip } from "../../utils/dom/tooltip.ts";
+import {
+  getPreviewableTypeTabs,
+  RESOURCE_TYPE_LABELS,
+  resolveTypeSafe,
+} from "../../utils/resource/types.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import type { PreviewMenuCtx } from "./node-types.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
@@ -21,7 +25,9 @@ const tr = (key: string, fallback: string): string => {
 // P1 批次5：模型切换面板内联 cssText → 集中类（sw- 前缀本文件私有，ensureSwitchStyles
 // 幂等注入——fillSwitch 唯一入口调用覆盖 tabBar/候选行/空态全部渲染路径）
 let _swStylesInjected = false;
-onOverlayStyleTargetReset(() => { _swStylesInjected = false; }); // ADR-175 M1:目标切换重注入
+onOverlayStyleTargetReset(() => {
+  _swStylesInjected = false;
+}); // ADR-175 M1:目标切换重注入
 function ensureSwitchStyles(): void {
   if (_swStylesInjected) return;
   const style = document.createElement("style");
@@ -49,7 +55,6 @@ function ensureSwitchStyles(): void {
   overlayStyleRoot().appendChild(style);
   _swStylesInjected = true;
 }
-
 
 /** 上次选中的类型 tab 持久化键（全局记忆，跨模型/跨会话）："" = 当前目录 */
 const PREVIEW_LAST_RTYPE_KEY = "ysm.preview.lastRtype";
@@ -106,7 +111,10 @@ function buildSwitchTabBar(
   tabBar.dataset.testid = "preview-switch-tabs";
   const highlightTab = (key: string): void => {
     for (const tb of Array.from(tabBar.children)) {
-      (tb as HTMLElement).classList.toggle("sw-tab-active", (tb as HTMLElement).dataset.rtype === key);
+      (tb as HTMLElement).classList.toggle(
+        "sw-tab-active",
+        (tb as HTMLElement).dataset.rtype === key,
+      );
     }
   };
   for (const r of rtypes) {
@@ -155,9 +163,10 @@ function applySwitchRowClick(
 ): void {
   // 追加语义才带 opts；替换语义保持旧签名形态（不传第二/三参），调用方契约按参数个数区分
   const extra: [{ keepInScene?: boolean }?] = keepInScene ? [{ keepInScene: true }] : [];
-  const r = !sameType && ctx.switchExternal
-    ? ctx.switchExternal(p, ctx.getSiblings(), ...extra)
-    : ctx.switchTo(p, ...extra);
+  const r =
+    !sameType && ctx.switchExternal
+      ? ctx.switchExternal(p, ctx.getSiblings(), ...extra)
+      : ctx.switchTo(p, ...extra);
   if (r && typeof (r as Promise<void>).then === "function") swallowError(r as Promise<void>);
 }
 

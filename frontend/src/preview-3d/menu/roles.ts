@@ -5,16 +5,15 @@
 // 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载模型，
 // 少用但重要）；底部复用 fillSwitch 加载入口（siblings + 类型 tab）。
 
-import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
+import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
-import type { PreviewMenuNode, PreviewActionMenuCtx } from "./node-types.ts";
-import { sceneRegistry, type ModelEntry } from "../adapters/scene-registry.ts";
-import { renderMenu, renderAdapterPanelContent } from "./render.ts";
+import { type ModelEntry, sceneRegistry } from "../adapters/scene-registry.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
+import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import { renderAdapterPanelContent, renderMenu } from "./render.ts";
 import { fillSwitch } from "./switch.ts";
-import type { PreviewMenuCtx } from "./node-types.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
@@ -39,7 +38,9 @@ export function roleBaseName(e: ModelEntry): string {
 // P1 批次3：角色面板内联 cssText → 集中类（fr- 前缀本文件私有，ensureRolesStyles
 // 幂等注入——modelDetailView/motionDetailView/fillRoles 三个入口各调一次，覆盖全部渲染路径）
 let _rolesStylesInjected = false;
-onOverlayStyleTargetReset(() => { _rolesStylesInjected = false; }); // ADR-175 M1:目标切换重注入
+onOverlayStyleTargetReset(() => {
+  _rolesStylesInjected = false;
+}); // ADR-175 M1:目标切换重注入
 function ensureRolesStyles(): void {
   if (_rolesStylesInjected) return;
   const style = document.createElement("style");
@@ -118,7 +119,9 @@ export function modelDetailView(
           switchTo: deps.switchTo,
           onChanged: renderAll,
         });
-        const modelItems = (cur.menuItems ?? []).filter((d) => d.kind === "panel" && d.dockGroup === "model");
+        const modelItems = (cur.menuItems ?? []).filter(
+          (d) => d.kind === "panel" && d.dockGroup === "model",
+        );
         if (modelItems.length === 0) {
           if (!hadComponents) {
             const empty = document.createElement("div");
@@ -190,7 +193,9 @@ export function motionDetailView(
   },
 ): SlideMenuView {
   ensureRolesStyles();
-  const motionItems = (e.menuItems ?? []).filter((d) => d.kind === "panel" && d.dockGroup === "motion");
+  const motionItems = (e.menuItems ?? []).filter(
+    (d) => d.kind === "panel" && d.dockGroup === "motion",
+  );
   return {
     title: roleBaseName(e),
     render: (l) => {
@@ -240,7 +245,7 @@ function frRenderRoles(
   deps: FrRenderDeps,
   toolsDeps: FrToolsDeps,
   onSelectRole: (e: ModelEntry) => SlideMenuView,
-  reRender: () => void
+  reRender: () => void,
 ): void {
   rolesBox.innerHTML = "";
   const entries = sceneRegistry.getAll();
@@ -254,7 +259,9 @@ function frRenderRoles(
   }
   const activeId = sceneRegistry.getActiveId();
   for (const e of entries) {
-    rolesBox.appendChild(frBuildRoleRow(e, e.id === activeId, deps, toolsDeps, onSelectRole, reRender));
+    rolesBox.appendChild(
+      frBuildRoleRow(e, e.id === activeId, deps, toolsDeps, onSelectRole, reRender),
+    );
   }
 }
 
@@ -272,7 +279,7 @@ function frBuildRoleRow(
   deps: FrRenderDeps,
   toolsDeps: FrToolsDeps,
   onSelectRole: (e: ModelEntry) => SlideMenuView,
-  reRender: () => void
+  reRender: () => void,
 ): HTMLElement {
   const row = document.createElement("div");
   row.dataset.testid = "preview-role-row";
@@ -292,7 +299,7 @@ function frBuildFocusRadio(
   e: ModelEntry,
   isActive: boolean,
   setAdapterItems: (items: PreviewMenuNode[]) => void,
-  reRender: () => void
+  reRender: () => void,
 ): HTMLButtonElement {
   const radio = document.createElement("button");
   radio.dataset.testid = "preview-role-focus";
@@ -319,7 +326,11 @@ function frBuildRoleName(e: ModelEntry): HTMLSpanElement {
   return name;
 }
 
-function frBuildRoleToolsBtn(e: ModelEntry, toolsDeps: FrToolsDeps, menu: SlideMenuHandle): HTMLButtonElement {
+function frBuildRoleToolsBtn(
+  e: ModelEntry,
+  toolsDeps: FrToolsDeps,
+  menu: SlideMenuHandle,
+): HTMLButtonElement {
   const tools = document.createElement("button");
   tools.dataset.testid = "preview-role-tools";
   tools.textContent = "⚙";
@@ -375,7 +386,8 @@ export function fillRoles(
 
   const renderDeps: FrRenderDeps = { setAdapterItems, makeRow, makePanelView, menu, actionCtx };
   const toolsDeps: FrToolsDeps = { unloadModel: (id) => ctx.unloadModel?.(id), closePopup };
-  const reRender: () => void = () => frRenderRoles(rolesBox, renderDeps, toolsDeps, onSelectRole, reRender);
+  const reRender: () => void = () =>
+    frRenderRoles(rolesBox, renderDeps, toolsDeps, onSelectRole, reRender);
   renderDeps.reRender = reRender;
 
   reRender();

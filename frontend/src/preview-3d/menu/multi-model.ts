@@ -37,7 +37,15 @@ export interface MultiModelSelectOpts {
  * 返回节点：kind="select"，control.options / get / set 全部装配好，零手写 DOM。
  */
 export function multiModelSelectNode(opts: MultiModelSelectOpts): PreviewMenuNode | null {
-  const { entries, activeId, onSelect, labelKey = "preview.component", fallback = "模型", nodeId = "multi-model-select", refreshOnChange } = opts;
+  const {
+    entries,
+    activeId,
+    onSelect,
+    labelKey = "preview.component",
+    fallback = "模型",
+    nodeId = "multi-model-select",
+    refreshOnChange,
+  } = opts;
   if (entries.length < 2) return null;
   // [审核修复] 预计算合法 id 集合：get/set 判存在 O(1)，避免每次控件读写全量线性扫 entries
   const ids = new Set(entries.map((e) => e.id));

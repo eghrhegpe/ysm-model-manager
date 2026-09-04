@@ -2,8 +2,8 @@
 
 import * as THREE from "three";
 import { safeDispose } from "../safe-dispose.ts";
-import { DISPOSE_TEX_KEYS, estimateTexGpuBytes, matTexSlots } from "./mmd-utils.ts";
 import type { MdMmAllocEntry, MmdDataPort } from "./mmd-types.ts";
+import { DISPOSE_TEX_KEYS, estimateTexGpuBytes, matTexSlots } from "./mmd-utils.ts";
 
 /** 环形日志面板诊断（AGENTS.md：排查卡顿往环形日志塞日志而非死盯 console）；失败静默不阻断 */
 export async function mmdDiag(

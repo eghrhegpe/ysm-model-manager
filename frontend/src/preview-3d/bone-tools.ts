@@ -33,7 +33,14 @@ export interface BoneTree {
  * 输入契约足够宽：仅要求 { id, name, parentId? }——YSM 扁平 bones、
  * VRM humanoid 提取结果均可直接喂入。
  */
-export function buildBoneTree(bones: Array<{ id: string; name: string; parentId?: string | null; object?: THREE.Object3D | undefined }>): BoneTree {
+export function buildBoneTree(
+  bones: Array<{
+    id: string;
+    name: string;
+    parentId?: string | null;
+    object?: THREE.Object3D | undefined;
+  }>,
+): BoneTree {
   const byId = new Map<string, BoneNode>();
   const childrenMap = new Map<string, string[]>();
   const roots: string[] = [];

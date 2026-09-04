@@ -1,10 +1,11 @@
 // preview-menu-cap-controls.ts — 能力控件通用渲染器（从 preview-menu.ts 拆出避免 env 循环依赖）。
 // 独立模块只依赖 ui-header-toggle / i18n / MenuControlDef 类型，供 preview-menu.ts 与
 // preview-menu-env.ts 共用。
-import { overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
+
+import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
@@ -16,7 +17,9 @@ const tr = (key: string, fallback: string): string => {
 };
 
 let _capStylesInjected = false;
-onOverlayStyleTargetReset(() => { _capStylesInjected = false; }); // ADR-175 M1:目标切换重注入
+onOverlayStyleTargetReset(() => {
+  _capStylesInjected = false;
+}); // ADR-175 M1:目标切换重注入
 /** P1 抽类迁移(2026-09):cap-controls 控件样式集中注入(幂等,renderCapControls 入口调用,
  *  覆盖 env.ts 直调 ×3 与 render.ts:543 委托的全部路径,不依赖 renderMenu 曾运行)。
  *  .cap-section-header/.cap-section-arrow 与 render.ts ensureMenuStyles 同值镜像(双源,
@@ -163,7 +166,8 @@ function renderCapToggle(parent: HTMLElement, c: MenuControlDef): void {
  */
 export function formatCapSliderValue(c: MenuControlDef, v: number): string {
   const u = c.slider?.unit;
-  if (u === "h") return `${String(Math.floor(v)).padStart(2, "0")}:${String(Math.round((v % 1) * 60)).padStart(2, "0")}`;
+  if (u === "h")
+    return `${String(Math.floor(v)).padStart(2, "0")}:${String(Math.round((v % 1) * 60)).padStart(2, "0")}`;
   if (u === "%") return `${Math.round(v * 100)}%`;
   if (u) return `${v}${u}`;
   return v.toFixed(2);
@@ -340,7 +344,7 @@ function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
     const stops = [
       { t: 0.0, c: "#04060f" },
       { t: 0.25, c: "#1a2b4a" }, // 6h 晨
-      { t: 0.5, c: "#9bc4e8" },  // 12h 午
+      { t: 0.5, c: "#9bc4e8" }, // 12h 午
       { t: 0.75, c: "#ff8a5c" }, // 18h 暮
       { t: 1.0, c: "#04060f" },
     ];
@@ -388,7 +392,11 @@ function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
   });
   band.addEventListener("pointerup", (e: PointerEvent): void => {
     dragging = false;
-    try { band.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+    try {
+      band.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
   });
   band.addEventListener("pointercancel", (): void => {
     dragging = false;
@@ -412,7 +420,8 @@ function renderCapHistogram(parent: HTMLElement, c: MenuControlDef): void {
   row.appendChild(label);
 
   const canvas = document.createElement("canvas");
-  const W = 240, H = 48;
+  const W = 240,
+    H = 48;
   canvas.width = W;
   canvas.height = H;
   canvas.className = "cc-canvas-auto";
@@ -517,16 +526,36 @@ export function renderCapControls(
     if (c.visibleWhen && snapshot && !c.visibleWhen(snapshot)) continue;
     const parent = ensureCapSection(sectionMap, list, c.group) ?? list;
     switch (c.kind) {
-      case "divider": renderCapDivider(parent, c); break;
-      case "toggle": renderCapToggle(parent, c); break;
-      case "slider": renderCapSlider(parent, c); break;
-      case "select": renderCapSelect(parent, c); break;
-      case "button": renderCapButton(parent, c); break;
-      case "image": renderCapImage(parent, c); break;
-      case "color": renderCapColor(parent, c); break;
-      case "timeline": renderCapTimeline(parent, c); break;
-      case "histogram": renderCapHistogram(parent, c); break;
-      case "preset-thumb": renderCapPresetThumb(parent, c); break;
+      case "divider":
+        renderCapDivider(parent, c);
+        break;
+      case "toggle":
+        renderCapToggle(parent, c);
+        break;
+      case "slider":
+        renderCapSlider(parent, c);
+        break;
+      case "select":
+        renderCapSelect(parent, c);
+        break;
+      case "button":
+        renderCapButton(parent, c);
+        break;
+      case "image":
+        renderCapImage(parent, c);
+        break;
+      case "color":
+        renderCapColor(parent, c);
+        break;
+      case "timeline":
+        renderCapTimeline(parent, c);
+        break;
+      case "histogram":
+        renderCapHistogram(parent, c);
+        break;
+      case "preset-thumb":
+        renderCapPresetThumb(parent, c);
+        break;
     }
   }
 }

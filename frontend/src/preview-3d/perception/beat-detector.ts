@@ -186,7 +186,15 @@ export function createBeatDetector(opts: BeatDetectorOptions = {}) {
     reset();
   }
 
-  return { update, onBeat, offBeat, reset, dispose, getPhase: () => state.phase, isBeat: () => state.isBeat };
+  return {
+    update,
+    onBeat,
+    offBeat,
+    reset,
+    dispose,
+    getPhase: () => state.phase,
+    isBeat: () => state.isBeat,
+  };
 }
 
 /** BPM 量化：偏差 ±tolerance 内吸附到常见值 */

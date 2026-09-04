@@ -92,9 +92,7 @@ interface BedrockRawGeometry {
 }
 
 /** 从 JSON 字符串解析 Bedrock geometry */
-export function parseBedrockGeometryFromJSON(
-  jsonStr: string,
-): BedrockGeometry | null {
+export function parseBedrockGeometryFromJSON(jsonStr: string): BedrockGeometry | null {
   // 畸形输入 JSON.parse 会抛 SyntaxError——解析函数自身兜底返回 null，避免调用链未捕获
   let raw: BedrockRawGeometry | null = null;
   try {

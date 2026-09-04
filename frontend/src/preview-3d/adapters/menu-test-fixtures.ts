@@ -1,13 +1,13 @@
 // ===== menu-test-fixtures.ts — 3D 菜单测试共享夹具（jscpd 消重 + 单一事实源）=====
 // makeMenuCtx（PreviewMenuCtx 全字段 stub）与 mockMenuHandle（SlideMenuHandle stub）
 // 原先在 preview-menu.roles/items/menu/health/node-render 五个测试文件各持一份
- // 26 行近似拷贝——health.test（ADR-128 冒烟）入列时 jscpd 配对爆表。抽此处共享，
- // 变体差异（如 items 的 fakeCap getCap）经 overrides / 本地薄包装表达。
+// 26 行近似拷贝——health.test（ADR-128 冒烟）入列时 jscpd 配对爆表。抽此处共享，
+// 变体差异（如 items 的 fakeCap getCap）经 overrides / 本地薄包装表达。
 import { vi } from "vitest";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
+import type { SceneCapability } from "../caps/scene-capability.ts";
 import type { PreviewMenuCtx } from "../menu/core.ts";
 import { setSceneCapabilityLookup } from "../state/preview-state.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
 
 /** PreviewMenuCtx 全字段 stub：能力全缺（getCap → null）、桥全 vi.fn()。
  *  需要特定能力的测试经 overrides 注入（如 items 的 fakeCap）。 */

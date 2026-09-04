@@ -82,13 +82,16 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
 
   let nextId = 0;
   let rr = 0;
-  const pending = new Map<number, {
-    resolve: (v: Ok) => void;
-    reject: (e: Error) => void;
-    timer: ReturnType<typeof setTimeout>;
-  }>();
+  const pending = new Map<
+    number,
+    {
+      resolve: (v: Ok) => void;
+      reject: (e: Error) => void;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  >();
 
-  const pickWorker = opts.pickWorker ?? ((_id: number, ws: Worker[]) => ws[(rr++) % ws.length]);
+  const pickWorker = opts.pickWorker ?? ((_id: number, ws: Worker[]) => ws[rr++ % ws.length]);
 
   /** 单请求失败结算：超时 / dispose / onerror 复用 */
   function settleError(id: number, msg: string): void {
@@ -121,7 +124,11 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
 
   function terminatePool(): void {
     for (const w of workers) {
-      try { w.terminate(); } catch { /* 已终止 */ }
+      try {
+        w.terminate();
+      } catch {
+        /* 已终止 */
+      }
     }
     for (const [id] of pending) {
       settleError(id, onWorkerError === "terminatePool" ? "KTX2 worker 终止" : "Worker 已终止");
@@ -175,7 +182,7 @@ export function createResolveModeBridge<Resp extends ResolveModeResponse>(
     timeoutMsg,
     settle: (r, { resolve }) => resolve(r),
     onWorkerError: "resolveAllError",
-    makeErrorResponse: (id, msg) => ({ id, ok: false, error: msg } as Resp),
+    makeErrorResponse: (id, msg) => ({ id, ok: false, error: msg }) as Resp,
   });
   // 消息接线必须由工厂完成：薄封装不暴露 handleMessage/handleWorkerError，
   // 若漏接，worker 响应永不结算、恒超时 ok:false 静默回退主线程

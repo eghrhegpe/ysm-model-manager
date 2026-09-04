@@ -13,7 +13,7 @@
 //   gaze.apply(dt, semanticBones, cameraPos);
 
 import * as THREE from "three";
-import { getSemanticBone, type SemanticBoneMap, type SemanticBoneId } from "../semantic-bones.ts";
+import { getSemanticBone, type SemanticBoneId, type SemanticBoneMap } from "../semantic-bones.ts";
 
 /** 注视驱动的语义骨骼：head 为主，eyes 为辅 */
 const GAZE_BONES: SemanticBoneId[] = ["head", "leftEye", "rightEye"];

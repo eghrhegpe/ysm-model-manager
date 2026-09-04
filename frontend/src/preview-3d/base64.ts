@@ -36,9 +36,10 @@ export function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 
 /** Uint8Array → base64（分块防栈溢出，对齐 atob 解码口径） */
 export function bytesToBase64(bytes: Uint8Array): string {
-  const view = bytes.length === bytes.byteLength
-    ? bytes
-    : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const view =
+    bytes.length === bytes.byteLength
+      ? bytes
+      : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let binary = "";
   const CHUNK = 0x8000;
   for (let i = 0; i < view.length; i += CHUNK) {

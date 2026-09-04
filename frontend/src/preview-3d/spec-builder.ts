@@ -307,16 +307,18 @@ interface RawGeometryJSON {
       parent?: string;
       pivot?: [number, number, number];
       rotation?: [number, number, number] | null;
-      cubes?: {
-        origin: [number, number, number];
-        size: [number, number, number];
-        pivot?: [number, number, number];
-        uv?: [number, number] | string | null;
-        rotation?: [number, number, number] | null;
-        texture?: number;
-        inflate?: number;
-        mirror?: boolean;
-      }[] | null;
+      cubes?:
+        | {
+            origin: [number, number, number];
+            size: [number, number, number];
+            pivot?: [number, number, number];
+            uv?: [number, number] | string | null;
+            rotation?: [number, number, number] | null;
+            texture?: number;
+            inflate?: number;
+            mirror?: boolean;
+          }[]
+        | null;
     }[];
   }[];
 }

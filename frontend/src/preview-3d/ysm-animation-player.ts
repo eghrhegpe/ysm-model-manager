@@ -16,14 +16,14 @@
 
 import * as THREE from "three";
 import {
-  evaluateClip,
-  executeTimeline,
   type AnimationClip,
   type BoneHierarchyNode,
+  evaluateClip,
+  executeTimeline,
 } from "../utils/animation/animation.ts";
 import {
-  AnimationControllerRuntime,
   type AnimationController,
+  AnimationControllerRuntime,
 } from "../utils/animation/animation-controller.ts";
 import { setMolangScope } from "../utils/animation/molang.ts";
 
@@ -45,7 +45,11 @@ export interface YsmAnimPlayer {
   getControllerState(): string | null;
 }
 
-interface MdApBonePose { pos: THREE.Vector3; quat: THREE.Quaternion; scale: THREE.Vector3; }
+interface MdApBonePose {
+  pos: THREE.Vector3;
+  quat: THREE.Quaternion;
+  scale: THREE.Vector3;
+}
 
 interface MdApScratch {
   quat: THREE.Quaternion;
@@ -106,11 +110,7 @@ function mdApCaptureRestPose(
   }
 }
 
-function mdApAdvanceTimeAndController(
-  dt: number,
-  state: MdApState,
-  ctx: MdApCtx,
-): void {
+function mdApAdvanceTimeAndController(dt: number, state: MdApState, ctx: MdApCtx): void {
   const clip = ctx.clips[state.currentIdx];
   const prevTime = state.prevElapsed;
   state.elapsed += dt;
@@ -145,11 +145,7 @@ function mdApAdvanceTimeAndController(
   }
 }
 
-function mdApApplyPose(
-  dt: number,
-  state: MdApState,
-  ctx: MdApCtx,
-): void {
+function mdApApplyPose(dt: number, state: MdApState, ctx: MdApCtx): void {
   const clip = ctx.clips[state.currentIdx];
   const transforms = evaluateClip(clip, state.elapsed, ctx.boneHierarchy, true);
   const { scratch, basePose, restPose, blendAlpha, BLEND_RATE, boneByName } = ctx;
@@ -190,7 +186,11 @@ function mdApApplyPose(
     let rest = restPose.get(boneName);
     let alpha = blendAlpha.get(boneName) ?? 0;
     if (!rest) {
-      rest = { pos: node.position.clone(), quat: node.quaternion.clone(), scale: node.scale.clone() };
+      rest = {
+        pos: node.position.clone(),
+        quat: node.quaternion.clone(),
+        scale: node.scale.clone(),
+      };
       restPose.set(boneName, rest);
       alpha = Math.min(1, dt * BLEND_RATE);
     } else {
@@ -204,11 +204,7 @@ function mdApApplyPose(
   }
 }
 
-function mdApSelectClip(
-  index: number,
-  state: MdApState,
-  ctx: MdApCtx,
-): void {
+function mdApSelectClip(index: number, state: MdApState, ctx: MdApCtx): void {
   if (index < 0 || index >= ctx.clips.length) return;
   state.currentIdx = index;
   state.elapsed = 0;
@@ -217,11 +213,7 @@ function mdApSelectClip(
   mdApCaptureRestPose(ctx.boneByName, ctx.restPose, ctx.blendAlpha);
 }
 
-function mdApSetController(
-  controller: AnimationController,
-  state: MdApState,
-  ctx: MdApCtx,
-): void {
+function mdApSetController(controller: AnimationController, state: MdApState, ctx: MdApCtx): void {
   state.controllerVariables = {};
   state.controllerRuntime = new AnimationControllerRuntime(
     controller,
@@ -238,10 +230,7 @@ function mdApSetController(
   );
 }
 
-function mdApDispose(
-  state: MdApState,
-  ctx: MdApCtx,
-): void {
+function mdApDispose(state: MdApState, ctx: MdApCtx): void {
   setMolangScope(null);
   state.elapsed = 0;
   state.prevElapsed = 0;
@@ -262,13 +251,24 @@ function mdApBuildMeta(
 }
 
 function mdApCreateInitialState(): MdApState {
-  return { currentIdx: 0, elapsed: 0, playing: true, prevElapsed: 0, controllerRuntime: null, controllerVariables: {} };
+  return {
+    currentIdx: 0,
+    elapsed: 0,
+    playing: true,
+    prevElapsed: 0,
+    controllerRuntime: null,
+    controllerVariables: {},
+  };
 }
 
 function mdApToggle(state: MdApState, ctx: MdApCtx): void {
   const clip = ctx.clips[state.currentIdx];
-  if (state.elapsed >= clip.length && !clip.loop) { state.elapsed = 0; state.playing = true; }
-  else { state.playing = !state.playing; }
+  if (state.elapsed >= clip.length && !clip.loop) {
+    state.elapsed = 0;
+    state.playing = true;
+  } else {
+    state.playing = !state.playing;
+  }
 }
 
 /**
@@ -286,27 +286,52 @@ export function createYsmAnimPlayer(
   const { labels, clipNameToIdx } = mdApBuildMeta(clips, clipLabels);
   const state = mdApCreateInitialState();
   const ctx: MdApCtx = {
-    boneByName, clips, boneHierarchy, labels, clipNameToIdx,
+    boneByName,
+    clips,
+    boneHierarchy,
+    labels,
+    clipNameToIdx,
     basePose: mdApCreateBasePose(boneByName),
     restPose: new Map<string, MdApBonePose>(),
     blendAlpha: new Map<string, number>(),
     BLEND_RATE: 5.0,
-    scratch: { quat: new THREE.Quaternion(), euler: new THREE.Euler(), pos: new THREE.Vector3(), scale: new THREE.Vector3() },
+    scratch: {
+      quat: new THREE.Quaternion(),
+      euler: new THREE.Euler(),
+      pos: new THREE.Vector3(),
+      scale: new THREE.Vector3(),
+    },
   };
   const getClip = (): AnimationClip => ctx.clips[state.currentIdx];
   return {
-    apply(dt: number): void { if (!state.playing) return; mdApAdvanceTimeAndController(dt, state, ctx); mdApApplyPose(dt, state, ctx); },
-    dispose(): void { mdApDispose(state, ctx); },
-    toggle(): void { mdApToggle(state, ctx); },
+    apply(dt: number): void {
+      if (!state.playing) return;
+      mdApAdvanceTimeAndController(dt, state, ctx);
+      mdApApplyPose(dt, state, ctx);
+    },
+    dispose(): void {
+      mdApDispose(state, ctx);
+    },
+    toggle(): void {
+      mdApToggle(state, ctx);
+    },
     isPlaying: () => state.playing,
     getTime: () => state.elapsed,
     getDuration: () => getClip().length || 0,
     currentIndex: () => state.currentIdx,
     clips: () => ctx.labels,
     clipCount: () => ctx.clips.length,
-    selectClip(index: number): void { mdApSelectClip(index, state, ctx); },
-    isAnimActive(): boolean { return state.playing && state.elapsed < (getClip().length || Infinity); },
-    setController(controller: AnimationController): void { mdApSetController(controller, state, ctx); },
-    getControllerState(): string | null { return state.controllerRuntime?.current_state ?? null; },
+    selectClip(index: number): void {
+      mdApSelectClip(index, state, ctx);
+    },
+    isAnimActive(): boolean {
+      return state.playing && state.elapsed < (getClip().length || Infinity);
+    },
+    setController(controller: AnimationController): void {
+      mdApSetController(controller, state, ctx);
+    },
+    getControllerState(): string | null {
+      return state.controllerRuntime?.current_state ?? null;
+    },
   };
 }

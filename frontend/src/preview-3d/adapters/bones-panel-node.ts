@@ -23,10 +23,10 @@
 //   - ysm / vrm：无条件注入（menuItems 基础项）
 //   这些「是否注入」的策略由各 adapter 在外层控制，本工厂只负责「注入什么形状」。
 
-import * as THREE from "three";
+import type * as THREE from "three";
+import type { BoneTree } from "../bone-tools.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { makeBonePanelRenderer } from "./vrm-bone-ui.ts";
-import type { BoneTree } from "../bone-tools.ts";
 
 /** 工厂入参：caller 持 cleanupRef（与 panel 生命周期对齐，dispose 时同步调） */
 export interface BonesPanelItemOpts {

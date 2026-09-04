@@ -107,4 +107,3 @@ function readRgbaPixels(texture: THREE.Texture): RgbaSample | null {
     return null;
   }
 }
-

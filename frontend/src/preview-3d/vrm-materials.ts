@@ -5,7 +5,7 @@
 //
 // 收集方式：vrm.scene.traverse 取出所有 isMesh 的 material；MToon 无 pmx 层索引结构，
 // 直接按 scene 遍历顺序排列，与 vrm-materials.ts 的 list/getDetail/setVisible/setOpacity 一一对齐。
-import * as THREE from "three";
+import type * as THREE from "three";
 
 /** 材质列表项（listVrmMaterials） */
 export interface VrmMaterialListItem {
@@ -25,9 +25,7 @@ export interface VrmMaterialDetail {
 }
 
 /** 材质列表：vrm.scene 遍历所有 Mesh.material（含数组材质）*/
-export function listVrmMaterials(
-  materials: readonly THREE.Material[],
-): VrmMaterialListItem[] {
+export function listVrmMaterials(materials: readonly THREE.Material[]): VrmMaterialListItem[] {
   return materials.map((m, i) => ({
     index: i,
     name: m.name || `材质 #${i + 1}`,
@@ -70,12 +68,15 @@ export function getVrmMaterialDetail(
   // 推断材质类型：MToon 是自定义 ShaderMaterial，名称常含 MToon
   const typeName = mat.type.toLowerCase();
   const name = mat.name?.toLowerCase() || "";
-  const type: VrmMaterialDetail["type"] =
-    name.includes("mtoon") ? "mtoon"
-    : typeName.includes("standard") ? "standard"
-    : typeName.includes("basic") ? "basic"
-    : typeName.includes("phong") ? "phong"
-    : "unknown";
+  const type: VrmMaterialDetail["type"] = name.includes("mtoon")
+    ? "mtoon"
+    : typeName.includes("standard")
+      ? "standard"
+      : typeName.includes("basic")
+        ? "basic"
+        : typeName.includes("phong")
+          ? "phong"
+          : "unknown";
   return {
     index,
     name: mat.name || `材质 #${index + 1}`,

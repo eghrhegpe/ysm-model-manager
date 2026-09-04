@@ -10,15 +10,14 @@
 //     重复真值来源，改由 collectSettingsCapControls() 自动聚合
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
-import type { PreviewMenuNode } from "./node-types.ts";
-import { buildCameraControls } from "../adapters/camera-controls.ts";
-import { t, type LocaleKey } from "../../core/i18n/t.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
-import { getStateValue, setStateValue } from "../state/preview-state.ts";
-import { getPerfPreset, setPerfPreset, type PerfLevel } from "../state/perf-presets.ts";
+import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
-import type { PreviewMenuCtx } from "./node-types.ts";
+import { buildCameraControls } from "../adapters/camera-controls.ts";
+import type { MenuControlDef } from "../caps/scene-capability.ts";
+import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import { getPerfPreset, type PerfLevel, setPerfPreset } from "../state/perf-presets.ts";
+import { getStateValue, setStateValue } from "../state/preview-state.ts";
+import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
@@ -31,52 +30,87 @@ const tr = (key: string, fallback: string): string => {
 
 /** 相机面板 schema：wrap buildCameraControls 为声明式节点 */
 export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  return [{
-    id: "camera",
-    kind: "custom",
-    labelKey: "preview.cameraView",
-    fallback: "视图",
-    icon: "🎥",
-    renderCustom: (list: HTMLElement): void => {
-      buildCameraControls(list, ctx.getCamBridge());
+  return [
+    {
+      id: "camera",
+      kind: "custom",
+      labelKey: "preview.cameraView",
+      fallback: "视图",
+      icon: "🎥",
+      renderCustom: (list: HTMLElement): void => {
+        buildCameraControls(list, ctx.getCamBridge());
+      },
     },
-  }];
+  ];
 }
 
 /** 灯光面板 schema：从 light cap 自报控件渲染 */
 export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const lightFromReg = sceneCapabilityRegistry.getById("light") as import("../caps/light-capability.ts").LightCapability | null;
-  const lightCap = lightFromReg ?? (() => {
-    const fromCtx = ctx.getCap("light");
-    if (fromCtx && "getMenuControls" in fromCtx) return fromCtx as unknown as import("../caps/light-capability.ts").LightCapability;
-    return null;
-  })();
+  const lightFromReg = sceneCapabilityRegistry.getById("light") as
+    | import("../caps/light-capability.ts").LightCapability
+    | null;
+  const lightCap =
+    lightFromReg ??
+    (() => {
+      const fromCtx = ctx.getCap("light");
+      if (fromCtx && "getMenuControls" in fromCtx)
+        return fromCtx as unknown as import("../caps/light-capability.ts").LightCapability;
+      return null;
+    })();
   if (!lightCap) {
-    return [{ id: "lighting-empty", kind: "sectionTitle", labelKey: "preview.noLightCap", fallback: "进入 3D 后再打开灯光面板" }];
+    return [
+      {
+        id: "lighting-empty",
+        kind: "sectionTitle",
+        labelKey: "preview.noLightCap",
+        fallback: "进入 3D 后再打开灯光面板",
+      },
+    ];
   }
   return [{ id: "lighting", kind: "controls", controls: () => lightCap.getMenuControls() }];
 }
 
 /** 阴影面板 schema：从 shadow cap 自报控件渲染 */
 export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const fromReg = sceneCapabilityRegistry.getById("shadow") as import("../caps/shadow-capability.ts").ShadowCapability | null;
+  const fromReg = sceneCapabilityRegistry.getById("shadow") as
+    | import("../caps/shadow-capability.ts").ShadowCapability
+    | null;
   if (!fromReg) {
-    return [{ id: "shadow-empty", kind: "sectionTitle", labelKey: "preview.noShadowCap", fallback: "进入 3D 后再打开阴影面板" }];
+    return [
+      {
+        id: "shadow-empty",
+        kind: "sectionTitle",
+        labelKey: "preview.noShadowCap",
+        fallback: "进入 3D 后再打开阴影面板",
+      },
+    ];
   }
   return [{ id: "shadow", kind: "controls", controls: () => fromReg.getMenuControls() }];
 }
 
 /** 后处理面板 schema：从 postprocessing cap 自报控件渲染 */
 export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const fromReg = sceneCapabilityRegistry.getById("postprocessing") as import("../caps/postprocessing-capability.ts").PostprocessingCapability | null;
+  const fromReg = sceneCapabilityRegistry.getById("postprocessing") as
+    | import("../caps/postprocessing-capability.ts").PostprocessingCapability
+    | null;
   if (!fromReg) {
-    return [{ id: "postproc-empty", kind: "sectionTitle", labelKey: "preview.noPostprocCap", fallback: "进入 3D 后再打开后处理面板" }];
+    return [
+      {
+        id: "postproc-empty",
+        kind: "sectionTitle",
+        labelKey: "preview.noPostprocCap",
+        fallback: "进入 3D 后再打开后处理面板",
+      },
+    ];
   }
   return [{ id: "postproc", kind: "controls", controls: () => fromReg.getMenuControls() }];
 }
 
 /** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 */
-export function buildSettingsSchema(_ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
+export function buildSettingsSchema(
+  _ctx: PreviewMenuCtx,
+  menu?: SlideMenuHandle,
+): PreviewMenuNode[] {
   return [
     bsBuildSectionTitle("settings-perf-header", "preview.settingsPerf", "性能"),
     // 性能档位：一键套用低/中/高（数据表驱动）；切档后 menu.refresh() 刷新兄弟控件显示
@@ -135,7 +169,13 @@ export function buildCrossCuttingControls(): MenuControlDef[] {
       // 拖动是高频写入：跳过通知，避免每 0.25 步进触发面板重算
       setValue: (v) => setStateValue("render.maxPixelRatio", v, { notify: false }),
       // 松手提交是离散操作：广播一次，供 subscribe 驱动的面板重算/谓词响应
-      slider: { min: 0.5, max: 2, step: 0.25, unit: "x", onCommit: (v) => setStateValue("render.maxPixelRatio", v) },
+      slider: {
+        min: 0.5,
+        max: 2,
+        step: 0.25,
+        unit: "x",
+        onCommit: (v) => setStateValue("render.maxPixelRatio", v),
+      },
     },
   ];
 }

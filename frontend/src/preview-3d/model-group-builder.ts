@@ -2,8 +2,15 @@
 // 单组件 spec 构建核心（Build 与 BuildMulti 共用）。
 // 对齐 Go threejs/spec.go buildModelGroup（L103-390）。
 
-import type { BedrockModel, ModelGroup, BoneData, MeshData, Vec3, Cube2D } from "./spec-builder.ts";
-import { buildCubeMeshData, mergeCubes, eulerToQuaternion, isIdentityQuat, hasBoneRotation, computeBoneLocalPos } from "./cube-mesh.ts";
+import {
+  buildCubeMeshData,
+  computeBoneLocalPos,
+  eulerToQuaternion,
+  hasBoneRotation,
+  isIdentityQuat,
+  mergeCubes,
+} from "./cube-mesh.ts";
+import type { BedrockModel, BoneData, Cube2D, MeshData, ModelGroup, Vec3 } from "./spec-builder.ts";
 
 /** buildModelGroup 内部：骨骼首次出现信息 */
 interface BoneFirst {
@@ -71,10 +78,15 @@ function mdMgFixOrphanBoneChain(
     }
 
     const bp = pivots.get(bones[i].name);
-    const ancPivot = ancestor !== "" ? pivots.get(ancestor) ?? null : null;
+    const ancPivot = ancestor !== "" ? (pivots.get(ancestor) ?? null) : null;
     if (ancestor !== "") {
       bones[i].parentId = ancestor;
-      bones[i].localPosition = ancPivot && bp ? computeBoneLocalPos(bp, ancPivot) : (bp ? computeBoneLocalPos(bp, null) : [0, 0, 0]);
+      bones[i].localPosition =
+        ancPivot && bp
+          ? computeBoneLocalPos(bp, ancPivot)
+          : bp
+            ? computeBoneLocalPos(bp, null)
+            : [0, 0, 0];
     } else {
       bones[i].parentId = null;
       bones[i].localPosition = bp ? computeBoneLocalPos(bp, null) : [0, 0, 0];
@@ -85,7 +97,10 @@ function mdMgFixOrphanBoneChain(
 /**
  * 阶段①：初始化空壳 + tex 尺寸 + first/pivots 预收集 map
  */
-function mdMgInitShellAndMaps(model: BedrockModel): { ctx: MdMgBonesCtx; emptyReturn: ModelGroup | null } {
+function mdMgInitShellAndMaps(model: BedrockModel): {
+  ctx: MdMgBonesCtx;
+  emptyReturn: ModelGroup | null;
+} {
   if (!model.bones || model.bones.length === 0) {
     return {
       ctx: null as unknown as MdMgBonesCtx,
@@ -112,7 +127,11 @@ function mdMgInitShellAndMaps(model: BedrockModel): { ctx: MdMgBonesCtx; emptyRe
     const np: Vec3 = { x: b.pivot[0], y: b.pivot[1], z: b.pivot[2] };
     const fi = first.get(b.name);
     if (!fi) {
-      first.set(b.name, { pivot: np, hasParent: b.parent !== "", hasRot: hasBoneRotation(b.rotation) });
+      first.set(b.name, {
+        pivot: np,
+        hasParent: b.parent !== "",
+        hasRot: hasBoneRotation(b.rotation),
+      });
       pivots.set(b.name, np);
       continue;
     }
@@ -142,7 +161,7 @@ function mdMgInitShellAndMaps(model: BedrockModel): { ctx: MdMgBonesCtx; emptyRe
 function mdMgBuildBonesTree(model: BedrockModel, ctx: MdMgBonesCtx): void {
   for (const b of model.bones) {
     const bp = ctx.pivots.get(b.name)!;
-    const parentPivot = b.parent !== "" ? ctx.pivots.get(b.parent) ?? null : null;
+    const parentPivot = b.parent !== "" ? (ctx.pivots.get(b.parent) ?? null) : null;
     const localPos = computeBoneLocalPos(bp, parentPivot);
 
     let localRot: [number, number, number, number] = [0, 0, 0, 1];
@@ -228,8 +247,13 @@ function mdMgEnsureAllBonesPresent(model: BedrockModel, ctx: MdMgBonesCtx): void
       if (b.name === name) {
         found = true;
         parentName = b.parent;
-        const parentPivot2 = b.parent !== "" ? ctx.pivots.get(b.parent) ?? null : null;
-        localPos = parentPivot2 && bp ? computeBoneLocalPos(bp, parentPivot2) : (bp ? computeBoneLocalPos(bp, null) : [0, 0, 0]);
+        const parentPivot2 = b.parent !== "" ? (ctx.pivots.get(b.parent) ?? null) : null;
+        localPos =
+          parentPivot2 && bp
+            ? computeBoneLocalPos(bp, parentPivot2)
+            : bp
+              ? computeBoneLocalPos(bp, null)
+              : [0, 0, 0];
         break;
       }
     }
@@ -256,7 +280,11 @@ function mdMgEnsureAllBonesPresent(model: BedrockModel, ctx: MdMgBonesCtx): void
 /**
  * 阶段④：后处理（断链修复 + Arm 挂接）+ 纹理 ID 计算
  */
-function mdMgPostProcessAndTextures(model: BedrockModel, ctx: MdMgBonesCtx, texIdxBase: number): string | null {
+function mdMgPostProcessAndTextures(
+  model: BedrockModel,
+  ctx: MdMgBonesCtx,
+  texIdxBase: number,
+): string | null {
   mdMgFixOrphanBoneChain(ctx.bones, model.bones, ctx.pivots);
 
   for (let i = 0; i < ctx.bones.length; i++) {
@@ -296,7 +324,11 @@ function mdMgPostProcessAndTextures(model: BedrockModel, ctx: MdMgBonesCtx, texI
  * 单组件 spec 构建核心。
  * 对齐 Go threejs/spec.go buildModelGroup（L103-390）。
  */
-export function buildModelGroup(model: BedrockModel, compID: string, texIdxBase: number): ModelGroup {
+export function buildModelGroup(
+  model: BedrockModel,
+  compID: string,
+  texIdxBase: number,
+): ModelGroup {
   const { ctx, emptyReturn } = mdMgInitShellAndMaps(model);
   if (emptyReturn !== null) {
     emptyReturn.id = compID;

@@ -3,8 +3,8 @@
 import * as THREE from "three";
 import type { SpecMeshGroup3D } from "./model3d.ts";
 import { applyRotationIfNonIdentity } from "./quaternion.ts";
-import { getTextureAlphaMode } from "./texture-alpha.ts";
 import type { TextureAlphaMode } from "./texture-alpha.ts";
+import { getTextureAlphaMode } from "./texture-alpha.ts";
 
 /** ysmview 风格材质配置（索引 2.16 魔法数值收敛）。
  * side 用 DoubleSide：对齐 architecture.md 材质标准 + YSMViewer/Blockbench 双面渲染。

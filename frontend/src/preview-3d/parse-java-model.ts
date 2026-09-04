@@ -11,30 +11,63 @@
 import { b64ToBytes } from "./base64.ts";
 
 // ===== 面 → 4 顶点（[x?, y?, z?, u角, v角]，u/v 为 MC 语义 0/1 角）=====
-const ELEM_FACES: Record<string, { dir: [number, number, number]; corners: [number, number, number, number, number][] }> = {
+const ELEM_FACES: Record<
+  string,
+  { dir: [number, number, number]; corners: [number, number, number, number, number][] }
+> = {
   up: {
     dir: [0, 1, 0],
-    corners: [[0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 0, 1, 0]],
+    corners: [
+      [0, 1, 1, 0, 1],
+      [1, 1, 1, 1, 1],
+      [0, 1, 0, 0, 0],
+      [1, 1, 0, 1, 0],
+    ],
   },
   down: {
     dir: [0, -1, 0],
-    corners: [[1, 0, 1, 0, 1], [0, 0, 1, 1, 1], [1, 0, 0, 0, 0], [0, 0, 0, 1, 0]],
+    corners: [
+      [1, 0, 1, 0, 1],
+      [0, 0, 1, 1, 1],
+      [1, 0, 0, 0, 0],
+      [0, 0, 0, 1, 0],
+    ],
   },
   east: {
     dir: [1, 0, 0],
-    corners: [[1, 1, 1, 0, 0], [1, 0, 1, 0, 1], [1, 1, 0, 1, 0], [1, 0, 0, 1, 1]],
+    corners: [
+      [1, 1, 1, 0, 0],
+      [1, 0, 1, 0, 1],
+      [1, 1, 0, 1, 0],
+      [1, 0, 0, 1, 1],
+    ],
   },
   west: {
     dir: [-1, 0, 0],
-    corners: [[0, 1, 0, 0, 0], [0, 0, 0, 0, 1], [0, 1, 1, 1, 0], [0, 0, 1, 1, 1]],
+    corners: [
+      [0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 1],
+      [0, 1, 1, 1, 0],
+      [0, 0, 1, 1, 1],
+    ],
   },
   north: {
     dir: [0, 0, -1],
-    corners: [[1, 0, 0, 0, 1], [0, 0, 0, 1, 1], [1, 1, 0, 0, 0], [0, 1, 0, 1, 0]],
+    corners: [
+      [1, 0, 0, 0, 1],
+      [0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0],
+      [0, 1, 0, 1, 0],
+    ],
   },
   south: {
     dir: [0, 0, 1],
-    corners: [[0, 0, 1, 0, 1], [1, 0, 1, 1, 1], [0, 1, 1, 0, 0], [1, 1, 1, 1, 0]],
+    corners: [
+      [0, 0, 1, 0, 1],
+      [1, 0, 1, 1, 1],
+      [0, 1, 1, 0, 0],
+      [1, 1, 1, 1, 0],
+    ],
   },
 };
 
@@ -133,7 +166,13 @@ async function resolveModel(
     jsonCache.set(entry, raw);
   }
 
-  let parent: ResolvedModel = { textures: {}, elements: [], display: {}, ambientocclusion: true, gui_light: null };
+  let parent: ResolvedModel = {
+    textures: {},
+    elements: [],
+    display: {},
+    ambientocclusion: true,
+    gui_light: null,
+  };
   if (typeof raw.parent === "string") {
     const p = raw.parent as string;
     if (!p.startsWith("builtin/")) {
@@ -148,7 +187,9 @@ async function resolveModel(
     elements: (raw.elements as Array<Record<string, unknown>> | undefined) ?? parent.elements,
     display: { ...parent.display, ...disp },
     ambientocclusion:
-      typeof raw.ambientocclusion === "boolean" ? (raw.ambientocclusion as boolean) : parent.ambientocclusion,
+      typeof raw.ambientocclusion === "boolean"
+        ? (raw.ambientocclusion as boolean)
+        : parent.ambientocclusion,
     gui_light: (raw.gui_light as string | undefined) ?? parent.gui_light,
   };
 }
@@ -181,7 +222,11 @@ function buildRotationMatrix(axis: string, degree: number): number[][] {
   const i0 = { x: 0, y: 1, z: 2 }[axis] ?? 1;
   const i1 = (i0 + 1) % 3;
   const i2 = (i0 + 2) % 3;
-  const m = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const m = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
   m[i0][i0] = 1;
   m[i1][i1] = cos;
   m[i1][i2] = -sin;
@@ -256,8 +301,8 @@ async function buildElementFaces(
 
     const uv: number[] = [];
     for (const c of spec.corners) {
-      let u = (u1 + (c[3] * (u2 - u1))) / 16;
-      let v = (v1 + (c[4] * (v2 - v1))) / 16;
+      let u = (u1 + c[3] * (u2 - u1)) / 16;
+      let v = (v1 + c[4] * (v2 - v1)) / 16;
       if (rotDeg !== 0) {
         const bu = (u - 0.5) * cos - (v - 0.5) * sn + 0.5;
         const bv = (u - 0.5) * sn + (v - 0.5) * cos + 0.5;
@@ -301,7 +346,9 @@ export async function parseJavaModel(
       faces.push(...(await buildElementFaces(el as unknown as ElementLike, model.textures)));
     }
     // 展示名：去命名空间 / models 前缀 / block|item / 扩展名
-    const short = entry.replace(/^assets\/[^/]+\/models\/(?:block|item)\//, "").replace(/\.json$/, "");
+    const short = entry
+      .replace(/^assets\/[^/]+\/models\/(?:block|item)\//, "")
+      .replace(/\.json$/, "");
     return {
       name: short,
       entry,
@@ -320,4 +367,3 @@ export async function parseJavaModel(
 export function isRenderableModel(m: JavaModelResult | null): m is JavaModelResult {
   return !!m && m.faces.some((f) => f.texEntry !== null || f.texColor !== null);
 }
-

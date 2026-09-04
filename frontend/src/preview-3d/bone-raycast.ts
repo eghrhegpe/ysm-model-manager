@@ -11,9 +11,9 @@ const ROOT_PARENT_ID = "__root__";
  * 构建骨骼层级路径映射（name/id/parent/children）。
  * @returns { nameMap, parentMap, childrenMap }
  */
-export function buildBoneHierarchy(
-  spec: { models?: Array<{ bones?: Array<{ id: string; name: string; parentId?: string }> }> },
-): {
+export function buildBoneHierarchy(spec: {
+  models?: Array<{ bones?: Array<{ id: string; name: string; parentId?: string }> }>;
+}): {
   nameMap: Map<string, string>;
   parentMap: Map<string, string | null>;
   childrenMap: Map<string, string[]>;
@@ -36,7 +36,11 @@ export function buildBoneHierarchy(
 /**
  * 骨骼名 → 全路径（如 "root / spine / head"）。
  */
-function getBonePath(boneId: string, nameMap: Map<string, string>, parentMap: Map<string, string | null>): string {
+function getBonePath(
+  boneId: string,
+  nameMap: Map<string, string>,
+  parentMap: Map<string, string | null>,
+): string {
   const parts: string[] = [];
   let current: string | null | undefined = boneId;
   while (current && nameMap.has(current)) {
@@ -80,8 +84,7 @@ export function assembleBoneSelectInfo(
   const lq = bg ? bg.quaternion : new THREE.Quaternion();
   let lr: number[] | null = null;
   // 单位四元数判定复用 quaternion.ts 现成工具（epsilon 1e-9 口径，与 Go threejs 一致）
-  if (!isIdentityQuat([lq.x, lq.y, lq.z, lq.w]))
-    lr = [lq.x, lq.y, lq.z, lq.w];
+  if (!isIdentityQuat([lq.x, lq.y, lq.z, lq.w])) lr = [lq.x, lq.y, lq.z, lq.w];
 
   // Cube（mesh）级数据
   let cq: number[] | null = null;
@@ -159,12 +162,19 @@ export function registerBoneRaycast(
       let node: THREE.Object3D | null = hit.object;
       let hidden = false;
       while (node) {
-        if (!node.visible) { hidden = true; break; }
+        if (!node.visible) {
+          hidden = true;
+          break;
+        }
         node = node.parent;
       }
       if (hidden) continue;
       const boneId = getMeshBoneId(hit.object, nameMap);
-      if (boneId) { foundBone = boneId; foundMesh = hit.object; break; }
+      if (boneId) {
+        foundBone = boneId;
+        foundMesh = hit.object;
+        break;
+      }
     }
     if (foundBone !== state.hoveredBone) {
       state.setHoveredBone(foundBone);
@@ -176,7 +186,12 @@ export function registerBoneRaycast(
   const onPointerClick = (_e: MouseEvent): void => {
     if (!state.hoveredBone || !state.onBoneSelectCallback) return;
     const info = assembleBoneSelectInfo(
-      state.hoveredBone, boneGroupMap, nameMap, parentMap, childrenMap, state.hoveredMesh,
+      state.hoveredBone,
+      boneGroupMap,
+      nameMap,
+      parentMap,
+      childrenMap,
+      state.hoveredMesh,
     );
     state.onBoneSelectCallback(info);
   };

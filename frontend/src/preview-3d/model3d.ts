@@ -10,7 +10,7 @@
 // 绑定类型为唯一锚点。禁新增第四套 spec 类型名；缺字段（_cubeCount/textureWidth/
 // texArrOrder/componentTextures）请直锚绑定，勿在此补字段 or 用 as 双跳硬取——
 // 统计侧（skeleton-render componentCountsFromSpec）已直锚绑定为范式。
-import * as THREE from "three";
+import type * as THREE from "three";
 
 // ── Spec 结构（Go 返回的 models 结构）────────────────
 export interface SpecBone3D {
@@ -73,7 +73,7 @@ export interface BoneMaps {
 
 // P1 修复（ADR-040）：键位/相机偏好 re-export 兼容
 export type { TdKeyAction } from "./keymap.ts";
-export { DEFAULT_TD_KEYMAP, loadTdKeymap, loadTdCamSpeed, loadTdRotMode } from "./keymap.ts";
+export { DEFAULT_TD_KEYMAP, loadTdCamSpeed, loadTdKeymap, loadTdRotMode } from "./keymap.ts";
 
 // ADR-052 P3 落地：截图功能通用化至 screenshot.ts 纯函数 + 适配器 screenshot() 能力；
 // 本文件不再持有截图相关符号。

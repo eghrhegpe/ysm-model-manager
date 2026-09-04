@@ -74,7 +74,7 @@ export function buildSpecFromModel(model: SpecModelInput): SpecBuildResult {
 
   // Phase 1: 收集每个 bone 的 first pivot
   for (const b of model.bones || []) {
-    if (!boneIdx.hasOwnProperty(b.name)) {
+    if (!Object.hasOwn(boneIdx, b.name)) {
       boneIdx[b.name] = true;
       firstPivot[b.name] = b.pivot || [0, 0, 0];
     }
@@ -97,7 +97,16 @@ export function buildSpecFromModel(model: SpecModelInput): SpecBuildResult {
       const size = c.size || [1, 1, 1];
       const pivot = c.pivot || [0, 0, 0];
       const rotation = c.rotation || [0, 0, 0];
-      return { origin, size, pivot, rotation, uv: c.uv, faceUV: c.faceUV, inflate: c.inflate, mirror: c.mirror };
+      return {
+        origin,
+        size,
+        pivot,
+        rotation,
+        uv: c.uv,
+        faceUV: c.faceUV,
+        inflate: c.inflate,
+        mirror: c.mirror,
+      };
     });
     if (!boneCubes[b.name]) {
       boneCubes[b.name] = cubes;
@@ -119,14 +128,7 @@ export function buildSpecFromModel(model: SpecModelInput): SpecBuildResult {
     if (!cubes || cubes.length === 0) continue;
 
     for (const c of cubes) {
-      const data = buildCubeMeshDataJS(
-        c,
-        groupPivot,
-        texW,
-        texH,
-        boneID,
-        cubeIdx,
-      );
+      const data = buildCubeMeshDataJS(c, groupPivot, texW, texH, boneID, cubeIdx);
       meshes.push(data);
       cubeIdx++;
     }
@@ -194,11 +196,7 @@ function buildCubeMeshDataJS(
     geoOrigin[1] - bonePivot[1],
     geoOrigin[2] - bonePivot[2],
   ];
-  const cubePivot = [
-    pivot[0] - bonePivot[0],
-    pivot[1] - bonePivot[1],
-    pivot[2] - bonePivot[2],
-  ];
+  const cubePivot = [pivot[0] - bonePivot[0], pivot[1] - bonePivot[1], pivot[2] - bonePivot[2]];
   const rot = c.rotation || [0, 0, 0];
   const faceUV = c.faceUV;
   const uvData = faceUV
@@ -334,8 +332,7 @@ function parseUVFromObject(
     const uv: number[][][] = [];
     let texIdx = 0;
     for (const face of faces) {
-      const fd =
-        faceData[face] || faceData[face.toUpperCase() as keyof FaceUVData];
+      const fd = faceData[face] || faceData[face.toUpperCase() as keyof FaceUVData];
       if (fd?.uv && fd?.uv_size) {
         const [fu, fv] = fd.uv;
         const [fw, fh] = fd.uv_size;
@@ -360,5 +357,3 @@ function parseUVFromObject(
     return parseUVJS({ uv: [0, 0] }, sx, sy, sz, texW, texH);
   }
 }
-
-

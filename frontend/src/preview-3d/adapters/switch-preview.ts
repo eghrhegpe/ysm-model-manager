@@ -6,24 +6,24 @@
 // 改为接受 SwitchContext 的纯函数，消除闭包耦合。
 // 同时抽出重复的「重算包围盒 → 更新 lightCap target」逻辑为独立函数。
 
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { logError } from "../../utils/core/log.ts";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "../../bus.ts";
+import { logError } from "../../utils/core/log.ts";
+import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { fitCameraToRoots } from "../camera-setup.ts";
+import type { EnvironmentCapability } from "../caps/environment-capability.ts";
 import type { LightCapability } from "../caps/light-capability.ts";
 import type { ShadowCapability } from "../caps/shadow-capability.ts";
-import type { EnvironmentCapability } from "../caps/environment-capability.ts";
-import type { CameraControlBridge } from "./camera-controls.ts";
-import { safeDispose } from "../safe-dispose.ts";
-import { showLoadFailure } from "./preview-loading.ts";
-import { collectSceneStats } from "../scene-stats.ts";
-import { mergeStatsMenuItems } from "../menu/stats.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
-import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import type { PreviewMenuHandle } from "../menu/core.ts";
-import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
-import { fitCameraToRoots } from "../camera-setup.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
+import { mergeStatsMenuItems } from "../menu/stats.ts";
+import { safeDispose } from "../safe-dispose.ts";
+import { collectSceneStats } from "../scene-stats.ts";
+import type { CameraControlBridge } from "./camera-controls.ts";
+import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
+import { showLoadFailure } from "./preview-loading.ts";
+import { MAX_MODELS, sceneRegistry } from "./scene-registry.ts";
 
 // ---------------------------------------------------------------------------
 // 类型
@@ -181,7 +181,11 @@ function clearSwitchContent(ctx: SwitchContext, keep: boolean): Set<THREE.Object
   }
   // 释放旧内容层 GPU 资源（非同台模式才 dispose；同台模式下旧模型仍需保持）
   if (!keep) {
-    try { ctx.getContent()?.dispose(); } catch (e) { console.error("[preview] 旧内容层 dispose 失败:", e); }
+    try {
+      ctx.getContent()?.dispose();
+    } catch (e) {
+      console.error("[preview] 旧内容层 dispose 失败:", e);
+    }
     // 审核 P3-1：dispose 后立即停驱动旧 perFrame——否则 await build 窗口内
     // rAF 仍每帧驱动已释放的旧 update（有 try/catch 兜底不崩，但每帧刷警告）。
     // build 成功后 syncSwitchView 注册新回调；失败则 recoverSwitchFailure 已兜底。
@@ -376,10 +380,7 @@ function syncSwitchView(
  * 若把完整 scene（含刚构建的模型）作基线，下次切换的 stale 差量会把旧模型视为基线、
  * 永不移除 → 幽灵网格累积（P1）。
  */
-function updateSwitchBaseline(
-  ctx: SwitchContext,
-  beforeBuild: Set<THREE.Object3D> | null,
-): void {
+function updateSwitchBaseline(ctx: SwitchContext, beforeBuild: Set<THREE.Object3D> | null): void {
   if (ctx.setSceneBaseline && ctx.scene) {
     const added = beforeBuild ? ctx.scene.children.filter((c) => !beforeBuild.has(c)) : [];
     const addedSet = new Set(added);

@@ -5,18 +5,18 @@
 //   2. 在底部 add() 注册一行
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
 
-import * as THREE from "three";
-import { SkyCapability } from "./sky-capability.ts";
-import { GroundCapability } from "./ground-capability.ts";
-import { WaterCapability } from "./water-capability.ts";
-import { LightCapability } from "./light-capability.ts";
-import { FogCapability } from "./fog-capability.ts";
-import { ShadowCapability } from "./shadow-capability.ts";
-import { ReflectorCapability } from "./reflector-capability.ts";
+import type * as THREE from "three";
 import { EnvironmentCapability } from "./environment-capability.ts";
+import { FogCapability } from "./fog-capability.ts";
+import { GroundCapability } from "./ground-capability.ts";
+import { LightCapability } from "./light-capability.ts";
 import { PostprocessingCapability } from "./postprocessing-capability.ts";
+import { ReflectorCapability } from "./reflector-capability.ts";
 import { RenderModeCapability } from "./render-mode-capability.ts";
 import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
+import { ShadowCapability } from "./shadow-capability.ts";
+import { SkyCapability } from "./sky-capability.ts";
+import { WaterCapability } from "./water-capability.ts";
 
 /** 能力工厂：接收 scene/renderer/camera，返回能力实例。
  *  ctx.caps 是 cap 间协调查询器（getById 本批实例）——cap 间联动经注入，不 import
@@ -145,11 +145,14 @@ sceneCapabilityRegistry.add((ctx) => new EnvironmentCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new FogCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new ShadowCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new ReflectorCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new PostprocessingCapability({
-  scene: ctx.scene,
-  renderer: ctx.renderer,
-  camera: ctx.camera,
-}));
+sceneCapabilityRegistry.add(
+  (ctx) =>
+    new PostprocessingCapability({
+      scene: ctx.scene,
+      renderer: ctx.renderer,
+      camera: ctx.camera,
+    }),
+);
 sceneCapabilityRegistry.add((ctx) => new LightCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new RenderModeCapability({ scene: ctx.scene }));
 
@@ -157,7 +160,8 @@ sceneCapabilityRegistry.add((ctx) => new RenderModeCapability({ scene: ctx.scene
  *  （skeleton-render）共用——原 light-capability 模块函数，上移断 registry↔light 环） */
 export function isSkyEnvironmentOn(): boolean {
   return (
-    (sceneCapabilityRegistry.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null)
-      ?.isEnvironmentEnabled?.() ?? false
+    (
+      sceneCapabilityRegistry.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null
+    )?.isEnvironmentEnabled?.() ?? false
   );
 }

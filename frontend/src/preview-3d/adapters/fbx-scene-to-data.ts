@@ -11,7 +11,7 @@
 // 丢祖先变换（放置错位 / 蒙皮 bind 错位）。骨骼节点不序列化——由 skeleton.bones
 // 数据单独重建并挂到 mesh（既有契约，动画轨道经名字可达）。
 
-import * as THREE from "three";
+import type * as THREE from "three";
 
 export interface FbxGeometryData {
   position: Float32Array;
@@ -124,10 +124,18 @@ function serializeMaterial(mat: THREE.Material): FbxMaterialData {
     const v = anyMat[key];
     if (v !== undefined && v !== null) write(v);
   };
-  optional("specular", (v) => { out.specular = toColor(v); });
-  optional("shininess", (v) => { out.shininess = v as number; });
-  optional("transparent", (v) => { out.transparent = v as boolean; });
-  optional("opacity", (v) => { out.opacity = v as number; });
+  optional("specular", (v) => {
+    out.specular = toColor(v);
+  });
+  optional("shininess", (v) => {
+    out.shininess = v as number;
+  });
+  optional("transparent", (v) => {
+    out.transparent = v as boolean;
+  });
+  optional("opacity", (v) => {
+    out.opacity = v as number;
+  });
   for (const key of ["map", "normalMap", "specularMap", "alphaMap", "emissiveMap"] as const) {
     const name = texNameOf(key);
     if (name) out[key] = name;

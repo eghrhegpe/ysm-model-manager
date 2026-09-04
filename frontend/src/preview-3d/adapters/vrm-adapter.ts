@@ -3,31 +3,39 @@
 // VRMLoaderPlugin 解析 → rotateVRM0 摆正 → 注入核心场景 + 灯光 + 包围盒定相机。
 // 通用外壳（overlay/renderer/循环/释放）由 mount-preview-core.ts 拥有。
 
-import * as THREE from "three";
-import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
-import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm";
-import { VRMAnimationLoaderPlugin, createVRMAnimationClip, type VRMAnimation } from "@pixiv/three-vrm-animation";
+import { type VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import {
+  createVRMAnimationClip,
+  type VRMAnimation,
+  VRMAnimationLoaderPlugin,
+} from "@pixiv/three-vrm-animation";
 import type { VRM0Meta } from "@pixiv/three-vrm-core";
-import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
-import { buildVrmBoneTree } from "./vrm-bone.ts";
-import { vrmSemanticBoneMap } from "../semantic-bones.ts";
+import * as THREE from "three";
+import { type GLTF, GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { b64ToBytes } from "../base64.ts";
+import type { BoneTree } from "../bone-tools.ts";
+import { frameCameraSide } from "../camera-setup.ts";
+import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
+import { recordLoadTrace } from "../load-trace.ts";
+import type { PreviewMenuNode } from "../menu/node-types.ts";
+import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
+import { createBlinkController } from "../perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createBreathController } from "../perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
 import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
 import { createGazeController } from "../perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
-import { createBlinkController } from "../perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
-import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
-import { recordLoadTrace } from "../load-trace.ts";
-import { frameCameraSide } from "../camera-setup.ts";
-import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
-import { renderLoadingState } from "./preview-loading.ts";
-import { b64ToBytes } from "../base64.ts";
 import { collectSceneStats, type SceneStats } from "../scene-stats.ts";
-import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
+import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
+import { vrmSemanticBoneMap } from "../semantic-bones.ts";
+import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { materialNodes } from "./material-controls.ts";
-import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
-import type { BoneTree } from "../bone-tools.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
+import {
+  type PerceptionCapability,
+  type PerceptionState,
+  perceptionNodes,
+} from "./perception-controls.ts";
+import { renderLoadingState } from "./preview-loading.ts";
+import { buildVrmBoneTree } from "./vrm-bone.ts";
 
 /** VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface VrmDataPort {
@@ -48,11 +56,12 @@ async function vrmDiag(
     /* 诊断不阻断加载 */
   }
 }
+
 import {
-  listVrmMaterials,
   getVrmMaterialDetail,
-  setVrmMaterialVisible,
+  listVrmMaterials,
   setVrmMaterialOpacity,
+  setVrmMaterialVisible,
 } from "../vrm-materials.ts";
 import type { MmdPlayBridge } from "./content-bridges.ts";
 
@@ -116,7 +125,10 @@ export async function readVrmMeta(
     if (!b64) return null;
 
     const bytes = b64ToBytes(b64);
-    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer;
 
     const loader = new GLTFLoader();
     loader.register((parser) => new VRMLoaderPlugin(parser));
@@ -139,13 +151,18 @@ export async function readVrmMeta(
         name: meta.title || "",
         authors: meta.author ? [meta.author] : [],
         version: meta.version,
-        license: meta.licenseName ? meta.licenseName + (meta.otherLicenseUrl ? " · " + meta.otherLicenseUrl : "") : undefined,
+        license: meta.licenseName
+          ? meta.licenseName + (meta.otherLicenseUrl ? " · " + meta.otherLicenseUrl : "")
+          : undefined,
         contact: meta.contactInformation,
         thumbnail: meta.texture ? imageToDataURL(meta.texture) : "",
         restrictions: {
-          allowedUser: m.allowedUserName === "Everyone" ? "everyone"
-            : m.allowedUserName === "ExplicitlyLicensedPerson" ? "licensed"
-            : "onlyAuthor",
+          allowedUser:
+            m.allowedUserName === "Everyone"
+              ? "everyone"
+              : m.allowedUserName === "ExplicitlyLicensedPerson"
+                ? "licensed"
+                : "onlyAuthor",
           commercial: m.commercialUssageName === "Allow",
           sexual: m.sexualUssageName === "Allow",
           violent: m.violentUssageName === "Allow",
@@ -188,7 +205,10 @@ export interface VrmPanelHooks {
   modelInfoNodes?: (ctx: VrmModelInfoCtx) => PreviewMenuNode[];
   /** 截图面板声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归，P5 收尾：对齐 MMD/YSM
    *  shotNodes 模式，复用 shot-panel-shared；缺失 → children 空、面板不渲染） */
-  shotNodes?: (screenshot: (() => Promise<string | null>) | null, modelPath: string) => PreviewMenuNode[];
+  shotNodes?: (
+    screenshot: (() => Promise<string | null>) | null,
+    modelPath: string,
+  ) => PreviewMenuNode[];
   /** [doc:adr-126-p5-收尾] play 面板声明式节点（复用 MMD playNodes：toggle 播放/暂停 +
    *  select 动作 + 空态引导）；缺失 → children 空、面板不渲染 */
   playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
@@ -242,10 +262,19 @@ async function mdVrStage1ReadParse(
   renderLoadingState(ctx.loadingEl, "🥽", "preview.loadingModel");
   const tStart = performance.now();
   const b64 = await readFn(path);
-  await vrmDiag(port, "read-model", path, b64 ? "ok" : "fail", b64 ? `bytes=${b64.length}` : "ReadFileBytes 返回空（路径语义/守卫？）");
+  await vrmDiag(
+    port,
+    "read-model",
+    path,
+    b64 ? "ok" : "fail",
+    b64 ? `bytes=${b64.length}` : "ReadFileBytes 返回空（路径语义/守卫？）",
+  );
   if (!b64) throw new Error("ReadFileBytes 返回空");
   const bytes = b64ToBytes(b64);
-  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const buffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
   const loader = new GLTFLoader();
   loader.register((parser) => new VRMLoaderPlugin(parser));
   loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
@@ -262,8 +291,20 @@ async function mdVrStage1ReadParse(
   registerModelRoot(vrm.scene);
   ctx.loadingEl.remove();
   const tParseEnd = performance.now();
-  await vrmDiag(port, "parse", path, "ok", `bones=${gltf.scenes?.[0]?.children?.length ?? 0} gltf-children=${gltf.scenes?.length ?? 0}`);
-  await vrmDiag(port, "perf", path, "ok", `parse=${Math.round(tParseEnd - tParseStart)}ms total=${Math.round(tParseEnd - tStart)}ms`);
+  await vrmDiag(
+    port,
+    "parse",
+    path,
+    "ok",
+    `bones=${gltf.scenes?.[0]?.children?.length ?? 0} gltf-children=${gltf.scenes?.length ?? 0}`,
+  );
+  await vrmDiag(
+    port,
+    "perf",
+    path,
+    "ok",
+    `parse=${Math.round(tParseEnd - tParseStart)}ms total=${Math.round(tParseEnd - tStart)}ms`,
+  );
   return { vrm, gltf, tStart, tParseStart, tParseEnd };
 }
 async function mdVrLoadVrmaAnims(
@@ -275,9 +316,10 @@ async function mdVrLoadVrmaAnims(
   const motionClips: Array<{ label: string; clip: THREE.AnimationClip }> = [];
   let motionMixer: THREE.AnimationMixer | null = null;
   let motionAction: THREE.AnimationAction | null = null;
-  let motionPlaying = true;
-  let motionIdx = 0;
-  if (!listAllFilePaths) return { motionClips, motionMixer, motionAction, motionPlaying, motionIdx };
+  const motionPlaying = true;
+  const motionIdx = 0;
+  if (!listAllFilePaths)
+    return { motionClips, motionMixer, motionAction, motionPlaying, motionIdx };
   try {
     const dirPath = path.replace(/[^/\\]*$/, "").replace(/[/\\]$/, "");
     const files = (await listAllFilePaths(dirPath)) || [];
@@ -290,8 +332,13 @@ async function mdVrLoadVrmaAnims(
         const b64 = await readFn(vp);
         if (!b64) continue;
         const bytes = b64ToBytes(b64);
-        const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-        const animGltf = await new Promise<GLTF>((resolve, reject) => loader.parse(buf, "", resolve, reject));
+        const buf = bytes.buffer.slice(
+          bytes.byteOffset,
+          bytes.byteOffset + bytes.byteLength,
+        ) as ArrayBuffer;
+        const animGltf = await new Promise<GLTF>((resolve, reject) =>
+          loader.parse(buf, "", resolve, reject),
+        );
         const anims = (animGltf.userData as { vrmAnimations?: VRMAnimation[] }).vrmAnimations;
         if (!anims || anims.length === 0) continue;
         motionClips.push({
@@ -321,7 +368,11 @@ function mdVrStage3Materials(vrm: VRM): THREE.Material[] {
   vrm.scene.traverse((child: THREE.Object3D) => {
     if (!(child as THREE.Mesh).isMesh) return;
     const mesh = child as THREE.Mesh;
-    const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+    const mats = Array.isArray(mesh.material)
+      ? mesh.material
+      : mesh.material
+        ? [mesh.material]
+        : [];
     vrmMaterials.push(...mats);
   });
   return vrmMaterials;
@@ -332,8 +383,19 @@ function mdVrStage2BonesHumanoid(vrm: VRM): MdVrBoneAssembly {
   const semanticBones = vrmSemanticBoneMap(vrm.humanoid.humanBones);
   return { bonePanelRef, boneTree, semanticBones };
 }
-function mdVrBuildPerception(vrm: VRM, ctx: PreviewBuildCtx, boneTree: BoneTree, semanticBones: ReturnType<typeof vrmSemanticBoneMap>): MdVrPerceptionState {
-  const perceptionState: PerceptionState = { breath: true, gaze: true, blink: true, lipSync: false, autoDance: false };
+function mdVrBuildPerception(
+  vrm: VRM,
+  ctx: PreviewBuildCtx,
+  boneTree: BoneTree,
+  semanticBones: ReturnType<typeof vrmSemanticBoneMap>,
+): MdVrPerceptionState {
+  const perceptionState: PerceptionState = {
+    breath: true,
+    gaze: true,
+    blink: true,
+    lipSync: false,
+    autoDance: false,
+  };
   const perceptionCaps: PerceptionCapability[] = [
     { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
     { id: "gaze", labelKey: "preview.perceptionGaze", fallback: "注视" },
@@ -341,15 +403,29 @@ function mdVrBuildPerception(vrm: VRM, ctx: PreviewBuildCtx, boneTree: BoneTree,
   ];
   const breath = createBreathController();
   const useNativeLookAt = !!vrm.lookAt;
-  const gaze: ReturnType<typeof createGazeController> | null = useNativeLookAt ? null : createGazeController();
+  const gaze: ReturnType<typeof createGazeController> | null = useNativeLookAt
+    ? null
+    : createGazeController();
   if (useNativeLookAt && ctx.camera) vrm.lookAt!.target = ctx.camera;
   const exprMgr = vrm.expressionManager;
   const blinkExpressionNames = exprMgr
-    ? (["blink", "blinkLeft", "blinkRight"] as const).filter((n) => exprMgr.getExpression(n) !== null)
-    : [] as Array<"blink" | "blinkLeft" | "blinkRight">;
+    ? (["blink", "blinkLeft", "blinkRight"] as const).filter(
+        (n) => exprMgr.getExpression(n) !== null,
+      )
+    : ([] as Array<"blink" | "blinkLeft" | "blinkRight">);
   const blink = createBlinkController();
   const footIK = createFootIKController(boneTree, semanticBones);
-  return { perceptionState, perceptionCaps, breath, gaze, blink, footIK, useNativeLookAt, blinkExpressionNames, exprMgr };
+  return {
+    perceptionState,
+    perceptionCaps,
+    breath,
+    gaze,
+    blink,
+    footIK,
+    useNativeLookAt,
+    blinkExpressionNames,
+    exprMgr,
+  };
 }
 function mdVrStage4MenuPanels(
   path: string,
@@ -364,7 +440,11 @@ function mdVrStage4MenuPanels(
   const { motionClips, motionMixer } = motion;
   // 模型信息数据源（model 面板 children；名称取文件名去扩展名）
   const modelInfo: VrmModelInfoCtx = {
-    modelName: path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || path,
+    modelName:
+      path
+        .split(/[/\\]/)
+        .pop()
+        ?.replace(/\.[^.]+$/, "") || path,
     // 全量骨骼数（byId.size = 提取的全部 humanoid 骨骼 ~52 根；roots 只是无父骨根节点 ≈1，
     // 用它面板会错误显示「1 骨骼」——a400b244 review P2）
     boneCount: boneAssy.boneTree.byId.size,
@@ -390,27 +470,28 @@ function mdVrStage4MenuPanels(
         setVrmMaterialOpacity(vrmMaterials, i, o);
       },
     },
-    play: motionClips.length > 0
-      ? {
-          clips: motionClips.map((c) => ({ label: c.label })),
-          isPlaying: () => motion.motionPlaying,
-          toggle: () => {
-            motion.motionPlaying = !motion.motionPlaying;
-            if (motion.motionAction) motion.motionAction.paused = !motion.motionPlaying;
-          },
-          currentIndex: () => motion.motionIdx,
-          select: (i: number) => {
-            if (i === motion.motionIdx || !motionMixer) return;
-            if (i < 0 || i >= motionClips.length) return;
-            motion.motionIdx = i;
-            motion.motionAction?.stop();
-            motion.motionAction = motionMixer.clipAction(motionClips[i].clip);
-            motion.motionAction.play();
-            motion.motionAction.paused = !motion.motionPlaying;
-          },
-          animDir: null,
-        }
-      : null,
+    play:
+      motionClips.length > 0
+        ? {
+            clips: motionClips.map((c) => ({ label: c.label })),
+            isPlaying: () => motion.motionPlaying,
+            toggle: () => {
+              motion.motionPlaying = !motion.motionPlaying;
+              if (motion.motionAction) motion.motionAction.paused = !motion.motionPlaying;
+            },
+            currentIndex: () => motion.motionIdx,
+            select: (i: number) => {
+              if (i === motion.motionIdx || !motionMixer) return;
+              if (i < 0 || i >= motionClips.length) return;
+              motion.motionIdx = i;
+              motion.motionAction?.stop();
+              motion.motionAction = motionMixer.clipAction(motionClips[i].clip);
+              motion.motionAction.play();
+              motion.motionAction.paused = !motion.motionPlaying;
+            },
+            animDir: null,
+          }
+        : null,
     perception: { state: perception.perceptionState, caps: perception.perceptionCaps },
   });
   return menuItems;
@@ -430,8 +511,14 @@ function mdVrStage5BuildResult(
   const { semanticBones, bonePanelRef } = boneAssy;
   const { motionClips, motionMixer } = motion;
   const {
-    perceptionState, breath, gaze, blink, footIK,
-    useNativeLookAt, blinkExpressionNames, exprMgr,
+    perceptionState,
+    breath,
+    gaze,
+    blink,
+    footIK,
+    useNativeLookAt,
+    blinkExpressionNames,
+    exprMgr,
   } = perception;
   recordLoadTrace({
     ts: Date.now(),
@@ -463,7 +550,8 @@ function mdVrStage5BuildResult(
       if (semanticBones) {
         if (perceptionState.breath) breath.apply(dt, semanticBones);
         // gaze 不挂全局暂停标志（摄像机追踪，非动画优先级）——保留本层 !animActive 守卫
-        if (!animActive && !useNativeLookAt && perceptionState.gaze) gaze!.apply(dt, semanticBones, ctx.camera!.position);
+        if (!animActive && !useNativeLookAt && perceptionState.gaze)
+          gaze!.apply(dt, semanticBones, ctx.camera!.position);
       }
       footIK.apply(dt, !animActive);
       if (exprMgr && blinkExpressionNames.length > 0 && perceptionState.blink) {
@@ -493,9 +581,20 @@ function mdVrStage5BuildResult(
       vrm.scene.traverse((child: THREE.Object3D) => {
         if (!(child as THREE.Mesh).isMesh) return;
         const mesh = child as THREE.Mesh;
-        const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+        const mats = Array.isArray(mesh.material)
+          ? mesh.material
+          : mesh.material
+            ? [mesh.material]
+            : [];
         for (const mat of mats) {
-          const texKeys = ["map", "emissiveMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap"];
+          const texKeys = [
+            "map",
+            "emissiveMap",
+            "normalMap",
+            "roughnessMap",
+            "metalnessMap",
+            "aoMap",
+          ];
           for (const key of texKeys) {
             const tex = (mat as unknown as Record<string, unknown>)[key];
             if (tex instanceof THREE.Texture) texCount++;
@@ -505,8 +604,7 @@ function mdVrStage5BuildResult(
       VRMUtils.deepDispose(vrm.scene);
       void vrmDiag(port, "gpu-release", path, "ok", `tex=${texCount}`);
     },
-    screenshot: () =>
-      Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
+    screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
     semanticBones,
   };
 }
@@ -526,8 +624,26 @@ export async function buildVrmScene(
   const boneAssy = mdVrStage2BonesHumanoid(vrm);
   const vrmMaterials = mdVrStage3Materials(vrm);
   const perception = mdVrBuildPerception(vrm, ctx, boneAssy.boneTree, boneAssy.semanticBones);
-  const menuItems = mdVrStage4MenuPanels(path, panels, ctx, boneAssy, vrmMaterials, motion, perception);
-  return mdVrStage5BuildResult(ctx, path, port, parseRes, boneAssy, vrmMaterials, motion, perception, menuItems);
+  const menuItems = mdVrStage4MenuPanels(
+    path,
+    panels,
+    ctx,
+    boneAssy,
+    vrmMaterials,
+    motion,
+    perception,
+  );
+  return mdVrStage5BuildResult(
+    ctx,
+    path,
+    port,
+    parseRes,
+    boneAssy,
+    vrmMaterials,
+    motion,
+    perception,
+    menuItems,
+  );
 }
 
 /** vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 */
@@ -583,7 +699,8 @@ export interface VrmAdapterDeps {
 export function makeVrmAdapter(deps: VrmAdapterDeps): PreviewAdapter {
   return {
     id: "vrm",
-    build: (ctx, path) => buildVrmScene(ctx, path, deps.port, deps.readFileBytes, deps.panels, deps.listAllFilePaths),
+    build: (ctx, path) =>
+      buildVrmScene(ctx, path, deps.port, deps.readFileBytes, deps.panels, deps.listAllFilePaths),
   };
 }
 

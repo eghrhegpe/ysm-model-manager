@@ -12,12 +12,12 @@
 // 血统：类型原住 views/app-preview/{mmd,ysm}-controls.ts（值文件），是内容层面板
 // 填充函数与 adapter 组装之间的桥契约。值逻辑留在原文件，类型归位此处。
 
-import type { SkinnedMesh, Texture } from "three";
 import type { MMD } from "@moeru/three-mmd";
-import type { CameraControlBridge } from "./camera-controls.ts";
-import type { MmdMaterialDetail, MmdMaterialListItem } from "../mmd-materials.ts";
+import type { SkinnedMesh, Texture } from "three";
 import type { BedrockGeometry } from "../decoder/geometry.ts";
-import type { Spec3D, BoneSelectInfo } from "../model3d.ts";
+import type { MmdMaterialDetail, MmdMaterialListItem } from "../mmd-materials.ts";
+import type { BoneSelectInfo, Spec3D } from "../model3d.ts";
+import type { CameraControlBridge } from "./camera-controls.ts";
 
 // ── MMD 内容层桥（原 views/app-preview/mmd-controls.ts）──
 

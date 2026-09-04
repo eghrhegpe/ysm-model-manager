@@ -6,10 +6,10 @@
 
 import * as THREE from "three";
 import {
-  type SceneCapability,
   type MenuControlDef,
   persistState,
   restoreState,
+  type SceneCapability,
 } from "./scene-capability.ts";
 
 /* -------- 属性定义 -------- */
@@ -101,11 +101,21 @@ export class RenderModeCapability implements SceneCapability {
       //   override null 且曾被覆盖 → 回落该属性快照原始值（无快照保持现值）；
       //   override null 且从未覆盖 → 保持材质现值不写（外部写入不被 sync 还原）。
       // 回调参数显式注解：泛型 T 无法从回调体反向推断，不注解会落为 unknown。
-      this.applyProp("wireframe", mat, orig, (v: boolean) => { mat.wireframe = v; });
-      this.applyProp("blending", mat, orig, (v: THREE.Blending) => { mat.blending = v; });
-      this.applyProp("depthTest", mat, orig, (v: boolean) => { mat.depthTest = v; });
-      this.applyProp("side", mat, orig, (v: THREE.Side) => { mat.side = v; });
-      this.applyProp("depthWrite", mat, orig, (v: boolean) => { mat.depthWrite = v; });
+      this.applyProp("wireframe", mat, orig, (v: boolean) => {
+        mat.wireframe = v;
+      });
+      this.applyProp("blending", mat, orig, (v: THREE.Blending) => {
+        mat.blending = v;
+      });
+      this.applyProp("depthTest", mat, orig, (v: boolean) => {
+        mat.depthTest = v;
+      });
+      this.applyProp("side", mat, orig, (v: THREE.Side) => {
+        mat.side = v;
+      });
+      this.applyProp("depthWrite", mat, orig, (v: boolean) => {
+        mat.depthWrite = v;
+      });
     }
   }
 
@@ -160,32 +170,62 @@ export class RenderModeCapability implements SceneCapability {
 
   /* -------- 单属性 setter/getter -------- */
 
-  setWireframe(v: boolean | null): void { this.overrides.wireframe = v; this.sync(); }
-  getWireframe(): boolean | null { return this.overrides.wireframe; }
+  setWireframe(v: boolean | null): void {
+    this.overrides.wireframe = v;
+    this.sync();
+  }
+  getWireframe(): boolean | null {
+    return this.overrides.wireframe;
+  }
 
-  setBlending(v: THREE.Blending | null): void { this.overrides.blending = v; this.sync(); }
-  getBlending(): THREE.Blending | null { return this.overrides.blending; }
+  setBlending(v: THREE.Blending | null): void {
+    this.overrides.blending = v;
+    this.sync();
+  }
+  getBlending(): THREE.Blending | null {
+    return this.overrides.blending;
+  }
 
-  setDepthTest(v: boolean | null): void { this.overrides.depthTest = v; this.sync(); }
-  getDepthTest(): boolean | null { return this.overrides.depthTest; }
+  setDepthTest(v: boolean | null): void {
+    this.overrides.depthTest = v;
+    this.sync();
+  }
+  getDepthTest(): boolean | null {
+    return this.overrides.depthTest;
+  }
 
-  setSide(v: THREE.Side | null): void { this.overrides.side = v; this.sync(); }
-  getSide(): THREE.Side | null { return this.overrides.side; }
+  setSide(v: THREE.Side | null): void {
+    this.overrides.side = v;
+    this.sync();
+  }
+  getSide(): THREE.Side | null {
+    return this.overrides.side;
+  }
 
-  setDepthWrite(v: boolean | null): void { this.overrides.depthWrite = v; this.sync(); }
-  getDepthWrite(): boolean | null { return this.overrides.depthWrite; }
+  setDepthWrite(v: boolean | null): void {
+    this.overrides.depthWrite = v;
+    this.sync();
+  }
+  getDepthWrite(): boolean | null {
+    return this.overrides.depthWrite;
+  }
 
   /* -------- SceneCapability 接口 -------- */
 
-  apply(): void { this.sync(); }
+  apply(): void {
+    this.sync();
+  }
 
-  setEnabled(_v: boolean): void { /* 由各属性独立控制 */ }
-  isEnabled(): boolean { return this.hasAnyOverride(); }
+  setEnabled(_v: boolean): void {
+    /* 由各属性独立控制 */
+  }
+  isEnabled(): boolean {
+    return this.hasAnyOverride();
+  }
 
   /* -------- 菜单控件 -------- */
 
   getMenuControls(): MenuControlDef[] {
-    const cap = this;
     const BLENDING_OPTIONS = [
       { value: String(THREE.NormalBlending), label: "正常" },
       { value: String(THREE.AdditiveBlending), label: "叠加" },
@@ -206,8 +246,8 @@ export class RenderModeCapability implements SceneCapability {
         fallback: "线框",
         hintKey: "preview.wireframeDesc",
         settingsOrder: 30,
-        getValue: () => cap.getWireframe() === true,
-        setValue: (v) => cap.setWireframe(v ? true : null),
+        getValue: () => this.getWireframe() === true,
+        setValue: (v) => this.setWireframe(v ? true : null),
       },
       // 🌈 混合模式
       {
@@ -217,8 +257,8 @@ export class RenderModeCapability implements SceneCapability {
         fallback: "混合模式",
         settingsOrder: 31,
         select: BLENDING_OPTIONS,
-        getValue: () => String(cap.getBlending() ?? THREE.NormalBlending),
-        setValue: (v) => cap.setBlending(v as unknown as THREE.Blending),
+        getValue: () => String(this.getBlending() ?? THREE.NormalBlending),
+        setValue: (v) => this.setBlending(v as unknown as THREE.Blending),
       },
       // 💀 X光透视（深度测试关闭 = 可看穿模型）
       {
@@ -228,8 +268,8 @@ export class RenderModeCapability implements SceneCapability {
         fallback: "X光透视",
         hintKey: "preview.renderModeXrayDesc",
         settingsOrder: 32,
-        getValue: () => cap.getDepthTest() === false,
-        setValue: (v) => cap.setDepthTest(v ? false : null),
+        getValue: () => this.getDepthTest() === false,
+        setValue: (v) => this.setDepthTest(v ? false : null),
       },
       // 🔄 面剔除
       {
@@ -239,8 +279,8 @@ export class RenderModeCapability implements SceneCapability {
         fallback: "面剔除",
         settingsOrder: 33,
         select: SIDE_OPTIONS,
-        getValue: () => String(cap.getSide() ?? THREE.FrontSide),
-        setValue: (v) => cap.setSide(v as unknown as THREE.Side),
+        getValue: () => String(this.getSide() ?? THREE.FrontSide),
+        setValue: (v) => this.setSide(v as unknown as THREE.Side),
       },
       // ⚡ 深度写入
       {
@@ -250,8 +290,8 @@ export class RenderModeCapability implements SceneCapability {
         fallback: "深度写入",
         hintKey: "preview.renderModeDepthWriteDesc",
         settingsOrder: 34,
-        getValue: () => cap.getDepthWrite() !== false,
-        setValue: (v) => cap.setDepthWrite(v ? null : false),
+        getValue: () => this.getDepthWrite() !== false,
+        setValue: (v) => this.setDepthWrite(v ? null : false),
       },
     ];
   }
@@ -271,11 +311,16 @@ export class RenderModeCapability implements SceneCapability {
   loadState(): void {
     const s = restoreState(this.id);
     if (!s) return;
-    if (typeof s.wireframe === "boolean" || s.wireframe === null) this.overrides.wireframe = s.wireframe;
-    if (typeof s.blending === "number" || s.blending === null) this.overrides.blending = s.blending as THREE.Blending | null;
-    if (typeof s.depthTest === "boolean" || s.depthTest === null) this.overrides.depthTest = s.depthTest;
-    if (typeof s.side === "number" || s.side === null) this.overrides.side = s.side as THREE.Side | null;
-    if (typeof s.depthWrite === "boolean" || s.depthWrite === null) this.overrides.depthWrite = s.depthWrite;
+    if (typeof s.wireframe === "boolean" || s.wireframe === null)
+      this.overrides.wireframe = s.wireframe;
+    if (typeof s.blending === "number" || s.blending === null)
+      this.overrides.blending = s.blending as THREE.Blending | null;
+    if (typeof s.depthTest === "boolean" || s.depthTest === null)
+      this.overrides.depthTest = s.depthTest;
+    if (typeof s.side === "number" || s.side === null)
+      this.overrides.side = s.side as THREE.Side | null;
+    if (typeof s.depthWrite === "boolean" || s.depthWrite === null)
+      this.overrides.depthWrite = s.depthWrite;
     this.sync();
   }
 

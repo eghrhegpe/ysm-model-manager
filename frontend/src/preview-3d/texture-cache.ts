@@ -7,7 +7,7 @@
 // 适用范围：YSM loadTextures（Image + Texture）、pack-model-adapter（TextureLoader）。
 // MMD/VRM 走 blob URL + 内置 Loader，暂不接入（需改造 Loader 管线，ROI 低）。
 
-import * as THREE from "three";
+import type * as THREE from "three";
 import { safeDispose } from "./safe-dispose.ts";
 
 interface CacheEntry {
@@ -31,7 +31,7 @@ export class TextureCacheImpl {
    * @param make  创建器（url → Texture），仅缓存未命中时调用
    */
   acquire<T extends THREE.Texture>(url: string, make: (url: string) => T): T {
-    let entry = this.cache.get(url);
+    const entry = this.cache.get(url);
     if (entry) {
       entry.refs++;
       // LRU：命中即刷新访问序（Map 迭代序 = 插入序，delete+set 移到最新）

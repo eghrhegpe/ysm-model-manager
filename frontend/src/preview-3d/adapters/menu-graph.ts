@@ -13,12 +13,12 @@
 // 可达性 = 对代表性快照集求 node.visibleWhen(snap)；节点级谓词（吃 PreviewSnapshot）
 // 与 cap 级 collectVisiblePredicates（无参 c.visible）严格区分，不可混用（§5 死穴二）。
 
+import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
+import type { PreviewMenuRouters } from "../menu/core.ts";
+import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "../menu/defs.ts";
 import type { PreviewMenuNode, PreviewMenuNodeKind } from "../menu/node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
-import type { PreviewMenuRouters } from "../menu/core.ts";
-import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { getSchema, listSchemas } from "./schema-registry.ts";
-import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "../menu/defs.ts";
 
 /** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn）。
  *  2026-09 收紧：Partial<PreviewSnapshot>——键位必须是已落地路径（写 ui.mode 等未落地键编译报错），
@@ -178,7 +178,9 @@ export function collectMenuGraph(opts: CollectMenuGraphOpts): MenuGraph {
     try {
       nodes = builder(snapForBuilder);
     } catch (e) {
-      throw new Error(`collectMenuGraph: registry 面板 "${id}" builder 抛错（${(e as Error).message}）`);
+      throw new Error(
+        `collectMenuGraph: registry 面板 "${id}" builder 抛错（${(e as Error).message}）`,
+      );
     }
     allResolvedNodes.push(nodes);
     allPanels.push(buildPanelNode(id, nodes, snapshots, nodes[0]?.dockGroup ?? lookupDock(id), id));

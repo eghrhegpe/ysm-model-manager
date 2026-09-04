@@ -3,12 +3,12 @@
 // 保存原始 wireframe 状态，dispose/关闭时逐个还原（不依赖材质 clone）。
 // 纯属性切换零 GPU 开销——wireframe 是 Three.js 内建光栅化模式，不走额外 draw call。
 
-import * as THREE from "three";
+import type * as THREE from "three";
 import {
-  type SceneCapability,
   type MenuControlDef,
   persistState,
   restoreState,
+  type SceneCapability,
 } from "./scene-capability.ts";
 
 export class WireframeCapability implements SceneCapability {

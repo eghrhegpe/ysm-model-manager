@@ -10,8 +10,8 @@
 //   2. readFileBytesBatch([...])  → 逐条分流（zip 内 / zip 外）
 //   3. listAllFilePaths(dir)      → dir 为虚拟目录 → 返回 zip 所有 entry 路径
 
-import { b64ToBytes, bytesToBase64 } from "../base64.ts";
 import { extractZip } from "../../parsers/extract.ts";
+import { b64ToBytes, bytesToBase64 } from "../base64.ts";
 import type { MmdDataPort } from "./mmd-adapter.ts";
 
 /** ZIP 解析产物（传给 overlay 的配置） */
@@ -211,7 +211,14 @@ export function makeZipOverlayPort(
 export async function prepareMmdZipInput(
   path: string,
   port: MmdDataPort,
-): Promise<{ port: MmdDataPort; rootPath: string; modelBytes: Uint8Array; modelBase: string; modelEntry: string; allModelEntries: string[] }> {
+): Promise<{
+  port: MmdDataPort;
+  rootPath: string;
+  modelBytes: Uint8Array;
+  modelBase: string;
+  modelEntry: string;
+  allModelEntries: string[];
+}> {
   const config = await resolveMmdZipConfig(path, port);
   const { port: overlay, rootPath } = makeZipOverlayPort(port, config);
   return {

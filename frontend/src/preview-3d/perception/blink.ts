@@ -80,7 +80,10 @@ export function createBlinkController(opts: BlinkOptions = {}) {
    */
   function apply(dt: number, onBlink: BlinkCallback): void {
     if (disposed || !onBlink || isPerceptionPaused()) return; // #9 全局暂停标志：动画激活时感知静默
-    if (!state) { scheduleNext(); return; }
+    if (!state) {
+      scheduleNext();
+      return;
+    }
 
     const now = performance.now();
     state.lastTick = now;

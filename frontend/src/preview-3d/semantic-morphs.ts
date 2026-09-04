@@ -12,18 +12,23 @@
 
 /** 语义 morph id（对齐 MMD 标准表情 + VRM 标准 expression） */
 export type SemanticMorphId =
-  | "blink"       // 眨眼：まばたき / blink
-  | "blinkLeft"   // 左眨：wink / blinkLeft
-  | "blinkRight"  // 右眨：winkRight / blinkRight
-  | "lipOpen"     // 张嘴：あ / A / mouth / open
-  | "lipClose"    // 闭嘴：い / I / close
-  | "lipPucker"   // 嘟嘴：う / U / pucker
-  | "lipSmile";   // 微笑：え / E / smile
+  | "blink" // 眨眼：まばたき / blink
+  | "blinkLeft" // 左眨：wink / blinkLeft
+  | "blinkRight" // 右眨：winkRight / blinkRight
+  | "lipOpen" // 张嘴：あ / A / mouth / open
+  | "lipClose" // 闭嘴：い / I / close
+  | "lipPucker" // 嘟嘴：う / U / pucker
+  | "lipSmile"; // 微笑：え / E / smile
 
 /** 全部语义 morph id（稳定顺序） */
 export const SEMANTIC_MORPH_IDS: readonly SemanticMorphId[] = [
-  "blink", "blinkLeft", "blinkRight",
-  "lipOpen", "lipClose", "lipPucker", "lipSmile",
+  "blink",
+  "blinkLeft",
+  "blinkRight",
+  "lipOpen",
+  "lipClose",
+  "lipPucker",
+  "lipSmile",
 ];
 
 /** 语义 morph 解析结果 */
@@ -57,7 +62,10 @@ export const MMD_SEMANTIC_MORPH_CANDIDATES: Record<SemanticMorphId, readonly str
 /**
  * 在 morph 名列表中按候选名匹配首个语义 morph（候选顺序 = 优先级）。
  */
-export function matchSemanticMorph(morphNames: readonly string[], candidates: readonly string[]): string | null {
+export function matchSemanticMorph(
+  morphNames: readonly string[],
+  candidates: readonly string[],
+): string | null {
   for (const c of candidates) {
     if (morphNames.includes(c)) return c;
   }
@@ -92,6 +100,9 @@ export function mmdSemanticMorphMap(morphs: readonly { name: string }[]): Semant
 /**
  * 取语义 morph 条目（消费方唯一入口；缺失返回 null）。
  */
-export function getSemanticMorph(map: SemanticMorphMap, id: SemanticMorphId): SemanticMorphEntry | null {
+export function getSemanticMorph(
+  map: SemanticMorphMap,
+  id: SemanticMorphId,
+): SemanticMorphEntry | null {
   return map[id] ?? null;
 }

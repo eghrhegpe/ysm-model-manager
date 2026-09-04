@@ -45,8 +45,10 @@ export class AlphaIndex {
     for (const g of this.grids.values()) {
       for (let ty = 1; ty < rows + 1; ty++) {
         for (let tx = 1; tx < cols + 1; tx++) {
-          g[ty * this.stride + tx] += g[(ty - 1) * this.stride + tx] +
-            g[ty * this.stride + tx - 1] - g[(ty - 1) * this.stride + tx - 1];
+          g[ty * this.stride + tx] +=
+            g[(ty - 1) * this.stride + tx] +
+            g[ty * this.stride + tx - 1] -
+            g[(ty - 1) * this.stride + tx - 1];
         }
       }
     }
@@ -75,8 +77,10 @@ export class AlphaIndex {
     let flags = 0;
     for (const [f, g] of this.grids) {
       const n =
-        g[(t1y + 1) * this.stride + (t1x + 1)] - g[t0y * this.stride + (t1x + 1)] -
-        g[(t1y + 1) * this.stride + t0x] + g[t0y * this.stride + t0x];
+        g[(t1y + 1) * this.stride + (t1x + 1)] -
+        g[t0y * this.stride + (t1x + 1)] -
+        g[(t1y + 1) * this.stride + t0x] +
+        g[t0y * this.stride + t0x];
       if (n > 0) flags |= f;
     }
     return flags;

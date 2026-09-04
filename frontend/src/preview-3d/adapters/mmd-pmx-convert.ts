@@ -5,14 +5,14 @@
 // 替代自研 PmxReader 双轨解析：解析口径与主线程 MMDLoader 完全一致，消除口径漂移。
 import type { PmxObject } from "../vendor/babylon-mmd/pmxReader.js";
 import type {
-  PmxParseResponse,
-  PmxVertexData,
-  PmxMaterialData,
   PmxBoneData,
-  PmxMorphData,
-  PmxRigidBodyData,
-  PmxJointData,
   PmxDisplayFrameData,
+  PmxJointData,
+  PmxMaterialData,
+  PmxMorphData,
+  PmxParseResponse,
+  PmxRigidBodyData,
+  PmxVertexData,
 } from "./mmd-pmx-parser.worker.ts";
 
 /** 顶点骨骼数据展平为 4 列压缩数组（BDEF4/QDEF 原样；BDEF1/2/SDEF 展开补零） */
@@ -129,7 +129,10 @@ function convertMorph(m: PmxObject["morphs"][number]): PmxMorphData {
     if (m.type === 1 && m.positions) {
       // VertexMorph：顶点位移
       for (let i = 0; i < idxs.length; i++) {
-        elements.push({ index: idxs[i], offset: [m.positions[i * 3], m.positions[i * 3 + 1], m.positions[i * 3 + 2]] });
+        elements.push({
+          index: idxs[i],
+          offset: [m.positions[i * 3], m.positions[i * 3 + 1], m.positions[i * 3 + 2]],
+        });
       }
     } else if (m.type === 0 && m.ratios) {
       // GroupMorph：组比例（offset 借位存 ratio）
@@ -139,12 +142,18 @@ function convertMorph(m: PmxObject["morphs"][number]): PmxMorphData {
     } else if (m.type === 2 && m.positions) {
       // BoneMorph：位移 + 旋转（offset 取位移）
       for (let i = 0; i < idxs.length; i++) {
-        elements.push({ index: idxs[i], offset: [m.positions[i * 3], m.positions[i * 3 + 1], m.positions[i * 3 + 2]] });
+        elements.push({
+          index: idxs[i],
+          offset: [m.positions[i * 3], m.positions[i * 3 + 1], m.positions[i * 3 + 2]],
+        });
       }
     } else if (m.type >= 3 && m.offsets) {
       // UvMorph / AdditionalUv：UV 偏移（offset 取前 3 分量）
       for (let i = 0; i < idxs.length; i++) {
-        elements.push({ index: idxs[i], offset: [m.offsets[i * 4], m.offsets[i * 4 + 1], m.offsets[i * 4 + 2]] });
+        elements.push({
+          index: idxs[i],
+          offset: [m.offsets[i * 4], m.offsets[i * 4 + 1], m.offsets[i * 4 + 2]],
+        });
       }
     }
   }

@@ -13,7 +13,17 @@ import type { PreviewSnapshot } from "../state/preview-paths.ts";
 /* ============ 菜单控件定义 ============ */
 
 /** 单个菜单控件类型（导出：PreviewMenuNode.controls 字段引用同一形制） */
-export type MenuControlKind = "toggle" | "slider" | "select" | "button" | "divider" | "image" | "color" | "timeline" | "histogram" | "preset-thumb";
+export type MenuControlKind =
+  | "toggle"
+  | "slider"
+  | "select"
+  | "button"
+  | "divider"
+  | "image"
+  | "color"
+  | "timeline"
+  | "histogram"
+  | "preset-thumb";
 
 /** 菜单控件定义（声明式，由框架渲染为 DOM） */
 export interface MenuControlDef {
@@ -216,7 +226,9 @@ export function createListenerSet(): {
   return {
     subscribe(listener: () => void): () => void {
       listeners.add(listener);
-      return () => { listeners.delete(listener); };
+      return () => {
+        listeners.delete(listener);
+      };
     },
     notify(): void {
       for (const l of listeners) l();

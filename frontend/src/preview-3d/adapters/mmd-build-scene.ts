@@ -7,9 +7,9 @@ import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
 import { registerModelRoot } from "../frustum-cull.ts";
 import { scheduleBackgroundEncoding } from "./mmd-ktx2-encoder.ts";
-import { DISPOSE_TEX_KEYS, matTexSlots } from "./mmd-utils.ts";
 import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
 import type { MdMmStage3Ctx } from "./mmd-types.ts";
+import { DISPOSE_TEX_KEYS, matTexSlots } from "./mmd-utils.ts";
 
 export async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
   c.buildSucceeded = false;
@@ -128,8 +128,8 @@ async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
               const ktxUrl = URL.createObjectURL(ktxBlob);
               c.blobUrls.push(ktxUrl);
               return (
-                c.ktx2CacheLoader!
-                  .loadAsync(ktxUrl)
+                c
+                  .ktx2CacheLoader!.loadAsync(ktxUrl)
                   .then((compressedTex) => {
                     for (const { mat, key } of slots) {
                       const prev = matTexSlots(mat)[key];
@@ -141,7 +141,11 @@ async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
                   // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve，
                   // 供外层 Promise.all await 与 replaced= 计数——不可改 fire-and-forget）
                   .catch((err) =>
-                    dbg("ktx2-replace-fail", { hash, slots: slots.length, err: safeErrorMessage(err) }),
+                    dbg("ktx2-replace-fail", {
+                      hash,
+                      slots: slots.length,
+                      err: safeErrorMessage(err),
+                    }),
                   )
               );
             }),

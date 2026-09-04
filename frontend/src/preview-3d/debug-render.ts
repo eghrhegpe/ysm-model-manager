@@ -104,11 +104,20 @@ export function rebuildDebug(
       const lineGeo = new THREE.BufferGeometry().setFromPoints([data.pos, top]);
       const line = new THREE.Line(
         lineGeo,
-        new THREE.LineBasicMaterial({ color: DEBUG_THEME.pivotLineColor, transparent: true, opacity: 0.25 }),
+        new THREE.LineBasicMaterial({
+          color: DEBUG_THEME.pivotLineColor,
+          transparent: true,
+          opacity: 0.25,
+        }),
       );
       state.debugGroup.add(line);
       const tex = makeTextTexture(data.name, DEBUG_THEME.pivotLabelColor);
-      const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false, transparent: true });
+      const mat = new THREE.SpriteMaterial({
+        map: tex,
+        depthTest: false,
+        sizeAttenuation: false,
+        transparent: true,
+      });
       const label = new THREE.Sprite(mat);
       label.position.copy(top);
       label.scale.set(DEBUG_THEME.labelScale.x, DEBUG_THEME.labelScale.y, DEBUG_THEME.labelScale.z);
@@ -116,12 +125,13 @@ export function rebuildDebug(
     }
   } else if (state.debugMode === "bone") {
     for (const [, data] of boneWorldPositions) {
-      const parentPos = data.parentId
-        ? boneWorldPositions.get(data.parentId)?.pos
-        : null;
+      const parentPos = data.parentId ? boneWorldPositions.get(data.parentId)?.pos : null;
       if (!parentPos) continue;
       const geo = new THREE.BufferGeometry().setFromPoints([data.pos.clone(), parentPos.clone()]);
-      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: DEBUG_THEME.boneLineColor }));
+      const line = new THREE.Line(
+        geo,
+        new THREE.LineBasicMaterial({ color: DEBUG_THEME.boneLineColor }),
+      );
       state.debugGroup.add(line);
     }
   }

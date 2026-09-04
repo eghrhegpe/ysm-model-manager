@@ -5,19 +5,19 @@
 
 import * as THREE from "three";
 import { t } from "../../core/i18n/t.ts";
-import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
+import type { VoxelData } from "../../parsers/voxel-parse.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import { recordLoadTrace } from "../load-trace.ts";
+import { multiModelSelectNode } from "../menu/multi-model.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
+import { overlayStyleRoot } from "../overlay-style-bridge.ts";
+import { safeDispose } from "../safe-dispose.ts";
+import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import type { PreviewSnapshot } from "../state/preview-state.ts";
+import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+import { renderLoadingState } from "./preview-loading.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
 import { registerSchema, unregisterSchema } from "./schema-registry.ts";
-import { multiModelSelectNode } from "../menu/multi-model.ts";
-import { recordLoadTrace } from "../load-trace.ts";
-import { safeDispose } from "../safe-dispose.ts";
-import { overlayStyleRoot } from "../overlay-style-bridge.ts";
-import { renderLoadingState } from "./preview-loading.ts";
-import type { VoxelData } from "../../parsers/voxel-parse.ts";
 
 // 提取魔法数值常量（体素尺寸 / 默认色 / chunk 维 / 截断上限）
 /** litematic 截断警告条样式(P1 批次11:cssText 抽类;插 ctx.overlay——ADR-175 M1 后为 overlay shadow root,ensureMdliStyles 经桥注入同域) */
@@ -40,10 +40,16 @@ const FALLBACK_MAX_BLOCKS = 200000; // data.maxBlocks 缺席时的展示上限
 // ===== 类型提级（闭包共享状态 → 包级接口，避免自由变量）=====
 
 interface MdLiSizeInfo {
-  sizeX: number; sizeY: number; sizeZ: number;
-  centerX: number; centerY: number; centerZ: number;
+  sizeX: number;
+  sizeY: number;
+  sizeZ: number;
+  centerX: number;
+  centerY: number;
+  centerZ: number;
   maxDim: number;
-  xChunks: number; yChunks: number; zChunks: number;
+  xChunks: number;
+  yChunks: number;
+  zChunks: number;
   grid: THREE.GridHelper;
 }
 
@@ -72,9 +78,7 @@ function mdLiShowLoading(ctx: PreviewBuildCtx): void {
   renderLoadingState(ctx.loadingEl, "🧊", "preview.loadingVoxels");
 }
 
-type MdLiLoadResult =
-  | { ok: true; data: VoxelData }
-  | { ok: false; earlyResult: PreviewScene };
+type MdLiLoadResult = { ok: true; data: VoxelData } | { ok: false; earlyResult: PreviewScene };
 
 async function mdLiLoadAndParseData(
   ctx: PreviewBuildCtx,
@@ -110,8 +114,12 @@ function mdLiSetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): MdLiSize
   grid.position.set(centerX, 0, centerZ);
   ctx.scene!.add(grid);
   return {
-    sizeX, sizeY, sizeZ,
-    centerX, centerY, centerZ,
+    sizeX,
+    sizeY,
+    sizeZ,
+    centerX,
+    centerY,
+    centerZ,
     maxDim,
     xChunks: Math.ceil(sizeX / CHUNK_SIZE),
     yChunks: Math.ceil(sizeY / CHUNK_SIZE),
@@ -124,7 +132,13 @@ function mdLiSetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): MdLiSize
 
 /** 常值哨兵陷阱（#17）：[0,0,0] 是合法坐标，不可 `|| 0` 兜底。非法条目整条丢弃。 */
 function mdLiIsValidPos(p: number[]): boolean {
-  return Array.isArray(p) && p.length >= 3 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Number.isFinite(p[2]);
+  return (
+    Array.isArray(p) &&
+    p.length >= 3 &&
+    Number.isFinite(p[0]) &&
+    Number.isFinite(p[1]) &&
+    Number.isFinite(p[2])
+  );
 }
 
 /** blockState→texture atlas 映射（当前：group.color 兜底；命名预留后续 atlas 扩展） */
@@ -221,7 +235,12 @@ function mdLiApplyLayer(
         if (!mdLiIsValidPos(p)) continue;
         if (mdLiChunkKey(p, sizeInfo) !== ck) continue;
         if (mode === "single" && p[shell.layerAxis] !== target) continue;
-        if (mode !== "all" && mode !== "single" && !(p[shell.layerAxis] >= lo && p[shell.layerAxis] < hi)) continue;
+        if (
+          mode !== "all" &&
+          mode !== "single" &&
+          !(p[shell.layerAxis] >= lo && p[shell.layerAxis] < hi)
+        )
+          continue;
         dummy.position.set(p[0], p[1], p[2]);
         dummy.updateMatrix();
         mesh.setMatrixAt(count, dummy.matrix);
@@ -271,13 +290,20 @@ function mdLiBuildSliceSchema(
     layerVal2: sizeInfo.sizeY,
     mode: "all",
   };
-  const applyLayer = (): void => mdLiApplyLayer(shell, sizeInfo, rawGroups, groupMeshes, shell.mode);
+  const applyLayer = (): void =>
+    mdLiApplyLayer(shell, sizeInfo, rawGroups, groupMeshes, shell.mode);
   const resetToMax = (): void => {
     shell.layerMax = [sizeInfo.sizeX, sizeInfo.sizeY, sizeInfo.sizeZ][shell.layerAxis];
     shell.layerVal = shell.layerMax;
     shell.layerVal2 = shell.layerMax;
   };
-  const layerSlider = (id: string, labelKey: string, fallback: string, pick: "layerVal" | "layerVal2", visibleWhen: (s: Partial<PreviewSnapshot>) => boolean): PreviewMenuNode => ({
+  const layerSlider = (
+    id: string,
+    labelKey: string,
+    fallback: string,
+    pick: "layerVal" | "layerVal2",
+    visibleWhen: (s: Partial<PreviewSnapshot>) => boolean,
+  ): PreviewMenuNode => ({
     id,
     kind: "slider",
     labelKey,
@@ -336,9 +362,27 @@ function mdLiBuildSliceSchema(
         refreshOnChange: true,
       },
     },
-    layerSlider("slice-layer", "preview.sliceLayer", "层", "layerVal", () => shell.mode === "single"),
-    layerSlider("slice-range-start", "preview.sliceRangeStart", "起", "layerVal", () => shell.mode === "range"),
-    layerSlider("slice-range-end", "preview.sliceRangeEnd", "止", "layerVal2", () => shell.mode === "range"),
+    layerSlider(
+      "slice-layer",
+      "preview.sliceLayer",
+      "层",
+      "layerVal",
+      () => shell.mode === "single",
+    ),
+    layerSlider(
+      "slice-range-start",
+      "preview.sliceRangeStart",
+      "起",
+      "layerVal",
+      () => shell.mode === "range",
+    ),
+    layerSlider(
+      "slice-range-end",
+      "preview.sliceRangeEnd",
+      "止",
+      "layerVal2",
+      () => shell.mode === "range",
+    ),
   ];
 }
 
@@ -374,7 +418,9 @@ function mdLiRecordPerfTrace(path: string, tStart: number, data: VoxelData): voi
       assets: { files: 1, textures: 0, materials: data.groups?.length ?? 0, animations: 0 },
       ok: true,
     });
-  } catch { /* perf trace 失败不影响渲染 */ }
+  } catch {
+    /* perf trace 失败不影响渲染 */
+  }
 }
 
 function mdLiShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
@@ -447,7 +493,9 @@ export async function buildLitematicScene(
   mdLiRecordPerfTrace(path, tStart, data);
 
   const sliceKey = `${LITEMATIC_SLICE_SCHEMA_ID}-${++mdLiSliceInstance}`; // per-scene 唯一（多模型并存防覆盖）
-  const sliceItems = [mdLiRegisterSliceSchema(sizeInfo, data.groups, meshSet.groupMeshes, sliceKey)];
+  const sliceItems = [
+    mdLiRegisterSliceSchema(sizeInfo, data.groups, meshSet.groupMeshes, sliceKey),
+  ];
   mdLiShowTruncatedWarning(ctx, data);
 
   // [doc:adr-132] 多模型选择菜单项（容器内全部 entry；切 entry 走 core switchTo 重建）

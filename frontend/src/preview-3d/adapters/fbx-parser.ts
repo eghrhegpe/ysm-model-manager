@@ -5,14 +5,14 @@
 
 import * as THREE from "three";
 import type { FbxParseResponse } from "./fbx-parser.worker.ts";
-import { createWorkerParser } from "./worker-bridge.ts";
 import type {
-  FbxSceneData,
-  FbxMeshData,
   FbxGeometryData,
-  FbxSkeletonData,
   FbxMaterialData,
+  FbxMeshData,
+  FbxSceneData,
+  FbxSkeletonData,
 } from "./fbx-scene-to-data.ts";
+import { createWorkerParser } from "./worker-bridge.ts";
 
 /** FBX 解析器管理器（接口对齐 PmxParser） */
 export interface FbxParser {
@@ -148,7 +148,9 @@ function buildSkeleton(skel: FbxSkeletonData): { bones: THREE.Bone[]; skeleton: 
   const boneInverses: THREE.Matrix4[] = [];
   const count = skel.boneInverses.length / 16;
   for (let i = 0; i < count; i++) {
-    boneInverses.push(new THREE.Matrix4().fromArray(skel.boneInverses as unknown as number[], i * 16));
+    boneInverses.push(
+      new THREE.Matrix4().fromArray(skel.boneInverses as unknown as number[], i * 16),
+    );
   }
   return { bones, skeleton: new THREE.Skeleton(bones, boneInverses) };
 }
@@ -160,7 +162,8 @@ function buildMesh(
   const geometry = buildGeometry(meshData.geometry);
   const materials = meshData.materials.map((m) => buildMaterial(m));
   materials.forEach((m) => applyTexture(m, texUrlMap));
-  const material: THREE.Material | THREE.Material[] = materials.length === 1 ? materials[0] : materials;
+  const material: THREE.Material | THREE.Material[] =
+    materials.length === 1 ? materials[0] : materials;
 
   let mesh: THREE.Mesh | THREE.SkinnedMesh;
   if (meshData.hasSkeleton && meshData.skeleton) {
@@ -168,7 +171,10 @@ function buildMesh(
     const skinned = new THREE.SkinnedMesh(geometry, material);
     // 显式传 bindMatrix（FBXLoader.bindSkeleton 同口径：TransformLink 逆矩阵序列化而来），
     // 避免 Skeleton.calculateInverses 用 identity 重算
-    skinned.bind(skeleton, new THREE.Matrix4().fromArray(meshData.skeleton.bindMatrix as unknown as number[]));
+    skinned.bind(
+      skeleton,
+      new THREE.Matrix4().fromArray(meshData.skeleton.bindMatrix as unknown as number[]),
+    );
     // 根骨骼挂到 mesh（镜像 attachRootBones：FBX 可多根，漏挂 → matrixWorld 不更新 → 蒙皮错位）
     let rootAdded = false;
     for (const bone of bones) {
@@ -190,8 +196,10 @@ function buildMesh(
 /** 轨道类路由：FBXLoader 命名锚点见 vendor/FBXLoader（modelName.quaternion / .position / .scale / .morphTargetInfluences[N]） */
 function buildTrack(name: string, times: Float32Array, values: Float32Array): THREE.KeyframeTrack {
   if (name.endsWith(".quaternion")) return new THREE.QuaternionKeyframeTrack(name, times, values);
-  if (name.includes(".morphTargetInfluences")) return new THREE.NumberKeyframeTrack(name, times, values);
-  if (values.length / Math.max(1, times.length) === 1) return new THREE.NumberKeyframeTrack(name, times, values);
+  if (name.includes(".morphTargetInfluences"))
+    return new THREE.NumberKeyframeTrack(name, times, values);
+  if (values.length / Math.max(1, times.length) === 1)
+    return new THREE.NumberKeyframeTrack(name, times, values);
   return new THREE.VectorKeyframeTrack(name, times, values);
 }
 
@@ -199,7 +207,10 @@ function buildTrack(name: string, times: Float32Array, values: Float32Array): TH
  *  按 nodes 层级还原：非 mesh 节点建 Group、mesh 节点建 Mesh/SkinnedMesh，
  *  依 parent 索引挂接（codereview 批次2：FBX 网格常挂在带祖先变换的 Group 下，
  *  展平会丢放置/蒙皮 bind；动画轨道命名非 mesh 节点也需要其在场景树中存在） */
-export function buildFbxSceneFromData(data: FbxSceneData, config: FbxSceneBuilderConfig = {}): THREE.Group {
+export function buildFbxSceneFromData(
+  data: FbxSceneData,
+  config: FbxSceneBuilderConfig = {},
+): THREE.Group {
   const texUrlMap = config.texUrlMap;
   const nodeObjects: Array<THREE.Object3D | null> = data.nodes.map(() => null);
   // 第一遍：创建节点（Group 或 Mesh）

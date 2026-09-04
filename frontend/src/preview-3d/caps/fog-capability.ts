@@ -6,10 +6,10 @@
 
 import * as THREE from "three";
 import {
-  type SceneCapability,
   type MenuControlDef,
   persistState,
   restoreState,
+  type SceneCapability,
 } from "./scene-capability.ts";
 
 export type FogMode = "linear" | "exp2";
@@ -41,27 +41,57 @@ export const FOG_PRESETS: Record<string, Partial<FogParams>> = {
   default: { ...DEFAULT_FOG_PARAMS },
   ysm: {
     // 方块场景：近处清晰，远处轻雾（100 ~ 600 尺幅）
-    enabled: false, mode: "linear", color: 0xb8d0ec, near: 20, far: 600, density: 0.006,
+    enabled: false,
+    mode: "linear",
+    color: 0xb8d0ec,
+    near: 20,
+    far: 600,
+    density: 0.006,
   },
   vrm: {
     // PBR 角色：半身近景，雾薄突出主体
-    enabled: false, mode: "linear", color: 0xc5d4e8, near: 50, far: 400, density: 0.008,
+    enabled: false,
+    mode: "linear",
+    color: 0xc5d4e8,
+    near: 50,
+    far: 400,
+    density: 0.008,
   },
   mmd: {
     // toon 材质高光易被雾褪：整体更薄
-    enabled: false, mode: "linear", color: 0xd6e0f0, near: 80, far: 500, density: 0.005,
+    enabled: false,
+    mode: "linear",
+    color: 0xd6e0f0,
+    near: 80,
+    far: 500,
+    density: 0.005,
   },
   "mmd-scene": {
     // 场景模型：大范围雾（80 ~ 1500），营造纵深感
-    enabled: false, mode: "linear", color: 0xd0daed, near: 100, far: 1500, density: 0.003,
+    enabled: false,
+    mode: "linear",
+    color: 0xd0daed,
+    near: 100,
+    far: 1500,
+    density: 0.003,
   },
   litematic: {
     // 体素大场景：线性雾营造距离感
-    enabled: false, mode: "linear", color: 0xc0d4f0, near: 30, far: 800, density: 0.004,
+    enabled: false,
+    mode: "linear",
+    color: 0xc0d4f0,
+    near: 30,
+    far: 800,
+    density: 0.004,
   },
   resourcepack: {
     // MC 方块/物品：同 YSM 口径
-    enabled: false, mode: "linear", color: 0xb8d0ec, near: 20, far: 600, density: 0.006,
+    enabled: false,
+    mode: "linear",
+    color: 0xb8d0ec,
+    near: 20,
+    far: 600,
+    density: 0.006,
   },
 };
 
@@ -201,7 +231,10 @@ export class FogCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") { this.enabled = state.enabled; this.params.enabled = state.enabled; }
+    if (typeof state.enabled === "boolean") {
+      this.enabled = state.enabled;
+      this.params.enabled = state.enabled;
+    }
     if (state.mode === "linear" || state.mode === "exp2") this.params.mode = state.mode;
     if (typeof state.color === "number") this.params.color = state.color;
     if (typeof state.near === "number") this.params.near = state.near;

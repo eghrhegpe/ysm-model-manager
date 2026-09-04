@@ -13,7 +13,7 @@
 // 实现陷阱（ADR-131 §3）：texture.image 在异步加载完成前为 null，本提取器只计纹理
 // 数量，尺寸由调用方在纹理 onLoad 后补采。
 
-import * as THREE from "three";
+import type * as THREE from "three";
 
 /** 场景统计（ADR-131 P0 产出，调用方映射进 StatsCardModel） */
 export interface SceneStats {

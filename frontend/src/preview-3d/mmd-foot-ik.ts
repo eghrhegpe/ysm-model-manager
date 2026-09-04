@@ -5,8 +5,8 @@
 //
 // 依赖：bone-tools.BoneTree + semantic-bones.ts 语义骨骼映射
 import * as THREE from "three";
-import { solveIK, extractIKChainFromTree, type IKChain } from "./ik-solver.ts";
 import type { BoneTree } from "./bone-tools.ts";
+import { extractIKChainFromTree, type IKChain, solveIK } from "./ik-solver.ts";
 import type { SemanticBoneMap } from "./semantic-bones.ts";
 
 /** 足部 IK 控制器 */
@@ -88,10 +88,7 @@ export function createFootIKController(
 }
 
 /** 从语义骨骼映射中获取骨骼 id */
-function getSemanticBoneId(
-  map: SemanticBoneMap,
-  key: string,
-): string | null {
+function getSemanticBoneId(map: SemanticBoneMap, key: string): string | null {
   const entry = map[key as keyof SemanticBoneMap];
   return entry?.id ?? null;
 }

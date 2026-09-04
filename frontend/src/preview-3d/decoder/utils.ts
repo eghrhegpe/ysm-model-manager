@@ -5,9 +5,7 @@
 import type { BedrockGeometry } from "./geometry.ts";
 
 /** DEV 模式下输出调试日志 */
-export const devLog: (...args: unknown[]) => void = import.meta.env.DEV
-  ? console.log
-  : () => {};
+export const devLog: (...args: unknown[]) => void = import.meta.env.DEV ? console.log : () => {};
 
 /** WASM 解码结果（decodeYsmViaWasm 返回） */
 export interface DecodedYsm {
@@ -34,10 +32,7 @@ export interface DecodedYsm {
  * V2: 加密数据前有 16B 独立 hash 区
  * V3: 纯加密数据，无独立 hash 区
  */
-function buildStdYsgpFromTextVariant(
-  bytes: Uint8Array,
-  forceVer?: number,
-): Uint8Array | null {
+function buildStdYsgpFromTextVariant(bytes: Uint8Array, forceVer?: number): Uint8Array | null {
   if (!bytes || bytes.length < 20) return null;
   if (bytes[0] !== 0xef || bytes[1] !== 0xbb || bytes[2] !== 0xbf) return null;
 
@@ -57,9 +52,8 @@ function buildStdYsgpFromTextVariant(
   const ascii = String.fromCharCode(...bytes.slice(0, 4096));
   const eqM = ascii.match(/\n===[^\n]*\n/);
   const eqEnd = eqM && typeof eqM.index === "number" ? eqM.index + eqM[0].length : -1;
-  const dashM = ascii.match(/\n-{10,}[^\[\n]*\n/);
-  const dashEnd =
-    dashM && typeof dashM.index === "number" ? dashM.index + dashM[0].length : -1;
+  const dashM = ascii.match(/\n-{10,}[^[\n]*\n/);
+  const dashEnd = dashM && typeof dashM.index === "number" ? dashM.index + dashM[0].length : -1;
   let dataStart = 3; // skip BOM
   if (eqEnd !== -1 && (dashEnd === -1 || eqEnd <= dashEnd)) {
     dataStart = eqEnd;
@@ -68,12 +62,7 @@ function buildStdYsgpFromTextVariant(
   } else {
     // 无终止标记：尝试找二进制数据起始（非文本、非空白字符）
     for (let i = 3; i < bytes.length; i++) {
-      if (
-        bytes[i] < 0x20 &&
-        bytes[i] !== 0x09 &&
-        bytes[i] !== 0x0a &&
-        bytes[i] !== 0x0d
-      ) {
+      if (bytes[i] < 0x20 && bytes[i] !== 0x09 && bytes[i] !== 0x0a && bytes[i] !== 0x0d) {
         dataStart = i;
         break;
       }
@@ -109,10 +98,7 @@ function buildStdYsgpFromTextVariant(
 /**
  * 剥离 YSGP 文本头部，返回标准二进制格式
  */
-export function stripYsgpTextHeader(
-  bytes: Uint8Array,
-  forceVer?: number,
-): Uint8Array {
+export function stripYsgpTextHeader(bytes: Uint8Array, forceVer?: number): Uint8Array {
   const stdYsgp = buildStdYsgpFromTextVariant(bytes, forceVer);
   if (stdYsgp) return stdYsgp;
   if (!bytes || bytes.length < 10) return bytes;

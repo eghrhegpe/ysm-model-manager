@@ -20,7 +20,11 @@
 //   });
 
 import { clamp01 } from "../../utils/core/clamp.ts";
-import { getSemanticMorph, type SemanticMorphMap, type SemanticMorphId } from "../semantic-morphs.ts";
+import {
+  getSemanticMorph,
+  type SemanticMorphId,
+  type SemanticMorphMap,
+} from "../semantic-morphs.ts";
 import { isPerceptionPaused } from "./core.ts";
 
 /** 单 morph 回调：消费方写入具体格式的 morph weight */
@@ -73,7 +77,7 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
 
     const raw = clamp01(amplitude);
     // 灵敏度阈值：低于 threshold 视为静音
-    const target = raw > sensitivity ? (raw - sensitivity) / (1 - sensitivity) * intensity : 0;
+    const target = raw > sensitivity ? ((raw - sensitivity) / (1 - sensitivity)) * intensity : 0;
     // 平滑：指数移动平均
     if (!state) state = { prevWeight: target };
     const weight = state.prevWeight * smoothing + target * (1 - smoothing);
@@ -105,7 +109,7 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
       }
 
       const raw = clamp01(amp);
-      const target = raw > sensitivity ? (raw - sensitivity) / (1 - sensitivity) * intensity : 0;
+      const target = raw > sensitivity ? ((raw - sensitivity) / (1 - sensitivity)) * intensity : 0;
       const weight = s.prevWeight * smoothing + target * (1 - smoothing);
       s.prevWeight = weight;
       onMultiLipSync(id, weight);
@@ -133,8 +137,18 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
 export function buildLipMorphIndices(
   semanticMorphs: SemanticMorphMap,
   morphTargetDictionary: Record<string, number | undefined>,
-): { open?: number | undefined; close?: number | undefined; pucker?: number | undefined; smile?: number | undefined } {
-  const result: { open?: number | undefined; close?: number | undefined; pucker?: number | undefined; smile?: number | undefined } = {};
+): {
+  open?: number | undefined;
+  close?: number | undefined;
+  pucker?: number | undefined;
+  smile?: number | undefined;
+} {
+  const result: {
+    open?: number | undefined;
+    close?: number | undefined;
+    pucker?: number | undefined;
+    smile?: number | undefined;
+  } = {};
   const openEntry = getSemanticMorph(semanticMorphs, "lipOpen");
   if (openEntry?.name && morphTargetDictionary[openEntry.name] !== undefined) {
     result.open = morphTargetDictionary[openEntry.name];

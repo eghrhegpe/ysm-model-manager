@@ -48,7 +48,10 @@ export async function readPmxStats(
     const cached = pmxStatsCache.get(key);
     if (cached) return cached;
     const bytes = b64ToBytes(b64);
-    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer;
 
     const parser = createPmxParser();
     try {

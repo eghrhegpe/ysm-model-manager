@@ -31,7 +31,7 @@
 ### 改代码——TDD，改完即验
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。
 - 大改动（多文件/架构级）写adr，再动手，连环询问用户以确认需求。
-- 先写测试（TS/mjs/Go），再写实现；改完立刻 `go build ./...` 或 `cd frontend && npx vite build` + `npm run typecheck`，失败就修到绿。
+- 先写测试（TS/mjs/Go），再写实现；改完立刻 `go build ./...` 或 `cd frontend && npx vite build && npm run typecheck`（typecheck 与 vite build 同 cwd=frontend，勿在根目录跑 `tsc`，根无对应 script），失败就修到绿；前端改动再补 `node scripts/check-biome.ts`（biome 增量闸门）复查格式化。
 - 连续改同一文件时自下而上，避免行号漂移。
 - 排查卡顿/日志往**环形日志面板**塞，不盯 console。
 
@@ -55,7 +55,7 @@ git checkout -- <file>              # 精确恢复单文件（进入提交阶段
 git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区（进入提交阶段后请勿使用）
 ```
 
-- 验证按域裁剪：Go → `go build ./...`（`./...` 覆盖 `go/` + 根 `internal/app` 绑定入口 + 根 `cli.go`，`./go/...` 会漏主体）；前端 → build + typecheck；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
+- 验证按域裁剪：Go → `go build ./...`（`./...` 覆盖 `go/` + 根 `internal/app` 绑定入口 + 根 `cli.go`，`./go/...` 会漏主体）；前端 → `cd frontend && npx vite build` + `npm run typecheck` + `node scripts/check-biome.ts`（biome 增量闸门）；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
 - 临时回退用 `git commit` + `git reset --soft HEAD~1` 记录问题文件；不碰 `git stash/push/pop`（`list`/`show` 只读可用）。
 
 ## 钩子自动化（自动执行，你只需手动三件事）
@@ -63,7 +63,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 - **pre-commit**（非阻断，结果走 stderr）：跑 `GEN_CMDS` 循环同步生成物（**清单以 `.githooks/pre-commit` 为准**）→ `check-knowledge-drift --affected` → 智能 stage 同名测试文件 → gofmt → 输出本次 commit `diff --stat`。
 - **pre-push**：全量门禁，失败阻断；**prepare-commit-msg**：提示受影响知识卡 + 覆盖率。
 - **你只需手动**：① `git add` 自己的源码；② 发版前 `doctor` 全量；③ `git push`（pre-push 自然触发）。
-- 逃生阀：`git commit --no-verify` 只跳 commit 钩子；`YSM_SKIP_GATE=1 git push` 或 `git push --no-verify` 连 pre-push 一起跳（慎用，绕过不留审计）。doctor 输出 `[WARN]...skip` 时手动 `tsc` 补验。
+- 逃生阀：`git commit --no-verify` 只跳 commit 钩子；`YSM_SKIP_GATE=1 git push` 或 `git push --no-verify` 连 pre-push 一起跳（慎用，绕过不留审计）。doctor 输出 `[WARN]...skip` 时手动 `cd frontend && npm run typecheck` 补验。
 
 ## 场景路由（快速对号入座）
 
@@ -89,6 +89,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 |------|------|
 | `doctor` | 全量闸门（`--docs` 文档轻量版） |
 | `commit-with-check` | 验证 + 提交一体，按 staged 文件裁剪门禁 |
+| `check-biome` | biome 增量闸门：`node scripts/check-biome.ts`（查相对 main 变更文件）；`--write` 自动修复；勿在 frontend/ 外裸跑 `npx biome`（配置在 `frontend/biome.json`） |
 | `audit-split` / `rollback-impact` | 拆分 / revert 影响面分析（函数去向、红线、断链调用方） |
 | `api-break` | 两 ref 破坏性变更检测（合分支 / 发版前） |
 | `bug-search` | Bug 历史搜索 |
@@ -122,7 +123,8 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | 脚本/测试 | Node（.ts 零依赖）；Go 单测 + Node 契约测试（tests/*.ts） |
 
 ```bash
-cd frontend && npx vite build                # 前端
+cd frontend && npx vite build && npm run typecheck   # 前端（同 cwd=frontend）
+node scripts/check-biome.ts                           # biome 增量闸门（--write 自动修复；全量存量 errors 以相对 main 变更文件为准）
 go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 cli.go）
 for f in tests/*.ts; do node "$f"; done     # 契约测试
 node scripts/doctor.ts --docs               # 只改文档时（秒级）

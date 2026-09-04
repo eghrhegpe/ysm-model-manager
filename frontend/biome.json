@@ -10,9 +10,9 @@
     "includes": [
       "**/*.ts",
       "**/*.tsx",
-      "!upstream/**",
-      "!src/core/i18n/locales/**",
-      "!dist/**",
+      "!upstream",
+      "!src/core/i18n/locales",
+      "!dist",
       "!**/*.test.ts",
       "!**/*.test.tsx",
       "!**/*.worker.ts",

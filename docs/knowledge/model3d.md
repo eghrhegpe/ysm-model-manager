@@ -140,6 +140,8 @@ auto_fields:
     - DecodedTexture
     - DecodedYsm
     - decodeYsmViaWasm
+    - deepMergeLightParams
+    - DeepPartial
     - DEFAULT_ENV_PARAMS
     - DEFAULT_FOG_PARAMS
     - DEFAULT_GROUND_PARAMS
@@ -215,6 +217,7 @@ auto_fields:
     - getBonePosition
     - getCustomAnimPath
     - getFrameIntervalMs
+    - getLightMenuControls
     - getLoadTraces
     - getMaxFps
     - getMaxPixelRatio
@@ -582,6 +585,7 @@ auto_fields:
     - unregisterModelRoot
     - unregisterSchema
     - Vec3
+    - VolumetricCone
     - VolumetricParams
     - VrmAdapterDeps
     - VrmBonePanelCtx

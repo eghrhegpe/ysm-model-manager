@@ -742,6 +742,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-177：拆分 LightCapability 为编排器 + 协作子模块",
+        "link": "/adr/ADR-177-lightcapability"
+      },
+      {
         "text": "ADR-176：Go 端维持进程单例与 InstallLock,收敛测试注入,修文档/门禁漂移与吞错",
         "link": "/adr/ADR-176-go-installlock"
       },

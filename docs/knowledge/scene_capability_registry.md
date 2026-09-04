@@ -16,6 +16,8 @@ auto_fields:
     - attenuateAmbientForSky
     - buildGroundSurfaceSpec
     - createListenerSet
+    - deepMergeLightParams
+    - DeepPartial
     - DEFAULT_ENV_PARAMS
     - DEFAULT_FOG_PARAMS
     - DEFAULT_GROUND_PARAMS
@@ -42,6 +44,7 @@ auto_fields:
     - FogMode
     - FogParams
     - generateSurfacePixels
+    - getLightMenuControls
     - GroundCapability
     - GroundMaterialParams
     - GroundParams
@@ -88,6 +91,7 @@ auto_fields:
     - surfaceSpecKey
     - textureRepeat
     - TILE_WORLD_SIZE
+    - VolumetricCone
     - VolumetricParams
     - WaterCapability
     - WaterMode

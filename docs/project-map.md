@@ -68,7 +68,7 @@
 | `core/` | 基础设施（buttons / global-handlers / theme / context-menus） 〔源码 8: context-menu-dir-handlers.ts context-menu-file-handlers.ts context-menu-handlers.ts context-menu-… · 测试 3 · 子目录 2: handlers/ i18n/〕 |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） 〔源码 9: dnd-collector.ts dnd-shared.ts import-dnd.ts import-executor.ts oldest-models.ts pack-dnd.ts recy… · 测试 9 · 子目录 2: community/ dialogs/〕 |
 | `parsers/` | 前端解析簇（ADR-170 下沉）：YSM 头/NBT/资源包元数据/体素颜色/纹理提取 〔源码 6: extract.ts nbt-parse.ts pack-meta.ts voxel-colors.ts voxel-parse.ts ysm-header.ts · 测试 7〕 |
-| `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 44 · 测试 36 · 子目录 7: adapters/ caps/ decoder/ menu/ perception/ state/ vendor/〕 |
+| `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 44 · 测试 37 · 子目录 7: adapters/ caps/ decoder/ menu/ perception/ state/ vendor/〕 |
 | `services/` | 服务注册（registry.ts） 〔源码 2: cli-bridge.ts resource-registry.ts · 测试 2〕 |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） 〔源码 7: events.ts fake-image.ts index.ts query-by-testid.ts render.ts self-healing.ts tex-bytes.ts · 测试 4〕 |
 | `ui/` | 🥉 ui-helpers 原生 DOM 组件库（自 MikuMikuAR 迁移：slide-row / rows / header-toggle / advanced-rows / collapsible / preset / card / loading + 自包含 CSS 模块 `ui-components-styles.ts`，经 `installUiComponentsStyles()` / `uiComponentsStyleSheet` 接入） 〔源码 16 · 测试 11〕 |

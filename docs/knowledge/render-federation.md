@@ -18,17 +18,14 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - _resetSingletons
-    - AmbientLightParams
     - attenuateAmbientForSky
     - cleanupPreview
     - DEFAULT_ENV_PARAMS
     - DEFAULT_FOG_PARAMS
     - DEFAULT_GROUND_PARAMS
-    - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
     - DEFAULT_SHADOW_PARAMS
     - DEFAULT_SKY_PARAMS
-    - DirectionalLightParams
     - drawEnvEquirect
     - ENV_PRESET_BY_MODEL
     - ENV_PRESET_LINKAGE
@@ -48,10 +45,8 @@ auto_fields:
     - injectSkySunScalePatch
     - invalidatePreview
     - isSkyEnvironmentOn
-    - LIGHT_PRESETS
     - LightCapability
     - lightDirToPosition
-    - LightParams
     - MODEL_SKY_PRESETS
     - mount3D
     - Mount3DOptions
@@ -72,9 +67,7 @@ auto_fields:
     - SkyCapability
     - SkyModelType
     - SkyParams
-    - SpotlightParams
     - switchPreview
-    - VolumetricParams
   tests:
     - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
     - frontend/src/preview-3d/caps/environment-capability.test.ts

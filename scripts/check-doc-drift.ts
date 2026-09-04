@@ -26,8 +26,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.ts';
-import { run } from './_lib/proc.ts';
-import { parseFrontmatter, getScalar, parseSourceFiles, parseAdrHeader } from './_lib/frontmatter.ts';
+import { parseFrontmatter, parseSourceFiles, parseAdrHeader } from './_lib/frontmatter.ts';
+import { stripBom, hasFrontmatterDelimiter, getUntrackedCards, missingRequiredCardFields } from './_lib/knowledge-common.ts';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
 const KC_DIR = path.join(ROOT, 'docs/knowledge');
@@ -45,13 +45,6 @@ const FILES_RAW = FILES_IDX !== -1 ? (process.argv[FILES_IDX + 1] || '') : '';
 const FILES_SET: Set<string> | null = FILES_RAW
   ? new Set(FILES_RAW.split('\n').map((p) => p.trim()).filter(Boolean).map((p) => path.basename(p)))
   : null;
-
-/** 未跟踪知识卡集合（git ls-files --others）。草稿不参与漂移打分——fail-open：git 不可用时返回空集不阻断。 */
-function getUntrackedCards(): Set<string> {
-  const r = run('git', ['ls-files', '--others', '--exclude-standard', '--', 'docs/knowledge'], { cwd: ROOT });
-  if (!r.ok) return new Set();
-  return new Set(r.out.split('\n').filter(Boolean).map((p) => path.basename(p)));
-}
 
 const errors: string[] = [];
 const warns: string[] = [];
@@ -118,7 +111,7 @@ function checkKnowledge() {
   if (!fs.existsSync(KC_DIR)) return 0;
   // 未跟踪草稿跳过仅在 --files（commit/push 裁剪）模式启用：全局模式（doctor --all /
   // 契约测试）须扫全部卡（含未跟踪草稿），否则会漏检。与 check-knowledge-drift 对齐。
-  const untracked = FILES_SET ? getUntrackedCards() : new Set<string>();
+  const untracked = FILES_SET ? getUntrackedCards(ROOT) : new Set<string>();
   const files = fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && !/^(readme|agents)\.md$/i.test(f));
   let count = 0;
   for (const cf of files) {
@@ -126,19 +119,17 @@ function checkKnowledge() {
       if (untracked.has(cf)) continue;          // 跳过未跟踪草稿（并行会话残留，不打分）
       if (!FILES_SET.has(cf)) continue;         // 仅查本次变更卡
     }
-    // P1-1 修复（code_review）：与 check-knowledge-drift 对齐——读文件剥 BOM（\uFEFF）。
-    // 带 BOM 的知识卡 `^---` 锚定会失配 → 整卡静默跳过（假绿）；剥后 frontmatter 解析正常。
-    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf-8').replace(/^\uFEFF/, '');
-    if (!/^---\r?\n/.test(text)) continue;
+    // 带 BOM 剥除 + `^---` 锚定统一走 _lib/knowledge-common（stripBom/hasFrontmatterDelimiter）。
+    const text = stripBom(fs.readFileSync(path.join(KC_DIR, cf), 'utf-8'));
+    if (!hasFrontmatterDelimiter(text)) continue;
     count++;
     const fm = parseFrontmatter(text);
     if (!fm) {
       errors.push(`[知识卡] ${cf} 缺少 YAML frontmatter`);
       continue;
     }
-    for (const key of ['kind', 'name', 'category', 'tier']) {
-      const v = getScalar(fm, key);
-      if (v === undefined || v === '') errors.push(`[知识卡] ${cf} 缺少必填字段 ${key}`);
+    for (const key of missingRequiredCardFields(fm)) {
+      errors.push(`[知识卡] ${cf} 缺少必填字段 ${key}`);
     }
     const placeholderM = fm.match(/<[a-z_]+>/);
     if (placeholderM) errors.push(`[知识卡] ${cf} 含未填充占位符 <...>`);

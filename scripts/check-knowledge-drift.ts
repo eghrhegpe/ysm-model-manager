@@ -35,7 +35,7 @@ import { toPosix } from './_lib/to-posix.ts';
 import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.ts';
 import { PERF_TAGS, KNOWLEDGE_NON_CARDS, KNOWLEDGE_ORDER } from './_lib/knowledge-cards.ts';
 import { parseArgs } from './_lib/parse-args.ts';
-import { run } from './_lib/proc.ts';
+import { stripBom, hasFrontmatterDelimiter, getUntrackedCards, missingRequiredCardFields } from './_lib/knowledge-common.ts';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
@@ -70,7 +70,6 @@ const warns: string[] = [];
 // ── 枚举 ──────────────────────────────────────────────
 const CATEGORY_ENUM = new Set(KNOWLEDGE_ORDER);
 const TIER_ENUM = new Set(['architecture', 'leaf']);
-const REQUIRED_FIELDS = ['kind', 'name', 'category', 'tier'];
 const KIND_RE = /^[a-z0-9][a-z0-9_-]*$/;
 const PLACEHOLDER_RE = /^<.*>$/;
 
@@ -85,13 +84,6 @@ const ROOT_ESCAPE_RE = /\\|^[A-Za-z]:|^\/|^~|\.\.\//; // 反斜杠 / 绝对路�
 // 此前 checkKnowledgeMeta/Sources/Anchors/Coverage/runAffected 各自
 // readdirSync + readFileSync + parseFrontmatter（每卡 frontmatter 被解析 5 遍，
 // 同一目录被读盘 5 次）——统一为一次遍历，喂给全部检查器。
-/** 未跟踪知识卡集合（git ls-files --others）。草稿不参与漂移打分——fail-open：git 不可用时返回空集不阻断。 */
-function getUntrackedCards(): Set<string> {
-  const r = run('git', ['ls-files', '--others', '--exclude-standard', '--', 'docs/knowledge'], { cwd: ROOT });
-  if (!r.ok) return new Set();
-  return new Set(r.out.split('\n').filter(Boolean).map((p) => path.basename(p)));
-}
-
 /**
  * 单遍遍历骨架：readdir 一次 + 每卡 read+parseFrontmatter 一次。
  * opts.filesSet：仅保留集合内的卡（--files 裁剪模式，与 check-redlines 对齐）。
@@ -100,7 +92,7 @@ function getUntrackedCards(): Set<string> {
  */
 function loadKnowledgeCards(opts: { filesSet?: Set<string> | null } = {}) {
   if (!fs.existsSync(KC_DIR)) return [];
-  const untracked = opts.filesSet ? getUntrackedCards() : new Set<string>();
+  const untracked = opts.filesSet ? getUntrackedCards(ROOT) : new Set<string>();
   const files = fs.readdirSync(KC_DIR).filter(
     (f) =>
       f.endsWith('.md') &&
@@ -124,13 +116,13 @@ function checkKnowledgeMeta(cards: any[]) {
     // 幽灵卡检测：任何 .md 文件（排除 KNOWLEDGE_NON_CARDS）若无 YAML frontmatter，报错而非静默跳过。
     // 历史教训：go-repoaudit.md / go-rustbridge.md / wasm-memory-pitfalls.md 曾以旧格式（行内 frontmatter）存在于
     // docs/knowledge/ 下但未被 gen 脚本索引，check-knowledge-drift 也不检测——属于「漂移检查盲区」。
-    if (!/^\uFEFF?---\r?\n/.test(text)) {
+    if (!hasFrontmatterDelimiter(text)) {
       if (!KNOWLEDGE_NON_CARDS.has(cf)) {
         // 分隔符显式诊断：*** / ~~~ 等非 --- 开头 = 疑似「整卡 Markdown 重排事故」——frontmatter 被当正文
         // 序列化（---→*** 水平线改写、\_ 转义、列表空行平铺 + 嵌套错乱），会绕过 parseFrontmatter 的 ^---
         // 匹配令 gen 静默跳过、索引漏登。历史两次受害：frontend_repo_audit.md（bd86a916 修复）、
         // context-menu.md（cabb0e8b 回滚）。给可操作指引（定位重排提交回滚），区别于泛化「旧格式残留」。
-        const head = (text.replace(/^\uFEFF/, '').split(/\r?\n/, 1)[0] || '').trim();
+        const head = (stripBom(text).split(/\r?\n/, 1)[0] || '').trim();
         errors.push(
           head === '***' || head === '~~~'
             ? `知识卡 ${cf} frontmatter 分隔符异常「${head}」——疑似整卡 Markdown 重排事故（frontmatter 被当正文序列化：---→***、\\_ 转义、列表平铺嵌套错乱；历史两次：frontend_repo_audit / context-menu）——须 git log 定位重排提交回滚该卡，或重组 frontmatter 为 --- 开头`
@@ -142,12 +134,9 @@ function checkKnowledgeMeta(cards: any[]) {
     count++;
     if (!fm) { errors.push(`知识卡 ${cf} 缺少 YAML frontmatter`); continue; }
 
-    // 必填字段
-    for (const key of REQUIRED_FIELDS) {
-      const v = getScalar(fm, key);
-      if (v === undefined || v === '') {
-        errors.push(`知识卡 ${cf} 缺少必填字段 ${key}`);
-      }
+    // 必填字段（统一走 _lib/knowledge-common）
+    for (const key of missingRequiredCardFields(fm)) {
+      errors.push(`知识卡 ${cf} 缺少必填字段 ${key}`);
     }
 
     // 模板占位符

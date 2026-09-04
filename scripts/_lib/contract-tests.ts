@@ -89,6 +89,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   'test_gen_stage.ts': ['tests'],
   'test_gate_iife_correctness.ts': ['tests'],
   'test_jscpd_pairs.ts': ['tests'],
+  'test_knowledge_common.ts': ['tests'],
   'test_redlines_changed_files.ts': ['tests'],
   'test_scripts_json.ts': ['tests'],
   'test_scripts_lib.ts': ['tests'],
@@ -134,6 +135,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   'test_domain_classify.ts': ['scripts/_lib/domain-classify.ts'],
   'test_gen_stage.ts': ['scripts/_lib/gen-stage.ts'],
   'test_jscpd_pairs.ts': ['scripts/_lib/jscpd-pairs.ts'],
+  'test_knowledge_common.ts': ['scripts/_lib/knowledge-common.ts', 'scripts/check-knowledge-drift.ts', 'scripts/check-doc-drift.ts'],
   'test_redlines_changed_files.ts': ['scripts/check-redlines.ts'],
   'test_scripts_lib.ts': ['scripts/_lib/scan-files.ts', 'scripts/_lib/to-posix.ts', 'scripts/_lib/ripgrep.ts', 'scripts/_lib/rg-line.ts'],
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——

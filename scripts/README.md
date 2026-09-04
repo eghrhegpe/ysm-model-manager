@@ -148,15 +148,15 @@
 
 > 平台构建与发版自动化，`check-readme-index` 对账口径（`includeNonTs`）一并登记。
 
-| 脚本 | 调用方式 | 说明 |
-|------|---------|------|
-| `build-release.ps1` | `.\scripts\build-release.ps1 v1.0.0 [-SkipUpload]` | Windows 发布构建：前端 + Go + 打包，`-SkipUpload` 跳过 GitHub Release 上传（仅本地构建） |
-| `build-release.sh` | `./scripts/build-release.sh v1.0.0 [-skip-upload]` | 发布构建跨平台 bash 版，逻辑与 `build-release.ps1` 一一对应 |
-| `build-android.ps1` | `.\scripts\build-android.ps1 v1.0.0 [-Arch arm64\|amd64\|all] [-Production] [-Clean]` | Android 一键构建（Windows）：NDK 交叉编译 libwails.so + gradle 打包，结构参照已验证的 MikuMikuAR 全链路 |
-| `build-android-so.ps1` | `.\scripts\build-android-so.ps1 v1.0.0 [-Arch arm64\|amd64\|x86_64] [-Production]` | Android .so 编译前置单步（NDK 交叉编译，`build-android.ps1` 的底层依赖） |
-| `release.ps1` | `.\scripts\release.ps1 -Version 1.9.4 [-DryRun]` | 一键发版骨架（对应 `docs/releases/release-process.md` §2 九步 + §8 命令序列），`-DryRun` 只演练不落盘 |
-| `build-darwin.sh` | `./scripts/build-darwin.sh v1.0.0 [--clean]` | macOS 构建脚本（Wails v3 需 CGO + WebKit，仅 macOS 本机执行） |
-| `build-linux.sh` | `./scripts/build-linux.sh v1.0.0 [--clean]` | Linux 构建脚本（Wails v3 需 CGO + GTK/WebKit，仅 Linux 本机执行） |
+| 脚本                     | 调用方式                                                                                  | 说明                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `build-release.ps1`    | `.\scripts\build-release.ps1 v1.0.0 [-SkipUpload]`                                    | Windows 发布构建：前端 + Go + 打包，`-SkipUpload` 跳过 GitHub Release 上传（仅本地构建）            |
+| `build-release.sh`     | `./scripts/build-release.sh v1.0.0 [-skip-upload]`                                    | 发布构建跨平台 bash 版，逻辑与 `build-release.ps1` 一一对应                                    |
+| `build-android.ps1`    | `.\scripts\build-android.ps1 v1.0.0 [-Arch arm64\|amd64\|all] [-Production] [-Clean]` | Android 一键构建（Windows）：NDK 交叉编译 libwails.so + gradle 打包，结构参照已验证的 MikuMikuAR 全链路 |
+| `build-android-so.ps1` | `.\scripts\build-android-so.ps1 v1.0.0 [-Arch arm64\|amd64\|x86_64] [-Production]`    | Android .so 编译前置单步（NDK 交叉编译，`build-android.ps1` 的底层依赖）                         |
+| `release.ps1`          | `.\scripts\release.ps1 -Version 1.9.4 [-DryRun]`                                      | 一键发版骨架（对应 `docs/releases/release-process.md` §2 九步 + §8 命令序列），`-DryRun` 只演练不落盘 |
+| `build-darwin.sh`      | `./scripts/build-darwin.sh v1.0.0 [--clean]`                                          | macOS 构建脚本（Wails v3 需 CGO + WebKit，仅 macOS 本机执行）                               |
+| `build-linux.sh`       | `./scripts/build-linux.sh v1.0.0 [--clean]`                                           | Linux 构建脚本（Wails v3 需 CGO + GTK/WebKit，仅 Linux 本机执行）                           |
 
 ### 已删除（2026-08-03 Python 迁移）
 

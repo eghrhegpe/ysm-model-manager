@@ -8,7 +8,6 @@ category: feature
 source_files:
   - frontend/src/views/app-preview/shot-panel-shared.ts
   - frontend/src/views/app-preview/skeleton-render.ts
-  - frontend/src/views/app-preview/skeleton-utils.ts
   - frontend/src/views/app-preview/skeleton-fill-panel.ts
   - frontend/src/views/app-preview/skeleton.ts
   - frontend/src/views/app-preview/zoom.ts
@@ -24,7 +23,6 @@ auto_fields:
     - BedrockCube
     - BedrockModel
     - buildBoneExportRow
-    - buildDepthMap
     - buildStatsCard
     - buildToggleRow
     - buildYsmModelSchema
@@ -39,7 +37,6 @@ auto_fields:
     - getPrefer3D
     - getStateValue
     - invalidateMaxFpsCache
-    - iRow
     - isPathAvailable
     - KNOWN_PATHS
     - loadModel2D
@@ -64,7 +61,6 @@ auto_fields:
     - resetSettingsListeners
     - sampleAdaptivePixelRatio
     - saveScreenshot
-    - sec
     - setActive3DClose
     - setPrefer3D
     - setPreviewUiMode

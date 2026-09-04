@@ -4,6 +4,7 @@
 import { bus, type ToastPayload } from "../bus.ts";
 import { getApp } from "../backend/app.ts";
 import { stripPathSegments } from "../utils/dom/errors.ts";
+import { setLogSink } from "../utils/core/log.ts";
 
 let _registered = false;
 let _unsubToast: (() => void) | undefined;
@@ -32,6 +33,7 @@ export function __TEST__resetDiary(): void {
   // 相邻用例若发相同 (msg,status)，第二次会被 5s 窗口误去重 → 断言 toHaveBeenCalledTimes 失败
   _lastDedupKey = "";
   _lastDedupAt = 0;
+  setLogSink(null); // 同步拆除 logWarn/logError 透写（防测试间 sink 残留串扰）
   _unsubToast?.();
   _unsubToast = undefined;
   if (_unsubError) {
@@ -76,6 +78,14 @@ export function registerErrorDiary(): void {
   _unsubToast = unsubToast;
   _unsubError = onError;
   _unsubRejection = onRejection;
+  // 4. logWarn/logError 透写日记（code review #6：生产 143 处 console.* 中热路径/
+  //    加载失败类告警原只进 console，与「排查往环形日志塞」红线相悖）——经 log.ts
+  //    的注入式 sink 收敛到本模块 AddOpLog，复用 5s 去重防写入放大
+  setLogSink((level, tag, msg, err) => {
+    const detail = err instanceof Error ? err.message : err === undefined ? "" : String(err);
+    const status = level === "error" ? "failed" : "warn";
+    void logUiMsg(`[${tag}] ${msg}${detail ? `: ${detail}` : ""}`, status);
+  });
   _registered = true;
 }
 

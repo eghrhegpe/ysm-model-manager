@@ -237,8 +237,7 @@ describe("registerErrorDiary", () => {
     expect(call[6]).toContain("解决建议");
   });
 
-  it("ADR-071 修正：web 模式同样调 AddOpLog（web-store 已实现内存日志环，早退已移除）", async () => {
-    vi.mocked(resolveWebMode).mockReturnValue(true);
+  it("ADR-071 修正：web 模式同样调 AddOpLog（web-store 已实现内存日志环，早退已移除）", async () => {    vi.mocked(resolveWebMode).mockReturnValue(true);
     try {
       registerErrorDiary();
       bus.emit("toast:show", { msg: "❌ 网页版错误", duration: 3000, type: "error" });
@@ -248,5 +247,40 @@ describe("registerErrorDiary", () => {
     } finally {
       vi.mocked(resolveWebMode).mockReturnValue(false);
     }
+  });
+});
+
+// ===== logWarn/logError 透写日记（code review #6：热路径告警进环形日志）=====
+describe("log sink 透写", () => {
+  it("logError → AddOpLog status=failed，带 tag 前缀与 err detail", async () => {
+    const { logError } = await import("../utils/core/log.ts");
+    registerErrorDiary();
+    logError("preview 3D", "加载失败", new Error("boom"));
+    await flush();
+    expect(addOpLogMock).toHaveBeenCalledTimes(1);
+    const call = addOpLogMock.mock.calls[0];
+    expect(call[0]).toBe("ui");
+    expect(call[1]).toContain("preview 3D");
+    expect(call[1]).toContain("加载失败");
+    expect(call[1]).toContain("boom");
+    expect(call[5]).toBe("failed");
+  });
+
+  it("logWarn → AddOpLog status=warn；无 err 不追加 detail", async () => {
+    const { logWarn } = await import("../utils/core/log.ts");
+    registerErrorDiary();
+    logWarn("preview 3D", "handle.cleanup 失败");
+    await flush();
+    expect(addOpLogMock).toHaveBeenCalledTimes(1);
+    expect(addOpLogMock.mock.calls[0][5]).toBe("warn");
+  });
+
+  it("__TEST__resetDiary 拆除 sink：reset 后 logWarn 不再落日记", async () => {
+    const { logWarn } = await import("../utils/core/log.ts");
+    registerErrorDiary();
+    __TEST__resetDiary();
+    logWarn("tag", "reset 后的消息");
+    await flush();
+    expect(addOpLogMock).not.toHaveBeenCalled();
   });
 });

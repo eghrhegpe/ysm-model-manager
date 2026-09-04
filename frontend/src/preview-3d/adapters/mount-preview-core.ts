@@ -26,7 +26,7 @@ import { installUiComponentsStyles, uiComponentsStyleSheet } from "../../ui/ui-c
 import { slideMenuStyleSheet } from "../../ui/ui-slide-menu-styles.ts";
 import { setOverlayStyleTarget, overlayStyleRoot, onOverlayStyleTargetReset } from "../overlay-style-bridge.ts";
 import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
-import { logWarn } from "../../utils/core/log.ts";
+import { logWarn, logError } from "../../utils/core/log.ts";
 import {
   rememberTrigger,
   trapFocusAcrossShadow,
@@ -222,8 +222,8 @@ export function cleanupPreview(): void {
     try {
       h.handle.cleanup();
     } catch (e) {
-      // 单会话清理失败不阻塞其余会话，但 GPU 泄漏排查需留痕
-      console.warn("[preview 3D] handle.cleanup 失败:", e);
+      // 单会话清理失败不阻塞其余会话，但 GPU 泄漏排查需留痕（透写环形日志）
+      logWarn("preview 3D", "handle.cleanup 失败", e);
     }
   }
   _handles.length = 0;
@@ -800,7 +800,7 @@ export async function mount3D(
     // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，
     // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。
     if (session.aborted.v || myGen !== _gen) return;
-    console.error("[preview 3D] 加载失败:", e);
+    logError("preview 3D", "加载失败", e);
     showLoadFailure(loadingEl, e);
   }
 }

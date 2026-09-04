@@ -7,6 +7,7 @@
 // 同时抽出重复的「重算包围盒 → 更新 lightCap target」逻辑为独立函数。
 
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { logError } from "../../utils/core/log.ts";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "../../bus.ts";
@@ -236,7 +237,7 @@ function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): vo
     ctx.inFlight = false;
     return;
   }
-  console.error("[preview 3D] 切换失败:", e);
+  logError("preview 3D", "切换失败", e);
   // P1 修复（审核 ADR-109 Checklist）：build 失败后旧内容层已 dispose（上方清除段）
   // 但 perFrame 回调仍指向已 dispose 的 update → rAF 每帧驱动已释放对象；
   // sceneRegistry 残留旧 entry → count 虚高（误触 MAX_MODELS）+ visibleRoots 含

@@ -99,7 +99,7 @@ status: active
 
 ## 不变量
 
-- 活动弹窗单例槽位（`_activeOverlay`/`_closeActive`）：新弹窗 `registerDlg` 时旧弹窗必须按「取消值」结算，杜绝弹窗叠加与悬挂 Promise；`closeDlg` 结算槽位带 `_activeOverlay === overlay` 判定，旧弹窗晚到的定时器不误清新弹窗槽位
+- 活动弹窗单例槽位（收敛体 `_slot`，2026-09-04 全局 Map 试点重构：原 `_activeOverlay`/`_closeActive`/`_activeClosable` 三模块级 let 收进 `ModalSlotState`）：新弹窗 `registerDlg` 时旧弹窗必须按「取消值」结算，杜绝弹窗叠加与悬挂 Promise；`closeDlg` 结算槽位带 `_slot.overlay === overlay` 判定，旧弹窗晚到的定时器不误清新弹窗槽位
 - `closeDlg` 必须经 `_closingOverlays`（WeakSet）守卫，同一弹窗只结算一次
 - 弹窗内所有动态文本必须过 `esc`，禁止直拼未转义 HTML（modal.ts 从 html.ts import 并 re-export，无双源；`'` 也转义为 `&#39;`，比知识卡声明的 `& < > "` 更严格）
 - 弹窗只 resolve 不 reject：取消/关闭一律 resolve 取消值（null/false），调用方无需 catch

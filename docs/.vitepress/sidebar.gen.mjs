@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-178：PreviewScene 能力分层接口",
+        "link": "/adr/ADR-178-previewscene-capability-interfaces"
+      },
+      {
         "text": "ADR-177：拆分 LightCapability 为编排器 + 协作子模块",
         "link": "/adr/ADR-177-lightcapability"
       },

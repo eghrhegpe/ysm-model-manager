@@ -66,35 +66,48 @@ export function closeDlg<T>(
   overlay.classList.add("dlg-closing");
   setTimeout(() => {
     overlay.remove();
-    if (_activeOverlay === overlay) {
-      _activeOverlay = null;
-      _closeActive = null;
-      _activeClosable = true;
+    if (_slot.overlay === overlay) {
+      _slot.overlay = null;
+      _slot.closeActive = null;
+      _slot.closable = true;
     }
     resolve(value);
   }, delay);
 }
 
-/** 活动弹窗单例槽位：新开弹窗前先按取消值结算旧弹窗，防连点叠加/双执行 */
-let _activeOverlay: HTMLElement | null = null;
-let _closeActive: (() => void) | null = null;
-/** 当前活动弹窗是否允许被外部关闭（进度弹窗 closable=false 时 back 不强关） */
-let _activeClosable = true;
+/**
+ * 活动弹窗单例槽位（收敛体，2026-09-04 全局 Map 试点重构）：
+ * 原 3 个模块级 let（_activeOverlay/_closeActive/_activeClosable）+ 散落各函数的
+ * 读写收敛为本对象——状态与操作同域，reset 供测试清理，未来演进（弹窗栈）有落点。
+ * 导出函数签名不变，外部（modalXxx/android back/测试）零改动。
+ */
+interface ModalSlotState {
+  overlay: HTMLElement | null;
+  closeActive: (() => void) | null;
+  closable: boolean;
+}
+
+function createModalSlot(): ModalSlotState {
+  return { overlay: null, closeActive: null, closable: true };
+}
+
+/** 活动弹窗单例槽位（模块级单例；__resetModalStateForTest 仅供测试清理） */
+const _slot: ModalSlotState = createModalSlot();
 
 /** 测试钩子：重置活动弹窗单例槽位（isolate:false 共享模块图下，兄弟文件残留的
- *  _activeOverlay 会让「无活动弹窗」断言失真；web-store.__resetWebLogStateForTest 同款） */
+ *  _slot.overlay 会让「无活动弹窗」断言失真；web-store.__resetWebLogStateForTest 同款） */
 export function __resetModalStateForTest(): void {
-  _activeOverlay = null;
-  _closeActive = null;
-  _activeClosable = true;
+  _slot.overlay = null;
+  _slot.closeActive = null;
+  _slot.closable = true;
 }
 
 /** 弹窗 append 到 body 后调用，登记为当前活动弹窗 */
 export function registerDlg(overlay: HTMLElement, cancelClose: () => void, closable = true): void {
-  if (_activeOverlay && _closeActive) _closeActive();
-  _activeOverlay = overlay;
-  _closeActive = cancelClose;
-  _activeClosable = closable;
+  if (_slot.overlay && _slot.closeActive) _slot.closeActive();
+  _slot.overlay = overlay;
+  _slot.closeActive = cancelClose;
+  _slot.closable = closable;
 }
 
 /**
@@ -103,11 +116,11 @@ export function registerDlg(overlay: HTMLElement, cancelClose: () => void, closa
  * 由 back 事件桥接；进度弹窗（closable=false）不强关。
  */
 export function closeActiveDialog(): boolean {
-  if (!_activeOverlay || !_closeActive || !_activeClosable) return false;
-  const close = _closeActive;
-  _closeActive = null;
-  _activeOverlay = null;
-  _activeClosable = true;
+  if (!_slot.overlay || !_slot.closeActive || !_slot.closable) return false;
+  const close = _slot.closeActive;
+  _slot.closeActive = null;
+  _slot.overlay = null;
+  _slot.closable = true;
   close();
   return true;
 }

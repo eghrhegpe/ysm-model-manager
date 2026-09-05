@@ -56,7 +56,7 @@ vi.mock("@/backend/app.ts", async () => {
   return setupAppMock();
 });
 
-import { initRecycleBin, type RecycleHost } from "./recycle-bin.ts";
+import { initRecycleBin, type RecycleDeps, type RecycleHost } from "./recycle-bin.ts";
 
 function entry(name: string, path: string, size = 100) {
   return { Name: name, Path: path, Size: size };
@@ -483,5 +483,37 @@ describe("清理竞态（guard.stale 保护幽灵回调）", () => {
     await flushPromises();
 
     expect(toasts).toHaveLength(0);
+  });
+});
+
+describe("依赖注入（ADR-190 D2 注入真化）", () => {
+  it("deps 注入的 t / modalConfirm 替代生产实现，无需 vi.mock", async () => {
+    const injectedConfirm = vi.fn().mockResolvedValue(false); // 返回 false → 删除流程终止
+    const injectedT = vi.fn((key: never) => `T:${String(key)}`);
+    const root2 = document.createElement("div").attachShadow({ mode: "open" });
+    root2.innerHTML = `
+      <span id="recy-count"></span>
+      <button id="recy-refresh"></button>
+      <button id="recy-empty"></button>
+      <div id="recy-list"></div>`;
+    mocks.ListRecycleBin.mockResolvedValue([
+      { Name: "a.ysm", Path: "/mc/a.ysm", Size: 10 },
+    ]);
+    const cleanup2 = initRecycleBin(
+      { _root: root2 } as RecycleHost,
+      { t: injectedT as unknown as RecycleDeps["t"], modalConfirm: injectedConfirm },
+    );
+    await flushPromises();
+
+    // 计数文案走注入 t（injectedT 恒返 T:<key>；前缀 icon 来自 registry，属正常拼接）
+    expect(root2.getElementById("recy-count")!.textContent).toContain("T:recycle.fileCount");
+
+    // 点删除走注入 modalConfirm（返回 false → 不调 binding）
+    root2.querySelector<HTMLButtonElement>('[data-testid="recy-del"]')!.click();
+    await flushPromises();
+    expect(injectedConfirm).toHaveBeenCalled();
+    expect(mocks.DeleteFromRecycle).not.toHaveBeenCalled();
+
+    cleanup2();
   });
 });

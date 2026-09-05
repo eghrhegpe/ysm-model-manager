@@ -1,8 +1,10 @@
 // ===== 回收站管理（类型化版 — ADR-014 P3 features）=====
+// 依赖注入（ADR-190 D2）：getApp / t / modalConfirm 经 initRecycleBin 的 deps 参数显式透传，
+// 测试可直接注入替身，无需 vi.mock 整个模块；缺省走生产实现。
 
-import { getApp as _getApp } from "../../backend/app.ts";
+import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
-import { t as _t, type LocaleKey } from "../../core/i18n/t.ts";
+import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import { loadResourceRegistry } from "../../services/resource-registry.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
 import { createLoadGuard, type LoadGuard } from "../../utils/async/load-guard.ts";
@@ -12,7 +14,7 @@ import { formatBytes } from "../../utils/dom/format.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { modalConfirm as _modalConfirm } from "../dialogs/modal-confirm.ts";
+import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { useCurrentResourceType } from "../repo/repo-rtype.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -36,10 +38,21 @@ interface RecycleBinEntry {
 }
 
 type ToastFn = (msg: string, duration: number, type: "success" | "error") => void;
-type TFn = typeof _t;
-type ModalConfirmFn = typeof _modalConfirm;
-type GetAppFn = typeof _getApp;
+type TFn = typeof t;
+type ModalConfirmFn = typeof modalConfirm;
+type GetAppFn = typeof getApp;
 type GetCurrentTypeFn = () => (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES];
+
+/** 可注入依赖（ADR-190 D2 注入真化）；测试传部分字段，其余回落生产实现 */
+export interface RecycleDeps {
+  getApp: GetAppFn;
+  t: TFn;
+  modalConfirm: ModalConfirmFn;
+}
+const PROD_DEPS: RecycleDeps = { getApp, t, modalConfirm };
+function resolveDeps(overrides?: Partial<RecycleDeps>): RecycleDeps {
+  return { ...PROD_DEPS, ...overrides };
+}
 
 function renderRecycleListHtml(
   entries: RecycleBinEntry[],
@@ -76,6 +89,7 @@ function setupRecycleActions(
     getCurrentType: GetCurrentTypeFn;
     loadRecycleBin: () => void;
     t: TFn;
+    modalConfirm: ModalConfirmFn;
     onShowToast: ToastFn;
   },
 ): () => void {
@@ -95,7 +109,7 @@ function setupRecycleActions(
         // 杜绝幽灵 toast / bus 副作用 / 对已脱离 DOM 的按钮恢复状态
         const opGen = guard.next();
         if (opt.confirm) {
-          const confirmed = await _modalConfirm({ ...opt.confirm, danger: true });
+          const confirmed = await opts.modalConfirm({ ...opt.confirm, danger: true });
           if (!confirmed || guard.stale(opGen)) return;
         }
         btn.disabled = true;
@@ -205,15 +219,16 @@ function buildLoadRecycleBin(
   guard: LoadGuard,
   shell: RecycleShell,
   onShowToast: ToastFn,
+  deps: RecycleDeps,
 ): () => Promise<void> {
+  const { getApp, t } = deps;
   return async function loadRecycleBin(): Promise<void> {
     const gen = guard.next();
     const list = root.getElementById("recy-list");
     const count = root.getElementById("recy-count");
     if (!list) return;
     try {
-      const { ListRecycleBin, RestoreFromRecycle, DeleteFromRecycle, GetRepoRoot } =
-        await _getApp();
+      const { ListRecycleBin, RestoreFromRecycle, DeleteFromRecycle, GetRepoRoot } = await getApp();
       const currentRoot = await GetRepoRoot(getCurrentType());
       // 作用域交由 Go 端过滤（ListRecycleBin 的 recyclePath 参数），前端不再自建路径前缀匹配
       const allEntries = (await ListRecycleBin(currentRoot || "")) || [];
@@ -225,13 +240,13 @@ function buildLoadRecycleBin(
           shell.cleanupActions.current = null;
         }
         list.innerHTML = "";
-        if (count) count.textContent = _t("recycle.emptyState");
+        if (count) count.textContent = t("recycle.emptyState");
         return;
       }
       const reg = await loadResourceRegistry();
       if (guard.stale(gen)) return;
       const icon = (reg[getCurrentType()] && reg[getCurrentType()].icon) || "📦";
-      if (count) count.textContent = `${icon} ${_t("recycle.fileCount", { n: entries.length })}`;
+      if (count) count.textContent = `${icon} ${t("recycle.fileCount", { n: entries.length })}`;
       list.innerHTML = renderRecycleListHtml(
         entries,
         getCurrentType,
@@ -239,7 +254,7 @@ function buildLoadRecycleBin(
         formatBytes,
         renderDisplayName,
         stagger,
-        _t,
+        t,
       );
       if (shell.cleanupActions.current) shell.cleanupActions.current();
       shell.cleanupActions.current = setupRecycleActions(list, guard, {
@@ -247,7 +262,8 @@ function buildLoadRecycleBin(
         DeleteFromRecycle,
         getCurrentType,
         loadRecycleBin: shell.loadRecycleBin,
-        t: _t,
+        t,
+        modalConfirm: deps.modalConfirm,
         onShowToast,
       });
     } catch (e) {
@@ -256,13 +272,14 @@ function buildLoadRecycleBin(
         shell.cleanupActions.current();
         shell.cleanupActions.current = null;
       }
-      list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--paid);font-size:11px">❌ ${esc(friendlyError(e, _t("recycle.loadFailed")))}</div>`;
-      if (count) count.textContent = _t("common.loadFailed");
+      list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--paid);font-size:11px">❌ ${esc(friendlyError(e, t("recycle.loadFailed")))}</div>`;
+      if (count) count.textContent = t("common.loadFailed");
     }
   };
 }
 
-export function initRecycleBin(app: RecycleHost): () => void {
+export function initRecycleBin(app: RecycleHost, depsOverrides?: Partial<RecycleDeps>): () => void {
+  const deps = resolveDeps(depsOverrides);
   const root = app._root;
   let _emptyBusy = false;
   const getEmptyBusy = () => _emptyBusy;
@@ -282,7 +299,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
   const listEl = root.getElementById("recy-list");
   if (listEl) listEl.addEventListener("click", onRecycleListClick);
 
-  shell.loadRecycleBin = buildLoadRecycleBin(root, getCurrentType, guard, shell, onShowToast);
+  shell.loadRecycleBin = buildLoadRecycleBin(root, getCurrentType, guard, shell, onShowToast, deps);
 
   const onRefreshClick = onRecycleRefreshClick(() => shell.loadRecycleBin());
   root.getElementById("recy-refresh")?.addEventListener("click", onRefreshClick);
@@ -290,11 +307,11 @@ export function initRecycleBin(app: RecycleHost): () => void {
   const onEmptyClick = onRecycleEmptyClick({
     getEmptyBusy,
     setEmptyBusy,
-    getApp: _getApp,
+    getApp: deps.getApp,
     loadRecycleBin: () => shell.loadRecycleBin(),
     onShowToast,
-    modalConfirm: _modalConfirm,
-    t: _t,
+    modalConfirm: deps.modalConfirm,
+    t: deps.t,
   });
   root.getElementById("recy-empty")?.addEventListener("click", onEmptyClick);
 

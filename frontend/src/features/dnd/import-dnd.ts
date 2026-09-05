@@ -2,7 +2,6 @@
 // 从 document 级 registerDnD 收敛为 <app-tree> 容器内绑定，去掉全局遮罩。
 // 收集器统一走 features/dnd-collector.ts，与导入页收集器一致。
 
-import { getApp } from "../../backend/app.ts";
 import { MAX_IMPORT_BYTES } from "../../backend/browser-adapter.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { bus } from "../../bus.ts";
@@ -14,6 +13,7 @@ import { isEditableTarget } from "../../utils/dom/editable-target.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
+import { backendGetApp } from "../backend-deps.ts";
 import { executeCollected, importWebFilesWithToast } from "../import/executor.ts";
 import { type CollectedEntry, collectDropFiles, isImportableFile } from "./shared.ts";
 
@@ -51,7 +51,7 @@ export async function handleTreeDrop(
 
   // 写环形日志面板（Go AddOpLog）——非阻塞，失败经 swallowError 记录
   const logDrop = (msg: string) =>
-    swallowError(getApp().then((app) => app.AddOpLog?.("drop", msg, "", "", 0, "ok", "")));
+    swallowError(backendGetApp().then((app) => app.AddOpLog?.("drop", msg, "", "", 0, "ok", "")));
 
   try {
     // 网页版：无本地文件系统 → 拖入文件直接写入 IndexedDB 模型库

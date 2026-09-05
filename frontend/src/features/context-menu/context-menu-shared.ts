@@ -6,7 +6,7 @@
 
 import { bus } from "../../bus.ts";
 import { tr } from "../../core/i18n/tr.ts";
-import { toast } from "../../utils/dom/toast.ts";
+import { toast, toastError } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { modalPrompt } from "../dialogs/modal-prompt.ts";
@@ -62,4 +62,50 @@ export async function resolveDstDir(
     return null;
   }
   return { folder, dstDir: `${filesRoot}/${folder.replace(/\\/g, "/")}` };
+}
+
+/**
+ * 单目标 move|copy 模板（2026-09-06 锐评 P2 #5 收敛）：file.move/file.copy/dir.move/dir.copy
+ * 四胞胎共用 resolveDstDir → getApp → binding → toast → refreshUI → catch 同构段，
+ * 与 batch 侧 runBatchFileOp + BATCH_TPL 同一屋檐。调用方只给差异项：路径、rtype、
+ * 绑定名、弹窗标题与成功文案（i18n key，本函数内 tr）。
+ */
+export async function runSingleOp(
+  pathOf: string,
+  rtype: string | undefined,
+  binding: "MoveModelFile" | "CopyModelFile",
+  mode: "move" | "copy",
+  i18n: { dialogTitle: string; okMsg: string },
+): Promise<void> {
+  const isMove = mode === "move";
+  try {
+    const resolved = await resolveDstDir(
+      {
+        title: tr(i18n.dialogTitle, isMove ? "Move to Folder" : "Copy to Folder"),
+        icon: isMove ? "📂" : "📋",
+        okText: tr(isMove ? "ctx.moveDialogOk" : "ctx.copyDialogOk", isMove ? "Move" : "Copy"),
+        emptyMsg: tr(
+          isMove ? "ctx.emptyMoveRoot" : "ctx.emptyCopyRoot",
+          isMove
+            ? "❌ Configure a storage path first"
+            : "❌ Configure a repository directory first",
+        ),
+      },
+      rtype,
+    );
+    if (!resolved) return;
+    const { folder, dstDir } = resolved;
+    const app = await contextMenuGetApp();
+    await app[binding](pathOf, dstDir);
+    toast(
+      tr(i18n.okMsg, isMove ? "✅ Moved to {folder}" : "✅ Copied to {folder}", { folder }),
+      TOAST_MS.normal,
+    );
+    refreshUI();
+  } catch (e) {
+    toastError(
+      e,
+      tr(isMove ? "ctx.moveFail" : "ctx.copyFail", isMove ? "Move failed" : "Copy failed"),
+    );
+  }
 }

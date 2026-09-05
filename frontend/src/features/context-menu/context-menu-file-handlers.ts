@@ -10,7 +10,8 @@ import { showRenameDialog } from "../dialogs/rename.ts";
 import { modalTagEditor } from "../dialogs/tag-editor.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";
 import type { FileCtx } from "./context-menu-handlers.ts";
-import { refreshUI, resolveDstDir } from "./context-menu-shared.ts";
+import { refreshUI, runSingleOp } from "./context-menu-shared.ts";
+import type { MenuAction } from "./menu-defs.ts";
 
 /** file 类 handler 子表（精确 key 推断，供 HANDLERS satisfies 覆盖断言） */
 export const FILE_HANDLERS = {
@@ -27,48 +28,16 @@ export const FILE_HANDLERS = {
       toastError(e, tr("ctx.renameFail", "Rename failed"));
     }
   },
-  "file.move": async (ctx) => {
-    try {
-      const resolved = await resolveDstDir(
-        {
-          title: tr("ctx.moveDialogTitle", "Move to Folder"),
-          icon: "📂",
-          okText: tr("ctx.moveDialogOk", "Move"),
-          emptyMsg: tr("ctx.emptyMoveRoot", "❌ Configure a storage path first"),
-        },
-        ctx.rtype,
-      );
-      if (!resolved) return;
-      const { folder, dstDir } = resolved;
-      const { MoveModelFile } = await contextMenuGetApp();
-      await MoveModelFile(ctx.path || "", dstDir);
-      toast(tr("ctx.fileMoveOk", "✅ Moved to {folder}", { folder }), TOAST_MS.normal);
-      refreshUI();
-    } catch (e) {
-      toastError(e, tr("ctx.moveFail", "Move failed"));
-    }
-  },
-  "file.copy": async (ctx) => {
-    try {
-      const resolved = await resolveDstDir(
-        {
-          title: tr("ctx.copyDialogTitle", "Copy to Folder"),
-          icon: "📋",
-          okText: tr("ctx.copyDialogOk", "Copy"),
-          emptyMsg: tr("ctx.emptyCopyRoot", "❌ Configure a repository directory first"),
-        },
-        ctx.rtype,
-      );
-      if (!resolved) return;
-      const { folder, dstDir } = resolved;
-      const { CopyModelFile } = await contextMenuGetApp();
-      await CopyModelFile(ctx.path || "", dstDir);
-      toast(tr("ctx.fileCopyOk", "✅ Copied to {folder}", { folder }), TOAST_MS.normal);
-      refreshUI();
-    } catch (e) {
-      toastError(e, tr("ctx.copyFail", "Copy failed"));
-    }
-  },
+  "file.move": (ctx) =>
+    runSingleOp(ctx.path || "", ctx.rtype, "MoveModelFile", "move", {
+      dialogTitle: "ctx.moveDialogTitle",
+      okMsg: "ctx.fileMoveOk",
+    }),
+  "file.copy": (ctx) =>
+    runSingleOp(ctx.path || "", ctx.rtype, "CopyModelFile", "copy", {
+      dialogTitle: "ctx.copyDialogTitle",
+      okMsg: "ctx.fileCopyOk",
+    }),
   "file.push-to-pack": async (ctx) => {
     try {
       const { LoadAppConfig, ListVersionInstances, InstallModelTo } = await contextMenuGetApp();
@@ -155,4 +124,4 @@ export const FILE_HANDLERS = {
       ok ? undefined : "error",
     );
   },
-} satisfies Record<string, (ctx: FileCtx) => void>;
+} satisfies Record<Extract<MenuAction, `file.${string}`>, (ctx: FileCtx) => void>;

@@ -28,6 +28,11 @@
 - 跨类型切换走 `switchExternal`（同源替换走 `switchTo`）。
 - 数据经 Wails 桥（`window.go`）消费；绑定统一 `cd frontend && npm run generate:bindings`（script 已内置 `-ts`；在根目录裸跑会 Missing script，无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
 
+### `src/core` 准入准则（ADR-189 D4）
+- `frontend/src/core` 是**引擎无关内核**（i18n + page-store + 注入式 error-diary），准入三条全满足才可入：①引擎无关（不 import three/Wails）；②不依赖上层（features/views/backend/utils 一律禁止，依赖方向只许别人引它）；③无 Wails 也能单测。
+- 需要绑定的能力（如 `AddOpLog`）走**依赖注入**：core 定义接口（`DiarySink`），`backend/` 提供适配器，装配层（`app-modules.ts`）接线——禁止 core 直接 `import backend/*`（回归红线，pre-commit 有 `check-redlines` 兜底）。
+- DOM 原语（toast 等）归 `utils/dom/`，不进 core；utils 基础纯函数层在 `utils/base/`（原 `utils/core/`，勿再新建同名目录）。
+
 ### 改代码——TDD，改完即验
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。
 - 大改动（多文件/架构级）写adr，再动手，连环询问用户以确认需求。

@@ -29,11 +29,11 @@ const mocks = {
   modalConfirm,
 };
 
-vi.mock("../../core/handlers/require-mcroot.ts", () => ({
+vi.mock("../require-mcroot.ts", () => ({
   requireMcRoot: vi.fn().mockResolvedValue("/mc"),
 }));
 
-vi.mock("../dialogs/modal.ts", () => ({
+vi.mock("../dialogs/modal-confirm.ts", () => ({
   modalConfirm,
 }));
 
@@ -116,7 +116,7 @@ describe("registerInstanceOps — instance:export-list", () => {
   });
 
   it("requireMcRoot 返回空 → 直接返回", async () => {
-    const { requireMcRoot } = await import("../../core/handlers/require-mcroot.ts");
+    const { requireMcRoot } = await import("../require-mcroot.ts");
     (requireMcRoot as ReturnType<typeof vi.fn>).mockResolvedValueOnce("");
     await register();
 

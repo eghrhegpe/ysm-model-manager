@@ -21,10 +21,11 @@ const appContentStyle: CSSStyleSheet = (() => {
 
 export { appContentStyle };
 
-import { registerCoreHandlers } from "../../core/handlers/global.ts";
+import { registerPageStore } from "../../core/page-store.ts";
 import { registerContextMenus } from "../../features/context-menu/context-menus.ts";
 import { registerInstanceOps } from "../../features/pack-ops/instance-ops.ts";
 import { registerAndroidEvents } from "../../features/platform/android-events.ts";
+import { registerSync } from "../../features/sync.ts";
 import { swallowError } from "../../utils/core/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "../app-preview/index.ts";
@@ -171,9 +172,11 @@ class AppContent extends WebComponentBase {
       }),
     );
     this._render();
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-    // core 内核 + features 全局 handler（ADR-185：汇编职责自 core/handlers/global 上移）
-    const globalUnsubs: Array<() => void> = registerCoreHandlers();
+    // core 内核 + features 全局 handler（ADR-188：core/handlers/global 汇编壳已删，
+    // app-content 直接注册 registerPageStore / registerSync——core 不设壳层）
+    const globalUnsubs: Array<() => void> = [];
+    registerPageStore(globalUnsubs);
+    registerSync(globalUnsubs);
     registerContextMenus(globalUnsubs);
     registerInstanceOps(globalUnsubs);
     registerAndroidEvents(globalUnsubs);

@@ -3,12 +3,12 @@
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { toast, toastEmptyRtype, toastError } from "../../core/feedback.ts";
-import { requireMcRoot } from "../../core/handlers/require-mcroot.ts";
 import { t } from "../../core/i18n/t.ts";
 import { copyText } from "../../utils/dom/clipboard.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
-import { modalConfirm } from "../dialogs/modal.ts";
+import { modalConfirm } from "../dialogs/modal-confirm.ts";
+import { requireMcRoot } from "../require-mcroot.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
 export function registerInstanceOps(unsubs: Array<() => void>): void {

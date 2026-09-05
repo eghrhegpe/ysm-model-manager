@@ -79,14 +79,13 @@ function safeHintColor(c?: string): string {
 }
 
 function pickerBoxBuilder(
-  title: string,
-  icon: string | undefined,
   subtitle: string | undefined,
   items: ModalPickerItem[],
   footerHTML: string | undefined,
   cancelText: string | undefined,
 ): (box: HTMLElement) => void {
   return (box): void => {
+    // 标题行由 createDialog 统一渲染（ADR-190 D3）
     const rows = items
       .map(
         (it, i) =>
@@ -98,7 +97,6 @@ function pickerBoxBuilder(
       )
       .join("");
     box.innerHTML =
-      `<div class="dlg-title dlg-title-flush">${esc(icon || "")} ${esc(title)}</div>` +
       (subtitle ? `<div class="dlg-pick-subtitle">${esc(subtitle)}</div>` : "") +
       `<div data-testid="pick-list" class="dlg-pick-list">${rows}</div>` +
       (footerHTML || "") +
@@ -123,7 +121,7 @@ export function modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult
       tabIndex: 0,
       cancelValue: null,
       resolve,
-      buildBox: pickerBoxBuilder(title, icon, subtitle, items, footerHTML, cancelText),
+      buildBox: pickerBoxBuilder(subtitle, items, footerHTML, cancelText),
     });
     box.querySelectorAll<HTMLButtonElement>("[data-testid='pick-item']").forEach((row) => {
       row.addEventListener("click", () => {

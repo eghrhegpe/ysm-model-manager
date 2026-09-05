@@ -16,15 +16,13 @@ export interface ModalPromptOptions {
 }
 
 function promptBoxBuilder(
-  title: string,
-  icon: string | undefined,
   value: string | undefined,
   placeholder: string | undefined,
   okText: string | undefined,
 ): (box: HTMLElement) => void {
   return (box): void => {
+    // 标题行由 createDialog 统一渲染（ADR-190 D3）
     box.innerHTML = `
-      <div class="dlg-title dlg-title-flush">${esc(icon || "")} ${esc(title)}</div>
       <input id="mp-input" data-testid="dlg-input" class="dlg-field" maxlength="255" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}">
       <div id="mp-err" class="dlg-err"></div>
       <div class="dlg-footer dlg-footer-flush">
@@ -49,7 +47,7 @@ export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
       tabIndex: 0,
       cancelValue: null,
       resolve,
-      buildBox: promptBoxBuilder(title, icon, value, placeholder, okText),
+      buildBox: promptBoxBuilder(value, placeholder, okText),
     });
     const input = box.querySelector("#mp-input") as HTMLInputElement;
     input.focus();

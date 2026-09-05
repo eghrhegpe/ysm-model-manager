@@ -6,7 +6,7 @@ import { t } from "../../core/i18n/t.ts";
 import { parseModelName } from "../../utils/dom/display.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
+import { createDialog } from "./modal-core.ts";
 import { buildRenameName, type RenameFields, validateRenameFields } from "./rename-format.ts";
 
 type DgRnCloseFn = (v: string | null) => void;
@@ -14,41 +14,19 @@ type DgRnReadFn = () => RenameFields;
 type DgRnGetExtFn = () => string;
 type DgRnUpdateFn = () => void;
 
-function dgRnCreateOverlay(
-  resolve: (v: string | null) => void,
-  box: HTMLDivElement,
-): { overlay: HTMLDivElement; close: DgRnCloseFn } {
-  const overlay = document.createElement("div");
-  overlay.tabIndex = 0;
-  overlay.className = "dlg-overlay";
-  // WCAG 2.1 A 级：对话框语义（与 modal.ts/adv-filter/batch-rename/tag-editor 自建 overlay 同规）
-  overlay.setAttribute("role", "dialog");
-  overlay.setAttribute("aria-modal", "true");
-  const close: DgRnCloseFn = (v) => closeDlg(overlay, resolve, v);
-  overlay.onclick = (e: MouseEvent): void => {
-    if (e.target === overlay) close(null);
-  };
-  overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
-    if (e.key === "Escape") close(null);
-    else if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement) && !e.isComposing) {
-      e.preventDefault();
-      (box.querySelector("#rn-ok") as HTMLElement | null)?.click();
-    }
-  });
-  return { overlay, close };
+/** 标题行「读取头部」按钮（经 titleExtra 挂入统一标题行右侧） */
+function dgRnBuildHeaderBtn(): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.id = "rn-from-header";
+  btn.className = "dlg-btn-sm";
+  btn.title = t("dialog.readHeaderTitle");
+  btn.textContent = `📖 ${t("dialog.readHeader")}`;
+  return btn;
 }
 
-function dgRnBuildDialogBox(
-  parsed: ReturnType<typeof parseModelName>,
-  currentName: string,
-): HTMLDivElement {
-  const box = document.createElement("div");
-  box.className = "dlg-box dlg-pad dlg-gap";
-  box.innerHTML = `
-      <div class="dlg-title">
-        <span>✂️ ${t("dialog.renameModel")}</span>
-        <button id="rn-from-header" class="dlg-btn-sm" title="${t("dialog.readHeaderTitle")}">📖 ${t("dialog.readHeader")}</button>
-      </div>
+function dgRnBuildBoxHTML(parsed: ReturnType<typeof parseModelName>, currentName: string): string {
+  // 标题行由 createDialog 统一渲染（ADR-190 D3），此处只管内容区
+  return `
       <div class="dlg-sub">${esc(currentName)}</div>
       <div class="dlg-row">
         <input id="rn-author" class="dlg-input-bg" style="flex:2" placeholder="${t("import.author")}" value="${esc(parsed.author)}">
@@ -67,7 +45,6 @@ function dgRnBuildDialogBox(
       </div>
       <div id="rn-err" class="dlg-err"></div>
     `;
-  return box;
 }
 
 function dgRnBindReadHeaderBtn(
@@ -203,13 +180,25 @@ export async function showRenameDialog(
 ): Promise<string | null> {
   return new Promise((resolve) => {
     const parsed = parseModelName(currentName);
-    const box = dgRnBuildDialogBox(parsed, currentName);
-    const { overlay, close } = dgRnCreateOverlay(resolve, box);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    registerDlg(overlay, () => closeDlg(overlay, resolve, null));
-    overlay.focus();
-    trapFocus(overlay);
+    const { overlay, box, close } = createDialog<string | null>({
+      title: t("dialog.renameModel"),
+      icon: "✂️",
+      titleExtra: dgRnBuildHeaderBtn(),
+      boxClass: "dlg-box dlg-pad dlg-gap",
+      tabIndex: 0,
+      cancelValue: null,
+      resolve,
+      buildBox: (el) => {
+        el.innerHTML = dgRnBuildBoxHTML(parsed, currentName);
+      },
+    });
+    // Enter → 触发确认（Esc / 遮罩关闭已由 createDialog 脚手架处理）
+    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
+      if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement) && !e.isComposing) {
+        e.preventDefault();
+        (box.querySelector("#rn-ok") as HTMLElement | null)?.click();
+      }
+    });
 
     const { disableTail, getExt } = dgRnMakeExtCtx(currentName);
     const readFn: DgRnReadFn = () => dgRnReadFields(box);

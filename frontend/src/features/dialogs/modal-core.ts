@@ -6,6 +6,8 @@
 // 勿直接依赖本文件内部 API；createDialog 为内部脚手架（供同目录 builder 使用），
 // 导出仅为兄弟文件协作，非对外契约。
 
+import { esc } from "../../utils/dom/html.ts";
+
 /** ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
  * 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。 */
 export const VIEW_TESTIDS: readonly string[] = [
@@ -131,17 +133,19 @@ function buildOverlay<T>(
   closable: boolean,
   cancelValue: T,
   resolve: (value: T) => void,
+  onClose?: (value: T) => void,
 ): { overlay: HTMLElement; close: (value: T) => void } {
   const overlay = document.createElement("div");
   overlay.tabIndex = tabIndex;
   overlay.className = "dlg-overlay";
   overlay.dataset.testid = "dlg-overlay";
-  // WCAG 2.1 A 级：对话框语义。注意：业务弹窗并非都走本函数——adv-filter / batch-rename /
-  // tag-editor / rename 各自自建 overlay 并自带 role=dialog + aria-modal（同规约定，
-  // 见各文件注释）；新增自建弹窗时须同步补这两条属性，勿依赖本处「统一继承」。
+  // WCAG 2.1 A 级：对话框语义。业务弹窗统一走 createDialog 后自动继承这两条属性。
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
-  const close = (value: T): void => closeDlg(overlay, resolve, value);
+  const close = (value: T): void => {
+    closeDlg(overlay, resolve, value);
+    onClose?.(value);
+  };
   overlay.onclick = (e: MouseEvent): void => {
     if (e.target === overlay && closable) close(cancelValue);
   };
@@ -155,14 +159,32 @@ function appendDialogBox(
   overlay: HTMLElement,
   width: string | undefined,
   buildBox: (box: HTMLElement) => void,
+  boxClass?: string,
 ): HTMLElement {
   const box = document.createElement("div");
-  box.className = "dlg-box dlg-pad dlg-gap-lg";
+  box.className = boxClass || "dlg-box dlg-pad dlg-gap-lg";
   if (width) box.style.width = width;
   buildBox(box);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
   return box;
+}
+
+/**
+ * 统一标题行（ADR-190 D3：抽象抽全——原 5 个 builder 各自重复渲染）。
+ * icon 空时省略图标与空格（与旧实现「空 icon 留前导空格」的视觉差异可忽略）。
+ * titleExtra 追加为行内子节点（如 rename 的「读取头部」按钮），保持在标题行右侧。
+ */
+function buildTitleRow(
+  title: string,
+  icon: string | undefined,
+  titleExtra?: HTMLElement,
+): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "dlg-title dlg-title-flush";
+  el.innerHTML = icon ? `${esc(icon)} ${esc(title)}` : esc(title);
+  if (titleExtra) el.appendChild(titleExtra);
+  return el;
 }
 
 function registerDialogLife<T>(
@@ -186,16 +208,36 @@ function registerDialogLife<T>(
 export function createDialog<T>(opts: {
   title: string;
   icon?: string | undefined;
+  /** 标题行内追加的自定义节点（如操作按钮），保持行内布局 */
+  titleExtra?: HTMLElement;
   width?: string | undefined;
+  /** box class 覆盖（默认 "dlg-box dlg-pad dlg-gap-lg"；业务弹窗可传自有布局类） */
+  boxClass?: string;
   tabIndex?: number;
   cancelValue: T;
   resolve: (value: T) => void;
   closable?: boolean;
+  /** 关闭生命周期钩子（Esc/遮罩/按钮任一 close 路径均同步触发；resolve 在退场动画后异步结算） */
+  onClose?: (value: T) => void;
   buildBox: (box: HTMLElement) => void;
 }): { overlay: HTMLElement; box: HTMLElement; close: (value: T) => void } {
-  const { width, tabIndex = 0, cancelValue, resolve, closable = true, buildBox } = opts;
-  const { overlay, close } = buildOverlay(tabIndex, closable, cancelValue, resolve);
-  const box = appendDialogBox(overlay, width, buildBox);
+  const {
+    title,
+    icon,
+    titleExtra,
+    width,
+    boxClass,
+    tabIndex = 0,
+    cancelValue,
+    resolve,
+    closable = true,
+    onClose,
+    buildBox,
+  } = opts;
+  const { overlay, close } = buildOverlay(tabIndex, closable, cancelValue, resolve, onClose);
+  const box = appendDialogBox(overlay, width, buildBox, boxClass);
+  // 标题行由脚手架统一 prepend（buildBox 内的 innerHTML 赋值先行完成，互不覆盖）
+  box.prepend(buildTitleRow(title, icon, titleExtra));
   registerDialogLife(overlay, closable, cancelValue, close);
   return { overlay, box, close };
 }

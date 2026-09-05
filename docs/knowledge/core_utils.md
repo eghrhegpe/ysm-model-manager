@@ -6,29 +6,7 @@ category: utils
 source_files:
   - frontend/src/utils/core/
 auto_fields:
-  symbols_with_lines:
-    - addDisposableListener
-    - asArray
-    - asNumber
-    - asString
-    - clamp
-    - clamp01
-    - clampInt
-    - clampPct
-    - debounce
-    - delay
-    - Disposable
-    - fireAndForget
-    - getCompound
-    - isObj
-    - lerp
-    - lerpArray
-    - logError
-    - LogSink
-    - logWarn
-    - setLogSink
-    - swallowError
-    - waitForFrame
+  symbols_with_lines: []
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

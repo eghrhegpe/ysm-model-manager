@@ -39,6 +39,11 @@
 | P1-3 | `dialogs/rename.ts:21-29`、`adv-filter.ts:176-181`、`tag-editor.ts:94-98`、`batch-rename.ts:236-239` | 4 个业务弹窗绕开 `createDialog`，各写 overlay 六步：`createElement → tabIndex → className → role → aria-modal → onclick`（`adv-filter.ts:176-181` 与 `tag-editor.ts:94-98` 逐行同构） | 改为调用 `createDialog`，仅保留各自 `buildBox`。**注意 `rename.ts:24` 注释已自承「与 modal.ts/adv-filter/batch-rename/tag-editor 自建 overlay 同规」，一并更新** |
 
 > P1-3 涉及 4 个业务弹窗的可见行为（动画/焦点/ESC），建议**逐个提交、逐个手工验证**，不合并成一次大改。
+>
+> **执行状态（2026-09-05）**：P1-1 / P1-2 / P1-3 已完成并验证（dialogs 全套件 171/171 ✅、vite build ✅[当日]、biome 无新增债）。
+> - P1-1 落地形态：`createDialog` 新增 `titleExtra`（标题行内自定义节点，rename 的「读取头部」按钮用）、`boxClass`（四弹窗四种 box 布局类）、`onClose`（关闭生命周期钩子，tag-editor 的 disposed 同步置位用）三个通用参数；
+> - P1-3 实际接入 **3/4**：rename ✅、adv-filter ✅、tag-editor ✅（三者测试同步去 mock、改走真实脚手架）；**batch-rename 记账不接入**——其标题为自定义三段式 `dlg-header`（标题+路径+计数），与统一 title 行模型不匹配，且关闭链含 brTimers 清理与 pendingResolve 结算，强行接入需给抽象开「header 模式」口子，违反 D3「抽象要么抽全要么别抽」；待 dlg-header 样式统一时再做；
+> - 附带收口：`buildOverlay` 注释更新（业务弹窗统一走 createDialog 自动继承 role/aria-modal，「同规约定」注释失效）。
 
 ---
 

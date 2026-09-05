@@ -15,32 +15,17 @@ export interface ModalSelectOptions {
   okText?: string;
 }
 
-function selectBoxBuilder(
-  title: string,
-  icon: string | undefined,
-  items: string[],
-  okText: string | undefined,
-): (box: HTMLElement) => void {
+function selectBoxBuilder(items: string[], okText: string | undefined): (box: HTMLElement) => void {
   return (box): void => {
-    box.innerHTML =
-      '<div class="dlg-title dlg-title-flush">' +
-      esc(icon || "") +
-      " " +
-      esc(title) +
-      "</div>" +
-      '<select id="ms-select" data-testid="dlg-select" class="dlg-field">' +
-      (items || [])
-        .map((item) => '<option value="' + esc(item) + '">' + esc(item) + "</option>")
-        .join("") +
-      "</select>" +
-      '<div class="dlg-footer dlg-footer-flush">' +
-      '<button id="ms-cancel" data-testid="dlg-cancel" class="dlg-btn">' +
-      t("dialog.cancelEsc") +
-      "</button>" +
-      '<button id="ms-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">' +
-      esc(okText || t("dialog.ok")) +
-      " (Enter)</button>" +
-      "</div>";
+    // 标题行由 createDialog 统一渲染（ADR-190 D3）；本 builder 顺带统一为模板串风格
+    box.innerHTML = `
+      <select id="ms-select" data-testid="dlg-select" class="dlg-field">
+        ${(items || []).map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}
+      </select>
+      <div class="dlg-footer dlg-footer-flush">
+        <button id="ms-cancel" data-testid="dlg-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
+        <button id="ms-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${esc(okText || t("dialog.ok"))} (Enter)</button>
+      </div>`;
   };
 }
 
@@ -59,7 +44,7 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
       tabIndex: -1,
       cancelValue: null,
       resolve,
-      buildBox: selectBoxBuilder(title, icon, items, okText),
+      buildBox: selectBoxBuilder(items, okText),
     });
     const select = box.querySelector("#ms-select") as HTMLSelectElement;
     select.focus();

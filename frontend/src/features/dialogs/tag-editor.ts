@@ -5,11 +5,11 @@ import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
+import { createDialog } from "./modal-core.ts";
 import { addTagToSet } from "./tag-set.ts";
 
 interface DgTeShell {
-  overlay: HTMLDivElement;
+  overlay: HTMLElement;
   box: HTMLDivElement;
   errEl: HTMLElement;
   tagsEl: HTMLElement;
@@ -90,19 +90,9 @@ function ensureTeStyles(): void {
   document.head.appendChild(el);
 }
 
-function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => void): DgTeShell {
-  const overlay = document.createElement("div");
-  overlay.className = "dlg-overlay";
-  overlay.tabIndex = 0;
-  overlay.setAttribute("role", "dialog");
-  overlay.setAttribute("aria-modal", "true");
-
-  ensureTeStyles(); // P1 批次12:cssText 抽类注入(幂等)
-  const box = document.createElement("div");
-  box.className = "dlg-box dlg-pad te-box"; // 语义类保留,补充布局在 .te-box
-
-  box.innerHTML = `
-    <div class="dlg-title" style="margin:0">🏷️ ${t("dialog.editTags")}</div>
+/** 弹窗内容区 HTML（标题行由 createDialog 统一渲染 — ADR-190 D3） */
+function dgTeBuildBoxHTML(modelPath: string): string {
+  return `
     <div style="font-size:10px;color:var(--muted);word-break:break-all">${esc(modelPath)}</div>
 
     <div id="te-tags" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;padding:4px;border:1px solid var(--bd);border-radius:5px;background:var(--bg);align-content:flex-start"></div>
@@ -124,11 +114,33 @@ function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => 
       <button id="te-save" class="dlg-btn dlg-btn-primary">💾 ${t("common.save")}</button>
     </div>
   `;
+}
 
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
+function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => void): DgTeShell {
+  ensureTeStyles(); // P1 批次12:cssText 抽类注入(幂等)
 
-  const shell: DgTeShell = {
+  let shell!: DgTeShell;
+  const {
+    overlay,
+    box,
+    close: settleClose,
+  } = createDialog<string[] | null>({
+    title: t("dialog.editTags"),
+    icon: "🏷️",
+    boxClass: "dlg-box dlg-pad te-box", // 语义类保留,补充布局在 .te-box
+    tabIndex: 0,
+    cancelValue: null,
+    resolve,
+    // Esc / 遮罩关闭也须同步置 disposed，防异步链继续写已卸载 DOM（与按钮路径同规）
+    onClose: () => {
+      shell.disposed = true;
+    },
+    buildBox: (el) => {
+      el.innerHTML = dgTeBuildBoxHTML(modelPath);
+    },
+  });
+
+  shell = {
     overlay,
     box,
     errEl: box.querySelector("#te-err") as HTMLElement,
@@ -139,24 +151,8 @@ function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => 
     loading: true,
     loadFailed: false,
     disposed: false,
-    close: () => {},
+    close: (result: string[] | null): void => settleClose(result),
   };
-
-  shell.close = (result: string[] | null): void => {
-    shell.disposed = true;
-    closeDlg(overlay, resolve, result);
-  };
-
-  overlay.onclick = (e: MouseEvent): void => {
-    if (e.target === overlay) shell.close(null);
-  };
-  overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
-    if (e.key === "Escape") shell.close(null);
-  });
-
-  registerDlg(overlay, () => closeDlg(overlay, resolve, null));
-  trapFocus(overlay);
-  overlay.focus();
 
   return shell;
 }

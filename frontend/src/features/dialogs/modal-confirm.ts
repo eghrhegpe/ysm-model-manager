@@ -24,16 +24,14 @@ export interface ModalConfirmOptions {
 }
 
 function confirmBoxBuilder(
-  title: string,
-  icon: string | undefined,
   message: string,
   okText: string | undefined,
   danger: boolean | undefined,
   bodyHTML: string | undefined,
 ): (box: HTMLElement) => void {
   return (box): void => {
+    // 标题行由 createDialog 统一渲染（ADR-190 D3），本 builder 只管内容区与 footer
     box.innerHTML = `
-      <div class="dlg-title dlg-title-flush">${esc(icon || "")} ${esc(title)}</div>
       ${bodyHTML ?? `<div class="dlg-msg">${esc(message)}</div>`}
       <div class="dlg-footer dlg-footer-flush">
         <button id="mc-cancel" data-testid="dlg-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
@@ -58,7 +56,7 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
       tabIndex: 0,
       cancelValue: false,
       resolve,
-      buildBox: confirmBoxBuilder(title, icon, message, okText, danger, bodyHTML),
+      buildBox: confirmBoxBuilder(message, okText, danger, bodyHTML),
     });
     (box.querySelector("#mc-cancel") as HTMLElement).onclick = (): void => close(false);
     (box.querySelector("#mc-ok") as HTMLElement).onclick = (): void => close(true);

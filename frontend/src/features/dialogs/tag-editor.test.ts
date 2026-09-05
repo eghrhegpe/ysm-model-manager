@@ -1,28 +1,16 @@
 // ===== 模型标签编辑弹窗测试 =====
 // 覆盖：加载失败后禁止保存（P2：空列表写回 → Go SetTags delete 条目 → 标签全清）、正常加载保存
+// ADR-190 D3：modal-core 走真实脚手架（overlay/单例/退场为纯 DOM 行为，无需 mock）
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mocks, closeDlgMock, registerDlgMock } = vi.hoisted(() => {
+const { mocks } = vi.hoisted(() => {
   const mocks = {
     GetModelTags: vi.fn(),
     AllTags: vi.fn(),
     SetModelTags: vi.fn(),
   };
-  return {
-    mocks,
-    closeDlgMock: vi.fn(
-      (_o: unknown, resolve?: (r: unknown) => void, result?: unknown) =>
-        resolve?.(result),
-    ),
-    registerDlgMock: vi.fn(),
-  };
+  return { mocks };
 });
-
-vi.mock("./modal-core.ts", () => ({
-  closeDlg: closeDlgMock,
-  registerDlg: registerDlgMock,
-  trapFocus: vi.fn(),
-}));
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
@@ -33,6 +21,7 @@ vi.mock("@/backend/app.ts", () => ({
 }));
 
 import { modalTagEditor } from "./tag-editor.ts";
+import { closeActiveDialog, __resetModalStateForTest } from "./modal-core.ts";
 import { t } from "../../core/i18n/t.ts";
 
 async function open(modelPath = "/m/a.ysm") {
@@ -47,8 +36,7 @@ async function open(modelPath = "/m/a.ysm") {
 
 beforeEach(() => {
   document.body.innerHTML = "";
-  closeDlgMock.mockClear();
-  registerDlgMock.mockClear();
+  __resetModalStateForTest();
   vi.clearAllMocks();
   mocks.GetModelTags.mockResolvedValue([]);
   mocks.AllTags.mockResolvedValue([]);
@@ -66,7 +54,8 @@ describe("modalTagEditor — 加载失败保护（P2 数据丢失）", () => {
     // disabled 按钮 click 不派发事件，SetModelTags 绝不被调
     saveBtn.click();
     expect(mocks.SetModelTags).not.toHaveBeenCalled();
-    expect(closeDlgMock).not.toHaveBeenCalled();
+    // 弹窗未关闭（overlay 仍在文档中）
+    expect(document.querySelector(".dlg-overlay")).not.toBeNull();
   });
 
   it("加载失败后即使按钮状态被绕过，保存守卫仍拒绝写回", async () => {
@@ -77,7 +66,7 @@ describe("modalTagEditor — 加载失败保护（P2 数据丢失）", () => {
     saveBtn.disabled = false;
     saveBtn.click();
     expect(mocks.SetModelTags).not.toHaveBeenCalled();
-    expect(closeDlgMock).not.toHaveBeenCalled();
+    expect(document.querySelector(".dlg-overlay")).not.toBeNull();
   });
 });
 
@@ -165,13 +154,9 @@ describe("modalTagEditor — 关闭路径与 disposed 竞态", () => {
     expect(await pending).toBeNull();
   });
 
-  it("registerDlg 注册的 ESC 回调可关窗（closeDlg(overlay, resolve, null)）", async () => {
+  it("closeActiveDialog（切页逃逸/android back 路径）→ resolve null", async () => {
     const { pending } = await open();
-    const [, registeredClose] = registerDlgMock.mock.calls[0] as unknown as [
-      unknown,
-      () => void,
-    ];
-    registeredClose();
+    expect(closeActiveDialog()).toBe(true);
     expect(await pending).toBeNull();
   });
 

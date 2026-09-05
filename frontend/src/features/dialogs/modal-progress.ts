@@ -4,7 +4,6 @@
 // 注意: fmtMB 不再经本文件 re-export——消费方直连 utils/format/fmt-mb.ts（原「逐步移除」兑现）。
 
 import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
 import { fmtMB } from "../../utils/format/fmt-mb.ts";
 import { createDialog } from "./modal-core.ts";
 
@@ -38,13 +37,11 @@ function buildProgressDoms(): {
 }
 
 function progressBoxBuilder(
-  title: string,
-  icon: string | undefined,
   track: HTMLDivElement,
   pctEl: HTMLDivElement,
 ): (box: HTMLElement) => void {
   return (box): void => {
-    box.innerHTML = `<div class="dlg-title dlg-title-flush">${esc(icon || "")} ${esc(title)}</div>`;
+    // 标题行由 createDialog 统一渲染（ADR-190 D3），本 builder 只管进度条
     box.appendChild(track);
     box.appendChild(pctEl);
   };
@@ -109,7 +106,7 @@ export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
     cancelValue: undefined,
     closable,
     resolve: () => {},
-    buildBox: progressBoxBuilder(title, icon, track, pctEl),
+    buildBox: progressBoxBuilder(track, pctEl),
   });
   const closed = { value: false };
   const close = guardProgressClose(closed, settleClose);

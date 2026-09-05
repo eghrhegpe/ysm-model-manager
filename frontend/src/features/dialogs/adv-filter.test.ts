@@ -1,21 +1,10 @@
 // ===== 高级筛选弹窗测试 =====
 // 覆盖：初始值回填、应用/清除/取消/Esc/overlay 点击、验证失败拦截、Enter 提交、标签提示加载
+// ADR-190 D3：modal-core 走真实脚手架（overlay/单例/退场为纯 DOM 行为，无需 mock）
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { closeDlgMock, registerDlgMock, trapFocusMock, AllTagsMock } = vi.hoisted(() => ({
-  closeDlgMock: vi.fn(
-    (_o: unknown, resolve?: (r: unknown) => void, result?: unknown) =>
-      resolve?.(result),
-  ),
-  registerDlgMock: vi.fn(),
-  trapFocusMock: vi.fn(),
+const { AllTagsMock } = vi.hoisted(() => ({
   AllTagsMock: vi.fn(),
-}));
-
-vi.mock("./modal-core.ts", () => ({
-  closeDlg: closeDlgMock,
-  registerDlg: registerDlgMock,
-  trapFocus: trapFocusMock,
 }));
 
 vi.mock("@/backend/app.ts", () => ({
@@ -23,6 +12,7 @@ vi.mock("@/backend/app.ts", () => ({
 }));
 
 import { modalAdvFilter } from "./adv-filter.ts";
+import { __resetModalStateForTest, closeActiveDialog } from "./modal-core.ts";
 
 async function open(opts: { value?: Record<string, unknown> } = {}) {
   const pending = modalAdvFilter(opts as unknown as Parameters<typeof modalAdvFilter>[0]);
@@ -48,8 +38,7 @@ async function open(opts: { value?: Record<string, unknown> } = {}) {
 
 beforeEach(() => {
   document.body.innerHTML = "";
-  closeDlgMock.mockClear();
-  registerDlgMock.mockClear();
+  __resetModalStateForTest();
   vi.clearAllMocks();
   AllTagsMock.mockResolvedValue([]);
 });
@@ -174,16 +163,10 @@ describe("modalAdvFilter — 关闭路径", () => {
     ).resolves.toBe("pending");
   });
 
-  it("registerDlg 的取消回调 → resolve null（切页逃逸）", async () => {
-    await open();
-    const cancelClose = registerDlgMock.mock.calls[0][1] as () => void;
-    cancelClose();
-    // closeDlg mock 已 resolve null，验证被调用
-    expect(closeDlgMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.any(Function),
-      null,
-    );
+  it("closeActiveDialog（切页逃逸/android back 路径）→ resolve null", async () => {
+    const { pending } = await open();
+    expect(closeActiveDialog()).toBe(true);
+    await expect(pending).resolves.toBeNull();
   });
 });
 

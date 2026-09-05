@@ -9,7 +9,7 @@ import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
+import { createDialog } from "./modal-core.ts";
 
 export type { AdvFilterValue } from "./adv-filter-util.ts";
 
@@ -46,11 +46,9 @@ function advFilterCollect(
   };
 }
 
-/** 渲染弹窗表单 HTML（纯函数，无 DOM 副作用） */
+/** 渲染弹窗表单 HTML（纯函数，无 DOM 副作用；标题行由 createDialog 统一渲染 — ADR-190 D3） */
 function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
   return `
-      <div class="dlg-title" style="margin:0">⚙️ ${t("dialog.advFilter")}</div>
-
       <div style="display:flex;flex-direction:column;gap:8px;font-size:11px">
         <div>
           <label for="afv-kw" style="display:block;color:var(--muted);margin-bottom:3px">🔍 ${t("dialog.keyword")}</label>
@@ -106,9 +104,9 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
 
 /** 绑定弹窗交互：清除/取消/应用/Enter + 已有标签提示异步加载 */
 function bindAdvFilterEvents(
-  overlay: HTMLDivElement,
+  overlay: HTMLElement,
   box: HTMLDivElement,
-  resolve: (r: AdvFilterResult) => void,
+  close: (r: AdvFilterResult) => void,
   getValue: () => AdvFilterValue,
 ): void {
   const kwInput = box.querySelector("#afv-kw") as HTMLInputElement;
@@ -136,11 +134,8 @@ function bindAdvFilterEvents(
 
   const errEl = box.querySelector("#afv-err") as HTMLElement;
 
-  const close = (result: AdvFilterResult): void => closeDlg(overlay, resolve, result);
-
   (box.querySelector("#afv-cancel") as HTMLElement).onclick = (): void => close(null);
-  (box.querySelector("#afv-clear") as HTMLElement).onclick = (): void =>
-    closeDlg(overlay, resolve, { cleared: true });
+  (box.querySelector("#afv-clear") as HTMLElement).onclick = (): void => close({ cleared: true });
   (box.querySelector("#afv-ok") as HTMLElement).onclick = (): void => {
     const data = getValue();
     const err = validateAdvFilter(data);
@@ -173,31 +168,22 @@ export function modalAdvFilter(
 ): Promise<AdvFilterResult> {
   return new Promise((resolve) => {
     const v = opts.value || {};
-    const overlay = document.createElement("div");
-    overlay.className = "dlg-overlay";
-    overlay.tabIndex = 0;
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.onclick = (e: MouseEvent): void => {
-      if (e.target === overlay) closeDlg(overlay, resolve, null);
-    };
-    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
-      if (e.key === "Escape") closeDlg(overlay, resolve, null);
+    const { overlay, box, close } = createDialog<AdvFilterResult>({
+      title: t("dialog.advFilter"),
+      icon: "⚙️",
+      width: "420px",
+      boxClass: "dlg-box dlg-pad",
+      tabIndex: 0,
+      cancelValue: null,
+      resolve,
+      buildBox: (el) => {
+        el.style.gap = "10px";
+        el.innerHTML = buildAdvFilterFormHTML(v);
+      },
     });
-
-    const box = document.createElement("div");
-    box.className = "dlg-box dlg-pad";
-    box.style.gap = "10px";
-    box.style.width = "420px";
-    box.innerHTML = buildAdvFilterFormHTML(v);
-
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    registerDlg(overlay, () => closeDlg(overlay, resolve, null));
-    trapFocus(overlay); // #3：Tab 焦点锁在弹窗内，防逃逸到背后页面（修复陷阱 #14 变体）
 
     const kwInput = box.querySelector("#afv-kw") as HTMLInputElement;
     const tagInput = box.querySelector("#afv-tag") as HTMLInputElement;
-    bindAdvFilterEvents(overlay, box, resolve, () => advFilterCollect(box, kwInput, tagInput));
+    bindAdvFilterEvents(overlay, box, close, () => advFilterCollect(box, kwInput, tagInput));
   });
 }

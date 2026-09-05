@@ -85,7 +85,7 @@ invariant_anchors:
 | `KNOWN_PATHS` 计数 9→11（preview-settings.md / preview_menu_settings_state.md） | `preview-paths.ts:24-44` 实为 11 项（ADR-125 六条 → ADR-126 扩） | ✅ `029721d4` |
 | invariant_anchors 定义归属错位（theme / preview_menu_session_key / app-tree / app_cycle_injection / app_content_diagnostics / app-modules） | 锚指 import/re-export/注释处：`app-modules.ts\|normalizeTheme`(真义 theme-core.ts:17)、`ysm-adapter.ts\|buildYsmModelSchema`(真义 skeleton-fill-panel.ts:359, ysm-adapter 仅注释)、`bus-handlers.ts\|selectState`(真义 data.ts:4) | ✅ `029721d4` 七卡锚点改指定义文件 |
 | 校验器盲区（机制级） | `checkKnowledgeAnchors` 弱断言（子串包含）不验定义归属；287 锚中 ref-only 高置信 4-5 个 | ✅ `029721d4` 增强 + 契约测试 |
-| 目录级 source_files 精度退化 | model3d.md→preview-3d/（263 文件索引单模型层卡）、resource-packs.md→views/app-nav/（疑似错误归属）；test-utils/ui_components/ysm-wasm 用目录属恰当粒度 | ⏳ model3d 拆卡待办 |
+| 目录级 source_files 精度退化 | model3d.md→preview-3d/（⏳ 结论已修正：**无需拆卡**——72 处引用含指向 model3d.ts 单文件与渲染层整体的混合查询，实为「单文件名打头的域总览卡」，source_files 用目录是恰当粒度，同 ui_components/test-utils）；resource-packs.md→views/app-nav/（✅ 结论已修正：**归档卡无需改**——status: archived + affected:false + pitfalls 已明示功能删除与迁移路径，source_files 指当初关联组件属归档卡可接受） | ✅ 无待办 |
 | context-menu HANDLERS 归属 | `HANDLERS` 拆至 `context-menu-handlers.ts:161`，context-menus.ts:9 仅消费 | ✅ `31bf4ae5` |
 | core_utils 漏 nbt-guards.ts | `utils/core/` 实有 6 非测试文件，正文表格只列 5 | ✅ `31bf4ae5` |
 | 「2026-XX」占位日期（context-menu / i18n / utils-dom） | git log -S 溯源全部完成于 **2026-08-30 P3 收敛批**（be99f7ee/42179349/eb01dcdb/98eadbf9/a200c5e7）；一处（对账升级）实为**未完成待办**被 XX 掩盖 | ✅ `5d5a20b0` 完成项填日期、计划项标「待办(P2)」 |
@@ -96,8 +96,8 @@ invariant_anchors:
 
 ## 遗留缺口（建议补卡，未执行）
 
-- `utils/dom/capabilities.ts`（viewer 能力门控，21+ 消费点）、`features/repo-rtype.ts`（资源类型状态枢纽）、`preview-3d/menu/`（声明式菜单系统）、`preview-3d/state/preview-paths.ts`（KNOWN_PATHS 契约锚点）、`features/dnd-shared.ts`（WebView2 DnD）、下载队列（download-queue-store + download-tasks）、`backend/runtime.ts`、`features/community/virtual-list.ts`
-- model3d.md 卡粒度错配（741 行用 preview-3d/ 整目录）需拆卡
+- `utils/dom/capabilities.ts`（viewer 能力门控，21+ 消费点）、`features/repo-rtype.ts`（资源类型状态枢纽）、`preview-3d/menu/`（声明式菜单系统）、`preview-3d/state/preview-paths.ts`（KNOWN_PATHS 契约锚点）、`features/dnd-shared.ts`（WebView2 DnD）、下载队列（download-queue-store + download-tasks）、`backend/runtime.ts`、`features/community/virtual-list.ts`（✅ 已立卡，见立卡批）
+- model3d.md 结论已修正：**无需拆卡**（域总览卡定位合理）；resource-packs.md 结论已修正：**归档卡无需改**（status: archived + pitfalls 已明示功能删除迁移路径）
 
 ## 修复后校验器状态
 

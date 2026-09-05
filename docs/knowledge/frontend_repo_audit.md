@@ -950,7 +950,6 @@ auto_fields:
     - packPngToThumbnail
     - packTextureLabel
     - PAGE_REGISTRY
-    - PAGE_WHITELIST
     - PageDefinition
     - PageName
     - PageStore
@@ -1198,7 +1197,6 @@ auto_fields:
     - safeStr
     - safeUrl
     - sampleAdaptivePixelRatio
-    - sanitizePage
     - saveBrowseMode
     - saveCfg
     - saveScreenshot

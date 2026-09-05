@@ -16,7 +16,7 @@
 | `batch:enable-all` | 1 | 1 | 0 | 0 | ✅ |
 | `batch:rename` | 1 | 1 | 0 | 0 | ✅ |
 | `community:clearCache` | 1 | 1 | 0 | 0 | ✅ |
-| `ctx:show` | 4 | 1 | 0 | 0 | ✅ |
+| `ctx:show` | 5 | 1 | 0 | 0 | ✅ |
 | `dir:batch-rename` | 1 | 1 | 0 | 0 | ✅ |
 | `dir:mkdir` | 1 | 1 | 0 | 0 | ✅ |
 | `dir:recycle` | 1 | 1 | 0 | 0 | ✅ |
@@ -106,6 +106,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
+| showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 143 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 122 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 294 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 318 |
@@ -200,7 +201,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 167 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 190 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 191 |
 
 ### `menu:show`
 
@@ -243,14 +244,14 @@
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 275 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 197 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 40 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 200 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 201 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 243 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 117 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerPageStore | `frontend/src/core/page-store.ts` | 68 |
+| registerPageStore | `frontend/src/core/page-store.ts` | 67 |
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 148 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 175 |
 
@@ -282,7 +283,7 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 33 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 491 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 204 |
 

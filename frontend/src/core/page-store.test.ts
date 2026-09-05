@@ -5,10 +5,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus, type PageName } from "../bus.ts";
 import {
+  isValidPage,
   PageStore,
   registerPageStore,
   resolveInitialPage,
-  PAGE_WHITELIST,
 } from "./page-store.ts";
 
 /** 隐私模式模拟：localStorage 读抛错（复用 app-modules.test.ts 的 breakLocalStorage 模式） */
@@ -72,12 +72,18 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
   });
 });
 
-describe("PAGE_WHITELIST 双源漂移防护", () => {
-  it("白名单内容与 PageName 六页一致（防新增页被内联脚本重置回 repository）", () => {
-    expect([...PAGE_WHITELIST].sort()).toEqual(
-      ["repository", "instances", "workshop", "github", "diagnostics", "settings"].sort(),
-    );
-    expect(PAGE_WHITELIST.length).toBe(6);
+describe("isValidPage 运行时守卫", () => {
+  it("六页合法（与 PageName 联合同源——VALID_PAGES 是类型源）", () => {
+    for (const p of ["repository", "instances", "workshop", "github", "diagnostics", "settings"]) {
+      expect(isValidPage(p)).toBe(true);
+    }
+  });
+
+  it("未知值 / 非字符串拒绝", () => {
+    expect(isValidPage("bogus")).toBe(false);
+    expect(isValidPage(null)).toBe(false);
+    expect(isValidPage(undefined)).toBe(false);
+    expect(isValidPage(42)).toBe(false);
   });
 });
 
@@ -116,18 +122,21 @@ describe("PageStore 导航状态机", () => {
     expect(PageStore.currentPage).toBe("repository");
   });
 
-  it("非法页 emit → 回退仓库页（P2 修复：sanitizePage 防遗留 .js 注入）", () => {
+  it("非法页 emit → 拒绝（状态不变，防兜底污染）", () => {
+    bus.emit("nav:changed", { page: "settings" });
     bus.emit("nav:changed", { page: "bogus" as unknown as PageName });
-    expect(PageStore.currentPage).toBe("repository");
+    expect(PageStore.currentPage).toBe("settings");
   });
 
-  it("null/undefined 页 emit → 回退仓库页", () => {
+  it("null/undefined 页 emit → 拒绝（状态不变）", () => {
+    bus.emit("nav:changed", { page: "github" });
     bus.emit("nav:changed", { page: null as unknown as PageName });
-    expect(PageStore.currentPage).toBe("repository");
+    expect(PageStore.currentPage).toBe("github");
   });
 
-  it("事件侧历史名 resources → 映射回仓库页", () => {
+  it("广播侧历史名 resources → 拒绝（宽容映射只属启动恢复）", () => {
+    bus.emit("nav:changed", { page: "instances" });
     bus.emit("nav:changed", { page: "resources" as unknown as PageName });
-    expect(PageStore.currentPage).toBe("repository");
+    expect(PageStore.currentPage).toBe("instances");
   });
 });

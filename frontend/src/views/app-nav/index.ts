@@ -4,7 +4,7 @@
 import { getApp } from "../../backend/app.ts";
 import { bus, type PageName } from "../../bus.ts";
 import { type LocaleKey, t } from "../../core/i18n/t.ts";
-import { resolveInitialPage, sanitizePage } from "../../core/page-store.ts";
+import { isValidPage, resolveInitialPage } from "../../core/page-store.ts";
 import { can } from "../../utils/dom/capabilities.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
@@ -173,10 +173,11 @@ class AppNav extends WebComponentBase {
     this._unsubLang?.();
     this._unsubRtype?.();
     this._unsub = bus.on("nav:changed", ({ page }) => {
-      // P3 修复（子代理审计）：page 过 sanitizePage 白名单——非法页 emit（遗留 .js/
-      // 未来调用方）会让高亮静默丢失 + 脏值入 nav_page（启动时虽被兜底，会话期 UI 脱节）；
-      // 与 page-store 同款模式对齐
-      this._current = sanitizePage(page);
+      // P2 修复（增量深评，2026-09-05）：非法页 emit 直接忽略（不更新高亮、不写盘）——
+      // 原 sanitizePage 兜底成 repository 会把非用户意图值写入 nav_page（启动时虽被兜底，
+      // 会话期 UI 脱节 + 下次启动从脏值恢复）；广播是已发生事实，应拒绝而非重定向
+      if (!isValidPage(page)) return;
+      this._current = page;
       safeSet("nav_page", this._current);
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       this.shadowRoot!.querySelectorAll(".nav-item").forEach((el) => {

@@ -26,21 +26,20 @@ const VALID_PAGES: PageName[] = [
   "settings",
 ];
 
-// P3 修复（code_review）：导出白名单供 index.html 内联脚本经 window 桥接复用——
-// 原内联脚本硬编码第二份六页列表，新增页时两源漂移 → 内联源（后发射）把新页重置回
-// repository，静默启动回归。红线 §3.1 只禁双下划线前缀（window. 后接两个下划线），非 __ 前缀与
-// window.applyTheme 同模式合规（app-modules 挂载，见 app-modules.ts）。
-export const PAGE_WHITELIST: readonly string[] = VALID_PAGES;
-
-function sanitizePage(v: string | null): PageName {
-  if (v === "resources") return "repository"; // 历史页面名映射
-  return (VALID_PAGES as string[]).includes(v ?? "") ? (v as PageName) : "repository";
+/** 运行时页面名校验（类型守卫）。广播守卫用：nav:changed 是已发生事实的广播，
+ *  非法 emit 应拒绝（保持状态不变）而非兜底重定向——兜底会把非用户意图值写进
+ *  状态/持久化，造成高亮与视图脱节（P2 修复，2026-09-05 增量深评） */
+export function isValidPage(v: unknown): v is PageName {
+  return typeof v === "string" && (VALID_PAGES as readonly string[]).includes(v);
 }
 
-// P3 修复（子代理审计）：导出 sanitizePage 供 app-nav 复用——app-nav 的 nav:changed
-// handler 直接写 _current 未过白名单（非法页 emit → 高亮静默丢失 + 脏值入 nav_page），
-// 与 page-store 已修的同款模式对齐
-export { sanitizePage };
+/** 启动恢复的宽容解析：历史名 resources 映射回 repository，未知值兜底 repository
+ *  （防死页——_render 落入 default 分支却无对应 init 分发，历史教训：resources 遗留值）。
+ *  仅服务 resolveInitialPage 读 localStorage 旧值；运行时广播一律用 isValidPage 严格拒绝 */
+function sanitizePage(v: string | null): PageName {
+  if (v === "resources") return "repository"; // 历史页面名映射
+  return isValidPage(v) ? v : "repository";
+}
 
 export function resolveInitialPage(): PageName {
   const configured = safeGet("ui-default-page");
@@ -66,11 +65,12 @@ export const PageStore = {
 export function registerPageStore(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on("nav:changed", ({ page }) => {
-      // P3 修复：写入前过 sanitizePage 白名单——原注释自述「运行时信任 emit 方类型」，
-      // 任何遗留 .js 或未来调用方 emit 非法值会使 _currentPage 脱离 PageName 联合
-      const safe = sanitizePage(page ?? null);
-      if (safe !== _currentPage) {
-        _currentPage = safe;
+      // P2 修复（增量深评，2026-09-05）：非法 emit 直接忽略，不做 sanitize 兜底——
+      // nav:changed 是「已发生事实」的广播（视图已切），兜底重定向成 repository
+      // 会让 _currentPage 与真实视图脱节；宽容解析只属于启动恢复（resolveInitialPage）
+      if (!isValidPage(page)) return;
+      if (page !== _currentPage) {
+        _currentPage = page;
       }
     }),
   );

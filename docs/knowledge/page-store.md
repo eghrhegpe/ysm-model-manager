@@ -7,11 +7,10 @@ source_files:
   - frontend/src/core/page-store.ts
 auto_fields:
   symbols_with_lines:
-    - PAGE_WHITELIST
+    - isValidPage
     - PageStore
     - registerPageStore
     - resolveInitialPage
-    - sanitizePage
   tests:
     - frontend/src/core/page-store.test.ts
 tests:

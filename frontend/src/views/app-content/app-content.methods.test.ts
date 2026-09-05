@@ -41,8 +41,6 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 // 已删，改为分别 mock core/page-store 与 features/sync）
 vi.mock("../../core/page-store.ts", () => ({
   registerPageStore: vi.fn(),
-  PAGE_WHITELIST: [],
-  sanitizePage: (v: string | null) => v,
   resolveInitialPage: () => "repository",
   PageStore: { get currentPage() { return "repository" as const; } },
 }));

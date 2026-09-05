@@ -116,12 +116,17 @@ d2("buildYsmObject — 分支补强", () => {
     expect(collectMeshes(handle).length).toBeGreaterThan(0);
   });
 
-  it("mesh 缺 texIdx → console.warn 回退 0（spec 契约破坏防御）", () => {
+  it("mesh 缺 texIdx → console.warn 回退 0，且整次构建仅提示一次（收敛防刷屏）", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const spec = makeMinSpec();
-    delete (spec.models![0].meshGroups![0] as { texIdx?: number }).texIdx;
+    // 两个 mesh 都缺 texIdx（模拟多组件模型契约破坏）——修复前逐 mesh 刷屏，应只 warn 一次
+    const firstMesh = spec.models![0]!.meshGroups![0] as { texIdx?: number };
+    delete firstMesh.texIdx;
+    const cloned = structuredClone(spec.models![0]!.meshGroups![0]);
+    delete (cloned as { texIdx?: number }).texIdx;
+    spec.models![0]!.meshGroups!.push(cloned);
     const handle = buildYsmObject(spec, [new THREE.Texture()], new Map(), 0);
-    expect(warn).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);
     warn.mockRestore();
     handle.removeFromScene(new THREE.Scene());
   });

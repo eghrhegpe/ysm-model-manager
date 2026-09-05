@@ -56,6 +56,9 @@ export function buildYsmObject(
   >(),
   texIdx = 0,
 ): YsmObjectHandle {
+  // 缺 texIdx 的 warn 收敛：契约破坏应在首个 mesh 提示一次（多组件模型数百 mesh 时
+  // 逐条刷屏淹没有用日志），本次构建后续缺项静默——code review P2
+  let texIdxWarned = false;
   const componentTexMap =
     componentTexMapOrTexIdx instanceof Map
       ? componentTexMapOrTexIdx
@@ -113,7 +116,8 @@ export function buildYsmObject(
     for (const { md, mode } of merged) {
       const bg = boneGroupMap.get(compKey(mi, md.boneId));
       if (!bg) continue;
-      if (md.texIdx === undefined) {
+      if (md.texIdx === undefined && !texIdxWarned) {
+        texIdxWarned = true;
         console.warn("[model3d] mesh 缺 texIdx（spec 契约破坏），回退 0", spec.models?.length);
       }
       // 绑定索引与分类同空间：组件分支传组件数组（mesh-builder 局部槽 0）；

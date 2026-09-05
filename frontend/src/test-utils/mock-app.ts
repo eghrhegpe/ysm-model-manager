@@ -9,7 +9,12 @@
 // 设计要点：
 // - fail-closed：未配置的方法调用即 throw（显式失败，杜绝静默假成功）；
 // - Proxy get trap 放行 then/catch/finally 探针（await getApp() 会探查 thenable）；
-// - 每文件独立模块环境（isolate:true），store 挂 globalThis 即可，无跨文件共享问题。
+// - store 挂 globalThis（所有 mock-app 采用文件共享同一 store，无每文件独立模块态）。
+//   ⚠️ 隔离契约（code_review 7be20003）：不要假设 isolate:true 保证每文件干净——
+//   `test:audit` 跑 isolate=false + sequence.shuffle，worker 内 globalThis 跨文件存活，
+//   先跑文件 mockResolvedValue 的实现/调用历史会残留给后跑文件。每采用文件的
+//   afterEach 必须调 resetAppMock()（清实现 + 历史，回到 fail-closed 起点），
+//   否则未配置方法的「未配置即 throw」保证被静默击穿、结果随 shuffle 顺序漂移。
 // 不采用 setup 级全局 vi.mock：app.test.ts 等测真实 app.ts 的文件会被劫持，
 // 且 importOriginal 直通会破坏 vi.resetModules 语义（app.ts 内部缓存状态不再重置）。
 import { vi } from "vitest";
@@ -87,4 +92,28 @@ export function mockAppMethods(methods: Record<string, unknown>): Record<string,
     out[name] = fn;
   }
   return out;
+}
+
+/**
+ * 重置共享 store 到 fail-closed 起点（code_review 7be20003 #3/#4/#6）：
+ * test:audit 跑 isolate=false + sequence.shuffle，worker 内 globalThis store 跨文件
+ * 存活——先跑文件 mockResolvedValue 的实现/调用历史若不清理会残留给后跑文件
+ * （vi.clearAllMocks 只清历史不清实现），未配置方法的「未配置即 throw」保证被
+ * 静默击穿、断言随 shuffle 顺序漂移。每个采用文件的 afterEach 必须调用本函数
+ *（与 browser-adapter 族 setup 级 __YSM_TEST_IDB__ 的每文件显式清理同范式）。
+ */
+export function resetAppMock(): void {
+  const g = globalThis as Record<string, unknown>;
+  const store = g.__YSM_TEST_APP__ as AppMockStore | undefined;
+  if (!store) return;
+  for (const [name, fn] of store.fns) {
+    fn.mockReset();
+    // 回到 fail-closed：未配置方法调用即 throw（mockReset 只清实现/历史，
+    // 默认实现需重新挂上——否则变回 vi.fn() 的 undefined 成功语义，静默假成功）
+    fn.mockImplementation((..._args: unknown[]) => {
+      throw new Error(
+        `backend/app 方法 ${name} 未在测试中配置（用 test-utils/mock-app 的 mockAppMethods 设置）`,
+      );
+    });
+  }
 }

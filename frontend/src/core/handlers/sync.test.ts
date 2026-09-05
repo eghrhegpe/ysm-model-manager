@@ -7,7 +7,7 @@ import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { MOCK_DATA } from "../../../e2e/mock-data.ts";
 import { flushPromises } from "../../test-utils/index.ts";
-import { appFn } from "../../test-utils/mock-app.ts";
+import { appFn, resetAppMock } from "../../test-utils/mock-app.ts";
 
 // app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
 vi.mock("@/backend/app.ts", async () => {
@@ -49,6 +49,12 @@ beforeEach(() => {
     { Name: "PackB", Missing: [] },
   ]);
   mocks.InstallModelTo.mockResolvedValue(undefined);
+  // code_review 7be20003 #1/#2/#5：InstallResourceToInstance 经 appFn 映射但原
+  // beforeEach 未配置——旧 vi.hoisted 裸 fn 返回 undefined（成功语义）；新工厂
+  // fail-closed（未配置即 throw），「非 YSM rtype → 走 InstallResourceToInstance」
+  // 用例（L199-216）会命中 throw：sync 吞掉则静默假绿、不吞则 unhandled rejection。
+  // 补回成功默认，让该用例继续验证成功分支。
+  mocks.InstallResourceToInstance.mockResolvedValue(undefined);
   mocks.InvalidateScanCache.mockResolvedValue(undefined);
   mocks.SyncModelToggleStatus.mockResolvedValue([2, 1]);
   mocks.AddImportLog.mockResolvedValue(undefined);
@@ -56,6 +62,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanups.splice(0).forEach((fn) => fn());
+  // B 簇（code_review 7be20003 #3/#4/#6）：isolate=false + shuffle 下 globalThis
+  // store 跨文件存活，本文件配的实现/历史会残留给后跑文件——清回 fail-closed 起点
+  resetAppMock();
 });
 
 /** 注册被测 handler 并登记清理 */

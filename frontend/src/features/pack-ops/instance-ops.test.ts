@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
 import { flushPromises } from "../../test-utils/index.ts";
-import { appFn } from "../../test-utils/mock-app.ts";
+import { appFn, resetAppMock } from "../../test-utils/mock-app.ts";
 
 // app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
 vi.mock("@/backend/app.ts", async () => {
@@ -15,14 +15,18 @@ vi.mock("@/backend/app.ts", async () => {
 // ---- mock 依赖 ----
 // appFn 取 fail-closed Proxy 上的底层 vi.fn
 // backend/app mock 走 test-setup §5 全局 fail-closed Proxy；appFn 取底层 vi.fn
+// modalConfirm 经 vi.hoisted 声明（code_review 7be20003 #8）：vi.mock 被 hoist 到
+// 文件顶，factory 闭包若读 body-scope 的 const mocks 会有时序依赖——isolate:false
+// 共享模块图下 modal.ts 先求值即 ReferenceError。hoisted 绑定在 hoist 时已存在，
+// factory 引用它无初始化顺序问题（对齐 pre-refactor 的 vi.hoisted 写法）。
+const { modalConfirm } = vi.hoisted(() => ({ modalConfirm: vi.fn() }));
 const mocks = {
   ListVersionInstances: appFn("ListVersionInstances"),
   ListFileNames: appFn("ListFileNames"),
   GetSubDirMap: appFn("GetSubDirMap"),
   CountInstanceResources: appFn("CountInstanceResources"),
   ClearInstanceResources: appFn("ClearInstanceResources"),
-  GetRepoRoot: appFn("GetRepoRoot"),
-  modalConfirm: vi.fn(),
+  modalConfirm,
 };
 
 vi.mock("../../core/handlers/require-mcroot.ts", () => ({
@@ -30,7 +34,7 @@ vi.mock("../../core/handlers/require-mcroot.ts", () => ({
 }));
 
 vi.mock("../dialogs/modal.ts", () => ({
-  modalConfirm: mocks.modalConfirm,
+  modalConfirm,
 }));
 
 // 统一清理：移除被测 handler 与 spy 监听
@@ -50,6 +54,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanups.splice(0).forEach((fn) => fn());
+  // B 簇（code_review 7be20003 #3/#4/#6）：isolate=false + shuffle 下 globalThis
+  // store 跨文件存活，本文件配的实现/历史会残留给后跑文件——清回 fail-closed 起点
+  resetAppMock();
 });
 
 /** 注册被测 handler 并登记清理 */

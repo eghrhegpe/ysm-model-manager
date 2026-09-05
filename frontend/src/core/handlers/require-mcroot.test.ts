@@ -4,7 +4,7 @@
 // backend/app mock 走 test-setup §5 全局 fail-closed Proxy（mockAppMethods 配置）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
-import { mockAppMethods } from "../../test-utils/mock-app.ts";
+import { mockAppMethods, resetAppMock } from "../../test-utils/mock-app.ts";
 
 // app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
 vi.mock("@/backend/app.ts", async () => {
@@ -21,6 +21,10 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanups.splice(0).forEach((fn) => fn());
+  // B 簇（code_review 7be20003 #3/#4/#6）：isolate=false + shuffle 下 globalThis
+  // store 跨文件存活，本文件 mockAppMethods 配的实现/历史会残留给后跑文件——
+  // 清回 fail-closed 起点
+  resetAppMock();
 });
 
 function spyToasts() {

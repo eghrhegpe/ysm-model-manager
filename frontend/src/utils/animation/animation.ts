@@ -4,7 +4,6 @@
  * 编译失败零占位降级），求值时机在 evaluateKeyframes（anim_time = 求值时间 t）。
  */
 
-import { logWarn } from "../base/log.ts";
 import { compileMolang, type MolangFn } from "./molang.ts";
 
 // ── 类型定义 ────────────────────────────────────────
@@ -62,12 +61,6 @@ export interface BoneTransform {
 
 /** 骨骼动画三通道名单点（收敛 4 处字面量重复，防通道名拼写漂移） */
 const BONE_CHANNELS = ["rotation", "position", "scale"] as const;
-
-/** 骨骼层级节点 */
-export interface BoneHierarchyNode {
-  name: string;
-  parent?: string | null;
-}
 
 /** 原始关键帧对象（JSON 形态） */
 interface RawKeyframeObject {
@@ -646,19 +639,12 @@ export function executeTimeline(
 }
 
 /**
- * 对整个动画 clip 在指定时间求值（支持骨骼层级）
+ * 对整个动画 clip 在指定时间求值，返回各骨骼的局部变换。
  * @param clip 动画剪辑
  * @param time 当前时间（秒）
- * @param boneHierarchy 骨骼层级数据 [{name, parent}]（可选）
- * @param localOnly 只返回局部变换（不传播父级），用于 Three.js（可选）
- * @returns 骨骼名 → 变换 Map
+ * @returns 骨骼名 → 局部变换 Map
  */
-export function evaluateClip(
-  clip: AnimationClip,
-  time: number,
-  boneHierarchy?: BoneHierarchyNode[],
-  localOnly?: boolean,
-): Map<string, BoneTransform> {
+export function evaluateClip(clip: AnimationClip, time: number): Map<string, BoneTransform> {
   const result = new Map<string, BoneTransform>();
   if (!clip?.bones) return result;
 
@@ -669,8 +655,6 @@ export function evaluateClip(
     t = clip.length;
   }
 
-  // 1. 计算各骨骼的局部变换
-  const local = new Map<string, BoneTransform>();
   for (const [boneName, channels] of Object.entries(clip.bones)) {
     const transform: BoneTransform = {};
     for (const ch of BONE_CHANNELS) {
@@ -678,96 +662,7 @@ export function evaluateClip(
       if (val) transform[ch] = val;
     }
     if (Object.keys(transform).length > 0) {
-      local.set(boneName, transform);
-    }
-  }
-
-  // 如果只需要局部变换，直接返回
-  if (localOnly) return local;
-
-  // 2. 构建名称→父级映射
-  const parentMap = new Map<string, string>();
-  if (boneHierarchy) {
-    for (const b of boneHierarchy) {
-      if (b.parent) parentMap.set(b.name, b.parent);
-    }
-  }
-
-  // 3. 按父级优先顺序传播变换
-  // 先找出根骨骼（无父级或有父级但父级不在列表中的）
-  const allBoneNames = new Set<string>([...local.keys()]);
-  if (boneHierarchy) {
-    for (const b of boneHierarchy) allBoneNames.add(b.name);
-  }
-
-  // 拓扑排序：父级在前
-  const sorted: string[] = [];
-  const visited = new Set<string>();
-  // P1 修复（反推审核）：环检测——骨骼层级自环/互指（boneHierarchy 中 A.parent=B、
-  // B.parent=A）时 visit 无限递归栈溢出；用 inStack 标记当前递归栈，回边跳过并告警
-  const inStack = new Set<string>();
-  const visit = (name: string): void => {
-    if (inStack.has(name)) {
-      logWarn("animation", `骨骼层级存在环，跳过回边: ${name}`);
-      return;
-    }
-    if (visited.has(name)) return;
-    inStack.add(name);
-    visited.add(name);
-    const p = parentMap.get(name);
-    if (p && allBoneNames.has(p)) visit(p);
-    inStack.delete(name);
-    sorted.push(name);
-  };
-  for (const name of allBoneNames) visit(name);
-
-  // 4. 累积父级变换到子级
-  for (const name of sorted) {
-    const tLocal = local.get(name) || {};
-    const parentName = parentMap.get(name);
-    if (parentName && result.has(parentName)) {
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      const pt = result.get(parentName)!;
-      const combined: BoneTransform = {
-        rotation: [0, 0, 0],
-        position: [0, 0, 0],
-        scale: [1, 1, 1],
-      };
-
-      // 累积旋转（角度相加）
-      if (pt.rotation || tLocal.rotation) {
-        combined.rotation = [
-          (pt.rotation?.[0] || 0) + (tLocal.rotation?.[0] || 0),
-          (pt.rotation?.[1] || 0) + (tLocal.rotation?.[1] || 0),
-          (pt.rotation?.[2] || 0) + (tLocal.rotation?.[2] || 0),
-        ];
-      }
-
-      // 累积位置（父级位移 + 子级局部位移直接相加；非 localOnly 分支为简化近似，
-      // 未做父级旋转矩阵变换——业务渲染走 localOnly=true 由 Three.js 算层级）
-      if (pt.position || tLocal.position) {
-        const pp = pt.position || [0, 0, 0];
-        const cp = tLocal.position || [0, 0, 0];
-        combined.position = [pp[0] + cp[0], pp[1] + cp[1], pp[2] + cp[2]];
-      }
-
-      // 累积缩放
-      if (pt.scale || tLocal.scale) {
-        const ps = pt.scale || [1, 1, 1];
-        const cs = tLocal.scale || [1, 1, 1];
-        combined.scale = [ps[0] * cs[0], ps[1] * cs[1], ps[2] * cs[2]];
-      }
-
-      result.set(name, combined);
-    } else if (Object.keys(tLocal).length > 0) {
-      // P2 修复（审核，引用共享）：深拷贝数组——原 `{ ...tLocal }` 浅拷贝，
-      // rotation/position/scale 数组与 local Map 共享引用，调用方持结果后修改
-      // 数组会污染局部变换缓存（localOnly 分支直接返回 local 时尤甚）
-      result.set(name, {
-        rotation: tLocal.rotation ? [...tLocal.rotation] : undefined,
-        position: tLocal.position ? [...tLocal.position] : undefined,
-        scale: tLocal.scale ? [...tLocal.scale] : undefined,
-      });
+      result.set(boneName, transform);
     }
   }
 

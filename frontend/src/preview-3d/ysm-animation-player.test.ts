@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { createYsmAnimPlayer } from "./ysm-animation-player.ts";
 import type { AnimationClip } from "../utils/animation/animation.ts";
-import type { BoneHierarchyNode } from "../utils/animation/animation.ts";
 import { compileMolang } from "../utils/animation/molang.ts";
 import type { AnimationController } from "../utils/animation/animation-controller.ts";
 
@@ -23,8 +22,6 @@ function makeClip(length = 2.0, boneName = "root"): AnimationClip {
   };
 }
 
-const H: BoneHierarchyNode[] = [{ name: "root" }];
-
 function makeBone(name: string): THREE.Object3D {
   const b = new THREE.Object3D();
   b.name = name;
@@ -34,14 +31,14 @@ function makeBone(name: string): THREE.Object3D {
 describe("createYsmAnimPlayer", () => {
   it("apply 后骨骼变换被更新", () => {
     const bone = makeBone("root");
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeClip(2)], H, ["run"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeClip(2)], ["run"]);
     player.apply(1.0);
     expect(bone.position.x).toBeCloseTo(-1.0, 5); // 游戏内口径：动画位移 X 取负叠加（base 0 - tx 1）
   });
 
   it("toggle/isPlaying 状态切换", () => {
     const bone = makeBone("root");
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeClip(2)], H, ["run"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeClip(2)], ["run"]);
     expect(player.isPlaying()).toBe(true);
     player.toggle();
     expect(player.isPlaying()).toBe(false);
@@ -52,7 +49,7 @@ describe("createYsmAnimPlayer", () => {
 
   it("loop 动画超过 clip.length 后取模", () => {
     const bone = makeBone("root");
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeClip(2)], H, ["run"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeClip(2)], ["run"]);
     player.apply(3.0);
     expect(bone.position.x).toBeCloseTo(-1.0, 5); // 3%2=1 → X 取负（游戏内口径）
   });
@@ -60,7 +57,7 @@ describe("createYsmAnimPlayer", () => {
   it("非 loop 动画超过 clip.length 后暂停在末帧", () => {
     const bone = makeBone("root");
     const clip = { ...makeClip(2), loop: false };
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clip], H, ["run"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clip], ["run"]);
     player.apply(3.0);
     expect(bone.position.x).toBeCloseTo(0.0, 5);
     expect(player.isPlaying()).toBe(false);
@@ -68,14 +65,14 @@ describe("createYsmAnimPlayer", () => {
 
   it("骨骼名不匹配静默跳过不抛错", () => {
     const bone = makeBone("root");
-    const player = createYsmAnimPlayer(new Map([["head", bone]]), [makeClip(2)], H, ["run"]);
+    const player = createYsmAnimPlayer(new Map([["head", bone]]), [makeClip(2)], ["run"]);
     expect(() => player.apply(1.0)).not.toThrow();
     expect(bone.position.x).toBe(0);
   });
 
   it("dispose 后重置状态", () => {
     const bone = makeBone("root");
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeClip(2)], H, ["run"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeClip(2)], ["run"]);
     player.apply(1.5);
     player.dispose();
     expect(player.getTime()).toBe(0);
@@ -84,12 +81,12 @@ describe("createYsmAnimPlayer", () => {
 
   // ---- L2 多 clip ----
   it("clipCount 返回正确数量", () => {
-    const player = createYsmAnimPlayer(new Map(), [makeClip(1), makeClip(2), makeClip(3)], H, ["idle", "run", "attack"]);
+    const player = createYsmAnimPlayer(new Map(), [makeClip(1), makeClip(2), makeClip(3)], ["idle", "run", "attack"]);
     expect(player.clipCount()).toBe(3);
   });
 
   it("clips() 返回正确标签列表", () => {
-    const player = createYsmAnimPlayer(new Map(), [makeClip(1), makeClip(2)], H, ["idle", "run"]);
+    const player = createYsmAnimPlayer(new Map(), [makeClip(1), makeClip(2)], ["idle", "run"]);
     expect(player.clips()).toEqual([{ label: "idle" }, { label: "run" }]);
   });
 
@@ -107,7 +104,7 @@ describe("createYsmAnimPlayer", () => {
         },
       },
     };
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clip1, clip2], H, ["idle", "jump"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clip1, clip2], ["idle", "jump"]);
     player.selectClip(1);
     expect(player.currentIndex()).toBe(1);
     expect(player.getTime()).toBe(0);
@@ -116,7 +113,7 @@ describe("createYsmAnimPlayer", () => {
   });
 
   it("selectClip 越界静默忽略", () => {
-    const player = createYsmAnimPlayer(new Map(), [makeClip(1)], H, ["idle"]);
+    const player = createYsmAnimPlayer(new Map(), [makeClip(1)], ["idle"]);
     player.selectClip(99);
     expect(player.currentIndex()).toBe(0);
     player.selectClip(-1);
@@ -124,18 +121,18 @@ describe("createYsmAnimPlayer", () => {
   });
 
   it("自定义 clipLabels 可选", () => {
-    const player = createYsmAnimPlayer(new Map(), [makeClip(1)], H, ["custom"]);
+    const player = createYsmAnimPlayer(new Map(), [makeClip(1)], ["custom"]);
     expect(player.clips()[0].label).toBe("custom");
   });
 
   it("缺省 clipLabels 自动生成", () => {
-    const player = createYsmAnimPlayer(new Map(), [makeClip(1), makeClip(2)], H);
+    const player = createYsmAnimPlayer(new Map(), [makeClip(1), makeClip(2)]);
     expect(player.clips()[0].label).toBe("Clip 0");
     expect(player.clips()[1].label).toBe("Clip 1");
   });
 
   it("isAnimActive 播放中返回 true，暂停返回 false", () => {
-    const player = createYsmAnimPlayer(new Map(), [makeClip(2)], H, ["run"]);
+    const player = createYsmAnimPlayer(new Map(), [makeClip(2)], ["run"]);
     expect(player.isAnimActive()).toBe(true);
     player.toggle();
     expect(player.isAnimActive()).toBe(false);
@@ -159,7 +156,7 @@ describe("createYsmAnimPlayer", () => {
         },
       },
     };
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clip], H, ["rotate"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clip], ["rotate"]);
 
     // 初始四元数应为 identity
     const initialY = bone.quaternion.y;
@@ -202,7 +199,7 @@ describe("createYsmAnimPlayer", () => {
         },
       },
     };
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clip], H, ["rotate"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clip], ["rotate"]);
 
     // 先 apply 少量步，让骨骼到达中间姿态（alpha < 1）
     player.apply(0); // 采集 rest (identity)
@@ -251,7 +248,7 @@ describe("createYsmAnimPlayer", () => {
     const bone = makeBone("root");
     const clipA = makeConstPosClip("a", "root", [1, 0, 0]);
     const clipB = makeConstPosClip("b", "root", [5, 0, 0]);
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipA, clipB], H, ["a", "b"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipA, clipB], ["a", "b"]);
 
     for (let i = 0; i < 10; i++) player.apply(0.05);
     expect(bone.position.x).toBeCloseTo(-1.0, 5); // clipA pos=[1,0,0] → base 0 - 1（X 取负）
@@ -270,11 +267,9 @@ describe("createYsmAnimPlayer", () => {
     const arm = makeBone("arm");
     const clipA = makeConstPosClip("a", "arm", [2, 0, 0]); // 动画 arm
     const clipB = makeConstPosClip("b", "root", [0, 1, 0]); // 只动画 root，不碰 arm
-    const hierarchy: BoneHierarchyNode[] = [{ name: "root" }, { name: "arm", parent: "root" }];
     const player = createYsmAnimPlayer(
       new Map([["root", root], ["arm", arm]]),
       [clipA, clipB],
-      hierarchy,
       ["a", "b"],
     );
 
@@ -295,11 +290,9 @@ describe("createYsmAnimPlayer", () => {
     const free = makeBone("free");
     free.position.set(1, 2, 3); // base 偏移
     const clip = makeConstPosClip("a", "root", [4, 0, 0]); // 只动画 root
-    const hierarchy: BoneHierarchyNode[] = [{ name: "root" }, { name: "free", parent: "root" }];
     const player = createYsmAnimPlayer(
       new Map([["root", root], ["free", free]]),
       [clip],
-      hierarchy,
       ["a"],
     );
 
@@ -313,7 +306,7 @@ describe("createYsmAnimPlayer", () => {
     const bone = makeBone("root");
     const clipA = makeConstPosClip("a", "root", [1, 0, 0]);
     const clipB = makeConstPosClip("b", "root", [5, 0, 0]);
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipA, clipB], H, ["a", "b"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipA, clipB], ["a", "b"]);
 
     // clipA 收敛到 x=-1
     for (let i = 0; i < 10; i++) player.apply(0.05);
@@ -331,7 +324,7 @@ describe("createYsmAnimPlayer", () => {
     const bone = makeBone("root");
     const clipA = makeConstPosClip("a", "root", [2, 0, 0]);
     const clipB = makeConstPosClip("b", "root", [8, 0, 0]);
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipA, clipB], H, ["a", "b"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipA, clipB], ["a", "b"]);
 
     // clipA 收敛到 x=-2
     for (let i = 0; i < 10; i++) player.apply(0.05);
@@ -393,7 +386,7 @@ describe("createYsmAnimPlayer", () => {
         }],
       ]),
     };
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipIdle, clipRun], H, ["idle", "run"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipIdle, clipRun], ["idle", "run"]);
     player.setController(controller);
 
     // 第一帧：timeline 事件(0.5)未触发，v.flag 未写 → 条件不满足
@@ -433,7 +426,7 @@ describe("createYsmAnimPlayer", () => {
         }],
       ]),
     };
-    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipIdle, clipRun], H, ["idle", "run"]);
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [clipIdle, clipRun], ["idle", "run"]);
     player.setController(controller);
 
     // timeInState=0.3 < 0.5：不切换

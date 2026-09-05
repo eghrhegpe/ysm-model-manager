@@ -395,12 +395,9 @@ async function mdYsBuildBonePanelAndAnim(
           const group = obj.boneGroupMap.get(sbi.id);
           if (group) boneByName.set(sbi.name, group);
         }
-        const hierarchy: import("../../utils/animation/animation.ts").BoneHierarchyNode[] = sb.map(
-          (b) => ({ name: b.name, ...(b.parentId ? { parent: b.parentId } : {}) }),
-        );
         const labels = allClips.map((c) => c.label);
         const clips = allClips.map((c) => c.clip);
-        animPlayer = createYsmAnimPlayer(boneByName, clips, hierarchy, labels);
+        animPlayer = createYsmAnimPlayer(boneByName, clips, labels);
         if (allControllers.length > 0) animPlayer.setController(allControllers[0]);
         animBridge = {
           clips: allClips.map((c) => ({ label: c.label })),

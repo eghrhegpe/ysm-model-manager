@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== 骨骼动画计算测试（ADR-021 扩展，坐标高危区）=====
-// evaluateKeyframes（插值）/ parseBedrockAnimationJSON（解析）/ evaluateClip（父级传播）。
+// evaluateKeyframes（插值）/ parseBedrockAnimationJSON（解析）/ evaluateClip（局部变换）。
 import { describe, it, expect } from "vitest";
 import {
   evaluateKeyframes,
@@ -153,7 +153,7 @@ describe("parseBedrockAnimationJSON 解析", () => {
   });
 });
 
-describe("evaluateClip 变换传播", () => {
+describe("evaluateClip 局部变换", () => {
   it("空 clip 返回空 Map", () => {
     expect(evaluateClip({ name: "x", loop: false, length: 0, bones: {} }, 0).size).toBe(0);
   });
@@ -180,88 +180,9 @@ describe("evaluateClip 变换传播", () => {
     const r = evaluateClip(clip, 100);
     expect(r.get("b")!.position).toEqual([20, 20, 30]);
   });
+});
 
-  it("父级变换传播到子级（旋转相加 / 位置相加 / 缩放相乘）", () => {
-    const clip: AnimationClip = {
-      name: "x",
-      loop: false,
-      length: 1,
-      bones: {
-        root: {
-          rotation: KFS, // t=0 → [0,0,0]
-          position: [{ time: 0, post: [1, 2, 3], pre: [1, 2, 3], lerp: "linear" }],
-          scale: [{ time: 0, post: [2, 2, 2], pre: [2, 2, 2], lerp: "linear" }],
-        },
-        child: {
-          rotation: [{ time: 0, post: [10, 0, 0], pre: [10, 0, 0], lerp: "linear" }],
-          position: [{ time: 0, post: [5, 0, 0], pre: [5, 0, 0], lerp: "linear" }],
-          scale: [{ time: 0, post: [3, 1, 1], pre: [3, 1, 1], lerp: "linear" }],
-        },
-      },
-    };
-    const hierarchy = [
-      { name: "root", parent: "" },
-      { name: "child", parent: "root" },
-    ];
-    const r = evaluateClip(clip, 0, hierarchy);
-    expect(r.get("root")!.rotation).toEqual([0, 0, 0]);
-    expect(r.get("child")!.rotation).toEqual([10, 0, 0]); // 父 + 子
-    expect(r.get("child")!.position).toEqual([6, 2, 3]); // 1+5, 2+0, 3+0
-    expect(r.get("child")!.scale).toEqual([6, 2, 2]); // 2*3, 2*1, 2*1
-  });
-
-  it("localOnly 只返回局部变换，不传播父级", () => {
-    const clip: AnimationClip = {
-      name: "x",
-      loop: false,
-      length: 1,
-      bones: {
-        root: { position: [{ time: 0, post: [1, 0, 0], pre: [1, 0, 0], lerp: "linear" }] },
-        child: { position: [{ time: 0, post: [5, 0, 0], pre: [5, 0, 0], lerp: "linear" }] },
-      },
-    };
-    const hierarchy = [
-      { name: "root", parent: "" },
-      { name: "child", parent: "root" },
-    ];
-    const r = evaluateClip(clip, 0, hierarchy, true);
-    expect(r.get("child")!.position).toEqual([5, 0, 0]); // 不叠加父级
-  });
-
-  it("骨骼层级互指环（A.parent=B, B.parent=A）不无限递归（P1 反推修复）", () => {
-    const clip: AnimationClip = {
-      name: "x",
-      loop: false,
-      length: 1,
-      bones: {
-        a: { position: [{ time: 0, post: [1, 0, 0], pre: [1, 0, 0], lerp: "linear" }] },
-        b: { position: [{ time: 0, post: [2, 0, 0], pre: [2, 0, 0], lerp: "linear" }] },
-      },
-    };
-    const hierarchy = [
-      { name: "a", parent: "b" },
-      { name: "b", parent: "a" },
-    ];
-    // 修复前 visit 无限递归栈溢出；修复后回边跳过、正常返回
-    const r = evaluateClip(clip, 0, hierarchy);
-    expect(r.get("a")).toBeDefined();
-    expect(r.get("b")).toBeDefined();
-  });
-
-  it("骨骼自环（A.parent=A）不无限递归（P1 反推修复）", () => {
-    const clip: AnimationClip = {
-      name: "x",
-      loop: false,
-      length: 1,
-      bones: {
-        a: { position: [{ time: 0, post: [1, 0, 0], pre: [1, 0, 0], lerp: "linear" }] },
-      },
-    };
-    const hierarchy = [{ name: "a", parent: "a" }];
-    const r = evaluateClip(clip, 0, hierarchy);
-    expect(r.get("a")).toBeDefined();
-  });
-
+describe("数值安全（P1 反推修复）", () => {
   it("动画关键帧字符串数值溢出（1e999→Infinity）→ 轴占位 0，不产出 NaN（P1 反推修复）", () => {
     // 真实 Infinity 来源：字符串数值溢出 Number("1e999")=Infinity——
     // 走解析路径验证 parseKeyValue 的 Number.isFinite 守卫（直接构造数字 Keyframe

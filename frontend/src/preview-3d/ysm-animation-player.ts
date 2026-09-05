@@ -15,12 +15,7 @@
 //     实现「停播骨骼渐回零位」（YSMViewer Aura3DRenderer 同款收尾）。
 
 import * as THREE from "three";
-import {
-  type AnimationClip,
-  type BoneHierarchyNode,
-  evaluateClip,
-  executeTimeline,
-} from "../utils/animation/animation.ts";
+import { type AnimationClip, evaluateClip, executeTimeline } from "../utils/animation/animation.ts";
 import {
   type AnimationController,
   AnimationControllerRuntime,
@@ -70,7 +65,6 @@ interface MdApState {
 interface MdApCtx {
   boneByName: Map<string, THREE.Object3D>;
   clips: AnimationClip[];
-  boneHierarchy: BoneHierarchyNode[];
   labels: ReadonlyArray<{ label: string }>;
   clipNameToIdx: Map<string, number>;
   basePose: Map<string, MdApBonePose>;
@@ -147,7 +141,7 @@ function mdApAdvanceTimeAndController(dt: number, state: MdApState, ctx: MdApCtx
 
 function mdApApplyPose(dt: number, state: MdApState, ctx: MdApCtx): void {
   const clip = ctx.clips[state.currentIdx];
-  const transforms = evaluateClip(clip, state.elapsed, ctx.boneHierarchy, true);
+  const transforms = evaluateClip(clip, state.elapsed);
   const { scratch, basePose, restPose, blendAlpha, BLEND_RATE, boneByName } = ctx;
 
   for (const [boneName, node] of boneByName) {
@@ -273,13 +267,11 @@ function mdApToggle(state: MdApState, ctx: MdApCtx): void {
 
 /**
  * Builds a YSM animation player whose per-frame path reuses every temporary object.
- * boneHierarchy remains in the signature for API compatibility; Three.js already
- * propagates the local transforms through the Object3D hierarchy.
+ * Three.js propagates the local transforms through the Object3D hierarchy itself.
  */
 export function createYsmAnimPlayer(
   boneByName: Map<string, THREE.Object3D>,
   clips: AnimationClip[],
-  boneHierarchy: BoneHierarchyNode[],
   clipLabels?: string[],
 ): YsmAnimPlayer {
   if (clips.length === 0) throw new Error("YSM animation player requires at least one clip");
@@ -288,7 +280,6 @@ export function createYsmAnimPlayer(
   const ctx: MdApCtx = {
     boneByName,
     clips,
-    boneHierarchy,
     labels,
     clipNameToIdx,
     basePose: mdApCreateBasePose(boneByName),

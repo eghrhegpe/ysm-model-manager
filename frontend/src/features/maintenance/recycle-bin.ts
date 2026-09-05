@@ -6,11 +6,8 @@ import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import { loadResourceRegistry } from "../../services/resource-registry.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
 import { createLoadGuard, type LoadGuard } from "../../utils/async/load-guard.ts";
-import { renderDisplayName } from "../../utils/dom/display.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { formatBytes } from "../../utils/dom/format.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { RESOURCE_TYPES } from "../../utils/resource/types.ts";
@@ -37,6 +34,8 @@ interface RecycleBinEntry {
   Size: number | unknown;
 }
 
+export type { RecycleBinEntry };
+
 type ToastFn = (msg: string, duration: number, type: "success" | "error") => void;
 type TFn = typeof t;
 type ModalConfirmFn = typeof modalConfirm;
@@ -48,38 +47,23 @@ export interface RecycleDeps {
   getApp: GetAppFn;
   t: TFn;
   modalConfirm: ModalConfirmFn;
+  /** 列表条目 HTML 渲染（ADR-190 D1a：DOM 模板归 views，由组合根注入，features 不自渲染） */
+  renderListHtml: (entries: RecycleBinEntry[]) => string;
 }
-const PROD_DEPS: RecycleDeps = { getApp, t, modalConfirm };
+const PROD_DEPS: RecycleDeps = {
+  getApp,
+  t,
+  modalConfirm,
+  // fail-loud：渲染属 views 职责，features 无合法默认实现；漏注入立即暴露而非静默空列表
+  renderListHtml: () => {
+    throw new Error(
+      "RecycleDeps.renderListHtml 未注入（应由 views 组合根提供，见 tpl-recycle.ts）",
+    );
+  },
+};
 function resolveDeps(overrides?: Partial<RecycleDeps>): RecycleDeps {
   return { ...PROD_DEPS, ...overrides };
 }
-
-function renderRecycleListHtml(
-  entries: RecycleBinEntry[],
-  _getCurrentType: GetCurrentTypeFn,
-  esc: (s: string) => string,
-  fmtSize: (n: number) => string,
-  renderDisplayName: (s: string) => string,
-  stagger: (i: number, step: number, max: number) => number,
-  t: TFn,
-): string {
-  return entries
-    .map((e, i) => {
-      const name = e.Name.replace(/\.(ysm|zip|7z)\.(disabled|ban)$/i, ".$1");
-      const size = Number.isFinite(e.Size) ? fmtSize(e.Size as number) : "?";
-      return `<div class="recy-item" data-testid="recy-item" style="animation-delay:${stagger(i, 25, 400)}ms;display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg);font-size:var(--fs-sm)">
-<div style="display:flex;align-items:center;gap:6px">
-<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="${t("oldest.clickDetail", { name: esc(e.Path) })}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
-<span style="font-size:var(--fs-xs);color:var(--muted)">${size}</span>
-<button class="recy-restore" data-testid="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">↩️ ${t("recycle.restore")}</button>
-<button class="recy-del" data-testid="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--paid);background:transparent;color:var(--paid);cursor:pointer;font-size:var(--fs-xs)">🗑️ ${t("recycle.delete")}</button>
-</div>
-<div style="font-size:var(--fs-xs);color:var(--muted);padding-left:2px;word-break:break-all">📂 ${esc(e.Path)}</div>
-</div>`;
-    })
-    .join("");
-}
-
 function setupRecycleActions(
   listEl: HTMLElement,
   guard: LoadGuard,
@@ -247,15 +231,7 @@ function buildLoadRecycleBin(
       if (guard.stale(gen)) return;
       const icon = (reg[getCurrentType()] && reg[getCurrentType()].icon) || "📦";
       if (count) count.textContent = `${icon} ${t("recycle.fileCount", { n: entries.length })}`;
-      list.innerHTML = renderRecycleListHtml(
-        entries,
-        getCurrentType,
-        esc,
-        formatBytes,
-        renderDisplayName,
-        stagger,
-        t,
-      );
+      list.innerHTML = deps.renderListHtml(entries);
       if (shell.cleanupActions.current) shell.cleanupActions.current();
       shell.cleanupActions.current = setupRecycleActions(list, guard, {
         RestoreFromRecycle,

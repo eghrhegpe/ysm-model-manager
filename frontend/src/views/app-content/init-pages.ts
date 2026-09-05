@@ -216,9 +216,10 @@ async function initRecycleTab(
   host: AppContentHost,
   container: HTMLElement,
 ): Promise<(() => void) | null> {
-  const { recycleHTML } = await import("./tpl-recycle.ts");
+  const { recycleHTML, renderRecycleListHtml } = await import("./tpl-recycle.ts");
   container.innerHTML = recycleHTML();
-  const recycleCleanup = initRecycleBin(host);
+  // ADR-190 D1a：列表条目渲染属 views 职责，经 deps 注入 features 编排层
+  const recycleCleanup = initRecycleBin(host, { renderListHtml: renderRecycleListHtml });
   return recycleCleanup;
 }
 
@@ -271,7 +272,11 @@ async function initOldestTab(
   _host: AppContentHost,
   container: HTMLElement,
 ): Promise<(() => void) | null> {
-  const oldestCleanup = await loadOldestModel(container, (s) => esc(s));
+  // ADR-190 D1a：整页 DOM 模板由 views 提供（tpl-oldest.ts），features 只做数据编排
+  const { renderOldestPage } = await import("./tpl-oldest.ts");
+  const oldestCleanup = await loadOldestModel(container, (s) => esc(s), {
+    renderPage: renderOldestPage,
+  });
   return oldestCleanup;
 }
 

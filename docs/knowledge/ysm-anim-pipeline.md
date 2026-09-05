@@ -12,7 +12,6 @@ auto_fields:
   symbols_with_lines:
     - AnimationClip
     - BoneChannels
-    - BoneHierarchyNode
     - BoneTransform
     - buildYsmScene
     - compileMolang

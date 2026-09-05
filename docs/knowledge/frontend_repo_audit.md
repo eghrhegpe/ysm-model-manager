@@ -133,7 +133,6 @@ auto_fields:
     - BoneDetail
     - BoneEntry
     - BoneGroupMap
-    - BoneHierarchyNode
     - BoneInfoLite
     - BoneListItem
     - BoneMaps

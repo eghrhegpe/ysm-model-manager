@@ -36,6 +36,25 @@
 **D1 — 确立 `features/` 准入准则（单一职责）。**
 `features/` 只放**交互编排**：事件绑定、用户意图到 Go 绑定的翻译、对话框与菜单流程。凡属「数据 → HTML 字符串」的纯渲染函数回迁 `views/`；凡属「多次 Go 调用编排成一个业务动作」的逻辑下沉 `services/`。判定口诀：**不出 HTML 给 `views`，不编排多个 Go 调用给 `services`**。
 
+**D1a — 「渲染」二分细则（2026-09-05 考古后补，Jieling 拍板）。**
+「渲染」一词须一刀切为两种，归属相反：
+
+| 渲染种类 | 归属 | 依据 |
+|---|---|---|
+| **DOM HTML 模板**（字符串拼接、内联 style、页面骨架/条目） | `views/`（沿用 §4.2 `tpl-*.ts` / `render.ts` 惯例） | `views/app-content/tpl-recycle.ts` 与 `features/maintenance/recycle-bin.ts:44` 服务同一页面却被劈成两半——模板归 views 是既有惯例，非新规 |
+| **3D/WebGL 渲染**（scene/camera/renderer/WebGL 管线） | `features/` 领域根 | ADR-129 已裁决 preview-3d 整体升格 features，**不得**以此 D1 反向回迁 |
+
+依赖方向不变量：`features/` 永不 import `views/`（当前 0 命中，回迁时必须保持）。违反此二分的迁移（把 DOM 模板搬进 features 或把领域编排搬进 views）即为「来回迁移」的根源，禁止。
+
+**D1b — 编排下沉 services 的边界修正（2026-09-05 考古后补，Jieling 拍板）。**
+原 D1 口诀「不编排多个 Go 调用给 `services`」与 [ADR-188] 冲突：ADR-188 已裁决
+`sync.ts`（bus handler + Go 绑定业务单元）与 `require-mcroot.ts`（含 toast 的交互守卫）归 `features/`，
+且是当日迁移成果。执行 D1 原文即是第三次搬动。修正为：
+
+- **`services/` 只收无 UI 语义的纯数据服务**（现状 `cli-bridge` / `resource-registry` 即此口径）；
+- **凡触 toast / bus 事件 / 用户交互反馈的编排归 `features/`**（ADR-188 口径，优先级高于本 ADR 原则句）；
+- 原方案 P3-3（sync→services）、P3-4（require-mcroot→services）**撤销**，两文件维持现状。
+
 **D2 — 依赖注入真化，取缔下划线别名。**
 新增与修改的模块必须接受显式 `Deps`（或 options 对象）参数，由调用方注入 `getApp` / `t` / `modalConfirm`；模块内不得再直接 import 全局单例。禁止新增 `_xxx` 下划线别名式伪注入——它既不能注入，又误导读者以为能注入。存量迁移按方案文档分期，不追求一次做完。
 

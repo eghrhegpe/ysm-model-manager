@@ -21,7 +21,6 @@ auto_fields:
     - AnimationController
     - AnimationControllerRuntime
     - BoneChannels
-    - BoneHierarchyNode
     - BoneTransform
     - compileMolang
     - ControllerState

@@ -64,16 +64,16 @@
 
 ---
 
-## 5. P3 — 职责回迁（ADR-190 D1）
+## 5. P3 — 职责回迁（ADR-190 D1/D1a/D1b）
 
-| # | 文件:行号 | 迁往 | 说明 |
+| # | 文件:行号 | 迁往 | 结果 |
 |---|---|---|---|
-| P3-1 | `maintenance/oldest-models.ts:91` `buildHeatmapHtml`、`:133` `renderOldestCardsHtml`、`:228` `buildOldestPageHtml` | `views/` | 纯「数据 → HTML 字符串」，含内联 style |
-| P3-2 | `maintenance/recycle-bin.ts:44` `renderRecycleListHtml` | `views/` | 同上 |
-| P3-3 | `sync.ts:29-214`（`runDownloadMissing:29`、`handleSyncDownloadMissing:91`、`runSyncToggleStatus:132`、`handleSyncToggleStatus:189`、`registerSync:215`） | `services/` | 多次 Go 调用编排成一个业务动作；文件头注释 `:4-6` 亦自承「由 core/handlers 迁来」 |
-| P3-4 | `require-mcroot.ts:18-27` | `services/` | 配置读取守卫 |
+| P3-1 | `oldest-models.ts` 渲染集群（buildHeatmapHtml / renderOldestCardsHtml / renderDailyPicksHtml / buildOldestPageHtml / buildMonthHeatmap） | ✅ `views/app-content/tpl-oldest.ts`（新建） | 已落地：整页模板归 views，features 经 `OldestDeps.renderPage` 注入，依赖倒置（features 不 import views） |
+| P3-2 | `recycle-bin.ts:44` `renderRecycleListHtml` | ✅ `views/app-content/tpl-recycle.ts`（并入同页面既有模板） | 已落地：经 `RecycleDeps.renderListHtml` 注入，fail-loud 默认 |
+| P3-3 | `sync.ts` → `services/` | ❌ **撤销** | 与 ADR-188 冲突（当日已裁决 sync 归 features，bus handler 业务单元）；D1b 已修正边界：services 只收无 UI 语义的纯数据服务 |
+| P3-4 | `require-mcroot.ts` → `services/` | ❌ **撤销** | 同上：守卫自带 toast 属交互反馈，ADR-188 裁决归 features |
 
-> P3 触碰 `views/` 既有实现，**须先确认无并行会话占用**再开工。
+> P3-1/P3-2 采用**依赖倒置**而非直接迁移调用：features 定义 `Deps` 接口，views 组合根（init-pages）注入实现，保持「features 永不 import views」不变量。
 
 ---
 

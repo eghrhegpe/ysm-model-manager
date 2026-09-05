@@ -54,6 +54,7 @@ vi.mock("@/backend/app.ts", async () => {
 });
 
 import { initRecycleBin, type RecycleDeps, type RecycleHost } from "./recycle-bin.ts";
+import { renderRecycleListHtml } from "../../views/app-content/tpl-recycle.ts";
 
 function entry(name: string, path: string, size = 100) {
   return { Name: name, Path: path, Size: size };
@@ -84,7 +85,7 @@ beforeEach(async () => {
   mocks.DeleteFromRecycle.mockResolvedValue(undefined);
   mocks.EmptyRecycleBin.mockResolvedValue(0);
   mocks.modalConfirm.mockResolvedValue(true);
-  cleanup = initRecycleBin(host);
+  cleanup = initRecycleBin(host, { renderListHtml: renderRecycleListHtml });
   await flushPromises();
 });
 
@@ -502,7 +503,11 @@ describe("依赖注入（ADR-190 D2 注入真化）", () => {
     ]);
     const cleanup2 = initRecycleBin(
       { _root: root2 } as RecycleHost,
-      { t: injectedT as unknown as RecycleDeps["t"], modalConfirm: injectedConfirm },
+      {
+        t: injectedT as unknown as RecycleDeps["t"],
+        modalConfirm: injectedConfirm,
+        renderListHtml: renderRecycleListHtml,
+      },
     );
     await flushPromises();
 

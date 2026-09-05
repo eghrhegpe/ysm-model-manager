@@ -1,7 +1,6 @@
 // ===== 创意工坊事件绑定（类型化版 — ADR-014 P3 features）=====
 // 下载队列逻辑已拆到 download-queue.js，本文件只做事件绑定 + 协调。
 
-import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { parseModelName } from "../../utils/dom/display.ts";
@@ -9,6 +8,7 @@ import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
 import { modalConfirm } from "../dialogs/modal-confirm.ts";
+import { communityGetApp } from "./community-deps.ts";
 import { createDownloadQueue, type DownloadQueue } from "./download-queue.ts";
 import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";
 import { buildModelRow, filterModels, isModelMissing, type WorkshopModel } from "./render.ts";
@@ -295,7 +295,7 @@ function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
             const { author } = parseModelName((row as HTMLElement).dataset.name || "");
             if (author) {
               try {
-                const { OpenInBrowser } = await getApp();
+                const { OpenInBrowser } = await communityGetApp();
                 OpenInBrowser(
                   "https://search.bilibili.com/all?keyword=" + encodeURIComponent(author),
                 );

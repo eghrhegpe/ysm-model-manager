@@ -13,13 +13,13 @@
 // download-queue-progress.ts 承接 99% 卡进度守卫状态机；
 // download-queue.ts 保留 createDownloadQueue UI 控制器并对外 re-export（消费者零改动）。
 
-import { getApp } from "../../backend/app.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { Events } from "../../backend/runtime.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { communityGetApp } from "./community-deps.ts";
 
 // ============================================================
 //  模块顶层 — 持久状态与事件注册（脚本加载时执行一次）
@@ -121,7 +121,7 @@ export function getState(): DownloadState {
 export async function resume(): Promise<void> {
   try {
     dbg("resume:start");
-    const { QueueStatus } = await getApp();
+    const { QueueStatus } = await communityGetApp();
     const result = await QueueStatus();
     dbg("resume:result", result);
     // Wails v2 多返回值映射：数组/对象/单值 三种格式都要兜底
@@ -278,7 +278,7 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
     return;
   }
   try {
-    const { EnqueueDownloads } = await getApp();
+    const { EnqueueDownloads } = await communityGetApp();
     await EnqueueDownloads(tasks);
     dbg("enqueue:done", STATE.status);
   } catch (e) {
@@ -296,7 +296,7 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
 export async function cancelDownloads(): Promise<void> {
   if (!isActiveStatus(STATE)) return;
   try {
-    const { CancelQueue } = await getApp();
+    const { CancelQueue } = await communityGetApp();
     await CancelQueue();
   } catch (e) {
     // P3（审核发现）：不静默吞错——取消失败时 UI 仍显示下载中，记录原因便于排查
@@ -381,7 +381,7 @@ if (!_registered) {
           _avatarChain = _avatarChain
             .then(async () => {
               try {
-                const { CachedCreatorAvatar, DebugExtractCreatorAvatar } = await getApp();
+                const { CachedCreatorAvatar, DebugExtractCreatorAvatar } = await communityGetApp();
                 let dataUri = await CachedCreatorAvatar(author);
                 if (!dataUri) {
                   await DebugExtractCreatorAvatar(author);

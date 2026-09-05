@@ -1,11 +1,11 @@
 // ===== 仓库模型显示（共享逻辑，供 init-workshop.ts 和 init-github.ts 复用）=====
 
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { getApp } from "../../backend/app.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { stripDisableSuffix } from "../../utils/dom/display.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { currentRepoType } from "../repo/repo-rtype.ts";
+import { communityGetApp } from "./community-deps.ts";
 import { bindRepoEvents } from "./events.ts";
 import type { WorkshopModel } from "./render.ts";
 import { countMissing, renderRepoHeaderHTML } from "./render.ts";
@@ -68,7 +68,7 @@ export async function showRepoModels(
   const localMap = new Map<string, string>();
   let mirror = "";
   try {
-    const AppM = await getApp();
+    const AppM = await communityGetApp();
     const cfg = await AppM.LoadAppConfig();
     mirror = cfg.mirror || "";
     const filesRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot(effectiveRtype) : "";

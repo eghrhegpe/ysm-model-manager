@@ -5,7 +5,6 @@
 // · 本文件：createDownloadQueue UI 控制器 + 对外 re-export（测试 / events.ts / download-tasks.ts
 //   均从本文件取符号，契约零改动）
 
-import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { swallowError } from "../../utils/base/async.ts";
@@ -13,6 +12,7 @@ import { renderDisplayName } from "../../utils/dom/display.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { currentRepoType } from "../repo/repo-rtype.ts";
+import { communityGetApp } from "./community-deps.ts";
 import { createProgressGuard, type ProgressGuard } from "./download-queue-progress.ts";
 import {
   cancelDownloads,
@@ -101,7 +101,7 @@ function cmDqCleanupProgressUI(ctx: CmDqCtx, errorSummary?: string): void {
   if (btn) btn.disabled = false;
   try {
     swallowError(
-      getApp().then((App) => {
+      communityGetApp().then((App) => {
         if (App.ClearScanCache) App.ClearScanCache();
         // 解除 features → views 反向依赖：经 bus 事件解耦，订阅在 views 层注册（ADR-039 范式）
         bus.emit("community:clearCache");
@@ -273,7 +273,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
   if (!tasks.length) return;
 
   try {
-    const { GetRepoRoot } = await getApp();
+    const { GetRepoRoot } = await communityGetApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
     if (!filesRoot) {
       bus.emit("toast:show", {

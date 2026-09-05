@@ -1,4 +1,4 @@
-package types
+package registry
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 // TestSchemaGuard_ScanCurrentResourceTypes 用守卫扫描当前 resource_types.json，
 // 输出所有红线违规。这是诊断测试，不硬断言——用于确认隔壁 AI 三刀后剩余的债。
 func TestSchemaGuard_ScanCurrentResourceTypes(t *testing.T) {
-	data, err := os.ReadFile("../../resource_types.json")
+	data, err := os.ReadFile("../../../resource_types.json")
 	if err != nil {
 		t.Skipf("无法读取 resource_types.json: %v", err)
 	}

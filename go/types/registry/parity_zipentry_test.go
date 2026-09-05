@@ -5,7 +5,7 @@
 // 语料来源：classify-golden.json entries 字段 + 全类型 zipEntries 指纹 + 边界。
 // 单一权威 = Go types.MatchZipEntry（ADR-154 §2.2：双端互锁硬性要求）。
 // 仓库根定位复用 parity_test.go 的 repoRootFromPkgDir（同包共享，避免 jscpd 重复）。
-package types
+package registry
 
 import (
 	"encoding/json"

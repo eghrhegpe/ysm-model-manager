@@ -1,6 +1,6 @@
 //go:build !race
 
-package types_test
+package registry_test
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // TestResourceTypesEmbedJSONConsistency 验证单源化契约：
@@ -23,14 +23,14 @@ import (
 // 任一字段漂移（误改某处、漏改结构标签、副本再次分裂）即失败，永久消灭双副本漂移。
 func TestResourceTypesEmbedJSONConsistency(t *testing.T) {
 	// 读取仓库根 resource_types.json（单一事实来源）
-	jsonPath := filepath.Join("..", "..", "resource_types.json")
+	jsonPath := filepath.Join("..", "..", "..", "resource_types.json")
 	raw, err := os.ReadFile(jsonPath)
 	if err != nil {
 		t.Fatalf("read resource_types.json: %v", err)
 	}
 
 	// 直接解码根文件 → 结构体（与 LoadRegistry 同构，避免 map/struct 字段不对称）
-	var fileReg types.ResourceTypeRegistry
+	var fileReg registry.ResourceTypeRegistry
 	if err := json.Unmarshal(raw, &fileReg); err != nil {
 		t.Fatalf("parse resource_types.json: %v", err)
 	}
@@ -39,22 +39,22 @@ func TestResourceTypesEmbedJSONConsistency(t *testing.T) {
 	}
 
 	// 强制 LoadRegistry 重读根文件（清空包级缓存、指向根路径），走应用真实加载路径
-	types.SetRegistryPath(jsonPath)
-	defer types.SetRegistryPath("")
-	reg := types.LoadRegistry()
+	registry.SetRegistryPath(jsonPath)
+	defer registry.SetRegistryPath("")
+	reg := registry.LoadRegistry()
 	if len(reg.ResourceTypes) == 0 {
 		t.Fatalf("LoadRegistry() returned 0 types (fallback baseline empty?)")
 	}
 
 	// 按 id 建索引比对（忽略顺序，去重不改变语义）
-	byIDFile := make(map[string]types.ResourceType, len(fileReg.ResourceTypes))
+	byIDFile := make(map[string]registry.ResourceType, len(fileReg.ResourceTypes))
 	for _, rt := range fileReg.ResourceTypes {
 		if _, dup := byIDFile[rt.ID]; dup {
 			t.Fatalf("root resource_types.json 含重复 id %q（数据缺陷，需先修源）", rt.ID)
 		}
 		byIDFile[rt.ID] = rt
 	}
-	byIDReg := make(map[string]types.ResourceType, len(reg.ResourceTypes))
+	byIDReg := make(map[string]registry.ResourceType, len(reg.ResourceTypes))
 	for _, rt := range reg.ResourceTypes {
 		byIDReg[rt.ID] = rt
 	}

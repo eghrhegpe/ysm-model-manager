@@ -1,32 +1,10 @@
-// ===== types 包 0% 覆盖函数补测（IsDirLevelSync / IsScanInstance / InstallExtsFor /
-// MatchZipEntry / StatusToLevel）=====
-package types
+// ===== registry 包 0% 覆盖函数补测（IsDirLevelSync / IsScanInstance / InstallExtsFor /
+// MatchZipEntry）=====
+package registry
 
 import (
 	"testing"
 )
-
-func TestStatusToLevel(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected LogLevel
-	}{
-		{"success", LevelInfo},
-		{"failed", LevelError},
-		{"warn", LevelWarn},
-		{"skipped", LevelDebug},
-		{"unknown", LevelInfo},
-		{"", LevelInfo},
-	}
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got := StatusToLevel(tt.input)
-			if got != tt.expected {
-				t.Errorf("StatusToLevel(%q) = %q, 期望 %q", tt.input, got, tt.expected)
-			}
-		})
-	}
-}
 
 func TestIsDirLevelSync(t *testing.T) {
 	tests := []struct {

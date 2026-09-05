@@ -1,5 +1,5 @@
-// ===== go/types 补充单测 =====
-package types
+// ===== registry 补充单测 =====
+package registry
 
 import (
 	"encoding/json"

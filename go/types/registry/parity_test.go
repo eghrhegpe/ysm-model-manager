@@ -3,7 +3,7 @@
 // is_ysm_entry_json / is_disable_suffix 三个谓词与 Rust（rust-core/src/scan.rs）
 // 逐字一致的 input→output 对。任一端改口径，另一端 cargo/go 测试当场红。
 // 单一权威 = Go（ADR-038 D2）；fixture 由本测试与 rust-core/src/tests.rs 双端消费。
-package types
+package registry
 
 import (
 	"encoding/json"

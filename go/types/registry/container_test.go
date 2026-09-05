@@ -1,4 +1,4 @@
-package types
+package registry
 
 import (
 	"reflect"

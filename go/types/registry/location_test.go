@@ -1,5 +1,5 @@
-// ===== types.TypeByLocation 单元测试（location 路由，2026-08-23 提取自 flow.go）=====
-package types
+// ===== registry.TypeByLocation 单元测试（location 路由，2026-08-23 提取自 flow.go）=====
+package registry
 
 import (
 	"testing"

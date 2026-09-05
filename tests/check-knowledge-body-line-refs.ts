@@ -20,23 +20,9 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { ok, finish, runScript } from './_lib.mts';
 
 const ROOT = process.cwd();
-const SCRIPTS = path.join(ROOT, 'scripts');
-const NODE = process.execPath;
-const errors = [];
-
-function run(script, ...args) {
-  return spawnSync(NODE, [path.join(SCRIPTS, script), ...args], {
-    encoding: 'utf-8',
-    timeout: 60000,
-  });
-}
-
-function ok(label, cond, detail = '') {
-  if (cond) console.log(`   ✓ ${label}`);
-  else errors.push(`[${label}] ${detail}`);
-}
 
 // 隔离策略同 check-knowledge-perf-tags：临时卡写系统临时目录，
 // 经 --kc-dir 指向，避免生成器 glob 到它污染生成物。
@@ -72,7 +58,7 @@ function writeTmpCard(bodyExtraLines = []) {
 }
 
 function runDrift() {
-  const r = run('check-knowledge-drift.ts', '--json', '--kc-dir', TMP_DIR);
+  const r = runScript('check-knowledge-drift.ts', '--json', '--kc-dir', TMP_DIR);
   let out = { errors: [], warns: [] };
   try {
     out = r.stdout ? JSON.parse(r.stdout) : out;
@@ -179,9 +165,4 @@ try {
   if (fs.existsSync(TMP_DIR)) fs.rmSync(TMP_DIR, { recursive: true, force: true });
 }
 
-if (errors.length) {
-  console.log(`FAILED: ${errors.length} issue(s)`);
-  for (const e of errors) console.log(`  ✗ ${e}`);
-  process.exit(1);
-}
-console.log('OK: 知识卡正文行号引用契约全过');
+finish('知识卡正文行号引用契约全过');

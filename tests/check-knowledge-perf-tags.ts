@@ -13,24 +13,10 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { ok, finish, runScript } from './_lib.mts';
 
 const ROOT = process.cwd();
-const SCRIPTS = path.join(ROOT, 'scripts');
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge'); // 真实知识卡目录（仅供步骤 3 读 index.md，临时卡已隔离到 TMP_DIR）
-const NODE = process.execPath;
-const errors = [];
-
-function run(script, ...args) {
-  return spawnSync(NODE, [path.join(SCRIPTS, script), ...args], {
-    encoding: 'utf-8',
-    timeout: 60000,
-  });
-}
-
-function ok(label, cond, detail = '') {
-  if (cond) console.log(`   ✓ ${label}`);
-  else errors.push(`[${label}] ${detail}`);
-}
 
 // 隔离策略：临时卡写入系统临时目录（mkdtempSync），而非 docs/knowledge/。
 // 否则 gen-vitepress-sidebar / gen-knowledge-index 等生成器会 glob 到该卡，
@@ -71,7 +57,7 @@ let r;
 try {
   // 1. 词表内标签 → 放行
   writeTmpCard(['perf:', '  - cpu-bound', '  - concurrent']);
-  r = run('check-knowledge-drift.ts', '--json', '--kc-dir', TMP_DIR);
+  r = runScript('check-knowledge-drift.ts', '--json', '--kc-dir', TMP_DIR);
   const legalOut = r.stdout ? JSON.parse(r.stdout) : { errors: [] };
   ok(
     '词表内标签无 ERROR',
@@ -81,7 +67,7 @@ try {
 
   // 2. 词表外标签 → ERROR 提示词表
   writeTmpCard(['perf:', '  - warp-speed']);
-  r = run('check-knowledge-drift.ts', '--json', '--kc-dir', TMP_DIR);
+  r = runScript('check-knowledge-drift.ts', '--json', '--kc-dir', TMP_DIR);
   ok('非法标签退出码 1', r.status === 1, `status=${r.status}`);
   const badOut = r.stdout ? JSON.parse(r.stdout) : { errors: [] };
   ok(
@@ -95,7 +81,7 @@ try {
 
 // 3. 索引渲染：性能画像汇总段 + 已知标注卡
 // 先确保索引与卡同步（幂等重生成，等价 pre-commit GEN_CMDS 行为）
-r = run('gen-knowledge-index.ts');
+r = runScript('gen-knowledge-index.ts');
 ok('gen-knowledge-index 退出码 0', r.status === 0, `stderr=${r.stderr?.slice(0, 150)}`);
 
 const indexText = fs.readFileSync(path.join(KC_DIR, 'index.md'), 'utf8');
@@ -108,12 +94,7 @@ const optRow = indexText.split('\n').find((l) => l.includes('optimization_log'))
 ok('optimization_log 行含 gpu-bound', Boolean(optRow && optRow.includes('gpu-bound')), `行内容: ${optRow?.slice(0, 160)}`);
 
 // 4. 索引自校验（--check 幂等：生成后应已同步）
-r = run('gen-knowledge-index.ts', '--check');
+r = runScript('gen-knowledge-index.ts', '--check');
 ok('index --check 同步', r.status === 0, `stderr=${r.stderr?.slice(0, 150)}`);
 
-if (errors.length) {
-  console.log(`FAILED: ${errors.length} issue(s)`);
-  for (const e of errors) console.log(`  ✗ ${e}`);
-  process.exit(1);
-}
-console.log('OK: 知识卡 perf 性能画像契约全过');
+finish('知识卡 perf 性能画像契约全过');

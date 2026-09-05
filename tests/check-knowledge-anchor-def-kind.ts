@@ -25,11 +25,9 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { ok, finish, runScript } from './_lib.mts';
 
 const ROOT = process.cwd();
-const SCRIPTS = path.join(ROOT, 'scripts');
-const NODE = process.execPath;
-const errors = [];
 
 // 临时锚源文件放 ROOT/tmp/（git 忽略，不入库；用后即删）
 const TMP_SRC_DIR = path.join(ROOT, 'tmp', 'anchor-def-contract');
@@ -40,18 +38,6 @@ const TMP_CARD = path.join(KC_TMP_DIR, 'zzz-anchor-def-tmp.md');
 const CARD_STEM = 'zzz-anchor-def-tmp';
 
 const ANCHOR_HINT = '疑似指向引用处而非定义处';
-
-function run(script, ...args) {
-  return spawnSync(NODE, [path.join(SCRIPTS, script), ...args], {
-    encoding: 'utf-8',
-    timeout: 60000,
-  });
-}
-
-function ok(label, cond, detail = '') {
-  if (cond) console.log(`   ✓ ${label}`);
-  else errors.push(`[${label}] ${detail}`);
-}
 
 function writeSrc(name, content) {
   const full = path.join(TMP_SRC_DIR, name);
@@ -84,7 +70,7 @@ function writeCard(anchor) {
 }
 
 function runDrift() {
-  const r = run('check-knowledge-drift.ts', '--json', '--kc-dir', KC_TMP_DIR);
+  const r = runScript('check-knowledge-drift.ts', '--json', '--kc-dir', KC_TMP_DIR);
   let out = { errors: [], warns: [] };
   try {
     out = r.stdout ? JSON.parse(r.stdout) : out;
@@ -173,9 +159,4 @@ try {
   if (fs.existsSync(KC_TMP_DIR)) fs.rmSync(KC_TMP_DIR, { recursive: true, force: true });
 }
 
-if (errors.length) {
-  console.log(`FAILED: ${errors.length} issue(s)`);
-  for (const e of errors) console.log(`  ✗ ${e}`);
-  process.exit(1);
-}
-console.log('OK: 机制锚定义归属增强契约全过');
+finish('机制锚定义归属增强契约全过');

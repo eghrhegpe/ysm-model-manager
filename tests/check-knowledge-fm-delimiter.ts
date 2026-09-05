@@ -17,12 +17,12 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { ok, finish } from './_lib.mts';
 
 const ROOT = process.cwd();
 const SCRIPTS = path.join(ROOT, 'scripts');
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 const NODE = process.execPath;
-const errors = [];
 
 const TMP_CARD = path.join(KC_DIR, 'zzz-fm-delimiter-tmp.md');
 
@@ -31,11 +31,6 @@ function runDriftJson() {
     encoding: 'utf-8',
     timeout: 60000,
   });
-}
-
-function ok(label, cond, detail = '') {
-  if (cond) console.log(`   ✓ ${label}`);
-  else errors.push(`[${label}] ${detail}`);
 }
 
 /** 写临时卡：delimiter 为 frontmatter 首行（--- 正常 / *** 畸形重排），restLines 为后续行。 */
@@ -91,9 +86,4 @@ try {
   if (fs.existsSync(TMP_CARD)) fs.unlinkSync(TMP_CARD);
 }
 
-if (errors.length) {
-  console.log(`FAILED: ${errors.length} issue(s)`);
-  for (const e of errors) console.log(`  ✗ ${e}`);
-  process.exit(1);
-}
-console.log('OK: frontmatter 分隔符显式校验契约全过');
+finish('frontmatter 分隔符显式校验契约全过');

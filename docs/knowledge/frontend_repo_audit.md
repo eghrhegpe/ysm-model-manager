@@ -1475,7 +1475,6 @@ auto_fields:
     - WebUnsupportedError
     - Window
     - wipeDir
-    - WireframeCapability
     - withCached
     - withLoadingIndicator
     - withPreviewExtras

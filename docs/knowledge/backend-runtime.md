@@ -25,7 +25,7 @@ quick_intents:
   - 桌面/网页版运行时区分
 pitfalls:
   - 业务模块禁止直 import "@wailsio/runtime"；统一经此桥
-  - Web 模式 Events.On 返回空函数（no-op）；Emit 返回 Promise<false>
+  - Web 模式 Events.On 返回空函数（no-op）；Emit 返回 Promise，resolve 值恒为 false
   - Web 模式 Window 用 Proxy 动态捕获任意方法（返回 async no-op）；thenable 探测陷阱：返回 undefined 防 await 挂起
   - 网页版 Events/Window 无原生后端，须 no-op 兜底，否则 OpenDevTools 等会抛 / 行为漂移
 use_when:

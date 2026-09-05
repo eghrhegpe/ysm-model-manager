@@ -4,9 +4,12 @@ name: 回收站界面 recycle-bin
 tier: architecture
 category: feature
 source_files:
-  - frontend/src/features/recycle-bin.ts
+  - frontend/src/features/maintenance/recycle-bin.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - initRecycleBin
+    - RecycleHost
+    - VIEW_TESTIDS
   tests:
     - frontend/src/features/recycle-bin.integration.test.ts
 tests:
@@ -33,7 +36,7 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - frontend/src/features/recycle-bin.ts|GetRepoRoot
+  - frontend/src/features/maintenance/recycle-bin.ts|GetRepoRoot
   - frontend/src/utils/async/load-guard.ts|createLoadGuard
 status: active
 ---

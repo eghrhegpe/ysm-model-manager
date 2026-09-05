@@ -4,9 +4,9 @@ name: i18n 翻译准确度扫描记录
 tier: leaf
 category: core
 source_files:
-  - frontend/src/core/i18n/locales/zh-CN.ts
-  - frontend/src/core/i18n/locales/en.ts
-  - frontend/src/core/i18n/locales/ja.ts
+  - frontend/src/locales/zh-CN.ts
+  - frontend/src/locales/en.ts
+  - frontend/src/locales/ja.ts
   - scripts/i18n-key-naming.ts
   - tests/test_i18n_key_naming.ts
 auto_fields:

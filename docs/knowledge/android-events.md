@@ -4,9 +4,10 @@ name: Android 系统事件消费（back/网络/存储授权）
 tier: architecture
 category: core
 source_files:
-  - frontend/src/core/handlers/android-events.ts
+  - frontend/src/features/platform/android-events.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - registerAndroidEvents
   tests:
     - frontend/src/features/dialogs/modal.test.ts
 tests:
@@ -31,7 +32,7 @@ use_when:
   - ScreenLocked
   - NetworkChanged
 invariant_anchors:
-  - frontend/src/core/handlers/android-events.ts|registerAndroidEvents
+  - frontend/src/features/platform/android-events.ts|registerAndroidEvents
 status: active
 ---
 

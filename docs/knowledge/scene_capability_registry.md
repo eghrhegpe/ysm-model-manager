@@ -99,7 +99,6 @@ auto_fields:
     - WaterCapability
     - WaterMode
     - WaterParams
-    - WireframeCapability
   tests:
     - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
     - frontend/src/preview-3d/caps/ground-capability.test.ts

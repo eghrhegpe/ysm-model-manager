@@ -4,16 +4,27 @@ name: 拖拽平台适配 dnd-shared
 tier: leaf
 category: feature
 source_files:
-  - frontend/src/features/dnd-shared.ts
-  - frontend/src/features/dnd-collector.ts
+  - frontend/src/features/dnd/shared.ts
+  - frontend/src/features/dnd/collector.ts
   - frontend/src/utils/resource/extensions.ts
 auto_fields:
   symbols_with_lines:
     - ALL_EXTS
+    - buildFolderItems
+    - collectDropFiles
+    - CollectedEntry
+    - collectFiles
     - extBelongsTo
+    - fileToBase64
+    - FolderGroup
+    - getExt
     - getExts
+    - groupCollected
+    - isImportableFile
     - isSupportedExt
+    - isSupportedFile
     - RESOURCE_EXTS
+    - shouldEnterForm
 quick_groups:
   - 拖拽导入与平台适配
 quick_intents:

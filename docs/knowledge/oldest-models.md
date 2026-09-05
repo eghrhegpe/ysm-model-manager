@@ -4,9 +4,10 @@ name: 资历最深模型 oldest-models
 tier: architecture
 category: feature
 source_files:
-  - frontend/src/features/oldest-models.ts
+  - frontend/src/features/maintenance/oldest-models.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - loadOldestModel
   tests:
     - frontend/src/features/oldest-models.test.ts
 tests:
@@ -33,7 +34,7 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - frontend/src/features/oldest-models.ts|bus.emit
+  - frontend/src/features/maintenance/oldest-models.ts|bus.emit
 status: active
 ---
 

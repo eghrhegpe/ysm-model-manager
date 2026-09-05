@@ -4,15 +4,19 @@ name: 模块级全局状态治理
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/features/dialogs/modal.ts
+  - frontend/src/features/dialogs/modal-core.ts
   - frontend/src/core/i18n/locale.ts
   - frontend/src/backend/web-store.ts
   - frontend/src/utils/cache/with-cached.ts
 auto_fields:
   symbols_with_lines:
+    - __resetModalStateForTest
     - __resetWebLogStateForTest
     - CachePolicy
     - clearAllCache
+    - closeActiveDialog
+    - closeDlg
+    - createDialog
     - getBundle
     - getCacheTtlMs
     - getLang
@@ -20,8 +24,11 @@ auto_fields:
     - invalidateCache
     - LangCode
     - loadLocale
+    - registerDlg
     - setLang
     - SUPPORTED_LANGS
+    - trapFocus
+    - VIEW_TESTIDS
     - warnedKeys
     - webStoreBindings
     - withCached
@@ -44,7 +51,7 @@ quick_risk_lines:
   - 模块级状态收敛 = 状态收进闭包/类对象 + 导出函数签名不变；不改消费方
   - 判断标准：reset 钩子依赖（有 → 收敛有测试收益）vs resetModules 重载（无 → 收敛仅为组织价值）
 invariant_anchors:
-  - frontend/src/features/dialogs/modal.ts|createModalSlot
+  - frontend/src/features/dialogs/modal-core.ts|createModalSlot
 ---
 
 # 模块级全局状态治理
@@ -62,7 +69,7 @@ invariant_anchors:
 
 ## 对外 API / 入口
 
-- modal 收敛范式：`frontend/src/features/dialogs/modal.ts` `createModalSlot()` → `_slot` 单例 → `__resetModalStateForTest()` 内部调 `_slot` 字段重置
+- modal 收敛范式：`frontend/src/features/dialogs/modal-core.ts` `createModalSlot()` → `_slot` 单例 → `__resetModalStateForTest()` 内部调 `_slot` 字段重置
 - locale.ts 测试策略：`locale.test.ts` `freshModule()` = `vi.resetModules()` + 动态 import（bus 必须同实例重载）
 
 ## 与其他子系统关系

@@ -89,5 +89,5 @@ status: active
 ## 相关
 
 - `frontend/index.html` — 以 module script 引入本文件
-- `frontend/src/features/version-updater.ts` — 更新检查
+- `frontend/src/features/maintenance/version-updater.ts` — 更新检查
 - 知识卡：`app_content`、`context_menu`、`resource_registry`、`event_bus`

@@ -1,9 +1,11 @@
 {
-  "generated": "2026-08-31T06:39:50.114Z",
+  "generated": "2026-09-05T12:10:41.257Z",
   "unregistered": [
     "frontend/src/backend",
     "frontend/src/core",
     "frontend/src/features",
+    "frontend/src/locales",
+    "frontend/src/parsers",
     "frontend/src/services",
     "frontend/src/test-utils",
     "frontend/src/ui",
@@ -13,6 +15,7 @@
     "frontend/src/workers",
     "go/avatar",
     "go/cli",
+    "go/conc",
     "go/config",
     "go/container",
     "go/dedup",
@@ -37,6 +40,7 @@
     "go/updater",
     "go/version",
     "go/watcher",
-    "internal/app"
+    "internal/app",
+    "internal/testutil"
   ]
 }

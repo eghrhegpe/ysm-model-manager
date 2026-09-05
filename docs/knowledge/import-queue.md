@@ -4,13 +4,35 @@ name: 全局导入执行 import-executor
 tier: architecture
 category: feature
 source_files:
-  - frontend/src/features/import-executor.ts
-  - frontend/src/features/import-dnd.ts
-  - frontend/src/features/dnd-shared.ts
-  - frontend/src/features/dnd-collector.ts
-  - frontend/src/features/pack-dnd.ts
+  - frontend/src/features/import/executor.ts
+  - frontend/src/features/dnd/import-dnd.ts
+  - frontend/src/features/dnd/shared.ts
+  - frontend/src/features/dnd/collector.ts
+  - frontend/src/features/dnd/pack-dnd.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - bindPackCardDnD
+    - bindTreeDnD
+    - buildFolderItems
+    - collectDropFiles
+    - CollectedEntry
+    - collectFiles
+    - directImport
+    - executeCollected
+    - fileToBase64
+    - FolderGroup
+    - getExt
+    - groupCollected
+    - handleInstanceDrop
+    - handleTreeDrop
+    - ImportFile
+    - importFolder
+    - importWebFilesWithToast
+    - isImportableFile
+    - isSupportedFile
+    - PackDndBusy
+    - PackDndInstance
+    - shouldEnterForm
   tests:
     - frontend/src/features/import-executor.test.ts
     - frontend/src/features/import-dnd.test.ts
@@ -40,8 +62,8 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - frontend/src/features/dnd-shared.ts|isImportableFile
-  - frontend/src/features/import-executor.ts|executeCollected
+  - frontend/src/features/dnd/shared.ts|isImportableFile
+  - frontend/src/features/import/executor.ts|executeCollected
 status: active
 ---
 

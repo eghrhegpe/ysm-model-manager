@@ -17,7 +17,7 @@ source_files:
   - frontend/src/preview-3d/safe-dispose.ts
   - frontend/src/preview-3d/adapters/scene-registry.ts
   - frontend/src/preview-3d/menu/roles.ts
-  - frontend/src/features/dialogs/modal.ts
+  - frontend/src/features/dialogs/modal-core.ts
   - frontend/src/features/dialogs/adv-filter.ts
   - frontend/src/features/dialogs/batch-rename.ts
   - frontend/src/ui/ui-components-styles.ts
@@ -50,7 +50,6 @@ auto_fields:
     - DedupSession
     - Disposable
     - fillRoles
-    - fmtMB
     - getFrameIntervalMs
     - getLastModelPath
     - getMaxFps
@@ -69,19 +68,6 @@ auto_fields:
     - MAX_FPS_KEY
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
-    - modalConfirm
-    - ModalConfirmOptions
-    - modalPicker
-    - ModalPickerItem
-    - ModalPickerOptions
-    - ModalPickerResult
-    - modalProgress
-    - ModalProgressHandle
-    - ModalProgressOptions
-    - modalPrompt
-    - ModalPromptOptions
-    - modalSelect
-    - ModalSelectOptions
     - modelDetailView
     - ModelEntry
     - motionDetailView

@@ -69,7 +69,7 @@ status: active
 ## 与其他子系统关系
 
 - `go/version/`: 版本信息管理
-- `frontend/src/features/version-updater.ts`: 前端更新 UI（进度经 `update:progress` 事件驱动 `modalProgress` 弹窗 + 窗口标题）
+- `frontend/src/features/maintenance/version-updater.ts`: 前端更新 UI（进度经 `update:progress` 事件驱动 `modalProgress` 弹窗 + 窗口标题）
 
 ## 不变量
 
@@ -84,4 +84,4 @@ status: active
 
 ## 相关
 
-- `frontend/src/features/version-updater.ts`
+- `frontend/src/features/maintenance/version-updater.ts`

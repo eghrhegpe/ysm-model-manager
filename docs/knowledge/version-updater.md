@@ -4,9 +4,12 @@ name: 版本更新 version-updater
 tier: architecture
 category: feature
 source_files:
-  - frontend/src/features/version-updater.ts
+  - frontend/src/features/maintenance/version-updater.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - checkUpdateSilent
+    - initVersionUpdater
+    - UpdateInfo
   tests:
     - frontend/src/features/version-updater.test.ts
 tests:
@@ -34,8 +37,8 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - frontend/src/features/version-updater.ts|canCheck
-  - frontend/src/features/version-updater.ts|markChecked
+  - frontend/src/features/maintenance/version-updater.ts|canCheck
+  - frontend/src/features/maintenance/version-updater.ts|markChecked
 status: active
 ---
 

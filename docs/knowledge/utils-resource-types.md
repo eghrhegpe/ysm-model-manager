@@ -6,7 +6,7 @@ category: utils
 source_files:
   - frontend/src/utils/resource/
   - frontend/src/utils/types-re-export.ts
-  - frontend/src/features/repo-rtype.ts
+  - frontend/src/features/repo/repo-rtype.ts
 tests:
   - frontend/src/features/repo-rtype.test.ts
 auto_fields:
@@ -15,6 +15,7 @@ auto_fields:
     - ALL_RESOURCE_TYPES
     - allResourceTypes
     - AMBIGUOUS_EXTS
+    - currentRepoType
     - extBelongsTo
     - extOf
     - getExts
@@ -45,6 +46,7 @@ auto_fields:
     - ResourceTypeVariant
     - shortLabelOf
     - typeIconOf
+    - useCurrentResourceType
     - VOXEL_RPC_BY_EXT
     - ZipEntryMatch
 quick_groups:

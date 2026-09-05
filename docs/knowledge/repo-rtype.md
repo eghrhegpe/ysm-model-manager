@@ -4,7 +4,7 @@ name: 全局资源类型状态 repo-rtype
 tier: leaf
 category: feature
 source_files:
-  - frontend/src/features/repo-rtype.ts
+  - frontend/src/features/repo/repo-rtype.ts
   - frontend/src/utils/dom/storage.ts
   - frontend/src/bus.ts
 auto_fields:
@@ -14,6 +14,7 @@ auto_fields:
     - BusEventName
     - BusEvents
     - CtxShowPayload
+    - currentRepoType
     - MenuItem
     - ModelSelectPayload
     - NavPagePayload
@@ -22,6 +23,7 @@ auto_fields:
     - safeRemove
     - safeSet
     - ToastPayload
+    - useCurrentResourceType
 quick_groups:
   - 资源类型与仓库状态
 quick_intents:

@@ -64,7 +64,7 @@ invariant_anchors:
 | 4 | ② | `go/fsutil/` `copyFile×6` / `copyDirRecursive×4` | 原子复制原语成对重复，应收敛进 fsutil | 高 |
 | 5 | ③ | `go/types/extensions.go` `ShouldHashExt` + scanner 内嵌 CI 清单 | 哈希白名单硬编码 switch，文件头声称注册表驱动唯独此处例外；新增类型须改 2 处 Go + 1 处 CI | 高 |
 | 6 | ⑥ | `frontend/src/backend/browser-adapter.ts` `webImpls` | 40+ binding 手写大对象字面量，应改 binding 注册表（各职责模块自注册 + 元数据门控） | 高 |
-| 7 | ② | `frontend/src/features/import-dnd.ts` 与 `import-queue-events.ts` | 网页版导入块在 4 处近逐字重复，已有细微漂移（folderInput 分支缺 stats:refresh） | 高 |
+| 7 | ② | `frontend/src/features/dnd/import-dnd.ts` 与 `import-queue-events.ts` | 网页版导入块在 4 处近逐字重复，已有细微漂移（folderInput 分支缺 stats:refresh） | 高 |
 | 8 | ② | `frontend/src/app-modules.ts` 动态加载块 | 5 个 Web Component 动态加载 catch 模板逐字重复，应抽 `loadView(name, importFn)` | 高 |
 | 9 | ④ | `go/types/resource.go` `ResourceType` | 纯数据无 Go 层 hook 字段，importer/packs 的扩展点无法从 JSON 表达；增加 `plugin`/`handlerRef` 字段可打通三处硬编码根 | 高 |
 | 10 | ② | `/web` 虚拟根路径解析正则散落 5 处（`web-fs.ts` + `browser-adapter.ts`） | 基于 WEB_ROOT 的统一路径模块 | 高 |

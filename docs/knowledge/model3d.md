@@ -622,7 +622,6 @@ auto_fields:
     - WaterCapability
     - WaterMode
     - WaterParams
-    - WireframeCapability
     - WorkerBridge
     - WorkerErrorStrategy
     - YSM_MODEL_SCHEMA_ID

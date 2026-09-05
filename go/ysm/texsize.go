@@ -125,9 +125,10 @@ func readTexFrom7z(path string) (int, int) {
 	return 0, 0
 }
 
-// clampTexDim 修复：float64→int 溢出钳制——畸形 JSON 如
-// texture_width:1e100（合法数字）int() 溢出为最小 int，巨大负数流入统计展示。
-// 钳到 [0, 65536]，与 go/geometry/parse.go:66-73 口径一致（合法贴图远小于此）。
+// clampTexDim float64→int 溢出钳制——畸形 JSON 如 texture_width:1e100 经 int() 溢出为负数，
+// 此处钳到 [0, 65536] 供统计展示使用（超上限取 65536 作为最坏值，而非归 0）。
+// 与 geometry.clampTexSize 语义不同：后者归 0 是 UV 归一化除零保护，前者钳 65536
+// 是统计面板「最大已知纹理尺寸」的有界哨兵——两套 fixture 各自为真，不可互相替换。
 func clampTexDim(v float64) int {
 	if math.IsNaN(v) || math.IsInf(v, 0) {
 		return 0

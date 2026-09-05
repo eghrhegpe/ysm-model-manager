@@ -169,11 +169,11 @@ func TestExtractControlTypes_NotArray(t *testing.T) {
 	}
 }
 
-// ====== extractTexSizeFromGeometry ======
+// ====== extractTexSizeFromGeometryBytes ======
 
 func TestExtractTexSizeFromGeometry_Valid(t *testing.T) {
 	data := []byte(`{"format_version":"1.16.0","minecraft:geometry":[{"description":{"identifier":"test","texture_width":64,"texture_height":32}}]}`)
-	w, h := extractTexSizeFromGeometry(data)
+	w, h := extractTexSizeFromGeometryBytes(data)
 	if w != 64 || h != 32 {
 		t.Errorf("期望 64x32, 得到 %dx%d", w, h)
 	}
@@ -181,7 +181,7 @@ func TestExtractTexSizeFromGeometry_Valid(t *testing.T) {
 
 func TestExtractTexSizeFromGeometry_NoGeometry(t *testing.T) {
 	data := []byte(`{}`)
-	w, h := extractTexSizeFromGeometry(data)
+	w, h := extractTexSizeFromGeometryBytes(data)
 	if w != 0 || h != 0 {
 		t.Errorf("空 geometry 应返回 0,0, 得到 %d,%d", w, h)
 	}
@@ -189,7 +189,7 @@ func TestExtractTexSizeFromGeometry_NoGeometry(t *testing.T) {
 
 func TestExtractTexSizeFromGeometry_InvalidJSON(t *testing.T) {
 	data := []byte(`{not json}`)
-	w, h := extractTexSizeFromGeometry(data)
+	w, h := extractTexSizeFromGeometryBytes(data)
 	if w != 0 || h != 0 {
 		t.Errorf("非法 JSON 应返回 0,0, 得到 %d,%d", w, h)
 	}
@@ -197,7 +197,7 @@ func TestExtractTexSizeFromGeometry_InvalidJSON(t *testing.T) {
 
 func TestExtractTexSizeFromGeometry_EmptyGeometry(t *testing.T) {
 	data := []byte(`{"minecraft:geometry":[]}`)
-	w, h := extractTexSizeFromGeometry(data)
+	w, h := extractTexSizeFromGeometryBytes(data)
 	if w != 0 || h != 0 {
 		t.Errorf("空 geometry 数组应返回 0,0, 得到 %d,%d", w, h)
 	}

@@ -8,6 +8,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/paths"
 )
 
 // ConflictType 冲突类型
@@ -153,6 +154,15 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 // ResolveConflict 解决单个文件冲突
 // 先备份再操作，确保安全
 func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDir, remoteDir string) error {
+	// 路径守卫：防 conflict.Path 含 ".." 穿越到 localDir/remoteDir 之外
+	//（与 sync_push.go 同款 RelInside 防线对齐）。
+	// 此处由调用方 ResolveConflictsLocked 在持锁前提下调用，路径来自前端 JSON 传入，信任面需显式守卫。
+	if _, err := paths.RelInside(localDir, filepath.Join(localDir, conflict.Path)); err != nil {
+		return fmt.Errorf("冲突路径越界 %q: %w", conflict.Path, err)
+	}
+	if _, err := paths.RelInside(remoteDir, filepath.Join(remoteDir, conflict.Path)); err != nil {
+		return fmt.Errorf("冲突路径越界 %q: %w", conflict.Path, err)
+	}
 	localPath := filepath.Join(localDir, conflict.Path)
 	remotePath := filepath.Join(remoteDir, conflict.Path)
 

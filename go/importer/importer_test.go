@@ -28,6 +28,9 @@ func TestRegistry(t *testing.T) {
 	if got := Get("litematic"); got == nil {
 		t.Fatal("Get('litematic') = nil, want handler")
 	}
+	if got := Get("fbx"); got == nil {
+		t.Fatal("Get('fbx') = nil, want handler（resource_types.json 已含 fbx 类型）")
+	}
 	// 防回归：vrm 独立类型已随 ADR-111 退役
 	if got := Get("vrm"); got != nil {
 		t.Fatalf("Get('vrm') = %v, want nil（已并入 EntityPlayer variants）", got)

@@ -160,7 +160,9 @@ func (q *DownloadQueue) processForEpoch(target uint64) {
 		// 避免与 Enqueue 启动的 worker 重复消费队列
 		newEpoch := q.epoch
 		q.mu.Unlock()
-		if !cancelled && !restart {
+		// panicked 时不发 done：UI 收到 done 会认为「下载完成」，但实际队列 fail-stop
+		// 停在 panic 任务上——假 done 会让前端误判整体状态。
+		if !cancelled && !restart && !panicked {
 			log.Printf("[queue] emit queue:status done")
 			q.emitFn("queue:status", "done", 0, "")
 		}

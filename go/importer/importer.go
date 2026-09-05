@@ -226,4 +226,6 @@ func init() {
 	Register(NewDirectoryCopy("maid-model"))
 	Register(NewSimpleCopy("ysm"))
 	Register(NewSimpleCopy("litematic"))
+	// fbx: MC-MMD 动画格式，与 CustomAnim 同 instanceDir 但独立 storageSubDir=FBX
+	Register(NewSimpleCopy("fbx"))
 }

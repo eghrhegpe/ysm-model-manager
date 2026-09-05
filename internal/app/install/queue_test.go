@@ -160,4 +160,10 @@ func TestDownloadQueue_DownloadPanicRecovered(t *testing.T) {
 			t.Error("panic 不应被当成普通下载失败记账到导入日志")
 		}
 	}
+	// panic 后不得广播「下载完成」——否则 UI 误判整体状态
+	for _, e := range emitted {
+		if e == "queue:status" {
+			t.Error("panic 后不应广播 queue:status done（队列 fail-stop，非正常完成）")
+		}
+	}
 }

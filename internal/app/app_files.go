@@ -334,7 +334,8 @@ func resolveInstDirTarget(instDir, rtype string) string {
 
 // ========== 启用/禁用 ==========
 // ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效）
-// Deprecated: 仅桌面 UI 零消费，多根场景请用 ToggleEnable。保留为 CLI / browser-adapter 契约入口。
+// Deprecated: 桌面 UI 零消费（多根场景请用 ToggleEnable），但网页版 browser-adapter 有真实调用。
+// 保留为 CLI / browser-adapter 契约入口——删除需同步清 browser-adapter.ts 调用点。
 func (a *App) ToggleModelEnable(path string) (bool, error) {
 	enabled, err := fileops.ToggleModelEnable(a.ysmRoot(), path)
 	if err == nil {

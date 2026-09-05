@@ -298,7 +298,7 @@ func extractTexSizeFromZipGeo(r zipEntriesReader, geoPaths []string) (int, int) 
 			if data == nil {
 				continue
 			}
-			if w, h := extractTexSizeFromGeometry(data); w > 0 && h > 0 {
+			if w, h := extractTexSizeFromGeometryBytes(data); w > 0 && h > 0 {
 				return w, h
 			}
 			break
@@ -337,12 +337,15 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 
 	// 分支 1：裸 ysm.json（解压后的 YSM 模型文件）
 	if strings.HasSuffix(strings.ToLower(path), ".json") {
-		if fi, err := os.Stat(path); err == nil && fi.Size() > types.MaxReadLimit {
-			return summary, fmt.Errorf("ysm.json 超过 %dMB 上限，已拒绝解析", types.MaxReadLimit/(1<<20))
-		}
-		data, err := os.ReadFile(path)
+		// 一步 ReadLimitedEntry 替代 Stat+ReadFile 两步（TOCTOU：Stat 与 ReadFile 之间文件可能被替换为超大文件）
+		// 与同函数 ZIP 分支口径对齐；超限/读错返回 nil，此处转为错误文案
+		f, err := os.Open(path)
 		if err != nil {
-			return summary, fmt.Errorf("无法读取 JSON: %w", err)
+			return summary, fmt.Errorf("无法打开 ysm.json: %w", err)
+		}
+		data := fsutil.ReadLimitedEntry(f, types.MaxReadLimit)
+		if data == nil {
+			return summary, fmt.Errorf("ysm.json 超过 %dMB 上限或读取失败", types.MaxReadLimit/(1<<20))
 		}
 		summary.Format = "ysm"
 		var root ysmRoot
@@ -439,16 +442,28 @@ func appendAnimGroupsAndConfigs(root *ysmRoot, summary *YsmSummary) {
 				}
 			}
 		}
-		var looseAnims []string
-		for k, v := range eaMap {
-			if s, ok := v.(string); ok && s != "" && !strings.HasPrefix(s, "#") {
-				if strings.HasPrefix(k, "#") {
-					continue // 组名跳过
-				}
-				if !classifiedItems[k] {
-					looseAnims = append(looseAnims, s)
-				}
+		// 按键排序：map 遍历序不定，固定顺序防 parity golden 对账 flaky（同 commit dfa190b8 已修过同款）
+		var looseKeys []string
+		for k := range eaMap {
+			if strings.HasPrefix(k, "#") {
+				continue
 			}
+			if classifiedItems[k] {
+				continue
+			}
+			if _, ok := eaMap[k].(string); !ok {
+				continue
+			}
+			s := eaMap[k].(string)
+			if s == "" || strings.HasPrefix(s, "#") {
+				continue
+			}
+			looseKeys = append(looseKeys, k)
+		}
+		sort.Strings(looseKeys)
+		var looseAnims []string
+		for _, k := range looseKeys {
+			looseAnims = append(looseAnims, eaMap[k].(string))
 		}
 		if len(looseAnims) > 0 {
 			summary.AnimGroups = append(summary.AnimGroups, AnimGroup{
@@ -471,22 +486,6 @@ func appendAnimGroupsAndConfigs(root *ysmRoot, summary *YsmSummary) {
 }
 
 // ===== 辅助函数 =====
-
-// 解析 bedrock geometry JSON 的纹理尺寸
-func extractTexSizeFromGeometry(data []byte) (w, h int) {
-	var raw struct {
-		Geometry []struct {
-			Description struct {
-				TextureWidth  float64 `json:"texture_width"`
-				TextureHeight float64 `json:"texture_height"`
-			} `json:"description"`
-		} `json:"minecraft:geometry"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil || len(raw.Geometry) == 0 {
-		return 0, 0
-	}
-	return clampTexDim(raw.Geometry[0].Description.TextureWidth), clampTexDim(raw.Geometry[0].Description.TextureHeight)
-}
 
 // 从 files.player 统计纹理、模型主体、动画数量，并收集几何体文件路径
 func extractFileStats(filesRaw json.RawMessage) (Stats, []string) {

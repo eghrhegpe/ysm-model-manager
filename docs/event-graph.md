@@ -194,8 +194,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| setLang | `frontend/src/core/i18n/locale.ts` | 130 |
-| initI18n | `frontend/src/core/i18n/locale.ts` | 181 |
+| setLang | `frontend/src/core/i18n/locale.ts` | 135 |
+| initI18n | `frontend/src/core/i18n/locale.ts` | 186 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -251,7 +251,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerPageStore | `frontend/src/core/page-store.ts` | 76 |
+| registerPageStore | `frontend/src/core/page-store.ts` | 83 |
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 148 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 175 |
 

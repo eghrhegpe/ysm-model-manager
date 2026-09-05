@@ -100,10 +100,10 @@ status: active
 ## 对外 API / 入口
 
 `animation.ts`（解析 + 插值）：
-- 类型：`Vec3`、`Keyframe`（time/post/pre/lerp）、`BoneChannels`（rotation/position/scale）、`AnimationClip`（name/loop/length/bones/hasMolang）、`BoneTransform`、`BoneHierarchyNode`
+- 类型：`Vec3`、`Keyframe`（time/post/pre/lerp）、`BoneChannels`（rotation/position/scale）、`AnimationClip`（name/loop/length/bones/hasMolang）、`BoneTransform`
 - `parseBedrockAnimationJSON(jsonStr): { clips, errors }` — 解析 .animation.json；JSON 错误/缺 animations 字段进 errors；任一关键帧含 Molang 字符串则 clip.hasMolang = true
 - `evaluateKeyframes(keyframes, t): Vec3 | null` — 二分查找 + 线性插值；step 模式直接取当前帧 post；catmullrom 模式取前后各一邻帧做 uniform Catmull-Rom（Hermite 等价，C1 连续）三次样条（`sampleCatmullRom`；官方 wine_fox 大量用 `lerp_mode: catmullrom`，此前被一律降级为 linear 是"动作僵硬/轨迹怪"根因，已支持）
-- `evaluateClip(clip, time, boneHierarchy?, localOnly?): Map<string, BoneTransform>` — 整 clip 求值；循环动画时间取模；`localOnly` 只返回局部变换（Three.js 场景树自己传播时用），否则按拓扑排序把父级变换累积到子级
+- `evaluateClip(clip, time): Map<string, BoneTransform>` — 整 clip 求值局部变换；循环动画时间取模；层级传播由 Three.js Object3D 场景树自行完成（2026-09 删非 localOnly 分支与 BoneHierarchyNode）
 
 `animate.ts`：
 - `animateNumber(el, to, duration=700): () => void` — 里程表式滚动进位（个位先转 → 十位 → 百位），替换元素文本中的首个数字串，返回取消函数（组件卸载时调用）
@@ -165,8 +165,8 @@ status: active
 - **molangjs 全容错原语（2026-08-25 实测）**：molangjs 用容错解析器——对 `"("`、`"@@"`、`"1..2"`、`"query."` 等任意非法/残缺 token 都不抛错、直接返回 0。故 `compileMolang` 走「解析异常→返回 null」的路径在真实世界中几乎不可达，`parseAnimationControllerJSON` 上报「转换条件编译失败」与运行时「condition=null 跳过不触发」均为几乎不触发的防御分支（测试用构造对象直接命中），属低价值死防御，可作后续清理候选
 - **molangjs 全容错**（见上）亦意味着 Molang 条件「真值」判定需注意：未识别表达式稳定返回 0 = 恒假，不会误触发转换
 - 播放循环（RAF）由消费方组件自行管理并须在卸载时 cancelAnimationFrame；曾有的 AnimationPlayer 封装类因长期无消费方已在死代码清理中移除，如需播放器请基于 evaluateClip 重建
-- **求值链路运行时消费方**（2026-08-21 更新）：`evaluateClip` 由 YSM 动画播放器消费（`preview-3d/ysm-animation-player.ts`，ADR-100 L1-L3，每帧 localOnly 求值驱动骨骼 Group）；`parseBedrockAnimationJSON` 消费方 `preview-3d/decoder/wasm-decode.ts`（+loader.ts，ADR-137 归位）与 `ysm-adapter.ts`（动画扫描）；`animateNumber` 实际返回取消函数 `() => void`（**JSDoc 已标注 `@returns 取消函数`**），消费方 app-tree/render.ts、app-sidebar/events.ts **忽略取消函数**（快速连续渲染叠加未清理 timer，P3 观察）；`isMolang` 已删除（旧文"死代码"断言过时——已彻底移除）
-- **层级传播未应用父级旋转**（`animation.ts` 层级传播逻辑，P3 观察）：注释声称「子级位移经父级旋转后」累加，实现却是纯向量相加 `pp+cp`、旋转仅欧拉角分量相加——父级非零旋转时传播结果错误；求值链路休眠态无运行时影响，属唤醒前的设计降级点（唤醒需先补旋转矩阵/四元数传播，测试仅覆盖无旋转父级）
+- **求值链路运行时消费方**（2026-08-21 更新）：`evaluateClip` 由 YSM 动画播放器消费（`preview-3d/ysm-animation-player.ts`，ADR-100 L1-L3，每帧求值局部变换驱动骨骼 Group，层级由 Three.js 场景树传播）；`parseBedrockAnimationJSON` 消费方 `preview-3d/decoder/wasm-decode.ts`（+loader.ts，ADR-137 归位）与 `ysm-adapter.ts`（动画扫描）；`animateNumber` 实际返回取消函数 `() => void`（**JSDoc 已标注 `@returns 取消函数`**），消费方 app-tree/render.ts、app-sidebar/events.ts **忽略取消函数**（快速连续渲染叠加未清理 timer，P3 观察）；`isMolang` 已删除（旧文"死代码"断言过时——已彻底移除）
+- **层级传播归 Three.js**（2026-09 更新）：`evaluateClip` 原非 localOnly 分支（欧拉角相加/向量相加的简化层级传播）零业务消费者且实现与注释不符，已随 2026-09 清理删除——播放器只取局部变换，层级传播由 Three.js Object3D 场景树完成
 - **旋转通道口径（2026-08-24 定版）**：`parseBedrockAnimationJSON` 出口的 rotation 通道统一做**度→弧度 + X/Y 取负、Z 不取负**换算（`convertRotationKeyframes`，对齐上游 ModernYSM/TLM 共同口径 `RawBoneKeyFrame.init` + `RotationValue.convert`）；Molang 动态轴包求值后换算闭包（molang 三角函数按度求值）。此前缺失导致 bedrock 的度被当弧度直喂 Euler（45°→2578°），是预览角色乱飞根因。下游全弧度域：player 直接 `Euler(rz,ry,rx,'ZYX')`；位移通道保持像素原值 + X 取负叠加 pivot（player 层做）。测试夹具手工构造的 Keyframe 绕过解析层，须自备弧度值
 - **消费方文件名漂移已修正**（2026-08-09；2026-08-31 ADR-137 再迁 decoder/wasm-decode.ts）：`parseBedrockAnimationJSON` 消费方为 `preview-3d/decoder/wasm-decode.ts`（+loader.ts，旧文 preview-wasm.ts 已过时）；stagger 消费方含 `app-content/site/render.ts`（旧文 site-view.ts 过时）；测试文件均为 `.ts`（旧文 .js 过时）
 

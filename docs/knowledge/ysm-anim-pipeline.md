@@ -96,14 +96,14 @@ YSM 模型的动画并非硬编码在渲染核心 `model3d.ts` 中，而是由**
 
 ```typescript
 // 1. 加载阶段（适配器层 ysm-adapter.ts 的 build() 内）
-loader/adapter → createYsmAnimPlayer(boneByName, clips, boneHierarchy, clipLabels?)
+loader/adapter → createYsmAnimPlayer(boneByName, clips, clipLabels?)
 
 // 2. 驱动阶段（Player.apply(dt) 每帧 rAF 调，内部串接两步）
 mdApAdvanceTimeAndController(dt, state, ctx)  // 推进时钟 + 控制器状态机
                                               // 内含 setMolangScope(controllerVariables) 完成 @variable.time 等变量求值
               ↓
 mdApApplyPose(dt, state, ctx)                 // 覆盖 THREE.Group.position/quaternion
-                                              // 内部调 evaluateClip(clip, state.elapsed, ctx.boneHierarchy, true) 拿插值结果
+                                              // 内部调 evaluateClip(clip, state.elapsed) 拿局部插值结果，层级由 Three.js 树传播
 
 // 3. 渲染消费
 rAF 循环 → Player.apply(dt) → Three.js 画面随时间轴动起来
@@ -115,17 +115,16 @@ rAF 循环 → Player.apply(dt) → Three.js 画面随时间轴动起来
 |------|---------|------|
 | **动画玩家** | `preview-3d/ysm-animation-player.ts` | 完整的状态机：时间推进、Clip 切换、控制器管理。导出符号 `createYsmAnimPlayer`。 |
 | **Molang 作用域桥** | `utils/animation/molang.ts` | 内嵌 molangjs 表达式求值器。`setMolangScope(vars)` 注入 `@variable.time` 等变量，由 `mdApAdvanceTimeAndController` 在每帧推 clock 时调用；见 animation-system.md。 |
-| **插值引擎** | `utils/animation/animation.ts` | `parseBedrockAnimationJSON`, `evaluateClip`。使用 Catmull-Rom 样条插值。由 `mdApApplyPose` 内部在每帧调 `evaluateClip(clip, elapsed, boneHierarchy, true)` 拿当前时刻的变换序列。 |
+| **插值引擎** | `utils/animation/animation.ts` | `parseBedrockAnimationJSON`, `evaluateClip`。使用 Catmull-Rom 样条插值。由 `mdApApplyPose` 内部在每帧调 `evaluateClip(clip, elapsed)` 拿当前时刻的局部变换序列（层级由 Three.js 场景树传播，2026-09 删 boneHierarchy 参数）。 |
 | **适配器桥接** | `preview-3d/ysm-adapter.ts` | 将解码的 YSM 骨骼/动画/clip 数据喂入 `createYsmAnimPlayer`（在 `build()` 内），并注册到会话生命周期。 |
 
 ## 关键接口
 
-### `createYsmAnimPlayer(boneByName, clips, boneHierarchy, clipLabels?)`
+### `createYsmAnimPlayer(boneByName, clips, clipLabels?)`
 - **用途**：创建 YSM 动画播放器实例。
 - **参数**：
   - `boneByName: Map<string, THREE.Object3D>`：骨骼名称 → 已创建 THREE.Group 节点的映射（适配器 `build()` 阶段生成）。
   - `clips: AnimationClip[]`：Bedrock 动画切片列表（`parseBedrockAnimationJSON` 输出）。
-  - `boneHierarchy: BoneHierarchyNode[]`：骨骼层级结构（父子关系 + 索引）。
   - `clipLabels?: string[]`：clip 可读名（缺省用 clip 索引）。
 - **返回**：`YsmAnimPlayer` 对象，含 `apply(dt)` / `dispose()` / `toggle()` / `isPlaying` / `selectClip` / `currentIndex` / `clips()` / `clipCount` / `getDuration` / `getTime` 等方法和只读访问器。
 
@@ -134,7 +133,7 @@ rAF 循环 → Player.apply(dt) → Three.js 画面随时间轴动起来
 
 ### `mdApApplyPose(dt, state, ctx)`
 - **用途**：将当前时间的骨骼变换结果应用到 Three.js 场景图。
-- **注意**：内部调 `evaluateClip(clip, state.elapsed, ctx.boneHierarchy, true)` 拿插值后的变换；直接修改 `position` / `quaternion`，需在后续调 `updateMatrixWorld()`。
+- **注意**：内部调 `evaluateClip(clip, state.elapsed)` 拿插值后的局部变换；直接修改 `position` / `quaternion`，需在后续调 `updateMatrixWorld()`。
 
 ## 避坑指南
 

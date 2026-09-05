@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-192：go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移",
+        "link": "/adr/ADR-192-go-types-registry-split"
+      },
+      {
         "text": "ADR-191：testutil 迁至 go/internal——消除内核测试对应用层的依赖倒挂",
         "link": "/adr/ADR-191-testutil-go-internal"
       },

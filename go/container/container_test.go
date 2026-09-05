@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -144,15 +145,8 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 
 func TestOpenDir_Entries(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(dir+"/a.json", []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(dir+"/sub", 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(dir+"/sub/b.json", []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.CreateTestFile(t, dir, "a.json", "{}")
+	testutil.CreateTestFile(t, dir, "sub/b.json", "{}")
 	r, err := OpenDir(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -224,15 +218,8 @@ func TestOpen7zBytes_BadData(t *testing.T) {
 
 func TestOpenDir_NestedDirAndRead(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(dir+"/root.txt", []byte("ROOT"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(dir+"/sub", 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(dir+"/sub/nested.txt", []byte("NESTED"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.CreateTestFile(t, dir, "root.txt", "ROOT")
+	testutil.CreateTestFile(t, dir, "sub/nested.txt", "NESTED")
 	r, err := OpenDir(dir)
 	if err != nil {
 		t.Fatal(err)

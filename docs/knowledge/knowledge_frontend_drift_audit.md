@@ -15,7 +15,7 @@ source_files:
   - frontend/src/theme-core.ts
   - frontend/src/app-modules.ts
   - frontend/src/views/app-preview/skeleton-fill-panel.ts
-  - frontend/src/core/context-menu-handlers.ts
+  - frontend/src/features/context-menu/context-menu-handlers.ts
   - scripts/check-knowledge-drift.ts
 tests:
   - frontend/src/app-modules.boot.test.ts

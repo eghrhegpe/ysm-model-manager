@@ -8,11 +8,10 @@
   - 关联代码：`frontend/src/features/`（根目录 18 平铺文件）、`frontend/src/features/dialogs/modal.ts`
   - 前置规则：AGENTS.md「前端/Go 职责归属红线」「3d 菜单只允许 visibleWhen」
   - 反向引用：
-    - [ADR-014 P3](../ADR-014-type-driven-state.md)（类型化版 features 落地）
-    - [ADR-040](../ADR-040-context-menu-handlers-split.md)（右键菜单 handler 拆分）
-    - [ADR-060](../ADR-060-dnd-collector.md)（DnD 收集器立项）
-    - [ADR-103](../ADR-103-ui-state-persistence.md)（uiState 持久化收口 SettingsStore）
-    - [ADR-109](../ADR-109-audit-framework.md)（前端 3D Checklist）
+    - [ADR-014 P3](./ADR-014-typescript-migration.md)（类型化版 features 落地）
+    - [ADR-040](./ADR-040-architecture-scale-governance.md)（前端大文件拆分与 internal 下沉收口）
+    - [ADR-060](./ADR-060-dnd-component-scoped-registration.md)（DnD 组件注册）
+    - [ADR-109](./ADR-109-code-review-checklist.md)（前端 3D Checklist）
 
 ---
 

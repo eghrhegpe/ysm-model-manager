@@ -41,6 +41,7 @@ auto_fields:
 tests:
   - frontend/src/backend/runtime.test.ts
   - frontend/src/features/community/download-queue.test.ts
+  - frontend/src/features/community/download-queue-ui.test.ts
   - frontend/src/features/community/download-tasks.test.ts
 quick_groups:
   - 创意工坊下载

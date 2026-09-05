@@ -14,24 +14,6 @@ source_files:
   - frontend/src/core/handlers/instance-ops.ts
 auto_fields:
   symbols_with_lines:
-    - DIR_HANDLERS
-    - DirCtx
-    - FILE_HANDLERS
-    - FileCtx
-    - getMenuDef
-    - HANDLERS
-    - isUnsafeFolderName
-    - MENU_DEFS
-    - MenuAction
-    - MenuCtx
-    - MenuDef
-    - refreshUI
-    - registerContextMenus
-    - registerInstanceOps
-    - resolveDstDir
-    - toast
-    - toastEmptyRtype
-    - toastError
     - VIEW_TESTIDS
   tests:
     - frontend/src/core/context-menus.test.ts

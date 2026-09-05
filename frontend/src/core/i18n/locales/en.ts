@@ -776,7 +776,7 @@ export const en: Record<string, string> = {
   "sync.busySkip": "Sync in progress, skipped this time",
   "sync.failedToast": "Sync failed: {msg}",
 
-  // instance-ops handlers (core/handlers/instance-ops.ts)
+  // instance-ops handlers (features/pack-ops/instance-ops.ts)
   "inst.packNotFound": "Modpack not found",
   "inst.noResources": "This modpack has no resource files",
   "inst.exportListCopied": "📋 Copied {n} file names to clipboard",

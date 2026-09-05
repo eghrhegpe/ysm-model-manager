@@ -1,20 +1,14 @@
-// ===== 全局操作事件处理（类型化版 — ADR-014 P3 组件层）=====
-// 统一入口，汇聚所有子 handler 模块
-// app-content/index.js 调用此模块注册所有 handler
+// ===== core 全局 handler 注册（ADR-185 后 core-only）=====
+// 右键菜单 / 整合包操作 / Android 平台事件已迁 features（context-menu、pack-ops、
+// platform），由 app-content 编排注册；本文件只汇编 core 内核注册器。
 
-import { registerContextMenus } from "../context-menus.ts";
 import { registerPageStore } from "../page-store.ts";
-import { registerAndroidEvents } from "./android-events.ts";
-import { registerInstanceOps } from "./instance-ops.ts";
 import { registerSync } from "./sync.ts";
 
-/** 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） */
-export function registerGlobalHandlers(): Array<() => void> {
+/** 注册 core 全局 handler，返回 unsub 函数数组（features 层注册由 app-content 编排） */
+export function registerCoreHandlers(): Array<() => void> {
   const unsubs: Array<() => void> = [];
   registerPageStore(unsubs);
-  registerContextMenus(unsubs);
   registerSync(unsubs);
-  registerInstanceOps(unsubs);
-  registerAndroidEvents(unsubs);
   return unsubs;
 }

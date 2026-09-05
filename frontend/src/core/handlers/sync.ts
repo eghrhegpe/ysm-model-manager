@@ -7,7 +7,7 @@ import { dbg } from "../../utils/debug/debug.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { toast } from "../context-menu-shared.ts";
+import { toast } from "../feedback.ts";
 import { requireMcRoot } from "./require-mcroot.ts";
 
 /** sync:download:missing 事件载荷（镜像 bus.ts BusEvents 契约） */

@@ -21,7 +21,10 @@ const appContentStyle: CSSStyleSheet = (() => {
 
 export { appContentStyle };
 
-import { registerGlobalHandlers } from "../../core/handlers/global.ts";
+import { registerCoreHandlers } from "../../core/handlers/global.ts";
+import { registerContextMenus } from "../../features/context-menu/context-menus.ts";
+import { registerInstanceOps } from "../../features/pack-ops/instance-ops.ts";
+import { registerAndroidEvents } from "../../features/platform/android-events.ts";
 import { swallowError } from "../../utils/core/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "../app-preview/index.ts";
@@ -169,7 +172,14 @@ class AppContent extends WebComponentBase {
     );
     this._render();
     // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-    registerGlobalHandlers().forEach((fn) => this.subs.addGlobal(fn));
+    // core 内核 + features 全局 handler（ADR-185：汇编职责自 core/handlers/global 上移）
+    const globalUnsubs: Array<() => void> = registerCoreHandlers();
+    registerContextMenus(globalUnsubs);
+    registerInstanceOps(globalUnsubs);
+    registerAndroidEvents(globalUnsubs);
+    globalUnsubs.forEach((fn) => {
+      this.subs.addGlobal(fn);
+    });
   }
 
   disconnectedCallback(): void {
@@ -251,7 +261,7 @@ class AppContent extends WebComponentBase {
   private _pageInitFailed(e: unknown): void {
     console.error("[app-content] 页面初始化失败:", e);
     bus.emit("toast:show", {
-      msg: "❌ " + t("content.pageLoadFailed") + ": " + friendlyError(e),
+      msg: `❌ ${t("content.pageLoadFailed")}: ${friendlyError(e)}`,
       duration: TOAST_MS.long,
       type: "error",
     });

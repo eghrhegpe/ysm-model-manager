@@ -1088,7 +1088,6 @@ auto_fields:
     - registerControl
     - registerDlg
     - registerErrorDiary
-    - registerGlobalHandlers
     - registerInstanceOps
     - registerModelRoot
     - registerPageStore

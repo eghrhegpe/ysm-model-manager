@@ -6,8 +6,7 @@ category: core
 source_files:
   - frontend/src/core/handlers/android-events.ts
 auto_fields:
-  symbols_with_lines:
-    - registerAndroidEvents
+  symbols_with_lines: []
   tests:
     - frontend/src/features/dialogs/modal.test.ts
 tests:

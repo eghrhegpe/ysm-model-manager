@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-185：core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环",
+        "link": "/adr/ADR-185-core-features-core-features"
+      },
+      {
         "text": "ADR-184：滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离",
         "link": "/adr/ADR-184-diff-gen-stage-stage"
       },

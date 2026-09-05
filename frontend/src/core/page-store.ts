@@ -62,7 +62,7 @@ export const PageStore = {
   },
 };
 
-/** 注册页面状态同步（由 registerGlobalHandlers 统一调用，bus.on 的 unsub 收集进 unsubs 清理） */
+/** 注册页面状态同步（由 app-content 编排调用（ADR-185），bus.on 的 unsub 收集进 unsubs 清理） */
 export function registerPageStore(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on("nav:changed", ({ page }) => {

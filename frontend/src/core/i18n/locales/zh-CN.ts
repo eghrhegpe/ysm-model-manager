@@ -781,7 +781,7 @@ export const zhCN = {
   "sync.busySkip": "同步进行中，已跳过本次",
   "sync.failedToast": "同步失败: {msg}",
 
-  // instance-ops 处理器（core/handlers/instance-ops.ts）
+  // instance-ops 处理器（features/pack-ops/instance-ops.ts）
   "inst.packNotFound": "未找到整合包",
   "inst.noResources": "该整合包没有资源文件",
   "inst.exportListCopied": "📋 已复制 {n} 个文件清单到剪贴板",

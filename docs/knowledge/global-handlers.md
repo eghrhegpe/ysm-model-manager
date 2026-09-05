@@ -14,9 +14,8 @@ auto_fields:
   symbols_with_lines:
     - bindTreeDnD
     - handleTreeDrop
+    - registerCoreHandlers
     - registerErrorDiary
-    - registerGlobalHandlers
-    - registerInstanceOps
     - registerSync
     - requireMcRoot
     - unregisterErrorDiary

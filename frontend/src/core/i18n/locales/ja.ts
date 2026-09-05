@@ -777,7 +777,7 @@ export const ja: Record<string, string> = {
   "sync.busySkip": "同期中、今回はスキップ",
   "sync.failedToast": "同期失敗: {msg}",
 
-  // instance-ops ハンドラー（core/handlers/instance-ops.ts）
+  // instance-ops ハンドラー（features/pack-ops/instance-ops.ts）
   "inst.packNotFound": "統合パックが見つかりません",
   "inst.noResources": "この統合パックにはリソースファイルがありません",
   "inst.exportListCopied": "📋 {n} 個のファイル一覧をクリップボードにコピーしました",

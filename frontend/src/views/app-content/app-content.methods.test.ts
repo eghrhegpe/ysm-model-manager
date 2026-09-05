@@ -39,7 +39,16 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 
 // heavy feature 模块 mock（断开 import 副作用链）
 vi.mock("../../core/handlers/global.ts", () => ({
-  registerGlobalHandlers: vi.fn(() => []),
+  registerCoreHandlers: vi.fn(() => []),
+}));
+vi.mock("../../features/context-menu/context-menus.ts", () => ({
+  registerContextMenus: vi.fn(() => []),
+}));
+vi.mock("../../features/pack-ops/instance-ops.ts", () => ({
+  registerInstanceOps: vi.fn(() => []),
+}));
+vi.mock("../../features/platform/android-events.ts", () => ({
+  registerAndroidEvents: vi.fn(() => []),
 }));
 vi.mock("./diagnostics/init.ts", () => ({
   initDiagnostics: vi.fn(),

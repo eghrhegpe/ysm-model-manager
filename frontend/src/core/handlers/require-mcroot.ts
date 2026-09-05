@@ -4,7 +4,7 @@
 
 import { getApp } from "../../backend/app.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { toast } from "../context-menu-shared.ts";
+import { toast } from "../feedback.ts";
 import { t } from "../i18n/t.ts";
 
 /**

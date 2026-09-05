@@ -82,7 +82,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 205 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 200 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -114,14 +114,14 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerContextMenus | `frontend/src/core/context-menus.ts` | 90 |
+| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 90 |
 
 ### `dir:batch-rename`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 13 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 14 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -133,7 +133,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 56 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 57 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -145,7 +145,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 57 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 58 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -157,7 +157,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-dir-handlers.ts` | 12 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 13 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -169,24 +169,24 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 198 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 193 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 90 |
+| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 90 |
 
 ### `instance:export-list`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/core/context-menu-handlers.ts` | 188 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 183 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 17 |
+| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 17 |
 
 ### `lang:changed`
 
@@ -199,7 +199,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 163 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 166 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 190 |
 
 ### `menu:show`
@@ -207,8 +207,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerContextMenus | `frontend/src/core/context-menus.ts` | 91 |
 | cmReBindContextMenu | `frontend/src/features/community/events.ts` | 200 |
+| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 91 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -239,8 +239,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 155 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 262 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 158 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 272 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 197 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 40 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 200 |
@@ -251,7 +251,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | registerPageStore | `frontend/src/core/page-store.ts` | 68 |
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 144 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 147 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 175 |
 
 ### `package:selected`
@@ -297,7 +297,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 153 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 156 |
 
 ### `repo:subdir-changed`
 
@@ -316,16 +316,16 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| refreshUI | `frontend/src/core/context-menu-shared.ts` | 21 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 55 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 131 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 76 |
 | runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 182 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 263 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
+| refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 38 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 197 |
 | handleInstanceDrop | `frontend/src/features/pack-dnd.ts` | 171 |
+| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
+| registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 106 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 171 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
@@ -395,7 +395,7 @@
 |------|------|----|
 | runStartupSteps | `frontend/src/app-modules.ts` | 67 |
 | (顶层) | `frontend/src/app-modules.ts` | 125 |
-| toast | `frontend/src/core/context-menu-shared.ts` | 30 |
+| toast | `frontend/src/core/feedback.ts` | 21 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 252 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 306 |
@@ -444,7 +444,7 @@
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 89 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 371 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 253 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 263 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 164 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 287 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 52 |
@@ -584,15 +584,15 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| refreshUI | `frontend/src/core/context-menu-shared.ts` | 20 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 116 |
 | handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 207 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 262 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
+| refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 39 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 196 |
 | handleInstanceDrop | `frontend/src/features/pack-dnd.ts` | 172 |
+| registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 107 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 172 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 368 |
@@ -608,7 +608,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 157 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 160 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

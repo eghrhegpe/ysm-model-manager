@@ -2,7 +2,7 @@
 
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
-import { toastEmptyRtype } from "../../core/context-menu-shared.ts";
+import { toastEmptyRtype } from "../../core/feedback.ts";
 import { t } from "../../core/i18n/t.ts";
 import { currentRepoType } from "../../features/repo-rtype.ts";
 import { animateNumber } from "../../utils/animation/animate.ts";
@@ -59,8 +59,8 @@ function bindCardClickHandler(root: ShadowRoot, st: CardBindState): (e: MouseEve
       .forEach((h) => h.classList.remove("active", "ripple"));
     // 涟漪效果：记录点击坐标，触发涟漪动画
     const rect = hdr.getBoundingClientRect();
-    hdr.style.setProperty("--ripple-x", ((e.clientX - rect.left) / rect.width) * 100 + "%");
-    hdr.style.setProperty("--ripple-y", ((e.clientY - rect.top) / rect.height) * 100 + "%");
+    hdr.style.setProperty("--ripple-x", `${((e.clientX - rect.left) / rect.width) * 100}%`);
+    hdr.style.setProperty("--ripple-y", `${((e.clientY - rect.top) / rect.height) * 100}%`);
     hdr.classList.add("active", "ripple");
     setTimeout(() => hdr.classList.remove("ripple"), 500);
     // 发送选中事件
@@ -81,8 +81,8 @@ function bindCardClickHandler(root: ShadowRoot, st: CardBindState): (e: MouseEve
       // reload 后再次 emit package:selected，app-content 反复重建 <app-sync-manager>
       // （丢用户状态/闪烁回归）。
       // 点击允许 fallback 到 YSM（预览/选择无害），与右键拒绝 fallback 形成对称设计
-      _lastEmittedPkg = (st.instances[0]?.rtype || currentRepoType()) + ":" + pkg.name;
-      safeSet("sb_selectedName_" + (pkg.rtype || currentRepoType()), pkg.name);
+      _lastEmittedPkg = `${st.instances[0]?.rtype || currentRepoType()}:${pkg.name}`;
+      safeSet(`sb_selectedName_${pkg.rtype || currentRepoType()}`, pkg.name);
     }
   };
 }
@@ -200,7 +200,7 @@ export function resetSelectedEmit(): void {
 function restoreSelectedCard(root: ShadowRoot, instances: SidebarInstance[]): void {
   try {
     const rtypeKey = instances[0]?.rtype || currentRepoType();
-    const savedName = safeGet("sb_selectedName_" + rtypeKey);
+    const savedName = safeGet(`sb_selectedName_${rtypeKey}`);
     if (!savedName) return;
     const idx = instances.findIndex((i) => i.name === savedName);
     if (idx < 0) return;
@@ -213,7 +213,7 @@ function restoreSelectedCard(root: ShadowRoot, instances: SidebarInstance[]): vo
       hdr.classList.add("active");
       // P2 修复：仅选中项实际变化时才 emit——原每次重载都重发，
       // app-content 每次收到都 innerHTML 重建 <app-sync-manager>（状态丢失/闪烁）
-      const emitKey = rtypeKey + ":" + savedName;
+      const emitKey = `${rtypeKey}:${savedName}`;
       if (_lastEmittedPkg !== emitKey) {
         const pkg = instances[idx];
         // P3 修复：与点击路径同构——空 rtype 拦截报错，不 emit。
@@ -262,11 +262,11 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
               theme,
             );
           } else {
-            btn.textContent = "🎮 " + t("sidebar.notSet");
+            btn.textContent = `🎮 ${t("sidebar.notSet")}`;
           }
         }
       } catch (e) {
-        btn.textContent = "🎮 " + t("sidebar.notSet");
+        btn.textContent = `🎮 ${t("sidebar.notSet")}`;
         console.warn("[sidebar] MC detection:", e);
       }
     })();

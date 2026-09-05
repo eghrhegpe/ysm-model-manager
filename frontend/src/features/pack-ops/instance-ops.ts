@@ -2,9 +2,9 @@
 
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
-import { toast, toastEmptyRtype, toastError } from "../../core/feedback.ts";
 import { t } from "../../core/i18n/t.ts";
 import { copyText } from "../../utils/dom/clipboard.ts";
+import { toast, toastEmptyRtype, toastError } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { modalConfirm } from "../dialogs/modal-confirm.ts";

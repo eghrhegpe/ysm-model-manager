@@ -59,7 +59,10 @@ auto_fields:
     - stripBanSuffix
     - stripDisableSuffix
     - stripPathSegments
+    - toast
     - TOAST_MS
+    - toastEmptyRtype
+    - toastError
     - ToastType
     - TooltipOptions
     - trapFocusAcrossShadow

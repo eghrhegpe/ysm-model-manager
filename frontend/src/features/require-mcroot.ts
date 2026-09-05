@@ -6,8 +6,8 @@
 // 非纯内核语义）。
 
 import { getApp } from "../backend/app.ts";
-import { toast } from "../core/feedback.ts";
 import { t } from "../core/i18n/t.ts";
+import { toast } from "../utils/dom/toast.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 
 /**

@@ -3,20 +3,20 @@
 
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
-import { toast, toastEmptyRtype, toastError } from "../../core/feedback.ts";
 import { t } from "../../core/i18n/t.ts";
 import { tr } from "../../core/i18n/tr.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { copyText } from "../../utils/dom/clipboard.ts";
 import { downloadTextFile } from "../../utils/dom/download-text.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
+import { toast, toastEmptyRtype, toastError } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 // P1 修复（ADR-040）：file/dir handler 已拆出，此处合并
 import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";
 // 共享原语（refreshUI/isUnsafeFolderName/resolveDstDir）在 context-menu-shared.ts；
-// 通知原语（toast 系）在 core/feedback.ts（ADR-185）
+// 通知原语（toast 系）在 utils/dom/toast.ts（ADR-185 下沉，ADR-189 D3 归位）
 import { refreshUI, resolveDstDir } from "./context-menu-shared.ts";
 // P2 收窄：HANDLERS 断言覆盖 MENU_ACTIONS（type-only，无运行时循环依赖）
 import type { MenuAction } from "./menu-defs.ts";

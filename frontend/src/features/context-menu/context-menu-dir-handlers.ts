@@ -2,8 +2,8 @@
 
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
-import { toast, toastError } from "../../core/feedback.ts";
 import { tr } from "../../core/i18n/tr.ts";
+import { toast, toastError } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { DirCtx } from "./context-menu-handlers.ts";
 import { refreshUI, resolveDstDir } from "./context-menu-shared.ts";

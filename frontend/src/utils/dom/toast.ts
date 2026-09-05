@@ -1,17 +1,14 @@
-// ===== 通知原语（toast 系收敛，ADR-185）=====
-// 从 features/context-menu/context-menu-shared.ts 下沉至此的跨层复用原语——
+// ===== 通知原语（toast 系收敛，ADR-185 下沉；ADR-189 D3 自 core/ 归位 utils/dom）=====
+// 从 features/context-menu/context-menu-shared.ts 下沉的跨层复用原语——
 // 消费方：context-menu 族 / pack-ops / sync / settings / app-sidebar 等。
-// 置于 core（而非 utils）原因（订正 2026-09-05 增量深评）：初版注释称「放 utils 会造成
-// utils→core 反向依赖」已被现网证伪——utils 现有 4 处 import core/i18n（dom/errors.ts、
-// dom/directory-picker.ts、format/summarize.ts、resource/short-label.ts）。现按惯例留 core：
-// toast 原语与 i18n/page-store 同属内核侧横向能力；若未来治理 utils→core 依赖，
-// 本文件与 utils/dom/toast-ms.ts 可一并迁 utils/dom/（另见与 dom/feedback.ts 的撞名问题）。
+// 归位 utils/dom 理由：DOM 反馈原语与 toast-ms.ts 同域；同时消除与
+// utils/dom/feedback.ts（flashBtn 原地闪烁）的撞名。
 
-import type { ToastPayload } from "../bus.ts";
-import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/dom/errors.ts";
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
-import { t } from "./i18n/t.ts";
+import type { ToastPayload } from "../../bus.ts";
+import { bus } from "../../bus.ts";
+import { friendlyError } from "./errors.ts";
+import { TOAST_MS } from "./toast-ms.ts";
+import { t } from "../../core/i18n/t.ts";
 
 type ToastType = NonNullable<ToastPayload["type"]>;
 

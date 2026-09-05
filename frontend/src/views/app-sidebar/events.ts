@@ -2,11 +2,11 @@
 
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
-import { toastEmptyRtype } from "../../core/feedback.ts";
 import { t } from "../../core/i18n/t.ts";
 import { currentRepoType } from "../../features/repo/repo-rtype.ts";
 import { animateNumber } from "../../utils/animation/animate.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { toastEmptyRtype } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { SidebarInstance } from "./data.ts";
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";

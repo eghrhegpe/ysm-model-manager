@@ -1,13 +1,13 @@
 // ===== context-menu-shared.ts — 右键菜单共享原语（ADR-040 拆分 / ADR-185 迁入 features）=====
 // 从 context-menu-handlers.ts 下沉的纯前端共享函数，供 handlers / file-handlers /
 // dir-handlers 共用，破除循环依赖。通知原语（toast/toastError/toastEmptyRtype）
-// 已下沉 core/feedback.ts（跨层复用，ADR-185）。
+// 已下沉 utils/dom/toast.ts（跨层复用，ADR-185 下沉，ADR-189 D3 归位）。
 // 依赖：bus / modalPrompt / getApp / RESOURCE_TYPES——均不引 handlers，本文件不在环内。
 
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
-import { toast } from "../../core/feedback.ts";
 import { tr } from "../../core/i18n/tr.ts";
+import { toast } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { modalPrompt } from "../dialogs/modal-prompt.ts";

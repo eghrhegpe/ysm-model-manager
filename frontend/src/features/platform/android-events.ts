@@ -12,9 +12,9 @@
 
 import { Events } from "../../backend/runtime.ts";
 import { bus } from "../../bus.ts";
-import { toast } from "../../core/feedback.ts";
 import { t } from "../../core/i18n/t.ts";
 import { emitAndroidBack } from "../../utils/dom/android-bridge.ts";
+import { toast } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { closeActiveDialog } from "../dialogs/modal-core.ts";
 

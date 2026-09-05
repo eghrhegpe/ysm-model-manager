@@ -321,6 +321,66 @@ export const webCommunityBindings = {
     saveWebSites(sites);
     return Promise.resolve();
   },
+  // 站点 JSON 拖入导入（drag.ts 消费，31d30fb7 桌面下沉双轨收口）。语义镜像 Go
+  // MergeWorkshopSitesFromJSON：id 命中 → 覆盖（updated），未命中 → 追加（added），
+  // 空净化拒绝；合并结果须落 2-100 合法域（Go 同款校验，code_review 0d454160 #1-#4）。
+  // code_review P2 背景：桌面下沉只补了 Wails binding，web 桥漏补此实现——浏览器端
+  // 拖入站点 JSON 抛 "MergeWorkshopSitesFromJSON is not a function"（旧 SaveWorkshopSites
+  // 整存链被替换后无替代，站点导入 web 侧单边回归）；此处与 creators 手动导入同骨架补齐。
+  MergeWorkshopSitesFromJSON: (jsonContent: string): Promise<[number, number]> => {
+    let imported: WorkshopSite[];
+    try {
+      imported = JSON.parse(jsonContent) as WorkshopSite[];
+    } catch (e) {
+      return Promise.reject(
+        new Error(t("webCommunity.importJsonParseFailed", { err: safeErrorMessage(e) })),
+      );
+    }
+    if (!Array.isArray(imported)) {
+      return Promise.reject(
+        new Error(t("webCommunity.importJsonParseFailed", { err: "not an array" })),
+      );
+    }
+    // 逐条净化：id 必须非空字符串（站点唯一身份），非法元素过滤
+    // （防 __proto__ 注入 / 畸形数据污染覆盖层，对齐 Go 净化口径）
+    imported = imported.filter(
+      (s): s is WorkshopSite =>
+        s != null && typeof s === "object" && typeof s.id === "string" && s.id.length > 0,
+    );
+    if (imported.length === 0) {
+      return Promise.reject(new Error(t("webCommunity.communityEmpty")));
+    }
+    // 串行化读-改-写（与两类 creators 合并共用 enqueueMerge 队列——
+    // 站点/创作者覆盖层同源 localStorage，防并发 lost update）
+    return enqueueMerge(() => {
+      // loadWebSites 无覆盖层时回退 bundled 默认站（= 桌面 DefaultWorkshopSites 基准），
+      // 与 Go 31d30fb7 #1 修复后语义一致：全新用户导入不抹默认站
+      const existing = loadWebSites();
+      const existMap = new Map<string, number>();
+      existing.forEach((s, i) => existMap.set(s.id, i));
+      let added = 0;
+      let updated = 0;
+      for (const s of imported) {
+        const idx = existMap.get(s.id);
+        if (idx === undefined) {
+          existing.push(s);
+          existMap.set(s.id, existing.length - 1);
+          added++;
+        } else {
+          // id 命中 → 覆盖（原语义：不区分是否实际变更，Go 同款「命中即计 updated」）
+          existing[idx] = s;
+          updated++;
+        }
+      }
+      if (existing.length < 2 || existing.length > 100) {
+        return Promise.reject(
+          new Error(t("webCommunity.mergeTooFew", { count: existing.length })),
+        );
+      }
+      saveWebSites(existing);
+      return Promise.resolve([added, updated]);
+    });
+  },
   // R3-P0（web-edition.md）：站点级编辑保存 + JSON 合并——与 Go 同语义，基于
   // localStorage 覆盖层（"编辑站点→保存"恢复可用；原 web 未桥接恒抛
   // WebUnsupportedError，community-data.ts 有对应门控，现已移除）

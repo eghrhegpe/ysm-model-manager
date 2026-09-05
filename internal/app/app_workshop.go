@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -369,21 +370,12 @@ func (a *App) MergeWorkshopSitesFromJSON(jsonContent string) (int, int, error) {
 	if len(imported) == 0 {
 		return 0, 0, fmt.Errorf("导入数据异常: 无有效站点（期望非空 id 数组）")
 	}
-	// 前置轻备份（无用户配置时 os.IsNotExist → 跳过不中止）
-	sitesPath := workshopSitesPath()
-	if sitesPath != "" {
-		if data, err := os.ReadFile(sitesPath); err == nil {
-			if err := fsutil.WriteFileAtomic(sitesPath+"."+time.Now().Format("20060102-150405")+".bak", data); err != nil {
-				return 0, 0, fmt.Errorf("备份站点数据失败，中止合并: %w", err)
-			}
-		} else if !os.IsNotExist(err) {
-			return 0, 0, fmt.Errorf("备份站点数据失败，中止合并: %w", err)
-		}
-	}
 	// 载入「用户实际配置」（非 bundled 默认）：手动导入的合并基座 = 用户编辑过的
-	// workshop_sites.json。文件不存在（全新用户）→ 空列表，导入全部计 added；
-	// 文件损坏 → 中止（不静默置空覆盖用户配置）。bundled 默认仅 3 个站点，
-	// 混入会令同 id 导入误判为 updated，故此处不用 DefaultWorkshopSites。
+	// workshop_sites.json。文件不存在（全新用户）→ bundled 默认站作基准——若以空
+	// 列表为基准，首次拖入不含全部默认站的部分 JSON（单自定义站/共享部分导出）会
+	// 把默认站（bilibili/afdian/github）从用户文件永久抹掉，且 DefaultWorkshopSites
+	// 此后只回该子集（与 MergeCommunitySitesFromJSON 同款基准，code_review 31d30fb7
+	// #1）；文件损坏 → 中止（不静默置空覆盖用户配置）。
 	var existing []types.WorkshopSite
 	if data, err := os.ReadFile(workshopSitesPath()); err == nil {
 		if err := json.Unmarshal(data, &existing); err != nil {
@@ -391,6 +383,8 @@ func (a *App) MergeWorkshopSitesFromJSON(jsonContent string) (int, int, error) {
 		}
 	} else if !os.IsNotExist(err) {
 		return 0, 0, fmt.Errorf("读取现有站点配置失败，中止合并: %w", err)
+	} else {
+		existing = a.DefaultWorkshopSites()
 	}
 	if existing == nil {
 		existing = []types.WorkshopSite{}
@@ -400,14 +394,42 @@ func (a *App) MergeWorkshopSitesFromJSON(jsonContent string) (int, int, error) {
 		existMap[s.ID] = i
 	}
 	added, updated := 0, 0
+	changed := false
 	for _, s := range imported {
 		if idx, ok := existMap[s.ID]; ok {
-			existing[idx] = s
-			updated++
+			if !reflect.DeepEqual(existing[idx], s) {
+				existing[idx] = s
+				updated++
+				changed = true
+			}
 		} else {
 			existing = append(existing, s)
 			existMap[s.ID] = len(existing) - 1
 			added++
+			changed = true
+		}
+	}
+	// 幂等短路：无任何有效变更（重复拖入同内容/全量覆盖同值）→ 不备份不写盘，
+	// 避免每次拖入都产生 .bak 与无谓原子写（对齐 MergeCommunityCreatorsFromJSON，
+	// ADR-172 §2 同款）。
+	if !changed {
+		return 0, 0, nil
+	}
+	// 合并结果须落在应用自身合法域（2-100，ValidateWorkshopSites 同款边界）——
+	// 单站/超限拖入直接拒绝不写盘，防持久化应用自判非法的配置（对齐 creators
+	// 侧的 ≥20/≥100 守卫，code_review 31d30fb7 #2/#3）。
+	if len(existing) < 2 || len(existing) > 100 {
+		return 0, 0, fmt.Errorf("合并结果 %d 个站点超出合法域（2-100），已中止不写盘", len(existing))
+	}
+	// 前置轻备份（无用户配置时 os.IsNotExist → 跳过不中止）
+	sitesPath := workshopSitesPath()
+	if sitesPath != "" {
+		if data, err := os.ReadFile(sitesPath); err == nil {
+			if err := fsutil.WriteFileAtomic(sitesPath+"."+time.Now().Format("20060102-150405.000")+".bak", data); err != nil {
+				return 0, 0, fmt.Errorf("备份站点数据失败，中止合并: %w", err)
+			}
+		} else if !os.IsNotExist(err) {
+			return 0, 0, fmt.Errorf("备份站点数据失败，中止合并: %w", err)
 		}
 	}
 	return added, updated, a.SaveWorkshopSites(existing)

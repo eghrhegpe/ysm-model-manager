@@ -426,8 +426,11 @@ func TestMergeWorkshopSitesFromJSON_FreshUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("全新用户首次 Merge 不应失败, got %v", err)
 	}
-	if added != 2 || updated != 0 {
-		t.Fatalf("期望 added=2 updated=0, got added=%d updated=%d", added, updated)
+	// 基准 = bundled 默认站（bilibili/afdian/github）：导入的两个默认站 id 命中
+	// 同值/同 id → updated（DeepEqual 判定变更），github 保留——默认站不被抹掉
+	//（code_review 31d30fb7 #1：空基准会让首次部分导入静默删除未出现的默认站）
+	if added != 0 || updated != 2 {
+		t.Fatalf("期望 added=0 updated=2（命中默认站）, got added=%d updated=%d", added, updated)
 	}
 	// 落盘验证：读回 workshop_sites.json（无独立 LoadWorkshopSites，直接读文件）
 	p := workshopSitesPath()
@@ -435,8 +438,140 @@ func TestMergeWorkshopSitesFromJSON_FreshUser(t *testing.T) {
 	if err := readJSONFile(p, &got); err != nil {
 		t.Fatalf("合并后读回失败: %v", err)
 	}
+	if len(got) != 3 {
+		t.Fatalf("落盘应 3 条（默认站全保留）, got %d", len(got))
+	}
+	githubFound := false
+	for _, s := range got {
+		if s.ID == "github" {
+			githubFound = true
+		}
+	}
+	if !githubFound {
+		t.Fatal("默认站 github 应保留（未被部分导入抹掉）")
+	}
+}
+
+// TestMergeWorkshopSitesFromJSON_FreshUser_CustomSite 全新用户导入不含默认站的自定义站：
+// 默认站保留 + 自定义站追加（added=1），落盘 4 条。
+func TestMergeWorkshopSitesFromJSON_FreshUser_CustomSite(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	imported := []types.WorkshopSite{
+		{ID: "my-custom", Label: "自建站", URL: "https://custom.test"},
+	}
+	data, _ := json.Marshal(imported)
+	added, updated, err := a.MergeWorkshopSitesFromJSON(string(data))
+	if err != nil {
+		t.Fatalf("Merge 不应失败, got %v", err)
+	}
+	if added != 1 || updated != 0 {
+		t.Fatalf("期望 added=1 updated=0, got added=%d updated=%d", added, updated)
+	}
+	p := workshopSitesPath()
+	var got []types.WorkshopSite
+	if err := readJSONFile(p, &got); err != nil {
+		t.Fatalf("合并后读回失败: %v", err)
+	}
+	if len(got) != 4 {
+		t.Fatalf("落盘应 4 条（3 默认 + 1 自定义）, got %d", len(got))
+	}
+}
+
+// TestMergeWorkshopSitesFromJSON_SingleSiteRejected 单站拖入（合并结果 1 条 < 2 合法域）
+// 必须拒绝且不写盘（对齐 ValidateWorkshopSites 2-100 边界，code_review 31d30fb7 #2）。
+func TestMergeWorkshopSitesFromJSON_SingleSiteRejected(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	// 预置一个「自定义站点文件」（模拟已有单站配置），文件存在 → 基准 = 该文件
+	seed := []types.WorkshopSite{{ID: "solo", Label: "独站", URL: "https://solo.test"}}
+	if err := a.SaveWorkshopSites(seed); err != nil {
+		t.Fatal(err)
+	}
+	// 再拖入同 id 新值：合并后仍 1 条 → 越界拒绝，文件不得被写坏
+	incoming := []types.WorkshopSite{{ID: "solo", Label: "独站改", URL: "https://solo2.test"}}
+	data, _ := json.Marshal(incoming)
+	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err == nil {
+		t.Fatal("单站合并结果应被拒绝（<2 合法域下限）")
+	}
+	// 文件不应被覆盖成非法态之外的意外内容（此处保持原 seed）
+	var got []types.WorkshopSite
+	if err := readJSONFile(workshopSitesPath(), &got); err != nil {
+		t.Fatalf("读回失败: %v", err)
+	}
+	if len(got) != 1 || got[0].Label != "独站" {
+		t.Fatalf("拒绝后文件应保持原状, got %+v", got)
+	}
+}
+
+// TestMergeWorkshopSitesFromJSON_OverLimitRejected 超 100 站拖入（合并结果 > 100）
+// 必须拒绝且不写盘（code_review 31d30fb7 #3）。
+func TestMergeWorkshopSitesFromJSON_OverLimitRejected(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	// 预置 99 站，再拖入 2 个新站 → 合并 101 > 100 上限
+	seed := make([]types.WorkshopSite, 0, 99)
+	for i := 0; i < 99; i++ {
+		seed = append(seed, types.WorkshopSite{ID: fmt.Sprintf("seed-%02d", i), Label: "s", URL: "https://s.test"})
+	}
+	if err := a.SaveWorkshopSites(seed); err != nil {
+		t.Fatal(err)
+	}
+	incoming := []types.WorkshopSite{
+		{ID: "extra-1", Label: "x1", URL: "https://x1.test"},
+		{ID: "extra-2", Label: "x2", URL: "https://x2.test"},
+	}
+	data, _ := json.Marshal(incoming)
+	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err == nil {
+		t.Fatal("101 站合并结果应被拒绝（>100 上限）")
+	}
+	// 文件保持 99 站原状
+	var got []types.WorkshopSite
+	if err := readJSONFile(workshopSitesPath(), &got); err != nil {
+		t.Fatalf("读回失败: %v", err)
+	}
+	if len(got) != 99 {
+		t.Fatalf("拒绝后文件应保持 99 条, got %d", len(got))
+	}
+}
+
+// TestMergeWorkshopSitesFromJSON_IdempotentNoWrite 幂等短路：同内容重复拖入
+// （同 id 同值）→ 不备份不写盘（changed=false 早退，对齐 ADR-172 §2 社区合并）。
+func TestMergeWorkshopSitesFromJSON_IdempotentNoWrite(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	seed := []types.WorkshopSite{{ID: "s1", Label: "站点1", URL: "https://s1.test"}}
+	if err := a.SaveWorkshopSites(seed); err != nil {
+		t.Fatal(err)
+	}
+	// 首次拖入扩展：s2 追加 → added=1 写盘
+	incoming := []types.WorkshopSite{{ID: "s2", Label: "站点2", URL: "https://s2.test"}}
+	data, _ := json.Marshal(incoming)
+	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err != nil {
+		t.Fatalf("首次合并不应失败: %v", err)
+	}
+	// 幂等重拖同一内容：s1 已存在同值、无新增 → changed=false → 不写盘不报错
+	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err != nil {
+		t.Fatalf("幂等重拖不应失败: %v", err)
+	}
+	var got []types.WorkshopSite
+	if err := readJSONFile(workshopSitesPath(), &got); err != nil {
+		t.Fatalf("读回失败: %v", err)
+	}
 	if len(got) != 2 {
-		t.Fatalf("落盘应 2 条, got %d", len(got))
+		t.Fatalf("幂等重拖后文件应保持 2 条, got %d", len(got))
 	}
 }
 

@@ -69,6 +69,8 @@ const STRING_RETURN_ALLOWLIST = new Set([
   'CachedCreatorAvatar',
   'GetCachedTextureByHash',
   'ValidateMinecraftDir',    // (string, string)
+  'DoUpdate',                // 仍返回 (string, error)——成功回 "success"；错误通道已迁移为
+  // promise rejection（421ae7b5 只改了失败表达，未改成功返回值，白名单不可误删）
 ]);
 
 /** 括号配对：从 open 位置找到与之匹配的右括号（跳过嵌套层级），找不到返回文本末尾。 */

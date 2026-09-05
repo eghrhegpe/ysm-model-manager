@@ -120,7 +120,7 @@ export const MOCK_DATA = {
     { Name: "1.21-NeoForge", VersionDir: "/e2e/mc/1.21-NeoForge" },
   ],
   GetResourceInstanceStatus: [
-    // 对齐 models.ts 必填字段（CustomDir/Status/Disabled/HasYSM/Files）——
+    // 对齐 models.ts 必填字段（CustomDir/Status/Disabled/Files）——
     // 缺字段会让依赖排序/状态分支的 e2e 掩盖真实现问题（子代理审计 P2）。
     // Status 契约值域："complete" | "missing" | "extra"（models.ts 注释），
     // Files 契约：CustomFileInfo[] | null——"ok"/0 属漂移值，E2E 会命中生产不存在的状态
@@ -130,7 +130,6 @@ export const MOCK_DATA = {
       CustomDir: "",
       Status: "complete",
       Disabled: [],
-      HasYSM: true,
       Files: [],
       Missing: [],
       Extra: [],
@@ -143,7 +142,6 @@ export const MOCK_DATA = {
       CustomDir: "",
       Status: "complete",
       Disabled: [],
-      HasYSM: true,
       Files: [],
       Missing: [],
       Extra: [],
@@ -301,7 +299,6 @@ export const MOCK_DATA = {
   GetVoxelDataInContainer: undefined,
   GetWindowPosition: undefined,
   GetYSMRepoRoot: undefined,
-  HasYSMMod: undefined,
   InstallModelFile: undefined,
   InstallModelTo: undefined,
   InstallResourceToInstance: undefined,

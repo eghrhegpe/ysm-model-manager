@@ -352,7 +352,6 @@ export interface InstanceStatus {
      */
     "Extra": string[] | null;
     "Disabled": string[] | null;
-    "HasYSM": boolean;
 
     /**
      * 当前资源类型对应的 mod 是否存在

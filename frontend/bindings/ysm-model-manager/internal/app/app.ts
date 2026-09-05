@@ -568,16 +568,6 @@ export function HasCachedTextures(hashes: string[] | null): $CancellablePromise<
 }
 
 /**
- * ========== YSM 检测 ==========
- * HasYSMMod 检测实例 mods 目录是否包含 YSM 模组（整合包卡片 mod 徽标用）。
- * 注意："ysm" 子串匹配刻意宽松（覆盖 Yes_Steve_Model/ysm 官方 jar 变体），
- * mods 目录语境下误判面小；若未来引入非 YSM 但含 ysm 子串的 mod，需收紧为段匹配。
- */
-export function HasYSMMod(modsDir: string): $CancellablePromise<boolean> {
-    return $Call.ByID(1327539980, modsDir);
-}
-
-/**
  * ImportByType 统一导入入口——根据资源类型自动选择导入策略
  */
 export function ImportByType(rtype: string, srcPath: string): $CancellablePromise<string> {

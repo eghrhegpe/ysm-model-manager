@@ -19,7 +19,6 @@ auto_fields:
     - FindComponentsInExtractedYSM
     - FindGeometryInExtractedYSM
     - HasModInDir
-    - HasYSMMod
     - IsModJar
     - IsYSMJar
     - Link
@@ -37,12 +36,12 @@ quick_groups:
   - 模型扫描与仓库管理
 quick_intents:
   - YSM 解析、摘要 ExtractYsmSummary
-  - AnalyzeYSMModel、HasYSMMod
+  - AnalyzeYSMModel、HasModInDir
   - YSM 文件元数据
 quick_risk_lines:
   - YSM 解析必须走 go/ysm 的 AnalyzeYSMModel，前端禁止手写 YSM 解析逻辑
 pitfalls:
-  - 前端手写 YSM 解析 → 与 Go 解析结果不一致、漏掉 HasYSMMod 判定；必须交 Go 解析
+  - 前端手写 YSM 解析 → 与 Go 解析结果不一致；必须交 Go 解析
   - 跳过 ExtractYsmSummary 走全文解析 → 详情展示性能差；摘要必须复用
 
 use_when:
@@ -56,7 +55,7 @@ perf:
 invariant_anchors:
   - go/ysm/summary.go|ExtractYsmSummary
   - go/ysm/parse.go|AnalyzeYSMModel
-  - go/ysm/ysm.go|HasYSMMod
+  - go/ysm/ysm.go|HasModInDir
 status: active
 ---
 
@@ -76,7 +75,7 @@ status: active
 ## 对外 API / 入口
 
 - `IsYSMJar` — 判断文件是否为 YSM jar 包（zip 内结构探测）
-- `HasYSMMod` / `HasModInDir` — 检测目录内是否含 YSM mod
+- `HasModInDir` — 检测目录内是否含指定类型 mod（注册表驱动，ADR-110；YSM 走 `HasModInDir(dir, "ysm")`，原硬编码 `HasYSMMod` 已收编删除）
 - 解析链路文件：`parse.go`（模型解析）/ `summary.go`（摘要）/ `header.go`（头部读取）/ `texsize.go`（纹理尺寸）
 
 ## 与其他子系统关系

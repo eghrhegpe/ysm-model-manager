@@ -191,7 +191,6 @@ type InstanceStatus struct {
 	Missing   []string         `json:"Missing"` // 完整路径
 	Extra     []string         `json:"Extra"`   // 文件名（供展示）
 	Disabled  []string         `json:"Disabled"`
-	HasYSM    bool             `json:"HasYSM"`
 	HasMod    bool             `json:"HasMod"` // 当前资源类型对应的 mod 是否存在
 	Files     []CustomFileInfo `json:"Files"`  // custom 目录下每个文件的链接类型
 }

@@ -86,32 +86,6 @@ displayName="Yes Steve Model"
 	}
 }
 
-func TestHasYSMMod(t *testing.T) {
-	modsDir := t.TempDir()
-	jar := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": ysmModToml})
-	if err := os.Rename(jar, filepath.Join(modsDir, "ysm-1.0.jar")); err != nil {
-		t.Fatal(err)
-	}
-	if !HasYSMMod(modsDir) {
-		t.Fatal("含 ysm jar 的目录应识别")
-	}
-	// 目录不存在 → false
-	if HasYSMMod(filepath.Join(t.TempDir(), "nope")) {
-		t.Fatal("目录不存在应 false")
-	}
-	// 无 ysm jar → false
-	if HasYSMMod(t.TempDir()) {
-		t.Fatal("空目录应 false")
-	}
-	// 文件名不含关键词的 jar 不打开（快速过滤）
-	other := t.TempDir()
-	_ = testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": ysmModToml})
-	_ = os.WriteFile(filepath.Join(other, "random.jar"), []byte("x"), 0644)
-	if HasYSMMod(other) {
-		t.Fatal("文件名不匹配不应打开检查")
-	}
-}
-
 func TestHasModInDir(t *testing.T) {
 	// 未知 rtype → 默认 true（非模型类）
 	if !HasModInDir(t.TempDir(), "resourcepack") {

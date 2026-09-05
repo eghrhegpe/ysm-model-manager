@@ -303,7 +303,6 @@ status: active
 - `RelinkCustomDir(customDir, repoRoot) → number` — 重新应用链接模式到指定目录（兼容旧版）
 - `RelinkAllInstanceResources(instanceName) → number` — 重新应用链接模式到整合包所有资源类型目录
 - `InstallResourceToInstance(rtype, srcPath, instanceName) → void` — 将资源文件安装到指定整合包（rtype 如 resourcepack/shaderpack）
-- `HasYSMMod(modsDir) → boolean` — 检测 mods 目录是否存在 YSM 模组
 - `SetLinkMode(mode) → void` — 设置链接模式（符号链接/硬链接/复制）
 - `GetLinkMode() → string` — 获取当前链接模式
 

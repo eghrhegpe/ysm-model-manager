@@ -134,7 +134,7 @@ status: active
 - 被 `internal/app/app_install.go` 调用（状态对比、推送/拉取、启禁同步、`GetLinkType` 决定删除策略）
 - 被 `internal/app/app_scan.go` 调用（`ListVersions`）、`internal/app/app_config.go` 引用
 - 被 [go_watcher](./go-watcher.md) 调用（文件变更时 `ListVersions` + `SyncToggleStatus` 自动同步启禁）
-- 依赖 `go/types`（ModelEntry/InstanceStatus/LinkType 等）、`go/ysm`（`ysm.HasYSMMod` 检测实例 mod）
+- 依赖 `go/types`（ModelEntry/InstanceStatus/LinkType 等）；mod 检测经 `HasModInDirFn` 注入（`CompareGlobalInstanceHashes`），本包不再直接依赖 `go/ysm`（原 `HasYSMMod` 硬编码已收编删除，`InstanceStatus.HasYSM` 死字段同步删）
 - `sync_push.go` / `sync_relink.go` 反向依赖 [go_installer](./go-installer.md)（`Install` / `InstallDir` / `CopyFile`）——本包→installer 是单向的，installer 不得回调本包
 
 ## 不变量

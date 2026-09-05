@@ -15,7 +15,6 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/types"
-	"ysm-model-manager/go/ysm"
 )
 
 // 锁统一（ADR-056 共享单锁）：同步与安装并发操作同一 custom 目录文件（Rename 竞态），
@@ -183,7 +182,6 @@ func GetInstanceStatusWith(mcRoot, repoDir, rtype string, scanFn ScanFunc, listF
 			Missing:   []string{},
 			Extra:     []string{},
 			Disabled:  []string{},
-			HasYSM:    ysm.HasYSMMod(filepath.Join(ins.VersionDir, "mods")),
 		}
 
 		if idx.UseHash {

@@ -582,6 +582,16 @@ function assembleShell(ctx: MountCtx): {
   // viewContainer：与 scene/canvas 同属共享外壳——首次 mount3D 创建，后续复用同一
   // 视窗（多模型同台共用同一 canvas，而非每次 mount3D 新建空容器；回归：曾反复 new
   // 容器导致同台后多出空白分屏）
+  // 防御性兜底（code_review ce648d64 #1/#2）：overlay/body 单例成对创建（overlay 在则
+  // body 必在），TS 不认该不变量——复用路径 body 来自可能为 null 的 _singletonBody。
+  // 兜底必须在此处（viewContainer 创建前）执行才能真正守卫下方 body! 消费——
+  // 原实现把它放函数尾（body! 消费之后），真破坏时先崩在 body!、兜底永不达。
+  if (!body) {
+    body = document.createElement("div");
+    body.className = "mpc-body";
+    root.appendChild(body);
+    _singletonBody = body;
+  }
   if (!_singletonViewContainer) {
     const c = document.createElement("div");
     c.className = "preview-view-container mpc-view"; // 语义锚点类保留,布局样式入 .mpc-view(双类防将来锚点规则覆盖)
@@ -657,15 +667,6 @@ function assembleShell(ctx: MountCtx): {
   loadingEl.className = "mpc-loading";
   viewContainer.appendChild(loadingEl);
   ctx.loadingEl = loadingEl;
-
-  // 防御性兜底：overlay/body 单例成对创建（overlay 在则 body 必在），TS 不认该不变量——
-  // 原 mount3D 以 `body!` 断言消费（viewContainer 创建处）；此处返回 body 前显式兜底非空。
-  if (!body) {
-    body = document.createElement("div");
-    body.className = "mpc-body";
-    root.appendChild(body);
-    _singletonBody = body;
-  }
 
   return {
     overlay,

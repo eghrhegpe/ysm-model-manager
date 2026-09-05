@@ -6,7 +6,6 @@
 // 消费方一律 `import type { ... } from "../../../utils/types-re-export.ts"`。
 export type {
   AppConfig,
-  ModelEntry,
   VersionInstance,
   WorkshopPresetSearch,
   WorkshopSite,

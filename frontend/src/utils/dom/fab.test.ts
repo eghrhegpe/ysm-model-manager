@@ -25,7 +25,7 @@ describe("ensureFabStyles — overlay 全局样式幂等注入", () => {
     const el = document.getElementById("ysw-fab-styles");
     expect(el).not.toBeNull();
     expect(el!.tagName).toBe("STYLE");
-    expect(el!.textContent).toContain(".ysm-ovl-root");
+    expect(el!.textContent).toContain(".ysm-ovl-btn");
   });
 
   it("幂等：重复调用不产生第二个节点", async () => {

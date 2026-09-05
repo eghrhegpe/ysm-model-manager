@@ -743,7 +743,8 @@ export function evaluateClip(
         ];
       }
 
-      // 累积位置（父级位移 + 子级位移经父级旋转后）
+      // 累积位置（父级位移 + 子级局部位移直接相加；非 localOnly 分支为简化近似，
+      // 未做父级旋转矩阵变换——业务渲染走 localOnly=true 由 Three.js 算层级）
       if (pt.position || tLocal.position) {
         const pp = pt.position || [0, 0, 0];
         const cp = tLocal.position || [0, 0, 0];

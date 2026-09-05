@@ -12,9 +12,7 @@ import { attachTooltip } from "./tooltip.ts";
 export const YSW_FAB_CSS = `
 /* ===== 3D overlay 控制层样式（挂 document.body 的 light DOM 顶栏按钮/下拉/标签） =====
    注：overlay 根容器类名已随 ADR-175 M1 改为 .mpc-overlay（mount-preview-core 挂载，
-   见 preview-3d/adapters/mount-preview-core.ts）；下方 .ysm-ovl-root 为历史遗留类
-   （当前无元素引用，保留以免破坏 fab.test 字符串断言，死 CSS 清理另行排期）。 */
-.ysm-ovl-root{position:fixed;inset:0;z-index:var(--z-fullscreen);background:#11111b;display:flex;flex-direction:column}
+   见 preview-3d/adapters/mount-preview-core.ts）。 */
 
 /* ===== 3D overlay 控制层（顶栏按钮/下拉/标签，light DOM） ===== */
 .ysm-ovl-bar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10}

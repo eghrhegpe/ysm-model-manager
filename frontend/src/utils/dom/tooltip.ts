@@ -56,12 +56,14 @@ function ensureTooltipEl(): HTMLDivElement {
 }
 
 /** 目标元素脱离 DOM 时兜底隐藏（菜单整体重建时 mouseleave 不触发） */
-function ensureObserver(): void {
-  if (_observer || typeof MutationObserver === "undefined") return;
-  _observer = new MutationObserver(() => {
-    if (st.target && !st.target.isConnected) hide();
-  });
-  _observer.observe(document.body, { childList: true, subtree: true });
+function ensureObserver(): MutationObserver | null {
+  if (typeof MutationObserver === "undefined") return null;
+  if (!_observer) {
+    _observer = new MutationObserver(() => {
+      if (st.target && !st.target.isConnected) hide();
+    });
+  }
+  return _observer;
 }
 
 /** 页面滚动时提示会飘离锚点，捕获阶段统一隐藏（原生 title 同行为）。
@@ -108,13 +110,15 @@ function show(target: HTMLElement, text: string): void {
   tip.classList.add("ysw-tooltip--show");
   place(target);
   st.target = target;
-  ensureObserver();
+  // tooltip 可见期间才观察目标脱离 DOM，隐藏即停（避免 subtree 全量观察常驻空转）
+  ensureObserver()?.observe(document.body, { childList: true, subtree: true });
 }
 
 function hide(): void {
   cancelTimer();
   if (st.el) st.el.classList.remove("ysw-tooltip--show");
   st.target = null;
+  _observer?.disconnect();
 }
 
 export interface TooltipOptions {

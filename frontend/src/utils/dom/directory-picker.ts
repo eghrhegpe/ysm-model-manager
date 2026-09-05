@@ -11,7 +11,7 @@ import { isWebPlatform } from "../../backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { getAndroidBridge, isViewerMode } from "./android-bridge.ts";
-import { TOAST_MS } from ".//toast-ms.ts";
+import { TOAST_MS } from "./toast-ms.ts";
 
 /**
  * Android 共享仓库目录解析（双端桥接：授权引导 + 定位公共目录）。
@@ -33,7 +33,7 @@ export async function resolveAndroidRepoDir(): Promise<string | null> {
       const dir = await GetDefaultRepoRoot();
       if (!dir) return null;
       bus.emit("toast:show", {
-        msg: t("settings.path.autoRepoRoot") + " " + dir,
+        msg: `${t("settings.path.autoRepoRoot")} ${dir}`,
         duration: TOAST_MS.verbose,
         type: "info",
       });
@@ -56,7 +56,7 @@ export async function resolveAndroidRepoDir(): Promise<string | null> {
   const dir = await GetDefaultRepoRoot();
   if (!dir) return null;
   bus.emit("toast:show", {
-    msg: t("settings.path.autoRepoRoot") + " " + dir,
+    msg: `${t("settings.path.autoRepoRoot")} ${dir}`,
     duration: TOAST_MS.verbose,
     type: "info",
   });

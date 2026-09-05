@@ -137,7 +137,8 @@ jobs:
       - name: Go 检查（build + vet + test）
         shell: pwsh
         run: |
-          go build ./go/...
+          # ./... 而非 ./go/...：后者会漏掉根 internal/app（Wails 绑定层，79 文件）与 cmd/updater。
+          go build ./...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go vet ./go/... ./internal/app/...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -185,7 +186,8 @@ jobs:
           # 注意：-coverprofile=go-cover.out 必须加引号——PowerShell 会把
           # 「go-cover.out」解析成成员访问（值为 null），profile 落盘为 0 字节，
           # 后续 go tool cover -func= 收到空参数报 too many arguments。
-          go test ./go/... -coverprofile='go-cover.out' -count=1 -p 1 | Out-String -Width 200
+          # 同上用 ./...：原 ./go/... 使 internal/app 的 33 个测试文件完全不计入覆盖率。
+          go test ./... -coverprofile='go-cover.out' -count=1 -p 1 | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go tool cover -func='go-cover.out' | Select-String 'total:'
 

@@ -82,6 +82,7 @@ auto_fields:
     - PageDefinition
     - recycleHTML
     - rememberModelPath
+    - renderRecycleListHtml
     - RepoCacheEntry
     - repositoryHTML
     - resetAvatarConfigLoaded

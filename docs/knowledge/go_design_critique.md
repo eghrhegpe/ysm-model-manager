@@ -208,6 +208,53 @@ invariant_anchors:
 - ➖ **SearchModels 8 参数封装**：前端真实消费仅 1 处（toolbar-search.ts:195），60+ 处改动面（含 40+ 测试）。标记技术债，补注释「参数固定 8 个，扩展走 types.SearchFilters struct」。
 - ➖ **resolvedRootCache 范式分裂纠正**：已随视角A 组件化落地，ADR-134 清零结论恢复一致。
 
+## 动刀进度（实施记录，2026-09-06 三轮增量）
+
+### 视角A：测试质量审计（新维度）
+- 🆕 **测试质量评分 3.7/5**：失败注入工程扎实（`write_fail_test.go` 用包级函数变量 swap 模拟 ENOSPC/EIO，`t.Cleanup` 恢复），断言精度在线（`errors.Is` / `errors.As` 全覆盖）。
+- ⚠️ **主模型仲裁修正：importer `DetectContainerType` 并非裸奔**（子代理 1 报「零测试」系幻觉）——实地 `container_parity_test.go` + `detect_tail_test.go` + `importer_reverse_test.go` + `importer_file_test.go` 四文件 29 处覆盖充分（含双端 fixture 对账）。下载队列 `queue_test.go` 有 4 测试，但确缺 cancel-restart 竞态路径（已记 ADR-181 暂缓项，非新发现）。
+- 🔴 **P0 缺口 — 全仓零 `t.Parallel()`**：`go/` 与 `internal/app/` 全测试文件**0 个调用 `t.Parallel()`**。CI 串行执行 + race detector 仅检测手动 goroutine 而非并行测试，并发竞态检测力大打折扣。
+- 🟡 **watcher 14 个 `time.Sleep` 硬等待**：`watcher_test.go` 独占 10 处（最大 500ms debounce 窗口），无虚拟时钟 / 事件通道同步。测试耗时膨胀且 flaky 隐患。
+- 🟡 **scanner `setWalkStartHook` 用 defer 非 t.Cleanup**：`TestScanEntriesWithHit_ConcurrentSameDir_SingleWalk` 恢复钩子靠 defer，若测试 panic（非 Fatal）可能漏恢复污染后续测试。
+- ⚠️ **sync 非 Windows 并发竞态测试缺**：`sync_push_lock_windows_test.go` 仅 Windows，push/pull 的并发互斥保护在 Linux/macOS 无覆盖。
+- 🟢 **Fixture 质量优秀**：litematic 全内存 fixture（`nbtTag`/`makeLitematicGz` helper），零二进制依赖。geometry 12 文件 0.08MB 轻量。
+
+### 视角B：并发安全与错误处理（新维度）
+- 🆕 **并发安全评分 3.3/5**：代际机制（epoch）设计精良——`Cancel()` 持锁递增 epoch + 替换 ctx，`processForEpoch` 启动/退出双校验，所有状态转换在锁内完成，无 TOCTOU 窗口。
+- 🔴 **致命 — `processForEpoch` 无 recover 护体（已修复，见下「刀①」）**：`internal/app/install/queue.go` 的 defer 只复位 running / 重启 worker，**无 recover**。`downloadFn` / `emitFn` 回调若 panic，goroutine 直接崩溃，整个进程陪葬。讽刺的是 `conc.pool.go`、`watcher.go`、`dedup.go` 的 worker 都知道 recover，唯独串行消费的核心管道忘了。
+- 🟡 **single-flight `wg.Wait()` 永久阻塞**：`go/scanner/scanner.go:442-458` 的 waiter `other.wg.Wait()` 依赖 owner goroutine 的 `wg.Done()`。若 owner 在 `tryStoreScanCache` 中 panic（无 recover），所有 waiter 永久阻塞 → goroutine 泄漏。
+- 🟡 **`DecodeYSMData` 用 `context.Background()` 不可取消**：`go/avatar/avatar_decode.go:155` 未接收 ctx 参数，应用退出（ServiceShutdown → appCancel）时 Node/WASM 子进程无法通过 ctx 取消（60s timeout 兜底但 60s 内存占用是真实代价）。
+- 🔴 **`InstallLock` 整段持锁做 I/O 是架构级性能天花板**：`go/sync/sync_push.go:33-34` 在锁内遍历所有 missing 文件逐个复制。数百 MB 仓库持锁数秒~数十秒，期间所有安装/同步操作全局串行。ADR-056 的「共享单锁」设计正确但粒度过粗。
+- 🟡 **`fileLocks sync.Map` 永不清理**：`go/download/download.go:44-48` 注释自认「删除会引入 Unlock→Delete 竞态窗口」，设计正确但长期运行缓慢增长（每条目 ~48B + mutex）。
+- 🟢 **defer 链 LIFO 正确**：`watcher.syncAll` 双 defer（recover → wg.Done）、`downloadTo` 七阶段 defer 链均 LIFO 安全。
+- 🟢 **errors.Is / errors.As 全面收敛**：download 包 sentinel error 分类（ErrTruncated / ErrChecksumMismatch / ErrUnsupportedScheme）+ `errors.As` 精确匹配，替代文本 contains 反模式。
+
+### 视角C：包边界与耦合度（新维度）
+- 🆕 **包边界评分 3.475/5**：依赖方向整体健康（`internal/app` → `go/` 单向、`internal/app/install` 不反向 import `internal/app`、21 个 ADR 全部落地），但 `go/types` 是实锤的上帝包。
+- 🔴 **致命 — `go/types/` 上帝包**：全仓 import `go/types` 的文件 77 个（子代理报「21 包」系低估）。`types.go` + `resource.go` + `extensions.go` 等非测试共 1715 行，DTO + 注册表加载 + 扩展名工具函数三层抽象混杂。`LoadRegistry` 耦合 JSON 加载、`StripDisableSuffix` 耦合扩展名判定，与纯 DTO 应分家。
+- ⚠️ **主模型仲裁修正：「go/cli 绕过 AppService 直调 go/ysm」系幻觉**（子代理 3 报 🔴）——实地 `appservice.go` 的 import `go/ysm` 是接口签名要引用返回类型 `ysm.YSMModelMeta`（`AnalyzeYSMMod` 方法），不是绕过接口直调格式解析器。依赖倒置（ADR-145）成立。
+- 🟡 **`go/sync`→`go/ysm` 逆向依赖**：`sync.go:186` 调用 `ysm.HasYSMMod()`。同步包（跨类型通用）依赖 YSM 格式专属逻辑，反向——ysm 是叶包不该被 sync 消费。同病：`go/fileops`→`go/ysm`。
+- 🟡 **`go/ysm/extracted.go` 906 行**：「解压后 YSM 目录中的 geometry/纹理查找」把 YSM 目录读取、geometry 解析、纹理查找、载具/投射物纹理声明解析全塞一起。
+- 🟢 **fsutil 收敛标杆级落地（ADR-044）**：84 处 `SHA256File`/`WriteFileAtomic`/`CopyFile`/`CopyDirRecursive` 全面收敛，零未收敛手写实现残留。
+- 🟢 **ADR 遵从度优秀**：ADR-002/044/056/068/144/179 全部落地，仅 `app_download.go` 命名漂移（实为 install 转发层，非 download 实现）。
+
+## 三轮锐评总加权
+
+| 轮次 | 视角 | 评分 |
+|------|------|------|
+| 第一轮（2026-09-03） | IO/扫描/解析/绑定 三路 | 3.1/5 |
+| 第二轮（2026-09-05） | 增量补刀 LimitReader+1 / Toggle 三轨 / 纹理口径 | — |
+| 第三轮（2026-09-06） | 测试质量 3.7 / 并发安全 3.3 / 包边界 3.475 | **3.49/5** |
+
+三轮加权约 **3.3/5**——安全防御层行业级（OOM/栈溢出/路径逃逸/TOCTOU/代际防竞态 四重防线全部到位），技术债集中在「隐式协议靠注释续命 + 上帝包 + 核心路径无测试」三块。
+
+## 动刀进度（实施记录，2026-09-06 三轮仲裁后落地）
+
+- ✅ **刀① `processForEpoch` 加 recover 兜底**：`internal/app/install/queue.go` 的 defer 首行加 `recover`，捕获 `downloadFn`/`emitFn`/`logFn` 回调 panic 后置 `panicked=true`（log 记账）+ 参与 `restart` 判定（`!panicked`）——防「panic → 重启 → 又 panic」无限重启循环，fail-stop 停在本任务。与 `conc.Pool`/`watcher.loop`/`dedup.worker` 三兄弟兜底口径对齐。新增 `queue_test.go` `TestDownloadQueue_DownloadPanicRecovered` 锁住：running 复位、剩余任务不消费、panic 不当普通失败记导入日志。`go build ./...` + `go test -race ./internal/app/install/` 全绿。
+- ➖ **刀② `sync`/`fileops` → `go/ysm` 逆向依赖**（标记技术债，不动）：`sync.go` `HasYSMMod` + `fileops_preview.go` `DecodeYSM` 反向依赖格式叶包。依赖单向、语义清晰、不构成环，真修要引 `packs`→`ysm` 重排可能制造新环——风险大于收益，记债不砍。
+- ➖ **刀③ `InstallLock` 锁粒度**（标记技术债，不动）：ADR-056 共享单锁是明确设计决策，细粒度化引入死锁风险；是性能天花板非正确性 bug，属推倒重来心态。
+- ➖ **纯技术债清单（不做）**：全仓零 `t.Parallel()`（渐进式）；`go/types` 1715 行上帝包（77 文件 import，需独立立项拆包）；watcher 14 个 `time.Sleep`（虚拟时钟改造）。
+
 ## 相关
 
 - [frontend_design_critique](frontend_design_critique.md)：前端侧同方法论锐评（三子代理并发 + 主模型抽查）

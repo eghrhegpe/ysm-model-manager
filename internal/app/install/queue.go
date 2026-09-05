@@ -124,7 +124,18 @@ func (q *DownloadQueue) processForEpoch(target uint64) {
 	myEpoch := q.epoch
 	q.mu.Unlock()
 
+	// panicked 标志：downloadFn/emitFn/logFn 回调 panic 被 recover 拦截后置 true，
+	// 阻止 restart 重启——否则「panic → 重启 → 又 panic」会形成无限重启循环，
+	// 且 panic 不该被当成普通下载失败继续消费（fail-stop：队列停在本任务）。
+	panicked := false
 	defer func() {
+		// recover 兜底：串行消费核心管道若回调 panic 无拦截会直接崩溃整个桌面进程
+		// （conc.Pool / watcher.loop / dedup.worker 的 worker 均有同款兜底，此处是唯一漏网点）。
+		// recover 必须在 reset 逻辑之前执行，panicked 标志才来得及参与 restart 判定。
+		if r := recover(); r != nil {
+			panicked = true
+			log.Printf("[queue] process panic（回调 panic 已拦截，队列 fail-stop）: %v", r)
+		}
 		q.mu.Lock()
 		// 仅当代际一致才复位 running / 发 done：
 		// 若已被 Cancel（或取消后重新入队）取代，本 goroutine 不再触碰队列状态，
@@ -137,8 +148,9 @@ func (q *DownloadQueue) processForEpoch(target uint64) {
 		cancelled := q.cancelled
 		// 丢失唤醒竞态——process 判空解锁 return 与 defer 取锁复位 running 之间，
 		// Enqueue 可能已追加任务（running 仍 true → start=false 不启新 goroutine）；
-		// 复位后重检任务列表：代际一致且有任务则重启处理，防队列静默停滞
-		restart := !cancelled && len(q.tasks) > 0
+		// 复位后重检任务列表：代际一致且有任务则重启处理，防队列静默停滞。
+		// panic 时不重启（fail-stop），防无限重启循环。
+		restart := !panicked && !cancelled && len(q.tasks) > 0
 		if restart {
 			q.running = true
 			q.epoch++

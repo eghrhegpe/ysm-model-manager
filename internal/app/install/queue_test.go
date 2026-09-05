@@ -125,3 +125,39 @@ func TestQueueStatus_ReflectsQueue(t *testing.T) {
 		t.Errorf("注入 2 任务后应 running+remaining=2, got %+v", st)
 	}
 }
+
+// TestDownloadQueue_DownloadPanicRecovered 锁住 processForEpoch 的 recover 防线：
+// downloadFn 回调 panic 不得崩溃进程（与 conc.Pool/watcher/dedup 的 worker 兜底对齐），
+// 队列以 fail-stop 语义停止——running 复位、不重启、不把 panic 当普通下载失败记账。
+func TestDownloadQueue_DownloadPanicRecovered(t *testing.T) {
+	var emitted []string
+	var logged []string
+	q := NewDownloadQueue(
+		func(ctx context.Context, url, saveDir string) (string, error) {
+			panic("boom")
+		},
+		func(name string, args ...interface{}) { emitted = append(emitted, name) },
+		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {
+			logged = append(logged, status)
+		},
+	)
+	q.tasks = []types.DownloadTask{
+		{URL: "https://a.example/x.ysm", SaveDir: t.TempDir(), Name: "a.ysm"},
+		{URL: "https://b.example/y.ysm", SaveDir: t.TempDir(), Name: "b.ysm"},
+	}
+
+	// 修复前：q.process() 会 panic 穿透，测试进程崩溃；修复后应正常返回
+	q.process()
+
+	if q.running {
+		t.Error("panic 后 running 应复位")
+	}
+	if len(q.tasks) != 1 {
+		t.Errorf("panic 时已弹出 1 任务，剩余应 1（fail-stop 不继续消费），got %d", len(q.tasks))
+	}
+	for _, s := range logged {
+		if s == "failed" {
+			t.Error("panic 不应被当成普通下载失败记账到导入日志")
+		}
+	}
+}

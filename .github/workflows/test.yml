@@ -140,9 +140,10 @@ jobs:
           # ./... 而非 ./go/...：后者会漏掉根 internal/app（Wails 绑定层，79 文件）与 cmd/updater。
           go build ./...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go vet ./go/... ./internal/app/...
+          go vet ./...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go test -race ./go/... ./internal/app/ -count=1 -timeout 10m | Out-String -Width 400
+          # ./... 而非 ./go/... ./internal/app/：后者是双路径补丁写法，新增顶层包会静默漏检。
+          go test -race ./... -count=1 -timeout 10m | Out-String -Width 400
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # 缓存 Rust 依赖仓库（registry/git）与两个 crate 的 target 编译产物——

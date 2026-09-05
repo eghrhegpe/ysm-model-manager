@@ -221,7 +221,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 58 |
+| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 48 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 188 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 272 |
@@ -447,7 +447,7 @@
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 371 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 266 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 164 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 288 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 292 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 52 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 90 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 130 |

@@ -8,6 +8,9 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - loadOldestModel
+    - ModelEntry
+    - OldestDeps
+    - RepoStats
   tests:
     - frontend/src/features/oldest-models.test.ts
 tests:

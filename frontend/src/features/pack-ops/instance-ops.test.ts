@@ -4,31 +4,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
 import { flushPromises } from "../../test-utils/index.ts";
+import { appFn } from "../../test-utils/mock-app.ts";
 
-// ---- mock 依赖 ----
-const { mocks } = vi.hoisted(() => {
-  const mocks = {
-    ListVersionInstances: vi.fn(),
-    ListFileNames: vi.fn(),
-    GetSubDirMap: vi.fn(),
-    CountInstanceResources: vi.fn(),
-    ClearInstanceResources: vi.fn(),
-    GetRepoRoot: vi.fn(),
-    modalConfirm: vi.fn(),
-  };
-  return { mocks };
+// app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
+vi.mock("@/backend/app.ts", async () => {
+  const { setupAppMock } = await import("@/test-utils/mock-app.ts");
+  return setupAppMock();
 });
 
-vi.mock("../../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
-    ListVersionInstances: mocks.ListVersionInstances,
-    ListFileNames: mocks.ListFileNames,
-    GetSubDirMap: mocks.GetSubDirMap,
-    CountInstanceResources: mocks.CountInstanceResources,
-    ClearInstanceResources: mocks.ClearInstanceResources,
-    GetRepoRoot: mocks.GetRepoRoot,
-  }),
-}));
+// ---- mock 依赖 ----
+// appFn 取 fail-closed Proxy 上的底层 vi.fn
+// backend/app mock 走 test-setup §5 全局 fail-closed Proxy；appFn 取底层 vi.fn
+const mocks = {
+  ListVersionInstances: appFn("ListVersionInstances"),
+  ListFileNames: appFn("ListFileNames"),
+  GetSubDirMap: appFn("GetSubDirMap"),
+  CountInstanceResources: appFn("CountInstanceResources"),
+  ClearInstanceResources: appFn("ClearInstanceResources"),
+  GetRepoRoot: appFn("GetRepoRoot"),
+  modalConfirm: vi.fn(),
+};
 
 vi.mock("../../core/handlers/require-mcroot.ts", () => ({
   requireMcRoot: vi.fn().mockResolvedValue("/mc"),

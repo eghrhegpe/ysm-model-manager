@@ -7,33 +7,25 @@ import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { MOCK_DATA } from "../../../e2e/mock-data.ts";
 import { flushPromises } from "../../test-utils/index.ts";
+import { appFn } from "../../test-utils/mock-app.ts";
 
-const { mocks } = vi.hoisted(() => {
-  const mocks = {
-    ListVersionInstances: vi.fn(),
-    GetResourceInstanceStatus: vi.fn(),
-    InstallModelTo: vi.fn(),
-    InstallResourceToInstance: vi.fn(),
-    GetRepoRoot: vi.fn(),
-    InvalidateScanCache: vi.fn(),
-    SyncModelToggleStatus: vi.fn(),
-    AddImportLog: vi.fn(),
-  };
-  return { mocks };
+// app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
+vi.mock("@/backend/app.ts", async () => {
+  const { setupAppMock } = await import("@/test-utils/mock-app.ts");
+  return setupAppMock();
 });
 
-vi.mock("../../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
-    ListVersionInstances: mocks.ListVersionInstances,
-    GetResourceInstanceStatus: mocks.GetResourceInstanceStatus,
-    InstallModelTo: mocks.InstallModelTo,
-    InstallResourceToInstance: mocks.InstallResourceToInstance,
-    GetRepoRoot: mocks.GetRepoRoot,
-    InvalidateScanCache: mocks.InvalidateScanCache,
-    SyncModelToggleStatus: mocks.SyncModelToggleStatus,
-    AddImportLog: mocks.AddImportLog,
-  }),
-}));
+// backend/app mock 为 fail-closed Proxy；appFn 取底层 vi.fn
+const mocks = {
+  ListVersionInstances: appFn("ListVersionInstances"),
+  GetResourceInstanceStatus: appFn("GetResourceInstanceStatus"),
+  InstallModelTo: appFn("InstallModelTo"),
+  InstallResourceToInstance: appFn("InstallResourceToInstance"),
+  GetRepoRoot: appFn("GetRepoRoot"),
+  InvalidateScanCache: appFn("InvalidateScanCache"),
+  SyncModelToggleStatus: appFn("SyncModelToggleStatus"),
+  AddImportLog: appFn("AddImportLog"),
+};
 
 vi.mock("./require-mcroot.ts", () => ({
   requireMcRoot: vi.fn().mockResolvedValue("/mc"),

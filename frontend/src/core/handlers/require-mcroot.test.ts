@@ -1,19 +1,16 @@
 // @vitest-environment node
 // ===== requireMcRoot 测试：读配置 + 空守卫 + toast =====
 // 覆盖：已配置 mcRoot 返回路径；未配置发 warn toast 并返回 null
+// backend/app mock 走 test-setup §5 全局 fail-closed Proxy（mockAppMethods 配置）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
+import { mockAppMethods } from "../../test-utils/mock-app.ts";
 
-const { mocks } = vi.hoisted(() => {
-  const mocks = {
-    LoadAppConfig: vi.fn(),
-  };
-  return { mocks };
+// app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
+vi.mock("@/backend/app.ts", async () => {
+  const { setupAppMock } = await import("@/test-utils/mock-app.ts");
+  return setupAppMock();
 });
-
-vi.mock("../../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({ LoadAppConfig: mocks.LoadAppConfig }),
-}));
 
 let cleanups: Array<() => void> = [];
 
@@ -34,7 +31,7 @@ function spyToasts() {
 
 describe("requireMcRoot", () => {
   it("已配置 mcRoot → 返回路径，不发 toast", async () => {
-    mocks.LoadAppConfig.mockResolvedValue({ mcRoot: "/mc" });
+    mockAppMethods({ LoadAppConfig: { mcRoot: "/mc" } });
     const toasts = spyToasts();
 
     const { requireMcRoot } = await import("./require-mcroot.ts");
@@ -45,7 +42,7 @@ describe("requireMcRoot", () => {
   });
 
   it("mcRoot 为空 → warn toast「请先配置游戏目录」+ 返回 null", async () => {
-    mocks.LoadAppConfig.mockResolvedValue({ mcRoot: "" });
+    mockAppMethods({ LoadAppConfig: { mcRoot: "" } });
     const toasts = spyToasts();
 
     const { requireMcRoot } = await import("./require-mcroot.ts");

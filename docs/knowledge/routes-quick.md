@@ -408,6 +408,13 @@
 |----------|--------|----------|----------|
 | 该子域是否直读 App 的共享基础设施字段？是 → 不切（复合域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install_domain_split.md) | importModelFolderAs 宿主在 app_files.go（files 域），被 files 域绑定与 install 组合链三方共用 | - |
 
+## 🎯 知识库治理与审计
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 知识库与代码脱节清单、幽灵事件 | [知识库×前端语义脱节审计](./knowledge_frontend_drift_audit.md) | 知识卡正文写事件名/计数/归属前必须先 grep 生产代码实证，禁止凭记忆或测试名推断（nav:change→nav:changed 教训） | ADR-132 |
+| invariant_anchors 定义归属、status 收编 | [知识库×前端语义脱节审计](./knowledge_frontend_drift_audit.md) | invariant_anchors 的弱断言只验「文本出现」不验「定义归属」——锚应指定义文件，指 import/re-export/注释处会让 AI 摸错文件 | ADR-132 |
+
 ## 🎯 3D 渲染与预览核心
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -752,6 +759,8 @@
 | dnd-collector 未做去重 | - | 同文件重复导入；必须在 collector 阶段去重 |
 | 硬切高内聚复合域会把 App god-object 换成，且连带拉扯共享 helper 的宿主域（伪切分） | `接口版 god-object` | - |
 | 包级私有 helper 被多域/多测试直调时，迁移需连带改造测试，成本随调用面放大 | - | - |
+| 把测试文件的 it() 描述名当权威 | - | 测试名与断言名实不符是系统性问题（nav:change 残留测试层） |
+| 用占位日期 | `2026-XX` | 掩盖"已完成 vs 待办"，AI 分不清；完成项填实际日期、计划项标「待办」 |
 | 主线程同步跑统计 | - | 大库卡死 UI；必须经 Web Worker 后台统计 |
 | Worker 未独立加载 WASM | - | 与主线程 WASM 实例冲突；必须在 Worker 内独立 open 解码 |
 | 手写骨骼画布 | - | 与 model2d 输出不一致、缺鼠标拾取；必须复用 model2d.ts |

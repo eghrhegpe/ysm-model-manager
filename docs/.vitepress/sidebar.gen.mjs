@@ -1420,6 +1420,10 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_repo_audit"
           },
           {
+            "text": "知识库×前端语义脱节审计",
+            "link": "/knowledge/knowledge_frontend_drift_audit"
+          },
+          {
             "text": "模块级全局状态治理",
             "link": "/knowledge/module_global_state"
           },

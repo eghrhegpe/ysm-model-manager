@@ -4,7 +4,6 @@
 // 职责归属：前端只收集/分组/编排，类型判定与落点全在 Go 侧 binding；
 // 收集口径与仓库页拖拽共用 dnd-shared.collectDropFiles。
 
-import { getApp } from "../../backend/app.ts";
 import { MAX_IMPORT_BYTES } from "../../backend/browser-adapter.ts";
 import { isWebPlatform } from "../../backend/platform-web.ts";
 import { bus } from "../../bus.ts";
@@ -15,6 +14,7 @@ import { dbg } from "../../utils/debug/debug.ts";
 import { isEditableTarget } from "../../utils/dom/editable-target.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { backendGetApp } from "../backend-deps.ts";
 import {
   buildFolderItems,
   type CollectedEntry,
@@ -66,7 +66,9 @@ export async function handleInstanceDrop(
 
   // 写环形日志面板（Go AddOpLog）——非阻塞，失败经 swallowError 记录
   const logDrop = (msg: string) =>
-    swallowError(getApp().then((app) => app.AddOpLog?.("pack-drop", msg, "", "", 0, "ok", "")));
+    swallowError(
+      backendGetApp().then((app) => app.AddOpLog?.("pack-drop", msg, "", "", 0, "ok", "")),
+    );
 
   try {
     if (isWebPlatform()) {
@@ -110,7 +112,7 @@ export async function handleInstanceDrop(
     });
     logDrop(`pack-drop: 分组 folders=${folders.length} singles=${singles.length}`);
 
-    const App = await getApp();
+    const App = await backendGetApp();
     let okUnits = 0;
     let attempted = 0;
     const failures: string[] = [];

@@ -3,7 +3,6 @@
 // 与 context-menu/pack-ops/platform 同层，不属内核；core 只留 i18n/page-store/
 // feedback/error-diary 纯内核）
 
-import { getApp } from "../backend/app.ts";
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
 import { dbg } from "../utils/debug/debug.ts";
@@ -11,6 +10,7 @@ import { friendlyError } from "../utils/dom/errors.ts";
 import { toast } from "../utils/dom/toast.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { backendGetApp } from "./backend-deps.ts";
 import { requireMcRoot } from "./require-mcroot.ts";
 
 /** sync:download:missing 事件载荷（镜像 bus.ts BusEvents 契约） */
@@ -38,7 +38,7 @@ async function runDownloadMissing(
     InstallResourceToInstance,
     GetRepoRoot,
     InvalidateScanCache,
-  } = await getApp();
+  } = await backendGetApp();
   const mcRoot = await requireMcRoot();
   if (!mcRoot) return false;
   const instances = (await ListVersionInstances(mcRoot)) ?? [];
@@ -131,7 +131,8 @@ async function handleSyncDownloadMissing(
 /** 同步启用/禁用状态到所有整合包（核心逻辑），失败明细经 friendlyError 显式化 */
 async function runSyncToggleStatus(): Promise<void> {
   dbg("sync", "toggle-status");
-  const { ListVersionInstances, SyncModelToggleStatus, AddImportLog, GetRepoRoot } = await getApp();
+  const { ListVersionInstances, SyncModelToggleStatus, AddImportLog, GetRepoRoot } =
+    await backendGetApp();
   // 语义边界（硬编码排查确认）：sync:toggle:status 是模型 .ban/.disabled 启禁同步，
   // 由 app-tree 的启禁操作触发——前端已统一走 ToggleEnable（无 rtype 纯路径判定，
   // 根集合 FilesRoot/McRoot/CustomRoots/ysmRoot，内部复用 fileops 的 .disabled
@@ -198,7 +199,7 @@ async function handleSyncToggleStatus(flag: SyncBusyFlag): Promise<void> {
     await runSyncToggleStatus();
   } catch (err) {
     try {
-      const { AddImportLog } = await getApp();
+      const { AddImportLog } = await backendGetApp();
       await AddImportLog("sync-status", "同步失败", "", 0, "failed", String(err));
     } catch (logErr) {
       // 日志写入失败不阻断反馈（bus.emit 自带兜底），但不静默吞错

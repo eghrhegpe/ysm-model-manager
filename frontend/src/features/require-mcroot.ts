@@ -5,10 +5,10 @@
 // ——features 内共享原语，pack-ops/sync 双消费；守卫自带 toast 属交互反馈，
 // 非纯内核语义）。
 
-import { getApp } from "../backend/app.ts";
 import { t } from "../core/i18n/t.ts";
 import { toast } from "../utils/dom/toast.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { backendGetApp } from "./backend-deps.ts";
 
 /**
  * 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。
@@ -16,7 +16,7 @@ import { TOAST_MS } from "../utils/dom/toast-ms.ts";
  * @returns mcRoot 字符串；未配置时返回 null（已 toast 提示）
  */
 export async function requireMcRoot(): Promise<string | null> {
-  const { LoadAppConfig } = await getApp();
+  const { LoadAppConfig } = await backendGetApp();
   const cfg = await LoadAppConfig();
   const mcRoot = cfg.mcRoot || "";
   if (!mcRoot) {

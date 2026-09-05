@@ -5,13 +5,13 @@
 // - inFlight 去重 + toast/stats/tree 广播
 // 与 go/importer + go/fileops.WriteModelFolder 后端对齐。
 
-import { getApp } from "../../backend/app.ts";
 import { importWebFiles, MAX_IMPORT_BYTES } from "../../backend/browser-adapter.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { swallowError } from "../../utils/base/async.ts";
 import { friendlyError, isFileExistsError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { backendGetApp } from "../backend-deps.ts";
 import type { CollectedEntry } from "../dnd/shared.ts";
 import { buildFolderItems, fileToBase64, groupCollected } from "../dnd/shared.ts";
 import { currentRepoType } from "../repo/repo-rtype.ts";
@@ -68,7 +68,7 @@ export const directImport = async (file: File): Promise<void> => {
   _inFlight.add(key);
   try {
     const base64 = await fileToBase64(file);
-    const { ImportModelFile } = await getApp();
+    const { ImportModelFile } = await backendGetApp();
     await ImportModelFile(file.name, base64);
     refreshRepo();
     toast(t("import.success") + ": " + file.name, "success", TOAST_MS.success);
@@ -116,7 +116,7 @@ export const importFolder = async (
       toast("❌ " + t("import.emptyFolder"), "error", TOAST_MS.verbose);
       return;
     }
-    const App = await getApp();
+    const App = await backendGetApp();
     // P3 审核修复：旧桥/Android 绑定时序缺 ImportModelFolderTo 时 typeof 守卫，
     // 退回内容推断旧路径而非整条拖入 TypeError（文档承诺的空上下文兜底语义）。
     // P3-2（审核）：降级不可静默——有页面上下文但桥缺失时 warn 提示，否则
@@ -159,7 +159,7 @@ export const executeCollected = async (
   rtype = "",
 ): Promise<{ folders: number; singles: number }> => {
   const log = (msg: string) =>
-    swallowError(getApp().then((app) => app.AddOpLog?.("import", msg, "", "", 0, "ok", "")));
+    swallowError(backendGetApp().then((app) => app.AddOpLog?.("import", msg, "", "", 0, "ok", "")));
   log(`执行导入 ${collected.length} 个条目`);
   const { folders, singles } = groupCollected(collected);
   log(`分组: folders=${folders.length} singles=${singles.length}`);

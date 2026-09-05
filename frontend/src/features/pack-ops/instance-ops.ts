@@ -1,12 +1,12 @@
 // ===== 整合包操作：导出清单 / 清空目录（类型化版 — ADR-014 P3）=====
 
-import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { copyText } from "../../utils/dom/clipboard.ts";
 import { toast, toastEmptyRtype, toastError } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { backendGetApp } from "../backend-deps.ts";
 import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { requireMcRoot } from "../require-mcroot.ts";
 
@@ -16,7 +16,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on("instance:export-list", async ({ name: insName, rtype }) => {
       try {
-        const { ListVersionInstances, ListFileNames } = await getApp();
+        const { ListVersionInstances, ListFileNames } = await backendGetApp();
         const mcRoot = await requireMcRoot();
         if (!mcRoot) return;
 
@@ -36,7 +36,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         }
 
         // 子目录映射——从 Go 端统一获取
-        const { GetSubDirMap } = await getApp();
+        const { GetSubDirMap } = await backendGetApp();
         const subDirAll = (await GetSubDirMap()) ?? {};
 
         let dirs: string[] = [];
@@ -89,7 +89,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on("instance:clear", async ({ name: insName, rtype }) => {
       try {
-        const { CountInstanceResources, ClearInstanceResources } = await getApp();
+        const { CountInstanceResources, ClearInstanceResources } = await backendGetApp();
         const mcRoot = await requireMcRoot();
         if (!mcRoot) return;
 

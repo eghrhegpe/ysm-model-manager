@@ -201,3 +201,23 @@ describe("modalTagEditor — 关闭路径与 disposed 竞态", () => {
     expect(await pending).toBeNull();
   });
 });
+
+describe("依赖注入（ADR-190 D2 注入真化）", () => {
+  it("deps.getApp 替代模块 mock 的生产实现，无需 vi.mock backend", async () => {
+    const injectedGetApp = vi.fn().mockResolvedValue({
+      GetModelTags: vi.fn().mockResolvedValue(["injected-tag"]),
+      AllTags: vi.fn().mockResolvedValue([]),
+      SetModelTags: vi.fn().mockResolvedValue(undefined),
+    });
+    const pending = modalTagEditor("/m/b.ysm", { getApp: injectedGetApp });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(injectedGetApp).toHaveBeenCalled();
+    // 注入实现返回的标签已渲染；生产 mock 的 GetModelTags 未被调用
+    expect(document.querySelector(".dlg-overlay")!.innerHTML).toContain("injected-tag");
+    expect(mocks.GetModelTags).not.toHaveBeenCalled();
+
+    document.querySelector<HTMLButtonElement>("#te-cancel")!.click();
+    expect(await pending).toBeNull();
+  });
+});

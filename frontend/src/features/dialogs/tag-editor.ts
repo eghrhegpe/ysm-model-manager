@@ -2,6 +2,9 @@
 // 读取/写入模型标签，支持输入新标签和选择已有标签
 
 import { getApp } from "../../backend/app.ts";
+
+type GetAppFn = typeof getApp;
+
 import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";
@@ -157,7 +160,7 @@ function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => 
   return shell;
 }
 
-function dgTeLoadData(shell: DgTeShell, modelPath: string): void {
+function dgTeLoadData(shell: DgTeShell, modelPath: string, getApp: GetAppFn): void {
   (async () => {
     const addBtn = shell.box.querySelector("#te-add") as HTMLButtonElement | null;
     const saveBtn = shell.box.querySelector("#te-save") as HTMLButtonElement | null;
@@ -188,7 +191,7 @@ function dgTeLoadData(shell: DgTeShell, modelPath: string): void {
   })();
 }
 
-function dgTeBindEvents(shell: DgTeShell, modelPath: string): void {
+function dgTeBindEvents(shell: DgTeShell, modelPath: string, getApp: GetAppFn): void {
   shell.inputEl.addEventListener("keydown", (e: KeyboardEvent): void => {
     if (e.key === "Enter") {
       dgTeAddTag(shell, shell.inputEl.value);
@@ -221,10 +224,15 @@ function dgTeBindEvents(shell: DgTeShell, modelPath: string): void {
  * @param modelPath 模型文件路径
  * @returns 保存后的标签列表，取消返回 null
  */
-export function modalTagEditor(modelPath: string): Promise<string[] | null> {
+export function modalTagEditor(
+  modelPath: string,
+  /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
+  deps?: { getApp?: GetAppFn },
+): Promise<string[] | null> {
+  const getAppFn = deps?.getApp || getApp;
   return new Promise((resolve) => {
     const shell = dgTeBuildShell(modelPath, resolve);
-    dgTeLoadData(shell, modelPath);
-    dgTeBindEvents(shell, modelPath);
+    dgTeLoadData(shell, modelPath, getAppFn);
+    dgTeBindEvents(shell, modelPath, getAppFn);
   });
 }

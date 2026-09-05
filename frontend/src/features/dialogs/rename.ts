@@ -2,6 +2,9 @@
 // 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
 
 import { getApp } from "../../backend/app.ts";
+
+type GetAppFn = typeof getApp;
+
 import { t } from "../../core/i18n/t.ts";
 import { parseModelName } from "../../utils/dom/display.ts";
 import { esc } from "../../utils/dom/html.ts";
@@ -52,6 +55,7 @@ function dgRnBindReadHeaderBtn(
   overlay: HTMLDivElement,
   box: HTMLDivElement,
   update: DgRnUpdateFn,
+  getApp: GetAppFn,
 ): void {
   (box.querySelector("#rn-from-header") as HTMLElement).onclick = async (): Promise<void> => {
     if (!filePath) {
@@ -177,6 +181,8 @@ function dgRnBindOkCancel(
 export async function showRenameDialog(
   filePath: string | null,
   currentName: string,
+  /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
+  deps?: { getApp?: GetAppFn },
 ): Promise<string | null> {
   return new Promise((resolve) => {
     const parsed = parseModelName(currentName);
@@ -204,7 +210,7 @@ export async function showRenameDialog(
     const readFn: DgRnReadFn = () => dgRnReadFields(box);
     const update: DgRnUpdateFn = () => dgRnUpdatePreview(box, readFn, getExt, disableTail);
 
-    dgRnBindReadHeaderBtn(filePath, overlay, box, update);
+    dgRnBindReadHeaderBtn(filePath, overlay, box, update, deps?.getApp || getApp);
     dgRnBindFieldInputs(box, update);
     dgRnBindOkCancel(close, box, readFn, getExt, disableTail);
     update();

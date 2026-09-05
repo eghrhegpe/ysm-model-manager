@@ -6,6 +6,9 @@
 //   不支持文件大小、排序（避免展示无效控件）
 
 import { getApp } from "../../backend/app.ts";
+
+type GetAppFn = typeof getApp;
+
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
@@ -108,6 +111,7 @@ function bindAdvFilterEvents(
   box: HTMLDivElement,
   close: (r: AdvFilterResult) => void,
   getValue: () => AdvFilterValue,
+  getApp: GetAppFn,
 ): void {
   const kwInput = box.querySelector("#afv-kw") as HTMLInputElement;
   kwInput.focus();
@@ -164,7 +168,11 @@ function bindAdvFilterEvents(
 }
 
 export function modalAdvFilter(
-  opts: { value?: Partial<AdvFilterValue> } = {},
+  opts: {
+    value?: Partial<AdvFilterValue>;
+    /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
+    getApp?: GetAppFn;
+  } = {},
 ): Promise<AdvFilterResult> {
   return new Promise((resolve) => {
     const v = opts.value || {};
@@ -184,6 +192,12 @@ export function modalAdvFilter(
 
     const kwInput = box.querySelector("#afv-kw") as HTMLInputElement;
     const tagInput = box.querySelector("#afv-tag") as HTMLInputElement;
-    bindAdvFilterEvents(overlay, box, close, () => advFilterCollect(box, kwInput, tagInput));
+    bindAdvFilterEvents(
+      overlay,
+      box,
+      close,
+      () => advFilterCollect(box, kwInput, tagInput),
+      opts.getApp || getApp,
+    );
   });
 }

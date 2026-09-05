@@ -13,8 +13,8 @@ import (
 )
 
 // TestResourceTypesEmbedJSONConsistency 验证单源化契约：
-// LoadRegistry()（单源：仓库根 resource_types.json，经 root embed.go 注入 go/types 的 bundledRegistryJSON，
-// build 即同步）产出的注册表，与直接解码仓库根 resource_types.json 得到的注册表逐类型完全一致。
+// LoadRegistry()（单源：仓库根 resource_types.json，经 root embed.go 注入 go/types/registry 的
+// bundledRegistryJSON，build 即同步）产出的注册表，与直接解码仓库根 resource_types.json 得到的注册表逐类型完全一致。
 //
 // 旧设计存在两份副本（root JSON + 手工 embeddedRegistryJSON），不同步会弹平大类或卡死新格式同步；
 // 单源化后二者同源，旧手工副本已删除。TestMain 已将根文件注入 bundledRegistryJSON，

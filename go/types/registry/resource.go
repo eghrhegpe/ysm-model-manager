@@ -11,7 +11,7 @@ import (
 )
 
 // bundledRegistryJSON 是编译期内嵌的 resource_types.json（单一事实来源）。
-// 由根包 main 在 init() 中经 embed.go 读取并注入（types.SetBundledRegistryJSON），
+// 由根包 main 在 init() 中经 embed.go 读取并注入（registry.SetBundledRegistryJSON），
 // 与 internal/app 共用同一份 root embed，彻底取代旧的手工副本 resource_types_embed.go
 // （曾因不同步导致分类被回退弹平）。测试/未注入场景下由 loadRegistryBytes 回退读取仓库根 resource_types.json。
 var bundledRegistryJSON []byte

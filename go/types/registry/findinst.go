@@ -73,7 +73,7 @@ func FindInstDir(versionDir, subDir, rtype string) string {
 	exts := SupportedExtsForType(rtype)
 	extSet := make(map[string]bool)
 	// 容器扩展名（zip/7z 可包裹任意资源，属弱证据）——
-	// 容器集合单源：types.IsContainerExt / ContainerExts，禁止硬编码 map。
+	// 容器集合单源：registry.IsContainerExt / ContainerExts，禁止硬编码 map。
 	hasNonContainer := false
 	for _, e := range exts {
 		low := strings.ToLower(e)

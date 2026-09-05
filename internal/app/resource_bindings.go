@@ -23,7 +23,7 @@ import (
 	typereg "ysm-model-manager/go/types/registry"
 )
 
-// LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/typereg.LoadRegistry）
+// LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/types/registry.LoadRegistry）
 func (a *App) LoadResourceTypes() (*typereg.ResourceTypeRegistry, error) {
 	reg := typereg.LoadRegistry()
 	if reg == nil || len(reg.ResourceTypes) == 0 {
@@ -128,8 +128,8 @@ func (a *App) GetLitematicVoxelData(path string) (*typereg.LitematicVoxelData, e
 
 // DetectResourceType 检测指定文件的资源类型
 func (a *App) DetectResourceType(path string) string {
-	// 单源化：registry 直接来自 go/types 内嵌的 resource_types.json
-	// （internal/app 复用 typereg.BundledRegistryJSON 同一 embed），解析失败兜底 LoadRegistry
+	// 单源化：registry 直接来自 go/types/registry 的 bundledRegistryJSON
+	// （internal/app 与 embed.go 复用同一注入点），解析失败兜底 LoadRegistry
 	registry := typereg.LoadRegistry()
 	return packs.DetectResourceType(path, registry)
 }

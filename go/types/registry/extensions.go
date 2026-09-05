@@ -285,8 +285,8 @@ func ExtBelongsTo(ext string) []string {
 }
 
 // ExtBelongsToBy 返回扩展名在指定注册表中的声明者 ID 列表（ExtBelongsTo 的可注入版本）。
-// 纯注册表查询，归属本包（ADR-144：types/resource.go 守卫与 packs.ClassifyExt 共用；
-// 若随识别大脑下沉 packs 会造成 types→packs 反向依赖，故保留于此）。
+// 纯注册表查询，归属本包（ADR-144：registry/resource.go 守卫与 packs.ClassifyExt 共用；
+// 若随识别大脑下沉 packs 会造成 registry→packs 反向依赖，故保留于此）。
 func ExtBelongsToBy(ext string, reg *ResourceTypeRegistry) []string {
 	ext = strings.ToLower(ext)
 	var result []string

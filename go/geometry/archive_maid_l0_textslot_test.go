@@ -4,7 +4,7 @@ package geometry
 import (
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestL0_TexSlot_SharedTexture 验证 L0 多角色包（共享纹理上下文）的 texSlot 绑定正确性。

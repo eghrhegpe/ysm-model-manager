@@ -17,7 +17,7 @@ import (
 	"hash/crc32"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // rawZipEntry 手工 ZIP 条目（method 可指定任意值）

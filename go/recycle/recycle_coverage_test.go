@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // setupCrossDevice 注入跨设备回退（rename 报 EXDEV → 复制后删），使 moveEx/Restore 走复制分支。

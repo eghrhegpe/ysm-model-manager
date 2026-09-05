@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // pathsOf 取组内文件路径列表（断言排序用）

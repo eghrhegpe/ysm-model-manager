@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // moveEx 在 recycleDir 未设置时应报错（fail-fast 守卫）

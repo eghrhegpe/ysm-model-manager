@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // newTMWithRenameErr 构造注入 rename 返回指定错误的 TrashManager

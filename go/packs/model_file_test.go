@@ -3,7 +3,7 @@
 package packs_test
 
 import (
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 
 	"os"
 	"path/filepath"

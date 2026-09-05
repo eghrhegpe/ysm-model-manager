@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestCopyDir_RecursionErrorLocked 源子目录被锁 → 递归枚举失败 → 临时目录清理、目标不落地

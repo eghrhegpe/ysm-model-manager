@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestFindDuplicateFiles_NoDupes(t *testing.T) {

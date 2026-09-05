@@ -3,7 +3,7 @@
 package scanner
 
 import (
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 
 	"encoding/json"
 	"os"

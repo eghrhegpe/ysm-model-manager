@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ====== extractTexSizeFromGeometryBytes ======

@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestCopyDirRecursive_RollbackOnPartialCopy 复制中途失败且 dst 为本次新建

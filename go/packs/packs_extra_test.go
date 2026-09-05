@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
-	"ysm-model-manager/internal/testutil"
 )
 
 // ====== isYsmFile ======

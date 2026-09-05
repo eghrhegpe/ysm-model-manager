@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestWalkAllFiles(t *testing.T) {

@@ -1310,7 +1310,7 @@ export const autoSidebar = [
             "link": "/knowledge/go-tags"
           },
           {
-            "text": "测试辅助函数 internal/testutil",
+            "text": "测试辅助函数 go/internal/testutil",
             "link": "/knowledge/go-testutil"
           },
           {

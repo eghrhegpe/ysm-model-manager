@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"testing"
 
-	"ysm-model-manager/internal/testutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // Restore 越权：src 在回收站目录之外应被拒绝

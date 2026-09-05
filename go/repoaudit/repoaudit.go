@@ -35,10 +35,12 @@ type extClassifier struct {
 
 var extClassifierCache atomic.Value // *extClassifier
 
-func buildExtClassifier() *extClassifier {
+// buildExtClassifierFrom 以给定注册表实例构建 ext→rtype 映射。
+// reg 必须由调用方传入（而非内部 LoadRegistry）——与 ClassifyWith 的「外层已
+// hoist reg」契约一致，保证缓存失效比对与构建用同一实例。
+func buildExtClassifierFrom(reg *types.ResourceTypeRegistry) *extClassifier {
 	count := make(map[string]int)
 	owner := make(map[string]string)
-	reg := types.LoadRegistry()
 	for _, rt := range reg.ResourceTypes {
 		for _, e := range rt.EffectiveExtensions() {
 			low := strings.ToLower(e)
@@ -222,7 +224,9 @@ func Audit(dirPath string) (DirAuditResult, error) {
 			if types.IsContainerExt(ext) {
 				typeName = "container"
 			} else {
-				typeName = Classify(ext)
+				// 用 walk 外已 hoist 的 reg（L161）判型——Classify 入口每调一次
+				// LoadRegistry，per-file 路径必须走 ClassifyWith 防线性放大
+				typeName = ClassifyWith(reg, ext)
 			}
 		}
 		resources[typeName]++
@@ -393,11 +397,24 @@ func isModelFileValid(path, ext string) bool {
 // Classify 将扩展名映射到注册表资源类型 id（如 "ysm"/"fbx"/"blueprint"）。
 // 单一声明者直判——零或多声明者返回 "other"（禁 last-wins，共享扩展名靠
 // 扩展名判型本身就是回归根源）。导出供 resource-scan/审计兜底共用。
+// 注意：本导出入口每调一次 LoadRegistry（mutex+解析）；per-file 热路径
+// （Audit walk / cli resource scan）请用 ClassifyWith 传外层已 hoist 的 reg，
+// 避免大仓库线性放大（见 ClassifyWith 注释）。
 func Classify(ext string) string {
+	return ClassifyWith(types.LoadRegistry(), ext)
+}
+
+// ClassifyWith 使用调用方已 hoist 的注册表实例做扩展名判型（cache hit 时零锁）。
+// 背景（code_review 963d4d36 #6/#8/#9）：原实现每次调用都 LoadRegistry 做
+// 实例指针比对——mutex+解析在 per-file 路径上线性放大，恰好违反 Audit walk
+// 中「注册表加载提升到 walk 外」（本文件 L159-161）的既有收敛。调用方须在
+// walk/scan 外 LoadRegistry 一次并传入；缓存仍以实例指针为失效 key，
+// SetRegistryPath 重置后新实例自然触发重建。
+func ClassifyWith(reg *types.ResourceTypeRegistry, ext string) string {
 	key := strings.ToLower(strings.TrimSpace(ext))
 	if raw := extClassifierCache.Load(); raw != nil {
 		cl := raw.(*extClassifier)
-		if cl.reg == types.LoadRegistry() {
+		if cl.reg == reg {
 			if id, ok := cl.extMap[key]; ok {
 				return id
 			}
@@ -405,7 +422,7 @@ func Classify(ext string) string {
 		}
 	}
 	// 缓存未命中或注册表已重置 → 重建（幂等：并发时最后 Store 者胜）
-	cl := buildExtClassifier()
+	cl := buildExtClassifierFrom(reg)
 	extClassifierCache.Store(cl)
 	if id, ok := cl.extMap[key]; ok {
 		return id

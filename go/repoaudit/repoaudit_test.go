@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
 
 func TestAudit_EmptyDir(t *testing.T) {
@@ -205,5 +207,60 @@ func writeFile(t *testing.T, path string, data []byte) {
 	t.Helper()
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("写文件 %s 失败: %v", path, err)
+	}
+}
+
+// TestClassifyWith_RebuildOnRegistrySwap 钉住 Classify/ClassifyWith 缓存随
+// 注册表实例失效重建（code_review 963d4d36 #7 补测试）：
+// 与 go/types/extensions_map_test.go 同款范式——SetRegistryPath 切换后，
+// 缓存必须以新实例指针为 key 重建，否则 stale ext→rtype 映射被永久服务。
+// 防回归点：若未来误用「一次性构建不再比对 reg」，切注册表后本测试会红。
+func TestClassifyWith_RebuildOnRegistrySwap(t *testing.T) {
+	dir := t.TempDir()
+	reg1 := filepath.Join(dir, "r1.json")
+	if err := os.WriteFile(reg1, []byte(`{"resourceTypes":[{"id":"alpha","extensions":[".aaa"],"hashable":true,"storageSubDir":"alpha"}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	reg2 := filepath.Join(dir, "r2.json")
+	if err := os.WriteFile(reg2, []byte(`{"resourceTypes":[{"id":"beta","extensions":[".bbb"],"hashable":true,"storageSubDir":"beta"}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	types.SetRegistryPath(reg1)
+	defer types.SetRegistryPath("")
+	regA := types.LoadRegistry()
+	if got := ClassifyWith(regA, ".aaa"); got != "alpha" {
+		t.Fatalf("reg1 下 ClassifyWith('.aaa') 应为 alpha, got %q", got)
+	}
+	if got := ClassifyWith(regA, ".bbb"); got != "other" {
+		t.Fatalf("reg1 下 ClassifyWith('.bbb') 应为 other, got %q", got)
+	}
+
+	// 切换注册表 → 缓存必须随新实例重建（新指针 → 缓存失效）
+	types.SetRegistryPath(reg2)
+	regB := types.LoadRegistry()
+	if got := ClassifyWith(regB, ".bbb"); got != "beta" {
+		t.Fatalf("切到 reg2 后 ClassifyWith('.bbb') 应为 beta（缓存需随实例重建）, got %q", got)
+	}
+	if got := ClassifyWith(regB, ".aaa"); got != "other" {
+		t.Fatalf("切到 reg2 后 ClassifyWith('.aaa') 应为 other, got %q", got)
+	}
+
+	// 无参 Classify 入口（内部 LoadRegistry）与传 reg 变体口径一致
+	if got := Classify(".bbb"); got != "beta" {
+		t.Fatalf("切到 reg2 后 Classify('.bbb') 应为 beta, got %q", got)
+	}
+
+	// 旧实例指针（regA）调用：全局缓存槽已被 regB 占用 → 以 regA 重建并服务
+	// regA 自有内容（.aaa→alpha，自洽）——缓存颠簸但不错判
+	if got := ClassifyWith(regA, ".aaa"); got != "alpha" {
+		t.Fatalf("旧实例 regA 判 '.aaa' 应以 regA 内容重建返回 alpha, got %q", got)
+	}
+	// 颠簸后回切 regB 仍正确（每次构建以传入 reg 为准，不误服务对方 stale 映射）
+	if got := ClassifyWith(regB, ".bbb"); got != "beta" {
+		t.Fatalf("颠簸后 regB 判 '.bbb' 仍应 beta, got %q", got)
+	}
+	if got := ClassifyWith(regB, ".aaa"); got != "other" {
+		t.Fatalf("颠簸后 regB 判 '.aaa' 应 other（regB 未声明 .aaa）, got %q", got)
 	}
 }

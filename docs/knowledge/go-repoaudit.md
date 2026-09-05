@@ -10,6 +10,7 @@ auto_fields:
     - Audit
     - CacheStatus
     - Classify
+    - ClassifyWith
     - Completeness
     - DedupSummary
     - DirAuditResult

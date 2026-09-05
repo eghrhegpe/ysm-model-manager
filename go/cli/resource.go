@@ -58,7 +58,9 @@ func addClassified(path, ext string, stats *resourceStats, reg *types.ResourceTy
 		if types.IsContainerExt(ext) {
 			t = "container"
 		} else {
-			t = repoaudit.Classify(ext)
+			// 用已 hoist 的 reg 判型（runResourceScan 在 walk 外 LoadRegistry 一次）——
+			// Classify 入口每调一次 LoadRegistry，per-file 路径走 ClassifyWith 防线性放大
+			t = repoaudit.ClassifyWith(reg, ext)
 		}
 	}
 	if stats.ByType == nil {

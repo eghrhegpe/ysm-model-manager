@@ -75,7 +75,9 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 			}
 		}
 		if failed > 0 {
-			return count, fmt.Errorf("推送完成: 成功 %d，失败 %d", count, failed)
+			// code_review #5：与 PullResources 对称——部分失败统一包 ErrPartialSync，
+			// 调用方 errors.Is 可区分「前置不满足」(nil) 与「可重试部分失败」
+			return count, fmt.Errorf("%w: 推送完成: 成功 %d，失败 %d", ErrPartialSync, count, failed)
 		}
 		return count, nil
 	}
@@ -93,7 +95,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 		}
 	}
 	if failed > 0 {
-		return count, fmt.Errorf("推送完成: 成功 %d，失败 %d", count, failed)
+		return count, fmt.Errorf("%w: 推送完成: 成功 %d，失败 %d", ErrPartialSync, count, failed)
 	}
 	return count, nil
 }

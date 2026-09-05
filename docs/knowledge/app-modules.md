@@ -42,7 +42,7 @@ perf:
   - io-bound
 invariant_anchors:
   - frontend/src/utils/module-loader.ts|loadView
-  - frontend/src/app-modules.ts|register
+  - frontend/src/app-modules.ts|registerCoiServiceWorker
 status: active
 ---
 

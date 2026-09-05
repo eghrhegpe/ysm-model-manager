@@ -80,7 +80,7 @@ use_when:
   - 树
   - 目录树
 invariant_anchors:
-  - frontend/src/views/app-tree/bus-handlers.ts|selectState
+  - frontend/src/views/app-tree/data.ts|selectState
 status: active
 ---
 

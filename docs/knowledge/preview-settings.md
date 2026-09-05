@@ -127,7 +127,7 @@ use_when:
   - 帧率
   - 截图灯光
 invariant_anchors:
-  - frontend/src/preview-3d/state/preview-state.ts|KNOWN_PATHS
+  - frontend/src/preview-3d/state/preview-paths.ts|KNOWN_PATHS
   - frontend/src/preview-3d/state/preview-state.ts|setStateValue
   - frontend/src/views/app-preview/skeleton-render.ts|buildToggleRow
   - frontend/src/preview-3d/render-budget.ts|MAX_FPS_DEFAULT
@@ -151,11 +151,12 @@ status: active
 
 ### 域二：3D 全域状态层
 - `preview-3d/state/preview-state.ts`（ADR-126 P4-A 升格；ADR-129 第一刀归位）
-- 9 条已落地横切设置路径（`KNOWN_PATHS`）：
+- 11 条已落地横切设置路径（`KNOWN_PATHS`，见 `preview-paths.ts`；ADR-125 P1 六条 → ADR-126 P4-A 升格 → 后扩至 11）：
   - 直管 localStorage（3 条）：`render.maxFps`（60）、`render.maxPixelRatio`（1.5）、`render.frustumCull`
   - cap 派生（不落盘，5 条）：`render.bloom` / `render.wireframe` / `env.pmrem` / `env.waterMode` / `env.groundMatSource`
   - per-scene 会话态（不落盘，1 条）：`ui.activeComponent`（`-1 = All`）
-  - 详见 [preview_state](./preview_state.md)（卡间口径以 9 条为准）
+  - 探针路径（2 条，cap 内部状态上浮供 `visibleWhen` 谓词消费）：`ui.mode`（预览会话模式 shared/self）、`env.skyGroundCap`（环境能力可用性）
+  - 详见 [preview_state](./preview_state.md)（卡间口径以 11 条为准）
 
 ### 域三：截图 & 填充面板
 - `shot-panel-shared.ts`（6 角度按钮）、`skeleton-render.ts`（`saveScreenshot`）、`skeleton-fill-panel.ts`（组件选择 + 统计 + 纹理）
@@ -189,6 +190,8 @@ status: active
 | 水面模式 | `env.waterMode` | `"film"` | `preview-state.ts` |
 | 地面材质源 | `env.groundMatSource` | `"none"` | `preview-state.ts` |
 | 组件选择 | `ui.activeComponent`（per-scene 会话态） | `-1` | `preview-state.ts` / `ysm-controls.ts` |
+| 预览会话模式 | `ui.mode`（shared/self，探针，不落盘） | `shared` | `preview-state.ts` |
+| 环境能力可用性 | `env.skyGroundCap`（探针，sky/ground cap 任一挂载即 true） | `false` | `preview-state.ts` |
 | 截图角度 | 6 键（`current/front/45/side/back45/all`） | — | `shot-panel-shared.ts` |
 | 截图灯光 | 三点布光，从 LightCapability 派生 | 缺省标准灯 | `screenshot-lights.ts` |
 | MMD 播放/动作 | 播放/暂停 + 多 clip 选择 | 首 clip | `mmd-controls.ts::playNodes` |

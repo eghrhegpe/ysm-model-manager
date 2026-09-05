@@ -72,7 +72,7 @@ perf:
   - gpu-bound
   - concurrent
 invariant_anchors:
-  - frontend/src/views/app-content/diagnostics/init.ts|createDedupSession
+  - frontend/src/views/app-content/diagnostics/dedup.ts|createDedupSession
 status: active
 ---
 

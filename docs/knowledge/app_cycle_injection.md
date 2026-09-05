@@ -41,7 +41,7 @@ use_when:
 status: active
 invariant_anchors:
   - internal/app/app_download.go|CancelQueue
-  - internal/app/app.go|DownloadFromGitHub
+  - internal/app/app_download.go|DownloadFromGitHub
 ---
 
 # App↔子组件对象级环打破范式（回调注入）

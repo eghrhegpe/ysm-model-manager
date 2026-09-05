@@ -37,7 +37,7 @@ use_when:
   - 字号
   - 界面偏好
 invariant_anchors:
-  - frontend/src/app-modules.ts|normalizeTheme
+  - frontend/src/theme-core.ts|normalizeTheme
   - frontend/src/utils/dom/storage.ts|safeGet
 status: active
 ---
@@ -46,7 +46,7 @@ status: active
 
 ## 概览
 
-主题系统的实现在组件入口 `app-modules.ts`（无独立 theme.ts 文件）：提供 6 套主题皮肤（cyber/warm/pro/sakura/ocean/mint）+ `system` 跟随系统模式，全部通过在 `<body>` 上切换 `theme-*` class 实现，具体颜色/字号/间距全由 `frontend/css/variables.css` 的 CSS 变量承载——组件层无任何硬编码颜色。启动时从 Go 配置或 localStorage 恢复主题，并应用字号/字体/密度/动画等 UI 偏好。
+主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/initTheme/normalizeTheme` 并在启动 IIFE 中装配）：提供 6 套主题皮肤（cyber/warm/pro/sakura/ocean/mint）+ `system` 跟随系统模式，全部通过在 `<body>` 上切换 `theme-*` class 实现，具体颜色/字号/间距全由 `frontend/css/variables.css` 的 CSS 变量承载——组件层无任何硬编码颜色。启动时从 Go 配置或 localStorage 恢复主题，并应用字号/字体/密度/动画等 UI 偏好。
 
 ## 核心职责
 
@@ -60,7 +60,7 @@ status: active
 ## 对外 API / 入口
 
 - 全局函数：`window.applyTheme(mode: string)`
-- 入口函数（app-modules.ts 内部）：`initTheme()`、`applyUIPrefs()`，启动 IIFE 中依次执行
+- 入口函数：`initTheme()`（定义于 `theme-core.ts`）、`applyUIPrefs()`（定义于 `app-modules.ts`），启动 IIFE 中依次执行
 - Wails binding（动态 import）：`LoadAppConfig`（仅取 `cfg.theme`）
 - localStorage 键：`theme`、`theme-auto`、`ui-font-size`、`ui-display-font`、`ui-card-density`、`ui-animations`
 - 派发 bus：`toast:show`（跟随系统切换提示）

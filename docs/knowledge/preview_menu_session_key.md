@@ -94,8 +94,7 @@ use_when:
 status: active
 invariant_anchors:
   - frontend/src/preview-3d/adapters/schema-registry.ts|getSchema
-  - frontend/src/views/app-preview/ysm-controls.ts|buildYsmModelSchema
-  - frontend/src/preview-3d/adapters/ysm-adapter.ts|buildYsmModelSchema
+  - frontend/src/views/app-preview/skeleton-fill-panel.ts|buildYsmModelSchema
 ---
 
 # preview-menu-session-key

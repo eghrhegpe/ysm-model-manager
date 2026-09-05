@@ -227,6 +227,59 @@ function checkKnowledgeSources(cards: any[]) {
 // GetVersion→GetAppVersion 等重构后知识卡正文失效）。知识卡 frontmatter 可声明
 // `invariant_anchors:`（list），每项 `文件相对路径|应含模式`（| 分隔，模式为字面子串或
 // `re:` 前缀正则）。锚不命中 → ERROR（机制描述漂移即红，纳入 ADR-043 fail-closed 契约）。
+//
+// 增强（WARN 级，2026-09）：纯标识符形态的锚（如 `file|someSymbol`）本意是「符号定义于此」，
+// 但弱断言（子串包含）会把只 import / re-export / 注释提及该符号的文件也判为命中——AI 照锚
+// 索引会摸错文件（实证：theme.md 曾把 normalizeTheme 钉在只有 re-export 的 app-modules.ts，
+// 真义在 theme-core.ts）。故对纯标识符锚额外检查「定义形态 or 真实消费」，两者皆无（仅
+// import/export 列表/注释/字符串出现）→ WARN 提示锚疑似指引用处。保持 ERROR 逻辑不变。
+const ANCHOR_DEF_RE =
+  // TS/JS：export function/class/const/let/var/type/interface/enum、裸 function/class、模块级 const/let/var
+  /(?:^|[\s\n;{}])(?:export\s+)?(?:async\s+)?(?:function\s+(\w+)\s*\(|class\s+(\w+)\b|(?:const|let|var)\s+(\w+)\s*[:=]|type\s+(\w+)\s*[={]|interface\s+(\w+)\b|enum\s+(\w+)\b)/g;
+const ANCHOR_DEF_RE_GO =
+  // Go：func/type/const/var + receiver 方法
+  /(?:^|[\s\n;{}])(?:func\s+\([^)]*\)\s+(\w+)\s*\(|func\s+(\w+)\s*\(|type\s+(\w+)\s*(?:struct|interface|\{)|const\s+(\w+)\s*=|var\s+(\w+)\s*=)/g;
+
+/**
+ * 判断纯标识符锚在目标文件里是「定义处」还是「仅有引用」。
+ * 返回 'defined' | 'consumed' | 'ref-only' | 'absent'：
+ *   - defined：文件存在该符号的定义形态（function/class/const/type 声明或 Go func/type/const）
+ *   - consumed：无定义形态，但有真实消费（调用 `X(` / 属性 `X.` / 类型标注 `: X` 等）
+ *   - ref-only：无定义形态、无真实消费，仅 import/export 列表/注释/字符串提及（锚疑似指引用处）
+ *   - absent：连子串都不含（本函数不负责，外层 includes 已判 ERROR）
+ */
+function anchorDefKind(content: string, sym: string): 'defined' | 'consumed' | 'ref-only' | 'absent' {
+  if (!content.includes(sym)) return 'absent';
+  const re = new RegExp(`\\b${sym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+  // 定义形态：TS/JS 与 Go 双正则各扫一遍
+  const defRegexes = [ANCHOR_DEF_RE, ANCHOR_DEF_RE_GO];
+  for (const dr of defRegexes) {
+    dr.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = dr.exec(content)) !== null) {
+      if (m.slice(1).includes(sym)) return 'defined';
+    }
+  }
+  // 定义形态兜底：Go 常见 `X = iota` / 短声明域内定义 / TS `class X` 属性 `readonly X` /
+  // TS interface 成员 `X?:` / `X:`
+  if (
+    new RegExp(
+      `(?:^|[\\s\\n;{}])(?:readonly\\s+|private\\s+|protected\\s+|public\\s+)?${re.source}\\s*[=:(]|\\b${re.source}\\??\\s*:\\s*(?:\\w+|\\[|\\{|\\(|<|\\([^)]*\\)\\s*=>)`
+    ).test(content)
+  ) {
+    // 排除 import/export 列表内的 `X,`（逗号后无冒号/等号/括号）
+    if (!new RegExp(`import[^;\\n]*\\b${re.source}\\b|export\\s*\\{[^}]*\\b${re.source}\\b`).test(content)) return 'defined';
+  }
+  // 真实消费：调用 `X(`、成员访问 `X.`、类型标注 `: X`、泛型 `X<`、数组/集合 `X[`、
+  // 函数实参 `(X)`（如 runTools(ALL_STATIC_TOOLS)）——排除声明形态
+  if (
+    new RegExp(
+      `\\b${re.source}\\s*\\(|\\b${re.source}\\s*\\.|\\b${re.source}\\s*<|:\\s*\\b${re.source}\\b|\\b${re.source}\\s*\\[|\\(\\s*\\b${re.source}\\s*\\)`
+    ).test(content)
+  ) return 'consumed';
+  return 'ref-only';
+}
+
 function checkKnowledgeAnchors(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
@@ -269,6 +322,16 @@ function checkKnowledgeAnchors(cards: any[]) {
       }
       if (!hit) {
         errors.push(`知识卡 ${cf} 的机制锚失效: 声称 ${file} 含「${pat}」，实际不存在（机制描述漂移——重构触及锚即红，请同步知识卡正文）`);
+        continue;
+      }
+      // 增强（WARN）：纯标识符锚且无定义/消费 → 疑似指引用处而非定义处
+      if (/^[A-Za-z_$][\w$]*$/.test(pat) && !pat.startsWith('re:')) {
+        const kind = anchorDefKind(content, pat);
+        if (kind === 'ref-only') {
+          warns.push(
+            `知识卡 ${cf} 的机制锚 ${file}|${pat} 疑似指向引用处而非定义处：该符号在文件中仅以 import / re-export / 注释 / 字符串出现，无定义形态亦无调用消费。若锚语义是「文件含该机制」可忽略；若想表达「符号定义于此」，请改指定义文件（grep 定位）`
+          );
+        }
       }
     }
   }

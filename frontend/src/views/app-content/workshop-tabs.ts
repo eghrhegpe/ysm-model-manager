@@ -93,7 +93,7 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
       // P2 修复（审核）：async handler 最外层 catch 出口（ADR-044 ①）——
       // loadCommunityData/showSiteView 抛错原逸出为 unhandled rejection
       bus.emit("toast:show", {
-        msg: "❌ " + (e as Error)?.message || t("workshop.loadCommunityFailed"),
+        msg: "❌ " + ((e as Error)?.message || t("workshop.loadCommunityFailed")),
         duration: TOAST_MS.normal,
         type: "error",
       });
@@ -142,7 +142,7 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
         // P3 修复（审核）：定时器回调最外层 catch 出口——原 loadCommunityData 在 try 外，
         // getApp 失败逸出 unhandled rejection（与 showCreatorsBySite 同出口）
         bus.emit("toast:show", {
-          msg: "❌ " + (e as Error)?.message || t("workshop.loadCommunityFailed"),
+          msg: "❌ " + ((e as Error)?.message || t("workshop.loadCommunityFailed")),
           duration: TOAST_MS.normal,
           type: "error",
         });

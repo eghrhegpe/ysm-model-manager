@@ -54,26 +54,7 @@ export async function collectFiles(
     if (entry?.isDirectory) {
       const subPath = basePath ? basePath + "/" + entry.name : entry.name;
       const reader = (entry as FileSystemDirectoryEntry).createReader();
-      const batch = await new Promise<FileSystemEntry[]>((resolve) => {
-        let settled = false;
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        const done = (v: FileSystemEntry[]): void => {
-          if (settled) return;
-          settled = true;
-          if (timer) clearTimeout(timer);
-          resolve(v);
-        };
-        // 兜底定时器：先武装再调 readEntries，防 readEntries 同步回调 done 时 timer 仍为
-        // undefined（clearTimeout 空操作）→ 3s 兜底定时器滞留为 no-op（codereview P3）
-        timer = setTimeout(() => done([]), READ_ENTRIES_TIMEOUT);
-        reader.readEntries(
-          (entries) => done(entries || []),
-          () => {
-            console.warn("[dnd-collector] 目录读取失败，跳过:", entry.name);
-            done([]);
-          },
-        );
-      });
+      const batch = await readAllDirEntries(reader, entry.name);
       if (batch.length && depth < MAX_DEPTH) {
         const deeper = await collectFiles(batch, true, subPath, depth + 1);
         result.push(...deeper);
@@ -95,4 +76,49 @@ export async function collectFiles(
     }
   }
   return result;
+}
+
+/**
+ * 分页读取目录全部条目。Web 标准 FileSystemDirectoryReader.readEntries 单次最多
+ * 返回 100 条，必须循环调用直到返回空数组才读完目录——单次调用会静默漏掉
+ * >100 条目目录的第 101+ 个文件/子目录（codereview P2）。
+ * 带 READ_ENTRIES_TIMEOUT 超时兜底防 WebView2 卡死；settle 后立即 clearTimeout。
+ * @param entryName 目录名（错误日志用）
+ */
+function readAllDirEntries(
+  reader: FileSystemDirectoryReader,
+  entryName: string,
+): Promise<FileSystemEntry[]> {
+  return new Promise((resolve) => {
+    const all: FileSystemEntry[] = [];
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(all);
+    };
+    // 兜底定时器：先武装再调 readEntries，防 readEntries 同步回调 done 时 timer 仍为
+    // undefined（clearTimeout 空操作）→ 3s 兜底定时器滞留为 no-op（codereview P3）
+    timer = setTimeout(finish, READ_ENTRIES_TIMEOUT);
+    const readBatch = (): void => {
+      reader.readEntries(
+        (entries) => {
+          const batch = entries || [];
+          if (!batch.length) {
+            finish(); // 空批次 = 目录读完
+            return;
+          }
+          all.push(...batch);
+          readBatch(); // 继续读下一批（每批 ≤100 条）
+        },
+        () => {
+          console.warn("[dnd-collector] 目录读取失败，跳过:", entryName);
+          finish();
+        },
+      );
+    };
+    readBatch();
+  });
 }

@@ -12,17 +12,32 @@ const fileEntry = (name: string, file: File): FileSystemFileEntry => ({
   file: (cb: (f: File) => void) => cb(file),
 } as unknown as FileSystemFileEntry);
 
+/**
+ * 目录条目 mock：readEntries 首次回调返回 children，之后回调空数组——
+ * 模拟真实浏览器分页语义（单批读完后第二批为空 → 目录读完）。
+ * 若 mock 每次回调都返回非空，循环分页实现会无限读下去直至超时。
+ */
 const dirEntry = (
   name: string,
   children: FileSystemEntry[],
-): FileSystemDirectoryEntry => ({
-  isFile: false,
-  isDirectory: true,
-  name,
-  createReader: () => ({
-    readEntries: (cb: (e: FileSystemEntry[]) => void) => cb(children),
-  }),
-} as unknown as FileSystemDirectoryEntry);
+): FileSystemDirectoryEntry => {
+  let read = false;
+  return {
+    isFile: false,
+    isDirectory: true,
+    name,
+    createReader: () => ({
+      readEntries: (cb: (e: FileSystemEntry[]) => void) => {
+        if (!read) {
+          read = true;
+          cb(children);
+        } else {
+          cb([]);
+        }
+      },
+    }),
+  } as unknown as FileSystemDirectoryEntry;
+};
 
 const dndItem = (entry: FileSystemEntry): DataTransferItem => ({
   kind: "file",
@@ -74,12 +89,18 @@ describe("collectFiles — 目录递归", () => {
   it("深度守卫：超过 MAX_DEPTH 层时停止递归，深层文件不收集", async () => {
     // 每层目录含 1 个文件 + 1 个子目录，构造 12 层嵌套
     const makeDeepDir = (n: number): FileSystemDirectoryEntry => {
+      let read = false;
       const self: FileSystemDirectoryEntry = {
         isFile: false,
         isDirectory: true,
         name: `d${n}`,
         createReader: () => ({
           readEntries: (cb: (e: FileSystemEntry[]) => void) => {
+            if (read) {
+              cb([]);
+              return;
+            }
+            read = true;
             if (n < 12) {
               cb([fileEntry(`f${n}.ysm`, new File(["x"], `f${n}.ysm`)), makeDeepDir(n + 1)]);
             } else {
@@ -98,6 +119,38 @@ describe("collectFiles — 目录递归", () => {
       ["f0.ysm", "f1.ysm", "f2.ysm", "f3.ysm", "f4.ysm", "f5.ysm", "f6.ysm", "f7.ysm", "f8.ysm", "f9.ysm"],
     );
     expect(result.some((c) => c.relPath.includes("/f10.ysm"))).toBe(false);
+  });
+
+  it(">100 条目目录：readEntries 分页循环读完所有批次（漏文件回归）", async () => {
+    // 模拟真实浏览器分页：批次1 = 60 条、批次2 = 60 条、批次3 = 空（目录读完）
+    // Web 标准 readEntries 单次最多返回 100 条，须循环读到空数组才完整。
+    const batches = [
+      Array.from({ length: 60 }, (_, i) =>
+        fileEntry(`a${i}.ysm`, new File(["x"], "a")),
+      ),
+      Array.from({ length: 60 }, (_, i) =>
+        fileEntry(`b${i}.ysm`, new File(["x"], "b")),
+      ),
+    ];
+    const pagedDir = {
+      isFile: false,
+      isDirectory: true,
+      name: "big",
+      createReader: () => {
+        let idx = 0;
+        return {
+          readEntries: (cb: (e: FileSystemEntry[]) => void) => {
+            if (idx < batches.length) cb(batches[idx++]);
+            else cb([]); // 空批次 = 读完
+          },
+        };
+      },
+    } as unknown as FileSystemDirectoryEntry;
+    const result = await collectFiles([dndItem(pagedDir)], false);
+    // 120 个文件全部收集（修复前只读第一批：漏掉 b* 60 个）
+    expect(result).toHaveLength(120);
+    expect(result.some((c) => c.relPath === "big/a59.ysm")).toBe(true);
+    expect(result.some((c) => c.relPath === "big/b59.ysm")).toBe(true);
   });
 
   it("isEntryArray=true：直接传 FileSystemEntry[] 顶层递归，未知条目跳过", async () => {

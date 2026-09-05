@@ -39,6 +39,25 @@ export interface WorkshopSite {
 }
 
 /**
+ * localMap（Map<name, hash>）→ hash 值 Set 的惰性缓存。
+ * 每模型调用 isModelMissing 时若遍历 Array.from(localMap.values()) 为 O(M)，
+ * N 个模型 = O(N×M)——本地文件上千 + 仓库模型上千时每次搜索/渲染数百万次比较。
+ * localMap 实例在会话生命周期内内容固定（show-repo-models 扫描一次后只读传递），
+ * 故每个实例仅构建一次 hashSet；WeakMap 弱引用，localMap 被 GC 后自动清理无泄漏。
+ */
+const _hashSetCache = new WeakMap<Map<string, string>, Set<string>>();
+
+function hashSetOf(localMap: Map<string, string>): Set<string> {
+  let s = _hashSetCache.get(localMap);
+  if (!s) {
+    s = new Set();
+    for (const h of localMap.values()) if (h) s.add(h);
+    _hashSetCache.set(localMap, s);
+  }
+  return s;
+}
+
+/**
  * 判断模型是否缺失（本地不存在）
  */
 export function isModelMissing(
@@ -47,7 +66,7 @@ export function isModelMissing(
 ): boolean {
   if (!m) return true;
   return m.hash
-    ? !(Array.from(localMap.values()).some((h) => h && h === m.hash) || localMap.has(m.name))
+    ? !(hashSetOf(localMap).has(m.hash) || localMap.has(m.name))
     : !localMap.has(m.name);
 }
 

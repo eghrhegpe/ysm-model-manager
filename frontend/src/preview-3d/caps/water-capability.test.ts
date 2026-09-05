@@ -495,6 +495,51 @@ describe("WaterCapability — dispose", () => {
   });
 });
 
+// ============ 法线贴图缓存（锐评 P1 重建风暴治理）============
+describe("WaterCapability — 法线贴图缓存", () => {
+  const topNormalMap = (scene: THREE.Scene): THREE.Texture | null => {
+    const top = scene.getObjectByName("ysm-water-top") as THREE.Mesh | null;
+    return top ? (top.material as THREE.MeshPhysicalMaterial).normalMap : null;
+  };
+
+  it("setPoolHeight/setPoolWallThickness 触发 rebuild 后 normalMap 复用同一 texture 实例", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool");
+    const n1 = topNormalMap(scene);
+    expect(n1).not.toBeNull();
+    cap.setPoolHeight(2.5); // rebuild ①
+    cap.setPoolWallThickness(0.5); // rebuild ②
+    expect(topNormalMap(scene)).toBe(n1); // 滑块逐帧 rebuild 不重生成 256² 噪声
+  });
+
+  it("size 变化（loadState 迁移路径）→ 缓存按 size 失效重生成", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    const t1 = cap["getNormalMap"]();
+    (cap as unknown as { params: { size: number } }).params.size = 40;
+    const t2 = cap["getNormalMap"]();
+    expect(t2).not.toBe(t1);
+    expect(cap["getNormalMap"]()).toBe(t2); // 新 size 下稳定复用
+  });
+
+  it("dispose 释放缓存贴图（释放责任从 disposeWater 挪到 dispose），且幂等", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool"); // ysm-water-top 仅 pool 模式存在
+    const n1 = topNormalMap(scene);
+    expect(n1).not.toBeNull();
+    let disposed = 0;
+    n1!.addEventListener("dispose", () => { disposed++; });
+    cap.dispose();
+    expect(disposed).toBe(1);
+    expect(() => cap.dispose()).not.toThrow();
+    expect(disposed).toBe(1);
+  });
+});
+
 // ============ 菜单控件全联动（覆盖 buildWaterGroup 全部 getValue/setValue 闭包）============
 describe("WaterCapability — 菜单控件全联动", () => {
   it("12 项控件 setValue/getValue 双向读写联动", () => {

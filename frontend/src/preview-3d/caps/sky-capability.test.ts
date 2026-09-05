@@ -719,6 +719,28 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     expect(pmremSpy).toHaveBeenCalled();
   });
 
+  it("[锐评 P1 跨 cap 踩踏] dispose 守卫还原：environment 被他人改写后不得冲掉", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    expect(scene.environment).not.toBeNull(); // 本能力 PMREM 贴图已接管
+    const foreign = new THREE.Texture();
+    scene.environment = foreign; // 模拟 environment-capability（HDR）在 sky 之后写入
+    cap.dispose();
+    expect(scene.environment).toBe(foreign);
+  });
+
+  it("dispose 在 environment 仍归自己所有时还原构造前快照", () => {
+    const scene = new THREE.Scene();
+    const prev = new THREE.Texture();
+    scene.environment = prev;
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    expect(scene.environment).not.toBe(prev); // 已被 PMREM 贴图接管
+    cap.dispose();
+    expect(scene.environment).toBe(prev);
+  });
+
   it("setSun 写 uniforms 并在 enabled+environment 下重建环境", () => {
     const scene = new THREE.Scene();
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
@@ -889,6 +911,14 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     cap.setGodRaysEnabled(false);
     cap.setTime(18); // updateGodRays 走 disabled 分支 → remove
     expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
+  });
+
+  it("[锐评 P1 死时间轴] update(dt) 推进 godRaysTime（shimmer 动画独立于昼夜循环活着）", () => {
+    const cap = newCap();
+    const t = (cap as unknown as { godRaysTime: { value: number } }).godRaysTime;
+    const before = t.value;
+    cap.update(0.5); // 未开昼夜循环也要推进——shader sin(uTime*2.0+...) 依赖此时间轴
+    expect(t.value).toBeCloseTo(before + 0.5, 5);
   });
 
   it("disabled 状态下 setGodRaysEnabled 只翻标志不触发挂载", () => {

@@ -37,6 +37,11 @@ export class WaterCapability implements SceneCapability {
   private enabled: boolean;
   /** 参数变更监听（menu 局部刷新用）；仅模式切换等影响分组可见性的离散操作 notify */
   private readonly listenerSet = createListenerSet();
+  /** 法线贴图实例级缓存（锐评 P1 重建风暴治理）：生成只依赖 size（运行期无 setter，仅
+   *  loadState 迁移可变），pool 高度/壁厚滑块逐帧 rebuild 不必重生成 256²×3 层逐像素噪声；
+   *  缓存跨 rebuild 共用 → 释放责任在 dispose()，disposeWater 不得中途释放。 */
+  private normalMapCache: THREE.DataTexture | null = null;
+  private normalMapCacheSize = -1;
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -127,7 +132,7 @@ export class WaterCapability implements SceneCapability {
     };
     mat.needsUpdate = true;
 
-    const normalMap = this.generateNormalMap(256);
+    const normalMap = this.getNormalMap();
     (mat as THREE.MeshPhysicalMaterial & { normalMap: THREE.DataTexture | null }).normalMap =
       normalMap;
     (mat as THREE.MeshPhysicalMaterial & { normalScale: THREE.Vector2 }).normalScale =
@@ -290,13 +295,9 @@ export class WaterCapability implements SceneCapability {
       m.geometry.dispose();
       const mats = Array.isArray(m.material) ? m.material : [m.material];
       for (const mat of mats) {
-        // 释放 normalMap / transmission / Physical 内部资源（尽量拆安全引用）
-        const asStandard = mat as THREE.MeshStandardMaterial & {
-          normalMap?: THREE.Texture | null;
-        };
-        if (asStandard?.normalMap) safeDispose(asStandard.normalMap);
         // MeshPhysicalMaterial transmission 特性会在内部创建 transmissionRenderTarget，
         // 必须在 material.dispose() 之前显式释放其 texture 和 render target。
+        // （normalMap 不在此释放：实例级缓存跨 rebuild 共用，释放责任在 dispose()）
         const asPhysical = mat as THREE.MeshPhysicalMaterial & {
           transmissionRenderTarget?: THREE.WebGLRenderTarget | null;
         };
@@ -542,6 +543,17 @@ export class WaterCapability implements SceneCapability {
   }
 
   // ── 程序化法线贴图生成 ──
+  /** 取法线贴图（按 size 缓存复用；size 变化时失效重生成并释放旧贴图） */
+  private getNormalMap(): THREE.DataTexture {
+    if (this.normalMapCache && this.normalMapCacheSize === this.params.size) {
+      return this.normalMapCache;
+    }
+    if (this.normalMapCache) safeDispose(this.normalMapCache);
+    this.normalMapCache = this.generateNormalMap(256);
+    this.normalMapCacheSize = this.params.size;
+    return this.normalMapCache;
+  }
+
   private generateNormalMap(size: number): THREE.DataTexture {
     const data = new Uint8Array(size * size * 4);
     const sz = this.params.size;
@@ -667,6 +679,12 @@ export class WaterCapability implements SceneCapability {
   dispose(): void {
     if (this.water.parent) this.water.parent.remove(this.water);
     this.disposeWater();
+    // 法线贴图缓存在此统一释放（重建路径 disposeWater 共用缓存，不在此拆）
+    if (this.normalMapCache) {
+      safeDispose(this.normalMapCache);
+      this.normalMapCache = null;
+      this.normalMapCacheSize = -1;
+    }
   }
 }
 

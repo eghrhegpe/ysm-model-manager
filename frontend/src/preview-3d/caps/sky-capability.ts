@@ -543,6 +543,9 @@ export class SkyCapability implements SceneCapability {
    *  forceEnv=false：昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建
    *  （锐评 P1 GPU 熔炉修复——每帧重生环境贴图是 rAF 热路径上的重活）。 */
   update(dt: number): void {
+    // God Rays shimmer 动画时间轴独立于昼夜循环推进（锐评 P1：此前初始化后全仓无写入，
+    // shader sin(uTime*2.0+...) 永远静止——写了动画，动画不存在）。
+    this.godRaysTime.value += dt;
     if (!this.autoRotateOn) return;
     this.setTime(this.params.timeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC, {
       forceEnv: false,
@@ -951,13 +954,20 @@ export class SkyCapability implements SceneCapability {
   dispose(): void {
     this.stopAutoRotate();
     this.detach();
+    // 守卫依据：本能力生成过的 environment 贴图引用（须在 renderTarget dispose/置空前捕获）
+    const ownedEnv = this.renderTarget?.texture ?? null;
     if (this.renderTarget) {
       this.renderTarget.dispose();
       this.renderTarget = null;
     }
     // tone mapping 已由 detach()→releaseTone() 回滚，此处不再重复处理。
     // dispose 还原 scene.environment 到构造前状态（detach 仅 clearEnvironment 不还原 prev）。
-    this.scene.environment = this.prevEnvironment;
+    // 守卫（锐评 P1 跨 cap 踩踏）：仅当当前 environment 仍归本能力所有（自建贴图或已被
+    // clearEnvironment 置 null）才还原——environment-capability（HDR）若在本能力之后写过
+    // scene.environment，无条件还原会把别人的贴图冲掉。
+    if (this.scene.environment === null || this.scene.environment === ownedEnv) {
+      this.scene.environment = this.prevEnvironment;
+    }
     this.sky.geometry.dispose();
     (this.sky.material as THREE.Material).dispose();
     this.envSky.geometry.dispose();

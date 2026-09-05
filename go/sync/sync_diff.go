@@ -1,10 +1,10 @@
 // ===== 同步对比单点化（ADR-064 阶段一）=====
 // 从 sync.go / sync_hash.go 抽出的「归一化 key 对比」公共实现：
-// SyncResources（文件级）与 CompareGlobalInstanceHashes 此前各自内联同一套
-// 「同名同大小 Synced / 同名不同大小 Missing / 仅单侧 Extra」归并逻辑，靠
-// 手工对齐口径（sync_hash.go:42 注释）——改一处忘一处即漂移，近三轮连环
-// bug（深度守卫 / pack.mcmeta 门控 / FindInstDir 兜底）均为其代价。
-// 现收敛为本文件单点实现，两侧只负责收集条目。
+// SyncResources（文件级）此前内联「同名同大小 Synced / 同名不同大小 Missing /
+// 仅单侧 Extra」归并逻辑（已随 CompareGlobalInstanceHashes 死代码清理删除，
+// 本文件是唯一实现）——靠手工对齐口径漂移，近三轮连环 bug（深度守卫 /
+// pack.mcmeta 门控 / FindInstDir 兜底）均为其代价。
+// 现收敛为本文件单点实现，调用方只负责收集条目。
 package sync
 
 import (

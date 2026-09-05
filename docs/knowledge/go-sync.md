@@ -112,8 +112,7 @@ status: active
 - `HasDotMinecraftSubdirs(path string) bool` / `FindMinecraftDir(parentDir string) string` — 实例布局探测辅助
 - `SyncResources(globalDir, instanceDir string, rtype ...string) types.ResourceSyncResult` — **ADR-064 阶段二：全树递归 + 相对路径（relKey）对比**全局 ↔ 整合包资源；嵌套文件天然区分、无同名冲突，原「只扫顶层」深度守卫已取消。含 `pack.mcmeta` 的文件夹作为整体单元（仅资源包类型收集）；过滤/归一化统一走 `types.IsResourceAllowed` / `types.NormalizeResourceName`，归并走 `ResourceDiff`（sync_diff.go）
 - `SyncResourcesDirLevel(globalDir, instanceDir, rtype string)` / 优化版 `SyncResourcesDirLevelScan(globalDir, instanceDir, rtype string, scanFn ScanEntriesFn)` — 按文件夹名对比（YSM 的 ysm.json 文件夹 / MMD 的 .pmx/.pmd 文件夹 / 蓝图 .nbt 文件夹），同名时文件夹优先于平铺文件。`SyncResourcesDirLevel` 走 filepath.Walk（测试/旧调用方，行为不变）；`SyncResourcesDirLevelScan` 注入 scanner 已缓存扫描结果，命中时从 ModelEntry 列表反推同步条目（无嵌套模式类型 MMD/YSM 与原 Walk 精确等价；含嵌套模式 maid-model 回退 Walk），消除 8 个 MMD 子类型 ×(1+N 整合包) 对同一仓库树的重复 Walk
-- `CompareGlobalInstanceHashes(mcRoot, globalDir, subDir, rtype string, scanFn ScanFunc, listFn ListVersionsFunc, hasModFn HasModInDirFn) []types.InstanceStatus` — 非 YSM 资源类型的通用实例状态对比，**ADR-064 与 `SyncResources` 同口径**（`relKey` 相对路径 + 大小 + `ResourceDiff` 单点归并，消除手工对齐漂移）；实例目录经 `types.FindInstDir` 解析（标准目录不存在时兜底扫描）。修复 MMD（`.pmx/.pmd` 不计算 SHA256，旧哈希比对恒 0）与蓝图（实例目录非标准路径）在侧栏不显示的问题
-- `ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResult` — **单点对比归并**（sync_diff.go，ADR-064 阶段一）：同名同大小 Synced / 同名不同大小 Missing / 仅单侧 Extra，结果排序确定性；`SyncResources` 与 `CompareGlobalInstanceHashes` 共享，key 由调用方决定（统一为 `relKey` 相对路径）
+- `ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResult` — **单点对比归并**（sync_diff.go，ADR-064 阶段一）：同名同大小 Synced / 同名不同大小 Missing / 仅单侧 Extra，结果排序确定性；`SyncResources` 消费，key 由调用方决定（统一为 `relKey` 相对路径）。注：`CompareGlobalInstanceHashes`（旧非 YSM 实例状态对比）已随死代码清理删除——实例状态对比统一走 `GetInstanceStatus` / `GetInstanceStatusWith`
 - `GetLinkType(path string) types.LinkType` — 判定 `symlink` / `hardlink` / `copy` / `unknown`
 - `SortEntries(entries []types.ModelEntry)` — 按名称排序
 - `PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) (int, error)` — 推送缺失资源；**`types.IsDirLevelSync(rtype)` 注册表驱动**（YSM/MMD 等 `dirLevelSync` 类型）走文件夹级（`SyncResourcesDirLevel` + `installer.InstallDir`），其余走文件级（`SyncResources` + `installer.Install`）
@@ -125,14 +124,14 @@ status: active
 - `ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDir, remoteDir string) error` — 单文件冲突解决：`force_remote` 先备份本地再用远端覆盖（失败回滚备份），`force_local` 不操作，`manual` 返回错误
 - `ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int)` — 批量解决，`SuggestedStrategy==manual` 时回退到 `defaultStrategy`
 - `suggestStrategy(localTime, remoteTime time.Time) ResolutionStrategy` — 按修改时间推荐：远端新→`force_remote`，本地新→`force_local`，相同→`manual`
-- 函数类型：`ScanFunc`（扫描注入，由 internal/app 提供）、`ListVersionsFunc`、`HasModInDirFn`、`Logger`（导入日志回调，薄壳注入 `App.logger.Add`）
+- 函数类型：`ScanFunc`（扫描注入，由 internal/app 提供）、`ListVersionsFunc`、`Logger`（导入日志回调，薄壳注入 `App.logger.Add`）
 
 ## 与其他子系统关系
 
 - 被 `internal/app/app_install.go` 调用（状态对比、推送/拉取、启禁同步、`GetLinkType` 决定删除策略）
 - 被 `internal/app/app_scan.go` 调用（`ListVersions`）、`internal/app/app_config.go` 引用
 - 被 [go_watcher](./go-watcher.md) 调用（文件变更时 `ListVersions` + `SyncToggleStatus` 自动同步启禁）
-- 依赖 `go/types`（ModelEntry/InstanceStatus/LinkType 等）；mod 检测经 `HasModInDirFn` 注入（`CompareGlobalInstanceHashes`），本包不再直接依赖 `go/ysm`（原 `HasYSMMod` 硬编码已收编删除，`InstanceStatus.HasYSM` 死字段同步删）
+- 依赖 `go/types`（ModelEntry/InstanceStatus/LinkType 等）；本包不依赖 `go/ysm`（原 `HasYSMMod` 硬编码已收编删除，`InstanceStatus.HasYSM` 死字段同步删，mod 检测归 App 层 `HasModInDir` 注册表驱动）
 - `sync_push.go` / `sync_relink.go` 反向依赖 [go_installer](./go-installer.md)（`Install` / `InstallDir` / `CopyFile`）——本包→installer 是单向的，installer 不得回调本包
 
 ## 不变量
@@ -142,7 +141,7 @@ status: active
 - 哈希全量计算（`scanner.ComputeFileHash`，`sync.go computeHash` 委托）；文件 >500MB（`types.MaxImportSize`）返回空串跳过哈希（同步对空哈希跳过匹配），读错误同样返回空
 - **所有扫描路径都必须排除 `.recycle`**，与 `scanner.ScanEntries` 口径对齐：`SyncResources` 的 collect（`sync.go`，统一 collect 闭包内 `fsutil.IsRecycleDir` SkipDir）、`SyncResourcesDirLevel` 的 `collectEntries`（sync_dirlevel.go）均跳过；`SyncToggleStatus` 用 `strings.Contains(strings.ToLower(p), ".recycle")` 检查整个路径（sync.go），非路径前缀匹配——漏排会把回收站里的模型当成仓库活跃模型，同步管理器显示 missing 且可被推送回实例（回归测试 `TestSyncResources_IgnoresRecycleDir`）
 - 跳过回收站时带 `path != 根目录` 守卫：若用户把仓库根/实例根本身命名为 `.recycle` 则不跳过，否则整次扫描会直接空掉
-- 状态对比类入口（`GetInstanceStatus` / `CompareGlobalInstanceHashes`）自身不 Walk 仓库，`.recycle` 的排除依赖注入的 `scanFn`（即 `scanner.ScanEntries`）——换用不排 `.recycle` 的 scanFn 会重新引入误判
+- 状态对比类入口（`GetInstanceStatus`）自身不 Walk 仓库，`.recycle` 的排除依赖注入的 `scanFn`（即 `scanner.ScanEntries`）——换用不排 `.recycle` 的 scanFn 会重新引入误判
 - `SyncResources` 对比 key 为**相对路径**（`relKey`：小写 + 正斜杠 + 去 `.disabled`/`.ban`，ADR-064 阶段二），同名文件按**大小**判定内容是否变化（复制会改 mtime，mtime 不可靠），大小不同归入 Missing 视为待更新；三个结果列表返回前均 `sort.Strings` 排序
 - 扩展名过滤统一走 `types.IsResourceAllowed`（`types.AllExts()` + `.json` 仅 `ysm.json`）与 `packs.IsTypeModelFile`（单类型扩展集 + `ysm.json`，ADR-144 下沉），原 `isSyncAllowed` / `isModelFile` / `instance.extMatch` 三处同义实现已收敛（ADR-064 阶段一）
 - **`SyncResourcesDirLevel` 容器 vs 叶子模型夹判定**（`collectEntries`，sync_dirlevel.go）：目录被 `isDirTypeModelFolder` 判真（直接含 .ysm/.ysm.json）后，若还直接含子模型文件夹（`containsModelSubfolder` 为真），则是「容器」而非「叶子模型夹」——**不下钻整体收编 SkipDir**，而继续下钻保留各子夹层级，由 `go/instance` 的 `nestDirLevelTree` 重建容器树。收发场景：`嵌套1/` 内含直接平铺 `动力臂.ysm` + `01_taisho_maid/` + `嵌套2/` 深层子夹，若被整体收编会把子夹层级吞掉，前端退化成摊平的 `01_taisho_maid/ysm.json` 文件行（违背仓库层级镜像）；只有「叶子模型夹」（含模型文件但无子模型夹）才 SkipDir 收编为单同步单元

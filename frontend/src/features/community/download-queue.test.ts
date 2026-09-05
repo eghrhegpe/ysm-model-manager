@@ -2,6 +2,10 @@
 // 模块级 STATE：getState/subscribe/enqueue/cancel/resume + 后端事件处理。
 // 每个用例通过 vi.resetModules() + 动态 import 获得全新模块实例，
 // 彻底隔离模块级 STATE（含 errorList），避免跨用例状态泄漏。
+//
+// ⚠️ ADR-187 D5 例外条款：952 行未拆分——setup 111 行 + beforeEach 动态 import 绑定
+// 文件级 let（bus/getState/createDownloadQueue…），UI 层与状态层共享同一 mock 矩阵；
+// 外提复制后行数净增（496+566 > 952）且子文件缺任一 mock 即静默失效；保留整文件。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { type Bus, type ToastPayload } from "../../bus.ts";
 import {

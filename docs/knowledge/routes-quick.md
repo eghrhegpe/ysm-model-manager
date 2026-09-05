@@ -256,17 +256,17 @@
 | 按标签筛选、条件过滤 | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | 菜单行为执行、ctx:show | [右键菜单系统](./context-menu.md) | 禁止 view 层手写菜单项 | - |
 | 打标签、编辑标签、tag-editor | [标签编辑器 tag-editor](./dialog-tag-editor.md) | tag-editor 弹窗必须复用 modal.ts 的 Promise API，标签写回走 go/tags Store 的原子替换 | - |
-| 弹确认框 / 输入框 / 下拉选择 / modal | [弹窗基座 modal](./dialog-modal.md) | 业务弹窗必须复用 modal.ts 的 Promise API（prompt/select/confirm/picker），禁止手写弹窗 | - |
+| 弹确认框 / 输入框 / 下拉选择 / modal | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | 业务弹窗必须复用 modal 家族的 Promise API（prompt/select/confirm/picker），禁止手写弹窗 | - |
 | 读取 YSM 头部（作者 / 介绍） | [重命名弹窗 rename](./dialog-rename.md) | - | - |
 | 分类标记、全库标签建议 | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
-| 富列表选择（picker，支持自定义 footer 表单） | [弹窗基座 modal](./dialog-modal.md) | - | - |
+| 富列表选择（picker，支持自定义 footer 表单） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
 | 高级筛选、骨骼数 / 立方体 / 纹理尺寸数值范围 | [高级筛选 adv-filter](./dialog-adv-filter.md) | adv-filter 弹窗必须复用 modal.ts 的 Promise API，禁止手写弹窗 DOM | - |
 | 加载动画、滑块、行组件、预设 chip | [UI 组件库 ui-components](./ui_components.md) | - | - |
-| 进度弹窗（closable=false 防误关） | [弹窗基座 modal](./dialog-modal.md) | - | - |
+| 进度弹窗（closable=false 防误关） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
 | 批量重命名、查找替换、正则替换 | [批量重命名 batch-rename](./dialog-batch-rename.md) | batch-rename 弹窗必须是模块级单例 dialogEl，重复打开先 close() 结算上一个 Promise | - |
 | 统一作者 / 作品、5 个内置预设 | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | 右键菜单、添加菜单项 | [右键菜单系统](./context-menu.md) | 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 core/context-menu-handlers.ts（HANDLERS 表） | - |
-| 执行破坏性操作前的二次确认（danger 模式） | [弹窗基座 modal](./dialog-modal.md) | 破坏性操作（删除/清空/覆盖）必须用 modalConfirm，danger=true 标红按钮 | - |
+| 执行破坏性操作前的二次确认（danger 模式） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | 破坏性操作（删除/清空/覆盖）必须用 modalConfirm，danger=true 标红按钮 | - |
 | 重命名、改名、命名规范 | [重命名弹窗 rename](./dialog-rename.md) | rename 弹窗必须复用 modal.ts 的 Promise API，非法字符与长度校验在弹窗内完成 | - |
 | createCard / createSlideMenu / createLoading | [UI 组件库 ui-components](./ui_components.md) | - | - |
 | FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 dom/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签 | - |
@@ -674,7 +674,7 @@
 | 离屏 Canvas 不释放 | - | 内存泄漏、连续截图卡死；必须在完成回调里 release |
 | blob URL 不 revokeObjectURL | - | 浏览器内存累积；导出 / 失败分支都必须 revoke |
 | 目录层级变动后,vi.mock 字符串路径与 import 同步重算(ADR-170 实测:非 import 语句正则扫不到 mock 路径变更) | - | - |
-| modal.ts VIEW_TESTIDS 是契约测试静态聚合的单一事实源,增删 data-testid 必须同步本数组,否则契约测试静默漏检 | - | - |
+| modal-core.ts VIEW_TESTIDS 是契约测试静态聚合的单一事实源,增删 data-testid 必须同步本数组,否则契约测试静默漏检 | - | - |
 | tag-editor.ts 标签建议列表未做去重,上游标签集含重复时 UI 会渲染重复条目(已知限制,非 bug) | - | - |
 | batch-rename.ts 批量改名失败时 TOAST_MS 显示错误但 bus 未 emit tree:reload,需手动触发刷新 | - | - |
 | adv-filter.ts keyword 字段 trim 后为空串时 Go 侧视为无关键字过滤(非报错,静默降级) | - | - |

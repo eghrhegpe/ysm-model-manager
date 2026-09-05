@@ -1408,7 +1408,7 @@ export const autoSidebar = [
             "link": "/knowledge/dialog-batch-rename"
           },
           {
-            "text": "弹窗基座 modal",
+            "text": "弹窗基座 modal（6 文件家族）",
             "link": "/knowledge/dialog-modal"
           },
           {

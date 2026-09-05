@@ -8,7 +8,7 @@ source_files:
   - frontend/src/features/dialogs/tag-editor.ts
   - frontend/src/features/dialogs/adv-filter.ts
   - frontend/src/features/dialogs/batch-rename.ts
-  - frontend/src/features/dialogs/modal.ts
+  - frontend/src/features/dialogs/modal-core.ts
 tests:
   - frontend/src/features/dialogs/adv-filter-util.test.ts
   - frontend/src/features/dialogs/adv-filter.test.ts
@@ -20,13 +20,20 @@ tests:
   - frontend/src/features/dialogs/tag-editor.test.ts
 auto_fields:
   symbols_with_lines:
+    - __resetModalStateForTest
     - AdvFilterResult
     - AdvFilterValue
     - BatchRenameChange
+    - closeActiveDialog
+    - closeDlg
+    - createDialog
     - modalAdvFilter
     - modalTagEditor
+    - registerDlg
     - showBatchRenameDialog
     - showRenameDialog
+    - trapFocus
+    - VIEW_TESTIDS
 use_when:
   - 批量重命名 / 标签编辑 / 高级筛选对话框
   - 找对话框入口符号
@@ -37,13 +44,13 @@ quick_intents:
 quick_risk_lines:
   - features/dialogs 是业务 UI,勿被调回 utils/dom(分类事故复发)
   - dialogs 各文件内部引用深度以 features/dialogs 为基准,vi.mock 路径须同步
-  - modal.ts VIEW_TESTIDS 增删 data-testid 须同步本数组(ADR-133 阶段 B 契约测试静态聚合)
+  - modal-core.ts VIEW_TESTIDS 增删 data-testid 须同步本数组(ADR-133 阶段 B 契约测试静态聚合)
   - rename.ts 路径变更时需同步 vi.mock 字符串路径(ADR-170 实测教训:非 import 语句正则扫不到)
   - batch-rename.ts stagger 动画依赖 animation/stagger.ts,改路径须保持同簇引用
   - adv-filter.ts 后端约束:Go SearchModels 仅支持 6 范围 +1 关键字,前端不呈现其他控件(代码注释已注明)
 pitfalls:
   - 目录层级变动后,vi.mock 字符串路径与 import 同步重算(ADR-170 实测:非 import 语句正则扫不到 mock 路径变更)
-  - modal.ts VIEW_TESTIDS 是契约测试静态聚合的单一事实源,增删 data-testid 必须同步本数组,否则契约测试静默漏检
+  - modal-core.ts VIEW_TESTIDS 是契约测试静态聚合的单一事实源,增删 data-testid 必须同步本数组,否则契约测试静默漏检
   - tag-editor.ts 标签建议列表未做去重,上游标签集含重复时 UI 会渲染重复条目(已知限制,非 bug)
   - batch-rename.ts 批量改名失败时 TOAST_MS 显示错误但 bus 未 emit tree:reload,需手动触发刷新
   - adv-filter.ts keyword 字段 trim 后为空串时 Go 侧视为无关键字过滤(非报错,静默降级)
@@ -61,7 +68,7 @@ invariant_anchors:
 
 | 文件 | 职责 |
 |---|---|
-| modal.ts | 通用对话框底座（trapFocus/closeDlg/registerDlg/modalConfirm/modalPicker） |
+| modal-core.ts + modal-prompt/select/confirm/progress/picker.ts | 通用对话框底座 6 文件家族（ADR-187 D2 拆分；core=脚手架/单例/trapFocus，builder 各含 modalXxx 入口） |
 | rename.ts + rename-format.ts | 重命名对话框 + 文件名拼接/校验纯逻辑 |
 | batch-rename.ts + batch-rename-util.ts | 批量重命名 + 解析名重建纯逻辑 |
 | tag-editor.ts + tag-set.ts | 标签编辑器 + 标签集合运算 |
@@ -77,7 +84,7 @@ invariant_anchors:
 
 - 桥依赖：adv-filter/rename/tag-editor 经 `getApp` 调 backend（业务正确调桥，非穿透）。
 - i18n：核心文案走 `core/i18n/t.ts`。
-- modal.ts 是共享底座，被 core/features/views 测试 vi.mock 拦截。
+- modal-*.ts（core+builder）是共享底座，被 core/features/views 测试 vi.mock 拦截（mock 路径须指向符号实际所在文件：modalConfirm→modal-confirm.ts 等）
 
 ## 不变量
 

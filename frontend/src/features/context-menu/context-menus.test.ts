@@ -2,6 +2,10 @@
 // ===== context-menus 映射测试（ADR-021 A 层）=====
 // 触发 ctx:show → 断言 menu:show 载荷与 menu-defs.ts 声明一致；
 // 点击 item → 断言 handler 发出正确的 bus 事件 / getApp 调用。
+//
+// ⚠️ ADR-187 D5 例外条款：1076 行未拆分——setup 214 行（mock 矩阵 10 组 + DOM stub +
+// isolate:false 全局时序耦合）占 20%，外提复制后 3 文件净增行数（447+674+382 > 1076）
+// 且破坏全局 stub 时序；保留整文件，巨型 describe 内按语义分段阅读。
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
 import type { MenuItem, CtxShowPayload, ToastPayload } from "../../bus";

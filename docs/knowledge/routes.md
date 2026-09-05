@@ -38,7 +38,7 @@
 | 工具函数、工具方法、纯函数、防抖、异步 | [核心工具函数 core-utils](./core_utils.md) | `utils/core/` 是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。 |
 | 高级筛选、筛选、骨骼数、立方体、纹理尺寸、按标签筛选、条件过滤 | [高级筛选 adv-filter](./dialog-adv-filter.md) ⚠️歧义（另见 search.md、model-stats.md等） | `adv-filter.ts` 提供模型高级筛选弹窗：关键字 + 骨骼数/立方体数/纹理尺寸三组数值范围 + 标签名，采集后返回结构化条件对象交给调用方执行搜索。控件集合与后端 `SearchModels` 的能力严格对齐（6 个范围参数 … |
 | 批量重命名、批量改名、查找替换、正则替换、统一作者、预设、batch-rename | [批量重命名 batch-rename](./dialog-batch-rename.md) ⚠️歧义（另见 ui_components.md） | `batch-rename.ts` 提供目录级批量重命名弹窗：接收文件条目列表，用 `parseModelName` 逐个解析出作者/作品/角色/日期，支持两种模式——「解析格式」（统一作者/作品批量改写）与「查找替换」（字面量或正则，含 … |
-| 弹窗、对话框、确认框、输入框弹窗、下拉选择弹窗、modal、prompt、confirm | [弹窗基座 modal](./dialog-modal.md) ⚠️歧义（另见 android-events.md） | `modal.ts` 是全应用统一的模态弹窗基座：提供 prompt（带输入框）、select（下拉选择）、confirm（确认）、picker（富列表选择）四种 Promise 化弹窗，以及共享的转义、关闭动画、活动弹窗单例管理。所有业务… |
+| 弹窗、对话框、确认框、输入框弹窗、下拉选择弹窗、modal、prompt、confirm | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) ⚠️歧义（另见 android-events.md） | `modal.ts`（659 行）已按 ADR-187 D2 拆为 6 文件平铺于 `dialogs/`： |
 | 重命名、改名、命名规范、作者 品牌 角色、rename、读取头部 | [重命名弹窗 rename](./dialog-rename.md) ⚠️歧义（另见 go-fileops.md） | `rename.ts` 提供单个模型的结构化重命名弹窗：把文件名按 `[作者]【品牌】角色-变体 (年月).ext` 规范拆成五个输入框，实时预览新文件名，可选「📖 读取头部」从 YSM 文件头提取作者/介绍。弹窗只负责产出新文件名，实际落… |
 | 标签、打标签、编辑标签、tag、标签弹窗、分类标记 | [标签编辑器 tag-editor](./dialog-tag-editor.md) ⚠️歧义（另见 go-tags.md等） | `tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto… |
 | FAB、悬浮按钮、FAB 3D 预览入口、overlay、ADR-057 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | 3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu… |

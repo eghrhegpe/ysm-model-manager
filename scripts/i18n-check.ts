@@ -25,7 +25,7 @@ import { dirname, resolve } from 'node:path';
 import { parseArgs } from './_lib/parse-args.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const LOCALES_DIR = resolve(__dirname, '..', 'frontend', 'src', 'core', 'i18n', 'locales');
+const LOCALES_DIR = resolve(__dirname, '..', 'frontend', 'src', 'locales');
 const BASE_LANG = 'zh-CN';
 const REFERENCE_LANGS = ['en', 'ja'];
 
@@ -144,7 +144,7 @@ if (phReport.length) {
 if (totalMissing > 0) {
   log(`\n⚠ ${totalMissing} key(s) missing across translation bundles.`);
   log('  These silently fall back to zh-CN at runtime (t.ts fallback chain).');
-  log('  Fill them in the corresponding frontend/src/core/i18n/locales/*.ts,');
+  log('  Fill them in the corresponding frontend/src/locales/*.ts,');
   log('  then this check goes green.');
   if (strict && !json) {
     console.error(`\n[i18n-check] --strict: ${totalMissing} missing key(s) → CI fails.`);
@@ -225,7 +225,7 @@ if (inAvailNotFile.length || inFileNotAvail.length) {
   log('\n⚠ SUPPORTED_LANGS (locale.ts) 与 locales/*.ts 文件集不一致:');
   if (inAvailNotFile.length) log('  仅声明于 SUPPORTED_LANGS 但无 bundle 文件: ' + inAvailNotFile.join(', '));
   if (inFileNotAvail.length) log('  存在 bundle 文件但未列入 SUPPORTED_LANGS: ' + inFileNotAvail.join(', '));
-  log('  请同步 frontend/src/core/i18n/locale.ts 与 frontend/src/core/i18n/locales/。');
+  log('  请同步 frontend/src/core/i18n/locale.ts 与 frontend/src/locales/。');
   if (strict && !json) {
     console.error('\n[i18n-check] --strict: SUPPORTED_LANGS 与文件集不一致 → CI fails.');
     process.exit(1);
@@ -234,11 +234,61 @@ if (inAvailNotFile.length || inFileNotAvail.length) {
 } else {
   log(`\n✅ SUPPORTED_LANGS (${availableLangs.length}) 与 locales/*.ts 文件集完全一致。`);
 }
+// ── 影子包校验（ADR-186 配套）：tr("key", fallback) 的 key 必须存在于基准包 ──
+// fallback 是缺译时的保险丝，不该常态命中。key 不在 zh-CN 包 = 用户永远看到的
+// 是散落在代码里的英文 fallback（事实上的"第四语言包"，不进生成链不进测试）。
+// 本检查强制：先入语言包，再写 tr()——key 缺失即报警。
+import { readdirSync as _rd, statSync as _st } from 'node:fs';
+
+function walkSources(dir: string, out: string[] = []) {
+  for (const name of _rd(dir)) {
+    const p = resolve(dir, name);
+    const st = _st(p);
+    if (st.isDirectory()) {
+      if (name === 'node_modules' || name === 'dist') continue;
+      walkSources(p, out);
+    } else if (name.endsWith('.ts') && !name.endsWith('.test.ts')) {
+      out.push(p);
+    }
+  }
+  return out;
+}
+
+const SRC_ROOT = resolve(__dirname, '..', 'frontend', 'src');
+const trCallRe = /\btr\(\s*['"]([^'"]+)['"]/g;
+const shadowPack: { file: string; key: string }[] = [];
+for (const file of walkSources(SRC_ROOT)) {
+  const text = readFileSync(file, 'utf8');
+  let m;
+  while ((m = trCallRe.exec(text)) !== null) {
+    if (!base.keys.has(m[1]!)) {
+      shadowPack.push({ file: file.replace(/\\/g, '/').replace(SRC_ROOT.replace(/\\/g, '/') + '/', ''), key: m[1]! });
+    }
+  }
+}
+
+if (shadowPack.length > 0) {
+  log(`\n⚠ ${shadowPack.length} 处 tr() 调用的 key 不在 zh-CN 基准包（影子包常态命中）:`);
+  for (const { file, key } of shadowPack.slice(0, 30)) {
+    log(`  ${key}  (${file})`);
+  }
+  if (shadowPack.length > 30) log(`  ... 及其他 ${shadowPack.length - 30} 处`);
+  log('  fallback 应是保险丝而非正文——先把 key 补入 frontend/src/locales/*.ts。');
+  if (strict && !json) {
+    console.error(`\n[i18n-check] --strict: ${shadowPack.length} shadow-pack tr() call(s) → CI fails.`);
+    process.exit(1);
+  }
+  log('  (warning mode — non-blocking.)');
+} else {
+  log('\n✅ 所有 tr() 调用的 key 均已在基准包注册（无影子包常态命中）。');
+}
+
 if (json) {
   const failed =
     totalMissing > 0 ||
     phIssues > 0 ||
     untranslated.length > 0 ||
+    shadowPack.length > 0 ||
     inAvailNotFile.length > 0 ||
     inFileNotAvail.length > 0;
   console.log(

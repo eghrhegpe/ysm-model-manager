@@ -10,7 +10,7 @@
 //  5. storage:permissionGranted → tree:reload + stats:refresh 各一次
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
-import { zhCN } from "../../core/i18n/locales/zh-CN.ts";
+import { zhCN } from "../../locales/zh-CN.ts";
 
 type Evt = { data?: unknown };
 const { handlers } = vi.hoisted(() => {

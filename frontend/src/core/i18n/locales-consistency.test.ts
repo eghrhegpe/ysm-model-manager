@@ -4,9 +4,9 @@
 // 防翻译 key 漂移（ADR-045：缺 key 时 t() 返回 key 本身，用户看到英文/日文串裸奔）。
 // 注意：本文件放 locales/ 外（该目录禁止放 .test.ts，见 zh-CN.ts 头部注释）。
 import { describe, it, expect } from "vitest";
-import { zhCN } from "./locales/zh-CN.ts";
-import { en } from "./locales/en.ts";
-import { ja } from "./locales/ja.ts";
+import { zhCN } from "../../locales/zh-CN.ts";
+import { en } from "../../locales/en.ts";
+import { ja } from "../../locales/ja.ts";
 
 const bundles: Array<[string, Record<string, string>]> = [
   ["en", en],

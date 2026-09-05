@@ -4,8 +4,8 @@
 // 拼错 key 编译期报错——三语言包 key 集严格一致（locales-consistency 测试保证），
 // zh-CN 作单一类型源；运行时缺失仍返回 key + warn（JSON 语言包可能滞后，优雅降级不崩）。
 
+import type { zhCN } from "../../locales/zh-CN.ts";
 import { getBundle, warnedKeys } from "./locale.ts";
-import type { zhCN } from "./locales/zh-CN.ts";
 
 /** 全部合法 i18n key（扁平化命名空间 key，如 "nav.repository"） */
 export type LocaleKey = keyof typeof zhCN;

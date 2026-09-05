@@ -5,7 +5,7 @@
 // 间接解决不同格式可查看内容不一致的问题）、行尾 ⚙ 进工具面板（卸载模型，
 // 少用但重要）；底部复用 fillSwitch 加载入口（siblings + 类型 tab）。
 
-import { type LocaleKey, t } from "../../core/i18n/t.ts";
+import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
@@ -17,11 +17,6 @@ import { fillSwitch } from "./switch.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
-const tr = (key: string, fallback: string): string => {
-  const v = t(key as LocaleKey);
-  return v === key ? fallback : v;
-};
-
 /** 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。
  *  [ADR-159] 容器语义：entry 有 displayName（容器实体名，如 zip 名剥扩展名）时优先展示——
  *  用户看到「包」而非包内首个模型的技术文件名。

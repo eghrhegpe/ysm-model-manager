@@ -345,7 +345,7 @@ function listByEntity(entity: string) {
 
 // ── CI 模式：检查新增/修改的键 ──────────────────────
 function checkCI() {
-  const r = spawnSync('git', ['diff', '--name-only', 'HEAD', '--', 'frontend/src/core/i18n/locales'], {
+  const r = spawnSync('git', ['diff', '--name-only', 'HEAD', '--', 'frontend/src/locales'], {
     encoding: 'utf-8',
     cwd: resolve(__dirname, '..'),
   });

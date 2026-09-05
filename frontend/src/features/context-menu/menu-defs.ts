@@ -14,7 +14,7 @@ interface MenuItemDef {
   /**
    * 静态文案或按 ctx 动态生成（如标题项）；divider 项省略。
    * 2026-XX 收紧：原 `string | ((ctx) => string)` 的 string 分支已无消费者
-   * （所有声明均函数式：`() => tr("menu.xxx", "Fallback")` 或 `(ctx) => 动态`），
+   * （所有声明均函数式：`() => tr(<key>, "Fallback")` 或 `(ctx) => 动态`），
    * 收紧为纯函数式让「label 必须经 i18n 或 ctx 动态生成」成为类型级约束。
    */
   label?: (ctx: CtxShowPayload) => string;

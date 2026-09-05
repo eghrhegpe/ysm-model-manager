@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-186：i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core",
+        "link": "/adr/ADR-186-i18n-tr-locale-core"
+      },
+      {
         "text": "ADR-185：core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环",
         "link": "/adr/ADR-185-core-features-core-features"
       },

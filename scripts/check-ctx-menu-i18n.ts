@@ -45,7 +45,7 @@ const SOURCE_FILES = [
   'frontend/src/core/context-menu-dir-handlers.ts',
   'frontend/src/core/context-menu-shared.ts',
 ];
-const LOCALE_FILE = 'frontend/src/core/i18n/locales/zh-CN.ts';
+const LOCALE_FILE = 'frontend/src/locales/zh-CN.ts';
 
 // ── 参数（仅 CLI 入口解析；模块被 import 时不执行）──
 function parseCliArgs() {
@@ -176,7 +176,7 @@ function main() {
     for (const { key, file } of missing) {
       console.log(`  ${key}  ←  ${file}`);
     }
-    console.log('  请在 frontend/src/core/i18n/locales/zh-CN.ts 补该 key，然后重跑本脚本。');
+    console.log('  请在 frontend/src/locales/zh-CN.ts 补该 key，然后重跑本脚本。');
     if (strict) {
       console.error(`\n[check-ctx-menu-i18n] --strict: ${missing.length} 缺失 key → 阻断。`);
       process.exit(1);

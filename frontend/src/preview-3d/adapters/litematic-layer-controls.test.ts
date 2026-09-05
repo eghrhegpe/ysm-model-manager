@@ -6,7 +6,7 @@
 // / 注册生命周期 / renderMenu 真渲染器显隐。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
-import { zhCN } from "../../core/i18n/locales/zh-CN.ts";
+import { zhCN } from "../../locales/zh-CN.ts";
 import { buildLitematicScene, LITEMATIC_SLICE_SCHEMA_ID } from "./litematic-adapter.ts";
 import { getSchema } from "./schema-registry.ts";
 import { previewSnapshot } from "../state/preview-state.ts";

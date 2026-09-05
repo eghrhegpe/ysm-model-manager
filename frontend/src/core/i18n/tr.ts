@@ -10,15 +10,15 @@ import { interpolate, type LocaleKey, t } from "./t.ts";
 
 /**
  * i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。
- * @param key - 翻译键（如 "menu.openFolder"）。有意接受任意 string：
- *   tr() 是「缺失兜底」语义，允许运行时动态 key（如 group 标题原文兜底）——
- *   经 LocaleKey 收窄后仍可在编译期拦截字面量拼错（字符串变量数据驱动放行）。
+ * @param key - 翻译键（如 "menu.openFolder"）。签名收窄为 LocaleKey | (string & {})：
+ *   字面量实参仍被 LocaleKey 编译期拦截（拼错即报错）；`string & {}` 交叉类型
+ *   放行运行时动态 key（labelKey/group 数据字段）而不丢失字面量自动补全。
  * @param fallback - 键缺失时的兜底字符串（建议用英文/原 key 之外的稳定文案）
  * @param params - 插值参数，透传 t(key, params)（同 t 的 {n} 语法）
  * @returns 翻译结果；缺失则返回 fallback
  */
 export function tr(
-  key: string,
+  key: LocaleKey | (string & {}),
   fallback: string,
   params?: Record<string, string | number>,
 ): string {

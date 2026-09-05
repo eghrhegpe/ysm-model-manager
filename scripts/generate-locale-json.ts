@@ -2,7 +2,7 @@
 /**
  * 语言包 TS → JSON 构建脚本（ADR-045）。
  * generate-locale-json.ts — 编译 locales TS 导出为运行时 JSON
- * 设计意图：以 frontend/src/core/i18n/locales/*.ts 为单一事实源，产出 frontend/public/locales/*.json 供运行时 fetch 消费。
+ * 设计意图：以 frontend/src/locales/*.ts 为单一事实源，产出 frontend/public/locales/*.json 供运行时 fetch 消费。
  * 依赖：node:fs / node:path / node:url
  * 用法：
  *   node scripts/generate-locale-json.ts           # 生成（写 frontend/public/locales/*.json）
@@ -11,7 +11,7 @@
  *   0 成功 / 1 未捕获异常（非零退出）或 --check 发现不一致
  */
 // ===== 语言包 TS → JSON 构建脚本（ADR-045）=====
-// 从 frontend/src/core/i18n/locales/*.ts 编译提取导出对象，
+// 从 frontend/src/locales/*.ts 编译提取导出对象，
 // 写入 frontend/public/locales/*.json（运行时 fetch 消费）。
 // --check 模式解决 #8 开发/运行双源不对称：改 TS 未重生成 → 构建即失败。
 
@@ -21,7 +21,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const ROOT = join(__dirname, "..");
-const SRC_DIR = join(ROOT, "frontend", "src", "core", "i18n", "locales");
+const SRC_DIR = join(ROOT, "frontend", "src", "locales");
 const OUT_DIR = join(ROOT, "frontend", "public", "locales");
 
 const CHECK = process.argv.includes("--check");

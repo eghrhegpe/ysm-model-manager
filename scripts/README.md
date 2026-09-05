@@ -135,7 +135,7 @@
 | `gen-doc-next-steps.ts`            | 文档体系「待补地图」诊断聚合：聚合 `check-knowledge-drift` / `link-checker` / `adr-check` 的 `--json` → `docs/.doc-next-steps.md`（只读报告，不修改源文件）                                                                                                                                                           |
 | `gen-routes.ts`                    | AI 知识库路由表自动生成（`docs/knowledge/routes.md`）：从知识卡 frontmatter `use_when` 生成「意图 → 首选卡 → 关联阅读」路由表；`--check` 已挂 doctor/pre-push                                                                                                                                                              |
 | `gen-routes-quick.ts`              | AI 急速版路由表自动生成（`docs/knowledge/routes-quick.md`）：从 `quick_groups` / `quick_intents` / `quick_risk_lines` / `pitfalls` 生成；配对不均恒打 WARN 绝不静默丢弃；`--check` 已挂 doctor/pre-push                                                                                                                |
-| `generate-locale-json.ts`          | 语言包 TS → JSON 构建（ADR-045）：以 `frontend/src/core/i18n/locales/*.ts` 为单一事实源，产出 `frontend` 运行时 locales 目录下的 `*.json` 供 fetch 消费（pre-commit GEN\_CMDS 调用）                                                                                                                                   |
+| `generate-locale-json.ts`          | 语言包 TS → JSON 构建（ADR-045）：以 `frontend/src/locales/*.ts` 为单一事实源，产出 `frontend` 运行时 locales 目录下的 `*.json` 供 fetch 消费（pre-commit GEN\_CMDS 调用）                                                                                                                                   |
 
 ### 生成器维护约定（2026-08-03 新增）
 

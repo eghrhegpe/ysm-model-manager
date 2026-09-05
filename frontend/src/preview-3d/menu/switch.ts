@@ -4,7 +4,7 @@
 // 「当前目录」tab 已移除（记忆/当前类型生效后可少一个 tab）；
 // rtypes 为空（无注册路由）时仍走 siblings 列表兜底，不空白。
 
-import { type LocaleKey, t } from "../../core/i18n/t.ts";
+import { tr } from "../../core/i18n/tr.ts";
 import { swallowError } from "../../utils/core/async.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
@@ -18,10 +18,6 @@ import type { PreviewMenuCtx } from "./node-types.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
-const tr = (key: string, fallback: string): string => {
-  const v = t(key as LocaleKey);
-  return v === key ? fallback : v;
-};
 // P1 批次5：模型切换面板内联 cssText → 集中类（sw- 前缀本文件私有，ensureSwitchStyles
 // 幂等注入——fillSwitch 唯一入口调用覆盖 tabBar/候选行/空态全部渲染路径）
 let _swStylesInjected = false;

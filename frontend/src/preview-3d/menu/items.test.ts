@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { MMD } from "@moeru/three-mmd";
-import { zhCN } from "../../core/i18n/locales/zh-CN.ts";
+import { zhCN } from "../../locales/zh-CN.ts";
 import {
   CORE_MENU_ITEMS,
   PREVIEW_MENU_GROUPS,

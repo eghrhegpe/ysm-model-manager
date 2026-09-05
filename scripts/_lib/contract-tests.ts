@@ -45,6 +45,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   'check-knowledge-body-line-refs.ts': ['docs', 'tests'],
   'check-knowledge-anchor-def-kind.ts': ['docs', 'tests'],
   'check-knowledge-card-status.ts': ['docs', 'tests'],
+  'check-knowledge-rename-migration.ts': ['docs', 'tests'],
   'test_check_readme_index.ts': ['docs', 'tests'],
   'test_sidebar_gen.ts': ['docs', 'tests'],
   'verify-adr-042.ts': ['docs'],
@@ -145,6 +146,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   'check-knowledge-body-line-refs.ts': ['scripts/check-knowledge-drift.ts', 'docs/knowledge/AGENTS.md'],
   'check-knowledge-anchor-def-kind.ts': ['scripts/check-knowledge-drift.ts', 'docs/knowledge/AGENTS.md'],
   'check-knowledge-card-status.ts': ['scripts/check-knowledge-drift.ts', 'scripts/_lib/knowledge-cards.ts', 'docs/knowledge/AGENTS.md'],
+  'check-knowledge-rename-migration.ts': ['scripts/check-knowledge-drift.ts'],
   'test_redlines_changed_files.ts': ['scripts/check-redlines.ts'],
   'test_scripts_lib.ts': ['scripts/_lib/scan-files.ts', 'scripts/_lib/to-posix.ts', 'scripts/_lib/ripgrep.ts', 'scripts/_lib/rg-line.ts'],
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——

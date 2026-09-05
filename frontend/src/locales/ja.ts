@@ -91,7 +91,7 @@ export const ja: Record<string, string> = {
   "dialog.reading": "読み取り中…",
   "dialog.readFailed": "読み取りに失敗しました。ファイルが有効なYSMではない可能性があります",
   "dialog.authorCharaRequired": "作者名とキャラクター名は必須です",
-  "dialog.fileNameIllegal": "ファイル名に < > : \" / \\ | ? * などの文字は使用できません",
+  "dialog.fileNameIllegal": 'ファイル名に < > : " / \\ | ? * などの文字は使用できません',
   "dialog.fileNameTooLong": "ファイル名が長すぎます。短くしてください",
   "dialog.cancelEsc": "キャンセル (Esc)",
   "dialog.ok": "OK",
@@ -144,7 +144,8 @@ export const ja: Record<string, string> = {
   "settings.basic": "一般",
   "settings.appearance": "外観と体験",
   "settings.parser": "パーサー",
-  "settings.parserDesc": "3D モデル解析エンジンの設定。両形式とも既定ではメインスレッドで解析（安定ベースライン）。有効にすると解析は Web Worker に移り、異常時は自動でメインスレッドにフォールバック。ここでいつでも手動で無効化できます。",
+  "settings.parserDesc":
+    "3D モデル解析エンジンの設定。両形式とも既定ではメインスレッドで解析（安定ベースライン）。有効にすると解析は Web Worker に移り、異常時は自動でメインスレッドにフォールバック。ここでいつでも手動で無効化できます。",
   "settings.about": "概要",
   "settings.credits": "クレジット",
   "settings.language": "言語",
@@ -159,22 +160,26 @@ export const ja: Record<string, string> = {
   "settings.links.reapply": "再適用",
   "settings.links.copy": "コピー",
   "settings.links.copyHint": "各統合パックが個別にディスク容量を使用。最も互換性が高い",
-  "settings.links.hardlinkHint": "✅ おすすめ：ディスク容量を節約、モデルのオン/オフを即時切替\n📌 ゲームと同じパーティションが必要",
+  "settings.links.hardlinkHint":
+    "✅ おすすめ：ディスク容量を節約、モデルのオン/オフを即時切替\n📌 ゲームと同じパーティションが必要",
   "settings.links.symlinkHint": "❌ 非推奨：権限不足でファイルがハングします",
   "settings.links.hardlink": "ハードリンク",
   "settings.links.symlink": "シンボリックリンク",
   "settings.mirror.title": "ダウンロードミラー",
   "settings.mirror.directOption": "直接接続（raw.githubusercontent.com）",
   "settings.mirror.jsdelivrOption": "jsDelivr CDN（国内高速）",
-  "settings.mirror.directHint": "GitHub から直接ダウンロード。一部ネットワークでは遅い場合があります",
+  "settings.mirror.directHint":
+    "GitHub から直接ダウンロード。一部ネットワークでは遅い場合があります",
   "settings.mirror.jsdelivrHint": "国内高速、約12時間のキャッシュ",
   "settings.mirror.githubapiHint": "未認証リクエストは 60 回/時間。たまにダウンロードする場合向け",
   "settings.path.customHint": "各タイプの独立パス（空欄なら共通ストレージパスを使用）",
   "settings.storage.title": "ファイル保存パス",
   "settings.storage.expand": "展開",
-  "settings.storage.desc": "すべてのリソースファイルはここに統一して保存され、種類ごとにサブディレクトリに分類されます",
+  "settings.storage.desc":
+    "すべてのリソースファイルはここに統一して保存され、種類ごとにサブディレクトリに分類されます",
   "settings.webRepo.title": "ウェブ版ファイルソース",
-  "settings.webRepo.desc": "ウェブ版にはローカルファイルシステムがありません。ローカルフォルダを認可すると、配下の .ysm モデルが内蔵モデルライブラリ（IndexedDB）に取り込まれファイルソースとなります。",
+  "settings.webRepo.desc":
+    "ウェブ版にはローカルファイルシステムがありません。ローカルフォルダを認可すると、配下の .ysm モデルが内蔵モデルライブラリ（IndexedDB）に取り込まれファイルソースとなります。",
   "settings.webRepo.authorize": "ローカルリポジトリフォルダを認可",
   // 設定ページ動作トースト（app-content/settings）
   "settings.mirror.switched": "✅ ダウンロード元を {name} に切り替えました",
@@ -211,11 +216,13 @@ export const ja: Record<string, string> = {
   "settings.worker.fbxOff": "✅ FBX worker を無効にしました",
   "settings.worker.mmdOn": "✅ MMD PMX worker を有効にしました",
   "settings.worker.mmdOff": "✅ MMD PMX worker を無効にしました",
-  "settings.webRepo.unsupported": "このブラウザは File System Access API 非対応のため、ローカルフォルダを認可できません",
+  "settings.webRepo.unsupported":
+    "このブラウザは File System Access API 非対応のため、ローカルフォルダを認可できません",
   "settings.webRepo.scanning": ".ysm モデルをスキャンして取り込み中…",
   "settings.webRepo.done": "「{dir}」を認可：{imported} 件取り込み、{failed} 件失敗",
   "settings.webRepo.restored": "ローカルリポジトリを復元：{imported} 件のモデルを同期",
-  "settings.webRepo.revoked": "前回の認可が失効しました。モデルライブラリを同期するにはフォルダを再認可してください。",
+  "settings.webRepo.revoked":
+    "前回の認可が失効しました。モデルライブラリを同期するにはフォルダを再認可してください。",
 
   // ── Settings - Appearance ──
   "settings.theme.title": "テーマと外観",
@@ -250,7 +257,8 @@ export const ja: Record<string, string> = {
   "settings.animation.title": "動作とアニメーション",
   "settings.animation.enable": "アニメーション",
   "settings.animation.enableCheck": "トランジションアニメーションを有効化",
-  "settings.animation.hint": "オフにするとレイアウト遷移のみ残し、ホバーやフェードを無効化します。低スペック端末向け。",
+  "settings.animation.hint":
+    "オフにするとレイアウト遷移のみ残し、ホバーやフェードを無効化します。低スペック端末向け。",
   "settings.defaultPage": "起動時の既定ページ",
   "settings.defaultPage.instances": "統合パック管理",
   "settings.defaultPage.workshop": "クリエイターチャンネル",
@@ -258,21 +266,27 @@ export const ja: Record<string, string> = {
   "settings.defaultPageHint": "起動時に自動で開くページ。",
   "settings.preview3d.title": "3D プレビュー操作",
   "settings.preview3d.camSpeed": "カメラ移動速度",
-  "settings.preview3d.camSpeedHint": "フリーカメラ（自分モード）での WASD 移動速度。プレビュー内スライダーと同期。",
+  "settings.preview3d.camSpeedHint":
+    "フリーカメラ（自分モード）での WASD 移動速度。プレビュー内スライダーと同期。",
   "settings.preview3d.rotMode": "デフォルト回転モード",
   "settings.preview3d.orbit": "モデル周回",
   "settings.preview3d.free": "フリーカメラ",
-  "settings.preview3d.rotModeHint": "3D プレビューを開いたときのデフォルトカメラモード。プレビュー内でも切替可。",
+  "settings.preview3d.rotModeHint":
+    "3D プレビューを開いたときのデフォルトカメラモード。プレビュー内でも切替可。",
   "settings.preview3d.keymap": "操作キー（クリック→キーで再割り当て）",
-  "settings.preview3d.keymapHint": "矢印キーは常に移動のフォールバックとして有効。変更は次の 3D プレビューで反映。",
+  "settings.preview3d.keymapHint":
+    "矢印キーは常に移動のフォールバックとして有効。変更は次の 3D プレビューで反映。",
   "settings.preview3d.resetKeys": "デフォルトキーに戻す",
   "settings.preview3d.workerCheck": "worker を有効にする",
   "settings.preview3d.fbxWorker": "FBX worker 解析",
-  "settings.preview3d.fbxWorkerHint": "有効にすると FBX 解析は Web Worker で実行され、失敗時はメインスレッドに自動フォールバック。無効の場合は常にメインスレッドで解析（デフォルト）。",
+  "settings.preview3d.fbxWorkerHint":
+    "有効にすると FBX 解析は Web Worker で実行され、失敗時はメインスレッドに自動フォールバック。無効の場合は常にメインスレッドで解析（デフォルト）。",
   "settings.preview3d.frustumCull": "視錐カリング",
-  "settings.preview3d.frustumCullHint": "複数モデル同枠時に視錐外のモデルをカリングして描画を省きます。誤ってモデルが隠れる場合はオフにすると全モデルが常に表示されます。",
+  "settings.preview3d.frustumCullHint":
+    "複数モデル同枠時に視錐外のモデルをカリングして描画を省きます。誤ってモデルが隠れる場合はオフにすると全モデルが常に表示されます。",
   "settings.preview3d.mmdWorker": "MMD PMX worker 解析",
-  "settings.preview3d.mmdWorkerHint": "有効にすると PMX バイナリ解析は Worker で実行（実験的）。無効の場合は公式 MMDLoader の完全ロード（デフォルト）。",
+  "settings.preview3d.mmdWorkerHint":
+    "有効にすると PMX バイナリ解析は Worker で実行（実験的）。無効の場合は公式 MMDLoader の完全ロード（デフォルト）。",
 
   // ── Import Page ──
   "import.mmdSubdir": "MMD 用途サブディレクトリ",
@@ -286,8 +300,9 @@ export const ja: Record<string, string> = {
   "import.importBtn": "インポート",
   "import.queue": "キュー",
   "import.imported": "インポート済み",
-  "import.dropHint": "モデルファイル … またはフォルダをここにドラッグ、またはクリックしてファイルを選択",
-    "import.dropHint2": "離してモデルをインポート",
+  "import.dropHint":
+    "モデルファイル … またはフォルダをここにドラッグ、またはクリックしてファイルを選択",
+  "import.dropHint2": "離してモデルをインポート",
   "import.supportedFiles": "対応",
   "import.files": "ファイル",
   "import.noModelDetected": "⛔ モデルファイルが見つかりません",
@@ -295,7 +310,8 @@ export const ja: Record<string, string> = {
   "import.busyImporting": "インポート中です。しばらくお待ちください",
   "import.fileTooLarge": "100MBを超えています。リポジトリフォルダに直接配置してください",
   "import.processError": "インポート処理エラー。再試行してください",
-  "import.contextRouteUnavailable": "ページのコンテキストルーティングが利用できないため、内容推測でフォールバックしました",
+  "import.contextRouteUnavailable":
+    "ページのコンテキストルーティングが利用できないため、内容推測でフォールバックしました",
   "import.readFailed": "ファイルの読み取りに失敗しました",
   "import.unsupportedFormat": "非対応の形式です。対応：",
   "import.addedToQueue": "キューに追加されました：{n} ファイル",
@@ -308,7 +324,8 @@ export const ja: Record<string, string> = {
   "import.previewTempFailed": "プレビュー一時ファイルの保存に失敗: {err}",
   "import.headerReadFailed": "ヘッダー情報を読み取れません",
   "import.readDropFailed": "ドロップされたファイルの読み取りに失敗しました",
-  "import.ysmJsonHint": "ysm.jsonはモデルのマニフェストです。geometry／アニメーション／テクスチャを含むモデルフォルダ全体をドラッグして、グループとしてインポートしてください",
+  "import.ysmJsonHint":
+    "ysm.jsonはモデルのマニフェストです。geometry／アニメーション／テクスチャを含むモデルフォルダ全体をドラッグして、グループとしてインポートしてください",
   "import.emptyFolder": "フォルダ内に読み取り可能なファイルがありません",
   "import.emptyFile": "ファイルが空のためスキップしました",
   "import.alreadyExists": "既に存在します。インポート前にフォルダ名を変更してください",
@@ -359,7 +376,8 @@ export const ja: Record<string, string> = {
   "diagnostics.runtimeLog": "ランタイムログ",
   "diagnostics.copyLog": "ログをコピー",
   "diagnostics.copiedLog": "ログをクリップボードにコピーしました",
-  "diagnostics.copiedLogPrivacy": "ログをコピーしました（ローカルパスを含む可能性があります。公開共有に注意）",
+  "diagnostics.copiedLogPrivacy":
+    "ログをコピーしました（ローカルパスを含む可能性があります。公開共有に注意）",
   "diagnostics.refresh": "リフレッシュ",
   "diagnostics.clearLog": "ログを消去",
   "diagnostics.conflict": "競合検出",
@@ -374,7 +392,8 @@ export const ja: Record<string, string> = {
   "diagnostics.clearFailed": "ログのクリアに失敗しました",
   "diagnostics.perfTitle": "パフォーマンス",
   "diagnostics.perfRunSingle": "単一モデルベンチマークを実行",
-  "diagnostics.perfModelPlaceholder": ".ysm モデルパスを入力（YSM のみシミュレート可；PMX は GUI 3D プレビューで実測）",
+  "diagnostics.perfModelPlaceholder":
+    ".ysm モデルパスを入力（YSM のみシミュレート可；PMX は GUI 3D プレビューで実測）",
   "diagnostics.webNoConflictScan": "ウェブ版では競合スキャンはサポートされていません",
   "diagnostics.webNoSyncConflictScan": "ウェブ版では同期競合スキャンはサポートされていません",
   "diagnostics.loadResourceTypesFailed": "リソースタイプの読み込みに失敗しました",
@@ -394,7 +413,8 @@ export const ja: Record<string, string> = {
   "diagnostics.perfHistResult": "最適化履歴",
   "diagnostics.perfTotal": "総所要時間",
   "diagnostics.perfTrendTitle": "パフォーマンス傾向（段階ごとの所要時間）",
-  "diagnostics.perfTrendNoData": "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
+  "diagnostics.perfTrendNoData":
+    "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
   "diagnostics.perfNoData": "結果はまだありません。上記のボタンで実行",
   "diagnostics.perfRunning": "実行中…",
   "diagnostics.perfFail": "実行に失敗しました",
@@ -436,7 +456,8 @@ export const ja: Record<string, string> = {
   // ── About Page ──
   "about.title": "YSMモデルマネージャーについて",
   "about.appName": "YSM モデルマネージャー",
-  "about.intro": "は Minecraft YSM モッド向けのモデル管理ツールで、Steam Workshop のようにモデルコレクションを管理できます。",
+  "about.intro":
+    "は Minecraft YSM モッド向けのモデル管理ツールで、Steam Workshop のようにモデルコレクションを管理できます。",
   "about.f1": ".ysm / .zip モデルファイルをドラッグ＆ドロップでインポート",
   "about.f2": "作者・キャラクター・作品ごとにスマート分類",
   "about.f3": "ゲームを起動せずに 2D/3D プレビュー",
@@ -473,7 +494,8 @@ export const ja: Record<string, string> = {
   // ── Update ──
   "update.downloading": "{version} をダウンロード中… 完了後にアプリが自動再起動します",
   "update.newVersionTitle": "新しいバージョンを発見",
-  "update.newVersionPrompt": "新しいバージョン {latest} を発見（現在 {current}）。ダウンロードして更新しますか？",
+  "update.newVersionPrompt":
+    "新しいバージョン {latest} を発見（現在 {current}）。ダウンロードして更新しますか？",
   "update.changelog": "更新ログ",
   "update.download": "更新をダウンロード",
   "update.failed": "アップデートに失敗しました",
@@ -492,8 +514,10 @@ export const ja: Record<string, string> = {
   "credits.parseDesc": "クロスプラットフォームの YSM バイナリ形式デコード（WASM 内蔵）",
   "credits.repo": "リポジトリ管理",
   "credits.repoDesc": "ハードリンクインストール、ゴミ箱、インスタンス管理の設計源",
-  "credits.zuogeren1Contribute": "PrismLauncher インスタンスレイアウト対応、大規模インスタンス性能、コミュニティ索引、ワークショップ修正に貢献",
-  "credits.jiangkaslanaContribute": "Rust スキャナのホットパス最適化とバッチ YSM レンダリング（PR #13）、レンダリングパス間のテクスチャ整合（PR #16）に貢献",
+  "credits.zuogeren1Contribute":
+    "PrismLauncher インスタンスレイアウト対応、大規模インスタンス性能、コミュニティ索引、ワークショップ修正に貢献",
+  "credits.jiangkaslanaContribute":
+    "Rust スキャナのホットパス最適化とバッチ YSM レンダリング（PR #13）、レンダリングパス間のテクスチャ整合（PR #16）に貢献",
   "credits.special": "特別感謝",
 
   // ── Main Content Area ──
@@ -516,8 +540,10 @@ export const ja: Record<string, string> = {
   "content.browseRepo": "📦 参照",
   "content.loaded": "✅ 読み込み完了",
   "content.errNoIndex": "❌ index.json なし<br>",
-  "content.errNoIndexDesc": "このリポジトリにはワークショップ索引がまだありません。ブラウザでダウンロードしてください。<br>",
-  "content.errNoIndexHint": "（このリポジトリは API でファイルをダウンロードするには index.json が必要です）",
+  "content.errNoIndexDesc":
+    "このリポジトリにはワークショップ索引がまだありません。ブラウザでダウンロードしてください。<br>",
+  "content.errNoIndexHint":
+    "（このリポジトリは API でファイルをダウンロードするには index.json が必要です）",
   "content.btnNoIndex": "❌ 索引なし",
   "content.errOffline": "🌐 ネットワークに接続できません。確認して再試行してください",
   "content.btnOffline": "🌐 オフライン",
@@ -525,12 +551,15 @@ export const ja: Record<string, string> = {
   "content.btnTimeout": "⏱️ タイムアウト",
   "content.errRateLimited": "⏱️ GitHub API のレート制限です。後で再試行してください",
   "content.btnRateLimited": "⏱️ レート制限",
-  "content.errLoadRetry": "❌ 読み込みに失敗しました。ネットワークを確認するか、後で再試行してください",
+  "content.errLoadRetry":
+    "❌ 読み込みに失敗しました。ネットワークを確認するか、後で再試行してください",
   "content.errLoad": "❌ 読み込みに失敗しました",
   "content.btnFailed": "❌ 失敗",
   "content.backArrow": "← 戻る",
-  "content.toastRepoTimeout": "⏱️ {repo} の接続がタイムアウト（raw.githubusercontent.com がブロックされている可能性）、ブラウザでリポジトリを開きました",
-  "content.toastRepoNoIndex": "📦 {repo} に index.json がありません。ブラウザでリポジトリを開きました",
+  "content.toastRepoTimeout":
+    "⏱️ {repo} の接続がタイムアウト（raw.githubusercontent.com がブロックされている可能性）、ブラウザでリポジトリを開きました",
+  "content.toastRepoNoIndex":
+    "📦 {repo} に index.json がありません。ブラウザでリポジトリを開きました",
   "content.dragJsonOnly": "❌ .json ファイルをドラッグしてください",
   "content.dropZoneHint": "JSON ファイルをここにドラッグして、クリエイター/サイト設定をインポート",
   "content.jsonMustBeArray": "JSON はオブジェクトの配列である必要があります",
@@ -575,12 +604,15 @@ export const ja: Record<string, string> = {
   "content.roleRepo": "リポジトリ",
   "content.mcPathSet": "✅ 設定済み: {path}",
   "content.pickMcDirTitle": "🔍 ゲームディレクトリを選択",
-  "content.pickMcDirDesc": "複数のゲームディレクトリが見つかりました。使用するものを選択してください：",
+  "content.pickMcDirDesc":
+    "複数のゲームディレクトリが見つかりました。使用するものを選択してください：",
   "content.scanScope": "🔍 スキャン範囲",
   "content.scanScopeLine1": "C 〜 Z ドライブ · ルート .minecraft / 各ランチャーディレクトリ<br>",
-  "content.scanScopeLine2": "ProgramFiles · Games · ユーザー設定ディレクトリ · EXE と同ディレクトリ",
+  "content.scanScopeLine2":
+    "ProgramFiles · Games · ユーザー設定ディレクトリ · EXE と同ディレクトリ",
   "content.noMcDirFound": "既存のゲームディレクトリが見つかりません",
-  "content.noMcDirHint": "💡 ランチャーをインストールしているのに見つからない場合、非標準パスかもしれません。手動で選択してください",
+  "content.noMcDirHint":
+    "💡 ランチャーをインストールしているのに見つからない場合、非標準パスかもしれません。手動で選択してください",
   "content.foundCount": "✅ {n} 個見つかりました",
 
   // ── Workshop ──
@@ -631,16 +663,20 @@ export const ja: Record<string, string> = {
   "workshop.updateConfig": "🌐 設定を更新",
   "workshop.newCreatorName": "新しいクリエイター",
   "workshop.newCreatorDesc": "説明",
-  "workshop.exportWebUnsupported": "ウェブ版ではサイト設定のエクスポートはサポートされていません。デスクトップ版を使用してください",
+  "workshop.exportWebUnsupported":
+    "ウェブ版ではサイト設定のエクスポートはサポートされていません。デスクトップ版を使用してください",
   "workshop.action.exported": "📤 サイトをエクスポートしました: {path}",
   "workshop.exportFailed": "エクスポートに失敗しました",
-  "workshop.importWebUnsupported": "ウェブ版ではサイト設定のインポートはサポートされていません。デスクトップ版を使用してください",
+  "workshop.importWebUnsupported":
+    "ウェブ版ではサイト設定のインポートはサポートされていません。デスクトップ版を使用してください",
   "workshop.action.imported": "✅ {n} 件のサイトをインポートしました",
   "workshop.communityIndexLoading": "⏳ コミュニティインデックス: {source}…",
   "workshop.siteIndexLoading": "⏳ サイトインデックス: {source}…",
   "workshop.githubNoIndex": "📭 このリポジトリに index.json がありません（工房インデックス未構築）",
-  "workshop.rateLimitedGithub": "⏱️ GitHub API レート制限です。後で再試行するかブラウザで開いてください",
-  "workshop.githubLoadFailed": "❌ 読み込みに失敗しました。ネットワークを確認するか後で再試行してください",
+  "workshop.rateLimitedGithub":
+    "⏱️ GitHub API レート制限です。後で再試行するかブラウザで開いてください",
+  "workshop.githubLoadFailed":
+    "❌ 読み込みに失敗しました。ネットワークを確認するか後で再試行してください",
   // クリエイター身分ロールラベル（workshop-data getCreatorIdentity）
   "workshop.roleOfficial": "公式IPモデルライブラリ",
   "workshop.roleCreator": "YSM クリエイター",
@@ -708,7 +744,8 @@ export const ja: Record<string, string> = {
   "syncManager.scanRootsTitle": "同期ディレクトリ",
   "syncManager.scanGlobal": "リポジトリ基準：{dir}",
   "syncManager.scanInstance": "インスタンススキャン：{dir}",
-  "syncManager.scanDirWide": "⚠️ {label} リポジトリ基準ディレクトリ {dir} が広すぎます（mods/config/schematics サブディレクトリを含む）。同期に他のリソースが混入する可能性があります。専用の {subDir} サブディレクトリを指定してください",
+  "syncManager.scanDirWide":
+    "⚠️ {label} リポジトリ基準ディレクトリ {dir} が広すぎます（mods/config/schematics サブディレクトリを含む）。同期に他のリソースが混入する可能性があります。専用の {subDir} サブディレクトリを指定してください",
   // P0 修正: 右クリックメニュー rtype ガード トースト（i18n 準拠）
   "ctx.emptyRtype": "❌ パックにタイプ情報がありません、右クリック操作は無効です",
   "ctx.missingPath": "❌ パックディレクトリが見つかりません",
@@ -721,7 +758,8 @@ export const ja: Record<string, string> = {
   "ctx.moveOkAll": "✅ {n} 個のファイルを {folder} へ移動しました",
   "ctx.copyOkAll": "✅ {n} 個のファイルを {folder} へコピーしました",
   "ctx.moveOkPartial": "✅ {ok} 個移動 / ❌ {fail} 件失敗",
-  "ctx.copyOkPartial": "✅ {ok} 個コピー / ❌ {fail} 件失敗（ターゲットが既に存在する可能性があります）",
+  "ctx.copyOkPartial":
+    "✅ {ok} 個コピー / ❌ {fail} 件失敗（ターゲットが既に存在する可能性があります）",
   "ctx.moveFailAll": "❌ 移動に失敗しました",
   "ctx.copyFailAll": "❌ コピーに失敗（ターゲットが既に存在する可能性があります）",
   "ctx.moveDialogTitle": "移動先フォルダ",
@@ -735,7 +773,8 @@ export const ja: Record<string, string> = {
   "ctx.recycleOkText": "♻️ 移動",
   "ctx.recycleFailN": "❌ {fail} 個のファイルをゴミ箱に移動できませんでした：{err}",
   "ctx.recycleOkN": "✅ {n} 個のファイルをゴミ箱に移動しました",
-  "ctx.renameYsmJson": "ysm.json はモデルディレクトリマニフェストです。親フォルダを右クリックして「名前を変更」してください（グループ操作）",
+  "ctx.renameYsmJson":
+    "ysm.json はモデルディレクトリマニフェストです。親フォルダを右クリックして「名前を変更」してください（グループ操作）",
   "ctx.renameFail": "名前の変更に失敗しました",
   "ctx.fileMoveOk": "✅ {folder} へ移動しました",
   "ctx.fileCopyOk": "✅ {folder} へコピーしました",
@@ -784,7 +823,8 @@ export const ja: Record<string, string> = {
   "inst.exportListCopied": "📋 {n} 個のファイル一覧をクリップボードにコピーしました",
   "inst.nothingToClear": "クリアできるリソースファイルがありません",
   "inst.clearTitle": "統合パックをクリア",
-  "inst.clearMessage": "{name} をクリア\nスキャンされた {n} 個のリソースファイルがクリアされます（ゴミ箱へ、復元可能）。\nタイプ：{type}\n未入庫のファイルはそのまま残ります。続行しますか？",
+  "inst.clearMessage":
+    "{name} をクリア\nスキャンされた {n} 個のリソースファイルがクリアされます（ゴミ箱へ、復元可能）。\nタイプ：{type}\n未入庫のファイルはそのまま残ります。続行しますか？",
   "inst.clearOk": "🗑️ クリア",
   "inst.cancelled": "キャンセルしました",
   "inst.cleared": "🗑️ {name}: {n} 個のファイルをクリアしました（ゴミ箱へ）",
@@ -814,7 +854,8 @@ export const ja: Record<string, string> = {
   "diagnostics.configResourceDir": "リソースディレクトリを先に設定してください",
   "diagnostics.configGameDir": "ゲームディレクトリを先に設定してください",
   "diagnostics.noDups": "重複ファイルはありません",
-  "diagnostics.dupSummary": "{groups} グループの重複ファイルを検出（計 {dups} 個の余分なコピー）、各グループから1つを残します：",
+  "diagnostics.dupSummary":
+    "{groups} グループの重複ファイルを検出（計 {dups} 個の余分なコピー）、各グループから1つを残します：",
   "diagnostics.dupSummaryHint": "選択されていないファイルはごみ箱に移動されます",
   "diagnostics.fileCount": "{n} ファイル",
   "diagnostics.group": "グループ {n}",
@@ -859,7 +900,8 @@ export const ja: Record<string, string> = {
   "diagnostics.conflictTypeContent": "内容変更競合",
   "diagnostics.conflictTypeBoth": "両方に追加競合",
   "diagnostics.healthTitle": "リポジトリ健全性監査",
-  "diagnostics.healthHint": "静的健全性監査：完全性・キャッシュ・リソース・重複（読込時間は含まない；CLI health-report と同一ソース）",
+  "diagnostics.healthHint":
+    "静的健全性監査：完全性・キャッシュ・リソース・重複（読込時間は含まない；CLI health-report と同一ソース）",
   "diagnostics.healthRun": "診断開始",
   "diagnostics.healthScanning": "倉庫を診断中…",
   "diagnostics.healthParseFailed": "診断結果の解析に失敗",
@@ -881,9 +923,12 @@ export const ja: Record<string, string> = {
   // ── Creators Channel ──
   "community.fromLocal": "ローカルリポジトリから",
   "community.downloadQueue.remain": "残り {n}",
-  "community.downloadQueue.webDlFailed": "⚠️ {imported} 個がモデルライブラリに保存、{fallback} 個はブラウザ直リンク、{failed} 個失敗",
-  "community.downloadQueue.webDlFallback": "✅ {imported} 個がモデルライブラリに保存、{fallback} 個はブラウザ直リンク",
-  "community.downloadQueue.webDlOk": "✅ {imported} 個のモデルをブラウザモデルライブラリにインポート",
+  "community.downloadQueue.webDlFailed":
+    "⚠️ {imported} 個がモデルライブラリに保存、{fallback} 個はブラウザ直リンク、{failed} 個失敗",
+  "community.downloadQueue.webDlFallback":
+    "✅ {imported} 個がモデルライブラリに保存、{fallback} 個はブラウザ直リンク",
+  "community.downloadQueue.webDlOk":
+    "✅ {imported} 個のモデルをブラウザモデルライブラリにインポート",
   "gh.leftHead": "リポジトリ",
   "gh.sourceInfo": "リポジトリ",
   "gh.initialHint": "左のリポジトリをクリックしてモデルを表示",
@@ -901,9 +946,12 @@ export const ja: Record<string, string> = {
   // ── Error Messages ──
   "error.fallback": "操作に失敗しました",
   "error.unknown": "不明なエラー",
-  "error.networkOffline": "🌐 ネットワークに接続されていません。ネットワークを確認して再試行してください",
-  "error.noIndex": "📭 このリポジトリには index.json がありません（ワークショップインデックスがまだ構築されていません）",
-  "error.rateLimited": "⏱️ GitHub APIのレート制限に達しました。後でもう一度試すか、ブラウザで開いてください",
+  "error.networkOffline":
+    "🌐 ネットワークに接続されていません。ネットワークを確認して再試行してください",
+  "error.noIndex":
+    "📭 このリポジトリには index.json がありません（ワークショップインデックスがまだ構築されていません）",
+  "error.rateLimited":
+    "⏱️ GitHub APIのレート制限に達しました。後でもう一度試すか、ブラウザで開いてください",
   "error.loadFailed": "読み込みに失敗しました。ネットワークを確認するか、後で再試行してください",
   "error.fileLocked": "ファイルが他のプログラムでロックされています。閉じてから再試行してください",
   "error.permissionDenied": "アクセス権限がないため、ファイルにアクセスできません",
@@ -932,7 +980,8 @@ export const ja: Record<string, string> = {
   "settings.path.customized": "カスタマイズ済み",
   "settings.path.default": "↩️ デフォルト",
   "settings.path.clickToChange": "クリックしてパスを変更",
-  "settings.path.needStoragePermission": "モデルライブラリを読むには「すべてのファイルへのアクセス」許可が必要です。許可画面を開きます…",
+  "settings.path.needStoragePermission":
+    "モデルライブラリを読むには「すべてのファイルへのアクセス」許可が必要です。許可画面を開きます…",
   "settings.path.autoRepoRoot": "✅ モデルライブラリを共有ディレクトリに配置しました：",
   "settings.saveSuccess": "保存しました",
   "settings.saveFailed": "保存に失敗しました",
@@ -945,12 +994,15 @@ export const ja: Record<string, string> = {
   "settings.mc.noFound": "既存のゲームディレクトリが見つかりません。手動で選択してください",
   "settings.mc.set": "✅ 設定しました：{path}",
   "settings.mc.pickerTitle": "🔍 ゲームディレクトリを選択",
-  "settings.mc.pickerDesc": "複数のゲームディレクトリが検出されました。使用するものを選択してください：",
+  "settings.mc.pickerDesc":
+    "複数のゲームディレクトリが検出されました。使用するものを選択してください：",
   "settings.mc.pickerCancel": "キャンセル",
   "settings.mc.scanScope": "🔍 スキャン範囲",
-  "settings.mc.scanScopeDesc": "ドライブ C〜Z · ルートの .minecraft ／ ランチャーディレクトリ<br>ProgramFiles · Games · ユーザー設定ディレクトリ · EXEと同じディレクトリ",
+  "settings.mc.scanScopeDesc":
+    "ドライブ C〜Z · ルートの .minecraft ／ ランチャーディレクトリ<br>ProgramFiles · Games · ユーザー設定ディレクトリ · EXEと同じディレクトリ",
   "settings.mc.notFound": "既存のゲームディレクトリが見つかりません",
-  "settings.mc.notFoundHint": "💡 ランチャーがインストールされているが見つからない場合は、非標準なパスの可能性があります。手動で選択してください",
+  "settings.mc.notFoundHint":
+    "💡 ランチャーがインストールされているが見つからない場合は、非標準なパスの可能性があります。手動で選択してください",
   "settings.mc.found": "✅ {n} 個見つかりました",
 
   // ── Settings - Mirror ──
@@ -1002,6 +1054,9 @@ export const ja: Record<string, string> = {
 
   // ── Preview ──
   "preview.title3d": "3Dプレビュー",
+  "preview.noEnvironment": "3D に入ってから環境パネルを開いてください",
+  "preview.roleNoMotion": "（このモデルに再生可能なモーションがありません）",
+  "preview.unloadModel": "モデルをアンロード",
   "preview.modelInfo": "モデル情報",
   "preview.roles": "読み込み済みキャラクター",
   // 3D 下部ドックグループボタン文案（preview-menu defs.ts PREVIEW_MENU_GROUPS）
@@ -1041,7 +1096,8 @@ export const ja: Record<string, string> = {
   "preview.roleModelSection": "モデル",
   "preview.roleMotionSection": "モーション",
   "preview.appendModel": "シーンに追加",
-  "preview.cooperateCrossType": "同一シーンへの追加は同一タイプのみ対応です。新しいモデルに切り替えました（{from} → {to}）",
+  "preview.cooperateCrossType":
+    "同一シーンへの追加は同一タイプのみ対応です。新しいモデルに切り替えました（{from} → {to}）",
   "preview.backendUnavailable": "バックエンドが利用できません。3Dプレビューを開けません",
   "preview.library": "ライブラリ",
   "preview.libraryLoading": "ライブラリを読み込み中…",
@@ -1108,20 +1164,20 @@ export const ja: Record<string, string> = {
   "preview.resetView": "ビューをリセット",
   "preview.cameraRotation": "カメラ回転",
   "preview.cameraSpeed": "カメラ速度",
-  
 
-   "preview.spotlight": "スポットライト",
-   "preview.keyIntensity": "キーライト",
-   "preview.ambientIntensity": "アンビエント",
-   "preview.volumetric": "体積光",
-   "preview.volumetricCone": "体積光コーン",
-   "preview.coneAngle": "コーン角",
-   "preview.lightPreset": "ライトプリセット",
-   "preview.volumetricEngine": "体積光エンジン",
-   "preview.lighting": "照明",
-   "preview.cameraView": "カメラビュー",
+  "preview.spotlight": "スポットライト",
+  "preview.keyIntensity": "キーライト",
+  "preview.ambientIntensity": "アンビエント",
+  "preview.volumetric": "体積光",
+  "preview.volumetricCone": "体積光コーン",
+  "preview.coneAngle": "コーン角",
+  "preview.lightPreset": "ライトプリセット",
+  "preview.volumetricEngine": "体積光エンジン",
+  "preview.lighting": "照明",
+  "preview.cameraView": "カメラビュー",
   "preview.environment": "環境",
-  "preview.environmentDesc": "環境マップ：プロシージャルな空/スタジオ等のプリセットまたはカスタム HDR",
+  "preview.environmentDesc":
+    "環境マップ：プロシージャルな空/スタジオ等のプリセットまたはカスタム HDR",
   "preview.envPreset": "環境プリセット",
   "preview.envPresetThumbnail": "プリセットプレビュー",
   "preview.envIntensity": "環境強度",
@@ -1134,7 +1190,8 @@ export const ja: Record<string, string> = {
   "preview.envClearHdrHint": "クリア後は「スタジオ」プリセットに戻ります",
   "preview.envDivider": "──",
   "preview.envUseAsBackground": "背景として使用",
-  "preview.envUseAsBackgroundHint": "オンにすると現在の環境マップをシーン背景に表示、オフにすると元に戻します",
+  "preview.envUseAsBackgroundHint":
+    "オンにすると現在の環境マップをシーン背景に表示、オフにすると元に戻します",
   "preview.envGroupPreset": "プリセット",
   "preview.envGroupCustomHdr": "カスタム HDR",
   "preview.envGroupBackground": "背景と強度",
@@ -1227,25 +1284,30 @@ export const ja: Record<string, string> = {
   "preview.shadow": "影",
   "preview.shadowType": "影タイプ",
   "preview.shadowMapSize": "影マップ精度",
-  "preview.shadowMapSizeDesc": "高いほど鮮明で GPU 負荷が上がります（512 省電力 / 1024 標準 / 2048 高画質 / 4096 シネマティック）",
+  "preview.shadowMapSizeDesc":
+    "高いほど鮮明で GPU 負荷が上がります（512 省電力 / 1024 標準 / 2048 高画質 / 4096 シネマティック）",
   "preview.shadowRange": "影の範囲",
   "preview.shadowDesc": "影：ライティングパネルの方向光/スポットライトを再利用、切替で即反映",
   "preview.shadowEnabled": "影を有効化",
-  "preview.shadowEnabledHint": "有効にすると毎フレーム影マップを描画するため GPU 負荷が上がります。低スペック端末では OFF 推奨。",
+  "preview.shadowEnabledHint":
+    "有効にすると毎フレーム影マップを描画するため GPU 負荷が上がります。低スペック端末では OFF 推奨。",
   "preview.shadowSoft": "ソフトシャドウ",
   "preview.shadowBias": "影バイアス",
-  "preview.shadowBiasDesc": "Peter Panning（自己遮蔽による縞）を補正。通常 -0.001 ～ 0 の範囲で調整。",
+  "preview.shadowBiasDesc":
+    "Peter Panning（自己遮蔽による縞）を補正。通常 -0.001 ～ 0 の範囲で調整。",
   "preview.shadowNormalBias": "法線バイアス",
-  "preview.shadowNormalBiasDesc": "法線方向に影をオフセット。斜め光でのシャドウアクネやギザつきを抑えます。",
+  "preview.shadowNormalBiasDesc":
+    "法線方向に影をオフセット。斜め光でのシャドウアクネやギザつきを抑えます。",
   "preview.shadowCameraSize": "方向光視錐台サイズ",
-  "preview.shadowCameraSizeDesc": "方向光の正投影影カメラの一辺。大きいほど広範囲をカバー、細部は粗くなります。",
+  "preview.shadowCameraSizeDesc":
+    "方向光の正投影影カメラの一辺。大きいほど広範囲をカバー、細部は粗くなります。",
   "preview.noShadowCap": "3D プレビューに入ってから影パネルを開いてください",
   "preview.ground": "地面",
   "preview.groundDesc": "グリッドヘルパー参考平面",
   "preview.groundGroupWater": "水面",
   "preview.waterFilmDensity": "水膜濃度",
   "preview.groundWaterColor": "水色",
-  
+
   "preview.groundNormalStrength": "ノーマル強度",
   "preview.groundGroupMaterial": "表面マテリアル",
   "preview.groundMatSource": "表面マテリアル",
@@ -1289,7 +1351,8 @@ export const ja: Record<string, string> = {
   "preview.noMaterial": "マテリアルなし",
   "preview.copied": "コピーしました",
   "preview.blueprintDetail": "設計図の詳細",
-  "preview.web7zUnsupported": "Web版では .7z モデルのプレビューは未対応（デスクトップ版をご利用ください）",
+  "preview.web7zUnsupported":
+    "Web版では .7z モデルのプレビューは未対応（デスクトップ版をご利用ください）",
   "preview.nonAirBlocks": "非空ブロック",
   "preview.totalVolume": "総体積",
   "preview.boundingBox": "バウンディングボックス",
@@ -1425,7 +1488,8 @@ export const ja: Record<string, string> = {
   "tree.indexGenerated": "✅ index.json を生成しました",
   "tree.tagQueryFail": "❌ タグの照会に失敗: {msg}",
   "tree.needRepoDir": "リポジトリディレクトリを設定してください",
-  "tree.webStatsDegraded": "⚠️ ウェブ版統計エンジンが利用できません。骨格/キューブ数値条件は無視されました（キーワードのみ）",
+  "tree.webStatsDegraded":
+    "⚠️ ウェブ版統計エンジンが利用できません。骨格/キューブ数値条件は無視されました（キーワードのみ）",
   "tree.statsBadgePreparing": "🧵×{n} 統計を準備中…",
   "tree.statsBadgeDegraded": "⚠️ Worker 降格 · 数値条件は無視",
   "tree.filterFound": "🔍 {n} 件の一致",
@@ -1452,8 +1516,8 @@ export const ja: Record<string, string> = {
   "tree.repoConfigTitle": "リポジトリディレクトリを設定",
   "tree.repoNotSet": "📁 未設定",
   "tree.authorsEmpty": "作者なし",
-  "tree.treeLoadFailed": "<div class=\"empty\"><div class=\"big\">⚠️</div>読み込み失敗</div>",
-  "tree.scanning": "<div class=\"empty\"><div class=\"big\">⏳</div><div>スキャン中...</div></div>",
+  "tree.treeLoadFailed": '<div class="empty"><div class="big">⚠️</div>読み込み失敗</div>',
+  "tree.scanning": '<div class="empty"><div class="big">⏳</div><div>スキャン中...</div></div>',
   "tree.dropHint": "モデルファイルをドロップしてインポート",
   "tree.fileList": "モデルファイルリスト",
 
@@ -1485,7 +1549,8 @@ export const ja: Record<string, string> = {
   "web.metric": "指標",
   "web.value": "値",
   "web.wasmInit": "⏳ WASM 初期化中…",
-  "web.wasmInitFailed": "❌ WASM の初期化に失敗しました（このブラウザは WebAssembly に対応していませんか？）",
+  "web.wasmInitFailed":
+    "❌ WASM の初期化に失敗しました（このブラウザは WebAssembly に対応していませんか？）",
   "web.wasmReady": "✅ WASM 準備完了",
   "web.decoding": "⏳ decodeYsmFileFromMemory でメモリ解析中…",
   "web.decodeNoOutput": "❌ デコードに失敗しました：出力ファイルなし（.ysm 形式が非対応？）",
@@ -1502,11 +1567,12 @@ export const ja: Record<string, string> = {
   "app.managerSuffix": "マネージャー",
 
   // ── インポートキュー ──
-        // ── ダウンロードページ ──
+  // ── ダウンロードページ ──
   "downloads.readAuthor": "作者を読み取る",
   "downloads.today": "当日",
   "downloads.fileCount": "{n} 個のファイル",
-  "downloads.dropHint": "モデルファイル <b>{exts}</b> またはフォルダをここにドラッグ、またはクリックしてファイルを選択",
+  "downloads.dropHint":
+    "モデルファイル <b>{exts}</b> またはフォルダをここにドラッグ、またはクリックしてファイルを選択",
   "downloads.folderHint": "フォルダ全体をドラッグして一括インポート",
   "downloads.mmdHint": "MMD/統合版モデルは .zip ファイルとして管理するのがおすすめ",
   "downloads.loading": "⏳ 読み込み中...",
@@ -1519,19 +1585,23 @@ export const ja: Record<string, string> = {
   // ── Web ファイルシステム ──
   "webFs.kindDir": "ディレクトリ",
   "webFs.kindFile": "ファイル",
-  "webFs.fsaUnsupported": "SelectLocalRepo: この環境では File System Access API はサポートされていません",
+  "webFs.fsaUnsupported":
+    "SelectLocalRepo: この環境では File System Access API はサポートされていません",
   "webFs.renameEmptyName": "名前の変更に失敗しました：{kind}名が空です",
   "webFs.renameInvalidChars": "名前の変更に失敗しました：{kind}名に無効な文字が含まれています",
-  "webFs.renameInvalidPathSegment": "名前の変更に失敗しました：{kind}名に無効なパスセグメントが含まれています",
+  "webFs.renameInvalidPathSegment":
+    "名前の変更に失敗しました：{kind}名に無効なパスセグメントが含まれています",
   "webFs.renameInvalidPath": "名前の変更に失敗しました：無効なパス: {path}",
   "webFs.renameTargetExists": "名前の変更に失敗しました：対象が既に存在します: {path}",
   "webFs.renameModelMissing": "名前の変更に失敗しました：モデルが存在しません: {path}",
-  "webFs.renameYsmJsonForbidden": "ysm.json はモデルフォルダのマニフェストです。フォルダごと名前を変更してください（グループ操作）",
+  "webFs.renameYsmJsonForbidden":
+    "ysm.json はモデルフォルダのマニフェストです。フォルダごと名前を変更してください（グループ操作）",
   "webFs.deleteInvalidPath": "削除に失敗しました：無効なパス: {path}",
   "webFs.moveInvalidSrc": "移動/コピーに失敗しました：無効なソースパス: {path}",
   "webFs.moveInvalidDstDir": "移動/コピーに失敗しました：無効な移動先ディレクトリ: {path}",
   "webFs.moveModelMissing": "移動/コピーに失敗しました：モデルが存在しません: {path}",
-  "webFs.moveNested": "移動/コピーに失敗しました：移動先ディレクトリをソース内に置くことはできません: {path}",
+  "webFs.moveNested":
+    "移動/コピーに失敗しました：移動先ディレクトリをソース内に置くことはできません: {path}",
   "webFs.moveTargetExists": "移動/コピーに失敗しました：移動先が既に存在します: {path}",
 
   // ── Web コミュニティ（web-community.ts クリエイター/ワークショップ JSON マージ）──

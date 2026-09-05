@@ -49,7 +49,7 @@ const MENU_FILES = [
   'frontend/src/preview-3d/adapters/mmd-adapter.ts',
   'frontend/src/preview-3d/adapters/vrm-adapter.ts',
 ];
-const LOCALE_FILE = 'frontend/src/core/i18n/locales/zh-CN.ts';
+const LOCALE_FILE = 'frontend/src/locales/zh-CN.ts';
 const LEGAL_KINDS = new Set(['panel', 'action', 'divider']);
 
 function readRel(rel: string) {

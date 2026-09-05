@@ -2,7 +2,7 @@
 // 独立模块只依赖 ui-header-toggle / i18n / MenuControlDef 类型，供 preview-menu.ts 与
 // preview-menu-env.ts 共用。
 
-import { type LocaleKey, t } from "../../core/i18n/t.ts";
+import { tr } from "../../core/i18n/tr.ts";
 import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
@@ -11,11 +11,6 @@ import type { PreviewSnapshot } from "../state/preview-state.ts";
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（MenuControlDef.labelKey/group 为数据字段 + group 原文兜底），
  *  内部经 LocaleKey 收窄——字面量拼错在声明处（cap 定义）编译期暴露。 */
-const tr = (key: string, fallback: string): string => {
-  const v = t(key as LocaleKey);
-  return v === key ? fallback : v;
-};
-
 let _capStylesInjected = false;
 onOverlayStyleTargetReset(() => {
   _capStylesInjected = false;

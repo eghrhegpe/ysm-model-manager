@@ -1,6 +1,8 @@
 // ===== DnD 导入共享逻辑（import-queue 与 handler-dnd 共用，消除重复）=====
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
-import { collectFiles } from "./collector.ts";
+import { type CollectedEntry, collectFiles } from "./collector.ts";
+
+export type { CollectedEntry };
 
 const getExt = (name: string): string => "." + (name.split(".").pop() || "").toLowerCase();
 
@@ -27,12 +29,7 @@ export const shouldEnterForm = (name: string): boolean => {
 export { getExt };
 
 // ===== 文件夹整组分组（dnd.ts 全局拖拽与 import-queue 导入页共用）=====
-
-/** 收集条目（文件 + 相对路径） */
-export interface CollectedEntry {
-  file: File;
-  relPath: string;
-}
+// CollectedEntry 唯一事实源在 collector.ts（ADR-187 D4 合并双胞胎，此处 re-export 兼容下游）
 
 /** 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） */
 export interface FolderGroup {

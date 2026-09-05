@@ -2,8 +2,8 @@
 // 被 import-dnd.ts（仓库页全局拖拽）与 import-queue-data.ts（导入页队列拖拽）共用，
 // 消除 ADR-060 立项前的两套收集器漂移问题。
 
-/** 收集结果条目 */
-export interface CollectedFile {
+/** 收集结果条目（唯一事实源；shared.ts / import-executor.ts 经 re-export 消费 — ADR-187 D4） */
+export interface CollectedEntry {
   file: File;
   relPath: string;
 }
@@ -43,8 +43,8 @@ export async function collectFiles(
   isEntryArray: boolean,
   basePath = "",
   depth = 0,
-): Promise<CollectedFile[]> {
-  const result: CollectedFile[] = [];
+): Promise<CollectedEntry[]> {
+  const result: CollectedEntry[] = [];
   for (const item of items) {
     if (!item) continue;
     if (!isEntryArray && (item as DataTransferItem).kind !== "file") continue;

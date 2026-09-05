@@ -46,7 +46,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| eventArr | `frontend/src/features/community/download-queue-store.ts` | 384 |
+| eventArr | `frontend/src/features/community/download-queue-store.ts` | 391 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -316,7 +316,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 263 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 270 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
@@ -396,7 +396,7 @@
 | runStartupSteps | `frontend/src/app-modules.ts` | 67 |
 | (顶层) | `frontend/src/app-modules.ts` | 125 |
 | toast | `frontend/src/core/feedback.ts` | 21 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 252 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 259 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 306 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 144 |
@@ -584,7 +584,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 262 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 269 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |

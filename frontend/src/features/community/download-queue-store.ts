@@ -51,7 +51,14 @@ export interface DownloadState {
   _lastDoneSeq: number;
 }
 
-/** 模块级共享状态（progress guard / UI 控制器 import 协作，不对外 re-export） */
+/**
+ * 模块级共享状态（progress guard / UI 控制器 import 协作，不对外 re-export）
+ *
+ * ⚠️ ADR-187 D3 决策固化：本单例是**有意设计**（下载队列 app 级全局唯一，
+ * 生命周期与 Events.On 常驻注册绑定，见文件头 ADR-039 豁免声明），
+ * 订阅经自建 subscribe/notify（listeners Set），不引入 PageStore 适配层——
+ * 双状态哲学并存（两套订阅机制）比单例更伤；__reset*ForTest 测试后门为单例固有代价，保留。
+ */
 export const STATE: DownloadState = {
   status: "idle",
   total: 0,

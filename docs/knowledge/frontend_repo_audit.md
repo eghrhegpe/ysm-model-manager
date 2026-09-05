@@ -262,7 +262,6 @@ auto_fields:
     - collectBlobUrls
     - collectDropFiles
     - CollectedEntry
-    - CollectedFile
     - collectFiles
     - collectMenuGraph
     - CollectMenuGraphOpts

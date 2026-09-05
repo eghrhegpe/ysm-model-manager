@@ -199,7 +199,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 166 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 167 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 190 |
 
 ### `menu:show`
@@ -220,8 +220,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleContainerClick | `frontend/src/features/oldest-models.ts` | 58 |
-| onRecycleListClick | `frontend/src/features/recycle-bin.ts` | 187 |
+| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 58 |
+| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 187 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 272 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 353 |
@@ -239,8 +239,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 158 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 272 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 159 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 276 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 197 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 40 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 200 |
@@ -251,7 +251,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | registerPageStore | `frontend/src/core/page-store.ts` | 68 |
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 147 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 148 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 175 |
 
 ### `package:selected`
@@ -279,7 +279,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| useCurrentResourceType | `frontend/src/features/repo-rtype.ts` | 33 |
+| useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 33 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
@@ -297,7 +297,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 156 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 157 |
 
 ### `repo:subdir-changed`
 
@@ -319,13 +319,13 @@
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 263 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 38 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 197 |
-| handleInstanceDrop | `frontend/src/features/pack-dnd.ts` | 171 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 38 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 197 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 106 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 171 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
-| setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 106 |
-| onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 171 |
 | runDownloadMissing | `frontend/src/features/sync.ts` | 79 |
 | runSyncToggleStatus | `frontend/src/features/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
@@ -408,24 +408,24 @@
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 430 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 444 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 463 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 43 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 61 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 80 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 90 |
-| handleTreeDrop | `frontend/src/features/import-dnd.ts` | 108 |
-| bindTreeDnD | `frontend/src/features/import-dnd.ts` | 213 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 33 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 188 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 201 |
-| (顶层) | `frontend/src/features/pack-dnd.ts` | 42 |
-| initRecycleBin | `frontend/src/features/recycle-bin.ts` | 267 |
-| promptUpdate | `frontend/src/features/version-updater.ts` | 142 |
-| promptUpdate | `frontend/src/features/version-updater.ts` | 151 |
-| checkUpdateSilent | `frontend/src/features/version-updater.ts` | 177 |
-| checkUpdateSilent | `frontend/src/features/version-updater.ts` | 186 |
-| initVersionUpdater | `frontend/src/features/version-updater.ts` | 207 |
-| initVersionUpdater | `frontend/src/features/version-updater.ts` | 238 |
-| initVersionUpdater | `frontend/src/features/version-updater.ts` | 248 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 43 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 61 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 80 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 90 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 108 |
+| bindTreeDnD | `frontend/src/features/dnd/import-dnd.ts` | 213 |
+| (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 42 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 33 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 188 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 201 |
+| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 267 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 142 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 151 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 177 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 186 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 207 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 238 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 248 |
 | mount3D | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 571 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 159 |
@@ -444,7 +444,7 @@
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 89 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 371 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 263 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 267 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 164 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 287 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 52 |
@@ -587,12 +587,12 @@
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 262 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 39 |
-| (顶层) | `frontend/src/features/import-executor.ts` | 196 |
-| handleInstanceDrop | `frontend/src/features/pack-dnd.ts` | 172 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 39 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 196 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 107 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 172 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
-| setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 107 |
-| onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 172 |
 | handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 119 |
 | handleSyncToggleStatus | `frontend/src/features/sync.ts` | 210 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 368 |
@@ -608,7 +608,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 160 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 161 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

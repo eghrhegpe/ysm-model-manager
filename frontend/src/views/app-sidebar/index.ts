@@ -1,7 +1,7 @@
 // ===== <app-sidebar> 入口 =====
 
 import { bus } from "../../bus.ts";
-import { currentRepoType } from "../../features/repo-rtype.ts";
+import { currentRepoType } from "../../features/repo/repo-rtype.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
@@ -25,7 +25,7 @@ export { appSidebarStyle };
 
 import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
-import { bindPackCardDnD } from "../../features/pack-dnd.ts";
+import { bindPackCardDnD } from "../../features/dnd/pack-dnd.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import type { SidebarInstance } from "./data.ts";
 import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";

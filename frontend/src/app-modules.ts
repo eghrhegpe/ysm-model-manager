@@ -5,7 +5,7 @@ import { Window } from "./backend/runtime.ts";
 import { bus } from "./bus.ts";
 import { registerErrorDiary } from "./core/error-diary.ts";
 import { initI18n } from "./core/i18n/locale.ts";
-import { checkUpdateSilent } from "./features/version-updater.ts";
+import { checkUpdateSilent } from "./features/maintenance/version-updater.ts";
 import { revealMainWindow } from "./startup-reveal.ts";
 import { friendlyError } from "./utils/dom/errors.ts";
 import { TOAST_MS } from "./utils/dom/toast-ms.ts";

@@ -16,7 +16,7 @@ vi.mock("./launcher-detect.ts", () => ({
   runMcSearch: runMcSearchMock,
   runLauncherDetect: runLauncherDetectMock,
 }));
-vi.mock("../../features/repo-rtype.ts", () => ({ currentRepoType: currentRepoTypeMock }));
+vi.mock("../../features/repo/repo-rtype.ts", () => ({ currentRepoType: currentRepoTypeMock }));
 vi.mock("./tpl.ts", () => ({
   instanceCardHeaderHTML: () => '<div class="instance-card-header"><div class="name"></div></div>',
 }));

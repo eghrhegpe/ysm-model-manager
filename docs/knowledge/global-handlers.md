@@ -12,8 +12,6 @@ source_files:
   - frontend/src/core/error-diary.ts
 auto_fields:
   symbols_with_lines:
-    - bindTreeDnD
-    - handleTreeDrop
     - registerErrorDiary
     - unregisterErrorDiary
   tests:

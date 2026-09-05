@@ -2,8 +2,8 @@
 
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { loadOldestModel } from "../../features/oldest-models.ts";
-import { initRecycleBin } from "../../features/recycle-bin.ts";
+import { loadOldestModel } from "../../features/maintenance/oldest-models.ts";
+import { initRecycleBin } from "../../features/maintenance/recycle-bin.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { safeGet } from "../../utils/dom/storage.ts";

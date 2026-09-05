@@ -14,7 +14,6 @@ auto_fields:
     - BusEventName
     - BusEvents
     - CtxShowPayload
-    - currentRepoType
     - MenuItem
     - ModelSelectPayload
     - NavPagePayload
@@ -23,7 +22,6 @@ auto_fields:
     - safeRemove
     - safeSet
     - ToastPayload
-    - useCurrentResourceType
 quick_groups:
   - 资源类型与仓库状态
 quick_intents:

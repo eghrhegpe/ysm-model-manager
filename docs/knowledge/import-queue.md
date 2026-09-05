@@ -10,30 +10,7 @@ source_files:
   - frontend/src/features/dnd-collector.ts
   - frontend/src/features/pack-dnd.ts
 auto_fields:
-  symbols_with_lines:
-    - bindPackCardDnD
-    - bindTreeDnD
-    - buildFolderItems
-    - collectDropFiles
-    - CollectedEntry
-    - CollectedFile
-    - collectFiles
-    - directImport
-    - executeCollected
-    - fileToBase64
-    - FolderGroup
-    - getExt
-    - groupCollected
-    - handleInstanceDrop
-    - handleTreeDrop
-    - ImportFile
-    - importFolder
-    - importWebFilesWithToast
-    - isImportableFile
-    - isSupportedFile
-    - PackDndBusy
-    - PackDndInstance
-    - shouldEnterForm
+  symbols_with_lines: []
   tests:
     - frontend/src/features/import-executor.test.ts
     - frontend/src/features/import-dnd.test.ts

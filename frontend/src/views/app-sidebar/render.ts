@@ -1,7 +1,7 @@
 // ===== sidebar 渲染层 =====
 
 import { t } from "../../core/i18n/t.ts";
-import { currentRepoType } from "../../features/repo-rtype.ts";
+import { currentRepoType } from "../../features/repo/repo-rtype.ts";
 import type { SidebarInstance } from "./data.ts";
 import { instanceCardHeaderHTML } from "./tpl.ts";
 

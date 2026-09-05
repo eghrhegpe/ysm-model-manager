@@ -5,7 +5,7 @@
 // 复用 web-fs-import 的 importWebFiles（File → IDB 落库），不重复造 IDB 写入逻辑。
 
 import { t } from "../core/i18n/t.ts";
-import { currentRepoType } from "../features/repo-rtype.ts";
+import { currentRepoType } from "../features/repo/repo-rtype.ts";
 import { idbGet, idbSet } from "./idb.ts";
 import { WebUnsupportedError } from "./web-common.ts";
 import { importWebFiles } from "./web-fs-import.ts";

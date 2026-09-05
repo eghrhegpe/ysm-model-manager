@@ -6,10 +6,7 @@ category: feature
 source_files:
   - frontend/src/features/recycle-bin.ts
 auto_fields:
-  symbols_with_lines:
-    - initRecycleBin
-    - RecycleHost
-    - VIEW_TESTIDS
+  symbols_with_lines: []
   tests:
     - frontend/src/features/recycle-bin.integration.test.ts
 tests:

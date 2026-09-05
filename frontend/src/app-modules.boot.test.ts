@@ -54,7 +54,7 @@ vi.mock("./core/error-diary.ts", () => ({ registerErrorDiary: m.registerErrorDia
 vi.mock("./workers/coi-sw.ts", () => ({ registerCoiServiceWorker: m.registerCoiServiceWorker }));
 vi.mock("./backend/browser-adapter.ts", () => ({ prefetchStatsWorker: m.prefetchStatsWorker }));
 vi.mock("./core/i18n/locale.ts", () => ({ initI18n: m.initI18n }));
-vi.mock("./features/version-updater.ts", () => ({ checkUpdateSilent: m.checkUpdateSilent }));
+vi.mock("./features/maintenance/version-updater.ts", () => ({ checkUpdateSilent: m.checkUpdateSilent }));
 vi.mock("./views/app-content/settings/ui-prefs.ts", () => ({ applyUIPrefs: m.applyUIPrefs }));
 vi.mock("./theme-core.ts", () => ({
   normalizeTheme: m.normalizeTheme,

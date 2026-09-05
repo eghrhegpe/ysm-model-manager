@@ -6,8 +6,7 @@ category: feature
 source_files:
   - frontend/src/features/oldest-models.ts
 auto_fields:
-  symbols_with_lines:
-    - loadOldestModel
+  symbols_with_lines: []
   tests:
     - frontend/src/features/oldest-models.test.ts
 tests:

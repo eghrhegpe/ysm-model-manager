@@ -5,7 +5,7 @@
 
 import { getApp } from "../../../backend/app.ts";
 import { t } from "../../../core/i18n/t.ts";
-import { currentRepoType } from "../../../features/repo-rtype.ts";
+import { currentRepoType } from "../../../features/repo/repo-rtype.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { formatBytes } from "../../../utils/dom/format.ts";
 import { type HealthReport, parseHealthReport } from "../../../utils/health-report.ts";

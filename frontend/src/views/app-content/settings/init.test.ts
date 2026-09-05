@@ -64,7 +64,7 @@ vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("../../../services/resource-registry.ts", () => ({ loadResourceRegistry }));
 vi.mock("../../../preview-3d/model3d.ts", () => ({ loadTdKeymap }));
-vi.mock("../../../features/version-updater.ts", () => ({ initVersionUpdater }));
+vi.mock("../../../features/maintenance/version-updater.ts", () => ({ initVersionUpdater }));
 vi.mock("../../../utils/dom/errors.ts", () => ({ friendlyError }));
 // browser-adapter：本图内仅 init.ts 消费 FSA 三函数；browserAdapter 空垫是给
 // importOriginal 展开的真 platform-web 引用兜底（仅函数体内使用，不在此验证）

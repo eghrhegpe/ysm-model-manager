@@ -37,9 +37,17 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   GetMinecraftPaths: vi.fn().mockResolvedValue([]),
 }));
 
-// heavy feature 模块 mock（断开 import 副作用链）
-vi.mock("../../core/handlers/global.ts", () => ({
-  registerCoreHandlers: vi.fn(() => []),
+// heavy feature 模块 mock（断开 import 副作用链；ADR-188：core/handlers/global 壳
+// 已删，改为分别 mock core/page-store 与 features/sync）
+vi.mock("../../core/page-store.ts", () => ({
+  registerPageStore: vi.fn(),
+  PAGE_WHITELIST: [],
+  sanitizePage: (v: string | null) => v,
+  resolveInitialPage: () => "repository",
+  PageStore: { get currentPage() { return "repository" as const; } },
+}));
+vi.mock("../../features/sync.ts", () => ({
+  registerSync: vi.fn(),
 }));
 vi.mock("../../features/context-menu/context-menus.ts", () => ({
   registerContextMenus: vi.fn(() => []),
@@ -63,8 +71,8 @@ vi.mock("./diagnostics/dedup.ts", () => ({
     resetConfig: vi.fn(),
   }),
 }));
-vi.mock("../../features/recycle-bin.ts", () => ({ initRecycleBin: vi.fn() }));
-vi.mock("../../features/oldest-models.ts", () => ({
+vi.mock("../../features/maintenance/recycle-bin.ts", () => ({ initRecycleBin: vi.fn() }));
+vi.mock("../../features/maintenance/oldest-models.ts", () => ({
   loadOldestModel: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../features/community/data.ts", () => ({ tryFetchModels: vi.fn() }));
@@ -80,8 +88,8 @@ vi.mock("../../features/community/events.ts", () => ({ bindRepoEvents: vi.fn() }
 vi.mock("../../utils/icon/workshop-icons.ts", () => ({ getSiteIcon: vi.fn(() => "") }));
 
 import { bus } from "../../bus.ts";
-import { initRecycleBin } from "../../features/recycle-bin.ts";
-import { loadOldestModel } from "../../features/oldest-models.ts";
+import { initRecycleBin } from "../../features/maintenance/recycle-bin.ts";
+import { loadOldestModel } from "../../features/maintenance/oldest-models.ts";
 // 断言跟随实现的真实消费路径（init-pages 直接 import dedup.ts；init.ts 仅兼容壳）
 import { PAGE_REGISTRY } from "./page-registry.ts";
 import { loadCommunityData } from "./community-data.ts";

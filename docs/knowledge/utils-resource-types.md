@@ -15,7 +15,6 @@ auto_fields:
     - ALL_RESOURCE_TYPES
     - allResourceTypes
     - AMBIGUOUS_EXTS
-    - currentRepoType
     - extBelongsTo
     - extOf
     - getExts
@@ -46,7 +45,6 @@ auto_fields:
     - ResourceTypeVariant
     - shortLabelOf
     - typeIconOf
-    - useCurrentResourceType
     - VOXEL_RPC_BY_EXT
     - ZipEntryMatch
 quick_groups:

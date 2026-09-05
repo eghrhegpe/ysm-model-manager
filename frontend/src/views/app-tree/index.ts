@@ -49,7 +49,7 @@ export const VIEW_TESTIDS: readonly string[] = ["tree-root"];
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../features/dialogs/modal.ts";
-import { bindTreeDnD } from "../../features/import-dnd.ts";
+import { bindTreeDnD } from "../../features/dnd/import-dnd.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { can } from "../../utils/dom/capabilities.ts";
 import { rememberModelPath } from "../app-content/init-pages.ts";

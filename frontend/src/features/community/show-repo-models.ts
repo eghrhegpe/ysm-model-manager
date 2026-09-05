@@ -5,7 +5,7 @@ import { getApp } from "../../backend/app.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { stripDisableSuffix } from "../../utils/dom/display.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
-import { currentRepoType } from "../repo-rtype.ts";
+import { currentRepoType } from "../repo/repo-rtype.ts";
 import { bindRepoEvents } from "./events.ts";
 import type { WorkshopModel } from "./render.ts";
 import { countMissing, renderRepoHeaderHTML } from "./render.ts";

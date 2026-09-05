@@ -248,4 +248,4 @@ export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInBindLogSearch(root, esc);
 }
 
-/** 👴 资历最深 + 📊 仓库评分 + 🎲 每日推荐 + 热力图（已迁移到 features/oldest-models.ts） */
+/** 👴 资历最深 + 📊 仓库评分 + 🎲 每日推荐 + 热力图（已迁移到 features/maintenance/oldest-models.ts） */

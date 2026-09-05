@@ -6,10 +6,7 @@ category: feature
 source_files:
   - frontend/src/features/version-updater.ts
 auto_fields:
-  symbols_with_lines:
-    - checkUpdateSilent
-    - initVersionUpdater
-    - UpdateInfo
+  symbols_with_lines: []
   tests:
     - frontend/src/features/version-updater.test.ts
 tests:

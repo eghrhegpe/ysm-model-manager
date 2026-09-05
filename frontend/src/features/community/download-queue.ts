@@ -12,7 +12,7 @@ import { swallowError } from "../../utils/core/async.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { currentRepoType } from "../repo-rtype.ts";
+import { currentRepoType } from "../repo/repo-rtype.ts";
 import { createProgressGuard, type ProgressGuard } from "./download-queue-progress.ts";
 import {
   cancelDownloads,

@@ -21,19 +21,9 @@ import { fileURLToPath } from 'node:url';
 import { tokenize } from '../scripts/auto-import-lexer.ts';
 import { extractExports, extractDefined, extractImported, splitBlockEntries } from '../scripts/auto-import-symbols.ts';
 import { checkFile } from '../scripts/auto-import-detect.ts';
+import { check, finish } from './_lib.mts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const fails = [];
-function check(name, fn) {
-  try {
-    fn();
-    console.log('✓', name);
-  } catch (e) {
-    fails.push(`${name}: ${e.message}`);
-    console.error('✗', name, '-', e.message);
-  }
-}
-
 // ── tokenize ─────────────────────────────────────────
 
 check('tokenize 剥离注释/字符串并收集标识符', () => {
@@ -186,8 +176,5 @@ check('run 全量扫描当前仓库 0 缺失（与拆分前基线一致）', () 
   assert.ok(data._summary.scanned > 700, `预期扫描 >700 文件，实际 ${data._summary.scanned}`);
 });
 
-if (fails.length) {
-  console.error(`\n${fails.length} 项失败`);
-  process.exit(1);
-}
+finish('契约测试全过');
 console.log('\n全部通过');

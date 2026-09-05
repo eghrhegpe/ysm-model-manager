@@ -18,19 +18,9 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { tryResolveAlias, resolveAliasToSrcRel, loadAliases, classifyImport, SRC_ROOT } from '../scripts/_lib/alias-resolve.ts';
 import { resolveImport } from '../scripts/_lib/scan-files.ts';
+import { check, finish } from './_lib.mts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
-const fails: string[] = [];
-function check(name: string, fn: () => void) {
-  try {
-    fn();
-    console.log('✓', name);
-  } catch (e) {
-    fails.push(`${name}: ${(e as Error).message}`);
-    console.error('✗', name, '-', (e as Error).message);
-  }
-}
 
 check('loadAliases 解析 ≥13 个别名（12 个 @/dir + #root）', () => {
   const a = loadAliases();
@@ -160,8 +150,5 @@ check('gate 集成：check-path-hygiene --json 的 r4Count === 冻结基线（�
   assert.strictEqual(out._summary.r4_cross_boundary.baseline, baseline, '脚本侧 baseline 读取应与文件一致');
 });
 
-if (fails.length) {
-  console.error(`\n${fails.length} 项失败`);
-  process.exit(1);
-}
+finish('契约测试全过');
 console.log('\n✅ 全部通过');

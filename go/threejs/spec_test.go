@@ -350,4 +350,3 @@ func quatMul(a, b [4]float64) [4]float64 {
 func quatDiff(a, b [4]float64) float64 {
 	return math.Abs(a[0]-b[0]) + math.Abs(a[1]-b[1]) + math.Abs(a[2]-b[2]) + math.Abs(a[3]-b[3])
 }
-

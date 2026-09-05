@@ -32,6 +32,17 @@ export function ok(label: string, cond: boolean, detail = ''): void {
   else failures.push(`[${label}] ${detail}`);
 }
 
+/** 记名执行：fn 抛错即记入 failures（✓/✗ 输出，不打断，最后由 finish 裁决）。 */
+export function check(name: string, fn: () => void): void {
+  try {
+    fn();
+    console.log('✓', name);
+  } catch (e) {
+    failures.push(`${name}: ${(e as Error).message}`);
+    console.error('✗', name, '-', (e as Error).message);
+  }
+}
+
 /** 尾部汇总：failures 非空则逐条打印并 exit 1，否则打印 OK 消息。 */
 export function finish(okMessage: string): void {
   if (failures.length) {

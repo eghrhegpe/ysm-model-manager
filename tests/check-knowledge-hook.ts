@@ -8,19 +8,9 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stripBlock, buildBlock, BLOCK_START, BLOCK_END, findStaleSnippets, diffIntroducesNew, parseCardText } from '../scripts/hooks/knowledge-affected-hint.ts';
+import { check, finish } from './_lib.mts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const fails = [];
-function check(name, fn) {
-  try {
-    fn();
-    console.log('✓', name);
-  } catch (e) {
-    fails.push(`${name}: ${e.message}`);
-    console.error('✗', name, '-', e.message);
-  }
-}
-
 check('stripBlock 无区块时原样返回', () => {
   assert.strictEqual(stripBlock('hello\nworld'), 'hello\nworld');
 });
@@ -209,8 +199,5 @@ check('findStaleSnippets：裸词 mouse 警示语境不误报（零残留 mouse 
   assert.deepStrictEqual(findStaleSnippets(card, diff), []);
 });
 
-if (fails.length) {
-  console.error(`\n契约失败 ${fails.length} 项`);
-  process.exit(1);
-}
+finish('契约测试全过');
 console.log('\n全部通过');

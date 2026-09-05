@@ -17,19 +17,9 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { missingFromReadme, findReadmeRow, assertionViolations } from '../scripts/check-readme-index.ts';
+import { check, finish } from './_lib.mts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const fails = [];
-function check(name, fn) {
-  try {
-    fn();
-    console.log('✓', name);
-  } catch (e) {
-    fails.push(`${name}: ${e.message}`);
-    console.error('✗', name, '-', e.message);
-  }
-}
-
 function runCheck(args) {
   try {
     const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'check-readme-index.ts'), ...args], {
@@ -116,8 +106,5 @@ check('全量扫描当前仓库应 0 描述违规（rc=0 + --json 含 assertionV
   assert.equal(data._summary.assertionViolations, 0, `预期 0 描述违规，实际 ${data._summary.assertionViolations}`);
 });
 
-if (fails.length) {
-  console.error(`\n${fails.length} 项失败`);
-  process.exit(1);
-}
+finish('契约测试全过');
 console.log('\n全部通过');

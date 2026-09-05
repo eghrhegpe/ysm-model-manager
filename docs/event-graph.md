@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 200 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 179 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -174,7 +174,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 106 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 90 |
 
 ### `instance:export-list`
 
@@ -283,7 +283,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 488 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 491 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 204 |
 
 ### `repo:search-creator`
@@ -317,10 +317,10 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | refreshUI | `frontend/src/core/context-menu-shared.ts` | 21 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 67 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 155 |
-| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 79 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 203 |
+| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 55 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 131 |
+| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 76 |
+| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 182 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 263 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 38 |
@@ -332,7 +332,7 @@
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 75 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 333 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 355 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 356 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 84 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 155 |
@@ -345,7 +345,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 480 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 483 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 184 |
 
 ### `sync:download:done`
@@ -353,26 +353,26 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 99 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 135 |
+| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 96 |
+| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 124 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/index.ts` | 198 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/index.ts` | 219 |
+| pushOne | `frontend/src/views/app-sidebar/index.ts` | 199 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/index.ts` | 220 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/index.ts` | 212 |
+| pushOne | `frontend/src/views/app-sidebar/index.ts` | 213 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/core/handlers/sync.ts` | 248 |
+| registerSync | `frontend/src/core/handlers/sync.ts` | 219 |
 
 ### `sync:toggle:status`
 
@@ -386,7 +386,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/core/handlers/sync.ts` | 250 |
+| registerSync | `frontend/src/core/handlers/sync.ts` | 221 |
 
 ### `toast:show`
 
@@ -396,27 +396,6 @@
 | runStartupSteps | `frontend/src/app-modules.ts` | 67 |
 | (顶层) | `frontend/src/app-modules.ts` | 125 |
 | toast | `frontend/src/core/context-menu-shared.ts` | 30 |
-| resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 80 |
-| resolveDstDir | `frontend/src/core/context-menu-shared.ts` | 90 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 26 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 43 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 34 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 73 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 86 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 93 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 130 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 146 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 156 |
-| requireMcRoot | `frontend/src/core/handlers/require-mcroot.ts` | 20 |
-| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 42 |
-| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 80 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 111 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 128 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 153 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 162 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 196 |
-| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 211 |
-| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 229 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 252 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 306 |
@@ -522,14 +501,14 @@
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 163 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 115 |
-| beginSync | `frontend/src/views/app-sidebar/index.ts` | 142 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 267 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 273 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 279 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 338 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 344 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 349 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 358 |
+| beginSync | `frontend/src/views/app-sidebar/index.ts` | 143 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 268 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 274 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 280 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 339 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 345 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 350 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 359 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 37 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 66 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 85 |
@@ -606,9 +585,9 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | refreshUI | `frontend/src/core/context-menu-shared.ts` | 20 |
-| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 66 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 123 |
-| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 236 |
+| registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 54 |
+| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 116 |
+| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 207 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 262 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | (顶层) | `frontend/src/features/import-executor.ts` | 39 |
@@ -617,7 +596,7 @@
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 107 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 172 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 368 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 356 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 357 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

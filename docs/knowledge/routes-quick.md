@@ -900,7 +900,7 @@
 | 手写类型映射 | - | 与注册表不一致、分类错乱；必须经 LoadResourceTypes |
 | 新增资源类型未注册 | - | 前端无法识别；必须在 resource_types.json 中注册 |
 | 手写详情卡片 | - | 与 summaryCardHTML 样式不一致、作者信息重复；必须经 summaryCardHTML |
-| 加密模型未走 summarizeDecoded | - | 加密内容泄露；必须经 summarizeDecoded 的安全提取 |
+| 加密模型未走安全提取路径 | - | 加密内容泄露；必须经 summaryCardHTML 渲染 |
 | 高频轮询 GitHub API | - | 触发限流、浪费带宽；必须经 canCheck 节流 |
 | check 未 markChecked | - | 重启后重复检查；必须在检查完成后 markChecked 记录时间戳 |
 | DOM 测试切 node 环境 | - | window/document 报错；必须保持 happy-dom 或治理源码副作用 |

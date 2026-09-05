@@ -418,7 +418,7 @@
 | (顶层) | `frontend/src/features/import/executor.ts` | 33 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 188 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 201 |
-| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 291 |
+| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 290 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 144 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 153 |
 | checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 179 |

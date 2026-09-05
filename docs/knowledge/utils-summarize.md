@@ -15,7 +15,6 @@ auto_fields:
     - YSMHeader
     - YsmSummary
   tests:
-    - frontend/src/utils/format/summarize-decoded.test.ts
     - frontend/src/utils/format/summarize.test.ts
 quick_groups:
   - 截图导出与缓存
@@ -26,7 +25,7 @@ quick_risk_lines:
   - 模型摘要必须走 summarize.ts 的 summaryCardHTML，禁止手写详情卡片 HTML
 pitfalls:
   - 手写详情卡片 → 与 summaryCardHTML 样式不一致、作者信息重复；必须经 summaryCardHTML
-  - 加密模型未走 summarizeDecoded → 加密内容泄露；必须经 summarizeDecoded 的安全提取
+  - 加密模型未走安全提取路径 → 加密内容泄露；必须经 summaryCardHTML 渲染
 
 use_when:
   - 模型详情
@@ -39,7 +38,6 @@ use_when:
   - 免费付费
 invariant_anchors:
   - frontend/src/utils/format/summarize.ts|summaryCardHTML
-  - frontend/src/utils/format/summarize.ts|summarizeDecoded
 status: active
 ---
 
@@ -58,7 +56,7 @@ status: active
 ## 对外 API / 入口
 
 - 导出类型：`YsmSummary`（name/source/tips/license/authors/stats/preview/animGroups/configMenus/links）、`YSMHeader`（isYsm/name/tips/license/hasFree/isFree/authorName/authorBilibili/authorRole/linkHome/linkUpdate/hash/format/crypto）、`SummaryAuthor`、`SummaryAnimGroup`、`SummaryConfigMenu` — 与 go/ysm + go/types 结构体对齐的轻量类型
-- `summaryCardHTML(summary, header, basename?): string` — 主入口：双空 → 空态引导卡（「点击左侧仓库文件查看详情」）；无 summary 且 header.isYsm → 头部简约卡（🔒 加密提示 + 格式/加密版本号）；否则 → 完整卡片（🆓 免费 / 🔒 付费徽章由 hasFree/isFree 驱动）。**方案 A 去重（2026-08-28）**：完整卡片不再渲染作者行（含文件名 `[作者]` 回退）与纹理尺寸行——作者（头像+角色）与纹理由统计卡 `buildStatsCard`（skeleton-render.ts）统一承载并挂详情卡底部 `#preview-stats`，摘要卡保留唯一性，消除信息重复。**资源行删除（2026-08-28）**：「📦 贴图/模型/动画」行整体移除——贴图/模型计数（Go `extractFileStats` 只数 `files.player.*` 清单条目）与统计卡实际文件数（WASM `summarizeDecoded` 数 `textures/` 路径 + `.png`）口径不一致且重叠；动画计数并入动画分组标题（`🎬 ${name}（${items.length}）`，如「其他动画（7）」）。**顶部标题去重（2026-08-28）**：`model-detail-title`（📄 模型详情）两处（header-only 卡 + 完整卡）移除——外层 tab 已表达「📄 详情」层级，卡内不再重复标题；统计卡 `pv-card-title` 的「📊 模型概览」文字同步移除（badge 保留，`ysm-badge` 存在时渲染 `<div class="pv-card-title">${badge}</div>`）。**幽灵空行修复（2026-08-28）**：`configHtml` 内部原自带 `<div class="md-divider">`，与渲染处 `animGroupHtml` 的前导 divider 同时存在时连续两个 divider 产生幽灵空行——统一为「divider 只在渲染处按区块存在性加一次」（scale/animGroup/config 各自 `?` 前导），区块内容自身不再带
+- `summaryCardHTML(summary, header, basename?): string` — 主入口：双空 → 空态引导卡（「点击左侧仓库文件查看详情」）；无 summary 且 header.isYsm → 头部简约卡（🔒 加密提示 + 格式/加密版本号）；否则 → 完整卡片（🆓 免费 / 🔒 付费徽章由 hasFree/isFree 驱动）。**方案 A 去重（2026-08-28）**：完整卡片不再渲染作者行（含文件名 `[作者]` 回退）与纹理尺寸行——作者（头像+角色）与纹理由统计卡 `buildStatsCard`（skeleton-render.ts）统一承载并挂详情卡底部 `#preview-stats`，摘要卡保留唯一性，消除信息重复。**资源行删除（2026-08-28）**：「📦 贴图/模型/动画」行整体移除——贴图/模型计数（Go `extractFileStats` 只数 `files.player.*` 清单条目）与统计卡实际文件数口径不一致且重叠；动画计数并入动画分组标题（`🎬 ${name}（${items.length}）`，如「其他动画（7）」）。**顶部标题去重（2026-08-28）**：`model-detail-title`（📄 模型详情）两处（header-only 卡 + 完整卡）移除——外层 tab 已表达「📄 详情」层级，卡内不再重复标题；统计卡 `pv-card-title` 的「📊 模型概览」文字同步移除（badge 保留，`ysm-badge` 存在时渲染 `<div class="pv-card-title">${badge}</div>`）。**幽灵空行修复（2026-08-28）**：`configHtml` 内部原自带 `<div class="md-divider">`，与渲染处 `animGroupHtml` 的前导 divider 同时存在时连续两个 divider 产生幽灵空行——统一为「divider 只在渲染处按区块存在性加一次」（scale/animGroup/config 各自 `?` 前导），区块内容自身不再带
 - 内部渲染助手：renderTips（§ 着色）、cleanText（剥离 § 码与控制字符）；**`safeUrl`（2026-08-28 起导出**，供统计卡作者 bilibili 链接复用；仅放行 http/https，javascript:/data: 等替换为 "#"）
 
 ## 与其他子系统关系

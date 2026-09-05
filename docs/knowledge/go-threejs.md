@@ -95,14 +95,14 @@ ADR-042 §2.1 四项 + §2.2 bone 层直读的实施状态（ADR 只记决策方
 |----|------|------|
 | §2.1 旋转序 ZYX | ✅ 已落地 | `eulerToQuaternion` ZYX intrinsic，commit b8fc3211 |
 | §2.1 cube 变换链 | ✅ 已落地 | 3 层 X 镜像/翻号，`verify:port` 全绿 |
-| §2.1 scale | ✅ 已落地 | `BoneChannels.scale` → `evaluateClip` 累积 → `ysm-animation-player` 应用到 `THREE.Bone.scale`；`scale=0 → visible=false` |
+| §2.1 scale | ✅ 已落地 | `BoneChannels.scale` → `evaluateClip` 局部求值 → THREE 场景图层父子复合 → `ysm-animation-player` 应用到 `THREE.Group/Bone.scale`（`evaluateClip` 不做显式父子累积，51a7c5e1 重构）；`scale=0 → visible=false` |
 | §2.1 隐藏联动 | ✅ 已落地 | `bone-visibility.ts` `setBoneVisible` 用 `g.traverse` 递归子骨骼 |
 | §2.1 glow | ✅ 已落地 | Go `isGlowBone` 前缀检测 + `BoneData.Glow` → 前端 `MeshStandardMaterial + emissive`，commit a93b61ba |
 | §2.1 世界坐标回填 | ⏭️ 无需实现 | Three.js CPU 渲染，`getWorldPosition()` 可替代 |
 | §2.2 bone 层二进制直读 | ✅ 已落地 | C++ `YSMParserV3.cpp:862-876` 直读 pivot/rotation 并导出到 geometry JSON |
 | §2.2 cube 层反推猜错 | ⏳ 待解决 | `restore_blockbench_cube` 从烘焙 quad 反推 `origin/size`，复杂嵌套旋转会猜错 |
 
-验证脚本：`tests/verify-adr-042.mjs`（scale/隐藏联动/glow/世界坐标回填四项一键回归）
+验证脚本：`tests/verify-adr-042.ts`（scale/隐藏联动/glow/世界坐标回填四项一键回归）
 
 ## 相关
 

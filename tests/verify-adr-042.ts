@@ -1,5 +1,5 @@
 // 永久性验证：ADR-042 四项的实际落地状态。
-// 用法: node tests/verify-adr-042.mjs
+// 用法: node tests/verify-adr-042.ts
 // 目的: 验证 ADR-042 记录的"四项未建模"是否仍然成立。
 
 import { readFileSync, existsSync } from "node:fs";
@@ -15,7 +15,8 @@ const results = [];
 
 // ===== 1. scale 是否建模 =====
 // 上游: animSx/Sy/Sz 来自 boneParams[idx*12+6..8]
-// 我们: BoneChannels.scale + evaluateClip 累积 + ysm-animation-player 应用
+// 我们: BoneChannels.scale + evaluateClip 局部求值 + 场景图层父子复合 + ysm-animation-player 应用
+// （51a7c5e1 起 evaluateClip 不再做父子累积，父子变换由 THREE 场景图天然复合）
 function checkScale() {
   const animTs = read("frontend/src/utils/animation/animation.ts");
   const playerTs = read("frontend/src/preview-3d/ysm-animation-player.ts");
@@ -32,9 +33,14 @@ function checkScale() {
       evidence: "animation.ts:48 scale?: Vec3",
     },
     {
-      name: "evaluateClip 累积父子 scale",
-      pass: animTs.includes("combined.scale = [ps[0] * cs[0]"),
-      evidence: "animation.ts:590 combined.scale = [ps[0] * cs[0], ps[1] * cs[1], ps[2] * cs[2]]",
+      name: "evaluateClip 按 BONE_CHANNELS 逐通道求值（含 scale）",
+      pass: animTs.includes("for (const ch of BONE_CHANNELS)") && animTs.includes("transform[ch] = val"),
+      evidence: "animation.ts:660-662 遍历 BONE_CHANNELS(rotation/position/scale) 逐通道求值写回 transform[ch]",
+    },
+    {
+      name: "父子 scale 累积由 THREE 场景图层承担（evaluateClip 纯局部，51a7c5e1 起）",
+      pass: !animTs.includes("combined.scale") && !animTs.includes("localOnly"),
+      evidence: "animation.ts 无 combined.scale / localOnly——父子复合归渲染层节点层级",
     },
     {
       name: "ysm-animation-player 应用 scale 到 THREE.Group/Bone",
@@ -53,7 +59,8 @@ function checkScale() {
     item: "scale 未建模",
     status: allPass ? "ALREADY_LANDED" : "GAP_FOUND",
     checks,
-    conclusion: "scale 通道已完整落地：BoneChannels.scale → evaluateClip 累积 → ysm-animation-player 应用到 THREE.Bone.scale",
+    conclusion:
+      "scale 通道已完整落地：BoneChannels.scale → evaluateClip 局部求值 → 场景图层父子复合 → ysm-animation-player 应用到 THREE.Group/Bone.scale",
   });
 }
 
@@ -190,7 +197,7 @@ console.log(`确实未建模: ${gaps} / 4`);
 console.log(`无需实现: ${notNeeded} / 4`);
 console.log();
 console.log("结论：ADR-042 四项全部核对完毕，3 项已落地、1 项无需实现。");
-console.log("- scale: 动画管线已完整支持（BoneChannels.scale → evaluateClip → ysm-animation-player）");
+console.log("- scale: 动画管线已完整支持（BoneChannels.scale → evaluateClip 局部求值 → 场景图层复合 → ysm-animation-player）");
 console.log("- 隐藏联动: setBoneVisible 用 traverse 递归子骨骼");
 console.log("- glow: Go isGlowBone 前缀检测 + BoneData.Glow → 前端 glowByBoneId 反查 → MeshStandardMaterial + emissive");
 console.log("- 世界坐标回填: 无需实现（Three.js getWorldPosition 可替代）");

@@ -202,7 +202,7 @@ status: active
 
 | 子项 | 状态 | 证据 |
 |------|------|------|
-| 关键帧插值 | ✅ 已落地 | `evaluateKeyframes` + `evaluateClip` 做插值 + 父子传播 |
+| 关键帧插值 | ✅ 已落地 | `evaluateKeyframes` + `evaluateClip` 逐通道局部插值（父子复合由场景图层承担，51a7c5e1 起 evaluateClip 不做父子传播） |
 | molang builtin math | ✅ 已落地 | `molang-lib/math.js`（Sin/Cos/Atan2/Lerp/MinAngle… 整套直译） |
 | molang 求值器 | ✅ 已落地 | `molang.ts` `compileMolang` 返回 `(animTime) => number` 闭包，被 `animation.ts:115,140` 调用 |
 | transition（跨 clip） | ✅ 已落地 | `selectClip` 从当前姿态采集 rest + alpha 归零，commit 163a6f09 |

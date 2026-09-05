@@ -222,7 +222,8 @@ const DEG2RAD = Math.PI / 180;
  * 的「度」被当「弧度」直喂 Euler（45°→2578°），是角色预览乱飞的根因。
  * 数字基底直接换算；Molang 动态轴包一层求值后换算闭包——molang 三角函数按度求值，
  * 与上游 RotationValue 包裹 IValue 求值结果再 convert 同构。放解析层而非播放层：
- * evaluateClip 非 localOnly 分支跨骨骼累加旋转角，须保证整个求值域统一在弧度制。
+ * evaluateClip 逐通道局部求值（51a7c5e1 起无跨骨骼累加，父子复合归场景图层），
+ * 弧度制在解析层统一后，播放层求值/应用全程无须再换算单位。
  */
 function convertRotationKeyframes(kfs: Keyframe[]): Keyframe[] {
   // 归一化 -0→+0：取负零值轴产出 -0，下游 toEqual 快照/序列化按 Object.is 判不等

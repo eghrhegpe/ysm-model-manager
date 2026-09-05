@@ -13,8 +13,8 @@
  *   3. 真实存在、未 rename 的文件 → 无针对该卡的 ERROR（增强不误伤正常卡）
  *
  * 隔离策略：卡片目录经 --kc-dir 指向系统临时目录（同 anchor-def-kind / body-line-refs 范式）。
- * 依赖真实 git 仓库（rename 案例取自仓库历史：go/internal/testutil → internal/testutil，
- * 一次性目录迁移事件，契约锁定该已知案例）。
+ * 依赖真实 git 仓库（rename 案例取自仓库历史：internal/testutil → go/internal/testutil，
+ * ADR-191 迁回事件，契约锁定该已知案例）。
  *
  * 用法：node tests/check-knowledge-rename-migration.ts
  */
@@ -29,9 +29,10 @@ const TMP_CARD = path.join(KC_TMP_DIR, 'zzz-rename-migration-tmp.md');
 const CARD_STEM = 'zzz-rename-migration-tmp';
 
 const RENAME_HINT = '疑似历史重命名迁移至';
-// 仓库真实 rename 案例：go/internal/testutil/testutil.go → internal/testutil/testutil.go（目录层级迁移）
-const OLD_PATH = 'go/internal/testutil/testutil.go';
-const NEW_PATH = 'internal/testutil/testutil.go';
+// 仓库真实 rename 案例：internal/testutil/testutil.go → go/internal/testutil/testutil.go
+// （ADR-191 testutil 迁回 go/internal；当前 go/internal/... 存在、internal/... 已 404）
+const OLD_PATH = 'internal/testutil/testutil.go';
+const NEW_PATH = 'go/internal/testutil/testutil.go';
 
 function writeCard(src: string) {
   const fm = [

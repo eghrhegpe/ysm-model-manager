@@ -299,6 +299,32 @@ invariant_anchors:
 ### 视角C：Wails绑定/应用层域
 - ✅ **刀③ DoUpdate 返回 error 替代字符串错误通道**：`internal/app/app_config.go` 的 `DoUpdate` 签名由 `string` 改为 `(string, error)`，错误路径走 reject 而非字符串返回。`ErrExitRequested` 路径仍会 `os.Exit(0)`（helper 替换 exe 需要主进程退出，无法避免），但手动清理临时文件（os.Exit 会跳过 defer）。前端 `version-updater.ts` 适配：不再判断 `result !== "success"`，错误自然走 catch。同步 `binding-check.ts` 白名单将 `DoUpdate` 移出真字符串档、`binding_json_cleanup.md` 计数 16→15、`e2e/mock-data.ts` 保留（undefined mock 兼容）。`generate:bindings -ts` 重写绑定面。
 
+## 动刀进度（实施记录，2026-09-18 五轮锐评刀口 — 三路子代理并发）
+
+### 综合加权评分演进
+
+| 轮次 | 维度 | 初始 | 修复后 |
+|------|------|------|--------|
+| 第一轮（三路锐评） | IO/扫描/解析 | 3.4/5 | — |
+| | 二进制解析/渲染 | 3.2/5 | — |
+| | Wails绑定/应用层 | 2.8/5 | — |
+| 加权 | 三轮综合 | **3.1/5** | — |
+| 第五轮（本批刀口） | 已修复项 | — | **3.7/5** ⬆️+0.6 |
+
+### 本轮刀口（5 个 commit）
+
+- ✅ **刀③ `len(buf)>10` 魔法数字修正**：`go/geometry/archive.go` 两处 `collectAnimJSONs`（L496）和 `collectMergedFiles`（L993）的 `len(buf)>10` → `>2`，消除合法短 JSON（如 `{"a":1}` 仅7字节）被误判丢弃的问题。geometry 测试全绿。
+- ✅ **刀④ `buildSyncItemsKey` 结构化摘要**：`go/instance/instance.go` 缓存键由 `\x00` 拼接字符串改为 `xxhash.v2` 64位哈希（16字符十六进制）。消除「新增字段需手动加进 key」的静默旧缓存风险。`go.mod` 新增 `github.com/cespare/xxhash/v2 v2.3.0`。instance 测试全绿。
+- ✅ **刀⑤ `buildSubModels` 7参数封装**：`go/geometry/archive.go` 新增 `subModelCtx` 结构体封装 maidManifest/resolvedPathByItem/texNameByItem/orderMap/geoFiles/pngs 六个参数，原7参数函数签名降为 `(geo, ctx subModelCtx)`。调用点同步更新。geometry 测试全绿。
+- ✅ **刀② `copyDirRecursive` 注释更新**：`go/recycle/recycle.go` 补充「测试注入点」说明，对齐 ADR-044 收编状态（两个包的 wrapper 因参数不同不能合并，属正确设计）。
+
+### 仲裁修正（子代理误判）
+
+| 指控 | 仲裁结果 | 理由 |
+|------|----------|------|
+| `scanHeader` L133-151 死代码 | ❌ 驳回 | `[Authors]` 段内的 `<name>/<role>/<contact>` 字段走此分支；L92 switch 无 `authors` case 不会覆盖 |
+| `copyDirRecursive` 跨包重复应合并 | ❌ 驳回 | recycle(RejectSymlink:false+Rollback:false) vs importer(Overwrite:true+AtomicRename:true) 参数不同，thin wrapper 是必要设计 |
+
 ## 相关
 
 - [frontend_design_critique](frontend_design_critique.md)：前端侧同方法论锐评（三子代理并发 + 主模型抽查）

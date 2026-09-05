@@ -78,7 +78,7 @@ status: active
 > 以下为多轮子代理审计确认的已知遗留，部分已随 ADR-051 收尾解决。
 
 - ~~**正则表整体保留**~~：✅ ADR-051 已完成——前端正则模式表已删除，单一事实来源为 Go `AppError.Code`。errors.test.ts 中的 16 类正则断言已同步更新为结构化 Code 断言。
-- **`!err` 分支忽略 fallback 参数（低）**：`friendlyError(null, "重命名失败")` 返回「未知错误」而非带上下文前缀；测试仅覆盖无 fallback 情形。若需统一语义，应改为 `fallback` 兜底（与 L94 一致）。
+- **`!err` 分支忽略 fallback 参数（低）**：`friendlyError(null, "重命名失败")` 返回「未知错误」而非带上下文前缀；测试仅覆盖无 fallback 情形。若需统一语义，应改为 `fallback` 兜底（与 fallback 参数口径一致）。
 - **透传剥离路径段（P2 已修复，2026-08-11）**：Go 端 `AppError.Error()` 拼入 `源路径：/目标路径：` 内部绝对路径，friendlyError 中文透传/兜底前经 `stripPathSegments` 剥离（ADR-051「透传截断」）；新增模式注意勿重新引入原文拼接。
 
 ## esc 转义统一备案（2026-08-11，子代理审计）

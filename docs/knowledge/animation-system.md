@@ -133,8 +133,8 @@ status: active
 - `stagger` 消费方：`app-content/index.ts`、`app-sync-manager/tpl.ts`、`dialogs/batch-rename.ts`、`features/community/render.ts`、`app-content/site/render.ts`（卡片入场）
 - 全局开关：`app-modules.ts` 按设置切换 `document.documentElement` 的 `no-animations` class；CSS 侧对卡片/弹窗/主题动效统一 `animation: none !important`
 - **Molang 消费方**：
-  - 解析阶段（`animation.ts`）：`parseAxisItem`（L127）/ `parseKeyValue`（L143）/ `extractKeyframe`（L167）调用 `molang.ts` 的 `compileMolang`（L71）
-  - 求值阶段（`animation.ts`）：`resolveFramePost`（L515）/ `evaluateKeyframes`（L558）/ `evaluateClip`（L654）调用编译后的 `MolangFn`
+  - 解析阶段（`animation.ts`）：`parseAxisItem` / `parseKeyValue` / `extractKeyframe` 调用 `molang.ts` 的 `compileMolang`
+  - 求值阶段（`animation.ts`）：`resolveFramePost` / `evaluateKeyframes` / `evaluateClip` 调用编译后的 `MolangFn`
 
 ## 上游留档：YSMParser 动画模型 ID 映射（v0.3.6）
 

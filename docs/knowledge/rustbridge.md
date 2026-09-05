@@ -59,11 +59,11 @@ status: active
 ## 范围与构建
 
 - **包**：`go/rustbridge/`——**2 份平台独立实现**（每文件带 `rust_backend` build tag）：
-  - `bridge_windows.go`（~137 行）— Windows FFI 桥接（syscall.LazyDLL，`//go:build windows && rust_backend`）
-  - `bridge_cgo.go`（~110 行）— Linux/macOS/Android FFI 桥接（CGO extern，`//go:build (darwin || linux || android) && rust_backend`；GOOS=android 隐含 linux，单文件构造上消除 android 撞车，无需 `!android` 守卫，见 ADR-139）
-  - `embedded_windows.go`（69 行）— Windows 内嵌 Rust 库释放（SHA256 版本化缓存 + 原子 rename，`//go:build windows && rust_backend`）
-  - `common.go`（~40 行）— 公共解码（parseResponse + ffiMu，`//go:build rust_backend`）
-  - `types.go`（17 行）— 类型定义（ScanResponse/ScanEntry，`//go:build rust_backend`）
+  - `bridge_windows.go` — Windows FFI 桥接（syscall.LazyDLL，`//go:build windows && rust_backend`）
+  - `bridge_cgo.go` — Linux/macOS/Android FFI 桥接（CGO extern，`//go:build (darwin || linux || android) && rust_backend`；GOOS=android 隐含 linux，单文件构造上消除 android 撞车，无需 `!android` 守卫，见 ADR-139）
+  - `embedded_windows.go` — Windows 内嵌 Rust 库释放（SHA256 版本化缓存 + 原子 rename，`//go:build windows && rust_backend`）
+  - `common.go` — 公共解码（parseResponse + ffiMu，`//go:build rust_backend`）
+  - `types.go` — 类型定义（ScanResponse/ScanEntry，`//go:build rust_backend`）
   - `types_windows.go`（9 行）— Windows 特定类型（nativeBuffer，`//go:build windows && rust_backend`）
   - `doc.go`（3 行）— 包文档（无 build tag）
 - **桥 DLL**：`rust-wails-bridge/`（Rust crate）编译产出 `ysm_model_manager_wails_bridge.dll`，由 `build/windows/Taskfile.yml` 的 `build:rust-bridge` 构建并拷贝到 `go/rustbridge/bin/`（`platforms: [windows]` 守卫——非 Windows 交叉构建不产 .dll）

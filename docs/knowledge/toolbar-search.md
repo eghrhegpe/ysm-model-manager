@@ -47,7 +47,7 @@ status: active
 
 ## 概览
 
-`toolbar-search.ts` 是 YSM 前端搜索/筛选/导入逻辑的编排核心（272 行，从 `toolbar-events.ts` 拆出，ADR-040 P1）。它管理从用户输入到搜索结果渲染的完整链路：弹窗交互 → 后端搜索 → 标签交集 → 降级消费 → 树渲染。
+`toolbar-search.ts` 是 YSM 前端搜索/筛选/导入逻辑的编排核心（从 `toolbar-events.ts` 拆出，ADR-040 P1）。它管理从用户输入到搜索结果渲染的完整链路：弹窗交互 → 后端搜索 → 标签交集 → 降级消费 → 树渲染。
 
 ## 核心职责
 

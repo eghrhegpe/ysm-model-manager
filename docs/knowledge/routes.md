@@ -95,7 +95,7 @@
 | 页面、当前页、状态管理、page store、currentPage | [页面状态管理 page-store.ts](./page-store.md) | — |
 | 自主动画、眨眼、节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | — |
 | pointerdown、pointermove、pointerup、触屏、拖拽、旋转 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) ⚠️歧义（另见 import-queue.md） | ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `… |
-| 推送门禁、质量门禁、域级检查、门禁阻断、go build、vite build、契约测试、Promise.all | [推送前门禁 pre-push-gate](./pre_push_gate.md) ⚠️歧义（另见 frontend_test_audit.md） | `.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器，681 行）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（… |
+| 推送门禁、质量门禁、域级检查、门禁阻断、go build、vite build、契约测试、Promise.all | [推送前门禁 pre-push-gate](./pre_push_gate.md) ⚠️歧义（另见 frontend_test_audit.md） | `.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（编译/测试/… |
 | pre-commit、钩子、文档同步、自动 stage、并发隔离 | [提交前钩子 pre-commit](./pre-commit-hook.md) | `.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0… |
 | 3D 预览、统一预览外壳、程序化天空 / sky / 背景 / scene.background、PreviewAdapter 适配器、全模型预览（YSM / VRM / MMD / Litematic）、mount3D | [统一 3D 预览核心 preview-core](./preview_core.md) ⚠️歧义（另见 app-preview.md、go-threejs.md） | `frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi… |
 | schema 注册、per-scene、多模型同框、schema 键冲突、activeComponent、组件选择、YSM maid 同台、sessionId | [preview-menu-session-key](./preview_menu_session_key.md) | 3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台 |

@@ -39,7 +39,7 @@ status: snapshot
 
 ## 概览
 
-`worker-bridge.ts:94-105` `settleError` 三分支结算：`terminatePool` → reject；`makeErrorResponse` 存在 → resolve 错误响应；else → reject（P2 已加 assertNever 兜底）。L70 `const onWorkerError = opts.onWorkerError ?? "resolveAllError"` 把联合窄化成 `string`，后续 L99 `if (onWorkerError === "terminatePool")` 比较合法但 L100 `else if (makeErrorResponse)` 兜底——若未来加第三种策略，`settleError` 静默走 `makeErrorResponse` 分支。
+`worker-bridge.ts` 的 `settleError` 三分支结算：`terminatePool` → reject；`makeErrorResponse` 存在 → resolve 错误响应；else → reject（P2 已加 assertNever 兜底）。`settleError` 开头的 `const onWorkerError = opts.onWorkerError ?? "resolveAllError"` 把联合窄化成 `string`，后续 `if (onWorkerError === "terminatePool")` 比较合法但 `else if (makeErrorResponse)` 兜底——若未来加第三种策略，`settleError` 静默走 `makeErrorResponse` 分支。
 
 ## 核心职责
 
@@ -57,19 +57,19 @@ Worker 桥单请求失败结算：超时 / dispose / onerror 复用 `settleError
 ## 不变量
 
 - `WorkerErrorStrategy = "resolveAllError" | "terminatePool"` 联合类型穷尽性。
-- `resolveAllError` 模式必须传 `makeErrorResponse`（L71 入口契约校验，抛错）。
+- `resolveAllError` 模式必须传 `makeErrorResponse`（工厂入口契约校验，抛错）。
 - `terminatePool` 模式 `makeErrorResponse` 不允许（联合分支约束）。
 - **消息接线由工厂完成**：`createResolveModeBridge` 内部把 `worker.onmessage/onerror` 委托回 `bridge.handleMessage/handleWorkerError`——薄封装不暴露这两者，漏接 = worker 响应永不结算、恒超时 ok:false 静默回退主线程。409b060e 重构曾丢失接线，2026-08-30 补测轮（audit-r16）修复并加 `worker-bridge.test.ts`「工厂内部接线」回归锁。
 
 ## 问题清单（ts-package-review 2026-08-27）
 
-1. **可扩展性隐患**：L70 `onWorkerError` 窄化成 `string`，L99 `if` 比较 + L100 `else if` 兜底——若未来加第三种策略（如 `retryPool`），`settleError` 静默走 `makeErrorResponse` 分支，语义反转。
-2. **当前非 bug**：只有两策略，L99-L105 分支穷尽，行为正确。
+1. **可扩展性隐患**：`settleError` 开头把 `onWorkerError` 窄化成 `string`，`if` 比较 + `else if` 兜底——若未来加第三种策略（如 `retryPool`），`settleError` 静默走 `makeErrorResponse` 分支，语义反转。
+2. **当前非 bug**：只有两策略，三分支穷尽，行为正确。
 
 ## 建议动作
 
 1. `settleError` 的 `else if (makeErrorResponse)` 分支加 `assertNever(onWorkerError)` 兜底，未来加策略编译期报错。
-2. 或：`onWorkerError` 窄化成 `"resolveAllError" | "terminatePool"` 字面量联合（`const onWorkerError: WorkerErrorStrategy = opts.onWorkerError ?? "resolveAllError"`），L99 `if` 比较 + L100 `else` 兜底（无 `makeErrorResponse` 检查）——但需确认 `resolveAllError` 模式 `makeErrorResponse` 必传的 L76-81 校验仍生效。
+2. 或：`onWorkerError` 窄化成 `"resolveAllError" | "terminatePool"` 字面量联合（`const onWorkerError: WorkerErrorStrategy = opts.onWorkerError ?? "resolveAllError"`），`if` 比较 + `else` 兜底（无 `makeErrorResponse` 检查）——但需确认 `resolveAllError` 模式 `makeErrorResponse` 必传的入口校验仍生效。
 
 ## 相关
 

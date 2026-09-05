@@ -46,7 +46,7 @@ status: active
 
 # Rust Scanner Bridge 全平台支持
 
-L2 合并（2026-09-03，ADR-139 §2 已落地）：`bridge_{darwin,linux,android}.go` 三份 CGO 文件
+ADR-139 §2「逐字相同文件合并」已落地（2026-09-03）：`bridge_{darwin,linux,android}.go` 三份 CGO 文件
 去注释后逐字相同（含 C 前导块），合并为单一 `bridge_cgo.go`（`//go:build (darwin || linux || android) && rust_backend`）。
 `bridge_windows.go` 单列（syscall/DLL，无 cgo，实现真实不同）。
 

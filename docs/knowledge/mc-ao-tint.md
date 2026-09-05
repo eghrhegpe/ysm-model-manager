@@ -109,7 +109,7 @@ MC 的 `tintindex` 是**自由整数索引**，最终颜色由**方块类型 + b
 
 → `pack-model-adapter.ts` 已按此语义修正（TDD，全绿）：tintindex 仅作"需染色"布尔，**不再按 index 查表**；类别改由 `texEntry` 路径启发式（`tintCategoryForPath`：`*_leaves`→foliage、`*water*`→water、其余默认 grass，覆盖 vanilla 多数染色面——grass_block 顶面/overlay 无后缀即默认草地绿）；tint 面**保留纹理**（材质 `color×map` 相乘，替代早期"纯色平板"错误简化，"同 tint 不同纹理"按 key 含纹理路径分开材质，避免错贴）。该启发式即 ADR-080 §5.4 方案 a；"方块身份 → tint 类别"精确映射（手工小表）仍为未来改进，与 biome 正确解正交。
 
-## 3. 与本项目的落地映射（供 L4）
+## 3. 与本项目的落地映射（供第 4 节）
 
 | 目标 | 前置条件 | 务实路径 |
 |------|----------|----------|

@@ -124,8 +124,8 @@ a.queue = NewDownloadQueue(
   仅有 **单向** 引用——`App→*DownloadQueue`、以及 `App→*proxySession→*cookieJar`
   （均不回指 `App`）；跨包指针（`*watcher.Watcher`、`*tags.Store`、`*application.App`）
   也不反向持有 `App`。故"破环"范畴内**当前无活债**，无需再搜 struct 互指环。
-- 大文件（`resource_bindings.go` 744 / `app_install_instance.go` 651 / `app_scan.go` 601 /
-  `app_model.go` 586 / `app_config.go` 553 行）是 **god-object 方法膨胀**，不是对象级耦合；
+- 大文件（`resource_bindings.go` / `app_install_instance.go` / `app_scan.go` /
+  `app_model.go` / `app_config.go`）是 **god-object 方法膨胀**，不是对象级耦合；
   若拆分属"可维护性/内聚"重构，与破环是两件事。
 - 真正该警惕的**隐藏耦合是「包级全局可变状态」而非环**：先前 `app_scan.go` 的
   `var containerTypeCache sync.Map` 即此类——由 `ClearScanCache`(app_scan.go) 与

@@ -599,8 +599,12 @@ function checkNoCuratedInAutoFields(cards: any[]) {
 //   - 「062 行为」的「行为」不是行数引用 → \d{2,}\s*行 后不得跟汉字（(?![^\x00-\x7f])？否，
 //     直接负向前瞻汉字区 [\u4e00-\u9fff]，「888 行，」的行后是中文逗号（非汉字）仍通过
 //   - 「100 行红线」是 AGENTS.md 全仓通用规范术语（行数阈值），非文件行数引用 → 行后跟「红线」豁免
+//   - 描述性事实（非会漂移的导航行号）一律豁免：
+//       * `ADR-100 L4` ADR 章节引用（ADR 章节结构稳定，不随源码漂移）→ lookbehind 排除 `ADR-\d+ ` 前缀
+//       * `≤15 行`/`~137 行`/`1504→827 行`/`301–360 行`/`20-30 行` 前缀 ≤ ~ → – - 均为
+//         上限约定 / 估算 / 历史变化 / 区间描述，不指向当前源码位置 → lookbehind 排除
 const BODY_LINE_RE_FINAL =
-  /(?<![A-Za-z0-9_])L[1-9]\d{0,3}(?:-\d{1,4})?(?![0-9A-Za-z_])|\b\d{2,}\s*行(?!红线)(?![0-9A-Za-z_\u4e00-\u9fff])|\b\d{1,2}\s*个(?:能力|控件|守卫|单例|参数|事件)(?![0-9A-Za-z_])/g;
+  /(?<![A-Za-z0-9_-])(?<!ADR-\d{1,4} )L[1-9]\d{0,3}(?:-\d{1,4})?(?![0-9A-Za-z_])|(?<![→~–—≤-])\b\d{2,}\s*行(?!红线)(?![0-9A-Za-z_\u4e00-\u9fff])|\b\d{1,2}\s*个(?:能力|控件|守卫|单例|参数|事件)(?![0-9A-Za-z_])/g;
 /** 提取 frontmatter 块结束后的正文行（带行号）。 */
 function bodyLinesWithNumbers(text: string): Array<{ lineNo: number; line: string }> {
   const clean = text.replace(/^\uFEFF/, '');

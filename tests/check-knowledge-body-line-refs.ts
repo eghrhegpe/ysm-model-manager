@@ -141,6 +141,22 @@ try {
     `期望 WARN: ${out.warns.join('; ').slice(0, 300)}`
   );
 
+  // 6.5. 语义误报豁免：这些是描述性事实而非会漂移的导航行号
+  writeTmpCard([
+    '求值闭包见 ADR-100 L4 与 ADR-100 L1-L3（ADR 章节引用）。',
+    '对账摘要须控制在 ≤15 行以内。',
+    'bridge_windows.go 约 ~137 行的规模估算。',
+    'sample 已从 1504→827 行收缩（历史变化记录）。',
+    '第三方实现区间：AO 在 301–360 行、tint 在 9–30 行。',
+    '新增设置项不超过 20-30 行闭包。',
+  ]);
+  ({ status, out } = runDrift());
+  ok(
+    'ADR 章节引用 / ≤上限 / ~估算 / →历史变化 / –区间 / N-M 范围 均不报',
+    !out.warns.some((w) => w.includes(CARD_STEM)),
+    `豁免失败: ${out.warns.filter((w) => w.includes(CARD_STEM)).join(' | ').slice(0, 300)}`
+  );
+
   // 7. 正文含符号引用（文件|符号）→ 不误报
   writeTmpCard(['入口见 `mount-preview-core.ts|mount3D`，签名不动（回归红线）。']);
   ({ status, out } = runDrift());

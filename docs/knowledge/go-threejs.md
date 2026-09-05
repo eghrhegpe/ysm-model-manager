@@ -73,8 +73,8 @@ status: active
 - **cube inflate/mirror 消费**（2026-08-09 补齐，对齐 Java GeoCube/GeoQuad 口径）：`inflate` 时几何 origin 各轴 -i、size 各轴 +2i（Go 端像素坐标直接算，无需 /16）；`mirror` 时 UV 水平翻转（u 交换，几何不翻转）。box UV 展开（`parseUV`/`expandBoxUV`）**必须基于未膨胀的原始尺寸 `c.Size`**——对齐 C# 黄金参考 `csharp-builder.mjs`（先 `expandBoxUV(原始 sz)` 再 inflate 几何），若用膨胀后尺寸 UV 范围漂移 → 贴图拉伸/塌缩成色块（P2）
 - **负 inflate 下限防护**：inflate 超过半尺寸会把 cube 缩成负宽 → `hx2<0` 面翻转（法线反、正面剔除后不可见）；各轴 clamp 到 `thicknessEpsilon`（C# 黄金参考同缺陷，此为改进不背离）
 - **cube 变换链对齐 Blockbench 活规范（2026-08-22，ADR-042 §2.1 裁决）**：Bedrock JSON cube → 渲染顶点须经 3 层 X 镜像/翻号，缺任一层都会导致裙子/小部件朝向错误（主题正确、小部件错）：
-  1. **cube origin X 镜像**（`parseCube` L662 `from[0] = -(from[0]+size[0])`）— `applyInflate`/`buildCubeMeshData` 里 `ox = -(ox + sx)`，Bedrock JSON `cube.origin` 是"左下角"，Blockbench 内部 X 镜像到"右下角"
-  2. **cube pivot X 翻号**（`parseCube` L659 `origin[0] *= -1`）— `resolveCubePivot`/`buildCubeMeshData` 里 `cp[0] = -cp[0]`，cube 旋转中心 X 翻号，与顶点 X 镜像配套
+  1. **cube origin X 镜像**（`parseCube`：`from[0] = -(from[0]+size[0])`）— `applyInflate`/`buildCubeMeshData` 里 `ox = -(ox + sx)`，Bedrock JSON `cube.origin` 是"左下角"，Blockbench 内部 X 镜像到"右下角"
+  2. **cube pivot X 翻号**（`parseCube`：`origin[0] *= -1`）— `resolveCubePivot`/`buildCubeMeshData` 里 `cp[0] = -cp[0]`，cube 旋转中心 X 翻号，与顶点 X 镜像配套
   3. **mesh localPos[0] 符号**（Blockbench `mesh.position = cube.origin - parent.origin`）— `computeMeshLocalPos` 里 `localPos[0] = bonePivot.x + cp[0]`（不是 `- cp[0]`），因 `cp[0]` 已翻号（= `-Pivot[0]`），`+cp[0]` = `bonePivot.x - Pivot[0]` = Blockbench 口径
   - 验证：`npm run verify:port`（`scripts/port-align.ts`：Blockbench 权威 oracle × 多样性 corpus 全顶点对拍，无需 fixture），cube 几何 + localPosition + localRotation 全绿
 - **cube pivot 缺席 fallback（PivotSet 语义，2026-08-09 code_review P2）**：cube 未显式声明 pivot（Blockbench 缺省）时，spec 用 cube 中心作为旋转中心（对齐 YSMViewer，修复 fox 解压目录模型 main 手臂消失 P1）；**判定必须用 `types.Cube2D.PivotSet`（解析层 `*[3]float64` nil=缺席）而非 `cp==[0,0,0]`**——显式 `pivot:[0,0,0]` 是绕模型原点旋转的合法铰接件，误判会漂移旋转中心。手工构造 Cube2D 的测试 fixture 须同步设 `PivotSet: true`（致命陷阱 #17）

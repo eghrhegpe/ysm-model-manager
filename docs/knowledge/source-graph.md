@@ -57,7 +57,7 @@ invariant_anchors:
 
 ## 位置
 
-- 共享层：`scripts/_lib/source-graph.ts`（338 行）
+- 共享层：`scripts/_lib/source-graph.ts`
 - 依赖：`_lib/to-posix.ts`（Windows 路径归一）+ `_lib/scan-files.ts` 的 `walk`
 
 ## 背景
@@ -70,7 +70,7 @@ invariant_anchors:
 | 两组正则结果拼接序未排序 | api-break 报告顺序不稳定 | 收敛后加 `.sort()` |
 | 注释里的 `// func Ghost(` 被当真符号 | 误报 | 块注释剥离 + 行首锚定正则 |
 
-本次重构（536a19e8）把 7 个脚本的符号提取逻辑上收到 `_lib/source-graph.ts`，净减 107 行（`-229/+122`），并建立"单一内核 + 分发层"的防御范式。
+本次重构（536a19e8）把 7 个脚本的符号提取逻辑上收到 `_lib/source-graph.ts`（`-229/+122`），并建立"单一内核 + 分发层"的防御范式。
 
 ## 设计：两圈架构
 
@@ -131,7 +131,7 @@ invariant_anchors:
 
 - `scripts/_lib/scan-files.ts` 的 `walk`：source-graph 借用它做源码文件收集（`.ts/.tsx/.js/.jsx` 扩展名），但符号提取本身不依赖 walk。
 - `scripts/_lib/to-posix.ts`：Windows 路径归一（`C:\foo` → `C:/foo`），symbol 提取结果里路径统一正斜杠。
-- `scripts/check-lib-adoption.ts`：采用率闸门——检测「手搓了某模块能覆盖的能力却未 import」。source-graph 的 `getExportedSymbolsAny` / `topDeclsAny` 在其 RULES 表里已有 `advice` 条目（见 check-lib-adoption.mjs L63）。
+- `scripts/check-lib-adoption.ts`：采用率闸门——检测「手搓了某模块能覆盖的能力却未 import」。source-graph 的 `getExportedSymbolsAny` / `topDeclsAny` 在其 RULES 表里已有 `advice` 条目（见 check-lib-adoption.mjs 的 RULES 表）。
 - `docs/adr/ADR-141-large-script-split-baseline.md`：2026-08-31 审计实证 source-graph 与 auto-import.extractExports 在 re-export 处理上存在 15 文件差异，结论「不复用」——这是**差异化设计不是复制**（source-graph 把转发符号也算本文件导出，auto-import 故意排除转发名）。
 - `tests/test_scripts_lib.mjs`：契约测试，当前覆盖 scan-files / ripgrep / to-posix / parseRgLine，**尚未覆盖 source-graph**——这是待补缺口。
 

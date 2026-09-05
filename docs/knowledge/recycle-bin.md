@@ -82,7 +82,7 @@ status: active
 - 清空回收站与单条永久删除必须先过 `modalConfirm`（danger 样式）二次确认，不可直接执行
 - 列表仅显示路径前缀匹配当前类型 `GetRepoRoot` 根目录的条目（**带路径分隔符边界**：`path === root || path.startsWith(root + "/")`，防 `ysm2/` 误入 `ysm/`，P3 修复），路径分隔符统一转 `/` 再比较；`GetRepoRoot` 返回空时回退显示全量条目（回退语义属设计取舍）；**空 `Path` 条目一律排除**（P3 修复：防回退全量时渲染 `data-path=""` 点击发 `model:select {path:""}`）
 - 显示名需剥离 `.ban` 后缀（`replace(/\.(ysm|zip|7z)\.ban$/i, ".$1")`）后走 `renderDisplayName`
-- 列表点击监听只在 init 绑一次并在 cleanup 成对移除；渲染时 `innerHTML` 重建的按钮用 `btn.onclick` 赋值（覆盖式，不累积）。**⚠️ 技术债（P2，见 ADR-034 §5.1）**：列表容器已用 `onListClick` 事件委托（第 119 行），但条目按钮仍走 `btn.onclick` 逐元素直接绑定（第 184 行），双范式并存导致 cleanup 仅撤委托监听、未撤 `onclick`，组件销毁后悬空按钮可能触发后端。第 8 批 `listEl.innerHTML=""` 是对症止血，根治需把 `btn.onclick` 收编进 `onListClick` 委托分发。
+- 列表点击监听只在 init 绑一次并在 cleanup 成对移除；渲染时 `innerHTML` 重建的按钮用 `btn.onclick` 赋值（覆盖式，不累积）。**⚠️ 技术债（P2，见 ADR-034 §5.1）**：列表容器已用 `onListClick` 事件委托（`onListClick` 委托处），但条目按钮仍走 `btn.onclick` 逐元素直接绑定（`btn.onclick` 绑定处），双范式并存导致 cleanup 仅撤委托监听、未撤 `onclick`，组件销毁后悬空按钮可能触发后端。第 8 批 `listEl.innerHTML=""` 是对症止血，根治需把 `btn.onclick` 收编进 `onListClick` 委托分发。
 - 所有异常路径必须 toast 反馈（`friendlyError` 包装，`loadRecycleBin` 失败分支走列表内联错误渲染属例外——用户仍可见错误但非 toast，知识卡措辞已限定），恢复/删除失败需回滚条目 `leaving` 类并把按钮 `disabled` 解锁
 
 ## 相关

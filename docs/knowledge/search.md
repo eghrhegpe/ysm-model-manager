@@ -57,11 +57,6 @@ invariant_anchors:
   - frontend/src/views/app-tree/toolbar-search.ts|advFilterIntersectPaths
   - frontend/src/features/dialogs/adv-filter.ts|modalAdvFilter
   - frontend/src/backend/web-stats.ts|consumeWebSearchDegraded
-tests:
-  - frontend/src/views/app-tree/toolbar-search.test.ts
-  - frontend/src/views/app-tree/toolbar-events.test.ts
-  - frontend/src/features/dialogs/adv-filter.test.ts
-  - frontend/src/features/dialogs/adv-filter-util.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:
@@ -136,9 +131,9 @@ status: active
 
 | 绑定 | 文件 | 用途 |
 |------|------|------|
-| `SearchModels` | `app_scan.go:62` | 关键词 + 6 数值范围一次性过滤 |
-| `ListByTag` | `app_tags.go:38` | 按标签反查路径集 |
-| `AllTags` | `app_tags.go:43` | 全量标签候选 |
+| `SearchModels` | `app_scan.go` | 关键词 + 6 数值范围一次性过滤 |
+| `ListByTag` | `app_tags.go` | 按标签反查路径集 |
+| `AllTags` | `app_tags.go` | 全量标签候选 |
 
 ## 与其他子系统关系
 

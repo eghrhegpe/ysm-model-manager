@@ -75,7 +75,7 @@ status: active
 
 ## 核心职责
 
-- `esc(s)`：HTML 转义（`&`/`<`/`>`/`"`），弹窗内所有动态文本必须经过
+- 内部引用 `utils/dom/html.ts` 的 `esc(s)`（HTML 转义 `&`/`<`/`>`/`"`），弹窗内所有动态文本必须经过；不对外 re-export，业务弹窗直引 `utils/dom/html.ts`
 - `closeDlg(overlay, resolve, value, delay=120)`：带退场动画关闭——经模块级 `WeakSet<HTMLElement>`（`_closingOverlays`）防重复触发（不污染 HTMLElement 全局类型），加 `dlg-closing` 类，延时移除 DOM 并 resolve Promise
 - `registerDlg(overlay, cancelClose)`：登记活动弹窗单例；已有活动弹窗时先调其 `cancelClose()`（按取消值结算），防止连点叠加出多个弹窗/双执行
 - `modalPrompt(opts)`：输入框弹窗，空值校验（`#mp-err` 提示），Enter 确认 / Esc 取消，返回输入值或 null

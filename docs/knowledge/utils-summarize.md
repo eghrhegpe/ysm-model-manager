@@ -20,9 +20,6 @@ auto_fields:
   tests:
     - frontend/src/utils/format/summarize-decoded.test.ts
     - frontend/src/utils/format/summarize.test.ts
-tests:
-  - frontend/src/utils/format/summarize-decoded.test.ts
-  - frontend/src/utils/format/summarize.test.ts
 quick_groups:
   - 截图导出与缓存
 quick_intents:
@@ -84,4 +81,4 @@ status: active
 
 - [app_preview](./app-preview.md) — 预览面板
 - [go_ysm_parser](./go-ysm-parser.md) — 摘要数据源
-- `frontend/src/utils/format/summarize.test.js` — 单元测试（验证入口）
+- `frontend/src/utils/format/summarize.test.ts` — 单元测试（验证入口）

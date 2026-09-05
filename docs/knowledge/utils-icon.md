@@ -45,7 +45,7 @@ status: active
 
 ## 对外 API / 入口
 
-- `fileIcon(name: string): string` — 按扩展名（小写）返回 emoji：ysm→💎，zip/rar/7z/tar/gz→📦，pmx/pmd→🎭，vrca/vrcw→🥽，litematic→📐，nbt/schematic/schem→⚙️，png/jpg/jpeg/gif/webp/bmp→🖼️，txt/md/json/xml/yml/yaml/cfg/conf/ini→📄，其余→🧊。**2026-08-24：取扩展名前先剥禁用后缀（`.disabled`/`.ban`）**——禁用态文件仍是原名命名的真类型文件，`xxx.zip.disabled` 直接取末段会得 `.disabled` 落 🧊 兜底；剥后缀后按原扩展名判定（对齐 Go scanner 禁用后缀恢复 + display.ts 口径）。`isYsmName` 同基 `getExt` 自动受益
+- `fileIcon(name: string): string` — 按扩展名返回 emoji 图标：**注册表驱动**——`REGISTRY_EXT_ICONS` 由 `RESOURCE_EXTS`（`utils/resource/` 类型扩展名注册表）遍历 + `typeIconOf(rt)` 映射构建，扩展名 → 图标自动派生，无需手写映射表。兜底 `🧊`（未知类型）；禁用后缀（`.disabled`/`.ban`）剥离后取原扩展名判定。**2026-08-24 注册表化**：原硬编码表已迁移为 `RESOURCE_EXTS` + `typeIconOf` 派生，新增类型只需在资源类型注册表声明图标即可
 - `isYsmName(name: string): boolean` — 扩展名是否等于 `RESOURCE_TYPES.YSM`
 
 ## 与其他子系统关系

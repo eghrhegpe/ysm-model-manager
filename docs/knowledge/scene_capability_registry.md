@@ -104,10 +104,6 @@ auto_fields:
     - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
     - frontend/src/preview-3d/caps/ground-capability.test.ts
     - frontend/src/preview-3d/caps/light-capability.test.ts
-tests:
-  - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
-  - frontend/src/preview-3d/caps/ground-capability.test.ts
-  - frontend/src/preview-3d/caps/light-capability.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -132,7 +128,7 @@ perf:
 invariant_anchors:
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|sceneCapabilityRegistry
   - frontend/src/preview-3d/caps/scene-capability.ts|SceneCapability
-  - frontend/src/preview-3d/adapters/shared-infra.ts|createAll
+  - frontend/src/preview-3d/caps/scene-capability-registry.ts|createAll
   - frontend/src/preview-3d/menu/env.ts|buildEnvSchema
   - frontend/src/preview-3d/menu/env.ts|renderEnvLevel
 status: active

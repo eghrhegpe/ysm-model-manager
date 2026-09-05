@@ -8,6 +8,8 @@ source_files:
   - frontend/src/preview-3d/model-group-builder.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
   - frontend/src/preview-3d/cleanup-helper.ts
+  - frontend/src/preview-3d/safe-dispose.ts
+  - frontend/src/preview-3d/adapters/render-loop.ts
   - frontend/src/views/app-preview/preview-library.ts
   - frontend/src/views/app-preview/skeleton.ts
 auto_fields:
@@ -18,6 +20,7 @@ auto_fields:
     - CameraControlScene
     - cleanupPreview
     - closeActive3DOverlay
+    - Disposable
     - disposeDebugGroup
     - disposeSceneMeshes
     - getRegisteredRoutes
@@ -35,11 +38,17 @@ auto_fields:
     - PreviewHandle
     - PreviewScene
     - rebuildDebug
+    - registerPerFrame
     - registerReRoute
+    - removePerFrame
+    - resetLoopState
+    - safeDispose
     - scanModelsByType
     - ScreenshotScene
     - SemanticScene
     - setActive3DClose
+    - startGlobalRenderLoop
+    - stopIfIdle
     - switchPreview
     - UpdateableScene
     - withPreviewExtras
@@ -54,17 +63,6 @@ auto_fields:
     - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
     - frontend/src/views/app-preview/skeleton-render.test.ts
     - frontend/src/views/app-preview/skeleton.test.ts
-tests:
-  - frontend/src/preview-3d/adapters/mount-preview-core.behavior.test.ts
-  - frontend/src/preview-3d/adapters/mount-preview-core.test.ts
-  - frontend/src/preview-3d/cleanup-helper.test.ts
-  - frontend/src/preview-3d/debug-render.test.ts
-  - frontend/src/views/app-preview/preview-library-cooperate.test.ts
-  - frontend/src/views/app-preview/preview-library-replace.test.ts
-  - frontend/src/views/app-preview/preview-library.test.ts
-  - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
-  - frontend/src/views/app-preview/skeleton-render.test.ts
-  - frontend/src/views/app-preview/skeleton.test.ts
 use_when:
   - 3D 渲染循环优化
   - Vector3 复用
@@ -117,7 +115,7 @@ status: active
 ### 示例
 - 审核子代理输出：`P2: mount-preview-core.ts 类型化 + model-group-builder.ts 函数抽取`，`P3: render-loop.ts Vector3 复用 + debug-render.ts 纹理缓存`。
 - 主模型分两批提交：`cf781437`（P2 修复）、`e0065671`（P3 修复）。
-- 验证门禁：每次提交前跑 `vite build` + `npm run typecheck` + 501 项测试全绿。
+- 验证门禁：每次提交前跑 `vite build` + `npm run typecheck` + 测试全绿。
 
 ### 适用场景
 - 大型模块重构后的健康度复查
@@ -137,7 +135,7 @@ Three.js 等第三方库的 TypeScript 类型有时不够精确，或历史遗�
 
 ### 解决方案
 从 `any` 到具体类型的渐变收敛：
-1. **接口先行**：在 `LoopContext` 接口中显式声明字段类型（如 `_cd: THREE.Vector3`），即使暂时未被消费也提前定义契约。
+1. **局部变量类型声明**：在渲染循环函数中显式声明 `const _camDir = new THREE.Vector3()` 等，避免隐式 `any`。
 2. **变量类型收窄**：将 `let composer: any = null` 改为 `let composer: EffectComposer | null = null`，编译器自动捕获 misuse。
 3. **预定义常量提取**：将魔法值或重复对象提为模块级常量（如 `UpVec`、`DEBUG_THEME`）。
 
@@ -159,14 +157,15 @@ Three.js 等第三方库的 TypeScript 类型有时不够精确，或历史遗�
 per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，影响 60fps 稳定性。
 
 ### 解决方案
-**对象池化 + 上下文复用**：
-1. **LoopContext 扩展**：在 `LoopContext` 接口中新增 `_cd`、`_fwd`、`_right`、`_mv` 字段，声明为 `THREE.Vector3`。
-2. **per-frame 复用**：渲染循环内直接使用 `ctx._cd.set(...)` 替代 `new THREE.Vector3()`。
+**局部变量复用 + 参数对象传递**：
+1. **局部 Vector3 复用**：渲染循环函数内声明 `const _camDir/_forward/_right/_move = new THREE.Vector3()`，每帧通过 `set()` 更新，避免 `new` 产生 GC 压力。
+2. **参数对象传递**：`applyWasdCameraMotion(keys, cam, ctr, ..., { camDir, forward, right, move })` 接收复用向量对象。
 3. **模块级常量**：不随帧变化的向量（如 `UpVec`）提为模块级常量，避免重复创建。
 
 ### 示例
-- `render-budget.ts`：接口新增四个 Vector3 复用字段
-- 渲染循环内：`ctx.camera.getWorldDirection(ctx._cd)` 替代 `new Vector3()`
+- `adapters/render-loop.ts`：`const _camDir = new THREE.Vector3(); const _forward = new THREE.Vector3(); ...`
+- 渲染循环内：`camera.getWorldDirection(_camDir)` 替代 `new Vector3()`
+- `applyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, ..., { camDir: _camDir, forward: _forward, ... })`
 - 模块级缓存：`const UpVec = new THREE.Vector3(0, 1, 0)`
 
 ### 适用场景
@@ -250,8 +249,8 @@ per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，�
 4. 同步修复缩进不一致（间接暴露的代码质量信号）。
 
 ### 示例
-- `model-group-builder.ts`：提取 `fixOrphanBoneChain(bones, modelBones, pivots): void`
-- 调用点：`fixOrphanBoneChain(bones, model.bones, pivots);`
+- `model-group-builder.ts`：提取 `mdMgFixOrphanBoneChain(bones, modelBones, pivots): void`
+- 调用点：`mdMgFixOrphanBoneChain(bones, model.bones, pivots);`
 - 原内联段迁移后，`buildModelGroup` 函数圈复杂度显著降低
 
 ### 适用场景
@@ -260,7 +259,7 @@ per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，�
 - 多处重复的同构逻辑
 
 ### 最佳实践
-- 函数名应准确描述行为（动词 + 名词，如 `fixOrphanBoneChain`）
+- 函数名应准确描述行为（动词 + 名词，如 `mdMgFixOrphanBoneChain`）
 - 参数列表不超过 4 个，超出考虑封装为对象
 - 注释说明"为什么"而非"做什么"
 
@@ -272,17 +271,17 @@ per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，�
 Three.js 资源（几何体、材质、纹理、渲染器）需要成对 dispose，遗漏会导致 GPU 内存泄漏。
 
 ### 解决方案
-**分层清理契约 + cleanup-helper 三件套**：
+**分层清理契约 + 安全释放原语**：
 1. **能力层 dispose**：`SkyCapability.dispose()`、`GroundCapability.dispose()`、`LightCapability.dispose()` 各自管理自己的资源。
 2. **后处理层 dispose**：`EffectComposer.dispose()` 清理渲染目标和后处理 Pass。
 3. **防御性遍历**：`disposeSceneMeshes()` 遍历场景图释放所有 Mesh 的 geometry/material。
-4. **安全包装**：`safeDisposeRenderer()` 捕获 dispose 可能的异常（重复 dispose 场景）。
+4. **安全释放原语**：`safeDispose(obj)`（`safe-dispose.ts`）捕获 dispose 可能的异常（重复 dispose 场景），适配器各自实现 dispose、个别会抛错——安全释放保证「一个抛错不阻塞后续释放」。
 
 ### 示例
 - `mount-preview-core.ts`：分层清理链（skyCap/groundCap/lightCap/composer 逐一 dispose）
 - `cleanup-helper.ts`：`disposeDebugGroup()` — 遍历 debugGroup 释放 Mesh/Line/Sprite
 - `cleanup-helper.ts`：`disposeSceneMeshes()` — 通用场景图清理
-- `cleanup-helper.ts`：`safeDisposeRenderer()` — 异常安全包装
+- `safe-dispose.ts`：`safeDispose(obj)` — 异常安全包装，零依赖原语
 
 ### 适用场景
 - 所有 Three.js 相关代码
@@ -320,7 +319,7 @@ Three.js 资源（几何体、材质、纹理、渲染器）需要成对 dispose
   提前归零后被 LRU 淘汰，造成悬垂已释放纹理。
 
 **失败路径必查**：`loadTextures` 之后、句柄产出之前的任何异常（如 `buildYsmObject` 抛错）
-都要归还引用，否则引用永久泄漏。参照 `pack-model-adapter:265-267` 的失败路径范式。
+都要归还引用，否则引用永久泄漏。参照 `pack-model-adapter.ts` 的失败路径范式。
 
 ---
 
@@ -494,9 +493,9 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 4. **自主汇总**：子代理汇报总结，主模型统一提交。
 
 ### 示例
-- 审核子代理（d30590f0）：扫描 80+ 源文件，输出 P1-P4 分级报告。
+- 审核子代理（d30590f0）：扫描 preview-3d + app-preview 目录，输出 P1-P4 分级报告。
 - 主模型消化：按优先级批量修复 → 验证 → 提交。
-- 验证门禁：501 测试全绿，vite build 通过，tsc --noEmit 0 错。
+- 验证门禁：vite build + npm run typecheck + 测试全绿。
 
 ### 适用场景
 - 多文件批量重构
@@ -532,9 +531,11 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 
 ## 相关文件
 
-- `frontend/src/preview-3d/render-loop.ts` — 渲染循环优化
+- `frontend/src/preview-3d/adapters/render-loop.ts` — 渲染循环优化（Vector3 复用局部变量）
+- `frontend/src/preview-3d/safe-dispose.ts` — 安全释放原语
 - `frontend/src/preview-3d/debug-render.ts` — 纹理缓存
-- `frontend/src/preview-3d/model-group-builder.ts` — 函数抽取
+- `frontend/src/preview-3d/model-group-builder.ts` — 函数抽取（mdMgFixOrphanBoneChain）
 - `frontend/src/preview-3d/adapters/mount-preview-core.ts` — 类型收敛、并发防护、资源生命周期
+- `frontend/src/preview-3d/adapters/mount-session.ts` — 失败路径清理 runFailedMountCleanup
 - `frontend/src/views/app-preview/preview-library.ts` — 循环依赖破壁
 - `frontend/src/views/app-preview/skeleton.ts` — AbortController、防御性编程

@@ -29,10 +29,6 @@ auto_fields:
     - frontend/src/preview-3d/decoder/cache.test.ts
     - frontend/src/preview-3d/screenshot-render.test.ts
     - frontend/src/preview-3d/texture-loader.test.ts
-tests:
-  - frontend/src/preview-3d/decoder/cache.test.ts
-  - frontend/src/preview-3d/screenshot-render.test.ts
-  - frontend/src/preview-3d/texture-loader.test.ts
 use_when:
   - 截图
   - 导出 PNG
@@ -76,7 +72,7 @@ status: active
 ## 对外 API / 入口
 
 `screenshot-render.ts`：
-- `renderMultiAngle(modelPath: string, texUrls: string[], opts?: { size? }): Promise<AngleShot[] | null>` — 经 `GetModel3DSpec` 取 spec + `loadTextures` 加载纹理，离屏 WebGLRenderer（alpha 透明背景，默认 512×512）渲染四角度，返回 `[{ name, base64 }]`（PNG base64 无 data: 前缀）；结束 traverse dispose 全部 geometry/material + renderer
+- `renderMultiAngle(modelPath: string, texUrls: string[], opts?: RenderMultiAngleOptions): Promise<AngleShot[] | null>` — 经 `GetModel3DSpec` 取 spec + `loadTextures` 加载纹理，离屏 WebGLRenderer（alpha 透明背景，默认 512×512）渲染四角度，返回 `[{ name, base64 }]`（PNG base64 无 data: 前缀）；结束 traverse dispose 全部 geometry/material + renderer。`RenderMultiAngleOptions`：`size?`（像素）、`componentTextures?`（组件纹理 URL 映射）、`lights?`（预览灯光提取——所见即所得）、`decodeYsm?`（WASM 解码兜底注入）
 - `AngleShot` 接口：`{ name: "front" | "45" | "side" | "back45", base64 }`
 
 `preview-3d/decoder/cache.ts`（preview-cache）：

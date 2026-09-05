@@ -89,16 +89,6 @@ auto_fields:
     - ADR-073-federal-render-caps
     - ADR-084-personal-lighting
     - ADR-097-scene-capability-registry
-tests:
-  - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
-  - frontend/src/preview-3d/caps/environment-capability.test.ts
-  - frontend/src/preview-3d/caps/fog-capability.test.ts
-  - frontend/src/preview-3d/caps/ground-capability.test.ts
-  - frontend/src/preview-3d/caps/light-capability.test.ts
-  - frontend/src/preview-3d/caps/postprocessing-capability.test.ts
-  - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
-  - frontend/src/preview-3d/caps/shadow-capability.test.ts
-  - frontend/src/preview-3d/caps/sky-capability.test.ts
 use_when:
   - 联邦渲染
   - shared renderer

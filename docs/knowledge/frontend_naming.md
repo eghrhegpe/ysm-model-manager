@@ -53,7 +53,7 @@ invariant_anchors:
 |----------|------|----------|
 | built 动词名词化（已扩散适配器层） | 250+ 处 | `litematic-adapter.ts`/`fbx-parser.ts` + 全部适配器测试 |
 | 匈牙利私有缩写前缀 `MdLi*`/`dgPc*` | ~89 处 | `litematic-adapter.ts`（41）/`views/app-content/diagnostics/perf-cli.ts`（48） |
-| 单字母业务变量 | 729 处声明 | `backend/nbt-parse.ts`（w/h/l/b/n/v） |
+| 单字母业务变量 | 729 处声明 | `parsers/nbt-parse.ts`（w/h/l/b/n/v） |
 | 生命周期动词家族一义多词 | 全仓 1683 次 | `mount-preview-core.ts`（89 次自证） |
 | 动词名词化（parsed/loaded/saved/selected 当名词） | 268 处 / 55 文件 | `core/i18n/locale.ts`、`utils/dom/dialogs/modal.ts:487` |
 | 同函数双份定义 | 2 例 | `getCompound`（nbt-parse + voxel-parse）、`getExt/getExts`（icon + extensions） |
@@ -87,9 +87,9 @@ invariant_anchors:
 - **setBuilt 链**（built→content 主战役 8f5a2b63 自身漏改的半边 setter）：`mount-preview-core.ts` `setBuilt`→`setContent`（与 getContent 对称）、`switch-preview.ts` `SwitchContext.setBuilt` 契约+3 调用点→`setContent`、测试桩/标题/`oldBuilt`→`oldContent` 同步。
 - **`workerBuilt`→`workerResult`**（mmd-adapter.ts 11 处）：worker 路径 `buildPmxSceneSliced` 产物缓存，与 `pmxParsedData` 对仗；`PmxBuildResult` 类型名保留（builder 正当领域词）。
 - **同函数双份定义收敛**（红线落地）：`isObj`/`asString`/`asNumber`/`asArray`/`getCompound` 曾 nbt-parse.ts 与 voxel-parse.ts 各抄一份逐行相同 → 提取 `frontend/src/utils/core/nbt-guards.ts` 共用，两文件改 import（voxel 独有 `asLongArray`/`asByteArray`/`paletteToColors` 非双份，就地保留）。搜索「getCompound」从两文件收敛为一。
-- **三轴单字母展开**：`nbt-parse.ts schematicSummaryView` 与 `voxel-parse.ts schematicVoxelView`/`indexToCoord` 的 `w/h/l`（Width/Height/Length）→`width/height/length`（知识卡 pitfall 教科书案例）。
+- **三轴单字母展开**：`parsers/nbt-parse.ts schematicSummaryView` 与 `parsers/voxel-parse.ts schematicVoxelView`/`indexToCoord` 的 `w/h/l`（Width/Height/Length）→`width/height/length`（知识卡 pitfall 教科书案例）。
 - **`postprocessing-capability.test.ts` `built` 布尔旗标**→`composerBuilt`（记录 buildComposer 是否被调，与同函数 `disposed` 对仗）。
-- **防回潮脚本**：`scripts/check-naming-blacktalk.ts`（WARN 级，仿 check-boolean-naming 范式，默认不入 doctor 闸门）：built 名词家族零容忍 + w/h/l 三轴单字母挤一行检测，手动 `node scripts/check-naming-blacktalk.ts [--strict]` 可跑。
+- **防回潮脚本**：`scripts/_attic/check-naming-blacktalk.ts`（WARN 级，仿 check-boolean-naming 范式，默认不入 doctor 闸门）：built 名词家族零容忍 + w/h/l 三轴单字母挤一行检测，已归档至 attic。
 
 **✅ 已清理（commit 6ad4cdd5，2026-09）——知识库反向扫描发现**：
 - **`gc*` 私有前缀展开**（ground/water capability，7 生产符号）：`ground-capability.ts` `gcBuildMain`→`buildGroundMain`、`gcBuildMaterialGroup`→`buildGroundMaterialGroup`、`gcSliderDef`→`groundSliderDef`、`gcColorDef`→`groundColorDef`、`gcButtonDef`→`groundButtonDef`；`water-capability.ts` `gcBuildWaterGroup`→`buildWaterGroup`（**water 误用 gc 前缀**——前缀与语义矛盾，一并根除）。

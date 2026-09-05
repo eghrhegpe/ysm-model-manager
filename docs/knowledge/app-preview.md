@@ -182,18 +182,18 @@ status: active
 - `index.ts` — `<app-preview>` 生命周期编排：监听 `model:select`（回调开头 `this._previewGuard.invalidate()`），按 `DetectResourceType` 结果分流（pack → `showResourcePack`；ysm/空 → `showModelDetail`；litematic/blueprint → `showLitematic`；shaderpack → `showShaderpack`；MMD EntityPlayer → `PREVIEW_HANDLERS` 查表按 variants 分发；其他已知类型 → `showSimplePreview`）。
 - `loader.ts` — `loadModelData`：统一模型加载（缓存 → WASM → Go `AnalyzeBedrockModel` 兜底）；WASM 能力判定由 `matchTypeByExt(modelPath, RESOURCE_TYPES.YSM)`（注册表驱动，防 `.7z` 漏判）；`.zip`/`.json` 支持 `ysm.json` manifest 按声明序合并多角色 geometry 与纹理。
 - `detail.ts` — `showModelDetail` / `showResourcePack` / `showShaderpack` / `showSimplePreview`：详情面板渲染（Go 侧 `ExtractYsmSummary` / `ExtractYSMHeader` / `ReadPackMeta` / `ReadShaderpackLang`）；`showVrmMeta` / `showMmdPreview` 已迁出至 `detail-3d.ts`。
-- `skeleton.ts` — `loadModel2D`：2D/3D 骨骼渲染编排，委托 `preview-3d/model2d.ts` 与 `model3d.ts`；截图走 `SaveScreenshotFile`；3D overlay 触发键 `🎨3D` 为右下角悬浮 FAB。
+- `skeleton.ts` — `loadModel2D`：2D/3D 骨骼渲染编排，委托 `views/app-preview/model2d/model2d.ts` 与 `preview-3d/model3d.ts`；截图走 `SaveScreenshotFile`；3D overlay 触发键 `🎨3D` 为右下角悬浮 FAB。
 - `*-adapter.ts` / `*-3d.ts` — 各资源类型（YSM/MMD/VRM/Litematic/FBX/maid）的 3D 适配器，均通过 `PreviewAdapter.build` 契约挂内容层，shared 模式复用核心 renderer/rAF/controls。
-- `wasm.ts` — `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `cache.ts` 缓存）；同目录 `.animation.json` 扫描驱动 `createYsmAnimPlayer`。
+- `wasm-decode.ts`（`preview-3d/decoder/`）— `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `decoder/cache.ts` 缓存）；同目录 `.animation.json` 扫描驱动 `createYsmAnimPlayer`。
 - `litematic-3d.ts` — `createLitematic3D` / `cleanupVoxel3D`：通用外壳归 `mount-preview-core.ts` 的 `mount3D(adapter, path)`，体素内容层归 `litematic-adapter.ts` 的 `buildLitematicScene`。
 - `litematic-meta.ts` — `showLitematic`（Go `ReadLitematicMeta` / `ReadNbtStructure` / `ReadSchematic`）。
 - `maid-3d.ts` — 车万女仆详情 + 3D 预览（Bedrock generic 模式），详情卡复用 YSM `statsCardHTML` 彩色分区。**GetModel3DSpec 单视图（ADR-160）**：详情数据 = `AnalyzeBedrockModel`（聚合纹理/尺寸/metadata/格式）+ `GetModel3DSpec`（逐组件统计唯一源）；蓝卡逐组件行 = `componentCountsFromSpec(spec)` 投影（与 YSM 详情、3D「组件」下拉同构），纯静态无选中态；大字 = 组件合计，spec 失败回落聚合口径；FAB = 整包 3D（不再传 `subModelIdx`/`subPath`，角色切换收敛在 3D 组件下拉）。交互式 L0 清单（dp-submodels/chip）与 `AnalyzeBedrockModelEntry` 逐角色预取已退役。
 - `utils.ts` — 共享类型与工具：`PreviewCtx`、`getPrefer3D` / `setPrefer3D`、`stripYsgpTextHeader`。
-- `geometry.ts` — `BedrockCube` / `BedrockBone` / `BedrockGeometry` 类型 + `parseBedrockGeometryFromJSON`。
+- `decoder/geometry.ts`（`preview-3d/decoder/`）— `BedrockCube` / `BedrockBone` / `BedrockGeometry` 类型 + `parseBedrockGeometryFromJSON`。
 - `tpl.ts` — `modelDetailHTML`（详情面板）/ `statsCardHTML`（统计卡：彩色分区 + 逐组件行 componentCounts + 纹理分类）。
-- `texture-order.ts` — `buildOrderedTexKeys`：纹理有序列表计算，与 Go `internal/app/texture_order.go` 口径严格对称。
-- `parse-ysm-json.ts` — `parseYsmJsonDirect(json)`：解压后 YSM 的 `ysm.json` 直接解析，双格式分支（YSM 专属 / 标准 Bedrock）。
-- `cache.ts` — 模块级预览缓存。
+- `decoder/texture-order.ts`（`preview-3d/decoder/`）— `buildOrderedTexKeys`：纹理有序列表计算，与 Go `internal/app/texture_order.go` 口径严格对称。
+- `decoder/parse-ysm-json.ts`（`preview-3d/decoder/`）— `parseYsmJsonDirect(json)`：解压后 YSM 的 `ysm.json` 直接解析，双格式分支（YSM 专属 / 标准 Bedrock）。
+- `decoder/cache.ts`（`preview-3d/decoder/`）— 模块级预览缓存（FIFO 上限 50，与 `export.md` 口径一致）。
 
 ### maid 详情数据源与子实体词汇（ADR-160）
 
@@ -248,7 +248,7 @@ status: active
 - mount-preview-core 拆分为 `mount3D`（shell 装配 + infra 创建 + 输入绑定 + rAF 管线）+ `cleanupPreview` / `switchPreview` / `_resetSingletons`
 - Three.js 现为静态依赖（`litematic-3d.ts` / `model3d-loader.ts` / `screenshot-render.ts` / `model3d.ts` 均静态 `import * as THREE`）
 - 坐标变换遵循 ysmview 口径（改 model2d/model3d 前先 grep bug-chronicle）
-- **纹理口径对称**：`texture-order.ts` 与 Go `internal/app/texture_order.go` 口径严格对称，改一侧须同步另一侧
+- **纹理口径对称**：`decoder/texture-order.ts` 与 Go `internal/app/texture_order.go` 口径严格对称，改一侧须同步另一侧
 - **3D overlay 单例钩子**（`skeleton.ts` 模块级 `_active3DClose`）：全局同时只允许一个活跃 3D overlay——新开 3D 前先调上一份的 `_active3DClose`（`keepPrefer=true` 保留 `_prefer3D`）
 - **3D 内模型切换**：`PreviewHandle.switchTo(path)` 复用 renderer/rAF/controls/灯光重建内容层；`mount3D` 可选 `Mount3DOptions.siblings`（同类型候选 ≥2 时 topBar 渲染切换下拉）
 - **YSM 骨骼动画（ADR-100）**：动画数据优先取 `model._animClips`（loader 统一挂载），无内嵌时兜底扫同目录 `*.animation.json` → `createYsmAnimPlayer` 驱动骨骼

@@ -42,13 +42,6 @@ auto_fields:
     - frontend/src/views/app-preview/skeleton.test.ts
     - frontend/src/views/app-content/app-content.methods.test.ts
     - frontend/src/views/app-tree/toolbar-events.test.ts
-tests:
-  - frontend/src/views/app-preview/model2d/model2d.test.ts
-  - frontend/src/preview-3d/model3d.test.ts
-  - frontend/src/views/app-preview/zoom.test.ts
-  - frontend/src/views/app-preview/skeleton.test.ts
-  - frontend/src/views/app-content/app-content.methods.test.ts
-  - frontend/src/views/app-tree/toolbar-events.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -69,7 +62,7 @@ use_when:
   - 拖拽
   - 旋转
 invariant_anchors:
-  - frontend/src/preview-3d/adapters/input-and-animation.ts|setPointerCapture
+  - frontend/src/preview-3d/adapters/input-and-animation.ts|bindInputHandlers
 status: active
 ---
 

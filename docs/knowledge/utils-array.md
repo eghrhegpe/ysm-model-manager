@@ -10,8 +10,6 @@ auto_fields:
     - moveItem
   tests:
     - frontend/src/utils/array.test.ts
-tests:
-  - frontend/src/utils/array.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -50,4 +48,4 @@ status: active
 
 ## 相关
 
-- `frontend/src/site/edit.ts` — 最初来源，拖拽排序逻辑
+- `frontend/src/views/app-content/site/edit.ts` — 最初来源，拖拽排序逻辑

@@ -111,20 +111,18 @@ status: active
 | 卡片 | `ui-card.ts` | `cardContainer(container, fn)` — 包一层 `.lcard`，返回内部 dispose |
 | 加载 | `ui-loading.ts` | `withLoadingIndicator` 自包含加载遮罩 |
 | 顶部切换 | `ui-header-toggle.ts` | `createHeaderToggle` 紧凑 toggle；bind 注册用唯一 id `header-toggle-bind#<seq>`（防多实例 Map 覆盖）+ 两击断连清扫 |
-| 预设 | `ui-preset.ts` | 预设选择器 |
 | 滑块 | `ui-slider-controller.ts` | 数值范围滑块控件 |
 | 图标 | `icons.ts` | `createIcon` 图标工厂（Iconify + emoji 回退） |
 | 样式 | `ui-components-styles.ts` | `uiComponentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installUiComponentsStyles()`（light-DOM 注入，幂等，仅一次） |
 | 常量 | `ui-constants.ts` | 组件尺寸/间距常量 |
 | 类型 | `ui-types.ts` | 共享 TypeScript 类型（`ControlOptions`） |
-| 工具 | `ui-helpers.ts` | barrel re-export（3 值：cardContainer/addFieldRow/createSlideMenu，2026-08-26 清理后） |
+| 工具 | （已删） | barrel re-export 已在 ADR-146 反桶运动中移除；全部消费方改为从具体叶模块直引 |
 | 控制注册 | `control-registry.ts` | 控件自更新注册表（可选接入外部响应式系统，默认 no-op） |
 | 契约 | `dom-contract.ts` | role/class 契约单源（禁手写字符串） |
 
 ## 对外 API / 入口
 
-- **barrel**：`import { ... } from "../ui/ui-helpers.ts"` — 仅 re-export 当前有消费方的 3 值（`cardContainer` / `addFieldRow` / `createSlideMenu`）；其余 helper（`slideRow` / `addToggleRow` / `toggleRow` / `addSliderRow` / `initControl` / `createHeaderToggle` / `addColorSliderRow` / `addModeSlider` / `addVector3SliderRow` / `withLoadingIndicator` 及各 type）一律**直接从源模块 import**（2026-08-26 移除无消费方 re-export）
-- **非 barrel**：`addCollapsible`（`ui-collapsible.ts`）、`installUiComponentsStyles`（`ui-components-styles.ts`）、`addPresetChip` 等按需直接 import
+- **无 barrel**：ADR-146 反桶运动后，`ui-helpers.ts` 已删除；全部消费方**直接从具体叶模块 import**（`cardContainer` 从 `ui-card.ts`、`addFieldRow` 从 `ui-rows.ts`、`createSlideMenu` 从 `ui-slide-menu.ts` 等）
 - **不注册自定义元素**：本库无 `customElements.define`，消费方自行挂载返回值；不依赖 app-modules 装配（旧卡「经 app-modules.ts 统一注册为 Web Components」描述失真已修正）
 
 ## 与其他子系统关系

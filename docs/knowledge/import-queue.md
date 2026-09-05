@@ -40,12 +40,6 @@ auto_fields:
     - frontend/src/features/dnd-shared.test.ts
     - frontend/src/features/dnd-collector.test.ts
     - frontend/src/features/pack-dnd.test.ts
-tests:
-  - frontend/src/features/import-executor.test.ts
-  - frontend/src/features/import-dnd.test.ts
-  - frontend/src/features/dnd-shared.test.ts
-  - frontend/src/features/dnd-collector.test.ts
-  - frontend/src/features/pack-dnd.test.ts
 quick_groups:
   - 文件操作与标签
 quick_intents:
@@ -103,8 +97,10 @@ status: active
 ### dnd-shared.ts（共享判定）
 
 - `isSupportedFile(name)`：扩展名是否在 `ALL_EXTS` 支持列表
-- `isImportableFile(name)`：`.json` 仅放行 `ysm.json` 入口清单（包内 `main.json`/`*.animation.json`/`zh_cn.json` 等不得单独导入），与 `go/scanner/scanner.go:80-87` 白名单对齐
+- `isImportableFile(name)`：`.json` 仅放行 `ysm.json` 入口清单（包内 `main.json`/`*.animation.json`/`zh_cn.json` 等不得单独导入），与 `go/scanner/scanner.go` 白名单对齐
 - `shouldEnterForm(name)`：**仅 `ysm.json` 返回 true**（当前仅用于表单分流，整组导入不进表单）
+- `fileToBase64(file)`（10s 超时 base64 读取）：import-executor / pack-dnd 复用
+- `buildFolderItems(files, folderName, subpath)`：文件夹导入项构建（base64 批转）
 - `groupCollected(collected)`：按顶层目录分组，组内至少 1 个支持文件才整组导入，否则整组丢弃
 - `collectDropFiles(e)`（2026-08-29）：drop 事件收集口径单点——`dataTransfer.files` 优先（WebView2 可靠）+ `webkitGetAsEntry` 补充目录条目，按 `name:size:lastModified` 去重合并；`handleTreeDrop` / `handleInstanceDrop` 共用（原 import-dnd 内联块收敛）
 - `isEditableTarget(el)`：drop 目标是否可编辑元素（输入框内 drop 不触发导入），两 handler 共用
@@ -125,9 +121,9 @@ status: active
 
 ## 对外 API / 入口
 
-- import-executor 导出：`directImport`、`importFolder`、`executeCollected`、`importWebFilesWithToast`、`isImportableFile`、`fileToBase64`（10s 超时 base64 读取，pack-dnd 复用）
+- import-executor 导出：`directImport`、`importFolder`、`executeCollected`、`importWebFilesWithToast`
 - import-dnd 导出：`handleTreeDrop`、`bindTreeDnD`
-- dnd-shared 导出：`isSupportedFile`、`isImportableFile`、`shouldEnterForm`、`getExt`、`groupCollected`、`collectDropFiles`、`isEditableTarget`、类型 `CollectedEntry`/`FolderGroup`
+- dnd-shared 导出：`isSupportedFile`、`isImportableFile`、`shouldEnterForm`、`getExt`、`groupCollected`、`collectDropFiles`、`isEditableTarget`、`fileToBase64`、`buildFolderItems`、类型 `CollectedEntry`/`FolderGroup`
 - dnd-collector 导出：`collectFiles`、类型 `CollectedFile`
 - pack-dnd 导出：`handleInstanceDrop`、`bindPackCardDnD`、类型 `PackDndBusy`/`PackDndInstance`
 - 派发 bus：`toast:show`、`stats:refresh`、`tree:reload`
@@ -152,7 +148,7 @@ status: active
 
 ## 不变量
 
-- `isImportableFile` 的 `.json` 白名单仅放行 `ysm.json`，与 `go/scanner/scanner.go:80-87` 对齐
+- `isImportableFile` 的 `.json` 白名单仅放行 `ysm.json`，与 `go/scanner/scanner.go` 白名单对齐
 - `groupCollected` 组内至少 1 个支持文件才整组导入（与后端 `isSupportedEntryFile` 对齐）
 - `_inFlight` 键 = `name:size:lastModified`，防止跨源同名文件误判在途
 - `bindTreeDnD` 文档级监听 + `composedPath` 判定，Shadow DOM 穿透红线

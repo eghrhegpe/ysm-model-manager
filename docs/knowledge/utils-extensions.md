@@ -14,8 +14,6 @@ auto_fields:
     - RESOURCE_EXTS
   tests:
     - frontend/src/utils/resource/extensions.test.ts
-tests:
-  - frontend/src/utils/resource/extensions.test.ts
 quick_groups:
   - 配置与注册表
 quick_intents:
@@ -55,7 +53,7 @@ status: active
 
 ## 对外 API / 入口
 
-- `RESOURCE_EXTS: Record<string, string[]>` — 15 类映射（与 `resource_types.json` 对齐）：resourcepack/shaderpack/ysm/maid-model/blueprint/litematic/EntityPlayer/SceneModel/CustomAnim/CustomMorph/StageAnim/mmd-shader/DefaultAnim/DefaultMorph/fbx，完整列表见 `extensions.ts` 源码
+- `RESOURCE_EXTS: Record<string, string[]>` — 资源类型 → 扩展名列表静态映射（与 `resource_types.json` 对齐，由 `schema.ts allResourceTypes` 派生；完整列表见 `extensions.ts` 源码）
 - `ALL_EXTS: string[]` — 全部扩展名去重列表（按 RESOURCE_EXTS 出现顺序）
 - `getExts(rtype: string): string[]` — 取某类型的扩展名列表，未知类型返回 `[]`
 - `isSupportedExt(ext: string): boolean` — 扩展名是否被支持（大小写不敏感）

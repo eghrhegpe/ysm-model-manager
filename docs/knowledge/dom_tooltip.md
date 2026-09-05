@@ -48,7 +48,7 @@ status: active
 - **样式幂等注入**: `ensureTooltipStyles()` — id=`ysw-tooltip-styles` 注入 head 一次（模式同 `ensureFabStyles`）
 - **悬停显示/离开隐藏**: 默认 350ms 延迟防扫过频闪；文案惰性 getter 在显示时刻求值（适配 i18n 运行时切换）
 - **定位**: 目标上方水平居中、夹在视口内；上方放不下翻到下方；页面滚动捕获阶段统一隐藏（原生 title 同行为）
-- **兜底**: MutationObserver 监听 body subtree——目标元素被移除 DOM（菜单整体重建，mouseleave 不触发）时自动隐藏
+- **兜底**: MutationObserver 监听 body subtree——目标元素被移除 DOM（菜单整体重建，mouseleave 不触发）时自动隐藏；观察仅在 tooltip 可见期间挂载（`show` 时 observe、`hide` 时 disconnect），隐藏后即停，避免 subtree 全量观察常驻空转
 
 ## 对外 API / 入口
 

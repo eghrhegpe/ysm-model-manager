@@ -34,6 +34,7 @@ async function runDownloadMissing(
     InstallModelTo,
     InstallResourceToInstance,
     GetRepoRoot,
+    InvalidateScanCache,
   } = await getApp();
   const mcRoot = await requireMcRoot();
   if (!mcRoot) return false;
@@ -66,7 +67,6 @@ async function runDownloadMissing(
   }
   // 强制刷新扫描缓存
   try {
-    const { InvalidateScanCache } = await getApp();
     await InvalidateScanCache();
   } catch (e) {
     // P3（审核发现）：不静默吞错——缓存失效失败会让新导入最长 30s 不出现

@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-187：features/ 目录归位与 modal.ts 拆分收敛",
+        "link": "/adr/ADR-187-features-modal-ts"
+      },
+      {
         "text": "ADR-186：i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core",
         "link": "/adr/ADR-186-i18n-tr-locale-core"
       },

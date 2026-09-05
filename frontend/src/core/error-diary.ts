@@ -49,9 +49,20 @@ export function unregisterErrorDiary(): void {
 
 /**
  * 注册 UI 报错落日记功能。
- * 幂等，可重复调用。
+ * 幂等，可重复调用；注册中途任一步失败则整体回滚（unregisterErrorDiary），
+ * 防止部分注册成功后重试叠加监听（同条 toast 落两遍日记）。
  */
 export function registerErrorDiary(): void {
+  if (_registered) return;
+  try {
+    registerErrorDiaryInner();
+  } catch (e) {
+    unregisterErrorDiary();
+    console.warn("[error-diary] 注册失败（已回滚，可重试）:", e);
+  }
+}
+
+function registerErrorDiaryInner(): void {
   if (_registered) return;
 
   // 1. error/warn toast → 日记
@@ -100,15 +111,14 @@ async function logUiMsg(msg: string, status: string): Promise<void> {
   try {
     const { AddOpLog } = await getApp();
     // 净化：去掉 ❌/⚠️ 前缀（含 U+FE0F 变体选择器）+ 剥离内部路径段 + 截断
-    // P2 修复（code_review）：clean 同样应用 stripPathSegments——ModelName 字段
-    // 也会持久化进日记并在诊断页展示/复制，单边剥离 errMsg 会让路径从 ModelName
-    // 字段泄漏（路径通常 < 200 字符，截断拦不住），与新注释承诺的剥离边界不一致
-    const clean = stripPathSegments(msg)
-      .replace(/^[❌❎⚠]️?\s*/, "")
-      .slice(0, DIARY_MODEL_MAX);
+    // stripPathSegments 只算一次复用——ModelName/errMsg 两字段都需要剥离
+    //（P2 修复（code_review）：ModelName 字段也会持久化进日记并在诊断页展示/复制，
+    // 单边剥离会让路径从 ModelName 字段泄漏（路径通常 < 200 字符，截断拦不住））
+    const stripped = stripPathSegments(msg);
+    const clean = stripped.replace(/^[❌❎⚠]️?\s*/, "").slice(0, DIARY_MODEL_MAX);
     // P2 修复（审核，敏感路径）：写日记同样剥离内部路径段——与 ADR-051 透传截断
     // 边界一致（friendlyError 已对用户侧剥离，日记持久化不应重新引入完整路径）
-    const errMsg = stripPathSegments(msg).slice(0, DIARY_ERRMSG_MAX);
+    const errMsg = stripped.slice(0, DIARY_ERRMSG_MAX);
     // P2 修复（审核发现）：原 `void AddOpLog(...)` 浮空 Promise 未 catch——Wails 调用
     // 失败会 reject → unhandledrejection → 触发本模块 onRejection → 再 logUiMsg →
     // 再 AddOpLog → 拒绝 → 死循环；补 .catch 截断错误链

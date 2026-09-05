@@ -27,6 +27,24 @@ let _langReqGen = 0;
 /** 已加载的语言包缓存 */
 const bundles: Record<string, Bundle> = {};
 
+/**
+ * 无参 getBundle() 的活跃包引用缓存。t() 是渲染热路径（每次调用原实现要
+ * Object.keys 扫 1437 key 包两次），退化为一次属性读取；仅在 bundles /
+ * _currentLang 变更点（loadLocale 成败、setLang、initI18n）刷新。
+ */
+let _activeBundle: Bundle | undefined;
+
+/** 刷新活跃包缓存（ bundles / _currentLang 任一变更后调用） */
+function refreshActiveBundle(): void {
+  const cur = bundles[_currentLang];
+  if (cur && Object.keys(cur).length > 0) {
+    _activeBundle = cur;
+    return;
+  }
+  const base = bundles["zh-CN"];
+  _activeBundle = base && Object.keys(base).length > 0 ? base : undefined;
+}
+
 /** 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） */
 export const warnedKeys = new Set<string>();
 
@@ -61,6 +79,8 @@ async function doLoadLocale(lang: string): Promise<void> {
     // 删除键允许后续 setLang/initI18n 重试（瞬态网络失败可自愈）。
     console.warn(`[i18n] 加载 ${lang} 失败（未缓存，可重试）:`, e);
     delete bundles[lang];
+  } finally {
+    refreshActiveBundle();
   }
 }
 
@@ -69,6 +89,7 @@ async function doLoadLocale(lang: string): Promise<void> {
  * 注意与 getLang() 区分：getBundle 返回翻译表（对象），getLang 返回语言代码（字符串）。
  */
 export function getBundle(lang?: string): Bundle {
+  if (lang === undefined && _activeBundle) return _activeBundle;
   const code = lang ?? _currentLang;
   const cur = bundles[code];
   // P2（code_review）：空对象 {} 是 truthy——`bundles[code] ?? zh-CN` 会被空包短路，
@@ -97,6 +118,10 @@ export async function setLang(code: LangCode): Promise<void> {
   _currentLang = code;
   safeSet(STORAGE_KEY, code);
   applyHtmlLang(code);
+  // 切语言后清空缺失 key 告警节流——warnedKeys 原为全局 Set 跨语言复用，
+  // zh-CN 期记录的 key 会吃掉 en/ja 期同 key 的告警（静默缺译）
+  warnedKeys.clear();
+  refreshActiveBundle();
   bus.emit("lang:changed", { lang: code });
 }
 
@@ -143,6 +168,7 @@ export async function initI18n(): Promise<void> {
 
   applyHtmlLang(_currentLang);
   await loadLocale(_currentLang);
+  refreshActiveBundle();
   // 仅当语言包确实加载成功（非空）才通知重渲染；失败留待重试，不污染订阅通道
   const loaded = bundles[_currentLang];
   if (loaded && Object.keys(loaded).length > 0) {

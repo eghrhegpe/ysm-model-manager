@@ -13,15 +13,26 @@ export type LocaleKey = keyof typeof zhCN;
 /** 插值参数：{key} 占位符的值（字符串/数字） */
 export type LocaleParams = Record<string, string | number>;
 
+/** 占位符正则编译缓存（带 params 的 t() 在列表渲染中高频，避免每次 new RegExp） */
+const placeholderCache = new Map<string, RegExp>();
+
+function getPlaceholderRegex(key: string): RegExp {
+  let re = placeholderCache.get(key);
+  if (!re) {
+    re = new RegExp(`\\{${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\}`, "g");
+    placeholderCache.set(key, re);
+  }
+  return re;
+}
+
 /**
  * 将 params 中的 {key} 占位符替换为对应值。
- * 使用函数型替换防止 $&/$1 等特殊序列被正则解析，并对 key 先做正则转义。
+ * 使用函数型替换防止 $&/$1 等特殊序列被正则解析。
  */
 export function interpolate(text: string, params?: LocaleParams): string {
   if (!params) return text;
   for (const [k, v] of Object.entries(params)) {
-    const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    text = text.replace(new RegExp(`\\{${escaped}\\}`, "g"), () => String(v));
+    text = text.replace(getPlaceholderRegex(k), () => String(v));
   }
   return text;
 }

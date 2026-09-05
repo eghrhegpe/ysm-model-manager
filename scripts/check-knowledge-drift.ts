@@ -37,6 +37,7 @@ import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars }
 import { PERF_TAGS, CARD_STATUS, KNOWLEDGE_NON_CARDS, KNOWLEDGE_ORDER } from './_lib/knowledge-cards.ts';
 import { parseArgs } from './_lib/parse-args.ts';
 import { stripBom, hasFrontmatterDelimiter, getUntrackedCards, missingRequiredCardFields } from './_lib/knowledge-common.ts';
+import { gitMaybe } from './_lib/git-ref.ts';
 
 // 参数解析统一走 _lib/parse-args（positional 脚本契约：未知 flag 白名单拦截）
 // --kc-dir：隔离模式，指向临时知识卡目录（契约测试用，避免临时卡污染 docs/knowledge/ 生成物）
@@ -207,6 +208,36 @@ function checkKnowledgeMeta(cards: any[]) {
 
 // ── 检查 2：source_files 存在性 + 路径格式 + 语义漂移 ──
 
+// source_files 404 时的「历史重命名迁移」建议（WARN 附言，不改 ERROR 级别）。
+// 背景（2026-09）：目录层级迁移（go/internal/ → internal/）后，知识卡 source_files 仍指
+// 旧路径 → checkKnowledgeSources 报「引用不存在」。裸 ERROR 只告诉 AI「文件没了」，不告诉
+// 「去哪了」，AI 还得自己 git log --follow 溯源。本增强在 404 时懒加载跑一次
+// `git log --all --diff-filter=R --name-status`（全历史 rename 记录），把疑似迁移目标附进
+// ERROR 文案，让 AI 一步改指新路径。
+//
+// 设计取舍：
+//   - 懒加载 + 缓存：只在第一次 404 时才跑 git；全量检查零 404 时不背 git 子进程开销；
+//   - 静默降级：git 不可用（CI 非 clone / 无 git PATH）→ gitMaybe 返回 null → 空 Map →
+//     原 ERROR 文案不变（本增强是「锦上添花」不是「硬依赖」）；
+//   - 不降级 ERROR：404 仍是 fail-closed 硬错误，本增强只补「去哪了」的可操作信息；
+//   - 复用 git-ref.ts gitMaybe：已带 -c core.quotepath=false（中文路径不八进制转义，防
+//     docs/\345\205\266... 类转义破坏 rename 配对解析）+ Windows 安全 execFileSync。
+//   - rename 配对相似度阈值走 git 默认 -M50%：低相似度「删旧+增新」不识别为 rename，
+//     仍报裸 ERROR（可接受——那种情况本来就难自动给建议）。
+let _renameMap: Map<string, string> | null = null;
+function buildRenameMap(): Map<string, string> {
+  if (_renameMap) return _renameMap;
+  _renameMap = new Map();
+  const out = gitMaybe(['log', '--all', '--diff-filter=R', '--name-status', '--format=']);
+  if (!out) return _renameMap;
+  for (const line of out.trim().split('\n')) {
+    // --name-status 的 rename 行格式：`R<similarity>\t<old>\t<new>`（tab 分隔）
+    const m = line.match(/^R\d+\t(.+)\t(.+)$/);
+    if (m && m[1] && m[2]) _renameMap.set(m[1], m[2]);
+  }
+  return _renameMap;
+}
+
 function checkKnowledgeSources(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
@@ -220,7 +251,13 @@ function checkKnowledgeSources(cards: any[]) {
       }
       // [ERROR] 文件不存在（硬 404，源码删除/移动/重命名即触发）
       if (!fs.existsSync(path.join(ROOT, norm))) {
-        errors.push(`知识卡 ${cf} 的 source_files 引用不存在: ${norm}`);
+        // 历史重命名迁移建议：懒加载 git rename 映射，附「去哪了」的可操作信息（不降级 ERROR）
+        const target = buildRenameMap().get(norm);
+        errors.push(
+          target
+            ? `知识卡 ${cf} 的 source_files 引用不存在: ${norm}（疑似历史重命名迁移至 ${target}，请改指新路径）`
+            : `知识卡 ${cf} 的 source_files 引用不存在: ${norm}`
+        );
         continue;
       }
       // [WARN] 指向生成物（bindings/dist/node_modules）→ 非源码事实源，重构后静默失真

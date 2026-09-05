@@ -36,6 +36,7 @@ auto_fields:
     - renderComponent
     - RenderOptions
     - RenderResult
+    - setupAppMock
     - sleep
     - stubBlobUrls
     - unmountElement

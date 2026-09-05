@@ -134,7 +134,7 @@ function buildOverlay<T>(
   cancelValue: T,
   resolve: (value: T) => void,
   onClose?: (value: T) => void,
-): { overlay: HTMLElement; close: (value: T) => void } {
+): { overlay: HTMLDivElement; close: (value: T) => void } {
   const overlay = document.createElement("div");
   overlay.tabIndex = tabIndex;
   overlay.className = "dlg-overlay";
@@ -160,7 +160,7 @@ function appendDialogBox(
   width: string | undefined,
   buildBox: (box: HTMLElement) => void,
   boxClass?: string,
-): HTMLElement {
+): HTMLDivElement {
   const box = document.createElement("div");
   box.className = boxClass || "dlg-box dlg-pad dlg-gap-lg";
   if (width) box.style.width = width;
@@ -220,7 +220,7 @@ export function createDialog<T>(opts: {
   /** 关闭生命周期钩子（Esc/遮罩/按钮任一 close 路径均同步触发；resolve 在退场动画后异步结算） */
   onClose?: (value: T) => void;
   buildBox: (box: HTMLElement) => void;
-}): { overlay: HTMLElement; box: HTMLElement; close: (value: T) => void } {
+}): { overlay: HTMLDivElement; box: HTMLDivElement; close: (value: T) => void } {
   const {
     title,
     icon,

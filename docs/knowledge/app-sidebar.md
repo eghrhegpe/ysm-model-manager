@@ -99,7 +99,7 @@ status: active
 
 - 自定义元素：`<app-sidebar rtype="ysm">`（属性变更触发 `_reload` 与按钮文案更新；**属性缺省时构造函数读 `currentRepoType()`**——localStorage `repo_rtype` 权威源，app-nav 切换器落盘，首屏整合包标题即显示当前全局类型而非默认 YSM）
 - 监听 bus：`stats:refresh`（300ms 防抖重载）、`repo:rtype-changed`（随仓库页类型切换重载）、`sync:download:done`（按 token 匹配推送结果，30s 超时）
-- 派发 bus：`package:selected`、`ctx:show`、`sync:download:missing`（含 token）、`toast:show`、`stats:refresh`、`tree:reload`、`nav:change`（底部路径按钮跳设置页）、`loading:start` / `loading:end`
+- 派发 bus：`package:selected`、`ctx:show`、`sync:download:missing`（含 token）、`toast:show`、`stats:refresh`、`tree:reload`、`nav:changed`（底部路径按钮跳设置页，`events.ts:243`）
 - Go 调用：统一经 `getApp()` 取绑定（ADR-012 红线，禁 `window.go.main.App.*`）——`LoadAppConfig` / `ListVersionInstances` / `GetResourceInstanceStatus` / `GetRepoRoot`（loader.ts）、`PullResourceFromInstance`（index.ts 拉取）、`LoadAppConfig` / `SaveAppConfig` / `GetMinecraftPaths`（events.ts bindFooter 自动检测 MC 路径）；「推送到整合包」由 `core/context-menus.ts` 的 `file.push-to-pack` 走 `InstallModelTo`（见知识卡 `context_menu`）
 - 导出符号：`loadInstances`（loader.ts，`index.ts` 直接 import，无注册表）
 

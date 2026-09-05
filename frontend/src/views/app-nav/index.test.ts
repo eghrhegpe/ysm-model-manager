@@ -1,7 +1,8 @@
 // ===== <app-nav> 组件级测试（G-1 — ADR-035 / Design.md §19.1）=====
-// 断言基于 data-testid 稳定钩子；交互验证 nav:change 事件 + nav:changed 高亮更新。
-// 注意：nav:change 是请求事件（app-content 处理），nav:changed 是响应事件（app-nav 监听）。
-// 单独挂载 app-nav 时 nav:change → nav:changed 链路无消费方，需直接发射 nav:changed 验证。
+// 断言基于 data-testid 稳定钩子；交互验证 nav:changed 发射 + 高亮更新。
+// 注意：2026-08-17（4e4e3494）bus 契约统一为单事件 nav:changed（旧 nav:change 请求事件已删），
+// 无「请求/响应」双事件；app-nav 点击直接 emit nav:changed，自身监听更新高亮。
+// 单独挂载 app-nav 时 nav:changed 的页面消费方（app-content）不在场，但 emit 可被自身监听捕获。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { getByTestId, getAllByTestId, waitFor, sleep, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
 import { bus } from "../../bus.ts";
@@ -118,7 +119,7 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     unmountElement(el);
   });
 
-  it("点击 nav-item → 发射 nav:change", async () => {
+  it("点击 nav-item → 发射 nav:changed", async () => {
     const el = mountCustomElement("app-nav");
     const root = el.shadowRoot!;
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);

@@ -111,17 +111,17 @@ quick_groups:
   - 跨组件通信与页面
 quick_intents:
   - 主内容区、页面切换、仓库页 / 创作者页 / 社区页
-  - nav:change 事件分发、全局 handler 注册
+  - nav:changed 事件分发、全局 handler 注册
   - 页面初始化流程、订阅桶 / 会话状态
 quick_risk_lines:
-  - 主内容区页面切换必须经 nav:change / app-nav 路由分发，禁止页面之间直接 init 对方
+  - 主内容区页面切换必须经 nav:changed / app-nav 路由分发，禁止页面之间直接 init 对方
 pitfalls:
-  - 页面 A 直接调用页面 B 的 init → 重复初始化 / 订阅泄漏；必须经 nav:change 单点分发
+  - 页面 A 直接调用页面 B 的 init → 重复初始化 / 订阅泄漏；必须经 nav:changed 单点分发
   - subscription-bucket 未退订 → 跨页残留监听、状态串扰；每次切换必须 clear 旧桶
 use_when:
   - 主内容区
   - 页面切换
-  - nav:change
+  - nav:changed
   - 仓库页
   - 全局 handler
 invariant_anchors:
@@ -133,9 +133,9 @@ status: active
 
 ## 概览
 
-`app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工坊（github）、诊断与冲突（diagnostics/oldest）、设置（settings）。它监听 `nav:change` 整块重渲染当前页，也是全部全局事件 handler 的唯一注册点（致命陷阱 #2 的解法）。
+`app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工坊（github）、诊断与冲突（diagnostics/oldest）、设置（settings）。它监听 `nav:changed` 整块重渲染当前页，也是全部全局事件 handler 的唯一注册点（致命陷阱 #2 的解法）。
 
-构造器不再硬编码 `"repository"`，而是与 `app-nav`、`PageStore` 三源同源调用 `resolveInitialPage()`（`core/page-store.ts`）：`app-content` 经 `app-modules.ts` 动态加载，可能晚于 `app-nav` 派发的初始 `nav:change`，事件被吞后若硬编码首页，会让 UI 实际渲染页与 `PageStore.currentPage` 脱节。旧版全局 DnD 曾依赖 `page === "repository"` 守卫，现仓库页 DnD 已改为 `app-tree` 组件级绑定，不再受该守卫影响。
+构造器不再硬编码 `"repository"`，而是与 `app-nav`、`PageStore` 三源同源调用 `resolveInitialPage()`（`core/page-store.ts`）：`app-content` 经 `app-modules.ts` 动态加载，可能晚于 `app-nav` 派发的初始 `nav:changed`，事件被吞后若硬编码首页，会让 UI 实际渲染页与 `PageStore.currentPage` 脱节。旧版全局 DnD 曾依赖 `page === "repository"` 守卫，现仓库页 DnD 已改为 `app-tree` 组件级绑定，不再受该守卫影响。
 
 UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `content.*`），改文案只改语言包。
 
@@ -147,7 +147,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 > - [设置页 `app_content_settings`](./app_content_settings.md) — `settings/` 全子模块
 > - [创意工坊站点视图 `app_content_site`](./app_content_site.md) — `site/` + `site-view.ts` + `workshop-data` / `workshop-browse-mode`
 
-- `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:change` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）
+- `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`
 - `content-css.ts` — 样式组合层：6 个域 CSS 文件 join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
 - `content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架卡片系统（`.page` / `.stat-card` / `.model-card` / `.health-ring` 等）+ 工坊通用按钮类（`.ws-*`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。
@@ -162,15 +162,15 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 ## 对外 API / 入口
 
 - 自定义元素：`<app-content>`
-- 监听 bus：`nav:change`（切页并回发 `nav:changed`，同时 `App.ClearScanCache()` 清扫描缓存）、`repo:switch-tab`、`repo:search-creator`（写入 `setPendingTreeSearch` 后切仓库页）、`package:selected`（instances 页注入 `<app-sync-manager>`）、`repo:rtype-changed`、`avatar:refresh`
+- 监听 bus：`nav:changed`（切页整块重渲染；`index.ts` 注释明示「不再每次 nav:changed 清扫描缓存」——30s 缓存由导入/同步/下载等实际数据变更处失效，见 `go-scanner.md`/`go-watcher.md`）、`repo:switch-tab`、`repo:search-creator`（写入 `setPendingTreeSearch` 后切仓库页）、`package:selected`（instances 页注入 `<app-sync-manager>`）、`repo:rtype-changed`、`avatar:refresh`
 - 派发 bus：`nav:changed`、`repo:rtype-changed`、`toast:show`
 - 全局 handler 注册：`connectedCallback` 末尾调用 `registerGlobalHandlers()`（`core/handlers/global.ts`，汇聚 PageStore / 右键菜单 / 同步 / 实例操作 / Android 事件 handler，返回 unsub 数组收进 `_globalUnsubs`）；另单独调用 `registerResourceManagerGlobal(this._globalUnsubs)`；仓库页 DnD 由 `app-tree` 组件内部 `bindTreeDnD` 绑定，不在此注册
 - Wails 运行时事件：`Events.On("config-loaded")` 触发头像重提取，用模块级 `_avatarConfigLoadedRegistered` / `_avatarConfigLoadedUnsub` 保证只注册一次，`disconnectedCallback` 回收并复位 flag
-- getApp 调用：`ClearScanCache`、`LoadGitHubRepos`、`LoadAppConfig`、`GetRepoRoot`、`ScanModelEntries`、`BatchExtractCreatorAvatars`、`OpenInBrowser`、`NavigatePlazaWindow`、`ExportWorkshopSitesJSONFile` / `ImportWorkshopSitesJSONFile`
+- getApp 调用：`LoadGitHubRepos`、`LoadAppConfig`、`GetRepoRoot`、`ScanModelEntries`、`BatchExtractCreatorAvatars`、`OpenInBrowser`、`NavigatePlazaWindow`、`ExportWorkshopSitesJSONFile` / `ImportWorkshopSitesJSONFile`（`ClearScanCache` 已不在本组件切页路径——见监听 bus 说明）
 
 ## 与其他子系统关系
 
-- `app-nav` 是 `nav:change` 的派发源；本组件消费后整块重渲染并回发 `nav:changed`，`PageStore` 监听 `nav:changed` 单向更新状态（见知识卡 `app_nav`、`page_store`）
+- `app-nav` 是 `nav:changed` 的主要派发源；本组件与 `PageStore` 监听 `nav:changed`（本组件切页整块重渲染，`PageStore` 单向更新状态；2026-08-17 起单事件模型，见知识卡 `app_nav`、`page_store`）
 - `<app-preview>` 由本模块顶部副作用静态导入完成注册，仓库页模板直接放置元素（见知识卡 `app_preview`）
 - `package:selected` 由 `app-sidebar` 卡片点击派发，本组件据此挂载 `<app-sync-manager instance=...>`（见知识卡 `app_sidebar`、`app_sync_manager`）
 - 仓库页事件绑定与卡片渲染委托 `features/community/events.ts`（`bindRepoEvents`，清理函数存 `_repoEventsCleanup`）与 `features/community/render.ts`；工坊模型列表接入定高虚拟滚动（`virtual-list.ts`，社区上线后索引可顶 2000 级）

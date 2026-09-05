@@ -66,14 +66,14 @@ status: active
 - 监听/派发 bus：无
 - getApp() 调用：`AllTags`
 - 依赖：`esc`/`closeDlg`/`registerDlg`（dialogs/modal.ts）
-- 调用方：app-tree 高级筛选入口（结果经 `filter:results` 等流程消费）
+- 调用方：app-tree 高级筛选入口（结果交 `toolbar-search.ts` 的 `runFilter`：调 Go `SearchModels`，命中路径写入 `AppTree._filterPaths` 集合驱动树过滤；无独立 bus 事件——旧文所称 `filter:results` 事件从未存在，已移出契约，见 `Design.md` D6 记录）
 
 ## 与其他子系统关系
 
 - 弹窗基座复用 [dialog_modal](./dialog-modal.md)
 - 后端搜索能力见 [wails_bindings](./wails-bindings.md)（SearchModels 的 6 范围 + 关键字参数）
 - 标签条件与 [dialog_tag_editor](./dialog-tag-editor.md) 写入的标签同源（go/tags，见 [go_tags](./go-tags.md)）
-- 筛选结果展示在 [app_tree](./app-tree.md)（`filter:results` 事件）
+- 筛选结果展示在 [app_tree](./app-tree.md)：经 Go `SearchModels` 取回命中路径写入 `AppTree._filterPaths`（Set），树组件按该集合过滤行渲染——无 `filter:results` 事件（幽灵事件已移出契约）
 
 ## 不变量
 

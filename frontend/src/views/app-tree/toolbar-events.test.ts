@@ -453,7 +453,7 @@ describe("bindToolbarEvents — 全选/反选", () => {
 });
 
 describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
-  it("btn-repo → nav:change settings", () => {
+  it("btn-repo → nav:changed settings", () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     bindToolbarEvents(root, vm as unknown as AppTree);

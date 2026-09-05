@@ -1,6 +1,6 @@
 // ===== app-content 组件编排测试（组件级测试样板 4）=====
-// 生命周期：connectedCallback 订阅 nav:change → disconnectedCallback 清理
-// 验证：mount 渲染默认仓库页 / nav:change 切页渲染 / disconnected 后不再重写 detached DOM
+// 生命周期：connectedCallback 订阅 nav:changed → disconnectedCallback 清理
+// 验证：mount 渲染默认仓库页 / nav:changed 切页渲染 / disconnected 后不再重写 detached DOM
 // 依赖：@wailsio/runtime（Events）+ backend/app.ts（getApp）+ bindings 三层 mock
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -70,7 +70,7 @@ describe("app-content 生命周期配对", () => {
     unmountElement(el);
   });
 
-  it("nav:change → 切页渲染（页面内容变化）", async () => {
+  it("nav:changed → 切页渲染（页面内容变化）", async () => {
     const el = mountCustomElement("app-content");
     await sleep(150);
     const before = el.shadowRoot?.innerHTML || "";
@@ -80,7 +80,7 @@ describe("app-content 生命周期配对", () => {
     unmountElement(el);
   });
 
-  it("disconnected → 订阅清理 + 面板 DOM 释放（ADR-163：nav:change 不重挂 detached 面板）", async () => {
+  it("disconnected → 订阅清理 + 面板 DOM 释放（ADR-163：nav:changed 不重挂 detached 面板）", async () => {
     const el = mountCustomElement("app-content");
     await sleep(150);
     // 挂载时已渲染 .page 面板（ADR-163 单面板挂载）

@@ -94,8 +94,8 @@ status: active
 
 ## 对外 API / 入口
 
-- 由主卡 `app-content` 的 `init-workshop.ts` 调用：`renderSiteView(ctx)` 渲染站点页
-- 监听 bus：`nav:change`（经主卡分发）、收藏变更（localStorage 事件）
+- 由主卡 `app-content` 的 `init-workshop.ts` 调用：`renderSiteView(ctx)` 渲染站点页（页面切换由主卡 `nav:changed` 监听驱动，site 子模块不直接订阅导航事件）
+- 派发 bus：`nav:changed`（空状态跳转 repository，`site/events.ts:197`）；收藏变更（localStorage 事件）
 - 样式：`.cr-*` 创作者全族 + `.ws-*` 工坊类定义在 `app-content` 样式层 `content-creator.ts` / `content-layout.ts`（跨子域共享，不随本卡迁移）
 
 ## 与其他子系统关系

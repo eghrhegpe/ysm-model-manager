@@ -50,17 +50,17 @@ last_verified: 2026-09-03
 
 ## 2026-09-05 复核（最新实测，取代 9-03/8-27 快照行号）
 
-`frontend/src/preview-3d/adapters/mount-preview-core.ts` 现 **888 行**。`mount3D` 本体 **L351-877 ≈ 527 行**，仍是文件主体（超 100 行红线 5 倍）。文件尾 L879-888 为 §5 会话状态注释块（原「L938-944」引用的旧 §5 区块早已随拆分移动，勿再用旧行号）。
+`mount-preview-core.ts`（`mount3D` 所在文件）是**大文件**，`mount3D`（`mount-preview-core.ts|mount3D`）本体仍是文件主体、超 100 行红线数倍（2026-09-05 实测规模约 500 行级——精确行数属会漂移的度量，此处只留定性判断）。文件尾 §5 注释块记录会话状态。旧快照引用的「旧 §5 区块行号」「旧文件行数」早已随拆分漂移，**勿再沿旧行号查询**（按符号定位）。
 
 **生命周期闭包已提为模块级函数并外置**（2026 锐评整改，比 9-03 复核更进一步）：
-- `mount-session.ts`（276 行）— `MpSessionState` + `MountCtx` + `finishSession`/`closeOverlay`/`runFullCleanup`/`unloadSessionModel`
+- `mount-session.ts` — `MpSessionState` + `MountCtx` + `finishSession`/`closeOverlay`/`runFullCleanup`/`unloadSessionModel`
 - `shared-infra.ts`— `buildSharedInfra`/`syncShadowLights`（场景单例）
 - `render-loop.ts` — rAF 全局循环 + perFrame 注册表
 - `wasd-camera.ts`/`unified-pick.ts`/`unload-model.ts`/`input-and-animation.ts`/`switch-preview.ts` — 分别承载 WASD/拾取/卸载/输入/会话切换
 
-「再拆 vs 维持」的结构性判定仍成立（闭包接线器无 stage 缝，强行外移需 15-20 参数 ctx 化，ROI 低），最重的生命周期函数已外置；**残余内嵌闭包仅剩 `escH`**（L611/L831，session 可变引用，与 `switchTo` 的旧 handler 替换语义耦合，见卡片 `preview_core` §不变量）与 animate/rAF 调度（render-loop.ts 持有的 perFrame 表）。旧文的「6 个内嵌闭包」「fullCleanup ~60 行内嵌」等表述已过时。
+「再拆 vs 维持」的结构性判定仍成立（闭包接线器无 stage 缝，强行外移需 15-20 参数 ctx 化，ROI 低），最重的生命周期函数已外置；**残余内嵌闭包仅剩 `escH`**（`mount-preview-core.ts|escH` 相关段——session 可变引用，与 `switchTo` 的旧 handler 替换语义耦合，见卡片 `preview_core` §不变量）与 animate/rAF 调度（`render-loop.ts` 持有的 perFrame 表）。旧文的「6 个内嵌闭包」「fullCleanup ~60 行内嵌」等表述已过时。
 
-**`_gen` 代际守卫**（并发安全核心）：L249 声明 / L363 `myGen = ++_gen` / L730·L755·L873 三处守卫（与卡片 `mount-preview-module-singleton-race` 一致）。
+**`_gen` 代际守卫**（并发安全核心）：`mount-preview-core.ts|_gen` 模块级声明 / `mount3D` 入口 `myGen = ++_gen` 捕获代数 / 三处 `myGen !== _gen` 守卫弃旧（与卡片 `mount-preview-module-singleton-race` 一致）。
 
 ---
 

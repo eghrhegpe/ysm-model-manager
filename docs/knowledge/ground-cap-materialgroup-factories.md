@@ -33,11 +33,11 @@ status: active
 
 ## 概览
 
-`ground-capability.ts` `buildGroundMaterialGroup` 148 行（L541-688；T2 工厂化曾从 133 行降至 ~55 行，2026-08-28 拓展后回升至 148 行），构建「表面材质」菜单组 14 个控件。已按建议抽 `groundSliderDef`/`groundColorDef`/`groundButtonDef` 工厂，消除重复结构。2026-08-28 拓展：新增 `stripes`/`diamond`/`marble` 三种程序化表面模式；select 列表、副色 color2、density、angle 三项控件。
+`ground-capability.ts` 的 `buildGroundMaterialGroup`（`ground-capability.ts|buildGroundMaterialGroup`，超 100 行红线）构建「表面材质」菜单组全部控件（2026-08-28 拓展：`stripes`/`diamond`/`marble` 三种程序化表面模式；select 列表、副色 color2、density、angle 三项控件；T2 工厂化曾降行，拓展后回升超红线）。控件总数为会漂移的度量，以 `GroundCapability.getMenuControls` 聚合实况为准。已按建议抽 `groundSliderDef`/`groundColorDef`/`groundButtonDef` 工厂，消除重复结构。
 
 ## 核心职责
 
-构建「表面材质」菜单组的 14 个控件项（source select、底/副/线 3 color、grid-size、density、angle、2 buttons、opacity、scale、rotation、roughness、metalness），返回 `MenuControlDef[]` 供 `getMenuControls()` 聚合。
+构建「表面材质」菜单组的控件项（source select、底/副/线 3 color、grid-size、density、angle、2 buttons、opacity、scale、rotation、roughness、metalness），返回 `MenuControlDef[]` 供 `getMenuControls()` 聚合（控件清单以源码为准，总数不硬编码）。
 
 ## 对外 API / 入口
 
@@ -47,20 +47,20 @@ status: active
 
 ## 与其他子系统关系
 
-- 上游：`GroundCapability.getMenuControls()` 聚合 `buildGroundMain`/`buildGroundMaterialGroup` 两组（1 + 14 = 15 控件；水面已拆为独立 WaterCapability，其 `buildWaterGroup` 在 water-capability.ts 内）。
+- 上游：`GroundCapability.getMenuControls()` 聚合 `buildGroundMain`/`buildGroundMaterialGroup` 两组控件（水面已拆为独立 WaterCapability，其 `buildWaterGroup` 在 `water-capability.ts` 内）。
 - 下游：`renderCapControls`（preview-menu/cap-controls.ts）消费 `MenuControlDef[]` 渲染声明式菜单。
-- 横向：`buildGroundMain` 12 行（L464-475）、`buildGroundMaterialGroup` 148 行（L541-688）——material group 超 100 行红线（工厂化降行后，2026-08-28 拓展控件回升）。
+- 横向：`buildGroundMain`（`ground-capability.ts|buildGroundMain`，短函数）与 `buildGroundMaterialGroup`（超 100 行红线：material group 工厂化降行后，2026-08-28 拓展控件回升）——组长尾不再均达标。
 
 ## 不变量
 
-- 14 个控件项的 `id`/`labelKey`/`group`/`kind`/`slider`/`getValue`/`setValue` 字段不可变（e2e 选择器依赖）。
+- 全部控件项的 `id`/`labelKey`/`group`/`kind`/`slider`/`getValue`/`setValue` 字段不可变（e2e 选择器依赖）。
 - `group: "preview.groundGroupMaterial"` 所有 material 项共享，不可改；水面组（现 `WaterCapability`）对应 `preview.waterGroup`。
 - `GROUND_SURFACE_MODES` 白名单与 select 选项列表保持对齐（9 项）：`none/solid/plain/grid/checker/stripes/diamond/marble/texture`。
 
 ## 历史问题清单（2026-08-27 ts-package-review）— 已完成修复
 
-1. ~~133 行超 100 行红线~~：抽出 3 个工厂后，主函数曾从 133 行降至 ~55 行；**2026-08-28 拓展后回升至 148 行**（新增 stripes/diamond/marble 模式 + color2/density/angle 控件），重新超红线。
-2. ~~重复结构~~：7 slider（后扩至 9）→ `groundSliderDef` 工厂 1 处；2 color（后扩至 3）→ `groundColorDef` 工厂。
+1. ~~超 100 行红线~~：抽出 3 个工厂后，主函数曾从超红线降至红线内；**2026-08-28 拓展后回升超红线**（新增 stripes/diamond/marble 模式 + color2/density/angle 控件）。
+2. ~~重复结构~~：多个 slider → `groundSliderDef` 工厂 1 处；多个 color → `groundColorDef` 工厂。
 3. ~~`as unknown as` 窄化~~：保留现状（私有字段访问用类型断言集中一处），无需扩大 public API 面。
 
 ## 建议动作（续）

@@ -14,6 +14,7 @@
  *   [ERROR] 知识卡 kind 非 kebab-case/snake_case（小写，允许 - 与 _）或含未填充占位符 <...>
  *   [WARN]  H1 标题与 name 不一致
  *   [WARN]  AGENTS.md 含手写事实索引（├──/└── 目录树）
+ *   [WARN]  知识卡正文含硬编码行号/行数/计数引用（ADR-162 精神：正文引用一律「文件|符号」，行坐标会漂移）
  *   [ERROR] 幽灵卡：docs/knowledge/ 下无 YAML frontmatter 的 .md 文件（排除 KNOWLEDGE_NON_CARDS）
  *   [ERROR] 索引文件（index.md）链接指向不存在的卡
  *
@@ -574,6 +575,79 @@ function checkNoCuratedInAutoFields(cards: any[]) {
   }
 }
 
+// ── 检查 5.9：正文散文禁硬编码行号/行数/计数（WARN，P1 落地 ADR-162 精神到散文层）──
+// 背景（2026-09-05 P1）：ADR-162 已把 frontmatter symbols_with_lines 去行号（纯符号名，
+// 行号位移不再触发重写）。但正文散文里的手写行号（`L164`、`983 行`、`8 个能力`）从未纳入
+// 治理——重构一次漂一层、无人维护（实证：mount3d-584-giant / mount-preview-module-singleton-race
+// 行号三层漂移）。本检查以 WARN 级护栏引导改写为「文件|符号」引用（机器可验存在性，漂移自愈）。
+//
+// 豁免（不属手写治理对象）：
+//   1. 生成物（index.md / routes.md / routes-quick.md）——gen 产物禁手改，快照文本随源卡走
+//   2. focused 快照/报告卡（affected: false）——历史评审快照，行号是「当时」事实记录，不漂移
+//      （同 ADR-043「affected: false 退出 --affected 匹配」语义）
+//
+// 模式（只扫正文，frontmatter 由 5.7 的 `:NN` 兼容格式豁免）：
+//   L123        单行号（词边界，防误伤 loadL123 / L1234 变量名 —— 数字部分限 2-4 位歧义？否，
+//                仅要求 L 后紧跟 1-4 位数字且非单词字符）
+//   L100-200    行号区间
+//   888 行      行数引用（≥2 位数字 + 「行」，避免「1 行代码」类叙述噪音）
+//   8 个能力    计数引用（受限词表：能力/控件/守卫/单例/参数/事件 —— 防「1 个能力」噪音）
+// 注意 JS `\b` 只认 ASCII 词字符（[A-Za-z0-9_]），「行/能力」等 CJK 后接中文标点（，、（ ）时
+// \b 不成立（均为非词字符）——所以 CJK 尾部一律用负向前瞻 (?![0-9A-Za-z_]) 而非 \b。
+// 细节（实测定拄）：
+//   - L0 必为误报（无 0 行；app-preview「交互式 L0 清单」是游戏层级符号）→ 用 L[1-9]\d{0,3}
+//   - 「062 行为」的「行为」不是行数引用 → \d{2,}\s*行 后不得跟汉字（(?![^\x00-\x7f])？否，
+//     直接负向前瞻汉字区 [\u4e00-\u9fff]，「888 行，」的行后是中文逗号（非汉字）仍通过
+//   - 「100 行红线」是 AGENTS.md 全仓通用规范术语（行数阈值），非文件行数引用 → 行后跟「红线」豁免
+const BODY_LINE_RE_FINAL =
+  /(?<![A-Za-z0-9_])L[1-9]\d{0,3}(?:-\d{1,4})?(?![0-9A-Za-z_])|\b\d{2,}\s*行(?!红线)(?![0-9A-Za-z_\u4e00-\u9fff])|\b\d{1,2}\s*个(?:能力|控件|守卫|单例|参数|事件)(?![0-9A-Za-z_])/g;
+/** 提取 frontmatter 块结束后的正文行（带行号）。 */
+function bodyLinesWithNumbers(text: string): Array<{ lineNo: number; line: string }> {
+  const clean = text.replace(/^\uFEFF/, '');
+  // 第一次 `---` 与第二次 `---` 之间 = frontmatter；之后 = 正文
+  const lines = clean.split(/\r?\n/);
+  let inFrontmatter = false;
+  const body: Array<{ lineNo: number; line: string }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i]!.trim();
+    if (t === '---') {
+      if (!inFrontmatter) { inFrontmatter = true; continue; }
+      inFrontmatter = false;
+      continue;
+    }
+    if (inFrontmatter) continue;
+    body.push({ lineNo: i + 1, line: lines[i]! });
+  }
+  return body;
+}
+/** 扫描单卡正文，返回命中的行号引用（含正文行号 + 匹配文本）。 */
+function scanBodyLineRefs(text: string): Array<{ lineNo: number; text: string; full: string }> {
+  const hits: Array<{ lineNo: number; text: string; full: string }> = [];
+  for (const { lineNo, line } of bodyLinesWithNumbers(text)) {
+    BODY_LINE_RE_FINAL.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = BODY_LINE_RE_FINAL.exec(line)) !== null) {
+      hits.push({ lineNo, text: m[0], full: line.trim().slice(0, 90) });
+    }
+  }
+  return hits;
+}
+// 豁免：生成物（禁手改，随源卡走）与快照/报告卡（affected:false，行号是历史事实记录）
+const BODY_REFS_SKIP_CARDS = new Set(['index.md', 'routes.md', 'routes-quick.md']);
+function checkBodyLineRefs(cards: any[]) {
+  for (const { cf, fm, text } of cards) {
+    if (!text) continue;
+    if (BODY_REFS_SKIP_CARDS.has(cf)) continue; // 生成物禁手改，不参与手写治理
+    if (getScalar(fm, 'affected') === 'false') continue; // 快照/报告卡：行号为当时事实，不漂移
+    const hits = scanBodyLineRefs(text);
+    if (hits.length === 0) continue;
+    const sample = hits.slice(0, 3).map((h) => `L${h.lineNo}「${h.text}」`).join('、');
+    warns.push(
+      `知识卡 ${cf} 正文含硬编码行号/行数/计数引用: ${sample}（ADR-162 精神：正文引用一律写「文件|符号」而非行坐标——行号位移会静默漂移，符号存在性由机器校验）`
+    );
+  }
+}
+
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
@@ -598,6 +672,7 @@ function main() {
   checkCuratedFields(cards);       // 解法 B：人工策展字段漂移（WARN）
   checkAutoFieldsFormat(cards);    // 解法 B：机器推导字段格式校验
   checkNoCuratedInAutoFields(cards); // 解法 B：auto_fields 禁人工策展子字段（ERROR）
+  checkBodyLineRefs(cards);        // P1：正文散文禁硬编码行号/行数/计数（WARN）
   checkKnowledgeCoverage(cards);
 
   const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };

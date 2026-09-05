@@ -2,7 +2,7 @@
 /**
  * gen-knowledge-autogen.ts — 知识卡 `auto_fields:` 字段自动生成器（解法 B：机器推导字段）。
  *
- * 从卡片 `source_files` 指向的源码提取导出符号（不含行号，行号减噪见 ADR-159），写入 frontmatter 的
+ * 从卡片 `source_files` 指向的源码提取导出符号（不含行号，行号减噪见 ADR-162），写入 frontmatter 的
  * `auto_fields.symbols_with_lines:` 块列表（纯符号名清单）。
  *
  * 解法 B 核心：知识卡字段分两类——
@@ -345,14 +345,14 @@ function main() {
     }
 
     const target = collectSymbolsWithLines(sources);
-    // 格式化为纯符号名列表（行号已减噪，见 ADR-159：Symbol:NN 漂移会产生提交噪音）
+    // 格式化为纯符号名列表（行号已减噪，见 ADR-162：Symbol:NN 漂移会产生提交噪音）
     const targetSymbols = target.map((s) => s.symbol);
 
     // 解析现有 auto_fields
     const existing = parseAutoFields(fm);
     const existingSymbols = existing?.['symbols_with_lines'] ?? [];
 
-    // 仅按符号名集合比对（顺序无关）。行号不进卡片（ADR-159 行号减噪）：
+    // 仅按符号名集合比对（顺序无关）。行号不进卡片（ADR-162 行号减噪）：
     // 行号漂移不再触发重写；只有符号真实增删（改名/新增/移除）才重写该卡。
     const existingSet = new Set(existingSymbols);
     const targetSet = new Set(targetSymbols);

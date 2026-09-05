@@ -16,7 +16,7 @@ frontmatter 必填字段：`kind`（kebab-case，=文件名）/ `name`（=H1 标
 
 | 字段 | 语义 | 维护 | drift |
 |------|------|------|-------|
-| `source_files` / `tests` / `symbols` / `auto_fields.symbols_with_lines`（纯符号名无行号，ADR-159） | 机器推导 | gen 脚本自动 | ERROR 阻断 |
+| `source_files` / `tests` / `symbols` / `auto_fields.symbols_with_lines`（纯符号名无行号，ADR-162） | 机器推导 | gen 脚本自动 | ERROR 阻断 |
 | `use_when`(≤8) / `quick_intents`(≤5) / `pitfalls` / `quick_groups` / `quick_risk_lines` / 正文 | 人工策展：用户自然语言关键词与陷阱 | 手写 | WARN |
 | `invariant_anchors`（`文件\|符号`） | 机制锚点，architecture 卡必须声明 | 手写声明 + 机器校验存在性 | ERROR 阻断 |
 | `affected: false` | 仅此值合法：快照/报告型卡退出 `--affected` 匹配 | 手写 | — |
@@ -44,4 +44,5 @@ index.md 由 pre-commit 钩子自动 gen+stage，无需手动 `gen-knowledge-ind
 - `kind` = 文件名 kebab-case；`name` = H1 标题
 - `perf` 标签必须在 PERF_TAGS 词表内；扩展新维度只改词表常量
 - `quick_groups` 与 `quick_intents` 按位置 1:1 配对：「1 个分组 + 多条意图」是常态（gen-routes-quick 全部并入该组、不鸣笛）；分组数 >1 时须与意图数等长，避免多余意图并入末组造成错位（gen-routes-quick 对多分组不均打 WARN）
+- **正文引用一律写「`文件\|符号`」/「`文件`」**，禁止硬编码行号（`L123`）、行号区间（`L100-200`）、行数（`888 行`）、计数（`8 个能力`）——ADR-162 去行号精神延伸到散文层：行号位移会静默漂移且无人维护（实证 mount3d-584-giant 三层行号漂移），符号存在性由机器校验（check-knowledge-drift WARN 检测，见检查 5.9）。快照/报告卡（`affected: false`）豁免——行号是「当时」事实记录
 - `index.md` 等生成物禁止手改；卡片正文为人工维护内容

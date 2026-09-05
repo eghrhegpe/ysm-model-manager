@@ -3,10 +3,11 @@
 // 每种资源类型可以注册自己的导入策略，通用组件通过 rtype 自动选择：
 //
 //	handler := importer.Get("resourcepack")
-//	errMsg := handler.Import(zipPath, dstDir)
+//	err := handler.Import(zipPath, dstDir)
 package importer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,8 +22,10 @@ import (
 type Handler interface {
 	// Type 返回支持的类型 ID
 	Type() string
-	// Import 执行导入，返回错误信息（空串=成功）
-	Import(srcPath, dstDir string) string
+	// Import 执行导入。返回 error：nil=成功；非 nil=失败原因（调用方应直接透传给前端/日志，
+	// 禁止再包装 fmt.Errorf 以保留原始分类信息）。
+	// 改 string→error：统一错误语义，调用方可 errors.Is/As 分类（原 string 接口压扁了所有错误结构）。
+	Import(srcPath, dstDir string) error
 }
 
 var (
@@ -98,20 +101,20 @@ func NewSimpleCopy(rtype string) *SimpleCopyImporter {
 
 func (s *SimpleCopyImporter) Type() string { return s.rtype }
 
-func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
+func (s *SimpleCopyImporter) Import(srcPath, dstDir string) error {
 	srcPath, dstDir, errMsg := sanitizeImportPaths(srcPath, dstDir)
 	if errMsg != "" {
-		return errMsg
+		return errors.New(errMsg)
 	}
 
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
-		return fmt.Sprintf("创建目标目录失败: %v", err)
+		return fmt.Errorf("创建目标目录失败: %w", err)
 	}
 
 	// 检查源路径是文件还是目录
 	info, err := os.Stat(srcPath)
 	if err != nil {
-		return fmt.Sprintf("无法访问源路径: %v", err)
+		return fmt.Errorf("无法访问源路径: %w", err)
 	}
 
 	if info.IsDir() {
@@ -120,13 +123,13 @@ func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
 		if baseName == "" || baseName == "." ||
 			baseName == string(filepath.Separator) ||
 			baseName == string(filepath.VolumeName(srcPath)) {
-			return "源路径无效：无法确定要导入的模型文件夹（源为磁盘根目录）"
+			return errors.New("源路径无效：无法确定要导入的模型文件夹（源为磁盘根目录）")
 		}
 		targetDir := filepath.Join(dstDir, baseName)
 		if err := copyDirRecursive(srcPath, targetDir); err != nil {
-			return fmt.Sprintf("导入目录失败: %v", err)
+			return fmt.Errorf("导入目录失败: %w", err)
 		}
-		return ""
+		return nil
 	}
 
 	// 文件导入：收敛到 fsutil.CopyFile（ADR-044 策略 A）——
@@ -135,9 +138,9 @@ func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
 	// 原 50 行手写 tmp+sync+chmod+rename 实现与 fsutil.CopyFile 完全重复，收敛后单一实现。
 	dstPath := filepath.Join(dstDir, filepath.Base(srcPath))
 	if err := fsutil.CopyFile(srcPath, dstPath); err != nil {
-		return fmt.Sprintf("复制文件失败: %v", err)
+		return fmt.Errorf("复制文件失败: %w", err)
 	}
-	return ""
+	return nil
 }
 
 // copyDirRecursive 递归复制目录（先复制到临时目录再 rename，保证原子性）
@@ -166,16 +169,16 @@ func (d *DirectoryCopyImporter) Type() string { return d.rtype }
 // Import 复制源文件夹到目标目录
 // srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身
 // 若 srcPath 是文件则取父目录，若是目录则直接使用
-func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) string {
+func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) error {
 	srcPath, dstDir, errMsg := sanitizeImportPaths(srcPath, dstDir)
 	if errMsg != "" {
-		return errMsg
+		return errors.New(errMsg)
 	}
 
 	// 判断 srcPath 是文件还是目录
 	info, stErr := os.Stat(srcPath)
 	if stErr != nil {
-		return fmt.Sprintf("无法访问源路径: %v", stErr)
+		return fmt.Errorf("无法访问源路径: %w", stErr)
 	}
 	var srcDir string
 	if info.IsDir() {
@@ -187,19 +190,19 @@ func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) string {
 	if folderName == "" || folderName == "." ||
 		folderName == string(filepath.Separator) ||
 		folderName == string(filepath.VolumeName(srcDir)) {
-		return "源路径无效：无法确定要导入的模型文件夹（源为磁盘根目录）"
+		return errors.New("源路径无效：无法确定要导入的模型文件夹（源为磁盘根目录）")
 	}
 	dstPath := filepath.Join(dstDir, folderName)
 
 	// 确保目标父目录存在
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
-		return fmt.Sprintf("创建目标目录失败: %v", err)
+		return fmt.Errorf("创建目标目录失败: %w", err)
 	}
 	// 复制整个文件夹
 	if err := copyDir(srcDir, dstPath); err != nil {
-		return fmt.Sprintf("复制文件夹失败: %v", err)
+		return fmt.Errorf("复制文件夹失败: %w", err)
 	}
-	return ""
+	return nil
 }
 
 func copyDir(src, dst string) error {

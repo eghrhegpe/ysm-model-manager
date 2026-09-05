@@ -80,12 +80,12 @@ func TestSimpleCopyImporter_Import_Errors(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			msg := NewSimpleCopy("test").Import(tc.src, tc.dst)
-			if msg == "" {
+			err := NewSimpleCopy("test").Import(tc.src, tc.dst)
+			if err == nil {
 				t.Fatalf("Import(%q, %q) 应报错，实际成功", tc.src, tc.dst)
 			}
-			if !strings.Contains(msg, tc.want) {
-				t.Fatalf("错误消息 %q 应包含 %q", msg, tc.want)
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("错误消息 %q 应包含 %v", err.Error(), tc.want)
 			}
 		})
 	}
@@ -103,9 +103,9 @@ func TestSimpleCopyImporter_Import_FileOverwrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	msg := NewSimpleCopy("test").Import(srcFile, dstDir)
-	if msg != "" {
-		t.Fatalf("覆盖导入应成功，实际: %q", msg)
+	err := NewSimpleCopy("test").Import(srcFile, dstDir)
+	if err != nil {
+		t.Fatalf("覆盖导入应成功，实际: %v", err)
 	}
 	data, _ := os.ReadFile(dstFile)
 	if string(data) != "newdata" {
@@ -124,8 +124,8 @@ func TestSimpleCopyImporter_Import_FileTargetIsDir(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dstDir, "a.bin"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	msg := NewSimpleCopy("test").Import(srcFile, dstDir)
-	if msg == "" {
+	err := NewSimpleCopy("test").Import(srcFile, dstDir)
+	if err == nil {
 		t.Fatal("目标为目录时文件导入应报错")
 	}
 	if n := globCount(t, dstDir, ".import-*.tmp"); n != 0 {
@@ -152,9 +152,9 @@ func TestSimpleCopyImporter_Import_DirOverwrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	msg := NewSimpleCopy("test").Import(srcDir, dstDir)
-	if msg != "" {
-		t.Fatalf("目录覆盖导入应成功，实际: %q", msg)
+	err := NewSimpleCopy("test").Import(srcDir, dstDir)
+	if err != nil {
+		t.Fatalf("目录覆盖导入应成功，实际: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(oldDir, "new.txt")); err != nil {
 		t.Fatalf("新文件未导入: %v", err)
@@ -180,9 +180,9 @@ func TestSimpleCopyImporter_Import_DirEmptySubdir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	msg := NewSimpleCopy("test").Import(srcDir, dstDir)
-	if msg != "" {
-		t.Fatalf("Import(dir) = %q, want empty", msg)
+	err := NewSimpleCopy("test").Import(srcDir, dstDir)
+	if err != nil {
+		t.Fatalf("Import(dir) err = %v, want nil", err)
 	}
 	info, err := os.Stat(filepath.Join(dstDir, filepath.Base(srcDir), "emptydir"))
 	if err != nil || !info.IsDir() {
@@ -209,7 +209,7 @@ func TestCopyDirRecursive_OverwriteExisting(t *testing.T) {
 		t.Fatalf("copyDirRecursive 覆盖失败: %v", err)
 	}
 	if data, err := os.ReadFile(filepath.Join(dst, "b.txt")); err != nil || string(data) != "bbb" {
-		t.Fatalf("新文件缺失: %v %q", err, string(data))
+		t.Fatalf("新文件缺失: %v %v", err, string(data))
 	}
 	if _, err := os.Stat(filepath.Join(dst, "old.txt")); err == nil {
 		t.Fatal("旧文件应被整体替换")
@@ -293,12 +293,12 @@ func TestDirectoryCopyImporter_Import_Errors(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			msg := NewDirectoryCopy("EntityPlayer").Import(tc.src, tc.dst)
-			if msg == "" {
+			err := NewDirectoryCopy("EntityPlayer").Import(tc.src, tc.dst)
+			if err == nil {
 				t.Fatalf("Import(%q, %q) 应报错，实际成功", tc.src, tc.dst)
 			}
-			if !strings.Contains(msg, tc.want) {
-				t.Fatalf("错误消息 %q 应包含 %q", msg, tc.want)
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("错误消息 %q 应包含 %v", err, tc.want)
 			}
 		})
 	}
@@ -324,9 +324,9 @@ func TestDirectoryCopyImporter_Import_Overwrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	msg := NewDirectoryCopy("EntityPlayer").Import(modelDir, dstDir)
-	if msg != "" {
-		t.Fatalf("覆盖导入应成功，实际: %q", msg)
+	err := NewDirectoryCopy("EntityPlayer").Import(modelDir, dstDir)
+	if err != nil {
+		t.Fatalf("覆盖导入应成功，实际: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(oldDir, "model.pmx")); err != nil {
 		t.Fatalf("新文件缺失: %v", err)
@@ -346,9 +346,9 @@ func TestDirectoryCopyImporter_Import_EmptyDir(t *testing.T) {
 	if err := os.MkdirAll(empty, 0755); err != nil {
 		t.Fatal(err)
 	}
-	msg := NewDirectoryCopy("EntityPlayer").Import(empty, dstDir)
-	if msg != "" {
-		t.Fatalf("空目录导入应成功，实际: %q", msg)
+	err := NewDirectoryCopy("EntityPlayer").Import(empty, dstDir)
+	if err != nil {
+		t.Fatalf("空目录导入应成功，实际: %v", err)
 	}
 	info, err := os.Stat(filepath.Join(dstDir, "emptymodel"))
 	if err != nil || !info.IsDir() {
@@ -370,7 +370,7 @@ func TestCopyFile(t *testing.T) {
 	}
 	data, err := os.ReadFile(dst)
 	if err != nil || string(data) != "content" {
-		t.Fatalf("内容错误: %v %q", err, string(data))
+		t.Fatalf("内容错误: %v %v", err, string(data))
 	}
 	if runtime.GOOS != "windows" {
 		info, _ := os.Stat(dst)
@@ -733,8 +733,8 @@ func TestSimpleCopyImporter_Import_DirSymlink(t *testing.T) {
 		t.Skip("环境不支持创建符号链接，跳过")
 	}
 	dst := t.TempDir()
-	if msg := NewSimpleCopy("test").Import(src, dst); msg != "" {
-		t.Fatalf("Import = %q", msg)
+	if err := NewSimpleCopy("test").Import(src, dst); err != nil {
+		t.Fatalf("Import err = %v", err)
 	}
 	copied := filepath.Join(dst, filepath.Base(src))
 	assertSymlinkCopied(t, filepath.Join(copied, "file-link"), filepath.Join(src, "file.txt"))
@@ -748,8 +748,8 @@ func TestDirectoryCopyImporter_Import_Symlink(t *testing.T) {
 	}
 	dst := t.TempDir()
 	imp := NewDirectoryCopy("EntityPlayer")
-	if msg := imp.Import(src, dst); msg != "" {
-		t.Fatalf("Import = %q", msg)
+	if err := imp.Import(src, dst); err != nil {
+		t.Fatalf("Import err = %v", err)
 	}
 	copied := filepath.Join(dst, filepath.Base(src))
 	assertSymlinkCopied(t, filepath.Join(copied, "file-link"), filepath.Join(src, "file.txt"))

@@ -358,14 +358,15 @@ func (a *App) saveConfig(cfg types.AppConfig) error {
 }
 
 // ImportByType 统一导入入口——根据资源类型自动选择导入策略
-func (a *App) ImportByType(rtype, srcPath string) string {
+// 返回 error：nil=成功；非 nil=失败原因（调用方应直接透传给前端 toast/modal）。
+func (a *App) ImportByType(rtype, srcPath string) error {
 	h := importer.Get(rtype)
 	if h == nil {
-		return fmt.Sprintf("未找到资源类型 %s 的导入策略", rtype)
+		return fmt.Errorf("未找到资源类型 %s 的导入策略", rtype)
 	}
 	dstDir, _ := a.GetRepoRoot(rtype)
 	if dstDir == "" {
-		return "未设置" + rtype + "目录"
+		return fmt.Errorf("未设置 %s 目录", rtype)
 	}
 	return h.Import(srcPath, dstDir)
 }

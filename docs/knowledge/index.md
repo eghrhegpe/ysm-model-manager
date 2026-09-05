@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 162 张知识卡
+> 总计: 168 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -76,13 +76,15 @@
 - **theme**（主题系统 theme）：主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/init…
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
-## feature（12 张）
+## feature（15 张）
 
 *业务功能（导入队列、同步、社区）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🏗 community-feature | 社区下载 community | architecture | io-bound | 创意工坊, 社区, 下载队列, 镜像源, 批量下载, github 仓库, 下载进度, workshop |
+| 🍃 dnd-shared | 拖拽平台适配 dnd-shared | leaf | — | 拖拽导入, DnD 文件收集, 文件夹整组分组, File → base64 编码, 导入支持文件判定 |
+| 🏗 download-queue-store | 下载队列状态机 download-queue-store | architecture | — | 下载队列状态, 入队 / 取消 / 恢复, Wails 进度事件, 社区下载状态层 |
 | 🏗 export | 截图导出 export | architecture | — | 截图, 导出 PNG, 多角度截图, 透明背景, 预览缓存, blob URL, saveScreenshot, renderMultiAngle |
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
 | 🏗 oldest-models | 资历最深模型 oldest-models | architecture | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
@@ -90,6 +92,7 @@
 | 🏗 preview-settings | 预览面板设置与显示控制 | architecture | — | 预览设置, 显示控制, 骨骼名称, 帧率, 截图灯光 |
 | 🍃 preview_3d_migration | preview-3d 领域根迁移 | leaf | — | 整目录搬家, 领域根提升, 相对引用修复, cmd 命令行限制, 目录归置 |
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | io-bound | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
+| 🍃 repo-rtype | 全局资源类型状态 repo-rtype | leaf | — | 当前资源类型, 类型切换订阅, 仓库类型权威源, repo_rtype 状态 |
 | 🏗 resource-packs | 资源包功能 resource-packs（已归档） | architecture | — | 资源包, 光影包, resourcepack, shaderpack |
 | 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 三路交集, adv-filter, SearchModels, 网页版降级 |
 | 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 跨组件同步编排, 缺包回拉, PullSingleResource, sync:download:missing |
@@ -98,6 +101,8 @@
 ### 摘要
 
 - **community-feature**（社区下载 community）：`features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，五个文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染站点卡片与模型列表、`e…
+- **dnd-shared**（拖拽平台适配 dnd-shared）：拖拽导入共享逻辑层。解决 WebView2 特殊性（dragover 读不到文件名、drop 用 webkitGetAsEntry、entry.file Promise 化、DataTransferItem 无 name）的同时，为 `im…
+- **download-queue-store**（下载队列状态机 download-queue-store）：创意工坊批量下载队列的状态层（模块级 Store）。ADR-040 ≤400 行红线拆分产物：自 `download-queue.ts`（829 行）拆出，类型 / STATE / Go 调用 / 后端事件注册全部内聚于此。v2：模块级持久…
 - **export**（截图导出 export）：> **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到…
 - **import-queue**（全局导入执行 import-executor）：**2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex…
 - **oldest-models**（资历最深模型 oldest-models）：`oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按…
@@ -105,6 +110,7 @@
 - **preview-settings**（预览面板设置与显示控制）：> **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖…
 - **preview_3d_migration**（preview-3d 领域根迁移）：ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 `frontend/src/preview-3d/`。纯改名、收益最低、但暗礁最多。三刀顺序不可逆：第一刀正类型（依赖倒置修复）→ 第二…
 - **recycle-bin**（回收站界面 recycle-bin）：`recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调…
+- **repo-rtype**（全局资源类型状态 repo-rtype）：全局资源类型权威源。收敛 `oldest-models` / `recycle-bin` / `views/init-pages` 三处各自手写的 `safeGet("repo_rtype") || RESOURCE_TYPES.YSM` …
 - **resource-packs**（资源包功能 resource-packs（已归档））：**已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager…
 - **search**（搜索筛选编排 search）：搜索筛选的**跨层端到端编排层**：前端工具栏搜索输入 → 关键词 + 标签 + 数值三路交集 → 后端 Go 一次性过滤 → 白名单回填 `buildTree` 精确匹配。
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
@@ -208,7 +214,7 @@
 - **install_domain_split**（install 域切分经验：切纯域不硬切复合域（耦合度门槛判断））：ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 
-## rendering（12 张）
+## rendering（14 张）
 
 *3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
 
@@ -223,6 +229,8 @@
 | 🍃 mount-preview-module-singleton-race | mount3D 并发竞态（已闭环 — _gen 代际守卫） | leaf | concurrent | mount3D 并发竞态（已闭环）, 评审模块级单例守卫（历史） |
 | 🍃 mount3d-584-giant | mount3D 巨函数现状（2026-08-27 已部分拆分） | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
 | 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 眨眼, 节拍检测, 模型感知 |
+| 🏗 preview-menu | 3D 预览声明式菜单 preview-menu | architecture | — | 3D 预览菜单, 声明式菜单节点, visibleWhen 谓词, 面板 schema 注册, SlideMenu 多层导航 |
+| 🏗 preview-paths | 预览状态路径契约 preview-paths | architecture | — | 预览状态路径, KNOWN_PATHS 扩展, PreviewStatePath 类型, 状态层快照契约 |
 | 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
@@ -236,6 +244,8 @@
 - **model3d**（3D 预览渲染 model3d）：`frontend/src/preview-3d/` + `frontend/src/views/app-preview/model3d-loader.ts` 构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲…
 - **mount-preview-module-singleton-race**（mount3D 并发竞态（已闭环 — _gen 代际守卫））：**已闭环**。`mount-preview-core.ts`（现位于 `preview-3d/adapters/`）L249 声明模块级 `let _gen = 0`，`mount3D` 入口（L363）`const myGen = ++…
 - **mount3d-584-giant**（mount3D 巨函数现状（2026-08-27 已部分拆分））：> ⬇️ 本节为 2026-08-27 历史快照（行号/行数全部失效，仅存历史演化脉络）。当前实况见置顶「2026-09-05 复核」。
+- **preview-menu**（3D 预览声明式菜单 preview-menu）：3D 预览底部根菜单的声明式菜单系统（ADR-076 v3）。对齐 MikuMikuAR 范式：底部根按钮 → `createSlideMenu` 多层导航。菜单即数据——`PreviewMenuNode` 树 + `visibleWhen…
+- **preview-paths**（预览状态路径契约 preview-paths）：预览状态层的路径契约叶子（ADR-168 二期下沉产物）。零依赖叶子：`KNOWN_PATHS`（值）+ `PreviewStatePath` + `PreviewSnapshot`（类型）。自 `preview-state.ts` 下沉—…
 - **preview_core**（统一 3D 预览核心 preview-core）：`frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi…
 
 ## ui（36 张）
@@ -318,13 +328,14 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/ui/ui-slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（m…
 - **ui_components**（UI 组件库 ui-components）：`frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 …
 
-## utils（27 张）
+## utils（28 张）
 
 *工具函数（display、fmt、dom、animation）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | 动画, 骨骼动画, 关键帧, Molang, 数字滚动, stagger 入场 |
+| 🍃 capabilities | 能力门控 capabilities | leaf | — | can binding 门控, viewer 模式右键菜单过滤, web 可达性判定, 平台能力矩阵 |
 | 🏗 commit-with-check | 提交脚本 commit-with-check | architecture | — | commit-with-check, 自动提交, 并发提交, 临时索引, 白名单提交, 门禁后自动 commit |
 | 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步 |
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
@@ -355,6 +366,7 @@
 ### 摘要
 
 - **animation-system**（动画系统 animation）：前端动画体系分两层：**模型骨骼动画**（基岩版 animation.json 解析 + 关键帧插值求值）与 **UI 动效**（数字里程表滚动、stagger 入场延迟）。UI 层的 CSS 动画可被全局 `no-animations` …
+- **capabilities**（能力门控 capabilities）：前端能力门控唯一对外入口。`can(binding)` 将「当前平台是否可用指定 binding」的三态判定（desktop 全量 / web adapter has / Android 黑名单）委托给 `backend/platform-…
 - **commit-with-check**（提交脚本 commit-with-check）：`commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD…
 - **core_utils**（核心工具函数 core-utils）：`utils/core/` 是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。
 - **dom-storage**（localStorage 安全读写 safeGet/safeSet）：`localStorage` 安全读写工具层（ADR-044 策略 A），收敛项目内所有 `localStorage` 调用，避免隐私模式/存储禁用下裸调抛错中断启动链（`initTheme`/`applyUIPrefs`/`setting…

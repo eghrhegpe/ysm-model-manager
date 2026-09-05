@@ -75,7 +75,7 @@ func TestCopyDir_BackupRenameErrorLocked(t *testing.T) {
 	// 目标目录原样保留（未备份、未替换）
 	data, err := os.ReadFile(filepath.Join(dst, "old.txt"))
 	if err != nil || string(data) != "old" {
-		t.Fatalf("既有内容应保留: %v %q", err, string(data))
+		t.Fatalf("既有内容应保留: %v %v", err, string(data))
 	}
 	if n := globCount(t, base, ".tmp_import_*"); n != 0 {
 		t.Fatalf("失败后不应残留临时目录，实际 %d 个", n)
@@ -97,12 +97,12 @@ func TestDirectoryCopyImport_CopyDirErrorLocked(t *testing.T) {
 	lockDirExclusive(t, filepath.Join(modelDir, "d"))
 
 	dstDir := filepath.Join(base, "out")
-	msg := NewDirectoryCopy("EntityPlayer").Import(modelDir, dstDir)
-	if msg == "" {
+	err := NewDirectoryCopy("EntityPlayer").Import(modelDir, dstDir)
+	if err == nil {
 		t.Fatal("copyDir 失败应返回错误消息")
 	}
-	if !strings.Contains(msg, "复制文件夹失败") {
-		t.Fatalf("错误消息 %q 应包含「复制文件夹失败」", msg)
+	if !strings.Contains(err.Error(), "复制文件夹失败") {
+		t.Fatalf("错误消息 %q 应包含「复制文件夹失败」", err)
 	}
 	if n := globCount(t, dstDir, ".tmp_import_*"); n != 0 {
 		t.Fatalf("失败后不应残留临时目录，实际 %d 个", n)

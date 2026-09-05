@@ -54,10 +54,10 @@ func TestType(t *testing.T) {
 	for _, tc := range tests {
 		h := Get(tc.rtype)
 		if h == nil {
-			t.Fatalf("Get(%q) = nil", tc.rtype)
+			t.Fatalf("Get(%v) = nil", tc.rtype)
 		}
 		if got := h.Type(); got != tc.want {
-			t.Errorf("Type() = %q, want %q", got, tc.want)
+			t.Errorf("Type() = %v, want %v", got, tc.want)
 		}
 	}
 	// 防回归：vrm 独立类型已随 ADR-111 退役，注册表不得复活
@@ -84,7 +84,7 @@ func TestSanitizePath(t *testing.T) {
 		_, err := sanitizePath(tc.path, "test")
 		gotErr := err != nil
 		if gotErr != tc.wantErr {
-			t.Errorf("sanitizePath(%q) err=%v, wantErr=%v", tc.path, err, tc.wantErr)
+			t.Errorf("sanitizePath(%v) err=%v, wantErr=%v", tc.path, err, tc.wantErr)
 		}
 	}
 }
@@ -100,9 +100,9 @@ func TestSimpleCopyImporter_Import(t *testing.T) {
 	}
 
 	imp := NewSimpleCopy("test")
-	errMsg := imp.Import(srcFile, dstDir)
-	if errMsg != "" {
-		t.Fatalf("Import() = %q, want empty", errMsg)
+	err := imp.Import(srcFile, dstDir)
+	if err != nil {
+		t.Fatalf("Import() = %v, want empty", err)
 	}
 
 	// 验证文件已复制
@@ -112,7 +112,7 @@ func TestSimpleCopyImporter_Import(t *testing.T) {
 	}
 	data, _ := os.ReadFile(dstFile)
 	if string(data) != "hello" {
-		t.Fatalf("文件内容 = %q, want %q", string(data), "hello")
+		t.Fatalf("文件内容 = %v, want %v", string(data), "hello")
 	}
 }
 
@@ -131,9 +131,9 @@ func TestSimpleCopyImporter_Import_Dir(t *testing.T) {
 	}
 
 	imp := NewSimpleCopy("test")
-	errMsg := imp.Import(srcDir, dstDir)
-	if errMsg != "" {
-		t.Fatalf("Import(dir) = %q, want empty", errMsg)
+	err := imp.Import(srcDir, dstDir)
+	if err != nil {
+		t.Fatalf("Import(dir) = %v, want empty", err)
 	}
 
 	// 验证目录已复制
@@ -149,10 +149,10 @@ func TestSimpleCopyImporter_Import_Dir(t *testing.T) {
 
 func TestSimpleCopyImporter_Import_EmptyPath(t *testing.T) {
 	imp := NewSimpleCopy("test")
-	if msg := imp.Import("", "/tmp"); msg == "" {
+	if err := imp.Import("", "/tmp"); err == nil {
 		t.Error("空源路径应返回错误")
 	}
-	if msg := imp.Import("/tmp", ""); msg == "" {
+	if err := imp.Import("/tmp", ""); err == nil {
 		t.Error("空目标路径应返回错误")
 	}
 }
@@ -174,9 +174,9 @@ func TestDirectoryCopyImporter_Import(t *testing.T) {
 
 	imp := NewDirectoryCopy("EntityPlayer")
 	// 传入文件夹内任意文件
-	errMsg := imp.Import(filepath.Join(modelDir, "model.pmx"), dstDir)
-	if errMsg != "" {
-		t.Fatalf("Import(file) = %q, want empty", errMsg)
+	err := imp.Import(filepath.Join(modelDir, "model.pmx"), dstDir)
+	if err != nil {
+		t.Fatalf("Import(file) = %v, want empty", err)
 	}
 	// 验证文件夹已复制
 	dstFile := filepath.Join(dstDir, folderName, "model.pmx")
@@ -203,9 +203,9 @@ func TestDirectoryCopyImporter_Import_Dir(t *testing.T) {
 
 	imp := NewDirectoryCopy("vrm")
 	// 传入文件夹本体
-	errMsg := imp.Import(modelDir, dstDir)
-	if errMsg != "" {
-		t.Fatalf("Import(dir) = %q, want empty", errMsg)
+	err := imp.Import(modelDir, dstDir)
+	if err != nil {
+		t.Fatalf("Import(dir) = %v, want empty", err)
 	}
 	dstFile := filepath.Join(dstDir, folderName, "model.vrm")
 	if _, err := os.Stat(dstFile); os.IsNotExist(err) {

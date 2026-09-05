@@ -1478,6 +1478,14 @@ export const autoSidebar = [
             "link": "/knowledge/community-feature"
           },
           {
+            "text": "拖拽平台适配 dnd-shared",
+            "link": "/knowledge/dnd-shared"
+          },
+          {
+            "text": "下载队列状态机 download-queue-store",
+            "link": "/knowledge/download-queue-store"
+          },
+          {
             "text": "截图导出 export",
             "link": "/knowledge/export"
           },
@@ -1504,6 +1512,10 @@ export const autoSidebar = [
           {
             "text": "回收站界面 recycle-bin",
             "link": "/knowledge/recycle-bin"
+          },
+          {
+            "text": "全局资源类型状态 repo-rtype",
+            "link": "/knowledge/repo-rtype"
           },
           {
             "text": "资源包功能 resource-packs（已归档）",
@@ -1568,6 +1580,14 @@ export const autoSidebar = [
             "link": "/knowledge/preview_core"
           },
           {
+            "text": "3D 预览声明式菜单 preview-menu",
+            "link": "/knowledge/preview-menu"
+          },
+          {
+            "text": "预览状态路径契约 preview-paths",
+            "link": "/knowledge/preview-paths"
+          },
+          {
             "text": "联邦渲染能力 (Render Federation)",
             "link": "/knowledge/render-federation"
           },
@@ -1584,6 +1604,10 @@ export const autoSidebar = [
           {
             "text": "动画系统 animation",
             "link": "/knowledge/animation-system"
+          },
+          {
+            "text": "能力门控 capabilities",
+            "link": "/knowledge/capabilities"
           },
           {
             "text": "提交脚本 commit-with-check",

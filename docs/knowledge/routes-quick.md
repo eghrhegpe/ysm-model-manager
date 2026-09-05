@@ -277,6 +277,16 @@
 | showBatchRenameDialog | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | UI 组件库、卡片组件、折叠面板 | [UI 组件库 ui-components](./ui_components.md) | UI 组件必须走 ui-components 的 helper 函数，禁止手写重复 DOM 结构 | - |
 
+## 🎯 创意工坊下载
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| cancelDownloads 取消 | [下载队列状态机 download-queue-store](./download-queue-store.md) | - | - |
+| DownloadState 队列状态 | [下载队列状态机 download-queue-store](./download-queue-store.md) | - | - |
+| DownloadTask 下载任务 | [下载队列状态机 download-queue-store](./download-queue-store.md) | - | - |
+| enqueueDownloads 入队 | [下载队列状态机 download-queue-store](./download-queue-store.md) | - | - |
+| Wails 事件订阅 | [下载队列状态机 download-queue-store](./download-queue-store.md) | - | - |
+
 ## 🎯 截图导出与缓存
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -454,6 +464,25 @@
 | 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
 | 提交前文档自动同步 | [提交前钩子 pre-commit](./pre-commit-hook.md) | 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2） | - |
 | 推送被门禁阻断怎么办 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查 | - |
+
+## 🎯 3D 预览菜单系统
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| mountPreviewRootMenu 挂载 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132 |
+| PreviewMenuNode 声明式菜单 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132 |
+| renderMenu 单一渲染器 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132 |
+| schema-registry 面板注册 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132 |
+| visibleWhen 谓词 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132 |
+
+## 🎯 预览状态层契约
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 两步走路径扩展 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
+| KNOWN_PATHS 状态路径 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
+| PreviewSnapshot 快照类型 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
+| PreviewStatePath 类型契约 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
 
 ## 🎯 门禁集成与 pre-push 流程
 
@@ -636,6 +665,11 @@
 | 标签写回用直写 tags.json | - | 并发写破坏文件；必须经 go/tags Store 的 tmp+os.Rename 原子替换 |
 | 各组件各自注入 style 标签 | - | 多次注入、样式冲突；必须经 ensureFabStyles 一次注入 |
 | FAB 挂 document.body 但样式在 Shadow DOM | - | light DOM 按钮不继承；必须经 ensureFabStyles 注入 head 标签 |
+| ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On 无对应 Off（app 级单例，_registered 守卫防重复注册） | - | - |
+| 非 app 级模块禁止复制此模式 | - | - |
+| isActiveStatus 必须同时认 "downloading" 和 "enqueued"（Go 端入队后只发 enqueued，从不发 downloading） | - | - |
+| web 下载入库上限 50MB（WEB_DOWNLOAD_IDB_LIMIT），超限回退浏览器直链 | - | - |
+| fetch 15s 超时兜底（WEB_DOWNLOAD_FETCH_TIMEOUT_MS），防挂起服务器永久卡队列 | - | - |
 | once off 错对象 | `bus.off(event, 原fn)` | 用 once 返回的 unsub 函数取消 |
 | 离屏 Canvas 不释放 | - | 内存泄漏、连续截图卡死；必须在完成回调里 release |
 | blob URL 不 revokeObjectURL | - | 浏览器内存累积；导出 / 失败分支都必须 revoke |
@@ -797,6 +831,13 @@
 | switch-preview 未清 schema 注册表 | - | 旧模型 schema 残留；必须经 switch-preview 清理 |
 | 新加相机按钮 | - | 直接注入 mmd-controls → 切类型时按钮消失；必须走 setAdapterItems 注入核心根菜单 |
 | YSM schema 未走 registerYsmModelSchema 注册 | - | schema 变更不同步到菜单；必须经 schema-registry |
+| 3D 菜单只允许 visibleWhen 谓词，禁止手写 3D 菜单；新增 UI 功能必须可被所有数组类菜单调用 | - | - |
+| schemaId 必显式声明（panel id 不再隐式兜底作 schema key，防 id 撞注册键渲染错内容） | - | - |
+| fillers 仅 roles 一项（G3 删 fill* 后唯一残留），health.test 白名单守卫——禁止新增 filler | - | - |
+| renderCustom 是末段逃生舱，schemaId 未注册时走 renderCustom 会 console.warn | - | - |
+| 新增路径必须两步走，缺一步编译不过 | `扩 KNOWN_PATHS + 填 binding` | - |
+| 未落地键在编译期即报错（不再恒 undefined 静默假死） | - | - |
+| 直接写未落地路径（如 ui.mode / env.sky）编译报错——类型契约即运行时实现 | - | - |
 | 直接改 preview-state 未注册字段 | - | 切页/换模后状态回滚、选项失效；应走 KNOWN_PATHS |
 | 截图灯光与预览灯光混用 | - | 导出 PNG 与实时预览不一致；截图灯光必须走 shot-panel 独立通道 |
 | 前端直调 os.Remove | - | 无法恢复、跳过 ADR-038 合并规则；必须经 go/recycle |

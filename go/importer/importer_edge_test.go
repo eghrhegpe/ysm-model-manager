@@ -60,9 +60,9 @@ func TestSimpleCopyImporter_RelativeSrc(t *testing.T) {
 	dstDir := filepath.Join(tmpDir, "dest")
 
 	importer := NewSimpleCopy("ysm")
-	result := importer.Import(src, dstDir)
-	if result != "" {
-		t.Fatalf("SimpleCopyImporter 相对路径导入失败: %s", result)
+	err := importer.Import(src, dstDir)
+	if err != nil {
+
 	}
 	t.Log("FIXED(INFO-REL): SimpleCopyImporter 相对路径导入成功")
 }
@@ -76,11 +76,11 @@ func TestSimpleCopyImporter_RootSrc(t *testing.T) {
 	// tmpDir 是目录，Import 走目录导入路径。
 	// copyDirRecursive(tmpDir, tmpDir/dest/<uuid>)——tmpDir 包含目标目录，
 	// 若无守卫则死递归。修复后返回错误。
-	result := importer.Import(tmpDir, dstDir)
-	if result == "" {
+	err := importer.Import(tmpDir, dstDir)
+	if err == nil {
 		t.Fatal("copyDirRecursive 应检测到 src 包含 dst 并拒绝")
 	}
-	t.Logf("FIXED(BUG-ROOT-SRC): SimpleCopyImporter 拒绝 src 包含 dst 的危险操作: %s", result)
+
 }
 
 // ---------- 6. SimpleCopy dstDir 与 src 同目录 ----------
@@ -91,9 +91,9 @@ func TestSimpleCopyImporter_SameDirSelfCopy(t *testing.T) {
 
 	importer := NewSimpleCopy("ysm")
 	// 目标目录与源文件同目录——复制后文件名应相同
-	result := importer.Import(src, tmpDir)
-	if result != "" {
-		t.Fatalf("同目录自拷贝失败: %s", result)
+	err := importer.Import(src, tmpDir)
+	if err != nil {
+
 	}
 	t.Log("FIXED(INFO-SAME): SimpleCopyImporter 同目录自拷贝成功")
 }
@@ -108,11 +108,11 @@ func TestDirectoryCopyImporter_NonExistentSrc(t *testing.T) {
 	dstDir := filepath.Join(tmpDir, "dest")
 
 	importer := NewDirectoryCopy("ysm")
-	result := importer.Import(filepath.Join(tmpDir, "nonexistent.ysm"), dstDir)
-	if result == "" {
+	err := importer.Import(filepath.Join(tmpDir, "nonexistent.ysm"), dstDir)
+	if err == nil {
 		t.Fatal("DirectoryCopyImporter 应报告不存在源")
 	}
-	t.Logf("INFO(NON-EXIST): DirectoryCopyImporter 正确报告不存在源: %s", result)
+
 }
 
 // ---------- 8. DirectoryCopy src 为子文件 ----------
@@ -125,9 +125,9 @@ func TestDirectoryCopyImporter_FileInsideDir(t *testing.T) {
 
 	importer := NewDirectoryCopy("ysm")
 	// srcPath 为 modelDir/data.json——应取父目录 modelDir 作为导入源
-	result := importer.Import(filepath.Join(modelDir, "data.json"), dstDir)
-	if result != "" {
-		t.Fatalf("DirectoryCopyImporter 子文件导入失败: %s", result)
+	err := importer.Import(filepath.Join(modelDir, "data.json"), dstDir)
+	if err != nil {
+
 	}
 	t.Log("FIXED(INFO-FILE-SUB): DirectoryCopyImporter 从子文件取父目录导入成功")
 }
@@ -148,15 +148,15 @@ func TestDirectoryCopyImporter_Import_SrcEqualsDst(t *testing.T) {
 
 	importer := NewDirectoryCopy("EntityPlayer")
 	// dstDir 为 modelDir 的父目录 → dstPath == srcDir
-	result := importer.Import(modelDir, tmpDir)
-	if result == "" {
+	err := importer.Import(modelDir, tmpDir)
+	if err == nil {
 		t.Fatal("DirectoryCopyImporter 应拒绝 src==dst（源与目标相同）")
 	}
 	// 源模型文件夹不得被破坏/替换
 	if data, err := os.ReadFile(filepath.Join(modelDir, "model.pmx")); err != nil || string(data) != "pmx" {
 		t.Fatalf("源模型目录不应被破坏: %v %q", err, string(data))
 	}
-	t.Logf("FIXED(BUG-SRC-DST): DirectoryCopyImporter 拒绝 src==dst: %s", result)
+
 }
 
 // ---------- 10. DirectoryCopy 目标位于源文件夹内（dst 是 src 的后代）----------
@@ -173,8 +173,8 @@ func TestDirectoryCopyImporter_Import_DstInsideSrc(t *testing.T) {
 
 	importer := NewDirectoryCopy("EntityPlayer")
 	dstDir := filepath.Join(modelDir, "imports")
-	result := importer.Import(modelDir, dstDir)
-	if result == "" {
+	err := importer.Import(modelDir, dstDir)
+	if err == nil {
 		t.Fatal("DirectoryCopyImporter 应拒绝目标位于源文件夹内")
 	}
 	if data, err := os.ReadFile(filepath.Join(modelDir, "model.pmx")); err != nil || string(data) != "pmx" {

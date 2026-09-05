@@ -33,13 +33,13 @@ quick_groups:
   - 跨组件通信与页面
 quick_intents:
   - 工具函数、防抖、异步工具
-  - swallowError / fireAndForget / retry / timeout
+  - swallowError / fireAndForget / delay / waitForFrame
   - 纯函数
 quick_risk_lines:
-  - swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底
+  - swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 异常由 swallowError 自动兜底记日志
 pitfalls:
   - swallowError 吞掉业务异常 → 静默失败、无法排查；必须用于"预期内可忽略"的错误
-  - fireAndForget 无 error 兜底 → 异常丢失；必须挂 onerror 回调或全局 error 监听
+  - fireAndForget 异常仅记日志不抛出 → 调用方无感知；生产无 console 时须靠 log.ts setLogSink 接日志
 
 use_when:
   - 工具函数
@@ -63,7 +63,7 @@ status: active
 
 | 工具 | 文件 | 用途 |
 |------|------|------|
-| async | `async.ts` | 异步工具（sleep、retry、timeout、swallowError、fireAndForget） |
+| async | `async.ts` | 异步工具（swallowError、fireAndForget、delay、waitForFrame） |
 | clamp | `clamp.ts` | 数值约束（min/max/clamp） |
 | debounce | `debounce.ts` | 防抖/节流 |
 | disposable | `disposable.ts` | 资源生命周期管理（dispose 模式） |
@@ -76,7 +76,7 @@ status: active
 
 ```ts
 import { clamp } from './utils/core/clamp';
-import { sleep, retry } from './utils/core/async';
+import { swallowError, delay } from './utils/core/async';
 ```
 
 ## 不变量

@@ -357,7 +357,6 @@ interface MountBuildResult {
   /** 已 build 成功、已登记进 session.allContent 的内容层 */
   content: PreviewScene;
 }
-
 export async function mount3D(
   adapter: PreviewAdapter,
   path: string,
@@ -396,11 +395,6 @@ export async function mount3D(
     escH: () => {},
     tipTimeoutId: undefined,
   };
-
-  // input 状态（不进 session：bindInputHandlers 已显式接收 keys/mouseDown/lastMouse）
-  const keys: Partial<Record<TdKeyAction, boolean>> = {};
-  let mouseDown = false;
-  const lastMouse = { x: 0, y: 0 };
 
   // infra（scene/camera/renderer/controls/orbitTarget + 全部 cap）由 buildSharedInfra
   // 一次性构造返回；self 模式下 infra 保持 null，所有访问经 infra?. 短路为 undefined。
@@ -448,6 +442,57 @@ export async function mount3D(
     focusTrap,
     handlers,
   };
+
+  // ===== stage 1: 外壳装配（overlay/camBridge/viewContainer/根菜单/loadingEl + input 容器）=====
+  const shell = assembleShell(ctx);
+  // ===== stage 2: 基础设施装配（escH/shared infra/输入/rAF/tip/switchCtx）=====
+  const installed = buildInfra(ctx, shell);
+  infra = installed.infra; // 回填 ctx.getInfra() 槽位（buildInfra 后 camBridge 经 getter 读到）
+  switchCtx = installed.switchCtx; // 回填 ctx.getSwitchCtx() 槽位
+
+  try {
+    const build = await runBuild(ctx, shell, installed);
+    if (!build) return; // abort / 代际作废（已 runFullCleanup），静默退出
+    commitSession(ctx, installed.switchCtx, build.content);
+  } catch (e) {
+    recoverMountFailure(ctx, shell.loadingEl, e);
+  }
+}
+
+// ===== mount3D stage 1: 外壳装配（原 mount3D L400-407 + L456-619 纯搬家）=====
+/**
+ * 会话骨架(session/handlers/focusTrap/ctx/infra 槽)由调度层 mount3D 先建；
+ * 本函数负责外壳 DOM(overlay/body/root) + camBridge + viewContainer + 声明式根菜单 + loadingEl
+ * 及 input 状态容器(keys/mouseDown/lastMouse)。camBridge.setOrbit 经 ctx.getInfra() 延迟读 infra
+ * (原闭包捕获 let infra 的语义等价——buildInfra 赋值后调度层回填 ctx 槽位)。
+ */
+function assembleShell(ctx: MountCtx): {
+  overlay: HTMLElement;
+  body: HTMLElement;
+  root: HTMLElement | ShadowRoot;
+  camBridge: CameraControlBridge;
+  viewContainer: HTMLElement;
+  menuHandle: PreviewMenuHandle;
+  loadingEl: HTMLElement;
+  keys: Partial<Record<TdKeyAction, boolean>>;
+  mouseDown: { v: boolean };
+  lastMouse: { x: number; y: number };
+} {
+  const session = ctx.session;
+  const selfMode = ctx.selfMode;
+  const adapter = ctx.adapter;
+  const opts = ctx.opts;
+  const focusTrap = ctx.focusTrap;
+  const _handles = ctx.handles;
+
+  // input 状态（不进 session：bindInputHandlers 已显式接收 keys/mouseDown/lastMouse）
+  const keys: Partial<Record<TdKeyAction, boolean>> = {};
+  // mouseDown 用 { v } 引用容器（与 input-and-animation InputOptions.mouseDown 同形）：
+  // camBridge.setOrbit 与 bindInputHandlers 共享同一引用——修历史脱节（原 let 布尔 +
+  // { v: mouseDown } 快照，camBridge 写裸布尔不影响 input 读容器），并为 assembleShell/
+  // buildInfra 跨 stage 共享铺路（容器引用跨函数传递共享同一状态）。
+  const mouseDown = { v: false };
+  const lastMouse = { x: 0, y: 0 };
 
   // 单例外壳：首次创建，后续 mount3D 复用同一 DOM（避免重建导致黑屏）
   let overlay = _singletonOverlay;
@@ -513,7 +558,7 @@ export async function mount3D(
   const camBridge: CameraControlBridge = {
     getOrbit: () => session.orbitMode,
     setOrbit: (v: boolean) => {
-      const i = infra; // camBridge 仅经 cameraControls 在 build 后使用；self 模式不调用
+      const i = ctx.getInfra(); // camBridge 仅经 cameraControls 在 build 后使用；self 模式不调用（ctx.getInfra 延迟读）
       if (!i) return;
       session.orbitMode = v;
       i.controls.enableRotate = v;
@@ -522,7 +567,7 @@ export async function mount3D(
       } else {
         session.euler.setFromQuaternion(i.camera.quaternion);
       }
-      mouseDown = false;
+      mouseDown.v = false;
     },
     getSpeed: () => session.camSpeed,
     setSpeed: (n: number) => {
@@ -614,6 +659,72 @@ export async function mount3D(
   viewContainer.appendChild(loadingEl);
   ctx.loadingEl = loadingEl;
 
+  // 防御性兜底：overlay/body 单例成对创建（overlay 在则 body 必在），TS 不认该不变量——
+  // 原 mount3D 以 `body!` 断言消费（viewContainer 创建处）；此处返回 body 前显式兜底非空。
+  if (!body) {
+    body = document.createElement("div");
+    body.className = "mpc-body";
+    root.appendChild(body);
+    _singletonBody = body;
+  }
+
+  return {
+    overlay,
+    body,
+    root,
+    camBridge,
+    viewContainer,
+    menuHandle,
+    loadingEl,
+    keys,
+    mouseDown,
+    lastMouse,
+  };
+}
+
+// ===== mount3D stage 2: 基础设施装配（原 mount3D L621-738 纯搬家）=====
+/**
+ * escH 注册 + shared 基础设施(buildSharedInfra) + 输入绑定 + 统一拾取 + rAF 首帧 +
+ * tip 提示条 + switchCtx 构造。self 模式 infra 保持 null（适配器自驱）。
+ * @returns infra(shared 模式非 null) + switchCtx——调度层回填 ctx.getInfra()/getSwitchCtx() 槽位
+ */
+function buildInfra(
+  ctx: MountCtx,
+  shell: {
+    viewContainer: HTMLElement;
+    loadingEl: HTMLElement;
+    root: HTMLElement | ShadowRoot;
+    body: HTMLElement;
+    overlay: HTMLElement;
+    menuHandle: PreviewMenuHandle;
+    camBridge: CameraControlBridge;
+    keys: Partial<Record<TdKeyAction, boolean>>;
+    mouseDown: { v: boolean };
+    lastMouse: { x: number; y: number };
+  },
+): { infra: SharedInfra | null; switchCtx: SwitchContext } {
+  const session = ctx.session;
+  const selfMode = ctx.selfMode;
+  const adapter = ctx.adapter;
+  const opts = ctx.opts;
+  const handlers = ctx.handlers;
+  const {
+    viewContainer,
+    loadingEl,
+    root,
+    body,
+    overlay,
+    menuHandle,
+    camBridge,
+    keys,
+    mouseDown,
+    lastMouse,
+  } = shell;
+  let infra: SharedInfra | null = null;
+  const myGen = ctx.myGen;
+  const sessionId = ctx.sessionId;
+  const _handles = ctx.handles;
+
   // ===== §4 基础设施创建（scene/camera/renderer/OrbitControls/灯光/resize）=====
   // session.aborted 已在 mount3D 头部 session 对象初始化时声明。
   // 可变 ESC 处理函数：switchTo 后重新赋值
@@ -636,7 +747,7 @@ export async function mount3D(
     const inputOpts: InputOptions = {
       keys,
       getOrbitMode: () => session.orbitMode,
-      mouseDown: { v: mouseDown },
+      mouseDown, // 共享引用容器（非快照）：camBridge 与 input 同写一处
       lastMouse: { x: lastMouse.x, y: lastMouse.y },
       euler: session.euler,
       camera: infra.camera,
@@ -681,7 +792,7 @@ export async function mount3D(
   // 清理统一内联于下方 fullCleanup（原 cleanup-3d.ts 的 runFullCleanup/CleanupContext 是
   // 从未被调用的僵尸实现，已随本次修复删除——单一事实来源，杜绝双清理路径漂移）。
 
-  switchCtx = {
+  const switchCtx: SwitchContext = {
     scene: infra?.scene,
     getSceneBaseline: () => session.sceneBaseline,
     setSceneBaseline: (s) => {
@@ -733,19 +844,7 @@ export async function mount3D(
     getGen: () => _gen,
   };
 
-  // unloadSessionModel 已提为 mount-session.ts 模块级函数（经 MountCtx 上下文读写）
-
-  try {
-    const build = await runBuild(
-      ctx,
-      { viewContainer, loadingEl, root, menuHandle, camBridge },
-      { infra, switchCtx },
-    );
-    if (!build) return; // abort / 代际作废（已 runFullCleanup），静默退出
-    commitSession(ctx, switchCtx, build.content);
-  } catch (e) {
-    recoverMountFailure(ctx, loadingEl, e);
-  }
+  return { infra, switchCtx };
 }
 
 // ===== mount3D 构建管线（原 mount3D try 块 L759–L857 纯搬家；代际守卫 + build + abort + 同步 + 注册）=====

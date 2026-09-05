@@ -373,9 +373,7 @@ export const webCommunityBindings = {
         }
       }
       if (existing.length < 2 || existing.length > 100) {
-        return Promise.reject(
-          new Error(t("webCommunity.mergeTooFew", { count: existing.length })),
-        );
+        return Promise.reject(new Error(t("webCommunity.mergeTooFew", { count: existing.length })));
       }
       saveWebSites(existing);
       return Promise.resolve([added, updated]);

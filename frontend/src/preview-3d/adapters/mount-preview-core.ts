@@ -348,6 +348,16 @@ export interface Mount3DOptions {
   components?: string[];
 }
 
+// ===== mount3D stage 拆分段间产物类型（ADR-167 800 行老将拆单兵）=====
+/** stage 3 runBuild 产物：构建成功的内容层（stage 4 commit 消费）。
+ *  注：AssembledShell / InstalledPreviewInfra 两个预留类型（assembleShell/buildInfra
+ *  stage 拆分用）已随步骤 4 暂缓删除——见 docs/superpowers/plans/2026-09-preview3d-mount3d-stage-split.md
+ *  §8 R4（跨 stage 闭包共享 mouseDown 需改 {v} 容器，超纯搬家边界，待拍板）。 */
+interface MountBuildResult {
+  /** 已 build 成功、已登记进 session.allContent 的内容层 */
+  content: PreviewScene;
+}
+
 export async function mount3D(
   adapter: PreviewAdapter,
   path: string,
@@ -726,154 +736,198 @@ export async function mount3D(
   // unloadSessionModel 已提为 mount-session.ts 模块级函数（经 MountCtx 上下文读写）
 
   try {
-    // 代际守卫：await 期间用户已点其他文件 / 被 invalidate，丢弃本次挂载
-    if (myGen !== _gen) return;
-
-    const i = infra; // self 模式 infra=null，跳过 sceneBaseline；shared 模式恒非空
-    if (i) session.sceneBaseline = new Set(i.scene.children);
-    const buildCtx: PreviewBuildCtx = {
-      viewContainer,
-      loadingEl,
-      overlay: root, // ADR-175 M1：适配器内容插入目标 = root（shadow 内），非 host
-      menu: menuHandle,
-      // 延迟闭包：build 时 _handle 尚未赋值，菜单点击（build 之后）时已就绪；
-      // 无活跃会话时 no-op（与 switchPreview 同口径）
-      switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> => {
-        const active = _handles[_handles.length - 1];
-        return active?.handle.switchTo?.(p, options) ?? Promise.resolve();
-      },
-    };
-    // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
-    // exactOptional 收紧后仅真实存在时赋值（shared 模式有值，self 模式缺省）
-    if (i?.scene !== undefined) buildCtx.scene = i.scene;
-    if (i?.camera !== undefined) buildCtx.camera = i.camera;
-    if (i?.controls !== undefined) buildCtx.controls = i.controls;
-    if (i?.renderer !== undefined) buildCtx.renderer = i.renderer;
-    if (!selfMode && camBridge) buildCtx.cameraControls = camBridge;
-    if (sessionId !== undefined) buildCtx.sessionId = sessionId;
-    session.content = await adapter.build(buildCtx, path);
-    if (session.aborted.v || myGen !== _gen) {
-      // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
-      // 避免外壳资源泄漏；内容层 GPU 资源经 fullCleanup 一并释放。
-      // 注意：会话登记进 allContent 发生在下方（build 成功之后），此处必须补登记，
-      // 否则刚 build 完的内容层不在 dispose 列表里 → GPU 资源泄漏。
-      if (session.content && !session.allContent.includes(session.content)) {
-        session.allContent.push(session.content);
-      }
-      runFullCleanup(ctx);
-      return;
-    }
-    // 注意：loadingEl 的移除交由适配器在成功路径自行处理（旧 vrm/litematic 即在
-    // build 内 loadingEl.remove()）；空数据/错误等场景适配器会把提示写在 loadingEl
-    // 并保留它，核心不在此强制移除。
-
-    // 同步通用相机状态到适配器已设定的取景（包围盒/尺寸定相机）——仅 shared 模式
-    if (i) {
-      i.orbitTarget.copy(i.controls.target);
-      session.euler.setFromQuaternion(i.camera.quaternion);
-      // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
-      syncLightTargetFromContent(i.scene, session.sceneBaseline, i.lightCap ?? null);
-      // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
-      if (i.shadowCap && session.content) {
-        const roots = session.sceneBaseline
-          ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-            i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-          : [];
-        i.shadowCap.applyMeshCasts(roots);
-      }
-      // 首模型 mesh envMapIntensity 同步
-      if (i.environmentCap && session.content) {
-        const roots = session.sceneBaseline
-          ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-            i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-          : [];
-        i.environmentCap.syncMeshIntensity(roots);
-      }
-    }
-    switchCtx.setPerFrame(session.content.update ?? null);
-    // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
-    // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
-    if (session.content) session.allContent.push(session.content);
-    // ADR-093 T2：首模型注册进场景注册表（roots 经 scene.children 差量捕获）
-    if (session.content) {
-      const added =
-        infra && session.sceneBaseline
-          ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-            infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-          : [];
-      // ADR-131 P1：post-build 采集场景统计，合并统计面板进菜单（「能渲染就能出统计」）
-      const stats = collectSceneStats(added);
-      const menuItems = mergeStatsMenuItems(session.content.menuItems, stats);
-      sceneRegistry.register({
-        path,
-        rtype: opts.rtype ?? adapter.id,
-        roots: added,
-        content: session.content,
-        boneMaps: session.content.boneMaps ?? null,
-        menuItems,
-        onBonePick: session.content.onBonePick ?? null,
-        displayName: opts.displayName,
-        components: opts.components,
-      });
-      // ADR-076 v2 Phase 3：注册后立刻注入菜单项，否则 dock-menu 无适配器专属控件
-      // （ADR-131 §2.3：统计面板已并入 menuItems，一次注入不覆盖）
-      if (menuItems.length > 0) menuHandle.setAdapterItems(menuItems);
-    }
-
-    // ADR-076 v2 Phase 3：适配器控件全部经声明式根菜单注入（ctx.menu.setAdapterItems / content.menuItems）
-    // 不再有 topBar 或 sidePanel 额外挂载
-
-    // fullCleanup 已提为 mount-session.ts 的 runFullCleanup(ctx)（MountCtx 上下文模式）
-
-    // 复用 escH 可变引用，switchTo 后旧 handler 被替换，新 handler 在 cleanup 时通过 getter 正确卸载
-    // R1-P1-2：先保存旧引用再替换，否则 removeEventListener 移除的是新函数（从未注册过），旧函数仍残留
-    const oldEscH = session.escH;
-    session.escH = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") runFullCleanup(ctx);
-    };
-    document.removeEventListener("keydown", oldEscH);
-    document.addEventListener("keydown", session.escH);
-    session.cleanupFn = () => runFullCleanup(ctx);
-    const sessionHandle = {
-      cleanup: () => runFullCleanup(ctx),
-      resetCamera: session.content.resetCamera,
-      setRotationMode: session.content.setRotationMode,
-      setSpeed: session.content.setSpeed,
-      showModelGroup: session.content.showModelGroup,
-      onBoneSelect: session.content.onBoneSelect,
-      // 截图不做 handle 透传（消费方审计 2026-09-04）：shotNodes 菜单闭包直取，此处曾死透传
-      // 当前会话内切换模型：复用外壳（renderer/rAF/controls/灯光）重建内容层（ADR-066 §5.6）
-      // 支持 keepInScene 模式：true 时不移除旧模型，新模型追加到同一场景（多模型同台）
-      switchTo: (newPath: string, options?: { keepInScene?: boolean }) =>
-        switchToSession(switchCtx, newPath, options),
-    };
-    _handles.push({ handle: sessionHandle, gen: myGen });
+    const build = await runBuild(
+      ctx,
+      { viewContainer, loadingEl, root, menuHandle, camBridge },
+      { infra, switchCtx },
+    );
+    if (!build) return; // abort / 代际作废（已 runFullCleanup），静默退出
+    commitSession(ctx, switchCtx, build.content);
   } catch (e) {
-    // 失败路径清理（P1 修复，兄弟会话审核发现）
-    // adapter.build 抛错时 session.content 为 null，session.content?.dispose() 是 no-op，
-    // half-built mesh 留在 scene 中成为幽灵基线——下次 mount 把垃圾快照进 baseline。
-    // 此处不移除 overlay/DOM（fullCleanup 语义，overlay 上保留 showLoadFailure 错误提示），
-    // 只清场景中的半成品 + dispose 已注册 content + 解绑输入监听/停 rAF/拆菜单。
-    // 注意：escH 移除须在 runFailedMountCleanup 之前（它不清 escH，调用方负责）——
-    // 与 abort 打断路径（L762 runFullCleanup 内含 escH 移除）的清理分工不同。
-    document.removeEventListener("keydown", session.escH);
-    runFailedMountCleanup(ctx);
-    if (infra && session.sceneBaseline) {
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
-      for (const c of stale) infra.scene.remove(c);
-    }
-    for (const b of session.allContent) safeDispose(b);
-    session.allContent.length = 0;
-    // 不单独调 session.content?.dispose()——content 已在 allContent 中，
-    // safeDispose 循环已 dispose 它；再调一次是 double-dispose（code review #2 修复）
-    // P2 守卫（对齐旧 skeleton close3D 语义）：加载期间被 ESC/切模型/invalidate
-    // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，
-    // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。
-    if (session.aborted.v || myGen !== _gen) return;
-    logError("preview 3D", "加载失败", e);
-    showLoadFailure(loadingEl, e);
+    recoverMountFailure(ctx, loadingEl, e);
   }
+}
+
+// ===== mount3D 构建管线（原 mount3D try 块 L759–L857 纯搬家；代际守卫 + build + abort + 同步 + 注册）=====
+/**
+ * 主路径构建管线：代际守卫 → sceneBaseline 快照 → buildCtx 构造 → adapter.build →
+ * abort 打断分支 → 相机/light/shadow/env 同步 → setPerFrame → allContent/register/
+ * setAdapterItems。
+ * @returns MountBuildResult | null——null = abort 或代际作废（已 runFullCleanup 或静默退出），
+ *  非 null = 可 commit（build.content 非空）。
+ */
+async function runBuild(
+  ctx: MountCtx,
+  shell: {
+    viewContainer: HTMLElement;
+    loadingEl: HTMLElement;
+    root: HTMLElement | ShadowRoot;
+    menuHandle: PreviewMenuHandle;
+    camBridge: CameraControlBridge;
+  },
+  installed: { infra: SharedInfra | null; switchCtx: SwitchContext },
+): Promise<MountBuildResult | null> {
+  const session = ctx.session;
+  const { infra, switchCtx } = installed;
+  // 代际守卫：await 期间用户已点其他文件 / 被 invalidate，丢弃本次挂载
+  if (ctx.myGen !== ctx.getGen()) return null;
+
+  const i = infra; // self 模式 infra=null，跳过 sceneBaseline；shared 模式恒非空
+  if (i) session.sceneBaseline = new Set(i.scene.children);
+  const buildCtx: PreviewBuildCtx = {
+    viewContainer: shell.viewContainer,
+    loadingEl: shell.loadingEl,
+    overlay: shell.root, // ADR-175 M1：适配器内容插入目标 = root（shadow 内），非 host
+    menu: shell.menuHandle,
+    // 延迟闭包：build 时 _handle 尚未赋值，菜单点击（build 之后）时已就绪；
+    // 无活跃会话时 no-op（与 switchPreview 同口径）
+    switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> => {
+      const active = ctx.handles[ctx.handles.length - 1];
+      return active?.handle.switchTo?.(p, options) ?? Promise.resolve();
+    },
+  };
+  // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
+  // exactOptional 收紧后仅真实存在时赋值（shared 模式有值，self 模式缺省）
+  if (i?.scene !== undefined) buildCtx.scene = i.scene;
+  if (i?.camera !== undefined) buildCtx.camera = i.camera;
+  if (i?.controls !== undefined) buildCtx.controls = i.controls;
+  if (i?.renderer !== undefined) buildCtx.renderer = i.renderer;
+  if (!ctx.selfMode && shell.camBridge) buildCtx.cameraControls = shell.camBridge;
+  if (ctx.sessionId !== undefined) buildCtx.sessionId = ctx.sessionId;
+  session.content = await ctx.adapter.build(buildCtx, session.currentPath);
+  if (session.aborted.v || ctx.myGen !== ctx.getGen()) {
+    // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
+    // 避免外壳资源泄漏；内容层 GPU 资源经 fullCleanup 一并释放。
+    // 注意：会话登记进 allContent 发生在下方（build 成功之后），此处必须补登记，
+    // 否则刚 build 完的内容层不在 dispose 列表里 → GPU 资源泄漏。
+    if (session.content && !session.allContent.includes(session.content)) {
+      session.allContent.push(session.content);
+    }
+    runFullCleanup(ctx);
+    return null;
+  }
+  // 注意：loadingEl 的移除交由适配器在成功路径自行处理（旧 vrm/litematic 即在
+  // build 内 loadingEl.remove()）；空数据/错误等场景适配器会把提示写在 loadingEl
+  // 并保留它，核心不在此强制移除。
+
+  // 同步通用相机状态到适配器已设定的取景（包围盒/尺寸定相机）——仅 shared 模式
+  if (i) {
+    i.orbitTarget.copy(i.controls.target);
+    session.euler.setFromQuaternion(i.camera.quaternion);
+    // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
+    syncLightTargetFromContent(i.scene, session.sceneBaseline, i.lightCap ?? null);
+    // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
+    if (i.shadowCap && session.content) {
+      const roots = session.sceneBaseline
+        ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+          i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+        : [];
+      i.shadowCap.applyMeshCasts(roots);
+    }
+    // 首模型 mesh envMapIntensity 同步
+    if (i.environmentCap && session.content) {
+      const roots = session.sceneBaseline
+        ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+          i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+        : [];
+      i.environmentCap.syncMeshIntensity(roots);
+    }
+  }
+  switchCtx.setPerFrame(session.content.update ?? null);
+  // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
+  // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
+  if (session.content) session.allContent.push(session.content);
+  // ADR-093 T2：首模型注册进场景注册表（roots 经 scene.children 差量捕获）
+  if (session.content) {
+    const added =
+      infra && session.sceneBaseline
+        ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+          infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+        : [];
+    // ADR-131 P1：post-build 采集场景统计，合并统计面板进菜单（「能渲染就能出统计」）
+    const stats = collectSceneStats(added);
+    const menuItems = mergeStatsMenuItems(session.content.menuItems, stats);
+    sceneRegistry.register({
+      path: session.currentPath,
+      rtype: ctx.opts.rtype ?? ctx.adapter.id,
+      roots: added,
+      content: session.content,
+      boneMaps: session.content.boneMaps ?? null,
+      menuItems,
+      onBonePick: session.content.onBonePick ?? null,
+      displayName: ctx.opts.displayName,
+      components: ctx.opts.components,
+    });
+    // ADR-076 v2 Phase 3：注册后立刻注入菜单项，否则 dock-menu 无适配器专属控件
+    // （ADR-131 §2.3：统计面板已并入 menuItems，一次注入不覆盖）
+    if (menuItems.length > 0) shell.menuHandle.setAdapterItems(menuItems);
+  }
+
+  // ADR-076 v2 Phase 3：适配器控件全部经声明式根菜单注入（ctx.menu.setAdapterItems / content.menuItems）
+  // 不再有 topBar 或 sidePanel 额外挂载
+
+  // fullCleanup 已提为 mount-session.ts 的 runFullCleanup(ctx)（MountCtx 上下文模式）
+
+  return { content: session.content };
+}
+
+// ===== mount3D 失败路径清理（catch 体抽为叶函数，纯搬家原 L851–L876）=====
+/**
+ * adapter.build 抛错时 session.content 为 null，session.content?.dispose() 是 no-op，
+ * half-built mesh 留在 scene 中成为幽灵基线——下次 mount 把垃圾快照进 baseline。
+ * 此处不移除 overlay/DOM（fullCleanup 语义，overlay 上保留 showLoadFailure 错误提示），
+ * 只清场景中的半成品 + dispose 已注册 content + 解绑输入监听/停 rAF/拆菜单。
+ */
+function recoverMountFailure(ctx: MountCtx, loadingEl: HTMLElement, e: unknown): void {
+  const session = ctx.session;
+  // 注意：escH 移除须在 runFailedMountCleanup 之前（它不清 escH，调用方负责）——
+  // 与 abort 打断路径（runFullCleanup 内含 escH 移除）的清理分工不同。
+  document.removeEventListener("keydown", session.escH);
+  runFailedMountCleanup(ctx);
+  const infra = ctx.getInfra();
+  if (infra && session.sceneBaseline) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
+    for (const c of stale) infra.scene.remove(c);
+  }
+  for (const b of session.allContent) safeDispose(b);
+  session.allContent.length = 0;
+  // 不单独调 session.content?.dispose()——content 已在 allContent 中，
+  // safeDispose 循环已 dispose 它；再调一次是 double-dispose（code review #2 修复）
+  // P2 守卫（对齐旧 skeleton close3D 语义）：加载期间被 ESC/切模型/invalidate
+  // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，
+  // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。
+  if (session.aborted.v || ctx.myGen !== ctx.getGen()) return;
+  logError("preview 3D", "加载失败", e);
+  showLoadFailure(loadingEl, e);
+}
+
+// ===== mount3D 收尾（escH 替换 + sessionHandle 构造 + 句柄入列，纯搬家原 L830–L850）=====
+function commitSession(ctx: MountCtx, switchCtx: SwitchContext, content: PreviewScene): void {
+  const session = ctx.session;
+  // 复用 escH 可变引用，switchTo 后旧 handler 被替换，新 handler 在 cleanup 时通过 getter 正确卸载
+  // R1-P1-2：先保存旧引用再替换，否则 removeEventListener 移除的是新函数（从未注册过），旧函数仍残留
+  const oldEscH = session.escH;
+  session.escH = (e: KeyboardEvent): void => {
+    if (e.key === "Escape") runFullCleanup(ctx);
+  };
+  document.removeEventListener("keydown", oldEscH);
+  document.addEventListener("keydown", session.escH);
+  session.cleanupFn = () => runFullCleanup(ctx);
+  const sessionHandle: PreviewHandle = {
+    cleanup: () => runFullCleanup(ctx),
+    resetCamera: content.resetCamera,
+    setRotationMode: content.setRotationMode,
+    setSpeed: content.setSpeed,
+    showModelGroup: content.showModelGroup,
+    onBoneSelect: content.onBoneSelect,
+    // 截图不做 handle 透传（消费方审计 2026-09-04）：shotNodes 菜单闭包直取，此处曾死透传
+    // 当前会话内切换模型：复用外壳（renderer/rAF/controls/灯光）重建内容层（ADR-066 §5.6）
+    // 支持 keepInScene 模式：true 时不移除旧模型，新模型追加到同一场景（多模型同台）
+    switchTo: (newPath: string, options?: { keepInScene?: boolean }) =>
+      switchToSession(switchCtx, newPath, options),
+  };
+  ctx.handles.push({ handle: sessionHandle, gen: ctx.myGen });
 }
 
 // ===== §5 mount3D 会话状态（其余私有工具已拆出独立模块）=====

@@ -135,7 +135,9 @@ function buildOverlay<T>(
   overlay.tabIndex = tabIndex;
   overlay.className = "dlg-overlay";
   overlay.dataset.testid = "dlg-overlay";
-  // WCAG 2.1 A 级：对话框语义（全仓弹窗唯一基座，业务弹窗统一继承）
+  // WCAG 2.1 A 级：对话框语义。注意：业务弹窗并非都走本函数——adv-filter / batch-rename /
+  // tag-editor / rename 各自自建 overlay 并自带 role=dialog + aria-modal（同规约定，
+  // 见各文件注释）；新增自建弹窗时须同步补这两条属性，勿依赖本处「统一继承」。
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
   const close = (value: T): void => closeDlg(overlay, resolve, value);

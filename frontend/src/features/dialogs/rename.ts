@@ -21,6 +21,9 @@ function dgRnCreateOverlay(
   const overlay = document.createElement("div");
   overlay.tabIndex = 0;
   overlay.className = "dlg-overlay";
+  // WCAG 2.1 A 级：对话框语义（与 modal.ts/adv-filter/batch-rename/tag-editor 自建 overlay 同规）
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
   const close: DgRnCloseFn = (v) => closeDlg(overlay, resolve, v);
   overlay.onclick = (e: MouseEvent): void => {
     if (e.target === overlay) close(null);

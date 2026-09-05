@@ -319,8 +319,23 @@ function main() {
     if (getScalar(fm, 'affected') === 'false') {
       const frozenParsed = parseAutoFields(fm);
       const frozenExisting = frozenParsed?.['symbols_with_lines'] ?? [];
+      // 共享 checkout 暂缺源守卫（2026-09-05 code_review P3）：并行会话切分支/检出中间态下
+      // source_files 可能部分暂缺——collectSymbolsWithLines 对缺失路径静默跳过，若照常清理会
+      // 把「暂缺源文件的符号」误判为「已删」从冻结卡永久删索引（冻结豁免 added，误删不自动恢复）。
+      // 任一源路径当前缺失 → 本次清理整体保守跳过（残留可后续人工清，误删不可逆——保守方向同 ADR-151）。
+      const frozenMissing = sources.filter((s) => !fs.existsSync(path.join(ROOT, s)));
+      if (frozenMissing.length > 0) {
+        // 可见信号（2026-09-05 code_review #5）：跳过不可静默——若缺失是「永久陈旧
+        // source_files」（源文件真被删而未同步 frontmatter），此 WARN 让清理/漂移
+        // 长期失效有迹可查（CI 能看到），提示应同步卡片或确认为并发检出中间态。
+        console.error(
+          `⚠️ ${cf} → 冻结快照清理跳过：${frozenMissing.length} 个 source_files 当前缺失（${frozenMissing.join(', ')}）——若为永久陈旧源请同步卡片 frontmatter`
+        );
+        skippedFrozen++;
+        continue;
+      }
       const frozenTarget = collectSymbolsWithLines(sources).map((s) => s.symbol);
-      // 源文件整体缺失 → 保守跳过，避免 source_files 失效被误判为「全部已删」清空索引
+      // 源文件全部在场但无可提取符号 → 保守跳过，避免空扫被误判为「全部已删」清空索引
       if (frozenTarget.length === 0) { skippedFrozen++; continue; }
       const frozenRemoved = frozenExisting.filter((s) => !frozenTarget.includes(s));
       if (frozenRemoved.length === 0) { skippedFrozen++; continue; } // 无残留 → 冻结原样

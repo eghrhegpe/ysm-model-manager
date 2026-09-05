@@ -2,7 +2,7 @@
 // 不 mock esc/registerDlg/closeDlg——原 mock 恰好覆盖陷阱 #15（转义）/#14（单例槽位）
 // /#3（finally/连点防重入）的载体；改用真实实现后这些防线可被测试锁定。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { appFn } from "@/test-utils/mock-app.ts";
+import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 
 const extractHeaderMock = appFn("ExtractYSMHeader");
 extractHeaderMock.mockResolvedValue(null);
@@ -64,6 +64,10 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  // B 簇（code_review 54ef29d3 #4/#7）：isolate=false + shuffle 下 globalThis store
+  // 跨文件存活，extractHeaderMock 实现残留会给后跑文件——清回 fail-closed 起点，
+  // 对齐 mock-app.ts 头注释契约（sync/instance-ops/require-mcroot 同范式）
+  resetAppMock();
 });
 
 describe("showRenameDialog — 扩展名推导（getExt）", () => {

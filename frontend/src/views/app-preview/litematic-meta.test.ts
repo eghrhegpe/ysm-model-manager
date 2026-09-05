@@ -1,18 +1,17 @@
 // ===== showLitematic 测试 =====
 // 覆盖：litematic/nbt/schematic 三种路径、解析失败、材料列表、3D tab、Tab 切换、代际守卫
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { appFn } from "@/test-utils/mock-app.ts";
+import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
-    ReadLitematicMeta: vi.fn(),
-    ReadNbtStructure: vi.fn(),
-    ReadSchematic: vi.fn(),
     createLitematic3D: vi.fn(),
     cleanupVoxel3D: vi.fn(),
   };
   return { mocks };
 });
+// app 方法经 appFn 注册（唯一事实源，code_review 54ef29d3 #10：hoisted 旧条目
+// 已被 Object.assign 覆盖成死代码，双源真相有漂移风险——仅保留非 app mock）
 Object.assign(mocks, {
   ReadLitematicMeta: appFn("ReadLitematicMeta"),
   ReadNbtStructure: appFn("ReadNbtStructure"),
@@ -72,6 +71,10 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  // B 簇（code_review 54ef29d3 #5/#7）：isolate=false + shuffle 下 globalThis store
+  // 跨文件存活，ReadLitematicMeta/ReadNbtStructure/ReadSchematic 用例级实现残留
+  // 会给后跑文件——清回 fail-closed 起点，对齐 mock-app.ts 头注释契约
+  resetAppMock();
 });
 
 describe("showLitematic", () => {

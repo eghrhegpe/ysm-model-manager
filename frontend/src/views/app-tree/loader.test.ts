@@ -4,7 +4,7 @@
 // mock 基线来自 e2e/mock-data.ts（共享单源：改 Go 数据只改一处，防双源漂移），
 // 测试专用值用 override 覆盖（如反斜杠路径用例）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { appFn } from "@/test-utils/mock-app.ts";
+import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 import { MOCK_DATA } from "../../../e2e/mock-data.ts";
 // bus 不静态 import：beforeEach resetModules 后动态拿，保证与 loader 新实例同源
 // （裸 resetModules 会让 loader 的 bus 与 spy 的 bus 分叉，toast 收不到——见 141 行注）
@@ -12,13 +12,12 @@ import type { Bus } from "../../bus.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
-    GetRepoRoot: vi.fn(),
-    ScanModelEntriesFiltered: vi.fn(),
-    IsFileBanned: vi.fn(),
     getAndroidBridge: vi.fn(),
   };
   return { mocks };
 });
+// app 方法经 appFn 注册（唯一事实源，code_review 54ef29d3 #10：hoisted 旧条目
+// 已被 Object.assign 覆盖成死代码，双源真相有漂移风险——仅保留非 app mock）
 Object.assign(mocks, {
   GetRepoRoot: appFn("GetRepoRoot"),
   ScanModelEntriesFiltered: appFn("ScanModelEntriesFiltered"),
@@ -65,6 +64,11 @@ beforeEach(async () => {
 
 afterEach(() => {
   cleanups.splice(0).forEach((fn) => fn());
+  // B 簇（code_review 54ef29d3 #3/#7）：isolate=false + shuffle 下 globalThis store
+  // 跨文件存活（本文件还 resetModules + 内层 describe mockReset 共享 fn 留下
+  // undefined-success），GetRepoRoot/ScanModelEntriesFiltered 残留会给 recycle-bin/
+  // sync 等后跑文件——清回 fail-closed 起点，对齐 mock-app.ts 头注释契约
+  resetAppMock();
 });
 
 function spyToasts() {

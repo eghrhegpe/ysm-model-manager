@@ -1,7 +1,7 @@
 // ===== initRecycleBin 集成测试 =====
 // 覆盖：加载渲染、路径过滤、恢复/删除/清空、类型切换、事件委托、清理函数、异常路径
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { appFn } from "@/test-utils/mock-app.ts";
+import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 import { bus } from "../../bus.ts";
 import { flushPromises } from "../../test-utils/index.ts";
 
@@ -13,14 +13,11 @@ const { mocks } = vi.hoisted(() => {
       e instanceof Error ? e.message : fallback,
     ),
     loadResourceRegistry: vi.fn(),
-    GetRepoRoot: vi.fn(),
-    ListRecycleBin: vi.fn(),
-    RestoreFromRecycle: vi.fn(),
-    DeleteFromRecycle: vi.fn(),
-    EmptyRecycleBin: vi.fn(),
   };
   return { mocks };
 });
+// app 方法经 appFn 注册（唯一事实源，code_review 54ef29d3 #10：hoisted 旧条目
+// 已被 Object.assign 覆盖成死代码，双源真相有漂移风险——仅保留非 app mock）
 Object.assign(mocks, {
   GetRepoRoot: appFn("GetRepoRoot"),
   ListRecycleBin: appFn("ListRecycleBin"),
@@ -94,6 +91,10 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup?.();
   cleanups.splice(0).forEach((fn) => fn());
+  // B 簇（code_review 54ef29d3 #1/#7）：isolate=false + shuffle 下 globalThis store
+  // 跨文件存活，本文件 mockResolvedValue 实现/历史残留会给后跑文件（loader/sync 等
+  // 同 fetch GetRepoRoot）——清回 fail-closed 起点，对齐 mock-app.ts 头注释契约
+  resetAppMock();
 });
 
 /** 按钮执行有 150ms leaving 动画延迟，需长等待 */

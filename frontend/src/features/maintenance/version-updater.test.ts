@@ -1,14 +1,11 @@
 // ===== 版本更新检查测试 =====
 // 覆盖：频次限制、静默检查成功/失败、手动检查（modalConfirm 确认/取消、下载失败 toast）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { appFn } from "@/test-utils/mock-app.ts";
+import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 import { bus } from "../../bus.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
-    CheckUpdate: vi.fn(),
-    DoUpdate: vi.fn(),
-    RestartApplication: vi.fn(),
     modalConfirm: vi.fn(),
     modalProgress: vi.fn(),
     progressHandle: { update: vi.fn(), close: vi.fn() },
@@ -17,6 +14,8 @@ const { mocks } = vi.hoisted(() => {
   };
   return { mocks };
 });
+// app 方法经 appFn 注册（唯一事实源，code_review 54ef29d3 #10：hoisted 旧条目
+// 已被 Object.assign 覆盖成死代码，双源真相有漂移风险——仅保留非 app mock）
 Object.assign(mocks, {
   CheckUpdate: appFn("CheckUpdate"),
   DoUpdate: appFn("DoUpdate"),
@@ -65,6 +64,11 @@ beforeEach(() => {
     current: "v1",
   });
   mocks.DoUpdate.mockResolvedValue("success");
+  // code_review 54ef29d3 #6/#9：RestartApplication 经 appFn 映射但 beforeEach 未配
+  // 成功默认——旧裸 vi.fn 返回 undefined（成功语义）；新工厂 fail-closed（未配置即
+  // throw），「下载 → 重启」贯通链路用例会命中 throw 静默走错误分支（同 sync.test.ts
+  // 的 InstallResourceToInstance 修复范式）。reject 用例 L344 自行覆盖。
+  mocks.RestartApplication.mockResolvedValue(undefined);
   mocks.modalConfirm.mockResolvedValue(true);
   // 进度弹窗默认返回句柄；update:progress 监听默认返回注销函数
   unsubSpy = vi.fn();
@@ -76,6 +80,10 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanups.splice(0).forEach((fn) => fn());
+  // B 簇（code_review 54ef29d3 #2/#7）：isolate=false + shuffle 下 globalThis store
+  // 跨文件存活，本文件 DoUpdate/RestartApplication 实现残留会给后跑文件（含 reject
+  // 用例的 mockRejectedValue）——清回 fail-closed 起点，对齐 mock-app.ts 头注释契约
+  resetAppMock();
 });
 
 function spyToasts() {

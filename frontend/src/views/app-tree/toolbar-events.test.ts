@@ -689,7 +689,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more import-file 后端失败 → warn toast", async () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    ImportByTypeMock.mockResolvedValue("文件已存在");
+    ImportByTypeMock.mockRejectedValue(new Error("文件已存在"));
     bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-import-file") as HTMLElement;

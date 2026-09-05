@@ -39,9 +39,13 @@ async function atTlShowConfirm(
 ): Promise<void> {
   const path = await api();
   if (!path) return;
-  const err = await importByType(rtype, path);
-  if (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
+  // Go 侧 ImportByType 返回 error（非 string）：bindings 为 Promise<void>，
+  // 失败走 reject（@wailsio/runtime Call 语义），必须 try/catch 捕获，
+  // 不能用 resolve 值判错（那是旧 string 签名时代的残留，失败路径永远进不去）。
+  try {
+    await importByType(rtype, path);
+  } catch (e) {
+    const errMsg = e instanceof Error ? e.message : String(e);
     bus.emit("toast:show", {
       msg: t("tree.importFail", { msg: errMsg }),
       duration: TOAST_MS.verbose,

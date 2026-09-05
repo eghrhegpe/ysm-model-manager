@@ -161,7 +161,7 @@
 | 调试日志、dbg、调试开关 | [常量与调试 constants/debug](./utils-misc.md) | 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码 | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
-| 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 必须带 error 回调兜底 | - |
+| 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fireAndForget 异常由 swallowError 自动兜底记日志 | - |
 | 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
 | 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 纯函数查表；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124, ADR-124 |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
@@ -201,7 +201,7 @@
 | resolveInitialPage / sanitizePage | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe_error_msg.md) | - | - |
 | setPointerCapture、touch-action、拖拽 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
-| swallowError / fireAndForget / retry / timeout | [核心工具函数 core-utils](./core_utils.md) | - | - |
+| swallowError / fireAndForget / delay / waitForFrame | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | sync:download:missing 缺包回拉 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | toast 文案、报错翻译、网络错误 | [错误处理 errors](./utils-errors.md) | - | - |
 | tree:set-search、bus-handlers、selectState | [资源树 app-tree](./app-tree.md) | - | - |
@@ -647,7 +647,7 @@
 | 内联菜单结构 | `view 层` | 必须声明进 menu-defs.ts |
 | file/dir handler 各用 FileCtx/DirCtx（Omit 掉对立字段）；dir handler 读 ctx.path→编译报错（P2-1 表级窄化） | - | - |
 | swallowError 吞掉业务异常 | - | 静默失败、无法排查；必须用于"预期内可忽略"的错误 |
-| fireAndForget 无 error 兜底 | - | 异常丢失；必须挂 onerror 回调或全局 error 监听 |
+| fireAndForget 异常仅记日志不抛出 | - | 调用方无感知；生产无 console 时须靠 log.ts setLogSink 接日志 |
 | 手写 adv-filter 弹窗 DOM | - | 与全局弹窗样式 / 焦点陷阱不一致；必须复用 modal.ts 的 registerDlg |
 | adv-filter 输入不校验就提交 | - | min > max 传后端报错；必须在 validate() 拦截并在 |
 | 重复打开 batch-rename 不 close | - | 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算 |

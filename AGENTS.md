@@ -26,7 +26,7 @@
     磁盘级归属筛选与高级搜索（关键词 + 骨骼/立方体/纹理范围，`SearchModels`，adv-filter 消费）仍归 Go，
     前端不得自行扫描磁盘或重算归属。界线：**输入端（磁盘 → 列表）归 Go，展示端（列表 → 视图）豁免**。
 - 跨类型切换走 `switchExternal`（同源替换走 `switchTo`）。
-- 数据经 Wails 桥（`window.go`）消费；绑定统一 `npm run generate:bindings -ts`（无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
+- 数据经 Wails 桥（`window.go`）消费；绑定统一 `cd frontend && npm run generate:bindings`（script 已内置 `-ts`；在根目录裸跑会 Missing script，无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
 
 ### 改代码——TDD，改完即验
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。
@@ -74,7 +74,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | 陌生函数/类/模块 | routes-quick → 首选知识卡 → grep 卡正文 → source_files |
 | 误删/误移函数 | `git diff HEAD` → `git checkout -- <file>` |
 | Go Binding 函数名 | grep `internal/app/` 确认函数名 |
-| Wails 绑定 | `npm run generate:bindings -ts`（不手写） |
+| Wails 绑定 | `cd frontend && npm run generate:bindings`（script 已内置 `-ts`，不手写） |
 | Bug 历史 | `bug-search <关键词>` |
 | CLI 命令参数 | `docs/cli-commands.md`（`gen-cli-doc.ts` 自动生成，单一事实源 = 源码注册） |
 | 缓存问题 | `texture_cache` 包 + `cache-status`/`cache-verify`；清理走 `cache-clear` |

@@ -18,6 +18,7 @@
     "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "lint:scripts": "biome check scripts/",
     "deadcode": "node scripts/check-deadcode-baseline.ts",
+    "gen:docsindex": "node scripts/gen-docs-index.ts",
     "jscpd-go": "node scripts/jscpd-go.ts"
   }
 }

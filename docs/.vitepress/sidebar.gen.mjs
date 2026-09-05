@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-190：features 层职责收束与依赖注入真化",
+        "link": "/adr/ADR-190-features-deps-convergence"
+      },
+      {
         "text": "ADR-189：frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名",
         "link": "/adr/ADR-189-frontend-core-backend-utils-core-feedback"
       },

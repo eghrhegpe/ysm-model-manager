@@ -284,7 +284,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 190 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 488 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 188 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 204 |
 
 ### `repo:search-creator`
 
@@ -309,7 +309,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 211 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 227 |
 
 ### `stats:refresh`
 
@@ -335,7 +335,7 @@
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 355 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 84 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
-| _doRender | `frontend/src/views/app-sync-manager/index.ts` | 233 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 155 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 82 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 117 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 184 |
@@ -346,7 +346,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 480 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 168 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 184 |
 
 ### `sync:download:done`
 
@@ -536,7 +536,7 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 136 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 158 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 143 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 161 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 177 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 47 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 55 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 34 |

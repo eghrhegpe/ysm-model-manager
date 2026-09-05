@@ -11,7 +11,7 @@ auto_fields:
     - actionBtnHTML
     - applyFilter
     - AppSyncManager
-    - bindEvents
+    - bindDelegatedEvents
     - containerHTML
     - emptyHintHTML
     - EventSelf

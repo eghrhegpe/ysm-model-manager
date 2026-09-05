@@ -169,28 +169,15 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 	if err := a.saveConfig(cfg); err != nil {
 		return err
 	}
-	// 技术债 #4：保存成功后同步内存 LinkMode（与 SetLinkMode 同模式）——
+	// 保存成功后同步内存 LinkMode（与 SetLinkMode 同模式）——
 	// 原实现写盘后 installer 安装仍用旧链接模式直到重启（GetLinkMode 读 a.LinkMode）
 	a.install.SyncLinkMode(cfg.LinkMode)
-	// 技术债 #4：FilesRoot/McRoot 变化后重启 watcher——原 restartWatcher 是无调用点死代码，
-	// 保存后 watcher 仍监听旧目录（文件变更不再触发自动同步）；saveConfig 已更新 configCache，
-	// 故 GetRepoRoot 返回新 FilesRoot 推导的 ysm 根。
-	// 仅当 ysm root 或 McRoot 实际变化才重启——原无条件重启使
-	// theme-only/link-mode-only 保存（前端 settings 每次保存都调）拆除重建 watcher（全仓
-	// WalkDir 同步 + 自动同步窗口）；Start 失败返回错误而非 println 静默假成功
-	rootChanged := cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot
-	if rootChanged {
-		// GetRepoRoot 失败时原实现静默跳过——watcher 已 Stop
-		// 新 watcher 未起，自动同步永久丢失且 SaveAppConfig 假成功；改返回 error
-		ysmRoot, err := a.GetRepoRoot("ysm")
-		if err != nil {
-			return fmt.Errorf("GetRepoRoot 失败，watcher 未重启: %w", err)
-		}
-		if err := a.restartWatcher(ysmRoot, cfg.McRoot); err != nil {
-			return err
-		}
-		// 预创建所有类型存储子目录：用户改根路径后期望整棵类型树立即落在磁盘
-		if err := a.EnsureStorageDirs(); err != nil {
+	// FilesRoot/McRoot 变化后重启 watcher：
+	// - 原 restartWatcher 是无调用点死代码，保存后 watcher 仍监听旧目录
+	// - 仅当实际变化才重启（防 theme-only/link-mode-only 保存触发全仓 WalkDir）
+	// - Start 失败返回 error（原 println 静默会导致 watcher 永久丢失）
+	if cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot {
+		if err := a.rebuildWatcherAndDirs(&cfg); err != nil {
 			return err
 		}
 	}
@@ -211,6 +198,20 @@ func (a *App) SaveThresholds(checkIntervalMs int, logMaxEntries int) error {
 	cfg.UpdateCheckIntervalMs = checkIntervalMs
 	cfg.LogMaxEntries = logMaxEntries
 	return a.saveConfig(cfg)
+}
+
+// rebuildWatcherAndDirs 根路径变化后重建 watcher + 预创建存储子目录。
+// 拆分为独立函数：saveConfig 只负责写盘+LinkMode同步，watcher重建是副作用清晰的独立操作。
+func (a *App) rebuildWatcherAndDirs(cfg *types.AppConfig) error {
+	ysmRoot, err := a.GetRepoRoot("ysm")
+	if err != nil {
+		return fmt.Errorf("GetRepoRoot 失败，watcher 未重启: %w", err)
+	}
+	if err := a.restartWatcher(ysmRoot, cfg.McRoot); err != nil {
+		return err
+	}
+	// 预创建所有类型存储子目录：用户改根路径后期望整棵类型树立即落在磁盘
+	return a.EnsureStorageDirs()
 }
 
 func (a *App) restartWatcher(filesRoot, mcRoot string) error {

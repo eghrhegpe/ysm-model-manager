@@ -117,7 +117,6 @@ auto_fields:
     - bindCardEvents
     - bindDragEvents
     - bindEditEvents
-    - bindEvents
     - bindFooter
     - bindInputHandlers
     - bindPackCardDnD

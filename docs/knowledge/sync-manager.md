@@ -24,7 +24,7 @@ auto_fields:
     - appSidebarStyle
     - AppSyncManager
     - bindCardEvents
-    - bindEvents
+    - bindDelegatedEvents
     - bindFooter
     - containerHTML
     - emptyHintHTML

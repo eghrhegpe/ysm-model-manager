@@ -17,12 +17,11 @@ import type { LightCapability } from "../caps/light-capability.ts";
 import type { ShadowCapability } from "../caps/shadow-capability.ts";
 import type { PreviewMenuHandle } from "../menu/core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { mergeStatsMenuItems } from "../menu/stats.ts";
 import { safeDispose } from "../safe-dispose.ts";
-import { collectSceneStats } from "../scene-stats.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import { showLoadFailure } from "./preview-loading.ts";
+import { registerBuiltScene } from "./register-built-scene.ts";
 import { MAX_MODELS, sceneRegistry } from "./scene-registry.ts";
 
 // ---------------------------------------------------------------------------
@@ -320,22 +319,17 @@ function registerSwitchScene(
   containerMeta?: { displayName?: string; components?: string[] },
 ): PreviewMenuNode[] {
   if (beforeBuild) {
-    const added = ctx.scene ? ctx.scene.children.filter((c) => !beforeBuild.has(c)) : [];
-    // ADR-131 P1：切换模型后重新采集统计，合并统计面板进注册表 menuItems
-    const stats = collectSceneStats(added);
-    const menuItems = mergeStatsMenuItems(next.menuItems, stats);
-    sceneRegistry.register({
+    // 差量捕获→统计合并→注册：与 mount 初载共用 register-built-scene.ts 单一实现
+    // （锐评 P1-2 收敛；ADR-131 P1 统计面板 / ADR-093 T2 注册即置活跃）
+    return registerBuiltScene({
       path: newPath,
       rtype: ctx.getCurrentRtype?.() ?? "",
-      roots: added,
       content: next,
-      boneMaps: next.boneMaps ?? null,
-      menuItems,
-      onBonePick: next.onBonePick ?? null,
+      scene: ctx.scene,
+      diffSet: beforeBuild,
       displayName: containerMeta?.displayName,
       components: containerMeta?.components,
     });
-    return menuItems;
   }
   sceneRegistry.register({ path: newPath, rtype: "", roots: [], content: next });
   return [];

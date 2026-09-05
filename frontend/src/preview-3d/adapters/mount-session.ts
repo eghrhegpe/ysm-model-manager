@@ -139,13 +139,43 @@ export function closeOverlay(ctx: MountCtx): void {
   ctx.session.isDisposed.v = true;
   document.removeEventListener("keydown", ctx.session.escH);
   // 早期路径（cleanupFn 尚未赋值）：清理 tip 定时器 + 菜单，再拆 overlay
-  if (ctx.session.tipTimeoutId) {
-    clearTimeout(ctx.session.tipTimeoutId);
-    ctx.session.tipTimeoutId = undefined;
-  }
+  clearTipTimer(ctx.session);
   ctx.menuHandle.dispose();
   if (ctx.overlay?.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
   finishSession(ctx);
+}
+
+/** ② 提示条定时器清除（closeOverlay / runFailedMountCleanup / runFullCleanup 三路共用）。 */
+function clearTipTimer(session: MpSessionState): void {
+  if (session.tipTimeoutId) {
+    clearTimeout(session.tipTimeoutId);
+    session.tipTimeoutId = undefined;
+  }
+}
+
+/**
+ * ⑦ 输入监听解绑 + perFrame/rAF 收尾（runFullCleanup 与 runFailedMountCleanup 共用段）。
+ * bindInputHandlers 已注册于 build 前；漏解绑跨会话累积。removePerFrame 对未注册回调
+ * 为 no-op 安全；若这是唯一活跃会话则停全局 rAF。
+ */
+function unbindInputsAndStopLoop(ctx: MountCtx): void {
+  const session = ctx.session;
+  const h = ctx.handlers;
+  document.removeEventListener("keydown", h.onKeyDown);
+  document.removeEventListener("keyup", h.onKeyUp);
+  window.removeEventListener("pointerup", h.onDragPointerUp);
+  window.removeEventListener("pointermove", h.onDragPointerMove);
+  window.removeEventListener("resize", h.onResize);
+  h.cancelPendingResize?.(); // 取消已在途 resize rAF 帧（容器已拆，防幽灵 setSize）
+  const infra = ctx.getInfra();
+  if (infra) {
+    infra.renderer.domElement.removeEventListener("pointerdown", h.onDragPointerDown);
+    if (session.onUnifiedPick)
+      infra.renderer.domElement.removeEventListener("click", session.onUnifiedPick);
+  }
+  // 从全局 perFrame 回调列表移除本 session；全部清空后停 rAF
+  if (session.perFrame) removePerFrame(session.perFrame);
+  stopIfIdle();
 }
 
 /**
@@ -154,45 +184,28 @@ export function closeOverlay(ctx: MountCtx): void {
  * 用户需能看到失败原因），不清场景能力/纹理缓存（可能被其他活跃会话共享）——
  * 只解绑本会话已注册的输入监听 + 停 rAF + 拆菜单 + 清 tip 定时器，防止跨会话累积泄漏。
  *
- * 复刻 runFullCleanup 的 ②③⑦ + perFrame/rAF 收尾段；① escH 与 ⑥ content/scene
- * 差量由调用方（catch 段）自行处理（顺序：先解绑监听再拆资源）。
+ * 复用 runFullCleanup 的 ②③⑦ 共用段；① escH 与 ⑥ content/scene 差量由调用方
+ * （catch 段）自行处理（顺序：先解绑监听再拆资源）。
+ * 注意：不调 finishSession——失败后会话仍存活（用户看错误提示后 ESC 走 closeOverlay）。
  */
 export function runFailedMountCleanup(ctx: MountCtx): void {
   const session = ctx.session;
   // 终止标志置位（同 runFullCleanup/closeOverlay）
   session.isDisposed.v = true;
   // ② 提示条定时器（成功路径由 timeout 自移除；失败时取消避免迟到移除）
-  if (session.tipTimeoutId) {
-    clearTimeout(session.tipTimeoutId);
-    session.tipTimeoutId = undefined;
-  }
+  clearTipTimer(session);
   // ③ 声明式根菜单（移除 dock/popup + 解绑 view click 监听）
   ctx.menuHandle.dispose();
-  // ⑦ 输入监听解绑（bindInputHandlers 已注册于 build 前；漏解绑跨会话累积）
-  const h = ctx.handlers;
-  document.removeEventListener("keydown", h.onKeyDown);
-  document.removeEventListener("keyup", h.onKeyUp);
-  window.removeEventListener("pointerup", h.onDragPointerUp);
-  window.removeEventListener("pointermove", h.onDragPointerMove);
-  window.removeEventListener("resize", h.onResize);
-  h.cancelPendingResize?.();
-  const infra = ctx.getInfra();
-  if (infra) {
-    infra.renderer.domElement.removeEventListener("pointerdown", h.onDragPointerDown);
-    if (session.onUnifiedPick)
-      infra.renderer.domElement.removeEventListener("click", session.onUnifiedPick);
-  }
-  // perFrame/rAF 收尾：移除本 session 回调（失败时 content 未成功注册 perFrame，
-  // removePerFrame 为 no-op 安全）；若这是唯一活跃会话则停全局 rAF
-  if (session.perFrame) removePerFrame(session.perFrame);
-  stopIfIdle();
+  // ⑦ 输入监听解绑 + perFrame/rAF 收尾（runFullCleanup 同段共用）
+  unbindInputsAndStopLoop(ctx);
 }
 
 /**
  * 完整清理（原 mount3D 内嵌 fullCleanup，P0 修复：中止/退出路径完整拆除 DOM + 解绑监听，防泄漏）。
  * ① ESC 监听器（escH 可能已被 switchTo 替换，移除当前引用）→ ② 提示条定时器 →
  * ③ 声式根菜单 → ④ viewContainer → ⑤ overlay + 单例清零 → ⑥ 内容层 dispose + scene 差量
- * 清理 → ⑦ 输入监听解绑 → ⑧ 场景能力 save/dispose → ⑨ 纹理缓存 → perFrame/rAF 收尾。
+ * 清理 → ⑦ 输入监听解绑 + perFrame/rAF 收尾（与 runFailedMountCleanup 共用段）→
+ * ⑧ 场景能力 save/dispose → ⑨ 纹理缓存 → loadingEl 兜底 → finishSession。
  */
 export function runFullCleanup(ctx: MountCtx): void {
   const session = ctx.session;
@@ -201,10 +214,7 @@ export function runFullCleanup(ctx: MountCtx): void {
   // ① ESC 监听器（escH 经 switchTo 可能已被替换，移除当前引用）
   document.removeEventListener("keydown", session.escH);
   // ② 提示条定时器
-  if (session.tipTimeoutId) {
-    clearTimeout(session.tipTimeoutId);
-    session.tipTimeoutId = undefined;
-  }
+  clearTipTimer(session);
   // ③ 声式根菜单（移除 dock/popup + 解绑 view click 监听）
   ctx.menuHandle.dispose();
   // ④ viewContainer（含 loadingEl；首次挂载时可能含 renderer.domElement）
@@ -226,19 +236,8 @@ export function runFullCleanup(ctx: MountCtx): void {
   }
   session.allContent.length = 0;
   sceneRegistry.reset();
-  // ⑦ 输入监听解绑（bindInputHandlers 内注册）——旧实现漏解绑，跨会话累积
-  const h = ctx.handlers;
-  document.removeEventListener("keydown", h.onKeyDown);
-  document.removeEventListener("keyup", h.onKeyUp);
-  window.removeEventListener("pointerup", h.onDragPointerUp);
-  window.removeEventListener("pointermove", h.onDragPointerMove);
-  window.removeEventListener("resize", h.onResize);
-  h.cancelPendingResize?.(); // 取消已在途 resize rAF 帧（容器已拆，防幽灵 setSize）
-  if (infra) {
-    infra.renderer.domElement.removeEventListener("pointerdown", h.onDragPointerDown);
-    if (session.onUnifiedPick)
-      infra.renderer.domElement.removeEventListener("click", session.onUnifiedPick);
-  }
+  // ⑦ 输入监听解绑 + perFrame/rAF 收尾（runFailedMountCleanup 同段共用）
+  unbindInputsAndStopLoop(ctx);
   // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用
   sceneCapabilityRegistry.saveAll();
   sceneCapabilityRegistry.dispose();
@@ -252,9 +251,6 @@ export function runFullCleanup(ctx: MountCtx): void {
   setPerceptionPaused(false);
   // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
   if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();
-  // 从全局 perFrame 回调列表移除本 session；全部清空后停 rAF
-  if (session.perFrame) removePerFrame(session.perFrame);
-  stopIfIdle();
   // 收尾：摘句柄 + 通知调用方 + 焦点归还（幂等，与 closeOverlay 共用同一出口）
   finishSession(ctx);
 }

@@ -35,7 +35,6 @@ import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { TdKeyAction } from "../keymap.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx, type PreviewMenuHandle } from "../menu/core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { mergeStatsMenuItems } from "../menu/stats.ts";
 import { type BoneMaps, type BoneSelectInfo, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
 import {
   onOverlayStyleTargetReset,
@@ -43,7 +42,6 @@ import {
   setOverlayStyleTarget,
 } from "../overlay-style-bridge.ts";
 import { safeDispose } from "../safe-dispose.ts";
-import { collectSceneStats } from "../scene-stats.ts";
 import type { SemanticBoneMap } from "../semantic-bones.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { InputOptions } from "./input-and-animation.ts";
@@ -58,6 +56,7 @@ import {
   unloadSessionModel,
 } from "./mount-session.ts";
 import { showLoadFailure } from "./preview-loading.ts";
+import { registerBuiltScene } from "./register-built-scene.ts";
 import {
   registerPerFrame,
   removePerFrame,
@@ -748,7 +747,7 @@ function buildInfra(
       keys,
       getOrbitMode: () => session.orbitMode,
       mouseDown, // 共享引用容器（非快照）：camBridge 与 input 同写一处
-      lastMouse: { x: lastMouse.x, y: lastMouse.y },
+      lastMouse, // 同上：坐标状态归 input 独占读写，传引用消灭快照双轨（壳层容器即唯一事实源）
       euler: session.euler,
       camera: infra.camera,
       renderer: infra.renderer,
@@ -936,24 +935,15 @@ async function runBuild(
   // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
   // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
   if (session.content) session.allContent.push(session.content);
-  // ADR-093 T2：首模型注册进场景注册表（roots 经 scene.children 差量捕获）
+  // ADR-093 T2：首模型注册进场景注册表（差量捕获→统计合并→注册，与 switchTo 共用
+  // register-built-scene.ts 单一实现，锐评 P1-2 收敛）
   if (session.content) {
-    const added =
-      infra && session.sceneBaseline
-        ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-        : [];
-    // ADR-131 P1：post-build 采集场景统计，合并统计面板进菜单（「能渲染就能出统计」）
-    const stats = collectSceneStats(added);
-    const menuItems = mergeStatsMenuItems(session.content.menuItems, stats);
-    sceneRegistry.register({
+    const menuItems = registerBuiltScene({
       path: session.currentPath,
       rtype: ctx.opts.rtype ?? ctx.adapter.id,
-      roots: added,
       content: session.content,
-      boneMaps: session.content.boneMaps ?? null,
-      menuItems,
-      onBonePick: session.content.onBonePick ?? null,
+      scene: infra?.scene,
+      diffSet: session.sceneBaseline,
       displayName: ctx.opts.displayName,
       components: ctx.opts.components,
     });

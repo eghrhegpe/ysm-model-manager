@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 168 张知识卡
+> 总计: 171 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -31,7 +31,7 @@
 - **scripts_jscpd_go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd…
 - **scripts_readme_index**（README 登记处对账 check-readme-index.mjs）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（20 张）
+## core（21 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -40,6 +40,7 @@
 | 🏗 android-bridge | Android 桥接层：存储授权 + 目录选择器 | architecture | — | Android, 存储授权, 目录选择, MANAGE_EXTERNAL_STORAGE, SAF |
 | 🏗 android-events | Android 系统事件消费（back/网络/存储授权） | architecture | — | android:back, 返回键, 弹窗, 系统事件, ScreenLocked, NetworkChanged |
 | 🏗 backend-idb | 浏览器后端 IndexedDB 封装 | architecture | io-bound | IndexedDB, 网页版, backend, 模型库, browser adapter, web mode |
+| 🍃 backend-runtime | Wails runtime 抽象 backend-runtime | leaf | — | Wails 事件订阅, Wails 窗口操作, 桌面/网页版运行时切换, no-op 桩消费 |
 | 🏗 backend_web | 网页版后端 backend-web | architecture | — | 网页版, 浏览器模式, browser adapter, IndexedDB, 跨域隔离 |
 | 🏗 binding_json_cleanup | string-JSON 绑定铲债清单 | architecture | — | string-JSON, JSON.parse 断言, 绑定 struct 化, 铲债清单, 错误通道统一, ADR-143, 绑定返回 string |
 | 🏗 event-bus | 事件总线 bus.ts | architecture | — | 事件, 事件总线, 通信, emit, 跨组件通信, bus |
@@ -63,6 +64,7 @@
 - **android-bridge**（Android 桥接层：存储授权 + 目录选择器）：Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 WebView，桌面端无此桥返回 `null`）与跨平台目录选择器。解决 Android 上 Wails 官方**拒绝目录选择**（…
 - **android-events**（Android 系统事件消费（back/网络/存储授权））：前端消费 Java 层经 Wails 事件总线转发的 `android:*` 系统事件（ADR-046 P2，参照 MikuMikuAR ADR-017 A3-04）。桌面端无 Java 层，这些事件永不触发，注册无害。生命周期由 `reg…
 - **backend-idb**（浏览器后端 IndexedDB 封装）：`backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id…
+- **backend-runtime**（Wails runtime 抽象 backend-runtime）：`@wailsio/runtime` 统一桥（ADR-049 Phase 1 收尾：value import 全量迁移）。业务模块禁止再直 import `@wailsio/runtime`；统一经此桥，桌面走真 runtime、网页版（无…
 - **binding_json_cleanup**（string-JSON 绑定铲债清单）：ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struc…
 - **event-graph-guard**（Bus 事件契约守卫）：`scripts/event-graph.ts` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
 - **frontend_parsers**（解析簇 parsers/ 自 backend 迁出）：`frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel）、zip 解包、pack.mcmeta、方块颜色映射六类解析器。真叶子层——…
@@ -76,15 +78,17 @@
 - **theme**（主题系统 theme）：主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/init…
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
-## feature（15 张）
+## feature（17 张）
 
 *业务功能（导入队列、同步、社区）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🏗 community-feature | 社区下载 community | architecture | io-bound | 创意工坊, 社区, 下载队列, 镜像源, 批量下载, github 仓库, 下载进度, workshop |
+| 🍃 community-virtual-list | 社区虚拟滚动 community-virtual-list | leaf | cpu-bound, io-bound | 社区模型列表, 虚拟滚动, 定高列表窗口化, 大索引列表性能优化 |
 | 🍃 dnd-shared | 拖拽平台适配 dnd-shared | leaf | — | 拖拽导入, DnD 文件收集, 文件夹整组分组, File → base64 编码, 导入支持文件判定 |
 | 🏗 download-queue-store | 下载队列状态机 download-queue-store | architecture | — | 下载队列状态, 入队 / 取消 / 恢复, Wails 进度事件, 社区下载状态层 |
+| 🍃 download-tasks | 下载任务执行层 download-tasks | leaf | — | 下载任务构建, 下载大小策略, 选中集转下载任务, 社区下载前置决策 |
 | 🏗 export | 截图导出 export | architecture | — | 截图, 导出 PNG, 多角度截图, 透明背景, 预览缓存, blob URL, saveScreenshot, renderMultiAngle |
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
 | 🏗 oldest-models | 资历最深模型 oldest-models | architecture | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
@@ -101,8 +105,10 @@
 ### 摘要
 
 - **community-feature**（社区下载 community）：`features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，五个文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染站点卡片与模型列表、`e…
+- **community-virtual-list**（社区虚拟滚动 community-virtual-list）：定高虚拟列表（工坊模型列表窗口化）。社区上线后仓库模型索引可能顶到 2000 级，全量渲染 DOM 会爆炸。策略：占位式——列表容器 `paddingTop`/`paddingBottom` 撑出总高，DOM 常驻仅可见切片 ± 缓冲行。兼…
 - **dnd-shared**（拖拽平台适配 dnd-shared）：拖拽导入共享逻辑层。解决 WebView2 特殊性（dragover 读不到文件名、drop 用 webkitGetAsEntry、entry.file Promise 化、DataTransferItem 无 name）的同时，为 `im…
-- **download-queue-store**（下载队列状态机 download-queue-store）：创意工坊批量下载队列的状态层（模块级 Store）。ADR-040 ≤400 行红线拆分产物：自 `download-queue.ts`（829 行）拆出，类型 / STATE / Go 调用 / 后端事件注册全部内聚于此。v2：模块级持久…
+- **download-queue-store**（下载队列状态机 download-queue-store）：创意工坊批量下载队列的状态层（模块级 Store）。ADR-040 ≤400 行红线拆分产物：自 `download-queue.ts`（原超长文件）拆出，类型 / STATE / Go 调用 / 后端事件注册全部内聚于此。v2：模块级持久…
+- **download-tasks**（下载任务执行层 download-tasks）：创意工坊下载任务构建 + 大小策略纯函数层。自 `community/events.ts` 抽出：下载大小决策（4MB 确认 / 10MB 拒绝）与选中集 → 下载任务列表的构建逻辑，供单测覆盖（ADR-023 L3）。与 `downloa…
 - **export**（截图导出 export）：> **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到…
 - **import-queue**（全局导入执行 import-executor）：**2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex…
 - **oldest-models**（资历最深模型 oldest-models）：`oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按…
@@ -398,8 +404,8 @@
 
 | 标签 | 含义 | 卡片 |
 |------|------|------|
-| io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, rustbridge, version-updater |
-| cpu-bound | CPU 密集（解析/编译/解算/编码） | 3d-oversize-file-codesplit-feasibility, animation-system, app_content_diagnostics, bone-tools, go-threejs, ground-cap-materialgroup-factories, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-wasm |
+| io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, rustbridge, version-updater |
+| cpu-bound | CPU 密集（解析/编译/解算/编码） | 3d-oversize-file-codesplit-feasibility, animation-system, app_content_diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-wasm |
 | gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, model3d, mount3d-584-giant, multi_model_select, optimization_log, preview_core, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
 | concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app_content_diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, optimization_log, rustbridge, worker-bridge-settleerror-fallback |
 | memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, model3d, optimization_log, utils-export |

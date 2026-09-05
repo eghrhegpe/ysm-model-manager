@@ -1068,6 +1068,10 @@ export const autoSidebar = [
             "link": "/knowledge/backend-idb"
           },
           {
+            "text": "Wails runtime 抽象 backend-runtime",
+            "link": "/knowledge/backend-runtime"
+          },
+          {
             "text": "string-JSON 绑定铲债清单",
             "link": "/knowledge/binding_json_cleanup"
           },
@@ -1478,12 +1482,20 @@ export const autoSidebar = [
             "link": "/knowledge/community-feature"
           },
           {
+            "text": "社区虚拟滚动 community-virtual-list",
+            "link": "/knowledge/community-virtual-list"
+          },
+          {
             "text": "拖拽平台适配 dnd-shared",
             "link": "/knowledge/dnd-shared"
           },
           {
             "text": "下载队列状态机 download-queue-store",
             "link": "/knowledge/download-queue-store"
+          },
+          {
+            "text": "下载任务执行层 download-tasks",
+            "link": "/knowledge/download-tasks"
           },
           {
             "text": "截图导出 export",

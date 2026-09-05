@@ -147,7 +147,11 @@ function renderCapToggle(parent: HTMLElement, c: MenuControlDef): void {
   labelBox.append(label, hint);
   const toggle = createHeaderToggle({
     value: c.getValue() as boolean,
-    onChange: (v: boolean): void => c.setValue(v),
+    onChange: (v: boolean): void => {
+      c.setValue(v);
+      // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
+      c.onChange?.(v);
+    },
     bind: (): boolean => c.getValue() as boolean,
   });
   row.append(labelBox, toggle);
@@ -168,7 +172,7 @@ export function formatCapSliderValue(c: MenuControlDef, v: number): string {
   return v.toFixed(2);
 }
 
-/** slider：label + 当前值 + range 拖动 */
+/** slider：label + 当前值 + range 拖动（[控件原语归一] 收编 rmAppendSlider：numeric 数字输入 + onChange 钩子） */
 function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
@@ -189,21 +193,50 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
   slider.step = String(c.slider?.step ?? 0.01);
   slider.value = String(numVal);
   slider.className = "cc-range";
+  // [控件原语归一] numeric：旁挂数字输入框（双向联动，onchange 走 min/max clamp——litematic 分层语义）
+  let num: HTMLInputElement | null = null;
+  if (c.slider?.numeric) {
+    num = document.createElement("input");
+    num.type = "number";
+    num.min = slider.min;
+    num.max = slider.max;
+    num.step = slider.step;
+    num.value = String(numVal);
+    num.className = "rm-range-num";
+  }
   slider.oninput = (): void => {
     const v = Number(slider.value);
     c.setValue(v);
     val.textContent = formatCapSliderValue(c, v);
+    if (num) num.value = String(v);
+    c.onChange?.(v);
   };
+  if (num) {
+    // const 收窄替代非空断言：num 在 if 块内确定存在，捕获为 numEl 供闭包引用（TS 对 const 收窄生效）
+    const numEl = num;
+    numEl.onchange = (): void => {
+      const n = Number(numEl.value);
+      const v = Number.isFinite(n)
+        ? Math.max(Number(slider.min), Math.min(Number(slider.max), n))
+        : Number(slider.value);
+      slider.value = String(v);
+      numEl.value = String(v);
+      c.setValue(v);
+      val.textContent = formatCapSliderValue(c, v);
+      c.onChange?.(v);
+    };
+  }
   // slider 提交（松手/change）：高频拖拽在 oninput 已写值，此处只做离散提交回调
   // （如 pixel-ratio 提交时 notify）。未声明 onCommit 的 slider 行为不变。
   slider.onchange = (): void => {
     c.slider?.onCommit?.(Number(slider.value));
   };
   row.append(head, slider);
+  if (num) row.append(num);
   parent.appendChild(row);
 }
 
-/** select：label + 下拉选择 */
+/** select：label + 下拉选择（[控件原语归一] 收编 rmAppendSelect：onChange 钩子） */
 function renderCapSelect(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
@@ -220,7 +253,12 @@ function renderCapSelect(parent: HTMLElement, c: MenuControlDef): void {
     sel.appendChild(o);
   }
   sel.value = String(c.getValue());
-  sel.onchange = (): void => c.setValue(sel.value);
+  sel.onchange = (): void => {
+    const v = sel.value;
+    c.setValue(v);
+    // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
+    c.onChange?.(v);
+  };
   row.append(label, sel);
   parent.appendChild(row);
 }
@@ -492,18 +530,17 @@ function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
 }
 
 /**
- * [doc:adr-125 P3] 枚举控件中的条件显隐谓词。
+ * 枚举控件中的条件显隐谓词（B 轨 visibleWhen 唯一形式）。
  *
  * 纯函数（不依赖注册表），供契约测试锁定「全仓共有几个隐藏逻辑、各自行为如何」——
  * 杜绝条件显隐散落各 cap 工厂内部而无集中清单的「隐藏逻辑无人知道」状况。
  *
- * P3 规定条件显隐只允许两种形式：
- *   1. cap 内 `visible`（必须基于自身 params，**禁止跨 cap 探查**）
- *   2. 声明式节点上的 `visibleWhen(s)`（吃状态层快照的纯函数）
- * 禁止在 schema 构建期以 `if (cap)` 做条件插入（声明期求值 → cap 后创建则永不可见）。
+ * [铁律收口] 2026-09 A 轨 `visible` 闭包已整体删除：条件显隐只允许 visibleWhen（吃状态层快照
+ * 的纯函数，不摸 cap 实例）。collectVisiblePredicates 现只收 visibleWhen——与
+ * AGENTS.md「3d菜单只允许 visibleWhen」对齐。
  */
 export function collectVisiblePredicates(controls: MenuControlDef[]): MenuControlDef[] {
-  return controls.filter((c) => typeof c.visible === "function");
+  return controls.filter((c) => typeof c.visibleWhen === "function");
 }
 
 export function renderCapControls(
@@ -516,8 +553,8 @@ export function renderCapControls(
   // kind 分派：divider 无 group 挂顶层作组间分隔；其余控件挂 (target ?? list)（有 group 挂 body，无 group 挂顶层）。签名不可动，本函数只做纯分派。
   const sectionMap = new Map<string, CapSectionShell>();
   for (const c of controls) {
-    if (c.visible && !c.visible()) continue; // A 轨：条件隐藏控件（闭包依赖 cap params）跳过
-    // B 轨：状态层快照谓词 visibleWhen(s)——吃 previewSnapshot()，与 A 轨 AND（皆通过才显示）
+    // B 轨唯一：状态层快照谓词 visibleWhen(s)——[铁律收口] A 轨 visible 闭包已删除（2026-09），
+    // 条件显隐只允许 visibleWhen。无 snapshot 传入（纯 DOM 冒烟/早期调用）时跳过求值保留渲染。
     if (c.visibleWhen && snapshot && !c.visibleWhen(snapshot)) continue;
     const parent = ensureCapSection(sectionMap, list, c.group) ?? list;
     switch (c.kind) {

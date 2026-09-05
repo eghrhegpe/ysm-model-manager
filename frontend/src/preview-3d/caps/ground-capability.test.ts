@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from "vitest";
 import * as THREE from "three";
 import { GroundCapability, DEFAULT_GROUND_PARAMS } from "./ground-capability.ts";
 import { persistState } from "./scene-capability.ts";
+import type { PreviewSnapshot } from "../state/preview-paths.ts";
 
 describe("GroundCapability", () => {
   it("apply 挂入场景（GridHelper + 名称 ysm-ground），默认可见", () => {
@@ -73,22 +74,22 @@ describe("GroundCapability — getMenuControls 分组", () => {
   });
 });
 
-describe("GroundCapability — 材质控件按 matSource 条件显隐", () => {
-  it("默认 matSource=none：仅 source 门控可见，其余材质控件隐藏；切源后 viz 跟随", () => {
+describe("GroundCapability — 材质控件按 matSource 条件显隐（visibleWhen B 轨）", () => {
+  it("默认 matSource=none：仅 source 门控可见，其余材质控件隐藏；快照切源后 viz 跟随", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const controls = cap.getMenuControls();
     const source = controls.find((c) => c.id === "ground-mat-source")!;
     const color = controls.find((c) => c.id === "ground-mat-color")!;
     const texBtn = controls.find((c) => c.id === "ground-mat-texture")!;
-    expect(source.visible).toBeUndefined(); // 门控 select 常显
-    expect(color.visible?.()).toBe(false); // none → 隐藏
-    expect(texBtn.visible?.()).toBe(false); // none → 隐藏
-    cap.setMatSource("checker");
-    expect(color.visible?.()).toBe(true);
-    expect(texBtn.visible?.()).toBe(false); // checker 仍非 texture
-    cap.setMatSource("texture");
-    expect(texBtn.visible?.()).toBe(true); // 仅 texture 模式显贴图按钮
+    // [铁律收口] 谓词吃状态层快照 env.groundMatSource（纯函数，不摸 cap 实例）
+    expect(source.visibleWhen).toBeUndefined(); // 门控 select 常显
+    const snap = (src: string) => ({ "env.groundMatSource": src } as Partial<PreviewSnapshot>);
+    expect(color.visibleWhen?.(snap("none"))).toBe(false); // none → 隐藏
+    expect(texBtn.visibleWhen?.(snap("none"))).toBe(false); // none → 隐藏
+    expect(color.visibleWhen?.(snap("checker"))).toBe(true);
+    expect(texBtn.visibleWhen?.(snap("checker"))).toBe(false); // checker 仍非 texture
+    expect(texBtn.visibleWhen?.(snap("texture"))).toBe(true); // 仅 texture 模式显贴图按钮
   });
 });
 
@@ -413,22 +414,23 @@ describe("GroundCapability — 菜单控件联动", () => {
     expect(by("ground-mat-metalness").getValue()).toBe(0.2);
   });
 
-  it("button 控件：getValue null、setValue no-op、visible 随模式切换", () => {
+  it("button 控件：getValue null、setValue no-op、visibleWhen 随模式切换", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const pick = cap.getMenuControls().find((c) => c.id === "ground-mat-texture")!;
     const clear = cap.getMenuControls().find((c) => c.id === "ground-mat-clear")!;
+    const snap = (src: string) => ({ "env.groundMatSource": src } as Partial<PreviewSnapshot>);
     // none 模式隐藏
-    expect(pick.visible?.()).toBe(false);
-    expect(clear.visible?.()).toBe(false);
+    expect(pick.visibleWhen?.(snap("none"))).toBe(false);
+    expect(clear.visibleWhen?.(snap("none"))).toBe(false);
     expect(pick.getValue()).toBeNull();
     expect(() => pick.setValue("x")).not.toThrow();
     expect(() => clear.setValue("x")).not.toThrow();
     // texture 模式显示
+    expect(pick.visibleWhen?.(snap("texture"))).toBe(true);
+    expect(clear.visibleWhen?.(snap("texture"))).toBe(true);
+    // 清除按钮 action：真实状态切换（cap 需处于 texture 才回 plain）
     cap.setMatSource("texture");
-    expect(pick.visible?.()).toBe(true);
-    expect(clear.visible?.()).toBe(true);
-    // 清除按钮 action → clearCustomTexture 回 plain
     clear.button!.action!();
     expect(cap.getMatSource()).toBe("plain");
   });

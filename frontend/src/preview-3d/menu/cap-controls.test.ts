@@ -71,16 +71,20 @@ describe("renderCapControls — visibleWhen B 轨谓词", () => {
     expect(list2.querySelector('[data-testid="cap-pool-only"]')).not.toBeNull();
   });
 
-  it("无 snapshot 时 visibleWhen 被忽略（保留 A 轨行为），控件正常渲染", () => {
+  it("无 snapshot 时 visibleWhen 被忽略，控件正常渲染（纯 B 轨容错：早期调用/DOM 冒烟不判藏）", () => {
     const list = document.createElement("div");
     renderCapControls(list, [toggle("x", { visibleWhen: () => false })]);
     expect(list.querySelector('[data-testid="cap-x"]')).not.toBeNull();
   });
 
-  it("A 轨 visible 与 B 轨 visibleWhen 并存时 AND", () => {
+  it("[铁律收口] only visibleWhen：A 轨 visible 已整体删除，控件谓词只吃快照", () => {
+    // 控件声明里不再存在可用的 visible 闭包字段（类型层已删）；以下断言谓词求值纯函数性：
+    // film 快照下 pool-only 隐藏（与「传 snapshot 时按 visibleWhen 隐藏/显示」同构，锁定 B 轨唯一入口）
     const list = document.createElement("div");
-    renderCapControls(list, [toggle("y", { visible: () => true, visibleWhen: (s) => s["env.waterMode"] === "pool" })], snap("film"));
-    expect(list.querySelector('[data-testid="cap-y"]')).toBeNull();
+    renderCapControls(list, [
+      toggle("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+    ], snap("film"));
+    expect(list.querySelector('[data-testid="cap-pool-only"]')).toBeNull();
   });
 });
 

@@ -407,6 +407,9 @@ export class SkyCapability implements SceneCapability {
       if (this.renderTarget) this.renderTarget.dispose();
       this.renderTarget = this.ensurePMREM().fromScene(this.envScene);
       this.scene.environment = this.renderTarget.texture;
+      // 同步阈值基准：任何重建路径（手动 forceEnv / 循环阈值命中 / setSun / preset）
+      // 都以此时太阳高度角为新的门控基准，避免循环在手动调参后首帧冗余重建。
+      this.lastPmremElevation = this.params.elevation;
     } catch (e) {
       console.error("[sky] 环境贴图生成失败:", e);
       // catch 后 renderTarget 可能悬空（fromScene 抛错时 renderTarget 已 dispose 但未重置）
@@ -510,6 +513,15 @@ export class SkyCapability implements SceneCapability {
   // 速度：约 1 小时/秒（24 秒一圈），夜间会自然转暗。
   private autoRotateOn = false;
   private static readonly AUTO_ROTATE_HOURS_PER_SEC = 1;
+  /**
+   * 上次 PMREM 环境贴图重建时的太阳高度角（°）。
+   * 昼夜循环下 setTime 每帧被 update(dt) 驱动——环境贴图重生是「立方体贴图 + mip 模糊」的
+   * 重活（锐评 P1 GPU 熔炉）：高度角变化未超阈值时不重建（IBL 反射差异肉眼不可辨），
+   * 手动 setTime（滑块/时间轴）走 forceEnv=true 强制刷新（拖动即见，体验不降级）。
+   * 初始 -999 保证首次 setTime 必然重建（无论手动或循环首帧）。
+   */
+  private lastPmremElevation = -999;
+  private static readonly PMREM_ELEVATION_THRESHOLD = 2.0; // 太阳高度角变化 ≥ 2° 才重建
 
   /** 启动昼夜循环；已开则 no-op（实际推进由 update(dt) 驱动） */
   startAutoRotate(): void {
@@ -527,10 +539,14 @@ export class SkyCapability implements SceneCapability {
   }
 
   /** SceneCapability.update(dt) 钩子（对齐 water-capability 用法）：dt 单位秒，
-   *  昼夜循环开启时按 1 小时/秒推进 timeOfDay；setTime 内部已取模 24。 */
+   *  昼夜循环开启时按 1 小时/秒推进 timeOfDay；setTime 内部已取模 24。
+   *  forceEnv=false：昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建
+   *  （锐评 P1 GPU 熔炉修复——每帧重生环境贴图是 rAF 热路径上的重活）。 */
   update(dt: number): void {
     if (!this.autoRotateOn) return;
-    this.setTime(this.params.timeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC);
+    this.setTime(this.params.timeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC, {
+      forceEnv: false,
+    });
   }
 
   /** 由 timeOfDay 推导太阳 elevation/azimuth（单一事实来源，避免与 setSun 双写冲突） */
@@ -561,14 +577,29 @@ export class SkyCapability implements SceneCapability {
     return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
   }
 
-  /** 按时间设置太阳位置（time-of-day），联动天空与 IBL 环境 */
-  setTime(hour: number): void {
+  /**
+   * 按时间设置太阳位置（time-of-day），联动天空与 IBL 环境。
+   * @param opts.forceEnv 是否强制重建 PMREM 环境贴图（默认 true——滑块/时间轴手动
+   *   setTime 都是用户主动调参，拖动即见 + 既有测试不改语义）；
+   *   传 false 走阈值门控：太阳高度角变化 < PMREM_ELEVATION_THRESHOLD 不重建
+   *   （昼夜循环 update(dt) 每帧调用，锐评 P1 GPU 熔炉修复）。
+   */
+  setTime(hour: number, opts?: { forceEnv?: boolean }): void {
     this.params.timeOfDay = ((hour % 24) + 24) % 24;
     this.syncSunFromTime();
     if (!this.enabled) return;
     this.writeUniforms(this.sky);
     this.writeUniforms(this.envSky);
-    if (this.params.environment) this.regenerateEnvironment();
+    if (this.params.environment) {
+      const forceEnv = opts?.forceEnv ?? true;
+      const el = this.params.elevation;
+      const dirty =
+        Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
+      if (forceEnv || dirty) {
+        this.regenerateEnvironment();
+        this.lastPmremElevation = el;
+      }
+    }
     // 更新 god rays 和 sunset tint
     this.updateGodRays();
     this.updateSunsetTint();

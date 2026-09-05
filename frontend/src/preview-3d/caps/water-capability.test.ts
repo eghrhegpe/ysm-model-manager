@@ -7,6 +7,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import * as THREE from "three";
 import { WaterCapability } from "./water-capability.ts";
 import { persistState } from "./scene-capability.ts";
+import type { PreviewSnapshot } from "../state/preview-paths.ts";
 
 // node 环境内存版 localStorage 跨用例共享，清理防污染（与 ground 拆分的持久化键互不串扰）
 afterEach(() => {
@@ -62,19 +63,20 @@ describe("WaterCapability", () => {
     expect(byGroup("preview.waterGroupWave")).toEqual(["ground-wave-speed"]);
   });
 
-  it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool", () => {
+  it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool（visibleWhen B 轨）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const controls = cap.getMenuControls();
     const wetness = controls.find((c) => c.id === "ground-wetness")!;
     const poolHeight = controls.find((c) => c.id === "ground-pool-height")!;
+    // [铁律收口] 谓词吃状态层快照 env.waterMode（纯函数，不摸 cap 实例）
+    const snap = (mode: string) => ({ "env.waterMode": mode } as Partial<PreviewSnapshot>);
     // 默认 film：wetness 可见，pool 系列隐藏
-    expect(wetness.visible?.()).toBe(true);
-    expect(poolHeight.visible?.()).toBe(false);
+    expect(wetness.visibleWhen?.(snap("film"))).toBe(true);
+    expect(poolHeight.visibleWhen?.(snap("film"))).toBe(false);
     // 切 pool：wetness 隐藏，pool 系列可见
-    cap.setWaterMode("pool");
-    expect(wetness.visible?.()).toBe(false);
-    expect(poolHeight.visible?.()).toBe(true);
+    expect(wetness.visibleWhen?.(snap("pool"))).toBe(false);
+    expect(poolHeight.visibleWhen?.(snap("pool"))).toBe(true);
   });
 
   it("getMenuControls 含 ground-normal-strength slider（group=preview.waterGroup）", () => {

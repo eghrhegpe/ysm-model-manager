@@ -50,12 +50,21 @@ const renderMenuStubDeps = {
 /** 最小 fake cap：仅实现状态层会探到的开关语义 + 自报控件 */
 function makeFakeCap(
   id: string,
-  opts: { controls?: MenuControlDef[]; env?: boolean; envMethods?: boolean } = {},
+  opts: {
+    controls?: MenuControlDef[];
+    env?: boolean;
+    envMethods?: boolean;
+    /** RenderModeCapability 的 wireframe 单项语义（getWireframe/setWireframe） */
+    wireframeMode?: boolean;
+  } = {},
 ): SceneCapability & {
   enabled: boolean;
   envOn: boolean;
   isEnvironmentEnabled(): boolean;
   setEnvironmentEnabled(v: boolean): void;
+  wfOn: boolean | null;
+  getWireframe(): boolean | null;
+  setWireframe(v: boolean | null): void;
 } {
   const cap = {
     id,
@@ -84,11 +93,23 @@ function makeFakeCap(
     delete (cap as unknown as Record<string, unknown>).setEnvironmentEnabled;
     delete (cap as unknown as Record<string, unknown>).isEnvironmentEnabled;
   }
+  // wireframeMode：render.wireframe binding 走 renderMode 单项语义（同 rm-wireframe 控件真值源）
+  if (opts.wireframeMode === true) {
+    (cap as unknown as Record<string, unknown>).wfOn = null;
+    (cap as unknown as Record<string, unknown>).getWireframe = () =>
+      (cap as unknown as { wfOn: boolean | null }).wfOn;
+    (cap as unknown as Record<string, unknown>).setWireframe = (v: boolean | null) => {
+      (cap as unknown as { wfOn: boolean | null }).wfOn = v;
+    };
+  }
   return cap as unknown as SceneCapability & {
     enabled: boolean;
     envOn: boolean;
     isEnvironmentEnabled(): boolean;
     setEnvironmentEnabled(v: boolean): void;
+    wfOn: boolean | null;
+    getWireframe(): boolean | null;
+    setWireframe(v: boolean | null): void;
   };
 }
 
@@ -224,17 +245,22 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
 
   it("cap 就位后：读写透传至 cap，且 available 转为 true", () => {
     const pp = makeFakeCap("postprocessing");
-    const wf = makeFakeCap("wireframe");
+    const rm = makeFakeCap("renderMode", { wireframeMode: true });
     const sky = makeFakeCap("sky", { env: false });
-    mountCaps(pp, wf, sky);
+    mountCaps(pp, rm, sky);
 
     expect(isPathAvailable("render.bloom")).toBe(true);
     setStateValue("render.bloom", true);
     expect(pp.isEnabled()).toBe(true);
     expect(getStateValue("render.bloom")).toBe(true);
 
+    // render.wireframe 走 renderMode 单项语义（rm-wireframe 真值源）：写 true → setWireframe(true)
     setStateValue("render.wireframe", true);
-    expect(wf.isEnabled()).toBe(true);
+    expect(rm.getWireframe()).toBe(true);
+    expect(getStateValue("render.wireframe")).toBe(true);
+    // 写 false → setWireframe(null)（还原原始值，与 rm-wireframe 控件 setValue 同语义）
+    setStateValue("render.wireframe", false);
+    expect(rm.getWireframe()).toBeNull();
 
     setStateValue("env.pmrem", true);
     expect(sky.isEnvironmentEnabled()).toBe(true);
@@ -242,7 +268,7 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
 
     // 防双写（cap 就位态）：状态层写入透传 cap.setEnabled，但绝不自行创建 cap 域存储键
     // （cap 域键只由 cap.saveState 写，会话退出时统一落盘——真实前缀 ysm-scene-cap-）。
-    for (const capId of ["postprocessing", "wireframe", "sky"]) {
+    for (const capId of ["postprocessing", "renderMode", "sky"]) {
       expect(localStorage.getItem(`ysm-scene-cap-${capId}`)).toBeNull();
     }
   });
@@ -296,9 +322,10 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
   });
 
   it("结构性探测：id 对得上但方法不全的 cap 不误判为可用", () => {
-    // 只有 isEnabled、缺 setEnabled —— toggleCap 应判为「无此能力」而非运行期炸裂
+    // renderMode 有 isEnabled 但缺 getWireframe/setWireframe —— wireframeModeCap 应判为「无此能力」
+    // （RenderModeCapability 的 wireframe 单项语义靠这两个方法，缺任一即不可用）而非运行期炸裂
     const halfCap = {
-      id: "wireframe",
+      id: "renderMode",
       labelKey: "x",
       icon: "x",
       descKey: "x",
@@ -473,22 +500,22 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
   });
 });
 
-describe("P3 visible 规则 — 条件显隐可集中枚举", () => {
-  it("collectVisiblePredicates 只挑出带谓词的控件（纯函数）", () => {
+describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 唯一）", () => {
+  it("collectVisiblePredicates 只挑出带 visibleWhen 谓词的控件（纯函数）", () => {
     const plain: MenuControlDef = {
       id: "a", kind: "toggle", labelKey: "a", fallback: "a",
       getValue: () => false, setValue: vi.fn(),
     };
     const gated: MenuControlDef = {
-      ...plain, id: "b", visible: () => false,
+      ...plain, id: "b", visibleWhen: () => false,
     };
     expect(collectVisiblePredicates([plain, gated]).map((c) => c.id)).toEqual(["b"]);
   });
 
-  it("聚合到设置面板的控件如带 visible，谓词仍可枚举（不被抹平丢失）", () => {
+  it("聚合到设置面板的控件如带 visibleWhen，谓词仍可枚举（不被抹平丢失）", () => {
     const gated: MenuControlDef = {
       id: "c-gated", kind: "toggle", labelKey: "c", fallback: "c",
-      settingsOrder: 5, visible: () => true,
+      settingsOrder: 5, visibleWhen: () => true,
       getValue: () => false, setValue: vi.fn(),
     };
     mountCaps(makeFakeCap("fakecap", { controls: [gated] }));

@@ -78,8 +78,8 @@ function partitionCapControlsByGroup(
 ): { key: string | null; label: string; ctrls: MenuControlDef[] }[] {
   const groups = new Map<string | null, MenuControlDef[]>();
   for (const c of ctrls) {
-    if (c.visible && !c.visible()) continue; // A 轨：条件隐藏控件不计入分组
-    // B 轨：状态层快照谓词 visibleWhen(s)——与 renderCapControls 同口径，避免「分区入口出现但控件实际被隐藏」的错配
+    // [铁律收口] B 轨唯一：状态层快照谓词 visibleWhen(s)——与 renderCapControls 同口径，
+    // 避免「分区入口出现但控件实际被隐藏」的错配。A 轨 visible 闭包已整体删除（2026-09）。
     if (c.visibleWhen && snapshot && !c.visibleWhen(snapshot)) continue;
     const k = c.group ?? null;
     const arr = groups.get(k);

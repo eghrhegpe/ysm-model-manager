@@ -174,6 +174,26 @@ function groundMatCap(): GroundMatCap | undefined {
   return cap as unknown as GroundMatCap;
 }
 
+/** 渲染模式线框能力（RenderModeCapability 的 wireframe 单项语义）——
+ *  不走 toggleCap：RenderModeCapability.setEnabled 是空操作（各属性独立覆盖），
+ *  isEnabled 返回「任一属性有 override」，与 wireframe 单项语义不符。
+ *  真值源与 rm-wireframe 控件同口（getWireframe() === true / setWireframe(v ? true : null)）。 */
+interface WireframeModeCap {
+  getWireframe(): boolean | null;
+  setWireframe(v: boolean | null): void;
+}
+function wireframeModeCap(): WireframeModeCap | undefined {
+  const cap: SceneCapability | undefined = capById("renderMode");
+  if (!cap) return undefined;
+  if (
+    !hasMethod<WireframeModeCap>(cap, "getWireframe") ||
+    !hasMethod<WireframeModeCap>(cap, "setWireframe")
+  ) {
+    return undefined;
+  }
+  return cap as unknown as WireframeModeCap;
+}
+
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）
  *  类型用窄联合（`typeof KNOWN_PATHS[number]`）而非 `PreviewStatePath` 全集——
  *  保证"加新路径"必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住"调用方永不传未落地项" */
@@ -229,10 +249,14 @@ const bindings: Record<(typeof KNOWN_PATHS)[number], PreviewStatePathBinding> = 
     },
     available: () => toggleCap("postprocessing") !== undefined,
   },
+  // [幽灵船收口 2026-09] render.wireframe 原绑定指向 WireframeCapability——该 cap 从未注册
+  // （scene-capability-registry 无 wireframe 工厂），toggleCap("wireframe") 恒 undefined →
+  // available() 永远 false 死链。真身是 RenderModeCapability.rm-wireframe（settingsOrder:30）。
+  // 现绑定改走 renderMode 的 getWireframe/setWireframe 专用口（同 rm-wireframe 控件真值源）。
   "render.wireframe": {
-    get: () => toggleCap("wireframe")?.isEnabled() ?? false,
-    set: (v) => toggleCap("wireframe")?.setEnabled(Boolean(v)),
-    available: () => toggleCap("wireframe") !== undefined,
+    get: () => wireframeModeCap()?.getWireframe() === true,
+    set: (v) => wireframeModeCap()?.setWireframe(v ? true : null),
+    available: () => wireframeModeCap() !== undefined,
   },
   "env.pmrem": {
     get: () => envToggleCap("sky")?.isEnvironmentEnabled() ?? false,

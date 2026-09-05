@@ -7,6 +7,7 @@ import type { PreviewMenuCtx } from "./node-types.ts";
 import type { CameraControlBridge } from "../adapters/camera-controls.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { setSceneCapabilityLookup } from "../state/preview-state.ts";
+import type { PreviewSnapshot } from "../state/preview-paths.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
@@ -195,14 +196,23 @@ describe("renderEnvLevel", () => {
       icon: "💧",
       descKey: "",
       subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+      // 探针（P5-c）：状态层经 getWaterMode/setWaterMode 上浮 mode 到 previewSnapshot()
+      getWaterMode: () => mode,
+      setWaterMode: (v: string) => { mode = v as "film" | "pool"; listeners.forEach((l) => l()); },
       getMenuControls: () => [
         { id: "water-enabled", kind: "toggle", labelKey: "preview.groundWaterEnabled", fallback: "水面", getValue: () => true, setValue: () => {} },
         { id: "water-mode", kind: "select", labelKey: "preview.groundWaterMode", fallback: "形态", group: "preview.waterGroupForm", select: [{ value: "film", label: "薄膜" }, { value: "pool", label: "水池" }], getValue: () => mode, setValue: (v: string) => { mode = v as "film" | "pool"; listeners.forEach((l) => l()); } },
-        { id: "water-pool-height", kind: "slider", labelKey: "preview.groundPoolHeight", fallback: "水池高度", group: "preview.waterGroupPool", slider: { min: 0.01, max: 5, step: 0.05 }, getValue: () => 1, setValue: () => {}, visible: () => mode === "pool" },
-        { id: "water-wetness", kind: "slider", labelKey: "preview.waterFilmDensity", fallback: "浓度", group: "preview.waterGroupLook", slider: { min: 0, max: 1, step: 0.05 }, getValue: () => 0.5, setValue: () => {}, visible: () => mode === "film" },
+        { id: "water-pool-height", kind: "slider", labelKey: "preview.groundPoolHeight", fallback: "水池高度", group: "preview.waterGroupPool", slider: { min: 0.01, max: 5, step: 0.05 }, getValue: () => 1, setValue: () => {}, visibleWhen: (s: Partial<PreviewSnapshot>) => s["env.waterMode"] === "pool" },
+        { id: "water-wetness", kind: "slider", labelKey: "preview.waterFilmDensity", fallback: "浓度", group: "preview.waterGroupLook", slider: { min: 0, max: 1, step: 0.05 }, getValue: () => 0.5, setValue: () => {}, visibleWhen: (s: Partial<PreviewSnapshot>) => s["env.waterMode"] === "film" },
       ],
       apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
-    };
+    } as unknown as SceneCapability;
+    // 注册到 registry + [ADR-168] 注入 state 层查询器——previewSnapshot() 经 env.waterMode
+    // binding 惰性解析到 mode（P5-c 范式，与探针测试一致）
+    vi.spyOn(sceneCapabilityRegistry, "getById").mockImplementation((id: string) => (id === "water" ? fakeWaterCap : undefined));
+    setSceneCapabilityLookup({
+      getById: (id: string) => (id === "water" ? fakeWaterCap : undefined),
+    });
     const ctx = makeCtx({ getCap: (id) => (id === "water" ? (fakeWaterCap as unknown as SceneCapability) : null) });
     const subList = document.createElement("div");
     let lastView: { title: string; render: (l: HTMLElement) => void } | null = null;

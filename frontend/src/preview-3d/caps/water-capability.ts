@@ -6,6 +6,8 @@
 
 import * as THREE from "three";
 import { safeDispose } from "../safe-dispose.ts";
+// 状态层探针类型（visibleWhen 谓词吃 env.waterMode 快照——B 轨唯一条件显隐，不摸 cap 实例）
+import type { PreviewSnapshot } from "../state/preview-paths.ts";
 import {
   createListenerSet,
   type MenuControlDef,
@@ -685,7 +687,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
     slider: { min: number; max: number; step: number; unit?: string },
     getValue: () => number,
     setValue: (v: number) => void,
-    visible?: () => boolean,
+    visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
   ): MenuControlDef => ({
     id,
     kind: "slider",
@@ -695,7 +697,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
     slider,
     getValue,
     setValue: (v) => setValue(v as number),
-    ...(visible ? { visible } : {}),
+    ...(visibleWhen ? { visibleWhen } : {}),
   });
   const wColor = (
     id: string,
@@ -704,7 +706,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
     group: string,
     getValue: () => number,
     setValue: (v: number) => void,
-    visible?: () => boolean,
+    visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
   ): MenuControlDef => ({
     id,
     kind: "color",
@@ -713,7 +715,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
     group,
     getValue,
     setValue: (v) => setValue(v as number),
-    ...(visible ? { visible } : {}),
+    ...(visibleWhen ? { visibleWhen } : {}),
   });
   return [
     {
@@ -747,7 +749,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       { min: 0, max: 1, step: 0.05 },
       () => cap.getWetness(),
       (v) => cap.setWetness(v),
-      () => cap.getWaterMode() === "film", // 仅薄膜模式：pool 下 wetness 不参与 opacity（见 buildWaveWaterMaterial）
+      (s) => s["env.waterMode"] === "film", // 仅薄膜模式：pool 下 wetness 不参与 opacity（见 buildWaveWaterMaterial）
     ),
     // ── 外观 ──
     wColor(
@@ -794,7 +796,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       { min: 0.01, max: 5, step: 0.05, unit: "m" },
       () => cap.getPoolHeight(),
       (v) => cap.setPoolHeight(v),
-      () => cap.getWaterMode() === "pool",
+      (s) => s["env.waterMode"] === "pool",
     ),
     wSlider(
       "ground-pool-wall-thickness",
@@ -804,7 +806,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       { min: 0.01, max: 2, step: 0.01, unit: "m" },
       () => cap.getPoolWallThickness(),
       (v) => cap.setPoolWallThickness(v),
-      () => cap.getWaterMode() === "pool",
+      (s) => s["env.waterMode"] === "pool",
     ),
     wColor(
       "ground-pool-wall-color",
@@ -813,7 +815,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       WATER_GROUP_POOL,
       () => cap.getPoolWallColor(),
       (v) => cap.setPoolWallColor(v),
-      () => cap.getWaterMode() === "pool",
+      (s) => s["env.waterMode"] === "pool",
     ),
     wSlider(
       "ground-pool-roundness",
@@ -823,7 +825,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       { min: 0, max: 0.5, step: 0.01 },
       () => cap.getPoolRoundness(),
       (v) => cap.setPoolRoundness(v),
-      () => cap.getWaterMode() === "pool",
+      (s) => s["env.waterMode"] === "pool",
     ),
     // ── 波纹 ──
     wSlider(

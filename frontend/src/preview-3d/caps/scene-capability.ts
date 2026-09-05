@@ -45,13 +45,12 @@ export interface MenuControlDef {
    * cap 侧自声明即可，settings 侧零接线。
    */
   settingsOrder?: number;
-  /** 条件显隐（A 轨闭包）：定义且返回 false 时控件隐藏（依赖 cap 自身 params，禁止跨 cap 探查）。未定义则始终显示。 */
-  visible?: () => boolean;
   /** 条件显隐（B 轨纯函数谓词）：吃状态层快照 PreviewSnapshot（2026-09 放宽为 Partial——谓词只读自己关心的键，
    *  键存在性仍编译期守卫，未落地键报错），返回 false 时隐藏。
    *  与节点级 visibleWhen 同构，用于把 cap 控件条件显隐从「闭包依赖运行时 params」升级为「状态层快照驱动」，
    *  配合 preview-state 的 env.waterMode / env.groundMatSource 等 cap 状态上浮路径，消除快照冻结类 bug 根源。
-   *  A 轨 visible 与 B 轨 visibleWhen 并存时两者 AND（皆通过才显示）。未定义则仅看 visible。 */
+   *  [铁律收口] 3d菜单只允许 visibleWhen——A 轨 visible 闭包已整体删除（2026-09，ground/water 换皮完成），
+   *  谓词只吃快照不摸 cap 实例，全仓唯一条件显隐入口。 */
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean;
   /** slider 配置 */
   slider?: {
@@ -60,12 +59,22 @@ export interface MenuControlDef {
     step: number;
     unit?: string;
     /**
+     * 旁挂数字输入框（与 range 双向联动，onchange 走 min/max clamp）。
+     * [控件原语归一] 自 PreviewControlSpec.numeric 收编（2026-09）——此前 node 栈
+     * 专属能力，cap 栈（litematic 分层等）调用不到；归一后所有数组类菜单共享。
+     */
+    numeric?: boolean;
+    /**
      * slider 提交回调（拖拽松手/change 事件，离散触发）。
      * 与 setValue 的 oninput 高频写入区分：用于「拖动时抑制、提交时通知」类语义
      * （如 pixel-ratio 拖动不触发面板重算，松手后广播一次）。
      */
     onCommit?: (v: number) => void;
   };
+  /** 控件值变更后的副作用钩子（select/toggle/slider 通用，change/input 提交后调用）。
+   *  [控件原语归一] 自 PreviewControlSpec.onChange 收编（2026-09）——适配层可在其中
+   *  注入 menu.refresh（refreshOnChange 语义）或广播副作用，renderCap* 无需持有 menu 引用。 */
+  onChange?: (v: unknown) => void;
   /** select 配置 */
   select?: Array<{ value: string; label: string }>;
   /** button 配置（kind=button 时生效） */

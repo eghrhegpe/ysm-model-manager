@@ -816,6 +816,35 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
     cap.update(1); // dispose 后 update 空转，timeOfDay 不再推进
     expect(cap.getTimeOfDay()).toBe(DEFAULT_SKY_PARAMS.timeOfDay);
   });
+
+  it("[锐评 P1 GPU 熔炉修复] 昼夜循环 update(dt) 走阈值门控：高度角变化 < 2° 不重建 PMREM", () => {
+    const cap = newCap(); // timeOfDay=9, 9h 附近高度角约每 0.1h 变化 1.3°
+    cap.startAutoRotate();
+    const fromScene = vi.spyOn(THREE.PMREMGenerator.prototype, "fromScene");
+    fromScene.mockClear();
+    // ① 首帧（初始 lastPmremElevation=-999）无条件重建一次
+    cap.update(0.05); // +0.05h → 高度角变化 < 2°
+    expect(fromScene).toHaveBeenCalledTimes(1);
+    // ② 继续小幅推进（累计高度角变化仍 < 2°）→ 不重建（scene.environment 保持旧贴图）
+    cap.update(0.1); // 累计 +0.15h，高度角变化 < 2° → 不应重建
+    expect(fromScene).toHaveBeenCalledTimes(1);
+    // ③ 大步推进跨过 2° 阈值 → 重建
+    cap.update(1); // 累计 +1.15h，高度角变化远超 2° → 重建
+    expect(fromScene).toHaveBeenCalledTimes(2);
+  });
+
+  it("手动 setTime 默认 forceEnv=true：任意精度调整都强制重建（滑块/时间轴体验不降级）", () => {
+    const cap = newCap();
+    const fromScene = vi.spyOn(THREE.PMREMGenerator.prototype, "fromScene");
+    fromScene.mockClear();
+    cap.setTime(9.05); // 微调 0.05h（高度角变化远 < 2°）——手动仍强制重建
+    expect(fromScene).toHaveBeenCalledTimes(1);
+    cap.setTime(9.1);
+    expect(fromScene).toHaveBeenCalledTimes(2);
+    cap.setTime(10); // 跨阈值手动调整同样重建（无门控）
+    expect(fromScene).toHaveBeenCalledTimes(3);
+    cap.dispose();
+  });
 });
 
 // ============ God Rays 挂载/卸载（真实分支）============

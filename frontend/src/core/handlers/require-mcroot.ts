@@ -5,6 +5,7 @@
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { t } from "../i18n/t.ts";
 
 /**
  * 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。
@@ -17,7 +18,7 @@ export async function requireMcRoot(): Promise<string | null> {
   const mcRoot = cfg.mcRoot || "";
   if (!mcRoot) {
     bus.emit("toast:show", {
-      msg: "请先配置游戏目录",
+      msg: t("ctx.pushNoMcRoot"),
       duration: TOAST_MS.normal,
       type: "warn",
     });

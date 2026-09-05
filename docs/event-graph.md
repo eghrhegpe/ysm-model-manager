@@ -407,7 +407,7 @@
 | registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 130 |
 | registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 146 |
 | registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 156 |
-| requireMcRoot | `frontend/src/core/handlers/require-mcroot.ts` | 19 |
+| requireMcRoot | `frontend/src/core/handlers/require-mcroot.ts` | 20 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 42 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 80 |
 | handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 111 |

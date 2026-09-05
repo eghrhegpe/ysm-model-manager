@@ -316,8 +316,6 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 76 |
-| runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 182 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 263 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
@@ -328,6 +326,8 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 106 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 171 |
+| runDownloadMissing | `frontend/src/features/sync.ts` | 79 |
+| runSyncToggleStatus | `frontend/src/features/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 75 |
@@ -353,8 +353,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 96 |
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 124 |
+| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 99 |
+| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 127 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -372,7 +372,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/core/handlers/sync.ts` | 219 |
+| registerSync | `frontend/src/features/sync.ts` | 222 |
 
 ### `sync:toggle:status`
 
@@ -386,7 +386,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/core/handlers/sync.ts` | 221 |
+| registerSync | `frontend/src/features/sync.ts` | 224 |
 
 ### `toast:show`
 
@@ -584,8 +584,6 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleSyncDownloadMissing | `frontend/src/core/handlers/sync.ts` | 116 |
-| handleSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 207 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 262 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
@@ -595,6 +593,8 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 107 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 172 |
+| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 119 |
+| handleSyncToggleStatus | `frontend/src/features/sync.ts` | 210 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 368 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 359 |
 

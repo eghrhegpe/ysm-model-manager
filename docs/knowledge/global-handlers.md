@@ -14,10 +14,7 @@ auto_fields:
   symbols_with_lines:
     - bindTreeDnD
     - handleTreeDrop
-    - registerCoreHandlers
     - registerErrorDiary
-    - registerSync
-    - requireMcRoot
     - unregisterErrorDiary
   tests:
     - frontend/src/core/error-diary.test.ts

@@ -39,7 +39,6 @@ auto_fields:
     - MmdVariantGroups
     - NetworkSelf
     - performSingleOp
-    - registerSync
     - render
     - renderVersionCards
     - resetSelectedEmit

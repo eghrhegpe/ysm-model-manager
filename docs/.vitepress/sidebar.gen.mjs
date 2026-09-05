@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-188：core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语",
+        "link": "/adr/ADR-188-core-handlers-sync-features-require-mcroot-features"
+      },
+      {
         "text": "ADR-187：features/ 目录归位与 modal.ts 拆分收敛",
         "link": "/adr/ADR-187-features-modal-ts"
       },

@@ -27,6 +27,7 @@ auto_fields:
     - DiffEntry
     - DiffFolderContents
     - DiffFolderContentsScan
+    - ErrPartialSync
     - FileConflict
     - FileDiffEntry
     - FindMinecraftDir

@@ -3,6 +3,7 @@ package sync
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -407,5 +408,73 @@ func TestSHA256File(t *testing.T) {
 	}
 	if hash1 == hash3 {
 		t.Error("不同内容应产生不同哈希")
+	}
+}
+
+// TestResolveConflict_PathTraversal_Rejected 钉住路径穿越守卫（2026-09-05 三路锐评
+// P0/P1 新增防线，code_review 补测试）：
+// conflict.Path 含 ".." 逃逸 localDir/remoteDir 时，必须在任何文件操作（备份/拷贝）
+// 前被 RelInside 拒绝——否则恶意 ../ 路径可让 ResolveForceRemote 写到目录外。
+func TestResolveConflict_PathTraversal_Rejected(t *testing.T) {
+	localDir, remoteDir, cleanup := setupTestDirs(t)
+	defer cleanup()
+
+	// 在 localDir/remoteDir 之外放一个哨兵文件，验证守卫拒绝后它不被触碰
+	outsideDir := t.TempDir()
+	writeFile(t, outsideDir, "escape.bin", "must survive", time.Now())
+	sentryPath := filepath.Join(outsideDir, "escape.bin")
+
+	// 本地目录内正常文件（若守卫失效，会被当作备份/覆盖目标读取）
+	writeFile(t, localDir, "test.txt", "local content", time.Now())
+	writeFile(t, remoteDir, "test.txt", "remote content", time.Now())
+
+	conflict := FileConflict{
+		Path: filepath.Join("..", filepath.Base(outsideDir), "escape.bin"),
+		Type: ConflictContentModified,
+	}
+
+	// 穿越路径必须被拒绝（三个策略都要过守卫，取最会写盘的 ForceRemote 验证）
+	err := ResolveConflict(conflict, ResolveForceRemote, localDir, remoteDir)
+	if err == nil {
+		t.Fatal("穿越路径应当被守卫拒绝，实际返回 nil")
+	}
+	// 错误应含越界语境（而非文件操作失败）
+	if !strings.Contains(err.Error(), "冲突路径越界") {
+		t.Errorf("错误应指明越界守卫，实际: %v", err)
+	}
+
+	// 哨兵文件必须原样保留（守卫在文件操作前拦截）
+	sentry, err := os.ReadFile(sentryPath)
+	if err != nil {
+		t.Fatalf("哨兵文件不应被触碰（读取失败: %v）", err)
+	}
+	if string(sentry) != "must survive" {
+		t.Errorf("哨兵文件内容被改动: %q", string(sentry))
+	}
+}
+
+// TestResolveConflict_PathTraversal_SafeSubpath 反向钉住：正常相对子路径不被守卫误杀
+// （RelInside 判定合法 → 照常执行 ForceRemote 覆盖）。
+func TestResolveConflict_PathTraversal_SafeSubpath(t *testing.T) {
+	localDir, remoteDir, cleanup := setupTestDirs(t)
+	defer cleanup()
+
+	writeFile(t, localDir, "nested/test.txt", "local content", time.Now())
+	writeFile(t, remoteDir, "nested/test.txt", "remote content", time.Now())
+
+	conflict := FileConflict{
+		Path: filepath.Join("nested", "test.txt"),
+		Type: ConflictContentModified,
+	}
+
+	if err := ResolveConflict(conflict, ResolveForceRemote, localDir, remoteDir); err != nil {
+		t.Fatalf("合法相对子路径不应被守卫拦截: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(localDir, "nested", "test.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "remote content" {
+		t.Errorf("期望被远端覆盖为 'remote content'，实际 '%s'", string(content))
 	}
 }

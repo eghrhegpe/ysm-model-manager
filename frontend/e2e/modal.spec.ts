@@ -21,9 +21,15 @@ async function openModal(
 ): Promise<void> {
   const ok = await page.evaluate(
     async ({ kind: k, opts: o }) => {
-      const mod = await import("../src/features/dialogs/modal.ts");
       const w = window as DlgWindow;
-      w._dlgPromise = k === "confirm" ? mod.modalConfirm(o) : mod.modalPrompt(o);
+      if (k === "confirm") {
+        // ADR-187 D2：modal.ts 拆分后 confirm/prompt 各成文件（原 modal.ts 单文件）
+        const mod = await import("../src/features/dialogs/modal-confirm.ts");
+        w._dlgPromise = mod.modalConfirm(o);
+      } else {
+        const mod = await import("../src/features/dialogs/modal-prompt.ts");
+        w._dlgPromise = mod.modalPrompt(o);
+      }
       return true;
     },
     { kind, opts: { title: "E2E 遮罩测试", message: "确认要执行吗？", ...opts } },

@@ -17,17 +17,7 @@ export const FILE_HANDLERS = {
   "file.rename": async (ctx) => {
     try {
       const fileName = (ctx.path || "").split(/[/\\]/).pop() || "";
-      if (fileName.toLowerCase() === "ysm.json") {
-        toast(
-          tr(
-            "ctx.renameYsmJson",
-            "ysm.json is the model directory manifest — right-click its folder and choose 'Rename'",
-          ),
-          TOAST_MS.verbose,
-          "warn",
-        );
-        return;
-      }
+      // ysm.json 护栏已上移 menu-defs.ts visibleWhen（后端硬拒保留），此处不再 toast 教育
       const newName = await showRenameDialog(ctx.path || "", fileName);
       if (!newName) return;
       const { RenameFile } = await contextMenuGetApp();

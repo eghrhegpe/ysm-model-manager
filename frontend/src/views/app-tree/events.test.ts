@@ -702,7 +702,7 @@ describe("contextmenu 右键菜单", () => {
     ]);
   });
 
-  it("未选中文件（ck 灭）→ ctx:show {type:file, path, banned:true, name}", () => {
+  it("未选中文件（ck 灭）→ ctx:show {type:file, path, name}（banned 已出契约：启停走 .ck 事件链，不经菜单）", () => {
     const h = makeHarness();
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm", false));
     bindTreeEvents(h.container, h.vm);
@@ -715,22 +715,29 @@ describe("contextmenu 右键菜单", () => {
         y: 2,
         type: "file",
         path: "/repo/a.ysm",
-        banned: true,
         name: "a.ysm",
         rtype: "ysm",
       },
     ]);
   });
 
-  it("启用中文件（ck 亮）→ banned:false", () => {
+  it("启用中文件（ck 亮）→ 同结构 ctx:show（banned 已出契约）", () => {
     const h = makeHarness();
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm", true));
     bindTreeEvents(h.container, h.vm);
     h.container
       .querySelector(".fl")!
       .dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
-    const payload = emitted("ctx:show")[0] as { banned: boolean };
-    expect(payload.banned).toBe(false);
+    expect(emitted("ctx:show")).toEqual([
+      {
+        x: 0,
+        y: 0,
+        type: "file",
+        path: "/repo/a.ysm",
+        name: "a.ysm",
+        rtype: "ysm",
+      },
+    ]);
   });
 
   it("右键命中多选集合内的行 → ctx:show {type:batch, count, paths}", () => {

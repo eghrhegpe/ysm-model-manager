@@ -110,11 +110,12 @@ status: active
 ## 不变量
 
 - 菜单结构只允许在 `menu-defs.ts` 修改；`MenuItemDef.action` 与 `HANDLERS` 表一一对应，`buildMenuItems` 对失配 action 打 `console.warn`，契约测试遍历声明断言零警告（缺 handler 会测试失败）；**待办（P2）**：升级为直接对账声明表 vs handler 表，不再依赖 spy
-- `visibleWhen` 与 viewer-mode 全局过滤 AND：两边都通过才出现在 items；与 3D `PreviewMenuNode.visibleWhen`（[doc:adr-126-p4-d]）语义同构（都吃状态快照/ctx 快照的纯函数谓词），共享「声明式菜单唯一条件守卫口」精神面
+- `visibleWhen` 与 viewer-mode 全局过滤 AND：两边都通过才出现在 items；与 3D `PreviewMenuNode.visibleWhen`（[doc:adr-126-p4-d]）语义同构（都吃状态快照/ctx 快照的纯函数谓词），共享「声明式菜单唯一条件守卫口」精神面。**2026-09-06 起有真实消费者**（file.rename 的 ysm.json 守卫），不再是零消费机制
+- `CtxShowPayload` 不携带 `banned`（2026-09-06 出契约）：树行启用/禁用切换走 app-tree 自己的 `.ck` 事件链，与右键菜单无关——原字段发射端携带、全链零消费
 - `registerContextMenus(unsubs)` 只由 `registerGlobalHandlers()` 调用一次且必须把 unsub 收进数组，禁止组件内重复注册（事件无守卫注册反模式，ADR-008）
 - 菜单项 label/icon 一律过 `_esc`（委托 utils/dom/html.ts 的 `esc`）转义；移动/复制目标文件夹名过 `isUnsafeFolderName` 安全过滤
 - 每个 async handler 的最外层 await 链都要有 catch 出口——右键菜单点击是「发射后不管」调用，未捕获异常只会变成 unhandledrejection，用户看不到任何反馈。**已全量补齐**（P2 修复）：batch.move/batch.copy/batch.recycle 补外层 catch，file.move/file.copy/dir.move/dir.copy 的 `resolveDstDir`/`getApp` 与 file.reveal 的 `getApp` 纳入 try——原实现 `getApp`（import 失败 rethrow）与 `resolveDstDir`（内含 GetRepoRoot）在 try 外，reject 时 rejection 逸出
-- `ysm.json` 禁止单文件重命名（ADR-038 D3），`file.rename` 直接 warn toast 引导改目录名
+- `ysm.json` 禁止单文件重命名（ADR-038 D3）：守卫在**声明层**——`menu-defs.ts` 的 `file.rename` 项挂 `visibleWhen`（path 末段 ysm.json 大小写不敏感 → 隐藏整项，2026-09-06 自 handler 内 toast 教育上移，首个真实消费者）；后端 Go fileops / web-fs.ts 双侧硬拒保留兜底，`ctx.renameYsmJson` i18n 键已删
 - `<context-menu>` 的 `bus.on` 与 document 级 click/contextmenu/keydown 监听在 `disconnectedCallback` 成对清理
 - 键盘导航（Arrow/Enter/Escape，2026-09-05 code_review 补强）三条不变量：
   1. **shadow 深焦解析**：`document.activeElement` 对 shadow DOM 内聚焦元素 retarget 成 host（`<context-menu>` 本体），`items.indexOf(active)`/`classList.contains("item")` 对 host 恒 false → 方向键/Enter 整体失效。必须沿 `shadowRoot.activeElement` 下钻取真实聚焦项（范式同 `utils/dom/focus-restore.ts` 的 trapFocusAcrossShadow）——此坑在 jsdom/happy-dom 下因不实现 retargeting 而测不出，须显式断言 `shadowRoot.activeElement`

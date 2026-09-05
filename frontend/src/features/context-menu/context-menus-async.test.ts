@@ -329,14 +329,9 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
     expect(toasts().some((t) => t.type === "error")).toBe(true);
   });
 
-  // ── ADR-038 D3：ysm.json 重命名护栏 + 文件夹整组操作 ──
-  it("file.rename 对 ysm.json → warn toast 且不调 RenameFile", async () => {
-    await clickAsync("file", "file.rename", { path: "/models/模型A/ysm.json" });
-    expect(showRenameDialogMock).not.toHaveBeenCalled();
-    expect(RenameFileMock).not.toHaveBeenCalled();
-    expect(toasts().some((t) => t.type === "warn" && t.msg.includes("ysm.json"))).toBe(true);
-  });
-
+  // ── ADR-038 D3：ysm.json 护栏已上移 menu-defs.ts visibleWhen（context-menus.test.ts
+  // 「file.rename 的 ysm.json visibleWhen 守卫」段）——后端（Go fileops / web-fs.ts）硬拒保留，
+  // 前端 handler 不再持有 toast 教育分支。──
   it("dir.move 成功 → MoveModelFile(目录路径) + toast + 刷新", async () => {
     modalPromptMock.mockResolvedValue("作者B");
     GetRepoRootMock.mockResolvedValue("/repo/models");

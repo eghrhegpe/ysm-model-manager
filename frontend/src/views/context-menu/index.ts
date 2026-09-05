@@ -54,7 +54,10 @@ class ContextMenu extends WebComponentBase {
         }
         items[next]?.focus();
       }
-      if (e.key === "Enter") {
+      // Enter/Space 激活（WCAG：role=menuitem 的 div 对 Space 无默认行为，须显式接管；
+      // preventDefault 吞掉 Space 的页面滚动）
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
         if (activeEl.classList.contains("item")) activeEl.click();
       }
     };

@@ -53,7 +53,6 @@ export interface CtxShowPayload {
   type: "instance" | "batch" | "file" | "dir";
   instanceName?: string;
   path?: string;
-  banned?: boolean;
   dir?: string;
   name?: string;
   count?: number;

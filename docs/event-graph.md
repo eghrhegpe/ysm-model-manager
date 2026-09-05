@@ -110,7 +110,7 @@
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 122 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 294 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 318 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 329 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 330 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -214,7 +214,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/context-menu/index.ts` | 64 |
+| connectedCallback | `frontend/src/views/context-menu/index.ts` | 67 |
 
 ### `model:select`
 

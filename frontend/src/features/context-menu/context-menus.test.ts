@@ -381,6 +381,31 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
   });
 });
 
+// ===== file.rename 的 ysm.json visibleWhen 守卫（ADR-038 D3 声明化）=====
+// 原实现：handler 内 toast 教育（file-handlers.ts）——教育反模式，且后端
+// （Go fileops.RenameFile / web-fs.ts）本就硬拒。守卫上移声明层：菜单直接不给死动作。
+describe("file.rename 的 ysm.json visibleWhen 守卫", () => {
+  function actionsOf(payload: { items: MenuItem[] }): string[] {
+    return payload.items.filter((i) => i.action).map((i) => i.action!);
+  }
+
+  it("path 以 ysm.json 结尾 → file.rename 不出现（大小写不敏感）", () => {
+    const payload = showMenu("file", {
+      x: 10,
+      y: 20,
+      type: "file",
+      path: "/models/模型A/YSM.JSON",
+      paths: ["/models/模型A/YSM.JSON"],
+    });
+    expect(actionsOf(payload)).not.toContain("file.rename");
+  });
+
+  it("普通文件 → file.rename 正常出现", () => {
+    const payload = showMenu("file", payloadCtx("file"));
+    expect(actionsOf(payload)).toContain("file.rename");
+  });
+});
+
 // ===== buildMenuItems divider 折叠（ADR-021 B 层：单一事实源收口，渲染层不再去重）=====
 // 背景：context-menus.ts 旧注释声称「连续 divider 会在渲染时折叠」，但渲染层
 // views/context-menu/index.ts 的 show() 仅 item.divider → <hr>，无折叠逻辑。

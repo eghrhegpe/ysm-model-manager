@@ -683,7 +683,6 @@
   "ctx.recycleOkText": "♻️ 移入",
   "ctx.recycleFailN": "❌ {fail} 个文件移入回收站失败：{err}",
   "ctx.recycleOkN": "✅ {n} 个文件已移入回收站",
-  "ctx.renameYsmJson": "ysm.json 是模型目录清单，请右键所在文件夹「重命名」（整组操作）",
   "ctx.renameFail": "重命名失败",
   "ctx.fileMoveOk": "✅ 已移动到 {folder}",
   "ctx.fileCopyOk": "✅ 已复制到 {folder}",

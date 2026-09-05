@@ -104,7 +104,6 @@ async function runBatchFileOp(
     if (!resolved) return;
     const { folder, dstDir } = resolved;
     const app = await contextMenuGetApp();
-    const fn = app[op.binding];
     toast(
       tr(tpl.progress, "📦 Moving {n} files to {folder}...", { n: ctx.paths.length, folder }),
       TOAST_MS.normal,
@@ -113,7 +112,8 @@ async function runBatchFileOp(
     let fail = 0;
     for (const p of ctx.paths) {
       try {
-        await fn(p, dstDir);
+        // 方法调用形态保持 this 绑定（const fn = app[op.binding] 解绑后调用有 this 风险）
+        await app[op.binding](p, dstDir);
         ok++;
       } catch (e) {
         fail++;

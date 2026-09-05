@@ -763,8 +763,6 @@ export const en: Record<string, string> = {
   "ctx.recycleOkText": "♻️ Recycle",
   "ctx.recycleFailN": "❌ Failed to recycle {fail} files: {err}",
   "ctx.recycleOkN": "✅ Moved {n} files to recycle bin",
-  "ctx.renameYsmJson":
-    "ysm.json is the model directory manifest — right-click its folder and choose 'Rename' (group operation)",
   "ctx.renameFail": "Rename failed",
   "ctx.fileMoveOk": "✅ Moved to {folder}",
   "ctx.fileCopyOk": "✅ Copied to {folder}",

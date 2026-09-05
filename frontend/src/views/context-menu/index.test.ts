@@ -137,6 +137,21 @@ describe("<context-menu> 键盘导航", () => {
     expect(el.style.display).toBe("none"); // hide()
   });
 
+  it("Space 激活当前聚焦项并 hide（role=menuitem 的 div 无默认激活，WCAG 补齐）", () => {
+    const onClickA = vi.fn();
+    const onClickB = vi.fn();
+    const el = showMenu([
+      { label: "A", onClick: onClickA },
+      { label: "B", onClick: onClickB },
+    ]);
+    const items = [...el.shadowRoot!.querySelectorAll<HTMLElement>(".item")];
+    (items[1] as HTMLElement).focus();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    expect(onClickA).not.toHaveBeenCalled();
+    expect(onClickB).toHaveBeenCalledTimes(1);
+    expect(el.style.display).toBe("none"); // hide()
+  });
+
   it("Escape 关闭菜单且焦点不在菜单内时不劫持方向键（外部元素不受影响）", () => {
     const outside = document.createElement("button");
     document.body.appendChild(outside);

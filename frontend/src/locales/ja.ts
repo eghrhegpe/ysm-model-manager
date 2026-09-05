@@ -773,8 +773,6 @@ export const ja: Record<string, string> = {
   "ctx.recycleOkText": "♻️ 移動",
   "ctx.recycleFailN": "❌ {fail} 個のファイルをゴミ箱に移動できませんでした：{err}",
   "ctx.recycleOkN": "✅ {n} 個のファイルをゴミ箱に移動しました",
-  "ctx.renameYsmJson":
-    "ysm.json はモデルディレクトリマニフェストです。親フォルダを右クリックして「名前を変更」してください（グループ操作）",
   "ctx.renameFail": "名前の変更に失敗しました",
   "ctx.fileMoveOk": "✅ {folder} へ移動しました",
   "ctx.fileCopyOk": "✅ {folder} へコピーしました",

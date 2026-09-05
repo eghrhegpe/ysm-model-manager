@@ -325,13 +325,13 @@ function atTeBindContextMenu(ctx: AtTeCtx): void {
         });
         return;
       }
-      const banned = !fl.querySelector(".ck")?.classList.contains("on");
+      // banned 不入 ctx:show（契约零消费，2026-09 清理）：树行的启用/禁用切换走
+      // 下方 enable/disable 事件链（events.ts 段内 .ck 处理），不经右键菜单
       bus.emit("ctx:show", {
         x: e.clientX,
         y: e.clientY,
         type: "file",
         path: fullPath || "",
-        banned,
         name,
         rtype: atTeGetRtype(vm),
       });

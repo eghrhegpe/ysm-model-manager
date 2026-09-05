@@ -134,7 +134,14 @@ export const MENU_DEFS: MenuDef[] = [
   {
     type: "file",
     items: [
-      { action: "file.rename", label: () => tr("menu.rename", "Rename"), icon: "✂️" },
+      // ysm.json 是模型目录清单（ADR-038 D3，Go fileops / web-fs 后端双侧硬拒）——
+      // visibleWhen 首个真实消费者：菜单层直接不给出死动作，替代 handler 内 toast 教育
+      {
+        action: "file.rename",
+        label: () => tr("menu.rename", "Rename"),
+        icon: "✂️",
+        visibleWhen: (ctx) => (ctx.path || "").split(/[/\\]/).pop()?.toLowerCase() !== "ysm.json",
+      },
       { action: "file.move", label: () => tr("menu.moveTo", "Move To"), icon: "📂" },
       { action: "file.copy", label: () => tr("menu.copyTo", "Copy To"), icon: "📋" },
       {

@@ -83,6 +83,7 @@ status: active
 - 弹窗必须经 `registerDlg` 登记，关闭统一走 `closeDlg`（退场动画 + 单次结算）
 - **Enter 键已接线**（P3 修复）：overlay keydown 的 Enter 触发 `#rn-ok` click，与按钮共享校验/关闭路径（原按钮文案「重命名 (Enter)」虚标，键盘 Enter 无法提交）；Esc 走取消
 - **`trapFocus` 已补全**（P3 修复）：`showRenameDialog` 内 `overlay.focus()` 后调用 `trapFocus(overlay)`，Tab 焦点不再逃逸到背后页面，与 modal 家族其余 4 弹窗行为一致
+- **role=dialog + aria-modal 已补齐**（2026-09-05 code_review）：rename 自建 overlay（`dgRnCreateOverlay`）同样声明对话框语义（WCAG 2.1 A）——modal 家族弹窗不统一走 modal.ts 基座（adv-filter/batch-rename/tag-editor/rename 各自自建 overlay），每条自建路径都必须带这两条属性，新增自建弹窗时勿默认「基座统一继承」
 
 ## 相关
 

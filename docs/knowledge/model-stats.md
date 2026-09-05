@@ -97,6 +97,11 @@ status: active
 - 单批超时 60s 终止 Worker 防僵尸
 - 降级时 `hasError: false`（统计失败不影响搜索结果可用性，仅数值为 0）
 - 批量统计串行（`requestSeq` 保证顺序），批间不可并行
+- **单 worker 单在途 + 重试专属 replacement**（2026-09-05 code_review 修复 8cfbf2e7）：
+  - `statsOneChunk` 以 `w.onmessage` 单槽位按 `requestId` 过滤回包——每 worker 同时只允许一个在途请求（`runWorkerQueue` 池内并发各持一 worker）
+  - 瞬态 error（WASM init 失败 / trap 逃逸）只 `terminateWorker` 出错者；重试**必须新建专属 worker**（`spawnReplacementWorker` 补入池），**禁止复用池内既有 worker**——多 worker 池里其余 worker 正被并发队列持在途，复用会覆盖其 onmessage 槽位 → 对方回包被 requestId 丢弃 → 挂 60s 超时杀整池（重试特性反而整体降级）
+  - 重试预算按「每次瞬态 error 一次」计：`retried` 在每片成功后复位，后片瞬态 error 独立享 1 次重试
+  - 测试须覆盖 hc≥2 多 worker 并发（hc=1 下 terminate 清池 → 懒建新 worker，永远碰不到「抢他队 worker」冲突，是既有用例的盲区）
 
 ## 消费方
 

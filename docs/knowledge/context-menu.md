@@ -114,6 +114,10 @@ status: active
 - 每个 async handler 的最外层 await 链都要有 catch 出口——右键菜单点击是「发射后不管」调用，未捕获异常只会变成 unhandledrejection，用户看不到任何反馈。**已全量补齐**（P2 修复）：batch.move/batch.copy/batch.recycle 补外层 catch，file.move/file.copy/dir.move/dir.copy 的 `resolveDstDir`/`getApp` 与 file.reveal 的 `getApp` 纳入 try——原实现 `getApp`（import 失败 rethrow）与 `resolveDstDir`（内含 GetRepoRoot）在 try 外，reject 时 rejection 逸出
 - `ysm.json` 禁止单文件重命名（ADR-038 D3），`file.rename` 直接 warn toast 引导改目录名
 - `<context-menu>` 的 `bus.on` 与 document 级 click/contextmenu/keydown 监听在 `disconnectedCallback` 成对清理
+- 键盘导航（Arrow/Enter/Escape，2026-09-05 code_review 补强）三条不变量：
+  1. **shadow 深焦解析**：`document.activeElement` 对 shadow DOM 内聚焦元素 retarget 成 host（`<context-menu>` 本体），`items.indexOf(active)`/`classList.contains("item")` 对 host 恒 false → 方向键/Enter 整体失效。必须沿 `shadowRoot.activeElement` 下钻取真实聚焦项（范式同 `utils/dom/focus-restore.ts` 的 trapFocusAcrossShadow）——此坑在 jsdom/happy-dom 下因不实现 retargeting 而测不出，须显式断言 `shadowRoot.activeElement`
+  2. **焦点归属守卫**：焦点不在本菜单（Tab 逃逸/外部点击/空 items）时不接管方向键/Enter——防劫持页面滚动/光标、防误触页面上恰好同 class 的元素
+  3. **焦点归还**：`show()` 记录打开前焦点（host/body 不入账），`hide()` 归还——Esc/选中后键盘上下文不丢到 body
 
 ## 相关
 

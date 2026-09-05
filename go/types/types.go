@@ -1,6 +1,9 @@
 package types
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // WindowState 窗口位置
 type WindowState struct {
@@ -147,6 +150,10 @@ const (
 	ErrLinkFailed      ErrorCode = "LINK_FAILED"
 	ErrUnknown         ErrorCode = "UNKNOWN"
 )
+
+// ErrMcRootNotSet 哨兵错误：游戏根目录未配置（替代裸字符串 "请先设置游戏根目录"）。
+// requireMcRoot 返回此哨兵，调用方用 errors.Is 判定，测试断言不再依赖字符串匹配。
+var ErrMcRootNotSet = errors.New("请先设置游戏根目录")
 
 // LogLevel 日志级别（诊断页按 Level 过滤；向后兼容——旧日志无此字段时前端按 Status 兜底）
 type LogLevel string

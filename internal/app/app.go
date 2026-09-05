@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -33,7 +32,7 @@ import (
 // fallback 探测语义不同，保持原位不在此收敛。
 func requireMcRoot(cfg types.AppConfig) error {
 	if cfg.McRoot == "" {
-		return fmt.Errorf("请先设置游戏根目录")
+		return types.ErrMcRootNotSet
 	}
 	return nil
 }

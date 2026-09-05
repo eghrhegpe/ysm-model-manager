@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -60,7 +61,7 @@ func TestIsResourcePackFolder(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(p, "pack.mcmeta"), []byte("{}"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if !isResourcePackFolder(p) {
+		if !fsutil.IsResourcePackFolder(p) {
 			t.Error("含 pack.mcmeta 的目录应判定为资源包")
 		}
 	})
@@ -69,12 +70,12 @@ func TestIsResourcePackFolder(t *testing.T) {
 		if err := os.MkdirAll(p, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if isResourcePackFolder(p) {
+		if fsutil.IsResourcePackFolder(p) {
 			t.Error("不含 pack.mcmeta 的目录不应判定为资源包")
 		}
 	})
 	t.Run("目录不存在 → false", func(t *testing.T) {
-		if isResourcePackFolder(filepath.Join(dir, "missing")) {
+		if fsutil.IsResourcePackFolder(filepath.Join(dir, "missing")) {
 			t.Error("不存在的目录应返回 false")
 		}
 	})

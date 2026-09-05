@@ -4,6 +4,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -193,8 +194,8 @@ func TestValidUpdateURL(t *testing.T) {
 func TestRequireMcRoot(t *testing.T) {
 	if err := requireMcRoot(types.AppConfig{}); err == nil {
 		t.Error("空 McRoot 应返回错误")
-	} else if err.Error() != "请先设置游戏根目录" {
-		t.Errorf("错误消息不符: got %q, 期望 %q", err.Error(), "请先设置游戏根目录")
+	} else if !errors.Is(err, types.ErrMcRootNotSet) {
+		t.Errorf("哨兵错误不符: got %v, 期望 errors.Is ErrMcRootNotSet", err)
 	}
 	if err := requireMcRoot(types.AppConfig{McRoot: "/mc"}); err != nil {
 		t.Errorf("非空 McRoot 应返回 nil, got %v", err)

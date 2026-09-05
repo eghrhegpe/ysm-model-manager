@@ -159,9 +159,9 @@ func (a *App) ImportModelFolder(folderName, subpath string, files []types.Import
 	return a.importModelFolderAs(rtype, folderName, subpath, files)
 }
 
-// fallbackRepoType 全局兜底类型（默认仓库页上下文同源）：内容推断歧义/未知时的落点；
+// neutralPageType 中性页标记（默认仓库页上下文同源）：内容推断歧义/未知时的落点；
 // 也是「中性页」标记——该页拖入时内容推断优先于上下文（见 ImportModelFolderTo）。
-const fallbackRepoType = "ysm"
+const neutralPageType = "ysm"
 
 // ImportModelFolderTo 带页面上下文类型的文件夹整组导入（拖拽导入上下文路由）。
 // rtype 来自前端当前树的根属性——树根本就派生自注册表路由配置，前端只透传不判型；
@@ -178,7 +178,7 @@ func (a *App) ImportModelFolderTo(folderName, subpath, rtype string, files []typ
 		return a.ImportModelFolder(folderName, subpath, files)
 	}
 	if mismatch := inferExplicitFolderType(files); mismatch != "" && mismatch != rtype {
-		if rtype == fallbackRepoType {
+		if rtype == neutralPageType {
 			return a.ImportModelFolder(folderName, subpath, files)
 		}
 		a.AddOpLog("import", folderName, "", "", 0, "warn",
@@ -228,7 +228,7 @@ func inferFolderType(files []types.ImportFileItem) string {
 	for _, f := range files {
 		rel := filepath.Clean(filepath.FromSlash(strings.TrimSpace(f.RelPath)))
 		if types.IsYsmEntryJSON(filepath.Base(rel)) {
-			return fallbackRepoType
+			return neutralPageType
 		}
 	}
 	// 第二遍：按首个单归属支持文件判定
@@ -243,7 +243,7 @@ func inferFolderType(files []types.ImportFileItem) string {
 			return rtypes[0]
 		}
 	}
-	return fallbackRepoType
+	return neutralPageType
 }
 
 // ========== 在资源管理器中显示 ==========

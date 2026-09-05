@@ -127,8 +127,8 @@ func TestImportAndPush_NoMcRoot_Rejected(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 
 	err := a.ImportFileAndPushToInstance("m.ysm", b64("x"), "TestInst")
-	if err == nil || !strings.Contains(err.Error(), "请先设置游戏根目录") {
-		t.Fatalf("应报「请先设置游戏根目录」, got %v", err)
+	if err == nil || !errors.Is(err, types.ErrMcRootNotSet) {
+		t.Fatalf("应报 ErrMcRootNotSet, got %v", err)
 	}
 	assertFileAbsent(t, filepath.Join(base, types.GroupStorageRoot("ysm"), "m.ysm"))
 }

@@ -418,16 +418,19 @@ export class AppTree extends WebComponentBase {
         ? Math.min(currentIdx + 1, fileRows.length - 1)
         : Math.max(currentIdx - 1, 0);
     const nextKey = fileRows[nextIdx].key;
+    // 在 selectSingle（内部会把 lastKey 改为 nextKey）之前捕获旧行 key，用它清除旧行
+    // 高亮——原代码在 selectSingle 后读 selectState.lastKey，拿到的已是新行，清除逻辑
+    // 误删新行自己，旧行 .selected 残留（连续 ArrowDown 多行同时高亮）。
+    const oldKey = selectState.lastKey;
     selectSingle(nextKey);
 
-    if (selectState.lastKey) {
-      const oldEl = container.querySelector(`[data-fullpath="${CSS.escape(selectState.lastKey)}"]`);
+    if (oldKey && oldKey !== nextKey) {
+      const oldEl = container.querySelector(`[data-fullpath="${CSS.escape(oldKey)}"]`);
       if (oldEl) {
         oldEl.classList.remove("selected");
         oldEl.setAttribute("aria-selected", "false");
       }
     }
-    selectState.lastKey = nextKey;
     const newEl = container.querySelector(`[data-fullpath="${CSS.escape(nextKey)}"]`);
     if (newEl) {
       newEl.classList.add("selected");

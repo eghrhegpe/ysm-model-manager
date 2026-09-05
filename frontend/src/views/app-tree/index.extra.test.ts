@@ -208,6 +208,46 @@ describe("app-tree index 入口生命周期（补位）", () => {
     await waitFor(() => expect(el.shadowRoot!.activeElement).toBe(srch));
   });
 
+  it("方向键导航 → 旧行 .selected 清除，仅当前行高亮（残留回归）", async () => {
+    const el = await mountEl();
+    // 让 mount 的迟到异步（若有）完全落定，避免与导航断言交错
+    await sleep0();
+    await sleep0();
+    // 模拟当前选中 a.ysm（selectState + DOM class 双态对齐）
+    selectState.keys.add("/repo/a.ysm");
+    selectState.lastKey = "/repo/a.ysm";
+    const rows = queryAllByTestId(el.shadowRoot!, "tree-file");
+    expect(rows.length).toBe(2);
+    const rowA = rows.find((r) => r.getAttribute("data-fullpath") === "/repo/a.ysm");
+    const rowB = rows.find((r) => r.getAttribute("data-fullpath") === "/repo/b.ysm");
+    expect(rowA).toBeTruthy();
+    expect(rowB).toBeTruthy();
+    rowA!.classList.add("selected");
+    rowA!.setAttribute("aria-selected", "true");
+
+    // 从树内行元素派发（composed 冒泡到 document keydown 监听，target 过 _root.contains 守卫）
+    rowA!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, composed: true }),
+    );
+    await sleep0();
+
+    // 用派发后新查询的行元素断言（避免旧引用与可能的异步重渲染错位）
+    const rowsAfter = queryAllByTestId(el.shadowRoot!, "tree-file");
+    const rowAAfter = rowsAfter.find((r) => r.getAttribute("data-fullpath") === "/repo/a.ysm");
+    const rowBAfter = rowsAfter.find((r) => r.getAttribute("data-fullpath") === "/repo/b.ysm");
+    // b.ysm 被选中（高亮转移）
+    expect(rowBAfter!.classList.contains("selected")).toBe(true);
+    expect(rowBAfter!.getAttribute("aria-selected")).toBe("true");
+    // 旧行 a.ysm 的 .selected 必须清除——修复前 selectSingle 已把 lastKey 改成 nextKey，
+    // 清除逻辑误删新行自己，旧行高亮残留（连续 ArrowDown 多行同时高亮）
+    expect(rowAAfter!.classList.contains("selected")).toBe(false);
+    expect(rowAAfter!.getAttribute("aria-selected")).toBe("false");
+    // 全局仅一行高亮
+    const sel = rowsAfter.filter((r) => r.classList.contains("selected"));
+    expect(sel.length).toBe(1);
+    expect(sel[0].getAttribute("data-fullpath")).toBe("/repo/b.ysm");
+  });
+
   it("Delete 网页版无删除能力 → toast，不删除", async () => {
     await mountEl();
     canMock.mockReturnValue(false); // 模拟无删除能力

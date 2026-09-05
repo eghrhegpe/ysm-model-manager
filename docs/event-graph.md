@@ -227,7 +227,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 353 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 156 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 250 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 438 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 441 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -574,8 +574,8 @@
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 225 |
 | _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 366 |
 | _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 374 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 486 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 493 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 489 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 496 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 45 |
